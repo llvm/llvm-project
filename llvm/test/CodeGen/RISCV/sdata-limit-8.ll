@@ -7,7 +7,7 @@
 ; SmallDataLimit set to 8, so we expect @v will be put in sbss
 ; and @r will be put in sdata.
 !llvm.module.flags = !{!0}
-!0 = !{i32 1, !"SmallDataLimit", i32 8}
+!0 = !{i32 8, !"SmallDataLimit", i32 8}
 
 ; RV32:    .section        .sbss
 ; RV32:    .section        .sdata

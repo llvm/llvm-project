@@ -1,5 +1,5 @@
 // Basic C++ test for update_cc_test_checks
-// RUN: %clang_cc1 -no-opaque-pointers -triple=x86_64-unknown-linux-gnu -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple=x86_64-unknown-linux-gnu -emit-llvm -o - %s | FileCheck %s
 
 class Foo {
   int x;

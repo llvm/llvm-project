@@ -1,5 +1,4 @@
-; RUN: opt < %s -S -place-safepoints -enable-new-pm=0 | FileCheck %s
-
+; RUN: opt < %s -S -passes=place-safepoints | FileCheck %s
 
 ; Do we insert a simple entry safepoint?
 define void @test_entry() gc "statepoint-example" {

@@ -18,6 +18,7 @@
 
 #include "sanitizer_internal_defs.h"
 #include "sanitizer_platform.h"
+#include "sanitizer_mallinfo.h"
 
 #if SANITIZER_APPLE
 #include <sys/cdefs.h>
@@ -135,7 +136,7 @@ struct __sanitizer_perf_event_attr {
 extern unsigned struct_epoll_event_sz;
 extern unsigned struct_sysinfo_sz;
 extern unsigned __user_cap_header_struct_sz;
-extern unsigned __user_cap_data_struct_sz;
+extern unsigned __user_cap_data_struct_sz(void *hdrp);
 extern unsigned struct_new_utsname_sz;
 extern unsigned struct_old_utsname_sz;
 extern unsigned struct_oldold_utsname_sz;
@@ -204,17 +205,7 @@ struct __sanitizer_sem_t {
 };
 #endif // SANITIZER_LINUX
 
-#if SANITIZER_ANDROID
-struct __sanitizer_struct_mallinfo {
-  uptr v[10];
-};
-#endif
-
 #if SANITIZER_LINUX && !SANITIZER_ANDROID
-struct __sanitizer_struct_mallinfo {
-  int v[10];
-};
-
 extern unsigned struct_ustat_sz;
 extern unsigned struct_rlimit64_sz;
 extern unsigned struct_statvfs64_sz;
@@ -318,7 +309,6 @@ extern unsigned struct_msqid_ds_sz;
 extern unsigned struct_mq_attr_sz;
 extern unsigned struct_timex_sz;
 extern unsigned struct_statvfs_sz;
-extern unsigned struct_crypt_data_sz;
 #endif  // SANITIZER_LINUX && !SANITIZER_ANDROID
 
 struct __sanitizer_iovec {
@@ -587,8 +577,13 @@ struct __sanitizer_sigset_t {
 #endif
 
 struct __sanitizer_siginfo_pad {
+#if SANITIZER_X32
+  // x32 siginfo_t is aligned to 8 bytes.
+  u64 pad[128 / sizeof(u64)];
+#else
   // Require uptr, because siginfo_t is always pointer-size aligned on Linux.
   uptr pad[128 / sizeof(uptr)];
+#endif
 };
 
 #if SANITIZER_LINUX

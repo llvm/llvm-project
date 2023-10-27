@@ -17,7 +17,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
-
+#include "llvm/TableGen/Record.h"
 #include <string>
 
 using namespace llvm;
@@ -35,6 +35,8 @@ ValueTypeByHwMode::ValueTypeByHwMode(Record *R, const CodeGenHwModes &CGH) {
     assert(I.second && "Duplicate entry?");
     (void)I;
   }
+  if (R->isSubClassOf("PtrValueType"))
+    PtrAddrSpace = R->getValueAsInt("AddrSpace");
 }
 
 ValueTypeByHwMode::ValueTypeByHwMode(Record *R, MVT T) : ValueTypeByHwMode(T) {
@@ -65,8 +67,8 @@ MVT &ValueTypeByHwMode::getOrCreateTypeForMode(unsigned Mode, MVT Type) {
     return F->second;
   // If Mode is not in the map, look up the default mode. If it exists,
   // make a copy of it for Mode and return it.
-  auto D = Map.find(DefaultMode);
-  if (D != Map.end())
+  auto D = Map.begin();
+  if (D != Map.end() && D->first == DefaultMode)
     return Map.insert(std::make_pair(Mode, D->second)).first->second;
   // If default mode is not present either, use provided Type.
   return Map.insert(std::make_pair(Mode, Type)).first->second;

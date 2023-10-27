@@ -30,14 +30,14 @@
 #include "support/Path.h"
 #include "support/ThreadsafeFS.h"
 #include "clang/Tooling/Core/Replacement.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include <functional>
 #include <memory>
 #include <optional>
 #include <string>
-#include <type_traits>
-#include <utility>
+#include <tuple>
 #include <vector>
 
 namespace clang {
@@ -67,7 +67,7 @@ public:
     /// file, they do not interfere with "pull-based" ClangdServer::diagnostics.
     /// May be called concurrently for separate files, not for a single file.
     virtual void onDiagnosticsReady(PathRef File, llvm::StringRef Version,
-                                    std::vector<Diag> Diagnostics) {}
+                                    llvm::ArrayRef<Diag> Diagnostics) {}
     /// Called whenever the file status is updated.
     /// May be called concurrently for separate files, not for a single file.
     virtual void onFileUpdated(PathRef File, const TUStatus &Status) {}
@@ -84,6 +84,11 @@ public:
     /// build finishes, we can provide more accurate semantic tokens, so we
     /// should tell the client to refresh.
     virtual void onSemanticsMaybeChanged(PathRef File) {}
+
+    /// Called by ClangdServer when some \p InactiveRegions for \p File are
+    /// ready.
+    virtual void onInactiveRegionsReady(PathRef File,
+                                        std::vector<Range> InactiveRegions) {}
   };
   /// Creates a context provider that loads and installs config.
   /// Errors in loading config are reported as diagnostics via Callbacks.
@@ -140,8 +145,9 @@ public:
 
     /// The resource directory is used to find internal headers, overriding
     /// defaults and -resource-dir compiler flag).
-    /// If None, ClangdServer calls CompilerInvocation::GetResourcePath() to
-    /// obtain the standard resource directory.
+    /// If std::nullopt, ClangdServer calls
+    /// CompilerInvocation::GetResourcePath() to obtain the standard resource
+    /// directory.
     std::optional<std::string> ResourceDir;
 
     /// Time to wait after a new file version before computing diagnostics.
@@ -174,6 +180,10 @@ public:
     /// Whether include fixer insertions for Objective-C code should use #import
     /// instead of #include.
     bool ImportInsertions = false;
+
+    /// Whether to collect and publish information about inactive preprocessor
+    /// regions in the document.
+    bool PublishInactiveRegions = false;
 
     explicit operator TUScheduler::Options() const;
   };
@@ -336,11 +346,45 @@ public:
     std::string Title; /// A single-line message to show in the UI.
     llvm::StringLiteral Kind;
   };
-  /// Enumerate the code tweaks available to the user at a specified point.
-  /// Tweaks where Filter returns false will not be checked or included.
-  void enumerateTweaks(PathRef File, Range Sel,
-                       llvm::unique_function<bool(const Tweak &)> Filter,
-                       Callback<std::vector<TweakRef>> CB);
+
+  // Ref to the clangd::Diag.
+  struct DiagRef {
+    clangd::Range Range;
+    std::string Message;
+    bool operator==(const DiagRef &Other) const {
+      return std::tie(Range, Message) == std::tie(Other.Range, Other.Message);
+    }
+    bool operator<(const DiagRef &Other) const {
+      return std::tie(Range, Message) < std::tie(Other.Range, Other.Message);
+    }
+  };
+
+  struct CodeActionInputs {
+    std::string File;
+    Range Selection;
+
+    /// Requested kind of actions to return.
+    std::vector<std::string> RequestedActionKinds;
+
+    /// Diagnostics attached to the code action request.
+    std::vector<DiagRef> Diagnostics;
+
+    /// Tweaks where Filter returns false will not be checked or included.
+    std::function<bool(const Tweak &)> TweakFilter;
+  };
+  struct CodeActionResult {
+    std::string Version;
+    struct QuickFix {
+      DiagRef Diag;
+      Fix F;
+    };
+    std::vector<QuickFix> QuickFixes;
+    std::vector<TweakRef> TweakRefs;
+  };
+  /// Surface code actions (quick-fixes for diagnostics, or available code
+  /// tweaks) for a given range in a file.
+  void codeAction(const CodeActionInputs &Inputs,
+                  Callback<CodeActionResult> CB);
 
   /// Apply the code tweak with a specified \p ID.
   void applyTweak(PathRef File, Range Sel, StringRef ID,
@@ -439,6 +483,8 @@ private:
   bool PreambleParseForwardingFunctions = false;
 
   bool ImportInsertions = false;
+
+  bool PublishInactiveRegions = false;
 
   // GUARDED_BY(CachedCompletionFuzzyFindRequestMutex)
   llvm::StringMap<std::optional<FuzzyFindRequest>>

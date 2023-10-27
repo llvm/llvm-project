@@ -6,9 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/AST/DeclCXX.h"
-#include "clang/AST/DeclGroup.h"
-#include "clang/Frontend/FrontendAction.h"
 #include "clang/Tooling/CompilationDatabase.h"
 #include "clang/Tooling/FileMatchTrie.h"
 #include "clang/Tooling/JSONCompilationDatabase.h"
@@ -24,6 +21,8 @@ namespace tooling {
 
 using testing::ElementsAre;
 using testing::EndsWith;
+using testing::IsEmpty;
+using testing::UnorderedElementsAreArray;
 
 static void expectFailure(StringRef JSONDatabase, StringRef Explanation) {
   std::string ErrorMessage;
@@ -83,8 +82,8 @@ getAllCompileCommands(JSONCommandLineSyntax Syntax, StringRef JSONDatabase,
 
 TEST(JSONCompilationDatabase, GetAllFiles) {
   std::string ErrorMessage;
-  EXPECT_EQ(std::vector<std::string>(),
-            getAllFiles("[]", ErrorMessage, JSONCommandLineSyntax::Gnu))
+  EXPECT_THAT(getAllFiles("[]", ErrorMessage, JSONCommandLineSyntax::Gnu),
+              IsEmpty())
       << ErrorMessage;
 
   std::vector<std::string> expected_files;
@@ -97,8 +96,7 @@ TEST(JSONCompilationDatabase, GetAllFiles) {
   expected_files.push_back(std::string(PathStorage.str()));
   llvm::sys::path::native("//net/file1", PathStorage);
   expected_files.push_back(std::string(PathStorage.str()));
-  EXPECT_EQ(expected_files,
-            getAllFiles(R"json(
+  EXPECT_THAT(getAllFiles(R"json(
             [
               {
                 "directory": "//net/dir",
@@ -121,7 +119,8 @@ TEST(JSONCompilationDatabase, GetAllFiles) {
                 "file": "//net/dir/foo/../file3"
               }
             ])json",
-                        ErrorMessage, JSONCommandLineSyntax::Gnu))
+                          ErrorMessage, JSONCommandLineSyntax::Gnu),
+              UnorderedElementsAreArray(expected_files))
       << ErrorMessage;
 }
 
@@ -550,7 +549,7 @@ TEST(FixedCompilationDatabase, GetAllFiles) {
   CommandLine.push_back("two");
   FixedCompilationDatabase Database(".", CommandLine);
 
-  EXPECT_EQ(0ul, Database.getAllFiles().size());
+  EXPECT_THAT(Database.getAllFiles(), IsEmpty());
 }
 
 TEST(FixedCompilationDatabase, GetAllCompileCommands) {

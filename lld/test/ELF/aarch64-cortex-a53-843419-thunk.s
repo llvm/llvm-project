@@ -2,7 +2,7 @@
 // RUN: llvm-mc -filetype=obj -triple=aarch64-none-linux %s -o %t.o
 // RUN: echo "SECTIONS { \
 // RUN:          .text1 0x10000 : { *(.text.01) *(.text.02) *(.text.03) } \
-// RUN:          .text2 0x8010000 : { *(.text.04) } } " > %t.script
+// RUN:          .text2 0x10010000 : { *(.text.04) } } " > %t.script
 // RUN: ld.lld --script %t.script -fix-cortex-a53-843419 -verbose %t.o -o %t2 \
 // RUN:   2>&1 | FileCheck -check-prefix=CHECK-PRINT %s
 // RUN: llvm-objdump --no-print-imm-hex --no-show-raw-insn --triple=aarch64-linux-gnu -d %t2 | FileCheck %s
@@ -39,7 +39,7 @@ t3_ff8_ldr:
 
 // CHECK-PRINT: detected cortex-a53-843419 erratum sequence starting at 10FF8 in unpatched output.
 // CHECK: 0000000000010ff8 <t3_ff8_ldr>:
-// CHECK-NEXT: adrp    x0, 0x8010000
+// CHECK-NEXT: adrp    x0, 0x10010000
 // CHECK-NEXT: ldr     x1, [x1]
 // CHECK-NEXT: b       0x11008
 // CHECK-NEXT: ret

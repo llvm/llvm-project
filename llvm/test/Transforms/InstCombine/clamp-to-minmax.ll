@@ -6,8 +6,8 @@ define float @clamp_float_fast_ordered_strict_maxmin(float %x) {
 ; CHECK-LABEL: @clamp_float_fast_ordered_strict_maxmin(
 ; CHECK-NEXT:    [[CMP2:%.*]] = fcmp fast olt float [[X:%.*]], 2.550000e+02
 ; CHECK-NEXT:    [[MIN:%.*]] = select i1 [[CMP2]], float [[X]], float 2.550000e+02
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast float @llvm.maxnum.f32(float [[MIN]], float 1.000000e+00)
-; CHECK-NEXT:    ret float [[TMP1]]
+; CHECK-NEXT:    [[R1:%.*]] = call fast float @llvm.maxnum.f32(float [[MIN]], float 1.000000e+00)
+; CHECK-NEXT:    ret float [[R1]]
 ;
   %cmp2 = fcmp fast olt float %x, 255.0
   %min = select i1 %cmp2, float %x, float 255.0
@@ -21,8 +21,8 @@ define float @clamp_float_fast_ordered_nonstrict_maxmin(float %x) {
 ; CHECK-LABEL: @clamp_float_fast_ordered_nonstrict_maxmin(
 ; CHECK-NEXT:    [[CMP2:%.*]] = fcmp fast olt float [[X:%.*]], 2.550000e+02
 ; CHECK-NEXT:    [[MIN:%.*]] = select i1 [[CMP2]], float [[X]], float 2.550000e+02
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast float @llvm.maxnum.f32(float [[MIN]], float 1.000000e+00)
-; CHECK-NEXT:    ret float [[TMP1]]
+; CHECK-NEXT:    [[R1:%.*]] = call fast float @llvm.maxnum.f32(float [[MIN]], float 1.000000e+00)
+; CHECK-NEXT:    ret float [[R1]]
 ;
   %cmp2 = fcmp fast olt float %x, 255.0
   %min = select i1 %cmp2, float %x, float 255.0
@@ -36,8 +36,8 @@ define float @clamp_float_fast_ordered_strict_minmax(float %x) {
 ; CHECK-LABEL: @clamp_float_fast_ordered_strict_minmax(
 ; CHECK-NEXT:    [[CMP2:%.*]] = fcmp fast ogt float [[X:%.*]], 1.000000e+00
 ; CHECK-NEXT:    [[MAX:%.*]] = select i1 [[CMP2]], float [[X]], float 1.000000e+00
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast float @llvm.minnum.f32(float [[MAX]], float 2.550000e+02)
-; CHECK-NEXT:    ret float [[TMP1]]
+; CHECK-NEXT:    [[R1:%.*]] = call fast float @llvm.minnum.f32(float [[MAX]], float 2.550000e+02)
+; CHECK-NEXT:    ret float [[R1]]
 ;
   %cmp2 = fcmp fast ogt float %x, 1.0
   %max = select i1 %cmp2, float %x, float 1.0
@@ -51,8 +51,8 @@ define float @clamp_float_fast_ordered_nonstrict_minmax(float %x) {
 ; CHECK-LABEL: @clamp_float_fast_ordered_nonstrict_minmax(
 ; CHECK-NEXT:    [[CMP2:%.*]] = fcmp fast ogt float [[X:%.*]], 1.000000e+00
 ; CHECK-NEXT:    [[MAX:%.*]] = select i1 [[CMP2]], float [[X]], float 1.000000e+00
-; CHECK-NEXT:    [[TMP1:%.*]] = call fast float @llvm.minnum.f32(float [[MAX]], float 2.550000e+02)
-; CHECK-NEXT:    ret float [[TMP1]]
+; CHECK-NEXT:    [[R1:%.*]] = call fast float @llvm.minnum.f32(float [[MAX]], float 2.550000e+02)
+; CHECK-NEXT:    ret float [[R1]]
 ;
   %cmp2 = fcmp fast ogt float %x, 1.0
   %max = select i1 %cmp2, float %x, float 1.0
@@ -68,9 +68,9 @@ define float @clamp_float_fast_ordered_nonstrict_minmax(float %x) {
 define float @clamp_float_fast_unordered_strict_maxmin(float %x) {
 ; CHECK-LABEL: @clamp_float_fast_unordered_strict_maxmin(
 ; CHECK-NEXT:    [[CMP2_INV:%.*]] = fcmp fast oge float [[X:%.*]], 2.550000e+02
-; CHECK-NEXT:    [[TMP1:%.*]] = select fast i1 [[CMP2_INV]], float 2.550000e+02, float [[X]]
-; CHECK-NEXT:    [[TMP2:%.*]] = call fast float @llvm.maxnum.f32(float [[TMP1]], float 1.000000e+00)
-; CHECK-NEXT:    ret float [[TMP2]]
+; CHECK-NEXT:    [[MIN:%.*]] = select fast i1 [[CMP2_INV]], float 2.550000e+02, float [[X]]
+; CHECK-NEXT:    [[R1:%.*]] = call fast float @llvm.maxnum.f32(float [[MIN]], float 1.000000e+00)
+; CHECK-NEXT:    ret float [[R1]]
 ;
   %cmp2 = fcmp fast ult float %x, 255.0
   %min = select i1 %cmp2, float %x, float 255.0
@@ -83,9 +83,9 @@ define float @clamp_float_fast_unordered_strict_maxmin(float %x) {
 define float @clamp_float_fast_unordered_nonstrict_maxmin(float %x) {
 ; CHECK-LABEL: @clamp_float_fast_unordered_nonstrict_maxmin(
 ; CHECK-NEXT:    [[CMP2_INV:%.*]] = fcmp fast oge float [[X:%.*]], 2.550000e+02
-; CHECK-NEXT:    [[TMP1:%.*]] = select fast i1 [[CMP2_INV]], float 2.550000e+02, float [[X]]
-; CHECK-NEXT:    [[TMP2:%.*]] = call fast float @llvm.maxnum.f32(float [[TMP1]], float 1.000000e+00)
-; CHECK-NEXT:    ret float [[TMP2]]
+; CHECK-NEXT:    [[MIN:%.*]] = select fast i1 [[CMP2_INV]], float 2.550000e+02, float [[X]]
+; CHECK-NEXT:    [[R1:%.*]] = call fast float @llvm.maxnum.f32(float [[MIN]], float 1.000000e+00)
+; CHECK-NEXT:    ret float [[R1]]
 ;
   %cmp2 = fcmp fast ult float %x, 255.0
   %min = select i1 %cmp2, float %x, float 255.0
@@ -98,9 +98,9 @@ define float @clamp_float_fast_unordered_nonstrict_maxmin(float %x) {
 define float @clamp_float_fast_unordered_strict_minmax(float %x) {
 ; CHECK-LABEL: @clamp_float_fast_unordered_strict_minmax(
 ; CHECK-NEXT:    [[CMP2_INV:%.*]] = fcmp fast ole float [[X:%.*]], 1.000000e+00
-; CHECK-NEXT:    [[TMP1:%.*]] = select fast i1 [[CMP2_INV]], float 1.000000e+00, float [[X]]
-; CHECK-NEXT:    [[TMP2:%.*]] = call fast float @llvm.minnum.f32(float [[TMP1]], float 2.550000e+02)
-; CHECK-NEXT:    ret float [[TMP2]]
+; CHECK-NEXT:    [[MAX:%.*]] = select fast i1 [[CMP2_INV]], float 1.000000e+00, float [[X]]
+; CHECK-NEXT:    [[R1:%.*]] = call fast float @llvm.minnum.f32(float [[MAX]], float 2.550000e+02)
+; CHECK-NEXT:    ret float [[R1]]
 ;
   %cmp2 = fcmp fast ugt float %x, 1.0
   %max = select i1 %cmp2, float %x, float 1.0
@@ -113,9 +113,9 @@ define float @clamp_float_fast_unordered_strict_minmax(float %x) {
 define float @clamp_float_fast_unordered_nonstrict_minmax(float %x) {
 ; CHECK-LABEL: @clamp_float_fast_unordered_nonstrict_minmax(
 ; CHECK-NEXT:    [[CMP2_INV:%.*]] = fcmp fast ole float [[X:%.*]], 1.000000e+00
-; CHECK-NEXT:    [[TMP1:%.*]] = select fast i1 [[CMP2_INV]], float 1.000000e+00, float [[X]]
-; CHECK-NEXT:    [[TMP2:%.*]] = call fast float @llvm.minnum.f32(float [[TMP1]], float 2.550000e+02)
-; CHECK-NEXT:    ret float [[TMP2]]
+; CHECK-NEXT:    [[MAX:%.*]] = select fast i1 [[CMP2_INV]], float 1.000000e+00, float [[X]]
+; CHECK-NEXT:    [[R1:%.*]] = call fast float @llvm.minnum.f32(float [[MAX]], float 2.550000e+02)
+; CHECK-NEXT:    ret float [[R1]]
 ;
   %cmp2 = fcmp fast ugt float %x, 1.0
   %max = select i1 %cmp2, float %x, float 1.0
@@ -131,9 +131,9 @@ define float @clamp_float_fast_unordered_nonstrict_minmax(float %x) {
 define float @clamp_test_1(float %x) {
 ; CHECK-LABEL: @clamp_test_1(
 ; CHECK-NEXT:    [[INNER_CMP_INV:%.*]] = fcmp fast oge float [[X:%.*]], 2.550000e+02
-; CHECK-NEXT:    [[TMP1:%.*]] = select fast i1 [[INNER_CMP_INV]], float 2.550000e+02, float [[X]]
-; CHECK-NEXT:    [[TMP2:%.*]] = call fast float @llvm.maxnum.f32(float [[TMP1]], float 1.000000e+00)
-; CHECK-NEXT:    ret float [[TMP2]]
+; CHECK-NEXT:    [[INNER_SEL:%.*]] = select fast i1 [[INNER_CMP_INV]], float 2.550000e+02, float [[X]]
+; CHECK-NEXT:    [[R1:%.*]] = call fast float @llvm.maxnum.f32(float [[INNER_SEL]], float 1.000000e+00)
+; CHECK-NEXT:    ret float [[R1]]
 ;
   %inner_cmp = fcmp fast ult float %x, 255.0
   %inner_sel = select i1 %inner_cmp, float %x, float 255.0
@@ -148,9 +148,9 @@ define float @clamp_test_1(float %x) {
 define float @clamp_negative_wrong_const(float %x) {
 ; CHECK-LABEL: @clamp_negative_wrong_const(
 ; CHECK-NEXT:    [[INNER_CMP_INV:%.*]] = fcmp fast oge float [[X:%.*]], 2.550000e+02
-; CHECK-NEXT:    [[TMP1:%.*]] = select fast i1 [[INNER_CMP_INV]], float 2.550000e+02, float [[X]]
+; CHECK-NEXT:    [[INNER_SEL:%.*]] = select fast i1 [[INNER_CMP_INV]], float 2.550000e+02, float [[X]]
 ; CHECK-NEXT:    [[OUTER_CMP:%.*]] = fcmp fast ugt float [[X]], 5.120000e+02
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[OUTER_CMP]], float [[TMP1]], float 5.120000e+02
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[OUTER_CMP]], float [[INNER_SEL]], float 5.120000e+02
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %inner_cmp = fcmp fast ult float %x, 255.0
@@ -164,9 +164,9 @@ define float @clamp_negative_wrong_const(float %x) {
 define float @clamp_negative_same_op(float %x) {
 ; CHECK-LABEL: @clamp_negative_same_op(
 ; CHECK-NEXT:    [[INNER_CMP_INV:%.*]] = fcmp fast oge float [[X:%.*]], 2.550000e+02
-; CHECK-NEXT:    [[TMP1:%.*]] = select fast i1 [[INNER_CMP_INV]], float 2.550000e+02, float [[X]]
+; CHECK-NEXT:    [[INNER_SEL:%.*]] = select fast i1 [[INNER_CMP_INV]], float 2.550000e+02, float [[X]]
 ; CHECK-NEXT:    [[OUTER_CMP:%.*]] = fcmp fast ult float [[X]], 1.000000e+00
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[OUTER_CMP]], float [[TMP1]], float 1.000000e+00
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[OUTER_CMP]], float [[INNER_SEL]], float 1.000000e+00
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %inner_cmp = fcmp fast ult float %x, 255.0
@@ -235,9 +235,9 @@ define float @clamp_float_ordered_strict_maxmin1(float %x) {
 define float @clamp_float_ordered_strict_maxmin2(float %x) {
 ; CHECK-LABEL: @clamp_float_ordered_strict_maxmin2(
 ; CHECK-NEXT:    [[CMP2_INV:%.*]] = fcmp oge float [[X:%.*]], 2.550000e+02
-; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[CMP2_INV]], float 2.550000e+02, float [[X]]
+; CHECK-NEXT:    [[MIN:%.*]] = select i1 [[CMP2_INV]], float 2.550000e+02, float [[X]]
 ; CHECK-NEXT:    [[CMP1:%.*]] = fcmp olt float [[X]], 1.000000e+00
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMP1]], float 1.000000e+00, float [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMP1]], float 1.000000e+00, float [[MIN]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %cmp2 = fcmp ult float %x, 255.0                  ; X is NaN => true
@@ -266,9 +266,9 @@ define float @clamp_float_ordered_nonstrict_maxmin1(float %x) {
 define float @clamp_float_ordered_nonstrict_maxmin2(float %x) {
 ; CHECK-LABEL: @clamp_float_ordered_nonstrict_maxmin2(
 ; CHECK-NEXT:    [[CMP2_INV:%.*]] = fcmp oge float [[X:%.*]], 2.550000e+02
-; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[CMP2_INV]], float 2.550000e+02, float [[X]]
+; CHECK-NEXT:    [[MIN:%.*]] = select i1 [[CMP2_INV]], float 2.550000e+02, float [[X]]
 ; CHECK-NEXT:    [[CMP1:%.*]] = fcmp ole float [[X]], 1.000000e+00
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMP1]], float 1.000000e+00, float [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMP1]], float 1.000000e+00, float [[MIN]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %cmp2 = fcmp ult float %x, 255.0                  ; x is NaN => true
@@ -297,9 +297,9 @@ define float @clamp_float_ordered_strict_minmax1(float %x) {
 define float @clamp_float_ordered_strict_minmax2(float %x) {
 ; CHECK-LABEL: @clamp_float_ordered_strict_minmax2(
 ; CHECK-NEXT:    [[CMP2_INV:%.*]] = fcmp ole float [[X:%.*]], 1.000000e+00
-; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[CMP2_INV]], float 1.000000e+00, float [[X]]
+; CHECK-NEXT:    [[MAX:%.*]] = select i1 [[CMP2_INV]], float 1.000000e+00, float [[X]]
 ; CHECK-NEXT:    [[CMP1:%.*]] = fcmp ogt float [[X]], 2.550000e+02
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMP1]], float 2.550000e+02, float [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMP1]], float 2.550000e+02, float [[MAX]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %cmp2 = fcmp ugt float %x, 1.0                    ; x is NaN => true
@@ -328,9 +328,9 @@ define float @clamp_float_ordered_nonstrict_minmax1(float %x) {
 define float @clamp_float_ordered_nonstrict_minmax2(float %x) {
 ; CHECK-LABEL: @clamp_float_ordered_nonstrict_minmax2(
 ; CHECK-NEXT:    [[CMP2_INV:%.*]] = fcmp ole float [[X:%.*]], 1.000000e+00
-; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[CMP2_INV]], float 1.000000e+00, float [[X]]
+; CHECK-NEXT:    [[MAX:%.*]] = select i1 [[CMP2_INV]], float 1.000000e+00, float [[X]]
 ; CHECK-NEXT:    [[CMP1:%.*]] = fcmp oge float [[X]], 2.550000e+02
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMP1]], float 2.550000e+02, float [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMP1]], float 2.550000e+02, float [[MAX]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %cmp2 = fcmp ugt float %x, 1.0                    ; x is NaN => true
@@ -362,9 +362,9 @@ define float @clamp_float_unordered_strict_maxmin1(float %x) {
 define float @clamp_float_unordered_strict_maxmin2(float %x) {
 ; CHECK-LABEL: @clamp_float_unordered_strict_maxmin2(
 ; CHECK-NEXT:    [[CMP2_INV:%.*]] = fcmp oge float [[X:%.*]], 2.550000e+02
-; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[CMP2_INV]], float 2.550000e+02, float [[X]]
+; CHECK-NEXT:    [[MIN:%.*]] = select i1 [[CMP2_INV]], float 2.550000e+02, float [[X]]
 ; CHECK-NEXT:    [[CMP1:%.*]] = fcmp ult float [[X]], 1.000000e+00
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMP1]], float 1.000000e+00, float [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMP1]], float 1.000000e+00, float [[MIN]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %cmp2 = fcmp ult float %x, 255.0                  ; x is NaN => true
@@ -393,9 +393,9 @@ define float @clamp_float_unordered_nonstrict_maxmin1(float %x) {
 define float @clamp_float_unordered_nonstrict_maxmin2(float %x) {
 ; CHECK-LABEL: @clamp_float_unordered_nonstrict_maxmin2(
 ; CHECK-NEXT:    [[CMP2_INV:%.*]] = fcmp oge float [[X:%.*]], 2.550000e+02
-; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[CMP2_INV]], float 2.550000e+02, float [[X]]
+; CHECK-NEXT:    [[MIN:%.*]] = select i1 [[CMP2_INV]], float 2.550000e+02, float [[X]]
 ; CHECK-NEXT:    [[CMP1:%.*]] = fcmp ule float [[X]], 1.000000e+00
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMP1]], float 1.000000e+00, float [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMP1]], float 1.000000e+00, float [[MIN]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %cmp2 = fcmp ult float %x, 255.0                  ; x is NaN => true
@@ -424,9 +424,9 @@ define float @clamp_float_unordered_strict_minmax1(float %x) {
 define float @clamp_float_unordered_strict_minmax2(float %x) {
 ; CHECK-LABEL: @clamp_float_unordered_strict_minmax2(
 ; CHECK-NEXT:    [[CMP2_INV:%.*]] = fcmp ole float [[X:%.*]], 1.000000e+00
-; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[CMP2_INV]], float 1.000000e+00, float [[X]]
+; CHECK-NEXT:    [[MAX:%.*]] = select i1 [[CMP2_INV]], float 1.000000e+00, float [[X]]
 ; CHECK-NEXT:    [[CMP1:%.*]] = fcmp ugt float [[X]], 2.550000e+02
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMP1]], float 2.550000e+02, float [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMP1]], float 2.550000e+02, float [[MAX]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %cmp2 = fcmp ugt float %x, 1.0                    ; x is NaN => true
@@ -455,9 +455,9 @@ define float @clamp_float_unordered_nonstrict_minmax1(float %x) {
 define float @clamp_float_unordered_nonstrict_minmax2(float %x) {
 ; CHECK-LABEL: @clamp_float_unordered_nonstrict_minmax2(
 ; CHECK-NEXT:    [[CMP2_INV:%.*]] = fcmp ole float [[X:%.*]], 1.000000e+00
-; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[CMP2_INV]], float 1.000000e+00, float [[X]]
+; CHECK-NEXT:    [[MAX:%.*]] = select i1 [[CMP2_INV]], float 1.000000e+00, float [[X]]
 ; CHECK-NEXT:    [[CMP1:%.*]] = fcmp uge float [[X]], 2.550000e+02
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMP1]], float 2.550000e+02, float [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMP1]], float 2.550000e+02, float [[MAX]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %cmp2 = fcmp ugt float %x, 1.0                    ; x is NaN => true
@@ -471,9 +471,9 @@ define float @clamp_float_unordered_nonstrict_minmax2(float %x) {
 define float @ui32_clamp_and_cast_to_float(i32 %x) {
 ; CHECK-LABEL: @ui32_clamp_and_cast_to_float(
 ; CHECK-NEXT:    [[LO_CMP:%.*]] = icmp eq i32 [[X:%.*]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.umin.i32(i32 [[X]], i32 255)
-; CHECK-NEXT:    [[TMP2:%.*]] = uitofp i32 [[TMP1]] to float
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[LO_CMP]], float 1.000000e+00, float [[TMP2]]
+; CHECK-NEXT:    [[MIN1:%.*]] = call i32 @llvm.umin.i32(i32 [[X]], i32 255)
+; CHECK-NEXT:    [[MIN:%.*]] = uitofp i32 [[MIN1]] to float
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[LO_CMP]], float 1.000000e+00, float [[MIN]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %f_x = uitofp i32 %x to float
@@ -487,9 +487,9 @@ define float @ui32_clamp_and_cast_to_float(i32 %x) {
 define float @ui64_clamp_and_cast_to_float(i64 %x) {
 ; CHECK-LABEL: @ui64_clamp_and_cast_to_float(
 ; CHECK-NEXT:    [[LO_CMP:%.*]] = icmp eq i64 [[X:%.*]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.umin.i64(i64 [[X]], i64 255)
-; CHECK-NEXT:    [[TMP2:%.*]] = uitofp i64 [[TMP1]] to float
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[LO_CMP]], float 1.000000e+00, float [[TMP2]]
+; CHECK-NEXT:    [[MIN1:%.*]] = call i64 @llvm.umin.i64(i64 [[X]], i64 255)
+; CHECK-NEXT:    [[MIN:%.*]] = uitofp i64 [[MIN1]] to float
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[LO_CMP]], float 1.000000e+00, float [[MIN]]
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %f_x = uitofp i64 %x to float
@@ -502,10 +502,10 @@ define float @ui64_clamp_and_cast_to_float(i64 %x) {
 
 define float @mixed_clamp_to_float_1(i32 %x) {
 ; CHECK-LABEL: @mixed_clamp_to_float_1(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.smin.i32(i32 [[X:%.*]], i32 255)
-; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.smax.i32(i32 [[TMP1]], i32 1)
-; CHECK-NEXT:    [[TMP3:%.*]] = sitofp i32 [[TMP2]] to float
-; CHECK-NEXT:    ret float [[TMP3]]
+; CHECK-NEXT:    [[SI_MIN:%.*]] = call i32 @llvm.smin.i32(i32 [[X:%.*]], i32 255)
+; CHECK-NEXT:    [[R1:%.*]] = call i32 @llvm.smax.i32(i32 [[SI_MIN]], i32 1)
+; CHECK-NEXT:    [[R:%.*]] = sitofp i32 [[R1]] to float
+; CHECK-NEXT:    ret float [[R]]
 ;
   %si_min_cmp = icmp sgt i32 %x, 255
   %si_min = select i1 %si_min_cmp, i32 255, i32 %x
@@ -537,10 +537,10 @@ define i32 @mixed_clamp_to_i32_1(float %x) {
 
 define float @mixed_clamp_to_float_2(i32 %x) {
 ; CHECK-LABEL: @mixed_clamp_to_float_2(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.smin.i32(i32 [[X:%.*]], i32 255)
-; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.smax.i32(i32 [[TMP1]], i32 1)
-; CHECK-NEXT:    [[TMP3:%.*]] = sitofp i32 [[TMP2]] to float
-; CHECK-NEXT:    ret float [[TMP3]]
+; CHECK-NEXT:    [[SI_MIN:%.*]] = call i32 @llvm.smin.i32(i32 [[X:%.*]], i32 255)
+; CHECK-NEXT:    [[R1:%.*]] = call i32 @llvm.smax.i32(i32 [[SI_MIN]], i32 1)
+; CHECK-NEXT:    [[R:%.*]] = sitofp i32 [[R1]] to float
+; CHECK-NEXT:    ret float [[R]]
 ;
   %si_min_cmp = icmp sgt i32 %x, 255
   %si_min = select i1 %si_min_cmp, i32 255, i32 %x

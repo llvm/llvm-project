@@ -18,8 +18,8 @@
 #include "clang/Tooling/Tooling.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Host.h"
 #include "llvm/Support/JSON.h"
+#include "llvm/TargetParser/Host.h"
 
 #include "ASTSrcLocProcessor.h"
 

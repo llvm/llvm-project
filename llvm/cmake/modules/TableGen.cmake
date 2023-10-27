@@ -6,6 +6,12 @@ include(LLVMDistributionSupport)
 
 function(tablegen project ofn)
   cmake_parse_arguments(ARG "" "" "DEPENDS;EXTRA_INCLUDES" ${ARGN})
+
+  # Override ${project} with ${project}_TABLEGEN_PROJECT
+  if(NOT "${${project}_TABLEGEN_PROJECT}" STREQUAL "")
+    set(project ${${project}_TABLEGEN_PROJECT})
+  endif()
+
   # Validate calling context.
   if(NOT ${project}_TABLEGEN_EXE)
     message(FATAL_ERROR "${project}_TABLEGEN_EXE not set")
@@ -42,24 +48,15 @@ function(tablegen project ofn)
     set(LLVM_TARGET_DEFINITIONS_ABSOLUTE
       ${CMAKE_CURRENT_SOURCE_DIR}/${LLVM_TARGET_DEFINITIONS})
   endif()
-  if (LLVM_ENABLE_DAGISEL_COV)
-    list(FIND ARGN "-gen-dag-isel" idx)
-    if( NOT idx EQUAL -1 )
-      list(APPEND LLVM_TABLEGEN_FLAGS "-instrument-coverage")
-    endif()
+  if (LLVM_ENABLE_DAGISEL_COV AND "-gen-dag-isel" IN_LIST ARGN)
+    list(APPEND LLVM_TABLEGEN_FLAGS "-instrument-coverage")
   endif()
-  if (LLVM_ENABLE_GISEL_COV)
-    list(FIND ARGN "-gen-global-isel" idx)
-    if( NOT idx EQUAL -1 )
-      list(APPEND LLVM_TABLEGEN_FLAGS "-instrument-gisel-coverage")
-      list(APPEND LLVM_TABLEGEN_FLAGS "-gisel-coverage-file=${LLVM_GISEL_COV_PREFIX}all")
-    endif()
+  if (LLVM_ENABLE_GISEL_COV AND "-gen-global-isel" IN_LIST ARGN)
+    list(APPEND LLVM_TABLEGEN_FLAGS "-instrument-gisel-coverage")
+    list(APPEND LLVM_TABLEGEN_FLAGS "-gisel-coverage-file=${LLVM_GISEL_COV_PREFIX}all")
   endif()
-  if (LLVM_OMIT_DAGISEL_COMMENTS)
-    list(FIND ARGN "-gen-dag-isel" idx)
-    if (NOT idx EQUAL -1)
-      list(APPEND LLVM_TABLEGEN_FLAGS "-omit-comments")
-    endif()
+  if (LLVM_OMIT_DAGISEL_COMMENTS AND "-gen-dag-isel" IN_LIST ARGN)
+    list(APPEND LLVM_TABLEGEN_FLAGS "-omit-comments")
   endif()
 
   # MSVC can't support long string literals ("long" > 65534 bytes)[1], so if there's
@@ -146,12 +143,6 @@ macro(add_tablegen target project)
   set(${target}_OLD_LLVM_LINK_COMPONENTS ${LLVM_LINK_COMPONENTS})
   set(LLVM_LINK_COMPONENTS ${LLVM_LINK_COMPONENTS} TableGen)
 
-  # CMake doesn't let compilation units depend on their dependent libraries on some generators.
-  if(NOT CMAKE_GENERATOR MATCHES "Ninja" AND NOT XCODE)
-    # FIXME: It leaks to user, callee of add_tablegen.
-    set(LLVM_ENABLE_OBJLIB ON)
-  endif()
-
   add_llvm_executable(${target} DISABLE_LLVM_LINK_LLVM_DYLIB
     ${ADD_TABLEGEN_UNPARSED_ARGUMENTS})
   set(LLVM_LINK_COMPONENTS ${${target}_OLD_LLVM_LINK_COMPONENTS})
@@ -162,8 +153,22 @@ macro(add_tablegen target project)
       set(${project}_TABLEGEN_DEFAULT "${LLVM_NATIVE_TOOL_DIR}/${target}${LLVM_HOST_EXECUTABLE_SUFFIX}")
     endif()
   endif()
-  set(${project}_TABLEGEN "${${project}_TABLEGEN_DEFAULT}" CACHE
+
+  # FIXME: Quick fix to reflect LLVM_TABLEGEN to llvm-min-tblgen
+  if("${target}" STREQUAL "llvm-min-tblgen"
+      AND NOT "${LLVM_TABLEGEN}" STREQUAL ""
+      AND NOT "${LLVM_TABLEGEN}" STREQUAL "llvm-tblgen")
+    set(${project}_TABLEGEN_DEFAULT "${LLVM_TABLEGEN}")
+  endif()
+
+  if(ADD_TABLEGEN_EXPORT)
+    set(${project}_TABLEGEN "${${project}_TABLEGEN_DEFAULT}" CACHE
       STRING "Native TableGen executable. Saves building one when cross-compiling.")
+  else()
+    # Internal tablegen
+    set(${project}_TABLEGEN "${${project}_TABLEGEN_DEFAULT}")
+    set_target_properties(${target} PROPERTIES EXCLUDE_FROM_ALL ON)
+  endif()
 
   # Effective tblgen executable to be used:
   set(${project}_TABLEGEN_EXE ${${project}_TABLEGEN} PARENT_SCOPE)
@@ -177,16 +182,8 @@ macro(add_tablegen target project)
       build_native_tool(${target} ${project}_TABLEGEN_EXE DEPENDS ${target})
       set(${project}_TABLEGEN_EXE ${${project}_TABLEGEN_EXE} PARENT_SCOPE)
 
-      add_custom_target(${project}-tablegen-host DEPENDS ${${project}_TABLEGEN_EXE})
-      set(${project}_TABLEGEN_TARGET ${project}-tablegen-host PARENT_SCOPE)
-
-      # Create an artificial dependency between tablegen projects, because they
-      # compile the same dependencies, thus using the same build folders.
-      # FIXME: A proper fix requires sequentially chaining tablegens.
-      if (NOT ${project} STREQUAL LLVM AND TARGET ${project}-tablegen-host AND
-          TARGET LLVM-tablegen-host)
-        add_dependencies(${project}-tablegen-host LLVM-tablegen-host)
-      endif()
+      add_custom_target(${target}-host DEPENDS ${${project}_TABLEGEN_EXE})
+      set(${project}_TABLEGEN_TARGET ${target}-host PARENT_SCOPE)
 
       # If we're using the host tablegen, and utils were not requested, we have no
       # need to build this tablegen.

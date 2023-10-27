@@ -72,7 +72,7 @@ InputSectionBase::InputSectionBase(InputFile *file, uint64_t flags,
   // If SHF_COMPRESSED is set, parse the header. The legacy .zdebug format is no
   // longer supported.
   if (flags & SHF_COMPRESSED)
-    invokeELFT(parseCompressedHeader);
+    invokeELFT(parseCompressedHeader,);
 }
 
 // Drop SHF_GROUP bit unless we are producing a re-linkable object file.
@@ -349,29 +349,61 @@ InputSectionBase *InputSection::getRelocatedSection() const {
   return sections[info];
 }
 
+template <class ELFT, class RelTy>
+void InputSection::copyRelocations(uint8_t *buf) {
+  if (config->relax && !config->relocatable && config->emachine == EM_RISCV) {
+    // On RISC-V, relaxation might change relocations: copy from internal ones
+    // that are updated by relaxation.
+    InputSectionBase *sec = getRelocatedSection();
+    copyRelocations<ELFT, RelTy>(buf, llvm::make_range(sec->relocations.begin(),
+                                                       sec->relocations.end()));
+  } else {
+    // Convert the raw relocations in the input section into Relocation objects
+    // suitable to be used by copyRelocations below.
+    struct MapRel {
+      const ObjFile<ELFT> &file;
+      Relocation operator()(const RelTy &rel) const {
+        // RelExpr is not used so set to a dummy value.
+        return Relocation{R_NONE, rel.getType(config->isMips64EL), rel.r_offset,
+                          getAddend<ELFT>(rel), &file.getRelocTargetSym(rel)};
+      }
+    };
+
+    using RawRels = ArrayRef<RelTy>;
+    using MapRelIter =
+        llvm::mapped_iterator<typename RawRels::iterator, MapRel>;
+    auto mapRel = MapRel{*getFile<ELFT>()};
+    RawRels rawRels = getDataAs<RelTy>();
+    auto rels = llvm::make_range(MapRelIter(rawRels.begin(), mapRel),
+                                 MapRelIter(rawRels.end(), mapRel));
+    copyRelocations<ELFT, RelTy>(buf, rels);
+  }
+}
+
 // This is used for -r and --emit-relocs. We can't use memcpy to copy
 // relocations because we need to update symbol table offset and section index
 // for each relocation. So we copy relocations one by one.
-template <class ELFT, class RelTy>
-void InputSection::copyRelocations(uint8_t *buf, ArrayRef<RelTy> rels) {
+template <class ELFT, class RelTy, class RelIt>
+void InputSection::copyRelocations(uint8_t *buf,
+                                   llvm::iterator_range<RelIt> rels) {
   const TargetInfo &target = *elf::target;
   InputSectionBase *sec = getRelocatedSection();
   (void)sec->contentMaybeDecompress(); // uncompress if needed
 
-  for (const RelTy &rel : rels) {
-    RelType type = rel.getType(config->isMips64EL);
+  for (const Relocation &rel : rels) {
+    RelType type = rel.type;
     const ObjFile<ELFT> *file = getFile<ELFT>();
-    Symbol &sym = file->getRelocTargetSym(rel);
+    Symbol &sym = *rel.sym;
 
     auto *p = reinterpret_cast<typename ELFT::Rela *>(buf);
     buf += sizeof(RelTy);
 
     if (RelTy::IsRela)
-      p->r_addend = getAddend<ELFT>(rel);
+      p->r_addend = rel.addend;
 
     // Output section VA is zero for -r, so r_offset is an offset within the
     // section, but for --emit-relocs it is a virtual address.
-    p->r_offset = sec->getVA(rel.r_offset);
+    p->r_offset = sec->getVA(rel.offset);
     p->setSymbolAndType(in.symTab->getSymbolIndex(&sym), type,
                         config->isMips64EL);
 
@@ -408,8 +440,8 @@ void InputSection::copyRelocations(uint8_t *buf, ArrayRef<RelTy> rels) {
         continue;
       }
 
-      int64_t addend = getAddend<ELFT>(rel);
-      const uint8_t *bufLoc = sec->content().begin() + rel.r_offset;
+      int64_t addend = rel.addend;
+      const uint8_t *bufLoc = sec->content().begin() + rel.offset;
       if (!RelTy::IsRela)
         addend = target.getImplicitAddend(bufLoc, type);
 
@@ -431,8 +463,14 @@ void InputSection::copyRelocations(uint8_t *buf, ArrayRef<RelTy> rels) {
 
       if (RelTy::IsRela)
         p->r_addend = sym.getVA(addend) - section->getOutputSection()->addr;
-      else if (config->relocatable && type != target.noneRel)
-        sec->addReloc({R_ABS, type, rel.r_offset, addend, &sym});
+      // For SHF_ALLOC sections relocated by REL, append a relocation to
+      // sec->relocations so that relocateAlloc transitively called by
+      // writeSections will update the implicit addend. Non-SHF_ALLOC sections
+      // utilize relocateNonAlloc to process raw relocations and do not need
+      // this sec->relocations change.
+      else if (config->relocatable && (sec->flags & SHF_ALLOC) &&
+               type != target.noneRel)
+        sec->addReloc({R_ABS, type, rel.offset, addend, &sym});
     } else if (config->emachine == EM_PPC && type == R_PPC_PLTREL24 &&
                p->r_addend >= 0x8000 && sec->file->ppc32Got2) {
       // Similar to R_MIPS_GPREL{16,32}. If the addend of R_PPC_PLTREL24
@@ -517,6 +555,7 @@ static uint64_t getRISCVUndefinedRelativeWeakVA(uint64_t type, uint64_t p) {
   case R_RISCV_CALL_PLT:
   case R_RISCV_RVC_BRANCH:
   case R_RISCV_RVC_JUMP:
+  case R_RISCV_PLT32:
     return p;
   default:
     return 0;
@@ -609,6 +648,7 @@ static int64_t getTlsTpOffset(const Symbol &s) {
     // to allow a signed 16-bit offset to reach 0x1000 of TCB/thread-library
     // data and 0xf000 of the program's TLS segment.
     return s.getVA(0) + (tls->p_vaddr & (tls->p_align - 1)) - 0x7000;
+  case EM_LOONGARCH:
   case EM_RISCV:
     return s.getVA(0) + (tls->p_vaddr & (tls->p_align - 1));
 
@@ -643,6 +683,14 @@ uint64_t InputSectionBase::getRelocTargetVA(const InputFile *file, RelType type,
   case R_GOT:
   case R_RELAX_TLS_GD_TO_IE_ABS:
     return sym.getGotVA() + a;
+  case R_LOONGARCH_GOT:
+    // The LoongArch TLS GD relocs reuse the R_LARCH_GOT_PC_LO12 reloc type
+    // for their page offsets. The arithmetics are different in the TLS case
+    // so we have to duplicate some logic here.
+    if (sym.hasFlag(NEEDS_TLSGD) && type != R_LARCH_TLS_IE_PC_LO12)
+      // Like R_LOONGARCH_TLSGD_PAGE_PC but taking the absolute value.
+      return in.got->getGlobalDynAddr(sym) + a;
+    return getRelocTargetVA(file, type, a, p, sym, R_GOT);
   case R_GOTONLY_PC:
     return in.got->getVA() + a - p;
   case R_GOTPLTONLY_PC:
@@ -667,6 +715,10 @@ uint64_t InputSectionBase::getRelocTargetVA(const InputFile *file, RelType type,
   case R_GOT_PC:
   case R_RELAX_TLS_GD_TO_IE:
     return sym.getGotVA() + a - p;
+  case R_LOONGARCH_GOT_PAGE_PC:
+    if (sym.hasFlag(NEEDS_TLSGD))
+      return getLoongArchPageDelta(in.got->getGlobalDynAddr(sym) + a, p);
+    return getLoongArchPageDelta(sym.getGotVA() + a, p);
   case R_MIPS_GOTREL:
     return sym.getVA(a) - in.mipsGot->getGp(file);
   case R_MIPS_GOT_GP:
@@ -715,6 +767,8 @@ uint64_t InputSectionBase::getRelocTargetVA(const InputFile *file, RelType type,
                               *hiRel->sym, hiRel->expr);
     return 0;
   }
+  case R_LOONGARCH_PAGE_PC:
+    return getLoongArchPageDelta(sym.getVA(a), p);
   case R_PC:
   case R_ARM_PCA: {
     uint64_t dest;
@@ -723,7 +777,7 @@ uint64_t InputSectionBase::getRelocTargetVA(const InputFile *file, RelType type,
       p = p & 0xfffffffc;
     if (sym.isUndefined()) {
       // On ARM and AArch64 a branch to an undefined weak resolves to the next
-      // instruction, otherwise the place. On RISCV, resolve an undefined weak
+      // instruction, otherwise the place. On RISC-V, resolve an undefined weak
       // to the same instruction to cause an infinite loop (making the user
       // aware of the issue) while ensuring no overflow.
       // Note: if the symbol is hidden, its binding has been converted to local,
@@ -748,6 +802,8 @@ uint64_t InputSectionBase::getRelocTargetVA(const InputFile *file, RelType type,
   case R_PLT_PC:
   case R_PPC64_CALL_PLT:
     return sym.getPltVA() + a - p;
+  case R_LOONGARCH_PLT_PAGE_PC:
+    return getLoongArchPageDelta(sym.getPltVA() + a, p);
   case R_PLT_GOTPLT:
     return sym.getPltVA() + a - in.gotPlt->getVA();
   case R_PPC32_PLTREL:
@@ -808,6 +864,8 @@ uint64_t InputSectionBase::getRelocTargetVA(const InputFile *file, RelType type,
     return in.got->getGlobalDynAddr(sym) + a - in.gotPlt->getVA();
   case R_TLSGD_PC:
     return in.got->getGlobalDynAddr(sym) + a - p;
+  case R_LOONGARCH_TLSGD_PAGE_PC:
+    return getLoongArchPageDelta(in.got->getGlobalDynAddr(sym) + a, p);
   case R_TLSLD_GOTPLT:
     return in.got->getVA() + in.got->getTlsIndexOff() + a - in.gotPlt->getVA();
   case R_TLSLD_GOT:
@@ -902,8 +960,10 @@ void InputSection::relocateNonAlloc(uint8_t *buf, ArrayRef<RelTy> rels) {
       }
     }
 
-    // For a relocatable link, only tombstone values are applied.
-    if (config->relocatable)
+    // For a relocatable link, content relocated by RELA remains unchanged and
+    // we can stop here, while content relocated by REL referencing STT_SECTION
+    // needs updating implicit addends.
+    if (config->relocatable && (RelTy::IsRela || sym.type != STT_SECTION))
       continue;
 
     if (expr == R_SIZE) {
@@ -923,7 +983,7 @@ void InputSection::relocateNonAlloc(uint8_t *buf, ArrayRef<RelTy> rels) {
     std::string msg = getLocation(offset) + ": has non-ABS relocation " +
                       toString(type) + " against symbol '" + toString(sym) +
                       "'";
-    if (expr != R_PC && expr != R_ARM_PCA) {
+    if (expr != R_PC) {
       error(msg);
       return;
     }
@@ -935,27 +995,15 @@ void InputSection::relocateNonAlloc(uint8_t *buf, ArrayRef<RelTy> rels) {
     // relocations without any errors and relocate them as if they were at
     // address 0. For bug-compatibility, we accept them with warnings. We
     // know Steel Bank Common Lisp as of 2018 have this bug.
-    warn(msg);
+    //
+    // RELA -r stopped earlier and does not get the warning. Suppress the
+    // warning for REL -r as well
+    // (https://github.com/ClangBuiltLinux/linux/issues/1937).
+    if (RelTy::IsRela || !config->relocatable)
+      warn(msg);
     target.relocateNoSym(
         bufLoc, type,
         SignExtend64<bits>(sym.getVA(addend - offset - outSecOff)));
-  }
-}
-
-// This is used when '-r' is given.
-// For REL targets, InputSection::copyRelocations() may store artificial
-// relocations aimed to update addends. They are handled in relocateAlloc()
-// for allocatable sections, and this function does the same for
-// non-allocatable sections, such as sections with debug information.
-static void relocateNonAllocForRelocatable(InputSection *sec, uint8_t *buf) {
-  const unsigned bits = config->is64 ? 64 : 32;
-
-  for (const Relocation &rel : sec->relocs()) {
-    // InputSection::copyRelocations() adds only R_ABS relocations.
-    assert(rel.expr == R_ABS);
-    uint8_t *bufLoc = buf + rel.offset;
-    uint64_t targetVA = SignExtend64(rel.sym->getVA(rel.addend), bits);
-    target->relocate(bufLoc, rel, targetVA);
   }
 }
 
@@ -970,8 +1018,6 @@ void InputSectionBase::relocate(uint8_t *buf, uint8_t *bufEnd) {
   }
 
   auto *sec = cast<InputSection>(this);
-  if (config->relocatable)
-    relocateNonAllocForRelocatable(sec, buf);
   // For a relocatable link, also call relocateNonAlloc() to rewrite applicable
   // locations with tombstone values.
   const RelsOrRelas<ELFT> rels = sec->template relsOrRelas<ELFT>();
@@ -1039,7 +1085,7 @@ void InputSectionBase::adjustSplitStackFunctionPrologues(uint8_t *buf,
 
   for (Relocation &rel : relocs()) {
     // Ignore calls into the split-stack api.
-    if (rel.sym->getName().startswith("__morestack")) {
+    if (rel.sym->getName().starts_with("__morestack")) {
       if (rel.sym->getName().equals("__morestack"))
         morestackCalls.push_back(&rel);
       continue;
@@ -1086,11 +1132,11 @@ template <class ELFT> void InputSection::writeTo(uint8_t *buf) {
   // If -r or --emit-relocs is given, then an InputSection
   // may be a relocation section.
   if (LLVM_UNLIKELY(type == SHT_RELA)) {
-    copyRelocations<ELFT>(buf, getDataAs<typename ELFT::Rela>());
+    copyRelocations<ELFT, typename ELFT::Rela>(buf);
     return;
   }
   if (LLVM_UNLIKELY(type == SHT_REL)) {
-    copyRelocations<ELFT>(buf, getDataAs<typename ELFT::Rel>());
+    copyRelocations<ELFT, typename ELFT::Rel>(buf);
     return;
   }
 
@@ -1240,13 +1286,13 @@ void MergeInputSection::splitStrings(StringRef s, size_t entSize) {
     // Optimize the common case.
     do {
       size_t size = strlen(p);
-      pieces.emplace_back(p - s.begin(), xxHash64(StringRef(p, size)), live);
+      pieces.emplace_back(p - s.begin(), xxh3_64bits(StringRef(p, size)), live);
       p += size + 1;
     } while (p != end);
   } else {
     do {
       size_t size = findNull(StringRef(p, end - p), entSize);
-      pieces.emplace_back(p - s.begin(), xxHash64(StringRef(p, size)), live);
+      pieces.emplace_back(p - s.begin(), xxh3_64bits(StringRef(p, size)), live);
       p += size + entSize;
     } while (p != end);
   }
@@ -1262,7 +1308,7 @@ void MergeInputSection::splitNonStrings(ArrayRef<uint8_t> data,
 
   pieces.resize_for_overwrite(size / entSize);
   for (size_t i = 0, j = 0; i != size; i += entSize, j++)
-    pieces[j] = {i, (uint32_t)xxHash64(data.slice(i, entSize)), live};
+    pieces[j] = {i, (uint32_t)xxh3_64bits(data.slice(i, entSize)), live};
 }
 
 template <class ELFT>

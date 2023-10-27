@@ -1,4 +1,6 @@
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-unknown %s -verify
+// RUN: %clang_cc1 -std=c++2b -triple x86_64-unknown-unknown %s -verify
+
 
 namespace dr2621 { // dr2621: yes
 enum class E { a };
@@ -14,19 +16,42 @@ using enum E; // expected-error {{unknown type name E}}
 }
 }
 
-namespace dr2628 { // dr2628: yes open
+namespace dr2628 { // dr2628: no open
+                   // this was reverted for the 16.x release
+                   // due to regressions, see the issue for more details:
+                   // https://github.com/llvm/llvm-project/issues/60777
 
 template <bool A = false, bool B = false>
 struct foo {
-  constexpr foo() requires (!A && !B) = delete; // #DR2628_CTOR
-  constexpr foo() requires (A || B) = delete;
+  // The expected notes below should be removed when dr2628 is fully implemented again
+  constexpr foo() requires (!A && !B) = delete; // expected-note {{candidate function [with A = false, B = false]}} #DR2628_CTOR
+  constexpr foo() requires (A || B) = delete; // expected-note {{candidate function [with A = false, B = false]}}
 };
 
 void f() {
-  foo fooable; // expected-error {{call to deleted}}
-  // expected-note@#DR2628_CTOR {{marked deleted here}}
+  // The FIXME's below should be the expected errors when dr2628 is
+  // fully implemented again.
+  // FIXME-expected-error {{call to deleted}}
+  foo fooable; // expected-error {{ambiguous deduction for template arguments of 'foo'}}
+  // FIXME-expected-note@#DR2628_CTOR {{marked deleted here}}
 }
 
+}
+
+namespace dr2631 { // dr2631: 16
+  constexpr int g();
+  consteval int f() {
+    return g();
+  }
+  int k(int x = f()) {
+    return x;
+  }
+  constexpr int g() {
+    return 42;
+  }
+  int test() {
+    return k();
+  }
 }
 
 namespace dr2635 { // dr2635: 16
@@ -85,6 +110,7 @@ auto z = [a = 42](int a) { // expected-error {{a lambda parameter cannot shadow 
 
 }
 
+#if __cplusplus >= 202302L
 namespace dr2650 { // dr2650: yes
 template <class T, T> struct S {};
 template <class T> int f(S<T, T{}>*); // expected-note {{type 'X' of non-type template parameter is not a structural type}}
@@ -93,6 +119,16 @@ class X {
 };
 int i0 = f<X>(0);   //expected-error {{no matching function for call to 'f'}}
 }
+#endif
+
+#if __cplusplus >= 202302L
+namespace dr2653 { // dr2653: 18
+  struct Test { void f(this const auto& = Test{}); };
+  // expected-error@-1 {{the explicit object parameter cannot have a default argument}}
+  auto L = [](this const auto& = Test{}){};
+  // expected-error@-1 {{the explicit object parameter cannot have a default argument}}
+}
+#endif
 
 namespace dr2654 { // dr2654: 16
 void f() {
@@ -104,18 +140,62 @@ void f() {
 }
 }
 
-namespace dr2631 { // dr2631: 16
-  constexpr int g();
-  consteval int f() {
-    return g();
-  }
-  int k(int x = f()) {
-    return x;
-  }
-  constexpr int g() {
-    return 42;
-  }
-  int test() {
-    return k();
-  }
+namespace dr2681 { // dr2681: 17
+using size_t = decltype(sizeof(int));
+
+template<class T, size_t N>
+struct H {
+  T array[N];
+};
+template<class T, size_t N>
+struct I {
+  volatile T array[N];
+};
+template<size_t N>
+struct J {  // expected-note 3{{candidate}}
+  unsigned char array[N];
+};
+
+H h = { "abc" };
+I i = { "def" };
+static_assert(__is_same(decltype(h), H<char, 4>));  // Not H<const char, 4>
+static_assert(__is_same(decltype(i), I<char, 4>));
+
+J j = { "ghi" };  // expected-error {{no viable constructor or deduction guide}}
 }
+
+namespace dr2672 { // dr2672: 18 open
+template <class T>
+void f(T) requires requires { []() { T::invalid; } (); }; // expected-error{{type 'int' cannot be used prior to '::'}}
+                                                          // expected-note@-1{{while substituting into a lambda expression here}}
+                                                          // expected-note@-2{{in instantiation of requirement here}}
+                                                          // expected-note@-3{{while substituting template arguments into constraint expression here}}
+void f(...);
+
+template <class T>
+void bar(T) requires requires {
+   decltype([]() -> T {})::foo();
+};
+void bar(...);
+
+void m() {
+  f(0); // expected-note {{while checking constraint satisfaction for template 'f<int>' required here}}
+        // expected-note@-1 {{in instantiation of function template specialization}}
+  bar(0);
+}
+}
+#if __cplusplus >= 202302L
+namespace dr2687 { // dr2687: 18
+struct S{
+    void f(int);
+    static void g(int);
+    void h(this const S&, int);
+};
+
+void test() {
+    (&S::f)(1); // expected-error {{called object type 'void (dr2687::S::*)(int)' is not a function or function pointer}}
+    (&S::g)(1);
+    (&S::h)(S(), 1);
+}
+}
+#endif

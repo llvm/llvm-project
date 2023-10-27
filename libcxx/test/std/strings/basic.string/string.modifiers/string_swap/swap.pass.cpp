@@ -19,16 +19,14 @@
 #include "min_allocator.h"
 
 template <class S>
-TEST_CONSTEXPR_CXX20 void
-test(S s1, S s2)
-{
-    S s1_ = s1;
-    S s2_ = s2;
-    s1.swap(s2);
-    LIBCPP_ASSERT(s1.__invariants());
-    LIBCPP_ASSERT(s2.__invariants());
-    assert(s1 == s2_);
-    assert(s2 == s1_);
+TEST_CONSTEXPR_CXX20 void test(S s1, S s2) {
+  S s1_ = s1;
+  S s2_ = s2;
+  s1.swap(s2);
+  LIBCPP_ASSERT(s1.__invariants());
+  LIBCPP_ASSERT(s2.__invariants());
+  assert(s1 == s2_);
+  assert(s2 == s1_);
 }
 
 template <class S>
@@ -60,8 +58,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
   return true;
 }
 
-int main(int, char**)
-{
+int main(int, char**) {
   test();
 #if TEST_STD_VER > 17
   static_assert(test());

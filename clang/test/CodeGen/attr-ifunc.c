@@ -12,6 +12,7 @@ void bar(void) __attribute__((ifunc("foo")));
 void *f1_ifunc(void);
 void f1(void) __attribute__((ifunc("f1_ifunc")));
 // expected-error@-1 {{ifunc must point to a defined function}}
+// expected-note@-2 {{must refer to its mangled name}}
 
 void *f2_a(void) __attribute__((alias("f2_b")));
 void *f2_b(void) __attribute__((ifunc("f2_a")));

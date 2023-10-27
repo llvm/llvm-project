@@ -2,9 +2,9 @@
 ; RUN: opt < %s -passes=loop-vectorize -mtriple riscv64 -riscv-v-vector-bits-min=128 -mattr="+v" -debug-only=loop-vectorize -S 2>&1 | FileCheck %s
 
 ; CHECK: LV: Loop hints: force=enabled
-; CHECK: LV: Scalar loop costs: 7.
-; ChosenFactor.Cost is 8, but the real cost will be divided by the width, which is 4.
-; CHECK: LV: Vector loop of width 2 costs: 3.
+; CHECK: LV: Scalar loop costs: 4.
+; ChosenFactor.Cost is 4, but the real cost will be divided by the width, which is 2.
+; CHECK: LV: Vector loop of width 2 costs: 2.
 ; Regardless of force vectorization or not, this loop will eventually be vectorized because of the cost model.
 ; Therefore, the following message does not need to be printed even if vectorization is explicitly forced in the metadata.
 ; CHECK-NOT: LV: Vectorization seems to be not beneficial, but was forced by a user.

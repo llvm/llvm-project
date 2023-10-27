@@ -31,12 +31,12 @@ void IdDependentBackwardBranchCheck::registerMatchers(MatchFinder *Finder) {
               stmt(
                   anyOf(declStmt(hasDescendant(varDecl(hasInitializer(ThreadID))
                                                    .bind("tid_dep_var"))),
-                        binaryOperator(allOf(
+                        binaryOperator(
                             isAssignmentOperator(), hasRHS(ThreadID),
                             hasLHS(anyOf(
                                 declRefExpr(to(varDecl().bind("tid_dep_var"))),
                                 memberExpr(member(
-                                    fieldDecl().bind("tid_dep_field")))))))))
+                                    fieldDecl().bind("tid_dep_field"))))))))
                   .bind("straight_assignment"))),
       this);
 
@@ -241,18 +241,17 @@ void IdDependentBackwardBranchCheck::check(
     IdDependencyRecord *IdDepVar = hasIdDepVar(CondExpr);
     IdDependencyRecord *IdDepField = hasIdDepField(CondExpr);
     if (IdDepVar) {
-      // Change one of these to a Note
-      diag(IdDepVar->Location, IdDepVar->Message, DiagnosticIDs::Note);
       diag(CondExpr->getBeginLoc(),
            "backward branch (%select{do|while|for}0 loop) is ID-dependent due "
            "to variable reference to %1 and may cause performance degradation")
           << Type << IdDepVar->VariableDeclaration;
+      diag(IdDepVar->Location, IdDepVar->Message, DiagnosticIDs::Note);
     } else if (IdDepField) {
-      diag(IdDepField->Location, IdDepField->Message, DiagnosticIDs::Note);
       diag(CondExpr->getBeginLoc(),
            "backward branch (%select{do|while|for}0 loop) is ID-dependent due "
            "to member reference to %1 and may cause performance degradation")
           << Type << IdDepField->FieldDeclaration;
+      diag(IdDepField->Location, IdDepField->Message, DiagnosticIDs::Note);
     }
   }
 }

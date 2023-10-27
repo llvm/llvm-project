@@ -431,6 +431,21 @@ FLAGS_ENUM(WatchpointEventType){
     eWatchpointEventTypeThreadChanged = (1u << 11),
     eWatchpointEventTypeTypeChanged = (1u << 12)};
 
+enum WatchpointWriteType {
+  /// Don't stop when the watched memory region is written to.
+  eWatchpointWriteTypeDisabled,
+  /// Stop on any write access to the memory region, even if
+  /// the value doesn't change.  On some architectures, a write
+  /// near the memory region may be falsely reported as a match,
+  /// and notify this spurious stop as a watchpoint trap.
+  eWatchpointWriteTypeAlways,
+  /// Stop on a write to the memory region that changes its value.
+  /// This is most likely the behavior a user expects, and is the
+  /// behavior in gdb.  lldb can silently ignore writes near the
+  /// watched memory region that are reported as accesses to lldb.
+  eWatchpointWriteTypeOnModify
+};
+
 /// Programming language type.
 ///
 /// These enumerations use the same language enumerations as the DWARF
@@ -479,13 +494,30 @@ enum LanguageType {
   eLanguageTypeC_plus_plus_14 = 0x0021, ///< ISO C++:2014.
   eLanguageTypeFortran03 = 0x0022,      ///< ISO Fortran 2003.
   eLanguageTypeFortran08 = 0x0023,      ///< ISO Fortran 2008.
+  eLanguageTypeRenderScript = 0x0024,
+  eLanguageTypeBLISS = 0x0025,
+  eLanguageTypeKotlin = 0x0026,
+  eLanguageTypeZig = 0x0027,
+  eLanguageTypeCrystal = 0x0028,
+  eLanguageTypeC_plus_plus_17 = 0x002a, ///< ISO C++:2017.
+  eLanguageTypeC_plus_plus_20 = 0x002b, ///< ISO C++:2020.
+  eLanguageTypeC17 = 0x002c,
+  eLanguageTypeFortran18 = 0x002d,
+  eLanguageTypeAda2005 = 0x002e,
+  eLanguageTypeAda2012 = 0x002f,
+  eLanguageTypeHIP = 0x0030,
+  eLanguageTypeAssembly = 0x0031,
+  eLanguageTypeC_sharp = 0x0032,
+  eLanguageTypeMojo = 0x0033,
+
   // Vendor Extensions
   // Note: Language::GetNameForLanguageType
   // assumes these can be used as indexes into array language_names, and
   // Language::SetLanguageFromCString and Language::AsCString assume these can
   // be used as indexes into array g_languages.
-  eLanguageTypeMipsAssembler = 0x0024,   ///< Mips_Assembler.
-  eLanguageTypeExtRenderScript = 0x0025, ///< RenderScript.
+  eLanguageTypeMipsAssembler, ///< Mips_Assembler.
+  // Mojo will move to the common list of languages once the DWARF committee
+  // creates a language code for it.
   eNumLanguageTypes
 };
 
@@ -615,6 +647,7 @@ enum CommandArgumentType {
   eArgTypeConnectURL,
   eArgTypeTargetID,
   eArgTypeStopHookID,
+  eArgTypeCompletionType,
   eArgTypeLastArg // Always keep this entry as the last entry in this
                   // enumeration!!
 };
@@ -720,6 +753,8 @@ enum SectionType {
   eSectionTypeDWARFDebugLocDwo,
   eSectionTypeDWARFDebugLocListsDwo,
   eSectionTypeDWARFDebugTuIndex,
+  eSectionTypeCTF,
+  eSectionTypeSwiftModules,
 };
 
 FLAGS_ENUM(EmulateInstructionOptions){
@@ -805,7 +840,9 @@ enum StructuredDataType {
   eStructuredDataTypeFloat,
   eStructuredDataTypeBoolean,
   eStructuredDataTypeString,
-  eStructuredDataTypeDictionary
+  eStructuredDataTypeDictionary,
+  eStructuredDataTypeSignedInteger,
+  eStructuredDataTypeUnsignedInteger = eStructuredDataTypeInteger,
 };
 
 FLAGS_ENUM(TypeClass){
@@ -1218,6 +1255,48 @@ enum DWIMPrintVerbosity {
   /// Always print a message indicating how `dwim-print` is evaluating its
   /// expression.
   eDWIMPrintVerbosityFull,
+};
+
+enum WatchpointValueKind {
+  eWatchPointValueKindInvalid = 0,
+  ///< Watchpoint was created watching a variable
+  eWatchPointValueKindVariable = 1,
+  ///< Watchpoint was created watching the result of an expression that was
+  ///< evaluated at creation time.
+  eWatchPointValueKindExpression = 2,
+};
+
+enum CompletionType {
+  eNoCompletion = 0u,
+  eSourceFileCompletion = (1u << 0),
+  eDiskFileCompletion = (1u << 1),
+  eDiskDirectoryCompletion = (1u << 2),
+  eSymbolCompletion = (1u << 3),
+  eModuleCompletion = (1u << 4),
+  eSettingsNameCompletion = (1u << 5),
+  ePlatformPluginCompletion = (1u << 6),
+  eArchitectureCompletion = (1u << 7),
+  eVariablePathCompletion = (1u << 8),
+  eRegisterCompletion = (1u << 9),
+  eBreakpointCompletion = (1u << 10),
+  eProcessPluginCompletion = (1u << 11),
+  eDisassemblyFlavorCompletion = (1u << 12),
+  eTypeLanguageCompletion = (1u << 13),
+  eFrameIndexCompletion = (1u << 14),
+  eModuleUUIDCompletion = (1u << 15),
+  eStopHookIDCompletion = (1u << 16),
+  eThreadIndexCompletion = (1u << 17),
+  eWatchpointIDCompletion = (1u << 18),
+  eBreakpointNameCompletion = (1u << 19),
+  eProcessIDCompletion = (1u << 20),
+  eProcessNameCompletion = (1u << 21),
+  eRemoteDiskFileCompletion = (1u << 22),
+  eRemoteDiskDirectoryCompletion = (1u << 23),
+  eTypeCategoryNameCompletion = (1u << 24),
+  // This item serves two purposes.  It is the last element in the enum, so
+  // you can add custom enums starting from here in your Option class. Also
+  // if you & in this bit the base code will not process the option.
+  eCustomCompletion = (1u << 25)
 };
 
 } // namespace lldb

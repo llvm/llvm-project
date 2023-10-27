@@ -29,26 +29,18 @@
 namespace llvm {
 namespace dsymutil {
 
-class BinaryHolder;
-
 /// Extract the DebugMaps from the given file.
 /// The file has to be a MachO object file. Multiple debug maps can be
 /// returned when the file is universal (aka fat) binary.
 ErrorOr<std::vector<std::unique_ptr<DebugMap>>>
 parseDebugMap(llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
               StringRef InputFile, ArrayRef<std::string> Archs,
-              StringRef PrependPath, bool PaperTrailWarnings, bool Verbose,
-              bool InputIsYAML);
+              StringRef PrependPath, bool Verbose, bool InputIsYAML);
 
 /// Dump the symbol table.
 bool dumpStab(llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
               StringRef InputFile, ArrayRef<std::string> Archs,
               StringRef PrependPath = "");
-
-/// Link the Dwarf debug info as directed by the passed DebugMap \p DM into a
-/// DwarfFile named \p OutputFilename. \returns false if the link failed.
-bool linkDwarf(raw_fd_ostream &OutFile, BinaryHolder &BinHolder,
-               const DebugMap &DM, LinkOptions Options);
 
 } // end namespace dsymutil
 } // end namespace llvm

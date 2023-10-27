@@ -299,7 +299,7 @@ multiclass VOPC_Pseudos <string opName,
     let isCommutable = 1;
   }
 
-  foreach _ = BoolToList<P.HasExtSDWA>.ret in
+  if P.HasExtSDWA then
   def _sdwa : VOPC_SDWA_Pseudo <opName, P> {
     let Defs = !if(DefExec, [EXEC], []);
     let SchedRW = P.Schedule;
@@ -360,7 +360,7 @@ multiclass VOPCX_Pseudos <string opName,
     let IsVCMPX = 1;
   }
 
-  foreach _ = BoolToList<P_NoSDst.HasExtSDWA>.ret in
+  if P_NoSDst.HasExtSDWA then
   def _nosdst_sdwa : VOPC_SDWA_Pseudo <opName#"_nosdst", P_NoSDst> {
     let Defs = [EXEC];
     let SchedRW = P_NoSDst.Schedule;
@@ -770,7 +770,7 @@ class VOPC_Class_Profile<list<SchedReadWrite> sched, ValueType src0VT, ValueType
   // DPP8 forbids modifiers and can inherit from VOPC_Profile
 
   let Ins64 = (ins Src0Mod:$src0_modifiers, Src0RC64:$src0, Src1RC64:$src1);
-  dag InsPartVOP3DPP = (ins FPVRegInputMods:$src0_modifiers, VGPRSrc_32:$src0, VGPRSrc_32:$src1);
+  dag InsPartVOP3DPP = (ins FPVRegInputMods:$src0_modifiers, VGPRSrc_32:$src0, VRegSrc_32:$src1);
   let InsVOP3Base = !con(InsPartVOP3DPP, !if(HasOpSel, (ins op_sel0:$op_sel),
                                                        (ins)));
   let AsmVOP3Base = "$sdst, $src0_modifiers, $src1";
@@ -831,7 +831,7 @@ class getVOPCClassPat64 <VOPProfile P> {
   list<dag> ret =
     [(set i1:$sdst,
       (AMDGPUfp_class
-        (P.Src0VT (VOP3Mods P.Src0VT:$src0, i32:$src0_modifiers)),
+        (P.Src0VT (VOP3ModsNonCanonicalizing P.Src0VT:$src0, i32:$src0_modifiers)),
         i32:$src1))];
 }
 
@@ -854,7 +854,7 @@ multiclass VOPC_Class_Pseudos <string opName, VOPC_Profile p, bit DefExec,
     let SchedRW = p.Schedule;
   }
 
-  foreach _ = BoolToList<p.HasExtSDWA>.ret in
+  if p.HasExtSDWA then
   def _sdwa : VOPC_SDWA_Pseudo <opName, p> {
     let Defs = !if(DefExec, !if(DefVcc, [VCC, EXEC], [EXEC]),
                             !if(DefVcc, [VCC], []));
@@ -902,7 +902,7 @@ multiclass VOPCX_Class_Pseudos <string opName,
     let SubtargetPredicate = HasNoSdstCMPX;
   }
 
-  foreach _ = BoolToList<P_NoSDst.HasExtSDWA>.ret in
+  if P_NoSDst.HasExtSDWA then
   def _nosdst_sdwa : VOPC_SDWA_Pseudo <opName#"_nosdst", P_NoSDst> {
     let Defs = [EXEC];
     let SchedRW = P_NoSDst.Schedule;
@@ -992,11 +992,18 @@ multiclass ICMP_Pattern <PatFrags cond, Instruction inst, ValueType vt> {
     (i64 (COPY_TO_REGCLASS (inst $src0, $src1), SReg_64))
   >;
 
-  let WaveSizePredicate = isWave32 in
-  def : GCNPat <
-    (i32 (AMDGPUsetcc vt:$src0, vt:$src1, cond)),
-    (i32 (COPY_TO_REGCLASS (inst $src0, $src1), SReg_32))
-  >;
+  let WaveSizePredicate = isWave32 in {
+    def : GCNPat <
+      (i32 (AMDGPUsetcc vt:$src0, vt:$src1, cond)),
+      (i32 (COPY_TO_REGCLASS (inst $src0, $src1), SReg_32))
+    >;
+
+    // Support codegen of i64 setcc in wave32 mode.
+    def : GCNPat <
+      (i64 (AMDGPUsetcc vt:$src0, vt:$src1, cond)),
+      (i64 (REG_SEQUENCE SReg_64, (inst $src0, $src1), sub0, (S_MOV_B32 (i32 0)), sub1))
+    >;
+  }
 }
 
 defm : ICMP_Pattern <COND_EQ, V_CMP_EQ_U32_e64, i32>;
@@ -1056,15 +1063,26 @@ multiclass FCMP_Pattern <PatFrags cond, Instruction inst, ValueType vt> {
                            DSTCLAMP.NONE), SReg_64))
   >;
 
-  let WaveSizePredicate = isWave32 in
-  def : GCNPat <
-    (i32 (AMDGPUsetcc (vt (VOP3Mods vt:$src0, i32:$src0_modifiers)),
-                 (vt (VOP3Mods vt:$src1, i32:$src1_modifiers)), cond)),
-    (i32 (COPY_TO_REGCLASS (inst $src0_modifiers, $src0, $src1_modifiers, $src1,
-                           DSTCLAMP.NONE), SReg_32))
-  >;
+  let WaveSizePredicate = isWave32 in {
+    def : GCNPat <
+      (i32 (AMDGPUsetcc (vt (VOP3Mods vt:$src0, i32:$src0_modifiers)),
+                        (vt (VOP3Mods vt:$src1, i32:$src1_modifiers)), cond)),
+      (i32 (COPY_TO_REGCLASS (inst $src0_modifiers, $src0, $src1_modifiers, $src1,
+                              DSTCLAMP.NONE), SReg_32))
+    >;
+
+    def : GCNPat <
+      (i64 (AMDGPUsetcc (vt (VOP3Mods vt:$src0, i32:$src0_modifiers)),
+                        (vt (VOP3Mods vt:$src1, i32:$src1_modifiers)), cond)),
+      (i64 (REG_SEQUENCE SReg_64, (inst $src0_modifiers, $src0, $src1_modifiers, $src1,
+                                   DSTCLAMP.NONE), sub0,
+                                  (S_MOV_B32 (i32 0)), sub1))
+    >;
+  }
 }
 
+defm : FCMP_Pattern <COND_O, V_CMP_O_F32_e64, f32>;
+defm : FCMP_Pattern <COND_UO, V_CMP_U_F32_e64, f32>;
 defm : FCMP_Pattern <COND_OEQ, V_CMP_EQ_F32_e64, f32>;
 defm : FCMP_Pattern <COND_ONE, V_CMP_NEQ_F32_e64, f32>;
 defm : FCMP_Pattern <COND_OGT, V_CMP_GT_F32_e64, f32>;
@@ -1072,6 +1090,8 @@ defm : FCMP_Pattern <COND_OGE, V_CMP_GE_F32_e64, f32>;
 defm : FCMP_Pattern <COND_OLT, V_CMP_LT_F32_e64, f32>;
 defm : FCMP_Pattern <COND_OLE, V_CMP_LE_F32_e64, f32>;
 
+defm : FCMP_Pattern <COND_O, V_CMP_O_F64_e64, f64>;
+defm : FCMP_Pattern <COND_UO, V_CMP_U_F64_e64, f64>;
 defm : FCMP_Pattern <COND_OEQ, V_CMP_EQ_F64_e64, f64>;
 defm : FCMP_Pattern <COND_ONE, V_CMP_NEQ_F64_e64, f64>;
 defm : FCMP_Pattern <COND_OGT, V_CMP_GT_F64_e64, f64>;
@@ -1094,6 +1114,8 @@ defm : FCMP_Pattern <COND_ULT, V_CMP_NGE_F64_e64, f64>;
 defm : FCMP_Pattern <COND_ULE, V_CMP_NGT_F64_e64, f64>;
 
 let OtherPredicates = [HasTrue16BitInsts] in {
+defm : FCMP_Pattern <COND_O, V_CMP_O_F16_t16_e64, f16>;
+defm : FCMP_Pattern <COND_UO, V_CMP_U_F16_t16_e64, f16>;
 defm : FCMP_Pattern <COND_OEQ, V_CMP_EQ_F16_t16_e64, f16>;
 defm : FCMP_Pattern <COND_ONE, V_CMP_NEQ_F16_t16_e64, f16>;
 defm : FCMP_Pattern <COND_OGT, V_CMP_GT_F16_t16_e64, f16>;
@@ -1110,6 +1132,8 @@ defm : FCMP_Pattern <COND_ULE, V_CMP_NGT_F16_t16_e64, f16>;
 } // End OtherPredicates = [HasTrue16BitInsts]
 
 let OtherPredicates = [NotHasTrue16BitInsts] in {
+defm : FCMP_Pattern <COND_O, V_CMP_O_F16_e64, f16>;
+defm : FCMP_Pattern <COND_UO, V_CMP_U_F16_e64, f16>;
 defm : FCMP_Pattern <COND_OEQ, V_CMP_EQ_F16_e64, f16>;
 defm : FCMP_Pattern <COND_ONE, V_CMP_NEQ_F16_e64, f16>;
 defm : FCMP_Pattern <COND_OGT, V_CMP_GT_F16_e64, f16>;
@@ -1320,7 +1344,7 @@ let AssemblerPredicate = isGFX11Only in {
 
     defm : VOPCInstAliases<NAME, "gfx11">;
 
-    foreach _ = BoolToList<ps32.Pfl.HasExtDPP>.ret in {
+    if ps32.Pfl.HasExtDPP then {
       defvar psDPP = !cast<VOP_DPP_Pseudo>(NAME #"_e32" #"_dpp");
       defvar AsmDPP = ps32.Pfl.AsmDPP16;
       let DecoderNamespace = "DPPGFX11" in {
@@ -1352,7 +1376,7 @@ let AssemblerPredicate = isGFX11Only in {
         }
       }
     }
-    foreach _ = BoolToList<ps64.Pfl.HasExtVOP3DPP>.ret in {
+    if ps64.Pfl.HasExtVOP3DPP then {
       defvar psDPP = !cast<VOP_DPP_Pseudo>(NAME #"_e64" #"_dpp");
       defvar AsmDPP = ps64.Pfl.AsmVOP3DPP16;
       let DecoderNamespace = "DPPGFX11" in {
@@ -1419,7 +1443,7 @@ let AssemblerPredicate = isGFX11Only in {
 
     defm : VOPCInstAliases<OpName, "gfx11", NAME, asm_name>;
 
-    foreach _ = BoolToList<ps32.Pfl.HasExtDPP>.ret in {
+    if ps32.Pfl.HasExtDPP then {
       defvar psDPP = !cast<VOP_DPP_Pseudo>(OpName #"_e32" #"_dpp");
       defvar AsmDPP = ps32.Pfl.AsmDPP16;
       let DecoderNamespace = "DPPGFX11" in {
@@ -1456,7 +1480,7 @@ let AssemblerPredicate = isGFX11Only in {
       }
     }
 
-    foreach _ = BoolToList<ps64.Pfl.HasExtVOP3DPP>.ret in {
+    if ps64.Pfl.HasExtVOP3DPP then {
       defvar psDPP = !cast<VOP_DPP_Pseudo>(OpName #"_e64" #"_dpp");
       defvar AsmDPP = ps64.Pfl.AsmVOP3DPP16;
       let DecoderNamespace = "DPPGFX11" in {
@@ -1518,7 +1542,7 @@ let AssemblerPredicate = isGFX11Only in {
 
     defm : VOPCXInstAliases<NAME, "gfx11">;
 
-    foreach _ = BoolToList<ps32.Pfl.HasExtDPP>.ret in {
+    if ps32.Pfl.HasExtDPP then {
       defvar psDPP = !cast<VOP_DPP_Pseudo>(NAME #"_nosdst_e32" #"_dpp");
       defvar AsmDPP = ps32.Pfl.AsmDPP16;
       let DecoderNamespace = "DPPGFX11" in {
@@ -1535,7 +1559,7 @@ let AssemblerPredicate = isGFX11Only in {
       }
     }
 
-    foreach _ = BoolToList<ps64.Pfl.HasExtVOP3DPP>.ret in {
+    if ps64.Pfl.HasExtVOP3DPP then {
       defvar psDPP = !cast<VOP_DPP_Pseudo>(NAME #"_nosdst_e64" #"_dpp");
       defvar AsmDPP = ps64.Pfl.AsmVOP3DPP16;
       let DecoderNamespace = "DPPGFX11" in {
@@ -1584,7 +1608,7 @@ let AssemblerPredicate = isGFX11Only in {
 
     defm : VOPCXInstAliases<OpName, "gfx11", NAME, asm_name>;
 
-    foreach _ = BoolToList<ps32.Pfl.HasExtDPP>.ret in {
+    if ps32.Pfl.HasExtDPP then {
       defvar psDPP = !cast<VOP_DPP_Pseudo>(OpName#"_nosdst_e32"#"_dpp");
       let DecoderNamespace = "DPPGFX11" in {
         def _e32_dpp_gfx11 : VOPC_DPP16_SIMC<op{7-0}, psDPP,
@@ -1594,7 +1618,7 @@ let AssemblerPredicate = isGFX11Only in {
         def _e32_dpp8_gfx11 : VOPC_DPP8<op{7-0}, ps32, asm_name>;
       }
     }
-    foreach _ = BoolToList<ps64.Pfl.HasExtVOP3DPP>.ret in {
+    if ps64.Pfl.HasExtVOP3DPP then {
       defvar psDPP = !cast<VOP_DPP_Pseudo>(OpName#"_nosdst_e64"#"_dpp");
       defvar AsmDPP = ps64.Pfl.AsmVOP3DPP16;
       let DecoderNamespace = "DPPGFX11" in {
@@ -1821,7 +1845,7 @@ let AssemblerPredicate = isGFX10Only in {
       }
     } // End DecoderNamespace = "GFX10"
 
-    foreach _ = BoolToList<!cast<VOPC_Pseudo>(NAME#"_e32").Pfl.HasExtSDWA9>.ret in
+    if !cast<VOPC_Pseudo>(NAME#"_e32").Pfl.HasExtSDWA9 then
     def _sdwa_gfx10 :
       VOP_SDWA10_Real<!cast<VOPC_SDWA_Pseudo>(NAME#"_sdwa")>,
       VOPC_SDWA9e<op{7-0}, !cast<VOPC_SDWA_Pseudo>(NAME#"_sdwa").Pfl>;
@@ -1847,7 +1871,7 @@ let AssemblerPredicate = isGFX10Only in {
         }
     } // End DecoderNamespace = "GFX10"
 
-    foreach _ = BoolToList<!cast<VOPC_Pseudo>(NAME#"_nosdst_e32").Pfl.HasExtSDWA9>.ret in
+    if !cast<VOPC_Pseudo>(NAME#"_nosdst_e32").Pfl.HasExtSDWA9 then
     def _sdwa_gfx10 :
       VOP_SDWA10_Real<!cast<VOPC_SDWA_Pseudo>(NAME#"_nosdst_sdwa")>,
       VOPC_SDWA9e<op{7-0}, !cast<VOPC_SDWA_Pseudo>(NAME#"_nosdst_sdwa").Pfl> {
@@ -2174,12 +2198,12 @@ multiclass VOPC_Real_vi <bits<10> op> {
     }
   }
 
-  foreach _ = BoolToList<!cast<VOPC_Pseudo>(NAME#"_e32").Pfl.HasExtSDWA>.ret in
+  if !cast<VOPC_Pseudo>(NAME#"_e32").Pfl.HasExtSDWA then
   def _sdwa_vi :
     VOP_SDWA_Real <!cast<VOPC_SDWA_Pseudo>(NAME#"_sdwa")>,
     VOPC_SDWAe <op{7-0}, !cast<VOPC_SDWA_Pseudo>(NAME#"_sdwa").Pfl>;
 
-  foreach _ = BoolToList<!cast<VOPC_Pseudo>(NAME#"_e32").Pfl.HasExtSDWA9>.ret in
+  if !cast<VOPC_Pseudo>(NAME#"_e32").Pfl.HasExtSDWA9 then
   def _sdwa_gfx9 :
     VOP_SDWA9_Real <!cast<VOPC_SDWA_Pseudo>(NAME#"_sdwa")>,
     VOPC_SDWA9e <op{7-0}, !cast<VOPC_SDWA_Pseudo>(NAME#"_sdwa").Pfl>;

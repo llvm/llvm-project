@@ -12,9 +12,7 @@
 #include "../ClangTidyCheck.h"
 #include <string>
 
-namespace clang {
-namespace tidy {
-namespace cert {
+namespace clang::tidy::cert {
 
 /// Random number generator must be seeded properly.
 ///
@@ -39,8 +37,6 @@ private:
   SmallVector<StringRef, 5> DisallowedSeedTypes;
 };
 
-} // namespace cert
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::cert
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CERT_PROPERLY_SEEDED_RANDOM_GENERATOR_H

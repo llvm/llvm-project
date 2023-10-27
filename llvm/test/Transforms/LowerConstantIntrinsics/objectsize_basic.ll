@@ -146,3 +146,41 @@ define i64 @test_objectsize_malloc() {
   %objsize = call i64 @llvm.objectsize.i64(ptr %ptr, i1 false, i1 true, i1 true)
   ret i64 %objsize
 }
+
+@gv_weak = weak global i64 zeroinitializer, align 16
+
+define i32 @promote_with_objectsize_min_false() {
+; CHECK-LABEL: @promote_with_objectsize_min_false(
+; CHECK-NEXT:    ret i32 -1
+;
+  %size = call i32 @llvm.objectsize.i32.p0(ptr @gv_weak, i1 false, i1 false, i1 false)
+  ret i32 %size
+}
+
+define i32 @promote_with_objectsize_min_true() {
+; CHECK-LABEL: @promote_with_objectsize_min_true(
+; CHECK-NEXT:    ret i32 8
+;
+  %size = call i32 @llvm.objectsize.i32.p0(ptr @gv_weak, i1 true, i1 false, i1 false)
+  ret i32 %size
+}
+
+@gv_extern = extern_weak global i64, align 16
+
+define i32 @promote_with_objectsize_nullunknown_false() {
+; CHECK-LABEL: @promote_with_objectsize_nullunknown_false(
+; CHECK-NEXT:    ret i32 0
+;
+  %size = call i32 @llvm.objectsize.i32.p0(ptr @gv_extern, i1 true, i1 false, i1 false)
+  ret i32 %size
+}
+
+define i32 @promote_with_objectsize_nullunknown_true() {
+; CHECK-LABEL: @promote_with_objectsize_nullunknown_true(
+; CHECK-NEXT:    ret i32 0
+;
+  %size = call i32 @llvm.objectsize.i32.p0(ptr @gv_extern, i1 true, i1 true, i1 false)
+  ret i32 %size
+}
+
+declare i32 @llvm.objectsize.i32.p0(ptr, i1, i1, i1)

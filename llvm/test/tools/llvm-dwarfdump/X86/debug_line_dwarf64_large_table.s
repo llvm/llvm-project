@@ -18,7 +18,7 @@
 # CHECK-NEXT:           length: 0x00000000
 # CHECK-NEXT: warning: line table program with offset 0x00000000 has length 0xfffffffc but only 0x0000003a bytes are available
 
-# CHECK:      0x000000000badbeef      1      0      1   0             0  is_stmt end_sequence
+# CHECK:      0x000000000badbeef      1      0      1   0             0       0  is_stmt end_sequence
 
 .section .debug_line,"",@progbits
 .long   0xffffffff      # Length of Unit (DWARF-64 format)

@@ -55,6 +55,10 @@ program openacc_parallel_validity
   !$acc parallel num_gangs(8)
   !$acc end parallel
 
+  !ERROR: NUM_GANGS clause accepts a maximum of 3 arguments
+  !$acc parallel num_gangs(1, 1, 1, 1)
+  !$acc end parallel
+
   !$acc parallel num_workers(8)
   !$acc end parallel
 

@@ -102,8 +102,26 @@ Status OptionGroupPythonClassWithDict::SetOptionValue(
       if (!m_dict_sp)
         m_dict_sp = std::make_shared<StructuredData::Dictionary>();
       if (!m_current_key.empty()) {
-          m_dict_sp->AddStringItem(m_current_key, option_arg);
-          m_current_key.clear();
+        if (!option_arg.empty()) {
+          double d = 0;
+          std::string opt = option_arg.lower();
+
+          if (llvm::to_integer(option_arg, d)) {
+            if (opt[0] == '-')
+              m_dict_sp->AddIntegerItem(m_current_key, static_cast<int64_t>(d));
+            else
+              m_dict_sp->AddIntegerItem(m_current_key,
+                                        static_cast<uint64_t>(d));
+          } else if (llvm::to_float(option_arg, d)) {
+            m_dict_sp->AddFloatItem(m_current_key, d);
+          } else if (opt == "true" || opt == "false") {
+            m_dict_sp->AddBooleanItem(m_current_key, opt == "true");
+          } else {
+            m_dict_sp->AddStringItem(m_current_key, option_arg);
+          }
+        }
+
+        m_current_key.clear();
       }
       else
         error.SetErrorStringWithFormat("Value: \"%s\" missing matching key.",

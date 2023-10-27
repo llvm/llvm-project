@@ -24,8 +24,7 @@
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/IR/GlobalValue.h"
-#include "llvm/Support/AArch64TargetParser.h"
-#include "llvm/Support/TargetParser.h"
+#include "llvm/TargetParser/AArch64TargetParser.h"
 
 using namespace llvm;
 
@@ -65,9 +64,18 @@ ReservedRegsForRA("reserve-regs-for-regalloc", cl::desc("Reserve physical "
                   "Should only be used for testing register allocator."),
                   cl::CommaSeparated, cl::Hidden);
 
-static cl::opt<bool>
-    ForceStreamingCompatibleSVE("force-streaming-compatible-sve",
-                                cl::init(false), cl::Hidden);
+static cl::opt<bool> ForceStreamingCompatibleSVE(
+    "force-streaming-compatible-sve",
+    cl::desc(
+        "Force the use of streaming-compatible SVE code for all functions"),
+    cl::Hidden);
+
+static cl::opt<AArch64PAuth::AuthCheckMethod>
+    AuthenticatedLRCheckMethod("aarch64-authenticated-lr-check-method",
+                               cl::Hidden,
+                               cl::desc("Override the variant of check applied "
+                                        "to authenticated LR during tail call"),
+                               cl::values(AUTH_CHECK_METHOD_CL_VALUES_LR));
 
 unsigned AArch64Subtarget::getVectorInsertExtractBaseCost() const {
   if (OverrideVectorInsertExtractBaseCost.getNumOccurrences() > 0)
@@ -104,24 +112,24 @@ void AArch64Subtarget::initializeProperties() {
   case CortexA35:
   case CortexA53:
   case CortexA55:
-    PrefFunctionLogAlignment = 4;
-    PrefLoopLogAlignment = 4;
+    PrefFunctionAlignment = Align(16);
+    PrefLoopAlignment = Align(16);
     MaxBytesForLoopAlignment = 8;
     break;
   case CortexA57:
     MaxInterleaveFactor = 4;
-    PrefFunctionLogAlignment = 4;
-    PrefLoopLogAlignment = 4;
+    PrefFunctionAlignment = Align(16);
+    PrefLoopAlignment = Align(16);
     MaxBytesForLoopAlignment = 8;
     break;
   case CortexA65:
-    PrefFunctionLogAlignment = 3;
+    PrefFunctionAlignment = Align(8);
     break;
   case CortexA72:
   case CortexA73:
   case CortexA75:
-    PrefFunctionLogAlignment = 4;
-    PrefLoopLogAlignment = 4;
+    PrefFunctionAlignment = Align(16);
+    PrefLoopAlignment = Align(16);
     MaxBytesForLoopAlignment = 8;
     break;
   case CortexA76:
@@ -131,29 +139,29 @@ void AArch64Subtarget::initializeProperties() {
   case CortexR82:
   case CortexX1:
   case CortexX1C:
-    PrefFunctionLogAlignment = 4;
-    PrefLoopLogAlignment = 5;
+    PrefFunctionAlignment = Align(16);
+    PrefLoopAlignment = Align(32);
     MaxBytesForLoopAlignment = 16;
     break;
   case CortexA510:
-    PrefFunctionLogAlignment = 4;
+    PrefFunctionAlignment = Align(16);
     VScaleForTuning = 1;
-    PrefLoopLogAlignment = 4;
+    PrefLoopAlignment = Align(16);
     MaxBytesForLoopAlignment = 8;
     break;
   case CortexA710:
   case CortexA715:
   case CortexX2:
   case CortexX3:
-    PrefFunctionLogAlignment = 4;
+    PrefFunctionAlignment = Align(16);
     VScaleForTuning = 1;
-    PrefLoopLogAlignment = 5;
+    PrefLoopAlignment = Align(32);
     MaxBytesForLoopAlignment = 16;
     break;
   case A64FX:
     CacheLineSize = 256;
-    PrefFunctionLogAlignment = 3;
-    PrefLoopLogAlignment = 2;
+    PrefFunctionAlignment = Align(8);
+    PrefLoopAlignment = Align(4);
     MaxInterleaveFactor = 4;
     PrefetchDistance = 128;
     MinPrefetchStride = 1024;
@@ -185,8 +193,8 @@ void AArch64Subtarget::initializeProperties() {
   case ExynosM3:
     MaxInterleaveFactor = 4;
     MaxJumpTableSize = 20;
-    PrefFunctionLogAlignment = 5;
-    PrefLoopLogAlignment = 4;
+    PrefFunctionAlignment = Align(32);
+    PrefLoopAlignment = Align(16);
     break;
   case Falkor:
     MaxInterleaveFactor = 4;
@@ -208,28 +216,29 @@ void AArch64Subtarget::initializeProperties() {
     MinVectorRegisterBitWidth = 128;
     break;
   case NeoverseE1:
-    PrefFunctionLogAlignment = 3;
+    PrefFunctionAlignment = Align(8);
     break;
   case NeoverseN1:
-    PrefFunctionLogAlignment = 4;
-    PrefLoopLogAlignment = 5;
+    PrefFunctionAlignment = Align(16);
+    PrefLoopAlignment = Align(32);
     MaxBytesForLoopAlignment = 16;
     break;
   case NeoverseN2:
   case NeoverseV2:
-    PrefFunctionLogAlignment = 4;
-    PrefLoopLogAlignment = 5;
+    PrefFunctionAlignment = Align(16);
+    PrefLoopAlignment = Align(32);
     MaxBytesForLoopAlignment = 16;
     VScaleForTuning = 1;
     break;
   case NeoverseV1:
-    PrefFunctionLogAlignment = 4;
-    PrefLoopLogAlignment = 5;
+    PrefFunctionAlignment = Align(16);
+    PrefLoopAlignment = Align(32);
     MaxBytesForLoopAlignment = 16;
     VScaleForTuning = 2;
+    DefaultSVETFOpts = TailFoldingOpts::Simple;
     break;
   case Neoverse512TVB:
-    PrefFunctionLogAlignment = 4;
+    PrefFunctionAlignment = Align(16);
     VScaleForTuning = 1;
     MaxInterleaveFactor = 4;
     break;
@@ -240,8 +249,8 @@ void AArch64Subtarget::initializeProperties() {
     break;
   case ThunderX2T99:
     CacheLineSize = 64;
-    PrefFunctionLogAlignment = 3;
-    PrefLoopLogAlignment = 2;
+    PrefFunctionAlignment = Align(8);
+    PrefLoopAlignment = Align(4);
     MaxInterleaveFactor = 4;
     PrefetchDistance = 128;
     MinPrefetchStride = 1024;
@@ -254,20 +263,20 @@ void AArch64Subtarget::initializeProperties() {
   case ThunderXT81:
   case ThunderXT83:
     CacheLineSize = 128;
-    PrefFunctionLogAlignment = 3;
-    PrefLoopLogAlignment = 2;
+    PrefFunctionAlignment = Align(8);
+    PrefLoopAlignment = Align(4);
     // FIXME: remove this to enable 64-bit SLP if performance looks good.
     MinVectorRegisterBitWidth = 128;
     break;
   case TSV110:
     CacheLineSize = 64;
-    PrefFunctionLogAlignment = 4;
-    PrefLoopLogAlignment = 2;
+    PrefFunctionAlignment = Align(16);
+    PrefLoopAlignment = Align(4);
     break;
   case ThunderX3T110:
     CacheLineSize = 64;
-    PrefFunctionLogAlignment = 4;
-    PrefLoopLogAlignment = 2;
+    PrefFunctionAlignment = Align(16);
+    PrefLoopAlignment = Align(4);
     MaxInterleaveFactor = 4;
     PrefetchDistance = 128;
     MinPrefetchStride = 1024;
@@ -276,9 +285,10 @@ void AArch64Subtarget::initializeProperties() {
     MinVectorRegisterBitWidth = 128;
     break;
   case Ampere1:
+  case Ampere1A:
     CacheLineSize = 64;
-    PrefFunctionLogAlignment = 6;
-    PrefLoopLogAlignment = 6;
+    PrefFunctionAlignment = Align(64);
+    PrefLoopAlignment = Align(64);
     MaxInterleaveFactor = 4;
     break;
   }
@@ -289,13 +299,15 @@ AArch64Subtarget::AArch64Subtarget(const Triple &TT, StringRef CPU,
                                    const TargetMachine &TM, bool LittleEndian,
                                    unsigned MinSVEVectorSizeInBitsOverride,
                                    unsigned MaxSVEVectorSizeInBitsOverride,
-                                   bool StreamingSVEModeDisabled)
+                                   bool StreamingSVEMode,
+                                   bool StreamingCompatibleSVEMode)
     : AArch64GenSubtargetInfo(TT, CPU, TuneCPU, FS),
       ReserveXRegister(AArch64::GPR64commonRegClass.getNumRegs()),
       ReserveXRegisterForRA(AArch64::GPR64commonRegClass.getNumRegs()),
       CustomCallSavedXRegs(AArch64::GPR64commonRegClass.getNumRegs()),
       IsLittle(LittleEndian),
-      StreamingSVEModeDisabled(StreamingSVEModeDisabled),
+      StreamingSVEMode(StreamingSVEMode),
+      StreamingCompatibleSVEMode(StreamingCompatibleSVEMode),
       MinSVEVectorSizeInBits(MinSVEVectorSizeInBitsOverride),
       MaxSVEVectorSizeInBits(MaxSVEVectorSizeInBitsOverride), TargetTriple(TT),
       InstrInfo(initializeSubtargetDependencies(FS, CPU, TuneCPU)),
@@ -330,6 +342,8 @@ AArch64Subtarget::AArch64Subtarget(const Triple &TT, StringRef CPU,
   // X29 is named FP, so we can't use TRI->getName to check X29.
   if (ReservedRegNames.count("X29") || ReservedRegNames.count("FP"))
     ReserveXRegisterForRA.set(29);
+
+  AddressCheckPSV.reset(new AddressCheckPseudoSourceValue(TM));
 }
 
 const CallLowering *AArch64Subtarget::getCallLowering() const {
@@ -360,6 +374,13 @@ AArch64Subtarget::ClassifyGlobalReference(const GlobalValue *GV,
   // MachO large model always goes via a GOT, simply to get a single 8-byte
   // absolute relocation on all global addresses.
   if (TM.getCodeModel() == CodeModel::Large && isTargetMachO())
+    return AArch64II::MO_GOT;
+
+  // All globals dynamically protected by MTE must have their address tags
+  // synthesized. This is done by having the loader stash the tag in the GOT
+  // entry. Force all tagged globals (even ones with internal linkage) through
+  // the GOT.
+  if (GV->isTagged())
     return AArch64II::MO_GOT;
 
   if (!TM.shouldAssumeDSOLocal(*GV->getParent(), GV)) {
@@ -465,10 +486,39 @@ void AArch64Subtarget::mirFileLoaded(MachineFunction &MF) const {
 
 bool AArch64Subtarget::useAA() const { return UseAA; }
 
-bool AArch64Subtarget::forceStreamingCompatibleSVE() const {
-  if (ForceStreamingCompatibleSVE) {
-    assert(hasSVEorSME() && "Expected SVE to be available");
-    return hasSVEorSME();
-  }
-  return false;
+bool AArch64Subtarget::isStreamingCompatible() const {
+  return StreamingCompatibleSVEMode || ForceStreamingCompatibleSVE;
+}
+
+bool AArch64Subtarget::isNeonAvailable() const {
+  return hasNEON() && !isStreaming() && !isStreamingCompatible();
+}
+
+bool AArch64Subtarget::isSVEAvailable() const{
+  // FIXME: Also return false if FEAT_FA64 is set, but we can't do this yet
+  // as we don't yet support the feature in LLVM.
+  return hasSVE() && !isStreaming() && !isStreamingCompatible();
+}
+
+// If return address signing is enabled, tail calls are emitted as follows:
+//
+// ```
+//   <authenticate LR>
+//   <check LR>
+//   TCRETURN          ; the callee may sign and spill the LR in its prologue
+// ```
+//
+// LR may require explicit checking because if FEAT_FPAC is not implemented
+// and LR was tampered with, then `<authenticate LR>` will not generate an
+// exception on its own. Later, if the callee spills the signed LR value and
+// neither FEAT_PAuth2 nor FEAT_EPAC are implemented, the valid PAC replaces
+// the higher bits of LR thus hiding the authentication failure.
+AArch64PAuth::AuthCheckMethod
+AArch64Subtarget::getAuthenticatedLRCheckMethod() const {
+  if (AuthenticatedLRCheckMethod.getNumOccurrences())
+    return AuthenticatedLRCheckMethod;
+
+  // At now, use None by default because checks may introduce an unexpected
+  // performance regression or incompatibility with execute-only mappings.
+  return AArch64PAuth::AuthCheckMethod::None;
 }

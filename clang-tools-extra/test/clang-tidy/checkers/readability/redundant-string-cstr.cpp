@@ -1,71 +1,11 @@
-// RUN: %check_clang_tidy %s readability-redundant-string-cstr %t
+// RUN: %check_clang_tidy %s readability-redundant-string-cstr %t -- -- -isystem %clang_tidy_headers
+#include <string>
 
-typedef unsigned __INT16_TYPE__ char16;
-typedef unsigned __INT32_TYPE__ char32;
-typedef __SIZE_TYPE__ size;
-
-namespace std {
 template <typename T>
-class allocator {};
-template <typename T>
-class char_traits {};
-template <typename C, typename T, typename A>
-struct basic_string {
-  typedef basic_string<C, T, A> _Type;
-  basic_string();
-  basic_string(const C *p, const A &a = A());
-
-  ~basic_string();
-
-  const C *c_str() const;
-  const C *data() const;
-
-  _Type& append(const C *s);
-  _Type& append(const C *s, size n);
-  _Type& assign(const C *s);
-  _Type& assign(const C *s, size n);
-
-  int compare(const _Type&) const;
-  int compare(const C* s) const;
-  int compare(size pos, size len, const _Type&) const;
-  int compare(size pos, size len, const C* s) const;
-
-  size find(const _Type& str, size pos = 0) const;
-  size find(const C* s, size pos = 0) const;
-  size find(const C* s, size pos, size n) const;
-
-  _Type& insert(size pos, const _Type& str);
-  _Type& insert(size pos, const C* s);
-  _Type& insert(size pos, const C* s, size n);
-
-  _Type& operator+=(const _Type& str);
-  _Type& operator+=(const C* s);
-  _Type& operator=(const _Type& str);
-  _Type& operator=(const C* s);
+struct iterator {
+  T *operator->();
+  T &operator*();
 };
-
-typedef basic_string<char, std::char_traits<char>, std::allocator<char>> string;
-typedef basic_string<wchar_t, std::char_traits<wchar_t>, std::allocator<wchar_t>> wstring;
-typedef basic_string<char16, std::char_traits<char16>, std::allocator<char16>> u16string;
-typedef basic_string<char32, std::char_traits<char32>, std::allocator<char32>> u32string;
-
-template <typename C, typename T>
-struct basic_string_view {
-  basic_string_view(const C* s);
-};
-typedef basic_string_view<char, std::char_traits<char>> string_view;
-typedef basic_string_view<wchar_t, std::char_traits<wchar_t>> wstring_view;
-typedef basic_string_view<char16, std::char_traits<char16>> u16string_view;
-typedef basic_string_view<char32, std::char_traits<char32>> u32string_view;
-}
-
-std::string operator+(const std::string&, const std::string&);
-std::string operator+(const std::string&, const char*);
-std::string operator+(const char*, const std::string&);
-
-bool operator==(const std::string&, const std::string&);
-bool operator==(const std::string&, const char*);
-bool operator==(const char*, const std::string&);
 
 namespace llvm {
 struct StringRef {
@@ -266,6 +206,31 @@ void m1(std::string&&) {
   using m1tp = void (*)(std::string &&);
   m1tp m1p2 = m1;
   m1p2(s.c_str());  
+}
+
+// Test for overloaded operator->
+void it(iterator<std::string> i)
+{
+  std::string tmp;
+  tmp = i->c_str();
+  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: redundant call to 'c_str' [readability-redundant-string-cstr]
+  // CHECK-FIXES: {{^  }}tmp = *i;{{$}}
+
+  // An unlikely situation and the outcome is not ideal, but at least the fix doesn't generate broken code.
+  tmp = i.operator->()->c_str();
+  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: redundant call to 'c_str' [readability-redundant-string-cstr]
+  // CHECK-FIXES: {{^  }}tmp = *i.operator->();{{$}}
+
+  // The fix contains an unnecessary set of parentheses, but these have no effect.
+  iterator<std::string> *pi = &i;
+  tmp = (*pi)->c_str();
+  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: redundant call to 'c_str' [readability-redundant-string-cstr]
+  // CHECK-FIXES: {{^  }}tmp = *(*pi);{{$}}
+
+  // An unlikely situation, but at least the fix doesn't generate broken code.
+  tmp = pi->operator->()->c_str();
+  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: redundant call to 'c_str' [readability-redundant-string-cstr]
+  // CHECK-FIXES: {{^  }}tmp = *pi->operator->();{{$}}
 }
 
 namespace PR45286 {

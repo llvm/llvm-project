@@ -29,9 +29,7 @@ using namespace llvm;
 static bool isAligned(const Value *Base, const APInt &Offset, Align Alignment,
                       const DataLayout &DL) {
   Align BA = Base->getPointerAlignment(DL);
-  const APInt APAlign(Offset.getBitWidth(), Alignment.value());
-  assert(APAlign.isPowerOf2() && "must be a power of 2!");
-  return BA >= Alignment && !(Offset & (APAlign - 1));
+  return BA >= Alignment && Offset.isAligned(BA);
 }
 
 /// Test if V is always a pointer to allocated and suitably aligned memory for
@@ -204,7 +202,7 @@ bool llvm::isDereferenceableAndAlignedPointer(
     const TargetLibraryInfo *TLI) {
   // For unsized types or scalable vectors we don't know exactly how many bytes
   // are dereferenced, so bail out.
-  if (!Ty->isSized() || isa<ScalableVectorType>(Ty))
+  if (!Ty->isSized() || Ty->isScalableTy())
     return false;
 
   // When dereferenceability information is provided by a dereferenceable
@@ -286,21 +284,48 @@ bool llvm::isDereferenceableAndAlignedInLoop(LoadInst *LI, Loop *L,
   auto* Step = dyn_cast<SCEVConstant>(AddRec->getStepRecurrence(SE));
   if (!Step)
     return false;
-  // TODO: generalize to access patterns which have gaps
-  if (Step->getAPInt() != EltSize)
-    return false;
 
   auto TC = SE.getSmallConstantMaxTripCount(L);
   if (!TC)
     return false;
 
-  const APInt AccessSize = TC * EltSize;
-
-  auto *StartS = dyn_cast<SCEVUnknown>(AddRec->getStart());
-  if (!StartS)
+  // TODO: Handle overlapping accesses.
+  // We should be computing AccessSize as (TC - 1) * Step + EltSize.
+  if (EltSize.sgt(Step->getAPInt()))
     return false;
-  assert(SE.isLoopInvariant(StartS, L) && "implied by addrec definition");
-  Value *Base = StartS->getValue();
+
+  // Compute the total access size for access patterns with unit stride and
+  // patterns with gaps. For patterns with unit stride, Step and EltSize are the
+  // same.
+  // For patterns with gaps (i.e. non unit stride), we are
+  // accessing EltSize bytes at every Step.
+  APInt AccessSize = TC * Step->getAPInt();
+
+  assert(SE.isLoopInvariant(AddRec->getStart(), L) &&
+         "implied by addrec definition");
+  Value *Base = nullptr;
+  if (auto *StartS = dyn_cast<SCEVUnknown>(AddRec->getStart())) {
+    Base = StartS->getValue();
+  } else if (auto *StartS = dyn_cast<SCEVAddExpr>(AddRec->getStart())) {
+    // Handle (NewBase + offset) as start value.
+    const auto *Offset = dyn_cast<SCEVConstant>(StartS->getOperand(0));
+    const auto *NewBase = dyn_cast<SCEVUnknown>(StartS->getOperand(1));
+    if (StartS->getNumOperands() == 2 && Offset && NewBase) {
+      // For the moment, restrict ourselves to the case where the offset is a
+      // multiple of the requested alignment and the base is aligned.
+      // TODO: generalize if a case found which warrants
+      if (Offset->getAPInt().urem(Alignment.value()) != 0)
+        return false;
+      Base = NewBase->getValue();
+      bool Overflow = false;
+      AccessSize = AccessSize.uadd_ov(Offset->getAPInt(), Overflow);
+      if (Overflow)
+        return false;
+    }
+  }
+
+  if (!Base)
+    return false;
 
   // For the moment, restrict ourselves to the case where the access size is a
   // multiple of the requested alignment and the base is aligned.
@@ -653,7 +678,7 @@ Value *llvm::FindAvailableLoadedValue(LoadInst *Load, AAResults &AA,
 
   // Try to find an available value first, and delay expensive alias analysis
   // queries until later.
-  Value *Available = nullptr;;
+  Value *Available = nullptr;
   SmallVector<Instruction *> MustNotAliasInsts;
   for (Instruction &Inst : make_range(++Load->getReverseIterator(),
                                       ScanBB->rend())) {

@@ -11,9 +11,9 @@
 // <functional>
 
 // template<CopyConstructible Fn, CopyConstructible... Types>
-//   unspecified bind(Fn, Types...);
+//   unspecified bind(Fn, Types...);    // constexpr since C++20
 // template<Returnable R, CopyConstructible Fn, CopyConstructible... Types>
-//   unspecified bind(Fn, Types...);
+//   unspecified bind(Fn, Types...);    // constexpr since C++20
 
 #include <stdio.h>
 
@@ -130,27 +130,22 @@ test_void_1()
 
 // 1 arg, return int
 
-int f_int_1(int i)
-{
+TEST_CONSTEXPR_CXX20 int f_int_1(int i) {
     return i + 1;
 }
 
-struct A_int_1
-{
-    A_int_1() : data_(5) {}
-    int operator()(int i)
-    {
+struct A_int_1 {
+    TEST_CONSTEXPR_CXX20 A_int_1() : data_(5) {}
+    TEST_CONSTEXPR_CXX20 int operator()(int i) {
         return i - 1;
     }
 
-    int mem1() {return 3;}
-    int mem2() const {return 4;}
+    TEST_CONSTEXPR_CXX20 int mem1() { return 3; }
+    TEST_CONSTEXPR_CXX20 int mem2() const { return 4; }
     int data_;
 };
 
-void
-test_int_1()
-{
+TEST_CONSTEXPR_CXX20 bool test_int_1() {
     using namespace std::placeholders;
     // function
     {
@@ -196,6 +191,7 @@ test_int_1()
     std::bind(&A_int_1::data_, _1)(&a) = 7;
     assert(std::bind(&A_int_1::data_, _1)(&a) == 7);
     }
+    return true;
 }
 
 // 2 arg, return void
@@ -244,28 +240,39 @@ test_void_2()
     }
 }
 
-int f_nested(int i)
-{
+TEST_CONSTEXPR_CXX20 int f_nested(int i) {
     return i+1;
 }
 
-int g_nested(int i)
-{
+TEST_CONSTEXPR_CXX20 int g_nested(int i) {
     return i*10;
 }
 
-void test_nested()
-{
+TEST_CONSTEXPR_CXX20 bool test_nested() {
     using namespace std::placeholders;
     assert(std::bind(f_nested, std::bind(g_nested, _1))(3) == 31);
+    return true;
 }
 
-int main(int, char**)
-{
+TEST_CONSTEXPR_CXX20 bool test_many_args() {
+    using namespace std::placeholders;
+    auto f = [](int a, char, float, long) { return a; };
+    auto bound = std::bind(f, _4, _3, _2, _1);
+    assert(bound(0l, 1.0f, '2', 3) == 3);
+    return true;
+}
+
+int main(int, char**) {
     test_void_1();
     test_int_1();
     test_void_2();
     test_nested();
 
-  return 0;
+    // The other tests are not constexpr-friendly since they need to use a global variable
+#if TEST_STD_VER >= 20
+    static_assert(test_int_1());
+    static_assert(test_nested());
+#endif
+
+    return 0;
 }

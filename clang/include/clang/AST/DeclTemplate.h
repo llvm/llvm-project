@@ -117,6 +117,8 @@ public:
                                        SourceLocation RAngleLoc,
                                        Expr *RequiresClause);
 
+  void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &C) const;
+
   /// Iterates through the template parameters in this list.
   using iterator = NamedDecl **;
 
@@ -375,7 +377,8 @@ public:
     InheritedFrom = getParmOwningDefaultArg(InheritedFrom);
     if (!isSet())
       ValueOrInherited = InheritedFrom;
-    else if (auto *D = ValueOrInherited.template dyn_cast<ParmDecl *>()) {
+    else if ([[maybe_unused]] auto *D =
+                 ValueOrInherited.template dyn_cast<ParmDecl *>()) {
       assert(C.isSameDefaultTemplateArgument(D, InheritedFrom));
       ValueOrInherited =
           new (allocateDefaultArgStorageChain(C)) Chain{InheritedFrom, get()};
@@ -580,7 +583,7 @@ public:
   /// \code
   /// template<typename> struct A {
   ///   template<typename> void f();
-  ///   template<> void f<int>(); // ClassScopeFunctionSpecializationDecl
+  ///   template<> void f<int>();
   /// };
   /// \endcode
   ///
@@ -616,7 +619,7 @@ public:
 
   static void
   Profile(llvm::FoldingSetNodeID &ID, ArrayRef<TemplateArgument> TemplateArgs,
-          ASTContext &Context) {
+          const ASTContext &Context) {
     ID.AddInteger(TemplateArgs.size());
     for (const TemplateArgument &TemplateArg : TemplateArgs)
       TemplateArg.Profile(ID, Context);
@@ -679,82 +682,48 @@ public:
 /// Provides information about a dependent function-template
 /// specialization declaration.
 ///
-/// Since explicit function template specialization and instantiation
-/// declarations can only appear in namespace scope, and you can only
-/// specialize a member of a fully-specialized class, the only way to
-/// get one of these is in a friend declaration like the following:
+/// This is used for function templates explicit specializations declared
+/// within class templates:
+///
+/// \code
+/// template<typename> struct A {
+///   template<typename> void f();
+///   template<> void f<int>(); // DependentFunctionTemplateSpecializationInfo
+/// };
+/// \endcode
+///
+/// As well as dependent friend declarations naming function template
+/// specializations declared within class templates:
 ///
 /// \code
 ///   template \<class T> void foo(T);
 ///   template \<class T> class A {
-///     friend void foo<>(T);
+///     friend void foo<>(T); // DependentFunctionTemplateSpecializationInfo
 ///   };
 /// \endcode
 class DependentFunctionTemplateSpecializationInfo final
     : private llvm::TrailingObjects<DependentFunctionTemplateSpecializationInfo,
-                                    TemplateArgumentLoc,
                                     FunctionTemplateDecl *> {
-  /// The number of potential template candidates.
-  unsigned NumTemplates;
-
-  /// The number of template arguments.
-  unsigned NumArgs;
-
-  /// The locations of the left and right angle brackets.
-  SourceRange AngleLocs;
-
-  size_t numTrailingObjects(OverloadToken<TemplateArgumentLoc>) const {
-    return NumArgs;
-  }
-  size_t numTrailingObjects(OverloadToken<FunctionTemplateDecl *>) const {
-    return NumTemplates;
-  }
-
-  DependentFunctionTemplateSpecializationInfo(
-                                 const UnresolvedSetImpl &Templates,
-                                 const TemplateArgumentListInfo &TemplateArgs);
-
-public:
   friend TrailingObjects;
 
+  /// The number of candidates for the primary template.
+  unsigned NumCandidates;
+
+  DependentFunctionTemplateSpecializationInfo(
+      const UnresolvedSetImpl &Candidates,
+      const ASTTemplateArgumentListInfo *TemplateArgsWritten);
+
+public:
+  /// The template arguments as written in the sources, if provided.
+  const ASTTemplateArgumentListInfo *TemplateArgumentsAsWritten;
+
   static DependentFunctionTemplateSpecializationInfo *
-  Create(ASTContext &Context, const UnresolvedSetImpl &Templates,
-         const TemplateArgumentListInfo &TemplateArgs);
+  Create(ASTContext &Context, const UnresolvedSetImpl &Candidates,
+         const TemplateArgumentListInfo *TemplateArgs);
 
-  /// Returns the number of function templates that this might
-  /// be a specialization of.
-  unsigned getNumTemplates() const { return NumTemplates; }
-
-  /// Returns the i'th template candidate.
-  FunctionTemplateDecl *getTemplate(unsigned I) const {
-    assert(I < getNumTemplates() && "template index out of range");
-    return getTrailingObjects<FunctionTemplateDecl *>()[I];
-  }
-
-  /// Returns the explicit template arguments that were given.
-  const TemplateArgumentLoc *getTemplateArgs() const {
-    return getTrailingObjects<TemplateArgumentLoc>();
-  }
-
-  /// Returns the number of explicit template arguments that were given.
-  unsigned getNumTemplateArgs() const { return NumArgs; }
-
-  llvm::ArrayRef<TemplateArgumentLoc> arguments() const {
-    return llvm::ArrayRef(getTemplateArgs(), getNumTemplateArgs());
-  }
-
-  /// Returns the nth template argument.
-  const TemplateArgumentLoc &getTemplateArg(unsigned I) const {
-    assert(I < getNumTemplateArgs() && "template arg index out of range");
-    return getTemplateArgs()[I];
-  }
-
-  SourceLocation getLAngleLoc() const {
-    return AngleLocs.getBegin();
-  }
-
-  SourceLocation getRAngleLoc() const {
-    return AngleLocs.getEnd();
+  /// Returns the candidates for the primary function template.
+  ArrayRef<FunctionTemplateDecl *> getCandidates() const {
+    return {getTrailingObjects<FunctionTemplateDecl *>(), NumCandidates};
   }
 };
 
@@ -850,7 +819,7 @@ protected:
     /// template.
     ///
     /// This pointer refers to the template arguments (there are as
-    /// many template arguments as template parameaters) for the
+    /// many template arguments as template parameters) for the
     /// template, and is allocated lazily, since most templates do not
     /// require the use of this information.
     TemplateArgument *InjectedArgs = nullptr;
@@ -1371,10 +1340,7 @@ public:
          nullptr;
   }
 
-  void setTypeConstraint(NestedNameSpecifierLoc NNS,
-                         DeclarationNameInfo NameInfo, NamedDecl *FoundDecl,
-                         ConceptDecl *CD,
-                         const ASTTemplateArgumentListInfo *ArgsAsWritten,
+  void setTypeConstraint(ConceptReference *CR,
                          Expr *ImmediatelyDeclaredConstraint);
 
   /// Determine whether this template parameter has a type-constraint.
@@ -2081,7 +2047,7 @@ public:
 
   static void
   Profile(llvm::FoldingSetNodeID &ID, ArrayRef<TemplateArgument> TemplateArgs,
-          ASTContext &Context) {
+          const ASTContext &Context) {
     ID.AddInteger(TemplateArgs.size());
     for (const TemplateArgument &TemplateArg : TemplateArgs)
       TemplateArg.Profile(ID, Context);
@@ -2257,7 +2223,7 @@ public:
 
   static void
   Profile(llvm::FoldingSetNodeID &ID, ArrayRef<TemplateArgument> TemplateArgs,
-          TemplateParameterList *TPL, ASTContext &Context);
+          TemplateParameterList *TPL, const ASTContext &Context);
 
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
 
@@ -2307,9 +2273,15 @@ protected:
     return static_cast<Common *>(RedeclarableTemplateDecl::getCommonPtr());
   }
 
+  void setCommonPtr(Common *C) {
+    RedeclarableTemplateDecl::Common = C;
+  }
+
 public:
+
   friend class ASTDeclReader;
   friend class ASTDeclWriter;
+  friend class TemplateDeclInstantiator;
 
   /// Load any lazily-loaded specializations from the external source.
   void LoadLazySpecializations() const;
@@ -2607,70 +2579,6 @@ public:
   static bool classofKind(Kind K) { return K == TypeAliasTemplate; }
 };
 
-/// Declaration of a function specialization at template class scope.
-///
-/// For example:
-/// \code
-/// template <class T>
-/// class A {
-///    template <class U> void foo(U a) { }
-///    template<> void foo(int a) { }
-/// }
-/// \endcode
-///
-/// "template<> foo(int a)" will be saved in Specialization as a normal
-/// CXXMethodDecl. Then during an instantiation of class A, it will be
-/// transformed into an actual function specialization.
-///
-/// FIXME: This is redundant; we could store the same information directly on
-/// the CXXMethodDecl as a DependentFunctionTemplateSpecializationInfo.
-class ClassScopeFunctionSpecializationDecl : public Decl {
-  CXXMethodDecl *Specialization;
-  const ASTTemplateArgumentListInfo *TemplateArgs;
-
-  ClassScopeFunctionSpecializationDecl(
-      DeclContext *DC, SourceLocation Loc, CXXMethodDecl *FD,
-      const ASTTemplateArgumentListInfo *TemplArgs)
-      : Decl(Decl::ClassScopeFunctionSpecialization, DC, Loc),
-        Specialization(FD), TemplateArgs(TemplArgs) {}
-
-  ClassScopeFunctionSpecializationDecl(EmptyShell Empty)
-      : Decl(Decl::ClassScopeFunctionSpecialization, Empty) {}
-
-  virtual void anchor();
-
-public:
-  friend class ASTDeclReader;
-  friend class ASTDeclWriter;
-
-  CXXMethodDecl *getSpecialization() const { return Specialization; }
-  bool hasExplicitTemplateArgs() const { return TemplateArgs; }
-  const ASTTemplateArgumentListInfo *getTemplateArgsAsWritten() const {
-    return TemplateArgs;
-  }
-
-  static ClassScopeFunctionSpecializationDecl *
-  Create(ASTContext &C, DeclContext *DC, SourceLocation Loc, CXXMethodDecl *FD,
-         bool HasExplicitTemplateArgs,
-         const TemplateArgumentListInfo &TemplateArgs) {
-    return new (C, DC) ClassScopeFunctionSpecializationDecl(
-        DC, Loc, FD,
-        HasExplicitTemplateArgs
-            ? ASTTemplateArgumentListInfo::Create(C, TemplateArgs)
-            : nullptr);
-  }
-
-  static ClassScopeFunctionSpecializationDecl *
-  CreateDeserialized(ASTContext &Context, unsigned ID);
-
-  // Implement isa/cast/dyncast/etc.
-  static bool classof(const Decl *D) { return classofKind(D->getKind()); }
-
-  static bool classofKind(Kind K) {
-    return K == Decl::ClassScopeFunctionSpecialization;
-  }
-};
-
 /// Represents a variable template specialization, which refers to
 /// a variable template with a given set of template arguments.
 ///
@@ -2926,13 +2834,7 @@ public:
     return ExplicitInfo ? ExplicitInfo->TemplateKeywordLoc : SourceLocation();
   }
 
-  SourceRange getSourceRange() const override LLVM_READONLY {
-    if (isExplicitSpecialization()) {
-      if (const ASTTemplateArgumentListInfo *Info = getTemplateArgsInfo())
-        return SourceRange(getOuterLocStart(), Info->getRAngleLoc());
-    }
-    return VarDecl::getSourceRange();
-  }
+  SourceRange getSourceRange() const override LLVM_READONLY;
 
   void Profile(llvm::FoldingSetNodeID &ID) const {
     Profile(ID, TemplateArgs->asArray(), getASTContext());
@@ -2940,7 +2842,7 @@ public:
 
   static void Profile(llvm::FoldingSetNodeID &ID,
                       ArrayRef<TemplateArgument> TemplateArgs,
-                      ASTContext &Context) {
+                      const ASTContext &Context) {
     ID.AddInteger(TemplateArgs.size());
     for (const TemplateArgument &TemplateArg : TemplateArgs)
       TemplateArg.Profile(ID, Context);
@@ -3091,13 +2993,7 @@ public:
     return First->InstantiatedFromMember.setInt(true);
   }
 
-  SourceRange getSourceRange() const override LLVM_READONLY {
-    if (isExplicitSpecialization()) {
-      if (const ASTTemplateArgumentListInfo *Info = getTemplateArgsAsWritten())
-        return SourceRange(getOuterLocStart(), Info->getRAngleLoc());
-    }
-    return VarDecl::getSourceRange();
-  }
+  SourceRange getSourceRange() const override LLVM_READONLY;
 
   void Profile(llvm::FoldingSetNodeID &ID) const {
     Profile(ID, getTemplateArgs().asArray(), getTemplateParameters(),
@@ -3106,7 +3002,7 @@ public:
 
   static void
   Profile(llvm::FoldingSetNodeID &ID, ArrayRef<TemplateArgument> TemplateArgs,
-          TemplateParameterList *TPL, ASTContext &Context);
+          TemplateParameterList *TPL, const ASTContext &Context);
 
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
 

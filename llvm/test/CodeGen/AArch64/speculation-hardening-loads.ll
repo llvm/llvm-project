@@ -45,8 +45,8 @@ entry:
   ret i32 %ret
 ; Checking that the address laoded from is masked for a floating point load.
 ; CHECK-LABEL: csdb_emitted_for_subreg_use
-; CHECK:      ldr x8, [x0]
-; CHECK-NEXT: cmp sp, #0
+; CHECK:      cmp sp, #0
+; CHECK-NEXT: ldr x8, [x0]
 ; CHECK-NEXT: csetm x16, ne
 ; CHECK-NEXT: and x8, x8, x16
 ; csdb instruction must occur before the add instruction with w8 as operand.
@@ -70,8 +70,8 @@ entry:
   ret i64 %ret
 ; Checking that the address laoded from is masked for a floating point load.
 ; CHECK-LABEL: csdb_emitted_for_superreg_use
-; CHECK:      ldr w8, [x0]
-; CHECK-NEXT: cmp sp, #0
+; CHECK:      cmp sp, #0
+; CHECK-NEXT: ldr w8, [x0]
 ; CHECK-NEXT: csetm x16, ne
 ; CHECK-NEXT: and w8, w8, w16
 ; csdb instruction must occur before the add instruction with x8 as operand.
@@ -125,11 +125,10 @@ entry:
 ; CHECK-LABEL: f_usedefvectorload
 ; CHECK:       cmp     sp, #0
 ; CHECK-NEXT:  csetm   x16, ne
-; CHECK-NEXT:  movi    v0.2d, #0000000000000000
 ; CHECK-NEXT:  and     x1, x1, x16
 ; CHECK-NEXT:  csdb
 ; CHECK-NEXT:  mov     [[TMPREG:x[0-9]+]], sp
-; CHECK-NEXT:  ld1     { v0.d }[0], [x1]
+; CHECK-NEXT:  ldr     d0, [x1]
 ; CHECK-NEXT:  and     [[TMPREG]], [[TMPREG]], x16
 ; CHECK-NEXT:  mov     sp, [[TMPREG]]
 ; CHECK-NEXT:  ret

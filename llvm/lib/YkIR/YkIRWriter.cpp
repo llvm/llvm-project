@@ -4,7 +4,6 @@
 //
 //===-------------------------------------------------------------------===//
 
-#include "llvm/ADT/Triple.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"

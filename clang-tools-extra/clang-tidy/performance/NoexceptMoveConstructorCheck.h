@@ -10,10 +10,9 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PERFORMANCE_NOEXCEPTMOVECONSTRUCTORCHECK_H
 
 #include "../ClangTidyCheck.h"
+#include "NoexceptFunctionBaseCheck.h"
 
-namespace clang {
-namespace tidy {
-namespace performance {
+namespace clang::tidy::performance {
 
 /// The check flags user-defined move constructors and assignment operators not
 /// marked with `noexcept` or marked with `noexcept(expr)` where `expr`
@@ -22,19 +21,22 @@ namespace performance {
 /// Move constructors of all the types used with STL containers, for example,
 /// need to be declared `noexcept`. Otherwise STL will choose copy constructors
 /// instead. The same is valid for move assignment operations.
-class NoexceptMoveConstructorCheck : public ClangTidyCheck {
+///
+/// For the user-facing documentation see:
+/// https://clang.llvm.org/extra/clang-tidy/checks/performance/noexcept-move-constructor.html
+class NoexceptMoveConstructorCheck : public NoexceptFunctionBaseCheck {
 public:
-  NoexceptMoveConstructorCheck(StringRef Name, ClangTidyContext *Context)
-      : ClangTidyCheck(Name, Context) {}
-  bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
-    return LangOpts.CPlusPlus11;
-  }
+  using NoexceptFunctionBaseCheck::NoexceptFunctionBaseCheck;
+
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
-  void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
+
+private:
+  DiagnosticBuilder
+  reportMissingNoexcept(const FunctionDecl *FuncDecl) final override;
+  void reportNoexceptEvaluatedToFalse(const FunctionDecl *FuncDecl,
+                                      const Expr *NoexceptExpr) final override;
 };
 
-} // namespace performance
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::performance
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PERFORMANCE_NOEXCEPTMOVECONSTRUCTORCHECK_H

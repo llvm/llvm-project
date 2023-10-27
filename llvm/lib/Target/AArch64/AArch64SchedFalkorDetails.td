@@ -210,13 +210,13 @@ def FalkorWr_1Z_1XY_0cyc : SchedWriteRes<[FalkorUnitZ, FalkorUnitXY]> {
 def FalkorWr_1X_1Z_8cyc  : SchedWriteRes<[FalkorUnitX, FalkorUnitZ]> {
   let Latency = 8;
   let NumMicroOps = 2;
-  let ResourceCycles = [2, 8];
+  let ReleaseAtCycles = [2, 8];
 }
 
 def FalkorWr_1X_1Z_11cyc : SchedWriteRes<[FalkorUnitX, FalkorUnitZ]> {
   let Latency = 11;
   let NumMicroOps = 2;
-  let ResourceCycles = [2, 11];
+  let ReleaseAtCycles = [2, 11];
 }
 
 def FalkorWr_1LD_1Z_3cyc : SchedWriteRes<[FalkorUnitLD, FalkorUnitZ]> {

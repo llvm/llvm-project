@@ -11,13 +11,13 @@ config.substitutions.append(('%{link_flags}',
     '-nostdlib++ -L %{lib} -lc++'
 ))
 config.substitutions.append(('%{exec}',
-    '%{executor} --execdir %T --env PATH=%{lib} -- '
+    '%{executor} --execdir %T --prepend_env PATH=%{lib} -- '
 ))
 
 import os, site
 site.addsitedir(os.path.join('@LIBCXX_SOURCE_DIR@', 'utils'))
-import libcxx.test.params, libcxx.test.newconfig
-libcxx.test.newconfig.configure(
+import libcxx.test.params, libcxx.test.config
+libcxx.test.config.configure(
     libcxx.test.params.DEFAULT_PARAMETERS,
     libcxx.test.features.DEFAULT_FEATURES,
     config,

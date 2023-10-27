@@ -191,7 +191,7 @@ inline int64_t decodeSLEB128(const uint8_t *p, unsigned *n = nullptr,
   } while (Byte >= 128);
   // Sign extend negative numbers if needed.
   if (Shift < 64 && (Byte & 0x40))
-    Value |= (-1ULL) << Shift;
+    Value |= UINT64_MAX << Shift;
   if (n)
     *n = (unsigned)(p - orig_p);
   return Value;

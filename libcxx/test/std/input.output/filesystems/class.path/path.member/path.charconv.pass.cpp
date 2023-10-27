@@ -8,6 +8,7 @@
 
 // UNSUPPORTED: no-localization
 // UNSUPPORTED: c++03
+// UNSUPPORTED: availability-filesystem-missing
 // ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
 
 // <filesystem>
@@ -37,7 +38,10 @@
 #include <cassert>
 
 #include "test_macros.h"
-#include "filesystem_test_helper.h"
+
+#ifdef _WIN32
+#  include <windows.h> // SetFileApisToANSI & friends
+#endif
 
 // Test conversion with strings that fit within the latin1 charset, that fit
 // within one code point in UTF-16, and that can be expressible in certain

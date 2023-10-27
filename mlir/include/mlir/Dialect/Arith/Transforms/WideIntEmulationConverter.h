@@ -16,7 +16,7 @@ namespace mlir::arith {
 /// two halves and thus turning into supported ones, i.e., i2*N --> iN, where N
 /// is the widest integer bitwidth supported by the target.
 /// Currently, we only handle power-of-two integer types and support conversions
-/// of integers twice as wide as the maxium supported by the target. Wide
+/// of integers twice as wide as the maximum supported by the target. Wide
 /// integers are represented as vectors, e.g., i64 --> vector<2xi32>, where the
 /// first element is the low half of the original integer, and the second
 /// element the high half.

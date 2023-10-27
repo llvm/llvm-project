@@ -221,10 +221,10 @@ bool M68kCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
       return false;
   }
 
-  CallSeqStart.addImm(Assigner.StackOffset).addImm(0);
+  CallSeqStart.addImm(Assigner.StackSize).addImm(0);
 
   unsigned AdjStackUp = TII.getCallFrameDestroyOpcode();
-  MIRBuilder.buildInstr(AdjStackUp).addImm(Assigner.StackOffset).addImm(0);
+  MIRBuilder.buildInstr(AdjStackUp).addImm(Assigner.StackSize).addImm(0);
 
   return true;
 }

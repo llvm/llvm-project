@@ -26,9 +26,9 @@ end subroutine
 ! CHECK:  %[[VAL_4:.*]] = fir.address_of(@_QMtest_mod_used_in_hostEnot_in_equiv) : !fir.ref<i32>
 
 subroutine test_common()
-  integer, save :: i(2)
-  integer, save :: j_in_equiv
-  integer, save :: not_in_equiv
+  integer :: i(2)
+  integer :: j_in_equiv
+  integer :: not_in_equiv
   equivalence (i(2),j_in_equiv)
   common /x/ i, not_in_equiv
   call bar()
@@ -38,7 +38,7 @@ contains
  end subroutine
 end subroutine
 ! CHECK-LABEL: func.func @_QFtest_commonPbar() attributes {fir.internal_proc} {
-! CHECK:  %[[VAL_0:.*]] = fir.address_of(@_QBx) : !fir.ref<!fir.array<12xi8>>
+! CHECK:  %[[VAL_0:.*]] = fir.address_of(@x_) : !fir.ref<!fir.array<12xi8>>
 ! CHECK:  %[[VAL_1:.*]] = fir.convert %[[VAL_0]] : (!fir.ref<!fir.array<12xi8>>) -> !fir.ref<!fir.array<?xi8>>
 ! CHECK:  %[[VAL_2:.*]] = arith.constant 4 : index
 ! CHECK:  %[[VAL_3:.*]] = fir.coordinate_of %[[VAL_1]], %[[VAL_2]] : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>

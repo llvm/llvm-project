@@ -3,18 +3,18 @@
 
 // This implements a 2D multisize tiling with target sizes [3, 10].
 transform.sequence failures(propagate) {
-^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["linalg.generic"]} in %arg1
-  %1:3 = transform.structured.multitile_sizes %0 { dimension = 0, target_size = 3} : (!pdl.operation) -> !pdl.operation
-  %t:3 = transform.structured.multitile_sizes %0 { dimension = 1, target_size = 10} : (!pdl.operation) -> !pdl.operation
-  %2:2 = transform.structured.split %0 after %1#2 { dimension = 0 } : !pdl.operation, !pdl.operation
-  %3:2 = transform.structured.tile %2#0 [%1#0] : (!pdl.operation, !pdl.operation) -> (!pdl.operation, !pdl.operation)
-  %4:2 = transform.structured.tile %2#1 [%1#1] : (!pdl.operation, !pdl.operation) -> (!pdl.operation, !pdl.operation)
-  %5 = merge_handles %3#0, %4#0 : !pdl.operation
-  %tt:3 = replicate num(%5) %t#0, %t#1, %t#2 : !pdl.operation, !pdl.operation, !pdl.operation, !pdl.operation
-  %6:2 = transform.structured.split %5 after %tt#2 { dimension = 1 } : !pdl.operation, !pdl.operation
-  transform.structured.tile %6#0 [0, %tt#0] : (!pdl.operation, !pdl.operation) -> (!pdl.operation, !pdl.operation)
-  transform.structured.tile %6#1 [0, %tt#1] : (!pdl.operation, !pdl.operation) -> (!pdl.operation, !pdl.operation)
+^bb1(%arg1: !transform.any_op):
+  %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+  %1:3 = transform.structured.multitile_sizes %0 { dimension = 0, target_size = 3} : (!transform.any_op) -> !transform.any_op
+  %t:3 = transform.structured.multitile_sizes %0 { dimension = 1, target_size = 10} : (!transform.any_op) -> !transform.any_op
+  %2:2 = transform.structured.split %0 after %1#2 { dimension = 0 } : !transform.any_op, !transform.any_op
+  %3:2 = transform.structured.tile_using_for %2#0 [%1#0] : (!transform.any_op, !transform.any_op) -> (!transform.any_op, !transform.any_op)
+  %4:2 = transform.structured.tile_using_for %2#1 [%1#1] : (!transform.any_op, !transform.any_op) -> (!transform.any_op, !transform.any_op)
+  %5 = merge_handles %3#0, %4#0 : !transform.any_op
+  %tt:3 = replicate num(%5) %t#0, %t#1, %t#2 : !transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op
+  %6:2 = transform.structured.split %5 after %tt#2 { dimension = 1 } : !transform.any_op, !transform.any_op
+  transform.structured.tile_using_for %6#0 [0, %tt#0] : (!transform.any_op, !transform.any_op) -> (!transform.any_op, !transform.any_op)
+  transform.structured.tile_using_for %6#1 [0, %tt#1] : (!transform.any_op, !transform.any_op) -> (!transform.any_op, !transform.any_op)
 }
 
 func.func private @elem(%arg0: f32, %arg1: index, %arg2: index) -> f32
@@ -103,18 +103,18 @@ func.func @two_d(%arg0: tensor<10x34xf32>,
 // -----
 
 transform.sequence failures(propagate) {
-^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["linalg.generic"]} in %arg1
-  %1:3 = transform.structured.multitile_sizes %0 { dimension = 0, target_size = 3} : (!pdl.operation) -> !transform.param<i64>
-  %t:3 = transform.structured.multitile_sizes %0 { dimension = 1, target_size = 10} : (!pdl.operation) -> !transform.param<i64>
-  %2:2 = transform.structured.split %0 after %1#2 { dimension = 0 } : !pdl.operation, !transform.param<i64>
-  %3:2 = transform.structured.tile %2#0 [%1#0] : (!pdl.operation, !transform.param<i64>) -> (!pdl.operation, !pdl.operation)
-  %4:2 = transform.structured.tile %2#1 [%1#1] : (!pdl.operation, !transform.param<i64>) -> (!pdl.operation, !pdl.operation)
-  %5 = merge_handles %3#0, %4#0 : !pdl.operation
-  %tt:3 = replicate num(%5) %t#0, %t#1, %t#2 : !pdl.operation, !transform.param<i64>, !transform.param<i64>, !transform.param<i64>
-  %6:2 = transform.structured.split %5 after %tt#2 { dimension = 1 } : !pdl.operation, !transform.param<i64>
-  transform.structured.tile %6#0 [0, %tt#0] : (!pdl.operation, !transform.param<i64>) -> (!pdl.operation, !pdl.operation)
-  transform.structured.tile %6#1 [0, %tt#1] : (!pdl.operation, !transform.param<i64>) -> (!pdl.operation, !pdl.operation)
+^bb1(%arg1: !transform.any_op):
+  %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+  %1:3 = transform.structured.multitile_sizes %0 { dimension = 0, target_size = 3} : (!transform.any_op) -> !transform.param<i64>
+  %t:3 = transform.structured.multitile_sizes %0 { dimension = 1, target_size = 10} : (!transform.any_op) -> !transform.param<i64>
+  %2:2 = transform.structured.split %0 after %1#2 { dimension = 0 } : !transform.any_op, !transform.param<i64>
+  %3:2 = transform.structured.tile_using_for %2#0 [%1#0] : (!transform.any_op, !transform.param<i64>) -> (!transform.any_op, !transform.any_op)
+  %4:2 = transform.structured.tile_using_for %2#1 [%1#1] : (!transform.any_op, !transform.param<i64>) -> (!transform.any_op, !transform.any_op)
+  %5 = merge_handles %3#0, %4#0 : !transform.any_op
+  %tt:3 = replicate num(%5) %t#0, %t#1, %t#2 : !transform.any_op, !transform.param<i64>, !transform.param<i64>, !transform.param<i64>
+  %6:2 = transform.structured.split %5 after %tt#2 { dimension = 1 } : !transform.any_op, !transform.param<i64>
+  transform.structured.tile_using_for %6#0 [0, %tt#0] : (!transform.any_op, !transform.param<i64>) -> (!transform.any_op, !transform.any_op)
+  transform.structured.tile_using_for %6#1 [0, %tt#1] : (!transform.any_op, !transform.param<i64>) -> (!transform.any_op, !transform.any_op)
 }
 
 func.func private @elem(%arg0: f32, %arg1: index, %arg2: index) -> f32

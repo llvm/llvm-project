@@ -57,13 +57,13 @@
  <td class="unknown" align="center">Maybe?</td>
 </tr>
 <tr>
- <td><a href="#c2x">C2x</a></td>
- <td><tt>-std=c2x</tt></td>
+ <td><a href="#c2x">C23</a></td>
+ <td><tt>-std=c23</tt></td>
  <td class="partial" align="center">Partial</td>
 </tr>
 </table>
 
-<p>The implementation status for C99, C11, and C17 are currently under
+<p>The implementation status for C99, C11, C17, and C23 are currently under
 investigation. Any proposal whose status in Clang is currently unknown
 will be marked in <span class="unknown">magenta</span>.</p>
 
@@ -73,7 +73,7 @@ compliance between releases by submitting and tracking
 they become available.</p>
 
 <p>The <a href="https://github.com/llvm/llvm-project/issues/">LLVM bug tracker</a> uses
-the "c", "c99", "c11", "c17", and "c2x" labels to track known bugs with Clang's language
+the "c", "c99", "c11", "c17", and "c23" labels to track known bugs with Clang's language
 conformance.</p>
 
 <h2 id="c89">C89 implementation status</h2>
@@ -617,11 +617,12 @@ conformance.</p>
 <p>There are no major changes in this edition, only technical corrections and clarifications that are tracked by Defect Report.</p>
 <p>You can use Clang in C17 mode with the <code>-std=c17</code> or <code>-std=c18</code> options (available in Clang 6 and later).</p>
 
-<h2 id="c2x">C2x implementation status</h2>
+<h2 id="c2x">C23 implementation status</h2>
 
-<p>Clang has support for some of the features of the C standard following C17, informally referred to as C2x.</p>
+<p>Clang has support for some of the features of the C standard following C17, informally referred to as C23.</p>
 
-<p>You can use Clang in C2x mode with the <code>-std=c2x</code> option (available in Clang 9 and later).</p>
+<p>You can use Clang in C23 mode with the <code>-std=c23</code> option (available in Clang 18 and later) or with the
+   <code>-std=c2x</code> option (available in Clang 9 and later).</p>
 
 <details open>
 <summary>List of features and minimum Clang version with support</summary>
@@ -629,7 +630,7 @@ conformance.</p>
 <table width="689" border="1" cellspacing="0">
  <tr>
     <th>Language Feature</th>
-    <th>C2x Proposal</th>
+    <th>C23 Proposal</th>
     <th>Available in Clang?</th>
  </tr>
     <!-- Pre-Oct 2019 Papers -->
@@ -783,7 +784,7 @@ conformance.</p>
     <tr>
       <td>Free positioning of labels inside compound statements</td>
       <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2508.pdf">N2508</a></td>
-      <td class="unreleased" align="center">Clang 16</td>
+      <td class="full" align="center">Clang 16</td>
     </tr>
     <tr>
       <td>Clarification request for C17 example of undefined behavior</td>
@@ -829,12 +830,20 @@ conformance.</p>
     <tr>
       <td>Compatibility of Pointers to Arrays with Qualifiers</td>
       <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2607.pdf">N2607</a></td>
-      <td class="partial" align="center">Partial</td>
+      <td class="partial" align="center">
+        <details><summary>Partial</summary>
+          Much of the proposal is implemented, but Clang lacks pedantic diagnostics
+          in C17 and earlier regarding use of incompatible pointer types as an
+          extension. Further, Clang does not properly compute the correct result
+          type for the <code>?:</code> operator when the result type should be a
+          qualified array type.
+        </details>
+      </td>
     </tr>
     <tr>
       <td>Unclear type relationship between a format specifier and its argument</td>
       <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2562.pdf">N2562</a></td>
-      <td class="unreleased" align="center">Clang 16</td>
+      <td class="full" align="center">Clang 16</td>
     </tr>
     <!-- Apr 2021 Papers -->
     <tr>
@@ -861,7 +870,7 @@ conformance.</p>
     <tr>
       <td>[[maybe_unused]] for labels</td>
       <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2662.pdf">N2662</a></td>
-      <td class="unreleased" align="center">Clang 16</td>
+      <td class="full" align="center">Clang 16</td>
     </tr>
     <tr>
       <td>Zeros compare equal</td>
@@ -895,7 +904,7 @@ conformance.</p>
       </tr>
       <tr> <!-- Jul 2022 -->
         <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3035.pdf">N3035</a></td>
-        <td class="unknown" align="center">Unknown</td>
+        <td class="full" align="center">Clang 15</td>
       </tr>
     <!-- Sep 2021 Papers -->
     <tr>
@@ -909,11 +918,6 @@ conformance.</p>
       <td class="full" align="center">Yes</td>
     </tr>
     <tr>
-      <td>Integer constant expressions</td>
-      <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2713.htm">N2713</a></td>
-      <td class="none" align="center">No</td>
-    </tr>
-    <tr>
       <td>Numerically equal</td>
       <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2716.htm">N2716</a></td>
       <td class="full" align="center">Yes</td>
@@ -921,7 +925,7 @@ conformance.</p>
     <tr>
       <td>char16_t & char32_t string literals shall be UTF-16 & UTF-32</td>
       <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2728.htm">N2728</a></td>
-      <td class="unknown" align="center">Unknown</td>
+      <td class="full" align="center">Yes</td>
     </tr>
     <tr>
       <td>IEC 60559 binding</td>
@@ -972,7 +976,7 @@ conformance.</p>
     <tr>
       <td>Types and sizes</td>
       <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2838.htm">N2838</a></td>
-      <td class="unknown" align="center">Unknown</td>
+      <td class="full" align="center">Yes</td>
     </tr>
     <tr>
       <td>Clarifying integer terms</td>
@@ -1028,17 +1032,12 @@ conformance.</p>
     <tr>
       <td>Add annotations for unreachable control flow v2</td>
       <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2826.pdf">N2826</a></td>
-      <td class="none" align="center">No</td>
+      <td class="full" align="center">Clang 17</td>
     </tr>
     <tr>
       <td>Unicode Sequences More Than 21 Bits are a Constraint Violation r0</td>
       <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2828.htm">N2828</a></td>
       <td class="full" align="center">Clang 3.6</td>
-    </tr>
-    <tr>
-      <td>Make assert() macro user friendly for C and C++ v2</td>
-      <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2829.htm">N2829</a></td>
-      <td class="none" align="center">No</td>
     </tr>
     <tr>
       <td>Identifier Syntax using Unicode Standard Annex 31</td>
@@ -1053,7 +1052,7 @@ conformance.</p>
     <tr>
       <td>Remove default argument promotions for _FloatN types</td>
       <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2844.pdf">N2844</a></td>
-      <td class="unknown" align="center">Unknown</td>
+      <td class="none" align="center">No</td>
     </tr>
     <tr>
       <td>Revised Suggestions of Change for Numerically Equal/Equivalent</td>
@@ -1080,22 +1079,22 @@ conformance.</p>
     </tr>
       <tr> <!-- Feb 2022 -->
         <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2900.htm">N2900</a></td>
-        <td class="unknown" align="center">Unknown</td>
+        <td class="full" align="center">Clang 17</td>
       </tr>
       <tr> <!-- Jul 2022 -->
         <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3011.htm">N3011</a></td>
-        <td class="unknown" align="center">Unknown</td>
+        <td class="full" align="center">Clang 17</td>
       </tr>
     <tr id="typeof">
       <td rowspan="3">Not-so-magic: typeof</td>
     </tr>
       <tr> <!-- Feb 2022 -->
         <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2927.htm">N2927</a></td>
-        <td class="unreleased" align="center">Clang 16</td>
+        <td class="full" align="center">Clang 16</td>
       </tr>
       <tr> <!-- Jul 2022 -->
         <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2930.pdf">N2930</a></td>
-        <td class="unreleased" align="center">Clang 16</td>
+        <td class="full" align="center">Clang 16</td>
       </tr>
     <tr>
       <td>Type annex tgmath narrowing macros with integer args v2</td>
@@ -1105,7 +1104,7 @@ conformance.</p>
     <tr>
       <td>Revise spelling of keywords v7</td>
       <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2934.pdf">N2934</a></td>
-      <td class="none" align="center">No</td>
+      <td class="full" align="center">Clang 17</td>
     </tr>
     <tr>
       <td>Make false and true first-class language features v8</td>
@@ -1131,7 +1130,7 @@ conformance.</p>
     <tr>
       <td>Remove ATOMIC_VAR_INIT v2</td>
       <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2886.htm">N2886</a></td>
-      <td class="none" align="center">No</td>
+      <td class="full" align="center">Clang 17</td>
     </tr>
     <tr>
       <td>Require exact-width integer type interfaces v2</td>
@@ -1162,7 +1161,7 @@ conformance.</p>
     <tr>
       <td>Relax requirements for va_start</td>
       <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2975.pdf">N2975</a></td>
-      <td class="unreleased" align="center">Clang 16</td>
+      <td class="full" align="center">Clang 16</td>
     </tr>
     <tr>
       <td>Enhanced enumerations</td>
@@ -1187,12 +1186,12 @@ conformance.</p>
     <tr>
       <td>Underspecified object definitions</td>
       <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3006.htm">N3006</a></td>
-      <td class="unknown" align="center">Unknown</td>
+      <td class="none" align="center">No</td>
     </tr>
     <tr>
       <td>Type inference for object declarations</td>
       <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3007.htm">N3007</a></td>
-      <td class="none" align="center">No</td>
+      <td class="unreleased" align="center">Clang 18</td>
     </tr>
     <tr>
       <td>constexpr for object definitions</td>
@@ -1212,13 +1211,7 @@ conformance.</p>
     <tr>
       <td>Introduce the nullptr constant</td>
       <td><a href="https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3042.htm">N3042</a></td>
-      <td class="partial" align="center">
-        <details><summary>Partial</summary>
-          Parts of the implementation may be incorrect until WG14 has completed NB comment
-          resolution for incompatibilities with C++ that were discovered. The major use cases
-          and usage patterns should work well, though.
-        </details>
-      </td>
+      <td class="full" align="center">Clang 17</td>
     </tr>
     <tr>
       <td>Memory layout of unions</td>

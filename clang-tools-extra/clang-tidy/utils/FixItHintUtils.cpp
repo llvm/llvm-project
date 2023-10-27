@@ -9,7 +9,9 @@
 #include "FixItHintUtils.h"
 #include "LexerUtils.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/ExprCXX.h"
 #include "clang/AST/Type.h"
+#include "clang/Tooling/FixIt.h"
 #include <optional>
 
 namespace clang::tidy::utils::fixit {
@@ -221,4 +223,46 @@ std::optional<FixItHint> addQualifierToVarDecl(const VarDecl &Var,
 
   return std::nullopt;
 }
+
+// Return true if expr needs to be put in parens when it is an argument of a
+// prefix unary operator, e.g. when it is a binary or ternary operator
+// syntactically.
+static bool needParensAfterUnaryOperator(const Expr &ExprNode) {
+  if (isa<clang::BinaryOperator>(&ExprNode) ||
+      isa<clang::ConditionalOperator>(&ExprNode)) {
+    return true;
+  }
+  if (const auto *Op = dyn_cast<CXXOperatorCallExpr>(&ExprNode)) {
+    return Op->getNumArgs() == 2 && Op->getOperator() != OO_PlusPlus &&
+           Op->getOperator() != OO_MinusMinus && Op->getOperator() != OO_Call &&
+           Op->getOperator() != OO_Subscript;
+  }
+  return false;
+}
+
+// Format a pointer to an expression: prefix with '*' but simplify
+// when it already begins with '&'.  Return empty string on failure.
+std::string formatDereference(const Expr &ExprNode, const ASTContext &Context) {
+  if (const auto *Op = dyn_cast<clang::UnaryOperator>(&ExprNode)) {
+    if (Op->getOpcode() == UO_AddrOf) {
+      // Strip leading '&'.
+      return std::string(
+          tooling::fixit::getText(*Op->getSubExpr()->IgnoreParens(), Context));
+    }
+  }
+  StringRef Text = tooling::fixit::getText(ExprNode, Context);
+
+  if (Text.empty())
+    return {};
+
+  // Remove remaining '->' from overloaded operator call
+  Text.consume_back("->");
+
+  // Add leading '*'.
+  if (needParensAfterUnaryOperator(ExprNode)) {
+    return (llvm::Twine("*(") + Text + ")").str();
+  }
+  return (llvm::Twine("*") + Text).str();
+}
+
 } // namespace clang::tidy::utils::fixit

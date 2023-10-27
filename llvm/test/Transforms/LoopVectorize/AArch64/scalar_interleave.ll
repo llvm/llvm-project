@@ -3,7 +3,7 @@
 ; RUN: opt -passes=loop-vectorize -prefer-predicate-over-epilogue=predicate-else-scalar-epilogue -S -o - < %s | FileCheck %s
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
-target triple = "aarch64-arm-none-eabi"
+target triple = "aarch64"
 
 ; This test is not vectorized on AArch64 due to requiring predicated loads.
 ; It should also not be interleaved as the predicated interleaving will just

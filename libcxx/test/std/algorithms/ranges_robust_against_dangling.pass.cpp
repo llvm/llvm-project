@@ -29,9 +29,9 @@ struct NonBorrowedRange {
   using Sent = sentinel_wrapper<Iter>;
 
   int* data_;
-  size_t size_;
+  std::size_t size_;
 
-  template <size_t N>
+  template <std::size_t N>
   constexpr explicit NonBorrowedRange(std::array<int, N>& arr) : data_{arr.data()}, size_{arr.size()} {}
 
   constexpr Iter begin() const { return data_; };
@@ -109,7 +109,7 @@ constexpr bool test_all() {
   auto out2 = output.begin() + 1;
 
   int x = 2;
-  size_t count = 1;
+  std::size_t count = 1;
 
   dangling_1st(std::ranges::find, in, x);
   dangling_1st(std::ranges::find_if, in, unary_pred);
@@ -201,6 +201,7 @@ constexpr bool test_all() {
   dangling_1st(std::ranges::make_heap, in);
   dangling_1st(std::ranges::push_heap, in);
   dangling_1st(std::ranges::pop_heap, in);
+  dangling_1st(std::ranges::make_heap, in);
   dangling_1st(std::ranges::sort_heap, in);
   dangling_1st<prev_permutation_result<dangling>>(std::ranges::prev_permutation, in);
   dangling_1st<next_permutation_result<dangling>>(std::ranges::next_permutation, in);

@@ -177,7 +177,7 @@ static bool isDestBasedOnGivenLength(const MatchFinder::MatchResult &Result) {
   StringRef LengthExprStr =
       exprToStr(Result.Nodes.getNodeAs<Expr>(LengthExprName), Result).trim();
 
-  return DestCapacityExprStr != "" && LengthExprStr != "" &&
+  return !DestCapacityExprStr.empty() && !LengthExprStr.empty() &&
          DestCapacityExprStr.contains(LengthExprStr);
 }
 
@@ -483,7 +483,7 @@ static void insertNullTerminatorExpr(StringRef Name,
       (Twine('\n') + SpaceBeforeStmtStr +
        exprToStr(Result.Nodes.getNodeAs<Expr>(DestExprName), Result) + "[" +
        exprToStr(Result.Nodes.getNodeAs<Expr>(LengthExprName), Result) +
-       "] = " + ((Name[0] != 'w') ? "\'\\0\';" : "L\'\\0\';"))
+       "] = " + ((Name[0] != 'w') ? R"('\0';)" : R"(L'\0';)"))
           .str();
 
   const auto AddNullTerminatorExprFix = FixItHint::CreateInsertion(
@@ -528,10 +528,10 @@ AST_MATCHER_P(Expr, hasDefinition, ast_matchers::internal::Matcher<Expr>,
 
   const char *const VarDeclName = "variable-declaration";
   auto DREHasDefinition = ignoringImpCasts(declRefExpr(
-      allOf(to(varDecl().bind(VarDeclName)),
-            hasAncestor(compoundStmt(hasDescendant(binaryOperator(
-                hasLHS(declRefExpr(to(varDecl(equalsBoundNode(VarDeclName))))),
-                hasRHS(ignoringImpCasts(InnerMatcher)))))))));
+      to(varDecl().bind(VarDeclName)),
+      hasAncestor(compoundStmt(hasDescendant(binaryOperator(
+          hasLHS(declRefExpr(to(varDecl(equalsBoundNode(VarDeclName))))),
+          hasRHS(ignoringImpCasts(InnerMatcher))))))));
 
   if (DREHasDefinition.matches(*SimpleNode, Finder, Builder))
     return true;
@@ -581,9 +581,8 @@ void NotNullTerminatedResultCheck::registerMatchers(MatchFinder *Finder) {
 
   // - Example:  std::string str = "foo";  str.size();
   auto SizeOrLength =
-      cxxMemberCallExpr(
-          allOf(on(expr(AnyOfStringTy).bind("Foo")),
-                has(memberExpr(member(hasAnyName("size", "length"))))))
+      cxxMemberCallExpr(on(expr(AnyOfStringTy).bind("Foo")),
+                        has(memberExpr(member(hasAnyName("size", "length")))))
           .bind(WrongLengthExprName);
 
   // - Example:  char src[] = "foo";       sizeof(src);
@@ -641,8 +640,8 @@ void NotNullTerminatedResultCheck::registerMatchers(MatchFinder *Finder) {
 
   // - Example:  foo[bar[baz]].qux; (or just ParmVarDecl)
   auto DestUnknownDecl =
-      declRefExpr(allOf(to(varDecl(AnyOfCharTy).bind(DestVarDeclName)),
-                        expr().bind(UnknownDestName)))
+      declRefExpr(to(varDecl(AnyOfCharTy).bind(DestVarDeclName)),
+                  expr().bind(UnknownDestName))
           .bind(DestExprName);
 
   auto AnyOfDestDecl = ignoringImpCasts(
@@ -659,10 +658,10 @@ void NotNullTerminatedResultCheck::registerMatchers(MatchFinder *Finder) {
       hasRHS(ignoringImpCasts(
           anyOf(characterLiteral(equals(0U)), integerLiteral(equals(0))))));
 
-  auto SrcDecl = declRefExpr(
-      allOf(to(decl().bind(SrcVarDeclName)),
-            anyOf(hasAncestor(cxxMemberCallExpr().bind(SrcExprName)),
-                  expr().bind(SrcExprName))));
+  auto SrcDecl =
+      declRefExpr(to(decl().bind(SrcVarDeclName)),
+                  anyOf(hasAncestor(cxxMemberCallExpr().bind(SrcExprName)),
+                        expr().bind(SrcExprName)));
 
   auto AnyOfSrcDecl =
       ignoringImpCasts(anyOf(stringLiteral().bind(SrcExprName),
@@ -940,7 +939,7 @@ void NotNullTerminatedResultCheck::memchrFix(
 
 void NotNullTerminatedResultCheck::memmoveFix(
     StringRef Name, const MatchFinder::MatchResult &Result,
-    DiagnosticBuilder &Diag) {
+    DiagnosticBuilder &Diag) const {
   bool IsOverflows = isDestCapacityFix(Result, Diag);
 
   if (UseSafeFunctions && isKnownDest(Result)) {

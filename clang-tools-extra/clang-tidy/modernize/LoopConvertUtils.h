@@ -22,9 +22,7 @@
 #include <string>
 #include <utility>
 
-namespace clang {
-namespace tidy {
-namespace modernize {
+namespace clang::tidy::modernize {
 
 enum LoopFixerKind {
   LFK_Array,
@@ -34,24 +32,24 @@ enum LoopFixerKind {
 };
 
 /// A map used to walk the AST in reverse: maps child Stmt to parent Stmt.
-typedef llvm::DenseMap<const clang::Stmt *, const clang::Stmt *> StmtParentMap;
+using StmtParentMap = llvm::DenseMap<const clang::Stmt *, const clang::Stmt *>;
 
 /// A map used to walk the AST in reverse:
 ///  maps VarDecl to the to parent DeclStmt.
-typedef llvm::DenseMap<const clang::VarDecl *, const clang::DeclStmt *>
-    DeclParentMap;
+using DeclParentMap =
+    llvm::DenseMap<const clang::VarDecl *, const clang::DeclStmt *>;
 
 /// A map used to track which variables have been removed by a refactoring pass.
 /// It maps the parent ForStmt to the removed index variable's VarDecl.
-typedef llvm::DenseMap<const clang::ForStmt *, const clang::VarDecl *>
-    ReplacedVarsMap;
+using ReplacedVarsMap =
+    llvm::DenseMap<const clang::ForStmt *, const clang::VarDecl *>;
 
 /// A map used to remember the variable names generated in a Stmt
-typedef llvm::DenseMap<const clang::Stmt *, std::string>
-    StmtGeneratedVarNameMap;
+using StmtGeneratedVarNameMap =
+    llvm::DenseMap<const clang::Stmt *, std::string>;
 
 /// A vector used to store the AST subtrees of an Expr.
-typedef llvm::SmallVector<const clang::Expr *, 16> ComponentVector;
+using ComponentVector = llvm::SmallVector<const clang::Expr *, 16>;
 
 /// Class used build the reverse AST properties needed to detect
 /// name conflicts and free variables.
@@ -179,7 +177,7 @@ class DeclFinderASTVisitor
 public:
   DeclFinderASTVisitor(const StringRef &Name,
                        const StmtGeneratedVarNameMap *GeneratedDecls)
-      : Name(Name), GeneratedDecls(GeneratedDecls), Found(false) {}
+      : Name(Name), GeneratedDecls(GeneratedDecls) {}
 
   /// Attempts to find any usages of variables name Name in Body, returning
   /// true when it is used in Body. This includes the generated loop variables
@@ -197,12 +195,12 @@ private:
   /// GeneratedDecls keeps track of ForStmts which have been transformed,
   /// mapping each modified ForStmt to the variable generated in the loop.
   const StmtGeneratedVarNameMap *GeneratedDecls;
-  bool Found;
+  bool Found = false;
 
-  bool VisitForStmt(clang::ForStmt *F);
-  bool VisitNamedDecl(clang::NamedDecl *D);
-  bool VisitDeclRefExpr(clang::DeclRefExpr *D);
-  bool VisitTypeLoc(clang::TypeLoc TL);
+  bool VisitForStmt(clang::ForStmt *);
+  bool VisitNamedDecl(clang::NamedDecl *);
+  bool VisitDeclRefExpr(clang::DeclRefExpr *);
+  bool VisitTypeLoc(clang::TypeLoc);
 };
 
 /// The information needed to describe a valid convertible usage
@@ -272,7 +270,7 @@ private:
 };
 
 // The main computational result of ForLoopIndexVisitor.
-typedef llvm::SmallVector<Usage, 8> UsageResult;
+using UsageResult = llvm::SmallVector<Usage, 8>;
 
 // General functions used by ForLoopIndexUseVisitor and LoopConvertCheck.
 const Expr *digThroughConstructorsConversions(const Expr *E);
@@ -341,7 +339,7 @@ public:
 
 private:
   /// Typedef used in CRTP functions.
-  typedef RecursiveASTVisitor<ForLoopIndexUseVisitor> VisitorBase;
+  using VisitorBase = RecursiveASTVisitor<ForLoopIndexUseVisitor>;
   friend class RecursiveASTVisitor<ForLoopIndexUseVisitor>;
 
   /// Overriden methods for RecursiveASTVisitor's traversal.
@@ -377,9 +375,9 @@ private:
   /// ArraySubscriptExpressions.
   UsageResult Usages;
   llvm::SmallSet<SourceLocation, 8> UsageLocations;
-  bool OnlyUsedAsIndex;
+  bool OnlyUsedAsIndex = true;
   /// The DeclStmt for an alias to the container element.
-  const DeclStmt *AliasDecl;
+  const DeclStmt *AliasDecl = nullptr;
   Confidence ConfidenceLevel;
   /// A list of expressions on which ContainerExpr depends.
   ///
@@ -390,16 +388,16 @@ private:
 
   /// The parent-in-waiting. Will become the real parent once we traverse down
   /// one level in the AST.
-  const Stmt *NextStmtParent;
+  const Stmt *NextStmtParent = nullptr;
   /// The actual parent of a node when Visit*() calls are made. Only the
   /// parentage of DeclStmt's to possible iteration/selection statements is of
   /// importance.
-  const Stmt *CurrStmtParent;
+  const Stmt *CurrStmtParent = nullptr;
 
   /// \see aliasUseRequired().
-  bool ReplaceWithAliasUse;
+  bool ReplaceWithAliasUse = false;
   /// \see aliasFromForInit().
-  bool AliasFromForInit;
+  bool AliasFromForInit = false;
 };
 
 struct TUTrackingInfo {
@@ -464,8 +462,6 @@ private:
   bool declarationExists(llvm::StringRef Symbol);
 };
 
-} // namespace modernize
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::modernize
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_LOOP_CONVERT_UTILS_H

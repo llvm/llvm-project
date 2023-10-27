@@ -59,6 +59,7 @@ import time
 import zipfile
 
 from queue import Queue
+
 # mypy has problems finding InvalidFileException in the module
 # and this is we can shush that false positive
 from plistlib import InvalidFileException  # type:ignore
@@ -70,9 +71,9 @@ from typing import Dict, IO, List, NamedTuple, Optional, TYPE_CHECKING, Tuple
 # Helper functions.
 ###############################################################################
 
+
 class StreamToLogger:
-    def __init__(self, logger: logging.Logger,
-                 log_level: int = logging.INFO):
+    def __init__(self, logger: logging.Logger, log_level: int = logging.INFO):
         self.logger = logger
         self.log_level = log_level
 
@@ -109,8 +110,7 @@ def stdout(message: str):
     LOCAL.stdout.write(message)
 
 
-logging.basicConfig(
-    format='%(asctime)s:%(levelname)s:%(name)s: %(message)s')
+logging.basicConfig(format="%(asctime)s:%(levelname)s:%(name)s: %(message)s")
 
 
 ###############################################################################
@@ -119,10 +119,10 @@ logging.basicConfig(
 
 
 # Find Clang for static analysis.
-if 'CC' in os.environ:
-    cc_candidate: Optional[str] = os.environ['CC']
+if "CC" in os.environ:
+    cc_candidate: Optional[str] = os.environ["CC"]
 else:
-    cc_candidate = utils.which("clang", os.environ['PATH'])
+    cc_candidate = utils.which("clang", os.environ["PATH"])
 if not cc_candidate:
     stderr("Error: cannot find 'clang' in PATH")
     sys.exit(1)
@@ -173,18 +173,20 @@ PATCHFILE_NAME = "changes_for_analyzer.patch"
 # The list of checkers used during analyzes.
 # Currently, consists of all the non-experimental checkers, plus a few alpha
 # checkers we don't want to regress on.
-CHECKERS = ",".join([
-    "alpha.unix.SimpleStream",
-    "alpha.security.taint",
-    "cplusplus.NewDeleteLeaks",
-    "core",
-    "cplusplus",
-    "deadcode",
-    "security",
-    "unix",
-    "osx",
-    "nullability"
-])
+CHECKERS = ",".join(
+    [
+        "alpha.unix.SimpleStream",
+        "alpha.security.taint",
+        "cplusplus.NewDeleteLeaks",
+        "core",
+        "cplusplus",
+        "deadcode",
+        "security",
+        "unix",
+        "osx",
+        "nullability",
+    ]
+)
 
 VERBOSE = 0
 
@@ -201,15 +203,21 @@ def run_cleanup_script(directory: str, build_log_file: IO):
     cwd = os.path.join(directory, PATCHED_SOURCE_DIR_NAME)
     script_path = os.path.join(directory, CLEANUP_SCRIPT)
 
-    utils.run_script(script_path, build_log_file, cwd,
-                     out=LOCAL.stdout, err=LOCAL.stderr,
-                     verbose=VERBOSE)
+    utils.run_script(
+        script_path,
+        build_log_file,
+        cwd,
+        out=LOCAL.stdout,
+        err=LOCAL.stderr,
+        verbose=VERBOSE,
+    )
 
 
 class TestInfo(NamedTuple):
     """
     Information about a project and settings for its analysis.
     """
+
     project: ProjectInfo
     override_compiler: bool = False
     extra_analyzer_config: str = ""
@@ -235,10 +243,16 @@ class RegressionTester:
     A component aggregating all of the project testing.
     """
 
-    def __init__(self, jobs: int, projects: List[ProjectInfo],
-                 override_compiler: bool, extra_analyzer_config: str,
-                 extra_checkers: str,
-                 regenerate: bool, strictness: bool):
+    def __init__(
+        self,
+        jobs: int,
+        projects: List[ProjectInfo],
+        override_compiler: bool,
+        extra_analyzer_config: str,
+        extra_checkers: str,
+        regenerate: bool,
+        strictness: bool,
+    ):
         self.jobs = jobs
         self.projects = projects
         self.override_compiler = override_compiler
@@ -253,18 +267,21 @@ class RegressionTester:
         # Test the projects.
         for project in self.projects:
             projects_to_test.append(
-                TestInfo(project,
-                         self.override_compiler,
-                         self.extra_analyzer_config,
-                         self.extra_checkers,
-                         self.regenerate, self.strictness))
+                TestInfo(
+                    project,
+                    self.override_compiler,
+                    self.extra_analyzer_config,
+                    self.extra_checkers,
+                    self.regenerate,
+                    self.strictness,
+                )
+            )
         if self.jobs <= 1:
             return self._single_threaded_test_all(projects_to_test)
         else:
             return self._multi_threaded_test_all(projects_to_test)
 
-    def _single_threaded_test_all(self,
-                                  projects_to_test: List[TestInfo]) -> bool:
+    def _single_threaded_test_all(self, projects_to_test: List[TestInfo]) -> bool:
         """
         Run all projects.
         :return: whether tests have passed.
@@ -275,8 +292,7 @@ class RegressionTester:
             success &= tester.test()
         return success
 
-    def _multi_threaded_test_all(self,
-                                 projects_to_test: List[TestInfo]) -> bool:
+    def _multi_threaded_test_all(self, projects_to_test: List[TestInfo]) -> bool:
         """
         Run each project in a separate thread.
 
@@ -327,8 +343,7 @@ class ProjectTester:
         to the :param strictness: criteria.
         """
         if not self.project.enabled:
-            self.out(
-                f" \n\n--- Skipping disabled project {self.project.name}\n")
+            self.out(f" \n\n--- Skipping disabled project {self.project.name}\n")
             return True
 
         self.out(f" \n\n--- Building project {self.project.name}\n")
@@ -350,8 +365,10 @@ class ProjectTester:
         else:
             passed = run_cmp_results(project_dir, self.strictness)
 
-        self.out(f"Completed tests for project {self.project.name} "
-                 f"(time: {time.time() - start_time:.2f}).\n")
+        self.out(
+            f"Completed tests for project {self.project.name} "
+            f"(time: {time.time() - start_time:.2f}).\n"
+        )
 
         return passed
 
@@ -380,7 +397,7 @@ class ProjectTester:
 
             shutil.rmtree(output_dir)
 
-        assert(not os.path.exists(output_dir))
+        assert not os.path.exists(output_dir)
         os.makedirs(os.path.join(output_dir, LOG_DIR_NAME))
 
         # Build and analyze the project.
@@ -388,39 +405,39 @@ class ProjectTester:
             if self.project.mode == 1:
                 self._download_and_patch(directory, build_log_file)
                 run_cleanup_script(directory, build_log_file)
-                build_time, memory = self.scan_build(directory, output_dir,
-                                                     build_log_file)
+                build_time, memory = self.scan_build(
+                    directory, output_dir, build_log_file
+                )
             else:
-                build_time, memory = self.analyze_preprocessed(directory,
-                                                               output_dir)
+                build_time, memory = self.analyze_preprocessed(directory, output_dir)
 
             if self.is_reference_build:
                 run_cleanup_script(directory, build_log_file)
-                normalize_reference_results(directory, output_dir,
-                                            self.project.mode)
+                normalize_reference_results(directory, output_dir, self.project.mode)
 
-        self.out(f"Build complete (time: {utils.time_to_str(build_time)}, "
-                 f"peak memory: {utils.memory_to_str(memory)}). "
-                 f"See the log for more details: {build_log_path}\n")
+        self.out(
+            f"Build complete (time: {utils.time_to_str(build_time)}, "
+            f"peak memory: {utils.memory_to_str(memory)}). "
+            f"See the log for more details: {build_log_path}\n"
+        )
 
         return build_time, memory
 
-    def scan_build(self, directory: str, output_dir: str,
-                   build_log_file: IO) -> Tuple[float, int]:
+    def scan_build(
+        self, directory: str, output_dir: str, build_log_file: IO
+    ) -> Tuple[float, int]:
         """
         Build the project with scan-build by reading in the commands and
         prefixing them with the scan-build options.
         """
         build_script_path = os.path.join(directory, BUILD_SCRIPT)
         if not os.path.exists(build_script_path):
-            stderr(f"Error: build script is not defined: "
-                   f"{build_script_path}\n")
+            stderr(f"Error: build script is not defined: " f"{build_script_path}\n")
             sys.exit(1)
 
         all_checkers = CHECKERS
-        if 'SA_ADDITIONAL_CHECKERS' in os.environ:
-            all_checkers = (all_checkers + ',' +
-                            os.environ['SA_ADDITIONAL_CHECKERS'])
+        if "SA_ADDITIONAL_CHECKERS" in os.environ:
+            all_checkers = all_checkers + "," + os.environ["SA_ADDITIONAL_CHECKERS"]
         if self.extra_checkers != "":
             all_checkers += "," + self.extra_checkers
 
@@ -456,9 +473,9 @@ class ProjectTester:
                 # instead.
                 if command == NO_PREFIX_CMD:
                     command_prefix = ""
-                    extra_env['OUTPUT'] = output_dir
-                    extra_env['CC'] = CLANG
-                    extra_env['ANALYZER_CONFIG'] = self.generate_config()
+                    extra_env["OUTPUT"] = output_dir
+                    extra_env["CC"] = CLANG
+                    extra_env["ANALYZER_CONFIG"] = self.generate_config()
                     continue
 
                 if command.startswith("#"):
@@ -467,8 +484,9 @@ class ProjectTester:
                 # If using 'make', auto imply a -jX argument
                 # to speed up analysis.  xcodebuild will
                 # automatically use the maximum number of cores.
-                if (command.startswith("make ") or command == "make") and \
-                        "-j" not in command:
+                if (
+                    command.startswith("make ") or command == "make"
+                ) and "-j" not in command:
                     command += f" -j{MAX_JOBS}"
 
                 command_to_run = command_prefix + command
@@ -476,11 +494,13 @@ class ProjectTester:
                 self.vout(f"  Executing: {command_to_run}\n")
 
                 time, mem = utils.check_and_measure_call(
-                    command_to_run, cwd=cwd,
+                    command_to_run,
+                    cwd=cwd,
                     stderr=build_log_file,
                     stdout=build_log_file,
                     env=dict(os.environ, **extra_env),
-                    shell=True)
+                    shell=True,
+                )
 
                 execution_time += time
                 peak_memory = max(peak_memory, mem)
@@ -493,14 +513,17 @@ class ProjectTester:
 
         return execution_time, peak_memory
 
-    def analyze_preprocessed(self, directory: str,
-                             output_dir: str) -> Tuple[float, int]:
+    def analyze_preprocessed(
+        self, directory: str, output_dir: str
+    ) -> Tuple[float, int]:
         """
         Run analysis on a set of preprocessed files.
         """
         if os.path.exists(os.path.join(directory, BUILD_SCRIPT)):
-            stderr(f"Error: The preprocessed files project "
-                   f"should not contain {BUILD_SCRIPT}\n")
+            stderr(
+                f"Error: The preprocessed files project "
+                f"should not contain {BUILD_SCRIPT}\n"
+            )
             raise Exception()
 
         prefix = CLANG + " --analyze "
@@ -543,16 +566,22 @@ class ProjectTester:
                     self.vout(f"  Executing: {command}\n")
 
                     time, mem = utils.check_and_measure_call(
-                        command, cwd=directory, stderr=log_file,
-                        stdout=log_file, shell=True)
+                        command,
+                        cwd=directory,
+                        stderr=log_file,
+                        stdout=log_file,
+                        shell=True,
+                    )
 
                     execution_time += time
                     peak_memory = max(peak_memory, mem)
 
                 except CalledProcessError as e:
-                    stderr(f"Error: Analyzes of {full_file_name} failed. "
-                           f"See {log_file.name} for details. "
-                           f"Error code {e.returncode}.\n")
+                    stderr(
+                        f"Error: Analyzes of {full_file_name} failed. "
+                        f"See {log_file.name} for details. "
+                        f"Error code {e.returncode}.\n"
+                    )
                     failed = True
 
                 # If command did not fail, erase the log file.
@@ -606,18 +635,27 @@ class ProjectTester:
         else:
             raise ValueError(
                 f"Unknown source type '{self.project.source}' is found "
-                f"for the '{self.project.name}' project")
+                f"for the '{self.project.name}' project"
+            )
 
     def _download_from_git(self, directory: str, build_log_file: IO):
         repo = self.project.origin
         cached_source = os.path.join(directory, CACHED_SOURCE_DIR_NAME)
 
-        check_call(f"git clone --recursive {repo} {cached_source}",
-                   cwd=directory, stderr=build_log_file,
-                   stdout=build_log_file, shell=True)
-        check_call(f"git checkout --quiet {self.project.commit}",
-                   cwd=cached_source, stderr=build_log_file,
-                   stdout=build_log_file, shell=True)
+        check_call(
+            f"git clone --recursive {repo} {cached_source}",
+            cwd=directory,
+            stderr=build_log_file,
+            stdout=build_log_file,
+            shell=True,
+        )
+        check_call(
+            f"git checkout --quiet {self.project.commit}",
+            cwd=cached_source,
+            stderr=build_log_file,
+            stdout=build_log_file,
+            shell=True,
+        )
 
     def _unpack_zip(self, directory: str, build_log_file: IO):
         zip_files = list(glob.glob(directory + "/*.zip"))
@@ -625,23 +663,29 @@ class ProjectTester:
         if len(zip_files) == 0:
             raise ValueError(
                 f"Couldn't find any zip files to unpack for the "
-                f"'{self.project.name}' project")
+                f"'{self.project.name}' project"
+            )
 
         if len(zip_files) > 1:
             raise ValueError(
                 f"Couldn't decide which of the zip files ({zip_files}) "
-                f"for the '{self.project.name}' project to unpack")
+                f"for the '{self.project.name}' project to unpack"
+            )
 
         with zipfile.ZipFile(zip_files[0], "r") as zip_file:
-            zip_file.extractall(os.path.join(directory,
-                                             CACHED_SOURCE_DIR_NAME))
+            zip_file.extractall(os.path.join(directory, CACHED_SOURCE_DIR_NAME))
 
     @staticmethod
     def _run_download_script(directory: str, build_log_file: IO):
         script_path = os.path.join(directory, DOWNLOAD_SCRIPT)
-        utils.run_script(script_path, build_log_file, directory,
-                         out=LOCAL.stdout, err=LOCAL.stderr,
-                         verbose=VERBOSE)
+        utils.run_script(
+            script_path,
+            build_log_file,
+            directory,
+            out=LOCAL.stdout,
+            err=LOCAL.stderr,
+            verbose=VERBOSE,
+        )
 
     def _apply_patch(self, directory: str, build_log_file: IO):
         patchfile_path = os.path.join(directory, PATCHFILE_NAME)
@@ -653,15 +697,16 @@ class ProjectTester:
 
         self.out("  Applying patch.\n")
         try:
-            check_call(f"patch -p1 < '{patchfile_path}'",
-                       cwd=patched_source,
-                       stderr=build_log_file,
-                       stdout=build_log_file,
-                       shell=True)
+            check_call(
+                f"patch -p1 < '{patchfile_path}'",
+                cwd=patched_source,
+                stderr=build_log_file,
+                stdout=build_log_file,
+                shell=True,
+            )
 
         except CalledProcessError:
-            stderr(f"Error: Patch failed. "
-                   f"See {build_log_file.name} for details.\n")
+            stderr(f"Error: Patch failed. " f"See {build_log_file.name} for details.\n")
             sys.exit(1)
 
     def out(self, what: str):
@@ -674,9 +719,12 @@ class ProjectTester:
 
 
 class TestProjectThread(threading.Thread):
-    def __init__(self, tasks_queue: TestQueue,
-                 results_differ: threading.Event,
-                 failure_flag: threading.Event):
+    def __init__(
+        self,
+        tasks_queue: TestQueue,
+        results_differ: threading.Event,
+        failure_flag: threading.Event,
+    ):
         """
         :param results_differ: Used to signify that results differ from
                the canonical ones.
@@ -728,8 +776,10 @@ def check_build(output_dir: str):
         clean_up_empty_folders(output_dir)
 
         plists = glob.glob(output_dir + "/*/*.plist")
-        stdout(f"Number of bug reports "
-               f"(non-empty plist files) produced: {len(plists)}\n")
+        stdout(
+            f"Number of bug reports "
+            f"(non-empty plist files) produced: {len(plists)}\n"
+        )
         return
 
     stderr("Error: analysis failed.\n")
@@ -797,8 +847,7 @@ def run_cmp_results(directory: str, strictness: int = 0) -> bool:
     new_list.remove(os.path.join(new_dir, LOG_DIR_NAME))
 
     if len(ref_list) != len(new_list):
-        stderr(f"Mismatch in number of results folders: "
-               f"{ref_list} vs {new_list}")
+        stderr(f"Mismatch in number of results folders: " f"{ref_list} vs {new_list}")
         sys.exit(1)
 
     # There might be more then one folder underneath - one per each scan-build
@@ -811,7 +860,7 @@ def run_cmp_results(directory: str, strictness: int = 0) -> bool:
     # Iterate and find the differences.
     num_diffs = 0
     for ref_dir, new_dir in zip(ref_list, new_list):
-        assert(ref_dir != new_dir)
+        assert ref_dir != new_dir
 
         if VERBOSE >= 1:
             stdout(f"  Comparing Results: {ref_dir} {new_dir}\n")
@@ -822,10 +871,13 @@ def run_cmp_results(directory: str, strictness: int = 0) -> bool:
         new_results = CmpRuns.ResultsDirectory(new_dir, patched_source)
 
         # Scan the results, delete empty plist files.
-        num_diffs, reports_in_ref, reports_in_new = \
-            CmpRuns.dump_scan_build_results_diff(ref_results, new_results,
-                                                 delete_empty=False,
-                                                 out=LOCAL.stdout)
+        (
+            num_diffs,
+            reports_in_ref,
+            reports_in_new,
+        ) = CmpRuns.dump_scan_build_results_diff(
+            ref_results, new_results, delete_empty=False, out=LOCAL.stdout
+        )
 
         if num_diffs > 0:
             stdout(f"Warning: {num_diffs} differences in diagnostics.\n")
@@ -835,24 +887,23 @@ def run_cmp_results(directory: str, strictness: int = 0) -> bool:
             tests_passed = False
 
         elif strictness >= 1 and reports_in_ref != reports_in_new:
-            stdout("Error: The number of results are different "
-                   " strict mode (1).\n")
+            stdout("Error: The number of results are different " " strict mode (1).\n")
             tests_passed = False
 
-    stdout(f"Diagnostic comparison complete "
-           f"(time: {time.time() - start_time:.2f}).\n")
+    stdout(
+        f"Diagnostic comparison complete " f"(time: {time.time() - start_time:.2f}).\n"
+    )
 
     return tests_passed
 
 
-def normalize_reference_results(directory: str, output_dir: str,
-                                build_mode: int):
+def normalize_reference_results(directory: str, output_dir: str, build_mode: int):
     """
     Make the absolute paths relative in the reference results.
     """
     for dir_path, _, filenames in os.walk(output_dir):
         for filename in filenames:
-            if not filename.endswith('plist'):
+            if not filename.endswith("plist"):
                 continue
 
             plist = os.path.join(dir_path, filename)
@@ -863,18 +914,21 @@ def normalize_reference_results(directory: str, output_dir: str,
             if build_mode == 1:
                 path_prefix = os.path.join(directory, PATCHED_SOURCE_DIR_NAME)
 
-            paths = [source[len(path_prefix) + 1:]
-                     if source.startswith(path_prefix) else source
-                     for source in data['files']]
-            data['files'] = paths
+            paths = [
+                source[len(path_prefix) + 1 :]
+                if source.startswith(path_prefix)
+                else source
+                for source in data["files"]
+            ]
+            data["files"] = paths
 
             # Remove transient fields which change from run to run.
-            for diagnostic in data['diagnostics']:
-                if 'HTMLDiagnostics_files' in diagnostic:
-                    diagnostic.pop('HTMLDiagnostics_files')
+            for diagnostic in data["diagnostics"]:
+                if "HTMLDiagnostics_files" in diagnostic:
+                    diagnostic.pop("HTMLDiagnostics_files")
 
-            if 'clang_version' in data:
-                data.pop('clang_version')
+            if "clang_version" in data:
+                data.pop("clang_version")
 
             with open(plist, "wb") as plist_file:
                 plistlib.dump(data, plist_file)
@@ -908,7 +962,7 @@ def clean_up_empty_plists(output_dir: str):
             with open(plist, "rb") as plist_file:
                 data = plistlib.load(plist_file)
             # Delete empty reports.
-            if not data['files']:
+            if not data["files"]:
                 os.remove(plist)
                 continue
 

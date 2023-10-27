@@ -1,13 +1,13 @@
 ; RUN: split-file %s %t
 ; RUN: cat %t/main.ll %t/a.ll > %t/a2.ll
 ; RUN: cat %t/main.ll %t/b.ll > %t/b2.ll
-; RUN: llc %t/a2.ll -mtriple=armv7-unknown-linux-gnueabihf -mattr=+read-tp-hard -o - | \
+; RUN: llc %t/a2.ll -mtriple=armv7-unknown-linux-gnueabihf -mattr=+read-tp-tpidruro -o - | \
 ; RUN: FileCheck --check-prefixes=CHECK,CHECK-SMALL %s
-; RUN: llc %t/a2.ll -mtriple=thumbv7-unknown-linux-gnueabihf -mattr=+read-tp-hard -o - | \
+; RUN: llc %t/a2.ll -mtriple=thumbv7-unknown-linux-gnueabihf -mattr=+read-tp-tpidruro -o - | \
 ; RUN: FileCheck --check-prefixes=CHECK,CHECK-SMALL %s
-; RUN: llc %t/b2.ll -mtriple=armv7-unknown-linux-gnueabihf -mattr=+read-tp-hard -o - | \
+; RUN: llc %t/b2.ll -mtriple=armv7-unknown-linux-gnueabihf -mattr=+read-tp-tpidruro -o - | \
 ; RUN: FileCheck --check-prefixes=CHECK,CHECK-LARGE %s
-; RUN: llc %t/b2.ll -mtriple=thumbv7-unknown-linux-gnueabihf -mattr=+read-tp-hard -o - | \
+; RUN: llc %t/b2.ll -mtriple=thumbv7-unknown-linux-gnueabihf -mattr=+read-tp-tpidruro -o - | \
 ; RUN: FileCheck --check-prefixes=CHECK,CHECK-LARGE %s
 
 ;--- main.ll

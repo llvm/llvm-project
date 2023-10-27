@@ -6,18 +6,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_FPUTIL_DYADIC_FLOAT_H
-#define LLVM_LIBC_SRC_SUPPORT_FPUTIL_DYADIC_FLOAT_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_DYADIC_FLOAT_H
+#define LLVM_LIBC_SRC___SUPPORT_FPUTIL_DYADIC_FLOAT_H
 
 #include "FPBits.h"
 #include "FloatProperties.h"
 #include "multiply_add.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/UInt.h"
+#include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 
 #include <stddef.h>
 
-namespace __llvm_libc::fputil {
+namespace LIBC_NAMESPACE::fputil {
 
 // A generic class to perform comuptations of high precision floating points.
 // We store the value in dyadic format, including 3 fields:
@@ -31,7 +32,7 @@ namespace __llvm_libc::fputil {
 // To simplify and improve the efficiency, many functions will assume that the
 // inputs are normal.
 template <size_t Bits> struct DyadicFloat {
-  using MantissaType = __llvm_libc::cpp::UInt<Bits>;
+  using MantissaType = LIBC_NAMESPACE::cpp::UInt<Bits>;
 
   bool sign = false;
   int exponent = 0;
@@ -51,14 +52,14 @@ template <size_t Bits> struct DyadicFloat {
     normalize();
   }
 
-  DyadicFloat(bool s, int e, MantissaType m)
+  constexpr DyadicFloat(bool s, int e, MantissaType m)
       : sign(s), exponent(e), mantissa(m) {
     normalize();
   }
 
   // Normalizing the mantissa, bringing the leading 1 bit to the most
   // significant bit.
-  DyadicFloat &normalize() {
+  constexpr DyadicFloat &normalize() {
     if (!mantissa.is_zero()) {
       int shift_length = static_cast<int>(mantissa.clz());
       exponent -= shift_length;
@@ -81,9 +82,9 @@ template <size_t Bits> struct DyadicFloat {
     return *this;
   }
 
-  // Assume that it is already normalized and output is also normal.
+  // Assume that it is already normalized and output is not underflow.
   // Output is rounded correctly with respect to the current rounding mode.
-  // TODO(lntue): Test or add support for denormal output.
+  // TODO(lntue): Add support for underflow.
   // TODO(lntue): Test or add specialization for x86 long double.
   template <typename T, typename = cpp::enable_if_t<
                             cpp::is_floating_point_v<T> &&
@@ -98,24 +99,90 @@ template <size_t Bits> struct DyadicFloat {
     constexpr size_t PRECISION = FloatProperties<T>::MANTISSA_WIDTH + 1;
     using output_bits_t = typename FPBits<T>::UIntType;
 
-    MantissaType m_hi(mantissa >> (Bits - PRECISION));
-    auto d_hi = FPBits<T>::create_value(
-        sign, exponent + (Bits - 1) + FloatProperties<T>::EXPONENT_BIAS,
-        output_bits_t(m_hi) & FloatProperties<T>::MANTISSA_MASK);
+    int exp_hi = exponent + static_cast<int>((Bits - 1) +
+                                             FloatProperties<T>::EXPONENT_BIAS);
 
-    const MantissaType ROUND_MASK = MantissaType(1) << (Bits - PRECISION - 1);
-    const MantissaType STICKY_MASK = ROUND_MASK - MantissaType(1);
+    bool denorm = false;
+    uint32_t shift = Bits - PRECISION;
+    if (LIBC_UNLIKELY(exp_hi <= 0)) {
+      // Output is denormal.
+      denorm = true;
+      shift = (Bits - PRECISION) + static_cast<uint32_t>(1 - exp_hi);
 
-    bool round_bit = !(mantissa & ROUND_MASK).is_zero();
-    bool sticky_bit = !(mantissa & STICKY_MASK).is_zero();
+      exp_hi = FloatProperties<T>::EXPONENT_BIAS;
+    }
+
+    int exp_lo = exp_hi - PRECISION - 1;
+
+    MantissaType m_hi(mantissa >> shift);
+
+    T d_hi = FPBits<T>::create_value(sign, exp_hi,
+                                     output_bits_t(m_hi) &
+                                         FloatProperties<T>::MANTISSA_MASK)
+                 .get_val();
+
+    const MantissaType round_mask = MantissaType(1) << (shift - 1);
+    const MantissaType sticky_mask = round_mask - MantissaType(1);
+
+    bool round_bit = !(mantissa & round_mask).is_zero();
+    bool sticky_bit = !(mantissa & sticky_mask).is_zero();
     int round_and_sticky = int(round_bit) * 2 + int(sticky_bit);
-    auto d_lo = FPBits<T>::create_value(sign,
-                                        exponent + (Bits - PRECISION - 2) +
-                                            FloatProperties<T>::EXPONENT_BIAS,
-                                        output_bits_t(0));
+
+    T d_lo;
+    if (LIBC_UNLIKELY(exp_lo <= 0)) {
+      // d_lo is denormal, but the output is normal.
+      int scale_up_exponent = 2 * PRECISION;
+      T scale_up_factor =
+          FPBits<T>::create_value(
+              sign, FloatProperties<T>::EXPONENT_BIAS + scale_up_exponent,
+              output_bits_t(0))
+              .get_val();
+      T scale_down_factor =
+          FPBits<T>::create_value(
+              sign, FloatProperties<T>::EXPONENT_BIAS - scale_up_exponent,
+              output_bits_t(0))
+              .get_val();
+
+      d_lo = FPBits<T>::create_value(sign, exp_lo + scale_up_exponent,
+                                     output_bits_t(0))
+                 .get_val();
+
+      return multiply_add(d_lo, T(round_and_sticky), d_hi * scale_up_factor) *
+             scale_down_factor;
+    }
+
+    d_lo = FPBits<T>::create_value(sign, exp_lo, output_bits_t(0)).get_val();
 
     // Still correct without FMA instructions if `d_lo` is not underflow.
-    return multiply_add(d_lo.get_val(), T(round_and_sticky), d_hi.get_val());
+    T r = multiply_add(d_lo, T(round_and_sticky), d_hi);
+
+    if (LIBC_UNLIKELY(denorm)) {
+      // Output is denormal, simply clear the exponent field.
+      output_bits_t clear_exp = output_bits_t(exp_hi)
+                                << FloatProperties<T>::MANTISSA_WIDTH;
+      output_bits_t r_bits = FPBits<T>(r).uintval() - clear_exp;
+      return FPBits<T>(r_bits).get_val();
+    }
+
+    return r;
+  }
+
+  explicit operator MantissaType() const {
+    if (mantissa.is_zero())
+      return 0;
+
+    MantissaType new_mant = mantissa;
+    if (exponent > 0) {
+      new_mant <<= exponent;
+    } else {
+      new_mant >>= (-exponent);
+    }
+
+    if (sign) {
+      new_mant = (~new_mant) + 1;
+    }
+
+    return new_mant;
   }
 };
 
@@ -134,9 +201,9 @@ template <size_t Bits> struct DyadicFloat {
 template <size_t Bits>
 constexpr DyadicFloat<Bits> quick_add(DyadicFloat<Bits> a,
                                       DyadicFloat<Bits> b) {
-  if (unlikely(a.mantissa.is_zero()))
+  if (LIBC_UNLIKELY(a.mantissa.is_zero()))
     return b;
-  if (unlikely(b.mantissa.is_zero()))
+  if (LIBC_UNLIKELY(b.mantissa.is_zero()))
     return a;
 
   // Align exponents
@@ -155,7 +222,7 @@ constexpr DyadicFloat<Bits> quick_add(DyadicFloat<Bits> a,
     if (result.mantissa.add(b.mantissa)) {
       // Mantissa addition overflow.
       result.shift_right(1);
-      result.mantissa.val[DyadicFloat<Bits>::MantissaType::WordCount - 1] |=
+      result.mantissa.val[DyadicFloat<Bits>::MantissaType::WORDCOUNT - 1] |=
           (uint64_t(1) << 63);
     }
     // Result is already normalized.
@@ -182,7 +249,7 @@ constexpr DyadicFloat<Bits> quick_add(DyadicFloat<Bits> a,
 //   result.mantissa = quick_mul_hi(a.mantissa + b.mantissa)
 //                   ~ (full product a.mantissa * b.mantissa) >> Bits.
 // The errors compared to the mathematical product is bounded by:
-//   2 * errors of quick_mul_hi = 2 * (UInt<Bits>::WordCount - 1) in ULPs.
+//   2 * errors of quick_mul_hi = 2 * (UInt<Bits>::WORDCOUNT - 1) in ULPs.
 // Assume inputs are normalized (by constructors or other functions) so that we
 // don't need to normalize the inputs again in this function.  If the inputs are
 // not normalized, the results might lose precision significantly.
@@ -197,7 +264,7 @@ constexpr DyadicFloat<Bits> quick_mul(DyadicFloat<Bits> a,
     result.mantissa = a.mantissa.quick_mul_hi(b.mantissa);
     // Check the leading bit directly, should be faster than using clz in
     // normalize().
-    if (result.mantissa.val[DyadicFloat<Bits>::MantissaType::WordCount - 1] >>
+    if (result.mantissa.val[DyadicFloat<Bits>::MantissaType::WORDCOUNT - 1] >>
             63 ==
         0)
       result.shift_left(1);
@@ -207,6 +274,38 @@ constexpr DyadicFloat<Bits> quick_mul(DyadicFloat<Bits> a,
   return result;
 }
 
-} // namespace __llvm_libc::fputil
+// Simple polynomial approximation.
+template <size_t Bits>
+constexpr DyadicFloat<Bits> multiply_add(const DyadicFloat<Bits> &a,
+                                         const DyadicFloat<Bits> &b,
+                                         const DyadicFloat<Bits> &c) {
+  return quick_add(c, quick_mul(a, b));
+}
 
-#endif // LLVM_LIBC_SRC_SUPPORT_FPUTIL_DYADIC_FLOAT_H
+// Simple exponentiation implementation for printf. Only handles positive
+// exponents, since division isn't implemented.
+template <size_t Bits>
+constexpr DyadicFloat<Bits> pow_n(DyadicFloat<Bits> a, uint32_t power) {
+  DyadicFloat<Bits> result = 1.0;
+  DyadicFloat<Bits> cur_power = a;
+
+  while (power > 0) {
+    if ((power % 2) > 0) {
+      result = quick_mul(result, cur_power);
+    }
+    power = power >> 1;
+    cur_power = quick_mul(cur_power, cur_power);
+  }
+  return result;
+}
+
+template <size_t Bits>
+constexpr DyadicFloat<Bits> mul_pow_2(DyadicFloat<Bits> a, int32_t pow_2) {
+  DyadicFloat<Bits> result = a;
+  result.exponent += pow_2;
+  return result;
+}
+
+} // namespace LIBC_NAMESPACE::fputil
+
+#endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_DYADIC_FLOAT_H

@@ -12,8 +12,8 @@
 
 define i32 @clamp255_i32(i32 %x) {
 ; CHECK-LABEL: @clamp255_i32(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.smin.i32(i32 [[X:%.*]], i32 255)
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[TMP1]], 255
+; CHECK-NEXT:    [[OR:%.*]] = call i32 @llvm.smin.i32(i32 [[X:%.*]], i32 255)
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[OR]], 255
 ; CHECK-NEXT:    ret i32 [[AND]]
 ;
   %sub = sub nsw i32 255, %x
@@ -195,7 +195,7 @@ define i32 @sub_ashr_or_i32_extra_use_sub(i32 %x, i32 %y, ptr %p) {
 ; CHECK-LABEL: @sub_ashr_or_i32_extra_use_sub(
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[Y:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    store i32 [[SUB]], ptr [[P:%.*]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[Y]], [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i32 [[X]], [[Y]]
 ; CHECK-NEXT:    [[OR:%.*]] = select i1 [[TMP1]], i32 -1, i32 [[X]]
 ; CHECK-NEXT:    ret i32 [[OR]]
 ;

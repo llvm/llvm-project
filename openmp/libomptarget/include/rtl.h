@@ -70,6 +70,10 @@ struct RTLInfoTy {
                                        const char **);
   typedef int32_t(data_lock_ty)(int32_t, void *, int64_t, void **);
   typedef int32_t(data_unlock_ty)(int32_t, void *);
+  typedef int32_t(data_notify_mapped_ty)(int32_t, void *, int64_t);
+  typedef int32_t(data_notify_unmapped_ty)(int32_t, void *);
+  typedef int32_t(set_device_offset_ty)(int32_t);
+  typedef int32_t(activate_record_replay_ty)(int32_t, uint64_t, bool, bool);
 
   int32_t Idx = -1;             // RTL index, index is the number of devices
                                 // of other RTLs that were registered before,
@@ -120,6 +124,10 @@ struct RTLInfoTy {
   release_async_info_ty *release_async_info = nullptr;
   data_lock_ty *data_lock = nullptr;
   data_unlock_ty *data_unlock = nullptr;
+  data_notify_mapped_ty *data_notify_mapped = nullptr;
+  data_notify_unmapped_ty *data_notify_unmapped = nullptr;
+  set_device_offset_ty *set_device_offset = nullptr;
+  activate_record_replay_ty *activate_record_replay = nullptr;
 
   // Are there images associated with this RTL.
   bool IsUsed = false;

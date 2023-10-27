@@ -190,7 +190,7 @@ TEST_F(IRBuilderTest, IntrinsicsWithScalableVectors) {
   // LLVMScalarOrSameVectorWidth.
 
   Type *VecTy = VectorType::get(Builder.getInt32Ty(), 4, true);
-  Type *PtrToVecTy = VecTy->getPointerTo();
+  Type *PtrToVecTy = Builder.getPtrTy();
   PredTy = VectorType::get(Builder.getInt1Ty(), 4, true);
 
   ArgTys.clear();

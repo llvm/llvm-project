@@ -7,9 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/unistd/getppid.h"
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
 TEST(LlvmLibcGetPpidTest, SmokeTest) {
   // getppid always succeeds. So, we just call it as a smoke test.
-  __llvm_libc::getppid();
+  LIBC_NAMESPACE::getppid();
 }

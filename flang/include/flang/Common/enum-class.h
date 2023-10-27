@@ -12,7 +12,7 @@
 //   enum class className { enum1, enum2, ... , enumN };
 // as well as the introspective utilities
 //   static constexpr std::size_t className_enumSize{N};
-//   static inline const std::string &EnumToString(className);
+//   static inline std::string_view EnumToString(className);
 
 #ifndef FORTRAN_COMMON_ENUM_CLASS_H_
 #define FORTRAN_COMMON_ENUM_CLASS_H_

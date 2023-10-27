@@ -240,7 +240,7 @@ body:             |
     renamable $eax = MOV32rm $ebp, 1, $noreg, 8, $noreg :: (load (s32) from %fixed-stack.1)
     DBG_VALUE renamable $eax, 0, !20, !DIExpression(DW_OP_deref), debug-location !21
     MOV32mi $ebp, 1, $noreg, -4, $noreg, 2, debug-location !23 :: (store (s32) into %ir.z)
-    CMP32mi8 renamable $eax, 1, $noreg, 4, $noreg, 2, implicit-def $eflags, debug-location !24 :: (load (s32) from %ir.var)
+    CMP32mi renamable $eax, 1, $noreg, 4, $noreg, 2, implicit-def $eflags, debug-location !24 :: (load (s32) from %ir.var)
     MOV32mr $ebp, 1, $noreg, -8, $noreg, killed $eax :: (store (s32) into %stack.1)
     DBG_VALUE $ebp, 0, !20, !DIExpression(DW_OP_constu, 8, DW_OP_minus, DW_OP_deref, DW_OP_deref), debug-location !21
     JCC_1 %bb.2, 14, implicit $eflags, debug-location !24

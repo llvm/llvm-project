@@ -20,7 +20,7 @@ define void @foo(ptr byval(%struct.face) nocapture align 8) local_unnamed_addr {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    subq $40, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-NEXT:    vmovaps {{.*#+}} xmm0 = [1,1,1,1]
+; CHECK-NEXT:    vbroadcastss {{.*#+}} xmm0 = [1,1,1,1]
 ; CHECK-NEXT:    vmovaps %xmm0, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movl $1, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    vmovups {{[0-9]+}}(%rsp), %xmm0

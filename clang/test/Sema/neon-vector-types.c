@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 %s -triple armv7 -target-feature +neon -fsyntax-only -fdouble-square-bracket-attributes -verify
-// RUN: %clang_cc1 %s -triple armv8 -target-feature +neon -fsyntax-only -fdouble-square-bracket-attributes -verify
+// RUN: %clang_cc1 %s -triple armv7 -target-feature +neon -fsyntax-only -verify
+// RUN: %clang_cc1 %s -triple armv8 -target-feature +neon -fsyntax-only -verify
 
 typedef float float32_t;
 typedef signed char poly8_t;

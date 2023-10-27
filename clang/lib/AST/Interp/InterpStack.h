@@ -13,6 +13,8 @@
 #ifndef LLVM_CLANG_AST_INTERP_INTERPSTACK_H
 #define LLVM_CLANG_AST_INTERP_INTERPSTACK_H
 
+#include "FunctionPointer.h"
+#include "IntegralAP.h"
 #include "PrimType.h"
 #include <memory>
 #include <vector>
@@ -43,8 +45,8 @@ public:
     assert(ItemTypes.back() == toPrimType<T>());
     ItemTypes.pop_back();
 #endif
-    auto *Ptr = &peek<T>();
-    auto Value = std::move(*Ptr);
+    T *Ptr = &peekInternal<T>();
+    T Value = std::move(*Ptr);
     Ptr->~T();
     shrink(aligned_size<T>());
     return Value;
@@ -53,21 +55,31 @@ public:
   /// Discards the top value from the stack.
   template <typename T> void discard() {
 #ifndef NDEBUG
+    assert(!ItemTypes.empty());
     assert(ItemTypes.back() == toPrimType<T>());
     ItemTypes.pop_back();
 #endif
-    auto *Ptr = &peek<T>();
+    T *Ptr = &peekInternal<T>();
     Ptr->~T();
     shrink(aligned_size<T>());
   }
 
   /// Returns a reference to the value on the top of the stack.
   template <typename T> T &peek() const {
-    return *reinterpret_cast<T *>(peek(aligned_size<T>()));
+#ifndef NDEBUG
+    assert(!ItemTypes.empty());
+    assert(ItemTypes.back() == toPrimType<T>());
+#endif
+    return peekInternal<T>();
+  }
+
+  template <typename T> T &peek(size_t Offset) const {
+    assert(aligned(Offset));
+    return *reinterpret_cast<T *>(peekData(Offset));
   }
 
   /// Returns a pointer to the top object.
-  void *top() const { return Chunk ? peek(0) : nullptr; }
+  void *top() const { return Chunk ? peekData(0) : nullptr; }
 
   /// Returns the size of the stack in bytes.
   size_t size() const { return StackSize; }
@@ -75,8 +87,11 @@ public:
   /// Clears the stack without calling any destructors.
   void clear();
 
-  // Returns whether the stack is empty.
+  /// Returns whether the stack is empty.
   bool empty() const { return StackSize == 0; }
+
+  /// dump the stack contents to stderr.
+  void dump() const;
 
 private:
   /// All stack slots are aligned to the native pointer alignment for storage.
@@ -86,10 +101,15 @@ private:
     return ((sizeof(T) + PtrAlign - 1) / PtrAlign) * PtrAlign;
   }
 
+  /// Like the public peek(), but without the debug type checks.
+  template <typename T> T &peekInternal() const {
+    return *reinterpret_cast<T *>(peekData(aligned_size<T>()));
+  }
+
   /// Grows the stack to accommodate a value and returns a pointer to it.
   void *grow(size_t Size);
   /// Returns a pointer from the top of the stack.
-  void *peek(size_t Size) const;
+  void *peekData(size_t Size) const;
   /// Shrinks the stack.
   void shrink(size_t Size);
 
@@ -160,6 +180,14 @@ private:
     else if constexpr (std::is_same_v<T, uint64_t> ||
                        std::is_same_v<T, Integral<64, false>>)
       return PT_Uint64;
+    else if constexpr (std::is_same_v<T, Floating>)
+      return PT_Float;
+    else if constexpr (std::is_same_v<T, FunctionPointer>)
+      return PT_FnPtr;
+    else if constexpr (std::is_same_v<T, IntegralAP<true>>)
+      return PT_IntAP;
+    else if constexpr (std::is_same_v<T, IntegralAP<false>>)
+      return PT_IntAP;
 
     llvm_unreachable("unknown type push()'ed into InterpStack");
   }

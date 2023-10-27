@@ -5,7 +5,8 @@
 
 define hidden i32 @"_Z54bar$ompvariant$bar"() {
 ; CHECK-LABEL: _Z54bar$ompvariant$bar:
-; CHECK:       ; %bb.0: ; %entry
+; CHECK:         .cfi_startproc
+; CHECK-NEXT:  ; %bb.0: ; %entry
 ; CHECK-NEXT:    mov #2, r12
 ; CHECK-NEXT:    clr r13
 ; CHECK-NEXT:    ret

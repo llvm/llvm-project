@@ -132,8 +132,8 @@ The obtuse part of this example is in the cases of ``%idx2`` and ``%idx3``. They
 result in the computation of addresses that point to memory past the end of the
 ``@MyVar`` global, which is only one ``i32`` long, not three ``i32``\s long.
 While this is legal in LLVM, it is inadvisable because any load or store with
-the pointer that results from these GEP instructions would produce undefined
-results.
+the pointer that results from these GEP instructions would trigger undefined
+behavior (UB).
 
 Why is the extra 0 index required?
 ----------------------------------
@@ -200,7 +200,7 @@ fine:
 
   @MyVar = external global { i32, [40 x i32 ] }
   ...
-  %idx = getelementptr { [40 x i32] }, ptr @MyVal, i64 0, i32 1, i64 17
+  %idx = getelementptr { i32, [40 x i32] }, ptr @MyVar, i64 0, i32 1, i64 17
 
 In this case, the structure does not contain a pointer and the GEP instruction
 can index through the global variable, into the second field of the structure
@@ -345,7 +345,7 @@ the static array type bounds are respected.
 The second sense of being out of bounds is computing an address that's beyond
 the actual underlying allocated object.
 
-With the ``inbounds`` keyword, the result value of the GEP is undefined if the
+With the ``inbounds`` keyword, the result value of the GEP is ``poison`` if the
 address is outside the actual underlying allocated object and not the address
 one-past-the-end.
 
@@ -428,8 +428,8 @@ evaluating the implied two's complement integer computation. However, since
 there's no guarantee of where an object will be allocated in the address space,
 such values have limited meaning.
 
-If the GEP has the ``inbounds`` keyword, the result value is undefined (a "trap
-value") if the GEP overflows (i.e. wraps around the end of the address space).
+If the GEP has the ``inbounds`` keyword, the result value is ``poison``
+if the GEP overflows (i.e. wraps around the end of the address space).
 
 As such, there are some ramifications of this for inbounds GEPs: scales implied
 by array/vector/pointer indices are always known to be "nsw" since they are

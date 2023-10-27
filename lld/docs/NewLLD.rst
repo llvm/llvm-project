@@ -5,7 +5,7 @@ The ELF Linker as a Library
 ---------------------------
 
 You can embed LLD to your program by linking against it and calling the linker's
-entry point function lld::elf::link.
+entry point function ``lld::lldMain``.
 
 The current policy is that it is your responsibility to give trustworthy object
 files. The function is guaranteed to return as long as you do not pass corrupted

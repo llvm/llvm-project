@@ -1,5 +1,12 @@
 import("//llvm/tools/cctools_symlinks.gni")
+import("//llvm/utils/gn/build/driver_executable.gni")
 import("//llvm/utils/gn/build/symlink_or_copy.gni")
+import("//llvm/utils/TableGen/tablegen.gni")
+
+tablegen("Opts") {
+  visibility = [ ":llvm-libtool-darwin" ]
+  args = [ "-gen-opt-parser-defs" ]
+}
 
 if (llvm_install_cctools_symlinks) {
   symlink_or_copy("libtool") {
@@ -18,9 +25,11 @@ group("symlinks") {
   }
 }
 
-executable("llvm-libtool-darwin") {
+driver_executable("llvm-libtool-darwin") {
   deps = [
+    ":Opts",
     "//llvm/lib/Object",
+    "//llvm/lib/Option",
     "//llvm/lib/Support",
     "//llvm/lib/Target:TargetsToBuild",
     "//llvm/lib/TargetParser",

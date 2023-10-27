@@ -141,3 +141,197 @@ loop.be:
 exit:
   ret i32 %iv
 }
+
+define i32 @test_03(ptr %p, ptr %capacity_p, ptr %num_elements_p) {
+; CHECK-LABEL: @test_03(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CAPACITY:%.*]] = load i32, ptr [[CAPACITY_P:%.*]], align 4, !range [[RNG0:![0-9]+]]
+; CHECK-NEXT:    [[NUM_ELEMENTS:%.*]] = load i32, ptr [[NUM_ELEMENTS_P:%.*]], align 4, !range [[RNG0]]
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
+; CHECK-NEXT:    [[BYTES_TO_WRITE:%.*]] = sub nsw i32 [[CAPACITY]], [[IV]]
+; CHECK-NEXT:    [[CAPACITY_CHECK:%.*]] = icmp slt i32 [[BYTES_TO_WRITE]], 4
+; CHECK-NEXT:    br i1 [[CAPACITY_CHECK]], label [[OUT_OF_BOUNDS:%.*]], label [[BACKEDGE]]
+; CHECK:       backedge:
+; CHECK-NEXT:    [[EL_PTR:%.*]] = getelementptr i32, ptr [[P:%.*]], i32 [[IV]]
+; CHECK-NEXT:    store i32 1, ptr [[EL_PTR]], align 4
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 4
+; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp slt i32 [[IV_NEXT]], [[NUM_ELEMENTS]]
+; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[IV_NEXT_LCSSA:%.*]] = phi i32 [ [[IV_NEXT]], [[BACKEDGE]] ]
+; CHECK-NEXT:    ret i32 [[IV_NEXT_LCSSA]]
+; CHECK:       out_of_bounds:
+; CHECK-NEXT:    ret i32 -1
+;
+entry:
+  %capacity = load i32, ptr %capacity_p, !range !0
+  %num_elements = load i32, ptr %num_elements_p, !range !0
+  br label %loop
+
+loop:
+  %iv = phi i32 [0, %entry], [%iv.next, %backedge]
+  %bytes_to_write = sub i32 %capacity, %iv
+  %capacity_check = icmp slt i32 %bytes_to_write, 4
+  br i1 %capacity_check, label %out_of_bounds, label %backedge
+
+backedge:
+  %el.ptr = getelementptr i32, ptr %p, i32 %iv
+  store i32 1, ptr %el.ptr
+  %iv.next = add nuw nsw i32 %iv, 4
+  %loop_cond = icmp slt i32 %iv.next, %num_elements
+  br i1 %loop_cond, label %loop, label %exit
+
+exit:
+  ret i32 %iv.next
+
+out_of_bounds:
+  ret i32 -1
+}
+
+define i32 @test_04(ptr %p, ptr %capacity_p, ptr %num_elements_p) {
+; CHECK-LABEL: @test_04(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CAPACITY:%.*]] = load i32, ptr [[CAPACITY_P:%.*]], align 4, !range [[RNG0]]
+; CHECK-NEXT:    [[NUM_ELEMENTS:%.*]] = load i32, ptr [[NUM_ELEMENTS_P:%.*]], align 4, !range [[RNG0]]
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
+; CHECK-NEXT:    [[BYTES_TO_WRITE:%.*]] = sub nsw i32 [[CAPACITY]], [[IV]]
+; CHECK-NEXT:    [[CAPACITY_CHECK:%.*]] = icmp sle i32 [[BYTES_TO_WRITE]], 3
+; CHECK-NEXT:    br i1 [[CAPACITY_CHECK]], label [[OUT_OF_BOUNDS:%.*]], label [[BACKEDGE]]
+; CHECK:       backedge:
+; CHECK-NEXT:    [[EL_PTR:%.*]] = getelementptr i32, ptr [[P:%.*]], i32 [[IV]]
+; CHECK-NEXT:    store i32 1, ptr [[EL_PTR]], align 4
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 4
+; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp slt i32 [[IV_NEXT]], [[NUM_ELEMENTS]]
+; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[IV_NEXT_LCSSA:%.*]] = phi i32 [ [[IV_NEXT]], [[BACKEDGE]] ]
+; CHECK-NEXT:    ret i32 [[IV_NEXT_LCSSA]]
+; CHECK:       out_of_bounds:
+; CHECK-NEXT:    ret i32 -1
+;
+entry:
+  %capacity = load i32, ptr %capacity_p, !range !0
+  %num_elements = load i32, ptr %num_elements_p, !range !0
+  br label %loop
+
+loop:
+  %iv = phi i32 [0, %entry], [%iv.next, %backedge]
+  %bytes_to_write = sub i32 %capacity, %iv
+  %capacity_check = icmp sle i32 %bytes_to_write, 3
+  br i1 %capacity_check, label %out_of_bounds, label %backedge
+
+backedge:
+  %el.ptr = getelementptr i32, ptr %p, i32 %iv
+  store i32 1, ptr %el.ptr
+  %iv.next = add nuw nsw i32 %iv, 4
+  %loop_cond = icmp slt i32 %iv.next, %num_elements
+  br i1 %loop_cond, label %loop, label %exit
+
+exit:
+  ret i32 %iv.next
+
+out_of_bounds:
+  ret i32 -1
+}
+
+define i32 @test_05(ptr %p, ptr %capacity_p, ptr %num_elements_p) {
+; CHECK-LABEL: @test_05(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CAPACITY:%.*]] = load i32, ptr [[CAPACITY_P:%.*]], align 4, !range [[RNG0]]
+; CHECK-NEXT:    [[NUM_ELEMENTS:%.*]] = load i32, ptr [[NUM_ELEMENTS_P:%.*]], align 4, !range [[RNG0]]
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
+; CHECK-NEXT:    [[BYTES_TO_WRITE:%.*]] = sub nuw nsw i32 [[CAPACITY]], [[IV]]
+; CHECK-NEXT:    [[CAPACITY_CHECK:%.*]] = icmp ult i32 [[BYTES_TO_WRITE]], 4
+; CHECK-NEXT:    br i1 [[CAPACITY_CHECK]], label [[OUT_OF_BOUNDS:%.*]], label [[BACKEDGE]]
+; CHECK:       backedge:
+; CHECK-NEXT:    [[EL_PTR:%.*]] = getelementptr i32, ptr [[P:%.*]], i32 [[IV]]
+; CHECK-NEXT:    store i32 1, ptr [[EL_PTR]], align 4
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 4
+; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp slt i32 [[IV_NEXT]], [[NUM_ELEMENTS]]
+; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[IV_NEXT_LCSSA:%.*]] = phi i32 [ [[IV_NEXT]], [[BACKEDGE]] ]
+; CHECK-NEXT:    ret i32 [[IV_NEXT_LCSSA]]
+; CHECK:       out_of_bounds:
+; CHECK-NEXT:    ret i32 -1
+;
+entry:
+  %capacity = load i32, ptr %capacity_p, !range !0
+  %num_elements = load i32, ptr %num_elements_p, !range !0
+  br label %loop
+
+loop:
+  %iv = phi i32 [0, %entry], [%iv.next, %backedge]
+  %bytes_to_write = sub i32 %capacity, %iv
+  %capacity_check = icmp ult i32 %bytes_to_write, 4
+  br i1 %capacity_check, label %out_of_bounds, label %backedge
+
+backedge:
+  %el.ptr = getelementptr i32, ptr %p, i32 %iv
+  store i32 1, ptr %el.ptr
+  %iv.next = add nuw nsw i32 %iv, 4
+  %loop_cond = icmp slt i32 %iv.next, %num_elements
+  br i1 %loop_cond, label %loop, label %exit
+
+exit:
+  ret i32 %iv.next
+
+out_of_bounds:
+  ret i32 -1
+}
+
+define i32 @test_06(ptr %p, ptr %capacity_p, ptr %num_elements_p) {
+; CHECK-LABEL: @test_06(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CAPACITY:%.*]] = load i32, ptr [[CAPACITY_P:%.*]], align 4, !range [[RNG0]]
+; CHECK-NEXT:    [[NUM_ELEMENTS:%.*]] = load i32, ptr [[NUM_ELEMENTS_P:%.*]], align 4, !range [[RNG0]]
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
+; CHECK-NEXT:    [[BYTES_TO_WRITE:%.*]] = sub nuw nsw i32 [[CAPACITY]], [[IV]]
+; CHECK-NEXT:    [[CAPACITY_CHECK:%.*]] = icmp ule i32 [[BYTES_TO_WRITE]], 3
+; CHECK-NEXT:    br i1 [[CAPACITY_CHECK]], label [[OUT_OF_BOUNDS:%.*]], label [[BACKEDGE]]
+; CHECK:       backedge:
+; CHECK-NEXT:    [[EL_PTR:%.*]] = getelementptr i32, ptr [[P:%.*]], i32 [[IV]]
+; CHECK-NEXT:    store i32 1, ptr [[EL_PTR]], align 4
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 4
+; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp slt i32 [[IV_NEXT]], [[NUM_ELEMENTS]]
+; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[IV_NEXT_LCSSA:%.*]] = phi i32 [ [[IV_NEXT]], [[BACKEDGE]] ]
+; CHECK-NEXT:    ret i32 [[IV_NEXT_LCSSA]]
+; CHECK:       out_of_bounds:
+; CHECK-NEXT:    ret i32 -1
+;
+entry:
+  %capacity = load i32, ptr %capacity_p, !range !0
+  %num_elements = load i32, ptr %num_elements_p, !range !0
+  br label %loop
+
+loop:
+  %iv = phi i32 [0, %entry], [%iv.next, %backedge]
+  %bytes_to_write = sub i32 %capacity, %iv
+  %capacity_check = icmp ule i32 %bytes_to_write, 3
+  br i1 %capacity_check, label %out_of_bounds, label %backedge
+
+backedge:
+  %el.ptr = getelementptr i32, ptr %p, i32 %iv
+  store i32 1, ptr %el.ptr
+  %iv.next = add nuw nsw i32 %iv, 4
+  %loop_cond = icmp slt i32 %iv.next, %num_elements
+  br i1 %loop_cond, label %loop, label %exit
+
+exit:
+  ret i32 %iv.next
+
+out_of_bounds:
+  ret i32 -1
+}
+
+!0 = !{i32 1, i32 2147483648}

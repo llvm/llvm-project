@@ -161,31 +161,22 @@ define i32 @or_i32_rr(i32 %0, i32 %1) {
 define i64 @or_i64_ri(i64 %0, i64 %1) nounwind {
 ; X86-LABEL: or_i64_ri:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl %eax, %ecx
-; X86-NEXT:    orl $-17, %ecx
-; X86-NEXT:    cmpl $1, %ecx
-; X86-NEXT:    movl $-1, %edx
-; X86-NEXT:    movl $-1, %esi
-; X86-NEXT:    sbbl $0, %esi
-; X86-NEXT:    jl .LBB6_1
-; X86-NEXT:  # %bb.2:
-; X86-NEXT:    movl %ecx, %eax
-; X86-NEXT:    popl %esi
-; X86-NEXT:    retl
-; X86-NEXT:  .LBB6_1:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    popl %esi
+; X86-NEXT:    testl %edx, %edx
+; X86-NEXT:    js .LBB6_2
+; X86-NEXT:  # %bb.1:
+; X86-NEXT:    orl $17, %eax
+; X86-NEXT:  .LBB6_2:
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: or_i64_ri:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq %rdi, %rax
-; X64-NEXT:    orq $-17, %rax
+; X64-NEXT:    orq $17, %rax
 ; X64-NEXT:    cmovleq %rdi, %rax
 ; X64-NEXT:    retq
-  %3 = or i64 %0, -17
+  %3 = or i64 %0, 17
   %4 = icmp slt i64 %3, 1
   %5 = select i1 %4, i64 %0, i64 %3
   ret i64 %5

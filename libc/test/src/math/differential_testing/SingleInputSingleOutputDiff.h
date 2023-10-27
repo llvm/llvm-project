@@ -7,10 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/FPUtil/FPBits.h"
-#include "utils/testutils/StreamWrapper.h"
-#include "utils/testutils/Timer.h"
+#include "test/src/math/differential_testing/Timer.h"
 
-namespace __llvm_libc {
+#include <fstream>
+
+namespace LIBC_NAMESPACE {
 namespace testing {
 
 template <typename T> class SingleInputSingleOutputDiff {
@@ -24,7 +25,7 @@ public:
 
   static void runDiff(Func myFunc, Func otherFunc, const char *logFile) {
     UIntType diffCount = 0;
-    testutils::OutputFileStream log(logFile);
+    std::ofstream log(logFile);
     log << "Starting diff for values from 0 to " << UIntMax << '\n'
         << "Only differing results will be logged.\n\n";
     for (UIntType bits = 0;; ++bits) {
@@ -47,8 +48,7 @@ public:
   }
 
   static void runPerfInRange(Func myFunc, Func otherFunc, UIntType startingBit,
-                             UIntType endingBit,
-                             testutils::OutputFileStream &log) {
+                             UIntType endingBit, std::ofstream &log) {
     auto runner = [=](Func func) {
       volatile T result;
       for (UIntType bits = startingBit;; ++bits) {
@@ -89,7 +89,7 @@ public:
   }
 
   static void runPerf(Func myFunc, Func otherFunc, const char *logFile) {
-    testutils::OutputFileStream log(logFile);
+    std::ofstream log(logFile);
     log << " Performance tests with inputs in denormal range:\n";
     runPerfInRange(myFunc, otherFunc, /* startingBit= */ UIntType(0),
                    /* endingBit= */ FPBits::MAX_SUBNORMAL, log);
@@ -100,18 +100,18 @@ public:
 };
 
 } // namespace testing
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #define SINGLE_INPUT_SINGLE_OUTPUT_DIFF(T, myFunc, otherFunc, filename)        \
   int main() {                                                                 \
-    __llvm_libc::testing::SingleInputSingleOutputDiff<T>::runDiff(             \
+    LIBC_NAMESPACE::testing::SingleInputSingleOutputDiff<T>::runDiff(          \
         &myFunc, &otherFunc, filename);                                        \
     return 0;                                                                  \
   }
 
 #define SINGLE_INPUT_SINGLE_OUTPUT_PERF(T, myFunc, otherFunc, filename)        \
   int main() {                                                                 \
-    __llvm_libc::testing::SingleInputSingleOutputDiff<T>::runPerf(             \
+    LIBC_NAMESPACE::testing::SingleInputSingleOutputDiff<T>::runPerf(          \
         &myFunc, &otherFunc, filename);                                        \
     return 0;                                                                  \
   }

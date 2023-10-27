@@ -74,7 +74,6 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %copy:gpr32sp = COPY $w0
     ; CHECK-NEXT: %add:gpr32 = ADDSWri %copy, 16, 0, implicit-def $nzcv
-    ; CHECK-NEXT: %overflow:gpr32 = CSINCWr $wzr, $wzr, 7, implicit $nzcv
     ; CHECK-NEXT: $w0 = COPY %add
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %copy:gpr(s32) = COPY $w0
@@ -101,7 +100,6 @@ body:             |
     ; CHECK-NEXT: %copy1:gpr32 = COPY $w0
     ; CHECK-NEXT: %copy2:gpr32 = COPY $w1
     ; CHECK-NEXT: %add:gpr32 = ADDSWrs %copy1, %copy2, 16, implicit-def $nzcv
-    ; CHECK-NEXT: %overflow:gpr32 = CSINCWr $wzr, $wzr, 7, implicit $nzcv
     ; CHECK-NEXT: $w0 = COPY %add
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %copy1:gpr(s32) = COPY $w0
@@ -129,7 +127,6 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %copy:gpr32sp = COPY $w0
     ; CHECK-NEXT: %add:gpr32 = SUBSWri %copy, 16, 0, implicit-def $nzcv
-    ; CHECK-NEXT: %overflow:gpr32 = CSINCWr $wzr, $wzr, 7, implicit $nzcv
     ; CHECK-NEXT: $w0 = COPY %add
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %copy:gpr(s32) = COPY $w0
@@ -155,7 +152,6 @@ body:             |
     ; CHECK-NEXT: %reg0:gpr64sp = COPY $x0
     ; CHECK-NEXT: %reg1:gpr32 = COPY $w0
     ; CHECK-NEXT: %add:gpr64 = ADDSXrx %reg0, %reg1, 18, implicit-def $nzcv
-    ; CHECK-NEXT: %flags:gpr32 = CSINCWr $wzr, $wzr, 7, implicit $nzcv
     ; CHECK-NEXT: $x0 = COPY %add
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %reg0:gpr(s64) = COPY $x0

@@ -25,7 +25,6 @@
 #include "lldb/Breakpoint/StoppointCallbackContext.h"
 #include "lldb/Core/Address.h"
 #include "lldb/Core/Debugger.h"
-#include "lldb/Core/StreamFile.h"
 #include "lldb/Core/StructuredDataImpl.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/ScriptInterpreter.h"
@@ -284,12 +283,12 @@ const char *SBBreakpoint::GetCondition() {
   LLDB_INSTRUMENT_VA(this);
 
   BreakpointSP bkpt_sp = GetSP();
-  if (bkpt_sp) {
-    std::lock_guard<std::recursive_mutex> guard(
-        bkpt_sp->GetTarget().GetAPIMutex());
-    return bkpt_sp->GetConditionText();
-  }
-  return nullptr;
+  if (!bkpt_sp)
+    return nullptr;
+
+  std::lock_guard<std::recursive_mutex> guard(
+      bkpt_sp->GetTarget().GetAPIMutex());
+  return ConstString(bkpt_sp->GetConditionText()).GetCString();
 }
 
 void SBBreakpoint::SetAutoContinue(bool auto_continue) {
@@ -411,18 +410,17 @@ void SBBreakpoint::SetThreadName(const char *thread_name) {
 const char *SBBreakpoint::GetThreadName() const {
   LLDB_INSTRUMENT_VA(this);
 
-  const char *name = nullptr;
   BreakpointSP bkpt_sp = GetSP();
-  if (bkpt_sp) {
-    std::lock_guard<std::recursive_mutex> guard(
-        bkpt_sp->GetTarget().GetAPIMutex());
-    const ThreadSpec *thread_spec =
-        bkpt_sp->GetOptions().GetThreadSpecNoCreate();
-    if (thread_spec != nullptr)
-      name = thread_spec->GetName();
-  }
+  if (!bkpt_sp)
+    return nullptr;
 
-  return name;
+  std::lock_guard<std::recursive_mutex> guard(
+      bkpt_sp->GetTarget().GetAPIMutex());
+  if (const ThreadSpec *thread_spec =
+          bkpt_sp->GetOptions().GetThreadSpecNoCreate())
+    return ConstString(thread_spec->GetName()).GetCString();
+
+  return nullptr;
 }
 
 void SBBreakpoint::SetQueueName(const char *queue_name) {
@@ -439,18 +437,17 @@ void SBBreakpoint::SetQueueName(const char *queue_name) {
 const char *SBBreakpoint::GetQueueName() const {
   LLDB_INSTRUMENT_VA(this);
 
-  const char *name = nullptr;
   BreakpointSP bkpt_sp = GetSP();
-  if (bkpt_sp) {
-    std::lock_guard<std::recursive_mutex> guard(
-        bkpt_sp->GetTarget().GetAPIMutex());
-    const ThreadSpec *thread_spec =
-        bkpt_sp->GetOptions().GetThreadSpecNoCreate();
-    if (thread_spec)
-      name = thread_spec->GetQueueName();
-  }
+  if (!bkpt_sp)
+    return nullptr;
 
-  return name;
+  std::lock_guard<std::recursive_mutex> guard(
+      bkpt_sp->GetTarget().GetAPIMutex());
+  if (const ThreadSpec *thread_spec =
+          bkpt_sp->GetOptions().GetThreadSpecNoCreate())
+    return ConstString(thread_spec->GetQueueName()).GetCString();
+
+  return nullptr;
 }
 
 size_t SBBreakpoint::GetNumResolvedLocations() const {
@@ -645,7 +642,8 @@ SBError SBBreakpoint::SetScriptCallbackBody(const char *callback_body_text) {
         bkpt_sp->GetTarget()
             .GetDebugger()
             .GetScriptInterpreter()
-            ->SetBreakpointCommandCallback(bp_options, callback_body_text);
+            ->SetBreakpointCommandCallback(bp_options, callback_body_text,
+                                           /*is_callback=*/false);
     sb_error.SetError(error);
   } else
     sb_error.SetErrorString("invalid breakpoint");

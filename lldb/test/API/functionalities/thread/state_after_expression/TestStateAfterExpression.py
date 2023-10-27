@@ -4,14 +4,13 @@ during an expression is not changed by running the expression
 """
 
 
-
 import lldb
 import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *
 
-class TestStopReasonAfterExpression(TestBase):
 
+class TestStopReasonAfterExpression(TestBase):
     @skipIfWindows
     @expectedFailureAll(oslist=["freebsd"], bugnumber="llvm.org/pr48415")
     @expectedFlakeyNetBSD
@@ -21,8 +20,9 @@ class TestStopReasonAfterExpression(TestBase):
         self.do_test()
 
     def do_test(self):
-        (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(self,
-            "Set a breakpoint here", self.main_source_file)
+        (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
+            self, "Set a breakpoint here", self.main_source_file
+        )
 
         self.assertEqual(bkpt.GetNumLocations(), 2, "Got two locations")
 
@@ -33,21 +33,29 @@ class TestStopReasonAfterExpression(TestBase):
         self.assertEqual(len(threads), 1, "Hit the breakpoint the second time")
         other_thread = threads[0]
 
-        self.assertNotEqual(thread.GetThreadID(), other_thread.GetThreadID(),
-                            "A different thread")
+        self.assertNotEqual(
+            thread.GetThreadID(), other_thread.GetThreadID(), "A different thread"
+        )
         # Run an expression ONLY on other_thread.  Don't let thread run:
         options = lldb.SBExpressionOptions()
         options.SetTryAllThreads(False)
         options.SetStopOthers(True)
 
-        result = thread.frames[0].EvaluateExpression('(int) printf("Hello\\n")', options)
+        result = thread.frames[0].EvaluateExpression(
+            '(int) printf("Hello\\n")', options
+        )
         self.assertSuccess(result.GetError(), "Expression failed")
 
         stop_reason = other_thread.GetStopReason()
 
-        self.assertStopReason(stop_reason, lldb.eStopReasonBreakpoint,
-                         "Still records stopped at breakpoint: %s"
-                         %(lldbutil.stop_reason_to_str(stop_reason)))
-        self.assertEqual(other_thread.GetStopReasonDataAtIndex(0), 1,
-                         "Still records stopped at right breakpoint")
-
+        self.assertStopReason(
+            stop_reason,
+            lldb.eStopReasonBreakpoint,
+            "Still records stopped at breakpoint: %s"
+            % (lldbutil.stop_reason_to_str(stop_reason)),
+        )
+        self.assertEqual(
+            other_thread.GetStopReasonDataAtIndex(0),
+            1,
+            "Still records stopped at right breakpoint",
+        )

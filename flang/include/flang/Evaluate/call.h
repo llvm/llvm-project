@@ -209,6 +209,8 @@ struct ProcedureDesignator {
       u;
 };
 
+using Chevrons = std::vector<Expr<SomeType>>;
+
 class ProcedureRef {
 public:
   CLASS_BOILERPLATE(ProcedureRef)
@@ -223,6 +225,10 @@ public:
   const ProcedureDesignator &proc() const { return proc_; }
   ActualArguments &arguments() { return arguments_; }
   const ActualArguments &arguments() const { return arguments_; }
+  // CALL subr <<< kernel launch >>> (...); not function
+  Chevrons &chevrons() { return chevrons_; }
+  const Chevrons &chevrons() const { return chevrons_; }
+  void set_chevrons(Chevrons &&chevrons) { chevrons_ = std::move(chevrons); }
 
   std::optional<Expr<SubscriptInteger>> LEN() const;
   int Rank() const;
@@ -250,6 +256,7 @@ public:
 protected:
   ProcedureDesignator proc_;
   ActualArguments arguments_;
+  Chevrons chevrons_;
   bool hasAlternateReturns_;
 };
 
@@ -261,7 +268,17 @@ public:
   FunctionRef(ProcedureDesignator &&p, ActualArguments &&a)
       : ProcedureRef{std::move(p), std::move(a)} {}
 
-  std::optional<DynamicType> GetType() const { return proc_.GetType(); }
+  std::optional<DynamicType> GetType() const {
+    if (auto type{proc_.GetType()}) {
+      // TODO: Non constant explicit length parameters of PDTs result should
+      // likely be dropped too. This is not as easy as for characters since some
+      // long lived DerivedTypeSpec pointer would need to be created here. It is
+      // not clear if this is causing any issue so far since the storage size of
+      // PDTs is independent of length parameters.
+      return type->DropNonConstantCharacterLength();
+    }
+    return std::nullopt;
+  }
 };
 } // namespace Fortran::evaluate
 #endif // FORTRAN_EVALUATE_CALL_H_

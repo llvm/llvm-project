@@ -663,9 +663,11 @@ Then, specify additional attributes via mix-ins:
 * ``HelpText`` holds the text that will be printed besides the option name when
   the user requests help (e.g. via ``clang --help``).
 * ``Group`` specifies the "category" of options this option belongs to. This is
-  used by various tools to filter certain options of interest.
-* ``Flags`` may contain a number of "tags" associated with the option. This
-  enables more granular filtering than the ``Group`` attribute.
+  used by various tools to categorize and sometimes filter options.
+* ``Flags`` may contain "tags" associated with the option. These may affect how
+  the option is rendered, or if it's hidden in some contexts.
+* ``Visibility`` should be used to specify the drivers in which a particular
+  option would be available. This attribute will impact tool --help
 * ``Alias`` denotes that the option is an alias of another option. This may be
   combined with ``AliasArgs`` that holds the implied value.
 
@@ -674,12 +676,14 @@ Then, specify additional attributes via mix-ins:
     // Options.td
 
     def fpass_plugin_EQ : Joined<["-"], "fpass-plugin=">,
-  +   Group<f_Group>, Flags<[CC1Option]>,
+  +   Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
   +   HelpText<"Load pass plugin from a dynamic shared object file.">;
 
-New options are recognized by the Clang driver unless marked with the
-``NoDriverOption`` flag. On the other hand, options intended for the ``-cc1``
-frontend must be explicitly marked with the ``CC1Option`` flag.
+New options are recognized by the ``clang`` driver mode if ``Visibility`` is
+not specified or contains ``ClangOption``. Options intended for ``clang -cc1``
+must be explicitly marked with the ``CC1Option`` flag. Flags that specify
+``CC1Option`` but not ``ClangOption`` will only be accessible via ``-cc1``.
+This is similar for other driver modes, such as ``clang-cl`` or ``flang``.
 
 Next, parse (or manufacture) the command line arguments in the Clang driver and
 use them to construct the ``-cc1`` job:
@@ -874,7 +878,8 @@ present on command line.
 
 .. code-block:: text
 
-  def fignore_exceptions : Flag<["-"], "fignore-exceptions">, Flags<[CC1Option]>,
+  def fignore_exceptions : Flag<["-"], "fignore-exceptions">,
+    Visibility<[ClangOption, CC1Option]>,
     MarshallingInfoFlag<LangOpts<"IgnoreExceptions">>;
 
 **Negative Flag**
@@ -884,7 +889,8 @@ present on command line.
 
 .. code-block:: text
 
-  def fno_verbose_asm : Flag<["-"], "fno-verbose-asm">, Flags<[CC1Option]>,
+  def fno_verbose_asm : Flag<["-"], "fno-verbose-asm">,
+    Visibility<[ClangOption, CC1Option]>,
     MarshallingInfoNegativeFlag<CodeGenOpts<"AsmVerbose">>;
 
 **Negative and Positive Flag**
@@ -898,9 +904,9 @@ line.
 
   defm legacy_pass_manager : BoolOption<"f", "legacy-pass-manager",
     CodeGenOpts<"LegacyPassManager">, DefaultFalse,
-    PosFlag<SetTrue, [], "Use the legacy pass manager in LLVM">,
-    NegFlag<SetFalse, [], "Use the new pass manager in LLVM">,
-    BothFlags<[CC1Option]>>;
+    PosFlag<SetTrue, [], [], "Use the legacy pass manager in LLVM">,
+    NegFlag<SetFalse, [], [], "Use the new pass manager in LLVM">,
+    BothFlags<[], [ClangOption, CC1Option]>>;
 
 With most such pair of flags, the ``-cc1`` frontend accepts only the flag that
 changes the default key path value. The Clang driver is responsible for
@@ -912,10 +918,11 @@ full names of both flags. The positive flag would then be named
 ``flegacy-pass-manager`` and the negative ``fno-legacy-pass-manager``.
 ``BoolOption`` also implies the ``-`` prefix for both flags. It's also possible
 to use ``BoolFOption`` that implies the ``"f"`` prefix and ``Group<f_Group>``.
-The ``PosFlag`` and ``NegFlag`` classes hold the associated boolean value, an
-array of elements passed to the ``Flag`` class and the help text. The optional
-``BothFlags`` class holds an array of ``Flag`` elements that are common for both
-the positive and negative flag and their common help text suffix.
+The ``PosFlag`` and ``NegFlag`` classes hold the associated boolean value,
+arrays of elements passed to the ``Flag`` and ``Visibility`` classes and the
+help text. The optional ``BothFlags`` class holds arrays of ``Flag`` and
+``Visibility`` elements that are common for both the positive and negative flag
+and their common help text suffix.
 
 **String**
 
@@ -924,7 +931,8 @@ the option appears on the command line, the argument value is simply copied.
 
 .. code-block:: text
 
-  def isysroot : JoinedOrSeparate<["-"], "isysroot">, Flags<[CC1Option]>,
+  def isysroot : JoinedOrSeparate<["-"], "isysroot">,
+    Visibility<[ClangOption, CC1Option]>,
     MarshallingInfoString<HeaderSearchOpts<"Sysroot">, [{"/"}]>;
 
 **List of Strings**
@@ -935,7 +943,8 @@ vector.
 
 .. code-block:: text
 
-  def frewrite_map_file : Separate<["-"], "frewrite-map-file">, Flags<[CC1Option]>,
+  def frewrite_map_file : Separate<["-"], "frewrite-map-file">,
+    Visibility<[ClangOption, CC1Option]>,
     MarshallingInfoStringVector<CodeGenOpts<"RewriteMapFiles">>;
 
 **Integer**
@@ -946,7 +955,8 @@ and the result is assigned to the key path on success.
 
 .. code-block:: text
 
-  def mstack_probe_size : Joined<["-"], "mstack-probe-size=">, Flags<[CC1Option]>,
+  def mstack_probe_size : Joined<["-"], "mstack-probe-size=">,
+    Visibility<[ClangOption, CC1Option]>,
     MarshallingInfoInt<CodeGenOpts<"StackProbeSize">, "4096">;
 
 **Enumeration**
@@ -963,7 +973,8 @@ comma-separated string values and elements of the array within
 
 .. code-block:: text
 
-  def mthread_model : Separate<["-"], "mthread-model">, Flags<[CC1Option]>,
+  def mthread_model : Separate<["-"], "mthread-model">,
+    Visibility<[ClangOption, CC1Option]>,
     Values<"posix,single">, NormalizedValues<["POSIX", "Single"]>,
     NormalizedValuesScope<"LangOptions::ThreadModelKind">,
     MarshallingInfoEnum<LangOpts<"ThreadModel">, "POSIX">;
@@ -983,7 +994,8 @@ Finally, the command line is parsed according to the primary annotation.
 
 .. code-block:: text
 
-  def fms_extensions : Flag<["-"], "fms-extensions">, Flags<[CC1Option]>,
+  def fms_extensions : Flag<["-"], "fms-extensions">,
+    Visibility<[ClangOption, CC1Option]>,
     MarshallingInfoFlag<LangOpts<"MicrosoftExt">>,
     ImpliedByAnyOf<[fms_compatibility.KeyPath], "true">;
 
@@ -994,7 +1006,8 @@ true.
 
 .. code-block:: text
 
-  def fopenmp_enable_irbuilder : Flag<["-"], "fopenmp-enable-irbuilder">, Flags<[CC1Option]>,
+  def fopenmp_enable_irbuilder : Flag<["-"], "fopenmp-enable-irbuilder">,
+    Visibility<[ClangOption, CC1Option]>,
     MarshallingInfoFlag<LangOpts<"OpenMPIRBuilder">>,
     ShouldParseIf<fopenmp.KeyPath>;
 
@@ -2798,12 +2811,12 @@ and then the semantic handling of the attribute.
 Parsing of the attribute is determined by the various syntactic forms attributes
 can take, such as GNU, C++11, and Microsoft style attributes, as well as other
 information provided by the table definition of the attribute. Ultimately, the
-parsed representation of an attribute object is an ``ParsedAttr`` object.
+parsed representation of an attribute object is a ``ParsedAttr`` object.
 These parsed attributes chain together as a list of parsed attributes attached
 to a declarator or declaration specifier. The parsing of attributes is handled
-automatically by Clang, except for attributes spelled as keywords. When
-implementing a keyword attribute, the parsing of the keyword and creation of the
-``ParsedAttr`` object must be done manually.
+automatically by Clang, except for attributes spelled as so-called “custom”
+keywords. When implementing a custom keyword attribute, the parsing of the
+keyword and creation of the ``ParsedAttr`` object must be done manually.
 
 Eventually, ``Sema::ProcessDeclAttributeList()`` is called with a ``Decl`` and
 a ``ParsedAttr``, at which point the parsed attribute can be transformed
@@ -2856,33 +2869,60 @@ may have a keyword spelling, as well as a C++11 spelling and a GNU spelling. An
 empty spelling list is also permissible and may be useful for attributes which
 are created implicitly. The following spellings are accepted:
 
-  ============  ================================================================
-  Spelling      Description
-  ============  ================================================================
-  ``GNU``       Spelled with a GNU-style ``__attribute__((attr))`` syntax and
-                placement.
-  ``CXX11``     Spelled with a C++-style ``[[attr]]`` syntax with an optional
-                vendor-specific namespace.
-  ``C2x``       Spelled with a C-style ``[[attr]]`` syntax with an optional
-                vendor-specific namespace.
-  ``Declspec``  Spelled with a Microsoft-style ``__declspec(attr)`` syntax.
-  ``Keyword``   The attribute is spelled as a keyword, and required custom
-                parsing.
-  ``GCC``       Specifies two or three spellings: the first is a GNU-style
-                spelling, the second is a C++-style spelling with the ``gnu``
-                namespace, and the third is an optional C-style spelling with
-                the ``gnu`` namespace. Attributes should only specify this
-                spelling for attributes supported by GCC.
-  ``Clang``     Specifies two or three spellings: the first is a GNU-style
-                spelling, the second is a C++-style spelling with the ``clang``
-                namespace, and the third is an optional C-style spelling with
-                the ``clang`` namespace. By default, a C-style spelling is
-                provided.
-  ``Pragma``    The attribute is spelled as a ``#pragma``, and requires custom
-                processing within the preprocessor. If the attribute is meant to
-                be used by Clang, it should set the namespace to ``"clang"``.
-                Note that this spelling is not used for declaration attributes.
-  ============  ================================================================
+  ==================  =========================================================
+  Spelling            Description
+  ==================  =========================================================
+  ``GNU``             Spelled with a GNU-style ``__attribute__((attr))``
+                      syntax and placement.
+  ``CXX11``           Spelled with a C++-style ``[[attr]]`` syntax with an
+                      optional vendor-specific namespace.
+  ``C23``             Spelled with a C-style ``[[attr]]`` syntax with an
+                      optional vendor-specific namespace.
+  ``Declspec``        Spelled with a Microsoft-style ``__declspec(attr)``
+                      syntax.
+  ``CustomKeyword``   The attribute is spelled as a keyword, and requires
+                      custom parsing.
+  ``RegularKeyword``  The attribute is spelled as a keyword. It can be
+                      used in exactly the places that the standard
+                      ``[[attr]]`` syntax can be used, and appertains to
+                      exactly the same thing that a standard attribute
+                      would appertain to. Lexing and parsing of the keyword
+                      are handled automatically.
+  ``GCC``             Specifies two or three spellings: the first is a
+                      GNU-style spelling, the second is a C++-style spelling
+                      with the ``gnu`` namespace, and the third is an optional
+                      C-style spelling with the ``gnu`` namespace. Attributes
+                      should only specify this spelling for attributes
+                      supported by GCC.
+  ``Clang``           Specifies two or three spellings: the first is a
+                      GNU-style spelling, the second is a C++-style spelling
+                      with the ``clang`` namespace, and the third is an
+                      optional C-style spelling with the ``clang`` namespace.
+                      By default, a C-style spelling is provided.
+  ``Pragma``          The attribute is spelled as a ``#pragma``, and requires
+                      custom processing within the preprocessor. If the
+                      attribute is meant to be used by Clang, it should
+                      set the namespace to ``"clang"``. Note that this
+                      spelling is not used for declaration attributes.
+  ==================  =========================================================
+
+The C++ standard specifies that “any [non-standard attribute] that is not
+recognized by the implementation is ignored” (``[dcl.attr.grammar]``).
+The rule for C is similar. This makes ``CXX11`` and ``C23`` spellings
+unsuitable for attributes that affect the type system, that change the
+binary interface of the code, or that have other similar semantic meaning.
+
+``RegularKeyword`` provides an alternative way of spelling such attributes.
+It reuses the production rules for standard attributes, but it applies them
+to plain keywords rather than to ``[[…]]`` sequences. Compilers that don't
+recognize the keyword are likely to report an error of some kind.
+
+For example, the ``ArmStreaming`` function type attribute affects
+both the type system and the binary interface of the function.
+It cannot therefore be spelled ``[[arm::streaming]]``, since compilers
+that don't understand ``arm::streaming`` would ignore it and miscompile
+the code. ``ArmStreaming`` is instead spelled ``__arm_streaming``, but it
+can appear wherever a hypothetical ``[[arm::streaming]]`` could appear.
 
 Subjects
 ~~~~~~~~
@@ -3268,3 +3308,39 @@ are similar.
      proper visitation for your expression, enabling various IDE features such
      as syntax highlighting, cross-referencing, and so on.  The
      ``c-index-test`` helper program can be used to test these features.
+
+Feature Test Macros
+===================
+Clang implements several ways to test whether a feature is supported or not.
+Some of these feature tests are standardized, like ``__has_cpp_attribute`` or
+``__cpp_lambdas``, while others are Clang extensions, like ``__has_builtin``.
+The common theme among all the various feature tests is that they are a utility
+to tell users that we think a particular feature is complete. However,
+completeness is a difficult property to define because features may still have
+lingering bugs, may only work on some targets, etc. We use the following
+criteria when deciding whether to expose a feature test macro (or particular
+result value for the feature test):
+
+  * Are there known issues where we reject valid code that should be accepted?
+  * Are there known issues where we accept invalid code that should be rejected?
+  * Are there known crashes, failed assertions, or miscompilations?
+  * Are there known issues on a particular relevant target?
+
+If the answer to any of these is "yes", the feature test macro should either
+not be defined or there should be very strong rationale for why the issues
+should not prevent defining it. Note, it is acceptable to define the feature
+test macro on a per-target basis if needed.
+
+When in doubt, being conservative is better than being aggressive. If we don't
+claim support for the feature but it does useful things, users can still use it
+and provide us with useful feedback on what is missing. But if we claim support
+for a feature that has significant bugs, we've eliminated most of the utility
+of having a feature testing macro at all because users are then forced to test
+what compiler version is in use to get a more accurate answer.
+
+The status reported by the feature test macro should always be reflected in the
+language support page for the corresponding feature (`C++
+<https://clang.llvm.org/cxx_status.html>`_, `C
+<https://clang.llvm.org/c_status.html>`_) if applicable. This page can give
+more nuanced information to the user as well, such as claiming partial support
+for a feature and specifying details as to what remains to be done.

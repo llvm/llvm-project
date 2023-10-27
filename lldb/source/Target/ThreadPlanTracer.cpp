@@ -12,7 +12,6 @@
 #include "lldb/Core/Disassembler.h"
 #include "lldb/Core/DumpRegisterValue.h"
 #include "lldb/Core/Module.h"
-#include "lldb/Core/StreamFile.h"
 #include "lldb/Core/Value.h"
 #include "lldb/Symbol/TypeList.h"
 #include "lldb/Symbol/TypeSystem.h"
@@ -56,7 +55,7 @@ Stream *ThreadPlanTracer::GetLogStream() {
 Thread &ThreadPlanTracer::GetThread() {
   if (m_thread)
     return *m_thread;
-    
+
   ThreadSP thread_sp = m_process.GetThreadList().FindThreadByID(m_tid);
   m_thread = thread_sp.get();
   return *m_thread;
@@ -107,8 +106,9 @@ TypeFromUser ThreadPlanAssemblyTracer::GetIntPointerType() {
       auto type_system_or_err =
           target_sp->GetScratchTypeSystemForLanguage(eLanguageTypeC);
       if (auto err = type_system_or_err.takeError()) {
-        LLDB_LOG_ERROR(GetLog(LLDBLog::Types), std::move(err),
-                       "Unable to get integer pointer type from TypeSystem");
+        LLDB_LOG_ERROR(
+            GetLog(LLDBLog::Types), std::move(err),
+            "Unable to get integer pointer type from TypeSystem: {0}");
       } else {
         if (auto ts = *type_system_or_err)
           m_intptr_type = TypeFromUser(ts->GetBuiltinTypeForEncodingAndBitSize(
@@ -223,7 +223,7 @@ void ThreadPlanAssemblyTracer::Log() {
           reg_value != m_register_values[reg_num]) {
         if (reg_value.GetType() != RegisterValue::eTypeInvalid) {
           stream->PutCString("\n\t");
-          DumpRegisterValue(reg_value, stream, reg_info, true, false,
+          DumpRegisterValue(reg_value, *stream, *reg_info, true, false,
                             eFormatDefault);
         }
       }

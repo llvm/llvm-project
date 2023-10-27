@@ -9,7 +9,6 @@
 #ifndef MLIR_DIALECT_GPU_TRANSFORMOPS_GPUTRANSFORMOPS_H
 #define MLIR_DIALECT_GPU_TRANSFORMOPS_GPUTRANSFORMOPS_H
 
-#include "mlir/Dialect/PDL/IR/PDLTypes.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
 #include "mlir/IR/OpImplementation.h"
@@ -32,38 +31,51 @@ namespace mlir {
 class DialectRegistry;
 namespace transform {
 namespace gpu {
+struct GpuIdBuilder;
 
-/// Searches `scf.foreach_thread` ops nested under `target` and maps each such
-/// op to GPU threads. Mapping is one-to-one and the induction variables of
-/// `scf.foreach_thread` are rewritten to gpu.thread_id according to the
-/// thread_dim_apping attribute. Sibling `scf.foreach_thread` are supported in
-/// which case, the union of the number of threads is computed and may result in
-/// predication. Dynamic, `scf.foreach_thread` trip counts are currently not
-/// supported. Dynamic block dim sizes are currently not supported.
-DiagnosedSilenceableFailure mapNestedForeachToThreadsImpl(
-    RewriterBase &rewriter, Operation *target,
-    const SmallVectorImpl<int64_t> &blockDim, bool syncAfterDistribute,
-    std::optional<TransformOpInterface> transformOp,
-    const ArrayRef<DeviceMappingAttrInterface> &threadMappingAttributes);
-
-/// Maps the top level `scf.foreach_thread` op to GPU Thread Blocks. Mapping is
-/// one-to-one and the induction variables of `scf.foreach_thread` are rewritten
-/// to gpu.block_id according to the thread_dim_apping attribute. Dynamic,
-/// `scf.foreach_thread` trip counts are currently not supported. Dynamic block
-/// dim sizes are currently not supported.
-DiagnosedSilenceableFailure mapForeachToBlocksImpl(
-    RewriterBase &rewriter, scf::ForeachThreadOp foreachThreadOp,
-    function_ref<void(RewriterBase &, scf::ForeachThreadOp,
-                      SmallVectorImpl<Value> &)>
-        blockIdGenerator,
-    SmallVectorImpl<int64_t> &gridDims, TransformOpInterface transformOp,
-    const ArrayRef<DeviceMappingAttrInterface> &mappingAttributes);
-
-/// Finds the top level scf::ForeachThreadOp of given target.
+/// Map the top level `scf.forall` op to GPU blocks.
+/// Mapping is one-to-one and the induction variables of `scf.forall` are
+/// rewritten to gpu.block_id according to the thread_dim_mapping attribute.
+///
+/// Dynamic, `scf.forall` trip counts are currently not supported.
+/// Dynamic `gridDims` are currently not supported.
 DiagnosedSilenceableFailure
-findTopLevelForeachThreadOp(Operation *target,
-                            scf::ForeachThreadOp &topLevelForeachThreadOp,
-                            TransformOpInterface transformOp);
+mapForallToBlocksImpl(RewriterBase &rewriter, TransformOpInterface transformOp,
+                      scf::ForallOp forallOp,
+                      SmallVectorImpl<int64_t> &gridDims,
+                      const GpuIdBuilder &gpuIdBuilder);
+
+/// Search `scf.forall` ops nested under `target` and map each such op to an
+/// explicit GPU implementation along `blockDims`.
+/// The mapping is one-to-one and the induction variables of `scf.forall` are
+/// rewritten to gpuIdBuilder.idBuilder according to the
+/// gpuIdBuilder.mappingAttributes attribute.
+///
+/// Dynamic, `scf.forall` trip counts are currently not supported.
+/// Dynamic `blockDims` sizes are currently not supported.
+/// `blockDims` is expected to be of size 3.
+DiagnosedSilenceableFailure
+mapOneForallToThreadsImpl(RewriterBase &rewriter,
+                          std::optional<TransformOpInterface> transformOp,
+                          scf::ForallOp forallOp, ArrayRef<int64_t> blockDims,
+                          int64_t warpSize, bool syncAfterDistribute);
+
+/// Search `scf.forall` ops nested under `target` and map each such op to an
+/// explicit GPU implementation along `blockDims`.
+/// The mapping is one-to-one and the induction variables of `scf.forall` are
+/// rewritten to appropriate ids according to the mapping attribute.
+///
+/// Dynamic, `scf.forall` trip counts are currently not supported.
+/// Dynamic `blockDims` or `newBasis` entries are currently not
+/// supported. `blockDims` is expected to be of size 3.
+///
+/// The insertion point of the `rewriter` is expected to be set at the
+/// beginning of the `target` body block and dominate all other blocks.
+DiagnosedSilenceableFailure
+mapNestedForallToThreadsImpl(RewriterBase &rewriter,
+                             std::optional<TransformOpInterface> transformOp,
+                             Operation *target, ArrayRef<int64_t> blockDims,
+                             int64_t warpSize, bool syncAfterDistribute);
 
 } // namespace gpu
 } // namespace transform

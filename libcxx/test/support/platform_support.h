@@ -87,7 +87,7 @@ std::string get_temp_file_name()
 inline bool glibc_version_less_than(char const* version) {
   std::string test_version = std::string("glibc ") + version;
 
-  size_t n = confstr(_CS_GNU_LIBC_VERSION, nullptr, (size_t)0);
+  std::size_t n = confstr(_CS_GNU_LIBC_VERSION, nullptr, (size_t)0);
   char *current_version = new char[n];
   confstr(_CS_GNU_LIBC_VERSION, current_version, n);
 

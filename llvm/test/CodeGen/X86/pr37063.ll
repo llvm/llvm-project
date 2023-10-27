@@ -9,11 +9,9 @@ define void @foo(ptr) {
 ; CHECK-NEXT:    movl (%rdi), %eax
 ; CHECK-NEXT:    andl $6, %eax
 ; CHECK-NEXT:    cmpl $4, %eax
-; CHECK-NEXT:    jne .LBB0_2
+; CHECK-NEXT:    jne bar # TAILCALL
 ; CHECK-NEXT:  # %bb.1: # %bb1
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB0_2: # %bb2.i
-; CHECK-NEXT:    jmp bar # TAILCALL
 start:
   %1 = load i64, ptr %0, align 8, !range !0
   %2 = and i64 %1, 6

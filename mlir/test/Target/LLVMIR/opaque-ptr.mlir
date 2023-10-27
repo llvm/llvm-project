@@ -1,4 +1,4 @@
-// RUN: mlir-translate -mlir-to-llvmir -opaque-pointers %s | FileCheck %s
+// RUN: mlir-translate -mlir-to-llvmir %s | FileCheck %s
 
 // CHECK-LABEL: @opaque_ptr_load
 llvm.func @opaque_ptr_load(%arg0: !llvm.ptr) -> i32 {

@@ -1,0 +1,76 @@
+! RUN: %python %S/test_errors.py %s %flang_fc1
+module m
+ contains
+  attributes(device) subroutine devsub
+    !ERROR: Statement may not appear in device code
+    !$cuf kernel do <<< 1, 2 >>>
+    do k=1,10
+    end do
+  end
+end
+
+program main
+  !ERROR: !$CUF KERNEL DO (1) must be followed by a DO construct with tightly nested outer levels of counted DO loops
+  !$cuf kernel do <<< 1, 2 >>>
+  do while (.false.)
+  end do
+  !ERROR: !$CUF KERNEL DO (1) must be followed by a DO construct with tightly nested outer levels of counted DO loops
+  !$cuf kernel do <<< 1, 2 >>>
+  do
+    exit
+  end do
+  !ERROR: !$CUF KERNEL DO (1) must be followed by a DO construct with tightly nested outer levels of counted DO loops
+  !$cuf kernel do <<< 1, 2 >>>
+  do concurrent (j=1:10)
+  end do
+  !$cuf kernel do <<< 1, 2 >>>
+  do 1 j=1,10
+1 continue ! ok
+  !$cuf kernel do <<< 1, 2 >>>
+  do j=1,10
+  end do ! ok
+  !$cuf kernel do <<< 1, 2 >>>
+  do j=1,10
+    !ERROR: Statement may not appear in device code
+    !$cuf kernel do <<< 1, 2 >>>
+    do k=1,10
+    end do
+  end do
+  !ERROR: !$CUF KERNEL DO (-1): loop nesting depth must be positive
+  !$cuf kernel do (-1) <<< 1, 2 >>>
+  do j=1,10
+  end do
+  !ERROR: !$CUF KERNEL DO (1) must be followed by a DO construct with tightly nested outer levels of counted DO loops
+  !$cuf kernel do <<< 1, 2 >>>
+  continue
+  !ERROR: !$CUF KERNEL DO (2) must be followed by a DO construct with tightly nested outer levels of counted DO loops
+  !$cuf kernel do (2) <<< 1, 2 >>>
+  do j=1,10
+  end do
+  !ERROR: !$CUF KERNEL DO (2) must be followed by a DO construct with tightly nested outer levels of counted DO loops
+  !$cuf kernel do (2) <<< 1, 2 >>>
+  do j=1,10
+    continue
+  end do
+  !ERROR: !$CUF KERNEL DO (2) must be followed by a DO construct with tightly nested outer levels of counted DO loops
+  !$cuf kernel do (2) <<< 1, 2 >>>
+  do j=1,10
+    do k=1,10
+    end do
+    continue
+  end do
+  !$cuf kernel do <<< 1, 2 >>>
+  do j = 1, 10
+    !ERROR: 'foo' may not be called in device code
+    call foo
+    !ERROR: 'bar' may not be called in device code
+    x = bar()
+    !ERROR: 'ifunc' may not be called in device code
+    if (ifunc() /= 0) continue
+    !ERROR: 'ifunc' may not be called in device code
+    if (ifunc() /= 0) then
+    !ERROR: 'ifunc' may not be called in device code
+    else if (ifunc() /= 1) then
+    end if
+  end do
+end

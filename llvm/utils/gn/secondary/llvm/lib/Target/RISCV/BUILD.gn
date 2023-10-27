@@ -23,13 +23,40 @@ tablegen("RISCVGenDAGISel") {
 tablegen("RISCVGenGlobalISel") {
   visibility = [ ":LLVMRISCVCodeGen" ]
   args = [ "-gen-global-isel" ]
-  td_file = "RISCV.td"
+  td_file = "RISCVGISel.td"
+}
+
+tablegen("RISCVGenO0PreLegalizeGICombiner") {
+  visibility = [ ":LLVMRISCVCodeGen" ]
+  args = [
+    "-gen-global-isel-combiner",
+    "-combiners=RISCVO0PreLegalizerCombiner",
+  ]
+  td_file = "RISCVGISel.td"
 }
 
 tablegen("RISCVGenMCPseudoLowering") {
   visibility = [ ":LLVMRISCVCodeGen" ]
   args = [ "-gen-pseudo-lowering" ]
   td_file = "RISCV.td"
+}
+
+tablegen("RISCVGenPreLegalizeGICombiner") {
+  visibility = [ ":LLVMRISCVCodeGen" ]
+  args = [
+    "-gen-global-isel-combiner",
+    "-combiners=RISCVPreLegalizerCombiner",
+  ]
+  td_file = "RISCVGISel.td"
+}
+
+tablegen("RISCVGenPostLegalizeGICombiner") {
+  visibility = [ ":LLVMRISCVCodeGen" ]
+  args = [
+    "-gen-global-isel-combiner",
+    "-combiners=RISCVPostLegalizerCombiner",
+  ]
+  td_file = "RISCVGISel.td"
 }
 
 tablegen("RISCVGenRegisterBank") {
@@ -44,6 +71,9 @@ static_library("LLVMRISCVCodeGen") {
     ":RISCVGenDAGISel",
     ":RISCVGenGlobalISel",
     ":RISCVGenMCPseudoLowering",
+    ":RISCVGenO0PreLegalizeGICombiner",
+    ":RISCVGenPostLegalizeGICombiner",
+    ":RISCVGenPreLegalizeGICombiner",
     ":RISCVGenRegisterBank",
 
     # See https://reviews.llvm.org/D69130
@@ -53,6 +83,7 @@ static_library("LLVMRISCVCodeGen") {
     "//llvm/include/llvm/Config:llvm-config",
     "//llvm/lib/CodeGen",
     "//llvm/lib/CodeGen/AsmPrinter",
+    "//llvm/lib/CodeGen/GlobalISel",
     "//llvm/lib/CodeGen/SelectionDAG",
     "//llvm/lib/IR",
     "//llvm/lib/MC",
@@ -66,26 +97,32 @@ static_library("LLVMRISCVCodeGen") {
     "GISel/RISCVCallLowering.cpp",
     "GISel/RISCVInstructionSelector.cpp",
     "GISel/RISCVLegalizerInfo.cpp",
+    "GISel/RISCVO0PreLegalizerCombiner.cpp",
+    "GISel/RISCVPostLegalizerCombiner.cpp",
+    "GISel/RISCVPreLegalizerCombiner.cpp",
     "GISel/RISCVRegisterBankInfo.cpp",
     "RISCVAsmPrinter.cpp",
     "RISCVCodeGenPrepare.cpp",
+    "RISCVDeadRegisterDefinitions.cpp",
     "RISCVExpandAtomicPseudoInsts.cpp",
     "RISCVExpandPseudoInsts.cpp",
     "RISCVFrameLowering.cpp",
     "RISCVGatherScatterLowering.cpp",
     "RISCVISelDAGToDAG.cpp",
     "RISCVISelLowering.cpp",
+    "RISCVInsertReadWriteCSR.cpp",
     "RISCVInsertVSETVLI.cpp",
     "RISCVInstrInfo.cpp",
-    "RISCVMCInstLower.cpp",
     "RISCVMachineFunctionInfo.cpp",
     "RISCVMacroFusion.cpp",
     "RISCVMakeCompressible.cpp",
     "RISCVMergeBaseOffset.cpp",
+    "RISCVMoveMerger.cpp",
+    "RISCVOptWInstrs.cpp",
+    "RISCVPushPopOptimizer.cpp",
+    "RISCVRVVInitUndef.cpp",
     "RISCVRedundantCopyElimination.cpp",
     "RISCVRegisterInfo.cpp",
-    "RISCVSExtWRemoval.cpp",
-    "RISCVStripWSuffix.cpp",
     "RISCVSubtarget.cpp",
     "RISCVTargetMachine.cpp",
     "RISCVTargetObjectFile.cpp",
@@ -104,6 +141,7 @@ group("RISCV") {
     ":LLVMRISCVCodeGen",
     "AsmParser",
     "Disassembler",
+    "MCA",
     "MCTargetDesc",
     "TargetInfo",
   ]

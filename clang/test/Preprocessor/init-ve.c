@@ -2,9 +2,11 @@
 /// REQUIRES: ve-registered-target
 
 // RUN: %clang_cc1 -E -dM -triple=ve < /dev/null | \
-// RUN:     FileCheck -match-full-lines -check-prefix VE %s
+// RUN:     FileCheck -match-full-lines -check-prefixes=VE,VE-HOSTED %s
+// RUN: %clang_cc1 -E -dM -triple=ve -ffreestanding < /dev/null | \
+// RUN:     FileCheck -match-full-lines -check-prefixes=VE,VE-FREESTANDING %s
 // RUN: %clang_cc1 -x c++ -E -dM -triple=ve < /dev/null | \
-// RUN:     FileCheck -match-full-lines -check-prefix VE -check-prefix VE-CXX %s
+// RUN:     FileCheck -match-full-lines -check-prefixes=VE,VE-HOSTED,VE-CXX %s
 //
 // VE:#define _LP64 1
 // VE:#define __BIGGEST_ALIGNMENT__ 8
@@ -160,7 +162,8 @@
 // VE:#define __SIZE_TYPE__ long unsigned int
 // VE:#define __SIZE_WIDTH__ 64
 // VE-CXX:#define __STDCPP_DEFAULT_NEW_ALIGNMENT__ 16UL
-// VE:#define __STDC_HOSTED__ 1
+// VE-HOSTED:#define __STDC_HOSTED__ 1
+// VE-FREESTANDING:#define __STDC_HOSTED__ 0
 // VE:#define __UINT16_C_SUFFIX__
 // VE:#define __UINT16_FMTX__ "hX"
 // VE:#define __UINT16_FMTo__ "ho"

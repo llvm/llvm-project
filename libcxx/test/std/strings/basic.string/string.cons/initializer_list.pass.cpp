@@ -19,37 +19,30 @@
 #include "test_allocator.h"
 #include "min_allocator.h"
 
+// clang-format off
+template <template <class> class Alloc>
+TEST_CONSTEXPR_CXX20 void test_string() {
+  {
+    std::basic_string<char, std::char_traits<char>, Alloc<char> > s = {'a', 'b', 'c'};
+    assert(s == "abc");
+  }
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
+  {
+    std::basic_string<wchar_t, std::char_traits<wchar_t>, Alloc<wchar_t> > s = {L'a', L'b', L'c'};
+    assert(s == L"abc");
+  }
+#endif
+}
+// clang-format on
+
 TEST_CONSTEXPR_CXX20 bool test() {
-  {
-    std::string s = {'a', 'b', 'c'};
-    assert(s == "abc");
-  }
-#ifndef TEST_HAS_NO_WIDE_CHARACTERS
-  {
-    std::wstring s;
-    s = {L'a', L'b', L'c'};
-    assert(s == L"abc");
-  }
-#endif
-  {
-    typedef std::basic_string<char, std::char_traits<char>, min_allocator<char>> S;
-    S s = {'a', 'b', 'c'};
-    assert(s == "abc");
-  }
-#ifndef TEST_HAS_NO_WIDE_CHARACTERS
-  {
-    typedef std::basic_string<wchar_t, std::char_traits<wchar_t>, min_allocator<wchar_t>> S;
-    S s;
-    s = {L'a', L'b', L'c'};
-    assert(s == L"abc");
-  }
-#endif
+  test_string<std::allocator>();
+  test_string<min_allocator>();
 
   return true;
 }
 
-int main(int, char**)
-{
+int main(int, char**) {
   test();
 #if TEST_STD_VER > 17
   static_assert(test());

@@ -1,6 +1,6 @@
-// RUN: mlir-opt %s -expand-strided-metadata -lower-affine -convert-arith-to-llvm -convert-memref-to-llvm -convert-func-to-llvm -reconcile-unrealized-casts | \
+// RUN: mlir-opt %s -expand-strided-metadata -lower-affine -convert-arith-to-llvm -finalize-memref-to-llvm -convert-func-to-llvm -reconcile-unrealized-casts | \
 // RUN: mlir-cpu-runner -e main -entry-point-result=void \
-// RUN:   -shared-libs=%mlir_lib_dir/libmlir_runner_utils%shlibext | FileCheck %s
+// RUN:   -shared-libs=%mlir_runner_utils | FileCheck %s
 
 memref.global "private" constant @__constant_5x3xf32 : memref<5x3xf32> =
 dense<[[0.0, 1.0, 2.0],

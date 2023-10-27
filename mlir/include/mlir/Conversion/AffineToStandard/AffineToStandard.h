@@ -12,16 +12,18 @@
 #include "mlir/Support/LLVM.h"
 
 namespace mlir {
-class AffineForOp;
 class Location;
 struct LogicalResult;
 class OpBuilder;
 class Pass;
 class RewritePattern;
+class RewritePatternSet;
 class Value;
 class ValueRange;
 
-class RewritePatternSet;
+namespace affine {
+class AffineForOp;
+} // namespace affine
 
 #define GEN_PASS_DECL_CONVERTAFFINETOSTANDARD
 #include "mlir/Conversion/Passes.h.inc"
@@ -37,11 +39,11 @@ void populateAffineToVectorConversionPatterns(RewritePatternSet &patterns);
 
 /// Emit code that computes the lower bound of the given affine loop using
 /// standard arithmetic operations.
-Value lowerAffineLowerBound(AffineForOp op, OpBuilder &builder);
+Value lowerAffineLowerBound(affine::AffineForOp op, OpBuilder &builder);
 
 /// Emit code that computes the upper bound of the given affine loop using
 /// standard arithmetic operations.
-Value lowerAffineUpperBound(AffineForOp op, OpBuilder &builder);
+Value lowerAffineUpperBound(affine::AffineForOp op, OpBuilder &builder);
 
 /// Lowers affine control flow operations (ForStmt, IfStmt and AffineApplyOp)
 /// to equivalent lower-level constructs (flow of basic blocks and arithmetic

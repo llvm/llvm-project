@@ -72,8 +72,8 @@ static_assert(!HasIsHeapUntilRange<RandomAccessRangeBadIndex>);
 // !indirect_strict_weak_order<Comp, projected<iterator_t<R>, Proj>>
 static_assert(!HasIsHeapUntilRange<R<NoComparator*>>);
 
-template <class Iter, class Sent, size_t N>
-constexpr void test_one(std::array<int, N> input, size_t until_index) {
+template <class Iter, class Sent, std::size_t N>
+constexpr void test_one(std::array<int, N> input, std::size_t until_index) {
   auto begin = Iter(input.data());
   auto end = Sent(Iter(input.data() + input.size()));
 

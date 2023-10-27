@@ -30,12 +30,12 @@ static const TargetRegisterClass *getRC32(MachineOperand &MO,
   const TargetRegisterClass *RC = MRI->getRegClass(MO.getReg());
 
   if (SystemZ::GR32BitRegClass.hasSubClassEq(RC) ||
-      MO.getSubReg() == SystemZ::subreg_l32 ||
-      MO.getSubReg() == SystemZ::subreg_hl32)
+      MO.getSubReg() == SystemZ::subreg_ll32 ||
+      MO.getSubReg() == SystemZ::subreg_l32)
     return &SystemZ::GR32BitRegClass;
   if (SystemZ::GRH32BitRegClass.hasSubClassEq(RC) ||
-      MO.getSubReg() == SystemZ::subreg_h32 ||
-      MO.getSubReg() == SystemZ::subreg_hh32)
+      MO.getSubReg() == SystemZ::subreg_lh32 ||
+      MO.getSubReg() == SystemZ::subreg_h32)
     return &SystemZ::GRH32BitRegClass;
 
   if (VRM && VRM->hasPhys(MO.getReg())) {
@@ -430,10 +430,9 @@ bool SystemZRegisterInfo::shouldCoalesce(MachineInstr *MI,
   for (; MII != MEE; ++MII) {
     for (const MachineOperand &MO : MII->operands())
       if (MO.isReg() && MO.getReg().isPhysical()) {
-        for (MCSuperRegIterator SI(MO.getReg(), this, true/*IncludeSelf*/);
-             SI.isValid(); ++SI)
-          if (NewRC->contains(*SI)) {
-            PhysClobbered.set(*SI);
+        for (MCPhysReg SI : superregs_inclusive(MO.getReg()))
+          if (NewRC->contains(SI)) {
+            PhysClobbered.set(SI);
             break;
           }
       }

@@ -34,7 +34,7 @@ main_body:
 ; GCN-LABEL: {{^}}sample_d_3d:
 ; GFX1010-NSA: image_sample_d v[0:3], v[7:15],
 ; GFX1030-NSA: image_sample_d v[0:3], [v3, v8, v7, v5, v4, v6, v0, v2, v1],
-; GFX11-NSA: image_sample_d v[0:3], v[7:15],
+; GFX11-NSA: image_sample_d v[0:3], [v3, v8, v7, v5, v[9:13]],
 define amdgpu_ps <4 x float> @sample_d_3d(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp, float %s, float %r, float %t, float %dsdh, float %dtdv, float %dsdv, float %drdv, float %drdh, float %dtdh) {
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.sample.d.3d.v4f32.f32(i32 15, float %dsdh, float %dtdh, float %drdh, float %dsdv, float %dtdv, float %drdv, float %s, float %t, float %r, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)

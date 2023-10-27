@@ -29,32 +29,56 @@ template<> int A<char>::a;
 // ALL: @_ZN1AIbE1aE ={{.*}} global i32 10
 template<> int A<bool>::a = 10;
 
-// ALL: @llvm.global_ctors = appending global [8 x { i32, ptr, ptr }]
+// ALL: @llvm.global_ctors = appending global [16 x { i32, ptr, ptr }]
 
-// ELF: [{ i32, ptr, ptr } { i32 65535, ptr @[[unordered1:[^,]*]], ptr @_ZN1AIsE1aE },
-// MACHO: [{ i32, ptr, ptr } { i32 65535, ptr @[[unordered1:[^,]*]], ptr null },
+// ELF:  [{ i32, ptr, ptr } { i32 65535, ptr @[[unordered:[^,]*]], ptr @_ZN1AIsE1aE },
+// MACHO: [{ i32, ptr, ptr } { i32 65535, ptr @[[unordered:[^,]*]], ptr null },
 
-// ELF:  { i32, ptr, ptr } { i32 65535, ptr @[[unordered2:[^,]*]], ptr @_Z1xIsE },
-// MACHO:  { i32, ptr, ptr } { i32 65535, ptr @[[unordered2:[^,]*]], ptr null },
+// ELF:  { i32, ptr, ptr } { i32 65535, ptr @[[unordered7:[^,]*]], ptr @_Z1xIsE },
+// MACHO:  { i32, ptr, ptr } { i32 65535, ptr @[[unordered7:[^,]*]], ptr null },
 
-// ELF:  { i32, ptr, ptr } { i32 65535, ptr @[[unordered3:[^,]*]], ptr @_ZN2ns1aIiE1iE },
-// MACHO:  { i32, ptr, ptr } { i32 65535, ptr @[[unordered3:[^,]*]], ptr null },
+// ELF:  { i32, ptr, ptr } { i32 65535, ptr @[[unordered10:[^,]*]], ptr @_ZN2ns1aIiE1iE },
+// MACHO:  { i32, ptr, ptr } { i32 65535, ptr @[[unordered10:[^,]*]], ptr null },
 
-// ELF:  { i32, ptr, ptr } { i32 65535, ptr @[[unordered4:[^,]*]], ptr @_ZN2ns1b1iIiEE },
-// MACHO:  { i32, ptr, ptr } { i32 65535, ptr @[[unordered4:[^,]*]], ptr null },
+// ELF:  { i32, ptr, ptr } { i32 65535, ptr @[[unordered11:[^,]*]], ptr @_ZN2ns1b1iIiEE },
+// MACHO:  { i32, ptr, ptr } { i32 65535, ptr @[[unordered11:[^,]*]], ptr null },
 
-// ELF:  { i32, ptr, ptr } { i32 65535, ptr @[[unordered5:[^,]*]], ptr @_ZN1AIvE1aE },
-// MACHO:  { i32, ptr, ptr } { i32 65535, ptr @[[unordered5:[^,]*]], ptr null },
+// ELF:  { i32, ptr, ptr } { i32 65535, ptr @[[unordered14:[^,]*]], ptr @_ZN1AIvE1aE },
+// MACHO:  { i32, ptr, ptr } { i32 65535, ptr @[[unordered14:[^,]*]], ptr null },
 
-// ELF:  { i32, ptr, ptr } { i32 65535, ptr @[[unordered6:[^,]*]], ptr @_Z1xIcE },
-// MACHO:  { i32, ptr, ptr } { i32 65535, ptr @[[unordered6:[^,]*]], ptr null },
+// ELF:  { i32, ptr, ptr } { i32 65535, ptr @[[unordered15:[^,]*]], ptr @_Z1xIcE },
+// MACHO:  { i32, ptr, ptr } { i32 65535, ptr @[[unordered15:[^,]*]], ptr null },
 
-// ALL:  { i32, ptr, ptr } { i32 65535, ptr @[[unordered7:[^,]*]], ptr null },
+// ALL:  { i32, ptr, ptr } { i32 65535, ptr @[[unordered16:[^,]*]], ptr null },
+
+// ELF:  { i32, ptr, ptr } { i32 65535, ptr @[[unordered19:[^,]*]], ptr @_ZN3FibILi2EE1aE },
+// MACHO: { i32, ptr, ptr } { i32 65535, ptr @[[unordered19:[^,]*]], ptr null },
+
+// ELF:  { i32, ptr, ptr } { i32 65535, ptr @[[unordered18:[^,]*]], ptr @_ZN3FibILi3EE1aE },
+// MACHO: { i32, ptr, ptr } { i32 65535, ptr @[[unordered18:[^,]*]], ptr null },
+
+// ELF:  { i32, ptr, ptr } { i32 65535, ptr @[[unordered20:[^,]*]], ptr @_ZN3FibILi4EE1aE },
+// MACHO: { i32, ptr, ptr } { i32 65535, ptr @[[unordered20:[^,]*]], ptr null },
+
+// ELF:  { i32, ptr, ptr } { i32 65535, ptr @[[unordered17:[^,]*]], ptr @_ZN3FibILi5EE1aE },
+// MACHO: { i32, ptr, ptr } { i32 65535, ptr @[[unordered17:[^,]*]], ptr null },
+
+// ELF:  { i32, ptr, ptr } { i32 65535, ptr @[[unordered23:[^,]*]], ptr @_ZN4Fib2ILi2EE1aE },
+// MACHO: { i32, ptr, ptr } { i32 65535, ptr @[[unordered23:[^,]*]], ptr null },
+
+// ELF:  { i32, ptr, ptr } { i32 65535, ptr @[[unordered24:[^,]*]], ptr @_ZN4Fib2ILi3EE1aE },
+// MACHO: { i32, ptr, ptr } { i32 65535, ptr @[[unordered24:[^,]*]], ptr null },
+
+// ELF:  { i32, ptr, ptr } { i32 65535, ptr @[[unordered22:[^,]*]], ptr @_ZN4Fib2ILi4EE1aE },
+// MACHO: { i32, ptr, ptr } { i32 65535, ptr @[[unordered22:[^,]*]], ptr null },
+
+// ELF:  { i32, ptr, ptr } { i32 65535, ptr @[[unordered21:[^,]*]], ptr @_ZN4Fib2ILi5EE1aE },
+// MACHO: { i32, ptr, ptr } { i32 65535, ptr @[[unordered21:[^,]*]], ptr null }, 
 
 // ALL:  { i32, ptr, ptr } { i32 65535, ptr @_GLOBAL__sub_I_static_member_variable_explicit_specialization.cpp, ptr null }]
 
 /// llvm.used ensures SHT_INIT_ARRAY in a section group cannot be GCed.
-// ELF: @llvm.used = appending global [6 x ptr] [ptr @_ZN1AIsE1aE, ptr @_Z1xIsE, ptr @_ZN2ns1aIiE1iE, ptr @_ZN2ns1b1iIiEE, ptr @_ZN1AIvE1aE, ptr @_Z1xIcE]
+// ELF: @llvm.used = appending global [14 x ptr] [ptr @_ZN1AIsE1aE, ptr @_Z1xIsE, ptr @_ZN2ns1aIiE1iE, ptr @_ZN2ns1b1iIiEE, ptr @_ZN1AIvE1aE, ptr @_Z1xIcE, ptr @_ZN3FibILi5EE1aE, ptr @_ZN3FibILi3EE1aE, ptr @_ZN3FibILi2EE1aE, ptr @_ZN3FibILi4EE1aE, ptr @_ZN4Fib2ILi5EE1aE, ptr @_ZN4Fib2ILi4EE1aE, ptr @_ZN4Fib2ILi2EE1aE, ptr @_ZN4Fib2ILi3EE1aE]
 
 template int A<short>::a;  // Unordered
 int b = foo();
@@ -94,45 +118,86 @@ template<typename T> int Internal<T>::a = foo();
 }
 int *use_internal_a = &Internal<int>::a;
 
+template<int n> struct Fib { static int a; };
+template<> int Fib<0>::a = 0;
+template<> int Fib<1>::a = 1;
+template<int n> int Fib<n>::a = Fib<n-2>::a + Fib<n-1>::a;
+int f = Fib<5>::a;
+
+template<int n> struct Fib2 { static int a; };
+template<> int Fib2<0>::a = 0;
+template<> int Fib2<1>::a = 1;
+template<int n> int Fib2<n>::a = Fib2<n-1>::a + Fib2<n-2>::a;
+int f2 = Fib2<5>::a;
+
 #endif
 
-// ALL: define internal void @[[unordered1]](
+// ALL: define internal void @[[unordered]](
 // ALL: call i32 @foo()
 // ALL: store {{.*}} @_ZN1AIsE1aE
 // ALL: ret
 
-// ALL: define internal void @[[unordered2]](
+// ALL: define internal void @[[unordered7]](
 // ALL: call i32 @foo()
 // ALL: store {{.*}} @_Z1xIsE
 // ALL: ret
 
-// ALL: define internal void @[[unordered3]](
+// ALL: define internal void @[[unordered10]](
 // ALL: call i32 @foo()
 // ALL: store {{.*}} @_ZN2ns1aIiE1iE
 // ALL: ret
 
-// ALL: define internal void @[[unordered4]](
+// ALL: define internal void @[[unordered11]](
 // ALL: call i32 @foo()
 // ALL: store {{.*}} @_ZN2ns1b1iIiEE
 // ALL: ret
 
-// ALL: define internal void @[[unordered5]](
-// ALL: call i32 @foo()
-// ALL: store {{.*}} @_ZN1AIvE1aE
-// ALL: ret
-
-// ALL: define internal void @[[unordered6]](
+// ALL: define internal void @[[unordered15]](
 // ALL: call i32 @foo()
 // ALL: store {{.*}} @_Z1xIcE
 // ALL: ret
 
-// ALL: define internal void @[[unordered7]](
+// ALL: define internal void @[[unordered16]](
 // ALL: call i32 @foo()
 // ALL: store {{.*}} @_ZN12_GLOBAL__N_18InternalIiE1aE
 // ALL: ret
 
+// ALL: define internal void @[[unordered17]](
+// ALL: store {{.*}} @_ZN3FibILi5EE1aE
+// ALL: ret
+
+// ALL: define internal void @[[unordered18]](
+// ALL: store {{.*}} @_ZN3FibILi3EE1aE
+// ALL: ret
+
+// ALL: define internal void @[[unordered19]](
+// ALL: store {{.*}} @_ZN3FibILi2EE1aE
+// ALL: ret
+
+// ALL: define internal void @[[unordered20]](
+// ALL: store {{.*}} @_ZN3FibILi4EE1aE
+// ALL: ret
+
+// ALL: define internal void @[[unordered21]](
+// ALL: store {{.*}} @_ZN4Fib2ILi5EE1aE
+// ALL: ret
+
+// ALL: define internal void @[[unordered22]](
+// ALL: store {{.*}} @_ZN4Fib2ILi4EE1aE
+// ALL: ret
+
+// ALL: define internal void @[[unordered23]](
+// ALL: store {{.*}} @_ZN4Fib2ILi2EE1aE
+// ALL: ret
+
+// ALL: define internal void @[[unordered24]](
+// ALL: store {{.*}} @_ZN4Fib2ILi3EE1aE
+// ALL: ret
+
 // ALL: define internal void @_GLOBAL__sub_I_static_member_variable_explicit_specialization.cpp()
 //   We call unique stubs for every ordered dynamic initializer in the TU.
+// ALL: call
+// ALL: call
 // ALL: call
 // ALL: call
 // ALL: call

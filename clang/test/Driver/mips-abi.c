@@ -9,13 +9,6 @@
 // MIPS32R2-O32: "-target-cpu" "mips32r2"
 // MIPS32R2-O32: "-target-abi" "o32"
 //
-// FIXME: This is a valid combination of options but we reject it at the moment
-//        because the backend can't handle it.
-// RUN: not %clang -target mips-linux-gnu -c %s \
-// RUN:        -march=mips64r2 -mabi=32 2>&1 \
-// RUN:   | FileCheck -check-prefix=MIPS64R2-O32 %s
-// MIPS64R2-O32: error: ABI 'o32' is not supported on CPU 'mips64r2'
-//
 // RUN: %clang -target mips64-linux-gnu -### -c %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=MIPS64R2-N64 %s
 // RUN: %clang -target mips-img-linux-gnu -mips64r2 -### -c %s 2>&1 \

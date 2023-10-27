@@ -16,32 +16,6 @@ class RISCVReg<bits<5> Enc, string n, list<string> alt = []> : Register<n> {
   let AltNames = alt;
 }
 
-class RISCVReg16<bits<5> Enc, string n, list<string> alt = []> : Register<n> {
-  let HWEncoding{4-0} = Enc;
-  let AltNames = alt;
-}
-
-def sub_16 : SubRegIndex<16>;
-class RISCVReg32<RISCVReg16 subreg> : Register<""> {
-  let HWEncoding{4-0} = subreg.HWEncoding{4-0};
-  let SubRegs = [subreg];
-  let SubRegIndices = [sub_16];
-  let AsmName = subreg.AsmName;
-  let AltNames = subreg.AltNames;
-}
-
-// Because RISCVReg64 register have AsmName and AltNames that alias with their
-// 16/32-bit sub-register, RISCVAsmParser will need to coerce a register number
-// from a RISCVReg16/RISCVReg32 to the equivalent RISCVReg64 when appropriate.
-def sub_32 : SubRegIndex<32>;
-class RISCVReg64<RISCVReg32 subreg> : Register<""> {
-  let HWEncoding{4-0} = subreg.HWEncoding{4-0};
-  let SubRegs = [subreg];
-  let SubRegIndices = [sub_32];
-  let AsmName = subreg.AsmName;
-  let AltNames = subreg.AltNames;
-}
-
 class RISCVRegWithSubRegs<bits<5> Enc, string n, list<Register> subregs,
                           list<string> alt = []>
       : RegisterWithSubRegs<n, subregs> {
@@ -49,6 +23,29 @@ class RISCVRegWithSubRegs<bits<5> Enc, string n, list<Register> subregs,
   let AltNames = alt;
 }
 
+class RISCVReg16<bits<5> Enc, string n, list<string> alt = []> : Register<n> {
+  let HWEncoding{4-0} = Enc;
+  let AltNames = alt;
+}
+
+def sub_16 : SubRegIndex<16>;
+class RISCVReg32<RISCVReg16 subreg>
+  : RISCVRegWithSubRegs<subreg.HWEncoding{4-0}, subreg.AsmName, [subreg],
+                        subreg.AltNames> {
+  let SubRegIndices = [sub_16];
+}
+
+// Because RISCVReg64 register have AsmName and AltNames that alias with their
+// 16/32-bit sub-register, RISCVAsmParser will need to coerce a register number
+// from a RISCVReg16/RISCVReg32 to the equivalent RISCVReg64 when appropriate.
+def sub_32 : SubRegIndex<32>;
+class RISCVReg64<RISCVReg32 subreg>
+  : RISCVRegWithSubRegs<subreg.HWEncoding{4-0}, subreg.AsmName, [subreg],
+                        subreg.AltNames> {
+  let SubRegIndices = [sub_32];
+}
+
+let FallbackRegAltNameIndex = NoRegAltName in
 def ABIRegAltName : RegAltNameIndex;
 
 def sub_vrm4_0 : SubRegIndex<256>;
@@ -118,65 +115,55 @@ let RegAltNameIndices = [ABIRegAltName] in {
 
 def XLenVT : ValueTypeByHwMode<[RV32, RV64],
                                [i32,  i64]>;
+// Allow f64 in GPR for ZDINX on RV64.
+def XLenFVT : ValueTypeByHwMode<[RV64],
+                                [f64]>;
 def XLenRI : RegInfoByHwMode<
       [RV32,              RV64],
       [RegInfo<32,32,32>, RegInfo<64,64,64>]>;
 
+class GPRRegisterClass<dag regList>
+    : RegisterClass<"RISCV", [XLenVT, XLenFVT, i32], 32, regList> {
+  let RegInfos = XLenRI;
+}
+
 // The order of registers represents the preferred allocation sequence.
 // Registers are listed in the order caller-save, callee-save, specials.
-def GPR : RegisterClass<"RISCV", [XLenVT], 32, (add
-    (sequence "X%u", 10, 17),
-    (sequence "X%u", 5, 7),
-    (sequence "X%u", 28, 31),
-    (sequence "X%u", 8, 9),
-    (sequence "X%u", 18, 27),
-    (sequence "X%u", 0, 4)
-  )> {
-  let RegInfos = XLenRI;
-}
+def GPR : GPRRegisterClass<(add (sequence "X%u", 10, 17),
+                                (sequence "X%u", 5, 7),
+                                (sequence "X%u", 28, 31),
+                                (sequence "X%u", 8, 9),
+                                (sequence "X%u", 18, 27),
+                                (sequence "X%u", 0, 4))>;
 
-def GPRX0 : RegisterClass<"RISCV", [XLenVT], 32, (add X0)> {
-  let RegInfos = XLenRI;
-}
+def GPRX0 : GPRRegisterClass<(add X0)>;
 
-def GPRNoX0 : RegisterClass<"RISCV", [XLenVT], 32, (sub GPR, X0)> {
-  let RegInfos = XLenRI;
-}
+def GPRNoX0 : GPRRegisterClass<(sub GPR, X0)>;
 
-def GPRNoX0X2 : RegisterClass<"RISCV", [XLenVT], 32, (sub GPR, X0, X2)> {
-  let RegInfos = XLenRI;
-}
+def GPRNoX0X2 : GPRRegisterClass<(sub GPR, X0, X2)>;
 
 // Don't use X1 or X5 for JALR since that is a hint to pop the return address
 // stack on some microarchitectures. Also remove the reserved registers X0, X2,
 // X3, and X4 as it reduces the number of register classes that get synthesized
 // by tablegen.
-def GPRJALR : RegisterClass<"RISCV", [XLenVT], 32, (sub GPR, (sequence "X%u", 0, 5))> {
-  let RegInfos = XLenRI;
-}
+def GPRJALR : GPRRegisterClass<(sub GPR, (sequence "X%u", 0, 5))>;
 
-def GPRC : RegisterClass<"RISCV", [XLenVT], 32, (add
-    (sequence "X%u", 10, 15),
-    (sequence "X%u", 8, 9)
-  )> {
-  let RegInfos = XLenRI;
-}
+def GPRC : GPRRegisterClass<(add (sequence "X%u", 10, 15),
+                                 (sequence "X%u", 8, 9))>;
 
 // For indirect tail calls, we can't use callee-saved registers, as they are
 // restored to the saved value before the tail call, which would clobber a call
 // address. We shouldn't use x5 since that is a hint for to pop the return
 // address stack on some microarchitectures.
-def GPRTC : RegisterClass<"RISCV", [XLenVT], 32, (add
-    (sequence "X%u", 6, 7),
-    (sequence "X%u", 10, 17),
-    (sequence "X%u", 28, 31)
-  )> {
-  let RegInfos = XLenRI;
-}
+def GPRTC : GPRRegisterClass<(add (sequence "X%u", 6, 7),
+                                  (sequence "X%u", 10, 17),
+                                  (sequence "X%u", 28, 31))>;
 
-def SP : RegisterClass<"RISCV", [XLenVT], 32, (add X2)> {
-  let RegInfos = XLenRI;
-}
+def SP : GPRRegisterClass<(add X2)>;
+
+// Saved Registers from s0 to s7, for C.MVA01S07 instruction in Zcmp extension
+def SR07 : GPRRegisterClass<(add (sequence "X%u", 8, 9),
+                                 (sequence "X%u", 18, 23))>;
 
 // Floating point registers
 let RegAltNameIndices = [ABIRegAltName] in {
@@ -226,39 +213,44 @@ let RegAltNameIndices = [ABIRegAltName] in {
 
 // The order of registers represents the preferred allocation sequence,
 // meaning caller-save regs are listed before callee-save.
-def FPR16 : RegisterClass<"RISCV", [f16], 16, (add
-    (sequence "F%u_H", 0, 7),
-    (sequence "F%u_H", 10, 17),
-    (sequence "F%u_H", 28, 31),
-    (sequence "F%u_H", 8, 9),
-    (sequence "F%u_H", 18, 27)
+// We start by allocating argument registers in reverse order since they are
+// compressible.
+def FPR16 : RegisterClass<"RISCV", [f16, bf16], 16, (add
+    (sequence "F%u_H", 15, 10), // fa5-fa0
+    (sequence "F%u_H", 0, 7),   // ft0-f7
+    (sequence "F%u_H", 16, 17), // fa6-fa7
+    (sequence "F%u_H", 28, 31), // ft8-ft11
+    (sequence "F%u_H", 8, 9),   // fs0-fs1
+    (sequence "F%u_H", 18, 27)  // fs2-fs11
 )>;
 
 def FPR32 : RegisterClass<"RISCV", [f32], 32, (add
+    (sequence "F%u_F", 15, 10),
     (sequence "F%u_F", 0, 7),
-    (sequence "F%u_F", 10, 17),
+    (sequence "F%u_F", 16, 17),
     (sequence "F%u_F", 28, 31),
     (sequence "F%u_F", 8, 9),
     (sequence "F%u_F", 18, 27)
 )>;
 
 def FPR32C : RegisterClass<"RISCV", [f32], 32, (add
-  (sequence "F%u_F", 10, 15),
+  (sequence "F%u_F", 15, 10),
   (sequence "F%u_F", 8, 9)
 )>;
 
 // The order of registers represents the preferred allocation sequence,
 // meaning caller-save regs are listed before callee-save.
 def FPR64 : RegisterClass<"RISCV", [f64], 64, (add
+    (sequence "F%u_D", 15, 10),
     (sequence "F%u_D", 0, 7),
-    (sequence "F%u_D", 10, 17),
+    (sequence "F%u_D", 16, 17),
     (sequence "F%u_D", 28, 31),
     (sequence "F%u_D", 8, 9),
     (sequence "F%u_D", 18, 27)
 )>;
 
 def FPR64C : RegisterClass<"RISCV", [f64], 64, (add
-  (sequence "F%u_D", 10, 15),
+  (sequence "F%u_D", 15, 10),
   (sequence "F%u_D", 8, 9)
 )>;
 
@@ -312,6 +304,13 @@ defvar vfloat16m2_t  = nxv8f16;
 defvar vfloat16m4_t  = nxv16f16;
 defvar vfloat16m8_t  = nxv32f16;
 
+defvar vbfloat16mf4_t = nxv1bf16;
+defvar vbfloat16mf2_t = nxv2bf16;
+defvar vbfloat16m1_t  = nxv4bf16;
+defvar vbfloat16m2_t  = nxv8bf16;
+defvar vbfloat16m4_t  = nxv16bf16;
+defvar vbfloat16m8_t  = nxv32bf16;
+
 defvar vfloat32mf2_t = nxv1f32;
 defvar vfloat32m1_t  = nxv2f32;
 defvar vfloat32m2_t  = nxv4f32;
@@ -332,22 +331,21 @@ defvar vbool32_t = nxv2i1;
 defvar vbool64_t = nxv1i1;
 
 // There is no need to define register classes for fractional LMUL.
-def LMULList {
-  list<int> m = [1, 2, 4, 8];
-}
+defvar LMULList = [1, 2, 4, 8];
 
 //===----------------------------------------------------------------------===//
 // Utility classes for segment load/store.
 //===----------------------------------------------------------------------===//
 // The set of legal NF for LMUL = lmul.
-// LMUL == 1, NF = 2, 3, 4, 5, 6, 7, 8
+// LMUL <= 1, NF = 2, 3, 4, 5, 6, 7, 8
 // LMUL == 2, NF = 2, 3, 4
 // LMUL == 4, NF = 2
+// LMUL == 8, no legal NF
 class NFList<int lmul> {
-  list<int> L = !cond(!eq(lmul, 1): [2, 3, 4, 5, 6, 7, 8],
-                      !eq(lmul, 2): [2, 3, 4],
+  list<int> L = !cond(!eq(lmul, 8): [],
                       !eq(lmul, 4): [2],
-                      !eq(lmul, 8): []);
+                      !eq(lmul, 2): [2, 3, 4],
+                      true: [2, 3, 4, 5, 6, 7, 8]);
 }
 
 // Generate [start, end) SubRegIndex list.
@@ -419,54 +417,50 @@ class VRegList<list<dag> LIn, int start, int nf, int lmul, bit isV0> {
 }
 
 // Vector registers
-let RegAltNameIndices = [ABIRegAltName] in {
-  foreach Index = 0-31 in {
-    def V#Index : RISCVReg<Index, "v"#Index, ["v"#Index]>, DwarfRegNum<[!add(Index, 96)]>;
-  }
-
-  foreach Index = [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22,
-                   24, 26, 28, 30] in {
-    def V#Index#M2 : RISCVRegWithSubRegs<Index, "v"#Index,
-                       [!cast<Register>("V"#Index),
-                        !cast<Register>("V"#!add(Index, 1))],
-                       ["v"#Index]>,
-                     DwarfRegAlias<!cast<Register>("V"#Index)> {
-      let SubRegIndices = [sub_vrm1_0, sub_vrm1_1];
-    }
-  }
-
-  foreach Index = [0, 4, 8, 12, 16, 20, 24, 28] in {
-    def V#Index#M4 : RISCVRegWithSubRegs<Index, "v"#Index,
-                       [!cast<Register>("V"#Index#"M2"),
-                        !cast<Register>("V"#!add(Index, 2)#"M2")],
-                       ["v"#Index]>,
-                     DwarfRegAlias<!cast<Register>("V"#Index)> {
-      let SubRegIndices = [sub_vrm2_0, sub_vrm2_1];
-    }
-  }
-
-  foreach Index = [0, 8, 16, 24] in {
-    def V#Index#M8 : RISCVRegWithSubRegs<Index, "v"#Index,
-                       [!cast<Register>("V"#Index#"M4"),
-                        !cast<Register>("V"#!add(Index, 4)#"M4")],
-                       ["v"#Index]>,
-                     DwarfRegAlias<!cast<Register>("V"#Index)> {
-      let SubRegIndices = [sub_vrm4_0, sub_vrm4_1];
-    }
-  }
-
-  def VTYPE  : RISCVReg<0, "vtype", ["vtype"]>;
-  def VL     : RISCVReg<0, "vl", ["vl"]>;
-  def VXSAT  : RISCVReg<0, "vxsat", ["vxsat"]>;
-  def VXRM   : RISCVReg<0, "vxrm", ["vxrm"]>;
-  let isConstant = true in
-  def VLENB  : RISCVReg<0, "vlenb", ["vlenb"]>,
-               DwarfRegNum<[!add(4096, SysRegVLENB.Encoding)]>;
+foreach Index = 0-31 in {
+  def V#Index : RISCVReg<Index, "v"#Index>, DwarfRegNum<[!add(Index, 96)]>;
 }
+
+foreach Index = [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22,
+                 24, 26, 28, 30] in {
+  def V#Index#M2 : RISCVRegWithSubRegs<Index, "v"#Index,
+                     [!cast<Register>("V"#Index),
+                      !cast<Register>("V"#!add(Index, 1))]>,
+                   DwarfRegAlias<!cast<Register>("V"#Index)> {
+    let SubRegIndices = [sub_vrm1_0, sub_vrm1_1];
+  }
+}
+
+foreach Index = [0, 4, 8, 12, 16, 20, 24, 28] in {
+  def V#Index#M4 : RISCVRegWithSubRegs<Index, "v"#Index,
+                     [!cast<Register>("V"#Index#"M2"),
+                      !cast<Register>("V"#!add(Index, 2)#"M2")]>,
+                   DwarfRegAlias<!cast<Register>("V"#Index)> {
+    let SubRegIndices = [sub_vrm2_0, sub_vrm2_1];
+  }
+}
+
+foreach Index = [0, 8, 16, 24] in {
+  def V#Index#M8 : RISCVRegWithSubRegs<Index, "v"#Index,
+                     [!cast<Register>("V"#Index#"M4"),
+                      !cast<Register>("V"#!add(Index, 4)#"M4")]>,
+                   DwarfRegAlias<!cast<Register>("V"#Index)> {
+    let SubRegIndices = [sub_vrm4_0, sub_vrm4_1];
+  }
+}
+
+def VTYPE  : RISCVReg<0, "vtype">;
+def VL     : RISCVReg<0, "vl">;
+def VXSAT  : RISCVReg<0, "vxsat">;
+def VXRM   : RISCVReg<0, "vxrm">;
+let isConstant = true in
+def VLENB  : RISCVReg<0, "vlenb">,
+             DwarfRegNum<[!add(4096, SysRegVLENB.Encoding)]>;
 
 def VCSR : RegisterClass<"RISCV", [XLenVT], 32,
                           (add VTYPE, VL, VLENB)> {
   let RegInfos = XLenRI;
+  let isAllocatable = 0;
 }
 
 
@@ -494,19 +488,23 @@ defvar VMaskVTs = [vbool1_t, vbool2_t, vbool4_t, vbool8_t, vbool16_t,
                    vbool32_t, vbool64_t];
 
 defvar VM1VTs = [vint8m1_t, vint16m1_t, vint32m1_t, vint64m1_t,
-                 vfloat16m1_t, vfloat32m1_t, vfloat64m1_t,
-                 vint8mf2_t, vint8mf4_t, vint8mf8_t,
-                 vint16mf2_t, vint16mf4_t, vint32mf2_t,
-                 vfloat16mf4_t, vfloat16mf2_t, vfloat32mf2_t];
+                 vbfloat16m1_t, vfloat16m1_t, vfloat32m1_t,
+                 vfloat64m1_t, vint8mf2_t, vint8mf4_t, vint8mf8_t,
+	               vint16mf2_t, vint16mf4_t, vint32mf2_t,
+                 vfloat16mf4_t, vfloat16mf2_t, vbfloat16mf4_t,
+                 vbfloat16mf2_t, vfloat32mf2_t];
 
 defvar VM2VTs = [vint8m2_t, vint16m2_t, vint32m2_t, vint64m2_t,
-                 vfloat16m2_t, vfloat32m2_t, vfloat64m2_t];
+                 vfloat16m2_t, vbfloat16m2_t,
+                 vfloat32m2_t, vfloat64m2_t];
 
 defvar VM4VTs = [vint8m4_t, vint16m4_t, vint32m4_t, vint64m4_t,
-                 vfloat16m4_t, vfloat32m4_t, vfloat64m4_t];
+                 vfloat16m4_t, vbfloat16m4_t,
+                 vfloat32m4_t, vfloat64m4_t];
 
 defvar VM8VTs = [vint8m8_t, vint16m8_t, vint32m8_t, vint64m8_t,
-                 vfloat16m8_t, vfloat32m8_t, vfloat64m8_t];
+                 vfloat16m8_t, vbfloat16m8_t,
+                 vfloat32m8_t, vfloat64m8_t];
 
 def VR : VReg<!listconcat(VM1VTs, VMaskVTs),
               (add (sequence "V%u", 8, 31),
@@ -539,18 +537,33 @@ def VMV0 : RegisterClass<"RISCV", VMaskVTs, 64, (add V0)> {
 let RegInfos = XLenRI in {
 def GPRF16  : RegisterClass<"RISCV", [f16], 16, (add GPR)>;
 def GPRF32  : RegisterClass<"RISCV", [f32], 32, (add GPR)>;
-def GPRF64  : RegisterClass<"RISCV", [f64], 64, (add GPR)>;
 } // RegInfos = XLenRI
 
+// Dummy zero register for use in the register pair containing X0 (as X1 is
+// not read to or written when the X0 register pair is used).
+def DUMMY_REG_PAIR_WITH_X0 : RISCVReg<0, "0">;
+
+// Must add DUMMY_REG_PAIR_WITH_X0 to a separate register class to prevent the
+// register's existence from changing codegen (due to the regPressureSetLimit
+// for the GPR register class being altered).
+def GPRAll : GPRRegisterClass<(add GPR, DUMMY_REG_PAIR_WITH_X0)>;
+
 let RegAltNameIndices = [ABIRegAltName] in {
-  foreach Index = [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22,
-                   24, 26, 28, 30] in {
+  def X0_PD : RISCVRegWithSubRegs<0, X0.AsmName,
+                                     [X0, DUMMY_REG_PAIR_WITH_X0],
+                                     X0.AltNames> {
+    let SubRegIndices = [sub_32, sub_32_hi];
+    let CoveredBySubRegs = 1;
+  }
+  foreach I = 1-15 in {
+    defvar Index = !shl(I, 1);
     defvar Reg = !cast<Register>("X"#Index);
+    defvar RegP1 = !cast<Register>("X"#!add(Index,1));
     def X#Index#_PD : RISCVRegWithSubRegs<Index, Reg.AsmName,
-                                          [!cast<Register>("X"#Index),
-                                           !cast<Register>("X"#!add(Index, 1))],
-                                           Reg.AltNames> {
+                                          [Reg, RegP1],
+                                          Reg.AltNames> {
       let SubRegIndices = [sub_32, sub_32_hi];
+      let CoveredBySubRegs = 1;
     }
   }
 }
@@ -570,7 +583,7 @@ def VM : VReg<VMaskVTs,
            (add (sequence "V%u", 8, 31),
                 (sequence "V%u", 0, 7)), 1>;
 
-foreach m = LMULList.m in {
+foreach m = LMULList in {
   foreach nf = NFList<m>.L in {
     def "VRN" # nf # "M" # m # "NoV0": VReg<[untyped],
                                (add !cast<RegisterTuples>("VN" # nf # "M" # m # "NoV0")),
@@ -585,15 +598,3 @@ foreach m = LMULList.m in {
 // Special registers
 def FFLAGS : RISCVReg<0, "fflags">;
 def FRM    : RISCVReg<0, "frm">;
-
-// Any type register. Used for .insn directives when we don't know what the
-// register types could be.
-// NOTE: The alignment and size are bogus values. The Size needs to be non-zero
-// or tablegen will use "untyped" to determine the size which will assert.
-let isAllocatable = 0 in
-def AnyReg : RegisterClass<"RISCV", [untyped], 32,
-                           (add (sequence "X%u", 0, 31),
-                                (sequence "F%u_D", 0, 31),
-                                (sequence "V%u", 0, 31))> {
-  let Size = 32;
-}

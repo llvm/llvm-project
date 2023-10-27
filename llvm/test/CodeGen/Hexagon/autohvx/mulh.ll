@@ -10,7 +10,13 @@ define <64 x i16> @mulhs16(<64 x i16> %a0, <64 x i16> %a1) #0 {
 ; V60-NEXT:     v1:0.w = vmpy(v1.h,v0.h)
 ; V60-NEXT:    }
 ; V60-NEXT:    {
-; V60-NEXT:     v0.h = vshuffo(v1.h,v0.h)
+; V60-NEXT:     r7 = #124
+; V60-NEXT:    }
+; V60-NEXT:    {
+; V60-NEXT:     v1:0 = vshuff(v1,v0,r7)
+; V60-NEXT:    }
+; V60-NEXT:    {
+; V60-NEXT:     v0.h = vpacko(v1.w,v0.w)
 ; V60-NEXT:    }
 ; V60-NEXT:    {
 ; V60-NEXT:     jumpr r31
@@ -22,7 +28,13 @@ define <64 x i16> @mulhs16(<64 x i16> %a0, <64 x i16> %a1) #0 {
 ; V65-NEXT:     v1:0.w = vmpy(v1.h,v0.h)
 ; V65-NEXT:    }
 ; V65-NEXT:    {
-; V65-NEXT:     v0.h = vshuffo(v1.h,v0.h)
+; V65-NEXT:     r7 = #124
+; V65-NEXT:    }
+; V65-NEXT:    {
+; V65-NEXT:     v1:0 = vshuff(v1,v0,r7)
+; V65-NEXT:    }
+; V65-NEXT:    {
+; V65-NEXT:     v0.h = vpacko(v1.w,v0.w)
 ; V65-NEXT:    }
 ; V65-NEXT:    {
 ; V65-NEXT:     jumpr r31
@@ -34,7 +46,13 @@ define <64 x i16> @mulhs16(<64 x i16> %a0, <64 x i16> %a1) #0 {
 ; V69-NEXT:     v1:0.w = vmpy(v1.h,v0.h)
 ; V69-NEXT:    }
 ; V69-NEXT:    {
-; V69-NEXT:     v0.h = vshuffo(v1.h,v0.h)
+; V69-NEXT:     r7 = #124
+; V69-NEXT:    }
+; V69-NEXT:    {
+; V69-NEXT:     v1:0 = vshuff(v1,v0,r7)
+; V69-NEXT:    }
+; V69-NEXT:    {
+; V69-NEXT:     v0.h = vpacko(v1.w,v0.w)
 ; V69-NEXT:    }
 ; V69-NEXT:    {
 ; V69-NEXT:     jumpr r31
@@ -54,7 +72,13 @@ define <64 x i16> @mulhu16(<64 x i16> %a0, <64 x i16> %a1) #0 {
 ; V60-NEXT:     v1:0.uw = vmpy(v1.uh,v0.uh)
 ; V60-NEXT:    }
 ; V60-NEXT:    {
-; V60-NEXT:     v0.h = vshuffo(v1.h,v0.h)
+; V60-NEXT:     r7 = #124
+; V60-NEXT:    }
+; V60-NEXT:    {
+; V60-NEXT:     v1:0 = vshuff(v1,v0,r7)
+; V60-NEXT:    }
+; V60-NEXT:    {
+; V60-NEXT:     v0.h = vpacko(v1.w,v0.w)
 ; V60-NEXT:    }
 ; V60-NEXT:    {
 ; V60-NEXT:     jumpr r31
@@ -66,7 +90,13 @@ define <64 x i16> @mulhu16(<64 x i16> %a0, <64 x i16> %a1) #0 {
 ; V65-NEXT:     v1:0.uw = vmpy(v1.uh,v0.uh)
 ; V65-NEXT:    }
 ; V65-NEXT:    {
-; V65-NEXT:     v0.h = vshuffo(v1.h,v0.h)
+; V65-NEXT:     r7 = #124
+; V65-NEXT:    }
+; V65-NEXT:    {
+; V65-NEXT:     v1:0 = vshuff(v1,v0,r7)
+; V65-NEXT:    }
+; V65-NEXT:    {
+; V65-NEXT:     v0.h = vpacko(v1.w,v0.w)
 ; V65-NEXT:    }
 ; V65-NEXT:    {
 ; V65-NEXT:     jumpr r31
@@ -98,16 +128,16 @@ define <32 x i32> @mulhs32(<32 x i32> %a0, <32 x i32> %a1) #0 {
 ; V60-NEXT:     v2.w = vmpye(v1.w,v0.uh)
 ; V60-NEXT:    }
 ; V60-NEXT:    {
-; V60-NEXT:     v0.w = vasr(v0.w,r0)
+; V60-NEXT:     v31.w = vasr(v0.w,r0)
 ; V60-NEXT:    }
 ; V60-NEXT:    {
 ; V60-NEXT:     v3.w = vasr(v1.w,r0)
 ; V60-NEXT:    }
 ; V60-NEXT:    {
-; V60-NEXT:     v5:4.w = vmpy(v0.h,v1.uh)
+; V60-NEXT:     v5:4.w = vmpy(v31.h,v1.uh)
 ; V60-NEXT:    }
 ; V60-NEXT:    {
-; V60-NEXT:     v31:30.w = vmpy(v0.h,v3.h)
+; V60-NEXT:     v31:30.w = vmpy(v31.h,v3.h)
 ; V60-NEXT:    }
 ; V60-NEXT:    {
 ; V60-NEXT:     v7:6.w = vadd(v2.uh,v4.uh)
@@ -181,10 +211,10 @@ define <32 x i32> @mulhu32(<32 x i32> %a0, <32 x i32> %a1) #0 {
 ; V60-NEXT:     v2.uw = vlsr(v2.uw,r2)
 ; V60-NEXT:    }
 ; V60-NEXT:    {
-; V60-NEXT:     v1 = vdelta(v1,v4)
+; V60-NEXT:     v31 = vdelta(v1,v4)
 ; V60-NEXT:    }
 ; V60-NEXT:    {
-; V60-NEXT:     v1:0.uw = vmpy(v0.uh,v1.uh)
+; V60-NEXT:     v1:0.uw = vmpy(v0.uh,v31.uh)
 ; V60-NEXT:    }
 ; V60-NEXT:    {
 ; V60-NEXT:     v1:0.w = vadd(v1.uh,v0.uh)

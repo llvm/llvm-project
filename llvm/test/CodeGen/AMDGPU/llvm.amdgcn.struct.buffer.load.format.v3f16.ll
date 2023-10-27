@@ -2,6 +2,7 @@
 ; RUN: llc -mcpu=gfx1010 -mtriple=amdgcn-- -verify-machineinstrs < %s | FileCheck -check-prefix=GFX10 %s
 ; RUN: llc -mcpu=gfx900 -mtriple=amdgcn-- -verify-machineinstrs < %s | FileCheck -check-prefix=GFX9 %s
 ; RUN: llc -mcpu=gfx810 -mtriple=amdgcn-- -verify-machineinstrs < %s | FileCheck -check-prefix=GFX8 %s
+; RUN: llc -mcpu=gfx1100 -mtriple=amdgcn-- -verify-machineinstrs < %s | FileCheck -check-prefix=GFX11 %s
 @esgs_ring = external addrspace(3) global [0 x i32], align 65536
 
 define amdgpu_gs void @main(<4 x i32> %arg, i32 %arg1) {
@@ -84,6 +85,32 @@ define amdgpu_gs void @main(<4 x i32> %arg, i32 %arg1) {
 ; GFX8-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX8-NEXT:    s_mov_b32 m0, -1
 ; GFX8-NEXT:    ds_write2_b32 v2, v0, v1 offset0:7 offset1:8
+;
+; GFX11-LABEL: main:
+; GFX11:       ; %bb.0: ; %bb
+; GFX11-NEXT:    s_mov_b32 s1, exec_lo
+; GFX11-NEXT:  .LBB0_1: ; =>This Inner Loop Header: Depth=1
+; GFX11-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX11-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX11-NEXT:    v_readfirstlane_b32 s6, v2
+; GFX11-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[0:1]
+; GFX11-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[2:3]
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GFX11-NEXT:    s_and_b32 s0, vcc_lo, s0
+; GFX11-NEXT:    s_and_saveexec_b32 s0, s0
+; GFX11-NEXT:    buffer_load_d16_format_xyz v[5:6], v4, s[4:7], 0 idxen
+; GFX11-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
+; GFX11-NEXT:    ; implicit-def: $vgpr4
+; GFX11-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
+; GFX11-NEXT:    s_cbranch_execnz .LBB0_1
+; GFX11-NEXT:  ; %bb.2:
+; GFX11-NEXT:    s_mov_b32 exec_lo, s1
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    v_lshrrev_b32_e32 v0, 16, v5
+; GFX11-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_and_b32 v1, 0xffff, v6
+; GFX11-NEXT:    ds_store_2addr_b32 v2, v0, v1 offset0:7 offset1:8
 bb:
   %i = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 undef)
   %i2 = call nsz arcp <3 x half> @llvm.amdgcn.struct.buffer.load.format.v3f16(<4 x i32> %arg, i32 %arg1, i32 0, i32 0, i32 0)
@@ -101,12 +128,9 @@ bb:
   store i32 %i8, ptr addrspace(3) %i12, align 4
   unreachable
 }
-
 ; Function Attrs: nounwind readnone willreturn
 declare i32 @llvm.amdgcn.mbcnt.hi(i32, i32) #0
-
 ; Function Attrs: nounwind readonly willreturn
 declare <3 x half> @llvm.amdgcn.struct.buffer.load.format.v3f16(<4 x i32>, i32, i32, i32, i32 immarg) #1
-
 attributes #0 = { nounwind readnone willreturn }
 attributes #1 = { nounwind readonly willreturn }

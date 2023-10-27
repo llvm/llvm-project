@@ -73,13 +73,13 @@ define <8 x half> @sitofp_v8i1_v8f16(<8 x i1> %x) #0 {
 define <8 x half> @uitofp_v8i1_v8f16(<8 x i1> %x) #0 {
 ; X86-LABEL: uitofp_v8i1_v8f16:
 ; X86:       # %bb.0:
-; X86-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}{1to4}, %xmm0, %xmm0
 ; X86-NEXT:    vcvtuw2ph %xmm0, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: uitofp_v8i1_v8f16:
 ; X64:       # %bb.0:
-; X64-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; X64-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
 ; X64-NEXT:    vcvtuw2ph %xmm0, %xmm0
 ; X64-NEXT:    retq
  %result = call <8 x half> @llvm.experimental.constrained.uitofp.v8f16.v8i1(<8 x i1> %x,

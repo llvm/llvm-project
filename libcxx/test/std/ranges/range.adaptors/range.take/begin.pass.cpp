@@ -22,7 +22,7 @@
 struct NonCommonSimpleView : std::ranges::view_base {
   int* begin() const;
   sentinel_wrapper<int*> end() const;
-  size_t size() { return 0; }  // deliberately non-const
+  std::size_t size() { return 0; }  // deliberately non-const
 };
 static_assert(std::ranges::sized_range<NonCommonSimpleView>);
 static_assert(!std::ranges::sized_range<const NonCommonSimpleView>);

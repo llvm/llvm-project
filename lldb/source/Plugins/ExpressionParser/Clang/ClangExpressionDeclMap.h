@@ -53,7 +53,7 @@ class ClangPersistentVariables;
 /// struct so that it can be passed to the JITted version of the IR.
 ///
 /// Fourth and finally, it "dematerializes" the struct after the JITted code
-/// has has executed, placing the new values back where it found the old ones.
+/// has executed, placing the new values back where it found the old ones.
 class ClangExpressionDeclMap : public ClangASTSource {
 public:
   /// Constructor

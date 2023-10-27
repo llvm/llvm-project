@@ -2,7 +2,6 @@
 // RUN: %clang_hwasan %s -o %t
 // RUN: ulimit -s 1000
 // RUN: %run %t 2>&1 | FileCheck %s
-// REQUIRES: stable-runtime
 
 #include <pthread.h>
 #include <stdlib.h>
@@ -23,9 +22,10 @@ void *malloc_and_use(int size) {
 }
 
 void *T1(void *arg) {
-
-  for (int i = 1; i <= (1 << 20); i *= 2)
+  for (int i = 1; i <= (1 << 20); i *= 2) {
     sink = malloc_and_use(i);
+    free(sink);
+  }
 
   __sync_fetch_and_add(&state, 1);
   while (__sync_fetch_and_add(&state, 0) != 4) {}

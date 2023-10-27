@@ -38,18 +38,22 @@ public:
   /// passed around during sparsification for bookkeeping
   /// together with some consistency asserts.
   CodegenEnv(linalg::GenericOp linop, SparsificationOptions opts,
-             unsigned numTensors, unsigned numLoops, unsigned numFilterLoops);
+             unsigned numTensors, unsigned numLoops, unsigned numFilterLoops,
+             unsigned maxRank);
 
   //
   // General methods.
   //
+
+  LogicalResult initTensorExp();
+  ExprId getExprId() const { return tensorExp; }
 
   linalg::GenericOp op() const { return linalgOp; }
   const SparsificationOptions &options() const { return sparseOptions; }
   Merger &merger() { return latticeMerger; }
   LoopEmitter &emitter() { return loopEmitter; }
 
-  void startEmit(OpOperand *so, unsigned lv);
+  void startEmit();
 
   /// Generates loop boundary statements (entering/exiting loops). The function
   /// passes and updates the passed-in parameters.
@@ -62,31 +66,78 @@ public:
   // Merger delegates.
   //
 
-  TensorExp &exp(unsigned e) { return latticeMerger.exp(e); }
-  LatPoint &lat(unsigned l) { return latticeMerger.lat(l); }
-  SmallVector<unsigned> &set(unsigned s) { return latticeMerger.set(s); }
-  DimLevelType dlt(unsigned t, unsigned i) const {
-    return latticeMerger.getDimLevelType(t, i);
+  constexpr TensorId makeTensorId(unsigned t) const {
+    return latticeMerger.makeTensorId(t);
   }
-  DimLevelType dlt(unsigned b) const {
-    return latticeMerger.getDimLevelType(b);
+  constexpr LoopId makeLoopId(unsigned i) const {
+    return latticeMerger.makeLoopId(i);
   }
+  constexpr TensorLoopId makeTensorLoopId(unsigned t, unsigned i) const {
+    return latticeMerger.makeTensorLoopId(t, i);
+  }
+  const TensorExp &exp(ExprId e) const { return latticeMerger.exp(e); }
+  const LatPoint &lat(LatPointId l) const { return latticeMerger.lat(l); }
+  ArrayRef<LatPointId> set(LatSetId s) const { return latticeMerger.set(s); }
+  DimLevelType dlt(TensorId t, LoopId i) const {
+    return latticeMerger.getLvlType(t, i);
+  }
+  DimLevelType dlt(TensorLoopId b) const { return latticeMerger.getLvlType(b); }
+
+  //
+  // LoopEmitter delegates.
+  //
+
+  TensorLevel makeTensorLevel(TensorId t, Level l) const {
+    // Make sure LoopEmitter, GenericOp, and Merger agree on the number of
+    // tensors.
+    assert(loopEmitter.getNumManifestTensors() == linalgOp->getNumOperands() &&
+           loopEmitter.getNumTensors() == latticeMerger.getNumTensors() &&
+           loopEmitter.getOutTensorId() == latticeMerger.getOutTensorID() &&
+           loopEmitter.getSynTensorId() == latticeMerger.getSynTensorID());
+    return loopEmitter.makeTensorLevel(t, l);
+  }
+  TensorLevel makeTensorLevel(std::pair<TensorId, Level> tlPair) const {
+    return makeTensorLevel(tlPair.first, tlPair.second);
+  }
+  std::pair<TensorId, Level> unpackTensorLevel(TensorLevel tl) const {
+    return loopEmitter.unpackTensorLevel(tl);
+  }
+  template <class ContainerTy>
+  auto unpackTensorLevelRange(ContainerTy &&c) const {
+    return loopEmitter.unpackTensorLevelRange(std::forward<ContainerTy>(c));
+  }
+
+  //
+  // Code generation environment verify functions.
+  //
+
+  /// Whether the tensor expression is admissible for codegen.
+  /// It also sets the sparseOut if the output tensor is sparse.
+  bool isAdmissibleTensorExp(ExprId e);
+
+  /// Whether the iteration graph is sorted in admissible topoOrder.
+  /// Sets outerParNest on success with sparse output
+  bool isAdmissibleTopoOrder();
 
   //
   // Topological delegate and sort methods.
   //
 
-  size_t topSortSize() const { return topSort.size(); }
-  unsigned topSortAt(unsigned i) const { return topSort.at(i); }
-  void topSortPushBack(unsigned i) { topSort.push_back(i); }
-  void topSortClear(unsigned capacity = 0) {
+  LoopOrd topSortSize() const { return topSort.size(); }
+  LoopId topSortAt(LoopOrd n) const { return topSort.at(n); }
+  void topSortPushBack(LoopId i) { topSort.push_back(i); }
+  void topSortClear(size_t capacity = 0) {
     topSort.clear();
     topSort.reserve(capacity);
   }
 
-  ArrayRef<unsigned> getTopSortSlice(size_t n, size_t m) const;
-  ArrayRef<unsigned> getLoopCurStack() const;
-  Value getLoopIdxValue(size_t loopIdx) const;
+  ArrayRef<LoopId> getTopSortSlice(LoopOrd n, LoopOrd m) const;
+  ArrayRef<LoopId> getLoopStackUpTo(LoopOrd n) const;
+  ArrayRef<LoopId> getCurrentLoopStack() const;
+  /// Returns the induction-variable for the loop identified by the given
+  /// `LoopId`.  This method handles application of the topological sort
+  /// in order to convert the `LoopId` into the corresponding `LoopOrd`.
+  Value getLoopVar(LoopId i) const;
 
   //
   // Sparse tensor output and expansion methods.
@@ -98,7 +149,8 @@ public:
   Value getInsertionChain() const { return insChain; }
   void updateInsertionChain(Value chain);
 
-  bool atExpandLevel(OpOperand *o, unsigned rank, unsigned lv) const;
+  // FIXME: clarify what this "rank" is really supposed to mean/be.
+  bool atExpandLevel(OpOperand *o, unsigned rank, LoopOrd n) const;
   void startExpand(Value values, Value filled, Value added, Value count);
   bool isExpand() const { return expValues != nullptr; }
   void updateExpandCount(Value count);
@@ -112,14 +164,17 @@ public:
   // Reduction methods.
   //
 
-  void startReduc(unsigned exp, Value val);
-  bool isReduc() const { return redExp != -1u; }
+  void startReduc(ExprId exp, Value val);
+  bool isReduc() const { return redExp != detail::kInvalidId; }
   void updateReduc(Value val);
   Value getReduc() const { return redVal; }
   Value endReduc();
+  void setValidLexInsert(Value val);
+  void clearValidLexInsert();
+  Value getValidLexInsert() const { return redValidLexInsert; }
 
-  void startCustomReduc(unsigned exp);
-  bool isCustomReduc() const { return redCustom != -1u; }
+  void startCustomReduc(ExprId exp);
+  bool isCustomReduc() const { return redCustom != detail::kInvalidId; }
   Value getCustomRedId();
   void endCustomReduc();
 
@@ -136,14 +191,16 @@ private:
   // Loop emitter helper class.
   LoopEmitter loopEmitter;
 
-  // Topological sort.
-  std::vector<unsigned> topSort;
+  // Topological sort.  This serves as a mapping from `LoopOrd` to `LoopId`
+  // (cf., `getLoopVar` and `topSortAt`).
+  std::vector<LoopId> topSort;
 
   // Sparse tensor as output. Implemented either through direct injective
   // insertion in lexicographic index order or through access pattern
   // expansion in the innermost loop nest (`expValues` through `expCount`).
   OpOperand *sparseOut;
-  unsigned outerParNest;
+  // The count of outer non-filter loops, as defined by `isAdmissibleTopoOrder`.
+  LoopOrd outerParNest;
   Value insChain;
   Value expValues;
   Value expFilled;
@@ -154,8 +211,16 @@ private:
   // into the merger's expression tree. When the indices of a tensor reduction
   // expression are exhausted, all inner loops can use a scalarized reduction.
   Value redVal;
-  unsigned redExp;
-  unsigned redCustom;
+  ExprId redExp;
+  ExprId redCustom;
+
+  // Bookkeeping for lex insertion during reductions. Holds the runtime boolean
+  // value of whether any reduction occurred. This is only set during a
+  // reduction and cleared once the reduction is finished.
+  Value redValidLexInsert;
+
+  // The root tensor expression of the kernel.
+  ExprId tensorExp;
 };
 
 } // namespace sparse_tensor

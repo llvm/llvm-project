@@ -69,8 +69,8 @@ INITIALIZE_PASS_END(RegBankSelect, DEBUG_TYPE,
                     "Assign register bank of generic virtual registers", false,
                     false)
 
-RegBankSelect::RegBankSelect(Mode RunningMode)
-    : MachineFunctionPass(ID), OptMode(RunningMode) {
+RegBankSelect::RegBankSelect(char &PassID, Mode RunningMode)
+    : MachineFunctionPass(PassID), OptMode(RunningMode) {
   if (RegBankSelectMode.getNumOccurrences() != 0) {
     OptMode = RegBankSelectMode;
     if (RegBankSelectMode != RunningMode)
@@ -162,8 +162,10 @@ bool RegBankSelect::repairReg(
     MI = MIRBuilder.buildInstrNoInsert(TargetOpcode::COPY)
       .addDef(Dst)
       .addUse(Src);
-    LLVM_DEBUG(dbgs() << "Copy: " << printReg(Src) << " to: " << printReg(Dst)
-               << '\n');
+    LLVM_DEBUG(dbgs() << "Copy: " << printReg(Src) << ':'
+                      << printRegClassOrBank(Src, *MRI, TRI)
+                      << " to: " << printReg(Dst) << ':'
+                      << printRegClassOrBank(Dst, *MRI, TRI) << '\n');
   } else {
     // TODO: Support with G_IMPLICIT_DEF + G_INSERT sequence or G_EXTRACT
     // sequence.
@@ -447,7 +449,8 @@ RegBankSelect::MappingCost RegBankSelect::computeMapping(
     return MappingCost::ImpossibleCost();
 
   // If mapped with InstrMapping, MI will have the recorded cost.
-  MappingCost Cost(MBFI ? MBFI->getBlockFreq(MI.getParent()) : 1);
+  MappingCost Cost(MBFI ? MBFI->getBlockFreq(MI.getParent())
+                        : BlockFrequency(1));
   bool Saturated = Cost.addLocalCost(InstrMapping.getCost());
   assert(!Saturated && "Possible mapping saturated the cost");
   LLVM_DEBUG(dbgs() << "Evaluating mapping cost for: " << MI);
@@ -621,7 +624,7 @@ bool RegBankSelect::applyMapping(
 
   // Second, rewrite the instruction.
   LLVM_DEBUG(dbgs() << "Actual mapping of the operands: " << OpdMapper << '\n');
-  RBI->applyMapping(OpdMapper);
+  RBI->applyMapping(MIRBuilder, OpdMapper);
 
   return true;
 }
@@ -969,7 +972,7 @@ bool RegBankSelect::EdgeInsertPoint::canMaterialize() const {
   return Src.canSplitCriticalEdge(DstOrSplit);
 }
 
-RegBankSelect::MappingCost::MappingCost(const BlockFrequency &LocalFreq)
+RegBankSelect::MappingCost::MappingCost(BlockFrequency LocalFreq)
     : LocalFreq(LocalFreq.getFrequency()) {}
 
 bool RegBankSelect::MappingCost::addLocalCost(uint64_t Cost) {

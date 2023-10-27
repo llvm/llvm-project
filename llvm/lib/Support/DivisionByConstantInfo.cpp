@@ -132,7 +132,7 @@ UnsignedDivisionByConstantInfo::get(const APInt &D, unsigned LeadingZeros,
            (Q1.ult(Delta) || (Q1 == Delta && R1.isZero())));
 
   if (Retval.IsAdd && !D[0] && AllowEvenDivisorOptimization) {
-    unsigned PreShift = D.countTrailingZeros();
+    unsigned PreShift = D.countr_zero();
     APInt ShiftedD = D.lshr(PreShift);
     Retval =
         UnsignedDivisionByConstantInfo::get(ShiftedD, LeadingZeros + PreShift);

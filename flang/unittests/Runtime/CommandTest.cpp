@@ -132,12 +132,12 @@ protected:
     SCOPED_TRACE(name);
     SCOPED_TRACE("Checking environment variable");
     CheckValue(
-        [&](const Descriptor *value, const Descriptor *,
+        [&](const Descriptor *value, const Descriptor *length,
             const Descriptor *errmsg) {
-          return RTNAME(EnvVariableValue)(*CharDescriptor(name), value,
-              trimName, errmsg, /*sourceFile=*/nullptr, /*line=*/0);
+          return RTNAME(GetEnvVariable)(
+              *CharDescriptor(name), value, length, trimName, errmsg);
         },
-        expectedValue);
+        expectedValue, std::strlen(expectedValue));
   }
 
   void CheckMissingEnvVarValue(const char *name, bool trimName = true) const {
@@ -147,15 +147,13 @@ protected:
     ASSERT_EQ(nullptr, std::getenv(name))
         << "Environment variable " << name << " not expected to exist";
 
-    OwningPtr<Descriptor> nameDescriptor{CharDescriptor(name)};
-    EXPECT_EQ(0, RTNAME(EnvVariableLength)(*nameDescriptor, trimName));
     CheckValue(
-        [&](const Descriptor *value, const Descriptor *,
+        [&](const Descriptor *value, const Descriptor *length,
             const Descriptor *errmsg) {
-          return RTNAME(EnvVariableValue)(*nameDescriptor, value, trimName,
-              errmsg, /*sourceFile=*/nullptr, /*line=*/0);
+          return RTNAME(GetEnvVariable)(
+              *CharDescriptor(name), value, length, trimName, errmsg);
         },
-        "", -1, 1, "Missing environment variable");
+        "", 0, 1, "Missing environment variable");
   }
 
   void CheckMissingArgumentValue(int n, const char *errStr = nullptr) const {
@@ -416,7 +414,6 @@ private:
 
 TEST_F(EnvironmentVariables, Nonexistent) {
   CheckMissingEnvVarValue("DOESNT_EXIST");
-
   CheckMissingEnvVarValue("      ");
   CheckMissingEnvVarValue("");
 }
@@ -425,12 +422,15 @@ TEST_F(EnvironmentVariables, Basic) {
   // Test a variable that's expected to exist in the environment.
   char *path{std::getenv("PATH")};
   auto expectedLen{static_cast<int64_t>(std::strlen(path))};
-  EXPECT_EQ(expectedLen, RTNAME(EnvVariableLength)(*CharDescriptor("PATH")));
+  OwningPtr<Descriptor> length{EmptyIntDescriptor()};
+  EXPECT_EQ(0,
+      RTNAME(GetEnvVariable)(*CharDescriptor("PATH"),
+          /*value=*/nullptr, length.get()));
+  CheckDescriptorEqInt(length.get(), expectedLen);
 }
 
 TEST_F(EnvironmentVariables, Trim) {
   if (EnableFineGrainedTests()) {
-    EXPECT_EQ(5, RTNAME(EnvVariableLength)(*CharDescriptor("NAME   ")));
     CheckEnvVarValue("VALUE", "NAME   ");
   }
 }
@@ -443,7 +443,6 @@ TEST_F(EnvironmentVariables, NoTrim) {
 
 TEST_F(EnvironmentVariables, Empty) {
   if (EnableFineGrainedTests()) {
-    EXPECT_EQ(0, RTNAME(EnvVariableLength)(*CharDescriptor("EMPTY")));
     CheckEnvVarValue("", "EMPTY");
   }
 }
@@ -451,10 +450,10 @@ TEST_F(EnvironmentVariables, Empty) {
 TEST_F(EnvironmentVariables, NoValueOrErrmsg) {
   ASSERT_EQ(std::getenv("DOESNT_EXIST"), nullptr)
       << "Environment variable DOESNT_EXIST actually exists";
-  EXPECT_EQ(RTNAME(EnvVariableValue)(*CharDescriptor("DOESNT_EXIST")), 1);
+  EXPECT_EQ(RTNAME(GetEnvVariable)(*CharDescriptor("DOESNT_EXIST")), 1);
 
   if (EnableFineGrainedTests()) {
-    EXPECT_EQ(RTNAME(EnvVariableValue)(*CharDescriptor("NAME")), 0);
+    EXPECT_EQ(RTNAME(GetEnvVariable)(*CharDescriptor("NAME")), 0);
   }
 }
 
@@ -462,16 +461,16 @@ TEST_F(EnvironmentVariables, ValueTooShort) {
   if (EnableFineGrainedTests()) {
     OwningPtr<Descriptor> tooShort{CreateEmptyCharDescriptor<2>()};
     ASSERT_NE(tooShort, nullptr);
-    EXPECT_EQ(RTNAME(EnvVariableValue)(*CharDescriptor("NAME"), tooShort.get(),
-                  /*trim_name=*/true, nullptr),
+    EXPECT_EQ(RTNAME(GetEnvVariable)(*CharDescriptor("NAME"), tooShort.get(),
+                  /*length=*/nullptr, /*trim_name=*/true, nullptr),
         -1);
     CheckDescriptorEqStr(tooShort.get(), "VALUE");
 
     OwningPtr<Descriptor> errMsg{CreateEmptyCharDescriptor()};
     ASSERT_NE(errMsg, nullptr);
 
-    EXPECT_EQ(RTNAME(EnvVariableValue)(*CharDescriptor("NAME"), tooShort.get(),
-                  /*trim_name=*/true, errMsg.get()),
+    EXPECT_EQ(RTNAME(GetEnvVariable)(*CharDescriptor("NAME"), tooShort.get(),
+                  /*length=*/nullptr, /*trim_name=*/true, errMsg.get()),
         -1);
 
     std::string expectedErrMsg{
@@ -485,8 +484,8 @@ TEST_F(EnvironmentVariables, ErrMsgTooShort) {
       << "Environment variable DOESNT_EXIST actually exists";
 
   OwningPtr<Descriptor> errMsg{CreateEmptyCharDescriptor<3>()};
-  EXPECT_EQ(RTNAME(EnvVariableValue)(*CharDescriptor("DOESNT_EXIST"), nullptr,
-                /*trim_name=*/true, errMsg.get()),
+  EXPECT_EQ(RTNAME(GetEnvVariable)(*CharDescriptor("DOESNT_EXIST"), nullptr,
+                /*length=*/nullptr, /*trim_name=*/true, errMsg.get()),
       1);
   CheckDescriptorEqStr(errMsg.get(), "Mis");
 }

@@ -71,12 +71,12 @@
 ; DWARF-DUMP-NEXT:    md5_checksum: ba6dbc7dc09162edb18beacd8474bcd3
 ; DWARF-DUMP-NEXT:          source: "int main()\n{\n    return 0;\n}\n"
 ; DWARF-DUMP-EMPTY:
-; DWARF-DUMP-NEXT: Address            Line   Column File   ISA Discriminator Flags
-; DWARF-DUMP-NEXT: ------------------ ------ ------ ------ --- ------------- -------------
-; DWARF-DUMP-NEXT: 0x0000000000000000      2      0      0   0             0  is_stmt
-; DWARF-DUMP-NEXT: 0x000000000000000e      3      3      0   0             0  is_stmt prologue_end
-; DWARF-DUMP-NEXT: 0x0000000000000016      3      3      0   0             0  epilogue_begin
-; DWARF-DUMP-NEXT: 0x000000000000001a      3      3      0   0             0  end_sequence
+; DWARF-DUMP-NEXT: Address            Line   Column File   ISA Discriminator OpIndex Flags
+; DWARF-DUMP-NEXT: ------------------ ------ ------ ------ --- ------------- ------- -------------
+; DWARF-DUMP-NEXT: 0x0000000000000000      2      0      0   0             0       0  is_stmt
+; DWARF-DUMP-NEXT: 0x000000000000000e      3      3      0   0             0       0  is_stmt prologue_end
+; DWARF-DUMP-NEXT: 0x0000000000000016      3      3      0   0             0       0  epilogue_begin
+; DWARF-DUMP-NEXT: 0x000000000000001a      3      3      0   0             0       0  end_sequence
 
 ; ModuleID = 'dwarf-csky-relocs.c'
 source_filename = "dwarf-csky-relocs.c"

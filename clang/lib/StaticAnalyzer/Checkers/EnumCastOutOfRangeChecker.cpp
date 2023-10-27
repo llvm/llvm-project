@@ -58,7 +58,7 @@ public:
 // Being conservative, it does not warn if there is slight possibility the
 // value can be matching.
 class EnumCastOutOfRangeChecker : public Checker<check::PreStmt<CastExpr>> {
-  mutable std::unique_ptr<BuiltinBug> EnumValueCastOutOfRange;
+  mutable std::unique_ptr<BugType> EnumValueCastOutOfRange;
   void reportWarning(CheckerContext &C) const;
 
 public:
@@ -81,12 +81,12 @@ void EnumCastOutOfRangeChecker::reportWarning(CheckerContext &C) const {
   if (const ExplodedNode *N = C.generateNonFatalErrorNode()) {
     if (!EnumValueCastOutOfRange)
       EnumValueCastOutOfRange.reset(
-          new BuiltinBug(this, "Enum cast out of range",
-                         "The value provided to the cast expression is not in "
-                         "the valid range of values for the enum"));
+          new BugType(this, "Enum cast out of range"));
+    constexpr llvm::StringLiteral Msg =
+        "The value provided to the cast expression is not in the valid range"
+        " of values for the enum";
     C.emitReport(std::make_unique<PathSensitiveBugReport>(
-        *EnumValueCastOutOfRange, EnumValueCastOutOfRange->getDescription(),
-        N));
+        *EnumValueCastOutOfRange, Msg, N));
   }
 }
 
@@ -129,6 +129,14 @@ void EnumCastOutOfRangeChecker::checkPreStmt(const CastExpr *CE,
   const EnumDecl *ED = T->castAs<EnumType>()->getDecl();
 
   EnumValueVector DeclValues = getDeclValuesForEnum(ED);
+
+  // If the declarator list is empty, bail out.
+  // Every initialization an enum with a fixed underlying type but without any
+  // enumerators would produce a warning if we were to continue at this point.
+  // The most notable example is std::byte in the C++17 standard library.
+  if (DeclValues.size() == 0)
+    return;
+
   // Check if any of the enum values possibly match.
   bool PossibleValueMatch = llvm::any_of(
       DeclValues, ConstraintBasedEQEvaluator(C, *ValueToCast));

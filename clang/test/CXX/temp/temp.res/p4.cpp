@@ -170,3 +170,18 @@ struct C {
 
 template <typename T>
 C<T>::C(T::type) {}
+
+namespace GH63119 {
+struct X {
+    X(int);
+    X(auto);
+    void f(int);
+};
+template<typename T> struct S {
+  friend X::X(T::type);
+  friend X::X(T::type = (int)(void(*)(typename T::type))(nullptr)); // expected-error {{friend declaration specifying a default argument must be a definition}}
+  friend X::X(T::type = (int)(void(*)(T::type))(nullptr)); // expected-error {{friend declaration specifying a default argument must be a definition}} \
+                                                           // expected-error {{expected expression}}
+  friend void X::f(T::type);
+};
+}

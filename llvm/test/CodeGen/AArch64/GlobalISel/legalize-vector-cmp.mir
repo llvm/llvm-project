@@ -16,12 +16,13 @@ body:             |
 
     ; CHECK-LABEL: name: test_v2i64_eq
     ; CHECK: liveins: $q0, $q1
-    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<2 x s64>) = COPY $q1
-    ; CHECK: [[ICMP:%[0-9]+]]:_(<2 x s64>) = G_ICMP intpred(eq), [[COPY]](<2 x s64>), [[COPY1]]
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(<2 x s32>) = G_TRUNC [[ICMP]](<2 x s64>)
-    ; CHECK: $d0 = COPY [[TRUNC]](<2 x s32>)
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s64>) = COPY $q1
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(<2 x s64>) = G_ICMP intpred(eq), [[COPY]](<2 x s64>), [[COPY1]]
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(<2 x s32>) = G_TRUNC [[ICMP]](<2 x s64>)
+    ; CHECK-NEXT: $d0 = COPY [[TRUNC]](<2 x s32>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %0:_(<2 x s64>) = COPY $q0
     %1:_(<2 x s64>) = COPY $q1
     %2:_(<2 x s1>) = G_ICMP intpred(eq), %0(<2 x s64>), %1
@@ -46,12 +47,13 @@ body:             |
 
     ; CHECK-LABEL: name: test_v4i32_eq
     ; CHECK: liveins: $q0, $q1
-    ; CHECK: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<4 x s32>) = COPY $q1
-    ; CHECK: [[ICMP:%[0-9]+]]:_(<4 x s32>) = G_ICMP intpred(eq), [[COPY]](<4 x s32>), [[COPY1]]
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(<4 x s16>) = G_TRUNC [[ICMP]](<4 x s32>)
-    ; CHECK: $d0 = COPY [[TRUNC]](<4 x s16>)
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<4 x s32>) = COPY $q1
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(<4 x s32>) = G_ICMP intpred(eq), [[COPY]](<4 x s32>), [[COPY1]]
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(<4 x s16>) = G_TRUNC [[ICMP]](<4 x s32>)
+    ; CHECK-NEXT: $d0 = COPY [[TRUNC]](<4 x s16>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %0:_(<4 x s32>) = COPY $q0
     %1:_(<4 x s32>) = COPY $q1
     %2:_(<4 x s1>) = G_ICMP intpred(eq), %0(<4 x s32>), %1
@@ -76,11 +78,12 @@ body:             |
 
     ; CHECK-LABEL: name: test_v2i32_eq
     ; CHECK: liveins: $d0, $d1
-    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $d0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<2 x s32>) = COPY $d1
-    ; CHECK: [[ICMP:%[0-9]+]]:_(<2 x s32>) = G_ICMP intpred(eq), [[COPY]](<2 x s32>), [[COPY1]]
-    ; CHECK: $d0 = COPY [[ICMP]](<2 x s32>)
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $d0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s32>) = COPY $d1
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(<2 x s32>) = G_ICMP intpred(eq), [[COPY]](<2 x s32>), [[COPY1]]
+    ; CHECK-NEXT: $d0 = COPY [[ICMP]](<2 x s32>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %0:_(<2 x s32>) = COPY $d0
     %1:_(<2 x s32>) = COPY $d1
     %2:_(<2 x s1>) = G_ICMP intpred(eq), %0(<2 x s32>), %1
@@ -105,12 +108,13 @@ body:             |
 
     ; CHECK-LABEL: name: test_v8i16_eq
     ; CHECK: liveins: $q0, $q1
-    ; CHECK: [[COPY:%[0-9]+]]:_(<8 x s16>) = COPY $q0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<8 x s16>) = COPY $q1
-    ; CHECK: [[ICMP:%[0-9]+]]:_(<8 x s16>) = G_ICMP intpred(eq), [[COPY]](<8 x s16>), [[COPY1]]
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(<8 x s8>) = G_TRUNC [[ICMP]](<8 x s16>)
-    ; CHECK: $d0 = COPY [[TRUNC]](<8 x s8>)
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<8 x s16>) = COPY $q0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<8 x s16>) = COPY $q1
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(<8 x s16>) = G_ICMP intpred(eq), [[COPY]](<8 x s16>), [[COPY1]]
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(<8 x s8>) = G_TRUNC [[ICMP]](<8 x s16>)
+    ; CHECK-NEXT: $d0 = COPY [[TRUNC]](<8 x s8>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %0:_(<8 x s16>) = COPY $q0
     %1:_(<8 x s16>) = COPY $q1
     %2:_(<8 x s1>) = G_ICMP intpred(eq), %0(<8 x s16>), %1
@@ -135,11 +139,12 @@ body:             |
 
     ; CHECK-LABEL: name: test_v4i16_eq
     ; CHECK: liveins: $d0, $d1
-    ; CHECK: [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $d0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<4 x s16>) = COPY $d1
-    ; CHECK: [[ICMP:%[0-9]+]]:_(<4 x s16>) = G_ICMP intpred(eq), [[COPY]](<4 x s16>), [[COPY1]]
-    ; CHECK: $d0 = COPY [[ICMP]](<4 x s16>)
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $d0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<4 x s16>) = COPY $d1
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(<4 x s16>) = G_ICMP intpred(eq), [[COPY]](<4 x s16>), [[COPY1]]
+    ; CHECK-NEXT: $d0 = COPY [[ICMP]](<4 x s16>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %0:_(<4 x s16>) = COPY $d0
     %1:_(<4 x s16>) = COPY $d1
     %2:_(<4 x s1>) = G_ICMP intpred(eq), %0(<4 x s16>), %1
@@ -164,11 +169,12 @@ body:             |
 
     ; CHECK-LABEL: name: test_v16i8_eq
     ; CHECK: liveins: $q0, $q1
-    ; CHECK: [[COPY:%[0-9]+]]:_(<16 x s8>) = COPY $q0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<16 x s8>) = COPY $q1
-    ; CHECK: [[ICMP:%[0-9]+]]:_(<16 x s8>) = G_ICMP intpred(eq), [[COPY]](<16 x s8>), [[COPY1]]
-    ; CHECK: $q0 = COPY [[ICMP]](<16 x s8>)
-    ; CHECK: RET_ReallyLR implicit $q0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<16 x s8>) = COPY $q0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<16 x s8>) = COPY $q1
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(<16 x s8>) = G_ICMP intpred(eq), [[COPY]](<16 x s8>), [[COPY1]]
+    ; CHECK-NEXT: $q0 = COPY [[ICMP]](<16 x s8>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %0:_(<16 x s8>) = COPY $q0
     %1:_(<16 x s8>) = COPY $q1
     %2:_(<16 x s1>) = G_ICMP intpred(eq), %0(<16 x s8>), %1
@@ -193,11 +199,12 @@ body:             |
 
     ; CHECK-LABEL: name: test_v8i8_eq
     ; CHECK: liveins: $d0, $d1
-    ; CHECK: [[COPY:%[0-9]+]]:_(<8 x s8>) = COPY $d0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<8 x s8>) = COPY $d1
-    ; CHECK: [[ICMP:%[0-9]+]]:_(<8 x s8>) = G_ICMP intpred(eq), [[COPY]](<8 x s8>), [[COPY1]]
-    ; CHECK: $d0 = COPY [[ICMP]](<8 x s8>)
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<8 x s8>) = COPY $d0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<8 x s8>) = COPY $d1
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(<8 x s8>) = G_ICMP intpred(eq), [[COPY]](<8 x s8>), [[COPY1]]
+    ; CHECK-NEXT: $d0 = COPY [[ICMP]](<8 x s8>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %0:_(<8 x s8>) = COPY $d0
     %1:_(<8 x s8>) = COPY $d1
     %2:_(<8 x s1>) = G_ICMP intpred(eq), %0(<8 x s8>), %1
@@ -222,12 +229,13 @@ body:             |
 
     ; CHECK-LABEL: name: test_v2i64_ugt
     ; CHECK: liveins: $q0, $q1
-    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<2 x s64>) = COPY $q1
-    ; CHECK: [[ICMP:%[0-9]+]]:_(<2 x s64>) = G_ICMP intpred(ugt), [[COPY]](<2 x s64>), [[COPY1]]
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(<2 x s32>) = G_TRUNC [[ICMP]](<2 x s64>)
-    ; CHECK: $d0 = COPY [[TRUNC]](<2 x s32>)
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s64>) = COPY $q1
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(<2 x s64>) = G_ICMP intpred(ugt), [[COPY]](<2 x s64>), [[COPY1]]
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(<2 x s32>) = G_TRUNC [[ICMP]](<2 x s64>)
+    ; CHECK-NEXT: $d0 = COPY [[TRUNC]](<2 x s32>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %0:_(<2 x s64>) = COPY $q0
     %1:_(<2 x s64>) = COPY $q1
     %2:_(<2 x s1>) = G_ICMP intpred(ugt), %0(<2 x s64>), %1
@@ -252,12 +260,13 @@ body:             |
 
     ; CHECK-LABEL: name: test_v4i32_ugt
     ; CHECK: liveins: $q0, $q1
-    ; CHECK: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<4 x s32>) = COPY $q1
-    ; CHECK: [[ICMP:%[0-9]+]]:_(<4 x s32>) = G_ICMP intpred(ugt), [[COPY]](<4 x s32>), [[COPY1]]
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(<4 x s16>) = G_TRUNC [[ICMP]](<4 x s32>)
-    ; CHECK: $d0 = COPY [[TRUNC]](<4 x s16>)
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<4 x s32>) = COPY $q1
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(<4 x s32>) = G_ICMP intpred(ugt), [[COPY]](<4 x s32>), [[COPY1]]
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(<4 x s16>) = G_TRUNC [[ICMP]](<4 x s32>)
+    ; CHECK-NEXT: $d0 = COPY [[TRUNC]](<4 x s16>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %0:_(<4 x s32>) = COPY $q0
     %1:_(<4 x s32>) = COPY $q1
     %2:_(<4 x s1>) = G_ICMP intpred(ugt), %0(<4 x s32>), %1
@@ -282,11 +291,12 @@ body:             |
 
     ; CHECK-LABEL: name: test_v2i32_ugt
     ; CHECK: liveins: $d0, $d1
-    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $d0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<2 x s32>) = COPY $d1
-    ; CHECK: [[ICMP:%[0-9]+]]:_(<2 x s32>) = G_ICMP intpred(ugt), [[COPY]](<2 x s32>), [[COPY1]]
-    ; CHECK: $d0 = COPY [[ICMP]](<2 x s32>)
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $d0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s32>) = COPY $d1
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(<2 x s32>) = G_ICMP intpred(ugt), [[COPY]](<2 x s32>), [[COPY1]]
+    ; CHECK-NEXT: $d0 = COPY [[ICMP]](<2 x s32>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %0:_(<2 x s32>) = COPY $d0
     %1:_(<2 x s32>) = COPY $d1
     %2:_(<2 x s1>) = G_ICMP intpred(ugt), %0(<2 x s32>), %1
@@ -311,12 +321,13 @@ body:             |
 
     ; CHECK-LABEL: name: test_v8i16_ugt
     ; CHECK: liveins: $q0, $q1
-    ; CHECK: [[COPY:%[0-9]+]]:_(<8 x s16>) = COPY $q0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<8 x s16>) = COPY $q1
-    ; CHECK: [[ICMP:%[0-9]+]]:_(<8 x s16>) = G_ICMP intpred(ugt), [[COPY]](<8 x s16>), [[COPY1]]
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(<8 x s8>) = G_TRUNC [[ICMP]](<8 x s16>)
-    ; CHECK: $d0 = COPY [[TRUNC]](<8 x s8>)
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<8 x s16>) = COPY $q0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<8 x s16>) = COPY $q1
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(<8 x s16>) = G_ICMP intpred(ugt), [[COPY]](<8 x s16>), [[COPY1]]
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(<8 x s8>) = G_TRUNC [[ICMP]](<8 x s16>)
+    ; CHECK-NEXT: $d0 = COPY [[TRUNC]](<8 x s8>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %0:_(<8 x s16>) = COPY $q0
     %1:_(<8 x s16>) = COPY $q1
     %2:_(<8 x s1>) = G_ICMP intpred(ugt), %0(<8 x s16>), %1
@@ -341,11 +352,12 @@ body:             |
 
     ; CHECK-LABEL: name: test_v4i16_ugt
     ; CHECK: liveins: $d0, $d1
-    ; CHECK: [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $d0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<4 x s16>) = COPY $d1
-    ; CHECK: [[ICMP:%[0-9]+]]:_(<4 x s16>) = G_ICMP intpred(ugt), [[COPY]](<4 x s16>), [[COPY1]]
-    ; CHECK: $d0 = COPY [[ICMP]](<4 x s16>)
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $d0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<4 x s16>) = COPY $d1
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(<4 x s16>) = G_ICMP intpred(ugt), [[COPY]](<4 x s16>), [[COPY1]]
+    ; CHECK-NEXT: $d0 = COPY [[ICMP]](<4 x s16>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %0:_(<4 x s16>) = COPY $d0
     %1:_(<4 x s16>) = COPY $d1
     %2:_(<4 x s1>) = G_ICMP intpred(ugt), %0(<4 x s16>), %1
@@ -370,11 +382,12 @@ body:             |
 
     ; CHECK-LABEL: name: test_v16i8_ugt
     ; CHECK: liveins: $q0, $q1
-    ; CHECK: [[COPY:%[0-9]+]]:_(<16 x s8>) = COPY $q0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<16 x s8>) = COPY $q1
-    ; CHECK: [[ICMP:%[0-9]+]]:_(<16 x s8>) = G_ICMP intpred(ugt), [[COPY]](<16 x s8>), [[COPY1]]
-    ; CHECK: $q0 = COPY [[ICMP]](<16 x s8>)
-    ; CHECK: RET_ReallyLR implicit $q0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<16 x s8>) = COPY $q0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<16 x s8>) = COPY $q1
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(<16 x s8>) = G_ICMP intpred(ugt), [[COPY]](<16 x s8>), [[COPY1]]
+    ; CHECK-NEXT: $q0 = COPY [[ICMP]](<16 x s8>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %0:_(<16 x s8>) = COPY $q0
     %1:_(<16 x s8>) = COPY $q1
     %2:_(<16 x s1>) = G_ICMP intpred(ugt), %0(<16 x s8>), %1
@@ -399,11 +412,12 @@ body:             |
 
     ; CHECK-LABEL: name: test_v8i8_ugt
     ; CHECK: liveins: $d0, $d1
-    ; CHECK: [[COPY:%[0-9]+]]:_(<8 x s8>) = COPY $d0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<8 x s8>) = COPY $d1
-    ; CHECK: [[ICMP:%[0-9]+]]:_(<8 x s8>) = G_ICMP intpred(ugt), [[COPY]](<8 x s8>), [[COPY1]]
-    ; CHECK: $d0 = COPY [[ICMP]](<8 x s8>)
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<8 x s8>) = COPY $d0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<8 x s8>) = COPY $d1
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(<8 x s8>) = G_ICMP intpred(ugt), [[COPY]](<8 x s8>), [[COPY1]]
+    ; CHECK-NEXT: $d0 = COPY [[ICMP]](<8 x s8>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %0:_(<8 x s8>) = COPY $d0
     %1:_(<8 x s8>) = COPY $d1
     %2:_(<8 x s1>) = G_ICMP intpred(ugt), %0(<8 x s8>), %1
@@ -428,12 +442,13 @@ body:             |
 
     ; CHECK-LABEL: name: test_v2i64_uge
     ; CHECK: liveins: $q0, $q1
-    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<2 x s64>) = COPY $q1
-    ; CHECK: [[ICMP:%[0-9]+]]:_(<2 x s64>) = G_ICMP intpred(uge), [[COPY]](<2 x s64>), [[COPY1]]
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(<2 x s32>) = G_TRUNC [[ICMP]](<2 x s64>)
-    ; CHECK: $d0 = COPY [[TRUNC]](<2 x s32>)
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s64>) = COPY $q1
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(<2 x s64>) = G_ICMP intpred(uge), [[COPY]](<2 x s64>), [[COPY1]]
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(<2 x s32>) = G_TRUNC [[ICMP]](<2 x s64>)
+    ; CHECK-NEXT: $d0 = COPY [[TRUNC]](<2 x s32>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %0:_(<2 x s64>) = COPY $q0
     %1:_(<2 x s64>) = COPY $q1
     %2:_(<2 x s1>) = G_ICMP intpred(uge), %0(<2 x s64>), %1
@@ -458,12 +473,13 @@ body:             |
 
     ; CHECK-LABEL: name: test_v4i32_uge
     ; CHECK: liveins: $q0, $q1
-    ; CHECK: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<4 x s32>) = COPY $q1
-    ; CHECK: [[ICMP:%[0-9]+]]:_(<4 x s32>) = G_ICMP intpred(uge), [[COPY]](<4 x s32>), [[COPY1]]
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(<4 x s16>) = G_TRUNC [[ICMP]](<4 x s32>)
-    ; CHECK: $d0 = COPY [[TRUNC]](<4 x s16>)
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<4 x s32>) = COPY $q1
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(<4 x s32>) = G_ICMP intpred(uge), [[COPY]](<4 x s32>), [[COPY1]]
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(<4 x s16>) = G_TRUNC [[ICMP]](<4 x s32>)
+    ; CHECK-NEXT: $d0 = COPY [[TRUNC]](<4 x s16>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %0:_(<4 x s32>) = COPY $q0
     %1:_(<4 x s32>) = COPY $q1
     %2:_(<4 x s1>) = G_ICMP intpred(uge), %0(<4 x s32>), %1
@@ -488,11 +504,12 @@ body:             |
 
     ; CHECK-LABEL: name: test_v2i32_uge
     ; CHECK: liveins: $d0, $d1
-    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $d0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<2 x s32>) = COPY $d1
-    ; CHECK: [[ICMP:%[0-9]+]]:_(<2 x s32>) = G_ICMP intpred(uge), [[COPY]](<2 x s32>), [[COPY1]]
-    ; CHECK: $d0 = COPY [[ICMP]](<2 x s32>)
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $d0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s32>) = COPY $d1
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(<2 x s32>) = G_ICMP intpred(uge), [[COPY]](<2 x s32>), [[COPY1]]
+    ; CHECK-NEXT: $d0 = COPY [[ICMP]](<2 x s32>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %0:_(<2 x s32>) = COPY $d0
     %1:_(<2 x s32>) = COPY $d1
     %2:_(<2 x s1>) = G_ICMP intpred(uge), %0(<2 x s32>), %1
@@ -517,12 +534,13 @@ body:             |
 
     ; CHECK-LABEL: name: test_v8i16_uge
     ; CHECK: liveins: $q0, $q1
-    ; CHECK: [[COPY:%[0-9]+]]:_(<8 x s16>) = COPY $q0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<8 x s16>) = COPY $q1
-    ; CHECK: [[ICMP:%[0-9]+]]:_(<8 x s16>) = G_ICMP intpred(uge), [[COPY]](<8 x s16>), [[COPY1]]
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(<8 x s8>) = G_TRUNC [[ICMP]](<8 x s16>)
-    ; CHECK: $d0 = COPY [[TRUNC]](<8 x s8>)
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<8 x s16>) = COPY $q0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<8 x s16>) = COPY $q1
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(<8 x s16>) = G_ICMP intpred(uge), [[COPY]](<8 x s16>), [[COPY1]]
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(<8 x s8>) = G_TRUNC [[ICMP]](<8 x s16>)
+    ; CHECK-NEXT: $d0 = COPY [[TRUNC]](<8 x s8>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %0:_(<8 x s16>) = COPY $q0
     %1:_(<8 x s16>) = COPY $q1
     %2:_(<8 x s1>) = G_ICMP intpred(uge), %0(<8 x s16>), %1
@@ -547,11 +565,12 @@ body:             |
 
     ; CHECK-LABEL: name: test_v4i16_uge
     ; CHECK: liveins: $d0, $d1
-    ; CHECK: [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $d0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<4 x s16>) = COPY $d1
-    ; CHECK: [[ICMP:%[0-9]+]]:_(<4 x s16>) = G_ICMP intpred(uge), [[COPY]](<4 x s16>), [[COPY1]]
-    ; CHECK: $d0 = COPY [[ICMP]](<4 x s16>)
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $d0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<4 x s16>) = COPY $d1
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(<4 x s16>) = G_ICMP intpred(uge), [[COPY]](<4 x s16>), [[COPY1]]
+    ; CHECK-NEXT: $d0 = COPY [[ICMP]](<4 x s16>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %0:_(<4 x s16>) = COPY $d0
     %1:_(<4 x s16>) = COPY $d1
     %2:_(<4 x s1>) = G_ICMP intpred(uge), %0(<4 x s16>), %1
@@ -576,11 +595,12 @@ body:             |
 
     ; CHECK-LABEL: name: test_v16i8_uge
     ; CHECK: liveins: $q0, $q1
-    ; CHECK: [[COPY:%[0-9]+]]:_(<16 x s8>) = COPY $q0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<16 x s8>) = COPY $q1
-    ; CHECK: [[ICMP:%[0-9]+]]:_(<16 x s8>) = G_ICMP intpred(uge), [[COPY]](<16 x s8>), [[COPY1]]
-    ; CHECK: $q0 = COPY [[ICMP]](<16 x s8>)
-    ; CHECK: RET_ReallyLR implicit $q0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<16 x s8>) = COPY $q0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<16 x s8>) = COPY $q1
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(<16 x s8>) = G_ICMP intpred(uge), [[COPY]](<16 x s8>), [[COPY1]]
+    ; CHECK-NEXT: $q0 = COPY [[ICMP]](<16 x s8>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %0:_(<16 x s8>) = COPY $q0
     %1:_(<16 x s8>) = COPY $q1
     %2:_(<16 x s1>) = G_ICMP intpred(uge), %0(<16 x s8>), %1
@@ -605,11 +625,12 @@ body:             |
 
     ; CHECK-LABEL: name: test_v8i8_uge
     ; CHECK: liveins: $d0, $d1
-    ; CHECK: [[COPY:%[0-9]+]]:_(<8 x s8>) = COPY $d0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<8 x s8>) = COPY $d1
-    ; CHECK: [[ICMP:%[0-9]+]]:_(<8 x s8>) = G_ICMP intpred(uge), [[COPY]](<8 x s8>), [[COPY1]]
-    ; CHECK: $d0 = COPY [[ICMP]](<8 x s8>)
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<8 x s8>) = COPY $d0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<8 x s8>) = COPY $d1
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(<8 x s8>) = G_ICMP intpred(uge), [[COPY]](<8 x s8>), [[COPY1]]
+    ; CHECK-NEXT: $d0 = COPY [[ICMP]](<8 x s8>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %0:_(<8 x s8>) = COPY $d0
     %1:_(<8 x s8>) = COPY $d1
     %2:_(<8 x s1>) = G_ICMP intpred(uge), %0(<8 x s8>), %1
@@ -634,12 +655,13 @@ body:             |
 
     ; CHECK-LABEL: name: test_v2i64_ult
     ; CHECK: liveins: $q0, $q1
-    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<2 x s64>) = COPY $q1
-    ; CHECK: [[ICMP:%[0-9]+]]:_(<2 x s64>) = G_ICMP intpred(ult), [[COPY]](<2 x s64>), [[COPY1]]
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(<2 x s32>) = G_TRUNC [[ICMP]](<2 x s64>)
-    ; CHECK: $d0 = COPY [[TRUNC]](<2 x s32>)
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s64>) = COPY $q1
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(<2 x s64>) = G_ICMP intpred(ult), [[COPY]](<2 x s64>), [[COPY1]]
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(<2 x s32>) = G_TRUNC [[ICMP]](<2 x s64>)
+    ; CHECK-NEXT: $d0 = COPY [[TRUNC]](<2 x s32>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %0:_(<2 x s64>) = COPY $q0
     %1:_(<2 x s64>) = COPY $q1
     %2:_(<2 x s1>) = G_ICMP intpred(ult), %0(<2 x s64>), %1
@@ -664,12 +686,13 @@ body:             |
 
     ; CHECK-LABEL: name: test_v4i32_ult
     ; CHECK: liveins: $q0, $q1
-    ; CHECK: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<4 x s32>) = COPY $q1
-    ; CHECK: [[ICMP:%[0-9]+]]:_(<4 x s32>) = G_ICMP intpred(ult), [[COPY]](<4 x s32>), [[COPY1]]
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(<4 x s16>) = G_TRUNC [[ICMP]](<4 x s32>)
-    ; CHECK: $d0 = COPY [[TRUNC]](<4 x s16>)
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<4 x s32>) = COPY $q1
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(<4 x s32>) = G_ICMP intpred(ult), [[COPY]](<4 x s32>), [[COPY1]]
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(<4 x s16>) = G_TRUNC [[ICMP]](<4 x s32>)
+    ; CHECK-NEXT: $d0 = COPY [[TRUNC]](<4 x s16>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %0:_(<4 x s32>) = COPY $q0
     %1:_(<4 x s32>) = COPY $q1
     %2:_(<4 x s1>) = G_ICMP intpred(ult), %0(<4 x s32>), %1
@@ -694,11 +717,12 @@ body:             |
 
     ; CHECK-LABEL: name: test_v2i32_ult
     ; CHECK: liveins: $d0, $d1
-    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $d0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<2 x s32>) = COPY $d1
-    ; CHECK: [[ICMP:%[0-9]+]]:_(<2 x s32>) = G_ICMP intpred(ult), [[COPY]](<2 x s32>), [[COPY1]]
-    ; CHECK: $d0 = COPY [[ICMP]](<2 x s32>)
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $d0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s32>) = COPY $d1
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(<2 x s32>) = G_ICMP intpred(ult), [[COPY]](<2 x s32>), [[COPY1]]
+    ; CHECK-NEXT: $d0 = COPY [[ICMP]](<2 x s32>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %0:_(<2 x s32>) = COPY $d0
     %1:_(<2 x s32>) = COPY $d1
     %2:_(<2 x s1>) = G_ICMP intpred(ult), %0(<2 x s32>), %1
@@ -723,12 +747,13 @@ body:             |
 
     ; CHECK-LABEL: name: test_v8i16_ult
     ; CHECK: liveins: $q0, $q1
-    ; CHECK: [[COPY:%[0-9]+]]:_(<8 x s16>) = COPY $q0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<8 x s16>) = COPY $q1
-    ; CHECK: [[ICMP:%[0-9]+]]:_(<8 x s16>) = G_ICMP intpred(ult), [[COPY]](<8 x s16>), [[COPY1]]
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(<8 x s8>) = G_TRUNC [[ICMP]](<8 x s16>)
-    ; CHECK: $d0 = COPY [[TRUNC]](<8 x s8>)
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<8 x s16>) = COPY $q0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<8 x s16>) = COPY $q1
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(<8 x s16>) = G_ICMP intpred(ult), [[COPY]](<8 x s16>), [[COPY1]]
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(<8 x s8>) = G_TRUNC [[ICMP]](<8 x s16>)
+    ; CHECK-NEXT: $d0 = COPY [[TRUNC]](<8 x s8>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %0:_(<8 x s16>) = COPY $q0
     %1:_(<8 x s16>) = COPY $q1
     %2:_(<8 x s1>) = G_ICMP intpred(ult), %0(<8 x s16>), %1
@@ -753,11 +778,12 @@ body:             |
 
     ; CHECK-LABEL: name: test_v4i16_ult
     ; CHECK: liveins: $d0, $d1
-    ; CHECK: [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $d0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<4 x s16>) = COPY $d1
-    ; CHECK: [[ICMP:%[0-9]+]]:_(<4 x s16>) = G_ICMP intpred(ult), [[COPY]](<4 x s16>), [[COPY1]]
-    ; CHECK: $d0 = COPY [[ICMP]](<4 x s16>)
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $d0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<4 x s16>) = COPY $d1
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(<4 x s16>) = G_ICMP intpred(ult), [[COPY]](<4 x s16>), [[COPY1]]
+    ; CHECK-NEXT: $d0 = COPY [[ICMP]](<4 x s16>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %0:_(<4 x s16>) = COPY $d0
     %1:_(<4 x s16>) = COPY $d1
     %2:_(<4 x s1>) = G_ICMP intpred(ult), %0(<4 x s16>), %1
@@ -782,11 +808,12 @@ body:             |
 
     ; CHECK-LABEL: name: test_v16i8_ult
     ; CHECK: liveins: $q0, $q1
-    ; CHECK: [[COPY:%[0-9]+]]:_(<16 x s8>) = COPY $q0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<16 x s8>) = COPY $q1
-    ; CHECK: [[ICMP:%[0-9]+]]:_(<16 x s8>) = G_ICMP intpred(ult), [[COPY]](<16 x s8>), [[COPY1]]
-    ; CHECK: $q0 = COPY [[ICMP]](<16 x s8>)
-    ; CHECK: RET_ReallyLR implicit $q0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<16 x s8>) = COPY $q0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<16 x s8>) = COPY $q1
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(<16 x s8>) = G_ICMP intpred(ult), [[COPY]](<16 x s8>), [[COPY1]]
+    ; CHECK-NEXT: $q0 = COPY [[ICMP]](<16 x s8>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %0:_(<16 x s8>) = COPY $q0
     %1:_(<16 x s8>) = COPY $q1
     %2:_(<16 x s1>) = G_ICMP intpred(ult), %0(<16 x s8>), %1
@@ -811,11 +838,12 @@ body:             |
 
     ; CHECK-LABEL: name: test_v8i8_ult
     ; CHECK: liveins: $d0, $d1
-    ; CHECK: [[COPY:%[0-9]+]]:_(<8 x s8>) = COPY $d0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<8 x s8>) = COPY $d1
-    ; CHECK: [[ICMP:%[0-9]+]]:_(<8 x s8>) = G_ICMP intpred(ult), [[COPY]](<8 x s8>), [[COPY1]]
-    ; CHECK: $d0 = COPY [[ICMP]](<8 x s8>)
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<8 x s8>) = COPY $d0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<8 x s8>) = COPY $d1
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(<8 x s8>) = G_ICMP intpred(ult), [[COPY]](<8 x s8>), [[COPY1]]
+    ; CHECK-NEXT: $d0 = COPY [[ICMP]](<8 x s8>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %0:_(<8 x s8>) = COPY $d0
     %1:_(<8 x s8>) = COPY $d1
     %2:_(<8 x s1>) = G_ICMP intpred(ult), %0(<8 x s8>), %1
@@ -840,12 +868,13 @@ body:             |
 
     ; CHECK-LABEL: name: test_v2i64_ule
     ; CHECK: liveins: $q0, $q1
-    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<2 x s64>) = COPY $q1
-    ; CHECK: [[ICMP:%[0-9]+]]:_(<2 x s64>) = G_ICMP intpred(ule), [[COPY]](<2 x s64>), [[COPY1]]
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(<2 x s32>) = G_TRUNC [[ICMP]](<2 x s64>)
-    ; CHECK: $d0 = COPY [[TRUNC]](<2 x s32>)
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s64>) = COPY $q1
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(<2 x s64>) = G_ICMP intpred(ule), [[COPY]](<2 x s64>), [[COPY1]]
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(<2 x s32>) = G_TRUNC [[ICMP]](<2 x s64>)
+    ; CHECK-NEXT: $d0 = COPY [[TRUNC]](<2 x s32>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %0:_(<2 x s64>) = COPY $q0
     %1:_(<2 x s64>) = COPY $q1
     %2:_(<2 x s1>) = G_ICMP intpred(ule), %0(<2 x s64>), %1
@@ -870,12 +899,13 @@ body:             |
 
     ; CHECK-LABEL: name: test_v4i32_ule
     ; CHECK: liveins: $q0, $q1
-    ; CHECK: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<4 x s32>) = COPY $q1
-    ; CHECK: [[ICMP:%[0-9]+]]:_(<4 x s32>) = G_ICMP intpred(ule), [[COPY]](<4 x s32>), [[COPY1]]
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(<4 x s16>) = G_TRUNC [[ICMP]](<4 x s32>)
-    ; CHECK: $d0 = COPY [[TRUNC]](<4 x s16>)
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<4 x s32>) = COPY $q1
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(<4 x s32>) = G_ICMP intpred(ule), [[COPY]](<4 x s32>), [[COPY1]]
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(<4 x s16>) = G_TRUNC [[ICMP]](<4 x s32>)
+    ; CHECK-NEXT: $d0 = COPY [[TRUNC]](<4 x s16>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %0:_(<4 x s32>) = COPY $q0
     %1:_(<4 x s32>) = COPY $q1
     %2:_(<4 x s1>) = G_ICMP intpred(ule), %0(<4 x s32>), %1
@@ -900,11 +930,12 @@ body:             |
 
     ; CHECK-LABEL: name: test_v2i32_ule
     ; CHECK: liveins: $d0, $d1
-    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $d0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<2 x s32>) = COPY $d1
-    ; CHECK: [[ICMP:%[0-9]+]]:_(<2 x s32>) = G_ICMP intpred(ule), [[COPY]](<2 x s32>), [[COPY1]]
-    ; CHECK: $d0 = COPY [[ICMP]](<2 x s32>)
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $d0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s32>) = COPY $d1
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(<2 x s32>) = G_ICMP intpred(ule), [[COPY]](<2 x s32>), [[COPY1]]
+    ; CHECK-NEXT: $d0 = COPY [[ICMP]](<2 x s32>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %0:_(<2 x s32>) = COPY $d0
     %1:_(<2 x s32>) = COPY $d1
     %2:_(<2 x s1>) = G_ICMP intpred(ule), %0(<2 x s32>), %1
@@ -929,12 +960,13 @@ body:             |
 
     ; CHECK-LABEL: name: test_v8i16_ule
     ; CHECK: liveins: $q0, $q1
-    ; CHECK: [[COPY:%[0-9]+]]:_(<8 x s16>) = COPY $q0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<8 x s16>) = COPY $q1
-    ; CHECK: [[ICMP:%[0-9]+]]:_(<8 x s16>) = G_ICMP intpred(ule), [[COPY]](<8 x s16>), [[COPY1]]
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(<8 x s8>) = G_TRUNC [[ICMP]](<8 x s16>)
-    ; CHECK: $d0 = COPY [[TRUNC]](<8 x s8>)
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<8 x s16>) = COPY $q0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<8 x s16>) = COPY $q1
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(<8 x s16>) = G_ICMP intpred(ule), [[COPY]](<8 x s16>), [[COPY1]]
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(<8 x s8>) = G_TRUNC [[ICMP]](<8 x s16>)
+    ; CHECK-NEXT: $d0 = COPY [[TRUNC]](<8 x s8>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %0:_(<8 x s16>) = COPY $q0
     %1:_(<8 x s16>) = COPY $q1
     %2:_(<8 x s1>) = G_ICMP intpred(ule), %0(<8 x s16>), %1
@@ -959,11 +991,12 @@ body:             |
 
     ; CHECK-LABEL: name: test_v4i16_ule
     ; CHECK: liveins: $d0, $d1
-    ; CHECK: [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $d0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<4 x s16>) = COPY $d1
-    ; CHECK: [[ICMP:%[0-9]+]]:_(<4 x s16>) = G_ICMP intpred(ule), [[COPY]](<4 x s16>), [[COPY1]]
-    ; CHECK: $d0 = COPY [[ICMP]](<4 x s16>)
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $d0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<4 x s16>) = COPY $d1
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(<4 x s16>) = G_ICMP intpred(ule), [[COPY]](<4 x s16>), [[COPY1]]
+    ; CHECK-NEXT: $d0 = COPY [[ICMP]](<4 x s16>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %0:_(<4 x s16>) = COPY $d0
     %1:_(<4 x s16>) = COPY $d1
     %2:_(<4 x s1>) = G_ICMP intpred(ule), %0(<4 x s16>), %1
@@ -988,11 +1021,12 @@ body:             |
 
     ; CHECK-LABEL: name: test_v16i8_ule
     ; CHECK: liveins: $q0, $q1
-    ; CHECK: [[COPY:%[0-9]+]]:_(<16 x s8>) = COPY $q0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<16 x s8>) = COPY $q1
-    ; CHECK: [[ICMP:%[0-9]+]]:_(<16 x s8>) = G_ICMP intpred(ule), [[COPY]](<16 x s8>), [[COPY1]]
-    ; CHECK: $q0 = COPY [[ICMP]](<16 x s8>)
-    ; CHECK: RET_ReallyLR implicit $q0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<16 x s8>) = COPY $q0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<16 x s8>) = COPY $q1
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(<16 x s8>) = G_ICMP intpred(ule), [[COPY]](<16 x s8>), [[COPY1]]
+    ; CHECK-NEXT: $q0 = COPY [[ICMP]](<16 x s8>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %0:_(<16 x s8>) = COPY $q0
     %1:_(<16 x s8>) = COPY $q1
     %2:_(<16 x s1>) = G_ICMP intpred(ule), %0(<16 x s8>), %1
@@ -1017,11 +1051,12 @@ body:             |
 
     ; CHECK-LABEL: name: test_v8i8_ule
     ; CHECK: liveins: $d0, $d1
-    ; CHECK: [[COPY:%[0-9]+]]:_(<8 x s8>) = COPY $d0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<8 x s8>) = COPY $d1
-    ; CHECK: [[ICMP:%[0-9]+]]:_(<8 x s8>) = G_ICMP intpred(ule), [[COPY]](<8 x s8>), [[COPY1]]
-    ; CHECK: $d0 = COPY [[ICMP]](<8 x s8>)
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<8 x s8>) = COPY $d0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<8 x s8>) = COPY $d1
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(<8 x s8>) = G_ICMP intpred(ule), [[COPY]](<8 x s8>), [[COPY1]]
+    ; CHECK-NEXT: $d0 = COPY [[ICMP]](<8 x s8>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %0:_(<8 x s8>) = COPY $d0
     %1:_(<8 x s8>) = COPY $d1
     %2:_(<8 x s1>) = G_ICMP intpred(ule), %0(<8 x s8>), %1
@@ -1046,12 +1081,13 @@ body:             |
 
     ; CHECK-LABEL: name: test_v2i64_sgt
     ; CHECK: liveins: $q0, $q1
-    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<2 x s64>) = COPY $q1
-    ; CHECK: [[ICMP:%[0-9]+]]:_(<2 x s64>) = G_ICMP intpred(sgt), [[COPY]](<2 x s64>), [[COPY1]]
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(<2 x s32>) = G_TRUNC [[ICMP]](<2 x s64>)
-    ; CHECK: $d0 = COPY [[TRUNC]](<2 x s32>)
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s64>) = COPY $q1
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(<2 x s64>) = G_ICMP intpred(sgt), [[COPY]](<2 x s64>), [[COPY1]]
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(<2 x s32>) = G_TRUNC [[ICMP]](<2 x s64>)
+    ; CHECK-NEXT: $d0 = COPY [[TRUNC]](<2 x s32>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %0:_(<2 x s64>) = COPY $q0
     %1:_(<2 x s64>) = COPY $q1
     %2:_(<2 x s1>) = G_ICMP intpred(sgt), %0(<2 x s64>), %1
@@ -1076,12 +1112,13 @@ body:             |
 
     ; CHECK-LABEL: name: test_v4i32_sgt
     ; CHECK: liveins: $q0, $q1
-    ; CHECK: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<4 x s32>) = COPY $q1
-    ; CHECK: [[ICMP:%[0-9]+]]:_(<4 x s32>) = G_ICMP intpred(sgt), [[COPY]](<4 x s32>), [[COPY1]]
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(<4 x s16>) = G_TRUNC [[ICMP]](<4 x s32>)
-    ; CHECK: $d0 = COPY [[TRUNC]](<4 x s16>)
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<4 x s32>) = COPY $q1
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(<4 x s32>) = G_ICMP intpred(sgt), [[COPY]](<4 x s32>), [[COPY1]]
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(<4 x s16>) = G_TRUNC [[ICMP]](<4 x s32>)
+    ; CHECK-NEXT: $d0 = COPY [[TRUNC]](<4 x s16>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %0:_(<4 x s32>) = COPY $q0
     %1:_(<4 x s32>) = COPY $q1
     %2:_(<4 x s1>) = G_ICMP intpred(sgt), %0(<4 x s32>), %1
@@ -1106,11 +1143,12 @@ body:             |
 
     ; CHECK-LABEL: name: test_v2i32_sgt
     ; CHECK: liveins: $d0, $d1
-    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $d0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<2 x s32>) = COPY $d1
-    ; CHECK: [[ICMP:%[0-9]+]]:_(<2 x s32>) = G_ICMP intpred(sgt), [[COPY]](<2 x s32>), [[COPY1]]
-    ; CHECK: $d0 = COPY [[ICMP]](<2 x s32>)
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $d0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s32>) = COPY $d1
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(<2 x s32>) = G_ICMP intpred(sgt), [[COPY]](<2 x s32>), [[COPY1]]
+    ; CHECK-NEXT: $d0 = COPY [[ICMP]](<2 x s32>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %0:_(<2 x s32>) = COPY $d0
     %1:_(<2 x s32>) = COPY $d1
     %2:_(<2 x s1>) = G_ICMP intpred(sgt), %0(<2 x s32>), %1
@@ -1135,12 +1173,13 @@ body:             |
 
     ; CHECK-LABEL: name: test_v8i16_sgt
     ; CHECK: liveins: $q0, $q1
-    ; CHECK: [[COPY:%[0-9]+]]:_(<8 x s16>) = COPY $q0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<8 x s16>) = COPY $q1
-    ; CHECK: [[ICMP:%[0-9]+]]:_(<8 x s16>) = G_ICMP intpred(sgt), [[COPY]](<8 x s16>), [[COPY1]]
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(<8 x s8>) = G_TRUNC [[ICMP]](<8 x s16>)
-    ; CHECK: $d0 = COPY [[TRUNC]](<8 x s8>)
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<8 x s16>) = COPY $q0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<8 x s16>) = COPY $q1
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(<8 x s16>) = G_ICMP intpred(sgt), [[COPY]](<8 x s16>), [[COPY1]]
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(<8 x s8>) = G_TRUNC [[ICMP]](<8 x s16>)
+    ; CHECK-NEXT: $d0 = COPY [[TRUNC]](<8 x s8>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %0:_(<8 x s16>) = COPY $q0
     %1:_(<8 x s16>) = COPY $q1
     %2:_(<8 x s1>) = G_ICMP intpred(sgt), %0(<8 x s16>), %1
@@ -1165,11 +1204,12 @@ body:             |
 
     ; CHECK-LABEL: name: test_v4i16_sgt
     ; CHECK: liveins: $d0, $d1
-    ; CHECK: [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $d0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<4 x s16>) = COPY $d1
-    ; CHECK: [[ICMP:%[0-9]+]]:_(<4 x s16>) = G_ICMP intpred(sgt), [[COPY]](<4 x s16>), [[COPY1]]
-    ; CHECK: $d0 = COPY [[ICMP]](<4 x s16>)
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $d0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<4 x s16>) = COPY $d1
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(<4 x s16>) = G_ICMP intpred(sgt), [[COPY]](<4 x s16>), [[COPY1]]
+    ; CHECK-NEXT: $d0 = COPY [[ICMP]](<4 x s16>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %0:_(<4 x s16>) = COPY $d0
     %1:_(<4 x s16>) = COPY $d1
     %2:_(<4 x s1>) = G_ICMP intpred(sgt), %0(<4 x s16>), %1
@@ -1194,11 +1234,12 @@ body:             |
 
     ; CHECK-LABEL: name: test_v16i8_sgt
     ; CHECK: liveins: $q0, $q1
-    ; CHECK: [[COPY:%[0-9]+]]:_(<16 x s8>) = COPY $q0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<16 x s8>) = COPY $q1
-    ; CHECK: [[ICMP:%[0-9]+]]:_(<16 x s8>) = G_ICMP intpred(sgt), [[COPY]](<16 x s8>), [[COPY1]]
-    ; CHECK: $q0 = COPY [[ICMP]](<16 x s8>)
-    ; CHECK: RET_ReallyLR implicit $q0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<16 x s8>) = COPY $q0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<16 x s8>) = COPY $q1
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(<16 x s8>) = G_ICMP intpred(sgt), [[COPY]](<16 x s8>), [[COPY1]]
+    ; CHECK-NEXT: $q0 = COPY [[ICMP]](<16 x s8>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %0:_(<16 x s8>) = COPY $q0
     %1:_(<16 x s8>) = COPY $q1
     %2:_(<16 x s1>) = G_ICMP intpred(sgt), %0(<16 x s8>), %1
@@ -1223,11 +1264,12 @@ body:             |
 
     ; CHECK-LABEL: name: test_v8i8_sgt
     ; CHECK: liveins: $d0, $d1
-    ; CHECK: [[COPY:%[0-9]+]]:_(<8 x s8>) = COPY $d0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<8 x s8>) = COPY $d1
-    ; CHECK: [[ICMP:%[0-9]+]]:_(<8 x s8>) = G_ICMP intpred(sgt), [[COPY]](<8 x s8>), [[COPY1]]
-    ; CHECK: $d0 = COPY [[ICMP]](<8 x s8>)
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<8 x s8>) = COPY $d0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<8 x s8>) = COPY $d1
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(<8 x s8>) = G_ICMP intpred(sgt), [[COPY]](<8 x s8>), [[COPY1]]
+    ; CHECK-NEXT: $d0 = COPY [[ICMP]](<8 x s8>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %0:_(<8 x s8>) = COPY $d0
     %1:_(<8 x s8>) = COPY $d1
     %2:_(<8 x s1>) = G_ICMP intpred(sgt), %0(<8 x s8>), %1
@@ -1252,12 +1294,13 @@ body:             |
 
     ; CHECK-LABEL: name: test_v2i64_sge
     ; CHECK: liveins: $q0, $q1
-    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<2 x s64>) = COPY $q1
-    ; CHECK: [[ICMP:%[0-9]+]]:_(<2 x s64>) = G_ICMP intpred(sge), [[COPY]](<2 x s64>), [[COPY1]]
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(<2 x s32>) = G_TRUNC [[ICMP]](<2 x s64>)
-    ; CHECK: $d0 = COPY [[TRUNC]](<2 x s32>)
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s64>) = COPY $q1
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(<2 x s64>) = G_ICMP intpred(sge), [[COPY]](<2 x s64>), [[COPY1]]
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(<2 x s32>) = G_TRUNC [[ICMP]](<2 x s64>)
+    ; CHECK-NEXT: $d0 = COPY [[TRUNC]](<2 x s32>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %0:_(<2 x s64>) = COPY $q0
     %1:_(<2 x s64>) = COPY $q1
     %2:_(<2 x s1>) = G_ICMP intpred(sge), %0(<2 x s64>), %1
@@ -1282,12 +1325,13 @@ body:             |
 
     ; CHECK-LABEL: name: test_v4i32_sge
     ; CHECK: liveins: $q0, $q1
-    ; CHECK: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<4 x s32>) = COPY $q1
-    ; CHECK: [[ICMP:%[0-9]+]]:_(<4 x s32>) = G_ICMP intpred(sge), [[COPY]](<4 x s32>), [[COPY1]]
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(<4 x s16>) = G_TRUNC [[ICMP]](<4 x s32>)
-    ; CHECK: $d0 = COPY [[TRUNC]](<4 x s16>)
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<4 x s32>) = COPY $q1
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(<4 x s32>) = G_ICMP intpred(sge), [[COPY]](<4 x s32>), [[COPY1]]
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(<4 x s16>) = G_TRUNC [[ICMP]](<4 x s32>)
+    ; CHECK-NEXT: $d0 = COPY [[TRUNC]](<4 x s16>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %0:_(<4 x s32>) = COPY $q0
     %1:_(<4 x s32>) = COPY $q1
     %2:_(<4 x s1>) = G_ICMP intpred(sge), %0(<4 x s32>), %1
@@ -1312,11 +1356,12 @@ body:             |
 
     ; CHECK-LABEL: name: test_v2i32_sge
     ; CHECK: liveins: $d0, $d1
-    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $d0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<2 x s32>) = COPY $d1
-    ; CHECK: [[ICMP:%[0-9]+]]:_(<2 x s32>) = G_ICMP intpred(sge), [[COPY]](<2 x s32>), [[COPY1]]
-    ; CHECK: $d0 = COPY [[ICMP]](<2 x s32>)
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $d0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s32>) = COPY $d1
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(<2 x s32>) = G_ICMP intpred(sge), [[COPY]](<2 x s32>), [[COPY1]]
+    ; CHECK-NEXT: $d0 = COPY [[ICMP]](<2 x s32>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %0:_(<2 x s32>) = COPY $d0
     %1:_(<2 x s32>) = COPY $d1
     %2:_(<2 x s1>) = G_ICMP intpred(sge), %0(<2 x s32>), %1
@@ -1341,12 +1386,13 @@ body:             |
 
     ; CHECK-LABEL: name: test_v8i16_sge
     ; CHECK: liveins: $q0, $q1
-    ; CHECK: [[COPY:%[0-9]+]]:_(<8 x s16>) = COPY $q0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<8 x s16>) = COPY $q1
-    ; CHECK: [[ICMP:%[0-9]+]]:_(<8 x s16>) = G_ICMP intpred(sge), [[COPY]](<8 x s16>), [[COPY1]]
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(<8 x s8>) = G_TRUNC [[ICMP]](<8 x s16>)
-    ; CHECK: $d0 = COPY [[TRUNC]](<8 x s8>)
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<8 x s16>) = COPY $q0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<8 x s16>) = COPY $q1
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(<8 x s16>) = G_ICMP intpred(sge), [[COPY]](<8 x s16>), [[COPY1]]
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(<8 x s8>) = G_TRUNC [[ICMP]](<8 x s16>)
+    ; CHECK-NEXT: $d0 = COPY [[TRUNC]](<8 x s8>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %0:_(<8 x s16>) = COPY $q0
     %1:_(<8 x s16>) = COPY $q1
     %2:_(<8 x s1>) = G_ICMP intpred(sge), %0(<8 x s16>), %1
@@ -1371,11 +1417,12 @@ body:             |
 
     ; CHECK-LABEL: name: test_v4i16_sge
     ; CHECK: liveins: $d0, $d1
-    ; CHECK: [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $d0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<4 x s16>) = COPY $d1
-    ; CHECK: [[ICMP:%[0-9]+]]:_(<4 x s16>) = G_ICMP intpred(sge), [[COPY]](<4 x s16>), [[COPY1]]
-    ; CHECK: $d0 = COPY [[ICMP]](<4 x s16>)
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $d0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<4 x s16>) = COPY $d1
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(<4 x s16>) = G_ICMP intpred(sge), [[COPY]](<4 x s16>), [[COPY1]]
+    ; CHECK-NEXT: $d0 = COPY [[ICMP]](<4 x s16>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %0:_(<4 x s16>) = COPY $d0
     %1:_(<4 x s16>) = COPY $d1
     %2:_(<4 x s1>) = G_ICMP intpred(sge), %0(<4 x s16>), %1
@@ -1400,11 +1447,12 @@ body:             |
 
     ; CHECK-LABEL: name: test_v16i8_sge
     ; CHECK: liveins: $q0, $q1
-    ; CHECK: [[COPY:%[0-9]+]]:_(<16 x s8>) = COPY $q0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<16 x s8>) = COPY $q1
-    ; CHECK: [[ICMP:%[0-9]+]]:_(<16 x s8>) = G_ICMP intpred(sge), [[COPY]](<16 x s8>), [[COPY1]]
-    ; CHECK: $q0 = COPY [[ICMP]](<16 x s8>)
-    ; CHECK: RET_ReallyLR implicit $q0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<16 x s8>) = COPY $q0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<16 x s8>) = COPY $q1
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(<16 x s8>) = G_ICMP intpred(sge), [[COPY]](<16 x s8>), [[COPY1]]
+    ; CHECK-NEXT: $q0 = COPY [[ICMP]](<16 x s8>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %0:_(<16 x s8>) = COPY $q0
     %1:_(<16 x s8>) = COPY $q1
     %2:_(<16 x s1>) = G_ICMP intpred(sge), %0(<16 x s8>), %1
@@ -1429,11 +1477,12 @@ body:             |
 
     ; CHECK-LABEL: name: test_v8i8_sge
     ; CHECK: liveins: $d0, $d1
-    ; CHECK: [[COPY:%[0-9]+]]:_(<8 x s8>) = COPY $d0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<8 x s8>) = COPY $d1
-    ; CHECK: [[ICMP:%[0-9]+]]:_(<8 x s8>) = G_ICMP intpred(sge), [[COPY]](<8 x s8>), [[COPY1]]
-    ; CHECK: $d0 = COPY [[ICMP]](<8 x s8>)
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<8 x s8>) = COPY $d0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<8 x s8>) = COPY $d1
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(<8 x s8>) = G_ICMP intpred(sge), [[COPY]](<8 x s8>), [[COPY1]]
+    ; CHECK-NEXT: $d0 = COPY [[ICMP]](<8 x s8>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %0:_(<8 x s8>) = COPY $d0
     %1:_(<8 x s8>) = COPY $d1
     %2:_(<8 x s1>) = G_ICMP intpred(sge), %0(<8 x s8>), %1
@@ -1458,12 +1507,13 @@ body:             |
 
     ; CHECK-LABEL: name: test_v2i64_slt
     ; CHECK: liveins: $q0, $q1
-    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<2 x s64>) = COPY $q1
-    ; CHECK: [[ICMP:%[0-9]+]]:_(<2 x s64>) = G_ICMP intpred(slt), [[COPY]](<2 x s64>), [[COPY1]]
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(<2 x s32>) = G_TRUNC [[ICMP]](<2 x s64>)
-    ; CHECK: $d0 = COPY [[TRUNC]](<2 x s32>)
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s64>) = COPY $q1
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(<2 x s64>) = G_ICMP intpred(slt), [[COPY]](<2 x s64>), [[COPY1]]
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(<2 x s32>) = G_TRUNC [[ICMP]](<2 x s64>)
+    ; CHECK-NEXT: $d0 = COPY [[TRUNC]](<2 x s32>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %0:_(<2 x s64>) = COPY $q0
     %1:_(<2 x s64>) = COPY $q1
     %2:_(<2 x s1>) = G_ICMP intpred(slt), %0(<2 x s64>), %1
@@ -1488,12 +1538,13 @@ body:             |
 
     ; CHECK-LABEL: name: test_v4i32_slt
     ; CHECK: liveins: $q0, $q1
-    ; CHECK: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<4 x s32>) = COPY $q1
-    ; CHECK: [[ICMP:%[0-9]+]]:_(<4 x s32>) = G_ICMP intpred(slt), [[COPY]](<4 x s32>), [[COPY1]]
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(<4 x s16>) = G_TRUNC [[ICMP]](<4 x s32>)
-    ; CHECK: $d0 = COPY [[TRUNC]](<4 x s16>)
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<4 x s32>) = COPY $q1
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(<4 x s32>) = G_ICMP intpred(slt), [[COPY]](<4 x s32>), [[COPY1]]
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(<4 x s16>) = G_TRUNC [[ICMP]](<4 x s32>)
+    ; CHECK-NEXT: $d0 = COPY [[TRUNC]](<4 x s16>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %0:_(<4 x s32>) = COPY $q0
     %1:_(<4 x s32>) = COPY $q1
     %2:_(<4 x s1>) = G_ICMP intpred(slt), %0(<4 x s32>), %1
@@ -1518,11 +1569,12 @@ body:             |
 
     ; CHECK-LABEL: name: test_v2i32_slt
     ; CHECK: liveins: $d0, $d1
-    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $d0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<2 x s32>) = COPY $d1
-    ; CHECK: [[ICMP:%[0-9]+]]:_(<2 x s32>) = G_ICMP intpred(slt), [[COPY]](<2 x s32>), [[COPY1]]
-    ; CHECK: $d0 = COPY [[ICMP]](<2 x s32>)
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $d0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s32>) = COPY $d1
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(<2 x s32>) = G_ICMP intpred(slt), [[COPY]](<2 x s32>), [[COPY1]]
+    ; CHECK-NEXT: $d0 = COPY [[ICMP]](<2 x s32>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %0:_(<2 x s32>) = COPY $d0
     %1:_(<2 x s32>) = COPY $d1
     %2:_(<2 x s1>) = G_ICMP intpred(slt), %0(<2 x s32>), %1
@@ -1547,12 +1599,13 @@ body:             |
 
     ; CHECK-LABEL: name: test_v8i16_slt
     ; CHECK: liveins: $q0, $q1
-    ; CHECK: [[COPY:%[0-9]+]]:_(<8 x s16>) = COPY $q0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<8 x s16>) = COPY $q1
-    ; CHECK: [[ICMP:%[0-9]+]]:_(<8 x s16>) = G_ICMP intpred(slt), [[COPY]](<8 x s16>), [[COPY1]]
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(<8 x s8>) = G_TRUNC [[ICMP]](<8 x s16>)
-    ; CHECK: $d0 = COPY [[TRUNC]](<8 x s8>)
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<8 x s16>) = COPY $q0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<8 x s16>) = COPY $q1
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(<8 x s16>) = G_ICMP intpred(slt), [[COPY]](<8 x s16>), [[COPY1]]
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(<8 x s8>) = G_TRUNC [[ICMP]](<8 x s16>)
+    ; CHECK-NEXT: $d0 = COPY [[TRUNC]](<8 x s8>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %0:_(<8 x s16>) = COPY $q0
     %1:_(<8 x s16>) = COPY $q1
     %2:_(<8 x s1>) = G_ICMP intpred(slt), %0(<8 x s16>), %1
@@ -1577,11 +1630,12 @@ body:             |
 
     ; CHECK-LABEL: name: test_v4i16_slt
     ; CHECK: liveins: $d0, $d1
-    ; CHECK: [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $d0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<4 x s16>) = COPY $d1
-    ; CHECK: [[ICMP:%[0-9]+]]:_(<4 x s16>) = G_ICMP intpred(slt), [[COPY]](<4 x s16>), [[COPY1]]
-    ; CHECK: $d0 = COPY [[ICMP]](<4 x s16>)
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $d0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<4 x s16>) = COPY $d1
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(<4 x s16>) = G_ICMP intpred(slt), [[COPY]](<4 x s16>), [[COPY1]]
+    ; CHECK-NEXT: $d0 = COPY [[ICMP]](<4 x s16>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %0:_(<4 x s16>) = COPY $d0
     %1:_(<4 x s16>) = COPY $d1
     %2:_(<4 x s1>) = G_ICMP intpred(slt), %0(<4 x s16>), %1
@@ -1606,11 +1660,12 @@ body:             |
 
     ; CHECK-LABEL: name: test_v16i8_slt
     ; CHECK: liveins: $q0, $q1
-    ; CHECK: [[COPY:%[0-9]+]]:_(<16 x s8>) = COPY $q0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<16 x s8>) = COPY $q1
-    ; CHECK: [[ICMP:%[0-9]+]]:_(<16 x s8>) = G_ICMP intpred(slt), [[COPY]](<16 x s8>), [[COPY1]]
-    ; CHECK: $q0 = COPY [[ICMP]](<16 x s8>)
-    ; CHECK: RET_ReallyLR implicit $q0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<16 x s8>) = COPY $q0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<16 x s8>) = COPY $q1
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(<16 x s8>) = G_ICMP intpred(slt), [[COPY]](<16 x s8>), [[COPY1]]
+    ; CHECK-NEXT: $q0 = COPY [[ICMP]](<16 x s8>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %0:_(<16 x s8>) = COPY $q0
     %1:_(<16 x s8>) = COPY $q1
     %2:_(<16 x s1>) = G_ICMP intpred(slt), %0(<16 x s8>), %1
@@ -1635,11 +1690,12 @@ body:             |
 
     ; CHECK-LABEL: name: test_v8i8_slt
     ; CHECK: liveins: $d0, $d1
-    ; CHECK: [[COPY:%[0-9]+]]:_(<8 x s8>) = COPY $d0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<8 x s8>) = COPY $d1
-    ; CHECK: [[ICMP:%[0-9]+]]:_(<8 x s8>) = G_ICMP intpred(slt), [[COPY]](<8 x s8>), [[COPY1]]
-    ; CHECK: $d0 = COPY [[ICMP]](<8 x s8>)
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<8 x s8>) = COPY $d0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<8 x s8>) = COPY $d1
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(<8 x s8>) = G_ICMP intpred(slt), [[COPY]](<8 x s8>), [[COPY1]]
+    ; CHECK-NEXT: $d0 = COPY [[ICMP]](<8 x s8>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %0:_(<8 x s8>) = COPY $d0
     %1:_(<8 x s8>) = COPY $d1
     %2:_(<8 x s1>) = G_ICMP intpred(slt), %0(<8 x s8>), %1
@@ -1664,12 +1720,13 @@ body:             |
 
     ; CHECK-LABEL: name: test_v2i64_sle
     ; CHECK: liveins: $q0, $q1
-    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<2 x s64>) = COPY $q1
-    ; CHECK: [[ICMP:%[0-9]+]]:_(<2 x s64>) = G_ICMP intpred(sle), [[COPY]](<2 x s64>), [[COPY1]]
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(<2 x s32>) = G_TRUNC [[ICMP]](<2 x s64>)
-    ; CHECK: $d0 = COPY [[TRUNC]](<2 x s32>)
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s64>) = COPY $q1
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(<2 x s64>) = G_ICMP intpred(sle), [[COPY]](<2 x s64>), [[COPY1]]
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(<2 x s32>) = G_TRUNC [[ICMP]](<2 x s64>)
+    ; CHECK-NEXT: $d0 = COPY [[TRUNC]](<2 x s32>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %0:_(<2 x s64>) = COPY $q0
     %1:_(<2 x s64>) = COPY $q1
     %2:_(<2 x s1>) = G_ICMP intpred(sle), %0(<2 x s64>), %1
@@ -1694,12 +1751,13 @@ body:             |
 
     ; CHECK-LABEL: name: test_v4i32_sle
     ; CHECK: liveins: $q0, $q1
-    ; CHECK: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<4 x s32>) = COPY $q1
-    ; CHECK: [[ICMP:%[0-9]+]]:_(<4 x s32>) = G_ICMP intpred(sle), [[COPY]](<4 x s32>), [[COPY1]]
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(<4 x s16>) = G_TRUNC [[ICMP]](<4 x s32>)
-    ; CHECK: $d0 = COPY [[TRUNC]](<4 x s16>)
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<4 x s32>) = COPY $q1
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(<4 x s32>) = G_ICMP intpred(sle), [[COPY]](<4 x s32>), [[COPY1]]
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(<4 x s16>) = G_TRUNC [[ICMP]](<4 x s32>)
+    ; CHECK-NEXT: $d0 = COPY [[TRUNC]](<4 x s16>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %0:_(<4 x s32>) = COPY $q0
     %1:_(<4 x s32>) = COPY $q1
     %2:_(<4 x s1>) = G_ICMP intpred(sle), %0(<4 x s32>), %1
@@ -1724,11 +1782,12 @@ body:             |
 
     ; CHECK-LABEL: name: test_v2i32_sle
     ; CHECK: liveins: $d0, $d1
-    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $d0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<2 x s32>) = COPY $d1
-    ; CHECK: [[ICMP:%[0-9]+]]:_(<2 x s32>) = G_ICMP intpred(sle), [[COPY]](<2 x s32>), [[COPY1]]
-    ; CHECK: $d0 = COPY [[ICMP]](<2 x s32>)
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $d0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s32>) = COPY $d1
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(<2 x s32>) = G_ICMP intpred(sle), [[COPY]](<2 x s32>), [[COPY1]]
+    ; CHECK-NEXT: $d0 = COPY [[ICMP]](<2 x s32>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %0:_(<2 x s32>) = COPY $d0
     %1:_(<2 x s32>) = COPY $d1
     %2:_(<2 x s1>) = G_ICMP intpred(sle), %0(<2 x s32>), %1
@@ -1753,12 +1812,13 @@ body:             |
 
     ; CHECK-LABEL: name: test_v8i16_sle
     ; CHECK: liveins: $q0, $q1
-    ; CHECK: [[COPY:%[0-9]+]]:_(<8 x s16>) = COPY $q0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<8 x s16>) = COPY $q1
-    ; CHECK: [[ICMP:%[0-9]+]]:_(<8 x s16>) = G_ICMP intpred(sle), [[COPY]](<8 x s16>), [[COPY1]]
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(<8 x s8>) = G_TRUNC [[ICMP]](<8 x s16>)
-    ; CHECK: $d0 = COPY [[TRUNC]](<8 x s8>)
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<8 x s16>) = COPY $q0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<8 x s16>) = COPY $q1
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(<8 x s16>) = G_ICMP intpred(sle), [[COPY]](<8 x s16>), [[COPY1]]
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(<8 x s8>) = G_TRUNC [[ICMP]](<8 x s16>)
+    ; CHECK-NEXT: $d0 = COPY [[TRUNC]](<8 x s8>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %0:_(<8 x s16>) = COPY $q0
     %1:_(<8 x s16>) = COPY $q1
     %2:_(<8 x s1>) = G_ICMP intpred(sle), %0(<8 x s16>), %1
@@ -1783,11 +1843,12 @@ body:             |
 
     ; CHECK-LABEL: name: test_v4i16_sle
     ; CHECK: liveins: $d0, $d1
-    ; CHECK: [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $d0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<4 x s16>) = COPY $d1
-    ; CHECK: [[ICMP:%[0-9]+]]:_(<4 x s16>) = G_ICMP intpred(sle), [[COPY]](<4 x s16>), [[COPY1]]
-    ; CHECK: $d0 = COPY [[ICMP]](<4 x s16>)
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $d0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<4 x s16>) = COPY $d1
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(<4 x s16>) = G_ICMP intpred(sle), [[COPY]](<4 x s16>), [[COPY1]]
+    ; CHECK-NEXT: $d0 = COPY [[ICMP]](<4 x s16>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %0:_(<4 x s16>) = COPY $d0
     %1:_(<4 x s16>) = COPY $d1
     %2:_(<4 x s1>) = G_ICMP intpred(sle), %0(<4 x s16>), %1
@@ -1812,11 +1873,12 @@ body:             |
 
     ; CHECK-LABEL: name: test_v16i8_sle
     ; CHECK: liveins: $q0, $q1
-    ; CHECK: [[COPY:%[0-9]+]]:_(<16 x s8>) = COPY $q0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<16 x s8>) = COPY $q1
-    ; CHECK: [[ICMP:%[0-9]+]]:_(<16 x s8>) = G_ICMP intpred(sle), [[COPY]](<16 x s8>), [[COPY1]]
-    ; CHECK: $q0 = COPY [[ICMP]](<16 x s8>)
-    ; CHECK: RET_ReallyLR implicit $q0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<16 x s8>) = COPY $q0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<16 x s8>) = COPY $q1
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(<16 x s8>) = G_ICMP intpred(sle), [[COPY]](<16 x s8>), [[COPY1]]
+    ; CHECK-NEXT: $q0 = COPY [[ICMP]](<16 x s8>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %0:_(<16 x s8>) = COPY $q0
     %1:_(<16 x s8>) = COPY $q1
     %2:_(<16 x s1>) = G_ICMP intpred(sle), %0(<16 x s8>), %1
@@ -1841,11 +1903,12 @@ body:             |
 
     ; CHECK-LABEL: name: test_v8i8_sle
     ; CHECK: liveins: $d0, $d1
-    ; CHECK: [[COPY:%[0-9]+]]:_(<8 x s8>) = COPY $d0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<8 x s8>) = COPY $d1
-    ; CHECK: [[ICMP:%[0-9]+]]:_(<8 x s8>) = G_ICMP intpred(sle), [[COPY]](<8 x s8>), [[COPY1]]
-    ; CHECK: $d0 = COPY [[ICMP]](<8 x s8>)
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<8 x s8>) = COPY $d0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<8 x s8>) = COPY $d1
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(<8 x s8>) = G_ICMP intpred(sle), [[COPY]](<8 x s8>), [[COPY1]]
+    ; CHECK-NEXT: $d0 = COPY [[ICMP]](<8 x s8>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %0:_(<8 x s8>) = COPY $d0
     %1:_(<8 x s8>) = COPY $d1
     %2:_(<8 x s1>) = G_ICMP intpred(sle), %0(<8 x s8>), %1
@@ -1870,12 +1933,13 @@ body:             |
 
     ; CHECK-LABEL: name: test_v2p0_eq
     ; CHECK: liveins: $q0, $q1
-    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x p0>) = COPY $q0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<2 x p0>) = COPY $q1
-    ; CHECK: [[ICMP:%[0-9]+]]:_(<2 x s64>) = G_ICMP intpred(eq), [[COPY]](<2 x p0>), [[COPY1]]
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(<2 x s32>) = G_TRUNC [[ICMP]](<2 x s64>)
-    ; CHECK: $d0 = COPY [[TRUNC]](<2 x s32>)
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x p0>) = COPY $q0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x p0>) = COPY $q1
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(<2 x s64>) = G_ICMP intpred(eq), [[COPY]](<2 x p0>), [[COPY1]]
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(<2 x s32>) = G_TRUNC [[ICMP]](<2 x s64>)
+    ; CHECK-NEXT: $d0 = COPY [[TRUNC]](<2 x s32>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %0:_(<2 x p0>) = COPY $q0
     %1:_(<2 x p0>) = COPY $q1
     %2:_(<2 x s1>) = G_ICMP intpred(eq), %0(<2 x p0>), %1
@@ -1899,18 +1963,19 @@ body:             |
 
     ; CHECK-LABEL: name: icmp_8xs1
     ; CHECK: liveins: $q0, $q1, $q2, $q3
-    ; CHECK: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<4 x s32>) = COPY $q1
-    ; CHECK: [[COPY2:%[0-9]+]]:_(<4 x s32>) = COPY $q2
-    ; CHECK: [[COPY3:%[0-9]+]]:_(<4 x s32>) = COPY $q3
-    ; CHECK: [[ICMP:%[0-9]+]]:_(<4 x s32>) = G_ICMP intpred(eq), [[COPY]](<4 x s32>), [[COPY2]]
-    ; CHECK: [[ICMP1:%[0-9]+]]:_(<4 x s32>) = G_ICMP intpred(eq), [[COPY1]](<4 x s32>), [[COPY3]]
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(<4 x s16>) = G_TRUNC [[ICMP]](<4 x s32>)
-    ; CHECK: [[TRUNC1:%[0-9]+]]:_(<4 x s16>) = G_TRUNC [[ICMP1]](<4 x s32>)
-    ; CHECK: [[CONCAT_VECTORS:%[0-9]+]]:_(<8 x s16>) = G_CONCAT_VECTORS [[TRUNC]](<4 x s16>), [[TRUNC1]](<4 x s16>)
-    ; CHECK: [[TRUNC2:%[0-9]+]]:_(<8 x s8>) = G_TRUNC [[CONCAT_VECTORS]](<8 x s16>)
-    ; CHECK: $d0 = COPY [[TRUNC2]](<8 x s8>)
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<4 x s32>) = COPY $q1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(<4 x s32>) = COPY $q2
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(<4 x s32>) = COPY $q3
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(<4 x s32>) = G_ICMP intpred(eq), [[COPY]](<4 x s32>), [[COPY2]]
+    ; CHECK-NEXT: [[ICMP1:%[0-9]+]]:_(<4 x s32>) = G_ICMP intpred(eq), [[COPY1]](<4 x s32>), [[COPY3]]
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(<4 x s16>) = G_TRUNC [[ICMP]](<4 x s32>)
+    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(<4 x s16>) = G_TRUNC [[ICMP1]](<4 x s32>)
+    ; CHECK-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<8 x s16>) = G_CONCAT_VECTORS [[TRUNC]](<4 x s16>), [[TRUNC1]](<4 x s16>)
+    ; CHECK-NEXT: [[TRUNC2:%[0-9]+]]:_(<8 x s8>) = G_TRUNC [[CONCAT_VECTORS]](<8 x s16>)
+    ; CHECK-NEXT: $d0 = COPY [[TRUNC2]](<8 x s8>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %2:_(<4 x s32>) = COPY $q0
     %3:_(<4 x s32>) = COPY $q1
     %0:_(<8 x s32>) = G_CONCAT_VECTORS %2(<4 x s32>), %3(<4 x s32>)
@@ -1937,18 +2002,19 @@ body:             |
 
     ; CHECK-LABEL: name: icmp_8xs32
     ; CHECK: liveins: $q0, $q1, $q2, $q3
-    ; CHECK: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<4 x s32>) = COPY $q1
-    ; CHECK: [[COPY2:%[0-9]+]]:_(<4 x s32>) = COPY $q2
-    ; CHECK: [[COPY3:%[0-9]+]]:_(<4 x s32>) = COPY $q3
-    ; CHECK: [[ICMP:%[0-9]+]]:_(<4 x s32>) = G_ICMP intpred(eq), [[COPY]](<4 x s32>), [[COPY2]]
-    ; CHECK: [[ICMP1:%[0-9]+]]:_(<4 x s32>) = G_ICMP intpred(eq), [[COPY1]](<4 x s32>), [[COPY3]]
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(<4 x s16>) = G_TRUNC [[ICMP]](<4 x s32>)
-    ; CHECK: [[TRUNC1:%[0-9]+]]:_(<4 x s16>) = G_TRUNC [[ICMP1]](<4 x s32>)
-    ; CHECK: [[CONCAT_VECTORS:%[0-9]+]]:_(<8 x s16>) = G_CONCAT_VECTORS [[TRUNC]](<4 x s16>), [[TRUNC1]](<4 x s16>)
-    ; CHECK: [[TRUNC2:%[0-9]+]]:_(<8 x s8>) = G_TRUNC [[CONCAT_VECTORS]](<8 x s16>)
-    ; CHECK: $d0 = COPY [[TRUNC2]](<8 x s8>)
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<4 x s32>) = COPY $q1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(<4 x s32>) = COPY $q2
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(<4 x s32>) = COPY $q3
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(<4 x s32>) = G_ICMP intpred(eq), [[COPY]](<4 x s32>), [[COPY2]]
+    ; CHECK-NEXT: [[ICMP1:%[0-9]+]]:_(<4 x s32>) = G_ICMP intpred(eq), [[COPY1]](<4 x s32>), [[COPY3]]
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(<4 x s16>) = G_TRUNC [[ICMP]](<4 x s32>)
+    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(<4 x s16>) = G_TRUNC [[ICMP1]](<4 x s32>)
+    ; CHECK-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<8 x s16>) = G_CONCAT_VECTORS [[TRUNC]](<4 x s16>), [[TRUNC1]](<4 x s16>)
+    ; CHECK-NEXT: [[TRUNC2:%[0-9]+]]:_(<8 x s8>) = G_TRUNC [[CONCAT_VECTORS]](<8 x s16>)
+    ; CHECK-NEXT: $d0 = COPY [[TRUNC2]](<8 x s8>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %2:_(<4 x s32>) = COPY $q0
     %3:_(<4 x s32>) = COPY $q1
     %0:_(<8 x s32>) = G_CONCAT_VECTORS %2(<4 x s32>), %3(<4 x s32>)
@@ -1975,18 +2041,19 @@ body:             |
 
     ; CHECK-LABEL: name: fcmp_8xs1
     ; CHECK: liveins: $q0, $q1, $q2, $q3
-    ; CHECK: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<4 x s32>) = COPY $q1
-    ; CHECK: [[COPY2:%[0-9]+]]:_(<4 x s32>) = COPY $q2
-    ; CHECK: [[COPY3:%[0-9]+]]:_(<4 x s32>) = COPY $q3
-    ; CHECK: [[FCMP:%[0-9]+]]:_(<4 x s32>) = G_FCMP floatpred(one), [[COPY]](<4 x s32>), [[COPY2]]
-    ; CHECK: [[FCMP1:%[0-9]+]]:_(<4 x s32>) = G_FCMP floatpred(one), [[COPY1]](<4 x s32>), [[COPY3]]
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(<4 x s16>) = G_TRUNC [[FCMP]](<4 x s32>)
-    ; CHECK: [[TRUNC1:%[0-9]+]]:_(<4 x s16>) = G_TRUNC [[FCMP1]](<4 x s32>)
-    ; CHECK: [[CONCAT_VECTORS:%[0-9]+]]:_(<8 x s16>) = G_CONCAT_VECTORS [[TRUNC]](<4 x s16>), [[TRUNC1]](<4 x s16>)
-    ; CHECK: [[TRUNC2:%[0-9]+]]:_(<8 x s8>) = G_TRUNC [[CONCAT_VECTORS]](<8 x s16>)
-    ; CHECK: $d0 = COPY [[TRUNC2]](<8 x s8>)
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<4 x s32>) = COPY $q1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(<4 x s32>) = COPY $q2
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(<4 x s32>) = COPY $q3
+    ; CHECK-NEXT: [[FCMP:%[0-9]+]]:_(<4 x s32>) = G_FCMP floatpred(one), [[COPY]](<4 x s32>), [[COPY2]]
+    ; CHECK-NEXT: [[FCMP1:%[0-9]+]]:_(<4 x s32>) = G_FCMP floatpred(one), [[COPY1]](<4 x s32>), [[COPY3]]
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(<4 x s16>) = G_TRUNC [[FCMP]](<4 x s32>)
+    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(<4 x s16>) = G_TRUNC [[FCMP1]](<4 x s32>)
+    ; CHECK-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<8 x s16>) = G_CONCAT_VECTORS [[TRUNC]](<4 x s16>), [[TRUNC1]](<4 x s16>)
+    ; CHECK-NEXT: [[TRUNC2:%[0-9]+]]:_(<8 x s8>) = G_TRUNC [[CONCAT_VECTORS]](<8 x s16>)
+    ; CHECK-NEXT: $d0 = COPY [[TRUNC2]](<8 x s8>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %2:_(<4 x s32>) = COPY $q0
     %3:_(<4 x s32>) = COPY $q1
     %0:_(<8 x s32>) = G_CONCAT_VECTORS %2(<4 x s32>), %3(<4 x s32>)
@@ -2013,18 +2080,19 @@ body:             |
 
     ; CHECK-LABEL: name: fcmp_8xs32
     ; CHECK: liveins: $q0, $q1, $q2, $q3
-    ; CHECK: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<4 x s32>) = COPY $q1
-    ; CHECK: [[COPY2:%[0-9]+]]:_(<4 x s32>) = COPY $q2
-    ; CHECK: [[COPY3:%[0-9]+]]:_(<4 x s32>) = COPY $q3
-    ; CHECK: [[FCMP:%[0-9]+]]:_(<4 x s32>) = G_FCMP floatpred(oeq), [[COPY]](<4 x s32>), [[COPY2]]
-    ; CHECK: [[FCMP1:%[0-9]+]]:_(<4 x s32>) = G_FCMP floatpred(oeq), [[COPY1]](<4 x s32>), [[COPY3]]
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(<4 x s16>) = G_TRUNC [[FCMP]](<4 x s32>)
-    ; CHECK: [[TRUNC1:%[0-9]+]]:_(<4 x s16>) = G_TRUNC [[FCMP1]](<4 x s32>)
-    ; CHECK: [[CONCAT_VECTORS:%[0-9]+]]:_(<8 x s16>) = G_CONCAT_VECTORS [[TRUNC]](<4 x s16>), [[TRUNC1]](<4 x s16>)
-    ; CHECK: [[TRUNC2:%[0-9]+]]:_(<8 x s8>) = G_TRUNC [[CONCAT_VECTORS]](<8 x s16>)
-    ; CHECK: $d0 = COPY [[TRUNC2]](<8 x s8>)
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<4 x s32>) = COPY $q1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(<4 x s32>) = COPY $q2
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(<4 x s32>) = COPY $q3
+    ; CHECK-NEXT: [[FCMP:%[0-9]+]]:_(<4 x s32>) = G_FCMP floatpred(oeq), [[COPY]](<4 x s32>), [[COPY2]]
+    ; CHECK-NEXT: [[FCMP1:%[0-9]+]]:_(<4 x s32>) = G_FCMP floatpred(oeq), [[COPY1]](<4 x s32>), [[COPY3]]
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(<4 x s16>) = G_TRUNC [[FCMP]](<4 x s32>)
+    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(<4 x s16>) = G_TRUNC [[FCMP1]](<4 x s32>)
+    ; CHECK-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<8 x s16>) = G_CONCAT_VECTORS [[TRUNC]](<4 x s16>), [[TRUNC1]](<4 x s16>)
+    ; CHECK-NEXT: [[TRUNC2:%[0-9]+]]:_(<8 x s8>) = G_TRUNC [[CONCAT_VECTORS]](<8 x s16>)
+    ; CHECK-NEXT: $d0 = COPY [[TRUNC2]](<8 x s8>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %2:_(<4 x s32>) = COPY $q0
     %3:_(<4 x s32>) = COPY $q1
     %0:_(<8 x s32>) = G_CONCAT_VECTORS %2(<4 x s32>), %3(<4 x s32>)
@@ -2052,12 +2120,13 @@ body:             |
 
     ; CHECK-LABEL: name: fcmp_v4s32
     ; CHECK: liveins: $q0, $q1
-    ; CHECK: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<4 x s32>) = COPY $q1
-    ; CHECK: [[FCMP:%[0-9]+]]:_(<4 x s32>) = G_FCMP floatpred(olt), [[COPY]](<4 x s32>), [[COPY1]]
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(<4 x s16>) = G_TRUNC [[FCMP]](<4 x s32>)
-    ; CHECK: $d0 = COPY [[TRUNC]](<4 x s16>)
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<4 x s32>) = COPY $q1
+    ; CHECK-NEXT: [[FCMP:%[0-9]+]]:_(<4 x s32>) = G_FCMP floatpred(olt), [[COPY]](<4 x s32>), [[COPY1]]
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(<4 x s16>) = G_TRUNC [[FCMP]](<4 x s32>)
+    ; CHECK-NEXT: $d0 = COPY [[TRUNC]](<4 x s16>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %0:_(<4 x s32>) = COPY $q0
     %1:_(<4 x s32>) = COPY $q1
     %2:_(<4 x s1>) = G_FCMP floatpred(olt), %0(<4 x s32>), %1

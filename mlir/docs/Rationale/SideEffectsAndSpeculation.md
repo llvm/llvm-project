@@ -7,7 +7,7 @@ This rationale only applies to operations used in
 [CFG regions](../LangRef.md#control-flow-and-ssacfg-regions). Side effect
 modeling in [graph regions](../LangRef.md#graph-regions) is TBD.
 
-\[TOC\]
+[TOC]
 
 ## Overview
 
@@ -47,7 +47,10 @@ Operations with implicit behaviors can be broadly categorized as follows:
    `longjmp`, operations that throw exceptions.
 
 Finally, a given operation may have a combination of the above implicit
-behaviors.
+behaviors. The combination of implicit behaviors during the execution of the
+operation may be ordered. We use 'stage' to label the order of implicit
+behaviors during the execution of 'op'. Implicit behaviors with a lower stage
+number happen earlier than those with a higher stage number.
 
 ## Modeling
 
@@ -76,6 +79,10 @@ When adding a new op, ask:
 
 1. Does it read from or write to the heap or stack? It should probably implement
    `MemoryEffectsOpInterface`.
+1. Does these side effects ordered? It should probably set the stage of
+   side effects to make analysis more accurate.
+1. Does These side effects act on every single value of resource? It probably
+   should set the FullEffect on effect.
 1. Does it have side effects that must be preserved, like a volatile store or a
    syscall? It should probably implement `MemoryEffectsOpInterface` and model
    the effect as a read from or write to an abstract `Resource`. Please start an
@@ -91,3 +98,83 @@ When adding a new op, ask:
 1. Is your operation free of side effects and can be freely hoisted, introduced
    and eliminated? It should probably be marked `Pure`. (TODO: revisit this name
    since it has overloaded meanings in C++.)
+
+## Examples
+
+This section describes a few very simple examples that help understand how to
+add side effect correctly.
+
+### SIMD compute operation
+
+If we have a SIMD backend dialect with a "simd.abs" operation, which reads all
+values from the source memref, calculates their absolute values, and writes them
+to the target memref.
+
+```mlir
+  func.func @abs(%source : memref<10xf32>, %target : memref<10xf32>) {
+    simd.abs(%source, %target) : memref<10xf32> to memref<10xf32>
+    return
+  }
+```
+
+The abs operation reads each individual value from the source resource and then
+writes these values to each corresponding value in the target resource.
+Therefore, we need to specify a read side effect for the source and a write side
+effect for the target. The read side effect occurs before the write side effect,
+so we need to mark the read stage as earlier than the write stage. Additionally,
+we need to indicate that these side effects apply to each individual value in
+the resource.
+
+A typical approach is as follows:
+``` mlir
+  def AbsOp : SIMD_Op<"abs", [...] {
+    ...
+
+    let arguments = (ins Arg<AnyRankedOrUnrankedMemRef, "the source memref",
+                             [MemReadAt<0, FullEffect>]>:$source,
+                         Arg<AnyRankedOrUnrankedMemRef, "the target memref",
+                             [MemWriteAt<1, FullEffect>]>:$target);
+
+    ...
+  }
+```
+
+In the above example, we attach the side effect [MemReadAt<0, FullEffect>] to
+the source, indicating that the abs operation reads each individual value from
+the source during stage 0. Likewise, we attach the side effect
+[MemWriteAt<1, FullEffect>] to the target, indicating that the abs operation
+writes to each individual value within the target during stage 1 (after reading
+from the source).
+
+### Load like operation
+
+Memref.load is a typical load like operation:
+```mlir
+  func.func @foo(%input : memref<10xf32>, %index : index) -> f32 {
+    %result = memref.load  %input[index] : memref<10xf32>
+    return %result : f32
+  }
+```
+
+The load like operation reads a single value from the input memref and returns
+it. Therefore, we need to specify a partial read side effect for the input
+memref, indicating that not every single value is used.
+
+A typical approach is as follows:
+``` mlir
+  def LoadOp : MemRef_Op<"load", [...] {
+    ...
+
+    let arguments = (ins Arg<AnyMemRef, "the reference to load from",
+                             [MemReadAt<0, PartialEffect>]>:$memref,
+                         Variadic<Index>:$indices,
+                         DefaultValuedOptionalAttr<BoolAttr, "false">:$nontemporal);
+
+    ...
+  }
+```
+
+In the above example, we attach the side effect [MemReadAt<0, PartialEffect>] to
+the source, indicating that the load operation reads parts of values from the
+memref during stage 0. Since side effects typically occur at stage 0 and are
+partial by default, we can abbreviate it as "[MemRead]".

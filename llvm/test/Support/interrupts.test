@@ -12,7 +12,7 @@ import time
 def run_symbolizer():
     proc = subprocess.Popen([sys.argv[2]], stdout=subprocess.PIPE, stdin=subprocess.PIPE)
     # Write then read some output to ensure the process has started fully.
-    proc.stdin.write(b'foo\n')
+    proc.stdin.write(b'foo bar\n')
     proc.stdin.flush()
     proc.stdout.readline()
     # Windows handles signals differently.

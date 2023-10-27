@@ -20,6 +20,7 @@
 #include "flang/Common/Fortran.h"
 #include "flang/Common/uint128.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
+#include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/MLIRContext.h"
@@ -379,7 +380,7 @@ struct RuntimeTableEntry<RuntimeTableKey<KT>, RuntimeIdentifier<Cs...>> {
 /// fir::runtime::RuntimeTableEntry<fir::runtime::RuntimeTableKey<
 ///     decltype(_FortranASumReal4)>, "_FortranASumReal4"))>
 /// ```
-/// These entries are then used to to generate the MLIR FunctionType that
+/// These entries are then used to generate the MLIR FunctionType that
 /// correspond to the runtime function declaration in C++.
 #undef FirE
 #define FirE(L, I) (I < sizeof(L) / sizeof(*L) ? L[I] : 0)
@@ -418,7 +419,7 @@ static mlir::func::FuncOp getRuntimeFunc(mlir::Location loc,
     return func;
   auto funTy = RuntimeEntry::getTypeModel()(builder.getContext());
   func = builder.createFunction(loc, name, funTy);
-  func->setAttr("fir.runtime", builder.getUnitAttr());
+  func->setAttr(FIROpsDialect::getFirRuntimeAttrName(), builder.getUnitAttr());
   return func;
 }
 

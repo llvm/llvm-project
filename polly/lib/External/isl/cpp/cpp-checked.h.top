@@ -17,6 +17,11 @@
 #include <string>
 #include <type_traits>
 
+#if __cplusplus >= 201703L
+#include <any>
+#include <optional>
+#endif
+
 namespace isl {
 namespace checked {
 
@@ -95,18 +100,23 @@ inline boolean manage(isl_bool val) {
 }
 
 class ctx {
-  isl_ctx *ptr;
+	isl_ctx *ptr;
 public:
-  /* implicit */ ctx(isl_ctx *ctx)
-      : ptr(ctx) {}
-  isl_ctx *release() {
-    auto tmp = ptr;
-    ptr = nullptr;
-    return tmp;
-  }
-  isl_ctx *get() {
-    return ptr;
-  }
+	/* implicit */ ctx(isl_ctx *ctx) : ptr(ctx) {}
+	isl_ctx *release() {
+		auto tmp = ptr;
+		ptr = nullptr;
+		return tmp;
+	}
+	isl_ctx *get() {
+		return ptr;
+	}
+#if __cplusplus >= 201703L
+	static void free_user(void *user) {
+		std::any *p = static_cast<std::any *>(user);
+		delete p;
+	}
+#endif
 };
 
 /* Class encapsulating an isl_stat value.

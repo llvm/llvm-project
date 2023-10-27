@@ -253,7 +253,7 @@ bool IncludeCategoryManager::isMainHeader(StringRef IncludeName) const {
   //  1) foo.h => bar.cc
   //  2) foo.proto.h => foo.cc
   StringRef Matching;
-  if (MatchingFileStem.startswith_insensitive(HeaderStem))
+  if (MatchingFileStem.starts_with_insensitive(HeaderStem))
     Matching = MatchingFileStem; // example 1), 2)
   else if (FileStem.equals_insensitive(HeaderStem))
     Matching = FileStem; // example 3)
@@ -276,6 +276,7 @@ HeaderIncludes::HeaderIncludes(StringRef FileName, StringRef Code,
       MaxInsertOffset(MinInsertOffset +
                       getMaxHeaderInsertionOffset(
                           FileName, Code.drop_front(MinInsertOffset), Style)),
+      MainIncludeFound(false),
       Categories(Style, FileName) {
   // Add 0 for main header and INT_MAX for headers that are not in any
   // category.
@@ -335,7 +336,9 @@ void HeaderIncludes::addExistingInclude(Include IncludeToAdd,
   // Only record the offset of current #include if we can insert after it.
   if (CurInclude.R.getOffset() <= MaxInsertOffset) {
     int Priority = Categories.getIncludePriority(
-        CurInclude.Name, /*CheckMainHeader=*/FirstIncludeOffset < 0);
+        CurInclude.Name, /*CheckMainHeader=*/!MainIncludeFound);
+    if (Priority == 0)
+      MainIncludeFound = true;
     CategoryEndOffsets[Priority] = NextLineOffset;
     IncludesByPriority[Priority].push_back(&CurInclude);
     if (FirstIncludeOffset < 0)
@@ -362,7 +365,7 @@ HeaderIncludes::insert(llvm::StringRef IncludeName, bool IsAngled,
       std::string(llvm::formatv(IsAngled ? "<{0}>" : "\"{0}\"", IncludeName));
   StringRef QuotedName = Quoted;
   int Priority = Categories.getIncludePriority(
-      QuotedName, /*CheckMainHeader=*/FirstIncludeOffset < 0);
+      QuotedName, /*CheckMainHeader=*/!MainIncludeFound);
   auto CatOffset = CategoryEndOffsets.find(Priority);
   assert(CatOffset != CategoryEndOffsets.end());
   unsigned InsertOffset = CatOffset->second; // Fall back offset

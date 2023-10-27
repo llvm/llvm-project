@@ -1,7 +1,7 @@
 # RUN: llvm-mc %s -triple=riscv32 -riscv-no-aliases \
-# RUN:     | FileCheck -check-prefixes=CHECK-EXPAND,CHECK-INST %s
+# RUN:     | FileCheck -check-prefixes=CHECK-EXPAND,CHECK-INST,CHECK-ASM-NOALIAS %s
 # RUN: llvm-mc %s -triple=riscv32 \
-# RUN:     | FileCheck -check-prefixes=CHECK-EXPAND,CHECK-ALIAS %s
+# RUN:     | FileCheck -check-prefixes=CHECK-EXPAND,CHECK-ALIAS,CHECK-ASM %s
 # RUN: llvm-mc -filetype=obj -triple riscv32 < %s \
 # RUN:     | llvm-objdump -M no-aliases -d -r - \
 # RUN:     | FileCheck -check-prefixes=CHECK-OBJ-NOALIAS,CHECK-EXPAND,CHECK-INST %s
@@ -16,6 +16,10 @@
 
 # Needed for testing valid %pcrel_lo expressions
 .Lpcrel_hi0: auipc a0, %pcrel_hi(foo)
+
+# Needed for testing li with a symbol difference
+.Lbuf: .skip 8
+.Lbuf_end:
 
 # CHECK-INST: addi a0, zero, 0
 # CHECK-ALIAS: li a0, 0
@@ -102,6 +106,116 @@ li a0, CONST+1
 # CHECK-EXPAND: lui a0, 1620
 # CHECK-EXPAND: addi a0, a0, 801
 li a0, CONST
+
+.equ CONST, .Lbuf_end - .Lbuf
+# CHECK-ASM: li a0, CONST
+# CHECK-ASM-NOALIAS: addi a0, zero, CONST
+# CHECK-OBJ-NOALIAS: addi a0, zero, 8
+li a0, CONST
+
+# CHECK-ASM: addi a0, zero, .Lbuf_end-.Lbuf
+# CHECK-ASM-NOALIAS: addi a0, zero, .Lbuf_end-.Lbuf
+# CHECK-OBJ-NOALIAS: addi a0, zero, 8
+li a0, .Lbuf_end - .Lbuf
+
+# CHECK-INST: addi a0, zero, 0
+# CHECK-ALIAS: li a0, 0
+la x10, 0
+lla x10, 0
+# CHECK-INST: addi a0, zero, 1
+# CHECK-ALIAS: li a0, 1
+la x10, 1
+lla x10, 1
+# CHECK-INST: addi a0, zero, -1
+# CHECK-ALIAS: li a0, -1
+la x10, -1
+lla x10, -1
+# CHECK-INST: addi a0, zero, 2047
+# CHECK-ALIAS: li a0, 2047
+la x10, 2047
+lla x10, 2047
+# CHECK-INST: addi a0, zero, -2047
+# CHECK-ALIAS: li a0, -2047
+la x10, -2047
+lla x10, -2047
+# CHECK-INST: addi a1, zero, 1
+# CHECK-INST: slli a1, a1, 11
+# CHECK-ALIAS: li a1, 1
+# CHECK-ALIAS: slli a1, a1, 11
+la x11, 2048
+lla x11, 2048
+# CHECK-INST: addi a1, zero, -2048
+# CHECK-ALIAS: li a1, -2048
+la x11, -2048
+lla x11, -2048
+# CHECK-EXPAND: lui a1, 1
+# CHECK-EXPAND: addi a1, a1, -2047
+la x11, 2049
+lla x11, 2049
+# CHECK-EXPAND: lui a1, 1048575
+# CHECK-EXPAND: addi a1, a1, 2047
+la x11, -2049
+lla x11, -2049
+# CHECK-EXPAND: lui a1, 1
+# CHECK-EXPAND: addi a1, a1, -1
+la x11, 4095
+lla x11, 4095
+# CHECK-EXPAND: lui a1, 1048575
+# CHECK-EXPAND: addi a1, a1, 1
+la x11, -4095
+lla x11, -4095
+# CHECK-EXPAND: lui a2, 1
+la x12, 4096
+lla x12, 4096
+# CHECK-EXPAND: lui a2, 1048575
+la x12, -4096
+lla x12, -4096
+# CHECK-EXPAND: lui a2, 1
+# CHECK-EXPAND: addi a2, a2, 1
+la x12, 4097
+lla x12, 4097
+# CHECK-EXPAND: lui a2, 1048575
+# CHECK-EXPAND: addi a2, a2, -1
+la x12, -4097
+lla x12, -4097
+# CHECK-EXPAND: lui a2, 524288
+# CHECK-EXPAND: addi a2, a2, -1
+la x12, 2147483647
+lla x12, 2147483647
+# CHECK-EXPAND: lui a2, 524288
+# CHECK-EXPAND: addi a2, a2, 1
+la x12, -2147483647
+lla x12, -2147483647
+# CHECK-EXPAND: lui a2, 524288
+la x12, -2147483648
+lla x12, -2147483648
+# CHECK-EXPAND: lui a2, 524288
+la x12, -0x80000000
+lla x12, -0x80000000
+
+# CHECK-EXPAND: lui a2, 524288
+la x12, 0x80000000
+lla x12, 0x80000000
+# CHECK-INST: addi a2, zero, -1
+# CHECK-ALIAS: li a2, -1
+la x12, 0xFFFFFFFF
+lla x12, 0xFFFFFFFF
+
+.equ CONSTANT, 0x123456
+# CHECK-EXPAND: lui a0, 291
+# CHECK-EXPAND: addi a0, a0, 1110
+la a0, CONSTANT
+lla a0, CONSTANT
+# CHECK-EXPAND: lui a0, 291
+# CHECK-EXPAND: addi a0, a0, 1111
+la a0, CONSTANT+1
+lla a0, CONSTANT+1
+
+.equ CONSTANT, 0x654321
+# CHECK-EXPAND: lui a0, 1620
+# CHECK-EXPAND: addi a0, a0, 801
+la a0, CONSTANT
+lla a0, CONSTANT
 
 # CHECK-INST: csrrs t4, instreth, zero
 # CHECK-ALIAS: rdinstreth t4

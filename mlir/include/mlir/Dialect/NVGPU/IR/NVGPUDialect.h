@@ -13,10 +13,18 @@
 #ifndef MLIR_DIALECT_NVGPU_NVGPUDIALECT_H_
 #define MLIR_DIALECT_NVGPU_NVGPUDIALECT_H_
 
+#include "mlir/Bytecode/BytecodeOpInterface.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
+
+#include "mlir/Dialect/NVGPU/IR/NVGPUEnums.h.inc"
+
+constexpr int kWarpSize = 32;
+
+#define GET_ATTRDEF_CLASSES
+#include "mlir/Dialect/NVGPU/IR/NVGPUAttrDefs.h.inc"
 
 #define GET_TYPEDEF_CLASSES
 #include "mlir/Dialect/NVGPU/IR/NVGPUTypes.h.inc"

@@ -23,9 +23,9 @@
 template<CopyCategory CC>
 struct BidirSizedRange : std::ranges::view_base {
   int *ptr_;
-  size_t size_;
+  std::size_t size_;
 
-  constexpr BidirSizedRange(int *ptr, size_t size) : ptr_(ptr), size_(size) {}
+  constexpr BidirSizedRange(int *ptr, std::size_t size) : ptr_(ptr), size_(size) {}
   constexpr BidirSizedRange(const BidirSizedRange &) requires (CC == Copyable) = default;
   constexpr BidirSizedRange(BidirSizedRange &&) requires (CC == MoveOnly) = default;
   constexpr BidirSizedRange& operator=(const BidirSizedRange &) requires (CC == Copyable) = default;
@@ -36,7 +36,7 @@ struct BidirSizedRange : std::ranges::view_base {
   constexpr bidirectional_iterator<int*> end() { return bidirectional_iterator<int*>{ptr_ + 8}; }
   constexpr bidirectional_iterator<const int*> end() const { return bidirectional_iterator<const int*>{ptr_ + 8}; }
 
-  constexpr size_t size() const { return size_; }
+  constexpr std::size_t size() const { return size_; }
 };
 
 constexpr bool test() {
@@ -49,8 +49,8 @@ constexpr bool test() {
     assert(rev.size() == 4);
     assert(std::move(rev).size() == 4);
 
-    ASSERT_SAME_TYPE(decltype(rev.size()), size_t);
-    ASSERT_SAME_TYPE(decltype(std::move(rev).size()), size_t);
+    ASSERT_SAME_TYPE(decltype(rev.size()), std::size_t);
+    ASSERT_SAME_TYPE(decltype(std::move(rev).size()), std::size_t);
   }
   // Non-common, const bidirectional range.
   {
@@ -59,15 +59,15 @@ constexpr bool test() {
     assert(rev.size() == 4);
     assert(std::move(rev).size() == 4);
 
-    ASSERT_SAME_TYPE(decltype(rev.size()), size_t);
-    ASSERT_SAME_TYPE(decltype(std::move(rev).size()), size_t);
+    ASSERT_SAME_TYPE(decltype(rev.size()), std::size_t);
+    ASSERT_SAME_TYPE(decltype(std::move(rev).size()), std::size_t);
   }
   // Non-common, non-const (move only) bidirectional range.
   {
     auto rev = std::ranges::reverse_view(BidirSizedRange<MoveOnly>{buffer, 4});
     assert(std::move(rev).size() == 4);
 
-    ASSERT_SAME_TYPE(decltype(std::move(rev).size()), size_t);
+    ASSERT_SAME_TYPE(decltype(std::move(rev).size()), std::size_t);
   }
 
   return true;

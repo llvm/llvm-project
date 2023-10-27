@@ -26,11 +26,8 @@ define <4 x i32> @vec_select(<4 x i32> %a, <4 x i32> %b) {
 define <4 x i32> @vec_select_alternate_sign_bit_test(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: @vec_select_alternate_sign_bit_test(
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nsw <4 x i32> zeroinitializer, [[A:%.*]]
-; CHECK-NEXT:    [[ISNEG1:%.*]] = icmp slt <4 x i32> [[B:%.*]], zeroinitializer
-; CHECK-NEXT:    [[T2:%.*]] = select <4 x i1> [[ISNEG1]], <4 x i32> [[A]], <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[ISNEG:%.*]] = icmp slt <4 x i32> [[B]], zeroinitializer
-; CHECK-NEXT:    [[T3:%.*]] = select <4 x i1> [[ISNEG]], <4 x i32> zeroinitializer, <4 x i32> [[SUB]]
-; CHECK-NEXT:    [[COND:%.*]] = or <4 x i32> [[T2]], [[T3]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt <4 x i32> [[B:%.*]], zeroinitializer
+; CHECK-NEXT:    [[COND:%.*]] = select <4 x i1> [[CMP1]], <4 x i32> [[A]], <4 x i32> [[SUB]]
 ; CHECK-NEXT:    ret <4 x i32> [[COND]]
 ;
   %cmp = icmp sgt <4 x i32> %b, <i32 -1, i32 -1, i32 -1, i32 -1>
@@ -58,9 +55,9 @@ define <2 x i32> @is_negative_undef_elt(<2 x i32> %a) {
 
 define <2 x i32> @is_positive_undef_elt(<2 x i32> %a) {
 ; CHECK-LABEL: @is_positive_undef_elt(
-; CHECK-NEXT:    [[A_LOBIT:%.*]] = ashr <2 x i32> [[A:%.*]], <i32 31, i32 31>
-; CHECK-NEXT:    [[A_LOBIT_NOT:%.*]] = xor <2 x i32> [[A_LOBIT]], <i32 -1, i32 -1>
-; CHECK-NEXT:    ret <2 x i32> [[A_LOBIT_NOT]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt <2 x i32> [[A:%.*]], <i32 undef, i32 -1>
+; CHECK-NEXT:    [[SEXT:%.*]] = sext <2 x i1> [[CMP]] to <2 x i32>
+; CHECK-NEXT:    ret <2 x i32> [[SEXT]]
 ;
   %cmp = icmp sgt <2 x i32> %a, <i32 undef, i32 -1>
   %sext = sext <2 x i1> %cmp to <2 x i32>

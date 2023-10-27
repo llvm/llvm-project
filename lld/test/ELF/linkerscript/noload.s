@@ -19,10 +19,10 @@
 
 ## The output SHT_PROBITS is contrary to the user expectation of SHT_NOBITS.
 ## Issue a warning. See https://github.com/ClangBuiltLinux/linux/issues/1597
-# RUN: ld.lld --script %t/lds %t.o %t/mismatch.o -o %t/out 2>&1 | FileCheck %s --check-prefix=WARN
+# RUN: ld.lld --script %t/lds %t.o %t/mismatch.o -o %t/out 2>&1 | FileCheck %s --check-prefix=WARN --allow-empty
 # RUN: llvm-readelf -S -l %t/out | FileCheck %s --check-prefix=CHECK2
 
-# WARN:   warning: section type mismatch for .data_noload_a
+# WARN-NOT:   warning:
 # CHECK2:      Name                 Type     Address          Off               Size
 # CHECK2:      .data_noload_a       NOBITS   0000000000000000 [[OFF:[0-9a-f]+]] 001001
 
@@ -45,5 +45,8 @@ SECTIONS {
   .data_noload_a (NOLOAD) : { *(.data_noload_a) }
   .data_noload_b (0x10000) (NOLOAD) : { *(.data_noload_b) }
   .no_input_sec_noload (NOLOAD) : { . += 1; }
-  .text (0x20000) : { *(.text) }
+  .text (0x20000) : {
+    *(.text);
+    _start = .;
+  }
 }

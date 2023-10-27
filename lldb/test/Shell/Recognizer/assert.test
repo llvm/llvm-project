@@ -9,7 +9,6 @@
 # RUN: %lldb -b -s %s %t.out | FileCheck %s
 run
 # CHECK: thread #{{.*}}stop reason = hit program assert
-frame info
 # CHECK: frame #{{.*}}`main at assert.c
 frame recognizer info 0
 # CHECK: frame 0 is recognized by Assert StackFrame Recognizer

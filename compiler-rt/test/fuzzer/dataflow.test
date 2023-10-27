@@ -97,6 +97,11 @@ L20_FUZZM-NEXT: F1 00000000000000001000{{$}}
 L20_FUZZM-NEXT: F2 00000000000000000001{{$}}
 L20_FUZZM-NOT: F
 
+# Don't crash with missing data_flow args.
+RUN: rm -rf %t-DFT
+RUN: %t-ThreeFunctionsTest -collect_data_flow=%t-ThreeFunctionsTestDF
+RUN: %t-ThreeFunctionsTest -data_flow_trace=%t-DFT %t/IN/FUZZMU
+
 # Test libFuzzer's built in DFT collection.
 RUN: rm -rf %t-DFT
 RUN: %t-ThreeFunctionsTest  -collect_data_flow=%t-ThreeFunctionsTestDF -data_flow_trace=%t-DFT %t/IN/FUZZMU

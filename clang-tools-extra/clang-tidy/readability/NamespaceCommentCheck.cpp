@@ -23,11 +23,12 @@ namespace clang::tidy::readability {
 NamespaceCommentCheck::NamespaceCommentCheck(StringRef Name,
                                              ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      NamespaceCommentPattern("^/[/*] *(end (of )?)? *(anonymous|unnamed)? *"
-                              "namespace( +([a-zA-Z0-9_:]+))?\\.? *(\\*/)?$",
-                              llvm::Regex::IgnoreCase),
-      ShortNamespaceLines(Options.get("ShortNamespaceLines", 1u)),
-      SpacesBeforeComments(Options.get("SpacesBeforeComments", 1u)) {}
+      NamespaceCommentPattern(
+          "^/[/*] *(end (of )?)? *(anonymous|unnamed)? *"
+          "namespace( +(((inline )|([a-zA-Z0-9_:]))+))?\\.? *(\\*/)?$",
+          llvm::Regex::IgnoreCase),
+      ShortNamespaceLines(Options.get("ShortNamespaceLines", 1U)),
+      SpacesBeforeComments(Options.get("SpacesBeforeComments", 1U)) {}
 
 void NamespaceCommentCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "ShortNamespaceLines", ShortNamespaceLines);
@@ -67,8 +68,10 @@ getNamespaceNameAsWritten(SourceLocation &Loc, const SourceManager &Sources,
     } else if (Nesting == 0) {
       if (T->is(tok::raw_identifier)) {
         StringRef ID = T->getRawIdentifier();
-        if (ID != "namespace" && ID != "inline")
+        if (ID != "namespace")
           Result.append(std::string(ID));
+        if (ID == "inline")
+          Result.append(" ");
       } else if (T->is(tok::coloncolon)) {
         Result.append("::");
       } else { // Any other kind of token is unexpected here.

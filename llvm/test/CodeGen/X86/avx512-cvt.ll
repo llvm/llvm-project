@@ -180,13 +180,13 @@ define <4 x i64> @f64to4sl(<4 x double> %a) {
 ; NODQ-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; NODQ-NEXT:    vcvttsd2si %xmm1, %rax
 ; NODQ-NEXT:    vmovq %rax, %xmm2
-; NODQ-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm1[1,0]
+; NODQ-NEXT:    vshufpd {{.*#+}} xmm1 = xmm1[1,0]
 ; NODQ-NEXT:    vcvttsd2si %xmm1, %rax
 ; NODQ-NEXT:    vmovq %rax, %xmm1
 ; NODQ-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
 ; NODQ-NEXT:    vcvttsd2si %xmm0, %rax
 ; NODQ-NEXT:    vmovq %rax, %xmm2
-; NODQ-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
+; NODQ-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
 ; NODQ-NEXT:    vcvttsd2si %xmm0, %rax
 ; NODQ-NEXT:    vmovq %rax, %xmm0
 ; NODQ-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm2[0],xmm0[0]
@@ -211,10 +211,10 @@ define <4 x i64> @f64to4sl(<4 x double> %a) {
 define <4 x i64> @f32to4sl(<4 x float> %a) {
 ; NODQ-LABEL: f32to4sl:
 ; NODQ:       # %bb.0:
-; NODQ-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[3,3,3,3]
+; NODQ-NEXT:    vshufps {{.*#+}} xmm1 = xmm0[3,3,3,3]
 ; NODQ-NEXT:    vcvttss2si %xmm1, %rax
 ; NODQ-NEXT:    vmovq %rax, %xmm1
-; NODQ-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm0[1,0]
+; NODQ-NEXT:    vshufpd {{.*#+}} xmm2 = xmm0[1,0]
 ; NODQ-NEXT:    vcvttss2si %xmm2, %rax
 ; NODQ-NEXT:    vmovq %rax, %xmm2
 ; NODQ-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
@@ -424,7 +424,7 @@ define <16 x i8> @f32to16uc(<16 x float> %f) {
 define <16 x i16> @f32to16us(<16 x float> %f) {
 ; ALL-LABEL: f32to16us:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    vcvttps2dq %zmm0, %zmm0
+; ALL-NEXT:    vcvttps2udq %zmm0, %zmm0
 ; ALL-NEXT:    vpmovdw %zmm0, %ymm0
 ; ALL-NEXT:    retq
   %res = fptoui <16 x float> %f to <16 x i16>
@@ -1707,7 +1707,7 @@ define <2 x double> @sbto2f64(<2 x double> %a) {
 ; NOVL:       # %bb.0:
 ; NOVL-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; NOVL-NEXT:    vcmpltpd %xmm0, %xmm1, %xmm0
-; NOVL-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,2,2,3]
+; NOVL-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2,2,3]
 ; NOVL-NEXT:    vcvtdq2pd %xmm0, %xmm0
 ; NOVL-NEXT:    retq
 ;

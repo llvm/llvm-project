@@ -14,28 +14,29 @@
 
 #include <stdarg.h>
 
-#include "utils/UnitTest/ScanfMatcher.h"
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/ScanfMatcher.h"
+#include "test/UnitTest/Test.h"
 
-using __llvm_libc::cpp::string_view;
+using LIBC_NAMESPACE::cpp::string_view;
+using LIBC_NAMESPACE::internal::ArgList;
 
 void init(const char *__restrict str, ...) {
   va_list vlist;
   va_start(vlist, str);
-  __llvm_libc::internal::ArgList v(vlist);
+  ArgList v(vlist);
   va_end(vlist);
 
-  __llvm_libc::scanf_core::Parser parser(str, v);
+  LIBC_NAMESPACE::scanf_core::Parser<ArgList> parser(str, v);
 }
 
-void evaluate(__llvm_libc::scanf_core::FormatSection *format_arr,
+void evaluate(LIBC_NAMESPACE::scanf_core::FormatSection *format_arr,
               const char *__restrict str, ...) {
   va_list vlist;
   va_start(vlist, str);
-  __llvm_libc::internal::ArgList v(vlist);
+  LIBC_NAMESPACE::internal::ArgList v(vlist);
   va_end(vlist);
 
-  __llvm_libc::scanf_core::Parser parser(str, v);
+  LIBC_NAMESPACE::scanf_core::Parser<ArgList> parser(str, v);
 
   for (auto cur_section = parser.get_next_section();
        !cur_section.raw_string.empty();
@@ -48,11 +49,11 @@ void evaluate(__llvm_libc::scanf_core::FormatSection *format_arr,
 TEST(LlvmLibcScanfParserTest, Constructor) { init("test", 1, 2); }
 
 TEST(LlvmLibcScanfParserTest, EvalRaw) {
-  __llvm_libc::scanf_core::FormatSection format_arr[10];
+  LIBC_NAMESPACE::scanf_core::FormatSection format_arr[10];
   const char *str = "test";
   evaluate(format_arr, str);
 
-  __llvm_libc::scanf_core::FormatSection expected;
+  LIBC_NAMESPACE::scanf_core::FormatSection expected;
   expected.has_conv = false;
 
   expected.raw_string = str;
@@ -62,11 +63,11 @@ TEST(LlvmLibcScanfParserTest, EvalRaw) {
 }
 
 TEST(LlvmLibcScanfParserTest, EvalSimple) {
-  __llvm_libc::scanf_core::FormatSection format_arr[10];
+  LIBC_NAMESPACE::scanf_core::FormatSection format_arr[10];
   const char *str = "test %% test";
   evaluate(format_arr, str);
 
-  __llvm_libc::scanf_core::FormatSection expected0, expected1, expected2;
+  LIBC_NAMESPACE::scanf_core::FormatSection expected0, expected1, expected2;
   expected0.has_conv = false;
 
   expected0.raw_string = {str, 5};
@@ -88,12 +89,12 @@ TEST(LlvmLibcScanfParserTest, EvalSimple) {
 }
 
 TEST(LlvmLibcScanfParserTest, EvalOneArg) {
-  __llvm_libc::scanf_core::FormatSection format_arr[10];
+  LIBC_NAMESPACE::scanf_core::FormatSection format_arr[10];
   const char *str = "%d";
   int arg1 = 12345;
   evaluate(format_arr, str, &arg1);
 
-  __llvm_libc::scanf_core::FormatSection expected;
+  LIBC_NAMESPACE::scanf_core::FormatSection expected;
   expected.has_conv = true;
 
   expected.raw_string = str;
@@ -104,12 +105,12 @@ TEST(LlvmLibcScanfParserTest, EvalOneArg) {
 }
 
 TEST(LlvmLibcScanfParserTest, EvalBadArg) {
-  __llvm_libc::scanf_core::FormatSection format_arr[10];
+  LIBC_NAMESPACE::scanf_core::FormatSection format_arr[10];
   const char *str = "%\0abc";
   int arg1 = 12345;
   evaluate(format_arr, str, &arg1);
 
-  __llvm_libc::scanf_core::FormatSection expected;
+  LIBC_NAMESPACE::scanf_core::FormatSection expected;
   expected.has_conv = false;
   expected.raw_string = {str, 1};
 
@@ -117,7 +118,7 @@ TEST(LlvmLibcScanfParserTest, EvalBadArg) {
 }
 
 TEST(LlvmLibcScanfParserTest, EvalOneArgWithFlag) {
-  __llvm_libc::scanf_core::FormatSection format_arr[10];
+  LIBC_NAMESPACE::scanf_core::FormatSection format_arr[10];
   const char *str = "%*d";
   // Since NO_WRITE is set, the argument shouldn't be used, but I've included
   // one anyways because in the case that it doesn't work it's better for it to
@@ -125,11 +126,11 @@ TEST(LlvmLibcScanfParserTest, EvalOneArgWithFlag) {
   int arg1 = 12345;
   evaluate(format_arr, str, &arg1);
 
-  __llvm_libc::scanf_core::FormatSection expected;
+  LIBC_NAMESPACE::scanf_core::FormatSection expected;
   expected.has_conv = true;
 
   expected.raw_string = str;
-  expected.flags = __llvm_libc::scanf_core::FormatFlags::NO_WRITE;
+  expected.flags = LIBC_NAMESPACE::scanf_core::FormatFlags::NO_WRITE;
   expected.conv_name = 'd';
 
   ASSERT_SFORMAT_EQ(expected, format_arr[0]);
@@ -141,12 +142,12 @@ TEST(LlvmLibcScanfParserTest, EvalOneArgWithFlag) {
 }
 
 TEST(LlvmLibcScanfParserTest, EvalOneArgWithWidth) {
-  __llvm_libc::scanf_core::FormatSection format_arr[10];
+  LIBC_NAMESPACE::scanf_core::FormatSection format_arr[10];
   const char *str = "%12d";
   int arg1 = 12345;
   evaluate(format_arr, str, &arg1);
 
-  __llvm_libc::scanf_core::FormatSection expected;
+  LIBC_NAMESPACE::scanf_core::FormatSection expected;
   expected.has_conv = true;
 
   expected.raw_string = str;
@@ -158,16 +159,16 @@ TEST(LlvmLibcScanfParserTest, EvalOneArgWithWidth) {
 }
 
 TEST(LlvmLibcScanfParserTest, EvalOneArgWithShortLengthModifier) {
-  __llvm_libc::scanf_core::FormatSection format_arr[10];
+  LIBC_NAMESPACE::scanf_core::FormatSection format_arr[10];
   const char *str = "%hd";
   int arg1 = 12345;
   evaluate(format_arr, str, &arg1);
 
-  __llvm_libc::scanf_core::FormatSection expected;
+  LIBC_NAMESPACE::scanf_core::FormatSection expected;
   expected.has_conv = true;
 
   expected.raw_string = str;
-  expected.length_modifier = __llvm_libc::scanf_core::LengthModifier::h;
+  expected.length_modifier = LIBC_NAMESPACE::scanf_core::LengthModifier::h;
   expected.output_ptr = &arg1;
   expected.conv_name = 'd';
 
@@ -175,16 +176,16 @@ TEST(LlvmLibcScanfParserTest, EvalOneArgWithShortLengthModifier) {
 }
 
 TEST(LlvmLibcScanfParserTest, EvalOneArgWithLongLengthModifier) {
-  __llvm_libc::scanf_core::FormatSection format_arr[10];
+  LIBC_NAMESPACE::scanf_core::FormatSection format_arr[10];
   const char *str = "%lld";
   long long arg1 = 12345;
   evaluate(format_arr, str, &arg1);
 
-  __llvm_libc::scanf_core::FormatSection expected;
+  LIBC_NAMESPACE::scanf_core::FormatSection expected;
   expected.has_conv = true;
 
   expected.raw_string = str;
-  expected.length_modifier = __llvm_libc::scanf_core::LengthModifier::ll;
+  expected.length_modifier = LIBC_NAMESPACE::scanf_core::LengthModifier::ll;
   expected.output_ptr = &arg1;
   expected.conv_name = 'd';
 
@@ -192,37 +193,37 @@ TEST(LlvmLibcScanfParserTest, EvalOneArgWithLongLengthModifier) {
 }
 
 TEST(LlvmLibcScanfParserTest, EvalOneArgWithAllOptions) {
-  __llvm_libc::scanf_core::FormatSection format_arr[10];
+  LIBC_NAMESPACE::scanf_core::FormatSection format_arr[10];
   const char *str = "%*56jd";
   intmax_t arg1 = 12345;
   evaluate(format_arr, str, &arg1);
 
-  __llvm_libc::scanf_core::FormatSection expected;
+  LIBC_NAMESPACE::scanf_core::FormatSection expected;
   expected.has_conv = true;
 
   expected.raw_string = str;
-  expected.flags = __llvm_libc::scanf_core::FormatFlags::NO_WRITE;
+  expected.flags = LIBC_NAMESPACE::scanf_core::FormatFlags::NO_WRITE;
   expected.max_width = 56;
-  expected.length_modifier = __llvm_libc::scanf_core::LengthModifier::j;
+  expected.length_modifier = LIBC_NAMESPACE::scanf_core::LengthModifier::j;
   expected.conv_name = 'd';
 
   ASSERT_SFORMAT_EQ(expected, format_arr[0]);
 }
 
 TEST(LlvmLibcScanfParserTest, EvalSimpleBracketArg) {
-  __llvm_libc::scanf_core::FormatSection format_arr[10];
+  LIBC_NAMESPACE::scanf_core::FormatSection format_arr[10];
   const char *str = "%[abc]";
   char arg1 = 'a';
   evaluate(format_arr, str, &arg1);
 
-  __llvm_libc::scanf_core::FormatSection expected;
+  LIBC_NAMESPACE::scanf_core::FormatSection expected;
   expected.has_conv = true;
 
   expected.raw_string = str;
   expected.conv_name = '[';
   expected.output_ptr = &arg1;
 
-  __llvm_libc::cpp::bitset<256> scan_set;
+  LIBC_NAMESPACE::cpp::bitset<256> scan_set;
 
   scan_set.set('a');
   scan_set.set('b');
@@ -234,19 +235,19 @@ TEST(LlvmLibcScanfParserTest, EvalSimpleBracketArg) {
 }
 
 TEST(LlvmLibcScanfParserTest, EvalBracketArgRange) {
-  __llvm_libc::scanf_core::FormatSection format_arr[10];
+  LIBC_NAMESPACE::scanf_core::FormatSection format_arr[10];
   const char *str = "%[A-D]";
   char arg1 = 'a';
   evaluate(format_arr, str, &arg1);
 
-  __llvm_libc::scanf_core::FormatSection expected;
+  LIBC_NAMESPACE::scanf_core::FormatSection expected;
   expected.has_conv = true;
 
   expected.raw_string = str;
   expected.conv_name = '[';
   expected.output_ptr = &arg1;
 
-  __llvm_libc::cpp::bitset<256> scan_set;
+  LIBC_NAMESPACE::cpp::bitset<256> scan_set;
 
   scan_set.set('A');
   scan_set.set('B');
@@ -259,19 +260,19 @@ TEST(LlvmLibcScanfParserTest, EvalBracketArgRange) {
 }
 
 TEST(LlvmLibcScanfParserTest, EvalBracketArgTwoRanges) {
-  __llvm_libc::scanf_core::FormatSection format_arr[10];
+  LIBC_NAMESPACE::scanf_core::FormatSection format_arr[10];
   const char *str = "%[A-De-g]";
   char arg1 = 'a';
   evaluate(format_arr, str, &arg1);
 
-  __llvm_libc::scanf_core::FormatSection expected;
+  LIBC_NAMESPACE::scanf_core::FormatSection expected;
   expected.has_conv = true;
 
   expected.raw_string = str;
   expected.conv_name = '[';
   expected.output_ptr = &arg1;
 
-  __llvm_libc::cpp::bitset<256> scan_set;
+  LIBC_NAMESPACE::cpp::bitset<256> scan_set;
 
   scan_set.set('A');
   scan_set.set('B');
@@ -285,19 +286,19 @@ TEST(LlvmLibcScanfParserTest, EvalBracketArgTwoRanges) {
 }
 
 TEST(LlvmLibcScanfParserTest, EvalBracketArgJustHyphen) {
-  __llvm_libc::scanf_core::FormatSection format_arr[10];
+  LIBC_NAMESPACE::scanf_core::FormatSection format_arr[10];
   const char *str = "%[-]";
   char arg1 = 'a';
   evaluate(format_arr, str, &arg1);
 
-  __llvm_libc::scanf_core::FormatSection expected;
+  LIBC_NAMESPACE::scanf_core::FormatSection expected;
   expected.has_conv = true;
 
   expected.raw_string = str;
   expected.conv_name = '[';
   expected.output_ptr = &arg1;
 
-  __llvm_libc::cpp::bitset<256> scan_set;
+  LIBC_NAMESPACE::cpp::bitset<256> scan_set;
 
   scan_set.set('-');
 
@@ -307,19 +308,19 @@ TEST(LlvmLibcScanfParserTest, EvalBracketArgJustHyphen) {
 }
 
 TEST(LlvmLibcScanfParserTest, EvalBracketArgLeftHyphen) {
-  __llvm_libc::scanf_core::FormatSection format_arr[10];
+  LIBC_NAMESPACE::scanf_core::FormatSection format_arr[10];
   const char *str = "%[-A]";
   char arg1 = 'a';
   evaluate(format_arr, str, &arg1);
 
-  __llvm_libc::scanf_core::FormatSection expected;
+  LIBC_NAMESPACE::scanf_core::FormatSection expected;
   expected.has_conv = true;
 
   expected.raw_string = str;
   expected.conv_name = '[';
   expected.output_ptr = &arg1;
 
-  __llvm_libc::cpp::bitset<256> scan_set;
+  LIBC_NAMESPACE::cpp::bitset<256> scan_set;
 
   scan_set.set('-');
   scan_set.set('A');
@@ -330,19 +331,19 @@ TEST(LlvmLibcScanfParserTest, EvalBracketArgLeftHyphen) {
 }
 
 TEST(LlvmLibcScanfParserTest, EvalBracketArgRightHyphen) {
-  __llvm_libc::scanf_core::FormatSection format_arr[10];
+  LIBC_NAMESPACE::scanf_core::FormatSection format_arr[10];
   const char *str = "%[Z-]";
   char arg1 = 'a';
   evaluate(format_arr, str, &arg1);
 
-  __llvm_libc::scanf_core::FormatSection expected;
+  LIBC_NAMESPACE::scanf_core::FormatSection expected;
   expected.has_conv = true;
 
   expected.raw_string = str;
   expected.conv_name = '[';
   expected.output_ptr = &arg1;
 
-  __llvm_libc::cpp::bitset<256> scan_set;
+  LIBC_NAMESPACE::cpp::bitset<256> scan_set;
 
   scan_set.set('-');
   scan_set.set('Z');
@@ -353,19 +354,19 @@ TEST(LlvmLibcScanfParserTest, EvalBracketArgRightHyphen) {
 }
 
 TEST(LlvmLibcScanfParserTest, EvalBracketArgInvertSimple) {
-  __llvm_libc::scanf_core::FormatSection format_arr[10];
+  LIBC_NAMESPACE::scanf_core::FormatSection format_arr[10];
   const char *str = "%[^abc]";
   char arg1 = 'a';
   evaluate(format_arr, str, &arg1);
 
-  __llvm_libc::scanf_core::FormatSection expected;
+  LIBC_NAMESPACE::scanf_core::FormatSection expected;
   expected.has_conv = true;
 
   expected.raw_string = str;
   expected.conv_name = '[';
   expected.output_ptr = &arg1;
 
-  __llvm_libc::cpp::bitset<256> scan_set;
+  LIBC_NAMESPACE::cpp::bitset<256> scan_set;
 
   scan_set.set('a');
   scan_set.set('b');
@@ -378,19 +379,19 @@ TEST(LlvmLibcScanfParserTest, EvalBracketArgInvertSimple) {
 }
 
 TEST(LlvmLibcScanfParserTest, EvalBracketArgInvertRange) {
-  __llvm_libc::scanf_core::FormatSection format_arr[10];
+  LIBC_NAMESPACE::scanf_core::FormatSection format_arr[10];
   const char *str = "%[^0-9]";
   char arg1 = 'a';
   evaluate(format_arr, str, &arg1);
 
-  __llvm_libc::scanf_core::FormatSection expected;
+  LIBC_NAMESPACE::scanf_core::FormatSection expected;
   expected.has_conv = true;
 
   expected.raw_string = str;
   expected.conv_name = '[';
   expected.output_ptr = &arg1;
 
-  __llvm_libc::cpp::bitset<256> scan_set;
+  LIBC_NAMESPACE::cpp::bitset<256> scan_set;
 
   scan_set.set_range('0', '9');
   scan_set.flip();
@@ -401,19 +402,19 @@ TEST(LlvmLibcScanfParserTest, EvalBracketArgInvertRange) {
 }
 
 TEST(LlvmLibcScanfParserTest, EvalBracketArgRightBracket) {
-  __llvm_libc::scanf_core::FormatSection format_arr[10];
+  LIBC_NAMESPACE::scanf_core::FormatSection format_arr[10];
   const char *str = "%[]]";
   char arg1 = 'a';
   evaluate(format_arr, str, &arg1);
 
-  __llvm_libc::scanf_core::FormatSection expected;
+  LIBC_NAMESPACE::scanf_core::FormatSection expected;
   expected.has_conv = true;
 
   expected.raw_string = str;
   expected.conv_name = '[';
   expected.output_ptr = &arg1;
 
-  __llvm_libc::cpp::bitset<256> scan_set;
+  LIBC_NAMESPACE::cpp::bitset<256> scan_set;
 
   scan_set.set(']');
 
@@ -423,19 +424,19 @@ TEST(LlvmLibcScanfParserTest, EvalBracketArgRightBracket) {
 }
 
 TEST(LlvmLibcScanfParserTest, EvalBracketArgRightBracketRange) {
-  __llvm_libc::scanf_core::FormatSection format_arr[10];
+  LIBC_NAMESPACE::scanf_core::FormatSection format_arr[10];
   const char *str = "%[]-a]";
   char arg1 = 'a';
   evaluate(format_arr, str, &arg1);
 
-  __llvm_libc::scanf_core::FormatSection expected;
+  LIBC_NAMESPACE::scanf_core::FormatSection expected;
   expected.has_conv = true;
 
   expected.raw_string = str;
   expected.conv_name = '[';
   expected.output_ptr = &arg1;
 
-  __llvm_libc::cpp::bitset<256> scan_set;
+  LIBC_NAMESPACE::cpp::bitset<256> scan_set;
 
   scan_set.set_range(']', 'a');
 
@@ -445,19 +446,19 @@ TEST(LlvmLibcScanfParserTest, EvalBracketArgRightBracketRange) {
 }
 
 TEST(LlvmLibcScanfParserTest, EvalBracketArgRightBracketInvert) {
-  __llvm_libc::scanf_core::FormatSection format_arr[10];
+  LIBC_NAMESPACE::scanf_core::FormatSection format_arr[10];
   const char *str = "%[^]]";
   char arg1 = 'a';
   evaluate(format_arr, str, &arg1);
 
-  __llvm_libc::scanf_core::FormatSection expected;
+  LIBC_NAMESPACE::scanf_core::FormatSection expected;
   expected.has_conv = true;
 
   expected.raw_string = str;
   expected.conv_name = '[';
   expected.output_ptr = &arg1;
 
-  __llvm_libc::cpp::bitset<256> scan_set;
+  LIBC_NAMESPACE::cpp::bitset<256> scan_set;
 
   scan_set.set(']');
   scan_set.flip();
@@ -468,19 +469,19 @@ TEST(LlvmLibcScanfParserTest, EvalBracketArgRightBracketInvert) {
 }
 
 TEST(LlvmLibcScanfParserTest, EvalBracketArgRightBracketInvertRange) {
-  __llvm_libc::scanf_core::FormatSection format_arr[10];
+  LIBC_NAMESPACE::scanf_core::FormatSection format_arr[10];
   const char *str = "%[^]-^]";
   char arg1 = 'a';
   evaluate(format_arr, str, &arg1);
 
-  __llvm_libc::scanf_core::FormatSection expected;
+  LIBC_NAMESPACE::scanf_core::FormatSection expected;
   expected.has_conv = true;
 
   expected.raw_string = str;
   expected.conv_name = '[';
   expected.output_ptr = &arg1;
 
-  __llvm_libc::cpp::bitset<256> scan_set;
+  LIBC_NAMESPACE::cpp::bitset<256> scan_set;
 
   scan_set.set_range(']', '^');
   scan_set.flip();
@@ -494,19 +495,19 @@ TEST(LlvmLibcScanfParserTest, EvalBracketArgRightBracketInvertRange) {
 // implementation defined, and I have defined it such that it will capture the
 // correct range regardless of the order of the characters.
 TEST(LlvmLibcScanfParserTest, EvalBracketArgBackwardsRange) {
-  __llvm_libc::scanf_core::FormatSection format_arr[10];
+  LIBC_NAMESPACE::scanf_core::FormatSection format_arr[10];
   const char *str = "%[9-0]";
   char arg1 = 'a';
   evaluate(format_arr, str, &arg1);
 
-  __llvm_libc::scanf_core::FormatSection expected;
+  LIBC_NAMESPACE::scanf_core::FormatSection expected;
   expected.has_conv = true;
 
   expected.raw_string = str;
   expected.conv_name = '[';
   expected.output_ptr = &arg1;
 
-  __llvm_libc::cpp::bitset<256> scan_set;
+  LIBC_NAMESPACE::cpp::bitset<256> scan_set;
 
   scan_set.set_range('0', '9');
 
@@ -516,14 +517,14 @@ TEST(LlvmLibcScanfParserTest, EvalBracketArgBackwardsRange) {
 }
 
 TEST(LlvmLibcScanfParserTest, EvalThreeArgs) {
-  __llvm_libc::scanf_core::FormatSection format_arr[10];
+  LIBC_NAMESPACE::scanf_core::FormatSection format_arr[10];
   const char *str = "%d%f%s";
   int arg1 = 12345;
   double arg2 = 123.45;
   const char *arg3 = "12345";
   evaluate(format_arr, str, &arg1, &arg2, &arg3);
 
-  __llvm_libc::scanf_core::FormatSection expected0, expected1, expected2;
+  LIBC_NAMESPACE::scanf_core::FormatSection expected0, expected1, expected2;
   expected0.has_conv = true;
 
   expected0.raw_string = {str, 2};
@@ -549,15 +550,15 @@ TEST(LlvmLibcScanfParserTest, EvalThreeArgs) {
   ASSERT_SFORMAT_EQ(expected2, format_arr[2]);
 }
 
-#ifndef LLVM_LIBC_SCANF_DISABLE_INDEX_MODE
+#ifndef LIBC_COPT_SCANF_DISABLE_INDEX_MODE
 
 TEST(LlvmLibcScanfParserTest, IndexModeOneArg) {
-  __llvm_libc::scanf_core::FormatSection format_arr[10];
+  LIBC_NAMESPACE::scanf_core::FormatSection format_arr[10];
   const char *str = "%1$d";
   int arg1 = 12345;
   evaluate(format_arr, str, &arg1);
 
-  __llvm_libc::scanf_core::FormatSection expected;
+  LIBC_NAMESPACE::scanf_core::FormatSection expected;
   expected.has_conv = true;
 
   expected.raw_string = {str, 4};
@@ -568,14 +569,14 @@ TEST(LlvmLibcScanfParserTest, IndexModeOneArg) {
 }
 
 TEST(LlvmLibcScanfParserTest, IndexModeThreeArgsSequential) {
-  __llvm_libc::scanf_core::FormatSection format_arr[10];
+  LIBC_NAMESPACE::scanf_core::FormatSection format_arr[10];
   const char *str = "%1$d%2$f%3$s";
   int arg1 = 12345;
   double arg2 = 123.45;
   const char *arg3 = "12345";
   evaluate(format_arr, str, &arg1, &arg2, &arg3);
 
-  __llvm_libc::scanf_core::FormatSection expected0, expected1, expected2;
+  LIBC_NAMESPACE::scanf_core::FormatSection expected0, expected1, expected2;
   expected0.has_conv = true;
 
   expected0.raw_string = {str, 4};
@@ -602,14 +603,14 @@ TEST(LlvmLibcScanfParserTest, IndexModeThreeArgsSequential) {
 }
 
 TEST(LlvmLibcScanfParserTest, IndexModeThreeArgsReverse) {
-  __llvm_libc::scanf_core::FormatSection format_arr[10];
+  LIBC_NAMESPACE::scanf_core::FormatSection format_arr[10];
   const char *str = "%3$d%2$f%1$s";
   int arg1 = 12345;
   double arg2 = 123.45;
   const char *arg3 = "12345";
   evaluate(format_arr, str, &arg3, &arg2, &arg1);
 
-  __llvm_libc::scanf_core::FormatSection expected0, expected1, expected2;
+  LIBC_NAMESPACE::scanf_core::FormatSection expected0, expected1, expected2;
   expected0.has_conv = true;
 
   expected0.raw_string = {str, 4};
@@ -636,14 +637,14 @@ TEST(LlvmLibcScanfParserTest, IndexModeThreeArgsReverse) {
 }
 
 TEST(LlvmLibcScanfParserTest, IndexModeTenArgsRandom) {
-  __llvm_libc::scanf_core::FormatSection format_arr[10];
+  LIBC_NAMESPACE::scanf_core::FormatSection format_arr[10];
   const char *str = "%6$d%3$d%7$d%2$d%8$d%1$d%4$d%9$d%5$d%10$d";
   uintptr_t args[10] = {6, 4, 2, 7, 9, 1, 3, 5, 8, 10};
   evaluate(format_arr, str, args[0], args[1], args[2], args[3], args[4],
            args[5], args[6], args[7], args[8], args[9]);
 
   for (size_t i = 0; i < 10; ++i) {
-    __llvm_libc::scanf_core::FormatSection expected;
+    LIBC_NAMESPACE::scanf_core::FormatSection expected;
     expected.has_conv = true;
 
     expected.raw_string = {str + (4 * i),
@@ -655,7 +656,7 @@ TEST(LlvmLibcScanfParserTest, IndexModeTenArgsRandom) {
 }
 
 TEST(LlvmLibcScanfParserTest, IndexModeComplexParsing) {
-  __llvm_libc::scanf_core::FormatSection format_arr[11];
+  LIBC_NAMESPACE::scanf_core::FormatSection format_arr[11];
   const char *str = "normal text %3$llu %% %2$*f %4$d %1$1c%5$[123]";
   char arg1 = '1';
   double arg2 = 123.45;
@@ -664,7 +665,7 @@ TEST(LlvmLibcScanfParserTest, IndexModeComplexParsing) {
   char arg5 = 'A';
   evaluate(format_arr, str, &arg1, &arg2, &arg3, &arg4, &arg5);
 
-  __llvm_libc::scanf_core::FormatSection expected0, expected1, expected2,
+  LIBC_NAMESPACE::scanf_core::FormatSection expected0, expected1, expected2,
       expected3, expected4, expected5, expected6, expected7, expected8,
       expected9, expected10;
 
@@ -678,7 +679,7 @@ TEST(LlvmLibcScanfParserTest, IndexModeComplexParsing) {
   expected1.has_conv = true;
   // "%3$llu"
   expected1.raw_string = {str + 12, 6};
-  expected1.length_modifier = __llvm_libc::scanf_core::LengthModifier::ll;
+  expected1.length_modifier = LIBC_NAMESPACE::scanf_core::LengthModifier::ll;
   expected1.output_ptr = &arg3;
   expected1.conv_name = 'u';
 
@@ -706,7 +707,7 @@ TEST(LlvmLibcScanfParserTest, IndexModeComplexParsing) {
   expected5.has_conv = true;
   // "%2$*f"
   expected5.raw_string = {str + 22, 5};
-  expected5.flags = __llvm_libc::scanf_core::FormatFlags::NO_WRITE;
+  expected5.flags = LIBC_NAMESPACE::scanf_core::FormatFlags::NO_WRITE;
   expected5.conv_name = 'f';
 
   EXPECT_SFORMAT_EQ(expected5, format_arr[5]);
@@ -747,7 +748,7 @@ TEST(LlvmLibcScanfParserTest, IndexModeComplexParsing) {
   expected10.output_ptr = &arg5;
   expected10.conv_name = '[';
 
-  __llvm_libc::cpp::bitset<256> scan_set;
+  LIBC_NAMESPACE::cpp::bitset<256> scan_set;
 
   scan_set.set_range('1', '3');
 
@@ -756,4 +757,4 @@ TEST(LlvmLibcScanfParserTest, IndexModeComplexParsing) {
   EXPECT_SFORMAT_EQ(expected10, format_arr[10]);
 }
 
-#endif // LLVM_LIBC_SCANF_DISABLE_INDEX_MODE
+#endif // LIBC_COPT_SCANF_DISABLE_INDEX_MODE

@@ -228,10 +228,13 @@ def FeatureFuseAES        : SubtargetFeature<"fuse-aes", "HasFuseAES", "true",
 def FeatureFuseLiterals   : SubtargetFeature<"fuse-literals", "HasFuseLiterals", "true",
                                              "CPU fuses literal generation operations">;
 
-// The way of reading thread pointer.
-// True if read thread pointer from coprocessor register.
-def FeatureReadTp :  SubtargetFeature<"read-tp-hard", "IsReadTPHard", "true",
-                                      "Reading thread pointer from register">;
+// Choice of hardware register to use as the thread pointer, if any.
+def FeatureReadTpTPIDRURW :  SubtargetFeature<"read-tp-tpidrurw", "IsReadTPTPIDRURW", "true",
+                                      "Reading thread pointer from TPIDRURW register">;
+def FeatureReadTpTPIDRURO :  SubtargetFeature<"read-tp-tpidruro", "IsReadTPTPIDRURO", "true",
+                                      "Reading thread pointer from TPIDRURO register">;
+def FeatureReadTpTPIDRPRW :  SubtargetFeature<"read-tp-tpidrprw", "IsReadTPTPIDRPRW", "true",
+                                      "Reading thread pointer from TPIDRPRW register">;
 
 // Cyclone can zero VFP registers in 0 cycles.
 // True if the instructions "vmov.i32 d0, #0" and "vmov.i32 q0, #0" are
@@ -1224,6 +1227,7 @@ include "ARMScheduleA57.td"
 include "ARMScheduleM4.td"
 include "ARMScheduleM55.td"
 include "ARMScheduleM7.td"
+include "ARMScheduleM85.td"
 
 //===----------------------------------------------------------------------===//
 // ARM processors
@@ -1508,7 +1512,7 @@ def : ProcessorModel<"cortex-m55", CortexM55Model,      [ARMv81mMainline,
                                                          HasMVEFloatOps,
                                                          FeatureFixCMSE_CVE_2021_35465]>;
 
-def : ProcessorModel<"cortex-m85", CortexM7Model,       [ARMv81mMainline,
+def : ProcessorModel<"cortex-m85", CortexM85Model,      [ARMv81mMainline,
                                                          FeatureDSP,
                                                          FeatureFPARMv8_D16,
                                                          FeaturePACBTI,

@@ -19,18 +19,11 @@
 
 namespace mlir {
 
-class AffineMap;
-class ConversionTarget;
 struct LogicalResult;
-class MLIRContext;
 class Region;
 class RewriterBase;
-class TypeConverter;
-class RewritePatternSet;
 class Operation;
 class Value;
-class ValueRange;
-class PatternRewriter;
 
 namespace scf {
 
@@ -70,11 +63,11 @@ void naivelyFuseParallelOps(Region &region);
 /// }
 /// ```
 ///
-/// After loop peeling, this function tries to simplify/canonicalize affine.min
-/// and affine.max ops in the body of the peeled loop and in the body of the
-/// partial iteration loop, taking advantage of the fact that the peeled loop
-/// has only "full" iterations. This canonicalization is expected to enable
-/// further canonicalization opportunities through other patterns.
+/// After loop peeling, this function tries to simplify affine.min and
+/// affine.max ops in the body of the peeled loop and in the body of the partial
+/// iteration loop, taking advantage of the fact that the peeled loop has only
+/// "full" iterations. This simplification is expected to enable further
+/// canonicalization opportunities through other patterns.
 ///
 /// The return value indicates whether the loop was rewritten or not. Loops are
 /// not rewritten if:
@@ -85,8 +78,8 @@ void naivelyFuseParallelOps(Region &region);
 /// Note: This function rewrites the given scf.for loop in-place and creates a
 /// new scf.for operation for the last iteration. It replaces all uses of the
 /// unpeeled loop with the results of the newly generated scf.for.
-LogicalResult peelAndCanonicalizeForLoop(RewriterBase &rewriter, ForOp forOp,
-                                         scf::ForOp &partialIteration);
+LogicalResult peelForLoopAndSimplifyBounds(RewriterBase &rewriter, ForOp forOp,
+                                           scf::ForOp &partialIteration);
 
 /// Tile a parallel loop of the form
 ///   scf.parallel (%i0, %i1) = (%arg0, %arg1) to (%arg2, %arg3)
@@ -106,19 +99,6 @@ LogicalResult peelAndCanonicalizeForLoop(RewriterBase &rewriter, ForOp forOp,
 std::pair<ParallelOp, ParallelOp>
 tileParallelLoop(ParallelOp op, llvm::ArrayRef<int64_t> tileSizes,
                  bool noMinMaxBounds);
-
-/// Populates patterns for SCF structural type conversions and sets up the
-/// provided ConversionTarget with the appropriate legality configuration for
-/// the ops to get converted properly.
-///
-/// A "structural" type conversion is one where the underlying ops are
-/// completely agnostic to the actual types involved and simply need to update
-/// their types. An example of this is scf.if -- the scf.if op and the
-/// corresponding scf.yield ops need to update their types accordingly to the
-/// TypeConverter, but otherwise don't care what type conversions are happening.
-void populateSCFStructuralTypeConversionsAndLegality(
-    TypeConverter &typeConverter, RewritePatternSet &patterns,
-    ConversionTarget &target);
 
 /// Options to dictate how loops should be pipelined.
 struct PipeliningOption {
@@ -148,25 +128,43 @@ struct PipeliningOption {
   /// lambda to generate the predicated version of operations.
   bool peelEpilogue = true;
 
-  // Lamdba to predicate operations when the prologue or epilogue are not
+  // Callback to predicate operations when the prologue or epilogue are not
   // peeled. This takes the original operation, an i1 predicate value and the
-  // pattern rewriter.
+  // pattern rewriter. It is expected to replace the given operation with
+  // the predicated equivalent and return it, or return nullptr if the
+  // predication is impossible. In the latter case, pipelining will fail and
+  // may leave IR in a partially transformed state.
   using PredicateOpFn =
-      std::function<Operation *(Operation *, Value, PatternRewriter &)>;
+      std::function<Operation *(RewriterBase &, Operation *, Value)>;
   PredicateOpFn predicateFn = nullptr;
 
   // TODO: add option to decide if the prologue should be peeled.
 };
 
-/// Populate patterns for SCF software pipelining transformation. See the
-/// ForLoopPipeliningPattern for the transformation details.
-void populateSCFLoopPipeliningPatterns(RewritePatternSet &patterns,
-                                       const PipeliningOption &options);
-
-/// Populate patterns for canonicalizing operations inside SCF loop bodies.
-/// At the moment, only affine.min/max computations with iteration variables,
-/// loop bounds and loop steps are canonicalized.
-void populateSCFForLoopCanonicalizationPatterns(RewritePatternSet &patterns);
+/// Generate a pipelined version of the scf.for loop based on the schedule given
+/// as option. This applies the mechanical transformation of changing the loop
+/// and generating the prologue/epilogue for the pipelining and doesn't make any
+/// decision regarding the schedule.
+/// Based on the options the loop is split into several stages.
+/// The transformation assumes that the scheduling given by user is valid.
+/// For example if we break a loop into 3 stages named S0, S1, S2 we would
+/// generate the following code with the number in parenthesis as the iteration
+/// index:
+///
+///   S0(0)                        // Prologue
+///   S0(1) S1(0)                  // Prologue
+///   scf.for %I = %C0 to %N - 2 {
+///     S0(I+2) S1(I+1) S2(I)       // Pipelined kernel
+///   }
+///   S1(N) S2(N-1)                // Epilogue
+///   S2(N)                        // Epilogue
+///
+/// If `modifiedIR` is provided, it will be set to a value that indicates
+/// whether pipelining modified the IR before failing, signaling to the caller
+/// whether they can proceed with different transformations.
+FailureOr<ForOp> pipelineForLoop(RewriterBase &rewriter, ForOp forOp,
+                                 const PipeliningOption &options,
+                                 bool *modifiedIR = nullptr);
 
 } // namespace scf
 } // namespace mlir

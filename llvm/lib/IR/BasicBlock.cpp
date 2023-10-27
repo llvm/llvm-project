@@ -133,9 +133,8 @@ iplist<BasicBlock>::iterator BasicBlock::eraseFromParent() {
   return getParent()->getBasicBlockList().erase(getIterator());
 }
 
-void BasicBlock::moveBefore(BasicBlock *MovePos) {
-  MovePos->getParent()->splice(MovePos->getIterator(), getParent(),
-                               getIterator());
+void BasicBlock::moveBefore(SymbolTableList<BasicBlock>::iterator MovePos) {
+  getParent()->splice(MovePos, getParent(), getIterator());
 }
 
 void BasicBlock::moveAfter(BasicBlock *MovePos) {
@@ -205,11 +204,24 @@ const CallInst *BasicBlock::getPostdominatingDeoptimizeCall() const {
   return BB->getTerminatingDeoptimizeCall();
 }
 
+const Instruction *BasicBlock::getFirstMayFaultInst() const {
+  if (InstList.empty())
+    return nullptr;
+  for (const Instruction &I : *this)
+    if (isa<LoadInst>(I) || isa<StoreInst>(I) || isa<CallBase>(I))
+      return &I;
+  return nullptr;
+}
+
 const Instruction* BasicBlock::getFirstNonPHI() const {
   for (const Instruction &I : *this)
     if (!isa<PHINode>(I))
       return &I;
   return nullptr;
+}
+
+BasicBlock::const_iterator BasicBlock::getFirstNonPHIIt() const {
+  return getFirstNonPHI()->getIterator();
 }
 
 const Instruction *BasicBlock::getFirstNonPHIOrDbg(bool SkipPseudoOp) const {
@@ -388,8 +400,9 @@ bool BasicBlock::isLegalToHoistInto() const {
   // If the block has no successors, there can be no instructions to hoist.
   assert(Term->getNumSuccessors() > 0);
 
-  // Instructions should not be hoisted across exception handling boundaries.
-  return !Term->isExceptionalTerminator();
+  // Instructions should not be hoisted across special terminators, which may
+  // have side effects or return values.
+  return !Term->isSpecialTerminator();
 }
 
 bool BasicBlock::isEntryBlock() const {

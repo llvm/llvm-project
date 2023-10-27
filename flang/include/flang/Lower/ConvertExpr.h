@@ -79,6 +79,14 @@ fir::MutableBoxValue createMutableBox(mlir::Location loc,
                                       AbstractConverter &converter,
                                       const SomeExpr &expr, SymMap &symMap);
 
+/// Return true iff the expression is pointing to a parent component.
+bool isParentComponent(const SomeExpr &expr);
+
+/// Update the extended value to represent the parent component.
+fir::ExtendedValue updateBoxForParentComponent(AbstractConverter &converter,
+                                               fir::ExtendedValue exv,
+                                               const SomeExpr &expr);
+
 /// Create a fir::BoxValue describing the value of \p expr.
 /// If \p expr is a variable without vector subscripts, the fir::BoxValue
 /// described the variable storage. Otherwise, the created fir::BoxValue
@@ -226,6 +234,9 @@ inline mlir::NamedAttribute getAdaptToByRefAttr(fir::FirOpBuilder &builder) {
           builder.getUnitAttr()};
 }
 
+mlir::Value addCrayPointerInst(mlir::Location loc, fir::FirOpBuilder &builder,
+                               mlir::Value ptrVal, mlir::Type ptrTy,
+                               mlir::Type pteTy);
 } // namespace Fortran::lower
 
 #endif // FORTRAN_LOWER_CONVERTEXPR_H

@@ -21,10 +21,22 @@ int __attribute__((target("arch=sierraforest"))) foo(void) {return 16;}
 int __attribute__((target("arch=grandridge"))) foo(void) {return 17;}
 int __attribute__((target("arch=graniterapids"))) foo(void) {return 18;}
 int __attribute__((target("arch=emeraldrapids"))) foo(void) {return 19;}
+int __attribute__((target("arch=graniterapids-d"))) foo(void) {return 20;}
+int __attribute__((target("arch=arrowlake"))) foo(void) {return 21;}
+int __attribute__((target("arch=arrowlake-s"))) foo(void) {return 22;}
+int __attribute__((target("arch=lunarlake"))) foo(void) {return 23;}
+int __attribute__((target("arch=gracemont"))) foo(void) {return 24;}
 int __attribute__((target("default"))) foo(void) { return 2; }
 
 int bar(void) {
   return foo();
+}
+
+static int __attribute__((target("arch=meteorlake"))) foo_internal(void) {return 15;}
+static int __attribute__((target("default"))) foo_internal(void) { return 2; }
+
+int bar1(void) {
+  return foo_internal();
 }
 
 inline int __attribute__((target("sse4.2"))) foo_inline(void) { return 0; }
@@ -123,6 +135,7 @@ void calls_pr50025c(void) { pr50025c(); }
 
 
 // LINUX: @foo.ifunc = weak_odr ifunc i32 (), ptr @foo.resolver
+// LINUX: @foo_internal.ifunc = internal ifunc i32 (), ptr @foo_internal.resolver
 // LINUX: @foo_inline.ifunc = weak_odr ifunc i32 (), ptr @foo_inline.resolver
 // LINUX: @foo_decls.ifunc = weak_odr ifunc void (), ptr @foo_decls.resolver
 // LINUX: @foo_multi.ifunc = weak_odr ifunc void (i32, double), ptr @foo_multi.resolver
@@ -167,6 +180,16 @@ void calls_pr50025c(void) { pr50025c(); }
 // LINUX: ret i32 18
 // LINUX: define{{.*}} i32 @foo.arch_emeraldrapids()
 // LINUX: ret i32 19
+// LINUX: define{{.*}} i32 @foo.arch_graniterapids-d()
+// LINUX: ret i32 20
+// LINUX: define{{.*}} i32 @foo.arch_arrowlake()
+// LINUX: ret i32 21
+// LINUX: define{{.*}} i32 @foo.arch_arrowlake-s()
+// LINUX: ret i32 22
+// LINUX: define{{.*}} i32 @foo.arch_lunarlake()
+// LINUX: ret i32 23
+// LINUX: define{{.*}} i32 @foo.arch_gracemont()
+// LINUX: ret i32 24
 // LINUX: define{{.*}} i32 @foo()
 // LINUX: ret i32 2
 // LINUX: define{{.*}} i32 @bar()
@@ -210,6 +233,16 @@ void calls_pr50025c(void) { pr50025c(); }
 // WINDOWS: ret i32 18
 // WINDOWS: define dso_local i32 @foo.arch_emeraldrapids()
 // WINDOWS: ret i32 19
+// WINDOWS: define dso_local i32 @foo.arch_graniterapids-d()
+// WINDOWS: ret i32 20
+// WINDOWS: define dso_local i32 @foo.arch_arrowlake()
+// WINDOWS: ret i32 21
+// WINDOWS: define dso_local i32 @foo.arch_arrowlake-s()
+// WINDOWS: ret i32 22
+// WINDOWS: define dso_local i32 @foo.arch_lunarlake()
+// WINDOWS: ret i32 23
+// WINDOWS: define dso_local i32 @foo.arch_gracemont()
+// WINDOWS: ret i32 24
 // WINDOWS: define dso_local i32 @foo()
 // WINDOWS: ret i32 2
 // WINDOWS: define dso_local i32 @bar()
@@ -228,6 +261,11 @@ void calls_pr50025c(void) { pr50025c(); }
 // WINDOWS: call i32 @foo.arch_ivybridge
 // WINDOWS: call i32 @foo.sse4.2
 // WINDOWS: call i32 @foo
+
+/// Internal linkage resolvers do not use comdat.
+// LINUX: define internal ptr @foo_internal.resolver() {
+
+// WINDOWS: define internal i32 @foo_internal.resolver() {
 
 // LINUX: define{{.*}} i32 @bar2()
 // LINUX: call i32 @foo_inline.ifunc()

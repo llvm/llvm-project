@@ -59,7 +59,6 @@ void test2(void) {
   }
 }
 
-// <rdar://problem/6127293>
 int outer1(int); // expected-note{{previous declaration is here}}
 struct outer3 { };
 int outer4(int); // expected-note{{previous declaration is here}}

@@ -44,4 +44,4 @@ if.end:                                           ; preds = %entry, %if.then
 
 declare void @xf(...)
 
-!0 = !{i32 0, i32 256}
+!0 = !{i64 0, i64 256}

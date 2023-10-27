@@ -155,8 +155,7 @@ struct isl_tab *isl_tab_compute_reduced_basis(struct isl_tab *tab)
 			GBR_lp_get_obj_val(lp, &F_new);
 			fixed = GBR_lp_is_fixed(lp);
 			GBR_set_ui(alpha, 0);
-		} else
-		if (use_saved) {
+		} else if (use_saved) {
 			row = GBR_lp_next_row(lp);
 			GBR_set(F_new, F_saved);
 			fixed = fixed_saved;

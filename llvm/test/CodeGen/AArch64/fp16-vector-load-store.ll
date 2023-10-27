@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=aarch64-none-eabi | FileCheck %s
+; RUN: llc < %s -mtriple=aarch64 | FileCheck %s
 
 ; Simple load of v4i16
 define <4 x half> @load_64(ptr nocapture readonly %a) #0 {

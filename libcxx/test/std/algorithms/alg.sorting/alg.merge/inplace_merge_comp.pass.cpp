@@ -79,7 +79,7 @@ test_one(unsigned N, unsigned M)
         assert(ia[0] == static_cast<int>(N)-1);
         assert(ia[N-1] == 0);
         assert(std::is_sorted(ia, ia+N, std::greater<value_type>()));
-#ifndef _LIBCPP_ENABLE_DEBUG_MODE
+#if !_LIBCPP_ENABLE_DEBUG_MODE
         assert(pred.count() <= (N-1));
 #endif
     }

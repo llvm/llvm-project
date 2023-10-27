@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -std=c++17 %s -verify -fcxx-exceptions
+// RUN: %clang_cc1 -std=c++17 %s -verify=expected,cxx17 -fcxx-exceptions
+// RUN: %clang_cc1 -std=c++2b %s -verify=expected,cxx2b -fcxx-exceptions
 // RUN: not %clang_cc1 -std=c++17 %s -emit-llvm-only -fcxx-exceptions
 
 struct S { int a, b, c; };
@@ -30,7 +31,7 @@ namespace ForRangeDecl {
 namespace OtherDecl {
   // A parameter-declaration is not a simple-declaration.
   // This parses as an array declaration.
-  void f(auto [a, b, c]); // expected-error {{'auto' not allowed in function prototype}} expected-error {{'a'}}
+  void f(auto [a, b, c]); // cxx17-error {{'auto' not allowed in function prototype}} expected-error {{'a'}}
 
   void g() {
     // A condition is allowed as a Clang extension.
@@ -57,7 +58,7 @@ namespace OtherDecl {
 namespace GoodSpecifiers {
   void f() {
     int n[1];
-    const volatile auto &[a] = n;
+    const volatile auto &[a] = n; // cxx2b-warning {{volatile qualifier in structured binding declaration is deprecated}}
   }
 }
 
@@ -67,8 +68,8 @@ namespace BadSpecifiers {
   struct S { int n; } s;
   void f() {
     // storage-class-specifiers
-    static auto &[a] = n; // expected-warning {{declared 'static' is a C++20 extension}}
-    thread_local auto &[b] = n; // expected-warning {{declared 'thread_local' is a C++20 extension}}
+    static auto &[a] = n; // cxx17-warning {{declared 'static' is a C++20 extension}}
+    thread_local auto &[b] = n; // cxx17-warning {{declared 'thread_local' is a C++20 extension}}
     extern auto &[c] = n; // expected-error {{cannot be declared 'extern'}} expected-error {{declaration of block scope identifier with linkage cannot have an initializer}}
     struct S {
       mutable auto &[d] = n; // expected-error {{not permitted in this context}}
@@ -85,16 +86,19 @@ namespace BadSpecifiers {
   }
 
   static constexpr inline thread_local auto &[j1] = n; // expected-error {{cannot be declared with 'constexpr inline' specifiers}}
-  static thread_local auto &[j2] = n; // expected-warning {{declared with 'static thread_local' specifiers is a C++20 extension}}
+  static thread_local auto &[j2] = n; // cxx17-warning {{declared with 'static thread_local' specifiers is a C++20 extension}}
 
   inline auto &[k] = n; // expected-error {{cannot be declared 'inline'}}
 
   const int K = 5;
+  auto ([c]) = s; // expected-error {{decomposition declaration cannot be declared with parentheses}}
   void g() {
     // defining-type-specifiers other than cv-qualifiers and 'auto'
     S [a] = s; // expected-error {{cannot be declared with type 'S'}}
     decltype(auto) [b] = s; // expected-error {{cannot be declared with type 'decltype(auto)'}}
-    auto ([c]) = s; // expected-error {{cannot be declared with parentheses}}
+    auto ([c2]) = s; // cxx17-error {{decomposition declaration cannot be declared with parenthese}} \
+                     // cxx2b-error {{use of undeclared identifier 'c2'}} \
+                     // cxx2b-error {{expected body of lambda expression}} \
 
     // FIXME: This error is not very good.
     auto [d]() = s; // expected-error {{expected ';'}} expected-error {{expected expression}}

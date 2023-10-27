@@ -1,9 +1,7 @@
 ## Test invalid instructions on both loongarch32 and loongarch64 target.
 
-# RUN: not llvm-mc --triple=loongarch32 --mattr=-f %s 2>&1 \
-# RUN:         | FileCheck %s --check-prefixes=CHECK,CHECK64
-# RUN: not llvm-mc --triple=loongarch64 --mattr=-f %s 2>&1 --defsym=LA64=1 \
-# RUN:         | FileCheck %s
+# RUN: not llvm-mc --triple=loongarch32 %s 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK64
+# RUN: not llvm-mc --triple=loongarch64 %s 2>&1 --defsym=LA64=1 | FileCheck %s
 
 ## Out of range immediates
 ## uimm2
@@ -180,12 +178,6 @@ andi $a0, $a0
 
 ## Instructions outside the base integer ISA
 ## TODO: Test instructions in LSX/LASX/LBT/LVZ after their introduction.
-
-## Floating-Point mnemonics
-fadd.s $fa0, $fa0, $fa0
-# CHECK:   :[[#@LINE-1]]:1: error: instruction requires the following: 'F' (Single-Precision Floating-Point)
-fadd.d $fa0, $fa0, $fa0
-# CHECK:   :[[#@LINE-1]]:1: error: instruction requires the following: 'D' (Double-Precision Floating-Point)
 
 ## Using floating point registers when integer registers are expected
 sll.w $a0, $a0, $fa0

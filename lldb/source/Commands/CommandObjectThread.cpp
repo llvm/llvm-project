@@ -228,8 +228,11 @@ protected:
           thread->GetIndexID());
       return false;
     }
-    if (m_options.m_extended_backtrace) {
-      DoExtendedBacktrace(thread, result);
+    if (m_options.m_extended_backtrace) { 
+      if (!INTERRUPT_REQUESTED(GetDebugger(), 
+                              "Interrupt skipped extended backtrace")) {
+        DoExtendedBacktrace(thread, result);
+      }
     }
 
     return true;
@@ -401,9 +404,9 @@ public:
     if (request.GetCursorIndex())
       return;
 
-    CommandCompletions::InvokeCommonCompletionCallbacks(
-        GetCommandInterpreter(), CommandCompletions::eThreadIndexCompletion,
-        request, nullptr);
+    lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
+        GetCommandInterpreter(), lldb::eThreadIndexCompletion, request,
+        nullptr);
   }
 
   Options *GetOptions() override { return &m_all_options; }
@@ -556,8 +559,9 @@ protected:
     } else if (m_step_type == eStepTypeOut) {
       new_plan_sp = thread->QueueThreadPlanForStepOut(
           abort_other_plans, nullptr, false, bool_stop_other_threads, eVoteYes,
-          eVoteNoOpinion, thread->GetSelectedFrameIndex(), new_plan_status,
-          m_options.m_step_out_avoid_no_debug);
+          eVoteNoOpinion,
+          thread->GetSelectedFrameIndex(DoNoSelectMostRelevantFrame),
+          new_plan_status, m_options.m_step_out_avoid_no_debug);
     } else if (m_step_type == eStepTypeScripted) {
       new_plan_sp = thread->QueueThreadPlanForStepScripted(
           abort_other_plans, m_class_options.GetName().c_str(),
@@ -663,9 +667,9 @@ public:
   void
   HandleArgumentCompletion(CompletionRequest &request,
                            OptionElementVector &opt_element_vector) override {
-    CommandCompletions::InvokeCommonCompletionCallbacks(
-        GetCommandInterpreter(), CommandCompletions::eThreadIndexCompletion,
-        request, nullptr);
+    lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
+        GetCommandInterpreter(), lldb::eThreadIndexCompletion, request,
+        nullptr);
   }
 
   bool DoExecute(Args &command, CommandReturnObject &result) override {
@@ -1160,9 +1164,9 @@ public:
     if (request.GetCursorIndex())
       return;
 
-    CommandCompletions::InvokeCommonCompletionCallbacks(
-        GetCommandInterpreter(), CommandCompletions::eThreadIndexCompletion,
-        request, nullptr);
+    lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
+        GetCommandInterpreter(), lldb::eThreadIndexCompletion, request,
+        nullptr);
   }
 
 protected:
@@ -1294,9 +1298,9 @@ public:
   void
   HandleArgumentCompletion(CompletionRequest &request,
                            OptionElementVector &opt_element_vector) override {
-    CommandCompletions::InvokeCommonCompletionCallbacks(
-        GetCommandInterpreter(), CommandCompletions::eThreadIndexCompletion,
-        request, nullptr);
+    lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
+        GetCommandInterpreter(), lldb::eThreadIndexCompletion, request,
+        nullptr);
   }
 
   Options *GetOptions() override { return &m_options; }
@@ -1344,9 +1348,9 @@ public:
   void
   HandleArgumentCompletion(CompletionRequest &request,
                            OptionElementVector &opt_element_vector) override {
-    CommandCompletions::InvokeCommonCompletionCallbacks(
-        GetCommandInterpreter(), CommandCompletions::eThreadIndexCompletion,
-        request, nullptr);
+    lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
+        GetCommandInterpreter(), lldb::eThreadIndexCompletion, request,
+        nullptr);
   }
 
   bool HandleOneThread(lldb::tid_t tid, CommandReturnObject &result) override {
@@ -1392,9 +1396,9 @@ public:
   void
   HandleArgumentCompletion(CompletionRequest &request,
                            OptionElementVector &opt_element_vector) override {
-    CommandCompletions::InvokeCommonCompletionCallbacks(
-        GetCommandInterpreter(), CommandCompletions::eThreadIndexCompletion,
-        request, nullptr);
+    lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
+        GetCommandInterpreter(), lldb::eThreadIndexCompletion, request,
+        nullptr);
   }
 
   bool HandleOneThread(lldb::tid_t tid, CommandReturnObject &result) override {
@@ -1527,7 +1531,8 @@ protected:
         bool success =
             thread->SetSelectedFrameByIndexNoisily(0, result.GetOutputStream());
         if (success) {
-          m_exe_ctx.SetFrameSP(thread->GetSelectedFrame());
+          m_exe_ctx.SetFrameSP(
+              thread->GetSelectedFrame(DoNoSelectMostRelevantFrame));
           result.SetStatus(eReturnStatusSuccessFinishResult);
         } else {
           result.AppendErrorWithFormat(
@@ -2418,7 +2423,7 @@ protected:
   }
 
   CommandOptions m_options;
-  // Last traversed id used to continue a repeat command. None means
+  // Last traversed id used to continue a repeat command. std::nullopt means
   // that all the trace has been consumed.
   std::optional<lldb::user_id_t> m_last_id;
 };

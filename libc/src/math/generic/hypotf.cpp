@@ -11,7 +11,7 @@
 #include "src/__support/FPUtil/sqrt.h"
 #include "src/__support/common.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(float, hypotf, (float x, float y)) {
   using DoubleBits = fputil::FPBits<double>;
@@ -70,4 +70,4 @@ LLVM_LIBC_FUNCTION(float, hypotf, (float x, float y)) {
   return static_cast<float>(static_cast<double>(result));
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

@@ -19,6 +19,7 @@
 #include "mlir/Transforms/ViewOpGraph.h"
 #include "llvm/Support/Debug.h"
 #include <limits>
+#include <memory>
 
 namespace mlir {
 
@@ -31,10 +32,13 @@ class GreedyRewriteConfig;
 #define GEN_PASS_DECL_CANONICALIZER
 #define GEN_PASS_DECL_CONTROLFLOWSINK
 #define GEN_PASS_DECL_CSEPASS
-#define GEN_PASS_DECL_LOOPINVARIANTCODEMOTION
-#define GEN_PASS_DECL_STRIPDEBUGINFO
-#define GEN_PASS_DECL_PRINTOPSTATS
 #define GEN_PASS_DECL_INLINER
+#define GEN_PASS_DECL_LOOPINVARIANTCODEMOTION
+#define GEN_PASS_DECL_MEM2REG
+#define GEN_PASS_DECL_PRINTIRPASS
+#define GEN_PASS_DECL_PRINTOPSTATS
+#define GEN_PASS_DECL_SROA
+#define GEN_PASS_DECL_STRIPDEBUGINFO
 #define GEN_PASS_DECL_SCCP
 #define GEN_PASS_DECL_SYMBOLDCE
 #define GEN_PASS_DECL_SYMBOLPRIVATIZE
@@ -63,6 +67,9 @@ std::unique_ptr<Pass> createControlFlowSinkPass();
 
 /// Creates a pass to perform common sub expression elimination.
 std::unique_ptr<Pass> createCSEPass();
+
+/// Creates a pass to print IR on the debug stream.
+std::unique_ptr<Pass> createPrintIRPass(const PrintIRPassOptions & = {});
 
 /// Creates a pass that generates IR to verify ops at runtime.
 std::unique_ptr<Pass> createGenerateRuntimeVerificationPass();
@@ -98,6 +105,9 @@ createInlinerPass(llvm::StringMap<OpPassManager> opPipelines);
 std::unique_ptr<Pass>
 createInlinerPass(llvm::StringMap<OpPassManager> opPipelines,
                   std::function<void(OpPassManager &)> defaultPipelineBuilder);
+
+/// Creates an optimization pass to remove dead values.
+std::unique_ptr<Pass> createRemoveDeadValuesPass();
 
 /// Creates a pass which performs sparse conditional constant propagation over
 /// nested operations.

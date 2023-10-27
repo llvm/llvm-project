@@ -1,10 +1,10 @@
 // RUN: %clang_analyze_cc1 -verify %s \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=debug.ExprInspection \
-// RUN:   -analyzer-checker=apiModeling.StdCLibraryFunctions \
+// RUN:   -analyzer-checker=unix.StdCLibraryFunctions \
 // RUN:   -analyzer-checker=apiModeling.Errno \
 // RUN:   -analyzer-checker=alpha.unix.Errno \
-// RUN:   -analyzer-config apiModeling.StdCLibraryFunctions:ModelPOSIX=true
+// RUN:   -analyzer-config unix.StdCLibraryFunctions:ModelPOSIX=true
 
 #include "Inputs/errno_var.h"
 

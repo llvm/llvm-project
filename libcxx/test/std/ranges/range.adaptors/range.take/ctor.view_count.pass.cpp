@@ -8,15 +8,30 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
-// constexpr take_view(V base, range_difference_t<V> count);
+// constexpr take_view(V base, range_difference_t<V> count); // explicit since C++23
 
-#include <ranges>
 #include <cassert>
+#include <ranges>
 
-#include "test_macros.h"
+#include "test_convertible.h"
 #include "test_iterators.h"
+#include "test_macros.h"
 #include "test_range.h"
 #include "types.h"
+
+// SFINAE tests.
+
+#if TEST_STD_VER >= 23
+
+static_assert(!test_convertible<std::ranges::take_view<View>, View, std::ranges::range_difference_t<View>>(),
+              "This constructor must be explicit");
+
+#else
+
+static_assert(test_convertible<std::ranges::take_view<View>, View, std::ranges::range_difference_t<View>>(),
+              "This constructor must be explicit");
+
+#endif // TEST_STD_VER >= 23
 
 constexpr bool test() {
   int buffer[8] = {1, 2, 3, 4, 5, 6, 7, 8};

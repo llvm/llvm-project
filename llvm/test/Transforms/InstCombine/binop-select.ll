@@ -5,6 +5,8 @@ declare void @use(i32)
 declare void @use_f32(float)
 declare void @use_v2f16(<2 x half>)
 declare void @use_v2i8(<2 x i8>)
+declare i32 @llvm.sadd.sat.i32(i32, i32)
+declare <2 x i8> @llvm.sadd.sat.v2i8(<2 x i8>, <2 x i8>)
 
 define i32 @test1(i1 %c, i32 %x, i32 %y) {
 ; CHECK-LABEL: @test1(
@@ -68,6 +70,86 @@ define i32 @test5(i1 %c, i32 %x, i32 %y) {
   %add = add i32 %cond, %x
   ret i32 %add
 }
+
+define i32 @test_sub_deduce_true(i32 %x, i32 %y) {
+; CHECK-LABEL: @test_sub_deduce_true(
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[X:%.*]], 9
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.sadd.sat.i32(i32 [[X]], i32 [[Y:%.*]])
+; CHECK-NEXT:    [[SUB:%.*]] = select i1 [[C]], i32 15, i32 [[TMP1]]
+; CHECK-NEXT:    ret i32 [[SUB]]
+;
+  %c = icmp eq i32 %x, 9
+  %cond = select i1 %c, i32 6, i32 %y
+  %sub = call i32 @llvm.sadd.sat.i32(i32 %x, i32 %cond)
+  ret i32 %sub
+}
+
+define i32 @test_sub_deduce_true_no_const_fold(i32 %x, i32 %y) {
+; CHECK-LABEL: @test_sub_deduce_true_no_const_fold(
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[X:%.*]], 9
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[C]], i32 [[Y:%.*]], i32 6
+; CHECK-NEXT:    [[SUB:%.*]] = call i32 @llvm.sadd.sat.i32(i32 [[X]], i32 [[COND]])
+; CHECK-NEXT:    ret i32 [[SUB]]
+;
+  %c = icmp eq i32 %x, 9
+  %cond = select i1 %c, i32 %y, i32 6
+  %sub = call i32 @llvm.sadd.sat.i32(i32 %x, i32 %cond)
+  ret i32 %sub
+}
+
+define i32 @test_sub_deduce_false(i32 %x, i32 %y) {
+; CHECK-LABEL: @test_sub_deduce_false(
+; CHECK-NEXT:    [[C_NOT:%.*]] = icmp eq i32 [[X:%.*]], 9
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.sadd.sat.i32(i32 [[X]], i32 [[Y:%.*]])
+; CHECK-NEXT:    [[SUB:%.*]] = select i1 [[C_NOT]], i32 16, i32 [[TMP1]]
+; CHECK-NEXT:    ret i32 [[SUB]]
+;
+  %c = icmp ne i32 %x, 9
+  %cond = select i1 %c, i32 %y, i32 7
+  %sub = call i32 @llvm.sadd.sat.i32(i32 %x, i32 %cond)
+  ret i32 %sub
+}
+
+define <2 x i8> @test_sub_dont_deduce_with_undef_cond_vec(<2 x i8> %x, <2 x i8> %y) {
+; CHECK-LABEL: @test_sub_dont_deduce_with_undef_cond_vec(
+; CHECK-NEXT:    [[C_NOT:%.*]] = icmp eq <2 x i8> [[X:%.*]], <i8 9, i8 undef>
+; CHECK-NEXT:    [[COND:%.*]] = select <2 x i1> [[C_NOT]], <2 x i8> <i8 7, i8 7>, <2 x i8> [[Y:%.*]]
+; CHECK-NEXT:    [[SUB:%.*]] = call <2 x i8> @llvm.sadd.sat.v2i8(<2 x i8> [[X]], <2 x i8> [[COND]])
+; CHECK-NEXT:    ret <2 x i8> [[SUB]]
+;
+  %c = icmp ne <2 x i8> %x, <i8 9, i8 undef>
+  %cond = select <2 x i1> %c, <2 x i8> %y, <2 x i8> <i8 7, i8 7>
+  %sub = call <2 x i8> @llvm.sadd.sat.v2i8(<2 x i8> %x, <2 x i8> %cond)
+  ret <2 x i8> %sub
+}
+
+define <2 x i8> @test_sub_dont_deduce_with_poison_cond_vec(<2 x i8> %x, <2 x i8> %y) {
+; CHECK-LABEL: @test_sub_dont_deduce_with_poison_cond_vec(
+; CHECK-NEXT:    [[C_NOT:%.*]] = icmp eq <2 x i8> [[X:%.*]], <i8 poison, i8 9>
+; CHECK-NEXT:    [[COND:%.*]] = select <2 x i1> [[C_NOT]], <2 x i8> <i8 7, i8 7>, <2 x i8> [[Y:%.*]]
+; CHECK-NEXT:    [[SUB:%.*]] = call <2 x i8> @llvm.sadd.sat.v2i8(<2 x i8> [[X]], <2 x i8> [[COND]])
+; CHECK-NEXT:    ret <2 x i8> [[SUB]]
+;
+  %c = icmp ne <2 x i8> %x, <i8 poison, i8 9>
+  %cond = select <2 x i1> %c, <2 x i8> %y, <2 x i8> <i8 7, i8 7>
+  %sub = call <2 x i8> @llvm.sadd.sat.v2i8(<2 x i8> %x, <2 x i8> %cond)
+  ret <2 x i8> %sub
+}
+
+
+define <2 x i8> @test_sub_deduce_with_undef_val_vec(<2 x i8> %x, <2 x i8> %y) {
+; CHECK-LABEL: @test_sub_deduce_with_undef_val_vec(
+; CHECK-NEXT:    [[C_NOT:%.*]] = icmp eq <2 x i8> [[X:%.*]], <i8 1, i8 2>
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i8> @llvm.sadd.sat.v2i8(<2 x i8> [[X]], <2 x i8> [[Y:%.*]])
+; CHECK-NEXT:    [[SUB:%.*]] = select <2 x i1> [[C_NOT]], <2 x i8> <i8 4, i8 -1>, <2 x i8> [[TMP1]]
+; CHECK-NEXT:    ret <2 x i8> [[SUB]]
+;
+  %c = icmp ne <2 x i8> %x, <i8 1, i8 2>
+  %cond = select <2 x i1> %c, <2 x i8> %y, <2 x i8> <i8 3, i8 undef>
+  %sub = call <2 x i8> @llvm.sadd.sat.v2i8(<2 x i8> %x, <2 x i8> %cond)
+  ret <2 x i8> %sub
+}
+
 
 define i32 @test6(i1 %c, i32 %x, i32 %y) {
 ; CHECK-LABEL: @test6(
@@ -242,12 +324,12 @@ define i32 @sub_sel_op1_use(i1 %b) {
 ; CHECK-LABEL: @sub_sel_op1_use(
 ; CHECK-NEXT:    [[S:%.*]] = select i1 [[B:%.*]], i32 42, i32 41
 ; CHECK-NEXT:    call void @use(i32 [[S]])
-; CHECK-NEXT:    [[R:%.*]] = sub nsw i32 42, [[S]]
+; CHECK-NEXT:    [[R:%.*]] = sub nuw nsw i32 42, [[S]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %s = select i1 %b, i32 42, i32 41
   call void @use(i32 %s)
-  %r = sub nsw i32 42, %s
+  %r = sub nuw nsw i32 42, %s
   ret i32 %r
 }
 

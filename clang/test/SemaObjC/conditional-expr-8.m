@@ -1,7 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 // expected-no-diagnostics
 
-// rdar://9296866
 @interface NSResponder
 @end
 
@@ -24,7 +23,6 @@
 }
 @end
 
-// rdar://problem/19572837
 @protocol NSObject
 @end
 

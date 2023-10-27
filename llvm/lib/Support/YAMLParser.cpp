@@ -2041,8 +2041,11 @@ StringRef ScalarNode::getValue(SmallVectorImpl<char> &Storage) const {
     }
     return UnquotedValue;
   }
-  // Plain or block.
-  return Value.rtrim(' ');
+  // Plain.
+  // Trim whitespace ('b-char' and 's-white').
+  // NOTE: Alternatively we could change the scanner to not include whitespace
+  //       here in the first place.
+  return Value.rtrim("\x0A\x0D\x20\x09");
 }
 
 StringRef ScalarNode::unescapeDoubleQuoted( StringRef UnquotedValue

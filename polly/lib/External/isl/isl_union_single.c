@@ -133,9 +133,9 @@ static __isl_give UNION *FN(UNION,remove_part_entry)(__isl_take UNION *u,
 	if (!u || !part_entry)
 		return FN(UNION,free)(u);
 
+	FN(PART,free)(part_entry->data);
 	ctx = FN(UNION,get_ctx)(u);
 	isl_hash_table_remove(ctx, &u->table, part_entry);
-	FN(PART,free)(part_entry->data);
 
 	return u;
 }

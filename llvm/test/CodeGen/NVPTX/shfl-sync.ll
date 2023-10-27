@@ -1,5 +1,5 @@
 ; RUN: llc < %s -march=nvptx64 -mcpu=sm_30 -mattr=+ptx60 | FileCheck %s
-; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_30 -mattr=+ptx60 | %ptxas-verify %if !ptxas-11.0 %{-arch=sm_30%} %}
+; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_30 -mattr=+ptx60 | %ptxas-verify %}
 
 declare i32 @llvm.nvvm.shfl.sync.down.i32(i32, i32, i32, i32)
 declare float @llvm.nvvm.shfl.sync.down.f32(float, i32, i32, i32)

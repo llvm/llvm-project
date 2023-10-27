@@ -11,7 +11,7 @@ define <4 x i32> @test1(<4 x i32> %A, <4 x i32> %B) nounwind {
 ;
 ; CHECK-AVX-LABEL: test1:
 ; CHECK-AVX:       # %bb.0:
-; CHECK-AVX-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[1,2,3,0]
+; CHECK-AVX-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[1,2,3,0]
 ; CHECK-AVX-NEXT:    retl
   %C = shufflevector <4 x i32> %A, <4 x i32> undef, <4 x i32> < i32 1, i32 2, i32 3, i32 0 >
   ret <4 x i32> %C

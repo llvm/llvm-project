@@ -47,33 +47,30 @@ ClangDynamicCheckerFunctions::ClangDynamicCheckerFunctions()
 
 ClangDynamicCheckerFunctions::~ClangDynamicCheckerFunctions() = default;
 
-bool ClangDynamicCheckerFunctions::Install(
+llvm::Error ClangDynamicCheckerFunctions::Install(
     DiagnosticManager &diagnostic_manager, ExecutionContext &exe_ctx) {
-  auto utility_fn_or_error = exe_ctx.GetTargetRef().CreateUtilityFunction(
-      g_valid_pointer_check_text, VALID_POINTER_CHECK_NAME,
-      lldb::eLanguageTypeC, exe_ctx);
-  if (!utility_fn_or_error) {
-    llvm::consumeError(utility_fn_or_error.takeError());
-    return false;
-  }
-  m_valid_pointer_check = std::move(*utility_fn_or_error);
+  Expected<std::unique_ptr<UtilityFunction>> utility_fn =
+      exe_ctx.GetTargetRef().CreateUtilityFunction(
+          g_valid_pointer_check_text, VALID_POINTER_CHECK_NAME,
+          lldb::eLanguageTypeC, exe_ctx);
+  if (!utility_fn)
+    return utility_fn.takeError();
+  m_valid_pointer_check = std::move(*utility_fn);
 
   if (Process *process = exe_ctx.GetProcessPtr()) {
     ObjCLanguageRuntime *objc_language_runtime =
         ObjCLanguageRuntime::Get(*process);
 
     if (objc_language_runtime) {
-      auto utility_fn_or_error = objc_language_runtime->CreateObjectChecker(
-          VALID_OBJC_OBJECT_CHECK_NAME, exe_ctx);
-      if (!utility_fn_or_error) {
-        llvm::consumeError(utility_fn_or_error.takeError());
-        return false;
-      }
-      m_objc_object_check = std::move(*utility_fn_or_error);
+      Expected<std::unique_ptr<UtilityFunction>> checker_fn =
+          objc_language_runtime->CreateObjectChecker(VALID_OBJC_OBJECT_CHECK_NAME, exe_ctx);
+      if (!checker_fn)
+        return checker_fn.takeError();
+      m_objc_object_check = std::move(*checker_fn);
     }
   }
 
-  return true;
+  return Error::success();
 }
 
 bool ClangDynamicCheckerFunctions::DoCheckersExplainStop(lldb::addr_t addr,
@@ -334,20 +331,8 @@ protected:
     else
       return false;
 
-    // Insert an instruction to cast the loaded value to int8_t*
-
-    BitCastInst *bit_cast =
-        new BitCastInst(dereferenced_ptr, GetI8PtrTy(), "", inst);
-
     // Insert an instruction to call the helper with the result
-
-    llvm::Value *arg_array[1];
-
-    arg_array[0] = bit_cast;
-
-    llvm::ArrayRef<llvm::Value *> args(arg_array, 1);
-
-    CallInst::Create(m_valid_pointer_check_func, args, "", inst);
+    CallInst::Create(m_valid_pointer_check_func, dereferenced_ptr, "", inst);
 
     return true;
   }
@@ -425,16 +410,11 @@ protected:
     assert(target_object);
     assert(selector);
 
-    // Insert an instruction to cast the receiver id to int8_t*
-
-    BitCastInst *bit_cast =
-        new BitCastInst(target_object, GetI8PtrTy(), "", inst);
-
     // Insert an instruction to call the helper with the result
 
     llvm::Value *arg_array[2];
 
-    arg_array[0] = bit_cast;
+    arg_array[0] = target_object;
     arg_array[1] = selector;
 
     ArrayRef<llvm::Value *> args(arg_array, 2);

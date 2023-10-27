@@ -30,7 +30,6 @@ define <2 x i16> @v_add_v2i16(<2 x i16> %a, <2 x i16> %b) {
 ; GFX10-LABEL: v_add_v2i16:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_pk_add_u16 v0, v0, v1
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %add = add <2 x i16> %a, %b
@@ -68,7 +67,6 @@ define <2 x i16> @v_add_v2i16_fneg_lhs(<2 x half> %a, <2 x i16> %b) {
 ; GFX10-LABEL: v_add_v2i16_fneg_lhs:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_pk_add_u16 v0, v0, v1 neg_lo:[1,0] neg_hi:[1,0]
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %neg.a = fneg <2 x half> %a
@@ -108,7 +106,6 @@ define <2 x i16> @v_add_v2i16_fneg_rhs(<2 x i16> %a, <2 x half> %b) {
 ; GFX10-LABEL: v_add_v2i16_fneg_rhs:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_pk_add_u16 v0, v0, v1 neg_lo:[0,1] neg_hi:[0,1]
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %neg.b = fneg <2 x half> %b
@@ -154,7 +151,6 @@ define <2 x i16> @v_add_v2i16_fneg_lhs_fneg_rhs(<2 x half> %a, <2 x half> %b) {
 ; GFX10-LABEL: v_add_v2i16_fneg_lhs_fneg_rhs:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_pk_add_u16 v0, v0, v1 neg_lo:[1,1] neg_hi:[1,1]
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %neg.a = fneg <2 x half> %a
@@ -193,7 +189,6 @@ define <2 x i16> @v_add_v2i16_neg_inline_imm_splat(<2 x i16> %a) {
 ; GFX10-LABEL: v_add_v2i16_neg_inline_imm_splat:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_pk_add_u16 v0, 0xffc0, v0 op_sel_hi:[0,1]
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %add = add <2 x i16> %a, <i16 -64, i16 -64>
@@ -227,7 +222,6 @@ define <2 x i16> @v_add_v2i16_neg_inline_imm_lo(<2 x i16> %a) {
 ; GFX10-LABEL: v_add_v2i16_neg_inline_imm_lo:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_pk_add_u16 v0, 0x4ffc0, v0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %add = add <2 x i16> %a, <i16 -64, i16 4>
@@ -261,7 +255,6 @@ define <2 x i16> @v_add_v2i16_neg_inline_imm_hi(<2 x i16> %a) {
 ; GFX10-LABEL: v_add_v2i16_neg_inline_imm_hi:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_pk_add_u16 v0, 0xffc00004, v0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %add = add <2 x i16> %a, <i16 4, i16 -64>

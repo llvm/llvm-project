@@ -28,7 +28,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 // __unwrap_iter and __rewrap_iter don't work for this, because they assume that the iterator and sentinel have
 // the same type. __unwrap_range tries to get two iterators and then forward to __unwrap_iter.
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 template <class _Iter, class _Sent>
 struct __unwrap_range_impl {
   _LIBCPP_HIDE_FROM_ABI static constexpr auto __unwrap(_Iter __first, _Sent __sent)
@@ -43,14 +43,14 @@ struct __unwrap_range_impl {
   }
 
   _LIBCPP_HIDE_FROM_ABI static constexpr auto
-  __rewrap(_Iter __orig_iter, decltype(std::__unwrap_iter(__orig_iter)) __iter)
+  __rewrap(_Iter __orig_iter, decltype(std::__unwrap_iter(std::move(__orig_iter))) __iter)
     requires random_access_iterator<_Iter> && sized_sentinel_for<_Sent, _Iter>
   {
     return std::__rewrap_iter(std::move(__orig_iter), std::move(__iter));
   }
 
   _LIBCPP_HIDE_FROM_ABI static constexpr auto __rewrap(const _Iter&, _Iter __iter)
-    requires (!(random_access_iterator<_Iter> && sized_sentinel_for<_Sent, _Iter>))
+    requires(!(random_access_iterator<_Iter> && sized_sentinel_for<_Sent, _Iter>))
   {
     return __iter;
   }
@@ -73,24 +73,21 @@ _LIBCPP_HIDE_FROM_ABI constexpr auto __unwrap_range(_Iter __first, _Sent __last)
   return __unwrap_range_impl<_Iter, _Sent>::__unwrap(std::move(__first), std::move(__last));
 }
 
-template <
-    class _Sent,
-    class _Iter,
-    class _Unwrapped = decltype(std::__unwrap_range(std::declval<_Iter>(), std::declval<_Sent>()))>
+template < class _Sent, class _Iter, class _Unwrapped>
 _LIBCPP_HIDE_FROM_ABI constexpr _Iter __rewrap_range(_Iter __orig_iter, _Unwrapped __iter) {
   return __unwrap_range_impl<_Iter, _Sent>::__rewrap(std::move(__orig_iter), std::move(__iter));
 }
-#else  // _LIBCPP_STD_VER > 17
+#else  // _LIBCPP_STD_VER >= 20
 template <class _Iter, class _Unwrapped = decltype(std::__unwrap_iter(std::declval<_Iter>()))>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR pair<_Unwrapped, _Unwrapped> __unwrap_range(_Iter __first, _Iter __last) {
   return std::make_pair(std::__unwrap_iter(std::move(__first)), std::__unwrap_iter(std::move(__last)));
 }
 
-template <class _Iter, class _Unwrapped = decltype(std::__unwrap_iter(std::declval<_Iter>()))>
+template <class _Iter, class _Unwrapped>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR _Iter __rewrap_range(_Iter __orig_iter, _Unwrapped __iter) {
   return std::__rewrap_iter(std::move(__orig_iter), std::move(__iter));
 }
-#endif // _LIBCPP_STD_VER > 17
+#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

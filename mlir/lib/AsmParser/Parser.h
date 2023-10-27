@@ -211,7 +211,7 @@ public:
   /// Parse a vector type.
   VectorType parseVectorType();
   ParseResult parseVectorDimensionList(SmallVectorImpl<int64_t> &dimensions,
-                                       unsigned &numScalableDims);
+                                       SmallVectorImpl<bool> &scalableDims);
   ParseResult parseDimensionListRanked(SmallVectorImpl<int64_t> &dimensions,
                                        bool allowDynamic = true,
                                        bool withTrailingX = true);
@@ -241,7 +241,7 @@ public:
       return std::nullopt;
 
     if (Attribute parsedAttr = parseAttribute(type)) {
-      attr = parsedAttr.cast<AttributeT>();
+      attr = cast<AttributeT>(parsedAttr);
       return success();
     }
     return failure();
@@ -249,6 +249,9 @@ public:
 
   /// Parse an attribute dictionary.
   ParseResult parseAttributeDict(NamedAttrList &attributes);
+
+  /// Parse a distinct attribute.
+  Attribute parseDistinctAttr(Type type);
 
   /// Parse an extended attribute.
   Attribute parseExtendedAttr(Type type);
@@ -296,10 +299,13 @@ public:
   // Affine Parsing
   //===--------------------------------------------------------------------===//
 
-  /// Parse a reference to either an affine map, or an integer set.
+  /// Parse a reference to either an affine map, expr, or an integer set.
   ParseResult parseAffineMapOrIntegerSetReference(AffineMap &map,
                                                   IntegerSet &set);
   ParseResult parseAffineMapReference(AffineMap &map);
+  ParseResult
+  parseAffineExprReference(ArrayRef<std::pair<StringRef, AffineExpr>> symbolSet,
+                           AffineExpr &expr);
   ParseResult parseIntegerSetReference(IntegerSet &set);
 
   /// Parse an AffineMap where the dim and symbol identifiers are SSA ids.

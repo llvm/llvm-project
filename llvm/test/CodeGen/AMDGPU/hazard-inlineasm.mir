@@ -6,7 +6,7 @@
 
 ...
 
-# GCN-LABEL: name: hazard-inlineasm
+# CHECK-LABEL: name: hazard-inlineasm
 # CHECK: FLAT_STORE_DWORDX4
 # CHECK-NEXT: S_NOP 0
 # CHECK-NEXT: INLINEASM

@@ -381,12 +381,7 @@ PreprocessingRecord::getLoadedPreprocessedEntity(unsigned Index) {
 
 MacroDefinitionRecord *
 PreprocessingRecord::findMacroDefinition(const MacroInfo *MI) {
-  llvm::DenseMap<const MacroInfo *, MacroDefinitionRecord *>::iterator Pos =
-      MacroDefinitions.find(MI);
-  if (Pos == MacroDefinitions.end())
-    return nullptr;
-
-  return Pos->second;
+  return MacroDefinitions.lookup(MI);
 }
 
 void PreprocessingRecord::addMacroExpansion(const Token &Id,

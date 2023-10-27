@@ -59,9 +59,9 @@ func.func @promote_subview_matmul(%arg0: memref<?x?xf32, strided<[?, 1], offset:
 // CHECK-SAME:                outs(%[[v2]] : memref<?x?xf32>)
 
 transform.sequence failures(propagate) {
-^bb0(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1
-  %1 = transform.structured.promote %0 { operands_to_promote = [0, 1, 2], use_full_tiles_by_default }
+^bb0(%arg1: !transform.any_op):
+  %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+  %1 = transform.structured.promote %0 { operands_to_promote = [0, 1, 2], use_full_tiles_by_default } : (!transform.any_op) -> !transform.any_op
 }
 
 // -----
@@ -119,11 +119,11 @@ func.func @promote_first_subview_matmul(%arg0: memref<?x?xf32, strided<[?, 1], o
 // CHECK-SAME:          outs(%[[s2]] : memref<?x?xf32, strided<[?, ?], offset: ?>>)
 
 transform.with_pdl_patterns {
-^bb0(%arg0: !pdl.operation):
-  sequence %arg0 : !pdl.operation failures(propagate) {
-    ^bb0(%arg1: !pdl.operation):
-      %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1
-      %1 = transform.structured.promote %0 { operands_to_promote = [0], use_full_tiles_by_default }
+^bb0(%arg0: !transform.any_op):
+  sequence %arg0 : !transform.any_op failures(propagate) {
+    ^bb0(%arg1: !transform.any_op):
+      %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+      %1 = transform.structured.promote %0 { operands_to_promote = [0], use_full_tiles_by_default } : (!transform.any_op) -> !transform.any_op
   }
 }
 
@@ -136,13 +136,13 @@ func.func @aligned_promote_fill(%arg0: memref<?x?xf32, strided<[?, 1], offset: ?
   %c1 = arith.constant 1 : index
   %cf = arith.constant 1.0 : f32
   %3 = memref.subview %arg0[%c0, %c0][%c2000, %c4000][%c1, %c1] :
- 	 memref<?x?xf32, strided<[?, 1], offset: ?>> to memref<?x?xf32, strided<[?, ?], offset: ?>>
+         memref<?x?xf32, strided<[?, 1], offset: ?>> to memref<?x?xf32, strided<[?, ?], offset: ?>>
   linalg.fill
    ins(%cf : f32) outs(%3 : memref<?x?xf32, strided<[?, ?], offset: ?>>)
   return
 }
 // CHECK-LABEL: func @aligned_promote_fill
-// CHECK:	  %[[cf:.*]] = arith.constant 1.{{.*}} : f32
+// CHECK:         %[[cf:.*]] = arith.constant 1.{{.*}} : f32
 // CHECK:         %[[s0:.*]] = memref.subview {{.*}}: memref<?x?xf32, strided{{.*}}> to memref<?x?xf32, strided{{.*}}>
 // CHECK:         %[[a0:.*]] = memref.alloc() {alignment = 32 : i64} : memref<32000000xi8>
 // CHECK:         %[[v0:.*]] = memref.view %[[a0]]{{.*}} : memref<32000000xi8> to memref<?x?xf32>
@@ -152,11 +152,11 @@ func.func @aligned_promote_fill(%arg0: memref<?x?xf32, strided<[?, 1], offset: ?
 // CHECK:         linalg.fill ins(%[[cf]] : f32) outs(%[[v0]] : memref<?x?xf32>)
 
 transform.with_pdl_patterns {
-^bb0(%arg0: !pdl.operation):
-  sequence %arg0 : !pdl.operation failures(propagate) {
-    ^bb0(%arg1: !pdl.operation):
-      %0 = transform.structured.match ops{["linalg.fill"]} in %arg1
-      %1 = transform.structured.promote %0 { operands_to_promote = [1], use_full_tile_buffers = [false, true], alignment = 32}
+^bb0(%arg0: !transform.any_op):
+  sequence %arg0 : !transform.any_op failures(propagate) {
+    ^bb0(%arg1: !transform.any_op):
+      %0 = transform.structured.match ops{["linalg.fill"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+      %1 = transform.structured.promote %0 { operands_to_promote = [1], use_full_tile_buffers = [false, true], alignment = 32} : (!transform.any_op) -> !transform.any_op
   }
 }
 
@@ -170,13 +170,13 @@ func.func @aligned_promote_fill_complex(%arg0: memref<?x?xcomplex<f32>, strided<
   %cf = arith.constant 1.0 : f32
   %cc = complex.create %cf, %cf : complex<f32>
   %3 = memref.subview %arg0[%c0, %c0][%c2000, %c4000][%c1, %c1] :
- 	 memref<?x?xcomplex<f32>, strided<[?, 1], offset: ?>> to memref<?x?xcomplex<f32>, strided<[?, ?], offset: ?>>
+         memref<?x?xcomplex<f32>, strided<[?, 1], offset: ?>> to memref<?x?xcomplex<f32>, strided<[?, ?], offset: ?>>
   linalg.fill ins(%cc : complex<f32>)
              outs(%3 : memref<?x?xcomplex<f32>, strided<[?, ?], offset: ?>>)
   return
 }
 // CHECK-LABEL: func @aligned_promote_fill_complex
-// CHECK:	  %[[cc:.*]] = complex.create {{.*}} : complex<f32>
+// CHECK:         %[[cc:.*]] = complex.create {{.*}} : complex<f32>
 // CHECK:         %[[s0:.*]] = memref.subview {{.*}}: memref<?x?xcomplex<f32>, strided{{.*}}> to memref<?x?xcomplex<f32>, strided{{.*}}>
 // CHECK:         %[[a0:.*]] = memref.alloc() {alignment = 32 : i64} : memref<64000000xi8>
 // CHECK:         %[[v0:.*]] = memref.view %[[a0]]{{.*}} : memref<64000000xi8> to memref<?x?xcomplex<f32>>
@@ -186,10 +186,10 @@ func.func @aligned_promote_fill_complex(%arg0: memref<?x?xcomplex<f32>, strided<
 // CHECK:         linalg.fill ins(%[[cc]] : complex<f32>) outs(%[[v0]] : memref<?x?xcomplex<f32>>)
 
 transform.with_pdl_patterns {
-^bb0(%arg0: !pdl.operation):
-  sequence %arg0 : !pdl.operation failures(propagate) {
-    ^bb0(%arg1: !pdl.operation):
-      %0 = transform.structured.match ops{["linalg.fill"]} in %arg1
-      %1 = transform.structured.promote %0 { operands_to_promote = [1], use_full_tile_buffers = [false, true], alignment = 32}
+^bb0(%arg0: !transform.any_op):
+  sequence %arg0 : !transform.any_op failures(propagate) {
+    ^bb0(%arg1: !transform.any_op):
+      %0 = transform.structured.match ops{["linalg.fill"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+      %1 = transform.structured.promote %0 { operands_to_promote = [1], use_full_tile_buffers = [false, true], alignment = 32} : (!transform.any_op) -> !transform.any_op
   }
 }

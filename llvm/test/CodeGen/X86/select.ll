@@ -508,43 +508,43 @@ define void @test8(i1 %c, ptr %dst.addr, <6 x i32> %src1,<6 x i32> %src2) nounwi
 ; ATHLON-NEXT:    pushl %edi
 ; ATHLON-NEXT:    pushl %esi
 ; ATHLON-NEXT:    testb $1, {{[0-9]+}}(%esp)
-; ATHLON-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; ATHLON-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; ATHLON-NEXT:    cmovnel %ecx, %eax
-; ATHLON-NEXT:    leal {{[0-9]+}}(%esp), %edx
-; ATHLON-NEXT:    leal {{[0-9]+}}(%esp), %ecx
-; ATHLON-NEXT:    cmovnel %edx, %ecx
-; ATHLON-NEXT:    leal {{[0-9]+}}(%esp), %edx
-; ATHLON-NEXT:    leal {{[0-9]+}}(%esp), %esi
-; ATHLON-NEXT:    cmovnel %edx, %esi
-; ATHLON-NEXT:    leal {{[0-9]+}}(%esp), %edx
-; ATHLON-NEXT:    leal {{[0-9]+}}(%esp), %edi
-; ATHLON-NEXT:    cmovnel %edx, %edi
-; ATHLON-NEXT:    leal {{[0-9]+}}(%esp), %edx
 ; ATHLON-NEXT:    leal {{[0-9]+}}(%esp), %ebx
-; ATHLON-NEXT:    cmovnel %edx, %ebx
+; ATHLON-NEXT:    cmovnel %eax, %ebx
+; ATHLON-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; ATHLON-NEXT:    leal {{[0-9]+}}(%esp), %edi
+; ATHLON-NEXT:    cmovnel %eax, %edi
+; ATHLON-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; ATHLON-NEXT:    leal {{[0-9]+}}(%esp), %esi
+; ATHLON-NEXT:    cmovnel %eax, %esi
+; ATHLON-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; ATHLON-NEXT:    leal {{[0-9]+}}(%esp), %edx
+; ATHLON-NEXT:    cmovnel %eax, %edx
+; ATHLON-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; ATHLON-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; ATHLON-NEXT:    cmovnel %eax, %ecx
 ; ATHLON-NEXT:    leal {{[0-9]+}}(%esp), %ebp
-; ATHLON-NEXT:    cmovnel %edx, %ebp
-; ATHLON-NEXT:    movl (%eax), %eax
-; ATHLON-NEXT:    movl (%ecx), %ecx
-; ATHLON-NEXT:    movl (%esi), %edx
-; ATHLON-NEXT:    movl (%edi), %esi
-; ATHLON-NEXT:    movl (%ebx), %ebx
-; ATHLON-NEXT:    movl (%ebp), %edi
-; ATHLON-NEXT:    decl %eax
-; ATHLON-NEXT:    movl {{[0-9]+}}(%esp), %ebp
-; ATHLON-NEXT:    movl %eax, 20(%ebp)
-; ATHLON-NEXT:    decl %ecx
-; ATHLON-NEXT:    movl %ecx, 16(%ebp)
-; ATHLON-NEXT:    decl %edx
-; ATHLON-NEXT:    movl %edx, 12(%ebp)
-; ATHLON-NEXT:    decl %esi
-; ATHLON-NEXT:    movl %esi, 8(%ebp)
+; ATHLON-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; ATHLON-NEXT:    cmovnel %ebp, %eax
+; ATHLON-NEXT:    movl (%ebx), %ebp
+; ATHLON-NEXT:    movl (%edi), %ebx
+; ATHLON-NEXT:    movl (%esi), %edi
+; ATHLON-NEXT:    movl (%edx), %esi
+; ATHLON-NEXT:    movl (%ecx), %edx
+; ATHLON-NEXT:    movl (%eax), %ecx
+; ATHLON-NEXT:    decl %ebp
+; ATHLON-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; ATHLON-NEXT:    movl %ebp, 20(%eax)
 ; ATHLON-NEXT:    decl %ebx
-; ATHLON-NEXT:    movl %ebx, 4(%ebp)
+; ATHLON-NEXT:    movl %ebx, 16(%eax)
 ; ATHLON-NEXT:    decl %edi
-; ATHLON-NEXT:    movl %edi, (%ebp)
+; ATHLON-NEXT:    movl %edi, 12(%eax)
+; ATHLON-NEXT:    decl %esi
+; ATHLON-NEXT:    movl %esi, 8(%eax)
+; ATHLON-NEXT:    decl %edx
+; ATHLON-NEXT:    movl %edx, 4(%eax)
+; ATHLON-NEXT:    decl %ecx
+; ATHLON-NEXT:    movl %ecx, (%eax)
 ; ATHLON-NEXT:    popl %esi
 ; ATHLON-NEXT:    popl %edi
 ; ATHLON-NEXT:    popl %ebx

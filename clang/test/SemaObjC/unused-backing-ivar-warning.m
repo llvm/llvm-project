@@ -1,5 +1,4 @@
 // RUN: %clang_cc1  -fsyntax-only -Wunused-property-ivar -verify -Wno-objc-root-class %s
-// rdar://14989999
 
 @interface NSObject @end
 
@@ -50,7 +49,6 @@
 }
 @end
 
-// rdar://15473432
 typedef char BOOL;
 @interface CalDAVServerVersion {
   BOOL _supportsTimeRangeFilterWithoutEndDate;
@@ -75,7 +73,6 @@ typedef char BOOL;
 }
 @end
 
-// rdar://15630719
 @interface CDBModifyRecordsOperation : NSObject
 @property (nonatomic, assign) BOOL atomic;
 @end
@@ -91,7 +88,6 @@ typedef char BOOL;
 }
 @end
 
-// rdar://15728901
 @interface GATTOperation : NSObject {
     long operation;
 }
@@ -105,7 +101,6 @@ typedef char BOOL;
 }
 @end
 
-// rdar://15727327
 @interface Radar15727327 : NSObject
 @property (assign, readonly) long p;
 @property (assign) long q; // expected-note 2 {{property declared here}}
@@ -148,7 +143,6 @@ typedef char BOOL;
 }
 @end
 
-// rdar://15873425
 @protocol MyProtocol
 @property (nonatomic, readonly) int myProperty;
 @end
@@ -171,7 +165,6 @@ typedef char BOOL;
 }
 @end
 
-// rdar://15890251
 @class NSURL;
 
 @protocol MCCIDURLProtocolDataProvider

@@ -1,6 +1,5 @@
 // RUN: %clang_cc1  -fsyntax-only -verify -Wno-objc-root-class %s
 // expected-no-diagnostics
-// radar 7211563
 
 @interface X
 

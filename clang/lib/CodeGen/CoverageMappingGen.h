@@ -104,10 +104,9 @@ class CoverageMappingModuleGen {
 
   CodeGenModule &CGM;
   CoverageSourceInfo &SourceInfo;
-  llvm::SmallDenseMap<const FileEntry *, unsigned, 8> FileEntries;
+  llvm::SmallDenseMap<FileEntryRef, unsigned, 8> FileEntries;
   std::vector<llvm::Constant *> FunctionNames;
   std::vector<FunctionInfo> FunctionRecords;
-  std::map<std::string, std::string> CoveragePrefixMap;
 
   std::string getCurrentDirname();
   std::string normalizeFilename(StringRef Filename);
@@ -138,7 +137,7 @@ public:
 
   /// Return the coverage mapping translation unit file id
   /// for the given file.
-  unsigned getFileID(const FileEntry *File);
+  unsigned getFileID(FileEntryRef File);
 
   /// Return an interface into CodeGenModule.
   CodeGenModule &getCodeGenModule() { return CGM; }

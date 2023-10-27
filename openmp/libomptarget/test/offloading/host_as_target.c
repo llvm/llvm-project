@@ -7,17 +7,15 @@
 
 // RUN: %libomptarget-compile-run-and-check-generic
 
-// amdgpu does not have a working printf definition
-// XFAIL: amdgcn-amd-amdhsa
-// XFAIL: amdgcn-amd-amdhsa-LTO
-
 #include <omp.h>
 #include <stdio.h>
 
 static void check(char *X, int Dev) {
   printf("  host X = %c\n", *X);
-#pragma omp target device(Dev)
-  printf("device X = %c\n", *X);
+  char DV = -1;
+#pragma omp target device(Dev) map(from : DV)
+  DV = *X;
+  printf("device X = %c\n", DV);
 }
 
 #define CHECK_DATA() check(&X, DevDefault)

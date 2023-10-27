@@ -22,9 +22,7 @@
 #  undef USE_SSECRC
 #endif
 
-namespace {
-
-LLVM_ATTRIBUTE_UNUSED inline size_t hash_int64_fallback(int64_t k) {
+static LLVM_ATTRIBUTE_UNUSED inline size_t hash_int64_fallback(int64_t k) {
   uint64_t key = (unsigned long long)k;
   // "64 bit Mix Functions", from Thomas Wang's "Integer Hash Function."
   // http://www.concentric.net/~ttwang/tech/inthash.htm
@@ -37,7 +35,7 @@ LLVM_ATTRIBUTE_UNUSED inline size_t hash_int64_fallback(int64_t k) {
   return static_cast<size_t>(static_cast<uint32_t>(key));
 }
 
-LLVM_ATTRIBUTE_UNUSED inline size_t hash_int64(int64_t k) {
+static LLVM_ATTRIBUTE_UNUSED inline size_t hash_int64(int64_t k) {
 #if defined(USE_SSECRC) && defined(__SSE4_2__)
   size_t h = 0;
   __asm("crc32q %1, %0\n" : "+r"(h) : "rm"(k));
@@ -47,7 +45,7 @@ LLVM_ATTRIBUTE_UNUSED inline size_t hash_int64(int64_t k) {
 #endif
 }
 
-inline size_t hash_int64_pair(int64_t k1, int64_t k2) {
+static inline size_t hash_int64_pair(int64_t k1, int64_t k2) {
 #if defined(USE_SSECRC) && defined(__SSE4_2__)
   // crc32 is commutative, so we need to perturb k1 so that (k1, k2) hashes
   // differently from (k2, k1).
@@ -57,8 +55,6 @@ inline size_t hash_int64_pair(int64_t k1, int64_t k2) {
 #else
   return (hash_int64(k1) << 1) ^ hash_int64(k2);
 #endif
-}
-
 }
 
 namespace llvm {

@@ -11,7 +11,6 @@ int main (void)
   return Test.one.two;
 }
 
-// rdar://16650575
 __attribute__((objc_root_class))
 @interface RootClass { 
   Class isa; 

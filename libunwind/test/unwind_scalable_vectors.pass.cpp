@@ -13,30 +13,8 @@
 #include <assert.h>
 #include <libunwind.h>
 
-// Check correct unwinding of frame with VLENB-sized objects (vector registers):
-// 1. Save return address (ra) in temporary register.
-// 2. Load VLENB (vector length in bytes) and substract it from current stack
-//    pointer (sp) - equivalent to one vector register on stack frame.
-// 3. Set DWARF cannonical frame address (CFA) to "sp + vlenb" expresssion so it
-//    can be correctly unwinded.
-// 4. Call stepper() function and check that 2 unwind steps are successful -
-//    from stepper() into foo() and from foo() into main().
-// 5. Restore stack pointer and return address.
-__attribute__((naked)) static void foo() {
-  __asm__(".cfi_startproc\n"
-          "mv s0, ra\n"
-          "csrr  s1, vlenb\n"
-          "sub sp, sp, s1\n"
-          "# .cfi_def_cfa_expression sp + vlenb\n"
-          ".cfi_escape 0x0f, 0x07, 0x72, 0x00, 0x92, 0xa2, 0x38, 0x00, 0x22\n"
-          "call stepper\n"
-          "add sp, sp, s1\n"
-          "mv ra, s0\n"
-          "ret\n"
-          ".cfi_endproc\n");
-}
-
-extern "C" void stepper() {
+#ifdef __riscv_vector
+__attribute__((noinline)) extern "C" void stepper() {
   unw_cursor_t cursor;
   unw_context_t uc;
   unw_getcontext(&uc);
@@ -47,4 +25,16 @@ extern "C" void stepper() {
   assert(unw_step(&cursor) > 0);
 }
 
+// Check correct unwinding of frame with VLENB-sized objects (vector registers).
+__attribute__((noinline)) static void foo() {
+  __rvv_int32m1_t v;
+  asm volatile("" : "=vr"(v)); // Dummy inline asm to def v.
+  stepper();                   // def-use of v has cross the function, so that
+                               // will triger spill/reload to/from the stack.
+  asm volatile("" ::"vr"(v));  // Dummy inline asm to use v.
+}
+
 int main() { foo(); }
+#else
+int main() { return 0; }
+#endif

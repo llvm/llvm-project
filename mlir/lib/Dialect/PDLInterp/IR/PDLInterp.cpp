@@ -10,7 +10,7 @@
 #include "mlir/Dialect/PDL/IR/PDLTypes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
-#include "mlir/IR/FunctionImplementation.h"
+#include "mlir/Interfaces/FunctionImplementation.h"
 
 using namespace mlir;
 using namespace mlir::pdl_interp;
@@ -145,7 +145,7 @@ void ForEachOp::build(::mlir::OpBuilder &builder, ::mlir::OperationState &state,
   if (initLoop) {
     // Create the block and the loop variable.
     // FIXME: Allow passing in a proper location for the loop variable.
-    auto rangeType = range.getType().cast<pdl::RangeType>();
+    auto rangeType = llvm::cast<pdl::RangeType>(range.getType());
     state.regions.front()->emplaceBlock();
     state.regions.front()->addArgument(rangeType.getElementType(),
                                        state.location);
@@ -238,7 +238,8 @@ void FuncOp::print(OpAsmPrinter &p) {
 /// Given the result type of a `GetValueTypeOp`, return the expected input type.
 static Type getGetValueTypeOpValueType(Type type) {
   Type valueTy = pdl::ValueType::get(type.getContext());
-  return type.isa<pdl::RangeType>() ? pdl::RangeType::get(valueTy) : valueTy;
+  return llvm::isa<pdl::RangeType>(type) ? pdl::RangeType::get(valueTy)
+                                         : valueTy;
 }
 
 //===----------------------------------------------------------------------===//

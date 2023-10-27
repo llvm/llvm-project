@@ -18,7 +18,6 @@
 #include <type_traits>
 #include <utility>
 
-#include "MoveOnly.h"
 #include "test_macros.h"
 
 constexpr bool test() {
@@ -75,16 +74,31 @@ void testException() {
     }
   }
 
-  // MoveOnly
+#endif // TEST_HAS_NO_EXCEPTIONS
+}
+
+void testAsConst() {
+#ifndef TEST_HAS_NO_EXCEPTIONS
+  struct Error {
+    enum { Default, MutableRefCalled, ConstRefCalled } From = Default;
+    Error()                                                 = default;
+    Error(const Error&) { From = ConstRefCalled; }
+    Error(Error&) { From = MutableRefCalled; }
+    Error(Error&& e) { From = e.From; }
+  };
+
+  // Test & overload
   {
-    std::expected<int, MoveOnly> e(std::unexpect, 5);
+    std::expected<int, Error> e(std::unexpect, Error());
     try {
-      (void) std::move(e).value();
+      (void)e.value();
       assert(false);
-    } catch (const std::bad_expected_access<MoveOnly>& ex) {
-      assert(ex.error() == 5);
+    } catch (const std::bad_expected_access<Error>& ex) {
+      assert(ex.error().From == Error::ConstRefCalled);
     }
   }
+
+  // There are no effects for `const &` overload.
 
 #endif // TEST_HAS_NO_EXCEPTIONS
 }
@@ -93,5 +107,7 @@ int main(int, char**) {
   test();
   static_assert(test());
   testException();
+  testAsConst();
+
   return 0;
 }

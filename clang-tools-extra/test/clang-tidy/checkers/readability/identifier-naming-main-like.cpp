@@ -1,8 +1,8 @@
 // RUN: %check_clang_tidy %s readability-identifier-naming %t -- \
-// RUN:   -config='{CheckOptions: [ \
-// RUN:     {key: readability-identifier-naming.ParameterCase, value: CamelCase}, \
-// RUN:     {key: readability-identifier-naming.IgnoreMainLikeFunctions, value: true} \
-// RUN:  ]}'
+// RUN:   -config='{CheckOptions: { \
+// RUN:     readability-identifier-naming.ParameterCase: CamelCase, \
+// RUN:     readability-identifier-naming.IgnoreMainLikeFunctions: true \
+// RUN:  }}'
 
 int mainLike(int argc, char **argv);
 int mainLike(int argc, char **argv, const char **env);

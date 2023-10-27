@@ -9,25 +9,32 @@
 #include "src/math/atanf.h"
 #include "math_utils.h"
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/FPUtil/rounding_mode.h"
+#include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 #include "src/math/generic/inv_trigf_utils.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(float, atanf, (float x)) {
   using FPBits = typename fputil::FPBits<float>;
+
+  // x == 0.0
+  if (LIBC_UNLIKELY(x == 0.0f))
+    return x;
+
   FPBits xbits(x);
   bool sign = xbits.get_sign();
   xbits.set_sign(false);
 
-  if (unlikely(xbits.is_inf_or_nan())) {
+  if (LIBC_UNLIKELY(xbits.is_inf_or_nan())) {
     if (xbits.is_inf())
-      return opt_barrier(sign ? -M_MATH_PI_2 : M_MATH_PI_2);
+      return static_cast<float>(opt_barrier(sign ? -M_MATH_PI_2 : M_MATH_PI_2));
     else
       return x;
   }
   // |x| == 0.06905200332403183
-  if (unlikely(xbits.uintval() == 0x3d8d6b23U)) {
-    if (fputil::get_round() == FE_TONEAREST) {
+  if (LIBC_UNLIKELY(xbits.uintval() == 0x3d8d6b23U)) {
+    if (fputil::fenv_is_round_to_nearest()) {
       // 0.06894256919622421
       FPBits br(0x3d8d31c3U);
       br.set_sign(sign);
@@ -36,8 +43,8 @@ LLVM_LIBC_FUNCTION(float, atanf, (float x)) {
   }
 
   // |x| == 1.8670953512191772
-  if (unlikely(xbits.uintval() == 0x3feefcfbU)) {
-    int rounding_mode = fputil::get_round();
+  if (LIBC_UNLIKELY(xbits.uintval() == 0x3feefcfbU)) {
+    int rounding_mode = fputil::quick_get_round();
     if (sign) {
       if (rounding_mode == FE_DOWNWARD) {
         // -1.0790828466415405
@@ -51,7 +58,7 @@ LLVM_LIBC_FUNCTION(float, atanf, (float x)) {
     }
   }
 
-  return atan_eval(x);
+  return static_cast<float>(atan_eval(x));
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

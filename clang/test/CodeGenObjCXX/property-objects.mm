@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers %s -triple=x86_64-apple-darwin10 -std=c++11 -emit-llvm -debug-info-kind=limited -o - | FileCheck %s
+// RUN: %clang_cc1 %s -triple=x86_64-apple-darwin10 -std=c++11 -emit-llvm -debug-info-kind=limited -o - | FileCheck %s
 
 class S {
 public:
@@ -32,7 +32,7 @@ struct CGRect {
 @synthesize frame;
 
 // CHECK: define internal void @"\01-[I setPosition:]"
-// CHECK: call noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %class.S* @_ZN1SaSERKS_
+// CHECK: call noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) ptr @_ZN1SaSERKS_
 // CHECK-NEXT: ret void
 
 // Don't attach debug locations to the prologue instructions. These were
@@ -50,7 +50,6 @@ struct CGRect {
   _labelLayer.frame = labelLayerFrame;
 }
 
-// rdar://8366604
 - (void)dealloc
   {
       CGRect cgrect = self.extent;
@@ -60,8 +59,8 @@ struct CGRect {
 @end
 
 // CHECK-LABEL: define{{.*}} i32 @main
-// CHECK: call void @_ZN1SC1ERKS_(%class.S* {{[^,]*}} [[AGGTMP:%[a-zA-Z0-9\.]+]], %class.S* noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) {{%[a-zA-Z0-9\.]+}})
-// CHECK: call void bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to void (i8*, i8*, %class.S*)*)(i8* noundef {{%[a-zA-Z0-9\.]+}}, i8* noundef {{%[a-zA-Z0-9\.]+}}, %class.S* noundef [[AGGTMP]])
+// CHECK: call void @_ZN1SC1ERKS_(ptr {{[^,]*}} [[AGGTMP:%[a-zA-Z0-9\.]+]], ptr noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) {{%[a-zA-Z0-9\.]+}})
+// CHECK: call void @objc_msgSend(ptr noundef {{%[a-zA-Z0-9\.]+}}, ptr noundef {{%[a-zA-Z0-9\.]+}}, ptr noundef [[AGGTMP]])
 // CHECK-NEXT: ret i32 0
 int main() {
   I *i;
@@ -70,11 +69,10 @@ int main() {
   return 0;
 }
 
-// rdar://8379892
 // CHECK-LABEL: define{{.*}} void @_Z1fP1A
-// CHECK: call void @_ZN1XC1Ev(%struct.X* {{[^,]*}} [[LVTEMP:%[a-zA-Z0-9\.]+]])
-// CHECK: call void @_ZN1XC1ERKS_(%struct.X* {{[^,]*}} [[AGGTMP:%[a-zA-Z0-9\.]+]], %struct.X* noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[LVTEMP]])
-// CHECK: call void bitcast (i8* (i8*, i8*, ...)* @objc_msgSend to void (i8*, i8*, %struct.X*)*)({{.*}} %struct.X* noundef [[AGGTMP]])
+// CHECK: call void @_ZN1XC1Ev(ptr {{[^,]*}} [[LVTEMP:%[a-zA-Z0-9\.]+]])
+// CHECK: call void @_ZN1XC1ERKS_(ptr {{[^,]*}} [[AGGTMP:%[a-zA-Z0-9\.]+]], ptr noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[LVTEMP]])
+// CHECK: call void @objc_msgSend({{.*}} ptr noundef [[AGGTMP]])
 struct X {
   X();
   X(const X&);
@@ -92,7 +90,6 @@ void f(A* a) {
   a.x = X();
 }
 
-// rdar://21801088
 //   Ensure that pseudo-objecet expressions that require the RHS to be
 //   rewritten don't result in crashes or redundant emission of code.
 struct B0 { long long x; };
@@ -116,32 +113,32 @@ void testB0(B *b) {
 void testB1(B *b) {
   b.b1 += { b_makeInt() };
 }
-// CHECK:    define{{.*}} void @_Z6testB0P1B([[B:%.*]]*
-// CHECK:      [[BVAR:%.*]] = alloca [[B]]*, align 8
+// CHECK:    define{{.*}} void @_Z6testB0P1B(ptr
+// CHECK:      [[BVAR:%.*]] = alloca ptr, align 8
 // CHECK:      [[TEMP:%.*]] = alloca [[B0:%.*]], align 8
-// CHECK:      [[X:%.*]] = getelementptr inbounds [[B0]], [[B0]]* [[TEMP]], i32 0, i32 0
+// CHECK:      [[X:%.*]] = getelementptr inbounds [[B0]], ptr [[TEMP]], i32 0, i32 0
 // CHECK-NEXT: [[T0:%.*]] = call noundef i32 @_Z9b_makeIntv()
 // CHECK-NEXT: [[T1:%.*]] = sext i32 [[T0]] to i64
-// CHECK-NEXT: store i64 [[T1]], i64* [[X]], align 8
-// CHECK:      load [[B]]*, [[B]]** [[BVAR]]
+// CHECK-NEXT: store i64 [[T1]], ptr [[X]], align 8
+// CHECK:      load ptr, ptr [[BVAR]]
 // CHECK-NOT:  call
 // CHECK:      call void @llvm.memcpy
 // CHECK-NOT:  call
-// CHECK:      call void bitcast {{.*}} @objc_msgSend
+// CHECK:      call void @objc_msgSend
 // CHECK-NOT:  call
 // CHECK:      ret void
 
-// CHECK:    define{{.*}} void @_Z6testB1P1B([[B]]*
-// CHECK:      [[BVAR:%.*]] = alloca [[B]]*, align 8
-// CHECK:      load [[B]]*, [[B]]** [[BVAR]]
+// CHECK:    define{{.*}} void @_Z6testB1P1B(ptr
+// CHECK:      [[BVAR:%.*]] = alloca ptr, align 8
+// CHECK:      load ptr, ptr [[BVAR]]
 // CHECK-NOT:  call
-// CHECK:      [[T0:%.*]] = call i64 bitcast {{.*}} @objc_msgSend
+// CHECK:      [[T0:%.*]] = call i64 @objc_msgSend
 // CHECK-NOT:  call
 // CHECK:      store i64 [[T0]],
 // CHECK-NOT:  call
 // CHECK:      [[T0:%.*]] = call noundef i32 @_Z9b_makeIntv()
 // CHECK-NEXT: [[T1:%.*]] = sext i32 [[T0]] to i64
-// CHECK-NEXT: store i64 [[T1]], i64* {{.*}}, align 8
+// CHECK-NEXT: store i64 [[T1]], ptr {{.*}}, align 8
 // CHECK-NOT:  call
 // CHECK:      [[T0:%.*]] = call i64 @_Zpl2B1S_
 // CHECK-NOT:  call
@@ -149,7 +146,7 @@ void testB1(B *b) {
 // CHECK-NOT:  call
 // CHECK:      call void @llvm.memcpy
 // CHECK-NOT:  call
-// CHECK:      call void bitcast {{.*}} @objc_msgSend
+// CHECK:      call void @objc_msgSend
 // CHECK-NOT:  call
 // CHECK:      ret void
 
@@ -159,18 +156,18 @@ void testB2(B *b) {
   b.b2 = { B3() };
 }
 
-// CHECK:    define{{.*}} void @_Z6testB2P1B([[B]]*
-// CHECK:      [[BVAR:%.*]] = alloca [[B]]*, align 8
+// CHECK:    define{{.*}} void @_Z6testB2P1B(ptr
+// CHECK:      [[BVAR:%.*]] = alloca ptr, align 8
 // CHECK:      call void @llvm.dbg.declare(
 // CHECK:      call void @_ZN2B3C1Ev(
 // CHECK-NEXT: [[T0:%.*]] = call i64 @_ZN2B3cv2B1Ev(
 // CHECK-NOT:  call
 // CHECK:      store i64 [[T0]],
-// CHECK:      load [[B]]*, [[B]]** [[BVAR]]
+// CHECK:      load ptr, ptr [[BVAR]]
 // CHECK-NOT:  call
 // CHECK:      call void @llvm.memcpy
 // CHECK-NOT:  call
-// CHECK:      call void bitcast {{.*}} @objc_msgSend
+// CHECK:      call void @objc_msgSend
 // CHECK-NOT:  call
 // CHECK:      ret void
 
@@ -191,24 +188,24 @@ void testC0(C *c) {
   c.c0 = c_helper;
   c.c0 = &c_helper;
 }
-// CHECK:    define{{.*}} void @_Z6testC0P1C([[C:%.*]]*
-// CHECK:      [[CVAR:%.*]] = alloca [[C]]*, align 8
-// CHECK:      load [[C]]*, [[C]]** [[CVAR]]
+// CHECK:    define{{.*}} void @_Z6testC0P1C(ptr
+// CHECK:      [[CVAR:%.*]] = alloca ptr, align 8
+// CHECK:      load ptr, ptr [[CVAR]]
 // CHECK-NOT:  call
-// CHECK:      call void bitcast {{.*}} @objc_msgSend {{.*}} @_Z8c_helperv
+// CHECK:      call void @objc_msgSend({{.*}} @_Z8c_helperv
 // CHECK-NOT:  call
-// CHECK:      call void bitcast {{.*}} @objc_msgSend {{.*}} @_Z8c_helperv
+// CHECK:      call void @objc_msgSend({{.*}} @_Z8c_helperv
 // CHECK-NOT:  call
 // CHECK:      ret void
 
 void testC1(C *c) {
   c.c1 += c_helper;
 }
-// CHECK:    define{{.*}} void @_Z6testC1P1C([[C]]*
-// CHECK:      [[CVAR:%.*]] = alloca [[C]]*, align 8
-// CHECK:      load [[C]]*, [[C]]** [[CVAR]]
+// CHECK:    define{{.*}} void @_Z6testC1P1C(ptr
+// CHECK:      [[CVAR:%.*]] = alloca ptr, align 8
+// CHECK:      load ptr, ptr [[CVAR]]
 // CHECK-NOT:  call
-// CHECK:      [[T0:%.*]] = call i32 bitcast {{.*}} @objc_msgSend
+// CHECK:      [[T0:%.*]] = call i32 @objc_msgSend
 // CHECK-NOT:  call
 // CHECK:      store i32 [[T0]],
 // CHECK-NOT:  call
@@ -218,6 +215,6 @@ void testC1(C *c) {
 // CHECK-NOT:  call
 // CHECK:      call void @llvm.memcpy
 // CHECK-NOT:  call
-// CHECK:      call void bitcast {{.*}} @objc_msgSend
+// CHECK:      call void @objc_msgSend
 // CHECK-NOT:  call
 // CHECK:      ret void

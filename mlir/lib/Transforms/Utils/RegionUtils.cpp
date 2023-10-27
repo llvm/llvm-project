@@ -8,16 +8,20 @@
 
 #include "mlir/Transforms/RegionUtils.h"
 #include "mlir/IR/Block.h"
+#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/RegionGraphTraits.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
+#include "mlir/Transforms/TopologicalSortUtils.h"
 
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SmallSet.h"
+
+#include <deque>
 
 using namespace mlir;
 
@@ -67,6 +71,102 @@ void mlir::getUsedValuesDefinedAbove(MutableArrayRef<Region> regions,
                                      SetVector<Value> &values) {
   for (Region &region : regions)
     getUsedValuesDefinedAbove(region, region, values);
+}
+
+//===----------------------------------------------------------------------===//
+// Make block isolated from above.
+//===----------------------------------------------------------------------===//
+
+SmallVector<Value> mlir::makeRegionIsolatedFromAbove(
+    RewriterBase &rewriter, Region &region,
+    llvm::function_ref<bool(Operation *)> cloneOperationIntoRegion) {
+
+  // Get initial list of values used within region but defined above.
+  llvm::SetVector<Value> initialCapturedValues;
+  mlir::getUsedValuesDefinedAbove(region, initialCapturedValues);
+
+  std::deque<Value> worklist(initialCapturedValues.begin(),
+                             initialCapturedValues.end());
+  llvm::DenseSet<Value> visited;
+  llvm::DenseSet<Operation *> visitedOps;
+
+  llvm::SetVector<Value> finalCapturedValues;
+  SmallVector<Operation *> clonedOperations;
+  while (!worklist.empty()) {
+    Value currValue = worklist.front();
+    worklist.pop_front();
+    if (visited.count(currValue))
+      continue;
+    visited.insert(currValue);
+
+    Operation *definingOp = currValue.getDefiningOp();
+    if (!definingOp || visitedOps.count(definingOp)) {
+      finalCapturedValues.insert(currValue);
+      continue;
+    }
+    visitedOps.insert(definingOp);
+
+    if (!cloneOperationIntoRegion(definingOp)) {
+      // Defining operation isnt cloned, so add the current value to final
+      // captured values list.
+      finalCapturedValues.insert(currValue);
+      continue;
+    }
+
+    // Add all operands of the operation to the worklist and mark the op as to
+    // be cloned.
+    for (Value operand : definingOp->getOperands()) {
+      if (visited.count(operand))
+        continue;
+      worklist.push_back(operand);
+    }
+    clonedOperations.push_back(definingOp);
+  }
+
+  // The operations to be cloned need to be ordered in topological order
+  // so that they can be cloned into the region without violating use-def
+  // chains.
+  mlir::computeTopologicalSorting(clonedOperations);
+
+  OpBuilder::InsertionGuard g(rewriter);
+  // Collect types of existing block
+  Block *entryBlock = &region.front();
+  SmallVector<Type> newArgTypes =
+      llvm::to_vector(entryBlock->getArgumentTypes());
+  SmallVector<Location> newArgLocs = llvm::to_vector(llvm::map_range(
+      entryBlock->getArguments(), [](BlockArgument b) { return b.getLoc(); }));
+
+  // Append the types of the captured values.
+  for (auto value : finalCapturedValues) {
+    newArgTypes.push_back(value.getType());
+    newArgLocs.push_back(value.getLoc());
+  }
+
+  // Create a new entry block.
+  Block *newEntryBlock =
+      rewriter.createBlock(&region, region.begin(), newArgTypes, newArgLocs);
+  auto newEntryBlockArgs = newEntryBlock->getArguments();
+
+  // Create a mapping between the captured values and the new arguments added.
+  IRMapping map;
+  auto replaceIfFn = [&](OpOperand &use) {
+    return use.getOwner()->getBlock()->getParent() == &region;
+  };
+  for (auto [arg, capturedVal] :
+       llvm::zip(newEntryBlockArgs.take_back(finalCapturedValues.size()),
+                 finalCapturedValues)) {
+    map.map(capturedVal, arg);
+    rewriter.replaceUsesWithIf(capturedVal, arg, replaceIfFn);
+  }
+  rewriter.setInsertionPointToStart(newEntryBlock);
+  for (auto clonedOp : clonedOperations) {
+    Operation *newOp = rewriter.clone(*clonedOp, map);
+    rewriter.replaceOpWithIf(clonedOp, newOp->getResults(), replaceIfFn);
+  }
+  rewriter.mergeBlocks(
+      entryBlock, newEntryBlock,
+      newEntryBlock->getArguments().take_front(entryBlock->getNumArguments()));
+  return llvm::to_vector(finalCapturedValues);
 }
 
 //===----------------------------------------------------------------------===//
@@ -144,17 +244,17 @@ public:
   bool wasProvenLive(Value value) {
     // TODO: For results that are removable, e.g. for region based control flow,
     // we could allow for these values to be tracked independently.
-    if (OpResult result = value.dyn_cast<OpResult>())
+    if (OpResult result = dyn_cast<OpResult>(value))
       return wasProvenLive(result.getOwner());
-    return wasProvenLive(value.cast<BlockArgument>());
+    return wasProvenLive(cast<BlockArgument>(value));
   }
   bool wasProvenLive(BlockArgument arg) { return liveValues.count(arg); }
   void setProvedLive(Value value) {
     // TODO: For results that are removable, e.g. for region based control flow,
     // we could allow for these values to be tracked independently.
-    if (OpResult result = value.dyn_cast<OpResult>())
+    if (OpResult result = dyn_cast<OpResult>(value))
       return setProvedLive(result.getOwner());
-    setProvedLive(value.cast<BlockArgument>());
+    setProvedLive(cast<BlockArgument>(value));
   }
   void setProvedLive(BlockArgument arg) {
     changed |= liveValues.insert(arg).second;
@@ -438,11 +538,11 @@ unsigned BlockEquivalenceData::getOrderOf(Value value) const {
   assert(value.getParentBlock() == block && "expected value of this block");
 
   // Arguments use the argument number as the order index.
-  if (BlockArgument arg = value.dyn_cast<BlockArgument>())
+  if (BlockArgument arg = dyn_cast<BlockArgument>(value))
     return arg.getArgNumber();
 
   // Otherwise, the result order is offset from the parent op's order.
-  OpResult result = value.cast<OpResult>();
+  OpResult result = cast<OpResult>(value);
   auto opOrderIt = opOrderIndex.find(result.getDefiningOp());
   assert(opOrderIt != opOrderIndex.end() && "expected op to have an order");
   return opOrderIt->second + result.getResultNumber();
@@ -493,7 +593,7 @@ LogicalResult BlockMergeCluster::addToCluster(BlockEquivalenceData &blockData) {
     // Check that the operations are equivalent.
     if (!OperationEquivalence::isEquivalentTo(
             &*lhsIt, &*rhsIt, OperationEquivalence::ignoreValueEquivalence,
-            OperationEquivalence::ignoreValueEquivalence,
+            /*markEquivalent=*/nullptr,
             OperationEquivalence::Flags::IgnoreLocations))
       return failure();
 
@@ -735,4 +835,20 @@ LogicalResult mlir::simplifyRegions(RewriterBase &rewriter,
       succeeded(mergeIdenticalBlocks(rewriter, regions));
   return success(eliminatedBlocks || eliminatedOpsOrArgs ||
                  mergedIdenticalBlocks);
+}
+
+SetVector<Block *> mlir::getTopologicallySortedBlocks(Region &region) {
+  // For each block that has not been visited yet (i.e. that has no
+  // predecessors), add it to the list as well as its successors.
+  SetVector<Block *> blocks;
+  for (Block &b : region) {
+    if (blocks.count(&b) == 0) {
+      llvm::ReversePostOrderTraversal<Block *> traversal(&b);
+      blocks.insert(traversal.begin(), traversal.end());
+    }
+  }
+  assert(blocks.size() == region.getBlocks().size() &&
+         "some blocks are not sorted");
+
+  return blocks;
 }

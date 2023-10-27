@@ -1,6 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin10 -emit-llvm -fobjc-arc -fobjc-exceptions -o - %s | FileCheck %s
 // pr10411
-// rdar://10042689
 
 id make(void);
 void test(void) { 

@@ -1,8 +1,8 @@
-// RUN: mlir-opt -pass-pipeline="builtin.module(func.func(convert-arith-to-llvm),convert-func-to-llvm,reconcile-unrealized-casts)" -split-input-file %s | FileCheck %s
-// RUN: mlir-opt -pass-pipeline="builtin.module(func.func(convert-arith-to-llvm),convert-func-to-llvm{use-bare-ptr-memref-call-conv=1},reconcile-unrealized-casts)" -split-input-file %s | FileCheck %s --check-prefix=BAREPTR
+// RUN: mlir-opt -pass-pipeline="builtin.module(func.func(convert-arith-to-llvm),convert-func-to-llvm{use-opaque-pointers=1},reconcile-unrealized-casts)" -split-input-file %s | FileCheck %s
+// RUN: mlir-opt -pass-pipeline="builtin.module(func.func(convert-arith-to-llvm),convert-func-to-llvm{use-bare-ptr-memref-call-conv=1 use-opaque-pointers=1},reconcile-unrealized-casts)" -split-input-file %s | FileCheck %s --check-prefix=BAREPTR
 
 // BAREPTR-LABEL: func @check_noalias
-// BAREPTR-SAME: %{{.*}}: !llvm.ptr<f32> {llvm.noalias}, %{{.*}}: !llvm.ptr<f32> {llvm.noalias}
+// BAREPTR-SAME: %{{.*}}: !llvm.ptr {llvm.noalias}, %{{.*}}: !llvm.ptr {llvm.noalias}
 func.func @check_noalias(%static : memref<2xf32> {llvm.noalias}, %other : memref<2xf32> {llvm.noalias}) {
     return
 }
@@ -10,11 +10,11 @@ func.func @check_noalias(%static : memref<2xf32> {llvm.noalias}, %other : memref
 // -----
 
 // CHECK-LABEL: func @check_strided_memref_arguments(
-// CHECK-COUNT-2: !llvm.ptr<f32>
+// CHECK-COUNT-2: !llvm.ptr
 // CHECK-COUNT-5: i64
-// CHECK-COUNT-2: !llvm.ptr<f32>
+// CHECK-COUNT-2: !llvm.ptr
 // CHECK-COUNT-5: i64
-// CHECK-COUNT-2: !llvm.ptr<f32>
+// CHECK-COUNT-2: !llvm.ptr
 // CHECK-COUNT-5: i64
 func.func @check_strided_memref_arguments(%static: memref<10x20xf32, affine_map<(i,j)->(20 * i + j + 1)>>,
                                      %dynamic : memref<?x?xf32, affine_map<(i,j)[M]->(M * i + j + 1)>>,
@@ -25,13 +25,13 @@ func.func @check_strided_memref_arguments(%static: memref<10x20xf32, affine_map<
 // -----
 
 // CHECK-LABEL: func @memref_index
-// CHECK-SAME: %arg0: !llvm.ptr<i64>, %arg1: !llvm.ptr<i64>,
+// CHECK-SAME: %arg0: !llvm.ptr, %arg1: !llvm.ptr,
 // CHECK-SAME: %arg2: i64, %arg3: i64, %arg4: i64)
-// CHECK-SAME: -> !llvm.struct<(ptr<i64>, ptr<i64>, i64, array<1 x i64>, array<1 x i64>)>
+// CHECK-SAME: -> !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
 // CHECK32-LABEL: func @memref_index
-// CHECK32-SAME: %arg0: !llvm.ptr<i32>, %arg1: !llvm.ptr<i32>,
+// CHECK32-SAME: %arg0: !llvm.ptr, %arg1: !llvm.ptr,
 // CHECK32-SAME: %arg2: i32, %arg3: i32, %arg4: i32)
-// CHECK32-SAME: -> !llvm.struct<(ptr<i32>, ptr<i32>, i32, array<1 x i32>, array<1 x i32>)>
+// CHECK32-SAME: -> !llvm.struct<(ptr, ptr, i32, array<1 x i32>, array<1 x i32>)>
 func.func @memref_index(%arg0: memref<32xindex>) -> memref<32xindex> {
   return %arg0 : memref<32xindex>
 }
@@ -39,11 +39,11 @@ func.func @memref_index(%arg0: memref<32xindex>) -> memref<32xindex> {
 // -----
 
 // CHECK-LABEL: func @check_arguments
-// CHECK-COUNT-2: !llvm.ptr<f32>
+// CHECK-COUNT-2: !llvm.ptr
 // CHECK-COUNT-5: i64
-// CHECK-COUNT-2: !llvm.ptr<f32>
+// CHECK-COUNT-2: !llvm.ptr
 // CHECK-COUNT-5: i64
-// CHECK-COUNT-2: !llvm.ptr<f32>
+// CHECK-COUNT-2: !llvm.ptr
 // CHECK-COUNT-5: i64
 func.func @check_arguments(%static: memref<10x20xf32>, %dynamic : memref<?x?xf32>, %mixed : memref<10x?xf32>) {
   return
@@ -108,7 +108,7 @@ func.func @check_scalar_func_call(%in : f32) {
 func.func @loop_carried(%arg0 : index, %arg1 : index, %arg2 : index, %base0 : !base_type, %base1 : !base_type) -> (!base_type, !base_type) {
   // This test checks that in the BAREPTR case, the branch arguments only forward the descriptor.
   // This test was lowered from a simple scf.for that swaps 2 memref iter_args.
-  //      BAREPTR: llvm.br ^bb1(%{{.*}}, %{{.*}}, %{{.*}} : i64, !llvm.struct<(ptr<i32, 201>, ptr<i32, 201>, i64, array<1 x i64>, array<1 x i64>)>, !llvm.struct<(ptr<i32, 201>, ptr<i32, 201>, i64, array<1 x i64>, array<1 x i64>)>)
+  //      BAREPTR: llvm.br ^bb1(%{{.*}}, %{{.*}}, %{{.*}} : i64, !llvm.struct<(ptr<201>, ptr<201>, i64, array<1 x i64>, array<1 x i64>)>, !llvm.struct<(ptr<201>, ptr<201>, i64, array<1 x i64>, array<1 x i64>)>)
   cf.br ^bb1(%arg0, %base0, %base1 : index, memref<64xi32, 201>, memref<64xi32, 201>)
 
   // BAREPTR-NEXT: ^bb1

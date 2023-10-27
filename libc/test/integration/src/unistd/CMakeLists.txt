@@ -7,11 +7,9 @@ add_integration_test(
     unistd-integration-tests
   SRCS
     getcwd_test.cpp
-  STARTUP
-    libc.startup.linux.crt1
   DEPENDS
-    libc.include.errno
     libc.src.__support.CPP.string_view
+    libc.src.errno.errno
     libc.src.stdlib.getenv
     libc.src.unistd.getcwd
 )
@@ -22,8 +20,6 @@ add_integration_test(
     unistd-integration-tests
   SRCS
     fork_test.cpp
-  STARTUP
-    libc.startup.linux.crt1
   DEPENDS
     libc.include.errno
     libc.include.signal
@@ -36,6 +32,29 @@ add_integration_test(
     libc.src.sys.wait.waitpid
     libc.src.unistd.fork
 )
+
+if((${LIBC_TARGET_OS} STREQUAL "linux") AND (${LIBC_TARGET_ARCHITECTURE_IS_X86}))
+  add_integration_test(
+    stack_smashing_test
+    SUITE
+      unistd-integration-tests
+    SRCS
+      stack_smashing_test.cpp
+    DEPENDS
+      libc.include.errno
+      libc.include.signal
+      libc.include.sys_wait
+      libc.include.unistd
+      libc.src.pthread.pthread_atfork
+      libc.src.signal.raise
+      libc.src.sys.wait.wait
+      libc.src.sys.wait.wait4
+      libc.src.sys.wait.waitpid
+      libc.src.unistd.fork
+    COMPILE_OPTIONS
+      -fstack-protector-all
+  )
+endif()
 
 add_executable(
   libc_execv_test_normal_exit
@@ -67,8 +86,6 @@ add_integration_test(
     unistd-integration-tests
   SRCS
     execv_test.cpp
-  STARTUP
-    libc.startup.linux.crt1
   DEPENDS
     libc_execv_test_normal_exit
     libc_execv_test_signal_exit
@@ -86,8 +103,6 @@ add_integration_test(
     unistd-integration-tests
   SRCS
     execve_test.cpp
-  STARTUP
-    libc.startup.linux.crt1
   DEPENDS
     libc_execv_test_normal_exit
     libc_execv_test_signal_exit

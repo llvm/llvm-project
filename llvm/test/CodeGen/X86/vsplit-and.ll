@@ -7,9 +7,9 @@ define void @t0(ptr %dst, <2 x i64> %src1, <2 x i64> %src2) nounwind readonly {
 ; CHECK-NEXT:    pxor %xmm2, %xmm2
 ; CHECK-NEXT:    pcmpeqq %xmm2, %xmm0
 ; CHECK-NEXT:    pcmpeqq %xmm2, %xmm1
-; CHECK-NEXT:    pcmpeqd %xmm2, %xmm2
-; CHECK-NEXT:    pxor %xmm1, %xmm2
-; CHECK-NEXT:    pandn %xmm2, %xmm0
+; CHECK-NEXT:    por %xmm0, %xmm1
+; CHECK-NEXT:    pcmpeqd %xmm0, %xmm0
+; CHECK-NEXT:    pxor %xmm1, %xmm0
 ; CHECK-NEXT:    movdqa %xmm0, (%rdi)
 ; CHECK-NEXT:    retq
   %cmp1 = icmp ne <2 x i64> %src1, zeroinitializer
@@ -32,20 +32,19 @@ define void @t2(ptr %dst, <3 x i64> %src1, <3 x i64> %src2) nounwind readonly {
 ; CHECK-NEXT:    movq %rcx, %xmm0
 ; CHECK-NEXT:    movq {{.*#+}} xmm3 = mem[0],zero
 ; CHECK-NEXT:    pxor %xmm4, %xmm4
-; CHECK-NEXT:    pcmpeqq %xmm4, %xmm0
 ; CHECK-NEXT:    pcmpeqq %xmm4, %xmm2
-; CHECK-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,2],xmm0[0,2]
-; CHECK-NEXT:    pcmpeqd %xmm0, %xmm0
-; CHECK-NEXT:    pcmpeqq %xmm4, %xmm3
+; CHECK-NEXT:    pcmpeqq %xmm4, %xmm0
+; CHECK-NEXT:    pcmpeqd %xmm5, %xmm5
 ; CHECK-NEXT:    pcmpeqq %xmm4, %xmm1
-; CHECK-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,2],xmm3[0,2]
-; CHECK-NEXT:    xorps %xmm0, %xmm1
-; CHECK-NEXT:    andnps %xmm1, %xmm2
-; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[2,3,2,3]
-; CHECK-NEXT:    psllq $63, %xmm0
+; CHECK-NEXT:    por %xmm2, %xmm1
+; CHECK-NEXT:    pcmpeqq %xmm4, %xmm3
+; CHECK-NEXT:    por %xmm0, %xmm3
+; CHECK-NEXT:    packssdw %xmm3, %xmm1
+; CHECK-NEXT:    pxor %xmm5, %xmm1
+; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[2,2,2,2]
+; CHECK-NEXT:    pslld $31, %xmm0
 ; CHECK-NEXT:    psrad $31, %xmm0
-; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
-; CHECK-NEXT:    pmovsxdq %xmm2, %xmm1
+; CHECK-NEXT:    pmovsxdq %xmm1, %xmm1
 ; CHECK-NEXT:    movdqa %xmm1, (%rdi)
 ; CHECK-NEXT:    movq %xmm0, 16(%rdi)
 ; CHECK-NEXT:    retq

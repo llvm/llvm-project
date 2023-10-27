@@ -169,24 +169,22 @@ private:
   MCOperand GetSymbolRef(const MCSymbol *Symbol);
   unsigned encodeVirtualRegister(unsigned Reg);
 
-  void printMemOperand(const MachineInstr *MI, int opNum, raw_ostream &O,
+  void printMemOperand(const MachineInstr *MI, unsigned OpNum, raw_ostream &O,
                        const char *Modifier = nullptr);
   void printModuleLevelGV(const GlobalVariable *GVar, raw_ostream &O,
                           bool processDemoted, const NVPTXSubtarget &STI);
-  void printParamName(Function::const_arg_iterator I, int paramIndex,
-                      raw_ostream &O);
   void emitGlobals(const Module &M);
+  void emitGlobalAlias(const Module &M, const GlobalAlias &GA);
   void emitHeader(Module &M, raw_ostream &O, const NVPTXSubtarget &STI);
   void emitKernelFunctionDirectives(const Function &F, raw_ostream &O) const;
   void emitVirtualRegister(unsigned int vr, raw_ostream &);
   void emitFunctionParamList(const Function *, raw_ostream &O);
-  void emitFunctionParamList(const MachineFunction &MF, raw_ostream &O);
   void setAndEmitFunctionVirtualRegisters(const MachineFunction &MF);
   void printReturnValStr(const Function *, raw_ostream &O);
   void printReturnValStr(const MachineFunction &MF, raw_ostream &O);
   bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
                        const char *ExtraCode, raw_ostream &) override;
-  void printOperand(const MachineInstr *MI, int opNum, raw_ostream &O);
+  void printOperand(const MachineInstr *MI, unsigned OpNum, raw_ostream &O);
   bool PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
                              const char *ExtraCode, raw_ostream &) override;
 

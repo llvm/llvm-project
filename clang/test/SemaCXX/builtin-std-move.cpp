@@ -43,6 +43,33 @@ namespace std {
     return static_cast<T&&>(x);
   }
 
+  template <class T> struct is_const { static constexpr bool value = false; };
+  template <class T> struct is_const<const T> { static constexpr bool value = true; };
+
+  template <bool B, class T, class F> struct conditional { using type = T; };
+  template <class T, class F> struct conditional<false, T, F> { using type = F; };
+
+  template <class U, class T>
+  using CopyConst = typename conditional<
+          is_const<remove_reference<U>>::value,
+          const T, T>::type;
+
+  template <class U, class T>
+  using OverrideRef = typename conditional<
+          is_lvalue_reference<U &&>::value,
+          typename remove_reference<T>::type &,
+          typename remove_reference<T>::type &&>::type;
+
+  template <class U, class T>
+  using ForwardLikeRetType = OverrideRef<U &&, CopyConst<U, T>>;
+
+  template <class U, class T>
+  CONSTEXPR auto forward_like(T &&t) -> ForwardLikeRetType<U, T> {
+    using TT = typename remove_reference<T>::type;
+    static_assert(TT::moveable, "instantiated as_const"); // expected-error {{no member named 'moveable' in 'B'}}
+    return static_cast<ForwardLikeRetType<U, T>>(t);
+  }
+
   template<typename T> CONSTEXPR const T &as_const(T &x) {
     static_assert(T::moveable, "instantiated as_const"); // expected-error {{no member named 'moveable' in 'B'}}
     return x;
@@ -92,14 +119,15 @@ struct B {};
 B &&(*pMove)(B&) = std::move; // #1 expected-note {{instantiation of}}
 B &&(*pMoveIfNoexcept)(B&) = &std::move_if_noexcept; // #2 expected-note {{instantiation of}}
 B &&(*pForward)(B&) = &std::forward<B>; // #3 expected-note {{instantiation of}}
-const B &(*pAsConst)(B&) = &std::as_const; // #4 expected-note {{instantiation of}}
-B *(*pAddressof)(B&) = &std::addressof; // #5 expected-note {{instantiation of}}
-B *(*pUnderUnderAddressof)(B&) = &std::__addressof; // #6 expected-note {{instantiation of}}
+B &&(*pForwardLike)(B&) = &std::forward_like<int&&, B&>; // #4 expected-note {{instantiation of}}
+const B &(*pAsConst)(B&) = &std::as_const; // #5 expected-note {{instantiation of}}
+B *(*pAddressof)(B&) = &std::addressof; // #6 expected-note {{instantiation of}}
+B *(*pUnderUnderAddressof)(B&) = &std::__addressof; // #7 expected-note {{instantiation of}}
 int (*pUnrelatedMove)(B, B) = std::move;
 
 struct C {};
-C &&(&rMove)(C&) = std::move; // #7 expected-note {{instantiation of}}
-C &&(&rForward)(C&) = std::forward<C>; // #8 expected-note {{instantiation of}}
+C &&(&rMove)(C&) = std::move; // #8 expected-note {{instantiation of}}
+C &&(&rForward)(C&) = std::forward<C>; // #9 expected-note {{instantiation of}}
 int (&rUnrelatedMove)(B, B) = std::move;
 
 #if __cplusplus <= 201703L
@@ -111,6 +139,7 @@ int (&rUnrelatedMove)(B, B) = std::move;
 // expected-warning@#6 {{non-addressable}}
 // expected-warning@#7 {{non-addressable}}
 // expected-warning@#8 {{non-addressable}}
+// expected-warning@#9 {{non-addressable}}
 #else
 // expected-error@#1 {{non-addressable}}
 // expected-error@#2 {{non-addressable}}
@@ -120,6 +149,7 @@ int (&rUnrelatedMove)(B, B) = std::move;
 // expected-error@#6 {{non-addressable}}
 // expected-error@#7 {{non-addressable}}
 // expected-error@#8 {{non-addressable}}
+// expected-error@#9 {{non-addressable}}
 #endif
 
 void attribute_const() {
@@ -127,6 +157,7 @@ void attribute_const() {
   std::move(n); // expected-warning {{ignoring return value}}
   std::move_if_noexcept(n); // expected-warning {{ignoring return value}}
   std::forward<int>(n); // expected-warning {{ignoring return value}}
+  std::forward_like<float&&>(n); // expected-warning {{ignoring return value}}
   std::addressof(n); // expected-warning {{ignoring return value}}
   std::__addressof(n); // expected-warning {{ignoring return value}}
   std::as_const(n); // expected-warning {{ignoring return value}}

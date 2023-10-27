@@ -11,10 +11,12 @@
 #ifndef LLVM_UTILS_TABLEGEN_CODEGENHWMODES_H
 #define LLVM_UTILS_TABLEGEN_CODEGENHWMODES_H
 
-#include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/StringRef.h"
 #include <cassert>
 #include <map>
 #include <string>
+#include <utility>
 #include <vector>
 
 // HwModeId -> list of predicates (definition)
@@ -29,6 +31,7 @@ namespace llvm {
     HwMode(Record *R);
     StringRef Name;
     std::string Features;
+    std::string Predicates;
     void dump() const;
   };
 
@@ -44,7 +47,7 @@ namespace llvm {
     static StringRef DefaultModeName;
 
     CodeGenHwModes(RecordKeeper &R);
-    unsigned getHwModeId(StringRef Name) const;
+    unsigned getHwModeId(Record *R) const;
     const HwMode &getMode(unsigned Id) const {
       assert(Id != 0 && "Mode id of 0 is reserved for the default mode");
       return Modes[Id-1];
@@ -55,7 +58,7 @@ namespace llvm {
 
   private:
     RecordKeeper &Records;
-    StringMap<unsigned> ModeIds;  // HwMode (string) -> HwModeId
+    DenseMap<Record *, unsigned> ModeIds;  // HwMode Record -> HwModeId
     std::vector<HwMode> Modes;
     std::map<Record*,HwModeSelect> ModeSelects;
   };

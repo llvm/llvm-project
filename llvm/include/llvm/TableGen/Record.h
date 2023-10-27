@@ -36,6 +36,7 @@
 #include <optional>
 #include <string>
 #include <utility>
+#include <variant>
 #include <vector>
 
 namespace llvm {
@@ -142,8 +143,6 @@ public:
   std::string getAsString() const override;
 
   bool typeIsConvertibleTo(const RecTy *RHS) const override;
-
-  bool typeIsA(const RecTy *RHS) const override;
 };
 
 /// 'int' - Represent an integer value of no particular size
@@ -316,11 +315,11 @@ protected:
     IK_AnonymousNameInit,
     IK_StringInit,
     IK_VarInit,
-    IK_VarListElementInit,
     IK_VarBitInit,
     IK_VarDefInit,
     IK_LastTypedInit,
-    IK_UnsetInit
+    IK_UnsetInit,
+    IK_ArgumentInit,
   };
 
 private:
@@ -386,14 +385,6 @@ public:
     return nullptr;
   }
 
-  /// This function is used to implement the list slice
-  /// selection operator.  Given a value, it selects the specified list
-  /// elements, returning them as a new \p Init of type \p list. If it
-  /// is not legal to use the slice operator, null is returned.
-  virtual Init *convertInitListSlice(ArrayRef<unsigned> Elements) const {
-    return nullptr;
-  }
-
   /// This function is used to implement the FieldInit class.
   /// Implementors of this method should return the type of the named
   /// field if they are of type record.
@@ -445,7 +436,6 @@ public:
   Init *convertInitializerTo(RecTy *Ty) const override;
 
   Init *convertInitializerBitRange(ArrayRef<unsigned> Bits) const override;
-  Init *convertInitListSlice(ArrayRef<unsigned> Elements) const override;
 
   /// This method is used to implement the FieldInit class.
   /// Implementors of this method should return the type of the named field if
@@ -490,6 +480,68 @@ public:
 
   /// Get the string representation of the Init.
   std::string getAsString() const override { return "?"; }
+};
+
+// Represent an argument.
+using ArgAuxType = std::variant<unsigned, Init *>;
+class ArgumentInit : public Init, public FoldingSetNode {
+public:
+  enum Kind {
+    Positional,
+    Named,
+  };
+
+private:
+  Init *Value;
+  ArgAuxType Aux;
+
+protected:
+  explicit ArgumentInit(Init *Value, ArgAuxType Aux)
+      : Init(IK_ArgumentInit), Value(Value), Aux(Aux) {}
+
+public:
+  ArgumentInit(const ArgumentInit &) = delete;
+  ArgumentInit &operator=(const ArgumentInit &) = delete;
+
+  static bool classof(const Init *I) { return I->getKind() == IK_ArgumentInit; }
+
+  RecordKeeper &getRecordKeeper() const { return Value->getRecordKeeper(); }
+
+  static ArgumentInit *get(Init *Value, ArgAuxType Aux);
+
+  bool isPositional() const { return Aux.index() == Positional; }
+  bool isNamed() const { return Aux.index() == Named; }
+
+  Init *getValue() const { return Value; }
+  unsigned getIndex() const {
+    assert(isPositional() && "Should be positional!");
+    return std::get<Positional>(Aux);
+  }
+  Init *getName() const {
+    assert(isNamed() && "Should be named!");
+    return std::get<Named>(Aux);
+  }
+  ArgumentInit *cloneWithValue(Init *Value) const { return get(Value, Aux); }
+
+  void Profile(FoldingSetNodeID &ID) const;
+
+  Init *resolveReferences(Resolver &R) const override;
+  std::string getAsString() const override {
+    if (isPositional())
+      return utostr(getIndex()) + ": " + Value->getAsString();
+    if (isNamed())
+      return getName()->getAsString() + ": " + Value->getAsString();
+    llvm_unreachable("Unsupported argument type!");
+    return "";
+  }
+
+  bool isComplete() const override { return false; }
+  bool isConcrete() const override { return false; }
+  Init *getBit(unsigned Bit) const override { return Value->getBit(Bit); }
+  Init *getCastTo(RecTy *Ty) const override { return Value->getCastTo(Ty); }
+  Init *convertInitializerTo(RecTy *Ty) const override {
+    return Value->convertInitializerTo(Ty);
+  }
 };
 
 /// 'true'/'false' - Represent a concrete initializer for a bit.
@@ -726,8 +778,6 @@ public:
 
   Record *getElementAsRecord(unsigned i) const;
 
-  Init *convertInitListSlice(ArrayRef<unsigned> Elements) const override;
-
   Init *convertInitializerTo(RecTy *Ty) const override;
 
   /// This method is used by classes that refer to other
@@ -785,7 +835,19 @@ public:
 ///
 class UnOpInit : public OpInit, public FoldingSetNode {
 public:
-  enum UnaryOp : uint8_t { CAST, NOT, HEAD, TAIL, SIZE, EMPTY, GETDAGOP, LOG2 };
+  enum UnaryOp : uint8_t {
+    TOLOWER,
+    TOUPPER,
+    CAST,
+    NOT,
+    HEAD,
+    TAIL,
+    SIZE,
+    EMPTY,
+    GETDAGOP,
+    LOG2,
+    REPR
+  };
 
 private:
   Init *LHS;
@@ -848,6 +910,9 @@ public:
     LISTCONCAT,
     LISTSPLAT,
     LISTREMOVE,
+    LISTELEM,
+    LISTSLICE,
+    RANGEC,
     STRCONCAT,
     INTERLEAVE,
     CONCAT,
@@ -857,7 +922,9 @@ public:
     LT,
     GE,
     GT,
-    SETDAGOP
+    GETDAGARG,
+    GETDAGNAME,
+    SETDAGOP,
   };
 
 private:
@@ -915,7 +982,18 @@ public:
 /// !op (X, Y, Z) - Combine two inits.
 class TernOpInit : public OpInit, public FoldingSetNode {
 public:
-  enum TernaryOp : uint8_t { SUBST, FOREACH, FILTER, IF, DAG, SUBSTR, FIND };
+  enum TernaryOp : uint8_t {
+    SUBST,
+    FOREACH,
+    FILTER,
+    IF,
+    DAG,
+    RANGE,
+    SUBSTR,
+    FIND,
+    SETDAGARG,
+    SETDAGNAME,
+  };
 
 private:
   Init *LHS, *MHS, *RHS;
@@ -1229,39 +1307,6 @@ public:
   }
 };
 
-/// List[4] - Represent access to one element of a var or
-/// field.
-class VarListElementInit : public TypedInit {
-  TypedInit *TI;
-  unsigned Element;
-
-  VarListElementInit(TypedInit *T, unsigned E)
-      : TypedInit(IK_VarListElementInit,
-                  cast<ListRecTy>(T->getType())->getElementType()),
-        TI(T), Element(E) {
-    assert(T->getType() && isa<ListRecTy>(T->getType()) &&
-           "Illegal VarBitInit expression!");
-  }
-
-public:
-  VarListElementInit(const VarListElementInit &) = delete;
-  VarListElementInit &operator=(const VarListElementInit &) = delete;
-
-  static bool classof(const Init *I) {
-    return I->getKind() == IK_VarListElementInit;
-  }
-
-  static VarListElementInit *get(TypedInit *T, unsigned E);
-
-  TypedInit *getVariable() const { return TI; }
-  unsigned getElementNum() const { return Element; }
-
-  std::string getAsString() const override;
-  Init *resolveReferences(Resolver &R) const override;
-
-  Init *getBit(unsigned Bit) const override;
-};
-
 /// AL - Represent a reference to a 'def' in the description
 class DefInit : public TypedInit {
   friend class Record;
@@ -1298,8 +1343,9 @@ public:
 
 /// classname<targs...> - Represent an uninstantiated anonymous class
 /// instantiation.
-class VarDefInit final : public TypedInit, public FoldingSetNode,
-                         public TrailingObjects<VarDefInit, Init *> {
+class VarDefInit final : public TypedInit,
+                         public FoldingSetNode,
+                         public TrailingObjects<VarDefInit, ArgumentInit *> {
   Record *Class;
   DefInit *Def = nullptr; // after instantiation
   unsigned NumArgs;
@@ -1318,7 +1364,7 @@ public:
   static bool classof(const Init *I) {
     return I->getKind() == IK_VarDefInit;
   }
-  static VarDefInit *get(Record *Class, ArrayRef<Init *> Args);
+  static VarDefInit *get(Record *Class, ArrayRef<ArgumentInit *> Args);
 
   void Profile(FoldingSetNodeID &ID) const;
 
@@ -1327,20 +1373,24 @@ public:
 
   std::string getAsString() const override;
 
-  Init *getArg(unsigned i) const {
+  ArgumentInit *getArg(unsigned i) const {
     assert(i < NumArgs && "Argument index out of range!");
-    return getTrailingObjects<Init *>()[i];
+    return getTrailingObjects<ArgumentInit *>()[i];
   }
 
-  using const_iterator = Init *const *;
+  using const_iterator = ArgumentInit *const *;
 
-  const_iterator args_begin() const { return getTrailingObjects<Init *>(); }
+  const_iterator args_begin() const {
+    return getTrailingObjects<ArgumentInit *>();
+  }
   const_iterator args_end  () const { return args_begin() + NumArgs; }
 
   size_t         args_size () const { return NumArgs; }
   bool           args_empty() const { return NumArgs == 0; }
 
-  ArrayRef<Init *> args() const { return ArrayRef(args_begin(), NumArgs); }
+  ArrayRef<ArgumentInit *> args() const {
+    return ArrayRef(args_begin(), NumArgs);
+  }
 
   Init *getBit(unsigned Bit) const override {
     llvm_unreachable("Illegal bit reference off anonymous def");
@@ -1436,6 +1486,10 @@ public:
     assert(Num < NumArgs && "Arg number out of range!");
     return getTrailingObjects<Init *>()[Num];
   }
+
+  /// This method looks up the specified argument name and returns its argument
+  /// number or std::nullopt if that argument name does not exist.
+  std::optional<unsigned> getArgNo(StringRef Name) const;
 
   StringInit *getArgName(unsigned Num) const {
     assert(Num < NumArgNames && "Arg number out of range!");
@@ -1828,7 +1882,7 @@ public:
 
   /// This method looks up the specified field and returns its value as a
   /// string, throwing an exception if the value is not a string and
-  /// llvm::Optional() if the field does not exist.
+  /// std::nullopt if the field does not exist.
   std::optional<StringRef> getValueAsOptionalString(StringRef FieldName) const;
 
   /// This method looks up the specified field and returns its value as a

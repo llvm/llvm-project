@@ -26,7 +26,7 @@ int main(int, char**)
     typedef F::mask mask;
     const mask *p = F::classic_table();
 
-    for ( size_t i = 0; i < 128; ++i ) // values above 128 are not consistent
+    for ( std::size_t i = 0; i < 128; ++i ) // values above 128 are not consistent
     {
 
         bool expect_cntrl = (i < 32 || 126 < i);

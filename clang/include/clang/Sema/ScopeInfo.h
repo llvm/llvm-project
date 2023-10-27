@@ -172,6 +172,9 @@ public:
   /// in the function. One of co_return, co_await, or co_yield.
   unsigned char FirstCoroutineStmtKind : 2;
 
+  /// Whether we found an immediate-escalating expression.
+  bool FoundImmediateEscalatingExpression : 1;
+
   /// First coroutine statement in the current function.
   /// (ex co_return, co_await, co_yield)
   SourceLocation FirstCoroutineStmtLoc;
@@ -388,7 +391,8 @@ public:
         HasPotentialAvailabilityViolations(false), ObjCShouldCallSuper(false),
         ObjCIsDesignatedInit(false), ObjCWarnForNoDesignatedInitChain(false),
         ObjCIsSecondaryInit(false), ObjCWarnForNoInitDelegation(false),
-        NeedsCoroutineSuspends(true), ErrorTrap(Diag) {}
+        NeedsCoroutineSuspends(true), FoundImmediateEscalatingExpression(false),
+        ErrorTrap(Diag) {}
 
   virtual ~FunctionScopeInfo();
 
@@ -838,6 +842,13 @@ public:
   /// The lambda's compiler-generated \c operator().
   CXXMethodDecl *CallOperator = nullptr;
 
+  /// Indicate that we parsed the parameter list
+  /// at which point the mutability of the lambda
+  /// is known.
+  bool AfterParameterList = true;
+
+  ParmVarDecl *ExplicitObjectParameter = nullptr;
+
   /// Source range covering the lambda introducer [...].
   SourceRange IntroducerRange;
 
@@ -849,8 +860,9 @@ public:
   /// explicit captures.
   unsigned NumExplicitCaptures = 0;
 
-  /// Whether this is a mutable lambda.
-  bool Mutable = false;
+  /// Whether this is a mutable lambda. Until the mutable keyword is parsed,
+  /// we assume the lambda is mutable.
+  bool Mutable = true;
 
   /// Whether the (empty) parameter list is explicit.
   bool ExplicitParams = false;
@@ -1032,6 +1044,8 @@ public:
 
   void visitPotentialCaptures(
       llvm::function_ref<void(ValueDecl *, Expr *)> Callback) const;
+
+  bool lambdaCaptureShouldBeConst() const;
 };
 
 FunctionScopeInfo::WeakObjectProfileTy::WeakObjectProfileTy()

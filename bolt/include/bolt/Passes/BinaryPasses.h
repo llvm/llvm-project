@@ -213,6 +213,16 @@ public:
   void runOnFunctions(BinaryContext &BC) override;
 };
 
+/// Clean the state of the MC representation before sending it to emission
+class CleanMCState : public BinaryFunctionPass {
+public:
+  explicit CleanMCState(const cl::opt<bool> &PrintPass)
+      : BinaryFunctionPass(PrintPass) {}
+
+  const char *getName() const override { return "clean-mc-state"; }
+  void runOnFunctions(BinaryContext &BC) override;
+};
+
 /// An optimization to simplify conditional tail calls by removing
 /// unnecessary branches.
 ///

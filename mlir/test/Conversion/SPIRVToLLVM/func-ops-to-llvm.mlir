@@ -1,4 +1,4 @@
-// RUN: mlir-opt -convert-spirv-to-llvm %s | FileCheck %s
+// RUN: mlir-opt -convert-spirv-to-llvm='use-opaque-pointers=1' %s | FileCheck %s
 
 //===----------------------------------------------------------------------===//
 // spirv.Return

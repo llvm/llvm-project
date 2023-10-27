@@ -1316,7 +1316,7 @@ define half @extract_f16_3(<8 x half> %x) {
 define half @extract_f16_4(<8 x half> %x) {
 ; CHECK-LABEL: extract_f16_4:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
 ; CHECK-NEXT:    ret{{[l|q]}}
    %res = extractelement <8 x half> %x, i32 4
    ret half %res
@@ -1334,7 +1334,7 @@ define half @extract_f16_5(<8 x half> %x) {
 define half @extract_f16_6(<8 x half> %x) {
 ; CHECK-LABEL: extract_f16_6:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,3,3,3]
+; CHECK-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
 ; CHECK-NEXT:    ret{{[l|q]}}
    %res = extractelement <8 x half> %x, i32 6
    ret half %res
@@ -1570,14 +1570,14 @@ define void @extract_store_f16_3(<8 x half> %x, ptr %y) {
 define void @extract_store_f16_4(<8 x half> %x, ptr %y) {
 ; X64-LABEL: extract_store_f16_4:
 ; X64:       # %bb.0:
-; X64-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
+; X64-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
 ; X64-NEXT:    vmovsh %xmm0, (%rdi)
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: extract_store_f16_4:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
+; X86-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
 ; X86-NEXT:    vmovsh %xmm0, (%eax)
 ; X86-NEXT:    retl
    %res = extractelement <8 x half> %x, i32 4
@@ -1606,14 +1606,14 @@ define void @extract_store_f16_5(<8 x half> %x, ptr %y) {
 define void @extract_store_f16_6(<8 x half> %x, ptr %y) {
 ; X64-LABEL: extract_store_f16_6:
 ; X64:       # %bb.0:
-; X64-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,3,3,3]
+; X64-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
 ; X64-NEXT:    vmovsh %xmm0, (%rdi)
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: extract_store_f16_6:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,3,3,3]
+; X86-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
 ; X86-NEXT:    vmovsh %xmm0, (%eax)
 ; X86-NEXT:    retl
    %res = extractelement <8 x half> %x, i32 6
@@ -2130,9 +2130,8 @@ define <16 x i32> @pr52561(<16 x i32> %a, <16 x i32> %b) "min-legal-vector-width
 define <8 x i16> @pr59628_xmm(i16 %arg) {
 ; X64-LABEL: pr59628_xmm:
 ; X64:       # %bb.0:
-; X64-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; X64-NEXT:    vmovw %edi, %xmm0
 ; X64-NEXT:    vpbroadcastw %edi, %xmm1
-; X64-NEXT:    vmovsh %xmm1, %xmm0, %xmm0
 ; X64-NEXT:    vpcmpneqw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %k1
 ; X64-NEXT:    vmovdqu16 %xmm0, %xmm0 {%k1} {z}
 ; X64-NEXT:    retq

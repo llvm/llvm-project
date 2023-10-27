@@ -24,24 +24,41 @@
 namespace __lsan {
 
 static ThreadRegistry *thread_registry;
+static ThreadArgRetval *thread_arg_retval;
+
+static Mutex mu_for_thread_context;
+static LowLevelAllocator allocator_for_thread_context;
 
 static ThreadContextBase *CreateThreadContext(u32 tid) {
-  void *mem = MmapOrDie(sizeof(ThreadContext), "ThreadContext");
-  return new (mem) ThreadContext(tid);
+  Lock lock(&mu_for_thread_context);
+  return new (allocator_for_thread_context) ThreadContext(tid);
 }
 
-void InitializeThreadRegistry() {
-  static ALIGNED(64) char thread_registry_placeholder[sizeof(ThreadRegistry)];
+void InitializeThreads() {
+  static ALIGNED(alignof(
+      ThreadRegistry)) char thread_registry_placeholder[sizeof(ThreadRegistry)];
   thread_registry =
       new (thread_registry_placeholder) ThreadRegistry(CreateThreadContext);
+
+  static ALIGNED(alignof(ThreadArgRetval)) char
+      thread_arg_retval_placeholder[sizeof(ThreadArgRetval)];
+  thread_arg_retval = new (thread_arg_retval_placeholder) ThreadArgRetval();
 }
+
+ThreadArgRetval &GetThreadArgRetval() { return *thread_arg_retval; }
 
 ThreadContextLsanBase::ThreadContextLsanBase(int tid)
     : ThreadContextBase(tid) {}
 
+void ThreadContextLsanBase::OnStarted(void *arg) {
+  SetCurrentThread(this);
+  AllocatorThreadStart();
+}
+
 void ThreadContextLsanBase::OnFinished() {
   AllocatorThreadFinish();
   DTLS_Destroy();
+  SetCurrentThread(nullptr);
 }
 
 u32 ThreadCreate(u32 parent_tid, bool detached, void *arg) {
@@ -51,26 +68,13 @@ u32 ThreadCreate(u32 parent_tid, bool detached, void *arg) {
 void ThreadContextLsanBase::ThreadStart(u32 tid, tid_t os_id,
                                         ThreadType thread_type, void *arg) {
   thread_registry->StartThread(tid, os_id, thread_type, arg);
-  SetCurrentThread(tid);
 }
 
-void ThreadFinish() {
-  thread_registry->FinishThread(GetCurrentThread());
-  SetCurrentThread(kInvalidTid);
-}
-
-ThreadContext *CurrentThreadContext() {
-  if (!thread_registry)
-    return nullptr;
-  if (GetCurrentThread() == kInvalidTid)
-    return nullptr;
-  // No lock needed when getting current thread.
-  return (ThreadContext *)thread_registry->GetThreadLocked(GetCurrentThread());
-}
+void ThreadFinish() { thread_registry->FinishThread(GetCurrentThreadId()); }
 
 void EnsureMainThreadIDIsCorrect() {
-  if (GetCurrentThread() == kMainTid)
-    CurrentThreadContext()->os_id = GetTid();
+  if (GetCurrentThreadId() == kMainTid)
+    GetCurrentThread()->os_id = GetTid();
 }
 
 ///// Interface to the common LSan module. /////
@@ -79,9 +83,15 @@ void GetThreadExtraStackRangesLocked(tid_t os_id,
                                      InternalMmapVector<Range> *ranges) {}
 void GetThreadExtraStackRangesLocked(InternalMmapVector<Range> *ranges) {}
 
-void LockThreadRegistry() { thread_registry->Lock(); }
+void LockThreads() {
+  thread_registry->Lock();
+  thread_arg_retval->Lock();
+}
 
-void UnlockThreadRegistry() { thread_registry->Unlock(); }
+void UnlockThreads() {
+  thread_arg_retval->Unlock();
+  thread_registry->Unlock();
+}
 
 ThreadRegistry *GetLsanThreadRegistryLocked() {
   thread_registry->CheckLocked();
@@ -97,6 +107,10 @@ void GetRunningThreadsLocked(InternalMmapVector<tid_t> *threads) {
         }
       },
       threads);
+}
+
+void GetAdditionalThreadContextPtrsLocked(InternalMmapVector<uptr> *ptrs) {
+  GetThreadArgRetval().GetAllPtrsLocked(ptrs);
 }
 
 }  // namespace __lsan

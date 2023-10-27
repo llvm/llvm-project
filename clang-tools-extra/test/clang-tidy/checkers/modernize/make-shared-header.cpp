@@ -1,10 +1,8 @@
 // RUN: %check_clang_tidy %s modernize-make-shared %t -- \
 // RUN:   -config="{CheckOptions: \
-// RUN:     [{key: modernize-make-shared.MakeSmartPtrFunction, \
-// RUN:       value: 'my::MakeShared'}, \
-// RUN:      {key: modernize-make-shared.MakeSmartPtrFunctionHeader, \
-// RUN:       value: 'make_shared_util.h'} \
-// RUN:     ]}" \
+// RUN:     {modernize-make-shared.MakeSmartPtrFunction: 'my::MakeShared', \
+// RUN:      modernize-make-shared.MakeSmartPtrFunctionHeader: 'make_shared_util.h' \
+// RUN:     }}" \
 // RUN:   -- -I %S/Inputs/smart-ptr
 
 #include "shared_ptr.h"

@@ -74,6 +74,17 @@ enum {
   MO_INDNTPOFF = (2 << 0)
 };
 
+// z/OS XPLink specific: classifies the types of
+// accesses to the ADA (Associated Data Area).
+// These enums contains values that overlap with the above MO_ enums,
+// but that's fine since the above enums are used with ELF,
+// while these values are used with z/OS.
+enum {
+  MO_ADA_DATA_SYMBOL_ADDR = 1,
+  MO_ADA_INDIRECT_FUNC_DESC,
+  MO_ADA_DIRECT_FUNC_DESC,
+};
+
 // Classifies a branch.
 enum BranchType {
   // An instruction that branches on the current value of CC.

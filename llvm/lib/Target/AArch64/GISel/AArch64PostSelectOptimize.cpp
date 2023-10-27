@@ -73,10 +73,32 @@ unsigned getNonFlagSettingVariant(unsigned Opc) {
     return AArch64::SUBWrr;
   case AArch64::SUBSXrs:
     return AArch64::SUBXrs;
+  case AArch64::SUBSWrs:
+    return AArch64::SUBWrs;
   case AArch64::SUBSXri:
     return AArch64::SUBXri;
   case AArch64::SUBSWri:
     return AArch64::SUBWri;
+  case AArch64::ADDSXrr:
+    return AArch64::ADDXrr;
+  case AArch64::ADDSWrr:
+    return AArch64::ADDWrr;
+  case AArch64::ADDSXrs:
+    return AArch64::ADDXrs;
+  case AArch64::ADDSWrs:
+    return AArch64::ADDWrs;
+  case AArch64::ADDSXri:
+    return AArch64::ADDXri;
+  case AArch64::ADDSWri:
+    return AArch64::ADDWri;
+  case AArch64::SBCSXr:
+    return AArch64::SBCXr;
+  case AArch64::SBCSWr:
+    return AArch64::SBCWr;
+  case AArch64::ADCSXr:
+    return AArch64::ADCXr;
+  case AArch64::ADCSWr:
+    return AArch64::ADCWr;
   }
 }
 
@@ -137,6 +159,12 @@ bool AArch64PostSelectOptimize::foldSimpleCrossClassCopies(MachineInstr &MI) {
 }
 
 bool AArch64PostSelectOptimize::optimizeNZCVDefs(MachineBasicBlock &MBB) {
+  // If we find a dead NZCV implicit-def, we
+  // - try to convert the operation to a non-flag-setting equivalent
+  // - or mark the def as dead to aid later peephole optimizations.
+
+  // Use cases:
+  // 1)
   // Consider the following code:
   //  FCMPSrr %0, %1, implicit-def $nzcv
   //  %sel1:gpr32 = CSELWr %_, %_, 12, implicit $nzcv
@@ -153,8 +181,11 @@ bool AArch64PostSelectOptimize::optimizeNZCVDefs(MachineBasicBlock &MBB) {
   // in between the two FCMPs. In this case, the SUBS defines NZCV
   // but it doesn't have any users, being overwritten by the second FCMP.
   //
-  // Our solution here is to try to convert flag setting operations between
-  // a interval of identical FCMPs, so that CSE will be able to eliminate one.
+  // 2)
+  // The instruction selector always emits the flag-setting variant of ADC/SBC
+  // while selecting G_UADDE/G_SADDE/G_USUBE/G_SSUBE. If the carry-out of these
+  // instructions is never used, we can switch to the non-flag-setting variant.
+
   bool Changed = false;
   auto &MF = *MBB.getParent();
   auto &Subtarget = MF.getSubtarget();
@@ -163,52 +194,20 @@ bool AArch64PostSelectOptimize::optimizeNZCVDefs(MachineBasicBlock &MBB) {
   auto RBI = Subtarget.getRegBankInfo();
   auto &MRI = MF.getRegInfo();
 
-  // The first step is to find the first and last FCMPs. If we have found
-  // at least two, then set the limit of the bottom-up walk to the first FCMP
-  // found since we're only interested in dealing with instructions between
-  // them.
-  MachineInstr *FirstCmp = nullptr, *LastCmp = nullptr;
-  for (auto &MI : instructionsWithoutDebug(MBB.begin(), MBB.end())) {
-    if (MI.getOpcode() == AArch64::FCMPSrr ||
-        MI.getOpcode() == AArch64::FCMPDrr) {
-      if (!FirstCmp)
-        FirstCmp = &MI;
-      else
-        LastCmp = &MI;
-    }
-  }
-
-  // In addition to converting flag-setting ops in fcmp ranges into non-flag
-  // setting ops, across the whole basic block we also detect when nzcv
-  // implicit-defs are dead, and mark them as dead. Peephole optimizations need
-  // this information later.
-
   LiveRegUnits LRU(*MBB.getParent()->getSubtarget().getRegisterInfo());
   LRU.addLiveOuts(MBB);
-  bool NZCVDead = LRU.available(AArch64::NZCV);
-  bool InsideCmpRange = false;
+
   for (auto &II : instructionsWithoutDebug(MBB.rbegin(), MBB.rend())) {
-    LRU.stepBackward(II);
-
-    if (LastCmp) { // There's a range present in this block.
-      // If we're inside an fcmp range, look for begin instruction.
-      if (InsideCmpRange && &II == FirstCmp)
-        InsideCmpRange = false;
-      else if (&II == LastCmp)
-        InsideCmpRange = true;
-    }
-
-    // Did this instruction define NZCV?
-    bool NZCVDeadAtCurrInstr = LRU.available(AArch64::NZCV);
-    if (NZCVDead && NZCVDeadAtCurrInstr && II.definesRegister(AArch64::NZCV)) {
-      // If we have a def and NZCV is dead, then we may convert this op.
+    bool NZCVDead = LRU.available(AArch64::NZCV);
+    if (NZCVDead && II.definesRegister(AArch64::NZCV)) {
+      // The instruction defines NZCV, but NZCV is dead.
       unsigned NewOpc = getNonFlagSettingVariant(II.getOpcode());
       int DeadNZCVIdx = II.findRegisterDefOperandIdx(AArch64::NZCV);
       if (DeadNZCVIdx != -1) {
-        // If we're inside an fcmp range, then convert flag setting ops.
-        if (InsideCmpRange && NewOpc) {
+        if (NewOpc) {
+          // If there is an equivalent non-flag-setting op, we convert.
           LLVM_DEBUG(dbgs() << "Post-select optimizer: converting flag-setting "
-                               "op in fcmp range: "
+                               "op: "
                             << II);
           II.setDesc(TII->get(NewOpc));
           II.removeOperand(DeadNZCVIdx);
@@ -225,8 +224,7 @@ bool AArch64PostSelectOptimize::optimizeNZCVDefs(MachineBasicBlock &MBB) {
         }
       }
     }
-
-    NZCVDead = NZCVDeadAtCurrInstr;
+    LRU.stepBackward(II);
   }
   return Changed;
 }

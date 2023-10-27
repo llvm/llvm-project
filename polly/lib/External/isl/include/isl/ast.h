@@ -103,6 +103,9 @@ __isl_give char *isl_ast_expr_to_str(__isl_keep isl_ast_expr *expr);
 __isl_export
 __isl_give char *isl_ast_expr_to_C_str(__isl_keep isl_ast_expr *expr);
 
+__isl_constructor
+__isl_give isl_ast_node *isl_ast_node_user_from_expr(
+	__isl_take isl_ast_expr *expr);
 __isl_give isl_ast_node *isl_ast_node_alloc_user(__isl_take isl_ast_expr *expr);
 __isl_give isl_ast_node *isl_ast_node_copy(__isl_keep isl_ast_node *node);
 __isl_null isl_ast_node *isl_ast_node_free(__isl_take isl_ast_node *node);
@@ -150,6 +153,9 @@ __isl_give isl_ast_node *isl_ast_node_if_get_else_node(
 __isl_give isl_ast_node *isl_ast_node_if_get_else(
 	__isl_keep isl_ast_node *node);
 
+__isl_constructor
+__isl_give isl_ast_node *isl_ast_node_block_from_children(
+	__isl_take isl_ast_node_list *list);
 __isl_export
 __isl_give isl_ast_node_list *isl_ast_node_block_get_children(
 	__isl_keep isl_ast_node *node);
@@ -167,6 +173,10 @@ __isl_give isl_ast_expr *isl_ast_node_user_get_expr(
 isl_stat isl_ast_node_foreach_descendant_top_down(
 	__isl_keep isl_ast_node *node,
 	isl_bool (*fn)(__isl_keep isl_ast_node *node, void *user), void *user);
+__isl_export
+__isl_give isl_ast_node *isl_ast_node_map_descendant_bottom_up(
+	__isl_take isl_ast_node *node, __isl_give isl_ast_node *(*fn)(
+		__isl_take isl_ast_node *node, void *user), void *user);
 
 __isl_give isl_printer *isl_printer_print_ast_node(__isl_take isl_printer *p,
 	__isl_keep isl_ast_node *node);

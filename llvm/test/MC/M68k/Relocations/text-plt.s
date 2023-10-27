@@ -7,3 +7,8 @@
 ; INSTR: jsr     (target@PLT,%pc)
 ; FIXUP: fixup A - offset: 2, value: target@PLT, kind: FK_PCRel_2
 jsr	(target@PLT,%pc)
+
+; RELOC: R_68K_PLT32  __tls_get_addr 0x0
+; INSTR: bsr.l   __tls_get_addr@PLT
+; FIXUP: fixup A - offset: 2, value: __tls_get_addr@PLT, kind: FK_PCRel_4
+bsr.l __tls_get_addr@PLT

@@ -21,8 +21,8 @@ using namespace mlir::tblgen;
 
 /// Emit the documentation for the given pass.
 static void emitDoc(const Pass &pass, raw_ostream &os) {
-  os << llvm::formatv("### `-{0}`: {1}\n", pass.getArgument(),
-                      pass.getSummary());
+  os << llvm::formatv("### `-{0}`\n", pass.getArgument());
+  emitSummary(pass.getSummary(), os);
   emitDescription(pass.getDescription(), os);
 
   // Handle the options of the pass.

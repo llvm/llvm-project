@@ -361,7 +361,7 @@ public:
     unsigned NumArgs = 0;
 
     // Function arguments
-    const Expr *const *FunArgs = nullptr;
+    llvm::PointerUnion<const Expr *const *, til::SExpr *> FunArgs = nullptr;
 
     // is Self referred to with -> or .?
     bool SelfArrow = false;
@@ -483,8 +483,6 @@ private:
   void insertStmt(const Stmt *S, til::SExpr *E) {
     SMap.insert(std::make_pair(S, E));
   }
-
-  til::SExpr *getCurrentLVarDefinition(const ValueDecl *VD);
 
   til::SExpr *addStatement(til::SExpr *E, const Stmt *S,
                            const ValueDecl *VD = nullptr);

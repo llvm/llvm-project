@@ -49,14 +49,14 @@ void DescribeThread(MemprofThreadContext *context) {
   }
   context->announced = true;
   InternalScopedString str;
-  str.append("Thread %s", MemprofThreadIdAndName(context).c_str());
+  str.AppendF("Thread %s", MemprofThreadIdAndName(context).c_str());
   if (context->parent_tid == kInvalidTid) {
-    str.append(" created by unknown thread\n");
+    str.AppendF(" created by unknown thread\n");
     Printf("%s", str.data());
     return;
   }
-  str.append(" created by %s here:\n",
-             MemprofThreadIdAndName(context->parent_tid).c_str());
+  str.AppendF(" created by %s here:\n",
+              MemprofThreadIdAndName(context->parent_tid).c_str());
   Printf("%s", str.data());
   StackDepotGet(context->stack_id).Print();
   // Recursively described parent thread if needed.

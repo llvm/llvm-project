@@ -9,17 +9,14 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_FILE_EXTENSIONS_UTILS_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_FILE_EXTENSIONS_UTILS_H
 
+#include "../FileExtensionsSet.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringRef.h"
 #include <optional>
 
-namespace clang {
-namespace tidy {
-namespace utils {
-
-typedef llvm::SmallSet<llvm::StringRef, 5> FileExtensionsSet;
+namespace clang::tidy::utils {
 
 /// Checks whether expansion location of \p Loc is in header file.
 bool isExpansionLocInHeaderFile(SourceLocation Loc, const SourceManager &SM,
@@ -61,8 +58,6 @@ getFileExtension(StringRef FileName, const FileExtensionsSet &FileExtensions);
 bool isFileExtension(StringRef FileName,
                      const FileExtensionsSet &FileExtensions);
 
-} // namespace utils
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::utils
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_FILE_EXTENSIONS_UTILS_H

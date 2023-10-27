@@ -13,18 +13,19 @@
 target triple = "nvptx64"
 
 %struct.ident_t = type { i32, i32, i32, i32, ptr }
+%struct.KernelEnvironmentTy = type { %struct.ConfigurationEnvironmentTy, ptr, ptr }
+%struct.ConfigurationEnvironmentTy = type { i8, i8, i8 }
 
 @0 = private unnamed_addr constant [23 x i8] c";unknown;unknown;0;0;;\00", align 1
 @1 = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 0, ptr @0 }, align 8
-@__omp_offloading_fd02_404433c2_main_l5_exec_mode = weak constant i8 1
-@llvm.compiler.used = appending global [1 x ptr] [ptr @__omp_offloading_fd02_404433c2_main_l5_exec_mode], section "llvm.metadata"
+@__omp_offloading_fd02_404433c2_main_l5_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 0, i8 1 }, ptr @1, ptr null }
+
 
 ; Function Attrs: alwaysinline convergent norecurse nounwind
 ;.
 ; CHECK: @[[GLOB0:[0-9]+]] = private unnamed_addr constant [23 x i8] c"
 ; CHECK: @[[GLOB1:[0-9]+]] = private unnamed_addr constant [[STRUCT_IDENT_T:%.*]] { i32 0, i32 2, i32 0, i32 0, ptr @[[GLOB0]] }, align 8
-; CHECK: @[[__OMP_OFFLOADING_FD02_404433C2_MAIN_L5_EXEC_MODE:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 3
-; CHECK: @[[LLVM_COMPILER_USED:[a-zA-Z0-9_$"\\.-]+]] = appending global [1 x ptr] [ptr @__omp_offloading_fd02_404433c2_main_l5_exec_mode], section "llvm.metadata"
+; CHECK: @[[__OMP_OFFLOADING_FD02_404433C2_MAIN_L5_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 0, i8 0, i8 3 }, ptr @[[GLOB1]], ptr null }
 ; CHECK: @[[GLOB2:[0-9]+]] = private unnamed_addr constant [[STRUCT_IDENT_T:%.*]] { i32 0, i32 2, i32 0, i32 22, ptr @[[GLOB0]] }, align 8
 ;.
 define weak void @__omp_offloading_fd02_404433c2_main_l5(ptr nonnull align 8 dereferenceable(8) %x) local_unnamed_addr #0 {
@@ -32,7 +33,7 @@ define weak void @__omp_offloading_fd02_404433c2_main_l5(ptr nonnull align 8 der
 ; CHECK-SAME: (ptr nonnull align 8 dereferenceable(8) [[X:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 8
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr nonnull @[[GLOB1]], i8 2, i1 false) #[[ATTR3:[0-9]+]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr nonnull @__omp_offloading_fd02_404433c2_main_l5_kernel_environment) #[[ATTR3:[0-9]+]]
 ; CHECK-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 ; CHECK-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[COMMON_RET:%.*]]
 ; CHECK:       common.ret:
@@ -55,12 +56,12 @@ define weak void @__omp_offloading_fd02_404433c2_main_l5(ptr nonnull align 8 der
 ; CHECK-NEXT:    br label [[REGION_EXIT:%.*]]
 ; CHECK:       region.exit:
 ; CHECK-NEXT:    call void @__kmpc_parallel_51(ptr nonnull @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__, ptr @__omp_outlined___wrapper, ptr nonnull [[CAPTURED_VARS_ADDRS]], i64 0) #[[ATTR3]]
-; CHECK-NEXT:    call void @__kmpc_target_deinit(ptr nonnull @[[GLOB1]], i8 2) #[[ATTR3]]
+; CHECK-NEXT:    call void @__kmpc_target_deinit() #[[ATTR3]]
 ; CHECK-NEXT:    br label [[COMMON_RET]]
 ;
 entry:
   %captured_vars_addrs = alloca [0 x ptr], align 8
-  %0 = call i32 @__kmpc_target_init(ptr nonnull @1, i8 1, i1 true) #3
+  %0 = call i32 @__kmpc_target_init(ptr nonnull @__omp_offloading_fd02_404433c2_main_l5_kernel_environment) #3
   %exec_user_code = icmp eq i32 %0, -1
   br i1 %exec_user_code, label %user_code.entry, label %common.ret
 
@@ -72,11 +73,11 @@ user_code.entry:                                  ; preds = %entry
   %call.i = call double @__nv_sin(double 0x400921FB54442D18) #6
   store double %call.i, ptr %x, align 8, !tbaa !8
   call void @__kmpc_parallel_51(ptr nonnull @1, i32 %1, i32 1, i32 -1, i32 -1, ptr @__omp_outlined__, ptr @__omp_outlined___wrapper, ptr nonnull %captured_vars_addrs, i64 0) #3
-  call void @__kmpc_target_deinit(ptr nonnull @1, i8 1) #3
+  call void @__kmpc_target_deinit() #3
   br label %common.ret
 }
 
-declare i32 @__kmpc_target_init(ptr, i8, i1) local_unnamed_addr
+declare i32 @__kmpc_target_init(ptr) local_unnamed_addr
 
 ; Function Attrs: alwaysinline mustprogress nofree norecurse nosync nounwind readnone willreturn
 define internal void @__omp_outlined__(ptr noalias nocapture %.global_tid., ptr noalias nocapture %.bound_tid.) #1 {
@@ -112,12 +113,12 @@ declare i32 @__kmpc_global_thread_num(ptr) local_unnamed_addr #3
 ; Function Attrs: alwaysinline
 declare void @__kmpc_parallel_51(ptr, i32, i32, i32, i32, ptr, ptr, ptr, i64) local_unnamed_addr #4
 
-declare void @__kmpc_target_deinit(ptr, i8) local_unnamed_addr
+declare void @__kmpc_target_deinit() local_unnamed_addr
 
 ; Function Attrs: convergent
 declare double @__nv_sin(double) local_unnamed_addr #5
 
-attributes #0 = { alwaysinline convergent norecurse nounwind "frame-pointer"="all" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
+attributes #0 = { alwaysinline convergent norecurse nounwind "kernel" "frame-pointer"="all" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 attributes #1 = { alwaysinline mustprogress nofree norecurse nosync nounwind readnone willreturn "frame-pointer"="all" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 attributes #2 = { norecurse nounwind "frame-pointer"="all" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 attributes #3 = { nounwind }
@@ -143,7 +144,7 @@ attributes #6 = { convergent nounwind "llvm.assume"="ompx_spmd_amenable" }
 !10 = !{!"omnipotent char", !11, i64 0}
 !11 = !{!"Simple C/C++ TBAA"}
 ;.
-; CHECK: attributes #[[ATTR0]] = { alwaysinline convergent norecurse nounwind "frame-pointer"="all" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
+; CHECK: attributes #[[ATTR0]] = { alwaysinline convergent norecurse nounwind "frame-pointer"="all" "kernel" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 ; CHECK: attributes #[[ATTR1]] = { alwaysinline mustprogress nofree norecurse nosync nounwind willreturn memory(none) "frame-pointer"="all" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 ; CHECK: attributes #[[ATTR2]] = { norecurse nounwind "frame-pointer"="all" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 ; CHECK: attributes #[[ATTR3]] = { nounwind }

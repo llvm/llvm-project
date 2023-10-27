@@ -10,8 +10,8 @@
 #include "GCNSubtarget.h"
 #include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
+#include "llvm/CodeGen/LowLevelType.h"
 #include "llvm/IR/Constants.h"
-#include "llvm/Support/LowLevelTypeImpl.h"
 
 using namespace llvm;
 using namespace MIPatternMatch;

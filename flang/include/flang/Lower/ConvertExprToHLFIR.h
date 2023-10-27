@@ -27,6 +27,10 @@ namespace mlir {
 class Location;
 } // namespace mlir
 
+namespace hlfir {
+class ElementalAddrOp;
+}
+
 namespace Fortran::lower {
 
 class AbstractConverter;
@@ -48,20 +52,24 @@ translateToExtendedValue(mlir::Location loc, fir::FirOpBuilder &builder,
   return exv;
 }
 
-/// Lower an evaluate::Expr to a fir::Box.
-fir::BoxValue convertExprToBox(mlir::Location loc,
-                               Fortran::lower::AbstractConverter &,
-                               const Fortran::lower::SomeExpr &,
-                               Fortran::lower::SymMap &,
-                               Fortran::lower::StatementContext &);
-fir::BoxValue convertToBox(mlir::Location loc,
-                           Fortran::lower::AbstractConverter &,
-                           hlfir::Entity entity,
-                           Fortran::lower::StatementContext &);
+/// Lower an evaluate::Expr object to a fir.box, and a procedure designator to a
+/// fir.boxproc<>
+fir::ExtendedValue convertExprToBox(mlir::Location loc,
+                                    Fortran::lower::AbstractConverter &,
+                                    const Fortran::lower::SomeExpr &,
+                                    Fortran::lower::SymMap &,
+                                    Fortran::lower::StatementContext &);
+fir::ExtendedValue convertToBox(mlir::Location loc,
+                                Fortran::lower::AbstractConverter &,
+                                hlfir::Entity entity,
+                                Fortran::lower::StatementContext &,
+                                mlir::Type fortranType);
 
 /// Lower an evaluate::Expr to fir::ExtendedValue address.
-/// The address may be a raw fir.ref<T>, or a fir.box<T>/fir.class<T>, (pointer
-/// and allocatable are dereferenced).
+/// The address may be a raw fir.ref<T>, or a fir.box<T>/fir.class<T>, or a
+/// fir.boxproc<>. Pointers and allocatable are dereferenced.
+/// - If the expression is a procedure designator, it is lowered to fir.boxproc
+/// (with an extra length for character function procedure designators).
 /// - If expression is not a variable, or is a designator with vector
 ///   subscripts, a temporary is created to hold the expression value and
 ///   is returned as:
@@ -90,7 +98,8 @@ fir::ExtendedValue convertExprToAddress(mlir::Location loc,
 fir::ExtendedValue convertToAddress(mlir::Location loc,
                                     Fortran::lower::AbstractConverter &,
                                     hlfir::Entity entity,
-                                    Fortran::lower::StatementContext &);
+                                    Fortran::lower::StatementContext &,
+                                    mlir::Type fortranType);
 
 /// Lower an evaluate::Expr to a fir::ExtendedValue value.
 fir::ExtendedValue convertExprToValue(mlir::Location loc,
@@ -110,6 +119,19 @@ fir::MutableBoxValue
 convertExprToMutableBox(mlir::Location loc, Fortran::lower::AbstractConverter &,
                         const Fortran::lower::SomeExpr &,
                         Fortran::lower::SymMap &);
+/// Lower a designator containing vector subscripts into an
+/// hlfir::ElementalAddrOp that will allow looping on the elements to assign
+/// them values. This only intends to cover the cases where such designator
+/// appears on the left-hand side of an assignment or appears in an input IO
+/// statement. These are the only contexts in Fortran where a vector subscripted
+/// entity may be modified. Otherwise, there is no need to do anything special
+/// about vector subscripts, they are automatically turned into array expression
+/// values via an hlfir.elemental in the convertExprToXXX calls.
+hlfir::ElementalAddrOp convertVectorSubscriptedExprToElementalAddr(
+    mlir::Location loc, Fortran::lower::AbstractConverter &,
+    const Fortran::lower::SomeExpr &, Fortran::lower::SymMap &,
+    Fortran::lower::StatementContext &);
+
 } // namespace Fortran::lower
 
 #endif // FORTRAN_LOWER_CONVERTEXPRTOHLFIR_H

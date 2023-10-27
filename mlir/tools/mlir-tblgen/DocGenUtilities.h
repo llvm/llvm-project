@@ -23,6 +23,10 @@ class raw_ostream;
 namespace mlir {
 namespace tblgen {
 
+// Emit the summary. To avoid confusion, the summary is styled differently from
+// the description.
+void emitSummary(llvm::StringRef summary, llvm::raw_ostream &os);
+
 // Emit the description by aligning the text to the left per line (e.g.
 // removing the minimum indentation across the block).
 //

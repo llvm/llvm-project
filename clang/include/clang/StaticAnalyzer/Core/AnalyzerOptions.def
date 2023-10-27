@@ -327,15 +327,6 @@ ANALYZER_OPTION(bool, ShouldSupportSymbolicIntegerCasts,
                 false)
 
 ANALYZER_OPTION(
-    bool, ShouldConsiderSingleElementArraysAsFlexibleArrayMembers,
-    "consider-single-element-arrays-as-flexible-array-members",
-    "Consider single element arrays as flexible array member candidates. "
-    "This will prevent the analyzer from assuming that a single element array "
-    "holds a single element. [DEPRECATED, removing in clang-17; "
-    "use '-fstrict-flex-arrays=<N>' instead]",
-    true)
-
-ANALYZER_OPTION(
     bool, ShouldAssumeControlledEnvironment, "assume-controlled-environment",
     "Whether the analyzed application runs in a controlled environment. "
     "We will assume that environment variables exist in queries and they hold "

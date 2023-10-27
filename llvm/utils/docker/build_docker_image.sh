@@ -96,7 +96,7 @@ while [[ $# -gt 0 ]]; do
       DOCKER_TAG="$1"
       shift
       ;;
-    -r|--revision|-c|-cherrypick|-b|--branch)
+    -r|--revision|-c|--cherrypick|-b|--branch)
       CHECKOUT_ARGS="$CHECKOUT_ARGS $1 $2"
       shift 2
       ;;

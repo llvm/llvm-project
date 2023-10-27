@@ -18,7 +18,7 @@
 
 // Precondition:  0 <= b < bits_in_tword
 
-COMPILER_RT_ABI ti_int __ashrti3(ti_int a, si_int b) {
+COMPILER_RT_ABI ti_int __ashrti3(ti_int a, int b) {
   const int bits_in_dword = (int)(sizeof(di_int) * CHAR_BIT);
   twords input;
   twords result;
@@ -31,7 +31,8 @@ COMPILER_RT_ABI ti_int __ashrti3(ti_int a, si_int b) {
     if (b == 0)
       return a;
     result.s.high = input.s.high >> b;
-    result.s.low = (input.s.high << (bits_in_dword - b)) | (input.s.low >> b);
+    result.s.low =
+        ((du_int)input.s.high << (bits_in_dword - b)) | (input.s.low >> b);
   }
   return result.all;
 }

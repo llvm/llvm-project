@@ -18,39 +18,34 @@
 #include "min_allocator.h"
 
 template <class S>
-TEST_CONSTEXPR_CXX20 void
-test(S s1)
-{
-    S s2 = s1;
-    LIBCPP_ASSERT(s2.__invariants());
-    assert(s2 == s1);
-    assert(s2.capacity() >= s2.size());
-    assert(s2.get_allocator() == s1.get_allocator());
+TEST_CONSTEXPR_CXX20 void test(S s1) {
+  S s2 = s1;
+  LIBCPP_ASSERT(s2.__invariants());
+  assert(s2 == s1);
+  assert(s2.capacity() >= s2.size());
+  assert(s2.get_allocator() == s1.get_allocator());
+}
+
+template <class Alloc>
+TEST_CONSTEXPR_CXX20 void test_string(const Alloc& a) {
+  typedef std::basic_string<char, std::char_traits<char>, Alloc> S;
+  test(S(Alloc(a)));
+  test(S("1", Alloc(a)));
+  test(S("1234567890123456789012345678901234567890123456789012345678901234567890", Alloc(a)));
 }
 
 TEST_CONSTEXPR_CXX20 bool test() {
-  {
-    typedef test_allocator<char> A;
-    typedef std::basic_string<char, std::char_traits<char>, A> S;
-    test(S(A(3)));
-    test(S("1", A(5)));
-    test(S("1234567890123456789012345678901234567890123456789012345678901234567890", A(7)));
-  }
+  test_string(std::allocator<char>());
+  test_string(test_allocator<char>());
+  test_string(test_allocator<char>(3));
 #if TEST_STD_VER >= 11
-  {
-    typedef min_allocator<char> A;
-    typedef std::basic_string<char, std::char_traits<char>, A> S;
-    test(S(A{}));
-    test(S("1", A()));
-    test(S("1234567890123456789012345678901234567890123456789012345678901234567890", A()));
-  }
+  test_string(min_allocator<char>());
 #endif
 
   return true;
 }
 
-int main(int, char**)
-{
+int main(int, char**) {
   test();
 #if TEST_STD_VER > 17
   static_assert(test());

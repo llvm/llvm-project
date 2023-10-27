@@ -83,5 +83,8 @@ func.func @ops(%f: f32) {
   // CHECK: complex.tan %[[C]] : complex<f32>
   %tan = complex.tan %complex : complex<f32>
 
+  // CHECK: complex.bitcast %[[C]]
+  %i64 = complex.bitcast %complex : complex<f32> to i64
+
   return
 }

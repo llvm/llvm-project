@@ -15,6 +15,7 @@
 #include "TypeMerger.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/DebugInfo/CodeView/TypeIndexDiscovery.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
 #include "llvm/DebugInfo/CodeView/TypeRecordHelpers.h"
@@ -28,6 +29,7 @@
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/TimeProfiler.h"
 
 using namespace llvm;
 using namespace llvm::codeview;
@@ -309,7 +311,7 @@ Error TpiSource::mergeDebugT(TypeMerger *m) {
          "use remapTpiWithGHashes when ghash is enabled");
 
   CVTypeArray types;
-  BinaryStreamReader reader(file->debugTypes, support::little);
+  BinaryStreamReader reader(file->debugTypes, llvm::endianness::little);
   cantFail(reader.readArray(types, reader.getLength()));
 
   // When dealing with PCH.OBJ, some indices were already merged.
@@ -586,7 +588,7 @@ void TpiSource::loadGHashes() {
     ownedGHashes = false;
   } else {
     CVTypeArray types;
-    BinaryStreamReader reader(file->debugTypes, support::little);
+    BinaryStreamReader reader(file->debugTypes, llvm::endianness::little);
     cantFail(reader.readArray(types, reader.getLength()));
     assignGHashesFromVector(GloballyHashedType::hashTypes(types));
   }
@@ -1021,7 +1023,8 @@ uint32_t GHashTable::insert(COFFLinkerContext &ctx, GloballyHashedType ghash,
   // type records are. Swap the byte order for better entropy. A better ghash
   // won't need this.
   uint32_t startIdx =
-      ByteSwap_64(*reinterpret_cast<uint64_t *>(&ghash)) % tableSize;
+      llvm::byteswap<uint64_t>(*reinterpret_cast<uint64_t *>(&ghash)) %
+      tableSize;
 
   // Do a linear probe starting at startIdx.
   uint32_t idx = startIdx;
@@ -1066,6 +1069,7 @@ TypeMerger::~TypeMerger() = default;
 void TypeMerger::mergeTypesWithGHash() {
   // Load ghashes. Do type servers and PCH objects first.
   {
+    llvm::TimeTraceScope timeScope("Load GHASHes");
     ScopedTimer t1(ctx.loadGHashTimer);
     parallelForEach(dependencySources,
                     [&](TpiSource *source) { source->loadGHashes(); });
@@ -1073,6 +1077,7 @@ void TypeMerger::mergeTypesWithGHash() {
                     [&](TpiSource *source) { source->loadGHashes(); });
   }
 
+  llvm::TimeTraceScope timeScope("Merge types (GHASH)");
   ScopedTimer t2(ctx.mergeGHashTimer);
   GHashState ghashState;
 

@@ -20,7 +20,7 @@
 
 ## Check that we don't emit any warnings nor errors for these unimplemented flags.
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %s -o %t.o
-# RUN: %lld %t.o -o /dev/null -objc_abi_version 2
+# RUN: %lld %t.o -o /dev/null -objc_abi_version 2 -debug_variant
 
 .globl _main
 _main:

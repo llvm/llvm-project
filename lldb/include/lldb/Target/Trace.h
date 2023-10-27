@@ -58,7 +58,7 @@ public:
   virtual void Dump(Stream *s) const = 0;
 
   /// Save the trace to the specified directory, which will be created if
-  /// needed. This will also create a a file \a <directory>/trace.json with the
+  /// needed. This will also create a file \a <directory>/trace.json with the
   /// main properties of the trace session, along with others files which
   /// contain the actual trace data. The trace.json file can be used later as
   /// input for the "trace load" command to load the trace in LLDB.
@@ -570,7 +570,7 @@ private:
     llvm::DenseMap<ConstString, uint64_t> live_process_data;
     /// \}
 
-    /// The list of cpus being traced. Might be \b None depending on the
+    /// The list of cpus being traced. Might be \b std::nullopt depending on the
     /// plug-in.
     std::optional<std::vector<lldb::cpu_id_t>> cpus;
 

@@ -7,9 +7,10 @@
 -->
 # Getting Involved
 
-```eval_rst
-.. contents::
-   :local:
+```{contents}
+---
+local:
+---
 ```
 
 The Flang Project welcomes contributions of all kinds.
@@ -63,11 +64,11 @@ To understand the status of various developments in Flang please join the respec
 -   Time: Tuesdays 10:00 AM Pacific Time, every 4 weeks.
 -   The agenda is in this [Google Doc](https://docs.google.com/document/d/17U-WvX8qyKc3S36YUKr3xfF-GHunWyYowXbxEdpHscw).
 
-### OpenMP in Flang Technical Call
+### OpenMP in Flang Biweekly Technical Call
 
 -   Development updates on OpenMP and OpenACC in the Flang Project.
 -   Join [OpenMP in Flang Technical Call](https://bit.ly/39eQW3o)
--   Time: Weekly call on every Thursdays 8:00 AM Pacific time.
+-   Time: Biweekly call on Thursdays 8:00 AM Pacific time.
 -   Meeting minutes are [here](https://docs.google.com/document/d/1yA-MeJf6RYY-ZXpdol0t7YoDoqtwAyBhFLr5thu5pFI).
 -   Status tracking [page](https://docs.google.com/spreadsheets/d/1FvHPuSkGbl4mQZRAwCIndvQx9dQboffiD-xD0oqxgU0/edit#gid=0).
 

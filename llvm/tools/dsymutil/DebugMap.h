@@ -24,12 +24,12 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Object/MachO.h"
 #include "llvm/Support/Chrono.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/YAMLTraits.h"
+#include "llvm/TargetParser/Triple.h"
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
@@ -174,10 +174,6 @@ public:
   }
 
   uint8_t getType() const { return Type; }
-
-  iterator_range<StringMap<SymbolMapping>::const_iterator> symbols() const {
-    return make_range(Symbols.begin(), Symbols.end());
-  }
 
   bool empty() const { return Symbols.empty(); }
 

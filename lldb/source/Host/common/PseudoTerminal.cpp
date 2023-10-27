@@ -8,6 +8,7 @@
 
 #include "lldb/Host/PseudoTerminal.h"
 #include "lldb/Host/Config.h"
+#include "lldb/Host/FileSystem.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Errno.h"
 #include <cassert>
@@ -95,7 +96,7 @@ llvm::Error PseudoTerminal::OpenSecondary(int oflag) {
   CloseSecondaryFileDescriptor();
 
   std::string name = GetSecondaryName();
-  m_secondary_fd = llvm::sys::RetryAfterSignal(-1, ::open, name.c_str(), oflag);
+  m_secondary_fd = FileSystem::Instance().Open(name.c_str(), oflag);
   if (m_secondary_fd >= 0)
     return llvm::Error::success();
 

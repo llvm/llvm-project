@@ -235,8 +235,14 @@ std::optional<Expr<SomeType>> FoldTransfer(
     }
   }
   std::optional<DynamicType> moldType;
-  if (arguments[1]) {
+  std::optional<std::int64_t> moldLength;
+  if (arguments[1]) { // MOLD=
     moldType = arguments[1]->GetType();
+    if (moldType && moldType->category() == TypeCategory::Character) {
+      if (const auto *chExpr{UnwrapExpr<Expr<SomeCharacter>>(arguments[1])}) {
+        moldLength = ToInt64(Fold(context, chExpr->LEN()));
+      }
+    }
   }
   std::optional<ConstantSubscripts> extents;
   if (arguments.size() == 2) { // no SIZE=
@@ -260,7 +266,8 @@ std::optional<Expr<SomeType>> FoldTransfer(
       }
     }
   }
-  if (sourceBytes && IsActuallyConstant(*source) && moldType && extents) {
+  if (sourceBytes && IsActuallyConstant(*source) && moldType && extents &&
+      (moldLength || moldType->category() != TypeCategory::Character)) {
     std::size_t elements{
         extents->empty() ? 1 : static_cast<std::size_t>((*extents)[0])};
     std::size_t totalBytes{*sourceBytes * elements};
@@ -268,11 +275,15 @@ std::optional<Expr<SomeType>> FoldTransfer(
     if (totalBytes < std::size_t{1000000} &&
         (elements == 0 || totalBytes / elements == *sourceBytes)) {
       InitialImage image{*sourceBytes};
-      InitialImage::Result imageResult{
-          image.Add(0, *sourceBytes, *source, context)};
-      CHECK(imageResult == InitialImage::Ok);
-      return image.AsConstant(
-          context, *moldType, *extents, true /*pad with 0*/);
+      auto status{image.Add(0, *sourceBytes, *source, context)};
+      if (status == InitialImage::Ok) {
+        return image.AsConstant(
+            context, *moldType, moldLength, *extents, true /*pad with 0*/);
+      } else {
+        // Can fail due to an allocatable or automatic component;
+        // a warning will also have been produced.
+        CHECK(status == InitialImage::NotAConstant);
+      }
     }
   }
   return std::nullopt;

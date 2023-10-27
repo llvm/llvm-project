@@ -78,10 +78,10 @@ define i64 @test4() {
 define { i64, i128 } @test5() {
 ; CHECK-LABEL: test5:
 ; CHECK: call    	return_multi_multi
-; CHECK: i32.const	$push10=, 8
-; CHECK: i32.add 	$push11=, $[[SP:[0-9]+]], $pop10
+; CHECK: i32.const	$push8=, 8
+; CHECK: i32.add 	$push9=, $[[SP:[0-9]+]], $pop8
 ; CHECK: i32.const	$push0=, 16
-; CHECK: i32.add 	$push1=, $pop11, $pop0
+; CHECK: i32.add 	$push1=, $pop9, $pop0
 ; CHECK: i64.load	$[[L1:[0-9]+]]=, 0($pop1)
 ; CHECK: i64.load	$[[L2:[0-9]+]]=, 8($[[SP]])
 ; CHECK: i64.load	$push2=, 16($[[SP]])
@@ -153,10 +153,10 @@ define { i64, i192 } @test7() {
 define { i128, i192, i128, i64 } @test8() {
 ; CHECK-LABEL: test8:
 ; CHECK: call    	return_multi_multi
-; CHECK: i32.const	$push20=, 8
-; CHECK: i32.add 	$push21=, $[[SP:[0-9]+]], $pop20
+; CHECK: i32.const	$push18=, 8
+; CHECK: i32.add 	$push19=, $[[SP:[0-9]+]], $pop18
 ; CHECK: i32.const	$push0=, 32
-; CHECK: i32.add 	$push1=, $pop21, $pop0
+; CHECK: i32.add 	$push1=, $pop19, $pop0
 ; CHECK: i64.load	$[[L1:[0-9]+]]=, 0($pop1)
 ; CHECK: i32.const	$push2=, 48
 ; CHECK: i32.add 	$push3=, $[[SP]], $pop2

@@ -19,7 +19,7 @@
 #include <mutex>
 #include <shared_mutex>
 
-// std::shared_timed_mutex is only availble on macOS 10.12 and later.
+// std::shared_timed_mutex is only available on macOS 10.12 and later.
 #if defined(__APPLE__) && defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__)
 #if __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ < 101200
 #define LLVM_USE_RW_MUTEX_IMPL

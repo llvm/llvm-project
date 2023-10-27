@@ -113,7 +113,7 @@ static void restoreSSA(const DominatorTree &DT, const Loop *L,
     }
   }
 
-  for (auto II : ExternalUsers) {
+  for (const auto &II : ExternalUsers) {
     // For each Def used outside the loop, create NewPhi in
     // LoopExitBlock. NewPhi receives Def only along exiting blocks that
     // dominate it, while the remaining values are undefined since those paths
@@ -130,7 +130,7 @@ static void restoreSSA(const DominatorTree &DT, const Loop *L,
         NewPhi->addIncoming(Def, In);
       } else {
         LLVM_DEBUG(dbgs() << "not dominated\n");
-        NewPhi->addIncoming(UndefValue::get(Def->getType()), In);
+        NewPhi->addIncoming(PoisonValue::get(Def->getType()), In);
       }
     }
 

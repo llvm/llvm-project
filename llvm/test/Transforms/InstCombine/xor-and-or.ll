@@ -15,9 +15,8 @@ define i1 @xor_logic_and_logic_or1(i1 %c, i1 %x, i1 %y) {
 
 define i1 @xor_logic_and_logic_or2(i1 %c, i1 %x, i1 %y) {
 ; CHECK-LABEL: @xor_logic_and_logic_or2(
-; CHECK-NEXT:    [[O:%.*]] = select i1 [[Y:%.*]], i1 true, i1 [[C:%.*]]
-; CHECK-NEXT:    [[A:%.*]] = select i1 [[C]], i1 [[X:%.*]], i1 false
-; CHECK-NEXT:    [[R:%.*]] = xor i1 [[A]], [[O]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i1 [[X:%.*]], true
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[C:%.*]], i1 [[TMP1]], i1 [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %o = select i1 %y, i1 true, i1 %c
@@ -28,9 +27,9 @@ define i1 @xor_logic_and_logic_or2(i1 %c, i1 %x, i1 %y) {
 
 define i1 @xor_logic_and_logic_or3(i1 %c, i1 %x, i1 %y) {
 ; CHECK-LABEL: @xor_logic_and_logic_or3(
-; CHECK-NEXT:    [[O:%.*]] = select i1 [[Y:%.*]], i1 true, i1 [[C:%.*]]
-; CHECK-NEXT:    [[A:%.*]] = select i1 [[X:%.*]], i1 [[C]], i1 false
-; CHECK-NEXT:    [[R:%.*]] = xor i1 [[A]], [[O]]
+; CHECK-NEXT:    [[TMP1:%.*]] = freeze i1 [[C:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i1 [[X:%.*]], true
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[TMP1]], i1 [[TMP2]], i1 [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %o = select i1 %y, i1 true, i1 %c
@@ -41,9 +40,8 @@ define i1 @xor_logic_and_logic_or3(i1 %c, i1 %x, i1 %y) {
 
 define i1 @xor_logic_and_logic_or4(i1 %c, i1 %x, i1 %y) {
 ; CHECK-LABEL: @xor_logic_and_logic_or4(
-; CHECK-NEXT:    [[O:%.*]] = select i1 [[C:%.*]], i1 true, i1 [[Y:%.*]]
-; CHECK-NEXT:    [[A:%.*]] = select i1 [[X:%.*]], i1 [[C]], i1 false
-; CHECK-NEXT:    [[R:%.*]] = xor i1 [[A]], [[O]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i1 [[X:%.*]], true
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[C:%.*]], i1 [[TMP1]], i1 [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %o = select i1 %c, i1 true, i1 %y
@@ -66,9 +64,9 @@ define <3 x i1> @xor_logic_and_logic_or_vector1(<3 x i1> %c, <3 x i1> %x, <3 x i
 
 define <3 x i1> @xor_logic_and_logic_or_vector2(<3 x i1> %c, <3 x i1> %x, <3 x i1> %y) {
 ; CHECK-LABEL: @xor_logic_and_logic_or_vector2(
-; CHECK-NEXT:    [[O:%.*]] = select <3 x i1> [[Y:%.*]], <3 x i1> <i1 true, i1 true, i1 true>, <3 x i1> [[C:%.*]]
-; CHECK-NEXT:    [[A:%.*]] = select <3 x i1> [[X:%.*]], <3 x i1> [[C]], <3 x i1> zeroinitializer
-; CHECK-NEXT:    [[R:%.*]] = xor <3 x i1> [[A]], [[O]]
+; CHECK-NEXT:    [[TMP1:%.*]] = freeze <3 x i1> [[C:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = xor <3 x i1> [[X:%.*]], <i1 true, i1 true, i1 true>
+; CHECK-NEXT:    [[R:%.*]] = select <3 x i1> [[TMP1]], <3 x i1> [[TMP2]], <3 x i1> [[Y:%.*]]
 ; CHECK-NEXT:    ret <3 x i1> [[R]]
 ;
   %o = select <3 x i1> %y, <3 x i1> <i1 true, i1 true, i1 true>, <3 x i1> %c
@@ -103,9 +101,8 @@ define <3 x i1> @xor_logic_and_logic_or_vector_poison2(<3 x i1> %c, <3 x i1> %x,
 
 define i1 @xor_and_logic_or1(i1 %c, i1 %x, i1 %y) {
 ; CHECK-LABEL: @xor_and_logic_or1(
-; CHECK-NEXT:    [[O:%.*]] = select i1 [[C:%.*]], i1 true, i1 [[Y:%.*]]
-; CHECK-NEXT:    [[A:%.*]] = and i1 [[C]], [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = xor i1 [[A]], [[O]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i1 [[X:%.*]], true
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[C:%.*]], i1 [[TMP1]], i1 [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %o = select i1 %c, i1 true, i1 %y
@@ -116,9 +113,8 @@ define i1 @xor_and_logic_or1(i1 %c, i1 %x, i1 %y) {
 
 define i1 @xor_and_logic_or2(i1 %c, i1 %x, i1 %y) {
 ; CHECK-LABEL: @xor_and_logic_or2(
-; CHECK-NEXT:    [[O:%.*]] = select i1 [[Y:%.*]], i1 true, i1 [[C:%.*]]
-; CHECK-NEXT:    [[A:%.*]] = and i1 [[X:%.*]], [[C]]
-; CHECK-NEXT:    [[R:%.*]] = xor i1 [[A]], [[O]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i1 [[X:%.*]], true
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[C:%.*]], i1 [[TMP1]], i1 [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %o = select i1 %y, i1 true, i1 %c
@@ -129,9 +125,8 @@ define i1 @xor_and_logic_or2(i1 %c, i1 %x, i1 %y) {
 
 define <2 x i1> @xor_and_logic_or_vector(<2 x i1> %c, <2 x i1> %x, <2 x i1> %y) {
 ; CHECK-LABEL: @xor_and_logic_or_vector(
-; CHECK-NEXT:    [[O:%.*]] = select <2 x i1> [[C:%.*]], <2 x i1> <i1 true, i1 true>, <2 x i1> [[Y:%.*]]
-; CHECK-NEXT:    [[A:%.*]] = and <2 x i1> [[C]], [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = xor <2 x i1> [[A]], [[O]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i1> [[X:%.*]], <i1 true, i1 true>
+; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[C:%.*]], <2 x i1> [[TMP1]], <2 x i1> [[Y:%.*]]
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %o = select <2 x i1> %c, <2 x i1> <i1 true, i1 true>, <2 x i1> %y
@@ -155,9 +150,8 @@ define <2 x i1> @xor_and_logic_or_vector_poison(<2 x i1> %c, <2 x i1> %x, <2 x i
 
 define i1 @xor_logic_and_or1(i1 %c, i1 %x, i1 %y) {
 ; CHECK-LABEL: @xor_logic_and_or1(
-; CHECK-NEXT:    [[O:%.*]] = or i1 [[Y:%.*]], [[C:%.*]]
-; CHECK-NEXT:    [[A:%.*]] = select i1 [[C]], i1 [[X:%.*]], i1 false
-; CHECK-NEXT:    [[R:%.*]] = xor i1 [[A]], [[O]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i1 [[X:%.*]], true
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[C:%.*]], i1 [[TMP1]], i1 [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %o = or i1 %y, %c
@@ -168,9 +162,8 @@ define i1 @xor_logic_and_or1(i1 %c, i1 %x, i1 %y) {
 
 define i1 @xor_logic_and_or2(i1 %c, i1 %x, i1 %y) {
 ; CHECK-LABEL: @xor_logic_and_or2(
-; CHECK-NEXT:    [[O:%.*]] = or i1 [[C:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[A:%.*]] = select i1 [[X:%.*]], i1 [[C]], i1 false
-; CHECK-NEXT:    [[R:%.*]] = xor i1 [[A]], [[O]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i1 [[X:%.*]], true
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[C:%.*]], i1 [[TMP1]], i1 [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %o = or i1 %c, %y
@@ -181,9 +174,8 @@ define i1 @xor_logic_and_or2(i1 %c, i1 %x, i1 %y) {
 
 define <2 x i1> @xor_logic_and_or_vector(<2 x i1> %c, <2 x i1> %x, <2 x i1> %y) {
 ; CHECK-LABEL: @xor_logic_and_or_vector(
-; CHECK-NEXT:    [[O:%.*]] = or <2 x i1> [[Y:%.*]], [[C:%.*]]
-; CHECK-NEXT:    [[A:%.*]] = select <2 x i1> [[C]], <2 x i1> [[X:%.*]], <2 x i1> zeroinitializer
-; CHECK-NEXT:    [[R:%.*]] = xor <2 x i1> [[A]], [[O]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <2 x i1> [[X:%.*]], <i1 true, i1 true>
+; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[C:%.*]], <2 x i1> [[TMP1]], <2 x i1> [[Y:%.*]]
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %o = or <2 x i1> %y, %c
@@ -205,12 +197,12 @@ define <2 x i1> @xor_logic_and_or_vector_poison(<2 x i1> %c, <2 x i1> %x, <2 x i
   ret <2 x i1> %r
 }
 
-;; TODO: do we really need to do this transform?
+;; even through we save a instruction here, select is heavier than normal
+;; and/or/xor on most backend,  do we really need to do this transform?
 define i1 @xor_and_or(i1 %c, i1 %x, i1 %y) {
 ; CHECK-LABEL: @xor_and_or(
-; CHECK-NEXT:    [[O:%.*]] = or i1 [[Y:%.*]], [[C:%.*]]
-; CHECK-NEXT:    [[A:%.*]] = and i1 [[C]], [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = xor i1 [[A]], [[O]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i1 [[X:%.*]], true
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[C:%.*]], i1 [[TMP1]], i1 [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %o = or i1 %y, %c
@@ -219,12 +211,12 @@ define i1 @xor_and_or(i1 %c, i1 %x, i1 %y) {
   ret i1 %r
 }
 
-;; TODO: do we really need to do this transform?
+;; even though we save a instruction here, select is heavier than normal
+;; and/or/xor on most backend,  do we really need to do this transform?
 define <4 x i1> @xor_and_or_vector(<4 x i1> %c, <4 x i1> %x, <4 x i1> %y) {
 ; CHECK-LABEL: @xor_and_or_vector(
-; CHECK-NEXT:    [[O:%.*]] = or <4 x i1> [[Y:%.*]], [[C:%.*]]
-; CHECK-NEXT:    [[A:%.*]] = and <4 x i1> [[C]], [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = xor <4 x i1> [[A]], [[O]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <4 x i1> [[X:%.*]], <i1 true, i1 true, i1 true, i1 true>
+; CHECK-NEXT:    [[R:%.*]] = select <4 x i1> [[C:%.*]], <4 x i1> [[TMP1]], <4 x i1> [[Y:%.*]]
 ; CHECK-NEXT:    ret <4 x i1> [[R]]
 ;
   %o = or <4 x i1> %y, %c
@@ -233,6 +225,7 @@ define <4 x i1> @xor_and_or_vector(<4 x i1> %c, <4 x i1> %x, <4 x i1> %y) {
   ret <4 x i1> %r
 }
 
+; Negative test, more than one use
 define i1 @xor_and_or_negative_oneuse(i1 %c, i1 %x, i1 %y) {
 ; CHECK-LABEL: @xor_and_or_negative_oneuse(
 ; CHECK-NEXT:    [[O:%.*]] = or i1 [[Y:%.*]], [[C:%.*]]

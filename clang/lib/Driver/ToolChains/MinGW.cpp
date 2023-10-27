@@ -135,7 +135,7 @@ void tools::MinGW::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("arm64pe");
     break;
   default:
-    llvm_unreachable("Unsupported target architecture.");
+    D.Diag(diag::err_target_unknown_triple) << TC.getEffectiveTriple().str();
   }
 
   Arg *SubsysArg =
@@ -169,6 +169,10 @@ void tools::MinGW::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (Args.hasArg(options::OPT_Z_Xlinker__no_demangle))
     CmdArgs.push_back("--no-demangle");
 
+  if (!Args.hasFlag(options::OPT_fauto_import, options::OPT_fno_auto_import,
+                    true))
+    CmdArgs.push_back("--disable-auto-import");
+
   if (Arg *A = Args.getLastArg(options::OPT_mguard_EQ)) {
     StringRef GuardArgs = A->getValue();
     if (GuardArgs == "none")
@@ -192,13 +196,21 @@ void tools::MinGW::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   } else
     CmdArgs.push_back(OutputFile);
 
-  Args.AddAllArgs(CmdArgs, options::OPT_e);
   // FIXME: add -N, -n flags
   Args.AddLastArg(CmdArgs, options::OPT_r);
   Args.AddLastArg(CmdArgs, options::OPT_s);
   Args.AddLastArg(CmdArgs, options::OPT_t);
   Args.AddAllArgs(CmdArgs, options::OPT_u_Group);
-  Args.AddLastArg(CmdArgs, options::OPT_Z_Flag);
+
+  // Add asan_dynamic as the first import lib before other libs. This allows
+  // asan to be initialized as early as possible to increase its instrumentation
+  // coverage to include other user DLLs which has not been built with asan.
+  if (Sanitize.needsAsanRt() && !Args.hasArg(options::OPT_nostdlib) &&
+      !Args.hasArg(options::OPT_nodefaultlibs)) {
+    // MinGW always links against a shared MSVCRT.
+    CmdArgs.push_back(
+        TC.getCompilerRTArgString(Args, "asan_dynamic", ToolChain::FT_Shared));
+  }
 
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles)) {
     if (Args.hasArg(options::OPT_shared) || Args.hasArg(options::OPT_mdll)) {
@@ -228,6 +240,12 @@ void tools::MinGW::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(Args.MakeArgString("-L" + CRTPath));
 
   AddLinkerInputs(TC, Inputs, Args, CmdArgs, JA);
+
+  if (D.isUsingLTO()) {
+    assert(!Inputs.empty() && "Must have at least one input.");
+    addLTOOptions(TC, Args, CmdArgs, Output, Inputs[0],
+                  D.getLTOMode() == LTOK_Thin);
+  }
 
   if (C.getDriver().IsFlangMode()) {
     addFortranRuntimeLibraryPath(TC, Args, CmdArgs);
@@ -509,8 +527,6 @@ toolchains::MinGW::MinGW(const Driver &D, const llvm::Triple &Triple,
           .equals_insensitive("lld");
 }
 
-bool toolchains::MinGW::IsIntegratedAssemblerDefault() const { return true; }
-
 Tool *toolchains::MinGW::getTool(Action::ActionClass AC) const {
   switch (AC) {
   case Action::PreprocessJobClass:
@@ -690,6 +706,14 @@ void toolchains::MinGW::addClangTargetOptions(
       getDriver().Diag(diag::err_drv_unsupported_option_argument)
           << A->getSpelling() << GuardArgs;
     }
+  }
+
+  CC1Args.push_back("-fno-use-init-array");
+
+  for (auto Opt : {options::OPT_mthreads, options::OPT_mwindows,
+                   options::OPT_mconsole, options::OPT_mdll}) {
+    if (Arg *A = DriverArgs.getLastArgNoClaim(Opt))
+      A->ignoreTargetSpecific();
   }
 }
 

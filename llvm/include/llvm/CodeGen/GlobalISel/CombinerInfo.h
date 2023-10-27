@@ -6,7 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 /// \file
-/// Interface for Targets to specify which operations are combined how and when.
+/// Option class for Targets to specify which operations are combined how and
+/// when.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -16,15 +17,11 @@
 #include <cassert>
 namespace llvm {
 
-class GISelChangeObserver;
 class LegalizerInfo;
-class MachineInstr;
-class MachineIRBuilder;
 
 // Contains information relevant to enabling/disabling various combines for a
 // pass.
-class CombinerInfo {
-public:
+struct CombinerInfo {
   CombinerInfo(bool AllowIllegalOps, bool ShouldLegalizeIllegal,
                const LegalizerInfo *LInfo, bool OptEnabled, bool OptSize,
                bool MinSize)
@@ -52,19 +49,6 @@ public:
   bool EnableOptSize;
   /// Whether we're optimizing for minsize (-Oz).
   bool EnableMinSize;
-
-  /// Attempt to combine instructions using MI as the root.
-  ///
-  /// Use Observer to report the creation, modification, and erasure of
-  /// instructions. GISelChangeObserver will automatically report certain
-  /// kinds of operations. These operations are:
-  /// * Instructions that are newly inserted into the MachineFunction
-  /// * Instructions that are erased from the MachineFunction.
-  ///
-  /// However, it is important to report instruction modification and this is
-  /// not automatic.
-  virtual bool combine(GISelChangeObserver &Observer, MachineInstr &MI,
-                       MachineIRBuilder &B) const = 0;
 };
 } // namespace llvm
 

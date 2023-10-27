@@ -1,4 +1,4 @@
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
+! RUN: bbc --use-desc-for-alloc=false -emit-fir %s -o - | FileCheck %s
 
 ! Test lowering of allocatables for allocate statements with source.
 
@@ -311,7 +311,7 @@ end
 ! CHECK:         %[[VAL_18:.*]] = arith.constant 1 : i32
 ! CHECK:         %[[VAL_19:.*]] = arith.constant 0 : i32
 ! CHECK:         %[[VAL_20:.*]] = arith.constant 0 : i32
-! CHECK:         %[[VAL_21:.*]] = fir.call @_FortranAAllocatableInitCharacter(%[[VAL_16]], %[[VAL_17]], %[[VAL_18]], %[[VAL_19]], %[[VAL_20]]) {{.*}}: (!fir.ref<!fir.box<none>>, i64, i32, i32, i32) -> none
+! CHECK:         %[[VAL_21:.*]] = fir.call @_FortranAAllocatableInitCharacterForAllocate(%[[VAL_16]], %[[VAL_17]], %[[VAL_18]], %[[VAL_19]], %[[VAL_20]]) {{.*}}: (!fir.ref<!fir.box<none>>, i64, i32, i32, i32) -> none
 ! CHECK:         %[[VAL_22:.*]] = fir.convert %[[VAL_3]] : (!fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK:         %[[VAL_23:.*]] = fir.convert %[[VAL_11]] : (!fir.box<!fir.char<1,?>>) -> !fir.box<none>
 ! CHECK:         %[[VAL_25:.*]] = fir.call @_FortranAAllocatableAllocateSource(%[[VAL_22]], %[[VAL_23]], %[[VAL_7]], %[[VAL_8]], %{{.*}}, %{{.*}}) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.box<none>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32

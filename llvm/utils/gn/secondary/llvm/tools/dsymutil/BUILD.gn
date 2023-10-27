@@ -1,11 +1,12 @@
 import("//llvm/utils/TableGen/tablegen.gni")
+import("//llvm/utils/gn/build/driver_executable.gni")
 
 tablegen("Options") {
   visibility = [ ":dsymutil" ]
   args = [ "-gen-opt-parser-defs" ]
 }
 
-executable("dsymutil") {
+driver_executable("dsymutil") {
   deps = [
     ":Options",
     "//llvm/lib/CodeGen/AsmPrinter",

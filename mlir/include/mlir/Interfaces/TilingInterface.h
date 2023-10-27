@@ -21,6 +21,20 @@
 #include "mlir/Interfaces/ViewLikeInterface.h"
 #include "mlir/Support/LLVM.h"
 
+namespace mlir {
+
+/// Container for result values of tiling.
+/// - `tiledOps` contains operations created by the tiling implementation that
+/// are returned to the caller for further transformations.
+/// - `tiledValues` contains the tiled value corresponding to the result of the
+/// untiled operation.
+struct TilingResult {
+  SmallVector<Operation *> tiledOps;
+  SmallVector<Value> tiledValues;
+};
+
+} // namespace mlir
+
 /// Include the ODS generated interface header files.
 #include "mlir/Interfaces/TilingInterface.h.inc"
 

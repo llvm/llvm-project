@@ -1,5 +1,9 @@
 // RUN: %libomp-compile-and-run | %sort-threads | FileCheck %s
 // REQUIRES: ompt
+
+/// GCC lowering of distribute results in calls to 
+/// omp_get_num_teams/omp_get_team_num rather than region calls
+// UNSUPPORTED: gcc
 #include "callback.h"
 
 #define WORK_SIZE 64

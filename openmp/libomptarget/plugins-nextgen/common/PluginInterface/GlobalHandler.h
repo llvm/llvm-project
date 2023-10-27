@@ -112,7 +112,6 @@ class GenericGlobalHandlerTy {
   /// Actually move memory between host and device. See readGlobalFromDevice and
   /// writeGlobalToDevice for the interface description.
   Error moveGlobalBetweenDeviceAndHost(GenericDeviceTy &Device,
-                                       DeviceImageTy &Image,
                                        const GlobalTy &HostGlobal,
                                        const GlobalTy &DeviceGlobal,
                                        bool Device2Host);
@@ -140,11 +139,10 @@ public:
   /// Copy the memory associated with a global from the device to its
   /// counterpart on the host. The name, size, and destination are defined by
   /// \p HostGlobal. The origin is defined by \p DeviceGlobal.
-  Error readGlobalFromDevice(GenericDeviceTy &Device, DeviceImageTy &Image,
+  Error readGlobalFromDevice(GenericDeviceTy &Device,
                              const GlobalTy &HostGlobal,
                              const GlobalTy &DeviceGlobal) {
-    return moveGlobalBetweenDeviceAndHost(Device, Image, HostGlobal,
-                                          DeviceGlobal,
+    return moveGlobalBetweenDeviceAndHost(Device, HostGlobal, DeviceGlobal,
                                           /* D2H */ true);
   }
 
@@ -160,11 +158,9 @@ public:
   /// Copy the memory associated with a global from the host to its counterpart
   /// on the device. The name, size, and origin are defined by \p HostGlobal.
   /// The destination is defined by \p DeviceGlobal.
-  Error writeGlobalToDevice(GenericDeviceTy &Device, DeviceImageTy &Image,
-                            const GlobalTy &HostGlobal,
+  Error writeGlobalToDevice(GenericDeviceTy &Device, const GlobalTy &HostGlobal,
                             const GlobalTy &DeviceGlobal) {
-    return moveGlobalBetweenDeviceAndHost(Device, Image, HostGlobal,
-                                          DeviceGlobal,
+    return moveGlobalBetweenDeviceAndHost(Device, HostGlobal, DeviceGlobal,
                                           /* D2H */ false);
   }
 

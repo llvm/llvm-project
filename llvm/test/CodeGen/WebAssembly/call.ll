@@ -1,5 +1,5 @@
-; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-keep-registers -mattr=+sign-ext,+simd128 | FileCheck --check-prefixes=CHECK,NO-TAIL %s
-; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-keep-registers -fast-isel -fast-isel-abort=1 -mattr=+sign-ext,+simd128 | FileCheck --check-prefixes=CHECK,NO-TAIL %s
+; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-keep-registers -mattr=+sign-ext,+simd128 | FileCheck --check-prefixes=CHECK,SLOW,NO-TAIL %s
+; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-keep-registers -fast-isel -fast-isel-abort=1 -mattr=+sign-ext,+simd128 | FileCheck --check-prefixes=CHECK,FAST,NO-TAIL %s
 ; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-keep-registers -mattr=+sign-ext,+simd128,+tail-call | FileCheck --check-prefixes=CHECK,SLOW-TAIL %s
 ; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-keep-registers -fast-isel -fast-isel-abort=1 -mattr=+sign-ext,+simd128,+tail-call | FileCheck --check-prefixes=CHECK,FAST-TAIL %s
 
@@ -216,7 +216,10 @@ define void @coldcc_tail_call_void_nullary() {
 ; CHECK-NEXT: i32.const $push[[L0:[0-9]+]]=, 2{{$}}
 ; CHECK-NEXT: i32.const $push[[L1:[0-9]+]]=, 3{{$}}
 ; CHECK-NEXT: call .Lvararg_func_bitcast, $pop[[L0]], $pop[[L1]]{{$}}
-; CHECK-NEXT: call other_void_nullary{{$}}
+; CHECK-NEXT: i32.const	$push[[L3:[0-9]+]]=, void_nullary{{$}}
+; CHECK-NEXT: i32.const	$push[[L2:[0-9]+]]=, other_void_nullary{{$}}
+; CHECK-NEXT: i32.add 	$push[[L4:[0-9]+]]=, $pop[[L3]], $pop[[L2]]{{$}}
+; CHECK-NEXT: call_indirect	$pop[[L4]]{{$}}
 ; CHECK-NEXT: call void_nullary{{$}}
 ; CHECK-NEXT: return{{$}}
 declare void @vararg_func(...)
@@ -226,10 +229,65 @@ bb0:
   call void @vararg_func(i32 2, i32 3)
   br label %bb1
 bb1:
-  call void select (i1 0, ptr @void_nullary, ptr @other_void_nullary)()
+  call void getelementptr (i8, ptr @void_nullary, i32 ptrtoint (ptr @other_void_nullary to i32))()
   br label %bb2
 bb2:
   call void inttoptr (i32 ptrtoint (ptr @void_nullary to i32) to ptr)()
+  ret void
+}
+
+; Allocas should be lowered to call_indirects.
+; CHECK-LABEL: call_indirect_alloca:
+; CHECK:      local.tee  $push{{.*}}=, [[L0:[0-9]+]]
+; CHECK-NEXT: global.set  __stack_pointer
+; CHECK-NEXT: local.get  $push{{.*}}=, [[L0]]
+; CHECK-NEXT: i32.const  $push{{.*}}=, 12
+; CHECK-NEXT: i32.add
+; CHECK-NEXT: call_indirect  $pop{{.*}}
+define void @call_indirect_alloca() {
+entry:
+  %ptr = alloca i32, align 4
+  call void %ptr()
+  ret void
+}
+
+; Calling non-functional globals should be lowered to call_indirects.
+; CHECK-LABEL: call_indirect_int:
+; CHECK:      i32.const  $push[[L0:[0-9]+]]=, global_i8
+; CHECK-NEXT: call_indirect  $pop[[L0]]
+; CHECK-NEXT: i32.const  $push[[L1:[0-9]+]]=, global_i32
+; CHECK-NEXT: call_indirect  $pop[[L1]]
+@global_i8 = global i8 0
+@global_i32 = global i32 0
+define void @call_indirect_int() {
+  call void @global_i8()
+  call void @global_i32()
+  ret void
+}
+
+; Calling aliases of non-functional globals should be lowered to call_indirects.
+; CHECK-LABEL: call_indirect_int_alias:
+; CHECK:      i32.const  $push[[L0:[0-9]+]]=, global_i8_alias
+; CHECK-NEXT: call_indirect  $pop[[L0]]
+; CHECK-NEXT: i32.const  $push[[L1:[0-9]+]]=, global_i32_alias
+; CHECK-NEXT: call_indirect  $pop[[L1]]
+@global_i8_alias = alias i8, ptr @global_i8
+@global_i32_alias = alias i32, ptr @global_i32
+define void @call_indirect_int_alias() {
+  call void @global_i8_alias()
+  call void @global_i32_alias()
+  ret void
+}
+
+; Ideally calling aliases of functions should be lowered to direct calls. We
+; support this in the normal (=slow) isel.
+; CHECK-LABEL: call_func_alias:
+; SLOW:      call  func_alias
+; FAST:      i32.const  $push[[L0:[0-9]+]]=, func_alias
+; FAST-NEXT: call_indirect  $pop[[L0]]
+@func_alias = alias void (), ptr @call_void_nullary
+define void @call_func_alias() {
+  call void @func_alias()
   ret void
 }
 

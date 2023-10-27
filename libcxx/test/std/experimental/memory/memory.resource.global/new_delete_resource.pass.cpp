@@ -8,10 +8,7 @@
 
 // UNSUPPORTED: c++03
 
-// Aligned allocation is required by std::experimental::pmr, but it was not provided
-// before macosx10.13 and as a result we get linker errors when deploying to older than
-// macosx10.13.
-// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11|12}}
+// XFAIL: availability-aligned_allocation-missing
 
 // <experimental/memory_resource>
 
@@ -32,10 +29,10 @@ namespace ex = std::experimental::pmr;
 struct assert_on_compare : public ex::memory_resource
 {
 protected:
-    void * do_allocate(size_t, size_t) override
+    void * do_allocate(std::size_t, size_t) override
     { assert(false); return nullptr; }
 
-    void do_deallocate(void *, size_t, size_t) override
+    void do_deallocate(void *, std::size_t, size_t) override
     { assert(false); }
 
     bool do_is_equal(ex::memory_resource const &) const noexcept override

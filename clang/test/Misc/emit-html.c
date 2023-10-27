@@ -1,6 +1,5 @@
 // RUN: %clang_cc1 %s -emit-html -o -
 
-// rdar://6562329
 #line 42 "foo.c"
 
 // PR3635
@@ -16,7 +15,6 @@ int main(int argc, char **argv) {
   FOR_ALL_FILES(f) { }
 #endif
 
-// <rdar://problem/11625964>
 // -emit-html filters out # directives, but not _Pragma (or MS __pragma)
 // Diagnostic push/pop is stateful, so re-lexing a file can cause problems
 // if these pragmas are interpreted normally.

@@ -13,7 +13,6 @@ import os
 
 
 class TestCase(TestBase):
-
     # We only emulate a fake libc++ in this test and don't use the real libc++,
     # but we still add the libc++ category so that this test is only run in
     # test configurations where libc++ is actually supposed to be tested.
@@ -26,12 +25,13 @@ class TestCase(TestBase):
         sysroot = os.path.join(os.getcwd(), "root")
 
         # Set the sysroot this test is using to provide a custom libc++.
-        self.runCmd("platform select --sysroot '" + sysroot + "' host",
-                    CURRENT_EXECUTABLE_SET)
+        self.runCmd(
+            "platform select --sysroot '" + sysroot + "' host", CURRENT_EXECUTABLE_SET
+        )
 
-        lldbutil.run_to_source_breakpoint(self,
-                                          "// Set break point at this line.",
-                                          lldb.SBFileSpec("main.cpp"))
+        lldbutil.run_to_source_breakpoint(
+            self, "// Set break point at this line.", lldb.SBFileSpec("main.cpp")
+        )
 
         # The expected error message when the fake libc++ module in this test
         # fails to build from within LLDB (as it contains invalid code).
@@ -40,20 +40,21 @@ class TestCase(TestBase):
         # First force the std module to be imported. This should show the
         # module build error to the user.
         self.runCmd("settings set target.import-std-module true")
-        self.expect("expr (size_t)v.size()",
-                    substrs=[module_build_error_msg],
-                    error=True)
+        self.expect(
+            "expr (size_t)v.size()", substrs=[module_build_error_msg], error=True
+        )
 
         # In the fallback mode the module build error should not be shown.
         self.runCmd("settings set target.import-std-module fallback")
         fallback_expr = "expr v ; error_to_trigger_fallback_mode"
         # First check for the actual expression error that should be displayed
         # and is useful for the user.
-        self.expect(fallback_expr,
-                    substrs=["use of undeclared identifier 'error_to_trigger_fallback_mode'"],
-                    error=True)
+        self.expect(
+            fallback_expr,
+            substrs=["use of undeclared identifier 'error_to_trigger_fallback_mode'"],
+            error=True,
+        )
         # Test that the module build error is not displayed.
-        self.expect(fallback_expr,
-                    substrs=[module_build_error_msg],
-                    matching=False,
-                    error=True)
+        self.expect(
+            fallback_expr, substrs=[module_build_error_msg], matching=False, error=True
+        )

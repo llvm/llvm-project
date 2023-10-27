@@ -5,12 +5,13 @@ target datalayout = "e-i64:64-i128:128-v16:16-v32:32-n16:32:64"
 target triple = "nvptx64"
 
 %struct.ident_t = type { i32, i32, i32, i32, ptr }
+%struct.KernelEnvironmentTy = type { %struct.ConfigurationEnvironmentTy, ptr, ptr }
+%struct.ConfigurationEnvironmentTy = type { i8, i8, i8 }
 
 @0 = private unnamed_addr constant [23 x i8] c";unknown;unknown;0;0;;\00", align 1
 @1 = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 0, ptr @0 }, align 8
 @2 = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 1, i32 0, ptr @0 }, align 8
-@__omp_offloading_50_a3e09bf8_foo_l2_exec_mode = weak constant i8 0
-@llvm.compiler.used = appending global [1 x ptr] [ptr @__omp_offloading_50_a3e09bf8_foo_l2_exec_mode], section "llvm.metadata"
+@__omp_offloading_50_a3e09bf8_foo_l2_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 0, i8 2 }, ptr null, ptr null }
 
 declare void @use(i32)
 
@@ -18,39 +19,40 @@ define weak void @__omp_offloading_50_a3e09bf8_foo_l2() #0 {
 ; CHECK-LABEL: define {{[^@]+}}@__omp_offloading_50_a3e09bf8_foo_l2
 ; CHECK-SAME: () #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @[[GLOB1:[0-9]+]], i8 2, i1 false)
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB2:[0-9]+]])
+; CHECK-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_50_a3e09bf8_foo_l2_kernel_environment)
 ; CHECK-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 ; CHECK-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 ; CHECK:       user_code.entry:
-; CHECK-NEXT:    call void @__kmpc_target_deinit(ptr @[[GLOB1]], i8 2)
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB2:[0-9]+]])
+; CHECK-NEXT:    call void @__kmpc_target_deinit()
 ; CHECK-NEXT:    ret void
 ; CHECK:       worker.exit:
 ; CHECK-NEXT:    ret void
 ;
 entry:
   %captured_vars_addrs = alloca [0 x ptr], align 8
-  %0 = call i32 @__kmpc_target_init(ptr @1, i8 2, i1 false)
+  %0 = call i32 @__kmpc_target_init(ptr @__omp_offloading_50_a3e09bf8_foo_l2_kernel_environment)
   %exec_user_code = icmp eq i32 %0, -1
   br i1 %exec_user_code, label %user_code.entry, label %worker.exit
 
 user_code.entry:                                  ; preds = %entry
   %1 = call i32 @__kmpc_global_thread_num(ptr @2)
   %2 = call i32 @__kmpc_global_thread_num(ptr @2)
-  call void @__kmpc_target_deinit(ptr @1, i8 2)
+  call void @__kmpc_target_deinit()
   ret void
 
 worker.exit:                                      ; preds = %entry
   ret void
 }
 
-declare i32 @__kmpc_target_init(ptr, i8, i1)
+declare i32 @__kmpc_target_init(ptr)
 
 declare i32 @__kmpc_global_thread_num(ptr) #1
 
-declare void @__kmpc_target_deinit(ptr, i8)
+declare void @__kmpc_target_deinit()
 
-attributes #0 = { convergent noinline norecurse nounwind "frame-pointer"="none" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+ptx32,+sm_20" }
+attributes #0 = { convergent noinline norecurse nounwind "kernel" "frame-pointer"="none" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+ptx32,+sm_20" }
 attributes #1 = { nounwind }
 
 !omp_offload.info = !{!0}

@@ -8,7 +8,7 @@ tablegen("LLGSOptions") {
 
 executable("lldb-server") {
   configs += [
-    #"//llvm/utils/gn/build:clang_code",
+    "//llvm/utils/gn/build:clang_code",
     "//llvm/utils/gn/build:lldb_code",
   ]
   deps = [
@@ -32,16 +32,27 @@ executable("lldb-server") {
 
   if (current_os == "android" || current_os == "linux") {
     deps += [ "//lldb/source/Plugins/Process/Linux" ]
-    #} else if (current_os == "freebsd") {
-    #deps += [ "//lldb/source/Plugins/Process/FreeBSD" ]
-    #} else if (current_os == "netbsd") {
-    #deps += [ "//lldb/source/Plugins/Process/NetBSD" ]
+    if (current_os == "linux") {
+      deps += [ "//lldb/source/Plugins/Platform/Linux" ]
+    } else {
+      # XXX
+      #deps += [ "//lldb/source/Plugins/Platform/Android" ]
+    }
   }
+
+  #} else if (current_os == "freebsd") {
+  #deps += [ "//lldb/source/Platform/Process/FreeBSD" ]
+  #deps += [ "//lldb/source/Plugins/Process/FreeBSD" ]
+  #} else if (current_os == "netbsd") {
+  #deps += [ "//lldb/source/Platform/Process/NetBSD" ]
+  #deps += [ "//lldb/source/Plugins/Process/NetBSD" ]
 
   if (current_os == "mac") {
     deps += [ "//lldb/source/Plugins/ObjectFile/Mach-O" ]
+    deps += [ "//lldb/source/Plugins/Platform/MacOSX" ]
   } else if (current_os == "win") {
     deps += [ "//lldb/source/Plugins/ObjectFile/PECOFF" ]
+    deps += [ "//lldb/source/Plugins/Platform/Windows" ]
   } else {
     deps += [ "//lldb/source/Plugins/ObjectFile/ELF" ]
   }

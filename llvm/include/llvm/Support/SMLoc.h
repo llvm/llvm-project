@@ -24,14 +24,14 @@ class SMLoc {
   const char *Ptr = nullptr;
 
 public:
-  SMLoc() = default;
+  constexpr SMLoc() = default;
 
-  bool isValid() const { return Ptr != nullptr; }
+  constexpr bool isValid() const { return Ptr != nullptr; }
 
-  bool operator==(const SMLoc &RHS) const { return RHS.Ptr == Ptr; }
-  bool operator!=(const SMLoc &RHS) const { return RHS.Ptr != Ptr; }
+  constexpr bool operator==(const SMLoc &RHS) const { return RHS.Ptr == Ptr; }
+  constexpr bool operator!=(const SMLoc &RHS) const { return RHS.Ptr != Ptr; }
 
-  const char *getPointer() const { return Ptr; }
+  constexpr const char *getPointer() const { return Ptr; }
 
   static SMLoc getFromPointer(const char *Ptr) {
     SMLoc L;

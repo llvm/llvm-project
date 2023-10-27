@@ -9,7 +9,6 @@
 #ifndef PYTHON_BINDINGS_PDL_OPS
 #define PYTHON_BINDINGS_PDL_OPS
 
-include "mlir/Bindings/Python/Attributes.td"
 include "mlir/Dialect/PDL/IR/PDLOps.td"
 
 #endif

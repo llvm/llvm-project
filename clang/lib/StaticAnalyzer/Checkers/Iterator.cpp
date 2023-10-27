@@ -29,8 +29,8 @@ bool isIterator(const CXXRecordDecl *CRD) {
     return false;
 
   const auto Name = CRD->getName();
-  if (!(Name.endswith_insensitive("iterator") ||
-        Name.endswith_insensitive("iter") || Name.endswith_insensitive("it")))
+  if (!(Name.ends_with_insensitive("iterator") ||
+        Name.ends_with_insensitive("iter") || Name.ends_with_insensitive("it")))
     return false;
 
   bool HasCopyCtor = false, HasCopyAssign = true, HasDtor = false,

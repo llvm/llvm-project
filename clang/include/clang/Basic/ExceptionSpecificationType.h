@@ -50,6 +50,11 @@ inline bool isUnresolvedExceptionSpec(ExceptionSpecificationType ESpecType) {
   return ESpecType == EST_Unevaluated || ESpecType == EST_Uninstantiated;
 }
 
+inline bool isExplicitThrowExceptionSpec(ExceptionSpecificationType ESpecType) {
+  return ESpecType == EST_Dynamic || ESpecType == EST_MSAny ||
+         ESpecType == EST_NoexceptFalse;
+}
+
 /// Possible results from evaluation of a noexcept expression.
 enum CanThrowResult {
   CT_Cannot,

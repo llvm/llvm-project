@@ -42,18 +42,14 @@ FunctionPass *createM68kGlobalBaseRegPass();
 /// emission so that all possible MOVEM are already in place.
 FunctionPass *createM68kCollapseMOVEMPass();
 
-/// Finds MOVE instructions before any conditioanl branch instruction and
-/// replaces them with MOVEM instruction. Motorola's MOVEs do trash(V,C) flags
-/// register which prevents branch from taking the correct route. This pass
-/// has to be run after all pseudo expansions and prologue/epilogue emission
-/// so that all possible MOVEs are present.
-FunctionPass *createM68kConvertMOVToMOVMPass();
-
 InstructionSelector *
 createM68kInstructionSelector(const M68kTargetMachine &, const M68kSubtarget &,
                               const M68kRegisterBankInfo &);
 
 void initializeM68kDAGToDAGISelPass(PassRegistry &);
+void initializeM68kExpandPseudoPass(PassRegistry &);
+void initializeM68kGlobalBaseRegPass(PassRegistry &);
+void initializeM68kCollapseMOVEMPass(PassRegistry &);
 
 } // namespace llvm
 

@@ -8,7 +8,7 @@ extern "C" {
 extern "C" plusplus {
 }
 
-extern u8"C" {} // expected-error {{string literal in language linkage specifier cannot have an encoding-prefix}}
-extern L"C" {} // expected-error {{string literal in language linkage specifier cannot have an encoding-prefix}}
-extern u"C++" {} // expected-error {{string literal in language linkage specifier cannot have an encoding-prefix}}
-extern U"C" {} // expected-error {{string literal in language linkage specifier cannot have an encoding-prefix}}
+extern u8"C" {}  // expected-warning {{encoding prefix 'u8' on an unevaluated string literal has no effect and is incompatible with c++2c}}
+extern L"C" {}   // expected-warning {{encoding prefix 'L' on an unevaluated string literal has no effect and is incompatible with c++2c}}
+extern u"C++" {} // expected-warning {{encoding prefix 'u' on an unevaluated string literal has no effect and is incompatible with c++2c}}
+extern U"C" {}   // expected-warning {{encoding prefix 'U' on an unevaluated string literal has no effect and is incompatible with c++2c}}

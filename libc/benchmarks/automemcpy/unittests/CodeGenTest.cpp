@@ -63,14 +63,14 @@ using llvm::libc_benchmarks::MemcpyConfiguration;
 using llvm::libc_benchmarks::MemmoveConfiguration;
 using llvm::libc_benchmarks::MemsetConfiguration;
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 static void memcpy_0xE00E29EE73994E2B(char *__restrict dst, const char *__restrict src, size_t size) {
-  using namespace __llvm_libc::x86;
+  using namespace LIBC_NAMESPACE::x86;
   return copy<Accelerator>(dst, src, size);
 }
 static void memcpy_0x7381B60C7BE75EF9(char *__restrict dst, const char *__restrict src, size_t size) {
-  using namespace __llvm_libc::x86;
+  using namespace LIBC_NAMESPACE::x86;
   if(size == 0) return;
   if(size == 1) return copy<_1>(dst, src);
   if(size == 2) return copy<_2>(dst, src);
@@ -84,7 +84,7 @@ static void memcpy_0x7381B60C7BE75EF9(char *__restrict dst, const char *__restri
   return copy<Loop<_64>>(dst, src, size);
 }
 static int memcmp_0x348D7BA6DB0EE033(const char * lhs, const char * rhs, size_t size) {
-  using namespace __llvm_libc::x86;
+  using namespace LIBC_NAMESPACE::x86;
   if(size == 0) return 0;
   if(size == 1) return three_way_compare<_1>(lhs, rhs);
   if(size < 4) return three_way_compare<HeadTail<_2>>(lhs, rhs, size);
@@ -95,7 +95,7 @@ static int memcmp_0x348D7BA6DB0EE033(const char * lhs, const char * rhs, size_t 
   return three_way_compare<Align<_16,Arg::Lhs>::Then<Loop<_16>>>(lhs, rhs, size);
 }
 static void memset_0x71E761699B999863(char * dst, int value, size_t size) {
-  using namespace __llvm_libc::x86;
+  using namespace LIBC_NAMESPACE::x86;
   if(size == 0) return;
   if(size == 1) return splat_set<_1>(dst, value);
   if(size < 4) return splat_set<HeadTail<_2>>(dst, value, size);
@@ -108,7 +108,7 @@ static void memset_0x71E761699B999863(char * dst, int value, size_t size) {
   return splat_set<Align<_16,Arg::Dst>::Then<Loop<_32>>>(dst, value, size);
 }
 static void memset_0x3DF0F44E2ED6A50F(char * dst, int value, size_t size) {
-  using namespace __llvm_libc::x86;
+  using namespace LIBC_NAMESPACE::x86;
   if(size == 0) return;
   if(size == 1) return splat_set<_1>(dst, value);
   if(size < 4) return splat_set<HeadTail<_2>>(dst, value, size);
@@ -121,7 +121,7 @@ static void memset_0x3DF0F44E2ED6A50F(char * dst, int value, size_t size) {
   return splat_set<Align<_32,Arg::Dst>::Then<Loop<_32>>>(dst, value, size);
 }
 static void bzero_0x475977492C218AD4(char * dst, size_t size) {
-  using namespace __llvm_libc::x86;
+  using namespace LIBC_NAMESPACE::x86;
   if(size == 0) return;
   if(size == 1) return splat_set<_1>(dst, 0);
   if(size == 2) return splat_set<_2>(dst, 0);
@@ -134,7 +134,7 @@ static void bzero_0x475977492C218AD4(char * dst, size_t size) {
   return splat_set<Align<_32,Arg::Dst>::Then<Loop<_32>>>(dst, 0, size);
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 namespace llvm {
 namespace automemcpy {
@@ -163,7 +163,7 @@ void *Wrap(void *__restrict dst, const void *__restrict src, size_t size) {
   return dst;
 }
 llvm::ArrayRef<MemcpyConfiguration> getMemcpyConfigurations() {
-  using namespace __llvm_libc;
+  using namespace LIBC_NAMESPACE;
   static constexpr MemcpyConfiguration kConfigurations[] = {
     {Wrap<memcpy_0xE00E29EE73994E2B>, "memcpy_0xE00E29EE73994E2B"},
     {Wrap<memcpy_0x7381B60C7BE75EF9>, "memcpy_0x7381B60C7BE75EF9"},
@@ -178,7 +178,7 @@ int Wrap(const void *lhs, const void *rhs, size_t size) {
              reinterpret_cast<const char *>(rhs), size);
 }
 llvm::ArrayRef<MemcmpOrBcmpConfiguration> getMemcmpConfigurations() {
-  using namespace __llvm_libc;
+  using namespace LIBC_NAMESPACE;
   static constexpr MemcmpOrBcmpConfiguration kConfigurations[] = {
     {Wrap<memcmp_0x348D7BA6DB0EE033>, "memcmp_0x348D7BA6DB0EE033"},
   };
@@ -194,7 +194,7 @@ template <MemsetStub Foo> void *Wrap(void *dst, int value, size_t size) {
   return dst;
 }
 llvm::ArrayRef<MemsetConfiguration> getMemsetConfigurations() {
-  using namespace __llvm_libc;
+  using namespace LIBC_NAMESPACE;
   static constexpr MemsetConfiguration kConfigurations[] = {
     {Wrap<memset_0x71E761699B999863>, "memset_0x71E761699B999863"},
     {Wrap<memset_0x3DF0F44E2ED6A50F>, "memset_0x3DF0F44E2ED6A50F"},
@@ -207,7 +207,7 @@ template <BzeroStub Foo> void Wrap(void *dst, size_t size) {
   Foo(reinterpret_cast<char *>(dst), size);
 }
 llvm::ArrayRef<BzeroConfiguration> getBzeroConfigurations() {
-  using namespace __llvm_libc;
+  using namespace LIBC_NAMESPACE;
   static constexpr BzeroConfiguration kConfigurations[] = {
     {Wrap<bzero_0x475977492C218AD4>, "bzero_0x475977492C218AD4"},
   };

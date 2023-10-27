@@ -67,7 +67,7 @@ somezeroes:
 # CHECK-NEXT:     408        0        4         {{.*}}{{/|\\}}map-file.s.tmp1.o:(.bss.somezeroes)
 # CHECK-NEXT:     408        0        4                 somezeroes
 # CHECK-NEXT:       -       93       12 CUSTOM(.debug_info)
-# CHECK-NEXT:       -       a5       50 CUSTOM(name)
+# CHECK-NEXT:       -       a5       61 CUSTOM(name)
 
 # RUN: not wasm-ld %t1.o -o /dev/null -Map=/ 2>&1 \
 # RUN:  | FileCheck -check-prefix=FAIL %s

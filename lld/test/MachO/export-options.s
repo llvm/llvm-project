@@ -1,8 +1,10 @@
 # REQUIRES: x86
 
 # RUN: rm -rf %t; split-file %s %t
+# RUN: echo "" | llvm-mc -filetype=obj -triple=x86_64-apple-macos -o %t/empty.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos %t/default.s -o %t/default.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos %t/lazydef.s -o %t/lazydef.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos %t/too-many-warnings.s -o %t/too-many-warnings.o
 # RUN: llvm-ar --format=darwin rcs %t/lazydef.a %t/lazydef.o
 
 ## Check that mixing exported and unexported symbol options yields an error
@@ -190,9 +192,38 @@
 # NOEXPORTS-NOT: literal_also
 # NOEXPORTS-NOT: literal_only
 
+# RUN: %lld -dylib %t/default.o -o %t/libdefault.dylib
+# RUN: %lld -dylib %t/empty.o %t/libdefault.dylib -exported_symbol _keep_globl \
+# RUN:   -exported_symbol _undef -exported_symbol _tlv \
+# RUN:   -undefined dynamic_lookup -o %t/reexport-dylib
+# RUN: llvm-objdump --macho --exports-trie %t/reexport-dylib
+
+# REEXPORT:      Exports trie:
+# REEXPORT-NEXT: [re-export] _tlv [per-thread] (from libdefault)
+# REEXPORT-NEXT: [re-export] _keep_globl (from libdefault)
+# REEXPORT-NEXT: [re-export] _undef (from unknown)
+
+## -unexported_symbol will not make us re-export symbols in dylibs.
+# RUN: %lld -dylib %t/default.o -o %t/libdefault.dylib
+# RUN: %lld -dylib %t/empty.o %t/libdefault.dylib -unexported_symbol _tlv \
+# RUN:   -o %t/unexport-dylib
+# RUN: llvm-objdump --macho --exports-trie %t/unexport-dylib | FileCheck %s \
+# RUN:   --check-prefix=EMPTY-TRIE
+
+## Check that warnings are truncated to the first 3 only.
+# RUN: %no-fatal-warnings-lld -dylib %t/too-many-warnings.o -o %t/too-many.out \
+# RUN:         -exported_symbol "_private_extern*" 2>&1 | \
+# RUN:     FileCheck --check-prefix=TRUNCATE %s
+
+# TRUNCATE: warning: cannot export hidden symbol _private_extern{{.+}}
+# TRUNCATE: warning: cannot export hidden symbol _private_extern{{.+}}
+# TRUNCATE: warning: cannot export hidden symbol _private_extern{{.+}}
+# TRUNCATE: warning: <... 7 more similar warnings...>
+# TRUNCATE-EMPTY:
+
 #--- default.s
 
-.globl _keep_globl, _hide_globl
+.globl _keep_globl, _hide_globl, _tlv
 _keep_globl:
   retq
 _hide_globl:
@@ -202,6 +233,9 @@ _private_extern:
   retq
 _private:
   retq
+
+.section __DATA,__thread_vars,thread_local_variables
+_tlv:
 
 #--- lazydef.s
 
@@ -260,4 +294,46 @@ _foo:
 .weak_definition _foo
 .private_extern _foo
 _foo:
+  retq
+
+#--- too-many-warnings.s
+.private_extern _private_extern1
+.private_extern _private_extern2
+.private_extern _private_extern3
+.private_extern _private_extern4
+.private_extern _private_extern5
+.private_extern _private_extern6
+.private_extern _private_extern7
+.private_extern _private_extern8
+.private_extern _private_extern9
+.private_extern _private_extern10
+
+_private_extern1:
+  retq
+
+_private_extern2:
+  retq
+
+_private_extern3:
+  retq
+
+_private_extern4:
+  retq
+
+_private_extern5:
+  retq
+
+_private_extern6:
+  retq
+
+_private_extern7:
+  retq
+
+_private_extern8:
+  retq
+
+_private_extern9:
+  retq
+
+_private_extern10:
   retq

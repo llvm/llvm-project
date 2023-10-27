@@ -8,9 +8,7 @@ add_clang_library(clangExtractAPI
   APIIgnoresList.cpp
   AvailabilityInfo.cpp
   ExtractAPIConsumer.cpp
-  ExtractAPIVisitor.cpp
   DeclarationFragments.cpp
-  Serialization/SerializerBase.cpp
   Serialization/SymbolGraphSerializer.cpp
   TypedefUnderlyingTypeResolver.cpp
 

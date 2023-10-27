@@ -13,7 +13,7 @@
 #include <errno.h>
 #include <pthread.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(int, pthread_attr_setdetachstate,
                    (pthread_attr_t * attr, int detachstate)) {
@@ -24,4 +24,4 @@ LLVM_LIBC_FUNCTION(int, pthread_attr_setdetachstate,
   return 0;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

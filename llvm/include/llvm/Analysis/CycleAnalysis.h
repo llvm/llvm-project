@@ -15,17 +15,12 @@
 #ifndef LLVM_ANALYSIS_CYCLEANALYSIS_H
 #define LLVM_ANALYSIS_CYCLEANALYSIS_H
 
-#include "llvm/ADT/GenericCycleInfo.h"
+#include "llvm/IR/CycleInfo.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/SSAContext.h"
 #include "llvm/Pass.h"
 
 namespace llvm {
-extern template class GenericCycleInfo<SSAContext>;
-extern template class GenericCycle<SSAContext>;
-
-using CycleInfo = GenericCycleInfo<SSAContext>;
-using Cycle = CycleInfo::CycleT;
 
 /// Legacy analysis pass which computes a \ref CycleInfo.
 class CycleInfoWrapperPass : public FunctionPass {

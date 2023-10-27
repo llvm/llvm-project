@@ -116,6 +116,42 @@ define <8 x i16> @combine_self_v8i16(<8 x i16> %a0) {
   ret <8 x i16> %1
 }
 
+; fold (usub_sat x, y) -> (sub x, y) iff no overflow
+define i32 @combine_no_overflow_i32(i32 %a0, i32 %a1) {
+; CHECK-LABEL: combine_no_overflow_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    shrl $16, %edi
+; CHECK-NEXT:    shrl $16, %esi
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    subl %esi, %edi
+; CHECK-NEXT:    cmovael %edi, %eax
+; CHECK-NEXT:    retq
+  %1 = lshr i32 %a0, 16
+  %2 = lshr i32 %a1, 16
+  %3 = call i32 @llvm.usub.sat.i32(i32 %1, i32 %2)
+  ret i32 %3
+}
+
+define <8 x i16> @combine_no_overflow_v8i16(<8 x i16> %a0, <8 x i16> %a1) {
+; SSE-LABEL: combine_no_overflow_v8i16:
+; SSE:       # %bb.0:
+; SSE-NEXT:    psrlw $10, %xmm0
+; SSE-NEXT:    psrlw $10, %xmm1
+; SSE-NEXT:    psubusw %xmm1, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: combine_no_overflow_v8i16:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpsrlw $10, %xmm0, %xmm0
+; AVX-NEXT:    vpsrlw $10, %xmm1, %xmm1
+; AVX-NEXT:    vpsubusw %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %1 = lshr <8 x i16> %a0, <i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10>
+  %2 = lshr <8 x i16> %a1, <i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10>
+  %3 = call <8 x i16> @llvm.usub.sat.v8i16(<8 x i16> %1, <8 x i16> %2)
+  ret <8 x i16> %3
+}
+
 ; FIXME: fold (trunc (usub_sat zext(x), y)) -> usub_sat(x, trunc(umin(y,satlimit)))
 define i16 @combine_trunc_i32_i16(i16 %a0, i32 %a1) {
 ; CHECK-LABEL: combine_trunc_i32_i16:
@@ -214,7 +250,7 @@ define <8 x i16> @combine_trunc_v8i32_v8i16(<8 x i16> %a0, <8 x i32> %a1) {
 ; AVX1-LABEL: combine_trunc_v8i32_v8i16:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm3 = [65535,65535,65535,65535]
+; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm3 = [65535,65535,65535,65535]
 ; AVX1-NEXT:    vpminud %xmm3, %xmm2, %xmm2
 ; AVX1-NEXT:    vpminud %xmm3, %xmm1, %xmm1
 ; AVX1-NEXT:    vpackusdw %xmm2, %xmm1, %xmm1

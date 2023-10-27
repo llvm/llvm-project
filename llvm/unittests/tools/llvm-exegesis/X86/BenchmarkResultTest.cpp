@@ -20,12 +20,9 @@
 #include "gtest/gtest.h"
 
 using ::testing::AllOf;
-using ::testing::ElementsAre;
 using ::testing::Eq;
 using ::testing::Field;
-using ::testing::get;
 using ::testing::Pointwise;
-using ::testing::Property;
 
 namespace llvm {
 namespace exegesis {
@@ -63,7 +60,7 @@ TEST(BenchmarkResultTest, WriteToAndReadFromDisk) {
 
   ExitOnError ExitOnErr;
 
-  InstructionBenchmark ToDisk;
+  Benchmark ToDisk;
 
   ToDisk.Key.Instructions.push_back(MCInstBuilder(X86::XOR32rr)
                                         .addReg(X86::AL)
@@ -74,7 +71,7 @@ TEST(BenchmarkResultTest, WriteToAndReadFromDisk) {
   ToDisk.Key.RegisterInitialValues = {
       RegisterValue{X86::AL, APInt(8, "-1", 10)},
       RegisterValue{X86::AH, APInt(8, "123", 10)}};
-  ToDisk.Mode = InstructionBenchmark::Latency;
+  ToDisk.Mode = Benchmark::Latency;
   ToDisk.CpuName = "cpu_name";
   ToDisk.LLVMTriple = "llvm_triple";
   ToDisk.NumRepetitions = 1;
@@ -106,19 +103,19 @@ TEST(BenchmarkResultTest, WriteToAndReadFromDisk) {
   {
     // Read Triples/Cpu only.
     const auto TriplesAndCpus =
-        ExitOnErr(InstructionBenchmark::readTriplesAndCpusFromYamls(*Buffer));
+        ExitOnErr(Benchmark::readTriplesAndCpusFromYamls(*Buffer));
 
     ASSERT_THAT(TriplesAndCpus,
                 testing::ElementsAre(
-                    AllOf(Field(&InstructionBenchmark::TripleAndCpu::LLVMTriple,
+                    AllOf(Field(&Benchmark::TripleAndCpu::LLVMTriple,
                                 Eq("llvm_triple")),
-                          Field(&InstructionBenchmark::TripleAndCpu::CpuName,
+                          Field(&Benchmark::TripleAndCpu::CpuName,
                                 Eq("cpu_name")))));
   }
   {
     // One-element version.
     const auto FromDisk =
-        ExitOnErr(InstructionBenchmark::readYaml(State, *Buffer));
+        ExitOnErr(Benchmark::readYaml(State, *Buffer));
 
     EXPECT_THAT(FromDisk.Key.Instructions,
                 Pointwise(EqMCInst(), ToDisk.Key.Instructions));
@@ -134,7 +131,7 @@ TEST(BenchmarkResultTest, WriteToAndReadFromDisk) {
   {
     // Vector version.
     const auto FromDiskVector =
-        ExitOnErr(InstructionBenchmark::readYamls(State, *Buffer));
+        ExitOnErr(Benchmark::readYamls(State, *Buffer));
     ASSERT_EQ(FromDiskVector.size(), size_t{1});
     const auto &FromDisk = FromDiskVector[0];
     EXPECT_THAT(FromDisk.Key.Instructions,

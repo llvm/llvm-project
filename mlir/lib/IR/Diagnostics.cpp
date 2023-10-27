@@ -259,7 +259,7 @@ void DiagnosticEngineImpl::emit(Diagnostic &&diag) {
     return;
 
   auto &os = llvm::errs();
-  if (!diag.getLocation().isa<UnknownLoc>())
+  if (!llvm::isa<UnknownLoc>(diag.getLocation()))
     os << diag.getLocation() << ": ";
   os << "error: ";
 
@@ -392,11 +392,11 @@ struct SourceMgrDiagnosticHandlerImpl {
 
 /// Return a processable CallSiteLoc from the given location.
 static std::optional<CallSiteLoc> getCallSiteLoc(Location loc) {
-  if (auto nameLoc = dyn_cast<NameLoc>(loc))
+  if (dyn_cast<NameLoc>(loc))
     return getCallSiteLoc(cast<NameLoc>(loc).getChildLoc());
   if (auto callLoc = dyn_cast<CallSiteLoc>(loc))
     return callLoc;
-  if (auto fusedLoc = dyn_cast<FusedLoc>(loc)) {
+  if (dyn_cast<FusedLoc>(loc)) {
     for (auto subLoc : cast<FusedLoc>(loc).getLocations()) {
       if (auto callLoc = getCallSiteLoc(subLoc)) {
         return callLoc;
@@ -448,7 +448,7 @@ void SourceMgrDiagnosticHandler::emitDiagnostic(Location loc, Twine message,
   if (!fileLoc) {
     std::string str;
     llvm::raw_string_ostream strOS(str);
-    if (!loc.isa<UnknownLoc>())
+    if (!llvm::isa<UnknownLoc>(loc))
       strOS << loc << ": ";
     strOS << message;
     return mgr.PrintMessage(os, SMLoc(), getDiagKind(kind), strOS.str());
@@ -983,7 +983,7 @@ struct ParallelDiagnosticHandlerImpl : public llvm::PrettyStackTraceEntry {
 
       // Print each diagnostic with the format:
       //   "<location>: <kind>: <msg>"
-      if (!diag.getLocation().isa<UnknownLoc>())
+      if (!llvm::isa<UnknownLoc>(diag.getLocation()))
         os << diag.getLocation() << ": ";
       switch (diag.getSeverity()) {
       case DiagnosticSeverity::Error:

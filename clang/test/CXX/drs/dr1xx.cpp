@@ -3,6 +3,7 @@
 // RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-unknown %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-unknown %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++23 -triple x86_64-unknown-unknown %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
 
 namespace dr100 { // dr100: yes
   template<const char (*)[4]> struct A {}; // expected-note 0-1{{declared here}}
@@ -998,6 +999,36 @@ namespace dr188 { // dr188: yes
 }
 
 // dr190 FIXME: add codegen test for tbaa
+
+int dr191_j;
+namespace dr191 { // dr191: yes
+  namespace example1 {
+    struct outer {
+      static int i;
+      struct inner {
+        void f() {
+          struct local {
+            void g() {
+              i = 5;
+            }
+          };
+        }
+      };
+    };
+  }
+
+  namespace example2 {
+    struct S {
+      void f() {
+        struct local2 {
+          void g() {
+            dr191_j = 5;
+          }
+        };
+      }
+    };
+  }
+}
 
 // dr193 FIXME: add codegen test
 

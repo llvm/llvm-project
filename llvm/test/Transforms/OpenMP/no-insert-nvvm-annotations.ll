@@ -3,7 +3,7 @@
 
 ; CHECK-NOT: nvvm
 
-define amdgpu_kernel void @foo() {
+define amdgpu_kernel void @foo() "kernel" {
   ret void
 }
 

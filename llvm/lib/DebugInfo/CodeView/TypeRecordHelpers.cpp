@@ -144,15 +144,15 @@ uint64_t llvm::codeview::getSizeInBytesForTypeIndex(TypeIndex TI) {
 
   // Complex float.
   case SimpleTypeKind::Complex16:
-    return 2;
-  case SimpleTypeKind::Complex32:
     return 4;
-  case SimpleTypeKind::Complex64:
+  case SimpleTypeKind::Complex32:
     return 8;
-  case SimpleTypeKind::Complex80:
-    return 10;
-  case SimpleTypeKind::Complex128:
+  case SimpleTypeKind::Complex64:
     return 16;
+  case SimpleTypeKind::Complex80:
+    return 20;
+  case SimpleTypeKind::Complex128:
+    return 32;
 
   default:
     return 0;

@@ -133,7 +133,7 @@ void test_abs()
     static_assert(!has_abs<unsigned>::value, "");
     static_assert(!has_abs<unsigned long>::value, "");
     static_assert(!has_abs<unsigned long long>::value, "");
-    static_assert(!has_abs<size_t>::value, "");
+    static_assert(!has_abs<std::size_t>::value, "");
 
     TEST_DIAGNOSTIC_POP
 
@@ -603,12 +603,20 @@ void test_fpclassify()
     static_assert((std::is_same<decltype(std::fpclassify(0)), int>::value), "");
     static_assert((std::is_same<decltype(std::fpclassify((long double)0)), int>::value), "");
     static_assert((std::is_same<decltype(fpclassify(Ambiguous())), Ambiguous>::value), "");
+    static_assert((std::is_same<decltype(fpclassify(Value<float>())), int>::value), "");
+    static_assert((std::is_same<decltype(fpclassify(Value<double>())), int>::value), "");
+    static_assert((std::is_same<decltype(fpclassify(Value<long double>())), int>::value), "");
+    ASSERT_NOEXCEPT(std::fpclassify((float)0));
+    ASSERT_NOEXCEPT(std::fpclassify((double)0));
+    ASSERT_NOEXCEPT(std::fpclassify((long double)0));
+    ASSERT_NOEXCEPT(std::fpclassify(0));
     assert(std::fpclassify(-1.0) == FP_NORMAL);
     assert(std::fpclassify(0) == FP_ZERO);
     assert(std::fpclassify(1) == FP_NORMAL);
     assert(std::fpclassify(-1) == FP_NORMAL);
     assert(std::fpclassify(std::numeric_limits<int>::max()) == FP_NORMAL);
     assert(std::fpclassify(std::numeric_limits<int>::min()) == FP_NORMAL);
+    assert(std::fpclassify(Value<double, 1>()) == FP_NORMAL);
 }
 
 void test_isfinite()

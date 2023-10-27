@@ -8,6 +8,8 @@ load("//libc/test/src/math:libc_math_test_rules.bzl", "math_test")
 
 package(default_visibility = ["//visibility:public"])
 
+exports_files(["libc_math_test_rules.bzl"])
+
 licenses(["notice"])
 
 math_test(
@@ -175,9 +177,9 @@ cc_library(
     deps = [
         "//libc:__support_fputil_basic_operations",
         "//libc:__support_fputil_fp_bits",
+        "//libc/test/UnitTest:LibcUnitTest",
+        "//libc/test/UnitTest:fp_test_helpers",
         "//libc/utils/MPFRWrapper:mpfr_wrapper",
-        "//libc/utils/UnitTest:LibcUnitTest",
-        "//libc/utils/UnitTest:fp_test_helpers",
     ],
 )
 
@@ -292,7 +294,7 @@ cc_library(
     deps = [
         "//libc:__support_fputil_fp_bits",
         "//libc:__support_fputil_manipulation_functions",
-        "//libc/utils/UnitTest:LibcUnitTest",
+        "//libc/test/UnitTest:LibcUnitTest",
     ],
 )
 
@@ -318,8 +320,8 @@ cc_library(
         "//libc:__support_fputil_basic_operations",
         "//libc:__support_fputil_fenv_impl",
         "//libc:__support_fputil_fp_bits",
-        "//libc/utils/UnitTest:LibcUnitTest",
-        "//libc/utils/UnitTest:fp_test_helpers",
+        "//libc/test/UnitTest:LibcUnitTest",
+        "//libc/test/UnitTest:fp_test_helpers",
     ],
 )
 
@@ -344,8 +346,8 @@ cc_library(
     deps = [
         "//libc:__support_fputil_fp_bits",
         "//libc:__support_fputil_normal_float",
-        "//libc/utils/UnitTest:LibcUnitTest",
-        "//libc/utils/UnitTest:fp_test_helpers",
+        "//libc/test/UnitTest:LibcUnitTest",
+        "//libc/test/UnitTest:fp_test_helpers",
     ],
 )
 
@@ -370,9 +372,9 @@ cc_library(
     deps = [
         "//libc:__support_fputil_fenv_impl",
         "//libc:__support_fputil_fp_bits",
+        "//libc/test/UnitTest:LibcUnitTest",
+        "//libc/test/UnitTest:fp_test_helpers",
         "//libc/utils/MPFRWrapper:mpfr_wrapper",
-        "//libc/utils/UnitTest:LibcUnitTest",
-        "//libc/utils/UnitTest:fp_test_helpers",
     ],
 )
 
@@ -406,9 +408,9 @@ cc_library(
     deps = [
         "//libc:__support_fputil_fenv_impl",
         "//libc:__support_fputil_fp_bits",
+        "//libc/test/UnitTest:LibcUnitTest",
+        "//libc/test/UnitTest:fp_test_helpers",
         "//libc/utils/MPFRWrapper:mpfr_wrapper",
-        "//libc/utils/UnitTest:LibcUnitTest",
-        "//libc/utils/UnitTest:fp_test_helpers",
     ],
 )
 
@@ -517,8 +519,8 @@ cc_library(
         "//libc:__support_cpp_type_traits",
         "//libc:__support_fputil_basic_operations",
         "//libc:__support_fputil_fp_bits",
-        "//libc/utils/UnitTest:LibcUnitTest",
-        "//libc/utils/UnitTest:fp_test_helpers",
+        "//libc/test/UnitTest:LibcUnitTest",
+        "//libc/test/UnitTest:fp_test_helpers",
     ],
 )
 
@@ -570,5 +572,226 @@ math_test(
         ":sdcomp26094",
         "//libc:__support_cpp_array",
         "//libc/utils/MPFRWrapper:mpfr_wrapper",
+    ],
+)
+
+math_test(
+    name = "tanf",
+    deps = [
+        ":sdcomp26094",
+        "//libc:__support_cpp_array",
+        "//libc/utils/MPFRWrapper:mpfr_wrapper",
+    ],
+)
+
+math_test(
+    name = "expf",
+    deps = [
+        "//libc/utils/MPFRWrapper:mpfr_wrapper",
+    ],
+)
+
+math_test(
+    name = "exp2f",
+    deps = [
+        "//libc:__support_macros_properties_cpu_features",
+        "//libc/utils/MPFRWrapper:mpfr_wrapper",
+    ],
+)
+
+math_test(
+    name = "exp10f",
+    deps = [
+        "//libc/utils/MPFRWrapper:mpfr_wrapper",
+    ],
+)
+
+math_test(
+    name = "expm1f",
+    deps = [
+        "//libc/utils/MPFRWrapper:mpfr_wrapper",
+    ],
+)
+
+math_test(
+    name = "logf",
+    deps = [
+        "//libc/utils/MPFRWrapper:mpfr_wrapper",
+    ],
+)
+
+math_test(
+    name = "log2f",
+    deps = [
+        "//libc/utils/MPFRWrapper:mpfr_wrapper",
+    ],
+)
+
+math_test(
+    name = "log10f",
+    deps = [
+        "//libc/utils/MPFRWrapper:mpfr_wrapper",
+    ],
+)
+
+math_test(
+    name = "log1pf",
+    deps = [
+        "//libc/utils/MPFRWrapper:mpfr_wrapper",
+    ],
+)
+
+math_test(
+    name = "log",
+    deps = [
+        "//libc/utils/MPFRWrapper:mpfr_wrapper",
+    ],
+)
+
+math_test(
+    name = "log2",
+    deps = [
+        "//libc/utils/MPFRWrapper:mpfr_wrapper",
+    ],
+)
+
+math_test(
+    name = "log10",
+    deps = [
+        "//libc/utils/MPFRWrapper:mpfr_wrapper",
+    ],
+)
+
+math_test(
+    name = "log1p",
+    deps = [
+        "//libc/utils/MPFRWrapper:mpfr_wrapper",
+    ],
+)
+
+math_test(
+    name = "sinhf",
+    deps = [
+        "//libc:__support_cpp_array",
+        "//libc/utils/MPFRWrapper:mpfr_wrapper",
+    ],
+)
+
+math_test(
+    name = "coshf",
+    deps = [
+        "//libc:__support_cpp_array",
+        "//libc/utils/MPFRWrapper:mpfr_wrapper",
+    ],
+)
+
+math_test(
+    name = "tanhf",
+    deps = [
+        "//libc/utils/MPFRWrapper:mpfr_wrapper",
+    ],
+)
+
+math_test(
+    name = "asinhf",
+    deps = [
+        "//libc/utils/MPFRWrapper:mpfr_wrapper",
+    ],
+)
+
+math_test(
+    name = "acoshf",
+    deps = [
+        "//libc/utils/MPFRWrapper:mpfr_wrapper",
+    ],
+)
+
+math_test(
+    name = "atanhf",
+    deps = [
+        "//libc/utils/MPFRWrapper:mpfr_wrapper",
+    ],
+)
+
+math_test(
+    name = "asinf",
+    deps = [
+        "//libc/utils/MPFRWrapper:mpfr_wrapper",
+    ],
+)
+
+math_test(
+    name = "acosf",
+    deps = [
+        "//libc/utils/MPFRWrapper:mpfr_wrapper",
+    ],
+)
+
+math_test(
+    name = "atanf",
+    deps = [
+        "//libc/utils/MPFRWrapper:mpfr_wrapper",
+    ],
+)
+
+math_test(
+    name = "erff",
+    deps = [
+        "//libc/utils/MPFRWrapper:mpfr_wrapper",
+    ],
+)
+
+math_test(
+    name = "exp",
+    deps = [
+        "//libc/utils/MPFRWrapper:mpfr_wrapper",
+    ],
+)
+
+math_test(
+    name = "exp2",
+    deps = [
+        "//libc/utils/MPFRWrapper:mpfr_wrapper",
+    ],
+)
+
+math_test(
+    name = "exp10",
+    deps = [
+        "//libc/utils/MPFRWrapper:mpfr_wrapper",
+    ],
+)
+
+math_test(
+    name = "fmod",
+    hdrs = ["FModTest.h"],
+)
+
+math_test(
+    name = "fmodf",
+    hdrs = ["FModTest.h"],
+)
+
+math_test(
+    name = "scalbn",
+    hdrs = [
+        "LdExpTest.h",
+        "ScalbnTest.h",
+    ],
+)
+
+math_test(
+    name = "scalbnf",
+    hdrs = [
+        "LdExpTest.h",
+        "ScalbnTest.h",
+    ],
+)
+
+math_test(
+    name = "scalbnl",
+    hdrs = [
+        "LdExpTest.h",
+        "ScalbnTest.h",
     ],
 )

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "common.h"
+#include "mem_map.h"
 #include "memtag.h"
 #include "platform.h"
 #include "tests/scudo_unit_test.h"
@@ -45,20 +46,24 @@ protected:
       GTEST_SKIP() << "Memory tagging is not supported";
 
     BufferSize = getPageSizeCached();
-    Buffer = reinterpret_cast<u8 *>(
-        map(nullptr, BufferSize, "MemtagTest", MAP_MEMTAG, &Data));
-    Addr = reinterpret_cast<uptr>(Buffer);
+    ASSERT_FALSE(MemMap.isAllocated());
+    ASSERT_TRUE(MemMap.map(/*Addr=*/0U, BufferSize, "MemtagTest", MAP_MEMTAG));
+    ASSERT_NE(MemMap.getBase(), 0U);
+    Addr = MemMap.getBase();
+    Buffer = reinterpret_cast<u8 *>(Addr);
     EXPECT_TRUE(isAligned(Addr, archMemoryTagGranuleSize()));
     EXPECT_EQ(Addr, untagPointer(Addr));
   }
 
   void TearDown() override {
-    if (Buffer)
-      unmap(Buffer, BufferSize, 0, &Data);
+    if (Buffer) {
+      ASSERT_TRUE(MemMap.isAllocated());
+      MemMap.unmap(MemMap.getBase(), MemMap.getCapacity());
+    }
   }
 
   uptr BufferSize = 0;
-  MapPlatformData Data = {};
+  scudo::MemMapT MemMap = {};
   u8 *Buffer = nullptr;
   uptr Addr = 0;
 };
@@ -71,20 +76,24 @@ TEST_F(MemtagTest, ArchMemoryTagGranuleSize) {
 }
 
 TEST_F(MemtagTest, ExtractTag) {
+// The test is already skipped on anything other than 64 bit. But
+// compiling on 32 bit leads to warnings/errors, so skip compiling the test.
+#if defined(__LP64__)
   uptr Tags = 0;
   // Try all value for the top byte and check the tags values are in the
   // expected range.
   for (u64 Top = 0; Top < 0x100; ++Top)
     Tags = Tags | (1u << extractTag(Addr | (Top << 56)));
   EXPECT_EQ(0xffffull, Tags);
+#endif
 }
 
 TEST_F(MemtagDeathTest, AddFixedTag) {
   for (uptr Tag = 0; Tag < 0x10; ++Tag)
     EXPECT_EQ(Tag, extractTag(addFixedTag(Addr, Tag)));
   if (SCUDO_DEBUG) {
-    EXPECT_DEBUG_DEATH(addFixedTag(Addr, 16), "");
-    EXPECT_DEBUG_DEATH(addFixedTag(~Addr, 0), "");
+    EXPECT_DEATH(addFixedTag(Addr, 16), "");
+    EXPECT_DEATH(addFixedTag(~Addr, 0), "");
   }
 }
 
@@ -116,18 +125,22 @@ TEST_F(MemtagTest, SelectRandomTag) {
 }
 
 TEST_F(MemtagTest, SelectRandomTagWithMask) {
+// The test is already skipped on anything other than 64 bit. But
+// compiling on 32 bit leads to warnings/errors, so skip compiling the test.
+#if defined(__LP64__)
   for (uptr j = 0; j < 32; ++j) {
     for (uptr i = 0; i < 1000; ++i)
       EXPECT_NE(j, extractTag(selectRandomTag(Addr, 1ull << j)));
   }
+#endif
 }
 
 TEST_F(MemtagDeathTest, SKIP_NO_DEBUG(LoadStoreTagUnaligned)) {
   for (uptr P = Addr; P < Addr + 4 * archMemoryTagGranuleSize(); ++P) {
     if (P % archMemoryTagGranuleSize() == 0)
       continue;
-    EXPECT_DEBUG_DEATH(loadTag(P), "");
-    EXPECT_DEBUG_DEATH(storeTag(P), "");
+    EXPECT_DEATH(loadTag(P), "");
+    EXPECT_DEATH(storeTag(P), "");
   }
 }
 
@@ -148,11 +161,14 @@ TEST_F(MemtagDeathTest, SKIP_NO_DEBUG(StoreTagsUnaligned)) {
     uptr Tagged = addFixedTag(P, 5);
     if (Tagged % archMemoryTagGranuleSize() == 0)
       continue;
-    EXPECT_DEBUG_DEATH(storeTags(Tagged, Tagged), "");
+    EXPECT_DEATH(storeTags(Tagged, Tagged), "");
   }
 }
 
 TEST_F(MemtagTest, StoreTags) {
+// The test is already skipped on anything other than 64 bit. But
+// compiling on 32 bit leads to warnings/errors, so skip compiling the test.
+#if defined(__LP64__)
   const uptr MaxTaggedSize = 4 * archMemoryTagGranuleSize();
   for (uptr Size = 0; Size <= MaxTaggedSize; ++Size) {
     uptr NoTagBegin = Addr + archMemoryTagGranuleSize();
@@ -163,7 +179,7 @@ TEST_F(MemtagTest, StoreTags) {
     uptr TaggedBegin = addFixedTag(NoTagBegin, Tag);
     uptr TaggedEnd = addFixedTag(NoTagEnd, Tag);
 
-    EXPECT_EQ(roundUpTo(TaggedEnd, archMemoryTagGranuleSize()),
+    EXPECT_EQ(roundUp(TaggedEnd, archMemoryTagGranuleSize()),
               storeTags(TaggedBegin, TaggedEnd));
 
     uptr LoadPtr = Addr;
@@ -179,8 +195,9 @@ TEST_F(MemtagTest, StoreTags) {
     EXPECT_EQ(LoadPtr, loadTag(LoadPtr));
 
     // Reset tags without using StoreTags.
-    releasePagesToOS(Addr, 0, BufferSize, &Data);
+    MemMap.releasePagesToOS(Addr, BufferSize);
   }
+#endif
 }
 
 } // namespace scudo

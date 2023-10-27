@@ -71,7 +71,7 @@ static cl::opt<bool> ErrorMissingParenthesis(
 static cl::opt<bool> WarnSignedMismatch(
     "mwarn-sign-mismatch",
     cl::desc("Warn for mismatching a signed and unsigned value"),
-    cl::init(true));
+    cl::init(false));
 static cl::opt<bool> WarnNoncontigiousRegister(
     "mwarn-noncontigious-register",
     cl::desc("Warn for register names that arent contigious"), cl::init(true));
@@ -115,10 +115,9 @@ class HexagonAsmParser : public MCTargetAsmParser {
   bool Error(SMLoc L, const Twine &Msg) { return Parser.Error(L, Msg); }
   bool ParseDirectiveFalign(unsigned Size, SMLoc L);
 
-  bool parseRegister(MCRegister &RegNo, SMLoc &StartLoc,
-                     SMLoc &EndLoc) override;
-  OperandMatchResultTy tryParseRegister(MCRegister &RegNo, SMLoc &StartLoc,
-                                        SMLoc &EndLoc) override;
+  bool parseRegister(MCRegister &Reg, SMLoc &StartLoc, SMLoc &EndLoc) override;
+  ParseStatus tryParseRegister(MCRegister &Reg, SMLoc &StartLoc,
+                               SMLoc &EndLoc) override;
   bool ParseDirectiveSubsection(SMLoc L);
   bool ParseDirectiveComm(bool IsLocal, SMLoc L);
   bool RegisterMatchesArch(unsigned MatchNum) const;
@@ -516,7 +515,7 @@ bool HexagonAsmParser::matchBundleOptions() {
     } else if (Option.compare_insensitive("endloop1") == 0) {
       HexagonMCInstrInfo::setOuterLoop(MCB);
     } else if (Option.compare_insensitive("mem_noshuf") == 0) {
-      if (getSTI().getFeatureBits()[Hexagon::FeatureMemNoShuf])
+      if (getSTI().hasFeature(Hexagon::FeatureMemNoShuf))
         HexagonMCInstrInfo::setMemReorderDisabled(MCB);
       else
         return getParser().Error(IDLoc, MemNoShuffMsg);
@@ -813,7 +812,7 @@ bool HexagonAsmParser::ParseDirectiveComm(bool IsLocal, SMLoc Loc) {
 // validate register against architecture
 bool HexagonAsmParser::RegisterMatchesArch(unsigned MatchNum) const {
   if (HexagonMCRegisterClasses[Hexagon::V62RegsRegClassID].contains(MatchNum))
-    if (!getSTI().getFeatureBits()[Hexagon::ArchV62])
+    if (!getSTI().hasFeature(Hexagon::ArchV62))
       return false;
   return true;
 }
@@ -963,14 +962,13 @@ bool HexagonAsmParser::handleNoncontigiousRegister(bool Contigious,
   return false;
 }
 
-bool HexagonAsmParser::parseRegister(MCRegister &RegNo, SMLoc &StartLoc,
+bool HexagonAsmParser::parseRegister(MCRegister &Reg, SMLoc &StartLoc,
                                      SMLoc &EndLoc) {
-  return tryParseRegister(RegNo, StartLoc, EndLoc) != MatchOperand_Success;
+  return !tryParseRegister(Reg, StartLoc, EndLoc).isSuccess();
 }
 
-OperandMatchResultTy HexagonAsmParser::tryParseRegister(MCRegister &RegNo,
-                                                        SMLoc &StartLoc,
-                                                        SMLoc &EndLoc) {
+ParseStatus HexagonAsmParser::tryParseRegister(MCRegister &Reg, SMLoc &StartLoc,
+                                               SMLoc &EndLoc) {
   MCAsmLexer &Lexer = getLexer();
   StartLoc = getLexer().getLoc();
   SmallVector<AsmToken, 5> Lookahead;
@@ -1002,20 +1000,20 @@ OperandMatchResultTy HexagonAsmParser::tryParseRegister(MCRegister &RegNo,
   unsigned DotReg = matchRegister(DotSplit.first.lower());
   if (DotReg != Hexagon::NoRegister && RegisterMatchesArch(DotReg)) {
     if (DotSplit.second.empty()) {
-      RegNo = DotReg;
+      Reg = DotReg;
       EndLoc = Lexer.getLoc();
       if (handleNoncontigiousRegister(!NeededWorkaround, StartLoc))
-        return MatchOperand_NoMatch;
-      return MatchOperand_Success;
+        return ParseStatus::NoMatch;
+      return ParseStatus::Success;
     } else {
-      RegNo = DotReg;
+      Reg = DotReg;
       size_t First = RawString.find('.');
       StringRef DotString (RawString.data() + First, RawString.size() - First);
       Lexer.UnLex(AsmToken(AsmToken::Identifier, DotString));
       EndLoc = Lexer.getLoc();
       if (handleNoncontigiousRegister(!NeededWorkaround, StartLoc))
-        return MatchOperand_NoMatch;
-      return MatchOperand_Success;
+        return ParseStatus::NoMatch;
+      return ParseStatus::Success;
     }
   }
   std::pair<StringRef, StringRef> ColonSplit = StringRef(FullString).split(':');
@@ -1024,16 +1022,16 @@ OperandMatchResultTy HexagonAsmParser::tryParseRegister(MCRegister &RegNo,
     do {
       Lexer.UnLex(Lookahead.pop_back_val());
     } while (!Lookahead.empty() && !Lexer.is(AsmToken::Colon));
-    RegNo = ColonReg;
+    Reg = ColonReg;
     EndLoc = Lexer.getLoc();
     if (handleNoncontigiousRegister(!NeededWorkaround, StartLoc))
-      return MatchOperand_NoMatch;
-    return MatchOperand_Success;
+      return ParseStatus::NoMatch;
+    return ParseStatus::Success;
   }
   while (!Lookahead.empty()) {
     Lexer.UnLex(Lookahead.pop_back_val());
   }
-  return MatchOperand_NoMatch;
+  return ParseStatus::NoMatch;
 }
 
 bool HexagonAsmParser::implicitExpressionLocation(OperandVector &Operands) {
@@ -1329,7 +1327,7 @@ int HexagonAsmParser::processInstruction(MCInst &Inst,
     break;
 
   case Hexagon::J2_trap1:
-    if (!getSTI().getFeatureBits()[Hexagon::ArchV65]) {
+    if (!getSTI().hasFeature(Hexagon::ArchV65)) {
       MCOperand &Rx = Inst.getOperand(0);
       MCOperand &Ry = Inst.getOperand(1);
       if (Rx.getReg() != Hexagon::R0 || Ry.getReg() != Hexagon::R0) {

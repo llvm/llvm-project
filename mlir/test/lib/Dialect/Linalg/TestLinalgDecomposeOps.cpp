@@ -26,7 +26,7 @@ struct TestLinalgDecomposeOps
   TestLinalgDecomposeOps(const TestLinalgDecomposeOps &pass)
       : PassWrapper(pass){};
   void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<AffineDialect, linalg::LinalgDialect>();
+    registry.insert<affine::AffineDialect, linalg::LinalgDialect>();
   }
   StringRef getArgument() const final { return "test-linalg-decompose-ops"; }
   StringRef getDescription() const final {

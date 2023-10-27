@@ -18,8 +18,7 @@ namespace clang::tidy::readability {
 namespace {
 
 SourceRange getTypeRange(const ParmVarDecl &Param) {
-  return SourceRange(Param.getBeginLoc(),
-                     Param.getLocation().getLocWithOffset(-1));
+  return {Param.getBeginLoc(), Param.getLocation().getLocWithOffset(-1)};
 }
 
 } // namespace

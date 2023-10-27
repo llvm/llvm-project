@@ -6,11 +6,10 @@ define half @select_fneg_posk_src_rcp_f16(i32 %c, half %x, half %y) {
 ; VI-LABEL: select_fneg_posk_src_rcp_f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_rcp_f16_e32 v1, v1
-; VI-NEXT:    v_mov_b32_e32 v2, 0xc000
+; VI-NEXT:    v_rcp_f16_e64 v1, -v1
+; VI-NEXT:    v_mov_b32_e32 v2, 0x4000
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; VI-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
-; VI-NEXT:    v_xor_b32_e32 v0, 0x8000, v0
 ; VI-NEXT:    s_setpc_b64 s[30:31]
   %cmp = icmp eq i32 %c, 0
   %rcp = call half @llvm.amdgcn.rcp.f16(half %x)

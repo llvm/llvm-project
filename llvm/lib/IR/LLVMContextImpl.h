@@ -513,11 +513,20 @@ template <> struct MDNodeKeyImpl<DIStringType> {
 
   bool isKeyOf(const DIStringType *RHS) const {
     return Tag == RHS->getTag() && Name == RHS->getRawName() &&
+           StringLength == RHS->getRawStringLength() &&
+           StringLengthExp == RHS->getRawStringLengthExp() &&
+           StringLocationExp == RHS->getRawStringLocationExp() &&
            SizeInBits == RHS->getSizeInBits() &&
            AlignInBits == RHS->getAlignInBits() &&
            Encoding == RHS->getEncoding();
   }
-  unsigned getHashValue() const { return hash_combine(Tag, Name, Encoding); }
+  unsigned getHashValue() const {
+    // Intentionally computes the hash on a subset of the operands for
+    // performance reason. The subset has to be significant enough to avoid
+    // collision "most of the time". There is no correctness issue in case of
+    // collision because of the full check above.
+    return hash_combine(Tag, Name, StringLength, Encoding);
+  }
 };
 
 template <> struct MDNodeKeyImpl<DIDerivedType> {
@@ -1446,13 +1455,13 @@ public:
 
   DenseMap<const Value *, ValueName *> ValueNames;
 
-  using IntMapTy =
-      DenseMap<APInt, std::unique_ptr<ConstantInt>, DenseMapAPIntKeyInfo>;
-  IntMapTy IntConstants;
+  DenseMap<unsigned, std::unique_ptr<ConstantInt>> IntZeroConstants;
+  DenseMap<unsigned, std::unique_ptr<ConstantInt>> IntOneConstants;
+  DenseMap<APInt, std::unique_ptr<ConstantInt>, DenseMapAPIntKeyInfo>
+      IntConstants;
 
-  using FPMapTy =
-      DenseMap<APFloat, std::unique_ptr<ConstantFP>, DenseMapAPFloatKeyInfo>;
-  FPMapTy FPConstants;
+  DenseMap<APFloat, std::unique_ptr<ConstantFP>, DenseMapAPFloatKeyInfo>
+      FPConstants;
 
   FoldingSet<AttributeImpl> AttrsSet;
   FoldingSet<AttributeListImpl> AttrsLists;
@@ -1535,8 +1544,9 @@ public:
 
   DenseMap<std::pair<Type *, uint64_t>, ArrayType *> ArrayTypes;
   DenseMap<std::pair<Type *, ElementCount>, VectorType *> VectorTypes;
-  DenseMap<Type *, PointerType *> PointerTypes; // Pointers in AddrSpace = 0
-  DenseMap<std::pair<Type *, unsigned>, PointerType *> ASPointerTypes;
+  PointerType *AS0PointerType = nullptr; // AddrSpace = 0
+  DenseMap<unsigned, PointerType *> PointerTypes;
+  DenseMap<std::pair<Type *, unsigned>, PointerType *> LegacyPointerTypes;
   DenseMap<std::pair<Type *, unsigned>, TypedPointerType *> ASTypedPointerTypes;
 
   /// ValueHandles - This map keeps track of all of the value handles that are
@@ -1623,14 +1633,6 @@ public:
   /// The lifetime of the object must be guaranteed to extend as long as the
   /// LLVMContext is used by compilation.
   void setOptPassGate(OptPassGate &);
-
-  // TODO: clean up the following after we no longer support non-opaque pointer
-  // types.
-  bool getOpaquePointers();
-  void setOpaquePointers(bool OP);
-
-private:
-  std::optional<bool> OpaquePointers;
 };
 
 } // end namespace llvm

@@ -190,11 +190,13 @@ public:
 	static bool is_isl_size(QualType type);
 	static bool is_long(QualType type);
 	static bool is_callback(QualType type);
+	static bool is_callback_arg(FunctionDecl *fd, int i);
 	static bool is_string(QualType type);
 	static bool is_static(const isl_class &clazz, FunctionDecl *method);
 	static bool is_mutator(const isl_class &clazz, FunctionDecl *fd);
 	static string extract_type(QualType type);
 	static const FunctionProtoType *extract_prototype(QualType type);
+	static int prototype_n_args(QualType type);
 	static ParmVarDecl *persistent_callback_arg(FunctionDecl *fd);
 };
 

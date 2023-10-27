@@ -23,20 +23,19 @@ TEST_CONSTEXPR_CXX20 bool test() {
   // ambiguous.
   {
     std::string s = "hello world";
-    s = {};
+    s             = {};
     assert(s.empty());
   }
   {
     std::string s = "hello world";
-    s = {"abc", 2};
+    s             = {"abc", 2};
     assert(s == "ab");
   }
 
   return true;
 }
 
-int main(int, char**)
-{
+int main(int, char**) {
   test();
 #if TEST_STD_VER > 17
   static_assert(test());

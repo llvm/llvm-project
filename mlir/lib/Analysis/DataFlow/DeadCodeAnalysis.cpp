@@ -8,6 +8,7 @@
 
 #include "mlir/Analysis/DataFlow/DeadCodeAnalysis.h"
 #include "mlir/Analysis/DataFlow/ConstantPropagationAnalysis.h"
+#include "mlir/Analysis/DataFlowFramework.h"
 #include "mlir/Interfaces/CallInterfaces.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include <optional>
@@ -31,7 +32,9 @@ void Executable::print(raw_ostream &os) const {
 }
 
 void Executable::onUpdate(DataFlowSolver *solver) const {
-  if (auto *block = point.dyn_cast<Block *>()) {
+  AnalysisState::onUpdate(solver);
+
+  if (auto *block = llvm::dyn_cast_if_present<Block *>(point)) {
     // Re-invoke the analyses on the block itself.
     for (DataFlowAnalysis *analysis : subscribers)
       solver->enqueue({block, analysis});
@@ -39,7 +42,7 @@ void Executable::onUpdate(DataFlowSolver *solver) const {
     for (DataFlowAnalysis *analysis : subscribers)
       for (Operation &op : *block)
         solver->enqueue({&op, analysis});
-  } else if (auto *programPoint = point.dyn_cast<GenericProgramPoint *>()) {
+  } else if (auto *programPoint = llvm::dyn_cast_if_present<GenericProgramPoint *>(point)) {
     // Re-invoke the analysis on the successor block.
     if (auto *edge = dyn_cast<CFGEdge>(programPoint)) {
       for (DataFlowAnalysis *analysis : subscribers)
@@ -219,7 +222,7 @@ void DeadCodeAnalysis::markEntryBlocksLive(Operation *op) {
 LogicalResult DeadCodeAnalysis::visit(ProgramPoint point) {
   if (point.is<Block *>())
     return success();
-  auto *op = point.dyn_cast<Operation *>();
+  auto *op = llvm::dyn_cast_if_present<Operation *>(point);
   if (!op)
     return emitError(point.getLoc(), "unknown program point kind");
 
@@ -256,7 +259,8 @@ LogicalResult DeadCodeAnalysis::visit(ProgramPoint point) {
   if (isRegionOrCallableReturn(op)) {
     if (auto branch = dyn_cast<RegionBranchOpInterface>(op->getParentOp())) {
       // Visit the exiting terminator of a region.
-      visitRegionTerminator(op, branch);
+      visitRegionTerminator(cast<RegionBranchTerminatorOpInterface>(op),
+                            branch);
     } else if (auto callable =
                    dyn_cast<CallableOpInterface>(op->getParentOp())) {
       // Visit the exiting terminator of a callable.
@@ -309,8 +313,8 @@ void DeadCodeAnalysis::visitCallOperation(CallOpInterface call) {
 }
 
 /// Get the constant values of the operands of an operation. If any of the
-/// constant value lattices are uninitialized, return none to indicate the
-/// analysis should bail out.
+/// constant value lattices are uninitialized, return std::nullopt to indicate
+/// the analysis should bail out.
 static std::optional<SmallVector<Attribute>> getOperandValuesImpl(
     Operation *op,
     function_ref<const Lattice<ConstantValue> *(Value)> getLattice) {
@@ -358,7 +362,7 @@ void DeadCodeAnalysis::visitRegionBranchOperation(
     return;
 
   SmallVector<RegionSuccessor> successors;
-  branch.getSuccessorRegions(/*index=*/{}, *operands, successors);
+  branch.getEntrySuccessorRegions(*operands, successors);
   for (const RegionSuccessor &successor : successors) {
     // The successor can be either an entry block or the parent operation.
     ProgramPoint point = successor.getSuccessor()
@@ -375,15 +379,14 @@ void DeadCodeAnalysis::visitRegionBranchOperation(
   }
 }
 
-void DeadCodeAnalysis::visitRegionTerminator(Operation *op,
-                                             RegionBranchOpInterface branch) {
+void DeadCodeAnalysis::visitRegionTerminator(
+    RegionBranchTerminatorOpInterface op, RegionBranchOpInterface branch) {
   std::optional<SmallVector<Attribute>> operands = getOperandValues(op);
   if (!operands)
     return;
 
   SmallVector<RegionSuccessor> successors;
-  branch.getSuccessorRegions(op->getParentRegion()->getRegionNumber(),
-                             *operands, successors);
+  op.getSuccessorRegions(*operands, successors);
 
   // Mark successor region entry blocks as executable and add this op to the
   // list of predecessors.
@@ -404,10 +407,6 @@ void DeadCodeAnalysis::visitRegionTerminator(Operation *op,
 
 void DeadCodeAnalysis::visitCallableTerminator(Operation *op,
                                                CallableOpInterface callable) {
-  // If there are no exiting values, we have nothing to do.
-  if (op->getNumOperands() == 0)
-    return;
-
   // Add as predecessors to all callsites this return op.
   auto *callsites = getOrCreateFor<PredecessorState>(op, callable);
   bool canResolve = op->hasTrait<OpTrait::ReturnLike>();

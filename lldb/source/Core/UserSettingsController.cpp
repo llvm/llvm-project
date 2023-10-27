@@ -30,13 +30,19 @@ class Property;
 using namespace lldb;
 using namespace lldb_private;
 
+Properties::Properties() = default;
+
+Properties::Properties(const lldb::OptionValuePropertiesSP &collection_sp)
+    : m_collection_sp(collection_sp) {}
+
+Properties::~Properties() = default;
+
 lldb::OptionValueSP
 Properties::GetPropertyValue(const ExecutionContext *exe_ctx,
-                             llvm::StringRef path, bool will_modify,
-                             Status &error) const {
+                             llvm::StringRef path, Status &error) const {
   OptionValuePropertiesSP properties_sp(GetValueProperties());
   if (properties_sp)
-    return properties_sp->GetSubValue(exe_ctx, path, will_modify, error);
+    return properties_sp->GetSubValue(exe_ctx, path, error);
   return lldb::OptionValueSP();
 }
 
@@ -99,16 +105,10 @@ Properties::Apropos(llvm::StringRef keyword,
   return matching_properties.size();
 }
 
-lldb::OptionValuePropertiesSP
-Properties::GetSubProperty(const ExecutionContext *exe_ctx,
-                           ConstString name) {
-  OptionValuePropertiesSP properties_sp(GetValueProperties());
-  if (properties_sp)
-    return properties_sp->GetSubProperty(exe_ctx, name);
-  return lldb::OptionValuePropertiesSP();
+llvm::StringRef Properties::GetExperimentalSettingsName() {
+  static constexpr llvm::StringLiteral g_experimental("experimental");
+  return g_experimental;
 }
-
-const char *Properties::GetExperimentalSettingsName() { return "experimental"; }
 
 bool Properties::IsSettingExperimental(llvm::StringRef setting) {
   if (setting.empty())

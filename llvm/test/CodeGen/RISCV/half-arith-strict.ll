@@ -3,12 +3,24 @@
 ; RUN:   -disable-strictnode-mutation -target-abi ilp32f < %s | FileCheck %s
 ; RUN: llc -mtriple=riscv64 -mattr=+zfh -verify-machineinstrs \
 ; RUN:   -disable-strictnode-mutation -target-abi lp64f < %s | FileCheck %s
+; RUN: llc -mtriple=riscv32 -mattr=+zhinx -verify-machineinstrs \
+; RUN:   -disable-strictnode-mutation -target-abi ilp32 < %s \
+; RUN:   | FileCheck -check-prefix=CHECK-ZHINX %s
+; RUN: llc -mtriple=riscv64 -mattr=+zhinx -verify-machineinstrs \
+; RUN:   -disable-strictnode-mutation -target-abi lp64 < %s \
+; RUN:   | FileCheck -check-prefix=CHECK-ZHINX %s
 ; RUN: llc -mtriple=riscv32 -mattr=+zfhmin -verify-machineinstrs \
 ; RUN:   -disable-strictnode-mutation -target-abi ilp32f < %s \
 ; RUN:   | FileCheck -check-prefix=CHECK-ZFHMIN %s
 ; RUN: llc -mtriple=riscv64 -mattr=+zfhmin -verify-machineinstrs \
 ; RUN:   -disable-strictnode-mutation -target-abi lp64f < %s \
 ; RUN:  | FileCheck -check-prefix=CHECK-ZFHMIN %s
+; RUN: llc -mtriple=riscv32 -mattr=+zhinxmin -verify-machineinstrs \
+; RUN:   -disable-strictnode-mutation -target-abi ilp32 < %s \
+; RUN:   | FileCheck -check-prefix=CHECK-ZHINXMIN %s
+; RUN: llc -mtriple=riscv64 -mattr=+zhinxmin -verify-machineinstrs \
+; RUN:   -disable-strictnode-mutation -target-abi lp64 < %s \
+; RUN:   | FileCheck -check-prefix=CHECK-ZHINXMIN %s
 
 ; FIXME: We can't test without Zfh because soft promote legalization isn't
 ; implemented in SelectionDAG for STRICT nodes.
@@ -19,13 +31,26 @@ define half @fadd_h(half %a, half %b) nounwind strictfp {
 ; CHECK-NEXT:    fadd.h fa0, fa0, fa1
 ; CHECK-NEXT:    ret
 ;
+; CHECK-ZHINX-LABEL: fadd_h:
+; CHECK-ZHINX:       # %bb.0:
+; CHECK-ZHINX-NEXT:    fadd.h a0, a0, a1
+; CHECK-ZHINX-NEXT:    ret
+;
 ; CHECK-ZFHMIN-LABEL: fadd_h:
 ; CHECK-ZFHMIN:       # %bb.0:
-; CHECK-ZFHMIN-NEXT:    fcvt.s.h ft0, fa1
-; CHECK-ZFHMIN-NEXT:    fcvt.s.h ft1, fa0
-; CHECK-ZFHMIN-NEXT:    fadd.s ft0, ft1, ft0
-; CHECK-ZFHMIN-NEXT:    fcvt.h.s fa0, ft0
+; CHECK-ZFHMIN-NEXT:    fcvt.s.h fa5, fa1
+; CHECK-ZFHMIN-NEXT:    fcvt.s.h fa4, fa0
+; CHECK-ZFHMIN-NEXT:    fadd.s fa5, fa4, fa5
+; CHECK-ZFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; CHECK-ZFHMIN-NEXT:    ret
+;
+; CHECK-ZHINXMIN-LABEL: fadd_h:
+; CHECK-ZHINXMIN:       # %bb.0:
+; CHECK-ZHINXMIN-NEXT:    fcvt.s.h a1, a1
+; CHECK-ZHINXMIN-NEXT:    fcvt.s.h a0, a0
+; CHECK-ZHINXMIN-NEXT:    fadd.s a0, a0, a1
+; CHECK-ZHINXMIN-NEXT:    fcvt.h.s a0, a0
+; CHECK-ZHINXMIN-NEXT:    ret
   %1 = call half @llvm.experimental.constrained.fadd.f16(half %a, half %b, metadata !"round.dynamic", metadata !"fpexcept.strict") strictfp
   ret half %1
 }
@@ -37,13 +62,26 @@ define half @fsub_h(half %a, half %b) nounwind strictfp {
 ; CHECK-NEXT:    fsub.h fa0, fa0, fa1
 ; CHECK-NEXT:    ret
 ;
+; CHECK-ZHINX-LABEL: fsub_h:
+; CHECK-ZHINX:       # %bb.0:
+; CHECK-ZHINX-NEXT:    fsub.h a0, a0, a1
+; CHECK-ZHINX-NEXT:    ret
+;
 ; CHECK-ZFHMIN-LABEL: fsub_h:
 ; CHECK-ZFHMIN:       # %bb.0:
-; CHECK-ZFHMIN-NEXT:    fcvt.s.h ft0, fa1
-; CHECK-ZFHMIN-NEXT:    fcvt.s.h ft1, fa0
-; CHECK-ZFHMIN-NEXT:    fsub.s ft0, ft1, ft0
-; CHECK-ZFHMIN-NEXT:    fcvt.h.s fa0, ft0
+; CHECK-ZFHMIN-NEXT:    fcvt.s.h fa5, fa1
+; CHECK-ZFHMIN-NEXT:    fcvt.s.h fa4, fa0
+; CHECK-ZFHMIN-NEXT:    fsub.s fa5, fa4, fa5
+; CHECK-ZFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; CHECK-ZFHMIN-NEXT:    ret
+;
+; CHECK-ZHINXMIN-LABEL: fsub_h:
+; CHECK-ZHINXMIN:       # %bb.0:
+; CHECK-ZHINXMIN-NEXT:    fcvt.s.h a1, a1
+; CHECK-ZHINXMIN-NEXT:    fcvt.s.h a0, a0
+; CHECK-ZHINXMIN-NEXT:    fsub.s a0, a0, a1
+; CHECK-ZHINXMIN-NEXT:    fcvt.h.s a0, a0
+; CHECK-ZHINXMIN-NEXT:    ret
   %1 = call half @llvm.experimental.constrained.fsub.f16(half %a, half %b, metadata !"round.dynamic", metadata !"fpexcept.strict") strictfp
   ret half %1
 }
@@ -55,13 +93,26 @@ define half @fmul_h(half %a, half %b) nounwind strictfp {
 ; CHECK-NEXT:    fmul.h fa0, fa0, fa1
 ; CHECK-NEXT:    ret
 ;
+; CHECK-ZHINX-LABEL: fmul_h:
+; CHECK-ZHINX:       # %bb.0:
+; CHECK-ZHINX-NEXT:    fmul.h a0, a0, a1
+; CHECK-ZHINX-NEXT:    ret
+;
 ; CHECK-ZFHMIN-LABEL: fmul_h:
 ; CHECK-ZFHMIN:       # %bb.0:
-; CHECK-ZFHMIN-NEXT:    fcvt.s.h ft0, fa1
-; CHECK-ZFHMIN-NEXT:    fcvt.s.h ft1, fa0
-; CHECK-ZFHMIN-NEXT:    fmul.s ft0, ft1, ft0
-; CHECK-ZFHMIN-NEXT:    fcvt.h.s fa0, ft0
+; CHECK-ZFHMIN-NEXT:    fcvt.s.h fa5, fa1
+; CHECK-ZFHMIN-NEXT:    fcvt.s.h fa4, fa0
+; CHECK-ZFHMIN-NEXT:    fmul.s fa5, fa4, fa5
+; CHECK-ZFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; CHECK-ZFHMIN-NEXT:    ret
+;
+; CHECK-ZHINXMIN-LABEL: fmul_h:
+; CHECK-ZHINXMIN:       # %bb.0:
+; CHECK-ZHINXMIN-NEXT:    fcvt.s.h a1, a1
+; CHECK-ZHINXMIN-NEXT:    fcvt.s.h a0, a0
+; CHECK-ZHINXMIN-NEXT:    fmul.s a0, a0, a1
+; CHECK-ZHINXMIN-NEXT:    fcvt.h.s a0, a0
+; CHECK-ZHINXMIN-NEXT:    ret
   %1 = call half @llvm.experimental.constrained.fmul.f16(half %a, half %b, metadata !"round.dynamic", metadata !"fpexcept.strict") strictfp
   ret half %1
 }
@@ -73,13 +124,26 @@ define half @fdiv_h(half %a, half %b) nounwind strictfp {
 ; CHECK-NEXT:    fdiv.h fa0, fa0, fa1
 ; CHECK-NEXT:    ret
 ;
+; CHECK-ZHINX-LABEL: fdiv_h:
+; CHECK-ZHINX:       # %bb.0:
+; CHECK-ZHINX-NEXT:    fdiv.h a0, a0, a1
+; CHECK-ZHINX-NEXT:    ret
+;
 ; CHECK-ZFHMIN-LABEL: fdiv_h:
 ; CHECK-ZFHMIN:       # %bb.0:
-; CHECK-ZFHMIN-NEXT:    fcvt.s.h ft0, fa1
-; CHECK-ZFHMIN-NEXT:    fcvt.s.h ft1, fa0
-; CHECK-ZFHMIN-NEXT:    fdiv.s ft0, ft1, ft0
-; CHECK-ZFHMIN-NEXT:    fcvt.h.s fa0, ft0
+; CHECK-ZFHMIN-NEXT:    fcvt.s.h fa5, fa1
+; CHECK-ZFHMIN-NEXT:    fcvt.s.h fa4, fa0
+; CHECK-ZFHMIN-NEXT:    fdiv.s fa5, fa4, fa5
+; CHECK-ZFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; CHECK-ZFHMIN-NEXT:    ret
+;
+; CHECK-ZHINXMIN-LABEL: fdiv_h:
+; CHECK-ZHINXMIN:       # %bb.0:
+; CHECK-ZHINXMIN-NEXT:    fcvt.s.h a1, a1
+; CHECK-ZHINXMIN-NEXT:    fcvt.s.h a0, a0
+; CHECK-ZHINXMIN-NEXT:    fdiv.s a0, a0, a1
+; CHECK-ZHINXMIN-NEXT:    fcvt.h.s a0, a0
+; CHECK-ZHINXMIN-NEXT:    ret
   %1 = call half @llvm.experimental.constrained.fdiv.f16(half %a, half %b, metadata !"round.dynamic", metadata !"fpexcept.strict") strictfp
   ret half %1
 }
@@ -91,12 +155,24 @@ define half @fsqrt_h(half %a) nounwind strictfp {
 ; CHECK-NEXT:    fsqrt.h fa0, fa0
 ; CHECK-NEXT:    ret
 ;
+; CHECK-ZHINX-LABEL: fsqrt_h:
+; CHECK-ZHINX:       # %bb.0:
+; CHECK-ZHINX-NEXT:    fsqrt.h a0, a0
+; CHECK-ZHINX-NEXT:    ret
+;
 ; CHECK-ZFHMIN-LABEL: fsqrt_h:
 ; CHECK-ZFHMIN:       # %bb.0:
-; CHECK-ZFHMIN-NEXT:    fcvt.s.h ft0, fa0
-; CHECK-ZFHMIN-NEXT:    fsqrt.s ft0, ft0
-; CHECK-ZFHMIN-NEXT:    fcvt.h.s fa0, ft0
+; CHECK-ZFHMIN-NEXT:    fcvt.s.h fa5, fa0
+; CHECK-ZFHMIN-NEXT:    fsqrt.s fa5, fa5
+; CHECK-ZFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; CHECK-ZFHMIN-NEXT:    ret
+;
+; CHECK-ZHINXMIN-LABEL: fsqrt_h:
+; CHECK-ZHINXMIN:       # %bb.0:
+; CHECK-ZHINXMIN-NEXT:    fcvt.s.h a0, a0
+; CHECK-ZHINXMIN-NEXT:    fsqrt.s a0, a0
+; CHECK-ZHINXMIN-NEXT:    fcvt.h.s a0, a0
+; CHECK-ZHINXMIN-NEXT:    ret
   %1 = call half @llvm.experimental.constrained.sqrt.f16(half %a, metadata !"round.dynamic", metadata !"fpexcept.strict") strictfp
   ret half %1
 }
@@ -122,14 +198,28 @@ define half @fmadd_h(half %a, half %b, half %c) nounwind strictfp {
 ; CHECK-NEXT:    fmadd.h fa0, fa0, fa1, fa2
 ; CHECK-NEXT:    ret
 ;
+; CHECK-ZHINX-LABEL: fmadd_h:
+; CHECK-ZHINX:       # %bb.0:
+; CHECK-ZHINX-NEXT:    fmadd.h a0, a0, a1, a2
+; CHECK-ZHINX-NEXT:    ret
+;
 ; CHECK-ZFHMIN-LABEL: fmadd_h:
 ; CHECK-ZFHMIN:       # %bb.0:
-; CHECK-ZFHMIN-NEXT:    fcvt.s.h ft0, fa2
-; CHECK-ZFHMIN-NEXT:    fcvt.s.h ft1, fa1
-; CHECK-ZFHMIN-NEXT:    fcvt.s.h ft2, fa0
-; CHECK-ZFHMIN-NEXT:    fmadd.s ft0, ft2, ft1, ft0
-; CHECK-ZFHMIN-NEXT:    fcvt.h.s fa0, ft0
+; CHECK-ZFHMIN-NEXT:    fcvt.s.h fa5, fa2
+; CHECK-ZFHMIN-NEXT:    fcvt.s.h fa4, fa1
+; CHECK-ZFHMIN-NEXT:    fcvt.s.h fa3, fa0
+; CHECK-ZFHMIN-NEXT:    fmadd.s fa5, fa3, fa4, fa5
+; CHECK-ZFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; CHECK-ZFHMIN-NEXT:    ret
+;
+; CHECK-ZHINXMIN-LABEL: fmadd_h:
+; CHECK-ZHINXMIN:       # %bb.0:
+; CHECK-ZHINXMIN-NEXT:    fcvt.s.h a2, a2
+; CHECK-ZHINXMIN-NEXT:    fcvt.s.h a1, a1
+; CHECK-ZHINXMIN-NEXT:    fcvt.s.h a0, a0
+; CHECK-ZHINXMIN-NEXT:    fmadd.s a0, a0, a1, a2
+; CHECK-ZHINXMIN-NEXT:    fcvt.h.s a0, a0
+; CHECK-ZHINXMIN-NEXT:    ret
   %1 = call half @llvm.experimental.constrained.fma.f16(half %a, half %b, half %c, metadata !"round.dynamic", metadata !"fpexcept.strict") strictfp
   ret half %1
 }
@@ -138,26 +228,47 @@ declare half @llvm.experimental.constrained.fma.f16(half, half, half, metadata, 
 define half @fmsub_h(half %a, half %b, half %c) nounwind strictfp {
 ; CHECK-LABEL: fmsub_h:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fmv.h.x ft0, zero
-; CHECK-NEXT:    fadd.h ft0, fa2, ft0
-; CHECK-NEXT:    fmsub.h fa0, fa0, fa1, ft0
+; CHECK-NEXT:    fmv.h.x fa5, zero
+; CHECK-NEXT:    fadd.h fa5, fa2, fa5
+; CHECK-NEXT:    fmsub.h fa0, fa0, fa1, fa5
 ; CHECK-NEXT:    ret
+;
+; CHECK-ZHINX-LABEL: fmsub_h:
+; CHECK-ZHINX:       # %bb.0:
+; CHECK-ZHINX-NEXT:    fadd.h a2, a2, zero
+; CHECK-ZHINX-NEXT:    fmsub.h a0, a0, a1, a2
+; CHECK-ZHINX-NEXT:    ret
 ;
 ; CHECK-ZFHMIN-LABEL: fmsub_h:
 ; CHECK-ZFHMIN:       # %bb.0:
-; CHECK-ZFHMIN-NEXT:    fcvt.s.h ft0, fa2
-; CHECK-ZFHMIN-NEXT:    fmv.w.x ft1, zero
-; CHECK-ZFHMIN-NEXT:    fadd.s ft0, ft0, ft1
-; CHECK-ZFHMIN-NEXT:    fcvt.h.s ft0, ft0
-; CHECK-ZFHMIN-NEXT:    fcvt.s.h ft0, ft0
-; CHECK-ZFHMIN-NEXT:    fneg.s ft0, ft0
-; CHECK-ZFHMIN-NEXT:    fcvt.h.s ft0, ft0
-; CHECK-ZFHMIN-NEXT:    fcvt.s.h ft0, ft0
-; CHECK-ZFHMIN-NEXT:    fcvt.s.h ft1, fa1
-; CHECK-ZFHMIN-NEXT:    fcvt.s.h ft2, fa0
-; CHECK-ZFHMIN-NEXT:    fmadd.s ft0, ft2, ft1, ft0
-; CHECK-ZFHMIN-NEXT:    fcvt.h.s fa0, ft0
+; CHECK-ZFHMIN-NEXT:    fcvt.s.h fa5, fa2
+; CHECK-ZFHMIN-NEXT:    fmv.w.x fa4, zero
+; CHECK-ZFHMIN-NEXT:    fadd.s fa5, fa5, fa4
+; CHECK-ZFHMIN-NEXT:    fcvt.h.s fa5, fa5
+; CHECK-ZFHMIN-NEXT:    fcvt.s.h fa5, fa5
+; CHECK-ZFHMIN-NEXT:    fneg.s fa5, fa5
+; CHECK-ZFHMIN-NEXT:    fcvt.h.s fa5, fa5
+; CHECK-ZFHMIN-NEXT:    fcvt.s.h fa5, fa5
+; CHECK-ZFHMIN-NEXT:    fcvt.s.h fa4, fa1
+; CHECK-ZFHMIN-NEXT:    fcvt.s.h fa3, fa0
+; CHECK-ZFHMIN-NEXT:    fmadd.s fa5, fa3, fa4, fa5
+; CHECK-ZFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; CHECK-ZFHMIN-NEXT:    ret
+;
+; CHECK-ZHINXMIN-LABEL: fmsub_h:
+; CHECK-ZHINXMIN:       # %bb.0:
+; CHECK-ZHINXMIN-NEXT:    fcvt.s.h a2, a2
+; CHECK-ZHINXMIN-NEXT:    fadd.s a2, a2, zero
+; CHECK-ZHINXMIN-NEXT:    fcvt.h.s a2, a2
+; CHECK-ZHINXMIN-NEXT:    fcvt.s.h a2, a2
+; CHECK-ZHINXMIN-NEXT:    fneg.s a2, a2
+; CHECK-ZHINXMIN-NEXT:    fcvt.h.s a2, a2
+; CHECK-ZHINXMIN-NEXT:    fcvt.s.h a2, a2
+; CHECK-ZHINXMIN-NEXT:    fcvt.s.h a1, a1
+; CHECK-ZHINXMIN-NEXT:    fcvt.s.h a0, a0
+; CHECK-ZHINXMIN-NEXT:    fmadd.s a0, a0, a1, a2
+; CHECK-ZHINXMIN-NEXT:    fcvt.h.s a0, a0
+; CHECK-ZHINXMIN-NEXT:    ret
   %c_ = fadd half 0.0, %c ; avoid negation using xor
   %negc = fneg half %c_
   %1 = call half @llvm.experimental.constrained.fma.f16(half %a, half %b, half %negc, metadata !"round.dynamic", metadata !"fpexcept.strict") strictfp
@@ -167,33 +278,61 @@ define half @fmsub_h(half %a, half %b, half %c) nounwind strictfp {
 define half @fnmadd_h(half %a, half %b, half %c) nounwind strictfp {
 ; CHECK-LABEL: fnmadd_h:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fmv.h.x ft0, zero
-; CHECK-NEXT:    fadd.h ft1, fa0, ft0
-; CHECK-NEXT:    fadd.h ft0, fa2, ft0
-; CHECK-NEXT:    fnmadd.h fa0, ft1, fa1, ft0
+; CHECK-NEXT:    fmv.h.x fa5, zero
+; CHECK-NEXT:    fadd.h fa4, fa0, fa5
+; CHECK-NEXT:    fadd.h fa5, fa2, fa5
+; CHECK-NEXT:    fnmadd.h fa0, fa4, fa1, fa5
 ; CHECK-NEXT:    ret
+;
+; CHECK-ZHINX-LABEL: fnmadd_h:
+; CHECK-ZHINX:       # %bb.0:
+; CHECK-ZHINX-NEXT:    fadd.h a0, a0, zero
+; CHECK-ZHINX-NEXT:    fadd.h a2, a2, zero
+; CHECK-ZHINX-NEXT:    fnmadd.h a0, a0, a1, a2
+; CHECK-ZHINX-NEXT:    ret
 ;
 ; CHECK-ZFHMIN-LABEL: fnmadd_h:
 ; CHECK-ZFHMIN:       # %bb.0:
-; CHECK-ZFHMIN-NEXT:    fcvt.s.h ft0, fa0
-; CHECK-ZFHMIN-NEXT:    fmv.w.x ft1, zero
-; CHECK-ZFHMIN-NEXT:    fadd.s ft0, ft0, ft1
-; CHECK-ZFHMIN-NEXT:    fcvt.h.s ft0, ft0
-; CHECK-ZFHMIN-NEXT:    fcvt.s.h ft2, fa2
-; CHECK-ZFHMIN-NEXT:    fadd.s ft1, ft2, ft1
-; CHECK-ZFHMIN-NEXT:    fcvt.h.s ft1, ft1
-; CHECK-ZFHMIN-NEXT:    fcvt.s.h ft0, ft0
-; CHECK-ZFHMIN-NEXT:    fneg.s ft0, ft0
-; CHECK-ZFHMIN-NEXT:    fcvt.h.s ft0, ft0
-; CHECK-ZFHMIN-NEXT:    fcvt.s.h ft1, ft1
-; CHECK-ZFHMIN-NEXT:    fneg.s ft1, ft1
-; CHECK-ZFHMIN-NEXT:    fcvt.h.s ft1, ft1
-; CHECK-ZFHMIN-NEXT:    fcvt.s.h ft1, ft1
-; CHECK-ZFHMIN-NEXT:    fcvt.s.h ft0, ft0
-; CHECK-ZFHMIN-NEXT:    fcvt.s.h ft2, fa1
-; CHECK-ZFHMIN-NEXT:    fmadd.s ft0, ft0, ft2, ft1
-; CHECK-ZFHMIN-NEXT:    fcvt.h.s fa0, ft0
+; CHECK-ZFHMIN-NEXT:    fcvt.s.h fa5, fa0
+; CHECK-ZFHMIN-NEXT:    fmv.w.x fa4, zero
+; CHECK-ZFHMIN-NEXT:    fadd.s fa5, fa5, fa4
+; CHECK-ZFHMIN-NEXT:    fcvt.h.s fa5, fa5
+; CHECK-ZFHMIN-NEXT:    fcvt.s.h fa3, fa2
+; CHECK-ZFHMIN-NEXT:    fadd.s fa4, fa3, fa4
+; CHECK-ZFHMIN-NEXT:    fcvt.h.s fa4, fa4
+; CHECK-ZFHMIN-NEXT:    fcvt.s.h fa5, fa5
+; CHECK-ZFHMIN-NEXT:    fneg.s fa5, fa5
+; CHECK-ZFHMIN-NEXT:    fcvt.h.s fa5, fa5
+; CHECK-ZFHMIN-NEXT:    fcvt.s.h fa4, fa4
+; CHECK-ZFHMIN-NEXT:    fneg.s fa4, fa4
+; CHECK-ZFHMIN-NEXT:    fcvt.h.s fa4, fa4
+; CHECK-ZFHMIN-NEXT:    fcvt.s.h fa4, fa4
+; CHECK-ZFHMIN-NEXT:    fcvt.s.h fa5, fa5
+; CHECK-ZFHMIN-NEXT:    fcvt.s.h fa3, fa1
+; CHECK-ZFHMIN-NEXT:    fmadd.s fa5, fa5, fa3, fa4
+; CHECK-ZFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; CHECK-ZFHMIN-NEXT:    ret
+;
+; CHECK-ZHINXMIN-LABEL: fnmadd_h:
+; CHECK-ZHINXMIN:       # %bb.0:
+; CHECK-ZHINXMIN-NEXT:    fcvt.s.h a0, a0
+; CHECK-ZHINXMIN-NEXT:    fadd.s a0, a0, zero
+; CHECK-ZHINXMIN-NEXT:    fcvt.h.s a0, a0
+; CHECK-ZHINXMIN-NEXT:    fcvt.s.h a2, a2
+; CHECK-ZHINXMIN-NEXT:    fadd.s a2, a2, zero
+; CHECK-ZHINXMIN-NEXT:    fcvt.h.s a2, a2
+; CHECK-ZHINXMIN-NEXT:    fcvt.s.h a0, a0
+; CHECK-ZHINXMIN-NEXT:    fneg.s a0, a0
+; CHECK-ZHINXMIN-NEXT:    fcvt.h.s a0, a0
+; CHECK-ZHINXMIN-NEXT:    fcvt.s.h a2, a2
+; CHECK-ZHINXMIN-NEXT:    fneg.s a2, a2
+; CHECK-ZHINXMIN-NEXT:    fcvt.h.s a2, a2
+; CHECK-ZHINXMIN-NEXT:    fcvt.s.h a2, a2
+; CHECK-ZHINXMIN-NEXT:    fcvt.s.h a0, a0
+; CHECK-ZHINXMIN-NEXT:    fcvt.s.h a1, a1
+; CHECK-ZHINXMIN-NEXT:    fmadd.s a0, a0, a1, a2
+; CHECK-ZHINXMIN-NEXT:    fcvt.h.s a0, a0
+; CHECK-ZHINXMIN-NEXT:    ret
   %a_ = fadd half 0.0, %a
   %c_ = fadd half 0.0, %c
   %nega = fneg half %a_
@@ -205,33 +344,61 @@ define half @fnmadd_h(half %a, half %b, half %c) nounwind strictfp {
 define half @fnmadd_h_2(half %a, half %b, half %c) nounwind strictfp {
 ; CHECK-LABEL: fnmadd_h_2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fmv.h.x ft0, zero
-; CHECK-NEXT:    fadd.h ft1, fa1, ft0
-; CHECK-NEXT:    fadd.h ft0, fa2, ft0
-; CHECK-NEXT:    fnmadd.h fa0, ft1, fa0, ft0
+; CHECK-NEXT:    fmv.h.x fa5, zero
+; CHECK-NEXT:    fadd.h fa4, fa1, fa5
+; CHECK-NEXT:    fadd.h fa5, fa2, fa5
+; CHECK-NEXT:    fnmadd.h fa0, fa4, fa0, fa5
 ; CHECK-NEXT:    ret
+;
+; CHECK-ZHINX-LABEL: fnmadd_h_2:
+; CHECK-ZHINX:       # %bb.0:
+; CHECK-ZHINX-NEXT:    fadd.h a1, a1, zero
+; CHECK-ZHINX-NEXT:    fadd.h a2, a2, zero
+; CHECK-ZHINX-NEXT:    fnmadd.h a0, a1, a0, a2
+; CHECK-ZHINX-NEXT:    ret
 ;
 ; CHECK-ZFHMIN-LABEL: fnmadd_h_2:
 ; CHECK-ZFHMIN:       # %bb.0:
-; CHECK-ZFHMIN-NEXT:    fcvt.s.h ft0, fa1
-; CHECK-ZFHMIN-NEXT:    fmv.w.x ft1, zero
-; CHECK-ZFHMIN-NEXT:    fadd.s ft0, ft0, ft1
-; CHECK-ZFHMIN-NEXT:    fcvt.h.s ft0, ft0
-; CHECK-ZFHMIN-NEXT:    fcvt.s.h ft2, fa2
-; CHECK-ZFHMIN-NEXT:    fadd.s ft1, ft2, ft1
-; CHECK-ZFHMIN-NEXT:    fcvt.h.s ft1, ft1
-; CHECK-ZFHMIN-NEXT:    fcvt.s.h ft0, ft0
-; CHECK-ZFHMIN-NEXT:    fneg.s ft0, ft0
-; CHECK-ZFHMIN-NEXT:    fcvt.h.s ft0, ft0
-; CHECK-ZFHMIN-NEXT:    fcvt.s.h ft1, ft1
-; CHECK-ZFHMIN-NEXT:    fneg.s ft1, ft1
-; CHECK-ZFHMIN-NEXT:    fcvt.h.s ft1, ft1
-; CHECK-ZFHMIN-NEXT:    fcvt.s.h ft1, ft1
-; CHECK-ZFHMIN-NEXT:    fcvt.s.h ft0, ft0
-; CHECK-ZFHMIN-NEXT:    fcvt.s.h ft2, fa0
-; CHECK-ZFHMIN-NEXT:    fmadd.s ft0, ft2, ft0, ft1
-; CHECK-ZFHMIN-NEXT:    fcvt.h.s fa0, ft0
+; CHECK-ZFHMIN-NEXT:    fcvt.s.h fa5, fa1
+; CHECK-ZFHMIN-NEXT:    fmv.w.x fa4, zero
+; CHECK-ZFHMIN-NEXT:    fadd.s fa5, fa5, fa4
+; CHECK-ZFHMIN-NEXT:    fcvt.h.s fa5, fa5
+; CHECK-ZFHMIN-NEXT:    fcvt.s.h fa3, fa2
+; CHECK-ZFHMIN-NEXT:    fadd.s fa4, fa3, fa4
+; CHECK-ZFHMIN-NEXT:    fcvt.h.s fa4, fa4
+; CHECK-ZFHMIN-NEXT:    fcvt.s.h fa5, fa5
+; CHECK-ZFHMIN-NEXT:    fneg.s fa5, fa5
+; CHECK-ZFHMIN-NEXT:    fcvt.h.s fa5, fa5
+; CHECK-ZFHMIN-NEXT:    fcvt.s.h fa4, fa4
+; CHECK-ZFHMIN-NEXT:    fneg.s fa4, fa4
+; CHECK-ZFHMIN-NEXT:    fcvt.h.s fa4, fa4
+; CHECK-ZFHMIN-NEXT:    fcvt.s.h fa4, fa4
+; CHECK-ZFHMIN-NEXT:    fcvt.s.h fa5, fa5
+; CHECK-ZFHMIN-NEXT:    fcvt.s.h fa3, fa0
+; CHECK-ZFHMIN-NEXT:    fmadd.s fa5, fa3, fa5, fa4
+; CHECK-ZFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; CHECK-ZFHMIN-NEXT:    ret
+;
+; CHECK-ZHINXMIN-LABEL: fnmadd_h_2:
+; CHECK-ZHINXMIN:       # %bb.0:
+; CHECK-ZHINXMIN-NEXT:    fcvt.s.h a1, a1
+; CHECK-ZHINXMIN-NEXT:    fadd.s a1, a1, zero
+; CHECK-ZHINXMIN-NEXT:    fcvt.h.s a1, a1
+; CHECK-ZHINXMIN-NEXT:    fcvt.s.h a2, a2
+; CHECK-ZHINXMIN-NEXT:    fadd.s a2, a2, zero
+; CHECK-ZHINXMIN-NEXT:    fcvt.h.s a2, a2
+; CHECK-ZHINXMIN-NEXT:    fcvt.s.h a1, a1
+; CHECK-ZHINXMIN-NEXT:    fneg.s a1, a1
+; CHECK-ZHINXMIN-NEXT:    fcvt.h.s a1, a1
+; CHECK-ZHINXMIN-NEXT:    fcvt.s.h a2, a2
+; CHECK-ZHINXMIN-NEXT:    fneg.s a2, a2
+; CHECK-ZHINXMIN-NEXT:    fcvt.h.s a2, a2
+; CHECK-ZHINXMIN-NEXT:    fcvt.s.h a2, a2
+; CHECK-ZHINXMIN-NEXT:    fcvt.s.h a1, a1
+; CHECK-ZHINXMIN-NEXT:    fcvt.s.h a0, a0
+; CHECK-ZHINXMIN-NEXT:    fmadd.s a0, a0, a1, a2
+; CHECK-ZHINXMIN-NEXT:    fcvt.h.s a0, a0
+; CHECK-ZHINXMIN-NEXT:    ret
   %b_ = fadd half 0.0, %b
   %c_ = fadd half 0.0, %c
   %negb = fneg half %b_
@@ -243,26 +410,47 @@ define half @fnmadd_h_2(half %a, half %b, half %c) nounwind strictfp {
 define half @fnmsub_h(half %a, half %b, half %c) nounwind strictfp {
 ; CHECK-LABEL: fnmsub_h:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fmv.h.x ft0, zero
-; CHECK-NEXT:    fadd.h ft0, fa0, ft0
-; CHECK-NEXT:    fnmsub.h fa0, ft0, fa1, fa2
+; CHECK-NEXT:    fmv.h.x fa5, zero
+; CHECK-NEXT:    fadd.h fa5, fa0, fa5
+; CHECK-NEXT:    fnmsub.h fa0, fa5, fa1, fa2
 ; CHECK-NEXT:    ret
+;
+; CHECK-ZHINX-LABEL: fnmsub_h:
+; CHECK-ZHINX:       # %bb.0:
+; CHECK-ZHINX-NEXT:    fadd.h a0, a0, zero
+; CHECK-ZHINX-NEXT:    fnmsub.h a0, a0, a1, a2
+; CHECK-ZHINX-NEXT:    ret
 ;
 ; CHECK-ZFHMIN-LABEL: fnmsub_h:
 ; CHECK-ZFHMIN:       # %bb.0:
-; CHECK-ZFHMIN-NEXT:    fcvt.s.h ft0, fa0
-; CHECK-ZFHMIN-NEXT:    fmv.w.x ft1, zero
-; CHECK-ZFHMIN-NEXT:    fadd.s ft0, ft0, ft1
-; CHECK-ZFHMIN-NEXT:    fcvt.h.s ft0, ft0
-; CHECK-ZFHMIN-NEXT:    fcvt.s.h ft0, ft0
-; CHECK-ZFHMIN-NEXT:    fneg.s ft0, ft0
-; CHECK-ZFHMIN-NEXT:    fcvt.h.s ft0, ft0
-; CHECK-ZFHMIN-NEXT:    fcvt.s.h ft0, ft0
-; CHECK-ZFHMIN-NEXT:    fcvt.s.h ft1, fa2
-; CHECK-ZFHMIN-NEXT:    fcvt.s.h ft2, fa1
-; CHECK-ZFHMIN-NEXT:    fmadd.s ft0, ft0, ft2, ft1
-; CHECK-ZFHMIN-NEXT:    fcvt.h.s fa0, ft0
+; CHECK-ZFHMIN-NEXT:    fcvt.s.h fa5, fa0
+; CHECK-ZFHMIN-NEXT:    fmv.w.x fa4, zero
+; CHECK-ZFHMIN-NEXT:    fadd.s fa5, fa5, fa4
+; CHECK-ZFHMIN-NEXT:    fcvt.h.s fa5, fa5
+; CHECK-ZFHMIN-NEXT:    fcvt.s.h fa5, fa5
+; CHECK-ZFHMIN-NEXT:    fneg.s fa5, fa5
+; CHECK-ZFHMIN-NEXT:    fcvt.h.s fa5, fa5
+; CHECK-ZFHMIN-NEXT:    fcvt.s.h fa5, fa5
+; CHECK-ZFHMIN-NEXT:    fcvt.s.h fa4, fa2
+; CHECK-ZFHMIN-NEXT:    fcvt.s.h fa3, fa1
+; CHECK-ZFHMIN-NEXT:    fmadd.s fa5, fa5, fa3, fa4
+; CHECK-ZFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; CHECK-ZFHMIN-NEXT:    ret
+;
+; CHECK-ZHINXMIN-LABEL: fnmsub_h:
+; CHECK-ZHINXMIN:       # %bb.0:
+; CHECK-ZHINXMIN-NEXT:    fcvt.s.h a0, a0
+; CHECK-ZHINXMIN-NEXT:    fadd.s a0, a0, zero
+; CHECK-ZHINXMIN-NEXT:    fcvt.h.s a0, a0
+; CHECK-ZHINXMIN-NEXT:    fcvt.s.h a0, a0
+; CHECK-ZHINXMIN-NEXT:    fneg.s a0, a0
+; CHECK-ZHINXMIN-NEXT:    fcvt.h.s a0, a0
+; CHECK-ZHINXMIN-NEXT:    fcvt.s.h a0, a0
+; CHECK-ZHINXMIN-NEXT:    fcvt.s.h a2, a2
+; CHECK-ZHINXMIN-NEXT:    fcvt.s.h a1, a1
+; CHECK-ZHINXMIN-NEXT:    fmadd.s a0, a0, a1, a2
+; CHECK-ZHINXMIN-NEXT:    fcvt.h.s a0, a0
+; CHECK-ZHINXMIN-NEXT:    ret
   %a_ = fadd half 0.0, %a
   %nega = fneg half %a_
   %1 = call half @llvm.experimental.constrained.fma.f16(half %nega, half %b, half %c, metadata !"round.dynamic", metadata !"fpexcept.strict") strictfp
@@ -272,26 +460,47 @@ define half @fnmsub_h(half %a, half %b, half %c) nounwind strictfp {
 define half @fnmsub_h_2(half %a, half %b, half %c) nounwind strictfp {
 ; CHECK-LABEL: fnmsub_h_2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fmv.h.x ft0, zero
-; CHECK-NEXT:    fadd.h ft0, fa1, ft0
-; CHECK-NEXT:    fnmsub.h fa0, ft0, fa0, fa2
+; CHECK-NEXT:    fmv.h.x fa5, zero
+; CHECK-NEXT:    fadd.h fa5, fa1, fa5
+; CHECK-NEXT:    fnmsub.h fa0, fa5, fa0, fa2
 ; CHECK-NEXT:    ret
+;
+; CHECK-ZHINX-LABEL: fnmsub_h_2:
+; CHECK-ZHINX:       # %bb.0:
+; CHECK-ZHINX-NEXT:    fadd.h a1, a1, zero
+; CHECK-ZHINX-NEXT:    fnmsub.h a0, a1, a0, a2
+; CHECK-ZHINX-NEXT:    ret
 ;
 ; CHECK-ZFHMIN-LABEL: fnmsub_h_2:
 ; CHECK-ZFHMIN:       # %bb.0:
-; CHECK-ZFHMIN-NEXT:    fcvt.s.h ft0, fa1
-; CHECK-ZFHMIN-NEXT:    fmv.w.x ft1, zero
-; CHECK-ZFHMIN-NEXT:    fadd.s ft0, ft0, ft1
-; CHECK-ZFHMIN-NEXT:    fcvt.h.s ft0, ft0
-; CHECK-ZFHMIN-NEXT:    fcvt.s.h ft0, ft0
-; CHECK-ZFHMIN-NEXT:    fneg.s ft0, ft0
-; CHECK-ZFHMIN-NEXT:    fcvt.h.s ft0, ft0
-; CHECK-ZFHMIN-NEXT:    fcvt.s.h ft0, ft0
-; CHECK-ZFHMIN-NEXT:    fcvt.s.h ft1, fa2
-; CHECK-ZFHMIN-NEXT:    fcvt.s.h ft2, fa0
-; CHECK-ZFHMIN-NEXT:    fmadd.s ft0, ft2, ft0, ft1
-; CHECK-ZFHMIN-NEXT:    fcvt.h.s fa0, ft0
+; CHECK-ZFHMIN-NEXT:    fcvt.s.h fa5, fa1
+; CHECK-ZFHMIN-NEXT:    fmv.w.x fa4, zero
+; CHECK-ZFHMIN-NEXT:    fadd.s fa5, fa5, fa4
+; CHECK-ZFHMIN-NEXT:    fcvt.h.s fa5, fa5
+; CHECK-ZFHMIN-NEXT:    fcvt.s.h fa5, fa5
+; CHECK-ZFHMIN-NEXT:    fneg.s fa5, fa5
+; CHECK-ZFHMIN-NEXT:    fcvt.h.s fa5, fa5
+; CHECK-ZFHMIN-NEXT:    fcvt.s.h fa5, fa5
+; CHECK-ZFHMIN-NEXT:    fcvt.s.h fa4, fa2
+; CHECK-ZFHMIN-NEXT:    fcvt.s.h fa3, fa0
+; CHECK-ZFHMIN-NEXT:    fmadd.s fa5, fa3, fa5, fa4
+; CHECK-ZFHMIN-NEXT:    fcvt.h.s fa0, fa5
 ; CHECK-ZFHMIN-NEXT:    ret
+;
+; CHECK-ZHINXMIN-LABEL: fnmsub_h_2:
+; CHECK-ZHINXMIN:       # %bb.0:
+; CHECK-ZHINXMIN-NEXT:    fcvt.s.h a1, a1
+; CHECK-ZHINXMIN-NEXT:    fadd.s a1, a1, zero
+; CHECK-ZHINXMIN-NEXT:    fcvt.h.s a1, a1
+; CHECK-ZHINXMIN-NEXT:    fcvt.s.h a1, a1
+; CHECK-ZHINXMIN-NEXT:    fneg.s a1, a1
+; CHECK-ZHINXMIN-NEXT:    fcvt.h.s a1, a1
+; CHECK-ZHINXMIN-NEXT:    fcvt.s.h a1, a1
+; CHECK-ZHINXMIN-NEXT:    fcvt.s.h a2, a2
+; CHECK-ZHINXMIN-NEXT:    fcvt.s.h a0, a0
+; CHECK-ZHINXMIN-NEXT:    fmadd.s a0, a0, a1, a2
+; CHECK-ZHINXMIN-NEXT:    fcvt.h.s a0, a0
+; CHECK-ZHINXMIN-NEXT:    ret
   %b_ = fadd half 0.0, %b
   %negb = fneg half %b_
   %1 = call half @llvm.experimental.constrained.fma.f16(half %a, half %negb, half %c, metadata !"round.dynamic", metadata !"fpexcept.strict") strictfp

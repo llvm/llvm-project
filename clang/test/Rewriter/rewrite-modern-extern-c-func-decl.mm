@@ -1,6 +1,5 @@
 // RUN: %clang_cc1 -fms-extensions -U__declspec -rewrite-objc -x objective-c++ -fblocks -o %t-rw.cpp %s
 // RUN: %clang_cc1 -fsyntax-only -std=gnu++98 -Werror -Wno-address-of-temporary -Wno-attributes -D"Class=void*" -D"id=void*" -D"SEL=void*" -U__declspec -D"__declspec(X)=" %t-rw.cpp
-// rdar://11131490
 
 typedef unsigned long size_t;
 extern "C" __declspec(dllexport) void BreakTheRewriter(void) {
@@ -45,7 +44,6 @@ main (int argc, char *argv[])
         };
 }
 
-// rdar://11275241
 static char stringtype;
 char CFStringGetTypeID();
 void x(void (^)());
@@ -66,7 +64,6 @@ static void initStatics2() {
     });
 }
 
-// rdar://11314329
 static inline const void *auto_zone_base_pointer(void *zone, const void *ptr) { return 0; }
 
 @interface I
@@ -74,12 +71,12 @@ static inline const void *auto_zone_base_pointer(void *zone, const void *ptr) { 
    id list;
 }
 - (void) Meth;
-// radar 7589385 use before definition
+// use before definition
 - (void) allObjects;
 @end
 
 @implementation I
-// radar 7589385 use before definition
+// use before definition
 - (void) allObjects {
     __attribute__((__blocks__(byref))) id *listp;
 

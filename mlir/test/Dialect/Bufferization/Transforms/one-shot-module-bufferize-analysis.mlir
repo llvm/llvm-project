@@ -1,9 +1,9 @@
-// RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries test-analysis-only allow-return-allocs" -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries test-analysis-only" -split-input-file | FileCheck %s
 
 // Run fuzzer with different seeds.
-// RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries test-analysis-only allow-return-allocs analysis-fuzzer-seed=23" -split-input-file -o /dev/null
-// RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries test-analysis-only allow-return-allocs analysis-fuzzer-seed=59" -split-input-file -o /dev/null
-// RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries test-analysis-only allow-return-allocs analysis-fuzzer-seed=91" -split-input-file -o /dev/null
+// RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries test-analysis-only analysis-fuzzer-seed=23" -split-input-file -o /dev/null
+// RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries test-analysis-only analysis-fuzzer-seed=59" -split-input-file -o /dev/null
+// RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries test-analysis-only analysis-fuzzer-seed=91" -split-input-file -o /dev/null
 
 // TODO: Extract op-specific test cases and move them to their respective
 // dialects.
@@ -1057,9 +1057,9 @@ func.func @main_func(%A : tensor<?xf32> {bufferization.writable = true},
 
 // CHECK-LABEL: func @to_tensor_op_not_writable
 func.func @to_tensor_op_not_writable(%m: memref<?xf32>, %v:  vector<5xf32>,
-                                %idx1: index, %idx2: index)
+                                     %idx1: index, %idx2: index)
     -> vector<10xf32> {
-  %0 = bufferization.to_tensor %m : memref<?xf32>
+  %0 = bufferization.to_tensor %m restrict : memref<?xf32>
 
   // Write to the tensor. Cannot be inplace due to tensor_load.
   //      CHECK: vector.transfer_write
@@ -1283,16 +1283,16 @@ func.func @write_to_same_alloc_tensor_out_of_place(
 
 // -----
 
-// CHECK-LABEL: func.func private @ext_func(tensor<*xf32> {bufferization.access = "read-write"})
-func.func private @ext_func(%t: tensor<*xf32>)
+// CHECK-LABEL: func.func private @ext_func(tensor<?xf32> {bufferization.access = "read-write"})
+func.func private @ext_func(%t: tensor<?xf32>)
 
 // CHECK: func.func @private_func_read_write(%{{.*}}: tensor<5xf32> {bufferization.access = "read"})
 func.func @private_func_read_write(%t: tensor<5xf32>) -> f32 {
   %c0 = arith.constant 0 : index
   // Bufferizes out-of-place because `ext_func` may modify the buffer.
   // CHECK: tensor.cast {{.*}} {__inplace_operands_attr__ = ["false"]}
-  %0 = tensor.cast %t : tensor<5xf32> to tensor<*xf32>
-  func.call @ext_func(%0) : (tensor<*xf32>) -> ()
+  %0 = tensor.cast %t : tensor<5xf32> to tensor<?xf32>
+  func.call @ext_func(%0) : (tensor<?xf32>) -> ()
   %1 = tensor.extract %t[%c0] : tensor<5xf32>
   return %1 : f32
 }

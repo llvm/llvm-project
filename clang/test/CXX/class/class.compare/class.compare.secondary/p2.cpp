@@ -5,6 +5,14 @@ struct A {
   // expected-note@-1 {{defaulted 'operator!=' is implicitly deleted because there is no viable 'operator==' for 'A'}}
 };
 
+struct A2 {
+  struct E {};
+  E e;
+  bool operator==(const A2&) const = default; // expected-warning {{explicitly defaulted equality comparison operator is implicitly deleted}} expected-note{{replace 'default'}}
+  // expected-note@-2 {{defaulted 'operator==' is implicitly deleted because there is no viable 'operator==' for member 'e'}}
+};
+
+
 struct Q {};
 bool operator!=(Q, Q); // expected-note {{defaulted 'operator!=' is implicitly deleted because this non-rewritten comparison function would be the best match for the comparison}}
 struct B {

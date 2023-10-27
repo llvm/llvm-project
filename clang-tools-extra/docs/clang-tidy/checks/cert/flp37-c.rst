@@ -4,5 +4,5 @@
 cert-flp37-c
 ============
 
-The cert-flp37-c check is an alias, please see
-`bugprone-suspicious-memory-comparison <../bugprone/suspicious-memory-comparison.html>`_ for more information.
+The `cert-flp37-c` check is an alias, please see
+:doc:`bugprone-suspicious-memory-comparison <../bugprone/suspicious-memory-comparison>` for more information.

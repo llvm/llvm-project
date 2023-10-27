@@ -122,7 +122,7 @@ void stdinTest2(FILE *pIn) {
   fscanf(pp, "%d", &ii);
   int jj = ii;// expected-warning + {{tainted}}
 
-  fscanf(p, "%d", &ii);
+  fscanf(p, "%d", &ii);// expected-warning + {{tainted}}
   int jj2 = ii;// expected-warning + {{tainted}}
 
   ii = 3;

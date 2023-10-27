@@ -25,6 +25,8 @@ static_library("msan") {
     "msan_allocator.h",
     "msan_chained_origin_depot.cpp",
     "msan_chained_origin_depot.h",
+    "msan_dl.cpp",
+    "msan_dl.h",
     "msan_flags.h",
     "msan_flags.inc",
     "msan_interceptors.cpp",

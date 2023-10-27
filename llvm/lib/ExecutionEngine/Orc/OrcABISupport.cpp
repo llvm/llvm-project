@@ -14,17 +14,17 @@
 #define DEBUG_TYPE "orc"
 
 using namespace llvm;
+using namespace llvm::orc;
 
 template <typename ORCABI>
-bool stubAndPointerRangesOk(JITTargetAddress StubBlockAddr,
-                            JITTargetAddress PointerBlockAddr,
-                            unsigned NumStubs) {
+static bool stubAndPointerRangesOk(ExecutorAddr StubBlockAddr,
+                                   ExecutorAddr PointerBlockAddr,
+                                   unsigned NumStubs) {
   constexpr unsigned MaxDisp = ORCABI::StubToPointerMaxDisplacement;
-  JITTargetAddress FirstStub = StubBlockAddr;
-  JITTargetAddress LastStub = FirstStub + ((NumStubs - 1) * ORCABI::StubSize);
-  JITTargetAddress FirstPointer = PointerBlockAddr;
-  JITTargetAddress LastPointer =
-      FirstPointer + ((NumStubs - 1) * ORCABI::StubSize);
+  ExecutorAddr FirstStub = StubBlockAddr;
+  ExecutorAddr LastStub = FirstStub + ((NumStubs - 1) * ORCABI::StubSize);
+  ExecutorAddr FirstPointer = PointerBlockAddr;
+  ExecutorAddr LastPointer = FirstPointer + ((NumStubs - 1) * ORCABI::StubSize);
 
   if (FirstStub < FirstPointer) {
     if (LastStub >= FirstPointer)
@@ -44,9 +44,9 @@ namespace llvm {
 namespace orc {
 
 void OrcAArch64::writeResolverCode(char *ResolverWorkingMem,
-                                   JITTargetAddress ResolverTargetAddress,
-                                   JITTargetAddress ReentryFnAddr,
-                                   JITTargetAddress ReentryCtxAddr) {
+                                   ExecutorAddr ResolverTargetAddress,
+                                   ExecutorAddr ReentryFnAddr,
+                                   ExecutorAddr ReentryCtxAddr) {
 
   const uint32_t ResolverCode[] = {
     // resolver_entry:
@@ -135,8 +135,8 @@ void OrcAArch64::writeResolverCode(char *ResolverWorkingMem,
 }
 
 void OrcAArch64::writeTrampolines(char *TrampolineBlockWorkingMem,
-                                  JITTargetAddress TrampolineBlockTargetAddress,
-                                  JITTargetAddress ResolverAddr,
+                                  ExecutorAddr TrampolineBlockTargetAddress,
+                                  ExecutorAddr ResolverAddr,
                                   unsigned NumTrampolines) {
 
   unsigned OffsetToPtr = alignTo(NumTrampolines * TrampolineSize, 8);
@@ -159,17 +159,17 @@ void OrcAArch64::writeTrampolines(char *TrampolineBlockWorkingMem,
 }
 
 void OrcAArch64::writeIndirectStubsBlock(
-    char *StubsBlockWorkingMem, JITTargetAddress StubsBlockTargetAddress,
-    JITTargetAddress PointersBlockTargetAddress, unsigned NumStubs) {
+    char *StubsBlockWorkingMem, ExecutorAddr StubsBlockTargetAddress,
+    ExecutorAddr PointersBlockTargetAddress, unsigned NumStubs) {
   // Stub format is:
   //
   // .section __orc_stubs
   // stub1:
-  //                 ldr     x0, ptr1       ; PC-rel load of ptr1
-  //                 br      x0             ; Jump to resolver
+  //                 ldr     x16, ptr1       ; PC-rel load of ptr1
+  //                 br      x16             ; Jump to resolver
   // stub2:
-  //                 ldr     x0, ptr2       ; PC-rel load of ptr2
-  //                 br      x0             ; Jump to resolver
+  //                 ldr     x16, ptr2       ; PC-rel load of ptr2
+  //                 br      x16             ; Jump to resolver
   //
   // ...
   //
@@ -188,17 +188,19 @@ void OrcAArch64::writeIndirectStubsBlock(
          "PointersBlock is out of range");
   uint64_t PtrDisplacement =
       PointersBlockTargetAddress - StubsBlockTargetAddress;
+  assert((PtrDisplacement % 8 == 0) &&
+         "Displacement to pointer is not a multiple of 8");
   uint64_t *Stub = reinterpret_cast<uint64_t *>(StubsBlockWorkingMem);
-  uint64_t PtrOffsetField = PtrDisplacement << 3;
+  uint64_t PtrOffsetField = ((PtrDisplacement >> 2) & 0x7ffff) << 5;
 
   for (unsigned I = 0; I < NumStubs; ++I)
     Stub[I] = 0xd61f020058000010 | PtrOffsetField;
 }
 
-void OrcX86_64_Base::writeTrampolines(
-    char *TrampolineBlockWorkingMem,
-    JITTargetAddress TrampolineBlockTargetAddress,
-    JITTargetAddress ResolverAddr, unsigned NumTrampolines) {
+void OrcX86_64_Base::writeTrampolines(char *TrampolineBlockWorkingMem,
+                                      ExecutorAddr TrampolineBlockTargetAddress,
+                                      ExecutorAddr ResolverAddr,
+                                      unsigned NumTrampolines) {
 
   unsigned OffsetToPtr = NumTrampolines * TrampolineSize;
 
@@ -214,8 +216,8 @@ void OrcX86_64_Base::writeTrampolines(
 }
 
 void OrcX86_64_Base::writeIndirectStubsBlock(
-    char *StubsBlockWorkingMem, JITTargetAddress StubsBlockTargetAddress,
-    JITTargetAddress PointersBlockTargetAddress, unsigned NumStubs) {
+    char *StubsBlockWorkingMem, ExecutorAddr StubsBlockTargetAddress,
+    ExecutorAddr PointersBlockTargetAddress, unsigned NumStubs) {
   // Stub format is:
   //
   // .section __orc_stubs
@@ -250,9 +252,9 @@ void OrcX86_64_Base::writeIndirectStubsBlock(
 }
 
 void OrcX86_64_SysV::writeResolverCode(char *ResolverWorkingMem,
-                                       JITTargetAddress ResolverTargetAddress,
-                                       JITTargetAddress ReentryFnAddr,
-                                       JITTargetAddress ReentryCtxAddr) {
+                                       ExecutorAddr ResolverTargetAddress,
+                                       ExecutorAddr ReentryFnAddr,
+                                       ExecutorAddr ReentryCtxAddr) {
 
   LLVM_DEBUG({
     dbgs() << "Writing resolver code to "
@@ -324,9 +326,9 @@ void OrcX86_64_SysV::writeResolverCode(char *ResolverWorkingMem,
 }
 
 void OrcX86_64_Win32::writeResolverCode(char *ResolverWorkingMem,
-                                        JITTargetAddress ResolverTargetAddress,
-                                        JITTargetAddress ReentryFnAddr,
-                                        JITTargetAddress ReentryCtxAddr) {
+                                        ExecutorAddr ResolverTargetAddress,
+                                        ExecutorAddr ReentryFnAddr,
+                                        ExecutorAddr ReentryCtxAddr) {
 
   // resolverCode is similar to OrcX86_64 with differences specific to windows
   // x64 calling convention: arguments go into rcx, rdx and come in reverse
@@ -402,12 +404,13 @@ void OrcX86_64_Win32::writeResolverCode(char *ResolverWorkingMem,
 }
 
 void OrcI386::writeResolverCode(char *ResolverWorkingMem,
-                                JITTargetAddress ResolverTargetAddress,
-                                JITTargetAddress ReentryFnAddr,
-                                JITTargetAddress ReentryCtxAddr) {
+                                ExecutorAddr ResolverTargetAddress,
+                                ExecutorAddr ReentryFnAddr,
+                                ExecutorAddr ReentryCtxAddr) {
 
-  assert((ReentryFnAddr >> 32) == 0 && "ReentryFnAddr out of range");
-  assert((ReentryCtxAddr >> 32) == 0 && "ReentryCtxAddr out of range");
+  assert((ReentryFnAddr.getValue() >> 32) == 0 && "ReentryFnAddr out of range");
+  assert((ReentryCtxAddr.getValue() >> 32) == 0 &&
+         "ReentryCtxAddr out of range");
 
   const uint8_t ResolverCode[] = {
       // resolver_entry:
@@ -455,10 +458,10 @@ void OrcI386::writeResolverCode(char *ResolverWorkingMem,
 }
 
 void OrcI386::writeTrampolines(char *TrampolineWorkingMem,
-                               JITTargetAddress TrampolineBlockTargetAddress,
-                               JITTargetAddress ResolverAddr,
+                               ExecutorAddr TrampolineBlockTargetAddress,
+                               ExecutorAddr ResolverAddr,
                                unsigned NumTrampolines) {
-  assert((ResolverAddr >> 32) == 0 && "ResolverAddr out of range");
+  assert((ResolverAddr.getValue() >> 32) == 0 && "ResolverAddr out of range");
 
   uint64_t CallRelImm = 0xF1C4C400000000e8;
   uint64_t ResolverRel = ResolverAddr - TrampolineBlockTargetAddress - 5;
@@ -468,12 +471,13 @@ void OrcI386::writeTrampolines(char *TrampolineWorkingMem,
     Trampolines[I] = CallRelImm | (ResolverRel << 8);
 }
 
-void OrcI386::writeIndirectStubsBlock(
-    char *StubsBlockWorkingMem, JITTargetAddress StubsBlockTargetAddress,
-    JITTargetAddress PointersBlockTargetAddress, unsigned NumStubs) {
-  assert((StubsBlockTargetAddress >> 32) == 0 &&
+void OrcI386::writeIndirectStubsBlock(char *StubsBlockWorkingMem,
+                                      ExecutorAddr StubsBlockTargetAddress,
+                                      ExecutorAddr PointersBlockTargetAddress,
+                                      unsigned NumStubs) {
+  assert((StubsBlockTargetAddress.getValue() >> 32) == 0 &&
          "StubsBlockTargetAddress is out of range");
-  assert((PointersBlockTargetAddress >> 32) == 0 &&
+  assert((PointersBlockTargetAddress.getValue() >> 32) == 0 &&
          "PointersBlockTargetAddress is out of range");
 
   // Stub format is:
@@ -501,15 +505,15 @@ void OrcI386::writeIndirectStubsBlock(
          "PointersBlock is out of range");
 
   uint64_t *Stub = reinterpret_cast<uint64_t *>(StubsBlockWorkingMem);
-  uint64_t PtrAddr = PointersBlockTargetAddress;
+  uint64_t PtrAddr = PointersBlockTargetAddress.getValue();
   for (unsigned I = 0; I < NumStubs; ++I, PtrAddr += 4)
     Stub[I] = 0xF1C40000000025ff | (PtrAddr << 16);
 }
 
 void OrcMips32_Base::writeResolverCode(char *ResolverWorkingMem,
-                                       JITTargetAddress ResolverTargetAddress,
-                                       JITTargetAddress ReentryFnAddr,
-                                       JITTargetAddress ReentryCtxAddr,
+                                       ExecutorAddr ResolverTargetAddress,
+                                       ExecutorAddr ReentryFnAddr,
+                                       ExecutorAddr ReentryCtxAddr,
                                        bool isBigEndian) {
 
   const uint32_t ResolverCode[] = {
@@ -596,32 +600,32 @@ void OrcMips32_Base::writeResolverCode(char *ResolverWorkingMem,
   memcpy(ResolverWorkingMem + Offsett, &MoveVxT9, sizeof(MoveVxT9));
 
   uint32_t ReentryCtxLUi =
-      0x3c040000 | (((ReentryCtxAddr + 0x8000) >> 16) & 0xFFFF);
-  uint32_t ReentryCtxADDiu = 0x24840000 | ((ReentryCtxAddr)&0xFFFF);
+      0x3c040000 | (((ReentryCtxAddr.getValue() + 0x8000) >> 16) & 0xFFFF);
+  uint32_t ReentryCtxADDiu = 0x24840000 | (ReentryCtxAddr.getValue() & 0xFFFF);
   memcpy(ResolverWorkingMem + ReentryCtxAddrOffset, &ReentryCtxLUi,
          sizeof(ReentryCtxLUi));
   memcpy(ResolverWorkingMem + ReentryCtxAddrOffset + 4, &ReentryCtxADDiu,
          sizeof(ReentryCtxADDiu));
 
   uint32_t ReentryFnLUi =
-      0x3c190000 | (((ReentryFnAddr + 0x8000) >> 16) & 0xFFFF);
-  uint32_t ReentryFnADDiu = 0x27390000 | ((ReentryFnAddr)&0xFFFF);
+      0x3c190000 | (((ReentryFnAddr.getValue() + 0x8000) >> 16) & 0xFFFF);
+  uint32_t ReentryFnADDiu = 0x27390000 | (ReentryFnAddr.getValue() & 0xFFFF);
   memcpy(ResolverWorkingMem + ReentryFnAddrOffset, &ReentryFnLUi,
          sizeof(ReentryFnLUi));
   memcpy(ResolverWorkingMem + ReentryFnAddrOffset + 4, &ReentryFnADDiu,
          sizeof(ReentryFnADDiu));
 }
 
-void OrcMips32_Base::writeTrampolines(
-    char *TrampolineBlockWorkingMem,
-    JITTargetAddress TrampolineBlockTargetAddress,
-    JITTargetAddress ResolverAddr, unsigned NumTrampolines) {
+void OrcMips32_Base::writeTrampolines(char *TrampolineBlockWorkingMem,
+                                      ExecutorAddr TrampolineBlockTargetAddress,
+                                      ExecutorAddr ResolverAddr,
+                                      unsigned NumTrampolines) {
 
-  assert((ResolverAddr >> 32) == 0 && "ResolverAddr out of range");
+  assert((ResolverAddr.getValue() >> 32) == 0 && "ResolverAddr out of range");
 
   uint32_t *Trampolines =
       reinterpret_cast<uint32_t *>(TrampolineBlockWorkingMem);
-  uint32_t RHiAddr = ((ResolverAddr + 0x8000) >> 16);
+  uint32_t RHiAddr = ((ResolverAddr.getValue() + 0x8000) >> 16);
 
   for (unsigned I = 0; I < NumTrampolines; ++I) {
     // move $t8,$ra
@@ -631,16 +635,16 @@ void OrcMips32_Base::writeTrampolines(
     // nop
     Trampolines[5 * I + 0] = 0x03e0c025;
     Trampolines[5 * I + 1] = 0x3c190000 | (RHiAddr & 0xFFFF);
-    Trampolines[5 * I + 2] = 0x27390000 | (ResolverAddr & 0xFFFF);
+    Trampolines[5 * I + 2] = 0x27390000 | (ResolverAddr.getValue() & 0xFFFF);
     Trampolines[5 * I + 3] = 0x0320f809;
     Trampolines[5 * I + 4] = 0x00000000;
   }
 }
 
 void OrcMips32_Base::writeIndirectStubsBlock(
-    char *StubsBlockWorkingMem, JITTargetAddress StubsBlockTargetAddress,
-    JITTargetAddress PointersBlockTargetAddress, unsigned NumStubs) {
-  assert((StubsBlockTargetAddress >> 32) == 0 &&
+    char *StubsBlockWorkingMem, ExecutorAddr StubsBlockTargetAddress,
+    ExecutorAddr PointersBlockTargetAddress, unsigned NumStubs) {
+  assert((StubsBlockTargetAddress.getValue() >> 32) == 0 &&
          "InitialPtrVal is out of range");
 
   // Stub format is:
@@ -671,7 +675,7 @@ void OrcMips32_Base::writeIndirectStubsBlock(
 
   // Populate the stubs page stubs and mark it executable.
   uint32_t *Stub = reinterpret_cast<uint32_t *>(StubsBlockWorkingMem);
-  uint64_t PtrAddr = PointersBlockTargetAddress;
+  uint64_t PtrAddr = PointersBlockTargetAddress.getValue();
 
   for (unsigned I = 0; I < NumStubs; ++I) {
     uint32_t HiAddr = ((PtrAddr + 0x8000) >> 16);
@@ -684,9 +688,9 @@ void OrcMips32_Base::writeIndirectStubsBlock(
 }
 
 void OrcMips64::writeResolverCode(char *ResolverWorkingMem,
-                                  JITTargetAddress ResolverTargetAddress,
-                                  JITTargetAddress ReentryFnAddr,
-                                  JITTargetAddress ReentryCtxAddr) {
+                                  ExecutorAddr ResolverTargetAddress,
+                                  ExecutorAddr ReentryFnAddr,
+                                  ExecutorAddr ReentryCtxAddr) {
 
   const uint32_t ResolverCode[] = {
        //resolver_entry:
@@ -775,14 +779,16 @@ void OrcMips64::writeResolverCode(char *ResolverWorkingMem,
   memcpy(ResolverWorkingMem, ResolverCode, sizeof(ResolverCode));
 
   uint32_t ReentryCtxLUi =
-      0x3c040000 | (((ReentryCtxAddr + 0x800080008000) >> 48) & 0xFFFF);
+      0x3c040000 |
+      (((ReentryCtxAddr.getValue() + 0x800080008000) >> 48) & 0xFFFF);
   uint32_t ReentryCtxDADDiu =
-      0x64840000 | (((ReentryCtxAddr + 0x80008000) >> 32) & 0xFFFF);
+      0x64840000 | (((ReentryCtxAddr.getValue() + 0x80008000) >> 32) & 0xFFFF);
   uint32_t ReentryCtxDSLL = 0x00042438;
   uint32_t ReentryCtxDADDiu2 =
-      0x64840000 | ((((ReentryCtxAddr + 0x8000) >> 16) & 0xFFFF));
+      0x64840000 | ((((ReentryCtxAddr.getValue() + 0x8000) >> 16) & 0xFFFF));
   uint32_t ReentryCtxDSLL2 = 0x00042438;
-  uint32_t ReentryCtxDADDiu3 = 0x64840000 | ((ReentryCtxAddr)&0xFFFF);
+  uint32_t ReentryCtxDADDiu3 =
+      0x64840000 | (ReentryCtxAddr.getValue() & 0xFFFF);
 
   memcpy(ResolverWorkingMem + ReentryCtxAddrOffset, &ReentryCtxLUi,
          sizeof(ReentryCtxLUi));
@@ -798,19 +804,20 @@ void OrcMips64::writeResolverCode(char *ResolverWorkingMem,
          sizeof(ReentryCtxDADDiu3));
 
   uint32_t ReentryFnLUi =
-      0x3c190000 | (((ReentryFnAddr + 0x800080008000) >> 48) & 0xFFFF);
+      0x3c190000 |
+      (((ReentryFnAddr.getValue() + 0x800080008000) >> 48) & 0xFFFF);
 
   uint32_t ReentryFnDADDiu =
-      0x67390000 | (((ReentryFnAddr + 0x80008000) >> 32) & 0xFFFF);
+      0x67390000 | (((ReentryFnAddr.getValue() + 0x80008000) >> 32) & 0xFFFF);
 
   uint32_t ReentryFnDSLL = 0x0019cc38;
 
   uint32_t ReentryFnDADDiu2 =
-      0x67390000 | (((ReentryFnAddr + 0x8000) >> 16) & 0xFFFF);
+      0x67390000 | (((ReentryFnAddr.getValue() + 0x8000) >> 16) & 0xFFFF);
 
   uint32_t ReentryFnDSLL2 = 0x0019cc38;
 
-  uint32_t ReentryFnDADDiu3 = 0x67390000 | ((ReentryFnAddr)&0xFFFF);
+  uint32_t ReentryFnDADDiu3 = 0x67390000 | (ReentryFnAddr.getValue() & 0xFFFF);
 
   memcpy(ResolverWorkingMem + ReentryFnAddrOffset, &ReentryFnLUi,
          sizeof(ReentryFnLUi));
@@ -827,16 +834,16 @@ void OrcMips64::writeResolverCode(char *ResolverWorkingMem,
 }
 
 void OrcMips64::writeTrampolines(char *TrampolineBlockWorkingMem,
-                                 JITTargetAddress TrampolineBlockTargetAddress,
-                                 JITTargetAddress ResolverAddr,
+                                 ExecutorAddr TrampolineBlockTargetAddress,
+                                 ExecutorAddr ResolverAddr,
                                  unsigned NumTrampolines) {
 
   uint32_t *Trampolines =
       reinterpret_cast<uint32_t *>(TrampolineBlockWorkingMem);
 
-  uint64_t HeighestAddr = ((ResolverAddr + 0x800080008000) >> 48);
-  uint64_t HeigherAddr = ((ResolverAddr + 0x80008000) >> 32);
-  uint64_t HiAddr = ((ResolverAddr + 0x8000) >> 16);
+  uint64_t HeighestAddr = ((ResolverAddr.getValue() + 0x800080008000) >> 48);
+  uint64_t HeigherAddr = ((ResolverAddr.getValue() + 0x80008000) >> 32);
+  uint64_t HiAddr = ((ResolverAddr.getValue() + 0x8000) >> 16);
 
   for (unsigned I = 0; I < NumTrampolines; ++I) {
     Trampolines[10 * I + 0] = 0x03e0c025;                            // move $t8,$ra
@@ -845,17 +852,18 @@ void OrcMips64::writeTrampolines(char *TrampolineBlockWorkingMem,
     Trampolines[10 * I + 3] = 0x0019cc38;                            // dsll $t9,$t9,16
     Trampolines[10 * I + 4] = 0x67390000 | (HiAddr & 0xFFFF);        // daddiu $t9,$t9,%hi(ptr)
     Trampolines[10 * I + 5] = 0x0019cc38;                            // dsll $t9,$t9,16
-    Trampolines[10 * I + 6] =
-        0x67390000 | (ResolverAddr & 0xFFFF); // daddiu $t9,$t9,%lo(ptr)
+    Trampolines[10 * I + 6] = 0x67390000 | (ResolverAddr.getValue() &
+                                            0xFFFF); // daddiu $t9,$t9,%lo(ptr)
     Trampolines[10 * I + 7] = 0x0320f809;                            // jalr $t9
     Trampolines[10 * I + 8] = 0x00000000;                            // nop
     Trampolines[10 * I + 9] = 0x00000000;                            // nop
   }
 }
 
-void OrcMips64::writeIndirectStubsBlock(
-    char *StubsBlockWorkingMem, JITTargetAddress StubsBlockTargetAddress,
-    JITTargetAddress PointersBlockTargetAddress, unsigned NumStubs) {
+void OrcMips64::writeIndirectStubsBlock(char *StubsBlockWorkingMem,
+                                        ExecutorAddr StubsBlockTargetAddress,
+                                        ExecutorAddr PointersBlockTargetAddress,
+                                        unsigned NumStubs) {
   // Stub format is:
   //
   // .section __orc_stubs
@@ -890,7 +898,7 @@ void OrcMips64::writeIndirectStubsBlock(
 
   // Populate the stubs page stubs and mark it executable.
   uint32_t *Stub = reinterpret_cast<uint32_t *>(StubsBlockWorkingMem);
-  uint64_t PtrAddr = PointersBlockTargetAddress;
+  uint64_t PtrAddr = PointersBlockTargetAddress.getValue();
 
   for (unsigned I = 0; I < NumStubs; ++I, PtrAddr += 8) {
     uint64_t HeighestAddr = ((PtrAddr + 0x800080008000) >> 48);
@@ -908,9 +916,9 @@ void OrcMips64::writeIndirectStubsBlock(
 }
 
 void OrcRiscv64::writeResolverCode(char *ResolverWorkingMem,
-                                   JITTargetAddress ResolverTargetAddress,
-                                   JITTargetAddress ReentryFnAddr,
-                                   JITTargetAddress ReentryCtxAddr) {
+                                   ExecutorAddr ResolverTargetAddress,
+                                   ExecutorAddr ReentryFnAddr,
+                                   ExecutorAddr ReentryCtxAddr) {
 
   const uint32_t ResolverCode[] = {
       0xef810113, // 0x00: addi sp,sp,-264
@@ -1008,8 +1016,8 @@ void OrcRiscv64::writeResolverCode(char *ResolverWorkingMem,
 }
 
 void OrcRiscv64::writeTrampolines(char *TrampolineBlockWorkingMem,
-                                  JITTargetAddress TrampolineBlockTargetAddress,
-                                  JITTargetAddress ResolverAddr,
+                                  ExecutorAddr TrampolineBlockTargetAddress,
+                                  ExecutorAddr ResolverAddr,
                                   unsigned NumTrampolines) {
 
   unsigned OffsetToPtr = alignTo(NumTrampolines * TrampolineSize, 8);
@@ -1031,8 +1039,8 @@ void OrcRiscv64::writeTrampolines(char *TrampolineBlockWorkingMem,
 }
 
 void OrcRiscv64::writeIndirectStubsBlock(
-    char *StubsBlockWorkingMem, JITTargetAddress StubsBlockTargetAddress,
-    JITTargetAddress PointersBlockTargetAddress, unsigned NumStubs) {
+    char *StubsBlockWorkingMem, ExecutorAddr StubsBlockTargetAddress,
+    ExecutorAddr PointersBlockTargetAddress, unsigned NumStubs) {
   // Stub format is:
   //
   // .section __orc_stubs
@@ -1078,9 +1086,9 @@ void OrcRiscv64::writeIndirectStubsBlock(
 }
 
 void OrcLoongArch64::writeResolverCode(char *ResolverWorkingMem,
-                                       JITTargetAddress ResolverTargetAddress,
-                                       JITTargetAddress ReentryFnAddr,
-                                       JITTargetAddress ReentryCtxAddr) {
+                                       ExecutorAddr ResolverTargetAddress,
+                                       ExecutorAddr ReentryFnAddr,
+                                       ExecutorAddr ReentryCtxAddr) {
 
   LLVM_DEBUG({
     dbgs() << "Writing resolver code to "
@@ -1150,10 +1158,10 @@ void OrcLoongArch64::writeResolverCode(char *ResolverWorkingMem,
          sizeof(uint64_t));
 }
 
-void OrcLoongArch64::writeTrampolines(
-    char *TrampolineBlockWorkingMem,
-    JITTargetAddress TrampolineBlockTargetAddress,
-    JITTargetAddress ResolverAddr, unsigned NumTrampolines) {
+void OrcLoongArch64::writeTrampolines(char *TrampolineBlockWorkingMem,
+                                      ExecutorAddr TrampolineBlockTargetAddress,
+                                      ExecutorAddr ResolverAddr,
+                                      unsigned NumTrampolines) {
 
   LLVM_DEBUG({
     dbgs() << "Writing trampoline code to "
@@ -1181,8 +1189,8 @@ void OrcLoongArch64::writeTrampolines(
 }
 
 void OrcLoongArch64::writeIndirectStubsBlock(
-    char *StubsBlockWorkingMem, JITTargetAddress StubsBlockTargetAddress,
-    JITTargetAddress PointersBlockTargetAddress, unsigned NumStubs) {
+    char *StubsBlockWorkingMem, ExecutorAddr StubsBlockTargetAddress,
+    ExecutorAddr PointersBlockTargetAddress, unsigned NumStubs) {
   // Stub format is:
   //
   // .section __orc_stubs

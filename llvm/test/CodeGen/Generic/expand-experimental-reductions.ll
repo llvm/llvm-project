@@ -23,7 +23,7 @@ declare i8 @llvm.vector.reduce.and.i8.v3i8(<3 x i8>)
 define i64 @add_i64(<2 x i64> %vec) {
 ; CHECK-LABEL: @add_i64(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <2 x i64> [[VEC:%.*]], <2 x i64> poison, <2 x i32> <i32 1, i32 undef>
+; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <2 x i64> [[VEC:%.*]], <2 x i64> poison, <2 x i32> <i32 1, i32 poison>
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = add <2 x i64> [[VEC]], [[RDX_SHUF]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <2 x i64> [[BIN_RDX]], i32 0
 ; CHECK-NEXT:    ret i64 [[TMP0]]
@@ -36,7 +36,7 @@ entry:
 define i64 @mul_i64(<2 x i64> %vec) {
 ; CHECK-LABEL: @mul_i64(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <2 x i64> [[VEC:%.*]], <2 x i64> poison, <2 x i32> <i32 1, i32 undef>
+; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <2 x i64> [[VEC:%.*]], <2 x i64> poison, <2 x i32> <i32 1, i32 poison>
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = mul <2 x i64> [[VEC]], [[RDX_SHUF]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <2 x i64> [[BIN_RDX]], i32 0
 ; CHECK-NEXT:    ret i64 [[TMP0]]
@@ -49,7 +49,7 @@ entry:
 define i64 @and_i64(<2 x i64> %vec) {
 ; CHECK-LABEL: @and_i64(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <2 x i64> [[VEC:%.*]], <2 x i64> poison, <2 x i32> <i32 1, i32 undef>
+; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <2 x i64> [[VEC:%.*]], <2 x i64> poison, <2 x i32> <i32 1, i32 poison>
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = and <2 x i64> [[VEC]], [[RDX_SHUF]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <2 x i64> [[BIN_RDX]], i32 0
 ; CHECK-NEXT:    ret i64 [[TMP0]]
@@ -62,7 +62,7 @@ entry:
 define i64 @or_i64(<2 x i64> %vec) {
 ; CHECK-LABEL: @or_i64(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <2 x i64> [[VEC:%.*]], <2 x i64> poison, <2 x i32> <i32 1, i32 undef>
+; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <2 x i64> [[VEC:%.*]], <2 x i64> poison, <2 x i32> <i32 1, i32 poison>
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = or <2 x i64> [[VEC]], [[RDX_SHUF]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <2 x i64> [[BIN_RDX]], i32 0
 ; CHECK-NEXT:    ret i64 [[TMP0]]
@@ -75,7 +75,7 @@ entry:
 define i64 @xor_i64(<2 x i64> %vec) {
 ; CHECK-LABEL: @xor_i64(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <2 x i64> [[VEC:%.*]], <2 x i64> poison, <2 x i32> <i32 1, i32 undef>
+; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <2 x i64> [[VEC:%.*]], <2 x i64> poison, <2 x i32> <i32 1, i32 poison>
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = xor <2 x i64> [[VEC]], [[RDX_SHUF]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <2 x i64> [[BIN_RDX]], i32 0
 ; CHECK-NEXT:    ret i64 [[TMP0]]
@@ -88,9 +88,9 @@ entry:
 define float @fadd_f32(<4 x float> %vec) {
 ; CHECK-LABEL: @fadd_f32(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x float> [[VEC:%.*]], <4 x float> poison, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
+; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x float> [[VEC:%.*]], <4 x float> poison, <4 x i32> <i32 2, i32 3, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = fadd fast <4 x float> [[VEC]], [[RDX_SHUF]]
-; CHECK-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <4 x float> [[BIN_RDX]], <4 x float> poison, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <4 x float> [[BIN_RDX]], <4 x float> poison, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[BIN_RDX2:%.*]] = fadd fast <4 x float> [[BIN_RDX]], [[RDX_SHUF1]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <4 x float> [[BIN_RDX2]], i32 0
 ; CHECK-NEXT:    [[BIN_RDX3:%.*]] = fadd fast float 0.000000e+00, [[TMP0]]
@@ -104,9 +104,9 @@ entry:
 define float @fadd_f32_accum(float %accum, <4 x float> %vec) {
 ; CHECK-LABEL: @fadd_f32_accum(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x float> [[VEC:%.*]], <4 x float> poison, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
+; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x float> [[VEC:%.*]], <4 x float> poison, <4 x i32> <i32 2, i32 3, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = fadd fast <4 x float> [[VEC]], [[RDX_SHUF]]
-; CHECK-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <4 x float> [[BIN_RDX]], <4 x float> poison, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <4 x float> [[BIN_RDX]], <4 x float> poison, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[BIN_RDX2:%.*]] = fadd fast <4 x float> [[BIN_RDX]], [[RDX_SHUF1]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <4 x float> [[BIN_RDX2]], i32 0
 ; CHECK-NEXT:    [[BIN_RDX3:%.*]] = fadd fast float [[ACCUM:%.*]], [[TMP0]]
@@ -156,9 +156,9 @@ entry:
 define float @fmul_f32(<4 x float> %vec) {
 ; CHECK-LABEL: @fmul_f32(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x float> [[VEC:%.*]], <4 x float> poison, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
+; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x float> [[VEC:%.*]], <4 x float> poison, <4 x i32> <i32 2, i32 3, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = fmul fast <4 x float> [[VEC]], [[RDX_SHUF]]
-; CHECK-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <4 x float> [[BIN_RDX]], <4 x float> poison, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <4 x float> [[BIN_RDX]], <4 x float> poison, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[BIN_RDX2:%.*]] = fmul fast <4 x float> [[BIN_RDX]], [[RDX_SHUF1]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <4 x float> [[BIN_RDX2]], i32 0
 ; CHECK-NEXT:    [[BIN_RDX3:%.*]] = fmul fast float 1.000000e+00, [[TMP0]]
@@ -172,9 +172,9 @@ entry:
 define float @fmul_f32_accum(float %accum, <4 x float> %vec) {
 ; CHECK-LABEL: @fmul_f32_accum(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x float> [[VEC:%.*]], <4 x float> poison, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
+; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x float> [[VEC:%.*]], <4 x float> poison, <4 x i32> <i32 2, i32 3, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = fmul fast <4 x float> [[VEC]], [[RDX_SHUF]]
-; CHECK-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <4 x float> [[BIN_RDX]], <4 x float> poison, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
+; CHECK-NEXT:    [[RDX_SHUF1:%.*]] = shufflevector <4 x float> [[BIN_RDX]], <4 x float> poison, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[BIN_RDX2:%.*]] = fmul fast <4 x float> [[BIN_RDX]], [[RDX_SHUF1]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <4 x float> [[BIN_RDX2]], i32 0
 ; CHECK-NEXT:    [[BIN_RDX3:%.*]] = fmul fast float [[ACCUM:%.*]], [[TMP0]]
@@ -224,10 +224,9 @@ entry:
 define i64 @smax_i64(<2 x i64> %vec) {
 ; CHECK-LABEL: @smax_i64(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <2 x i64> [[VEC:%.*]], <2 x i64> poison, <2 x i32> <i32 1, i32 undef>
-; CHECK-NEXT:    [[RDX_MINMAX_CMP:%.*]] = icmp sgt <2 x i64> [[VEC]], [[RDX_SHUF]]
-; CHECK-NEXT:    [[RDX_MINMAX_SELECT:%.*]] = select <2 x i1> [[RDX_MINMAX_CMP]], <2 x i64> [[VEC]], <2 x i64> [[RDX_SHUF]]
-; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <2 x i64> [[RDX_MINMAX_SELECT]], i32 0
+; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <2 x i64> [[VEC:%.*]], <2 x i64> poison, <2 x i32> <i32 1, i32 poison>
+; CHECK-NEXT:    [[RDX_MINMAX:%.*]] = call <2 x i64> @llvm.smax.v2i64(<2 x i64> [[VEC]], <2 x i64> [[RDX_SHUF]])
+; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <2 x i64> [[RDX_MINMAX]], i32 0
 ; CHECK-NEXT:    ret i64 [[TMP0]]
 ;
 entry:
@@ -238,10 +237,9 @@ entry:
 define i64 @smin_i64(<2 x i64> %vec) {
 ; CHECK-LABEL: @smin_i64(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <2 x i64> [[VEC:%.*]], <2 x i64> poison, <2 x i32> <i32 1, i32 undef>
-; CHECK-NEXT:    [[RDX_MINMAX_CMP:%.*]] = icmp slt <2 x i64> [[VEC]], [[RDX_SHUF]]
-; CHECK-NEXT:    [[RDX_MINMAX_SELECT:%.*]] = select <2 x i1> [[RDX_MINMAX_CMP]], <2 x i64> [[VEC]], <2 x i64> [[RDX_SHUF]]
-; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <2 x i64> [[RDX_MINMAX_SELECT]], i32 0
+; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <2 x i64> [[VEC:%.*]], <2 x i64> poison, <2 x i32> <i32 1, i32 poison>
+; CHECK-NEXT:    [[RDX_MINMAX:%.*]] = call <2 x i64> @llvm.smin.v2i64(<2 x i64> [[VEC]], <2 x i64> [[RDX_SHUF]])
+; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <2 x i64> [[RDX_MINMAX]], i32 0
 ; CHECK-NEXT:    ret i64 [[TMP0]]
 ;
 entry:
@@ -252,10 +250,9 @@ entry:
 define i64 @umax_i64(<2 x i64> %vec) {
 ; CHECK-LABEL: @umax_i64(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <2 x i64> [[VEC:%.*]], <2 x i64> poison, <2 x i32> <i32 1, i32 undef>
-; CHECK-NEXT:    [[RDX_MINMAX_CMP:%.*]] = icmp ugt <2 x i64> [[VEC]], [[RDX_SHUF]]
-; CHECK-NEXT:    [[RDX_MINMAX_SELECT:%.*]] = select <2 x i1> [[RDX_MINMAX_CMP]], <2 x i64> [[VEC]], <2 x i64> [[RDX_SHUF]]
-; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <2 x i64> [[RDX_MINMAX_SELECT]], i32 0
+; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <2 x i64> [[VEC:%.*]], <2 x i64> poison, <2 x i32> <i32 1, i32 poison>
+; CHECK-NEXT:    [[RDX_MINMAX:%.*]] = call <2 x i64> @llvm.umax.v2i64(<2 x i64> [[VEC]], <2 x i64> [[RDX_SHUF]])
+; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <2 x i64> [[RDX_MINMAX]], i32 0
 ; CHECK-NEXT:    ret i64 [[TMP0]]
 ;
 entry:
@@ -266,10 +263,9 @@ entry:
 define i64 @umin_i64(<2 x i64> %vec) {
 ; CHECK-LABEL: @umin_i64(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <2 x i64> [[VEC:%.*]], <2 x i64> poison, <2 x i32> <i32 1, i32 undef>
-; CHECK-NEXT:    [[RDX_MINMAX_CMP:%.*]] = icmp ult <2 x i64> [[VEC]], [[RDX_SHUF]]
-; CHECK-NEXT:    [[RDX_MINMAX_SELECT:%.*]] = select <2 x i1> [[RDX_MINMAX_CMP]], <2 x i64> [[VEC]], <2 x i64> [[RDX_SHUF]]
-; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <2 x i64> [[RDX_MINMAX_SELECT]], i32 0
+; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <2 x i64> [[VEC:%.*]], <2 x i64> poison, <2 x i32> <i32 1, i32 poison>
+; CHECK-NEXT:    [[RDX_MINMAX:%.*]] = call <2 x i64> @llvm.umin.v2i64(<2 x i64> [[VEC]], <2 x i64> [[RDX_SHUF]])
+; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <2 x i64> [[RDX_MINMAX]], i32 0
 ; CHECK-NEXT:    ret i64 [[TMP0]]
 ;
 entry:

@@ -1,7 +1,7 @@
 # RUN: rm -rf %t && mkdir -p %t && cd %t
 # RUN: llvm-mc -triple=x86_64-pc-windows-msvc -filetype=obj -o a.obj %S/Inputs/a.s
 # RUN: llvm-mc -triple=x86_64-pc-windows-msvc -filetype=obj -o b.obj %S/Inputs/b.s
-# RUN: llvm-lib /out:xfghashmap.lib a.obj b.obj
+# RUN: llvm-lib /out:xfghashmap.lib b.obj a.obj
 
 ## Replace a section in the library file with /<XFGHASHMAP>/ emulating
 ## a library from the Windows SDK for Windows 11.
@@ -10,9 +10,9 @@
 ## This should print the /<XFGHASHMAP>/ section as well as an .obj one.
 # RUN: llvm-lib /list %t/xfghashmap.lib | FileCheck %s
 
-# CHECK: a.obj
 # CHECK: /<XFGHASHMAP>/
 # CHECK-NOT: b.obj
+# CHECK: a.obj
 
 import sys
 

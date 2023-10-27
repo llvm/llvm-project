@@ -240,7 +240,7 @@ public:
   class redecl_iterator {
     /// Current - The current declaration.
     decl_type *Current = nullptr;
-    decl_type *Starter;
+    decl_type *Starter = nullptr;
     bool PassedFirst = false;
 
   public:

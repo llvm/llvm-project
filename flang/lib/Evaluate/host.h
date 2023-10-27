@@ -17,6 +17,10 @@
 // hardware type maps to Fortran intrinsic type T. Then HostType<T> can be used
 // to safely refer to this hardware type.
 
+#if HAS_QUADMATHLIB
+#include "quadmath.h"
+#include "flang/Common/float128.h"
+#endif
 #include "flang/Evaluate/type.h"
 #include <cfenv>
 #include <complex>
@@ -156,21 +160,33 @@ struct HostTypeHelper<
       long double, UnsupportedType>;
 };
 
-template <>
-struct HostTypeHelper<
-    Type<TypeCategory::Real, common::RealKindForPrecision(113)>> {
+#if HAS_QUADMATHLIB
+template <> struct HostTypeHelper<Type<TypeCategory::Real, 16>> {
+  // IEEE 754 128bits
+  using Type = __float128;
+};
+#else
+template <> struct HostTypeHelper<Type<TypeCategory::Real, 16>> {
   // IEEE 754 128bits
   using Type = std::conditional_t<sizeof(long double) == 16 &&
           std::numeric_limits<long double>::digits == 113 &&
           std::numeric_limits<long double>::max_exponent == 16384,
       long double, UnsupportedType>;
 };
+#endif
 
 template <int KIND> struct HostTypeHelper<Type<TypeCategory::Complex, KIND>> {
   using RealT = Fortran::evaluate::Type<TypeCategory::Real, KIND>;
   using Type = std::conditional_t<HostTypeExists<RealT>(),
       std::complex<HostType<RealT>>, UnsupportedType>;
 };
+
+#if HAS_QUADMATHLIB
+template <> struct HostTypeHelper<Type<TypeCategory::Complex, 16>> {
+  using RealT = Fortran::evaluate::Type<TypeCategory::Real, 16>;
+  using Type = __complex128;
+};
+#endif
 
 template <int KIND> struct HostTypeHelper<Type<TypeCategory::Logical, KIND>> {
   using Type = std::conditional_t<KIND <= 8, std::uint8_t, UnsupportedType>;

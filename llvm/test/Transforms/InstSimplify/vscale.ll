@@ -192,10 +192,10 @@ define ptr @getelementptr_constant_foldable_3() {
 
 define ptr @getelementptr_not_constant_foldable(i64 %x) {
 ; CHECK-LABEL: @getelementptr_not_constant_foldable(
-; CHECK-NEXT:    [[PTR:%.*]] = getelementptr <vscale x 4 x i32>, ptr null, i64 [[X:%.*]]
+; CHECK-NEXT:    [[PTR:%.*]] = getelementptr <vscale x 4 x i32>, ptr null, i64 1
 ; CHECK-NEXT:    ret ptr [[PTR]]
 ;
-  %ptr = getelementptr <vscale x 4 x i32>, ptr null, i64 %x
+  %ptr = getelementptr <vscale x 4 x i32>, ptr null, i64 1
   ret ptr %ptr
 }
 

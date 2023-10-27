@@ -66,7 +66,6 @@ struct testvec {
   }
 };
 
-// rdar://15931426
 //   Conversions for return values.
 __v4hi threeToFour(__v3hi v) { // expected-note {{not viable}}
   return v; // expected-error {{cannot initialize return object}}

@@ -89,6 +89,27 @@ const MappingDesc kMemoryLayout[] = {
 # define MEM_TO_SHADOW(mem) ((uptr)mem ^ 0xB00000000000ULL)
 # define SHADOW_TO_ORIGIN(shadow) (((uptr)(shadow)) + 0x200000000000ULL)
 
+#elif SANITIZER_LINUX && SANITIZER_LOONGARCH64
+// LoongArch64 maps:
+// - 0x000000000000-0x010000000000: Program own segments
+// - 0x555500000000-0x555600000000: PIE program segments
+// - 0x7fff00000000-0x7fffffffffff: libraries segments.
+const MappingDesc kMemoryLayout[] = {
+    {0x000000000000ULL, 0x010000000000ULL, MappingDesc::APP, "app-1"},
+    {0x010000000000ULL, 0x100000000000ULL, MappingDesc::SHADOW, "shadow-2"},
+    {0x100000000000ULL, 0x110000000000ULL, MappingDesc::INVALID, "invalid"},
+    {0x110000000000ULL, 0x200000000000ULL, MappingDesc::ORIGIN, "origin-2"},
+    {0x200000000000ULL, 0x300000000000ULL, MappingDesc::SHADOW, "shadow-3"},
+    {0x300000000000ULL, 0x400000000000ULL, MappingDesc::ORIGIN, "origin-3"},
+    {0x400000000000ULL, 0x500000000000ULL, MappingDesc::INVALID, "invalid"},
+    {0x500000000000ULL, 0x510000000000ULL, MappingDesc::SHADOW, "shadow-1"},
+    {0x510000000000ULL, 0x600000000000ULL, MappingDesc::APP, "app-2"},
+    {0x600000000000ULL, 0x610000000000ULL, MappingDesc::ORIGIN, "origin-1"},
+    {0x610000000000ULL, 0x700000000000ULL, MappingDesc::INVALID, "invalid"},
+    {0x700000000000ULL, 0x800000000000ULL, MappingDesc::APP, "app-3"}};
+#  define MEM_TO_SHADOW(mem) (((uptr)(mem)) ^ 0x500000000000ULL)
+#  define SHADOW_TO_ORIGIN(shadow) (((uptr)(shadow)) + 0x100000000000ULL)
+
 #elif SANITIZER_LINUX && SANITIZER_PPC64
 const MappingDesc kMemoryLayout[] = {
     {0x000000000000ULL, 0x000200000000ULL, MappingDesc::APP, "low memory"},
@@ -269,31 +290,33 @@ const int STACK_TRACE_TAG_POISON = StackTrace::TAG_CUSTOM + 1;
 const int STACK_TRACE_TAG_FIELDS = STACK_TRACE_TAG_POISON + 1;
 const int STACK_TRACE_TAG_VPTR = STACK_TRACE_TAG_FIELDS + 1;
 
-#define GET_MALLOC_STACK_TRACE                                            \
-  BufferedStackTrace stack;                                               \
-  if (__msan_get_track_origins() && msan_inited)                          \
-    stack.Unwind(StackTrace::GetCurrentPc(), GET_CURRENT_FRAME(),         \
-                 nullptr, common_flags()->fast_unwind_on_malloc,          \
-                 common_flags()->malloc_context_size)
+#define GET_MALLOC_STACK_TRACE                                             \
+  UNINITIALIZED BufferedStackTrace stack;                                  \
+  if (__msan_get_track_origins() && msan_inited) {                         \
+    stack.Unwind(StackTrace::GetCurrentPc(), GET_CURRENT_FRAME(), nullptr, \
+                 common_flags()->fast_unwind_on_malloc,                    \
+                 common_flags()->malloc_context_size);                     \
+  }
 
 // For platforms which support slow unwinder only, we restrict the store context
 // size to 1, basically only storing the current pc. We do this because the slow
 // unwinder which is based on libunwind is not async signal safe and causes
 // random freezes in forking applications as well as in signal handlers.
-#define GET_STORE_STACK_TRACE_PC_BP(pc, bp)                                    \
-  BufferedStackTrace stack;                                                    \
-  if (__msan_get_track_origins() > 1 && msan_inited) {                         \
-    int size = flags()->store_context_size;                                    \
-    if (!SANITIZER_CAN_FAST_UNWIND)                                            \
-      size = Min(size, 1);                                                     \
-    stack.Unwind(pc, bp, nullptr, common_flags()->fast_unwind_on_malloc, size);\
+#define GET_STORE_STACK_TRACE_PC_BP(pc, bp)                              \
+  UNINITIALIZED BufferedStackTrace stack;                                \
+  if (__msan_get_track_origins() > 1 && msan_inited) {                   \
+    int size = flags()->store_context_size;                              \
+    if (!SANITIZER_CAN_FAST_UNWIND)                                      \
+      size = Min(size, 1);                                               \
+    stack.Unwind(pc, bp, nullptr, common_flags()->fast_unwind_on_malloc, \
+                 size);                                                  \
   }
 
 #define GET_STORE_STACK_TRACE \
   GET_STORE_STACK_TRACE_PC_BP(StackTrace::GetCurrentPc(), GET_CURRENT_FRAME())
 
 #define GET_FATAL_STACK_TRACE_PC_BP(pc, bp)                              \
-  BufferedStackTrace stack;                                              \
+  UNINITIALIZED BufferedStackTrace stack;                                \
   if (msan_inited) {                                                     \
     stack.Unwind(pc, bp, nullptr, common_flags()->fast_unwind_on_fatal); \
   }

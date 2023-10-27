@@ -1,22 +1,20 @@
-// RUN: %clang_cc1 -no-opaque-pointers %s -triple=thumbv7k-apple-watchos -emit-llvm -o - -target-abi aapcs16 | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers %s -triple=thumbv7k-apple-watchos -emit-llvm -o - -target-abi aapcs16 | FileCheck -check-prefix=CHECK-GLOBALS %s
+// RUN: %clang_cc1 %s -triple=thumbv7k-apple-watchos -emit-llvm -o - -target-abi aapcs16 | FileCheck %s
+// RUN: %clang_cc1 %s -triple=thumbv7k-apple-watchos -emit-llvm -o - -target-abi aapcs16 | FileCheck -check-prefix=CHECK-GLOBALS %s
 
-// RUN: %clang_cc1 -no-opaque-pointers %s -triple=arm64_32-apple-ios -emit-llvm -o - -target-abi darwinpcs | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers %s -triple=arm64_32-apple-ios -emit-llvm -o - -target-abi darwinpcs | FileCheck -check-prefix=CHECK-GLOBALS %s
+// RUN: %clang_cc1 %s -triple=arm64_32-apple-ios -emit-llvm -o - -target-abi darwinpcs | FileCheck %s
+// RUN: %clang_cc1 %s -triple=arm64_32-apple-ios -emit-llvm -o - -target-abi darwinpcs | FileCheck -check-prefix=CHECK-GLOBALS %s
 
 // __cxa_guard_acquire argument is 64-bit
-// rdar://11540122
 struct A {
   A();
 };
 
 void f() {
-  // CHECK: call i32 @__cxa_guard_acquire(i32*
+  // CHECK: call i32 @__cxa_guard_acquire(ptr
   static A a;
 }
 
 // ARM64 uses the C++11 definition of POD.
-// rdar://12650514
 namespace test1 {
   // This class is POD in C++11 and cannot have objects allocated in
   // its tail-padding.
@@ -42,7 +40,7 @@ namespace std {
 }
 
 // ARM64 uses string comparisons for what would otherwise be
-// default-visibility weak RTTI.  rdar://12650568
+// default-visibility weak RTTI.
 namespace test2 {
   struct A {
     virtual void foo();
@@ -53,19 +51,19 @@ namespace test2 {
   struct __attribute__((visibility("hidden"))) B {};
   const std::type_info &b0 = typeid(B);
   // CHECK-GLOBALS: @_ZTSN5test21BE = linkonce_odr hidden constant
-  // CHECK-GLOBALS: @_ZTIN5test21BE = linkonce_odr hidden constant { {{.*}}, i8* getelementptr inbounds ([11 x i8], [11 x i8]* @_ZTSN5test21BE, i32 0, i32 0) }
+  // CHECK-GLOBALS: @_ZTIN5test21BE = linkonce_odr hidden constant { {{.*}}, ptr @_ZTSN5test21BE }
 
   const std::type_info &b1 = typeid(B*);
   // CHECK-GLOBALS: @_ZTSPN5test21BE = linkonce_odr hidden constant
-  // CHECK-GLOBALS: @_ZTIPN5test21BE = linkonce_odr hidden constant { {{.*}}, i8* getelementptr inbounds ([12 x i8], [12 x i8]* @_ZTSPN5test21BE, i32 0, i32 0), i32 0, i8* bitcast
+  // CHECK-GLOBALS: @_ZTIPN5test21BE = linkonce_odr hidden constant { {{.*}}, ptr @_ZTSPN5test21BE, i32 0, ptr @_ZTIN5test21BE
 
   struct C {};
   const std::type_info &c0 = typeid(C);
   // CHECK-GLOBALS: @_ZTSN5test21CE = linkonce_odr constant [11 x i8] c"N5test21CE\00"
-  // CHECK-GLOBALS: @_ZTIN5test21CE = linkonce_odr constant { {{.*}}, i8* getelementptr inbounds ([11 x i8], [11 x i8]* @_ZTSN5test21CE, i32 0, i32 0) }
+  // CHECK-GLOBALS: @_ZTIN5test21CE = linkonce_odr constant { {{.*}}, ptr @_ZTSN5test21CE }
 }
 
-// va_list should be based on "char *" rather than "void *".
+// va_list should be based on "char *" rather than "ptr".
 
 // CHECK: define{{.*}} void @_Z11whatsVaListPc
 void whatsVaList(__builtin_va_list l) {}

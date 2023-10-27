@@ -30,20 +30,16 @@
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
@@ -187,8 +183,7 @@ static void interChangeDependencies(CharMatrix &DepMatrix, unsigned FromIndx,
 // if the direction matrix, after the same permutation is applied to its
 // columns, has no ">" direction as the leftmost non-"=" direction in any row.
 static bool isLexicographicallyPositive(std::vector<char> &DV) {
-  for (unsigned Level = 0; Level < DV.size(); ++Level) {
-    unsigned char Direction = DV[Level];
+  for (unsigned char Direction : DV) {
     if (Direction == '<')
       return true;
     if (Direction == '>' || Direction == '*')
@@ -736,7 +731,6 @@ bool LoopInterchangeLegality::findInductionAndReductions(
   if (!L->getLoopLatch() || !L->getLoopPredecessor())
     return false;
   for (PHINode &PHI : L->getHeader()->phis()) {
-    RecurrenceDescriptor RD;
     InductionDescriptor ID;
     if (InductionDescriptor::isInductionPHI(&PHI, L, SE, ID))
       Inductions.push_back(&PHI);
@@ -1105,8 +1099,7 @@ LoopInterchangeProfitability::isProfitablePerLoopCacheAnalysis(
   // This is the new cost model returned from loop cache analysis.
   // A smaller index means the loop should be placed an outer loop, and vice
   // versa.
-  if (CostMap.find(InnerLoop) != CostMap.end() &&
-      CostMap.find(OuterLoop) != CostMap.end()) {
+  if (CostMap.contains(InnerLoop) && CostMap.contains(OuterLoop)) {
     unsigned InnerIndex = 0, OuterIndex = 0;
     InnerIndex = CostMap.find(InnerLoop)->second;
     OuterIndex = CostMap.find(OuterLoop)->second;
@@ -1381,7 +1374,7 @@ bool LoopInterchangeTransform::transform() {
     for (Instruction &I :
          make_early_inc_range(make_range(InnerLoopPreHeader->begin(),
                                          std::prev(InnerLoopPreHeader->end()))))
-      I.moveBefore(OuterLoopHeader->getTerminator());
+      I.moveBeforePreserving(OuterLoopHeader->getTerminator());
   }
 
   Transformed |= adjustLoopLinks();
@@ -1692,12 +1685,11 @@ bool LoopInterchangeTransform::adjustLoopBranches() {
   // latch. In that case, we need to create LCSSA phis for them, because after
   // interchanging they will be defined in the new inner loop and used in the
   // new outer loop.
-  IRBuilder<> Builder(OuterLoopHeader->getContext());
   SmallVector<Instruction *, 4> MayNeedLCSSAPhis;
   for (Instruction &I :
        make_range(OuterLoopHeader->begin(), std::prev(OuterLoopHeader->end())))
     MayNeedLCSSAPhis.push_back(&I);
-  formLCSSAForInstructions(MayNeedLCSSAPhis, *DT, *LI, SE, Builder);
+  formLCSSAForInstructions(MayNeedLCSSAPhis, *DT, *LI, SE);
 
   return true;
 }
@@ -1714,52 +1706,6 @@ bool LoopInterchangeTransform::adjustLoopLinks() {
     swapBBContents(OuterLoopPreHeader, InnerLoopPreHeader);
   }
   return Changed;
-}
-
-namespace {
-/// Main LoopInterchange Pass.
-struct LoopInterchangeLegacyPass : public LoopPass {
-  static char ID;
-
-  LoopInterchangeLegacyPass() : LoopPass(ID) {
-    initializeLoopInterchangeLegacyPassPass(*PassRegistry::getPassRegistry());
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<DependenceAnalysisWrapperPass>();
-    AU.addRequired<OptimizationRemarkEmitterWrapperPass>();
-
-    getLoopAnalysisUsage(AU);
-  }
-
-  bool runOnLoop(Loop *L, LPPassManager &LPM) override {
-    if (skipLoop(L))
-      return false;
-
-    auto *SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
-    auto *LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
-    auto *DI = &getAnalysis<DependenceAnalysisWrapperPass>().getDI();
-    auto *DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-    auto *ORE = &getAnalysis<OptimizationRemarkEmitterWrapperPass>().getORE();
-    std::unique_ptr<CacheCost> CC = nullptr;
-    return LoopInterchange(SE, LI, DI, DT, CC, ORE).run(L);
-  }
-};
-} // namespace
-
-char LoopInterchangeLegacyPass::ID = 0;
-
-INITIALIZE_PASS_BEGIN(LoopInterchangeLegacyPass, "loop-interchange",
-                      "Interchanges loops for cache reuse", false, false)
-INITIALIZE_PASS_DEPENDENCY(LoopPass)
-INITIALIZE_PASS_DEPENDENCY(DependenceAnalysisWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(OptimizationRemarkEmitterWrapperPass)
-
-INITIALIZE_PASS_END(LoopInterchangeLegacyPass, "loop-interchange",
-                    "Interchanges loops for cache reuse", false, false)
-
-Pass *llvm::createLoopInterchangePass() {
-  return new LoopInterchangeLegacyPass();
 }
 
 PreservedAnalyses LoopInterchangePass::run(LoopNest &LN,

@@ -17,7 +17,7 @@ Consider the follow snippet which steadily happens in tests:
 
 Under this assumption all elements in the vector whose first elements are equal
 do not guarantee any order. Unfortunately, this prevents libcxx introducing
-other implementatiosn because tests might silently fail and the users might
+other implementations because tests might silently fail and the users might
 heavily depend on the stability of implementations.
 
 Goal

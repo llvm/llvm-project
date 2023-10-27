@@ -11,6 +11,7 @@
 
 #include "llvm/CodeGen/RegisterBank.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/CodeGen/RegisterBankInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Debug.h"
@@ -21,15 +22,16 @@ using namespace llvm;
 
 const unsigned RegisterBank::InvalidID = UINT_MAX;
 
-RegisterBank::RegisterBank(
-    unsigned ID, const char *Name, unsigned Size,
-    const uint32_t *CoveredClasses, unsigned NumRegClasses)
-    : ID(ID), Name(Name), Size(Size) {
+RegisterBank::RegisterBank(unsigned ID, const char *Name,
+                           const uint32_t *CoveredClasses,
+                           unsigned NumRegClasses)
+    : ID(ID), Name(Name) {
   ContainedRegClasses.resize(NumRegClasses);
   ContainedRegClasses.setBitsInMask(CoveredClasses);
 }
 
-bool RegisterBank::verify(const TargetRegisterInfo &TRI) const {
+bool RegisterBank::verify(const RegisterBankInfo &RBI,
+                          const TargetRegisterInfo &TRI) const {
   assert(isValid() && "Invalid register bank");
   for (unsigned RCId = 0, End = TRI.getNumRegClasses(); RCId != End; ++RCId) {
     const TargetRegisterClass &RC = *TRI.getRegClass(RCId);
@@ -50,7 +52,7 @@ bool RegisterBank::verify(const TargetRegisterInfo &TRI) const {
 
       // Verify that the Size of the register bank is big enough to cover
       // all the register classes it covers.
-      assert(getSize() >= TRI.getRegSizeInBits(SubRC) &&
+      assert(RBI.getMaximumSize(getID()) >= TRI.getRegSizeInBits(SubRC) &&
              "Size is not big enough for all the subclasses!");
       assert(covers(SubRC) && "Not all subclasses are covered");
     }
@@ -64,7 +66,7 @@ bool RegisterBank::covers(const TargetRegisterClass &RC) const {
 }
 
 bool RegisterBank::isValid() const {
-  return ID != InvalidID && Name != nullptr && Size != 0 &&
+  return ID != InvalidID && Name != nullptr &&
          // A register bank that does not cover anything is useless.
          !ContainedRegClasses.empty();
 }
@@ -89,7 +91,7 @@ void RegisterBank::print(raw_ostream &OS, bool IsForDebug,
   OS << getName();
   if (!IsForDebug)
     return;
-  OS << "(ID:" << getID() << ", Size:" << getSize() << ")\n"
+  OS << "(ID:" << getID() << ")\n"
      << "isValid:" << isValid() << '\n'
      << "Number of Covered register classes: " << ContainedRegClasses.count()
      << '\n';

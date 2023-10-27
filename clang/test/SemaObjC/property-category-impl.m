@@ -31,7 +31,6 @@
 @implementation MyClass (public)
 @end 
 
-// rdar://12568064
 // No warn of unimplemented property of protocols in category,
 // when those properties will be implemented in category's primary
 // class or one of its super classes.

@@ -40,12 +40,11 @@ namespace sparse_tensor {
 
 /// This type is used in the public API at all places where MLIR expects
 /// values with the built-in type "index".  For now, we simply assume that
-/// type is 64-bit, but targets with different "index" bit widths should
+/// type is 64-bit, but targets with different "index" bitwidths should
 /// link with an alternatively built runtime support library.
-// TODO: support such targets?
 using index_type = uint64_t;
 
-/// Encoding of overhead types (both pointer overhead and indices
+/// Encoding of overhead types (both position overhead and coordinate
 /// overhead), for "overloading" @newSparseTensor.
 enum class OverheadType : uint32_t {
   kIndex = 0,
@@ -104,6 +103,27 @@ enum class PrimaryType : uint32_t {
   DO(C64, complex64)                                                           \
   DO(C32, complex32)
 
+// This x-macro includes all `V` types and supports variadic arguments.
+#define MLIR_SPARSETENSOR_FOREVERY_V_VAR(DO, ...)                              \
+  DO(F64, double, __VA_ARGS__)                                                 \
+  DO(F32, float, __VA_ARGS__)                                                  \
+  DO(F16, f16, __VA_ARGS__)                                                    \
+  DO(BF16, bf16, __VA_ARGS__)                                                  \
+  DO(I64, int64_t, __VA_ARGS__)                                                \
+  DO(I32, int32_t, __VA_ARGS__)                                                \
+  DO(I16, int16_t, __VA_ARGS__)                                                \
+  DO(I8, int8_t, __VA_ARGS__)                                                  \
+  DO(C64, complex64, __VA_ARGS__)                                              \
+  DO(C32, complex32, __VA_ARGS__)
+
+// This x-macro calls its argument on every pair of overhead and `V` types.
+#define MLIR_SPARSETENSOR_FOREVERY_V_O(DO)                                     \
+  MLIR_SPARSETENSOR_FOREVERY_V_VAR(DO, 64, uint64_t)                           \
+  MLIR_SPARSETENSOR_FOREVERY_V_VAR(DO, 32, uint32_t)                           \
+  MLIR_SPARSETENSOR_FOREVERY_V_VAR(DO, 16, uint16_t)                           \
+  MLIR_SPARSETENSOR_FOREVERY_V_VAR(DO, 8, uint8_t)                             \
+  MLIR_SPARSETENSOR_FOREVERY_V_VAR(DO, 0, index_type)
+
 constexpr bool isFloatingPrimaryType(PrimaryType valTy) {
   return PrimaryType::kF64 <= valTy && valTy <= PrimaryType::kBF16;
 }
@@ -123,13 +143,12 @@ constexpr bool isComplexPrimaryType(PrimaryType valTy) {
 /// The actions performed by @newSparseTensor.
 enum class Action : uint32_t {
   kEmpty = 0,
-  // newSparseTensor no longer handles `kFromFile=1`, so we leave this
-  // number reserved to help catch any code that still needs updating.
+  kEmptyForward = 1,
   kFromCOO = 2,
   kSparseToSparse = 3,
-  kEmptyCOO = 4,
   kToCOO = 5,
-  kToIterator = 6,
+  kPack = 7,
+  kSortCOOInPlace = 8,
 };
 
 /// This enum defines all the sparse representations supportable by
@@ -145,31 +164,48 @@ enum class Action : uint32_t {
 /// where we need to store an undefined or indeterminate `DimLevelType`.
 /// It should not be used externally, since it does not indicate an
 /// actual/representable format.
+///
+// TODO: We should generalize TwoOutOfFour to N out of M and use property to
+// encode the value of N and M.
+// TODO: Update DimLevelType to use lower 8 bits for storage formats and the
+// higher 4 bits to store level properties. Consider LooseCompressed and
+// TwoOutOfFour as properties instead of formats.
 enum class DimLevelType : uint8_t {
-  Undef = 0,           // 0b000_00
-  Dense = 4,           // 0b001_00
-  Compressed = 8,      // 0b010_00
-  CompressedNu = 9,    // 0b010_01
-  CompressedNo = 10,   // 0b010_10
-  CompressedNuNo = 11, // 0b010_11
-  Singleton = 16,      // 0b100_00
-  SingletonNu = 17,    // 0b100_01
-  SingletonNo = 18,    // 0b100_10
-  SingletonNuNo = 19,  // 0b100_11
+  Undef = 0,                // 0b00000_00
+  Dense = 4,                // 0b00001_00
+  Compressed = 8,           // 0b00010_00
+  CompressedNu = 9,         // 0b00010_01
+  CompressedNo = 10,        // 0b00010_10
+  CompressedNuNo = 11,      // 0b00010_11
+  Singleton = 16,           // 0b00100_00
+  SingletonNu = 17,         // 0b00100_01
+  SingletonNo = 18,         // 0b00100_10
+  SingletonNuNo = 19,       // 0b00100_11
+  LooseCompressed = 32,     // 0b01000_00
+  LooseCompressedNu = 33,   // 0b01000_01
+  LooseCompressedNo = 34,   // 0b01000_10
+  LooseCompressedNuNo = 35, // 0b01000_11
+  TwoOutOfFour = 64,        // 0b10000_00
 };
 
-/// This enum defines all the storage formats supported by the sparse compiler,
-/// without the level properties.
+/// This enum defines all supported storage format without the level properties.
 enum class LevelFormat : uint8_t {
-  Dense = 4,      // 0b001_00
-  Compressed = 8, // 0b010_00
-  Singleton = 16, // 0b100_00
+  Dense = 4,            // 0b00001_00
+  Compressed = 8,       // 0b00010_00
+  Singleton = 16,       // 0b00100_00
+  LooseCompressed = 32, // 0b01000_00
+  TwoOutOfFour = 64,    // 0b10000_00
+};
+
+/// This enum defines all the nondefault properties for storage formats.
+enum class LevelNondefaultProperty : uint8_t {
+  Nonunique = 1,  // 0b00000_01
+  Nonordered = 2, // 0b00000_10
 };
 
 /// Returns string representation of the given dimension level type.
-inline std::string toMLIRString(DimLevelType dlt) {
+constexpr const char *toMLIRString(DimLevelType dlt) {
   switch (dlt) {
-  // TODO: should probably raise an error instead of printing it...
   case DimLevelType::Undef:
     return "undef";
   case DimLevelType::Dense:
@@ -177,19 +213,29 @@ inline std::string toMLIRString(DimLevelType dlt) {
   case DimLevelType::Compressed:
     return "compressed";
   case DimLevelType::CompressedNu:
-    return "compressed-nu";
+    return "compressed(nonunique)";
   case DimLevelType::CompressedNo:
-    return "compressed-no";
+    return "compressed(nonordered)";
   case DimLevelType::CompressedNuNo:
-    return "compressed-nu-no";
+    return "compressed(nonunique, nonordered)";
   case DimLevelType::Singleton:
     return "singleton";
   case DimLevelType::SingletonNu:
-    return "singleton-nu";
+    return "singleton(nonunique)";
   case DimLevelType::SingletonNo:
-    return "singleton-no";
+    return "singleton(nonordered)";
   case DimLevelType::SingletonNuNo:
-    return "singleton-nu-no";
+    return "singleton(nonunique, nonordered)";
+  case DimLevelType::LooseCompressed:
+    return "loose_compressed";
+  case DimLevelType::LooseCompressedNu:
+    return "loose_compressed(nonunique)";
+  case DimLevelType::LooseCompressedNo:
+    return "loose_compressed(nonordered)";
+  case DimLevelType::LooseCompressedNuNo:
+    return "loose_compressed(nonunique, nonordered)";
+  case DimLevelType::TwoOutOfFour:
+    return "block2_4";
   }
   return "";
 }
@@ -200,8 +246,9 @@ constexpr bool isValidDLT(DimLevelType dlt) {
   const uint8_t propertyBits = static_cast<uint8_t>(dlt) & 3;
   // If undefined or dense, then must be unique and ordered.
   // Otherwise, the format must be one of the known ones.
-  return (formatBits <= 1) ? (propertyBits == 0)
-                           : (formatBits == 2 || formatBits == 4);
+  return (formatBits <= 1 || formatBits == 16)
+             ? (propertyBits == 0)
+             : (formatBits == 2 || formatBits == 4 || formatBits == 8);
 }
 
 /// Check if the `DimLevelType` is the special undefined value.
@@ -214,6 +261,11 @@ constexpr bool isDenseDLT(DimLevelType dlt) {
   return dlt == DimLevelType::Dense;
 }
 
+/// Check if the `DimLevelType` is 2:4
+constexpr bool isTwoOutOfFourDLT(DimLevelType dlt) {
+  return dlt == DimLevelType::TwoOutOfFour;
+}
+
 // We use the idiom `(dlt & ~3) == format` in order to only return true
 // for valid DLTs.  Whereas the `dlt & format` idiom is a bit faster but
 // can return false-positives on invalid DLTs.
@@ -222,6 +274,12 @@ constexpr bool isDenseDLT(DimLevelType dlt) {
 constexpr bool isCompressedDLT(DimLevelType dlt) {
   return (static_cast<uint8_t>(dlt) & ~3) ==
          static_cast<uint8_t>(DimLevelType::Compressed);
+}
+
+/// Check if the `DimLevelType` is compressed (regardless of properties).
+constexpr bool isLooseCompressedDLT(DimLevelType dlt) {
+  return (static_cast<uint8_t>(dlt) & ~3) ==
+         static_cast<uint8_t>(DimLevelType::LooseCompressed);
 }
 
 /// Check if the `DimLevelType` is singleton (regardless of properties).
@@ -254,7 +312,7 @@ constexpr std::optional<LevelFormat> getLevelFormat(DimLevelType dlt) {
 /// TODO: factor out a new LevelProperties type so we can add new properties
 /// without changing this function's signature
 constexpr std::optional<DimLevelType>
-getDimLevelType(LevelFormat lf, bool ordered, bool unique) {
+buildLevelType(LevelFormat lf, bool ordered, bool unique) {
   auto dlt = static_cast<DimLevelType>(static_cast<uint8_t>(lf) |
                                        (ordered ? 0 : 2) | (unique ? 0 : 1));
   return isValidDLT(dlt) ? std::optional(dlt) : std::nullopt;
@@ -275,27 +333,32 @@ static_assert(
     "getLevelFormat conversion is broken");
 
 static_assert(
-    (getDimLevelType(LevelFormat::Dense, false, true) == std::nullopt &&
-     getDimLevelType(LevelFormat::Dense, true, false) == std::nullopt &&
-     getDimLevelType(LevelFormat::Dense, false, false) == std::nullopt &&
-     *getDimLevelType(LevelFormat::Dense, true, true) == DimLevelType::Dense &&
-     *getDimLevelType(LevelFormat::Compressed, true, true) ==
+    (buildLevelType(LevelFormat::Dense, false, true) == std::nullopt &&
+     buildLevelType(LevelFormat::Dense, true, false) == std::nullopt &&
+     buildLevelType(LevelFormat::Dense, false, false) == std::nullopt &&
+     *buildLevelType(LevelFormat::Dense, true, true) == DimLevelType::Dense &&
+     buildLevelType(LevelFormat::TwoOutOfFour, false, true) == std::nullopt &&
+     buildLevelType(LevelFormat::TwoOutOfFour, true, false) == std::nullopt &&
+     buildLevelType(LevelFormat::TwoOutOfFour, false, false) == std::nullopt &&
+     *buildLevelType(LevelFormat::TwoOutOfFour, true, true) ==
+         DimLevelType::TwoOutOfFour &&
+     *buildLevelType(LevelFormat::Compressed, true, true) ==
          DimLevelType::Compressed &&
-     *getDimLevelType(LevelFormat::Compressed, true, false) ==
+     *buildLevelType(LevelFormat::Compressed, true, false) ==
          DimLevelType::CompressedNu &&
-     *getDimLevelType(LevelFormat::Compressed, false, true) ==
+     *buildLevelType(LevelFormat::Compressed, false, true) ==
          DimLevelType::CompressedNo &&
-     *getDimLevelType(LevelFormat::Compressed, false, false) ==
+     *buildLevelType(LevelFormat::Compressed, false, false) ==
          DimLevelType::CompressedNuNo &&
-     *getDimLevelType(LevelFormat::Singleton, true, true) ==
+     *buildLevelType(LevelFormat::Singleton, true, true) ==
          DimLevelType::Singleton &&
-     *getDimLevelType(LevelFormat::Singleton, true, false) ==
+     *buildLevelType(LevelFormat::Singleton, true, false) ==
          DimLevelType::SingletonNu &&
-     *getDimLevelType(LevelFormat::Singleton, false, true) ==
+     *buildLevelType(LevelFormat::Singleton, false, true) ==
          DimLevelType::SingletonNo &&
-     *getDimLevelType(LevelFormat::Singleton, false, false) ==
+     *buildLevelType(LevelFormat::Singleton, false, false) ==
          DimLevelType::SingletonNuNo),
-    "getDimLevelType conversion is broken");
+    "buildLevelType conversion is broken");
 
 // Ensure the above predicates work as intended.
 static_assert((isValidDLT(DimLevelType::Undef) &&
@@ -307,7 +370,12 @@ static_assert((isValidDLT(DimLevelType::Undef) &&
                isValidDLT(DimLevelType::Singleton) &&
                isValidDLT(DimLevelType::SingletonNu) &&
                isValidDLT(DimLevelType::SingletonNo) &&
-               isValidDLT(DimLevelType::SingletonNuNo)),
+               isValidDLT(DimLevelType::SingletonNuNo) &&
+               isValidDLT(DimLevelType::LooseCompressed) &&
+               isValidDLT(DimLevelType::LooseCompressedNu) &&
+               isValidDLT(DimLevelType::LooseCompressedNo) &&
+               isValidDLT(DimLevelType::LooseCompressedNuNo) &&
+               isValidDLT(DimLevelType::TwoOutOfFour)),
               "isValidDLT definition is broken");
 
 static_assert((!isCompressedDLT(DimLevelType::Dense) &&
@@ -321,6 +389,17 @@ static_assert((!isCompressedDLT(DimLevelType::Dense) &&
                !isCompressedDLT(DimLevelType::SingletonNuNo)),
               "isCompressedDLT definition is broken");
 
+static_assert((!isLooseCompressedDLT(DimLevelType::Dense) &&
+               isLooseCompressedDLT(DimLevelType::LooseCompressed) &&
+               isLooseCompressedDLT(DimLevelType::LooseCompressedNu) &&
+               isLooseCompressedDLT(DimLevelType::LooseCompressedNo) &&
+               isLooseCompressedDLT(DimLevelType::LooseCompressedNuNo) &&
+               !isLooseCompressedDLT(DimLevelType::Singleton) &&
+               !isLooseCompressedDLT(DimLevelType::SingletonNu) &&
+               !isLooseCompressedDLT(DimLevelType::SingletonNo) &&
+               !isLooseCompressedDLT(DimLevelType::SingletonNuNo)),
+              "isLooseCompressedDLT definition is broken");
+
 static_assert((!isSingletonDLT(DimLevelType::Dense) &&
                !isSingletonDLT(DimLevelType::Compressed) &&
                !isSingletonDLT(DimLevelType::CompressedNu) &&
@@ -333,6 +412,7 @@ static_assert((!isSingletonDLT(DimLevelType::Dense) &&
               "isSingletonDLT definition is broken");
 
 static_assert((isOrderedDLT(DimLevelType::Dense) &&
+               isOrderedDLT(DimLevelType::TwoOutOfFour) &&
                isOrderedDLT(DimLevelType::Compressed) &&
                isOrderedDLT(DimLevelType::CompressedNu) &&
                !isOrderedDLT(DimLevelType::CompressedNo) &&
@@ -340,10 +420,15 @@ static_assert((isOrderedDLT(DimLevelType::Dense) &&
                isOrderedDLT(DimLevelType::Singleton) &&
                isOrderedDLT(DimLevelType::SingletonNu) &&
                !isOrderedDLT(DimLevelType::SingletonNo) &&
-               !isOrderedDLT(DimLevelType::SingletonNuNo)),
+               !isOrderedDLT(DimLevelType::SingletonNuNo) &&
+               isOrderedDLT(DimLevelType::LooseCompressed) &&
+               isOrderedDLT(DimLevelType::LooseCompressedNu) &&
+               !isOrderedDLT(DimLevelType::LooseCompressedNo) &&
+               !isOrderedDLT(DimLevelType::LooseCompressedNuNo)),
               "isOrderedDLT definition is broken");
 
 static_assert((isUniqueDLT(DimLevelType::Dense) &&
+               isUniqueDLT(DimLevelType::TwoOutOfFour) &&
                isUniqueDLT(DimLevelType::Compressed) &&
                !isUniqueDLT(DimLevelType::CompressedNu) &&
                isUniqueDLT(DimLevelType::CompressedNo) &&
@@ -351,7 +436,11 @@ static_assert((isUniqueDLT(DimLevelType::Dense) &&
                isUniqueDLT(DimLevelType::Singleton) &&
                !isUniqueDLT(DimLevelType::SingletonNu) &&
                isUniqueDLT(DimLevelType::SingletonNo) &&
-               !isUniqueDLT(DimLevelType::SingletonNuNo)),
+               !isUniqueDLT(DimLevelType::SingletonNuNo) &&
+               isUniqueDLT(DimLevelType::LooseCompressed) &&
+               !isUniqueDLT(DimLevelType::LooseCompressedNu) &&
+               isUniqueDLT(DimLevelType::LooseCompressedNo) &&
+               !isUniqueDLT(DimLevelType::LooseCompressedNuNo)),
               "isUniqueDLT definition is broken");
 
 } // namespace sparse_tensor

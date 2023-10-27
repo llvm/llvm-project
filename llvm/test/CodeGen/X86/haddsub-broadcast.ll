@@ -9,7 +9,7 @@ define <4 x double> @PR43402(i64 %x) {
 ; CHECK-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; CHECK-NEXT:    vunpcklps {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
 ; CHECK-NEXT:    vsubpd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
-; CHECK-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; CHECK-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
 ; CHECK-NEXT:    vaddsd %xmm0, %xmm1, %xmm0
 ; CHECK-NEXT:    vbroadcastsd %xmm0, %ymm0
 ; CHECK-NEXT:    retl

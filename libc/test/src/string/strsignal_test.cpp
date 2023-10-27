@@ -7,12 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/string/strsignal.h"
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
 #include <signal.h>
 
 TEST(LlvmLibcStrSignalTest, KnownSignals) {
-  ASSERT_STREQ(__llvm_libc::strsignal(1), "Hangup");
+  ASSERT_STREQ(LIBC_NAMESPACE::strsignal(1), "Hangup");
 
   const char *message_array[] = {
       "Unknown signal 0", // unknown
@@ -66,18 +66,21 @@ TEST(LlvmLibcStrSignalTest, KnownSignals) {
   };
 
   for (size_t i = 0; i < (sizeof(message_array) / sizeof(char *)); ++i) {
-    EXPECT_STREQ(__llvm_libc::strsignal(i), message_array[i]);
+    ASSERT_EQ(static_cast<size_t>(static_cast<int>(i)), i);
+    EXPECT_STREQ(LIBC_NAMESPACE::strsignal(static_cast<int>(i)),
+                 message_array[i]);
   }
 
-  for (size_t i = 0; i < SIGRTMAX - SIGRTMIN; ++i) {
-    EXPECT_STREQ(__llvm_libc::strsignal(i + SIGRTMIN), rt_message_array[i]);
+  for (int i = 0; i < SIGRTMAX - SIGRTMIN; ++i) {
+    EXPECT_STREQ(LIBC_NAMESPACE::strsignal(i + SIGRTMIN), rt_message_array[i]);
   }
 }
 
 TEST(LlvmLibcStrsignalTest, UnknownSignals) {
-  ASSERT_STREQ(__llvm_libc::strsignal(-1), "Unknown signal -1");
-  ASSERT_STREQ(__llvm_libc::strsignal(65), "Unknown signal 65");
-  ASSERT_STREQ(__llvm_libc::strsignal(2147483647), "Unknown signal 2147483647");
-  ASSERT_STREQ(__llvm_libc::strsignal(-2147483648),
+  ASSERT_STREQ(LIBC_NAMESPACE::strsignal(-1), "Unknown signal -1");
+  ASSERT_STREQ(LIBC_NAMESPACE::strsignal(65), "Unknown signal 65");
+  ASSERT_STREQ(LIBC_NAMESPACE::strsignal(2147483647),
+               "Unknown signal 2147483647");
+  ASSERT_STREQ(LIBC_NAMESPACE::strsignal(-2147483648),
                "Unknown signal -2147483648");
 }

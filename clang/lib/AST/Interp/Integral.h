@@ -21,21 +21,15 @@
 #include <cstddef>
 #include <cstdint>
 
+#include "Primitives.h"
+
 namespace clang {
 namespace interp {
 
 using APInt = llvm::APInt;
 using APSInt = llvm::APSInt;
 
-/// Helper to compare two comparable types.
-template <typename T>
-ComparisonCategoryResult Compare(const T &X, const T &Y) {
-  if (X < Y)
-    return ComparisonCategoryResult::Less;
-  if (X > Y)
-    return ComparisonCategoryResult::Greater;
-  return ComparisonCategoryResult::Equal;
-}
+template <bool Signed> class IntegralAP;
 
 // Helper structure to select the representation.
 template <unsigned Bits, bool Signed> struct Repr;
@@ -69,6 +63,8 @@ private:
   template <typename T> explicit Integral(T V) : V(V) {}
 
 public:
+  using AsUnsigned = Integral<Bits, false>;
+
   /// Zero-initializes an integral.
   Integral() : V(0) {}
 
@@ -92,6 +88,9 @@ public:
   }
 
   Integral operator-() const { return Integral(-V); }
+  Integral operator-(const Integral &Other) const {
+    return Integral(V - Other.V);
+  }
   Integral operator~() const { return Integral(~V); }
 
   template <unsigned DstBits, bool DstSign>
@@ -102,6 +101,7 @@ public:
   explicit operator unsigned() const { return V; }
   explicit operator int64_t() const { return V; }
   explicit operator uint64_t() const { return V; }
+  explicit operator int32_t() const { return V; }
 
   APSInt toAPSInt() const {
     return APSInt(APInt(Bits, static_cast<uint64_t>(V), Signed), !Signed);
@@ -135,8 +135,17 @@ public:
     return Compare(V, RHS.V);
   }
 
+  std::string toDiagnosticString(const ASTContext &Ctx) const {
+    std::string NameStr;
+    llvm::raw_string_ostream OS(NameStr);
+    OS << V;
+    return NameStr;
+  }
+
   unsigned countLeadingZeros() const {
-    return llvm::countLeadingZeros<ReprT>(V);
+    if constexpr (!Signed)
+      return llvm::countl_zero<ReprT>(V);
+    llvm_unreachable("Don't call countLeadingZeros() on signed types.");
   }
 
   Integral truncate(unsigned TruncBits) const {
@@ -168,13 +177,6 @@ public:
   static std::enable_if_t<SrcBits != 0, Integral>
   from(Integral<SrcBits, SrcSign> Value) {
     return Integral(Value.V);
-  }
-
-  template <bool SrcSign> static Integral from(Integral<0, SrcSign> Value) {
-    if constexpr (SrcSign)
-      return Integral(Value.V.getSExtValue());
-    else
-      return Integral(Value.V.getZExtValue());
   }
 
   static Integral zero() { return from(0); }
@@ -233,6 +235,9 @@ public:
   }
 
   static bool neg(Integral A, Integral *R) {
+    if (Signed && A.isMin())
+      return true;
+
     *R = -A;
     return false;
   }
@@ -240,6 +245,18 @@ public:
   static bool comp(Integral A, Integral *R) {
     *R = Integral(~A.V);
     return false;
+  }
+
+  template <unsigned RHSBits, bool RHSSign>
+  static void shiftLeft(const Integral A, const Integral<RHSBits, RHSSign> B,
+                        unsigned OpBits, Integral *R) {
+    *R = Integral::from(A.V << B.V, OpBits);
+  }
+
+  template <unsigned RHSBits, bool RHSSign>
+  static void shiftRight(const Integral A, const Integral<RHSBits, RHSSign> B,
+                         unsigned OpBits, Integral *R) {
+    *R = Integral::from(A.V >> B.V, OpBits);
   }
 
 private:

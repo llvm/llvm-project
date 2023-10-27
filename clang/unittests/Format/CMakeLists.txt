@@ -14,6 +14,7 @@ add_clang_unittest(FormatTests
   FormatTestJS.cpp
   FormatTestJava.cpp
   FormatTestJson.cpp
+  FormatTestMacroExpansion.cpp
   FormatTestObjC.cpp
   FormatTestProto.cpp
   FormatTestRawStrings.cpp
@@ -21,6 +22,8 @@ add_clang_unittest(FormatTests
   FormatTestTableGen.cpp
   FormatTestTextProto.cpp
   FormatTestVerilog.cpp
+  FormatTokenSourceTest.cpp
+  FormatReplacementTest.cpp
   IntegerLiteralSeparatorTest.cpp
   MacroCallReconstructorTest.cpp
   MacroExpanderTest.cpp

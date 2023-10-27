@@ -13,8 +13,8 @@ define void @_Z5test1RiS_(ptr %x, ptr %y) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP_1_I:%.*]] = load i32, ptr [[Y:%.*]], align 4
 ; CHECK-NEXT:    [[TMP_3_I:%.*]] = load i32, ptr [[X:%.*]], align 4
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.smin.i32(i32 [[TMP_1_I]], i32 [[TMP_3_I]])
-; CHECK-NEXT:    store i32 [[TMP0]], ptr [[X]], align 4
+; CHECK-NEXT:    [[TMP_4:%.*]] = call i32 @llvm.smin.i32(i32 [[TMP_1_I]], i32 [[TMP_3_I]])
+; CHECK-NEXT:    store i32 [[TMP_4]], ptr [[X]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -32,8 +32,8 @@ define void @_Z5test2RiS_(ptr %x, ptr %y) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP_2:%.*]] = load i32, ptr [[X:%.*]], align 4
 ; CHECK-NEXT:    [[TMP_3_I:%.*]] = load i32, ptr [[Y:%.*]], align 4
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.smax.i32(i32 [[TMP_2]], i32 [[TMP_3_I]])
-; CHECK-NEXT:    store i32 [[TMP0]], ptr [[Y]], align 4
+; CHECK-NEXT:    [[TMP_6:%.*]] = call i32 @llvm.smax.i32(i32 [[TMP_2]], i32 [[TMP_3_I]])
+; CHECK-NEXT:    store i32 [[TMP_6]], ptr [[Y]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:

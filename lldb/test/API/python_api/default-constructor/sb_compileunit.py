@@ -8,8 +8,8 @@ import lldb
 def fuzz_obj(obj):
     obj.GetFileSpec()
     obj.GetNumLineEntries()
-    obj.GetLineEntryAtIndex(0xffffffff)
-    obj.FindLineEntryIndex(0, 0xffffffff, None)
+    obj.GetLineEntryAtIndex(0xFFFFFFFF)
+    obj.FindLineEntryIndex(0, 0xFFFFFFFF, None)
     obj.GetDescription(lldb.SBStream())
     len(obj)
     for line_entry in obj:

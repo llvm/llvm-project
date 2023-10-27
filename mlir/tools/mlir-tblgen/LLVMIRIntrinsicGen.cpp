@@ -14,8 +14,8 @@
 #include "mlir/TableGen/GenInfo.h"
 
 #include "llvm/ADT/SmallBitVector.h"
+#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/MachineValueType.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/Signals.h"
@@ -44,10 +44,10 @@ static llvm::cl::opt<std::string> accessGroupRegexp(
                    "regexp as taking an access group metadata"),
     llvm::cl::cat(intrinsicGenCat));
 
-static llvm::cl::opt<std::string> aliasScopesRegexp(
-    "llvmir-intrinsics-alias-scopes-regexp",
+static llvm::cl::opt<std::string> aliasAnalysisRegexp(
+    "llvmir-intrinsics-alias-analysis-regexp",
     llvm::cl::desc("Mark intrinsics that match the specified "
-                   "regexp as taking alias.scopes and noalias metadata"),
+                   "regexp as taking alias.scopes, noalias, and tbaa metadata"),
     llvm::cl::cat(intrinsicGenCat));
 
 // Used to represent the indices of overloadable operands/results.
@@ -202,9 +202,9 @@ static bool emitIntrinsic(const llvm::Record &record, llvm::raw_ostream &os) {
   bool requiresAccessGroup =
       !accessGroupRegexp.empty() && accessGroupMatcher.match(record.getName());
 
-  llvm::Regex aliasScopesMatcher(aliasScopesRegexp);
-  bool requiresAliasScopes =
-      !aliasScopesRegexp.empty() && aliasScopesMatcher.match(record.getName());
+  llvm::Regex aliasAnalysisMatcher(aliasAnalysisRegexp);
+  bool requiresAliasAnalysis = !aliasAnalysisRegexp.empty() &&
+                               aliasAnalysisMatcher.match(record.getName());
 
   // Prepare strings for traits, if any.
   llvm::SmallVector<llvm::StringRef, 2> traits;
@@ -217,10 +217,13 @@ static bool emitIntrinsic(const llvm::Record &record, llvm::raw_ostream &os) {
   llvm::SmallVector<llvm::StringRef, 8> operands(intr.getNumOperands(),
                                                  "LLVM_Type");
   if (requiresAccessGroup)
-    operands.push_back("OptionalAttr<SymbolRefArrayAttr>:$access_groups");
-  if (requiresAliasScopes) {
-    operands.push_back("OptionalAttr<SymbolRefArrayAttr>:$alias_scopes");
-    operands.push_back("OptionalAttr<SymbolRefArrayAttr>:$noalias_scopes");
+    operands.push_back(
+        "OptionalAttr<LLVM_AccessGroupArrayAttr>:$access_groups");
+  if (requiresAliasAnalysis) {
+    operands.push_back("OptionalAttr<LLVM_AliasScopeArrayAttr>:$alias_scopes");
+    operands.push_back(
+        "OptionalAttr<LLVM_AliasScopeArrayAttr>:$noalias_scopes");
+    operands.push_back("OptionalAttr<LLVM_TBAATagArrayAttr>:$tbaa");
   }
 
   // Emit the definition.
@@ -233,7 +236,7 @@ static bool emitIntrinsic(const llvm::Record &record, llvm::raw_ostream &os) {
   printBracketedRange(traits, os);
   os << ", " << intr.getNumResults() << ", "
      << (requiresAccessGroup ? "1" : "0") << ", "
-     << (requiresAliasScopes ? "1" : "0") << ">, Arguments<(ins"
+     << (requiresAliasAnalysis ? "1" : "0") << ">, Arguments<(ins"
      << (operands.empty() ? "" : " ");
   llvm::interleaveComma(operands, os);
   os << ")>;\n\n";
@@ -246,7 +249,7 @@ static bool emitIntrinsic(const llvm::Record &record, llvm::raw_ostream &os) {
 /// the name matching the filter.
 static bool emitIntrinsics(const llvm::RecordKeeper &records,
                            llvm::raw_ostream &os) {
-  llvm::emitSourceFileHeader("Operations for LLVM intrinsics", os);
+  llvm::emitSourceFileHeader("Operations for LLVM intrinsics", os, records);
   os << "include \"mlir/Dialect/LLVMIR/LLVMOpBase.td\"\n";
   os << "include \"mlir/Interfaces/SideEffectInterfaces.td\"\n\n";
 

@@ -234,18 +234,21 @@ define void @PR52039(ptr %pa, ptr %pb) {
 ; SSE-NEXT:    movdqa %xmm2, %xmm3
 ; SSE-NEXT:    psubd %xmm1, %xmm3
 ; SSE-NEXT:    psubd %xmm0, %xmm2
-; SSE-NEXT:    movdqa {{.*#+}} xmm0 = [3,3,3,3]
-; SSE-NEXT:    movdqu %xmm2, (%rsi)
-; SSE-NEXT:    pmulld %xmm0, %xmm2
-; SSE-NEXT:    pmulld %xmm3, %xmm0
+; SSE-NEXT:    movdqa %xmm2, %xmm0
+; SSE-NEXT:    paddd %xmm2, %xmm0
+; SSE-NEXT:    paddd %xmm2, %xmm0
+; SSE-NEXT:    movdqa %xmm3, %xmm1
+; SSE-NEXT:    paddd %xmm3, %xmm1
+; SSE-NEXT:    paddd %xmm3, %xmm1
 ; SSE-NEXT:    movdqu %xmm3, 16(%rsi)
-; SSE-NEXT:    movdqu %xmm0, 16(%rdi)
-; SSE-NEXT:    movdqu %xmm2, (%rdi)
+; SSE-NEXT:    movdqu %xmm2, (%rsi)
+; SSE-NEXT:    movdqu %xmm1, 16(%rdi)
+; SSE-NEXT:    movdqu %xmm0, (%rdi)
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: PR52039:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm0 = [10,10,10,10]
+; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm0 = [10,10,10,10]
 ; AVX1-NEXT:    vpsubd 16(%rdi), %xmm0, %xmm1
 ; AVX1-NEXT:    vpsubd (%rdi), %xmm0, %xmm0
 ; AVX1-NEXT:    vpaddd %xmm0, %xmm0, %xmm2
@@ -509,4 +512,54 @@ define i1 @PR51238(i1 %b, i8 %x, i8 %y, i8 %z) {
    %cmpyz = icmp ult i8 %ny, %nz
    %r = add i1 %cmpyz, true
    ret i1 %r
+}
+
+define <2 x i64> @add_vec_x_notx(<2 x i64> %v0) nounwind {
+; SSE-LABEL: add_vec_x_notx:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: add_vec_x_notx:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %x = xor <2 x i64> %v0, <i64 -1, i64 -1>
+  %y = add <2 x i64> %v0, %x
+  ret <2 x i64> %y
+}
+
+define <2 x i64> @add_vec_notx_x(<2 x i64> %v0) nounwind {
+; SSE-LABEL: add_vec_notx_x:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: add_vec_notx_x:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %x = xor <2 x i64> %v0, <i64 -1, i64 -1>
+  %y = add <2 x i64> %x, %v0
+  ret <2 x i64> %y
+}
+
+define i64 @add_x_notx(i64 %v0) nounwind {
+; CHECK-LABEL: add_x_notx:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq $-1, %rax
+; CHECK-NEXT:    retq
+  %x = xor i64 %v0, -1
+  %y = add i64 %v0, %x
+  ret i64 %y
+}
+
+define i64 @add_notx_x(i64 %v0) nounwind {
+; CHECK-LABEL: add_notx_x:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq $-1, %rax
+; CHECK-NEXT:    retq
+  %x = xor i64 %v0, -1
+  %y = add i64 %x, %v0
+  ret i64 %y
 }

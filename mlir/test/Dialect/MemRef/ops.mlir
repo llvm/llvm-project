@@ -380,3 +380,9 @@ func.func @memref_extract_aligned_pointer(%src : memref<?xf32>) -> index {
   %0 = memref.extract_aligned_pointer_as_index %src : memref<?xf32> -> index
   return %0 : index
 }
+
+// CHECK-LABEL: func @memref_memory_space_cast
+func.func @memref_memory_space_cast(%src : memref<?xf32>) -> memref<?xf32, 1> {
+  %dst = memref.memory_space_cast %src : memref<?xf32> to memref<?xf32, 1>
+  return %dst : memref<?xf32, 1>
+}

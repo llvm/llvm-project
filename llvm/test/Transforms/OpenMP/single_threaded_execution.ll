@@ -4,18 +4,20 @@
 ; ModuleID = 'single_threaded_exeuction.c'
 
 %struct.ident_t = type { i32, i32, i32, i32, ptr }
+%struct.KernelEnvironmentTy = type { %struct.ConfigurationEnvironmentTy, ptr, ptr }
+%struct.ConfigurationEnvironmentTy = type { i8, i8, i8 }
 
 @0 = private unnamed_addr constant [1 x i8] c"\00", align 1
 @1 = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 0, ptr @0 }, align 8
-@kernel_exec_mode = weak constant i8 1
+@kernel_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 0, i8 1 }, ptr @1, ptr null }
 
 
 ; CHECK-NOT: [openmp-opt] Basic block @kernel entry is executed by a single thread.
 ; CHECK: [openmp-opt] Basic block @kernel if.then is executed by a single thread.
 ; CHECK-NOT: [openmp-opt] Basic block @kernel if.else is executed by a single thread.
 ; CHECK-NOT: [openmp-opt] Basic block @kernel if.end is executed by a single thread.
-define void @kernel() {
-  %call = call i32 @__kmpc_target_init(ptr nonnull @1, i8 1, i1 false)
+define void @kernel() "kernel" {
+  %call = call i32 @__kmpc_target_init(ptr @kernel_kernel_environment)
   %cmp = icmp eq i32 %call, -1
   br i1 %cmp, label %if.then, label %if.else
 if.then:
@@ -23,7 +25,7 @@ if.then:
 if.else:
   br label %if.end
 if.end:
-  call void @__kmpc_target_deinit(ptr null, i8 1)
+  call void @__kmpc_target_deinit()
   ret void
 }
 
@@ -106,9 +108,9 @@ declare i32 @llvm.amdgcn.workitem.id.x()
 
 declare void @__kmpc_kernel_prepare_parallel(ptr)
 
-declare i32 @__kmpc_target_init(ptr, i8, i1)
+declare i32 @__kmpc_target_init(ptr)
 
-declare void @__kmpc_target_deinit(ptr, i8)
+declare void @__kmpc_target_deinit()
 
 attributes #0 = { cold noinline }
 

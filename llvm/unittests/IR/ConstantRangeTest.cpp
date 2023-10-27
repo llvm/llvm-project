@@ -665,7 +665,7 @@ TEST_F(ConstantRangeTest, getMinSignedBits) {
   EnumerateInterestingConstantRanges([&](const ConstantRange &CR) {
     unsigned Exact = 0;
     ForeachNumInConstantRange(CR, [&](const APInt &N) {
-      Exact = std::max(Exact, N.getMinSignedBits());
+      Exact = std::max(Exact, N.getSignificantBits());
     });
 
     unsigned ResultCR = CR.getMinSignedBits();
@@ -997,6 +997,26 @@ TEST_F(ConstantRangeTest, Multiply) {
   EXPECT_EQ(ConstantRange(APInt(8, -2)).multiply(
               ConstantRange(APInt(8, 0), APInt(8, 2))),
             ConstantRange(APInt(8, -2), APInt(8, 1)));
+
+  // Multiplication by -1 should give precise results.
+  EXPECT_EQ(ConstantRange(APInt(8, 3), APInt(8, -11))
+                .multiply(ConstantRange(APInt(8, -1))),
+            ConstantRange(APInt(8, 12), APInt(8, -2)));
+  EXPECT_EQ(ConstantRange(APInt(8, -1))
+                .multiply(ConstantRange(APInt(8, 3), APInt(8, -11))),
+            ConstantRange(APInt(8, 12), APInt(8, -2)));
+
+  TestBinaryOpExhaustive(
+      [](const ConstantRange &CR1, const ConstantRange &CR2) {
+        return CR1.multiply(CR2);
+      },
+      [](const APInt &N1, const APInt &N2) {
+        return N1 * N2;
+      },
+      PreferSmallest,
+      [](const ConstantRange &, const ConstantRange &) {
+        return false; // Check correctness only.
+      });
 }
 
 TEST_F(ConstantRangeTest, smul_fast) {
@@ -1352,6 +1372,13 @@ TEST_F(ConstantRangeTest, Shl) {
       Some2.shl(ConstantRange(APInt(16, 0x1))),
       ConstantRange(APInt(16, 0xfff << 0x1), APInt(16, 0x7fff << 0x1) + 1));
   EXPECT_EQ(One.shl(WrapNullMax), Full);
+
+  ConstantRange NegOne(APInt(16, 0xffff));
+  EXPECT_EQ(NegOne.shl(ConstantRange(APInt(16, 0), APInt(16, 5))),
+            ConstantRange(APInt(16, 0xfff0), APInt(16, 0)));
+  EXPECT_EQ(ConstantRange(APInt(16, 0xfffe), APInt(16, 0))
+                .shl(ConstantRange(APInt(16, 0), APInt(16, 5))),
+            ConstantRange(APInt(16, 0xffe0), APInt(16, 0)));
 
   TestBinaryOpExhaustive(
       [](const ConstantRange &CR1, const ConstantRange &CR2) {
@@ -2394,6 +2421,20 @@ TEST_F(ConstantRangeTest, Abs) {
         if (N.isMinSignedValue())
           return std::nullopt;
         return N.abs();
+      });
+}
+
+TEST_F(ConstantRangeTest, Ctlz) {
+  TestUnaryOpExhaustive(
+      [](const ConstantRange &CR) { return CR.ctlz(); },
+      [](const APInt &N) { return APInt(N.getBitWidth(), N.countl_zero()); });
+
+  TestUnaryOpExhaustive(
+      [](const ConstantRange &CR) { return CR.ctlz(/*ZeroIsPoison=*/true); },
+      [](const APInt &N) -> std::optional<APInt> {
+        if (N.isZero())
+          return std::nullopt;
+        return APInt(N.getBitWidth(), N.countl_zero());
       });
 }
 

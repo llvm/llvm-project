@@ -111,9 +111,9 @@ define i32 @inch(i32 %a) {
 define i32 @inch_mul(i32 %a) {
 ; NO_SCALAR_INC-LABEL: inch_mul:
 ; NO_SCALAR_INC:       // %bb.0:
-; NO_SCALAR_INC-NEXT:    mov w8, #5
-; NO_SCALAR_INC-NEXT:    cnth x9, vl8
-; NO_SCALAR_INC-NEXT:    madd w0, w9, w8, w0
+; NO_SCALAR_INC-NEXT:    cnth x8, vl8
+; NO_SCALAR_INC-NEXT:    mov w9, #5 // =0x5
+; NO_SCALAR_INC-NEXT:    madd w0, w8, w9, w0
 ; NO_SCALAR_INC-NEXT:    ret
 ;
 ; CHECK-LABEL: inch_mul:
@@ -155,9 +155,9 @@ define i32 @dech(i32 %a) {
 define i32 @dech_mul(i32 %a) {
 ; NO_SCALAR_INC-LABEL: dech_mul:
 ; NO_SCALAR_INC:       // %bb.0:
-; NO_SCALAR_INC-NEXT:    mov w8, #7
-; NO_SCALAR_INC-NEXT:    cnth x9, vl16
-; NO_SCALAR_INC-NEXT:    msub w0, w9, w8, w0
+; NO_SCALAR_INC-NEXT:    cnth x8, vl16
+; NO_SCALAR_INC-NEXT:    mov w9, #7 // =0x7
+; NO_SCALAR_INC-NEXT:    msub w0, w8, w9, w0
 ; NO_SCALAR_INC-NEXT:    ret
 ;
 ; CHECK-LABEL: dech_mul:
@@ -199,9 +199,9 @@ define i32 @incw(i32 %a) {
 define i32 @incw_mul(i32 %a) {
 ; NO_SCALAR_INC-LABEL: incw_mul:
 ; NO_SCALAR_INC:       // %bb.0:
-; NO_SCALAR_INC-NEXT:    mov w8, #12
-; NO_SCALAR_INC-NEXT:    cntw x9, vl32
-; NO_SCALAR_INC-NEXT:    madd w0, w9, w8, w0
+; NO_SCALAR_INC-NEXT:    cntw x8, vl32
+; NO_SCALAR_INC-NEXT:    mov w9, #12 // =0xc
+; NO_SCALAR_INC-NEXT:    madd w0, w8, w9, w0
 ; NO_SCALAR_INC-NEXT:    ret
 ;
 ; CHECK-LABEL: incw_mul:
@@ -284,9 +284,9 @@ define i32 @incd(i32 %base) {
 define i32 @incd_mul(i32 %base) {
 ; NO_SCALAR_INC-LABEL: incd_mul:
 ; NO_SCALAR_INC:       // %bb.0:
-; NO_SCALAR_INC-NEXT:    mov w8, #15
-; NO_SCALAR_INC-NEXT:    cntd x9, vl64
-; NO_SCALAR_INC-NEXT:    madd w0, w9, w8, w0
+; NO_SCALAR_INC-NEXT:    cntd x8, vl64
+; NO_SCALAR_INC-NEXT:    mov w9, #15 // =0xf
+; NO_SCALAR_INC-NEXT:    madd w0, w8, w9, w0
 ; NO_SCALAR_INC-NEXT:    ret
 ;
 ; CHECK-LABEL: incd_mul:
@@ -328,9 +328,9 @@ define i32 @decd(i32 %a) {
 define i32 @decd_mul(i32 %a) {
 ; NO_SCALAR_INC-LABEL: decd_mul:
 ; NO_SCALAR_INC:       // %bb.0:
-; NO_SCALAR_INC-NEXT:    mov w8, #9
-; NO_SCALAR_INC-NEXT:    cntd x9, vl2
-; NO_SCALAR_INC-NEXT:    msub w0, w9, w8, w0
+; NO_SCALAR_INC-NEXT:    cntd x8, vl2
+; NO_SCALAR_INC-NEXT:    mov w9, #9 // =0x9
+; NO_SCALAR_INC-NEXT:    msub w0, w8, w9, w0
 ; NO_SCALAR_INC-NEXT:    ret
 ;
 ; CHECK-LABEL: decd_mul:

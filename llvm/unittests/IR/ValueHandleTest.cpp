@@ -496,8 +496,8 @@ TEST_F(ValueHandle, AssertingVH_DenseMap) {
   Map.insert({BitcastV.get(), 1});
   Map.insert({ConstantV, 2});
   // These will create a temporary AssertingVH during lookup.
-  EXPECT_TRUE(Map.find(BitcastV.get()) != Map.end());
-  EXPECT_TRUE(Map.find(ConstantV) != Map.end());
+  EXPECT_TRUE(Map.contains(BitcastV.get()));
+  EXPECT_TRUE(Map.contains(ConstantV));
   // These will not create a temporary AssertingVH.
   EXPECT_TRUE(Map.find_as(BitcastV.get()) != Map.end());
   EXPECT_TRUE(Map.find_as(ConstantV) != Map.end());
@@ -508,8 +508,8 @@ TEST_F(ValueHandle, PoisoningVH_DenseMap) {
   Map.insert({BitcastV.get(), 1});
   Map.insert({ConstantV, 2});
   // These will create a temporary PoisoningVH during lookup.
-  EXPECT_TRUE(Map.find(BitcastV.get()) != Map.end());
-  EXPECT_TRUE(Map.find(ConstantV) != Map.end());
+  EXPECT_TRUE(Map.contains(BitcastV.get()));
+  EXPECT_TRUE(Map.contains(ConstantV));
   // These will not create a temporary PoisoningVH.
   EXPECT_TRUE(Map.find_as(BitcastV.get()) != Map.end());
   EXPECT_TRUE(Map.find_as(ConstantV) != Map.end());

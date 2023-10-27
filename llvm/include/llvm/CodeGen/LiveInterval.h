@@ -326,11 +326,11 @@ namespace llvm {
       return VNI && VNI->id < getNumValNums() && VNI == getValNumInfo(VNI->id);
     }
 
-    /// getNextValue - Create a new value number and return it.  MIIdx specifies
-    /// the instruction that defines the value number.
-    VNInfo *getNextValue(SlotIndex def, VNInfo::Allocator &VNInfoAllocator) {
+    /// getNextValue - Create a new value number and return it.
+    /// @p Def is the index of instruction that defines the value number.
+    VNInfo *getNextValue(SlotIndex Def, VNInfo::Allocator &VNInfoAllocator) {
       VNInfo *VNI =
-        new (VNInfoAllocator) VNInfo((unsigned)valnos.size(), def);
+        new (VNInfoAllocator) VNInfo((unsigned)valnos.size(), Def);
       valnos.push_back(VNI);
       return VNI;
     }
@@ -857,7 +857,7 @@ namespace llvm {
     /// V2: sub0 sub1 sub2 sub3
     /// V1: <offset>  sub0 sub1
     ///
-    /// This offset will look like a composed subregidx in the the class:
+    /// This offset will look like a composed subregidx in the class:
     ///     V1.(composed sub2 with sub1):<4 x s32> = COPY V2.sub3:<4 x s32>
     /// =>  V1.(composed sub2 with sub1):<4 x s32> = COPY V2.sub3:<4 x s32>
     ///

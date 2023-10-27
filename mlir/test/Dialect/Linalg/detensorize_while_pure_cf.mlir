@@ -44,8 +44,8 @@ func.func @main() -> () attributes {} {
 }
 
 // CHECK-LABEL: func @main
-// CHECK-NEXT:    arith.constant 0 : i32
-// CHECK-NEXT:    arith.constant 10
+// CHECK-DAG:    arith.constant 0 : i32
+// CHECK-DAG:    arith.constant 10
 // CHECK-NEXT:    cf.br ^[[bb1:.*]](%{{.*}} : i32)
 // CHECK-NEXT:  ^[[bb1]](%{{.*}}: i32)
 // CHECK-NEXT:    %{{.*}} = arith.cmpi slt, %{{.*}}, %{{.*}}

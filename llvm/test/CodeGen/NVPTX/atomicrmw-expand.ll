@@ -1,6 +1,6 @@
 ; RUN: llc < %s -march=nvptx64 -mcpu=sm_30 | FileCheck %s --check-prefixes=ALL,SM30
 ; RUN: llc < %s -march=nvptx64 -mcpu=sm_60 | FileCheck %s --check-prefixes=ALL,SM60
-; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_30 | %ptxas-verify %if !ptxas-11.0 %{-arch=sm_30%} %}
+; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_30 | %ptxas-verify %}
 ; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_60 | %ptxas-verify -arch=sm_60 %}
 
 ; CHECK-LABEL: fadd_double

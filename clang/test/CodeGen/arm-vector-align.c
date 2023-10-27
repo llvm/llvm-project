@@ -9,8 +9,7 @@
 
 #include <arm_neon.h>
 
-// Radar 9311427: Check that alignment specifier is used in Neon load/store
-// intrinsics.
+// Check that alignment specifier is used in Neon load/store intrinsics.
 typedef float AlignedAddr __attribute__ ((aligned (16)));
 void t1(AlignedAddr *addr1, AlignedAddr *addr2) {
 // CHECK: @t1
@@ -20,7 +19,7 @@ void t1(AlignedAddr *addr1, AlignedAddr *addr2) {
   vst1q_f32(addr2, a);
 }
 
-// Radar 10538555: Make sure unaligned load/stores do not gain alignment.
+// Make sure unaligned load/stores do not gain alignment.
 void t2(char *addr) {
 // CHECK: @t2
 // CHECK: load i32, ptr %{{.*}}, align 1

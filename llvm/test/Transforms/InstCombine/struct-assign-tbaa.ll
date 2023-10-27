@@ -26,9 +26,8 @@ entry:
 
 define ptr @test2() {
 ; CHECK-LABEL: @test2(
-; CHECK-NEXT:    [[TMP:%.*]] = alloca [[STRUCT_TEST2:%.*]], align 8
-; CHECK-NEXT:    store i64 poison, ptr null, align 4294967296
-; CHECK-NEXT:    ret ptr [[TMP]]
+; CHECK-NEXT:    store i1 true, ptr poison, align 1
+; CHECK-NEXT:    ret ptr poison
 ;
   %tmp = alloca %struct.test2, align 8
   call void @llvm.memcpy.p0.p0.i64(ptr align 8 %tmp, ptr align 8 undef, i64 8, i1 false), !tbaa.struct !4

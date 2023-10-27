@@ -1,5 +1,5 @@
-// RUN: llvm-mc -filetype=obj -triple aarch64-none-eabi %s | llvm-objdump -d - | FileCheck %s
-// RUN: llvm-mc -filetype=obj -triple aarch64_be-none-eabi %s | llvm-objdump -d - | FileCheck %s
+// RUN: llvm-mc -filetype=obj -triple aarch64 %s | llvm-objdump -d - | FileCheck %s
+// RUN: llvm-mc -filetype=obj -triple aarch64_be %s | llvm-objdump -d - | FileCheck %s
 
 // CHECK:   0: d2800000   mov     x0, #0
 // CHECK:   4: d2800000   mov     x0, #0

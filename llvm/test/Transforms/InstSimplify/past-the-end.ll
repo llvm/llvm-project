@@ -58,12 +58,7 @@ define zeroext i1 @no_alloca_offsets() {
 
 define zeroext i1 @both_past_the_end_alloca() {
 ; CHECK-LABEL: @both_past_the_end_alloca(
-; CHECK:         [[M:%.*]] = alloca i32
-; CHECK-NEXT:    [[N:%.*]] = alloca i32
-; CHECK-NEXT:    [[X:%.*]] = getelementptr i32, ptr [[M]], i32 1
-; CHECK-NEXT:    [[Y:%.*]] = getelementptr i32, ptr [[N]], i32 1
-; CHECK-NEXT:    [[T:%.*]] = icmp eq ptr [[X]], [[Y]]
-; CHECK-NEXT:    ret i1 [[T]]
+; CHECK-NEXT:    ret i1 false
 ;
   %m = alloca i32
   %n = alloca i32
@@ -71,7 +66,6 @@ define zeroext i1 @both_past_the_end_alloca() {
   %y = getelementptr i32, ptr %n, i32 1
   %t = icmp eq ptr %x, %y
   ret i1 %t
-  ; TODO: refine this
 }
 
 ; Comparing past-the-end addresses of one alloca to the base address

@@ -5,6 +5,9 @@
 # RUN: llvm-mc -triple=riscv32 -mattr=+e -filetype=obj < %s \
 # RUN:   | llvm-readobj --file-headers - \
 # RUN:   | FileCheck -check-prefix=CHECK-RVE %s
+# RUN: llvm-mc -triple=riscv64 -mattr=+e -filetype=obj < %s \
+# RUN:   | llvm-readobj --file-headers - \
+# RUN:   | FileCheck -check-prefix=CHECK-RVE %s
 # RUN: llvm-mc -triple=riscv32 -mattr=+experimental-ztso -filetype=obj < %s | llvm-readobj --file-headers - | FileCheck -check-prefixes=CHECK-TSO %s
 # RUN: llvm-mc -triple=riscv64 -mattr=+experimental-ztso -filetype=obj < %s | llvm-readobj --file-headers - | FileCheck -check-prefixes=CHECK-TSO %s
 

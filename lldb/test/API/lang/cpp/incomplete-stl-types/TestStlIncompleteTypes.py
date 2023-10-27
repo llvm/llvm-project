@@ -12,7 +12,9 @@ from lldbsuite.test import lldbutil
 class TestStlIncompleteTypes(TestBase):
     def test(self):
         self.build()
-        lldbutil.run_to_source_breakpoint(self, "// break here", lldb.SBFileSpec("f.cpp"))
+        lldbutil.run_to_source_breakpoint(
+            self, "// break here", lldb.SBFileSpec("f.cpp")
+        )
 
         var = self.frame().GetValueForVariablePath("v")
         self.assertIn("set", var.GetDisplayTypeName())

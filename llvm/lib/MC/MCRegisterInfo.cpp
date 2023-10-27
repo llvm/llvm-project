@@ -23,9 +23,9 @@ using namespace llvm;
 MCRegister
 MCRegisterInfo::getMatchingSuperReg(MCRegister Reg, unsigned SubIdx,
                                     const MCRegisterClass *RC) const {
-  for (MCSuperRegIterator Supers(Reg, this); Supers.isValid(); ++Supers)
-    if (RC->contains(*Supers) && Reg == getSubReg(*Supers, SubIdx))
-      return *Supers;
+  for (MCPhysReg Super : superregs(Reg))
+    if (RC->contains(Super) && Reg == getSubReg(Super, SubIdx))
+      return Super;
   return 0;
 }
 
@@ -35,9 +35,11 @@ MCRegister MCRegisterInfo::getSubReg(MCRegister Reg, unsigned Idx) const {
   // Get a pointer to the corresponding SubRegIndices list. This list has the
   // name of each sub-register in the same order as MCSubRegIterator.
   const uint16_t *SRI = SubRegIndices + get(Reg).SubRegIndices;
-  for (MCSubRegIterator Subs(Reg, this); Subs.isValid(); ++Subs, ++SRI)
+  for (MCPhysReg Sub : subregs(Reg)) {
     if (*SRI == Idx)
-      return *Subs;
+      return Sub;
+    ++SRI;
+  }
   return 0;
 }
 
@@ -47,9 +49,11 @@ unsigned MCRegisterInfo::getSubRegIndex(MCRegister Reg,
   // Get a pointer to the corresponding SubRegIndices list. This list has the
   // name of each sub-register in the same order as MCSubRegIterator.
   const uint16_t *SRI = SubRegIndices + get(Reg).SubRegIndices;
-  for (MCSubRegIterator Subs(Reg, this); Subs.isValid(); ++Subs, ++SRI)
-    if (*Subs == SubReg)
+  for (MCPhysReg Sub : subregs(Reg)) {
+    if (Sub == SubReg)
       return *SRI;
+    ++SRI;
+  }
   return 0;
 }
 
@@ -101,8 +105,13 @@ int MCRegisterInfo::getDwarfRegNumFromDwarfEHRegNum(unsigned RegNum) const {
   // a corresponding LLVM register number at all.  So if we can't map the
   // EH register number to an LLVM register number, assume it's just a
   // valid DWARF register number as is.
-  if (std::optional<unsigned> LRegNum = getLLVMRegNum(RegNum, true))
-    return getDwarfRegNum(*LRegNum, false);
+  if (std::optional<unsigned> LRegNum = getLLVMRegNum(RegNum, true)) {
+    int DwarfRegNum = getDwarfRegNum(*LRegNum, false);
+    if (DwarfRegNum == -1)
+      return RegNum;
+    else
+      return DwarfRegNum;
+  }
   return RegNum;
 }
 
@@ -125,11 +134,13 @@ int MCRegisterInfo::getCodeViewRegNum(MCRegister RegNum) const {
 
 bool MCRegisterInfo::regsOverlap(MCRegister RegA, MCRegister RegB) const {
   // Regunits are numerically ordered. Find a common unit.
-  MCRegUnitIterator RUA(RegA, this);
-  MCRegUnitIterator RUB(RegB, this);
+  auto RangeA = regunits(RegA);
+  MCRegUnitIterator IA = RangeA.begin(), EA = RangeA.end();
+  auto RangeB = regunits(RegB);
+  MCRegUnitIterator IB = RangeB.begin(), EB = RangeB.end();
   do {
-    if (*RUA == *RUB)
+    if (*IA == *IB)
       return true;
-  } while (*RUA < *RUB ? (++RUA).isValid() : (++RUB).isValid());
+  } while (*IA < *IB ? ++IA != EA : ++IB != EB);
   return false;
 }

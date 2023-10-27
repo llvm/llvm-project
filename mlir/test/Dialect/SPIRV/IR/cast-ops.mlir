@@ -138,9 +138,17 @@ func.func @convert_f_to_u_vector(%arg0 : vector<3xf32>) -> vector<3xi32> {
 
 // -----
 
-func.func @convert_f_to_u_coopmatrix(%arg0 : !spirv.coopmatrix<8x16xf32, Subgroup>) {
-  // CHECK: {{%.*}} = spirv.ConvertFToU {{%.*}} : !spirv.coopmatrix<8x16xf32, Subgroup> to !spirv.coopmatrix<8x16xi32, Subgroup>
-  %0 = spirv.ConvertFToU %arg0 : !spirv.coopmatrix<8x16xf32, Subgroup> to !spirv.coopmatrix<8x16xi32, Subgroup>
+func.func @convert_f_to_u.coopmatrix(%arg0 : !spirv.coopmatrix<8x16xf32, Subgroup, MatrixB>) {
+  // CHECK: {{%.*}} = spirv.ConvertFToU {{%.*}} : !spirv.coopmatrix<8x16xf32, Subgroup, MatrixB> to !spirv.coopmatrix<8x16xi32, Subgroup, MatrixB>
+  %0 = spirv.ConvertFToU %arg0 : !spirv.coopmatrix<8x16xf32, Subgroup, MatrixB> to !spirv.coopmatrix<8x16xi32, Subgroup, MatrixB>
+  spirv.Return
+}
+
+// -----
+
+func.func @convert_f_to_u_NV.coopmatrix(%arg0 : !spirv.NV.coopmatrix<8x16xf32, Subgroup>) {
+  // CHECK: {{%.*}} = spirv.ConvertFToU {{%.*}} : !spirv.NV.coopmatrix<8x16xf32, Subgroup> to !spirv.NV.coopmatrix<8x16xi32, Subgroup>
+  %0 = spirv.ConvertFToU %arg0 : !spirv.NV.coopmatrix<8x16xf32, Subgroup> to !spirv.NV.coopmatrix<8x16xi32, Subgroup>
   spirv.Return
 }
 
@@ -222,9 +230,17 @@ func.func @f_convert_vector(%arg0 : vector<3xf32>) -> vector<3xf64> {
 
 // -----
 
-func.func @f_convert_coop_matrix(%arg0 : !spirv.coopmatrix<8x16xf32, Subgroup>) {
-  // CHECK: {{%.*}} = spirv.FConvert {{%.*}} : !spirv.coopmatrix<8x16xf32, Subgroup> to !spirv.coopmatrix<8x16xf64, Subgroup>
-  %0 = spirv.FConvert %arg0 : !spirv.coopmatrix<8x16xf32, Subgroup> to !spirv.coopmatrix<8x16xf64, Subgroup>
+func.func @f_convert_coop_matrix(%arg0 : !spirv.coopmatrix<8x16xf32, Subgroup, MatrixA>) {
+  // CHECK: {{%.*}} = spirv.FConvert {{%.*}} : !spirv.coopmatrix<8x16xf32, Subgroup, MatrixA> to !spirv.coopmatrix<8x16xf64, Subgroup, MatrixA>
+  %0 = spirv.FConvert %arg0 : !spirv.coopmatrix<8x16xf32, Subgroup, MatrixA> to !spirv.coopmatrix<8x16xf64, Subgroup, MatrixA>
+  spirv.Return
+}
+
+// -----
+
+func.func @f_convert_coop_matrix_nv(%arg0 : !spirv.NV.coopmatrix<8x16xf32, Subgroup>) {
+  // CHECK: {{%.*}} = spirv.FConvert {{%.*}} : !spirv.NV.coopmatrix<8x16xf32, Subgroup> to !spirv.NV.coopmatrix<8x16xf64, Subgroup>
+  %0 = spirv.FConvert %arg0 : !spirv.NV.coopmatrix<8x16xf32, Subgroup> to !spirv.NV.coopmatrix<8x16xf64, Subgroup>
   spirv.Return
 }
 
@@ -234,6 +250,14 @@ func.func @f_convert_vector(%arg0 : f32) -> f32 {
   // expected-error @+1 {{expected the different bit widths for operand type and result type, but provided 'f32' and 'f32'}}
   %0 = spirv.FConvert %arg0 : f32 to f32
   spirv.ReturnValue %0 : f32
+}
+
+// -----
+
+func.func @f_convert_coop_matrix_to_nv_coop_matrix(%arg0 : !spirv.coopmatrix<8x16xf32, Subgroup, MatrixAcc>) {
+  // expected-error @+1 {{incompatible operand and result types}}
+  %0 = spirv.FConvert %arg0 : !spirv.coopmatrix<8x16xf32, Subgroup, MatrixAcc> to !spirv.NV.coopmatrix<8x16xf64, Subgroup>
+  spirv.Return
 }
 
 // -----
@@ -362,4 +386,110 @@ func.func @genericcasttoptrexplicit4(%arg0 : !spirv.ptr<f32, Generic>) {
   // expected-error @+1 {{pointee type must have the same as the op result type}}
   %0 = spirv.GenericCastToPtrExplicit %arg0 : !spirv.ptr<f32, Generic> to !spirv.ptr<vector<2xi32>, Workgroup>
   return
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.ConvertPtrToU
+//===----------------------------------------------------------------------===//
+spirv.module Physical64 OpenCL requires #spirv.vce<v1.0, [Kernel, Addresses], []> {
+  spirv.func @covert_ptr_to_u(%arg0 : !spirv.ptr<i32, Generic>) "None" {
+    // CHECK: {{%.*}} = spirv.ConvertPtrToU {{%.*}} : !spirv.ptr<i32, Generic> to i32
+    %0 = spirv.ConvertPtrToU %arg0 : !spirv.ptr<i32, Generic> to i32
+    spirv.Return
+  }
+  spirv.func @covert_ptr_to_u_truncate(%arg0 : !spirv.ptr<i64, Generic>) "None" {
+    // CHECK: {{%.*}} = spirv.ConvertPtrToU {{%.*}} : !spirv.ptr<i64, Generic> to i32
+    %0 = spirv.ConvertPtrToU %arg0 : !spirv.ptr<i64, Generic> to i32
+    spirv.Return
+  }
+  spirv.func @covert_ptr_to_u_extend(%arg0 : !spirv.ptr<i32, Generic>) "None" {
+    // CHECK: {{%.*}} = spirv.ConvertPtrToU {{%.*}} : !spirv.ptr<i32, Generic> to i64
+    %0 = spirv.ConvertPtrToU %arg0 : !spirv.ptr<i32, Generic> to i64
+    spirv.Return
+  }
+}
+
+// -----
+
+spirv.module PhysicalStorageBuffer64 OpenCL requires #spirv.vce<v1.0, [Kernel, Addresses, PhysicalStorageBufferAddresses], []> {
+  spirv.func @covert_ptr_to_u_PhysicalStorageBuffer(%arg0 : !spirv.ptr<i32, PhysicalStorageBuffer>) "None" {
+    // CHECK: {{%.*}} = spirv.ConvertPtrToU {{%.*}} : !spirv.ptr<i32, PhysicalStorageBuffer> to i32
+    %0 = spirv.ConvertPtrToU %arg0 : !spirv.ptr<i32, PhysicalStorageBuffer> to i32
+    spirv.Return
+  }
+}
+
+// -----
+
+spirv.module PhysicalStorageBuffer64 OpenCL requires #spirv.vce<v1.0, [Kernel, Addresses, PhysicalStorageBufferAddresses], []> {
+  spirv.func @covert_ptr_to_u_fail(%arg0 : !spirv.ptr<i32, Generic>) "None" {
+    // expected-error @+1 {{operand must be a physical pointer}}
+    %0 = spirv.ConvertPtrToU %arg0 : !spirv.ptr<i32, Generic> to i32
+    spirv.Return
+  }
+}
+
+// -----
+
+spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
+  spirv.func @covert_ptr_to_u_fail_2(%arg0 : !spirv.ptr<i32, Generic>) "None" {
+    // expected-error @+1 {{operand must be a physical pointer}}
+    %0 = spirv.ConvertPtrToU %arg0 : !spirv.ptr<i32, Generic> to i32
+    spirv.Return
+  }
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.ConvertUToPtr
+//===----------------------------------------------------------------------===//
+spirv.module Physical64 OpenCL requires #spirv.vce<v1.0, [Kernel, Addresses], []> {
+  spirv.func @covert_u_to_ptr(%arg0 : i32) "None" {
+    // CHECK: {{%.*}} = spirv.ConvertUToPtr {{%.*}} : i32 to !spirv.ptr<i32, Generic> 
+    %0 = spirv.ConvertUToPtr %arg0 : i32 to !spirv.ptr<i32, Generic>
+    spirv.Return
+  }
+  spirv.func @covert_u_to_ptr_truncate(%arg0 : i64) "None" {
+    // CHECK: {{%.*}} = spirv.ConvertUToPtr {{%.*}} : i64 to !spirv.ptr<i32, Generic> 
+    %0 = spirv.ConvertUToPtr %arg0 : i64 to !spirv.ptr<i32, Generic>
+    spirv.Return
+  }
+  spirv.func @covert_u_to_ptr_extend(%arg0 : i32) "None" {
+    // CHECK: {{%.*}} = spirv.ConvertUToPtr {{%.*}} : i32 to !spirv.ptr<i64, Generic> 
+    %0 = spirv.ConvertUToPtr %arg0 : i32 to !spirv.ptr<i64, Generic>
+    spirv.Return
+  }
+}
+
+// -----
+
+spirv.module PhysicalStorageBuffer64 OpenCL requires #spirv.vce<v1.0, [Kernel, Addresses, PhysicalStorageBufferAddresses], []> {
+  spirv.func @covert_u_to_ptr_PhysicalStorageBuffer(%arg0 : i32) "None" {
+    // CHECK: {{%.*}} = spirv.ConvertUToPtr {{%.*}} : i32 to !spirv.ptr<i32, PhysicalStorageBuffer>
+    %0 = spirv.ConvertUToPtr %arg0 : i32 to !spirv.ptr<i32, PhysicalStorageBuffer>
+    spirv.Return
+  }
+}
+
+// -----
+
+spirv.module PhysicalStorageBuffer64 OpenCL requires #spirv.vce<v1.0, [Kernel, Addresses, PhysicalStorageBufferAddresses], []> {
+  spirv.func @covert_u_to_ptr_fail(%arg0 : i32) "None" {
+    // expected-error @+1 {{result must be a physical pointer}}
+    %0 = spirv.ConvertUToPtr %arg0 : i32 to !spirv.ptr<i32, Generic>
+    spirv.Return
+  }
+}
+
+// -----
+
+spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
+  spirv.func @covert_u_to_ptr_fail_2(%arg0 : i32) "None" {
+    // expected-error @+1 {{result must be a physical pointer}}
+    %0 = spirv.ConvertUToPtr %arg0 : i32 to !spirv.ptr<i32, Generic>
+    spirv.Return
+  }
 }

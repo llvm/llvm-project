@@ -30,7 +30,8 @@ enum class PseudoProbeType { Block = 0, IndirectCall, DirectCall };
 
 enum class PseudoProbeAttributes {
   Reserved = 0x1,
-  Sentinel = 0x2, // A place holder for split function entry address.
+  Sentinel = 0x2,         // A place holder for split function entry address.
+  HasDiscriminator = 0x4, // for probes with a discriminator
 };
 
 // The saturated distrution factor representing 100% for block probes.
@@ -77,10 +78,22 @@ public:
   constexpr static uint8_t FullDistributionFactor = 100;
 };
 
+class PseudoProbeDescriptor {
+  uint64_t FunctionGUID;
+  uint64_t FunctionHash;
+
+public:
+  PseudoProbeDescriptor(uint64_t GUID, uint64_t Hash)
+      : FunctionGUID(GUID), FunctionHash(Hash) {}
+  uint64_t getFunctionGUID() const { return FunctionGUID; }
+  uint64_t getFunctionHash() const { return FunctionHash; }
+};
+
 struct PseudoProbe {
   uint32_t Id;
   uint32_t Type;
   uint32_t Attr;
+  uint32_t Discriminator;
   // Distribution factor that estimates the portion of the real execution count.
   // A saturated distribution factor stands for 1.0 or 100%. A pesudo probe has
   // a factor with the value ranged from 0.0 to 1.0.
@@ -89,6 +102,10 @@ struct PseudoProbe {
 
 static inline bool isSentinelProbe(uint32_t Flags) {
   return Flags & (uint32_t)PseudoProbeAttributes::Sentinel;
+}
+
+static inline bool hasDiscriminator(uint32_t Flags) {
+  return Flags & (uint32_t)PseudoProbeAttributes::HasDiscriminator;
 }
 
 std::optional<PseudoProbe> extractProbe(const Instruction &Inst);

@@ -19,13 +19,10 @@
 #include <cassert>
 
 #include "test_macros.h"
-#include "rapid-cxx-test.h"
 #include "filesystem_test_helper.h"
 #include "test_convertible.h"
 
-TEST_SUITE(directory_entry_path_ctor_suite)
-
-TEST_CASE(copy_ctor) {
+static void copy_ctor() {
   using namespace fs;
   // Copy
   {
@@ -42,7 +39,7 @@ TEST_CASE(copy_ctor) {
   }
 }
 
-TEST_CASE(copy_ctor_copies_cache) {
+static void copy_ctor_copies_cache() {
   using namespace fs;
   scoped_test_env env;
   const path dir = env.create_dir("dir");
@@ -55,8 +52,8 @@ TEST_CASE(copy_ctor_copies_cache) {
     fs::remove(sym);
 
     directory_entry ent_cp(ent);
-    TEST_CHECK(ent_cp.path() == sym);
-    TEST_CHECK(ent_cp.is_symlink());
+    assert(ent_cp.path() == sym);
+    assert(ent_cp.is_symlink());
   }
 
   {
@@ -65,9 +62,14 @@ TEST_CASE(copy_ctor_copies_cache) {
     fs::remove(file);
 
     directory_entry ent_cp(ent);
-    TEST_CHECK(ent_cp.path() == file);
-    TEST_CHECK(ent_cp.is_regular_file());
+    assert(ent_cp.path() == file);
+    assert(ent_cp.is_regular_file());
   }
 }
 
-TEST_SUITE_END()
+int main(int, char**) {
+  copy_ctor();
+  copy_ctor_copies_cache();
+
+  return 0;
+}

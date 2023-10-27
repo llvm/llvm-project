@@ -89,6 +89,10 @@ public:
   void emitJumpTableTBInst(const MachineInstr *MI, unsigned OffsetWidth);
   void emitInstruction(const MachineInstr *MI) override;
   bool runOnMachineFunction(MachineFunction &F) override;
+  std::tuple<const MCSymbol *, uint64_t, const MCSymbol *,
+             codeview::JumpTableEntrySize>
+  getCodeViewJumpTableInfo(int JTI, const MachineInstr *BranchInstr,
+                           const MCSymbol *BranchLabel) const override;
 
   void emitConstantPool() override {
     // we emit constant pools customly!
@@ -119,9 +123,6 @@ private:
 
   // Helpers for emitStartOfAsmFile() and emitEndOfAsmFile()
   void emitAttributes();
-
-  // Generic helper used to emit e.g. ARMv5 mul pseudos
-  void EmitPatchedInstruction(const MachineInstr *MI, unsigned TargetOpc);
 
   void EmitUnwindingInstruction(const MachineInstr *MI);
 

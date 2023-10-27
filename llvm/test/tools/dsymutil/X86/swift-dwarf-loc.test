@@ -1,5 +1,7 @@
 RUN: dsymutil -oso-prepend-path %p/../Inputs %p/../Inputs/swift-dwarf-loc.macho.x86_64 -no-output -verbose | FileCheck %s
 
+RUN: dsymutil --linker llvm -oso-prepend-path %p/../Inputs %p/../Inputs/swift-dwarf-loc.macho.x86_64 -no-output -verbose | FileCheck %s
+
 This test checks that dsymutil generates a valid dwarf location for a symbol with no flags set.
 
 The following IR was compiled for x86_64-apple:

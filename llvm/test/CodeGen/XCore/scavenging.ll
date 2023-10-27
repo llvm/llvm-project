@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=xcore | FileCheck %s
+; RUN: llc < %s -mtriple=xcore | FileCheck %s
 
 @size = global i32 0		; <ptr> [#uses=1]
 @g0 = external global i32		; <ptr> [#uses=2]
@@ -54,18 +54,18 @@ declare void @g(ptr, ptr)
 
 ; CHECK: .section .cp.rodata.cst4,"aMc",@progbits,4
 ; CHECK: .p2align  2
-; CHECK: [[ARG5:.LCPI[0-9_]+]]:
-; CHECK: .long   100003
 ; CHECK: [[INDEX0:.LCPI[0-9_]+]]:
-; CHECK: .long   80002
+; CHECK: .long   84002
 ; CHECK: [[INDEX1:.LCPI[0-9_]+]]:
-; CHECK: .long   81002
+; CHECK: .long   83002
 ; CHECK: [[INDEX2:.LCPI[0-9_]+]]:
 ; CHECK: .long   82002
 ; CHECK: [[INDEX3:.LCPI[0-9_]+]]:
-; CHECK: .long   83002
+; CHECK: .long   81002
 ; CHECK: [[INDEX4:.LCPI[0-9_]+]]:
-; CHECK: .long   84002
+; CHECK: .long   80002
+; CHECK: [[ARG5:.LCPI[0-9_]+]]:
+; CHECK: .long   100003
 ; CHECK: .text
 ; !FP + large frame: spill SR+SR = entsp 2 + 100000
 ; CHECK-LABEL: ScavengeSlots:
@@ -73,29 +73,35 @@ declare void @g(ptr, ptr)
 ; CHECK: extsp 34467
 ; scavenge r11
 ; CHECK: ldaw r11, sp[0]
-; scavenge r4 using SR spill slot
-; CHECK: stw r4, sp[1]
-; CHECK: ldw r4, cp[[[ARG5]]]
+; scavenge r0 using SR spill slot
+; CHECK: stw r0, sp[1]
+; CHECK: ldw r0, cp[[[ARG5]]]
 ; r11 used to load 5th argument
-; CHECK: ldw r11, r11[r4]
-; CHECK: ldaw r4, sp[0]
-; scavenge r5 using SR spill slot
-; CHECK: stw r5, sp[0]
-; CHECK: ldw r5, cp[[[INDEX0]]]
+; CHECK: ldw r11, r11[r0]
+; CHECK: ldw r0, sp[1]
+; scavenge r1 using SR spill slot
+; CHECK: stw r1, sp[1]
+; CHECK: ldaw r1, sp[0]
+; scavenge r2 using SR spill slot
+; CHECK: stw r2, sp[0]
+; CHECK: ldw r2, cp[[[INDEX4]]]
 ; r4 & r5 used by InsertSPConstInst() to emit STW_l3r instruction.
-; CHECK: stw r0, r4[r5]
+; CHECK: stw r0, r1[r2]
+; CHECK: ldw r2, sp[0]
+; CHECK: ldw r1, sp[1]
 ; CHECK: ldaw r0, sp[0]
-; CHECK: ldw r5, cp[[[INDEX1]]]
-; CHECK: stw r1, r0[r5]
+; scavenge r2 using SR spill slot
+; CHECK: stw r2, sp[1]
+; CHECK: ldw r2, cp[[[INDEX3]]]
+; CHECK: stw r1, r0[r2]
+; CHECK: ldw r2, sp[1]
 ; CHECK: ldw r1, cp[[[INDEX2]]]
 ; CHECK: stw r2, r0[r1]
-; CHECK: ldw r1, cp[[[INDEX3]]]
+; CHECK: ldw r1, cp[[[INDEX1]]]
 ; CHECK: stw r3, r0[r1]
-; CHECK: ldw r1, cp[[[INDEX4]]]
+; CHECK: ldw r1, cp[[[INDEX0]]]
 ; CHECK: stw r11, r0[r1]
 ; CHECK: ldaw sp, sp[65535]
-; CHECK: ldw r4, sp[1]
-; CHECK: ldw r5, sp[0]
 ; CHECK: retsp 34467
 define void @ScavengeSlots(i32 %r0, i32 %r1, i32 %r2, i32 %r3, i32 %r4) nounwind {
 entry:

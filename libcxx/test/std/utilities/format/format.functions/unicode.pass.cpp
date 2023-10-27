@@ -6,14 +6,13 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-has-no-incomplete-format
+// UNSUPPORTED: GCC-ALWAYS_INLINE-FIXME
 
 // This version runs the test when the platform has Unicode support.
 // UNSUPPORTED: libcpp-has-no-unicode
 
-// TODO FMT Investigate Windows and AIX issues.
-// UNSUPPORTED msvc, target={{.+}}-windows-gnu
-// UNSUPPORTED: LIBCXX-AIX-FIXME
+// TODO FMT This test should not require std::to_chars(floating-point)
+// XFAIL: availability-fp_to_chars-missing
 
 // <format>
 
@@ -78,8 +77,8 @@ static void test_single_code_point_fill() {
   check(SV("*\u2e80*"), SV("{:*^4}"), SV("\u2e80")); // CJK RADICAL REPEAT
   check(SV("*\u303e*"), SV("{:*^4}"), SV("\u303e")); // IDEOGRAPHIC VARIATION INDICATOR
 
-  check(SV("*\u3040*"), SV("{:*^4}"), SV("\u3040")); // U+3041 HIRAGANA LETTER SMALL A
-  check(SV("*\ua4cf*"), SV("{:*^4}"), SV("\ua4cf")); // U+A4D0 LISU LETTER BA
+  check(SV("*\u3041*"), SV("{:*^4}"), SV("\u3041")); // U+3041 HIRAGANA LETTER SMALL A
+  check(SV("*\ua4d0*"), SV("{:*^3}"), SV("\ua4d0")); // U+A4D0 LISU LETTER BA
 
   check(SV("*\uac00*"), SV("{:*^4}"), SV("\uac00")); // <Hangul Syllable, First>
   check(SV("*\ud7a3*"), SV("{:*^4}"), SV("\ud7a3")); // Hangul Syllable Hih
@@ -91,9 +90,9 @@ static void test_single_code_point_fill() {
   check(SV("*\ufe19*"), SV("{:*^4}"), SV("\ufe19")); // PRESENTATION FORM FOR VERTICAL HORIZONTAL ELLIPSIS
 
   check(SV("*\ufe30*"), SV("{:*^4}"), SV("\ufe30")); // PRESENTATION FORM FOR VERTICAL TWO DOT LEADER
-  check(SV("*\ufe6f*"), SV("{:*^4}"), SV("\ufe6f")); // U+FE70 ARABIC FATHATAN ISOLATED FORM
+  check(SV("*\ufe70*"), SV("{:*^3}"), SV("\ufe70")); // U+FE70 ARABIC FATHATAN ISOLATED FORM
 
-  check(SV("*\uff00*"), SV("{:*^4}"), SV("\uff00")); // U+FF01 FULLWIDTH EXCLAMATION MARK
+  check(SV("*\uff01*"), SV("{:*^4}"), SV("\uff01")); // U+FF01 FULLWIDTH EXCLAMATION MARK
   check(SV("*\uff60*"), SV("{:*^4}"), SV("\uff60")); // FULLWIDTH RIGHT WHITE PARENTHESIS
 
   check(SV("*\uffe0*"), SV("{:*^4}"), SV("\uffe0")); // FULLWIDTH CENT SIGN
@@ -140,8 +139,8 @@ static void test_single_code_point_truncate() {
   check(SV("***"), SV("{:*^3.1}"), SV("\u2e80")); // CJK RADICAL REPEAT
   check(SV("***"), SV("{:*^3.1}"), SV("\u303e")); // IDEOGRAPHIC VARIATION INDICATOR
 
-  check(SV("***"), SV("{:*^3.1}"), SV("\u3040")); // U+3041 HIRAGANA LETTER SMALL A
-  check(SV("***"), SV("{:*^3.1}"), SV("\ua4cf")); // U+A4D0 LISU LETTER BA
+  check(SV("***"), SV("{:*^3.1}"), SV("\u3041")); // U+3041 HIRAGANA LETTER SMALL A
+  check(SV("*\ua4d0*"), SV("{:*^3.1}"), SV("\ua4d0")); // U+A4D0 LISU LETTER BA
 
   check(SV("***"), SV("{:*^3.1}"), SV("\uac00")); // <Hangul Syllable, First>
   check(SV("***"), SV("{:*^3.1}"), SV("\ud7a3")); // Hangul Syllable Hih
@@ -153,9 +152,9 @@ static void test_single_code_point_truncate() {
   check(SV("***"), SV("{:*^3.1}"), SV("\ufe19")); // PRESENTATION FORM FOR VERTICAL HORIZONTAL ELLIPSIS
 
   check(SV("***"), SV("{:*^3.1}"), SV("\ufe30")); // PRESENTATION FORM FOR VERTICAL TWO DOT LEADER
-  check(SV("***"), SV("{:*^3.1}"), SV("\ufe6f")); // U+FE70 ARABIC FATHATAN ISOLATED FORM
+  check(SV("*\ufe70*"), SV("{:*^3.1}"), SV("\ufe70")); // U+FE70 ARABIC FATHATAN ISOLATED FORM
 
-  check(SV("***"), SV("{:*^3.1}"), SV("\uff00")); // U+FF01 FULLWIDTH EXCLAMATION MARK
+  check(SV("***"), SV("{:*^3.1}"), SV("\uff01"));      // U+FF01 FULLWIDTH EXCLAMATION MARK
   check(SV("***"), SV("{:*^3.1}"), SV("\uff60")); // FULLWIDTH RIGHT WHITE PARENTHESIS
 
   check(SV("***"), SV("{:*^3.1}"), SV("\uffe0")); // FULLWIDTH CENT SIGN
@@ -269,6 +268,31 @@ static void test_malformed_code_point() {
     check(SV("*ZZZZ\xcfZZZZ*"), SV("{:*^11}"), SV("ZZZZ\xcfZZZZ"));
     check(SV("*ZZZZ\xefZZZZ*"), SV("{:*^11}"), SV("ZZZZ\xefZZZZ"));
     check(SV("*ZZZZ\xffZZZZ*"), SV("{:*^11}"), SV("ZZZZ\xffZZZZ"));
+
+    // Invalid continuations
+    check(SV("\xc2\x00"), SV("{}"), SV("\xc2\x00"));
+    check(SV("\xc2\x40"), SV("{}"), SV("\xc2\x40"));
+    check(SV("\xc2\xc0"), SV("{}"), SV("\xc2\xc0"));
+
+    check(SV("\xe0\x00\x80"), SV("{}"), SV("\xe0\x00\x80"));
+    check(SV("\xe0\x40\x80"), SV("{}"), SV("\xe0\x40\x80"));
+    check(SV("\xe0\xc0\x80"), SV("{}"), SV("\xe0\xc0\x80"));
+
+    check(SV("\xe0\x80\x00"), SV("{}"), SV("\xe0\x80\x00"));
+    check(SV("\xe0\x80\x40"), SV("{}"), SV("\xe0\x80\x40"));
+    check(SV("\xe0\x80\xc0"), SV("{}"), SV("\xe0\x80\xc0"));
+
+    check(SV("\xf0\x80\x80\x00"), SV("{}"), SV("\xf0\x80\x80\x00"));
+    check(SV("\xf0\x80\x80\x40"), SV("{}"), SV("\xf0\x80\x80\x40"));
+    check(SV("\xf0\x80\x80\xc0"), SV("{}"), SV("\xf0\x80\x80\xc0"));
+
+    check(SV("\xf0\x80\x00\x80"), SV("{}"), SV("\xf0\x80\x00\x80"));
+    check(SV("\xf0\x80\x40\x80"), SV("{}"), SV("\xf0\x80\x40\x80"));
+    check(SV("\xf0\x80\xc0\x80"), SV("{}"), SV("\xf0\x80\xc0\x80"));
+
+    check(SV("\xf0\x00\x80\x80"), SV("{}"), SV("\xf0\x00\x80\x80"));
+    check(SV("\xf0\x40\x80\x80"), SV("{}"), SV("\xf0\x40\x80\x80"));
+    check(SV("\xf0\xc0\x80\x80"), SV("{}"), SV("\xf0\xc0\x80\x80"));
 
     // Premature end.
     check(SV("*ZZZZ\xef\xf5*"), SV("{:*^8}"), SV("ZZZZ\xef\xf5"));

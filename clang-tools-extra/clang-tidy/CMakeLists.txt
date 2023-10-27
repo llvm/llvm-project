@@ -22,13 +22,14 @@ add_clang_library(clangTidy
   DEPENDS
   ClangSACheckers
   omp_gen
+  ClangDriverOptions
   )
 
 clang_target_link_libraries(clangTidy
   PRIVATE
-  clangAnalysis
   clangAST
   clangASTMatchers
+  clangAnalysis
   clangBasic
   clangFormat
   clangFrontend

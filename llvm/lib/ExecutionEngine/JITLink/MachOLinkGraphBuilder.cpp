@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Generic MachO LinkGraph buliding code.
+// Generic MachO LinkGraph building code.
 //
 //===----------------------------------------------------------------------===//
 
@@ -47,12 +47,13 @@ Expected<std::unique_ptr<LinkGraph>> MachOLinkGraphBuilder::buildGraph() {
 }
 
 MachOLinkGraphBuilder::MachOLinkGraphBuilder(
-    const object::MachOObjectFile &Obj, Triple TT,
+    const object::MachOObjectFile &Obj, Triple TT, SubtargetFeatures Features,
     LinkGraph::GetEdgeKindNameFunction GetEdgeKindName)
     : Obj(Obj),
-      G(std::make_unique<LinkGraph>(
-          std::string(Obj.getFileName()), std::move(TT), getPointerSize(Obj),
-          getEndianness(Obj), std::move(GetEdgeKindName))) {
+      G(std::make_unique<LinkGraph>(std::string(Obj.getFileName()),
+                                    std::move(TT), std::move(Features),
+                                    getPointerSize(Obj), getEndianness(Obj),
+                                    std::move(GetEdgeKindName))) {
   auto &MachHeader = Obj.getHeader64();
   SubsectionsViaSymbols = MachHeader.flags & MachO::MH_SUBSECTIONS_VIA_SYMBOLS;
 }
@@ -105,9 +106,10 @@ MachOLinkGraphBuilder::getPointerSize(const object::MachOObjectFile &Obj) {
   return Obj.is64Bit() ? 8 : 4;
 }
 
-support::endianness
+llvm::endianness
 MachOLinkGraphBuilder::getEndianness(const object::MachOObjectFile &Obj) {
-  return Obj.isLittleEndian() ? support::little : support::big;
+  return Obj.isLittleEndian() ? llvm::endianness::little
+                              : llvm::endianness::big;
 }
 
 Section &MachOLinkGraphBuilder::getCommonSection() {
@@ -185,9 +187,13 @@ Error MachOLinkGraphBuilder::createNormalizedSections() {
       Prot = orc::MemProt::Read | orc::MemProt::Write;
 
     auto FullyQualifiedName =
-        G->allocateString(StringRef(NSec.SegName) + "," + NSec.SectName);
+        G->allocateContent(StringRef(NSec.SegName) + "," + NSec.SectName);
     NSec.GraphSection = &G->createSection(
         StringRef(FullyQualifiedName.data(), FullyQualifiedName.size()), Prot);
+
+    // TODO: Are there any other criteria for NoAlloc lifetime?
+    if (NSec.Flags & MachO::S_ATTR_DEBUG)
+      NSec.GraphSection->setMemLifetime(orc::MemLifetime::NoAlloc);
 
     IndexToSection.insert(std::make_pair(SecIndex, std::move(NSec)));
   }
@@ -267,7 +273,11 @@ Error MachOLinkGraphBuilder::createNormalizedSymbols() {
         Name = *NameOrErr;
       else
         return NameOrErr.takeError();
-    }
+    } else if (Type & MachO::N_EXT)
+      return make_error<JITLinkError>("Symbol at index " +
+                                      formatv("{0}", SymbolIndex) +
+                                      " has no name (string table index 0), "
+                                      "but N_EXT bit is set");
 
     LLVM_DEBUG({
       dbgs() << "  ";
@@ -656,7 +666,7 @@ Error MachOLinkGraphBuilder::graphifyCStringSection(
   orc::ExecutorAddrDiff BlockStart = 0;
 
   // Scan section for null characters.
-  for (size_t I = 0; I != NSec.Size; ++I)
+  for (size_t I = 0; I != NSec.Size; ++I) {
     if (NSec.Data[I] == '\0') {
       size_t BlockSize = I + 1 - BlockStart;
       // Create a block for this null terminated string.
@@ -723,6 +733,11 @@ Error MachOLinkGraphBuilder::graphifyCStringSection(
 
       BlockStart += BlockSize;
     }
+  }
+
+  assert(llvm::all_of(NSec.GraphSection->blocks(),
+                      [](Block *B) { return isCStringBlock(*B); }) &&
+         "All blocks in section should hold single c-strings");
 
   return Error::success();
 }

@@ -99,15 +99,14 @@ define i32 @v_andn2_i32(i32 %src0, i32 %src1) {
 ; GCN-LABEL: v_andn2_i32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_xor_b32_e32 v1, -1, v1
+; GCN-NEXT:    v_not_b32_e32 v1, v1
 ; GCN-NEXT:    v_and_b32_e32 v0, v0, v1
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10PLUS-LABEL: v_andn2_i32:
 ; GFX10PLUS:       ; %bb.0:
 ; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10PLUS-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10PLUS-NEXT:    v_xor_b32_e32 v1, -1, v1
+; GFX10PLUS-NEXT:    v_not_b32_e32 v1, v1
 ; GFX10PLUS-NEXT:    v_and_b32_e32 v0, v0, v1
 ; GFX10PLUS-NEXT:    s_setpc_b64 s[30:31]
   %not.src1 = xor i32 %src1, -1
@@ -118,13 +117,13 @@ define i32 @v_andn2_i32(i32 %src0, i32 %src1) {
 define amdgpu_ps float @v_andn2_i32_sv(i32 inreg %src0, i32 %src1) {
 ; GCN-LABEL: v_andn2_i32_sv:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    v_xor_b32_e32 v0, -1, v0
+; GCN-NEXT:    v_not_b32_e32 v0, v0
 ; GCN-NEXT:    v_and_b32_e32 v0, s2, v0
 ; GCN-NEXT:    ; return to shader part epilog
 ;
 ; GFX10PLUS-LABEL: v_andn2_i32_sv:
 ; GFX10PLUS:       ; %bb.0:
-; GFX10PLUS-NEXT:    v_xor_b32_e32 v0, -1, v0
+; GFX10PLUS-NEXT:    v_not_b32_e32 v0, v0
 ; GFX10PLUS-NEXT:    v_and_b32_e32 v0, s2, v0
 ; GFX10PLUS-NEXT:    ; return to shader part epilog
   %not.src1 = xor i32 %src1, -1
@@ -248,8 +247,8 @@ define i64 @v_andn2_i64(i64 %src0, i64 %src1) {
 ; GCN-LABEL: v_andn2_i64:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_xor_b32_e32 v2, -1, v2
-; GCN-NEXT:    v_xor_b32_e32 v3, -1, v3
+; GCN-NEXT:    v_not_b32_e32 v2, v2
+; GCN-NEXT:    v_not_b32_e32 v3, v3
 ; GCN-NEXT:    v_and_b32_e32 v0, v0, v2
 ; GCN-NEXT:    v_and_b32_e32 v1, v1, v3
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
@@ -257,9 +256,8 @@ define i64 @v_andn2_i64(i64 %src0, i64 %src1) {
 ; GFX10PLUS-LABEL: v_andn2_i64:
 ; GFX10PLUS:       ; %bb.0:
 ; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10PLUS-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10PLUS-NEXT:    v_xor_b32_e32 v2, -1, v2
-; GFX10PLUS-NEXT:    v_xor_b32_e32 v3, -1, v3
+; GFX10PLUS-NEXT:    v_not_b32_e32 v2, v2
+; GFX10PLUS-NEXT:    v_not_b32_e32 v3, v3
 ; GFX10PLUS-NEXT:    v_and_b32_e32 v0, v0, v2
 ; GFX10PLUS-NEXT:    v_and_b32_e32 v1, v1, v3
 ; GFX10PLUS-NEXT:    s_setpc_b64 s[30:31]
@@ -271,16 +269,16 @@ define i64 @v_andn2_i64(i64 %src0, i64 %src1) {
 define amdgpu_ps <2 x float> @v_andn2_i64_sv(i64 inreg %src0, i64 %src1) {
 ; GCN-LABEL: v_andn2_i64_sv:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    v_xor_b32_e32 v0, -1, v0
-; GCN-NEXT:    v_xor_b32_e32 v1, -1, v1
+; GCN-NEXT:    v_not_b32_e32 v0, v0
+; GCN-NEXT:    v_not_b32_e32 v1, v1
 ; GCN-NEXT:    v_and_b32_e32 v0, s2, v0
 ; GCN-NEXT:    v_and_b32_e32 v1, s3, v1
 ; GCN-NEXT:    ; return to shader part epilog
 ;
 ; GFX10PLUS-LABEL: v_andn2_i64_sv:
 ; GFX10PLUS:       ; %bb.0:
-; GFX10PLUS-NEXT:    v_xor_b32_e32 v0, -1, v0
-; GFX10PLUS-NEXT:    v_xor_b32_e32 v1, -1, v1
+; GFX10PLUS-NEXT:    v_not_b32_e32 v0, v0
+; GFX10PLUS-NEXT:    v_not_b32_e32 v1, v1
 ; GFX10PLUS-NEXT:    v_and_b32_e32 v0, s2, v0
 ; GFX10PLUS-NEXT:    v_and_b32_e32 v1, s3, v1
 ; GFX10PLUS-NEXT:    ; return to shader part epilog
@@ -452,7 +450,6 @@ define i16 @v_andn2_i16(i16 %src0, i16 %src1) {
 ; GFX10PLUS-LABEL: v_andn2_i16:
 ; GFX10PLUS:       ; %bb.0:
 ; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10PLUS-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10PLUS-NEXT:    v_xor_b32_e32 v1, -1, v1
 ; GFX10PLUS-NEXT:    v_and_b32_e32 v0, v0, v1
 ; GFX10PLUS-NEXT:    s_setpc_b64 s[30:31]
@@ -466,14 +463,14 @@ define amdgpu_ps float @v_andn2_i16_sv(i16 inreg %src0, i16 %src1) {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    v_xor_b32_e32 v0, -1, v0
 ; GCN-NEXT:    v_and_b32_e32 v0, s2, v0
-; GCN-NEXT:    v_bfe_u32 v0, v0, 0, 16
+; GCN-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GCN-NEXT:    ; return to shader part epilog
 ;
 ; GFX10PLUS-LABEL: v_andn2_i16_sv:
 ; GFX10PLUS:       ; %bb.0:
 ; GFX10PLUS-NEXT:    v_xor_b32_e32 v0, -1, v0
 ; GFX10PLUS-NEXT:    v_and_b32_e32 v0, s2, v0
-; GFX10PLUS-NEXT:    v_bfe_u32 v0, v0, 0, 16
+; GFX10PLUS-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX10PLUS-NEXT:    ; return to shader part epilog
   %not.src1 = xor i16 %src1, -1
   %and = and i16 %src0, %not.src1
@@ -487,14 +484,14 @@ define amdgpu_ps float @v_andn2_i16_vs(i16 %src0, i16 inreg %src1) {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_xor_b32 s0, s2, -1
 ; GCN-NEXT:    v_and_b32_e32 v0, s0, v0
-; GCN-NEXT:    v_bfe_u32 v0, v0, 0, 16
+; GCN-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GCN-NEXT:    ; return to shader part epilog
 ;
 ; GFX10PLUS-LABEL: v_andn2_i16_vs:
 ; GFX10PLUS:       ; %bb.0:
 ; GFX10PLUS-NEXT:    s_xor_b32 s0, s2, -1
 ; GFX10PLUS-NEXT:    v_and_b32_e32 v0, s0, v0
-; GFX10PLUS-NEXT:    v_bfe_u32 v0, v0, 0, 16
+; GFX10PLUS-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX10PLUS-NEXT:    ; return to shader part epilog
   %not.src1 = xor i16 %src1, -1
   %and = and i16 %src0, %not.src1
@@ -679,7 +676,6 @@ define <2 x i16> @v_andn2_v2i16(<2 x i16> %src0, <2 x i16> %src1) {
 ; GFX10PLUS-LABEL: v_andn2_v2i16:
 ; GFX10PLUS:       ; %bb.0:
 ; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10PLUS-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10PLUS-NEXT:    v_xor_b32_e32 v1, -1, v1
 ; GFX10PLUS-NEXT:    v_and_b32_e32 v0, v0, v1
 ; GFX10PLUS-NEXT:    s_setpc_b64 s[30:31]
@@ -696,16 +692,15 @@ define amdgpu_ps i48 @s_andn2_v3i16(<3 x i16> inreg %src0, <3 x i16> inreg %src1
 ; GFX6-NEXT:    s_mov_b32 s0, -1
 ; GFX6-NEXT:    s_and_b32 s5, s5, 0xffff
 ; GFX6-NEXT:    s_lshl_b32 s6, s6, 16
+; GFX6-NEXT:    s_and_b32 s3, s3, 0xffff
 ; GFX6-NEXT:    s_mov_b32 s1, 0xffff
 ; GFX6-NEXT:    s_or_b32 s6, s5, s6
 ; GFX6-NEXT:    s_and_b32 s7, s7, 0xffff
-; GFX6-NEXT:    s_and_b32 s3, s3, 0xffff
-; GFX6-NEXT:    s_xor_b64 s[0:1], s[6:7], s[0:1]
 ; GFX6-NEXT:    s_and_b32 s2, s2, 0xffff
 ; GFX6-NEXT:    s_lshl_b32 s3, s3, 16
+; GFX6-NEXT:    s_xor_b64 s[0:1], s[6:7], s[0:1]
 ; GFX6-NEXT:    s_or_b32 s2, s2, s3
 ; GFX6-NEXT:    s_and_b32 s3, s4, 0xffff
-; GFX6-NEXT:    s_and_b32 s1, s1, 0xffff
 ; GFX6-NEXT:    s_and_b64 s[0:1], s[2:3], s[0:1]
 ; GFX6-NEXT:    s_lshr_b32 s2, s0, 16
 ; GFX6-NEXT:    s_and_b32 s0, s0, 0xffff
@@ -750,14 +745,13 @@ define amdgpu_ps i48 @s_andn2_v3i16_commute(<3 x i16> inreg %src0, <3 x i16> inr
 ; GFX6-NEXT:    s_mov_b32 s0, -1
 ; GFX6-NEXT:    s_and_b32 s5, s5, 0xffff
 ; GFX6-NEXT:    s_lshl_b32 s6, s6, 16
+; GFX6-NEXT:    s_and_b32 s3, s3, 0xffff
 ; GFX6-NEXT:    s_mov_b32 s1, 0xffff
 ; GFX6-NEXT:    s_or_b32 s6, s5, s6
 ; GFX6-NEXT:    s_and_b32 s7, s7, 0xffff
-; GFX6-NEXT:    s_and_b32 s3, s3, 0xffff
-; GFX6-NEXT:    s_xor_b64 s[0:1], s[6:7], s[0:1]
 ; GFX6-NEXT:    s_and_b32 s2, s2, 0xffff
 ; GFX6-NEXT:    s_lshl_b32 s3, s3, 16
-; GFX6-NEXT:    s_and_b32 s1, s1, 0xffff
+; GFX6-NEXT:    s_xor_b64 s[0:1], s[6:7], s[0:1]
 ; GFX6-NEXT:    s_or_b32 s2, s2, s3
 ; GFX6-NEXT:    s_and_b32 s3, s4, 0xffff
 ; GFX6-NEXT:    s_and_b64 s[0:1], s[0:1], s[2:3]
@@ -801,31 +795,29 @@ define amdgpu_ps { i48, i48 } @s_andn2_v3i16_multi_use(<3 x i16> inreg %src0, <3
 ; GFX6-LABEL: s_andn2_v3i16_multi_use:
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_and_b32 s6, s6, 0xffff
-; GFX6-NEXT:    s_mov_b32 s0, s2
-; GFX6-NEXT:    s_mov_b32 s1, s3
-; GFX6-NEXT:    s_mov_b32 s2, -1
+; GFX6-NEXT:    s_mov_b32 s0, -1
 ; GFX6-NEXT:    s_and_b32 s5, s5, 0xffff
 ; GFX6-NEXT:    s_lshl_b32 s6, s6, 16
-; GFX6-NEXT:    s_mov_b32 s3, 0xffff
+; GFX6-NEXT:    s_mov_b32 s1, 0xffff
 ; GFX6-NEXT:    s_or_b32 s6, s5, s6
 ; GFX6-NEXT:    s_and_b32 s7, s7, 0xffff
-; GFX6-NEXT:    s_and_b32 s1, s1, 0xffff
-; GFX6-NEXT:    s_xor_b64 s[2:3], s[6:7], s[2:3]
-; GFX6-NEXT:    s_and_b32 s0, s0, 0xffff
+; GFX6-NEXT:    s_xor_b64 s[6:7], s[6:7], s[0:1]
+; GFX6-NEXT:    s_and_b32 s1, s3, 0xffff
+; GFX6-NEXT:    s_and_b32 s0, s2, 0xffff
 ; GFX6-NEXT:    s_lshl_b32 s1, s1, 16
 ; GFX6-NEXT:    s_or_b32 s0, s0, s1
 ; GFX6-NEXT:    s_and_b32 s1, s4, 0xffff
-; GFX6-NEXT:    s_and_b32 s3, s3, 0xffff
-; GFX6-NEXT:    s_and_b64 s[0:1], s[0:1], s[2:3]
-; GFX6-NEXT:    s_lshr_b32 s4, s0, 16
-; GFX6-NEXT:    s_lshr_b32 s5, s2, 16
+; GFX6-NEXT:    s_and_b64 s[0:1], s[0:1], s[6:7]
+; GFX6-NEXT:    s_lshr_b32 s2, s0, 16
+; GFX6-NEXT:    s_lshr_b32 s5, s6, 16
 ; GFX6-NEXT:    s_and_b32 s0, s0, 0xffff
-; GFX6-NEXT:    s_lshl_b32 s4, s4, 16
-; GFX6-NEXT:    s_or_b32 s0, s0, s4
-; GFX6-NEXT:    s_and_b32 s2, s2, 0xffff
-; GFX6-NEXT:    s_lshl_b32 s4, s5, 16
+; GFX6-NEXT:    s_lshl_b32 s2, s2, 16
+; GFX6-NEXT:    s_or_b32 s0, s0, s2
+; GFX6-NEXT:    s_and_b32 s2, s6, 0xffff
+; GFX6-NEXT:    s_lshl_b32 s3, s5, 16
 ; GFX6-NEXT:    s_and_b32 s1, s1, 0xffff
-; GFX6-NEXT:    s_or_b32 s2, s2, s4
+; GFX6-NEXT:    s_or_b32 s2, s2, s3
+; GFX6-NEXT:    s_and_b32 s3, s7, 0xffff
 ; GFX6-NEXT:    ; return to shader part epilog
 ;
 ; GFX9-LABEL: s_andn2_v3i16_multi_use:
@@ -879,16 +871,15 @@ define <3 x i16> @v_andn2_v3i16(<3 x i16> %src0, <3 x i16> %src1) {
 ; GFX6-NEXT:    v_lshlrev_b32_e32 v4, 16, v4
 ; GFX6-NEXT:    v_and_b32_e32 v1, 0xffff, v1
 ; GFX6-NEXT:    v_or_b32_e32 v3, v3, v4
-; GFX6-NEXT:    v_and_b32_e32 v4, 0xffff, v5
 ; GFX6-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX6-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; GFX6-NEXT:    v_and_b32_e32 v4, 0xffff, v5
 ; GFX6-NEXT:    v_xor_b32_e32 v3, -1, v3
-; GFX6-NEXT:    v_xor_b32_e32 v4, 0xfff5, v4
 ; GFX6-NEXT:    v_or_b32_e32 v0, v0, v1
+; GFX6-NEXT:    v_xor_b32_e32 v4, 0xfff5, v4
 ; GFX6-NEXT:    v_and_b32_e32 v1, 0xffff, v2
-; GFX6-NEXT:    v_and_b32_e32 v2, 0xffff, v4
 ; GFX6-NEXT:    v_and_b32_e32 v0, v0, v3
-; GFX6-NEXT:    v_and_b32_e32 v2, v1, v2
+; GFX6-NEXT:    v_and_b32_e32 v2, v1, v4
 ; GFX6-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
 ; GFX6-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -904,7 +895,6 @@ define <3 x i16> @v_andn2_v3i16(<3 x i16> %src0, <3 x i16> %src1) {
 ; GFX10PLUS-LABEL: v_andn2_v3i16:
 ; GFX10PLUS:       ; %bb.0:
 ; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10PLUS-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10PLUS-NEXT:    v_xor_b32_e32 v2, -1, v2
 ; GFX10PLUS-NEXT:    v_xor_b32_e32 v3, -11, v3
 ; GFX10PLUS-NEXT:    v_and_b32_e32 v0, v0, v2
@@ -1141,7 +1131,6 @@ define <4 x i16> @v_andn2_v4i16(<4 x i16> %src0, <4 x i16> %src1) {
 ; GFX10PLUS-LABEL: v_andn2_v4i16:
 ; GFX10PLUS:       ; %bb.0:
 ; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10PLUS-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10PLUS-NEXT:    v_xor_b32_e32 v2, -1, v2
 ; GFX10PLUS-NEXT:    v_xor_b32_e32 v3, -1, v3
 ; GFX10PLUS-NEXT:    v_and_b32_e32 v0, v0, v2

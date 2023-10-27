@@ -50,7 +50,7 @@ static_assert(!HasNextPermutationR<BidirectionalRangeNotSentinelSemiregular>);
 static_assert(!HasNextPermutationR<BidirectionalRangeNotSentinelWeaklyEqualityComparableWith>);
 static_assert(!HasNextPermutationR<UncheckedRange<const int*>>); // not sortable
 
-constexpr size_t factorial(size_t i) {
+constexpr std::size_t factorial(size_t i) {
   std::array memoized = {1, 1, 2, 6, 24, 120, 720, 5040, 40320};
   return memoized[i];
 }
@@ -87,8 +87,8 @@ constexpr void test_next_permutations(Func call_next_permutation) {
   // lexicographically greater than the previous. If these two conditions hold (the number of permutations is `N!`, and
   // each permutation is lexicographically greater than the previous one), it follows that the
   // `ranges::next_permutation` algorithm works correctly.
-  for (size_t i = 0; i <= current_permutation.size(); ++i) {
-    size_t count = 0;
+  for (std::size_t i = 0; i <= current_permutation.size(); ++i) {
+    std::size_t count = 0;
     bool next_found = true;
 
     while (next_found) {

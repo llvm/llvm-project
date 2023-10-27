@@ -23,36 +23,25 @@
 # Theses numbers are available in all runners, making it easier to update the
 # version number.
 env:
-    LLVM_STABLE_VERSION: "15"
-    LLVM_HEAD_VERSION: "16"
-    GCC_STABLE_VERSION: "12"
+    # LLVM POST-BRANCH bump version
+    # LLVM POST-BRANCH add compiler test for ToT - 1, e.g. "Clang 17"
+    # LLVM RELEASE bump remove compiler ToT - 3, e.g. "Clang 15"
+    LLVM_STABLE_VERSION: "17" # Used for tooling, update after the RELEASE.
+    LLVM_HEAD_VERSION: "18"   # Used compiler, update POST-BRANCH.
+    GCC_STABLE_VERSION: "13"
 steps:
   #
-  # Light pre-commit tests for things like formatting or when people forget
-  # to update generated files.
+  # Light pre-commit tests for things like forgetting to update generated files.
   #
-  - label: "Format"
-    command: "libcxx/utils/ci/run-buildbot check-format"
-    artifact_paths:
-      - "**/clang-format.patch"
-    env:
-        GIT_CLANG_FORMAT: "/usr/bin/git-clang-format-${LLVM_STABLE_VERSION}"
-    agents:
-      queue: "libcxx-builders"
-      os: "linux"
-    retry:
-      automatic:
-        - exit_status: -1  # Agent was lost
-          limit: 2
-    soft_fail:
-        - exit_status: 1
-    timeout_in_minutes: 120
-
   - label: "Generated output"
     command: "libcxx/utils/ci/run-buildbot check-generated-output"
     artifact_paths:
       - "**/generated_output.patch"
       - "**/generated_output.status"
+    env:
+        CC: "clang-${LLVM_HEAD_VERSION}"
+        CXX: "clang++-${LLVM_HEAD_VERSION}"
+        CLANG_FORMAT: "/usr/bin/clang-format-${LLVM_STABLE_VERSION}"
     agents:
       queue: "libcxx-builders"
       os: "linux"
@@ -66,6 +55,9 @@ steps:
     command: "libcxx/utils/ci/run-buildbot documentation"
     artifact_paths:
       - "**/test-results.xml"
+    env:
+        CC: "clang-${LLVM_HEAD_VERSION}"
+        CXX: "clang++-${LLVM_HEAD_VERSION}"
     agents:
       queue: "libcxx-builders"
       os: "linux"
@@ -90,6 +82,7 @@ steps:
     env:
         CC: "gcc-${GCC_STABLE_VERSION}"
         CXX: "g++-${GCC_STABLE_VERSION}"
+        ENABLE_CLANG_TIDY: "On"
     agents:
       queue: "libcxx-builders"
       os: "linux"
@@ -99,14 +92,17 @@ steps:
           limit: 2
     timeout_in_minutes: 120
 
-  - label: "C++2b"
-    command: "libcxx/utils/ci/run-buildbot generic-cxx2b"
+  - label: "C++26"
+    command: "libcxx/utils/ci/run-buildbot generic-cxx26"
     artifact_paths:
       - "**/test-results.xml"
       - "**/*.abilist"
     env:
-        CC: "clang-${LLVM_HEAD_VERSION}"
-        CXX: "clang++-${LLVM_HEAD_VERSION}"
+        # Note modules require and absolute path for clang-scan-deps
+        # https://github.com/llvm/llvm-project/issues/61006
+        CC: "/usr/lib/llvm-${LLVM_HEAD_VERSION}/bin/clang"
+        CXX: "/usr/lib/llvm-${LLVM_HEAD_VERSION}/bin/clang++"
+        CMAKE: "/opt/bin/cmake"
         ENABLE_CLANG_TIDY: "On"
     agents:
       queue: "libcxx-builders"
@@ -125,6 +121,7 @@ steps:
     env:
         CC: "clang-${LLVM_HEAD_VERSION}"
         CXX: "clang++-${LLVM_HEAD_VERSION}"
+        ENABLE_CLANG_TIDY: "On"
     agents:
       queue: "libcxx-builders"
       os: "linux"
@@ -175,15 +172,41 @@ steps:
   #
   - wait
 
+  - label: "C++23"
+    command: "libcxx/utils/ci/run-buildbot generic-cxx23"
+    artifact_paths:
+      - "**/test-results.xml"
+      - "**/*.abilist"
+    env:
+        # Note: Modules require and absolute path for clang-scan-deps
+        # https://github.com/llvm/llvm-project/issues/61006
+        CC: "/usr/lib/llvm-${LLVM_HEAD_VERSION}/bin/clang"
+        CXX: "/usr/lib/llvm-${LLVM_HEAD_VERSION}/bin/clang++"
+        CMAKE: "/opt/bin/cmake"
+        ENABLE_CLANG_TIDY: "On"
+        ENABLE_STD_MODULES: "On"
+    agents:
+      queue: "libcxx-builders"
+      os: "linux"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+    timeout_in_minutes: 120
+
   - label: "C++20"
     command: "libcxx/utils/ci/run-buildbot generic-cxx20"
     artifact_paths:
       - "**/test-results.xml"
       - "**/*.abilist"
     env:
-        CC: "clang-${LLVM_HEAD_VERSION}"
-        CXX: "clang++-${LLVM_HEAD_VERSION}"
+        # Note: Modules require and absolute path for clang-scan-deps
+        # https://github.com/llvm/llvm-project/issues/61006
+        CC: "/usr/lib/llvm-${LLVM_HEAD_VERSION}/bin/clang"
+        CXX: "/usr/lib/llvm-${LLVM_HEAD_VERSION}/bin/clang++"
+        CMAKE: "/opt/bin/cmake"
         ENABLE_CLANG_TIDY: "On"
+        ENABLE_STD_MODULES: "On"
     agents:
       queue: "libcxx-builders"
       os: "linux"
@@ -238,6 +261,7 @@ steps:
     env:
         CC: "gcc-${GCC_STABLE_VERSION}"
         CXX: "g++-${GCC_STABLE_VERSION}"
+        ENABLE_CLANG_TIDY: "On"
     agents:
       queue: "libcxx-builders"
       os: "linux"
@@ -247,14 +271,16 @@ steps:
           limit: 2
     timeout_in_minutes: 120
 
-  - label: "Clang 14"
-    command: "libcxx/utils/ci/run-buildbot generic-cxx2b"
+  - label: "Clang 16"
+    command: "libcxx/utils/ci/run-buildbot generic-cxx23"
     artifact_paths:
       - "**/test-results.xml"
       - "**/*.abilist"
     env:
-        CC: "clang-14"
-        CXX: "clang++-14"
+        CC: "clang-16"
+        CXX: "clang++-16"
+        ENABLE_CLANG_TIDY: "On"
+        ENABLE_STD_MODULES: "Off"
     agents:
       queue: "libcxx-builders"
       os: "linux"
@@ -264,14 +290,18 @@ steps:
           limit: 2
     timeout_in_minutes: 120
 
-  - label: "Clang 15"
-    command: "libcxx/utils/ci/run-buildbot generic-cxx2b"
+  - label: "Clang 17"
+    command: "libcxx/utils/ci/run-buildbot generic-cxx23"
     artifact_paths:
       - "**/test-results.xml"
       - "**/*.abilist"
     env:
-        CC: "clang-15"
-        CXX: "clang++-15"
+        # Note: Modules require and absolute path for clang-scan-deps
+        # https://github.com/llvm/llvm-project/issues/61006
+        CC: "/usr/lib/llvm-17/bin/clang"
+        CXX: "/usr/lib/llvm-17/bin/clang++"
+        CMAKE: "/opt/bin/cmake"
+        ENABLE_CLANG_TIDY: "On"
     agents:
       queue: "libcxx-builders"
       os: "linux"
@@ -292,6 +322,7 @@ steps:
       env:
           CC: "clang-${LLVM_HEAD_VERSION}"
           CXX: "clang++-${LLVM_HEAD_VERSION}"
+          ENABLE_CLANG_TIDY: "On"
       agents:
         queue: "libcxx-builders"
         os: "linux"
@@ -309,6 +340,7 @@ steps:
       env:
           CC: "clang-${LLVM_HEAD_VERSION}"
           CXX: "clang++-${LLVM_HEAD_VERSION}"
+          ENABLE_CLANG_TIDY: "On"
       agents:
         queue: "libcxx-builders"
         os: "linux"
@@ -326,6 +358,7 @@ steps:
       env:
           CC: "clang-${LLVM_HEAD_VERSION}"
           CXX: "clang++-${LLVM_HEAD_VERSION}"
+          ENABLE_CLANG_TIDY: "On"
       agents:
         queue: "libcxx-builders"
         os: "linux"
@@ -343,6 +376,7 @@ steps:
       env:
           CC: "clang-${LLVM_HEAD_VERSION}"
           CXX: "clang++-${LLVM_HEAD_VERSION}"
+          ENABLE_CLANG_TIDY: "On"
       agents:
         queue: "libcxx-builders"
         os: "linux"
@@ -382,6 +416,7 @@ steps:
     env:
         CC: "clang-${LLVM_HEAD_VERSION}"
         CXX: "clang++-${LLVM_HEAD_VERSION}"
+        ENABLE_CLANG_TIDY: "On"
     agents:
       queue: "libcxx-builders"
       os: "linux"
@@ -399,6 +434,7 @@ steps:
     env:
         CC: "clang-${LLVM_HEAD_VERSION}"
         CXX: "clang++-${LLVM_HEAD_VERSION}"
+        ENABLE_CLANG_TIDY: "On"
     agents:
       queue: "libcxx-builders"
       os: "linux"
@@ -408,14 +444,36 @@ steps:
           limit: 2
     timeout_in_minutes: 120
 
-  - label: "Assertions enabled"
-    command: "libcxx/utils/ci/run-buildbot generic-assertions"
+  - label: "Hardened mode"
+    command: "libcxx/utils/ci/run-buildbot generic-hardened-mode"
     artifact_paths:
       - "**/test-results.xml"
       - "**/*.abilist"
     env:
         CC: "clang-${LLVM_HEAD_VERSION}"
         CXX: "clang++-${LLVM_HEAD_VERSION}"
+        ENABLE_CLANG_TIDY: "On"
+    agents:
+      queue: "libcxx-builders"
+      os: "linux"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+    timeout_in_minutes: 120
+
+  - label: "Safe mode"
+    command: "libcxx/utils/ci/run-buildbot generic-safe-mode"
+    artifact_paths:
+      - "**/test-results.xml"
+      - "**/*.abilist"
+    env:
+        # Note: Modules require an absolute path for `clang-scan-deps` (see
+        # https://github.com/llvm/llvm-project/issues/61006).
+        CC: "/usr/lib/llvm-${LLVM_HEAD_VERSION}/bin/clang"
+        CXX: "/usr/lib/llvm-${LLVM_HEAD_VERSION}/bin/clang++"
+        CMAKE: "/opt/bin/cmake"
+        ENABLE_CLANG_TIDY: "On"
     agents:
       queue: "libcxx-builders"
       os: "linux"
@@ -433,6 +491,7 @@ steps:
     env:
         CC: "clang-${LLVM_HEAD_VERSION}"
         CXX: "clang++-${LLVM_HEAD_VERSION}"
+        ENABLE_CLANG_TIDY: "On"
     agents:
       queue: "libcxx-builders"
       os: "linux"
@@ -450,6 +509,25 @@ steps:
     env:
         CC: "clang-${LLVM_HEAD_VERSION}"
         CXX: "clang++-${LLVM_HEAD_VERSION}"
+        ENABLE_CLANG_TIDY: "On"
+    agents:
+      queue: "libcxx-builders"
+      os: "linux"
+    retry:
+      automatic:
+        - exit_status: -1  # Agent was lost
+          limit: 2
+    timeout_in_minutes: 120
+
+  - label: "Modular build with Local Submodule Visibility"
+    command: "libcxx/utils/ci/run-buildbot generic-modules-lsv"
+    artifact_paths:
+      - "**/test-results.xml"
+      - "**/*.abilist"
+    env:
+        CC: "clang-${LLVM_HEAD_VERSION}"
+        CXX: "clang++-${LLVM_HEAD_VERSION}"
+        ENABLE_CLANG_TIDY: "On"
     agents:
       queue: "libcxx-builders"
       os: "linux"
@@ -467,8 +545,12 @@ steps:
         - "**/test-results.xml"
         - "**/*.abilist"
       env:
-          CC: "clang-${LLVM_HEAD_VERSION}"
-          CXX: "clang++-${LLVM_HEAD_VERSION}"
+          # Note: Modules require and absolute path for clang-scan-deps
+          # https://github.com/llvm/llvm-project/issues/61006
+          CC: "/usr/lib/llvm-${LLVM_HEAD_VERSION}/bin/clang"
+          CXX: "/usr/lib/llvm-${LLVM_HEAD_VERSION}/bin/clang++"
+          CMAKE: "/opt/bin/cmake"
+          ENABLE_CLANG_TIDY: "On"
       agents:
         queue: "libcxx-builders"
         os: "linux"
@@ -484,8 +566,12 @@ steps:
         - "**/test-results.xml"
         - "**/*.abilist"
       env:
-          CC: "clang-${LLVM_HEAD_VERSION}"
-          CXX: "clang++-${LLVM_HEAD_VERSION}"
+          # Note: Modules require and absolute path for clang-scan-deps
+          # https://github.com/llvm/llvm-project/issues/61006
+          CC: "/usr/lib/llvm-${LLVM_HEAD_VERSION}/bin/clang"
+          CXX: "/usr/lib/llvm-${LLVM_HEAD_VERSION}/bin/clang++"
+          CMAKE: "/opt/bin/cmake"
+          ENABLE_CLANG_TIDY: "On"
       agents:
         queue: "libcxx-builders"
         os: "linux"
@@ -501,25 +587,12 @@ steps:
         - "**/test-results.xml"
         - "**/*.abilist"
       env:
-          CC: "clang-${LLVM_HEAD_VERSION}"
-          CXX: "clang++-${LLVM_HEAD_VERSION}"
-      agents:
-        queue: "libcxx-builders"
-        os: "linux"
-      retry:
-        automatic:
-          - exit_status: -1  # Agent was lost
-            limit: 2
-      timeout_in_minutes: 120
-
-    - label: "No fstream"
-      command: "libcxx/utils/ci/run-buildbot generic-no-fstream"
-      artifact_paths:
-        - "**/test-results.xml"
-        - "**/*.abilist"
-      env:
-          CC: "clang-${LLVM_HEAD_VERSION}"
-          CXX: "clang++-${LLVM_HEAD_VERSION}"
+          # Note: Modules require and absolute path for clang-scan-deps
+          # https://github.com/llvm/llvm-project/issues/61006
+          CC: "/usr/lib/llvm-${LLVM_HEAD_VERSION}/bin/clang"
+          CXX: "/usr/lib/llvm-${LLVM_HEAD_VERSION}/bin/clang++"
+          CMAKE: "/opt/bin/cmake"
+          ENABLE_CLANG_TIDY: "On"
       agents:
         queue: "libcxx-builders"
         os: "linux"
@@ -535,8 +608,12 @@ steps:
         - "**/test-results.xml"
         - "**/*.abilist"
       env:
-          CC: "clang-${LLVM_HEAD_VERSION}"
-          CXX: "clang++-${LLVM_HEAD_VERSION}"
+          # Note: Modules require and absolute path for clang-scan-deps
+          # https://github.com/llvm/llvm-project/issues/61006
+          CC: "/usr/lib/llvm-${LLVM_HEAD_VERSION}/bin/clang"
+          CXX: "/usr/lib/llvm-${LLVM_HEAD_VERSION}/bin/clang++"
+          CMAKE: "/opt/bin/cmake"
+          ENABLE_CLANG_TIDY: "On"
       agents:
         queue: "libcxx-builders"
         os: "linux"
@@ -552,8 +629,12 @@ steps:
         - "**/test-results.xml"
         - "**/*.abilist"
       env:
-          CC: "clang-${LLVM_HEAD_VERSION}"
-          CXX: "clang++-${LLVM_HEAD_VERSION}"
+          # Note: Modules require and absolute path for clang-scan-deps
+          # https://github.com/llvm/llvm-project/issues/61006
+          CC: "/usr/lib/llvm-${LLVM_HEAD_VERSION}/bin/clang"
+          CXX: "/usr/lib/llvm-${LLVM_HEAD_VERSION}/bin/clang++"
+          CMAKE: "/opt/bin/cmake"
+          ENABLE_CLANG_TIDY: "On"
       agents:
         queue: "libcxx-builders"
         os: "linux"
@@ -569,8 +650,30 @@ steps:
         - "**/test-results.xml"
         - "**/*.abilist"
       env:
+          # Note: Modules require and absolute path for clang-scan-deps
+          # https://github.com/llvm/llvm-project/issues/61006
+          CC: "/usr/lib/llvm-${LLVM_HEAD_VERSION}/bin/clang"
+          CXX: "/usr/lib/llvm-${LLVM_HEAD_VERSION}/bin/clang++"
+          CMAKE: "/opt/bin/cmake"
+          ENABLE_CLANG_TIDY: "On"
+      agents:
+        queue: "libcxx-builders"
+        os: "linux"
+      retry:
+        automatic:
+          - exit_status: -1  # Agent was lost
+            limit: 2
+      timeout_in_minutes: 120
+
+    - label: "No time zone database"
+      command: "libcxx/utils/ci/run-buildbot generic-no-tzdb"
+      artifact_paths:
+        - "**/test-results.xml"
+        - "**/*.abilist"
+      env:
           CC: "clang-${LLVM_HEAD_VERSION}"
           CXX: "clang++-${LLVM_HEAD_VERSION}"
+          ENABLE_CLANG_TIDY: "On"
       agents:
         queue: "libcxx-builders"
         os: "linux"
@@ -586,8 +689,12 @@ steps:
         - "**/test-results.xml"
         - "**/*.abilist"
       env:
-          CC: "clang-${LLVM_HEAD_VERSION}"
-          CXX: "clang++-${LLVM_HEAD_VERSION}"
+          # Note: Modules require and absolute path for clang-scan-deps
+          # https://github.com/llvm/llvm-project/issues/61006
+          CC: "/usr/lib/llvm-${LLVM_HEAD_VERSION}/bin/clang"
+          CXX: "/usr/lib/llvm-${LLVM_HEAD_VERSION}/bin/clang++"
+          CMAKE: "/opt/bin/cmake"
+          ENABLE_CLANG_TIDY: "On"
       agents:
         queue: "libcxx-builders"
         os: "linux"
@@ -598,13 +705,17 @@ steps:
       timeout_in_minutes: 120
 
     - label: "No exceptions"
-      command: "libcxx/utils/ci/run-buildbot generic-noexceptions"
+      command: "libcxx/utils/ci/run-buildbot generic-no-exceptions"
       artifact_paths:
         - "**/test-results.xml"
         - "**/*.abilist"
       env:
-          CC: "clang-${LLVM_HEAD_VERSION}"
-          CXX: "clang++-${LLVM_HEAD_VERSION}"
+          # Note: Modules require and absolute path for clang-scan-deps
+          # https://github.com/llvm/llvm-project/issues/61006
+          CC: "/usr/lib/llvm-${LLVM_HEAD_VERSION}/bin/clang"
+          CXX: "/usr/lib/llvm-${LLVM_HEAD_VERSION}/bin/clang++"
+          CMAKE: "/opt/bin/cmake"
+          ENABLE_CLANG_TIDY: "On"
       agents:
         queue: "libcxx-builders"
         os: "linux"
@@ -622,6 +733,7 @@ steps:
     env:
         CC: "clang-${LLVM_HEAD_VERSION}"
         CXX: "clang++-${LLVM_HEAD_VERSION}"
+        ENABLE_CLANG_TIDY: "On"
     agents:
       queue: "libcxx-builders"
       os: "linux"
@@ -640,6 +752,7 @@ steps:
     env:
         CC: "clang-${LLVM_HEAD_VERSION}"
         CXX: "clang++-${LLVM_HEAD_VERSION}"
+        ENABLE_CLANG_TIDY: "On"
     agents:
       queue: "libcxx-builders"
       os: "linux"
@@ -690,6 +803,32 @@ steps:
           - exit_status: -1  # Agent was lost
             limit: 2
 
+    - label: "Clang-cl (Debug mode)"
+      command: "bash libcxx/utils/ci/run-buildbot clang-cl-debug"
+      artifact_paths:
+        - "**/test-results.xml"
+        - "**/*.abilist"
+      agents:
+        queue: "windows"
+      retry:
+        automatic:
+          - exit_status: -1  # Agent was lost
+            limit: 2
+      timeout_in_minutes: 120
+
+    - label: "Clang-cl (Static CRT)"
+      command: "bash libcxx/utils/ci/run-buildbot clang-cl-static-crt"
+      artifact_paths:
+        - "**/test-results.xml"
+        - "**/*.abilist"
+      agents:
+        queue: "windows"
+      retry:
+        automatic:
+          - exit_status: -1  # Agent was lost
+            limit: 2
+      timeout_in_minutes: 120
+
     - label: "MinGW (DLL, x86_64)"
       command: "bash libcxx/utils/ci/run-buildbot mingw-dll"
       artifact_paths:
@@ -729,10 +868,10 @@ steps:
             limit: 2
       timeout_in_minutes: 120
 
-  - group: ":apple: Apple"
+  - group: ":mac: Apple"
     steps:
     - label: "MacOS x86_64"
-      command: "libcxx/utils/ci/run-buildbot apple-cxx20"
+      command: "libcxx/utils/ci/run-buildbot generic-cxx23"
       artifact_paths:
         - "**/test-results.xml"
         - "**/*.abilist"
@@ -747,7 +886,7 @@ steps:
       timeout_in_minutes: 120
 
     - label: "MacOS arm64"
-      command: "libcxx/utils/ci/run-buildbot apple-cxx20"
+      command: "libcxx/utils/ci/run-buildbot generic-cxx23"
       artifact_paths:
         - "**/test-results.xml"
         - "**/*.abilist"
@@ -755,6 +894,20 @@ steps:
         queue: "libcxx-builders"
         os: "macos"
         arch: "arm64"
+      retry:
+        automatic:
+          - exit_status: -1  # Agent was lost
+            limit: 2
+      timeout_in_minutes: 120
+
+    - label: "MacOS with Modules"
+      command: "libcxx/utils/ci/run-buildbot generic-modules"
+      artifact_paths:
+        - "**/test-results.xml"
+        - "**/*.abilist"
+      agents:
+        queue: "libcxx-builders"
+        os: "macos"
       retry:
         automatic:
           - exit_status: -1  # Agent was lost
@@ -778,8 +931,8 @@ steps:
       timeout_in_minutes: 120
 
     # Test back-deployment to older Apple platforms
-    - label: "Apple back-deployment macosx10.9"
-      command: "libcxx/utils/ci/run-buildbot apple-system-backdeployment-10.9"
+    - label: "Apple back-deployment macosx10.13"
+      command: "libcxx/utils/ci/run-buildbot apple-system-backdeployment-10.13"
       artifact_paths:
         - "**/test-results.xml"
         - "**/*.abilist"
@@ -808,29 +961,31 @@ steps:
             limit: 2
       timeout_in_minutes: 120
 
-    - label: "Apple back-deployment macosx11.0 arm64"
-      command: "libcxx/utils/ci/run-buildbot apple-system-backdeployment-11.0"
-      artifact_paths:
-        - "**/test-results.xml"
-        - "**/*.abilist"
-      agents:
-        queue: "libcxx-builders"
-        os: "macos"
-        arch: "arm64"
-      retry:
-        automatic:
-          - exit_status: -1  # Agent was lost
-            limit: 2
-      timeout_in_minutes: 120
+    # TODO: Re-enable this once we've figured out how to run back-deployment testing on arm64 on recent OSes
+    # - label: "Apple back-deployment macosx11.0 arm64"
+    #   command: "libcxx/utils/ci/run-buildbot apple-system-backdeployment-11.0"
+    #   artifact_paths:
+    #     - "**/test-results.xml"
+    #     - "**/*.abilist"
+    #   agents:
+    #     queue: "libcxx-builders"
+    #     os: "macos"
+    #     arch: "arm64"
+    #   retry:
+    #     automatic:
+    #       - exit_status: -1  # Agent was lost
+    #         limit: 2
+    #   timeout_in_minutes: 120
 
-    - label: "Apple back-deployment with assertions enabled"
-      command: "libcxx/utils/ci/run-buildbot apple-system-backdeployment-assertions-11.0"
+    - label: "Apple back-deployment with hardening enabled"
+      command: "libcxx/utils/ci/run-buildbot apple-system-backdeployment-hardened-11.0"
       artifact_paths:
         - "**/test-results.xml"
         - "**/*.abilist"
       agents:
         queue: "libcxx-builders"
         os: "macos"
+        arch: "x86_64" # TODO: Remove this once we are able to run back-deployment on arm64 again, since this isn't x86_64 specific
       retry:
         automatic:
           - exit_status: -1  # Agent was lost
@@ -854,7 +1009,7 @@ steps:
       timeout_in_minutes: 120
 
     - label: "AArch64 -fno-exceptions"
-      command: "libcxx/utils/ci/run-buildbot aarch64-noexceptions"
+      command: "libcxx/utils/ci/run-buildbot aarch64-no-exceptions"
       artifact_paths:
         - "**/test-results.xml"
         - "**/*.abilist"
@@ -882,7 +1037,7 @@ steps:
       timeout_in_minutes: 120
 
     - label: "Armv8 -fno-exceptions"
-      command: "libcxx/utils/ci/run-buildbot armv8-noexceptions"
+      command: "libcxx/utils/ci/run-buildbot armv8-no-exceptions"
       artifact_paths:
         - "**/test-results.xml"
         - "**/*.abilist"
@@ -910,7 +1065,7 @@ steps:
       timeout_in_minutes: 120
 
     - label: "Armv7 -fno-exceptions"
-      command: "libcxx/utils/ci/run-buildbot armv7-noexceptions"
+      command: "libcxx/utils/ci/run-buildbot armv7-no-exceptions"
       artifact_paths:
         - "**/test-results.xml"
         - "**/*.abilist"
@@ -955,6 +1110,26 @@ steps:
       agents:
           queue: libcxx-builders
           os: aix
+      retry:
+        automatic:
+          - exit_status: -1  # Agent was lost
+            limit: 2
+      timeout_in_minutes: 120
+
+  - group: ":freebsd: FreeBSD"
+    steps:
+    - label: "FreeBSD 13 amd64"
+      command: "libcxx/utils/ci/run-buildbot generic-cxx23"
+      artifact_paths:
+        - "**/test-results.xml"
+        - "**/*.abilist"
+      env:
+          CC: "clang16"
+          CXX: "clang++16"
+          ENABLE_STD_MODULES: "Off"
+      agents:
+        queue: "libcxx-builders"
+        os: "freebsd"
       retry:
         automatic:
           - exit_status: -1  # Agent was lost

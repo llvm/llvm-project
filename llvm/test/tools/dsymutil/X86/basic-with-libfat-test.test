@@ -1,4 +1,8 @@
-RUN: dsymutil -f -o - -oso-prepend-path=%p/.. %p/../Inputs/basic-with-libfat-test.macho.x86_64 | llvm-dwarfdump - | FileCheck %s 
+RUN: dsymutil -f -o - -oso-prepend-path=%p/.. %p/../Inputs/basic-with-libfat-test.macho.x86_64 | llvm-dwarfdump - | FileCheck %s
+
+RUN: dsymutil --linker llvm -f -o - -oso-prepend-path=%p/.. \
+RUN:   %p/../Inputs/basic-with-libfat-test.macho.x86_64 | llvm-dwarfdump - \
+RUN:   | FileCheck %s
 
 The test binary was created by force-linking the libfat-test.a fat archive
 with the basic linking test archive, like so:

@@ -9,23 +9,24 @@
 #ifndef TRACKING_MEM_RES_H
 #define TRACKING_MEM_RES_H
 
+#include <cstddef>
 #include <memory_resource>
 
 class TrackingMemRes : public std::pmr::memory_resource {
 public:
-  TrackingMemRes(size_t* last_size, size_t* last_alginment) : last_size_(last_size), last_alginment_(last_alginment) {}
+  TrackingMemRes(std::size_t* last_size, size_t* last_alginment) : last_size_(last_size), last_alginment_(last_alginment) {}
 
 private:
-  size_t* last_size_;
-  size_t* last_alginment_;
-  void* do_allocate(size_t size, size_t alignment) override {
+  std::size_t* last_size_;
+  std::size_t* last_alginment_;
+  void* do_allocate(std::size_t size, size_t alignment) override {
     *last_size_      = size;
     *last_alginment_ = alignment;
 
     return std::pmr::new_delete_resource()->allocate(size, alignment);
   }
 
-  void do_deallocate(void* ptr, size_t size, size_t alignment) override {
+  void do_deallocate(void* ptr, std::size_t size, size_t alignment) override {
     *last_size_      = size;
     *last_alginment_ = alignment;
     std::pmr::new_delete_resource()->deallocate(ptr, size, alignment);

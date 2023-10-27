@@ -6,7 +6,6 @@ from __future__ import print_function
 """
 
 import sys
-import imp
 import os
 import posixpath
 import threading

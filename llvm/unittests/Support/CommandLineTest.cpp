@@ -10,11 +10,9 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/Config/config.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/Host.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
@@ -22,6 +20,8 @@
 #include "llvm/Support/StringSaver.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/Host.h"
+#include "llvm/TargetParser/Triple.h"
 #include "llvm/Testing/Support/SupportHelpers.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -1294,7 +1294,8 @@ struct AutoDeleteFile {
   }
 };
 
-class PrintOptionInfoTest : public ::testing::Test {
+template <void (*Func)(const cl::Option &)>
+class PrintOptionTestBase : public ::testing::Test {
 public:
   // Return std::string because the output of a failing EXPECT check is
   // unreadable for StringRef. It also avoids any lifetime issues.
@@ -1309,7 +1310,7 @@ public:
 
       StackOption<OptionValue> TestOption(Opt, cl::desc(HelpText),
                                           OptionAttributes...);
-      printOptionInfo(TestOption, 26);
+      Func(TestOption);
       outs().flush();
     }
     auto Buffer = MemoryBuffer::getFile(File.FilePath);
@@ -1321,14 +1322,15 @@ public:
   enum class OptionValue { Val };
   const StringRef Opt = "some-option";
   const StringRef HelpText = "some help";
+};
 
-private:
   // This is a workaround for cl::Option sub-classes having their
   // printOptionInfo functions private.
-  void printOptionInfo(const cl::Option &O, size_t Width) {
-    O.printOptionInfo(Width);
-  }
-};
+void printOptionInfo(const cl::Option &O) {
+  O.printOptionInfo(/*GlobalWidth=*/26);
+}
+
+using PrintOptionInfoTest = PrintOptionTestBase<printOptionInfo>;
 
 TEST_F(PrintOptionInfoTest, PrintOptionInfoValueOptionalWithoutSentinel) {
   std::string Output =
@@ -1402,7 +1404,7 @@ TEST_F(PrintOptionInfoTest, PrintOptionInfoMultilineValueDescription) {
                                     "which has a really long description\n"
                                     "thus it is multi-line."),
                          clEnumValN(OptionValue::Val, "",
-                                    "This is an unnamed enum value option\n"
+                                    "This is an unnamed enum value\n"
                                     "Should be indented as well")));
 
   // clang-format off
@@ -1411,9 +1413,38 @@ TEST_F(PrintOptionInfoTest, PrintOptionInfoMultilineValueDescription) {
              "    =v1                 -   This is the first enum value\n"
              "                            which has a really long description\n"
              "                            thus it is multi-line.\n"
-             "    =<empty>            -   This is an unnamed enum value option\n"
+             "    =<empty>            -   This is an unnamed enum value\n"
              "                            Should be indented as well\n").str());
   // clang-format on
+}
+
+void printOptionValue(const cl::Option &O) {
+  O.printOptionValue(/*GlobalWidth=*/12, /*Force=*/true);
+}
+
+using PrintOptionValueTest = PrintOptionTestBase<printOptionValue>;
+
+TEST_F(PrintOptionValueTest, PrintOptionDefaultValue) {
+  std::string Output =
+      runTest(cl::init(OptionValue::Val),
+              cl::values(clEnumValN(OptionValue::Val, "v1", "desc1")));
+
+  EXPECT_EQ(Output, ("    --" + Opt + " = v1       (default: v1)\n").str());
+}
+
+TEST_F(PrintOptionValueTest, PrintOptionNoDefaultValue) {
+  std::string Output =
+      runTest(cl::values(clEnumValN(OptionValue::Val, "v1", "desc1")));
+
+  // Note: the option still has a (zero-initialized) value, but the default
+  // is invalid and doesn't match any value.
+  EXPECT_EQ(Output, ("    --" + Opt + " = v1       (default: )\n").str());
+}
+
+TEST_F(PrintOptionValueTest, PrintOptionUnknownValue) {
+  std::string Output = runTest(cl::init(OptionValue::Val));
+
+  EXPECT_EQ(Output, ("    --" + Opt + " = *unknown option value*\n").str());
 }
 
 class GetOptionWidthTest : public ::testing::Test {

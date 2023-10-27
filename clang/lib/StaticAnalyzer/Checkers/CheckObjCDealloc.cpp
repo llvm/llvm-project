@@ -321,7 +321,9 @@ ObjCDeallocChecker::getInstanceSymbolFromIvarSymbol(SymbolRef IvarSym) const {
   if (!IvarRegion)
     return nullptr;
 
-  return IvarRegion->getSymbolicBase()->getSymbol();
+  const SymbolicRegion *SR = IvarRegion->getSymbolicBase();
+  assert(SR && "Symbolic base should not be nullptr");
+  return SR->getSymbol();
 }
 
 /// If we are in -dealloc or -dealloc is on the stack, handle the call if it is
@@ -752,7 +754,7 @@ bool ObjCDeallocChecker::diagnoseMistakenDealloc(SymbolRef DeallocedValue,
 
 ObjCDeallocChecker::ObjCDeallocChecker()
     : NSObjectII(nullptr), SenTestCaseII(nullptr), XCTestCaseII(nullptr),
-      CIFilterII(nullptr) {
+      Block_releaseII(nullptr), CIFilterII(nullptr) {
 
   MissingReleaseBugType.reset(
       new BugType(this, "Missing ivar release (leak)",
@@ -818,8 +820,8 @@ const ObjCPropertyDecl *ObjCDeallocChecker::findShadowedPropertyDecl(
 
   IdentifierInfo *ID = PropDecl->getIdentifier();
   DeclContext::lookup_result R = CatDecl->getClassInterface()->lookup(ID);
-  for (DeclContext::lookup_iterator I = R.begin(), E = R.end(); I != E; ++I) {
-    auto *ShadowedPropDecl = dyn_cast<ObjCPropertyDecl>(*I);
+  for (const NamedDecl *D : R) {
+    auto *ShadowedPropDecl = dyn_cast<ObjCPropertyDecl>(D);
     if (!ShadowedPropDecl)
       continue;
 

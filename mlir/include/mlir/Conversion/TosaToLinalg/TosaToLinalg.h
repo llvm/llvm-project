@@ -14,6 +14,7 @@
 #ifndef MLIR_CONVERSION_TOSATOLINALG_TOSATOLINALG_H
 #define MLIR_CONVERSION_TOSATOLINALG_TOSATOLINALG_H
 
+#include "mlir/Dialect/Tosa/Transforms/Passes.h"
 #include "mlir/Pass/Pass.h"
 
 namespace mlir {
@@ -31,8 +32,11 @@ std::unique_ptr<Pass> createTosaToLinalgNamed();
 /// the pass, the function will only contain linalg ops or standard ops if the
 /// pipeline succeeds.  The option to disable decompositions is available for
 /// benchmarking performance improvements from the canonicalizations.
-void addTosaToLinalgPasses(OpPassManager &pm,
-                           bool disableTosaDecompositions = false);
+void addTosaToLinalgPasses(
+    OpPassManager &pm, const TosaToLinalgOptions &options,
+    // Note: Default to 'none' level unless otherwise specified.
+    tosa::ValidationOptions const &validationOptions =
+        tosa::ValidationOptions().setLevel(tosa::TosaLevelEnum::None));
 
 /// Populates conversion passes from TOSA dialect to Linalg dialect.
 void populateTosaToLinalgConversionPatterns(RewritePatternSet *patterns);

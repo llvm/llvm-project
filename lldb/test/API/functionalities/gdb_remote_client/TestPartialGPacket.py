@@ -6,18 +6,18 @@ from lldbsuite.test.lldbgdbclient import GDBRemoteTestBase
 
 
 class TestPartialGPacket(GDBRemoteTestBase):
-
     @skipIfXmlSupportMissing
     @skipIfRemote
     def test(self):
         """
         Test GDB remote fallback to 'p' packet when 'g' packet does not include all registers.
         """
-        class MyResponder(MockGDBServerResponder):
 
+        class MyResponder(MockGDBServerResponder):
             def qXferRead(self, obj, annex, offset, length):
                 if annex == "target.xml":
-                    return """<?xml version="1.0"?>
+                    return (
+                        """<?xml version="1.0"?>
                         <!DOCTYPE feature SYSTEM "gdb-target.dtd">
                         <target>
                         <architecture>arm</architecture>
@@ -46,7 +46,9 @@ class TestPartialGPacket(GDBRemoteTestBase):
                         <reg name="FAULTMASK" bitsize="32" regnum="30" type="uint32" group="general"/>
                         <reg name="CONTROL" bitsize="32" regnum="31" type="uint32" group="general"/>
                         </feature>
-                        </target>""", False
+                        </target>""",
+                        False,
+                    )
                 else:
                     return None, False
 
@@ -79,8 +81,7 @@ class TestPartialGPacket(GDBRemoteTestBase):
         self.server.responder = MyResponder()
         if self.TraceOn():
             self.runCmd("log enable gdb-remote packets")
-            self.addTearDownHook(
-                lambda: self.runCmd("log disable gdb-remote packets"))
+            self.addTearDownHook(lambda: self.runCmd("log disable gdb-remote packets"))
 
         self.dbg.SetDefaultArchitecture("armv7em")
         target = self.dbg.CreateTargetWithFileAndArch(None, None)
@@ -93,14 +94,13 @@ class TestPartialGPacket(GDBRemoteTestBase):
             interp.HandleCommand("target list", result)
             print(result.GetOutput())
 
-        r0_valobj = process.GetThreadAtIndex(
-            0).GetFrameAtIndex(0).FindRegister("r0")
+        r0_valobj = process.GetThreadAtIndex(0).GetFrameAtIndex(0).FindRegister("r0")
         self.assertEqual(r0_valobj.GetValueAsUnsigned(), 0x20)
 
-        pc_valobj = process.GetThreadAtIndex(
-            0).GetFrameAtIndex(0).FindRegister("pc")
-        self.assertEqual(pc_valobj.GetValueAsUnsigned(), 0x0800d22e)
+        pc_valobj = process.GetThreadAtIndex(0).GetFrameAtIndex(0).FindRegister("pc")
+        self.assertEqual(pc_valobj.GetValueAsUnsigned(), 0x0800D22E)
 
-        pc_valobj = process.GetThreadAtIndex(
-            0).GetFrameAtIndex(0).FindRegister("CONTROL")
-        self.assertEqual(pc_valobj.GetValueAsUnsigned(), 0x3f8ccccd)
+        pc_valobj = (
+            process.GetThreadAtIndex(0).GetFrameAtIndex(0).FindRegister("CONTROL")
+        )
+        self.assertEqual(pc_valobj.GetValueAsUnsigned(), 0x3F8CCCCD)

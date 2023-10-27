@@ -1,4 +1,4 @@
-# RUN: llvm-mc %s -arch=mips -mcpu=mips32r2 -mattr=+msa -show-encoding | FileCheck %s
+# RUN: llvm-mc %s -triple=mips -mcpu=mips32r2 -mattr=+msa -show-encoding | FileCheck %s
 #
 # CHECK:        and.v   $w25, $w20, $w27        # encoding: [0x78,0x1b,0xa6,0x5e]
 # CHECK:        bmnz.v  $w17, $w6, $w7          # encoding: [0x78,0x87,0x34,0x5e]

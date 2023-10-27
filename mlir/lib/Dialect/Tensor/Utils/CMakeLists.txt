@@ -7,6 +7,8 @@ add_mlir_dialect_library(MLIRTensorUtils
   LINK_LIBS PUBLIC
   MLIRAffineDialect
   MLIRArithDialect
+  MLIRArithUtils
   MLIRIR
   MLIRTensorDialect
+  MLIRValueBoundsOpInterface
 )

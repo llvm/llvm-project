@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -std=c++11 -triple x86_64-apple-darwin10 %s -emit-llvm -o %t
+// RUN: %clang_cc1 -std=c++11 -triple x86_64-apple-darwin10 %s -emit-llvm -o %t
 // RUN: FileCheck %s < %t
 // RUN: FileCheck -check-prefix=CHECK-PR10720 %s < %t
 
@@ -93,24 +93,21 @@ namespace InitVTable {
     B(int);
   };
 
-  // CHECK-LABEL: define{{.*}} void @_ZN10InitVTable1BC2Ev(%"struct.InitVTable::B"* {{[^,]*}} %this) unnamed_addr
-  // CHECK:      [[T0:%.*]] = bitcast [[B:%.*]]* [[THIS:%.*]] to i32 (...)***
-  // CHECK-NEXT: store i32 (...)** bitcast (i8** getelementptr inbounds ({ [3 x i8*] }, { [3 x i8*] }* @_ZTVN10InitVTable1BE, i32 0, inrange i32 0, i32 2) to i32 (...)**), i32 (...)*** [[T0]]
-  // CHECK:      [[VTBL:%.*]] = load i32 ([[B]]*)**, i32 ([[B]]*)*** {{%.*}}
-  // CHECK-NEXT: [[FNP:%.*]] = getelementptr inbounds i32 ([[B]]*)*, i32 ([[B]]*)** [[VTBL]], i64 0
-  // CHECK-NEXT: [[FN:%.*]] = load i32 ([[B]]*)*, i32 ([[B]]*)** [[FNP]]
-  // CHECK-NEXT: [[ARG:%.*]] = call noundef i32 [[FN]]([[B]]* {{[^,]*}} [[THIS]])
-  // CHECK-NEXT: call void @_ZN10InitVTable1AC2Ei({{.*}}* {{[^,]*}} {{%.*}}, i32 noundef [[ARG]])
-  // CHECK-NEXT: [[T0:%.*]] = bitcast [[B]]* [[THIS]] to i32 (...)***
-  // CHECK-NEXT: store i32 (...)** bitcast (i8** getelementptr inbounds ({ [3 x i8*] }, { [3 x i8*] }* @_ZTVN10InitVTable1BE, i32 0, inrange i32 0, i32 2) to i32 (...)**), i32 (...)*** [[T0]]
+  // CHECK-LABEL: define{{.*}} void @_ZN10InitVTable1BC2Ev(ptr {{[^,]*}} %this) unnamed_addr
+  // CHECK: store ptr getelementptr inbounds ({ [3 x ptr] }, ptr @_ZTVN10InitVTable1BE, i32 0, inrange i32 0, i32 2), ptr [[THIS:%.*]],
+  // CHECK:      [[VTBL:%.*]] = load ptr, ptr {{%.*}}
+  // CHECK-NEXT: [[FNP:%.*]] = getelementptr inbounds ptr, ptr [[VTBL]], i64 0
+  // CHECK-NEXT: [[FN:%.*]] = load ptr, ptr [[FNP]]
+  // CHECK-NEXT: [[ARG:%.*]] = call noundef i32 [[FN]](ptr {{[^,]*}} [[THIS]])
+  // CHECK-NEXT: call void @_ZN10InitVTable1AC2Ei(ptr {{[^,]*}} {{%.*}}, i32 noundef [[ARG]])
+  // CHECK-NEXT: store ptr getelementptr inbounds ({ [3 x ptr] }, ptr @_ZTVN10InitVTable1BE, i32 0, inrange i32 0, i32 2), ptr [[THIS]]
   // CHECK-NEXT: ret void
   B::B() : A(foo()) {}
 
-  // CHECK-LABEL: define{{.*}} void @_ZN10InitVTable1BC2Ei(%"struct.InitVTable::B"* {{[^,]*}} %this, i32 noundef %x) unnamed_addr
+  // CHECK-LABEL: define{{.*}} void @_ZN10InitVTable1BC2Ei(ptr {{[^,]*}} %this, i32 noundef %x) unnamed_addr
   // CHECK:      [[ARG:%.*]] = add nsw i32 {{%.*}}, 5
-  // CHECK-NEXT: call void @_ZN10InitVTable1AC2Ei({{.*}}* {{[^,]*}} {{%.*}}, i32 noundef [[ARG]])
-  // CHECK-NEXT: [[T0:%.*]] = bitcast [[B]]* {{%.*}} to i32 (...)***
-  // CHECK-NEXT: store i32 (...)** bitcast (i8** getelementptr inbounds ({ [3 x i8*] }, { [3 x i8*] }* @_ZTVN10InitVTable1BE, i32 0, inrange i32 0, i32 2) to i32 (...)**), i32 (...)*** [[T0]]
+  // CHECK-NEXT: call void @_ZN10InitVTable1AC2Ei(ptr {{[^,]*}} {{%.*}}, i32 noundef [[ARG]])
+  // CHECK-NEXT: store ptr getelementptr inbounds ({ [3 x ptr] }, ptr @_ZTVN10InitVTable1BE, i32 0, inrange i32 0, i32 2), ptr {{%.*}}
   // CHECK-NEXT: ret void
   B::B(int x) : A(x + 5) {}
 }
@@ -125,7 +122,7 @@ namespace rdar9694300 {
     // CHECK: alloca
     X x;
     // CHECK-NEXT: [[I:%.*]] = alloca i32
-    // CHECK-NEXT: store i32 17, i32* [[I]]
+    // CHECK-NEXT: store i32 17, ptr [[I]]
     int i = 17;
     // CHECK-NEXT: ret void
   }
@@ -163,7 +160,7 @@ template<typename T> struct X;
 
 // Make sure that the instantiated constructor initializes start and
 // end properly.
-// CHECK-LABEL: define linkonce_odr void @_ZN1XIiEC2ERKS0_(%struct.X* {{[^,]*}} %this, %struct.X* noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %other) unnamed_addr
+// CHECK-LABEL: define linkonce_odr void @_ZN1XIiEC2ERKS0_(ptr {{[^,]*}} %this, ptr noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %other) unnamed_addr
 // CHECK: {{store.*null}}
 // CHECK: {{store.*null}}
 // CHECK: ret

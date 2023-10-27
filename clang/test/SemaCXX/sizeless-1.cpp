@@ -73,7 +73,7 @@ void func(int sel) {
   svint8_t __attribute__((aligned(4))) aligned_int8_2; // expected-error {{'aligned' attribute cannot be applied to sizeless type 'svint8_t'}}
   svint8_t _Alignas(int) aligned_int8_3;               // expected-error {{'_Alignas' attribute cannot be applied to sizeless type 'svint8_t'}}
 
-  int _Alignas(svint8_t) aligned_int; // expected-error {{invalid application of 'alignof' to sizeless type 'svint8_t'}}
+  int _Alignas(svint8_t) aligned_int; // expected-error {{invalid application of '_Alignas' to sizeless type 'svint8_t'}}
 
   // Using pointers to sizeless data isn't wrong here, but because the
   // type is incomplete, it doesn't provide any alignment guarantees.
@@ -103,7 +103,7 @@ void func(int sel) {
   svint8_t bad_brace_init_int8_1 = {local_int8, 0};    // expected-error {{excess elements in initializer for indivisible sizeless type 'svint8_t'}}
   svint8_t bad_brace_init_int8_2 = {0};                // expected-error {{rvalue of type 'int'}}
   svint8_t bad_brace_init_int8_3 = {local_int16};      // expected-error {{lvalue of type 'svint16_t'}}
-  svint8_t bad_brace_init_int8_4 = {[0] = local_int8}; // expected-error {{designator in initializer for indivisible sizeless type 'svint8_t'}} expected-warning {{array designators are a C99 extension}}
+  svint8_t bad_brace_init_int8_4 = {[0] = local_int8}; // expected-error-re {{initialization of non-aggregate type 'svint8_t'{{.*}} with a designated initializer list}} expected-warning {{array designators are a C99 extension}}
   svint8_t bad_brace_init_int8_5 = {{local_int8}};     // expected-warning {{too many braces around initializer}}
   svint8_t bad_brace_init_int8_6 = {{local_int8, 0}};  // expected-warning {{too many braces around initializer}}
 
@@ -422,7 +422,7 @@ void cxx_only(int sel) {
   svint8_t bad_brace_init_int8_1{local_int8, 0};    // expected-error {{excess elements in initializer for indivisible sizeless type 'svint8_t'}}
   svint8_t bad_brace_init_int8_2{0};                // expected-error {{rvalue of type 'int'}}
   svint8_t bad_brace_init_int8_3{local_int16};      // expected-error {{lvalue of type 'svint16_t'}}
-  svint8_t bad_brace_init_int8_4{[0] = local_int8}; // expected-error {{designator in initializer for indivisible sizeless type 'svint8_t'}} expected-warning {{array designators are a C99 extension}}
+  svint8_t bad_brace_init_int8_4{[0] = local_int8}; // expected-error-re {{initialization of non-aggregate type 'svint8_t'{{.*}} with a designated initializer list}} expected-warning {{array designators are a C99 extension}}
   svint8_t bad_brace_init_int8_5{{local_int8}};     // expected-warning {{too many braces around initializer}}
   svint8_t bad_brace_init_int8_6{{local_int8, 0}};  // expected-warning {{too many braces around initializer}}
   svint8_t wrapper_init_int8{wrapper<svint8_t>()};

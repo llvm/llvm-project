@@ -1,7 +1,7 @@
 ! Test lowering of substrings to HLFIR
 ! Note: cse is run to make the expected output more readable by sharing
 ! the boilerplate between the different susbtring cases.
-! RUN: bbc -emit-fir -hlfir -o - %s | fir-opt -cse -o - | FileCheck %s
+! RUN: bbc -emit-hlfir -o - %s | fir-opt -cse -o - | FileCheck %s
 
 ! CHECK-LABEL:   func.func @_QPcst_len(
 subroutine cst_len(array, scalar)
@@ -24,7 +24,7 @@ subroutine cst_len(array, scalar)
 ! CHECK:  %[[VAL_34:.*]] = hlfir.designate %[[VAL_7]]#0 (%[[VAL_15]]:%[[VAL_5]]:%[[VAL_15]]) substr %[[VAL_16]], %[[VAL_3]]  shape %[[VAL_6]] typeparams %[[VAL_33]] : (!fir.ref<!fir.array<100x!fir.char<1,10>>>, index, index, index, index, index, !fir.shape<1>, index) -> !fir.box<!fir.array<100x!fir.char<1,9>>>
 
   print *, scalar(2:5)
-! CHECK:  %[[VAL_40:.*]] = hlfir.designate %[[VAL_9]]#0  substr %[[VAL_16]], %[[VAL_17]]  typeparams %[[VAL_18]] : (!fir.boxchar<1>, index, index, index) -> !fir.ref<!fir.char<1,4>>
+! CHECK:  %[[VAL_40:.*]] = hlfir.designate %[[VAL_9]]#0  substr %[[VAL_16]], %[[VAL_17]]  typeparams %[[VAL_18]] : (!fir.ref<!fir.char<1,10>>, index, index, index) -> !fir.ref<!fir.char<1,4>>
 end subroutine
 
 ! CHECK-LABEL:   func.func @_QPdyn_len(

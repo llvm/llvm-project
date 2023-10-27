@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/Iterators.h"
+#include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Pass/Pass.h"
 
 using namespace mlir;
@@ -64,6 +66,46 @@ static void testPureCallbacks(Operation *op) {
   llvm::outs() << "Region post-order visits"
                << "\n";
   op->walk<WalkOrder::PostOrder>(regionPure);
+
+  llvm::outs() << "Op reverse post-order visits"
+               << "\n";
+  op->walk<WalkOrder::PostOrder, ReverseIterator>(opPure);
+  llvm::outs() << "Block reverse post-order visits"
+               << "\n";
+  op->walk<WalkOrder::PostOrder, ReverseIterator>(blockPure);
+  llvm::outs() << "Region reverse post-order visits"
+               << "\n";
+  op->walk<WalkOrder::PostOrder, ReverseIterator>(regionPure);
+
+  // This test case tests "NoGraphRegions = true", so start the walk with
+  // functions.
+  op->walk([&](FunctionOpInterface funcOp) {
+    llvm::outs() << "Op forward dominance post-order visits"
+                 << "\n";
+    funcOp->walk<WalkOrder::PostOrder,
+                 ForwardDominanceIterator</*NoGraphRegions=*/true>>(opPure);
+    llvm::outs() << "Block forward dominance post-order visits"
+                 << "\n";
+    funcOp->walk<WalkOrder::PostOrder,
+                 ForwardDominanceIterator</*NoGraphRegions=*/true>>(blockPure);
+    llvm::outs() << "Region forward dominance post-order visits"
+                 << "\n";
+    funcOp->walk<WalkOrder::PostOrder,
+                 ForwardDominanceIterator</*NoGraphRegions=*/true>>(regionPure);
+
+    llvm::outs() << "Op reverse dominance post-order visits"
+                 << "\n";
+    funcOp->walk<WalkOrder::PostOrder,
+                 ReverseDominanceIterator</*NoGraphRegions=*/true>>(opPure);
+    llvm::outs() << "Block reverse dominance post-order visits"
+                 << "\n";
+    funcOp->walk<WalkOrder::PostOrder,
+                 ReverseDominanceIterator</*NoGraphRegions=*/true>>(blockPure);
+    llvm::outs() << "Region reverse dominance post-order visits"
+                 << "\n";
+    funcOp->walk<WalkOrder::PostOrder,
+                 ReverseDominanceIterator</*NoGraphRegions=*/true>>(regionPure);
+  });
 }
 
 /// Tests erasure callbacks that skip the walk.
@@ -88,11 +130,18 @@ static void testSkipErasureCallbacks(Operation *op) {
     if (isa<ModuleOp>(parentOp) || isa<ModuleOp>(parentOp->getParentOp()))
       return WalkResult::advance();
 
-    llvm::outs() << "Erasing ";
-    printBlock(block);
-    llvm::outs() << "\n";
-    block->erase();
-    return WalkResult::skip();
+    if (block->use_empty()) {
+      llvm::outs() << "Erasing ";
+      printBlock(block);
+      llvm::outs() << "\n";
+      block->erase();
+      return WalkResult::skip();
+    } else {
+      llvm::outs() << "Cannot erase ";
+      printBlock(block);
+      llvm::outs() << ", still has uses\n";
+      return WalkResult::advance();
+    }
   };
 
   llvm::outs() << "Op pre-order erasures (skip)"
@@ -131,10 +180,16 @@ static void testNoSkipErasureCallbacks(Operation *op) {
     op->erase();
   };
   auto noSkipBlockErasure = [](Block *block) {
-    llvm::outs() << "Erasing ";
-    printBlock(block);
-    llvm::outs() << "\n";
-    block->erase();
+    if (block->use_empty()) {
+      llvm::outs() << "Erasing ";
+      printBlock(block);
+      llvm::outs() << "\n";
+      block->erase();
+    } else {
+      llvm::outs() << "Cannot erase ";
+      printBlock(block);
+      llvm::outs() << ", still has uses\n";
+    }
   };
 
   llvm::outs() << "Op post-order erasures (no skip)"

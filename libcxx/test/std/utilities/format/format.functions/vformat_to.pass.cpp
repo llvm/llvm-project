@@ -6,9 +6,9 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-has-no-incomplete-format
-// TODO FMT Evaluate gcc-12 status
-// UNSUPPORTED: gcc-12
+// UNSUPPORTED: GCC-ALWAYS_INLINE-FIXME
+
+// XFAIL: availability-fp_to_chars-missing
 
 // <format>
 
@@ -23,6 +23,8 @@
 #include <list>
 #include <vector>
 
+#include "assert_macros.h"
+#include "concat_macros.h"
 #include "test_macros.h"
 #include "format_tests.h"
 #include "string_literal.h"
@@ -60,17 +62,18 @@ auto test_exception =
         [[maybe_unused]] std::string_view what,
         [[maybe_unused]] std::basic_string_view<CharT> fmt,
         [[maybe_unused]] Args&&... args) {
-#ifndef TEST_HAS_NO_EXCEPTIONS
-      try {
-        std::basic_string<CharT> out;
-        std::vformat_to(std::back_inserter(out), fmt, std::make_format_args<context_t<CharT>>(args...));
-        assert(false);
-      } catch ([[maybe_unused]] const std::format_error& e) {
-        LIBCPP_ASSERT(e.what() == what);
-        return;
-      }
-      assert(false);
-#endif
+      TEST_VALIDATE_EXCEPTION(
+          std::format_error,
+          [&]([[maybe_unused]] const std::format_error& e) {
+            TEST_LIBCPP_REQUIRE(
+                e.what() == what,
+                TEST_WRITE_CONCATENATED(
+                    "\nFormat string   ", fmt, "\nExpected exception ", what, "\nActual exception   ", e.what(), '\n'));
+          },
+          [&] {
+            std::basic_string<CharT> out;
+            std::vformat_to(std::back_inserter(out), fmt, std::make_format_args<context_t<CharT>>(args...));
+          }());
     };
 
 int main(int, char**) {

@@ -618,7 +618,7 @@ void PPCVSXSwapRemoval::formWebs() {
         continue;
 
       MachineInstr* DefMI = MRI->getVRegDef(Reg);
-      assert(SwapMap.find(DefMI) != SwapMap.end() &&
+      assert(SwapMap.contains(DefMI) &&
              "Inconsistency: def of vector reg not found in swap map!");
       int DefIdx = SwapMap[DefMI];
       (void)EC->unionSets(SwapVector[DefIdx].VSEId,

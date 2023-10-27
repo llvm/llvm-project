@@ -1,6 +1,5 @@
-// RUN: %clang_cc1 -no-opaque-pointers -x objective-c++ -Wno-return-type -fblocks -fms-extensions -rewrite-objc -fobjc-runtime=macosx-fragile-10.5 %s -o %t-rw.cpp
-// RUN: %clang_cc1 -no-opaque-pointers -fsyntax-only -Wno-address-of-temporary -DKEEP_ATTRIBUTES -D"id=struct objc_object *" -D"Class=struct objc_class *" -D"SEL=void*" -D"__declspec(X)=" -emit-llvm -o - %t-rw.cpp | FileCheck %t-rw.cpp
-// radar 7738453
+// RUN: %clang_cc1 -x objective-c++ -Wno-return-type -fblocks -fms-extensions -rewrite-objc -fobjc-runtime=macosx-fragile-10.5 %s -o %t-rw.cpp
+// RUN: %clang_cc1 -fsyntax-only -Wno-address-of-temporary -DKEEP_ATTRIBUTES -D"id=struct objc_object *" -D"Class=struct objc_class *" -D"SEL=void*" -D"__declspec(X)=" -emit-llvm -o - %t-rw.cpp | FileCheck %t-rw.cpp
 
 void *sel_registerName(const char *);
 
@@ -17,7 +16,7 @@ void *sel_registerName(const char *);
 }
 @end
 
-// CHECK: call %struct.objc_class* @class_getSuperclass
+// CHECK: call ptr @class_getSuperclass
 
 @class NSZone;
 

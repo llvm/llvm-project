@@ -310,6 +310,26 @@ TEST_F(FileManagerTest, getFileRefReturnsCorrectNameForDifferentStatPath) {
   EXPECT_EQ(&F2->getFileEntry(), &F2Alias2->getFileEntry());
 }
 
+TEST_F(FileManagerTest, getFileRefReturnsCorrectDirNameForDifferentStatPath) {
+  // Inject files with the same inode into distinct directories (name & inode).
+  auto StatCache = std::make_unique<FakeStatCache>();
+  StatCache->InjectDirectory("dir1", 40);
+  StatCache->InjectDirectory("dir2", 41);
+  StatCache->InjectFile("dir1/f.cpp", 42);
+  StatCache->InjectFile("dir2/f.cpp", 42, "dir1/f.cpp");
+
+  manager.setStatCache(std::move(StatCache));
+  auto Dir1F = manager.getFileRef("dir1/f.cpp");
+  auto Dir2F = manager.getFileRef("dir2/f.cpp");
+
+  ASSERT_FALSE(!Dir1F);
+  ASSERT_FALSE(!Dir2F);
+  EXPECT_EQ("dir1", Dir1F->getDir().getName());
+  EXPECT_EQ("dir2", Dir2F->getDir().getName());
+  EXPECT_EQ("dir1/f.cpp", Dir1F->getNameAsRequested());
+  EXPECT_EQ("dir2/f.cpp", Dir2F->getNameAsRequested());
+}
+
 // getFile() returns the same FileEntry for virtual files that have
 // corresponding real files that are aliases.
 TEST_F(FileManagerTest, getFileReturnsSameFileEntryForAliasedVirtualFiles) {
@@ -527,7 +547,7 @@ TEST_F(FileManagerTest, getBypassFile) {
   Manager.setStatCache(std::move(Cache));
 
   // Set up a virtual file with a different size than FakeStatCache uses.
-  const FileEntry *File = Manager.getVirtualFile("/tmp/test", /*Size=*/10, 0);
+  FileEntryRef File = Manager.getVirtualFileRef("/tmp/test", /*Size=*/10, 0);
   ASSERT_TRUE(File);
   const FileEntry &FE = *File;
   EXPECT_EQ(FE.getSize(), 10);
@@ -542,7 +562,7 @@ TEST_F(FileManagerTest, getBypassFile) {
   EXPECT_EQ(FE.getSize(), 10);
 
   // Bypass the file.
-  OptionalFileEntryRef BypassRef = Manager.getBypassFile(File->getLastRef());
+  OptionalFileEntryRef BypassRef = Manager.getBypassFile(File);
   ASSERT_TRUE(BypassRef);
   EXPECT_EQ("/tmp/test", BypassRef->getName());
 

@@ -39,17 +39,17 @@ define i32 @baz(i32 %0) {
 ; CHECK-GISEL:   liveins: $edi
 ; CHECK-GISEL:   %0:gr32 = COPY $edi
 ; CHECK-GISEL:   %10:gr32 = MOV32ri 1
-; CHECK-GISEL:   %11:gr32 = MOV32r0 implicit-def $eflags
-; CHECK-GISEL:   %2:gr32 = SUB32ri8 %0:gr32(tied-def 0), 0, implicit-def $eflags
+; CHECK-GISEL:   %11:gr32 = MOV32r0 implicit-def dead $eflags
+; CHECK-GISEL:   %2:gr32 = SUB32ri %0:gr32(tied-def 0), 0, implicit-def dead $eflags
 ; CHECK-GISEL: bb.5 (%ir-block.1):
 ; CHECK-GISEL: ; predecessors: %bb.1
 ; CHECK-GISEL:   successors: %bb.4(0x55555555), %bb.2(0x2aaaaaab); %bb.4(66.67%), %bb.2(33.33%)
 ; CHECK-GISEL:   %3:gr32 = MOV32ri 1
 ; CHECK-GISEL:   %13:gr8 = COPY %2.sub_8bit:gr32
 ; CHECK-GISEL:   $cl = COPY %13:gr8
-; CHECK-GISEL:   %4:gr32 = SHL32rCL %3:gr32(tied-def 0), implicit-def $eflags, implicit $cl
-; CHECK-GISEL:   %6:gr32 = AND32ri %4:gr32(tied-def 0), 13056, implicit-def $eflags
-; CHECK-GISEL:   %7:gr32 = MOV32r0 implicit-def $eflags
+; CHECK-GISEL:   %4:gr32 = SHL32rCL %3:gr32(tied-def 0), implicit-def dead $eflags, implicit $cl
+; CHECK-GISEL:   %6:gr32 = AND32ri %4:gr32(tied-def 0), 13056, implicit-def dead $eflags
+; CHECK-GISEL:   %7:gr32 = MOV32r0 implicit-def dead $eflags
 ; CHECK-GISEL:   CMP32rr %6:gr32, %7:gr32, implicit-def $eflags
 ; CHECK-GISEL:   %12:gr8 = SETCCr 5, implicit $eflags
 ; CHECK-GISEL:   TEST8ri %12:gr8, 1, implicit-def $eflags

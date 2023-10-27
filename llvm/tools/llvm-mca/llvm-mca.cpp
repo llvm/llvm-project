@@ -53,13 +53,13 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/Host.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/WithColor.h"
+#include "llvm/TargetParser/Host.h"
 
 using namespace llvm;
 
@@ -401,11 +401,6 @@ int main(int argc, char **argv) {
   // Tell SrcMgr about this buffer, which is what the parser will pick up.
   SrcMgr.AddNewSourceBuffer(std::move(*BufferPtr), SMLoc());
 
-  MCContext Ctx(TheTriple, MAI.get(), MRI.get(), STI.get(), &SrcMgr);
-  std::unique_ptr<MCObjectFileInfo> MOFI(
-      TheTarget->createMCObjectFileInfo(Ctx, /*PIC=*/false));
-  Ctx.setObjectFileInfo(MOFI.get());
-
   std::unique_ptr<buffer_ostream> BOS;
 
   std::unique_ptr<MCInstrInfo> MCII(TheTarget->createMCInstrInfo());
@@ -433,7 +428,11 @@ int main(int argc, char **argv) {
   }
 
   // Parse the input and create CodeRegions that llvm-mca can analyze.
-  mca::AsmAnalysisRegionGenerator CRG(*TheTarget, SrcMgr, Ctx, *MAI, *STI,
+  MCContext ACtx(TheTriple, MAI.get(), MRI.get(), STI.get(), &SrcMgr);
+  std::unique_ptr<MCObjectFileInfo> AMOFI(
+      TheTarget->createMCObjectFileInfo(ACtx, /*PIC=*/false));
+  ACtx.setObjectFileInfo(AMOFI.get());
+  mca::AsmAnalysisRegionGenerator CRG(*TheTarget, SrcMgr, ACtx, *MAI, *STI,
                                       *MCII);
   Expected<const mca::AnalysisRegions &> RegionsOrErr =
       CRG.parseAnalysisRegions(std::move(IPtemp));
@@ -471,7 +470,11 @@ int main(int argc, char **argv) {
 
   // Parse the input and create InstrumentRegion that llvm-mca
   // can use to improve analysis.
-  mca::AsmInstrumentRegionGenerator IRG(*TheTarget, SrcMgr, Ctx, *MAI, *STI,
+  MCContext ICtx(TheTriple, MAI.get(), MRI.get(), STI.get(), &SrcMgr);
+  std::unique_ptr<MCObjectFileInfo> IMOFI(
+      TheTarget->createMCObjectFileInfo(ICtx, /*PIC=*/false));
+  ICtx.setObjectFileInfo(IMOFI.get());
+  mca::AsmInstrumentRegionGenerator IRG(*TheTarget, SrcMgr, ICtx, *MAI, *STI,
                                         *MCII, *IM);
   Expected<const mca::InstrumentRegions &> InstrumentRegionsOrErr =
       IRG.parseInstrumentRegions(std::move(IPtemp));
@@ -547,7 +550,7 @@ int main(int argc, char **argv) {
   unsigned RegionIdx = 0;
 
   std::unique_ptr<MCCodeEmitter> MCE(
-      TheTarget->createMCCodeEmitter(*MCII, Ctx));
+      TheTarget->createMCCodeEmitter(*MCII, ACtx));
   assert(MCE && "Unable to create code emitter!");
 
   std::unique_ptr<MCAsmBackend> MAB(TheTarget->createMCAsmBackend(
@@ -568,11 +571,14 @@ int main(int argc, char **argv) {
 
     IPP->resetState();
 
+    DenseMap<const MCInst *, SmallVector<mca::Instrument *>>
+        InstToInstruments;
     SmallVector<std::unique_ptr<mca::Instruction>> LoweredSequence;
     for (const MCInst &MCI : Insts) {
       SMLoc Loc = MCI.getLoc();
-      const SmallVector<mca::SharedInstrument> Instruments =
+      const SmallVector<mca::Instrument *> Instruments =
           InstrumentRegions.getActiveInstruments(Loc);
+      InstToInstruments.insert({&MCI, Instruments});
 
       Expected<std::unique_ptr<mca::Instruction>> Inst =
           IB.createInstruction(MCI, Instruments);
@@ -618,7 +624,7 @@ int main(int argc, char **argv) {
       if (PrintInstructionInfoView) {
         Printer.addView(std::make_unique<mca::InstructionInfoView>(
             *STI, *MCII, CE, ShowEncoding, Insts, *IP, LoweredSequence,
-            ShowBarriers));
+            ShowBarriers, *IM, InstToInstruments));
       }
       Printer.addView(
           std::make_unique<mca::ResourcePressureView>(*STI, *IP, Insts));
@@ -695,7 +701,7 @@ int main(int argc, char **argv) {
     if (PrintInstructionInfoView)
       Printer.addView(std::make_unique<mca::InstructionInfoView>(
           *STI, *MCII, CE, ShowEncoding, Insts, *IP, LoweredSequence,
-          ShowBarriers));
+          ShowBarriers, *IM, InstToInstruments));
 
     // Fetch custom Views that are to be placed after the InstructionInfoView.
     // Refer to the comment paired with the CB->getStartViews(*IP, Insts); line

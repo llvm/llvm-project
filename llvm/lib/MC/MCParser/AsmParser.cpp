@@ -601,25 +601,25 @@ private:
 
   // .cfi directives
   bool parseDirectiveCFIRegister(SMLoc DirectiveLoc);
-  bool parseDirectiveCFIWindowSave();
+  bool parseDirectiveCFIWindowSave(SMLoc DirectiveLoc);
   bool parseDirectiveCFISections();
   bool parseDirectiveCFIStartProc();
   bool parseDirectiveCFIEndProc();
-  bool parseDirectiveCFIDefCfaOffset();
+  bool parseDirectiveCFIDefCfaOffset(SMLoc DirectiveLoc);
   bool parseDirectiveCFIDefCfa(SMLoc DirectiveLoc);
-  bool parseDirectiveCFIAdjustCfaOffset();
+  bool parseDirectiveCFIAdjustCfaOffset(SMLoc DirectiveLoc);
   bool parseDirectiveCFIDefCfaRegister(SMLoc DirectiveLoc);
   bool parseDirectiveCFILLVMDefAspaceCfa(SMLoc DirectiveLoc);
   bool parseDirectiveCFIOffset(SMLoc DirectiveLoc);
   bool parseDirectiveCFIRelOffset(SMLoc DirectiveLoc);
   bool parseDirectiveCFIPersonalityOrLsda(bool IsPersonality);
-  bool parseDirectiveCFIRememberState();
-  bool parseDirectiveCFIRestoreState();
+  bool parseDirectiveCFIRememberState(SMLoc DirectiveLoc);
+  bool parseDirectiveCFIRestoreState(SMLoc DirectiveLoc);
   bool parseDirectiveCFISameValue(SMLoc DirectiveLoc);
   bool parseDirectiveCFIRestore(SMLoc DirectiveLoc);
-  bool parseDirectiveCFIEscape();
+  bool parseDirectiveCFIEscape(SMLoc DirectiveLoc);
   bool parseDirectiveCFIReturnColumn(SMLoc DirectiveLoc);
-  bool parseDirectiveCFISignalFrame();
+  bool parseDirectiveCFISignalFrame(SMLoc DirectiveLoc);
   bool parseDirectiveCFIUndefined(SMLoc DirectiveLoc);
 
   // macro directives
@@ -807,7 +807,7 @@ AsmParser::AsmParser(SourceMgr &SM, MCContext &Ctx, MCStreamer &Out,
     PlatformParser.reset(createXCOFFAsmParser());
     break;
   case MCContext::IsDXContainer:
-    llvm_unreachable("DXContainer is not supported yet");
+    report_fatal_error("DXContainer is not supported yet");
     break;
   }
 
@@ -1999,20 +1999,12 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
 
     getTargetParser().flushPendingInstructions(getStreamer());
 
-    SMLoc StartTokLoc = getTok().getLoc();
-    bool TPDirectiveReturn = getTargetParser().ParseDirective(ID);
-
-    if (hasPendingError())
+    ParseStatus TPDirectiveReturn = getTargetParser().parseDirective(ID);
+    assert(TPDirectiveReturn.isFailure() == hasPendingError() &&
+           "Should only return Failure iff there was an error");
+    if (TPDirectiveReturn.isFailure())
       return true;
-    // Currently the return value should be true if we are
-    // uninterested but as this is at odds with the standard parsing
-    // convention (return true = error) we have instances of a parsed
-    // directive that fails returning true as an error. Catch these
-    // cases as best as possible errors here.
-    if (TPDirectiveReturn && StartTokLoc != getTok().getLoc())
-      return true;
-    // Return if we did some parsing or believe we succeeded.
-    if (!TPDirectiveReturn || StartTokLoc != getTok().getLoc())
+    if (TPDirectiveReturn.isSuccess())
       return false;
 
     // Next, check the extension directive map to see if any extension has
@@ -2195,9 +2187,9 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
     case DK_CFI_DEF_CFA:
       return parseDirectiveCFIDefCfa(IDLoc);
     case DK_CFI_DEF_CFA_OFFSET:
-      return parseDirectiveCFIDefCfaOffset();
+      return parseDirectiveCFIDefCfaOffset(IDLoc);
     case DK_CFI_ADJUST_CFA_OFFSET:
-      return parseDirectiveCFIAdjustCfaOffset();
+      return parseDirectiveCFIAdjustCfaOffset(IDLoc);
     case DK_CFI_DEF_CFA_REGISTER:
       return parseDirectiveCFIDefCfaRegister(IDLoc);
     case DK_CFI_LLVM_DEF_ASPACE_CFA:
@@ -2211,25 +2203,25 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
     case DK_CFI_LSDA:
       return parseDirectiveCFIPersonalityOrLsda(false);
     case DK_CFI_REMEMBER_STATE:
-      return parseDirectiveCFIRememberState();
+      return parseDirectiveCFIRememberState(IDLoc);
     case DK_CFI_RESTORE_STATE:
-      return parseDirectiveCFIRestoreState();
+      return parseDirectiveCFIRestoreState(IDLoc);
     case DK_CFI_SAME_VALUE:
       return parseDirectiveCFISameValue(IDLoc);
     case DK_CFI_RESTORE:
       return parseDirectiveCFIRestore(IDLoc);
     case DK_CFI_ESCAPE:
-      return parseDirectiveCFIEscape();
+      return parseDirectiveCFIEscape(IDLoc);
     case DK_CFI_RETURN_COLUMN:
       return parseDirectiveCFIReturnColumn(IDLoc);
     case DK_CFI_SIGNAL_FRAME:
-      return parseDirectiveCFISignalFrame();
+      return parseDirectiveCFISignalFrame(IDLoc);
     case DK_CFI_UNDEFINED:
       return parseDirectiveCFIUndefined(IDLoc);
     case DK_CFI_REGISTER:
       return parseDirectiveCFIRegister(IDLoc);
     case DK_CFI_WINDOW_SAVE:
-      return parseDirectiveCFIWindowSave();
+      return parseDirectiveCFIWindowSave(IDLoc);
     case DK_MACROS_ON:
     case DK_MACROS_OFF:
       return parseDirectiveMacrosOnOff(IDVal);
@@ -3400,6 +3392,7 @@ bool AsmParser::parseDirectiveAlign(bool IsPow2, unsigned ValueSize) {
   bool HasFillExpr = false;
   int64_t FillExpr = 0;
   int64_t MaxBytesToFill = 0;
+  SMLoc FillExprLoc;
 
   auto parseAlign = [&]() -> bool {
     if (parseAbsoluteExpression(Alignment))
@@ -3410,7 +3403,7 @@ bool AsmParser::parseDirectiveAlign(bool IsPow2, unsigned ValueSize) {
       //  .align 3,,4
       if (getTok().isNot(AsmToken::Comma)) {
         HasFillExpr = true;
-        if (parseAbsoluteExpression(FillExpr))
+        if (parseTokenLoc(FillExprLoc) || parseAbsoluteExpression(FillExpr))
           return true;
       }
       if (parseOptionalToken(AsmToken::Comma))
@@ -3451,11 +3444,22 @@ bool AsmParser::parseDirectiveAlign(bool IsPow2, unsigned ValueSize) {
       Alignment = 1;
     else if (!isPowerOf2_64(Alignment)) {
       ReturnVal |= Error(AlignmentLoc, "alignment must be a power of 2");
-      Alignment = PowerOf2Floor(Alignment);
+      Alignment = llvm::bit_floor<uint64_t>(Alignment);
     }
     if (!isUInt<32>(Alignment)) {
       ReturnVal |= Error(AlignmentLoc, "alignment must be smaller than 2**32");
       Alignment = 1u << 31;
+    }
+  }
+
+  if (HasFillExpr && FillExpr != 0) {
+    MCSection *Sec = getStreamer().getCurrentSectionOnly();
+    if (Sec && Sec->isVirtualSection()) {
+      ReturnVal |=
+          Warning(FillExprLoc, "ignoring non-zero fill value in " +
+                                   Sec->getVirtualSectionKind() + " section '" +
+                                   Sec->getName() + "'");
+      FillExpr = 0;
     }
   }
 
@@ -4238,18 +4242,18 @@ bool AsmParser::parseDirectiveCFIDefCfa(SMLoc DirectiveLoc) {
       parseAbsoluteExpression(Offset) || parseEOL())
     return true;
 
-  getStreamer().emitCFIDefCfa(Register, Offset);
+  getStreamer().emitCFIDefCfa(Register, Offset, DirectiveLoc);
   return false;
 }
 
 /// parseDirectiveCFIDefCfaOffset
 /// ::= .cfi_def_cfa_offset offset
-bool AsmParser::parseDirectiveCFIDefCfaOffset() {
+bool AsmParser::parseDirectiveCFIDefCfaOffset(SMLoc DirectiveLoc) {
   int64_t Offset = 0;
   if (parseAbsoluteExpression(Offset) || parseEOL())
     return true;
 
-  getStreamer().emitCFIDefCfaOffset(Offset);
+  getStreamer().emitCFIDefCfaOffset(Offset, DirectiveLoc);
   return false;
 }
 
@@ -4261,27 +4265,27 @@ bool AsmParser::parseDirectiveCFIRegister(SMLoc DirectiveLoc) {
       parseRegisterOrRegisterNumber(Register2, DirectiveLoc) || parseEOL())
     return true;
 
-  getStreamer().emitCFIRegister(Register1, Register2);
+  getStreamer().emitCFIRegister(Register1, Register2, DirectiveLoc);
   return false;
 }
 
 /// parseDirectiveCFIWindowSave
 /// ::= .cfi_window_save
-bool AsmParser::parseDirectiveCFIWindowSave() {
+bool AsmParser::parseDirectiveCFIWindowSave(SMLoc DirectiveLoc) {
   if (parseEOL())
     return true;
-  getStreamer().emitCFIWindowSave();
+  getStreamer().emitCFIWindowSave(DirectiveLoc);
   return false;
 }
 
 /// parseDirectiveCFIAdjustCfaOffset
 /// ::= .cfi_adjust_cfa_offset adjustment
-bool AsmParser::parseDirectiveCFIAdjustCfaOffset() {
+bool AsmParser::parseDirectiveCFIAdjustCfaOffset(SMLoc DirectiveLoc) {
   int64_t Adjustment = 0;
   if (parseAbsoluteExpression(Adjustment) || parseEOL())
     return true;
 
-  getStreamer().emitCFIAdjustCfaOffset(Adjustment);
+  getStreamer().emitCFIAdjustCfaOffset(Adjustment, DirectiveLoc);
   return false;
 }
 
@@ -4292,7 +4296,7 @@ bool AsmParser::parseDirectiveCFIDefCfaRegister(SMLoc DirectiveLoc) {
   if (parseRegisterOrRegisterNumber(Register, DirectiveLoc) || parseEOL())
     return true;
 
-  getStreamer().emitCFIDefCfaRegister(Register);
+  getStreamer().emitCFIDefCfaRegister(Register, DirectiveLoc);
   return false;
 }
 
@@ -4305,7 +4309,8 @@ bool AsmParser::parseDirectiveCFILLVMDefAspaceCfa(SMLoc DirectiveLoc) {
       parseAbsoluteExpression(AddressSpace) || parseEOL())
     return true;
 
-  getStreamer().emitCFILLVMDefAspaceCfa(Register, Offset, AddressSpace);
+  getStreamer().emitCFILLVMDefAspaceCfa(Register, Offset, AddressSpace,
+                                        DirectiveLoc);
   return false;
 }
 
@@ -4319,7 +4324,7 @@ bool AsmParser::parseDirectiveCFIOffset(SMLoc DirectiveLoc) {
       parseAbsoluteExpression(Offset) || parseEOL())
     return true;
 
-  getStreamer().emitCFIOffset(Register, Offset);
+  getStreamer().emitCFIOffset(Register, Offset, DirectiveLoc);
   return false;
 }
 
@@ -4332,7 +4337,7 @@ bool AsmParser::parseDirectiveCFIRelOffset(SMLoc DirectiveLoc) {
       parseAbsoluteExpression(Offset) || parseEOL())
     return true;
 
-  getStreamer().emitCFIRelOffset(Register, Offset);
+  getStreamer().emitCFIRelOffset(Register, Offset, DirectiveLoc);
   return false;
 }
 
@@ -4387,19 +4392,19 @@ bool AsmParser::parseDirectiveCFIPersonalityOrLsda(bool IsPersonality) {
 
 /// parseDirectiveCFIRememberState
 /// ::= .cfi_remember_state
-bool AsmParser::parseDirectiveCFIRememberState() {
+bool AsmParser::parseDirectiveCFIRememberState(SMLoc DirectiveLoc) {
   if (parseEOL())
     return true;
-  getStreamer().emitCFIRememberState();
+  getStreamer().emitCFIRememberState(DirectiveLoc);
   return false;
 }
 
 /// parseDirectiveCFIRestoreState
 /// ::= .cfi_remember_state
-bool AsmParser::parseDirectiveCFIRestoreState() {
+bool AsmParser::parseDirectiveCFIRestoreState(SMLoc DirectiveLoc) {
   if (parseEOL())
     return true;
-  getStreamer().emitCFIRestoreState();
+  getStreamer().emitCFIRestoreState(DirectiveLoc);
   return false;
 }
 
@@ -4411,7 +4416,7 @@ bool AsmParser::parseDirectiveCFISameValue(SMLoc DirectiveLoc) {
   if (parseRegisterOrRegisterNumber(Register, DirectiveLoc) || parseEOL())
     return true;
 
-  getStreamer().emitCFISameValue(Register);
+  getStreamer().emitCFISameValue(Register, DirectiveLoc);
   return false;
 }
 
@@ -4422,13 +4427,13 @@ bool AsmParser::parseDirectiveCFIRestore(SMLoc DirectiveLoc) {
   if (parseRegisterOrRegisterNumber(Register, DirectiveLoc) || parseEOL())
     return true;
 
-  getStreamer().emitCFIRestore(Register);
+  getStreamer().emitCFIRestore(Register, DirectiveLoc);
   return false;
 }
 
 /// parseDirectiveCFIEscape
 /// ::= .cfi_escape expression[,...]
-bool AsmParser::parseDirectiveCFIEscape() {
+bool AsmParser::parseDirectiveCFIEscape(SMLoc DirectiveLoc) {
   std::string Values;
   int64_t CurrValue;
   if (parseAbsoluteExpression(CurrValue))
@@ -4445,7 +4450,7 @@ bool AsmParser::parseDirectiveCFIEscape() {
     Values.push_back((uint8_t)CurrValue);
   }
 
-  getStreamer().emitCFIEscape(Values);
+  getStreamer().emitCFIEscape(Values, DirectiveLoc);
   return false;
 }
 
@@ -4461,7 +4466,7 @@ bool AsmParser::parseDirectiveCFIReturnColumn(SMLoc DirectiveLoc) {
 
 /// parseDirectiveCFISignalFrame
 /// ::= .cfi_signal_frame
-bool AsmParser::parseDirectiveCFISignalFrame() {
+bool AsmParser::parseDirectiveCFISignalFrame(SMLoc DirectiveLoc) {
   if (parseEOL())
     return true;
 
@@ -4477,7 +4482,7 @@ bool AsmParser::parseDirectiveCFIUndefined(SMLoc DirectiveLoc) {
   if (parseRegisterOrRegisterNumber(Register, DirectiveLoc) || parseEOL())
     return true;
 
-  getStreamer().emitCFIUndefined(Register);
+  getStreamer().emitCFIUndefined(Register, DirectiveLoc);
   return false;
 }
 
@@ -5853,24 +5858,23 @@ bool AsmParser::parseDirectivePseudoProbe() {
   int64_t Index;
   int64_t Type;
   int64_t Attr;
+  int64_t Discriminator = 0;
 
-  if (getLexer().is(AsmToken::Integer)) {
-    if (parseIntToken(Guid, "unexpected token in '.pseudoprobe' directive"))
-      return true;
-  }
+  if (parseIntToken(Guid, "unexpected token in '.pseudoprobe' directive"))
+    return true;
 
-  if (getLexer().is(AsmToken::Integer)) {
-    if (parseIntToken(Index, "unexpected token in '.pseudoprobe' directive"))
-      return true;
-  }
+  if (parseIntToken(Index, "unexpected token in '.pseudoprobe' directive"))
+    return true;
 
-  if (getLexer().is(AsmToken::Integer)) {
-    if (parseIntToken(Type, "unexpected token in '.pseudoprobe' directive"))
-      return true;
-  }
+  if (parseIntToken(Type, "unexpected token in '.pseudoprobe' directive"))
+    return true;
 
-  if (getLexer().is(AsmToken::Integer)) {
-    if (parseIntToken(Attr, "unexpected token in '.pseudoprobe' directive"))
+  if (parseIntToken(Attr, "unexpected token in '.pseudoprobe' directive"))
+    return true;
+
+  if (hasDiscriminator(Attr)) {
+    if (parseIntToken(Discriminator,
+                      "unexpected token in '.pseudoprobe' directive"))
       return true;
   }
 
@@ -5912,7 +5916,8 @@ bool AsmParser::parseDirectivePseudoProbe() {
   if (parseEOL())
     return true;
 
-  getStreamer().emitPseudoProbe(Guid, Index, Type, Attr, InlineStack, FnSym);
+  getStreamer().emitPseudoProbe(Guid, Index, Type, Attr, Discriminator,
+                                InlineStack, FnSym);
   return false;
 }
 
@@ -6048,7 +6053,7 @@ bool AsmParser::parseMSInlineAsm(
         InputDecls.push_back(OpDecl);
         InputDeclsAddressOf.push_back(Operand.needAddressOf());
         InputConstraints.push_back(Constraint.str());
-        if (Desc.OpInfo[i - 1].isBranchTarget())
+        if (Desc.operands()[i - 1].isBranchTarget())
           AsmStrRewrites.emplace_back(AOK_CallInput, Start, SymName.size(), 0,
                                       Restricted);
         else
@@ -6058,9 +6063,7 @@ bool AsmParser::parseMSInlineAsm(
     }
 
     // Consider implicit defs to be clobbers.  Think of cpuid and push.
-    ArrayRef<MCPhysReg> ImpDefs(Desc.getImplicitDefs(),
-                                Desc.getNumImplicitDefs());
-    llvm::append_range(ClobberRegs, ImpDefs);
+    llvm::append_range(ClobberRegs, Desc.implicit_defs());
   }
 
   // Set the number of Outputs and Inputs.
@@ -6373,7 +6376,7 @@ static bool isSymbolUsedInExpression(const MCSymbol *Sym, const MCExpr *Value) {
   case MCExpr::SymbolRef: {
     const MCSymbol &S =
         static_cast<const MCSymbolRefExpr *>(Value)->getSymbol();
-    if (S.isVariable())
+    if (S.isVariable() && !S.isWeakExternal())
       return isSymbolUsedInExpression(Sym, S.getVariableValue());
     return &S == Sym;
   }

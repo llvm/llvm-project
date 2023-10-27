@@ -1,4 +1,4 @@
-// RUN: not %clang_cc1 -std=c++11 -fcaret-diagnostics-max-lines 5 -Wsometimes-uninitialized %s 2>&1 | FileCheck %s --strict-whitespace
+// RUN: not %clang_cc1 -std=c++11 -fno-diagnostics-show-line-numbers -fcaret-diagnostics-max-lines=5 -Wsometimes-uninitialized %s 2>&1 | FileCheck %s --strict-whitespace
 
 void line(int);
 
@@ -14,9 +14,9 @@ void line(int);
 // CHECK-NEXT: {{^}}  if (cond) {
 // CHECK-NEXT: {{^}}  ^~~~~~~~~~~{{$}}
 // CHECK-NEXT: {{^}}    line(1);
-// CHECK-NEXT: {{^}}~~~~~~~~~~~~{{$}}
+// CHECK-NEXT: {{^}}    ~~~~~~~~{{$}}
 // CHECK-NEXT: {{^}}  } else {
-// CHECK-NEXT: {{^}}~~~~~~~~~{{$}}
+// CHECK-NEXT: {{^}}  ~~~~~~{{$}}
 // CHECK-NEXT: note: initialize the variable
 int f1(int cond) {
   int a;
@@ -38,11 +38,11 @@ int f1(int cond) {
 // CHECK-NEXT: {{^}}  if (cond) {
 // CHECK-NEXT: {{^}}  ^~~~~~~~~~~{{$}}
 // CHECK-NEXT: {{^}}    line(1);
-// CHECK-NEXT: {{^}}~~~~~~~~~~~~{{$}}
+// CHECK-NEXT: {{^}}    ~~~~~~~~{{$}}
 // CHECK-NEXT: {{^}}    line(2);
-// CHECK-NEXT: {{^}}~~~~~~~~~~~~{{$}}
+// CHECK-NEXT: {{^}}    ~~~~~~~~{{$}}
 // CHECK-NEXT: {{^}}  } else {
-// CHECK-NEXT: {{^}}~~~~~~~~~{{$}}
+// CHECK-NEXT: {{^}}  ~~~~~~{{$}}
 // CHECK-NEXT: note: initialize the variable
 int f2(int cond) {
   int a;
@@ -65,13 +65,13 @@ int f2(int cond) {
 // CHECK-NEXT: {{^}}  if (cond) {
 // CHECK-NEXT: {{^}}  ^~~~~~~~~~~{{$}}
 // CHECK-NEXT: {{^}}    line(1);
-// CHECK-NEXT: {{^}}~~~~~~~~~~~~{{$}}
+// CHECK-NEXT: {{^}}    ~~~~~~~~{{$}}
 // CHECK-NEXT: {{^}}    line(2);
-// CHECK-NEXT: {{^}}~~~~~~~~~~~~{{$}}
+// CHECK-NEXT: {{^}}    ~~~~~~~~{{$}}
 // CHECK-NEXT: {{^}}    line(3);
-// CHECK-NEXT: {{^}}~~~~~~~~~~~~{{$}}
+// CHECK-NEXT: {{^}}    ~~~~~~~~{{$}}
 // CHECK-NEXT: {{^}}  } else {
-// CHECK-NEXT: {{^}}~~~~~~~~~{{$}}
+// CHECK-NEXT: {{^}}  ~~~~~~{{$}}
 // CHECK-NEXT: note: initialize the variable
 int f3(int cond) {
   int a;
@@ -95,13 +95,13 @@ int f3(int cond) {
 // CHECK-NEXT: {{^}}  if (cond) {
 // CHECK-NEXT: {{^}}  ^~~~~~~~~~~{{$}}
 // CHECK-NEXT: {{^}}    line(1);
-// CHECK-NEXT: {{^}}~~~~~~~~~~~~{{$}}
+// CHECK-NEXT: {{^}}    ~~~~~~~~{{$}}
 // CHECK-NEXT: {{^}}    line(2);
-// CHECK-NEXT: {{^}}~~~~~~~~~~~~{{$}}
+// CHECK-NEXT: {{^}}    ~~~~~~~~{{$}}
 // CHECK-NEXT: {{^}}    line(3);
-// CHECK-NEXT: {{^}}~~~~~~~~~~~~{{$}}
+// CHECK-NEXT: {{^}}    ~~~~~~~~{{$}}
 // CHECK-NEXT: {{^}}    line(4);
-// CHECK-NEXT: {{^}}~~~~~~~~~~~~{{$}}
+// CHECK-NEXT: {{^}}    ~~~~~~~~{{$}}
 // CHECK-NEXT: note: initialize the variable
 int f4(int cond) {
   int a;
@@ -126,13 +126,13 @@ int f4(int cond) {
 // CHECK-NEXT: {{^}}  if (cond) {
 // CHECK-NEXT: {{^}}  ^~~~~~~~~~~{{$}}
 // CHECK-NEXT: {{^}}    line(1);
-// CHECK-NEXT: {{^}}~~~~~~~~~~~~{{$}}
+// CHECK-NEXT: {{^}}    ~~~~~~~~{{$}}
 // CHECK-NEXT: {{^}}    line(2);
-// CHECK-NEXT: {{^}}~~~~~~~~~~~~{{$}}
+// CHECK-NEXT: {{^}}    ~~~~~~~~{{$}}
 // CHECK-NEXT: {{^}}    line(3);
-// CHECK-NEXT: {{^}}~~~~~~~~~~~~{{$}}
+// CHECK-NEXT: {{^}}    ~~~~~~~~{{$}}
 // CHECK-NEXT: {{^}}    line(4);
-// CHECK-NEXT: {{^}}~~~~~~~~~~~~{{$}}
+// CHECK-NEXT: {{^}}    ~~~~~~~~{{$}}
 // CHECK-NEXT: note: initialize the variable
 int f5(int cond) {
   int a;

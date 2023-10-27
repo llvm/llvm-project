@@ -18,7 +18,6 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/ARMBuildAttributes.h"
-#include "llvm/Support/TargetParser.h"
 
 using namespace llvm;
 
@@ -112,7 +111,7 @@ void ARMTargetStreamer::emitIntTextAttribute(unsigned Attribute,
 void ARMTargetStreamer::emitArch(ARM::ArchKind Arch) {}
 void ARMTargetStreamer::emitArchExtension(uint64_t ArchExt) {}
 void ARMTargetStreamer::emitObjectArch(ARM::ArchKind Arch) {}
-void ARMTargetStreamer::emitFPU(unsigned FPU) {}
+void ARMTargetStreamer::emitFPU(ARM::FPUKind FPU) {}
 void ARMTargetStreamer::finishAttributeSection() {}
 void ARMTargetStreamer::annotateTLSDescriptorSequence(
     const MCSymbolRefExpr *SRE) {}

@@ -1,4 +1,4 @@
-# RUN: llc -o - %s -mtriple=aarch64-none-eabi -mcpu=cortex-a55 -lsr-preferred-addressing-mode=preindexed -stop-after=aarch64-ldst-opt | FileCheck %s
+# RUN: llc -o - %s -mtriple=aarch64 -mcpu=cortex-a55 -lsr-preferred-addressing-mode=preindexed -stop-after=aarch64-ldst-opt | FileCheck %s
 
 ---
 name:            1-strwpre-strwui-merge

@@ -258,6 +258,7 @@ class TypeSourceInfo;
     FoundDeclsTy findDeclsInToCtx(DeclContext *DC, DeclarationName Name);
 
     void AddToLookupTable(Decl *ToD);
+    llvm::Error ImportAttrs(Decl *ToD, Decl *FromD);
 
   protected:
     /// Can be overwritten by subclasses to implement their own import logic.

@@ -22,6 +22,12 @@ are always possible to implement in a non throwing way. Non throwing ``swap()``
 operations are also used to create move operations. A throwing ``main()``
 function also results in unexpected termination.
 
+Functions declared explicitly with ``noexcept(false)`` or ``throw(exception)``
+will be excluded from the analysis, as even though it is not recommended for
+functions like ``swap()``, ``main()``, move constructors, move assignment operators
+and destructors, it is a clear indication of the developer's intention and
+should be respected.
+
 WARNING! This check may be expensive on large source files.
 
 Options

@@ -29,8 +29,11 @@ typedef ArrayRef<uint8_t> BuildIDRef;
 
 class ObjectFile;
 
+/// Parses a build ID from a hex string.
+BuildID parseBuildID(StringRef Str);
+
 /// Returns the build ID, if any, contained in the given object file.
-std::optional<BuildIDRef> getBuildID(const ObjectFile *Obj);
+BuildIDRef getBuildID(const ObjectFile *Obj);
 
 /// BuildIDFetcher searches local cache directories for debug info.
 class BuildIDFetcher {

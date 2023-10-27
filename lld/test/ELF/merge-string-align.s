@@ -1,7 +1,12 @@
 // REQUIRES: x86
 // RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t.o
-// RUN: ld.lld %t.o -o %t.so -shared
+// RUN: ld.lld %t.o -o %t.so -shared -M | FileCheck %s --check-prefix=MAP
 // RUN: llvm-readobj -S --section-data %t.so | FileCheck %s
+
+// MAP:      .rodata{{$}}
+// MAP-NEXT:         <internal>:(.rodata.foo)
+// MAP-NEXT: .rodata2
+// MAP-NEXT:         <internal>:(.rodata2)
 
         .section        .rodata.foo,"aMS",@progbits,1
         .align  16

@@ -113,7 +113,7 @@ let Predicates = [FeatureVector] in {
   // Load count to block boundary.
   let Defs = [CC] in
     def LCBB : InstRXE<0xE727, (outs GR32:$R1),
-                               (ins bdxaddr12only:$XBD2, imm32zx4:$M3),
+                               (ins (bdxaddr12only $B2, $D2, $X2):$XBD2, imm32zx4:$M3),
                        "lcbb\t$R1, $XBD2, $M3",
                        [(set GR32:$R1, (int_s390_lcbb bdxaddr12only:$XBD2,
                                                       imm32zx4_timm:$M3))]>;

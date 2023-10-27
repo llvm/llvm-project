@@ -44,7 +44,7 @@ struct ValueKnowledge {
   // Get the static knowledge intrinsic to `type`.
   static ValueKnowledge getKnowledgeFromType(Type type) {
     ValueKnowledge result = getPessimisticValueState();
-    if (auto shapedType = type.dyn_cast<ShapedType>()) {
+    if (auto shapedType = dyn_cast<ShapedType>(type)) {
       if (shapedType.hasRank()) {
         result.hasRank = true;
         result.sizes.reserve(shapedType.getRank());

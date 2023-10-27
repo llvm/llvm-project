@@ -22,10 +22,11 @@ Features
   machine, you can expect that LLD runs more than twice as fast as the GNU
   gold linker. Your mileage may vary, though.
 
-- It supports various CPUs/ABIs including AArch64, AMDGPU, ARM, Hexagon, MIPS
-  32/64 big/little-endian, PowerPC, PowerPC64, RISC-V, SPARC V9, x86-32 and
-  x86-64. Among these, AArch64, ARM (>= v6), PowerPC, PowerPC64, x86-32 and
-  x86-64 have production quality. MIPS seems decent too.
+- It supports various CPUs/ABIs including AArch64, AMDGPU, ARM, Hexagon,
+  LoongArch, MIPS 32/64 big/little-endian, PowerPC, PowerPC64, RISC-V,
+  SPARC V9, x86-32 and x86-64. Among these, AArch64, ARM (>= v4), LoongArch,
+  PowerPC, PowerPC64, RISC-V, x86-32 and x86-64 have production quality.
+  MIPS seems decent too.
 
 - It is always a cross-linker, meaning that it always supports all the
   above targets however it was built. In fact, we don't provide a
@@ -36,7 +37,7 @@ Features
   external linkers. All you have to do is to construct object files
   and command line arguments just like you would do to invoke an
   external linker and then call the linker's main function,
-  ``lld::elf::link``, from your code.
+  ``lld::lldMain``, from your code.
 
 - It is small. We are using LLVM libObject library to read from object
   files, so it is not a completely fair comparison, but as of February

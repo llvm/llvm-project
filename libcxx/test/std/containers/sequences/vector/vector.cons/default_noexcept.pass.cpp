@@ -27,7 +27,7 @@ struct some_alloc
 {
     typedef T value_type;
     some_alloc(const some_alloc&);
-    void allocate(size_t);
+    void allocate(std::size_t);
 };
 
 TEST_CONSTEXPR_CXX20 bool tests() {

@@ -1,7 +1,7 @@
 # Meta test using merge-fdata binary
 UNSUPPORTED: asan
 # Instrumentation currently only works on X86
-REQUIRES: x86_64-linux
+REQUIRES: x86_64-linux,bolt-runtime
 
 # Instrumentation, should test:
 # - Direct branches
@@ -22,7 +22,7 @@ CHECK-FDATA: 0 [unknown] 0 1 _start 0 0 1
 # Check that BOLT works with this profile
 RUN: llvm-bolt merge-fdata -o %t.bolt --data %t.fdata1 \
 RUN:   --reorder-blocks=ext-tsp --reorder-functions=hfsort+ \
-RUN:   --split-functions \
+RUN:   --split-functions 2>&1 \
 RUN:   | FileCheck %s --check-prefix=CHECK-BOLT1
 CHECK-BOLT1-NOT: invalid (possibly stale) profile
 
@@ -44,7 +44,7 @@ RUN: cmp %t.fdata.base %t.fdata.inst
 # Optimize using merged fdata
 RUN: llvm-bolt merge-fdata -o %t.opt --data %t.fdata.base \
 RUN:   --reorder-blocks=ext-tsp --reorder-functions=hfsort+ \
-RUN:   --split-functions \
+RUN:   --split-functions 2>&1 \
 RUN:   | FileCheck %s --check-prefix=CHECK-BOLT2
 CHECK-BOLT2-NOT: invalid (possibly stale) profile
 

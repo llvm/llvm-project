@@ -38,14 +38,14 @@ namespace {
 
 class UninitializedObjectChecker
     : public Checker<check::EndFunction, check::DeadSymbols> {
-  std::unique_ptr<BuiltinBug> BT_uninitField;
+  std::unique_ptr<BugType> BT_uninitField;
 
 public:
   // The fields of this struct will be initialized when registering the checker.
   UninitObjCheckerOptions Opts;
 
   UninitializedObjectChecker()
-      : BT_uninitField(new BuiltinBug(this, "Uninitialized fields")) {}
+      : BT_uninitField(new BugType(this, "Uninitialized fields")) {}
 
   void checkEndFunction(const ReturnStmt *RS, CheckerContext &C) const;
   void checkDeadSymbols(SymbolReaper &SR, CheckerContext &C) const;

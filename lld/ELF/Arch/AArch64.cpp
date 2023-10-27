@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "InputFiles.h"
 #include "OutputSections.h"
 #include "Symbols.h"
 #include "SyntheticSections.h"
@@ -136,7 +137,9 @@ RelExpr AArch64::getRelExpr(RelType type, const Symbol &s,
   case R_AARCH64_CONDBR19:
   case R_AARCH64_JUMP26:
   case R_AARCH64_TSTBR14:
+    return R_PLT_PC;
   case R_AARCH64_PLT32:
+    const_cast<Symbol &>(s).thunkAccessed = true;
     return R_PLT_PC;
   case R_AARCH64_PREL16:
   case R_AARCH64_PREL32:
@@ -375,6 +378,20 @@ void AArch64::relocate(uint8_t *loc, const Relocation &rel,
     write32(loc, val);
     break;
   case R_AARCH64_ABS64:
+    // AArch64 relocations to tagged symbols have extended semantics, as
+    // described here:
+    // https://github.com/ARM-software/abi-aa/blob/main/memtagabielf64/memtagabielf64.rst#841extended-semantics-of-r_aarch64_relative.
+    // tl;dr: encode the symbol's special addend in the place, which is an
+    // offset to the point where the logical tag is derived from. Quick hack, if
+    // the addend is within the symbol's bounds, no need to encode the tag
+    // derivation offset.
+    if (rel.sym && rel.sym->isTagged() &&
+        (rel.addend < 0 ||
+         rel.addend >= static_cast<int64_t>(rel.sym->getSize())))
+      write64(loc, -rel.addend);
+    else
+      write64(loc, val);
+    break;
   case R_AARCH64_PREL64:
     write64(loc, val);
     break;
@@ -743,10 +760,18 @@ bool AArch64Relaxer::tryRelaxAdrpLdr(const Relocation &adrpRel,
   return true;
 }
 
+// Tagged symbols have upper address bits that are added by the dynamic loader,
+// and thus need the full 64-bit GOT entry. Do not relax such symbols.
+static bool needsGotForMemtag(const Relocation &rel) {
+  return rel.sym->isTagged() && needsGot(rel.expr);
+}
+
 void AArch64::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
   uint64_t secAddr = sec.getOutputSection()->addr;
   if (auto *s = dyn_cast<InputSection>(&sec))
     secAddr += s->outSecOff;
+  else if (auto *ehIn = dyn_cast<EhInputSection>(&sec))
+    secAddr += ehIn->getParent()->outSecOff;
   AArch64Relaxer relaxer(sec.relocs());
   for (size_t i = 0, size = sec.relocs().size(); i != size; ++i) {
     const Relocation &rel = sec.relocs()[i];
@@ -754,6 +779,12 @@ void AArch64::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
     const uint64_t val =
         sec.getRelocTargetVA(sec.file, rel.type, rel.addend,
                              secAddr + rel.offset, *rel.sym, rel.expr);
+
+    if (needsGotForMemtag(rel)) {
+      relocate(loc, rel, val);
+      continue;
+    }
+
     switch (rel.expr) {
     case R_AARCH64_GOT_PAGE_PC:
       if (i + 1 < size &&
@@ -910,9 +941,11 @@ void AArch64BtiPac::writePlt(uint8_t *buf, const Symbol &sym,
 
   // NEEDS_COPY indicates a non-ifunc canonical PLT entry whose address may
   // escape to shared objects. isInIplt indicates a non-preemptible ifunc. Its
-  // address may escape if referenced by a direct relocation. The condition is
-  // conservative.
-  bool hasBti = btiHeader && (sym.hasFlag(NEEDS_COPY) || sym.isInIplt);
+  // address may escape if referenced by a direct relocation. If relative
+  // vtables are used then if the vtable is in a shared object the offsets will
+  // be to the PLT entry. The condition is conservative.
+  bool hasBti = btiHeader &&
+                (sym.hasFlag(NEEDS_COPY) || sym.isInIplt || sym.thunkAccessed);
   if (hasBti) {
     memcpy(buf, btiData, sizeof(btiData));
     buf += sizeof(btiData);
@@ -946,3 +979,107 @@ static TargetInfo *getTargetInfo() {
 }
 
 TargetInfo *elf::getAArch64TargetInfo() { return getTargetInfo(); }
+
+template <class ELFT>
+static void
+addTaggedSymbolReferences(InputSectionBase &sec,
+                          DenseMap<Symbol *, unsigned> &referenceCount) {
+  assert(sec.type == SHT_AARCH64_MEMTAG_GLOBALS_STATIC);
+
+  const RelsOrRelas<ELFT> rels = sec.relsOrRelas<ELFT>();
+  if (rels.areRelocsRel())
+    error("non-RELA relocations are not allowed with memtag globals");
+
+  for (const typename ELFT::Rela &rel : rels.relas) {
+    Symbol &sym = sec.getFile<ELFT>()->getRelocTargetSym(rel);
+    // Linker-synthesized symbols such as __executable_start may be referenced
+    // as tagged in input objfiles, and we don't want them to be tagged. A
+    // cheap way to exclude them is the type check, but their type is
+    // STT_NOTYPE. In addition, this save us from checking untaggable symbols,
+    // like functions or TLS symbols.
+    if (sym.type != STT_OBJECT)
+      continue;
+    // STB_LOCAL symbols can't be referenced from outside the object file, and
+    // thus don't need to be checked for references from other object files.
+    if (sym.binding == STB_LOCAL) {
+      sym.setIsTagged(true);
+      continue;
+    }
+    ++referenceCount[&sym];
+  }
+  sec.markDead();
+}
+
+// A tagged symbol must be denoted as being tagged by all references and the
+// chosen definition. For simplicity, here, it must also be denoted as tagged
+// for all definitions. Otherwise:
+//
+//  1. A tagged definition can be used by an untagged declaration, in which case
+//     the untagged access may be PC-relative, causing a tag mismatch at
+//     runtime.
+//  2. An untagged definition can be used by a tagged declaration, where the
+//     compiler has taken advantage of the increased alignment of the tagged
+//     declaration, but the alignment at runtime is wrong, causing a fault.
+//
+// Ideally, this isn't a problem, as any TU that imports or exports tagged
+// symbols should also be built with tagging. But, to handle these cases, we
+// demote the symbol to be untagged.
+void lld::elf::createTaggedSymbols(const SmallVector<ELFFileBase *, 0> &files) {
+  assert(config->emachine == EM_AARCH64 &&
+         config->androidMemtagMode != ELF::NT_MEMTAG_LEVEL_NONE);
+
+  // First, collect all symbols that are marked as tagged, and count how many
+  // times they're marked as tagged.
+  DenseMap<Symbol *, unsigned> taggedSymbolReferenceCount;
+  for (InputFile* file : files) {
+    if (file->kind() != InputFile::ObjKind)
+      continue;
+    for (InputSectionBase *section : file->getSections()) {
+      if (!section || section->type != SHT_AARCH64_MEMTAG_GLOBALS_STATIC ||
+          section == &InputSection::discarded)
+        continue;
+      invokeELFT(addTaggedSymbolReferences, *section,
+                 taggedSymbolReferenceCount);
+    }
+  }
+
+  // Now, go through all the symbols. If the number of declarations +
+  // definitions to a symbol exceeds the amount of times they're marked as
+  // tagged, it means we have an objfile that uses the untagged variant of the
+  // symbol.
+  for (InputFile *file : files) {
+    if (file->kind() != InputFile::BinaryKind &&
+        file->kind() != InputFile::ObjKind)
+      continue;
+
+    for (Symbol *symbol : file->getSymbols()) {
+      // See `addTaggedSymbolReferences` for more details.
+      if (symbol->type != STT_OBJECT ||
+          symbol->binding == STB_LOCAL)
+        continue;
+      auto it = taggedSymbolReferenceCount.find(symbol);
+      if (it == taggedSymbolReferenceCount.end()) continue;
+      unsigned &remainingAllowedTaggedRefs = it->second;
+      if (remainingAllowedTaggedRefs == 0) {
+        taggedSymbolReferenceCount.erase(it);
+        continue;
+      }
+      --remainingAllowedTaggedRefs;
+    }
+  }
+
+  // `addTaggedSymbolReferences` has already checked that we have RELA
+  // relocations, the only other way to get written addends is with
+  // --apply-dynamic-relocs.
+  if (!taggedSymbolReferenceCount.empty() && config->writeAddends)
+    error("--apply-dynamic-relocs cannot be used with MTE globals");
+
+  // Now, `taggedSymbolReferenceCount` should only contain symbols that are
+  // defined as tagged exactly the same amount as it's referenced, meaning all
+  // uses are tagged.
+  for (auto &[symbol, remainingTaggedRefs] : taggedSymbolReferenceCount) {
+    assert(remainingTaggedRefs == 0 &&
+            "Symbol is defined as tagged more times than it's used");
+    symbol->setIsTagged(true);
+  }
+}

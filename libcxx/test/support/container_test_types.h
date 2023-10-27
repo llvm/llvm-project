@@ -86,6 +86,7 @@
  */
 
 #include <cassert>
+#include <cstddef>
 #include <functional>
 #include <new>
 #include <utility>
@@ -428,9 +429,9 @@ namespace std {
   template <int ID>
   struct hash< ::CopyInsertable<ID> > {
     typedef ::CopyInsertable<ID> argument_type;
-    typedef size_t result_type;
+    typedef std::size_t result_type;
 
-    size_t operator()(argument_type const& arg) const {
+    std::size_t operator()(argument_type const& arg) const {
       return arg.data;
     }
   };

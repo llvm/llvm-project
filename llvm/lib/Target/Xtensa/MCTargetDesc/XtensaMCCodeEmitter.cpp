@@ -43,7 +43,7 @@ public:
   ~XtensaMCCodeEmitter() {}
 
   // OVerride MCCodeEmitter.
-  void encodeInstruction(const MCInst &MI, raw_ostream &OS,
+  void encodeInstruction(const MCInst &MI, SmallVectorImpl<char> &CB,
                          SmallVectorImpl<MCFixup> &Fixups,
                          const MCSubtargetInfo &STI) const override;
 
@@ -122,7 +122,8 @@ MCCodeEmitter *llvm::createXtensaMCCodeEmitter(const MCInstrInfo &MCII,
   return new XtensaMCCodeEmitter(MCII, Ctx, true);
 }
 
-void XtensaMCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
+void XtensaMCCodeEmitter::encodeInstruction(const MCInst &MI,
+                                            SmallVectorImpl<char> &CB,
                                             SmallVectorImpl<MCFixup> &Fixups,
                                             const MCSubtargetInfo &STI) const {
   uint64_t Bits = getBinaryCodeForInstr(MI, Fixups, STI);
@@ -132,7 +133,7 @@ void XtensaMCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
     // Little-endian insertion of Size bytes.
     unsigned ShiftValue = 0;
     for (unsigned I = 0; I != Size; ++I) {
-      OS << uint8_t(Bits >> ShiftValue);
+      CB.push_back(char(Bits >> ShiftValue));
       ShiftValue += 8;
     }
   } else {

@@ -29,6 +29,12 @@ add_header(
 )
 
 add_header(
+  sys_socket_macros
+  HDR
+    sys-socket-macros.h
+)
+
+add_header(
   sys_wait_macros
   HDR
     sys-wait-macros.h

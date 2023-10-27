@@ -1,6 +1,6 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=debug.DumpCFG %s 2>&1 -fopenmp -fopenmp-version=45 | FileCheck %s
 
-// RUN: %clang_analyze_cc1 -analyzer-checker=debug.DumpCFG %s 2>&1 -fopenmp -fopenmp-version=51 | FileCheck %s --check-prefix=OMP51
+// RUN: %clang_analyze_cc1 -analyzer-checker=debug.DumpCFG %s 2>&1 -fopenmp | FileCheck %s --check-prefix=OMP51
 
 #if _OPENMP == 202011
 

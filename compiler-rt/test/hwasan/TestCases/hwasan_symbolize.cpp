@@ -4,8 +4,6 @@
 // RUN: %env_hwasan_opts=symbolize=0 not %run %t 2>&1 | hwasan_symbolize --html --linkify %t.linkify --symbols $(dirname %t) --index | FileCheck --check-prefixes=CHECK,LINKIFY %s
 // RUN: %env_hwasan_opts=symbolize=0 not %run %t 2>&1 | hwasan_symbolize --symbols $(dirname %t) --index | FileCheck %s
 
-// REQUIRES: stable-runtime
-
 #include <sanitizer/hwasan_interface.h>
 #include <stdlib.h>
 
@@ -18,7 +16,7 @@ int main(int argc, char **argv) {
   // LINKIFY: <a href="http://test.invalid/hwasan_symbolize.cpp:[[@LINE-1]]">
   // CHECK: hwasan_symbolize.cpp:[[@LINE-2]]
   // CHECK: Cause: heap-buffer-overflow
-  // CHECK: allocated here:
+  // CHECK: allocated by thread {{.*}} here:
   // LINKIFY: <a href="http://test.invalid/hwasan_symbolize.cpp:[[@LINE-6]]">
   // CHECK: hwasan_symbolize.cpp:[[@LINE-7]]
   return 0;

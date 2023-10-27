@@ -11,6 +11,7 @@
 // <vector>
 
 #include <cstddef>
+#include <memory>
 #include <vector>
 
 #include "test_macros.h"

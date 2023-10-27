@@ -23,6 +23,7 @@ actions are:
   specifies the dictionary key.
 """
 
+
 class MyResponder(MockGDBServerResponder):
     def __init__(self, state):
         super().__init__()
@@ -47,18 +48,21 @@ class MyResponder(MockGDBServerResponder):
                 return "X01"
         return "W47"
 
+
 class FakeEmulator(MockGDBServer):
     def __init__(self, addr, state):
         super().__init__(UnixServerSocket(addr))
         self.responder = MyResponder(state)
 
+
 def main():
-    parser = argparse.ArgumentParser(description=_description,
-            formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument('-g', metavar="unix-socket", required=True)
-    parser.add_argument('-0', metavar="arg0")
-    parser.add_argument('-fake-arg', dest="fake-arg")
-    parser.add_argument('program', help="The program to 'emulate'.")
+    parser = argparse.ArgumentParser(
+        description=_description, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
+    parser.add_argument("-g", metavar="unix-socket", required=True)
+    parser.add_argument("-0", metavar="arg0")
+    parser.add_argument("-fake-arg", dest="fake-arg")
+    parser.add_argument("program", help="The program to 'emulate'.")
     parser.add_argument("args", nargs=argparse.REMAINDER)
     args = parser.parse_args()
 
@@ -66,6 +70,7 @@ def main():
     state["environ"] = dict(os.environ)
     emulator = FakeEmulator(args.g, state)
     emulator.run()
+
 
 if __name__ == "__main__":
     main()

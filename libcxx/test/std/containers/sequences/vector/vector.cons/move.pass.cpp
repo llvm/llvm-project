@@ -101,6 +101,34 @@ TEST_CONSTEXPR_CXX20 bool tests()
         assert(is_contiguous_container_asan_correct(c2));
     }
     {
+      std::vector<MoveOnly, safe_allocator<MoveOnly> > l((safe_allocator<MoveOnly>()));
+      std::vector<MoveOnly, safe_allocator<MoveOnly> > lo((safe_allocator<MoveOnly>()));
+      assert(is_contiguous_container_asan_correct(l));
+      assert(is_contiguous_container_asan_correct(lo));
+      for (int i = 1; i <= 3; ++i) {
+        l.push_back(i);
+        lo.push_back(i);
+      }
+      assert(is_contiguous_container_asan_correct(l));
+      assert(is_contiguous_container_asan_correct(lo));
+      std::vector<MoveOnly, safe_allocator<MoveOnly> > l2 = std::move(l);
+      assert(l2 == lo);
+      assert(l.empty());
+      assert(l2.get_allocator() == lo.get_allocator());
+      assert(is_contiguous_container_asan_correct(l2));
+    }
+    {
+      int a1[] = {1, 3, 7, 9, 10};
+      std::vector<int, safe_allocator<int> > c1(a1, a1 + sizeof(a1) / sizeof(a1[0]));
+      assert(is_contiguous_container_asan_correct(c1));
+      std::vector<int, safe_allocator<int> >::const_iterator i = c1.begin();
+      std::vector<int, safe_allocator<int> > c2                = std::move(c1);
+      assert(is_contiguous_container_asan_correct(c2));
+      std::vector<int, safe_allocator<int> >::iterator j = c2.erase(i);
+      assert(*j == 3);
+      assert(is_contiguous_container_asan_correct(c2));
+    }
+    {
       alloc_stats.clear();
       using Vect = std::vector<int, test_allocator<int> >;
       Vect v(test_allocator<int>(42, 101, &alloc_stats));

@@ -8,7 +8,7 @@
 ; CHECK: adrp
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
-target triple = "aarch64-arm-none-eabi"
+target triple = "aarch64"
 
 @var = hidden local_unnamed_addr global i32 0, align 4
 @_ZTIi = external dso_local constant ptr

@@ -21,7 +21,7 @@
 // exists. To avoid errors in the benchmark these operations have a validation
 // mode to test the benchmark. Since they are not meant to be benchmarked the
 // number of sizes tested is limited to 1.
-//#define VALIDATE
+// #define VALIDATE
 
 namespace {
 
@@ -50,15 +50,12 @@ struct AllOrders : EnumValuesAsTuple<AllOrders, Order, 2> {
 struct TestSets {
   std::vector<uint64_t> Keys;
   std::vector<std::map<uint64_t, int64_t> > Maps;
-  std::vector<
-      std::vector<typename std::map<uint64_t, int64_t>::const_iterator> >
-      Hints;
+  std::vector<std::vector<typename std::map<uint64_t, int64_t>::const_iterator> > Hints;
 };
 
 enum class Shuffle { None, Keys, Hints };
 
-TestSets makeTestingSets(size_t MapSize, Mode mode, Shuffle shuffle,
-                         size_t max_maps) {
+TestSets makeTestingSets(size_t MapSize, Mode mode, Shuffle shuffle, size_t max_maps) {
   /*
    * The shuffle does not retain the random number generator to use the same
    * set of random numbers for every iteration.
@@ -74,7 +71,7 @@ TestSets makeTestingSets(size_t MapSize, Mode mode, Shuffle shuffle,
     std::shuffle(R.Keys.begin(), R.Keys.end(), std::mt19937());
 
   for (int M = 0; M < MapCount; ++M) {
-    auto& map = R.Maps.emplace_back();
+    auto& map   = R.Maps.emplace_back();
     auto& hints = R.Hints.emplace_back();
     for (uint64_t I = 0; I < MapSize; ++I) {
       hints.push_back(map.insert(std::make_pair(2 * I + 2, 0)).first);
@@ -115,8 +112,7 @@ struct ConstructorIterator : Base {
     auto& Map = Data.Maps.front();
     while (State.KeepRunningBatch(MapSize)) {
 #ifndef VALIDATE
-      benchmark::DoNotOptimize(
-          std::map<uint64_t, int64_t>(Map.begin(), Map.end()));
+      benchmark::DoNotOptimize(std::map<uint64_t, int64_t>(Map.begin(), Map.end()));
 #else
       std::map<uint64_t, int64_t> M{Map.begin(), Map.end()};
       if (M != Map)
@@ -238,9 +234,7 @@ struct Insert : Base {
   using Base::Base;
 
   void run(benchmark::State& State) const {
-    auto Data = makeTestingSets(
-        MapSize, Mode(),
-        Order::value == ::Order::Random ? Shuffle::Keys : Shuffle::None, 1000);
+    auto Data = makeTestingSets(MapSize, Mode(), Order::value == ::Order::Random ? Shuffle::Keys : Shuffle::None, 1000);
     while (State.KeepRunningBatch(MapSize * Data.Maps.size())) {
       for (auto& Map : Data.Maps) {
         for (auto K : Data.Keys) {
@@ -260,17 +254,12 @@ struct Insert : Base {
       }
 
       State.PauseTiming();
-      Data = makeTestingSets(MapSize, Mode(),
-                             Order::value == ::Order::Random ? Shuffle::Keys
-                                                             : Shuffle::None,
-                             1000);
+      Data = makeTestingSets(MapSize, Mode(), Order::value == ::Order::Random ? Shuffle::Keys : Shuffle::None, 1000);
       State.ResumeTiming();
     }
   }
 
-  std::string name() const {
-    return "BM_Insert" + baseName() + Mode::name() + Order::name();
-  }
+  std::string name() const { return "BM_Insert" + baseName() + Mode::name() + Order::name(); }
 };
 
 template <class Mode, class Hint>
@@ -278,13 +267,12 @@ struct InsertHint : Base {
   using Base::Base;
 
   template < ::Hint hint>
-  typename std::enable_if<hint == ::Hint::Correct>::type
-  run(benchmark::State& State) const {
+  typename std::enable_if<hint == ::Hint::Correct>::type run(benchmark::State& State) const {
     auto Data = makeTestingSets(MapSize, Mode(), Shuffle::None, 1000);
     while (State.KeepRunningBatch(MapSize * Data.Maps.size())) {
       for (size_t I = 0; I < Data.Maps.size(); ++I) {
         auto& Map = Data.Maps[I];
-        auto H = Data.Hints[I].begin();
+        auto H    = Data.Hints[I].begin();
         for (auto K : Data.Keys) {
 #ifndef VALIDATE
           benchmark::DoNotOptimize(Map.insert(*H, std::make_pair(K, 1)));
@@ -309,17 +297,14 @@ struct InsertHint : Base {
   }
 
   template < ::Hint hint>
-  typename std::enable_if<hint != ::Hint::Correct>::type
-  run(benchmark::State& State) const {
+  typename std::enable_if<hint != ::Hint::Correct>::type run(benchmark::State& State) const {
     auto Data = makeTestingSets(MapSize, Mode(), Shuffle::None, 1000);
     while (State.KeepRunningBatch(MapSize * Data.Maps.size())) {
       for (size_t I = 0; I < Data.Maps.size(); ++I) {
-        auto& Map = Data.Maps[I];
+        auto& Map  = Data.Maps[I];
         auto Third = *(Data.Hints[I].begin() + 2);
         for (auto K : Data.Keys) {
-          auto Itor = hint == ::Hint::Begin
-                          ? Map.begin()
-                          : hint == ::Hint::Third ? Third : Map.end();
+          auto Itor = hint == ::Hint::Begin ? Map.begin() : hint == ::Hint::Third ? Third : Map.end();
 #ifndef VALIDATE
           benchmark::DoNotOptimize(Map.insert(Itor, std::make_pair(K, 1)));
 #else
@@ -347,9 +332,7 @@ struct InsertHint : Base {
     run<h>(State);
   }
 
-  std::string name() const {
-    return "BM_InsertHint" + baseName() + Mode::name() + Hint::name();
-  }
+  std::string name() const { return "BM_InsertHint" + baseName() + Mode::name() + Hint::name(); }
 };
 
 template <class Mode, class Order>
@@ -357,9 +340,7 @@ struct InsertAssign : Base {
   using Base::Base;
 
   void run(benchmark::State& State) const {
-    auto Data = makeTestingSets(
-        MapSize, Mode(),
-        Order::value == ::Order::Random ? Shuffle::Keys : Shuffle::None, 1000);
+    auto Data = makeTestingSets(MapSize, Mode(), Order::value == ::Order::Random ? Shuffle::Keys : Shuffle::None, 1000);
     while (State.KeepRunningBatch(MapSize * Data.Maps.size())) {
       for (auto& Map : Data.Maps) {
         for (auto K : Data.Keys) {
@@ -379,17 +360,12 @@ struct InsertAssign : Base {
       }
 
       State.PauseTiming();
-      Data = makeTestingSets(MapSize, Mode(),
-                             Order::value == ::Order::Random ? Shuffle::Keys
-                                                             : Shuffle::None,
-                             1000);
+      Data = makeTestingSets(MapSize, Mode(), Order::value == ::Order::Random ? Shuffle::Keys : Shuffle::None, 1000);
       State.ResumeTiming();
     }
   }
 
-  std::string name() const {
-    return "BM_InsertAssign" + baseName() + Mode::name() + Order::name();
-  }
+  std::string name() const { return "BM_InsertAssign" + baseName() + Mode::name() + Order::name(); }
 };
 
 template <class Mode, class Hint>
@@ -397,13 +373,12 @@ struct InsertAssignHint : Base {
   using Base::Base;
 
   template < ::Hint hint>
-  typename std::enable_if<hint == ::Hint::Correct>::type
-  run(benchmark::State& State) const {
+  typename std::enable_if<hint == ::Hint::Correct>::type run(benchmark::State& State) const {
     auto Data = makeTestingSets(MapSize, Mode(), Shuffle::None, 1000);
     while (State.KeepRunningBatch(MapSize * Data.Maps.size())) {
       for (size_t I = 0; I < Data.Maps.size(); ++I) {
         auto& Map = Data.Maps[I];
-        auto H = Data.Hints[I].begin();
+        auto H    = Data.Hints[I].begin();
         for (auto K : Data.Keys) {
 #ifndef VALIDATE
           benchmark::DoNotOptimize(Map.insert_or_assign(*H, K, 1));
@@ -428,17 +403,14 @@ struct InsertAssignHint : Base {
   }
 
   template < ::Hint hint>
-  typename std::enable_if<hint != ::Hint::Correct>::type
-  run(benchmark::State& State) const {
+  typename std::enable_if<hint != ::Hint::Correct>::type run(benchmark::State& State) const {
     auto Data = makeTestingSets(MapSize, Mode(), Shuffle::None, 1000);
     while (State.KeepRunningBatch(MapSize * Data.Maps.size())) {
       for (size_t I = 0; I < Data.Maps.size(); ++I) {
-        auto& Map = Data.Maps[I];
+        auto& Map  = Data.Maps[I];
         auto Third = *(Data.Hints[I].begin() + 2);
         for (auto K : Data.Keys) {
-          auto Itor = hint == ::Hint::Begin
-                          ? Map.begin()
-                          : hint == ::Hint::Third ? Third : Map.end();
+          auto Itor = hint == ::Hint::Begin ? Map.begin() : hint == ::Hint::Third ? Third : Map.end();
 #ifndef VALIDATE
           benchmark::DoNotOptimize(Map.insert_or_assign(Itor, K, 1));
 #else
@@ -466,9 +438,7 @@ struct InsertAssignHint : Base {
     run<h>(State);
   }
 
-  std::string name() const {
-    return "BM_InsertAssignHint" + baseName() + Mode::name() + Hint::name();
-  }
+  std::string name() const { return "BM_InsertAssignHint" + baseName() + Mode::name() + Hint::name(); }
 };
 
 template <class Mode, class Order>
@@ -476,10 +446,7 @@ struct Emplace : Base {
   using Base::Base;
 
   void run(benchmark::State& State) const {
-
-    auto Data = makeTestingSets(
-        MapSize, Mode(),
-        Order::value == ::Order::Random ? Shuffle::Keys : Shuffle::None, 1000);
+    auto Data = makeTestingSets(MapSize, Mode(), Order::value == ::Order::Random ? Shuffle::Keys : Shuffle::None, 1000);
     while (State.KeepRunningBatch(MapSize * Data.Maps.size())) {
       for (auto& Map : Data.Maps) {
         for (auto K : Data.Keys) {
@@ -499,17 +466,12 @@ struct Emplace : Base {
       }
 
       State.PauseTiming();
-      Data = makeTestingSets(MapSize, Mode(),
-                             Order::value == ::Order::Random ? Shuffle::Keys
-                                                             : Shuffle::None,
-                             1000);
+      Data = makeTestingSets(MapSize, Mode(), Order::value == ::Order::Random ? Shuffle::Keys : Shuffle::None, 1000);
       State.ResumeTiming();
     }
   }
 
-  std::string name() const {
-    return "BM_Emplace" + baseName() + Mode::name() + Order::name();
-  }
+  std::string name() const { return "BM_Emplace" + baseName() + Mode::name() + Order::name(); }
 };
 
 template <class Mode, class Hint>
@@ -517,13 +479,12 @@ struct EmplaceHint : Base {
   using Base::Base;
 
   template < ::Hint hint>
-  typename std::enable_if<hint == ::Hint::Correct>::type
-  run(benchmark::State& State) const {
+  typename std::enable_if<hint == ::Hint::Correct>::type run(benchmark::State& State) const {
     auto Data = makeTestingSets(MapSize, Mode(), Shuffle::None, 1000);
     while (State.KeepRunningBatch(MapSize * Data.Maps.size())) {
       for (size_t I = 0; I < Data.Maps.size(); ++I) {
         auto& Map = Data.Maps[I];
-        auto H = Data.Hints[I].begin();
+        auto H    = Data.Hints[I].begin();
         for (auto K : Data.Keys) {
 #ifndef VALIDATE
           benchmark::DoNotOptimize(Map.emplace_hint(*H, K, 1));
@@ -548,17 +509,14 @@ struct EmplaceHint : Base {
   }
 
   template < ::Hint hint>
-  typename std::enable_if<hint != ::Hint::Correct>::type
-  run(benchmark::State& State) const {
+  typename std::enable_if<hint != ::Hint::Correct>::type run(benchmark::State& State) const {
     auto Data = makeTestingSets(MapSize, Mode(), Shuffle::None, 1000);
     while (State.KeepRunningBatch(MapSize * Data.Maps.size())) {
       for (size_t I = 0; I < Data.Maps.size(); ++I) {
-        auto& Map = Data.Maps[I];
+        auto& Map  = Data.Maps[I];
         auto Third = *(Data.Hints[I].begin() + 2);
         for (auto K : Data.Keys) {
-          auto Itor = hint == ::Hint::Begin
-                          ? Map.begin()
-                          : hint == ::Hint::Third ? Third : Map.end();
+          auto Itor = hint == ::Hint::Begin ? Map.begin() : hint == ::Hint::Third ? Third : Map.end();
 #ifndef VALIDATE
           benchmark::DoNotOptimize(Map.emplace_hint(Itor, K, 1));
 #else
@@ -586,9 +544,7 @@ struct EmplaceHint : Base {
     run<h>(State);
   }
 
-  std::string name() const {
-    return "BM_EmplaceHint" + baseName() + Mode::name() + Hint::name();
-  }
+  std::string name() const { return "BM_EmplaceHint" + baseName() + Mode::name() + Hint::name(); }
 };
 
 template <class Mode, class Order>
@@ -596,10 +552,7 @@ struct TryEmplace : Base {
   using Base::Base;
 
   void run(benchmark::State& State) const {
-
-    auto Data = makeTestingSets(
-        MapSize, Mode(),
-        Order::value == ::Order::Random ? Shuffle::Keys : Shuffle::None, 1000);
+    auto Data = makeTestingSets(MapSize, Mode(), Order::value == ::Order::Random ? Shuffle::Keys : Shuffle::None, 1000);
     while (State.KeepRunningBatch(MapSize * Data.Maps.size())) {
       for (auto& Map : Data.Maps) {
         for (auto K : Data.Keys) {
@@ -619,17 +572,12 @@ struct TryEmplace : Base {
       }
 
       State.PauseTiming();
-      Data = makeTestingSets(MapSize, Mode(),
-                             Order::value == ::Order::Random ? Shuffle::Keys
-                                                             : Shuffle::None,
-                             1000);
+      Data = makeTestingSets(MapSize, Mode(), Order::value == ::Order::Random ? Shuffle::Keys : Shuffle::None, 1000);
       State.ResumeTiming();
     }
   }
 
-  std::string name() const {
-    return "BM_TryEmplace" + baseName() + Mode::name() + Order::name();
-  }
+  std::string name() const { return "BM_TryEmplace" + baseName() + Mode::name() + Order::name(); }
 };
 
 template <class Mode, class Hint>
@@ -637,13 +585,12 @@ struct TryEmplaceHint : Base {
   using Base::Base;
 
   template < ::Hint hint>
-  typename std::enable_if<hint == ::Hint::Correct>::type
-  run(benchmark::State& State) const {
+  typename std::enable_if<hint == ::Hint::Correct>::type run(benchmark::State& State) const {
     auto Data = makeTestingSets(MapSize, Mode(), Shuffle::None, 1000);
     while (State.KeepRunningBatch(MapSize * Data.Maps.size())) {
       for (size_t I = 0; I < Data.Maps.size(); ++I) {
         auto& Map = Data.Maps[I];
-        auto H = Data.Hints[I].begin();
+        auto H    = Data.Hints[I].begin();
         for (auto K : Data.Keys) {
 #ifndef VALIDATE
           benchmark::DoNotOptimize(Map.try_emplace(*H, K, 1));
@@ -668,17 +615,14 @@ struct TryEmplaceHint : Base {
   }
 
   template < ::Hint hint>
-  typename std::enable_if<hint != ::Hint::Correct>::type
-  run(benchmark::State& State) const {
+  typename std::enable_if<hint != ::Hint::Correct>::type run(benchmark::State& State) const {
     auto Data = makeTestingSets(MapSize, Mode(), Shuffle::None, 1000);
     while (State.KeepRunningBatch(MapSize * Data.Maps.size())) {
       for (size_t I = 0; I < Data.Maps.size(); ++I) {
-        auto& Map = Data.Maps[I];
+        auto& Map  = Data.Maps[I];
         auto Third = *(Data.Hints[I].begin() + 2);
         for (auto K : Data.Keys) {
-          auto Itor = hint == ::Hint::Begin
-                          ? Map.begin()
-                          : hint == ::Hint::Third ? Third : Map.end();
+          auto Itor = hint == ::Hint::Begin ? Map.begin() : hint == ::Hint::Third ? Third : Map.end();
 #ifndef VALIDATE
           benchmark::DoNotOptimize(Map.try_emplace(Itor, K, 1));
 #else
@@ -706,9 +650,7 @@ struct TryEmplaceHint : Base {
     run<h>(State);
   }
 
-  std::string name() const {
-    return "BM_TryEmplaceHint" + baseName() + Mode::name() + Hint::name();
-  }
+  std::string name() const { return "BM_TryEmplaceHint" + baseName() + Mode::name() + Hint::name(); }
 };
 
 template <class Mode, class Order>
@@ -716,9 +658,7 @@ struct Erase : Base {
   using Base::Base;
 
   void run(benchmark::State& State) const {
-    auto Data = makeTestingSets(
-        MapSize, Mode(),
-        Order::value == ::Order::Random ? Shuffle::Keys : Shuffle::None, 1000);
+    auto Data = makeTestingSets(MapSize, Mode(), Order::value == ::Order::Random ? Shuffle::Keys : Shuffle::None, 1000);
     while (State.KeepRunningBatch(MapSize * Data.Maps.size())) {
       for (auto& Map : Data.Maps) {
         for (auto K : Data.Keys) {
@@ -738,17 +678,12 @@ struct Erase : Base {
       }
 
       State.PauseTiming();
-      Data = makeTestingSets(MapSize, Mode(),
-                             Order::value == ::Order::Random ? Shuffle::Keys
-                                                             : Shuffle::None,
-                             1000);
+      Data = makeTestingSets(MapSize, Mode(), Order::value == ::Order::Random ? Shuffle::Keys : Shuffle::None, 1000);
       State.ResumeTiming();
     }
   }
 
-  std::string name() const {
-    return "BM_Erase" + baseName() + Mode::name() + Order::name();
-  }
+  std::string name() const { return "BM_Erase" + baseName() + Mode::name() + Order::name(); }
 };
 
 template <class Order>
@@ -756,9 +691,8 @@ struct EraseIterator : Base {
   using Base::Base;
 
   void run(benchmark::State& State) const {
-    auto Data = makeTestingSets(
-        MapSize, Mode::Hit,
-        Order::value == ::Order::Random ? Shuffle::Hints : Shuffle::None, 1000);
+    auto Data =
+        makeTestingSets(MapSize, Mode::Hit, Order::value == ::Order::Random ? Shuffle::Hints : Shuffle::None, 1000);
     while (State.KeepRunningBatch(MapSize * Data.Maps.size())) {
       for (size_t I = 0; I < Data.Maps.size(); ++I) {
         auto& Map = Data.Maps[I];
@@ -772,17 +706,13 @@ struct EraseIterator : Base {
       }
 
       State.PauseTiming();
-      Data = makeTestingSets(MapSize, Mode::Hit,
-                             Order::value == ::Order::Random ? Shuffle::Hints
-                                                             : Shuffle::None,
-                             1000);
+      Data =
+          makeTestingSets(MapSize, Mode::Hit, Order::value == ::Order::Random ? Shuffle::Hints : Shuffle::None, 1000);
       State.ResumeTiming();
     }
   }
 
-  std::string name() const {
-    return "BM_EraseIterator" + baseName() + Order::name();
-  }
+  std::string name() const { return "BM_EraseIterator" + baseName() + Order::name(); }
 };
 
 struct EraseRange : Base {
@@ -819,9 +749,7 @@ struct Count : Base {
   using Base::Base;
 
   void run(benchmark::State& State) const {
-    auto Data = makeTestingSets(
-        MapSize, Mode(),
-        Order::value == ::Order::Random ? Shuffle::Keys : Shuffle::None, 1);
+    auto Data = makeTestingSets(MapSize, Mode(), Order::value == ::Order::Random ? Shuffle::Keys : Shuffle::None, 1);
     auto& Map = Data.Maps.front();
     while (State.KeepRunningBatch(MapSize)) {
       for (auto K : Data.Keys) {
@@ -841,9 +769,7 @@ struct Count : Base {
     }
   }
 
-  std::string name() const {
-    return "BM_Count" + baseName() + Mode::name() + Order::name();
-  }
+  std::string name() const { return "BM_Count" + baseName() + Mode::name() + Order::name(); }
 };
 
 template <class Mode, class Order>
@@ -851,9 +777,7 @@ struct Find : Base {
   using Base::Base;
 
   void run(benchmark::State& State) const {
-    auto Data = makeTestingSets(
-        MapSize, Mode(),
-        Order::value == ::Order::Random ? Shuffle::Keys : Shuffle::None, 1);
+    auto Data = makeTestingSets(MapSize, Mode(), Order::value == ::Order::Random ? Shuffle::Keys : Shuffle::None, 1);
     auto& Map = Data.Maps.front();
     while (State.KeepRunningBatch(MapSize)) {
       for (auto K : Data.Keys) {
@@ -873,9 +797,7 @@ struct Find : Base {
     }
   }
 
-  std::string name() const {
-    return "BM_Find" + baseName() + Mode::name() + Order::name();
-  }
+  std::string name() const { return "BM_Find" + baseName() + Mode::name() + Order::name(); }
 };
 
 template <class Mode, class Order>
@@ -883,9 +805,7 @@ struct EqualRange : Base {
   using Base::Base;
 
   void run(benchmark::State& State) const {
-    auto Data = makeTestingSets(
-        MapSize, Mode(),
-        Order::value == ::Order::Random ? Shuffle::Keys : Shuffle::None, 1);
+    auto Data = makeTestingSets(MapSize, Mode(), Order::value == ::Order::Random ? Shuffle::Keys : Shuffle::None, 1);
     auto& Map = Data.Maps.front();
     while (State.KeepRunningBatch(MapSize)) {
       for (auto K : Data.Keys) {
@@ -900,12 +820,12 @@ struct EqualRange : Base {
             --Range.second;
             Key -= 2;
           }
-          if (Range.first == Map.end() || Range.first->first != K ||
-              Range.second == Map.end() || Range.second->first - 2 != Key)
+          if (Range.first == Map.end() || Range.first->first != K || Range.second == Map.end() ||
+              Range.second->first - 2 != Key)
             State.SkipWithError("Did not find the existing element");
         } else {
-          if (Range.first == Map.end() || Range.first->first - 1 != K ||
-              Range.second == Map.end() || Range.second->first - 1 != K)
+          if (Range.first == Map.end() || Range.first->first - 1 != K || Range.second == Map.end() ||
+              Range.second->first - 1 != K)
             State.SkipWithError("Did find the non-existing element");
         }
 #endif
@@ -913,9 +833,7 @@ struct EqualRange : Base {
     }
   }
 
-  std::string name() const {
-    return "BM_EqualRange" + baseName() + Mode::name() + Order::name();
-  }
+  std::string name() const { return "BM_EqualRange" + baseName() + Mode::name() + Order::name(); }
 };
 
 template <class Mode, class Order>
@@ -923,9 +841,7 @@ struct LowerBound : Base {
   using Base::Base;
 
   void run(benchmark::State& State) const {
-    auto Data = makeTestingSets(
-        MapSize, Mode(),
-        Order::value == ::Order::Random ? Shuffle::Keys : Shuffle::None, 1);
+    auto Data = makeTestingSets(MapSize, Mode(), Order::value == ::Order::Random ? Shuffle::Keys : Shuffle::None, 1);
     auto& Map = Data.Maps.front();
     while (State.KeepRunningBatch(MapSize)) {
       for (auto K : Data.Keys) {
@@ -945,9 +861,7 @@ struct LowerBound : Base {
     }
   }
 
-  std::string name() const {
-    return "BM_LowerBound" + baseName() + Mode::name() + Order::name();
-  }
+  std::string name() const { return "BM_LowerBound" + baseName() + Mode::name() + Order::name(); }
 };
 
 template <class Mode, class Order>
@@ -955,9 +869,7 @@ struct UpperBound : Base {
   using Base::Base;
 
   void run(benchmark::State& State) const {
-    auto Data = makeTestingSets(
-        MapSize, Mode(),
-        Order::value == ::Order::Random ? Shuffle::Keys : Shuffle::None, 1);
+    auto Data = makeTestingSets(MapSize, Mode(), Order::value == ::Order::Random ? Shuffle::Keys : Shuffle::None, 1);
     auto& Map = Data.Maps.front();
     while (State.KeepRunningBatch(MapSize)) {
       for (auto K : Data.Keys) {
@@ -983,9 +895,7 @@ struct UpperBound : Base {
     }
   }
 
-  std::string name() const {
-    return "BM_UpperBound" + baseName() + Mode::name() + Order::name();
-  }
+  std::string name() const { return "BM_UpperBound" + baseName() + Mode::name() + Order::name(); }
 };
 
 } // namespace

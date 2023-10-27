@@ -14,6 +14,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/ADT/iterator.h"
@@ -43,11 +44,11 @@
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/Host.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/Host.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -128,11 +129,11 @@ struct ELFWriter {
   /// @}
 
   // This holds the symbol table index of the last local symbol.
-  unsigned LastLocalSymbolIndex;
+  unsigned LastLocalSymbolIndex = ~0u;
   // This holds the .strtab section index.
-  unsigned StringTableIndex;
+  unsigned StringTableIndex = ~0u;
   // This holds the .symtab section index.
-  unsigned SymbolTableIndex;
+  unsigned SymbolTableIndex = ~0u;
 
   // Sections in the order they are to be output in the section table.
   std::vector<const MCSectionELF *> SectionTable;
@@ -151,8 +152,9 @@ struct ELFWriter {
 public:
   ELFWriter(ELFObjectWriter &OWriter, raw_pwrite_stream &OS,
             bool IsLittleEndian, DwoMode Mode)
-      : OWriter(OWriter),
-        W(OS, IsLittleEndian ? support::little : support::big), Mode(Mode) {}
+      : OWriter(OWriter), W(OS, IsLittleEndian ? llvm::endianness::little
+                                               : llvm::endianness::big),
+        Mode(Mode) {}
 
   void WriteWord(uint64_t Word) {
     if (is64Bit())
@@ -226,8 +228,7 @@ class ELFObjectWriter : public MCObjectWriter {
 
   bool hasRelocationAddend() const;
 
-  bool shouldRelocateWithSymbol(const MCAssembler &Asm,
-                                const MCSymbolRefExpr *RefA,
+  bool shouldRelocateWithSymbol(const MCAssembler &Asm, const MCValue &Val,
                                 const MCSymbolELF *Sym, uint64_t C,
                                 unsigned Type) const;
 
@@ -406,8 +407,8 @@ void ELFWriter::writeHeader(const MCAssembler &Asm) {
   W.OS << char(is64Bit() ? ELF::ELFCLASS64 : ELF::ELFCLASS32); // e_ident[EI_CLASS]
 
   // e_ident[EI_DATA]
-  W.OS << char(W.Endian == support::little ? ELF::ELFDATA2LSB
-                                           : ELF::ELFDATA2MSB);
+  W.OS << char(W.Endian == llvm::endianness::little ? ELF::ELFDATA2LSB
+                                                    : ELF::ELFDATA2MSB);
 
   W.OS << char(ELF::EV_CURRENT);        // e_ident[EI_VERSION]
   // e_ident[EI_OSABI]
@@ -1296,10 +1297,11 @@ void ELFObjectWriter::executePostLayoutBinding(MCAssembler &Asm,
 // to use a relocation with a section if that is possible. Using the section
 // allows us to omit some local symbols from the symbol table.
 bool ELFObjectWriter::shouldRelocateWithSymbol(const MCAssembler &Asm,
-                                               const MCSymbolRefExpr *RefA,
+                                               const MCValue &Val,
                                                const MCSymbolELF *Sym,
                                                uint64_t C,
                                                unsigned Type) const {
+  const MCSymbolRefExpr *RefA = Val.getSymA();
   // A PCRel relocation to an absolute value has no symbol (or section). We
   // represent that with a relocation to a null section.
   if (!RefA)
@@ -1418,7 +1420,7 @@ bool ELFObjectWriter::shouldRelocateWithSymbol(const MCAssembler &Asm,
   if (Asm.isThumbFunc(Sym))
     return true;
 
-  if (TargetObjectWriter->needsRelocateWithSymbol(*Sym, Type))
+  if (TargetObjectWriter->needsRelocateWithSymbol(Val, *Sym, Type))
     return true;
   return false;
 }
@@ -1483,7 +1485,7 @@ void ELFObjectWriter::recordRelocation(MCAssembler &Asm,
   const auto *Parent = cast<MCSectionELF>(Fragment->getParent());
   // Emiting relocation with sybmol for CG Profile to  help with --cg-profile.
   bool RelocateWithSymbol =
-      shouldRelocateWithSymbol(Asm, RefA, SymA, C, Type) ||
+      shouldRelocateWithSymbol(Asm, Target, SymA, C, Type) ||
       (Parent->getType() == ELF::SHT_LLVM_CALL_GRAPH_PROFILE);
   uint64_t Addend = 0;
 

@@ -57,182 +57,182 @@ LVElement *LVELFReader::createElement(dwarf::Tag Tag) {
   switch (Tag) {
   // Types.
   case dwarf::DW_TAG_base_type:
-    CurrentType = new LVType();
+    CurrentType = createType();
     CurrentType->setIsBase();
     if (options().getAttributeBase())
       CurrentType->setIncludeInPrint();
     return CurrentType;
   case dwarf::DW_TAG_const_type:
-    CurrentType = new LVType();
+    CurrentType = createType();
     CurrentType->setIsConst();
     CurrentType->setName("const");
     return CurrentType;
   case dwarf::DW_TAG_enumerator:
-    CurrentType = new LVTypeEnumerator();
+    CurrentType = createTypeEnumerator();
     return CurrentType;
   case dwarf::DW_TAG_imported_declaration:
-    CurrentType = new LVTypeImport();
+    CurrentType = createTypeImport();
     CurrentType->setIsImportDeclaration();
     return CurrentType;
   case dwarf::DW_TAG_imported_module:
-    CurrentType = new LVTypeImport();
+    CurrentType = createTypeImport();
     CurrentType->setIsImportModule();
     return CurrentType;
   case dwarf::DW_TAG_pointer_type:
-    CurrentType = new LVType();
+    CurrentType = createType();
     CurrentType->setIsPointer();
     CurrentType->setName("*");
     return CurrentType;
   case dwarf::DW_TAG_ptr_to_member_type:
-    CurrentType = new LVType();
+    CurrentType = createType();
     CurrentType->setIsPointerMember();
     CurrentType->setName("*");
     return CurrentType;
   case dwarf::DW_TAG_reference_type:
-    CurrentType = new LVType();
+    CurrentType = createType();
     CurrentType->setIsReference();
     CurrentType->setName("&");
     return CurrentType;
   case dwarf::DW_TAG_restrict_type:
-    CurrentType = new LVType();
+    CurrentType = createType();
     CurrentType->setIsRestrict();
     CurrentType->setName("restrict");
     return CurrentType;
   case dwarf::DW_TAG_rvalue_reference_type:
-    CurrentType = new LVType();
+    CurrentType = createType();
     CurrentType->setIsRvalueReference();
     CurrentType->setName("&&");
     return CurrentType;
   case dwarf::DW_TAG_subrange_type:
-    CurrentType = new LVTypeSubrange();
+    CurrentType = createTypeSubrange();
     return CurrentType;
   case dwarf::DW_TAG_template_value_parameter:
-    CurrentType = new LVTypeParam();
+    CurrentType = createTypeParam();
     CurrentType->setIsTemplateValueParam();
     return CurrentType;
   case dwarf::DW_TAG_template_type_parameter:
-    CurrentType = new LVTypeParam();
+    CurrentType = createTypeParam();
     CurrentType->setIsTemplateTypeParam();
     return CurrentType;
   case dwarf::DW_TAG_GNU_template_template_param:
-    CurrentType = new LVTypeParam();
+    CurrentType = createTypeParam();
     CurrentType->setIsTemplateTemplateParam();
     return CurrentType;
   case dwarf::DW_TAG_typedef:
-    CurrentType = new LVTypeDefinition();
+    CurrentType = createTypeDefinition();
     return CurrentType;
   case dwarf::DW_TAG_unspecified_type:
-    CurrentType = new LVType();
+    CurrentType = createType();
     CurrentType->setIsUnspecified();
     return CurrentType;
   case dwarf::DW_TAG_volatile_type:
-    CurrentType = new LVType();
+    CurrentType = createType();
     CurrentType->setIsVolatile();
     CurrentType->setName("volatile");
     return CurrentType;
 
   // Symbols.
   case dwarf::DW_TAG_formal_parameter:
-    CurrentSymbol = new LVSymbol();
+    CurrentSymbol = createSymbol();
     CurrentSymbol->setIsParameter();
     return CurrentSymbol;
   case dwarf::DW_TAG_unspecified_parameters:
-    CurrentSymbol = new LVSymbol();
+    CurrentSymbol = createSymbol();
     CurrentSymbol->setIsUnspecified();
     CurrentSymbol->setName("...");
     return CurrentSymbol;
   case dwarf::DW_TAG_member:
-    CurrentSymbol = new LVSymbol();
+    CurrentSymbol = createSymbol();
     CurrentSymbol->setIsMember();
     return CurrentSymbol;
   case dwarf::DW_TAG_variable:
-    CurrentSymbol = new LVSymbol();
+    CurrentSymbol = createSymbol();
     CurrentSymbol->setIsVariable();
     return CurrentSymbol;
   case dwarf::DW_TAG_inheritance:
-    CurrentSymbol = new LVSymbol();
+    CurrentSymbol = createSymbol();
     CurrentSymbol->setIsInheritance();
     return CurrentSymbol;
   case dwarf::DW_TAG_call_site_parameter:
   case dwarf::DW_TAG_GNU_call_site_parameter:
-    CurrentSymbol = new LVSymbol();
+    CurrentSymbol = createSymbol();
     CurrentSymbol->setIsCallSiteParameter();
     return CurrentSymbol;
   case dwarf::DW_TAG_constant:
-    CurrentSymbol = new LVSymbol();
+    CurrentSymbol = createSymbol();
     CurrentSymbol->setIsConstant();
     return CurrentSymbol;
 
   // Scopes.
   case dwarf::DW_TAG_catch_block:
-    CurrentScope = new LVScope();
+    CurrentScope = createScope();
     CurrentScope->setIsCatchBlock();
     return CurrentScope;
   case dwarf::DW_TAG_lexical_block:
-    CurrentScope = new LVScope();
+    CurrentScope = createScope();
     CurrentScope->setIsLexicalBlock();
     return CurrentScope;
   case dwarf::DW_TAG_try_block:
-    CurrentScope = new LVScope();
+    CurrentScope = createScope();
     CurrentScope->setIsTryBlock();
     return CurrentScope;
   case dwarf::DW_TAG_compile_unit:
   case dwarf::DW_TAG_skeleton_unit:
-    CurrentScope = new LVScopeCompileUnit();
+    CurrentScope = createScopeCompileUnit();
     CompileUnit = static_cast<LVScopeCompileUnit *>(CurrentScope);
     return CurrentScope;
   case dwarf::DW_TAG_inlined_subroutine:
-    CurrentScope = new LVScopeFunctionInlined();
+    CurrentScope = createScopeFunctionInlined();
     return CurrentScope;
   case dwarf::DW_TAG_namespace:
-    CurrentScope = new LVScopeNamespace();
+    CurrentScope = createScopeNamespace();
     return CurrentScope;
   case dwarf::DW_TAG_template_alias:
-    CurrentScope = new LVScopeAlias();
+    CurrentScope = createScopeAlias();
     return CurrentScope;
   case dwarf::DW_TAG_array_type:
-    CurrentScope = new LVScopeArray();
+    CurrentScope = createScopeArray();
     return CurrentScope;
   case dwarf::DW_TAG_call_site:
   case dwarf::DW_TAG_GNU_call_site:
-    CurrentScope = new LVScopeFunction();
+    CurrentScope = createScopeFunction();
     CurrentScope->setIsCallSite();
     return CurrentScope;
   case dwarf::DW_TAG_entry_point:
-    CurrentScope = new LVScopeFunction();
+    CurrentScope = createScopeFunction();
     CurrentScope->setIsEntryPoint();
     return CurrentScope;
   case dwarf::DW_TAG_subprogram:
-    CurrentScope = new LVScopeFunction();
+    CurrentScope = createScopeFunction();
     CurrentScope->setIsSubprogram();
     return CurrentScope;
   case dwarf::DW_TAG_subroutine_type:
-    CurrentScope = new LVScopeFunctionType();
+    CurrentScope = createScopeFunctionType();
     return CurrentScope;
   case dwarf::DW_TAG_label:
-    CurrentScope = new LVScopeFunction();
+    CurrentScope = createScopeFunction();
     CurrentScope->setIsLabel();
     return CurrentScope;
   case dwarf::DW_TAG_class_type:
-    CurrentScope = new LVScopeAggregate();
+    CurrentScope = createScopeAggregate();
     CurrentScope->setIsClass();
     return CurrentScope;
   case dwarf::DW_TAG_structure_type:
-    CurrentScope = new LVScopeAggregate();
+    CurrentScope = createScopeAggregate();
     CurrentScope->setIsStructure();
     return CurrentScope;
   case dwarf::DW_TAG_union_type:
-    CurrentScope = new LVScopeAggregate();
+    CurrentScope = createScopeAggregate();
     CurrentScope->setIsUnion();
     return CurrentScope;
   case dwarf::DW_TAG_enumeration_type:
-    CurrentScope = new LVScopeEnumeration();
+    CurrentScope = createScopeEnumeration();
     return CurrentScope;
   case dwarf::DW_TAG_GNU_formal_parameter_pack:
-    CurrentScope = new LVScopeFormalPack();
+    CurrentScope = createScopeFormalPack();
     return CurrentScope;
   case dwarf::DW_TAG_GNU_template_parameter_pack:
-    CurrentScope = new LVScopeTemplatePack();
+    CurrentScope = createScopeTemplatePack();
     return CurrentScope;
   default:
     // Collect TAGs not implemented.
@@ -548,22 +548,22 @@ LVScope *LVELFReader::processOneDie(const DWARFDie &InputDIE, LVScope *Parent,
     // referencing this element.
     if (ElementTable.find(Offset) == ElementTable.end()) {
       // No previous references to this offset.
-      ElementTable.emplace(
-          std::piecewise_construct, std::forward_as_tuple(Offset),
-          std::forward_as_tuple(CurrentElement, LVElementSet()));
+      ElementTable.emplace(std::piecewise_construct,
+                           std::forward_as_tuple(Offset),
+                           std::forward_as_tuple(CurrentElement));
     } else {
       // There are previous references to this element. We need to update the
       // element and all the references pointing to this element.
       LVElementEntry &Reference = ElementTable[Offset];
-      Reference.first = CurrentElement;
+      Reference.Element = CurrentElement;
       // Traverse the element set and update the elements (backtracking).
-      // Using the bit associated with 'type' or 'reference' allows us to set
-      // the correct target.
-      for (LVElement *Target : Reference.second)
-        Target->getHasReference() ? Target->setReference(CurrentElement)
-                                  : Target->setType(CurrentElement);
+      for (LVElement *Target : Reference.References)
+        Target->setReference(CurrentElement);
+      for (LVElement *Target : Reference.Types)
+        Target->setType(CurrentElement);
       // Clear the pending elements.
-      Reference.second.clear();
+      Reference.References.clear();
+      Reference.Types.clear();
     }
 
     // Add the current element to its parent as there are attributes
@@ -733,7 +733,7 @@ void LVELFReader::createLineAndFileRecords(
       // the 'processLines()' function will move each created logical line
       // to its enclosing logical scope, using the debug ranges information
       // and they will be released when its scope parent is deleted.
-      LVLineDebug *Line = new LVLineDebug();
+      LVLineDebug *Line = createLineDebug();
       CULines.push_back(Line);
       Line->setAddress(Row.Address.Address);
       Line->setFilename(
@@ -759,7 +759,8 @@ void LVELFReader::createLineAndFileRecords(
     }
 }
 
-std::string LVELFReader::getRegisterName(LVSmall Opcode, uint64_t Operands[2]) {
+std::string LVELFReader::getRegisterName(LVSmall Opcode,
+                                         ArrayRef<uint64_t> Operands) {
   // The 'prettyPrintRegisterOp' function uses the DWARFUnit to support
   // DW_OP_regval_type. At this point we are operating on a logical view
   // item, with no access to the underlying DWARF data used by LLVM.
@@ -973,19 +974,8 @@ void LVELFReader::processLocationList(dwarf::Attribute Attr,
                                       bool CallSiteLocation) {
 
   auto ProcessLocationExpression = [&](const DWARFExpression &Expression) {
-    // DW_OP_const_type is variable-length and has 3
-    // operands. DWARFExpression thus far only supports 2.
-    uint64_t Operands[2] = {0};
-    for (const DWARFExpression::Operation &Op : Expression) {
-      DWARFExpression::Operation::Description Description = Op.getDescription();
-      for (unsigned Operand = 0; Operand < 2; ++Operand) {
-        if (Description.Op[Operand] == DWARFExpression::Operation::SizeNA)
-          break;
-        Operands[Operand] = Op.getRawOperand(Operand);
-      }
-      CurrentSymbol->addLocationOperands(Op.getCode(), Operands[0],
-                                         Operands[1]);
-    }
+    for (const DWARFExpression::Operation &Op : Expression)
+      CurrentSymbol->addLocationOperands(Op.getCode(), Op.getRawOperands());
   };
 
   DWARFUnit *U = Die.getDwarfUnit();
@@ -1068,19 +1058,21 @@ void LVELFReader::processLocationMember(dwarf::Attribute Attr,
     CurrentSymbol->addLocationConstant(Attr, *FormValue.getAsUnsignedConstant(),
                                        OffsetOnEntry);
   else
-    // This is a a location description, or a reference to one.
+    // This is a location description, or a reference to one.
     processLocationList(Attr, FormValue, Die, OffsetOnEntry);
 }
 
 // Update the current element with the reference.
 void LVELFReader::updateReference(dwarf::Attribute Attr,
                                   const DWARFFormValue &FormValue) {
-  // We are assuming that DW_AT_specification, DW_AT_abstract_origin,
-  // DW_AT_type and DW_AT_extension do not appear at the same time
-  // in the same DIE.
+  // FIXME: We are assuming that at most one Reference (DW_AT_specification,
+  // DW_AT_abstract_origin, ...) and at most one Type (DW_AT_import, DW_AT_type)
+  // appear in any single DIE, but this may not be true.
   uint64_t Reference = *FormValue.getAsReference();
   // Get target for the given reference, if already created.
-  LVElement *Target = getElementForOffset(Reference, CurrentElement);
+  LVElement *Target = getElementForOffset(
+      Reference, CurrentElement,
+      /*IsType=*/Attr == dwarf::DW_AT_import || Attr == dwarf::DW_AT_type);
   // Check if we are dealing with cross CU references.
   if (FormValue.getForm() == dwarf::DW_FORM_ref_addr) {
     if (Target) {
@@ -1124,26 +1116,18 @@ void LVELFReader::updateReference(dwarf::Attribute Attr,
 }
 
 // Get an element given the DIE offset.
-LVElement *LVELFReader::getElementForOffset(LVOffset Offset,
-                                            LVElement *Element) {
-  LVElement *Target = nullptr;
-  // Search offset in the cross references.
-  LVElementReference::iterator Iter = ElementTable.find(Offset);
-  if (Iter == ElementTable.end())
-    // Reference to an unseen element.
-    ElementTable.emplace(std::piecewise_construct,
-                         std::forward_as_tuple(Offset),
-                         std::forward_as_tuple(nullptr, LVElementSet{Element}));
-  else {
-    // There are previous references to this element. We need to update the
-    // element and all the references pointing to this element.
-    LVElementEntry &Reference = Iter->second;
-    Target = Reference.first;
-    if (!Target)
-      // Add the element to the set.
-      Reference.second.insert(Element);
+LVElement *LVELFReader::getElementForOffset(LVOffset Offset, LVElement *Element,
+                                            bool IsType) {
+  auto Iter = ElementTable.try_emplace(Offset).first;
+  // Update the element and all the references pointing to this element.
+  LVElementEntry &Entry = Iter->second;
+  if (!Entry.Element) {
+    if (IsType)
+      Entry.Types.insert(Element);
+    else
+      Entry.References.insert(Element);
   }
-  return Target;
+  return Entry.Element;
 }
 
 Error LVELFReader::loadTargetInfo(const ObjectFile &Obj) {

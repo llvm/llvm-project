@@ -20,6 +20,7 @@ class GreedyRewriteConfig;
 class Operation;
 class Pass;
 class Region;
+class ModuleOp;
 } // namespace mlir
 
 namespace fir {
@@ -42,20 +43,28 @@ namespace fir {
 #define GEN_PASS_DECL_MEMORYALLOCATIONOPT
 #define GEN_PASS_DECL_SIMPLIFYREGIONLITE
 #define GEN_PASS_DECL_ALGEBRAICSIMPLIFICATION
+#define GEN_PASS_DECL_POLYMORPHICOPCONVERSION
+#define GEN_PASS_DECL_OPENACCDATAOPERANDCONVERSION
 #include "flang/Optimizer/Transforms/Passes.h.inc"
 
 std::unique_ptr<mlir::Pass> createAbstractResultOnFuncOptPass();
 std::unique_ptr<mlir::Pass> createAbstractResultOnGlobalOptPass();
 std::unique_ptr<mlir::Pass> createAffineDemotionPass();
-std::unique_ptr<mlir::Pass> createArrayValueCopyPass();
+std::unique_ptr<mlir::Pass>
+createArrayValueCopyPass(fir::ArrayValueCopyOptions options = {});
 std::unique_ptr<mlir::Pass> createFirToCfgPass();
 std::unique_ptr<mlir::Pass> createCharacterConversionPass();
 std::unique_ptr<mlir::Pass> createExternalNameConversionPass();
+std::unique_ptr<mlir::Pass>
+createExternalNameConversionPass(bool appendUnderscore);
 std::unique_ptr<mlir::Pass> createMemDataFlowOptPass();
 std::unique_ptr<mlir::Pass> createPromoteToAffinePass();
 std::unique_ptr<mlir::Pass> createMemoryAllocationPass();
+std::unique_ptr<mlir::Pass> createStackArraysPass();
+std::unique_ptr<mlir::Pass> createAliasTagsPass();
 std::unique_ptr<mlir::Pass> createSimplifyIntrinsicsPass();
 std::unique_ptr<mlir::Pass> createAddDebugFoundationPass();
+std::unique_ptr<mlir::Pass> createLoopVersioningPass();
 
 std::unique_ptr<mlir::Pass>
 createMemoryAllocationPass(bool dynOnHeap, std::size_t maxStackSize);
@@ -64,6 +73,17 @@ std::unique_ptr<mlir::Pass> createSimplifyRegionLitePass();
 std::unique_ptr<mlir::Pass> createAlgebraicSimplificationPass();
 std::unique_ptr<mlir::Pass>
 createAlgebraicSimplificationPass(const mlir::GreedyRewriteConfig &config);
+std::unique_ptr<mlir::Pass> createPolymorphicOpConversionPass();
+
+std::unique_ptr<mlir::OperationPass<mlir::ModuleOp>>
+createOMPEarlyOutliningPass();
+std::unique_ptr<mlir::Pass> createOMPFunctionFilteringPass();
+std::unique_ptr<mlir::OperationPass<mlir::ModuleOp>>
+createOMPMarkDeclareTargetPass();
+
+std::unique_ptr<mlir::Pass> createVScaleAttrPass();
+std::unique_ptr<mlir::Pass>
+createVScaleAttrPass(std::pair<unsigned, unsigned> vscaleAttr);
 
 // declarative passes
 #define GEN_PASS_REGISTRATION

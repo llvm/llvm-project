@@ -15,8 +15,12 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::readability {
 
+namespace {
+AST_MATCHER(CXXMethodDecl, isStatic) { return Node.isStatic(); }
+} // namespace
+
 static unsigned getNameSpecifierNestingLevel(const QualType &QType) {
-  if (const ElaboratedType *ElType = QType->getAs<ElaboratedType>()) {
+  if (const auto *ElType = QType->getAs<ElaboratedType>()) {
     if (const NestedNameSpecifier *NestedSpecifiers = ElType->getQualifier()) {
       unsigned NameSpecifierNestingLevel = 1;
       do {
@@ -38,8 +42,9 @@ void StaticAccessedThroughInstanceCheck::storeOptions(
 
 void StaticAccessedThroughInstanceCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
-      memberExpr(hasDeclaration(anyOf(cxxMethodDecl(isStaticStorageClass()),
-                                      varDecl(hasStaticStorageDuration()))))
+      memberExpr(hasDeclaration(anyOf(cxxMethodDecl(isStatic()),
+                                      varDecl(hasStaticStorageDuration()),
+                                      enumConstantDecl())))
           .bind("memberExpression"),
       this);
 }
@@ -58,21 +63,26 @@ void StaticAccessedThroughInstanceCheck::check(
   if (isa<CXXOperatorCallExpr>(BaseExpr))
     return;
 
-  QualType BaseType =
+  const QualType BaseType =
       BaseExpr->getType()->isPointerType()
           ? BaseExpr->getType()->getPointeeType().getUnqualifiedType()
           : BaseExpr->getType().getUnqualifiedType();
 
   const ASTContext *AstContext = Result.Context;
-  PrintingPolicy PrintingPolicyWithSupressedTag(AstContext->getLangOpts());
-  PrintingPolicyWithSupressedTag.SuppressTagKeyword = true;
-  PrintingPolicyWithSupressedTag.SuppressUnwrittenScope = true;
+  PrintingPolicy PrintingPolicyWithSuppressedTag(AstContext->getLangOpts());
+  PrintingPolicyWithSuppressedTag.SuppressTagKeyword = true;
+  PrintingPolicyWithSuppressedTag.SuppressUnwrittenScope = true;
 
-  PrintingPolicyWithSupressedTag.PrintCanonicalTypes =
+  PrintingPolicyWithSuppressedTag.PrintCanonicalTypes =
       !BaseExpr->getType()->isTypedefNameType();
 
   std::string BaseTypeName =
-      BaseType.getAsString(PrintingPolicyWithSupressedTag);
+      BaseType.getAsString(PrintingPolicyWithSuppressedTag);
+
+  // Ignore anonymous structs/classes which will not have an identifier
+  const RecordDecl *RecDecl = BaseType->getAsCXXRecordDecl();
+  if (!RecDecl || RecDecl->getIdentifier() == nullptr)
+    return;
 
   // Do not warn for CUDA built-in variables.
   if (StringRef(BaseTypeName).startswith("__cuda_builtin_"))

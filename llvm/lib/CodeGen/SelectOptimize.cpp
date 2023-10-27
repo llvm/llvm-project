@@ -28,6 +28,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/ProfDataUtils.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
@@ -98,15 +99,15 @@ namespace {
 
 class SelectOptimize : public FunctionPass {
   const TargetMachine *TM = nullptr;
-  const TargetSubtargetInfo *TSI;
+  const TargetSubtargetInfo *TSI = nullptr;
   const TargetLowering *TLI = nullptr;
   const TargetTransformInfo *TTI = nullptr;
-  const LoopInfo *LI;
-  DominatorTree *DT;
+  const LoopInfo *LI = nullptr;
+  DominatorTree *DT = nullptr;
   std::unique_ptr<BlockFrequencyInfo> BFI;
   std::unique_ptr<BranchProbabilityInfo> BPI;
-  ProfileSummaryInfo *PSI;
-  OptimizationRemarkEmitter *ORE;
+  ProfileSummaryInfo *PSI = nullptr;
+  OptimizationRemarkEmitter *ORE = nullptr;
   TargetSchedModel TSchedModel;
 
 public:
@@ -424,7 +425,7 @@ void SelectOptimize::convertProfitableSIGroups(SelectGroups &ProfSIGroups) {
     BasicBlock *StartBlock = SI->getParent();
     BasicBlock::iterator SplitPt = ++(BasicBlock::iterator(LastSI));
     BasicBlock *EndBlock = StartBlock->splitBasicBlock(SplitPt, "select.end");
-    BFI->setBlockFreq(EndBlock, BFI->getBlockFreq(StartBlock).getFrequency());
+    BFI->setBlockFreq(EndBlock, BFI->getBlockFreq(StartBlock));
     // Delete the unconditional branch that was just created by the split.
     StartBlock->getTerminator()->eraseFromParent();
 
@@ -438,7 +439,7 @@ void SelectOptimize::convertProfitableSIGroups(SelectGroups &ProfSIGroups) {
       DIt++;
     }
     for (auto *DI : DebugPseudoINS) {
-      DI->moveBefore(&*EndBlock->getFirstInsertionPt());
+      DI->moveBeforePreserving(&*EndBlock->getFirstInsertionPt());
     }
 
     // These are the new basic blocks for the conditional branch.
@@ -504,7 +505,8 @@ void SelectOptimize::convertProfitableSIGroups(SelectGroups &ProfSIGroups) {
     for (auto It = ASI.rbegin(); It != ASI.rend(); ++It) {
       SelectInst *SI = *It;
       // The select itself is replaced with a PHI Node.
-      PHINode *PN = PHINode::Create(SI->getType(), 2, "", &EndBlock->front());
+      PHINode *PN = PHINode::Create(SI->getType(), 2, "");
+      PN->insertBefore(EndBlock->begin());
       PN->takeName(SI);
       PN->addIncoming(getTrueOrFalseValue(SI, true, INS), TrueBlock);
       PN->addIncoming(getTrueOrFalseValue(SI, false, INS), FalseBlock);

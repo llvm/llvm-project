@@ -47,7 +47,7 @@ static const char* ompt_cancel_flag_t_values[] = {
   "ompt_cancel_discarded_task"
 };
 
-static const char *ompt_dependence_type_t_values[] = {
+static const char *ompt_dependence_type_t_values[36] = {
     "ompt_dependence_type_UNDEFINED",
     "ompt_dependence_type_in", // 1
     "ompt_dependence_type_out", // 2
@@ -55,7 +55,12 @@ static const char *ompt_dependence_type_t_values[] = {
     "ompt_dependence_type_mutexinoutset", // 4
     "ompt_dependence_type_source", // 5
     "ompt_dependence_type_sink", // 6
-    "ompt_dependence_type_inoutset" // 7
+    "ompt_dependence_type_inoutset", // 7
+    "", "", "", "", "", "", // 8-13
+    "", "", "", "", "", "", "", "", "", "", // 14-23
+    "", "", "", "", "", "", "", "", "", "", // 24-33
+    "ompt_dependence_type_out_all_memory", // 34
+    "ompt_dependence_type_inout_all_memory" // 35
 };
 
 static void format_task_type(int type, char *buffer) {
@@ -216,6 +221,13 @@ ompt_label_##id:
   printf("%" PRIu64 ": current_address=%p or %p or %p\n",                      \
          ompt_get_thread_data()->value, ((char *)addr) - 4,                    \
          ((char *)addr) - 8, ((char *)addr) - 12)
+#elif KMP_ARCH_VE
+// On VE the NOP instruction is 8 byte long. In addition, the compiler inserts
+// a ??? instruction for non-void runtime functions which is ? bytes long.
+#define print_possible_return_addresses(addr)                                  \
+  printf("%" PRIu64 ": current_address=%p or %p\n",                            \
+         ompt_get_thread_data()->value, ((char *)addr) - 8,                    \
+         ((char *)addr) - 8)
 #else
 #error Unsupported target architecture, cannot determine address offset!
 #endif
@@ -272,10 +284,22 @@ on_ompt_callback_mutex_acquire(
              ", impl=%" PRIu32 ", codeptr_ra=%p \n",
              ompt_get_thread_data()->value, wait_id, hint, impl, codeptr_ra);
       break;
+    case ompt_mutex_test_lock:
+      printf("%" PRIu64 ":" _TOOL_PREFIX
+             " ompt_event_wait_test_lock: wait_id=%" PRIu64 ", hint=%" PRIu32
+             ", impl=%" PRIu32 ", codeptr_ra=%p \n",
+             ompt_get_thread_data()->value, wait_id, hint, impl, codeptr_ra);
+      break;
     case ompt_mutex_nest_lock:
       printf("%" PRIu64 ":" _TOOL_PREFIX
              " ompt_event_wait_nest_lock: wait_id=%" PRIu64 ", hint=%" PRIu32
              ", impl=%" PRIu32 ", codeptr_ra=%p \n",
+             ompt_get_thread_data()->value, wait_id, hint, impl, codeptr_ra);
+      break;
+    case ompt_mutex_test_nest_lock:
+      printf("%" PRIu64 ":" _TOOL_PREFIX
+             " ompt_event_wait_test_nest_lock: wait_id=%" PRIu64
+             ", hint=%" PRIu32 ", impl=%" PRIu32 ", codeptr_ra=%p \n",
              ompt_get_thread_data()->value, wait_id, hint, impl, codeptr_ra);
       break;
     case ompt_mutex_critical:
@@ -314,9 +338,21 @@ on_ompt_callback_mutex_acquired(
              " ompt_event_acquired_lock: wait_id=%" PRIu64 ", codeptr_ra=%p \n",
              ompt_get_thread_data()->value, wait_id, codeptr_ra);
       break;
+    case ompt_mutex_test_lock:
+      printf("%" PRIu64 ":" _TOOL_PREFIX
+             " ompt_event_acquired_test_lock: wait_id=%" PRIu64
+             ", codeptr_ra=%p \n",
+             ompt_get_thread_data()->value, wait_id, codeptr_ra);
+      break;
     case ompt_mutex_nest_lock:
       printf("%" PRIu64 ":" _TOOL_PREFIX
              " ompt_event_acquired_nest_lock_first: wait_id=%" PRIu64
+             ", codeptr_ra=%p \n",
+             ompt_get_thread_data()->value, wait_id, codeptr_ra);
+      break;
+    case ompt_mutex_test_nest_lock:
+      printf("%" PRIu64 ":" _TOOL_PREFIX
+             " ompt_event_acquired_test_nest_lock_first: wait_id=%" PRIu64
              ", codeptr_ra=%p \n",
              ompt_get_thread_data()->value, wait_id, codeptr_ra);
       break;

@@ -3,7 +3,7 @@
 # RUN: llvm-mc -triple x86_64-unknown-linux %s -filetype=obj -o %t.o
 # RUN: llvm-dwarfdump --debug-info %t.o | FileCheck %s
 # RUN: llvm-dwarfdump --debug-info %t.o 2> %t.txt
-# RUN: cat %t.txt | FileCheck %s --check-prefix=PART2
+# RUN: FileCheck --input-file=%t.txt %s --check-prefix=PART2 --implicit-check-not=warning:
 
         .section .debug_str.dwo,"MSe",@progbits,1
 .dwo_producer:
@@ -31,6 +31,10 @@
         .byte 0x25  # DW_FORM_strx1
         .byte 0x00  # EOM(1)
         .byte 0x00  # EOM(2)
+        .byte 0x00  # EOM(3)
+
+# PART2: warning: unexpected relocations for dwo section '.debug_abbrev.dwo'
+        .reloc ., R_X86_64_NONE, 0
 
         .section .debug_info.dwo,"e",@progbits
 # CHECK-LABEL: .debug_info.dwo
@@ -54,4 +58,10 @@ CU_split_5_end:
 # CHECK: 0x00000014: DW_TAG_compile_unit
 # CHECK-NEXT: DW_AT_producer	("Handmade DWO producer")
 # CHECK-NEXT: DW_AT_name	("V5_dwo_compile_unit")
-# PART2: warning: Unexpected relocations for dwo section rela.debug_info.dwo
+# PART2: warning: unexpected relocations for dwo section '.debug_info.dwo'
+
+## No warning, even if their names end with ".dwo".
+        .section .rodata.dwo,"a"
+        .long ext
+        .section .foo.dwo,""
+        .long .dwo_producer

@@ -1,47 +1,5 @@
-// RUN: %check_clang_tidy %s bugprone-assert-side-effect %t -- -config="{CheckOptions: [{key: bugprone-assert-side-effect.CheckFunctionCalls, value: true}, {key: bugprone-assert-side-effect.AssertMacros, value: 'assert,assert2,my_assert,convoluted_assert,msvc_assert'}, {key: bugprone-assert-side-effect.IgnoredFunctions, value: 'MyClass::badButIgnoredFunc'}]}" -- -fexceptions
-
-//===--- assert definition block ------------------------------------------===//
-int abort() { return 0; }
-
-#ifdef NDEBUG
-#define assert(x) 1
-#else
-#define assert(x)                                                              \
-  if (!(x))                                                                    \
-  (void)abort()
-#endif
-
-void print(...);
-#define assert2(e) (__builtin_expect(!(e), 0) ?                                \
-                       print (#e, __FILE__, __LINE__) : (void)0)
-
-#ifdef NDEBUG
-#define my_assert(x) 1
-#else
-#define my_assert(x)                                                           \
-  ((void)((x) ? 1 : abort()))
-#endif
-
-#ifdef NDEBUG
-#define not_my_assert(x) 1
-#else
-#define not_my_assert(x)                                                       \
-  if (!(x))                                                                    \
-  (void)abort()
-#endif
-
-#define real_assert(x) ((void)((x) ? 1 : abort()))
-#define wrap1(x) real_assert(x)
-#define wrap2(x) wrap1(x)
-#define convoluted_assert(x) wrap2(x)
-
-#define msvc_assert(expression) (void)(                                        \
-            (!!(expression)) ||                                                \
-            (abort(), 0)                                                       \
-        )
-
-
-//===----------------------------------------------------------------------===//
+// RUN: %check_clang_tidy %s bugprone-assert-side-effect %t -- -config="{CheckOptions: {bugprone-assert-side-effect.CheckFunctionCalls: true, bugprone-assert-side-effect.AssertMacros: 'assert,assert2,my_assert,convoluted_assert,msvc_assert', bugprone-assert-side-effect.IgnoredFunctions: 'MyClass::badButIgnoredFunc'}}" -- -fexceptions -I %S/Inputs/assert-side-effect
+#include <assert.h>
 
 bool badButIgnoredFunc(int a, int b) { return a * b > 0; }
 

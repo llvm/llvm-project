@@ -10,7 +10,7 @@
 # RUN: ld.lld --script %t/lds %t.o -o %t1 --noinhibit-exec
 # RUN: rm %t.o %t1
 
-# CHECK: error: R12 setup stub offset is out of range: 8589934592 is not in [-8589934592, 8589934591]; references callee
+# CHECK: error: R12 setup stub offset is out of range: 8589934592 is not in [-8589934592, 8589934591]; references 'callee'
 # CHECK-NEXT: >>> defined in {{.*}}.o
 
 //--- asm

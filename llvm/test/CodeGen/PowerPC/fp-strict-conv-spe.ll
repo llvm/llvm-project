@@ -44,8 +44,6 @@ define i64 @d_to_i64(double %m) #0 {
 ; SPE-NEXT:    .cfi_offset lr, 4
 ; SPE-NEXT:    evmergelo r4, r3, r4
 ; SPE-NEXT:    evmergehi r3, r4, r4
-; SPE-NEXT:    # kill: def $r4 killed $r4 killed $s4
-; SPE-NEXT:    # kill: def $r3 killed $r3 killed $s3
 ; SPE-NEXT:    bl __fixdfdi
 ; SPE-NEXT:    lwz r0, 20(r1)
 ; SPE-NEXT:    addi r1, r1, 16
@@ -66,8 +64,6 @@ define i64 @d_to_u64(double %m) #0 {
 ; SPE-NEXT:    .cfi_offset lr, 4
 ; SPE-NEXT:    evmergelo r4, r3, r4
 ; SPE-NEXT:    evmergehi r3, r4, r4
-; SPE-NEXT:    # kill: def $r4 killed $r4 killed $s4
-; SPE-NEXT:    # kill: def $r3 killed $r3 killed $s3
 ; SPE-NEXT:    bl __fixunsdfdi
 ; SPE-NEXT:    lwz r0, 20(r1)
 ; SPE-NEXT:    addi r1, r1, 16
@@ -150,8 +146,6 @@ define double @i32_to_d(i32 signext %m) #0 {
 ; SPE:       # %bb.0: # %entry
 ; SPE-NEXT:    efdcfsi r4, r3
 ; SPE-NEXT:    evmergehi r3, r4, r4
-; SPE-NEXT:    # kill: def $r4 killed $r4 killed $s4
-; SPE-NEXT:    # kill: def $r3 killed $r3 killed $s3
 ; SPE-NEXT:    blr
 entry:
   %conv = tail call double @llvm.experimental.constrained.sitofp.f64.i32(i32 %m, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
@@ -170,8 +164,6 @@ define double @i64_to_d(i64 %m) #0 {
 ; SPE-NEXT:    evmergelo r4, r3, r4
 ; SPE-NEXT:    evmergehi r3, r4, r4
 ; SPE-NEXT:    lwz r0, 20(r1)
-; SPE-NEXT:    # kill: def $r3 killed $r3 killed $s3
-; SPE-NEXT:    # kill: def $r4 killed $r4 killed $s4
 ; SPE-NEXT:    addi r1, r1, 16
 ; SPE-NEXT:    mtlr r0
 ; SPE-NEXT:    blr
@@ -185,8 +177,6 @@ define double @u32_to_d(i32 zeroext %m) #0 {
 ; SPE:       # %bb.0: # %entry
 ; SPE-NEXT:    efdcfui r4, r3
 ; SPE-NEXT:    evmergehi r3, r4, r4
-; SPE-NEXT:    # kill: def $r4 killed $r4 killed $s4
-; SPE-NEXT:    # kill: def $r3 killed $r3 killed $s3
 ; SPE-NEXT:    blr
 entry:
   %conv = tail call double @llvm.experimental.constrained.uitofp.f64.i32(i32 %m, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
@@ -205,8 +195,6 @@ define double @u64_to_d(i64 %m) #0 {
 ; SPE-NEXT:    evmergelo r4, r3, r4
 ; SPE-NEXT:    evmergehi r3, r4, r4
 ; SPE-NEXT:    lwz r0, 20(r1)
-; SPE-NEXT:    # kill: def $r3 killed $r3 killed $s3
-; SPE-NEXT:    # kill: def $r4 killed $r4 killed $s4
 ; SPE-NEXT:    addi r1, r1, 16
 ; SPE-NEXT:    mtlr r0
 ; SPE-NEXT:    blr

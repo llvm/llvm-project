@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-has-no-incomplete-format
 
 // libc++ supports basic_format_string in C++20 as an extension
 // UNSUPPORTED: !stdlib=libc++ && c++20
@@ -35,10 +34,10 @@ template <class CharT>
 constexpr bool test() {
   assert((std::basic_format_string<CharT>{CSTR("foo")}.get() == SV("foo")));
   assert((std::basic_format_string<CharT, int>{CSTR("{}")}.get() == SV("{}")));
-  assert((std::basic_format_string<CharT, int, float>{CSTR("{} {:01.23L}")}.get() == SV("{} {:01.23L}")));
+  assert((std::basic_format_string<CharT, int, char>{CSTR("{} {:*>6}")}.get() == SV("{} {:*>6}")));
 
   // Embedded NUL character
-  assert((std::basic_format_string<CharT, void*, double>{SV("{}\0{}")}.get() == SV("{}\0{}")));
+  assert((std::basic_format_string<CharT, void*, bool>{SV("{}\0{}")}.get() == SV("{}\0{}")));
   return true;
 }
 

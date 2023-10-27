@@ -2,11 +2,15 @@
 ; UNSUPPORTED: system-windows
 
 ; RUN: rm -rf %t; mkdir %t
+; RUN: llc -filetype=obj %s -o %t/test-obj.o
 ; RUN: opt -thinlto-bc %s -o %t/test.o
 ; RUN: opt %s -o %t/test-nonthin.o
 
 ; RUN: %lld %t/test.o -o %t/test
 ; RUN: llvm-nm -pa %t/test | FileCheck %s --check-prefixes CHECK,NOOBJPATH
+
+; RUN: %lld %t/test-obj.o -o %t/test-obj -object_path_lto %t/lto-temps-obj
+; RUN: llvm-nm -pa %t/test-obj | FileCheck %s --check-prefixes CHECK,NOLTOFILES -DDIR=%t
 
 ; RUN: ZERO_AR_DATE=0 %lld %t/test.o -o %t/test -object_path_lto %t/lto-temps
 ; RUN: llvm-nm -pa %t/test | FileCheck %s --check-prefixes CHECK,OBJPATH-DIR -DDIR=%t/lto-temps
@@ -31,10 +35,12 @@
 ; RUN: touch %t/lto-tmp.o
 ; RUN: ZERO_AR_DATE=0 %lld %t/test-nonthin.o -o %t/test -object_path_lto %t/lto-tmp.o
 ; RUN: llvm-nm -pa %t/test | FileCheck %s --check-prefixes CHECK,OBJPATH-FILE -DFILE=%t/lto-tmp.o
+; RUN: llvm-otool -l %t/lto-tmp.o | FileCheck %s --check-prefixes=MINOS
 
 
 ; CHECK:             0000000000000000                - 00 0000    SO /tmp/test.cpp
 ; NOOBJPATH-NEXT:    0000000000000000                - 03 0001   OSO /tmp/lto.tmp
+; NOLTOFILES-NEXT:   0000000000000000                - 03 0001   OSO [[DIR]]/test-obj.o
 ;; check that modTime is nonzero when `-object_path_lto` is provided
 ; OBJPATH-DIR-NEXT:  {{[0-9a-f]*[1-9a-f]+[0-9a-f]*}} - 03 0001   OSO [[DIR]]/1.x86_64.lto.o
 ; OBJPATH-FILE-NEXT: {{[0-9a-f]*[1-9a-f]+[0-9a-f]*}} - 03 0001   OSO [[FILE]]
@@ -44,6 +50,8 @@
 ; CHECK-NEXT:        {{[0-9a-f]+}}                   T _main
 ; DSYM: DW_AT_name ("test.cpp")
 ; HARDLINK: 2
+
+; MINOS: 10.15
 
 target triple = "x86_64-apple-macosx10.15.0"
 target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"

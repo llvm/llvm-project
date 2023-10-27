@@ -123,8 +123,8 @@ bool LanaiAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
       const MachineOperand &FlagsOP = MI->getOperand(OpNo - 1);
       if (!FlagsOP.isImm())
         return true;
-      unsigned Flags = FlagsOP.getImm();
-      unsigned NumVals = InlineAsm::getNumOperandRegisters(Flags);
+      const InlineAsm::Flag Flags(FlagsOP.getImm());
+      const unsigned NumVals = Flags.getNumOperandRegisters();
       if (NumVals != 2)
         return true;
       unsigned RegOp = OpNo + 1;

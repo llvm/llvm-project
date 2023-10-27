@@ -88,6 +88,7 @@ fun:isalnum=functional
 fun:ispunct=functional
 fun:isspace=functional
 fun:tolower=functional
+fun:_tolower=functional
 fun:toupper=functional
 
 # Functions that return a value that is data-dependent on the input.
@@ -268,6 +269,7 @@ fun:strtoll=custom
 fun:strtoul=custom
 fun:strtoull=custom
 fun:strcat=custom
+fun:strncat=custom
 
 # Functions that produce an output that is computed from the input, but is not
 # necessarily data dependent.
@@ -278,11 +280,13 @@ fun:strcasecmp=custom
 fun:strchr=custom
 fun:strcmp=custom
 fun:strlen=custom
+fun:strnlen=custom
 fun:strncasecmp=custom
 fun:strncmp=custom
 fun:strpbrk=custom
 fun:strrchr=custom
 fun:strstr=custom
+fun:strsep=custom
 
 # Functions which take action based on global state, such as running a callback
 # set by a separate function.
@@ -303,6 +307,10 @@ fun:gettimeofday=custom
 # sprintf-like
 fun:sprintf=custom
 fun:snprintf=custom
+
+# scanf-like
+fun:sscanf=custom
+fun:__isoc99_sscanf=custom
 
 # TODO: custom
 fun:asprintf=discard
@@ -447,8 +455,12 @@ fun:__sanitizer_get_estimated_allocated_size=uninstrumented
 fun:__sanitizer_get_estimated_allocated_size=discard
 fun:__sanitizer_get_ownership=uninstrumented
 fun:__sanitizer_get_ownership=discard
+fun:__sanitizer_get_allocated_begin=uninstrumented
+fun:__sanitizer_get_allocated_begin=discard
 fun:__sanitizer_get_allocated_size=uninstrumented
 fun:__sanitizer_get_allocated_size=discard
+fun:__sanitizer_get_allocated_size_fast=uninstrumented
+fun:__sanitizer_get_allocated_size_fast=discard
 fun:__sanitizer_print_stack_trace=uninstrumented
 fun:__sanitizer_print_stack_trace=discard
 

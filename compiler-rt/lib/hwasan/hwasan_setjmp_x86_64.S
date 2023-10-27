@@ -31,19 +31,20 @@
 .section .text
 .file "hwasan_setjmp_x86_64.S"
 
-.global __interceptor_setjmp
-ASM_TYPE_FUNCTION(__interceptor_setjmp)
-__interceptor_setjmp:
+.global ASM_WRAPPER_NAME(setjmp)
+ASM_TYPE_FUNCTION(ASM_WRAPPER_NAME(setjmp))
+ASM_WRAPPER_NAME(setjmp):
   CFI_STARTPROC
   _CET_ENDBR
   xorl %esi, %esi
-  jmp	__interceptor_sigsetjmp
+  jmp	.Linterceptor_sigsetjmp
   CFI_ENDPROC
-ASM_SIZE(__interceptor_setjmp)
+ASM_SIZE(ASM_WRAPPER_NAME(setjmp))
 
-.global __interceptor_sigsetjmp
-ASM_TYPE_FUNCTION(__interceptor_sigsetjmp)
-__interceptor_sigsetjmp:
+.global ASM_WRAPPER_NAME(sigsetjmp)
+ASM_TYPE_FUNCTION(ASM_WRAPPER_NAME(sigsetjmp))
+ASM_WRAPPER_NAME(sigsetjmp):
+.Linterceptor_sigsetjmp:
   CFI_STARTPROC
   _CET_ENDBR
 
@@ -66,16 +67,12 @@ __interceptor_sigsetjmp:
   jmp __sigjmp_save
 
   CFI_ENDPROC
-ASM_SIZE(__interceptor_sigsetjmp)
+ASM_SIZE(ASM_WRAPPER_NAME(sigsetjmp))
 
-
-.macro WEAK_ALIAS first second
-  .weak \second
-  .equ \second\(), \first
-.endm
-
-WEAK_ALIAS __interceptor_sigsetjmp, __sigsetjmp
-WEAK_ALIAS __interceptor_setjmp, _setjmp
+ASM_INTERCEPTOR_TRAMPOLINE(sigsetjmp)
+ASM_TRAMPOLINE_ALIAS(__sigsetjmp, sigsetjmp)
+ASM_INTERCEPTOR_TRAMPOLINE(setjmp)
+ASM_TRAMPOLINE_ALIAS(_setjmp, setjmp)
 #endif
 
 // We do not need executable stack.

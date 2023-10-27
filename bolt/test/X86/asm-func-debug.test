@@ -13,7 +13,7 @@ CHECK-NEXT:       DW_AT_stmt_list (0x00000000)
 CHECK-NEXT:       DW_AT_low_pc (0x0000000000000000)
 CHECK-NEXT:       DW_AT_ranges
 CHECK-NEXT:          [0x0000000000[[#%x,ADDR:]],
-CHECK-SAME:                              0x0000000000[[#ADDR+1]]))
+CHECK-SAME:           0x0000000000[[#ADDR+1]]))
 CHECK-NEXT:       DW_AT_name ("{{.*}}asm_foo.s")
 
 # Check .debug_aranges was updated for asm module
@@ -22,5 +22,5 @@ CHECK-NEXT:   Address Range Header: length = 0x0000002c, format = DWARF32, versi
 CHECK-NEXT:   [0x0000000000[[#ADDR]], 0x0000000000[[#ADDR+1]])
 
 # Check line number info was updated
-CHECK:       0x0000000000[[#ADDR]]   13      0      0   0             0  is_stmt
-CHECK-NEXT:  0x0000000000[[#ADDR+1]] 13      0      0   0             0  is_stmt end_sequence
+CHECK:       0x0000000000[[#ADDR]]   13      0      0   0             0       0  is_stmt
+CHECK-NEXT:  0x0000000000[[#ADDR+1]] 13      0      0   0             0       0  is_stmt end_sequence

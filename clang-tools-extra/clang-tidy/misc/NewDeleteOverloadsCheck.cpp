@@ -17,7 +17,7 @@ namespace clang::tidy::misc {
 namespace {
 
 AST_MATCHER(FunctionDecl, isPlacementOverload) {
-  bool New;
+  bool New = false;
   switch (Node.getOverloadedOperator()) {
   default:
     return false;

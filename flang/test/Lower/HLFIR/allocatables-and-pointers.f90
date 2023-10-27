@@ -1,5 +1,5 @@
 ! Test lowering of whole allocatable and pointers to HLFIR
-! RUN: bbc -emit-fir -hlfir -o - %s 2>&1 | FileCheck %s
+! RUN: bbc -emit-hlfir -o - %s 2>&1 | FileCheck %s
 
 subroutine passing_allocatable(x)
   interface
@@ -138,7 +138,7 @@ end subroutine
 ! CHECK:  %[[VAL_6:.*]] = arith.constant 1 : index
 ! CHECK:  %[[VAL_7:.*]]:3 = fir.box_dims %[[VAL_2]], %[[VAL_6]] : (!fir.box<!fir.ptr<!fir.array<?x?xi32>>>, index) -> (index, index, index)
 ! CHECK:  %[[VAL_8:.*]] = fir.shape %[[VAL_5]]#1, %[[VAL_7]]#1 : (index, index) -> !fir.shape<2>
-! CHECK:  %[[VAL_9:.*]] = hlfir.elemental %[[VAL_8]] : (!fir.shape<2>) -> !hlfir.expr<?x?xi32> {
+! CHECK:  %[[VAL_9:.*]] = hlfir.elemental %[[VAL_8]] unordered : (!fir.shape<2>) -> !hlfir.expr<?x?xi32> {
 ! CHECK:  ^bb0(%[[VAL_10:.*]]: index, %[[VAL_11:.*]]: index):
 ! CHECK:    %[[VAL_12:.*]] = arith.constant 0 : index
 ! CHECK:    %[[VAL_13:.*]]:3 = fir.box_dims %[[VAL_2]], %[[VAL_12]] : (!fir.box<!fir.ptr<!fir.array<?x?xi32>>>, index) -> (index, index, index)

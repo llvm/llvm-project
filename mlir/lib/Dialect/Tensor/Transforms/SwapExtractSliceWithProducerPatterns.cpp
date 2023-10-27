@@ -20,7 +20,7 @@
 
 using namespace mlir;
 
-FailureOr<Value> tensor::replaceExtractSliceWithTiledProducer(
+FailureOr<TilingResult> tensor::replaceExtractSliceWithTiledProducer(
     OpBuilder &builder, tensor::ExtractSliceOp sliceOp, OpResult producer) {
   auto producerOp = dyn_cast<TilingInterface>(producer.getOwner());
   if (!producerOp)
@@ -32,7 +32,7 @@ FailureOr<Value> tensor::replaceExtractSliceWithTiledProducer(
       }))
     return failure();
 
-  FailureOr<Value> tiledResult = producerOp.generateResultTileValue(
+  FailureOr<TilingResult> tiledResult = producerOp.generateResultTileValue(
       builder, producer.getResultNumber(), sliceOp.getMixedOffsets(),
       sliceOp.getMixedSizes());
   if (failed(tiledResult))

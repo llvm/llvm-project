@@ -97,7 +97,7 @@ void use_F() {
 // CHECK-DAG: @_ZTV1B = external unnamed_addr constant
 
 // C has no key function, so its vtable should have weak_odr linkage
-// and hidden visibility (rdar://problem/7523229).
+// and hidden visibility.
 // CHECK-DAG: @_ZTV1C = linkonce_odr unnamed_addr constant {{.*}}, comdat, align 8{{$}}
 // CHECK-DAG: @_ZTS1C = linkonce_odr constant {{.*}}, comdat, align 1{{$}}
 // CHECK-DAG: @_ZTI1C = linkonce_odr constant {{.*}}, comdat, align 8{{$}}

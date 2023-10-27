@@ -246,6 +246,17 @@ define float @freeze_exp2(float %arg) {
   ret float %freeze
 }
 
+define float @freeze_exp10(float %arg) {
+; CHECK-LABEL: @freeze_exp10(
+; CHECK-NEXT:    [[ARG_FR:%.*]] = freeze float [[ARG:%.*]]
+; CHECK-NEXT:    [[OP:%.*]] = call float @llvm.exp10.f32(float [[ARG_FR]])
+; CHECK-NEXT:    ret float [[OP]]
+;
+  %op = call float @llvm.exp10.f32(float %arg)
+  %freeze = freeze float %op
+  ret float %freeze
+}
+
 define float @freeze_fabs(float %arg) {
 ; CHECK-LABEL: @freeze_fabs(
 ; CHECK-NEXT:    [[ARG_FR:%.*]] = freeze float [[ARG:%.*]]
@@ -517,6 +528,54 @@ define float @freeze_fptrunc_round(double %arg0) {
   ret float %freeze
 }
 
+define float @freeze_ldexp(float %arg0, i32 noundef %arg1) {
+; CHECK-LABEL: @freeze_ldexp(
+; CHECK-NEXT:    [[ARG0_FR:%.*]] = freeze float [[ARG0:%.*]]
+; CHECK-NEXT:    [[OP:%.*]] = call float @llvm.ldexp.f32.i32(float [[ARG0_FR]], i32 [[ARG1:%.*]])
+; CHECK-NEXT:    ret float [[OP]]
+;
+  %op = call float @llvm.ldexp.f32.i32(float %arg0, i32 %arg1)
+  %freeze = freeze float %op
+  ret float %freeze
+}
+
+define { float, i32 } @freeze_frexp(float %arg0) {
+; CHECK-LABEL: @freeze_frexp(
+; CHECK-NEXT:    [[ARG0_FR:%.*]] = freeze float [[ARG0:%.*]]
+; CHECK-NEXT:    [[OP:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[ARG0_FR]])
+; CHECK-NEXT:    ret { float, i32 } [[OP]]
+;
+  %op = call { float, i32 } @llvm.frexp.f32.i32(float %arg0)
+  %freeze = freeze { float, i32 } %op
+  ret { float, i32 } %freeze
+}
+
+define float @freeze_frexp_0(float %arg0) {
+; CHECK-LABEL: @freeze_frexp_0(
+; CHECK-NEXT:    [[ARG0_FR:%.*]] = freeze float [[ARG0:%.*]]
+; CHECK-NEXT:    [[OP:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[ARG0_FR]])
+; CHECK-NEXT:    [[EXTRACT_0:%.*]] = extractvalue { float, i32 } [[OP]], 0
+; CHECK-NEXT:    ret float [[EXTRACT_0]]
+;
+  %op = call { float, i32 } @llvm.frexp.f32.i32(float %arg0)
+  %extract.0 = extractvalue { float, i32 } %op, 0
+  %freeze = freeze float %extract.0
+  ret float %freeze
+}
+
+define i32 @freeze_frexp_1(float %arg0) {
+; CHECK-LABEL: @freeze_frexp_1(
+; CHECK-NEXT:    [[ARG0_FR:%.*]] = freeze float [[ARG0:%.*]]
+; CHECK-NEXT:    [[OP:%.*]] = call { float, i32 } @llvm.frexp.f32.i32(float [[ARG0_FR]])
+; CHECK-NEXT:    [[EXTRACT_1:%.*]] = extractvalue { float, i32 } [[OP]], 1
+; CHECK-NEXT:    ret i32 [[EXTRACT_1]]
+;
+  %op = call { float, i32 } @llvm.frexp.f32.i32(float %arg0)
+  %extract.1 = extractvalue { float, i32 } %op, 1
+  %freeze = freeze i32 %extract.1
+  ret i32 %freeze
+}
+
 declare float @llvm.fma.f32(float, float, float)
 declare float @llvm.fmuladd.f32(float, float, float)
 declare float @llvm.sqrt.f32(float)
@@ -529,6 +588,7 @@ declare float @llvm.log10.f32(float)
 declare float @llvm.log2.f32(float)
 declare float @llvm.exp.f32(float)
 declare float @llvm.exp2.f32(float)
+declare float @llvm.exp10.f32(float)
 declare float @llvm.fabs.f32(float)
 declare float @llvm.copysign.f32(float, float)
 declare float @llvm.floor.f32(float)
@@ -550,3 +610,5 @@ declare float @llvm.minimum.f32(float, float)
 declare float @llvm.maximum.f32(float, float)
 declare i1 @llvm.is.fpclass.f32(float, i32 immarg)
 declare float @llvm.fptrunc.round.f32.f64(double, metadata)
+declare float @llvm.ldexp.f32.i32(float, i32)
+declare { float, i32 } @llvm.frexp.f32.i32(float)

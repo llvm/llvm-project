@@ -77,6 +77,22 @@ TEST_P(ImportObjCDecl, ObjPropertyNameConflict) {
   }
 }
 
+TEST_P(ImportObjCDecl, ImportObjCTypeParamDecl) {
+  Decl *FromTU = getTuDecl(
+      R"(
+        @interface X <FirstParam: id>
+        @end
+      )",
+      Lang_OBJCXX, "input.mm");
+  auto *FromInterfaceDecl = FirstDeclMatcher<ObjCInterfaceDecl>().match(
+      FromTU, namedDecl(hasName("X")));
+  auto *FromTypeParamDecl =
+      FromInterfaceDecl->getTypeParamListAsWritten()->front();
+
+  auto *ToTypeParamDeclImported = Import(FromTypeParamDecl, Lang_OBJCXX);
+  ASSERT_TRUE(ToTypeParamDeclImported);
+}
+
 static const auto ObjCTestArrayForRunOptions =
     std::array<std::vector<std::string>, 2>{
         {std::vector<std::string>{"-fno-objc-arc"},

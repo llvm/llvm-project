@@ -102,6 +102,8 @@ std::string PDBSymbolCompiland::getSourceFileFullPath() const {
               .Case(".asm", Lang == PDB_Lang::Masm)
               .Case(".swift", Lang == PDB_Lang::Swift)
               .Case(".rs", Lang == PDB_Lang::Rust)
+              .Case(".m", Lang == PDB_Lang::ObjC)
+              .Case(".mm", Lang == PDB_Lang::ObjCpp)
               .Default(false))
         return File->getFileName();
     }

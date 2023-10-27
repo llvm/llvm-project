@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s readability-function-size %t -- -config='{CheckOptions: [{key: readability-function-size.LineThreshold, value: 0}, {key: readability-function-size.StatementThreshold, value: 0}, {key: readability-function-size.BranchThreshold, value: 0}, {key: readability-function-size.ParameterThreshold, value: 5}, {key: readability-function-size.NestingThreshold, value: 2}, {key: readability-function-size.VariableThreshold, value: 1}]}' -- -std=c++17
+// RUN: %check_clang_tidy %s readability-function-size %t -- -config='{CheckOptions: {readability-function-size.LineThreshold: 0, readability-function-size.StatementThreshold: 0, readability-function-size.BranchThreshold: 0, readability-function-size.ParameterThreshold: 5, readability-function-size.NestingThreshold: 2, readability-function-size.VariableThreshold: 1}}' -- -std=c++17
 
 void structured_bindings() {
   int a[2] = {1, 2};

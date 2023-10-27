@@ -1,4 +1,4 @@
-//===-- RISCVMCAsmInfo.cpp - RISCV Asm properties -------------------------===//
+//===-- RISCVMCAsmInfo.cpp - RISC-V Asm properties ------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -12,9 +12,9 @@
 
 #include "RISCVMCAsmInfo.h"
 #include "MCTargetDesc/RISCVMCExpr.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/MC/MCStreamer.h"
+#include "llvm/TargetParser/Triple.h"
 using namespace llvm;
 
 void RISCVMCAsmInfo::anchor() {}

@@ -23,6 +23,18 @@ int complete = alignof(Complete(&)[]);
 }
 #endif
 
+namespace dr1307 { // dr1307: 14
+#if __cplusplus >= 201103L
+void f(int const (&)[2]);
+void f(int const (&)[3]);
+
+void caller() {
+  // This should not be ambiguous, the 2nd overload is better.
+  f({1, 2, 3});
+}
+#endif // __cplusplus >= 201103L
+} // namespace dr1307
+
 namespace dr1310 { // dr1310: 5
   struct S {} * sp = new S::S; // expected-error {{qualified reference to 'S' is a constructor name}}
   void f() {
@@ -239,6 +251,23 @@ namespace dr1330 { // dr1330: 4 c++11
   struct E : C<int> {}; // expected-note {{in instantiation of}}
 #if __cplusplus >= 201103L
   E e; // expected-note {{needed here}}
+#endif
+}
+
+namespace dr1341 { // dr1341: sup P0683R1
+#if __cplusplus >= 202002L
+int a;
+const int b = 0; // #dr1341-b-decl
+struct S {
+  int x1 : 8 = 42;
+  int x2 : 8 { 42 };
+  int y1 : true ? 8 : a = 42;
+  int y2 : true ? 8 : b = 42;
+  // expected-error@-1            {{cannot assign to variable 'b' with const-qualified type 'const int'}}
+  // expected-note@#dr1341-b-decl {{variable 'b' declared const here}}
+  int y3 : (true ? 8 : b) = 42;
+  int z : 1 || new int { 0 };
+};
 #endif
 }
 
@@ -468,6 +497,23 @@ namespace dr1395 { // dr1395: 16
 #endif
 }
 
+namespace dr1397 { // dr1397: 3.2
+#if __cplusplus >= 201103L
+struct A {       // #dr1397-struct-A
+  void *p = A{}; // #dr1397-void-p
+#if __cplusplus == 201103L
+  // expected-error@#dr1397-struct-A {{default member initializer for 'p' needed within definition of enclosing class 'A' outside of member functions}}
+  // expected-note@#dr1397-void-p {{in evaluation of exception specification for 'dr1397::A::A' needed here}}
+  // expected-note@#dr1397-void-p {{default member initializer declared here}}
+#elif __cplusplus >= 201402L
+  // expected-error@#dr1397-void-p {{default member initializer for 'p' needed within definition of enclosing class 'A' outside of member functions}}
+  // expected-note@#dr1397-void-p {{default member initializer declared here}}
+#endif
+  operator void*() const { return nullptr; }
+};
+#endif
+} // namespace dr1397
+
 namespace dr1399 { // dr1399: dup 1388
   template<typename ...T> void f(T..., int, T...) {} // expected-note {{candidate}} expected-error 0-1{{C++11}}
   void g() {
@@ -476,15 +522,3 @@ namespace dr1399 { // dr1399: dup 1388
     f(0, 0, 0); // expected-error {{no match}}
   }
 }
-
-namespace dr1307 { // dr1307: 14
-#if __cplusplus >= 201103L
-void f(int const (&)[2]);
-void f(int const (&)[3]);
-
-void caller() {
-  // This should not be ambiguous, the 2nd overload is better.
-  f({1, 2, 3});
-}
-#endif // __cplusplus >= 201103L
-} // namespace dr1307

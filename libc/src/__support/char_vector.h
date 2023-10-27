@@ -6,13 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_CHARVECTOR_H
-#define LLVM_LIBC_SRC_SUPPORT_CHARVECTOR_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_CHARVECTOR_H
+#define LLVM_LIBC_SRC___SUPPORT_CHARVECTOR_H
+
+#include "src/__support/common.h"
 
 #include <stddef.h>
 #include <stdlib.h> // For allocation.
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 // This is very simple alternate of the std::string class. There is no
 // bounds check performed in any of the methods. The callers are expected to
@@ -29,13 +31,13 @@ class CharVector {
 
 public:
   CharVector() = default;
-  ~CharVector() {
+  LIBC_INLINE ~CharVector() {
     if (cur_str != local_buffer)
       free(cur_str);
   }
 
   // append returns true on success and false on allocation failure.
-  bool append(char new_char) {
+  LIBC_INLINE bool append(char new_char) {
     // Subtract 1 for index starting at 0 and another for the null terminator.
     if (index >= cur_buff_size - 2) {
       // If the new character would cause the string to be longer than the
@@ -63,14 +65,14 @@ public:
     return true;
   }
 
-  char *c_str() {
+  LIBC_INLINE char *c_str() {
     cur_str[index] = '\0';
     return cur_str;
   }
 
-  size_t length() { return index; }
+  LIBC_INLINE size_t length() { return index; }
 };
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_SRC_SUPPORT_CHARVECTOR_H
+#endif // LLVM_LIBC_SRC___SUPPORT_CHARVECTOR_H

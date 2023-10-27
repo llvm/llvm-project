@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=x86_64-unknown-unknown %s -o - -run-pass=simple-register-coalescing | FileCheck %s
+# RUN: llc -mtriple=x86_64-unknown-unknown %s -o - -run-pass=register-coalescer | FileCheck %s
 # PR40010: DBG_VALUEs do not contribute to the liveness of virtual registers,
 # and the register coalescer would merge new live values on top of DBG_VALUEs,
 # leading to them presenting new (wrong) values to the debugger. Test that

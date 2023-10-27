@@ -27,6 +27,7 @@ define amdgpu_ps void @test_wmma_f32_16x16x16_f16(<16 x half> %A, <16 x half> %B
 ; W64-NEXT:    v_wmma_f32_16x16x16_f16 v[16:19], v[8:15], v[8:15], v[16:19]
 ; W64-NEXT:    global_store_b128 v[20:21], v[24:27], off
 ; W64-NEXT:    global_store_b128 v[22:23], v[16:19], off
+; W64-NEXT:    s_nop 0
 ; W64-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; W64-NEXT:    s_endpgm
 bb:
@@ -46,6 +47,7 @@ define amdgpu_ps void @test_wmma_f32_16x16x16_bf16(<16 x i16> %A, <16 x i16> %B,
 ; W64-NEXT:    v_wmma_f32_16x16x16_bf16 v[16:19], v[8:15], v[8:15], v[16:19]
 ; W64-NEXT:    global_store_b128 v[20:21], v[24:27], off
 ; W64-NEXT:    global_store_b128 v[22:23], v[16:19], off
+; W64-NEXT:    s_nop 0
 ; W64-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; W64-NEXT:    s_endpgm
 bb:
@@ -65,6 +67,7 @@ define amdgpu_ps void @test_wmma_f16_16x16x16_f16_lo(<16 x half> %A, <16 x half>
 ; W64-NEXT:    v_wmma_f16_16x16x16_f16 v[16:19], v[8:15], v[8:15], v[16:19]
 ; W64-NEXT:    global_store_b128 v[20:21], v[24:27], off
 ; W64-NEXT:    global_store_b128 v[22:23], v[16:19], off
+; W64-NEXT:    s_nop 0
 ; W64-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; W64-NEXT:    s_endpgm
 bb:
@@ -82,6 +85,7 @@ define amdgpu_ps void @test_wmma_f16_16x16x16_f16_hi(<16 x half> %A, <16 x half>
 ; W64-NEXT:    v_wmma_f16_16x16x16_f16 v[16:19], v[8:15], v[8:15], v[16:19] op_sel:[0,0,1]
 ; W64-NEXT:    global_store_b128 v[20:21], v[24:27], off
 ; W64-NEXT:    global_store_b128 v[22:23], v[16:19], off
+; W64-NEXT:    s_nop 0
 ; W64-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; W64-NEXT:    s_endpgm
 bb:
@@ -101,6 +105,7 @@ define amdgpu_ps void @test_wmma_bf16_16x16x16_bf16_lo(<16 x i16> %A, <16 x i16>
 ; W64-NEXT:    v_wmma_bf16_16x16x16_bf16 v[16:19], v[8:15], v[8:15], v[16:19]
 ; W64-NEXT:    global_store_b128 v[20:21], v[24:27], off
 ; W64-NEXT:    global_store_b128 v[22:23], v[16:19], off
+; W64-NEXT:    s_nop 0
 ; W64-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; W64-NEXT:    s_endpgm
 bb:
@@ -118,6 +123,7 @@ define amdgpu_ps void @test_wmma_bf16_16x16x16_bf16_hi(<16 x i16> %A, <16 x i16>
 ; W64-NEXT:    v_wmma_bf16_16x16x16_bf16 v[16:19], v[8:15], v[8:15], v[16:19] op_sel:[0,0,1]
 ; W64-NEXT:    global_store_b128 v[20:21], v[24:27], off
 ; W64-NEXT:    global_store_b128 v[22:23], v[16:19], off
+; W64-NEXT:    s_nop 0
 ; W64-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; W64-NEXT:    s_endpgm
 bb:
@@ -137,6 +143,7 @@ define amdgpu_ps void @test_wmma_i32_16x16x16_ui8_unsigned_unsigned(<4 x i32> %A
 ; W64-NEXT:    v_wmma_i32_16x16x16_iu8 v[8:11], v[4:7], v[4:7], v[8:11]
 ; W64-NEXT:    global_store_b128 v[12:13], v[16:19], off
 ; W64-NEXT:    global_store_b128 v[14:15], v[8:11], off
+; W64-NEXT:    s_nop 0
 ; W64-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; W64-NEXT:    s_endpgm
 bb:
@@ -155,6 +162,7 @@ define amdgpu_ps void @test_wmma_i32_16x16x16_ui8_unsigned_signed(<4 x i32> %A, 
 ; W64-NEXT:    v_wmma_i32_16x16x16_iu8 v[8:11], v[4:7], v[4:7], v[8:11] neg_lo:[0,1,0]
 ; W64-NEXT:    global_store_b128 v[12:13], v[16:19], off
 ; W64-NEXT:    global_store_b128 v[14:15], v[8:11], off
+; W64-NEXT:    s_nop 0
 ; W64-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; W64-NEXT:    s_endpgm
 bb:
@@ -172,6 +180,7 @@ define amdgpu_ps void @test_wmma_i32_16x16x16_ui8_signed_unsigned(<4 x i32> %A, 
 ; W64-NEXT:    v_wmma_i32_16x16x16_iu8 v[8:11], v[4:7], v[4:7], v[8:11] neg_lo:[1,0,0]
 ; W64-NEXT:    global_store_b128 v[12:13], v[16:19], off
 ; W64-NEXT:    global_store_b128 v[14:15], v[8:11], off
+; W64-NEXT:    s_nop 0
 ; W64-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; W64-NEXT:    s_endpgm
 bb:
@@ -189,6 +198,7 @@ define amdgpu_ps void @test_wmma_i32_16x16x16_ui8_signed_signed(<4 x i32> %A, <4
 ; W64-NEXT:    v_wmma_i32_16x16x16_iu8 v[8:11], v[4:7], v[4:7], v[8:11] neg_lo:[1,1,0]
 ; W64-NEXT:    global_store_b128 v[12:13], v[16:19], off
 ; W64-NEXT:    global_store_b128 v[14:15], v[8:11], off
+; W64-NEXT:    s_nop 0
 ; W64-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; W64-NEXT:    s_endpgm
 bb:
@@ -206,6 +216,7 @@ define amdgpu_ps void @test_wmma_i32_16x16x16_ui8_unsigned_unsigned_clamp(<4 x i
 ; W64-NEXT:    v_wmma_i32_16x16x16_iu8 v[8:11], v[4:7], v[4:7], v[8:11] clamp
 ; W64-NEXT:    global_store_b128 v[12:13], v[16:19], off
 ; W64-NEXT:    global_store_b128 v[14:15], v[8:11], off
+; W64-NEXT:    s_nop 0
 ; W64-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; W64-NEXT:    s_endpgm
 bb:
@@ -223,6 +234,7 @@ define amdgpu_ps void @test_wmma_i32_16x16x16_ui8_unsigned_signed_clamp(<4 x i32
 ; W64-NEXT:    v_wmma_i32_16x16x16_iu8 v[8:11], v[4:7], v[4:7], v[8:11] neg_lo:[0,1,0] clamp
 ; W64-NEXT:    global_store_b128 v[12:13], v[16:19], off
 ; W64-NEXT:    global_store_b128 v[14:15], v[8:11], off
+; W64-NEXT:    s_nop 0
 ; W64-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; W64-NEXT:    s_endpgm
 bb:
@@ -240,6 +252,7 @@ define amdgpu_ps void @test_wmma_i32_16x16x16_ui8_signed_unsigned_clamp(<4 x i32
 ; W64-NEXT:    v_wmma_i32_16x16x16_iu8 v[8:11], v[4:7], v[4:7], v[8:11] neg_lo:[1,0,0] clamp
 ; W64-NEXT:    global_store_b128 v[12:13], v[16:19], off
 ; W64-NEXT:    global_store_b128 v[14:15], v[8:11], off
+; W64-NEXT:    s_nop 0
 ; W64-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; W64-NEXT:    s_endpgm
 bb:
@@ -257,6 +270,7 @@ define amdgpu_ps void @test_wmma_i32_16x16x16_ui8_signed_signed_clamp(<4 x i32> 
 ; W64-NEXT:    v_wmma_i32_16x16x16_iu8 v[8:11], v[4:7], v[4:7], v[8:11] neg_lo:[1,1,0] clamp
 ; W64-NEXT:    global_store_b128 v[12:13], v[16:19], off
 ; W64-NEXT:    global_store_b128 v[14:15], v[8:11], off
+; W64-NEXT:    s_nop 0
 ; W64-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; W64-NEXT:    s_endpgm
 bb:
@@ -276,6 +290,7 @@ define amdgpu_ps void @test_wmma_i32_16x16x16_ui4_unsigned_unsigned(<2 x i32> %A
 ; W64-NEXT:    v_wmma_i32_16x16x16_iu4 v[4:7], v[2:3], v[2:3], v[4:7]
 ; W64-NEXT:    global_store_b128 v[8:9], v[12:15], off
 ; W64-NEXT:    global_store_b128 v[10:11], v[4:7], off
+; W64-NEXT:    s_nop 0
 ; W64-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; W64-NEXT:    s_endpgm
 bb:
@@ -293,6 +308,7 @@ define amdgpu_ps void @test_wmma_i32_16x16x16_ui4_unsigned_signed(<2 x i32> %A, 
 ; W64-NEXT:    v_wmma_i32_16x16x16_iu4 v[4:7], v[2:3], v[2:3], v[4:7] neg_lo:[0,1,0]
 ; W64-NEXT:    global_store_b128 v[8:9], v[12:15], off
 ; W64-NEXT:    global_store_b128 v[10:11], v[4:7], off
+; W64-NEXT:    s_nop 0
 ; W64-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; W64-NEXT:    s_endpgm
 bb:
@@ -310,6 +326,7 @@ define amdgpu_ps void @test_wmma_i32_16x16x16_ui4_signed_unsigned(<2 x i32> %A, 
 ; W64-NEXT:    v_wmma_i32_16x16x16_iu4 v[4:7], v[2:3], v[2:3], v[4:7] neg_lo:[1,0,0]
 ; W64-NEXT:    global_store_b128 v[8:9], v[12:15], off
 ; W64-NEXT:    global_store_b128 v[10:11], v[4:7], off
+; W64-NEXT:    s_nop 0
 ; W64-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; W64-NEXT:    s_endpgm
 bb:
@@ -327,6 +344,7 @@ define amdgpu_ps void @test_wmma_i32_16x16x16_ui4_signed_signed(<2 x i32> %A, <2
 ; W64-NEXT:    v_wmma_i32_16x16x16_iu4 v[4:7], v[2:3], v[2:3], v[4:7] neg_lo:[1,1,0]
 ; W64-NEXT:    global_store_b128 v[8:9], v[12:15], off
 ; W64-NEXT:    global_store_b128 v[10:11], v[4:7], off
+; W64-NEXT:    s_nop 0
 ; W64-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; W64-NEXT:    s_endpgm
 bb:
@@ -344,6 +362,7 @@ define amdgpu_ps void @test_wmma_i32_16x16x16_ui4_unsigned_unsigned_clamp(<2 x i
 ; W64-NEXT:    v_wmma_i32_16x16x16_iu4 v[4:7], v[2:3], v[2:3], v[4:7] clamp
 ; W64-NEXT:    global_store_b128 v[8:9], v[12:15], off
 ; W64-NEXT:    global_store_b128 v[10:11], v[4:7], off
+; W64-NEXT:    s_nop 0
 ; W64-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; W64-NEXT:    s_endpgm
 bb:
@@ -361,6 +380,7 @@ define amdgpu_ps void @test_wmma_i32_16x16x16_ui4_unsigned_signed_clamp(<2 x i32
 ; W64-NEXT:    v_wmma_i32_16x16x16_iu4 v[4:7], v[2:3], v[2:3], v[4:7] neg_lo:[0,1,0] clamp
 ; W64-NEXT:    global_store_b128 v[8:9], v[12:15], off
 ; W64-NEXT:    global_store_b128 v[10:11], v[4:7], off
+; W64-NEXT:    s_nop 0
 ; W64-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; W64-NEXT:    s_endpgm
 bb:
@@ -378,6 +398,7 @@ define amdgpu_ps void @test_wmma_i32_16x16x16_ui4_signed_unsigned_clamp(<2 x i32
 ; W64-NEXT:    v_wmma_i32_16x16x16_iu4 v[4:7], v[2:3], v[2:3], v[4:7] neg_lo:[1,0,0] clamp
 ; W64-NEXT:    global_store_b128 v[8:9], v[12:15], off
 ; W64-NEXT:    global_store_b128 v[10:11], v[4:7], off
+; W64-NEXT:    s_nop 0
 ; W64-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; W64-NEXT:    s_endpgm
 bb:
@@ -395,6 +416,7 @@ define amdgpu_ps void @test_wmma_i32_16x16x16_ui4_signed_signed_clamp(<2 x i32> 
 ; W64-NEXT:    v_wmma_i32_16x16x16_iu4 v[4:7], v[2:3], v[2:3], v[4:7] neg_lo:[1,1,0] clamp
 ; W64-NEXT:    global_store_b128 v[8:9], v[12:15], off
 ; W64-NEXT:    global_store_b128 v[10:11], v[4:7], off
+; W64-NEXT:    s_nop 0
 ; W64-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; W64-NEXT:    s_endpgm
 bb:

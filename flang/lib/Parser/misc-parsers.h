@@ -52,5 +52,10 @@ constexpr auto pointer{construct<Pointer>("POINTER"_tok)};
 constexpr auto protectedAttr{construct<Protected>("PROTECTED"_tok)};
 constexpr auto save{construct<Save>("SAVE"_tok)};
 
+template <typename A> common::IfNoLvalue<std::list<A>, A> singletonList(A &&x) {
+  std::list<A> result;
+  result.emplace_back(std::move(x));
+  return result;
+}
 } // namespace Fortran::parser
 #endif

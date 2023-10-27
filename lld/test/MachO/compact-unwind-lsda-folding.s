@@ -4,7 +4,7 @@
 
 # REQUIRES: x86
 # RUN: rm -rf %t; mkdir %t
-# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos11.0 -o %t/lsda.o %s
+# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos11.0 -emit-compact-unwind-non-canonical=true -o %t/lsda.o %s
 # RUN: %lld -dylib --icf=all -lSystem -lc++ -o %t/liblsda.dylib %t/lsda.o
 # RUN: llvm-objdump --macho --syms --unwind-info %t/liblsda.dylib | FileCheck %s
 

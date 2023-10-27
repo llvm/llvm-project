@@ -34,6 +34,8 @@ int isl_mat_cmp_div(__isl_keep isl_mat *div, int i, int j);
 __isl_give isl_mat *isl_merge_divs(__isl_keep isl_mat *div1,
 	__isl_keep isl_mat *div2, int *exp1, int *exp2);
 
+isl_size isl_local_space_var_offset(__isl_keep isl_local_space *ls,
+	enum isl_dim_type type);
 unsigned isl_local_space_offset(__isl_keep isl_local_space *ls,
 	enum isl_dim_type type);
 

@@ -223,7 +223,7 @@ void CSKYAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
 
   // For each byte of the fragment that the fixup touches, mask in the
   // bits from the fixup value.
-  bool IsLittleEndian = (Endian == support::little);
+  bool IsLittleEndian = (Endian == llvm::endianness::little);
   bool IsInstFixup = (Kind >= FirstTargetFixupKind);
 
   if (IsLittleEndian && IsInstFixup && (NumBytes == 4)) {
@@ -248,7 +248,7 @@ bool CSKYAsmBackend::mayNeedRelaxation(const MCInst &Inst,
   case CSKY::JBT32:
   case CSKY::JBF32:
   case CSKY::JBSR32:
-    if (!STI.getFeatureBits()[CSKY::Has2E3])
+    if (!STI.hasFeature(CSKY::Has2E3))
       return false;
     return true;
   case CSKY::JBR16:
@@ -330,7 +330,7 @@ void CSKYAsmBackend::relaxInstruction(MCInst &Inst,
   case CSKY::JBF16:
     // ck801
     unsigned opcode;
-    if (STI.getFeatureBits()[CSKY::HasE2])
+    if (STI.hasFeature(CSKY::HasE2))
       opcode = Inst.getOpcode() == CSKY::JBT16 ? CSKY::JBT32 : CSKY::JBF32;
     else
       opcode = Inst.getOpcode() == CSKY::JBT16 ? CSKY::JBT_E : CSKY::JBF_E;

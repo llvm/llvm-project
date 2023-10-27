@@ -3,7 +3,7 @@
 /// Test native GCC installation on Arch Linux i686.
 // RUN: %clang -### %s --target=i686-linux-gnu --sysroot=%S/Inputs/archlinux_i686_tree \
 // RUN:   -ccc-install-dir %S/Inputs/basic_linux_tree/usr/bin -resource-dir=%S/Inputs/resource_dir \
-// RUN:   --stdlib=platform --rtlib=platform 2>&1 | FileCheck %s --check-prefix=ARCH_I686
+// RUN:   --stdlib=platform --rtlib=platform --unwindlib=platform 2>&1 | FileCheck %s --check-prefix=ARCH_I686
 // ARCH_I686:      "-resource-dir" "[[RESOURCE:[^"]+]]"
 // ARCH_I686:      "-internal-isystem"
 // ARCH_I686-SAME: {{^}} "[[SYSROOT:[^"]+]]/usr/lib/gcc/i686-pc-linux-gnu/11.1.0/../../../../include/c++/11.1.0"
@@ -25,7 +25,7 @@
 /// Test native x86-64 in the tree.
 // RUN: %clang -### %s --target=x86_64-linux-gnu --sysroot=%S/Inputs/debian_multiarch_tree \
 // RUN:   -ccc-install-dir %S/Inputs/basic_linux_tree/usr/bin -resource-dir=%S/Inputs/resource_dir \
-// RUN:   --stdlib=platform --rtlib=platform 2>&1 | FileCheck %s --check-prefix=DEBIAN_X86_64
+// RUN:   --stdlib=platform --rtlib=platform --unwindlib=platform 2>&1 | FileCheck %s --check-prefix=DEBIAN_X86_64
 // DEBIAN_X86_64:      "-resource-dir" "[[RESOURCE:[^"]+]]"
 // DEBIAN_X86_64:      "-internal-isystem"
 // DEBIAN_X86_64-SAME: {{^}} "[[SYSROOT:[^"]+]]/usr/lib/gcc/x86_64-linux-gnu/10/../../../../include/c++/10"
@@ -54,7 +54,7 @@
 /// Test -m32.
 // RUN: %clang -### %s --target=x86_64-linux-gnu -m32 --sysroot=%S/Inputs/debian_multiarch_tree \
 // RUN:   -ccc-install-dir %S/Inputs/basic_linux_tree/usr/bin -resource-dir=%S/Inputs/resource_dir \
-// RUN:   --stdlib=platform --rtlib=platform 2>&1 | FileCheck %s --check-prefix=DEBIAN_X86_64_M32
+// RUN:   --stdlib=platform --rtlib=platform --unwindlib=platform 2>&1 | FileCheck %s --check-prefix=DEBIAN_X86_64_M32
 // DEBIAN_X86_64_M32:      "-resource-dir" "[[RESOURCE:[^"]+]]"
 // DEBIAN_X86_64_M32:      "-internal-isystem"
 // DEBIAN_X86_64_M32-SAME: {{^}} "[[SYSROOT:[^"]+]]/usr/lib/gcc/x86_64-linux-gnu/10/../../../../include/c++/10"
@@ -78,7 +78,7 @@
 /// Test native GCC installation on Debian i386.
 // RUN: %clang -### %s --target=i686-linux-gnu --sysroot=%S/Inputs/debian_i386_tree \
 // RUN:   -ccc-install-dir %S/Inputs/basic_linux_tree/usr/bin -resource-dir=%S/Inputs/resource_dir \
-// RUN:   --stdlib=platform --rtlib=platform 2>&1 | FileCheck %s --check-prefix=DEBIAN_I686
+// RUN:   --stdlib=platform --rtlib=platform --unwindlib=platform 2>&1 | FileCheck %s --check-prefix=DEBIAN_I686
 // DEBIAN_I686:      "-resource-dir" "[[RESOURCE:[^"]+]]"
 // DEBIAN_I686:      "-internal-isystem"
 // DEBIAN_I686-SAME: {{^}} "[[SYSROOT:[^"]+]]/usr/lib/gcc/i686-linux-gnu/10/../../../../include/c++/10"
@@ -103,7 +103,7 @@
 /// Test -m64 on Debian i386.
 // RUN: %clang -### %s --target=i686-linux-gnu --sysroot=%S/Inputs/debian_i386_tree -m64 \
 // RUN:   -ccc-install-dir %S/Inputs/basic_linux_tree/usr/bin -resource-dir=%S/Inputs/resource_dir \
-// RUN:   --stdlib=platform --rtlib=platform 2>&1 | FileCheck %s --check-prefix=DEBIAN_I686_M64
+// RUN:   --stdlib=platform --rtlib=platform --unwindlib=platform 2>&1 | FileCheck %s --check-prefix=DEBIAN_I686_M64
 // DEBIAN_I686_M64:      "-resource-dir" "[[RESOURCE:[^"]+]]"
 // DEBIAN_I686_M64:      "-internal-isystem"
 // DEBIAN_I686_M64-SAME: {{^}} "[[SYSROOT:[^"]+]]/usr/lib/gcc/i686-linux-gnu/10/../../../../include/c++/10"
@@ -129,7 +129,7 @@
 /// Test a cross compiler.
 // RUN: %clang -### %s --target=aarch64-linux-gnu --sysroot=%S/Inputs/debian_multiarch_tree \
 // RUN:   -ccc-install-dir %S/Inputs/basic_linux_tree/usr/bin -resource-dir=%S/Inputs/resource_dir \
-// RUN:   --stdlib=platform --rtlib=platform 2>&1 | FileCheck %s --check-prefix=DEBIAN_AARCH64
+// RUN:   --stdlib=platform --rtlib=platform --unwindlib=platform 2>&1 | FileCheck %s --check-prefix=DEBIAN_AARCH64
 // DEBIAN_AARCH64:      "-resource-dir" "[[RESOURCE:[^"]+]]"
 // DEBIAN_AARCH64:      "-internal-isystem"
 // DEBIAN_AARCH64-SAME: {{^}} "[[SYSROOT:[^"]+]]/usr/lib/gcc-cross/aarch64-linux-gnu/10/../../../../aarch64-linux-gnu/include/c++/10"
@@ -202,13 +202,13 @@
 
 /// LDSO_ARCH is i386 for all x86-32 variants.
 // RUN: %clang -### %s --target=i686-linux-musl --sysroot= \
-// RUN:   --stdlib=platform --rtlib=platform 2>&1 | FileCheck %s --check-prefix=MUSL_I686
+// RUN:   --stdlib=platform --rtlib=platform --unwindlib=platform 2>&1 | FileCheck %s --check-prefix=MUSL_I686
 // MUSL_I686: "-dynamic-linker" "/lib/ld-musl-i386.so.1"
 
 // RUN: %clang -### %s --target=x86_64-linux-muslx32 --sysroot= \
-// RUN:   --stdlib=platform --rtlib=platform 2>&1 | FileCheck %s --check-prefix=MUSL_X32
+// RUN:   --stdlib=platform --rtlib=platform --unwindlib=platform 2>&1 | FileCheck %s --check-prefix=MUSL_X32
 // RUN: %clang -### %s --target=i686-linux-musl -mx32 --sysroot= \
-// RUN:   --stdlib=platform --rtlib=platform 2>&1 | FileCheck %s --check-prefix=MUSL_X32
+// RUN:   --stdlib=platform --rtlib=platform --unwindlib=platform 2>&1 | FileCheck %s --check-prefix=MUSL_X32
 // MUSL_X32: "-dynamic-linker" "/lib/ld-musl-x32.so.1"
 
 /// -r suppresses -dynamic-linker, default -l, and crt*.o like -nostdlib.

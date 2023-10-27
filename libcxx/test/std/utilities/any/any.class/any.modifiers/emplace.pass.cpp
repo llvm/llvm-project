@@ -8,8 +8,7 @@
 
 // UNSUPPORTED: c++03, c++11, c++14
 
-// Throwing bad_any_cast is supported starting in macosx10.13
-// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11|12}} && !no-exceptions
+// XFAIL: availability-bad_any_cast-missing && !no-exceptions
 
 // <any>
 
@@ -25,9 +24,11 @@
 #include "test_macros.h"
 
 struct Tracked {
-  static int count;
-  Tracked()  {++count;}
-  ~Tracked() { --count; }
+    static int count;
+    Tracked() { ++count; }
+    Tracked(Tracked const&) noexcept { ++count; }
+    Tracked& operator=(Tracked const&) = default;
+    ~Tracked() { --count; }
 };
 int Tracked::count = 0;
 

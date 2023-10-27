@@ -248,13 +248,13 @@ define i64 @zext_from_legal_to_legal_type(i32 %x) {
 ; CHECK-NEXT:    br i1 [[CMP]], label [[T:%.*]], label [[F:%.*]]
 ; CHECK:       t:
 ; CHECK-NEXT:    [[Y:%.*]] = call i32 @get_i32()
-; CHECK-NEXT:    [[PHI_CAST:%.*]] = zext i32 [[Y]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[Y]] to i64
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       f:
 ; CHECK-NEXT:    call void @bar()
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[P:%.*]] = phi i64 [ [[PHI_CAST]], [[T]] ], [ 3, [[F]] ]
+; CHECK-NEXT:    [[P:%.*]] = phi i64 [ [[TMP0]], [[T]] ], [ 3, [[F]] ]
 ; CHECK-NEXT:    ret i64 [[P]]
 ;
 entry:
@@ -282,13 +282,13 @@ define i64 @zext_from_illegal_to_legal_type(i32 %x) {
 ; CHECK-NEXT:    br i1 [[CMP]], label [[T:%.*]], label [[F:%.*]]
 ; CHECK:       t:
 ; CHECK-NEXT:    [[Y:%.*]] = call i3 @get_i3()
-; CHECK-NEXT:    [[PHI_CAST:%.*]] = zext i3 [[Y]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = zext i3 [[Y]] to i64
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       f:
 ; CHECK-NEXT:    call void @bar()
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[P:%.*]] = phi i64 [ [[PHI_CAST]], [[T]] ], [ 3, [[F]] ]
+; CHECK-NEXT:    [[P:%.*]] = phi i64 [ [[TMP0]], [[T]] ], [ 3, [[F]] ]
 ; CHECK-NEXT:    ret i64 [[P]]
 ;
 entry:

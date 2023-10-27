@@ -96,18 +96,18 @@ MachineRegisterInfo::constrainRegAttrs(Register Reg,
   if (RegTy.isValid() && ConstrainingRegTy.isValid() &&
       RegTy != ConstrainingRegTy)
     return false;
-  const auto ConstrainingRegCB = getRegClassOrRegBank(ConstrainingReg);
+  const auto &ConstrainingRegCB = getRegClassOrRegBank(ConstrainingReg);
   if (!ConstrainingRegCB.isNull()) {
-    const auto RegCB = getRegClassOrRegBank(Reg);
+    const auto &RegCB = getRegClassOrRegBank(Reg);
     if (RegCB.isNull())
       setRegClassOrRegBank(Reg, ConstrainingRegCB);
-    else if (RegCB.is<const TargetRegisterClass *>() !=
-             ConstrainingRegCB.is<const TargetRegisterClass *>())
+    else if (isa<const TargetRegisterClass *>(RegCB) !=
+             isa<const TargetRegisterClass *>(ConstrainingRegCB))
       return false;
-    else if (RegCB.is<const TargetRegisterClass *>()) {
+    else if (isa<const TargetRegisterClass *>(RegCB)) {
       if (!::constrainRegClass(
-              *this, Reg, RegCB.get<const TargetRegisterClass *>(),
-              ConstrainingRegCB.get<const TargetRegisterClass *>(), MinNumRegs))
+              *this, Reg, cast<const TargetRegisterClass *>(RegCB),
+              cast<const TargetRegisterClass *>(ConstrainingRegCB), MinNumRegs))
         return false;
     } else if (RegCB != ConstrainingRegCB)
       return false;
@@ -644,16 +644,8 @@ void MachineRegisterInfo::setCalleeSavedRegs(ArrayRef<MCPhysReg> CSRs) {
 bool MachineRegisterInfo::isReservedRegUnit(unsigned Unit) const {
   const TargetRegisterInfo *TRI = getTargetRegisterInfo();
   for (MCRegUnitRootIterator Root(Unit, TRI); Root.isValid(); ++Root) {
-    bool IsRootReserved = true;
-    for (MCSuperRegIterator Super(*Root, TRI, /*IncludeSelf=*/true);
-         Super.isValid(); ++Super) {
-      MCRegister Reg = *Super;
-      if (!isReserved(Reg)) {
-        IsRootReserved = false;
-        break;
-      }
-    }
-    if (IsRootReserved)
+    if (all_of(TRI->superregs_inclusive(*Root),
+               [&](MCPhysReg Super) { return isReserved(Super); }))
       return true;
   }
   return false;

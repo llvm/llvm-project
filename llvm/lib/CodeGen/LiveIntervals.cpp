@@ -280,9 +280,7 @@ void LiveIntervals::computeRegUnitRange(LiveRange &LR, unsigned Unit) {
   bool IsReserved = false;
   for (MCRegUnitRootIterator Root(Unit, TRI); Root.isValid(); ++Root) {
     bool IsRootReserved = true;
-    for (MCSuperRegIterator Super(*Root, TRI, /*IncludeSelf=*/true);
-         Super.isValid(); ++Super) {
-      MCRegister Reg = *Super;
+    for (MCPhysReg Reg : TRI->superregs_inclusive(*Root)) {
       if (!MRI->reg_empty(Reg))
         LICalc->createDeadDefs(LR, Reg);
       // A register unit is considered reserved if all its roots and all their
@@ -299,9 +297,7 @@ void LiveIntervals::computeRegUnitRange(LiveRange &LR, unsigned Unit) {
   // Ignore uses of reserved registers. We only track defs of those.
   if (!IsReserved) {
     for (MCRegUnitRootIterator Root(Unit, TRI); Root.isValid(); ++Root) {
-      for (MCSuperRegIterator Super(*Root, TRI, /*IncludeSelf=*/true);
-           Super.isValid(); ++Super) {
-        MCRegister Reg = *Super;
+      for (MCPhysReg Reg : TRI->superregs_inclusive(*Root)) {
         if (!MRI->reg_empty(Reg))
           LICalc->extendToUses(LR, Reg);
       }
@@ -333,8 +329,7 @@ void LiveIntervals::computeLiveInRegUnits() {
     SlotIndex Begin = Indexes->getMBBStartIdx(&MBB);
     LLVM_DEBUG(dbgs() << Begin << "\t" << printMBBReference(MBB));
     for (const auto &LI : MBB.liveins()) {
-      for (MCRegUnitIterator Units(LI.PhysReg, TRI); Units.isValid(); ++Units) {
-        unsigned Unit = *Units;
+      for (MCRegUnit Unit : TRI->regunits(LI.PhysReg)) {
         LiveRange *LR = RegUnitRanges[Unit];
         if (!LR) {
           // Use segment set to speed-up initial computation of the live range.
@@ -708,9 +703,8 @@ void LiveIntervals::addKillFlags(const VirtRegMap *VRM) {
     // Find the regunit intervals for the assigned register. They may overlap
     // the virtual register live range, cancelling any kills.
     RU.clear();
-    for (MCRegUnitIterator Unit(PhysReg, TRI); Unit.isValid();
-         ++Unit) {
-      const LiveRange &RURange = getRegUnit(*Unit);
+    for (MCRegUnit Unit : TRI->regunits(PhysReg)) {
+      const LiveRange &RURange = getRegUnit(Unit);
       if (RURange.empty())
         continue;
       RU.push_back(std::make_pair(&RURange, RURange.find(LI.begin()->end)));
@@ -1056,10 +1050,9 @@ public:
 
       // For physregs, only update the regunits that actually have a
       // precomputed live range.
-      for (MCRegUnitIterator Units(Reg.asMCReg(), &TRI); Units.isValid();
-           ++Units)
-        if (LiveRange *LR = getRegUnitLI(*Units))
-          updateRange(*LR, *Units, LaneBitmask::getNone());
+      for (MCRegUnit Unit : TRI.regunits(Reg.asMCReg()))
+        if (LiveRange *LR = getRegUnitLI(Unit))
+          updateRange(*LR, Unit, LaneBitmask::getNone());
     }
     if (hasRegMask)
       updateRegMaskSlots();
@@ -1707,8 +1700,8 @@ LiveIntervals::repairIntervalsInRange(MachineBasicBlock *MBB,
 }
 
 void LiveIntervals::removePhysRegDefAt(MCRegister Reg, SlotIndex Pos) {
-  for (MCRegUnitIterator Unit(Reg, TRI); Unit.isValid(); ++Unit) {
-    if (LiveRange *LR = getCachedRegUnit(*Unit))
+  for (MCRegUnit Unit : TRI->regunits(Reg)) {
+    if (LiveRange *LR = getCachedRegUnit(Unit))
       if (VNInfo *VNI = LR->getVNInfoAt(Pos))
         LR->removeValNo(VNI);
   }

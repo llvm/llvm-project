@@ -205,7 +205,7 @@ using EvaluationTuple =
 /// from EvaluationTuple type (std::tuple<A, B, ...>).
 using EvaluationVariant = MakeReferenceVariant<EvaluationTuple>;
 
-/// Function-like units contain lists of evaluations.  These can be simple
+/// Function-like units contain lists of evaluations. These can be simple
 /// statements or constructs, where a construct contains its own evaluations.
 struct Evaluation : EvaluationVariant {
 
@@ -308,35 +308,36 @@ struct Evaluation : EvaluationVariant {
 
   bool lowerAsStructured() const;
   bool lowerAsUnstructured() const;
+  bool forceAsUnstructured() const;
 
   // FIR generation looks primarily at PFT ActionStmt and ConstructStmt leaf
-  // nodes.  Members such as lexicalSuccessor and block are applicable only
-  // to these nodes, plus some directives.  The controlSuccessor member is
-  // used for nonlexical successors, such as linking to a GOTO target.  For
-  // multiway branches, it is set to the first target.  Successor and exit
-  // links always target statements or directives.  An internal Construct
+  // nodes. Members such as lexicalSuccessor and block are applicable only
+  // to these nodes, plus some directives. The controlSuccessor member is
+  // used for nonlexical successors, such as linking to a GOTO target. For
+  // multiway branches, it is set to the first target. Successor and exit
+  // links always target statements or directives. An internal Construct
   // node has a constructExit link that applies to exits from anywhere within
   // the construct.
   //
-  // An unstructured construct is one that contains some form of goto.  This
+  // An unstructured construct is one that contains some form of goto. This
   // is indicated by the isUnstructured member flag, which may be set on a
-  // statement and propagated to enclosing constructs.  This distinction allows
+  // statement and propagated to enclosing constructs. This distinction allows
   // a structured IF or DO statement to be materialized with custom structured
-  // FIR operations.  An unstructured statement is materialized as mlir
+  // FIR operations. An unstructured statement is materialized as mlir
   // operation sequences that include explicit branches.
   //
-  // The block member is set for statements that begin a new block.  This
-  // block is the target of any branch to the statement.  Statements may have
+  // The block member is set for statements that begin a new block. This
+  // block is the target of any branch to the statement. Statements may have
   // additional (unstructured) "local" blocks, but such blocks cannot be the
-  // target of any explicit branch.  The primary example of an (unstructured)
+  // target of any explicit branch. The primary example of an (unstructured)
   // statement that may have multiple associated blocks is NonLabelDoStmt,
   // which may have a loop preheader block for loop initialization code (the
   // block member), and always has a "local" header block that is the target
-  // of the loop back edge.  If the NonLabelDoStmt is a concurrent loop, it
+  // of the loop back edge. If the NonLabelDoStmt is a concurrent loop, it
   // may be associated with an arbitrary number of nested preheader, header,
   // and mask blocks.
   //
-  // The printIndex member is only set for statements.  It is used for dumps
+  // The printIndex member is only set for statements. It is used for dumps
   // (and debugging) and does not affect FIR generation.
 
   PftNode parent;
@@ -350,6 +351,7 @@ struct Evaluation : EvaluationVariant {
   bool isNewBlock{false};                // evaluation begins a new basic block
   bool isUnstructured{false};  // evaluation has unstructured control flow
   bool negateCondition{false}; // If[Then]Stmt condition must be negated
+  bool activeConstruct{false}; // temporarily set for some constructs
   mlir::Block *block{nullptr}; // isNewBlock block (ActionStmt, ConstructStmt)
   int printIndex{0}; // (ActionStmt, ConstructStmt) evaluation index for dumps
 };
@@ -638,6 +640,15 @@ struct FunctionLikeUnit : public ProgramUnit {
     return *symbol;
   }
 
+  /// Return a pointer to the main program symbol for named programs
+  /// Return the null pointer for anonymous programs
+  const semantics::Symbol *getMainProgramSymbol() const {
+    if (!isMainProgram()) {
+      llvm::report_fatal_error("call only on main program.");
+    }
+    return entryPointList[activeEntry].first;
+  }
+
   /// Return a pointer to the current entry point Evaluation.
   /// This is null for a primary entry point.
   Evaluation *getEntryEval() const {
@@ -683,18 +694,19 @@ struct FunctionLikeUnit : public ProgramUnit {
   LabelEvalMap labelEvaluationMap;
   SymbolLabelMap assignSymbolLabelMap;
   std::list<FunctionLikeUnit> nestedFunctions;
-  /// <Symbol, Evaluation> pairs for each entry point.  The pair at index 0
+  /// <Symbol, Evaluation> pairs for each entry point. The pair at index 0
   /// is the primary entry point; remaining pairs are alternate entry points.
   /// The primary entry point symbol is Null for an anonymous program.
-  /// A named program symbol has MainProgramDetails.  Other symbols have
-  /// SubprogramDetails.  Evaluations are filled in for alternate entries.
+  /// A named program symbol has MainProgramDetails. Other symbols have
+  /// SubprogramDetails. Evaluations are filled in for alternate entries.
   llvm::SmallVector<std::pair<const semantics::Symbol *, Evaluation *>, 1>
       entryPointList{std::pair{nullptr, nullptr}};
-  /// Current index into entryPointList.  Index 0 is the primary entry point.
+  /// Current index into entryPointList. Index 0 is the primary entry point.
   int activeEntry = 0;
-  /// Primary result for function subprograms with alternate entries.  This
+  /// Primary result for function subprograms with alternate entries. This
   /// is one of the largest result values, not necessarily the first one.
   const semantics::Symbol *primaryResult{nullptr};
+  bool mayModifyRoundingMode{false};
   /// Terminal basic block (if any)
   mlir::Block *finalBlock{};
   HostAssociations hostAssociations;
@@ -821,9 +833,9 @@ namespace Fortran::lower {
 ///
 /// A PFT is a light weight tree over the parse tree that is used to create FIR.
 /// The PFT captures pointers back into the parse tree, so the parse tree must
-/// not be changed between the construction of the PFT and its last use.  The
-/// PFT captures a structured view of a program.  A program is a list of units.
-/// A function like unit contains a list of evaluations.  An evaluation is
+/// not be changed between the construction of the PFT and its last use. The
+/// PFT captures a structured view of a program. A program is a list of units.
+/// A function like unit contains a list of evaluations. An evaluation is
 /// either a statement, or a construct with a nested list of evaluations.
 std::unique_ptr<pft::Program>
 createPFT(const parser::Program &root,

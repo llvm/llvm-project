@@ -11,6 +11,7 @@ group("unittests") {
     "CodeGen:CodeGenTests",
     "CodeGen/GlobalISel:GlobalISelTests",
     "DWARFLinkerParallel:DWARFLinkerParallelTests",
+    "DebugInfo/BTF:DebugInfoBTFTests",
     "DebugInfo/CodeView:DebugInfoCodeViewTests",
     "DebugInfo/DWARF:DebugInfoDWARFTests",
     "DebugInfo/GSYM:DebugInfoGSYMTests",
@@ -38,8 +39,8 @@ group("unittests") {
     "Object:ObjectTests",
     "ObjectYAML:ObjectYAMLTests",
     "Option:OptionTests",
-    "Passes:PassesBindingsTests",
-    "Passes:PluginsTests",
+    "Passes/PassBuilderBindings:PassesBindingsTests",
+    "Passes/Plugins:PluginsTests",
     "ProfileData:ProfileDataTests",
     "Remarks:RemarksTests",
     "Support:SupportTests",
@@ -49,6 +50,7 @@ group("unittests") {
     "Testing/ADT:TestingADTTests",
     "Testing/Support:TestingSupportTests",
     "TextAPI:TextAPITests",
+    "Transforms/Coroutines:CoroTests",
     "Transforms/IPO:IPOTests",
     "Transforms/Scalar:ScalarTests",
     "Transforms/Utils:UtilsTests",
@@ -57,6 +59,7 @@ group("unittests") {
     "tools/llvm-cfi-verify:CFIVerifyTests",
     "tools/llvm-exegesis:LLVMExegesisTests",
     "tools/llvm-mca:LLVMMCATests",
+    "tools/llvm-profdata:LLVMProfdataTests",
     "tools/llvm-profgen:LLVMProfgenTests",
     "//llvm/lib/TargetParser",
   ]
@@ -78,10 +81,7 @@ group("unittests") {
     ]
   }
   if (llvm_build_ARM) {
-    deps += [
-      "Target/ARM:ARMTests",
-      "tools/llvm-exegesis/ARM:LLVMExegesisARMTests",
-    ]
+    deps += [ "Target/ARM:ARMTests" ]
   }
   if (llvm_build_LoongArch) {
     deps += [ "Target/LoongArch:LoongArchTests" ]
@@ -94,6 +94,9 @@ group("unittests") {
       "Target/PowerPC:PowerPCTests",
       "tools/llvm-exegesis/PowerPC:LLVMExegesisPowerPCTests",
     ]
+  }
+  if (llvm_build_RISCV) {
+    deps += [ "Target/RISCV:RISCVTests" ]
   }
   if (llvm_build_SystemZ) {
     deps += [ "MC/SystemZ:SystemZAsmLexerTests" ]

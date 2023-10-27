@@ -10,7 +10,7 @@ Building libc++
 .. _build instructions:
 
 The instructions on this page are aimed at vendors who ship libc++ as part of an
-operating system distribution, a toolchain or similar shipping vehicules. If you
+operating system distribution, a toolchain or similar shipping vehicles. If you
 are a user merely trying to use libc++ in your program, you most likely want to
 refer to your vendor's documentation, or to the general documentation for using
 libc++ :ref:`here <using-libcxx>`.
@@ -78,6 +78,10 @@ CMake invocation at ``<monorepo>/llvm``:
   This type of build is also commonly called a "Runtimes build", but we would like to move
   away from that terminology, which is too confusing.
 
+.. warning::
+  Adding the `--fresh` flag to the top-level cmake invocation in a bootstrapping build *will not*
+  freshen the cmake cache of any of the enabled runtimes.
+
 Support for Windows
 ===================
 
@@ -141,9 +145,6 @@ should add e.g. ``-DCMAKE_CXX_COMPILER_TARGET=x86_64-windows-msvc`` (replacing
 line above. This will instruct ``check-cxx`` to use the right target triple
 when invoking ``clang++``.
 
-Also note that if not building in Release mode, a failed assert in the tests
-pops up a blocking dialog box, making it hard to run a larger number of tests.
-
 CMake + ninja (MinGW)
 ---------------------
 
@@ -156,18 +157,12 @@ e.g. the ``mingw-w64-x86_64-clang`` package), together with CMake and ninja.
   > cmake -G Ninja -S runtimes -B build                                               \
           -DCMAKE_C_COMPILER=clang                                                    \
           -DCMAKE_CXX_COMPILER=clang++                                                \
-          -DLLVM_ENABLE_RUNTIMES=libcxx                                               \
-          -DLIBCXX_CXX_ABI=libstdc++
+          -DLLVM_ENABLE_LLD=ON                                                        \
+          -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi"                                   \
+          -DLIBCXXABI_ENABLE_SHARED=OFF                                               \
+          -DLIBCXX_ENABLE_STATIC_ABI_LIBRARY=ON
   > ninja -C build cxx
-  > cp /mingw64/bin/{libstdc++-6,libgcc_s_seh-1,libwinpthread-1}.dll lib
   > ninja -C build check-cxx
-
-As this build configuration ends up depending on a couple other DLLs that
-aren't available in path while running tests, copy them into the same
-directory as the tested libc++ DLL.
-
-(Building a libc++ that depends on libstdc++ isn't necessarily a config one
-would want to deploy, but it simplifies the config for testing purposes.)
 
 .. _`libc++abi`: http://libcxxabi.llvm.org/
 
@@ -210,15 +205,6 @@ libc++ specific options
   **Default**: ``ON``
 
   Toggle the installation of the libc++ headers.
-
-.. option:: LIBCXX_ENABLE_ASSERTIONS:BOOL
-
-  **Default**: ``OFF``
-
-  Build libc++ with assertions enabled in the compiled library, and enable assertions
-  by default when building user code as well. Assertions can be turned off by users
-  by defining ``_LIBCPP_ENABLE_ASSERTIONS=0``. For details, see
-  :ref:`the documentation <assertions-mode>`.
 
 .. option:: LIBCXX_ENABLE_SHARED:BOOL
 
@@ -263,6 +249,15 @@ libc++ specific options
    allows the library to work on top of a C Standard Library that does not provide
    support for ``wchar_t``. This is especially useful in embedded settings where
    C Standard Libraries don't always provide all the usual bells and whistles.
+
+.. option:: LIBCXX_ENABLE_TIME_ZONE_DATABASE:BOOL
+
+   **Default**: ``ON``
+
+   Whether to include support for time zones in the library. Disabling
+   time zone support can be useful when porting to platforms that don't
+   ship the IANA time zone database. When time zones are not supported,
+   time zone support in <chrono> will be disabled.
 
 .. option:: LIBCXX_INSTALL_LIBRARY_DIR:PATH
 

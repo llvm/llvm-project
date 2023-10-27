@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Internals.h"
 #include "clang/ARCMigrate/ARCMT.h"
+#include "Internals.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/Basic/DiagnosticCategories.h"
 #include "clang/Frontend/ASTUnit.h"
@@ -20,8 +20,8 @@
 #include "clang/Rewrite/Core/Rewriter.h"
 #include "clang/Sema/SemaDiagnostic.h"
 #include "clang/Serialization/ASTReader.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/TargetParser/Triple.h"
 #include <utility>
 using namespace clang;
 using namespace arcmt;
@@ -191,8 +191,8 @@ createInvocationForMigration(CompilerInvocation &origCI,
   std::string define = std::string(getARCMTMacroName());
   define += '=';
   CInvok->getPreprocessorOpts().addMacroDef(define);
-  CInvok->getLangOpts()->ObjCAutoRefCount = true;
-  CInvok->getLangOpts()->setGC(LangOptions::NonGC);
+  CInvok->getLangOpts().ObjCAutoRefCount = true;
+  CInvok->getLangOpts().setGC(LangOptions::NonGC);
   CInvok->getDiagnosticOpts().ErrorLimit = 0;
   CInvok->getDiagnosticOpts().PedanticErrors = 0;
 
@@ -207,8 +207,8 @@ createInvocationForMigration(CompilerInvocation &origCI,
   WarnOpts.push_back("error=arc-unsafe-retained-assign");
   CInvok->getDiagnosticOpts().Warnings = std::move(WarnOpts);
 
-  CInvok->getLangOpts()->ObjCWeakRuntime = HasARCRuntime(origCI);
-  CInvok->getLangOpts()->ObjCWeak = CInvok->getLangOpts()->ObjCWeakRuntime;
+  CInvok->getLangOpts().ObjCWeakRuntime = HasARCRuntime(origCI);
+  CInvok->getLangOpts().ObjCWeak = CInvok->getLangOpts().ObjCWeakRuntime;
 
   return CInvok.release();
 }
@@ -237,10 +237,10 @@ bool arcmt::checkForManualIssues(
     std::shared_ptr<PCHContainerOperations> PCHContainerOps,
     DiagnosticConsumer *DiagClient, bool emitPremigrationARCErrors,
     StringRef plistOut) {
-  if (!origCI.getLangOpts()->ObjC)
+  if (!origCI.getLangOpts().ObjC)
     return false;
 
-  LangOptions::GCMode OrigGCMode = origCI.getLangOpts()->getGC();
+  LangOptions::GCMode OrigGCMode = origCI.getLangOpts().getGC();
   bool NoNSAllocReallocError = origCI.getMigratorOpts().NoNSAllocReallocError;
   bool NoFinalizeRemoval = origCI.getMigratorOpts().NoFinalizeRemoval;
 
@@ -338,10 +338,10 @@ applyTransforms(CompilerInvocation &origCI, const FrontendInputFile &Input,
                 std::shared_ptr<PCHContainerOperations> PCHContainerOps,
                 DiagnosticConsumer *DiagClient, StringRef outputDir,
                 bool emitPremigrationARCErrors, StringRef plistOut) {
-  if (!origCI.getLangOpts()->ObjC)
+  if (!origCI.getLangOpts().ObjC)
     return false;
 
-  LangOptions::GCMode OrigGCMode = origCI.getLangOpts()->getGC();
+  LangOptions::GCMode OrigGCMode = origCI.getLangOpts().getGC();
 
   // Make sure checking is successful first.
   CompilerInvocation CInvokForCheck(origCI);
@@ -372,7 +372,7 @@ applyTransforms(CompilerInvocation &origCI, const FrontendInputFile &Input,
                             DiagClient, /*ShouldOwnClient=*/false));
 
   if (outputDir.empty()) {
-    origCI.getLangOpts()->ObjCAutoRefCount = true;
+    origCI.getLangOpts().ObjCAutoRefCount = true;
     return migration.getRemapper().overwriteOriginal(*Diags);
   } else {
     return migration.getRemapper().flushToDisk(outputDir, *Diags);
@@ -505,7 +505,7 @@ public:
 MigrationProcess::RewriteListener::~RewriteListener() { }
 
 MigrationProcess::MigrationProcess(
-    const CompilerInvocation &CI,
+    CompilerInvocation &CI,
     std::shared_ptr<PCHContainerOperations> PCHContainerOps,
     DiagnosticConsumer *diagClient, StringRef outputDir)
     : OrigCI(CI), PCHContainerOps(std::move(PCHContainerOps)),
@@ -577,7 +577,7 @@ bool MigrationProcess::applyTransform(TransformFn trans,
 
   Rewriter rewriter(Ctx.getSourceManager(), Ctx.getLangOpts());
   TransformActions TA(*Diags, capturedDiags, Ctx, Unit->getPreprocessor());
-  MigrationPass pass(Ctx, OrigCI.getLangOpts()->getGC(),
+  MigrationPass pass(Ctx, OrigCI.getLangOpts().getGC(),
                      Unit->getSema(), TA, capturedDiags, ARCMTMacroLocs);
 
   trans(pass);
@@ -597,7 +597,8 @@ bool MigrationProcess::applyTransform(TransformFn trans,
         I = rewriter.buffer_begin(), E = rewriter.buffer_end(); I != E; ++I) {
     FileID FID = I->first;
     RewriteBuffer &buf = I->second;
-    const FileEntry *file = Ctx.getSourceManager().getFileEntryForID(FID);
+    OptionalFileEntryRef file =
+        Ctx.getSourceManager().getFileEntryRefForID(FID);
     assert(file);
     std::string newFname = std::string(file->getName());
     newFname += "-trans";

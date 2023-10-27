@@ -1,7 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fdebugger-support -funknown-anytype -emit-llvm -o - %s | FileCheck %s
 
-// rdar://13025708
-
 @interface A @end
 void test0(A *a) {
   (void) [a test0: (float) 2.0];

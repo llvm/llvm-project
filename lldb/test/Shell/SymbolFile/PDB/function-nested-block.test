@@ -2,6 +2,7 @@ REQUIRES: system-windows, lld
 RUN: %build --compiler=clang-cl --nodefaultlib --output=%t.exe %S/Inputs/FunctionNestedBlockTest.cpp
 RUN: lldb-test symbols -find=function -file FunctionNestedBlockTest.cpp -line 4 %t.exe | FileCheck --check-prefix=CHECK-FUNCTION %s
 RUN: lldb-test symbols -find=block -file FunctionNestedBlockTest.cpp -line 4 %t.exe | FileCheck --check-prefix=CHECK-BLOCK %s
+XFAIL: *
 
 CHECK-FUNCTION: Found 1 functions:
 CHECK-FUNCTION: name = "{{.*}}", mangled = "{{_?}}main"

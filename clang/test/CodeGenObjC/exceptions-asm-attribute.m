@@ -1,7 +1,6 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin10 -emit-llvm -Wno-objc-root-class -fexceptions -fobjc-exceptions -o %t %s
 // RUN: FileCheck -check-prefix=CHECK-X86_64 < %t %s
 // RUN: FileCheck -check-prefix=CHECK-EHTYPE < %t %s
-// rdar://16462586
 
 // We need exactly 3 of these.
 // CHECK-EHTYPE: @"OBJC_EHTYPE_$_MySecretNamespace.EH3"

@@ -10,7 +10,7 @@ type is set to asynchronous. Asynchronous cancellation type
 cancellation, a cancellation point in an asynchronous signal handler may still
 be acted upon and the effect is as if it was an asynchronous cancellation.
 
-.. code-block: c++
+.. code-block:: c++
 
   pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, &oldtype);
 

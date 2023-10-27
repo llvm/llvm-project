@@ -13,48 +13,12 @@
 
 #include "WebAssemblyTypeUtilities.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/CodeGen/TargetRegisterInfo.h"
 
 // Get register classes enum.
 #define GET_REGINFO_ENUM
 #include "WebAssemblyGenRegisterInfo.inc"
 
 using namespace llvm;
-
-std::optional<wasm::ValType> WebAssembly::parseType(StringRef Type) {
-  // FIXME: can't use StringSwitch because wasm::ValType doesn't have a
-  // "invalid" value.
-  if (Type == "i32")
-    return wasm::ValType::I32;
-  if (Type == "i64")
-    return wasm::ValType::I64;
-  if (Type == "f32")
-    return wasm::ValType::F32;
-  if (Type == "f64")
-    return wasm::ValType::F64;
-  if (Type == "v128" || Type == "i8x16" || Type == "i16x8" || Type == "i32x4" ||
-      Type == "i64x2" || Type == "f32x4" || Type == "f64x2")
-    return wasm::ValType::V128;
-  if (Type == "funcref")
-    return wasm::ValType::FUNCREF;
-  if (Type == "externref")
-    return wasm::ValType::EXTERNREF;
-  return std::nullopt;
-}
-
-WebAssembly::BlockType WebAssembly::parseBlockType(StringRef Type) {
-  // Multivalue block types are handled separately in parseSignature
-  return StringSwitch<WebAssembly::BlockType>(Type)
-      .Case("i32", WebAssembly::BlockType::I32)
-      .Case("i64", WebAssembly::BlockType::I64)
-      .Case("f32", WebAssembly::BlockType::F32)
-      .Case("f64", WebAssembly::BlockType::F64)
-      .Case("v128", WebAssembly::BlockType::V128)
-      .Case("funcref", WebAssembly::BlockType::Funcref)
-      .Case("externref", WebAssembly::BlockType::Externref)
-      .Case("void", WebAssembly::BlockType::Void)
-      .Default(WebAssembly::BlockType::Invalid);
-}
 
 MVT WebAssembly::parseMVT(StringRef Type) {
   return StringSwitch<MVT>(Type)
@@ -70,56 +34,6 @@ MVT WebAssembly::parseMVT(StringRef Type) {
       .Case("funcref", MVT::funcref)
       .Case("externref", MVT::externref)
       .Default(MVT::INVALID_SIMPLE_VALUE_TYPE);
-}
-
-// We have various enums representing a subset of these types, use this
-// function to convert any of them to text.
-const char *WebAssembly::anyTypeToString(unsigned Type) {
-  switch (Type) {
-  case wasm::WASM_TYPE_I32:
-    return "i32";
-  case wasm::WASM_TYPE_I64:
-    return "i64";
-  case wasm::WASM_TYPE_F32:
-    return "f32";
-  case wasm::WASM_TYPE_F64:
-    return "f64";
-  case wasm::WASM_TYPE_V128:
-    return "v128";
-  case wasm::WASM_TYPE_FUNCREF:
-    return "funcref";
-  case wasm::WASM_TYPE_EXTERNREF:
-    return "externref";
-  case wasm::WASM_TYPE_FUNC:
-    return "func";
-  case wasm::WASM_TYPE_NORESULT:
-    return "void";
-  default:
-    return "invalid_type";
-  }
-}
-
-const char *WebAssembly::typeToString(wasm::ValType Type) {
-  return anyTypeToString(static_cast<unsigned>(Type));
-}
-
-std::string WebAssembly::typeListToString(ArrayRef<wasm::ValType> List) {
-  std::string S;
-  for (const auto &Type : List) {
-    if (&Type != &List[0])
-      S += ", ";
-    S += WebAssembly::typeToString(Type);
-  }
-  return S;
-}
-
-std::string WebAssembly::signatureToString(const wasm::WasmSignature *Sig) {
-  std::string S("(");
-  S += typeListToString(Sig->Params);
-  S += ") -> (";
-  S += typeListToString(Sig->Returns);
-  S += ")";
-  return S;
 }
 
 wasm::ValType WebAssembly::toValType(MVT Type) {
@@ -148,34 +62,8 @@ wasm::ValType WebAssembly::toValType(MVT Type) {
   }
 }
 
-wasm::ValType WebAssembly::regClassToValType(unsigned RC) {
-  switch (RC) {
-  case WebAssembly::I32RegClassID:
-    return wasm::ValType::I32;
-  case WebAssembly::I64RegClassID:
-    return wasm::ValType::I64;
-  case WebAssembly::F32RegClassID:
-    return wasm::ValType::F32;
-  case WebAssembly::F64RegClassID:
-    return wasm::ValType::F64;
-  case WebAssembly::V128RegClassID:
-    return wasm::ValType::V128;
-  case WebAssembly::FUNCREFRegClassID:
-    return wasm::ValType::FUNCREF;
-  case WebAssembly::EXTERNREFRegClassID:
-    return wasm::ValType::EXTERNREF;
-  default:
-    llvm_unreachable("unexpected type");
-  }
-}
-
-wasm::ValType WebAssembly::regClassToValType(const TargetRegisterClass *RC) {
-  assert(RC != nullptr);
-  return regClassToValType(RC->getID());
-}
-
 void WebAssembly::wasmSymbolSetType(MCSymbolWasm *Sym, const Type *GlobalVT,
-                                    const SmallVector<MVT, 1> &VTs) {
+                                    const ArrayRef<MVT> &VTs) {
   assert(!Sym->getType());
 
   // Tables are represented as Arrays in LLVM IR therefore
@@ -183,13 +71,12 @@ void WebAssembly::wasmSymbolSetType(MCSymbolWasm *Sym, const Type *GlobalVT,
   // that is a reference type.
   wasm::ValType ValTy;
   bool IsTable = false;
-  if (GlobalVT->isArrayTy() &&
-      WebAssembly::isRefType(GlobalVT->getArrayElementType())) {
+  if (WebAssembly::isWebAssemblyTableType(GlobalVT)) {
     IsTable = true;
     const Type *ElTy = GlobalVT->getArrayElementType();
-    if (WebAssembly::isExternrefType(ElTy))
+    if (WebAssembly::isWebAssemblyExternrefType(ElTy))
       ValTy = wasm::ValType::EXTERNREF;
-    else if (WebAssembly::isFuncrefType(ElTy))
+    else if (WebAssembly::isWebAssemblyFuncrefType(ElTy))
       ValTy = wasm::ValType::FUNCREF;
     else
       report_fatal_error("unhandled reference type");

@@ -25,9 +25,10 @@ namespace {
 
 class MachOLinkGraphBuilder_x86_64 : public MachOLinkGraphBuilder {
 public:
-  MachOLinkGraphBuilder_x86_64(const object::MachOObjectFile &Obj)
+  MachOLinkGraphBuilder_x86_64(const object::MachOObjectFile &Obj,
+                               SubtargetFeatures Features)
       : MachOLinkGraphBuilder(Obj, Triple("x86_64-apple-darwin"),
-                              x86_64::getEdgeKindName) {}
+                              std::move(Features), x86_64::getEdgeKindName) {}
 
 private:
   enum MachONormalizedRelocationType : unsigned {
@@ -466,7 +467,13 @@ createLinkGraphFromMachOObject_x86_64(MemoryBufferRef ObjectBuffer) {
   auto MachOObj = object::ObjectFile::createMachOObjectFile(ObjectBuffer);
   if (!MachOObj)
     return MachOObj.takeError();
-  return MachOLinkGraphBuilder_x86_64(**MachOObj).buildGraph();
+
+  auto Features = (*MachOObj)->getFeatures();
+  if (!Features)
+    return Features.takeError();
+
+  return MachOLinkGraphBuilder_x86_64(**MachOObj, std::move(*Features))
+      .buildGraph();
 }
 
 void link_MachO_x86_64(std::unique_ptr<LinkGraph> G,
@@ -475,7 +482,7 @@ void link_MachO_x86_64(std::unique_ptr<LinkGraph> G,
   PassConfiguration Config;
 
   if (Ctx->shouldAddDefaultTargetPasses(G->getTargetTriple())) {
-    // Add eh-frame passses.
+    // Add eh-frame passes.
     Config.PrePrunePasses.push_back(createEHFrameSplitterPass_MachO_x86_64());
     Config.PrePrunePasses.push_back(createEHFrameEdgeFixerPass_MachO_x86_64());
 

@@ -110,9 +110,10 @@ void ConstReturnTypeCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 void ConstReturnTypeCheck::registerMatchers(MatchFinder *Finder) {
   // Find all function definitions for which the return types are `const`
   // qualified, ignoring decltype types.
-  auto NonLocalConstType = qualType(
-      unless(isLocalConstQualified()),
-      anyOf(decltypeType(), autoType(), isTypeOfType(), isTypeOfExprType()));
+  auto NonLocalConstType =
+      qualType(unless(isLocalConstQualified()),
+               anyOf(decltypeType(), autoType(), isTypeOfType(),
+                     isTypeOfExprType(), substTemplateTypeParmType()));
   Finder->addMatcher(
       functionDecl(
           returns(allOf(isConstQualified(), unless(NonLocalConstType))),

@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/TargetParser/X86TargetParser.h"
+#include "llvm/ADT/Bitset.h"
 #include "llvm/ADT/StringSwitch.h"
 #include <numeric>
 
@@ -19,99 +20,27 @@ using namespace llvm::X86;
 
 namespace {
 
-/// Container class for CPU features.
-/// This is a constexpr reimplementation of a subset of std::bitset. It would be
-/// nice to use std::bitset directly, but it doesn't support constant
-/// initialization.
-class FeatureBitset {
-  static constexpr unsigned NUM_FEATURE_WORDS =
-      (X86::CPU_FEATURE_MAX + 31) / 32;
-
-  // This cannot be a std::array, operator[] is not constexpr until C++17.
-  uint32_t Bits[NUM_FEATURE_WORDS] = {};
-
-public:
-  constexpr FeatureBitset() = default;
-  constexpr FeatureBitset(std::initializer_list<unsigned> Init) {
-    for (auto I : Init)
-      set(I);
-  }
-
-  bool any() const {
-    return llvm::any_of(Bits, [](uint64_t V) { return V != 0; });
-  }
-
-  constexpr FeatureBitset &set(unsigned I) {
-    // GCC <6.2 crashes if this is written in a single statement.
-    uint32_t NewBits = Bits[I / 32] | (uint32_t(1) << (I % 32));
-    Bits[I / 32] = NewBits;
-    return *this;
-  }
-
-  constexpr bool operator[](unsigned I) const {
-    uint32_t Mask = uint32_t(1) << (I % 32);
-    return (Bits[I / 32] & Mask) != 0;
-  }
-
-  constexpr FeatureBitset &operator&=(const FeatureBitset &RHS) {
-    for (unsigned I = 0, E = std::size(Bits); I != E; ++I) {
-      // GCC <6.2 crashes if this is written in a single statement.
-      uint32_t NewBits = Bits[I] & RHS.Bits[I];
-      Bits[I] = NewBits;
-    }
-    return *this;
-  }
-
-  constexpr FeatureBitset &operator|=(const FeatureBitset &RHS) {
-    for (unsigned I = 0, E = std::size(Bits); I != E; ++I) {
-      // GCC <6.2 crashes if this is written in a single statement.
-      uint32_t NewBits = Bits[I] | RHS.Bits[I];
-      Bits[I] = NewBits;
-    }
-    return *this;
-  }
-
-  // gcc 5.3 miscompiles this if we try to write this using operator&=.
-  constexpr FeatureBitset operator&(const FeatureBitset &RHS) const {
-    FeatureBitset Result;
-    for (unsigned I = 0, E = std::size(Bits); I != E; ++I)
-      Result.Bits[I] = Bits[I] & RHS.Bits[I];
-    return Result;
-  }
-
-  // gcc 5.3 miscompiles this if we try to write this using operator&=.
-  constexpr FeatureBitset operator|(const FeatureBitset &RHS) const {
-    FeatureBitset Result;
-    for (unsigned I = 0, E = std::size(Bits); I != E; ++I)
-      Result.Bits[I] = Bits[I] | RHS.Bits[I];
-    return Result;
-  }
-
-  constexpr FeatureBitset operator~() const {
-    FeatureBitset Result;
-    for (unsigned I = 0, E = std::size(Bits); I != E; ++I)
-      Result.Bits[I] = ~Bits[I];
-    return Result;
-  }
-
-  constexpr bool operator!=(const FeatureBitset &RHS) const {
-    for (unsigned I = 0, E = std::size(Bits); I != E; ++I)
-      if (Bits[I] != RHS.Bits[I])
-        return true;
-    return false;
-  }
-};
+using FeatureBitset = Bitset<X86::CPU_FEATURE_MAX>;
 
 struct ProcInfo {
   StringLiteral Name;
   X86::CPUKind Kind;
   unsigned KeyFeature;
   FeatureBitset Features;
+  char Mangling;
+  bool OnlyForCPUDispatchSpecific;
 };
 
 struct FeatureInfo {
-  StringLiteral Name;
+  StringLiteral NameWithPlus;
   FeatureBitset ImpliedFeatures;
+
+  StringRef getName(bool WithPlus = false) const {
+    assert(NameWithPlus[0] == '+' && "Expected string to start with '+'");
+    if (WithPlus)
+      return NameWithPlus;
+    return NameWithPlus.drop_front();
+  }
 };
 
 } // end anonymous namespace
@@ -126,7 +55,7 @@ constexpr FeatureBitset FeaturesPentiumMMX =
 
 // Pentium 2 and 3.
 constexpr FeatureBitset FeaturesPentium2 =
-    FeatureX87 | FeatureCMPXCHG8B | FeatureMMX | FeatureFXSR;
+    FeatureX87 | FeatureCMPXCHG8B | FeatureMMX | FeatureFXSR | FeatureCMOV;
 constexpr FeatureBitset FeaturesPentium3 = FeaturesPentium2 | FeatureSSE;
 
 // Pentium 4 CPUs
@@ -143,7 +72,7 @@ constexpr FeatureBitset FeaturesX86_64_V2 = FeaturesX86_64 | FeatureSAHF |
 constexpr FeatureBitset FeaturesX86_64_V3 =
     FeaturesX86_64_V2 | FeatureAVX2 | FeatureBMI | FeatureBMI2 | FeatureF16C |
     FeatureFMA | FeatureLZCNT | FeatureMOVBE | FeatureXSAVE;
-constexpr FeatureBitset FeaturesX86_64_V4 = FeaturesX86_64_V3 |
+constexpr FeatureBitset FeaturesX86_64_V4 = FeaturesX86_64_V3 | FeatureEVEX512 |
                                             FeatureAVX512BW | FeatureAVX512CD |
                                             FeatureAVX512DQ | FeatureAVX512VL;
 
@@ -167,8 +96,8 @@ constexpr FeatureBitset FeaturesBroadwell =
 // Intel Knights Landing and Knights Mill
 // Knights Landing has feature parity with Broadwell.
 constexpr FeatureBitset FeaturesKNL =
-    FeaturesBroadwell | FeatureAES | FeatureAVX512F | FeatureAVX512CD |
-    FeatureAVX512ER | FeatureAVX512PF | FeaturePREFETCHWT1;
+    FeaturesBroadwell | FeatureAES | FeatureAVX512F | FeatureEVEX512 |
+    FeatureAVX512CD | FeatureAVX512ER | FeatureAVX512PF | FeaturePREFETCHWT1;
 constexpr FeatureBitset FeaturesKNM = FeaturesKNL | FeatureAVX512VPOPCNTDQ;
 
 // Intel Skylake processors.
@@ -178,9 +107,9 @@ constexpr FeatureBitset FeaturesSkylakeClient =
 // SkylakeServer inherits all SkylakeClient features except SGX.
 // FIXME: That doesn't match gcc.
 constexpr FeatureBitset FeaturesSkylakeServer =
-    (FeaturesSkylakeClient & ~FeatureSGX) | FeatureAVX512F | FeatureAVX512CD |
-    FeatureAVX512DQ | FeatureAVX512BW | FeatureAVX512VL | FeatureCLWB |
-    FeaturePKU;
+    (FeaturesSkylakeClient & ~FeatureSGX) | FeatureAVX512F | FeatureEVEX512 |
+    FeatureAVX512CD | FeatureAVX512DQ | FeatureAVX512BW | FeatureAVX512VL |
+    FeatureCLWB | FeaturePKU;
 constexpr FeatureBitset FeaturesCascadeLake =
     FeaturesSkylakeServer | FeatureAVX512VNNI;
 constexpr FeatureBitset FeaturesCooperLake =
@@ -188,9 +117,9 @@ constexpr FeatureBitset FeaturesCooperLake =
 
 // Intel 10nm processors.
 constexpr FeatureBitset FeaturesCannonlake =
-    FeaturesSkylakeClient | FeatureAVX512F | FeatureAVX512CD | FeatureAVX512DQ |
-    FeatureAVX512BW | FeatureAVX512VL | FeatureAVX512IFMA | FeatureAVX512VBMI |
-    FeaturePKU | FeatureSHA;
+    FeaturesSkylakeClient | FeatureAVX512F | FeatureEVEX512 | FeatureAVX512CD |
+    FeatureAVX512DQ | FeatureAVX512BW | FeatureAVX512VL | FeatureAVX512IFMA |
+    FeatureAVX512VBMI | FeaturePKU | FeatureSHA;
 constexpr FeatureBitset FeaturesICLClient =
     FeaturesCannonlake | FeatureAVX512BITALG | FeatureAVX512VBMI2 |
     FeatureAVX512VNNI | FeatureAVX512VPOPCNTDQ | FeatureGFNI | FeatureRDPID |
@@ -231,10 +160,12 @@ constexpr FeatureBitset FeaturesAlderlake =
     FeatureCLDEMOTE | FeatureMOVDIR64B | FeatureMOVDIRI | FeatureWAITPKG |
     FeatureAVXVNNI | FeatureHRESET | FeatureWIDEKL;
 constexpr FeatureBitset FeaturesSierraforest =
-    FeaturesAlderlake | FeatureCMPCCXADD | FeatureAVXIFMA |
-    FeatureAVXNECONVERT | FeatureAVXVNNIINT8;
+    FeaturesAlderlake | FeatureCMPCCXADD | FeatureAVXIFMA | FeatureUINTR |
+    FeatureENQCMD | FeatureAVXNECONVERT | FeatureAVXVNNIINT8;
 constexpr FeatureBitset FeaturesGrandridge =
     FeaturesSierraforest | FeatureRAOINT;
+constexpr FeatureBitset FeaturesArrowlakeS = FeaturesSierraforest |
+    FeatureAVXVNNIINT16 | FeatureSHA512 | FeatureSM3 | FeatureSM4;
 
 // Geode Processor.
 constexpr FeatureBitset FeaturesGeode =
@@ -299,155 +230,203 @@ static constexpr FeatureBitset FeaturesZNVER3 = FeaturesZNVER2 |
                                                 FeatureINVPCID | FeaturePKU |
                                                 FeatureVAES | FeatureVPCLMULQDQ;
 static constexpr FeatureBitset FeaturesZNVER4 =
-    FeaturesZNVER3 | FeatureAVX512F | FeatureAVX512CD | FeatureAVX512DQ |
-    FeatureAVX512BW | FeatureAVX512VL | FeatureAVX512IFMA | FeatureAVX512VBMI |
-    FeatureAVX512VBMI2 | FeatureAVX512VNNI | FeatureAVX512BITALG |
-    FeatureAVX512VPOPCNTDQ | FeatureAVX512BF16 | FeatureGFNI |
-    FeatureSHSTK;
+    FeaturesZNVER3 | FeatureAVX512F | FeatureEVEX512 | FeatureAVX512CD |
+    FeatureAVX512DQ | FeatureAVX512BW | FeatureAVX512VL | FeatureAVX512IFMA |
+    FeatureAVX512VBMI | FeatureAVX512VBMI2 | FeatureAVX512VNNI |
+    FeatureAVX512BITALG | FeatureAVX512VPOPCNTDQ | FeatureAVX512BF16 |
+    FeatureGFNI | FeatureSHSTK;
 
+// D151696 tranplanted Mangling and OnlyForCPUDispatchSpecific from
+// X86TargetParser.def to here. They are assigned by following ways:
+// 1. Copy the mangling from the original CPU_SPEICIFC MACROs. If no, assign
+// to '\0' by default, which means not support cpu_specific/dispatch feature.
+// 2. set OnlyForCPUDispatchSpecific as true if this cpu name was not
+// listed here before, which means it doesn't support -march, -mtune and so on.
+// FIXME: Remove OnlyForCPUDispatchSpecific after all CPUs here support both
+// cpu_dispatch/specific() feature and -march, -mtune, and so on.
+// clang-format off
 constexpr ProcInfo Processors[] = {
-  // Empty processor. Include X87 and CMPXCHG8 for backwards compatibility.
-  { {""}, CK_None, ~0U, FeatureX87 | FeatureCMPXCHG8B },
+ // Empty processor. Include X87 and CMPXCHG8 for backwards compatibility.
+  { {""}, CK_None, ~0U, FeatureX87 | FeatureCMPXCHG8B, '\0', false },
+  { {"generic"}, CK_None, ~0U, FeatureX87 | FeatureCMPXCHG8B | Feature64BIT, 'A', true },
   // i386-generation processors.
-  { {"i386"}, CK_i386, ~0U, FeatureX87 },
+  { {"i386"}, CK_i386, ~0U, FeatureX87, '\0', false },
   // i486-generation processors.
-  { {"i486"}, CK_i486, ~0U, FeatureX87 },
-  { {"winchip-c6"}, CK_WinChipC6, ~0U, FeaturesPentiumMMX },
-  { {"winchip2"}, CK_WinChip2, ~0U, FeaturesPentiumMMX | Feature3DNOW },
-  { {"c3"}, CK_C3, ~0U, FeaturesPentiumMMX | Feature3DNOW },
+  { {"i486"}, CK_i486, ~0U, FeatureX87, '\0', false },
+  { {"winchip-c6"}, CK_WinChipC6, ~0U, FeaturesPentiumMMX, '\0', false },
+  { {"winchip2"}, CK_WinChip2, ~0U, FeaturesPentiumMMX | Feature3DNOW, '\0', false },
+  { {"c3"}, CK_C3, ~0U, FeaturesPentiumMMX | Feature3DNOW, '\0', false },
   // i586-generation processors, P5 microarchitecture based.
-  { {"i586"}, CK_i586, ~0U, FeatureX87 | FeatureCMPXCHG8B },
-  { {"pentium"}, CK_Pentium, ~0U, FeatureX87 | FeatureCMPXCHG8B },
-  { {"pentium-mmx"}, CK_PentiumMMX, ~0U, FeaturesPentiumMMX },
+  { {"i586"}, CK_i586, ~0U, FeatureX87 | FeatureCMPXCHG8B, '\0', false },
+  { {"pentium"}, CK_Pentium, ~0U, FeatureX87 | FeatureCMPXCHG8B, 'B', false },
+  { {"pentium-mmx"}, CK_PentiumMMX, ~0U, FeaturesPentiumMMX, '\0', false },
+  { {"pentium_mmx"}, CK_PentiumMMX, ~0U, FeaturesPentiumMMX, 'D', true },
   // i686-generation processors, P6 / Pentium M microarchitecture based.
-  { {"pentiumpro"}, CK_PentiumPro, ~0U, FeatureX87 | FeatureCMPXCHG8B },
-  { {"i686"}, CK_i686, ~0U, FeatureX87 | FeatureCMPXCHG8B },
-  { {"pentium2"}, CK_Pentium2, ~0U, FeaturesPentium2 },
-  { {"pentium3"}, CK_Pentium3, ~0U, FeaturesPentium3 },
-  { {"pentium3m"}, CK_Pentium3, ~0U, FeaturesPentium3 },
-  { {"pentium-m"}, CK_PentiumM, ~0U, FeaturesPentium4 },
-  { {"c3-2"}, CK_C3_2, ~0U, FeaturesPentium3 },
-  { {"yonah"}, CK_Yonah, ~0U, FeaturesPrescott },
+  { {"pentiumpro"}, CK_PentiumPro, ~0U, FeatureCMOV | FeatureX87 | FeatureCMPXCHG8B, 'C', false },
+  { {"pentium_pro"}, CK_PentiumPro, ~0U, FeatureCMOV | FeatureX87 | FeatureCMPXCHG8B, 'C', true },
+  { {"i686"}, CK_i686, ~0U, FeatureCMOV | FeatureX87 | FeatureCMPXCHG8B, '\0', false },
+  { {"pentium2"}, CK_Pentium2, ~0U, FeaturesPentium2, 'E', false },
+  { {"pentium_ii"}, CK_Pentium2, ~0U, FeaturesPentium2, 'E', true },
+  { {"pentium3"}, CK_Pentium3, ~0U, FeaturesPentium3, 'H', false },
+  { {"pentium3m"}, CK_Pentium3, ~0U, FeaturesPentium3, 'H', false },
+  { {"pentium_iii"}, CK_Pentium3, ~0U, FeaturesPentium3, 'H', true },
+  { {"pentium_iii_no_xmm_regs"}, CK_Pentium3, ~0U, FeaturesPentium3, 'H', true },
+  { {"pentium-m"}, CK_PentiumM, ~0U, FeaturesPentium4, '\0', false },
+  { {"pentium_m"}, CK_PentiumM, ~0U, FeaturesPentium4, 'K', true },
+  { {"c3-2"}, CK_C3_2, ~0U, FeaturesPentium3, '\0', false },
+  { {"yonah"}, CK_Yonah, ~0U, FeaturesPrescott, 'L', false },
   // Netburst microarchitecture based processors.
-  { {"pentium4"}, CK_Pentium4, ~0U, FeaturesPentium4 },
-  { {"pentium4m"}, CK_Pentium4, ~0U, FeaturesPentium4 },
-  { {"prescott"}, CK_Prescott, ~0U, FeaturesPrescott },
-  { {"nocona"}, CK_Nocona, ~0U, FeaturesNocona },
+  { {"pentium4"}, CK_Pentium4, ~0U, FeaturesPentium4, 'J', false },
+  { {"pentium4m"}, CK_Pentium4, ~0U, FeaturesPentium4, 'J', false },
+  { {"pentium_4"}, CK_Pentium4, ~0U, FeaturesPentium4, 'J', true },
+  { {"pentium_4_sse3"}, CK_Prescott, ~0U, FeaturesPrescott, 'L', true },
+  { {"prescott"}, CK_Prescott, ~0U, FeaturesPrescott, 'L', false },
+  { {"nocona"}, CK_Nocona, ~0U, FeaturesNocona, 'L', false },
   // Core microarchitecture based processors.
-  { {"core2"}, CK_Core2, FEATURE_SSSE3, FeaturesCore2 },
-  { {"penryn"}, CK_Penryn, ~0U, FeaturesPenryn },
+  { {"core2"}, CK_Core2, FEATURE_SSSE3, FeaturesCore2, 'M', false },
+  { {"core_2_duo_ssse3"}, CK_Core2, ~0U, FeaturesCore2, 'M', true },
+  { {"penryn"}, CK_Penryn, ~0U, FeaturesPenryn, 'N', false },
+  { {"core_2_duo_sse4_1"}, CK_Penryn, ~0U, FeaturesPenryn, 'N', true },
   // Atom processors
-  { {"bonnell"}, CK_Bonnell, FEATURE_SSSE3, FeaturesBonnell },
-  { {"atom"}, CK_Bonnell, FEATURE_SSSE3, FeaturesBonnell },
-  { {"silvermont"}, CK_Silvermont, FEATURE_SSE4_2, FeaturesSilvermont },
-  { {"slm"}, CK_Silvermont, FEATURE_SSE4_2, FeaturesSilvermont },
-  { {"goldmont"}, CK_Goldmont, FEATURE_SSE4_2, FeaturesGoldmont },
-  { {"goldmont-plus"}, CK_GoldmontPlus, FEATURE_SSE4_2, FeaturesGoldmontPlus },
-  { {"tremont"}, CK_Tremont, FEATURE_SSE4_2, FeaturesTremont },
+  { {"bonnell"}, CK_Bonnell, FEATURE_SSSE3, FeaturesBonnell, 'O', false },
+  { {"atom"}, CK_Bonnell, FEATURE_SSSE3, FeaturesBonnell, 'O', false },
+  { {"silvermont"}, CK_Silvermont, FEATURE_SSE4_2, FeaturesSilvermont, 'c', false },
+  { {"slm"}, CK_Silvermont, FEATURE_SSE4_2, FeaturesSilvermont, 'c', false },
+  { {"atom_sse4_2"}, CK_Nehalem, FEATURE_SSE4_2, FeaturesNehalem, 'c', true },
+  { {"atom_sse4_2_movbe"}, CK_Goldmont, FEATURE_SSE4_2, FeaturesGoldmont, 'd', true },
+  { {"goldmont"}, CK_Goldmont, FEATURE_SSE4_2, FeaturesGoldmont, 'i', false },
+  { {"goldmont-plus"}, CK_GoldmontPlus, FEATURE_SSE4_2, FeaturesGoldmontPlus, '\0', false },
+  { {"goldmont_plus"}, CK_GoldmontPlus, FEATURE_SSE4_2, FeaturesGoldmontPlus, 'd', true },
+  { {"tremont"}, CK_Tremont, FEATURE_SSE4_2, FeaturesTremont, 'd', false },
   // Nehalem microarchitecture based processors.
-  { {"nehalem"}, CK_Nehalem, FEATURE_SSE4_2, FeaturesNehalem },
-  { {"corei7"}, CK_Nehalem, FEATURE_SSE4_2, FeaturesNehalem },
+  { {"nehalem"}, CK_Nehalem, FEATURE_SSE4_2, FeaturesNehalem, 'P', false },
+  { {"core_i7_sse4_2"}, CK_Nehalem, FEATURE_SSE4_2, FeaturesNehalem, 'P', true },
+  { {"corei7"}, CK_Nehalem, FEATURE_SSE4_2, FeaturesNehalem, 'P', false },
   // Westmere microarchitecture based processors.
-  { {"westmere"}, CK_Westmere, FEATURE_PCLMUL, FeaturesWestmere },
+  { {"westmere"}, CK_Westmere, FEATURE_PCLMUL, FeaturesWestmere, 'Q', false },
+  { {"core_aes_pclmulqdq"}, CK_Nehalem, FEATURE_SSE4_2, FeaturesNehalem, 'Q', true },
   // Sandy Bridge microarchitecture based processors.
-  { {"sandybridge"}, CK_SandyBridge, FEATURE_AVX, FeaturesSandyBridge },
-  { {"corei7-avx"}, CK_SandyBridge, FEATURE_AVX, FeaturesSandyBridge },
+  { {"sandybridge"}, CK_SandyBridge, FEATURE_AVX, FeaturesSandyBridge, 'R', false },
+  { {"core_2nd_gen_avx"}, CK_SandyBridge, FEATURE_AVX, FeaturesSandyBridge, 'R', true },
+  { {"corei7-avx"}, CK_SandyBridge, FEATURE_AVX, FeaturesSandyBridge, '\0', false },
   // Ivy Bridge microarchitecture based processors.
-  { {"ivybridge"}, CK_IvyBridge, FEATURE_AVX, FeaturesIvyBridge },
-  { {"core-avx-i"}, CK_IvyBridge, FEATURE_AVX, FeaturesIvyBridge },
+  { {"ivybridge"}, CK_IvyBridge, FEATURE_AVX, FeaturesIvyBridge, 'S', false },
+  { {"core_3rd_gen_avx"}, CK_IvyBridge, FEATURE_AVX, FeaturesIvyBridge, 'S', true },
+  { {"core-avx-i"}, CK_IvyBridge, FEATURE_AVX, FeaturesIvyBridge, '\0', false },
   // Haswell microarchitecture based processors.
-  { {"haswell"}, CK_Haswell, FEATURE_AVX2, FeaturesHaswell },
-  { {"core-avx2"}, CK_Haswell, FEATURE_AVX2, FeaturesHaswell },
+  { {"haswell"}, CK_Haswell, FEATURE_AVX2, FeaturesHaswell, 'V', false },
+  { {"core-avx2"}, CK_Haswell, FEATURE_AVX2, FeaturesHaswell, '\0', false },
+  { {"core_4th_gen_avx"}, CK_Haswell, FEATURE_AVX2, FeaturesHaswell, 'V', true },
+  { {"core_4th_gen_avx_tsx"}, CK_Haswell, FEATURE_AVX2, FeaturesHaswell, 'W', true },
   // Broadwell microarchitecture based processors.
-  { {"broadwell"}, CK_Broadwell, FEATURE_AVX2, FeaturesBroadwell },
+  { {"broadwell"}, CK_Broadwell, FEATURE_AVX2, FeaturesBroadwell, 'X', false },
+  { {"core_5th_gen_avx"}, CK_Broadwell, FEATURE_AVX2, FeaturesBroadwell, 'X', true },
+  { {"core_5th_gen_avx_tsx"}, CK_Broadwell, FEATURE_AVX2, FeaturesBroadwell, 'Y', true },
   // Skylake client microarchitecture based processors.
-  { {"skylake"}, CK_SkylakeClient, FEATURE_AVX2, FeaturesSkylakeClient },
+  { {"skylake"}, CK_SkylakeClient, FEATURE_AVX2, FeaturesSkylakeClient, 'b', false },
   // Skylake server microarchitecture based processors.
-  { {"skylake-avx512"}, CK_SkylakeServer, FEATURE_AVX512F, FeaturesSkylakeServer },
-  { {"skx"}, CK_SkylakeServer, FEATURE_AVX512F, FeaturesSkylakeServer },
+  { {"skylake-avx512"}, CK_SkylakeServer, FEATURE_AVX512F, FeaturesSkylakeServer, '\0', false },
+  { {"skx"}, CK_SkylakeServer, FEATURE_AVX512F, FeaturesSkylakeServer, 'a', false },
+  { {"skylake_avx512"}, CK_SkylakeServer, FEATURE_AVX512F, FeaturesSkylakeServer, 'a', true },
   // Cascadelake Server microarchitecture based processors.
-  { {"cascadelake"}, CK_Cascadelake, FEATURE_AVX512VNNI, FeaturesCascadeLake },
+  { {"cascadelake"}, CK_Cascadelake, FEATURE_AVX512VNNI, FeaturesCascadeLake, 'o', false },
   // Cooperlake Server microarchitecture based processors.
-  { {"cooperlake"}, CK_Cooperlake, FEATURE_AVX512BF16, FeaturesCooperLake },
+  { {"cooperlake"}, CK_Cooperlake, FEATURE_AVX512BF16, FeaturesCooperLake, 'f', false },
   // Cannonlake client microarchitecture based processors.
-  { {"cannonlake"}, CK_Cannonlake, FEATURE_AVX512VBMI, FeaturesCannonlake },
+  { {"cannonlake"}, CK_Cannonlake, FEATURE_AVX512VBMI, FeaturesCannonlake, 'e', false },
   // Icelake client microarchitecture based processors.
-  { {"icelake-client"}, CK_IcelakeClient, FEATURE_AVX512VBMI2, FeaturesICLClient },
+  { {"icelake-client"}, CK_IcelakeClient, FEATURE_AVX512VBMI2, FeaturesICLClient, '\0', false },
+  { {"icelake_client"}, CK_IcelakeClient, FEATURE_AVX512VBMI2, FeaturesICLClient, 'k', true },
   // Rocketlake microarchitecture based processors.
-  { {"rocketlake"}, CK_Rocketlake, FEATURE_AVX512VBMI2, FeaturesRocketlake },
+  { {"rocketlake"}, CK_Rocketlake, FEATURE_AVX512VBMI2, FeaturesRocketlake, 'k', false },
   // Icelake server microarchitecture based processors.
-  { {"icelake-server"}, CK_IcelakeServer, FEATURE_AVX512VBMI2, FeaturesICLServer },
+  { {"icelake-server"}, CK_IcelakeServer, FEATURE_AVX512VBMI2, FeaturesICLServer, '\0', false },
+  { {"icelake_server"}, CK_IcelakeServer, FEATURE_AVX512VBMI2, FeaturesICLServer, 'k', true },
   // Tigerlake microarchitecture based processors.
-  { {"tigerlake"}, CK_Tigerlake, FEATURE_AVX512VP2INTERSECT, FeaturesTigerlake },
+  { {"tigerlake"}, CK_Tigerlake, FEATURE_AVX512VP2INTERSECT, FeaturesTigerlake, 'l', false },
   // Sapphire Rapids microarchitecture based processors.
-  { {"sapphirerapids"}, CK_SapphireRapids, FEATURE_AVX512BF16, FeaturesSapphireRapids },
+  { {"sapphirerapids"}, CK_SapphireRapids, FEATURE_AVX512BF16, FeaturesSapphireRapids, 'n', false },
   // Alderlake microarchitecture based processors.
-  { {"alderlake"}, CK_Alderlake, FEATURE_AVX2, FeaturesAlderlake },
+  { {"alderlake"}, CK_Alderlake, FEATURE_AVX2, FeaturesAlderlake, 'p', false },
   // Raptorlake microarchitecture based processors.
-  { {"raptorlake"}, CK_Raptorlake, FEATURE_AVX2, FeaturesAlderlake },
+  { {"raptorlake"}, CK_Raptorlake, FEATURE_AVX2, FeaturesAlderlake, 'p', false },
   // Meteorlake microarchitecture based processors.
-  { {"meteorlake"}, CK_Meteorlake, FEATURE_AVX2, FeaturesAlderlake },
+  { {"meteorlake"}, CK_Meteorlake, FEATURE_AVX2, FeaturesAlderlake, 'p', false },
+  // Arrowlake microarchitecture based processors.
+  { {"arrowlake"}, CK_Arrowlake, FEATURE_AVX2, FeaturesSierraforest, 'p', false },
+  { {"arrowlake-s"}, CK_ArrowlakeS, FEATURE_AVX2, FeaturesArrowlakeS, '\0', false },
+  { {"arrowlake_s"}, CK_ArrowlakeS, FEATURE_AVX2, FeaturesArrowlakeS, 'p', true },
+  // Lunarlake microarchitecture based processors.
+  { {"lunarlake"}, CK_Lunarlake, FEATURE_AVX2, FeaturesArrowlakeS, 'p', false },
+  // Gracemont microarchitecture based processors.
+  { {"gracemont"}, CK_Gracemont, FEATURE_AVX2, FeaturesAlderlake, 'p', false },
   // Sierraforest microarchitecture based processors.
-  { {"sierraforest"}, CK_Sierraforest, FEATURE_AVX2, FeaturesSierraforest },
+  { {"sierraforest"}, CK_Sierraforest, FEATURE_AVX2, FeaturesSierraforest, 'p', false },
   // Grandridge microarchitecture based processors.
-  { {"grandridge"}, CK_Grandridge, FEATURE_AVX2, FeaturesGrandridge },
+  { {"grandridge"}, CK_Grandridge, FEATURE_AVX2, FeaturesGrandridge, 'p', false },
   // Granite Rapids microarchitecture based processors.
-  { {"graniterapids"}, CK_Graniterapids, FEATURE_AVX512BF16, FeaturesGraniteRapids },
+  { {"graniterapids"}, CK_Graniterapids, FEATURE_AVX512BF16, FeaturesGraniteRapids, 'n', false },
+  // Granite Rapids D microarchitecture based processors.
+  { {"graniterapids-d"}, CK_GraniterapidsD, FEATURE_AVX512BF16, FeaturesGraniteRapids | FeatureAMX_COMPLEX, '\0', false },
+  { {"graniterapids_d"}, CK_GraniterapidsD, FEATURE_AVX512BF16, FeaturesGraniteRapids | FeatureAMX_COMPLEX, 'n', true },
   // Emerald Rapids microarchitecture based processors.
-  { {"emeraldrapids"}, CK_Emeraldrapids, FEATURE_AVX512BF16, FeaturesSapphireRapids },
+  { {"emeraldrapids"}, CK_Emeraldrapids, FEATURE_AVX512BF16, FeaturesSapphireRapids, 'n', false },
   // Knights Landing processor.
-  { {"knl"}, CK_KNL, FEATURE_AVX512F, FeaturesKNL },
+  { {"knl"}, CK_KNL, FEATURE_AVX512F, FeaturesKNL, 'Z', false },
+  { {"mic_avx512"}, CK_KNL, FEATURE_AVX512F, FeaturesKNL, 'Z', true },
   // Knights Mill processor.
-  { {"knm"}, CK_KNM, FEATURE_AVX5124FMAPS, FeaturesKNM },
+  { {"knm"}, CK_KNM, FEATURE_AVX5124FMAPS, FeaturesKNM, 'j', false },
   // Lakemont microarchitecture based processors.
-  { {"lakemont"}, CK_Lakemont, ~0U, FeatureCMPXCHG8B },
+  { {"lakemont"}, CK_Lakemont, ~0U, FeatureCMPXCHG8B, '\0', false },
   // K6 architecture processors.
-  { {"k6"}, CK_K6, ~0U, FeaturesK6 },
-  { {"k6-2"}, CK_K6_2, ~0U, FeaturesK6 | Feature3DNOW },
-  { {"k6-3"}, CK_K6_3, ~0U, FeaturesK6 | Feature3DNOW },
+  { {"k6"}, CK_K6, ~0U, FeaturesK6, '\0', false },
+  { {"k6-2"}, CK_K6_2, ~0U, FeaturesK6 | Feature3DNOW, '\0', false },
+  { {"k6-3"}, CK_K6_3, ~0U, FeaturesK6 | Feature3DNOW, '\0', false },
   // K7 architecture processors.
-  { {"athlon"}, CK_Athlon, ~0U, FeaturesAthlon },
-  { {"athlon-tbird"}, CK_Athlon, ~0U, FeaturesAthlon },
-  { {"athlon-xp"}, CK_AthlonXP, ~0U, FeaturesAthlonXP },
-  { {"athlon-mp"}, CK_AthlonXP, ~0U, FeaturesAthlonXP },
-  { {"athlon-4"}, CK_AthlonXP, ~0U, FeaturesAthlonXP },
+  { {"athlon"}, CK_Athlon, ~0U, FeaturesAthlon, '\0', false },
+  { {"athlon-tbird"}, CK_Athlon, ~0U, FeaturesAthlon, '\0', false },
+  { {"athlon-xp"}, CK_AthlonXP, ~0U, FeaturesAthlonXP, '\0', false },
+  { {"athlon-mp"}, CK_AthlonXP, ~0U, FeaturesAthlonXP, '\0', false },
+  { {"athlon-4"}, CK_AthlonXP, ~0U, FeaturesAthlonXP, '\0', false },
   // K8 architecture processors.
-  { {"k8"}, CK_K8, ~0U, FeaturesK8 },
-  { {"athlon64"}, CK_K8, ~0U, FeaturesK8 },
-  { {"athlon-fx"}, CK_K8, ~0U, FeaturesK8 },
-  { {"opteron"}, CK_K8, ~0U, FeaturesK8 },
-  { {"k8-sse3"}, CK_K8SSE3, ~0U, FeaturesK8SSE3 },
-  { {"athlon64-sse3"}, CK_K8SSE3, ~0U, FeaturesK8SSE3 },
-  { {"opteron-sse3"}, CK_K8SSE3, ~0U, FeaturesK8SSE3 },
-  { {"amdfam10"}, CK_AMDFAM10, FEATURE_SSE4_A, FeaturesAMDFAM10 },
-  { {"barcelona"}, CK_AMDFAM10, FEATURE_SSE4_A, FeaturesAMDFAM10 },
+  { {"k8"}, CK_K8, ~0U, FeaturesK8, '\0', false },
+  { {"athlon64"}, CK_K8, ~0U, FeaturesK8, '\0', false },
+  { {"athlon-fx"}, CK_K8, ~0U, FeaturesK8, '\0', false },
+  { {"opteron"}, CK_K8, ~0U, FeaturesK8, '\0', false },
+  { {"k8-sse3"}, CK_K8SSE3, ~0U, FeaturesK8SSE3, '\0', false },
+  { {"athlon64-sse3"}, CK_K8SSE3, ~0U, FeaturesK8SSE3, '\0', false },
+  { {"opteron-sse3"}, CK_K8SSE3, ~0U, FeaturesK8SSE3, '\0', false },
+  { {"amdfam10"}, CK_AMDFAM10, FEATURE_SSE4_A, FeaturesAMDFAM10, '\0', false },
+  { {"barcelona"}, CK_AMDFAM10, FEATURE_SSE4_A, FeaturesAMDFAM10, '\0', false },
   // Bobcat architecture processors.
-  { {"btver1"}, CK_BTVER1, FEATURE_SSE4_A, FeaturesBTVER1 },
-  { {"btver2"}, CK_BTVER2, FEATURE_BMI, FeaturesBTVER2 },
+  { {"btver1"}, CK_BTVER1, FEATURE_SSE4_A, FeaturesBTVER1, '\0', false },
+  { {"btver2"}, CK_BTVER2, FEATURE_BMI, FeaturesBTVER2, '\0', false },
   // Bulldozer architecture processors.
-  { {"bdver1"}, CK_BDVER1, FEATURE_XOP, FeaturesBDVER1 },
-  { {"bdver2"}, CK_BDVER2, FEATURE_FMA, FeaturesBDVER2 },
-  { {"bdver3"}, CK_BDVER3, FEATURE_FMA, FeaturesBDVER3 },
-  { {"bdver4"}, CK_BDVER4, FEATURE_AVX2, FeaturesBDVER4 },
+  { {"bdver1"}, CK_BDVER1, FEATURE_XOP, FeaturesBDVER1, '\0', false },
+  { {"bdver2"}, CK_BDVER2, FEATURE_FMA, FeaturesBDVER2, '\0', false },
+  { {"bdver3"}, CK_BDVER3, FEATURE_FMA, FeaturesBDVER3, '\0', false },
+  { {"bdver4"}, CK_BDVER4, FEATURE_AVX2, FeaturesBDVER4, '\0', false },
   // Zen architecture processors.
-  { {"znver1"}, CK_ZNVER1, FEATURE_AVX2, FeaturesZNVER1 },
-  { {"znver2"}, CK_ZNVER2, FEATURE_AVX2, FeaturesZNVER2 },
-  { {"znver3"}, CK_ZNVER3, FEATURE_AVX2, FeaturesZNVER3 },
-  { {"znver4"}, CK_ZNVER4, FEATURE_AVX512VBMI2, FeaturesZNVER4 },
+  { {"znver1"}, CK_ZNVER1, FEATURE_AVX2, FeaturesZNVER1, '\0', false },
+  { {"znver2"}, CK_ZNVER2, FEATURE_AVX2, FeaturesZNVER2, '\0', false },
+  { {"znver3"}, CK_ZNVER3, FEATURE_AVX2, FeaturesZNVER3, '\0', false },
+  { {"znver4"}, CK_ZNVER4, FEATURE_AVX512VBMI2, FeaturesZNVER4, '\0', false },
   // Generic 64-bit processor.
-  { {"x86-64"}, CK_x86_64, ~0U, FeaturesX86_64 },
-  { {"x86-64-v2"}, CK_x86_64_v2, ~0U, FeaturesX86_64_V2 },
-  { {"x86-64-v3"}, CK_x86_64_v3, ~0U, FeaturesX86_64_V3 },
-  { {"x86-64-v4"}, CK_x86_64_v4, ~0U, FeaturesX86_64_V4 },
+  { {"x86-64"}, CK_x86_64, FEATURE_SSE2 , FeaturesX86_64, '\0', false },
+  { {"x86-64-v2"}, CK_x86_64_v2, FEATURE_SSE4_2 , FeaturesX86_64_V2, '\0', false },
+  { {"x86-64-v3"}, CK_x86_64_v3, FEATURE_AVX2, FeaturesX86_64_V3, '\0', false },
+  { {"x86-64-v4"}, CK_x86_64_v4, FEATURE_AVX512VL, FeaturesX86_64_V4, '\0', false },
   // Geode processors.
-  { {"geode"}, CK_Geode, ~0U, FeaturesGeode },
+  { {"geode"}, CK_Geode, ~0U, FeaturesGeode, '\0', false },
 };
+// clang-format on
 
 constexpr const char *NoTuneList[] = {"x86-64-v2", "x86-64-v3", "x86-64-v4"};
 
 X86::CPUKind llvm::X86::parseArchX86(StringRef CPU, bool Only64Bit) {
   for (const auto &P : Processors)
-    if (P.Name == CPU && (P.Features[FEATURE_64BIT] || !Only64Bit))
+    if (!P.OnlyForCPUDispatchSpecific && P.Name == CPU &&
+        (P.Features[FEATURE_64BIT] || !Only64Bit))
       return P.Kind;
 
   return CK_None;
@@ -462,14 +441,16 @@ X86::CPUKind llvm::X86::parseTuneCPU(StringRef CPU, bool Only64Bit) {
 void llvm::X86::fillValidCPUArchList(SmallVectorImpl<StringRef> &Values,
                                      bool Only64Bit) {
   for (const auto &P : Processors)
-    if (!P.Name.empty() && (P.Features[FEATURE_64BIT] || !Only64Bit))
+    if (!P.OnlyForCPUDispatchSpecific && !P.Name.empty() &&
+        (P.Features[FEATURE_64BIT] || !Only64Bit))
       Values.emplace_back(P.Name);
 }
 
 void llvm::X86::fillValidTuneCPUList(SmallVectorImpl<StringRef> &Values,
                                      bool Only64Bit) {
   for (const ProcInfo &P : Processors)
-    if (!P.Name.empty() && (P.Features[FEATURE_64BIT] || !Only64Bit) &&
+    if (!P.OnlyForCPUDispatchSpecific && !P.Name.empty() &&
+        (P.Features[FEATURE_64BIT] || !Only64Bit) &&
         !llvm::is_contained(NoTuneList, P.Name))
       Values.emplace_back(P.Name);
 }
@@ -528,6 +509,7 @@ constexpr FeatureBitset ImpliedFeaturesSHSTK = {};
 constexpr FeatureBitset ImpliedFeaturesTBM = {};
 constexpr FeatureBitset ImpliedFeaturesTSXLDTRK = {};
 constexpr FeatureBitset ImpliedFeaturesUINTR = {};
+constexpr FeatureBitset ImpliedFeaturesUSERMSR = {};
 constexpr FeatureBitset ImpliedFeaturesWAITPKG = {};
 constexpr FeatureBitset ImpliedFeaturesWBNOINVD = {};
 constexpr FeatureBitset ImpliedFeaturesVZEROUPPER = {};
@@ -561,6 +543,7 @@ constexpr FeatureBitset ImpliedFeaturesSSE4_1 = FeatureSSSE3;
 constexpr FeatureBitset ImpliedFeaturesSSE4_2 = FeatureSSE4_1;
 constexpr FeatureBitset ImpliedFeaturesAVX = FeatureSSE4_2;
 constexpr FeatureBitset ImpliedFeaturesAVX2 = FeatureAVX;
+constexpr FeatureBitset ImpliedFeaturesEVEX512 = {};
 constexpr FeatureBitset ImpliedFeaturesAVX512F =
     FeatureAVX2 | FeatureF16C | FeatureFMA;
 
@@ -571,8 +554,10 @@ constexpr FeatureBitset ImpliedFeaturesFMA = FeatureAVX;
 constexpr FeatureBitset ImpliedFeaturesGFNI = FeatureSSE2;
 constexpr FeatureBitset ImpliedFeaturesPCLMUL = FeatureSSE2;
 constexpr FeatureBitset ImpliedFeaturesSHA = FeatureSSE2;
-constexpr FeatureBitset ImpliedFeaturesVAES = FeatureAES | FeatureAVX;
+constexpr FeatureBitset ImpliedFeaturesVAES = FeatureAES | FeatureAVX2;
 constexpr FeatureBitset ImpliedFeaturesVPCLMULQDQ = FeatureAVX | FeaturePCLMUL;
+constexpr FeatureBitset ImpliedFeaturesSM3 = FeatureAVX;
+constexpr FeatureBitset ImpliedFeaturesSM4 = FeatureAVX2;
 
 // AVX512 features.
 constexpr FeatureBitset ImpliedFeaturesAVX512CD = FeatureAVX512F;
@@ -606,14 +591,17 @@ constexpr FeatureBitset ImpliedFeaturesAMX_TILE = {};
 constexpr FeatureBitset ImpliedFeaturesAMX_BF16 = FeatureAMX_TILE;
 constexpr FeatureBitset ImpliedFeaturesAMX_FP16 = FeatureAMX_TILE;
 constexpr FeatureBitset ImpliedFeaturesAMX_INT8 = FeatureAMX_TILE;
+constexpr FeatureBitset ImpliedFeaturesAMX_COMPLEX = FeatureAMX_TILE;
 constexpr FeatureBitset ImpliedFeaturesHRESET = {};
 
 constexpr FeatureBitset ImpliedFeaturesPREFETCHI = {};
 constexpr FeatureBitset ImpliedFeaturesCMPCCXADD = {};
 constexpr FeatureBitset ImpliedFeaturesRAOINT = {};
+constexpr FeatureBitset ImpliedFeaturesAVXVNNIINT16 = FeatureAVX2;
 constexpr FeatureBitset ImpliedFeaturesAVXVNNIINT8 = FeatureAVX2;
 constexpr FeatureBitset ImpliedFeaturesAVXIFMA = FeatureAVX2;
 constexpr FeatureBitset ImpliedFeaturesAVXNECONVERT = FeatureAVX2;
+constexpr FeatureBitset ImpliedFeaturesSHA512 = FeatureAVX2;
 constexpr FeatureBitset ImpliedFeaturesAVX512FP16 =
     FeatureAVX512BW | FeatureAVX512DQ | FeatureAVX512VL;
 // Key Locker Features
@@ -624,12 +612,13 @@ constexpr FeatureBitset ImpliedFeaturesWIDEKL = FeatureKL;
 constexpr FeatureBitset ImpliedFeaturesAVXVNNI = FeatureAVX2;
 
 constexpr FeatureInfo FeatureInfos[X86::CPU_FEATURE_MAX] = {
-#define X86_FEATURE(ENUM, STR) {{STR}, ImpliedFeatures##ENUM},
+#define X86_FEATURE(ENUM, STR) {{"+" STR}, ImpliedFeatures##ENUM},
 #include "llvm/TargetParser/X86TargetParser.def"
 };
 
 void llvm::X86::getFeaturesForCPU(StringRef CPU,
-                                  SmallVectorImpl<StringRef> &EnabledFeatures) {
+                                  SmallVectorImpl<StringRef> &EnabledFeatures,
+                                  bool NeedPlus) {
   auto I = llvm::find_if(Processors,
                          [&](const ProcInfo &P) { return P.Name == CPU; });
   assert(I != std::end(Processors) && "Processor not found!");
@@ -642,8 +631,8 @@ void llvm::X86::getFeaturesForCPU(StringRef CPU,
 
   // Add the string version of all set bits.
   for (unsigned i = 0; i != CPU_FEATURE_MAX; ++i)
-    if (Bits[i] && !FeatureInfos[i].Name.empty())
-      EnabledFeatures.push_back(FeatureInfos[i].Name);
+    if (Bits[i] && !FeatureInfos[i].getName(NeedPlus).empty())
+      EnabledFeatures.push_back(FeatureInfos[i].getName(NeedPlus));
 }
 
 // For each feature that is (transitively) implied by this feature, set it.
@@ -680,8 +669,9 @@ static void getImpliedDisabledFeatures(FeatureBitset &Bits, unsigned Value) {
 void llvm::X86::updateImpliedFeatures(
     StringRef Feature, bool Enabled,
     StringMap<bool> &Features) {
-  auto I = llvm::find_if(
-      FeatureInfos, [&](const FeatureInfo &FI) { return FI.Name == Feature; });
+  auto I = llvm::find_if(FeatureInfos, [&](const FeatureInfo &FI) {
+    return FI.getName() == Feature;
+  });
   if (I == std::end(FeatureInfos)) {
     // FIXME: This shouldn't happen, but may not have all features in the table
     // yet.
@@ -697,22 +687,40 @@ void llvm::X86::updateImpliedFeatures(
 
   // Update the map entry for all implied features.
   for (unsigned i = 0; i != CPU_FEATURE_MAX; ++i)
-    if (ImpliedBits[i] && !FeatureInfos[i].Name.empty())
-      Features[FeatureInfos[i].Name] = Enabled;
+    if (ImpliedBits[i] && !FeatureInfos[i].getName().empty())
+      Features[FeatureInfos[i].getName()] = Enabled;
 }
 
-uint64_t llvm::X86::getCpuSupportsMask(ArrayRef<StringRef> FeatureStrs) {
+char llvm::X86::getCPUDispatchMangling(StringRef CPU) {
+  auto I = llvm::find_if(Processors,
+                         [&](const ProcInfo &P) { return P.Name == CPU; });
+  assert(I != std::end(Processors) && "Processor not found!");
+  assert(I->Mangling != '\0' && "Processor dooesn't support function multiversion!");
+  return I->Mangling;
+}
+
+bool llvm::X86::validateCPUSpecificCPUDispatch(StringRef Name) {
+  auto I = llvm::find_if(Processors,
+                         [&](const ProcInfo &P) { return P.Name == Name; });
+  return I != std::end(Processors);
+}
+
+std::array<uint32_t, 4>
+llvm::X86::getCpuSupportsMask(ArrayRef<StringRef> FeatureStrs) {
   // Processor features and mapping to processor feature value.
-  uint64_t FeaturesMask = 0;
-  for (const StringRef &FeatureStr : FeatureStrs) {
+  std::array<uint32_t, 4> FeatureMask{};
+  for (StringRef FeatureStr : FeatureStrs) {
     unsigned Feature = StringSwitch<unsigned>(FeatureStr)
 #define X86_FEATURE_COMPAT(ENUM, STR, PRIORITY)                                \
   .Case(STR, llvm::X86::FEATURE_##ENUM)
+#define X86_MICROARCH_LEVEL(ENUM, STR, PRIORITY)                               \
+  .Case(STR, llvm::X86::FEATURE_##ENUM)
 #include "llvm/TargetParser/X86TargetParser.def"
         ;
-    FeaturesMask |= (1ULL << Feature);
+    assert(Feature / 32 < FeatureMask.size());
+    FeatureMask[Feature / 32] |= 1U << (Feature % 32);
   }
-  return FeaturesMask;
+  return FeatureMask;
 }
 
 unsigned llvm::X86::getFeaturePriority(ProcessorFeatures Feat) {
@@ -723,13 +731,11 @@ unsigned llvm::X86::getFeaturePriority(ProcessorFeatures Feat) {
 #define X86_FEATURE_COMPAT(ENUM, STR, PRIORITY) PRIORITY,
   unsigned Priorities[] = {
 #include "llvm/TargetParser/X86TargetParser.def"
-      std::numeric_limits<unsigned>::max() // Need to consume last comma.
   };
-  std::array<unsigned, std::size(Priorities) - 1> HelperList;
+  std::array<unsigned, std::size(Priorities)> HelperList;
   std::iota(HelperList.begin(), HelperList.end(), 0);
   assert(std::is_permutation(HelperList.begin(), HelperList.end(),
-                             std::begin(Priorities),
-                             std::prev(std::end(Priorities))) &&
+                             std::begin(Priorities), std::end(Priorities)) &&
          "Priorities don't form consecutive range!");
 #endif
 

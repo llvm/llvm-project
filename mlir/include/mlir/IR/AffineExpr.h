@@ -17,6 +17,7 @@
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/Hashing.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Casting.h"
 #include <functional>
 #include <type_traits>
@@ -32,7 +33,6 @@ namespace detail {
 struct AffineExprStorage;
 struct AffineBinaryOpExprStorage;
 struct AffineDimExprStorage;
-struct AffineSymbolExprStorage;
 struct AffineConstantExprStorage;
 
 } // namespace detail
@@ -251,6 +251,8 @@ inline AffineExpr operator-(int64_t val, AffineExpr expr) {
 AffineExpr getAffineDimExpr(unsigned position, MLIRContext *context);
 AffineExpr getAffineSymbolExpr(unsigned position, MLIRContext *context);
 AffineExpr getAffineConstantExpr(int64_t constant, MLIRContext *context);
+SmallVector<AffineExpr> getAffineConstantExprs(ArrayRef<int64_t> constants,
+                                               MLIRContext *context);
 AffineExpr getAffineBinaryOpExpr(AffineExprKind kind, AffineExpr lhs,
                                  AffineExpr rhs);
 
@@ -321,13 +323,6 @@ void bindSymbols(MLIRContext *ctx, AffineExprTy &e, AffineExprTy2 &...exprs) {
   bindSymbols<N + 1, AffineExprTy2 &...>(ctx, exprs...);
 }
 
-template <typename AffineExprTy>
-void bindSymbolsList(MLIRContext *ctx, SmallVectorImpl<AffineExprTy> &exprs) {
-  int idx = 0;
-  for (AffineExprTy &e : exprs)
-    e = getAffineSymbolExpr(idx++, ctx);
-}
-
 } // namespace detail
 
 /// Bind a list of AffineExpr references to DimExpr at positions:
@@ -337,11 +332,25 @@ void bindDims(MLIRContext *ctx, AffineExprTy &...exprs) {
   detail::bindDims<0>(ctx, exprs...);
 }
 
+template <typename AffineExprTy>
+void bindDimsList(MLIRContext *ctx, MutableArrayRef<AffineExprTy> exprs) {
+  int idx = 0;
+  for (AffineExprTy &e : exprs)
+    e = getAffineDimExpr(idx++, ctx);
+}
+
 /// Bind a list of AffineExpr references to SymbolExpr at positions:
 ///   [0 .. sizeof...(exprs)]
 template <typename... AffineExprTy>
 void bindSymbols(MLIRContext *ctx, AffineExprTy &...exprs) {
   detail::bindSymbols<0>(ctx, exprs...);
+}
+
+template <typename AffineExprTy>
+void bindSymbolsList(MLIRContext *ctx, MutableArrayRef<AffineExprTy> exprs) {
+  int idx = 0;
+  for (AffineExprTy &e : exprs)
+    e = getAffineSymbolExpr(idx++, ctx);
 }
 
 } // namespace mlir

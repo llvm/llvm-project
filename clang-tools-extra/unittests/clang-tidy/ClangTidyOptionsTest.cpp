@@ -76,13 +76,19 @@ TEST(ParseLineFilter, ValidFilter) {
 
 TEST(ParseConfiguration, ValidConfiguration) {
   llvm::ErrorOr<ClangTidyOptions> Options =
-      parseConfiguration(llvm::MemoryBufferRef("Checks: \"-*,misc-*\"\n"
-                                               "HeaderFilterRegex: \".*\"\n"
-                                               "AnalyzeTemporaryDtors: true\n"
-                                               "User: some.user",
-                                               "Options"));
+      parseConfiguration(llvm::MemoryBufferRef(
+          "Checks: \"-*,misc-*\"\n"
+          "HeaderFileExtensions: [\"\",\"h\",\"hh\",\"hpp\",\"hxx\"]\n"
+          "ImplementationFileExtensions: [\"c\",\"cc\",\"cpp\",\"cxx\"]\n"
+          "HeaderFilterRegex: \".*\"\n"
+          "User: some.user",
+          "Options"));
   EXPECT_TRUE(!!Options);
   EXPECT_EQ("-*,misc-*", *Options->Checks);
+  EXPECT_EQ(std::vector<std::string>({"", "h", "hh", "hpp", "hxx"}),
+            *Options->HeaderFileExtensions);
+  EXPECT_EQ(std::vector<std::string>({"c", "cc", "cpp", "cxx"}),
+            *Options->ImplementationFileExtensions);
   EXPECT_EQ(".*", *Options->HeaderFilterRegex);
   EXPECT_EQ("some.user", *Options->User);
 }
@@ -105,29 +111,37 @@ TEST(ParseConfiguration, MergeConfigurations) {
   llvm::ErrorOr<ClangTidyOptions> Options1 =
       parseConfiguration(llvm::MemoryBufferRef(R"(
       Checks: "check1,check2"
+      HeaderFileExtensions: ["h","hh"]
+      ImplementationFileExtensions: ["c","cc"]
       HeaderFilterRegex: "filter1"
-      AnalyzeTemporaryDtors: true
       User: user1
       ExtraArgs: ['arg1', 'arg2']
       ExtraArgsBefore: ['arg-before1', 'arg-before2']
       UseColor: false
+      SystemHeaders: false
   )",
                                                "Options1"));
   ASSERT_TRUE(!!Options1);
   llvm::ErrorOr<ClangTidyOptions> Options2 =
       parseConfiguration(llvm::MemoryBufferRef(R"(
       Checks: "check3,check4"
+      HeaderFileExtensions: ["hpp","hxx"]
+      ImplementationFileExtensions: ["cpp","cxx"]
       HeaderFilterRegex: "filter2"
-      AnalyzeTemporaryDtors: false
       User: user2
       ExtraArgs: ['arg3', 'arg4']
       ExtraArgsBefore: ['arg-before3', 'arg-before4']
       UseColor: true
+      SystemHeaders: true
   )",
                                                "Options2"));
   ASSERT_TRUE(!!Options2);
   ClangTidyOptions Options = Options1->merge(*Options2, 0);
   EXPECT_EQ("check1,check2,check3,check4", *Options.Checks);
+  EXPECT_EQ(std::vector<std::string>({"hpp", "hxx"}),
+            *Options.HeaderFileExtensions);
+  EXPECT_EQ(std::vector<std::string>({"cpp", "cxx"}),
+            *Options.ImplementationFileExtensions);
   EXPECT_EQ("filter2", *Options.HeaderFilterRegex);
   EXPECT_EQ("user2", *Options.User);
   ASSERT_TRUE(Options.ExtraArgs.has_value());
@@ -139,6 +153,9 @@ TEST(ParseConfiguration, MergeConfigurations) {
                        Options.ExtraArgsBefore->end(), ","));
   ASSERT_TRUE(Options.UseColor.has_value());
   EXPECT_TRUE(*Options.UseColor);
+
+  ASSERT_TRUE(Options.SystemHeaders.has_value());
+  EXPECT_TRUE(*Options.SystemHeaders);
 }
 
 namespace {
@@ -226,6 +243,17 @@ TEST(ParseConfiguration, CollectDiags) {
 
   Options = llvm::Annotations(R"(
     UseColor: [[NotABool]]
+  )");
+  ParsedOpt = ParseWithDiags(Options.code());
+  EXPECT_TRUE(!ParsedOpt);
+  EXPECT_THAT(Collector.getDiags(),
+              testing::ElementsAre(AllOf(DiagMessage("invalid boolean"),
+                                         DiagKind(llvm::SourceMgr::DK_Error),
+                                         DiagPos(Options.range().Begin),
+                                         DiagRange(Options.range()))));
+
+  Options = llvm::Annotations(R"(
+    SystemHeaders: [[NotABool]]
   )");
   ParsedOpt = ParseWithDiags(Options.code());
   EXPECT_TRUE(!ParsedOpt);

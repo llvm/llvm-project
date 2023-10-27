@@ -8,9 +8,9 @@ define dso_local void @_Z4loopi(i32 %width) local_unnamed_addr #0 {
 ; CHECK-LABEL: '_Z4loopi'
 ; CHECK-NEXT:  Classifying expressions for: @_Z4loopi
 ; CHECK-NEXT:    %storage = alloca [2 x i32], align 4
-; CHECK-NEXT:    --> %storage U: [0,-3) S: [-9223372036854775808,9223372036854775805)
+; CHECK-NEXT:    --> %storage U: [4,-11) S: [-9223372036854775808,9223372036854775805)
 ; CHECK-NEXT:    %0 = bitcast ptr %storage to ptr
-; CHECK-NEXT:    --> %storage U: [0,-3) S: [-9223372036854775808,9223372036854775805)
+; CHECK-NEXT:    --> %storage U: [4,-11) S: [-9223372036854775808,9223372036854775805)
 ; CHECK-NEXT:    %i.0 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
 ; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%for.cond> U: [0,-2147483648) S: [0,-2147483648) Exits: %width LoopDispositions: { %for.cond: Computable }
 ; CHECK-NEXT:    %rem = sdiv i32 %i.0, 2

@@ -63,22 +63,22 @@ static cl::opt<bool> VerifyPatternOrder(
 
 namespace {
 class MachineCombiner : public MachineFunctionPass {
-  const TargetSubtargetInfo *STI;
-  const TargetInstrInfo *TII;
-  const TargetRegisterInfo *TRI;
+  const TargetSubtargetInfo *STI = nullptr;
+  const TargetInstrInfo *TII = nullptr;
+  const TargetRegisterInfo *TRI = nullptr;
   MCSchedModel SchedModel;
-  MachineRegisterInfo *MRI;
-  MachineLoopInfo *MLI; // Current MachineLoopInfo
-  MachineTraceMetrics *Traces;
-  MachineTraceMetrics::Ensemble *MinInstr;
-  MachineBlockFrequencyInfo *MBFI;
-  ProfileSummaryInfo *PSI;
+  MachineRegisterInfo *MRI = nullptr;
+  MachineLoopInfo *MLI = nullptr; // Current MachineLoopInfo
+  MachineTraceMetrics *Traces = nullptr;
+  MachineTraceMetrics::Ensemble *TraceEnsemble = nullptr;
+  MachineBlockFrequencyInfo *MBFI = nullptr;
+  ProfileSummaryInfo *PSI = nullptr;
   RegisterClassInfo RegClassInfo;
 
   TargetSchedModel TSchedModel;
 
   /// True if optimizing for code size.
-  bool OptSize;
+  bool OptSize = false;
 
 public:
   static char ID;
@@ -95,7 +95,8 @@ private:
   bool isTransientMI(const MachineInstr *MI);
   unsigned getDepth(SmallVectorImpl<MachineInstr *> &InsInstrs,
                     DenseMap<unsigned, unsigned> &InstrIdxForVirtReg,
-                    MachineTraceMetrics::Trace BlockTrace);
+                    MachineTraceMetrics::Trace BlockTrace,
+                    const MachineBasicBlock &MBB);
   unsigned getLatency(MachineInstr *Root, MachineInstr *NewRoot,
                       MachineTraceMetrics::Trace BlockTrace);
   bool
@@ -148,7 +149,8 @@ void MachineCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
-MachineInstr *MachineCombiner::getOperandDef(const MachineOperand &MO) {
+MachineInstr *
+MachineCombiner::getOperandDef(const MachineOperand &MO) {
   MachineInstr *DefInstr = nullptr;
   // We need a virtual register definition.
   if (MO.isReg() && MO.getReg().isVirtual())
@@ -207,18 +209,17 @@ bool MachineCombiner::isTransientMI(const MachineInstr *MI) {
 unsigned
 MachineCombiner::getDepth(SmallVectorImpl<MachineInstr *> &InsInstrs,
                           DenseMap<unsigned, unsigned> &InstrIdxForVirtReg,
-                          MachineTraceMetrics::Trace BlockTrace) {
+                          MachineTraceMetrics::Trace BlockTrace,
+                          const MachineBasicBlock &MBB) {
   SmallVector<unsigned, 16> InstrDepth;
   // For each instruction in the new sequence compute the depth based on the
   // operands. Use the trace information when possible. For new operands which
   // are tracked in the InstrIdxForVirtReg map depth is looked up in InstrDepth
   for (auto *InstrPtr : InsInstrs) { // for each Use
     unsigned IDepth = 0;
-    for (const MachineOperand &MO : InstrPtr->operands()) {
+    for (const MachineOperand &MO : InstrPtr->all_uses()) {
       // Check for virtual register operand.
-      if (!(MO.isReg() && MO.getReg().isVirtual()))
-        continue;
-      if (!MO.isUse())
+      if (!MO.getReg().isVirtual())
         continue;
       unsigned DepthOp = 0;
       unsigned LatencyOp = 0;
@@ -237,7 +238,9 @@ MachineCombiner::getDepth(SmallVectorImpl<MachineInstr *> &InsInstrs,
                                                       InstrPtr, UseIdx);
       } else {
         MachineInstr *DefInstr = getOperandDef(MO);
-        if (DefInstr) {
+        if (DefInstr && (TII->getMachineCombinerTraceStrategy() !=
+                             MachineTraceStrategy::TS_Local ||
+                         DefInstr->getParent() == &MBB)) {
           DepthOp = BlockTrace.getInstrCycles(*DefInstr).Depth;
           if (!isTransientMI(DefInstr))
             LatencyOp = TSchedModel.computeOperandLatency(
@@ -267,11 +270,9 @@ unsigned MachineCombiner::getLatency(MachineInstr *Root, MachineInstr *NewRoot,
   // Check each definition in NewRoot and compute the latency
   unsigned NewRootLatency = 0;
 
-  for (const MachineOperand &MO : NewRoot->operands()) {
+  for (const MachineOperand &MO : NewRoot->all_defs()) {
     // Check for virtual register operand.
-    if (!(MO.isReg() && MO.getReg().isVirtual()))
-      continue;
-    if (!MO.isDef())
+    if (!MO.getReg().isVirtual())
       continue;
     // Get the first instruction that uses MO
     MachineRegisterInfo::reg_iterator RI = MRI->reg_begin(MO.getReg());
@@ -374,7 +375,8 @@ bool MachineCombiner::improvesCriticalPathLen(
     MachineCombinerPattern Pattern,
     bool SlackIsAccurate) {
   // Get depth and latency of NewRoot and Root.
-  unsigned NewRootDepth = getDepth(InsInstrs, InstrIdxForVirtReg, BlockTrace);
+  unsigned NewRootDepth =
+      getDepth(InsInstrs, InstrIdxForVirtReg, BlockTrace, *MBB);
   unsigned RootDepth = BlockTrace.getInstrCycles(*Root).Depth;
 
   LLVM_DEBUG(dbgs() << "  Dependence data for " << *Root << "\tNewRootDepth: "
@@ -399,8 +401,13 @@ bool MachineCombiner::improvesCriticalPathLen(
 
   // Account for the latency of the inserted and deleted instructions by
   unsigned NewRootLatency, RootLatency;
-  std::tie(NewRootLatency, RootLatency) =
-      getLatenciesForInstrSequences(*Root, InsInstrs, DelInstrs, BlockTrace);
+  if (TII->accumulateInstrSeqToRootLatency(*Root)) {
+    std::tie(NewRootLatency, RootLatency) =
+        getLatenciesForInstrSequences(*Root, InsInstrs, DelInstrs, BlockTrace);
+  } else {
+    NewRootLatency = TSchedModel.computeInstrLatency(InsInstrs.back());
+    RootLatency = TSchedModel.computeInstrLatency(Root);
+  }
 
   unsigned RootSlack = BlockTrace.getInstrSlack(*Root);
   unsigned NewCycleCount = NewRootDepth + NewRootLatency;
@@ -483,20 +490,19 @@ bool MachineCombiner::preservesResourceLen(
 /// \param MI current machine instruction
 /// \param InsInstrs new instructions to insert in \p MBB
 /// \param DelInstrs instruction to delete from \p MBB
-/// \param MinInstr is a pointer to the machine trace information
+/// \param TraceEnsemble is a pointer to the machine trace information
 /// \param RegUnits set of live registers, needed to compute instruction depths
 /// \param TII is target instruction info, used to call target hook
 /// \param Pattern is used to call target hook finalizeInsInstrs
 /// \param IncrementalUpdate if true, compute instruction depths incrementally,
 ///                          otherwise invalidate the trace
-static void insertDeleteInstructions(MachineBasicBlock *MBB, MachineInstr &MI,
-                                     SmallVector<MachineInstr *, 16> InsInstrs,
-                                     SmallVector<MachineInstr *, 16> DelInstrs,
-                                     MachineTraceMetrics::Ensemble *MinInstr,
-                                     SparseSet<LiveRegUnit> &RegUnits,
-                                     const TargetInstrInfo *TII,
-                                     MachineCombinerPattern Pattern,
-                                     bool IncrementalUpdate) {
+static void insertDeleteInstructions(
+    MachineBasicBlock *MBB, MachineInstr &MI,
+    SmallVectorImpl<MachineInstr *> &InsInstrs,
+    SmallVectorImpl<MachineInstr *> &DelInstrs,
+    MachineTraceMetrics::Ensemble *TraceEnsemble,
+    SparseSet<LiveRegUnit> &RegUnits, const TargetInstrInfo *TII,
+    MachineCombinerPattern Pattern, bool IncrementalUpdate) {
   // If we want to fix up some placeholder for some target, do it now.
   // We need this because in genAlternativeCodeSequence, we have not decided the
   // better pattern InsInstrs or DelInstrs, so we don't want generate some
@@ -522,9 +528,9 @@ static void insertDeleteInstructions(MachineBasicBlock *MBB, MachineInstr &MI,
 
   if (IncrementalUpdate)
     for (auto *InstrPtr : InsInstrs)
-      MinInstr->updateDepth(MBB, *InstrPtr, RegUnits);
+      TraceEnsemble->updateDepth(MBB, *InstrPtr, RegUnits);
   else
-    MinInstr->invalidate(MBB);
+    TraceEnsemble->invalidate(MBB);
 
   NumInstCombined++;
 }
@@ -550,7 +556,7 @@ void MachineCombiner::verifyPatternOrder(
 
     unsigned NewRootLatency, RootLatency;
     std::tie(NewRootLatency, RootLatency) = getLatenciesForInstrSequences(
-        Root, InsInstrs, DelInstrs, MinInstr->getTrace(MBB));
+        Root, InsInstrs, DelInstrs, TraceEnsemble->getTrace(MBB));
     long CurrentLatencyDiff = ((long)RootLatency) - ((long)NewRootLatency);
     assert(CurrentLatencyDiff <= PrevLatencyDiff &&
            "Current pattern is better than previous pattern.");
@@ -574,8 +580,8 @@ bool MachineCombiner::combineInstructions(MachineBasicBlock *MBB) {
   decltype(BlockIter) LastUpdate;
   // Check if the block is in a loop.
   const MachineLoop *ML = MLI->getLoopFor(MBB);
-  if (!MinInstr)
-    MinInstr = Traces->getEnsemble(MachineTraceMetrics::TS_MinInstrCount);
+  if (!TraceEnsemble)
+    TraceEnsemble = Traces->getEnsemble(TII->getMachineCombinerTraceStrategy());
 
   SparseSet<LiveRegUnit> RegUnits;
   RegUnits.setUniverse(TRI->getNumRegUnits());
@@ -647,7 +653,7 @@ bool MachineCombiner::combineInstructions(MachineBasicBlock *MBB) {
 
       if (IncrementalUpdate && LastUpdate != BlockIter) {
         // Update depths since the last incremental update.
-        MinInstr->updateDepths(LastUpdate, BlockIter, RegUnits);
+        TraceEnsemble->updateDepths(LastUpdate, BlockIter, RegUnits);
         LastUpdate = BlockIter;
       }
 
@@ -661,7 +667,7 @@ bool MachineCombiner::combineInstructions(MachineBasicBlock *MBB) {
         }
         if (reduceRegisterPressure(MI, MBB, InsInstrs, DelInstrs, P)) {
           // Replace DelInstrs with InsInstrs.
-          insertDeleteInstructions(MBB, MI, InsInstrs, DelInstrs, MinInstr,
+          insertDeleteInstructions(MBB, MI, InsInstrs, DelInstrs, TraceEnsemble,
                                    RegUnits, TII, P, IncrementalUpdate);
           Changed |= true;
 
@@ -674,7 +680,7 @@ bool MachineCombiner::combineInstructions(MachineBasicBlock *MBB) {
 
       if (ML && TII->isThroughputPattern(P)) {
         LLVM_DEBUG(dbgs() << "\t Replacing due to throughput pattern in loop\n");
-        insertDeleteInstructions(MBB, MI, InsInstrs, DelInstrs, MinInstr,
+        insertDeleteInstructions(MBB, MI, InsInstrs, DelInstrs, TraceEnsemble,
                                  RegUnits, TII, P, IncrementalUpdate);
         // Eagerly stop after the first pattern fires.
         Changed = true;
@@ -683,7 +689,7 @@ bool MachineCombiner::combineInstructions(MachineBasicBlock *MBB) {
         LLVM_DEBUG(dbgs() << "\t Replacing due to OptForSize ("
                           << InsInstrs.size() << " < "
                           << DelInstrs.size() << ")\n");
-        insertDeleteInstructions(MBB, MI, InsInstrs, DelInstrs, MinInstr,
+        insertDeleteInstructions(MBB, MI, InsInstrs, DelInstrs, TraceEnsemble,
                                  RegUnits, TII, P, IncrementalUpdate);
         // Eagerly stop after the first pattern fires.
         Changed = true;
@@ -694,7 +700,7 @@ bool MachineCombiner::combineInstructions(MachineBasicBlock *MBB) {
         // instruction depths incrementally.
         // NOTE: Only the instruction depths up to MI are accurate. All other
         // trace information is not updated.
-        MachineTraceMetrics::Trace BlockTrace = MinInstr->getTrace(MBB);
+        MachineTraceMetrics::Trace BlockTrace = TraceEnsemble->getTrace(MBB);
         Traces->verifyAnalysis();
         if (improvesCriticalPathLen(MBB, &MI, BlockTrace, InsInstrs, DelInstrs,
                                     InstrIdxForVirtReg, P,
@@ -706,7 +712,7 @@ bool MachineCombiner::combineInstructions(MachineBasicBlock *MBB) {
             LastUpdate = BlockIter;
           }
 
-          insertDeleteInstructions(MBB, MI, InsInstrs, DelInstrs, MinInstr,
+          insertDeleteInstructions(MBB, MI, InsInstrs, DelInstrs, TraceEnsemble,
                                    RegUnits, TII, P, IncrementalUpdate);
 
           // Eagerly stop after the first pattern fires.
@@ -741,7 +747,7 @@ bool MachineCombiner::runOnMachineFunction(MachineFunction &MF) {
   MBFI = (PSI && PSI->hasProfileSummary()) ?
          &getAnalysis<LazyMachineBlockFrequencyInfoPass>().getBFI() :
          nullptr;
-  MinInstr = nullptr;
+  TraceEnsemble = nullptr;
   OptSize = MF.getFunction().hasOptSize();
   RegClassInfo.runOnMachineFunction(MF);
 

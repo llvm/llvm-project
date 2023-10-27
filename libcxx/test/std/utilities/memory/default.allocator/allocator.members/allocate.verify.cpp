@@ -14,14 +14,8 @@
 // T* allocate(size_t n);
 
 #include <memory>
-#include <cassert>
 
-#include "test_macros.h"
-
-int main(int, char**)
-{
+void f() {
     std::allocator<int> a;
     a.allocate(3); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-
-    return 0;
 }

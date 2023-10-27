@@ -15,26 +15,26 @@
 define zeroext i1 @test1(float %v1, float %v2) #0 {
 ; CHECK-LABEL: test1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xxlxor 0, 0, 0
 ; CHECK-NEXT:    fcmpu 0, 1, 2
+; CHECK-NEXT:    xxlxor 0, 0, 0
 ; CHECK-NEXT:    li 3, 1
-; CHECK-NEXT:    fcmpu 5, 2, 2
-; CHECK-NEXT:    fcmpu 1, 2, 0
+; CHECK-NEXT:    fcmpu 1, 2, 2
 ; CHECK-NEXT:    crnor 20, 3, 0
-; CHECK-NEXT:    crnor 21, 23, 5
+; CHECK-NEXT:    fcmpu 0, 2, 0
+; CHECK-NEXT:    crnor 21, 7, 1
 ; CHECK-NEXT:    crnand 20, 20, 21
 ; CHECK-NEXT:    isel 3, 0, 3, 20
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-NO-ISEL-LABEL: test1:
 ; CHECK-NO-ISEL:       # %bb.0: # %entry
-; CHECK-NO-ISEL-NEXT:    xxlxor 0, 0, 0
 ; CHECK-NO-ISEL-NEXT:    fcmpu 0, 1, 2
+; CHECK-NO-ISEL-NEXT:    xxlxor 0, 0, 0
 ; CHECK-NO-ISEL-NEXT:    li 3, 1
-; CHECK-NO-ISEL-NEXT:    fcmpu 5, 2, 2
-; CHECK-NO-ISEL-NEXT:    fcmpu 1, 2, 0
+; CHECK-NO-ISEL-NEXT:    fcmpu 1, 2, 2
 ; CHECK-NO-ISEL-NEXT:    crnor 20, 3, 0
-; CHECK-NO-ISEL-NEXT:    crnor 21, 23, 5
+; CHECK-NO-ISEL-NEXT:    fcmpu 0, 2, 0
+; CHECK-NO-ISEL-NEXT:    crnor 21, 7, 1
 ; CHECK-NO-ISEL-NEXT:    crnand 20, 20, 21
 ; CHECK-NO-ISEL-NEXT:    bc 12, 20, .LBB0_1
 ; CHECK-NO-ISEL-NEXT:    blr
@@ -66,26 +66,26 @@ entry:
 define zeroext i1 @test2(float %v1, float %v2) #0 {
 ; CHECK-LABEL: test2:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xxlxor 0, 0, 0
 ; CHECK-NEXT:    fcmpu 0, 1, 2
+; CHECK-NEXT:    xxlxor 0, 0, 0
 ; CHECK-NEXT:    li 3, 1
-; CHECK-NEXT:    fcmpu 5, 2, 2
-; CHECK-NEXT:    fcmpu 1, 2, 0
+; CHECK-NEXT:    fcmpu 1, 2, 2
 ; CHECK-NEXT:    crnor 20, 3, 0
-; CHECK-NEXT:    crnor 21, 23, 5
+; CHECK-NEXT:    fcmpu 0, 2, 0
+; CHECK-NEXT:    crnor 21, 7, 1
 ; CHECK-NEXT:    creqv 20, 20, 21
 ; CHECK-NEXT:    isel 3, 0, 3, 20
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-NO-ISEL-LABEL: test2:
 ; CHECK-NO-ISEL:       # %bb.0: # %entry
-; CHECK-NO-ISEL-NEXT:    xxlxor 0, 0, 0
 ; CHECK-NO-ISEL-NEXT:    fcmpu 0, 1, 2
+; CHECK-NO-ISEL-NEXT:    xxlxor 0, 0, 0
 ; CHECK-NO-ISEL-NEXT:    li 3, 1
-; CHECK-NO-ISEL-NEXT:    fcmpu 5, 2, 2
-; CHECK-NO-ISEL-NEXT:    fcmpu 1, 2, 0
+; CHECK-NO-ISEL-NEXT:    fcmpu 1, 2, 2
 ; CHECK-NO-ISEL-NEXT:    crnor 20, 3, 0
-; CHECK-NO-ISEL-NEXT:    crnor 21, 23, 5
+; CHECK-NO-ISEL-NEXT:    fcmpu 0, 2, 0
+; CHECK-NO-ISEL-NEXT:    crnor 21, 7, 1
 ; CHECK-NO-ISEL-NEXT:    creqv 20, 20, 21
 ; CHECK-NO-ISEL-NEXT:    bc 12, 20, .LBB1_1
 ; CHECK-NO-ISEL-NEXT:    blr
@@ -117,13 +117,13 @@ entry:
 define zeroext i1 @test3(float %v1, float %v2, i32 signext %x) #0 {
 ; CHECK-LABEL: test3:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    fcmpu 0, 1, 2
 ; CHECK-NEXT:    xxlxor 0, 0, 0
-; CHECK-NEXT:    fcmpu 0, 2, 2
 ; CHECK-NEXT:    li 3, 1
-; CHECK-NEXT:    fcmpu 5, 1, 2
-; CHECK-NEXT:    fcmpu 1, 2, 0
-; CHECK-NEXT:    crnor 20, 23, 20
-; CHECK-NEXT:    crnor 21, 3, 5
+; CHECK-NEXT:    fcmpu 1, 2, 2
+; CHECK-NEXT:    crnor 20, 3, 0
+; CHECK-NEXT:    fcmpu 0, 2, 0
+; CHECK-NEXT:    crnor 21, 7, 1
 ; CHECK-NEXT:    cmpwi 5, -2
 ; CHECK-NEXT:    crandc 21, 21, 2
 ; CHECK-NEXT:    creqv 20, 20, 21
@@ -132,13 +132,13 @@ define zeroext i1 @test3(float %v1, float %v2, i32 signext %x) #0 {
 ;
 ; CHECK-NO-ISEL-LABEL: test3:
 ; CHECK-NO-ISEL:       # %bb.0: # %entry
+; CHECK-NO-ISEL-NEXT:    fcmpu 0, 1, 2
 ; CHECK-NO-ISEL-NEXT:    xxlxor 0, 0, 0
-; CHECK-NO-ISEL-NEXT:    fcmpu 0, 2, 2
 ; CHECK-NO-ISEL-NEXT:    li 3, 1
-; CHECK-NO-ISEL-NEXT:    fcmpu 5, 1, 2
-; CHECK-NO-ISEL-NEXT:    fcmpu 1, 2, 0
-; CHECK-NO-ISEL-NEXT:    crnor 20, 23, 20
-; CHECK-NO-ISEL-NEXT:    crnor 21, 3, 5
+; CHECK-NO-ISEL-NEXT:    fcmpu 1, 2, 2
+; CHECK-NO-ISEL-NEXT:    crnor 20, 3, 0
+; CHECK-NO-ISEL-NEXT:    fcmpu 0, 2, 0
+; CHECK-NO-ISEL-NEXT:    crnor 21, 7, 1
 ; CHECK-NO-ISEL-NEXT:    cmpwi 5, -2
 ; CHECK-NO-ISEL-NEXT:    crandc 21, 21, 2
 ; CHECK-NO-ISEL-NEXT:    creqv 20, 20, 21
@@ -202,24 +202,24 @@ entry:
 define zeroext i1 @test5(i1 zeroext %v1, i1 zeroext %v2, i32 signext %v3) #0 {
 ; CHECK-LABEL: test5:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    li 6, -2
 ; CHECK-NEXT:    and 3, 3, 4
-; CHECK-NEXT:    xor 5, 5, 6
+; CHECK-NEXT:    li 4, -2
+; CHECK-NEXT:    xor 4, 5, 4
 ; CHECK-NEXT:    clrldi 3, 3, 63
-; CHECK-NEXT:    cntlzw 5, 5
-; CHECK-NEXT:    srwi 4, 5, 5
+; CHECK-NEXT:    cntlzw 4, 4
+; CHECK-NEXT:    srwi 4, 4, 5
 ; CHECK-NEXT:    xori 4, 4, 1
 ; CHECK-NEXT:    or 3, 3, 4
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-NO-ISEL-LABEL: test5:
 ; CHECK-NO-ISEL:       # %bb.0: # %entry
-; CHECK-NO-ISEL-NEXT:    li 6, -2
 ; CHECK-NO-ISEL-NEXT:    and 3, 3, 4
-; CHECK-NO-ISEL-NEXT:    xor 5, 5, 6
+; CHECK-NO-ISEL-NEXT:    li 4, -2
+; CHECK-NO-ISEL-NEXT:    xor 4, 5, 4
 ; CHECK-NO-ISEL-NEXT:    clrldi 3, 3, 63
-; CHECK-NO-ISEL-NEXT:    cntlzw 5, 5
-; CHECK-NO-ISEL-NEXT:    srwi 4, 5, 5
+; CHECK-NO-ISEL-NEXT:    cntlzw 4, 4
+; CHECK-NO-ISEL-NEXT:    srwi 4, 4, 5
 ; CHECK-NO-ISEL-NEXT:    xori 4, 4, 1
 ; CHECK-NO-ISEL-NEXT:    or 3, 3, 4
 ; CHECK-NO-ISEL-NEXT:    blr
@@ -247,8 +247,8 @@ define zeroext i1 @test6(i1 zeroext %v1, i1 zeroext %v2, i32 signext %v3) #0 {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    li 6, -2
 ; CHECK-NEXT:    clrldi 4, 4, 63
-; CHECK-NEXT:    xor 5, 5, 6
 ; CHECK-NEXT:    clrldi 3, 3, 63
+; CHECK-NEXT:    xor 5, 5, 6
 ; CHECK-NEXT:    cntlzw 5, 5
 ; CHECK-NEXT:    srwi 5, 5, 5
 ; CHECK-NEXT:    xori 5, 5, 1
@@ -260,8 +260,8 @@ define zeroext i1 @test6(i1 zeroext %v1, i1 zeroext %v2, i32 signext %v3) #0 {
 ; CHECK-NO-ISEL:       # %bb.0: # %entry
 ; CHECK-NO-ISEL-NEXT:    li 6, -2
 ; CHECK-NO-ISEL-NEXT:    clrldi 4, 4, 63
-; CHECK-NO-ISEL-NEXT:    xor 5, 5, 6
 ; CHECK-NO-ISEL-NEXT:    clrldi 3, 3, 63
+; CHECK-NO-ISEL-NEXT:    xor 5, 5, 6
 ; CHECK-NO-ISEL-NEXT:    cntlzw 5, 5
 ; CHECK-NO-ISEL-NEXT:    srwi 5, 5, 5
 ; CHECK-NO-ISEL-NEXT:    xori 5, 5, 1
@@ -321,20 +321,21 @@ entry:
 define signext i32 @exttest7(i32 signext %a) #0 {
 ; CHECK-LABEL: exttest7:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    li 4, 8
 ; CHECK-NEXT:    cmplwi 3, 5
-; CHECK-NEXT:    li 3, 7
-; CHECK-NEXT:    iseleq 3, 3, 4
+; CHECK-NEXT:    li 3, 8
+; CHECK-NEXT:    li 4, 7
+; CHECK-NEXT:    iseleq 3, 4, 3
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-NO-ISEL-LABEL: exttest7:
 ; CHECK-NO-ISEL:       # %bb.0: # %entry
-; CHECK-NO-ISEL-NEXT:    li 4, 8
 ; CHECK-NO-ISEL-NEXT:    cmplwi 3, 5
-; CHECK-NO-ISEL-NEXT:    li 3, 7
-; CHECK-NO-ISEL-NEXT:    bclr 12, 2, 0
-; CHECK-NO-ISEL-NEXT:  # %bb.1: # %entry
-; CHECK-NO-ISEL-NEXT:    ori 3, 4, 0
+; CHECK-NO-ISEL-NEXT:    li 3, 8
+; CHECK-NO-ISEL-NEXT:    li 4, 7
+; CHECK-NO-ISEL-NEXT:    bc 12, 2, .LBB7_1
+; CHECK-NO-ISEL-NEXT:    blr
+; CHECK-NO-ISEL-NEXT:  .LBB7_1: # %entry
+; CHECK-NO-ISEL-NEXT:    addi 3, 4, 0
 ; CHECK-NO-ISEL-NEXT:    blr
 ;
 ; CHECK-P10-LABEL: exttest7:

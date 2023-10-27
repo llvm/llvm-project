@@ -20,8 +20,8 @@ define weak_odr void @test(i32 %0) !dbg !34 {
 ; CHECK-NEXT:    s_mov_b32 s33, s32
 ; CHECK-NEXT:    s_or_saveexec_b64 s[18:19], -1
 ; CHECK-NEXT:    buffer_store_dword v40, off, s[0:3], s33 offset:4 ; 4-byte Folded Spill
-; CHECK-NEXT:    buffer_store_dword v42, off, s[0:3], s33 offset:8 ; 4-byte Folded Spill
 ; CHECK-NEXT:    s_mov_b64 exec, s[18:19]
+; CHECK-NEXT:    v_writelane_b32 v40, s16, 16
 ; CHECK-NEXT:    v_writelane_b32 v40, s30, 0
 ; CHECK-NEXT:    v_writelane_b32 v40, s31, 1
 ; CHECK-NEXT:    v_writelane_b32 v40, s34, 2
@@ -48,7 +48,6 @@ define weak_odr void @test(i32 %0) !dbg !34 {
 ; CHECK-NEXT:    v_writelane_b32 v40, s47, 15
 ; CHECK-NEXT:    s_load_dwordx2 s[46:47], s[4:5], 0x0
 ; CHECK-NEXT:    s_mov_b64 s[4:5], s[40:41]
-; CHECK-NEXT:    v_writelane_b32 v42, s16, 0
 ; CHECK-NEXT:    buffer_store_dword v41, off, s[0:3], s33 ; 4-byte Folded Spill
 ; CHECK-NEXT:    v_mov_b32_e32 v41, v31
 ; CHECK-NEXT:    s_mov_b32 s42, s15
@@ -92,10 +91,9 @@ define weak_odr void @test(i32 %0) !dbg !34 {
 ; CHECK-NEXT:    v_readlane_b32 s34, v40, 2
 ; CHECK-NEXT:    v_readlane_b32 s31, v40, 1
 ; CHECK-NEXT:    v_readlane_b32 s30, v40, 0
-; CHECK-NEXT:    v_readlane_b32 s4, v42, 0
+; CHECK-NEXT:    v_readlane_b32 s4, v40, 16
 ; CHECK-NEXT:    s_or_saveexec_b64 s[6:7], -1
 ; CHECK-NEXT:    buffer_load_dword v40, off, s[0:3], s33 offset:4 ; 4-byte Folded Reload
-; CHECK-NEXT:    buffer_load_dword v42, off, s[0:3], s33 offset:8 ; 4-byte Folded Reload
 ; CHECK-NEXT:    s_mov_b64 exec, s[6:7]
 ; CHECK-NEXT:    s_addk_i32 s32, 0xfc00
 ; CHECK-NEXT:    s_mov_b32 s33, s4
@@ -112,7 +110,7 @@ define weak_odr void @test(i32 %0) !dbg !34 {
 attributes #0 = { nocallback nofree nosync nounwind readnone speculatable willreturn }
 
 !llvm.dbg.cu = !{!0, !25, !26}
-!llvm.module.flags = !{!27, !28, !29, !30, !31, !32, !33}
+!llvm.module.flags = !{!27, !28, !29, !30, !31, !32}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1, producer: "clang version 15.0.0 (https://github.com/llvm/llvm-project.git 05256c8d95e0b15bcc502d595c15d902ff520f97)", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, retainedTypes: !8, imports: !20, splitDebugInlining: false, nameTableKind: None)
 !1 = !DIFile(filename: "dummy", directory: "dummy", checksumkind: CSK_MD5, checksum: "b67bec84bdce3730b4a6f2ed8d50b85c")
@@ -147,7 +145,6 @@ attributes #0 = { nocallback nofree nosync nounwind readnone speculatable willre
 !30 = !{i32 7, !"openmp", i32 50}
 !31 = !{i32 7, !"openmp-device", i32 50}
 !32 = !{i32 7, !"PIC Level", i32 2}
-!33 = !{i32 1, !"LTOPostLink", i32 1}
 !34 = distinct !DISubprogram(name: "dummy", linkageName: "dummy", scope: !35, file: !1, line: 49, type: !23, scopeLine: 288, flags: DIFlagEnumClass, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, declaration: !36, retainedNodes: !37)
 !35 = distinct !DICompositeType(tag: DW_TAG_class_type, file: !1, line: 49, size: 32, flags: DIFlagEnumClass, elements: !6, identifier: "dummy")
 !36 = !DISubprogram(name: "dummy", scope: !35, file: !1, line: 49, type: !23, scopeLine: 288, flags: DIFlagEnumClass, spFlags: DISPFlagOptimized)

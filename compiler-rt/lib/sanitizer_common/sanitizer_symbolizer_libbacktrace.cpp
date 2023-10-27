@@ -11,11 +11,11 @@
 // Libbacktrace implementation of symbolizer parts.
 //===----------------------------------------------------------------------===//
 
-#include "sanitizer_platform.h"
+#include "sanitizer_symbolizer_libbacktrace.h"
 
 #include "sanitizer_internal_defs.h"
+#include "sanitizer_platform.h"
 #include "sanitizer_symbolizer.h"
-#include "sanitizer_symbolizer_libbacktrace.h"
 
 #if SANITIZER_LIBBACKTRACE
 # include "backtrace-supported.h"
@@ -199,7 +199,7 @@ static char *DemangleAlloc(const char *name, bool always_alloc) {
 #endif
   if (always_alloc)
     return internal_strdup(name);
-  return 0;
+  return nullptr;
 }
 
 const char *LibbacktraceSymbolizer::Demangle(const char *name) {

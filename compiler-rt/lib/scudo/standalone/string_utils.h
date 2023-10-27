@@ -25,7 +25,7 @@ public:
     String.clear();
     String.push_back('\0');
   }
-  void append(const char *Format, va_list Args);
+  void vappend(const char *Format, va_list Args);
   void append(const char *Format, ...) FORMAT(2, 3);
   void output() const { outputRaw(String.data()); }
   void reserve(size_t Size) { String.reserve(Size + 1); }

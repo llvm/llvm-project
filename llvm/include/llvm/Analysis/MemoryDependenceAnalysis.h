@@ -208,11 +208,11 @@ class NonLocalDepEntry {
   MemDepResult Result;
 
 public:
-  NonLocalDepEntry(BasicBlock *bb, MemDepResult result)
-      : BB(bb), Result(result) {}
+  NonLocalDepEntry(BasicBlock *BB, MemDepResult Result)
+      : BB(BB), Result(Result) {}
 
   // This is used for searches.
-  NonLocalDepEntry(BasicBlock *bb) : BB(bb) {}
+  NonLocalDepEntry(BasicBlock *BB) : BB(BB) {}
 
   // BB is the sort key, it can't be changed.
   BasicBlock *getBB() const { return BB; }
@@ -233,8 +233,8 @@ class NonLocalDepResult {
   Value *Address;
 
 public:
-  NonLocalDepResult(BasicBlock *bb, MemDepResult result, Value *address)
-      : Entry(bb, result), Address(address) {}
+  NonLocalDepResult(BasicBlock *BB, MemDepResult Result, Value *Address)
+      : Entry(BB, Result), Address(Address) {}
 
   // BB is the sort key, it can't be changed.
   BasicBlock *getBB() const { return Entry.getBB(); }

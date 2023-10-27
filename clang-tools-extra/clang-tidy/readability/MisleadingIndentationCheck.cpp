@@ -104,7 +104,8 @@ void MisleadingIndentationCheck::missingBracesCheck(const SourceManager &SM,
 }
 
 void MisleadingIndentationCheck::registerMatchers(MatchFinder *Finder) {
-  Finder->addMatcher(ifStmt(hasElse(stmt())).bind("if"), this);
+  Finder->addMatcher(
+      ifStmt(unless(hasThen(nullStmt())), hasElse(stmt())).bind("if"), this);
   Finder->addMatcher(
       compoundStmt(has(stmt(anyOf(ifStmt(), forStmt(), whileStmt()))))
           .bind("compound"),

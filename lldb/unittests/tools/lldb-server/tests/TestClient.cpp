@@ -59,10 +59,13 @@ Expected<std::unique_ptr<TestClient>> TestClient::launch(StringRef Log) {
 }
 
 Expected<std::unique_ptr<TestClient>> TestClient::launch(StringRef Log, ArrayRef<StringRef> InferiorArgs) {
-  return launchCustom(Log, {}, InferiorArgs);
+  return launchCustom(Log, false, {}, InferiorArgs);
 }
 
-Expected<std::unique_ptr<TestClient>> TestClient::launchCustom(StringRef Log, ArrayRef<StringRef> ServerArgs, ArrayRef<StringRef> InferiorArgs) {
+Expected<std::unique_ptr<TestClient>>
+TestClient::launchCustom(StringRef Log, bool disable_stdio,
+                         ArrayRef<StringRef> ServerArgs,
+                         ArrayRef<StringRef> InferiorArgs) {
   const ArchSpec &arch_spec = HostInfo::GetArchitecture();
   Args args;
   args.AppendArgument(LLDB_SERVER);
@@ -111,6 +114,8 @@ Expected<std::unique_ptr<TestClient>> TestClient::launchCustom(StringRef Log, Ar
   // Accept().
   Info.SetMonitorProcessCallback(&ProcessLaunchInfo::NoOpMonitorCallback);
 
+  if (disable_stdio)
+    Info.GetFlags().Set(lldb::eLaunchFlagDisableSTDIO);
   status = Host::LaunchProcess(Info);
   if (status.Fail())
     return status.ToError();

@@ -1,114 +1,60 @@
 Checks: readability-identifier-naming
 CheckOptions:
-  - key:    readability-identifier-naming.AbstractClassCase
-    value:  CamelCase
-  - key:    readability-identifier-naming.ClassCase
-    value:  CamelCase
-  - key:    readability-identifier-naming.ClassConstantCase
-    value:  CamelCase
-  - key:    readability-identifier-naming.ClassMemberCase
-    value:  CamelCase
-  - key:    readability-identifier-naming.ConstantCase
-    value:  CamelCase
-  - key:    readability-identifier-naming.ConstantMemberCase
-    value:  CamelCase
-  - key:    readability-identifier-naming.ConstantParameterCase
-    value:  CamelCase
-  - key:    readability-identifier-naming.ConstantPointerParameterCase
-    value:  CamelCase
-  - key:    readability-identifier-naming.ConstexprVariableCase
-    value:  CamelCase
-  - key:    readability-identifier-naming.EnumConstantCase
-    value:  CamelCase
-  - key:    readability-identifier-naming.GlobalConstantCase
-    value:  CamelCase
-  - key:    readability-identifier-naming.GlobalConstantPointerCase
-    value:  CamelCase
-  - key:    readability-identifier-naming.GlobalPointerCase
-    value:  CamelCase
-  - key:    readability-identifier-naming.GlobalVariableCase
-    value:  CamelCase
-  - key:    readability-identifier-naming.LocalConstantCase
-    value:  CamelCase
-  - key:    readability-identifier-naming.LocalConstantPointerCase
-    value:  CamelCase
-  - key:    readability-identifier-naming.LocalPointerCase
-    value:  CamelCase
-  - key:    readability-identifier-naming.LocalVariableCase
-    value:  CamelCase
-  - key:    readability-identifier-naming.MemberCase
-    value:  CamelCase
-  - key:    readability-identifier-naming.ParameterCase
-    value:  CamelCase
-  - key:    readability-identifier-naming.PointerParameterCase
-    value:  CamelCase
-  - key:    readability-identifier-naming.PrivateMemberCase
-    value:  CamelCase
-  - key:    readability-identifier-naming.ProtectedMemberCase
-    value:  CamelCase
-  - key:    readability-identifier-naming.PublicMemberCase
-    value:  CamelCase
-  - key:    readability-identifier-naming.ScopedEnumConstantCase
-    value:  CamelCase
-  - key:    readability-identifier-naming.StaticConstantCase
-    value:  CamelCase
-  - key:    readability-identifier-naming.StaticVariableCase
-    value:  CamelCase
-  - key:    readability-identifier-naming.VariableCase
-    value:  CamelCase
-  - key:    readability-identifier-naming.AbstractClassHungarianPrefix
-    value:  On
-  - key:    readability-identifier-naming.ClassHungarianPrefix
-    value:  On
-  - key:    readability-identifier-naming.ClassConstantHungarianPrefix
-    value:  On
-  - key:    readability-identifier-naming.ClassMemberHungarianPrefix
-    value:  On
-  - key:    readability-identifier-naming.ConstantHungarianPrefix
-    value:  On
-  - key:    readability-identifier-naming.ConstantMemberHungarianPrefix
-    value:  On
-  - key:    readability-identifier-naming.ConstantParameterHungarianPrefix
-    value:  On
-  - key:    readability-identifier-naming.ConstantPointerParameterHungarianPrefix
-    value:  On
-  - key:    readability-identifier-naming.ConstexprVariableHungarianPrefix
-    value:  On
-  - key:    readability-identifier-naming.EnumConstantHungarianPrefix
-    value:  On
-  - key:    readability-identifier-naming.GlobalConstantHungarianPrefix
-    value:  On
-  - key:    readability-identifier-naming.GlobalConstantPointerHungarianPrefix
-    value:  On
-  - key:    readability-identifier-naming.GlobalPointerHungarianPrefix
-    value:  On
-  - key:    readability-identifier-naming.GlobalVariableHungarianPrefix
-    value:  On
-  - key:    readability-identifier-naming.LocalConstantHungarianPrefix
-    value:  On
-  - key:    readability-identifier-naming.LocalConstantPointerHungarianPrefix
-    value:  On
-  - key:    readability-identifier-naming.LocalPointerHungarianPrefix
-    value:  On
-  - key:    readability-identifier-naming.LocalVariableHungarianPrefix
-    value:  On
-  - key:    readability-identifier-naming.MemberHungarianPrefix
-    value:  On
-  - key:    readability-identifier-naming.ParameterHungarianPrefix
-    value:  On
-  - key:    readability-identifier-naming.PointerParameterHungarianPrefix
-    value:  On
-  - key:    readability-identifier-naming.PrivateMemberHungarianPrefix
-    value:  On
-  - key:    readability-identifier-naming.ProtectedMemberHungarianPrefix
-    value:  On
-  - key:    readability-identifier-naming.PublicMemberHungarianPrefix
-    value:  On
-  - key:    readability-identifier-naming.ScopedEnumConstantHungarianPrefix
-    value:  On
-  - key:    readability-identifier-naming.StaticConstantHungarianPrefix
-    value:  On
-  - key:    readability-identifier-naming.StaticVariableHungarianPrefix
-    value:  On
-  - key:    readability-identifier-naming.VariableHungarianPrefix
-    value:  On
+  readability-identifier-naming.AbstractClassCase: CamelCase
+  readability-identifier-naming.StructCase: CamelCase
+  readability-identifier-naming.UnionCase: camelBack
+  readability-identifier-naming.ClassCase: CamelCase
+  readability-identifier-naming.ClassConstantCase: CamelCase
+  readability-identifier-naming.ClassMemberCase: CamelCase
+  readability-identifier-naming.ConstantCase: CamelCase
+  readability-identifier-naming.ConstantMemberCase: CamelCase
+  readability-identifier-naming.ConstantParameterCase: CamelCase
+  readability-identifier-naming.ConstantPointerParameterCase: CamelCase
+  readability-identifier-naming.ConstexprVariableCase: CamelCase
+  readability-identifier-naming.EnumConstantCase: CamelCase
+  readability-identifier-naming.GlobalConstantCase: CamelCase
+  readability-identifier-naming.GlobalConstantPointerCase: CamelCase
+  readability-identifier-naming.GlobalPointerCase: CamelCase
+  readability-identifier-naming.GlobalVariableCase: CamelCase
+  readability-identifier-naming.LocalConstantCase: CamelCase
+  readability-identifier-naming.LocalConstantPointerCase: CamelCase
+  readability-identifier-naming.LocalPointerCase: CamelCase
+  readability-identifier-naming.LocalVariableCase: CamelCase
+  readability-identifier-naming.MemberCase: CamelCase
+  readability-identifier-naming.ParameterCase: CamelCase
+  readability-identifier-naming.PointerParameterCase: CamelCase
+  readability-identifier-naming.PrivateMemberCase: CamelCase
+  readability-identifier-naming.ProtectedMemberCase: CamelCase
+  readability-identifier-naming.PublicMemberCase: CamelCase
+  readability-identifier-naming.ScopedEnumConstantCase: CamelCase
+  readability-identifier-naming.StaticConstantCase: CamelCase
+  readability-identifier-naming.StaticVariableCase: CamelCase
+  readability-identifier-naming.VariableCase: CamelCase
+  readability-identifier-naming.AbstractClassHungarianPrefix: On
+  readability-identifier-naming.ClassHungarianPrefix: On
+  readability-identifier-naming.ClassConstantHungarianPrefix: On
+  readability-identifier-naming.ClassMemberHungarianPrefix: On
+  readability-identifier-naming.ConstantHungarianPrefix: On
+  readability-identifier-naming.ConstantMemberHungarianPrefix: On
+  readability-identifier-naming.ConstantParameterHungarianPrefix: On
+  readability-identifier-naming.ConstantPointerParameterHungarianPrefix: On
+  readability-identifier-naming.ConstexprVariableHungarianPrefix: On
+  readability-identifier-naming.EnumConstantHungarianPrefix: On
+  readability-identifier-naming.GlobalConstantHungarianPrefix: On
+  readability-identifier-naming.GlobalConstantPointerHungarianPrefix: On
+  readability-identifier-naming.GlobalPointerHungarianPrefix: On
+  readability-identifier-naming.GlobalVariableHungarianPrefix: On
+  readability-identifier-naming.LocalConstantHungarianPrefix: On
+  readability-identifier-naming.LocalConstantPointerHungarianPrefix: On
+  readability-identifier-naming.LocalPointerHungarianPrefix: On
+  readability-identifier-naming.LocalVariableHungarianPrefix: On
+  readability-identifier-naming.MemberHungarianPrefix: On
+  readability-identifier-naming.ParameterHungarianPrefix: On
+  readability-identifier-naming.PointerParameterHungarianPrefix: On
+  readability-identifier-naming.PrivateMemberHungarianPrefix: On
+  readability-identifier-naming.ProtectedMemberHungarianPrefix: On
+  readability-identifier-naming.PublicMemberHungarianPrefix: On
+  readability-identifier-naming.ScopedEnumConstantHungarianPrefix: On
+  readability-identifier-naming.StaticConstantHungarianPrefix: On
+  readability-identifier-naming.StaticVariableHungarianPrefix: On
+  readability-identifier-naming.VariableHungarianPrefix: On

@@ -27,7 +27,7 @@ int bar() {
 // CHECK: @_Z3fooi.ifunc = weak_odr ifunc i32 (i32), ptr @_Z3fooi.resolver
 // CHECK: @_Z3foov.ifunc = weak_odr ifunc i32 (), ptr @_Z3foov.resolver
 
-// CHECK-LABEL: @_Z3fooi._Msme-f64f64Mbf16(
+// CHECK-LABEL: @_Z3fooi._Mbf16Msme-f64f64(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[DOTADDR:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    store i32 [[TMP0:%.*]], ptr [[DOTADDR]], align 4
@@ -78,7 +78,7 @@ int bar() {
 // CHECK-NEXT:    ret i32 [[ADD3]]
 // CHECK-LABEL: @_ZN7MyClass3gooEi.resolver(
 // CHECK-NEXT:  resolver_entry:
-// CHECK-NEXT:    call void @init_cpu_features_resolver()
+// CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 1024
 // CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 1024
@@ -98,19 +98,19 @@ int bar() {
 // CHECK-NEXT:    ret ptr @_ZN7MyClass3gooEi
 // CHECK-LABEL: @_Z3fooi.resolver(
 // CHECK-NEXT:  resolver_entry:
-// CHECK-NEXT:    call void @init_cpu_features_resolver()
+// CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 36028797153181696
 // CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 36028797153181696
 // CHECK-NEXT:    [[TMP3:%.*]] = and i1 true, [[TMP2]]
 // CHECK-NEXT:    br i1 [[TMP3]], label [[RESOLVER_RETURN:%.*]], label [[RESOLVER_ELSE:%.*]]
 // CHECK:       resolver_return:
-// CHECK-NEXT:    ret ptr @_Z3fooi._Msme-f64f64Mbf16
+// CHECK-NEXT:    ret ptr @_Z3fooi._Mbf16Msme-f64f64
 // CHECK:       resolver_else:
 // CHECK-NEXT:    ret ptr @_Z3fooi
 // CHECK-LABEL: @_Z3foov.resolver(
 // CHECK-NEXT:  resolver_entry:
-// CHECK-NEXT:    call void @init_cpu_features_resolver()
+// CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 268435488
 // CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 268435488

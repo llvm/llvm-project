@@ -1565,7 +1565,7 @@ inline DiagnosticBuilder DiagnosticsEngine::Report(unsigned DiagID) {
 /// currently in-flight diagnostic.
 class Diagnostic {
   const DiagnosticsEngine *DiagObj;
-  StringRef StoredDiagMessage;
+  std::optional<StringRef> StoredDiagMessage;
 
 public:
   explicit Diagnostic(const DiagnosticsEngine *DO) : DiagObj(DO) {}
@@ -1840,7 +1840,7 @@ const char ToggleHighlight = 127;
 void ProcessWarningOptions(DiagnosticsEngine &Diags,
                            const DiagnosticOptions &Opts,
                            bool ReportDiags = true);
-
+void EscapeStringForDiagnostic(StringRef Str, SmallVectorImpl<char> &OutStr);
 } // namespace clang
 
 #endif // LLVM_CLANG_BASIC_DIAGNOSTIC_H

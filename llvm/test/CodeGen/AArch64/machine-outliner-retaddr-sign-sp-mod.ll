@@ -1,4 +1,4 @@
-; RUN: llc -mtriple aarch64-arm-none-eabi -enable-machine-outliner \
+; RUN: llc -mtriple aarch64 -enable-machine-outliner \
 ; RUN:  -verify-machineinstrs %s -o - | FileCheck %s
 
 @v = common dso_local global ptr null, align 8

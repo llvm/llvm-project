@@ -1,3 +1,4 @@
+// RUN: export LSAN_OPTIONS=detect_leaks=0
 // RUN: env CINDEXTEST_EDITING=1 CINDEXTEST_PREAMBLE_FILE=%t-preamble.pch \
 // RUN:   not c-index-test -test-load-source-reparse 1 local \
 // RUN:   -remap-file="%s,%S/Inputs/crash-recovery-reparse-remap.c" \

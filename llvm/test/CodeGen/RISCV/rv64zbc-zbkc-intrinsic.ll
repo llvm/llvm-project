@@ -26,3 +26,42 @@ define i64 @clmul64h(i64 %a, i64 %b) nounwind {
   ret i64 %tmp
 }
 
+declare i32 @llvm.riscv.clmul.i32(i32 %a, i32 %b)
+
+define signext i32 @clmul32(i32 signext %a, i32 signext %b) nounwind {
+; RV64ZBC-ZBKC-LABEL: clmul32:
+; RV64ZBC-ZBKC:       # %bb.0:
+; RV64ZBC-ZBKC-NEXT:    clmul a0, a0, a1
+; RV64ZBC-ZBKC-NEXT:    sext.w a0, a0
+; RV64ZBC-ZBKC-NEXT:    ret
+  %tmp = call i32 @llvm.riscv.clmul.i32(i32 %a, i32 %b)
+  ret i32 %tmp
+}
+
+declare i32 @llvm.riscv.clmulh.i32(i32 %a, i32 %b)
+
+define signext i32 @clmul32h(i32 signext %a, i32 signext %b) nounwind {
+; RV64ZBC-ZBKC-LABEL: clmul32h:
+; RV64ZBC-ZBKC:       # %bb.0:
+; RV64ZBC-ZBKC-NEXT:    slli a1, a1, 32
+; RV64ZBC-ZBKC-NEXT:    slli a0, a0, 32
+; RV64ZBC-ZBKC-NEXT:    clmulh a0, a0, a1
+; RV64ZBC-ZBKC-NEXT:    srai a0, a0, 32
+; RV64ZBC-ZBKC-NEXT:    ret
+  %tmp = call i32 @llvm.riscv.clmulh.i32(i32 %a, i32 %b)
+  ret i32 %tmp
+}
+
+; FIXME: We could avoid the slli instructions by using clmul+srai since the
+; inputs are zero extended.
+define signext i32 @clmul32h_zext(i32 zeroext %a, i32 zeroext %b) nounwind {
+; RV64ZBC-ZBKC-LABEL: clmul32h_zext:
+; RV64ZBC-ZBKC:       # %bb.0:
+; RV64ZBC-ZBKC-NEXT:    slli a1, a1, 32
+; RV64ZBC-ZBKC-NEXT:    slli a0, a0, 32
+; RV64ZBC-ZBKC-NEXT:    clmulh a0, a0, a1
+; RV64ZBC-ZBKC-NEXT:    srai a0, a0, 32
+; RV64ZBC-ZBKC-NEXT:    ret
+  %tmp = call i32 @llvm.riscv.clmulh.i32(i32 %a, i32 %b)
+  ret i32 %tmp
+}

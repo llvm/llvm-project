@@ -67,6 +67,8 @@ struct isl_hash_table_entry *isl_hash_table_find(struct isl_ctx *ctx,
 			    const void *val, int reserve);
 isl_stat isl_hash_table_foreach(isl_ctx *ctx, struct isl_hash_table *table,
 	isl_stat (*fn)(void **entry, void *user), void *user);
+isl_bool isl_hash_table_every(isl_ctx *ctx, struct isl_hash_table *table,
+	isl_bool (*test)(void **entry, void *user), void *user);
 void isl_hash_table_remove(struct isl_ctx *ctx,
 				struct isl_hash_table *table,
 				struct isl_hash_table_entry *entry);

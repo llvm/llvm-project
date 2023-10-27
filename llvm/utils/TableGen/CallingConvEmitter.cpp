@@ -15,14 +15,16 @@
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
+#include <deque>
+
 using namespace llvm;
 
 namespace {
 class CallingConvEmitter {
   RecordKeeper &Records;
-  unsigned Counter;
+  unsigned Counter = 0u;
   std::string CurrentAction;
-  bool SwiftAction;
+  bool SwiftAction = false;
 
   std::map<std::string, std::set<std::string>> AssignedRegsMap;
   std::map<std::string, std::set<std::string>> AssignedSwiftRegsMap;
@@ -41,7 +43,9 @@ private:
 } // End anonymous namespace
 
 void CallingConvEmitter::run(raw_ostream &O) {
-  std::vector<Record*> CCs = Records.getAllDerivedDefinitions("CallingConv");
+  emitSourceFileHeader("Calling Convention Implementation Fragment", O);
+
+  std::vector<Record *> CCs = Records.getAllDerivedDefinitions("CallingConv");
 
   // Emit prototypes for all of the non-custom CC's so that they can forward ref
   // each other.
@@ -247,7 +251,7 @@ void CallingConvEmitter::EmitAction(Record *Action,
       int Size = Action->getValueAsInt("Size");
       int Align = Action->getValueAsInt("Align");
 
-      O << IndentStr << "unsigned Offset" << ++Counter
+      O << IndentStr << "int64_t Offset" << ++Counter
         << " = State.AllocateStack(";
       if (Size)
         O << Size << ", ";
@@ -283,7 +287,7 @@ void CallingConvEmitter::EmitAction(Record *Action,
         O << LS << getQualifiedName(ShadowRegList->getElementAsRecord(i));
       O << "\n" << IndentStr << "};\n";
 
-      O << IndentStr << "unsigned Offset" << ++Counter
+      O << IndentStr << "int64_t Offset" << ++Counter
         << " = State.AllocateStack(" << Size << ", Align(" << Align << "), "
         << "ShadowRegList" << ShadowRegListNumber << ");\n";
       O << IndentStr << "State.addLoc(CCValAssign::getMem(ValNo, ValVT, Offset"
@@ -426,11 +430,5 @@ void CallingConvEmitter::EmitArgRegisterLists(raw_ostream &O) {
   }
 }
 
-namespace llvm {
-
-void EmitCallingConv(RecordKeeper &RK, raw_ostream &OS) {
-  emitSourceFileHeader("Calling Convention Implementation Fragment", OS);
-  CallingConvEmitter(RK).run(OS);
-}
-
-} // End llvm namespace
+static TableGen::Emitter::OptClass<CallingConvEmitter>
+    X("gen-callingconv", "Generate calling convention descriptions");

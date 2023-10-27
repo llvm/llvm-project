@@ -11,8 +11,7 @@
 
 // ALLOW_RETRIES: 2
 
-// shared_mutex was introduced in macosx10.12
-// UNSUPPORTED: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11}}
+// UNSUPPORTED: availability-shared_mutex-missing
 
 // <shared_mutex>
 
@@ -20,11 +19,12 @@
 
 // void lock_shared();
 
+#include <cassert>
+#include <chrono>
+#include <cstdlib>
 #include <shared_mutex>
 #include <thread>
 #include <vector>
-#include <cstdlib>
-#include <cassert>
 
 #include "make_test_thread.h"
 #include "test_macros.h"

@@ -9,8 +9,8 @@
 #include "llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h"
 
 #include "llvm/MC/TargetRegistry.h"
-#include "llvm/Support/Host.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/Host.h"
 
 namespace llvm {
 namespace orc {
@@ -18,13 +18,10 @@ namespace orc {
 JITTargetMachineBuilder::JITTargetMachineBuilder(Triple TT)
     : TT(std::move(TT)) {
   Options.EmulatedTLS = true;
-  Options.ExplicitEmulatedTLS = true;
   Options.UseInitArray = true;
 }
 
 Expected<JITTargetMachineBuilder> JITTargetMachineBuilder::detectHost() {
-  // FIXME: getProcessTriple is bogus. It returns the host LLVM was compiled on,
-  //        rather than a valid triple for the current process.
   JITTargetMachineBuilder TMBuilder((Triple(sys::getProcessTriple())));
 
   // Retrieve host CPU name and sub-target features and add them to builder.
@@ -129,16 +126,16 @@ void JITTargetMachineBuilderPrinter::print(raw_ostream &OS) const {
   OS << "\n"
      << Indent << "  Optimization Level = ";
   switch (JTMB.OptLevel) {
-  case CodeGenOpt::None:
+  case CodeGenOptLevel::None:
     OS << "None";
     break;
-  case CodeGenOpt::Less:
+  case CodeGenOptLevel::Less:
     OS << "Less";
     break;
-  case CodeGenOpt::Default:
+  case CodeGenOptLevel::Default:
     OS << "Default";
     break;
-  case CodeGenOpt::Aggressive:
+  case CodeGenOptLevel::Aggressive:
     OS << "Aggressive";
     break;
   }

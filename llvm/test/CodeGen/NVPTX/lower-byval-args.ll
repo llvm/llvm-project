@@ -1,7 +1,7 @@
-; RUN: llc < %s -mtriple nvptx64 -mcpu=sm_20 -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK,CHECK64
 ; RUN: llc < %s -mtriple nvptx -mcpu=sm_20 -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK,CHECK32
+; RUN: llc < %s -mtriple nvptx64 -mcpu=sm_20 -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK,CHECK64
+; RUN: %if ptxas && !ptxas-12.0 %{ llc < %s -mtriple nvptx -mcpu=sm_20 -verify-machineinstrs | %ptxas-verify %}
 ; RUN: %if ptxas %{ llc < %s -mtriple nvptx64 -mcpu=sm_20 -verify-machineinstrs | %ptxas-verify %}
-; RUN: %if ptxas %{ llc < %s -mtriple nvptx -mcpu=sm_20 -verify-machineinstrs | %ptxas-verify %}
 
 %struct.ham = type { [4 x i32] }
 
@@ -118,7 +118,7 @@ bb:
 
 ; Verify that if the pointer escapes, then we do fall back onto using a temp copy.
 ; CHECK-LABEL: .visible .entry pointer_escapes
-; CHECK: .local .align 8 .b8     __local_depot{{.*}}
+; CHECK: .local .align 4 .b8     __local_depot{{.*}}
 ; CHECK64: ld.param.u64    [[result_addr:%rd[0-9]+]], [{{.*}}_param_0]
 ; CHECK64: add.u64         %[[copy_addr:rd[0-9]+]], %SPL, 0;
 ; CHECK32: ld.param.u32    [[result_addr:%r[0-9]+]], [{{.*}}_param_0]

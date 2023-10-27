@@ -118,9 +118,9 @@ define <vscale x 2 x i64> @sel_64_shifted(<vscale x 2 x i1> %p) {
 define <vscale x 8 x i16> @sel_16_illegal_wrong_extension(<vscale x 8 x i1> %p) {
 ; CHECK-LABEL: sel_16_illegal_wrong_extension:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z0.h, #0 // =0x0
-; CHECK-NEXT:    mov z1.h, #128 // =0x80
-; CHECK-NEXT:    mov z0.h, p0/m, z1.h
+; CHECK-NEXT:    mov z0.h, #128 // =0x80
+; CHECK-NEXT:    mov z1.h, #0 // =0x0
+; CHECK-NEXT:    sel z0.h, p0, z0.h, z1.h
 ; CHECK-NEXT:    ret
   %vec = shufflevector <vscale x 8 x i16> insertelement (<vscale x 8 x i16> undef, i16 128, i32 0), <vscale x 8 x i16> zeroinitializer, <vscale x 8 x i32> zeroinitializer
   %sel = select <vscale x 8 x i1> %p, <vscale x 8 x i16> %vec, <vscale x 8 x i16> zeroinitializer
@@ -130,9 +130,9 @@ define <vscale x 8 x i16> @sel_16_illegal_wrong_extension(<vscale x 8 x i1> %p) 
 define <vscale x 4 x i32> @sel_32_illegal_wrong_extension(<vscale x 4 x i1> %p) {
 ; CHECK-LABEL: sel_32_illegal_wrong_extension:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z0.s, #0 // =0x0
-; CHECK-NEXT:    mov z1.s, #128 // =0x80
-; CHECK-NEXT:    mov z0.s, p0/m, z1.s
+; CHECK-NEXT:    mov z0.s, #128 // =0x80
+; CHECK-NEXT:    mov z1.s, #0 // =0x0
+; CHECK-NEXT:    sel z0.s, p0, z0.s, z1.s
 ; CHECK-NEXT:    ret
   %vec = shufflevector <vscale x 4 x i32> insertelement (<vscale x 4 x i32> undef, i32 128, i32 0), <vscale x 4 x i32> zeroinitializer, <vscale x 4 x i32> zeroinitializer
   %sel = select <vscale x 4 x i1> %p, <vscale x 4 x i32> %vec, <vscale x 4 x i32> zeroinitializer
@@ -142,9 +142,9 @@ define <vscale x 4 x i32> @sel_32_illegal_wrong_extension(<vscale x 4 x i1> %p) 
 define <vscale x 2 x i64> @sel_64_illegal_wrong_extension(<vscale x 2 x i1> %p) {
 ; CHECK-LABEL: sel_64_illegal_wrong_extension:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z0.d, #0 // =0x0
-; CHECK-NEXT:    mov z1.d, #128 // =0x80
-; CHECK-NEXT:    mov z0.d, p0/m, z1.d
+; CHECK-NEXT:    mov z0.d, #128 // =0x80
+; CHECK-NEXT:    mov z1.d, #0 // =0x0
+; CHECK-NEXT:    sel z0.d, p0, z0.d, z1.d
 ; CHECK-NEXT:    ret
   %vec = shufflevector <vscale x 2 x i64> insertelement (<vscale x 2 x i64> undef, i64 128, i32 0), <vscale x 2 x i64> zeroinitializer, <vscale x 2 x i32> zeroinitializer
   %sel = select <vscale x 2 x i1> %p, <vscale x 2 x i64> %vec, <vscale x 2 x i64> zeroinitializer
@@ -154,7 +154,7 @@ define <vscale x 2 x i64> @sel_64_illegal_wrong_extension(<vscale x 2 x i1> %p) 
 define <vscale x 8 x i16> @sel_16_illegal_shifted(<vscale x 8 x i1> %p) {
 ; CHECK-LABEL: sel_16_illegal_shifted:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #513
+; CHECK-NEXT:    mov w8, #513 // =0x201
 ; CHECK-NEXT:    mov z1.h, #0 // =0x0
 ; CHECK-NEXT:    mov z0.h, w8
 ; CHECK-NEXT:    sel z0.h, p0, z0.h, z1.h
@@ -167,7 +167,7 @@ define <vscale x 8 x i16> @sel_16_illegal_shifted(<vscale x 8 x i1> %p) {
 define <vscale x 4 x i32> @sel_32_illegal_shifted(<vscale x 4 x i1> %p) {
 ; CHECK-LABEL: sel_32_illegal_shifted:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #513
+; CHECK-NEXT:    mov w8, #513 // =0x201
 ; CHECK-NEXT:    mov z1.s, #0 // =0x0
 ; CHECK-NEXT:    mov z0.s, w8
 ; CHECK-NEXT:    sel z0.s, p0, z0.s, z1.s
@@ -180,7 +180,7 @@ define <vscale x 4 x i32> @sel_32_illegal_shifted(<vscale x 4 x i1> %p) {
 define <vscale x 2 x i64> @sel_64_illegal_shifted(<vscale x 2 x i1> %p) {
 ; CHECK-LABEL: sel_64_illegal_shifted:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #513
+; CHECK-NEXT:    mov w8, #513 // =0x201
 ; CHECK-NEXT:    mov z1.d, #0 // =0x0
 ; CHECK-NEXT:    mov z0.d, x8
 ; CHECK-NEXT:    sel z0.d, p0, z0.d, z1.d
@@ -363,7 +363,7 @@ ret <vscale x 2 x double> %sel
 define <vscale x 8 x half> @sel_merge_nxv8f16_negative_zero(<vscale x 8 x i1> %p, <vscale x 8 x half> %in) {
 ; CHECK-LABEL: sel_merge_nxv8f16_negative_zero:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #32768
+; CHECK-NEXT:    mov w8, #32768 // =0x8000
 ; CHECK-NEXT:    mov z1.h, w8
 ; CHECK-NEXT:    mov z0.h, p0/m, z1.h
 ; CHECK-NEXT:    ret
@@ -375,7 +375,7 @@ ret <vscale x 8 x half> %sel
 define <vscale x 4 x half> @sel_merge_nx4f16_negative_zero(<vscale x 4 x i1> %p, <vscale x 4 x half> %in) {
 ; CHECK-LABEL: sel_merge_nx4f16_negative_zero:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #32768
+; CHECK-NEXT:    mov w8, #32768 // =0x8000
 ; CHECK-NEXT:    mov z1.h, w8
 ; CHECK-NEXT:    mov z0.s, p0/m, z1.s
 ; CHECK-NEXT:    ret
@@ -387,7 +387,7 @@ ret <vscale x 4 x half> %sel
 define <vscale x 2 x half> @sel_merge_nx2f16_negative_zero(<vscale x 2 x i1> %p, <vscale x 2 x half> %in) {
 ; CHECK-LABEL: sel_merge_nx2f16_negative_zero:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #32768
+; CHECK-NEXT:    mov w8, #32768 // =0x8000
 ; CHECK-NEXT:    mov z1.h, w8
 ; CHECK-NEXT:    mov z0.d, p0/m, z1.d
 ; CHECK-NEXT:    ret
@@ -399,7 +399,7 @@ ret <vscale x 2 x half> %sel
 define <vscale x 4 x float> @sel_merge_nx4f32_negative_zero(<vscale x 4 x i1> %p, <vscale x 4 x float> %in) {
 ; CHECK-LABEL: sel_merge_nx4f32_negative_zero:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #-2147483648
+; CHECK-NEXT:    mov w8, #-2147483648 // =0x80000000
 ; CHECK-NEXT:    mov z1.s, w8
 ; CHECK-NEXT:    mov z0.s, p0/m, z1.s
 ; CHECK-NEXT:    ret
@@ -411,7 +411,7 @@ ret <vscale x 4 x float> %sel
 define <vscale x 2 x float> @sel_merge_nx2f32_negative_zero(<vscale x 2 x i1> %p, <vscale x 2 x float> %in) {
 ; CHECK-LABEL: sel_merge_nx2f32_negative_zero:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #-2147483648
+; CHECK-NEXT:    mov w8, #-2147483648 // =0x80000000
 ; CHECK-NEXT:    mov z1.s, w8
 ; CHECK-NEXT:    mov z0.d, p0/m, z1.d
 ; CHECK-NEXT:    ret
@@ -423,7 +423,7 @@ ret <vscale x 2 x float> %sel
 define <vscale x 2 x double> @sel_merge_nx2f64_negative_zero(<vscale x 2 x i1> %p, <vscale x 2 x double> %in) {
 ; CHECK-LABEL: sel_merge_nx2f64_negative_zero:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #-9223372036854775808
+; CHECK-NEXT:    mov x8, #-9223372036854775808 // =0x8000000000000000
 ; CHECK-NEXT:    mov z1.d, x8
 ; CHECK-NEXT:    mov z0.d, p0/m, z1.d
 ; CHECK-NEXT:    ret
@@ -502,7 +502,7 @@ define <vscale x 2 x i64> @sel_merge_64_illegal_wrong_extension(<vscale x 2 x i1
 define <vscale x 8 x i16> @sel_merge_16_illegal_shifted(<vscale x 8 x i1> %p, <vscale x 8 x i16> %in) {
 ; CHECK-LABEL: sel_merge_16_illegal_shifted:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #513
+; CHECK-NEXT:    mov w8, #513 // =0x201
 ; CHECK-NEXT:    mov z1.h, w8
 ; CHECK-NEXT:    mov z0.h, p0/m, z1.h
 ; CHECK-NEXT:    ret
@@ -514,7 +514,7 @@ define <vscale x 8 x i16> @sel_merge_16_illegal_shifted(<vscale x 8 x i1> %p, <v
 define <vscale x 4 x i32> @sel_merge_32_illegal_shifted(<vscale x 4 x i1> %p, <vscale x 4 x i32> %in) {
 ; CHECK-LABEL: sel_merge_32_illegal_shifted:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #513
+; CHECK-NEXT:    mov w8, #513 // =0x201
 ; CHECK-NEXT:    mov z1.s, w8
 ; CHECK-NEXT:    mov z0.s, p0/m, z1.s
 ; CHECK-NEXT:    ret
@@ -526,7 +526,7 @@ define <vscale x 4 x i32> @sel_merge_32_illegal_shifted(<vscale x 4 x i1> %p, <v
 define <vscale x 2 x i64> @sel_merge_64_illegal_shifted(<vscale x 2 x i1> %p, <vscale x 2 x i64> %in) {
 ; CHECK-LABEL: sel_merge_64_illegal_shifted:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #513
+; CHECK-NEXT:    mov w8, #513 // =0x201
 ; CHECK-NEXT:    mov z1.d, x8
 ; CHECK-NEXT:    mov z0.d, p0/m, z1.d
 ; CHECK-NEXT:    ret

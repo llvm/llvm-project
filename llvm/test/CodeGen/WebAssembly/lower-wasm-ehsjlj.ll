@@ -1,5 +1,5 @@
-; RUN: opt -opaque-pointers=0 < %s -wasm-lower-em-ehsjlj -wasm-enable-eh -wasm-enable-sjlj -S | FileCheck %s
-; RUN: llc -opaque-pointers=0 < %s -wasm-enable-eh -wasm-enable-sjlj -exception-model=wasm -mattr=+exception-handling -verify-machineinstrs
+; RUN: opt < %s -wasm-lower-em-ehsjlj -wasm-enable-eh -wasm-enable-sjlj -S | FileCheck %s
+; RUN: llc < %s -wasm-enable-eh -wasm-enable-sjlj -exception-model=wasm -mattr=+exception-handling -verify-machineinstrs
 
 target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
@@ -17,10 +17,10 @@ target triple = "wasm32-unknown-unknown"
 ;   } catch (...) {
 ;   }
 ; }
-define void @setjmp_and_try() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
+define void @setjmp_and_try() personality ptr @__gxx_wasm_personality_v0 {
 ; CHECK-LABEL: @setjmp_and_try
 entry:
-  %call = call i32 @setjmp(%struct.__jmp_buf_tag* getelementptr inbounds ([1 x %struct.__jmp_buf_tag], [1 x %struct.__jmp_buf_tag]* @_ZL3buf, i32 0, i32 0)) #0
+  %call = call i32 @setjmp(ptr @_ZL3buf) #0
   %cmp = icmp ne i32 %call, 0
   br i1 %cmp, label %return, label %if.end
 
@@ -34,14 +34,14 @@ catch.dispatch:                                   ; preds = %if.end
 ; CHECK-NEXT:    catchswitch within none [label %catch.start] unwind label %catch.dispatch.longjmp
 
 catch.start:                                      ; preds = %catch.dispatch
-  %1 = catchpad within %0 [i8* null]
-  %2 = call i8* @llvm.wasm.get.exception(token %1)
+  %1 = catchpad within %0 [ptr null]
+  %2 = call ptr @llvm.wasm.get.exception(token %1)
   %3 = call i32 @llvm.wasm.get.ehselector(token %1)
-  %4 = call i8* @__cxa_begin_catch(i8* %2) #2 [ "funclet"(token %1) ]
+  %4 = call ptr @__cxa_begin_catch(ptr %2) #2 [ "funclet"(token %1) ]
   call void @__cxa_end_catch() [ "funclet"(token %1) ]
   catchret from %1 to label %return
 ; CHECK:       catch.start:
-; CHECK:         [[T0:%.*]] = catchpad within {{.*}} [i8* null]
+; CHECK:         [[T0:%.*]] = catchpad within {{.*}} [ptr null]
 ; CHECK:         invoke void @__cxa_end_catch() [ "funclet"(token [[T0]]) ]
 ; CHECK-NEXT:    to label %.noexc unwind label %catch.dispatch.longjmp
 
@@ -65,21 +65,21 @@ return:                                           ; preds = %catch.start, %if.en
 ;   } catch (...) {
 ;   }
 ; }
-define void @setjmp_within_try() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
+define void @setjmp_within_try() personality ptr @__gxx_wasm_personality_v0 {
 ; CHECK-LABEL: @setjmp_within_try
 entry:
   %jmpval = alloca i32, align 4
-  %exn.slot = alloca i8*, align 4
+  %exn.slot = alloca ptr, align 4
   invoke void @foo()
   to label %invoke.cont unwind label %catch.dispatch
 
 invoke.cont:                                      ; preds = %entry
-  %call = invoke i32 @setjmp(%struct.__jmp_buf_tag* getelementptr inbounds ([1 x %struct.__jmp_buf_tag], [1 x %struct.__jmp_buf_tag]* @_ZL3buf, i32 0, i32 0)) #0
+  %call = invoke i32 @setjmp(ptr @_ZL3buf) #0
   to label %invoke.cont1 unwind label %catch.dispatch
 
 invoke.cont1:                                     ; preds = %invoke.cont
-  store i32 %call, i32* %jmpval, align 4
-  %0 = load i32, i32* %jmpval, align 4
+  store i32 %call, ptr %jmpval, align 4
+  %0 = load i32, ptr %jmpval, align 4
   %cmp = icmp ne i32 %0, 0
   br i1 %cmp, label %if.then, label %if.end
 
@@ -96,20 +96,20 @@ catch.dispatch:                                   ; preds = %if.end, %invoke.con
 ; CHECK:       catch.dispatch:
 ; CHECK:         catchswitch within none [label %catch.start] unwind label %catch.dispatch.longjmp
 catch.start:                                      ; preds = %catch.dispatch
-  %2 = catchpad within %1 [i8* null]
-  %3 = call i8* @llvm.wasm.get.exception(token %2)
-  store i8* %3, i8** %exn.slot, align 4
+  %2 = catchpad within %1 [ptr null]
+  %3 = call ptr @llvm.wasm.get.exception(token %2)
+  store ptr %3, ptr %exn.slot, align 4
   %4 = call i32 @llvm.wasm.get.ehselector(token %2)
   br label %catch
 
 catch:                                            ; preds = %catch.start
-  %exn = load i8*, i8** %exn.slot, align 4
-  %5 = call i8* @__cxa_begin_catch(i8* %exn) #2 [ "funclet"(token %2) ]
+  %exn = load ptr, ptr %exn.slot, align 4
+  %5 = call ptr @__cxa_begin_catch(ptr %exn) #2 [ "funclet"(token %2) ]
   call void @__cxa_end_catch() [ "funclet"(token %2) ]
   catchret from %2 to label %catchret.dest
 ; CHECK: catch:                                            ; preds = %catch.start
-; CHECK-NEXT:   %exn = load i8*, i8** %exn.slot15, align 4
-; CHECK-NEXT:   %5 = call i8* @__cxa_begin_catch(i8* %exn) #7 [ "funclet"(token %2) ]
+; CHECK-NEXT:   %exn = load ptr, ptr %exn.slot15, align 4
+; CHECK-NEXT:   %5 = call ptr @__cxa_begin_catch(ptr %exn) #7 [ "funclet"(token %2) ]
 ; CHECK-NEXT:   invoke void @__cxa_end_catch() [ "funclet"(token %2) ]
 ; CHECK-NEXT:           to label %.noexc unwind label %catch.dispatch.longjmp
 
@@ -140,10 +140,10 @@ invoke.cont2:                                     ; preds = %if.end
 ;   } catch (...) {
 ;   }
 ; }
-define void @setjmp_and_nested_try() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
+define void @setjmp_and_nested_try() personality ptr @__gxx_wasm_personality_v0 {
 ; CHECK-LABEL: @setjmp_and_nested_try
 entry:
-  %call = call i32 @setjmp(%struct.__jmp_buf_tag* getelementptr inbounds ([1 x %struct.__jmp_buf_tag], [1 x %struct.__jmp_buf_tag]* @_ZL3buf, i32 0, i32 0)) #0
+  %call = call i32 @setjmp(ptr @_ZL3buf) #0
   %cmp = icmp ne i32 %call, 0
   br i1 %cmp, label %try.cont10, label %if.end
 
@@ -159,10 +159,10 @@ catch.dispatch:                                   ; preds = %invoke.cont
   %0 = catchswitch within none [label %catch.start] unwind label %catch.dispatch5
 
 catch.start:                                      ; preds = %catch.dispatch
-  %1 = catchpad within %0 [i8* null]
-  %2 = call i8* @llvm.wasm.get.exception(token %1)
+  %1 = catchpad within %0 [ptr null]
+  %2 = call ptr @llvm.wasm.get.exception(token %1)
   %3 = call i32 @llvm.wasm.get.ehselector(token %1)
-  %4 = call i8* @__cxa_begin_catch(i8* %2) #2 [ "funclet"(token %1) ]
+  %4 = call ptr @__cxa_begin_catch(ptr %2) #2 [ "funclet"(token %1) ]
   invoke void @foo() [ "funclet"(token %1) ]
   to label %invoke.cont2 unwind label %ehcleanup
 
@@ -193,17 +193,17 @@ catch.dispatch5:                                  ; preds = %invoke.cont4, %invo
 ; CHECK-NEXT:    catchswitch within none [label %catch.start6] unwind label %catch.dispatch.longjmp
 
 catch.start6:                                     ; preds = %catch.dispatch5
-  %7 = catchpad within %6 [i8* null]
-  %8 = call i8* @llvm.wasm.get.exception(token %7)
+  %7 = catchpad within %6 [ptr null]
+  %8 = call ptr @llvm.wasm.get.exception(token %7)
   %9 = call i32 @llvm.wasm.get.ehselector(token %7)
-  %10 = call i8* @__cxa_begin_catch(i8* %8) #2 [ "funclet"(token %7) ]
+  %10 = call ptr @__cxa_begin_catch(ptr %8) #2 [ "funclet"(token %7) ]
   call void @__cxa_end_catch() [ "funclet"(token %7) ]
   catchret from %7 to label %try.cont10
 ; CHECK:       catch.start6:
-; CHECK-NEXT:    [[T1:%.*]] = catchpad within {{.*}} [i8* null]
-; CHECK-NEXT:    call i8* @llvm.wasm.get.exception(token [[T1]])
+; CHECK-NEXT:    [[T1:%.*]] = catchpad within {{.*}} [ptr null]
+; CHECK-NEXT:    call ptr @llvm.wasm.get.exception(token [[T1]])
 ; CHECK-NEXT:    call i32 @llvm.wasm.get.ehselector(token [[T1]])
-; CHECK-NEXT:    call i8* @__cxa_begin_catch(i8* {{.*}}) {{.*}} [ "funclet"(token [[T1]]) ]
+; CHECK-NEXT:    call ptr @__cxa_begin_catch(ptr {{.*}}) {{.*}} [ "funclet"(token [[T1]]) ]
 ; CHECK:         invoke void @__cxa_end_catch() [ "funclet"(token [[T1]]) ]
 ; CHECK-NEXT:    to label %.noexc unwind label %catch.dispatch.longjmp
 
@@ -230,9 +230,9 @@ terminate:                                        ; preds = %ehcleanup
 ; change to an invoke whose unwind destination is determined by its parent
 ; chain.
 ; CHECK-NEXT:    invoke void @terminate() {{.*}} [ "funclet"(token [[T2]]) ]
-; CHECK-NEXT:    to label %.noexc4 unwind label %catch.dispatch5
+; CHECK-NEXT:    to label %[[NOEXC:.*]] unwind label %catch.dispatch5
 
-; CHECK:       .noexc4:
+; CHECK:       [[NOEXC]]:
 ; CHECK-NEXT:    unreachable
 
 ; CHECK:       catch.dispatch.longjmp:
@@ -244,17 +244,16 @@ terminate:                                        ; preds = %ehcleanup
 ;   Temp t;
 ;   setjmp(buf);
 ; }
-define void @cleanuppad_no_parent() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
+define void @cleanuppad_no_parent() personality ptr @__gxx_wasm_personality_v0 {
 ; CHECK-LABEL: @cleanuppad_no_parent
 entry:
   %buf = alloca [1 x %struct.__jmp_buf_tag], align 16
   %t = alloca %struct.Temp, align 1
-  %arraydecay = getelementptr inbounds [1 x %struct.__jmp_buf_tag], [1 x %struct.__jmp_buf_tag]* %buf, i32 0, i32 0
-  %call = invoke i32 @setjmp(%struct.__jmp_buf_tag* noundef %arraydecay) #0
+  %call = invoke i32 @setjmp(ptr noundef %buf) #0
           to label %invoke.cont unwind label %ehcleanup
 
 invoke.cont:                                      ; preds = %entry
-  %call1 = call noundef %struct.Temp* @_ZN4TempD2Ev(%struct.Temp* noundef %t) #2
+  %call1 = call noundef ptr @_ZN4TempD2Ev(ptr noundef %t) #2
   ret void
 
 ehcleanup:                                        ; preds = %entry
@@ -265,8 +264,8 @@ ehcleanup:                                        ; preds = %entry
   ; first to preserve the scoping structure. But this call's parent is %0
   ; (cleanuppad), whose parent is 'none', so we should unwind directly to
   ; %catch.dispatch.longjmp.
-  %call2 = call noundef %struct.Temp* @_ZN4TempD2Ev(%struct.Temp* noundef %t) #2 [ "funclet"(token %0) ]
-; CHECK: %call13 = invoke {{.*}} %struct.Temp* @_ZN4TempD2Ev(%struct.Temp*
+  %call2 = call noundef ptr @_ZN4TempD2Ev(ptr noundef %t) #2 [ "funclet"(token %0) ]
+; CHECK: %call13 = invoke {{.*}} ptr @_ZN4TempD2Ev(ptr
 ; CHECK-NEXT:    to label {{.*}} unwind label %catch.dispatch.longjmp
   cleanupret from %0 unwind to caller
 }
@@ -274,12 +273,11 @@ ehcleanup:                                        ; preds = %entry
 ; This case was adapted from @cleanuppad_no_parent by removing allocas and
 ; destructor calls, to generate a situation that there's only 'invoke @setjmp'
 ; and no other longjmpable calls.
-define i32 @setjmp_only() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
+define i32 @setjmp_only() personality ptr @__gxx_wasm_personality_v0 {
 ; CHECK-LABEL: @setjmp_only
 entry:
   %buf = alloca [1 x %struct.__jmp_buf_tag], align 16
-  %arraydecay = getelementptr inbounds [1 x %struct.__jmp_buf_tag], [1 x %struct.__jmp_buf_tag]* %buf, i32 0, i32 0
-  %call = invoke i32 @setjmp(%struct.__jmp_buf_tag* noundef %arraydecay) #0
+  %call = invoke i32 @setjmp(ptr noundef %buf) #0
           to label %invoke.cont unwind label %ehcleanup
 
 invoke.cont:                                      ; preds = %entry
@@ -296,17 +294,17 @@ ehcleanup:                                        ; preds = %entry
 
 declare void @foo()
 ; Function Attrs: nounwind
-declare %struct.Temp* @_ZN4TempD2Ev(%struct.Temp* %this) #2
+declare ptr @_ZN4TempD2Ev(ptr %this) #2
 ; Function Attrs: returns_twice
-declare i32 @setjmp(%struct.__jmp_buf_tag*) #0
+declare i32 @setjmp(ptr) #0
 ; Function Attrs: noreturn
-declare void @longjmp(%struct.__jmp_buf_tag*, i32) #1
+declare void @longjmp(ptr, i32) #1
 declare i32 @__gxx_wasm_personality_v0(...)
 ; Function Attrs: nounwind
-declare i8* @llvm.wasm.get.exception(token) #2
+declare ptr @llvm.wasm.get.exception(token) #2
 ; Function Attrs: nounwind
 declare i32 @llvm.wasm.get.ehselector(token) #2
-declare i8* @__cxa_begin_catch(i8*)
+declare ptr @__cxa_begin_catch(ptr)
 declare void @__cxa_end_catch()
 declare void @terminate()
 

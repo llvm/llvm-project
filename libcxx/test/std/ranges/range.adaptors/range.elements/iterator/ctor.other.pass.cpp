@@ -21,7 +21,7 @@ template <bool Const>
 struct ConvertibleIter : IterBase<ConvertibleIter<Const>> {
   using iterator_category = std::random_access_iterator_tag;
   using value_type        = std::tuple<int>;
-  using difference_type   = intptr_t;
+  using difference_type   = std::intptr_t;
 
   bool movedFromOtherConst = false;
   int i                    = 0;

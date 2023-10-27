@@ -1,15 +1,15 @@
-public _blake3_hash_many_sse2
-public blake3_hash_many_sse2
-public blake3_compress_in_place_sse2
-public _blake3_compress_in_place_sse2
-public blake3_compress_xof_sse2
-public _blake3_compress_xof_sse2
+public _llvm_blake3_hash_many_sse2
+public llvm_blake3_hash_many_sse2
+public llvm_blake3_compress_in_place_sse2
+public _llvm_blake3_compress_in_place_sse2
+public llvm_blake3_compress_xof_sse2
+public _llvm_blake3_compress_xof_sse2
 
 _TEXT   SEGMENT ALIGN(16) 'CODE'
 
 ALIGN   16
-blake3_hash_many_sse2 PROC
-_blake3_hash_many_sse2 PROC
+llvm_blake3_hash_many_sse2 PROC
+_llvm_blake3_hash_many_sse2 PROC
         push    r15
         push    r14
         push    r13
@@ -2034,11 +2034,11 @@ endroundloop1:
         movups  xmmword ptr [rbx], xmm0
         movups  xmmword ptr [rbx+10H], xmm1
         jmp     unwind
-_blake3_hash_many_sse2 ENDP
-blake3_hash_many_sse2 ENDP
+_llvm_blake3_hash_many_sse2 ENDP
+llvm_blake3_hash_many_sse2 ENDP
 
-blake3_compress_in_place_sse2 PROC
-_blake3_compress_in_place_sse2 PROC
+llvm_blake3_compress_in_place_sse2 PROC
+_llvm_blake3_compress_in_place_sse2 PROC
         sub     rsp, 120
         movdqa  xmmword ptr [rsp], xmm6
         movdqa  xmmword ptr [rsp+10H], xmm7
@@ -2164,12 +2164,12 @@ _blake3_compress_in_place_sse2 PROC
         movdqa  xmm15, xmmword ptr [rsp+60H]
         add     rsp, 120
         ret
-_blake3_compress_in_place_sse2 ENDP
-blake3_compress_in_place_sse2 ENDP
+_llvm_blake3_compress_in_place_sse2 ENDP
+llvm_blake3_compress_in_place_sse2 ENDP
 
 ALIGN 16
-blake3_compress_xof_sse2 PROC
-_blake3_compress_xof_sse2 PROC
+llvm_blake3_compress_xof_sse2 PROC
+_llvm_blake3_compress_xof_sse2 PROC
         sub     rsp, 120
         movdqa  xmmword ptr [rsp], xmm6
         movdqa  xmmword ptr [rsp+10H], xmm7
@@ -2302,8 +2302,8 @@ _blake3_compress_xof_sse2 PROC
         movdqa  xmm15, xmmword ptr [rsp+60H]
         add     rsp, 120
         ret
-_blake3_compress_xof_sse2 ENDP
-blake3_compress_xof_sse2 ENDP
+_llvm_blake3_compress_xof_sse2 ENDP
+llvm_blake3_compress_xof_sse2 ENDP
 
 _TEXT ENDS
 

@@ -15,6 +15,7 @@
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_errno.h"
 #include "sanitizer_common/sanitizer_placement_new.h"
+#include "tsan_interface.h"
 #include "tsan_mman.h"
 #include "tsan_rtl.h"
 #include "tsan_report.h"
@@ -24,6 +25,8 @@ namespace __tsan {
 
 struct MapUnmapCallback {
   void OnMap(uptr p, uptr size) const { }
+  void OnMapSecondary(uptr p, uptr size, uptr user_begin,
+                      uptr user_size) const {};
   void OnUnmap(uptr p, uptr size) const {
     // We are about to unmap a chunk of user memory.
     // Mark the corresponding shadow memory as not needed.
@@ -351,10 +354,35 @@ void *user_pvalloc(ThreadState *thr, uptr pc, uptr sz) {
   return SetErrnoOnNull(user_alloc_internal(thr, pc, sz, PageSize));
 }
 
+static const void *user_alloc_begin(const void *p) {
+  if (p == nullptr || !IsAppMem((uptr)p))
+    return nullptr;
+  void *beg = allocator()->GetBlockBegin(p);
+  if (!beg)
+    return nullptr;
+
+  MBlock *b = ctx->metamap.GetBlock((uptr)beg);
+  if (!b)
+    return nullptr;  // Not a valid pointer.
+
+  return (const void *)beg;
+}
+
 uptr user_alloc_usable_size(const void *p) {
   if (p == 0 || !IsAppMem((uptr)p))
     return 0;
   MBlock *b = ctx->metamap.GetBlock((uptr)p);
+  if (!b)
+    return 0;  // Not a valid pointer.
+  if (b->siz == 0)
+    return 1;  // Zero-sized allocations are actually 1 byte.
+  return b->siz;
+}
+
+uptr user_alloc_usable_size_fast(const void *p) {
+  MBlock *b = ctx->metamap.GetBlock((uptr)p);
+  // Static objects may have malloc'd before tsan completes
+  // initialization, and may believe returned ptrs to be valid.
   if (!b)
     return 0;  // Not a valid pointer.
   if (b->siz == 0)
@@ -429,8 +457,23 @@ int __sanitizer_get_ownership(const void *p) {
   return allocator()->GetBlockBegin(p) != 0;
 }
 
+const void *__sanitizer_get_allocated_begin(const void *p) {
+  return user_alloc_begin(p);
+}
+
 uptr __sanitizer_get_allocated_size(const void *p) {
   return user_alloc_usable_size(p);
+}
+
+uptr __sanitizer_get_allocated_size_fast(const void *p) {
+  DCHECK_EQ(p, __sanitizer_get_allocated_begin(p));
+  uptr ret = user_alloc_usable_size_fast(p);
+  DCHECK_EQ(ret, __sanitizer_get_allocated_size(p));
+  return ret;
+}
+
+void __sanitizer_purge_allocator() {
+  allocator()->ForceReleaseToOS();
 }
 
 void __tsan_on_thread_idle() {

@@ -23,6 +23,7 @@ unittest("FrontendTests") {
     "OutputStreamTest.cpp",
     "PCHPreambleTest.cpp",
     "ParsedSourceLocationTest.cpp",
+    "ReparseWorkingDirTest.cpp",
     "TextDiagnosticTest.cpp",
     "UtilsTest.cpp",
   ]

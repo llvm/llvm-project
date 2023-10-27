@@ -14,14 +14,14 @@
 #include "type_algorithms.h"
 
 // concatenate
-static_assert(std::is_same<meta::concatenate_t<meta::type_list<> >, meta::type_list<> >::value, "");
-static_assert(std::is_same<meta::concatenate_t<meta::type_list<int> >, meta::type_list<int> >::value, "");
+static_assert(std::is_same<types::concatenate_t<types::type_list<> >, types::type_list<> >::value, "");
+static_assert(std::is_same<types::concatenate_t<types::type_list<int> >, types::type_list<int> >::value, "");
 static_assert(
-    std::is_same<meta::concatenate_t<meta::type_list<int>, meta::type_list<long> >, meta::type_list<int, long> >::value,
+    std::is_same<types::concatenate_t<types::type_list<int>, types::type_list<long> >, types::type_list<int, long> >::value,
     "");
 static_assert(
-    std::is_same<meta::concatenate_t<meta::type_list<int>, meta::type_list<long>, meta::type_list<long long> >,
-                 meta::type_list<int, long, long long> >::value,
+    std::is_same<types::concatenate_t<types::type_list<int>, types::type_list<long>, types::type_list<long long> >,
+                 types::type_list<int, long, long long> >::value,
     "");
 
 // apply_all
@@ -57,7 +57,7 @@ struct Identity {
 
 TEST_CONSTEXPR_CXX20 void test_for_each() {
   bool is_called_array[3] = {};
-  meta::for_each(meta::type_list<NumT<0>, NumT<1>, NumT<2> >(), ApplyAllTest(is_called_array));
+  types::for_each(types::type_list<NumT<0>, NumT<1>, NumT<2> >(), ApplyAllTest(is_called_array));
   assert(std::all_of(is_called_array, is_called_array + 3, Identity()));
 }
 

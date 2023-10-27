@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -std=c++1y %s -triple x86_64-linux-gnu -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -std=c++1y %s -triple x86_64-linux-gnu -emit-llvm -o - | FileCheck %s
 
 struct A {
   int n = 0;
@@ -29,7 +29,7 @@ A c { 1, 0, 'A', f(), { 3 } };
 
 // @b has a constant initializer
 // CHECK: @[[STR_B:.*]] = {{.*}} [8 x i8] c"bazquux\00"
-// CHECK: @b ={{.*}} global {{.*}} i32 4, {{.*}} @[[STR_B]], {{.*}} i8 117, i32 42, {{.*}} i8 9
+// CHECK: @b ={{.*}} global {{.*}} i32 4, {{.*}} @[[STR_B]], i8 117, i32 42, {{.*}} i8 9
 
 B x;
 B y {};
@@ -49,15 +49,15 @@ C n{};
 
 // Initialization of 'a':
 
-// CHECK: store i32 0, i32* getelementptr inbounds ({{.*}} @a, i32 0, i32 0)
-// CHECK: store i8* {{.*}} @[[STR_A]]{{.*}}, i8** getelementptr inbounds ({{.*}} @a, i32 0, i32 1)
-// CHECK: load i8*, i8** getelementptr inbounds ({{.*}} @a, i32 0, i32 1)
-// CHECK: load i32, i32* getelementptr inbounds ({{.*}} @a, i32 0, i32 0)
-// CHECK: getelementptr inbounds i8, i8* %{{.*}}, {{.*}} %{{.*}}
-// CHECK: store i8 %{{.*}}, i8* getelementptr inbounds ({{.*}} @a, i32 0, i32 2)
+// CHECK: store i32 0, ptr @a
+// CHECK: store ptr @[[STR_A]], ptr getelementptr inbounds ({{.*}} @a, i32 0, i32 1)
+// CHECK: load ptr, ptr getelementptr inbounds ({{.*}} @a, i32 0, i32 1)
+// CHECK: load i32, ptr @a
+// CHECK: getelementptr inbounds i8, ptr %{{.*}}, {{.*}} %{{.*}}
+// CHECK: store i8 %{{.*}}, ptr getelementptr inbounds ({{.*}} @a, i32 0, i32 2)
 // CHECK: call noundef i32 @_ZN1A1fEv({{.*}} @a)
-// CHECK: store i32 %{{.*}}, i32* getelementptr inbounds ({{.*}}, {{.*}}* @a, i32 0, i32 3)
-// CHECK: store double 1.000000e+00, double* getelementptr inbounds ({{.*}} @a, i32 0, i32 4, i32 0)
+// CHECK: store i32 %{{.*}}, ptr getelementptr inbounds ({{.*}}, ptr @a, i32 0, i32 3)
+// CHECK: store double 1.000000e+00, ptr getelementptr inbounds ({{.*}} @a, i32 0, i32 4)
 
 // No dynamic initialization of 'b':
 
@@ -65,16 +65,16 @@ C n{};
 
 // Initialization of 'c':
 
-// CHECK: store i32 1, i32* getelementptr inbounds ({{.*}} @c, i32 0, i32 0)
-// CHECK: store i8* null, i8** getelementptr inbounds ({{.*}} @c, i32 0, i32 1)
+// CHECK: store i32 1, ptr @c
+// CHECK: store ptr null, ptr getelementptr inbounds ({{.*}} @c, i32 0, i32 1)
 // CHECK-NOT: load
-// CHECK: store i8 65, i8* getelementptr inbounds ({{.*}} @c, i32 0, i32 2)
+// CHECK: store i8 65, ptr getelementptr inbounds ({{.*}} @c, i32 0, i32 2)
 // CHECK: call noundef i32 @_Z1fv()
-// CHECK: store i32 %{{.*}}, i32* getelementptr inbounds ({{.*}}, {{.*}}* @c, i32 0, i32 3)
+// CHECK: store i32 %{{.*}}, ptr getelementptr inbounds ({{.*}}, ptr @c, i32 0, i32 3)
 // CHECK-NOT: C1Ev
-// CHECK: store i8 3, i8* {{.*}} @c, i32 0, i32 4)
+// CHECK: store i8 3, ptr {{.*}} @c, i32 0, i32 4)
 
 // CHECK: call void @_ZN1BC1Ev({{.*}} @x)
 
 // CHECK: call noundef i32 @_ZN1B1fEv({{.*}} @y)
-// CHECK: store i32 %{{.*}}, i32* getelementptr inbounds ({{.*}} @y, i32 0, i32 0)
+// CHECK: store i32 %{{.*}}, ptr @y

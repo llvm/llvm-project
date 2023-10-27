@@ -46,7 +46,7 @@
 
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Core/StreamFile.h"
+#include "lldb/Host/StreamFile.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/State.h"
@@ -128,8 +128,8 @@ CommandInterpreter::CommandInterpreter(Debugger &debugger,
                                        bool synchronous_execution)
     : Broadcaster(debugger.GetBroadcasterManager(),
                   CommandInterpreter::GetStaticBroadcasterClass().AsCString()),
-      Properties(OptionValuePropertiesSP(
-          new OptionValueProperties(ConstString("interpreter")))),
+      Properties(
+          OptionValuePropertiesSP(new OptionValueProperties("interpreter"))),
       IOHandlerDelegate(IOHandlerDelegate::Completion::LLDBCommand),
       m_debugger(debugger), m_synchronous_execution(true),
       m_skip_lldbinit_files(false), m_skip_app_init_files(false),
@@ -146,73 +146,73 @@ CommandInterpreter::CommandInterpreter(Debugger &debugger,
 
 bool CommandInterpreter::GetExpandRegexAliases() const {
   const uint32_t idx = ePropertyExpandRegexAliases;
-  return m_collection_sp->GetPropertyAtIndexAsBoolean(
-      nullptr, idx, g_interpreter_properties[idx].default_uint_value != 0);
+  return GetPropertyAtIndexAs<bool>(
+      idx, g_interpreter_properties[idx].default_uint_value != 0);
 }
 
 bool CommandInterpreter::GetPromptOnQuit() const {
   const uint32_t idx = ePropertyPromptOnQuit;
-  return m_collection_sp->GetPropertyAtIndexAsBoolean(
-      nullptr, idx, g_interpreter_properties[idx].default_uint_value != 0);
+  return GetPropertyAtIndexAs<bool>(
+      idx, g_interpreter_properties[idx].default_uint_value != 0);
 }
 
 void CommandInterpreter::SetPromptOnQuit(bool enable) {
   const uint32_t idx = ePropertyPromptOnQuit;
-  m_collection_sp->SetPropertyAtIndexAsBoolean(nullptr, idx, enable);
+  SetPropertyAtIndex(idx, enable);
 }
 
 bool CommandInterpreter::GetSaveSessionOnQuit() const {
   const uint32_t idx = ePropertySaveSessionOnQuit;
-  return m_collection_sp->GetPropertyAtIndexAsBoolean(
-      nullptr, idx, g_interpreter_properties[idx].default_uint_value != 0);
+  return GetPropertyAtIndexAs<bool>(
+      idx, g_interpreter_properties[idx].default_uint_value != 0);
 }
 
 void CommandInterpreter::SetSaveSessionOnQuit(bool enable) {
   const uint32_t idx = ePropertySaveSessionOnQuit;
-  m_collection_sp->SetPropertyAtIndexAsBoolean(nullptr, idx, enable);
+  SetPropertyAtIndex(idx, enable);
 }
 
 bool CommandInterpreter::GetOpenTranscriptInEditor() const {
   const uint32_t idx = ePropertyOpenTranscriptInEditor;
-  return m_collection_sp->GetPropertyAtIndexAsBoolean(
-      nullptr, idx, g_interpreter_properties[idx].default_uint_value != 0);
+  return GetPropertyAtIndexAs<bool>(
+      idx, g_interpreter_properties[idx].default_uint_value != 0);
 }
 
 void CommandInterpreter::SetOpenTranscriptInEditor(bool enable) {
   const uint32_t idx = ePropertyOpenTranscriptInEditor;
-  m_collection_sp->SetPropertyAtIndexAsBoolean(nullptr, idx, enable);
+  SetPropertyAtIndex(idx, enable);
 }
 
 FileSpec CommandInterpreter::GetSaveSessionDirectory() const {
   const uint32_t idx = ePropertySaveSessionDirectory;
-  return m_collection_sp->GetPropertyAtIndexAsFileSpec(nullptr, idx);
+  return GetPropertyAtIndexAs<FileSpec>(idx, {});
 }
 
 void CommandInterpreter::SetSaveSessionDirectory(llvm::StringRef path) {
   const uint32_t idx = ePropertySaveSessionDirectory;
-  m_collection_sp->SetPropertyAtIndexAsString(nullptr, idx, path);
+  SetPropertyAtIndex(idx, path);
 }
 
 bool CommandInterpreter::GetEchoCommands() const {
   const uint32_t idx = ePropertyEchoCommands;
-  return m_collection_sp->GetPropertyAtIndexAsBoolean(
-      nullptr, idx, g_interpreter_properties[idx].default_uint_value != 0);
+  return GetPropertyAtIndexAs<bool>(
+      idx, g_interpreter_properties[idx].default_uint_value != 0);
 }
 
 void CommandInterpreter::SetEchoCommands(bool enable) {
   const uint32_t idx = ePropertyEchoCommands;
-  m_collection_sp->SetPropertyAtIndexAsBoolean(nullptr, idx, enable);
+  SetPropertyAtIndex(idx, enable);
 }
 
 bool CommandInterpreter::GetEchoCommentCommands() const {
   const uint32_t idx = ePropertyEchoCommentCommands;
-  return m_collection_sp->GetPropertyAtIndexAsBoolean(
-      nullptr, idx, g_interpreter_properties[idx].default_uint_value != 0);
+  return GetPropertyAtIndexAs<bool>(
+      idx, g_interpreter_properties[idx].default_uint_value != 0);
 }
 
 void CommandInterpreter::SetEchoCommentCommands(bool enable) {
   const uint32_t idx = ePropertyEchoCommentCommands;
-  m_collection_sp->SetPropertyAtIndexAsBoolean(nullptr, idx, enable);
+  SetPropertyAtIndex(idx, enable);
 }
 
 void CommandInterpreter::AllowExitCodeOnQuit(bool allow) {
@@ -246,26 +246,26 @@ void CommandInterpreter::ResolveCommand(const char *command_line,
 
 bool CommandInterpreter::GetStopCmdSourceOnError() const {
   const uint32_t idx = ePropertyStopCmdSourceOnError;
-  return m_collection_sp->GetPropertyAtIndexAsBoolean(
-      nullptr, idx, g_interpreter_properties[idx].default_uint_value != 0);
+  return GetPropertyAtIndexAs<bool>(
+      idx, g_interpreter_properties[idx].default_uint_value != 0);
 }
 
 bool CommandInterpreter::GetSpaceReplPrompts() const {
   const uint32_t idx = ePropertySpaceReplPrompts;
-  return m_collection_sp->GetPropertyAtIndexAsBoolean(
-      nullptr, idx, g_interpreter_properties[idx].default_uint_value != 0);
+  return GetPropertyAtIndexAs<bool>(
+      idx, g_interpreter_properties[idx].default_uint_value != 0);
 }
 
 bool CommandInterpreter::GetRepeatPreviousCommand() const {
   const uint32_t idx = ePropertyRepeatPreviousCommand;
-  return m_collection_sp->GetPropertyAtIndexAsBoolean(
-      nullptr, idx, g_interpreter_properties[idx].default_uint_value != 0);
+  return GetPropertyAtIndexAs<bool>(
+      idx, g_interpreter_properties[idx].default_uint_value != 0);
 }
 
 bool CommandInterpreter::GetRequireCommandOverwrite() const {
   const uint32_t idx = ePropertyRequireCommandOverwrite;
-  return m_collection_sp->GetPropertyAtIndexAsBoolean(
-      nullptr, idx, g_interpreter_properties[idx].default_uint_value != 0);
+  return GetPropertyAtIndexAs<bool>(
+      idx, g_interpreter_properties[idx].default_uint_value != 0);
 }
 
 void CommandInterpreter::Initialize() {
@@ -413,17 +413,21 @@ void CommandInterpreter::Initialize() {
 
   alias_arguments_vector_sp = std::make_shared<OptionArgVector>();
 
-  cmd_obj_sp = GetCommandSPExact("expression");
+  cmd_obj_sp = GetCommandSPExact("dwim-print");
   if (cmd_obj_sp) {
     AddAlias("p", cmd_obj_sp, "--")->SetHelpLong("");
     AddAlias("print", cmd_obj_sp, "--")->SetHelpLong("");
-    AddAlias("call", cmd_obj_sp, "--")->SetHelpLong("");
     if (auto *po = AddAlias("po", cmd_obj_sp, "-O --")) {
       po->SetHelp("Evaluate an expression on the current thread.  Displays any "
                   "returned value with formatting "
                   "controlled by the type's author.");
       po->SetHelpLong("");
     }
+  }
+
+  cmd_obj_sp = GetCommandSPExact("expression");
+  if (cmd_obj_sp) {
+    AddAlias("call", cmd_obj_sp, "--")->SetHelpLong("");
     CommandAlias *parray_alias =
         AddAlias("parray", cmd_obj_sp, "--element-count %1 --");
     if (parray_alias) {
@@ -503,6 +507,11 @@ void CommandInterpreter::Initialize() {
   cmd_obj_sp = GetCommandSPExact("session history");
   if (cmd_obj_sp) {
     AddAlias("history", cmd_obj_sp);
+  }
+
+  cmd_obj_sp = GetCommandSPExact("help");
+  if (cmd_obj_sp) {
+    AddAlias("h", cmd_obj_sp);
   }
 }
 
@@ -612,10 +621,7 @@ void CommandInterpreter::LoadCommandDictionary() {
           "current file\n"
           "                                    // containing text 'break "
           "here'.\n",
-          3,
-          CommandCompletions::eSymbolCompletion |
-              CommandCompletions::eSourceFileCompletion,
-          false));
+          lldb::eSymbolCompletion | lldb::eSourceFileCompletion, false));
 
   if (break_regex_cmd_up) {
     bool success = true;
@@ -666,10 +672,7 @@ void CommandInterpreter::LoadCommandDictionary() {
           "current file\n"
           "                                    // containing text 'break "
           "here'.\n",
-          2,
-          CommandCompletions::eSymbolCompletion |
-              CommandCompletions::eSourceFileCompletion,
-          false));
+          lldb::eSymbolCompletion | lldb::eSourceFileCompletion, false));
 
   if (tbreak_regex_cmd_up) {
     bool success = true;
@@ -694,7 +697,7 @@ void CommandInterpreter::LoadCommandDictionary() {
   std::unique_ptr<CommandObjectRegexCommand> attach_regex_cmd_up(
       new CommandObjectRegexCommand(
           *this, "_regexp-attach", "Attach to process by ID or name.",
-          "_regexp-attach <pid> | <process-name>", 2, 0, false));
+          "_regexp-attach <pid> | <process-name>", 0, false));
   if (attach_regex_cmd_up) {
     if (attach_regex_cmd_up->AddRegexCommand("^([0-9]+)[[:space:]]*$",
                                              "process attach --pid %1") &&
@@ -716,7 +719,7 @@ void CommandInterpreter::LoadCommandDictionary() {
                                     "Select a newer stack frame.  Defaults to "
                                     "moving one frame, a numeric argument can "
                                     "specify an arbitrary number.",
-                                    "_regexp-down [<count>]", 2, 0, false));
+                                    "_regexp-down [<count>]", 0, false));
   if (down_regex_cmd_up) {
     if (down_regex_cmd_up->AddRegexCommand("^$", "frame select -r -1") &&
         down_regex_cmd_up->AddRegexCommand("^([0-9]+)$",
@@ -732,7 +735,7 @@ void CommandInterpreter::LoadCommandDictionary() {
           *this, "_regexp-up",
           "Select an older stack frame.  Defaults to moving one "
           "frame, a numeric argument can specify an arbitrary number.",
-          "_regexp-up [<count>]", 2, 0, false));
+          "_regexp-up [<count>]", 0, false));
   if (up_regex_cmd_up) {
     if (up_regex_cmd_up->AddRegexCommand("^$", "frame select -r 1") &&
         up_regex_cmd_up->AddRegexCommand("^([0-9]+)$", "frame select -r %1")) {
@@ -746,7 +749,7 @@ void CommandInterpreter::LoadCommandDictionary() {
       new CommandObjectRegexCommand(
           *this, "_regexp-display",
           "Evaluate an expression at every stop (see 'help target stop-hook'.)",
-          "_regexp-display expression", 2, 0, false));
+          "_regexp-display expression", 0, false));
   if (display_regex_cmd_up) {
     if (display_regex_cmd_up->AddRegexCommand(
             "^(.+)$", "target stop-hook add -o \"expr -- %1\"")) {
@@ -760,7 +763,7 @@ void CommandInterpreter::LoadCommandDictionary() {
       new CommandObjectRegexCommand(*this, "_regexp-undisplay",
                                     "Stop displaying expression at every "
                                     "stop (specified by stop-hook index.)",
-                                    "_regexp-undisplay stop-hook-number", 2, 0,
+                                    "_regexp-undisplay stop-hook-number", 0,
                                     false));
   if (undisplay_regex_cmd_up) {
     if (undisplay_regex_cmd_up->AddRegexCommand("^([0-9]+)$",
@@ -778,7 +781,7 @@ void CommandInterpreter::LoadCommandDictionary() {
           "If no host is specifed, localhost is assumed.\n"
           "gdb-remote is an abbreviation for 'process connect --plugin "
           "gdb-remote connect://<hostname>:<port>'\n",
-          "gdb-remote [<hostname>:]<portnum>", 2, 0, false));
+          "gdb-remote [<hostname>:]<portnum>", 0, false));
   if (connect_gdb_remote_cmd_up) {
     if (connect_gdb_remote_cmd_up->AddRegexCommand(
             "^([^:]+|\\[[0-9a-fA-F:]+.*\\]):([0-9]+)$",
@@ -798,7 +801,7 @@ void CommandInterpreter::LoadCommandDictionary() {
           "If no UDP port is specified, port 41139 is assumed.\n"
           "kdp-remote is an abbreviation for 'process connect --plugin "
           "kdp-remote udp://<hostname>:<port>'\n",
-          "kdp-remote <hostname>[:<portnum>]", 2, 0, false));
+          "kdp-remote <hostname>[:<portnum>]", 0, false));
   if (connect_kdp_remote_cmd_up) {
     if (connect_kdp_remote_cmd_up->AddRegexCommand(
             "^([^:]+:[[:digit:]]+)$",
@@ -818,7 +821,7 @@ void CommandInterpreter::LoadCommandDictionary() {
           "frames.  The argument 'all' displays all threads.  Use 'settings"
           " set frame-format' to customize the printing of individual frames "
           "and 'settings set thread-format' to customize the thread header.",
-          "bt [<digit> | all]", 2, 0, false));
+          "bt [<digit> | all]", 0, false));
   if (bt_regex_cmd_up) {
     // accept but don't document "bt -c <number>" -- before bt was a regex
     // command if you wanted to backtrace three frames you would do "bt -c 3"
@@ -847,7 +850,7 @@ void CommandInterpreter::LoadCommandDictionary() {
           "_regexp-list 0x<address>     // List around specified address\n"
           "_regexp-list -[<count>]      // List previous <count> lines\n"
           "_regexp-list                 // List subsequent lines",
-          2, CommandCompletions::eSourceFileCompletion, false));
+          lldb::eSourceFileCompletion, false));
   if (list_regex_cmd_up) {
     if (list_regex_cmd_up->AddRegexCommand("^([0-9]+)[[:space:]]*$",
                                            "source list --line %1") &&
@@ -879,7 +882,7 @@ void CommandInterpreter::LoadCommandDictionary() {
           "\n"
           "_regexp-env                  // Show environment\n"
           "_regexp-env <name>=<value>   // Set an environment variable",
-          2, 0, false));
+          0, false));
   if (env_regex_cmd_up) {
     if (env_regex_cmd_up->AddRegexCommand("^$",
                                           "settings show target.env-vars") &&
@@ -899,7 +902,7 @@ void CommandInterpreter::LoadCommandDictionary() {
           "_regexp-jump +<line-offset> | -<line-offset>\n"
           "_regexp-jump <file>:<line>\n"
           "_regexp-jump *<addr>\n",
-          2, 0, false));
+          0, false));
   if (jump_regex_cmd_up) {
     if (jump_regex_cmd_up->AddRegexCommand("^\\*(.*)$",
                                            "thread jump --addr %1") &&
@@ -1229,36 +1232,11 @@ CommandObject *
 CommandInterpreter::GetCommandObject(llvm::StringRef cmd_str,
                                      StringList *matches,
                                      StringList *descriptions) const {
-  CommandObject *command_obj =
-      GetCommandSP(cmd_str, false, true, matches, descriptions).get();
-
-  // If we didn't find an exact match to the command string in the commands,
-  // look in the aliases.
-
-  if (command_obj)
-    return command_obj;
-
-  command_obj = GetCommandSP(cmd_str, true, true, matches, descriptions).get();
-
-  if (command_obj)
-    return command_obj;
-
-  // If there wasn't an exact match then look for an inexact one in just the
-  // commands
-  command_obj = GetCommandSP(cmd_str, false, false, nullptr).get();
-
-  // Finally, if there wasn't an inexact match among the commands, look for an
-  // inexact match in both the commands and aliases.
-
-  if (command_obj) {
-    if (matches)
-      matches->AppendString(command_obj->GetCommandName());
-    if (descriptions)
-      descriptions->AppendString(command_obj->GetHelp());
-    return command_obj;
-  }
-
-  return GetCommandSP(cmd_str, true, false, matches, descriptions).get();
+  // Try to find a match among commands and aliases. Allowing inexact matches,
+  // but perferring exact matches.
+  return GetCommandSP(cmd_str, /*include_aliases=*/true, /*exact=*/false,
+                             matches, descriptions)
+                    .get();
 }
 
 CommandObject *CommandInterpreter::GetUserCommandObject(
@@ -1372,11 +1350,12 @@ bool CommandInterpreter::RemoveAlias(llvm::StringRef alias_name) {
   return false;
 }
 
-bool CommandInterpreter::RemoveCommand(llvm::StringRef cmd) {
+bool CommandInterpreter::RemoveCommand(llvm::StringRef cmd, bool force) {
   auto pos = m_command_dict.find(std::string(cmd));
   if (pos != m_command_dict.end()) {
-    if (pos->second->IsRemovable()) {
-      // Only regular expression objects or python commands are removable
+    if (force || pos->second->IsRemovable()) {
+      // Only regular expression objects or python commands are removable under
+      // normal circumstances.
       m_command_dict.erase(pos);
       return true;
     }
@@ -1687,20 +1666,19 @@ CommandObject *CommandInterpreter::BuildAliasResult(
           return nullptr;
         }
         llvm::StringRef arg_text = entry.ref();
-        if (strpos - start_fudge + arg_text.size() + len_fudge 
-            > raw_input_string.size()) {
+        if (strpos - start_fudge + arg_text.size() + len_fudge >
+            raw_input_string.size()) {
           result.AppendError("Unmatched quote at command end.");
-          return nullptr;  
+          return nullptr;
         }
         raw_input_string = raw_input_string.erase(
-            strpos - start_fudge, 
+            strpos - start_fudge,
             strlen(cmd_args.GetArgumentAtIndex(index)) + len_fudge);
       }
       if (quote_char == '\0')
         result_str.Printf("%s", cmd_args.GetArgumentAtIndex(index));
       else
-        result_str.Printf("%c%s%c", quote_char, 
-                          entry.c_str(), quote_char);
+        result_str.Printf("%c%s%c", quote_char, entry.c_str(), quote_char);
     }
   }
 
@@ -1748,112 +1726,124 @@ Status CommandInterpreter::PreprocessCommand(std::string &command) {
 
     std::string expr_str(command, expr_content_start,
                          end_backtick - expr_content_start);
+    error = PreprocessToken(expr_str);
+    // We always stop at the first error:
+    if (error.Fail())
+      break;
 
-    ExecutionContext exe_ctx(GetExecutionContext());
+    command.erase(start_backtick, end_backtick - start_backtick + 1);
+    command.insert(start_backtick, std::string(expr_str));
+    pos = start_backtick + expr_str.size();
+  }
+  return error;
+}
 
-    // Get a dummy target to allow for calculator mode while processing
-    // backticks. This also helps break the infinite loop caused when target is
-    // null.
-    Target *exe_target = exe_ctx.GetTargetPtr();
-    Target &target = exe_target ? *exe_target : m_debugger.GetDummyTarget();
+Status
+CommandInterpreter::PreprocessToken(std::string &expr_str) {
+  Status error;
+  ExecutionContext exe_ctx(GetExecutionContext());
 
-    ValueObjectSP expr_result_valobj_sp;
+  // Get a dummy target to allow for calculator mode while processing
+  // backticks. This also helps break the infinite loop caused when target is
+  // null.
+  Target *exe_target = exe_ctx.GetTargetPtr();
+  Target &target = exe_target ? *exe_target : m_debugger.GetDummyTarget();
 
-    EvaluateExpressionOptions options;
-    options.SetCoerceToId(false);
-    options.SetUnwindOnError(true);
-    options.SetIgnoreBreakpoints(true);
-    options.SetKeepInMemory(false);
-    options.SetTryAllThreads(true);
-    options.SetTimeout(std::nullopt);
+  ValueObjectSP expr_result_valobj_sp;
 
-    ExpressionResults expr_result =
-        target.EvaluateExpression(expr_str.c_str(), exe_ctx.GetFramePtr(),
-                                  expr_result_valobj_sp, options);
+  EvaluateExpressionOptions options;
+  options.SetCoerceToId(false);
+  options.SetUnwindOnError(true);
+  options.SetIgnoreBreakpoints(true);
+  options.SetKeepInMemory(false);
+  options.SetTryAllThreads(true);
+  options.SetTimeout(std::nullopt);
 
-    if (expr_result == eExpressionCompleted) {
-      Scalar scalar;
-      if (expr_result_valobj_sp)
-        expr_result_valobj_sp =
-            expr_result_valobj_sp->GetQualifiedRepresentationIfAvailable(
-                expr_result_valobj_sp->GetDynamicValueType(), true);
-      if (expr_result_valobj_sp->ResolveValue(scalar)) {
-        command.erase(start_backtick, end_backtick - start_backtick + 1);
-        StreamString value_strm;
-        const bool show_type = false;
-        scalar.GetValue(&value_strm, show_type);
-        size_t value_string_size = value_strm.GetSize();
-        if (value_string_size) {
-          command.insert(start_backtick, std::string(value_strm.GetString()));
-          pos = start_backtick + value_string_size;
-          continue;
-        } else {
-          error.SetErrorStringWithFormat("expression value didn't result "
-                                         "in a scalar value for the "
-                                         "expression '%s'",
-                                         expr_str.c_str());
-          break;
-        }
+  ExpressionResults expr_result =
+      target.EvaluateExpression(expr_str.c_str(), exe_ctx.GetFramePtr(),
+                                expr_result_valobj_sp, options);
+
+  if (expr_result == eExpressionCompleted) {
+    Scalar scalar;
+    if (expr_result_valobj_sp)
+      expr_result_valobj_sp =
+          expr_result_valobj_sp->GetQualifiedRepresentationIfAvailable(
+              expr_result_valobj_sp->GetDynamicValueType(), true);
+    if (expr_result_valobj_sp->ResolveValue(scalar)) {
+
+      StreamString value_strm;
+      const bool show_type = false;
+      scalar.GetValue(&value_strm, show_type);
+      size_t value_string_size = value_strm.GetSize();
+      if (value_string_size) {
+        expr_str = value_strm.GetData();
       } else {
         error.SetErrorStringWithFormat("expression value didn't result "
                                        "in a scalar value for the "
                                        "expression '%s'",
                                        expr_str.c_str());
-        break;
       }
-
-      continue;
+    } else {
+      error.SetErrorStringWithFormat("expression value didn't result "
+                                     "in a scalar value for the "
+                                     "expression '%s'",
+                                     expr_str.c_str());
     }
+    return error;
+  }
 
-    if (expr_result_valobj_sp)
-      error = expr_result_valobj_sp->GetError();
+  // If we have an error from the expression evaluation it will be in the
+  // ValueObject error, which won't be success and we will just report it.
+  // But if for some reason we didn't get a value object at all, then we will
+  // make up some helpful errors from the expression result.
+  if (expr_result_valobj_sp)
+    error = expr_result_valobj_sp->GetError();
 
-    if (error.Success()) {
-      switch (expr_result) {
-      case eExpressionSetupError:
-        error.SetErrorStringWithFormat(
-            "expression setup error for the expression '%s'", expr_str.c_str());
-        break;
-      case eExpressionParseError:
-        error.SetErrorStringWithFormat(
-            "expression parse error for the expression '%s'", expr_str.c_str());
-        break;
-      case eExpressionResultUnavailable:
-        error.SetErrorStringWithFormat(
-            "expression error fetching result for the expression '%s'",
-            expr_str.c_str());
-        break;
-      case eExpressionCompleted:
-        break;
-      case eExpressionDiscarded:
-        error.SetErrorStringWithFormat(
-            "expression discarded for the expression '%s'", expr_str.c_str());
-        break;
-      case eExpressionInterrupted:
-        error.SetErrorStringWithFormat(
-            "expression interrupted for the expression '%s'", expr_str.c_str());
-        break;
-      case eExpressionHitBreakpoint:
-        error.SetErrorStringWithFormat(
-            "expression hit breakpoint for the expression '%s'",
-            expr_str.c_str());
-        break;
-      case eExpressionTimedOut:
-        error.SetErrorStringWithFormat(
-            "expression timed out for the expression '%s'", expr_str.c_str());
-        break;
-      case eExpressionStoppedForDebug:
-        error.SetErrorStringWithFormat("expression stop at entry point "
-                                       "for debugging for the "
-                                       "expression '%s'",
-                                       expr_str.c_str());
-        break;
-      case eExpressionThreadVanished:
-        error.SetErrorStringWithFormat(
-            "expression thread vanished for the expression '%s'",
-            expr_str.c_str());
-        break;
-      }
+  if (error.Success()) {
+    switch (expr_result) {
+    case eExpressionSetupError:
+      error.SetErrorStringWithFormat(
+          "expression setup error for the expression '%s'", expr_str.c_str());
+      break;
+    case eExpressionParseError:
+      error.SetErrorStringWithFormat(
+          "expression parse error for the expression '%s'", expr_str.c_str());
+      break;
+    case eExpressionResultUnavailable:
+      error.SetErrorStringWithFormat(
+          "expression error fetching result for the expression '%s'",
+          expr_str.c_str());
+      break;
+    case eExpressionCompleted:
+      break;
+    case eExpressionDiscarded:
+      error.SetErrorStringWithFormat(
+          "expression discarded for the expression '%s'", expr_str.c_str());
+      break;
+    case eExpressionInterrupted:
+      error.SetErrorStringWithFormat(
+          "expression interrupted for the expression '%s'", expr_str.c_str());
+      break;
+    case eExpressionHitBreakpoint:
+      error.SetErrorStringWithFormat(
+          "expression hit breakpoint for the expression '%s'",
+          expr_str.c_str());
+      break;
+    case eExpressionTimedOut:
+      error.SetErrorStringWithFormat(
+          "expression timed out for the expression '%s'", expr_str.c_str());
+      break;
+    case eExpressionStoppedForDebug:
+      error.SetErrorStringWithFormat("expression stop at entry point "
+                                     "for debugging for the "
+                                     "expression '%s'",
+                                     expr_str.c_str());
+      break;
+    case eExpressionThreadVanished:
+      error.SetErrorStringWithFormat(
+          "expression thread vanished for the expression '%s'",
+          expr_str.c_str());
+      break;
     }
   }
   return error;
@@ -1872,8 +1862,8 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
 
 bool CommandInterpreter::HandleCommand(const char *command_line,
                                        LazyBool lazy_add_to_history,
-                                       CommandReturnObject &result) {
-
+                                       CommandReturnObject &result,
+                                       bool force_repeat_command) {
   std::string command_string(command_line);
   std::string original_command_string(command_line);
 
@@ -1884,8 +1874,8 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
   LLDB_LOGF(log, "Processing command: %s", command_line);
   LLDB_SCOPED_TIMERF("Processing command: %s.", command_line);
 
-  if (WasInterrupted()) {
-    result.AppendError("interrupted");
+  if (INTERRUPT_REQUESTED(GetDebugger(), "Interrupted initiating command")) {
+    result.AppendError("... Interrupted");
     return false;
   }
 
@@ -1968,11 +1958,11 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
 
   CommandObject *cmd_obj = ResolveCommandImpl(command_string, result);
 
-  // We have to preprocess the whole command string for Raw commands, since we 
+  // We have to preprocess the whole command string for Raw commands, since we
   // don't know the structure of the command.  For parsed commands, we only
   // treat backticks as quote characters specially.
   // FIXME: We probably want to have raw commands do their own preprocessing.
-  // For instance, I don't think people expect substitution in expr expressions. 
+  // For instance, I don't think people expect substitution in expr expressions.
   if (cmd_obj && cmd_obj->WantsRawCommandString()) {
     Status error(PreprocessCommand(command_string));
 
@@ -2002,17 +1992,26 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
   // arguments.
 
   if (cmd_obj != nullptr) {
+    bool generate_repeat_command = add_to_history;
     // If we got here when empty_command was true, then this command is a
     // stored "repeat command" which we should give a chance to produce it's
     // repeat command, even though we don't add repeat commands to the history.
-    if (add_to_history || empty_command) {
+    generate_repeat_command |= empty_command;
+    // For `command regex`, the regex command (ex `bt`) is added to history, but
+    // the resolved command (ex `thread backtrace`) is _not_ added to history.
+    // However, the resolved command must be given the opportunity to provide a
+    // repeat command. `force_repeat_command` supports this case.
+    generate_repeat_command |= force_repeat_command;
+    if (generate_repeat_command) {
       Args command_args(command_string);
       std::optional<std::string> repeat_command =
           cmd_obj->GetRepeatCommand(command_args, 0);
-      if (repeat_command)
+      if (repeat_command) {
+        LLDB_LOGF(log, "Repeat command: %s", repeat_command->data());
         m_repeat_command.assign(*repeat_command);
-      else
+      } else {
         m_repeat_command.assign(original_command_string);
+      }
     }
 
     if (add_to_history)
@@ -2544,7 +2543,7 @@ void CommandInterpreter::HandleCommands(const StringList &commands,
     m_debugger.SetAsyncExecution(false);
   }
 
-  for (size_t idx = 0; idx < num_lines && !WasInterrupted(); idx++) {
+  for (size_t idx = 0; idx < num_lines; idx++) {
     const char *cmd = commands.GetStringAtIndex(idx);
     if (cmd[0] == '\0')
       continue;
@@ -3024,6 +3023,9 @@ bool CommandInterpreter::InterruptCommand() {
 }
 
 bool CommandInterpreter::WasInterrupted() const {
+  if (!m_debugger.IsIOHandlerThreadCurrentThread())
+    return false;
+
   bool was_interrupted =
       (m_command_state == CommandHandlingState::eInterrupted);
   lldbassert(!was_interrupted || m_iohandler_nesting_level > 0);
@@ -3037,7 +3039,8 @@ void CommandInterpreter::PrintCommandOutput(IOHandler &io_handler,
   lldb::StreamFileSP stream = is_stdout ? io_handler.GetOutputStreamFileSP()
                                         : io_handler.GetErrorStreamFileSP();
   // Split the output into lines and poll for interrupt requests
-  while (!str.empty() && !WasInterrupted()) {
+  bool had_output = !str.empty();
+  while (!str.empty()) {
     llvm::StringRef line;
     std::tie(line, str) = str.split('\n');
     {
@@ -3048,7 +3051,8 @@ void CommandInterpreter::PrintCommandOutput(IOHandler &io_handler,
   }
 
   std::lock_guard<std::recursive_mutex> guard(io_handler.GetOutputMutex());
-  if (!str.empty())
+  if (had_output && INTERRUPT_REQUESTED(GetDebugger(), 
+                                        "Interrupted dumping command output"))
     stream->Printf("\n... Interrupted.\n");
   stream->Flush();
 }
@@ -3243,8 +3247,11 @@ bool CommandInterpreter::SaveTranscript(
   if (GetOpenTranscriptInEditor() && Host::IsInteractiveGraphicSession()) {
     const FileSpec file_spec;
     error = file->GetFileSpec(const_cast<FileSpec &>(file_spec));
-    if (error.Success())
-      Host::OpenFileInExternalEditor(file_spec, 1);
+    if (error.Success()) {
+      if (llvm::Error e = Host::OpenFileInExternalEditor(
+              m_debugger.GetExternalEditor(), file_spec, 1))
+        result.AppendError(llvm::toString(std::move(e)));
+    }
   }
 
   return true;
@@ -3361,7 +3368,13 @@ CommandInterpreterRunResult CommandInterpreter::RunCommandInterpreter(
   if (options.GetSpawnThread()) {
     m_debugger.StartIOHandlerThread();
   } else {
+    // If the current thread is not managed by a host thread, we won't detect
+    // that this IS the CommandInterpreter IOHandler thread, so make it so:
+    HostThread new_io_handler_thread(Host::GetCurrentThread());
+    HostThread old_io_handler_thread =
+        m_debugger.SetIOHandlerThread(new_io_handler_thread);
     m_debugger.RunIOHandlers();
+    m_debugger.SetIOHandlerThread(old_io_handler_thread);
 
     if (options.GetAutoHandleEvents())
       m_debugger.StopEventHandlerThread();

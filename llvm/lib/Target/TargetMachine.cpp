@@ -21,6 +21,7 @@
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/Support/CodeGen.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 using namespace llvm;
 
@@ -34,9 +35,21 @@ TargetMachine::TargetMachine(const Target &T, StringRef DataLayoutString,
     : TheTarget(T), DL(DataLayoutString), TargetTriple(TT),
       TargetCPU(std::string(CPU)), TargetFS(std::string(FS)), AsmInfo(nullptr),
       MRI(nullptr), MII(nullptr), STI(nullptr), RequireStructuredCFG(false),
-      O0WantsFastISel(false), DefaultOptions(Options), Options(Options) {}
+      O0WantsFastISel(false), Options(Options) {}
 
 TargetMachine::~TargetMachine() = default;
+
+bool TargetMachine::isLargeData(const GlobalVariable *GV) const {
+  if (getTargetTriple().getArch() != Triple::x86_64 || GV->isThreadLocal())
+    return false;
+  // Large data under the large code model still needs to be thought about, so
+  // restrict this to medium.
+  if (getCodeModel() != CodeModel::Medium)
+    return false;
+  const DataLayout &DL = GV->getParent()->getDataLayout();
+  uint64_t Size = DL.getTypeSizeInBits(GV->getValueType()) / 8;
+  return Size == 0 || Size > LargeDataThreshold;
+}
 
 bool TargetMachine::isPositionIndependent() const {
   return getRelocationModel() == Reloc::PIC_;
@@ -66,6 +79,20 @@ void TargetMachine::resetTargetOptions(const Function &F) const {
 /// Returns the code generation relocation model. The choices are static, PIC,
 /// and dynamic-no-pic.
 Reloc::Model TargetMachine::getRelocationModel() const { return RM; }
+
+uint64_t TargetMachine::getMaxCodeSize() const {
+  switch (getCodeModel()) {
+  case CodeModel::Tiny:
+    return llvm::maxUIntN(10);
+  case CodeModel::Small:
+  case CodeModel::Kernel:
+  case CodeModel::Medium:
+    return llvm::maxUIntN(31);
+  case CodeModel::Large:
+    return llvm::maxUIntN(64);
+  }
+  llvm_unreachable("Unhandled CodeModel enum");
+}
 
 /// Get the IR-specified TLS model for Var.
 static TLSModel::Model getSelectedTLSModel(const GlobalValue *GV) {
@@ -143,13 +170,7 @@ bool TargetMachine::shouldAssumeDSOLocal(const Module &M,
   return false;
 }
 
-bool TargetMachine::useEmulatedTLS() const {
-  // Returns Options.EmulatedTLS if the -emulated-tls or -no-emulated-tls
-  // was specified explicitly; otherwise uses target triple to decide default.
-  if (Options.ExplicitEmulatedTLS)
-    return Options.EmulatedTLS;
-  return getTargetTriple().hasDefaultEmulatedTLS();
-}
+bool TargetMachine::useEmulatedTLS() const { return Options.EmulatedTLS; }
 
 TLSModel::Model TargetMachine::getTLSModel(const GlobalValue *GV) const {
   bool IsPIE = GV->getParent()->getPIELevel() != PIELevel::Default;
@@ -179,9 +200,9 @@ TLSModel::Model TargetMachine::getTLSModel(const GlobalValue *GV) const {
 }
 
 /// Returns the optimization level: None, Less, Default, or Aggressive.
-CodeGenOpt::Level TargetMachine::getOptLevel() const { return OptLevel; }
+CodeGenOptLevel TargetMachine::getOptLevel() const { return OptLevel; }
 
-void TargetMachine::setOptLevel(CodeGenOpt::Level Level) { OptLevel = Level; }
+void TargetMachine::setOptLevel(CodeGenOptLevel Level) { OptLevel = Level; }
 
 TargetTransformInfo
 TargetMachine::getTargetTransformInfo(const Function &F) const {

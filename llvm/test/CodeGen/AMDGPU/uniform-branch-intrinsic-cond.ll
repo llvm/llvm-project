@@ -6,9 +6,9 @@
 ;
 ; CHECK-LABEL: {{^}}main:
 ; CHECK: s_cbranch_vccnz
-define amdgpu_ps float @main(<4 x i32> inreg %rsrc) {
+define amdgpu_ps float @main(ptr addrspace(8) inreg %rsrc) {
 main_body:
-  %v = call float @llvm.amdgcn.raw.buffer.load.f32(<4 x i32> %rsrc, i32 0, i32 0, i32 1)
+  %v = call float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8) %rsrc, i32 0, i32 0, i32 1)
   %cc = fcmp une float %v, 1.000000e+00
   br i1 %cc, label %if, label %else
 
@@ -22,6 +22,6 @@ else:
   ret float %r
 }
 
-declare float @llvm.amdgcn.raw.buffer.load.f32(<4 x i32>, i32, i32, i32 immarg) #0
+declare float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8), i32, i32, i32 immarg) #0
 
-attributes #0 = { nounwind readonly }
+attributes #0 = { nounwind memory(argmem: read) }

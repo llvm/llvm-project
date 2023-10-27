@@ -36,10 +36,12 @@ public:
 
   /// Construct a ProfileData vector used to correlate raw instrumentation data
   /// to their functions.
-  virtual Error correlateProfileData() = 0;
+  /// \param MaxWarnings the maximum number of warnings to emit (0 = no limit)
+  virtual Error correlateProfileData(int MaxWarnings) = 0;
 
   /// Process debug info and dump the correlation data.
-  virtual Error dumpYaml(raw_ostream &OS) = 0;
+  /// \param MaxWarnings the maximum number of warnings to emit (0 = no limit)
+  virtual Error dumpYaml(int MaxWarnings, raw_ostream &OS) = 0;
 
   /// Return the number of ProfileData elements.
   std::optional<size_t> getDataSize() const;
@@ -131,11 +133,12 @@ public:
 protected:
   std::vector<RawInstrProf::ProfileData<IntPtrT>> Data;
 
-  Error correlateProfileData() override;
+  Error correlateProfileData(int MaxWarnings) override;
   virtual void correlateProfileDataImpl(
+      int MaxWarnings,
       InstrProfCorrelator::CorrelationData *Data = nullptr) = 0;
 
-  Error dumpYaml(raw_ostream &OS) override;
+  Error dumpYaml(int MaxWarnings, raw_ostream &OS) override;
 
   void addProbe(StringRef FunctionName, uint64_t CFGHash, IntPtrT CounterOffset,
                 IntPtrT FunctionPtr, uint32_t NumCounters);
@@ -148,7 +151,7 @@ private:
 
   // Byte-swap the value if necessary.
   template <class T> T maybeSwap(T Value) const {
-    return Ctx->ShouldSwapBytes ? sys::getSwappedBytes(Value) : Value;
+    return Ctx->ShouldSwapBytes ? llvm::byteswap(Value) : Value;
   }
 };
 
@@ -197,7 +200,10 @@ private:
   ///       NULL
   ///     NULL
   /// \endcode
+  /// \param MaxWarnings the maximum number of warnings to emit (0 = no limit)
+  /// \param Data if provided, populate with the correlation data found
   void correlateProfileDataImpl(
+      int MaxWarnings,
       InstrProfCorrelator::CorrelationData *Data = nullptr) override;
 };
 

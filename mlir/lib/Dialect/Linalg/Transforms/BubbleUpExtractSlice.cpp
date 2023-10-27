@@ -96,7 +96,7 @@ struct BubbleUpExtractSliceOpPattern
           linalgOp, "failed to get loops map from shape sizes");
     }
     SmallVector<OpFoldResult> sizeBounds =
-        makeComposedFoldedMultiResultAffineApply(
+        affine::makeComposedFoldedMultiResultAffineApply(
             rewriter, linalgLoc, shapeSizesToLoopsMap, allShapeSizes);
 
     // The offsets and sizes from the slice operation only give you the tile
@@ -119,9 +119,9 @@ struct BubbleUpExtractSliceOpPattern
                         /*omitPartialTileCheck=*/true);
 
     SmallVector<Type, 4> resultTensorTypes;
-    for (OpOperand *opOperand : linalgOp.getDpsInitOperands())
+    for (OpOperand &opOperand : linalgOp.getDpsInitsMutable())
       resultTensorTypes.push_back(
-          tiledOperands[opOperand->getOperandNumber()].getType());
+          tiledOperands[opOperand.getOperandNumber()].getType());
 
     Operation *newOp =
         clone(rewriter, linalgOp, resultTensorTypes, tiledOperands);

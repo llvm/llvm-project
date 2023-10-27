@@ -3,7 +3,6 @@ Test lldb watchpoint that uses 'watchpoint set -w write -s size' to watch a poin
 """
 
 
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -18,48 +17,47 @@ class WatchLocationUsingWatchpointSetTestCase(TestBase):
     # the same time.  Tracked as llvm.org/pr49433
     # or rdar://93863107 inside Apple.
     def affected_by_radar_93863107(self):
-        return (self.getArchitecture() in ['arm64', 'arm64e']) and self.platformIsDarwin()
+        return (
+            self.getArchitecture() in ["arm64", "arm64e"]
+        ) and self.platformIsDarwin()
 
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
         # Our simple source filename.
-        self.source = 'main.cpp'
+        self.source = "main.cpp"
         # Find the line number to break inside main().
-        self.line = line_number(
-            self.source, '// Set break point at this line.')
+        self.line = line_number(self.source, "// Set break point at this line.")
         # This is for verifying that watch location works.
         self.violating_func = "do_bad_thing_with_location"
         # Build dictionary to have unique executable names for each test
         # method.
 
-    @skipIf(
-        oslist=["linux"],
-        archs=[
-            'aarch64',
-            'arm'],
-        bugnumber="llvm.org/pr26031")
-    @skipIfWindows # This test is flaky on Windows
+    @skipIf(oslist=["linux"], archs=["aarch64", "arm"], bugnumber="llvm.org/pr26031")
+    @skipIfWindows  # This test is flaky on Windows
     def test_watchlocation_using_watchpoint_set(self):
         """Test watching a location with 'watchpoint set expression -w write -s size' option."""
         self.build()
         self.setTearDownCleanup()
 
         exe = self.getBuildArtifact("a.out")
-        self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
+        target = self.dbg.CreateTarget(exe)
 
         # Add a breakpoint to set a watchpoint when stopped on the breakpoint.
         lldbutil.run_break_set_by_file_and_line(
-            self, None, self.line, num_expected_locations=1)
+            self, None, self.line, num_expected_locations=1
+        )
 
         # Run the program.
         self.runCmd("run", RUN_SUCCEEDED)
 
         # We should be stopped again due to the breakpoint.
         # The stop reason of the thread should be breakpoint.
-        self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
-                    substrs=['stopped',
-                             'stop reason = breakpoint'])
+        self.expect(
+            "thread list",
+            STOPPED_DUE_TO_BREAKPOINT,
+            substrs=["stopped", "stop reason = breakpoint"],
+        )
 
         # Now let's set a write-type watchpoint pointed to by 'g_char_ptr' and
         # with offset as 7.
@@ -68,18 +66,20 @@ class WatchLocationUsingWatchpointSetTestCase(TestBase):
         self.expect(
             "watchpoint set expression -w write -s 1 -- g_char_ptr + 7",
             WATCHPOINT_CREATED,
-            substrs=[
-                'Watchpoint created',
-                'size = 1',
-                'type = w'])
+            substrs=["Watchpoint created", "size = 1", "type = w"],
+        )
         self.runCmd("expr unsigned val = g_char_ptr[7]; val")
-        self.expect(self.res.GetOutput().splitlines()[0], exe=False,
-                    endstr=' = 0')
+        self.expect(self.res.GetOutput().splitlines()[0], exe=False, endstr=" = 0")
 
         # Use the '-v' option to do verbose listing of the watchpoint.
         # The hit count should be 0 initially.
-        self.expect("watchpoint list -v",
-                    substrs=['hit_count = 0'])
+        self.expect("watchpoint list -v", substrs=["hit_count = 0"])
+
+        # Check the underlying SBWatchpoint.
+        watchpoint = target.GetWatchpointAtIndex(0)
+        self.assertEqual(watchpoint.GetWatchSize(), 1)
+        self.assertEqual(watchpoint.GetHitCount(), 0)
+        self.assertEqual(watchpoint.GetWatchSpec(), "g_char_ptr + 7")
 
         self.runCmd("process continue")
 
@@ -89,27 +89,27 @@ class WatchLocationUsingWatchpointSetTestCase(TestBase):
             "thread list",
             STOPPED_DUE_TO_WATCHPOINT,
             substrs=[
-                'stopped',
+                "stopped",
                 self.violating_func,
-                'stop reason = watchpoint',
-            ])
+                "stop reason = watchpoint",
+            ],
+        )
 
         # Switch to the thread stopped due to watchpoint and issue some
         # commands.
         self.switch_to_thread_with_stop_reason(lldb.eStopReasonWatchpoint)
         self.runCmd("thread backtrace")
         self.runCmd("expr unsigned val = g_char_ptr[7]; val")
-        self.expect(self.res.GetOutput().splitlines()[0], exe=False,
-                    endstr=' = 99')
+        self.expect(self.res.GetOutput().splitlines()[0], exe=False, endstr=" = 99")
 
         # Use the '-v' option to do verbose listing of the watchpoint.
         # The hit count should now be the same as the number of threads that
         # stopped on a watchpoint.
         threads = lldbutil.get_stopped_threads(
-            self.process(), lldb.eStopReasonWatchpoint)
+            self.process(), lldb.eStopReasonWatchpoint
+        )
 
         if not self.affected_by_radar_93863107():
-          self.expect("watchpoint list -v",
-                      substrs=['hit_count = %d' % len(threads)])
+            self.expect("watchpoint list -v", substrs=["hit_count = %d" % len(threads)])
 
         self.runCmd("thread backtrace all")

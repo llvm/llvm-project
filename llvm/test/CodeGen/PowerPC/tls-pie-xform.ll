@@ -5,6 +5,8 @@
 @var_short = external thread_local local_unnamed_addr global i16, align 2
 @var_int = external thread_local local_unnamed_addr global i32, align 4
 @var_long_long = external thread_local local_unnamed_addr global i64, align 8
+@var_float = external thread_local local_unnamed_addr global float, align 4
+@var_double = external thread_local local_unnamed_addr global double, align 8
 
 define dso_local zeroext i8 @test_char_one() {
 ; CHECK-LABEL: test_char_one:
@@ -37,9 +39,9 @@ define dso_local zeroext i8 @test_char_three(i8 zeroext %a) {
 ; CHECK-NEXT:    addis 4, 2, var_char@got@tprel@ha
 ; CHECK-NEXT:    ld 4, var_char@got@tprel@l(4)
 ; CHECK-NEXT:    lbzx 5, 4, var_char@tls
-; CHECK-NEXT:    add 5, 5, 3
-; CHECK-NEXT:    clrldi 3, 5, 56
-; CHECK-NEXT:    stbx 5, 4, var_char@tls
+; CHECK-NEXT:    add 3, 5, 3
+; CHECK-NEXT:    stbx 3, 4, var_char@tls
+; CHECK-NEXT:    clrldi 3, 3, 56
 ; CHECK-NEXT:    blr
 entry:
   %0 = load i8, ptr @var_char, align 1, !tbaa !4
@@ -50,6 +52,18 @@ entry:
 
 define dso_local signext i16 @test_short_one() {
 ; CHECK-LABEL: test_short_one:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addis 3, 2, var_short@got@tprel@ha
+; CHECK-NEXT:    ld 3, var_short@got@tprel@l(3)
+; CHECK-NEXT:    lhax 3, 3, var_short@tls
+; CHECK-NEXT:    blr
+entry:
+  %0 = load i16, ptr @var_short, align 2, !tbaa !7
+  ret i16 %0
+}
+
+define dso_local zeroext i16 @test_short_one_zeroext() {
+; CHECK-LABEL: test_short_one_zeroext:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addis 3, 2, var_short@got@tprel@ha
 ; CHECK-NEXT:    ld 3, var_short@got@tprel@l(3)
@@ -79,9 +93,9 @@ define dso_local signext i16 @test_short_three(i16 signext %a) {
 ; CHECK-NEXT:    addis 4, 2, var_short@got@tprel@ha
 ; CHECK-NEXT:    ld 4, var_short@got@tprel@l(4)
 ; CHECK-NEXT:    lhzx 5, 4, var_short@tls
-; CHECK-NEXT:    add 5, 5, 3
-; CHECK-NEXT:    extsh 3, 5
-; CHECK-NEXT:    sthx 5, 4, var_short@tls
+; CHECK-NEXT:    add 3, 5, 3
+; CHECK-NEXT:    sthx 3, 4, var_short@tls
+; CHECK-NEXT:    extsh 3, 3
 ; CHECK-NEXT:    blr
 entry:
   %0 = load i16, ptr @var_short, align 2, !tbaa !7
@@ -92,6 +106,18 @@ entry:
 
 define dso_local signext i32 @test_int_one() {
 ; CHECK-LABEL: test_int_one:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addis 3, 2, var_int@got@tprel@ha
+; CHECK-NEXT:    ld 3, var_int@got@tprel@l(3)
+; CHECK-NEXT:    lwax 3, 3, var_int@tls
+; CHECK-NEXT:    blr
+entry:
+  %0 = load i32, ptr @var_int, align 4, !tbaa !9
+  ret i32 %0
+}
+
+define dso_local zeroext i32 @test_int_one_zeroext() {
+; CHECK-LABEL: test_int_one_zeroext:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addis 3, 2, var_int@got@tprel@ha
 ; CHECK-NEXT:    ld 3, var_int@got@tprel@l(3)
@@ -120,9 +146,9 @@ define dso_local signext i32 @test_int_three(i32 signext %a) {
 ; CHECK-NEXT:    addis 4, 2, var_int@got@tprel@ha
 ; CHECK-NEXT:    ld 4, var_int@got@tprel@l(4)
 ; CHECK-NEXT:    lwzx 5, 4, var_int@tls
-; CHECK-NEXT:    add 5, 5, 3
-; CHECK-NEXT:    extsw 3, 5
-; CHECK-NEXT:    stwx 5, 4, var_int@tls
+; CHECK-NEXT:    add 3, 5, 3
+; CHECK-NEXT:    stwx 3, 4, var_int@tls
+; CHECK-NEXT:    extsw 3, 3
 ; CHECK-NEXT:    blr
 entry:
   %0 = load i32, ptr @var_int, align 4, !tbaa !9
@@ -170,6 +196,54 @@ entry:
   %add = add nsw i64 %0, %a
   store i64 %add, ptr @var_long_long, align 8, !tbaa !11
   ret i64 %add
+}
+
+define float @test_float_one() {
+; CHECK-LABEL: test_float_one:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addis 3, 2, var_float@got@tprel@ha
+; CHECK-NEXT:    ld 3, var_float@got@tprel@l(3)
+; CHECK-NEXT:    lfsx 1, 3, var_float@tls
+; CHECK-NEXT:    blr
+entry:
+  %0 = load float, ptr @var_float, align 4
+  ret float %0
+}
+
+define void @test_float_two(float %a) {
+; CHECK-LABEL: test_float_two:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addis 3, 2, var_float@got@tprel@ha
+; CHECK-NEXT:    ld 3, var_float@got@tprel@l(3)
+; CHECK-NEXT:    stfsx 1, 3, var_float@tls
+; CHECK-NEXT:    blr
+entry:
+  store float %a, ptr @var_float, align 4
+  ret void
+}
+
+define double @test_double_one() {
+; CHECK-LABEL: test_double_one:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addis 3, 2, var_double@got@tprel@ha
+; CHECK-NEXT:    ld 3, var_double@got@tprel@l(3)
+; CHECK-NEXT:    lfdx 1, 3, var_double@tls
+; CHECK-NEXT:    blr
+entry:
+  %0 = load double, ptr @var_double, align 8
+  ret double %0
+}
+
+define void @test_double_two(double %a) {
+; CHECK-LABEL: test_double_two:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    addis 3, 2, var_double@got@tprel@ha
+; CHECK-NEXT:    ld 3, var_double@got@tprel@l(3)
+; CHECK-NEXT:    stfdx 1, 3, var_double@tls
+; CHECK-NEXT:    blr
+entry:
+  store double %a, ptr @var_double, align 8
+  ret void
 }
 
 !llvm.module.flags = !{!0, !1, !2}

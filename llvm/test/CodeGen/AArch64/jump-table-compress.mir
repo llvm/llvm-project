@@ -5,6 +5,7 @@
   }
 
   define void @test_inline_asm_no_compress() { ret void }
+  define void @test_bb_alignment_not_byte_compressable() { ret void }
 
 ...
 ---
@@ -192,6 +193,90 @@ body:             |
   bb.8:
     liveins: $w1, $w2
   
+    renamable $w8 = nsw MADDWrrr renamable $w2, renamable $w2, $wzr
+    renamable $w0 = MADDWrrr killed renamable $w8, killed renamable $w2, killed renamable $w1
+    RET undef $lr, implicit $w0
+
+...
+---
+name:            test_bb_alignment_not_byte_compressable
+alignment:       4
+tracksRegLiveness: true
+liveins:
+  - { reg: '$w0' }
+  - { reg: '$w1' }
+  - { reg: '$w2' }
+frameInfo:
+  maxAlignment:    1
+  maxCallFrameSize: 0
+machineFunctionInfo:
+  hasRedZone:      false
+jumpTable:
+  kind:            label-difference32
+  entries:
+    - id:              0
+      blocks:          [ '%bb.2', '%bb.4', '%bb.5', '%bb.6', '%bb.7', '%bb.8' ]
+body:             |
+  bb.0:
+    successors: %bb.3(0x12492492), %bb.1(0x6db6db6e)
+    liveins: $w0, $w1, $w2
+
+    dead $wzr = SUBSWri renamable $w0, 5, 0, implicit-def $nzcv
+    Bcc 8, %bb.3, implicit $nzcv
+
+  bb.1:
+    successors: %bb.2, %bb.4, %bb.5, %bb.6, %bb.7, %bb.8
+    liveins: $w0, $w1, $w2
+    ; Ensure there's no jump table compression when block alignments are bigger
+    ; than the function alignment because we don't known the padding length at
+    ; the point where compression is done.
+    ; CHECK-LABEL: test_bb_alignment_not_byte_compressable
+    ; CHECK-LABEL: bb.1
+    ; CHECK: JumpTableDest16
+    renamable $w8 = ORRWrs $wzr, killed renamable $w0, 0, implicit-def $x8
+    $x9 = ADRP target-flags(aarch64-page) %jump-table.0
+    renamable $x9 = ADDXri $x9, target-flags(aarch64-pageoff, aarch64-nc) %jump-table.0, 0
+    early-clobber renamable $x10, dead early-clobber renamable $x11 = JumpTableDest32 killed renamable $x9, killed renamable $x8, %jump-table.0
+    BR killed renamable $x10
+
+  bb.2:
+    liveins: $w1, $w2
+    $w0 = ADDWrs killed renamable $w2, killed renamable $w1, 0
+    RET undef $lr, implicit $w0
+
+  bb.3:
+    $w0 = MOVZWi 0, 0
+    RET undef $lr, implicit $w0
+
+  bb.4:
+    liveins: $w1, $w2
+
+    renamable $w0 = nsw MADDWrrr killed renamable $w2, killed renamable $w1, $wzr
+    RET undef $lr, implicit $w0
+
+  ; bb.5 is aligned to make it more that 256 instructions away from bb.1, which
+  ; means we can no longer assume the jump table will be byte indexable.
+  bb.5 (align 1024):
+    liveins: $w1, $w2
+
+    $w0 = SUBWrs killed renamable $w1, killed renamable $w2, 0
+    RET undef $lr, implicit $w0
+
+  bb.6:
+    liveins: $w1, $w2
+
+    $w0 = SUBWrs killed renamable $w2, killed renamable $w1, 0
+    RET undef $lr, implicit $w0
+
+  bb.7:
+    liveins: $w1, $w2
+
+    renamable $w0 = MADDWrrr killed renamable $w1, renamable $w1, killed renamable $w2
+    RET undef $lr, implicit $w0
+
+  bb.8:
+    liveins: $w1, $w2
+
     renamable $w8 = nsw MADDWrrr renamable $w2, renamable $w2, $wzr
     renamable $w0 = MADDWrrr killed renamable $w8, killed renamable $w2, killed renamable $w1
     RET undef $lr, implicit $w0

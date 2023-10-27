@@ -1,15 +1,15 @@
-public _blake3_hash_many_avx512
-public blake3_hash_many_avx512
-public blake3_compress_in_place_avx512
-public _blake3_compress_in_place_avx512
-public blake3_compress_xof_avx512
-public _blake3_compress_xof_avx512
+public _llvm_blake3_hash_many_avx512
+public llvm_blake3_hash_many_avx512
+public llvm_blake3_compress_in_place_avx512
+public _llvm_blake3_compress_in_place_avx512
+public llvm_blake3_compress_xof_avx512
+public _llvm_blake3_compress_xof_avx512
 
 _TEXT   SEGMENT ALIGN(16) 'CODE'
 
 ALIGN   16
-blake3_hash_many_avx512 PROC
-_blake3_hash_many_avx512 PROC
+llvm_blake3_hash_many_avx512 PROC
+_llvm_blake3_hash_many_avx512 PROC
         push    r15
         push    r14
         push    r13
@@ -2404,12 +2404,12 @@ endroundloop1:
         vmovdqu xmmword ptr [rbx+10H], xmm1
         jmp     unwind
 
-_blake3_hash_many_avx512 ENDP
-blake3_hash_many_avx512 ENDP
+_llvm_blake3_hash_many_avx512 ENDP
+llvm_blake3_hash_many_avx512 ENDP
 
 ALIGN 16
-blake3_compress_in_place_avx512 PROC
-_blake3_compress_in_place_avx512 PROC
+llvm_blake3_compress_in_place_avx512 PROC
+_llvm_blake3_compress_in_place_avx512 PROC
         sub     rsp, 72
         vmovdqa xmmword ptr [rsp], xmm6
         vmovdqa xmmword ptr [rsp+10H], xmm7
@@ -2498,12 +2498,12 @@ _blake3_compress_in_place_avx512 PROC
         vmovdqa xmm9, xmmword ptr [rsp+30H]
         add     rsp, 72
         ret
-_blake3_compress_in_place_avx512 ENDP
-blake3_compress_in_place_avx512 ENDP
+_llvm_blake3_compress_in_place_avx512 ENDP
+llvm_blake3_compress_in_place_avx512 ENDP
 
 ALIGN 16
-blake3_compress_xof_avx512 PROC
-_blake3_compress_xof_avx512 PROC
+llvm_blake3_compress_xof_avx512 PROC
+_llvm_blake3_compress_xof_avx512 PROC
         sub     rsp, 72
         vmovdqa xmmword ptr [rsp], xmm6
         vmovdqa xmmword ptr [rsp+10H], xmm7
@@ -2597,8 +2597,8 @@ _blake3_compress_xof_avx512 PROC
         vmovdqa xmm9, xmmword ptr [rsp+30H]
         add     rsp, 72
         ret
-_blake3_compress_xof_avx512 ENDP
-blake3_compress_xof_avx512 ENDP
+_llvm_blake3_compress_xof_avx512 ENDP
+llvm_blake3_compress_xof_avx512 ENDP
 
 _TEXT ENDS
 

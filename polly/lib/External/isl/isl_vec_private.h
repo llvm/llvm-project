@@ -4,6 +4,8 @@
 #include <isl_blk.h>
 #include <isl/vec.h>
 
+#include "isl_reordering.h"
+
 struct isl_vec {
 	int ref;
 
@@ -26,5 +28,7 @@ isl_bool isl_vec_is_zero(__isl_keep isl_vec *vec);
 
 __isl_give isl_vec *isl_vec_expand(__isl_take isl_vec *vec, int pos, int n,
 	int *exp, int expanded);
+__isl_give isl_vec *isl_vec_reorder(__isl_take isl_vec *vec,
+	unsigned offset, __isl_take isl_reordering *r);
 
 #endif

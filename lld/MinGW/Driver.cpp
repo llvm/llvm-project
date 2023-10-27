@@ -36,14 +36,14 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/Host.h"
 #include "llvm/Support/Path.h"
+#include "llvm/TargetParser/Host.h"
+#include "llvm/TargetParser/Triple.h"
 #include <optional>
 
 #if !defined(_MSC_VER) && !defined(__MINGW32__)
@@ -51,12 +51,13 @@
 #endif
 
 using namespace lld;
+using namespace llvm::opt;
 using namespace llvm;
 
 // Create OptTable
 enum {
   OPT_INVALID = 0,
-#define OPTION(_1, _2, ID, _4, _5, _6, _7, _8, _9, _10, _11, _12) OPT_##ID,
+#define OPTION(...) LLVM_MAKE_OPT_ID(__VA_ARGS__),
 #include "Options.inc"
 #undef OPTION
 };
@@ -71,9 +72,13 @@ enum {
 
 // Create table mapping all options defined in Options.td
 static constexpr opt::OptTable::Info infoTable[] = {
-#define OPTION(X1, X2, ID, KIND, GROUP, ALIAS, X7, X8, X9, X10, X11, X12)      \
-  {X1, X2, X10,         X11,         OPT_##ID, opt::Option::KIND##Class,       \
-   X9, X8, OPT_##GROUP, OPT_##ALIAS, X7,       X12},
+#define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS,         \
+               VISIBILITY, PARAM, HELPTEXT, METAVAR, VALUES)                   \
+  {PREFIX,      NAME,        HELPTEXT,                                         \
+   METAVAR,     OPT_##ID,    opt::Option::KIND##Class,                         \
+   PARAM,       FLAGS,       VISIBILITY,                                       \
+   OPT_##GROUP, OPT_##ALIAS, ALIASARGS,                                        \
+   VALUES},
 #include "Options.inc"
 #undef OPTION
 };
@@ -127,7 +132,7 @@ static std::optional<std::string> findFile(StringRef path1,
 // This is for -lfoo. We'll look for libfoo.dll.a or libfoo.a from search paths.
 static std::string
 searchLibrary(StringRef name, ArrayRef<StringRef> searchPaths, bool bStatic) {
-  if (name.startswith(":")) {
+  if (name.starts_with(":")) {
     for (StringRef dir : searchPaths)
       if (std::optional<std::string> s = findFile(dir, name.substr(1)))
         return *s;
@@ -157,11 +162,17 @@ searchLibrary(StringRef name, ArrayRef<StringRef> searchPaths, bool bStatic) {
   return "";
 }
 
+namespace lld {
+namespace coff {
+bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
+          llvm::raw_ostream &stderrOS, bool exitEarly, bool disableOutput);
+}
+
+namespace mingw {
 // Convert Unix-ish command line arguments to Windows-ish ones and
 // then call coff::link.
-bool mingw::link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
-                 llvm::raw_ostream &stderrOS, bool exitEarly,
-                 bool disableOutput) {
+bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
+          llvm::raw_ostream &stderrOS, bool exitEarly, bool disableOutput) {
   auto *ctx = new CommonLinkerContext;
   ctx->e.initialize(stdoutOS, stderrOS, exitEarly, disableOutput);
 
@@ -204,7 +215,7 @@ bool mingw::link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
 
   if (auto *a = args.getLastArg(OPT_entry)) {
     StringRef s = a->getValue();
-    if (args.getLastArgValue(OPT_m) == "i386pe" && s.startswith("_"))
+    if (args.getLastArgValue(OPT_m) == "i386pe" && s.starts_with("_"))
       add("-entry:" + s.substr(1));
     else
       add("-entry:" + s);
@@ -271,6 +282,8 @@ bool mingw::link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     add("-align:" + StringRef(a->getValue()));
   if (auto *a = args.getLastArg(OPT_heap))
     add("-heap:" + StringRef(a->getValue()));
+  if (auto *a = args.getLastArg(OPT_threads))
+    add("-threads:" + StringRef(a->getValue()));
 
   if (auto *a = args.getLastArg(OPT_o))
     add("-out:" + StringRef(a->getValue()));
@@ -407,6 +420,35 @@ bool mingw::link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
   for (auto *a : args.filtered(OPT_mllvm))
     add("-mllvm:" + StringRef(a->getValue()));
 
+  if (auto *arg = args.getLastArg(OPT_plugin_opt_mcpu_eq))
+    add("-mllvm:-mcpu=" + StringRef(arg->getValue()));
+  if (auto *arg = args.getLastArg(OPT_thinlto_jobs_eq))
+    add("-opt:lldltojobs=" + StringRef(arg->getValue()));
+  if (auto *arg = args.getLastArg(OPT_lto_O))
+    add("-opt:lldlto=" + StringRef(arg->getValue()));
+  if (auto *arg = args.getLastArg(OPT_lto_CGO))
+    add("-opt:lldltocgo=" + StringRef(arg->getValue()));
+  if (auto *arg = args.getLastArg(OPT_plugin_opt_dwo_dir_eq))
+    add("-dwodir:" + StringRef(arg->getValue()));
+  if (args.hasArg(OPT_lto_cs_profile_generate))
+    add("-lto-cs-profile-generate");
+  if (auto *arg = args.getLastArg(OPT_lto_cs_profile_file))
+    add("-lto-cs-profile-file:" + StringRef(arg->getValue()));
+
+  for (auto *a : args.filtered(OPT_plugin_opt_eq_minus))
+    add("-mllvm:-" + StringRef(a->getValue()));
+
+  // GCC collect2 passes -plugin-opt=path/to/lto-wrapper with an absolute or
+  // relative path. Just ignore. If not ended with "lto-wrapper" (or
+  // "lto-wrapper.exe" for GCC cross-compiled for Windows), consider it an
+  // unsupported LLVMgold.so option and error.
+  for (opt::Arg *arg : args.filtered(OPT_plugin_opt_eq)) {
+    StringRef v(arg->getValue());
+    if (!v.ends_with("lto-wrapper") && !v.ends_with("lto-wrapper.exe"))
+      error(arg->getSpelling() + ": unknown plugin option '" + arg->getValue() +
+            "'");
+  }
+
   for (auto *a : args.filtered(OPT_Xlink))
     add(a->getValue());
 
@@ -437,7 +479,7 @@ bool mingw::link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
   for (auto *a : args) {
     switch (a->getOption().getID()) {
     case OPT_INPUT:
-      if (StringRef(a->getValue()).endswith_insensitive(".def"))
+      if (StringRef(a->getValue()).ends_with_insensitive(".def"))
         add("-def:" + StringRef(a->getValue()));
       else
         add(prefix + StringRef(a->getValue()));
@@ -482,3 +524,5 @@ bool mingw::link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
 
   return coff::link(vec, stdoutOS, stderrOS, exitEarly, disableOutput);
 }
+} // namespace mingw
+} // namespace lld

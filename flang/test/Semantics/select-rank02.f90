@@ -1,4 +1,7 @@
 ! RUN: %python %S/test_errors.py %s %flang_fc1
+! TODO: crashes compiler mysteriously when built with MSVC since patch
+! 10b990a03b1ede533b8443edffa3607aae4295c7n or maybe earlier
+! UNSUPPORTED: system-windows
 
 !Shape analysis related tests for SELECT RANK Construct(R1148)
 program select_rank

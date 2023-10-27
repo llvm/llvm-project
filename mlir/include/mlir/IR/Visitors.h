@@ -35,7 +35,7 @@ class WalkResult {
   enum ResultEnum { Interrupt, Advance, Skip } result;
 
 public:
-  WalkResult(ResultEnum result) : result(result) {}
+  WalkResult(ResultEnum result = Advance) : result(result) {}
 
   /// Allow LogicalResult to interrupt the walk on failure.
   WalkResult(LogicalResult result)
@@ -61,6 +61,18 @@ public:
 
 /// Traversal order for region, block and operation walk utilities.
 enum class WalkOrder { PreOrder, PostOrder };
+
+/// This iterator enumerates the elements in "forward" order.
+struct ForwardIterator {
+  /// Make operations iterable: return the list of regions.
+  static MutableArrayRef<Region> makeIterable(Operation &range);
+
+  /// Regions and block are already iterable.
+  template <typename T>
+  static constexpr T &makeIterable(T &range) {
+    return range;
+  }
+};
 
 /// A utility class to encode the current walk stage for "generic" walkers.
 /// When walking an operation, we can either choose a Pre/Post order walker
@@ -113,33 +125,162 @@ template <typename T>
 using first_argument = decltype(first_argument_type(std::declval<T>()));
 
 /// Walk all of the regions, blocks, or operations nested under (and including)
-/// the given operation. Regions, blocks and operations at the same nesting
-/// level are visited in lexicographical order. The walk order for enclosing
-/// regions, blocks and operations with respect to their nested ones is
-/// specified by 'order'. These methods are invoked for void-returning
+/// the given operation. The order in which regions, blocks and operations at
+/// the same nesting level are visited (e.g., lexicographical or reverse
+/// lexicographical order) is determined by 'Iterator'. The walk order for
+/// enclosing regions, blocks and operations with respect to their nested ones
+/// is specified by 'order'. These methods are invoked for void-returning
 /// callbacks. A callback on a block or operation is allowed to erase that block
 /// or operation only if the walk is in post-order. See non-void method for
 /// pre-order erasure.
+template <typename Iterator>
 void walk(Operation *op, function_ref<void(Region *)> callback,
-          WalkOrder order);
-void walk(Operation *op, function_ref<void(Block *)> callback, WalkOrder order);
+          WalkOrder order) {
+  // We don't use early increment for regions because they can't be erased from
+  // a callback.
+  for (auto &region : Iterator::makeIterable(*op)) {
+    if (order == WalkOrder::PreOrder)
+      callback(&region);
+    for (auto &block : Iterator::makeIterable(region)) {
+      for (auto &nestedOp : Iterator::makeIterable(block))
+        walk<Iterator>(&nestedOp, callback, order);
+    }
+    if (order == WalkOrder::PostOrder)
+      callback(&region);
+  }
+}
+
+template <typename Iterator>
+void walk(Operation *op, function_ref<void(Block *)> callback,
+          WalkOrder order) {
+  for (auto &region : Iterator::makeIterable(*op)) {
+    // Early increment here in the case where the block is erased.
+    for (auto &block :
+         llvm::make_early_inc_range(Iterator::makeIterable(region))) {
+      if (order == WalkOrder::PreOrder)
+        callback(&block);
+      for (auto &nestedOp : Iterator::makeIterable(block))
+        walk<Iterator>(&nestedOp, callback, order);
+      if (order == WalkOrder::PostOrder)
+        callback(&block);
+    }
+  }
+}
+
+template <typename Iterator>
 void walk(Operation *op, function_ref<void(Operation *)> callback,
-          WalkOrder order);
+          WalkOrder order) {
+  if (order == WalkOrder::PreOrder)
+    callback(op);
+
+  // TODO: This walk should be iterative over the operations.
+  for (auto &region : Iterator::makeIterable(*op)) {
+    for (auto &block : Iterator::makeIterable(region)) {
+      // Early increment here in the case where the operation is erased.
+      for (auto &nestedOp :
+           llvm::make_early_inc_range(Iterator::makeIterable(block)))
+        walk<Iterator>(&nestedOp, callback, order);
+    }
+  }
+
+  if (order == WalkOrder::PostOrder)
+    callback(op);
+}
+
 /// Walk all of the regions, blocks, or operations nested under (and including)
-/// the given operation. Regions, blocks and operations at the same nesting
-/// level are visited in lexicographical order. The walk order for enclosing
-/// regions, blocks and operations with respect to their nested ones is
-/// specified by 'order'. This method is invoked for skippable or interruptible
-/// callbacks. A callback on a block or operation is allowed to erase that block
-/// or operation if either:
+/// the given operation. The order in which regions, blocks and operations at
+/// the same nesting level are visited (e.g., lexicographical or reverse
+/// lexicographical order) is determined by 'Iterator'. The walk order for
+/// enclosing regions, blocks and operations with respect to their nested ones
+/// is specified by 'order'. This method is invoked for skippable or
+/// interruptible callbacks. A callback on a block or operation is allowed to
+/// erase that block or operation if either:
 ///   * the walk is in post-order, or
 ///   * the walk is in pre-order and the walk is skipped after the erasure.
+template <typename Iterator>
 WalkResult walk(Operation *op, function_ref<WalkResult(Region *)> callback,
-                WalkOrder order);
+                WalkOrder order) {
+  // We don't use early increment for regions because they can't be erased from
+  // a callback.
+  for (auto &region : Iterator::makeIterable(*op)) {
+    if (order == WalkOrder::PreOrder) {
+      WalkResult result = callback(&region);
+      if (result.wasSkipped())
+        continue;
+      if (result.wasInterrupted())
+        return WalkResult::interrupt();
+    }
+    for (auto &block : Iterator::makeIterable(region)) {
+      for (auto &nestedOp : Iterator::makeIterable(block))
+        if (walk<Iterator>(&nestedOp, callback, order).wasInterrupted())
+          return WalkResult::interrupt();
+    }
+    if (order == WalkOrder::PostOrder) {
+      if (callback(&region).wasInterrupted())
+        return WalkResult::interrupt();
+      // We don't check if this region was skipped because its walk already
+      // finished and the walk will continue with the next region.
+    }
+  }
+  return WalkResult::advance();
+}
+
+template <typename Iterator>
 WalkResult walk(Operation *op, function_ref<WalkResult(Block *)> callback,
-                WalkOrder order);
+                WalkOrder order) {
+  for (auto &region : Iterator::makeIterable(*op)) {
+    // Early increment here in the case where the block is erased.
+    for (auto &block :
+         llvm::make_early_inc_range(Iterator::makeIterable(region))) {
+      if (order == WalkOrder::PreOrder) {
+        WalkResult result = callback(&block);
+        if (result.wasSkipped())
+          continue;
+        if (result.wasInterrupted())
+          return WalkResult::interrupt();
+      }
+      for (auto &nestedOp : Iterator::makeIterable(block))
+        if (walk<Iterator>(&nestedOp, callback, order).wasInterrupted())
+          return WalkResult::interrupt();
+      if (order == WalkOrder::PostOrder) {
+        if (callback(&block).wasInterrupted())
+          return WalkResult::interrupt();
+        // We don't check if this block was skipped because its walk already
+        // finished and the walk will continue with the next block.
+      }
+    }
+  }
+  return WalkResult::advance();
+}
+
+template <typename Iterator>
 WalkResult walk(Operation *op, function_ref<WalkResult(Operation *)> callback,
-                WalkOrder order);
+                WalkOrder order) {
+  if (order == WalkOrder::PreOrder) {
+    WalkResult result = callback(op);
+    // If skipped, caller will continue the walk on the next operation.
+    if (result.wasSkipped())
+      return WalkResult::advance();
+    if (result.wasInterrupted())
+      return WalkResult::interrupt();
+  }
+
+  // TODO: This walk should be iterative over the operations.
+  for (auto &region : Iterator::makeIterable(*op)) {
+    for (auto &block : Iterator::makeIterable(region)) {
+      // Early increment here in the case where the operation is erased.
+      for (auto &nestedOp :
+           llvm::make_early_inc_range(Iterator::makeIterable(block))) {
+        if (walk<Iterator>(&nestedOp, callback, order).wasInterrupted())
+          return WalkResult::interrupt();
+      }
+    }
+  }
+
+  if (order == WalkOrder::PostOrder)
+    return callback(op);
+  return WalkResult::advance();
+}
 
 // Below are a set of functions to walk nested operations. Users should favor
 // the direct `walk` methods on the IR classes(Operation/Block/etc) over these
@@ -147,10 +288,11 @@ WalkResult walk(Operation *op, function_ref<WalkResult(Operation *)> callback,
 // upon the type of the callback function.
 
 /// Walk all of the regions, blocks, or operations nested under (and including)
-/// the given operation. Regions, blocks and operations at the same nesting
-/// level are visited in lexicographical order. The walk order for enclosing
-/// regions, blocks and operations with respect to their nested ones is
-/// specified by 'Order' (post-order by default). A callback on a block or
+/// the given operation. The order in which regions, blocks and operations at
+/// the same nesting level are visited (e.g., lexicographical or reverse
+/// lexicographical order) is determined by 'Iterator'. The walk order for
+/// enclosing regions, blocks and operations with respect to their nested ones
+/// is specified by 'Order' (post-order by default). A callback on a block or
 /// operation is allowed to erase that block or operation if either:
 ///   * the walk is in post-order, or
 ///   * the walk is in pre-order and the walk is skipped after the erasure.
@@ -162,20 +304,21 @@ WalkResult walk(Operation *op, function_ref<WalkResult(Operation *)> callback,
 ///   op->walk([](Block *b) { ... });
 ///   op->walk([](Operation *op) { ... });
 template <
-    WalkOrder Order = WalkOrder::PostOrder, typename FuncTy,
-    typename ArgT = detail::first_argument<FuncTy>,
+    WalkOrder Order = WalkOrder::PostOrder, typename Iterator = ForwardIterator,
+    typename FuncTy, typename ArgT = detail::first_argument<FuncTy>,
     typename RetT = decltype(std::declval<FuncTy>()(std::declval<ArgT>()))>
 std::enable_if_t<llvm::is_one_of<ArgT, Operation *, Region *, Block *>::value,
                  RetT>
 walk(Operation *op, FuncTy &&callback) {
-  return detail::walk(op, function_ref<RetT(ArgT)>(callback), Order);
+  return detail::walk<Iterator>(op, function_ref<RetT(ArgT)>(callback), Order);
 }
 
 /// Walk all of the operations of type 'ArgT' nested under and including the
-/// given operation. Regions, blocks and operations at the same nesting
-/// level are visited in lexicographical order. The walk order for enclosing
-/// regions, blocks and operations with respect to their nested ones is
-/// specified by 'order' (post-order by default). This method is selected for
+/// given operation. The order in which regions, blocks and operations at
+/// the same nesting are visited (e.g., lexicographical or reverse
+/// lexicographical order) is determined by 'Iterator'. The walk order for
+/// enclosing regions, blocks and operations with respect to their nested ones
+/// is specified by 'order' (post-order by default). This method is selected for
 /// void-returning callbacks that operate on a specific derived operation type.
 /// A callback on an operation is allowed to erase that operation only if the
 /// walk is in post-order. See non-void method for pre-order erasure.
@@ -183,8 +326,8 @@ walk(Operation *op, FuncTy &&callback) {
 /// Example:
 ///   op->walk([](ReturnOp op) { ... });
 template <
-    WalkOrder Order = WalkOrder::PostOrder, typename FuncTy,
-    typename ArgT = detail::first_argument<FuncTy>,
+    WalkOrder Order = WalkOrder::PostOrder, typename Iterator = ForwardIterator,
+    typename FuncTy, typename ArgT = detail::first_argument<FuncTy>,
     typename RetT = decltype(std::declval<FuncTy>()(std::declval<ArgT>()))>
 std::enable_if_t<
     !llvm::is_one_of<ArgT, Operation *, Region *, Block *>::value &&
@@ -195,17 +338,19 @@ walk(Operation *op, FuncTy &&callback) {
     if (auto derivedOp = dyn_cast<ArgT>(op))
       callback(derivedOp);
   };
-  return detail::walk(op, function_ref<RetT(Operation *)>(wrapperFn), Order);
+  return detail::walk<Iterator>(op, function_ref<RetT(Operation *)>(wrapperFn),
+                                Order);
 }
 
 /// Walk all of the operations of type 'ArgT' nested under and including the
-/// given operation. Regions, blocks and operations at the same nesting level
-/// are visited in lexicographical order. The walk order for enclosing regions,
-/// blocks and operations with respect to their nested ones is specified by
-/// 'Order' (post-order by default). This method is selected for WalkReturn
-/// returning skippable or interruptible callbacks that operate on a specific
-/// derived operation type. A callback on an operation is allowed to erase that
-/// operation if either:
+/// given operation. The order in which regions, blocks and operations at
+/// the same nesting are visited (e.g., lexicographical or reverse
+/// lexicographical order) is determined by 'Iterator'. The walk order for
+/// enclosing regions, blocks and operations with respect to their nested ones
+/// is specified by 'Order' (post-order by default). This method is selected for
+/// WalkReturn returning skippable or interruptible callbacks that operate on a
+/// specific derived operation type. A callback on an operation is allowed to
+/// erase that operation if either:
 ///   * the walk is in post-order, or
 ///   * the walk is in pre-order and the walk is skipped after the erasure.
 ///
@@ -218,8 +363,8 @@ walk(Operation *op, FuncTy &&callback) {
 ///     return WalkResult::advance();
 ///   });
 template <
-    WalkOrder Order = WalkOrder::PostOrder, typename FuncTy,
-    typename ArgT = detail::first_argument<FuncTy>,
+    WalkOrder Order = WalkOrder::PostOrder, typename Iterator = ForwardIterator,
+    typename FuncTy, typename ArgT = detail::first_argument<FuncTy>,
     typename RetT = decltype(std::declval<FuncTy>()(std::declval<ArgT>()))>
 std::enable_if_t<
     !llvm::is_one_of<ArgT, Operation *, Region *, Block *>::value &&
@@ -231,7 +376,8 @@ walk(Operation *op, FuncTy &&callback) {
       return callback(derivedOp);
     return WalkResult::advance();
   };
-  return detail::walk(op, function_ref<RetT(Operation *)>(wrapperFn), Order);
+  return detail::walk<Iterator>(op, function_ref<RetT(Operation *)>(wrapperFn),
+                                Order);
 }
 
 /// Generic walkers with stage aware callbacks.

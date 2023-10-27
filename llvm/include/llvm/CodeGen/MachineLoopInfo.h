@@ -29,10 +29,10 @@
 #ifndef LLVM_CODEGEN_MACHINELOOPINFO_H
 #define LLVM_CODEGEN_MACHINELOOPINFO_H
 
-#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/IR/DebugLoc.h"
+#include "llvm/Support/GenericLoopInfo.h"
 
 namespace llvm {
 

@@ -62,7 +62,7 @@ findAffectedValues(CallBase *CI, TargetTransformInfo *TTI,
 
   auto AddAffected = [&Affected](Value *V, unsigned Idx =
                                                AssumptionCache::ExprResultIdx) {
-    if (isa<Argument>(V)) {
+    if (isa<Argument>(V) || isa<GlobalValue>(V)) {
       Affected.push_back({V, Idx});
     } else if (auto *I = dyn_cast<Instruction>(V)) {
       Affected.push_back({I, Idx});
@@ -87,7 +87,7 @@ findAffectedValues(CallBase *CI, TargetTransformInfo *TTI,
   AddAffected(Cond);
 
   CmpInst::Predicate Pred;
-  if (match(Cond, m_ICmp(Pred, m_Value(A), m_Value(B)))) {
+  if (match(Cond, m_Cmp(Pred, m_Value(A), m_Value(B)))) {
     AddAffected(A);
     AddAffected(B);
 
@@ -128,7 +128,18 @@ findAffectedValues(CallBase *CI, TargetTransformInfo *TTI,
       if (match(A, m_Add(m_Value(X), m_ConstantInt())) &&
           match(B, m_ConstantInt()))
         AddAffected(X);
+    } else if (CmpInst::isFPPredicate(Pred)) {
+      // fcmp fneg(x), y
+      // fcmp fabs(x), y
+      // fcmp fneg(fabs(x)), y
+      if (match(A, m_FNeg(m_Value(A))))
+        AddAffected(A);
+      if (match(A, m_FAbs(m_Value(A))))
+        AddAffected(A);
     }
+  } else if (match(Cond, m_Intrinsic<Intrinsic::is_fpclass>(m_Value(A),
+                                                            m_Value(B)))) {
+    AddAffected(A);
   }
 
   if (TTI) {

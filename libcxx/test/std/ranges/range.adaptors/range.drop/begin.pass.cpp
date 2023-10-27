@@ -37,7 +37,7 @@ struct MaybeSimpleView : std::ranges::view_base {
     return nullptr;
   }
   constexpr int* end() const { return nullptr; }
-  constexpr size_t size() const { return 0; }
+  constexpr std::size_t size() const { return 0; }
 };
 
 using SimpleView = MaybeSimpleView<true>;

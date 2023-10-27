@@ -56,12 +56,10 @@ BreakpointResolverName::BreakpointResolverName(
   }
 }
 
-BreakpointResolverName::BreakpointResolverName(const BreakpointSP &bkpt,
-                                               std::vector<std::string> names,
-                                               FunctionNameType name_type_mask,
-                                               LanguageType language,
-                                               lldb::addr_t offset,
-                                               bool skip_prologue)
+BreakpointResolverName::BreakpointResolverName(
+    const BreakpointSP &bkpt, const std::vector<std::string> &names,
+    FunctionNameType name_type_mask, LanguageType language, lldb::addr_t offset,
+    bool skip_prologue)
     : BreakpointResolver(bkpt, BreakpointResolver::NameResolver, offset),
       m_match_type(Breakpoint::Exact), m_language(language),
       m_skip_prologue(skip_prologue) {
@@ -104,7 +102,7 @@ BreakpointResolver *BreakpointResolverName::CreateFromStructuredData(
     }
   }
 
-  lldb::addr_t offset = 0;
+  lldb::offset_t offset = 0;
   success =
       options_dict.GetValueForKeyAsInteger(GetKey(OptionNames::Offset), offset);
   if (!success) {
@@ -197,8 +195,8 @@ StructuredData::ObjectSP BreakpointResolverName::SerializeToStructuredData() {
     for (auto lookup : m_lookups) {
       names_sp->AddItem(StructuredData::StringSP(
           new StructuredData::String(lookup.GetName().GetStringRef())));
-      name_masks_sp->AddItem(StructuredData::IntegerSP(
-          new StructuredData::Integer(lookup.GetNameTypeMask())));
+      name_masks_sp->AddItem(StructuredData::UnsignedIntegerSP(
+          new StructuredData::UnsignedInteger(lookup.GetNameTypeMask())));
     }
     options_dict_sp->AddItem(GetKey(OptionNames::SymbolNameArray), names_sp);
     options_dict_sp->AddItem(GetKey(OptionNames::NameMaskArray), name_masks_sp);
@@ -331,14 +329,7 @@ BreakpointResolverName::SearchCallback(SearchFilter &filter,
   Address break_addr;
 
   // Remove any duplicates between the function list and the symbol list
-  SymbolContext sc;
-  if (!func_list.GetSize())
-    return Searcher::eCallbackReturnContinue;
-
-  for (uint32_t i = 0; i < func_list.GetSize(); i++) {
-    if (!func_list.GetContextAtIndex(i, sc))
-      continue;
-
+  for (const SymbolContext &sc : func_list) {
     bool is_reexported = false;
 
     if (sc.block && sc.block->GetInlinedFunctionInfo()) {

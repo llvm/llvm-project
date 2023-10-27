@@ -22,11 +22,19 @@
 @import DependsOnModule.CXX14; // expected-note {{module imported here}}
 // expected-error@DependsOnModule.framework/module.map:46 {{module 'DependsOnModule.CXX17' requires feature 'cplusplus17'}}
 @import DependsOnModule.CXX17; // expected-note {{module imported here}}
+// expected-error@DependsOnModule.framework/module.map:49 {{module 'DependsOnModule.CXX20' requires feature 'cplusplus20'}}
+@import DependsOnModule.CXX20; // expected-note {{module imported here}}
+// expected-error@DependsOnModule.framework/module.map:52 {{module 'DependsOnModule.CXX23' requires feature 'cplusplus23'}}
+@import DependsOnModule.CXX23; // expected-note {{module imported here}}
+// expected-error@DependsOnModule.framework/module.map:55 {{module 'DependsOnModule.CXX26' requires feature 'cplusplus26'}}
+@import DependsOnModule.CXX26; // expected-note {{module imported here}}
 #else
-// expected-error@DependsOnModule.framework/module.map:49 {{module 'DependsOnModule.C99' requires feature 'c99'}}
+// expected-error@DependsOnModule.framework/module.map:58 {{module 'DependsOnModule.C99' requires feature 'c99'}}
 @import DependsOnModule.C99; // expected-note {{module imported here}}
-// expected-error@DependsOnModule.framework/module.map:52 {{module 'DependsOnModule.C11' requires feature 'c11'}}
+// expected-error@DependsOnModule.framework/module.map:61 {{module 'DependsOnModule.C11' requires feature 'c11'}}
 @import DependsOnModule.C11; // expected-note {{module imported here}}
-// expected-error@DependsOnModule.framework/module.map:55 {{module 'DependsOnModule.C17' requires feature 'c17'}}
+// expected-error@DependsOnModule.framework/module.map:64 {{module 'DependsOnModule.C17' requires feature 'c17'}}
 @import DependsOnModule.C17; // expected-note {{module imported here}}
+// expected-error@DependsOnModule.framework/module.map:67 {{module 'DependsOnModule.C23' requires feature 'c23'}}
+@import DependsOnModule.C23; // expected-note {{module imported here}}
 #endif

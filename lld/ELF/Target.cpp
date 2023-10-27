@@ -62,6 +62,8 @@ TargetInfo *elf::getTarget() {
     return getAVRTargetInfo();
   case EM_HEXAGON:
     return getHexagonTargetInfo();
+  case EM_LOONGARCH:
+    return getLoongArchTargetInfo();
   case EM_MIPS:
     switch (config->ekind) {
     case ELF32LEKind:
@@ -157,6 +159,8 @@ void TargetInfo::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
   uint64_t secAddr = sec.getOutputSection()->addr;
   if (auto *s = dyn_cast<InputSection>(&sec))
     secAddr += s->outSecOff;
+  else if (auto *ehIn = dyn_cast<EhInputSection>(&sec))
+    secAddr += ehIn->getParent()->outSecOff;
   for (const Relocation &rel : sec.relocs()) {
     uint8_t *loc = buf + rel.offset;
     const uint64_t val = SignExtend64(

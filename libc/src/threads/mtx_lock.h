@@ -9,12 +9,12 @@
 #ifndef LLVM_LIBC_SRC_THREADS_MTX_LOCK_H
 #define LLVM_LIBC_SRC_THREADS_MTX_LOCK_H
 
-#include "include/threads.h"
+#include <threads.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 int mtx_lock(mtx_t *mutex);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_THREADS_MTX_LOCK_H

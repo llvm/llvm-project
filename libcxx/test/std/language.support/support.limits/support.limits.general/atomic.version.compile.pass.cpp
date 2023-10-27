@@ -216,7 +216,7 @@
 #   error "__cpp_lib_atomic_value_initialization should have the value 201911L in c++20"
 # endif
 
-# if !defined(_LIBCPP_AVAILABILITY_DISABLE_FTM___cpp_lib_atomic_wait)
+# if !defined(_LIBCPP_AVAILABILITY_HAS_NO_SYNC)
 #   ifndef __cpp_lib_atomic_wait
 #     error "__cpp_lib_atomic_wait should be defined in c++20"
 #   endif
@@ -225,7 +225,7 @@
 #   endif
 # else
 #   ifdef __cpp_lib_atomic_wait
-#     error "__cpp_lib_atomic_wait should not be defined when the requirement '!defined(_LIBCPP_AVAILABILITY_DISABLE_FTM___cpp_lib_atomic_wait)' is not met!"
+#     error "__cpp_lib_atomic_wait should not be defined when the requirement '!defined(_LIBCPP_AVAILABILITY_HAS_NO_SYNC)' is not met!"
 #   endif
 # endif
 
@@ -242,21 +242,21 @@
 #   endif
 # endif
 
-#elif TEST_STD_VER > 20
+#elif TEST_STD_VER == 23
 
 # ifndef __cpp_lib_atomic_flag_test
-#   error "__cpp_lib_atomic_flag_test should be defined in c++2b"
+#   error "__cpp_lib_atomic_flag_test should be defined in c++23"
 # endif
 # if __cpp_lib_atomic_flag_test != 201907L
-#   error "__cpp_lib_atomic_flag_test should have the value 201907L in c++2b"
+#   error "__cpp_lib_atomic_flag_test should have the value 201907L in c++23"
 # endif
 
 # if !defined(_LIBCPP_VERSION)
 #   ifndef __cpp_lib_atomic_float
-#     error "__cpp_lib_atomic_float should be defined in c++2b"
+#     error "__cpp_lib_atomic_float should be defined in c++23"
 #   endif
 #   if __cpp_lib_atomic_float != 201711L
-#     error "__cpp_lib_atomic_float should have the value 201711L in c++2b"
+#     error "__cpp_lib_atomic_float should have the value 201711L in c++23"
 #   endif
 # else // _LIBCPP_VERSION
 #   ifdef __cpp_lib_atomic_float
@@ -265,25 +265,25 @@
 # endif
 
 # ifndef __cpp_lib_atomic_is_always_lock_free
-#   error "__cpp_lib_atomic_is_always_lock_free should be defined in c++2b"
+#   error "__cpp_lib_atomic_is_always_lock_free should be defined in c++23"
 # endif
 # if __cpp_lib_atomic_is_always_lock_free != 201603L
-#   error "__cpp_lib_atomic_is_always_lock_free should have the value 201603L in c++2b"
+#   error "__cpp_lib_atomic_is_always_lock_free should have the value 201603L in c++23"
 # endif
 
 # ifndef __cpp_lib_atomic_lock_free_type_aliases
-#   error "__cpp_lib_atomic_lock_free_type_aliases should be defined in c++2b"
+#   error "__cpp_lib_atomic_lock_free_type_aliases should be defined in c++23"
 # endif
 # if __cpp_lib_atomic_lock_free_type_aliases != 201907L
-#   error "__cpp_lib_atomic_lock_free_type_aliases should have the value 201907L in c++2b"
+#   error "__cpp_lib_atomic_lock_free_type_aliases should have the value 201907L in c++23"
 # endif
 
 # if !defined(_LIBCPP_VERSION)
 #   ifndef __cpp_lib_atomic_ref
-#     error "__cpp_lib_atomic_ref should be defined in c++2b"
+#     error "__cpp_lib_atomic_ref should be defined in c++23"
 #   endif
 #   if __cpp_lib_atomic_ref != 201806L
-#     error "__cpp_lib_atomic_ref should have the value 201806L in c++2b"
+#     error "__cpp_lib_atomic_ref should have the value 201806L in c++23"
 #   endif
 # else // _LIBCPP_VERSION
 #   ifdef __cpp_lib_atomic_ref
@@ -293,10 +293,10 @@
 
 # if !defined(_LIBCPP_VERSION)
 #   ifndef __cpp_lib_atomic_shared_ptr
-#     error "__cpp_lib_atomic_shared_ptr should be defined in c++2b"
+#     error "__cpp_lib_atomic_shared_ptr should be defined in c++23"
 #   endif
 #   if __cpp_lib_atomic_shared_ptr != 201711L
-#     error "__cpp_lib_atomic_shared_ptr should have the value 201711L in c++2b"
+#     error "__cpp_lib_atomic_shared_ptr should have the value 201711L in c++23"
 #   endif
 # else // _LIBCPP_VERSION
 #   ifdef __cpp_lib_atomic_shared_ptr
@@ -305,31 +305,31 @@
 # endif
 
 # ifndef __cpp_lib_atomic_value_initialization
-#   error "__cpp_lib_atomic_value_initialization should be defined in c++2b"
+#   error "__cpp_lib_atomic_value_initialization should be defined in c++23"
 # endif
 # if __cpp_lib_atomic_value_initialization != 201911L
-#   error "__cpp_lib_atomic_value_initialization should have the value 201911L in c++2b"
+#   error "__cpp_lib_atomic_value_initialization should have the value 201911L in c++23"
 # endif
 
-# if !defined(_LIBCPP_AVAILABILITY_DISABLE_FTM___cpp_lib_atomic_wait)
+# if !defined(_LIBCPP_AVAILABILITY_HAS_NO_SYNC)
 #   ifndef __cpp_lib_atomic_wait
-#     error "__cpp_lib_atomic_wait should be defined in c++2b"
+#     error "__cpp_lib_atomic_wait should be defined in c++23"
 #   endif
 #   if __cpp_lib_atomic_wait != 201907L
-#     error "__cpp_lib_atomic_wait should have the value 201907L in c++2b"
+#     error "__cpp_lib_atomic_wait should have the value 201907L in c++23"
 #   endif
 # else
 #   ifdef __cpp_lib_atomic_wait
-#     error "__cpp_lib_atomic_wait should not be defined when the requirement '!defined(_LIBCPP_AVAILABILITY_DISABLE_FTM___cpp_lib_atomic_wait)' is not met!"
+#     error "__cpp_lib_atomic_wait should not be defined when the requirement '!defined(_LIBCPP_AVAILABILITY_HAS_NO_SYNC)' is not met!"
 #   endif
 # endif
 
 # if defined(__cpp_char8_t)
 #   ifndef __cpp_lib_char8_t
-#     error "__cpp_lib_char8_t should be defined in c++2b"
+#     error "__cpp_lib_char8_t should be defined in c++23"
 #   endif
 #   if __cpp_lib_char8_t != 201907L
-#     error "__cpp_lib_char8_t should have the value 201907L in c++2b"
+#     error "__cpp_lib_char8_t should have the value 201907L in c++23"
 #   endif
 # else
 #   ifdef __cpp_lib_char8_t
@@ -337,5 +337,100 @@
 #   endif
 # endif
 
-#endif // TEST_STD_VER > 20
+#elif TEST_STD_VER > 23
+
+# ifndef __cpp_lib_atomic_flag_test
+#   error "__cpp_lib_atomic_flag_test should be defined in c++26"
+# endif
+# if __cpp_lib_atomic_flag_test != 201907L
+#   error "__cpp_lib_atomic_flag_test should have the value 201907L in c++26"
+# endif
+
+# if !defined(_LIBCPP_VERSION)
+#   ifndef __cpp_lib_atomic_float
+#     error "__cpp_lib_atomic_float should be defined in c++26"
+#   endif
+#   if __cpp_lib_atomic_float != 201711L
+#     error "__cpp_lib_atomic_float should have the value 201711L in c++26"
+#   endif
+# else // _LIBCPP_VERSION
+#   ifdef __cpp_lib_atomic_float
+#     error "__cpp_lib_atomic_float should not be defined because it is unimplemented in libc++!"
+#   endif
+# endif
+
+# ifndef __cpp_lib_atomic_is_always_lock_free
+#   error "__cpp_lib_atomic_is_always_lock_free should be defined in c++26"
+# endif
+# if __cpp_lib_atomic_is_always_lock_free != 201603L
+#   error "__cpp_lib_atomic_is_always_lock_free should have the value 201603L in c++26"
+# endif
+
+# ifndef __cpp_lib_atomic_lock_free_type_aliases
+#   error "__cpp_lib_atomic_lock_free_type_aliases should be defined in c++26"
+# endif
+# if __cpp_lib_atomic_lock_free_type_aliases != 201907L
+#   error "__cpp_lib_atomic_lock_free_type_aliases should have the value 201907L in c++26"
+# endif
+
+# if !defined(_LIBCPP_VERSION)
+#   ifndef __cpp_lib_atomic_ref
+#     error "__cpp_lib_atomic_ref should be defined in c++26"
+#   endif
+#   if __cpp_lib_atomic_ref != 201806L
+#     error "__cpp_lib_atomic_ref should have the value 201806L in c++26"
+#   endif
+# else // _LIBCPP_VERSION
+#   ifdef __cpp_lib_atomic_ref
+#     error "__cpp_lib_atomic_ref should not be defined because it is unimplemented in libc++!"
+#   endif
+# endif
+
+# if !defined(_LIBCPP_VERSION)
+#   ifndef __cpp_lib_atomic_shared_ptr
+#     error "__cpp_lib_atomic_shared_ptr should be defined in c++26"
+#   endif
+#   if __cpp_lib_atomic_shared_ptr != 201711L
+#     error "__cpp_lib_atomic_shared_ptr should have the value 201711L in c++26"
+#   endif
+# else // _LIBCPP_VERSION
+#   ifdef __cpp_lib_atomic_shared_ptr
+#     error "__cpp_lib_atomic_shared_ptr should not be defined because it is unimplemented in libc++!"
+#   endif
+# endif
+
+# ifndef __cpp_lib_atomic_value_initialization
+#   error "__cpp_lib_atomic_value_initialization should be defined in c++26"
+# endif
+# if __cpp_lib_atomic_value_initialization != 201911L
+#   error "__cpp_lib_atomic_value_initialization should have the value 201911L in c++26"
+# endif
+
+# if !defined(_LIBCPP_AVAILABILITY_HAS_NO_SYNC)
+#   ifndef __cpp_lib_atomic_wait
+#     error "__cpp_lib_atomic_wait should be defined in c++26"
+#   endif
+#   if __cpp_lib_atomic_wait != 201907L
+#     error "__cpp_lib_atomic_wait should have the value 201907L in c++26"
+#   endif
+# else
+#   ifdef __cpp_lib_atomic_wait
+#     error "__cpp_lib_atomic_wait should not be defined when the requirement '!defined(_LIBCPP_AVAILABILITY_HAS_NO_SYNC)' is not met!"
+#   endif
+# endif
+
+# if defined(__cpp_char8_t)
+#   ifndef __cpp_lib_char8_t
+#     error "__cpp_lib_char8_t should be defined in c++26"
+#   endif
+#   if __cpp_lib_char8_t != 201907L
+#     error "__cpp_lib_char8_t should have the value 201907L in c++26"
+#   endif
+# else
+#   ifdef __cpp_lib_char8_t
+#     error "__cpp_lib_char8_t should not be defined when the requirement 'defined(__cpp_char8_t)' is not met!"
+#   endif
+# endif
+
+#endif // TEST_STD_VER > 23
 

@@ -345,20 +345,20 @@ static unsigned countToEliminateCompares(Loop &L, unsigned MaxPeelCount,
   assert(L.isLoopSimplifyForm() && "Loop needs to be in loop simplify form");
   unsigned DesiredPeelCount = 0;
 
-  for (auto *BB : L.blocks()) {
-    auto *BI = dyn_cast<BranchInst>(BB->getTerminator());
-    if (!BI || BI->isUnconditional())
-      continue;
+  // Do not peel the entire loop.
+  const SCEV *BE = SE.getConstantMaxBackedgeTakenCount(&L);
+  if (const SCEVConstant *SC = dyn_cast<SCEVConstant>(BE))
+    MaxPeelCount =
+        std::min((unsigned)SC->getAPInt().getLimitedValue() - 1, MaxPeelCount);
 
-    // Ignore loop exit condition.
-    if (L.getLoopLatch() == BB)
-      continue;
+  auto ComputePeelCount = [&](Value *Condition) -> void {
+    if (!Condition->getType()->isIntegerTy())
+      return;
 
-    Value *Condition = BI->getCondition();
     Value *LeftVal, *RightVal;
     CmpInst::Predicate Pred;
     if (!match(Condition, m_ICmp(Pred, m_Value(LeftVal), m_Value(RightVal))))
-      continue;
+      return;
 
     const SCEV *LeftSCEV = SE.getSCEV(LeftVal);
     const SCEV *RightSCEV = SE.getSCEV(RightVal);
@@ -366,7 +366,7 @@ static unsigned countToEliminateCompares(Loop &L, unsigned MaxPeelCount,
     // Do not consider predicates that are known to be true or false
     // independently of the loop iteration.
     if (SE.evaluatePredicate(Pred, LeftSCEV, RightSCEV))
-      continue;
+      return;
 
     // Check if we have a condition with one AddRec and one non AddRec
     // expression. Normalize LeftSCEV to be the AddRec.
@@ -375,7 +375,7 @@ static unsigned countToEliminateCompares(Loop &L, unsigned MaxPeelCount,
         std::swap(LeftSCEV, RightSCEV);
         Pred = ICmpInst::getSwappedPredicate(Pred);
       } else
-        continue;
+        return;
     }
 
     const SCEVAddRecExpr *LeftAR = cast<SCEVAddRecExpr>(LeftSCEV);
@@ -383,10 +383,10 @@ static unsigned countToEliminateCompares(Loop &L, unsigned MaxPeelCount,
     // Avoid huge SCEV computations in the loop below, make sure we only
     // consider AddRecs of the loop we are trying to peel.
     if (!LeftAR->isAffine() || LeftAR->getLoop() != &L)
-      continue;
+      return;
     if (!(ICmpInst::isEquality(Pred) && LeftAR->hasNoSelfWrap()) &&
         !SE.getMonotonicPredicateType(LeftAR, Pred))
-      continue;
+      return;
 
     // Check if extending the current DesiredPeelCount lets us evaluate Pred
     // or !Pred in the loop body statically.
@@ -422,7 +422,7 @@ static unsigned countToEliminateCompares(Loop &L, unsigned MaxPeelCount,
     // first iteration of the loop body after peeling?
     if (!SE.isKnownPredicate(ICmpInst::getInversePredicate(Pred), IterVal,
                              RightSCEV))
-      continue; // If not, give up.
+      return; // If not, give up.
 
     // However, for equality comparisons, that isn't always sufficient to
     // eliminate the comparsion in loop body, we may need to peel one more
@@ -433,11 +433,28 @@ static unsigned countToEliminateCompares(Loop &L, unsigned MaxPeelCount,
         !SE.isKnownPredicate(Pred, IterVal, RightSCEV) &&
         SE.isKnownPredicate(Pred, NextIterVal, RightSCEV)) {
       if (!CanPeelOneMoreIteration())
-        continue; // Need to peel one more iteration, but can't. Give up.
+        return; // Need to peel one more iteration, but can't. Give up.
       PeelOneMoreIteration(); // Great!
     }
 
     DesiredPeelCount = std::max(DesiredPeelCount, NewPeelCount);
+  };
+
+  for (BasicBlock *BB : L.blocks()) {
+    for (Instruction &I : *BB) {
+      if (SelectInst *SI = dyn_cast<SelectInst>(&I))
+        ComputePeelCount(SI->getCondition());
+    }
+
+    auto *BI = dyn_cast<BranchInst>(BB->getTerminator());
+    if (!BI || BI->isUnconditional())
+      continue;
+
+    // Ignore loop exit condition.
+    if (L.getLoopLatch() == BB)
+      continue;
+
+    ComputePeelCount(BI->getCondition());
   }
 
   return DesiredPeelCount;
@@ -607,7 +624,7 @@ struct WeightInfo {
 /// F/(F+E) is a probability to go to loop and E/(F+E) is a probability to
 /// go to exit.
 /// Then, Estimated ExitCount = F / E.
-/// For I-th (counting from 0) peeled off iteration we set the the weights for
+/// For I-th (counting from 0) peeled off iteration we set the weights for
 /// the peeled exit as (EC - I, 1). It gives us reasonable distribution,
 /// The probability to go to exit 1/(EC-I) increases. At the same time
 /// the estimated exit count in the remainder loop reduces by I.
@@ -1025,6 +1042,7 @@ bool llvm::peelLoop(Loop *L, unsigned PeelCount, LoopInfo *LI,
 
   // We modified the loop, update SE.
   SE->forgetTopmostLoop(L);
+  SE->forgetBlockAndLoopDispositions();
 
 #ifdef EXPENSIVE_CHECKS
   // Finally DomtTree must be correct.

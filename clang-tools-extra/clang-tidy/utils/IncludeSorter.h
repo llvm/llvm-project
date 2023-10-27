@@ -13,8 +13,7 @@
 #include <optional>
 #include <string>
 
-namespace clang {
-namespace tidy {
+namespace clang::tidy {
 namespace utils {
 
 /// Class used by ``IncludeInserterCallback`` to record the names of the
@@ -52,7 +51,7 @@ public:
                                                   bool IsAngled);
 
 private:
-  typedef SmallVector<SourceRange, 1> SourceRangeVector;
+  using SourceRangeVector = SmallVector<SourceRange, 1>;
 
   const SourceManager *SourceMgr;
   const IncludeStyle Style;
@@ -73,6 +72,5 @@ template <> struct OptionEnumMapping<utils::IncludeSorter::IncludeStyle> {
   static ArrayRef<std::pair<utils::IncludeSorter::IncludeStyle, StringRef>>
   getEnumMapping();
 };
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_INCLUDESORTER_H

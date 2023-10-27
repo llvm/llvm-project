@@ -17,6 +17,7 @@
 #include "clang/Parse/Parser.h"
 #include "clang/Parse/RAIIObjectsForParser.h"
 #include "clang/Sema/DeclSpec.h"
+#include "clang/Sema/EnterExpressionEvaluationContext.h"
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/SemaDiagnostic.h"
@@ -209,7 +210,15 @@ Decl *Parser::ParseSingleDeclarationAfterTemplate(
   }
 
   ParsedAttributes prefixAttrs(AttrFactory);
-  MaybeParseCXX11Attributes(prefixAttrs);
+  ParsedAttributes DeclSpecAttrs(AttrFactory);
+
+  // GNU attributes are applied to the declaration specification while the
+  // standard attributes are applied to the declaration.  We parse the two
+  // attribute sets into different containters so we can apply them during
+  // the regular parsing process.
+  while (MaybeParseCXX11Attributes(prefixAttrs) ||
+         MaybeParseGNUAttributes(DeclSpecAttrs))
+    ;
 
   if (Tok.is(tok::kw_using)) {
     auto usingDeclPtr = ParseUsingDirectiveOrDeclaration(Context, TemplateInfo, DeclEnd,
@@ -222,6 +231,9 @@ Decl *Parser::ParseSingleDeclarationAfterTemplate(
   // Parse the declaration specifiers, stealing any diagnostics from
   // the template parameters.
   ParsingDeclSpec DS(*this, &DiagsFromTParams);
+  DS.SetRangeStart(DeclSpecAttrs.Range.getBegin());
+  DS.SetRangeEnd(DeclSpecAttrs.Range.getEnd());
+  DS.takeAttributesFrom(DeclSpecAttrs);
 
   ParseDeclarationSpecifiers(DS, TemplateInfo, AS,
                              getDeclSpecContextFromDeclaratorContext(Context));
@@ -236,11 +248,15 @@ Decl *Parser::ParseSingleDeclarationAfterTemplate(
                                     : MultiTemplateParamsArg(),
         TemplateInfo.Kind == ParsedTemplateInfo::ExplicitInstantiation,
         AnonRecord);
+    Actions.ActOnDefinedDeclarationSpecifier(Decl);
     assert(!AnonRecord &&
            "Anonymous unions/structs should not be valid with template");
     DS.complete(Decl);
     return Decl;
   }
+
+  if (DS.hasTagDefinition())
+    Actions.ActOnDefinedDeclarationSpecifier(DS.getRepAsDecl());
 
   // Move the attributes from the prefix into the DS.
   if (TemplateInfo.Kind == ParsedTemplateInfo::ExplicitInstantiation)
@@ -274,18 +290,9 @@ Decl *Parser::ParseSingleDeclarationAfterTemplate(
 
   // Error parsing the declarator?
   if (!DeclaratorInfo.hasName()) {
-    // If so, skip until the semi-colon or a }.
-    SkipUntil(tok::r_brace, StopAtSemi | StopBeforeMatch);
-    if (Tok.is(tok::semi))
-      ConsumeToken();
+    SkipMalformedDecl();
     return nullptr;
   }
-
-  llvm::TimeTraceScope TimeScope("ParseTemplate", [&]() {
-    return std::string(DeclaratorInfo.getIdentifier() != nullptr
-                           ? DeclaratorInfo.getIdentifier()->getName()
-                           : "<unknown>");
-  });
 
   LateParsedAttrList LateParsedAttrs(true);
   if (DeclaratorInfo.isFunctionDeclarator()) {
@@ -849,10 +856,17 @@ NamedDecl *Parser::ParseTypeParameter(unsigned Depth, unsigned Position) {
   // we introduce the type parameter into the local scope.
   SourceLocation EqualLoc;
   ParsedType DefaultArg;
-  if (TryConsumeToken(tok::equal, EqualLoc))
+  if (TryConsumeToken(tok::equal, EqualLoc)) {
+    // The default argument may declare template parameters, notably
+    // if it contains a generic lambda, so we need to increase
+    // the template depth as these parameters would not be instantiated
+    // at the current level.
+    TemplateParameterDepthRAII CurTemplateDepthTracker(TemplateParameterDepth);
+    ++CurTemplateDepthTracker;
     DefaultArg =
         ParseTypeName(/*Range=*/nullptr, DeclaratorContext::TemplateTypeArg)
             .get();
+  }
 
   NamedDecl *NewDecl = Actions.ActOnTypeParameter(getCurScope(),
                                                   TypenameKeyword, EllipsisLoc,
@@ -1038,6 +1052,14 @@ Parser::ParseNonTypeTemplateParameter(unsigned Depth, unsigned Position) {
       //   end of the template-parameter-list rather than a greater-than
       //   operator.
       GreaterThanIsOperatorScope G(GreaterThanIsOperator, false);
+
+      // The default argument may declare template parameters, notably
+      // if it contains a generic lambda, so we need to increase
+      // the template depth as these parameters would not be instantiated
+      // at the current level.
+      TemplateParameterDepthRAII CurTemplateDepthTracker(
+          TemplateParameterDepth);
+      ++CurTemplateDepthTracker;
       EnterExpressionEvaluationContext ConstantEvaluated(
           Actions, Sema::ExpressionEvaluationContext::ConstantEvaluated);
       DefaultArg =
@@ -1723,6 +1745,11 @@ void Parser::ParseLateTemplatedFuncDef(LateParsedTemplate &LPT) {
     if (DC != FunD)
       Actions.PushDeclContext(Actions.getCurScope(), DC);
   }
+
+  // Parsing should occur with empty FP pragma stack and FP options used in the
+  // point of the template definition.
+  Sema::FpPragmaStackSaveRAII SavedStack(Actions);
+  Actions.resetFPOptions(LPT.FPO);
 
   assert(!LPT.Toks.empty() && "Empty body!");
 

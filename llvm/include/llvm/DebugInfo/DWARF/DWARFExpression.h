@@ -24,8 +24,7 @@ class DWARFExpression {
 public:
   class iterator;
 
-  /// This class represents an Operation in the Expression. Each operation can
-  /// have up to 2 oprerands.
+  /// This class represents an Operation in the Expression.
   ///
   /// An Operation can be in Error state (check with isError()). This
   /// means that it couldn't be decoded successfully and if it is the
@@ -43,6 +42,9 @@ public:
       SizeRefAddr = 6,
       SizeBlock = 7, ///< Preceding operand contains block size
       BaseTypeRef = 8,
+      /// The operand is a ULEB128 encoded SubOpcode. This is only valid
+      /// for the first operand of an operation.
+      SizeSubOpLEB = 9,
       WasmLocationArg = 30,
       SignBit = 0x80,
       SignedSize1 = SignBit | Size1,
@@ -50,7 +52,6 @@ public:
       SignedSize4 = SignBit | Size4,
       SignedSize8 = SignBit | Size8,
       SignedSizeLEB = SignBit | SizeLEB,
-      SizeNA = 0xFF ///< Unused operands get this encoding.
     };
 
     enum DwarfVersion : uint8_t {
@@ -64,14 +65,13 @@ public:
     /// Description of the encoding of one expression Op.
     struct Description {
       DwarfVersion Version; ///< Dwarf version where the Op was introduced.
-      Encoding Op[2];       ///< Encoding for Op operands, or SizeNA.
+      SmallVector<Encoding> Op; ///< Encoding for Op operands.
 
-      Description(DwarfVersion Version = DwarfNA, Encoding Op1 = SizeNA,
-                  Encoding Op2 = SizeNA)
-          : Version(Version) {
-        Op[0] = Op1;
-        Op[1] = Op2;
-      }
+      template <typename... Ts>
+      Description(DwarfVersion Version, Ts... Op)
+          : Version(Version), Op{Op...} {}
+      Description() : Description(DwarfNA) {}
+      ~Description() = default;
     };
 
   private:
@@ -80,13 +80,19 @@ public:
     Description Desc;
     bool Error = false;
     uint64_t EndOffset;
-    uint64_t Operands[2];
-    uint64_t OperandEndOffsets[2];
+    SmallVector<uint64_t> Operands;
+    SmallVector<uint64_t> OperandEndOffsets;
 
   public:
     const Description &getDescription() const { return Desc; }
     uint8_t getCode() const { return Opcode; }
+    std::optional<unsigned> getSubCode() const;
+    uint64_t getNumOperands() const { return Operands.size(); }
+    ArrayRef<uint64_t> getRawOperands() const { return Operands; };
     uint64_t getRawOperand(unsigned Idx) const { return Operands[Idx]; }
+    ArrayRef<uint64_t> getOperandEndOffsets() const {
+      return OperandEndOffsets;
+    }
     uint64_t getOperandEndOffset(unsigned Idx) const {
       return OperandEndOffsets[Idx];
     }
@@ -165,7 +171,7 @@ public:
 
   static bool prettyPrintRegisterOp(DWARFUnit *U, raw_ostream &OS,
                                     DIDumpOptions DumpOpts, uint8_t Opcode,
-                                    const uint64_t Operands[2]);
+                                    const ArrayRef<uint64_t> Operands);
 
 private:
   DataExtractor Data;

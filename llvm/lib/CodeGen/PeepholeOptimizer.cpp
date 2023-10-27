@@ -150,11 +150,11 @@ namespace {
   class RecurrenceInstr;
 
   class PeepholeOptimizer : public MachineFunctionPass {
-    const TargetInstrInfo *TII;
-    const TargetRegisterInfo *TRI;
-    MachineRegisterInfo *MRI;
-    MachineDominatorTree *DT;  // Machine dominator tree
-    MachineLoopInfo *MLI;
+    const TargetInstrInfo *TII = nullptr;
+    const TargetRegisterInfo *TRI = nullptr;
+    MachineRegisterInfo *MRI = nullptr;
+    MachineDominatorTree *DT = nullptr; // Machine dominator tree
+    MachineLoopInfo *MLI = nullptr;
 
   public:
     static char ID; // Pass identification

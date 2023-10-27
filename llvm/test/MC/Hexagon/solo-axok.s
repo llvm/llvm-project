@@ -1,4 +1,4 @@
-# RUN: not llvm-mc -arch=hexagon -filetype=asm -mcpu=hexagonv55 %s 2>%t; FileCheck %s < %t
+# RUN: not llvm-mc -triple=hexagon -filetype=asm -mcpu=hexagonv55 %s 2>%t; FileCheck %s < %t
 #
 {
   sp=asrh(r6)

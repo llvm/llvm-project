@@ -6,18 +6,24 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "InputFiles.h"
+#include "OutputSections.h"
+#include "SymbolTable.h"
 #include "Symbols.h"
 #include "SyntheticSections.h"
 #include "Target.h"
 #include "lld/Common/ErrorHandler.h"
+#include "lld/Common/Filesystem.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Support/Endian.h"
 
 using namespace llvm;
 using namespace llvm::support::endian;
+using namespace llvm::support;
 using namespace llvm::ELF;
 using namespace lld;
 using namespace lld::elf;
+using namespace llvm::object;
 
 namespace {
 class ARM final : public TargetInfo {
@@ -43,7 +49,10 @@ public:
   void relocate(uint8_t *loc, const Relocation &rel,
                 uint64_t val) const override;
 };
+enum class CodeState { Data = 0, Thumb = 2, Arm = 4 };
 } // namespace
+
+static DenseMap<InputSection *, SmallVector<const Defined *, 0>> sectionMap{};
 
 ARM::ARM() {
   copyRel = R_ARM_COPY;
@@ -67,16 +76,24 @@ uint32_t ARM::calcEFlags() const {
   // The ABIFloatType is used by loaders to detect the floating point calling
   // convention.
   uint32_t abiFloatType = 0;
+
+  // Set the EF_ARM_BE8 flag in the ELF header, if ELF file is big-endian
+  // with BE-8 code.
+  uint32_t armBE8 = 0;
+
   if (config->armVFPArgs == ARMVFPArgKind::Base ||
       config->armVFPArgs == ARMVFPArgKind::Default)
     abiFloatType = EF_ARM_ABI_FLOAT_SOFT;
   else if (config->armVFPArgs == ARMVFPArgKind::VFP)
     abiFloatType = EF_ARM_ABI_FLOAT_HARD;
 
+  if (!config->isLE && config->armBe8)
+    armBE8 = EF_ARM_BE8;
+
   // We don't currently use any features incompatible with EF_ARM_EABI_VER5,
   // but we don't have any firm guarantees of conformance. Linux AArch64
   // kernels (as of 2016) require an EABI version to be set.
-  return EF_ARM_EABI_VER5 | abiFloatType;
+  return EF_ARM_EABI_VER5 | abiFloatType | armBE8;
 }
 
 RelExpr ARM::getRelExpr(RelType type, const Symbol &s,
@@ -87,6 +104,10 @@ RelExpr ARM::getRelExpr(RelType type, const Symbol &s,
   case R_ARM_MOVT_ABS:
   case R_ARM_THM_MOVW_ABS_NC:
   case R_ARM_THM_MOVT_ABS:
+  case R_ARM_THM_ALU_ABS_G0_NC:
+  case R_ARM_THM_ALU_ABS_G1_NC:
+  case R_ARM_THM_ALU_ABS_G2_NC:
+  case R_ARM_THM_ALU_ABS_G3:
     return R_ABS;
   case R_ARM_THM_JUMP8:
   case R_ARM_THM_JUMP11:
@@ -183,30 +204,28 @@ RelType ARM::getDynRel(RelType type) const {
 }
 
 void ARM::writeGotPlt(uint8_t *buf, const Symbol &) const {
-  write32le(buf, in.plt->getVA());
+  write32(buf, in.plt->getVA());
 }
 
 void ARM::writeIgotPlt(uint8_t *buf, const Symbol &s) const {
   // An ARM entry is the address of the ifunc resolver function.
-  write32le(buf, s.getVA());
+  write32(buf, s.getVA());
 }
 
 // Long form PLT Header that does not have any restrictions on the displacement
 // of the .plt from the .got.plt.
 static void writePltHeaderLong(uint8_t *buf) {
-  const uint8_t pltData[] = {
-      0x04, 0xe0, 0x2d, 0xe5, //     str lr, [sp,#-4]!
-      0x04, 0xe0, 0x9f, 0xe5, //     ldr lr, L2
-      0x0e, 0xe0, 0x8f, 0xe0, // L1: add lr, pc, lr
-      0x08, 0xf0, 0xbe, 0xe5, //     ldr pc, [lr, #8]
-      0x00, 0x00, 0x00, 0x00, // L2: .word   &(.got.plt) - L1 - 8
-      0xd4, 0xd4, 0xd4, 0xd4, //     Pad to 32-byte boundary
-      0xd4, 0xd4, 0xd4, 0xd4, //     Pad to 32-byte boundary
-      0xd4, 0xd4, 0xd4, 0xd4};
-  memcpy(buf, pltData, sizeof(pltData));
+  write32(buf + 0, 0xe52de004);   //     str lr, [sp,#-4]!
+  write32(buf + 4, 0xe59fe004);   //     ldr lr, L2
+  write32(buf + 8, 0xe08fe00e);   // L1: add lr, pc, lr
+  write32(buf + 12, 0xe5bef008);  //     ldr pc, [lr, #8]
+  write32(buf + 16, 0x00000000);  // L2: .word   &(.got.plt) - L1 - 8
+  write32(buf + 20, 0xd4d4d4d4);  //     Pad to 32-byte boundary
+  write32(buf + 24, 0xd4d4d4d4);  //     Pad to 32-byte boundary
+  write32(buf + 28, 0xd4d4d4d4);
   uint64_t gotPlt = in.gotPlt->getVA();
   uint64_t l1 = in.plt->getVA() + 8;
-  write32le(buf + 16, gotPlt - l1 - 8);
+  write32(buf + 16, gotPlt - l1 - 8);
 }
 
 // The default PLT header requires the .got.plt to be within 128 Mb of the
@@ -229,10 +248,10 @@ void ARM::writePltHeader(uint8_t *buf) const {
     writePltHeaderLong(buf);
     return;
   }
-  write32le(buf + 0, pltData[0]);
-  write32le(buf + 4, pltData[1] | ((offset >> 20) & 0xff));
-  write32le(buf + 8, pltData[2] | ((offset >> 12) & 0xff));
-  write32le(buf + 12, pltData[3] | (offset & 0xfff));
+  write32(buf + 0, pltData[0]);
+  write32(buf + 4, pltData[1] | ((offset >> 20) & 0xff));
+  write32(buf + 8, pltData[2] | ((offset >> 12) & 0xff));
+  write32(buf + 12, pltData[3] | (offset & 0xfff));
   memcpy(buf + 16, trapInstr.data(), 4); // Pad to 32-byte boundary
   memcpy(buf + 20, trapInstr.data(), 4);
   memcpy(buf + 24, trapInstr.data(), 4);
@@ -248,15 +267,12 @@ void ARM::addPltHeaderSymbols(InputSection &isec) const {
 // of the .plt from the .got.plt.
 static void writePltLong(uint8_t *buf, uint64_t gotPltEntryAddr,
                          uint64_t pltEntryAddr) {
-  const uint8_t pltData[] = {
-      0x04, 0xc0, 0x9f, 0xe5, //     ldr ip, L2
-      0x0f, 0xc0, 0x8c, 0xe0, // L1: add ip, ip, pc
-      0x00, 0xf0, 0x9c, 0xe5, //     ldr pc, [ip]
-      0x00, 0x00, 0x00, 0x00, // L2: .word   Offset(&(.got.plt) - L1 - 8
-  };
-  memcpy(buf, pltData, sizeof(pltData));
+  write32(buf + 0, 0xe59fc004);   //     ldr ip, L2
+  write32(buf + 4, 0xe08cc00f);   // L1: add ip, ip, pc
+  write32(buf + 8, 0xe59cf000);   //     ldr pc, [ip]
+  write32(buf + 12, 0x00000000);  // L2: .word   Offset(&(.got.plt) - L1 - 8
   uint64_t l1 = pltEntryAddr + 4;
-  write32le(buf + 12, gotPltEntryAddr - l1 - 8);
+  write32(buf + 12, gotPltEntryAddr - l1 - 8);
 }
 
 // The default PLT entries require the .got.plt to be within 128 Mb of the
@@ -280,9 +296,9 @@ void ARM::writePlt(uint8_t *buf, const Symbol &sym,
     writePltLong(buf, sym.getGotPltVA(), pltEntryAddr);
     return;
   }
-  write32le(buf + 0, pltData[0] | ((offset >> 20) & 0xff));
-  write32le(buf + 4, pltData[1] | ((offset >> 12) & 0xff));
-  write32le(buf + 8, pltData[2] | (offset & 0xfff));
+  write32(buf + 0, pltData[0] | ((offset >> 20) & 0xff));
+  write32(buf + 4, pltData[1] | ((offset >> 12) & 0xff));
+  write32(buf + 8, pltData[2] | (offset & 0xfff));
   memcpy(buf + 12, trapInstr.data(), 4); // Pad to 16-byte boundary
 }
 
@@ -432,7 +448,7 @@ static std::pair<uint32_t, uint32_t> getRemAndLZForGroup(unsigned group,
                                                          uint32_t val) {
   uint32_t rem, lz;
   do {
-    lz = llvm::countLeadingZeros(val) & ~1;
+    lz = llvm::countl_zero(val) & ~1;
     rem = val;
     if (lz == 32) // implies rem == 0
       break;
@@ -461,7 +477,7 @@ static void encodeAluGroup(uint8_t *loc, const Relocation &rel, uint64_t val,
   if (check && imm > 0xff)
     error(getErrorLocation(loc) + "unencodeable immediate " + Twine(val).str() +
           " for relocation " + toString(rel.type));
-  write32le(loc, (read32le(loc) & 0xff3ff000) | opcode | rot | (imm & 0xff));
+  write32(loc, (read32(loc) & 0xff3ff000) | opcode | rot | (imm & 0xff));
 }
 
 static void encodeLdrGroup(uint8_t *loc, const Relocation &rel, uint64_t val,
@@ -479,7 +495,7 @@ static void encodeLdrGroup(uint8_t *loc, const Relocation &rel, uint64_t val,
   }
   uint32_t imm = getRemAndLZForGroup(group, val).first;
   checkUInt(loc, imm, 12, rel);
-  write32le(loc, (read32le(loc) & 0xff7ff000) | opcode | imm);
+  write32(loc, (read32(loc) & 0xff7ff000) | opcode | imm);
 }
 
 static void encodeLdrsGroup(uint8_t *loc, const Relocation &rel, uint64_t val,
@@ -497,7 +513,7 @@ static void encodeLdrsGroup(uint8_t *loc, const Relocation &rel, uint64_t val,
   }
   uint32_t imm = getRemAndLZForGroup(group, val).first;
   checkUInt(loc, imm, 8, rel);
-  write32le(loc, (read32le(loc) & 0xff7ff0f0) | opcode | ((imm & 0xf0) << 4) |
+  write32(loc, (read32(loc) & 0xff7ff0f0) | opcode | ((imm & 0xf0) << 4) |
                      (imm & 0xf));
 }
 
@@ -520,11 +536,11 @@ void ARM::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   case R_ARM_TLS_LE32:
   case R_ARM_TLS_TPOFF32:
   case R_ARM_TLS_DTPOFF32:
-    write32le(loc, val);
+    write32(loc, val);
     break;
   case R_ARM_PREL31:
     checkInt(loc, val, 31, rel);
-    write32le(loc, (read32le(loc) & 0x80000000) | (val & ~0x80000000));
+    write32(loc, (read32(loc) & 0x80000000) | (val & ~0x80000000));
     break;
   case R_ARM_CALL: {
     // R_ARM_CALL is used for BL and BLX instructions, for symbols of type
@@ -534,7 +550,7 @@ void ARM::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     // PLT entries are always ARM state so we know we don't need to interwork.
     assert(rel.sym); // R_ARM_CALL is always reached via relocate().
     bool bit0Thumb = val & 1;
-    bool isBlx = (read32le(loc) & 0xfe000000) == 0xfa000000;
+    bool isBlx = (read32(loc) & 0xfe000000) == 0xfa000000;
     // lld 10.0 and before always used bit0Thumb when deciding to write a BLX
     // even when type not STT_FUNC.
     if (!rel.sym->isFunc() && isBlx != bit0Thumb)
@@ -542,14 +558,14 @@ void ARM::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     if (rel.sym->isFunc() ? bit0Thumb : isBlx) {
       // The BLX encoding is 0xfa:H:imm24 where Val = imm24:H:'1'
       checkInt(loc, val, 26, rel);
-      write32le(loc, 0xfa000000 |                    // opcode
+      write32(loc, 0xfa000000 |                    // opcode
                          ((val & 2) << 23) |         // H
                          ((val >> 2) & 0x00ffffff)); // imm24
       break;
     }
     // BLX (always unconditional) instruction to an ARM Target, select an
     // unconditional BL.
-    write32le(loc, 0xeb000000 | (read32le(loc) & 0x00ffffff));
+    write32(loc, 0xeb000000 | (read32(loc) & 0x00ffffff));
     // fall through as BL encoding is shared with B
   }
     [[fallthrough]];
@@ -557,26 +573,26 @@ void ARM::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   case R_ARM_PC24:
   case R_ARM_PLT32:
     checkInt(loc, val, 26, rel);
-    write32le(loc, (read32le(loc) & ~0x00ffffff) | ((val >> 2) & 0x00ffffff));
+    write32(loc, (read32(loc) & ~0x00ffffff) | ((val >> 2) & 0x00ffffff));
     break;
   case R_ARM_THM_JUMP8:
     // We do a 9 bit check because val is right-shifted by 1 bit.
     checkInt(loc, val, 9, rel);
-    write16le(loc, (read32le(loc) & 0xff00) | ((val >> 1) & 0x00ff));
+    write16(loc, (read32(loc) & 0xff00) | ((val >> 1) & 0x00ff));
     break;
   case R_ARM_THM_JUMP11:
     // We do a 12 bit check because val is right-shifted by 1 bit.
     checkInt(loc, val, 12, rel);
-    write16le(loc, (read32le(loc) & 0xf800) | ((val >> 1) & 0x07ff));
+    write16(loc, (read32(loc) & 0xf800) | ((val >> 1) & 0x07ff));
     break;
   case R_ARM_THM_JUMP19:
     // Encoding T3: Val = S:J2:J1:imm6:imm11:0
     checkInt(loc, val, 21, rel);
-    write16le(loc,
-              (read16le(loc) & 0xfbc0) |   // opcode cond
+    write16(loc,
+              (read16(loc) & 0xfbc0) |   // opcode cond
                   ((val >> 10) & 0x0400) | // S
                   ((val >> 12) & 0x003f)); // imm6
-    write16le(loc + 2,
+    write16(loc + 2,
               0x8000 |                    // opcode
                   ((val >> 8) & 0x0800) | // J2
                   ((val >> 5) & 0x2000) | // J1
@@ -590,7 +606,7 @@ void ARM::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     // PLT entries are always ARM state so we know we need to interwork.
     assert(rel.sym); // R_ARM_THM_CALL is always reached via relocate().
     bool bit0Thumb = val & 1;
-    bool isBlx = (read16le(loc + 2) & 0x1000) == 0;
+    bool isBlx = (read16(loc + 2) & 0x1000) == 0;
     // lld 10.0 and before always used bit0Thumb when deciding to write a BLX
     // even when type not STT_FUNC. PLT entries generated by LLD are always ARM.
     if (!rel.sym->isFunc() && !rel.sym->isInPlt() && isBlx == bit0Thumb)
@@ -600,19 +616,19 @@ void ARM::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
       // the BLX instruction may only be two byte aligned. This must be done
       // before overflow check.
       val = alignTo(val, 4);
-      write16le(loc + 2, read16le(loc + 2) & ~0x1000);
+      write16(loc + 2, read16(loc + 2) & ~0x1000);
     } else {
-      write16le(loc + 2, (read16le(loc + 2) & ~0x1000) | 1 << 12);
+      write16(loc + 2, (read16(loc + 2) & ~0x1000) | 1 << 12);
     }
     if (!config->armJ1J2BranchEncoding) {
       // Older Arm architectures do not support R_ARM_THM_JUMP24 and have
       // different encoding rules and range due to J1 and J2 always being 1.
       checkInt(loc, val, 23, rel);
-      write16le(loc,
+      write16(loc,
                 0xf000 |                     // opcode
                     ((val >> 12) & 0x07ff)); // imm11
-      write16le(loc + 2,
-                (read16le(loc + 2) & 0xd000) | // opcode
+      write16(loc + 2,
+                (read16(loc + 2) & 0xd000) | // opcode
                     0x2800 |                   // J1 == J2 == 1
                     ((val >> 1) & 0x07ff));    // imm11
       break;
@@ -623,12 +639,12 @@ void ARM::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   case R_ARM_THM_JUMP24:
     // Encoding B  T4, BL T1, BLX T2: Val = S:I1:I2:imm10:imm11:0
     checkInt(loc, val, 25, rel);
-    write16le(loc,
+    write16(loc,
               0xf000 |                     // opcode
                   ((val >> 14) & 0x0400) | // S
                   ((val >> 12) & 0x03ff)); // imm10
-    write16le(loc + 2,
-              (read16le(loc + 2) & 0xd000) |                  // opcode
+    write16(loc + 2,
+              (read16(loc + 2) & 0xd000) |                  // opcode
                   (((~(val >> 10)) ^ (val >> 11)) & 0x2000) | // J1
                   (((~(val >> 11)) ^ (val >> 13)) & 0x0800) | // J2
                   ((val >> 1) & 0x07ff));                     // imm11
@@ -636,25 +652,27 @@ void ARM::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   case R_ARM_MOVW_ABS_NC:
   case R_ARM_MOVW_PREL_NC:
   case R_ARM_MOVW_BREL_NC:
-    write32le(loc, (read32le(loc) & ~0x000f0fff) | ((val & 0xf000) << 4) |
+    write32(loc, (read32(loc) & ~0x000f0fff) | ((val & 0xf000) << 4) |
                        (val & 0x0fff));
     break;
   case R_ARM_MOVT_ABS:
   case R_ARM_MOVT_PREL:
   case R_ARM_MOVT_BREL:
-    write32le(loc, (read32le(loc) & ~0x000f0fff) |
+    write32(loc, (read32(loc) & ~0x000f0fff) |
                        (((val >> 16) & 0xf000) << 4) | ((val >> 16) & 0xfff));
     break;
   case R_ARM_THM_MOVT_ABS:
   case R_ARM_THM_MOVT_PREL:
   case R_ARM_THM_MOVT_BREL:
     // Encoding T1: A = imm4:i:imm3:imm8
-    write16le(loc,
-              0xf2c0 |                     // opcode
-                  ((val >> 17) & 0x0400) | // i
-                  ((val >> 28) & 0x000f)); // imm4
-    write16le(loc + 2,
-              (read16le(loc + 2) & 0x8f00) | // opcode
+
+    write16(loc,
+            0xf2c0 |                     // opcode
+                ((val >> 17) & 0x0400) | // i
+                ((val >> 28) & 0x000f)); // imm4
+
+    write16(loc + 2,
+              (read16(loc + 2) & 0x8f00) | // opcode
                   ((val >> 12) & 0x7000) |   // imm3
                   ((val >> 16) & 0x00ff));   // imm8
     break;
@@ -662,14 +680,26 @@ void ARM::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   case R_ARM_THM_MOVW_PREL_NC:
   case R_ARM_THM_MOVW_BREL_NC:
     // Encoding T3: A = imm4:i:imm3:imm8
-    write16le(loc,
+    write16(loc,
               0xf240 |                     // opcode
                   ((val >> 1) & 0x0400) |  // i
                   ((val >> 12) & 0x000f)); // imm4
-    write16le(loc + 2,
-              (read16le(loc + 2) & 0x8f00) | // opcode
+    write16(loc + 2,
+              (read16(loc + 2) & 0x8f00) | // opcode
                   ((val << 4) & 0x7000) |    // imm3
                   (val & 0x00ff));           // imm8
+    break;
+  case R_ARM_THM_ALU_ABS_G3:
+    write16(loc, (read16(loc) &~ 0x00ff) | ((val >> 24) & 0x00ff));
+    break;
+  case R_ARM_THM_ALU_ABS_G2_NC:
+    write16(loc, (read16(loc) &~ 0x00ff) | ((val >> 16) & 0x00ff));
+    break;
+  case R_ARM_THM_ALU_ABS_G1_NC:
+    write16(loc, (read16(loc) &~ 0x00ff) | ((val >> 8) & 0x00ff));
+    break;
+  case R_ARM_THM_ALU_ABS_G0_NC:
+    write16(loc, (read16(loc) &~ 0x00ff) | (val & 0x00ff));
     break;
   case R_ARM_ALU_PC_G0:
     encodeAluGroup(loc, rel, val, 0, true);
@@ -713,9 +743,9 @@ void ARM::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
       sub = 0x00a0;
     }
     checkUInt(loc, imm, 12, rel);
-    write16le(loc, (read16le(loc) & 0xfb0f) | sub | (imm & 0x800) >> 1);
-    write16le(loc + 2,
-              (read16le(loc + 2) & 0x8f00) | (imm & 0x700) << 4 | (imm & 0xff));
+    write16(loc, (read16(loc) & 0xfb0f) | sub | (imm & 0x800) >> 1);
+    write16(loc + 2,
+              (read16(loc + 2) & 0x8f00) | (imm & 0x700) << 4 | (imm & 0xff));
     break;
   }
   case R_ARM_THM_PC8:
@@ -727,7 +757,7 @@ void ARM::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
       val &= ~0x1;
     checkUInt(loc, val, 10, rel);
     checkAlignment(loc, val, 4, rel);
-    write16le(loc, (read16le(loc) & 0xff00) | (val & 0x3fc) >> 2);
+    write16(loc, (read16(loc) & 0xff00) | (val & 0x3fc) >> 2);
     break;
   case R_ARM_THM_PC12: {
     // LDR (literal) encoding T2, add = (U == '1') imm12
@@ -744,8 +774,8 @@ void ARM::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
       u = 0;
     }
     checkUInt(loc, imm12, 12, rel);
-    write16le(loc, read16le(loc) | u);
-    write16le(loc + 2, (read16le(loc + 2) & 0xf000) | imm12);
+    write16(loc, read16(loc) | u);
+    write16(loc + 2, (read16(loc + 2) & 0xf000) | imm12);
     break;
   }
   default:
@@ -779,22 +809,22 @@ int64_t ARM::getImplicitAddend(const uint8_t *buf, RelType type) const {
   case R_ARM_TLS_LE32:
   case R_ARM_TLS_LDO32:
   case R_ARM_TLS_TPOFF32:
-    return SignExtend64<32>(read32le(buf));
+    return SignExtend64<32>(read32(buf));
   case R_ARM_PREL31:
-    return SignExtend64<31>(read32le(buf));
+    return SignExtend64<31>(read32(buf));
   case R_ARM_CALL:
   case R_ARM_JUMP24:
   case R_ARM_PC24:
   case R_ARM_PLT32:
-    return SignExtend64<26>(read32le(buf) << 2);
+    return SignExtend64<26>(read32(buf) << 2);
   case R_ARM_THM_JUMP8:
-    return SignExtend64<9>(read16le(buf) << 1);
+    return SignExtend64<9>(read16(buf) << 1);
   case R_ARM_THM_JUMP11:
-    return SignExtend64<12>(read16le(buf) << 1);
+    return SignExtend64<12>(read16(buf) << 1);
   case R_ARM_THM_JUMP19: {
     // Encoding T3: A = S:J2:J1:imm10:imm6:0
-    uint16_t hi = read16le(buf);
-    uint16_t lo = read16le(buf + 2);
+    uint16_t hi = read16(buf);
+    uint16_t lo = read16(buf + 2);
     return SignExtend64<20>(((hi & 0x0400) << 10) | // S
                             ((lo & 0x0800) << 8) |  // J2
                             ((lo & 0x2000) << 5) |  // J1
@@ -805,8 +835,8 @@ int64_t ARM::getImplicitAddend(const uint8_t *buf, RelType type) const {
     if (!config->armJ1J2BranchEncoding) {
       // Older Arm architectures do not support R_ARM_THM_JUMP24 and have
       // different encoding rules and range due to J1 and J2 always being 1.
-      uint16_t hi = read16le(buf);
-      uint16_t lo = read16le(buf + 2);
+      uint16_t hi = read16(buf);
+      uint16_t lo = read16(buf + 2);
       return SignExtend64<22>(((hi & 0x7ff) << 12) | // imm11
                               ((lo & 0x7ff) << 1));  // imm11:0
       break;
@@ -815,8 +845,8 @@ int64_t ARM::getImplicitAddend(const uint8_t *buf, RelType type) const {
   case R_ARM_THM_JUMP24: {
     // Encoding B T4, BL T1, BLX T2: A = S:I1:I2:imm10:imm11:0
     // I1 = NOT(J1 EOR S), I2 = NOT(J2 EOR S)
-    uint16_t hi = read16le(buf);
-    uint16_t lo = read16le(buf + 2);
+    uint16_t hi = read16(buf);
+    uint16_t lo = read16(buf + 2);
     return SignExtend64<24>(((hi & 0x0400) << 14) |                    // S
                             (~((lo ^ (hi << 3)) << 10) & 0x00800000) | // I1
                             (~((lo ^ (hi << 1)) << 11) & 0x00400000) | // I2
@@ -831,7 +861,7 @@ int64_t ARM::getImplicitAddend(const uint8_t *buf, RelType type) const {
   case R_ARM_MOVT_PREL:
   case R_ARM_MOVW_BREL_NC:
   case R_ARM_MOVT_BREL: {
-    uint64_t val = read32le(buf) & 0x000f0fff;
+    uint64_t val = read32(buf) & 0x000f0fff;
     return SignExtend64<16>(((val & 0x000f0000) >> 4) | (val & 0x00fff));
   }
   case R_ARM_THM_MOVW_ABS_NC:
@@ -841,13 +871,18 @@ int64_t ARM::getImplicitAddend(const uint8_t *buf, RelType type) const {
   case R_ARM_THM_MOVW_BREL_NC:
   case R_ARM_THM_MOVT_BREL: {
     // Encoding T3: A = imm4:i:imm3:imm8
-    uint16_t hi = read16le(buf);
-    uint16_t lo = read16le(buf + 2);
+    uint16_t hi = read16(buf);
+    uint16_t lo = read16(buf + 2);
     return SignExtend64<16>(((hi & 0x000f) << 12) | // imm4
                             ((hi & 0x0400) << 1) |  // i
                             ((lo & 0x7000) >> 4) |  // imm3
                             (lo & 0x00ff));         // imm8
   }
+  case R_ARM_THM_ALU_ABS_G0_NC:
+  case R_ARM_THM_ALU_ABS_G1_NC:
+  case R_ARM_THM_ALU_ABS_G2_NC:
+  case R_ARM_THM_ALU_ABS_G3:
+    return read16(buf) & 0xff;
   case R_ARM_ALU_PC_G0:
   case R_ARM_ALU_PC_G0_NC:
   case R_ARM_ALU_PC_G1:
@@ -857,7 +892,7 @@ int64_t ARM::getImplicitAddend(const uint8_t *buf, RelType type) const {
     // right rotation and 8-bit constant. After the rotation the value
     // is zero-extended. When bit 23 is set the instruction is an add, when
     // bit 22 is set it is a sub.
-    uint32_t instr = read32le(buf);
+    uint32_t instr = read32(buf);
     uint32_t val = rotr32(instr & 0xff, ((instr & 0xf00) >> 8) * 2);
     return (instr & 0x00400000) ? -val : val;
   }
@@ -866,15 +901,15 @@ int64_t ARM::getImplicitAddend(const uint8_t *buf, RelType type) const {
   case R_ARM_LDR_PC_G2: {
     // ADR (literal) add = bit23, sub = bit22
     // LDR (literal) u = bit23 unsigned imm12
-    bool u = read32le(buf) & 0x00800000;
-    uint32_t imm12 = read32le(buf) & 0xfff;
+    bool u = read32(buf) & 0x00800000;
+    uint32_t imm12 = read32(buf) & 0xfff;
     return u ? imm12 : -imm12;
   }
   case R_ARM_LDRS_PC_G0:
   case R_ARM_LDRS_PC_G1:
   case R_ARM_LDRS_PC_G2: {
     // LDRD/LDRH/LDRSB/LDRSH (literal) u = bit23 unsigned imm8
-    uint32_t opcode = read32le(buf);
+    uint32_t opcode = read32(buf);
     bool u = opcode & 0x00800000;
     uint32_t imm4l = opcode & 0xf;
     uint32_t imm4h = (opcode & 0xf00) >> 4;
@@ -884,8 +919,8 @@ int64_t ARM::getImplicitAddend(const uint8_t *buf, RelType type) const {
     // Thumb2 ADR, which is an alias for a sub or add instruction with an
     // unsigned immediate.
     // ADR encoding T2 (sub), T3 (add) i:imm3:imm8
-    uint16_t hi = read16le(buf);
-    uint16_t lo = read16le(buf + 2);
+    uint16_t hi = read16(buf);
+    uint16_t lo = read16(buf + 2);
     uint64_t imm = (hi & 0x0400) << 1 | // i
                    (lo & 0x7000) >> 4 | // imm3
                    (lo & 0x00ff);       // imm8
@@ -897,11 +932,11 @@ int64_t ARM::getImplicitAddend(const uint8_t *buf, RelType type) const {
     // From ELF for the ARM Architecture the initial signed addend is formed
     // from an unsigned field using expression (((imm8:00 + 4) & 0x3ff) – 4)
     // this trick permits the PC bias of -4 to be encoded using imm8 = 0xff
-    return ((((read16le(buf) & 0xff) << 2) + 4) & 0x3ff) - 4;
+    return ((((read16(buf) & 0xff) << 2) + 4) & 0x3ff) - 4;
   case R_ARM_THM_PC12: {
     // LDR (literal) encoding T2, add = (U == '1') imm12
-    bool u = read16le(buf) & 0x0080;
-    uint64_t imm12 = read16le(buf + 2) & 0x0fff;
+    bool u = read16(buf) & 0x0080;
+    uint64_t imm12 = read16(buf + 2) & 0x0fff;
     return u ? imm12 : -imm12;
   }
   case R_ARM_NONE:
@@ -912,7 +947,525 @@ int64_t ARM::getImplicitAddend(const uint8_t *buf, RelType type) const {
   }
 }
 
+static bool isArmMapSymbol(const Symbol *b) {
+  return b->getName() == "$a" || b->getName().startswith("$a.");
+}
+
+static bool isThumbMapSymbol(const Symbol *s) {
+  return s->getName() == "$t" || s->getName().startswith("$t.");
+}
+
+static bool isDataMapSymbol(const Symbol *b) {
+  return b->getName() == "$d" || b->getName().startswith("$d.");
+}
+
+void elf::sortArmMappingSymbols() {
+  // For each input section make sure the mapping symbols are sorted in
+  // ascending order.
+  for (auto &kv : sectionMap) {
+    SmallVector<const Defined *, 0> &mapSyms = kv.second;
+    llvm::stable_sort(mapSyms, [](const Defined *a, const Defined *b) {
+      return a->value < b->value;
+    });
+  }
+}
+
+void elf::addArmInputSectionMappingSymbols() {
+  // Collect mapping symbols for every executable input sections.
+  // The linker generated mapping symbols for all the synthetic
+  // sections are adding into the sectionmap through the function
+  // addArmSyntheitcSectionMappingSymbol.
+  for (ELFFileBase *file : ctx.objectFiles) {
+    for (Symbol *sym : file->getLocalSymbols()) {
+      auto *def = dyn_cast<Defined>(sym);
+      if (!def)
+        continue;
+      if (!isArmMapSymbol(def) && !isDataMapSymbol(def) &&
+          !isThumbMapSymbol(def))
+        continue;
+      if (auto *sec = cast_if_present<InputSection>(def->section))
+        if (sec->flags & SHF_EXECINSTR)
+          sectionMap[sec].push_back(def);
+    }
+  }
+}
+
+// Synthetic sections are not backed by an ELF file where we can access the
+// symbol table, instead mapping symbols added to synthetic sections are stored
+// in the synthetic symbol table. Due to the presence of strip (--strip-all),
+// we can not rely on the synthetic symbol table retaining the mapping symbols.
+// Instead we record the mapping symbols locally.
+void elf::addArmSyntheticSectionMappingSymbol(Defined *sym) {
+  if (!isArmMapSymbol(sym) && !isDataMapSymbol(sym) && !isThumbMapSymbol(sym))
+    return;
+  if (auto *sec = cast_if_present<InputSection>(sym->section))
+    if (sec->flags & SHF_EXECINSTR)
+      sectionMap[sec].push_back(sym);
+}
+
+static void toLittleEndianInstructions(uint8_t *buf, uint64_t start,
+                                       uint64_t end, uint64_t width) {
+  CodeState curState = static_cast<CodeState>(width);
+  if (curState == CodeState::Arm)
+    for (uint64_t i = start; i < end; i += width)
+      write32le(buf + i, read32(buf + i));
+
+  if (curState == CodeState::Thumb)
+    for (uint64_t i = start; i < end; i += width)
+      write16le(buf + i, read16(buf + i));
+}
+
+// Arm BE8 big endian format requires instructions to be little endian, with
+// the initial contents big-endian. Convert the big-endian instructions to
+// little endian leaving literal data untouched. We use mapping symbols to
+// identify half open intervals of Arm code [$a, non $a) and Thumb code
+// [$t, non $t) and convert these to little endian a word or half word at a
+// time respectively.
+void elf::convertArmInstructionstoBE8(InputSection *sec, uint8_t *buf) {
+  if (!sectionMap.contains(sec))
+    return;
+
+  SmallVector<const Defined *, 0> &mapSyms = sectionMap[sec];
+
+  if (mapSyms.empty())
+    return;
+
+  CodeState curState = CodeState::Data;
+  uint64_t start = 0, width = 0, size = sec->getSize();
+  for (auto &msym : mapSyms) {
+    CodeState newState = CodeState::Data;
+    if (isThumbMapSymbol(msym))
+      newState = CodeState::Thumb;
+    else if (isArmMapSymbol(msym))
+      newState = CodeState::Arm;
+
+    if (newState == curState)
+      continue;
+
+    if (curState != CodeState::Data) {
+      width = static_cast<uint64_t>(curState);
+      toLittleEndianInstructions(buf, start, msym->value, width);
+    }
+    start = msym->value;
+    curState = newState;
+  }
+
+  // Passed last mapping symbol, may need to reverse
+  // up to end of section.
+  if (curState != CodeState::Data) {
+    width = static_cast<uint64_t>(curState);
+    toLittleEndianInstructions(buf, start, size, width);
+  }
+}
+
+// The Arm Cortex-M Security Extensions (CMSE) splits a system into two parts;
+// the non-secure and secure states with the secure state inaccessible from the
+// non-secure state, apart from an area of memory in secure state called the
+// secure gateway which is accessible from non-secure state. The secure gateway
+// contains one or more entry points which must start with a landing pad
+// instruction SG. Arm recommends that the secure gateway consists only of
+// secure gateway veneers, which are made up of a SG instruction followed by a
+// branch to the destination in secure state. Full details can be found in Arm
+// v8-M Security Extensions Requirements on Development Tools.
+//
+// The CMSE model of software development requires the non-secure and secure
+// states to be developed as two separate programs. The non-secure developer is
+// provided with an import library defining symbols describing the entry points
+// in the secure gateway. No additional linker support is required for the
+// non-secure state.
+//
+// Development of the secure state requires linker support to manage the secure
+// gateway veneers. The management consists of:
+// - Creation of new secure gateway veneers based on symbol conventions.
+// - Checking the address of existing secure gateway veneers.
+// - Warning when existing secure gateway veneers removed.
+//
+// The secure gateway veneers are created in an import library, which is just an
+// ELF object with a symbol table. The import library is controlled by two
+// command line options:
+// --in-implib (specify an input import library from a previous revision of the
+// program).
+// --out-implib (specify an output import library to be created by the linker).
+//
+// The input import library is used to manage consistency of the secure entry
+// points. The output import library is for new and updated secure entry points.
+//
+// The symbol convention that identifies secure entry functions is the prefix
+// __acle_se_ for a symbol called name the linker is expected to create a secure
+// gateway veneer if symbols __acle_se_name and name have the same address.
+// After creating a secure gateway veneer the symbol name labels the secure
+// gateway veneer and the __acle_se_name labels the function definition.
+//
+// The LLD implementation:
+// - Reads an existing import library with importCmseSymbols().
+// - Determines which new secure gateway veneers to create and redirects calls
+//   within the secure state to the __acle_se_ prefixed symbol with
+//   processArmCmseSymbols().
+// - Models the SG veneers as a synthetic section.
+
+// Initialize symbols. symbols is a parallel array to the corresponding ELF
+// symbol table.
+template <class ELFT> void ObjFile<ELFT>::importCmseSymbols() {
+  ArrayRef<Elf_Sym> eSyms = getELFSyms<ELFT>();
+  // Error for local symbols. The symbol at index 0 is LOCAL. So skip it.
+  for (size_t i = 1, end = firstGlobal; i != end; ++i) {
+    errorOrWarn("CMSE symbol '" + CHECK(eSyms[i].getName(stringTable), this) +
+                "' in import library '" + toString(this) + "' is not global");
+  }
+
+  for (size_t i = firstGlobal, end = eSyms.size(); i != end; ++i) {
+    const Elf_Sym &eSym = eSyms[i];
+    Defined *sym = reinterpret_cast<Defined *>(make<SymbolUnion>());
+
+    // Initialize symbol fields.
+    memset(sym, 0, sizeof(Symbol));
+    sym->setName(CHECK(eSyms[i].getName(stringTable), this));
+    sym->value = eSym.st_value;
+    sym->size = eSym.st_size;
+    sym->type = eSym.getType();
+    sym->binding = eSym.getBinding();
+    sym->stOther = eSym.st_other;
+
+    if (eSym.st_shndx != SHN_ABS) {
+      error("CMSE symbol '" + sym->getName() + "' in import library '" +
+            toString(this) + "' is not absolute");
+      continue;
+    }
+
+    if (!(eSym.st_value & 1) || (eSym.getType() != STT_FUNC)) {
+      error("CMSE symbol '" + sym->getName() + "' in import library '" +
+            toString(this) + "' is not a Thumb function definition");
+      continue;
+    }
+
+    if (symtab.cmseImportLib.count(sym->getName())) {
+      error("CMSE symbol '" + sym->getName() +
+            "' is multiply defined in import library '" + toString(this) + "'");
+      continue;
+    }
+
+    if (eSym.st_size != ACLESESYM_SIZE) {
+      warn("CMSE symbol '" + sym->getName() + "' in import library '" +
+           toString(this) + "' does not have correct size of " +
+           Twine(ACLESESYM_SIZE) + " bytes");
+    }
+
+    symtab.cmseImportLib[sym->getName()] = sym;
+  }
+}
+
+// Check symbol attributes of the acleSeSym, sym pair.
+// Both symbols should be global/weak Thumb code symbol definitions.
+static std::string checkCmseSymAttributes(Symbol *acleSeSym, Symbol *sym) {
+  auto check = [](Symbol *s, StringRef type) -> std::optional<std::string> {
+    auto d = dyn_cast_or_null<Defined>(s);
+    if (!(d && d->isFunc() && (d->value & 1)))
+      return (Twine(toString(s->file)) + ": cmse " + type + " symbol '" +
+              s->getName() + "' is not a Thumb function definition")
+          .str();
+    if (!d->section)
+      return (Twine(toString(s->file)) + ": cmse " + type + " symbol '" +
+              s->getName() + "' cannot be an absolute symbol")
+          .str();
+    return std::nullopt;
+  };
+  for (auto [sym, type] :
+       {std::make_pair(acleSeSym, "special"), std::make_pair(sym, "entry")})
+    if (auto err = check(sym, type))
+      return *err;
+  return "";
+}
+
+// Look for [__acle_se_<sym>, <sym>] pairs, as specified in the Cortex-M
+// Security Extensions specification.
+// 1) <sym> : A standard function name.
+// 2) __acle_se_<sym> : A special symbol that prefixes the standard function
+// name with __acle_se_.
+// Both these symbols are Thumb function symbols with external linkage.
+// <sym> may be redefined in .gnu.sgstubs.
+void elf::processArmCmseSymbols() {
+  if (!config->cmseImplib)
+    return;
+  // Only symbols with external linkage end up in symtab, so no need to do
+  // linkage checks. Only check symbol type.
+  for (Symbol *acleSeSym : symtab.getSymbols()) {
+    if (!acleSeSym->getName().startswith(ACLESESYM_PREFIX))
+      continue;
+    // If input object build attributes do not support CMSE, error and disable
+    // further scanning for <sym>, __acle_se_<sym> pairs.
+    if (!config->armCMSESupport) {
+      error("CMSE is only supported by ARMv8-M architecture or later");
+      config->cmseImplib = false;
+      break;
+    }
+
+    // Try to find the associated symbol definition.
+    // Symbol must have external linkage.
+    StringRef name = acleSeSym->getName().substr(std::strlen(ACLESESYM_PREFIX));
+    Symbol *sym = symtab.find(name);
+    if (!sym) {
+      error(toString(acleSeSym->file) + ": cmse special symbol '" +
+            acleSeSym->getName() +
+            "' detected, but no associated entry function definition '" + name +
+            "' with external linkage found");
+      continue;
+    }
+
+    std::string errMsg = checkCmseSymAttributes(acleSeSym, sym);
+    if (!errMsg.empty()) {
+      error(errMsg);
+      continue;
+    }
+
+    // <sym> may be redefined later in the link in .gnu.sgstubs
+    symtab.cmseSymMap[name] = {acleSeSym, sym};
+  }
+
+  // If this is an Arm CMSE secure app, replace references to entry symbol <sym>
+  // with its corresponding special symbol __acle_se_<sym>.
+  parallelForEach(ctx.objectFiles, [&](InputFile *file) {
+    MutableArrayRef<Symbol *> syms = file->getMutableSymbols();
+    for (size_t i = 0, e = syms.size(); i != e; ++i) {
+      StringRef symName = syms[i]->getName();
+      if (symtab.cmseSymMap.count(symName))
+        syms[i] = symtab.cmseSymMap[symName].acleSeSym;
+    }
+  });
+}
+
+class elf::ArmCmseSGVeneer {
+public:
+  ArmCmseSGVeneer(Symbol *sym, Symbol *acleSeSym,
+                  std::optional<uint64_t> addr = std::nullopt)
+      : sym(sym), acleSeSym(acleSeSym), entAddr{addr} {}
+  static const size_t size{ACLESESYM_SIZE};
+  const std::optional<uint64_t> getAddr() const { return entAddr; };
+
+  Symbol *sym;
+  Symbol *acleSeSym;
+  uint64_t offset = 0;
+
+private:
+  const std::optional<uint64_t> entAddr;
+};
+
+ArmCmseSGSection::ArmCmseSGSection()
+    : SyntheticSection(llvm::ELF::SHF_ALLOC | llvm::ELF::SHF_EXECINSTR,
+                       llvm::ELF::SHT_PROGBITS,
+                       /*alignment=*/32, ".gnu.sgstubs") {
+  entsize = ACLESESYM_SIZE;
+  // The range of addresses used in the CMSE import library should be fixed.
+  for (auto &[_, sym] : symtab.cmseImportLib) {
+    if (impLibMaxAddr <= sym->value)
+      impLibMaxAddr = sym->value + sym->size;
+  }
+  if (symtab.cmseSymMap.empty())
+    return;
+  addMappingSymbol();
+  for (auto &[_, entryFunc] : symtab.cmseSymMap)
+    addSGVeneer(cast<Defined>(entryFunc.acleSeSym),
+                cast<Defined>(entryFunc.sym));
+  for (auto &[_, sym] : symtab.cmseImportLib) {
+    if (!symtab.inCMSEOutImpLib.count(sym->getName()))
+      warn("entry function '" + sym->getName() +
+           "' from CMSE import library is not present in secure application");
+  }
+
+  if (!symtab.cmseImportLib.empty() && config->cmseOutputLib.empty()) {
+    for (auto &[_, entryFunc] : symtab.cmseSymMap) {
+      Symbol *sym = entryFunc.sym;
+      if (!symtab.inCMSEOutImpLib.count(sym->getName()))
+        warn("new entry function '" + sym->getName() +
+             "' introduced but no output import library specified");
+    }
+  }
+}
+
+void ArmCmseSGSection::addSGVeneer(Symbol *acleSeSym, Symbol *sym) {
+  entries.emplace_back(acleSeSym, sym);
+  if (symtab.cmseImportLib.count(sym->getName()))
+    symtab.inCMSEOutImpLib[sym->getName()] = true;
+  // Symbol addresses different, nothing to do.
+  if (acleSeSym->file != sym->file ||
+      cast<Defined>(*acleSeSym).value != cast<Defined>(*sym).value)
+    return;
+  // Only secure symbols with values equal to that of it's non-secure
+  // counterpart needs to be in the .gnu.sgstubs section.
+  ArmCmseSGVeneer *ss = nullptr;
+  if (symtab.cmseImportLib.count(sym->getName())) {
+    Defined *impSym = symtab.cmseImportLib[sym->getName()];
+    ss = make<ArmCmseSGVeneer>(sym, acleSeSym, impSym->value);
+  } else {
+    ss = make<ArmCmseSGVeneer>(sym, acleSeSym);
+    ++newEntries;
+  }
+  sgVeneers.emplace_back(ss);
+}
+
+void ArmCmseSGSection::writeTo(uint8_t *buf) {
+  for (ArmCmseSGVeneer *s : sgVeneers) {
+    uint8_t *p = buf + s->offset;
+    write16(p + 0, 0xe97f); // SG
+    write16(p + 2, 0xe97f);
+    write16(p + 4, 0xf000); // B.W S
+    write16(p + 6, 0xb000);
+    target->relocateNoSym(p + 4, R_ARM_THM_JUMP24,
+                          s->acleSeSym->getVA() -
+                              (getVA() + s->offset + s->size));
+  }
+}
+
+void ArmCmseSGSection::addMappingSymbol() {
+  addSyntheticLocal("$t", STT_NOTYPE, /*off=*/0, /*size=*/0, *this);
+}
+
+size_t ArmCmseSGSection::getSize() const {
+  if (sgVeneers.empty())
+    return (impLibMaxAddr ? impLibMaxAddr - getVA() : 0) + newEntries * entsize;
+
+  return entries.size() * entsize;
+}
+
+void ArmCmseSGSection::finalizeContents() {
+  if (sgVeneers.empty())
+    return;
+
+  auto it =
+      std::stable_partition(sgVeneers.begin(), sgVeneers.end(),
+                            [](auto *i) { return i->getAddr().has_value(); });
+  std::sort(sgVeneers.begin(), it, [](auto *a, auto *b) {
+    return a->getAddr().value() < b->getAddr().value();
+  });
+  // This is the partition of the veneers with fixed addresses.
+  uint64_t addr = (*sgVeneers.begin())->getAddr().has_value()
+                      ? (*sgVeneers.begin())->getAddr().value()
+                      : getVA();
+  // Check if the start address of '.gnu.sgstubs' correspond to the
+  // linker-synthesized veneer with the lowest address.
+  if ((getVA() & ~1) != (addr & ~1)) {
+    error("start address of '.gnu.sgstubs' is different from previous link");
+    return;
+  }
+
+  for (size_t i = 0; i < sgVeneers.size(); ++i) {
+    ArmCmseSGVeneer *s = sgVeneers[i];
+    s->offset = i * s->size;
+    Defined(file, StringRef(), s->sym->binding, s->sym->stOther, s->sym->type,
+            s->offset | 1, s->size, this)
+        .overwrite(*s->sym);
+  }
+}
+
+// Write the CMSE import library to disk.
+// The CMSE import library is a relocatable object with only a symbol table.
+// The symbols are copies of the (absolute) symbols of the secure gateways
+// in the executable output by this link.
+// See Arm® v8-M Security Extensions: Requirements on Development Tools
+// https://developer.arm.com/documentation/ecm0359818/latest
+template <typename ELFT> void elf::writeARMCmseImportLib() {
+  StringTableSection *shstrtab =
+      make<StringTableSection>(".shstrtab", /*dynamic=*/false);
+  StringTableSection *strtab =
+      make<StringTableSection>(".strtab", /*dynamic=*/false);
+  SymbolTableBaseSection *impSymTab = make<SymbolTableSection<ELFT>>(*strtab);
+
+  SmallVector<std::pair<OutputSection *, SyntheticSection *>, 0> osIsPairs;
+  osIsPairs.emplace_back(make<OutputSection>(strtab->name, 0, 0), strtab);
+  osIsPairs.emplace_back(make<OutputSection>(impSymTab->name, 0, 0), impSymTab);
+  osIsPairs.emplace_back(make<OutputSection>(shstrtab->name, 0, 0), shstrtab);
+
+  std::sort(symtab.cmseSymMap.begin(), symtab.cmseSymMap.end(),
+            [](const auto &a, const auto &b) -> bool {
+              return a.second.sym->getVA() < b.second.sym->getVA();
+            });
+  // Copy the secure gateway entry symbols to the import library symbol table.
+  for (auto &p : symtab.cmseSymMap) {
+    Defined *d = cast<Defined>(p.second.sym);
+    impSymTab->addSymbol(makeDefined(nullptr, d->getName(), d->computeBinding(),
+                                     /*stOther=*/0, STT_FUNC, d->getVA(),
+                                     d->getSize(), nullptr));
+  }
+
+  size_t idx = 0;
+  uint64_t off = sizeof(typename ELFT::Ehdr);
+  for (auto &[osec, isec] : osIsPairs) {
+    osec->sectionIndex = ++idx;
+    osec->recordSection(isec);
+    osec->finalizeInputSections();
+    osec->shName = shstrtab->addString(osec->name);
+    osec->size = isec->getSize();
+    isec->finalizeContents();
+    osec->offset = alignToPowerOf2(off, osec->addralign);
+    off = osec->offset + osec->size;
+  }
+
+  const uint64_t sectionHeaderOff = alignToPowerOf2(off, config->wordsize);
+  const auto shnum = osIsPairs.size() + 1;
+  const uint64_t fileSize =
+      sectionHeaderOff + shnum * sizeof(typename ELFT::Shdr);
+  const unsigned flags =
+      config->mmapOutputFile ? 0 : (unsigned)FileOutputBuffer::F_no_mmap;
+  unlinkAsync(config->cmseOutputLib);
+  Expected<std::unique_ptr<FileOutputBuffer>> bufferOrErr =
+      FileOutputBuffer::create(config->cmseOutputLib, fileSize, flags);
+  if (!bufferOrErr) {
+    error("failed to open " + config->cmseOutputLib + ": " +
+          llvm::toString(bufferOrErr.takeError()));
+    return;
+  }
+
+  // Write the ELF Header
+  std::unique_ptr<FileOutputBuffer> &buffer = *bufferOrErr;
+  uint8_t *const buf = buffer->getBufferStart();
+  memcpy(buf, "\177ELF", 4);
+  auto *eHdr = reinterpret_cast<typename ELFT::Ehdr *>(buf);
+  eHdr->e_type = ET_REL;
+  eHdr->e_entry = 0;
+  eHdr->e_shoff = sectionHeaderOff;
+  eHdr->e_ident[EI_CLASS] = ELFCLASS32;
+  eHdr->e_ident[EI_DATA] = config->isLE ? ELFDATA2LSB : ELFDATA2MSB;
+  eHdr->e_ident[EI_VERSION] = EV_CURRENT;
+  eHdr->e_ident[EI_OSABI] = config->osabi;
+  eHdr->e_ident[EI_ABIVERSION] = 0;
+  eHdr->e_machine = EM_ARM;
+  eHdr->e_version = EV_CURRENT;
+  eHdr->e_flags = config->eflags;
+  eHdr->e_ehsize = sizeof(typename ELFT::Ehdr);
+  eHdr->e_phnum = 0;
+  eHdr->e_shentsize = sizeof(typename ELFT::Shdr);
+  eHdr->e_phoff = 0;
+  eHdr->e_phentsize = 0;
+  eHdr->e_shnum = shnum;
+  eHdr->e_shstrndx = shstrtab->getParent()->sectionIndex;
+
+  // Write the section header table.
+  auto *sHdrs = reinterpret_cast<typename ELFT::Shdr *>(buf + eHdr->e_shoff);
+  for (auto &[osec, _] : osIsPairs)
+    osec->template writeHeaderTo<ELFT>(++sHdrs);
+
+  // Write section contents to a mmap'ed file.
+  {
+    parallel::TaskGroup tg;
+    for (auto &[osec, _] : osIsPairs)
+      osec->template writeTo<ELFT>(buf + osec->offset, tg);
+  }
+
+  if (auto e = buffer->commit())
+    fatal("failed to write output '" + buffer->getPath() +
+          "': " + toString(std::move(e)));
+}
+
 TargetInfo *elf::getARMTargetInfo() {
   static ARM target;
   return &target;
 }
+
+template void elf::writeARMCmseImportLib<ELF32LE>();
+template void elf::writeARMCmseImportLib<ELF32BE>();
+template void elf::writeARMCmseImportLib<ELF64LE>();
+template void elf::writeARMCmseImportLib<ELF64BE>();
+
+template void ObjFile<ELF32LE>::importCmseSymbols();
+template void ObjFile<ELF32BE>::importCmseSymbols();
+template void ObjFile<ELF64LE>::importCmseSymbols();
+template void ObjFile<ELF64BE>::importCmseSymbols();

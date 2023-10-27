@@ -635,7 +635,7 @@ retain-agnostic, the conversion is treated as a ``__bridge`` cast.
 
   For loads from ``const`` global variables of :ref:`C retainable pointer type
   <arc.misc.c-retainable>`, it is reasonable to assume that global system
-  constants were initialitzed with true constants (e.g. string literals), but
+  constants were initialized with true constants (e.g. string literals), but
   user constants might have been initialized with something dynamically
   allocated, using a global initializer.
 
@@ -1306,7 +1306,7 @@ or between ARC and non-ARC modes) under the following conditions:
 
 - The types must be compatible ignoring ownership qualifiers according
   to the baseline, non-ARC rules (e.g. C struct compatibility or C++'s
-  ODR).  This condition implies a pairwise correspondance between
+  ODR).  This condition implies a pairwise correspondence between
   fields.
 
   Note that an Objective-C++ class with base classes, a user-provided
@@ -1351,7 +1351,7 @@ automatically by the compiler.
 .. admonition:: Rationale
 
   In earlier releases, when non-trivial ownership was only permitted
-  on fields in Objective-C++, the ABI used for such classees was the
+  on fields in Objective-C++, the ABI used for such classes was the
   ordinary ABI for non-trivial C++ classes, which passes arguments and
   returns indirectly and does not transfer responsibility for arguments.
   When support for Objective-C structs was added, it was decided to

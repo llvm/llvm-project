@@ -5,7 +5,7 @@
 char *foo = "test";
 int test(char*,...);
 
-int test(fmt) // expected-warning {{a function definition without a prototype is deprecated in all versions of C and is not supported in C2x}}
+int test(fmt) // expected-warning {{a function definition without a prototype is deprecated in all versions of C and is not supported in C23}}
         char*fmt;
 {
         va_list ap;
@@ -21,7 +21,7 @@ int test(fmt) // expected-warning {{a function definition without a prototype is
 
 void exit(); // expected-warning {{a function declaration without a prototype is deprecated in all versions of C}}
 
-int main(argc,argv) // expected-warning {{a function definition without a prototype is deprecated in all versions of C and is not supported in C2x}}
+int main(argc,argv) // expected-warning {{a function definition without a prototype is deprecated in all versions of C and is not supported in C23}}
         int argc;char**argv;
 {
         exit(test("",foo));

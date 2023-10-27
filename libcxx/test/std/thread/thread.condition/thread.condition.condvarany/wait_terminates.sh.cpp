@@ -20,6 +20,9 @@
 // RUN: %{run} 4
 // RUN: %{run} 5
 // RUN: %{run} 6
+// RUN: %{run} 7
+// RUN: %{run} 8
+// RUN: %{run} 9
 
 // -----------------------------------------------------------------------------
 // Overview
@@ -34,6 +37,9 @@
 //   4.  void wait_for(Lock& lock, Duration, Pred);
 //   5.  void wait_until(Lock& lock, TimePoint);
 //   6.  void wait_until(Lock& lock, TimePoint, Pred);
+//   7.  bool wait(Lock& lock, stop_token stoken, Predicate pred);
+//   8.  bool wait_for(Lock& lock, stop_token stoken, Duration, Predicate pred);
+//   9.  bool wait_until(Lock& lock, stop_token stoken, TimePoint, Predicate pred);
 //
 // Plan
 //   1 Create a mutex type, 'ThrowingMutex', that throws when the lock is acquired
@@ -55,15 +61,18 @@
 //     that terminate has been called)
 
 
-#include <condition_variable>
 #include <atomic>
-#include <thread>
-#include <chrono>
-#include <string>
-#include <cstdlib>
 #include <cassert>
+#include <chrono>
+#include <condition_variable>
+#include <cstdlib>
+#include <exception>
+#include <string>
+#include <stop_token>
+#include <thread>
 
 #include "make_test_thread.h"
+#include "test_macros.h"
 
 void my_terminate() {
   std::_Exit(0); // Use _Exit to prevent cleanup from taking place.
@@ -114,7 +123,7 @@ typedef std::chrono::milliseconds MS;
 int main(int argc, char **argv) {
   assert(argc == 2);
   int id = std::stoi(argv[1]);
-  assert(id >= 1 && id <= 6);
+  assert(id >= 1 && id <= 9);
   std::set_terminate(my_terminate); // set terminate after std::stoi because it can throw.
   MS wait(250);
   try {
@@ -128,6 +137,16 @@ int main(int argc, char **argv) {
       case 4: cv.wait_for(mut, wait, pred_function); break;
       case 5: cv.wait_until(mut, Clock::now() + wait); break;
       case 6: cv.wait_until(mut, Clock::now() + wait, pred_function); break;
+#if TEST_STD_VER >=20 && !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_STOP_TOKEN) && !defined(_LIBCPP_AVAILABILITY_HAS_NO_SYNC)
+      case 7: cv.wait(mut, std::stop_source{}.get_token(), pred_function); break;
+      case 8: cv.wait_for(mut, std::stop_source{}.get_token(), wait, pred_function); break;
+      case 9: cv.wait_until(mut, std::stop_source{}.get_token(), Clock::now() + wait, pred_function); break;
+#else
+      case 7:
+      case 8:
+      case 9:
+        return 0;
+#endif //TEST_STD_VER >=20 && !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_STOP_TOKEN)
       default: assert(false);
     }
   } catch (...) {}

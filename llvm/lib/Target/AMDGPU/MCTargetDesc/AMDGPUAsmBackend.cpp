@@ -19,7 +19,7 @@
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/EndianStream.h"
-#include "llvm/Support/TargetParser.h"
+#include "llvm/TargetParser/TargetParser.h"
 
 using namespace llvm;
 using namespace llvm::AMDGPU;
@@ -28,7 +28,7 @@ namespace {
 
 class AMDGPUAsmBackend : public MCAsmBackend {
 public:
-  AMDGPUAsmBackend(const Target &T) : MCAsmBackend(support::little) {}
+  AMDGPUAsmBackend(const Target &T) : MCAsmBackend(llvm::endianness::little) {}
 
   unsigned getNumFixupKinds() const override { return AMDGPU::NumTargetFixupKinds; };
 
@@ -79,7 +79,7 @@ bool AMDGPUAsmBackend::fixupNeedsRelaxation(const MCFixup &Fixup,
 
 bool AMDGPUAsmBackend::mayNeedRelaxation(const MCInst &Inst,
                        const MCSubtargetInfo &STI) const {
-  if (!STI.getFeatureBits()[AMDGPU::FeatureOffset3fBug])
+  if (!STI.hasFeature(AMDGPU::FeatureOffset3fBug))
     return false;
 
   if (AMDGPU::getSOPPWithRelaxation(Inst.getOpcode()) >= 0)
@@ -185,6 +185,8 @@ const MCFixupKindInfo &AMDGPUAsmBackend::getFixupKindInfo(
   if (Kind < FirstTargetFixupKind)
     return MCAsmBackend::getFixupKindInfo(Kind);
 
+  assert(unsigned(Kind - FirstTargetFixupKind) < getNumFixupKinds() &&
+         "Invalid kind!");
   return Infos[Kind - FirstTargetFixupKind];
 }
 

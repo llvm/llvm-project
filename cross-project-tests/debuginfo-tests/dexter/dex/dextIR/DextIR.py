@@ -8,18 +8,20 @@ from collections import OrderedDict
 import os
 from typing import List
 
-from dex.dextIR.BuilderIR import BuilderIR
 from dex.dextIR.DebuggerIR import DebuggerIR
 from dex.dextIR.StepIR import StepIR, StepKind
 
 
 def _step_kind_func(context, step):
-    if (step.current_location.path is None or
-        not os.path.exists(step.current_location.path)):
+    if step.current_location.path is None or not os.path.exists(
+        step.current_location.path
+    ):
         return StepKind.FUNC_UNKNOWN
 
-    if any(os.path.samefile(step.current_location.path, f)
-           for f in context.options.source_files):
+    if any(
+        os.path.samefile(step.current_location.path, f)
+        for f in context.options.source_files
+    ):
         return StepKind.FUNC
 
     return StepKind.FUNC_EXTERNAL
@@ -39,34 +41,38 @@ class DextIR:
         commands: { name (str), commands (list[CommandIR])
     """
 
-    def __init__(self,
-                 dexter_version: str,
-                 executable_path: str,
-                 source_paths: List[str],
-                 builder: BuilderIR = None,
-                 debugger: DebuggerIR = None,
-                 commands: OrderedDict = None):
+    def __init__(
+        self,
+        dexter_version: str,
+        executable_path: str,
+        source_paths: List[str],
+        debugger: DebuggerIR = None,
+        commands: OrderedDict = None,
+    ):
         self.dexter_version = dexter_version
         self.executable_path = executable_path
         self.source_paths = source_paths
-        self.builder = builder
         self.debugger = debugger
         self.commands = commands
         self.steps: List[StepIR] = []
 
     def __str__(self):
-        colors = 'rgby'
-        st = '## BEGIN ##\n'
+        colors = "rgby"
+        st = "## BEGIN ##\n"
         color_idx = 0
         for step in self.steps:
-            if step.step_kind in (StepKind.FUNC, StepKind.FUNC_EXTERNAL,
-                                  StepKind.FUNC_UNKNOWN):
+            if step.step_kind in (
+                StepKind.FUNC,
+                StepKind.FUNC_EXTERNAL,
+                StepKind.FUNC_UNKNOWN,
+            ):
                 color_idx += 1
 
             color = colors[color_idx % len(colors)]
-            st += '<{}>{}</>\n'.format(color, step)
-        st += '## END ({} step{}) ##\n'.format(
-            self.num_steps, '' if self.num_steps == 1 else 's')
+            st += "<{}>{}</>\n".format(color, step)
+        st += "## END ({} step{}) ##\n".format(
+            self.num_steps, "" if self.num_steps == 1 else "s"
+        )
         return st
 
     @property
@@ -79,9 +85,15 @@ class DextIR:
         Returns:
             StepIR or None if there is no previous step in this frame.
         """
-        return next((s for s in reversed(self.steps)
-            if s.current_function == step.current_function
-            and s.num_frames == step.num_frames), None)
+        return next(
+            (
+                s
+                for s in reversed(self.steps)
+                if s.current_function == step.current_function
+                and s.num_frames == step.num_frames
+            ),
+            None,
+        )
 
     def _get_new_step_kind(self, context, step):
         if step.current_function is None:
@@ -103,7 +115,10 @@ class DextIR:
             prev_step = frame_step if frame_step is not None else prev_step
 
         # If we're missing line numbers to compare then the step kind has to be UNKNOWN.
-        if prev_step.current_location.lineno is None or step.current_location.lineno is None:
+        if (
+            prev_step.current_location.lineno is None
+            or step.current_location.lineno is None
+        ):
             return StepKind.UNKNOWN
 
         # We're in the same func as prev step, check lineo.

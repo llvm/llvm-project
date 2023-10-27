@@ -1,4 +1,5 @@
 ; RUN: llc < %s -march=avr | FileCheck %s
+; RUN: llc < %s -mtriple=avr -mcpu=attiny10 | FileCheck --check-prefix=TINY %s
 
 declare void @f1(i8)
 declare void @f2(i8)
@@ -201,4 +202,99 @@ if.else:
   br label %if.end
 if.end:
   ret void
+}
+
+define i16 @cmp_i16_gt_0(i16 %0) {
+; CHECK-LABEL: cmp_i16_gt_0:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    ldi r18, 1
+; CHECK-NEXT:    cp r1, r24
+; CHECK-NEXT:    cpc r1, r25
+; CHECK-NEXT:    brlt .LBB11_2
+; CHECK-NEXT:  ; %bb.1:
+; CHECK-NEXT:    mov r18, r1
+; CHECK-NEXT:  .LBB11_2:
+; CHECK-NEXT:    mov r24, r18
+; CHECK-NEXT:    clr r25
+; CHECK-NEXT:    ret
+;
+; TINY-LABEL: cmp_i16_gt_0:
+; TINY:       ; %bb.0:
+; TINY-NEXT:    ldi r20, 1
+; TINY-NEXT:    cp r17, r24
+; TINY-NEXT:    cpc r17, r25
+; TINY-NEXT:    brlt .LBB11_2
+; TINY-NEXT:  ; %bb.1:
+; TINY-NEXT:    mov r20, r17
+; TINY-NEXT:  .LBB11_2:
+; TINY-NEXT:    mov r24, r20
+; TINY-NEXT:    clr r25
+; TINY-NEXT:    ret
+  %2 = icmp sgt i16 %0, 0
+  %3 = zext i1 %2 to i16
+  ret i16 %3
+}
+
+define i16 @cmp_i16_gt_126(i16 %0) {
+; CHECK-LABEL: cmp_i16_gt_126:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    ldi r18, 1
+; CHECK-NEXT:    cpi r24, 127
+; CHECK-NEXT:    cpc r25, r1
+; CHECK-NEXT:    brge .LBB12_2
+; CHECK-NEXT:  ; %bb.1:
+; CHECK-NEXT:    mov r18, r1
+; CHECK-NEXT:  .LBB12_2:
+; CHECK-NEXT:    mov r24, r18
+; CHECK-NEXT:    clr r25
+; CHECK-NEXT:    ret
+;
+; TINY-LABEL: cmp_i16_gt_126:
+; TINY:       ; %bb.0:
+; TINY-NEXT:    ldi r20, 1
+; TINY-NEXT:    cpi r24, 127
+; TINY-NEXT:    cpc r25, r17
+; TINY-NEXT:    brge .LBB12_2
+; TINY-NEXT:  ; %bb.1:
+; TINY-NEXT:    mov r20, r17
+; TINY-NEXT:  .LBB12_2:
+; TINY-NEXT:    mov r24, r20
+; TINY-NEXT:    clr r25
+; TINY-NEXT:    ret
+  %2 = icmp sgt i16 %0, 126
+  %3 = zext i1 %2 to i16
+  ret i16 %3
+}
+
+define i16 @cmp_i16_gt_1023(i16 %0) {
+; CHECK-LABEL: cmp_i16_gt_1023:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    ldi r19, 4
+; CHECK-NEXT:    ldi r18, 1
+; CHECK-NEXT:    cp r24, r1
+; CHECK-NEXT:    cpc r25, r19
+; CHECK-NEXT:    brge .LBB13_2
+; CHECK-NEXT:  ; %bb.1:
+; CHECK-NEXT:    mov r18, r1
+; CHECK-NEXT:  .LBB13_2:
+; CHECK-NEXT:    mov r24, r18
+; CHECK-NEXT:    clr r25
+; CHECK-NEXT:    ret
+;
+; TINY-LABEL: cmp_i16_gt_1023:
+; TINY:       ; %bb.0:
+; TINY-NEXT:    ldi r21, 4
+; TINY-NEXT:    ldi r20, 1
+; TINY-NEXT:    cp r24, r17
+; TINY-NEXT:    cpc r25, r21
+; TINY-NEXT:    brge .LBB13_2
+; TINY-NEXT:  ; %bb.1:
+; TINY-NEXT:    mov r20, r17
+; TINY-NEXT:  .LBB13_2:
+; TINY-NEXT:    mov r24, r20
+; TINY-NEXT:    clr r25
+; TINY-NEXT:    ret
+  %2 = icmp sgt i16 %0, 1023
+  %3 = zext i1 %2 to i16
+  ret i16 %3
 }

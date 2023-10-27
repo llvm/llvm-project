@@ -236,6 +236,25 @@ long as the qualifiers for the type they point to match. For example, ``char*``,
 ``-fsanitize-cfi-icall-generalize-pointers`` is not compatible with
 ``-fsanitize-cfi-cross-dso``.
 
+.. _cfi-icall-experimental-normalize-integers:
+
+``-fsanitize-cfi-icall-experimental-normalize-integers``
+--------------------------------------------------------
+
+This option enables normalizing integer types as vendor extended types for
+cross-language LLVM CFI/KCFI support with other languages that can't represent
+and encode C/C++ integer types.
+
+Specifically, integer types are encoded as their defined representations (e.g.,
+8-bit signed integer, 16-bit signed integer, 32-bit signed integer, ...) for
+compatibility with languages that define explicitly-sized integer types (e.g.,
+i8, i16, i32, ..., in Rust).
+
+``-fsanitize-cfi-icall-experimental-normalize-integers`` is compatible with
+``-fsanitize-cfi-icall-generalize-pointers``.
+
+This option is currently experimental.
+
 .. _cfi-canonical-jump-tables:
 
 ``-fsanitize-cfi-canonical-jump-tables``
@@ -295,10 +314,8 @@ to find bugs in local development builds, whereas ``-fsanitize=cfi-icall``
 is a security hardening mechanism designed to be deployed in release builds.
 
 ``-fsanitize=function`` has a higher space and time overhead due to a more
-complex type check at indirect call sites, as well as a need for run-time
-type information (RTTI), which may make it unsuitable for deployment. Because
-of the need for RTTI, ``-fsanitize=function`` can only be used with C++
-programs, whereas ``-fsanitize=cfi-icall`` can protect both C and C++ programs.
+complex type check at indirect call sites, which may make it unsuitable for
+deployment.
 
 On the other hand, ``-fsanitize=function`` conforms more closely with the C++
 standard and user expectations around interaction with shared libraries;

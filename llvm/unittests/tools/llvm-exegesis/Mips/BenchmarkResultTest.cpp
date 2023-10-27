@@ -20,11 +20,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
-using ::testing::AllOf;
-using ::testing::Eq;
-using ::testing::get;
 using ::testing::Pointwise;
-using ::testing::Property;
 
 using llvm::unittest::TempDir;
 
@@ -55,7 +51,7 @@ class MipsBenchmarkResultTest : public MipsTestBase {};
 TEST_F(MipsBenchmarkResultTest, WriteToAndReadFromDisk) {
   ExitOnError ExitOnErr;
 
-  InstructionBenchmark ToDisk;
+  Benchmark ToDisk;
 
   ToDisk.Key.Instructions.push_back(MCInstBuilder(Mips::XOR)
                                         .addReg(Mips::T0)
@@ -65,7 +61,7 @@ TEST_F(MipsBenchmarkResultTest, WriteToAndReadFromDisk) {
   ToDisk.Key.RegisterInitialValues = {
       RegisterValue{Mips::T1, APInt(8, "123", 10)},
       RegisterValue{Mips::T2, APInt(8, "456", 10)}};
-  ToDisk.Mode = InstructionBenchmark::Latency;
+  ToDisk.Mode = Benchmark::Latency;
   ToDisk.CpuName = "cpu_name";
   ToDisk.LLVMTriple = "llvm_triple";
   ToDisk.NumRepetitions = 1;
@@ -94,7 +90,7 @@ TEST_F(MipsBenchmarkResultTest, WriteToAndReadFromDisk) {
   {
     // One-element version.
     const auto FromDisk =
-        ExitOnErr(InstructionBenchmark::readYaml(State, *Buffer));
+        ExitOnErr(Benchmark::readYaml(State, *Buffer));
 
     EXPECT_THAT(FromDisk.Key.Instructions,
                 Pointwise(EqMCInst(), ToDisk.Key.Instructions));
@@ -110,7 +106,7 @@ TEST_F(MipsBenchmarkResultTest, WriteToAndReadFromDisk) {
   {
     // Vector version.
     const auto FromDiskVector =
-        ExitOnErr(InstructionBenchmark::readYamls(State, *Buffer));
+        ExitOnErr(Benchmark::readYamls(State, *Buffer));
     ASSERT_EQ(FromDiskVector.size(), size_t{1});
     const auto &FromDisk = FromDiskVector[0];
     EXPECT_THAT(FromDisk.Key.Instructions,

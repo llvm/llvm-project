@@ -316,8 +316,8 @@ public:
   ///        bug path significantly shorter.
   const NoteTag *getNoteTag(StringRef Note, bool IsPrunable = false) {
     return getNoteTag(
-        [Note](BugReporterContext &,
-               PathSensitiveBugReport &) { return std::string(Note); },
+        [Note = std::string(Note)](BugReporterContext &,
+               PathSensitiveBugReport &) { return Note; },
         IsPrunable);
   }
 

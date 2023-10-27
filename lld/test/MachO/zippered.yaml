@@ -12,7 +12,7 @@
 # RUN: %no-arg-lld -syslibroot %S/Inputs/MacOSX.sdk -lSystem -dylib -arch x86_64 -platform_version mac-catalyst 13.15.0 14.0 %t/test_maccatalyst.o -o /dev/null -framework MacOnly-Indirect
 
 # RUN: not %no-arg-lld -syslibroot %S/Inputs/MacOSX.sdk -lSystem -dylib -arch x86_64 -platform_version mac-catalyst 13.15.0 14.0 %t/test_maccatalyst.o -o /dev/null -framework MacOnly 2>&1 | FileCheck --check-prefix=INCOMPATIBLE %s
-# INCOMPATIBLE: System/Library/Frameworks{{[\\/]}}MacOnly.framework{{[\\/]}}MacOnly.tbd(MacOnly.dylib) is incompatible with x86_64 (macCatalyst)
+# INCOMPATIBLE: System/Library/Frameworks{{[\\/]}}MacOnly.framework{{[\\/]}}MacOnly.tbd(MacOnly.dylib) is incompatible with x86_64 (macCatalyst13.15.0)
 
 # RUN: not %no-arg-lld -syslibroot %S/Inputs/MacOSX.sdk -lSystem -dylib -arch x86_64 -platform_version ios 13.15.0 14.0 %t/test.dylib %t/test_ios.o -o /dev/null 2>&1 | FileCheck %s
 # CHECK: test.dylib has platform macOS/macCatalyst, which is different from target platform iOS

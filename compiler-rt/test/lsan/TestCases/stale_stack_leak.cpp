@@ -45,6 +45,7 @@ int main() {
 // Otherwise, we need a different method.
 __attribute__((destructor))
 __attribute__((no_sanitize_address))
+__attribute__((no_sanitize("hwaddress")))
 void ConfirmPointerHasSurvived() {
   print_address("Value after LSan: ", 1, *pp);
 }
@@ -52,5 +53,5 @@ void ConfirmPointerHasSurvived() {
 // CHECK-sanity: Test alloc: [[ADDR:0x[0-9,a-f]+]]
 // CHECK: LeakSanitizer: detected memory leaks
 // CHECK: [[ADDR]] (1337 bytes)
-// CHECK: SUMMARY: {{(Leak|Address)}}Sanitizer:
+// CHECK: SUMMARY: {{.*}}Sanitizer:
 // CHECK-sanity: Value after LSan: [[ADDR]]

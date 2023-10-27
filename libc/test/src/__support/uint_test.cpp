@@ -9,20 +9,22 @@
 #include "src/__support/CPP/optional.h"
 #include "src/__support/UInt.h"
 
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
-// We want to test __llvm_libc::cpp::UInt<128> explicitly. So, for convenience,
-// we use a sugar which does not conflict with the UInt128 type which can
-// resolve to __uint128_t if the platform has it.
-using LL_UInt128 = __llvm_libc::cpp::UInt<128>;
-using LL_UInt192 = __llvm_libc::cpp::UInt<192>;
-using LL_UInt256 = __llvm_libc::cpp::UInt<256>;
-using LL_UInt320 = __llvm_libc::cpp::UInt<320>;
-using LL_UInt512 = __llvm_libc::cpp::UInt<512>;
-using LL_UInt1024 = __llvm_libc::cpp::UInt<1024>;
+// We want to test LIBC_NAMESPACE::cpp::UInt<128> explicitly. So, for
+// convenience, we use a sugar which does not conflict with the UInt128 type
+// which can resolve to __uint128_t if the platform has it.
+using LL_UInt128 = LIBC_NAMESPACE::cpp::UInt<128>;
+using LL_UInt192 = LIBC_NAMESPACE::cpp::UInt<192>;
+using LL_UInt256 = LIBC_NAMESPACE::cpp::UInt<256>;
+using LL_UInt320 = LIBC_NAMESPACE::cpp::UInt<320>;
+using LL_UInt512 = LIBC_NAMESPACE::cpp::UInt<512>;
+using LL_UInt1024 = LIBC_NAMESPACE::cpp::UInt<1024>;
+
+using LL_Int128 = LIBC_NAMESPACE::cpp::Int<128>;
+using LL_Int192 = LIBC_NAMESPACE::cpp::Int<192>;
 
 TEST(LlvmLibcUIntClassTest, BasicInit) {
-  LL_UInt128 empty;
   LL_UInt128 half_val(12345);
   LL_UInt128 full_val({12345, 67890});
   ASSERT_TRUE(half_val != full_val);
@@ -526,3 +528,109 @@ TEST(LlvmLibcUIntClassTest, QuickMulHiTests) {
   TEST_QUICK_MUL_HI(256, 3);
   TEST_QUICK_MUL_HI(512, 7);
 }
+
+TEST(LlvmLibcUIntClassTest, ConstexprInitTests) {
+  constexpr LL_UInt128 add = LL_UInt128(1) + LL_UInt128(2);
+  ASSERT_EQ(add, LL_UInt128(3));
+  constexpr LL_UInt128 sub = LL_UInt128(5) - LL_UInt128(4);
+  ASSERT_EQ(sub, LL_UInt128(1));
+}
+
+#define TEST_QUICK_DIV_UINT32_POW2(x, e)                                       \
+  do {                                                                         \
+    LL_UInt320 y({0x8899aabbccddeeffULL, 0x0011223344556677ULL,                \
+                  0x583715f4d3b29171ULL, 0xffeeddccbbaa9988ULL,                \
+                  0x1f2f3f4f5f6f7f8fULL});                                     \
+    LL_UInt320 d = LL_UInt320(x);                                              \
+    d <<= e;                                                                   \
+    LL_UInt320 q1 = y / d;                                                     \
+    LL_UInt320 r1 = y % d;                                                     \
+    LL_UInt320 r2 = *y.div_uint32_times_pow_2(x, e);                           \
+    EXPECT_EQ(q1, y);                                                          \
+    EXPECT_EQ(r1, r2);                                                         \
+  } while (0)
+
+TEST(LlvmLibcUIntClassTest, DivUInt32TimesPow2Tests) {
+  for (size_t i = 0; i < 320; i += 32) {
+    TEST_QUICK_DIV_UINT32_POW2(1, i);
+    TEST_QUICK_DIV_UINT32_POW2(13151719, i);
+  }
+
+  TEST_QUICK_DIV_UINT32_POW2(1, 75);
+  TEST_QUICK_DIV_UINT32_POW2(1, 101);
+
+  TEST_QUICK_DIV_UINT32_POW2(1000000000, 75);
+  TEST_QUICK_DIV_UINT32_POW2(1000000000, 101);
+}
+
+TEST(LlvmLibcUIntClassTest, ComparisonInt128Tests) {
+  LL_Int128 a(123);
+  LL_Int128 b(0);
+  LL_Int128 c(-1);
+
+  ASSERT_TRUE(a == a);
+  ASSERT_TRUE(b == b);
+  ASSERT_TRUE(c == c);
+
+  ASSERT_TRUE(a != b);
+  ASSERT_TRUE(a != c);
+  ASSERT_TRUE(b != a);
+  ASSERT_TRUE(b != c);
+  ASSERT_TRUE(c != a);
+  ASSERT_TRUE(c != b);
+
+  ASSERT_TRUE(a > b);
+  ASSERT_TRUE(a >= b);
+  ASSERT_TRUE(a > c);
+  ASSERT_TRUE(a >= c);
+  ASSERT_TRUE(b > c);
+  ASSERT_TRUE(b >= c);
+
+  ASSERT_TRUE(b < a);
+  ASSERT_TRUE(b <= a);
+  ASSERT_TRUE(c < a);
+  ASSERT_TRUE(c <= a);
+  ASSERT_TRUE(c < b);
+  ASSERT_TRUE(c <= b);
+}
+
+TEST(LlvmLibcUIntClassTest, BasicArithmeticInt128Tests) {
+  LL_Int128 a(123);
+  LL_Int128 b(0);
+  LL_Int128 c(-3);
+
+  ASSERT_EQ(a * a, LL_Int128(123 * 123));
+  ASSERT_EQ(a * c, LL_Int128(-369));
+  ASSERT_EQ(c * a, LL_Int128(-369));
+  ASSERT_EQ(c * c, LL_Int128(9));
+  ASSERT_EQ(a * b, b);
+  ASSERT_EQ(b * a, b);
+  ASSERT_EQ(b * c, b);
+  ASSERT_EQ(c * b, b);
+}
+
+#ifdef __SIZEOF_INT128__
+
+TEST(LlvmLibcUIntClassTest, ConstructorFromUInt128Tests) {
+  __uint128_t a = (__uint128_t(123) << 64) + 1;
+  __int128_t b = -static_cast<__int128_t>(a);
+  LL_Int128 c(a);
+  LL_Int128 d(b);
+
+  LL_Int192 e(a);
+  LL_Int192 f(b);
+
+  ASSERT_EQ(static_cast<int>(c), 1);
+  ASSERT_EQ(static_cast<int>(c >> 64), 123);
+  ASSERT_EQ(static_cast<uint64_t>(d), static_cast<uint64_t>(b));
+  ASSERT_EQ(static_cast<uint64_t>(d >> 64), static_cast<uint64_t>(b >> 64));
+  ASSERT_EQ(c + d, LL_Int128(a + b));
+
+  ASSERT_EQ(static_cast<int>(e), 1);
+  ASSERT_EQ(static_cast<int>(e >> 64), 123);
+  ASSERT_EQ(static_cast<uint64_t>(f), static_cast<uint64_t>(b));
+  ASSERT_EQ(static_cast<uint64_t>(f >> 64), static_cast<uint64_t>(b >> 64));
+  ASSERT_EQ(LL_UInt192(e + f), LL_UInt192(a + b));
+}
+
+#endif // __SIZEOF_INT128__

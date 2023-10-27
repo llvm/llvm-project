@@ -14,7 +14,7 @@ define void @test_basic() #0 {
 ; THUMB-NEXT:    mov r5, sp
 ; THUMB-NEXT:    ldr.w r4, [r4, #252]
 ; THUMB-NEXT:    cmp r4, r5
-; THUMB-NEXT:    blo .LBB0_2
+; THUMB-NEXT:    bls .LBB0_2
 ; THUMB-NEXT:  @ %bb.1:
 ; THUMB-NEXT:    mov r4, #48
 ; THUMB-NEXT:    mov r5, #0
@@ -42,7 +42,7 @@ define void @test_basic() #0 {
 ; ARM-NEXT:    mov r5, sp
 ; ARM-NEXT:    ldr r4, [r4, #252]
 ; ARM-NEXT:    cmp r4, r5
-; ARM-NEXT:    blo .LBB0_2
+; ARM-NEXT:    bls .LBB0_2
 ; ARM-NEXT:  @ %bb.1:
 ; ARM-NEXT:    mov r4, #48
 ; ARM-NEXT:    mov r5, #0
@@ -75,17 +75,15 @@ define void @test_large() #0 {
 ; THUMB-LABEL:   test_large:
 
 ; THUMB:         push    {r4, r5}
-; THUMB-NEXT:    movw    r4, #40192
 ; THUMB-NEXT:    mov     r5, sp
-; THUMB-NEXT:    movt    r4, #0
+; THUMB-NEXT:    movw    r4, #40192
 ; THUMB-NEXT:    sub     r5, r5, r4
 ; THUMB-NEXT:    mrc     p15, #0, r4, c13, c0, #3
 ; THUMB-NEXT:    ldr.w   r4, [r4, #252]
 ; THUMB-NEXT:    cmp     r4, r5
-; THUMB-NEXT:    blo     .LBB1_2
+; THUMB-NEXT:    bls     .LBB1_2
 
 ; THUMB:         movw    r4, #40192
-; THUMB-NEXT:    movt    r4, #0
 ; THUMB-NEXT:    mov     r5, #0
 ; THUMB-NEXT:    push    {lr}
 ; THUMB-NEXT:    bl      __morestack
@@ -104,7 +102,7 @@ define void @test_large() #0 {
 ; ARM-NEXT:    mrc     p15, #0, r4, c13, c0, #3
 ; ARM-NEXT:    ldr     r4, [r4, #252]
 ; ARM-NEXT:    cmp     r4, r5
-; ARM-NEXT:    blo     .LBB1_2
+; ARM-NEXT:    bls     .LBB1_2
 
 ; ARM:         ldr     r4, .LCPI1_0
 ; ARM-NEXT:    mov     r5, #0
@@ -129,17 +127,15 @@ define fastcc void @test_fastcc_large() #0 {
 ; THUMB-LABEL:   test_fastcc_large:
 
 ; THUMB:         push    {r4, r5}
-; THUMB-NEXT:    movw    r4, #40192
 ; THUMB-NEXT:    mov     r5, sp
-; THUMB-NEXT:    movt    r4, #0
+; THUMB-NEXT:    movw    r4, #40192
 ; THUMB-NEXT:    sub     r5, r5, r4
 ; THUMB-NEXT:    mrc     p15, #0, r4, c13, c0, #3
 ; THUMB-NEXT:    ldr.w   r4, [r4, #252]
 ; THUMB-NEXT:    cmp     r4, r5
-; THUMB-NEXT:    blo     .LBB2_2
+; THUMB-NEXT:    bls     .LBB2_2
 
 ; THUMB:         movw    r4, #40192
-; THUMB-NEXT:    movt    r4, #0
 ; THUMB-NEXT:    mov     r5, #0
 ; THUMB-NEXT:    push    {lr}
 ; THUMB-NEXT:    bl      __morestack
@@ -157,7 +153,7 @@ define fastcc void @test_fastcc_large() #0 {
 ; ARM-NEXT:    mrc     p15, #0, r4, c13, c0, #3
 ; ARM-NEXT:    ldr     r4, [r4, #252]
 ; ARM-NEXT:    cmp     r4, r5
-; ARM-NEXT:    blo     .LBB2_2
+; ARM-NEXT:    bls     .LBB2_2
 
 ; ARM:         ldr     r4, .LCPI2_0
 ; ARM-NEXT:    mov     r5, #0

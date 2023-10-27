@@ -20,7 +20,6 @@ define void @br_false() {
 ; WAVE32-LABEL: br_false:
 ; WAVE32:       ; %bb.0: ; %.exit
 ; WAVE32-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; WAVE32-NEXT:    s_waitcnt_vscnt null, 0x0
 ; WAVE32-NEXT:  .LBB0_1: ; %bb0
 ; WAVE32-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; WAVE32-NEXT:    s_mov_b32 s4, 1
@@ -53,7 +52,6 @@ define void @br_true() {
 ; WAVE32-LABEL: br_true:
 ; WAVE32:       ; %bb.0: ; %.exit
 ; WAVE32-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; WAVE32-NEXT:    s_waitcnt_vscnt null, 0x0
 ; WAVE32-NEXT:  .LBB1_1: ; %bb0
 ; WAVE32-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; WAVE32-NEXT:    s_mov_b32 s4, 0
@@ -87,7 +85,6 @@ define void @br_undef() {
 ; WAVE32-LABEL: br_undef:
 ; WAVE32:       ; %bb.0: ; %.exit
 ; WAVE32-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; WAVE32-NEXT:    s_waitcnt_vscnt null, 0x0
 ; WAVE32-NEXT:  .LBB2_1: ; %bb0
 ; WAVE32-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; WAVE32-NEXT:    ; implicit-def: $sgpr4
@@ -122,7 +119,6 @@ define void @br_poison() {
 ; WAVE32-LABEL: br_poison:
 ; WAVE32:       ; %bb.0: ; %.exit
 ; WAVE32-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; WAVE32-NEXT:    s_waitcnt_vscnt null, 0x0
 ; WAVE32-NEXT:  .LBB3_1: ; %bb0
 ; WAVE32-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; WAVE32-NEXT:    ; implicit-def: $sgpr4

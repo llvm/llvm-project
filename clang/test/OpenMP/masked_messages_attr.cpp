@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=51 %s -Wuninitialized
-// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=51 %s -Wuninitialized
+// RUN: %clang_cc1 -verify -fopenmp %s -Wuninitialized
+// RUN: %clang_cc1 -verify -fopenmp-simd %s -Wuninitialized
 
 void xxx(int argc) {
   int x; // expected-note {{initialize the variable 'x' to silence this warning}}

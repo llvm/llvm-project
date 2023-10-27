@@ -70,8 +70,8 @@ public:
   void SetUp() {
     // Boilerplate that creates a MachineFunction and associated blocks.
 
-    Mod->setDataLayout("e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-"
-                       "n8:16:32:64-S128");
+    Mod->setDataLayout("e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-"
+                       "f80:128-n8:16:32:64-S128");
     Triple TargetTriple("x86_64--");
     std::string Error;
     const Target *T = TargetRegistry::lookupTarget("", TargetTriple, Error);
@@ -81,7 +81,7 @@ public:
     TargetOptions Options;
     Machine = std::unique_ptr<TargetMachine>(T->createTargetMachine(
         Triple::normalize("x86_64--"), "", "", Options, std::nullopt,
-        std::nullopt, CodeGenOpt::Aggressive));
+        std::nullopt, CodeGenOptLevel::Aggressive));
 
     auto Type = FunctionType::get(Type::getVoidTy(Ctx), false);
     auto F =
@@ -475,8 +475,8 @@ body:  |
     auto MIRParse = createMIRParser(std::move(MemBuf), Ctx);
     Mod = MIRParse->parseIRModule();
     assert(Mod);
-    Mod->setDataLayout("e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-"
-                       "n8:16:32:64-S128");
+    Mod->setDataLayout("e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-"
+                       "f80:128-n8:16:32:64-S128");
 
     bool Result = MIRParse->parseMachineFunctions(*Mod, *MMI);
     assert(!Result && "Failed to parse unit test machine function?");
@@ -3155,7 +3155,7 @@ TEST_F(InstrRefLDVTest, VLocSimpleLoop) {
   VLocs[1].Vars.clear();
 
   // Test that we can eliminate PHIs. A PHI will be placed at the loop head
-  // because there's a def in in.
+  // because there's a def in it.
   MInLocs[1][0] = LiveInRsp;
   MOutLocs[1][0] = LiveInRsp;
   VLocs[0].Vars.insert({Var, DbgValue(LiveInRspID, EmptyProps)});

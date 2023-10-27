@@ -23,6 +23,7 @@ struct Section {
   // For now, each section is only an opaque binary blob with no distinction
   // between custom and known sections.
   uint8_t SectionType;
+  std::optional<uint8_t> HeaderSecSizeEncodingLen;
   StringRef Name;
   ArrayRef<uint8_t> Contents;
 };

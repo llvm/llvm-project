@@ -487,7 +487,7 @@ define i32 @test26(i1 %cond)  {
 ; CHECK:       jump:
 ; CHECK-NEXT:    br label [[RET]]
 ; CHECK:       ret:
-; CHECK-NEXT:    [[B:%.*]] = phi i32 [ 10, [[JUMP]] ], [ 20, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[B:%.*]] = phi i32 [ 20, [[ENTRY:%.*]] ], [ 10, [[JUMP]] ]
 ; CHECK-NEXT:    ret i32 [[B]]
 ;
 entry:
@@ -508,7 +508,7 @@ define i32 @test26_logical(i1 %cond)  {
 ; CHECK:       jump:
 ; CHECK-NEXT:    br label [[RET]]
 ; CHECK:       ret:
-; CHECK-NEXT:    [[B:%.*]] = phi i32 [ 10, [[JUMP]] ], [ 20, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[B:%.*]] = phi i32 [ 20, [[ENTRY:%.*]] ], [ 10, [[JUMP]] ]
 ; CHECK-NEXT:    ret i32 [[B]]
 ;
 entry:
@@ -846,8 +846,8 @@ define i32 @test52(i32 %n, i32 %m) {
 
 define i32 @test53(i32 %x) {
 ; CHECK-LABEL: @test53(
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 2
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], -3
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP1]], 0
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 2, i32 1
 ; CHECK-NEXT:    ret i32 [[SEL]]
 ;
@@ -960,7 +960,7 @@ define void @test64(i32 %p, i16 %b, i1 %c1) noreturn {
 ; CHECK:       lor.rhs:
 ; CHECK-NEXT:    br label [[LOR_END]]
 ; CHECK:       lor.end:
-; CHECK-NEXT:    br i1 true, label [[COND_END17:%.*]], label [[COND_FALSE16:%.*]]
+; CHECK-NEXT:    br i1 poison, label [[COND_END17:%.*]], label [[COND_FALSE16:%.*]]
 ; CHECK:       cond.false16:
 ; CHECK-NEXT:    br label [[COND_END17]]
 ; CHECK:       cond.end17:
@@ -1212,8 +1212,8 @@ define ptr @test83(i1 %flag) {
 ; CHECK-NEXT:    [[Y:%.*]] = alloca i64, align 8
 ; CHECK-NEXT:    call void @scribble_on_i64(ptr nonnull [[X]])
 ; CHECK-NEXT:    call void @scribble_on_i64(ptr nonnull [[Y]])
-; CHECK-NEXT:    [[T:%.*]] = load i64, ptr [[X]], align 8
-; CHECK-NEXT:    store i64 [[T]], ptr [[Y]], align 8
+; CHECK-NEXT:    [[T:%.*]] = load i64, ptr [[X]], align 4
+; CHECK-NEXT:    store i64 [[T]], ptr [[Y]], align 4
 ; CHECK-NEXT:    [[V:%.*]] = inttoptr i64 [[T]] to ptr
 ; CHECK-NEXT:    ret ptr [[V]]
 ;
@@ -1261,8 +1261,8 @@ define ptr @test85(i1 %flag) {
 ; CHECK-NEXT:    [[Y:%.*]] = alloca i128, align 8
 ; CHECK-NEXT:    call void @scribble_on_i128(ptr nonnull [[X]])
 ; CHECK-NEXT:    call void @scribble_on_i128(ptr nonnull [[Y]])
-; CHECK-NEXT:    [[T:%.*]] = load i128, ptr [[X]], align 8
-; CHECK-NEXT:    store i128 [[T]], ptr [[Y]], align 8
+; CHECK-NEXT:    [[T:%.*]] = load i128, ptr [[X]], align 4
+; CHECK-NEXT:    store i128 [[T]], ptr [[Y]], align 4
 ; CHECK-NEXT:    [[X_VAL:%.*]] = load ptr, ptr [[X]], align 8
 ; CHECK-NEXT:    [[Y_VAL:%.*]] = load ptr, ptr [[Y]], align 8
 ; CHECK-NEXT:    [[V:%.*]] = select i1 [[FLAG:%.*]], ptr [[X_VAL]], ptr [[Y_VAL]]
@@ -1290,8 +1290,8 @@ define i128 @test86(i1 %flag) {
 ; CHECK-NEXT:    call void @scribble_on_i128(ptr nonnull [[Y]])
 ; CHECK-NEXT:    [[T:%.*]] = load ptr, ptr [[X]], align 8
 ; CHECK-NEXT:    store ptr [[T]], ptr [[Y]], align 8
-; CHECK-NEXT:    [[X_VAL:%.*]] = load i128, ptr [[X]], align 8
-; CHECK-NEXT:    [[Y_VAL:%.*]] = load i128, ptr [[Y]], align 8
+; CHECK-NEXT:    [[X_VAL:%.*]] = load i128, ptr [[X]], align 4
+; CHECK-NEXT:    [[Y_VAL:%.*]] = load i128, ptr [[Y]], align 4
 ; CHECK-NEXT:    [[V:%.*]] = select i1 [[FLAG:%.*]], i128 [[X_VAL]], i128 [[Y_VAL]]
 ; CHECK-NEXT:    ret i128 [[V]]
 ;
@@ -2113,7 +2113,7 @@ define i32 @select_phi_same_condition(i1 %cond, i32 %x, i32 %y, i32 %z) {
 ; CHECK:       if.false:
 ; CHECK-NEXT:    br label [[MERGE]]
 ; CHECK:       merge:
-; CHECK-NEXT:    [[S:%.*]] = phi i32 [ [[Z:%.*]], [[IF_FALSE]] ], [ [[X:%.*]], [[IF_TRUE]] ]
+; CHECK-NEXT:    [[S:%.*]] = phi i32 [ [[X:%.*]], [[IF_TRUE]] ], [ [[Z:%.*]], [[IF_FALSE]] ]
 ; CHECK-NEXT:    ret i32 [[S]]
 ;
 entry:
@@ -2250,7 +2250,7 @@ define i32 @select_phi_same_condition_switch(i1 %cond, i32 %x, i32 %y) {
 ; CHECK:       if.false:
 ; CHECK-NEXT:    br label [[MERGE]]
 ; CHECK:       merge:
-; CHECK-NEXT:    [[S:%.*]] = phi i32 [ [[Y:%.*]], [[IF_FALSE]] ], [ [[X]], [[IF_TRUE]] ], [ [[X]], [[IF_TRUE]] ]
+; CHECK-NEXT:    [[S:%.*]] = phi i32 [ [[X]], [[IF_TRUE]] ], [ [[X]], [[IF_TRUE]] ], [ [[Y:%.*]], [[IF_FALSE]] ]
 ; CHECK-NEXT:    ret i32 [[S]]
 ;
 entry:
@@ -2287,7 +2287,7 @@ define i32 @transit_different_values_through_phi(i1 %cond, i1 %cond2) {
 ; CHECK:       if.false:
 ; CHECK-NEXT:    br label [[MERGE]]
 ; CHECK:       merge:
-; CHECK-NEXT:    [[S:%.*]] = phi i32 [ 3, [[IF_FALSE]] ], [ 2, [[IF_TRUE_2]] ], [ 1, [[IF_TRUE_1]] ]
+; CHECK-NEXT:    [[S:%.*]] = phi i32 [ 1, [[IF_TRUE_1]] ], [ 2, [[IF_TRUE_2]] ], [ 3, [[IF_FALSE]] ]
 ; CHECK-NEXT:    ret i32 [[S]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i32 0
@@ -2321,7 +2321,7 @@ define i32 @select_phi_degenerate(i1 %cond, i1 %cond2) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[LOOP:%.*]], label [[EXIT:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[SELECT:%.*]] = phi i32 [ [[IV_INC:%.*]], [[LOOP]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[SELECT:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_INC:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[IV_INC]] = add i32 [[SELECT]], 1
 ; CHECK-NEXT:    br i1 [[COND2:%.*]], label [[LOOP]], label [[EXIT2:%.*]]
 ; CHECK:       exit:
@@ -2416,7 +2416,7 @@ define i32 @test_select_into_phi_not_idom_inverted(i1 %cond, i32 %A, i32 %B)  {
 ; CHECK:       if.false:
 ; CHECK-NEXT:    br label [[MERGE]]
 ; CHECK:       merge:
-; CHECK-NEXT:    [[SEL:%.*]] = phi i32 [ [[B:%.*]], [[IF_FALSE]] ], [ [[A:%.*]], [[IF_TRUE]] ]
+; CHECK-NEXT:    [[SEL:%.*]] = phi i32 [ [[A:%.*]], [[IF_TRUE]] ], [ [[B:%.*]], [[IF_FALSE]] ]
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i32 [[SEL]]
@@ -2449,7 +2449,7 @@ define i32 @test_select_into_phi_not_idom_inverted_2(i1 %cond, i32 %A, i32 %B)  
 ; CHECK:       if.false:
 ; CHECK-NEXT:    br label [[MERGE]]
 ; CHECK:       merge:
-; CHECK-NEXT:    [[SEL:%.*]] = phi i32 [ [[B:%.*]], [[IF_FALSE]] ], [ [[A:%.*]], [[IF_TRUE]] ]
+; CHECK-NEXT:    [[SEL:%.*]] = phi i32 [ [[A:%.*]], [[IF_TRUE]] ], [ [[B:%.*]], [[IF_FALSE]] ]
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i32 [[SEL]]
@@ -2483,7 +2483,7 @@ define i32 @test_select_into_phi_not_idom_no_dom_input_1(i1 %cond, i32 %A, i32 %
 ; CHECK:       if.false:
 ; CHECK-NEXT:    br label [[MERGE]]
 ; CHECK:       merge:
-; CHECK-NEXT:    [[SEL:%.*]] = phi i32 [ [[A:%.*]], [[IF_FALSE]] ], [ [[C]], [[IF_TRUE]] ]
+; CHECK-NEXT:    [[SEL:%.*]] = phi i32 [ [[C]], [[IF_TRUE]] ], [ [[A:%.*]], [[IF_FALSE]] ]
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i32 [[SEL]]
@@ -2517,7 +2517,7 @@ define i32 @test_select_into_phi_not_idom_no_dom_input_2(i1 %cond, i32 %A, i32 %
 ; CHECK-NEXT:    [[C:%.*]] = load i32, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    br label [[MERGE]]
 ; CHECK:       merge:
-; CHECK-NEXT:    [[SEL:%.*]] = phi i32 [ [[C]], [[IF_FALSE]] ], [ [[B:%.*]], [[IF_TRUE]] ]
+; CHECK-NEXT:    [[SEL:%.*]] = phi i32 [ [[B:%.*]], [[IF_TRUE]] ], [ [[C]], [[IF_FALSE]] ]
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret i32 [[SEL]]
@@ -2892,10 +2892,9 @@ define i32 @select_replacement_loop2(i32 %arg, i32 %arg2) {
   ret i32 %sel
 }
 
-; TODO: Dropping the inbounds flag should not be necessary for this fold.
 define ptr @select_replacement_gep_inbounds(ptr %base, i64 %offset) {
 ; CHECK-LABEL: @select_replacement_gep_inbounds(
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[OFFSET:%.*]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr [[BASE:%.*]], i64 [[OFFSET:%.*]]
 ; CHECK-NEXT:    ret ptr [[GEP]]
 ;
   %cmp = icmp eq i64 %offset, 0
@@ -3395,4 +3394,231 @@ define <vscale x 2 x i1> @scalable_non_zero(<vscale x 2 x i32> %x) {
   %b = add <vscale x 2 x i32> %a, shufflevector (<vscale x 2 x i32> insertelement (<vscale x 2 x i32> poison, i32 -1, i32 0), <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer)
   %cmp = icmp ult <vscale x 2 x i32> %b, shufflevector (<vscale x 2 x i32> insertelement (<vscale x 2 x i32> poison, i32 56, i32 0), <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer)
   ret <vscale x 2 x i1> %cmp
+}
+
+define i32 @clamp_umin(i32 %x) {
+; CHECK-LABEL: @clamp_umin(
+; CHECK-NEXT:    [[SEL:%.*]] = call i32 @llvm.umax.i32(i32 [[X:%.*]], i32 1)
+; CHECK-NEXT:    ret i32 [[SEL]]
+;
+  %cmp = icmp eq i32 %x, 0
+  %sel = select i1 %cmp, i32 1, i32 %x
+  ret i32 %sel
+}
+
+define i32 @clamp_umin_use(i32 %x) {
+; CHECK-LABEL: @clamp_umin_use(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X:%.*]], 0
+; CHECK-NEXT:    call void @use1(i1 [[CMP]])
+; CHECK-NEXT:    [[SEL:%.*]] = call i32 @llvm.umax.i32(i32 [[X]], i32 1)
+; CHECK-NEXT:    ret i32 [[SEL]]
+;
+  %cmp = icmp eq i32 %x, 0
+  call void @use1(i1 %cmp)
+  %sel = select i1 %cmp, i32 1, i32 %x
+  ret i32 %sel
+}
+
+; negative test - wrong cmp constant
+
+define i32 @not_clamp_umin1(i32 %x) {
+; CHECK-LABEL: @not_clamp_umin1(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X:%.*]], 2
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 1, i32 [[X]]
+; CHECK-NEXT:    ret i32 [[SEL]]
+;
+  %cmp = icmp eq i32 %x, 2
+  %sel = select i1 %cmp, i32 1, i32 %x
+  ret i32 %sel
+}
+
+; negative test - wrong select constant
+
+define i32 @not_clamp_umin2(i32 %x) {
+; CHECK-LABEL: @not_clamp_umin2(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X:%.*]], 0
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 -1, i32 [[X]]
+; CHECK-NEXT:    ret i32 [[SEL]]
+;
+  %cmp = icmp eq i32 %x, 0
+  %sel = select i1 %cmp, i32 -1, i32 %x
+  ret i32 %sel
+}
+
+define <2 x i8> @clamp_umaxval(<2 x i8> %x) {
+; CHECK-LABEL: @clamp_umaxval(
+; CHECK-NEXT:    [[SEL:%.*]] = call <2 x i8> @llvm.umin.v2i8(<2 x i8> [[X:%.*]], <2 x i8> <i8 -2, i8 -2>)
+; CHECK-NEXT:    ret <2 x i8> [[SEL]]
+;
+  %cmp = icmp eq <2 x i8> %x, <i8 255, i8 255>
+  %sel = select <2 x i1> %cmp, <2 x i8> <i8 254, i8 254>, <2 x i8> %x
+  ret <2 x i8> %sel
+}
+
+; negative test - wrong cmp constant
+
+define i8 @not_clamp_umax1(i8 %x) {
+; CHECK-LABEL: @not_clamp_umax1(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[X:%.*]], -3
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i8 -2, i8 [[X]]
+; CHECK-NEXT:    ret i8 [[SEL]]
+;
+  %cmp = icmp eq i8 %x, 253
+  %sel = select i1 %cmp, i8 254, i8 %x
+  ret i8 %sel
+}
+
+; negative test - wrong select constant
+
+define i8 @not_clamp_umax2(i8 %x) {
+; CHECK-LABEL: @not_clamp_umax2(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[X:%.*]], -1
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i8 1, i8 [[X]]
+; CHECK-NEXT:    ret i8 [[SEL]]
+;
+  %cmp = icmp eq i8 %x, 255
+  %sel = select i1 %cmp, i8 1, i8 %x
+  ret i8 %sel
+}
+
+define i8 @clamp_smin(i8 %x) {
+; CHECK-LABEL: @clamp_smin(
+; CHECK-NEXT:    [[SEL:%.*]] = call i8 @llvm.smax.i8(i8 [[X:%.*]], i8 -127)
+; CHECK-NEXT:    ret i8 [[SEL]]
+;
+  %cmp = icmp eq i8 %x, -128
+  %sel = select i1 %cmp, i8 -127, i8 %x
+  ret i8 %sel
+}
+
+define i8 @clamp_smin_use(i8 %x) {
+; CHECK-LABEL: @clamp_smin_use(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[X:%.*]], -128
+; CHECK-NEXT:    call void @use1(i1 [[CMP]])
+; CHECK-NEXT:    [[SEL:%.*]] = call i8 @llvm.smax.i8(i8 [[X]], i8 -127)
+; CHECK-NEXT:    ret i8 [[SEL]]
+;
+  %cmp = icmp eq i8 %x, -128
+  call void @use1(i1 %cmp)
+  %sel = select i1 %cmp, i8 -127, i8 %x
+  ret i8 %sel
+}
+
+; negative test - wrong cmp constant
+
+define i8 @not_clamp_smin1(i8 %x) {
+; CHECK-LABEL: @not_clamp_smin1(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[X:%.*]], 127
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i8 -127, i8 [[X]]
+; CHECK-NEXT:    ret i8 [[SEL]]
+;
+  %cmp = icmp eq i8 %x, 127
+  %sel = select i1 %cmp, i8 -127, i8 %x
+  ret i8 %sel
+}
+
+; negative test - wrong select constant
+
+define i8 @not_clamp_smin2(i8 %x) {
+; CHECK-LABEL: @not_clamp_smin2(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[X:%.*]], -128
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i8 -1, i8 [[X]]
+; CHECK-NEXT:    ret i8 [[SEL]]
+;
+  %cmp = icmp eq i8 %x, -128
+  %sel = select i1 %cmp, i8 -1, i8 %x
+  ret i8 %sel
+}
+
+define <2 x i8> @clamp_smaxval(<2 x i8> %x) {
+; CHECK-LABEL: @clamp_smaxval(
+; CHECK-NEXT:    [[SEL:%.*]] = call <2 x i8> @llvm.smin.v2i8(<2 x i8> [[X:%.*]], <2 x i8> <i8 126, i8 126>)
+; CHECK-NEXT:    ret <2 x i8> [[SEL]]
+;
+  %cmp = icmp eq <2 x i8> %x, <i8 127, i8 127>
+  %sel = select <2 x i1> %cmp, <2 x i8> <i8 126, i8 126>, <2 x i8> %x
+  ret <2 x i8> %sel
+}
+
+; negative test - wrong cmp constant
+
+define i8 @not_clamp_smax1(i8 %x) {
+; CHECK-LABEL: @not_clamp_smax1(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[X:%.*]], -128
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i8 126, i8 [[X]]
+; CHECK-NEXT:    ret i8 [[SEL]]
+;
+  %cmp = icmp eq i8 %x, -128
+  %sel = select i1 %cmp, i8 126, i8 %x
+  ret i8 %sel
+}
+
+; negative test - wrong select constant
+
+define i8 @not_clamp_smax2(i8 %x) {
+; CHECK-LABEL: @not_clamp_smax2(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[X:%.*]], 127
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i8 125, i8 [[X]]
+; CHECK-NEXT:    ret i8 [[SEL]]
+;
+  %cmp = icmp eq i8 %x, 127
+  %sel = select i1 %cmp, i8 125, i8 %x
+  ret i8 %sel
+}
+
+; Used to infinite loop.
+define i32 @pr61361(i32 %arg) {
+; CHECK-LABEL: @pr61361(
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[ARG:%.*]], 0
+; CHECK-NEXT:    [[SEL2:%.*]] = select i1 [[CMP2]], i32 16777215, i32 0
+; CHECK-NEXT:    ret i32 [[SEL2]]
+;
+  %cmp1 = icmp eq i32 %arg, 1
+  %sel1 = select i1 %cmp1, i32 0, i32 33554431
+  %cmp2 = icmp eq i32 %arg, 0
+  %sel2 = select i1 %cmp2, i32 %sel1, i32 0
+  %ashr = ashr i32 %sel2, 1
+  ret i32 %ashr
+}
+
+define i32 @pr62088() {
+; CHECK-LABEL: @pr62088(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[NOT2:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ -2, [[LOOP]] ]
+; CHECK-NEXT:    [[H_0:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ 1, [[LOOP]] ]
+; CHECK-NEXT:    [[XOR1:%.*]] = or i32 [[H_0]], [[NOT2]]
+; CHECK-NEXT:    [[SUB5:%.*]] = sub i32 -1824888657, [[XOR1]]
+; CHECK-NEXT:    [[XOR6:%.*]] = xor i32 [[SUB5]], -1260914025
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[XOR6]], 824855120
+; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i32 [[H_0]]
+;
+entry:
+  br label %loop
+
+loop:
+  %not2 = phi i32 [ 0, %entry ], [ -2, %loop ]
+  %i.0 = phi i32 [ 0, %entry ], [ %shr, %loop ]
+  %h.0 = phi i32 [ 0, %entry ], [ 1, %loop ]
+  %i.0.fr = freeze i32 %i.0
+  %sext = shl i32 %i.0.fr, 16
+  %conv = ashr exact i32 %sext, 16
+  %not = xor i32 %conv, -1
+  %and = and i32 %h.0, 1
+  %rem.urem = sub nsw i32 %and, %conv
+  %rem.cmp = icmp ult i32 %and, %conv
+  %rem = select i1 %rem.cmp, i32 %not, i32 %rem.urem
+  %xor = xor i32 %rem, %not2
+  %sub = sub nsw i32 0, %xor
+  %sub5 = sub i32 -1824888657, %xor
+  %xor6 = xor i32 %sub5, -1260914025
+  %cmp = icmp slt i32 %xor6, 824855120
+  %shr = ashr i32 %xor6, 40
+  br i1 %cmp, label %loop, label %exit
+
+exit:
+  ret i32 %rem
 }

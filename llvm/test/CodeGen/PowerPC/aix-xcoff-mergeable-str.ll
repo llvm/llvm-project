@@ -4,12 +4,12 @@
 ; tests for XCOFF object files.
 
 ; RUN: llc -verify-machineinstrs -mcpu=pwr4 -mattr=-altivec -xcoff-traceback-table=false \
-; RUN:     -mtriple powerpc-ibm-aix-xcoff  -data-sections=false < %s | FileCheck %s
+; RUN:     -mtriple powerpc-ibm-aix-xcoff  -data-sections=false -ppc-merge-string-pool=false < %s | FileCheck %s
 ; RUN: llc -verify-machineinstrs -mcpu=pwr4 -mattr=-altivec -xcoff-traceback-table=false \
-; RUN:     -mtriple powerpc64-ibm-aix-xcoff -data-sections=false < %s | FileCheck %s
+; RUN:     -mtriple powerpc64-ibm-aix-xcoff -data-sections=false -ppc-merge-string-pool=false < %s | FileCheck %s
 
 ; RUN: llc -verify-machineinstrs -mcpu=pwr4 -mattr=-altivec -mtriple powerpc-ibm-aix-xcoff \
-; RUN:     -xcoff-traceback-table=false -data-sections=false -filetype=obj -o %t.o < %s
+; RUN:     -xcoff-traceback-table=false -data-sections=false -ppc-merge-string-pool=false -filetype=obj -o %t.o < %s
 ; RUN: llvm-objdump -D %t.o | FileCheck --check-prefix=CHECKOBJ %s
 
 @magic16 = private unnamed_addr constant [4 x i16] [i16 264, i16 272, i16 213, i16 0], align 2
@@ -26,35 +26,31 @@ entry:
   ret i8 %1
 }
 
-; CHECK:   .csect .rodata.str2.2[RO],2
+; CHECK:   .csect .rodata[RO],2
 ; CHECK-NEXT:   .align  1
 ; CHECK-NEXT: L..magic16:
 ; CHECK-NEXT:   .vbyte	2, 264                     # 0x108
 ; CHECK-NEXT:   .vbyte	2, 272                     # 0x110
 ; CHECK-NEXT:   .vbyte	2, 213                     # 0xd5
 ; CHECK-NEXT:   .vbyte	2, 0                       # 0x0
-; CHECK-NEXT:   .csect .rodata.str4.4[RO],2
 ; CHECK-NEXT:   .align  2
 ; CHECK-NEXT: L..magic32:
 ; CHECK-NEXT:   .vbyte	4, 464                     # 0x1d0
 ; CHECK-NEXT:   .vbyte	4, 472                     # 0x1d8
 ; CHECK-NEXT:   .vbyte	4, 413                     # 0x19d
 ; CHECK-NEXT:   .vbyte	4, 0                       # 0x0
-; CHECK-NEXT:   .csect .rodata.str1.1[RO],2
 ; CHECK-NEXT: L..strA:
 ; CHECK-NEXT: .byte   'h,'e,'l,'l,'o,' ,'w,'o,'r,'l,'d,'!,0012,0000
 ; CHECK-NEXT: L...str:
 ; CHECK-NEXT: .string "abcdefgh"
 
-; CHECKOBJ:     00000010 <.rodata.str2.2>:
+; CHECKOBJ:     00000010 <.rodata>:
 ; CHECKOBJ-NEXT:       10: 01 08 01 10
-; CHECKOBJ-NEXT:       14: 00 d5 00 00    {{.*}}{{[[:space:]] *}}
-; CHECKOBJ-NEXT: 00000018 <.rodata.str4.4>:
+; CHECKOBJ-NEXT:       14: 00 d5 00 00
 ; CHECKOBJ-NEXT:       18: 00 00 01 d0
 ; CHECKOBJ-NEXT:       1c: 00 00 01 d8
 ; CHECKOBJ-NEXT:       20: 00 00 01 9d
-; CHECKOBJ-NEXT:       24: 00 00 00 00    {{.*}}{{[[:space:]] *}}
-; CHECKOBJ-NEXT: 00000028 <.rodata.str1.1>:
+; CHECKOBJ-NEXT:       24: 00 00 00 00
 ; CHECKOBJ-NEXT:       28: 68 65 6c 6c
 ; CHECKOBJ-NEXT:       2c: 6f 20 77 6f
 ; CHECKOBJ-NEXT:       30: 72 6c 64 21

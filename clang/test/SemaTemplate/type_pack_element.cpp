@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++2b -fsyntax-only -triple x86_64-linux-gnu -ast-dump -verify -xc++ < %s | FileCheck %s
+// RUN: %clang_cc1 -std=c++23 -fsyntax-only -triple x86_64-linux-gnu -ast-dump -verify -xc++ < %s | FileCheck %s
 
 using test1 = __type_pack_element<0, int>;
 //      CHECK: |-TypeAliasDecl 0x{{[0-9A-Fa-f]+}} <<stdin>:3:1, col:41> col:7 test1 '__type_pack_element<0, int>':'int'

@@ -3,7 +3,7 @@
 // RUN:   -o %t %s
 // RUN: FileCheck < %t %s
 //
-// <rdar://problem/7471679> [irgen] [eh] Exception code built with clang (x86_64) crashes
+// [irgen] [eh] Exception code built with clang (x86_64) crashes
 
 // Check that we don't emit unnecessary personality function references.
 struct t0_A { t0_A(); };

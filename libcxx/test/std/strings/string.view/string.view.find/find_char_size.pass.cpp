@@ -19,28 +19,22 @@
 #include "constexpr_char_traits.h"
 
 template <class S>
-void
-test(const S& s, typename S::value_type c, typename S::size_type pos,
-     typename S::size_type x)
-{
-    LIBCPP_ASSERT_NOEXCEPT(s.find(c, pos));
-    assert(s.find(c, pos) == x);
-    if (x != S::npos)
-        assert(pos <= x && x + 1 <= s.size());
+void test(const S& s, typename S::value_type c, typename S::size_type pos, typename S::size_type x) {
+  LIBCPP_ASSERT_NOEXCEPT(s.find(c, pos));
+  assert(s.find(c, pos) == x);
+  if (x != S::npos)
+    assert(pos <= x && x + 1 <= s.size());
 }
 
 template <class S>
-void
-test(const S& s, typename S::value_type c, typename S::size_type x)
-{
-    assert(s.find(c) == x);
-    if (x != S::npos)
-        assert(0 <= x && x + 1 <= s.size());
+void test(const S& s, typename S::value_type c, typename S::size_type x) {
+  assert(s.find(c) == x);
+  if (x != S::npos)
+    assert(0 <= x && x + 1 <= s.size());
 }
 
-int main(int, char**)
-{
-    {
+int main(int, char**) {
+  {
     typedef std::string_view S;
     test(S(""), 'c', 0, S::npos);
     test(S(""), 'c', 1, S::npos);
@@ -67,22 +61,22 @@ int main(int, char**)
     test(S("abcde"), 'c', 2);
     test(S("abcdeabcde"), 'c', 2);
     test(S("abcdeabcdeabcdeabcde"), 'c', 2);
-    }
+  }
 
 #if TEST_STD_VER > 11
-    {
+  {
     typedef std::basic_string_view<char, constexpr_char_traits<char>> SV;
-    constexpr SV  sv1;
-    constexpr SV  sv2 { "abcde", 5 };
+    constexpr SV sv1;
+    constexpr SV sv2{"abcde", 5};
 
-    static_assert (sv1.find( 'c', 0 ) == SV::npos, "" );
-    static_assert (sv1.find( 'c', 1 ) == SV::npos, "" );
-    static_assert (sv2.find( 'c', 0 ) == 2, "" );
-    static_assert (sv2.find( 'c', 1 ) == 2, "" );
-    static_assert (sv2.find( 'c', 2 ) == 2, "" );
-    static_assert (sv2.find( 'c', 3 ) == SV::npos, "" );
-    static_assert (sv2.find( 'c', 4 ) == SV::npos, "" );
-    }
+    static_assert(sv1.find('c', 0) == SV::npos, "");
+    static_assert(sv1.find('c', 1) == SV::npos, "");
+    static_assert(sv2.find('c', 0) == 2, "");
+    static_assert(sv2.find('c', 1) == 2, "");
+    static_assert(sv2.find('c', 2) == 2, "");
+    static_assert(sv2.find('c', 3) == SV::npos, "");
+    static_assert(sv2.find('c', 4) == SV::npos, "");
+  }
 #endif
 
   return 0;

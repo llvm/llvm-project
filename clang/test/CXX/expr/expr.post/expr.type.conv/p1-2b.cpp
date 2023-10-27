@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++2b -verify %s
+// RUN: %clang_cc1 -std=c++23 -verify %s
 
 template <class T>
 void foo(T);
@@ -9,7 +9,7 @@ struct A {
   float g(double);
 } a{1};
 
-// C++2b [dcl.type.auto.deduct]p2.3
+// C++23 [dcl.type.auto.deduct]p2.3
 // For an explicit type conversion, T is the specified type, which shall be auto.
 void diagnostics() {
   foo(auto());   // expected-error {{initializer for functional-style cast to 'auto' is empty}}

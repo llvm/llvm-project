@@ -11,3 +11,11 @@ should be preferred.
 
 This also ensures that in the case that the container is empty, the data pointer
 access does not perform an errant memory access.
+
+Options
+-------
+
+.. option:: IgnoredContainers
+
+   Semicolon-separated list of containers regexp for which this check won't be
+   enforced. Default is `empty`.

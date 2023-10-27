@@ -27,16 +27,19 @@ body:             |
 
     ; NOFP16-LABEL: name: test_f32.rint
     ; NOFP16: liveins: $s0
-    ; NOFP16: [[COPY:%[0-9]+]]:_(s32) = COPY $s0
-    ; NOFP16: [[FRINT:%[0-9]+]]:_(s32) = G_FRINT [[COPY]]
-    ; NOFP16: $s0 = COPY [[FRINT]](s32)
-    ; NOFP16: RET_ReallyLR implicit $s0
+    ; NOFP16-NEXT: {{  $}}
+    ; NOFP16-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $s0
+    ; NOFP16-NEXT: [[FRINT:%[0-9]+]]:_(s32) = G_FRINT [[COPY]]
+    ; NOFP16-NEXT: $s0 = COPY [[FRINT]](s32)
+    ; NOFP16-NEXT: RET_ReallyLR implicit $s0
+    ;
     ; FP16-LABEL: name: test_f32.rint
     ; FP16: liveins: $s0
-    ; FP16: [[COPY:%[0-9]+]]:_(s32) = COPY $s0
-    ; FP16: [[FRINT:%[0-9]+]]:_(s32) = G_FRINT [[COPY]]
-    ; FP16: $s0 = COPY [[FRINT]](s32)
-    ; FP16: RET_ReallyLR implicit $s0
+    ; FP16-NEXT: {{  $}}
+    ; FP16-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $s0
+    ; FP16-NEXT: [[FRINT:%[0-9]+]]:_(s32) = G_FRINT [[COPY]]
+    ; FP16-NEXT: $s0 = COPY [[FRINT]](s32)
+    ; FP16-NEXT: RET_ReallyLR implicit $s0
     %0:_(s32) = COPY $s0
     %1:_(s32) = G_FRINT %0
     $s0 = COPY %1(s32)
@@ -54,16 +57,19 @@ body:             |
 
     ; NOFP16-LABEL: name: test_f64.rint
     ; NOFP16: liveins: $d0
-    ; NOFP16: [[COPY:%[0-9]+]]:_(s64) = COPY $d0
-    ; NOFP16: [[FRINT:%[0-9]+]]:_(s64) = G_FRINT [[COPY]]
-    ; NOFP16: $d0 = COPY [[FRINT]](s64)
-    ; NOFP16: RET_ReallyLR implicit $d0
+    ; NOFP16-NEXT: {{  $}}
+    ; NOFP16-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $d0
+    ; NOFP16-NEXT: [[FRINT:%[0-9]+]]:_(s64) = G_FRINT [[COPY]]
+    ; NOFP16-NEXT: $d0 = COPY [[FRINT]](s64)
+    ; NOFP16-NEXT: RET_ReallyLR implicit $d0
+    ;
     ; FP16-LABEL: name: test_f64.rint
     ; FP16: liveins: $d0
-    ; FP16: [[COPY:%[0-9]+]]:_(s64) = COPY $d0
-    ; FP16: [[FRINT:%[0-9]+]]:_(s64) = G_FRINT [[COPY]]
-    ; FP16: $d0 = COPY [[FRINT]](s64)
-    ; FP16: RET_ReallyLR implicit $d0
+    ; FP16-NEXT: {{  $}}
+    ; FP16-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $d0
+    ; FP16-NEXT: [[FRINT:%[0-9]+]]:_(s64) = G_FRINT [[COPY]]
+    ; FP16-NEXT: $d0 = COPY [[FRINT]](s64)
+    ; FP16-NEXT: RET_ReallyLR implicit $d0
     %0:_(s64) = COPY $d0
     %1:_(s64) = G_FRINT %0
     $d0 = COPY %1(s64)
@@ -81,16 +87,19 @@ body:             |
 
     ; NOFP16-LABEL: name: test_v4f32.rint
     ; NOFP16: liveins: $q0
-    ; NOFP16: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
-    ; NOFP16: [[FRINT:%[0-9]+]]:_(<4 x s32>) = G_FRINT [[COPY]]
-    ; NOFP16: $q0 = COPY [[FRINT]](<4 x s32>)
-    ; NOFP16: RET_ReallyLR implicit $q0
+    ; NOFP16-NEXT: {{  $}}
+    ; NOFP16-NEXT: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
+    ; NOFP16-NEXT: [[FRINT:%[0-9]+]]:_(<4 x s32>) = G_FRINT [[COPY]]
+    ; NOFP16-NEXT: $q0 = COPY [[FRINT]](<4 x s32>)
+    ; NOFP16-NEXT: RET_ReallyLR implicit $q0
+    ;
     ; FP16-LABEL: name: test_v4f32.rint
     ; FP16: liveins: $q0
-    ; FP16: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
-    ; FP16: [[FRINT:%[0-9]+]]:_(<4 x s32>) = G_FRINT [[COPY]]
-    ; FP16: $q0 = COPY [[FRINT]](<4 x s32>)
-    ; FP16: RET_ReallyLR implicit $q0
+    ; FP16-NEXT: {{  $}}
+    ; FP16-NEXT: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
+    ; FP16-NEXT: [[FRINT:%[0-9]+]]:_(<4 x s32>) = G_FRINT [[COPY]]
+    ; FP16-NEXT: $q0 = COPY [[FRINT]](<4 x s32>)
+    ; FP16-NEXT: RET_ReallyLR implicit $q0
     %0:_(<4 x s32>) = COPY $q0
     %1:_(<4 x s32>) = G_FRINT %0
     $q0 = COPY %1(<4 x s32>)
@@ -108,16 +117,19 @@ body:             |
 
     ; NOFP16-LABEL: name: test_v2f64.rint
     ; NOFP16: liveins: $q0
-    ; NOFP16: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
-    ; NOFP16: [[FRINT:%[0-9]+]]:_(<2 x s64>) = G_FRINT [[COPY]]
-    ; NOFP16: $q0 = COPY [[FRINT]](<2 x s64>)
-    ; NOFP16: RET_ReallyLR implicit $q0
+    ; NOFP16-NEXT: {{  $}}
+    ; NOFP16-NEXT: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
+    ; NOFP16-NEXT: [[FRINT:%[0-9]+]]:_(<2 x s64>) = G_FRINT [[COPY]]
+    ; NOFP16-NEXT: $q0 = COPY [[FRINT]](<2 x s64>)
+    ; NOFP16-NEXT: RET_ReallyLR implicit $q0
+    ;
     ; FP16-LABEL: name: test_v2f64.rint
     ; FP16: liveins: $q0
-    ; FP16: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
-    ; FP16: [[FRINT:%[0-9]+]]:_(<2 x s64>) = G_FRINT [[COPY]]
-    ; FP16: $q0 = COPY [[FRINT]](<2 x s64>)
-    ; FP16: RET_ReallyLR implicit $q0
+    ; FP16-NEXT: {{  $}}
+    ; FP16-NEXT: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
+    ; FP16-NEXT: [[FRINT:%[0-9]+]]:_(<2 x s64>) = G_FRINT [[COPY]]
+    ; FP16-NEXT: $q0 = COPY [[FRINT]](<2 x s64>)
+    ; FP16-NEXT: RET_ReallyLR implicit $q0
     %0:_(<2 x s64>) = COPY $q0
     %1:_(<2 x s64>) = G_FRINT %0
     $q0 = COPY %1(<2 x s64>)
@@ -135,29 +147,21 @@ body:             |
 
     ; NOFP16-LABEL: name: test_v4f16.rint
     ; NOFP16: liveins: $d0
-    ; NOFP16: [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $d0
-    ; NOFP16: [[UV:%[0-9]+]]:_(s16), [[UV1:%[0-9]+]]:_(s16), [[UV2:%[0-9]+]]:_(s16), [[UV3:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[COPY]](<4 x s16>)
-    ; NOFP16: [[FPEXT:%[0-9]+]]:_(s32) = G_FPEXT [[UV]](s16)
-    ; NOFP16: [[FRINT:%[0-9]+]]:_(s32) = G_FRINT [[FPEXT]]
-    ; NOFP16: [[FPTRUNC:%[0-9]+]]:_(s16) = G_FPTRUNC [[FRINT]](s32)
-    ; NOFP16: [[FPEXT1:%[0-9]+]]:_(s32) = G_FPEXT [[UV1]](s16)
-    ; NOFP16: [[FRINT1:%[0-9]+]]:_(s32) = G_FRINT [[FPEXT1]]
-    ; NOFP16: [[FPTRUNC1:%[0-9]+]]:_(s16) = G_FPTRUNC [[FRINT1]](s32)
-    ; NOFP16: [[FPEXT2:%[0-9]+]]:_(s32) = G_FPEXT [[UV2]](s16)
-    ; NOFP16: [[FRINT2:%[0-9]+]]:_(s32) = G_FRINT [[FPEXT2]]
-    ; NOFP16: [[FPTRUNC2:%[0-9]+]]:_(s16) = G_FPTRUNC [[FRINT2]](s32)
-    ; NOFP16: [[FPEXT3:%[0-9]+]]:_(s32) = G_FPEXT [[UV3]](s16)
-    ; NOFP16: [[FRINT3:%[0-9]+]]:_(s32) = G_FRINT [[FPEXT3]]
-    ; NOFP16: [[FPTRUNC3:%[0-9]+]]:_(s16) = G_FPTRUNC [[FRINT3]](s32)
-    ; NOFP16: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s16>) = G_BUILD_VECTOR [[FPTRUNC]](s16), [[FPTRUNC1]](s16), [[FPTRUNC2]](s16), [[FPTRUNC3]](s16)
-    ; NOFP16: $d0 = COPY [[BUILD_VECTOR]](<4 x s16>)
-    ; NOFP16: RET_ReallyLR implicit $d0
+    ; NOFP16-NEXT: {{  $}}
+    ; NOFP16-NEXT: [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $d0
+    ; NOFP16-NEXT: [[FPEXT:%[0-9]+]]:_(<4 x s32>) = G_FPEXT [[COPY]](<4 x s16>)
+    ; NOFP16-NEXT: [[FRINT:%[0-9]+]]:_(<4 x s32>) = G_FRINT [[FPEXT]]
+    ; NOFP16-NEXT: [[FPTRUNC:%[0-9]+]]:_(<4 x s16>) = G_FPTRUNC [[FRINT]](<4 x s32>)
+    ; NOFP16-NEXT: $d0 = COPY [[FPTRUNC]](<4 x s16>)
+    ; NOFP16-NEXT: RET_ReallyLR implicit $d0
+    ;
     ; FP16-LABEL: name: test_v4f16.rint
     ; FP16: liveins: $d0
-    ; FP16: [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $d0
-    ; FP16: [[FRINT:%[0-9]+]]:_(<4 x s16>) = G_FRINT [[COPY]]
-    ; FP16: $d0 = COPY [[FRINT]](<4 x s16>)
-    ; FP16: RET_ReallyLR implicit $d0
+    ; FP16-NEXT: {{  $}}
+    ; FP16-NEXT: [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $d0
+    ; FP16-NEXT: [[FRINT:%[0-9]+]]:_(<4 x s16>) = G_FRINT [[COPY]]
+    ; FP16-NEXT: $d0 = COPY [[FRINT]](<4 x s16>)
+    ; FP16-NEXT: RET_ReallyLR implicit $d0
     %0:_(<4 x s16>) = COPY $d0
     %1:_(<4 x s16>) = G_FRINT %0
     $d0 = COPY %1(<4 x s16>)
@@ -175,41 +179,26 @@ body:             |
 
     ; NOFP16-LABEL: name: test_v8f16.rint
     ; NOFP16: liveins: $q0
-    ; NOFP16: [[COPY:%[0-9]+]]:_(<8 x s16>) = COPY $q0
-    ; NOFP16: [[UV:%[0-9]+]]:_(s16), [[UV1:%[0-9]+]]:_(s16), [[UV2:%[0-9]+]]:_(s16), [[UV3:%[0-9]+]]:_(s16), [[UV4:%[0-9]+]]:_(s16), [[UV5:%[0-9]+]]:_(s16), [[UV6:%[0-9]+]]:_(s16), [[UV7:%[0-9]+]]:_(s16) = G_UNMERGE_VALUES [[COPY]](<8 x s16>)
-    ; NOFP16: [[FPEXT:%[0-9]+]]:_(s32) = G_FPEXT [[UV]](s16)
-    ; NOFP16: [[FRINT:%[0-9]+]]:_(s32) = G_FRINT [[FPEXT]]
-    ; NOFP16: [[FPTRUNC:%[0-9]+]]:_(s16) = G_FPTRUNC [[FRINT]](s32)
-    ; NOFP16: [[FPEXT1:%[0-9]+]]:_(s32) = G_FPEXT [[UV1]](s16)
-    ; NOFP16: [[FRINT1:%[0-9]+]]:_(s32) = G_FRINT [[FPEXT1]]
-    ; NOFP16: [[FPTRUNC1:%[0-9]+]]:_(s16) = G_FPTRUNC [[FRINT1]](s32)
-    ; NOFP16: [[FPEXT2:%[0-9]+]]:_(s32) = G_FPEXT [[UV2]](s16)
-    ; NOFP16: [[FRINT2:%[0-9]+]]:_(s32) = G_FRINT [[FPEXT2]]
-    ; NOFP16: [[FPTRUNC2:%[0-9]+]]:_(s16) = G_FPTRUNC [[FRINT2]](s32)
-    ; NOFP16: [[FPEXT3:%[0-9]+]]:_(s32) = G_FPEXT [[UV3]](s16)
-    ; NOFP16: [[FRINT3:%[0-9]+]]:_(s32) = G_FRINT [[FPEXT3]]
-    ; NOFP16: [[FPTRUNC3:%[0-9]+]]:_(s16) = G_FPTRUNC [[FRINT3]](s32)
-    ; NOFP16: [[FPEXT4:%[0-9]+]]:_(s32) = G_FPEXT [[UV4]](s16)
-    ; NOFP16: [[FRINT4:%[0-9]+]]:_(s32) = G_FRINT [[FPEXT4]]
-    ; NOFP16: [[FPTRUNC4:%[0-9]+]]:_(s16) = G_FPTRUNC [[FRINT4]](s32)
-    ; NOFP16: [[FPEXT5:%[0-9]+]]:_(s32) = G_FPEXT [[UV5]](s16)
-    ; NOFP16: [[FRINT5:%[0-9]+]]:_(s32) = G_FRINT [[FPEXT5]]
-    ; NOFP16: [[FPTRUNC5:%[0-9]+]]:_(s16) = G_FPTRUNC [[FRINT5]](s32)
-    ; NOFP16: [[FPEXT6:%[0-9]+]]:_(s32) = G_FPEXT [[UV6]](s16)
-    ; NOFP16: [[FRINT6:%[0-9]+]]:_(s32) = G_FRINT [[FPEXT6]]
-    ; NOFP16: [[FPTRUNC6:%[0-9]+]]:_(s16) = G_FPTRUNC [[FRINT6]](s32)
-    ; NOFP16: [[FPEXT7:%[0-9]+]]:_(s32) = G_FPEXT [[UV7]](s16)
-    ; NOFP16: [[FRINT7:%[0-9]+]]:_(s32) = G_FRINT [[FPEXT7]]
-    ; NOFP16: [[FPTRUNC7:%[0-9]+]]:_(s16) = G_FPTRUNC [[FRINT7]](s32)
-    ; NOFP16: [[BUILD_VECTOR:%[0-9]+]]:_(<8 x s16>) = G_BUILD_VECTOR [[FPTRUNC]](s16), [[FPTRUNC1]](s16), [[FPTRUNC2]](s16), [[FPTRUNC3]](s16), [[FPTRUNC4]](s16), [[FPTRUNC5]](s16), [[FPTRUNC6]](s16), [[FPTRUNC7]](s16)
-    ; NOFP16: $q0 = COPY [[BUILD_VECTOR]](<8 x s16>)
-    ; NOFP16: RET_ReallyLR implicit $q0
+    ; NOFP16-NEXT: {{  $}}
+    ; NOFP16-NEXT: [[COPY:%[0-9]+]]:_(<8 x s16>) = COPY $q0
+    ; NOFP16-NEXT: [[UV:%[0-9]+]]:_(<4 x s16>), [[UV1:%[0-9]+]]:_(<4 x s16>) = G_UNMERGE_VALUES [[COPY]](<8 x s16>)
+    ; NOFP16-NEXT: [[FPEXT:%[0-9]+]]:_(<4 x s32>) = G_FPEXT [[UV]](<4 x s16>)
+    ; NOFP16-NEXT: [[FPEXT1:%[0-9]+]]:_(<4 x s32>) = G_FPEXT [[UV1]](<4 x s16>)
+    ; NOFP16-NEXT: [[FRINT:%[0-9]+]]:_(<4 x s32>) = G_FRINT [[FPEXT]]
+    ; NOFP16-NEXT: [[FRINT1:%[0-9]+]]:_(<4 x s32>) = G_FRINT [[FPEXT1]]
+    ; NOFP16-NEXT: [[FPTRUNC:%[0-9]+]]:_(<4 x s16>) = G_FPTRUNC [[FRINT]](<4 x s32>)
+    ; NOFP16-NEXT: [[FPTRUNC1:%[0-9]+]]:_(<4 x s16>) = G_FPTRUNC [[FRINT1]](<4 x s32>)
+    ; NOFP16-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<8 x s16>) = G_CONCAT_VECTORS [[FPTRUNC]](<4 x s16>), [[FPTRUNC1]](<4 x s16>)
+    ; NOFP16-NEXT: $q0 = COPY [[CONCAT_VECTORS]](<8 x s16>)
+    ; NOFP16-NEXT: RET_ReallyLR implicit $q0
+    ;
     ; FP16-LABEL: name: test_v8f16.rint
     ; FP16: liveins: $q0
-    ; FP16: [[COPY:%[0-9]+]]:_(<8 x s16>) = COPY $q0
-    ; FP16: [[FRINT:%[0-9]+]]:_(<8 x s16>) = G_FRINT [[COPY]]
-    ; FP16: $q0 = COPY [[FRINT]](<8 x s16>)
-    ; FP16: RET_ReallyLR implicit $q0
+    ; FP16-NEXT: {{  $}}
+    ; FP16-NEXT: [[COPY:%[0-9]+]]:_(<8 x s16>) = COPY $q0
+    ; FP16-NEXT: [[FRINT:%[0-9]+]]:_(<8 x s16>) = G_FRINT [[COPY]]
+    ; FP16-NEXT: $q0 = COPY [[FRINT]](<8 x s16>)
+    ; FP16-NEXT: RET_ReallyLR implicit $q0
     %0:_(<8 x s16>) = COPY $q0
     %1:_(<8 x s16>) = G_FRINT %0
     $q0 = COPY %1(<8 x s16>)
@@ -227,16 +216,19 @@ body:             |
 
     ; NOFP16-LABEL: name: test_v2f32.rint
     ; NOFP16: liveins: $d0
-    ; NOFP16: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $d0
-    ; NOFP16: [[FRINT:%[0-9]+]]:_(<2 x s32>) = G_FRINT [[COPY]]
-    ; NOFP16: $d0 = COPY [[FRINT]](<2 x s32>)
-    ; NOFP16: RET_ReallyLR implicit $d0
+    ; NOFP16-NEXT: {{  $}}
+    ; NOFP16-NEXT: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $d0
+    ; NOFP16-NEXT: [[FRINT:%[0-9]+]]:_(<2 x s32>) = G_FRINT [[COPY]]
+    ; NOFP16-NEXT: $d0 = COPY [[FRINT]](<2 x s32>)
+    ; NOFP16-NEXT: RET_ReallyLR implicit $d0
+    ;
     ; FP16-LABEL: name: test_v2f32.rint
     ; FP16: liveins: $d0
-    ; FP16: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $d0
-    ; FP16: [[FRINT:%[0-9]+]]:_(<2 x s32>) = G_FRINT [[COPY]]
-    ; FP16: $d0 = COPY [[FRINT]](<2 x s32>)
-    ; FP16: RET_ReallyLR implicit $d0
+    ; FP16-NEXT: {{  $}}
+    ; FP16-NEXT: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $d0
+    ; FP16-NEXT: [[FRINT:%[0-9]+]]:_(<2 x s32>) = G_FRINT [[COPY]]
+    ; FP16-NEXT: $d0 = COPY [[FRINT]](<2 x s32>)
+    ; FP16-NEXT: RET_ReallyLR implicit $d0
     %0:_(<2 x s32>) = COPY $d0
     %1:_(<2 x s32>) = G_FRINT %0
     $d0 = COPY %1(<2 x s32>)

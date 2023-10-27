@@ -18,7 +18,7 @@ template <class ValueType>
 struct LowerBound {
   size_t Quantity;
 
-  mutable std::mt19937_64 rng { std::random_device{}() };
+  mutable std::mt19937_64 rng{std::random_device{}()};
 
   void run(benchmark::State& state) const {
     runOpOnCopies<ValueType>(state, Quantity, Order::Ascending, BatchSize::CountBatch, [&](auto& Copy) {
@@ -27,9 +27,7 @@ struct LowerBound {
     });
   }
 
-  std::string name() const {
-    return "BM_LowerBound" + ValueType::name() + "_" + std::to_string(Quantity);
-  }
+  std::string name() const { return "BM_LowerBound" + ValueType::name() + "_" + std::to_string(Quantity); }
 };
 } // namespace
 

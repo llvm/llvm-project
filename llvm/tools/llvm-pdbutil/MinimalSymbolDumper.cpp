@@ -8,6 +8,7 @@
 
 #include "MinimalSymbolDumper.h"
 
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/DebugInfo/CodeView/CVRecord.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/Formatters.h"
@@ -210,6 +211,8 @@ static std::string formatSourceLanguage(SourceLanguage Lang) {
     RETURN_CASE(SourceLanguage, D, "d");
     RETURN_CASE(SourceLanguage, Swift, "swift");
     RETURN_CASE(SourceLanguage, Rust, "rust");
+    RETURN_CASE(SourceLanguage, ObjC, "objc");
+    RETURN_CASE(SourceLanguage, ObjCpp, "objc++");
   }
   return formatUnknownEnum(Lang);
 }
@@ -353,6 +356,23 @@ static std::string formatGaps(uint32_t IndentLevel,
     GapStrs.push_back(formatv("({0},{1})", G.GapStartOffset, G.Range).str());
   }
   return typesetItemList(GapStrs, 7, IndentLevel, ", ");
+}
+
+static std::string formatJumpTableEntrySize(JumpTableEntrySize EntrySize) {
+  switch (EntrySize) {
+    RETURN_CASE(JumpTableEntrySize, Int8, "int8");
+    RETURN_CASE(JumpTableEntrySize, UInt8, "uin8");
+    RETURN_CASE(JumpTableEntrySize, Int16, "int16");
+    RETURN_CASE(JumpTableEntrySize, UInt16, "uint16");
+    RETURN_CASE(JumpTableEntrySize, Int32, "int32");
+    RETURN_CASE(JumpTableEntrySize, UInt32, "uint32");
+    RETURN_CASE(JumpTableEntrySize, Pointer, "pointer");
+    RETURN_CASE(JumpTableEntrySize, UInt8ShiftLeft, "uint8shl");
+    RETURN_CASE(JumpTableEntrySize, UInt16ShiftLeft, "uint16shl");
+    RETURN_CASE(JumpTableEntrySize, Int8ShiftLeft, "int8shl");
+    RETURN_CASE(JumpTableEntrySize, Int16ShiftLeft, "int16shl");
+  }
+  return formatUnknownEnum(EntrySize);
 }
 
 Error MinimalSymbolDumper::visitSymbolBegin(codeview::CVSymbol &Record) {
@@ -855,9 +875,24 @@ Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR,
 }
 
 Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR, CallerSym &Caller) {
+  const char *Format;
+  switch (CVR.kind()) {
+  case S_CALLEES:
+    Format = "callee: {0}";
+    break;
+  case S_CALLERS:
+    Format = "caller: {0}";
+    break;
+  case S_INLINEES:
+    Format = "inlinee: {0}";
+    break;
+  default:
+    return llvm::make_error<CodeViewError>(
+        "Unknown CV Record type for a CallerSym object!");
+  }
   AutoIndent Indent(P, 7);
   for (const auto &I : Caller.Indices) {
-    P.formatLine("callee: {0}", idIndex(I));
+    P.formatLine(Format, idIndex(I));
   }
   return Error::success();
 }
@@ -900,5 +935,19 @@ Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR,
   P.formatLine("addr = {0}", formatSegmentOffset(Annot.Segment, Annot.CodeOffset));
   P.formatLine("strings = {0}", typesetStringList(P.getIndentLevel() + 9 + 2,
                                                    Annot.Strings));
+  return Error::success();
+}
+
+Error MinimalSymbolDumper::visitKnownRecord(CVSymbol &CVR,
+                                            JumpTableSym &JumpTable) {
+  AutoIndent Indent(P, 7);
+  P.formatLine(
+      "base = {0}, switchtype = {1}, branch = {2}, table = {3}, entriescount = "
+      "{4}",
+      formatSegmentOffset(JumpTable.BaseSegment, JumpTable.BaseOffset),
+      formatJumpTableEntrySize(JumpTable.SwitchType),
+      formatSegmentOffset(JumpTable.BranchSegment, JumpTable.BranchOffset),
+      formatSegmentOffset(JumpTable.TableSegment, JumpTable.TableOffset),
+      JumpTable.EntriesCount);
   return Error::success();
 }

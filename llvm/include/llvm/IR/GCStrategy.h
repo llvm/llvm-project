@@ -105,7 +105,7 @@ public:
   /// Returns true if the RewriteStatepointsForGC pass should run on functions
   /// using this GC.
   bool useRS4GC() const {
-    assert(useStatepoints() &&
+    assert((!UseRS4GC || useStatepoints()) &&
            "GC strategy has useRS4GC but not useStatepoints set");
     return UseRS4GC;
   }

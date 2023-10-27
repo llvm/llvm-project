@@ -18,9 +18,9 @@
 #include "llvm/MC/MCDecoderOps.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
 #include "llvm/MC/MCInst.h"
-#include "llvm/MC/SubtargetFeature.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/TargetParser/SubtargetFeature.h"
 #include <cstdint>
 
 using namespace llvm;
@@ -57,8 +57,7 @@ public:
     BPF_ABS = 0x1,
     BPF_IND = 0x2,
     BPF_MEM = 0x3,
-    BPF_LEN = 0x4,
-    BPF_MSH = 0x5,
+    BPF_MEMSX = 0x4,
     BPF_ATOMIC = 0x6
   };
 
@@ -179,7 +178,7 @@ DecodeStatus BPFDisassembler::getInstruction(MCInst &Instr, uint64_t &Size,
   if ((InstClass == BPF_LDX || InstClass == BPF_STX) &&
       getInstSize(Insn) != BPF_DW &&
       (InstMode == BPF_MEM || InstMode == BPF_ATOMIC) &&
-      STI.getFeatureBits()[BPF::ALU32])
+      STI.hasFeature(BPF::ALU32))
     Result = decodeInstruction(DecoderTableBPFALU3264, Instr, Insn, Address,
                                this, STI);
   else

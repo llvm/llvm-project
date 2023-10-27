@@ -1,0 +1,23 @@
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-nm %t | count 0
+# RUN: llvm-nm --special-syms %t | FileCheck %s
+
+!ELF
+FileHeader:
+  Class:           ELFCLASS32
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_CSKY
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    AddressAlign:    0x4
+Symbols:
+  - Name:     $d.1
+    Section:  .text
+  - Name:     $t.1
+    Section:  .text
+
+# CHECK: 00000000 t $d.1
+# CHECK: 00000000 t $t.1

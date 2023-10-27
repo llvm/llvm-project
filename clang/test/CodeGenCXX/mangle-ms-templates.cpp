@@ -272,7 +272,7 @@ struct type1 {
 };
 extern const record inst;
 void recref(type1<inst>) {}
-// CHECK: "?recref@@YAXU?$type1@$E?inst@@3Urecord@@B@@@Z"
+// CHECK: "?recref@@YAXU?$type1@$1?inst@@3Urecord@@B@@@Z"
 
 struct _GUID {};
 struct __declspec(uuid("{12345678-1234-1234-1234-1234567890aB}")) uuid;
@@ -286,7 +286,7 @@ struct UUIDType2 {};
 void fun(UUIDType1<uuid> a) {}
 // CHECK: "?fun@@YAXU?$UUIDType1@Uuuid@@$1?_GUID_12345678_1234_1234_1234_1234567890ab@@3U__s_GUID@@B@@@Z"
 void fun(UUIDType2<uuid> b) {}
-// CHECK: "?fun@@YAXU?$UUIDType2@Uuuid@@$E?_GUID_12345678_1234_1234_1234_1234567890ab@@3U__s_GUID@@B@@@Z"
+// CHECK: "?fun@@YAXU?$UUIDType2@Uuuid@@$1?_GUID_12345678_1234_1234_1234_1234567890ab@@3U__s_GUID@@B@@@Z"
 
 template <typename T> struct TypeWithFriendDefinition {
   friend void FunctionDefinedWithInjectedName(TypeWithFriendDefinition<T>) {}

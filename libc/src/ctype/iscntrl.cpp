@@ -10,13 +10,13 @@
 
 #include "src/__support/common.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 // TODO: Currently restricted to default locale.
 // These should be extended using locale information.
 LLVM_LIBC_FUNCTION(int, iscntrl, (int c)) {
-  const unsigned char ch = static_cast<unsigned char>(c);
+  const unsigned ch = static_cast<unsigned>(c);
   return static_cast<int>(ch < 0x20 || ch == 0x7f);
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

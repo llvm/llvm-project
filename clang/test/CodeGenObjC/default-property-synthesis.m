@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin10 -emit-llvm -o %t %s
-// rdar://7923851.
 
 // Superclass declares property. Subclass redeclares the same property.
 // Do not @synthesize-by-default in the subclass. P1

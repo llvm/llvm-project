@@ -30,6 +30,57 @@ scheduling models. To that end, we also provide analysis of the results.
 :program:`llvm-exegesis` can also benchmark arbitrary user-provided code
 snippets.
 
+SUPPORTED PLATFORMS
+-------------------
+
+:program:`llvm-exegesis` currently only supports X86 (64-bit only), ARM (AArch64
+only), MIPS, and PowerPC (PowerPC64LE only) on Linux for benchmarking. Not all
+benchmarking functionality is guaranteed to work on every platform.
+:program:`llvm-exegesis` also has a separate analysis mode that is supported
+on every platform on which LLVM is.
+
+SNIPPET ANNOTATIONS
+-------------------
+
+:program:`llvm-exegesis` supports benchmarking arbitrary snippets of assembly.
+However, benchmarking these snippets often requires some setup so that they
+can execute properly. :program:`llvm-exegesis` has two annotations and some
+additional utilities to help with setup so that snippets can be benchmarked
+properly.
+
+* `LLVM-EXEGESIS-DEFREG <register name>` - Adding this annotation to the text
+  assembly snippet to be benchmarked marks the register as requiring a definition.
+  A value will automatically be provided unless a second parameter, a hex value,
+  is passed in. This is done with the `LLVM-EXEGESIS-DEFREG <register name> <hex value>`
+  format. `<hex value>` is a bit pattern used to fill the register. If it is a
+  value smaller than the register, it is sign extended to match the size of the
+  register.
+* `LLVM-EXEGESIS-LIVEIN <register name>` - This annotation allows specifying
+  registers that should keep their value upon starting the benchmark. Values
+  can be passed through registers from the benchmarking setup in some cases.
+  The registers and the values assigned to them that can be utilized in the
+  benchmarking script with a `LLVM-EXEGESIS-LIVEIN` are as follows:
+
+  * Scratch memory register - The specific register that this value is put in
+    is platform dependent (e.g., it is the RDI register on X86 Linux). Setting
+    this register as a live in ensures that a pointer to a block of memory (1MB)
+    is placed within this register that can be used by the snippet.
+* `LLVM-EXEGESIS-MEM-DEF <value name> <size> <value>` - This annotation allows
+  specifying memory definitions that can later be mapped into the execution
+  process of a snippet with the `LLVM-EXEGESIS-MEM-MAP` annotation. Each
+  value is named using the `<value name>` argument so that it can be referenced
+  later within a map annotation. The size is specified in bytes the the value
+  is taken in hexadecimal. If the size of the value is less than the specified
+  size, the value will be repeated until it fills the entire section of memory.
+  Using this annotation requires using the subprocess execution mode.
+* `LLVM-EXEGESIS-MEM-MAP <value name> <address>` - This annotation allows for
+  mapping previously defined memory definitions into the execution context of a
+  process. The value name refers to a previously defined memory definition and
+  the address is a decimal number that specifies the address the memory
+  definition should start at. Note that a single memory definition can be
+  mapped multiple times. Using this annotation requires the subprocess
+  execution mode.
+
 EXAMPLE 1: benchmarking instructions
 ------------------------------------
 
@@ -38,18 +89,18 @@ instruction, run:
 
 .. code-block:: bash
 
-    $ llvm-exegesis -mode=latency -opcode-name=ADD64rr
+    $ llvm-exegesis --mode=latency --opcode-name=ADD64rr
 
 Measuring the uop decomposition or inverse throughput of an instruction works similarly:
 
 .. code-block:: bash
 
-    $ llvm-exegesis -mode=uops -opcode-name=ADD64rr
-    $ llvm-exegesis -mode=inverse_throughput -opcode-name=ADD64rr
+    $ llvm-exegesis --mode=uops --opcode-name=ADD64rr
+    $ llvm-exegesis --mode=inverse_throughput --opcode-name=ADD64rr
 
 
 The output is a YAML document (the default is to write to stdout, but you can
-redirect the output to a file using `-benchmarks-file`):
+redirect the output to a file using `--benchmarks-file`):
 
 .. code-block:: none
 
@@ -74,7 +125,7 @@ To measure the latency of all instructions for the host architecture, run:
 
 .. code-block:: bash
 
-    $ llvm-exegesis -mode=latency -opcode-index=-1
+    $ llvm-exegesis --mode=latency --opcode-index=-1
 
 
 EXAMPLE 2: benchmarking a custom code snippet
@@ -85,21 +136,13 @@ To measure the latency/uops of a custom piece of code, you can specify the
 
 .. code-block:: bash
 
-    $ echo "vzeroupper" | llvm-exegesis -mode=uops -snippets-file=-
+    $ echo "vzeroupper" | llvm-exegesis --mode=uops --snippets-file=-
 
 Real-life code snippets typically depend on registers or memory.
 :program:`llvm-exegesis` checks the liveliness of registers (i.e. any register
 use has a corresponding def or is a "live in"). If your code depends on the
-value of some registers, you have two options:
-
-- Mark the register as requiring a definition. :program:`llvm-exegesis` will
-  automatically assign a value to the register. This can be done using the
-  directive `LLVM-EXEGESIS-DEFREG <reg name> <hex_value>`, where `<hex_value>`
-  is a bit pattern used to fill `<reg_name>`. If `<hex_value>` is smaller than
-  the register width, it will be sign-extended.
-- Mark the register as a "live in". :program:`llvm-exegesis` will benchmark
-  using whatever value was in this registers on entry. This can be done using
-  the directive `LLVM-EXEGESIS-LIVEIN <reg name>`.
+value of some registers, you need to use snippet annotations to ensure setup
+is performed properly.
 
 For example, the following code snippet depends on the values of XMM1 (which
 will be set by the tool) and the memory buffer passed in RDI (live in).
@@ -113,7 +156,31 @@ will be set by the tool) and the memory buffer passed in RDI (live in).
   addq $0x10, %rdi
 
 
-EXAMPLE 3: analysis
+Example 3: benchmarking with memory annotations
+-----------------------------------------------
+
+Some snippets require memory setup in specific places to execute without
+crashing. Setting up memory can be accomplished with the `LLVM-EXEGESIS-MEM-DEF`
+and `LLVM-EXEGESIS-MEM-MAP` annotations. To execute the following snippet:
+
+.. code-block:: none
+
+    movq $8192, %rax
+    movq (%rax), %rdi
+
+We need to have at least eight bytes of memory allocated starting `0x2000`.
+We can create the necessary execution environment with the following
+annotations added to the snippet:
+
+.. code-block:: none
+
+  # LLVM-EXEGESIS-MEM-DEF test1 4096 2147483647
+  # LLVM-EXEGESIS-MEM-MAP test1 8192
+
+  movq $8192, %rax
+  movq (%rax), %rdi
+
+EXAMPLE 4: analysis
 -------------------
 
 Assuming you have a set of benchmarked instructions (either latency or uops) as
@@ -122,10 +189,10 @@ following command:
 
 .. code-block:: bash
 
-    $ llvm-exegesis -mode=analysis \
-  -benchmarks-file=/tmp/benchmarks.yaml \
-  -analysis-clusters-output-file=/tmp/clusters.csv \
-  -analysis-inconsistencies-output-file=/tmp/inconsistencies.html
+    $ llvm-exegesis --mode=analysis \
+  --benchmarks-file=/tmp/benchmarks.yaml \
+  --analysis-clusters-output-file=/tmp/clusters.csv \
+  --analysis-inconsistencies-output-file=/tmp/inconsistencies.html
 
 This will group the instructions into clusters with the same performance
 characteristics. The clusters will be written out to `/tmp/clusters.csv` in the
@@ -163,28 +230,28 @@ be shown. This does not invalidate any of the analysis results though.
 OPTIONS
 -------
 
-.. option:: -help
+.. option:: --help
 
  Print a summary of command line options.
 
-.. option:: -opcode-index=<LLVM opcode index>
+.. option:: --opcode-index=<LLVM opcode index>
 
  Specify the opcode to measure, by index. Specifying `-1` will result
  in measuring every existing opcode. See example 1 for details.
  Either `opcode-index`, `opcode-name` or `snippets-file` must be set.
 
-.. option:: -opcode-name=<opcode name 1>,<opcode name 2>,...
+.. option:: --opcode-name=<opcode name 1>,<opcode name 2>,...
 
  Specify the opcode to measure, by name. Several opcodes can be specified as
  a comma-separated list. See example 1 for details.
  Either `opcode-index`, `opcode-name` or `snippets-file` must be set.
 
-.. option:: -snippets-file=<filename>
+.. option:: --snippets-file=<filename>
 
  Specify the custom code snippet to measure. See example 2 for details.
  Either `opcode-index`, `opcode-name` or `snippets-file` must be set.
 
-.. option:: -mode=[latency|uops|inverse_throughput|analysis]
+.. option:: --mode=[latency|uops|inverse_throughput|analysis]
 
  Specify the run mode. Note that some modes have additional requirements and options.
 
@@ -207,7 +274,7 @@ OPTIONS
   * ``assemble-measured-code``: Same as ``prepare-and-assemble-snippet``. but also creates the full sequence that can be dumped to a file using ``--dump-object-to-disk``.
   * ``measure``: Same as ``assemble-measured-code``, but also runs the measurement.
 
-.. option:: -x86-lbr-sample-period=<nBranches/sample>
+.. option:: --x86-lbr-sample-period=<nBranches/sample>
 
   Specify the LBR sampling period - how many branches before we take a sample.
   When a positive value is specified for this option and when the mode is `latency`,
@@ -216,7 +283,7 @@ OPTIONS
   could occur if the sampling is too frequent. A prime number should be used to
   avoid consistently skipping certain blocks.
 
-.. option:: -x86-disable-upper-sse-registers
+.. option:: --x86-disable-upper-sse-registers
 
   Using the upper xmm registers (xmm8-xmm15) forces a longer instruction encoding
   which may put greater pressure on the frontend fetch and decode stages,
@@ -225,7 +292,7 @@ OPTIONS
   enabled can help determine the effects of the frontend and can be used to
   improve latency and throughput estimates.
 
-.. option:: -repetition-mode=[duplicate|loop|min]
+.. option:: --repetition-mode=[duplicate|loop|min]
 
  Specify the repetition mode. `duplicate` will create a large, straight line
  basic block with `num-repetitions` instructions (repeating the snippet
@@ -240,13 +307,13 @@ OPTIONS
  instead use the `min` mode, which will run each other mode,
  and produce the minimal measured result.
 
-.. option:: -num-repetitions=<Number of repetitions>
+.. option:: --num-repetitions=<Number of repetitions>
 
  Specify the target number of executed instructions. Note that the actual
  repetition count of the snippet will be `num-repetitions`/`snippet size`.
  Higher values lead to more accurate measurements but lengthen the benchmark.
 
-.. option:: -loop-body-size=<Preferred loop body size>
+.. option:: --loop-body-size=<Preferred loop body size>
 
  Only effective for `-repetition-mode=[loop|min]`.
  Instead of looping over the snippet directly, first duplicate it so that the
@@ -254,7 +321,7 @@ OPTIONS
  in loop body being cached in the CPU Op Cache / Loop Cache, which allows to
  which may have higher throughput than the CPU decoders.
 
-.. option:: -max-configs-per-opcode=<value>
+.. option:: --max-configs-per-opcode=<value>
 
  Specify the maximum configurations that can be generated for each opcode.
  By default this is `1`, meaning that we assume that a single measurement is
@@ -266,22 +333,22 @@ OPTIONS
  lead to different performance characteristics.
 
 
-.. option:: -benchmarks-file=</path/to/file>
+.. option:: --benchmarks-file=</path/to/file>
 
  File to read (`analysis` mode) or write (`latency`/`uops`/`inverse_throughput`
  modes) benchmark results. "-" uses stdin/stdout.
 
-.. option:: -analysis-clusters-output-file=</path/to/file>
+.. option:: --analysis-clusters-output-file=</path/to/file>
 
  If provided, write the analysis clusters as CSV to this file. "-" prints to
  stdout. By default, this analysis is not run.
 
-.. option:: -analysis-inconsistencies-output-file=</path/to/file>
+.. option:: --analysis-inconsistencies-output-file=</path/to/file>
 
  If non-empty, write inconsistencies found during analysis to this file. `-`
  prints to stdout. By default, this analysis is not run.
 
-.. option:: -analysis-filter=[all|reg-only|mem-only]
+.. option:: --analysis-filter=[all|reg-only|mem-only]
 
  By default, all benchmark results are analysed, but sometimes it may be useful
  to only look at those that to not involve memory, or vice versa. This option
@@ -289,44 +356,44 @@ OPTIONS
  ones that do involve memory (involve instructions that may read or write to
  memory), or the opposite, to only keep such benchmarks.
 
-.. option:: -analysis-clustering=[dbscan,naive]
+.. option:: --analysis-clustering=[dbscan,naive]
 
  Specify the clustering algorithm to use. By default DBSCAN will be used.
  Naive clustering algorithm is better for doing further work on the
  `-analysis-inconsistencies-output-file=` output, it will create one cluster
  per opcode, and check that the cluster is stable (all points are neighbours).
 
-.. option:: -analysis-numpoints=<dbscan numPoints parameter>
+.. option:: --analysis-numpoints=<dbscan numPoints parameter>
 
  Specify the numPoints parameters to be used for DBSCAN clustering
  (`analysis` mode, DBSCAN only).
 
-.. option:: -analysis-clustering-epsilon=<dbscan epsilon parameter>
+.. option:: --analysis-clustering-epsilon=<dbscan epsilon parameter>
 
  Specify the epsilon parameter used for clustering of benchmark points
  (`analysis` mode).
 
-.. option:: -analysis-inconsistency-epsilon=<epsilon>
+.. option:: --analysis-inconsistency-epsilon=<epsilon>
 
  Specify the epsilon parameter used for detection of when the cluster
  is different from the LLVM schedule profile values (`analysis` mode).
 
-.. option:: -analysis-display-unstable-clusters
+.. option:: --analysis-display-unstable-clusters
 
  If there is more than one benchmark for an opcode, said benchmarks may end up
  not being clustered into the same cluster if the measured performance
  characteristics are different. by default all such opcodes are filtered out.
  This flag will instead show only such unstable opcodes.
 
-.. option:: -ignore-invalid-sched-class=false
+.. option:: --ignore-invalid-sched-class=false
 
  If set, ignore instructions that do not have a sched class (class idx = 0).
 
-.. option:: -mtriple=<triple name>
+.. option:: --mtriple=<triple name>
 
  Target triple. See `-version` for available targets.
 
-.. option:: -mcpu=<cpu name>
+.. option:: --mcpu=<cpu name>
 
  If set, measure the cpu characteristics using the counters for this CPU. This
  is useful when creating new sched models (the host CPU is unknown to LLVM).
@@ -342,6 +409,20 @@ OPTIONS
 
  If set,  llvm-exegesis will dump the generated code to a temporary file to
  enable code inspection. Disabled by default.
+
+.. option:: --use-dummy-perf-counters
+
+ If set, llvm-exegesis will not read any real performance counters and
+ return a dummy value instead. This can be used to ensure a snippet doesn't
+ crash when hardware performance counters are unavailable and for
+ debugging :program:`llvm-exegesis` itself.
+
+.. option:: --execution-mode=[inprocess,subprocess]
+
+  This option specifies what execution mode to use. The `inprocess` execution
+  mode is the default. The `subprocess` execution mode allows for additional
+  features such as memory annotations but is currently restricted to X86-64
+  on Linux.
 
 EXIT STATUS
 -----------

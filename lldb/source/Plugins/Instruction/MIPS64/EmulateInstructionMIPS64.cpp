@@ -1157,19 +1157,18 @@ bool EmulateInstructionMIPS64::Emulate_SD(llvm::MCInst &insn) {
     context.type = eContextPushRegisterOnStack;
     context.SetRegisterToRegisterPlusOffset(*reg_info_src, *reg_info_base, 0);
 
-    uint8_t buffer[RegisterValue::kMaxRegisterByteSize];
-    Status error;
-
     std::optional<RegisterValue> data_src = ReadRegister(*reg_info_base);
     if (!data_src)
       return false;
 
-    if (data_src->GetAsMemoryData(*reg_info_src, buffer,
+    Status error;
+    RegisterValue::BytesContainer buffer(reg_info_src->byte_size);
+    if (data_src->GetAsMemoryData(*reg_info_src, buffer.data(),
                                   reg_info_src->byte_size, eByteOrderLittle,
                                   error) == 0)
       return false;
 
-    if (!WriteMemory(context, address, buffer, reg_info_src->byte_size))
+    if (!WriteMemory(context, address, buffer.data(), reg_info_src->byte_size))
       return false;
   }
 

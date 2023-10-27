@@ -18,7 +18,6 @@
 #include "lldb/Interpreter/OptionValueDictionary.h"
 #include "lldb/Symbol/UnwindPlan.h"
 #include "lldb/Utility/ArchSpec.h"
-#include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Stream.h"
 
 #include "Plugins/Process/Utility/ARMDefines.h"
@@ -605,7 +604,7 @@ static std::optional<RegisterInfo> GetARMDWARFRegisterInfo(unsigned reg_num) {
 // Valid return values are {1, 2, 3, 4}, with 0 signifying an error condition.
 static uint32_t CountITSize(uint32_t ITMask) {
   // First count the trailing zeros of the IT mask.
-  uint32_t TZ = llvm::countTrailingZeros(ITMask);
+  uint32_t TZ = llvm::countr_zero(ITMask);
   if (TZ > 3) {
     return 0;
   }
@@ -13750,13 +13749,13 @@ bool EmulateInstructionARM::SetArchitecture(const ArchSpec &arch) {
     m_arm_isa = ARMvAll;
   else if (arch_cstr.equals_insensitive("thumb"))
     m_arm_isa = ARMvAll;
-  else if (arch_cstr.startswith_insensitive("armv4"))
+  else if (arch_cstr.starts_with_insensitive("armv4"))
     m_arm_isa = ARMv4;
-  else if (arch_cstr.startswith_insensitive("armv6"))
+  else if (arch_cstr.starts_with_insensitive("armv6"))
     m_arm_isa = ARMv6;
-  else if (arch_cstr.startswith_insensitive("armv7"))
+  else if (arch_cstr.starts_with_insensitive("armv7"))
     m_arm_isa = ARMv7;
-  else if (arch_cstr.startswith_insensitive("armv8"))
+  else if (arch_cstr.starts_with_insensitive("armv8"))
     m_arm_isa = ARMv8;
   return m_arm_isa != 0;
 }
@@ -14346,26 +14345,26 @@ EmulateInstructionARM::GetInstructionCondition() {
   return cond;
 }
 
-bool EmulateInstructionARM::TestEmulation(Stream *out_stream, ArchSpec &arch,
+bool EmulateInstructionARM::TestEmulation(Stream &out_stream, ArchSpec &arch,
                                           OptionValueDictionary *test_data) {
   if (!test_data) {
-    out_stream->Printf("TestEmulation: Missing test data.\n");
+    out_stream.Printf("TestEmulation: Missing test data.\n");
     return false;
   }
 
-  static ConstString opcode_key("opcode");
-  static ConstString before_key("before_state");
-  static ConstString after_key("after_state");
+  static constexpr llvm::StringLiteral opcode_key("opcode");
+  static constexpr llvm::StringLiteral before_key("before_state");
+  static constexpr llvm::StringLiteral after_key("after_state");
 
   OptionValueSP value_sp = test_data->GetValueForKey(opcode_key);
 
   uint32_t test_opcode;
   if ((value_sp.get() == nullptr) ||
       (value_sp->GetType() != OptionValue::eTypeUInt64)) {
-    out_stream->Printf("TestEmulation: Error reading opcode from test file.\n");
+    out_stream.Printf("TestEmulation: Error reading opcode from test file.\n");
     return false;
   }
-  test_opcode = value_sp->GetUInt64Value();
+  test_opcode = value_sp->GetValueAs<uint64_t>().value_or(0);
 
   if (arch.GetTriple().getArch() == llvm::Triple::thumb ||
       arch.IsAlwaysThumbInstructions()) {
@@ -14378,7 +14377,7 @@ bool EmulateInstructionARM::TestEmulation(Stream *out_stream, ArchSpec &arch,
     m_opcode_mode = eModeARM;
     m_opcode.SetOpcode32(test_opcode, endian::InlHostByteOrder());
   } else {
-    out_stream->Printf("TestEmulation:  Invalid arch.\n");
+    out_stream.Printf("TestEmulation:  Invalid arch.\n");
     return false;
   }
 
@@ -14388,26 +14387,26 @@ bool EmulateInstructionARM::TestEmulation(Stream *out_stream, ArchSpec &arch,
   value_sp = test_data->GetValueForKey(before_key);
   if ((value_sp.get() == nullptr) ||
       (value_sp->GetType() != OptionValue::eTypeDictionary)) {
-    out_stream->Printf("TestEmulation:  Failed to find 'before' state.\n");
+    out_stream.Printf("TestEmulation:  Failed to find 'before' state.\n");
     return false;
   }
 
   OptionValueDictionary *state_dictionary = value_sp->GetAsDictionary();
   if (!before_state.LoadStateFromDictionary(state_dictionary)) {
-    out_stream->Printf("TestEmulation:  Failed loading 'before' state.\n");
+    out_stream.Printf("TestEmulation:  Failed loading 'before' state.\n");
     return false;
   }
 
   value_sp = test_data->GetValueForKey(after_key);
   if ((value_sp.get() == nullptr) ||
       (value_sp->GetType() != OptionValue::eTypeDictionary)) {
-    out_stream->Printf("TestEmulation:  Failed to find 'after' state.\n");
+    out_stream.Printf("TestEmulation:  Failed to find 'after' state.\n");
     return false;
   }
 
   state_dictionary = value_sp->GetAsDictionary();
   if (!after_state.LoadStateFromDictionary(state_dictionary)) {
-    out_stream->Printf("TestEmulation: Failed loading 'after' state.\n");
+    out_stream.Printf("TestEmulation: Failed loading 'after' state.\n");
     return false;
   }
 
@@ -14419,14 +14418,14 @@ bool EmulateInstructionARM::TestEmulation(Stream *out_stream, ArchSpec &arch,
 
   bool success = EvaluateInstruction(eEmulateInstructionOptionAutoAdvancePC);
   if (!success) {
-    out_stream->Printf("TestEmulation:  EvaluateInstruction() failed.\n");
+    out_stream.Printf("TestEmulation:  EvaluateInstruction() failed.\n");
     return false;
   }
 
   success = before_state.CompareState(after_state, out_stream);
   if (!success)
-    out_stream->Printf(
-        "TestEmulation:  State after emulation does not match 'after' state.\n");
+    out_stream.Printf("TestEmulation:  State after emulation does not match "
+                      "'after' state.\n");
 
   return success;
 }

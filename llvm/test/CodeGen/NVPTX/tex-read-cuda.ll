@@ -1,7 +1,7 @@
-; RUN: llc < %s -march=nvptx -mcpu=sm_20 -verify-machineinstrs | FileCheck %s --check-prefix=SM20
-; RUN: llc < %s -march=nvptx -mcpu=sm_30 -verify-machineinstrs | FileCheck %s --check-prefix=SM30
-; RUN: %if ptxas %{ llc < %s -march=nvptx -mcpu=sm_20 -verify-machineinstrs | %ptxas-verify %}
-; RUN: %if ptxas %{ llc < %s -march=nvptx -mcpu=sm_30 -verify-machineinstrs | %ptxas-verify %if !ptxas-11.0 %{-arch=sm_30%} %}
+; RUN: llc < %s -march=nvptx64 -mcpu=sm_20 -verify-machineinstrs | FileCheck %s --check-prefix=SM20
+; RUN: llc < %s -march=nvptx64 -mcpu=sm_30 -verify-machineinstrs | FileCheck %s --check-prefix=SM30
+; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_20 -verify-machineinstrs | %ptxas-verify %}
+; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_30 -verify-machineinstrs | %ptxas-verify %}
 
 
 target triple = "nvptx-unknown-cuda"
@@ -18,8 +18,8 @@ define void @foo(i64 %img, ptr %red, i32 %idx) {
 ; SM30: tex.1d.v4.f32.s32 {%f[[RED:[0-9]+]], %f[[GREEN:[0-9]+]], %f[[BLUE:[0-9]+]], %f[[ALPHA:[0-9]+]]}, [%rd[[TEXREG]], {%r{{[0-9]+}}}]
   %val = tail call { float, float, float, float } @llvm.nvvm.tex.unified.1d.v4f32.s32(i64 %img, i32 %idx)
   %ret = extractvalue { float, float, float, float } %val, 0
-; SM20: st.global.f32 [%r{{[0-9]+}}], %f[[RED]]
-; SM30: st.global.f32 [%r{{[0-9]+}}], %f[[RED]]
+; SM20: st.global.f32 [%rd{{[0-9]+}}], %f[[RED]]
+; SM30: st.global.f32 [%rd{{[0-9]+}}], %f[[RED]]
   store float %ret, ptr %red
   ret void
 }
@@ -36,8 +36,8 @@ define void @bar(ptr %red, i32 %idx) {
 ; SM30: tex.1d.v4.f32.s32 {%f[[RED:[0-9]+]], %f[[GREEN:[0-9]+]], %f[[BLUE:[0-9]+]], %f[[ALPHA:[0-9]+]]}, [%rd[[TEXHANDLE]], {%r{{[0-9]+}}}]
   %val = tail call { float, float, float, float } @llvm.nvvm.tex.unified.1d.v4f32.s32(i64 %texHandle, i32 %idx)
   %ret = extractvalue { float, float, float, float } %val, 0
-; SM20: st.global.f32 [%r{{[0-9]+}}], %f[[RED]]
-; SM30: st.global.f32 [%r{{[0-9]+}}], %f[[RED]]
+; SM20: st.global.f32 [%rd{{[0-9]+}}], %f[[RED]]
+; SM30: st.global.f32 [%rd{{[0-9]+}}], %f[[RED]]
   store float %ret, ptr %red
   ret void
 }
@@ -63,8 +63,8 @@ define void @baz(ptr %red, i32 %idx) {
 ; SM20: add.rn.f32 %f[[RET2:[0-9]+]], %f[[RED]], %f[[TEXCALL]]
 ; SM30: add.rn.f32 %f[[RET2:[0-9]+]], %f[[RED]], %f[[TEXCALL]]
   %ret2 = fadd float %ret, %texcall
-; SM20: st.global.f32 [%r{{[0-9]+}}], %f[[RET2]]
-; SM30: st.global.f32 [%r{{[0-9]+}}], %f[[RET2]]
+; SM20: st.global.f32 [%rd{{[0-9]+}}], %f[[RET2]]
+; SM30: st.global.f32 [%rd{{[0-9]+}}], %f[[RET2]]
   store float %ret2, ptr %red
   ret void
 }

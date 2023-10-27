@@ -8,4 +8,4 @@ define i32 @isr_user(i8 %n) #0 {
   ret i32 0
 }
 
-attributes #0 = { "interrupt"="user" }
+attributes #0 = { "interrupt"="supervisor" }

@@ -14,8 +14,6 @@
 #define LLVM_SUPPORT_ERROR_H
 
 #include "llvm-c/Error.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Config/abi-breaking.h"
 #include "llvm/Support/AlignOf.h"
@@ -129,7 +127,7 @@ private:
 ///
 ///   auto E = foo(<...>); // <- foo returns failure with MyErrorInfo.
 ///   auto NewE =
-///     handleErrors(E,
+///     handleErrors(std::move(E),
 ///       [](const MyErrorInfo &M) {
 ///         // Deal with the error.
 ///       },
@@ -140,9 +138,15 @@ private:
 ///         }
 ///         // Couldn't handle this error instance. Pass it up the stack.
 ///         return Error(std::move(M));
-///       );
-///   // Note - we must check or return NewE in case any of the handlers
-///   // returned a new error.
+///     });
+///   // Note - The error passed to handleErrors will be marked as checked. If
+///   // there is no matched handler, a new error with the same payload is
+///   // created and returned.
+///   // The handlers take the error checked by handleErrors as an argument,
+///   // which can be used to retrieve more information. If a new error is
+///   // created by a handler, it will be passed back to the caller of
+///   // handleErrors and needs to be checked or return up to the stack.
+///   // Otherwise, the passed-in error is considered consumed.
 ///   @endcode
 ///
 /// The handleAllErrors function is identical to handleErrors, except
@@ -471,7 +475,7 @@ template <class T> class [[nodiscard]] Expected {
   template <class T1> friend class ExpectedAsOutParameter;
   template <class OtherT> friend class Expected;
 
-  static constexpr bool isRef = std::is_reference<T>::value;
+  static constexpr bool isRef = std::is_reference_v<T>;
 
   using wrap = std::reference_wrapper<std::remove_reference_t<T>>;
 
@@ -577,9 +581,9 @@ public:
 
   /// Returns \a takeError() after moving the held T (if any) into \p V.
   template <class OtherT>
-  Error moveInto(OtherT &Value,
-                 std::enable_if_t<std::is_assignable<OtherT &, T &&>::value> * =
-                     nullptr) && {
+  Error moveInto(
+      OtherT &Value,
+      std::enable_if_t<std::is_assignable_v<OtherT &, T &&>> * = nullptr) && {
     if (*this)
       Value = std::move(get());
     return takeError();
@@ -1025,13 +1029,7 @@ void logAllUnhandledErrors(Error E, raw_ostream &OS, Twine ErrorBanner = {});
 
 /// Write all error messages (if any) in E to a string. The newline character
 /// is used to separate error messages.
-inline std::string toString(Error E) {
-  SmallVector<std::string, 2> Errors;
-  handleAllErrors(std::move(E), [&Errors](const ErrorInfoBase &EI) {
-    Errors.push_back(EI.message());
-  });
-  return join(Errors.begin(), Errors.end(), "\n");
-}
+std::string toString(Error E);
 
 /// Consume a Error without doing anything. This method should be used
 /// only where an error can be considered a reasonable and expected return

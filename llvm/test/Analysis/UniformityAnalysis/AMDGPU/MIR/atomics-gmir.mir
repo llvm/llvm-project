@@ -1,0 +1,160 @@
+# RUN: llc -mtriple=amdgcn-- -run-pass=print-machine-uniformity -o - %s 2>&1 | FileCheck %s
+
+---
+name:            test1
+tracksRegLiveness: true
+body:             |
+  bb.1:
+    %2:_(s32) = IMPLICIT_DEF
+    %3:_(s32) = IMPLICIT_DEF
+    %0:_(p0) = G_MERGE_VALUES %2(s32), %3(s32)
+    %1:_(s32) = IMPLICIT_DEF
+
+    ; CHECK: DIVERGENT
+    ; CHECK-SAME: G_ATOMICRMW_XCHG
+    %4:_(s32) = G_ATOMICRMW_XCHG %0(p0), %1 :: (load store seq_cst (s32))
+
+    ; CHECK: DIVERGENT
+    ; CHECK-SAME: G_ATOMIC_CMPXCHG_WITH_SUCCESS
+    %5:_(s32), %6:_(s1) = G_ATOMIC_CMPXCHG_WITH_SUCCESS %0(p0), %1, %2 :: (load store seq_cst seq_cst (s32) )
+    $vgpr0 = COPY %4(s32)
+    SI_RETURN implicit $vgpr0
+...
+
+---
+name:            test_atomics
+tracksRegLiveness: true
+body:             |
+  bb.1:
+
+    %2:_(s32) = IMPLICIT_DEF
+    %3:_(s32) = IMPLICIT_DEF
+    %0:_(p1) = G_MERGE_VALUES %2(s32), %3(s32)
+    %1:_(s32) = IMPLICIT_DEF
+    %5:_(s32) = IMPLICIT_DEF
+
+    ; CHECK: DIVERGENT: %{{[0-9]}}: %{{[0-9]}}:_(s32) = G_ATOMICRMW_ADD
+    %4:_(s32) = G_ATOMICRMW_ADD %2, %3
+
+    ; CHECK: DIVERGENT: %{{[0-9]}}: %{{[0-9]}}:_(s32) = G_ATOMICRMW_SUB
+    %6:_(s32) = G_ATOMICRMW_SUB %1, %5
+
+    ; CHECK: DIVERGENT: %{{[0-9]}}: %{{[0-9]}}:_(s32) = G_ATOMICRMW_AND
+    %7:_(s32) = G_ATOMICRMW_AND %2, %3
+
+    ; CHECK: DIVERGENT: %{{[0-9]}}: %{{[0-9]}}:_(s32) = G_ATOMICRMW_NAND
+    %8:_(s32) = G_ATOMICRMW_NAND %1, %5
+
+    ; CHECK: DIVERGENT: %{{[0-9]}}: %{{[0-9]}}:_(s32) = G_ATOMICRMW_OR
+    %9:_(s32) = G_ATOMICRMW_OR %2, %3
+
+    ; CHECK: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s32) = G_ATOMICRMW_XOR
+    %10:_(s32) = G_ATOMICRMW_XOR %1, %5
+
+    ; CHECK: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s32) = G_ATOMICRMW_MAX
+    %11:_(s32) = G_ATOMICRMW_MAX %2, %3
+
+    ; CHECK: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s32) = G_ATOMICRMW_MIN
+    %12:_(s32) = G_ATOMICRMW_MIN %1, %5
+
+    ; CHECK: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s32) = G_ATOMICRMW_UMAX
+    %13:_(s32) = G_ATOMICRMW_UMAX %2, %3
+
+    ; CHECK: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s32) = G_ATOMICRMW_UMIN
+    %14:_(s32) = G_ATOMICRMW_UMIN %1, %5
+
+    ; CHECK: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s32) = G_ATOMICRMW_FADD
+    %15:_(s32) = G_ATOMICRMW_FADD %2, %3
+
+    ; CHECK: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s32) = G_ATOMICRMW_FSUB
+    %16:_(s32) = G_ATOMICRMW_FSUB %1, %5
+
+    ; CHECK: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s32) = G_ATOMICRMW_FMAX
+    %17:_(s32) = G_ATOMICRMW_FMAX %2, %3
+
+    ; CHECK: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s32) = G_ATOMICRMW_FMIN
+    %18:_(s32) = G_ATOMICRMW_FMIN %1, %5
+
+    ; CHECK: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s32) = G_ATOMICRMW_UINC_WRAP
+    %19:_(s32) = G_ATOMICRMW_UINC_WRAP %1, %5
+
+    ; CHECK: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s32) = G_ATOMICRMW_UDEC_WRAP
+    %20:_(s32) = G_ATOMICRMW_UDEC_WRAP %1, %5
+
+    $vgpr0 = COPY %4(s32)
+    SI_RETURN implicit $vgpr0
+
+...
+
+---
+name: test_buffer_atomics_always_divergent
+tracksRegLiveness: true
+body: |
+  bb.1:
+    liveins: $sgpr0, $sgpr2_sgpr3, $sgpr4_sgpr5_sgpr6_sgpr7
+
+    %0:_(s32) = COPY $sgpr0
+    %1:sgpr(p0) = COPY $sgpr2_sgpr3
+    %2:_(s32) = IMPLICIT_DEF
+    %3:_(<4 x s32>) = COPY $sgpr4_sgpr5_sgpr6_sgpr7
+    %4:_(s32) = G_CONSTANT i32 0
+
+    ; CHECK: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s32) = G_AMDGPU_ATOMIC_FMIN
+    %5:_(s32) = G_AMDGPU_ATOMIC_FMIN %0, %3
+
+    ; CHECK: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s32) = G_AMDGPU_ATOMIC_FMAX
+    %6:_(s32) = G_AMDGPU_ATOMIC_FMAX %0, %3
+
+    ; CHECK: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s32) = G_AMDGPU_BUFFER_ATOMIC_SWAP
+    %7:_(s32) = G_AMDGPU_BUFFER_ATOMIC_SWAP %0, %3, %4, %4, %4, 0, 0, 0 :: (volatile dereferenceable load store (s32), align 1, addrspace 8)
+
+    ; CHECK: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s32) = G_AMDGPU_BUFFER_ATOMIC_ADD
+    %8:_(s32) = G_AMDGPU_BUFFER_ATOMIC_ADD %0, %3, %4, %4, %4, 0, 0, 0 :: (volatile dereferenceable load store (s32), align 1, addrspace 8)
+
+    ; CHECK: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s32) = G_AMDGPU_BUFFER_ATOMIC_SUB
+    %9:_(s32) = G_AMDGPU_BUFFER_ATOMIC_SUB %0, %3, %4, %4, %4, 0, 0, 0 :: (volatile dereferenceable load store (s32), align 1, addrspace 8)
+
+    ; CHECK: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s32) = G_AMDGPU_BUFFER_ATOMIC_SMIN
+    %10:_(s32) = G_AMDGPU_BUFFER_ATOMIC_SMIN %0, %3, %4, %4, %4, 0, 0, 0 :: (volatile dereferenceable load store (s32), align 1, addrspace 8)
+
+    ; CHECK: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s32) = G_AMDGPU_BUFFER_ATOMIC_UMIN
+    %11:_(s32) = G_AMDGPU_BUFFER_ATOMIC_UMIN %0, %3, %4, %4, %4, 0, 0, 0 :: (volatile dereferenceable load store (s32), align 1, addrspace 8)
+
+    ; CHECK: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s32) = G_AMDGPU_BUFFER_ATOMIC_SMAX
+    %12:_(s32) = G_AMDGPU_BUFFER_ATOMIC_SMAX %0, %3, %4, %4, %4, 0, 0, 0 :: (volatile dereferenceable load store (s32), align 1, addrspace 8)
+
+    ; CHECK: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s32) = G_AMDGPU_BUFFER_ATOMIC_UMAX
+    %13:_(s32) = G_AMDGPU_BUFFER_ATOMIC_UMAX %0, %3, %4, %4, %4, 0, 0, 0 :: (volatile dereferenceable load store (s32), align 1, addrspace 8)
+
+    ; CHECK: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s32) = G_AMDGPU_BUFFER_ATOMIC_AND
+    %14:_(s32) = G_AMDGPU_BUFFER_ATOMIC_AND %0, %3, %4, %4, %4, 0, 0, 0 :: (volatile dereferenceable load store (s32), align 1, addrspace 8)
+
+    ; CHECK: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s32) = G_AMDGPU_BUFFER_ATOMIC_OR
+    %15:_(s32) = G_AMDGPU_BUFFER_ATOMIC_OR %0, %3, %4, %4, %4, 0, 0, 0 :: (volatile dereferenceable load store (s32), align 1, addrspace 8)
+
+    ; CHECK: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s32) = G_AMDGPU_BUFFER_ATOMIC_XOR
+    %16:_(s32) = G_AMDGPU_BUFFER_ATOMIC_XOR %0, %3, %4, %4, %4, 0, 0, 0 :: (volatile dereferenceable load store (s32), align 1, addrspace 8)
+
+    ; CHECK: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s32) = G_AMDGPU_BUFFER_ATOMIC_INC
+    %17:_(s32) = G_AMDGPU_BUFFER_ATOMIC_INC %0, %3, %4, %4, %4, 0, 0, 0 :: (volatile dereferenceable load store (s32), align 1, addrspace 8)
+
+    ; CHECK: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s32) = G_AMDGPU_BUFFER_ATOMIC_DEC
+    %18:_(s32) = G_AMDGPU_BUFFER_ATOMIC_DEC %0, %3, %4, %4, %4, 0, 0, 0 :: (volatile dereferenceable load store (s32), align 1, addrspace 8)
+
+    ; CHECK: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s32) = G_AMDGPU_BUFFER_ATOMIC_FADD
+    %19:_(s32) = G_AMDGPU_BUFFER_ATOMIC_FADD %0, %3, %4, %4, %4, 0, 0, 0 :: (volatile dereferenceable load store (s32), align 1, addrspace 8)
+
+    ; CHECK: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s32) = G_AMDGPU_BUFFER_ATOMIC_FMIN
+    %20:_(s32) = G_AMDGPU_BUFFER_ATOMIC_FMIN %0, %3, %4, %4, %4, 0, 0, 0 :: (volatile dereferenceable load store (s32), align 1, addrspace 8)
+
+    ; CHECK: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s32) = G_AMDGPU_BUFFER_ATOMIC_FMAX
+    %21:_(s32) = G_AMDGPU_BUFFER_ATOMIC_FMAX %0, %3, %4, %4, %4, 0, 0, 0 :: (volatile dereferenceable load store (s32), align 1, addrspace 8)
+
+    ; CHECK: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s32) = G_AMDGPU_BUFFER_ATOMIC_CMPSWAP
+    %22:_(s32) = G_AMDGPU_BUFFER_ATOMIC_CMPSWAP %0, %4, %3, %2, %2, %2, 0, 0, 0 :: (volatile dereferenceable load store (s32), align 1, addrspace 8)
+
+    ; CHECK: DIVERGENT
+    ; CHECK-SAME: G_AMDGPU_ATOMIC_CMPXCHG
+    %23:vgpr(s32) = G_AMDGPU_ATOMIC_CMPXCHG %1, %4 :: (load store seq_cst (s32), addrspace 0)
+
+...

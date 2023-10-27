@@ -14,14 +14,12 @@ define i1 @test_invoke_in_block_with_assume(i32 %x) personality ptr @__gxx_perso
 ; CHECK-NEXT:    invoke void @may_unwind()
 ; CHECK-NEXT:    to label [[CONT:%.*]] unwind label [[LPAD:%.*]]
 ; CHECK:       cont:
-; CHECK-NEXT:    [[T_1:%.*]] = icmp ult i32 [[X]], 10
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp ult i32 [[X]], 9
 ; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 true, [[C_2]]
 ; CHECK-NEXT:    ret i1 [[RES_1]]
 ; CHECK:       lpad:
 ; CHECK-NEXT:    [[LP:%.*]] = landingpad { ptr, i32 }
 ; CHECK-NEXT:    filter [0 x ptr] zeroinitializer
-; CHECK-NEXT:    [[T_2:%.*]] = icmp ult i32 [[X]], 10
 ; CHECK-NEXT:    [[C_3:%.*]] = icmp ult i32 [[X]], 9
 ; CHECK-NEXT:    [[RES_2:%.*]] = xor i1 true, [[C_3]]
 ; CHECK-NEXT:    ret i1 [[RES_2]]

@@ -7,16 +7,32 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang-include-cleaner/Record.h"
+#include "clang-include-cleaner/Types.h"
+#include "clang/AST/Decl.h"
+#include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/FrontendAction.h"
 #include "clang/Frontend/FrontendActions.h"
+#include "clang/Frontend/FrontendOptions.h"
+#include "clang/Serialization/PCHContainerOperations.h"
 #include "clang/Testing/TestAST.h"
 #include "clang/Tooling/Inclusions/StandardLibrary.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/IntrusiveRefCntPtr.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Testing/Annotations/Annotations.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <cassert>
+#include <memory>
+#include <optional>
+#include <utility>
 
 namespace clang::include_cleaner {
 namespace {
@@ -37,9 +53,9 @@ MATCHER_P(named, N, "") {
 }
 
 MATCHER_P(FileNamed, N, "") {
-  if (arg->tryGetRealPathName() == N)
+  if (arg.getFileEntry().tryGetRealPathName() == N)
     return true;
-  *result_listener << arg->tryGetRealPathName().str();
+  *result_listener << arg.getFileEntry().tryGetRealPathName().str();
   return false;
 }
 
@@ -171,7 +187,7 @@ TEST_F(RecordPPTest, CapturesIncludes) {
   EXPECT_EQ(H.HashLocation,
             AST.sourceManager().getComposedLoc(
                 AST.sourceManager().getMainFileID(), MainFile.point("H")));
-  EXPECT_EQ(H.Resolved, AST.fileManager().getFile("header.h").get());
+  EXPECT_EQ(H.Resolved, *AST.fileManager().getOptionalFileRef("header.h"));
   EXPECT_FALSE(H.Angled);
 
   auto &M = Recorded.Includes.all().back();
@@ -179,7 +195,7 @@ TEST_F(RecordPPTest, CapturesIncludes) {
   EXPECT_EQ(M.HashLocation,
             AST.sourceManager().getComposedLoc(
                 AST.sourceManager().getMainFileID(), MainFile.point("M")));
-  EXPECT_EQ(M.Resolved, nullptr);
+  EXPECT_EQ(M.Resolved, std::nullopt);
   EXPECT_TRUE(M.Angled);
 }
 
@@ -304,73 +320,63 @@ protected:
 
   void createEmptyFiles(llvm::ArrayRef<StringRef> FileNames) {
     for (llvm::StringRef File : FileNames)
-      Inputs.ExtraFiles[File] = "";
+      Inputs.ExtraFiles[File] = "#pragma once";
   }
 };
 
 TEST_F(PragmaIncludeTest, IWYUKeep) {
-  llvm::Annotations MainFile(R"cpp(
-    $keep1^#include "keep1.h" // IWYU pragma: keep
-    $keep2^#include "keep2.h" /* IWYU pragma: keep */
+  Inputs.Code = R"cpp(
+    #include "keep1.h" // IWYU pragma: keep
+    #include "keep2.h" /* IWYU pragma: keep */
 
-    $export1^#include "export1.h" // IWYU pragma: export
-    $begin_exports^// IWYU pragma: begin_exports
-    $export2^#include "export2.h"
-    $export3^#include "export3.h"
-    $end_exports^// IWYU pragma: end_exports
+    #include "export1.h" // IWYU pragma: export
+    // IWYU pragma: begin_exports
+    #include "export2.h"
+    #include "export3.h"
+    // IWYU pragma: end_exports
 
-    $normal^#include "normal.h"
+    #include "normal.h"
 
-    $begin_keep^// IWYU pragma: begin_keep 
-    $keep3^#include "keep3.h"
-    $end_keep^// IWYU pragma: end_keep
-
-    // IWYU pragma: begin_keep 
-    $keep4^#include "keep4.h"
     // IWYU pragma: begin_keep
-    $keep5^#include "keep5.h"
+    #include "keep3.h"
     // IWYU pragma: end_keep
-    $keep6^#include "keep6.h"
+
+    // IWYU pragma: begin_keep
+    #include "keep4.h"
+    // IWYU pragma: begin_keep
+    #include "keep5.h"
     // IWYU pragma: end_keep
-  )cpp");
-
-  auto OffsetToLineNum = [&MainFile](size_t Offset) {
-    int Count = MainFile.code().substr(0, Offset).count('\n');
-    return Count + 1;
-  };
-
-  Inputs.Code = MainFile.code();
+    #include "keep6.h"
+    // IWYU pragma: end_keep
+    #include <vector>
+    #include <map> // IWYU pragma: keep
+    #include <set> // IWYU pragma: export
+  )cpp";
   createEmptyFiles({"keep1.h", "keep2.h", "keep3.h", "keep4.h", "keep5.h",
                     "keep6.h", "export1.h", "export2.h", "export3.h",
-                    "normal.h"});
+                    "normal.h", "std/vector", "std/map", "std/set"});
 
+  Inputs.ExtraArgs.push_back("-isystemstd");
   TestAST Processed = build();
-  EXPECT_FALSE(PI.shouldKeep(1));
+  auto &FM = Processed.fileManager();
+
+  EXPECT_FALSE(PI.shouldKeep(FM.getFile("normal.h").get()));
+  EXPECT_FALSE(PI.shouldKeep(FM.getFile("std/vector").get()));
 
   // Keep
-  EXPECT_TRUE(PI.shouldKeep(OffsetToLineNum(MainFile.point("keep1"))));
-  EXPECT_TRUE(PI.shouldKeep(OffsetToLineNum(MainFile.point("keep2"))));
-
-  EXPECT_FALSE(PI.shouldKeep(
-      OffsetToLineNum(MainFile.point("begin_keep")))); // no # directive
-  EXPECT_TRUE(PI.shouldKeep(OffsetToLineNum(MainFile.point("keep3"))));
-  EXPECT_FALSE(PI.shouldKeep(
-      OffsetToLineNum(MainFile.point("end_keep")))); // no # directive
-
-  EXPECT_TRUE(PI.shouldKeep(OffsetToLineNum(MainFile.point("keep4"))));
-  EXPECT_TRUE(PI.shouldKeep(OffsetToLineNum(MainFile.point("keep5"))));
-  EXPECT_TRUE(PI.shouldKeep(OffsetToLineNum(MainFile.point("keep6"))));
+  EXPECT_TRUE(PI.shouldKeep(FM.getFile("keep1.h").get()));
+  EXPECT_TRUE(PI.shouldKeep(FM.getFile("keep2.h").get()));
+  EXPECT_TRUE(PI.shouldKeep(FM.getFile("keep3.h").get()));
+  EXPECT_TRUE(PI.shouldKeep(FM.getFile("keep4.h").get()));
+  EXPECT_TRUE(PI.shouldKeep(FM.getFile("keep5.h").get()));
+  EXPECT_TRUE(PI.shouldKeep(FM.getFile("keep6.h").get()));
+  EXPECT_TRUE(PI.shouldKeep(FM.getFile("std/map").get()));
 
   // Exports
-  EXPECT_TRUE(PI.shouldKeep(OffsetToLineNum(MainFile.point("export1"))));
-  EXPECT_TRUE(PI.shouldKeep(OffsetToLineNum(MainFile.point("export2"))));
-  EXPECT_TRUE(PI.shouldKeep(OffsetToLineNum(MainFile.point("export3"))));
-  EXPECT_FALSE(PI.shouldKeep(
-      OffsetToLineNum(MainFile.point("begin_exports")))); // no # directive
-  EXPECT_FALSE(PI.shouldKeep(
-      OffsetToLineNum(MainFile.point("end_exports")))); // no # directive
-
-  EXPECT_FALSE(PI.shouldKeep(OffsetToLineNum(MainFile.point("normal"))));
+  EXPECT_TRUE(PI.shouldKeep(FM.getFile("export1.h").get()));
+  EXPECT_TRUE(PI.shouldKeep(FM.getFile("export2.h").get()));
+  EXPECT_TRUE(PI.shouldKeep(FM.getFile("export3.h").get()));
+  EXPECT_TRUE(PI.shouldKeep(FM.getFile("std/set").get()));
 }
 
 TEST_F(PragmaIncludeTest, IWYUPrivate) {
@@ -502,5 +508,53 @@ TEST_F(PragmaIncludeTest, SelfContained) {
   EXPECT_FALSE(PI.isSelfContained(FM.getFile("unguarded.h").get()));
 }
 
+TEST_F(PragmaIncludeTest, AlwaysKeep) {
+  Inputs.Code = R"cpp(
+  #include "always_keep.h"
+  #include "usual.h"
+  )cpp";
+  Inputs.ExtraFiles["always_keep.h"] = R"cpp(
+  #pragma once
+  // IWYU pragma: always_keep
+  )cpp";
+  Inputs.ExtraFiles["usual.h"] = "#pragma once";
+  TestAST Processed = build();
+  auto &FM = Processed.fileManager();
+  EXPECT_TRUE(PI.shouldKeep(FM.getFile("always_keep.h").get()));
+  EXPECT_FALSE(PI.shouldKeep(FM.getFile("usual.h").get()));
+}
+
+TEST_F(PragmaIncludeTest, ExportInUnnamedBuffer) {
+  llvm::StringLiteral Filename = "test.cpp";
+  auto Code = R"cpp(#include "exporter.h")cpp";
+  Inputs.ExtraFiles["exporter.h"] = R"cpp(
+  #pragma once
+  #include "foo.h" // IWYU pragma: export
+  )cpp";
+  Inputs.ExtraFiles["foo.h"] = "";
+
+  auto Clang = std::make_unique<CompilerInstance>(
+      std::make_shared<PCHContainerOperations>());
+  Clang->createDiagnostics();
+
+  Clang->setInvocation(std::make_unique<CompilerInvocation>());
+  ASSERT_TRUE(CompilerInvocation::CreateFromArgs(
+      Clang->getInvocation(), {Filename.data()}, Clang->getDiagnostics(),
+      "clang"));
+
+  // Create unnamed memory buffers for all the files.
+  auto VFS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
+  VFS->addFile(Filename, /*ModificationTime=*/0,
+               llvm::MemoryBuffer::getMemBufferCopy(Code, /*BufferName=*/""));
+  for (const auto &Extra : Inputs.ExtraFiles)
+    VFS->addFile(Extra.getKey(), /*ModificationTime=*/0,
+                 llvm::MemoryBuffer::getMemBufferCopy(Extra.getValue(),
+                                                      /*BufferName=*/""));
+  auto *FM = Clang->createFileManager(VFS);
+  ASSERT_TRUE(Clang->ExecuteAction(*Inputs.MakeAction()));
+  EXPECT_THAT(
+      PI.getExporters(llvm::cantFail(FM->getFileRef("foo.h")), *FM),
+      testing::ElementsAre(llvm::cantFail(FM->getFileRef("exporter.h"))));
+}
 } // namespace
 } // namespace clang::include_cleaner

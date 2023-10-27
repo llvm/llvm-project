@@ -35,6 +35,7 @@
 #include "Target.h"
 #include "lld/Common/CommonLinkerContext.h"
 #include "lld/Common/Strings.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Endian.h"
 #include <algorithm>
 
@@ -432,10 +433,10 @@ void AArch64Err843419Patcher::init() {
   // [Symbol Value, End of section). The type, code or data, is determined by
   // the mapping symbol name, $x for code, $d for data.
   auto isCodeMapSymbol = [](const Symbol *b) {
-    return b->getName() == "$x" || b->getName().startswith("$x.");
+    return b->getName() == "$x" || b->getName().starts_with("$x.");
   };
   auto isDataMapSymbol = [](const Symbol *b) {
-    return b->getName() == "$d" || b->getName().startswith("$d.");
+    return b->getName() == "$d" || b->getName().starts_with("$d.");
   };
 
   // Collect mapping symbols for every executable InputSection.

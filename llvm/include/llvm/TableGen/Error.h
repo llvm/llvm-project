@@ -47,6 +47,6 @@ void CheckAssert(SMLoc Loc, Init *Condition, Init *Message);
 extern SourceMgr SrcMgr;
 extern unsigned ErrorsPrinted;
 
-} // end namespace "llvm"
+} // end namespace llvm
 
 #endif

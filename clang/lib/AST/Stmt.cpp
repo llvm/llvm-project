@@ -1345,6 +1345,11 @@ CapturedStmt::CapturedStmt(EmptyShell Empty, unsigned NumCaptures)
   : Stmt(CapturedStmtClass, Empty), NumCaptures(NumCaptures),
     CapDeclAndKind(nullptr, CR_Default) {
   getStoredStmts()[NumCaptures] = nullptr;
+
+  // Construct default capture objects.
+  Capture *Buffer = getStoredCaptures();
+  for (unsigned I = 0, N = NumCaptures; I != N; ++I)
+    new (Buffer++) Capture();
 }
 
 CapturedStmt *CapturedStmt::Create(const ASTContext &Context, Stmt *S,

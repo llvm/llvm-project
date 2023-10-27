@@ -5,8 +5,8 @@
 cert-err09-cpp
 ==============
 
-The cert-err09-cpp check is an alias, please see
-`misc-throw-by-value-catch-by-reference <../misc/throw-by-value-catch-by-reference.html>`_
+The `cert-err09-cpp` check is an alias, please see
+:doc:`misc-throw-by-value-catch-by-reference <../misc/throw-by-value-catch-by-reference>`
 for more information.
 
 This check corresponds to the CERT C++ Coding Standard recommendation

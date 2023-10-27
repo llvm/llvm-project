@@ -10,13 +10,13 @@ declare void @llvm.invariant.end.p0(ptr, i64, ptr nocapture) nounwind
 ; clobber memory
 define i8 @test_bypass1(ptr%P) {
 ; NO_ASSUME-LABEL: define {{[^@]+}}@test_bypass1
-; NO_ASSUME-SAME: (ptr [[P:%.*]])
+; NO_ASSUME-SAME: (ptr [[P:%.*]]) {
 ; NO_ASSUME-NEXT:    [[V1:%.*]] = load i8, ptr [[P]], align 1
 ; NO_ASSUME-NEXT:    [[I:%.*]] = call ptr @llvm.invariant.start.p0(i64 1, ptr [[P]])
 ; NO_ASSUME-NEXT:    ret i8 0
 ;
 ; USE_ASSUME-LABEL: define {{[^@]+}}@test_bypass1
-; USE_ASSUME-SAME: (ptr [[P:%.*]])
+; USE_ASSUME-SAME: (ptr [[P:%.*]]) {
 ; USE_ASSUME-NEXT:    [[V1:%.*]] = load i8, ptr [[P]], align 1
 ; USE_ASSUME-NEXT:    [[I:%.*]] = call ptr @llvm.invariant.start.p0(i64 1, ptr [[P]])
 ; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[P]], i64 1), "nonnull"(ptr [[P]]) ]
@@ -34,13 +34,13 @@ define i8 @test_bypass1(ptr%P) {
 ; Trivial Store->load forwarding over invariant.start
 define i8 @test_bypass2(ptr%P) {
 ; NO_ASSUME-LABEL: define {{[^@]+}}@test_bypass2
-; NO_ASSUME-SAME: (ptr [[P:%.*]])
+; NO_ASSUME-SAME: (ptr [[P:%.*]]) {
 ; NO_ASSUME-NEXT:    store i8 42, ptr [[P]], align 1
 ; NO_ASSUME-NEXT:    [[I:%.*]] = call ptr @llvm.invariant.start.p0(i64 1, ptr [[P]])
 ; NO_ASSUME-NEXT:    ret i8 42
 ;
 ; USE_ASSUME-LABEL: define {{[^@]+}}@test_bypass2
-; USE_ASSUME-SAME: (ptr [[P:%.*]])
+; USE_ASSUME-SAME: (ptr [[P:%.*]]) {
 ; USE_ASSUME-NEXT:    store i8 42, ptr [[P]], align 1
 ; USE_ASSUME-NEXT:    [[I:%.*]] = call ptr @llvm.invariant.start.p0(i64 1, ptr [[P]])
 ; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[P]], i64 1), "nonnull"(ptr [[P]]) ]
@@ -55,14 +55,14 @@ define i8 @test_bypass2(ptr%P) {
 
 define i8 @test_bypass_store_load(ptr%P, ptr%P2) {
 ; NO_ASSUME-LABEL: define {{[^@]+}}@test_bypass_store_load
-; NO_ASSUME-SAME: (ptr [[P:%.*]], ptr [[P2:%.*]])
+; NO_ASSUME-SAME: (ptr [[P:%.*]], ptr [[P2:%.*]]) {
 ; NO_ASSUME-NEXT:    store i8 42, ptr [[P]], align 1
 ; NO_ASSUME-NEXT:    [[I:%.*]] = call ptr @llvm.invariant.start.p0(i64 1, ptr [[P]])
 ; NO_ASSUME-NEXT:    store i8 0, ptr [[P2]], align 1
 ; NO_ASSUME-NEXT:    ret i8 42
 ;
 ; USE_ASSUME-LABEL: define {{[^@]+}}@test_bypass_store_load
-; USE_ASSUME-SAME: (ptr [[P:%.*]], ptr [[P2:%.*]])
+; USE_ASSUME-SAME: (ptr [[P:%.*]], ptr [[P2:%.*]]) {
 ; USE_ASSUME-NEXT:    store i8 42, ptr [[P]], align 1
 ; USE_ASSUME-NEXT:    [[I:%.*]] = call ptr @llvm.invariant.start.p0(i64 1, ptr [[P]])
 ; USE_ASSUME-NEXT:    store i8 0, ptr [[P2]], align 1
@@ -79,15 +79,15 @@ define i8 @test_bypass_store_load(ptr%P, ptr%P2) {
 
 define i8 @test_bypass_store_load_aatags_1(ptr%P, ptr%P2) {
 ; NO_ASSUME-LABEL: define {{[^@]+}}@test_bypass_store_load_aatags_1
-; NO_ASSUME-SAME: (ptr [[P:%.*]], ptr [[P2:%.*]])
-; NO_ASSUME-NEXT:    store i8 42, ptr [[P]], align 1, !tbaa !0
+; NO_ASSUME-SAME: (ptr [[P:%.*]], ptr [[P2:%.*]]) {
+; NO_ASSUME-NEXT:    store i8 42, ptr [[P]], align 1, !tbaa [[TBAA0:![0-9]+]]
 ; NO_ASSUME-NEXT:    [[I:%.*]] = call ptr @llvm.invariant.start.p0(i64 1, ptr [[P]])
 ; NO_ASSUME-NEXT:    store i8 0, ptr [[P2]], align 1
 ; NO_ASSUME-NEXT:    ret i8 42
 ;
 ; USE_ASSUME-LABEL: define {{[^@]+}}@test_bypass_store_load_aatags_1
-; USE_ASSUME-SAME: (ptr [[P:%.*]], ptr [[P2:%.*]])
-; USE_ASSUME-NEXT:    store i8 42, ptr [[P]], align 1, !tbaa !0
+; USE_ASSUME-SAME: (ptr [[P:%.*]], ptr [[P2:%.*]]) {
+; USE_ASSUME-NEXT:    store i8 42, ptr [[P]], align 1, !tbaa [[TBAA0:![0-9]+]]
 ; USE_ASSUME-NEXT:    [[I:%.*]] = call ptr @llvm.invariant.start.p0(i64 1, ptr [[P]])
 ; USE_ASSUME-NEXT:    store i8 0, ptr [[P2]], align 1
 ; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[P]], i64 1), "nonnull"(ptr [[P]]) ]
@@ -104,21 +104,13 @@ define i8 @test_bypass_store_load_aatags_1(ptr%P, ptr%P2) {
 ; The test demonstrates a missed optimization opportunity in case when the load
 ; has AA tags that are different from the store tags.
 define i8 @test_bypass_store_load_aatags_2(ptr%P, ptr%P2) {
-; NO_ASSUME-LABEL: define {{[^@]+}}@test_bypass_store_load_aatags_2
-; NO_ASSUME-SAME: (ptr [[P:%.*]], ptr [[P2:%.*]])
-; NO_ASSUME-NEXT:    store i8 42, ptr [[P]], align 1
-; NO_ASSUME-NEXT:    [[I:%.*]] = call ptr @llvm.invariant.start.p0(i64 1, ptr [[P]])
-; NO_ASSUME-NEXT:    store i8 0, ptr [[P2]], align 1
-; NO_ASSUME-NEXT:    %V1 = load i8, ptr %P, align 1, !tbaa !0
-; NO_ASSUME-NEXT:    ret i8 %V1
-;
-; USE_ASSUME-LABEL: define {{[^@]+}}@test_bypass_store_load_aatags_2
-; USE_ASSUME-SAME: (ptr [[P:%.*]], ptr [[P2:%.*]])
-; USE_ASSUME-NEXT:    store i8 42, ptr [[P]], align 1
-; USE_ASSUME-NEXT:    [[I:%.*]] = call ptr @llvm.invariant.start.p0(i64 1, ptr [[P]])
-; USE_ASSUME-NEXT:    store i8 0, ptr [[P2]], align 1
-; USE_ASSUME-NEXT:    %V1 = load i8, ptr %P, align 1, !tbaa !0
-; USE_ASSUME-NEXT:    ret i8 %V1
+; CHECK-LABEL: define {{[^@]+}}@test_bypass_store_load_aatags_2
+; CHECK-SAME: (ptr [[P:%.*]], ptr [[P2:%.*]]) {
+; CHECK-NEXT:    store i8 42, ptr [[P]], align 1
+; CHECK-NEXT:    [[I:%.*]] = call ptr @llvm.invariant.start.p0(i64 1, ptr [[P]])
+; CHECK-NEXT:    store i8 0, ptr [[P2]], align 1
+; CHECK-NEXT:    [[V1:%.*]] = load i8, ptr [[P]], align 1, !tbaa [[TBAA0:![0-9]+]]
+; CHECK-NEXT:    ret i8 [[V1]]
 ;
 
   store i8 42, ptr %P
@@ -133,13 +125,13 @@ define i8 @test_bypass_store_load_aatags_2(ptr%P, ptr%P2) {
 ; of invariant.start.
 define void @test_bypass3(ptr %P) {
 ; NO_ASSUME-LABEL: define {{[^@]+}}@test_bypass3
-; NO_ASSUME-SAME: (ptr [[P:%.*]])
+; NO_ASSUME-SAME: (ptr [[P:%.*]]) {
 ; NO_ASSUME-NEXT:    [[I:%.*]] = call ptr @llvm.invariant.start.p0(i64 1, ptr [[P]])
 ; NO_ASSUME-NEXT:    store i8 60, ptr [[P]], align 1
 ; NO_ASSUME-NEXT:    ret void
 ;
 ; USE_ASSUME-LABEL: define {{[^@]+}}@test_bypass3
-; USE_ASSUME-SAME: (ptr [[P:%.*]])
+; USE_ASSUME-SAME: (ptr [[P:%.*]]) {
 ; USE_ASSUME-NEXT:    [[I:%.*]] = call ptr @llvm.invariant.start.p0(i64 1, ptr [[P]])
 ; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[P]], i64 1), "nonnull"(ptr [[P]]) ]
 ; USE_ASSUME-NEXT:    store i8 60, ptr [[P]], align 1
@@ -157,7 +149,7 @@ define void @test_bypass3(ptr %P) {
 ; the invariant region, between start and end.
 define void @test_bypass4(ptr %P) {
 ; CHECK-LABEL: define {{[^@]+}}@test_bypass4
-; CHECK-SAME: (ptr [[P:%.*]])
+; CHECK-SAME: (ptr [[P:%.*]]) {
 ; CHECK-NEXT:    store i8 50, ptr [[P]], align 1
 ; CHECK-NEXT:    [[I:%.*]] = call ptr @llvm.invariant.start.p0(i64 1, ptr [[P]])
 ; CHECK-NEXT:    call void @llvm.invariant.end.p0(ptr [[I]], i64 1, ptr [[P]])
@@ -178,14 +170,14 @@ declare void @clobber()
 
 define i32 @test_before_load(ptr %p) {
 ; NO_ASSUME-LABEL: define {{[^@]+}}@test_before_load
-; NO_ASSUME-SAME: (ptr [[P:%.*]])
+; NO_ASSUME-SAME: (ptr [[P:%.*]]) {
 ; NO_ASSUME-NEXT:    [[TMP1:%.*]] = call ptr @llvm.invariant.start.p0(i64 4, ptr [[P]])
 ; NO_ASSUME-NEXT:    [[V1:%.*]] = load i32, ptr [[P]], align 4
 ; NO_ASSUME-NEXT:    call void @clobber()
 ; NO_ASSUME-NEXT:    ret i32 0
 ;
 ; USE_ASSUME-LABEL: define {{[^@]+}}@test_before_load
-; USE_ASSUME-SAME: (ptr [[P:%.*]])
+; USE_ASSUME-SAME: (ptr [[P:%.*]]) {
 ; USE_ASSUME-NEXT:    [[TMP1:%.*]] = call ptr @llvm.invariant.start.p0(i64 4, ptr [[P]])
 ; USE_ASSUME-NEXT:    [[V1:%.*]] = load i32, ptr [[P]], align 4
 ; USE_ASSUME-NEXT:    call void @clobber()
@@ -202,14 +194,14 @@ define i32 @test_before_load(ptr %p) {
 
 define i32 @test_before_clobber(ptr %p) {
 ; NO_ASSUME-LABEL: define {{[^@]+}}@test_before_clobber
-; NO_ASSUME-SAME: (ptr [[P:%.*]])
+; NO_ASSUME-SAME: (ptr [[P:%.*]]) {
 ; NO_ASSUME-NEXT:    [[V1:%.*]] = load i32, ptr [[P]], align 4
 ; NO_ASSUME-NEXT:    [[TMP1:%.*]] = call ptr @llvm.invariant.start.p0(i64 4, ptr [[P]])
 ; NO_ASSUME-NEXT:    call void @clobber()
 ; NO_ASSUME-NEXT:    ret i32 0
 ;
 ; USE_ASSUME-LABEL: define {{[^@]+}}@test_before_clobber
-; USE_ASSUME-SAME: (ptr [[P:%.*]])
+; USE_ASSUME-SAME: (ptr [[P:%.*]]) {
 ; USE_ASSUME-NEXT:    [[V1:%.*]] = load i32, ptr [[P]], align 4
 ; USE_ASSUME-NEXT:    [[TMP1:%.*]] = call ptr @llvm.invariant.start.p0(i64 4, ptr [[P]])
 ; USE_ASSUME-NEXT:    call void @clobber()
@@ -226,7 +218,7 @@ define i32 @test_before_clobber(ptr %p) {
 
 define i32 @test_duplicate_scope(ptr %p) {
 ; NO_ASSUME-LABEL: define {{[^@]+}}@test_duplicate_scope
-; NO_ASSUME-SAME: (ptr [[P:%.*]])
+; NO_ASSUME-SAME: (ptr [[P:%.*]]) {
 ; NO_ASSUME-NEXT:    [[V1:%.*]] = load i32, ptr [[P]], align 4
 ; NO_ASSUME-NEXT:    [[TMP1:%.*]] = call ptr @llvm.invariant.start.p0(i64 4, ptr [[P]])
 ; NO_ASSUME-NEXT:    call void @clobber()
@@ -234,7 +226,7 @@ define i32 @test_duplicate_scope(ptr %p) {
 ; NO_ASSUME-NEXT:    ret i32 0
 ;
 ; USE_ASSUME-LABEL: define {{[^@]+}}@test_duplicate_scope
-; USE_ASSUME-SAME: (ptr [[P:%.*]])
+; USE_ASSUME-SAME: (ptr [[P:%.*]]) {
 ; USE_ASSUME-NEXT:    [[V1:%.*]] = load i32, ptr [[P]], align 4
 ; USE_ASSUME-NEXT:    [[TMP1:%.*]] = call ptr @llvm.invariant.start.p0(i64 4, ptr [[P]])
 ; USE_ASSUME-NEXT:    call void @clobber()
@@ -253,7 +245,7 @@ define i32 @test_duplicate_scope(ptr %p) {
 
 define i32 @test_unanalzyable_load(ptr %p) {
 ; NO_ASSUME-LABEL: define {{[^@]+}}@test_unanalzyable_load
-; NO_ASSUME-SAME: (ptr [[P:%.*]])
+; NO_ASSUME-SAME: (ptr [[P:%.*]]) {
 ; NO_ASSUME-NEXT:    [[TMP1:%.*]] = call ptr @llvm.invariant.start.p0(i64 4, ptr [[P]])
 ; NO_ASSUME-NEXT:    call void @clobber()
 ; NO_ASSUME-NEXT:    [[V1:%.*]] = load i32, ptr [[P]], align 4
@@ -261,7 +253,7 @@ define i32 @test_unanalzyable_load(ptr %p) {
 ; NO_ASSUME-NEXT:    ret i32 0
 ;
 ; USE_ASSUME-LABEL: define {{[^@]+}}@test_unanalzyable_load
-; USE_ASSUME-SAME: (ptr [[P:%.*]])
+; USE_ASSUME-SAME: (ptr [[P:%.*]]) {
 ; USE_ASSUME-NEXT:    [[TMP1:%.*]] = call ptr @llvm.invariant.start.p0(i64 4, ptr [[P]])
 ; USE_ASSUME-NEXT:    call void @clobber()
 ; USE_ASSUME-NEXT:    [[V1:%.*]] = load i32, ptr [[P]], align 4
@@ -280,7 +272,7 @@ define i32 @test_unanalzyable_load(ptr %p) {
 
 define i32 @test_negative_after_clobber(ptr %p) {
 ; CHECK-LABEL: define {{[^@]+}}@test_negative_after_clobber
-; CHECK-SAME: (ptr [[P:%.*]])
+; CHECK-SAME: (ptr [[P:%.*]]) {
 ; CHECK-NEXT:    [[V1:%.*]] = load i32, ptr [[P]], align 4
 ; CHECK-NEXT:    call void @clobber()
 ; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @llvm.invariant.start.p0(i64 4, ptr [[P]])
@@ -298,7 +290,7 @@ define i32 @test_negative_after_clobber(ptr %p) {
 
 define i32 @test_merge(ptr %p, i1 %cnd) {
 ; NO_ASSUME-LABEL: define {{[^@]+}}@test_merge
-; NO_ASSUME-SAME: (ptr [[P:%.*]], i1 [[CND:%.*]])
+; NO_ASSUME-SAME: (ptr [[P:%.*]], i1 [[CND:%.*]]) {
 ; NO_ASSUME-NEXT:    [[V1:%.*]] = load i32, ptr [[P]], align 4
 ; NO_ASSUME-NEXT:    [[TMP1:%.*]] = call ptr @llvm.invariant.start.p0(i64 4, ptr [[P]])
 ; NO_ASSUME-NEXT:    br i1 [[CND]], label [[MERGE:%.*]], label [[TAKEN:%.*]]
@@ -309,7 +301,7 @@ define i32 @test_merge(ptr %p, i1 %cnd) {
 ; NO_ASSUME-NEXT:    ret i32 0
 ;
 ; USE_ASSUME-LABEL: define {{[^@]+}}@test_merge
-; USE_ASSUME-SAME: (ptr [[P:%.*]], i1 [[CND:%.*]])
+; USE_ASSUME-SAME: (ptr [[P:%.*]], i1 [[CND:%.*]]) {
 ; USE_ASSUME-NEXT:    [[V1:%.*]] = load i32, ptr [[P]], align 4
 ; USE_ASSUME-NEXT:    [[TMP1:%.*]] = call ptr @llvm.invariant.start.p0(i64 4, ptr [[P]])
 ; USE_ASSUME-NEXT:    br i1 [[CND]], label [[MERGE:%.*]], label [[TAKEN:%.*]]
@@ -335,7 +327,7 @@ merge:
 
 define i32 @test_negative_after_mergeclobber(ptr %p, i1 %cnd) {
 ; CHECK-LABEL: define {{[^@]+}}@test_negative_after_mergeclobber
-; CHECK-SAME: (ptr [[P:%.*]], i1 [[CND:%.*]])
+; CHECK-SAME: (ptr [[P:%.*]], i1 [[CND:%.*]]) {
 ; CHECK-NEXT:    [[V1:%.*]] = load i32, ptr [[P]], align 4
 ; CHECK-NEXT:    br i1 [[CND]], label [[MERGE:%.*]], label [[TAKEN:%.*]]
 ; CHECK:       taken:
@@ -364,7 +356,7 @@ merge:
 ; merging facts along distinct paths.
 define i32 @test_false_negative_merge(ptr %p, i1 %cnd) {
 ; CHECK-LABEL: define {{[^@]+}}@test_false_negative_merge
-; CHECK-SAME: (ptr [[P:%.*]], i1 [[CND:%.*]])
+; CHECK-SAME: (ptr [[P:%.*]], i1 [[CND:%.*]]) {
 ; CHECK-NEXT:    [[V1:%.*]] = load i32, ptr [[P]], align 4
 ; CHECK-NEXT:    br i1 [[CND]], label [[MERGE:%.*]], label [[TAKEN:%.*]]
 ; CHECK:       taken:
@@ -391,7 +383,7 @@ merge:
 
 define i32 @test_merge_unanalyzable_load(ptr %p, i1 %cnd) {
 ; NO_ASSUME-LABEL: define {{[^@]+}}@test_merge_unanalyzable_load
-; NO_ASSUME-SAME: (ptr [[P:%.*]], i1 [[CND:%.*]])
+; NO_ASSUME-SAME: (ptr [[P:%.*]], i1 [[CND:%.*]]) {
 ; NO_ASSUME-NEXT:    [[TMP1:%.*]] = call ptr @llvm.invariant.start.p0(i64 4, ptr [[P]])
 ; NO_ASSUME-NEXT:    call void @clobber()
 ; NO_ASSUME-NEXT:    [[V1:%.*]] = load i32, ptr [[P]], align 4
@@ -403,7 +395,7 @@ define i32 @test_merge_unanalyzable_load(ptr %p, i1 %cnd) {
 ; NO_ASSUME-NEXT:    ret i32 0
 ;
 ; USE_ASSUME-LABEL: define {{[^@]+}}@test_merge_unanalyzable_load
-; USE_ASSUME-SAME: (ptr [[P:%.*]], i1 [[CND:%.*]])
+; USE_ASSUME-SAME: (ptr [[P:%.*]], i1 [[CND:%.*]]) {
 ; USE_ASSUME-NEXT:    [[TMP1:%.*]] = call ptr @llvm.invariant.start.p0(i64 4, ptr [[P]])
 ; USE_ASSUME-NEXT:    call void @clobber()
 ; USE_ASSUME-NEXT:    [[V1:%.*]] = load i32, ptr [[P]], align 4
@@ -431,14 +423,14 @@ merge:
 
 define void @test_dse_before_load(ptr %p, i1 %cnd) {
 ; NO_ASSUME-LABEL: define {{[^@]+}}@test_dse_before_load
-; NO_ASSUME-SAME: (ptr [[P:%.*]], i1 [[CND:%.*]])
+; NO_ASSUME-SAME: (ptr [[P:%.*]], i1 [[CND:%.*]]) {
 ; NO_ASSUME-NEXT:    [[TMP1:%.*]] = call ptr @llvm.invariant.start.p0(i64 4, ptr [[P]])
 ; NO_ASSUME-NEXT:    [[V1:%.*]] = load i32, ptr [[P]], align 4
 ; NO_ASSUME-NEXT:    call void @clobber()
 ; NO_ASSUME-NEXT:    ret void
 ;
 ; USE_ASSUME-LABEL: define {{[^@]+}}@test_dse_before_load
-; USE_ASSUME-SAME: (ptr [[P:%.*]], i1 [[CND:%.*]])
+; USE_ASSUME-SAME: (ptr [[P:%.*]], i1 [[CND:%.*]]) {
 ; USE_ASSUME-NEXT:    [[TMP1:%.*]] = call ptr @llvm.invariant.start.p0(i64 4, ptr [[P]])
 ; USE_ASSUME-NEXT:    [[V1:%.*]] = load i32, ptr [[P]], align 4
 ; USE_ASSUME-NEXT:    call void @clobber()
@@ -454,14 +446,14 @@ define void @test_dse_before_load(ptr %p, i1 %cnd) {
 
 define void @test_dse_after_load(ptr %p, i1 %cnd) {
 ; NO_ASSUME-LABEL: define {{[^@]+}}@test_dse_after_load
-; NO_ASSUME-SAME: (ptr [[P:%.*]], i1 [[CND:%.*]])
+; NO_ASSUME-SAME: (ptr [[P:%.*]], i1 [[CND:%.*]]) {
 ; NO_ASSUME-NEXT:    [[V1:%.*]] = load i32, ptr [[P]], align 4
 ; NO_ASSUME-NEXT:    [[TMP1:%.*]] = call ptr @llvm.invariant.start.p0(i64 4, ptr [[P]])
 ; NO_ASSUME-NEXT:    call void @clobber()
 ; NO_ASSUME-NEXT:    ret void
 ;
 ; USE_ASSUME-LABEL: define {{[^@]+}}@test_dse_after_load
-; USE_ASSUME-SAME: (ptr [[P:%.*]], i1 [[CND:%.*]])
+; USE_ASSUME-SAME: (ptr [[P:%.*]], i1 [[CND:%.*]]) {
 ; USE_ASSUME-NEXT:    [[V1:%.*]] = load i32, ptr [[P]], align 4
 ; USE_ASSUME-NEXT:    [[TMP1:%.*]] = call ptr @llvm.invariant.start.p0(i64 4, ptr [[P]])
 ; USE_ASSUME-NEXT:    call void @clobber()
@@ -481,7 +473,7 @@ define void @test_dse_after_load(ptr %p, i1 %cnd) {
 ; passes will canonicalize away the bitcasts in this example.
 define i32 @test_false_negative_types(ptr %p) {
 ; CHECK-LABEL: define {{[^@]+}}@test_false_negative_types
-; CHECK-SAME: (ptr [[P:%.*]])
+; CHECK-SAME: (ptr [[P:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @llvm.invariant.start.p0(i64 4, ptr [[P]])
 ; CHECK-NEXT:    [[V1:%.*]] = load i32, ptr [[P]], align 4
 ; CHECK-NEXT:    call void @clobber()
@@ -501,7 +493,7 @@ define i32 @test_false_negative_types(ptr %p) {
 
 define i32 @test_negative_size1(ptr %p) {
 ; CHECK-LABEL: define {{[^@]+}}@test_negative_size1
-; CHECK-SAME: (ptr [[P:%.*]])
+; CHECK-SAME: (ptr [[P:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @llvm.invariant.start.p0(i64 3, ptr [[P]])
 ; CHECK-NEXT:    [[V1:%.*]] = load i32, ptr [[P]], align 4
 ; CHECK-NEXT:    call void @clobber()
@@ -519,7 +511,7 @@ define i32 @test_negative_size1(ptr %p) {
 
 define i32 @test_negative_size2(ptr %p) {
 ; CHECK-LABEL: define {{[^@]+}}@test_negative_size2
-; CHECK-SAME: (ptr [[P:%.*]])
+; CHECK-SAME: (ptr [[P:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @llvm.invariant.start.p0(i64 0, ptr [[P]])
 ; CHECK-NEXT:    [[V1:%.*]] = load i32, ptr [[P]], align 4
 ; CHECK-NEXT:    call void @clobber()
@@ -537,7 +529,7 @@ define i32 @test_negative_size2(ptr %p) {
 
 define i32 @test_negative_scope(ptr %p) {
 ; CHECK-LABEL: define {{[^@]+}}@test_negative_scope
-; CHECK-SAME: (ptr [[P:%.*]])
+; CHECK-SAME: (ptr [[P:%.*]]) {
 ; CHECK-NEXT:    [[SCOPE:%.*]] = call ptr @llvm.invariant.start.p0(i64 4, ptr [[P]])
 ; CHECK-NEXT:    call void @llvm.invariant.end.p0(ptr [[SCOPE]], i64 4, ptr [[P]])
 ; CHECK-NEXT:    [[V1:%.*]] = load i32, ptr [[P]], align 4
@@ -557,7 +549,7 @@ define i32 @test_negative_scope(ptr %p) {
 
 define i32 @test_false_negative_scope(ptr %p) {
 ; CHECK-LABEL: define {{[^@]+}}@test_false_negative_scope
-; CHECK-SAME: (ptr [[P:%.*]])
+; CHECK-SAME: (ptr [[P:%.*]]) {
 ; CHECK-NEXT:    [[SCOPE:%.*]] = call ptr @llvm.invariant.start.p0(i64 4, ptr [[P]])
 ; CHECK-NEXT:    [[V1:%.*]] = load i32, ptr [[P]], align 4
 ; CHECK-NEXT:    call void @clobber()
@@ -578,13 +570,13 @@ define i32 @test_false_negative_scope(ptr %p) {
 ; Invariant load defact starts an invariant.start scope of the appropriate size
 define i32 @test_invariant_load_scope(ptr %p) {
 ; NO_ASSUME-LABEL: define {{[^@]+}}@test_invariant_load_scope
-; NO_ASSUME-SAME: (ptr [[P:%.*]])
+; NO_ASSUME-SAME: (ptr [[P:%.*]]) {
 ; NO_ASSUME-NEXT:    [[V1:%.*]] = load i32, ptr [[P]], align 4, !invariant.load !4
 ; NO_ASSUME-NEXT:    call void @clobber()
 ; NO_ASSUME-NEXT:    ret i32 0
 ;
 ; USE_ASSUME-LABEL: define {{[^@]+}}@test_invariant_load_scope
-; USE_ASSUME-SAME: (ptr [[P:%.*]])
+; USE_ASSUME-SAME: (ptr [[P:%.*]]) {
 ; USE_ASSUME-NEXT:    [[V1:%.*]] = load i32, ptr [[P]], align 4, !invariant.load !4
 ; USE_ASSUME-NEXT:    call void @clobber()
 ; USE_ASSUME-NEXT:    call void @llvm.assume(i1 true) [ "dereferenceable"(ptr [[P]], i64 4), "nonnull"(ptr [[P]]), "align"(ptr [[P]], i64 4) ]

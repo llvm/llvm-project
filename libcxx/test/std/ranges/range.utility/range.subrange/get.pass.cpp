@@ -16,7 +16,7 @@
 #include "test_macros.h"
 #include "test_iterators.h"
 
-template<size_t I, class S>
+template<std::size_t I, class S>
 concept HasGet = requires {
   std::get<I>(std::declval<S>());
 };

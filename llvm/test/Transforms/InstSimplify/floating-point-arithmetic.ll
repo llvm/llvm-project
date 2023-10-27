@@ -211,6 +211,24 @@ define double @fmul_nnan_ninf_nneg_n0.0_commute(i127 %x) {
   ret double %r
 }
 
+; Make sure we can infer %x can't be 0 based on assumes.
+define { float, float } @test_fmul_0_assumed_finite(float %x) {
+; CHECK-LABEL: @test_fmul_0_assumed_finite(
+; CHECK-NEXT:    [[FABS_X:%.*]] = call float @llvm.fabs.f32(float [[X:%.*]])
+; CHECK-NEXT:    [[IS_FINITE_X:%.*]] = fcmp one float [[FABS_X]], 0x7FF0000000000000
+; CHECK-NEXT:    call void @llvm.assume(i1 [[IS_FINITE_X]])
+; CHECK-NEXT:    ret { float, float } { float 0.000000e+00, float -0.000000e+00 }
+;
+  %fabs.x = call float @llvm.fabs.f32(float %x)
+  %is.finite.x = fcmp one float %fabs.x, 0x7FF0000000000000
+  call void @llvm.assume(i1 %is.finite.x)
+  %mul.0 = fmul float %fabs.x, 0.0
+  %mul.neg0 = fmul float %fabs.x, -0.0
+  %ins.0 = insertvalue { float, float } poison, float %mul.0, 0
+  %ins.1 = insertvalue { float, float } %ins.0, float %mul.neg0, 1
+  ret { float, float } %ins.1
+}
+
 ; negative test - the int could be big enough to round to INF
 
 define double @fmul_nnan_ninf_nneg_0.0_commute(i128 %x) {
@@ -292,6 +310,8 @@ declare float @llvm.copysign.f32(float, float)
 declare <2 x float> @llvm.fabs.v2f32(<2 x float>)
 declare float @llvm.sqrt.f32(float)
 declare float @llvm.maxnum.f32(float, float)
+declare void @llvm.assume(i1 noundef)
+
 
 define float @fabs_select_positive_constants(i32 %c) {
 ; CHECK-LABEL: @fabs_select_positive_constants(

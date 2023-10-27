@@ -294,7 +294,7 @@ define <4 x float> @load_v3f32_v4f32(ptr dereferenceable(16) %p) {
 define <4 x float> @load_v3f32_v4f32_wrong_mask(ptr dereferenceable(16) %p) {
 ; CHECK-LABEL: @load_v3f32_v4f32_wrong_mask(
 ; CHECK-NEXT:    [[L:%.*]] = load <3 x float>, ptr [[P:%.*]], align 1
-; CHECK-NEXT:    [[S:%.*]] = shufflevector <3 x float> [[L]], <3 x float> poison, <4 x i32> <i32 1, i32 0, i32 2, i32 undef>
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <3 x float> [[L]], <3 x float> poison, <4 x i32> <i32 1, i32 0, i32 2, i32 poison>
 ; CHECK-NEXT:    ret <4 x float> [[S]]
 ;
   %l = load <3 x float>, ptr %p, align 1
@@ -307,7 +307,7 @@ define <4 x float> @load_v3f32_v4f32_wrong_mask(ptr dereferenceable(16) %p) {
 define <4 x float> @load_v3f32_v4f32_not_deref(ptr dereferenceable(15) %p) {
 ; CHECK-LABEL: @load_v3f32_v4f32_not_deref(
 ; CHECK-NEXT:    [[L:%.*]] = load <3 x float>, ptr [[P:%.*]], align 16
-; CHECK-NEXT:    [[S:%.*]] = shufflevector <3 x float> [[L]], <3 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 undef>
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <3 x float> [[L]], <3 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
 ; CHECK-NEXT:    ret <4 x float> [[S]]
 ;
   %l = load <3 x float>, ptr %p, align 16
@@ -320,7 +320,7 @@ define <4 x float> @load_v3f32_v4f32_not_deref(ptr dereferenceable(15) %p) {
 define <8 x float> @load_v2f32_v8f32(ptr dereferenceable(32) %p) {
 ; SSE-LABEL: @load_v2f32_v8f32(
 ; SSE-NEXT:    [[L:%.*]] = load <2 x float>, ptr [[P:%.*]], align 1
-; SSE-NEXT:    [[S:%.*]] = shufflevector <2 x float> [[L]], <2 x float> poison, <8 x i32> <i32 0, i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+; SSE-NEXT:    [[S:%.*]] = shufflevector <2 x float> [[L]], <2 x float> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; SSE-NEXT:    ret <8 x float> [[S]]
 ;
 ; AVX-LABEL: @load_v2f32_v8f32(
@@ -349,7 +349,7 @@ define <4 x i32> @load_v2i32_v4i32(ptr dereferenceable(16) %p) {
 define <4 x i32> @load_v2i32_v4i32_non_canonical_mask(ptr dereferenceable(16) %p) {
 ; CHECK-LABEL: @load_v2i32_v4i32_non_canonical_mask(
 ; CHECK-NEXT:    [[L:%.*]] = load <2 x i32>, ptr [[P:%.*]], align 1
-; CHECK-NEXT:    [[S:%.*]] = shufflevector <2 x i32> [[L]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 undef>
+; CHECK-NEXT:    [[S:%.*]] = shufflevector <2 x i32> [[L]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
 ; CHECK-NEXT:    ret <4 x i32> [[S]]
 ;
   %l = load <2 x i32>, ptr %p, align 1

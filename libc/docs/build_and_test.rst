@@ -62,3 +62,20 @@ and put the following in your settings.json file:
          "LIBC_INCLUDE_DOCS" : true
      }
    }
+
+Building with Bazel
+===================
+
+#. To build with Bazel, use the following command:
+
+  .. code-block:: sh
+
+    $> bazel build --config=generic_clang @llvm-project//libc/...
+
+#. To run the unit tests with bazel, use the following command:
+
+  .. code-block:: sh
+
+    $> bazel test --config=generic_clang @llvm-project//libc/...
+
+#. The bazel target layout of `libc` is located at: `utils/bazel/llvm-project-overlay/libc/BUILD.bazel <https://github.com/llvm/llvm-project/tree/main/utils/bazel/llvm-project-overlay/libc/BUILD.bazel>`_.

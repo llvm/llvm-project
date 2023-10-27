@@ -8,13 +8,10 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: no-localization
-// UNSUPPORTED: libcpp-has-no-incomplete-format
+// UNSUPPORTED: GCC-ALWAYS_INLINE-FIXME
 
-// TODO FMT Investigate Windows issues.
-// UNSUPPORTED: msvc, target={{.+}}-windows-gnu
-
-// TODO FMT It seems GCC uses too much memory in the CI and fails.
-// UNSUPPORTED: gcc-12
+// TODO FMT This test should not require std::to_chars(floating-point)
+// XFAIL: availability-fp_to_chars-missing
 
 // REQUIRES: locale.fr_FR.UTF-8
 // REQUIRES: locale.ja_JP.UTF-8
@@ -34,8 +31,15 @@
 #include "make_string.h"
 #include "platform_support.h" // locale name macros
 #include "test_macros.h"
+#include "assert_macros.h"
+#include "concat_macros.h"
 
 #define SV(S) MAKE_STRING_VIEW(CharT, S)
+
+#define TEST_EQUAL(OUT, EXPECTED)                                                                                      \
+  TEST_REQUIRE(OUT == EXPECTED,                                                                                        \
+               TEST_WRITE_CONCATENATED(                                                                                \
+                   "\nExpression      ", #OUT, "\nExpected output ", EXPECTED, "\nActual output   ", OUT, '\n'));
 
 template <class CharT>
 static std::basic_string<CharT> stream_c_locale(std::chrono::year_month_weekday ymwd) {
@@ -64,180 +68,191 @@ static std::basic_string<CharT> stream_ja_JP_locale(std::chrono::year_month_week
 
 template <class CharT>
 static void test() {
-  assert(stream_c_locale<CharT>(std::chrono::year_month_weekday{
-             std::chrono::year{-32'768},
-             std::chrono::month{1},
-             std::chrono::weekday_indexed{std::chrono::weekday(0), 1}}) == SV("-32768 is not a valid year/Jan/Sun[1]"));
-  assert(stream_c_locale<CharT>(std::chrono::year_month_weekday{
-             std::chrono::year{-32'767},
-             std::chrono::month{0},
-             std::chrono::weekday_indexed{std::chrono::weekday(0), 1}}) == SV("-32767/0 is not a valid month/Sun[1]"));
-  assert(
+  TEST_EQUAL(
       stream_c_locale<CharT>(std::chrono::year_month_weekday{
-          std::chrono::year{-32'767},
-          std::chrono::month{1},
-          std::chrono::weekday_indexed{std::chrono::weekday(8), 1}}) == SV("-32767/Jan/8 is not a valid weekday[1]"));
-  assert(stream_c_locale<CharT>(std::chrono::year_month_weekday{
-             std::chrono::year{-32'767},
-             std::chrono::month{1},
-             std::chrono::weekday_indexed{std::chrono::weekday(0), 0}}) ==
-         SV("-32767/Jan/Sun[0 is not a valid index]")); // note 0 is a valid index here...
-  assert(stream_c_locale<CharT>(std::chrono::year_month_weekday{
-             std::chrono::year{-32'767},
-             std::chrono::month{1},
-             std::chrono::weekday_indexed{std::chrono::weekday(0), 1}}) == SV("-32767/Jan/Sun[1]"));
+          std::chrono::year{-32'768}, std::chrono::month{1}, std::chrono::weekday_indexed{std::chrono::weekday(0), 1}}),
+      SV("-32768 is not a valid year/Jan/Sun[1]"));
+  TEST_EQUAL(
+      stream_c_locale<CharT>(std::chrono::year_month_weekday{
+          std::chrono::year{-32'767}, std::chrono::month{0}, std::chrono::weekday_indexed{std::chrono::weekday(0), 1}}),
+      SV("-32767/0 is not a valid month/Sun[1]"));
+  TEST_EQUAL(
+      stream_c_locale<CharT>(std::chrono::year_month_weekday{
+          std::chrono::year{-32'767}, std::chrono::month{1}, std::chrono::weekday_indexed{std::chrono::weekday(8), 1}}),
+      SV("-32767/Jan/8 is not a valid weekday[1]"));
+  TEST_EQUAL(
+      stream_c_locale<CharT>(std::chrono::year_month_weekday{
+          std::chrono::year{-32'767}, std::chrono::month{1}, std::chrono::weekday_indexed{std::chrono::weekday(0), 0}}),
+      SV("-32767/Jan/Sun[0 is not a valid index]")); // note 0 is a valid index here...
+  TEST_EQUAL(
+      stream_c_locale<CharT>(std::chrono::year_month_weekday{
+          std::chrono::year{-32'767}, std::chrono::month{1}, std::chrono::weekday_indexed{std::chrono::weekday(0), 1}}),
+      SV("-32767/Jan/Sun[1]"));
 
-  assert(
+  TEST_EQUAL(
       stream_c_locale<CharT>(std::chrono::year_month_weekday{
-          std::chrono::year{1970}, std::chrono::month{1}, std::chrono::weekday_indexed{std::chrono::weekday(0), 1}}) ==
+          std::chrono::year{1970}, std::chrono::month{1}, std::chrono::weekday_indexed{std::chrono::weekday(0), 1}}),
       SV("1970/Jan/Sun[1]"));
 
 #if defined(__APPLE__)
-  assert(stream_fr_FR_locale<CharT>(std::chrono::year_month_weekday{
-             std::chrono::year{-32'768},
-             std::chrono::month{1},
-             std::chrono::weekday_indexed{std::chrono::weekday(0), 1}}) == SV("-32768 is not a valid year/jan/Dim[1]"));
-  assert(stream_fr_FR_locale<CharT>(std::chrono::year_month_weekday{
-             std::chrono::year{-32'767},
-             std::chrono::month{0},
-             std::chrono::weekday_indexed{std::chrono::weekday(0), 1}}) == SV("-32767/0 is not a valid month/Dim[1]"));
-  assert(
+  TEST_EQUAL(
       stream_fr_FR_locale<CharT>(std::chrono::year_month_weekday{
-          std::chrono::year{-32'767},
-          std::chrono::month{1},
-          std::chrono::weekday_indexed{std::chrono::weekday(8), 1}}) == SV("-32767/jan/8 is not a valid weekday[1]"));
-  assert(stream_fr_FR_locale<CharT>(std::chrono::year_month_weekday{
-             std::chrono::year{-32'767},
-             std::chrono::month{1},
-             std::chrono::weekday_indexed{std::chrono::weekday(0), 0}}) ==
-         SV("-32767/jan/Dim[0 is not a valid index]")); // note 0 is a valid index here...
-  assert(stream_fr_FR_locale<CharT>(std::chrono::year_month_weekday{
-             std::chrono::year{-32'767},
-             std::chrono::month{1},
-             std::chrono::weekday_indexed{std::chrono::weekday(0), 1}}) == SV("-32767/jan/Dim[1]"));
+          std::chrono::year{-32'768}, std::chrono::month{1}, std::chrono::weekday_indexed{std::chrono::weekday(0), 1}}),
+      SV("-32768 is not a valid year/jan/Dim[1]"));
+  TEST_EQUAL(
+      stream_fr_FR_locale<CharT>(std::chrono::year_month_weekday{
+          std::chrono::year{-32'767}, std::chrono::month{0}, std::chrono::weekday_indexed{std::chrono::weekday(0), 1}}),
+      SV("-32767/0 is not a valid month/Dim[1]"));
+  TEST_EQUAL(
+      stream_fr_FR_locale<CharT>(std::chrono::year_month_weekday{
+          std::chrono::year{-32'767}, std::chrono::month{1}, std::chrono::weekday_indexed{std::chrono::weekday(8), 1}}),
+      SV("-32767/jan/8 is not a valid weekday[1]"));
+  TEST_EQUAL(
+      stream_fr_FR_locale<CharT>(std::chrono::year_month_weekday{
+          std::chrono::year{-32'767}, std::chrono::month{1}, std::chrono::weekday_indexed{std::chrono::weekday(0), 0}}),
+      SV("-32767/jan/Dim[0 is not a valid index]")); // note 0 is a valid index here...
+  TEST_EQUAL(
+      stream_fr_FR_locale<CharT>(std::chrono::year_month_weekday{
+          std::chrono::year{-32'767}, std::chrono::month{1}, std::chrono::weekday_indexed{std::chrono::weekday(0), 1}}),
+      SV("-32767/jan/Dim[1]"));
 
-  assert(
+  TEST_EQUAL(
       stream_fr_FR_locale<CharT>(std::chrono::year_month_weekday{
-          std::chrono::year{1970}, std::chrono::month{1}, std::chrono::weekday_indexed{std::chrono::weekday(0), 1}}) ==
+          std::chrono::year{1970}, std::chrono::month{1}, std::chrono::weekday_indexed{std::chrono::weekday(0), 1}}),
       SV("1970/jan/Dim[1]"));
 #else  //  defined(__APPLE__)
-  assert(
+  TEST_EQUAL(
       stream_fr_FR_locale<CharT>(std::chrono::year_month_weekday{
-          std::chrono::year{-32'768},
-          std::chrono::month{1},
-          std::chrono::weekday_indexed{std::chrono::weekday(0), 1}}) == SV("-32768 is not a valid year/janv./dim.[1]"));
-  assert(stream_fr_FR_locale<CharT>(std::chrono::year_month_weekday{
-             std::chrono::year{-32'767},
-             std::chrono::month{0},
-             std::chrono::weekday_indexed{std::chrono::weekday(0), 1}}) == SV("-32767/0 is not a valid month/dim.[1]"));
-  assert(
+          std::chrono::year{-32'768}, std::chrono::month{1}, std::chrono::weekday_indexed{std::chrono::weekday(0), 1}}),
+      SV("-32768 is not a valid year/janv./dim.[1]"));
+  TEST_EQUAL(
       stream_fr_FR_locale<CharT>(std::chrono::year_month_weekday{
-          std::chrono::year{-32'767},
-          std::chrono::month{1},
-          std::chrono::weekday_indexed{std::chrono::weekday(8), 1}}) == SV("-32767/janv./8 is not a valid weekday[1]"));
-  assert(stream_fr_FR_locale<CharT>(std::chrono::year_month_weekday{
-             std::chrono::year{-32'767},
-             std::chrono::month{1},
-             std::chrono::weekday_indexed{std::chrono::weekday(0), 0}}) ==
-         SV("-32767/janv./dim.[0 is not a valid index]")); // note 0 is a valid index here...
-  assert(stream_fr_FR_locale<CharT>(std::chrono::year_month_weekday{
-             std::chrono::year{-32'767},
-             std::chrono::month{1},
-             std::chrono::weekday_indexed{std::chrono::weekday(0), 1}}) == SV("-32767/janv./dim.[1]"));
+          std::chrono::year{-32'767}, std::chrono::month{0}, std::chrono::weekday_indexed{std::chrono::weekday(0), 1}}),
+      SV("-32767/0 is not a valid month/dim.[1]"));
+  TEST_EQUAL(
+      stream_fr_FR_locale<CharT>(std::chrono::year_month_weekday{
+          std::chrono::year{-32'767}, std::chrono::month{1}, std::chrono::weekday_indexed{std::chrono::weekday(8), 1}}),
+      SV("-32767/janv./8 is not a valid weekday[1]"));
+  TEST_EQUAL(
+      stream_fr_FR_locale<CharT>(std::chrono::year_month_weekday{
+          std::chrono::year{-32'767}, std::chrono::month{1}, std::chrono::weekday_indexed{std::chrono::weekday(0), 0}}),
+      SV("-32767/janv./dim.[0 is not a valid index]")); // note 0 is a valid index here...
+  TEST_EQUAL(
+      stream_fr_FR_locale<CharT>(std::chrono::year_month_weekday{
+          std::chrono::year{-32'767}, std::chrono::month{1}, std::chrono::weekday_indexed{std::chrono::weekday(0), 1}}),
+      SV("-32767/janv./dim.[1]"));
 
-  assert(
+  TEST_EQUAL(
       stream_fr_FR_locale<CharT>(std::chrono::year_month_weekday{
-          std::chrono::year{1970}, std::chrono::month{1}, std::chrono::weekday_indexed{std::chrono::weekday(0), 1}}) ==
+          std::chrono::year{1970}, std::chrono::month{1}, std::chrono::weekday_indexed{std::chrono::weekday(0), 1}}),
       SV("1970/janv./dim.[1]"));
 #endif //  defined(__APPLE__)
 
 #if defined(__APPLE__)
-  assert(stream_ja_JP_locale<CharT>(std::chrono::year_month_weekday{
-             std::chrono::year{-32'768},
-             std::chrono::month{1},
-             std::chrono::weekday_indexed{std::chrono::weekday(0), 1}}) == SV("-32768 is not a valid year/ 1/日[1]"));
-  assert(stream_ja_JP_locale<CharT>(std::chrono::year_month_weekday{
-             std::chrono::year{-32'767},
-             std::chrono::month{0},
-             std::chrono::weekday_indexed{std::chrono::weekday(0), 1}}) == SV("-32767/0 is not a valid month/日[1]"));
-  assert(stream_ja_JP_locale<CharT>(std::chrono::year_month_weekday{
-             std::chrono::year{-32'767},
-             std::chrono::month{1},
-             std::chrono::weekday_indexed{std::chrono::weekday(8), 1}}) == SV("-32767/ 1/8 is not a valid weekday[1]"));
-  assert(stream_ja_JP_locale<CharT>(std::chrono::year_month_weekday{
-             std::chrono::year{-32'767},
-             std::chrono::month{1},
-             std::chrono::weekday_indexed{std::chrono::weekday(0), 0}}) ==
-         SV("-32767/ 1/日[0 is not a valid index]")); // note 0 is a valid index here...
-  assert(stream_ja_JP_locale<CharT>(std::chrono::year_month_weekday{
-             std::chrono::year{-32'767},
-             std::chrono::month{1},
-             std::chrono::weekday_indexed{std::chrono::weekday(0), 1}}) == SV("-32767/ 1/日[1]"));
-
-  assert(
+  TEST_EQUAL(
       stream_ja_JP_locale<CharT>(std::chrono::year_month_weekday{
-          std::chrono::year{1970}, std::chrono::month{1}, std::chrono::weekday_indexed{std::chrono::weekday(0), 1}}) ==
+          std::chrono::year{-32'768}, std::chrono::month{1}, std::chrono::weekday_indexed{std::chrono::weekday(0), 1}}),
+      SV("-32768 is not a valid year/ 1/日[1]"));
+  TEST_EQUAL(
+      stream_ja_JP_locale<CharT>(std::chrono::year_month_weekday{
+          std::chrono::year{-32'767}, std::chrono::month{0}, std::chrono::weekday_indexed{std::chrono::weekday(0), 1}}),
+      SV("-32767/0 is not a valid month/日[1]"));
+  TEST_EQUAL(
+      stream_ja_JP_locale<CharT>(std::chrono::year_month_weekday{
+          std::chrono::year{-32'767}, std::chrono::month{1}, std::chrono::weekday_indexed{std::chrono::weekday(8), 1}}),
+      SV("-32767/ 1/8 is not a valid weekday[1]"));
+  TEST_EQUAL(
+      stream_ja_JP_locale<CharT>(std::chrono::year_month_weekday{
+          std::chrono::year{-32'767}, std::chrono::month{1}, std::chrono::weekday_indexed{std::chrono::weekday(0), 0}}),
+      SV("-32767/ 1/日[0 is not a valid index]")); // note 0 is a valid index here...
+  TEST_EQUAL(
+      stream_ja_JP_locale<CharT>(std::chrono::year_month_weekday{
+          std::chrono::year{-32'767}, std::chrono::month{1}, std::chrono::weekday_indexed{std::chrono::weekday(0), 1}}),
+      SV("-32767/ 1/日[1]"));
+  TEST_EQUAL(
+      stream_ja_JP_locale<CharT>(std::chrono::year_month_weekday{
+          std::chrono::year{1970}, std::chrono::month{1}, std::chrono::weekday_indexed{std::chrono::weekday(0), 1}}),
       SV("1970/ 1/日[1]"));
-#else    // defined(__APPLE__)
-#  if defined(_WIN32) || defined(_AIX)
-  assert(stream_ja_JP_locale<CharT>(std::chrono::year_month_weekday{
-             std::chrono::year{-32'768},
-             std::chrono::month{1},
-             std::chrono::weekday_indexed{std::chrono::weekday(0), 1}}) == SV("-32768 is not a valid year/1月/日[1]"));
-  assert(stream_ja_JP_locale<CharT>(std::chrono::year_month_weekday{
-             std::chrono::year{-32'767},
-             std::chrono::month{0},
-             std::chrono::weekday_indexed{std::chrono::weekday(0), 1}}) == SV("-32767/0 is not a valid month/日[1]"));
-  assert(
+#elif defined(_WIN32) // defined(__APPLE__)
+  TEST_EQUAL(
       stream_ja_JP_locale<CharT>(std::chrono::year_month_weekday{
-          std::chrono::year{-32'767},
-          std::chrono::month{1},
-          std::chrono::weekday_indexed{std::chrono::weekday(8), 1}}) == SV("-32767/1月/8 is not a valid weekday[1]"));
-
-  assert(stream_ja_JP_locale<CharT>(std::chrono::year_month_weekday{
-             std::chrono::year{-32'767},
-             std::chrono::month{1},
-             std::chrono::weekday_indexed{std::chrono::weekday(0), 0}}) ==
-         SV("-32767/1月/日[0 is not a valid index]")); // note 0 is a valid index here...
-  assert(stream_ja_JP_locale<CharT>(std::chrono::year_month_weekday{
-             std::chrono::year{-32'767},
-             std::chrono::month{1},
-             std::chrono::weekday_indexed{std::chrono::weekday(0), 1}}) == SV("-32767/1月/日[1]"));
-
-  assert(
+          std::chrono::year{-32'768}, std::chrono::month{1}, std::chrono::weekday_indexed{std::chrono::weekday(0), 1}}),
+      SV("-32768 is not a valid year/1/日[1]"));
+  TEST_EQUAL(
       stream_ja_JP_locale<CharT>(std::chrono::year_month_weekday{
-          std::chrono::year{1970}, std::chrono::month{1}, std::chrono::weekday_indexed{std::chrono::weekday(0), 1}}) ==
+          std::chrono::year{-32'767}, std::chrono::month{0}, std::chrono::weekday_indexed{std::chrono::weekday(0), 1}}),
+      SV("-32767/0 is not a valid month/日[1]"));
+  TEST_EQUAL(
+      stream_ja_JP_locale<CharT>(std::chrono::year_month_weekday{
+          std::chrono::year{-32'767}, std::chrono::month{1}, std::chrono::weekday_indexed{std::chrono::weekday(8), 1}}),
+      SV("-32767/1/8 is not a valid weekday[1]"));
+  TEST_EQUAL(
+      stream_ja_JP_locale<CharT>(std::chrono::year_month_weekday{
+          std::chrono::year{-32'767}, std::chrono::month{1}, std::chrono::weekday_indexed{std::chrono::weekday(0), 0}}),
+      SV("-32767/1/日[0 is not a valid index]")); // note 0 is a valid index here...
+  TEST_EQUAL(
+      stream_ja_JP_locale<CharT>(std::chrono::year_month_weekday{
+          std::chrono::year{-32'767}, std::chrono::month{1}, std::chrono::weekday_indexed{std::chrono::weekday(0), 1}}),
+      SV("-32767/1/日[1]"));
+
+  TEST_EQUAL(
+      stream_ja_JP_locale<CharT>(std::chrono::year_month_weekday{
+          std::chrono::year{1970}, std::chrono::month{1}, std::chrono::weekday_indexed{std::chrono::weekday(0), 1}}),
+      SV("1970/1/日[1]"));
+#elif defined(_AIX)   // defined(__APPLE__)
+  TEST_EQUAL(
+      stream_ja_JP_locale<CharT>(std::chrono::year_month_weekday{
+          std::chrono::year{-32'768}, std::chrono::month{1}, std::chrono::weekday_indexed{std::chrono::weekday(0), 1}}),
+      SV("-32768 is not a valid year/1月/日[1]"));
+  TEST_EQUAL(
+      stream_ja_JP_locale<CharT>(std::chrono::year_month_weekday{
+          std::chrono::year{-32'767}, std::chrono::month{0}, std::chrono::weekday_indexed{std::chrono::weekday(0), 1}}),
+      SV("-32767/0 is not a valid month/日[1]"));
+  TEST_EQUAL(
+      stream_ja_JP_locale<CharT>(std::chrono::year_month_weekday{
+          std::chrono::year{-32'767}, std::chrono::month{1}, std::chrono::weekday_indexed{std::chrono::weekday(8), 1}}),
+      SV("-32767/1月/8 is not a valid weekday[1]"));
+
+  TEST_EQUAL(
+      stream_ja_JP_locale<CharT>(std::chrono::year_month_weekday{
+          std::chrono::year{-32'767}, std::chrono::month{1}, std::chrono::weekday_indexed{std::chrono::weekday(0), 0}}),
+      SV("-32767/1月/日[0 is not a valid index]")); // note 0 is a valid index here...
+  TEST_EQUAL(
+      stream_ja_JP_locale<CharT>(std::chrono::year_month_weekday{
+          std::chrono::year{-32'767}, std::chrono::month{1}, std::chrono::weekday_indexed{std::chrono::weekday(0), 1}}),
+      SV("-32767/1月/日[1]"));
+
+  TEST_EQUAL(
+      stream_ja_JP_locale<CharT>(std::chrono::year_month_weekday{
+          std::chrono::year{1970}, std::chrono::month{1}, std::chrono::weekday_indexed{std::chrono::weekday(0), 1}}),
       SV("1970/1月/日[1]"));
-#  else  // defined(_WIN32) || defined(_AIX)
-  assert(stream_ja_JP_locale<CharT>(std::chrono::year_month_weekday{
-             std::chrono::year{-32'768},
-             std::chrono::month{1},
-             std::chrono::weekday_indexed{std::chrono::weekday(0), 1}}) == SV("-32768 is not a valid year/ 1月/日[1]"));
-  assert(stream_ja_JP_locale<CharT>(std::chrono::year_month_weekday{
-             std::chrono::year{-32'767},
-             std::chrono::month{0},
-             std::chrono::weekday_indexed{std::chrono::weekday(0), 1}}) == SV("-32767/0 is not a valid month/日[1]"));
-  assert(
+#else                 // defined(__APPLE__)
+  TEST_EQUAL(
       stream_ja_JP_locale<CharT>(std::chrono::year_month_weekday{
-          std::chrono::year{-32'767},
-          std::chrono::month{1},
-          std::chrono::weekday_indexed{std::chrono::weekday(8), 1}}) == SV("-32767/ 1月/8 is not a valid weekday[1]"));
-  assert(stream_ja_JP_locale<CharT>(std::chrono::year_month_weekday{
-             std::chrono::year{-32'767},
-             std::chrono::month{1},
-             std::chrono::weekday_indexed{std::chrono::weekday(0), 0}}) ==
-         SV("-32767/ 1月/日[0 is not a valid index]")); // note 0 is a valid index here...
-  assert(stream_ja_JP_locale<CharT>(std::chrono::year_month_weekday{
-             std::chrono::year{-32'767},
-             std::chrono::month{1},
-             std::chrono::weekday_indexed{std::chrono::weekday(0), 1}}) == SV("-32767/ 1月/日[1]"));
+          std::chrono::year{-32'768}, std::chrono::month{1}, std::chrono::weekday_indexed{std::chrono::weekday(0), 1}}),
+      SV("-32768 is not a valid year/ 1月/日[1]"));
+  TEST_EQUAL(
+      stream_ja_JP_locale<CharT>(std::chrono::year_month_weekday{
+          std::chrono::year{-32'767}, std::chrono::month{0}, std::chrono::weekday_indexed{std::chrono::weekday(0), 1}}),
+      SV("-32767/0 is not a valid month/日[1]"));
+  TEST_EQUAL(
+      stream_ja_JP_locale<CharT>(std::chrono::year_month_weekday{
+          std::chrono::year{-32'767}, std::chrono::month{1}, std::chrono::weekday_indexed{std::chrono::weekday(8), 1}}),
+      SV("-32767/ 1月/8 is not a valid weekday[1]"));
+  TEST_EQUAL(
+      stream_ja_JP_locale<CharT>(std::chrono::year_month_weekday{
+          std::chrono::year{-32'767}, std::chrono::month{1}, std::chrono::weekday_indexed{std::chrono::weekday(0), 0}}),
+      SV("-32767/ 1月/日[0 is not a valid index]")); // note 0 is a valid index here...
+  TEST_EQUAL(
+      stream_ja_JP_locale<CharT>(std::chrono::year_month_weekday{
+          std::chrono::year{-32'767}, std::chrono::month{1}, std::chrono::weekday_indexed{std::chrono::weekday(0), 1}}),
+      SV("-32767/ 1月/日[1]"));
 
-  assert(
+  TEST_EQUAL(
       stream_ja_JP_locale<CharT>(std::chrono::year_month_weekday{
-          std::chrono::year{1970}, std::chrono::month{1}, std::chrono::weekday_indexed{std::chrono::weekday(0), 1}}) ==
+          std::chrono::year{1970}, std::chrono::month{1}, std::chrono::weekday_indexed{std::chrono::weekday(0), 1}}),
       SV("1970/ 1月/日[1]"));
-#  endif // defined(_WIN32) || defined(_AIX)
-#endif   // defined(__APPLE__)
+#endif                // defined(__APPLE__)
 }
 
 int main(int, char**) {

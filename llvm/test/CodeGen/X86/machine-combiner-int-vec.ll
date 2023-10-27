@@ -425,7 +425,7 @@ define <2 x i64> @reassociate_umax_v2i64(<2 x i64> %x0, <2 x i64> %x1, <2 x i64>
 ; AVX2-LABEL: reassociate_umax_v2i64:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vmovdqa {{.*#+}} xmm1 = [9223372036854775808,9223372036854775808]
+; AVX2-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [9223372036854775808,9223372036854775808]
 ; AVX2-NEXT:    vpxor %xmm1, %xmm2, %xmm4
 ; AVX2-NEXT:    vpxor %xmm1, %xmm0, %xmm5
 ; AVX2-NEXT:    vpcmpgtq %xmm5, %xmm4, %xmm4
@@ -723,7 +723,7 @@ define <2 x i64> @reassociate_umin_v2i64(<2 x i64> %x0, <2 x i64> %x1, <2 x i64>
 ; AVX2-LABEL: reassociate_umin_v2i64:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vmovdqa {{.*#+}} xmm1 = [9223372036854775808,9223372036854775808]
+; AVX2-NEXT:    vpbroadcastq {{.*#+}} xmm1 = [9223372036854775808,9223372036854775808]
 ; AVX2-NEXT:    vpxor %xmm1, %xmm2, %xmm4
 ; AVX2-NEXT:    vpxor %xmm1, %xmm0, %xmm5
 ; AVX2-NEXT:    vpcmpgtq %xmm4, %xmm5, %xmm4

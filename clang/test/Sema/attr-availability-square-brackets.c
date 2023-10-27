@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin9 -fsyntax-only -fdouble-square-bracket-attributes -verify %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin9 -fsyntax-only -verify %s
 
 [[clang::availability(macosx,introduced=10.4,deprecated=10.2)]] void f0(void); // expected-warning{{feature cannot be deprecated in macOS version 10.2 before it was introduced in version 10.4; attribute ignored}}
 [[clang::availability(ios,obsoleted=2.1,deprecated=3.0)]] void f1(void);  // expected-warning{{feature cannot be obsoleted in iOS version 2.1 before it was deprecated in version 3.0; attribute ignored}}

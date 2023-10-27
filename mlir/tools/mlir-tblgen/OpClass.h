@@ -25,7 +25,7 @@ public:
   /// - inheritance of `print`
   /// - a type alias for the associated adaptor class
   ///
-  OpClass(StringRef name, StringRef extraClassDeclaration,
+  OpClass(StringRef name, std::string extraClassDeclaration,
           std::string extraClassDefinition);
 
   /// Add an op trait.
@@ -39,7 +39,7 @@ public:
 
 private:
   /// Hand-written extra class declarations.
-  StringRef extraClassDeclaration;
+  std::string extraClassDeclaration;
   /// Hand-written extra class definitions.
   std::string extraClassDefinition;
   /// The parent class, which also contains the traits to be inherited.

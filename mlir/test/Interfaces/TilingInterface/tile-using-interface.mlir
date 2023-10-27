@@ -2,7 +2,7 @@
 
 func.func @simple_matmul(%arg0 : tensor<?x?xf32>, %arg1 : tensor<?x?xf32>,
     %arg2 : tensor<?x?xf32>) -> tensor<?x?xf32> {
-  %0 = linalg.matmul {__internal_linalg_transform__ = "simple_gemm"}
+  %0 = linalg.matmul {__internal_transform__ = "simple_gemm"}
       ins(%arg0, %arg1 : tensor<?x?xf32>, tensor<?x?xf32>)
       outs(%arg2 : tensor<?x?xf32>) -> tensor<?x?xf32>
   return %0 : tensor<?x?xf32>
@@ -45,7 +45,7 @@ func.func @simple_matmul(%arg0 : tensor<?x?xf32>, %arg1 : tensor<?x?xf32>,
 
 func.func @simple_matmul_memref(%arg0 : memref<?x?xf32>, %arg1 : memref<?x?xf32>,
     %arg2 : memref<?x?xf32>) {
-  linalg.matmul {__internal_linalg_transform__ = "simple_gemm_memref"}
+  linalg.matmul {__internal_transform__ = "simple_gemm_memref"}
       ins(%arg0, %arg1 : memref<?x?xf32>, memref<?x?xf32>)
       outs(%arg2 : memref<?x?xf32>)
   return
@@ -92,7 +92,7 @@ func.func @multi_result(%arg0 : tensor<128x200x300xf32>) -> (tensor<128x300x200x
   %0:2 = linalg.generic {
       indexing_maps = [#map0, #map1, #map2],
       iterator_types = ["parallel", "parallel", "parallel"]}
-      {__internal_linalg_transform__ = "parallel_generic_transpose"}
+      {__internal_transform__ = "parallel_generic_transpose"}
       ins(%arg0 : tensor<128x200x300xf32>)
       outs(%init0, %init1 : tensor<128x300x200xf32>, tensor<300x128x200xf32>) {
     ^bb0(%b0 : f32, %b1 : f32, %b2 : f32):
@@ -139,7 +139,7 @@ func.func @conv2D(%arg0 : tensor<?x?x?x?xf32>, %arg1 : tensor<?x?x?x?xf32>,
   %0 = linalg.conv_2d_nhwc_hwcf {
       strides = dense<[2, 3]> : tensor<2xi64>,
       dilation = dense<[4, 5]> : tensor<2xi64>,
-      __internal_linalg_transform__ = "simple_conv"}
+      __internal_transform__ = "simple_conv"}
       ins(%arg0, %arg1 : tensor<?x?x?x?xf32>, tensor<?x?x?x?xf32>)
       outs(%arg2 : tensor<?x?x?x?xf32>) -> tensor<?x?x?x?xf32>
   return %0 : tensor<?x?x?x?xf32>
@@ -205,7 +205,7 @@ func.func @indexed_semantics(%arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf32>) -> 
     indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
                      affine_map<(d0, d1) -> (d0, d1)>],
     iterator_types = ["parallel", "parallel"]}
-    {__internal_linalg_transform__ = "indexed_semantics"}
+    {__internal_transform__ = "indexed_semantics"}
     ins(%arg0: tensor<?x?xf32>)
     outs(%arg1: tensor<?x?xf32>) {
   ^bb0(%arg2: f32, %arg3: f32):
@@ -229,7 +229,7 @@ func.func @indexed_semantics(%arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf32>) -> 
 
 func.func @interchange_matmul(%arg0 : tensor<?x?xf32>, %arg1 : tensor<?x?xf32>,
     %arg2 : tensor<?x?xf32>) -> tensor<?x?xf32> {
-  %0 = linalg.matmul {__internal_linalg_transform__ = "gemm_interchange"}
+  %0 = linalg.matmul {__internal_transform__ = "gemm_interchange"}
       ins(%arg0, %arg1 : tensor<?x?xf32>, tensor<?x?xf32>)
       outs(%arg2 : tensor<?x?xf32>) -> tensor<?x?xf32>
   return %0 : tensor<?x?xf32>
@@ -273,3 +273,17 @@ func.func @interchange_matmul(%arg0 : tensor<?x?xf32>, %arg1 : tensor<?x?xf32>,
 //      CHECK:       scf.yield %[[INNER2]]
 //      CHECK:     scf.yield %[[INNER1]]
 //      CHECK:   return %[[OUTER]]
+
+// -----
+
+// CHECK-LABEL: func @linalg_copy_matmul(
+//       CHECK:   scf.for
+//       CHECK:     scf.for
+//       CHECK:       memref.subview
+//       CHECK:       memref.subview
+//       CHECK:       linalg.copy
+func.func @linalg_copy_matmul(%a: memref<?x?xf32>, %b: memref<?x?xf32>) {
+  linalg.copy {__internal_transform__ = "simple_copy_memref"}
+      ins(%a : memref<?x?xf32>) outs(%b : memref<?x?xf32>)
+  return
+}

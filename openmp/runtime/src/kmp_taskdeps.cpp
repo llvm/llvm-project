@@ -30,7 +30,7 @@
 // TODO: Any ITT support needed?
 
 #ifdef KMP_SUPPORT_GRAPH_OUTPUT
-static std::atomic<kmp_int32> kmp_node_id_seed = ATOMIC_VAR_INIT(0);
+static std::atomic<kmp_int32> kmp_node_id_seed = 0;
 #endif
 
 static void __kmp_init_node(kmp_depnode_t *node) {
@@ -218,6 +218,44 @@ static kmp_depnode_list_t *__kmp_add_node(kmp_info_t *thread,
 static inline void __kmp_track_dependence(kmp_int32 gtid, kmp_depnode_t *source,
                                           kmp_depnode_t *sink,
                                           kmp_task_t *sink_task) {
+#if OMPX_TASKGRAPH
+  kmp_taskdata_t *task_source = KMP_TASK_TO_TASKDATA(source->dn.task);
+  kmp_taskdata_t *task_sink = KMP_TASK_TO_TASKDATA(sink_task);
+  if (source->dn.task && sink_task) {
+    // Not supporting dependency between two tasks that one is within the TDG
+    // and the other is not
+    KMP_ASSERT(task_source->is_taskgraph == task_sink->is_taskgraph);
+  }
+  if (task_sink->is_taskgraph &&
+      __kmp_tdg_is_recording(task_sink->tdg->tdg_status)) {
+    kmp_node_info_t *source_info =
+        &task_sink->tdg->record_map[task_source->td_task_id];
+    bool exists = false;
+    for (int i = 0; i < source_info->nsuccessors; i++) {
+      if (source_info->successors[i] == task_sink->td_task_id) {
+        exists = true;
+        break;
+      }
+    }
+    if (!exists) {
+      if (source_info->nsuccessors >= source_info->successors_size) {
+        source_info->successors_size = 2 * source_info->successors_size;
+        kmp_int32 *old_succ_ids = source_info->successors;
+        kmp_int32 *new_succ_ids = (kmp_int32 *)__kmp_allocate(
+            source_info->successors_size * sizeof(kmp_int32));
+        source_info->successors = new_succ_ids;
+        __kmp_free(old_succ_ids);
+      }
+
+      source_info->successors[source_info->nsuccessors] = task_sink->td_task_id;
+      source_info->nsuccessors++;
+
+      kmp_node_info_t *sink_info =
+          &(task_sink->tdg->record_map[task_sink->td_task_id]);
+      sink_info->npredecessors++;
+    }
+  }
+#endif
 #ifdef KMP_SUPPORT_GRAPH_OUTPUT
   kmp_taskdata_t *task_source = KMP_TASK_TO_TASKDATA(source->dn.task);
   // do not use sink->dn.task as that is only filled after the dependences
@@ -256,10 +294,23 @@ __kmp_depnode_link_successor(kmp_int32 gtid, kmp_info_t *thread,
   // link node as successor of list elements
   for (kmp_depnode_list_t *p = plist; p; p = p->next) {
     kmp_depnode_t *dep = p->node;
+#if OMPX_TASKGRAPH
+    kmp_tdg_status tdg_status = KMP_TDG_NONE;
+    if (task) {
+      kmp_taskdata_t *td = KMP_TASK_TO_TASKDATA(task);
+      if (td->is_taskgraph)
+        tdg_status = KMP_TASK_TO_TASKDATA(task)->tdg->tdg_status;
+      if (__kmp_tdg_is_recording(tdg_status))
+        __kmp_track_dependence(gtid, dep, node, task);
+    }
+#endif
     if (dep->dn.task) {
       KMP_ACQUIRE_DEPNODE(gtid, dep);
       if (dep->dn.task) {
-        __kmp_track_dependence(gtid, dep, node, task);
+#if OMPX_TASKGRAPH
+        if (!(__kmp_tdg_is_recording(tdg_status)) && task)
+#endif
+          __kmp_track_dependence(gtid, dep, node, task);
         dep->dn.successors = __kmp_add_node(thread, dep->dn.successors, node);
         KA_TRACE(40, ("__kmp_process_deps: T#%d adding dependence from %p to "
                       "%p\n",
@@ -281,16 +332,42 @@ static inline kmp_int32 __kmp_depnode_link_successor(kmp_int32 gtid,
   if (!sink)
     return 0;
   kmp_int32 npredecessors = 0;
+#if OMPX_TASKGRAPH
+  kmp_tdg_status tdg_status = KMP_TDG_NONE;
+  kmp_taskdata_t *td = KMP_TASK_TO_TASKDATA(task);
+  if (task) {
+    if (td->is_taskgraph)
+      tdg_status = KMP_TASK_TO_TASKDATA(task)->tdg->tdg_status;
+    if (__kmp_tdg_is_recording(tdg_status) && sink->dn.task)
+      __kmp_track_dependence(gtid, sink, source, task);
+  }
+#endif
   if (sink->dn.task) {
     // synchronously add source to sink' list of successors
     KMP_ACQUIRE_DEPNODE(gtid, sink);
     if (sink->dn.task) {
-      __kmp_track_dependence(gtid, sink, source, task);
+#if OMPX_TASKGRAPH
+      if (!(__kmp_tdg_is_recording(tdg_status)) && task)
+#endif
+        __kmp_track_dependence(gtid, sink, source, task);
       sink->dn.successors = __kmp_add_node(thread, sink->dn.successors, source);
       KA_TRACE(40, ("__kmp_process_deps: T#%d adding dependence from %p to "
                     "%p\n",
                     gtid, KMP_TASK_TO_TASKDATA(sink->dn.task),
                     KMP_TASK_TO_TASKDATA(task)));
+#if OMPX_TASKGRAPH
+      if (__kmp_tdg_is_recording(tdg_status)) {
+        kmp_taskdata_t *tdd = KMP_TASK_TO_TASKDATA(sink->dn.task);
+        if (tdd->is_taskgraph) {
+          if (tdd->td_flags.onced)
+            // decrement npredecessors if sink->dn.task belongs to a taskgraph
+            // and
+            //  1) the task is reset to its initial state (by kmp_free_task) or
+            //  2) the task is complete but not yet reset
+            npredecessors--;
+        }
+      }
+#endif
       npredecessors++;
     }
     KMP_RELEASE_DEPNODE(gtid, sink);
@@ -595,6 +672,48 @@ kmp_int32 __kmpc_omp_task_with_deps(ident_t *loc_ref, kmp_int32 gtid,
   kmp_info_t *thread = __kmp_threads[gtid];
   kmp_taskdata_t *current_task = thread->th.th_current_task;
 
+#if OMPX_TASKGRAPH
+  // record TDG with deps
+  if (new_taskdata->is_taskgraph &&
+      __kmp_tdg_is_recording(new_taskdata->tdg->tdg_status)) {
+    kmp_tdg_info_t *tdg = new_taskdata->tdg;
+    // extend record_map if needed
+    if (new_taskdata->td_task_id >= tdg->map_size) {
+      __kmp_acquire_bootstrap_lock(&tdg->graph_lock);
+      if (new_taskdata->td_task_id >= tdg->map_size) {
+        kmp_uint old_size = tdg->map_size;
+        kmp_uint new_size = old_size * 2;
+        kmp_node_info_t *old_record = tdg->record_map;
+        kmp_node_info_t *new_record = (kmp_node_info_t *)__kmp_allocate(
+            new_size * sizeof(kmp_node_info_t));
+        KMP_MEMCPY(new_record, tdg->record_map,
+                   old_size * sizeof(kmp_node_info_t));
+        tdg->record_map = new_record;
+
+        __kmp_free(old_record);
+
+        for (kmp_int i = old_size; i < new_size; i++) {
+          kmp_int32 *successorsList = (kmp_int32 *)__kmp_allocate(
+              __kmp_successors_size * sizeof(kmp_int32));
+          new_record[i].task = nullptr;
+          new_record[i].successors = successorsList;
+          new_record[i].nsuccessors = 0;
+          new_record[i].npredecessors = 0;
+          new_record[i].successors_size = __kmp_successors_size;
+          KMP_ATOMIC_ST_REL(&new_record[i].npredecessors_counter, 0);
+        }
+        // update the size at the end, so that we avoid other
+        // threads use old_record while map_size is already updated
+        tdg->map_size = new_size;
+      }
+      __kmp_release_bootstrap_lock(&tdg->graph_lock);
+    }
+    tdg->record_map[new_taskdata->td_task_id].task = new_task;
+    tdg->record_map[new_taskdata->td_task_id].parent_task =
+        new_taskdata->td_parent;
+    KMP_ATOMIC_INC(&tdg->num_tasks);
+  }
+#endif
 #if OMPT_SUPPORT
   if (ompt_enabled.enabled) {
     if (!current_task->ompt_task_info.frame.enter_frame.ptr)
@@ -626,7 +745,9 @@ kmp_int32 __kmpc_omp_task_with_deps(ident_t *loc_ref, kmp_int32 gtid,
 
     for (i = 0; i < ndeps; i++) {
       ompt_deps[i].variable.ptr = (void *)dep_list[i].base_addr;
-      if (dep_list[i].flags.in && dep_list[i].flags.out)
+      if (dep_list[i].base_addr == KMP_SIZE_T_MAX)
+        ompt_deps[i].dependence_type = ompt_dependence_type_out_all_memory;
+      else if (dep_list[i].flags.in && dep_list[i].flags.out)
         ompt_deps[i].dependence_type = ompt_dependence_type_inout;
       else if (dep_list[i].flags.out)
         ompt_deps[i].dependence_type = ompt_dependence_type_out;
@@ -636,10 +757,15 @@ kmp_int32 __kmpc_omp_task_with_deps(ident_t *loc_ref, kmp_int32 gtid,
         ompt_deps[i].dependence_type = ompt_dependence_type_mutexinoutset;
       else if (dep_list[i].flags.set)
         ompt_deps[i].dependence_type = ompt_dependence_type_inoutset;
+      else if (dep_list[i].flags.all)
+        ompt_deps[i].dependence_type = ompt_dependence_type_out_all_memory;
     }
     for (i = 0; i < ndeps_noalias; i++) {
       ompt_deps[ndeps + i].variable.ptr = (void *)noalias_dep_list[i].base_addr;
-      if (noalias_dep_list[i].flags.in && noalias_dep_list[i].flags.out)
+      if (noalias_dep_list[i].base_addr == KMP_SIZE_T_MAX)
+        ompt_deps[ndeps + i].dependence_type =
+            ompt_dependence_type_out_all_memory;
+      else if (noalias_dep_list[i].flags.in && noalias_dep_list[i].flags.out)
         ompt_deps[ndeps + i].dependence_type = ompt_dependence_type_inout;
       else if (noalias_dep_list[i].flags.out)
         ompt_deps[ndeps + i].dependence_type = ompt_dependence_type_out;
@@ -650,6 +776,9 @@ kmp_int32 __kmpc_omp_task_with_deps(ident_t *loc_ref, kmp_int32 gtid,
             ompt_dependence_type_mutexinoutset;
       else if (noalias_dep_list[i].flags.set)
         ompt_deps[ndeps + i].dependence_type = ompt_dependence_type_inoutset;
+      else if (noalias_dep_list[i].flags.all)
+        ompt_deps[ndeps + i].dependence_type =
+            ompt_dependence_type_out_all_memory;
     }
     ompt_callbacks.ompt_callback(ompt_callback_dependences)(
         &(new_taskdata->ompt_task_info.task_data), ompt_deps, ompt_ndeps);

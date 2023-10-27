@@ -23,7 +23,6 @@ using llvm::yaml::Hex32;
 using llvm::yaml::Hex64;
 using llvm::yaml::Hex8;
 using llvm::yaml::Input;
-using llvm::yaml::IO;
 using llvm::yaml::isNumeric;
 using llvm::yaml::MappingNormalization;
 using llvm::yaml::MappingTraits;
@@ -96,11 +95,30 @@ TEST(YAMLIO, TestMapRead) {
     EXPECT_EQ(doc.foo, 3);
     EXPECT_EQ(doc.bar, 5);
   }
+
+  {
+    Input yin("{\"foo\": 3\n, \"bar\": 5}");
+    yin >> doc;
+
+    EXPECT_FALSE(yin.error());
+    EXPECT_EQ(doc.foo, 3);
+    EXPECT_EQ(doc.bar, 5);
+  }
 }
 
 TEST(YAMLIO, TestMalformedMapRead) {
   FooBar doc;
   Input yin("{foo: 3; bar: 5}", nullptr, suppressErrorMessages);
+  yin >> doc;
+  EXPECT_TRUE(!!yin.error());
+}
+
+TEST(YAMLIO, TestMapDuplicatedKeysRead) {
+  auto testDiagnostic = [](const llvm::SMDiagnostic &Error, void *) {
+    EXPECT_EQ(Error.getMessage(), "duplicated mapping key 'foo'");
+  };
+  FooBar doc;
+  Input yin("{foo: 3, bar: 5, foo: 4}", nullptr, testDiagnostic);
   yin >> doc;
   EXPECT_TRUE(!!yin.error());
 }
@@ -532,10 +550,10 @@ TEST(YAMLIO, TestReadWriteBuiltInTypes) {
 
 struct EndianTypes {
   typedef llvm::support::detail::packed_endian_specific_integral<
-      float, llvm::support::little, llvm::support::unaligned>
+      float, llvm::endianness::little, llvm::support::unaligned>
       ulittle_float;
   typedef llvm::support::detail::packed_endian_specific_integral<
-      double, llvm::support::little, llvm::support::unaligned>
+      double, llvm::endianness::little, llvm::support::unaligned>
       ulittle_double;
 
   llvm::support::ulittle64_t u64;

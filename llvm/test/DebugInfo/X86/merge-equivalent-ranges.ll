@@ -1,4 +1,3 @@
-; XFAIL: target=aarch64-pc-windows-{{.*}}
 ; RUN: %llc_dwarf -filetype=obj -o %t.o < %s
 ; RUN: llvm-dwarfdump %t.o | FileCheck %s
 
@@ -6,12 +5,6 @@
 ;; result in identical DW_AT_location entries, we are able to merge them into a
 ;; single DW_AT_location instead of producing a loclist with identical locations
 ;; for each.
-
-;; Checks that we can merge an indirect debug value with an equivalent direct
-;; debug value that uses DW_OP_deref.
-; CHECK: DW_AT_location
-; CHECK-SAME: (DW_OP_fbreg +{{[0-9]+}})
-; CHECK-NEXT: DW_AT_name    ("Var1")
 
 ;; Checks that we can merge a non-variadic debug value with an equivalent
 ;; variadic debug value.
@@ -28,7 +21,6 @@ define i32 @_ZN4llvm9MCContext12GetDwarfFileENS_9StringRefES1_jj(ptr %this, ptr 
 entry:
   %CUID.addr = alloca i32, align 4
   store i32 %CUID, ptr %CUID.addr, align 4
-  call void @llvm.dbg.value(metadata ptr %CUID.addr, metadata !16, metadata !DIExpression(DW_OP_deref)), !dbg !17
   call void @llvm.dbg.value(metadata ptr %CUID.addr, metadata !26, metadata !DIExpression(DW_OP_deref, DW_OP_stack_value)), !dbg !17
   %0 = load ptr, ptr null, align 8, !dbg !18
   call void @llvm.dbg.value(metadata !DIArgList(ptr %CUID.addr), metadata !26, metadata !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_deref, DW_OP_stack_value)), !dbg !18
@@ -37,13 +29,11 @@ entry:
 while.body.i.i.i.i:                               ; preds = %while.body.i.i.i.i, %entry
   %__x.addr.011.i.i.i.i = phi ptr [ %__x.addr.1.in.i.i.i.i, %while.body.i.i.i.i ], [ %0, %entry ]
   %_M_right.i.i.i.i.i = getelementptr inbounds %"struct.std::_Rb_tree_node_base", ptr %__x.addr.011.i.i.i.i, i64 0, i32 3, !dbg !20
-  call void @llvm.dbg.addr(metadata ptr %CUID.addr, metadata !16, metadata !DIExpression()), !dbg !20
   %__x.addr.1.in.i.i.i.i = select i1 %cmp.i.i.i.i.i, ptr %__x.addr.011.i.i.i.i, ptr null, !dbg !20
   br label %while.body.i.i.i.i
 }
 
 declare void @llvm.dbg.value(metadata, metadata, metadata)
-declare void @llvm.dbg.addr(metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!2, !3, !4, !5, !6, !7, !8}

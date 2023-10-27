@@ -22,7 +22,7 @@
 // XFAIL: no-wide-characters
 
 // TODO: Avoid using <fstream> in this test.
-// XFAIL: no-fstream
+// XFAIL: no-filesystem
 
 #include <locale>
 #include <codecvt>

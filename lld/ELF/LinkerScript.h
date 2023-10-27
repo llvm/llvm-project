@@ -86,9 +86,9 @@ struct SectionCommand {
 
 // This represents ". = <expr>" or "<symbol> = <expr>".
 struct SymbolAssignment : SectionCommand {
-  SymbolAssignment(StringRef name, Expr e, std::string loc)
+  SymbolAssignment(StringRef name, Expr e, unsigned symOrder, std::string loc)
       : SectionCommand(AssignmentKind), name(name), expression(e),
-        location(loc) {}
+        symOrder(symOrder), location(loc) {}
 
   static bool classof(const SectionCommand *c) {
     return c->kind == AssignmentKind;
@@ -104,6 +104,11 @@ struct SymbolAssignment : SectionCommand {
   // Command attributes for PROVIDE, HIDDEN and PROVIDE_HIDDEN.
   bool provide = false;
   bool hidden = false;
+
+  // This assignment references DATA_SEGMENT_RELRO_END.
+  bool dataSegmentRelroEnd = false;
+
+  unsigned symOrder;
 
   // Holds file name and line number for error reporting.
   std::string location;
@@ -150,6 +155,9 @@ struct MemoryRegion {
   // For example, the memory region attribute "!r" maps to SHF_WRITE.
   uint32_t negInvFlags;
   uint64_t curPos = 0;
+
+  uint64_t getOrigin() const { return origin().getValue(); }
+  uint64_t getLength() const { return length().getValue(); }
 
   bool compatibleWith(uint32_t secFlags) const {
     if ((secFlags & negFlags) || (~secFlags & negInvFlags))
@@ -315,6 +323,7 @@ public:
 
   void addOrphanSections();
   void diagnoseOrphanHandling() const;
+  void diagnoseMissingSGSectionAddress() const;
   void adjustOutputSections();
   void adjustSectionsAfterSorting();
 
@@ -333,6 +342,12 @@ public:
   // Used to handle INSERT AFTER statements.
   void processInsertCommands();
 
+  // Describe memory region usage.
+  void printMemoryUsage(raw_ostream &os);
+
+  // Check backward location counter assignment and memory region/LMA overflows.
+  void checkFinalScriptConditions() const;
+
   // SECTIONS command list.
   SmallVector<SectionCommand *, 0> sectionCommands;
 
@@ -340,7 +355,10 @@ public:
   SmallVector<PhdrsCommand, 0> phdrsCommands;
 
   bool hasSectionsCommand = false;
+  bool seenDataAlign = false;
+  bool seenRelroEnd = false;
   bool errorOnMissingSection = false;
+  std::string backwardDotErr;
 
   // List of section patterns specified with KEEP commands. They will
   // be kept even if they are unused and --gc-sections is specified.

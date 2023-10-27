@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "SPIRVMCAsmInfo.h"
-#include "llvm/ADT/Triple.h"
+#include "llvm/TargetParser/Triple.h"
 
 using namespace llvm;
 

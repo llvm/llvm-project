@@ -18,9 +18,9 @@
 
 ; CHECK: %call = call
 ; CHECK-NEXT: %0 = extractvalue { <2 x float>, <2 x float> } %call, 0
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata <2 x float> %0, metadata ![[var:[0-9]+]], metadata !DIExpression(DW_OP_LLVM_fragment, 0, 64), metadata ![[id1:[0-9]+]],{{.+}} undef, metadata !DIExpression()), !dbg
+; CHECK-NEXT: call void @llvm.dbg.value(metadata <2 x float> %0, metadata ![[var:[0-9]+]], metadata !DIExpression(DW_OP_LLVM_fragment, 0, 64))
 ; CHECK-NEXT: %1 = extractvalue { <2 x float>, <2 x float> } %call, 1
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata <2 x float> %1, metadata ![[var]], metadata !DIExpression(DW_OP_LLVM_fragment, 64, 64), metadata ![[id2:[0-9]+]], {{.+}} undef, metadata !DIExpression()), !dbg
+; CHECK-NEXT: call void @llvm.dbg.value(metadata <2 x float> %1, metadata ![[var]], metadata !DIExpression(DW_OP_LLVM_fragment, 64, 64))
 
 %class.c = type { i8 }
 %class.a = type { [4 x float] }
@@ -36,7 +36,6 @@ entry:
   call void @llvm.dbg.assign(metadata ptr %this, metadata !26, metadata !DIExpression(), metadata !36, metadata ptr %this.addr, metadata !DIExpression()), !dbg !30
   %this1 = load ptr, ptr %this.addr, align 8
   %0 = bitcast ptr %e to ptr, !dbg !37
-  call void @llvm.lifetime.start.p0i8(i64 16, ptr %0) #4, !dbg !37
   %call = call { <2 x float>, <2 x float> } @_ZNK1c5m_fn1Ev(ptr %this1), !dbg !38
   %coerce.dive = getelementptr inbounds %class.a, ptr %e, i32 0, i32 0, !dbg !38
   %1 = bitcast ptr %coerce.dive to ptr, !dbg !38
@@ -49,14 +48,11 @@ entry:
   store <2 x float> %5, ptr %4, align 4, !dbg !38, !DIAssignID !40
   call void @llvm.dbg.assign(metadata <2 x float> %5, metadata !28, metadata !DIExpression(DW_OP_LLVM_fragment, 64, 64), metadata !40, metadata ptr %4, metadata !DIExpression()), !dbg !30
   %6 = bitcast ptr %e to ptr, !dbg !41
-  call void @llvm.lifetime.end.p0i8(i64 16, ptr %6) #4, !dbg !41
   ret void, !dbg !41
 }
 
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
-declare void @llvm.lifetime.start.p0i8(i64 immarg, ptr nocapture) #2
 declare dso_local { <2 x float>, <2 x float> } @_ZNK1c5m_fn1Ev(ptr) #3
-declare void @llvm.lifetime.end.p0i8(i64 immarg, ptr nocapture) #2
 declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, metadata) #1
 
 

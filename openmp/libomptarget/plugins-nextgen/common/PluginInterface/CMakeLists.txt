@@ -13,7 +13,7 @@
 # NOTE: Don't try to build `PluginInterface` using `add_llvm_library` because we
 # don't want to export `PluginInterface` while `add_llvm_library` requires that.
 add_library(PluginInterface OBJECT
-  PluginInterface.cpp GlobalHandler.cpp JIT.cpp)
+  PluginInterface.cpp GlobalHandler.cpp JIT.cpp RPC.cpp)
 
 # Only enable JIT for those targets that LLVM can support.
 string(TOUPPER "${LLVM_TARGETS_TO_BUILD}" TargetsSupported)
@@ -61,6 +61,23 @@ target_link_libraries(PluginInterface
     elf_common
     MemoryManager
 )
+
+# Include the RPC server from the `libc` project if availible.
+if(TARGET llvmlibc_rpc_server AND ${LIBOMPTARGET_GPU_LIBC_SUPPORT})
+  target_link_libraries(PluginInterface PRIVATE llvmlibc_rpc_server)
+  target_compile_definitions(PluginInterface PRIVATE LIBOMPTARGET_RPC_SUPPORT)
+elseif(${LIBOMPTARGET_GPU_LIBC_SUPPORT})
+  find_library(llvmlibc_rpc_server NAMES llvmlibc_rpc_server
+               PATHS ${LIBOMPTARGET_LLVM_LIBRARY_DIR} NO_DEFAULT_PATH)
+  if(llvmlibc_rpc_server)
+    target_link_libraries(PluginInterface PRIVATE llvmlibc_rpc_server)
+    target_compile_definitions(PluginInterface PRIVATE LIBOMPTARGET_RPC_SUPPORT)
+  endif()
+endif()
+
+if ((OMPT_TARGET_DEFAULT) AND (LIBOMPTARGET_OMPT_SUPPORT))
+  target_link_libraries(PluginInterface PUBLIC OMPT)
+endif()
 
 # Define the TARGET_NAME and DEBUG_PREFIX.
 target_compile_definitions(PluginInterface PRIVATE

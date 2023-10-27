@@ -20,7 +20,7 @@ char stackBased2 (void) {
   return buf[0]; // expected-warning{{Undefined}}
 }
 
-// Exercise the conditional visitor. Radar://10105448
+// Exercise the conditional visitor.
 char stackBased3 (int *x) {
   char buf[2];
   int *y;

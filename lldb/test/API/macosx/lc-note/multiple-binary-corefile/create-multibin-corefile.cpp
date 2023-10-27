@@ -16,7 +16,7 @@
 #include <vector>
 
 // Given a list of binaries, and optional slides to be applied,
-// create a corefile whose memory is those binaries laid at at
+// create a corefile whose memory is those binaries laid down at
 // their slid addresses.
 //
 // Add a 'main bin spec' LC_NOTE for the first binary, and

@@ -181,6 +181,10 @@ public:
   RewriteRope() = default;
   RewriteRope(const RewriteRope &RHS) : Chunks(RHS.Chunks) {}
 
+  // The copy assignment operator is defined as deleted pending further
+  // motivation.
+  RewriteRope &operator=(const RewriteRope &) = delete;
+
   using iterator = RopePieceBTree::iterator;
   using const_iterator = RopePieceBTree::iterator;
 

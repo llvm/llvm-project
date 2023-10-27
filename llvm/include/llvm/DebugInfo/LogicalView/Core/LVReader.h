@@ -54,6 +54,9 @@ public:
   raw_fd_ostream &os() { return OutputFile->os(); }
 };
 
+/// The logical reader owns of all the logical elements created during
+/// the debug information parsing. For its creation it uses a specific
+///  bump allocator for each type of logical element.
 class LVReader {
   LVBinaryType BinaryType;
 
@@ -74,6 +77,50 @@ class LVReader {
   Error createSplitFolder();
   bool OutputSplit = false;
 
+// Define a specific bump allocator for the given KIND.
+#define LV_OBJECT_ALLOCATOR(KIND)                                              \
+  llvm::SpecificBumpPtrAllocator<LV##KIND> Allocated##KIND;
+
+  // Lines allocator.
+  LV_OBJECT_ALLOCATOR(Line)
+  LV_OBJECT_ALLOCATOR(LineDebug)
+  LV_OBJECT_ALLOCATOR(LineAssembler)
+
+  // Locations allocator.
+  LV_OBJECT_ALLOCATOR(Location)
+  LV_OBJECT_ALLOCATOR(LocationSymbol)
+
+  // Operations allocator.
+  LV_OBJECT_ALLOCATOR(Operation)
+
+  // Scopes allocator.
+  LV_OBJECT_ALLOCATOR(Scope)
+  LV_OBJECT_ALLOCATOR(ScopeAggregate)
+  LV_OBJECT_ALLOCATOR(ScopeAlias)
+  LV_OBJECT_ALLOCATOR(ScopeArray)
+  LV_OBJECT_ALLOCATOR(ScopeCompileUnit)
+  LV_OBJECT_ALLOCATOR(ScopeEnumeration)
+  LV_OBJECT_ALLOCATOR(ScopeFormalPack)
+  LV_OBJECT_ALLOCATOR(ScopeFunction)
+  LV_OBJECT_ALLOCATOR(ScopeFunctionInlined)
+  LV_OBJECT_ALLOCATOR(ScopeFunctionType)
+  LV_OBJECT_ALLOCATOR(ScopeNamespace)
+  LV_OBJECT_ALLOCATOR(ScopeRoot)
+  LV_OBJECT_ALLOCATOR(ScopeTemplatePack)
+
+  // Symbols allocator.
+  LV_OBJECT_ALLOCATOR(Symbol)
+
+  // Types allocator.
+  LV_OBJECT_ALLOCATOR(Type)
+  LV_OBJECT_ALLOCATOR(TypeDefinition)
+  LV_OBJECT_ALLOCATOR(TypeEnumerator)
+  LV_OBJECT_ALLOCATOR(TypeImport)
+  LV_OBJECT_ALLOCATOR(TypeParam)
+  LV_OBJECT_ALLOCATOR(TypeSubrange)
+
+#undef LV_OBJECT_ALLOCATOR
+
 protected:
   LVScopeRoot *Root = nullptr;
   std::string InputFilename;
@@ -92,7 +139,7 @@ protected:
 
   // Create the Scope Root.
   virtual Error createScopes() {
-    Root = new LVScopeRoot();
+    Root = createScopeRoot();
     Root->setName(getFilename());
     if (options().getAttributeFormat())
       Root->setFileFormatName(FileFormatName);
@@ -129,9 +176,60 @@ public:
         OS(W.getOStream()) {}
   LVReader(const LVReader &) = delete;
   LVReader &operator=(const LVReader &) = delete;
-  virtual ~LVReader() {
-    if (Root)
-      delete Root;
+  virtual ~LVReader() = default;
+
+// Creates a logical object of the given KIND. The signature for the created
+// functions looks like:
+//   ...
+//   LVScope *createScope()
+//   LVScopeRoot *creatScopeRoot()
+//   LVType *createType();
+//   ...
+#define LV_CREATE_OBJECT(KIND)                                                 \
+  LV##KIND *create##KIND() {                                                   \
+    return new (Allocated##KIND.Allocate()) LV##KIND();                        \
+  }
+
+  // Lines creation.
+  LV_CREATE_OBJECT(Line)
+  LV_CREATE_OBJECT(LineDebug)
+  LV_CREATE_OBJECT(LineAssembler)
+
+  // Locations creation.
+  LV_CREATE_OBJECT(Location)
+  LV_CREATE_OBJECT(LocationSymbol)
+
+  // Scopes creation.
+  LV_CREATE_OBJECT(Scope)
+  LV_CREATE_OBJECT(ScopeAggregate)
+  LV_CREATE_OBJECT(ScopeAlias)
+  LV_CREATE_OBJECT(ScopeArray)
+  LV_CREATE_OBJECT(ScopeCompileUnit)
+  LV_CREATE_OBJECT(ScopeEnumeration)
+  LV_CREATE_OBJECT(ScopeFormalPack)
+  LV_CREATE_OBJECT(ScopeFunction)
+  LV_CREATE_OBJECT(ScopeFunctionInlined)
+  LV_CREATE_OBJECT(ScopeFunctionType)
+  LV_CREATE_OBJECT(ScopeNamespace)
+  LV_CREATE_OBJECT(ScopeRoot)
+  LV_CREATE_OBJECT(ScopeTemplatePack)
+
+  // Symbols creation.
+  LV_CREATE_OBJECT(Symbol)
+
+  // Types creation.
+  LV_CREATE_OBJECT(Type)
+  LV_CREATE_OBJECT(TypeDefinition)
+  LV_CREATE_OBJECT(TypeEnumerator)
+  LV_CREATE_OBJECT(TypeImport)
+  LV_CREATE_OBJECT(TypeParam)
+  LV_CREATE_OBJECT(TypeSubrange)
+
+#undef LV_CREATE_OBJECT
+
+  // Operations creation.
+  LVOperation *createOperation(LVSmall OpCode, ArrayRef<LVUnsigned> Operands) {
+    return new (AllocatedOperation.Allocate()) LVOperation(OpCode, Operands);
   }
 
   StringRef getFilename(LVObject *Object, size_t Index) const;
@@ -150,6 +248,12 @@ public:
     assert(Scope && Scope->isCompileUnit() && "Scope is not a compile unit");
     CompileUnit = static_cast<LVScopeCompileUnit *>(Scope);
   }
+  void setCompileUnitCPUType(codeview::CPUType Type) {
+    CompileUnit->setCPUType(Type);
+  }
+  codeview::CPUType getCompileUnitCPUType() {
+    return CompileUnit->getCPUType();
+  }
 
   // Access to the scopes root.
   LVScopeRoot *getScopesRoot() const { return Root; }
@@ -157,7 +261,8 @@ public:
   Error doPrint();
   Error doLoad();
 
-  virtual std::string getRegisterName(LVSmall Opcode, uint64_t Operands[2]) {
+  virtual std::string getRegisterName(LVSmall Opcode,
+                                      ArrayRef<uint64_t> Operands) {
     llvm_unreachable("Invalid instance reader.");
     return {};
   }

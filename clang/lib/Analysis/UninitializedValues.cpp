@@ -40,13 +40,31 @@ using namespace clang;
 
 #define DEBUG_LOGGING 0
 
+static bool recordIsNotEmpty(const RecordDecl *RD) {
+  // We consider a record decl to be empty if it contains only unnamed bit-
+  // fields, zero-width fields, and fields of empty record type.
+  for (const auto *FD : RD->fields()) {
+    if (FD->isUnnamedBitfield())
+      continue;
+    if (FD->isZeroSize(FD->getASTContext()))
+      continue;
+    // The only case remaining to check is for a field declaration of record
+    // type and whether that record itself is empty.
+    if (const auto *FieldRD = FD->getType()->getAsRecordDecl();
+        !FieldRD || recordIsNotEmpty(FieldRD))
+      return true;
+  }
+  return false;
+}
+
 static bool isTrackedVar(const VarDecl *vd, const DeclContext *dc) {
   if (vd->isLocalVarDecl() && !vd->hasGlobalStorage() &&
-      !vd->isExceptionVariable() && !vd->isInitCapture() &&
-      !vd->isImplicit() && vd->getDeclContext() == dc) {
+      !vd->isExceptionVariable() && !vd->isInitCapture() && !vd->isImplicit() &&
+      vd->getDeclContext() == dc) {
     QualType ty = vd->getType();
-    return ty->isScalarType() || ty->isVectorType() || ty->isRecordType() ||
-           ty->isRVVType();
+    if (const auto *RD = ty->getAsRecordDecl())
+      return recordIsNotEmpty(RD);
+    return ty->isScalarType() || ty->isVectorType() || ty->isRVVType();
   }
   return false;
 }
@@ -586,28 +604,6 @@ public:
           continue;
         }
 
-        if (AtPredExit == MayUninitialized) {
-          // If the predecessor's terminator is an "asm goto" that initializes
-          // the variable, then don't count it as "initialized" on the indirect
-          // paths.
-          CFGTerminator term = Pred->getTerminator();
-          if (const auto *as = dyn_cast_or_null<GCCAsmStmt>(term.getStmt())) {
-            const CFGBlock *fallthrough = *Pred->succ_begin();
-            if (as->isAsmGoto() &&
-                llvm::any_of(as->outputs(), [&](const Expr *output) {
-                    return vd == findVar(output).getDecl() &&
-                        llvm::any_of(as->labels(),
-                                     [&](const AddrLabelExpr *label) {
-                          return label->getLabel()->getStmt() == B->Label &&
-                              B != fallthrough;
-                        });
-                })) {
-              Use.setUninitAfterDecl();
-              continue;
-            }
-          }
-        }
-
         unsigned &SV = SuccsVisited[Pred->getBlockID()];
         if (!SV) {
           // When visiting the first successor of a block, mark all NULL
@@ -820,7 +816,8 @@ void TransferFunctions::VisitGCCAsmStmt(GCCAsmStmt *as) {
     // it's used on an indirect path, where it's not guaranteed to be
     // defined.
     if (const VarDecl *VD = findVar(Ex).getDecl())
-      vals[VD] = MayUninitialized;
+      if (vals[VD] != Initialized)
+        vals[VD] = MayUninitialized;
   }
 }
 
@@ -899,7 +896,7 @@ struct PruneBlocksHandler : public UninitVariablesHandler {
     hadUse[currentBlock] = true;
     hadAnyUse = true;
   }
-  
+
   /// Called when the uninitialized variable analysis detects the
   /// idiom 'int x = x'.  All other uses of 'x' within the initializer
   /// are handled by handleUseOfUninitVariable.

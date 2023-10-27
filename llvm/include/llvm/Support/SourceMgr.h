@@ -59,7 +59,7 @@ private:
     /// dynamically based on the size of Buffer.
     mutable void *OffsetCache = nullptr;
 
-    /// Look up a given \p Ptr in in the buffer, determining which line it came
+    /// Look up a given \p Ptr in the buffer, determining which line it came
     /// from.
     unsigned getLineNumber(const char *Ptr) const;
     template <typename T>

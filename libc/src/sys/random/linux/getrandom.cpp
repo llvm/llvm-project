@@ -11,19 +11,20 @@
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
 
-#include <errno.h>
+#include "src/errno/libc_errno.h"
 #include <sys/syscall.h> // For syscall numbers.
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(ssize_t, getrandom,
                    (void *buf, size_t buflen, unsigned int flags)) {
-  long ret = __llvm_libc::syscall_impl(SYS_getrandom, buf, buflen, flags);
+  ssize_t ret =
+      LIBC_NAMESPACE::syscall_impl<ssize_t>(SYS_getrandom, buf, buflen, flags);
   if (ret < 0) {
-    errno = -ret;
+    libc_errno = static_cast<int>(-ret);
     return -1;
   }
-  return 0;
+  return ret;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

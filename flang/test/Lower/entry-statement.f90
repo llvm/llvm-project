@@ -249,65 +249,47 @@ entry level3b(x, y, n)
 end
 
 ! CHECK-LABEL: @_QPf1
+! CHECK-SAME: %[[V_0:.*]]: !fir.ref<!fir.char<1,5>>
 function f1(n1) result(res1)
-  ! CHECK:   %[[V_0:[0-9]+]] = fir.convert %arg0 : (!fir.ref<!fir.char<1,5>>) -> !fir.ref<!fir.char<1,?>>
   ! CHECK:   %[[V_1:[0-9]+]] = fir.alloca i32 {bindc_name = "n2", uniq_name = "_QFf1En2"}
   ! CHECK:   %[[V_2:[0-9]+]] = fir.alloca tuple<!fir.boxchar<1>, !fir.boxchar<1>>
   ! CHECK:   %[[V_3:[0-9]+]] = fir.coordinate_of %[[V_2]], %c0{{.*}}_i32 : (!fir.ref<tuple<!fir.boxchar<1>, !fir.boxchar<1>>>, i32) -> !fir.ref<!fir.boxchar<1>>
-  ! CHECK:   %[[V_4:[0-9]+]] = fir.emboxchar %[[V_0]], %c5{{.*}} : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
+  ! CHECK:   %[[V_4:[0-9]+]] = fir.emboxchar %[[V_0]], %c5{{.*}} : (!fir.ref<!fir.char<1,5>>, index) -> !fir.boxchar<1>
   ! CHECK:   fir.store %[[V_4]] to %[[V_3]] : !fir.ref<!fir.boxchar<1>>
   ! CHECK:   %[[V_5:[0-9]+]] = fir.coordinate_of %[[V_2]], %c1{{.*}}_i32 : (!fir.ref<tuple<!fir.boxchar<1>, !fir.boxchar<1>>>, i32) -> !fir.ref<!fir.boxchar<1>>
-  ! CHECK:   %[[V_6:[0-9]+]] = fir.emboxchar %[[V_0]], %c5{{.*}} : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
+  ! CHECK:   %[[V_6:[0-9]+]] = fir.emboxchar %[[V_0]], %c5{{.*}} : (!fir.ref<!fir.char<1,5>>, index) -> !fir.boxchar<1>
   ! CHECK:   fir.store %[[V_6]] to %[[V_5]] : !fir.ref<!fir.boxchar<1>>
   ! CHECK:   br ^bb1
   ! CHECK: ^bb1:  // pred: ^bb0
   ! CHECK:   %[[V_7:[0-9]+]] = fir.address_of(@_QQcl.6120612061) : !fir.ref<!fir.char<1,5>>
-  ! CHECK:   %[[V_8:[0-9]+]] = arith.cmpi slt, %c5{{.*}}, %c5{{.*}} : index
-  ! CHECK:   %[[V_9:[0-9]+]] = arith.select %[[V_8]], %c5{{.*}}, %c5{{.*}} : index
-  ! CHECK:   %[[V_10:[0-9]+]] = fir.convert %[[V_9]] : (index) -> i64
+  ! CHECK:   %[[V_10:[0-9]+]] = fir.convert %c5{{.*}} : (index) -> i64
   ! CHECK:   %[[V_11:[0-9]+]] = arith.muli %c1{{.*}}_i64, %[[V_10]] : i64
-  ! CHECK:   %[[V_12:[0-9]+]] = fir.convert %[[V_0]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
+  ! CHECK:   %[[V_12:[0-9]+]] = fir.convert %[[V_0]] : (!fir.ref<!fir.char<1,5>>) -> !fir.ref<i8>
   ! CHECK:   %[[V_13:[0-9]+]] = fir.convert %[[V_7]] : (!fir.ref<!fir.char<1,5>>) -> !fir.ref<i8>
   ! CHECK:   fir.call @llvm.memmove.p0.p0.i64(%[[V_12]], %[[V_13]], %[[V_11]], %false{{.*}}) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
-  ! CHECK:   %[[V_14:[0-9]+]] = arith.subi %c5{{.*}}, %c1{{.*}} : index
-  ! CHECK:   %[[V_15:[0-9]+]] = fir.undefined !fir.char<1>
-  ! CHECK:   %[[V_16:[0-9]+]] = fir.insert_value %[[V_15]], %c32{{.*}}_i8, [0 : index] : (!fir.char<1>, i8) -> !fir.char<1>
-  ! CHECK:   fir.do_loop %arg3 = %[[V_9]] to %[[V_14]] step %c1{{.*}} {
-  ! CHECK:     %[[V_32:[0-9]+]] = fir.convert %[[V_0]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.array<?x!fir.char<1>>>
-  ! CHECK:     %[[V_33:[0-9]+]] = fir.coordinate_of %[[V_32]], %arg3 : (!fir.ref<!fir.array<?x!fir.char<1>>>, index) -> !fir.ref<!fir.char<1>>
-  ! CHECK:     fir.store %[[V_16]] to %[[V_33]] : !fir.ref<!fir.char<1>>
-  ! CHECK:   }
   ! CHECK:   %[[V_17:[0-9]+]] = fir.load %arg2 : !fir.ref<i32>
-  ! CHECK:   %[[V_18:[0-9]+]] = arith.cmpi eq, %[[V_17]], %c1{{.*}}_i32_4 : i32
+  ! CHECK:   %[[V_18:[0-9]+]] = arith.cmpi eq, %[[V_17]], %c1{{.*}} : i32
   ! CHECK:   cond_br %[[V_18]], ^bb2, ^bb3
-  ! CHECK: ^bb2:  // 2 preds: ^bb1, ^bb3
-  ! CHECK:   br ^bb5
+  ! CHECK: ^bb2:  // pred: ^bb1
+  ! CHECK:   br ^bb6
   ! CHECK: ^bb3:  // pred: ^bb1
   ! CHECK:   fir.call @_QFf1Ps2(%[[V_2]]) {{.*}}: (!fir.ref<tuple<!fir.boxchar<1>, !fir.boxchar<1>>>) -> ()
   ! CHECK:   %[[V_19:[0-9]+]] = fir.load %[[V_1]] : !fir.ref<i32>
   ! CHECK:   %[[V_20:[0-9]+]] = arith.cmpi eq, %[[V_19]], %c2{{.*}}_i32 : i32
-  ! CHECK:   cond_br %[[V_20]], ^bb2, ^bb4
+  ! CHECK:   cond_br %[[V_20]], ^bb4, ^bb5
   ! CHECK: ^bb4:  // pred: ^bb3
+  ! CHECK:   cf.br ^bb6
+  ! CHECK: ^bb5:  // pred: ^bb3
   ! CHECK:   %[[V_21:[0-9]+]] = fir.address_of(@_QQcl.4320432043) : !fir.ref<!fir.char<1,5>>
-  ! CHECK:   %[[V_22:[0-9]+]] = arith.cmpi slt, %c5{{.*}}, %c5{{.*}} : index
-  ! CHECK:   %[[V_23:[0-9]+]] = arith.select %[[V_22]], %c5{{.*}}, %c5{{.*}} : index
-  ! CHECK:   %[[V_24:[0-9]+]] = fir.convert %[[V_23]] : (index) -> i64
-  ! CHECK:   %[[V_25:[0-9]+]] = arith.muli %c1{{.*}}_i64_6, %[[V_24]] : i64
-  ! CHECK:   %[[V_26:[0-9]+]] = fir.convert %[[V_0]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
+  ! CHECK:   %[[V_24:[0-9]+]] = fir.convert %c5{{.*}} : (index) -> i64
+  ! CHECK:   %[[V_25:[0-9]+]] = arith.muli %c1{{.*}}, %[[V_24]] : i64
+  ! CHECK:   %[[V_26:[0-9]+]] = fir.convert %[[V_0]] : (!fir.ref<!fir.char<1,5>>) -> !fir.ref<i8>
   ! CHECK:   %[[V_27:[0-9]+]] = fir.convert %[[V_21]] : (!fir.ref<!fir.char<1,5>>) -> !fir.ref<i8>
   ! CHECK:   fir.call @llvm.memmove.p0.p0.i64(%[[V_26]], %[[V_27]], %[[V_25]], %false{{.*}}) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
-  ! CHECK:   %[[V_28:[0-9]+]] = arith.subi %c5{{.*}}, %c1{{.*}} : index
-  ! CHECK:   %[[V_29:[0-9]+]] = fir.undefined !fir.char<1>
-  ! CHECK:   %[[V_30:[0-9]+]] = fir.insert_value %[[V_29]], %c32{{.*}}_i8_9, [0 : index] : (!fir.char<1>, i8) -> !fir.char<1>
-  ! CHECK:   fir.do_loop %arg3 = %[[V_23]] to %[[V_28]] step %c1{{.*}} {
-  ! CHECK:     %[[V_32]] = fir.convert %[[V_0]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.array<?x!fir.char<1>>>
-  ! CHECK:     %[[V_33]] = fir.coordinate_of %[[V_32]], %arg3 : (!fir.ref<!fir.array<?x!fir.char<1>>>, index) -> !fir.ref<!fir.char<1>>
-  ! CHECK:     fir.store %[[V_30]] to %[[V_33]] : !fir.ref<!fir.char<1>>
-  ! CHECK:   }
   ! CHECK:   fir.call @_QFf1Ps3(%[[V_2]]) {{.*}}: (!fir.ref<tuple<!fir.boxchar<1>, !fir.boxchar<1>>>) -> ()
-  ! CHECK:   br ^bb5
-  ! CHECK: ^bb5:  // 2 preds: ^bb2, ^bb4
-  ! CHECK:   %[[V_31:[0-9]+]] = fir.emboxchar %[[V_0]], %c5{{.*}} : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
+  ! CHECK:   br ^bb6
+  ! CHECK: ^bb6:  //  3 preds: ^bb2, ^bb4, ^bb5
+  ! CHECK:   %[[V_31:[0-9]+]] = fir.emboxchar %[[V_0]], %c5{{.*}} : (!fir.ref<!fir.char<1,5>>, index) -> !fir.boxchar<1>
   ! CHECK:   return %[[V_31]] : !fir.boxchar<1>
   ! CHECK: }
   character(5) res1, f2, f3
@@ -315,15 +297,15 @@ function f1(n1) result(res1)
   if (n1 == 1) return
 
 ! CHECK-LABEL: @_QPf2
+! CHECK-SAME: %[[V_0:.*]]: !fir.ref<!fir.char<1,5>>
 entry f2(n2)
-  ! CHECK:   %[[V_0:[0-9]+]] = fir.convert %arg0 : (!fir.ref<!fir.char<1,5>>) -> !fir.ref<!fir.char<1,?>>
   ! CHECK:   %[[V_1:[0-9]+]] = fir.alloca i32 {bindc_name = "n1", uniq_name = "_QFf1En1"}
   ! CHECK:   %[[V_2:[0-9]+]] = fir.alloca tuple<!fir.boxchar<1>, !fir.boxchar<1>>
   ! CHECK:   %[[V_3:[0-9]+]] = fir.coordinate_of %[[V_2]], %c0{{.*}}_i32 : (!fir.ref<tuple<!fir.boxchar<1>, !fir.boxchar<1>>>, i32) -> !fir.ref<!fir.boxchar<1>>
-  ! CHECK:   %[[V_4:[0-9]+]] = fir.emboxchar %[[V_0]], %c5{{.*}} : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
+  ! CHECK:   %[[V_4:[0-9]+]] = fir.emboxchar %[[V_0]], %c5{{.*}} : (!fir.ref<!fir.char<1,5>>, index) -> !fir.boxchar<1>
   ! CHECK:   fir.store %[[V_4]] to %[[V_3]] : !fir.ref<!fir.boxchar<1>>
   ! CHECK:   %[[V_5:[0-9]+]] = fir.coordinate_of %[[V_2]], %c1{{.*}}_i32 : (!fir.ref<tuple<!fir.boxchar<1>, !fir.boxchar<1>>>, i32) -> !fir.ref<!fir.boxchar<1>>
-  ! CHECK:   %[[V_6:[0-9]+]] = fir.emboxchar %[[V_0]], %c5{{.*}} : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
+  ! CHECK:   %[[V_6:[0-9]+]] = fir.emboxchar %[[V_0]], %c5{{.*}} : (!fir.ref<!fir.char<1,5>>, index) -> !fir.boxchar<1>
   ! CHECK:   fir.store %[[V_6]] to %[[V_5]] : !fir.ref<!fir.boxchar<1>>
   ! CHECK:   br ^bb1
   ! CHECK: ^bb1:  // pred: ^bb0
@@ -335,64 +317,44 @@ entry f2(n2)
   ! CHECK:   br ^bb4
   ! CHECK: ^bb3:  // pred: ^bb1
   ! CHECK:   %[[V_9:[0-9]+]] = fir.address_of(@_QQcl.4320432043) : !fir.ref<!fir.char<1,5>>
-  ! CHECK:   %[[V_10:[0-9]+]] = arith.cmpi slt, %c5{{.*}}, %c5{{.*}} : index
-  ! CHECK:   %[[V_11:[0-9]+]] = arith.select %[[V_10]], %c5{{.*}}, %c5{{.*}} : index
-  ! CHECK:   %[[V_12:[0-9]+]] = fir.convert %[[V_11]] : (index) -> i64
-  ! CHECK:   %[[V_13:[0-9]+]] = arith.muli %c1{{.*}}_i64, %[[V_12]] : i64
-  ! CHECK:   %[[V_14:[0-9]+]] = fir.convert %[[V_0]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
+  ! CHECK:   %[[V_12:[0-9]+]] = fir.convert %c5{{.*}} : (index) -> i64
+  ! CHECK:   %[[V_13:[0-9]+]] = arith.muli %c1{{.*}}, %[[V_12]] : i64
+  ! CHECK:   %[[V_14:[0-9]+]] = fir.convert %[[V_0]] : (!fir.ref<!fir.char<1,5>>) -> !fir.ref<i8>
   ! CHECK:   %[[V_15:[0-9]+]] = fir.convert %[[V_9]] : (!fir.ref<!fir.char<1,5>>) -> !fir.ref<i8>
   ! CHECK:   fir.call @llvm.memmove.p0.p0.i64(%[[V_14]], %[[V_15]], %[[V_13]], %false{{.*}}) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
-  ! CHECK:   %[[V_16:[0-9]+]] = arith.subi %c5{{.*}}, %c1{{.*}} : index
-  ! CHECK:   %[[V_17:[0-9]+]] = fir.undefined !fir.char<1>
-  ! CHECK:   %[[V_18:[0-9]+]] = fir.insert_value %[[V_17]], %c32{{.*}}_i8, [0 : index] : (!fir.char<1>, i8) -> !fir.char<1>
-  ! CHECK:   fir.do_loop %arg3 = %[[V_11]] to %[[V_16]] step %c1{{.*}} {
-  ! CHECK:     %[[V_20:[0-9]+]] = fir.convert %[[V_0]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.array<?x!fir.char<1>>>
-  ! CHECK:     %[[V_21:[0-9]+]] = fir.coordinate_of %[[V_20]], %arg3 : (!fir.ref<!fir.array<?x!fir.char<1>>>, index) -> !fir.ref<!fir.char<1>>
-  ! CHECK:     fir.store %[[V_18]] to %[[V_21]] : !fir.ref<!fir.char<1>>
-  ! CHECK:   }
   ! CHECK:   fir.call @_QFf1Ps3(%[[V_2]]) {{.*}}: (!fir.ref<tuple<!fir.boxchar<1>, !fir.boxchar<1>>>) -> ()
   ! CHECK:   br ^bb4
   ! CHECK: ^bb4:  // 2 preds: ^bb2, ^bb3
-  ! CHECK:   %[[V_19:[0-9]+]] = fir.emboxchar %[[V_0]], %c5{{.*}} : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
+  ! CHECK:   %[[V_19:[0-9]+]] = fir.emboxchar %[[V_0]], %c5{{.*}} : (!fir.ref<!fir.char<1,5>>, index) -> !fir.boxchar<1>
   ! CHECK:   return %[[V_19]] : !fir.boxchar<1>
   ! CHECK: }
   call s2
   if (n2 == 2) return
 
 ! CHECK-LABEL: @_QPf3
+! CHECK-SAME: %[[V_0:.*]]: !fir.ref<!fir.char<1,5>>
 entry f3
-  ! CHECK:   %[[V_0:[0-9]+]] = fir.convert %arg0 : (!fir.ref<!fir.char<1,5>>) -> !fir.ref<!fir.char<1,?>>
   ! CHECK:   %[[V_1:[0-9]+]] = fir.alloca i32 {bindc_name = "n1", uniq_name = "_QFf1En1"}
   ! CHECK:   %[[V_2:[0-9]+]] = fir.alloca i32 {bindc_name = "n2", uniq_name = "_QFf1En2"}
   ! CHECK:   %[[V_3:[0-9]+]] = fir.alloca tuple<!fir.boxchar<1>, !fir.boxchar<1>>
   ! CHECK:   %[[V_4:[0-9]+]] = fir.coordinate_of %[[V_3]], %c0{{.*}}_i32 : (!fir.ref<tuple<!fir.boxchar<1>, !fir.boxchar<1>>>, i32) -> !fir.ref<!fir.boxchar<1>>
-  ! CHECK:   %[[V_5:[0-9]+]] = fir.emboxchar %[[V_0]], %c5{{.*}} : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
+  ! CHECK:   %[[V_5:[0-9]+]] = fir.emboxchar %[[V_0]], %c5{{.*}} : (!fir.ref<!fir.char<1,5>>, index) -> !fir.boxchar<1>
   ! CHECK:   fir.store %[[V_5]] to %[[V_4]] : !fir.ref<!fir.boxchar<1>>
   ! CHECK:   %[[V_6:[0-9]+]] = fir.coordinate_of %[[V_3]], %c1{{.*}}_i32 : (!fir.ref<tuple<!fir.boxchar<1>, !fir.boxchar<1>>>, i32) -> !fir.ref<!fir.boxchar<1>>
-  ! CHECK:   %[[V_7:[0-9]+]] = fir.emboxchar %[[V_0]], %c5{{.*}} : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
+  ! CHECK:   %[[V_7:[0-9]+]] = fir.emboxchar %[[V_0]], %c5{{.*}} : (!fir.ref<!fir.char<1,5>>, index) -> !fir.boxchar<1>
   ! CHECK:   fir.store %[[V_7]] to %[[V_6]] : !fir.ref<!fir.boxchar<1>>
   ! CHECK:   br ^bb1
   ! CHECK: ^bb1:  // pred: ^bb0
   ! CHECK:   %[[V_8:[0-9]+]] = fir.address_of(@_QQcl.4320432043) : !fir.ref<!fir.char<1,5>>
-  ! CHECK:   %[[V_9:[0-9]+]] = arith.cmpi slt, %c5{{.*}}, %c5{{.*}} : index
-  ! CHECK:   %[[V_10:[0-9]+]] = arith.select %[[V_9]], %c5{{.*}}, %c5{{.*}} : index
-  ! CHECK:   %[[V_11:[0-9]+]] = fir.convert %[[V_10]] : (index) -> i64
+  ! CHECK:   %[[V_11:[0-9]+]] = fir.convert %c5{{.*}} : (index) -> i64
   ! CHECK:   %[[V_12:[0-9]+]] = arith.muli %c1{{.*}}_i64, %[[V_11]] : i64
-  ! CHECK:   %[[V_13:[0-9]+]] = fir.convert %[[V_0]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
+  ! CHECK:   %[[V_13:[0-9]+]] = fir.convert %[[V_0]] : (!fir.ref<!fir.char<1,5>>) -> !fir.ref<i8>
   ! CHECK:   %[[V_14:[0-9]+]] = fir.convert %[[V_8]] : (!fir.ref<!fir.char<1,5>>) -> !fir.ref<i8>
   ! CHECK:   fir.call @llvm.memmove.p0.p0.i64(%[[V_13]], %[[V_14]], %[[V_12]], %false{{.*}}) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
-  ! CHECK:   %[[V_15:[0-9]+]] = arith.subi %c5{{.*}}, %c1{{.*}} : index
-  ! CHECK:   %[[V_16:[0-9]+]] = fir.undefined !fir.char<1>
-  ! CHECK:   %[[V_17:[0-9]+]] = fir.insert_value %[[V_16]], %c32{{.*}}_i8, [0 : index] : (!fir.char<1>, i8) -> !fir.char<1>
-  ! CHECK:   fir.do_loop %arg2 = %[[V_10]] to %[[V_15]] step %c1{{.*}} {
-  ! CHECK:     %[[V_19:[0-9]+]] = fir.convert %[[V_0]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.array<?x!fir.char<1>>>
-  ! CHECK:     %[[V_20:[0-9]+]] = fir.coordinate_of %[[V_19]], %arg2 : (!fir.ref<!fir.array<?x!fir.char<1>>>, index) -> !fir.ref<!fir.char<1>>
-  ! CHECK:     fir.store %[[V_17]] to %[[V_20]] : !fir.ref<!fir.char<1>>
-  ! CHECK:   }
   ! CHECK:   fir.call @_QFf1Ps3(%[[V_3]]) {{.*}}: (!fir.ref<tuple<!fir.boxchar<1>, !fir.boxchar<1>>>) -> ()
   ! CHECK:   br ^bb2
   ! CHECK: ^bb2:  // pred: ^bb1
-  ! CHECK:   %[[V_18:[0-9]+]] = fir.emboxchar %[[V_0]], %c5{{.*}} : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
+  ! CHECK:   %[[V_18:[0-9]+]] = fir.emboxchar %[[V_0]], %c5{{.*}} : (!fir.ref<!fir.char<1,5>>, index) -> !fir.boxchar<1>
   ! CHECK:   return %[[V_18]] : !fir.boxchar<1>
   ! CHECK: }
   f3 = "C C C"

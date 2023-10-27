@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -Wno-objc-root-class %s
-//rdar: //8591619
 // pr8453
 
 @protocol NSCopying @end
@@ -33,7 +32,6 @@ void test(id <NSCopying, NSPROTO, NSPROTO2> bar)
   NSObject <NSCopying> *Init = bar; // expected-warning {{initializing 'NSObject<NSCopying> *' with an expression of incompatible type 'id<NSCopying,NSPROTO,NSPROTO2>'}}
 }
 
-// rdar://8843851
 @interface NSObject (CAT)
 + (struct S*)Meth : (struct S*)arg;
 @end

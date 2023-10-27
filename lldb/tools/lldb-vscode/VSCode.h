@@ -11,10 +11,13 @@
 
 #include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX
 
+#include <atomic>
 #include <condition_variable>
 #include <cstdio>
+#include <future>
 #include <iosfwd>
 #include <map>
+#include <optional>
 #include <set>
 #include <thread>
 
@@ -52,7 +55,6 @@
 #include "ProgressEvent.h"
 #include "RunInTerminal.h"
 #include "SourceBreakpoint.h"
-#include "SourceReference.h"
 
 #define VARREF_LOCALS (int64_t)1
 #define VARREF_GLOBALS (int64_t)2
@@ -72,12 +74,21 @@ enum VSCodeBroadcasterBits {
 };
 
 typedef void (*RequestCallback)(const llvm::json::Object &command);
+typedef void (*ResponseCallback)(llvm::Expected<llvm::json::Value> value);
 
 enum class PacketStatus {
   Success = 0,
   EndOfFile,
   JSONMalformed,
   JSONNotObject
+};
+
+enum class ReplMode { Variable = 0, Command, Auto };
+
+/// The detected context of an expression based off the current repl mode.
+enum class ExpressionContext {
+  Variable = 0,
+  Command,
 };
 
 struct Variables {
@@ -105,7 +116,7 @@ struct Variables {
   /// \return a new variableReference.
   /// Specify is_permanent as true for variable that should persist entire
   /// debug session.
-  int64_t GetNewVariableRefence(bool is_permanent);
+  int64_t GetNewVariableReference(bool is_permanent);
 
   /// \return the expandable variable corresponding with variableReference
   /// value of \p value.
@@ -120,6 +131,16 @@ struct Variables {
   void Clear();
 };
 
+struct StartDebuggingRequestHandler : public lldb::SBCommandPluginInterface {
+  bool DoExecute(lldb::SBDebugger debugger, char **command,
+                 lldb::SBCommandReturnObject &result) override;
+};
+
+struct ReplModeRequestHandler : public lldb::SBCommandPluginInterface {
+  bool DoExecute(lldb::SBDebugger debugger, char **command,
+                 lldb::SBCommandReturnObject &result) override;
+};
+
 struct VSCode {
   std::string debug_adaptor_path;
   InputStream input;
@@ -131,8 +152,6 @@ struct VSCode {
   std::thread event_thread;
   std::thread progress_event_thread;
   std::unique_ptr<std::ofstream> log;
-  llvm::DenseMap<lldb::addr_t, int64_t> addr_to_source_ref;
-  llvm::DenseMap<int64_t, SourceReference> source_map;
   llvm::StringMap<SourceBreakpointMap> source_breakpoints;
   FunctionBreakpointMap function_breakpoints;
   std::vector<ExceptionBreakpoint> exception_breakpoints;
@@ -141,23 +160,39 @@ struct VSCode {
   std::vector<std::string> exit_commands;
   std::vector<std::string> stop_commands;
   std::vector<std::string> terminate_commands;
+  // A copy of the last LaunchRequest or AttachRequest so we can reuse its
+  // arguments if we get a RestartRequest.
+  std::optional<llvm::json::Object> last_launch_or_attach_request;
   lldb::tid_t focus_tid;
-  bool sent_terminated_event;
+  std::atomic<bool> sent_terminated_event;
   bool stop_at_entry;
   bool is_attach;
+  bool enable_auto_variable_summaries;
+  bool enable_synthetic_child_debugging;
+  // The process event thread normally responds to process exited events by
+  // shutting down the entire adapter. When we're restarting, we keep the id of
+  // the old process here so we can detect this case and keep running.
+  lldb::pid_t restarting_process_id;
   bool configuration_done_sent;
-  uint32_t reverse_request_seq;
   std::map<std::string, RequestCallback> request_handlers;
   bool waiting_for_run_in_terminal;
   ProgressEventReporter progress_event_reporter;
   // Keep track of the last stop thread index IDs as threads won't go away
   // unless we send a "thread" event to indicate the thread exited.
   llvm::DenseSet<lldb::tid_t> thread_ids;
+  uint32_t reverse_request_seq;
+  std::mutex call_mutex;
+  std::map<int /* request_seq */, ResponseCallback /* reply handler */>
+      inflight_reverse_requests;
+  StartDebuggingRequestHandler start_debugging_request_handler;
+  ReplModeRequestHandler repl_mode_request_handler;
+  ReplMode repl_mode;
+  bool auto_repl_mode_collision_warning;
+
   VSCode();
   ~VSCode();
   VSCode(const VSCode &rhs) = delete;
   void operator=(const VSCode &rhs) = delete;
-  int64_t GetLineForPC(int64_t sourceReference, lldb::addr_t pc) const;
   ExceptionBreakpoint *GetExceptionBreakpoint(const std::string &filter);
   ExceptionBreakpoint *GetExceptionBreakpoint(const lldb::break_id_t bp_id);
 
@@ -184,6 +219,9 @@ struct VSCode {
   lldb::SBFrame GetLLDBFrame(const llvm::json::Object &arguments);
 
   llvm::json::Value CreateTopLevelScopes();
+
+  ExpressionContext DetectExpressionContext(lldb::SBFrame &frame,
+                                            std::string &text);
 
   void RunLLDBCommands(llvm::StringRef prefix,
                        const std::vector<std::string> &commands);
@@ -216,19 +254,20 @@ struct VSCode {
   PacketStatus GetNextObject(llvm::json::Object &object);
   bool HandleObject(const llvm::json::Object &object);
 
-  /// Send a Debug Adapter Protocol reverse request to the IDE
+  llvm::Error Loop();
+
+  /// Send a Debug Adapter Protocol reverse request to the IDE.
   ///
-  /// \param[in] request
-  ///   The payload of the request to send.
+  /// \param[in] command
+  ///   The reverse request command.
   ///
-  /// \param[out] response
-  ///   The response of the IDE. It might be undefined if there was an error.
+  /// \param[in] arguments
+  ///   The reverse request arguements.
   ///
-  /// \return
-  ///   A \a PacketStatus object indicating the sucess or failure of the
-  ///   request.
-  PacketStatus SendReverseRequest(llvm::json::Object request,
-                                  llvm::json::Object &response);
+  /// \param[in] callback
+  ///   A callback to execute when the response arrives.
+  void SendReverseRequest(llvm::StringRef command, llvm::json::Value arguments,
+                          ResponseCallback callback);
 
   /// Registers a callback handler for a Debug Adapter Protocol request
   ///

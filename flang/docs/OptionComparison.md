@@ -846,7 +846,7 @@ fdefault-integer-8
    </td>
   </tr>
   <tr>
-   <td>Enable <a href="https://pubs.cray.com/content/S-3901/8.7/cray-fortran-reference-manual/types">Cray pointers</a>
+   <td>Enable <a href="https://support.hpe.com/hpesc/public/docDisplay?docId=a00113911en_us&docLocale=en_US&page=Types.html">Cray pointers</a>
    </td>
    <td>default
    </td>
@@ -854,7 +854,7 @@ fdefault-integer-8
    </td>
    <td><a href="https://www-01.ibm.com/support/docview.wss?uid=swg27024776&aid=1#page=432">Default (near equivalent)</a>
    </td>
-   <td><a href="https://software.intel.com/en-us/fortran-compiler-developer-guide-and-reference-pointer-integer">Default (near equivalent)</a>
+   <td><a href="https://www.intel.com/content/www/us/en/develop/documentation/fortran-compiler-oneapi-dev-guide-and-reference/top/language-reference/a-to-z-reference/o-to-p/pointer-integer.html">Default (near equivalent)</a>
    </td>
    <td>Mcray
    </td>

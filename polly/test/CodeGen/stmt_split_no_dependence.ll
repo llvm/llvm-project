@@ -1,7 +1,7 @@
-; RUN: opt -opaque-pointers=0 %loadPolly -polly-codegen -S < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-codegen -S < %s | FileCheck %s
 ;
-; CHECK:   store i32 %8, i32* %scevgep, align 4, !alias.scope !1, !noalias !4
-; CHECK:   store i32 %9, i32* %scevgep4, align 4, !alias.scope !4, !noalias !1
+; CHECK:   store i32 %9, ptr %scevgep, align 4, !alias.scope !1, !noalias !4
+; CHECK:   store i32 %11, ptr %scevgep4, align 4, !alias.scope !4, !noalias !1
 ;
 ;      void func(int *A, int *B){
 ;        for (int i = 0; i < 1024; i+=1) {
@@ -12,7 +12,7 @@
 ;      }
 ;
 ; Function Attrs: noinline nounwind uwtable
-define void @func(i32* %A, i32* %B) #0 {
+define void @func(ptr %A, ptr %B) #0 {
 entry:
   br label %for.cond
 
@@ -26,11 +26,11 @@ for.body: 					 ; preds = %for.cond
 
 Stmt: 						 ; preds = %for.body
   %idxprom = sext i32 %i.0 to i64
-  %arrayidx = getelementptr inbounds i32, i32* %A, i64 %idxprom
-  store i32 %i.0, i32* %arrayidx, align 4, !polly_split_after !0
+  %arrayidx = getelementptr inbounds i32, ptr %A, i64 %idxprom
+  store i32 %i.0, ptr %arrayidx, align 4, !polly_split_after !0
   %idxprom1 = sext i32 %i.0 to i64
-  %arrayidx2 = getelementptr inbounds i32, i32* %B, i64 %idxprom1
-  store i32 %i.0, i32* %arrayidx2, align 4
+  %arrayidx2 = getelementptr inbounds i32, ptr %B, i64 %idxprom1
+  store i32 %i.0, ptr %arrayidx2, align 4
   br label %for.inc
 
 for.inc: 					 ; preds = %Stmt

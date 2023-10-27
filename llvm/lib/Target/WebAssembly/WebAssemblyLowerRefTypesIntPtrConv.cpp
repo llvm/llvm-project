@@ -19,6 +19,7 @@
 #include "WebAssemblySubtarget.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/Pass.h"
+#include <set>
 
 using namespace llvm;
 
@@ -62,8 +63,9 @@ bool WebAssemblyLowerRefTypesIntPtrConv::runOnFunction(Function &F) {
   for (inst_iterator I = inst_begin(F), E = inst_end(F); I != E; ++I) {
     PtrToIntInst *PTI = dyn_cast<PtrToIntInst>(&*I);
     IntToPtrInst *ITP = dyn_cast<IntToPtrInst>(&*I);
-    if (!(PTI && WebAssembly::isRefType(PTI->getPointerOperand()->getType())) &&
-        !(ITP && WebAssembly::isRefType(ITP->getDestTy())))
+    if (!(PTI && WebAssembly::isWebAssemblyReferenceType(
+                     PTI->getPointerOperand()->getType())) &&
+        !(ITP && WebAssembly::isWebAssemblyReferenceType(ITP->getDestTy())))
       continue;
 
     UndefValue *U = UndefValue::get(I->getType());

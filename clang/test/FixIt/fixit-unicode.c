@@ -2,8 +2,8 @@
 // There's a set of additional checks for systems with proper support of UTF-8
 // on the standard output in fixit-unicode-with-utf8-output.c.
 
-// RUN: not %clang_cc1 -fsyntax-only %s 2>&1 | FileCheck -strict-whitespace %s
-// RUN: not %clang_cc1 -fsyntax-only -fdiagnostics-parseable-fixits %s 2>&1 | FileCheck -check-prefix=CHECK-MACHINE %s
+// RUN: not %clang_cc1 -fsyntax-only -fno-diagnostics-show-line-numbers %s 2>&1 | FileCheck -strict-whitespace %s
+// RUN: not %clang_cc1 -fsyntax-only -fno-diagnostics-show-line-numbers -fdiagnostics-parseable-fixits %s 2>&1 | FileCheck -check-prefix=CHECK-MACHINE %s
 
 struct Foo {
   int bar;

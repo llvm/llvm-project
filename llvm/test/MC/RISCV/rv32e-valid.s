@@ -3,6 +3,11 @@
 # RUN: llvm-mc -filetype=obj -triple=riscv32 -mattr=+e < %s \
 # RUN:     | llvm-objdump -M no-aliases -d -r - \
 # RUN:     | FileCheck -check-prefixes=CHECK-OBJ,CHECK-ASM-AND-OBJ %s
+# RUN: llvm-mc %s -triple=riscv64 -riscv-no-aliases -mattr=+e -show-encoding \
+# RUN:     | FileCheck -check-prefixes=CHECK-ASM,CHECK-ASM-AND-OBJ %s
+# RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+e < %s \
+# RUN:     | llvm-objdump -M no-aliases -d -r - \
+# RUN:     | FileCheck -check-prefixes=CHECK-OBJ,CHECK-ASM-AND-OBJ %s
 
 # This file provides a basic test for RV32E, checking that the expected
 # set of registers and instructions are accepted.
@@ -111,9 +116,9 @@ csrrw t0, 0xfff, t1
 csrrs s0, 0xc00, x0
 # CHECK-ASM-AND-OBJ: csrrs s0, fflags, a5
 csrrs s0, 0x001, a5
-# CHECK-ASM-AND-OBJ: csrrc sp, ustatus, ra
+# CHECK-ASM-AND-OBJ: csrrc sp, 0, ra
 csrrc sp, 0x000, ra
-# CHECK-ASM-AND-OBJ: csrrwi a5, ustatus, 0
+# CHECK-ASM-AND-OBJ: csrrwi a5, 0, 0
 csrrwi a5, 0x000, 0
 # CHECK-ASM-AND-OBJ: csrrsi t2, 4095, 31
 csrrsi t2, 0xfff, 31

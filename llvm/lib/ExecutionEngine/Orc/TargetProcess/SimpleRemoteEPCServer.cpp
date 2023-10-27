@@ -8,10 +8,12 @@
 
 #include "llvm/ExecutionEngine/Orc/TargetProcess/SimpleRemoteEPCServer.h"
 
+#include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 #include "llvm/ExecutionEngine/Orc/Shared/TargetProcessControlTypes.h"
+#include "llvm/ExecutionEngine/Orc/TargetProcess/RegisterEHFrames.h"
 #include "llvm/Support/FormatVariadic.h"
-#include "llvm/Support/Host.h"
 #include "llvm/Support/Process.h"
+#include "llvm/TargetParser/Host.h"
 
 #include "OrcRTBootstrap.h"
 
@@ -68,23 +70,22 @@ SimpleRemoteEPCServer::handleMessage(SimpleRemoteEPCOpcode OpC, uint64_t SeqNo,
     case SimpleRemoteEPCOpcode::Setup:
       dbgs() << "Setup";
       assert(SeqNo == 0 && "Non-zero SeqNo for Setup?");
-      assert(TagAddr.getValue() == 0 && "Non-zero TagAddr for Setup?");
+      assert(!TagAddr && "Non-zero TagAddr for Setup?");
       break;
     case SimpleRemoteEPCOpcode::Hangup:
       dbgs() << "Hangup";
       assert(SeqNo == 0 && "Non-zero SeqNo for Hangup?");
-      assert(TagAddr.getValue() == 0 && "Non-zero TagAddr for Hangup?");
+      assert(!TagAddr && "Non-zero TagAddr for Hangup?");
       break;
     case SimpleRemoteEPCOpcode::Result:
       dbgs() << "Result";
-      assert(TagAddr.getValue() == 0 && "Non-zero TagAddr for Result?");
+      assert(!TagAddr && "Non-zero TagAddr for Result?");
       break;
     case SimpleRemoteEPCOpcode::CallWrapper:
       dbgs() << "CallWrapper";
       break;
     }
-    dbgs() << ", seqno = " << SeqNo
-           << ", tag-addr = " << formatv("{0:x}", TagAddr.getValue())
+    dbgs() << ", seqno = " << SeqNo << ", tag-addr = " << TagAddr
            << ", arg-buffer = " << formatv("{0:x}", ArgBytes.size())
            << " bytes\n";
   });
@@ -158,23 +159,22 @@ Error SimpleRemoteEPCServer::sendMessage(SimpleRemoteEPCOpcode OpC,
     case SimpleRemoteEPCOpcode::Setup:
       dbgs() << "Setup";
       assert(SeqNo == 0 && "Non-zero SeqNo for Setup?");
-      assert(TagAddr.getValue() == 0 && "Non-zero TagAddr for Setup?");
+      assert(!TagAddr && "Non-zero TagAddr for Setup?");
       break;
     case SimpleRemoteEPCOpcode::Hangup:
       dbgs() << "Hangup";
       assert(SeqNo == 0 && "Non-zero SeqNo for Hangup?");
-      assert(TagAddr.getValue() == 0 && "Non-zero TagAddr for Hangup?");
+      assert(!TagAddr && "Non-zero TagAddr for Hangup?");
       break;
     case SimpleRemoteEPCOpcode::Result:
       dbgs() << "Result";
-      assert(TagAddr.getValue() == 0 && "Non-zero TagAddr for Result?");
+      assert(!TagAddr && "Non-zero TagAddr for Result?");
       break;
     case SimpleRemoteEPCOpcode::CallWrapper:
       dbgs() << "CallWrapper";
       break;
     }
-    dbgs() << ", seqno = " << SeqNo
-           << ", tag-addr = " << formatv("{0:x}", TagAddr.getValue())
+    dbgs() << ", seqno = " << SeqNo << ", tag-addr = " << TagAddr
            << ", arg-buffer = " << formatv("{0:x}", ArgBytes.size())
            << " bytes\n";
   });
@@ -187,6 +187,7 @@ Error SimpleRemoteEPCServer::sendMessage(SimpleRemoteEPCOpcode OpC,
 }
 
 Error SimpleRemoteEPCServer::sendSetupMessage(
+    StringMap<std::vector<char>> BootstrapMap,
     StringMap<ExecutorAddr> BootstrapSymbols) {
 
   using namespace SimpleRemoteEPCDefaultBootstrapSymbolNames;
@@ -198,6 +199,7 @@ Error SimpleRemoteEPCServer::sendSetupMessage(
     EI.PageSize = *PageSize;
   else
     return PageSize.takeError();
+  EI.BootstrapMap = std::move(BootstrapMap);
   EI.BootstrapSymbols = std::move(BootstrapSymbols);
 
   assert(!EI.BootstrapSymbols.count(ExecutorSessionObjectName) &&
@@ -206,6 +208,10 @@ Error SimpleRemoteEPCServer::sendSetupMessage(
          "Dispatch function name should not be set");
   EI.BootstrapSymbols[ExecutorSessionObjectName] = ExecutorAddr::fromPtr(this);
   EI.BootstrapSymbols[DispatchFnName] = ExecutorAddr::fromPtr(jitDispatchEntry);
+  EI.BootstrapSymbols[rt::RegisterEHFrameSectionWrapperName] =
+      ExecutorAddr::fromPtr(&llvm_orc_registerEHFrameSectionWrapper);
+  EI.BootstrapSymbols[rt::DeregisterEHFrameSectionWrapperName] =
+      ExecutorAddr::fromPtr(&llvm_orc_deregisterEHFrameSectionWrapper);
 
   using SPSSerialize =
       shared::SPSArgList<shared::SPSSimpleRemoteEPCExecutorInfo>;

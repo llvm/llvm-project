@@ -110,6 +110,9 @@ class Thread {
 Thread *GetCurrentThread();
 uptr *GetCurrentThreadLongPtr();
 
+// Used to handle fork().
+void EnsureMainThreadIDIsCorrect();
+
 struct ScopedTaggingDisabler {
   ScopedTaggingDisabler() { GetCurrentThread()->DisableTagging(); }
   ~ScopedTaggingDisabler() { GetCurrentThread()->EnableTagging(); }

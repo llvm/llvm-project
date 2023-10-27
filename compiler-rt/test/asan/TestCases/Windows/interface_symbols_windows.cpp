@@ -1,3 +1,5 @@
+// UNSUPPORTED: target={{.*-windows-gnu}}
+
 // Check that the interface exported by asan static lib matches the list of
 // functions mentioned in sanitizer_interface.inc.
 //
@@ -40,7 +42,6 @@
 // IMPORT: __asan_set_seh_filter
 // IMPORT: __asan_unhandled_exception_filter
 // IMPORT: __asan_test_only_reported_buggy_pointer
-// IMPORT: __sancov_lowest_stack
 // IMPORT: __ubsan_vptr_type_cache
 //
 // RUN: cat %t.imports1 %t.imports2 %t.imports3 | sort | uniq > %t.imports-sorted

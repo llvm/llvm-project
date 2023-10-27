@@ -4,34 +4,36 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
-class TestGdbRemoteAttach(gdbremote_testcase.GdbRemoteTestCaseBase):
 
+class TestGdbRemoteAttach(gdbremote_testcase.GdbRemoteTestCaseBase):
     def test_attach_with_vAttach(self):
         self.build()
         self.set_inferior_startup_attach_manually()
 
         # Start the inferior, start the debug monitor, nothing is attached yet.
-        procs = self.prep_debug_monitor_and_inferior(
-            inferior_args=["sleep:60"])
+        procs = self.prep_debug_monitor_and_inferior(inferior_args=["sleep:60"])
         self.assertIsNotNone(procs)
 
         # Make sure the target process has been launched.
         inferior = procs.get("inferior")
         self.assertIsNotNone(inferior)
         self.assertTrue(inferior.pid > 0)
-        self.assertTrue(
-            lldbgdbserverutils.process_is_running(
-                inferior.pid, True))
+        self.assertTrue(lldbgdbserverutils.process_is_running(inferior.pid, True))
 
         # Add attach packets.
-        self.test_sequence.add_log_lines([
-            # Do the attach.
-            "read packet: $vAttach;{:x}#00".format(inferior.pid),
-            # Expect a stop notification from the attach.
-            {"direction": "send",
-             "regex": r"^\$T([0-9a-fA-F]{2})[^#]*#[0-9a-fA-F]{2}$",
-             "capture": {1: "stop_signal_hex"}},
-        ], True)
+        self.test_sequence.add_log_lines(
+            [
+                # Do the attach.
+                "read packet: $vAttach;{:x}#00".format(inferior.pid),
+                # Expect a stop notification from the attach.
+                {
+                    "direction": "send",
+                    "regex": r"^\$T([0-9a-fA-F]{2})[^#]*#[0-9a-fA-F]{2}$",
+                    "capture": {1: "stop_signal_hex"},
+                },
+            ],
+            True,
+        )
         self.add_process_info_collection_packets()
 
         # Run the stream
@@ -43,7 +45,7 @@ class TestGdbRemoteAttach(gdbremote_testcase.GdbRemoteTestCaseBase):
         self.assertIsNotNone(process_info)
 
         # Ensure the process id matches what we expected.
-        pid_text = process_info.get('pid', None)
+        pid_text = process_info.get("pid", None)
         self.assertIsNotNone(pid_text)
         reported_pid = int(pid_text, base=16)
         self.assertEqual(reported_pid, inferior.pid)

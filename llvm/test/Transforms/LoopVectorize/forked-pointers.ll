@@ -48,49 +48,48 @@ define dso_local void @forked_ptrs_different_base_same_offset(ptr nocapture read
 ; CHECK-NEXT:    [[TMP5:%.*]] = or i64 [[INDEX]], 3
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[PREDS]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP6]], align 4
-; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq <4 x i32> [[WIDE_LOAD]], zeroinitializer
-; CHECK-NEXT:    [[TMP9:%.*]] = select <4 x i1> [[TMP8]], <4 x ptr> [[BROADCAST_SPLAT]], <4 x ptr> [[BROADCAST_SPLAT10]]
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x ptr> [[TMP9]], i64 0
-; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds float, ptr [[TMP10]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x ptr> [[TMP9]], i64 1
-; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds float, ptr [[TMP12]], i64 [[TMP3]]
-; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <4 x ptr> [[TMP9]], i64 2
-; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds float, ptr [[TMP14]], i64 [[TMP4]]
-; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <4 x ptr> [[TMP9]], i64 3
-; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds float, ptr [[TMP16]], i64 [[TMP5]]
-; CHECK-NEXT:    [[TMP18:%.*]] = load float, ptr [[TMP11]], align 4
-; CHECK-NEXT:    [[TMP19:%.*]] = load float, ptr [[TMP13]], align 4
-; CHECK-NEXT:    [[TMP20:%.*]] = load float, ptr [[TMP15]], align 4
-; CHECK-NEXT:    [[TMP21:%.*]] = load float, ptr [[TMP17]], align 4
-; CHECK-NEXT:    [[TMP22:%.*]] = insertelement <4 x float> poison, float [[TMP18]], i64 0
-; CHECK-NEXT:    [[TMP23:%.*]] = insertelement <4 x float> [[TMP22]], float [[TMP19]], i64 1
-; CHECK-NEXT:    [[TMP24:%.*]] = insertelement <4 x float> [[TMP23]], float [[TMP20]], i64 2
-; CHECK-NEXT:    [[TMP25:%.*]] = insertelement <4 x float> [[TMP24]], float [[TMP21]], i64 3
-; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr inbounds float, ptr [[DEST_FR]], i64 [[INDEX]]
-; CHECK-NEXT:    store <4 x float> [[TMP25]], ptr [[TMP26]], align 4
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq <4 x i32> [[WIDE_LOAD]], zeroinitializer
+; CHECK-NEXT:    [[TMP8:%.*]] = select <4 x i1> [[TMP7]], <4 x ptr> [[BROADCAST_SPLAT]], <4 x ptr> [[BROADCAST_SPLAT10]]
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x ptr> [[TMP8]], i64 0
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds float, ptr [[TMP9]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <4 x ptr> [[TMP8]], i64 1
+; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds float, ptr [[TMP11]], i64 [[TMP3]]
+; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <4 x ptr> [[TMP8]], i64 2
+; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds float, ptr [[TMP13]], i64 [[TMP4]]
+; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <4 x ptr> [[TMP8]], i64 3
+; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds float, ptr [[TMP15]], i64 [[TMP5]]
+; CHECK-NEXT:    [[TMP17:%.*]] = load float, ptr [[TMP10]], align 4
+; CHECK-NEXT:    [[TMP18:%.*]] = load float, ptr [[TMP12]], align 4
+; CHECK-NEXT:    [[TMP19:%.*]] = load float, ptr [[TMP14]], align 4
+; CHECK-NEXT:    [[TMP20:%.*]] = load float, ptr [[TMP16]], align 4
+; CHECK-NEXT:    [[TMP21:%.*]] = insertelement <4 x float> poison, float [[TMP17]], i64 0
+; CHECK-NEXT:    [[TMP22:%.*]] = insertelement <4 x float> [[TMP21]], float [[TMP18]], i64 1
+; CHECK-NEXT:    [[TMP23:%.*]] = insertelement <4 x float> [[TMP22]], float [[TMP19]], i64 2
+; CHECK-NEXT:    [[TMP24:%.*]] = insertelement <4 x float> [[TMP23]], float [[TMP20]], i64 3
+; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr inbounds float, ptr [[DEST_FR]], i64 [[INDEX]]
+; CHECK-NEXT:    store <4 x float> [[TMP24]], ptr [[TMP25]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; CHECK-NEXT:    [[TMP28:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
-; CHECK-NEXT:    br i1 [[TMP28]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK-NEXT:    [[TMP26:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
+; CHECK-NEXT:    br i1 [[TMP26]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br i1 true, label [[FOR_COND_CLEANUP:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 100, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ], [ 0, [[VECTOR_MEMCHECK]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    ret void
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[PREDS]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP29:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[CMP1_NOT:%.*]] = icmp eq i32 [[TMP29]], 0
+; CHECK-NEXT:    [[TMP27:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[CMP1_NOT:%.*]] = icmp eq i32 [[TMP27]], 0
 ; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[CMP1_NOT]], ptr [[BASE2_FR]], ptr [[BASE1_FR]]
 ; CHECK-NEXT:    [[DOTSINK_IN:%.*]] = getelementptr inbounds float, ptr [[SPEC_SELECT]], i64 [[INDVARS_IV]]
 ; CHECK-NEXT:    [[DOTSINK:%.*]] = load float, ptr [[DOTSINK_IN]], align 4
-; CHECK-NEXT:    [[TMP30:%.*]] = getelementptr inbounds float, ptr [[DEST_FR]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    store float [[DOTSINK]], ptr [[TMP30]], align 4
+; CHECK-NEXT:    [[TMP28:%.*]] = getelementptr inbounds float, ptr [[DEST_FR]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    store float [[DOTSINK]], ptr [[TMP28]], align 4
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 100
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], !llvm.loop [[LOOP2:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ;
 entry:
   br label %for.body

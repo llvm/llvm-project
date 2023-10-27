@@ -33,7 +33,7 @@
 // RUN: not %clang_cc1 -triple %itanium_abi_triple -DINSTANTIATION -include-pch all.h.pch -I%t_moved -I%t_moved/sub2 -emit-llvm-only %s 2> %t.stderr
 // RUN: grep 'orig_sub2_1' %t.stderr
 
-void qq(orig_sub*) {all();}
+void qq(orig_sub) {all();}
 
 #ifdef REDECL
 float foo() {return 0;}

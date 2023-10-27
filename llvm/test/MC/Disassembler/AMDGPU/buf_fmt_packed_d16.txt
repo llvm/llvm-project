@@ -1,5 +1,5 @@
-# RUN: llvm-mc -arch=amdgcn -mcpu=gfx810 -disassemble -show-encoding < %s | FileCheck %s -check-prefix=PACKED
-# RUN: llvm-mc -arch=amdgcn -mcpu=gfx900 -disassemble -show-encoding < %s | FileCheck %s -check-prefix=PACKED
+# RUN: llvm-mc -triple=amdgcn -mcpu=gfx810 -disassemble -show-encoding < %s | FileCheck %s -check-prefix=PACKED
+# RUN: llvm-mc -triple=amdgcn -mcpu=gfx900 -disassemble -show-encoding < %s | FileCheck %s -check-prefix=PACKED
 
 # PACKED: buffer_load_format_d16_x v1, off, s[4:7], s1 ; encoding: [0x00,0x00,0x20,0xe0,0x00,0x01,0x01,0x01]
 0x00,0x00,0x20,0xe0,0x00,0x01,0x01,0x01

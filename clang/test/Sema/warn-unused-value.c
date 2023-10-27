@@ -85,7 +85,6 @@ struct s0 { int f0; };
 
 void f0(int a);
 void f1(struct s0 *a) {
-  // rdar://8139785
   f0((int)(a->f0 + 1, 10)); // expected-warning {{left operand of comma operator has no effect}}
 }
 

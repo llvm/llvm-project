@@ -21,12 +21,12 @@
 
 // Tests to check compatibility between Bundle Entry ID formats i.e. between presence/absence of extra hyphen in case of missing environment field
 // RUN: clang-offload-bundler -unbundle -type=a -targets=openmp-amdgcn-amd-amdhsa--gfx906,openmp-amdgcn-amd-amdhsa-gfx908 -input=%t.input-archive.a -output=%t-archive-gfx906-simple.a -output=%t-archive-gfx908-simple.a -debug-only=CodeObjectCompatibility 2>&1 | FileCheck %s -check-prefix=BUNDLECOMPATIBILITY
-// BUNDLECOMPATIBILITY: Compatible: Exact match:        [CodeObject: openmp-amdgcn-amd-amdhsa-gfx906]   :       [Target: openmp-amdgcn-amd-amdhsa--gfx906]
-// BUNDLECOMPATIBILITY: Compatible: Exact match:        [CodeObject: openmp-amdgcn-amd-amdhsa--gfx908]  :       [Target: openmp-amdgcn-amd-amdhsa-gfx908]
+// BUNDLECOMPATIBILITY: Compatible: Exact match:        [CodeObject: openmp-amdgcn-amd-amdhsa--gfx906]  :       [Target: openmp-amdgcn-amd-amdhsa--gfx906]
+// BUNDLECOMPATIBILITY: Compatible: Exact match:        [CodeObject: openmp-amdgcn-amd-amdhsa--gfx908]  :       [Target: openmp-amdgcn-amd-amdhsa--gfx908]
 
 // RUN: clang-offload-bundler -unbundle -type=a -targets=hip-amdgcn-amd-amdhsa--gfx906,hipv4-amdgcn-amd-amdhsa-gfx908 -input=%t.input-archive.a -output=%t-hip-archive-gfx906-simple.a -output=%t-hipv4-archive-gfx908-simple.a -hip-openmp-compatible -debug-only=CodeObjectCompatibility 2>&1 | FileCheck %s -check-prefix=HIPOpenMPCOMPATIBILITY
-// HIPOpenMPCOMPATIBILITY: Compatible: Code Objects are compatible        [CodeObject: openmp-amdgcn-amd-amdhsa-gfx906]   :       [Target: hip-amdgcn-amd-amdhsa--gfx906]
-// HIPOpenMPCOMPATIBILITY: Compatible: Code Objects are compatible        [CodeObject: openmp-amdgcn-amd-amdhsa--gfx908]  :       [Target: hipv4-amdgcn-amd-amdhsa-gfx908]
+// HIPOpenMPCOMPATIBILITY: Compatible: Code Objects are compatible        [CodeObject: openmp-amdgcn-amd-amdhsa--gfx906]  :       [Target: hip-amdgcn-amd-amdhsa--gfx906]
+// HIPOpenMPCOMPATIBILITY: Compatible: Code Objects are compatible        [CodeObject: openmp-amdgcn-amd-amdhsa--gfx908]  :       [Target: hipv4-amdgcn-amd-amdhsa--gfx908]
 
 // Some code so that we can create a binary out of this file.
 int A = 0;

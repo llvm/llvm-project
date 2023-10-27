@@ -26,7 +26,7 @@
 template <bool IsNoexcept>
 struct MaybeNoexceptSwap {
   using value_type = int;
-  using difference_type = ptrdiff_t;
+  using difference_type = std::ptrdiff_t;
 
   constexpr friend void iter_swap(MaybeNoexceptSwap, MaybeNoexceptSwap) noexcept(IsNoexcept) {
   }

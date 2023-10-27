@@ -17,7 +17,7 @@ N: Matt Arsenault
 E: Matthew.Arsenault@amd.com
 E: arsenm2@gmail.com
 I: arsenm
-D: InferAddressSpaces
+D: AMDGPU, InferAddressSpaces
 
 N: Justin Bogner
 E: mail@justinbogner.com
@@ -51,8 +51,8 @@ E: andrey.churbanov@intel.com
 D: OpenMP runtime library
 
 N: Johannes Doerfert
-E: jdoerfert@anl.gov
-D: OpenMP target offloading
+E: jdoerfert@llnl.gov
+D: OpenMP target offloading, OpenMP-Opt, Attributor
 
 N: Greg Clayton
 E: clayborg@gmail.com
@@ -75,10 +75,6 @@ E: andrea.dibiagio@sony.com
 E: andrea.dibiagio@gmail.com
 D: MCA, llvm-mca
 
-N: Duncan P. N. Exon Smith
-E: dexonsmith@apple.com
-D: Branch weights and BlockFrequencyInfo
-
 N: Hal Finkel
 E: hfinkel@anl.gov
 D: The loop reroller and alias analysis
@@ -92,7 +88,7 @@ E: llvm@sunfishcode.online
 D: WebAssembly Backend (lib/Target/WebAssembly/*)
 
 N: Renato Golin
-E: renato.golin@linaro.org
+E: rengolin@systemcall.eu
 D: ARM Linux support
 
 N: Venkatraman Govindaraju
@@ -116,8 +112,7 @@ E: lhames@gmail.com
 D: MCJIT, RuntimeDyld and JIT event listeners, Orcish Warchief
 
 N: Min-Yih Hsu
-E: minyihh@uci.edu
-E: yihshyng223@gmail.com
+E: min@myhsu.dev
 D: M68k Target (lib/Target/M68k/*)
 
 N: Teresa Johnson
@@ -130,15 +125,19 @@ D: LLVM Buildbot
 
 N: Anton Korobeynikov
 E: anton@korobeynikov.info
-D: Exception handling, Windows codegen, ARM EABI
+D: Exception handling, Windows codegen, ARM EABI, MSP430 Target (lib/Target/MSP430/*)
 
 N: Benjamin Kramer
 E: benny.kra@gmail.com
 D: DWARF Parser
 
-N: Michael Kuperstein
-E: mkuper@google.com
+N: Florian Hahn
+E: flo@fhahn.com
 D: Loop Vectorizer
+
+N: Alexey Bataev
+E: a.bataev@outlook.com
+D: SLP Vectorizer
 
 N: Sergei Larin
 E: slarin@codeaurora.org
@@ -157,8 +156,8 @@ N: David Majnemer
 E: david.majnemer@gmail.com
 D: IR Constant Folder, InstCombine
 
-N: Dylan McKay
-E: me@dylanmckay.io
+N: Ben Shi
+E: 2283975856@qq.com, powerman1st@163.com
 D: AVR Backend
 
 N: Kazushi Marukawa
@@ -227,7 +226,7 @@ D: BPF backend
 
 N: Tom Stellard
 E: tstellar@redhat.com
-D: Stable release management (x.y.[1-9] releases), AMDGPU Backend, libclc
+D: Stable release management (x.y.[1-9] releases), libclc
 
 N: Evgeniy Stepanov
 E: eugenis@google.com

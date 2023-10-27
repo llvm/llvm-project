@@ -1,8 +1,10 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-unknown -Wno-implicit-function-declaration -w -S -o - -emit-llvm              %s | FileCheck %s --check-prefix=NO__ERRNO
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-unknown -Wno-implicit-function-declaration -w -S -o - -emit-llvm -fmath-errno %s | FileCheck %s --check-prefix=HAS_ERRNO
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-unknown -Wno-implicit-function-declaration -w -S -o - -emit-llvm -ffp-exception-behavior=maytrap %s | FileCheck %s --check-prefix=HAS_MAYTRAP
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-unknown-gnu -Wno-implicit-function-declaration -w -S -o - -emit-llvm -fmath-errno %s | FileCheck %s --check-prefix=HAS_ERRNO_GNU
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-windows-msvc -Wno-implicit-function-declaration -w -S -o - -emit-llvm -fmath-errno %s | FileCheck %s --check-prefix=HAS_ERRNO_WIN
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -Wno-implicit-function-declaration -w -S -o - -emit-llvm              %s | FileCheck %s --check-prefix=NO__ERRNO
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -Wno-implicit-function-declaration -w -S -o - -emit-llvm -fmath-errno %s | FileCheck %s --check-prefix=HAS_ERRNO
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -Wno-implicit-function-declaration -w -S -o - -emit-llvm -disable-llvm-passes -O2              %s | FileCheck %s --check-prefix=NO__ERRNO
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -Wno-implicit-function-declaration -w -S -o - -emit-llvm -disable-llvm-passes -O2 -fmath-errno %s | FileCheck %s --check-prefix=HAS_ERRNO
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -Wno-implicit-function-declaration -w -S -o - -emit-llvm -ffp-exception-behavior=maytrap %s | FileCheck %s --check-prefix=HAS_MAYTRAP
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown-gnu -Wno-implicit-function-declaration -w -S -o - -emit-llvm -fmath-errno %s | FileCheck %s --check-prefix=HAS_ERRNO_GNU
+// RUN: %clang_cc1 -triple x86_64-unknown-windows-msvc -Wno-implicit-function-declaration -w -S -o - -emit-llvm -fmath-errno %s | FileCheck %s --check-prefix=HAS_ERRNO_WIN
 
 // Test attributes and builtin codegen of math library calls.
 
@@ -57,15 +59,15 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 
   frexp(f,i);    frexpf(f,i);   frexpl(f,i);
 
-  // NO__ERRNO: declare double @frexp(double noundef, i32* noundef) [[NOT_READNONE:#[0-9]+]]
-  // NO__ERRNO: declare float @frexpf(float noundef, i32* noundef) [[NOT_READNONE]]
-  // NO__ERRNO: declare x86_fp80 @frexpl(x86_fp80 noundef, i32* noundef) [[NOT_READNONE]]
-  // HAS_ERRNO: declare double @frexp(double noundef, i32* noundef) [[NOT_READNONE]]
-  // HAS_ERRNO: declare float @frexpf(float noundef, i32* noundef) [[NOT_READNONE]]
-  // HAS_ERRNO: declare x86_fp80 @frexpl(x86_fp80 noundef, i32* noundef) [[NOT_READNONE]]
-  // HAS_MAYTRAP: declare double @frexp(double noundef, i32* noundef) [[NOT_READNONE]]
-  // HAS_MAYTRAP: declare float @frexpf(float noundef, i32* noundef) [[NOT_READNONE]]
-  // HAS_MAYTRAP: declare x86_fp80 @frexpl(x86_fp80 noundef, i32* noundef) [[NOT_READNONE]]
+  // NO__ERRNO: declare double @frexp(double noundef, ptr noundef) [[NOT_READNONE:#[0-9]+]]
+  // NO__ERRNO: declare float @frexpf(float noundef, ptr noundef) [[NOT_READNONE]]
+  // NO__ERRNO: declare x86_fp80 @frexpl(x86_fp80 noundef, ptr noundef) [[NOT_READNONE]]
+  // HAS_ERRNO: declare double @frexp(double noundef, ptr noundef) [[NOT_READNONE]]
+  // HAS_ERRNO: declare float @frexpf(float noundef, ptr noundef) [[NOT_READNONE]]
+  // HAS_ERRNO: declare x86_fp80 @frexpl(x86_fp80 noundef, ptr noundef) [[NOT_READNONE]]
+  // HAS_MAYTRAP: declare double @frexp(double noundef, ptr noundef) [[NOT_READNONE]]
+  // HAS_MAYTRAP: declare float @frexpf(float noundef, ptr noundef) [[NOT_READNONE]]
+  // HAS_MAYTRAP: declare x86_fp80 @frexpl(x86_fp80 noundef, ptr noundef) [[NOT_READNONE]]
 
   ldexp(f,f);    ldexpf(f,f);   ldexpl(f,f);
 
@@ -81,27 +83,27 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 
   modf(f,d);       modff(f,fp);      modfl(f,l);
 
-  // NO__ERRNO: declare double @modf(double noundef, double* noundef) [[NOT_READNONE]]
-  // NO__ERRNO: declare float @modff(float noundef, float* noundef) [[NOT_READNONE]]
-  // NO__ERRNO: declare x86_fp80 @modfl(x86_fp80 noundef, x86_fp80* noundef) [[NOT_READNONE]]
-  // HAS_ERRNO: declare double @modf(double noundef, double* noundef) [[NOT_READNONE]]
-  // HAS_ERRNO: declare float @modff(float noundef, float* noundef) [[NOT_READNONE]]
-  // HAS_ERRNO: declare x86_fp80 @modfl(x86_fp80 noundef, x86_fp80* noundef) [[NOT_READNONE]]
-  // HAS_MAYTRAP: declare double @modf(double noundef, double* noundef) [[NOT_READNONE]]
-  // HAS_MAYTRAP: declare float @modff(float noundef, float* noundef) [[NOT_READNONE]]
-  // HAS_MAYTRAP: declare x86_fp80 @modfl(x86_fp80 noundef, x86_fp80* noundef) [[NOT_READNONE]]
+  // NO__ERRNO: declare double @modf(double noundef, ptr noundef) [[NOT_READNONE]]
+  // NO__ERRNO: declare float @modff(float noundef, ptr noundef) [[NOT_READNONE]]
+  // NO__ERRNO: declare x86_fp80 @modfl(x86_fp80 noundef, ptr noundef) [[NOT_READNONE]]
+  // HAS_ERRNO: declare double @modf(double noundef, ptr noundef) [[NOT_READNONE]]
+  // HAS_ERRNO: declare float @modff(float noundef, ptr noundef) [[NOT_READNONE]]
+  // HAS_ERRNO: declare x86_fp80 @modfl(x86_fp80 noundef, ptr noundef) [[NOT_READNONE]]
+  // HAS_MAYTRAP: declare double @modf(double noundef, ptr noundef) [[NOT_READNONE]]
+  // HAS_MAYTRAP: declare float @modff(float noundef, ptr noundef) [[NOT_READNONE]]
+  // HAS_MAYTRAP: declare x86_fp80 @modfl(x86_fp80 noundef, ptr noundef) [[NOT_READNONE]]
 
   nan(c);        nanf(c);       nanl(c);
 
-// NO__ERRNO: declare double @nan(i8* noundef) [[READONLY:#[0-9]+]]
-// NO__ERRNO: declare float @nanf(i8* noundef) [[READONLY]]
-// NO__ERRNO: declare x86_fp80 @nanl(i8* noundef) [[READONLY]]
-// HAS_ERRNO: declare double @nan(i8* noundef) [[READONLY:#[0-9]+]]
-// HAS_ERRNO: declare float @nanf(i8* noundef) [[READONLY]]
-// HAS_ERRNO: declare x86_fp80 @nanl(i8* noundef) [[READONLY]]
-// HAS_MAYTRAP: declare double @nan(i8* noundef) [[READONLY:#[0-9]+]]
-// HAS_MAYTRAP: declare float @nanf(i8* noundef) [[READONLY]]
-// HAS_MAYTRAP: declare x86_fp80 @nanl(i8* noundef) [[READONLY]]
+// NO__ERRNO: declare double @nan(ptr noundef) [[READONLY:#[0-9]+]]
+// NO__ERRNO: declare float @nanf(ptr noundef) [[READONLY]]
+// NO__ERRNO: declare x86_fp80 @nanl(ptr noundef) [[READONLY]]
+// HAS_ERRNO: declare double @nan(ptr noundef) [[READONLY:#[0-9]+]]
+// HAS_ERRNO: declare float @nanf(ptr noundef) [[READONLY]]
+// HAS_ERRNO: declare x86_fp80 @nanl(ptr noundef) [[READONLY]]
+// HAS_MAYTRAP: declare double @nan(ptr noundef) [[READONLY:#[0-9]+]]
+// HAS_MAYTRAP: declare float @nanf(ptr noundef) [[READONLY]]
+// HAS_MAYTRAP: declare x86_fp80 @nanl(ptr noundef) [[READONLY]]
 
   pow(f,f);        powf(f,f);       powl(f,f);
 
@@ -564,15 +566,15 @@ void foo(double *d, float f, float *fp, long double *l, int *i, const char *c) {
 
   remquo(f,f,i);  remquof(f,f,i); remquol(f,f,i);
 
-// NO__ERRNO: declare double @remquo(double noundef, double noundef, i32* noundef) [[NOT_READNONE]]
-// NO__ERRNO: declare float @remquof(float noundef, float noundef, i32* noundef) [[NOT_READNONE]]
-// NO__ERRNO: declare x86_fp80 @remquol(x86_fp80 noundef, x86_fp80 noundef, i32* noundef) [[NOT_READNONE]]
-// HAS_ERRNO: declare double @remquo(double noundef, double noundef, i32* noundef) [[NOT_READNONE]]
-// HAS_ERRNO: declare float @remquof(float noundef, float noundef, i32* noundef) [[NOT_READNONE]]
-// HAS_ERRNO: declare x86_fp80 @remquol(x86_fp80 noundef, x86_fp80 noundef, i32* noundef) [[NOT_READNONE]]
-// HAS_MAYTRAP: declare double @remquo(double noundef, double noundef, i32* noundef) [[NOT_READNONE]]
-// HAS_MAYTRAP: declare float @remquof(float noundef, float noundef, i32* noundef) [[NOT_READNONE]]
-// HAS_MAYTRAP: declare x86_fp80 @remquol(x86_fp80 noundef, x86_fp80 noundef, i32* noundef) [[NOT_READNONE]]
+// NO__ERRNO: declare double @remquo(double noundef, double noundef, ptr noundef) [[NOT_READNONE]]
+// NO__ERRNO: declare float @remquof(float noundef, float noundef, ptr noundef) [[NOT_READNONE]]
+// NO__ERRNO: declare x86_fp80 @remquol(x86_fp80 noundef, x86_fp80 noundef, ptr noundef) [[NOT_READNONE]]
+// HAS_ERRNO: declare double @remquo(double noundef, double noundef, ptr noundef) [[NOT_READNONE]]
+// HAS_ERRNO: declare float @remquof(float noundef, float noundef, ptr noundef) [[NOT_READNONE]]
+// HAS_ERRNO: declare x86_fp80 @remquol(x86_fp80 noundef, x86_fp80 noundef, ptr noundef) [[NOT_READNONE]]
+// HAS_MAYTRAP: declare double @remquo(double noundef, double noundef, ptr noundef) [[NOT_READNONE]]
+// HAS_MAYTRAP: declare float @remquof(float noundef, float noundef, ptr noundef) [[NOT_READNONE]]
+// HAS_MAYTRAP: declare x86_fp80 @remquol(x86_fp80 noundef, x86_fp80 noundef, ptr noundef) [[NOT_READNONE]]
 
   rint(f);       rintf(f);      rintl(f);
 

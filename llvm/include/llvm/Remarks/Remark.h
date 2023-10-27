@@ -17,6 +17,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/CBindingWrapping.h"
+#include "llvm/Support/raw_ostream.h"
 #include <optional>
 #include <string>
 
@@ -32,6 +33,9 @@ struct RemarkLocation {
   StringRef SourceFilePath;
   unsigned SourceLine = 0;
   unsigned SourceColumn = 0;
+
+  /// Implement operator<< on RemarkLocation.
+  void print(raw_ostream &OS) const;
 };
 
 // Create wrappers for C Binding types (see CBindingWrapping.h).
@@ -45,6 +49,13 @@ struct Argument {
   StringRef Val;
   // If set, the debug location corresponding to the value.
   std::optional<RemarkLocation> Loc;
+
+  /// Implement operator<< on Argument.
+  void print(raw_ostream &OS) const;
+  /// Return the value of argument as int.
+  std::optional<int> getValAsInt() const;
+  /// Check if the argument value can be parsed as int.
+  bool isValInt() const;
 };
 
 // Create wrappers for C Binding types (see CBindingWrapping.h).
@@ -62,6 +73,25 @@ enum class Type {
   First = Unknown,
   Last = Failure
 };
+
+inline StringRef typeToStr(Type Ty) {
+  switch (Ty) {
+  case Type::Unknown:
+    return "Unknown";
+  case Type::Missed:
+    return "Missed";
+  case Type::Passed:
+    return "Passed";
+  case Type::Analysis:
+    return "Analysis";
+  case Type::AnalysisFPCommute:
+    return "AnalysisFPCommute";
+  case Type::AnalysisAliasing:
+    return "AnalysisAliasing";
+  default:
+    return "Failure";
+  }
+}
 
 /// A remark type used for both emission and parsing.
 struct Remark {
@@ -98,6 +128,9 @@ struct Remark {
 
   /// Clone this remark to explicitly ask for a copy.
   Remark clone() const { return *this; }
+
+  /// Implement operator<< on Remark.
+  void print(raw_ostream &OS) const;
 
 private:
   /// In order to avoid unwanted copies, "delete" the copy constructor.
@@ -169,6 +202,21 @@ inline bool operator<(const Remark &LHS, const Remark &RHS) {
                          LHS.FunctionName, LHS.Loc, LHS.Hotness, LHS.Args) <
          std::make_tuple(RHS.RemarkType, RHS.PassName, RHS.RemarkName,
                          RHS.FunctionName, RHS.Loc, RHS.Hotness, RHS.Args);
+}
+
+inline raw_ostream &operator<<(raw_ostream &OS, const RemarkLocation &RLoc) {
+  RLoc.print(OS);
+  return OS;
+}
+
+inline raw_ostream &operator<<(raw_ostream &OS, const Argument &Arg) {
+  Arg.print(OS);
+  return OS;
+}
+
+inline raw_ostream &operator<<(raw_ostream &OS, const Remark &Remark) {
+  Remark.print(OS);
+  return OS;
 }
 
 } // end namespace remarks

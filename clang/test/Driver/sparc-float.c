@@ -33,7 +33,7 @@
 // CHECK-FLOATABIHARD-NOT: "-target-feature" "+soft-float"
 //
 // check invalid -mfloat-abi
-// RUN: %clang -c %s -### -o %t.o 2>&1 \
+// RUN: not %clang -c %s -### -o %t.o 2>&1 \
 // RUN:     -target sparc-linux-gnu -mfloat-abi=x \
 // RUN:   | FileCheck --check-prefix=CHECK-ERRMSG %s
 // CHECK-ERRMSG: error: invalid float ABI '-mfloat-abi=x'
@@ -70,7 +70,7 @@
 // CHECK-FLOATABIHARD64-NOT: "-target-feature" "+soft-float"
 //
 // check invalid -mfloat-abi
-// RUN: %clang -c %s -### -o %t.o 2>&1 \
+// RUN: not %clang -c %s -### -o %t.o 2>&1 \
 // RUN:     -target sparc64-linux-gnu -mfloat-abi=x \
 // RUN:   | FileCheck --check-prefix=CHECK-ERRMSG64 %s
 // CHECK-ERRMSG64: error: invalid float ABI '-mfloat-abi=x'

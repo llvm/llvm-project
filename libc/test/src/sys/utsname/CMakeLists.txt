@@ -1,4 +1,4 @@
-add_libc_testsuite(libc_sys_utsname_unittests)
+add_custom_target(libc_sys_utsname_unittests)
 
 add_libc_unittest(
   uname_test

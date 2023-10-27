@@ -1,3 +1,4 @@
+// RUN: export LSAN_OPTIONS=detect_leaks=0
 // RUN: rm -rf %t && mkdir %t
 
 // RUN: echo "%s -fcrash-diagnostics-dir=%t -fsyntax-only" | sed -e 's/\\/\\\\/g' > %t.rsp

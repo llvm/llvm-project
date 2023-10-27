@@ -17,7 +17,7 @@
 ;       t24: ch = TokenFactor t7:1, t9:1, t21
 ;     t14: ch,glue = CopyToReg t24, Register:i64 $x0, t19
 ;     t19: i64,ch = load<(load (s64) from %ir.lp12, align 1, !tbaa !7)> t0, t9, undef:i64
-;     t15: ch = AArch64ISD::RET_FLAG t14, Register:i64 $x0, t14:1
+;     t15: ch = AArch64ISD::RET_GLUE t14, Register:i64 $x0, t14:1
 ;
 ; The t21 store depends on t19 (via a chain dependency),
 ; t19 load depends on t9 (via address operand),

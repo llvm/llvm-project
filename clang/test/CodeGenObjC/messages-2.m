@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin10 -fobjc-runtime=macosx-fragile-10.5 -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin10 -emit-llvm -o - %s | FileCheck %s -check-prefix=CHECK-NF
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fobjc-runtime=macosx-fragile-10.5 -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -emit-llvm -o - %s | FileCheck %s -check-prefix=CHECK-NF
 
 // Most of this test is apparently just verifying that we don't crash.
 
@@ -144,32 +144,27 @@ typedef struct {
 }
 @end
 
-// rdar://problem/7854674
-// CHECK:    define{{.*}} void @test0([[A:%.*]]*
-// CHECK-NF: define{{.*}} void @test0([[A:%.*]]*
+// CHECK:    define{{.*}} void @test0(ptr
+// CHECK-NF: define{{.*}} void @test0(ptr
 void test0(A *x) {
-  // CHECK:         [[X:%.*]] = alloca [[A]]*
+  // CHECK:         [[X:%.*]] = alloca ptr
   // CHECK-NEXT:    [[POINT:%.*]] = alloca [[POINT_T:%.*]],
-  // CHECK:         [[T0:%.*]] = load [[A]]*, [[A]]** [[X]]
-  // CHECK:         [[T1:%.*]] = bitcast [[A]]* [[T0]] to i8*
-  // CHECK-NEXT:    icmp eq i8* [[T1]], null
+  // CHECK:         [[T0:%.*]] = load ptr, ptr [[X]]
+  // CHECK:    icmp eq ptr [[T0]], null
   // CHECK-NEXT:    br i1
-  // CHECK:         call {{.*}} @objc_msgSend_stret to
+  // CHECK:         call {{.*}} @objc_msgSend_stret
   // CHECK-NEXT:    br label
-  // CHECK:         [[T0:%.*]] = bitcast [[POINT_T]]* [[POINT]] to i8*
-  // CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* align 4 [[T0]], i8 0, i64 48, i1 false)
+  // CHECK:    call void @llvm.memset.p0.i64(ptr align 4 [[POINT]], i8 0, i64 48, i1 false)
   // CHECK-NEXT:    br label
 
-  // CHECK-NF:      [[X:%.*]] = alloca [[A]]*
+  // CHECK-NF:      [[X:%.*]] = alloca ptr
   // CHECK-NF-NEXT: [[POINT:%.*]] = alloca [[POINT_T:%.*]],
-  // CHECK-NF:      [[T0:%.*]] = load [[A]]*, [[A]]** [[X]]
-  // CHECK-NF:      [[T1:%.*]] = bitcast [[A]]* [[T0]] to i8*
-  // CHECK-NF-NEXT: icmp eq i8* [[T1]], null
+  // CHECK-NF:      [[T0:%.*]] = load ptr, ptr [[X]]
+  // CHECK-NF: icmp eq ptr [[T0]], null
   // CHECK-NF-NEXT: br i1
-  // CHECK-NF:      call {{.*}} @objc_msgSend_stret to
+  // CHECK-NF:      call {{.*}} @objc_msgSend_stret
   // CHECK-NF-NEXT: br label
-  // CHECK-NF:      [[T0:%.*]] = bitcast [[POINT_T]]* [[POINT]] to i8*
-  // CHECK-NF-NEXT: call void @llvm.memset.p0i8.i64(i8* align 4 [[T0]], i8 0, i64 48, i1 false)
+  // CHECK-NF: call void @llvm.memset.p0.i64(ptr align 4 [[POINT]], i8 0, i64 48, i1 false)
   // CHECK-NF-NEXT: br label
   MyPoint point = [x returnAPoint];
 }

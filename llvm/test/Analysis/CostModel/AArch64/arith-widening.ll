@@ -2087,3 +2087,27 @@ define void @extmulv16(<16 x i8> %i8, <16 x i16> %i16, <16 x i32> %i32, <16 x i6
 
   ret void
 }
+
+define void @extmul_const(<8 x i8> %i8, <8 x i16> %i16, <8 x i32> %i32, <8 x i64> %i64)  {
+; CHECK-LABEL: 'extmul_const'
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %sl1_8_16 = sext <8 x i8> %i8 to <8 x i16>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %asl_8_16 = mul <8 x i16> %sl1_8_16, <i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %zl1_8_16 = zext <8 x i8> %i8 to <8 x i16>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %azl_8_16 = mul <8 x i16> %zl1_8_16, <i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %zl1_8_16b = zext <8 x i8> %i8 to <8 x i16>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %and = and <8 x i16> %sl1_8_16, <i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %aal_8_16 = mul <8 x i16> %zl1_8_16b, %and
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+  %sl1_8_16 = sext <8 x i8> %i8 to <8 x i16>
+  %asl_8_16 = mul <8 x i16> %sl1_8_16, <i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10>
+
+  %zl1_8_16 = zext <8 x i8> %i8 to <8 x i16>
+  %azl_8_16 = mul <8 x i16> %zl1_8_16, <i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10>
+
+  %zl1_8_16b = zext <8 x i8> %i8 to <8 x i16>
+  %and = and <8 x i16> %sl1_8_16, <i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255>
+  %aal_8_16 = mul <8 x i16> %zl1_8_16b, %and
+
+  ret void
+}

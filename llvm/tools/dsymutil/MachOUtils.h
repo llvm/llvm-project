@@ -26,10 +26,12 @@ namespace MachOUtils {
 
 struct ArchAndFile {
   std::string Arch;
-  std::unique_ptr<llvm::sys::fs::TempFile> File;
+  std::string Path;
+  int FD = -1;
 
   llvm::Error createTempFile();
-  llvm::StringRef path() const;
+  llvm::StringRef getPath() const;
+  int getFD() const;
 
   ArchAndFile(StringRef Arch) : Arch(std::string(Arch)) {}
   ArchAndFile(ArchAndFile &&A) = default;
@@ -54,7 +56,7 @@ struct DwarfRelocationApplicationInfo {
 
 bool generateUniversalBinary(SmallVectorImpl<ArchAndFile> &ArchFiles,
                              StringRef OutputFileName, const LinkOptions &,
-                             StringRef SDKPath);
+                             StringRef SDKPath, bool Fat64 = false);
 bool generateDsymCompanion(
     llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS, const DebugMap &DM,
     SymbolMapTranslator &Translator, MCStreamer &MS, raw_fd_ostream &OutFile,

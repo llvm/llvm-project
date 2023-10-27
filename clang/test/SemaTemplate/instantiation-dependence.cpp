@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++2b -verify %s
+// RUN: %clang_cc1 -std=c++23 -verify %s
 
 // Ensure we substitute into instantiation-dependent but non-dependent
 // constructs. The poster-child for this is...
@@ -37,8 +37,8 @@ namespace PR33655 {
   template<class ...Args> using indirect_void_t = typename indirect_void_t_imp<Args...>::type;
 
   template<class T> void foo() {
-    static_assert(!__is_void(indirect_void_t<T>)); // "ok", dependent
-    static_assert(!__is_void(void_t<T>)); // expected-error {{failed}}
+    int check1[__is_void(indirect_void_t<T>) == 0 ? 1 : -1]; // "ok", dependent
+    int check2[__is_void(void_t<T>) == 0 ? 1 : -1]; // expected-error {{array with a negative size}}
   }
 }
 

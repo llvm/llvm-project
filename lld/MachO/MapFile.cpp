@@ -122,8 +122,17 @@ static MapInfo gatherMapInfo() {
   return info;
 }
 
+// We use this instead of `toString(const InputFile *)` as we don't want to
+// include the dylib install name in our output.
+static void printFileName(raw_fd_ostream &os, const InputFile *f) {
+  if (f->archiveName.empty())
+    os << f->getName();
+  else
+    os << f->archiveName << "(" << path::filename(f->getName()) + ")";
+}
+
 // For printing the contents of the __stubs and __la_symbol_ptr sections.
-void printStubsEntries(
+static void printStubsEntries(
     raw_fd_ostream &os,
     const DenseMap<lld::macho::InputFile *, uint32_t> &readerToFileOrdinal,
     const OutputSection *osec, size_t entrySize) {
@@ -134,8 +143,8 @@ void printStubsEntries(
                  sym->getName().str().data());
 }
 
-void printNonLazyPointerSection(raw_fd_ostream &os,
-                                NonLazyPointerSectionBase *osec) {
+static void printNonLazyPointerSection(raw_fd_ostream &os,
+                                       NonLazyPointerSectionBase *osec) {
   // ld64 considers stubs to belong to particular files, but considers GOT
   // entries to be linker-synthesized. Not sure why they made that decision, but
   // I think we can follow suit unless there's demand for better symbol-to-file
@@ -171,7 +180,9 @@ void macho::writeMapFile() {
   uint32_t fileIndex = 1;
   DenseMap<lld::macho::InputFile *, uint32_t> readerToFileOrdinal;
   for (InputFile *file : info.files) {
-    os << format("[%3u] %s\n", fileIndex, file->getName().str().c_str());
+    os << format("[%3u] ", fileIndex);
+    printFileName(os, file);
+    os << "\n";
     readerToFileOrdinal[file] = fileIndex++;
   }
 
@@ -193,9 +204,10 @@ void macho::writeMapFile() {
       if (auto *concatOsec = dyn_cast<ConcatOutputSection>(osec)) {
         for (const InputSection *isec : concatOsec->inputs) {
           for (Defined *sym : isec->symbols)
-            os << format("0x%08llX\t0x%08llX\t[%3u] %s\n", sym->getVA(),
-                         sym->size, readerToFileOrdinal[sym->getFile()],
-                         sym->getName().str().data());
+            if (!(isPrivateLabel(sym->getName()) && sym->size == 0))
+              os << format("0x%08llX\t0x%08llX\t[%3u] %s\n", sym->getVA(),
+                           sym->size, readerToFileOrdinal[sym->getFile()],
+                           sym->getName().str().data());
         }
       } else if (osec == in.cStringSection || osec == in.objcMethnameSection) {
         const auto &liveCStrings = info.liveCStringsForSection.lookup(osec);

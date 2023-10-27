@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -Wno-unused-value -fdouble-square-bracket-attributes -verify %s
+// RUN: %clang_cc1 -Wno-unused-value -verify %s
 
 #define NODEREF __attribute__((noderef))
 

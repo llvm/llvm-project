@@ -2,8 +2,8 @@
 ; RUN: llc < %s -march=nvptx -mcpu=sm_20 -nvptx-fma-level=0 | FileCheck %s -check-prefix=MUL
 ; RUN: llc < %s -march=nvptx64 -mcpu=sm_20 -nvptx-fma-level=1 | FileCheck %s -check-prefix=FMA
 ; RUN: llc < %s -march=nvptx64 -mcpu=sm_20 -nvptx-fma-level=0 | FileCheck %s -check-prefix=MUL
-; RUN: %if ptxas %{ llc < %s -march=nvptx -mcpu=sm_20 -nvptx-fma-level=1 | %ptxas-verify %}
-; RUN: %if ptxas %{ llc < %s -march=nvptx -mcpu=sm_20 -nvptx-fma-level=0 | %ptxas-verify %}
+; RUN: %if ptxas && !ptxas-12.0 %{ llc < %s -march=nvptx -mcpu=sm_20 -nvptx-fma-level=1 | %ptxas-verify %}
+; RUN: %if ptxas && !ptxas-12.0 %{ llc < %s -march=nvptx -mcpu=sm_20 -nvptx-fma-level=0 | %ptxas-verify %}
 ; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_20 -nvptx-fma-level=1 | %ptxas-verify %}
 ; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_20 -nvptx-fma-level=0 | %ptxas-verify %}
 

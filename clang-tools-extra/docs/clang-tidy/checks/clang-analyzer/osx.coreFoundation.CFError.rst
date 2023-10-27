@@ -5,6 +5,9 @@
 clang-analyzer-osx.coreFoundation.CFError
 =========================================
 
-The clang-analyzer-osx.coreFoundation.CFError check is an alias, please see
-`Clang Static Analyzer Available Checkers <https://clang.llvm.org/docs/analyzer/checkers.html#osx-corefoundation-cferror>`_
+Check usage of CFErrorRef* parameters.
+
+The `clang-analyzer-osx.coreFoundation.CFError` check is an alias, please see
+`Clang Static Analyzer Available Checkers
+<https://clang.llvm.org/docs/analyzer/checkers.html#osx-corefoundation-cferror>`_
 for more information.

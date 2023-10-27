@@ -2,6 +2,7 @@
 
 from lldbsuite.test.lldbtest import *
 
+
 class TestSBError(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 

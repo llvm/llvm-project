@@ -19,14 +19,19 @@
 # RUN: llvm-objdump -d --no-show-raw-insn --print-imm-hex \
 # RUN:   %t.out | FileCheck --check-prefix=DISASM %s
 
+## Relocate foo only and check that code references from _start (that is
+## otherwise preserved) are updated.
+
+# RUN: llvm-bolt %t.exe --relocs -o %t.lite.out --funcs=foo
+# RUN: llvm-objdump -d --no-show-raw-insn --print-imm-hex \
+# RUN:   %t.lite.out | FileCheck --check-prefix=DISASM %s
+
   .text
   .globl _start
   .type _start, %function
 _start:
   .cfi_startproc
-# DISASM:      Disassembly of section .text:
-# DISASM-EMPTY:
-# DISASM-NEXT: <_start>:
+# DISASM: <_start>:
 
                       call *foo@GOTPCREL(%rip)
 # NO-RELAX-BOLT:      callq *{{.*}}(%rip)
@@ -63,6 +68,8 @@ _start:
 # BOLT-NEXT:          jmp foo
 # PIE-BOLT-NEXT:      jmp foo
 # DISASM-NEXT:        jmp 0x[[#ADDR]]
+
+# DISASM: [[#ADDR]] <foo>:
 
   ret
   .cfi_endproc

@@ -11,6 +11,7 @@
 
 #include "src/__support/CPP/span.h"
 #include "src/__support/CPP/string_view.h"
+#include "src/__support/common.h"
 #include "src/__support/integer_to_string.h"
 #include "src/stdio/printf_core/converter_utils.h"
 #include "src/stdio/printf_core/core_structs.h"
@@ -19,31 +20,51 @@
 #include <inttypes.h>
 #include <stddef.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace printf_core {
 
 // These functions only work on characters that are already known to be in the
 // alphabet. Their behavior is undefined otherwise.
-constexpr char inline to_lower(char a) { return a | 32; }
-constexpr bool inline is_lower(char a) { return (a & 32) > 0; }
+LIBC_INLINE constexpr char to_lower(char a) { return a | 32; }
+LIBC_INLINE constexpr bool is_lower(char a) { return (a & 32) > 0; }
 
-cpp::optional<cpp::string_view> inline num_to_strview(uintmax_t num,
-                                                      cpp::span<char> bufref,
-                                                      char conv_name) {
+namespace details {
+
+using HexFmt = IntegerToString<uintmax_t, radix::Hex>;
+using HexFmtUppercase = IntegerToString<uintmax_t, radix::Hex::Uppercase>;
+using OctFmt = IntegerToString<uintmax_t, radix::Oct>;
+using DecFmt = IntegerToString<uintmax_t>;
+
+LIBC_INLINE constexpr size_t num_buf_size() {
+  constexpr auto max = [](size_t a, size_t b) -> size_t {
+    return (a < b) ? b : a;
+  };
+  return max(HexFmt::buffer_size(),
+             max(HexFmtUppercase::buffer_size(),
+                 max(OctFmt::buffer_size(), DecFmt::buffer_size())));
+}
+
+LIBC_INLINE cpp::optional<cpp::string_view>
+num_to_strview(uintmax_t num, cpp::span<char> bufref, char conv_name) {
   if (to_lower(conv_name) == 'x') {
-    return IntegerToString::hex(num, bufref, is_lower(conv_name));
+    if (is_lower(conv_name))
+      return HexFmt::format_to(bufref, num);
+    else
+      return HexFmtUppercase::format_to(bufref, num);
   } else if (conv_name == 'o') {
-    return IntegerToString::oct(num, bufref);
+    return OctFmt::format_to(bufref, num);
   } else {
-    return IntegerToString::dec(num, bufref);
+    return DecFmt::format_to(bufref, num);
   }
 }
 
-int inline convert_int(Writer *writer, const FormatSection &to_conv) {
+} // namespace details
+
+LIBC_INLINE int convert_int(Writer *writer, const FormatSection &to_conv) {
   static constexpr size_t BITS_IN_BYTE = 8;
   static constexpr size_t BITS_IN_NUM = sizeof(uintmax_t) * BITS_IN_BYTE;
 
-  uintmax_t num = to_conv.conv_val_raw;
+  uintmax_t num = static_cast<uintmax_t>(to_conv.conv_val_raw);
   bool is_negative = false;
   FormatFlags flags = to_conv.flags;
 
@@ -66,8 +87,8 @@ int inline convert_int(Writer *writer, const FormatSection &to_conv) {
 
   num = apply_length_modifier(num, to_conv.length_modifier);
 
-  char buf[IntegerToString::oct_bufsize<intmax_t>()];
-  auto str = num_to_strview(num, buf, to_conv.conv_name);
+  cpp::array<char, details::num_buf_size()> buf;
+  auto str = details::num_to_strview(num, buf, to_conv.conv_name);
   if (!str)
     return INT_CONVERSION_ERROR;
 
@@ -108,13 +129,15 @@ int inline convert_int(Writer *writer, const FormatSection &to_conv) {
       // If this conv has flag 0 but not - and no specified precision, it's
       // padded with 0's instead of spaces identically to if precision =
       // min_width - (1 if sign_char). For example: ("%+04d", 1) -> "+001"
-      zeroes = to_conv.min_width - digits_written - prefix_len;
+      zeroes =
+          static_cast<int>(to_conv.min_width - digits_written - prefix_len);
       spaces = 0;
     } else {
       // If there are enough digits to pass over the precision, just write the
       // number, padded by spaces.
       zeroes = 0;
-      spaces = to_conv.min_width - digits_written - prefix_len;
+      spaces =
+          static_cast<int>(to_conv.min_width - digits_written - prefix_len);
     }
   } else {
     // If precision was specified, possibly write zeroes, and possibly write
@@ -127,10 +150,12 @@ int inline convert_int(Writer *writer, const FormatSection &to_conv) {
     // that special case first.
     if (num == 0 && to_conv.precision == 0)
       digits_written = 0;
-    zeroes = to_conv.precision - digits_written; // a negative value means 0
+    zeroes = static_cast<int>(to_conv.precision -
+                              digits_written); // a negative value means 0
     if (zeroes < 0)
       zeroes = 0;
-    spaces = to_conv.min_width - zeroes - digits_written - prefix_len;
+    spaces = static_cast<int>(to_conv.min_width - zeroes - digits_written -
+                              prefix_len);
   }
 
   if ((to_conv.conv_name == 'o') &&
@@ -164,6 +189,6 @@ int inline convert_int(Writer *writer, const FormatSection &to_conv) {
 }
 
 } // namespace printf_core
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STDIO_PRINTF_CORE_INT_CONVERTER_H

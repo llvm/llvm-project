@@ -125,8 +125,8 @@ define i64 @call_strnlen_s5_3_pi_n(i64 zeroext %i, i64 %n) {
 
 define i64 @fold_strnlen_a3_n(i64 %n) {
 ; CHECK-LABEL: @fold_strnlen_a3_n(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.umin.i64(i64 [[N:%.*]], i64 3)
-; CHECK-NEXT:    ret i64 [[TMP1]]
+; CHECK-NEXT:    [[LEN:%.*]] = call i64 @llvm.umin.i64(i64 [[N:%.*]], i64 3)
+; CHECK-NEXT:    ret i64 [[LEN]]
 ;
 
   %len = call i64 @strnlen(ptr @a3, i64 %n)
@@ -138,8 +138,8 @@ define i64 @fold_strnlen_a3_n(i64 %n) {
 
 define i64 @fold_strnlen_s3_n(i64 %n) {
 ; CHECK-LABEL: @fold_strnlen_s3_n(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.umin.i64(i64 [[N:%.*]], i64 3)
-; CHECK-NEXT:    ret i64 [[TMP1]]
+; CHECK-NEXT:    [[LEN:%.*]] = call i64 @llvm.umin.i64(i64 [[N:%.*]], i64 3)
+; CHECK-NEXT:    ret i64 [[LEN]]
 ;
 
   %len = call i64 @strnlen(ptr @s3, i64 %n)

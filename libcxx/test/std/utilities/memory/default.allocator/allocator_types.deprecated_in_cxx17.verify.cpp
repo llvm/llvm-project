@@ -27,7 +27,7 @@
 
 #include <memory>
 
-int main(int, char**) {
+void f() {
     {
         typedef std::allocator<char>::pointer Pointer;                  // expected-warning {{'pointer' is deprecated}}
         typedef std::allocator<char>::const_pointer ConstPointer;       // expected-warning {{'const_pointer' is deprecated}}
@@ -48,5 +48,4 @@ int main(int, char**) {
         // reference and const_reference are not provided by std::allocator<void>
         typedef std::allocator<void>::rebind<int>::other Rebind;        // expected-warning {{'rebind<int>' is deprecated}}
     }
-    return 0;
 }

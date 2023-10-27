@@ -1,10 +1,10 @@
 // RUN: %clang_cc1 -verify=expected,omp4 -fopenmp -fopenmp-version=45 -std=c++11 %s -Wuninitialized
 // RUN: %clang_cc1 -verify=expected,omp5 -fopenmp -fopenmp-version=50 -std=c++11 %s -Wuninitialized
-// RUN: %clang_cc1 -verify=expected,omp51 -fopenmp -fopenmp-version=51 -std=c++11 %s -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,omp51 -fopenmp -std=c++11 %s -Wuninitialized
 
 // RUN: %clang_cc1 -verify=expected,omp4 -fopenmp-simd -fopenmp-version=45 -std=c++11 %s -Wuninitialized
 // RUN: %clang_cc1 -verify=expected,omp5 -fopenmp-simd -fopenmp-version=50 -std=c++11 %s -Wuninitialized
-// RAN: %clang_cc1 -verify=expected,omp51 -fopenmp-simd -fopenmp-version=51 -std=c++11 %s -Wuninitialized
+// RAN: %clang_cc1 -verify=expected,omp51 -fopenmp-simd -std=c++11 %s -Wuninitialized
 
 void foo() {
 }

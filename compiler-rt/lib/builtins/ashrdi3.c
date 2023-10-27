@@ -29,7 +29,8 @@ COMPILER_RT_ABI di_int __ashrdi3(di_int a, int b) {
     if (b == 0)
       return a;
     result.s.high = input.s.high >> b;
-    result.s.low = (input.s.high << (bits_in_word - b)) | (input.s.low >> b);
+    result.s.low =
+        ((su_int)input.s.high << (bits_in_word - b)) | (input.s.low >> b);
   }
   return result.all;
 }

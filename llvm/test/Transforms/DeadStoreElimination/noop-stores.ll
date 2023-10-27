@@ -667,6 +667,17 @@ if.end:
   ret ptr %3
 }
 
+define ptr @readnone_malloc() {
+; CHECK-LABEL: @readnone_malloc(
+; CHECK-NEXT:    [[ALLOC:%.*]] = call ptr @malloc(i64 16) #[[ATTR8:[0-9]+]]
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[ALLOC]], i8 0, i64 16, i1 false)
+; CHECK-NEXT:    ret ptr [[ALLOC]]
+;
+  %alloc = call ptr @malloc(i64 16) memory(none)
+  call void @llvm.memset.p0.i64(ptr %alloc, i8 0, i64 16, i1 false)
+  ret ptr %alloc
+}
+
 define void @store_same_i32_to_mayalias_loc(ptr %q, ptr %p) {
 ; CHECK-LABEL: @store_same_i32_to_mayalias_loc(
 ; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[P:%.*]], align 4

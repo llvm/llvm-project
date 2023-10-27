@@ -44,7 +44,7 @@ public:
   LogicalResult
   matchAndRewrite(tensor::ExtractOp extractOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    TensorType tensorType = extractOp.getTensor().getType().cast<TensorType>();
+    auto tensorType = cast<RankedTensorType>(extractOp.getTensor().getType());
 
     if (!tensorType.hasStaticShape())
       return rewriter.notifyMatchFailure(extractOp, "non-static tensor");

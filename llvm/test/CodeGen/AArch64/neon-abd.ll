@@ -145,22 +145,22 @@ define <2 x i64> @sabd_2d(<2 x i64> %a, <2 x i64> %b) #0 {
 ; CHECK-LABEL: sabd_2d:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov x8, v0.d[1]
-; CHECK-NEXT:    fmov x10, d0
 ; CHECK-NEXT:    mov x9, v1.d[1]
-; CHECK-NEXT:    fmov x11, d1
-; CHECK-NEXT:    asr x12, x10, #63
-; CHECK-NEXT:    asr x14, x8, #63
-; CHECK-NEXT:    asr x15, x9, #63
+; CHECK-NEXT:    fmov x10, d0
+; CHECK-NEXT:    fmov x12, d1
+; CHECK-NEXT:    asr x14, x10, #63
+; CHECK-NEXT:    asr x11, x8, #63
+; CHECK-NEXT:    asr x13, x9, #63
+; CHECK-NEXT:    asr x15, x12, #63
 ; CHECK-NEXT:    subs x8, x8, x9
-; CHECK-NEXT:    asr x13, x11, #63
-; CHECK-NEXT:    sbc x9, x14, x15
-; CHECK-NEXT:    subs x10, x10, x11
+; CHECK-NEXT:    sbc x9, x11, x13
+; CHECK-NEXT:    subs x10, x10, x12
+; CHECK-NEXT:    sbc x11, x14, x15
 ; CHECK-NEXT:    asr x9, x9, #63
-; CHECK-NEXT:    sbc x11, x12, x13
-; CHECK-NEXT:    eor x8, x8, x9
 ; CHECK-NEXT:    asr x11, x11, #63
-; CHECK-NEXT:    sub x8, x8, x9
+; CHECK-NEXT:    eor x8, x8, x9
 ; CHECK-NEXT:    eor x10, x10, x11
+; CHECK-NEXT:    sub x8, x8, x9
 ; CHECK-NEXT:    sub x10, x10, x11
 ; CHECK-NEXT:    fmov d1, x8
 ; CHECK-NEXT:    fmov d0, x10
@@ -325,8 +325,8 @@ define <2 x i64> @uabd_2d(<2 x i64> %a, <2 x i64> %b) #0 {
 ; CHECK-LABEL: uabd_2d:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov x8, v0.d[1]
-; CHECK-NEXT:    fmov x10, d0
 ; CHECK-NEXT:    mov x9, v1.d[1]
+; CHECK-NEXT:    fmov x10, d0
 ; CHECK-NEXT:    fmov x11, d1
 ; CHECK-NEXT:    subs x8, x8, x9
 ; CHECK-NEXT:    ngc x9, xzr

@@ -13,11 +13,11 @@
 
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/Config/config.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
@@ -27,6 +27,7 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
+#include "llvm/IR/Mangler.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
@@ -42,6 +43,8 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/SwapByteOrder.h"
+#include "llvm/Support/VirtualFileSystem.h"
+#include "llvm/TargetParser/Triple.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -152,6 +155,9 @@ static std::string getInstrProfErrString(instrprof_error Err,
     OS << "profile uses zlib compression but the profile reader was built "
           "without zlib support";
     break;
+  case instrprof_error::raw_profile_version_mismatch:
+    OS << "raw profile version mismatch";
+    break;
   }
 
   // If optional error message is not empty, append it to the message.
@@ -228,31 +234,6 @@ std::string getInstrProfSectionName(InstrProfSectKind IPSK,
   return SectName;
 }
 
-void SoftInstrProfErrors::addError(instrprof_error IE) {
-  if (IE == instrprof_error::success)
-    return;
-
-  if (FirstError == instrprof_error::success)
-    FirstError = IE;
-
-  switch (IE) {
-  case instrprof_error::hash_mismatch:
-    ++NumHashMismatches;
-    break;
-  case instrprof_error::count_mismatch:
-    ++NumCountMismatches;
-    break;
-  case instrprof_error::counter_overflow:
-    ++NumCounterOverflows;
-    break;
-  case instrprof_error::value_site_count_mismatch:
-    ++NumValueSiteCountMismatches;
-    break;
-  default:
-    llvm_unreachable("Not a soft error");
-  }
-}
-
 std::string InstrProfError::message() const {
   return getInstrProfErrString(Err, Msg);
 }
@@ -284,6 +265,67 @@ static StringRef stripDirPrefix(StringRef PathNameStr, uint32_t NumPrefix) {
   return PathNameStr.substr(LastPos);
 }
 
+static StringRef getStrippedSourceFileName(const Function &F) {
+  StringRef FileName(F.getParent()->getSourceFileName());
+  uint32_t StripLevel = StaticFuncFullModulePrefix ? 0 : (uint32_t)-1;
+  if (StripLevel < StaticFuncStripDirNamePrefix)
+    StripLevel = StaticFuncStripDirNamePrefix;
+  if (StripLevel)
+    FileName = stripDirPrefix(FileName, StripLevel);
+  return FileName;
+}
+
+// The PGO name has the format [<filepath>;]<linkage-name> where <filepath>; is
+// provided if linkage is local and <linkage-name> is the mangled function
+// name. The filepath is used to discriminate possibly identical function names.
+// ; is used because it is unlikely to be found in either <filepath> or
+// <linkage-name>.
+//
+// Older compilers used getPGOFuncName() which has the format
+// [<filepath>:]<function-name>. <filepath> is used to discriminate between
+// possibly identical function names when linkage is local and <function-name>
+// simply comes from F.getName(). This caused trouble for Objective-C functions
+// which commonly have :'s in their names. Also, since <function-name> is not
+// mangled, they cannot be passed to Mach-O linkers via -order_file. We still
+// need to compute this name to lookup functions from profiles built by older
+// compilers.
+static std::string getIRPGOFuncName(const Function &F,
+                                    GlobalValue::LinkageTypes Linkage,
+                                    StringRef FileName) {
+  SmallString<64> Name;
+  if (llvm::GlobalValue::isLocalLinkage(Linkage)) {
+    Name.append(FileName.empty() ? "<unknown>" : FileName);
+    Name.append(";");
+  }
+  Mangler().getNameWithPrefix(Name, &F, /*CannotUsePrivateLabel=*/true);
+  return Name.str().str();
+}
+
+static std::optional<std::string> lookupPGOFuncName(const Function &F) {
+  if (MDNode *MD = getPGOFuncNameMetadata(F)) {
+    StringRef S = cast<MDString>(MD->getOperand(0))->getString();
+    return S.str();
+  }
+  return {};
+}
+
+// See getPGOFuncName()
+std::string getIRPGOFuncName(const Function &F, bool InLTO) {
+  if (!InLTO) {
+    auto FileName = getStrippedSourceFileName(F);
+    return getIRPGOFuncName(F, F.getLinkage(), FileName);
+  }
+
+  // In LTO mode (when InLTO is true), first check if there is a meta data.
+  if (auto IRPGOFuncName = lookupPGOFuncName(F))
+    return *IRPGOFuncName;
+
+  // If there is no meta data, the function must be a global before the value
+  // profile annotation pass. Its current linkage may be internal if it is
+  // internalized in LTO mode.
+  return getIRPGOFuncName(F, GlobalValue::ExternalLinkage, "");
+}
+
 // Return the PGOFuncName. This function has some special handling when called
 // in LTO optimization. The following only applies when calling in LTO passes
 // (when \c InLTO is true): LTO's internalization privatizes many global linkage
@@ -299,25 +341,27 @@ static StringRef stripDirPrefix(StringRef PathNameStr, uint32_t NumPrefix) {
 // data, its original linkage must be non-internal.
 std::string getPGOFuncName(const Function &F, bool InLTO, uint64_t Version) {
   if (!InLTO) {
-    StringRef FileName(F.getParent()->getSourceFileName());
-    uint32_t StripLevel = StaticFuncFullModulePrefix ? 0 : (uint32_t)-1;
-    if (StripLevel < StaticFuncStripDirNamePrefix)
-      StripLevel = StaticFuncStripDirNamePrefix;
-    if (StripLevel)
-      FileName = stripDirPrefix(FileName, StripLevel);
+    auto FileName = getStrippedSourceFileName(F);
     return getPGOFuncName(F.getName(), F.getLinkage(), FileName, Version);
   }
 
   // In LTO mode (when InLTO is true), first check if there is a meta data.
-  if (MDNode *MD = getPGOFuncNameMetadata(F)) {
-    StringRef S = cast<MDString>(MD->getOperand(0))->getString();
-    return S.str();
-  }
+  if (auto PGOFuncName = lookupPGOFuncName(F))
+    return *PGOFuncName;
 
   // If there is no meta data, the function must be a global before the value
   // profile annotation pass. Its current linkage may be internal if it is
   // internalized in LTO mode.
   return getPGOFuncName(F.getName(), GlobalValue::ExternalLinkage, "");
+}
+
+// See getIRPGOFuncName() for a discription of the format.
+std::pair<StringRef, StringRef>
+getParsedIRPGOFuncName(StringRef IRPGOFuncName) {
+  auto [FileName, FuncName] = IRPGOFuncName.split(';');
+  if (FuncName.empty())
+    return std::make_pair(StringRef(), IRPGOFuncName);
+  return std::make_pair(FileName, FuncName);
 }
 
 StringRef getFuncNameWithoutPrefix(StringRef PGOFuncName, StringRef FileName) {
@@ -340,7 +384,7 @@ std::string getPGOFuncNameVarName(StringRef FuncName,
     return VarName;
 
   // Now fix up illegal chars in local VarName that may upset the assembler.
-  const char *InvalidChars = "-:<>/\"'";
+  const char InvalidChars[] = "-:;<>/\"'";
   size_t found = VarName.find_first_of(InvalidChars);
   while (found != std::string::npos) {
     VarName[found] = '_';
@@ -386,38 +430,46 @@ Error InstrProfSymtab::create(Module &M, bool InLTO) {
     // Ignore in this case.
     if (!F.hasName())
       continue;
-    const std::string &PGOFuncName = getPGOFuncName(F, InLTO);
-    if (Error E = addFuncName(PGOFuncName))
+    if (Error E = addFuncWithName(F, getIRPGOFuncName(F, InLTO)))
       return E;
-    MD5FuncMap.emplace_back(Function::getGUID(PGOFuncName), &F);
-    // In ThinLTO, local function may have been promoted to global and have
-    // suffix ".llvm." added to the function name. We need to add the
-    // stripped function name to the symbol table so that we can find a match
-    // from profile.
-    //
-    // We may have other suffixes similar as ".llvm." which are needed to
-    // be stripped before the matching, but ".__uniq." suffix which is used
-    // to differentiate internal linkage functions in different modules
-    // should be kept. Now this is the only suffix with the pattern ".xxx"
-    // which is kept before matching.
-    const std::string UniqSuffix = ".__uniq.";
-    auto pos = PGOFuncName.find(UniqSuffix);
-    // Search '.' after ".__uniq." if ".__uniq." exists, otherwise
-    // search '.' from the beginning.
-    if (pos != std::string::npos)
-      pos += UniqSuffix.length();
-    else
-      pos = 0;
-    pos = PGOFuncName.find('.', pos);
-    if (pos != std::string::npos && pos != 0) {
-      const std::string &OtherFuncName = PGOFuncName.substr(0, pos);
-      if (Error E = addFuncName(OtherFuncName))
-        return E;
-      MD5FuncMap.emplace_back(Function::getGUID(OtherFuncName), &F);
-    }
+    // Also use getPGOFuncName() so that we can find records from older profiles
+    if (Error E = addFuncWithName(F, getPGOFuncName(F, InLTO)))
+      return E;
   }
   Sorted = false;
   finalizeSymtab();
+  return Error::success();
+}
+
+Error InstrProfSymtab::addFuncWithName(Function &F, StringRef PGOFuncName) {
+  if (Error E = addFuncName(PGOFuncName))
+    return E;
+  MD5FuncMap.emplace_back(Function::getGUID(PGOFuncName), &F);
+  // In ThinLTO, local function may have been promoted to global and have
+  // suffix ".llvm." added to the function name. We need to add the
+  // stripped function name to the symbol table so that we can find a match
+  // from profile.
+  //
+  // We may have other suffixes similar as ".llvm." which are needed to
+  // be stripped before the matching, but ".__uniq." suffix which is used
+  // to differentiate internal linkage functions in different modules
+  // should be kept. Now this is the only suffix with the pattern ".xxx"
+  // which is kept before matching.
+  const std::string UniqSuffix = ".__uniq.";
+  auto pos = PGOFuncName.find(UniqSuffix);
+  // Search '.' after ".__uniq." if ".__uniq." exists, otherwise
+  // search '.' from the beginning.
+  if (pos != std::string::npos)
+    pos += UniqSuffix.length();
+  else
+    pos = 0;
+  pos = PGOFuncName.find('.', pos);
+  if (pos != std::string::npos && pos != 0) {
+    StringRef OtherFuncName = PGOFuncName.substr(0, pos);
+    if (Error E = addFuncName(OtherFuncName))
+      return E;
+    MD5FuncMap.emplace_back(Function::getGUID(OtherFuncName), &F);
+  }
   return Error::success();
 }
 
@@ -435,11 +487,18 @@ uint64_t InstrProfSymtab::getFunctionHashFromAddress(uint64_t Address) {
   return 0;
 }
 
+void InstrProfSymtab::dumpNames(raw_ostream &OS) const {
+  SmallVector<StringRef, 0> Sorted(NameTab.keys());
+  llvm::sort(Sorted);
+  for (StringRef S : Sorted)
+    OS << S << '\n';
+}
+
 Error collectPGOFuncNameStrings(ArrayRef<std::string> NameStrs,
                                 bool doCompression, std::string &Result) {
   assert(!NameStrs.empty() && "No name data to emit");
 
-  uint8_t Header[16], *P = Header;
+  uint8_t Header[20], *P = Header;
   std::string UncompressedNameStrings =
       join(NameStrs.begin(), NameStrs.end(), getInstrProfNameSeparator());
 
@@ -799,6 +858,48 @@ void InstrProfRecord::addValueData(uint32_t ValueKind, uint32_t Site,
     ValueSites.emplace_back(VData, VData + N);
 }
 
+std::vector<BPFunctionNode> TemporalProfTraceTy::createBPFunctionNodes(
+    ArrayRef<TemporalProfTraceTy> Traces) {
+  using IDT = BPFunctionNode::IDT;
+  using UtilityNodeT = BPFunctionNode::UtilityNodeT;
+  // Collect all function IDs ordered by their smallest timestamp. This will be
+  // used as the initial FunctionNode order.
+  SetVector<IDT> FunctionIds;
+  size_t LargestTraceSize = 0;
+  for (auto &Trace : Traces)
+    LargestTraceSize =
+        std::max(LargestTraceSize, Trace.FunctionNameRefs.size());
+  for (size_t Timestamp = 0; Timestamp < LargestTraceSize; Timestamp++)
+    for (auto &Trace : Traces)
+      if (Timestamp < Trace.FunctionNameRefs.size())
+        FunctionIds.insert(Trace.FunctionNameRefs[Timestamp]);
+
+  int N = std::ceil(std::log2(LargestTraceSize));
+
+  // TODO: We need to use the Trace.Weight field to give more weight to more
+  // important utilities
+  DenseMap<IDT, SmallVector<UtilityNodeT, 4>> FuncGroups;
+  for (size_t TraceIdx = 0; TraceIdx < Traces.size(); TraceIdx++) {
+    auto &Trace = Traces[TraceIdx].FunctionNameRefs;
+    for (size_t Timestamp = 0; Timestamp < Trace.size(); Timestamp++) {
+      for (int I = std::floor(std::log2(Timestamp + 1)); I < N; I++) {
+        auto &FunctionId = Trace[Timestamp];
+        UtilityNodeT GroupId = TraceIdx * N + I;
+        FuncGroups[FunctionId].push_back(GroupId);
+      }
+    }
+  }
+
+  std::vector<BPFunctionNode> Nodes;
+  for (auto &Id : FunctionIds) {
+    auto &UNs = FuncGroups[Id];
+    llvm::sort(UNs);
+    UNs.erase(std::unique(UNs.begin(), UNs.end()), UNs.end());
+    Nodes.emplace_back(Id, UNs);
+  }
+  return Nodes;
+}
+
 #define INSTR_PROF_COMMON_API_IMPL
 #include "llvm/ProfileData/InstrProfData.inc"
 
@@ -881,14 +982,13 @@ void ValueProfRecord::deserializeTo(InstrProfRecord &Record,
 // For writing/serializing,  Old is the host endianness, and  New is
 // byte order intended on disk. For Reading/deserialization, Old
 // is the on-disk source endianness, and New is the host endianness.
-void ValueProfRecord::swapBytes(support::endianness Old,
-                                support::endianness New) {
+void ValueProfRecord::swapBytes(llvm::endianness Old, llvm::endianness New) {
   using namespace support;
 
   if (Old == New)
     return;
 
-  if (getHostEndianness() != Old) {
+  if (llvm::endianness::native != Old) {
     sys::swapByteOrder<uint32_t>(NumValueSites);
     sys::swapByteOrder<uint32_t>(Kind);
   }
@@ -900,7 +1000,7 @@ void ValueProfRecord::swapBytes(support::endianness Old,
     sys::swapByteOrder<uint64_t>(VD[I].Value);
     sys::swapByteOrder<uint64_t>(VD[I].Count);
   }
-  if (getHostEndianness() == Old) {
+  if (llvm::endianness::native == Old) {
     sys::swapByteOrder<uint32_t>(NumValueSites);
     sys::swapByteOrder<uint32_t>(Kind);
   }
@@ -919,13 +1019,13 @@ void ValueProfData::deserializeTo(InstrProfRecord &Record,
 }
 
 template <class T>
-static T swapToHostOrder(const unsigned char *&D, support::endianness Orig) {
+static T swapToHostOrder(const unsigned char *&D, llvm::endianness Orig) {
   using namespace support;
 
-  if (Orig == little)
-    return endian::readNext<T, little, unaligned>(D);
+  if (Orig == llvm::endianness::little)
+    return endian::readNext<T, llvm::endianness::little, unaligned>(D);
   else
-    return endian::readNext<T, big, unaligned>(D);
+    return endian::readNext<T, llvm::endianness::big, unaligned>(D);
 }
 
 static std::unique_ptr<ValueProfData> allocValueProfData(uint32_t TotalSize) {
@@ -959,7 +1059,7 @@ Error ValueProfData::checkIntegrity() {
 Expected<std::unique_ptr<ValueProfData>>
 ValueProfData::getValueProfData(const unsigned char *D,
                                 const unsigned char *const BufferEnd,
-                                support::endianness Endianness) {
+                                llvm::endianness Endianness) {
   using namespace support;
 
   if (D + sizeof(ValueProfData) > BufferEnd)
@@ -982,10 +1082,10 @@ ValueProfData::getValueProfData(const unsigned char *D,
   return std::move(VPD);
 }
 
-void ValueProfData::swapBytesToHost(support::endianness Endianness) {
+void ValueProfData::swapBytesToHost(llvm::endianness Endianness) {
   using namespace support;
 
-  if (Endianness == getHostEndianness())
+  if (Endianness == llvm::endianness::native)
     return;
 
   sys::swapByteOrder<uint32_t>(TotalSize);
@@ -993,21 +1093,21 @@ void ValueProfData::swapBytesToHost(support::endianness Endianness) {
 
   ValueProfRecord *VR = getFirstValueProfRecord(this);
   for (uint32_t K = 0; K < NumValueKinds; K++) {
-    VR->swapBytes(Endianness, getHostEndianness());
+    VR->swapBytes(Endianness, llvm::endianness::native);
     VR = getValueProfRecordNext(VR);
   }
 }
 
-void ValueProfData::swapBytesFromHost(support::endianness Endianness) {
+void ValueProfData::swapBytesFromHost(llvm::endianness Endianness) {
   using namespace support;
 
-  if (Endianness == getHostEndianness())
+  if (Endianness == llvm::endianness::native)
     return;
 
   ValueProfRecord *VR = getFirstValueProfRecord(this);
   for (uint32_t K = 0; K < NumValueKinds; K++) {
     ValueProfRecord *NVR = getValueProfRecordNext(VR);
-    VR->swapBytes(getHostEndianness(), Endianness);
+    VR->swapBytes(llvm::endianness::native, Endianness);
     VR = NVR;
   }
   sys::swapByteOrder<uint32_t>(TotalSize);
@@ -1224,7 +1324,10 @@ Error OverlapStats::accumulateCounts(const std::string &BaseFilename,
                                      bool IsCS) {
   auto getProfileSum = [IsCS](const std::string &Filename,
                               CountSumOrPercent &Sum) -> Error {
-    auto ReaderOrErr = InstrProfReader::create(Filename);
+    // This function is only used from llvm-profdata that doesn't use any kind
+    // of VFS. Just create a default RealFileSystem to read profiles.
+    auto FS = vfs::getRealFileSystem();
+    auto ReaderOrErr = InstrProfReader::create(Filename, *FS);
     if (Error E = ReaderOrErr.takeError()) {
       return E;
     }
@@ -1346,7 +1449,7 @@ static inline uint64_t read(const unsigned char *Buffer, size_t Offset) {
 
 uint64_t Header::formatVersion() const {
   using namespace support;
-  return endian::byte_swap<uint64_t, little>(Version);
+  return endian::byte_swap<uint64_t, llvm::endianness::little>(Version);
 }
 
 Expected<Header> Header::readFromBuffer(const unsigned char *Buffer) {
@@ -1358,7 +1461,8 @@ Expected<Header> Header::readFromBuffer(const unsigned char *Buffer) {
 
   H.Magic = read(Buffer, offsetOf(&Header::Magic));
   // Check the magic number.
-  uint64_t Magic = endian::byte_swap<uint64_t, little>(H.Magic);
+  uint64_t Magic =
+      endian::byte_swap<uint64_t, llvm::endianness::little>(H.Magic);
   if (Magic != IndexedInstrProf::Magic)
     return make_error<InstrProfError>(instrprof_error::bad_magic);
 
@@ -1372,9 +1476,13 @@ Expected<Header> Header::readFromBuffer(const unsigned char *Buffer) {
     // When a new field is added in the header add a case statement here to
     // populate it.
     static_assert(
-        IndexedInstrProf::ProfVersion::CurrentVersion == Version9,
+        IndexedInstrProf::ProfVersion::CurrentVersion == Version10,
         "Please update the reading code below if a new field has been added, "
         "if not add a case statement to fall through to the latest version.");
+  case 10ull:
+    H.TemporalProfTracesOffset =
+        read(Buffer, offsetOf(&Header::TemporalProfTracesOffset));
+    [[fallthrough]];
   case 9ull:
     H.BinaryIdOffset = read(Buffer, offsetOf(&Header::BinaryIdOffset));
     [[fallthrough]];
@@ -1394,10 +1502,13 @@ size_t Header::size() const {
     // When a new field is added to the header add a case statement here to
     // compute the size as offset of the new field + size of the new field. This
     // relies on the field being added to the end of the list.
-    static_assert(IndexedInstrProf::ProfVersion::CurrentVersion == Version9,
+    static_assert(IndexedInstrProf::ProfVersion::CurrentVersion == Version10,
                   "Please update the size computation below if a new field has "
                   "been added to the header, if not add a case statement to "
                   "fall through to the latest version.");
+  case 10ull:
+    return offsetOf(&Header::TemporalProfTracesOffset) +
+           sizeof(Header::TemporalProfTracesOffset);
   case 9ull:
     return offsetOf(&Header::BinaryIdOffset) + sizeof(Header::BinaryIdOffset);
   case 8ull:

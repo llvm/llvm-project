@@ -9,7 +9,6 @@
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
-#include "mlir/Dialect/CommonFolders.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Builders.h"
@@ -125,7 +124,7 @@ static LogicalResult collapseBranch(Block *&successor,
 
   // Otherwise, we need to remap any argument operands.
   for (Value operand : operands) {
-    BlockArgument argOperand = operand.dyn_cast<BlockArgument>();
+    BlockArgument argOperand = llvm::dyn_cast<BlockArgument>(operand);
     if (argOperand && argOperand.getOwner() == successor)
       argStorage.push_back(successorOperands[argOperand.getArgNumber()]);
     else
@@ -147,8 +146,9 @@ simplifyBrToBlockWithSinglePred(BranchOp op, PatternRewriter &rewriter) {
     return failure();
 
   // Merge the successor into the current block and erase the branch.
-  rewriter.mergeBlocks(succ, opParent, op.getOperands());
+  SmallVector<Value> brOperands(op.getOperands());
   rewriter.eraseOp(op);
+  rewriter.mergeBlocks(succ, opParent, brOperands);
   return success();
 }
 
@@ -441,8 +441,9 @@ SuccessorOperands CondBranchOp::getSuccessorOperands(unsigned index) {
 }
 
 Block *CondBranchOp::getSuccessorForOperands(ArrayRef<Attribute> operands) {
-  if (IntegerAttr condAttr = operands.front().dyn_cast_or_null<IntegerAttr>())
-    return condAttr.getValue().isOneValue() ? getTrueDest() : getFalseDest();
+  if (IntegerAttr condAttr =
+          llvm::dyn_cast_or_null<IntegerAttr>(operands.front()))
+    return condAttr.getValue().isOne() ? getTrueDest() : getFalseDest();
   return nullptr;
 }
 
@@ -600,7 +601,7 @@ Block *SwitchOp::getSuccessorForOperands(ArrayRef<Attribute> operands) {
     return getDefaultDestination();
 
   SuccessorRange caseDests = getCaseDestinations();
-  if (auto value = operands.front().dyn_cast_or_null<IntegerAttr>()) {
+  if (auto value = llvm::dyn_cast_or_null<IntegerAttr>(operands.front())) {
     for (const auto &it : llvm::enumerate(caseValues->getValues<APInt>()))
       if (it.value() == value.getValue())
         return caseDests[it.index()];

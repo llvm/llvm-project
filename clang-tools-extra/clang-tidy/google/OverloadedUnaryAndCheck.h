@@ -11,10 +11,7 @@
 
 #include "../ClangTidyCheck.h"
 
-namespace clang {
-namespace tidy {
-namespace google {
-namespace runtime {
+namespace clang::tidy::google::runtime {
 
 /// Finds overloads of unary `operator &`.
 ///
@@ -35,9 +32,6 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 };
 
-} // namespace runtime
-} // namespace google
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::google::runtime
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_GOOGLE_OVERLOADEDUNARYANDCHECK_H

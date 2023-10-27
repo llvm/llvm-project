@@ -25,3 +25,19 @@ struct task {
 task f() {
   co_return 43;
 }
+
+// From https://github.com/llvm/llvm-project/issues/60545
+struct generator {
+    struct promise_type {
+        generator get_return_object();
+        std::suspend_always initial_suspend();
+        std::suspend_always final_suspend() noexcept;
+        void return_void();
+        [[noreturn]] void unhandled_exception();
+
+        static void* operator new(std::size_t size);
+        static void operator delete(void* ptr, const std::size_t size);
+    };
+};
+
+generator goo() { co_return; }

@@ -143,6 +143,7 @@ foo:
   msr MAIR2_EL2, x3
   msr MAIR2_EL3, x3
   msr PIRE0_EL1, x3
+  msr PIRE0_EL12, x3
   msr PIRE0_EL2, x3
   msr PIR_EL1, x3
   msr PIR_EL12, x3
@@ -250,6 +251,7 @@ foo:
 ; CHECK: msr MAIR2_EL2, x3              ; encoding: [0x23,0xa1,0x1c,0xd5]
 ; CHECK: msr MAIR2_EL3, x3              ; encoding: [0x23,0xa1,0x1e,0xd5]
 ; CHECK: msr PIRE0_EL1, x3              ; encoding: [0x43,0xa2,0x18,0xd5]
+; CHECK: msr PIRE0_EL12, x3             ; encoding: [0x43,0xa2,0x1d,0xd5]
 ; CHECK: msr PIRE0_EL2, x3              ; encoding: [0x43,0xa2,0x1c,0xd5]
 ; CHECK: msr PIR_EL1, x3                ; encoding: [0x63,0xa2,0x18,0xd5]
 ; CHECK: msr PIR_EL12, x3               ; encoding: [0x63,0xa2,0x1d,0xd5]
@@ -473,6 +475,7 @@ foo:
   mrs x3, MAIR2_EL2
   mrs x3, MAIR2_EL3
   mrs x3, PIRE0_EL1
+  mrs x3, PIRE0_EL12
   mrs x3, PIRE0_EL2
   mrs x3, PIR_EL1
   mrs x3, PIR_EL12
@@ -691,6 +694,7 @@ foo:
 ; CHECK: mrs x3, MAIR2_EL2            ; encoding: [0x23,0xa1,0x3c,0xd5]
 ; CHECK: mrs x3, MAIR2_EL3            ; encoding: [0x23,0xa1,0x3e,0xd5]
 ; CHECK: mrs x3, PIRE0_EL1            ; encoding: [0x43,0xa2,0x38,0xd5]
+; CHECK: mrs x3, PIRE0_EL12           ; encoding: [0x43,0xa2,0x3d,0xd5]
 ; CHECK: mrs x3, PIRE0_EL2            ; encoding: [0x43,0xa2,0x3c,0xd5]
 ; CHECK: mrs x3, PIR_EL1              ; encoding: [0x63,0xa2,0x38,0xd5]
 ; CHECK: mrs x3, PIR_EL12             ; encoding: [0x63,0xa2,0x3d,0xd5]

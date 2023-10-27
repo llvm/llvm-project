@@ -10,8 +10,8 @@
 #include "Plugins/Process/POSIX/ProcessPOSIXLog.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
-#include "llvm/Support/Host.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/TargetParser/Host.h"
 #include <linux/perf_event.h>
 #include <sstream>
 #include <sys/syscall.h>
@@ -250,7 +250,7 @@ IntelPTSingleBufferTrace::Start(const TraceIntelPTStartRequest &request,
         request.ipt_trace_size);
   }
   uint64_t page_size = getpagesize();
-  uint64_t aux_buffer_numpages = static_cast<uint64_t>(llvm::PowerOf2Floor(
+  uint64_t aux_buffer_numpages = static_cast<uint64_t>(llvm::bit_floor(
       (request.ipt_trace_size + page_size - 1) / page_size));
 
   Expected<perf_event_attr> attr = CreateIntelPTPerfEventConfiguration(

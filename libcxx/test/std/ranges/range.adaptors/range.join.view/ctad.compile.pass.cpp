@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
+// UNSUPPORTED: !c++experimental
 
 // template<class R>
 //   explicit join_view(R&&) -> join_view<views::all_t<R>>;

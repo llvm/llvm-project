@@ -110,7 +110,7 @@ int test_cond_assign() {
 //===----------------------------------------------------------------------===//
 
 
-// <rdar://problem/8331641> leak reports should not show paths that end with exit() (but ones that don't end with exit())
+// leak reports should not show paths that end with exit() (but ones that don't end with exit())
 
 void stop() __attribute__((noreturn));
 
@@ -406,7 +406,6 @@ void testCast(int coin) {
 }
 
 // The following previously crashed when generating extensive diagnostics.
-// <rdar://problem/10797980>
 @interface RDar10797980_help
 @property (readonly) int x;
 @end
@@ -425,7 +424,7 @@ void testCast(int coin) {
 
 // The original source for the above Radar contains another problem:
 // if the end-of-path node is an implicit statement, it may not have a valid
-// source location. <rdar://problem/12446776>
+// source location.
 - (void)test2 {
   if (bar_cond_assign()) {
     id foo = [[RDar10797980 alloc] init]; // leak

@@ -16,10 +16,8 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/BinaryFormat/ELF.h"
-#include "llvm/MC/SubtargetFeature.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/ELF.h"
 #include "llvm/Object/ELFTypes.h"
@@ -34,6 +32,8 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/ScopedPrinter.h"
+#include "llvm/TargetParser/SubtargetFeature.h"
+#include "llvm/TargetParser/Triple.h"
 #include <cassert>
 #include <cstdint>
 
@@ -47,6 +47,12 @@ constexpr int NumElfSymbolTypes = 16;
 extern const llvm::EnumEntry<unsigned> ElfSymbolTypes[NumElfSymbolTypes];
 
 class elf_symbol_iterator;
+
+struct ELFPltEntry {
+  StringRef Section;
+  std::optional<DataRefImpl> Symbol;
+  uint64_t Address;
+};
 
 class ELFObjectFileBase : public ObjectFile {
   friend class ELFRelocationRef;
@@ -97,8 +103,7 @@ public:
 
   virtual uint16_t getEMachine() const = 0;
 
-  std::vector<std::pair<std::optional<DataRefImpl>, uint64_t>>
-  getPltAddresses() const;
+  std::vector<ELFPltEntry> getPltEntries() const;
 
   /// Returns a vector containing a symbol version for each dynamic symbol.
   /// Returns an empty vector if version sections do not exist.
@@ -402,7 +407,7 @@ protected:
   // This flag is used for classof, to distinguish ELFObjectFile from
   // its subclass. If more subclasses will be created, this flag will
   // have to become an enum.
-  bool isDyldELFObject;
+  bool isDyldELFObject = false;
 
 public:
   ELFObjectFile(ELFObjectFile<ELFT> &&Other);
@@ -432,6 +437,8 @@ public:
   basic_symbol_iterator symbol_begin() const override;
   basic_symbol_iterator symbol_end() const override;
 
+  bool is64Bit() const override { return getBytesInAddress() == 8; }
+
   elf_symbol_iterator dynamic_symbol_begin() const;
   elf_symbol_iterator dynamic_symbol_end() const;
 
@@ -451,8 +458,9 @@ public:
 
   bool isDyldType() const { return isDyldELFObject; }
   static bool classof(const Binary *v) {
-    return v->getType() == getELFType(ELFT::TargetEndianness == support::little,
-                                      ELFT::Is64Bits);
+    return v->getType() ==
+           getELFType(ELFT::TargetEndianness == llvm::endianness::little,
+                      ELFT::Is64Bits);
   }
 
   elf_symbol_iterator_range getDynamicSymbolIterators() const override;
@@ -523,10 +531,10 @@ Expected<StringRef> ELFObjectFile<ELFT>::getSymbolName(DataRefImpl Sym) const {
 
   // If the symbol name is empty use the section name.
   if ((*SymOrErr)->getType() == ELF::STT_SECTION) {
-    if (Expected<section_iterator> SecOrErr = getSymbolSection(Sym)) {
-      consumeError(Name.takeError());
+    Expected<section_iterator> SecOrErr = getSymbolSection(Sym);
+    if (SecOrErr)
       return (*SecOrErr)->getName();
-    }
+    return SecOrErr.takeError();
   }
   return Name;
 }
@@ -754,10 +762,21 @@ Expected<uint32_t> ELFObjectFile<ELFT>::getSymbolFlags(DataRefImpl Sym) const {
     }
     if (ESym->getType() == ELF::STT_FUNC && (ESym->st_value & 1) == 1)
       Result |= SymbolRef::SF_Thumb;
+  } else if (EF.getHeader().e_machine == ELF::EM_CSKY) {
+    if (Expected<StringRef> NameOrErr = getSymbolName(Sym)) {
+      StringRef Name = *NameOrErr;
+      if (Name.startswith("$d") || Name.startswith("$t"))
+        Result |= SymbolRef::SF_FormatSpecific;
+    } else {
+      // TODO: Actually report errors helpfully.
+      consumeError(NameOrErr.takeError());
+    }
   } else if (EF.getHeader().e_machine == ELF::EM_RISCV) {
     if (Expected<StringRef> NameOrErr = getSymbolName(Sym)) {
-      // Mark empty name symbols used for label differences.
-      if (NameOrErr->empty())
+      StringRef Name = *NameOrErr;
+      // Mark empty name symbols (used for label differences) and mapping
+      // symbols.
+      if (Name.empty() || Name.startswith("$d") || Name.startswith("$x"))
         Result |= SymbolRef::SF_FormatSpecific;
     } else {
       // TODO: Actually report errors helpfully.
@@ -1110,7 +1129,8 @@ ELFObjectFile<ELFT>::ELFObjectFile(MemoryBufferRef Object, ELFFile<ELFT> EF,
                                    const Elf_Shdr *DotSymtabSec,
                                    const Elf_Shdr *DotSymtabShndx)
     : ELFObjectFileBase(
-          getELFType(ELFT::TargetEndianness == support::little, ELFT::Is64Bits),
+          getELFType(ELFT::TargetEndianness == llvm::endianness::little,
+                     ELFT::Is64Bits),
           Object),
       EF(EF), DotDynSymSec(DotDynSymSec), DotSymtabSec(DotSymtabSec),
       DotSymtabShndxSec(DotSymtabShndx) {}
@@ -1179,7 +1199,8 @@ uint8_t ELFObjectFile<ELFT>::getBytesInAddress() const {
 
 template <class ELFT>
 StringRef ELFObjectFile<ELFT>::getFileFormatName() const {
-  constexpr bool IsLittleEndian = ELFT::TargetEndianness == support::little;
+  constexpr bool IsLittleEndian =
+      ELFT::TargetEndianness == llvm::endianness::little;
   switch (EF.getHeader().e_ident[ELF::EI_CLASS]) {
   case ELF::ELFCLASS32:
     switch (EF.getHeader().e_machine) {
@@ -1257,7 +1278,7 @@ StringRef ELFObjectFile<ELFT>::getFileFormatName() const {
 }
 
 template <class ELFT> Triple::ArchType ELFObjectFile<ELFT>::getArch() const {
-  bool IsLittleEndian = ELFT::TargetEndianness == support::little;
+  bool IsLittleEndian = ELFT::TargetEndianness == llvm::endianness::little;
   switch (EF.getHeader().e_machine) {
   case ELF::EM_68K:
     return Triple::m68k;

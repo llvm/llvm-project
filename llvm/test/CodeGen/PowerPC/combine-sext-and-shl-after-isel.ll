@@ -139,8 +139,8 @@ false:
 define dso_local i64 @no_extswsli(ptr %base, i32 %index, i1 %flag) {
 ; CHECK-LABEL: no_extswsli:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    andi. r5, r5, 1
 ; CHECK-NEXT:    extsw r4, r4
+; CHECK-NEXT:    andi. r5, r5, 1
 ; CHECK-NEXT:    bc 4, gt, .LBB2_2
 ; CHECK-NEXT:  # %bb.1: # %true
 ; CHECK-NEXT:    sldi r4, r4, 3
@@ -152,8 +152,8 @@ define dso_local i64 @no_extswsli(ptr %base, i32 %index, i1 %flag) {
 ;
 ; CHECK-BE-LABEL: no_extswsli:
 ; CHECK-BE:       # %bb.0: # %entry
-; CHECK-BE-NEXT:    andi. r5, r5, 1
 ; CHECK-BE-NEXT:    extsw r4, r4
+; CHECK-BE-NEXT:    andi. r5, r5, 1
 ; CHECK-BE-NEXT:    bc 4, gt, .LBB2_2
 ; CHECK-BE-NEXT:  # %bb.1: # %true
 ; CHECK-BE-NEXT:    sldi r4, r4, 3
@@ -200,3 +200,212 @@ true:
 false:
   ret i64 %iconv
 }
+
+define hidden void @testCaller(i1 %incond) local_unnamed_addr align 2 nounwind {
+; CHECK-LABEL: testCaller:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    mfocrf r12, 32
+; CHECK-NEXT:    stw r12, 8(r1)
+; CHECK-NEXT:    mflr r0
+; CHECK-NEXT:    stdu r1, -64(r1)
+; CHECK-NEXT:    std r0, 80(r1)
+; CHECK-NEXT:    std r30, 48(r1) # 8-byte Folded Spill
+; CHECK-NEXT:    andi. r3, r3, 1
+; CHECK-NEXT:    li r3, -1
+; CHECK-NEXT:    li r30, 0
+; CHECK-NEXT:    crmove 4*cr2+lt, gt
+; CHECK-NEXT:    std r29, 40(r1) # 8-byte Folded Spill
+; CHECK-NEXT:    b .LBB3_2
+; CHECK-NEXT:    .p2align 4
+; CHECK-NEXT:  .LBB3_1: # %if.end116
+; CHECK-NEXT:    #
+; CHECK-NEXT:    bl callee
+; CHECK-NEXT:    nop
+; CHECK-NEXT:    mr r3, r29
+; CHECK-NEXT:  .LBB3_2: # %cond.end.i.i
+; CHECK-NEXT:    # =>This Loop Header: Depth=1
+; CHECK-NEXT:    # Child Loop BB3_3 Depth 2
+; CHECK-NEXT:    lwz r29, 0(r3)
+; CHECK-NEXT:    li r5, 0
+; CHECK-NEXT:    extsw r4, r29
+; CHECK-NEXT:    .p2align 5
+; CHECK-NEXT:  .LBB3_3: # %while.body5.i
+; CHECK-NEXT:    # Parent Loop BB3_2 Depth=1
+; CHECK-NEXT:    # => This Inner Loop Header: Depth=2
+; CHECK-NEXT:    addi r5, r5, -1
+; CHECK-NEXT:    cmpwi r5, 0
+; CHECK-NEXT:    bgt cr0, .LBB3_3
+; CHECK-NEXT:  # %bb.4: # %while.cond12.preheader.i
+; CHECK-NEXT:    #
+; CHECK-NEXT:    bc 12, 4*cr2+lt, .LBB3_1
+; CHECK-NEXT:  # %bb.5: # %for.cond99.preheader
+; CHECK-NEXT:    #
+; CHECK-NEXT:    ld r5, 0(r3)
+; CHECK-NEXT:    sldi r4, r4, 2
+; CHECK-NEXT:    stw r3, 0(r3)
+; CHECK-NEXT:    stwx r30, r5, r4
+; CHECK-NEXT:    b .LBB3_1
+;
+; CHECK-BE-LABEL: testCaller:
+; CHECK-BE:       # %bb.0: # %entry
+; CHECK-BE-NEXT:    mfcr r12
+; CHECK-BE-NEXT:    stw r12, 8(r1)
+; CHECK-BE-NEXT:    mflr r0
+; CHECK-BE-NEXT:    stdu r1, -80(r1)
+; CHECK-BE-NEXT:    std r0, 96(r1)
+; CHECK-BE-NEXT:    std r30, 64(r1) # 8-byte Folded Spill
+; CHECK-BE-NEXT:    andi. r3, r3, 1
+; CHECK-BE-NEXT:    li r3, -1
+; CHECK-BE-NEXT:    li r30, 0
+; CHECK-BE-NEXT:    crmove 4*cr2+lt, gt
+; CHECK-BE-NEXT:    std r29, 56(r1) # 8-byte Folded Spill
+; CHECK-BE-NEXT:    b .LBB3_2
+; CHECK-BE-NEXT:    .p2align 4
+; CHECK-BE-NEXT:  .LBB3_1: # %if.end116
+; CHECK-BE-NEXT:    #
+; CHECK-BE-NEXT:    bl callee
+; CHECK-BE-NEXT:    nop
+; CHECK-BE-NEXT:    mr r3, r29
+; CHECK-BE-NEXT:  .LBB3_2: # %cond.end.i.i
+; CHECK-BE-NEXT:    # =>This Loop Header: Depth=1
+; CHECK-BE-NEXT:    # Child Loop BB3_3 Depth 2
+; CHECK-BE-NEXT:    lwz r29, 0(r3)
+; CHECK-BE-NEXT:    li r5, 0
+; CHECK-BE-NEXT:    extsw r4, r29
+; CHECK-BE-NEXT:    .p2align 5
+; CHECK-BE-NEXT:  .LBB3_3: # %while.body5.i
+; CHECK-BE-NEXT:    # Parent Loop BB3_2 Depth=1
+; CHECK-BE-NEXT:    # => This Inner Loop Header: Depth=2
+; CHECK-BE-NEXT:    addi r5, r5, -1
+; CHECK-BE-NEXT:    cmpwi r5, 0
+; CHECK-BE-NEXT:    bgt cr0, .LBB3_3
+; CHECK-BE-NEXT:  # %bb.4: # %while.cond12.preheader.i
+; CHECK-BE-NEXT:    #
+; CHECK-BE-NEXT:    bc 12, 4*cr2+lt, .LBB3_1
+; CHECK-BE-NEXT:  # %bb.5: # %for.cond99.preheader
+; CHECK-BE-NEXT:    #
+; CHECK-BE-NEXT:    ld r5, 0(r3)
+; CHECK-BE-NEXT:    sldi r4, r4, 2
+; CHECK-BE-NEXT:    stw r3, 0(r3)
+; CHECK-BE-NEXT:    stwx r30, r5, r4
+; CHECK-BE-NEXT:    b .LBB3_1
+;
+; CHECK-P9-LABEL: testCaller:
+; CHECK-P9:       # %bb.0: # %entry
+; CHECK-P9-NEXT:    mfocrf r12, 32
+; CHECK-P9-NEXT:    mflr r0
+; CHECK-P9-NEXT:    stw r12, 8(r1)
+; CHECK-P9-NEXT:    stdu r1, -64(r1)
+; CHECK-P9-NEXT:    andi. r3, r3, 1
+; CHECK-P9-NEXT:    std r0, 80(r1)
+; CHECK-P9-NEXT:    std r30, 48(r1) # 8-byte Folded Spill
+; CHECK-P9-NEXT:    li r3, -1
+; CHECK-P9-NEXT:    li r30, 0
+; CHECK-P9-NEXT:    std r29, 40(r1) # 8-byte Folded Spill
+; CHECK-P9-NEXT:    crmove 4*cr2+lt, gt
+; CHECK-P9-NEXT:    b .LBB3_2
+; CHECK-P9-NEXT:    .p2align 4
+; CHECK-P9-NEXT:  .LBB3_1: # %if.end116
+; CHECK-P9-NEXT:    #
+; CHECK-P9-NEXT:    bl callee
+; CHECK-P9-NEXT:    nop
+; CHECK-P9-NEXT:    mr r3, r29
+; CHECK-P9-NEXT:  .LBB3_2: # %cond.end.i.i
+; CHECK-P9-NEXT:    # =>This Loop Header: Depth=1
+; CHECK-P9-NEXT:    # Child Loop BB3_3 Depth 2
+; CHECK-P9-NEXT:    lwz r29, 0(r3)
+; CHECK-P9-NEXT:    li r4, 0
+; CHECK-P9-NEXT:    .p2align 5
+; CHECK-P9-NEXT:  .LBB3_3: # %while.body5.i
+; CHECK-P9-NEXT:    # Parent Loop BB3_2 Depth=1
+; CHECK-P9-NEXT:    # => This Inner Loop Header: Depth=2
+; CHECK-P9-NEXT:    addi r4, r4, -1
+; CHECK-P9-NEXT:    cmpwi r4, 0
+; CHECK-P9-NEXT:    bgt cr0, .LBB3_3
+; CHECK-P9-NEXT:  # %bb.4: # %while.cond12.preheader.i
+; CHECK-P9-NEXT:    #
+; CHECK-P9-NEXT:    bc 12, 4*cr2+lt, .LBB3_1
+; CHECK-P9-NEXT:  # %bb.5: # %for.cond99.preheader
+; CHECK-P9-NEXT:    #
+; CHECK-P9-NEXT:    ld r4, 0(r3)
+; CHECK-P9-NEXT:    extswsli r5, r29, 2
+; CHECK-P9-NEXT:    stw r3, 0(r3)
+; CHECK-P9-NEXT:    stwx r30, r4, r5
+; CHECK-P9-NEXT:    b .LBB3_1
+;
+; CHECK-P9-BE-LABEL: testCaller:
+; CHECK-P9-BE:       # %bb.0: # %entry
+; CHECK-P9-BE-NEXT:    mfcr r12
+; CHECK-P9-BE-NEXT:    mflr r0
+; CHECK-P9-BE-NEXT:    stw r12, 8(r1)
+; CHECK-P9-BE-NEXT:    stdu r1, -80(r1)
+; CHECK-P9-BE-NEXT:    andi. r3, r3, 1
+; CHECK-P9-BE-NEXT:    std r0, 96(r1)
+; CHECK-P9-BE-NEXT:    std r30, 64(r1) # 8-byte Folded Spill
+; CHECK-P9-BE-NEXT:    li r3, -1
+; CHECK-P9-BE-NEXT:    li r30, 0
+; CHECK-P9-BE-NEXT:    std r29, 56(r1) # 8-byte Folded Spill
+; CHECK-P9-BE-NEXT:    crmove 4*cr2+lt, gt
+; CHECK-P9-BE-NEXT:    b .LBB3_2
+; CHECK-P9-BE-NEXT:    .p2align 4
+; CHECK-P9-BE-NEXT:  .LBB3_1: # %if.end116
+; CHECK-P9-BE-NEXT:    #
+; CHECK-P9-BE-NEXT:    bl callee
+; CHECK-P9-BE-NEXT:    nop
+; CHECK-P9-BE-NEXT:    mr r3, r29
+; CHECK-P9-BE-NEXT:  .LBB3_2: # %cond.end.i.i
+; CHECK-P9-BE-NEXT:    # =>This Loop Header: Depth=1
+; CHECK-P9-BE-NEXT:    # Child Loop BB3_3 Depth 2
+; CHECK-P9-BE-NEXT:    lwz r29, 0(r3)
+; CHECK-P9-BE-NEXT:    li r4, 0
+; CHECK-P9-BE-NEXT:    .p2align 5
+; CHECK-P9-BE-NEXT:  .LBB3_3: # %while.body5.i
+; CHECK-P9-BE-NEXT:    # Parent Loop BB3_2 Depth=1
+; CHECK-P9-BE-NEXT:    # => This Inner Loop Header: Depth=2
+; CHECK-P9-BE-NEXT:    addi r4, r4, -1
+; CHECK-P9-BE-NEXT:    cmpwi r4, 0
+; CHECK-P9-BE-NEXT:    bgt cr0, .LBB3_3
+; CHECK-P9-BE-NEXT:  # %bb.4: # %while.cond12.preheader.i
+; CHECK-P9-BE-NEXT:    #
+; CHECK-P9-BE-NEXT:    bc 12, 4*cr2+lt, .LBB3_1
+; CHECK-P9-BE-NEXT:  # %bb.5: # %for.cond99.preheader
+; CHECK-P9-BE-NEXT:    #
+; CHECK-P9-BE-NEXT:    ld r4, 0(r3)
+; CHECK-P9-BE-NEXT:    extswsli r5, r29, 2
+; CHECK-P9-BE-NEXT:    stw r3, 0(r3)
+; CHECK-P9-BE-NEXT:    stwx r30, r4, r5
+; CHECK-P9-BE-NEXT:    b .LBB3_1
+entry:
+  br label %exit
+
+exit: ; preds = %entry
+  br label %cond.end.i.i
+
+cond.end.i.i:                                     ; preds = %if.end116, %exit
+  %CurrentState.0566 = phi i32 [ %CurrentState.2, %if.end116 ], [ -1, %exit ]
+  %0 = load i32, ptr poison, align 8
+  br label %while.body5.i
+
+while.cond12.preheader.i:                         ; preds = %while.body5.i
+  br i1 %incond, label %if.end116, label %for.cond99.preheader
+
+while.body5.i:                                    ; preds = %while.body5.i, %cond.end.i.i
+  %Test.012.i = phi i32 [ 0, %cond.end.i.i ], [ %dec10.i, %while.body5.i ]
+  %dec10.i = add nsw i32 %Test.012.i, -1
+  %cmp4.i = icmp slt i32 0, %dec10.i
+  br i1 %cmp4.i, label %while.body5.i, label %while.cond12.preheader.i
+
+for.cond99.preheader:                             ; preds = %while.cond12.preheader.i
+  %1 = load ptr, ptr poison, align 8
+  %conv103 = sext i32 %0 to i64
+  %arrayidx.i426 = getelementptr inbounds i32, ptr %1, i64 %conv103
+  store i32 0, ptr %arrayidx.i426, align 4
+  store i32 %CurrentState.0566, ptr poison, align 8
+  br label %if.end116
+
+if.end116:                                        ; preds = %for.cond99.preheader, %while.cond12.preheader.i
+  %CurrentState.2 = phi i32 [ %0, %while.cond12.preheader.i ], [ poison, %for.cond99.preheader ]
+  call fastcc void @callee()
+  br label %cond.end.i.i
+}
+declare dso_local fastcc void @callee() unnamed_addr align 2

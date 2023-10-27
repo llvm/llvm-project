@@ -977,7 +977,7 @@ attributes #2 = { alwaysinline nounwind }
 ;
 ; CHECK-LABEL: define {{[^@]+}}@bitcast_struct_v3f32_v3f32.body
 ; CHECK-SAME: (ptr [[OUT:%.*]], <3 x float> [[VALUE:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[EXTRACTVEC:%.*]] = shufflevector <3 x float> [[VALUE]], <3 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 undef>
+; CHECK-NEXT:    [[EXTRACTVEC:%.*]] = shufflevector <3 x float> [[VALUE]], <3 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue [[BITCAST_STRUCT_V3F32_V3F32:%.*]] poison, <4 x float> [[EXTRACTVEC]], 0
 ; CHECK-NEXT:    ret [[BITCAST_STRUCT_V3F32_V3F32]] [[TMP1]]
 ;
@@ -992,7 +992,7 @@ attributes #2 = { alwaysinline nounwind }
 ;
 ; CHECK-LABEL: define {{[^@]+}}@bitcast_struct_v3f32_v3i32.body
 ; CHECK-SAME: (ptr [[OUT:%.*]], <3 x i32> [[VALUE:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[EXTRACTVEC:%.*]] = shufflevector <3 x i32> [[VALUE]], <3 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 undef>
+; CHECK-NEXT:    [[EXTRACTVEC:%.*]] = shufflevector <3 x i32> [[VALUE]], <3 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue [[BITCAST_STRUCT_V3F32_V3I32:%.*]] poison, <4 x i32> [[EXTRACTVEC]], 0
 ; CHECK-NEXT:    ret [[BITCAST_STRUCT_V3F32_V3I32]] [[TMP1]]
 ;
@@ -1035,7 +1035,7 @@ attributes #2 = { alwaysinline nounwind }
 ;
 ; CHECK-LABEL: define {{[^@]+}}@bitcast_struct_v4f32_v3f32.body
 ; CHECK-SAME: (ptr [[OUT:%.*]], <3 x float> [[VALUE:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[EXTRACTVEC:%.*]] = shufflevector <3 x float> [[VALUE]], <3 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 undef>
+; CHECK-NEXT:    [[EXTRACTVEC:%.*]] = shufflevector <3 x float> [[VALUE]], <3 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue [[BITCAST_STRUCT_V4F32_V3F32:%.*]] poison, <4 x float> [[EXTRACTVEC]], 0
 ; CHECK-NEXT:    ret [[BITCAST_STRUCT_V4F32_V3F32]] [[TMP1]]
 ;
@@ -1064,7 +1064,7 @@ attributes #2 = { alwaysinline nounwind }
 ;
 ; CHECK-LABEL: define {{[^@]+}}@bitcast_struct_v3f32_f32_v3f32.body
 ; CHECK-SAME: (ptr [[OUT:%.*]], <3 x float> [[VALUE:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[EXTRACTVEC:%.*]] = shufflevector <3 x float> [[VALUE]], <3 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 undef>
+; CHECK-NEXT:    [[EXTRACTVEC:%.*]] = shufflevector <3 x float> [[VALUE]], <3 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue [[BITCAST_STRUCT_V3F32_F32_V3F32:%.*]] poison, <4 x float> [[EXTRACTVEC]], 0
 ; CHECK-NEXT:    ret [[BITCAST_STRUCT_V3F32_F32_V3F32]] [[TMP1]]
 ;
@@ -1124,7 +1124,7 @@ attributes #2 = { alwaysinline nounwind }
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[COND]], label [[RET0:%.*]], label [[RET1:%.*]]
 ; CHECK:       ret0:
-; CHECK-NEXT:    [[EXTRACTVEC:%.*]] = shufflevector <3 x float> [[VALUE]], <3 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 undef>
+; CHECK-NEXT:    [[EXTRACTVEC:%.*]] = shufflevector <3 x float> [[VALUE]], <3 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertvalue [[MULTI_RETURN_BITCAST_STRUCT_V3F32_V3F32:%.*]] poison, <4 x float> [[EXTRACTVEC]], 0
 ; CHECK-NEXT:    ret [[MULTI_RETURN_BITCAST_STRUCT_V3F32_V3F32]] [[TMP0]]
 ; CHECK:       ret1:

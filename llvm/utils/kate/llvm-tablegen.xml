@@ -42,6 +42,8 @@
       <item> !ge </item>
       <item> !gt </item>
       <item> !ne </item>
+      <item> !tolower </item>
+      <item> !toupper </item>
     </list>
     <list name="objects">
       <item> class </item>

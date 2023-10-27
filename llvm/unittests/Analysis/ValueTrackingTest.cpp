@@ -71,6 +71,9 @@ protected:
     A2 = findInstructionByNameOrNull(F, "A2");
     A3 = findInstructionByNameOrNull(F, "A3");
     A4 = findInstructionByNameOrNull(F, "A4");
+    A5 = findInstructionByNameOrNull(F, "A5");
+    A6 = findInstructionByNameOrNull(F, "A6");
+    A7 = findInstructionByNameOrNull(F, "A7");
 
     CxtI = findInstructionByNameOrNull(F, "CxtI");
     CxtI2 = findInstructionByNameOrNull(F, "CxtI2");
@@ -82,7 +85,8 @@ protected:
   Function *F = nullptr;
   Instruction *A = nullptr;
   // Instructions (optional)
-  Instruction *A2 = nullptr, *A3 = nullptr, *A4 = nullptr;
+  Instruction *A2 = nullptr, *A3 = nullptr, *A4 = nullptr, *A5 = nullptr,
+              *A6 = nullptr, *A7 = nullptr;
 
   // Context instructions (optional)
   Instruction *CxtI = nullptr, *CxtI2 = nullptr, *CxtI3 = nullptr;
@@ -110,6 +114,18 @@ protected:
   }
 };
 
+class ComputeKnownFPClassTest : public ValueTrackingTest {
+protected:
+  void expectKnownFPClass(unsigned KnownTrue, std::optional<bool> SignBitKnown,
+                          Instruction *TestVal = nullptr) {
+    if (!TestVal)
+      TestVal = A;
+
+    KnownFPClass Known = computeKnownFPClass(TestVal, M->getDataLayout());
+    EXPECT_EQ(KnownTrue, Known.KnownFPClasses);
+    EXPECT_EQ(SignBitKnown, Known.SignBit);
+  }
+};
 }
 
 TEST_F(MatchSelectPatternTest, SimpleFMin) {
@@ -613,28 +629,28 @@ TEST_F(MatchSelectPatternTest, NotNotNe) {
 
 TEST(ValueTracking, GuaranteedToTransferExecutionToSuccessor) {
   StringRef Assembly =
-      "declare void @nounwind_readonly(i32*) nounwind readonly "
-      "declare void @nounwind_argmemonly(i32*) nounwind argmemonly "
-      "declare void @nounwind_willreturn(i32*) nounwind willreturn "
-      "declare void @throws_but_readonly(i32*) readonly "
-      "declare void @throws_but_argmemonly(i32*) argmemonly "
-      "declare void @throws_but_willreturn(i32*) willreturn "
+      "declare void @nounwind_readonly(ptr) nounwind readonly "
+      "declare void @nounwind_argmemonly(ptr) nounwind argmemonly "
+      "declare void @nounwind_willreturn(ptr) nounwind willreturn "
+      "declare void @throws_but_readonly(ptr) readonly "
+      "declare void @throws_but_argmemonly(ptr) argmemonly "
+      "declare void @throws_but_willreturn(ptr) willreturn "
       " "
-      "declare void @unknown(i32*) "
+      "declare void @unknown(ptr) "
       " "
-      "define void @f(i32* %p) { "
-      "  call void @nounwind_readonly(i32* %p) "
-      "  call void @nounwind_argmemonly(i32* %p) "
-      "  call void @nounwind_willreturn(i32* %p)"
-      "  call void @throws_but_readonly(i32* %p) "
-      "  call void @throws_but_argmemonly(i32* %p) "
-      "  call void @throws_but_willreturn(i32* %p) "
-      "  call void @unknown(i32* %p) nounwind readonly "
-      "  call void @unknown(i32* %p) nounwind argmemonly "
-      "  call void @unknown(i32* %p) nounwind willreturn "
-      "  call void @unknown(i32* %p) readonly "
-      "  call void @unknown(i32* %p) argmemonly "
-      "  call void @unknown(i32* %p) willreturn "
+      "define void @f(ptr %p) { "
+      "  call void @nounwind_readonly(ptr %p) "
+      "  call void @nounwind_argmemonly(ptr %p) "
+      "  call void @nounwind_willreturn(ptr %p)"
+      "  call void @throws_but_readonly(ptr %p) "
+      "  call void @throws_but_argmemonly(ptr %p) "
+      "  call void @throws_but_willreturn(ptr %p) "
+      "  call void @unknown(ptr %p) nounwind readonly "
+      "  call void @unknown(ptr %p) nounwind argmemonly "
+      "  call void @unknown(ptr %p) nounwind willreturn "
+      "  call void @unknown(ptr %p) readonly "
+      "  call void @unknown(ptr %p) argmemonly "
+      "  call void @unknown(ptr %p) willreturn "
       "  ret void "
       "} ";
 
@@ -648,18 +664,18 @@ TEST(ValueTracking, GuaranteedToTransferExecutionToSuccessor) {
 
   auto &BB = F->getEntryBlock();
   bool ExpectedAnswers[] = {
-      false, // call void @nounwind_readonly(i32* %p)
-      false, // call void @nounwind_argmemonly(i32* %p)
-      true,  // call void @nounwind_willreturn(i32* %p)
-      false, // call void @throws_but_readonly(i32* %p)
-      false, // call void @throws_but_argmemonly(i32* %p)
-      false, // call void @throws_but_willreturn(i32* %p)
-      false, // call void @unknown(i32* %p) nounwind readonly
-      false, // call void @unknown(i32* %p) nounwind argmemonly
-      true,  // call void @unknown(i32* %p) nounwind willreturn
-      false, // call void @unknown(i32* %p) readonly
-      false, // call void @unknown(i32* %p) argmemonly
-      false, // call void @unknown(i32* %p) willreturn
+      false, // call void @nounwind_readonly(ptr %p)
+      false, // call void @nounwind_argmemonly(ptr %p)
+      true,  // call void @nounwind_willreturn(ptr %p)
+      false, // call void @throws_but_readonly(ptr %p)
+      false, // call void @throws_but_argmemonly(ptr %p)
+      false, // call void @throws_but_willreturn(ptr %p)
+      false, // call void @unknown(ptr %p) nounwind readonly
+      false, // call void @unknown(ptr %p) nounwind argmemonly
+      true,  // call void @unknown(ptr %p) nounwind willreturn
+      false, // call void @unknown(ptr %p) readonly
+      false, // call void @unknown(ptr %p) argmemonly
+      false, // call void @unknown(ptr %p) willreturn
       false, // ret void
   };
 
@@ -678,7 +694,7 @@ TEST_F(ValueTrackingTest, ComputeNumSignBits_PR32045) {
       "  %A = ashr i32 %a, -1\n"
       "  ret i32 %A\n"
       "}\n");
-  EXPECT_EQ(ComputeNumSignBits(A, M->getDataLayout()), 1u);
+  EXPECT_EQ(ComputeNumSignBits(A, M->getDataLayout()), 32u);
 }
 
 // No guarantees for canonical IR in this analysis, so this just bails out.
@@ -798,9 +814,9 @@ TEST_F(ValueTrackingTest, impliesPoisonTest_MaskCmp) {
 
 TEST_F(ValueTrackingTest, ComputeNumSignBits_Shuffle_Pointers) {
   parseAssembly(
-      "define <2 x i32*> @test(<2 x i32*> %x) {\n"
-      "  %A = shufflevector <2 x i32*> zeroinitializer, <2 x i32*> undef, <2 x i32> zeroinitializer\n"
-      "  ret <2 x i32*> %A\n"
+      "define <2 x ptr> @test(<2 x ptr> %x) {\n"
+      "  %A = shufflevector <2 x ptr> zeroinitializer, <2 x ptr> undef, <2 x i32> zeroinitializer\n"
+      "  ret <2 x ptr> %A\n"
       "}\n");
   EXPECT_EQ(ComputeNumSignBits(A, M->getDataLayout()), 64u);
 }
@@ -844,7 +860,7 @@ TEST(ValueTracking, propagatesPoison) {
       "declare i64 @llvm.llrint.f32(float)\n"
       "declare float @llvm.fmuladd.f32(float, float, float)\n"
       "define void @f(i32 %x, i32 %y, float %fx, float %fy, "
-      "i1 %cond, i8* %p) {\n";
+      "i1 %cond, ptr %p) {\n";
   std::string AsmTail = "  ret void\n}";
   // (propagates poison?, IR instruction)
   SmallVector<std::tuple<bool, std::string, unsigned>, 32> Data = {
@@ -871,10 +887,10 @@ TEST(ValueTracking, propagatesPoison) {
       {true, "fcmp oeq float %fx, %fy", 1},
       {true, "icmp eq i32 %x, %y", 0},
       {true, "icmp eq i32 %x, %y", 1},
-      {true, "getelementptr i8, i8* %p, i32 %x", 0},
-      {true, "getelementptr i8, i8* %p, i32 %x", 1},
-      {true, "getelementptr inbounds i8, i8* %p, i32 %x", 0},
-      {true, "getelementptr inbounds i8, i8* %p, i32 %x", 1},
+      {true, "getelementptr i8, ptr %p, i32 %x", 0},
+      {true, "getelementptr i8, ptr %p, i32 %x", 1},
+      {true, "getelementptr inbounds i8, ptr %p, i32 %x", 0},
+      {true, "getelementptr inbounds i8, ptr %p, i32 %x", 1},
       {true, "bitcast float %fx to i32", 0},
       {true, "select i1 %cond, i32 %x, i32 %y", 0},
       {false, "select i1 %cond, i32 %x, i32 %y", 1},
@@ -963,6 +979,20 @@ TEST_F(ValueTrackingTest, programUndefinedIfPoison) {
                 "  ret void\n"
                 "}\n");
   // If %A was poison, udiv raises UB regardless of %mask's value
+  EXPECT_EQ(programUndefinedIfPoison(A), true);
+}
+
+TEST_F(ValueTrackingTest, programUndefinedIfPoisonSelect) {
+  parseAssembly("declare i32 @any_num()"
+                "define void @test(i1 %Cond) {\n"
+                "  %A = call i32 @any_num()\n"
+                "  %B = add i32 %A, 1\n"
+                "  %C = select i1 %Cond, i32 %A, i32 %B\n"
+                "  udiv i32 1, %C"
+                "  ret void\n"
+                "}\n");
+  // If A is poison, B is also poison, and therefore C is poison regardless of
+  // the value of %Cond.
   EXPECT_EQ(programUndefinedIfPoison(A), true);
 }
 
@@ -1100,7 +1130,7 @@ TEST(ValueTracking, canCreatePoisonOrUndef) {
       "declare {i32, i1} @llvm.usub.with.overflow.i32(i32 %a, i32 %b)\n"
       "declare {i32, i1} @llvm.umul.with.overflow.i32(i32 %a, i32 %b)\n"
       "define void @f(i32 %x, i32 %y, float %fx, float %fy, i1 %cond, "
-      "<4 x i32> %vx, <4 x i32> %vx2, <vscale x 4 x i32> %svx, i8* %p) {\n";
+      "<4 x i32> %vx, <4 x i32> %vx2, <vscale x 4 x i32> %svx, ptr %p) {\n";
   std::string AsmTail = "  ret void\n}";
   // (can create poison?, can create undef?, IR instruction)
   SmallVector<std::pair<std::pair<bool, bool>, std::string>, 32> Data = {
@@ -1125,8 +1155,8 @@ TEST(ValueTracking, canCreatePoisonOrUndef) {
       {{true, false}, "lshr exact i32 %x, 31"},
       {{false, false}, "udiv i32 %x, %y"},
       {{true, false}, "udiv exact i32 %x, %y"},
-      {{false, false}, "getelementptr i8, i8* %p, i32 %x"},
-      {{true, false}, "getelementptr inbounds i8, i8* %p, i32 %x"},
+      {{false, false}, "getelementptr i8, ptr %p, i32 %x"},
+      {{true, false}, "getelementptr inbounds i8, ptr %p, i32 %x"},
       {{true, false}, "fneg nnan float %fx"},
       {{false, false}, "fneg float %fx"},
       {{false, false}, "fadd float %fx, %fy"},
@@ -1157,10 +1187,7 @@ TEST(ValueTracking, canCreatePoisonOrUndef) {
       {{false, false}, "call noundef i32 @g(i32 %x)"},
       {{true, false}, "fcmp nnan oeq float %fx, %fy"},
       {{false, false}, "fcmp oeq float %fx, %fy"},
-      {{true, false},
-       "ashr <4 x i32> %vx, select (i1 icmp sgt (i32 ptrtoint (i32* @s to "
-       "i32), i32 1), <4 x i32> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 "
-       "2, i32 3>)"},
+      {{true, false}, "ashr i32 %x, ptrtoint (ptr @s to i32)"},
       {{false, false},
        "call {i32, i1} @llvm.sadd.with.overflow.i32(i32 %x, i32 %y)"},
       {{false, false},
@@ -1207,17 +1234,17 @@ TEST(ValueTracking, canCreatePoisonOrUndef) {
 
 TEST_F(ValueTrackingTest, computePtrAlignment) {
   parseAssembly("declare i1 @f_i1()\n"
-                "declare i8* @f_i8p()\n"
+                "declare ptr @f_i8p()\n"
                 "declare void @llvm.assume(i1)\n"
                 "define void @test() {\n"
-                "  %A = call i8* @f_i8p()\n"
+                "  %A = call ptr @f_i8p()\n"
                 "  %cond = call i1 @f_i1()\n"
                 "  %CxtI = add i32 0, 0\n"
                 "  br i1 %cond, label %BB1, label %EXIT\n"
                 "BB1:\n"
                 "  %CxtI2 = add i32 0, 0\n"
                 "  %cond2 = call i1 @f_i1()\n"
-                "  call void @llvm.assume(i1 true) [ \"align\"(i8* %A, i64 16) ]\n"
+                "  call void @llvm.assume(i1 true) [ \"align\"(ptr %A, i64 16) ]\n"
                 "  br i1 %cond2, label %BB2, label %EXIT\n"
                 "BB2:\n"
                 "  %CxtI3 = add i32 0, 0\n"
@@ -1261,6 +1288,682 @@ TEST_F(ComputeKnownBitsTest, ComputeKnownMulBits) {
   expectKnownBits(/*zero*/ 95u, /*one*/ 32u);
 }
 
+TEST_F(ComputeKnownFPClassTest, SelectPos0) {
+  parseAssembly(
+      "define float @test(i1 %cond) {\n"
+      "  %A = select i1 %cond, float 0.0, float 0.0"
+      "  ret float %A\n"
+      "}\n");
+  expectKnownFPClass(fcPosZero, false);
+}
+
+TEST_F(ComputeKnownFPClassTest, SelectNeg0) {
+  parseAssembly(
+      "define float @test(i1 %cond) {\n"
+      "  %A = select i1 %cond, float -0.0, float -0.0"
+      "  ret float %A\n"
+      "}\n");
+  expectKnownFPClass(fcNegZero, true);
+}
+
+TEST_F(ComputeKnownFPClassTest, SelectPosOrNeg0) {
+  parseAssembly(
+      "define float @test(i1 %cond) {\n"
+      "  %A = select i1 %cond, float 0.0, float -0.0"
+      "  ret float %A\n"
+      "}\n");
+  expectKnownFPClass(fcZero, std::nullopt);
+}
+
+TEST_F(ComputeKnownFPClassTest, SelectPosInf) {
+  parseAssembly(
+      "define float @test(i1 %cond) {\n"
+      "  %A = select i1 %cond, float 0x7FF0000000000000, float 0x7FF0000000000000"
+      "  ret float %A\n"
+      "}\n");
+  expectKnownFPClass(fcPosInf, false);
+}
+
+TEST_F(ComputeKnownFPClassTest, SelectNegInf) {
+  parseAssembly(
+      "define float @test(i1 %cond) {\n"
+      "  %A = select i1 %cond, float 0xFFF0000000000000, float 0xFFF0000000000000"
+      "  ret float %A\n"
+      "}\n");
+  expectKnownFPClass(fcNegInf, true);
+}
+
+TEST_F(ComputeKnownFPClassTest, SelectPosOrNegInf) {
+  parseAssembly(
+      "define float @test(i1 %cond) {\n"
+      "  %A = select i1 %cond, float 0x7FF0000000000000, float 0xFFF0000000000000"
+      "  ret float %A\n"
+      "}\n");
+  expectKnownFPClass(fcInf, std::nullopt);
+}
+
+TEST_F(ComputeKnownFPClassTest, SelectNNaN) {
+  parseAssembly(
+      "define float @test(i1 %cond, float %arg0, float %arg1) {\n"
+      "  %A = select nnan i1 %cond, float %arg0, float %arg1"
+      "  ret float %A\n"
+      "}\n");
+  expectKnownFPClass(~fcNan, std::nullopt);
+}
+
+TEST_F(ComputeKnownFPClassTest, SelectNInf) {
+  parseAssembly(
+      "define float @test(i1 %cond, float %arg0, float %arg1) {\n"
+      "  %A = select ninf i1 %cond, float %arg0, float %arg1"
+      "  ret float %A\n"
+      "}\n");
+  expectKnownFPClass(~fcInf, std::nullopt);
+}
+
+TEST_F(ComputeKnownFPClassTest, SelectNNaNNInf) {
+  parseAssembly(
+      "define float @test(i1 %cond, float %arg0, float %arg1) {\n"
+      "  %A = select nnan ninf i1 %cond, float %arg0, float %arg1"
+      "  ret float %A\n"
+      "}\n");
+  expectKnownFPClass(~(fcNan | fcInf), std::nullopt);
+}
+
+TEST_F(ComputeKnownFPClassTest, SelectNoFPClassArgUnionAll) {
+  parseAssembly(
+      "define float @test(i1 %cond, float nofpclass(snan ninf nsub pzero pnorm) %arg0, float nofpclass(qnan nnorm nzero psub pinf) %arg1) {\n"
+      "  %A = select i1 %cond, float %arg0, float %arg1"
+      "  ret float %A\n"
+      "}\n");
+  expectKnownFPClass(fcAllFlags, std::nullopt);
+}
+
+TEST_F(ComputeKnownFPClassTest, SelectNoFPClassArgNoNan) {
+  parseAssembly(
+      "define float @test(i1 %cond, float nofpclass(nan) %arg0, float nofpclass(nan) %arg1) {\n"
+      "  %A = select i1 %cond, float %arg0, float %arg1"
+      "  ret float %A\n"
+      "}\n");
+  expectKnownFPClass(~fcNan, std::nullopt);
+}
+
+TEST_F(ComputeKnownFPClassTest, SelectNoFPClassArgNoPInf) {
+  parseAssembly(
+      "define float @test(i1 %cond, float nofpclass(inf) %arg0, float nofpclass(pinf) %arg1) {\n"
+      "  %A = select i1 %cond, float %arg0, float %arg1"
+      "  ret float %A\n"
+      "}\n");
+  expectKnownFPClass(~fcPosInf, std::nullopt);
+}
+
+TEST_F(ComputeKnownFPClassTest, SelectNoFPClassArgNoNInf) {
+  parseAssembly(
+      "define float @test(i1 %cond, float nofpclass(ninf) %arg0, float nofpclass(inf) %arg1) {\n"
+      "  %A = select i1 %cond, float %arg0, float %arg1"
+      "  ret float %A\n"
+      "}\n");
+  expectKnownFPClass(~fcNegInf, std::nullopt);
+}
+
+TEST_F(ComputeKnownFPClassTest, SelectNoFPClassCallSiteNoNan) {
+  parseAssembly(
+      "declare float @func()\n"
+      "define float @test() {\n"
+      "  %A = call nofpclass(nan) float @func()\n"
+      "  ret float %A\n"
+      "}\n");
+  expectKnownFPClass(~fcNan, std::nullopt);
+}
+
+TEST_F(ComputeKnownFPClassTest, SelectNoFPClassCallSiteNoZeros) {
+  parseAssembly(
+      "declare float @func()\n"
+      "define float @test() {\n"
+      "  %A = call nofpclass(zero) float @func()\n"
+      "  ret float %A\n"
+      "}\n");
+  expectKnownFPClass(~fcZero, std::nullopt);
+}
+
+TEST_F(ComputeKnownFPClassTest, SelectNoFPClassDeclarationNoNan) {
+  parseAssembly(
+      "declare nofpclass(nan) float @no_nans()\n"
+      "define float @test() {\n"
+      "  %A = call float @no_nans()\n"
+      "  ret float %A\n"
+      "}\n");
+  expectKnownFPClass(~fcNan, std::nullopt);
+}
+
+// Check nofpclass + ninf works on a callsite
+TEST_F(ComputeKnownFPClassTest, SelectNoFPClassCallSiteNoZerosNInfFlags) {
+  parseAssembly(
+      "declare float @func()\n"
+      "define float @test() {\n"
+      "  %A = call ninf nofpclass(zero) float @func()\n"
+      "  ret float %A\n"
+      "}\n");
+  expectKnownFPClass(~(fcZero | fcInf), std::nullopt);
+}
+
+TEST_F(ComputeKnownFPClassTest, FNegNInf) {
+  parseAssembly(
+      "define float @test(float %arg) {\n"
+      "  %A = fneg ninf float %arg"
+      "  ret float %A\n"
+      "}\n");
+  expectKnownFPClass(~fcInf, std::nullopt);
+}
+
+TEST_F(ComputeKnownFPClassTest, FabsUnknown) {
+  parseAssembly(
+      "declare float @llvm.fabs.f32(float)"
+      "define float @test(float %arg) {\n"
+      "  %A = call float @llvm.fabs.f32(float %arg)"
+      "  ret float %A\n"
+      "}\n");
+  expectKnownFPClass(fcPositive | fcNan, false);
+}
+
+TEST_F(ComputeKnownFPClassTest, FNegFabsUnknown) {
+  parseAssembly(
+      "declare float @llvm.fabs.f32(float)"
+      "define float @test(float %arg) {\n"
+      "  %fabs = call float @llvm.fabs.f32(float %arg)"
+      "  %A = fneg float %fabs"
+      "  ret float %A\n"
+      "}\n");
+  expectKnownFPClass(fcNegative | fcNan, true);
+}
+
+TEST_F(ComputeKnownFPClassTest, NegFabsNInf) {
+  parseAssembly(
+      "declare float @llvm.fabs.f32(float)"
+      "define float @test(float %arg) {\n"
+      "  %fabs = call ninf float @llvm.fabs.f32(float %arg)"
+      "  %A = fneg float %fabs"
+      "  ret float %A\n"
+      "}\n");
+  expectKnownFPClass((fcNegative & ~fcNegInf) | fcNan, true);
+}
+
+TEST_F(ComputeKnownFPClassTest, FNegFabsNNaN) {
+  parseAssembly(
+      "declare float @llvm.fabs.f32(float)"
+      "define float @test(float %arg) {\n"
+      "  %fabs = call nnan float @llvm.fabs.f32(float %arg)"
+      "  %A = fneg float %fabs"
+      "  ret float %A\n"
+      "}\n");
+  expectKnownFPClass(fcNegative, true);
+}
+
+TEST_F(ComputeKnownFPClassTest, CopySignNNanSrc0) {
+  parseAssembly(
+      "declare float @llvm.fabs.f32(float)\n"
+      "declare float @llvm.copysign.f32(float, float)\n"
+      "define float @test(float %arg0, float %arg1) {\n"
+      "  %fabs = call nnan float @llvm.fabs.f32(float %arg0)"
+      "  %A = call float @llvm.copysign.f32(float %fabs, float %arg1)"
+      "  ret float %A\n"
+      "}\n");
+  expectKnownFPClass(~fcNan, std::nullopt);
+}
+
+TEST_F(ComputeKnownFPClassTest, CopySignNInfSrc0_NegSign) {
+  parseAssembly(
+      "declare float @llvm.log.f32(float)\n"
+      "declare float @llvm.copysign.f32(float, float)\n"
+      "define float @test(float %arg0, float %arg1) {\n"
+      "  %ninf = call ninf float @llvm.log.f32(float %arg0)"
+      "  %A = call float @llvm.copysign.f32(float %ninf, float -1.0)"
+      "  ret float %A\n"
+      "}\n");
+  expectKnownFPClass(fcNegFinite | fcNan, true);
+}
+
+TEST_F(ComputeKnownFPClassTest, CopySignNInfSrc0_PosSign) {
+  parseAssembly(
+      "declare float @llvm.sqrt.f32(float)\n"
+      "declare float @llvm.copysign.f32(float, float)\n"
+      "define float @test(float %arg0, float %arg1) {\n"
+      "  %ninf = call ninf float @llvm.sqrt.f32(float %arg0)"
+      "  %A = call float @llvm.copysign.f32(float %ninf, float 1.0)"
+      "  ret float %A\n"
+      "}\n");
+  expectKnownFPClass(fcPosFinite | fcNan, false);
+}
+
+TEST_F(ComputeKnownFPClassTest, UIToFP) {
+  parseAssembly(
+      "define float @test(i32 %arg0, i16 %arg1) {\n"
+      "  %A = uitofp i32 %arg0 to float"
+      "  %A2 = uitofp i16 %arg1 to half"
+      "  ret float %A\n"
+      "}\n");
+  expectKnownFPClass(fcPosFinite & ~fcSubnormal, false, A);
+  expectKnownFPClass(fcPositive & ~fcSubnormal, false, A2);
+}
+
+TEST_F(ComputeKnownFPClassTest, SIToFP) {
+  parseAssembly(
+      "define float @test(i32 %arg0, i16 %arg1, i17 %arg2) {\n"
+      "  %A = sitofp i32 %arg0 to float"
+      "  %A2 = sitofp i16 %arg1 to half"
+      "  %A3 = sitofp i17 %arg2 to half"
+      "  ret float %A\n"
+      "}\n");
+  expectKnownFPClass(fcFinite & ~fcNegZero & ~fcSubnormal, std::nullopt, A);
+  expectKnownFPClass(fcFinite & ~fcNegZero & ~fcSubnormal, std::nullopt, A2);
+  expectKnownFPClass(~(fcNan | fcNegZero | fcSubnormal), std::nullopt, A3);
+}
+
+TEST_F(ComputeKnownFPClassTest, FAdd) {
+  parseAssembly(
+      "define float @test(float nofpclass(nan inf) %nnan.ninf, float nofpclass(nan) %nnan, float nofpclass(qnan) %no.qnan, float %unknown) {\n"
+      "  %A = fadd float %nnan, %nnan.ninf"
+      "  %A2 = fadd float %nnan.ninf, %nnan"
+      "  %A3 = fadd float %nnan.ninf, %unknown"
+      "  %A4 = fadd float %nnan.ninf, %no.qnan"
+      "  %A5 = fadd float %nnan, %nnan"
+      "  ret float %A\n"
+      "}\n");
+  expectKnownFPClass(fcFinite | fcInf, std::nullopt, A);
+  expectKnownFPClass(fcFinite | fcInf, std::nullopt, A2);
+  expectKnownFPClass(fcAllFlags, std::nullopt, A3);
+  expectKnownFPClass(fcAllFlags, std::nullopt, A4);
+  expectKnownFPClass(fcAllFlags, std::nullopt, A5);
+}
+
+TEST_F(ComputeKnownFPClassTest, FSub) {
+  parseAssembly(
+      "define float @test(float nofpclass(nan inf) %nnan.ninf, float nofpclass(nan) %nnan, float nofpclass(qnan) %no.qnan, float %unknown) {\n"
+      "  %A = fsub float %nnan, %nnan.ninf"
+      "  %A2 = fsub float %nnan.ninf, %nnan"
+      "  %A3 = fsub float %nnan.ninf, %unknown"
+      "  %A4 = fsub float %nnan.ninf, %no.qnan"
+      "  %A5 = fsub float %nnan, %nnan"
+      "  ret float %A\n"
+      "}\n");
+  expectKnownFPClass(fcFinite | fcInf, std::nullopt, A);
+  expectKnownFPClass(fcFinite | fcInf, std::nullopt, A2);
+  expectKnownFPClass(fcAllFlags, std::nullopt, A3);
+  expectKnownFPClass(fcAllFlags, std::nullopt, A4);
+  expectKnownFPClass(fcAllFlags, std::nullopt, A5);
+}
+
+TEST_F(ComputeKnownFPClassTest, FMul) {
+  parseAssembly(
+      "define float @test(float nofpclass(nan inf) %nnan.ninf0, float nofpclass(nan inf) %nnan.ninf1, float nofpclass(nan) %nnan, float nofpclass(qnan) %no.qnan, float %unknown) {\n"
+      "  %A = fmul float %nnan.ninf0, %nnan.ninf1"
+      "  %A2 = fmul float %nnan.ninf0, %nnan"
+      "  %A3 = fmul float %nnan, %nnan.ninf0"
+      "  %A4 = fmul float %nnan.ninf0, %no.qnan"
+      "  %A5 = fmul float %nnan, %nnan"
+      "  ret float %A\n"
+      "}\n");
+  expectKnownFPClass(fcFinite | fcInf, std::nullopt, A);
+  expectKnownFPClass(fcAllFlags, std::nullopt, A2);
+  expectKnownFPClass(fcAllFlags, std::nullopt, A3);
+  expectKnownFPClass(fcAllFlags, std::nullopt, A4);
+  expectKnownFPClass(fcPositive | fcNan, std::nullopt, A5);
+}
+
+TEST_F(ComputeKnownFPClassTest, FMulNoZero) {
+  parseAssembly(
+      "define float @test(float nofpclass(zero) %no.zero, float nofpclass(zero nan) %no.zero.nan0, float nofpclass(zero nan) %no.zero.nan1, float nofpclass(nzero nan) %no.negzero.nan, float nofpclass(pzero nan) %no.poszero.nan, float nofpclass(inf nan) %no.inf.nan, float nofpclass(inf) %no.inf, float nofpclass(nan) %no.nan) {\n"
+      "  %A = fmul float %no.zero.nan0, %no.zero.nan1"
+      "  %A2 = fmul float %no.zero, %no.zero"
+      "  %A3 = fmul float %no.poszero.nan, %no.zero.nan0"
+      "  %A4 = fmul float %no.nan, %no.zero"
+      "  %A5 = fmul float %no.zero, %no.inf"
+      "  %A6 = fmul float %no.zero.nan0, %no.nan"
+      "  %A7 = fmul float %no.nan, %no.zero.nan0"
+      "  ret float %A\n"
+      "}\n");
+  expectKnownFPClass(fcFinite | fcInf, std::nullopt, A);
+  expectKnownFPClass(fcPositive | fcNan, std::nullopt, A2);
+  expectKnownFPClass(fcAllFlags, std::nullopt, A3);
+  expectKnownFPClass(fcAllFlags, std::nullopt, A4);
+  expectKnownFPClass(fcAllFlags, std::nullopt, A5);
+  expectKnownFPClass(fcAllFlags, std::nullopt, A6);
+  expectKnownFPClass(fcAllFlags, std::nullopt, A7);
+}
+
+TEST_F(ComputeKnownFPClassTest, Phi) {
+  parseAssembly(
+      "define float @test(i1 %cond, float nofpclass(nan inf) %arg0, float nofpclass(nan) %arg1) {\n"
+      "entry:\n"
+      "  br i1 %cond, label %bb0, label %bb1\n"
+      "bb0:\n"
+      "  br label %ret\n"
+      "bb1:\n"
+      "  br label %ret\n"
+      "ret:\n"
+      "  %A = phi float [ %arg0, %bb0 ],  [ %arg1, %bb1 ]\n"
+      "  ret float %A\n"
+      "}\n");
+  expectKnownFPClass(~fcNan, std::nullopt);
+}
+
+TEST_F(ComputeKnownFPClassTest, PhiKnownSignFalse) {
+  parseAssembly(
+      "declare float @llvm.fabs.f32(float)"
+      "define float @test(i1 %cond, float nofpclass(nan) %arg0, float nofpclass(nan) %arg1) {\n"
+      "entry:\n"
+      "  br i1 %cond, label %bb0, label %bb1\n"
+      "bb0:\n"
+      "  %fabs.arg0 = call float @llvm.fabs.f32(float %arg0)\n"
+      "  br label %ret\n"
+      "bb1:\n"
+      "  %fabs.arg1 = call float @llvm.fabs.f32(float %arg1)\n"
+      "  br label %ret\n"
+      "ret:\n"
+      "  %A = phi float [ %fabs.arg0, %bb0 ],  [ %fabs.arg1, %bb1 ]\n"
+      "  ret float %A\n"
+      "}\n");
+  expectKnownFPClass(fcPositive, false);
+}
+
+TEST_F(ComputeKnownFPClassTest, PhiKnownSignTrue) {
+  parseAssembly(
+      "declare float @llvm.fabs.f32(float)"
+      "define float @test(i1 %cond, float nofpclass(nan) %arg0, float %arg1) {\n"
+      "entry:\n"
+      "  br i1 %cond, label %bb0, label %bb1\n"
+      "bb0:\n"
+      "  %fabs.arg0 = call float @llvm.fabs.f32(float %arg0)\n"
+      "  %fneg.fabs.arg0 = fneg float %fabs.arg0\n"
+      "  br label %ret\n"
+      "bb1:\n"
+      "  %fabs.arg1 = call float @llvm.fabs.f32(float %arg1)\n"
+      "  %fneg.fabs.arg1 = fneg float %fabs.arg1\n"
+      "  br label %ret\n"
+      "ret:\n"
+      "  %A = phi float [ %fneg.fabs.arg0, %bb0 ],  [ %fneg.fabs.arg1, %bb1 ]\n"
+      "  ret float %A\n"
+      "}\n");
+  expectKnownFPClass(fcNegative | fcNan, true);
+}
+
+TEST_F(ComputeKnownFPClassTest, UnreachablePhi) {
+  parseAssembly(
+      "define float @test(float %arg) {\n"
+      "entry:\n"
+      "  ret float 0.0\n"
+      "unreachable:\n"
+      "  %A = phi float\n"
+      "  ret float %A\n"
+      "}\n");
+  expectKnownFPClass(fcAllFlags, std::nullopt);
+}
+
+TEST_F(ComputeKnownFPClassTest, SelfPhiOnly) {
+  parseAssembly(
+      "define float @test(float %arg) {\n"
+      "entry:\n"
+      "  ret float 0.0\n"
+      "loop:\n"
+      "  %A = phi float [ %A, %loop ]\n"
+      "  br label %loop\n"
+      "}\n");
+  expectKnownFPClass(fcAllFlags, std::nullopt);
+}
+
+TEST_F(ComputeKnownFPClassTest, SelfPhiFirstArg) {
+  parseAssembly(
+      "define float @test(i1 %cond, float nofpclass(inf) %arg) {\n"
+      "entry:\n"
+      "  br i1 %cond, label %loop, label %ret\n"
+      "loop:\n"
+      "  %A = phi float [ %arg, %entry ], [ %A, %loop ]\n"
+      "  br label %loop\n"
+      "ret:\n"
+      "  ret float %A"
+      "}\n");
+  expectKnownFPClass(~fcInf, std::nullopt);
+}
+
+TEST_F(ComputeKnownFPClassTest, SelfPhiSecondArg) {
+  parseAssembly(
+      "define float @test(i1 %cond, float nofpclass(inf) %arg) {\n"
+      "entry:\n"
+      "  br i1 %cond, label %loop, label %ret\n"
+      "loop:\n"
+      "  %A = phi float [ %A, %loop ], [ %arg, %entry ]\n"
+      "  br label %loop\n"
+      "ret:\n"
+      "  ret float %A"
+      "}\n");
+  expectKnownFPClass(~fcInf, std::nullopt);
+}
+
+TEST_F(ComputeKnownFPClassTest, CannotBeOrderedLessThanZero) {
+  parseAssembly("define float @test(float %arg) {\n"
+                "  %A = fmul float %arg, %arg"
+                "  ret float %A\n"
+                "}\n");
+
+  Type *FPTy = Type::getDoubleTy(M->getContext());
+  const DataLayout &DL = M->getDataLayout();
+
+  EXPECT_TRUE(
+      computeKnownFPClass(ConstantFP::getZero(FPTy, /*Negative=*/false), DL)
+          .cannotBeOrderedLessThanZero());
+  EXPECT_TRUE(
+      computeKnownFPClass(ConstantFP::getZero(FPTy, /*Negative=*/true), DL)
+          .cannotBeOrderedLessThanZero());
+
+  EXPECT_TRUE(computeKnownFPClass(ConstantFP::getInfinity(FPTy, false), DL)
+                  .cannotBeOrderedLessThanZero());
+  EXPECT_FALSE(computeKnownFPClass(ConstantFP::getInfinity(FPTy, true), DL)
+                   .cannotBeOrderedLessThanZero());
+
+  EXPECT_TRUE(computeKnownFPClass(ConstantFP::get(FPTy, 1.0), DL)
+                  .cannotBeOrderedLessThanZero());
+  EXPECT_FALSE(computeKnownFPClass(ConstantFP::get(FPTy, -1.0), DL)
+                   .cannotBeOrderedLessThanZero());
+
+  EXPECT_TRUE(
+      computeKnownFPClass(
+          ConstantFP::get(FPTy, APFloat::getSmallest(FPTy->getFltSemantics(),
+                                                     /*Negative=*/false)),
+          DL)
+          .cannotBeOrderedLessThanZero());
+  EXPECT_FALSE(
+      computeKnownFPClass(
+          ConstantFP::get(FPTy, APFloat::getSmallest(FPTy->getFltSemantics(),
+                                                     /*Negative=*/true)),
+          DL)
+          .cannotBeOrderedLessThanZero());
+
+  EXPECT_TRUE(
+      computeKnownFPClass(ConstantFP::getQNaN(FPTy, /*Negative=*/false), DL)
+          .cannotBeOrderedLessThanZero());
+  EXPECT_TRUE(
+      computeKnownFPClass(ConstantFP::getQNaN(FPTy, /*Negative=*/true), DL)
+          .cannotBeOrderedLessThanZero());
+  EXPECT_TRUE(
+      computeKnownFPClass(ConstantFP::getSNaN(FPTy, /*Negative=*/false), DL)
+          .cannotBeOrderedLessThanZero());
+  EXPECT_TRUE(
+      computeKnownFPClass(ConstantFP::getSNaN(FPTy, /*Negative=*/true), DL)
+          .cannotBeOrderedLessThanZero());
+}
+
+TEST_F(ComputeKnownFPClassTest, FCmpToClassTest_OrdNan) {
+  parseAssembly("define i1 @test(double %arg) {\n"
+                "  %A = fcmp ord double %arg, 0x7FF8000000000000"
+                "  %A2 = fcmp uno double %arg, 0x7FF8000000000000"
+                "  %A3 = fcmp oeq double %arg, 0x7FF8000000000000"
+                "  %A4 = fcmp ueq double %arg, 0x7FF8000000000000"
+                "  ret i1 %A\n"
+                "}\n");
+
+  auto [OrdVal, OrdClass] = fcmpToClassTest(
+      CmpInst::FCMP_ORD, *A->getFunction(), A->getOperand(0), A->getOperand(1));
+  EXPECT_EQ(A->getOperand(0), OrdVal);
+  EXPECT_EQ(fcNone, OrdClass);
+
+  auto [UnordVal, UnordClass] =
+      fcmpToClassTest(CmpInst::FCMP_UNO, *A2->getFunction(), A2->getOperand(0),
+                      A2->getOperand(1));
+  EXPECT_EQ(A2->getOperand(0), UnordVal);
+  EXPECT_EQ(fcAllFlags, UnordClass);
+
+  auto [OeqVal, OeqClass] =
+      fcmpToClassTest(CmpInst::FCMP_OEQ, *A3->getFunction(), A3->getOperand(0),
+                      A3->getOperand(1));
+  EXPECT_EQ(A3->getOperand(0), OeqVal);
+  EXPECT_EQ(fcNone, OeqClass);
+
+  auto [UeqVal, UeqClass] =
+      fcmpToClassTest(CmpInst::FCMP_UEQ, *A3->getFunction(), A3->getOperand(0),
+                      A3->getOperand(1));
+  EXPECT_EQ(A3->getOperand(0), UeqVal);
+  EXPECT_EQ(fcAllFlags, UeqClass);
+}
+
+TEST_F(ComputeKnownFPClassTest, FCmpToClassTest_NInf) {
+  parseAssembly("define i1 @test(double %arg) {\n"
+                "  %A = fcmp olt double %arg, 0xFFF0000000000000"
+                "  %A2 = fcmp uge double %arg, 0xFFF0000000000000"
+                "  %A3 = fcmp ogt double %arg, 0xFFF0000000000000"
+                "  %A4 = fcmp ule double %arg, 0xFFF0000000000000"
+                "  ret i1 %A\n"
+                "}\n");
+
+  auto [OltVal, OltClass] = fcmpToClassTest(
+      CmpInst::FCMP_OLT, *A->getFunction(), A->getOperand(0), A->getOperand(1));
+  EXPECT_EQ(A->getOperand(0), OltVal);
+  EXPECT_EQ(fcNone, OltClass);
+
+  auto [UgeVal, UgeClass] =
+      fcmpToClassTest(CmpInst::FCMP_UGE, *A2->getFunction(), A2->getOperand(0),
+                      A2->getOperand(1));
+  EXPECT_EQ(A2->getOperand(0), UgeVal);
+  EXPECT_EQ(fcAllFlags, UgeClass);
+
+  auto [OgtVal, OgtClass] =
+      fcmpToClassTest(CmpInst::FCMP_OGT, *A3->getFunction(), A3->getOperand(0),
+                      A3->getOperand(1));
+  EXPECT_EQ(nullptr, OgtVal);
+  EXPECT_EQ(fcAllFlags, OgtClass);
+
+  auto [UleVal, UleClass] =
+      fcmpToClassTest(CmpInst::FCMP_ULE, *A4->getFunction(), A4->getOperand(0),
+                      A4->getOperand(1));
+  EXPECT_EQ(nullptr, UleVal);
+  EXPECT_EQ(fcAllFlags, UleClass);
+}
+
+TEST_F(ComputeKnownFPClassTest, FCmpToClassTest_PInf) {
+  parseAssembly("define i1 @test(double %arg) {\n"
+                "  %A = fcmp ogt double %arg, 0x7FF0000000000000"
+                "  %A2 = fcmp ule double %arg, 0x7FF0000000000000"
+                "  %A3 = fcmp ole double %arg, 0x7FF0000000000000"
+                "  %A4 = fcmp ugt double %arg, 0x7FF0000000000000"
+                "  ret i1 %A\n"
+                "}\n");
+
+  auto [OgtVal, OgtClass] = fcmpToClassTest(
+      CmpInst::FCMP_OGT, *A->getFunction(), A->getOperand(0), A->getOperand(1));
+  EXPECT_EQ(A->getOperand(0), OgtVal);
+  EXPECT_EQ(fcNone, OgtClass);
+
+  auto [UleVal, UleClass] =
+      fcmpToClassTest(CmpInst::FCMP_ULE, *A2->getFunction(), A2->getOperand(0),
+                      A2->getOperand(1));
+  EXPECT_EQ(A2->getOperand(0), UleVal);
+  EXPECT_EQ(fcAllFlags, UleClass);
+
+  auto [OleVal, OleClass] =
+      fcmpToClassTest(CmpInst::FCMP_OLE, *A3->getFunction(), A3->getOperand(0),
+                      A3->getOperand(1));
+  EXPECT_EQ(nullptr, OleVal);
+  EXPECT_EQ(fcAllFlags, OleClass);
+
+  auto [UgtVal, UgtClass] =
+      fcmpToClassTest(CmpInst::FCMP_UGT, *A4->getFunction(), A4->getOperand(0),
+                      A4->getOperand(1));
+  EXPECT_EQ(nullptr, UgtVal);
+  EXPECT_EQ(fcAllFlags, UgtClass);
+}
+
+TEST_F(ComputeKnownFPClassTest, SqrtNszSignBit) {
+  parseAssembly(
+      "declare float @llvm.sqrt.f32(float)\n"
+      "define float @test(float %arg, float nofpclass(nan) %arg.nnan) {\n"
+      "  %A = call float @llvm.sqrt.f32(float %arg)\n"
+      "  %A2 = call nsz float @llvm.sqrt.f32(float %arg)\n"
+      "  %A3 = call float @llvm.sqrt.f32(float %arg.nnan)\n"
+      "  %A4 = call nsz float @llvm.sqrt.f32(float %arg.nnan)\n"
+      "  ret float %A\n"
+      "}\n");
+
+  const FPClassTest SqrtMask = fcPositive | fcNegZero | fcNan;
+  const FPClassTest NszSqrtMask = fcPositive | fcNan;
+
+  {
+    KnownFPClass UseInstrInfo =
+        computeKnownFPClass(A, M->getDataLayout(), fcAllFlags, 0, nullptr,
+                            nullptr, nullptr, nullptr, /*UseInstrInfo=*/true);
+    EXPECT_EQ(SqrtMask, UseInstrInfo.KnownFPClasses);
+    EXPECT_EQ(std::nullopt, UseInstrInfo.SignBit);
+
+    KnownFPClass NoUseInstrInfo =
+        computeKnownFPClass(A, M->getDataLayout(), fcAllFlags, 0, nullptr,
+                            nullptr, nullptr, nullptr, /*UseInstrInfo=*/false);
+    EXPECT_EQ(SqrtMask, NoUseInstrInfo.KnownFPClasses);
+    EXPECT_EQ(std::nullopt, NoUseInstrInfo.SignBit);
+  }
+
+  {
+    KnownFPClass UseInstrInfoNSZ =
+        computeKnownFPClass(A2, M->getDataLayout(), fcAllFlags, 0, nullptr,
+                            nullptr, nullptr, nullptr, /*UseInstrInfo=*/true);
+    EXPECT_EQ(NszSqrtMask, UseInstrInfoNSZ.KnownFPClasses);
+    EXPECT_EQ(std::nullopt, UseInstrInfoNSZ.SignBit);
+
+    KnownFPClass NoUseInstrInfoNSZ =
+        computeKnownFPClass(A2, M->getDataLayout(), fcAllFlags, 0, nullptr,
+                            nullptr, nullptr, nullptr, /*UseInstrInfo=*/false);
+    EXPECT_EQ(SqrtMask, NoUseInstrInfoNSZ.KnownFPClasses);
+    EXPECT_EQ(std::nullopt, NoUseInstrInfoNSZ.SignBit);
+  }
+
+  {
+    KnownFPClass UseInstrInfoNoNan =
+        computeKnownFPClass(A3, M->getDataLayout(), fcAllFlags, 0, nullptr,
+                            nullptr, nullptr, nullptr, /*UseInstrInfo=*/true);
+    EXPECT_EQ(fcPositive | fcNegZero | fcQNan,
+              UseInstrInfoNoNan.KnownFPClasses);
+    EXPECT_EQ(std::nullopt, UseInstrInfoNoNan.SignBit);
+
+    KnownFPClass NoUseInstrInfoNoNan =
+        computeKnownFPClass(A3, M->getDataLayout(), fcAllFlags, 0, nullptr,
+                            nullptr, nullptr, nullptr, /*UseInstrInfo=*/false);
+    EXPECT_EQ(fcPositive | fcNegZero | fcQNan,
+              NoUseInstrInfoNoNan.KnownFPClasses);
+    EXPECT_EQ(std::nullopt, NoUseInstrInfoNoNan.SignBit);
+  }
+
+  {
+    KnownFPClass UseInstrInfoNSZNoNan =
+        computeKnownFPClass(A4, M->getDataLayout(), fcAllFlags, 0, nullptr,
+                            nullptr, nullptr, nullptr, /*UseInstrInfo=*/true);
+    EXPECT_EQ(fcPositive | fcQNan, UseInstrInfoNSZNoNan.KnownFPClasses);
+    EXPECT_EQ(false, UseInstrInfoNSZNoNan.SignBit);
+
+    KnownFPClass NoUseInstrInfoNSZNoNan =
+        computeKnownFPClass(A4, M->getDataLayout(), fcAllFlags, 0, nullptr,
+                            nullptr, nullptr, nullptr, /*UseInstrInfo=*/false);
+    EXPECT_EQ(fcPositive | fcNegZero | fcQNan,
+              NoUseInstrInfoNSZNoNan.KnownFPClasses);
+    EXPECT_EQ(std::nullopt, NoUseInstrInfoNSZNoNan.SignBit);
+  }
+}
+
 TEST_F(ValueTrackingTest, isNonZeroRecurrence) {
   parseAssembly(R"(
     define i1 @test(i8 %n, i8 %r) {
@@ -1284,11 +1987,11 @@ TEST_F(ValueTrackingTest, isNonZeroRecurrence) {
 
 TEST_F(ValueTrackingTest, KnownNonZeroFromDomCond) {
   parseAssembly(R"(
-    declare i8* @f_i8()
+    declare ptr @f_i8()
     define void @test(i1 %c) {
-      %A = call i8* @f_i8()
-      %B = call i8* @f_i8()
-      %c1 = icmp ne i8* %A, null
+      %A = call ptr @f_i8()
+      %B = call ptr @f_i8()
+      %c1 = icmp ne ptr %A, null
       %cond = and i1 %c1, %c
       br i1 %cond, label %T, label %Q
     T:
@@ -1308,11 +2011,11 @@ TEST_F(ValueTrackingTest, KnownNonZeroFromDomCond) {
 
 TEST_F(ValueTrackingTest, KnownNonZeroFromDomCond2) {
   parseAssembly(R"(
-    declare i8* @f_i8()
+    declare ptr @f_i8()
     define void @test(i1 %c) {
-      %A = call i8* @f_i8()
-      %B = call i8* @f_i8()
-      %c1 = icmp ne i8* %A, null
+      %A = call ptr @f_i8()
+      %B = call ptr @f_i8()
+      %c1 = icmp ne ptr %A, null
       %cond = select i1 %c, i1 %c1, i1 false
       br i1 %cond, label %T, label %Q
     T:
@@ -1422,8 +2125,8 @@ TEST_F(ComputeKnownBitsTest, KnownNonZeroShift) {
   // %q is known nonzero without known bits.
   // Because %q is nonzero, %A[0] is known to be zero.
   parseAssembly(
-      "define i8 @test(i8 %p, i8* %pq) {\n"
-      "  %q = load i8, i8* %pq, !range !0\n"
+      "define i8 @test(i8 %p, ptr %pq) {\n"
+      "  %q = load i8, ptr %pq, !range !0\n"
       "  %A = shl i8 %p, %q\n"
       "  ret i8 %A\n"
       "}\n"
@@ -1551,11 +2254,11 @@ TEST_F(ComputeKnownBitsTest, ComputeKnownUSubSatZerosPreserved) {
 }
 
 TEST_F(ComputeKnownBitsTest, ComputeKnownBitsPtrToIntTrunc) {
-  // ptrtoint truncates the pointer type.
+  // ptrtoint truncates the pointer type. Make sure we don't crash.
   parseAssembly(
-      "define void @test(i8** %p) {\n"
-      "  %A = load i8*, i8** %p\n"
-      "  %i = ptrtoint i8* %A to i32\n"
+      "define void @test(ptr %p) {\n"
+      "  %A = load ptr, ptr %p\n"
+      "  %i = ptrtoint ptr %A to i32\n"
       "  %m = and i32 %i, 31\n"
       "  %c = icmp eq i32 %m, 0\n"
       "  call void @llvm.assume(i1 %c)\n"
@@ -1565,16 +2268,15 @@ TEST_F(ComputeKnownBitsTest, ComputeKnownBitsPtrToIntTrunc) {
   AssumptionCache AC(*F);
   KnownBits Known = computeKnownBits(
       A, M->getDataLayout(), /* Depth */ 0, &AC, F->front().getTerminator());
-  EXPECT_EQ(Known.Zero.getZExtValue(), 31u);
-  EXPECT_EQ(Known.One.getZExtValue(), 0u);
+  EXPECT_TRUE(Known.isUnknown());
 }
 
 TEST_F(ComputeKnownBitsTest, ComputeKnownBitsPtrToIntZext) {
-  // ptrtoint zero extends the pointer type.
+  // ptrtoint zero extends the pointer type. Make sure we don't crash.
   parseAssembly(
-      "define void @test(i8** %p) {\n"
-      "  %A = load i8*, i8** %p\n"
-      "  %i = ptrtoint i8* %A to i128\n"
+      "define void @test(ptr %p) {\n"
+      "  %A = load ptr, ptr %p\n"
+      "  %i = ptrtoint ptr %A to i128\n"
       "  %m = and i128 %i, 31\n"
       "  %c = icmp eq i128 %m, 0\n"
       "  call void @llvm.assume(i1 %c)\n"
@@ -1584,8 +2286,7 @@ TEST_F(ComputeKnownBitsTest, ComputeKnownBitsPtrToIntZext) {
   AssumptionCache AC(*F);
   KnownBits Known = computeKnownBits(
       A, M->getDataLayout(), /* Depth */ 0, &AC, F->front().getTerminator());
-  EXPECT_EQ(Known.Zero.getZExtValue(), 31u);
-  EXPECT_EQ(Known.One.getZExtValue(), 0u);
+  EXPECT_TRUE(Known.isUnknown());
 }
 
 TEST_F(ComputeKnownBitsTest, ComputeKnownBitsFreeze) {
@@ -1607,8 +2308,8 @@ TEST_F(ComputeKnownBitsTest, ComputeKnownBitsFreeze) {
 }
 
 TEST_F(ComputeKnownBitsTest, ComputeKnownBitsAddWithRange) {
-  parseAssembly("define void @test(i64* %p) {\n"
-                "  %A = load i64, i64* %p, !range !{i64 64, i64 65536}\n"
+  parseAssembly("define void @test(ptr %p) {\n"
+                "  %A = load i64, ptr %p, !range !{i64 64, i64 65536}\n"
                 "  %APlus512 = add i64 %A, 512\n"
                 "  %c = icmp ugt i64 %APlus512, 523\n"
                 "  call void @llvm.assume(i1 %c)\n"
@@ -1662,8 +2363,8 @@ TEST_F(ComputeKnownBitsTest, ComputeKnownBitsUnknownVScale) {
 // 512 + [32, 64) doesn't produce overlapping bits.
 // Make sure we get all the individual bits properly.
 TEST_F(ComputeKnownBitsTest, ComputeKnownBitsAddWithRangeNoOverlap) {
-  parseAssembly("define void @test(i64* %p) {\n"
-                "  %A = load i64, i64* %p, !range !{i64 32, i64 64}\n"
+  parseAssembly("define void @test(ptr %p) {\n"
+                "  %A = load i64, ptr %p, !range !{i64 32, i64 64}\n"
                 "  %APlus512 = add i64 %A, 512\n"
                 "  %c = icmp ugt i64 %APlus512, 523\n"
                 "  call void @llvm.assume(i1 %c)\n"
@@ -1688,8 +2389,8 @@ TEST_F(ComputeKnownBitsTest, ComputeKnownBitsAddWithRangeNoOverlap) {
 
 TEST_F(ComputeKnownBitsTest, ComputeKnownBitsGEPWithRange) {
   parseAssembly(
-      "define void @test(i64* %p) {\n"
-      "  %A = load i64, i64* %p, !range !{i64 64, i64 65536}\n"
+      "define void @test(ptr %p) {\n"
+      "  %A = load i64, ptr %p, !range !{i64 64, i64 65536}\n"
       "  %APtr = inttoptr i64 %A to float*"
       "  %APtrPlus512 = getelementptr float, float* %APtr, i32 128\n"
       "  %c = icmp ugt float* %APtrPlus512, inttoptr (i32 523 to float*)\n"
@@ -1721,8 +2422,8 @@ TEST_F(ComputeKnownBitsTest, ComputeKnownBitsGEPWithRange) {
 // in the gep. Indeed, gep float, [32,64), 128 is not 128 + [32,64).
 TEST_F(ComputeKnownBitsTest, ComputeKnownBitsGEPWithRangeNoOverlap) {
   parseAssembly(
-      "define void @test(i64* %p) {\n"
-      "  %A = load i64, i64* %p, !range !{i64 32, i64 64}\n"
+      "define void @test(ptr %p) {\n"
+      "  %A = load i64, ptr %p, !range !{i64 32, i64 64}\n"
       "  %APtr = inttoptr i64 %A to float*"
       "  %APtrPlus512 = getelementptr float, float* %APtr, i32 128\n"
       "  %c = icmp ugt float* %APtrPlus512, inttoptr (i32 523 to float*)\n"
@@ -1744,6 +2445,94 @@ TEST_F(ComputeKnownBitsTest, ComputeKnownBitsGEPWithRangeNoOverlap) {
   // with the masks of zeros and ones, not the ranges.
   EXPECT_EQ(Known.getMinValue(), 544);
   EXPECT_EQ(Known.getMaxValue(), 575);
+}
+
+TEST_F(ComputeKnownBitsTest, ComputeKnownBitsAbsoluteSymbol) {
+  auto M = parseModule(R"(
+    @absolute_0_255 = external global [128 x i32], align 1, !absolute_symbol !0
+    @absolute_0_256 = external global [128 x i32], align 1, !absolute_symbol !1
+    @absolute_256_512 = external global [128 x i32], align 1, !absolute_symbol !2
+    @absolute_0_neg1 = external global [128 x i32], align 1, !absolute_symbol !3
+    @absolute_neg32_32 = external global [128 x i32], align 1, !absolute_symbol !4
+    @absolute_neg32_33 = external global [128 x i32], align 1, !absolute_symbol !5
+    @absolute_neg64_neg32 = external global [128 x i32], align 1, !absolute_symbol !6
+    @absolute_0_256_align8 = external global [128 x i32], align 8, !absolute_symbol !1
+
+    !0 = !{i64 0, i64 255}
+    !1 = !{i64 0, i64 256}
+    !2 = !{i64 256, i64 512}
+    !3 = !{i64 0, i64 -1}
+    !4 = !{i64 -32, i64 32}
+    !5 = !{i64 -32, i64 33}
+    !6 = !{i64 -64, i64 -32}
+  )");
+
+  GlobalValue *Absolute_0_255 = M->getNamedValue("absolute_0_255");
+  GlobalValue *Absolute_0_256 = M->getNamedValue("absolute_0_256");
+  GlobalValue *Absolute_256_512 = M->getNamedValue("absolute_256_512");
+  GlobalValue *Absolute_0_Neg1 = M->getNamedValue("absolute_0_neg1");
+  GlobalValue *Absolute_Neg32_32 = M->getNamedValue("absolute_neg32_32");
+  GlobalValue *Absolute_Neg32_33 = M->getNamedValue("absolute_neg32_33");
+  GlobalValue *Absolute_Neg64_Neg32 = M->getNamedValue("absolute_neg64_neg32");
+  GlobalValue *Absolute_0_256_Align8 =
+      M->getNamedValue("absolute_0_256_align8");
+
+  KnownBits Known_0_255 = computeKnownBits(Absolute_0_255, M->getDataLayout());
+  EXPECT_EQ(64u - 8u, Known_0_255.countMinLeadingZeros());
+  EXPECT_EQ(0u, Known_0_255.countMinTrailingZeros());
+  EXPECT_EQ(0u, Known_0_255.countMinLeadingOnes());
+  EXPECT_EQ(0u, Known_0_255.countMinTrailingOnes());
+
+  KnownBits Known_0_256 = computeKnownBits(Absolute_0_256, M->getDataLayout());
+  EXPECT_EQ(64u - 8u, Known_0_256.countMinLeadingZeros());
+  EXPECT_EQ(0u, Known_0_256.countMinTrailingZeros());
+  EXPECT_EQ(0u, Known_0_256.countMinLeadingOnes());
+  EXPECT_EQ(0u, Known_0_256.countMinTrailingOnes());
+
+  KnownBits Known_256_512 =
+      computeKnownBits(Absolute_256_512, M->getDataLayout());
+  EXPECT_EQ(64u - 8u, Known_0_255.countMinLeadingZeros());
+  EXPECT_EQ(0u, Known_0_255.countMinTrailingZeros());
+  EXPECT_EQ(0u, Known_0_255.countMinLeadingOnes());
+  EXPECT_EQ(0u, Known_0_255.countMinTrailingOnes());
+
+  KnownBits Known_0_Neg1 =
+      computeKnownBits(Absolute_0_Neg1, M->getDataLayout());
+  EXPECT_EQ(0u, Known_0_Neg1.countMinLeadingZeros());
+  EXPECT_EQ(0u, Known_0_Neg1.countMinTrailingZeros());
+  EXPECT_EQ(0u, Known_0_Neg1.countMinLeadingOnes());
+  EXPECT_EQ(0u, Known_0_Neg1.countMinTrailingOnes());
+
+  KnownBits Known_Neg32_32 =
+      computeKnownBits(Absolute_Neg32_32, M->getDataLayout());
+  EXPECT_EQ(0u, Known_Neg32_32.countMinLeadingZeros());
+  EXPECT_EQ(0u, Known_Neg32_32.countMinTrailingZeros());
+  EXPECT_EQ(0u, Known_Neg32_32.countMinLeadingOnes());
+  EXPECT_EQ(0u, Known_Neg32_32.countMinTrailingOnes());
+  EXPECT_EQ(1u, Known_Neg32_32.countMinSignBits());
+
+  KnownBits Known_Neg32_33 =
+      computeKnownBits(Absolute_Neg32_33, M->getDataLayout());
+  EXPECT_EQ(0u, Known_Neg32_33.countMinLeadingZeros());
+  EXPECT_EQ(0u, Known_Neg32_33.countMinTrailingZeros());
+  EXPECT_EQ(0u, Known_Neg32_33.countMinLeadingOnes());
+  EXPECT_EQ(0u, Known_Neg32_33.countMinTrailingOnes());
+  EXPECT_EQ(1u, Known_Neg32_33.countMinSignBits());
+
+  KnownBits Known_Neg32_Neg32 =
+      computeKnownBits(Absolute_Neg64_Neg32, M->getDataLayout());
+  EXPECT_EQ(0u, Known_Neg32_Neg32.countMinLeadingZeros());
+  EXPECT_EQ(0u, Known_Neg32_Neg32.countMinTrailingZeros());
+  EXPECT_EQ(58u, Known_Neg32_Neg32.countMinLeadingOnes());
+  EXPECT_EQ(0u, Known_Neg32_Neg32.countMinTrailingOnes());
+  EXPECT_EQ(58u, Known_Neg32_Neg32.countMinSignBits());
+
+  KnownBits Known_0_256_Align8 =
+      computeKnownBits(Absolute_0_256_Align8, M->getDataLayout());
+  EXPECT_EQ(64u - 8u, Known_0_256_Align8.countMinLeadingZeros());
+  EXPECT_EQ(3u, Known_0_256_Align8.countMinTrailingZeros());
+  EXPECT_EQ(0u, Known_0_256_Align8.countMinLeadingOnes());
+  EXPECT_EQ(0u, Known_0_256_Align8.countMinTrailingOnes());
 }
 
 TEST_F(ValueTrackingTest, HaveNoCommonBitsSet) {
@@ -2286,7 +3075,7 @@ const FindAllocaForValueTestParams FindAllocaForValueTests[] = {
     {R"(
       define void @test() {
         %a = alloca i64
-        %r = bitcast i64* %a to i32*
+        %r = bitcast ptr %a to ptr
         ret void
       })",
      true, true},
@@ -2294,7 +3083,7 @@ const FindAllocaForValueTestParams FindAllocaForValueTests[] = {
     {R"(
       define void @test() {
         %a = alloca i32
-        %r = getelementptr i32, i32* %a, i32 1
+        %r = getelementptr i32, ptr %a, i32 1
         ret void
       })",
      true, false},
@@ -2302,7 +3091,7 @@ const FindAllocaForValueTestParams FindAllocaForValueTests[] = {
     {R"(
       define void @test() {
         %a = alloca i32
-        %r = getelementptr i32, i32* %a, i32 0
+        %r = getelementptr i32, ptr %a, i32 0
         ret void
       })",
      true, true},
@@ -2314,7 +3103,7 @@ const FindAllocaForValueTestParams FindAllocaForValueTests[] = {
         br label %bb1
 
       bb1:
-        %r = phi i32* [ %a, %entry ], [ %r, %bb1 ]
+        %r = phi ptr [ %a, %entry ], [ %r, %bb1 ]
         br i1 %cond, label %bb1, label %exit
 
       exit:
@@ -2325,7 +3114,7 @@ const FindAllocaForValueTestParams FindAllocaForValueTests[] = {
     {R"(
       define void @test(i1 %cond) {
         %a = alloca i32
-        %r = select i1 %cond, i32* %a, i32* %a
+        %r = select i1 %cond, ptr %a, ptr %a
         ret void
       })",
      true, true},
@@ -2334,7 +3123,7 @@ const FindAllocaForValueTestParams FindAllocaForValueTests[] = {
       define void @test(i1 %cond) {
         %a = alloca i32
         %b = alloca i32
-        %r = select i1 %cond, i32* %a, i32* %b
+        %r = select i1 %cond, ptr %a, ptr %b
         ret void
       })",
      false, false},
@@ -2343,12 +3132,12 @@ const FindAllocaForValueTestParams FindAllocaForValueTests[] = {
       define void @test(i1 %cond) {
       entry:
         %a = alloca i64
-        %a32 = bitcast i64* %a to i32*
+        %a32 = bitcast ptr %a to ptr
         br label %bb1
 
       bb1:
-        %x = phi i32* [ %a32, %entry ], [ %x, %bb1 ]
-        %r = getelementptr i32, i32* %x, i32 1
+        %x = phi ptr [ %a32, %entry ], [ %x, %bb1 ]
+        %r = getelementptr i32, ptr %x, i32 1
         br i1 %cond, label %bb1, label %exit
 
       exit:
@@ -2360,12 +3149,12 @@ const FindAllocaForValueTestParams FindAllocaForValueTests[] = {
       define void @test(i1 %cond) {
       entry:
         %a = alloca i64
-        %a32 = bitcast i64* %a to i32*
+        %a32 = bitcast ptr %a to ptr
         br label %bb1
 
       bb1:
-        %x = phi i32* [ %a32, %entry ], [ %r, %bb1 ]
-        %r = getelementptr i32, i32* %x, i32 1
+        %x = phi ptr [ %a32, %entry ], [ %r, %bb1 ]
+        %r = getelementptr i32, ptr %x, i32 1
         br i1 %cond, label %bb1, label %exit
 
       exit:
@@ -2374,9 +3163,9 @@ const FindAllocaForValueTestParams FindAllocaForValueTests[] = {
      true, false},
 
     {R"(
-      define void @test(i1 %cond, i64* %a) {
+      define void @test(i1 %cond, ptr %a) {
       entry:
-        %r = bitcast i64* %a to i32*
+        %r = bitcast ptr %a to ptr
         ret void
       })",
      false, false},
@@ -2389,7 +3178,7 @@ const FindAllocaForValueTestParams FindAllocaForValueTests[] = {
         br label %bb1
 
       bb1:
-        %r = phi i32* [ %a, %entry ], [ %b, %bb1 ]
+        %r = phi ptr [ %a, %entry ], [ %b, %bb1 ]
         br i1 %cond, label %bb1, label %exit
 
       exit:
@@ -2397,18 +3186,18 @@ const FindAllocaForValueTestParams FindAllocaForValueTests[] = {
       })",
      false, false},
     {R"(
-      declare i32* @retptr(i32* returned)
+      declare ptr @retptr(ptr returned)
       define void @test(i1 %cond) {
         %a = alloca i32
-        %r = call i32* @retptr(i32* %a)
+        %r = call ptr @retptr(ptr %a)
         ret void
       })",
      true, true},
     {R"(
-      declare i32* @fun(i32*)
+      declare ptr @fun(ptr)
       define void @test(i1 %cond) {
         %a = alloca i32
-        %r = call i32* @fun(i32* %a)
+        %r = call ptr @fun(ptr %a)
         ret void
       })",
      false, false},

@@ -14,6 +14,8 @@
 #include "support/Markup.h"
 #include "clang/Index/IndexSymbol.h"
 #include <optional>
+#include <string>
+#include <vector>
 
 namespace clang {
 namespace clangd {
@@ -67,6 +69,8 @@ struct HoverInfo {
   std::string LocalScope;
   /// Name of the symbol, does not contain any "::".
   std::string Name;
+  /// Header providing the symbol (best match). Contains ""<>.
+  std::string Provider;
   std::optional<Range> SymRange;
   index::SymbolKind Kind = index::SymbolKind::Unknown;
   std::string Documentation;
@@ -87,7 +91,7 @@ struct HoverInfo {
   std::optional<std::vector<Param>> TemplateParameters;
   /// Contains the evaluated value of the symbol if available.
   std::optional<std::string> Value;
-  /// Contains the byte-size of fields and types where it's interesting.
+  /// Contains the bit-size of fields and types where it's interesting.
   std::optional<uint64_t> Size;
   /// Contains the offset of fields within the enclosing class.
   std::optional<uint64_t> Offset;
@@ -107,6 +111,10 @@ struct HoverInfo {
   };
   // Set only if CalleeArgInfo is set.
   std::optional<PassType> CallPassType;
+  // Filled when hovering over the #include line. Contains the names of symbols
+  // from a #include'd file that are used in the main file, sorted in
+  // alphabetical order.
+  std::vector<std::string> UsedSymbolNames;
 
   /// Produce a user-readable information.
   markup::Document present() const;

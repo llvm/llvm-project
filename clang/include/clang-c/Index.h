@@ -34,7 +34,7 @@
  * compatible, thus CINDEX_VERSION_MAJOR is expected to remain stable.
  */
 #define CINDEX_VERSION_MAJOR 0
-#define CINDEX_VERSION_MINOR 62
+#define CINDEX_VERSION_MINOR 64
 
 #define CINDEX_VERSION_ENCODE(major, minor) (((major)*10000) + ((minor)*1))
 
@@ -47,6 +47,10 @@
 
 #define CINDEX_VERSION_STRING                                                  \
   CINDEX_VERSION_STRINGIZE(CINDEX_VERSION_MAJOR, CINDEX_VERSION_MINOR)
+
+#ifndef __has_feature
+#define __has_feature(feature) 0
+#endif
 
 LLVM_CLANG_C_EXTERN_C_BEGIN
 
@@ -277,6 +281,22 @@ CINDEX_LINKAGE void clang_disposeIndex(CXIndex index);
 
 typedef enum {
   /**
+   * Use the default value of an option that may depend on the process
+   * environment.
+   */
+  CXChoice_Default = 0,
+  /**
+   * Enable the option.
+   */
+  CXChoice_Enabled = 1,
+  /**
+   * Disable the option.
+   */
+  CXChoice_Disabled = 2
+} CXChoice;
+
+typedef enum {
+  /**
    * Used to indicate that no special CXIndex options are needed.
    */
   CXGlobalOpt_None = 0x0,
@@ -310,7 +330,129 @@ typedef enum {
 } CXGlobalOptFlags;
 
 /**
+ * Index initialization options.
+ *
+ * 0 is the default value of each member of this struct except for Size.
+ * Initialize the struct in one of the following three ways to avoid adapting
+ * code each time a new member is added to it:
+ * \code
+ * CXIndexOptions Opts;
+ * memset(&Opts, 0, sizeof(Opts));
+ * Opts.Size = sizeof(CXIndexOptions);
+ * \endcode
+ * or explicitly initialize the first data member and zero-initialize the rest:
+ * \code
+ * CXIndexOptions Opts = { sizeof(CXIndexOptions) };
+ * \endcode
+ * or to prevent the -Wmissing-field-initializers warning for the above version:
+ * \code
+ * CXIndexOptions Opts{};
+ * Opts.Size = sizeof(CXIndexOptions);
+ * \endcode
+ */
+typedef struct CXIndexOptions {
+  /**
+   * The size of struct CXIndexOptions used for option versioning.
+   *
+   * Always initialize this member to sizeof(CXIndexOptions), or assign
+   * sizeof(CXIndexOptions) to it right after creating a CXIndexOptions object.
+   */
+  unsigned Size;
+  /**
+   * A CXChoice enumerator that specifies the indexing priority policy.
+   * \sa CXGlobalOpt_ThreadBackgroundPriorityForIndexing
+   */
+  unsigned char ThreadBackgroundPriorityForIndexing;
+  /**
+   * A CXChoice enumerator that specifies the editing priority policy.
+   * \sa CXGlobalOpt_ThreadBackgroundPriorityForEditing
+   */
+  unsigned char ThreadBackgroundPriorityForEditing;
+  /**
+   * \see clang_createIndex()
+   */
+  unsigned ExcludeDeclarationsFromPCH : 1;
+  /**
+   * \see clang_createIndex()
+   */
+  unsigned DisplayDiagnostics : 1;
+  /**
+   * Store PCH in memory. If zero, PCH are stored in temporary files.
+   */
+  unsigned StorePreamblesInMemory : 1;
+  unsigned /*Reserved*/ : 13;
+
+  /**
+   * The path to a directory, in which to store temporary PCH files. If null or
+   * empty, the default system temporary directory is used. These PCH files are
+   * deleted on clean exit but stay on disk if the program crashes or is killed.
+   *
+   * This option is ignored if \a StorePreamblesInMemory is non-zero.
+   *
+   * Libclang does not create the directory at the specified path in the file
+   * system. Therefore it must exist, or storing PCH files will fail.
+   */
+  const char *PreambleStoragePath;
+  /**
+   * Specifies a path which will contain log files for certain libclang
+   * invocations. A null value implies that libclang invocations are not logged.
+   */
+  const char *InvocationEmissionPath;
+} CXIndexOptions;
+
+/**
+ * Provides a shared context for creating translation units.
+ *
+ * Call this function instead of clang_createIndex() if you need to configure
+ * the additional options in CXIndexOptions.
+ *
+ * \returns The created index or null in case of error, such as an unsupported
+ * value of options->Size.
+ *
+ * For example:
+ * \code
+ * CXIndex createIndex(const char *ApplicationTemporaryPath) {
+ *   const int ExcludeDeclarationsFromPCH = 1;
+ *   const int DisplayDiagnostics = 1;
+ *   CXIndex Idx;
+ * #if CINDEX_VERSION_MINOR >= 64
+ *   CXIndexOptions Opts;
+ *   memset(&Opts, 0, sizeof(Opts));
+ *   Opts.Size = sizeof(CXIndexOptions);
+ *   Opts.ThreadBackgroundPriorityForIndexing = 1;
+ *   Opts.ExcludeDeclarationsFromPCH = ExcludeDeclarationsFromPCH;
+ *   Opts.DisplayDiagnostics = DisplayDiagnostics;
+ *   Opts.PreambleStoragePath = ApplicationTemporaryPath;
+ *   Idx = clang_createIndexWithOptions(&Opts);
+ *   if (Idx)
+ *     return Idx;
+ *   fprintf(stderr,
+ *           "clang_createIndexWithOptions() failed. "
+ *           "CINDEX_VERSION_MINOR = %d, sizeof(CXIndexOptions) = %u\n",
+ *           CINDEX_VERSION_MINOR, Opts.Size);
+ * #else
+ *   (void)ApplicationTemporaryPath;
+ * #endif
+ *   Idx = clang_createIndex(ExcludeDeclarationsFromPCH, DisplayDiagnostics);
+ *   clang_CXIndex_setGlobalOptions(
+ *       Idx, clang_CXIndex_getGlobalOptions(Idx) |
+ *                CXGlobalOpt_ThreadBackgroundPriorityForIndexing);
+ *   return Idx;
+ * }
+ * \endcode
+ *
+ * \sa clang_createIndex()
+ */
+CINDEX_LINKAGE CXIndex
+clang_createIndexWithOptions(const CXIndexOptions *options);
+
+/**
  * Sets general options associated with a CXIndex.
+ *
+ * This function is DEPRECATED. Set
+ * CXIndexOptions::ThreadBackgroundPriorityForIndexing and/or
+ * CXIndexOptions::ThreadBackgroundPriorityForEditing and call
+ * clang_createIndexWithOptions() instead.
  *
  * For example:
  * \code
@@ -327,6 +469,9 @@ CINDEX_LINKAGE void clang_CXIndex_setGlobalOptions(CXIndex, unsigned options);
 /**
  * Gets the general options associated with a CXIndex.
  *
+ * This function allows to obtain the final option values used by libclang after
+ * specifying the option policies via CXChoice enumerators.
+ *
  * \returns A bitmask of options, a bitwise OR of CXGlobalOpt_XXX flags that
  * are associated with the given CXIndex object.
  */
@@ -334,6 +479,9 @@ CINDEX_LINKAGE unsigned clang_CXIndex_getGlobalOptions(CXIndex);
 
 /**
  * Sets the invocation emission path option in a CXIndex.
+ *
+ * This function is DEPRECATED. Set CXIndexOptions::InvocationEmissionPath and
+ * call clang_createIndexWithOptions() instead.
  *
  * The invocation emission path specifies a path which will contain log
  * files for certain libclang invocations. A null value (default) implies that
@@ -1988,7 +2136,11 @@ enum CXCursorKind {
    */
   CXCursor_OMPErrorDirective = 305,
 
-  CXCursor_LastStmt = CXCursor_OMPErrorDirective,
+  /** OpenMP scope directive.
+   */
+  CXCursor_OMPScopeDirective = 306,
+
+  CXCursor_LastStmt = CXCursor_OMPScopeDirective,
 
   /**
    * Cursor that represents the translation unit itself.
@@ -2787,10 +2939,15 @@ enum CXTypeKind {
   CXType_OCLIntelSubgroupAVCImeResult = 169,
   CXType_OCLIntelSubgroupAVCRefResult = 170,
   CXType_OCLIntelSubgroupAVCSicResult = 171,
+  CXType_OCLIntelSubgroupAVCImeResultSingleReferenceStreamout = 172,
+  CXType_OCLIntelSubgroupAVCImeResultDualReferenceStreamout = 173,
+  CXType_OCLIntelSubgroupAVCImeSingleReferenceStreamin = 174,
+  CXType_OCLIntelSubgroupAVCImeDualReferenceStreamin = 175,
+
+  /* Old aliases for AVC OpenCL extension types. */
   CXType_OCLIntelSubgroupAVCImeResultSingleRefStreamout = 172,
   CXType_OCLIntelSubgroupAVCImeResultDualRefStreamout = 173,
   CXType_OCLIntelSubgroupAVCImeSingleRefStreamin = 174,
-
   CXType_OCLIntelSubgroupAVCImeDualRefStreamin = 175,
 
   CXType_ExtVector = 176,
@@ -2823,6 +2980,7 @@ enum CXCallingConv {
   CXCallingConv_AArch64VectorCall = 16,
   CXCallingConv_SwiftAsync = 17,
   CXCallingConv_AArch64SVEPCS = 18,
+  CXCallingConv_M68kRTD = 19,
 
   CXCallingConv_Invalid = 100,
   CXCallingConv_Unexposed = 200
@@ -2888,9 +3046,25 @@ CINDEX_LINKAGE unsigned long long
 clang_getEnumConstantDeclUnsignedValue(CXCursor C);
 
 /**
- * Retrieve the bit width of a bit field declaration as an integer.
+ * Returns non-zero if the cursor specifies a Record member that is a bit-field.
+ */
+CINDEX_LINKAGE unsigned clang_Cursor_isBitField(CXCursor C);
+
+/**
+ * Retrieve the bit width of a bit-field declaration as an integer.
  *
- * If a cursor that is not a bit field declaration is passed in, -1 is returned.
+ * If the cursor does not reference a bit-field, or if the bit-field's width
+ * expression cannot be evaluated, -1 is returned.
+ *
+ * For example:
+ * \code
+ * if (clang_Cursor_isBitField(Cursor)) {
+ *   int Width = clang_getFieldDeclBitWidth(Cursor);
+ *   if (Width != -1) {
+ *     // The bit-field width is not value-dependent.
+ *   }
+ * }
+ * \endcode
  */
 CINDEX_LINKAGE int clang_getFieldDeclBitWidth(CXCursor C);
 
@@ -3520,12 +3694,6 @@ CINDEX_LINKAGE CXType clang_Type_getTemplateArgumentAsType(CXType T,
 CINDEX_LINKAGE enum CXRefQualifierKind clang_Type_getCXXRefQualifier(CXType T);
 
 /**
- * Returns non-zero if the cursor specifies a Record member that is a
- *   bitfield.
- */
-CINDEX_LINKAGE unsigned clang_Cursor_isBitField(CXCursor C);
-
-/**
  * Returns 1 if the base class specified by the cursor with kind
  *   CX_CXXBaseSpecifier is virtual.
  */
@@ -3697,8 +3865,6 @@ typedef enum CXChildVisitResult (*CXCursorVisitor)(CXCursor cursor,
 CINDEX_LINKAGE unsigned clang_visitChildren(CXCursor parent,
                                             CXCursorVisitor visitor,
                                             CXClientData client_data);
-#ifdef __has_feature
-#if __has_feature(blocks)
 /**
  * Visitor invoked for each cursor found by a traversal.
  *
@@ -3709,8 +3875,12 @@ CINDEX_LINKAGE unsigned clang_visitChildren(CXCursor parent,
  * The visitor should return one of the \c CXChildVisitResult values
  * to direct clang_visitChildrenWithBlock().
  */
+#if __has_feature(blocks)
 typedef enum CXChildVisitResult (^CXCursorVisitorBlock)(CXCursor cursor,
                                                         CXCursor parent);
+#else
+typedef struct _CXChildVisitResult *CXCursorVisitorBlock;
+#endif
 
 /**
  * Visits the children of a cursor using the specified block.  Behaves
@@ -3718,8 +3888,6 @@ typedef enum CXChildVisitResult (^CXCursorVisitorBlock)(CXCursor cursor,
  */
 CINDEX_LINKAGE unsigned
 clang_visitChildrenWithBlock(CXCursor parent, CXCursorVisitorBlock block);
-#endif
-#endif
 
 /**
  * @}
@@ -4342,6 +4510,51 @@ CINDEX_LINKAGE unsigned clang_CXXMethod_isCopyAssignmentOperator(CXCursor C);
  * Is not.
  */
 CINDEX_LINKAGE unsigned clang_CXXMethod_isMoveAssignmentOperator(CXCursor C);
+
+/**
+ * Determines if a C++ constructor or conversion function was declared
+ * explicit, returning 1 if such is the case and 0 otherwise.
+ *
+ * Constructors or conversion functions are declared explicit through
+ * the use of the explicit specifier.
+ *
+ * For example, the following constructor and conversion function are
+ * not explicit as they lack the explicit specifier:
+ *
+ *     class Foo {
+ *         Foo();
+ *         operator int();
+ *     };
+ *
+ * While the following constructor and conversion function are
+ * explicit as they are declared with the explicit specifier.
+ *
+ *     class Foo {
+ *         explicit Foo();
+ *         explicit operator int();
+ *     };
+ *
+ * This function will return 0 when given a cursor pointing to one of
+ * the former declarations and it will return 1 for a cursor pointing
+ * to the latter declarations.
+ *
+ * The explicit specifier allows the user to specify a
+ * conditional compile-time expression whose value decides
+ * whether the marked element is explicit or not.
+ *
+ * For example:
+ *
+ *     constexpr bool foo(int i) { return i % 2 == 0; }
+ *
+ *     class Foo {
+ *          explicit(foo(1)) Foo();
+ *          explicit(foo(2)) operator int();
+ *     }
+ *
+ * This function will return 0 for the constructor and 1 for
+ * the conversion function.
+ */
+CINDEX_LINKAGE unsigned clang_CXXMethod_isExplicit(CXCursor C);
 
 /**
  * Determine if a C++ record is abstract, i.e. whether a class or struct
@@ -5675,11 +5888,12 @@ CINDEX_LINKAGE CXResult clang_findReferencesInFile(
 CINDEX_LINKAGE CXResult clang_findIncludesInFile(
     CXTranslationUnit TU, CXFile file, CXCursorAndRangeVisitor visitor);
 
-#ifdef __has_feature
 #if __has_feature(blocks)
-
 typedef enum CXVisitorResult (^CXCursorAndRangeVisitorBlock)(CXCursor,
                                                              CXSourceRange);
+#else
+typedef struct _CXCursorAndRangeVisitorBlock *CXCursorAndRangeVisitorBlock;
+#endif
 
 CINDEX_LINKAGE
 CXResult clang_findReferencesInFileWithBlock(CXCursor, CXFile,
@@ -5688,9 +5902,6 @@ CXResult clang_findReferencesInFileWithBlock(CXCursor, CXFile,
 CINDEX_LINKAGE
 CXResult clang_findIncludesInFileWithBlock(CXTranslationUnit, CXFile,
                                            CXCursorAndRangeVisitorBlock);
-
-#endif
-#endif
 
 /**
  * The client's data object that is associated with a CXFile.
@@ -6303,6 +6514,144 @@ typedef enum CXVisitorResult (*CXFieldVisitor)(CXCursor C,
  */
 CINDEX_LINKAGE unsigned clang_Type_visitFields(CXType T, CXFieldVisitor visitor,
                                                CXClientData client_data);
+
+/**
+ * Describes the kind of binary operators.
+ */
+enum CXBinaryOperatorKind {
+  /** This value describes cursors which are not binary operators. */
+  CXBinaryOperator_Invalid,
+  /** C++ Pointer - to - member operator. */
+  CXBinaryOperator_PtrMemD,
+  /** C++ Pointer - to - member operator. */
+  CXBinaryOperator_PtrMemI,
+  /** Multiplication operator. */
+  CXBinaryOperator_Mul,
+  /** Division operator. */
+  CXBinaryOperator_Div,
+  /** Remainder operator. */
+  CXBinaryOperator_Rem,
+  /** Addition operator. */
+  CXBinaryOperator_Add,
+  /** Subtraction operator. */
+  CXBinaryOperator_Sub,
+  /** Bitwise shift left operator. */
+  CXBinaryOperator_Shl,
+  /** Bitwise shift right operator. */
+  CXBinaryOperator_Shr,
+  /** C++ three-way comparison (spaceship) operator. */
+  CXBinaryOperator_Cmp,
+  /** Less than operator. */
+  CXBinaryOperator_LT,
+  /** Greater than operator. */
+  CXBinaryOperator_GT,
+  /** Less or equal operator. */
+  CXBinaryOperator_LE,
+  /** Greater or equal operator. */
+  CXBinaryOperator_GE,
+  /** Equal operator. */
+  CXBinaryOperator_EQ,
+  /** Not equal operator. */
+  CXBinaryOperator_NE,
+  /** Bitwise AND operator. */
+  CXBinaryOperator_And,
+  /** Bitwise XOR operator. */
+  CXBinaryOperator_Xor,
+  /** Bitwise OR operator. */
+  CXBinaryOperator_Or,
+  /** Logical AND operator. */
+  CXBinaryOperator_LAnd,
+  /** Logical OR operator. */
+  CXBinaryOperator_LOr,
+  /** Assignment operator. */
+  CXBinaryOperator_Assign,
+  /** Multiplication assignment operator. */
+  CXBinaryOperator_MulAssign,
+  /** Division assignment operator. */
+  CXBinaryOperator_DivAssign,
+  /** Remainder assignment operator. */
+  CXBinaryOperator_RemAssign,
+  /** Addition assignment operator. */
+  CXBinaryOperator_AddAssign,
+  /** Subtraction assignment operator. */
+  CXBinaryOperator_SubAssign,
+  /** Bitwise shift left assignment operator. */
+  CXBinaryOperator_ShlAssign,
+  /** Bitwise shift right assignment operator. */
+  CXBinaryOperator_ShrAssign,
+  /** Bitwise AND assignment operator. */
+  CXBinaryOperator_AndAssign,
+  /** Bitwise XOR assignment operator. */
+  CXBinaryOperator_XorAssign,
+  /** Bitwise OR assignment operator. */
+  CXBinaryOperator_OrAssign,
+  /** Comma operator. */
+  CXBinaryOperator_Comma
+};
+
+/**
+ * Retrieve the spelling of a given CXBinaryOperatorKind.
+ */
+CINDEX_LINKAGE CXString
+clang_getBinaryOperatorKindSpelling(enum CXBinaryOperatorKind kind);
+
+/**
+ * Retrieve the binary operator kind of this cursor.
+ *
+ * If this cursor is not a binary operator then returns Invalid.
+ */
+CINDEX_LINKAGE enum CXBinaryOperatorKind
+clang_getCursorBinaryOperatorKind(CXCursor cursor);
+
+/**
+ * Describes the kind of unary operators.
+ */
+enum CXUnaryOperatorKind {
+  /** This value describes cursors which are not unary operators. */
+  CXUnaryOperator_Invalid,
+  /** Postfix increment operator. */
+  CXUnaryOperator_PostInc,
+  /** Postfix decrement operator. */
+  CXUnaryOperator_PostDec,
+  /** Prefix increment operator. */
+  CXUnaryOperator_PreInc,
+  /** Prefix decrement operator. */
+  CXUnaryOperator_PreDec,
+  /** Address of operator. */
+  CXUnaryOperator_AddrOf,
+  /** Dereference operator. */
+  CXUnaryOperator_Deref,
+  /** Plus operator. */
+  CXUnaryOperator_Plus,
+  /** Minus operator. */
+  CXUnaryOperator_Minus,
+  /** Not operator. */
+  CXUnaryOperator_Not,
+  /** LNot operator. */
+  CXUnaryOperator_LNot,
+  /** "__real expr" operator. */
+  CXUnaryOperator_Real,
+  /** "__imag expr" operator. */
+  CXUnaryOperator_Imag,
+  /** __extension__ marker operator. */
+  CXUnaryOperator_Extension,
+  /** C++ co_await operator. */
+  CXUnaryOperator_Coawait
+};
+
+/**
+ * Retrieve the spelling of a given CXUnaryOperatorKind.
+ */
+CINDEX_LINKAGE CXString
+clang_getUnaryOperatorKindSpelling(enum CXUnaryOperatorKind kind);
+
+/**
+ * Retrieve the unary operator kind of this cursor.
+ *
+ * If this cursor is not a unary operator then returns Invalid.
+ */
+CINDEX_LINKAGE enum CXUnaryOperatorKind
+clang_getCursorUnaryOperatorKind(CXCursor cursor);
 
 /**
  * @}

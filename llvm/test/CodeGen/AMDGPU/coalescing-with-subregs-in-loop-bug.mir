@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx803 -run-pass=simple-register-coalescing,rename-independent-subregs %s -o - | FileCheck -check-prefix=GCN %s
+# RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx803 -run-pass=register-coalescer,rename-independent-subregs %s -o - | FileCheck -check-prefix=GCN %s
 
 # This test is for a bug where the following happens:
 #

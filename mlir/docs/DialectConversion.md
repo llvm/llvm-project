@@ -98,7 +98,8 @@ struct MyTarget : public ConversionTarget {
 
     /// Mark all operations within Affine dialect have dynamic legality
     /// constraints.
-    addDynamicallyLegalDialect<AffineDialect>([](Operation *op) { ... });
+    addDynamicallyLegalDialect<affine::AffineDialect>(
+        [](Operation *op) { ... });
 
     /// Mark `func.return` as dynamically legal, but provide a specific legality
     /// callback.

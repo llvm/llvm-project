@@ -17,7 +17,8 @@
 #include "llvm/DebugInfo/DWARF/DWARFAcceleratorTable.h"
 #include <optional>
 
-namespace lldb_private {
+namespace lldb_private::plugin {
+namespace dwarf {
 class DebugNamesDWARFIndex : public DWARFIndex {
 public:
   static llvm::Expected<std::unique_ptr<DebugNamesDWARFIndex>>
@@ -80,8 +81,7 @@ private:
 
   std::optional<DIERef> ToDIERef(const DebugNames::Entry &entry);
   bool ProcessEntry(const DebugNames::Entry &entry,
-                    llvm::function_ref<bool(DWARFDIE die)> callback,
-                    llvm::StringRef name);
+                    llvm::function_ref<bool(DWARFDIE die)> callback);
 
   static void MaybeLogLookupError(llvm::Error error,
                                   const DebugNames::NameIndex &ni,
@@ -90,6 +90,7 @@ private:
   static llvm::DenseSet<dw_offset_t> GetUnits(const DebugNames &debug_names);
 };
 
-} // namespace lldb_private
+} // namespace dwarf
+} // namespace lldb_private::plugin
 
 #endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DEBUGNAMESDWARFINDEX_H

@@ -247,7 +247,7 @@ module m2
 
     ! Error to invoke an IMPURE FINAL procedure in a DO CONCURRENT
     do concurrent (i = 1:10)
-          !ERROR: Deallocation of an entity with an IMPURE FINAL procedure caused by a DEALLOCATE statement not allowed in DO CONCURRENT
+      !ERROR: Deallocation of an entity with an IMPURE FINAL procedure 'impuresub' caused by a DEALLOCATE statement not allowed in DO CONCURRENT
       if (i .eq. 1) deallocate(ifVar)
     end do
 
@@ -256,18 +256,18 @@ module m2
         block
           type(impureFinal), allocatable :: ifVar
           allocate(ifVar)
-          ! Error here because exiting this scope causes the finalization of 
-          !ifvar which causes the invocation of an IMPURE FINAL procedure
-          !ERROR: Deallocation of an entity with an IMPURE FINAL procedure caused by block exit not allowed in DO CONCURRENT
+          ! Error here because exiting this scope causes the finalization of
+          ! ifvar which causes the invocation of an IMPURE FINAL procedure
+          !ERROR: Deallocation of an entity with an IMPURE FINAL procedure 'impuresub' caused by block exit not allowed in DO CONCURRENT
         end block
       end if
     end do
 
     do concurrent (i = 1:10)
       if (i .eq. 1) then
-        ! Error here because the assignment statement causes the finalization 
+        ! Error here because the assignment statement causes the finalization
         ! of ifvar which causes the invocation of an IMPURE FINAL procedure
-!ERROR: Deallocation of an entity with an IMPURE FINAL procedure caused by assignment not allowed in DO CONCURRENT
+        !ERROR: Deallocation of an entity with an IMPURE FINAL procedure 'impuresub' caused by assignment not allowed in DO CONCURRENT
         ifvar = ifvar1
       end if
     end do

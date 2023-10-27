@@ -67,11 +67,6 @@ BUILTIN(__builtin_amdgcn_sched_group_barrier, "vIiIiIi", "n")
 BUILTIN(__builtin_amdgcn_iglp_opt, "vIi", "n")
 BUILTIN(__builtin_amdgcn_s_dcache_inv, "v", "n")
 BUILTIN(__builtin_amdgcn_buffer_wbinvl1, "v", "n")
-BUILTIN(__builtin_amdgcn_ds_gws_init, "vUiUi", "n")
-BUILTIN(__builtin_amdgcn_ds_gws_barrier, "vUiUi", "n")
-BUILTIN(__builtin_amdgcn_ds_gws_sema_v, "vUi", "n")
-BUILTIN(__builtin_amdgcn_ds_gws_sema_br, "vUiUi", "n")
-BUILTIN(__builtin_amdgcn_ds_gws_sema_p, "vUi", "n")
 BUILTIN(__builtin_amdgcn_fence, "vUicC*", "n")
 BUILTIN(__builtin_amdgcn_groupstaticsize, "Ui", "n")
 
@@ -100,6 +95,8 @@ BUILTIN(__builtin_amdgcn_rsq_clamp, "dd", "nc")
 BUILTIN(__builtin_amdgcn_rsq_clampf, "ff", "nc")
 BUILTIN(__builtin_amdgcn_sinf, "ff", "nc")
 BUILTIN(__builtin_amdgcn_cosf, "ff", "nc")
+BUILTIN(__builtin_amdgcn_logf, "ff", "nc")
+BUILTIN(__builtin_amdgcn_exp2f, "ff", "nc")
 BUILTIN(__builtin_amdgcn_log_clampf, "ff", "nc")
 BUILTIN(__builtin_amdgcn_ldexp, "ddi", "nc")
 BUILTIN(__builtin_amdgcn_ldexpf, "ffi", "nc")
@@ -171,6 +168,15 @@ BUILTIN(__builtin_amdgcn_is_shared, "bvC*0", "nc")
 BUILTIN(__builtin_amdgcn_is_private, "bvC*0", "nc")
 
 //===----------------------------------------------------------------------===//
+// GWS builtins.
+//===----------------------------------------------------------------------===//
+TARGET_BUILTIN(__builtin_amdgcn_ds_gws_init, "vUiUi", "n", "gws")
+TARGET_BUILTIN(__builtin_amdgcn_ds_gws_barrier, "vUiUi", "n", "gws")
+TARGET_BUILTIN(__builtin_amdgcn_ds_gws_sema_v, "vUi", "n", "gws")
+TARGET_BUILTIN(__builtin_amdgcn_ds_gws_sema_br, "vUiUi", "n", "gws")
+TARGET_BUILTIN(__builtin_amdgcn_ds_gws_sema_p, "vUi", "n", "gws")
+
+//===----------------------------------------------------------------------===//
 // CI+ only builtins.
 //===----------------------------------------------------------------------===//
 TARGET_BUILTIN(__builtin_amdgcn_s_dcache_inv_vol, "v", "n", "ci-insts")
@@ -214,8 +220,8 @@ TARGET_BUILTIN(__builtin_amdgcn_perm, "UiUiUiUi", "nc", "gfx8-insts")
 TARGET_BUILTIN(__builtin_amdgcn_fmed3h, "hhhh", "nc", "gfx9-insts")
 
 TARGET_BUILTIN(__builtin_amdgcn_global_atomic_fadd_f64, "dd*1d", "t", "gfx90a-insts")
-TARGET_BUILTIN(__builtin_amdgcn_global_atomic_fadd_f32, "ff*1f", "t", "gfx90a-insts")
-TARGET_BUILTIN(__builtin_amdgcn_global_atomic_fadd_v2f16, "V2hV2h*1V2h", "t", "gfx90a-insts")
+TARGET_BUILTIN(__builtin_amdgcn_global_atomic_fadd_f32, "ff*1f", "t", "atomic-fadd-rtn-insts")
+TARGET_BUILTIN(__builtin_amdgcn_global_atomic_fadd_v2f16, "V2hV2h*1V2h", "t", "atomic-buffer-global-pk-add-f16-insts")
 TARGET_BUILTIN(__builtin_amdgcn_global_atomic_fmin_f64, "dd*1d", "t", "gfx90a-insts")
 TARGET_BUILTIN(__builtin_amdgcn_global_atomic_fmax_f64, "dd*1d", "t", "gfx90a-insts")
 
@@ -227,19 +233,20 @@ TARGET_BUILTIN(__builtin_amdgcn_ds_atomic_fadd_f64, "dd*3d", "t", "gfx90a-insts"
 TARGET_BUILTIN(__builtin_amdgcn_ds_atomic_fadd_f32, "ff*3f", "t", "gfx8-insts")
 
 TARGET_BUILTIN(__builtin_amdgcn_flat_atomic_fadd_f32, "ff*0f", "t", "gfx940-insts")
-TARGET_BUILTIN(__builtin_amdgcn_flat_atomic_fadd_v2f16, "V2hV2h*0V2h", "t", "gfx940-insts")
-TARGET_BUILTIN(__builtin_amdgcn_flat_atomic_fadd_v2bf16, "V2sV2s*0V2s", "t", "gfx940-insts")
-TARGET_BUILTIN(__builtin_amdgcn_global_atomic_fadd_v2bf16, "V2sV2s*1V2s", "t", "gfx940-insts")
-TARGET_BUILTIN(__builtin_amdgcn_ds_atomic_fadd_v2bf16, "V2sV2s*3V2s", "t", "gfx940-insts")
+TARGET_BUILTIN(__builtin_amdgcn_flat_atomic_fadd_v2f16, "V2hV2h*0V2h", "t", "atomic-flat-pk-add-16-insts")
+TARGET_BUILTIN(__builtin_amdgcn_flat_atomic_fadd_v2bf16, "V2sV2s*0V2s", "t", "atomic-flat-pk-add-16-insts")
+TARGET_BUILTIN(__builtin_amdgcn_global_atomic_fadd_v2bf16, "V2sV2s*1V2s", "t", "atomic-global-pk-add-bf16-inst")
+TARGET_BUILTIN(__builtin_amdgcn_ds_atomic_fadd_v2bf16, "V2sV2s*3V2s", "t", "atomic-ds-pk-add-16-insts")
+TARGET_BUILTIN(__builtin_amdgcn_ds_atomic_fadd_v2f16, "V2hV2h*3V2h", "t", "atomic-ds-pk-add-16-insts")
 
 //===----------------------------------------------------------------------===//
 // Deep learning builtins.
 //===----------------------------------------------------------------------===//
 
-TARGET_BUILTIN(__builtin_amdgcn_fdot2, "fV2hV2hfIb", "nc", "dot7-insts")
-TARGET_BUILTIN(__builtin_amdgcn_fdot2_f16_f16, "hV2hV2hh", "nc", "dot8-insts")
-TARGET_BUILTIN(__builtin_amdgcn_fdot2_bf16_bf16, "sV2sV2ss", "nc", "dot8-insts")
-TARGET_BUILTIN(__builtin_amdgcn_fdot2_f32_bf16, "fV2sV2sfIb", "nc", "dot8-insts")
+TARGET_BUILTIN(__builtin_amdgcn_fdot2, "fV2hV2hfIb", "nc", "dot10-insts")
+TARGET_BUILTIN(__builtin_amdgcn_fdot2_f16_f16, "hV2hV2hh", "nc", "dot9-insts")
+TARGET_BUILTIN(__builtin_amdgcn_fdot2_bf16_bf16, "sV2sV2ss", "nc", "dot9-insts")
+TARGET_BUILTIN(__builtin_amdgcn_fdot2_f32_bf16, "fV2sV2sfIb", "nc", "dot9-insts")
 TARGET_BUILTIN(__builtin_amdgcn_sdot2, "SiV2SsV2SsSiIb", "nc", "dot2-insts")
 TARGET_BUILTIN(__builtin_amdgcn_udot2, "UiV2UsV2UsUiIb", "nc", "dot2-insts")
 TARGET_BUILTIN(__builtin_amdgcn_sdot4, "SiSiSiSiIb", "nc", "dot1-insts")

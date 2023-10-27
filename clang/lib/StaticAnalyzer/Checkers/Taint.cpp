@@ -146,62 +146,142 @@ ProgramStateRef taint::addPartialTaint(ProgramStateRef State,
 
 bool taint::isTainted(ProgramStateRef State, const Stmt *S,
                       const LocationContext *LCtx, TaintTagType Kind) {
-  SVal val = State->getSVal(S, LCtx);
-  return isTainted(State, val, Kind);
+  return !getTaintedSymbolsImpl(State, S, LCtx, Kind, /*ReturnFirstOnly=*/true)
+              .empty();
 }
 
 bool taint::isTainted(ProgramStateRef State, SVal V, TaintTagType Kind) {
-  if (SymbolRef Sym = V.getAsSymbol())
-    return isTainted(State, Sym, Kind);
-  if (const MemRegion *Reg = V.getAsRegion())
-    return isTainted(State, Reg, Kind);
-  return false;
+  return !getTaintedSymbolsImpl(State, V, Kind, /*ReturnFirstOnly=*/true)
+              .empty();
 }
 
 bool taint::isTainted(ProgramStateRef State, const MemRegion *Reg,
                       TaintTagType K) {
-  if (!Reg)
-    return false;
-
-  // Element region (array element) is tainted if either the base or the offset
-  // are tainted.
-  if (const ElementRegion *ER = dyn_cast<ElementRegion>(Reg))
-    return isTainted(State, ER->getSuperRegion(), K) ||
-           isTainted(State, ER->getIndex(), K);
-
-  if (const SymbolicRegion *SR = dyn_cast<SymbolicRegion>(Reg))
-    return isTainted(State, SR->getSymbol(), K);
-
-  if (const SubRegion *ER = dyn_cast<SubRegion>(Reg))
-    return isTainted(State, ER->getSuperRegion(), K);
-
-  return false;
+  return !getTaintedSymbolsImpl(State, Reg, K, /*ReturnFirstOnly=*/true)
+              .empty();
 }
 
 bool taint::isTainted(ProgramStateRef State, SymbolRef Sym, TaintTagType Kind) {
+  return !getTaintedSymbolsImpl(State, Sym, Kind, /*ReturnFirstOnly=*/true)
+              .empty();
+}
+
+std::vector<SymbolRef> taint::getTaintedSymbols(ProgramStateRef State,
+                                                const Stmt *S,
+                                                const LocationContext *LCtx,
+                                                TaintTagType Kind) {
+  return getTaintedSymbolsImpl(State, S, LCtx, Kind, /*ReturnFirstOnly=*/false);
+}
+
+std::vector<SymbolRef> taint::getTaintedSymbols(ProgramStateRef State, SVal V,
+                                                TaintTagType Kind) {
+  return getTaintedSymbolsImpl(State, V, Kind, /*ReturnFirstOnly=*/false);
+}
+
+std::vector<SymbolRef> taint::getTaintedSymbols(ProgramStateRef State,
+                                                SymbolRef Sym,
+                                                TaintTagType Kind) {
+  return getTaintedSymbolsImpl(State, Sym, Kind, /*ReturnFirstOnly=*/false);
+}
+
+std::vector<SymbolRef> taint::getTaintedSymbols(ProgramStateRef State,
+                                                const MemRegion *Reg,
+                                                TaintTagType Kind) {
+  return getTaintedSymbolsImpl(State, Reg, Kind, /*ReturnFirstOnly=*/false);
+}
+
+std::vector<SymbolRef> taint::getTaintedSymbolsImpl(ProgramStateRef State,
+                                                    const Stmt *S,
+                                                    const LocationContext *LCtx,
+                                                    TaintTagType Kind,
+                                                    bool returnFirstOnly) {
+  SVal val = State->getSVal(S, LCtx);
+  return getTaintedSymbolsImpl(State, val, Kind, returnFirstOnly);
+}
+
+std::vector<SymbolRef> taint::getTaintedSymbolsImpl(ProgramStateRef State,
+                                                    SVal V, TaintTagType Kind,
+                                                    bool returnFirstOnly) {
+  if (SymbolRef Sym = V.getAsSymbol())
+    return getTaintedSymbolsImpl(State, Sym, Kind, returnFirstOnly);
+  if (const MemRegion *Reg = V.getAsRegion())
+    return getTaintedSymbolsImpl(State, Reg, Kind, returnFirstOnly);
+  return {};
+}
+
+std::vector<SymbolRef> taint::getTaintedSymbolsImpl(ProgramStateRef State,
+                                                    const MemRegion *Reg,
+                                                    TaintTagType K,
+                                                    bool returnFirstOnly) {
+  std::vector<SymbolRef> TaintedSymbols;
+  if (!Reg)
+    return TaintedSymbols;
+  // Element region (array element) is tainted if either the base or the offset
+  // are tainted.
+  if (const ElementRegion *ER = dyn_cast<ElementRegion>(Reg)) {
+    std::vector<SymbolRef> TaintedIndex =
+        getTaintedSymbolsImpl(State, ER->getIndex(), K, returnFirstOnly);
+    llvm::append_range(TaintedSymbols, TaintedIndex);
+    if (returnFirstOnly && !TaintedSymbols.empty())
+      return TaintedSymbols; // return early if needed
+    std::vector<SymbolRef> TaintedSuperRegion =
+        getTaintedSymbolsImpl(State, ER->getSuperRegion(), K, returnFirstOnly);
+    llvm::append_range(TaintedSymbols, TaintedSuperRegion);
+    if (returnFirstOnly && !TaintedSymbols.empty())
+      return TaintedSymbols; // return early if needed
+  }
+
+  if (const SymbolicRegion *SR = dyn_cast<SymbolicRegion>(Reg)) {
+    std::vector<SymbolRef> TaintedRegions =
+        getTaintedSymbolsImpl(State, SR->getSymbol(), K, returnFirstOnly);
+    llvm::append_range(TaintedSymbols, TaintedRegions);
+    if (returnFirstOnly && !TaintedSymbols.empty())
+      return TaintedSymbols; // return early if needed
+  }
+
+  if (const SubRegion *ER = dyn_cast<SubRegion>(Reg)) {
+    std::vector<SymbolRef> TaintedSubRegions =
+        getTaintedSymbolsImpl(State, ER->getSuperRegion(), K, returnFirstOnly);
+    llvm::append_range(TaintedSymbols, TaintedSubRegions);
+    if (returnFirstOnly && !TaintedSymbols.empty())
+      return TaintedSymbols; // return early if needed
+  }
+
+  return TaintedSymbols;
+}
+
+std::vector<SymbolRef> taint::getTaintedSymbolsImpl(ProgramStateRef State,
+                                                    SymbolRef Sym,
+                                                    TaintTagType Kind,
+                                                    bool returnFirstOnly) {
+  std::vector<SymbolRef> TaintedSymbols;
   if (!Sym)
-    return false;
+    return TaintedSymbols;
 
   // Traverse all the symbols this symbol depends on to see if any are tainted.
-  for (SymExpr::symbol_iterator SI = Sym->symbol_begin(),
-                                SE = Sym->symbol_end();
-       SI != SE; ++SI) {
-    if (!isa<SymbolData>(*SI))
+  for (SymbolRef SubSym : Sym->symbols()) {
+    if (!isa<SymbolData>(SubSym))
       continue;
 
-    if (const TaintTagType *Tag = State->get<TaintMap>(*SI)) {
-      if (*Tag == Kind)
-        return true;
+    if (const TaintTagType *Tag = State->get<TaintMap>(SubSym)) {
+      if (*Tag == Kind) {
+        TaintedSymbols.push_back(SubSym);
+        if (returnFirstOnly)
+          return TaintedSymbols; // return early if needed
+      }
     }
 
-    if (const auto *SD = dyn_cast<SymbolDerived>(*SI)) {
+    if (const auto *SD = dyn_cast<SymbolDerived>(SubSym)) {
       // If this is a SymbolDerived with a tainted parent, it's also tainted.
-      if (isTainted(State, SD->getParentSymbol(), Kind))
-        return true;
+      std::vector<SymbolRef> TaintedParents = getTaintedSymbolsImpl(
+          State, SD->getParentSymbol(), Kind, returnFirstOnly);
+      llvm::append_range(TaintedSymbols, TaintedParents);
+      if (returnFirstOnly && !TaintedSymbols.empty())
+        return TaintedSymbols; // return early if needed
 
       // If this is a SymbolDerived with the same parent symbol as another
-      // tainted SymbolDerived and a region that's a sub-region of that tainted
-      // symbol, it's also tainted.
+      // tainted SymbolDerived and a region that's a sub-region of that
+      // tainted symbol, it's also tainted.
       if (const TaintedSubRegions *Regs =
               State->get<DerivedSymTaint>(SD->getParentSymbol())) {
         const TypedValueRegion *R = SD->getRegion();
@@ -210,46 +290,32 @@ bool taint::isTainted(ProgramStateRef State, SymbolRef Sym, TaintTagType Kind) {
           // complete. For example, this would not currently identify
           // overlapping fields in a union as tainted. To identify this we can
           // check for overlapping/nested byte offsets.
-          if (Kind == I.second && R->isSubRegionOf(I.first))
-            return true;
+          if (Kind == I.second && R->isSubRegionOf(I.first)) {
+            TaintedSymbols.push_back(SD->getParentSymbol());
+            if (returnFirstOnly && !TaintedSymbols.empty())
+              return TaintedSymbols; // return early if needed
+          }
         }
       }
     }
 
     // If memory region is tainted, data is also tainted.
-    if (const auto *SRV = dyn_cast<SymbolRegionValue>(*SI)) {
-      if (isTainted(State, SRV->getRegion(), Kind))
-        return true;
+    if (const auto *SRV = dyn_cast<SymbolRegionValue>(SubSym)) {
+      std::vector<SymbolRef> TaintedRegions =
+          getTaintedSymbolsImpl(State, SRV->getRegion(), Kind, returnFirstOnly);
+      llvm::append_range(TaintedSymbols, TaintedRegions);
+      if (returnFirstOnly && !TaintedSymbols.empty())
+        return TaintedSymbols; // return early if needed
     }
 
     // If this is a SymbolCast from a tainted value, it's also tainted.
-    if (const auto *SC = dyn_cast<SymbolCast>(*SI)) {
-      if (isTainted(State, SC->getOperand(), Kind))
-        return true;
+    if (const auto *SC = dyn_cast<SymbolCast>(SubSym)) {
+      std::vector<SymbolRef> TaintedCasts =
+          getTaintedSymbolsImpl(State, SC->getOperand(), Kind, returnFirstOnly);
+      llvm::append_range(TaintedSymbols, TaintedCasts);
+      if (returnFirstOnly && !TaintedSymbols.empty())
+        return TaintedSymbols; // return early if needed
     }
   }
-
-  return false;
-}
-
-PathDiagnosticPieceRef TaintBugVisitor::VisitNode(const ExplodedNode *N,
-                                                  BugReporterContext &BRC,
-                                                  PathSensitiveBugReport &BR) {
-
-  // Find the ExplodedNode where the taint was first introduced
-  if (!isTainted(N->getState(), V) ||
-      isTainted(N->getFirstPred()->getState(), V))
-    return nullptr;
-
-  const Stmt *S = N->getStmtForDiagnostics();
-  if (!S)
-    return nullptr;
-
-  const LocationContext *NCtx = N->getLocationContext();
-  PathDiagnosticLocation L =
-      PathDiagnosticLocation::createBegin(S, BRC.getSourceManager(), NCtx);
-  if (!L.isValid() || !L.asLocation().isValid())
-    return nullptr;
-
-  return std::make_shared<PathDiagnosticEventPiece>(L, "Taint originated here");
+  return TaintedSymbols;
 }

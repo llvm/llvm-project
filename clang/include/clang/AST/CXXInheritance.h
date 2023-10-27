@@ -315,7 +315,7 @@ public:
 /// virtual function; in abstract classes, the final overrider for at
 /// least one virtual function is a pure virtual function. Due to
 /// multiple, virtual inheritance, it is possible for a class to have
-/// more than one final overrider. Athough this is an error (per C++
+/// more than one final overrider. Although this is an error (per C++
 /// [class.virtual]p2), it is not considered an error here: the final
 /// overrider map can represent multiple final overriders for a
 /// method, and it is up to the client to determine whether they are

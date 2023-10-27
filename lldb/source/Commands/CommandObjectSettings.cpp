@@ -143,9 +143,9 @@ insert-before or insert-after.");
     }
     if (request.GetCursorIndex() == setting_var_idx) {
       // Attempting to complete setting variable name
-      CommandCompletions::InvokeCommonCompletionCallbacks(
-          GetCommandInterpreter(), CommandCompletions::eSettingsNameCompletion,
-          request, nullptr);
+      lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
+          GetCommandInterpreter(), lldb::eSettingsNameCompletion, request,
+          nullptr);
       return;
     }
     arg = request.GetParsedLine().GetArgumentAtIndex(request.GetCursorIndex());
@@ -161,8 +161,8 @@ insert-before or insert-after.");
     const char *setting_var_name =
         request.GetParsedLine().GetArgumentAtIndex(setting_var_idx);
     Status error;
-    lldb::OptionValueSP value_sp(GetDebugger().GetPropertyValue(
-        &m_exe_ctx, setting_var_name, false, error));
+    lldb::OptionValueSP value_sp(
+        GetDebugger().GetPropertyValue(&m_exe_ctx, setting_var_name, error));
     if (!value_sp)
       return;
     value_sp->AutoComplete(m_interpreter, request);
@@ -267,9 +267,9 @@ public:
   void
   HandleArgumentCompletion(CompletionRequest &request,
                            OptionElementVector &opt_element_vector) override {
-    CommandCompletions::InvokeCommonCompletionCallbacks(
-        GetCommandInterpreter(), CommandCompletions::eSettingsNameCompletion,
-        request, nullptr);
+    lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
+        GetCommandInterpreter(), lldb::eSettingsNameCompletion, request,
+        nullptr);
   }
 
 protected:
@@ -511,16 +511,15 @@ public:
   void
   HandleArgumentCompletion(CompletionRequest &request,
                            OptionElementVector &opt_element_vector) override {
-    CommandCompletions::InvokeCommonCompletionCallbacks(
-        GetCommandInterpreter(), CommandCompletions::eSettingsNameCompletion,
-        request, nullptr);
+    lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
+        GetCommandInterpreter(), lldb::eSettingsNameCompletion, request,
+        nullptr);
   }
 
 protected:
   bool DoExecute(Args &args, CommandReturnObject &result) override {
     result.SetStatus(eReturnStatusSuccessFinishResult);
 
-    const bool will_modify = false;
     const size_t argc = args.GetArgumentCount();
     if (argc > 0) {
       const bool dump_qualified_name = true;
@@ -530,7 +529,7 @@ protected:
 
         const Property *property =
             GetDebugger().GetValueProperties()->GetPropertyAtPath(
-                &m_exe_ctx, will_modify, property_path);
+                &m_exe_ctx, property_path);
 
         if (property) {
           property->DumpDescription(m_interpreter, result.GetOutputStream(), 0,
@@ -596,9 +595,9 @@ public:
   HandleArgumentCompletion(CompletionRequest &request,
                            OptionElementVector &opt_element_vector) override {
     if (request.GetCursorIndex() < 2)
-      CommandCompletions::InvokeCommonCompletionCallbacks(
-          GetCommandInterpreter(), CommandCompletions::eSettingsNameCompletion,
-          request, nullptr);
+      lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
+          GetCommandInterpreter(), lldb::eSettingsNameCompletion, request,
+          nullptr);
   }
 
 protected:
@@ -704,9 +703,9 @@ public:
                            OptionElementVector &opt_element_vector) override {
     // Attempting to complete variable name
     if (request.GetCursorIndex() < 2)
-      CommandCompletions::InvokeCommonCompletionCallbacks(
-          GetCommandInterpreter(), CommandCompletions::eSettingsNameCompletion,
-          request, nullptr);
+      lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
+          GetCommandInterpreter(), lldb::eSettingsNameCompletion, request,
+          nullptr);
   }
 
 protected:
@@ -796,9 +795,9 @@ public:
                            OptionElementVector &opt_element_vector) override {
     // Attempting to complete variable name
     if (request.GetCursorIndex() < 2)
-      CommandCompletions::InvokeCommonCompletionCallbacks(
-          GetCommandInterpreter(), CommandCompletions::eSettingsNameCompletion,
-          request, nullptr);
+      lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
+          GetCommandInterpreter(), lldb::eSettingsNameCompletion, request,
+          nullptr);
   }
 
 protected:
@@ -892,9 +891,9 @@ public:
                            OptionElementVector &opt_element_vector) override {
     // Attempting to complete variable name
     if (request.GetCursorIndex() < 2)
-      CommandCompletions::InvokeCommonCompletionCallbacks(
-          GetCommandInterpreter(), CommandCompletions::eSettingsNameCompletion,
-          request, nullptr);
+      lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
+          GetCommandInterpreter(), lldb::eSettingsNameCompletion, request,
+          nullptr);
   }
 
 protected:
@@ -977,9 +976,9 @@ public:
                            OptionElementVector &opt_element_vector) override {
     // Attempting to complete variable name
     if (request.GetCursorIndex() < 2)
-      CommandCompletions::InvokeCommonCompletionCallbacks(
-          GetCommandInterpreter(), CommandCompletions::eSettingsNameCompletion,
-          request, nullptr);
+      lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
+          GetCommandInterpreter(), lldb::eSettingsNameCompletion, request,
+          nullptr);
   }
 
 protected:
@@ -1052,9 +1051,9 @@ public:
                            OptionElementVector &opt_element_vector) override {
     // Attempting to complete variable name
     if (request.GetCursorIndex() < 2)
-      CommandCompletions::InvokeCommonCompletionCallbacks(
-          GetCommandInterpreter(), CommandCompletions::eSettingsNameCompletion,
-          request, nullptr);
+      lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
+          GetCommandInterpreter(), lldb::eSettingsNameCompletion, request,
+          nullptr);
   }
 
    Options *GetOptions() override { return &m_options; }

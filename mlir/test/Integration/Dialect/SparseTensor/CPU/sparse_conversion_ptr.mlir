@@ -1,43 +1,56 @@
-// DEFINE: %{option} = enable-runtime-library=true
-// DEFINE: %{command} = mlir-opt %s --sparse-compiler=%{option} | \
-// DEFINE: mlir-cpu-runner \
-// DEFINE:  -e entry -entry-point-result=void  \
-// DEFINE:  -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext | \
-// DEFINE: FileCheck %s
+//--------------------------------------------------------------------------------------------------
+// WHEN CREATING A NEW TEST, PLEASE JUST COPY & PASTE WITHOUT EDITS.
 //
-// RUN: %{command}
+// Set-up that's shared across all tests in this directory. In principle, this
+// config could be moved to lit.local.cfg. However, there are downstream users that
+//  do not use these LIT config files. Hence why this is kept inline.
+//
+// DEFINE: %{sparse_compiler_opts} = enable-runtime-library=true
+// DEFINE: %{sparse_compiler_opts_sve} = enable-arm-sve=true %{sparse_compiler_opts}
+// DEFINE: %{compile} = mlir-opt %s --sparse-compiler="%{sparse_compiler_opts}"
+// DEFINE: %{compile_sve} = mlir-opt %s --sparse-compiler="%{sparse_compiler_opts_sve}"
+// DEFINE: %{run_libs} = -shared-libs=%mlir_c_runner_utils,%mlir_runner_utils
+// DEFINE: %{run_opts} = -e entry -entry-point-result=void
+// DEFINE: %{run} = mlir-cpu-runner %{run_opts} %{run_libs}
+// DEFINE: %{run_sve} = %mcr_aarch64_cmd --march=aarch64 --mattr="+sve" %{run_opts} %{run_libs}
+//
+// DEFINE: %{env} =
+//--------------------------------------------------------------------------------------------------
+
+// RUN: %{compile} | %{run} | FileCheck %s
 //
 // Do the same run, but now with direct IR generation.
-// REDEFINE: %{option} = "enable-runtime-library=false enable-buffer-initialization=true"
-// RUN: %{command}
+// REDEFINE: %{sparse_compiler_opts} = enable-runtime-library=false enable-buffer-initialization=true
+// RUN: %{compile} | %{run} | FileCheck %s
 //
 // Do the same run, but now with direct IR generation and vectorization.
-// REDEFINE: %{option} = "enable-runtime-library=false enable-buffer-initialization=true vl=2 reassociate-fp-reductions=true enable-index-optimizations=true"
-// RUN: %{command}
+// REDEFINE: %{sparse_compiler_opts} = enable-runtime-library=false enable-buffer-initialization=true vl=2 reassociate-fp-reductions=true enable-index-optimizations=true
+// RUN: %{compile} | %{run} | FileCheck %s
+//
+// Do the same run, but now with direct IR generation and VLA vectorization.
+// RUN: %if mlir_arm_sve_tests %{ %{compile_sve} | %{run_sve} | FileCheck %s %}
 
 #DCSR  = #sparse_tensor.encoding<{
-  dimLevelType = [ "compressed", "compressed" ],
-  pointerBitWidth = 8,
-  indexBitWidth = 8
+  map = (d0, d1) -> (d0 : compressed, d1 : compressed),
+  posWidth = 8,
+  crdWidth = 8
 }>
 
 #DCSC  = #sparse_tensor.encoding<{
-  dimLevelType = [ "compressed", "compressed" ],
-  dimOrdering = affine_map<(i,j) -> (j,i)>,
-  pointerBitWidth = 64,
-  indexBitWidth = 64
+  map = (d0, d1) -> (d1 : compressed, d0 : compressed),
+  posWidth = 64,
+  crdWidth = 64
 }>
 
 #CSC  = #sparse_tensor.encoding<{
-  dimLevelType = [ "dense", "compressed" ],
-  dimOrdering = affine_map<(i,j) -> (j,i)>,
-  pointerBitWidth = 16,
-  indexBitWidth = 32
+  map = (d0, d1) -> (d1 : dense, d0 : compressed),
+  posWidth = 16,
+  crdWidth = 32
 }>
 
 //
 // Integration test that tests conversions between sparse tensors,
-// where the pointer and index sizes in the overhead storage change
+// where the position and index sizes in the overhead storage change
 // in addition to layout.
 //
 module {
@@ -79,7 +92,7 @@ module {
     %c1 = arith.constant 1 : index
     %t1 = arith.constant sparse<
       [ [0,0], [0,1], [0,63], [1,0], [1,1], [31,0], [31,63] ],
-        [ 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0 ]> : tensor<32x64xf64>
+       [ 1.0,   2.0,   3.0,    4.0,   5.0,   6.0,    7.0 ]> : tensor<32x64xf64>
     %t2 = tensor.cast %t1 : tensor<32x64xf64> to tensor<?x?xf64>
 
     // Dense to sparse.
@@ -125,12 +138,12 @@ module {
     // CHECK-NEXT: ( 0, 1, 63, 0, 1, 0, 63, 0 )
     // CHECK-NEXT: ( 0, 1, 63, 0, 1, 0, 63, 0 )
     //
-    %i1 = sparse_tensor.indices %1 { dimension = 1 : index } : tensor<32x64xf64, #DCSR> to memref<?xi8>
-    %i2 = sparse_tensor.indices %2 { dimension = 1 : index } : tensor<32x64xf64, #DCSC> to memref<?xi64>
-    %i3 = sparse_tensor.indices %3 { dimension = 1 : index } : tensor<32x64xf64, #CSC>  to memref<?xi32>
-    %i4 = sparse_tensor.indices %4 { dimension = 1 : index } : tensor<32x64xf64, #DCSC> to memref<?xi64>
-    %i5 = sparse_tensor.indices %5 { dimension = 1 : index } : tensor<32x64xf64, #DCSR> to memref<?xi8>
-    %i6 = sparse_tensor.indices %6 { dimension = 1 : index } : tensor<32x64xf64, #DCSR> to memref<?xi8>
+    %i1 = sparse_tensor.coordinates %1 { level = 1 : index } : tensor<32x64xf64, #DCSR> to memref<?xi8>
+    %i2 = sparse_tensor.coordinates %2 { level = 1 : index } : tensor<32x64xf64, #DCSC> to memref<?xi64>
+    %i3 = sparse_tensor.coordinates %3 { level = 1 : index } : tensor<32x64xf64, #CSC>  to memref<?xi32>
+    %i4 = sparse_tensor.coordinates %4 { level = 1 : index } : tensor<32x64xf64, #DCSC> to memref<?xi64>
+    %i5 = sparse_tensor.coordinates %5 { level = 1 : index } : tensor<32x64xf64, #DCSR> to memref<?xi8>
+    %i6 = sparse_tensor.coordinates %6 { level = 1 : index } : tensor<32x64xf64, #DCSR> to memref<?xi8>
     call @dumpi08(%i1) : (memref<?xi8>)  -> ()
     call @dumpi64(%i2) : (memref<?xi64>) -> ()
     call @dumpi32(%i3) : (memref<?xi32>) -> ()

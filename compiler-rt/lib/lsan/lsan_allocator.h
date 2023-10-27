@@ -32,6 +32,7 @@ template<typename Callable>
 void ForEachChunk(const Callable &callback);
 
 void GetAllocatorCacheRange(uptr *begin, uptr *end);
+void AllocatorThreadStart();
 void AllocatorThreadFinish();
 void InitializeAllocator();
 
@@ -68,13 +69,16 @@ using PrimaryAllocator = PrimaryAllocatorASVT<LocalAddressSpaceView>;
 # if SANITIZER_FUCHSIA || defined(__powerpc64__)
 const uptr kAllocatorSpace = ~(uptr)0;
 const uptr kAllocatorSize  =  0x40000000000ULL;  // 4T.
-#elif defined(__s390x__)
-const uptr kAllocatorSpace = 0x40000000000ULL;
-const uptr kAllocatorSize = 0x40000000000ULL;  // 4T.
-# else
+#  elif SANITIZER_RISCV64
+const uptr kAllocatorSpace = ~(uptr)0;
+const uptr kAllocatorSize = 0x2000000000ULL;  // 128G.
+#  elif SANITIZER_APPLE
 const uptr kAllocatorSpace = 0x600000000000ULL;
 const uptr kAllocatorSize  = 0x40000000000ULL;  // 4T.
-# endif
+#  else
+const uptr kAllocatorSpace = 0x500000000000ULL;
+const uptr kAllocatorSize = 0x40000000000ULL;  // 4T.
+#  endif
 template <typename AddressSpaceViewTy>
 struct AP64 {  // Allocator64 parameters. Deliberately using a short name.
   static const uptr kSpaceBeg = kAllocatorSpace;

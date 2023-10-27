@@ -1211,7 +1211,7 @@ define <2 x i64> @test46(<2 x float> %x, <2 x float> %y) #0 {
 ; AVX512-LABEL: test46:
 ; AVX512:       ## %bb.0:
 ; AVX512-NEXT:    vcmpeqps %xmm1, %xmm0, %xmm0 ## encoding: [0xc5,0xf8,0xc2,0xc1,0x00]
-; AVX512-NEXT:    vpermilps $212, %xmm0, %xmm0 ## encoding: [0xc4,0xe3,0x79,0x04,0xc0,0xd4]
+; AVX512-NEXT:    vshufps $212, %xmm0, %xmm0, %xmm0 ## encoding: [0xc5,0xf8,0xc6,0xc0,0xd4]
 ; AVX512-NEXT:    ## xmm0 = xmm0[0,1,1,3]
 ; AVX512-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 ## encoding: [0xc5,0xf8,0x54,0x05,A,A,A,A]
 ; AVX512-NEXT:    ## fixup A - offset: 4, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
@@ -1458,9 +1458,7 @@ define void @half_vec_compare(ptr %x, ptr %y) {
 ; KNL-NEXT:    cmovpl %ecx, %eax ## encoding: [0x0f,0x4a,0xc1]
 ; KNL-NEXT:    vmovd %eax, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0x6e,0xc0]
 ; KNL-NEXT:    vpinsrw $1, %edx, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xc4,0xc2,0x01]
-; KNL-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,2,u,u,u,u,u,u,u,u,u,u,u,u,u,u]
-; KNL-NEXT:    ## encoding: [0xc4,0xe2,0x79,0x00,0x05,A,A,A,A]
-; KNL-NEXT:    ## fixup A - offset: 5, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
+; KNL-NEXT:    vpacksswb %xmm0, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0x63,0xc0]
 ; KNL-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xdb,0x05,A,A,A,A]
 ; KNL-NEXT:    ## fixup A - offset: 4, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
 ; KNL-NEXT:    vpextrw $0, %xmm0, (%rsi) ## encoding: [0xc4,0xe3,0x79,0x15,0x06,0x00]
@@ -1492,9 +1490,7 @@ define void @half_vec_compare(ptr %x, ptr %y) {
 ; AVX512BW-NEXT:    cmovpl %ecx, %eax ## encoding: [0x0f,0x4a,0xc1]
 ; AVX512BW-NEXT:    vmovd %eax, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0x6e,0xc0]
 ; AVX512BW-NEXT:    vpinsrw $1, %edx, %xmm0, %xmm0 ## EVEX TO VEX Compression encoding: [0xc5,0xf9,0xc4,0xc2,0x01]
-; AVX512BW-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,2,u,u,u,u,u,u,u,u,u,u,u,u,u,u]
-; AVX512BW-NEXT:    ## encoding: [0xc4,0xe2,0x79,0x00,0x05,A,A,A,A]
-; AVX512BW-NEXT:    ## fixup A - offset: 5, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
+; AVX512BW-NEXT:    vpacksswb %xmm0, %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0x63,0xc0]
 ; AVX512BW-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 ## encoding: [0xc5,0xf9,0xdb,0x05,A,A,A,A]
 ; AVX512BW-NEXT:    ## fixup A - offset: 4, value: {{\.?LCPI[0-9]+_[0-9]+}}-4, kind: reloc_riprel_4byte
 ; AVX512BW-NEXT:    vpextrw $0, %xmm0, (%rsi) ## EVEX TO VEX Compression encoding: [0xc4,0xe3,0x79,0x15,0x06,0x00]

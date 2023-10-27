@@ -8,13 +8,13 @@
 // CHECK-DEFAULT-NOT: "-target-feature" "+vfp3"
 // CHECK-DEFAULT-NOT: "-target-feature" "+neon"
 
-// RUN: %clang -target arm-linux-eabi -mfpu=fpa %s -### -o %t.o 2>&1 \
+// RUN: not %clang --target=arm-linux-eabi -mfpu=fpa %s -### -o %t.o 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-FPA %s
-// RUN: %clang -target arm-linux-eabi -mfpu=fpe2 %s -### -o %t.o 2>&1 \
+// RUN: not %clang --target=arm-linux-eabi -mfpu=fpe2 %s -### -o %t.o 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-FPA %s
-// RUN: %clang -target arm-linux-eabi -mfpu=fpe3 %s -### -o %t.o 2>&1 \
+// RUN: not %clang --target=arm-linux-eabi -mfpu=fpe3 %s -### -o %t.o 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-FPA %s
-// RUN: %clang -target arm-linux-eabi -mfpu=maverick %s -### -o %t.o 2>&1 \
+// RUN: not %clang --target=arm-linux-eabi -mfpu=maverick %s -### -o %t.o 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-FPA %s
 // CHECK-FPA: error: {{.*}} does not support '-mfpu={{fpa|fpe|fpe2|fpe3|maverick}}'
 
@@ -190,7 +190,7 @@
 // RUN:   | FileCheck --check-prefix=CHECK-FP5-SP-D16 %s
 // RUN: %clang -target arm-linux-eabi -mfpu=fpv5-sp-d16 %s -### -o %t.o 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-FP5-SP-D16 %s
-// RUN: %clang -target arm-linux-eabi -mfpu=fp-armv8-sp-d16 -mfloat-abi=soft %s -### -o %t.o \
+// RUN: not %clang --target=arm-linux-eabi -mfpu=fp-armv8-sp-d16 -mfloat-abi=soft %s -### -o %t.o \
 // RUN:   2>&1 | FileCheck --check-prefix=CHECK-SOFT-ABI-FP %s
 // CHECK-FP5-SP-D16-NOT: "-target-feature" "+soft-float"
 // CHECK-FP5-SP-D16-DAG: "-target-feature" "+soft-float-abi"

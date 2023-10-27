@@ -227,7 +227,7 @@ void SequenceBBQuery::traverseToExitBlock(const BasicBlock *AtBB,
                           VisitedBlocks);
 }
 
-// Get Block frequencies for blocks and take most frquently executed block,
+// Get Block frequencies for blocks and take most frequently executed block,
 // walk towards the entry block from those blocks and discover the basic blocks
 // with call.
 SequenceBBQuery::BlockListTy

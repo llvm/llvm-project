@@ -101,7 +101,7 @@ void ComputeOffsetsHelper::Compute(Scope &scope) {
   }
   // Assign offsets for non-COMMON EQUIVALENCE blocks
   for (auto &[symbol, blockInfo] : equivalenceBlock_) {
-    if (!InCommonBlock(*symbol)) {
+    if (!FindCommonBlockContaining(*symbol)) {
       DoSymbol(*symbol);
       DoEquivalenceBlockBase(*symbol, blockInfo);
       offset_ = std::max(offset_, symbol->offset() + blockInfo.size);
@@ -110,7 +110,7 @@ void ComputeOffsetsHelper::Compute(Scope &scope) {
   // Process remaining non-COMMON symbols; this is all of them if there
   // was no use of EQUIVALENCE in the scope.
   for (auto &symbol : scope.GetSymbols()) {
-    if (!InCommonBlock(*symbol) &&
+    if (!FindCommonBlockContaining(*symbol) &&
         dependents_.find(symbol) == dependents_.end() &&
         equivalenceBlock_.find(symbol) == equivalenceBlock_.end()) {
       DoSymbol(*symbol);
@@ -152,7 +152,8 @@ void ComputeOffsetsHelper::DoCommonBlock(Symbol &commonBlock) {
   alignment_ = 0;
   std::size_t minSize{0};
   std::size_t minAlignment{0};
-  for (auto &object : details.objects()) {
+  UnorderedSymbolSet previous;
+  for (auto object : details.objects()) {
     Symbol &symbol{*object};
     auto errorSite{
         commonBlock.name().empty() ? symbol.name() : commonBlock.name()};
@@ -161,6 +162,7 @@ void ComputeOffsetsHelper::DoCommonBlock(Symbol &commonBlock) {
           "COMMON block /%s/ requires %zd bytes of padding before '%s' for alignment"_port_en_US,
           commonBlock.name(), padding, symbol.name());
     }
+    previous.emplace(symbol);
     auto eqIter{equivalenceBlock_.end()};
     auto iter{dependents_.find(symbol)};
     if (iter == dependents_.end()) {
@@ -173,13 +175,13 @@ void ComputeOffsetsHelper::DoCommonBlock(Symbol &commonBlock) {
       Symbol &base{*dep.symbol};
       if (const auto *baseBlock{FindCommonBlockContaining(base)}) {
         if (baseBlock == &commonBlock) {
-          if (base.offset() != symbol.offset() - dep.offset ||
-              llvm::is_contained(details.objects(), base)) {
+          if (previous.find(SymbolRef{base}) == previous.end() ||
+              base.offset() != symbol.offset() - dep.offset) {
             context_.Say(errorSite,
                 "'%s' is storage associated with '%s' by EQUIVALENCE elsewhere in COMMON block /%s/"_err_en_US,
                 symbol.name(), base.name(), commonBlock.name());
           }
-        } else { // 8.10.3(1)
+        } else { // F'2023 8.10.3 p1
           context_.Say(errorSite,
               "'%s' in COMMON block /%s/ must not be storage associated with '%s' in COMMON block /%s/ by EQUIVALENCE"_err_en_US,
               symbol.name(), commonBlock.name(), base.name(),
@@ -193,6 +195,7 @@ void ComputeOffsetsHelper::DoCommonBlock(Symbol &commonBlock) {
         eqIter = equivalenceBlock_.find(base);
         base.get<ObjectEntityDetails>().set_commonBlock(commonBlock);
         base.set_offset(symbol.offset() - dep.offset);
+        previous.emplace(base);
       }
     }
     // Get full extent of any EQUIVALENCE block into size of COMMON ( see
@@ -321,11 +324,12 @@ auto ComputeOffsetsHelper::GetSizeAndAlignment(
     const Symbol &symbol, bool entire) -> SizeAndAlignment {
   auto &targetCharacteristics{context_.targetCharacteristics()};
   if (IsDescriptor(symbol)) {
-    const auto *derived{
-        evaluate::GetDerivedTypeSpec(evaluate::DynamicType::From(symbol))};
+    auto dyType{evaluate::DynamicType::From(symbol)};
+    const auto *derived{evaluate::GetDerivedTypeSpec(dyType)};
     int lenParams{derived ? CountLenParameters(*derived) : 0};
+    bool needAddendum{derived || (dyType && dyType->IsUnlimitedPolymorphic())};
     std::size_t size{runtime::Descriptor::SizeInBytes(
-        symbol.Rank(), derived != nullptr, lenParams)};
+        symbol.Rank(), needAddendum, lenParams)};
     return {size, targetCharacteristics.descriptorAlignment()};
   }
   if (IsProcedurePointer(symbol)) {

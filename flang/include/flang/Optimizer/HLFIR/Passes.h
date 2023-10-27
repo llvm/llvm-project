@@ -13,6 +13,7 @@
 #ifndef FORTRAN_OPTIMIZER_HLFIR_PASSES_H
 #define FORTRAN_OPTIMIZER_HLFIR_PASSES_H
 
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassRegistry.h"
 #include <memory>
@@ -23,6 +24,11 @@ namespace hlfir {
 
 std::unique_ptr<mlir::Pass> createConvertHLFIRtoFIRPass();
 std::unique_ptr<mlir::Pass> createBufferizeHLFIRPass();
+std::unique_ptr<mlir::Pass> createLowerHLFIRIntrinsicsPass();
+std::unique_ptr<mlir::Pass> createSimplifyHLFIRIntrinsicsPass();
+std::unique_ptr<mlir::Pass> createInlineElementalsPass();
+std::unique_ptr<mlir::Pass> createLowerHLFIROrderedAssignmentsPass();
+std::unique_ptr<mlir::Pass> createOptimizedBufferizationPass();
 
 #define GEN_PASS_REGISTRATION
 #include "flang/Optimizer/HLFIR/Passes.h.inc"

@@ -17,32 +17,48 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.ctype.tolower
     libc.src.ctype.toupper
 
+    # errno.h entrypoints
+    libc.src.errno.errno
+
     # fcntl.h entrypoints
     libc.src.fcntl.creat
     libc.src.fcntl.open
     libc.src.fcntl.openat
 
     # sched.h entrypoints
+    libc.src.sched.sched_get_priority_max
+    libc.src.sched.sched_get_priority_min
     libc.src.sched.sched_getaffinity
+    libc.src.sched.sched_getparam
+    libc.src.sched.sched_getscheduler
+    libc.src.sched.sched_rr_get_interval
     libc.src.sched.sched_setaffinity
+    libc.src.sched.sched_setparam
+    libc.src.sched.sched_setscheduler
+    libc.src.sched.sched_yield
 
     # string.h entrypoints
     libc.src.string.bcmp
     libc.src.string.bcopy
     libc.src.string.bzero
+    libc.src.string.index
     libc.src.string.memccpy
     libc.src.string.memchr
     libc.src.string.memcmp
     libc.src.string.memcpy
+    libc.src.string.memmem
     libc.src.string.memmove
     libc.src.string.mempcpy
     libc.src.string.memrchr
     libc.src.string.memset
+    libc.src.string.rindex
     libc.src.string.stpcpy
     libc.src.string.stpncpy
     libc.src.string.strcasecmp
+    libc.src.string.strcasestr
     libc.src.string.strcat
     libc.src.string.strchr
+    libc.src.string.strchrnul
     libc.src.string.strcmp
     libc.src.string.strcoll
     libc.src.string.strcpy
@@ -61,11 +77,13 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.string.strnlen
     libc.src.string.strpbrk
     libc.src.string.strrchr
+    libc.src.string.strsep
     libc.src.string.strsignal
     libc.src.string.strspn
     libc.src.string.strstr
     libc.src.string.strtok
     libc.src.string.strtok_r
+    libc.src.string.strxfrm
 
     # inttypes.h entrypoints
     libc.src.inttypes.imaxabs
@@ -86,6 +104,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.llabs
     libc.src.stdlib.lldiv
     libc.src.stdlib.qsort
+    libc.src.stdlib.qsort_r
     libc.src.stdlib.rand
     libc.src.stdlib.srand
     libc.src.stdlib.strtod
@@ -107,6 +126,15 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdio.remove
     libc.src.stdio.sprintf
     libc.src.stdio.snprintf
+    libc.src.stdio.fprintf
+    libc.src.stdio.printf
+    libc.src.stdio.vsprintf
+    libc.src.stdio.vsnprintf
+    libc.src.stdio.vfprintf
+    libc.src.stdio.vprintf
+    libc.src.stdio.sscanf
+    libc.src.stdio.scanf
+    libc.src.stdio.fscanf
 
     # sys/mman.h entrypoints
     libc.src.sys.mman.madvise
@@ -124,6 +152,9 @@ set(TARGET_LIBC_ENTRYPOINTS
 
     # sys/sendfile entrypoints
     libc.src.sys.sendfile.sendfile
+
+    # sys/socket.h entrypoints
+    libc.src.sys.socket.socket
 
     # sys/stat.h entrypoints
     libc.src.sys.stat.chmod
@@ -189,6 +220,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.unlink
     libc.src.unistd.unlinkat
     libc.src.unistd.write
+
+    # wchar.h entrypoints
+    libc.src.wchar.wctob
 )
 
 set(TARGET_LIBM_ENTRYPOINTS
@@ -210,8 +244,9 @@ set(TARGET_LIBM_ENTRYPOINTS
 
     # math.h entrypoints
     libc.src.math.acosf
-    libc.src.math.asin
+    libc.src.math.acoshf
     libc.src.math.asinf
+    libc.src.math.asinhf
     libc.src.math.atanf
     libc.src.math.atanhf
     libc.src.math.copysign
@@ -223,9 +258,14 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.cos
     libc.src.math.coshf
     libc.src.math.cosf
+    libc.src.math.erff
+    libc.src.math.exp
     libc.src.math.expf
+    libc.src.math.exp10
     libc.src.math.exp10f
+    libc.src.math.exp2
     libc.src.math.exp2f
+    libc.src.math.expm1
     libc.src.math.expm1f
     libc.src.math.fabs
     libc.src.math.fabsf
@@ -265,8 +305,11 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.llroundl
     libc.src.math.log10
     libc.src.math.log10f
+    libc.src.math.log1p
     libc.src.math.log1pf
+    libc.src.math.log2
     libc.src.math.log2f
+    libc.src.math.log
     libc.src.math.logf
     libc.src.math.logb
     libc.src.math.logbf
@@ -286,7 +329,6 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.nextafter
     libc.src.math.nextafterf
     libc.src.math.nextafterl
-    libc.src.math.pow
     libc.src.math.remainderf
     libc.src.math.remainder
     libc.src.math.remainderl
@@ -299,6 +341,9 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.round
     libc.src.math.roundf
     libc.src.math.roundl
+    libc.src.math.scalbn
+    libc.src.math.scalbnf
+    libc.src.math.scalbnl
     libc.src.math.sin
     libc.src.math.sincosf
     libc.src.math.sinhf
@@ -324,6 +369,12 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.dirent.dirfd
     libc.src.dirent.opendir
     libc.src.dirent.readdir
+
+    # network.h entrypoints
+    libc.src.network.htonl
+    libc.src.network.htons
+    libc.src.network.ntohl
+    libc.src.network.ntohs
 
     # pthread.h entrypoints
     libc.src.pthread.pthread_atfork
@@ -394,13 +445,10 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.stdio.funlockfile
     libc.src.stdio.fwrite
     libc.src.stdio.fwrite_unlocked
-    libc.src.stdio.fprintf
     libc.src.stdio.getc
     libc.src.stdio.getc_unlocked
-    libc.src.stdio.printf
-    libc.src.stdio.sscanf
-    libc.src.stdio.scanf
-    libc.src.stdio.fscanf
+    libc.src.stdio.getchar
+    libc.src.stdio.getchar_unlocked
     libc.src.stdio.putc
     libc.src.stdio.putchar
     libc.src.stdio.puts
@@ -483,6 +531,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.unistd.optind
     libc.src.unistd.optopt
     libc.src.unistd.opterr
+    libc.src.unistd.swab
 
     # sys/select.h entrypoints
     libc.src.sys.select.select

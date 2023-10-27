@@ -18,3 +18,21 @@ int d() {
   new __auto_type; // expected-error {{'__auto_type' not allowed in type allocated by 'new'}}
 }
 
+namespace TestDeductionFail {
+
+template<typename T>
+void caller(T x) {x.fun();} // expected-error {{parameter type 'TestDeductionFail::Abstract' is an abstract class}}
+
+template<typename T>
+auto getCaller(){
+  return caller<T>; // expected-note {{in instantiation of function template specialization 'TestDeductionFail::caller<TestDeductionFail::Abstract>' requested here}}
+}
+
+class Abstract{
+  public:
+    void fun();
+    virtual void vfun()=0; // expected-note {{unimplemented pure virtual method 'vfun' in 'Abstract'}}
+    void call(){getCaller<Abstract>()(*this);} // expected-error {{allocating an object of abstract class type 'TestDeductionFail::Abstract'}}
+};
+
+}

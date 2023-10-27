@@ -281,6 +281,32 @@ join:
   ret i32 %v
 }
 
+define i32 @addrspace_diff_remove_alloca(i1 %cond) {
+; CHECK-LABEL: @addrspace_diff_remove_alloca(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF:%.*]], label [[JOIN:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[PHI1:%.*]] = phi ptr addrspace(1) [ @g2, [[IF]] ], [ getelementptr inbounds ([32 x i8], ptr addrspace(1) @g2, i64 0, i64 2), [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr addrspace(1) [[PHI1]], align 4
+; CHECK-NEXT:    ret i32 [[V]]
+;
+entry:
+  %a = alloca [32 x i8]
+  call void @llvm.memcpy.p0.p1.i64(ptr %a, ptr addrspace(1) @g2, i64 32, i1 false)
+  %gep = getelementptr inbounds [32 x i8], ptr %a, i32 0, i32 2
+  br i1 %cond, label %if, label %join
+
+if:
+  br label %join
+
+join:
+  %phi = phi ptr [ %a, %if ], [ %gep, %entry ]
+  %v = load i32, ptr %phi
+  ret i32 %v
+}
+
 define i32 @phi_loop(i1 %c) {
 ; CHECK-LABEL: @phi_loop(
 ; CHECK-NEXT:  entry:
@@ -340,9 +366,7 @@ exit:
 define i8 @select_same_addrspace_remove_alloca(i1 %cond, ptr %p) {
 ; CHECK-LABEL: @select_same_addrspace_remove_alloca(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [32 x i8], align 1
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 1 dereferenceable(32) [[ALLOCA]], ptr noundef nonnull align 16 dereferenceable(32) @g1, i64 32, i1 false)
-; CHECK-NEXT:    [[PTR:%.*]] = select i1 [[COND:%.*]], ptr [[ALLOCA]], ptr [[P:%.*]]
+; CHECK-NEXT:    [[PTR:%.*]] = select i1 [[COND:%.*]], ptr @g1, ptr [[P:%.*]]
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i8, ptr [[PTR]], align 1
 ; CHECK-NEXT:    ret i8 [[LOAD]]
 ;
@@ -391,13 +415,7 @@ entry:
 define i8 @select_diff_addrspace_remove_alloca(i1 %cond, ptr %p) {
 ; CHECK-LABEL: @select_diff_addrspace_remove_alloca(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [32 x i8], align 1
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p1.i64(ptr noundef nonnull align 1 dereferenceable(32) [[ALLOCA]], ptr addrspace(1) noundef align 16 dereferenceable(32) @g2, i64 32, i1 false)
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [32 x i8], ptr [[ALLOCA]], i64 0, i64 2
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], ptr [[ALLOCA]], ptr [[GEP]]
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i8, ptr [[SEL]], i64 4
-; CHECK-NEXT:    [[LOAD:%.*]] = load i8, ptr [[GEP2]], align 1
-; CHECK-NEXT:    ret i8 [[LOAD]]
+; CHECK-NEXT:    ret i8 0
 ;
 entry:
   %alloca = alloca [32 x i8]
@@ -409,6 +427,40 @@ entry:
   ret i8 %load
 }
 
+declare i8 @readonly_callee(ptr readonly nocapture)
+
+define i8 @call_readonly_remove_alloca() {
+; CHECK-LABEL: @call_readonly_remove_alloca(
+; CHECK-NEXT:    [[V:%.*]] = call i8 @readonly_callee(ptr nonnull @g1)
+; CHECK-NEXT:    ret i8 [[V]]
+;
+  %alloca = alloca [32 x i8], addrspace(1)
+  call void @llvm.memcpy.p1.p0.i64(ptr addrspace(1) %alloca, ptr @g1, i64 32, i1 false)
+  %p = addrspacecast ptr addrspace(1) %alloca to ptr
+  %v = call i8 @readonly_callee(ptr %p)
+  ret i8 %v
+}
+
+define i8 @call_readonly_keep_alloca2() {
+; CHECK-LABEL: @call_readonly_keep_alloca2(
+; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [32 x i8], align 1, addrspace(1)
+; CHECK-NEXT:    call void @llvm.memcpy.p1.p0.i64(ptr addrspace(1) noundef align 1 dereferenceable(16) [[ALLOCA]], ptr noundef nonnull align 16 dereferenceable(16) @g1, i64 16, i1 false)
+; CHECK-NEXT:    [[A1:%.*]] = getelementptr inbounds [32 x i8], ptr addrspace(1) [[ALLOCA]], i64 0, i64 16
+; CHECK-NEXT:    call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) noundef align 1 dereferenceable(16) [[A1]], ptr addrspace(1) noundef align 16 dereferenceable(16) @g2, i64 16, i1 false)
+; CHECK-NEXT:    [[P:%.*]] = addrspacecast ptr addrspace(1) [[ALLOCA]] to ptr
+; CHECK-NEXT:    [[V:%.*]] = call i8 @readonly_callee(ptr [[P]])
+; CHECK-NEXT:    ret i8 [[V]]
+;
+  %alloca = alloca [32 x i8], addrspace(1)
+  call void @llvm.memcpy.p1.p0.i64(ptr addrspace(1) %alloca, ptr @g1, i64 16, i1 false)
+  %a1 = getelementptr inbounds [32 x i8], ptr addrspace(1) %alloca, i32 0, i32 16
+  call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) %a1, ptr addrspace(1) @g2, i64 16, i1 false)
+  %p = addrspacecast ptr addrspace(1) %alloca to ptr
+  %v = call i8 @readonly_callee(ptr %p)
+  ret i8 %v
+}
+
 declare void @llvm.memcpy.p1.p0.i64(ptr addrspace(1), ptr, i64, i1)
 declare void @llvm.memcpy.p0.p0.i64(ptr, ptr, i64, i1)
 declare void @llvm.memcpy.p0.p1.i64(ptr, ptr addrspace(1), i64, i1)
+declare void @llvm.memcpy.p1.p1.i64(ptr addrspace(1), ptr addrspace(1), i64, i1)

@@ -31,7 +31,7 @@ _start:
     .int32 undef
     .int32 .Ld
 
-# CHECK:          Name:            .debug_info
-# CHECK-NEXT:     Payload:         02000000FFFFFFFF00000000
 # CHECK:          Name:            .debug_int
 # CHECK-NEXT:     Payload:         '01000000'
+# CHECK:          Name:            .debug_info
+# CHECK-NEXT:     Payload:         02000000FFFFFFFF00000000

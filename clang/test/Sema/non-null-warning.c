@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -fsyntax-only -Wnonnull -Wnullability %s -verify
-// rdar://19160762
 
 #if __has_feature(nullability)
 #else

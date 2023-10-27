@@ -92,8 +92,6 @@ int main() {
   std::u16string_view u16_empty(u"");
   std::u32string_view u32_string(U"🍄🍅🍆🍌");
   std::u32string_view u32_empty(U"");
-  std::basic_string<unsigned char> uchar_source(10, 'a');
-  std::basic_string_view<unsigned char> uchar(uchar_source.data(), 5);
   std::string_view *null_str = nullptr;
 
   std::string hello = "Hellooo ";

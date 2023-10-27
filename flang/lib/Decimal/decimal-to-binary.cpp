@@ -298,7 +298,11 @@ ConversionToBinaryResult<PREC> IntermediateFloat<PREC>::ToBinary(
   if (expo >= Binary::maxExponent) {
     expo = Binary::maxExponent; // Inf
     flags |= Overflow;
-    fraction = 0;
+    if constexpr (Binary::bits == 80) { // x87
+      fraction = IntType{1} << 63;
+    } else {
+      fraction = 0;
+    }
   }
   using Raw = typename Binary::RawType;
   Raw raw = static_cast<Raw>(isNegative) << (Binary::bits - 1);
@@ -407,36 +411,40 @@ BigRadixFloatingPointNumber<PREC, LOG10RADIX>::ConvertToBinary(
     return result;
   } else {
     // Could not parse a decimal floating-point number.  p has been
-    // advanced over any leading spaces.
-    if ((!limit || limit >= p + 3) && toupper(p[0]) == 'N' &&
-        toupper(p[1]) == 'A' && toupper(p[2]) == 'N') {
+    // advanced over any leading spaces.  Most Fortran compilers set
+    // the sign bit for -NaN.
+    const char *q{p};
+    if (!limit || q < limit) {
+      isNegative_ = *q == '-';
+      if (isNegative_ || *q == '+') {
+        ++q;
+      }
+    }
+    if ((!limit || limit >= q + 3) && toupper(q[0]) == 'N' &&
+        toupper(q[1]) == 'A' && toupper(q[2]) == 'N') {
       // NaN
-      p += 3;
+      p = q + 3;
+      bool isQuiet{true};
       if ((!limit || p < limit) && *p == '(') {
         int depth{1};
         do {
           ++p;
           if (limit && p >= limit) {
             // Invalid input
-            return {Real{NaN()}, Invalid};
+            return {Real{NaN(false)}, Invalid};
           } else if (*p == '(') {
             ++depth;
           } else if (*p == ')') {
             --depth;
+          } else if (*p != ' ') {
+            // Implementation dependent, but other compilers
+            // all return quiet NaNs.
           }
         } while (depth > 0);
         ++p;
       }
-      return {Real{NaN()}};
-    } else {
-      // Try to parse Inf, maybe with a sign
-      const char *q{p};
-      if (!limit || q < limit) {
-        isNegative_ = *q == '-';
-        if (isNegative_ || *q == '+') {
-          ++q;
-        }
-      }
+      return {Real{NaN(isQuiet)}};
+    } else { // Inf?
       if ((!limit || limit >= q + 3) && toupper(q[0]) == 'I' &&
           toupper(q[1]) == 'N' && toupper(q[2]) == 'F') {
         if ((!limit || limit >= q + 8) && toupper(q[3]) == 'I' &&

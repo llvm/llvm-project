@@ -32,4 +32,45 @@ def CheckUsesPass : Pass<"transform-dialect-check-uses"> {
   }];
 }
 
+def InferEffectsPass : Pass<"transform-infer-effects"> {
+  let summary = "infer transform side effects for symbols";
+  let description = [{
+    This pass analyzes the definitions of transform dialect callable symbol
+    operations, such as `transform.named_sequence`, and annotates the symbol
+    arguments with attributes indicating the side effects that the nested
+    operations have on them.
+  }];
+}
+
+def PreloadLibraryPass : Pass<"transform-preload-library"> {
+  let summary = "preload transform dialect library";
+  let description = [{
+    This pass preloads a transform library and makes it available to subsequent
+    transform interpreter passes. The preloading occurs into the Transform
+    dialect and thus provides very limited functionality that does not scale.
+
+    Warning: Only a single such pass should exist for a given MLIR context.
+    This is a temporary solution until a resource-based solution is available.
+    TODO: investigate using a resource blob if some ownership mode allows it.
+  }];
+  let options = [
+    ListOption<"transformLibraryPaths", "transform-library-paths", "std::string",
+    "Optional paths to files with modules that should be merged into the "
+    "transform module to provide the definitions of external named sequences.">
+  ];
+}
+
+def InterpreterPass : Pass<"transform-interpreter"> {
+  let summary = "transform dialect interpreter";
+  let description = [{
+    This pass runs the transform dialect interpreter and applies the named
+    sequence transformation specified by the provided name (defaults to
+    `__transform_main`).
+  }];
+  let options = [
+    Option<"entryPoint", "entry-point", "std::string",
+           /*default=*/[{"__transform_main"}],
+           "Entry point of the pass pipeline.">,
+  ];
+}
 #endif // MLIR_DIALECT_TRANSFORM_TRANSFORMS_PASSES

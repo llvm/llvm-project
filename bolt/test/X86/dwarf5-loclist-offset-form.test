@@ -47,7 +47,7 @@
 
 # POSTCHECK: DW_TAG_compile_unit
 # POSTCHECK: DW_AT_loclists_base [DW_FORM_sec_offset]  (0x00000045)
-# POSTCHECK: DW_TAG_variable [11]
+# POSTCHECK: DW_TAG_variable [5]
 # POSTCHECK-NEXT: DW_AT_location [DW_FORM_loclistx] (indexed (0x0)
 # POSTCHECK-NEXT: [0x[[#ADDR7]]
 # POSTCHECK-SAME: 0x[[#ADDR7 + 0x3]]

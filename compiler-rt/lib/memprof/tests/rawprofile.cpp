@@ -4,6 +4,7 @@
 #include <memory>
 
 #include "profile/MemProfData.inc"
+#include "sanitizer_common/sanitizer_array_ref.h"
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_procmaps.h"
 #include "sanitizer_common/sanitizer_stackdepot.h"
@@ -15,27 +16,14 @@ namespace {
 
 using ::__memprof::MIBMapTy;
 using ::__memprof::SerializeToRawProfile;
-using ::__sanitizer::MemoryMappedSegment;
-using ::__sanitizer::MemoryMappingLayoutBase;
 using ::__sanitizer::StackDepotPut;
 using ::__sanitizer::StackTrace;
 using ::llvm::memprof::MemInfoBlock;
-using ::testing::_;
-using ::testing::Action;
-using ::testing::DoAll;
-using ::testing::Return;
-using ::testing::SetArgPointee;
 
-class MockMemoryMappingLayout final : public MemoryMappingLayoutBase {
-public:
-  MOCK_METHOD(bool, Next, (MemoryMappedSegment *), (override));
-  MOCK_METHOD(void, Reset, (), (override));
-};
-
-uint64_t PopulateFakeMap(const MemInfoBlock &FakeMIB, uint64_t StackPCBegin,
+uint64_t PopulateFakeMap(const MemInfoBlock &FakeMIB, uintptr_t StackPCBegin,
                          MIBMapTy &FakeMap) {
   constexpr int kSize = 5;
-  uint64_t array[kSize];
+  uintptr_t array[kSize];
   for (int i = 0; i < kSize; i++) {
     array[i] = StackPCBegin + i;
   }
@@ -56,26 +44,13 @@ template <class T = uint64_t> T Read(char *&Buffer) {
 }
 
 TEST(MemProf, Basic) {
-  MockMemoryMappingLayout Layout;
-  MemoryMappedSegment FakeSegment;
-  memset(&FakeSegment, 0, sizeof(FakeSegment));
-  FakeSegment.start = 0x10;
-  FakeSegment.end = 0x20;
-  FakeSegment.offset = 0x10;
-  uint8_t uuid[__sanitizer::kModuleUUIDSize] = {0xC, 0x0, 0xF, 0xF, 0xE, 0xE};
-  memcpy(FakeSegment.uuid, uuid, __sanitizer::kModuleUUIDSize);
-  FakeSegment.protection =
-      __sanitizer::kProtectionExecute | __sanitizer::kProtectionRead;
-
-  const Action<bool(MemoryMappedSegment *)> SetSegment =
-      DoAll(SetArgPointee<0>(FakeSegment), Return(true));
-  EXPECT_CALL(Layout, Next(_))
-      .WillOnce(SetSegment)
-      .WillOnce(Return(false))
-      .WillOnce(SetSegment)
-      .WillRepeatedly(Return(false));
-
-  EXPECT_CALL(Layout, Reset).Times(2);
+  __sanitizer::LoadedModule FakeModule;
+  FakeModule.addAddressRange(/*begin=*/0x10, /*end=*/0x20, /*executable=*/true,
+                             /*writable=*/false, /*name=*/"");
+  const char uuid[MEMPROF_BUILDID_MAX_SIZE] = {0xC, 0x0, 0xF, 0xF, 0xE, 0xE};
+  FakeModule.setUuid(uuid, MEMPROF_BUILDID_MAX_SIZE);
+  __sanitizer::ArrayRef<__sanitizer::LoadedModule> Modules(&FakeModule,
+                                                           (&FakeModule) + 1);
 
   MIBMapTy FakeMap;
   MemInfoBlock FakeMIB;
@@ -90,7 +65,7 @@ TEST(MemProf, Basic) {
   FakeIds[1] = PopulateFakeMap(FakeMIB, /*StackPCBegin=*/3, FakeMap);
 
   char *Ptr = nullptr;
-  uint64_t NumBytes = SerializeToRawProfile(FakeMap, Layout, Ptr);
+  uint64_t NumBytes = SerializeToRawProfile(FakeMap, Modules, Ptr);
   const char *Buffer = Ptr;
 
   ASSERT_GT(NumBytes, 0ULL);
@@ -111,16 +86,16 @@ TEST(MemProf, Basic) {
   // Should be equal to the size of the raw profile header.
   EXPECT_EQ(SegmentOffset, 48ULL);
 
-  // We expect only 1 segment entry, 8b for the count and 56b for SegmentEntry
+  // We expect only 1 segment entry, 8b for the count and 64b for SegmentEntry
   // in memprof_rawprofile.cpp.
-  EXPECT_EQ(MIBOffset - SegmentOffset, 64ULL);
+  EXPECT_EQ(MIBOffset - SegmentOffset, 72ULL);
 
-  EXPECT_EQ(MIBOffset, 112ULL);
+  EXPECT_EQ(MIBOffset, 120ULL);
   // We expect 2 mib entry, 8b for the count and sizeof(uint64_t) +
   // sizeof(MemInfoBlock) contains stack id + MeminfoBlock.
   EXPECT_EQ(StackOffset - MIBOffset, 8 + 2 * (8 + sizeof(MemInfoBlock)));
 
-  EXPECT_EQ(StackOffset, 336ULL);
+  EXPECT_EQ(StackOffset, 408ULL);
   // We expect 2 stack entries, with 5 frames - 8b for total count,
   // 2 * (8b for id, 8b for frame count and 5*8b for fake frames).
   // Since this is the last section, there may be additional padding at the end
@@ -128,16 +103,15 @@ TEST(MemProf, Basic) {
   EXPECT_GE(TotalSize - StackOffset, 8ULL + 2 * (8 + 8 + 5 * 8));
 
   // ============= Check contents.
-  // The Uuid field is not yet populated on Linux-Elf by the sanitizer procmaps
-  // library, so we expect it to be filled with 0 for now.
-  unsigned char ExpectedSegmentBytes[64] = {
-      0x01, 0, 0, 0, 0, 0, 0, 0, // Number of entries
-      0x10, 0, 0, 0, 0, 0, 0, 0, // Start
-      0x20, 0, 0, 0, 0, 0, 0, 0, // End
-      0x10, 0, 0, 0, 0, 0, 0, 0, // Offset
-      0x0,                       // Uuid
+  unsigned char ExpectedSegmentBytes[72] = {
+      0x01, 0,   0,   0,   0,   0,  0, 0, // Number of entries
+      0x10, 0,   0,   0,   0,   0,  0, 0, // Start
+      0x20, 0,   0,   0,   0,   0,  0, 0, // End
+      0x0,  0,   0,   0,   0,   0,  0, 0, // Offset
+      0x20, 0,   0,   0,   0,   0,  0, 0, // UuidSize
+      0xC,  0x0, 0xF, 0xF, 0xE, 0xE       // Uuid
   };
-  EXPECT_EQ(memcmp(Buffer + SegmentOffset, ExpectedSegmentBytes, 64), 0);
+  EXPECT_EQ(memcmp(Buffer + SegmentOffset, ExpectedSegmentBytes, 72), 0);
 
   // Check that the number of entries is 2.
   EXPECT_EQ(*reinterpret_cast<const uint64_t *>(Buffer + MIBOffset), 2ULL);
@@ -193,5 +167,4 @@ TEST(MemProf, Basic) {
                    sizeof(ExpectedStackBytes[1])),
             0);
 }
-
 } // namespace

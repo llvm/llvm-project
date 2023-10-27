@@ -5,8 +5,8 @@
 define <2 x double> @test_negation_move_to_result(<6 x double> %a, <3 x double> %b) {
 ; CHECK-LABEL: @test_negation_move_to_result(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x double> @llvm.matrix.multiply.v2f64.v6f64.v3f64(<6 x double> [[A:%.*]], <3 x double> [[B:%.*]], i32 2, i32 3, i32 1)
-; CHECK-NEXT:    [[TMP2:%.*]] = fneg <2 x double> [[TMP1]]
-; CHECK-NEXT:    ret <2 x double> [[TMP2]]
+; CHECK-NEXT:    [[RES:%.*]] = fneg <2 x double> [[TMP1]]
+; CHECK-NEXT:    ret <2 x double> [[RES]]
 ;
   %a.neg = fneg <6 x double> %a
   %res = tail call <2 x double> @llvm.matrix.multiply.v2f64.v6f64.v3f64(<6 x double> %a.neg, <3 x double> %b, i32 2, i32 3, i32 1)
@@ -18,8 +18,8 @@ define <2 x double> @test_negation_move_to_result(<6 x double> %a, <3 x double> 
 define <2 x double> @test_negation_move_to_result_with_fastflags(<6 x double> %a, <3 x double> %b) {
 ; CHECK-LABEL: @test_negation_move_to_result_with_fastflags(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call fast <2 x double> @llvm.matrix.multiply.v2f64.v6f64.v3f64(<6 x double> [[A:%.*]], <3 x double> [[B:%.*]], i32 2, i32 3, i32 1)
-; CHECK-NEXT:    [[TMP2:%.*]] = fneg fast <2 x double> [[TMP1]]
-; CHECK-NEXT:    ret <2 x double> [[TMP2]]
+; CHECK-NEXT:    [[RES:%.*]] = fneg fast <2 x double> [[TMP1]]
+; CHECK-NEXT:    ret <2 x double> [[RES]]
 ;
   %a.neg = fneg <6 x double> %a
   %res = tail call fast <2 x double> @llvm.matrix.multiply.v2f64.v6f64.v3f64(<6 x double> %a.neg, <3 x double> %b, i32 2, i32 3, i32 1)
@@ -29,8 +29,8 @@ define <2 x double> @test_negation_move_to_result_with_fastflags(<6 x double> %a
 define <2 x double> @test_negation_move_to_result_with_nnan_flag(<6 x double> %a, <3 x double> %b) {
 ; CHECK-LABEL: @test_negation_move_to_result_with_nnan_flag(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call nnan <2 x double> @llvm.matrix.multiply.v2f64.v6f64.v3f64(<6 x double> [[A:%.*]], <3 x double> [[B:%.*]], i32 2, i32 3, i32 1)
-; CHECK-NEXT:    [[TMP2:%.*]] = fneg nnan <2 x double> [[TMP1]]
-; CHECK-NEXT:    ret <2 x double> [[TMP2]]
+; CHECK-NEXT:    [[RES:%.*]] = fneg nnan <2 x double> [[TMP1]]
+; CHECK-NEXT:    ret <2 x double> [[RES]]
 ;
   %a.neg = fneg <6 x double> %a
   %res = tail call nnan <2 x double> @llvm.matrix.multiply.v2f64.v6f64.v3f64(<6 x double> %a.neg, <3 x double> %b, i32 2, i32 3, i32 1)
@@ -40,8 +40,8 @@ define <2 x double> @test_negation_move_to_result_with_nnan_flag(<6 x double> %a
 define <2 x double> @test_negation_move_to_result_with_nsz_flag(<6 x double> %a, <3 x double> %b) {
 ; CHECK-LABEL: @test_negation_move_to_result_with_nsz_flag(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call nsz <2 x double> @llvm.matrix.multiply.v2f64.v6f64.v3f64(<6 x double> [[A:%.*]], <3 x double> [[B:%.*]], i32 2, i32 3, i32 1)
-; CHECK-NEXT:    [[TMP2:%.*]] = fneg nsz <2 x double> [[TMP1]]
-; CHECK-NEXT:    ret <2 x double> [[TMP2]]
+; CHECK-NEXT:    [[RES:%.*]] = fneg nsz <2 x double> [[TMP1]]
+; CHECK-NEXT:    ret <2 x double> [[RES]]
 ;
   %a.neg = fneg <6 x double> %a
   %res = tail call nsz <2 x double> @llvm.matrix.multiply.v2f64.v6f64.v3f64(<6 x double> %a.neg, <3 x double> %b, i32 2, i32 3, i32 1)
@@ -51,8 +51,8 @@ define <2 x double> @test_negation_move_to_result_with_nsz_flag(<6 x double> %a,
 define <2 x double> @test_negation_move_to_result_with_fastflag_on_negation(<6 x double> %a, <3 x double> %b) {
 ; CHECK-LABEL: @test_negation_move_to_result_with_fastflag_on_negation(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x double> @llvm.matrix.multiply.v2f64.v6f64.v3f64(<6 x double> [[A:%.*]], <3 x double> [[B:%.*]], i32 2, i32 3, i32 1)
-; CHECK-NEXT:    [[TMP2:%.*]] = fneg <2 x double> [[TMP1]]
-; CHECK-NEXT:    ret <2 x double> [[TMP2]]
+; CHECK-NEXT:    [[RES:%.*]] = fneg <2 x double> [[TMP1]]
+; CHECK-NEXT:    ret <2 x double> [[RES]]
 ;
   %a.neg = fneg fast<6 x double> %a
   %res = tail call <2 x double> @llvm.matrix.multiply.v2f64.v6f64.v3f64(<6 x double> %a.neg, <3 x double> %b, i32 2, i32 3, i32 1)
@@ -88,8 +88,8 @@ define <9 x double> @test_move_negation_to_second_operand_with_fast_flags(<27 x 
 define <2 x double> @test_negation_move_to_result_from_second_operand(<3 x double> %a, <6 x double> %b){
 ; CHECK-LABEL: @test_negation_move_to_result_from_second_operand(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x double> @llvm.matrix.multiply.v2f64.v3f64.v6f64(<3 x double> [[A:%.*]], <6 x double> [[B:%.*]], i32 1, i32 3, i32 2)
-; CHECK-NEXT:    [[TMP2:%.*]] = fneg <2 x double> [[TMP1]]
-; CHECK-NEXT:    ret <2 x double> [[TMP2]]
+; CHECK-NEXT:    [[RES:%.*]] = fneg <2 x double> [[TMP1]]
+; CHECK-NEXT:    ret <2 x double> [[RES]]
 ;
   %b.neg = fneg <6 x double> %b
   %res = tail call <2 x double> @llvm.matrix.multiply.v2f64.v3f64.v6f64(<3 x double> %a, <6 x double> %b.neg, i32 1, i32 3, i32 2)
@@ -285,8 +285,8 @@ define <6 x double> @chain_of_matrix_mutliplies_with_two_negations(<3 x double> 
 ; CHECK-NEXT:    [[TMP1:%.*]] = fneg <3 x double> [[A:%.*]]
 ; CHECK-NEXT:    [[RES:%.*]] = tail call <15 x double> @llvm.matrix.multiply.v15f64.v3f64.v5f64(<3 x double> [[TMP1]], <5 x double> [[B:%.*]], i32 3, i32 1, i32 5)
 ; CHECK-NEXT:    [[TMP2:%.*]] = call <6 x double> @llvm.matrix.multiply.v6f64.v15f64.v10f64(<15 x double> [[RES]], <10 x double> [[C:%.*]], i32 3, i32 5, i32 2)
-; CHECK-NEXT:    [[TMP3:%.*]] = fneg <6 x double> [[TMP2]]
-; CHECK-NEXT:    ret <6 x double> [[TMP3]]
+; CHECK-NEXT:    [[RES_2:%.*]] = fneg <6 x double> [[TMP2]]
+; CHECK-NEXT:    ret <6 x double> [[RES_2]]
 ;
   %b.neg = fneg <5 x double> %b
   %res = tail call <15 x double> @llvm.matrix.multiply.v15f64.v3f64.v5f64(<3 x double> %a, <5 x double> %b.neg, i32 3, i32 1, i32 5)
@@ -300,8 +300,8 @@ define <6 x double> @chain_of_matrix_mutliplies_propagation(<15 x double> %a, <2
 ; CHECK-LABEL: @chain_of_matrix_mutliplies_propagation(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <12 x double> @llvm.matrix.multiply.v12f64.v15f64.v20f64(<15 x double> [[A:%.*]], <20 x double> [[B:%.*]], i32 3, i32 5, i32 4)
 ; CHECK-NEXT:    [[TMP2:%.*]] = call <6 x double> @llvm.matrix.multiply.v6f64.v12f64.v8f64(<12 x double> [[TMP1]], <8 x double> [[C:%.*]], i32 3, i32 4, i32 2)
-; CHECK-NEXT:    [[TMP3:%.*]] = fneg <6 x double> [[TMP2]]
-; CHECK-NEXT:    ret <6 x double> [[TMP3]]
+; CHECK-NEXT:    [[RES_2:%.*]] = fneg <6 x double> [[TMP2]]
+; CHECK-NEXT:    ret <6 x double> [[RES_2]]
 ;
   %a.neg = fneg <15 x double> %a
   %res = tail call <12 x double> @llvm.matrix.multiply.v12f64.v15f64.v20f64(<15 x double> %a.neg, <20 x double> %b, i32 3, i32 5, i32 4)

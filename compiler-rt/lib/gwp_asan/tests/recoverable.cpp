@@ -17,16 +17,6 @@
 #include "gwp_asan/crash_handler.h"
 #include "gwp_asan/tests/harness.h"
 
-void CheckOnlyOneGwpAsanCrash(const std::string &OutputBuffer) {
-  const char *kGwpAsanErrorString = "GWP-ASan detected a memory error";
-  size_t FirstIndex = OutputBuffer.find(kGwpAsanErrorString);
-  ASSERT_NE(FirstIndex, std::string::npos) << "Didn't detect a GWP-ASan crash";
-  ASSERT_EQ(OutputBuffer.find(kGwpAsanErrorString, FirstIndex + 1),
-            std::string::npos)
-      << "Detected more than one GWP-ASan crash:\n"
-      << OutputBuffer;
-}
-
 TEST_P(BacktraceGuardedPoolAllocator, MultipleDoubleFreeOnlyOneOutput) {
   SCOPED_TRACE("");
   void *Ptr = AllocateMemory(GPA);
@@ -182,9 +172,6 @@ void runInterThreadThrashingSingleAlloc(unsigned NumIterations,
   std::atomic<bool> StartingGun{false};
   std::vector<std::thread> Threads;
   constexpr unsigned kNumThreads = 4;
-  if (std::thread::hardware_concurrency() < kNumThreads) {
-    GTEST_SKIP() << "Not enough threads to run this test";
-  }
 
   char *Ptr = static_cast<char *>(AllocateMemory(*GPA));
 
@@ -205,6 +192,3 @@ TEST_P(BacktraceGuardedPoolAllocator, InterThreadThrashingSingleAlloc) {
   runInterThreadThrashingSingleAlloc(kNumIterations, &GPA);
   CheckOnlyOneGwpAsanCrash(GetOutputBuffer());
 }
-
-INSTANTIATE_TEST_SUITE_P(RecoverableTests, BacktraceGuardedPoolAllocator,
-                         /* Recoverable */ testing::Values(true));

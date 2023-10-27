@@ -48,10 +48,9 @@ static inline unsigned HashHMapKey(StringRef Str) {
 /// map.  If it doesn't look like a HeaderMap, it gives up and returns null.
 /// If it looks like a HeaderMap but is obviously corrupted, it puts a reason
 /// into the string error argument and returns null.
-std::unique_ptr<HeaderMap> HeaderMap::Create(const FileEntry *FE,
-                                             FileManager &FM) {
+std::unique_ptr<HeaderMap> HeaderMap::Create(FileEntryRef FE, FileManager &FM) {
   // If the file is too small to be a header map, ignore it.
-  unsigned FileSize = FE->getSize();
+  unsigned FileSize = FE.getSize();
   if (FileSize <= sizeof(HMapHeader)) return nullptr;
 
   auto FileBuffer = FM.getBufferForFile(FE);
@@ -77,8 +76,8 @@ bool HeaderMapImpl::checkHeader(const llvm::MemoryBuffer &File,
   if (Header->Magic == HMAP_HeaderMagicNumber &&
       Header->Version == HMAP_HeaderVersion)
     NeedsByteSwap = false;
-  else if (Header->Magic == llvm::ByteSwap_32(HMAP_HeaderMagicNumber) &&
-           Header->Version == llvm::ByteSwap_16(HMAP_HeaderVersion))
+  else if (Header->Magic == llvm::byteswap<uint32_t>(HMAP_HeaderMagicNumber) &&
+           Header->Version == llvm::byteswap<uint16_t>(HMAP_HeaderVersion))
     NeedsByteSwap = true;  // Mixed endianness headermap.
   else
     return false;  // Not a header map.
@@ -88,9 +87,8 @@ bool HeaderMapImpl::checkHeader(const llvm::MemoryBuffer &File,
 
   // Check the number of buckets.  It should be a power of two, and there
   // should be enough space in the file for all of them.
-  uint32_t NumBuckets = NeedsByteSwap
-                            ? llvm::sys::getSwappedBytes(Header->NumBuckets)
-                            : Header->NumBuckets;
+  uint32_t NumBuckets =
+      NeedsByteSwap ? llvm::byteswap(Header->NumBuckets) : Header->NumBuckets;
   if (!llvm::isPowerOf2_32(NumBuckets))
     return false;
   if (File.getBufferSize() <
@@ -113,7 +111,7 @@ StringRef HeaderMapImpl::getFileName() const {
 
 unsigned HeaderMapImpl::getEndianAdjustedWord(unsigned X) const {
   if (!NeedsBSwap) return X;
-  return llvm::ByteSwap_32(X);
+  return llvm::byteswap<uint32_t>(X);
 }
 
 /// getHeader - Return a reference to the file header, in unbyte-swapped form.

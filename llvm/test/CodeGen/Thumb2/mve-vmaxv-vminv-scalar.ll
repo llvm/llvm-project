@@ -495,14 +495,14 @@ define arm_aapcs_vfpcc i64 @uminv2i64(<2 x i64> %vec, i64 %min) {
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    .save {r4, lr}
 ; CHECK-NEXT:    push {r4, lr}
-; CHECK-NEXT:    vmov r2, r12, d1
-; CHECK-NEXT:    vmov r3, lr, d0
-; CHECK-NEXT:    cmp r3, r2
-; CHECK-NEXT:    csel r4, r3, r2, lo
-; CHECK-NEXT:    cmp lr, r12
-; CHECK-NEXT:    csel r2, r3, r2, lo
-; CHECK-NEXT:    csel r3, lr, r12, lo
-; CHECK-NEXT:    csel r2, r4, r2, eq
+; CHECK-NEXT:    vmov r12, lr, d1
+; CHECK-NEXT:    vmov r2, r3, d0
+; CHECK-NEXT:    subs.w r4, r2, r12
+; CHECK-NEXT:    sbcs.w r4, r3, lr
+; CHECK-NEXT:    cset r4, lo
+; CHECK-NEXT:    cmp r4, #0
+; CHECK-NEXT:    csel r2, r2, r12, ne
+; CHECK-NEXT:    csel r3, r3, lr, ne
 ; CHECK-NEXT:    subs r4, r2, r0
 ; CHECK-NEXT:    sbcs.w r4, r3, r1
 ; CHECK-NEXT:    cset r4, lo
@@ -521,14 +521,14 @@ define arm_aapcs_vfpcc i64 @sminv2i64(<2 x i64> %vec, i64 %min) {
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    .save {r4, lr}
 ; CHECK-NEXT:    push {r4, lr}
-; CHECK-NEXT:    vmov r2, r12, d1
-; CHECK-NEXT:    vmov r3, lr, d0
-; CHECK-NEXT:    cmp r3, r2
-; CHECK-NEXT:    csel r4, r3, r2, lo
-; CHECK-NEXT:    cmp lr, r12
-; CHECK-NEXT:    csel r2, r3, r2, lt
-; CHECK-NEXT:    csel r3, lr, r12, lt
-; CHECK-NEXT:    csel r2, r4, r2, eq
+; CHECK-NEXT:    vmov r12, lr, d1
+; CHECK-NEXT:    vmov r2, r3, d0
+; CHECK-NEXT:    subs.w r4, r2, r12
+; CHECK-NEXT:    sbcs.w r4, r3, lr
+; CHECK-NEXT:    cset r4, lt
+; CHECK-NEXT:    cmp r4, #0
+; CHECK-NEXT:    csel r2, r2, r12, ne
+; CHECK-NEXT:    csel r3, r3, lr, ne
 ; CHECK-NEXT:    subs r4, r2, r0
 ; CHECK-NEXT:    sbcs.w r4, r3, r1
 ; CHECK-NEXT:    cset r4, lt
@@ -547,14 +547,14 @@ define arm_aapcs_vfpcc i64 @umaxv2i64(<2 x i64> %vec, i64 %max) {
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    .save {r4, lr}
 ; CHECK-NEXT:    push {r4, lr}
-; CHECK-NEXT:    vmov r2, r12, d1
-; CHECK-NEXT:    vmov r3, lr, d0
-; CHECK-NEXT:    cmp r3, r2
-; CHECK-NEXT:    csel r4, r3, r2, hi
-; CHECK-NEXT:    cmp lr, r12
-; CHECK-NEXT:    csel r2, r3, r2, hi
-; CHECK-NEXT:    csel r3, lr, r12, hi
-; CHECK-NEXT:    csel r2, r4, r2, eq
+; CHECK-NEXT:    vmov r12, lr, d0
+; CHECK-NEXT:    vmov r2, r3, d1
+; CHECK-NEXT:    subs.w r4, r2, r12
+; CHECK-NEXT:    sbcs.w r4, r3, lr
+; CHECK-NEXT:    cset r4, lo
+; CHECK-NEXT:    cmp r4, #0
+; CHECK-NEXT:    csel r2, r12, r2, ne
+; CHECK-NEXT:    csel r3, lr, r3, ne
 ; CHECK-NEXT:    subs r4, r0, r2
 ; CHECK-NEXT:    sbcs.w r4, r1, r3
 ; CHECK-NEXT:    cset r4, lo
@@ -573,14 +573,14 @@ define arm_aapcs_vfpcc i64 @smaxv2i64(<2 x i64> %vec, i64 %max) {
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    .save {r4, lr}
 ; CHECK-NEXT:    push {r4, lr}
-; CHECK-NEXT:    vmov r2, r12, d1
-; CHECK-NEXT:    vmov r3, lr, d0
-; CHECK-NEXT:    cmp r3, r2
-; CHECK-NEXT:    csel r4, r3, r2, hi
-; CHECK-NEXT:    cmp lr, r12
-; CHECK-NEXT:    csel r2, r3, r2, gt
-; CHECK-NEXT:    csel r3, lr, r12, gt
-; CHECK-NEXT:    csel r2, r4, r2, eq
+; CHECK-NEXT:    vmov r12, lr, d0
+; CHECK-NEXT:    vmov r2, r3, d1
+; CHECK-NEXT:    subs.w r4, r2, r12
+; CHECK-NEXT:    sbcs.w r4, r3, lr
+; CHECK-NEXT:    cset r4, lt
+; CHECK-NEXT:    cmp r4, #0
+; CHECK-NEXT:    csel r2, r12, r2, ne
+; CHECK-NEXT:    csel r3, lr, r3, ne
 ; CHECK-NEXT:    subs r4, r0, r2
 ; CHECK-NEXT:    sbcs.w r4, r1, r3
 ; CHECK-NEXT:    cset r4, lt

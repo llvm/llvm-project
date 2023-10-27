@@ -39,6 +39,7 @@ enum SCEVTypes : unsigned short {
   // These should be ordered in terms of increasing complexity to make the
   // folders simpler.
   scConstant,
+  scVScale,
   scTruncate,
   scZeroExtend,
   scSignExtend,
@@ -73,6 +74,23 @@ public:
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const SCEV *S) { return S->getSCEVType() == scConstant; }
+};
+
+/// This class represents the value of vscale, as used when defining the length
+/// of a scalable vector or returned by the llvm.vscale() intrinsic.
+class SCEVVScale : public SCEV {
+  friend class ScalarEvolution;
+
+  SCEVVScale(const FoldingSetNodeIDRef ID, Type *ty)
+      : SCEV(ID, scVScale, 0), Ty(ty) {}
+
+  Type *Ty;
+
+public:
+  Type *getType() const { return Ty; }
+
+  /// Methods for support type inquiry through isa, cast, and dyn_cast:
+  static bool classof(const SCEV *S) { return S->getSCEVType() == scVScale; }
 };
 
 inline unsigned short computeExpressionSize(ArrayRef<const SCEV *> Args) {
@@ -579,18 +597,6 @@ class SCEVUnknown final : public SCEV, private CallbackVH {
 public:
   Value *getValue() const { return getValPtr(); }
 
-  /// @{
-  /// Test whether this is a special constant representing a type
-  /// size, alignment, or field offset in a target-independent
-  /// manner, and hasn't happened to have been folded with other
-  /// operations into something unrecognizable. This is mainly only
-  /// useful for pretty-printing and other situations where it isn't
-  /// absolutely required for these to succeed.
-  bool isSizeOf(Type *&AllocTy) const;
-  bool isAlignOf(Type *&AllocTy) const;
-  bool isOffsetOf(Type *&STy, Constant *&FieldNo) const;
-  /// @}
-
   Type *getType() const { return getValPtr()->getType(); }
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
@@ -604,6 +610,8 @@ template <typename SC, typename RetVal = void> struct SCEVVisitor {
     switch (S->getSCEVType()) {
     case scConstant:
       return ((SC *)this)->visitConstant((const SCEVConstant *)S);
+    case scVScale:
+      return ((SC *)this)->visitVScale((const SCEVVScale *)S);
     case scPtrToInt:
       return ((SC *)this)->visitPtrToIntExpr((const SCEVPtrToIntExpr *)S);
     case scTruncate:
@@ -671,6 +679,7 @@ public:
 
       switch (S->getSCEVType()) {
       case scConstant:
+      case scVScale:
       case scUnknown:
         continue;
       case scPtrToInt:
@@ -743,7 +752,7 @@ protected:
   // a SCEV is referenced by multiple SCEVs. Without memoization, this
   // visit algorithm would have exponential time complexity in the worst
   // case, causing the compiler to hang on certain tests.
-  DenseMap<const SCEV *, const SCEV *> RewriteResults;
+  SmallDenseMap<const SCEV *, const SCEV *> RewriteResults;
 
 public:
   SCEVRewriteVisitor(ScalarEvolution &SE) : SE(SE) {}
@@ -759,6 +768,8 @@ public:
   }
 
   const SCEV *visitConstant(const SCEVConstant *Constant) { return Constant; }
+
+  const SCEV *visitVScale(const SCEVVScale *VScale) { return VScale; }
 
   const SCEV *visitPtrToIntExpr(const SCEVPtrToIntExpr *Expr) {
     const SCEV *Operand = ((SC *)this)->visit(Expr->getOperand());

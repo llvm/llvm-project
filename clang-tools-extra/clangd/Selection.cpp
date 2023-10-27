@@ -635,8 +635,12 @@ public:
     if (llvm::isa_and_nonnull<TranslationUnitDecl>(X))
       return Base::TraverseDecl(X); // Already pushed by constructor.
     // Base::TraverseDecl will suppress children, but not this node itself.
-    if (X && X->isImplicit())
-      return true;
+    if (X && X->isImplicit()) {
+      // Most implicit nodes have only implicit children and can be skipped.
+      // However there are exceptions (`void foo(Concept auto x)`), and
+      // the base implementation knows how to find them.
+      return Base::TraverseDecl(X);
+    }
     return traverseNode(X, [&] { return Base::TraverseDecl(X); });
   }
   bool TraverseTypeLoc(TypeLoc X) {
@@ -659,6 +663,9 @@ public:
   }
   bool TraverseAttr(Attr *X) {
     return traverseNode(X, [&] { return Base::TraverseAttr(X); });
+  }
+  bool TraverseConceptReference(ConceptReference *X) {
+    return traverseNode(X, [&] { return Base::TraverseConceptReference(X); });
   }
   // Stmt is the same, but this form allows the data recursion optimization.
   bool dataTraverseStmtPre(Stmt *X) {

@@ -123,7 +123,7 @@ struct CodeTemplate {
   CodeTemplate clone() const;
 
   ExecutionMode Execution = ExecutionMode::UNKNOWN;
-  // See InstructionBenchmarkKey.::Config.
+  // See BenchmarkKey.::Config.
   std::string Config;
   // Some information about how this template has been created.
   std::string Info;

@@ -4,9 +4,9 @@
 ## contain an array of the results for all of the given addresses.
 
 ## Show how library errors are reported in the output.
-# RUN: llvm-symbolizer --output-style=JSON -e %p/no-file.exe 0 | \
+# RUN: not llvm-symbolizer --output-style=JSON -e %p/no-file.exe 0 | \
 # RUN:   FileCheck %s -DMSG=%errc_ENOENT --check-prefix=NO-FILE --strict-whitespace --match-full-lines --implicit-check-not={{.}}
-# NO-FILE:[{"Address":"0x0","Error":{"Message":"[[MSG]]"},"ModuleName":"{{.*}}/no-file.exe"}]
+# NO-FILE:{"Address":"0x0","Error":{"Message":"[[MSG]]"},"ModuleName":"{{.*}}/no-file.exe"}
 
 ## Resolve out of range address.
 ## Expected a list with one empty object with default values.
@@ -25,39 +25,39 @@
 # RUN: llvm-symbolizer --output-style=JSON --no-inlines -e %p/Inputs/addr.exe < %p/Inputs/addr.inp | \
 # RUN:   FileCheck %s --check-prefix=NO-INLINES --strict-whitespace --match-full-lines --implicit-check-not={{.}}
 ## Invalid first argument before any valid one.
-# NO-INLINES:{"Error":{"Message":"unable to parse arguments: some text"},"ModuleName":"{{.*}}/Inputs/addr.exe"}
+# NO-INLINES:{"ModuleName":"{{.*}}/Inputs/addr.exe","Symbol":[{"Column":0,"Discriminator":0,"FileName":"","FunctionName":"","Line":0,"StartAddress":"","StartFileName":"","StartLine":0}]}
 ## Resolve valid address.
 # NO-INLINES-NEXT:{"Address":"0x40054d","ModuleName":"{{.*}}/Inputs/addr.exe","Symbol":[{"Column":3,"Discriminator":0,"FileName":"/tmp{{/|\\\\}}x.c","FunctionName":"main","Line":3,"StartAddress":"0x400540","StartFileName":"/tmp{{/|\\\\}}x.c","StartLine":2}]}
 ## Invalid argument after a valid one.
-# NO-INLINES-NEXT:{"Error":{"Message":"unable to parse arguments: some text2"},"ModuleName":"{{.*}}/Inputs/addr.exe"}
+# NO-INLINES-NEXT:{"ModuleName":"{{.*}}/Inputs/addr.exe","Symbol":[{"Column":0,"Discriminator":0,"FileName":"","FunctionName":"","Line":0,"StartAddress":"","StartFileName":"","StartLine":0}]}
 
 ## This test case is testing stdin input, inlines by default.
 # RUN: llvm-symbolizer --output-style=JSON -e %p/Inputs/addr.exe < %p/Inputs/addr.inp | \
 # RUN:   FileCheck %s --check-prefix=INLINE --strict-whitespace --match-full-lines --implicit-check-not={{.}}
 ## Invalid first argument before any valid one.
-# INLINE:{"Error":{"Message":"unable to parse arguments: some text"},"ModuleName":"{{.*}}/Inputs/addr.exe"}
+# INLINE:{"ModuleName":"{{.*}}/Inputs/addr.exe","Symbol":[{"Column":0,"Discriminator":0,"FileName":"","FunctionName":"","Line":0,"StartAddress":"","StartFileName":"","StartLine":0}]}
 ## Resolve valid address.
 # INLINE-NEXT:{"Address":"0x40054d","ModuleName":"{{.*}}/Inputs/addr.exe","Symbol":[{"Column":3,"Discriminator":0,"FileName":"/tmp{{/|\\\\}}x.c","FunctionName":"inctwo","Line":3,"StartAddress":"0x400540","StartFileName":"/tmp{{/|\\\\}}x.c","StartLine":2},{"Column":0,"Discriminator":0,"FileName":"/tmp{{/|\\\\}}x.c","FunctionName":"inc","Line":7,"StartAddress":"0x400540","StartFileName":"/tmp{{/|\\\\}}x.c","StartLine":6},{"Column":0,"Discriminator":0,"FileName":"/tmp{{/|\\\\}}x.c","FunctionName":"main","Line":14,"StartAddress":"0x400540","StartFileName":"/tmp{{/|\\\\}}x.c","StartLine":12}]}
 ## Invalid argument after a valid one.
-# INLINE-NEXT:{"Error":{"Message":"unable to parse arguments: some text2"},"ModuleName":"{{.*}}/Inputs/addr.exe"}
+# INLINE-NEXT:{"ModuleName":"{{.*}}/Inputs/addr.exe","Symbol":[{"Column":0,"Discriminator":0,"FileName":"","FunctionName":"","Line":0,"StartAddress":"","StartFileName":"","StartLine":0}]}
 
 ## Also check the last test case with llvm-adr2line.
 ## The expected result is the same with -f -i.
 # RUN: llvm-addr2line --output-style=JSON -f -i -e %p/Inputs/addr.exe < %p/Inputs/addr.inp | \
 # RUN:   FileCheck %s --check-prefix=INLINE-A2L --strict-whitespace --match-full-lines --implicit-check-not={{.}}
 ## Invalid first argument before any valid one.
-# INLINE-A2L:{"Error":{"Message":"unable to parse arguments: some text"},"ModuleName":"{{.*}}/Inputs/addr.exe"}
+# INLINE-A2L:{"ModuleName":"{{.*}}/Inputs/addr.exe","Symbol":[{"Column":0,"Discriminator":0,"FileName":"","FunctionName":"","Line":0,"StartAddress":"","StartFileName":"","StartLine":0}]}
 ## Resolve valid address.
 # INLINE-A2L-NEXT:{"Address":"0x40054d","ModuleName":"{{.*}}/Inputs/addr.exe","Symbol":[{"Column":3,"Discriminator":0,"FileName":"/tmp{{/|\\\\}}x.c","FunctionName":"inctwo","Line":3,"StartAddress":"0x400540","StartFileName":"/tmp{{/|\\\\}}x.c","StartLine":2},{"Column":0,"Discriminator":0,"FileName":"/tmp{{/|\\\\}}x.c","FunctionName":"inc","Line":7,"StartAddress":"0x400540","StartFileName":"/tmp{{/|\\\\}}x.c","StartLine":6},{"Column":0,"Discriminator":0,"FileName":"/tmp{{/|\\\\}}x.c","FunctionName":"main","Line":14,"StartAddress":"0x400540","StartFileName":"/tmp{{/|\\\\}}x.c","StartLine":12}]}
 ## Invalid argument after a valid one.
-# INLINE-A2L-NEXT:{"Error":{"Message":"unable to parse arguments: some text2"},"ModuleName":"{{.*}}/Inputs/addr.exe"}
+# INLINE-A2L-NEXT:{"ModuleName":"{{.*}}/Inputs/addr.exe","Symbol":[{"Column":0,"Discriminator":0,"FileName":"","FunctionName":"","Line":0,"StartAddress":"","StartFileName":"","StartLine":0}]}
 
 ## Note llvm-addr2line without -f does not print the function name in JSON too.
 # RUN: llvm-addr2line --output-style=JSON -i -e %p/Inputs/addr.exe < %p/Inputs/addr.inp | \
 # RUN:   FileCheck %s --check-prefix=NO-FUNC-A2L --strict-whitespace --match-full-lines --implicit-check-not={{.}}
 ## Invalid first argument before any valid one.
-# NO-FUNC-A2L:{"Error":{"Message":"unable to parse arguments: some text"},"ModuleName":"{{.*}}/Inputs/addr.exe"}
+# NO-FUNC-A2L:{"ModuleName":"{{.*}}/Inputs/addr.exe","Symbol":[{"Column":0,"Discriminator":0,"FileName":"","FunctionName":"","Line":0,"StartAddress":"","StartFileName":"","StartLine":0}]}
 ## Resolve valid address.
 # NO-FUNC-A2L-NEXT:{"Address":"0x40054d","ModuleName":"{{.*}}/Inputs/addr.exe","Symbol":[{"Column":3,"Discriminator":0,"FileName":"/tmp{{/|\\\\}}x.c","FunctionName":"","Line":3,"StartAddress":"0x400540","StartFileName":"/tmp{{/|\\\\}}x.c","StartLine":2},{"Column":0,"Discriminator":0,"FileName":"/tmp{{/|\\\\}}x.c","FunctionName":"","Line":7,"StartAddress":"0x400540","StartFileName":"/tmp{{/|\\\\}}x.c","StartLine":6},{"Column":0,"Discriminator":0,"FileName":"/tmp{{/|\\\\}}x.c","FunctionName":"","Line":14,"StartAddress":"0x400540","StartFileName":"/tmp{{/|\\\\}}x.c","StartLine":12}]}
 ## Invalid argument after a valid one.
-# NO-FUNC-A2L-NEXT:{"Error":{"Message":"unable to parse arguments: some text2"},"ModuleName":"{{.*}}/Inputs/addr.exe"}
+# NO-FUNC-A2L-NEXT:{"ModuleName":"{{.*}}/Inputs/addr.exe","Symbol":[{"Column":0,"Discriminator":0,"FileName":"","FunctionName":"","Line":0,"StartAddress":"","StartFileName":"","StartLine":0}]}

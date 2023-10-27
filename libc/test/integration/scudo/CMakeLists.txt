@@ -27,7 +27,7 @@ add_executable(
 target_link_options(
   libc-scudo-integration-test
   PRIVATE
-  -pthreads
+  -pthread
 )
 
 target_link_libraries(libc-scudo-integration-test
@@ -43,7 +43,7 @@ add_executable(
 target_link_options(
   libc-gwp-asan-uaf-should-crash
   PRIVATE
-  -pthreads
+  -pthread
 )
 
 target_link_libraries(libc-gwp-asan-uaf-should-crash

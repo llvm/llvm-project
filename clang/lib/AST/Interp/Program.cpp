@@ -10,6 +10,7 @@
 #include "ByteCodeStmtGen.h"
 #include "Context.h"
 #include "Function.h"
+#include "Integral.h"
 #include "Opcode.h"
 #include "PrimType.h"
 #include "clang/AST/Decl.h"
@@ -119,7 +120,7 @@ std::optional<unsigned> Program::getGlobal(const ValueDecl *VD) {
   // Map the decl to the existing index.
   if (Index) {
     GlobalIndices[VD] = *Index;
-    return {};
+    return std::nullopt;
   }
 
   return Index;
@@ -134,35 +135,37 @@ std::optional<unsigned> Program::getOrCreateGlobal(const ValueDecl *VD,
     GlobalIndices[VD] = *Idx;
     return Idx;
   }
-  return {};
+  return std::nullopt;
 }
 
-std::optional<unsigned> Program::getOrCreateDummy(const ParmVarDecl *PD) {
-  auto &ASTCtx = Ctx.getASTContext();
+std::optional<unsigned> Program::getOrCreateDummy(const ValueDecl *PD) {
+  // Dedup blocks since they are immutable and pointers cannot be compared.
+  if (auto It = DummyParams.find(PD);
+      It != DummyParams.end())
+    return It->second;
 
   // Create a pointer to an incomplete array of the specified elements.
-  QualType ElemTy = PD->getType()->castAs<PointerType>()->getPointeeType();
-  QualType Ty = ASTCtx.getIncompleteArrayType(ElemTy, ArrayType::Normal, 0);
-
-  // Dedup blocks since they are immutable and pointers cannot be compared.
-  auto It = DummyParams.find(PD);
-  if (It != DummyParams.end())
-    return It->second;
+  QualType ElemTy = PD->getType();
+  QualType Ty =
+      Ctx.getASTContext().getIncompleteArrayType(ElemTy, ArrayType::Normal, 0);
 
   if (auto Idx = createGlobal(PD, Ty, /*isStatic=*/true, /*isExtern=*/true)) {
     DummyParams[PD] = *Idx;
     return Idx;
   }
-  return {};
+  return std::nullopt;
 }
 
 std::optional<unsigned> Program::createGlobal(const ValueDecl *VD,
                                               const Expr *Init) {
   assert(!getGlobal(VD));
   bool IsStatic, IsExtern;
-  if (auto *Var = dyn_cast<VarDecl>(VD)) {
-    IsStatic = !Var->hasLocalStorage();
+  if (const auto *Var = dyn_cast<VarDecl>(VD)) {
+    IsStatic = Context::shouldBeGloballyIndexed(VD);
     IsExtern = !Var->getAnyInitializer();
+  } else if (isa<UnnamedGlobalConstantDecl>(VD)) {
+    IsStatic = true;
+    IsExtern = false;
   } else {
     IsStatic = false;
     IsExtern = true;
@@ -172,7 +175,7 @@ std::optional<unsigned> Program::createGlobal(const ValueDecl *VD,
       GlobalIndices[P] = *Idx;
     return *Idx;
   }
-  return {};
+  return std::nullopt;
 }
 
 std::optional<unsigned> Program::createGlobal(const Expr *E) {
@@ -193,7 +196,7 @@ std::optional<unsigned> Program::createGlobal(const DeclTy &D, QualType Ty,
                             IsTemporary);
   }
   if (!Desc)
-    return {};
+    return std::nullopt;
 
   // Allocate a block for storage.
   unsigned I = Globals.size();
@@ -221,10 +224,8 @@ Record *Program::getOrCreateRecord(const RecordDecl *RD) {
     return nullptr;
 
   // Deduplicate records.
-  auto It = Records.find(RD);
-  if (It != Records.end()) {
+  if (auto It = Records.find(RD); It != Records.end())
     return It->second;
-  }
 
   // We insert nullptr now and replace that later, so recursive calls
   // to this function with the same RecordDecl don't run into
@@ -340,7 +341,7 @@ Descriptor *Program::createDescriptor(const DeclTy &D, const Type *Ty,
             D, ElemTy.getTypePtr(), std::nullopt, IsConst, IsTemporary);
         if (!ElemDesc)
           return nullptr;
-        InterpSize ElemSize =
+        unsigned ElemSize =
             ElemDesc->getAllocSize() + sizeof(InlineDescriptor);
         if (std::numeric_limits<unsigned>::max() / ElemSize <= NumElems)
           return {};

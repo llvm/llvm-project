@@ -16,6 +16,7 @@
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/YAMLTraits.h"
+#include <algorithm>
 #include <optional>
 #include <utility>
 
@@ -82,33 +83,40 @@ struct NOptionMap {
 };
 
 template <>
-void yamlize(IO &IO, ClangTidyOptions::OptionMap &Options, bool,
+void yamlize(IO &IO, ClangTidyOptions::OptionMap &Val, bool,
              EmptyContext &Ctx) {
   if (IO.outputting()) {
+    // Ensure check options are sorted
+    std::vector<std::pair<StringRef, StringRef>> SortedOptions;
+    SortedOptions.reserve(Val.size());
+    for (auto &Key : Val) {
+      SortedOptions.emplace_back(Key.getKey(), Key.getValue().Value);
+    }
+    std::sort(SortedOptions.begin(), SortedOptions.end());
+
     IO.beginMapping();
     // Only output as a map
-    for (auto &Key : Options) {
-      bool UseDefault;
-      void *SaveInfo;
-      IO.preflightKey(Key.getKey().data(), true, false, UseDefault, SaveInfo);
-      StringRef S = Key.getValue().Value;
-      IO.scalarString(S, needsQuotes(S));
+    for (auto &Option : SortedOptions) {
+      bool UseDefault = false;
+      void *SaveInfo = nullptr;
+      IO.preflightKey(Option.first.data(), true, false, UseDefault, SaveInfo);
+      IO.scalarString(Option.second, needsQuotes(Option.second));
       IO.postflightKey(SaveInfo);
     }
     IO.endMapping();
   } else {
     // We need custom logic here to support the old method of specifying check
     // options using a list of maps containing key and value keys.
-    Input &I = reinterpret_cast<Input &>(IO);
+    auto &I = reinterpret_cast<Input &>(IO);
     if (isa<SequenceNode>(I.getCurrentNode())) {
-      MappingNormalization<NOptionMap, ClangTidyOptions::OptionMap> NOpts(
-          IO, Options);
+      MappingNormalization<NOptionMap, ClangTidyOptions::OptionMap> NOpts(IO,
+                                                                          Val);
       EmptyContext Ctx;
       yamlize(IO, NOpts->Options, true, Ctx);
     } else if (isa<MappingNode>(I.getCurrentNode())) {
       IO.beginMapping();
       for (StringRef Key : IO.keys()) {
-        IO.mapRequired(Key.data(), Options[Key].Value);
+        IO.mapRequired(Key.data(), Val[Key].Value);
       }
       IO.endMapping();
     } else {
@@ -117,13 +125,51 @@ void yamlize(IO &IO, ClangTidyOptions::OptionMap &Options, bool,
   }
 }
 
+struct ChecksVariant {
+  std::optional<std::string> AsString;
+  std::optional<std::vector<std::string>> AsVector;
+};
+
+template <> void yamlize(IO &IO, ChecksVariant &Val, bool, EmptyContext &Ctx) {
+  if (!IO.outputting()) {
+    // Special case for reading from YAML
+    // Must support reading from both a string or a list
+    auto &I = reinterpret_cast<Input &>(IO);
+    if (isa<ScalarNode, BlockScalarNode>(I.getCurrentNode())) {
+      Val.AsString = std::string();
+      yamlize(IO, *Val.AsString, true, Ctx);
+    } else if (isa<SequenceNode>(I.getCurrentNode())) {
+      Val.AsVector = std::vector<std::string>();
+      yamlize(IO, *Val.AsVector, true, Ctx);
+    } else {
+      IO.setError("expected string or sequence");
+    }
+  }
+}
+
+static void mapChecks(IO &IO, std::optional<std::string> &Checks) {
+  if (IO.outputting()) {
+    // Output always a string
+    IO.mapOptional("Checks", Checks);
+  } else {
+    // Input as either a string or a list
+    ChecksVariant ChecksAsVariant;
+    IO.mapOptional("Checks", ChecksAsVariant);
+    if (ChecksAsVariant.AsString)
+      Checks = ChecksAsVariant.AsString;
+    else if (ChecksAsVariant.AsVector)
+      Checks = llvm::join(*ChecksAsVariant.AsVector, ",");
+  }
+}
+
 template <> struct MappingTraits<ClangTidyOptions> {
   static void mapping(IO &IO, ClangTidyOptions &Options) {
-    bool Ignored = false;
-    IO.mapOptional("Checks", Options.Checks);
+    mapChecks(IO, Options.Checks);
     IO.mapOptional("WarningsAsErrors", Options.WarningsAsErrors);
+    IO.mapOptional("HeaderFileExtensions", Options.HeaderFileExtensions);
+    IO.mapOptional("ImplementationFileExtensions",
+                   Options.ImplementationFileExtensions);
     IO.mapOptional("HeaderFilterRegex", Options.HeaderFilterRegex);
-    IO.mapOptional("AnalyzeTemporaryDtors", Ignored); // deprecated
     IO.mapOptional("FormatStyle", Options.FormatStyle);
     IO.mapOptional("User", Options.User);
     IO.mapOptional("CheckOptions", Options.CheckOptions);
@@ -131,6 +177,7 @@ template <> struct MappingTraits<ClangTidyOptions> {
     IO.mapOptional("ExtraArgsBefore", Options.ExtraArgsBefore);
     IO.mapOptional("InheritParentConfig", Options.InheritParentConfig);
     IO.mapOptional("UseColor", Options.UseColor);
+    IO.mapOptional("SystemHeaders", Options.SystemHeaders);
   }
 };
 
@@ -142,6 +189,8 @@ ClangTidyOptions ClangTidyOptions::getDefaults() {
   ClangTidyOptions Options;
   Options.Checks = "";
   Options.WarningsAsErrors = "";
+  Options.HeaderFileExtensions = {"", "h", "hh", "hpp", "hxx"};
+  Options.ImplementationFileExtensions = {"c", "cc", "cpp", "cxx"};
   Options.HeaderFilterRegex = "";
   Options.SystemHeaders = false;
   Options.FormatStyle = "none";
@@ -178,6 +227,9 @@ ClangTidyOptions &ClangTidyOptions::mergeWith(const ClangTidyOptions &Other,
                                               unsigned Order) {
   mergeCommaSeparatedLists(Checks, Other.Checks);
   mergeCommaSeparatedLists(WarningsAsErrors, Other.WarningsAsErrors);
+  overrideValue(HeaderFileExtensions, Other.HeaderFileExtensions);
+  overrideValue(ImplementationFileExtensions,
+                Other.ImplementationFileExtensions);
   overrideValue(HeaderFilterRegex, Other.HeaderFilterRegex);
   overrideValue(SystemHeaders, Other.SystemHeaders);
   overrideValue(FormatStyle, Other.FormatStyle);

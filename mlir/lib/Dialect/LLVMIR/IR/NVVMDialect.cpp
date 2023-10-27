@@ -16,6 +16,8 @@
 
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
 
+#include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
+#include "mlir/Dialect/GPU/IR/CompilationInterfaces.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -24,6 +26,9 @@
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/OperationSupport.h"
+#include "mlir/IR/Types.h"
+#include "mlir/Support/LogicalResult.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/Attributes.h"
@@ -31,7 +36,10 @@
 #include "llvm/IR/Type.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/SourceMgr.h"
+#include "llvm/Support/raw_ostream.h"
+#include <cassert>
 #include <optional>
+#include <string>
 
 using namespace mlir;
 using namespace NVVM;
@@ -67,11 +75,26 @@ ParseResult VoteBallotOp::parse(OpAsmParser &parser, OperationState &result) {
 
 void VoteBallotOp::print(OpAsmPrinter &p) { printNVVMIntrinsicOp(p, *this); }
 
+LogicalResult CpAsyncBulkTensorGlobalToSharedClusterOp::verify() {
+  if (getCoordinates().size() > 5)
+    return emitError("Maximum 5 coordinates and dimension is supported.");
+  return success();
+}
+
+LogicalResult CpAsyncBulkTensorSharedCTAToGlobalOp::verify() {
+  if (getCoordinates().size() > 5)
+    return emitError("Maximum 5 coordinates and dimension is supported.");
+  return success();
+}
+
 LogicalResult CpAsyncOp::verify() {
+  if (getModifier() != LoadCacheModifierKind::CG &&
+      getModifier() != LoadCacheModifierKind::CA)
+    return emitError("Only CG and CA cache modifiers are supported.");
   if (getSize() != 4 && getSize() != 8 && getSize() != 16)
     return emitError("expected byte size to be either 4, 8 or 16.");
-  if (getBypassL1() && getSize() != 16)
-    return emitError("bypass l1 is only support for 16 bytes copy.");
+  if (getModifier() == LoadCacheModifierKind::CG && getSize() != 16)
+    return emitError("CG cache modifier is only support for 16 bytes copy.");
   return success();
 }
 
@@ -90,13 +113,13 @@ MmaOp::inferOperandMMAType(Type operandElType, bool isAccumulator) {
     return NVVM::MMATypes::f32;
   if (operandElType.isF32() && !isAccumulator)
     return NVVM::MMATypes::tf32;
-  if (operandElType.isa<IntegerType>()) {
+  if (llvm::isa<IntegerType>(operandElType)) {
     if (isAccumulator)
       return NVVM::MMATypes::s32;
     return std::nullopt;
   }
 
-  if (auto structType = operandElType.dyn_cast<LLVM::LLVMStructType>()) {
+  if (auto structType = llvm::dyn_cast<LLVM::LLVMStructType>(operandElType)) {
     if (structType.getBody().empty())
       return std::nullopt;
     return inferOperandMMAType(structType.getBody()[0], isAccumulator);
@@ -526,9 +549,9 @@ LogicalResult MmaOp::verify() {
 LogicalResult ShflOp::verify() {
   if (!(*this)->getAttrOfType<UnitAttr>("return_value_and_is_valid"))
     return success();
-  auto type = getType().dyn_cast<LLVM::LLVMStructType>();
+  auto type = llvm::dyn_cast<LLVM::LLVMStructType>(getType());
   auto elementType = (type && type.getBody().size() == 2)
-                         ? type.getBody()[1].dyn_cast<IntegerType>()
+                         ? llvm::dyn_cast<IntegerType>(type.getBody()[1])
                          : nullptr;
   if (!elementType || elementType.getWidth() != 1)
     return emitError("expected return type to be a two-element struct with "
@@ -537,7 +560,8 @@ LogicalResult ShflOp::verify() {
 }
 
 std::pair<mlir::Type, unsigned> NVVM::inferMMAType(NVVM::MMATypes type,
-                                                   NVVM::MMAFrag frag,
+                                                   NVVM::MMAFrag frag, int nRow,
+                                                   int nCol,
                                                    MLIRContext *context) {
   unsigned numberElements = 0;
   Type elementType;
@@ -555,14 +579,51 @@ std::pair<mlir::Type, unsigned> NVVM::inferMMAType(NVVM::MMATypes type,
   } else if (type == NVVM::MMATypes::tf32) {
     elementType = builder.getI32Type();
     numberElements = 4;
+  } else if (type == NVVM::MMATypes::s8 || type == NVVM::MMATypes::u8) {
+    elementType = builder.getI32Type();
+    int parallelSize = 0;
+    if (frag == NVVM::MMAFrag::a)
+      parallelSize = nRow;
+    if (frag == NVVM::MMAFrag::b)
+      parallelSize = nCol;
+
+    // m == 16 && n == 16 && k == 16
+    if (parallelSize == 16)
+      numberElements = 2;
+    // m == 8 && n == 32 && k == 16 or m == 32 && n == 8 && k == 16
+    else if (parallelSize == 8)
+      numberElements = 1;
+    else if (parallelSize == 32)
+      numberElements = 4;
+  } else if (type == NVVM::MMATypes::s32) {
+    elementType = builder.getI32Type();
+    numberElements = 8;
   }
   assert(numberElements != 0 && elementType != nullptr);
   return std::make_pair(elementType, numberElements);
 }
 
+static std::pair<mlir::Type, unsigned>
+inferMMATypeFromMNK(NVVM::MMATypes type, NVVM::MMAFrag frag, int m, int n,
+                    int k, MLIRContext *context) {
+  int nRow, nCol;
+  if (frag == NVVM::MMAFrag::a) {
+    nRow = m;
+    nCol = k;
+  } else if (frag == NVVM::MMAFrag::b) {
+    nRow = k;
+    nCol = n;
+  } else {
+    nRow = m;
+    nCol = n;
+  }
+  assert(nRow && nCol);
+  return inferMMAType(type, frag, nRow, nCol, context);
+}
+
 LogicalResult NVVM::WMMALoadOp::verify() {
   unsigned addressSpace =
-      getPtr().getType().cast<LLVM::LLVMPointerType>().getAddressSpace();
+      llvm::cast<LLVM::LLVMPointerType>(getPtr().getType()).getAddressSpace();
   if (addressSpace != 0 && addressSpace != 1 && addressSpace != 3)
     return emitOpError("expected source pointer in memory "
                        "space 0, 1, 3");
@@ -570,8 +631,8 @@ LogicalResult NVVM::WMMALoadOp::verify() {
   if (NVVM::WMMALoadOp::getIntrinsicID(getM(), getN(), getK(), getLayout(),
                                        getEltype(), getFrag()) == 0)
     return emitOpError() << "invalid attribute combination";
-  std::pair<Type, unsigned> typeInfo =
-      inferMMAType(getEltype(), getFrag(), getContext());
+  std::pair<Type, unsigned> typeInfo = inferMMATypeFromMNK(
+      getEltype(), getFrag(), getM(), getN(), getK(), getContext());
   Type dstType = LLVM::LLVMStructType::getLiteral(
       getContext(), SmallVector<Type, 8>(typeInfo.second, typeInfo.first));
   if (getType() != dstType)
@@ -582,7 +643,7 @@ LogicalResult NVVM::WMMALoadOp::verify() {
 
 LogicalResult NVVM::WMMAStoreOp::verify() {
   unsigned addressSpace =
-      getPtr().getType().cast<LLVM::LLVMPointerType>().getAddressSpace();
+      llvm::cast<LLVM::LLVMPointerType>(getPtr().getType()).getAddressSpace();
   if (addressSpace != 0 && addressSpace != 1 && addressSpace != 3)
     return emitOpError("expected operands to be a source pointer in memory "
                        "space 0, 1, 3");
@@ -590,8 +651,8 @@ LogicalResult NVVM::WMMAStoreOp::verify() {
   if (NVVM::WMMAStoreOp::getIntrinsicID(getM(), getN(), getK(), getLayout(),
                                         getEltype()) == 0)
     return emitOpError() << "invalid attribute combination";
-  std::pair<Type, unsigned> typeInfo =
-      inferMMAType(getEltype(), NVVM::MMAFrag::c, getContext());
+  std::pair<Type, unsigned> typeInfo = inferMMATypeFromMNK(
+      getEltype(), NVVM::MMAFrag::c, getM(), getN(), getK(), getContext());
   if (getArgs().size() != typeInfo.second)
     return emitOpError() << "expected " << typeInfo.second << " data operands";
   if (llvm::any_of(getArgs(), [&typeInfo](Value operands) {
@@ -606,12 +667,12 @@ LogicalResult NVVM::WMMAMmaOp::verify() {
                                       getLayoutB(), getEltypeA(),
                                       getEltypeB()) == 0)
     return emitOpError() << "invalid attribute combination";
-  std::pair<Type, unsigned> typeInfoA =
-      inferMMAType(getEltypeA(), NVVM::MMAFrag::a, getContext());
-  std::pair<Type, unsigned> typeInfoB =
-      inferMMAType(getEltypeA(), NVVM::MMAFrag::b, getContext());
-  std::pair<Type, unsigned> typeInfoC =
-      inferMMAType(getEltypeB(), NVVM::MMAFrag::c, getContext());
+  std::pair<Type, unsigned> typeInfoA = inferMMATypeFromMNK(
+      getEltypeA(), NVVM::MMAFrag::a, getM(), getN(), getK(), getContext());
+  std::pair<Type, unsigned> typeInfoB = inferMMATypeFromMNK(
+      getEltypeA(), NVVM::MMAFrag::b, getM(), getN(), getK(), getContext());
+  std::pair<Type, unsigned> typeInfoC = inferMMATypeFromMNK(
+      getEltypeB(), NVVM::MMAFrag::c, getM(), getN(), getK(), getContext());
   SmallVector<Type, 32> arguments;
   arguments.append(typeInfoA.second, typeInfoA.first);
   arguments.append(typeInfoB.second, typeInfoB.first);
@@ -634,7 +695,7 @@ LogicalResult NVVM::WMMAMmaOp::verify() {
 
 LogicalResult NVVM::LdMatrixOp::verify() {
   unsigned addressSpace =
-      getPtr().getType().cast<LLVM::LLVMPointerType>().getAddressSpace();
+      llvm::cast<LLVM::LLVMPointerType>(getPtr().getType()).getAddressSpace();
   if (addressSpace != 3)
     return emitOpError("expected source pointer in memory space 3");
 
@@ -652,6 +713,273 @@ LogicalResult NVVM::LdMatrixOp::verify() {
              << getNum() << " elements of type i32";
   }
   return success();
+}
+
+FailureOr<int> getAllowedSizeK(NVVM::WGMMATypes typeA) {
+  if (typeA == NVVM::WGMMATypes::tf32)
+    return 8;
+  if (typeA == NVVM::WGMMATypes::f16 || typeA == NVVM::WGMMATypes::bf16)
+    return 16;
+  if (typeA == NVVM::WGMMATypes::s8 || typeA == NVVM::WGMMATypes::u8)
+    return 32;
+  if (typeA == NVVM::WGMMATypes::e4m3 || typeA == NVVM::WGMMATypes::e5m2)
+    return 32;
+  if (typeA == NVVM::WGMMATypes::b1)
+    return 256;
+  return failure();
+}
+
+LogicalResult isAllowedWGMMADataType(Type typeD, NVVM::WGMMATypes typeA,
+                                     NVVM::WGMMATypes typeB) {
+  switch (typeA) {
+  case NVVM::WGMMATypes::f16:
+    if ((typeD.isF32() || typeD.isF16()) && typeB == NVVM::WGMMATypes::f16)
+      return success();
+    break;
+  case NVVM::WGMMATypes::tf32:
+    if (typeD.isF32() && typeB == NVVM::WGMMATypes::tf32)
+      return success();
+    break;
+  case NVVM::WGMMATypes::u8:
+  case NVVM::WGMMATypes::s8:
+    if (typeD.isInteger(32) &&
+        (typeB == NVVM::WGMMATypes::u8 || typeB == NVVM::WGMMATypes::s8))
+      return success();
+    break;
+  case NVVM::WGMMATypes::b1:
+    if (typeD.isInteger(32) && typeB == NVVM::WGMMATypes::b1)
+      return success();
+    break;
+  case NVVM::WGMMATypes::bf16:
+    if ((typeD.isF32() || typeD.isF16()) && typeB == NVVM::WGMMATypes::bf16)
+      return success();
+    break;
+  case NVVM::WGMMATypes::e4m3:
+  case NVVM::WGMMATypes::e5m2:
+    if ((typeD.isF32() || typeD.isF16()) &&
+        (typeB == NVVM::WGMMATypes::e5m2 || typeB == NVVM::WGMMATypes::e4m3))
+      return success();
+    break;
+  }
+  return failure();
+}
+
+LogicalResult isAllowedSizeN(int sizeN, NVVM::WGMMATypes typeA) {
+  SmallVector<int> allowedN = {8,   16,  24,  32,  40,  48,  56,  64,
+                               72,  80,  88,  96,  104, 112, 120, 128,
+                               136, 144, 152, 160, 168, 176, 184, 192,
+                               200, 208, 216, 224, 232, 240, 248, 256};
+  SmallVector<int> allowedNshort = {8,   16,  24,  32,  48,  64,
+                                    80,  96,  112, 128, 144, 160,
+                                    176, 192, 208, 224, 240, 256};
+  switch (typeA) {
+  case mlir::NVVM::WGMMATypes::f16:
+  case mlir::NVVM::WGMMATypes::tf32:
+  case mlir::NVVM::WGMMATypes::bf16:
+  case mlir::NVVM::WGMMATypes::e4m3:
+  case mlir::NVVM::WGMMATypes::e5m2:
+    if (llvm::is_contained(allowedN, sizeN))
+      return success();
+    break;
+  case mlir::NVVM::WGMMATypes::u8:
+  case mlir::NVVM::WGMMATypes::s8:
+  case mlir::NVVM::WGMMATypes::b1:
+    if (llvm::is_contained(allowedNshort, sizeN))
+      return success();
+  }
+  return failure();
+}
+
+LogicalResult NVVM::WgmmaMmaAsyncOp::verify() {
+  Value outValue = getResults();
+  auto stype = dyn_cast<LLVM::LLVMStructType>(outValue.getType());
+  if (!stype)
+    return emitOpError() << "expected results to be struct";
+  Type outputType = stype.getBody().front();
+  int outputSize = stype.getBody().size();
+  for (Type t : stype.getBody()) {
+    if (t != outputType)
+      return emitOpError()
+             << "all elements in struct must be same type but there is " << t;
+  }
+
+  if (!outputType.isF32() && !outputType.isInteger(32) && !outputType.isF16()) {
+    return emitOpError() << "does not support the given output type "
+                         << outputType;
+  }
+  if (outputType.isInteger(32) && (getScaleA() == NVVM::WGMMAScaleIn::neg ||
+                                   getScaleB() == NVVM::WGMMAScaleIn::neg)) {
+    return emitOpError() << "has s32 output, scaleA and scaleB cannot be neg";
+  }
+
+  mlir::NVVM::WGMMATypes typeA = getTypeA();
+  mlir::NVVM::WGMMATypes typeB = getTypeB();
+  if (failed(isAllowedWGMMADataType(outputType, typeA, typeB))) {
+    return emitOpError() << outputType
+                         << " += " << NVVM::stringifyWGMMATypes(typeA) << " * "
+                         << NVVM::stringifyWGMMATypes(typeB)
+                         << ", it is not supported.";
+  }
+
+  // Check M
+  if (getShape().getM() != 64)
+    return emitOpError() << "shape 'm' must be 64";
+
+  // Check K
+  FailureOr<int> allowedK = getAllowedSizeK(typeA);
+  if (failed(allowedK) || allowedK.value() != getShape().getK())
+    return emitOpError() << "shape 'k' must be " << allowedK.value()
+                         << " for input type "
+                         << NVVM::stringifyWGMMATypes(typeA);
+
+  // Check N
+  if (failed(isAllowedSizeN(getShape().getN(), typeA))) {
+    return emitOpError() << "has input type "
+                         << NVVM::stringifyWGMMATypes(typeA) << " n is set to "
+                         << getShape().getN() << ", it is not supported.";
+  }
+
+  // Check transpose (only available for f16/bf16)
+  if ((typeA != mlir::NVVM::WGMMATypes::f16 &&
+       typeA != mlir::NVVM::WGMMATypes::bf16) &&
+      (getLayoutA() == mlir::NVVM::MMALayout::col ||
+       getLayoutB() == mlir::NVVM::MMALayout::col)) {
+    return emitOpError()
+           << "given layouts layout_a = " << stringifyMMALayout(getLayoutA())
+           << " and layout_b = " << stringifyMMALayout(getLayoutB())
+           << " for input types " << stringifyWGMMATypes(typeA) << " and "
+           << stringifyWGMMATypes(typeB)
+           << " requires transpose. However, this is only supported for: "
+           << stringifyMMATypes(mlir::NVVM::MMATypes::f16) << " and "
+           << stringifyMMATypes(mlir::NVVM::MMATypes::bf16);
+  }
+
+  // Check result registers
+  int expectedOutput;
+  if (outputType.isF32() || outputType.isInteger(32))
+    expectedOutput = getShape().getN() / 2;
+  if (outputType.isF16())
+    expectedOutput = getShape().getN() / 4;
+  if (outputSize != expectedOutput) {
+    return emitOpError() << "results " << expectedOutput
+                         << ", however output struct has " << outputSize
+                         << " elements";
+  }
+  // Check satfinite (only availalbe for s32 accumulator)
+  if (!outputType.isInteger(32) &&
+      getSatfinite().value_or(NVVM::MMAIntOverflow::wrapped) ==
+          NVVM::MMAIntOverflow::satfinite) {
+    return emitOpError()
+           << " `satfinite` can be only used with s32 accumulator, however "
+              "the current accumulator is "
+           << outputType;
+  }
+
+  return success();
+}
+
+std::string NVVM::WgmmaMmaAsyncOp::getPtx() {
+
+  int m = getShape().getM(), n = getShape().getN(), k = getShape().getK();
+  bool isF16 = getTypeA() == mlir::NVVM::WGMMATypes::f16 ||
+               getTypeA() == mlir::NVVM::WGMMATypes::bf16;
+
+  Value outValue = getResults() ? getResults() : getInouts();
+  auto stype = dyn_cast<LLVM::LLVMStructType>(outValue.getType());
+  Type outputType = stype.getBody().front();
+  std::string outputTypeName;
+  if (outputType.isF16())
+    outputTypeName = "f16";
+  else if (outputType.isF32())
+    outputTypeName = "f32";
+  else if (outputType.isInteger(32))
+    outputTypeName = "s32";
+  else
+    assert(false && "unsupported output type");
+
+  int expectedOutputRegisters;
+  if (outputType.isF32() || outputType.isInteger(32))
+    expectedOutputRegisters = getShape().getN() / 2;
+  if (outputType.isF16())
+    expectedOutputRegisters = getShape().getN() / 4;
+
+  std::string ptx;
+  llvm::raw_string_ostream ss(ptx);
+
+  ss << "{\n"
+        ".reg .pred p;\n"
+        "setp.ne.b32 p, $"
+     << ((expectedOutputRegisters * 2) + 2)
+     << ", 0;\n"
+        "wgmma.mma_async.sync.aligned.m"
+     << m << "n" << n << "k" << k << "." << outputTypeName << "."
+     << stringifyWGMMATypes(getTypeA()) << "."
+     << stringifyWGMMATypes(getTypeB());
+  if (getSatfinite().value_or(NVVM::MMAIntOverflow::wrapped) ==
+      NVVM::MMAIntOverflow::satfinite)
+    ss << ".satfinite";
+  ss << " {";
+  int regCnt = 0;
+  for (; regCnt < expectedOutputRegisters; ++regCnt) {
+    ss << "$" << regCnt;
+    if (regCnt != expectedOutputRegisters - 1)
+      ss << ", ";
+  }
+
+  ss << "},";
+  // Need to map read/write registers correctly.
+  regCnt = (regCnt * 2);
+  ss << " $" << (regCnt) << ","
+     << " $" << (regCnt + 1) << ","
+     << " p";
+  if (!outputType.isInteger(32)) {
+    ss << ", $" << (regCnt + 3) << ",  $" << (regCnt + 4);
+  }
+  // Don't add transpose parameters unless needed.
+  if (isF16) {
+    ss << ", $" << (regCnt + 5) << ",  $" << (regCnt + 6);
+  }
+  ss << ";\n"
+     << "}\n";
+  ss.flush();
+  return ptx;
+}
+
+void NVVM::WgmmaMmaAsyncOp::getAsmValues(
+    RewriterBase &rewriter,
+    llvm::SmallVectorImpl<std::pair<mlir::Value, mlir::NVVM::PTXRegisterMod>>
+        &asmValues) {
+  Value outValue = getResults() ? getResults() : getInouts();
+  auto stype = dyn_cast<LLVM::LLVMStructType>(outValue.getType());
+  Type outputType = stype.getBody().front();
+  bool isF16 = getTypeA() == mlir::NVVM::WGMMATypes::f16 ||
+               getTypeA() == mlir::NVVM::WGMMATypes::bf16;
+  if (getResults())
+    asmValues.push_back({getResults(), mlir::NVVM::PTXRegisterMod::Write});
+  if (getInouts())
+    asmValues.push_back({getInouts(), mlir::NVVM::PTXRegisterMod::ReadWrite});
+  asmValues.push_back({getDescriptorA(), mlir::NVVM::PTXRegisterMod::Read});
+  asmValues.push_back({getDescriptorB(), mlir::NVVM::PTXRegisterMod::Read});
+  asmValues.push_back({makeConstantI32(rewriter, static_cast<int>(getScaleD())),
+                       mlir::NVVM::PTXRegisterMod::Read});
+  if (!outputType.isInteger(32)) {
+    asmValues.push_back(
+        {makeConstantI32(rewriter,
+                         getScaleA() == NVVM::WGMMAScaleIn::neg ? -1 : 1),
+         mlir::NVVM::PTXRegisterMod::Read});
+    asmValues.push_back(
+        {makeConstantI32(rewriter,
+                         getScaleB() == NVVM::WGMMAScaleIn::neg ? -1 : 1),
+         mlir::NVVM::PTXRegisterMod::Read});
+  }
+  if (isF16) {
+    asmValues.push_back(
+        {makeConstantI32(rewriter, static_cast<int>(getLayoutA())),
+         mlir::NVVM::PTXRegisterMod::Read});
+    asmValues.push_back(
+        {makeConstantI32(rewriter, static_cast<int>(getLayoutB())),
+         mlir::NVVM::PTXRegisterMod::Read});
+  }
 }
 
 //===----------------------------------------------------------------------===//
@@ -672,6 +1000,8 @@ void NVVMDialect::initialize() {
   // Support unknown operations because not all NVVM operations are
   // registered.
   allowUnknownOperations();
+  declarePromisedInterface<NVVMDialect, ConvertToLLVMPatternInterface>();
+  declarePromisedInterface<NVVMTargetAttr, gpu::TargetAttrInterface>();
 }
 
 LogicalResult NVVMDialect::verifyOperationAttribute(Operation *op,
@@ -687,13 +1017,13 @@ LogicalResult NVVMDialect::verifyOperationAttribute(Operation *op,
   // If maxntid and reqntid exist, it must be an array with max 3 dim
   if (attrName == NVVMDialect::getMaxntidAttrName() ||
       attrName == NVVMDialect::getReqntidAttrName()) {
-    auto values = attr.getValue().dyn_cast<ArrayAttr>();
+    auto values = llvm::dyn_cast<ArrayAttr>(attr.getValue());
     if (!values || values.empty() || values.size() > 3)
       return op->emitError()
              << "'" << attrName
              << "' attribute must be integer array with maximum 3 index";
-    for (auto val : attr.getValue().cast<ArrayAttr>()) {
-      if (!val.dyn_cast<IntegerAttr>())
+    for (auto val : llvm::cast<ArrayAttr>(attr.getValue())) {
+      if (!llvm::dyn_cast<IntegerAttr>(val))
         return op->emitError()
                << "'" << attrName
                << "' attribute must be integer array with maximum 3 index";
@@ -702,11 +1032,40 @@ LogicalResult NVVMDialect::verifyOperationAttribute(Operation *op,
   // If minctasm and maxnreg exist, it must be an array with max 3 dim
   if (attrName == NVVMDialect::getMinctasmAttrName() ||
       attrName == NVVMDialect::getMaxnregAttrName()) {
-    if (!attr.getValue().dyn_cast<IntegerAttr>())
+    if (!llvm::dyn_cast<IntegerAttr>(attr.getValue()))
       return op->emitError()
              << "'" << attrName << "' attribute must be integer constant";
   }
 
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// NVVM target attribute.
+//===----------------------------------------------------------------------===//
+LogicalResult
+NVVMTargetAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                       int optLevel, StringRef triple, StringRef chip,
+                       StringRef features, DictionaryAttr flags,
+                       ArrayAttr files) {
+  if (optLevel < 0 || optLevel > 3) {
+    emitError() << "The optimization level must be a number between 0 and 3.";
+    return failure();
+  }
+  if (triple.empty()) {
+    emitError() << "The target triple cannot be empty.";
+    return failure();
+  }
+  if (chip.empty()) {
+    emitError() << "The target chip cannot be empty.";
+    return failure();
+  }
+  if (files && !llvm::all_of(files, [](::mlir::Attribute attr) {
+        return attr && mlir::isa<StringAttr>(attr);
+      })) {
+    emitError() << "All the elements in the `link` array must be strings.";
+    return failure();
+  }
   return success();
 }
 

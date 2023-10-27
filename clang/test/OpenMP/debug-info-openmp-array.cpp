@@ -25,19 +25,19 @@ void f(int m) {
 // CHECK1-NEXT:    call void @llvm.dbg.declare(metadata ptr [[I]], metadata [[META14:![0-9]+]], metadata !DIExpression()), !dbg [[DBG15:![0-9]+]]
 // CHECK1-NEXT:    [[TMP0:%.*]] = load i32, ptr [[M_ADDR]], align 4, !dbg [[DBG16:![0-9]+]]
 // CHECK1-NEXT:    [[TMP1:%.*]] = zext i32 [[TMP0]] to i64, !dbg [[DBG17:![0-9]+]]
-// CHECK1-NEXT:    [[TMP2:%.*]] = call ptr @llvm.stacksave(), !dbg [[DBG17]]
+// CHECK1-NEXT:    [[TMP2:%.*]] = call ptr @llvm.stacksave.p0(), !dbg [[DBG17]]
 // CHECK1-NEXT:    store ptr [[TMP2]], ptr [[SAVED_STACK]], align 8, !dbg [[DBG17]]
 // CHECK1-NEXT:    [[VLA:%.*]] = alloca i32, i64 [[TMP1]], align 16, !dbg [[DBG17]]
 // CHECK1-NEXT:    store i64 [[TMP1]], ptr [[__VLA_EXPR0]], align 8, !dbg [[DBG17]]
 // CHECK1-NEXT:    call void @llvm.dbg.declare(metadata ptr [[__VLA_EXPR0]], metadata [[META18:![0-9]+]], metadata !DIExpression()), !dbg [[DBG20:![0-9]+]]
 // CHECK1-NEXT:    call void @llvm.dbg.declare(metadata ptr [[VLA]], metadata [[META21:![0-9]+]], metadata !DIExpression()), !dbg [[DBG25:![0-9]+]]
-// CHECK1-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB4:[0-9]+]], i32 3, ptr @.omp_outlined., ptr [[M_ADDR]], i64 [[TMP1]], ptr [[VLA]]), !dbg [[DBG26:![0-9]+]]
+// CHECK1-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB4:[0-9]+]], i32 3, ptr @_Z1fi.omp_outlined, ptr [[M_ADDR]], i64 [[TMP1]], ptr [[VLA]]), !dbg [[DBG26:![0-9]+]]
 // CHECK1-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[SAVED_STACK]], align 8, !dbg [[DBG27:![0-9]+]]
-// CHECK1-NEXT:    call void @llvm.stackrestore(ptr [[TMP3]]), !dbg [[DBG27]]
+// CHECK1-NEXT:    call void @llvm.stackrestore.p0(ptr [[TMP3]]), !dbg [[DBG27]]
 // CHECK1-NEXT:    ret void, !dbg [[DBG27]]
 //
 //
-// CHECK1-LABEL: define {{[^@]+}}@.omp_outlined._debug__
+// CHECK1-LABEL: define {{[^@]+}}@_Z1fi.omp_outlined_debug__
 // CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[M:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[CEN:%.*]]) #[[ATTR3:[0-9]+]] !dbg [[DBG28:![0-9]+]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -147,7 +147,7 @@ void f(int m) {
 // CHECK1-NEXT:    ret void, !dbg [[DBG64:![0-9]+]]
 //
 //
-// CHECK1-LABEL: define {{[^@]+}}@.omp_outlined.
+// CHECK1-LABEL: define {{[^@]+}}@_Z1fi.omp_outlined
 // CHECK1-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[M:%.*]], i64 noundef [[VLA:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[CEN:%.*]]) #[[ATTR3]] !dbg [[DBG65:![0-9]+]] {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -172,6 +172,6 @@ void f(int m) {
 // CHECK1-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[DOTBOUND_TID__ADDR]], align 8, !dbg [[DBG72]]
 // CHECK1-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[M_ADDR]], align 8, !dbg [[DBG72]]
 // CHECK1-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[CEN_ADDR]], align 8, !dbg [[DBG72]]
-// CHECK1-NEXT:    call void @.omp_outlined._debug__(ptr [[TMP3]], ptr [[TMP4]], ptr [[TMP5]], i64 [[TMP1]], ptr [[TMP6]]) #[[ATTR4:[0-9]+]], !dbg [[DBG72]]
+// CHECK1-NEXT:    call void @_Z1fi.omp_outlined_debug__(ptr [[TMP3]], ptr [[TMP4]], ptr [[TMP5]], i64 [[TMP1]], ptr [[TMP6]]) #[[ATTR4:[0-9]+]], !dbg [[DBG72]]
 // CHECK1-NEXT:    ret void, !dbg [[DBG72]]
 //

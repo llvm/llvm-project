@@ -1,0 +1,60 @@
+## Test when the frame size is equal to or large than redzone boundary size(288).
+## The behaviour of IsBackChainStored bit of traceback table.
+# RUN: llc  -mtriple powerpc64-ibm-aix-xcoff -o -\
+# RUN:   %s | FileCheck %s
+
+---
+name:            test
+tracksRegLiveness: true
+stack:
+  - { id: 0, size: 288, alignment: 16 }
+body: |
+  bb.0:
+    BLR8 implicit $lr8, implicit $rm
+
+---
+name:            overredzone
+tracksRegLiveness: true
+stack:
+  - { id: 0, size: 296, alignment: 16 }
+body: |
+  bb.0:
+    BLR8 implicit $lr8, implicit $rm
+
+
+  ; CHECK:              .vbyte  4, 0x00000000                   # Traceback table begin
+  ; CHECK-NEXT:         .byte   0x00                            # Version = 0
+  ; CHECK-NEXT:         .byte   0x09                            # Language = CPlusPlus
+  ; CHECK-NEXT:         .byte   0x20                            # -IsGlobaLinkage, -IsOutOfLineEpilogOrPrologue
+  ; CHECK-NEXT:                                         # +HasTraceBackTableOffset, -IsInternalProcedure
+  ; CHECK-NEXT:                                         # -HasControlledStorage, -IsTOCless
+  ; CHECK-NEXT:                                         # -IsFloatingPointPresent
+  ; CHECK-NEXT:                                         # -IsFloatingPointOperationLogOrAbortEnabled
+  ; CHECK-NEXT:         .byte   0x40                            # -IsInterruptHandler, +IsFunctionNamePresent, -IsAllocaUsed
+  ; CHECK-NEXT:                                         # OnConditionDirective = 0, -IsCRSaved, -IsLRSaved
+  ; CHECK-NEXT:         .byte   0x00                            # -IsBackChainStored, -IsFixup, NumOfFPRsSaved = 0
+  ; CHECK-NEXT:         .byte   0x00                            # -HasExtensionTable, -HasVectorInfo, NumOfGPRsSaved = 0
+  ; CHECK-NEXT:         .byte   0x00                            # NumberOfFixedParms = 0
+  ; CHECK-NEXT:         .byte   0x01                            # NumberOfFPParms = 0, +HasParmsOnStack
+  ; CHECK-NEXT:         .vbyte  4, L..test0-.test               # Function size
+  ; CHECK-NEXT:         .vbyte  2, 0x0004                       # Function name len = 4
+  ; CHECK-NEXT:         .byte   "test"                          # Function Name
+
+  ; CHECK:              .vbyte  4, 0x00000000                   # Traceback table begin
+  ; CHECK-NEXT:         .byte   0x00                            # Version = 0
+  ; CHECK-NEXT:         .byte   0x09                            # Language = CPlusPlus
+  ; CHECK-NEXT:         .byte   0x20                            # -IsGlobaLinkage, -IsOutOfLineEpilogOrPrologue
+  ; CHECK-NEXT:                                         # +HasTraceBackTableOffset, -IsInternalProcedure
+  ; CHECK-NEXT:                                         # -HasControlledStorage, -IsTOCless
+  ; CHECK-NEXT:                                         # -IsFloatingPointPresent
+  ; CHECK-NEXT:                                         # -IsFloatingPointOperationLogOrAbortEnabled
+  ; CHECK-NEXT:         .byte   0x40                            # -IsInterruptHandler, +IsFunctionNamePresent, -IsAllocaUsed
+  ; CHECK-NEXT:                                         # OnConditionDirective = 0, -IsCRSaved, -IsLRSaved
+  ; CHECK-NEXT:         .byte   0x80                            # +IsBackChainStored, -IsFixup, NumOfFPRsSaved = 0
+  ; CHECK-NEXT:         .byte   0x00                            # -HasExtensionTable, -HasVectorInfo, NumOfGPRsSaved = 0
+  ; CHECK-NEXT:         .byte   0x00                            # NumberOfFixedParms = 0
+  ; CHECK-NEXT:         .byte   0x01                            # NumberOfFPParms = 0, +HasParmsOnStack
+  ; CHECK-NEXT:         .vbyte  4, L..overredzone0-.overredzone # Function size
+  ; CHECK-NEXT:         .vbyte  2, 0x000b                       # Function name len = 11
+  ; CHECK-NEXT:         .byte   "overredzone"                   # Function Name
+...

@@ -207,28 +207,28 @@ void CoverageChecker::collectModuleHeaders() {
 // FIXME: Doesn't collect files from umbrella header.
 bool CoverageChecker::collectModuleHeaders(const Module &Mod) {
 
-  if (const FileEntry *UmbrellaHeader = Mod.getUmbrellaHeader().Entry) {
+  if (std::optional<Module::Header> UmbrellaHeader =
+          Mod.getUmbrellaHeaderAsWritten()) {
     // Collect umbrella header.
-    ModuleMapHeadersSet.insert(ModularizeUtilities::getCanonicalPath(
-      UmbrellaHeader->getName()));
+    ModuleMapHeadersSet.insert(
+        ModularizeUtilities::getCanonicalPath(UmbrellaHeader->Entry.getName()));
     // Preprocess umbrella header and collect the headers it references.
-    if (!collectUmbrellaHeaderHeaders(UmbrellaHeader->getName()))
+    if (!collectUmbrellaHeaderHeaders(UmbrellaHeader->Entry.getName()))
       return false;
-  }
-  else if (const DirectoryEntry *UmbrellaDir = Mod.getUmbrellaDir().Entry) {
+  } else if (std::optional<Module::DirectoryName> UmbrellaDir =
+                 Mod.getUmbrellaDirAsWritten()) {
     // Collect headers in umbrella directory.
-    if (!collectUmbrellaHeaders(UmbrellaDir->getName()))
+    if (!collectUmbrellaHeaders(UmbrellaDir->Entry.getName()))
       return false;
   }
 
   for (auto &HeaderKind : Mod.Headers)
     for (auto &Header : HeaderKind)
-      ModuleMapHeadersSet.insert(ModularizeUtilities::getCanonicalPath(
-        Header.Entry->getName()));
+      ModuleMapHeadersSet.insert(
+          ModularizeUtilities::getCanonicalPath(Header.Entry.getName()));
 
-  for (auto MI = Mod.submodule_begin(), MIEnd = Mod.submodule_end();
-       MI != MIEnd; ++MI)
-    collectModuleHeaders(**MI);
+  for (auto *Submodule : Mod.submodules())
+    collectModuleHeaders(*Submodule);
 
   return true;
 }

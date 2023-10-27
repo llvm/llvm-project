@@ -34,7 +34,7 @@ class LDSDIRe<bits<2> op, bit is_direct> : Enc32 {
 class LDSDIR_getIns<bit direct> {
   dag ret = !if(direct,
     (ins wait_vdst:$waitvdst),
-    (ins Attr:$attr, AttrChan:$attrchan, wait_vdst:$waitvdst)
+    (ins InterpAttr:$attr, InterpAttrChan:$attrchan, wait_vdst:$waitvdst)
   );
 }
 

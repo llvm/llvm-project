@@ -3,9 +3,12 @@
 // RUN: %clang_cc1 -std=c++20 -x c++-header %S/Inputs/header.h -emit-header-unit -o %t/h.pcm
 // RUN: %clang_cc1 -std=c++20 %s -DX_INTERFACE -emit-module-interface -o %t/x.pcm
 // RUN: %clang_cc1 -std=c++20 %s -DY_INTERFACE -emit-module-interface -o %t/y.pcm
-// RUN: %clang_cc1 -std=c++20 %s -DINTERFACE -fmodule-file=%t/x.pcm -fmodule-file=%t/y.pcm -emit-module-interface -o %t/m.pcm
-// RUN: %clang_cc1 -std=c++20 %s -DIMPLEMENTATION -I%S/Inputs -fmodule-file=%t/h.pcm -fmodule-file=%t/m.pcm -verify
-// RUN: %clang_cc1 -std=c++20 %s -DUSER -I%S/Inputs -fmodule-file=%t/h.pcm -fmodule-file=%t/m.pcm -verify
+// RUN: %clang_cc1 -std=c++20 %s -DINTERFACE -fmodule-file=X=%t/x.pcm -fmodule-file=Y=%t/y.pcm -emit-module-interface -o %t/m.pcm
+// RUN: %clang_cc1 -std=c++20 %s -DIMPLEMENTATION -I%S/Inputs -fmodule-file=%t/h.pcm \
+// RUN:   -fmodule-file=X=%t/x.pcm -fmodule-file=Y=%t/y.pcm -fmodule-file=p2=%t/m.pcm -verify \
+// RUN:   -Wno-experimental-header-units
+// RUN: %clang_cc1 -std=c++20 %s -DUSER -I%S/Inputs -fmodule-file=%t/h.pcm -fmodule-file=p2=%t/m.pcm \
+// RUN:   -fmodule-file=X=%t/x.pcm -fmodule-file=Y=%t/y.pcm -Wno-experimental-header-units -verify
 
 #if defined(X_INTERFACE)
 export module X;

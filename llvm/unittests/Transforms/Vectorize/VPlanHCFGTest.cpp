@@ -9,8 +9,8 @@
 #include "../lib/Transforms/Vectorize/VPlan.h"
 #include "../lib/Transforms/Vectorize/VPlanTransforms.h"
 #include "VPlanTestBase.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/TargetParser/Triple.h"
 #include "gtest/gtest.h"
 #include <string>
 
@@ -96,7 +96,7 @@ TEST_F(VPlanHCFGTest, testBuildHCFGInnerLoop) {
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   // Add an external value to check we do not print the list of external values,
   // as this is not required with the new printing.
-  Plan->addVPValue(&*F->arg_begin());
+  Plan->getVPValueOrAddLiveIn(&*F->arg_begin());
   std::string FullDump;
   raw_string_ostream OS(FullDump);
   Plan->printDOT(OS);
@@ -106,28 +106,33 @@ node [shape=rect, fontname=Courier, fontsize=30]
 edge [fontname=Courier, fontsize=30]
 compound=true
   N0 [label =
+    "ph:\l" +
+    "  EMIT vp\<%1\> = EXPAND SCEV (-1 + %N)\l" +
+    "No successors\l"
+  ]
+  N1 [label =
     "vector.ph:\l" +
     "Successor(s): for.body\l"
   ]
-  N0 -> N1 [ label="" lhead=cluster_N2]
-  subgraph cluster_N2 {
+  N1 -> N2 [ label="" lhead=cluster_N3]
+  subgraph cluster_N3 {
     fontname=Courier
     label="\<x1\> for.body"
-    N1 [label =
+    N2 [label =
       "vector.body:\l" +
       "  WIDEN-PHI ir\<%indvars.iv\> = phi ir\<0\>, ir\<%indvars.iv.next\>\l" +
-      "  EMIT ir\<%arr.idx\> = getelementptr ir\<%A\> ir\<%indvars.iv\>\l" +
+      "  EMIT ir\<%arr.idx\> = getelementptr ir\<%A\>, ir\<%indvars.iv\>\l" +
       "  EMIT ir\<%l1\> = load ir\<%arr.idx\>\l" +
-      "  EMIT ir\<%res\> = add ir\<%l1\> ir\<10\>\l" +
-      "  EMIT store ir\<%res\> ir\<%arr.idx\>\l" +
-      "  EMIT ir\<%indvars.iv.next\> = add ir\<%indvars.iv\> ir\<1\>\l" +
-      "  EMIT ir\<%exitcond\> = icmp ir\<%indvars.iv.next\> ir\<%N\>\l" +
+      "  EMIT ir\<%res\> = add ir\<%l1\>, ir\<10\>\l" +
+      "  EMIT store ir\<%res\>, ir\<%arr.idx\>\l" +
+      "  EMIT ir\<%indvars.iv.next\> = add ir\<%indvars.iv\>, ir\<1\>\l" +
+      "  EMIT ir\<%exitcond\> = icmp ir\<%indvars.iv.next\>, ir\<%N\>\l" +
       "  EMIT branch-on-cond ir\<%exitcond\>\l" +
       "No successors\l"
     ]
   }
-  N1 -> N3 [ label="" ltail=cluster_N2]
-  N3 [label =
+  N2 -> N4 [ label="" ltail=cluster_N3]
+  N4 [label =
     "for.end:\l" +
     "No successors\l"
   ]
@@ -137,10 +142,8 @@ compound=true
 #endif
   TargetLibraryInfoImpl TLII(Triple(M.getTargetTriple()));
   TargetLibraryInfo TLI(TLII);
-  SmallPtrSet<Instruction *, 1> DeadInstructions;
   VPlanTransforms::VPInstructionsToVPRecipes(
-      LI->getLoopFor(LoopHeader), Plan, [](PHINode *P) { return nullptr; },
-      DeadInstructions, *SE, TLI);
+      Plan, [](PHINode *P) { return nullptr; }, *SE, TLI);
 }
 
 TEST_F(VPlanHCFGTest, testVPInstructionToVPRecipesInner) {
@@ -167,12 +170,10 @@ TEST_F(VPlanHCFGTest, testVPInstructionToVPRecipesInner) {
   BasicBlock *LoopHeader = F->getEntryBlock().getSingleSuccessor();
   auto Plan = buildHCFG(LoopHeader);
 
-  SmallPtrSet<Instruction *, 1> DeadInstructions;
   TargetLibraryInfoImpl TLII(Triple(M.getTargetTriple()));
   TargetLibraryInfo TLI(TLII);
   VPlanTransforms::VPInstructionsToVPRecipes(
-      LI->getLoopFor(LoopHeader), Plan, [](PHINode *P) { return nullptr; },
-      DeadInstructions, *SE, TLI);
+      Plan, [](PHINode *P) { return nullptr; }, *SE, TLI);
 
   VPBlockBase *Entry = Plan->getEntry()->getEntryBasicBlock();
   EXPECT_NE(nullptr, Entry->getSingleSuccessor());

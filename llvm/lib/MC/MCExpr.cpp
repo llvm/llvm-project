@@ -327,6 +327,10 @@ StringRef MCSymbolRefExpr::getVariantKindName(VariantKind Kind) {
     return "gd";
   case VK_PPC_AIX_TLSGDM:
     return "m";
+  case VK_PPC_AIX_TLSIE:
+    return "ie";
+  case VK_PPC_AIX_TLSLE:
+    return "le";
   case VK_PPC_GOT_TLSLD: return "got@tlsld";
   case VK_PPC_GOT_TLSLD_LO: return "got@tlsld@l";
   case VK_PPC_GOT_TLSLD_HI: return "got@tlsld@h";
@@ -360,6 +364,7 @@ StringRef MCSymbolRefExpr::getVariantKindName(VariantKind Kind) {
   case VK_WASM_TLSREL: return "TLSREL";
   case VK_WASM_TBREL: return "TBREL";
   case VK_WASM_GOT_TLS: return "GOT@TLS";
+  case VK_WASM_FUNCINDEX: return "FUNCINDEX";
   case VK_AMDGPU_GOTPCREL32_LO: return "gotpcrel32@lo";
   case VK_AMDGPU_GOTPCREL32_HI: return "gotpcrel32@hi";
   case VK_AMDGPU_REL32_LO: return "rel32@lo";
@@ -503,6 +508,7 @@ MCSymbolRefExpr::getVariantKindForName(StringRef Name) {
     .Case("mbrel", VK_WASM_MBREL)
     .Case("tlsrel", VK_WASM_TLSREL)
     .Case("got@tls", VK_WASM_GOT_TLS)
+    .Case("funcindex", VK_WASM_FUNCINDEX)
     .Case("gotpcrel32@lo", VK_AMDGPU_GOTPCREL32_LO)
     .Case("gotpcrel32@hi", VK_AMDGPU_GOTPCREL32_HI)
     .Case("rel32@lo", VK_AMDGPU_REL32_LO)
@@ -607,11 +613,6 @@ static void AttemptToFoldSymbolOffsetDifference(
     if (Asm->isThumbFunc(&SA))
       Addend |= 1;
 
-    // If symbol is labeled as micromips, we set low-bit to ensure
-    // correct offset in .gcc_except_table
-    if (Asm->getBackend().isMicroMips(&SA))
-      Addend |= 1;
-
     // Clear the symbol expr pointers to indicate we have folded these
     // operands.
     A = B = nullptr;
@@ -619,21 +620,25 @@ static void AttemptToFoldSymbolOffsetDifference(
 
   const MCFragment *FA = SA.getFragment();
   const MCFragment *FB = SB.getFragment();
-  // If both symbols are in the same fragment, return the difference of their
-  // offsets
-  if (FA == FB && !SA.isVariable() && !SA.isUnset() && !SB.isVariable() &&
-      !SB.isUnset()) {
-    Addend += SA.getOffset() - SB.getOffset();
-    return FinalizeFolding();
-  }
-
   const MCSection &SecA = *FA->getParent();
   const MCSection &SecB = *FB->getParent();
-
   if ((&SecA != &SecB) && !Addrs)
     return;
 
-  if (Layout) {
+  // When layout is available, we can generally compute the difference using the
+  // getSymbolOffset path, which also avoids the possible slow fragment walk.
+  // However, linker relaxation may cause incorrect fold of A-B if A and B are
+  // separated by a linker-relaxable instruction. If the section contains
+  // instructions and InSet is false (not expressions in directive like
+  // .size/.fill), disable the fast path.
+  if (Layout && (InSet || !SecA.hasInstructions() ||
+                 !Asm->getContext().getTargetTriple().isRISCV())) {
+    // If both symbols are in the same fragment, return the difference of their
+    // offsets. canGetFragmentOffset(FA) may be false.
+    if (FA == FB && !SA.isVariable() && !SB.isVariable()) {
+      Addend += SA.getOffset() - SB.getOffset();
+      return FinalizeFolding();
+    }
     // One of the symbol involved is part of a fragment being laid out. Quit now
     // to avoid a self loop.
     if (!Layout->canGetFragmentOffset(FA) || !Layout->canGetFragmentOffset(FB))
@@ -654,24 +659,65 @@ static void AttemptToFoldSymbolOffsetDifference(
     // this is important when the Subtarget is changed and a new MCDataFragment
     // is created in the case of foo: instr; .arch_extension ext; instr .if . -
     // foo.
-    if (SA.isVariable() || SA.isUnset() || SB.isVariable() || SB.isUnset() ||
-        FA->getKind() != MCFragment::FT_Data ||
-        FB->getKind() != MCFragment::FT_Data ||
+    if (SA.isVariable() || SB.isVariable() ||
         FA->getSubsectionNumber() != FB->getSubsectionNumber())
       return;
+
     // Try to find a constant displacement from FA to FB, add the displacement
     // between the offset in FA of SA and the offset in FB of SB.
+    bool Reverse = false;
+    if (FA == FB) {
+      Reverse = SA.getOffset() < SB.getOffset();
+    } else if (!isa<MCDummyFragment>(FA)) {
+      Reverse = std::find_if(std::next(FA->getIterator()), SecA.end(),
+                             [&](auto &I) { return &I == FB; }) != SecA.end();
+    }
+
+    uint64_t SAOffset = SA.getOffset(), SBOffset = SB.getOffset();
     int64_t Displacement = SA.getOffset() - SB.getOffset();
+    if (Reverse) {
+      std::swap(FA, FB);
+      std::swap(SAOffset, SBOffset);
+      Displacement *= -1;
+    }
+
+    [[maybe_unused]] bool Found = false;
+    // Track whether B is before a relaxable instruction and whether A is after
+    // a relaxable instruction. If SA and SB are separated by a linker-relaxable
+    // instruction, the difference cannot be resolved as it may be changed by
+    // the linker.
+    bool BBeforeRelax = false, AAfterRelax = false;
     for (auto FI = FB->getIterator(), FE = SecA.end(); FI != FE; ++FI) {
+      auto DF = dyn_cast<MCDataFragment>(FI);
+      if (DF && DF->isLinkerRelaxable()) {
+        if (&*FI != FB || SBOffset != DF->getContents().size())
+          BBeforeRelax = true;
+        if (&*FI != FA || SAOffset == DF->getContents().size())
+          AAfterRelax = true;
+        if (BBeforeRelax && AAfterRelax)
+          return;
+      }
       if (&*FI == FA) {
-        Addend += Displacement;
-        return FinalizeFolding();
+        Found = true;
+        break;
       }
 
-      if (FI->getKind() != MCFragment::FT_Data)
+      int64_t Num;
+      if (DF) {
+        Displacement += DF->getContents().size();
+      } else if (auto *FF = dyn_cast<MCFillFragment>(FI);
+                 FF && FF->getNumValues().evaluateAsAbsolute(Num)) {
+        Displacement += Num * FF->getValueSize();
+      } else {
         return;
-      Displacement += cast<MCDataFragment>(FI)->getContents().size();
+      }
     }
+    // If the previous loop does not find FA, FA must be a dummy fragment not in
+    // the fragment list (which means SA is a pending label (see
+    // flushPendingLabels)). In either case, we can resolve the difference.
+    assert(Found || isa<MCDummyFragment>(FA));
+    Addend += Reverse ? -Displacement : Displacement;
+    FinalizeFolding();
   }
 }
 
@@ -694,16 +740,23 @@ static void AttemptToFoldSymbolOffsetDifference(
 /// They might look redundant, but this function can be used before layout
 /// is done (see the object streamer for example) and having the Asm argument
 /// lets us avoid relaxations early.
-static bool
-EvaluateSymbolicAdd(const MCAssembler *Asm, const MCAsmLayout *Layout,
-                    const SectionAddrMap *Addrs, bool InSet, const MCValue &LHS,
-                    const MCSymbolRefExpr *RHS_A, const MCSymbolRefExpr *RHS_B,
-                    int64_t RHS_Cst, MCValue &Res) {
+static bool EvaluateSymbolicAdd(const MCAssembler *Asm,
+                                const MCAsmLayout *Layout,
+                                const SectionAddrMap *Addrs, bool InSet,
+                                const MCValue &LHS, const MCValue &RHS,
+                                MCValue &Res) {
   // FIXME: This routine (and other evaluation parts) are *incredibly* sloppy
   // about dealing with modifiers. This will ultimately bite us, one day.
   const MCSymbolRefExpr *LHS_A = LHS.getSymA();
   const MCSymbolRefExpr *LHS_B = LHS.getSymB();
   int64_t LHS_Cst = LHS.getConstant();
+
+  const MCSymbolRefExpr *RHS_A = RHS.getSymA();
+  const MCSymbolRefExpr *RHS_B = RHS.getSymB();
+  int64_t RHS_Cst = RHS.getConstant();
+
+  if (LHS.getRefKind() != RHS.getRefKind())
+    return false;
 
   // Fold the result constant immediately.
   int64_t Result_Cst = LHS_Cst + RHS_Cst;
@@ -761,6 +814,9 @@ bool MCExpr::evaluateAsValue(MCValue &Res, const MCAsmLayout &Layout) const {
 }
 
 static bool canExpand(const MCSymbol &Sym, bool InSet) {
+  if (Sym.isWeakExternal())
+    return false;
+
   const MCExpr *Expr = Sym.getVariableValue();
   const auto *Inner = dyn_cast<MCSymbolRefExpr>(Expr);
   if (Inner) {
@@ -885,18 +941,19 @@ bool MCExpr::evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
         !ABE->getRHS()->evaluateAsRelocatableImpl(RHSValue, Asm, Layout, Fixup,
                                                   Addrs, InSet)) {
       // Check if both are Target Expressions, see if we can compare them.
-      if (const MCTargetExpr *L = dyn_cast<MCTargetExpr>(ABE->getLHS()))
-        if (const MCTargetExpr *R = cast<MCTargetExpr>(ABE->getRHS())) {
-          switch (ABE->getOpcode()) {
-          case MCBinaryExpr::EQ:
-            Res = MCValue::get((L->isEqualTo(R)) ? -1 : 0);
-            return true;
-          case MCBinaryExpr::NE:
-            Res = MCValue::get((R->isEqualTo(R)) ? 0 : -1);
-            return true;
-          default: break;
-          }
+      if (const MCTargetExpr *L = dyn_cast<MCTargetExpr>(ABE->getLHS())) {
+        const MCTargetExpr *R = cast<MCTargetExpr>(ABE->getRHS());
+        switch (ABE->getOpcode()) {
+        case MCBinaryExpr::EQ:
+          Res = MCValue::get(L->isEqualTo(R) ? -1 : 0);
+          return true;
+        case MCBinaryExpr::NE:
+          Res = MCValue::get(L->isEqualTo(R) ? 0 : -1);
+          return true;
+        default:
+          break;
         }
+      }
       return false;
     }
 
@@ -909,14 +966,19 @@ bool MCExpr::evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
       case MCBinaryExpr::Sub:
         // Negate RHS and add.
         // The cast avoids undefined behavior if the constant is INT64_MIN.
-        return EvaluateSymbolicAdd(Asm, Layout, Addrs, InSet, LHSValue,
-                                   RHSValue.getSymB(), RHSValue.getSymA(),
-                                   -(uint64_t)RHSValue.getConstant(), Res);
+        return EvaluateSymbolicAdd(
+            Asm, Layout, Addrs, InSet, LHSValue,
+            MCValue::get(RHSValue.getSymB(), RHSValue.getSymA(),
+                         -(uint64_t)RHSValue.getConstant(),
+                         RHSValue.getRefKind()),
+            Res);
 
       case MCBinaryExpr::Add:
-        return EvaluateSymbolicAdd(Asm, Layout, Addrs, InSet, LHSValue,
-                                   RHSValue.getSymA(), RHSValue.getSymB(),
-                                   RHSValue.getConstant(), Res);
+        return EvaluateSymbolicAdd(
+            Asm, Layout, Addrs, InSet, LHSValue,
+            MCValue::get(RHSValue.getSymA(), RHSValue.getSymB(),
+                         RHSValue.getConstant(), RHSValue.getRefKind()),
+            Res);
       }
     }
 

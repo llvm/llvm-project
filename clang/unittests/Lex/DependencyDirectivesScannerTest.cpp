@@ -90,7 +90,8 @@ TEST(MinimizeSourceToDependencyDirectivesTest, AllTokens) {
                                            "#pragma pop_macro(A)\n"
                                            "#pragma include_alias(<A>, <B>)\n"
                                            "export module m;\n"
-                                           "import m;\n",
+                                           "import m;\n"
+                                           "#pragma clang system_header\n",
                                            Out, Tokens, Directives));
   EXPECT_EQ(pp_define, Directives[0].Kind);
   EXPECT_EQ(pp_undef, Directives[1].Kind);
@@ -113,7 +114,8 @@ TEST(MinimizeSourceToDependencyDirectivesTest, AllTokens) {
   EXPECT_EQ(pp_pragma_include_alias, Directives[18].Kind);
   EXPECT_EQ(cxx_export_module_decl, Directives[19].Kind);
   EXPECT_EQ(cxx_import_decl, Directives[20].Kind);
-  EXPECT_EQ(pp_eof, Directives[21].Kind);
+  EXPECT_EQ(pp_pragma_system_header, Directives[21].Kind);
+  EXPECT_EQ(pp_eof, Directives[22].Kind);
 }
 
 TEST(MinimizeSourceToDependencyDirectivesTest, EmptyHash) {
@@ -501,6 +503,92 @@ TEST(MinimizeSourceToDependencyDirectivesTest, Pragma) {
   EXPECT_STREQ("#pragma clang module import\n", Out.data());
 }
 
+TEST(MinimizeSourceToDependencyDirectivesTest, UnderscorePragma) {
+  SmallVector<char, 128> Out;
+
+  ASSERT_FALSE(minimizeSourceToDependencyDirectives(R"(_)", Out));
+  EXPECT_STREQ("<TokBeforeEOF>\n", Out.data());
+  ASSERT_FALSE(minimizeSourceToDependencyDirectives(R"(_Pragma)", Out));
+  EXPECT_STREQ("<TokBeforeEOF>\n", Out.data());
+  ASSERT_FALSE(minimizeSourceToDependencyDirectives(R"(_Pragma()", Out));
+  EXPECT_STREQ("<TokBeforeEOF>\n", Out.data());
+  ASSERT_FALSE(minimizeSourceToDependencyDirectives(R"(_Pragma())", Out));
+  EXPECT_STREQ("<TokBeforeEOF>\n", Out.data());
+  ASSERT_FALSE(minimizeSourceToDependencyDirectives(R"(_Pragma(")", Out));
+  EXPECT_STREQ("<TokBeforeEOF>\n", Out.data());
+  ASSERT_FALSE(minimizeSourceToDependencyDirectives(R"(_Pragma("A"))", Out));
+  EXPECT_STREQ("<TokBeforeEOF>\n", Out.data());
+
+  ASSERT_FALSE(minimizeSourceToDependencyDirectives(
+      R"x(_Pragma("push_macro(\"MACRO\")"))x", Out));
+  EXPECT_STREQ(R"x(_Pragma("push_macro(\"MACRO\")"))x"
+               "\n",
+               Out.data());
+
+  ASSERT_FALSE(minimizeSourceToDependencyDirectives(
+      R"x(_Pragma("pop_macro(\"MACRO\")"))x", Out));
+  EXPECT_STREQ(R"x(_Pragma("pop_macro(\"MACRO\")"))x"
+               "\n",
+               Out.data());
+
+  ASSERT_FALSE(minimizeSourceToDependencyDirectives(
+      R"x(_Pragma("include_alias(\"A\", \"B\")"))x", Out));
+  EXPECT_STREQ(R"x(_Pragma("include_alias(\"A\", \"B\")"))x"
+               "\n",
+               Out.data());
+
+  ASSERT_FALSE(minimizeSourceToDependencyDirectives(
+      R"x(_Pragma("include_alias(<A>, <B>)"))x", Out));
+  EXPECT_STREQ(R"x(_Pragma("include_alias(<A>, <B>)"))x"
+               "\n",
+               Out.data());
+
+  ASSERT_FALSE(
+      minimizeSourceToDependencyDirectives(R"(_Pragma("clang"))", Out));
+  EXPECT_STREQ("<TokBeforeEOF>\n", Out.data());
+
+  ASSERT_FALSE(
+      minimizeSourceToDependencyDirectives(R"(_Pragma("clang module"))", Out));
+  EXPECT_STREQ("<TokBeforeEOF>\n", Out.data());
+
+  ASSERT_FALSE(minimizeSourceToDependencyDirectives(
+      R"(_Pragma("clang module impor"))", Out));
+  EXPECT_STREQ("<TokBeforeEOF>\n", Out.data());
+
+  ASSERT_FALSE(minimizeSourceToDependencyDirectives(
+      R"(_Pragma("clang module import"))", Out));
+  EXPECT_STREQ(R"(_Pragma("clang module import"))"
+               "\n",
+               Out.data());
+
+  ASSERT_FALSE(minimizeSourceToDependencyDirectives(
+      R"(_Pragma("clang \
+  module \
+  import"))",
+      Out));
+  EXPECT_STREQ(R"(_Pragma("clang \
+  module \
+  import"))"
+               "\n",
+               Out.data());
+
+  ASSERT_FALSE(minimizeSourceToDependencyDirectives(
+      R"(_Pragma(L"clang module import"))", Out));
+  EXPECT_STREQ(R"(_Pragma(L"clang module import"))"
+               "\n",
+               Out.data());
+
+  // FIXME: u"" strings depend on using C11 language mode
+  ASSERT_FALSE(minimizeSourceToDependencyDirectives(
+      R"(_Pragma(u"clang module import"))", Out));
+  EXPECT_STREQ("<TokBeforeEOF>\n", Out.data());
+
+  // FIXME: R"()" strings depend on using C++ 11 language mode
+  ASSERT_FALSE(minimizeSourceToDependencyDirectives(
+      R"(_Pragma(R"abc(clang module import)abc"))", Out));
+  EXPECT_STREQ("<TokBeforeEOF>\n", Out.data());
+}
+
 TEST(MinimizeSourceToDependencyDirectivesTest, Include) {
   SmallVector<char, 128> Out;
 
@@ -755,20 +843,26 @@ TEST(MinimizeSourceToDependencyDirectivesTest, PragmaOnce) {
 #pragma once
 // another comment
 #include <test.h>
+_Pragma("once")
 )";
   ASSERT_FALSE(
       minimizeSourceToDependencyDirectives(Source, Out, Tokens, Directives));
-  EXPECT_STREQ("#pragma once\n#include <test.h>\n", Out.data());
-  ASSERT_EQ(Directives.size(), 3u);
+  EXPECT_STREQ("#pragma once\n#include <test.h>\n_Pragma(\"once\")\n",
+               Out.data());
+  ASSERT_EQ(Directives.size(), 4u);
   EXPECT_EQ(Directives[0].Kind, dependency_directives_scan::pp_pragma_once);
+  EXPECT_EQ(Directives[2].Kind, dependency_directives_scan::pp_pragma_once);
 
   Source = R"(// comment
     #pragma once extra tokens
     // another comment
     #include <test.h>
+    _Pragma("once") extra tokens
     )";
   ASSERT_FALSE(minimizeSourceToDependencyDirectives(Source, Out));
-  EXPECT_STREQ("#pragma once extra tokens\n#include <test.h>\n", Out.data());
+  EXPECT_STREQ("#pragma once extra tokens\n#include "
+               "<test.h>\n_Pragma(\"once\")<TokBeforeEOF>\n",
+               Out.data());
 }
 
 TEST(MinimizeSourceToDependencyDirectivesTest,

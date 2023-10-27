@@ -133,7 +133,6 @@ BugDriver::performFinalCleanups(std::unique_ptr<Module> M,
     I->setLinkage(GlobalValue::ExternalLinkage);
 
   std::vector<std::string> CleanupPasses;
-  CleanupPasses.push_back("globaldce");
 
   if (MayModifySemantics)
     CleanupPasses.push_back("deadarghaX0r");

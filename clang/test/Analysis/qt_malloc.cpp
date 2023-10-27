@@ -19,3 +19,8 @@ void connect(QObject *obj) {
                    new QtPrivate::QSlotObjectBase(), (Qt::ConnectionType)0,
                    nullptr, nullptr);
 }
+
+void singleShot(QTimer *timer) {
+  timer->singleShotImpl(0, (Qt::TimerType)0, nullptr,
+                        new QtPrivate::QSlotObjectBase());
+}

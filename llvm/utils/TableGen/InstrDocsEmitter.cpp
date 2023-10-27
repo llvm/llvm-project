@@ -21,25 +21,24 @@
 #include "CodeGenDAGPatterns.h"
 #include "CodeGenInstruction.h"
 #include "CodeGenTarget.h"
-#include "TableGenBackends.h"
 #include "llvm/TableGen/Record.h"
+#include "llvm/TableGen/TableGenBackend.h"
 #include <string>
 #include <vector>
 
 using namespace llvm;
 
-namespace llvm {
-
-void writeTitle(StringRef Str, raw_ostream &OS, char Kind = '-') {
-  OS << std::string(Str.size(), Kind) << "\n" << Str << "\n"
+static void writeTitle(StringRef Str, raw_ostream &OS, char Kind = '-') {
+  OS << std::string(Str.size(), Kind) << "\n"
+     << Str << "\n"
      << std::string(Str.size(), Kind) << "\n";
 }
 
-void writeHeader(StringRef Str, raw_ostream &OS, char Kind = '-') {
+static void writeHeader(StringRef Str, raw_ostream &OS, char Kind = '-') {
   OS << Str << "\n" << std::string(Str.size(), Kind) << "\n";
 }
 
-std::string escapeForRST(StringRef Str) {
+static std::string escapeForRST(StringRef Str) {
   std::string Result;
   Result.reserve(Str.size() + 4);
   for (char C : Str) {
@@ -55,7 +54,7 @@ std::string escapeForRST(StringRef Str) {
   return Result;
 }
 
-void EmitInstrDocs(RecordKeeper &RK, raw_ostream &OS) {
+static void EmitInstrDocs(RecordKeeper &RK, raw_ostream &OS) {
   CodeGenDAGPatterns CDP(RK);
   CodeGenTarget &Target = CDP.getTargetInfo();
   unsigned VariantCount = Target.getAsmParserVariantCount();
@@ -216,4 +215,5 @@ void EmitInstrDocs(RecordKeeper &RK, raw_ostream &OS) {
   }
 }
 
-} // end namespace llvm
+static TableGen::Emitter::Opt X("gen-instr-docs", EmitInstrDocs,
+                                "Generate instruction documentation");

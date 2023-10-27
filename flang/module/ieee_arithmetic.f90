@@ -8,6 +8,9 @@
 
 ! Fortran 2018 Clause 17
 
+! ieee_class_type and ieee_round_type values
+include '../include/flang/Runtime/ieee_arithmetic.h'
+
 module ieee_arithmetic
   ! 17.1: "The module IEEE_ARITHMETIC behaves as if it contained a
   ! USE statement for IEEE_EXCEPTIONS; everything that is public in
@@ -15,6 +18,7 @@ module ieee_arithmetic
   use __Fortran_ieee_exceptions
 
   use __Fortran_builtins, only: &
+    ieee_fma => __builtin_fma, &
     ieee_is_nan => __builtin_ieee_is_nan, &
     ieee_is_negative => __builtin_ieee_is_negative, &
     ieee_is_normal => __builtin_ieee_is_normal, &
@@ -42,21 +46,21 @@ module ieee_arithmetic
   end type ieee_class_type
 
   type(ieee_class_type), parameter :: &
-    ieee_signaling_nan = ieee_class_type(1), &
-    ieee_quiet_nan = ieee_class_type(2), &
-    ieee_negative_inf = ieee_class_type(3), &
-    ieee_negative_normal = ieee_class_type(4), &
-    ieee_negative_denormal = ieee_class_type(5), &
-    ieee_negative_zero = ieee_class_type(6), &
-    ieee_positive_zero = ieee_class_type(7), &
-    ieee_positive_subnormal = ieee_class_type(8), &
-    ieee_positive_normal = ieee_class_type(9), &
-    ieee_positive_inf = ieee_class_type(10), &
-    ieee_other_value = ieee_class_type(11)
+    ieee_signaling_nan = ieee_class_type(_FORTRAN_RUNTIME_IEEE_SIGNALING_NAN), &
+    ieee_quiet_nan = ieee_class_type(_FORTRAN_RUNTIME_IEEE_QUIET_NAN), &
+    ieee_negative_inf = ieee_class_type(_FORTRAN_RUNTIME_IEEE_NEGATIVE_INF), &
+    ieee_negative_normal = ieee_class_type(_FORTRAN_RUNTIME_IEEE_NEGATIVE_NORMAL), &
+    ieee_negative_subnormal = ieee_class_type(_FORTRAN_RUNTIME_IEEE_NEGATIVE_SUBNORMAL), &
+    ieee_negative_zero = ieee_class_type(_FORTRAN_RUNTIME_IEEE_NEGATIVE_ZERO), &
+    ieee_positive_zero = ieee_class_type(_FORTRAN_RUNTIME_IEEE_POSITIVE_ZERO), &
+    ieee_positive_subnormal = ieee_class_type(_FORTRAN_RUNTIME_IEEE_POSITIVE_SUBNORMAL), &
+    ieee_positive_normal = ieee_class_type(_FORTRAN_RUNTIME_IEEE_POSITIVE_NORMAL), &
+    ieee_positive_inf = ieee_class_type(_FORTRAN_RUNTIME_IEEE_POSITIVE_INF), &
+    ieee_other_value = ieee_class_type(_FORTRAN_RUNTIME_IEEE_OTHER_VALUE)
 
   type(ieee_class_type), parameter :: &
-    ieee_negative_subnormal = ieee_negative_denormal, &
-    ieee_positive_denormal = ieee_negative_subnormal
+    ieee_negative_denormal = ieee_negative_subnormal, &
+    ieee_positive_denormal = ieee_positive_subnormal
 
   type :: ieee_round_type
     private
@@ -64,12 +68,12 @@ module ieee_arithmetic
   end type ieee_round_type
 
   type(ieee_round_type), parameter :: &
-    ieee_nearest = ieee_round_type(1), &
-    ieee_to_zero = ieee_round_type(2), &
-    ieee_up = ieee_round_type(3), &
-    ieee_down = ieee_round_type(4), &
-    ieee_away = ieee_round_type(5), &
-    ieee_other = ieee_round_type(6)
+    ieee_to_zero = ieee_round_type(_FORTRAN_RUNTIME_IEEE_TO_ZERO), &
+    ieee_nearest = ieee_round_type(_FORTRAN_RUNTIME_IEEE_NEAREST), &
+    ieee_up = ieee_round_type(_FORTRAN_RUNTIME_IEEE_UP), &
+    ieee_down = ieee_round_type(_FORTRAN_RUNTIME_IEEE_DOWN), &
+    ieee_away = ieee_round_type(_FORTRAN_RUNTIME_IEEE_AWAY), &
+    ieee_other = ieee_round_type(_FORTRAN_RUNTIME_IEEE_OTHER)
 
   interface operator(==)
     elemental logical function ieee_class_eq(x, y)
@@ -219,16 +223,6 @@ module ieee_arithmetic
   end interface ieee_copy_sign
   PRIVATE_RR(IEEE_COPY_SIGN)
 #undef IEEE_COPY_SIGN_RR
-
-#define IEEE_FMA_R(AKIND) \
-  elemental real(AKIND) function ieee_fma_a##AKIND(a, b, c); \
-    real(AKIND), intent(in) :: a, b, c; \
-  end function ieee_fma_a##AKIND;
-  interface ieee_fma
-    SPECIFICS_R(IEEE_FMA_R)
-  end interface ieee_fma
-  PRIVATE_R(IEEE_FMA)
-#undef IEEE_FMA_R
 
 #define IEEE_GET_ROUNDING_MODE_I(RKIND) \
   subroutine ieee_get_rounding_mode_i##RKIND(round_value, radix); \

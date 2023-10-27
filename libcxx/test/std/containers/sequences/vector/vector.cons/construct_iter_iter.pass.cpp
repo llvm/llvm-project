@@ -81,6 +81,19 @@ TEST_CONSTEXPR_CXX20 void basic_test_cases() {
       random_access_iterator<const int*>(a),
       random_access_iterator<const int*>(an));
   test<std::vector<int> >(a, an);
+  test<std::vector<int, safe_allocator<int> > >(
+      cpp17_input_iterator<const int*>(a), cpp17_input_iterator<const int*>(an));
+  test<std::vector<int, safe_allocator<int> > >(forward_iterator<const int*>(a), forward_iterator<const int*>(an));
+  test<std::vector<int, safe_allocator<int> > >(
+      bidirectional_iterator<const int*>(a), bidirectional_iterator<const int*>(an));
+  test<std::vector<int, safe_allocator<int> > >(
+      random_access_iterator<const int*>(a), random_access_iterator<const int*>(an));
+
+  // Regression test for https://github.com/llvm/llvm-project/issues/46841
+  {
+    std::vector<int> v1({}, forward_iterator<const int*>{});
+    std::vector<int> v2(forward_iterator<const int*>{}, {});
+  }
 #endif
 }
 
@@ -183,8 +196,8 @@ TEST_CONSTEXPR_CXX20 void test_ctor_with_different_value_type() {
   }
   {
     // Though the types are different, initialization can be done with `memcpy`.
-    int32_t array[1] = { -1 };
-    std::vector<uint32_t> v(array, array + 1);
+    std::int32_t array[1] = { -1 };
+    std::vector<std::uint32_t> v(array, array + 1);
     assert(v[0] == 4294967295U);
   }
 }

@@ -19,8 +19,8 @@ define signext i32 @main() nounwind {
 ; CHECK-NEXT:    addi 6, 1, 46
 ; CHECK-NEXT:    sth 3, 46(1)
 ; CHECK-NEXT:    lis 3, 0
-; CHECK-NEXT:    ori 3, 3, 33059
 ; CHECK-NEXT:    sync
+; CHECK-NEXT:    ori 3, 3, 33059
 ; CHECK-NEXT:  .LBB0_1: # %L.entry
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    lharx 5, 0, 6
@@ -39,19 +39,21 @@ define signext i32 @main() nounwind {
 ; CHECK-NEXT:    cmplwi 3, 234
 ; CHECK-NEXT:    bne 0, .LBB0_7
 ; CHECK-NEXT:  # %bb.5: # %L.B0001
-; CHECK-NEXT:    addis 3, 2, .Lstr.2@toc@ha
-; CHECK-NEXT:    addi 3, 3, .Lstr.2@toc@l
+; CHECK-NEXT:    addis 3, 2, .L__ModuleStringPool@toc@ha
+; CHECK-NEXT:    addi 3, 3, .L__ModuleStringPool@toc@l
 ; CHECK-NEXT:    bl puts
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    li 3, 0
 ; CHECK-NEXT:    b .LBB0_9
 ; CHECK-NEXT:  .LBB0_6: # %L.B0003
-; CHECK-NEXT:    addis 3, 2, .Lstr@toc@ha
-; CHECK-NEXT:    addi 3, 3, .Lstr@toc@l
+; CHECK-NEXT:    addis 3, 2, .L__ModuleStringPool@toc@ha
+; CHECK-NEXT:    addi 3, 3, .L__ModuleStringPool@toc@l
+; CHECK-NEXT:    addi 3, 3, 7
 ; CHECK-NEXT:    b .LBB0_8
 ; CHECK-NEXT:  .LBB0_7: # %L.B0005
-; CHECK-NEXT:    addis 3, 2, .Lstr.1@toc@ha
-; CHECK-NEXT:    addi 3, 3, .Lstr.1@toc@l
+; CHECK-NEXT:    addis 3, 2, .L__ModuleStringPool@toc@ha
+; CHECK-NEXT:    addi 3, 3, .L__ModuleStringPool@toc@l
+; CHECK-NEXT:    addi 3, 3, 53
 ; CHECK-NEXT:  .LBB0_8: # %L.B0003
 ; CHECK-NEXT:    bl puts
 ; CHECK-NEXT:    nop
@@ -67,22 +69,22 @@ define signext i32 @main() nounwind {
 ; CHECK-P7-NEXT:    mflr 0
 ; CHECK-P7-NEXT:    stdu 1, -48(1)
 ; CHECK-P7-NEXT:    li 3, -32477
-; CHECK-P7-NEXT:    lis 5, 0
-; CHECK-P7-NEXT:    addi 4, 1, 46
-; CHECK-P7-NEXT:    li 7, 0
 ; CHECK-P7-NEXT:    std 0, 64(1)
-; CHECK-P7-NEXT:    sth 3, 46(1)
+; CHECK-P7-NEXT:    addi 4, 1, 46
 ; CHECK-P7-NEXT:    li 6, 234
-; CHECK-P7-NEXT:    rlwinm 3, 4, 3, 27, 27
-; CHECK-P7-NEXT:    ori 5, 5, 33059
-; CHECK-P7-NEXT:    ori 7, 7, 65535
+; CHECK-P7-NEXT:    sth 3, 46(1)
+; CHECK-P7-NEXT:    lis 3, 0
 ; CHECK-P7-NEXT:    sync
-; CHECK-P7-NEXT:    slw 6, 6, 3
-; CHECK-P7-NEXT:    slw 8, 5, 3
-; CHECK-P7-NEXT:    slw 5, 7, 3
+; CHECK-P7-NEXT:    ori 5, 3, 33059
+; CHECK-P7-NEXT:    rlwinm 3, 4, 3, 27, 27
 ; CHECK-P7-NEXT:    rldicr 4, 4, 0, 61
+; CHECK-P7-NEXT:    slw 7, 5, 3
+; CHECK-P7-NEXT:    li 5, 0
+; CHECK-P7-NEXT:    slw 6, 6, 3
+; CHECK-P7-NEXT:    ori 5, 5, 65535
+; CHECK-P7-NEXT:    slw 5, 5, 3
 ; CHECK-P7-NEXT:    and 6, 6, 5
-; CHECK-P7-NEXT:    and 7, 8, 5
+; CHECK-P7-NEXT:    and 7, 7, 5
 ; CHECK-P7-NEXT:  .LBB0_1: # %L.entry
 ; CHECK-P7-NEXT:    #
 ; CHECK-P7-NEXT:    lwarx 9, 0, 4
@@ -105,19 +107,21 @@ define signext i32 @main() nounwind {
 ; CHECK-P7-NEXT:    cmplwi 3, 234
 ; CHECK-P7-NEXT:    bne 0, .LBB0_7
 ; CHECK-P7-NEXT:  # %bb.5: # %L.B0001
-; CHECK-P7-NEXT:    addis 3, 2, .Lstr.2@toc@ha
-; CHECK-P7-NEXT:    addi 3, 3, .Lstr.2@toc@l
+; CHECK-P7-NEXT:    addis 3, 2, .L__ModuleStringPool@toc@ha
+; CHECK-P7-NEXT:    addi 3, 3, .L__ModuleStringPool@toc@l
 ; CHECK-P7-NEXT:    bl puts
 ; CHECK-P7-NEXT:    nop
 ; CHECK-P7-NEXT:    li 3, 0
 ; CHECK-P7-NEXT:    b .LBB0_9
 ; CHECK-P7-NEXT:  .LBB0_6: # %L.B0003
-; CHECK-P7-NEXT:    addis 3, 2, .Lstr@toc@ha
-; CHECK-P7-NEXT:    addi 3, 3, .Lstr@toc@l
+; CHECK-P7-NEXT:    addis 3, 2, .L__ModuleStringPool@toc@ha
+; CHECK-P7-NEXT:    addi 3, 3, .L__ModuleStringPool@toc@l
+; CHECK-P7-NEXT:    addi 3, 3, 7
 ; CHECK-P7-NEXT:    b .LBB0_8
 ; CHECK-P7-NEXT:  .LBB0_7: # %L.B0005
-; CHECK-P7-NEXT:    addis 3, 2, .Lstr.1@toc@ha
-; CHECK-P7-NEXT:    addi 3, 3, .Lstr.1@toc@l
+; CHECK-P7-NEXT:    addis 3, 2, .L__ModuleStringPool@toc@ha
+; CHECK-P7-NEXT:    addi 3, 3, .L__ModuleStringPool@toc@l
+; CHECK-P7-NEXT:    addi 3, 3, 53
 ; CHECK-P7-NEXT:  .LBB0_8: # %L.B0003
 ; CHECK-P7-NEXT:    bl puts
 ; CHECK-P7-NEXT:    nop

@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // UNSUPPORTED: no-threads
-//
+// UNSUPPORTED: c++03
 // ALLOW_RETRIES: 2
 
 // <mutex>
@@ -16,8 +16,9 @@
 
 // bool try_lock();
 
-#include <mutex>
 #include <cassert>
+#include <mutex>
+#include <system_error>
 
 #include "test_macros.h"
 

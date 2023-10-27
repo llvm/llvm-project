@@ -193,8 +193,11 @@ public:
               if (CI.getCalledFunction()->getName() ==
                   "llvm.experimental.stackmap") {
                 continue;
-              } else if (CI.getCalledFunction()->getName() ==
-                         "llvm.dbg.declare") {
+              }
+              if (CI.getCalledFunction()->getName() == "llvm.dbg.declare") {
+                continue;
+              }
+              if (CI.getCalledFunction()->getName() == "llvm.dbg.value") {
                 continue;
               }
             }

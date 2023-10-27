@@ -109,6 +109,14 @@
 # RUN: llvm-readobj --file-headers %t.elf32_hexagon.o | FileCheck %s --check-prefixes=CHECK,LE,HEXAGON,32,SYSV
 # RUN: llvm-readobj --file-headers %t.elf32_hexagon.dwo | FileCheck %s --check-prefixes=CHECK,LE,HEXAGON,32,SYSV
 
+# RUN: llvm-objcopy %t.o -O elf32-loongarch %t.elf32_loongarch.o --split-dwo=%t.elf32_loongarch.dwo
+# RUN: llvm-readobj --file-headers %t.elf32_loongarch.o | FileCheck %s --check-prefixes=CHECK,LE,LA32,32,SYSV
+# RUN: llvm-readobj --file-headers %t.elf32_loongarch.dwo | FileCheck %s --check-prefixes=CHECK,LE,LA32,32,SYSV
+
+# RUN: llvm-objcopy %t.o -O elf64-loongarch %t.elf64_loongarch.o --split-dwo=%t.elf64_loongarch.dwo
+# RUN: llvm-readobj --file-headers %t.elf64_loongarch.o | FileCheck %s --check-prefixes=CHECK,LE,LA64,64,SYSV
+# RUN: llvm-readobj --file-headers %t.elf64_loongarch.dwo | FileCheck %s --check-prefixes=CHECK,LE,LA64,64,SYSV
+
 !ELF
 FileHeader:
   Class:           ELFCLASS32
@@ -144,6 +152,8 @@ Symbols:
 # AARCH-SAME:   aarch64
 # ARM-SAME:     littlearm
 # HEXAGON-SAME: hexagon
+# LA32-SAME:    loongarch{{$}}
+# LA64-SAME:    loongarch{{$}}
 # MIPS-SAME:    mips
 # PPCBE-SAME:   powerpc{{$}}
 # PPCLE-SAME:   powerpcle{{$}}
@@ -158,6 +168,8 @@ Symbols:
 # AARCH-NEXT:    Arch: aarch64
 # ARM-NEXT:      Arch: arm
 # HEXAGON-NEXT:  Arch: hexagon
+# LA32-NEXT:     Arch: loongarch32
+# LA64-NEXT:     Arch: loongarch64
 # MIPSBE-NEXT:   Arch: mips{{$}}
 # MIPSLE-NEXT:   Arch: mipsel{{$}}
 # MIPS64BE-NEXT: Arch: mips64{{$}}
@@ -190,6 +202,8 @@ Symbols:
 # HEXAGON: Machine: EM_HEXAGON (0xA4)
 # I386:    Machine: EM_386 (0x3)
 # IAMCU:   Machine: EM_IAMCU (0x6)
+# LA32:    Machine: EM_LOONGARCH (0x102)
+# LA64:    Machine: EM_LOONGARCH (0x102)
 # MIPS:    Machine: EM_MIPS (0x8)
 # PPC32:   Machine: EM_PPC (0x14)
 # PPC64:   Machine: EM_PPC64 (0x15)

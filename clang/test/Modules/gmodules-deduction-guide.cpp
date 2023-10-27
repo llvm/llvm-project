@@ -1,6 +1,6 @@
 // REQUIRES: asserts
 
-// RUN: %clang_cc1 -std=c++2b -x c++-header -emit-pch -fmodule-format=obj -I %S/Inputs \
+// RUN: %clang_cc1 -std=c++23 -x c++-header -emit-pch -fmodule-format=obj -I %S/Inputs \
 // RUN:   -o %t.pch %S/Inputs/gmodules-deduction-guide.h \
 // RUN:   -mllvm -debug-only=pchcontainer &>%t-pch.ll
 // RUN: cat %t-pch.ll | FileCheck %s

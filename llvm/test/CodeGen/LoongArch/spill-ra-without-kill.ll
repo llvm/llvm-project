@@ -22,7 +22,7 @@ define dso_local ptr @f(i32 noundef signext %i) "frame-pointer"="all" {
 ; CHECK-NEXT:    move $a1, $a0
 ; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(calls)
 ; CHECK-NEXT:    addi.d $a3, $a0, %pc_lo12(calls)
-; CHECK-NEXT:    ld.wu $a0, $a3, 0
+; CHECK-NEXT:    ld.w $a0, $a3, 0
 ; CHECK-NEXT:    addi.d $a2, $a0, 1
 ; CHECK-NEXT:    st.w $a2, $a3, 0
 ; CHECK-NEXT:    st.w $a1, $fp, -28
@@ -33,7 +33,7 @@ define dso_local ptr @f(i32 noundef signext %i) "frame-pointer"="all" {
 ; CHECK-NEXT:    st.d $a0, $fp, -24
 ; CHECK-NEXT:    b .LBB0_7
 ; CHECK-NEXT:  .LBB0_2: # %if.end
-; CHECK-NEXT:    ld.wu $a0, $fp, -28
+; CHECK-NEXT:    ld.w $a0, $fp, -28
 ; CHECK-NEXT:    st.d $a0, $fp, -48 # 8-byte Folded Spill
 ; CHECK-NEXT:    beqz $a0, .LBB0_5
 ; CHECK-NEXT:    b .LBB0_3

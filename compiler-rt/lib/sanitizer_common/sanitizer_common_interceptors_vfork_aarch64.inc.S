@@ -40,8 +40,8 @@ ASM_WRAPPER_NAME(vfork):
         ret
 ASM_SIZE(vfork)
 
-.weak vfork
-.set vfork, ASM_WRAPPER_NAME(vfork)
+ASM_INTERCEPTOR_TRAMPOLINE(vfork)
+ASM_TRAMPOLINE_ALIAS(vfork, vfork)
 
 GNU_PROPERTY_BTI_PAC
 

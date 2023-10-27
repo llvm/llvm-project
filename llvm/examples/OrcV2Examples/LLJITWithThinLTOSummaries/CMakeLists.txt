@@ -12,3 +12,5 @@ set(LLVM_LINK_COMPONENTS
 add_llvm_example(LLJITWithThinLTOSummaries
   LLJITWithThinLTOSummaries.cpp
   )
+
+export_executable_symbols(LLJITWithThinLTOSummaries)

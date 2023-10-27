@@ -60,7 +60,7 @@ private:
 
 void RegistryMaps::registerMatcher(
     StringRef MatcherName, std::unique_ptr<MatcherDescriptor> Callback) {
-  assert(Constructors.find(MatcherName) == Constructors.end());
+  assert(!Constructors.contains(MatcherName));
   Constructors[MatcherName] = std::move(Callback);
 }
 
@@ -134,7 +134,10 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(allOf);
   REGISTER_MATCHER(anyOf);
   REGISTER_MATCHER(anything);
+  REGISTER_MATCHER(arrayInitIndexExpr);
+  REGISTER_MATCHER(arrayInitLoopExpr);
   REGISTER_MATCHER(argumentCountIs);
+  REGISTER_MATCHER(argumentCountAtLeast);
   REGISTER_MATCHER(arraySubscriptExpr);
   REGISTER_MATCHER(arrayType);
   REGISTER_MATCHER(asString);
@@ -169,12 +172,15 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(compoundLiteralExpr);
   REGISTER_MATCHER(compoundStmt);
   REGISTER_MATCHER(coawaitExpr);
+  REGISTER_MATCHER(conceptDecl);
   REGISTER_MATCHER(conditionalOperator);
   REGISTER_MATCHER(constantArrayType);
   REGISTER_MATCHER(constantExpr);
   REGISTER_MATCHER(containsDeclaration);
   REGISTER_MATCHER(continueStmt);
+  REGISTER_MATCHER(convertVectorExpr);
   REGISTER_MATCHER(coreturnStmt);
+  REGISTER_MATCHER(coroutineBodyStmt);
   REGISTER_MATCHER(coyieldExpr);
   REGISTER_MATCHER(cudaKernelCallExpr);
   REGISTER_MATCHER(cxxBaseSpecifier);
@@ -222,6 +228,7 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(defaultStmt);
   REGISTER_MATCHER(dependentCoawaitExpr);
   REGISTER_MATCHER(dependentSizedArrayType);
+  REGISTER_MATCHER(dependentSizedExtVectorType);
   REGISTER_MATCHER(designatedInitExpr);
   REGISTER_MATCHER(designatorCountIs);
   REGISTER_MATCHER(doStmt);
@@ -478,6 +485,7 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(lambdaCapture);
   REGISTER_MATCHER(lambdaExpr);
   REGISTER_MATCHER(linkageSpecDecl);
+  REGISTER_MATCHER(macroQualifiedType);
   REGISTER_MATCHER(materializeTemporaryExpr);
   REGISTER_MATCHER(member);
   REGISTER_MATCHER(memberExpr);

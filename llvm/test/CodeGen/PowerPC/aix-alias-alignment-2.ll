@@ -59,10 +59,10 @@ define void @foo3(%struct.B %a1) {
 
 ; SYM:      SYMBOL TABLE:
 ; SYM-NEXT: 00000000      df *DEBUG*	00000000 <stdin>
-; SYM-NEXT: 00000000 l       .text	0000008a .text
-; SYM-NEXT: 00000000 g     F .text (csect: .text) 	00000000 .foo1
-; SYM-NEXT: 00000030 g     F .text (csect: .text) 	00000000 .foo2
-; SYM-NEXT: 00000060 g     F .text (csect: .text) 	00000000 .foo3
+; SYM-NEXT: 00000000 l       .text	0000008a 
+; SYM-NEXT: 00000000 g     F .text (csect: ) 	00000000 .foo1
+; SYM-NEXT: 00000030 g     F .text (csect: ) 	00000000 .foo2
+; SYM-NEXT: 00000060 g     F .text (csect: ) 	00000000 .foo3
 ; SYM-NEXT: 00000090 l       .data	00000030 .data
 ; SYM-NEXT: 00000090 g     O .data (csect: .data) 	00000000 ConstVector
 ; SYM-NEXT: 00000098 g     O .data (csect: .data) 	00000000 var1

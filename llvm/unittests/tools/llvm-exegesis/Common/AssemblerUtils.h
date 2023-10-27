@@ -18,8 +18,8 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/TargetRegistry.h"
-#include "llvm/Support/Host.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/TargetParser/Host.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -77,8 +77,11 @@ private:
                      FillFunction Fill) {
     SmallString<256> Buffer;
     raw_svector_ostream AsmStream(Buffer);
+    BenchmarkKey Key;
+    Key.RegisterInitialValues = RegisterInitialValues;
     EXPECT_FALSE(assembleToStream(*ET, createTargetMachine(), /*LiveIns=*/{},
-                                  RegisterInitialValues, Fill, AsmStream));
+                                  RegisterInitialValues, Fill, AsmStream, Key,
+                                  false));
     return ExecutableFunction(createTargetMachine(),
                               getObjectFromBuffer(AsmStream.str()));
   }

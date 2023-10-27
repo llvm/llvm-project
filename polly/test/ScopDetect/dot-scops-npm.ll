@@ -15,7 +15,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 define void @func_npm(i32 %n, i32 %m, ptr noalias nonnull %A) {
 ; CHECK:      digraph "Scop Graph for 'func_npm' function"
 ; CHECK-NEXT: label="Scop Graph for 'func_npm' function"
-; CHECK:      Node0x[[EntryID:.*]] [shape=record,label="{entry:\l  br label %outer.for\l}"];
+; CHECK:      Node0x[[EntryID:.*]] [shape=record,label="{entry:\l|  br label %outer.for\l}"];
 ; CHECK-NEXT: Node0x[[EntryID]] -> Node0x[[OUTER_FOR_ID:.*]];
 ; CHECK-NEXT: Node0x[[OUTER_FOR_ID]] [shape=record,label="{outer.for:
 ; CHECK-NEXT: Node0x[[OUTER_FOR_ID]] -> Node0x[[INNER_FOR_ID:.*]];

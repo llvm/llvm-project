@@ -324,7 +324,7 @@ define i32 @vec_extract_branch(<2 x double> %x)  {
 ; CHECK-NEXT:    xorpd %xmm1, %xmm1
 ; CHECK-NEXT:    cmpltpd %xmm0, %xmm1
 ; CHECK-NEXT:    movmskpd %xmm1, %eax
-; CHECK-NEXT:    cmpb $3, %al
+; CHECK-NEXT:    cmpl $3, %eax
 ; CHECK-NEXT:    jne .LBB16_2
 ; CHECK-NEXT:  # %bb.1: # %true
 ; CHECK-NEXT:    movl $42, %eax
@@ -456,8 +456,8 @@ define zeroext i1 @ne_neg1_and_ne_zero(i64 %x) nounwind {
 ; CHECK-LABEL: ne_neg1_and_ne_zero:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    incq %rdi
-; CHECK-NEXT:    cmpq $2, %rdi
-; CHECK-NEXT:    setae %al
+; CHECK-NEXT:    testq $-2, %rdi
+; CHECK-NEXT:    setne %al
 ; CHECK-NEXT:    retq
   %cmp1 = icmp ne i64 %x, -1
   %cmp2 = icmp ne i64 %x, 0
@@ -557,10 +557,9 @@ define <4 x i32> @and_icmps_const_1bit_diff_vec(<4 x i32> %x) {
 ; CHECK-NEXT:    movdqa {{.*#+}} xmm1 = [44,60,44,60]
 ; CHECK-NEXT:    pcmpeqd %xmm0, %xmm1
 ; CHECK-NEXT:    pcmpeqd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; CHECK-NEXT:    pcmpeqd %xmm2, %xmm2
-; CHECK-NEXT:    pxor %xmm0, %xmm2
-; CHECK-NEXT:    pandn %xmm2, %xmm1
-; CHECK-NEXT:    movdqa %xmm1, %xmm0
+; CHECK-NEXT:    por %xmm1, %xmm0
+; CHECK-NEXT:    pcmpeqd %xmm1, %xmm1
+; CHECK-NEXT:    pxor %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %a = icmp ne <4 x i32> %x, <i32 44, i32 60, i32 44, i32 60>
   %b = icmp ne <4 x i32> %x, <i32 60, i32 44, i32 60, i32 44>

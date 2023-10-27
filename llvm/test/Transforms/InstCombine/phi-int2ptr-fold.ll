@@ -14,9 +14,9 @@ define i64 @func(ptr %X, ptr %Y, i1 %cond) {
 ; CHECK:       bb2:
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[PHI_IN_IN:%.*]] = phi ptr [ [[X:%.*]], [[BB1]] ], [ [[Y:%.*]], [[BB2]] ]
-; CHECK-NEXT:    [[PHI_IN:%.*]] = ptrtoint ptr [[PHI_IN_IN]] to i64
-; CHECK-NEXT:    ret i64 [[PHI_IN]]
+; CHECK-NEXT:    [[PHI_IN:%.*]] = phi ptr [ [[X:%.*]], [[BB1]] ], [ [[Y:%.*]], [[BB2]] ]
+; CHECK-NEXT:    [[X_P_I:%.*]] = ptrtoint ptr [[PHI_IN]] to i64
+; CHECK-NEXT:    ret i64 [[X_P_I]]
 ;
   br i1 %cond, label %bb1, label %bb2
 
@@ -42,8 +42,8 @@ define i64 @func_single_operand(ptr %X, ptr %Y, i1 %cond) {
 ; CHECK:       bb1:
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[PHI_IN:%.*]] = phi ptr [ [[X:%.*]], [[BB1]] ], [ [[Y:%.*]], [[TMP0:%.*]] ]
-; CHECK-NEXT:    [[X_P_I:%.*]] = ptrtoint ptr [[PHI_IN]] to i64
+; CHECK-NEXT:    [[PHI:%.*]] = phi ptr [ [[X:%.*]], [[BB1]] ], [ [[Y:%.*]], [[TMP0:%.*]] ]
+; CHECK-NEXT:    [[X_P_I:%.*]] = ptrtoint ptr [[PHI]] to i64
 ; CHECK-NEXT:    ret i64 [[X_P_I]]
 ;
   br i1 %cond, label %bb1, label %exit

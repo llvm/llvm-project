@@ -19,12 +19,12 @@
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
-#include "llvm/MC/SubtargetFeature.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/SubtargetFeature.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
@@ -71,7 +71,7 @@ namespace {
       // is in the MCOperand format in which 1 means 'else' and 0 'then'.
       void setITState(char Firstcond, char Mask) {
         // (3 - the number of trailing zeros) is the number of then / else.
-        unsigned NumTZ = countTrailingZeros<uint8_t>(Mask);
+        unsigned NumTZ = llvm::countr_zero<uint8_t>(Mask);
         unsigned char CCBits = static_cast<unsigned char>(Firstcond & 0xf);
         assert(NumTZ <= 3 && "Invalid IT mask!");
         // push condition codes onto the stack the correct order for the pops
@@ -110,7 +110,7 @@ namespace {
 
       void setVPTState(char Mask) {
         // (3 - the number of trailing zeros) is the number of then / else.
-        unsigned NumTZ = countTrailingZeros<uint8_t>(Mask);
+        unsigned NumTZ = llvm::countr_zero<uint8_t>(Mask);
         assert(NumTZ <= 3 && "Invalid VPT mask!");
         // push predicates onto the stack the correct order for the pops
         for (unsigned Pos = NumTZ+1; Pos <= 3; ++Pos) {
@@ -135,9 +135,9 @@ public:
   ARMDisassembler(const MCSubtargetInfo &STI, MCContext &Ctx,
                   const MCInstrInfo *MCII)
       : MCDisassembler(STI, Ctx), MCII(MCII) {
-    InstructionEndianness = STI.getFeatureBits()[ARM::ModeBigEndianInstructions]
-                                ? llvm::support::big
-                                : llvm::support::little;
+        InstructionEndianness = STI.hasFeature(ARM::ModeBigEndianInstructions)
+                                    ? llvm::endianness::big
+                                    : llvm::endianness::little;
   }
 
   ~ARMDisassembler() override = default;
@@ -166,7 +166,7 @@ private:
   DecodeStatus AddThumbPredicate(MCInst&) const;
   void UpdateThumbVFPPredicate(DecodeStatus &, MCInst&) const;
 
-  llvm::support::endianness InstructionEndianness;
+  llvm::endianness InstructionEndianness;
 };
 
 } // end anonymous namespace
@@ -746,7 +746,7 @@ uint64_t ARMDisassembler::suggestBytesToSkip(ArrayRef<uint8_t> Bytes,
   // In Arm state, instructions are always 4 bytes wide, so there's no
   // point in skipping any smaller number of bytes if an instruction
   // can't be decoded.
-  if (!STI.getFeatureBits()[ARM::ModeThumb])
+  if (!STI.hasFeature(ARM::ModeThumb))
     return 4;
 
   // In a Thumb instruction stream, a halfword is a standalone 2-byte
@@ -773,7 +773,7 @@ DecodeStatus ARMDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
                                              ArrayRef<uint8_t> Bytes,
                                              uint64_t Address,
                                              raw_ostream &CS) const {
-  if (STI.getFeatureBits()[ARM::ModeThumb])
+  if (STI.hasFeature(ARM::ModeThumb))
     return getThumbInstruction(MI, Size, Bytes, Address, CS);
   return getARMInstruction(MI, Size, Bytes, Address, CS);
 }
@@ -784,7 +784,7 @@ DecodeStatus ARMDisassembler::getARMInstruction(MCInst &MI, uint64_t &Size,
                                                 raw_ostream &CS) const {
   CommentStream = &CS;
 
-  assert(!STI.getFeatureBits()[ARM::ModeThumb] &&
+  assert(!STI.hasFeature(ARM::ModeThumb) &&
          "Asked to disassemble an ARM instruction but Subtarget is in Thumb "
          "mode!");
 
@@ -887,9 +887,9 @@ void ARMDisassembler::AddThumb1SBit(MCInst &MI, bool InITBlock) const {
   MCInst::iterator I = MI.begin();
   for (unsigned i = 0; i < MCID.NumOperands; ++i, ++I) {
     if (I == MI.end()) break;
-    if (MCID.OpInfo[i].isOptionalDef() &&
-        MCID.OpInfo[i].RegClass == ARM::CCRRegClassID) {
-      if (i > 0 && MCID.OpInfo[i - 1].isPredicate())
+    if (MCID.operands()[i].isOptionalDef() &&
+        MCID.operands()[i].RegClass == ARM::CCRRegClassID) {
+      if (i > 0 && MCID.operands()[i - 1].isPredicate())
         continue;
       MI.insert(I, MCOperand::createReg(InITBlock ? 0 : ARM::CPSR));
       return;
@@ -902,7 +902,7 @@ void ARMDisassembler::AddThumb1SBit(MCInst &MI, bool InITBlock) const {
 bool ARMDisassembler::isVectorPredicable(const MCInst &MI) const {
   const MCInstrDesc &MCID = MCII->get(MI.getOpcode());
   for (unsigned i = 0; i < MCID.NumOperands; ++i) {
-    if (ARM::isVpred(MCID.OpInfo[i].OperandType))
+    if (ARM::isVpred(MCID.operands()[i].OperandType))
       return true;
   }
   return false;
@@ -981,7 +981,7 @@ ARMDisassembler::AddThumbPredicate(MCInst &MI) const {
 
   MCInst::iterator CCI = MI.begin();
   for (unsigned i = 0; i < MCID.NumOperands; ++i, ++CCI) {
-    if (MCID.OpInfo[i].isPredicate() || CCI == MI.end())
+    if (MCID.operands()[i].isPredicate() || CCI == MI.end())
       break;
   }
 
@@ -999,7 +999,7 @@ ARMDisassembler::AddThumbPredicate(MCInst &MI) const {
   MCInst::iterator VCCI = MI.begin();
   unsigned VCCPos;
   for (VCCPos = 0; VCCPos < MCID.NumOperands; ++VCCPos, ++VCCI) {
-    if (ARM::isVpred(MCID.OpInfo[VCCPos].OperandType) || VCCI == MI.end())
+    if (ARM::isVpred(MCID.operands()[VCCPos].OperandType) || VCCI == MI.end())
       break;
   }
 
@@ -1013,7 +1013,7 @@ ARMDisassembler::AddThumbPredicate(MCInst &MI) const {
     ++VCCI;
     VCCI = MI.insert(VCCI, MCOperand::createReg(0));
     ++VCCI;
-    if (MCID.OpInfo[VCCPos].OperandType == ARM::OPERAND_VPRED_R) {
+    if (MCID.operands()[VCCPos].OperandType == ARM::OPERAND_VPRED_R) {
       int TiedOp = MCID.getOperandConstraint(VCCPos + 3, MCOI::TIED_TO);
       assert(TiedOp >= 0 &&
              "Inactive register in vpred_r is not tied to an output!");
@@ -1046,7 +1046,7 @@ void ARMDisassembler::UpdateThumbVFPPredicate(
   }
 
   const MCInstrDesc &MCID = MCII->get(MI.getOpcode());
-  const MCOperandInfo *OpInfo = MCID.OpInfo;
+  ArrayRef<MCOperandInfo> OpInfo = MCID.operands();
   MCInst::iterator I = MI.begin();
   unsigned short NumOps = MCID.NumOperands;
   for (unsigned i = 0; i < NumOps; ++i, ++I) {
@@ -1070,7 +1070,7 @@ DecodeStatus ARMDisassembler::getThumbInstruction(MCInst &MI, uint64_t &Size,
                                                   raw_ostream &CS) const {
   CommentStream = &CS;
 
-  assert(STI.getFeatureBits()[ARM::ModeThumb] &&
+  assert(STI.hasFeature(ARM::ModeThumb) &&
          "Asked to disassemble in Thumb mode but Subtarget is in ARM mode!");
 
   // We want to read exactly 2 bytes of data.
@@ -4910,7 +4910,7 @@ static DecodeStatus DecodeT2SOImm(MCInst &Inst, unsigned Val, uint64_t Address,
   } else {
     unsigned unrot = fieldFromInstruction(Val, 0, 7) | 0x80;
     unsigned rot = fieldFromInstruction(Val, 7, 5);
-    unsigned imm = (unrot >> rot) | (unrot << ((32-rot)&31));
+    unsigned imm = llvm::rotr<uint32_t>(unrot, rot);
     Inst.addOperand(MCOperand::createImm(imm));
   }
 
@@ -6204,7 +6204,7 @@ static DecodeStatus DecoderForMRRC2AndMCRR2(MCInst &Inst, unsigned Val,
   // We have to check if the instruction is MRRC2
   // or MCRR2 when constructing the operands for
   // Inst. Reason is because MRRC2 stores to two
-  // registers so it's tablegen desc has has two
+  // registers so it's tablegen desc has two
   // outputs whereas MCRR doesn't store to any
   // registers so all of it's operands are listed
   // as inputs, therefore the operand order for

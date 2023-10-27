@@ -37,11 +37,11 @@ def SparseTensor_StorageSpecifier : SparseTensor_Type<"StorageSpecifier"> {
     encoding ::= attribute-value
     ```
 
-    Values with storage_specifier types represent aggregated storage scheme metadata
-    for the given sparse tensor encoding.
-    It currently holds a set of values for sizes of sparse tensor dimension, index array,
-    pointer array and value array.
-    Note that the type is not yet stable and subject to change in the near future.
+    Values with storage_specifier types represent aggregated storage scheme
+    metadata for the given sparse tensor encoding.  It currently holds
+    a set of values for level-sizes, coordinate arrays, position arrays,
+    and value array.  Note that the type is not yet stable and subject to
+    change in the near future.
 
     Examples:
 
@@ -65,13 +65,6 @@ def SparseTensor_StorageSpecifier : SparseTensor_Type<"StorageSpecifier"> {
     }]>
   ];
 
-  let extraClassDeclaration = [{
-    // Get the integer type used to store memory and dimension sizes.
-    IntegerType getSizesType() const;
-    Type getFieldType(StorageSpecifierKind kind, std::optional<unsigned> dim) const;
-    Type getFieldType(StorageSpecifierKind kind, std::optional<APInt> dim) const;
-  }];
-
   // We skipped the default builder that simply takes the input sparse tensor encoding
   // attribute since we need to normalize the dimension level type and remove unrelated
   // fields that are irrelavant to sparse tensor storage scheme.
@@ -80,10 +73,10 @@ def SparseTensor_StorageSpecifier : SparseTensor_Type<"StorageSpecifier"> {
 }
 
 def IsSparseTensorStorageSpecifierTypePred
-    : CPred<"$_self.isa<::mlir::sparse_tensor::StorageSpecifierType>()">;
+    : CPred<"::llvm::isa<::mlir::sparse_tensor::StorageSpecifierType>($_self)">;
 
 def SparseTensorStorageSpecifier
-    : Type<CPred<"$_self.isa<::mlir::sparse_tensor::StorageSpecifierType>()">, "metadata",
+    : Type<CPred<"::llvm::isa<::mlir::sparse_tensor::StorageSpecifierType>($_self)">, "metadata",
           "::mlir::sparse_tensor::StorageSpecifierType">;
 
 #endif // SPARSETENSOR_TYPES

@@ -42,7 +42,7 @@ void recordFixes(const VarDecl &Var, ASTContext &Context,
 
 std::optional<SourceLocation> firstLocAfterNewLine(SourceLocation Loc,
                                                    SourceManager &SM) {
-  bool Invalid;
+  bool Invalid = false;
   const char *TextAfter = SM.getCharacterData(Loc, &Invalid);
   if (Invalid) {
     return std::nullopt;

@@ -25,8 +25,8 @@ void ReportExpectedUMRNotFound(StackTrace *stack);
 void ReportStats();
 void ReportAtExitStatistics();
 void DescribeMemoryRange(const void *x, uptr size);
-void ReportUMRInsideAddressRange(const char *what, const void *start, uptr size,
-                                 uptr offset);
+void ReportUMRInsideAddressRange(const char *function, const void *start,
+                                 uptr size, uptr offset);
 
 }  // namespace __msan
 

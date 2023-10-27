@@ -10,5 +10,5 @@
 FOO
   mov %eax, 0
 
-// CHECK:      0x0000000000000000 105 0 1 0 0 is_stmt
-// CHECK-NEXT: 0x0000000000000005 105 0 1 0 0 is_stmt end_sequence
+// CHECK:      0x0000000000000000 105 0 1 0 0 0 is_stmt
+// CHECK-NEXT: 0x0000000000000005 105 0 1 0 0 0 is_stmt end_sequence

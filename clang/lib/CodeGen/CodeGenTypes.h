@@ -78,19 +78,14 @@ class CodeGenTypes {
   /// Hold memoized CGFunctionInfo results.
   llvm::FoldingSet<CGFunctionInfo> FunctionInfos{FunctionInfosLog2InitSize};
 
-  /// This set keeps track of records that we're currently converting
-  /// to an IR type.  For example, when converting:
-  /// struct A { struct B { int x; } } when processing 'x', the 'A' and 'B'
-  /// types will be in this set.
-  llvm::SmallPtrSet<const Type*, 4> RecordsBeingLaidOut;
-
   llvm::SmallPtrSet<const CGFunctionInfo*, 4> FunctionsBeingProcessed;
 
   /// True if we didn't layout a function due to a being inside
   /// a recursive struct conversion, set this to true.
   bool SkippedLayout;
 
-  SmallVector<const RecordDecl *, 8> DeferredRecords;
+  /// True if any instance of long double types are used.
+  bool LongDoubleReferenced;
 
   /// This map keeps cache of llvm::Types and maps clang::Type to
   /// corresponding llvm::Type.
@@ -260,13 +255,11 @@ public:
   /// this.
   ///
   /// \param argTypes - must all actually be canonical as params
-  const CGFunctionInfo &arrangeLLVMFunctionInfo(CanQualType returnType,
-                                                bool instanceMethod,
-                                                bool chainCall,
-                                                ArrayRef<CanQualType> argTypes,
-                                                FunctionType::ExtInfo info,
-                    ArrayRef<FunctionProtoType::ExtParameterInfo> paramInfos,
-                                                RequiredArgs args);
+  const CGFunctionInfo &arrangeLLVMFunctionInfo(
+      CanQualType returnType, FnInfoOpts opts, ArrayRef<CanQualType> argTypes,
+      FunctionType::ExtInfo info,
+      ArrayRef<FunctionProtoType::ExtParameterInfo> paramInfos,
+      RequiredArgs args);
 
   /// Compute a new LLVM record layout object for the given record.
   std::unique_ptr<CGRecordLayout> ComputeRecordLayout(const RecordDecl *D,
@@ -299,13 +292,8 @@ public:  // These are internal details of CGT that shouldn't be used externally.
   /// zero-initialized (in the C++ sense) with an LLVM zeroinitializer.
   bool isZeroInitializable(const RecordDecl *RD);
 
+  bool isLongDoubleReferenced() const { return LongDoubleReferenced; }
   bool isRecordLayoutComplete(const Type *Ty) const;
-  bool noRecordsBeingLaidOut() const {
-    return RecordsBeingLaidOut.empty();
-  }
-  bool isRecordBeingLaidOut(const Type *Ty) const {
-    return RecordsBeingLaidOut.count(Ty);
-  }
   unsigned getTargetAddressSpace(QualType T) const;
 };
 

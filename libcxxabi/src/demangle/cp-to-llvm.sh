@@ -6,7 +6,7 @@
 set -e
 
 cd $(dirname $0)
-HDRS="ItaniumDemangle.h ItaniumNodes.def StringView.h Utility.h"
+HDRS="ItaniumDemangle.h ItaniumNodes.def StringViewExtras.h Utility.h"
 LLVM_DEMANGLE_DIR=$1
 
 if [[ -z "$LLVM_DEMANGLE_DIR" ]]; then

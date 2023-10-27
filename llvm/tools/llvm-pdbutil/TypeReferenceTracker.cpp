@@ -55,7 +55,7 @@ void TypeReferenceTracker::mark() {
   // - globals
   // - modi symbols
   // - LF_UDT_MOD_SRC_LINE? VC always links these in.
-  for (SymbolGroup SG : File.symbol_groups()) {
+  for (const SymbolGroup &SG : File.symbol_groups()) {
     if (File.isObj()) {
       for (const auto &SS : SG.getDebugSubsections()) {
         // FIXME: Are there other type-referencing subsections? Inlinees?

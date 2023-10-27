@@ -31,7 +31,7 @@ define i16 @func16(i16 %x, i16 %y) nounwind {
 ; CHECK-LABEL: func16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    and w8, w0, #0xffff
-; CHECK-NEXT:    mov w9, #65535
+; CHECK-NEXT:    mov w9, #65535 // =0xffff
 ; CHECK-NEXT:    add w8, w8, w1, uxth
 ; CHECK-NEXT:    cmp w8, w9
 ; CHECK-NEXT:    csel w0, w8, w9, lo
@@ -43,11 +43,11 @@ define i16 @func16(i16 %x, i16 %y) nounwind {
 define i8 @func8(i8 %x, i8 %y) nounwind {
 ; CHECK-LABEL: func8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and w8, w0, #0xff
-; CHECK-NEXT:    mov w9, #255
-; CHECK-NEXT:    add w8, w8, w1, uxtb
-; CHECK-NEXT:    cmp w8, #255
-; CHECK-NEXT:    csel w0, w8, w9, lo
+; CHECK-NEXT:    and w9, w0, #0xff
+; CHECK-NEXT:    mov w8, #255 // =0xff
+; CHECK-NEXT:    add w9, w9, w1, uxtb
+; CHECK-NEXT:    cmp w9, #255
+; CHECK-NEXT:    csel w0, w9, w8, lo
 ; CHECK-NEXT:    ret
   %tmp = call i8 @llvm.uadd.sat.i8(i8 %x, i8 %y);
   ret i8 %tmp;
@@ -56,12 +56,12 @@ define i8 @func8(i8 %x, i8 %y) nounwind {
 define i4 @func3(i4 %x, i4 %y) nounwind {
 ; CHECK-LABEL: func3:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and w8, w1, #0xf
-; CHECK-NEXT:    and w9, w0, #0xf
-; CHECK-NEXT:    add w8, w9, w8
-; CHECK-NEXT:    mov w9, #15
-; CHECK-NEXT:    cmp w8, #15
-; CHECK-NEXT:    csel w0, w8, w9, lo
+; CHECK-NEXT:    and w9, w1, #0xf
+; CHECK-NEXT:    and w10, w0, #0xf
+; CHECK-NEXT:    mov w8, #15 // =0xf
+; CHECK-NEXT:    add w9, w10, w9
+; CHECK-NEXT:    cmp w9, #15
+; CHECK-NEXT:    csel w0, w9, w8, lo
 ; CHECK-NEXT:    ret
   %tmp = call i4 @llvm.uadd.sat.i4(i4 %x, i4 %y);
   ret i4 %tmp;

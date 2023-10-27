@@ -188,8 +188,8 @@ define i32 @and_signbit_ashr(i32 %x) {
 define i32 @and_nosignbit_ashr(i32 %x) {
 ; CHECK-LABEL: @and_nosignbit_ashr(
 ; CHECK-NEXT:    [[T0:%.*]] = lshr i32 [[X:%.*]], 8
-; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[T0]], 8388352
-; CHECK-NEXT:    ret i32 [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = and i32 [[T0]], 8388352
+; CHECK-NEXT:    ret i32 [[R]]
 ;
   %t0 = and i32 %x, 2147418112 ; 0x7FFF0000
   %r = ashr i32 %t0, 8

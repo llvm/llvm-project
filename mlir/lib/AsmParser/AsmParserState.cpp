@@ -47,6 +47,12 @@ struct AsmParserState::Impl {
   SmallVector<std::unique_ptr<BlockDefinition>> blocks;
   DenseMap<Block *, unsigned> blocksToIdx;
 
+  /// A mapping from aliases in the input source file to their parser state.
+  SmallVector<std::unique_ptr<AttributeAliasDefinition>> attrAliases;
+  SmallVector<std::unique_ptr<TypeAliasDefinition>> typeAliases;
+  llvm::StringMap<unsigned> attrAliasToIdx;
+  llvm::StringMap<unsigned> typeAliasToIdx;
+
   /// A set of value definitions that are placeholders for forward references.
   /// This map should be empty if the parser finishes successfully.
   DenseMap<Value, SmallVector<SMLoc>> placeholderValueUses;
@@ -73,7 +79,7 @@ void AsmParserState::Impl::resolveSymbolUses() {
     for (auto &it : *opAndUseMapIt.second) {
       symbolOps.clear();
       if (failed(symbolTable.lookupSymbolIn(
-              opAndUseMapIt.first, it.first.cast<SymbolRefAttr>(), symbolOps)))
+              opAndUseMapIt.first, cast<SymbolRefAttr>(it.first), symbolOps)))
         continue;
 
       for (ArrayRef<SMRange> useRange : it.second) {
@@ -120,6 +126,30 @@ auto AsmParserState::getOpDef(Operation *op) const
   auto it = impl->operationToIdx.find(op);
   return it == impl->operationToIdx.end() ? nullptr
                                           : &*impl->operations[it->second];
+}
+
+auto AsmParserState::getAttributeAliasDefs() const
+    -> iterator_range<AttributeDefIterator> {
+  return llvm::make_pointee_range(ArrayRef(impl->attrAliases));
+}
+
+auto AsmParserState::getAttributeAliasDef(StringRef name) const
+    -> const AttributeAliasDefinition * {
+  auto it = impl->attrAliasToIdx.find(name);
+  return it == impl->attrAliasToIdx.end() ? nullptr
+                                          : &*impl->attrAliases[it->second];
+}
+
+auto AsmParserState::getTypeAliasDefs() const
+    -> iterator_range<TypeDefIterator> {
+  return llvm::make_pointee_range(ArrayRef(impl->typeAliases));
+}
+
+auto AsmParserState::getTypeAliasDef(StringRef name) const
+    -> const TypeAliasDefinition * {
+  auto it = impl->typeAliasToIdx.find(name);
+  return it == impl->typeAliasToIdx.end() ? nullptr
+                                          : &*impl->typeAliases[it->second];
 }
 
 /// Lex a string token whose contents start at the given `curPtr`. Returns the
@@ -271,6 +301,30 @@ void AsmParserState::addDefinition(BlockArgument blockArg, SMLoc location) {
   def.arguments[argIdx] = SMDefinition(convertIdLocToRange(location));
 }
 
+void AsmParserState::addAttrAliasDefinition(StringRef name, SMRange location,
+                                            Attribute value) {
+  auto [it, inserted] =
+      impl->attrAliasToIdx.try_emplace(name, impl->attrAliases.size());
+  // Location aliases may be referenced before they are defined.
+  if (inserted) {
+    impl->attrAliases.push_back(
+        std::make_unique<AttributeAliasDefinition>(name, location, value));
+  } else {
+    AttributeAliasDefinition &attr = *impl->attrAliases[it->second];
+    attr.definition.loc = location;
+    attr.value = value;
+  }
+}
+
+void AsmParserState::addTypeAliasDefinition(StringRef name, SMRange location,
+                                            Type value) {
+  [[maybe_unused]] auto [it, inserted] =
+      impl->typeAliasToIdx.try_emplace(name, impl->typeAliases.size());
+  assert(inserted && "unexpected attribute alias redefinition");
+  impl->typeAliases.push_back(
+      std::make_unique<TypeAliasDefinition>(name, location, value));
+}
+
 void AsmParserState::addUses(Value value, ArrayRef<SMLoc> locations) {
   // Handle the case where the value is an operation result.
   if (OpResult result = dyn_cast<OpResult>(value)) {
@@ -301,7 +355,7 @@ void AsmParserState::addUses(Value value, ArrayRef<SMLoc> locations) {
   }
 
   // Otherwise, this is a block argument.
-  BlockArgument arg = value.cast<BlockArgument>();
+  BlockArgument arg = cast<BlockArgument>(value);
   auto existingIt = impl->blocksToIdx.find(arg.getOwner());
   assert(existingIt != impl->blocksToIdx.end() &&
          "expected valid block definition for block argument");
@@ -333,6 +387,27 @@ void AsmParserState::addUses(SymbolRefAttr refAttr,
          "expected the same number of references as provided locations");
   (*impl->symbolUseScopes.back())[refAttr].emplace_back(locations.begin(),
                                                         locations.end());
+}
+
+void AsmParserState::addAttrAliasUses(StringRef name, SMRange location) {
+  auto it = impl->attrAliasToIdx.find(name);
+  // Location aliases may be referenced before they are defined.
+  if (it == impl->attrAliasToIdx.end()) {
+    it = impl->attrAliasToIdx.try_emplace(name, impl->attrAliases.size()).first;
+    impl->attrAliases.push_back(
+        std::make_unique<AttributeAliasDefinition>(name));
+  }
+  AttributeAliasDefinition &def = *impl->attrAliases[it->second];
+  def.definition.uses.push_back(location);
+}
+
+void AsmParserState::addTypeAliasUses(StringRef name, SMRange location) {
+  auto it = impl->typeAliasToIdx.find(name);
+  // Location aliases may be referenced before they are defined.
+  assert(it != impl->typeAliasToIdx.end() &&
+         "expected valid type alias definition");
+  TypeAliasDefinition &def = *impl->typeAliases[it->second];
+  def.definition.uses.push_back(location);
 }
 
 void AsmParserState::refineDefinition(Value oldValue, Value newValue) {

@@ -1,10 +1,6 @@
 // RUN: %clang_cc1 -triple i386-apple-darwin9 -verify %s
 // RUN: %clang_cc1 -triple i386-apple-darwin9 -target-feature +avx -verify %s
 
-// <rdar://problem/12415959>
-// rdar://problem/11846140
-// rdar://problem/17476970
-
 typedef unsigned int u_int32_t;
 typedef u_int32_t uint32_t;
 

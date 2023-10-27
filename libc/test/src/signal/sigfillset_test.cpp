@@ -6,24 +6,26 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "include/errno.h"
-#include "include/signal.h"
 #include "src/signal/raise.h"
 #include "src/signal/sigfillset.h"
 #include "src/signal/sigprocmask.h"
 
-#include "test/ErrnoSetterMatcher.h"
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/ErrnoSetterMatcher.h"
+#include "test/UnitTest/Test.h"
+
+#include <errno.h>
+#include <signal.h>
 
 TEST(LlvmLibcSigfillset, Invalid) {
-  using __llvm_libc::testing::ErrnoSetterMatcher::Fails;
-  EXPECT_THAT(__llvm_libc::sigfillset(nullptr), Fails(EINVAL));
+  using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
+  EXPECT_THAT(LIBC_NAMESPACE::sigfillset(nullptr), Fails(EINVAL));
 }
 
 TEST(LlvmLibcSigfillset, BlocksAll) {
-  using __llvm_libc::testing::ErrnoSetterMatcher::Succeeds;
+  using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
   sigset_t set;
-  EXPECT_THAT(__llvm_libc::sigfillset(&set), Succeeds());
-  EXPECT_THAT(__llvm_libc::sigprocmask(SIG_SETMASK, &set, nullptr), Succeeds());
-  EXPECT_EXITS([] { __llvm_libc::raise(SIGUSR1); }, 0);
+  EXPECT_THAT(LIBC_NAMESPACE::sigfillset(&set), Succeeds());
+  EXPECT_THAT(LIBC_NAMESPACE::sigprocmask(SIG_SETMASK, &set, nullptr),
+              Succeeds());
+  EXPECT_EXITS([] { LIBC_NAMESPACE::raise(SIGUSR1); }, 0);
 }

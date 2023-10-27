@@ -15,7 +15,7 @@ target triple = "wasm32-unknown-unknown"
 ; CHECK:  i32.store8 8($[[BASE]]), $[[A1]]{{$}}
 
 define void @test(i8 %byte) {
-  %t = alloca { i8, i8 }, align 1
+  %t = alloca { i8, i8 }, align 8
   %x4 = and i8 %byte, 1
   %x5 = icmp eq i8 %x4, 1
   %x6 = and i8 %byte, 2

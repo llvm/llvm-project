@@ -1,5 +1,4 @@
 // Make sure -fno-inline-functions is behaving correctly.
-// rdar://10972766
 
 // RUN: %clang_cc1 -O3 -fno-inline -fno-inline-functions -emit-llvm %s -o - | FileCheck -check-prefix=NOINLINE %s
 

@@ -22,8 +22,9 @@ entry:
 ; CHECK-DAG: li [[REG4:[0-9]+]], 1
 ; CHECK: isel 3, [[REG4]], [[REG1]], [[REG3]]
 ; CHECK-NO-ISEL-LABEL: @testi1
-; CHECK-NO-ISEL: bclr 12, 20, 0
-; CHECK-NO-ISEL: ori 3, 5, 0
+; CHECK-NO-ISEL: bc 12, 20,
+; CHECK-NO-ISEL: blr
+; CHECK-NO-ISEL: addi 3, 4, 0
 ; CHECK-NO-ISEL-NEXT: blr
 ; CHECK: blr
 }

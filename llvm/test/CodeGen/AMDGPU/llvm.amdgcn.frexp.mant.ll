@@ -27,7 +27,7 @@ define amdgpu_kernel void @s_test_fabs_frexp_mant_f32(ptr addrspace(1) %out, flo
 ; GCN: v_frexp_mant_f32_e64 {{v[0-9]+}}, -|{{s[0-9]+}}|
 define amdgpu_kernel void @s_test_fneg_fabs_frexp_mant_f32(ptr addrspace(1) %out, float %src) #1 {
   %fabs.src = call float @llvm.fabs.f32(float %src)
-  %fneg.fabs.src = fsub float -0.0, %fabs.src
+  %fneg.fabs.src = fneg float %fabs.src
   %frexp.mant = call float @llvm.amdgcn.frexp.mant.f32(float %fneg.fabs.src)
   store float %frexp.mant, ptr addrspace(1) %out
   ret void
@@ -54,7 +54,7 @@ define amdgpu_kernel void @s_test_fabs_frexp_mant_f64(ptr addrspace(1) %out, dou
 ; GCN: v_frexp_mant_f64_e64 {{v\[[0-9]+:[0-9]+\]}}, -|{{s\[[0-9]+:[0-9]+\]}}|
 define amdgpu_kernel void @s_test_fneg_fabs_frexp_mant_f64(ptr addrspace(1) %out, double %src) #1 {
   %fabs.src = call double @llvm.fabs.f64(double %src)
-  %fneg.fabs.src = fsub double -0.0, %fabs.src
+  %fneg.fabs.src = fneg double %fabs.src
   %frexp.mant = call double @llvm.amdgcn.frexp.mant.f64(double %fneg.fabs.src)
   store double %frexp.mant, ptr addrspace(1) %out
   ret void

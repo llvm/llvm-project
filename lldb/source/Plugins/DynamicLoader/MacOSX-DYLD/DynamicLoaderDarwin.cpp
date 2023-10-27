@@ -43,12 +43,6 @@
 #define DEBUG_PRINTF(fmt, ...)
 #endif
 
-#ifndef __APPLE__
-#include "Utility/UuidCompatibility.h"
-#else
-#include <uuid/uuid.h>
-#endif
-
 #include <memory>
 
 using namespace lldb;
@@ -372,7 +366,6 @@ bool DynamicLoaderDarwin::JSONImageInformationIntoImageInfo(
     // clang-format off
     if (!image->HasKey("load_address") ||
         !image->HasKey("pathname") ||
-        !image->HasKey("mod_date") ||
         !image->HasKey("mach_header") ||
         image->GetValueForKey("mach_header")->GetAsDictionary() == nullptr ||
         !image->HasKey("segments") ||
@@ -382,9 +375,7 @@ bool DynamicLoaderDarwin::JSONImageInformationIntoImageInfo(
     }
     // clang-format on
     image_infos[i].address =
-        image->GetValueForKey("load_address")->GetAsInteger()->GetValue();
-    image_infos[i].mod_date =
-        image->GetValueForKey("mod_date")->GetAsInteger()->GetValue();
+        image->GetValueForKey("load_address")->GetUnsignedIntegerValue();
     image_infos[i].file_spec.SetFile(
         image->GetValueForKey("pathname")->GetAsString()->GetValue(),
         FileSpec::Style::native);
@@ -392,13 +383,13 @@ bool DynamicLoaderDarwin::JSONImageInformationIntoImageInfo(
     StructuredData::Dictionary *mh =
         image->GetValueForKey("mach_header")->GetAsDictionary();
     image_infos[i].header.magic =
-        mh->GetValueForKey("magic")->GetAsInteger()->GetValue();
+        mh->GetValueForKey("magic")->GetUnsignedIntegerValue();
     image_infos[i].header.cputype =
-        mh->GetValueForKey("cputype")->GetAsInteger()->GetValue();
+        mh->GetValueForKey("cputype")->GetUnsignedIntegerValue();
     image_infos[i].header.cpusubtype =
-        mh->GetValueForKey("cpusubtype")->GetAsInteger()->GetValue();
+        mh->GetValueForKey("cpusubtype")->GetUnsignedIntegerValue();
     image_infos[i].header.filetype =
-        mh->GetValueForKey("filetype")->GetAsInteger()->GetValue();
+        mh->GetValueForKey("filetype")->GetUnsignedIntegerValue();
 
     if (image->HasKey("min_version_os_name")) {
       std::string os_name =
@@ -441,19 +432,19 @@ bool DynamicLoaderDarwin::JSONImageInformationIntoImageInfo(
 
     if (mh->HasKey("flags"))
       image_infos[i].header.flags =
-          mh->GetValueForKey("flags")->GetAsInteger()->GetValue();
+          mh->GetValueForKey("flags")->GetUnsignedIntegerValue();
     else
       image_infos[i].header.flags = 0;
 
     if (mh->HasKey("ncmds"))
       image_infos[i].header.ncmds =
-          mh->GetValueForKey("ncmds")->GetAsInteger()->GetValue();
+          mh->GetValueForKey("ncmds")->GetUnsignedIntegerValue();
     else
       image_infos[i].header.ncmds = 0;
 
     if (mh->HasKey("sizeofcmds"))
       image_infos[i].header.sizeofcmds =
-          mh->GetValueForKey("sizeofcmds")->GetAsInteger()->GetValue();
+          mh->GetValueForKey("sizeofcmds")->GetUnsignedIntegerValue();
     else
       image_infos[i].header.sizeofcmds = 0;
 
@@ -466,35 +457,32 @@ bool DynamicLoaderDarwin::JSONImageInformationIntoImageInfo(
           segments->GetItemAtIndex(j)->GetAsDictionary();
       segment.name =
           ConstString(seg->GetValueForKey("name")->GetAsString()->GetValue());
-      segment.vmaddr =
-          seg->GetValueForKey("vmaddr")->GetAsInteger()->GetValue();
-      segment.vmsize =
-          seg->GetValueForKey("vmsize")->GetAsInteger()->GetValue();
+      segment.vmaddr = seg->GetValueForKey("vmaddr")->GetUnsignedIntegerValue();
+      segment.vmsize = seg->GetValueForKey("vmsize")->GetUnsignedIntegerValue();
       segment.fileoff =
-          seg->GetValueForKey("fileoff")->GetAsInteger()->GetValue();
+          seg->GetValueForKey("fileoff")->GetUnsignedIntegerValue();
       segment.filesize =
-          seg->GetValueForKey("filesize")->GetAsInteger()->GetValue();
+          seg->GetValueForKey("filesize")->GetUnsignedIntegerValue();
       segment.maxprot =
-          seg->GetValueForKey("maxprot")->GetAsInteger()->GetValue();
+          seg->GetValueForKey("maxprot")->GetUnsignedIntegerValue();
 
       // Fields that aren't used by DynamicLoaderDarwin so debugserver doesn't
       // currently send them in the reply.
 
       if (seg->HasKey("initprot"))
         segment.initprot =
-            seg->GetValueForKey("initprot")->GetAsInteger()->GetValue();
+            seg->GetValueForKey("initprot")->GetUnsignedIntegerValue();
       else
         segment.initprot = 0;
 
       if (seg->HasKey("flags"))
-        segment.flags =
-            seg->GetValueForKey("flags")->GetAsInteger()->GetValue();
+        segment.flags = seg->GetValueForKey("flags")->GetUnsignedIntegerValue();
       else
         segment.flags = 0;
 
       if (seg->HasKey("nsects"))
         segment.nsects =
-            seg->GetValueForKey("nsects")->GetAsInteger()->GetValue();
+            seg->GetValueForKey("nsects")->GetUnsignedIntegerValue();
       else
         segment.nsects = 0;
 
@@ -811,11 +799,11 @@ void DynamicLoaderDarwin::ImageInfo::PutToLog(Log *log) const {
   if (!log)
     return;
   if (address == LLDB_INVALID_ADDRESS) {
-    LLDB_LOG(log, "modtime={0:x+8} uuid={1} path='{2}' (UNLOADED)", mod_date,
-             uuid.GetAsString(), file_spec.GetPath());
+    LLDB_LOG(log, "uuid={1} path='{2}' (UNLOADED)", uuid.GetAsString(),
+             file_spec.GetPath());
   } else {
-    LLDB_LOG(log, "address={0:x+16} modtime={1:x+8} uuid={2} path='{3}'",
-             address, mod_date, uuid.GetAsString(), file_spec.GetPath());
+    LLDB_LOG(log, "address={0:x+16} uuid={1} path='{2}'", address,
+             uuid.GetAsString(), file_spec.GetPath());
     for (uint32_t i = 0; i < segments.size(); ++i)
       segments[i].PutToLog(log, slide);
   }
@@ -888,53 +876,37 @@ DynamicLoaderDarwin::GetStepThroughTrampolinePlan(Thread &thread,
         SymbolContextList code_symbols;
         images.FindSymbolsWithNameAndType(trampoline_name, eSymbolTypeCode,
                                           code_symbols);
-        size_t num_code_symbols = code_symbols.GetSize();
+        for (const SymbolContext &context : code_symbols) {
+          AddressRange addr_range;
+          context.GetAddressRange(eSymbolContextEverything, 0, false,
+                                  addr_range);
+          addresses.push_back(addr_range.GetBaseAddress());
+          if (log) {
+            addr_t load_addr =
+                addr_range.GetBaseAddress().GetLoadAddress(target_sp.get());
 
-        if (num_code_symbols > 0) {
-          for (uint32_t i = 0; i < num_code_symbols; i++) {
-            SymbolContext context;
-            AddressRange addr_range;
-            if (code_symbols.GetContextAtIndex(i, context)) {
-              context.GetAddressRange(eSymbolContextEverything, 0, false,
-                                      addr_range);
-              addresses.push_back(addr_range.GetBaseAddress());
-              if (log) {
-                addr_t load_addr =
-                    addr_range.GetBaseAddress().GetLoadAddress(target_sp.get());
-
-                LLDB_LOGF(log,
-                          "Found a trampoline target symbol at 0x%" PRIx64 ".",
-                          load_addr);
-              }
-            }
+            LLDB_LOGF(log, "Found a trampoline target symbol at 0x%" PRIx64 ".",
+                      load_addr);
           }
         }
 
         SymbolContextList reexported_symbols;
         images.FindSymbolsWithNameAndType(
             trampoline_name, eSymbolTypeReExported, reexported_symbols);
-        size_t num_reexported_symbols = reexported_symbols.GetSize();
-        if (num_reexported_symbols > 0) {
-          for (uint32_t i = 0; i < num_reexported_symbols; i++) {
-            SymbolContext context;
-            if (reexported_symbols.GetContextAtIndex(i, context)) {
-              if (context.symbol) {
-                Symbol *actual_symbol =
-                    context.symbol->ResolveReExportedSymbol(*target_sp.get());
-                if (actual_symbol) {
-                  const Address actual_symbol_addr =
-                      actual_symbol->GetAddress();
-                  if (actual_symbol_addr.IsValid()) {
-                    addresses.push_back(actual_symbol_addr);
-                    if (log) {
-                      lldb::addr_t load_addr =
-                          actual_symbol_addr.GetLoadAddress(target_sp.get());
-                      LLDB_LOGF(
-                          log,
-                          "Found a re-exported symbol: %s at 0x%" PRIx64 ".",
-                          actual_symbol->GetName().GetCString(), load_addr);
-                    }
-                  }
+        for (const SymbolContext &context : reexported_symbols) {
+          if (context.symbol) {
+            Symbol *actual_symbol =
+                context.symbol->ResolveReExportedSymbol(*target_sp.get());
+            if (actual_symbol) {
+              const Address actual_symbol_addr = actual_symbol->GetAddress();
+              if (actual_symbol_addr.IsValid()) {
+                addresses.push_back(actual_symbol_addr);
+                if (log) {
+                  lldb::addr_t load_addr =
+                      actual_symbol_addr.GetLoadAddress(target_sp.get());
+                  LLDB_LOGF(log,
+                            "Found a re-exported symbol: %s at 0x%" PRIx64 ".",
+                            actual_symbol->GetName().GetCString(), load_addr);
                 }
               }
             }
@@ -944,24 +916,18 @@ DynamicLoaderDarwin::GetStepThroughTrampolinePlan(Thread &thread,
         SymbolContextList indirect_symbols;
         images.FindSymbolsWithNameAndType(trampoline_name, eSymbolTypeResolver,
                                           indirect_symbols);
-        size_t num_indirect_symbols = indirect_symbols.GetSize();
-        if (num_indirect_symbols > 0) {
-          for (uint32_t i = 0; i < num_indirect_symbols; i++) {
-            SymbolContext context;
-            AddressRange addr_range;
-            if (indirect_symbols.GetContextAtIndex(i, context)) {
-              context.GetAddressRange(eSymbolContextEverything, 0, false,
-                                      addr_range);
-              addresses.push_back(addr_range.GetBaseAddress());
-              if (log) {
-                addr_t load_addr =
-                    addr_range.GetBaseAddress().GetLoadAddress(target_sp.get());
 
-                LLDB_LOGF(log,
-                          "Found an indirect target symbol at 0x%" PRIx64 ".",
-                          load_addr);
-              }
-            }
+        for (const SymbolContext &context : indirect_symbols) {
+          AddressRange addr_range;
+          context.GetAddressRange(eSymbolContextEverything, 0, false,
+                                  addr_range);
+          addresses.push_back(addr_range.GetBaseAddress());
+          if (log) {
+            addr_t load_addr =
+                addr_range.GetBaseAddress().GetLoadAddress(target_sp.get());
+
+            LLDB_LOGF(log, "Found an indirect target symbol at 0x%" PRIx64 ".",
+                      load_addr);
           }
         }
       }

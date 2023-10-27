@@ -5,6 +5,9 @@
 clang-analyzer-osx.cocoa.NSError
 ================================
 
-The clang-analyzer-osx.cocoa.NSError check is an alias, please see
-`Clang Static Analyzer Available Checkers <https://clang.llvm.org/docs/analyzer/checkers.html#osx-cocoa-nserror>`_
+Check usage of NSError** parameters.
+
+The `clang-analyzer-osx.cocoa.NSError` check is an alias, please see
+`Clang Static Analyzer Available Checkers
+<https://clang.llvm.org/docs/analyzer/checkers.html#osx-cocoa-nserror>`_
 for more information.

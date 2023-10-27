@@ -37,7 +37,7 @@ void test_core(void) {
   // CHECK-ASM: vlvgg
 
   vd = vec_promote(d, idx);
-  // CHECK: insertelement <2 x double> undef, double %{{.*}}, i32 %{{.*}}
+  // CHECK: insertelement <2 x double> poison, double %{{.*}}, i32 %{{.*}}
   // CHECK-ASM: vlvgg
 
   vd = vec_insert_and_zero(cptrd);

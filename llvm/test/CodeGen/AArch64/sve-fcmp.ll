@@ -374,8 +374,8 @@ define <vscale x 4 x i1> @one_zero(<vscale x 4 x float> %x) {
 define <vscale x 4 x i1> @ueq_zero(<vscale x 4 x float> %x) {
 ; CHECK-LABEL: ueq_zero:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z1.s, #0 // =0x0
 ; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    mov z1.s, #0 // =0x0
 ; CHECK-NEXT:    fcmuo p1.s, p0/z, z0.s, z1.s
 ; CHECK-NEXT:    fcmeq p0.s, p0/z, z0.s, #0.0
 ; CHECK-NEXT:    sel p0.b, p0, p0.b, p1.b
@@ -485,4 +485,62 @@ define <vscale x 2 x i1> @une_zero_pred(<vscale x 2 x i1> %pg, <vscale x 2 x dou
   %y = fcmp une <vscale x 2 x double> %x, zeroinitializer
   %z = and <vscale x 2 x i1> %pg, %y
   ret <vscale x 2 x i1> %z
+}
+
+%svboolx2 = type { <vscale x 4 x i1>, <vscale x 4 x i1> }
+
+define %svboolx2 @and_of_multiuse_fcmp_ogt(<vscale x 4 x i1> %pg, <vscale x 4 x float> %x, <vscale x 4 x float> %y) {
+; CHECK-LABEL: and_of_multiuse_fcmp_ogt:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p1.s
+; CHECK-NEXT:    fcmgt p1.s, p1/z, z0.s, z1.s
+; CHECK-NEXT:    and p0.b, p0/z, p0.b, p1.b
+; CHECK-NEXT:    ret
+  %cmp = fcmp ogt <vscale x 4 x float> %x, %y
+  %and = and <vscale x 4 x i1> %pg, %cmp
+  %ins.1 = insertvalue %svboolx2 poison, <vscale x 4 x i1> %and, 0
+  %ins.2 = insertvalue %svboolx2 %ins.1, <vscale x 4 x i1> %cmp, 1
+  ret %svboolx2 %ins.2
+}
+
+define %svboolx2 @and_of_multiuse_fcmp_ogt_zero(<vscale x 4 x i1> %pg, <vscale x 4 x float> %x) {
+; CHECK-LABEL: and_of_multiuse_fcmp_ogt_zero:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p1.s
+; CHECK-NEXT:    fcmgt p1.s, p1/z, z0.s, #0.0
+; CHECK-NEXT:    and p0.b, p0/z, p0.b, p1.b
+; CHECK-NEXT:    ret
+  %cmp = fcmp ogt <vscale x 4 x float> %x, zeroinitializer
+  %and = and <vscale x 4 x i1> %pg, %cmp
+  %ins.1 = insertvalue %svboolx2 poison, <vscale x 4 x i1> %and, 0
+  %ins.2 = insertvalue %svboolx2 %ins.1, <vscale x 4 x i1> %cmp, 1
+  ret %svboolx2 %ins.2
+}
+
+define %svboolx2 @and_of_multiuse_fcmp_olt(<vscale x 4 x i1> %pg, <vscale x 4 x float> %x, <vscale x 4 x float> %y) {
+; CHECK-LABEL: and_of_multiuse_fcmp_olt:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p1.s
+; CHECK-NEXT:    fcmgt p1.s, p1/z, z1.s, z0.s
+; CHECK-NEXT:    and p0.b, p0/z, p0.b, p1.b
+; CHECK-NEXT:    ret
+  %cmp = fcmp olt <vscale x 4 x float> %x, %y
+  %and = and <vscale x 4 x i1> %pg, %cmp
+  %ins.1 = insertvalue %svboolx2 poison, <vscale x 4 x i1> %and, 0
+  %ins.2 = insertvalue %svboolx2 %ins.1, <vscale x 4 x i1> %cmp, 1
+  ret %svboolx2 %ins.2
+}
+
+define %svboolx2 @and_of_multiuse_fcmp_olt_zero(<vscale x 4 x i1> %pg, <vscale x 4 x float> %x) {
+; CHECK-LABEL: and_of_multiuse_fcmp_olt_zero:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p1.s
+; CHECK-NEXT:    fcmlt p1.s, p1/z, z0.s, #0.0
+; CHECK-NEXT:    and p0.b, p0/z, p0.b, p1.b
+; CHECK-NEXT:    ret
+  %cmp = fcmp olt <vscale x 4 x float> %x, zeroinitializer
+  %and = and <vscale x 4 x i1> %pg, %cmp
+  %ins.1 = insertvalue %svboolx2 poison, <vscale x 4 x i1> %and, 0
+  %ins.2 = insertvalue %svboolx2 %ins.1, <vscale x 4 x i1> %cmp, 1
+  ret %svboolx2 %ins.2
 }

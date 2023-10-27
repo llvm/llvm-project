@@ -40,6 +40,14 @@ void DiscardOutput(int Fd) {
   fclose(Temp);
 }
 
+void SetThreadName(std::thread &thread, const std::string &name) {
+#if LIBFUZZER_LINUX || LIBFUZZER_FREEBSD
+  (void)pthread_setname_np(thread.native_handle(), name.c_str());
+#elif LIBFUZZER_NETBSD
+  (void)pthread_set_name_np(thread.native_handle(), "%s", name.c_str());
+#endif
+}
+
 } // namespace fuzzer
 
 #endif

@@ -1,4 +1,4 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic
 ! Test 15.5.2.4 constraints and restrictions for non-POINTER non-ALLOCATABLE
 ! dummy arguments.
 
@@ -168,12 +168,16 @@ module m01
     !WARNING: Actual argument expression length '0' is less than expected length '2'
     call ch2("")
     call pdtdefault(vardefault)
+    !ERROR: Actual argument type 'pdt(n=3_4)' is not compatible with dummy argument type 'pdt'
     call pdtdefault(var3)
+    !ERROR: Actual argument type 'pdt(n=4_4)' is not compatible with dummy argument type 'pdt'
     call pdtdefault(var4) ! error
-    call pdt3(vardefault) ! error
+    !ERROR: Actual argument type 'pdt' is not compatible with dummy argument type 'pdt(n=4_4)'
+    call pdt3(vardefault)
     !ERROR: Actual argument type 'pdt(n=3_4)' is not compatible with dummy argument type 'pdt(n=4_4)'
-    call pdt3(var3) ! error
+    call pdt3(var3)
     call pdt3(var4)
+    !ERROR: Actual argument type 'pdt' is not compatible with dummy argument type 'pdt(n=*)'
     call pdt4(vardefault)
     call pdt4(var3)
     call pdt4(var4)

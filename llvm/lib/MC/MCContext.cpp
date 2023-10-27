@@ -85,7 +85,7 @@ MCContext::MCContext(const Triple &TheTriple, const MCAsmInfo *mai,
     Env = IsMachO;
     break;
   case Triple::COFF:
-    if (!TheTriple.isOSWindows())
+    if (!TheTriple.isOSWindows() && !TheTriple.isUEFI())
       report_fatal_error(
           "Cannot initialize MC for non-Windows COFF object files.");
 
@@ -211,19 +211,19 @@ MCSymbol *MCContext::getOrCreateSymbol(const Twine &Name) {
   return Sym;
 }
 
-MCSymbol *MCContext::getOrCreateFrameAllocSymbol(StringRef FuncName,
+MCSymbol *MCContext::getOrCreateFrameAllocSymbol(const Twine &FuncName,
                                                  unsigned Idx) {
-  return getOrCreateSymbol(Twine(MAI->getPrivateGlobalPrefix()) + FuncName +
+  return getOrCreateSymbol(MAI->getPrivateGlobalPrefix() + FuncName +
                            "$frame_escape_" + Twine(Idx));
 }
 
-MCSymbol *MCContext::getOrCreateParentFrameOffsetSymbol(StringRef FuncName) {
-  return getOrCreateSymbol(Twine(MAI->getPrivateGlobalPrefix()) + FuncName +
+MCSymbol *MCContext::getOrCreateParentFrameOffsetSymbol(const Twine &FuncName) {
+  return getOrCreateSymbol(MAI->getPrivateGlobalPrefix() + FuncName +
                            "$parent_frame_offset");
 }
 
-MCSymbol *MCContext::getOrCreateLSDASymbol(StringRef FuncName) {
-  return getOrCreateSymbol(Twine(MAI->getPrivateGlobalPrefix()) + "__ehtable$" +
+MCSymbol *MCContext::getOrCreateLSDASymbol(const Twine &FuncName) {
+  return getOrCreateSymbol(MAI->getPrivateGlobalPrefix() + "__ehtable$" +
                            FuncName);
 }
 
@@ -259,8 +259,8 @@ MCSymbol *MCContext::createSymbolImpl(const StringMapEntry<bool> *Name,
     return new (Name, *this)
         MCSymbol(MCSymbol::SymbolKindUnset, Name, IsTemporary);
   }
-  return new (Name, *this) MCSymbol(MCSymbol::SymbolKindUnset, Name,
-                                    IsTemporary);
+  return new (Name, *this)
+      MCSymbol(MCSymbol::SymbolKindUnset, Name, IsTemporary);
 }
 
 MCSymbol *MCContext::createSymbol(StringRef Name, bool AlwaysAddSuffix,
@@ -310,8 +310,12 @@ MCSymbol *MCContext::createNamedTempSymbol(const Twine &Name) {
 }
 
 MCSymbol *MCContext::createLinkerPrivateTempSymbol() {
+  return createLinkerPrivateSymbol("tmp");
+}
+
+MCSymbol *MCContext::createLinkerPrivateSymbol(const Twine &Name) {
   SmallString<128> NameSV;
-  raw_svector_ostream(NameSV) << MAI->getLinkerPrivateGlobalPrefix() << "tmp";
+  raw_svector_ostream(NameSV) << MAI->getLinkerPrivateGlobalPrefix() << Name;
   return createSymbol(NameSV, true, false);
 }
 
@@ -362,9 +366,8 @@ MCSymbol *MCContext::lookupSymbol(const Twine &Name) const {
   return Symbols.lookup(NameRef);
 }
 
-void MCContext::setSymbolValue(MCStreamer &Streamer,
-                              StringRef Sym,
-                              uint64_t Val) {
+void MCContext::setSymbolValue(MCStreamer &Streamer, const Twine &Sym,
+                               uint64_t Val) {
   auto Symbol = getOrCreateSymbol(Sym);
   Streamer.emitAssignment(Symbol, MCConstantExpr::create(Val, *this));
 }
@@ -498,14 +501,13 @@ MCSectionELF *MCContext::createELFSectionImpl(StringRef Section, unsigned Type,
   return Ret;
 }
 
-MCSectionELF *MCContext::createELFRelSection(const Twine &Name, unsigned Type,
-                                             unsigned Flags, unsigned EntrySize,
-                                             const MCSymbolELF *Group,
-                                             const MCSectionELF *RelInfoSection) {
+MCSectionELF *
+MCContext::createELFRelSection(const Twine &Name, unsigned Type, unsigned Flags,
+                               unsigned EntrySize, const MCSymbolELF *Group,
+                               const MCSectionELF *RelInfoSection) {
   StringMap<bool>::iterator I;
   bool Inserted;
-  std::tie(I, Inserted) =
-      RelSecNames.insert(std::make_pair(Name.str(), true));
+  std::tie(I, Inserted) = RelSecNames.insert(std::make_pair(Name.str(), true));
 
   return createELFSectionImpl(
       I->getKey(), Type, Flags, SectionKind::getReadOnly(), EntrySize, Group,
@@ -590,7 +592,7 @@ MCSectionELF *MCContext::getELFSection(const Twine &Section, unsigned Type,
                .StartsWith(".gnu.linkonce.td.", SectionKind::getThreadData())
                .StartsWith(".llvm.linkonce.td.", SectionKind::getThreadData())
                .StartsWith(".debug_", SectionKind::getMetadata())
-               .Default(SectionKind::getText());
+               .Default(SectionKind::getReadOnly());
 
   MCSectionELF *Result =
       createELFSectionImpl(CachedName, Type, Flags, Kind, EntrySize, GroupSym,
@@ -668,7 +670,6 @@ MCSectionCOFF *MCContext::getCOFFSection(StringRef Section,
     COMDATSymbol = getOrCreateSymbol(COMDATSymName);
     COMDATSymName = COMDATSymbol->getName();
   }
-
 
   // Do the lookup, if we have a hit, return it.
   COFFSectionKey T{Section, COMDATSymName, Selection, UniqueID};
@@ -849,9 +850,6 @@ MCSectionSPIRV *MCContext::getSPIRVSection() {
   Result->getFragmentList().insert(Result->begin(), F);
   F->setParent(Result);
 
-  if (Begin)
-    Begin->setFragment(F);
-
   return Result;
 }
 
@@ -884,11 +882,11 @@ MCSubtargetInfo &MCContext::getSubtargetCopy(const MCSubtargetInfo &STI) {
 
 void MCContext::addDebugPrefixMapEntry(const std::string &From,
                                        const std::string &To) {
-  DebugPrefixMap.insert(std::make_pair(From, To));
+  DebugPrefixMap.emplace_back(From, To);
 }
 
 void MCContext::remapDebugPath(SmallVectorImpl<char> &Path) {
-  for (const auto &[From, To] : DebugPrefixMap)
+  for (const auto &[From, To] : llvm::reverse(DebugPrefixMap))
     if (llvm::sys::path::replace_path_prefix(Path, From, To))
       break;
 }
@@ -926,6 +924,12 @@ EmitDwarfUnwindType MCContext::emitDwarfUnwindInfo() const {
   if (!TargetOptions)
     return EmitDwarfUnwindType::Default;
   return TargetOptions->EmitDwarfUnwind;
+}
+
+bool MCContext::emitCompactUnwindNonCanonical() const {
+  if (TargetOptions)
+    return TargetOptions->EmitCompactUnwindNonCanonical;
+  return false;
 }
 
 void MCContext::setGenDwarfRootFile(StringRef InputFileName, StringRef Buffer) {

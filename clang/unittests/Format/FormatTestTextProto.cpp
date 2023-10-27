@@ -6,49 +6,23 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "FormatTestUtils.h"
-#include "clang/Format/Format.h"
-#include "llvm/Support/Debug.h"
-#include "gtest/gtest.h"
+#include "FormatTestBase.h"
 
-#define DEBUG_TYPE "format-test"
+#define DEBUG_TYPE "format-test-text-proto"
 
 namespace clang {
 namespace format {
+namespace test {
+namespace {
 
-class FormatTestTextProto : public ::testing::Test {
+class FormatTestTextProto : public FormatTestBase {
 protected:
-  static std::string format(llvm::StringRef Code, unsigned Offset,
-                            unsigned Length, const FormatStyle &Style) {
-    LLVM_DEBUG(llvm::errs() << "---\n");
-    LLVM_DEBUG(llvm::errs() << Code << "\n\n");
-    std::vector<tooling::Range> Ranges(1, tooling::Range(Offset, Length));
-    tooling::Replacements Replaces = reformat(Style, Code, Ranges);
-    auto Result = applyAllReplacements(Code, Replaces);
-    EXPECT_TRUE(static_cast<bool>(Result));
-    LLVM_DEBUG(llvm::errs() << "\n" << *Result << "\n\n");
-    return *Result;
-  }
-
-  static std::string format(llvm::StringRef Code, const FormatStyle &Style) {
-    return format(Code, 0, Code.size(), Style);
-  }
-
-  static void _verifyFormat(const char *File, int Line, llvm::StringRef Code,
-                            const FormatStyle &Style) {
-    ::testing::ScopedTrace t(File, Line, ::testing::Message() << Code.str());
-    EXPECT_EQ(Code.str(), format(Code, Style)) << "Expected code is not stable";
-    EXPECT_EQ(Code.str(), format(test::messUp(Code), Style));
-  }
-
-  static void _verifyFormat(const char *File, int Line, llvm::StringRef Code) {
+  virtual FormatStyle getDefaultStyle() const override {
     FormatStyle Style = getGoogleStyle(FormatStyle::LK_TextProto);
     Style.ColumnLimit = 60; // To make writing tests easier.
-    _verifyFormat(File, Line, Code, Style);
+    return Style;
   }
 };
-
-#define verifyFormat(...) _verifyFormat(__FILE__, __LINE__, __VA_ARGS__)
 
 TEST_F(FormatTestTextProto, KeepsTopLevelEntriesFittingALine) {
   verifyFormat("field_a: OK field_b: OK field_c: OK field_d: OK field_e: OK");
@@ -761,5 +735,7 @@ TEST_F(FormatTestTextProto, KeepsAmpersandsNextToKeys) {
                "}");
 }
 
+} // namespace
+} // namespace test
 } // namespace format
 } // end namespace clang

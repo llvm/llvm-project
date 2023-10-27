@@ -21,26 +21,22 @@ vector double vector_varargs(int count, ...) {
 
 // AIX32:       for.body:
 // AIX32-NEXT:    %argp.cur = load ptr, ptr %arg_list, align 4
-// AIX32-NEXT:    %2 = ptrtoint ptr %argp.cur to i32
-// AIX32-NEXT:    %3 = add i32 %2, 15
-// AIX32-NEXT:    %4 = and i32 %3, -16
-// AIX32-NEXT:    %argp.cur.aligned = inttoptr i32 %4 to ptr
+// AIX32-NEXT:    %2 = getelementptr inbounds i8, ptr %argp.cur, i32 15
+// AIX32-NEXT:    %argp.cur.aligned = call ptr @llvm.ptrmask.p0.i32(ptr %2, i32 -16)
 // AIX32-NEXT:    %argp.next = getelementptr inbounds i8, ptr %argp.cur.aligned, i32 16
 // AIX32-NEXT:    store ptr %argp.next, ptr %arg_list, align 4
-// AIX32-NEXT:    %5 = load <2 x double>, ptr %argp.cur.aligned, align 16
-// AIX32-NEXT:    store <2 x double> %5, ptr %ret, align 16
+// AIX32-NEXT:    %3 = load <2 x double>, ptr %argp.cur.aligned, align 16
+// AIX32-NEXT:    store <2 x double> %3, ptr %ret, align 16
 // AIX32-NEXT:    br label %for.inc
 
 // AIX64:       for.body:
 // AIX64-NEXT:    %argp.cur = load ptr, ptr %arg_list, align 8
-// AIX64-NEXT:    %2 = ptrtoint ptr %argp.cur to i64
-// AIX64-NEXT:    %3 = add i64 %2, 15
-// AIX64-NEXT:    %4 = and i64 %3, -16
-// AIX64-NEXT:    %argp.cur.aligned = inttoptr i64 %4 to ptr
+// AIX64-NEXT:    %2 = getelementptr inbounds i8, ptr %argp.cur, i32 15
+// AIX64-NEXT:    %argp.cur.aligned = call ptr @llvm.ptrmask.p0.i64(ptr %2, i64 -16)
 // AIX64-NEXT:    %argp.next = getelementptr inbounds i8, ptr %argp.cur.aligned, i64 16
 // AIX64-NEXT:    store ptr %argp.next, ptr %arg_list, align 8
-// AIX64-NEXT:    %5 = load <2 x double>, ptr %argp.cur.aligned, align 16
-// AIX64-NEXT:    store <2 x double> %5, ptr %ret, align 16
+// AIX64-NEXT:    %3 = load <2 x double>, ptr %argp.cur.aligned, align 16
+// AIX64-NEXT:    store <2 x double> %3, ptr %ret, align 16
 // AIX64-NEXT:    br label %for.inc
 
 

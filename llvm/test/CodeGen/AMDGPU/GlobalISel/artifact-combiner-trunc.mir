@@ -145,3 +145,66 @@ body: |
     %2:_(s32) = G_TRUNC %1
     $vgpr0 = COPY %2
 ...
+
+---
+name: trunc_sext
+
+body: |
+  bb.0:
+    ; Test that trunc(sext) is replaced with sext source.
+    ; CHECK-LABEL: name: trunc_sext
+    ; CHECK: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: $vgpr0 = COPY [[DEF]](s32)
+    %0:_(s32) = G_IMPLICIT_DEF
+    %1:_(s64) = G_SEXT %0
+    %2:_(s32) = G_TRUNC %1
+    $vgpr0 = COPY %2
+...
+
+---
+name: trunc_zext
+
+body: |
+  bb.0:
+    ; Test that trunc(zext) is replaced with zext source.
+    ; CHECK-LABEL: name: trunc_zext
+    ; CHECK: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: $vgpr0 = COPY [[DEF]](s32)
+    %0:_(s32) = G_IMPLICIT_DEF
+    %1:_(s64) = G_ZEXT %0
+    %2:_(s32) = G_TRUNC %1
+    $vgpr0 = COPY %2
+...
+
+---
+name: trunc_anyext
+
+body: |
+  bb.0:
+    ; Test that trunc(anyext) is replaced with anyext source.
+    ; CHECK-LABEL: name: trunc_anyext
+    ; CHECK: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: $vgpr0 = COPY [[DEF]](s32)
+    %0:_(s32) = G_IMPLICIT_DEF
+    %1:_(s64) = G_ANYEXT %0
+    %2:_(s32) = G_TRUNC %1
+    $vgpr0 = COPY %2
+...
+
+---
+name: trunc_ext
+
+body: |
+  bb.0:
+    ; Test that trunc(sext (trunc (...))) is replaced with source.
+    ; CHECK-LABEL: name: trunc_ext
+    ; CHECK: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: $vgpr0 = COPY [[DEF]](s32)
+    %0:_(s32) = G_IMPLICIT_DEF
+    %1:_(s64) = G_SEXT %0
+    %2:_(s32) = G_TRUNC %1
+    %3:_(s128) = G_ZEXT %2
+    %4:_(s64) = G_TRUNC %3
+    %5:_(s32) = G_TRUNC %4
+    $vgpr0 = COPY %5
+...

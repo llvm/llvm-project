@@ -133,9 +133,8 @@ bool MarkupFilter::tryReset(const MarkupNode &Node,
     endAnyModuleInfoLine();
     for (const MarkupNode &Node : DeferredNodes)
       filterNode(Node);
-    highlight();
-    OS << "[[[reset]]]" << lineEnding();
-    restoreColor();
+    printRawElement(Node);
+    OS << lineEnding();
 
     Modules.clear();
     MMaps.clear();
@@ -239,8 +238,7 @@ bool MarkupFilter::tryPC(const MarkupNode &Node) {
     return false;
   if (!checkNumFieldsAtLeast(Node, 1))
     return true;
-  if (!checkNumFieldsAtMost(Node, 2))
-    return true;
+  warnNumFieldsAtMost(Node, 2);
 
   std::optional<uint64_t> Addr = parseAddr(Node.Fields[0]);
   if (!Addr)
@@ -293,8 +291,7 @@ bool MarkupFilter::tryBackTrace(const MarkupNode &Node) {
     return false;
   if (!checkNumFieldsAtLeast(Node, 2))
     return true;
-  if (!checkNumFieldsAtMost(Node, 3))
-    return true;
+  warnNumFieldsAtMost(Node, 3);
 
   std::optional<uint64_t> FrameNumber = parseFrameNumber(Node.Fields[0]);
   if (!FrameNumber)
@@ -513,8 +510,9 @@ MarkupFilter::parseModule(const MarkupNode &Element) const {
   }
   if (!checkNumFields(Element, 4))
     return std::nullopt;
-  ASSIGN_OR_RETURN_NONE(SmallVector<uint8_t>, BuildID,
-                        parseBuildID(Element.Fields[3]));
+  SmallVector<uint8_t> BuildID = parseBuildID(Element.Fields[3]);
+  if (BuildID.empty())
+    return std::nullopt;
   return Module{ID, Name.str(), std::move(BuildID)};
 }
 
@@ -597,16 +595,11 @@ std::optional<uint64_t> MarkupFilter::parseFrameNumber(StringRef Str) const {
 }
 
 // Parse a build ID (%x in the spec).
-std::optional<SmallVector<uint8_t>>
-MarkupFilter::parseBuildID(StringRef Str) const {
-  std::string Bytes;
-  if (Str.empty() || Str.size() % 2 || !tryGetFromHex(Str, Bytes)) {
+object::BuildID MarkupFilter::parseBuildID(StringRef Str) const {
+  object::BuildID BID = llvm::object::parseBuildID(Str);
+  if (BID.empty())
     reportTypeError(Str, "build ID");
-    return std::nullopt;
-  }
-  ArrayRef<uint8_t> BuildID(reinterpret_cast<const uint8_t *>(Bytes.data()),
-                            Bytes.size());
-  return SmallVector<uint8_t>(BuildID.begin(), BuildID.end());
+  return BID;
 }
 
 // Parses the mode string for an mmap element.
@@ -659,10 +652,12 @@ bool MarkupFilter::checkTag(const MarkupNode &Node) const {
 bool MarkupFilter::checkNumFields(const MarkupNode &Element,
                                   size_t Size) const {
   if (Element.Fields.size() != Size) {
-    WithColor::error(errs()) << "expected " << Size << " field(s); found "
-                             << Element.Fields.size() << "\n";
+    bool Warn = Element.Fields.size() > Size;
+    WithColor(errs(), Warn ? HighlightColor::Warning : HighlightColor::Error)
+        << (Warn ? "warning: " : "error: ") << "expected " << Size
+        << " field(s); found " << Element.Fields.size() << "\n";
     reportLocation(Element.Tag.end());
-    return false;
+    return Warn;
   }
   return true;
 }
@@ -679,16 +674,14 @@ bool MarkupFilter::checkNumFieldsAtLeast(const MarkupNode &Element,
   return true;
 }
 
-bool MarkupFilter::checkNumFieldsAtMost(const MarkupNode &Element,
-                                        size_t Size) const {
-  if (Element.Fields.size() > Size) {
-    WithColor::error(errs())
-        << "expected at most " << Size << " field(s); found "
-        << Element.Fields.size() << "\n";
-    reportLocation(Element.Tag.end());
-    return false;
-  }
-  return true;
+void MarkupFilter::warnNumFieldsAtMost(const MarkupNode &Element,
+                                       size_t Size) const {
+  if (Element.Fields.size() <= Size)
+    return;
+  WithColor::warning(errs())
+      << "expected at most " << Size << " field(s); found "
+      << Element.Fields.size() << "\n";
+  reportLocation(Element.Tag.end());
 }
 
 void MarkupFilter::reportTypeError(StringRef Str, StringRef TypeName) const {

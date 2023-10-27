@@ -138,9 +138,9 @@ this:
       unsigned Precedence;  // Precedence if a binary op.
 
     public:
-      PrototypeAST(const std::string &name, std::vector<std::string> Args,
+      PrototypeAST(const std::string &Name, std::vector<std::string> Args,
                    bool IsOperator = false, unsigned Prec = 0)
-      : Name(name), Args(std::move(Args)), IsOperator(IsOperator),
+      : Name(Name), Args(std::move(Args)), IsOperator(IsOperator),
         Precedence(Prec) {}
 
       Function *codegen();
@@ -244,15 +244,15 @@ default case for our existing binary operator node:
 
       switch (Op) {
       case '+':
-        return Builder.CreateFAdd(L, R, "addtmp");
+        return Builder->CreateFAdd(L, R, "addtmp");
       case '-':
-        return Builder.CreateFSub(L, R, "subtmp");
+        return Builder->CreateFSub(L, R, "subtmp");
       case '*':
-        return Builder.CreateFMul(L, R, "multmp");
+        return Builder->CreateFMul(L, R, "multmp");
       case '<':
-        L = Builder.CreateFCmpULT(L, R, "cmptmp");
+        L = Builder->CreateFCmpULT(L, R, "cmptmp");
         // Convert bool 0/1 to double 0.0 or 1.0
-        return Builder.CreateUIToFP(L, Type::getDoubleTy(TheContext),
+        return Builder->CreateUIToFP(L, Type::getDoubleTy(*TheContext),
                                     "booltmp");
       default:
         break;
@@ -264,7 +264,7 @@ default case for our existing binary operator node:
       assert(F && "binary operator not found!");
 
       Value *Ops[2] = { L, R };
-      return Builder.CreateCall(F, Ops, "binop");
+      return Builder->CreateCall(F, Ops, "binop");
     }
 
 As you can see above, the new code is actually really simple. It just
@@ -291,7 +291,7 @@ The final piece of code we are missing, is a bit of top-level magic:
         BinopPrecedence[P.getOperatorName()] = P.getBinaryPrecedence();
 
       // Create a new basic block to start insertion into.
-      BasicBlock *BB = BasicBlock::Create(TheContext, "entry", TheFunction);
+      BasicBlock *BB = BasicBlock::Create(*TheContext, "entry", TheFunction);
       ...
 
 Basically, before codegening a function, if it is a user-defined
@@ -438,7 +438,7 @@ unary operators. It looks like this:
       if (!F)
         return LogErrorV("Unknown unary operator");
 
-      return Builder.CreateCall(F, OperandV, "unop");
+      return Builder->CreateCall(F, OperandV, "unop");
     }
 
 This code is similar to, but simpler than, the code for binary

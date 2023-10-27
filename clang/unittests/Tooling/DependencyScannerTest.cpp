@@ -239,3 +239,65 @@ TEST(DependencyScanner, ScanDepsWithFS) {
   EXPECT_EQ(convert_to_slash(DepFile),
             "test.cpp.o: /root/test.cpp /root/header.h\n");
 }
+
+TEST(DependencyScanner, ScanDepsWithModuleLookup) {
+  std::vector<std::string> CommandLine = {
+      "clang",
+      "-target",
+      "x86_64-apple-macosx10.7",
+      "-c",
+      "test.m",
+      "-o"
+      "test.m.o",
+      "-fmodules",
+      "-I/root/SomeSources",
+  };
+  StringRef CWD = "/root";
+
+  auto VFS = new llvm::vfs::InMemoryFileSystem();
+  VFS->setCurrentWorkingDirectory(CWD);
+  auto Sept = llvm::sys::path::get_separator();
+  std::string OtherPath =
+      std::string(llvm::formatv("{0}root{0}SomeSources{0}other.h", Sept));
+  std::string TestPath = std::string(llvm::formatv("{0}root{0}test.m", Sept));
+
+  VFS->addFile(OtherPath, 0, llvm::MemoryBuffer::getMemBuffer("\n"));
+  VFS->addFile(TestPath, 0, llvm::MemoryBuffer::getMemBuffer("@import Foo;\n"));
+
+  struct InterceptorFS : llvm::vfs::ProxyFileSystem {
+    std::vector<std::string> StatPaths;
+    std::vector<std::string> ReadFiles;
+
+    InterceptorFS(IntrusiveRefCntPtr<FileSystem> UnderlyingFS)
+        : ProxyFileSystem(UnderlyingFS) {}
+
+    llvm::ErrorOr<llvm::vfs::Status> status(const Twine &Path) override {
+      StatPaths.push_back(Path.str());
+      return ProxyFileSystem::status(Path);
+    }
+
+    llvm::ErrorOr<std::unique_ptr<llvm::vfs::File>>
+    openFileForRead(const Twine &Path) override {
+      ReadFiles.push_back(Path.str());
+      return ProxyFileSystem::openFileForRead(Path);
+    }
+  };
+
+  auto InterceptFS = llvm::makeIntrusiveRefCnt<InterceptorFS>(VFS);
+
+  DependencyScanningService Service(ScanningMode::DependencyDirectivesScan,
+                                    ScanningOutputFormat::Make);
+  DependencyScanningTool ScanTool(Service, InterceptFS);
+
+  // This will fail with "fatal error: module 'Foo' not found" but it doesn't
+  // matter, the point of the test is to check that files are not read
+  // unnecessarily.
+  std::string DepFile;
+  ASSERT_THAT_ERROR(
+      ScanTool.getDependencyFile(CommandLine, CWD).moveInto(DepFile),
+      llvm::Failed());
+
+  EXPECT_TRUE(llvm::find(InterceptFS->StatPaths, OtherPath) ==
+              InterceptFS->StatPaths.end());
+  EXPECT_EQ(InterceptFS->ReadFiles, std::vector<std::string>{"test.m"});
+}

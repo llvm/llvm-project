@@ -26,53 +26,8 @@ namespace mlir {
 /// Matches a ConstantIndexOp.
 detail::op_matcher<arith::ConstantIndexOp> matchConstantIndex();
 
-/// Detects the `values` produced by a ConstantIndexOp and places the new
-/// constant in place of the corresponding sentinel value.
-void canonicalizeSubViewPart(SmallVectorImpl<OpFoldResult> &values,
-                             function_ref<bool(int64_t)> isDynamic);
-
 llvm::SmallBitVector getPositionsOfShapeOne(unsigned rank,
                                             ArrayRef<int64_t> shape);
-
-/// Pattern to rewrite a subview op with constant arguments.
-template <typename OpType, typename ResultTypeFunc, typename CastOpFunc>
-class OpWithOffsetSizesAndStridesConstantArgumentFolder final
-    : public OpRewritePattern<OpType> {
-public:
-  using OpRewritePattern<OpType>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(OpType op,
-                                PatternRewriter &rewriter) const override {
-    // No constant operand, just return;
-    if (llvm::none_of(op.getOperands(), [](Value operand) {
-          return matchPattern(operand, matchConstantIndex());
-        }))
-      return failure();
-
-    // At least one of offsets/sizes/strides is a new constant.
-    // Form the new list of operands and constant attributes from the existing.
-    SmallVector<OpFoldResult> mixedOffsets(op.getMixedOffsets());
-    SmallVector<OpFoldResult> mixedSizes(op.getMixedSizes());
-    SmallVector<OpFoldResult> mixedStrides(op.getMixedStrides());
-    canonicalizeSubViewPart(mixedOffsets, ShapedType::isDynamic);
-    canonicalizeSubViewPart(mixedSizes, ShapedType::isDynamic);
-    canonicalizeSubViewPart(mixedStrides, ShapedType::isDynamic);
-
-    // Create the new op in canonical form.
-    ResultTypeFunc resultTypeFunc;
-    auto resultType =
-        resultTypeFunc(op, mixedOffsets, mixedSizes, mixedStrides);
-    if (!resultType)
-      return failure();
-    auto newOp =
-        rewriter.create<OpType>(op.getLoc(), resultType, op.getSource(),
-                                mixedOffsets, mixedSizes, mixedStrides);
-    CastOpFunc func;
-    func(rewriter, op, newOp);
-
-    return success();
-  }
-};
 
 /// Converts an OpFoldResult to a Value. Returns the fold result if it casts to
 /// a Value or creates a ConstantIndexOp if it casts to an IntegerAttribute.
@@ -80,17 +35,17 @@ public:
 Value getValueOrCreateConstantIndexOp(OpBuilder &b, Location loc,
                                       OpFoldResult ofr);
 
-/// Create a cast from an index-like value (index or integer) to another
-/// index-like value. If the value type and the target type are the same, it
-/// returns the original value.
-Value getValueOrCreateCastToIndexLike(OpBuilder &b, Location loc,
-                                      Type targetType, Value value);
-
 /// Similar to the other overload, but converts multiple OpFoldResults into
 /// Values.
 SmallVector<Value>
 getValueOrCreateConstantIndexOp(OpBuilder &b, Location loc,
                                 ArrayRef<OpFoldResult> valueOrAttrVec);
+
+/// Create a cast from an index-like value (index or integer) to another
+/// index-like value. If the value type and the target type are the same, it
+/// returns the original value.
+Value getValueOrCreateCastToIndexLike(OpBuilder &b, Location loc,
+                                      Type targetType, Value value);
 
 /// Converts a scalar value `operand` to type `toType`. If the value doesn't
 /// convert, a warning will be issued and the operand is returned as is (which

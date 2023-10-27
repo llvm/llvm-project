@@ -2,7 +2,7 @@
 
 // CHECK: %[[resource:.*]] = memref.alloc() : memref<12xf32>
 // CHECK: %[[index:.*]] = arith.constant 1 : index
-// CHECK: call @vulkanLaunch(%[[index]], %[[index]], %[[index]], %[[resource]]) {spirv_blob = "{{.*}}", spirv_entry_point = "kernel"}
+// CHECK: call @vulkanLaunch(%[[index]], %[[index]], %[[index]], %[[resource]]) {spirv_blob = "{{.*}}", spirv_element_types = [f32], spirv_entry_point = "kernel"}
 
 module attributes {gpu.container_module} {
   spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], [SPV_KHR_storage_buffer_storage_class]> {

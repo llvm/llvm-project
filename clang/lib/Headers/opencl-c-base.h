@@ -45,6 +45,7 @@
 #define __opencl_c_ext_fp32_local_atomic_add 1
 #define __opencl_c_ext_fp32_global_atomic_min_max 1
 #define __opencl_c_ext_fp32_local_atomic_min_max 1
+#define __opencl_c_ext_image_raw10_raw12 1
 
 #endif // defined(__SPIR__) || defined(__SPIRV__)
 #endif // (defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ >= 200)
@@ -474,6 +475,13 @@ typedef enum memory_order
 #define CLK_HALF_FLOAT        0x10DD
 #define CLK_FLOAT             0x10DE
 #define CLK_UNORM_INT24       0x10DF
+#if __OPENCL_C_VERSION__ >= CL_VERSION_3_0
+#define CLK_UNORM_INT_101010_2 0x10E0
+#endif // __OPENCL_C_VERSION__ >= CL_VERSION_3_0
+#ifdef __opencl_c_ext_image_raw10_raw12
+#define CLK_UNSIGNED_INT_RAW10_EXT 0x10E3
+#define CLK_UNSIGNED_INT_RAW12_EXT 0x10E4
+#endif // __opencl_c_ext_image_raw10_raw12
 
 // Channel order, numbering must be aligned with cl_channel_order in cl.h
 //
@@ -810,6 +818,64 @@ int printf(__constant const char* st, ...) __attribute__((format(printf, 1, 2)))
 #define CLK_AVC_IME_RESULT_DUAL_REFERENCE_STREAMIN_INITIALIZE_INTEL 0x0
 
 #endif // cl_intel_device_side_avc_motion_estimation
+
+/**
+ * Compute square root.
+ *
+ * Provide inline implementations using the builtin so that we get appropriate
+ * !fpmath based on -cl-fp32-correctly-rounded-divide-sqrt, attached to
+ * llvm.sqrt. The implementation should still provide an external definition.
+ */
+#define __ovld __attribute__((overloadable))
+#define __cnfn __attribute__((const))
+
+inline float __ovld __cnfn sqrt(float __x) {
+  return __builtin_elementwise_sqrt(__x);
+}
+
+inline float2 __ovld __cnfn sqrt(float2 __x) {
+  return __builtin_elementwise_sqrt(__x);
+}
+
+inline float3 __ovld __cnfn sqrt(float3 __x) {
+  return __builtin_elementwise_sqrt(__x);
+}
+
+inline float4 __ovld __cnfn sqrt(float4 __x) {
+  return __builtin_elementwise_sqrt(__x);
+}
+
+inline float8 __ovld __cnfn sqrt(float8 __x) {
+  return __builtin_elementwise_sqrt(__x);
+}
+
+inline float16 __ovld __cnfn sqrt(float16 __x) {
+  return __builtin_elementwise_sqrt(__x);
+}
+
+// We only really want to define the float variants here. However
+// -fdeclare-opencl-builtins will not work if some overloads are already
+ // provided in the base header, so provide all overloads here.
+
+#ifdef cl_khr_fp64
+double __ovld __cnfn sqrt(double);
+double2 __ovld __cnfn sqrt(double2);
+double3 __ovld __cnfn sqrt(double3);
+double4 __ovld __cnfn sqrt(double4);
+double8 __ovld __cnfn sqrt(double8);
+double16 __ovld __cnfn sqrt(double16);
+#endif //cl_khr_fp64
+#ifdef cl_khr_fp16
+half __ovld __cnfn sqrt(half);
+half2 __ovld __cnfn sqrt(half2);
+half3 __ovld __cnfn sqrt(half3);
+half4 __ovld __cnfn sqrt(half4);
+half8 __ovld __cnfn sqrt(half8);
+half16 __ovld __cnfn sqrt(half16);
+#endif //cl_khr_fp16
+
+#undef __cnfn
+#undef __ovld
 
 // Disable any extensions we may have enabled previously.
 #pragma OPENCL EXTENSION all : disable

@@ -147,7 +147,7 @@ loop2:
 define amdgpu_kernel void @infinite_loop_nest_ret(ptr addrspace(1) %out) {
 ; SI-LABEL: infinite_loop_nest_ret:
 ; SI:       ; %bb.0: ; %entry
-; SI-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
+; SI-NEXT:    v_cmp_ne_u32_e32 vcc, 1, v0
 ; SI-NEXT:    s_and_saveexec_b64 s[2:3], vcc
 ; SI-NEXT:    s_cbranch_execz .LBB3_5
 ; SI-NEXT:  ; %bb.1: ; %outer_loop.preheader
@@ -180,7 +180,7 @@ define amdgpu_kernel void @infinite_loop_nest_ret(ptr addrspace(1) %out) {
 ; IR-LABEL: @infinite_loop_nest_ret(
 ; IR-NEXT:  entry:
 ; IR-NEXT:    [[TMP:%.*]] = tail call i32 @llvm.amdgcn.workitem.id.x()
-; IR-NEXT:    [[COND1:%.*]] = icmp eq i32 [[TMP]], 1
+; IR-NEXT:    [[COND1:%.*]] = icmp ne i32 [[TMP]], 1
 ; IR-NEXT:    br i1 [[COND1]], label [[OUTER_LOOP:%.*]], label [[UNIFIEDRETURNBLOCK:%.*]]
 ; IR:       outer_loop:
 ; IR-NEXT:    br label [[INNER_LOOP:%.*]]
@@ -195,7 +195,7 @@ define amdgpu_kernel void @infinite_loop_nest_ret(ptr addrspace(1) %out) {
 ;
 entry:
   %tmp = tail call i32 @llvm.amdgcn.workitem.id.x()
-  %cond1 = icmp eq i32 %tmp, 1
+  %cond1 = icmp ne i32 %tmp, 1  ; avoid following BB optimizing away through the domination
   br i1 %cond1, label %outer_loop, label %return
 
 outer_loop:

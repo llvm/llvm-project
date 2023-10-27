@@ -407,9 +407,10 @@ void ExtensibleDialect::registerDynamicType(
   assert(registered &&
          "Trying to create a new dynamic type with an existing name");
 
-  auto abstractType =
-      AbstractType::get(*dialect, DynamicAttr::getInterfaceMap(),
-                        DynamicType::getHasTraitFn(), typeID);
+  auto abstractType = AbstractType::get(
+      *dialect, DynamicAttr::getInterfaceMap(), DynamicType::getHasTraitFn(),
+      DynamicType::getWalkImmediateSubElementsFn(),
+      DynamicType::getReplaceImmediateSubElementsFn(), typeID);
 
   /// Add the type to the dialect and the type uniquer.
   addType(typeID, std::move(abstractType));
@@ -436,9 +437,10 @@ void ExtensibleDialect::registerDynamicAttr(
   assert(registered &&
          "Trying to create a new dynamic attribute with an existing name");
 
-  auto abstractAttr =
-      AbstractAttribute::get(*dialect, DynamicAttr::getInterfaceMap(),
-                             DynamicAttr::getHasTraitFn(), typeID);
+  auto abstractAttr = AbstractAttribute::get(
+      *dialect, DynamicAttr::getInterfaceMap(), DynamicAttr::getHasTraitFn(),
+      DynamicAttr::getWalkImmediateSubElementsFn(),
+      DynamicAttr::getReplaceImmediateSubElementsFn(), typeID);
 
   /// Add the type to the dialect and the type uniquer.
   addAttribute(typeID, std::move(abstractAttr));
@@ -472,7 +474,7 @@ OptionalParseResult ExtensibleDialect::parseOptionalDynamicType(
 
 LogicalResult ExtensibleDialect::printIfDynamicType(Type type,
                                                     AsmPrinter &printer) {
-  if (auto dynType = type.dyn_cast<DynamicType>()) {
+  if (auto dynType = llvm::dyn_cast<DynamicType>(type)) {
     dynType.print(printer);
     return success();
   }
@@ -494,7 +496,7 @@ OptionalParseResult ExtensibleDialect::parseOptionalDynamicAttr(
 
 LogicalResult ExtensibleDialect::printIfDynamicAttr(Attribute attribute,
                                                     AsmPrinter &printer) {
-  if (auto dynAttr = attribute.dyn_cast<DynamicAttr>()) {
+  if (auto dynAttr = llvm::dyn_cast<DynamicAttr>(attribute)) {
     dynAttr.print(printer);
     return success();
   }

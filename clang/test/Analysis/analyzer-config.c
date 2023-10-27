@@ -13,8 +13,6 @@
 // CHECK-NEXT: alpha.security.MmapWriteExec:MmapProtRead = 0x01
 // CHECK-NEXT: alpha.security.taint.TaintPropagation:Config = ""
 // CHECK-NEXT: alpha.unix.Errno:AllowErrnoReadOutsideConditionExpressions = true
-// CHECK-NEXT: apiModeling.StdCLibraryFunctions:DisplayLoadedSummaries = false
-// CHECK-NEXT: apiModeling.StdCLibraryFunctions:ModelPOSIX = false
 // CHECK-NEXT: apply-fixits = false
 // CHECK-NEXT: assume-controlled-environment = false
 // CHECK-NEXT: avoid-suppressing-null-argument-paths = false
@@ -33,7 +31,7 @@
 // CHECK-NEXT: cfg-rich-constructors = true
 // CHECK-NEXT: cfg-scopes = false
 // CHECK-NEXT: cfg-temporary-dtors = true
-// CHECK-NEXT: consider-single-element-arrays-as-flexible-array-members = true
+// CHECK-NEXT: core.BitwiseShift:Pedantic = false
 // CHECK-NEXT: core.CallAndMessage:ArgInitializedness = true
 // CHECK-NEXT: core.CallAndMessage:ArgPointeeInitializedness = false
 // CHECK-NEXT: core.CallAndMessage:CXXDeallocationArg = true
@@ -129,6 +127,8 @@
 // CHECK-NEXT: track-conditions-debug = false
 // CHECK-NEXT: unix.DynamicMemoryModeling:AddNoOwnershipChangeNotes = true
 // CHECK-NEXT: unix.DynamicMemoryModeling:Optimistic = false
+// CHECK-NEXT: unix.StdCLibraryFunctions:DisplayLoadedSummaries = false
+// CHECK-NEXT: unix.StdCLibraryFunctions:ModelPOSIX = false
 // CHECK-NEXT: unroll-loops = false
 // CHECK-NEXT: verbose-report-filename = false
 // CHECK-NEXT: widen-loops = false

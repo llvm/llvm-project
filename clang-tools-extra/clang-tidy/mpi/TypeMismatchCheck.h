@@ -14,9 +14,7 @@
 #include "clang/StaticAnalyzer/Checkers/MPIFunctionClassifier.h"
 #include <optional>
 
-namespace clang {
-namespace tidy {
-namespace mpi {
+namespace clang::tidy::mpi {
 
 /// This check verifies if buffer type and MPI (Message Passing Interface)
 /// datatype pairs match. All MPI datatypes defined by the MPI standard (3.1)
@@ -49,8 +47,6 @@ private:
   std::optional<ento::mpi::MPIFunctionClassifier> FuncClassifier;
 };
 
-} // namespace mpi
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::mpi
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MPI_TYPE_MISMATCH_H

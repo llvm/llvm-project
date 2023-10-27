@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-
 #include <string>
 #include <tuple>
 #include <type_traits>
@@ -22,7 +21,7 @@ struct EnumValue : std::integral_constant<E, static_cast<E>(I)> {
   static std::string name() { return std::string("_") + D::Names[I]; }
 };
 
-template <class D, class E, size_t ...Idxs>
+template <class D, class E, size_t... Idxs>
 constexpr auto makeEnumValueTuple(std::index_sequence<Idxs...>) {
   return std::make_tuple(EnumValue<D, E, Idxs>{}...);
 }
@@ -41,8 +40,7 @@ void makeBenchmarkFromValuesImpl(const Args& A, std::index_sequence<Is...>) {
   for (auto& V : A) {
     B Bench{std::get<Is>(V)...};
     if (!internal::skip(Bench, 0)) {
-      benchmark::RegisterBenchmark(Bench.name().c_str(),
-                                   [=](benchmark::State& S) { Bench.run(S); });
+      benchmark::RegisterBenchmark(Bench.name().c_str(), [=](benchmark::State& S) { Bench.run(S); });
     }
   }
 }
@@ -57,10 +55,8 @@ void makeBenchmarkImpl(const Args& A, std::tuple<U...> t) {
   makeBenchmarkFromValues<B<U...> >(A);
 }
 
-template <template <class...> class B, class Args, class... U,
-          class... T, class... Tuples>
-void makeBenchmarkImpl(const Args& A, std::tuple<U...>, std::tuple<T...>,
-                       Tuples... rest) {
+template <template <class...> class B, class Args, class... U, class... T, class... Tuples>
+void makeBenchmarkImpl(const Args& A, std::tuple<U...>, std::tuple<T...>, Tuples... rest) {
   (internal::makeBenchmarkImpl<B>(A, std::tuple<U..., T>(), rest...), ...);
 }
 
@@ -70,15 +66,13 @@ void allValueCombinations(R& Result, const T& Final) {
 }
 
 template <class R, class T, class V, class... Vs>
-void allValueCombinations(R& Result, const T& Prev, const V& Value,
-                          const Vs&... Values) {
+void allValueCombinations(R& Result, const T& Prev, const V& Value, const Vs&... Values) {
   for (const auto& E : Value) {
-    allValueCombinations(Result, std::tuple_cat(Prev, std::make_tuple(E)),
-                         Values...);
+    allValueCombinations(Result, std::tuple_cat(Prev, std::make_tuple(E)), Values...);
   }
 }
 
-}  // namespace internal
+} // namespace internal
 
 // CRTP class that enables using enum types as a dimension for
 // makeCartesianProductBenchmark below.
@@ -93,8 +87,7 @@ void allValueCombinations(R& Result, const T& Prev, const V& Value,
 // };
 template <class Derived, class EnumType, size_t NumLabels>
 using EnumValuesAsTuple =
-    decltype(internal::makeEnumValueTuple<Derived, EnumType>(
-        std::make_index_sequence<NumLabels>{}));
+    decltype(internal::makeEnumValueTuple<Derived, EnumType>(std::make_index_sequence<NumLabels>{}));
 
 // Instantiates B<T0, T1, ..., TN> where <Ti...> are the combinations in the
 // cartesian product of `Tuples...`, and pass (arg0, ..., argN) as constructor
@@ -128,6 +121,7 @@ int makeCartesianProductBenchmark(const Args&... A) {
 // It returns `value`.
 template <class T>
 TEST_ALWAYS_INLINE inline T maybeOpaque(T value, bool opaque) {
-  if (opaque) benchmark::DoNotOptimize(value);
+  if (opaque)
+    benchmark::DoNotOptimize(value);
   return value;
 }

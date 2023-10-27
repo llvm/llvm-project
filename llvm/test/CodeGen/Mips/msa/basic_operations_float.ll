@@ -275,7 +275,7 @@ define void @insert_v4f32(float %a) nounwind {
   ; float argument passed in $f12
   ; ALL-DAG: insve.w [[R1]][1], $w12[0]
 
-  store <4 x float> %2, ptr @v4f32
+  store volatile <4 x float> %2, ptr @v4f32
   ; ALL-DAG: st.w [[R1]]
 
   ret void
@@ -291,7 +291,7 @@ define void @insert_v2f64(double %a) nounwind {
   ; double argument passed in $f12
   ; ALL-DAG: insve.d [[R1]][1], $w12[0]
 
-  store <2 x double> %2, ptr @v2f64
+  store volatile <2 x double> %2, ptr @v2f64
   ; ALL-DAG: st.d [[R1]]
 
   ret void
@@ -319,7 +319,7 @@ define void @insert_v4f32_vidx(float %a) nounwind {
   ; ALL-DAG: neg [[NIDX:\$[0-9]+]], [[BIDX]]
   ; ALL-DAG: sld.b [[R1]], [[R1]][[[NIDX]]]
 
-  store <4 x float> %3, ptr @v4f32
+  store volatile <4 x float> %3, ptr @v4f32
   ; ALL-DAG: st.w [[R1]]
 
   ret void
@@ -347,7 +347,7 @@ define void @insert_v2f64_vidx(double %a) nounwind {
   ; ALL-DAG: neg [[NIDX:\$[0-9]+]], [[BIDX]]
   ; ALL-DAG: sld.b [[R1]], [[R1]][[[NIDX]]]
 
-  store <2 x double> %3, ptr @v2f64
+  store volatile <2 x double> %3, ptr @v2f64
   ; ALL-DAG: st.d [[R1]]
 
   ret void

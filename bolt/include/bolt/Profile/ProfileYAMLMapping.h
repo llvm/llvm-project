@@ -126,6 +126,7 @@ template <> struct MappingTraits<bolt::BinaryBasicBlockProfile> {
   static void mapping(IO &YamlIO, bolt::BinaryBasicBlockProfile &BBP) {
     YamlIO.mapRequired("bid", BBP.Index);
     YamlIO.mapRequired("insns", BBP.NumInstructions);
+    YamlIO.mapOptional("hash", BBP.Hash, (llvm::yaml::Hex64)0);
     YamlIO.mapOptional("exec", BBP.ExecCount, (uint64_t)0);
     YamlIO.mapOptional("events", BBP.EventCount, (uint64_t)0);
     YamlIO.mapOptional("calls", BBP.CallSites,
@@ -186,6 +187,7 @@ struct BinaryProfileHeader {
   // Type of the profile.
   std::string Origin;     // How the profile was obtained.
   std::string EventNames; // Events used for sample profile.
+  bool IsDFSOrder{true};  // Whether using DFS block order in function profile
 };
 } // end namespace bolt
 
@@ -197,6 +199,7 @@ template <> struct MappingTraits<bolt::BinaryProfileHeader> {
     YamlIO.mapRequired("profile-flags", Header.Flags);
     YamlIO.mapOptional("profile-origin", Header.Origin);
     YamlIO.mapOptional("profile-events", Header.EventNames);
+    YamlIO.mapOptional("dfs-order", Header.IsDFSOrder);
   }
 };
 

@@ -10,7 +10,7 @@ define i32 @test_atomicrmw_nand_i32_flat(ptr %ptr, i32 %value) {
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[LOADED]], [[VALUE:%.*]]
 ; CHECK-NEXT:    [[NEW:%.*]] = xor i32 [[TMP2]], -1
-; CHECK-NEXT:    [[TMP3:%.*]] = cmpxchg ptr [[PTR]], i32 [[LOADED]], i32 [[NEW]] seq_cst seq_cst
+; CHECK-NEXT:    [[TMP3:%.*]] = cmpxchg ptr [[PTR]], i32 [[LOADED]], i32 [[NEW]] seq_cst seq_cst, align 4
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP3]], 1
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP3]], 0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
@@ -29,7 +29,7 @@ define i32 @test_atomicrmw_nand_i32_global(ptr addrspace(1) %ptr, i32 %value) {
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[LOADED]], [[VALUE:%.*]]
 ; CHECK-NEXT:    [[NEW:%.*]] = xor i32 [[TMP2]], -1
-; CHECK-NEXT:    [[TMP3:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[LOADED]], i32 [[NEW]] seq_cst seq_cst
+; CHECK-NEXT:    [[TMP3:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[LOADED]], i32 [[NEW]] seq_cst seq_cst, align 4
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP3]], 1
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP3]], 0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
@@ -48,7 +48,7 @@ define i32 @test_atomicrmw_nand_i32_local(ptr addrspace(3) %ptr, i32 %value) {
 ; CHECK-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[LOADED]], [[VALUE:%.*]]
 ; CHECK-NEXT:    [[NEW:%.*]] = xor i32 [[TMP2]], -1
-; CHECK-NEXT:    [[TMP3:%.*]] = cmpxchg ptr addrspace(3) [[PTR]], i32 [[LOADED]], i32 [[NEW]] seq_cst seq_cst
+; CHECK-NEXT:    [[TMP3:%.*]] = cmpxchg ptr addrspace(3) [[PTR]], i32 [[LOADED]], i32 [[NEW]] seq_cst seq_cst, align 4
 ; CHECK-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP3]], 1
 ; CHECK-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP3]], 0
 ; CHECK-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]

@@ -1,4 +1,4 @@
-# RUN: llvm-mca -mtriple=aarch64-none-eabi -mcpu=cortex-a57 -iterations=1 -timeline < %s | FileCheck %s
+# RUN: llvm-mca -mtriple=aarch64 -mcpu=cortex-a57 -iterations=1 -timeline < %s | FileCheck %s
 
 # CHECK: [0] Code Region
 # CHECK: Instructions:      2

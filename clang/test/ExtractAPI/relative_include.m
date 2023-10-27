@@ -102,6 +102,10 @@ int OtherInt;
         {
           "kind": "identifier",
           "spelling": "MyInt"
+        },
+        {
+          "kind": "text",
+          "spelling": ";"
         }
       ],
       "identifier": {
@@ -153,6 +157,10 @@ int OtherInt;
         {
           "kind": "identifier",
           "spelling": "MyChar"
+        },
+        {
+          "kind": "text",
+          "spelling": ";"
         }
       ],
       "identifier": {

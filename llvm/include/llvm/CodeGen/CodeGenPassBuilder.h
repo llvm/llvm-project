@@ -115,7 +115,7 @@ public:
       TM.Options.GlobalISelAbort = *Opt.EnableGlobalISelAbort;
 
     if (!Opt.OptimizeRegAlloc)
-      Opt.OptimizeRegAlloc = getOptLevel() != CodeGenOpt::None;
+      Opt.OptimizeRegAlloc = getOptLevel() != CodeGenOptLevel::None;
   }
 
   Error buildPipeline(ModulePassManager &MPM, MachineFunctionPassManager &MFPM,
@@ -243,7 +243,7 @@ protected:
   }
 
   template <typename TMC> TMC &getTM() const { return static_cast<TMC &>(TM); }
-  CodeGenOpt::Level getOptLevel() const { return TM.getOptLevel(); }
+  CodeGenOptLevel getOptLevel() const { return TM.getOptLevel(); }
 
   /// Check whether or not GlobalISel should abort on error.
   /// When this is disabled, GlobalISel will fall back on SDISel instead of
@@ -288,7 +288,7 @@ protected:
   /// all virtual registers.
   ///
   /// Note if the target overloads addRegAssignAndRewriteOptimized, this may not
-  /// be honored. This is also not generally used for the the fast variant,
+  /// be honored. This is also not generally used for the fast variant,
   /// where the allocation and rewriting are done in one pass.
   void addPreRewrite(AddMachinePass &) const {}
 
@@ -579,7 +579,7 @@ void CodeGenPassBuilder<Derived>::addISelPasses(AddIRPass &addPass) const {
   if (TM.useEmulatedTLS())
     addPass(LowerEmuTLSPass());
 
-  addPass(PreISelIntrinsicLoweringPass());
+  addPass(PreISelIntrinsicLoweringPass(TM));
 
   derived().addIRPasses(addPass);
   derived().addCodeGenPrepare(addPass);
@@ -597,7 +597,7 @@ void CodeGenPassBuilder<Derived>::addIRPasses(AddIRPass &addPass) const {
     addPass(VerifierPass());
 
   // Run loop strength reduction before anything else.
-  if (getOptLevel() != CodeGenOpt::None && !Opt.DisableLSR) {
+  if (getOptLevel() != CodeGenOptLevel::None && !Opt.DisableLSR) {
     addPass(createFunctionToLoopPassAdaptor(
         LoopStrengthReducePass(), /*UseMemorySSA*/ true, Opt.DebugPM));
     // FIXME: use -stop-after so we could remove PrintLSR
@@ -605,7 +605,7 @@ void CodeGenPassBuilder<Derived>::addIRPasses(AddIRPass &addPass) const {
       addPass(PrintFunctionPass(dbgs(), "\n\n*** Code after LSR ***\n"));
   }
 
-  if (getOptLevel() != CodeGenOpt::None) {
+  if (getOptLevel() != CodeGenOptLevel::None) {
     // The MergeICmpsPass tries to create memcmp calls by grouping sequences of
     // loads and compares. ExpandMemCmpPass then tries to expand those calls
     // into optimally-sized loads and compares. The transforms are enabled by a
@@ -625,15 +625,16 @@ void CodeGenPassBuilder<Derived>::addIRPasses(AddIRPass &addPass) const {
   addPass(UnreachableBlockElimPass());
 
   // Prepare expensive constants for SelectionDAG.
-  if (getOptLevel() != CodeGenOpt::None && !Opt.DisableConstantHoisting)
+  if (getOptLevel() != CodeGenOptLevel::None && !Opt.DisableConstantHoisting)
     addPass(ConstantHoistingPass());
 
   // Replace calls to LLVM intrinsics (e.g., exp, log) operating on vector
   // operands with calls to the corresponding functions in a vector library.
-  if (getOptLevel() != CodeGenOpt::None)
+  if (getOptLevel() != CodeGenOptLevel::None)
     addPass(ReplaceWithVeclib());
 
-  if (getOptLevel() != CodeGenOpt::None && !Opt.DisablePartialLibcallInlining)
+  if (getOptLevel() != CodeGenOptLevel::None &&
+      !Opt.DisablePartialLibcallInlining)
     addPass(PartiallyInlineLibCallsPass());
 
   // Instrument function entry and exit, e.g. with calls to mcount().
@@ -648,7 +649,7 @@ void CodeGenPassBuilder<Derived>::addIRPasses(AddIRPass &addPass) const {
   addPass(ExpandReductionsPass());
 
   // Convert conditional moves to conditional jumps when profitable.
-  if (getOptLevel() != CodeGenOpt::None && !Opt.DisableSelectOptimize)
+  if (getOptLevel() != CodeGenOptLevel::None && !Opt.DisableSelectOptimize)
     addPass(SelectOptimizePass());
 }
 
@@ -702,7 +703,7 @@ void CodeGenPassBuilder<Derived>::addPassesToHandleExceptions(
 /// before exception handling preparation passes.
 template <typename Derived>
 void CodeGenPassBuilder<Derived>::addCodeGenPrepare(AddIRPass &addPass) const {
-  if (getOptLevel() != CodeGenOpt::None && !Opt.DisableCGP)
+  if (getOptLevel() != CodeGenOptLevel::None && !Opt.DisableCGP)
     addPass(CodeGenPreparePass());
   // TODO: Default ctor'd RewriteSymbolPass is no-op.
   // addPass(RewriteSymbolPass());
@@ -714,6 +715,7 @@ template <typename Derived>
 void CodeGenPassBuilder<Derived>::addISelPrepare(AddIRPass &addPass) const {
   derived().addPreISel(addPass);
 
+  addPass(CallBrPrepare());
   // Add both the safe stack and the stack protection passes: each of them will
   // only protect functions that have corresponding attributes.
   addPass(SafeStackPass());
@@ -747,7 +749,7 @@ Error CodeGenPassBuilder<Derived>::addCoreISelPasses(
             (!Opt.EnableGlobalISelOption ||
              *Opt.EnableGlobalISelOption == false)))
     Selector = SelectorType::GlobalISel;
-  else if (TM.getOptLevel() == CodeGenOpt::None && TM.getO0WantsFastISel())
+  else if (TM.getOptLevel() == CodeGenOptLevel::None && TM.getO0WantsFastISel())
     Selector = SelectorType::FastISel;
   else
     Selector = SelectorType::SelectionDAG;
@@ -825,7 +827,7 @@ template <typename Derived>
 Error CodeGenPassBuilder<Derived>::addMachinePasses(
     AddMachinePass &addPass) const {
   // Add passes that optimize machine instructions in SSA form.
-  if (getOptLevel() != CodeGenOpt::None) {
+  if (getOptLevel() != CodeGenOptLevel::None) {
     derived().addMachineSSAOptimization(addPass);
   } else {
     // If the target requests it, assign local variables to stack slots relative
@@ -854,7 +856,7 @@ Error CodeGenPassBuilder<Derived>::addMachinePasses(
   addPass(RemoveRedundantDebugValuesPass());
 
   // Insert prolog/epilog code.  Eliminate abstract frame index references...
-  if (getOptLevel() != CodeGenOpt::None) {
+  if (getOptLevel() != CodeGenOptLevel::None) {
     addPass(PostRAMachineSinkingPass());
     addPass(ShrinkWrapPass());
   }
@@ -862,7 +864,7 @@ Error CodeGenPassBuilder<Derived>::addMachinePasses(
   addPass(PrologEpilogInserterPass());
 
   /// Add passes that optimize machine instructions after register allocation.
-  if (getOptLevel() != CodeGenOpt::None)
+  if (getOptLevel() != CodeGenOptLevel::None)
     derived().addMachineLateOptimization(addPass);
 
   // Expand pseudo instructions before second scheduling pass.
@@ -877,7 +879,7 @@ Error CodeGenPassBuilder<Derived>::addMachinePasses(
   // Second pass scheduler.
   // Let Target optionally insert this pass by itself at some other
   // point.
-  if (getOptLevel() != CodeGenOpt::None &&
+  if (getOptLevel() != CodeGenOptLevel::None &&
       !TM.targetSchedulesPostRAScheduling()) {
     if (Opt.MISchedPostRA)
       addPass(PostMachineSchedulerPass());
@@ -889,7 +891,7 @@ Error CodeGenPassBuilder<Derived>::addMachinePasses(
   derived().addGCPasses(addPass);
 
   // Basic block placement.
-  if (getOptLevel() != CodeGenOpt::None)
+  if (getOptLevel() != CodeGenOptLevel::None)
     derived().addBlockPlacement(addPass);
 
   // Insert before XRay Instrumentation.
@@ -911,7 +913,8 @@ Error CodeGenPassBuilder<Derived>::addMachinePasses(
   addPass(LiveDebugValuesPass());
   addPass(MachineSanitizerBinaryMetadata());
 
-  if (TM.Options.EnableMachineOutliner && getOptLevel() != CodeGenOpt::None &&
+  if (TM.Options.EnableMachineOutliner &&
+      getOptLevel() != CodeGenOptLevel::None &&
       Opt.EnableMachineOutliner != RunOutliner::NeverOutline) {
     bool RunOnAllFunctions =
         (Opt.EnableMachineOutliner == RunOutliner::AlwaysOutline);

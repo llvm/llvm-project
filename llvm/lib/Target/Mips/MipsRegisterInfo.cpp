@@ -239,11 +239,6 @@ getReservedRegs(const MachineFunction &MF) const {
   return Reserved;
 }
 
-bool
-MipsRegisterInfo::requiresRegisterScavenging(const MachineFunction &MF) const {
-  return true;
-}
-
 // FrameIndex represent objects inside a abstract stack.
 // We must replace FrameIndex with an stack/frame pointer
 // direct reference.

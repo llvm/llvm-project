@@ -1,4 +1,5 @@
 // RUN: %clang -w -O0 %s -o %t && %run %t 2>&1 | FileCheck %s
+// UNSUPPORTED: hwasan
 // UNSUPPORTED: lsan
 // UNSUPPORTED: msan
 // UNSUPPORTED: ubsan

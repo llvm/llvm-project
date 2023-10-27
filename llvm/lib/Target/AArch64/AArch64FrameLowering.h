@@ -35,6 +35,8 @@ public:
   void emitPrologue(MachineFunction &MF, MachineBasicBlock &MBB) const override;
   void emitEpilogue(MachineFunction &MF, MachineBasicBlock &MBB) const override;
 
+  bool enableCFIFixup(MachineFunction &MF) const override;
+
   bool canUseAsPrologue(const MachineBasicBlock &MBB) const override;
 
   StackOffset getFrameIndexReference(const MachineFunction &MF, int FI,

@@ -52,11 +52,11 @@ define void @store_v8f32(ptr %a) #0 {
 define void @store_v16f32(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: store_v16f32:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #8
 ; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
 ; VBITS_GE_256-NEXT:    mov z0.s, #0 // =0x0
-; VBITS_GE_256-NEXT:    st1w { z0.s }, p0, [x0]
+; VBITS_GE_256-NEXT:    mov x8, #8 // =0x8
 ; VBITS_GE_256-NEXT:    st1w { z0.s }, p0, [x0, x8, lsl #2]
+; VBITS_GE_256-NEXT:    st1w { z0.s }, p0, [x0]
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: store_v16f32:
@@ -86,24 +86,24 @@ define void @store_v16f32(ptr %a) #0 {
 define void @store_v32f32(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: store_v32f32:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #24
-; VBITS_GE_256-NEXT:    mov x9, #16
-; VBITS_GE_256-NEXT:    mov x10, #8
 ; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
 ; VBITS_GE_256-NEXT:    mov z0.s, #0 // =0x0
+; VBITS_GE_256-NEXT:    mov x8, #24 // =0x18
+; VBITS_GE_256-NEXT:    mov x9, #16 // =0x10
 ; VBITS_GE_256-NEXT:    st1w { z0.s }, p0, [x0, x8, lsl #2]
+; VBITS_GE_256-NEXT:    mov x8, #8 // =0x8
 ; VBITS_GE_256-NEXT:    st1w { z0.s }, p0, [x0, x9, lsl #2]
-; VBITS_GE_256-NEXT:    st1w { z0.s }, p0, [x0, x10, lsl #2]
+; VBITS_GE_256-NEXT:    st1w { z0.s }, p0, [x0, x8, lsl #2]
 ; VBITS_GE_256-NEXT:    st1w { z0.s }, p0, [x0]
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: store_v32f32:
 ; VBITS_GE_512:       // %bb.0:
-; VBITS_GE_512-NEXT:    mov x8, #16
 ; VBITS_GE_512-NEXT:    ptrue p0.s, vl16
 ; VBITS_GE_512-NEXT:    mov z0.s, #0 // =0x0
-; VBITS_GE_512-NEXT:    st1w { z0.s }, p0, [x0]
+; VBITS_GE_512-NEXT:    mov x8, #16 // =0x10
 ; VBITS_GE_512-NEXT:    st1w { z0.s }, p0, [x0, x8, lsl #2]
+; VBITS_GE_512-NEXT:    st1w { z0.s }, p0, [x0]
 ; VBITS_GE_512-NEXT:    ret
 ;
 ; VBITS_GE_1024-LABEL: store_v32f32:
@@ -126,45 +126,45 @@ define void @store_v32f32(ptr %a) #0 {
 define void @store_v64f32(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: store_v64f32:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #56
-; VBITS_GE_256-NEXT:    mov x9, #48
 ; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
 ; VBITS_GE_256-NEXT:    mov z0.s, #0 // =0x0
-; VBITS_GE_256-NEXT:    mov x10, #40
-; VBITS_GE_256-NEXT:    mov x11, #32
+; VBITS_GE_256-NEXT:    mov x8, #56 // =0x38
 ; VBITS_GE_256-NEXT:    st1w { z0.s }, p0, [x0, x8, lsl #2]
-; VBITS_GE_256-NEXT:    mov x8, #24
-; VBITS_GE_256-NEXT:    mov x12, #16
-; VBITS_GE_256-NEXT:    st1w { z0.s }, p0, [x0, x9, lsl #2]
-; VBITS_GE_256-NEXT:    mov x9, #8
-; VBITS_GE_256-NEXT:    st1w { z0.s }, p0, [x0, x10, lsl #2]
-; VBITS_GE_256-NEXT:    st1w { z0.s }, p0, [x0, x11, lsl #2]
+; VBITS_GE_256-NEXT:    mov x8, #48 // =0x30
 ; VBITS_GE_256-NEXT:    st1w { z0.s }, p0, [x0, x8, lsl #2]
-; VBITS_GE_256-NEXT:    st1w { z0.s }, p0, [x0, x12, lsl #2]
+; VBITS_GE_256-NEXT:    mov x8, #40 // =0x28
+; VBITS_GE_256-NEXT:    st1w { z0.s }, p0, [x0, x8, lsl #2]
+; VBITS_GE_256-NEXT:    mov x8, #32 // =0x20
+; VBITS_GE_256-NEXT:    st1w { z0.s }, p0, [x0, x8, lsl #2]
+; VBITS_GE_256-NEXT:    mov x8, #24 // =0x18
+; VBITS_GE_256-NEXT:    st1w { z0.s }, p0, [x0, x8, lsl #2]
+; VBITS_GE_256-NEXT:    mov x8, #16 // =0x10
+; VBITS_GE_256-NEXT:    st1w { z0.s }, p0, [x0, x8, lsl #2]
+; VBITS_GE_256-NEXT:    mov x8, #8 // =0x8
+; VBITS_GE_256-NEXT:    st1w { z0.s }, p0, [x0, x8, lsl #2]
 ; VBITS_GE_256-NEXT:    st1w { z0.s }, p0, [x0]
-; VBITS_GE_256-NEXT:    st1w { z0.s }, p0, [x0, x9, lsl #2]
 ; VBITS_GE_256-NEXT:    ret
 ;
 ; VBITS_GE_512-LABEL: store_v64f32:
 ; VBITS_GE_512:       // %bb.0:
-; VBITS_GE_512-NEXT:    mov x8, #48
-; VBITS_GE_512-NEXT:    mov x9, #32
-; VBITS_GE_512-NEXT:    mov x10, #16
 ; VBITS_GE_512-NEXT:    ptrue p0.s, vl16
 ; VBITS_GE_512-NEXT:    mov z0.s, #0 // =0x0
+; VBITS_GE_512-NEXT:    mov x8, #48 // =0x30
+; VBITS_GE_512-NEXT:    mov x9, #32 // =0x20
 ; VBITS_GE_512-NEXT:    st1w { z0.s }, p0, [x0, x8, lsl #2]
+; VBITS_GE_512-NEXT:    mov x8, #16 // =0x10
 ; VBITS_GE_512-NEXT:    st1w { z0.s }, p0, [x0, x9, lsl #2]
-; VBITS_GE_512-NEXT:    st1w { z0.s }, p0, [x0, x10, lsl #2]
+; VBITS_GE_512-NEXT:    st1w { z0.s }, p0, [x0, x8, lsl #2]
 ; VBITS_GE_512-NEXT:    st1w { z0.s }, p0, [x0]
 ; VBITS_GE_512-NEXT:    ret
 ;
 ; VBITS_GE_1024-LABEL: store_v64f32:
 ; VBITS_GE_1024:       // %bb.0:
-; VBITS_GE_1024-NEXT:    mov x8, #32
 ; VBITS_GE_1024-NEXT:    ptrue p0.s, vl32
 ; VBITS_GE_1024-NEXT:    mov z0.s, #0 // =0x0
-; VBITS_GE_1024-NEXT:    st1w { z0.s }, p0, [x0]
+; VBITS_GE_1024-NEXT:    mov x8, #32 // =0x20
 ; VBITS_GE_1024-NEXT:    st1w { z0.s }, p0, [x0, x8, lsl #2]
+; VBITS_GE_1024-NEXT:    st1w { z0.s }, p0, [x0]
 ; VBITS_GE_1024-NEXT:    ret
 ;
 ; VBITS_GE_2048-LABEL: store_v64f32:

@@ -12,10 +12,10 @@
 // UNSUPPORTED: c++03
 
 // TODO: Investigate these failures which break the CI.
-// UNSUPPORTED: clang-14, clang-15, clang-16
+// UNSUPPORTED: clang-16, clang-17, clang-18
 
-// TODO: Investigate this failure on GCC 12 (in Ubuntu Jammy)
-// UNSUPPORTED: gcc-12
+// TODO: Investigate this failure on GCC 13 (in Ubuntu Jammy)
+// UNSUPPORTED: gcc-13
 
 // RUN: %{cxx} %{flags} %s -o %t.exe %{compile_flags} -g %{link_flags}
 // Ensure locale-independence for unicode tests.

@@ -26,8 +26,8 @@
 # LIMITS-NEXT: 23 a0 b5 80     sw      a1, -2048(a1)
 
 # RUN: not ld.lld %t.rv64.o --defsym foo=0x7ffff800 --defsym bar=0xffffffff7ffff7ff -o /dev/null 2>&1 | FileCheck --check-prefix ERROR %s
-# ERROR: relocation R_RISCV_HI20 out of range: 524288 is not in [-524288, 524287]; references foo
-# ERROR: relocation R_RISCV_HI20 out of range: -524289 is not in [-524288, 524287]; references bar
+# ERROR: relocation R_RISCV_HI20 out of range: 524288 is not in [-524288, 524287]; references 'foo'
+# ERROR: relocation R_RISCV_HI20 out of range: -524289 is not in [-524288, 524287]; references 'bar'
 
 .global _start
 

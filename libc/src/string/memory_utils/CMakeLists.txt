@@ -1,68 +1,99 @@
-#TODO(michaelrj): split out the implementations from memory_utils
+# TODO(michaelrj): split out the implementations from memory_utils
 add_header_library(
   memory_utils
   HDRS
-    bcmp_implementations.h
-    bzero_implementations.h
-    memcmp_implementations.h
-    memcpy_implementations.h
-    memmove_implementations.h
-    memset_implementations.h
+    aarch64/inline_bcmp.h
+    aarch64/inline_memcmp.h
+    aarch64/inline_memcpy.h
+    aarch64/inline_memmove.h
+    aarch64/inline_memset.h
+    generic/aligned_access.h
+    generic/byte_per_byte.h
+    inline_bcmp.h
+    inline_bzero.h
+    inline_memcmp.h
+    inline_memcpy.h
+    inline_memmove.h
+    inline_memset.h
     op_aarch64.h
     op_builtin.h
     op_generic.h
     op_x86.h
+    riscv/inline_bcmp.h
+    riscv/inline_memcmp.h
+    riscv/inline_memcpy.h
+    riscv/inline_memmove.h
+    riscv/inline_memset.h
     utils.h
-  DEPS
+    x86_64/inline_bcmp.h
+    x86_64/inline_memcmp.h
+    x86_64/inline_memcpy.h
+    x86_64/inline_memmove.h
+    x86_64/inline_memset.h
+  DEPENDS
     libc.src.__support.common
-    libc.src.__support.compiler_features
     libc.src.__support.CPP.bit
     libc.src.__support.CPP.cstddef
     libc.src.__support.CPP.type_traits
+    libc.src.__support.macros.config
+    libc.src.__support.macros.optimization
+    libc.src.__support.macros.properties.architectures
 )
 
 add_header_library(
-  memcpy_implementation
+  inline_memcpy
   HDRS
-    memcpy_implementations.h
-  DEPS
+    inline_memcpy.h
+  DEPENDS
     .memory_utils
 )
 
 add_header_library(
-  memmove_implementation
+  inline_memmove
   HDRS
-    memmove_implementations.h
-  DEPS
+    inline_memmove.h
+  DEPENDS
     .memory_utils
 )
 
 add_header_library(
-  memcmp_implementation
+  inline_memcmp
   HDRS
-    memcmp_implementations.h
-  DEPS
+    inline_memcmp.h
+  DEPENDS
     .memory_utils
 )
 
 add_header_library(
-  memset_implementation
+  inline_memset
   HDRS
-    memset_implementations.h
-  DEPS
+    inline_memset.h
+  DEPENDS
     .memory_utils
 )
 
 add_header_library(
-  bzero_implementation
+  inline_bzero
   HDRS
-    bzero_implementations.h
-  DEPS
-    .memset_implementation
+    inline_bzero.h
+  DEPENDS
+    .inline_memset
 )
 
 add_header_library(
-  strcmp_implementation
+  inline_strcmp
   HDRS
-    strcmp_implementations.h
+    inline_strcmp.h
+)
+
+add_header_library(
+  inline_strstr
+  HDRS
+    inline_strstr.h
+)
+
+add_header_library(
+  inline_memmem
+  HDRS
+    inline_memmem.h
 )

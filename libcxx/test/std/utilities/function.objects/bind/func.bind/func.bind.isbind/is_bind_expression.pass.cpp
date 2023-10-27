@@ -23,8 +23,10 @@ test(const T&)
     LIBCPP_STATIC_ASSERT(std::is_bind_expression<T&>::value == Expected, "");
     LIBCPP_STATIC_ASSERT(std::is_bind_expression<const T>::value == Expected, "");
     LIBCPP_STATIC_ASSERT(std::is_bind_expression<const T&>::value == Expected, "");
+    static_assert(std::is_base_of<std::integral_constant<bool, Expected>, std::is_bind_expression<T> >::value, "");
 
 #if TEST_STD_VER > 14
+    ASSERT_SAME_TYPE(decltype(std::is_bind_expression_v<T>), const bool);
     static_assert(std::is_bind_expression_v<T> == Expected, "");
     LIBCPP_STATIC_ASSERT(std::is_bind_expression_v<T&> == Expected, "");
     LIBCPP_STATIC_ASSERT(std::is_bind_expression_v<const T> == Expected, "");

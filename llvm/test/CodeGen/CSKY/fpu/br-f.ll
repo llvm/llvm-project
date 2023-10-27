@@ -644,10 +644,7 @@ define i32 @brRR_ogt(float %x, float %y) {
 ; CHECK-SF-LABEL: brRR_ogt:
 ; CHECK-SF:       # %bb.0: # %entry
 ; CHECK-SF-NEXT:    fcmplts vr0, vr1
-; CHECK-SF-NEXT:    mvc32 a0
-; CHECK-SF-NEXT:    xori32 a0, a0, 1
-; CHECK-SF-NEXT:    btsti16 a0, 0
-; CHECK-SF-NEXT:    bt32 .LBB18_2
+; CHECK-SF-NEXT:    bf32 .LBB18_2
 ; CHECK-SF-NEXT:  # %bb.1: # %label1
 ; CHECK-SF-NEXT:    movi16 a0, 1
 ; CHECK-SF-NEXT:    rts16
@@ -658,10 +655,7 @@ define i32 @brRR_ogt(float %x, float %y) {
 ; CHECK-SF2-LABEL: brRR_ogt:
 ; CHECK-SF2:       # %bb.0: # %entry
 ; CHECK-SF2-NEXT:    fcmplt.32 vr0, vr1
-; CHECK-SF2-NEXT:    mvc32 a0
-; CHECK-SF2-NEXT:    xori32 a0, a0, 1
-; CHECK-SF2-NEXT:    btsti16 a0, 0
-; CHECK-SF2-NEXT:    bt32 .LBB18_2
+; CHECK-SF2-NEXT:    bf32 .LBB18_2
 ; CHECK-SF2-NEXT:  # %bb.1: # %label1
 ; CHECK-SF2-NEXT:    movi16 a0, 1
 ; CHECK-SF2-NEXT:    rts16
@@ -684,10 +678,7 @@ define i32 @brRI_ogt(float %x) {
 ; CHECK-SF-NEXT:    movih32 a0, 16672
 ; CHECK-SF-NEXT:    fmtvrl vr1, a0
 ; CHECK-SF-NEXT:    fcmplts vr1, vr0
-; CHECK-SF-NEXT:    mvc32 a0
-; CHECK-SF-NEXT:    xori32 a0, a0, 1
-; CHECK-SF-NEXT:    btsti16 a0, 0
-; CHECK-SF-NEXT:    bt32 .LBB19_2
+; CHECK-SF-NEXT:    bf32 .LBB19_2
 ; CHECK-SF-NEXT:  # %bb.1: # %label1
 ; CHECK-SF-NEXT:    movi16 a0, 1
 ; CHECK-SF-NEXT:    rts16
@@ -700,10 +691,7 @@ define i32 @brRI_ogt(float %x) {
 ; CHECK-SF2-NEXT:    movih32 a0, 16672
 ; CHECK-SF2-NEXT:    fmtvr.32.1 vr1, a0
 ; CHECK-SF2-NEXT:    fcmplt.32 vr1, vr0
-; CHECK-SF2-NEXT:    mvc32 a0
-; CHECK-SF2-NEXT:    xori32 a0, a0, 1
-; CHECK-SF2-NEXT:    btsti16 a0, 0
-; CHECK-SF2-NEXT:    bt32 .LBB19_2
+; CHECK-SF2-NEXT:    bf32 .LBB19_2
 ; CHECK-SF2-NEXT:  # %bb.1: # %label1
 ; CHECK-SF2-NEXT:    movi16 a0, 1
 ; CHECK-SF2-NEXT:    rts16
@@ -723,30 +711,24 @@ define i32 @brR0_ogt(float %x) {
 ;
 ; CHECK-SF-LABEL: brR0_ogt:
 ; CHECK-SF:       # %bb.0: # %entry
-; CHECK-SF-NEXT:    fcmpzlss vr0
-; CHECK-SF-NEXT:    mvcv16 a0
-; CHECK-SF-NEXT:    xori32 a0, a0, 1
-; CHECK-SF-NEXT:    btsti16 a0, 0
-; CHECK-SF-NEXT:    bt32 .LBB20_2
+; CHECK-SF-NEXT:    movi16 a0, 0
+; CHECK-SF-NEXT:    fmtvrl vr1, a0
+; CHECK-SF-NEXT:    fcmplts vr1, vr0
+; CHECK-SF-NEXT:    bf32 .LBB20_2
 ; CHECK-SF-NEXT:  # %bb.1: # %label1
 ; CHECK-SF-NEXT:    movi16 a0, 1
-; CHECK-SF-NEXT:    rts16
 ; CHECK-SF-NEXT:  .LBB20_2: # %label2
-; CHECK-SF-NEXT:    movi16 a0, 0
 ; CHECK-SF-NEXT:    rts16
 ;
 ; CHECK-SF2-LABEL: brR0_ogt:
 ; CHECK-SF2:       # %bb.0: # %entry
-; CHECK-SF2-NEXT:    fcmphz.32 vr0
-; CHECK-SF2-NEXT:    mvc32 a0
-; CHECK-SF2-NEXT:    xori32 a0, a0, 1
-; CHECK-SF2-NEXT:    btsti16 a0, 0
-; CHECK-SF2-NEXT:    bt32 .LBB20_2
+; CHECK-SF2-NEXT:    movi16 a0, 0
+; CHECK-SF2-NEXT:    fmtvr.32.1 vr1, a0
+; CHECK-SF2-NEXT:    fcmplt.32 vr1, vr0
+; CHECK-SF2-NEXT:    bf32 .LBB20_2
 ; CHECK-SF2-NEXT:  # %bb.1: # %label1
 ; CHECK-SF2-NEXT:    movi16 a0, 1
-; CHECK-SF2-NEXT:    rts16
 ; CHECK-SF2-NEXT:  .LBB20_2: # %label2
-; CHECK-SF2-NEXT:    movi16 a0, 0
 ; CHECK-SF2-NEXT:    rts16
 entry:
   %fcmp = fcmp ogt float %x, 0.0
@@ -763,10 +745,7 @@ define i32 @brRR_oge(float %x, float %y) {
 ; CHECK-SF-LABEL: brRR_oge:
 ; CHECK-SF:       # %bb.0: # %entry
 ; CHECK-SF-NEXT:    fcmphss vr1, vr0
-; CHECK-SF-NEXT:    mvc32 a0
-; CHECK-SF-NEXT:    xori32 a0, a0, 1
-; CHECK-SF-NEXT:    btsti16 a0, 0
-; CHECK-SF-NEXT:    bt32 .LBB21_2
+; CHECK-SF-NEXT:    bf32 .LBB21_2
 ; CHECK-SF-NEXT:  # %bb.1: # %label1
 ; CHECK-SF-NEXT:    movi16 a0, 1
 ; CHECK-SF-NEXT:    rts16
@@ -777,10 +756,7 @@ define i32 @brRR_oge(float %x, float %y) {
 ; CHECK-SF2-LABEL: brRR_oge:
 ; CHECK-SF2:       # %bb.0: # %entry
 ; CHECK-SF2-NEXT:    fcmphs.32 vr1, vr0
-; CHECK-SF2-NEXT:    mvc32 a0
-; CHECK-SF2-NEXT:    xori32 a0, a0, 1
-; CHECK-SF2-NEXT:    btsti16 a0, 0
-; CHECK-SF2-NEXT:    bt32 .LBB21_2
+; CHECK-SF2-NEXT:    bf32 .LBB21_2
 ; CHECK-SF2-NEXT:  # %bb.1: # %label1
 ; CHECK-SF2-NEXT:    movi16 a0, 1
 ; CHECK-SF2-NEXT:    rts16
@@ -803,10 +779,7 @@ define i32 @brRI_oge(float %x) {
 ; CHECK-SF-NEXT:    movih32 a0, 16672
 ; CHECK-SF-NEXT:    fmtvrl vr1, a0
 ; CHECK-SF-NEXT:    fcmphss vr0, vr1
-; CHECK-SF-NEXT:    mvc32 a0
-; CHECK-SF-NEXT:    xori32 a0, a0, 1
-; CHECK-SF-NEXT:    btsti16 a0, 0
-; CHECK-SF-NEXT:    bt32 .LBB22_2
+; CHECK-SF-NEXT:    bf32 .LBB22_2
 ; CHECK-SF-NEXT:  # %bb.1: # %label1
 ; CHECK-SF-NEXT:    movi16 a0, 1
 ; CHECK-SF-NEXT:    rts16
@@ -819,10 +792,7 @@ define i32 @brRI_oge(float %x) {
 ; CHECK-SF2-NEXT:    movih32 a0, 16672
 ; CHECK-SF2-NEXT:    fmtvr.32.1 vr1, a0
 ; CHECK-SF2-NEXT:    fcmphs.32 vr0, vr1
-; CHECK-SF2-NEXT:    mvc32 a0
-; CHECK-SF2-NEXT:    xori32 a0, a0, 1
-; CHECK-SF2-NEXT:    btsti16 a0, 0
-; CHECK-SF2-NEXT:    bt32 .LBB22_2
+; CHECK-SF2-NEXT:    bf32 .LBB22_2
 ; CHECK-SF2-NEXT:  # %bb.1: # %label1
 ; CHECK-SF2-NEXT:    movi16 a0, 1
 ; CHECK-SF2-NEXT:    rts16
@@ -842,30 +812,24 @@ define i32 @brR0_oge(float %x) {
 ;
 ; CHECK-SF-LABEL: brR0_oge:
 ; CHECK-SF:       # %bb.0: # %entry
-; CHECK-SF-NEXT:    fcmpzhss vr0
-; CHECK-SF-NEXT:    mvc32 a0
-; CHECK-SF-NEXT:    xori32 a0, a0, 1
-; CHECK-SF-NEXT:    btsti16 a0, 0
-; CHECK-SF-NEXT:    bt32 .LBB23_2
+; CHECK-SF-NEXT:    movi16 a0, 0
+; CHECK-SF-NEXT:    fmtvrl vr1, a0
+; CHECK-SF-NEXT:    fcmphss vr0, vr1
+; CHECK-SF-NEXT:    bf32 .LBB23_2
 ; CHECK-SF-NEXT:  # %bb.1: # %label1
 ; CHECK-SF-NEXT:    movi16 a0, 1
-; CHECK-SF-NEXT:    rts16
 ; CHECK-SF-NEXT:  .LBB23_2: # %label2
-; CHECK-SF-NEXT:    movi16 a0, 0
 ; CHECK-SF-NEXT:    rts16
 ;
 ; CHECK-SF2-LABEL: brR0_oge:
 ; CHECK-SF2:       # %bb.0: # %entry
-; CHECK-SF2-NEXT:    fcmphsz.32 vr0
-; CHECK-SF2-NEXT:    mvc32 a0
-; CHECK-SF2-NEXT:    xori32 a0, a0, 1
-; CHECK-SF2-NEXT:    btsti16 a0, 0
-; CHECK-SF2-NEXT:    bt32 .LBB23_2
+; CHECK-SF2-NEXT:    movi16 a0, 0
+; CHECK-SF2-NEXT:    fmtvr.32.1 vr1, a0
+; CHECK-SF2-NEXT:    fcmphs.32 vr0, vr1
+; CHECK-SF2-NEXT:    bf32 .LBB23_2
 ; CHECK-SF2-NEXT:  # %bb.1: # %label1
 ; CHECK-SF2-NEXT:    movi16 a0, 1
-; CHECK-SF2-NEXT:    rts16
 ; CHECK-SF2-NEXT:  .LBB23_2: # %label2
-; CHECK-SF2-NEXT:    movi16 a0, 0
 ; CHECK-SF2-NEXT:    rts16
 entry:
   %fcmp = fcmp oge float %x, 0.0
@@ -882,10 +846,7 @@ define i32 @brRR_olt(float %x, float %y) {
 ; CHECK-SF-LABEL: brRR_olt:
 ; CHECK-SF:       # %bb.0: # %entry
 ; CHECK-SF-NEXT:    fcmplts vr1, vr0
-; CHECK-SF-NEXT:    mvc32 a0
-; CHECK-SF-NEXT:    xori32 a0, a0, 1
-; CHECK-SF-NEXT:    btsti16 a0, 0
-; CHECK-SF-NEXT:    bt32 .LBB24_2
+; CHECK-SF-NEXT:    bf32 .LBB24_2
 ; CHECK-SF-NEXT:  # %bb.1: # %label1
 ; CHECK-SF-NEXT:    movi16 a0, 1
 ; CHECK-SF-NEXT:    rts16
@@ -896,10 +857,7 @@ define i32 @brRR_olt(float %x, float %y) {
 ; CHECK-SF2-LABEL: brRR_olt:
 ; CHECK-SF2:       # %bb.0: # %entry
 ; CHECK-SF2-NEXT:    fcmplt.32 vr1, vr0
-; CHECK-SF2-NEXT:    mvc32 a0
-; CHECK-SF2-NEXT:    xori32 a0, a0, 1
-; CHECK-SF2-NEXT:    btsti16 a0, 0
-; CHECK-SF2-NEXT:    bt32 .LBB24_2
+; CHECK-SF2-NEXT:    bf32 .LBB24_2
 ; CHECK-SF2-NEXT:  # %bb.1: # %label1
 ; CHECK-SF2-NEXT:    movi16 a0, 1
 ; CHECK-SF2-NEXT:    rts16
@@ -922,10 +880,7 @@ define i32 @brRI_olt(float %x) {
 ; CHECK-SF-NEXT:    movih32 a0, 16672
 ; CHECK-SF-NEXT:    fmtvrl vr1, a0
 ; CHECK-SF-NEXT:    fcmplts vr0, vr1
-; CHECK-SF-NEXT:    mvc32 a0
-; CHECK-SF-NEXT:    xori32 a0, a0, 1
-; CHECK-SF-NEXT:    btsti16 a0, 0
-; CHECK-SF-NEXT:    bt32 .LBB25_2
+; CHECK-SF-NEXT:    bf32 .LBB25_2
 ; CHECK-SF-NEXT:  # %bb.1: # %label1
 ; CHECK-SF-NEXT:    movi16 a0, 1
 ; CHECK-SF-NEXT:    rts16
@@ -938,10 +893,7 @@ define i32 @brRI_olt(float %x) {
 ; CHECK-SF2-NEXT:    movih32 a0, 16672
 ; CHECK-SF2-NEXT:    fmtvr.32.1 vr1, a0
 ; CHECK-SF2-NEXT:    fcmplt.32 vr0, vr1
-; CHECK-SF2-NEXT:    mvc32 a0
-; CHECK-SF2-NEXT:    xori32 a0, a0, 1
-; CHECK-SF2-NEXT:    btsti16 a0, 0
-; CHECK-SF2-NEXT:    bt32 .LBB25_2
+; CHECK-SF2-NEXT:    bf32 .LBB25_2
 ; CHECK-SF2-NEXT:  # %bb.1: # %label1
 ; CHECK-SF2-NEXT:    movi16 a0, 1
 ; CHECK-SF2-NEXT:    rts16
@@ -961,30 +913,24 @@ define i32 @brR0_olt(float %x) {
 ;
 ; CHECK-SF-LABEL: brR0_olt:
 ; CHECK-SF:       # %bb.0: # %entry
-; CHECK-SF-NEXT:    fcmpzhss vr0
-; CHECK-SF-NEXT:    mvcv16 a0
-; CHECK-SF-NEXT:    xori32 a0, a0, 1
-; CHECK-SF-NEXT:    btsti16 a0, 0
-; CHECK-SF-NEXT:    bt32 .LBB26_2
+; CHECK-SF-NEXT:    movi16 a0, 0
+; CHECK-SF-NEXT:    fmtvrl vr1, a0
+; CHECK-SF-NEXT:    fcmplts vr0, vr1
+; CHECK-SF-NEXT:    bf32 .LBB26_2
 ; CHECK-SF-NEXT:  # %bb.1: # %label1
 ; CHECK-SF-NEXT:    movi16 a0, 1
-; CHECK-SF-NEXT:    rts16
 ; CHECK-SF-NEXT:  .LBB26_2: # %label2
-; CHECK-SF-NEXT:    movi16 a0, 0
 ; CHECK-SF-NEXT:    rts16
 ;
 ; CHECK-SF2-LABEL: brR0_olt:
 ; CHECK-SF2:       # %bb.0: # %entry
-; CHECK-SF2-NEXT:    fcmpltz.32 vr0
-; CHECK-SF2-NEXT:    mvc32 a0
-; CHECK-SF2-NEXT:    xori32 a0, a0, 1
-; CHECK-SF2-NEXT:    btsti16 a0, 0
-; CHECK-SF2-NEXT:    bt32 .LBB26_2
+; CHECK-SF2-NEXT:    movi16 a0, 0
+; CHECK-SF2-NEXT:    fmtvr.32.1 vr1, a0
+; CHECK-SF2-NEXT:    fcmplt.32 vr0, vr1
+; CHECK-SF2-NEXT:    bf32 .LBB26_2
 ; CHECK-SF2-NEXT:  # %bb.1: # %label1
 ; CHECK-SF2-NEXT:    movi16 a0, 1
-; CHECK-SF2-NEXT:    rts16
 ; CHECK-SF2-NEXT:  .LBB26_2: # %label2
-; CHECK-SF2-NEXT:    movi16 a0, 0
 ; CHECK-SF2-NEXT:    rts16
 entry:
   %fcmp = fcmp olt float %x, 0.0
@@ -1001,10 +947,7 @@ define i32 @brRR_ole(float %x, float %y) {
 ; CHECK-SF-LABEL: brRR_ole:
 ; CHECK-SF:       # %bb.0: # %entry
 ; CHECK-SF-NEXT:    fcmphss vr0, vr1
-; CHECK-SF-NEXT:    mvc32 a0
-; CHECK-SF-NEXT:    xori32 a0, a0, 1
-; CHECK-SF-NEXT:    btsti16 a0, 0
-; CHECK-SF-NEXT:    bt32 .LBB27_2
+; CHECK-SF-NEXT:    bf32 .LBB27_2
 ; CHECK-SF-NEXT:  # %bb.1: # %label1
 ; CHECK-SF-NEXT:    movi16 a0, 1
 ; CHECK-SF-NEXT:    rts16
@@ -1015,10 +958,7 @@ define i32 @brRR_ole(float %x, float %y) {
 ; CHECK-SF2-LABEL: brRR_ole:
 ; CHECK-SF2:       # %bb.0: # %entry
 ; CHECK-SF2-NEXT:    fcmphs.32 vr0, vr1
-; CHECK-SF2-NEXT:    mvc32 a0
-; CHECK-SF2-NEXT:    xori32 a0, a0, 1
-; CHECK-SF2-NEXT:    btsti16 a0, 0
-; CHECK-SF2-NEXT:    bt32 .LBB27_2
+; CHECK-SF2-NEXT:    bf32 .LBB27_2
 ; CHECK-SF2-NEXT:  # %bb.1: # %label1
 ; CHECK-SF2-NEXT:    movi16 a0, 1
 ; CHECK-SF2-NEXT:    rts16
@@ -1041,10 +981,7 @@ define i32 @brRI_ole(float %x) {
 ; CHECK-SF-NEXT:    movih32 a0, 16672
 ; CHECK-SF-NEXT:    fmtvrl vr1, a0
 ; CHECK-SF-NEXT:    fcmphss vr1, vr0
-; CHECK-SF-NEXT:    mvc32 a0
-; CHECK-SF-NEXT:    xori32 a0, a0, 1
-; CHECK-SF-NEXT:    btsti16 a0, 0
-; CHECK-SF-NEXT:    bt32 .LBB28_2
+; CHECK-SF-NEXT:    bf32 .LBB28_2
 ; CHECK-SF-NEXT:  # %bb.1: # %label1
 ; CHECK-SF-NEXT:    movi16 a0, 1
 ; CHECK-SF-NEXT:    rts16
@@ -1057,10 +994,7 @@ define i32 @brRI_ole(float %x) {
 ; CHECK-SF2-NEXT:    movih32 a0, 16672
 ; CHECK-SF2-NEXT:    fmtvr.32.1 vr1, a0
 ; CHECK-SF2-NEXT:    fcmphs.32 vr1, vr0
-; CHECK-SF2-NEXT:    mvc32 a0
-; CHECK-SF2-NEXT:    xori32 a0, a0, 1
-; CHECK-SF2-NEXT:    btsti16 a0, 0
-; CHECK-SF2-NEXT:    bt32 .LBB28_2
+; CHECK-SF2-NEXT:    bf32 .LBB28_2
 ; CHECK-SF2-NEXT:  # %bb.1: # %label1
 ; CHECK-SF2-NEXT:    movi16 a0, 1
 ; CHECK-SF2-NEXT:    rts16
@@ -1080,30 +1014,24 @@ define i32 @brR0_ole(float %x) {
 ;
 ; CHECK-SF-LABEL: brR0_ole:
 ; CHECK-SF:       # %bb.0: # %entry
-; CHECK-SF-NEXT:    fcmpzlss vr0
-; CHECK-SF-NEXT:    mvc32 a0
-; CHECK-SF-NEXT:    xori32 a0, a0, 1
-; CHECK-SF-NEXT:    btsti16 a0, 0
-; CHECK-SF-NEXT:    bt32 .LBB29_2
+; CHECK-SF-NEXT:    movi16 a0, 0
+; CHECK-SF-NEXT:    fmtvrl vr1, a0
+; CHECK-SF-NEXT:    fcmphss vr1, vr0
+; CHECK-SF-NEXT:    bf32 .LBB29_2
 ; CHECK-SF-NEXT:  # %bb.1: # %label1
 ; CHECK-SF-NEXT:    movi16 a0, 1
-; CHECK-SF-NEXT:    rts16
 ; CHECK-SF-NEXT:  .LBB29_2: # %label2
-; CHECK-SF-NEXT:    movi16 a0, 0
 ; CHECK-SF-NEXT:    rts16
 ;
 ; CHECK-SF2-LABEL: brR0_ole:
 ; CHECK-SF2:       # %bb.0: # %entry
-; CHECK-SF2-NEXT:    fcmplsz.32 vr0
-; CHECK-SF2-NEXT:    mvc32 a0
-; CHECK-SF2-NEXT:    xori32 a0, a0, 1
-; CHECK-SF2-NEXT:    btsti16 a0, 0
-; CHECK-SF2-NEXT:    bt32 .LBB29_2
+; CHECK-SF2-NEXT:    movi16 a0, 0
+; CHECK-SF2-NEXT:    fmtvr.32.1 vr1, a0
+; CHECK-SF2-NEXT:    fcmphs.32 vr1, vr0
+; CHECK-SF2-NEXT:    bf32 .LBB29_2
 ; CHECK-SF2-NEXT:  # %bb.1: # %label1
 ; CHECK-SF2-NEXT:    movi16 a0, 1
-; CHECK-SF2-NEXT:    rts16
 ; CHECK-SF2-NEXT:  .LBB29_2: # %label2
-; CHECK-SF2-NEXT:    movi16 a0, 0
 ; CHECK-SF2-NEXT:    rts16
 entry:
   %fcmp = fcmp ole float %x, 0.0

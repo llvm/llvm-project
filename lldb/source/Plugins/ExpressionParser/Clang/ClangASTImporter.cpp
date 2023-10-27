@@ -113,7 +113,7 @@ private:
   llvm::DenseMap<clang::Decl *, Backup> m_backups;
 
   void OverrideOne(clang::Decl *decl) {
-    if (m_backups.find(decl) != m_backups.end()) {
+    if (m_backups.contains(decl)) {
       return;
     }
 
@@ -902,7 +902,6 @@ void ClangASTImporter::ASTImporterDelegate::ImportDefinitionTo(
   // We want that 'to' is actually complete after this function so let's
   // tell the ASTImporter that 'to' was imported from 'from'.
   MapImported(from, to);
-  ASTImporter::Imported(from, to);
 
   Log *log = GetLog(LLDBLog::Expressions);
 
@@ -1028,7 +1027,7 @@ void ClangASTImporter::ASTImporterDelegate::Imported(clang::Decl *from,
   // Some decls shouldn't be tracked here because they were not created by
   // copying 'from' to 'to'. Just exit early for those.
   if (m_decls_to_ignore.count(to))
-    return clang::ASTImporter::Imported(from, to);
+    return;
 
   // Transfer module ownership information.
   auto *from_source = llvm::dyn_cast_or_null<ClangExternalASTSourceCallbacks>(
@@ -1080,12 +1079,6 @@ void ClangASTImporter::ASTImporterDelegate::Imported(clang::Decl *from,
       if (origin.ctx != &to->getASTContext()) {
         if (!to_context_md->hasOrigin(to) || user_id != LLDB_INVALID_UID)
           to_context_md->setOrigin(to, origin);
-
-        ImporterDelegateSP direct_completer =
-            m_main.GetDelegate(&to->getASTContext(), origin.ctx);
-
-        if (direct_completer.get() != this)
-          direct_completer->ASTImporter::Imported(origin.decl, to);
 
         LLDB_LOG(log,
                  "    [ClangASTImporter] Propagated origin "

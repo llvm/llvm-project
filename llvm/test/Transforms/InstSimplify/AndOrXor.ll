@@ -523,7 +523,7 @@ define i32 @or_of_zexted_icmps(i32 %i) {
 
 define i3 @or_of_bitcast_icmps_vec(<3 x i65> %i) {
 ; CHECK-LABEL: @or_of_bitcast_icmps_vec(
-; CHECK-NEXT:    ret i3 bitcast (<3 x i1> <i1 true, i1 true, i1 true> to i3)
+; CHECK-NEXT:    ret i3 -1
 ;
   %cmp0 = icmp sge <3 x i65> %i, zeroinitializer
   %conv0 = bitcast <3 x i1> %cmp0 to i3

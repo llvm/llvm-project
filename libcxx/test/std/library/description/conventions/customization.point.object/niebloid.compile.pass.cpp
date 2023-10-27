@@ -20,6 +20,7 @@
 #include <ranges>
 #include <type_traits>
 #include <utility>
+#include "test_macros.h"
 
 // Niebloids, unlike CPOs, are *not* required to be semiregular or even to have
 // a declared type at all; they are specified as "magic" overload sets whose
@@ -70,7 +71,9 @@ static_assert(test(std::ranges::copy_if, a, a, odd));
 static_assert(test(std::ranges::copy_n, a, 10, a));
 static_assert(test(std::ranges::count, a, 42));
 static_assert(test(std::ranges::count_if, a, odd));
-//static_assert(test(std::ranges::ends_with, a, a));
+#if TEST_STD_VER >= 23
+static_assert(test(std::ranges::ends_with, a, a));
+#endif
 static_assert(test(std::ranges::equal, a, a));
 static_assert(test(std::ranges::equal_range, a, 42));
 static_assert(test(std::ranges::fill, a, 42));
@@ -140,7 +143,9 @@ static_assert(test(std::ranges::sort, a));
 static_assert(test(std::ranges::sort_heap, a));
 static_assert(test(std::ranges::stable_partition, a, odd));
 static_assert(test(std::ranges::stable_sort, a));
-//static_assert(test(std::ranges::starts_with, a, a));
+#if TEST_STD_VER > 20
+static_assert(test(std::ranges::starts_with, a, a));
+#endif
 static_assert(test(std::ranges::swap_ranges, a, a));
 static_assert(test(std::ranges::transform, a, a, triple));
 static_assert(test(std::ranges::unique, a));

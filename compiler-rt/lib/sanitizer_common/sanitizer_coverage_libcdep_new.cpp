@@ -282,7 +282,14 @@ SANITIZER_INTERFACE_WEAK_DEF(void, __sanitizer_cov_pcs_init, const uptr* beg,
 // Weak definition for code instrumented with -fsanitize-coverage=stack-depth
 // and later linked with code containing a strong definition.
 // E.g., -fsanitize=fuzzer-no-link
+// FIXME: Update Apple deployment target so that thread_local is always
+// supported, and remove the #if.
+// FIXME: Figure out how this should work on Windows, exported thread_local
+// symbols are not supported:
+// "data with thread storage duration may not have dll interface"
+#if !SANITIZER_APPLE && !SANITIZER_WINDOWS
 SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
-SANITIZER_TLS_INITIAL_EXEC_ATTRIBUTE uptr __sancov_lowest_stack;
+thread_local uptr __sancov_lowest_stack;
+#endif
 
 #endif  // !SANITIZER_FUCHSIA

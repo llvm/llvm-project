@@ -8,10 +8,10 @@
 // RUN:  -o  %t/M.pcm
 
 // RUN: %clang_cc1 -std=c++20 -emit-obj %t/std-10-2-ex5-tu2.cpp \
-// RUN:  -fmodule-file=%t/M.pcm -o  %t/tu-2.o
+// RUN:  -fmodule-file=M=%t/M.pcm -o  %t/tu-2.o
 
 // RUN: %clang_cc1 -std=c++20 -emit-obj %t/std-10-2-ex5-tu3.cpp \
-// RUN:  -fmodule-file=%t/M.pcm -verify -o %t/main.o
+// RUN:  -fmodule-file=M=%t/M.pcm -verify -o %t/main.o
 
 //--- std-10-2-ex5-tu1.cpp
 export module M;

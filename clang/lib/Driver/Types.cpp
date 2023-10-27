@@ -80,8 +80,8 @@ types::ID types::getPrecompiledType(ID Id) {
   return TY_INVALID;
 }
 
-const char *types::getTypeTempSuffix(ID Id, bool CLMode) {
-  if (CLMode) {
+const char *types::getTypeTempSuffix(ID Id, bool CLStyle) {
+  if (CLStyle) {
     switch (Id) {
     case TY_Object:
     case TY_LTO_BC:
@@ -331,6 +331,10 @@ types::ID types::lookupTypeForExtension(llvm::StringRef Ext) {
       .Case("cui", TY_PP_CUDA)
       .Case("cxx", TY_CXX)
       .Case("CXX", TY_CXX)
+      .Case("F03", TY_Fortran)
+      .Case("f03", TY_PP_Fortran)
+      .Case("F08", TY_Fortran)
+      .Case("f08", TY_PP_Fortran)
       .Case("F90", TY_Fortran)
       .Case("f90", TY_PP_Fortran)
       .Case("F95", TY_Fortran)

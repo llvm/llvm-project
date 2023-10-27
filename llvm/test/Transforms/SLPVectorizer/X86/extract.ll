@@ -28,8 +28,8 @@ define void @fextr1(ptr %ptr) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[LD:%.*]] = load <2 x double>, ptr undef, align 16
 ; CHECK-NEXT:    [[TMP0:%.*]] = fadd <2 x double> [[LD]], <double 1.200000e+00, double 3.400000e+00>
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x double> [[TMP0]], <2 x double> poison, <2 x i32> <i32 1, i32 0>
-; CHECK-NEXT:    store <2 x double> [[SHUFFLE]], ptr [[PTR:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x double> [[TMP0]], <2 x double> poison, <2 x i32> <i32 1, i32 0>
+; CHECK-NEXT:    store <2 x double> [[TMP1]], ptr [[PTR:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -48,12 +48,9 @@ define void @fextr2(ptr %ptr) {
 ; CHECK-LABEL: @fextr2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[LD:%.*]] = load <4 x double>, ptr undef, align 32
-; CHECK-NEXT:    [[V0:%.*]] = extractelement <4 x double> [[LD]], i32 0
-; CHECK-NEXT:    [[V1:%.*]] = extractelement <4 x double> [[LD]], i32 1
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[V0]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> [[TMP0]], double [[V1]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = fadd <2 x double> [[TMP1]], <double 5.500000e+00, double 6.600000e+00>
-; CHECK-NEXT:    store <2 x double> [[TMP2]], ptr [[PTR:%.*]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <4 x double> [[LD]], <4 x double> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[TMP1:%.*]] = fadd <2 x double> [[TMP0]], <double 5.500000e+00, double 6.600000e+00>
+; CHECK-NEXT:    store <2 x double> [[TMP1]], ptr [[PTR:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:

@@ -333,3 +333,19 @@ func.func @allocmem_array_with_holes_dynchar(%arg0: index, %arg1: index) -> !fir
   return %1 : !fir.heap<!fir.array<3x?x4x!fir.char<2,?>>>
 }
 
+// CHECK-LABEL: define void @alloca_unlimited_polymorphic_box
+// CHECK:    %[[VAL_0:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, i64 1
+// CHECK:    %[[VAL_1:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]], ptr, [1 x i64] }, i64 1
+// CHECK:    %[[VAL_2:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, i64 1
+// CHECK:    %[[VAL_3:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]], ptr, [1 x i64] }, i64 1
+
+func.func @alloca_unlimited_polymorphic_box() {
+  %0 = fir.alloca !fir.class<none>
+  %1 = fir.alloca !fir.class<!fir.array<?xnone>>
+  %2 = fir.alloca !fir.box<none>
+  %3 = fir.alloca !fir.box<!fir.array<?xnone>>
+  return
+}
+// Note: allocmem of fir.box are not possible (fir::HeapType::verify does not
+// accept box types), so there is no equivalent of
+// alloca_unlimited_polymorphic_box for allocmem.

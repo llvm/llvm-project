@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=aarch64-none-eabi %s -o - | FileCheck %s
-; RUN: llc -mtriple=aarch64-none-eabi -global-isel=true -global-isel-abort=2 %s -o - | FileCheck %s
+; RUN: llc -mtriple=aarch64 %s -o - | FileCheck %s
+; RUN: llc -mtriple=aarch64 -global-isel=true -global-isel-abort=2 %s -o - | FileCheck %s
 
 
 ; Div whose result is unused should be removed unless we have strict exceptions
@@ -7,7 +7,7 @@
 ; CHECK-LABEL: unused_div:
 ; CHECK-NOT: fdiv
 ; CHECK: ret
-define void @unused_div(float %x, float %y) #0 {
+define void @unused_div(float %x, float %y) {
 entry:
   %add = fdiv float %x, %y
   ret void
@@ -40,7 +40,7 @@ entry:
 ; CHECK-NEXT: fmul [[MUL:s[0-9]+]], [[ADD]], [[ADD]]
 ; CHECK-NEXT: fcsel s0, [[ADD]], [[MUL]], eq
 ; CHECK-NEXT: ret
-define float @add_twice(float %x, float %y, i32 %n) #0 {
+define float @add_twice(float %x, float %y, i32 %n) {
 entry:
   %add = fadd float %x, %y
   %tobool.not = icmp eq i32 %n, 0
@@ -118,7 +118,7 @@ if.end:
 ; CHECK-NEXT: msr FPCR, [[XREG4]]
 ; CHECK-NEXT: fsub s0, [[SREG]], [[SREG]]
 ; CHECK-NEXT: ret
-define float @set_rounding(float %x, float %y) #0 {
+define float @set_rounding(float %x, float %y) {
 entry:
   %add1 = fadd float %x, %y
   call void @llvm.set.rounding(i32 0)
@@ -142,9 +142,9 @@ entry:
 define float @set_rounding_fpexcept_strict(float %x, float %y) #0 {
 entry:
   %add1 = call float @llvm.experimental.constrained.fadd.f32(float %x, float %y, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
-  call void @llvm.set.rounding(i32 0)
+  call void @llvm.set.rounding(i32 0) #0
   %add2 = call float @llvm.experimental.constrained.fadd.f32(float %x, float %y, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
-  call void @llvm.set.rounding(i32 1)
+  call void @llvm.set.rounding(i32 1) #0
   %sub = call float @llvm.experimental.constrained.fsub.f32(float %add1, float %add2, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret float %sub
 }
@@ -163,17 +163,17 @@ entry:
 define float @set_rounding_round_dynamic(float %x, float %y) #0 {
 entry:
   %add1 = call float @llvm.experimental.constrained.fadd.f32(float %x, float %y, metadata !"round.dynamic", metadata !"fpexcept.ignore") #0
-  call void @llvm.set.rounding(i32 0)
+  call void @llvm.set.rounding(i32 0) #0
   %add2 = call float @llvm.experimental.constrained.fadd.f32(float %x, float %y, metadata !"round.dynamic", metadata !"fpexcept.ignore") #0
-  call void @llvm.set.rounding(i32 1)
+  call void @llvm.set.rounding(i32 1) #0
   %sub = call float @llvm.experimental.constrained.fsub.f32(float %add1, float %add2, metadata !"round.dynamic", metadata !"fpexcept.ignore") #0
   ret float %sub
 }
 
-declare float @llvm.experimental.constrained.fadd.f32(float, float, metadata, metadata) #0
-declare float @llvm.experimental.constrained.fsub.f32(float, float, metadata, metadata) #0
-declare float @llvm.experimental.constrained.fmul.f32(float, float, metadata, metadata) #0
-declare float @llvm.experimental.constrained.fdiv.f32(float, float, metadata, metadata) #0
+declare float @llvm.experimental.constrained.fadd.f32(float, float, metadata, metadata)
+declare float @llvm.experimental.constrained.fsub.f32(float, float, metadata, metadata)
+declare float @llvm.experimental.constrained.fmul.f32(float, float, metadata, metadata)
+declare float @llvm.experimental.constrained.fdiv.f32(float, float, metadata, metadata)
 declare i32 @llvm.get.rounding()
 declare void @llvm.set.rounding(i32)
 

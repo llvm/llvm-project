@@ -13,6 +13,7 @@
 #include "BPF.h"
 #include "BPFCORE.h"
 #include "llvm/BinaryFormat/Dwarf.h"
+#include "llvm/DebugInfo/BTF/BTF.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Instruction.h"
@@ -82,9 +83,9 @@ static bool BPFPreserveDITypeImpl(Function &F) {
 
     uint32_t Reloc;
     if (FlagValue == BPFCoreSharedInfo::BTF_TYPE_ID_LOCAL_RELOC) {
-      Reloc = BPFCoreSharedInfo::BTF_TYPE_ID_LOCAL;
+      Reloc = BTF::BTF_TYPE_ID_LOCAL;
     } else {
-      Reloc = BPFCoreSharedInfo::BTF_TYPE_ID_REMOTE;
+      Reloc = BTF::BTF_TYPE_ID_REMOTE;
       DIType *Ty = cast<DIType>(MD);
       while (auto *DTy = dyn_cast<DIDerivedType>(Ty)) {
         unsigned Tag = DTy->getTag();
@@ -125,27 +126,7 @@ static bool BPFPreserveDITypeImpl(Function &F) {
 
   return true;
 }
-
-class BPFPreserveDIType final : public FunctionPass {
-  bool runOnFunction(Function &F) override;
-
-public:
-  static char ID;
-  BPFPreserveDIType() : FunctionPass(ID) {}
-};
 } // End anonymous namespace
-
-char BPFPreserveDIType::ID = 0;
-INITIALIZE_PASS(BPFPreserveDIType, DEBUG_TYPE, "BPF Preserve Debuginfo Type",
-                false, false)
-
-FunctionPass *llvm::createBPFPreserveDIType() {
-  return new BPFPreserveDIType();
-}
-
-bool BPFPreserveDIType::runOnFunction(Function &F) {
-  return BPFPreserveDITypeImpl(F);
-}
 
 PreservedAnalyses BPFPreserveDITypePass::run(Function &F,
                                              FunctionAnalysisManager &AM) {

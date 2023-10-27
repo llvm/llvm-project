@@ -355,3 +355,39 @@ vl8re64.v v8, (a0)
 # CHECK-ENCODING: [0x07,0x74,0x85,0xe2]
 # CHECK-ERROR: instruction requires the following: 'V' (Vector Extension for Application Processors) or 'Zve64x' (Vector Extensions for Embedded Processors){{$}}
 # CHECK-UNKNOWN: 07 74 85 e2 <unknown>
+
+vlm.v v0, 0(a0)
+# CHECK-INST: vlm.v v0, (a0)
+# CHECK-ENCODING: [0x07,0x00,0xb5,0x02]
+# CHECK-ERROR: instruction requires the following: 'V' (Vector Extension for Application Processors), 'Zve32x' or 'Zve64x' (Vector Extensions for Embedded Processors){{$}}
+# CHECK-UNKNOWN: 07 00 b5 02 <unknown>
+
+vle8.v v8, 0(a0)
+# CHECK-INST: vle8.v v8, (a0)
+# CHECK-ENCODING: [0x07,0x04,0x05,0x02]
+# CHECK-ERROR: instruction requires the following: 'V' (Vector Extension for Application Processors), 'Zve32x' or 'Zve64x' (Vector Extensions for Embedded Processors){{$}}
+# CHECK-UNKNOWN: 07 04 05 02 <unknown>
+
+vle8ff.v v8, 0(a0), v0.t
+# CHECK-INST: vle8ff.v v8, (a0), v0.t
+# CHECK-ENCODING: [0x07,0x04,0x05,0x01]
+# CHECK-ERROR: instruction requires the following: 'V' (Vector Extension for Application Processors), 'Zve32x' or 'Zve64x' (Vector Extensions for Embedded Processors){{$}}
+# CHECK-UNKNOWN: 07 04 05 01 <unknown>
+
+vlse16.v v8, 0(a0), a1, v0.t
+# CHECK-INST: vlse16.v v8, (a0), a1, v0.t
+# CHECK-ENCODING: [0x07,0x54,0xb5,0x08]
+# CHECK-ERROR: instruction requires the following: 'V' (Vector Extension for Application Processors), 'Zve32x' or 'Zve64x' (Vector Extensions for Embedded Processors){{$}}
+# CHECK-UNKNOWN: 07 54 b5 08 <unknown>
+
+vluxei32.v v8, 0(a0), v4
+# CHECK-INST: vluxei32.v v8, (a0), v4
+# CHECK-ENCODING: [0x07,0x64,0x45,0x06]
+# CHECK-ERROR: instruction requires the following: 'V' (Vector Extension for Application Processors), 'Zve32x' or 'Zve64x' (Vector Extensions for Embedded Processors){{$}}
+# CHECK-UNKNOWN: 07 64 45 06 <unknown>
+
+vloxei64.v v8, 0(a0), v4
+# CHECK-INST: vloxei64.v v8, (a0), v4
+# CHECK-ENCODING: [0x07,0x74,0x45,0x0e]
+# CHECK-ERROR: instruction requires the following: 'V' (Vector Extension for Application Processors) or 'Zve64x' (Vector Extensions for Embedded Processors){{$}}
+# CHECK-UNKNOWN: 07 74 45 0e <unknown>

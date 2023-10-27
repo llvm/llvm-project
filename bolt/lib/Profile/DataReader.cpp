@@ -215,9 +215,9 @@ FuncBranchData::getDirectCallBranch(uint64_t From) const {
     }
   };
   auto Range = std::equal_range(Data.begin(), Data.end(), From, Compare());
-  for (auto I = Range.first; I != Range.second; ++I)
-    if (I->From.Name != I->To.Name)
-      return *I;
+  for (const auto &RI : llvm::make_range(Range))
+    if (RI.From.Name != RI.To.Name)
+      return RI;
 
   return make_error_code(llvm::errc::invalid_argument);
 }
@@ -317,9 +317,11 @@ Error DataReader::readProfile(BinaryContext &BC) {
   }
 
   uint64_t NumUnused = 0;
-  for (const StringMapEntry<FuncBranchData> &FuncData : NamesToBranches)
-    if (!FuncData.getValue().Used)
+  for (const auto &KV : NamesToBranches) {
+    const FuncBranchData &FBD = KV.second;
+    if (!FBD.Used)
       ++NumUnused;
+  }
   BC.setNumUnusedProfiledObjects(NumUnused);
 
   return Error::success();
@@ -783,9 +785,8 @@ bool DataReader::recordBranch(BinaryFunction &BF, uint64_t From, uint64_t To,
         FTBI.MispredictedCount += Mispreds;
       ToBB = FTSuccessor;
     } else {
-      LLVM_DEBUG(dbgs() << "invalid branch in " << BF << '\n'
-                        << Twine::utohexstr(From) << " -> "
-                        << Twine::utohexstr(To) << '\n');
+      LLVM_DEBUG(dbgs() << "invalid branch in " << BF
+                        << formatv(": {0:x} -> {1:x}\n", From, To));
       return false;
     }
   }
@@ -1116,8 +1117,8 @@ std::error_code DataReader::parseInNoLBRMode() {
     if (!SI.Loc.IsSymbol)
       continue;
 
-    StringMapIterator<FuncSampleData> I = GetOrCreateFuncEntry(SI.Loc.Name);
-    I->getValue().Data.emplace_back(std::move(SI));
+    auto I = GetOrCreateFuncEntry(SI.Loc.Name);
+    I->second.Data.emplace_back(std::move(SI));
   }
 
   while (hasMemData()) {
@@ -1131,14 +1132,14 @@ std::error_code DataReader::parseInNoLBRMode() {
     if (!MI.Offset.IsSymbol)
       continue;
 
-    StringMapIterator<FuncMemData> I = GetOrCreateFuncMemEntry(MI.Offset.Name);
-    I->getValue().Data.emplace_back(std::move(MI));
+    auto I = GetOrCreateFuncMemEntry(MI.Offset.Name);
+    I->second.Data.emplace_back(std::move(MI));
   }
 
-  for (StringMapEntry<FuncSampleData> &FuncSamples : NamesToSamples)
+  for (auto &FuncSamples : NamesToSamples)
     llvm::stable_sort(FuncSamples.second.Data);
 
-  for (StringMapEntry<FuncMemData> &MemEvents : NamesToMemEvents)
+  for (auto &MemEvents : NamesToMemEvents)
     llvm::stable_sort(MemEvents.second.Data);
 
   return std::error_code();
@@ -1199,15 +1200,15 @@ std::error_code DataReader::parse() {
     if (!BI.From.IsSymbol && !BI.To.IsSymbol)
       continue;
 
-    StringMapIterator<FuncBranchData> I = GetOrCreateFuncEntry(BI.From.Name);
-    I->getValue().Data.emplace_back(std::move(BI));
+    auto I = GetOrCreateFuncEntry(BI.From.Name);
+    I->second.Data.emplace_back(std::move(BI));
 
     // Add entry data for branches to another function or branches
     // to entry points (including recursive calls)
     if (BI.To.IsSymbol &&
         (!BI.From.Name.equals(BI.To.Name) || BI.To.Offset == 0)) {
       I = GetOrCreateFuncEntry(BI.To.Name);
-      I->getValue().EntryData.emplace_back(std::move(BI));
+      I->second.EntryData.emplace_back(std::move(BI));
     }
 
     // If destination is the function start - update execution count.
@@ -1215,7 +1216,7 @@ std::error_code DataReader::parse() {
     //     branches to the function start.
     if (BI.To.IsSymbol && BI.To.Offset == 0) {
       I = GetOrCreateFuncEntry(BI.To.Name);
-      I->getValue().ExecutionCount += BI.Branches;
+      I->second.ExecutionCount += BI.Branches;
     }
   }
 
@@ -1230,69 +1231,68 @@ std::error_code DataReader::parse() {
     if (!MI.Offset.IsSymbol)
       continue;
 
-    StringMapIterator<FuncMemData> I = GetOrCreateFuncMemEntry(MI.Offset.Name);
-    I->getValue().Data.emplace_back(std::move(MI));
+    auto I = GetOrCreateFuncMemEntry(MI.Offset.Name);
+    I->second.Data.emplace_back(std::move(MI));
   }
 
-  for (StringMapEntry<FuncBranchData> &FuncBranches : NamesToBranches)
+  for (auto &FuncBranches : NamesToBranches)
     llvm::stable_sort(FuncBranches.second.Data);
 
-  for (StringMapEntry<FuncMemData> &MemEvents : NamesToMemEvents)
+  for (auto &MemEvents : NamesToMemEvents)
     llvm::stable_sort(MemEvents.second.Data);
 
   return std::error_code();
 }
 
 void DataReader::buildLTONameMaps() {
-  for (StringMapEntry<FuncBranchData> &FuncData : NamesToBranches) {
-    const StringRef FuncName = FuncData.getKey();
+  for (auto &FuncData : NamesToBranches) {
+    const StringRef FuncName = FuncData.first;
     const std::optional<StringRef> CommonName = getLTOCommonName(FuncName);
     if (CommonName)
-      LTOCommonNameMap[*CommonName].push_back(&FuncData.getValue());
+      LTOCommonNameMap[*CommonName].push_back(&FuncData.second);
   }
 
-  for (StringMapEntry<FuncMemData> &FuncData : NamesToMemEvents) {
-    const StringRef FuncName = FuncData.getKey();
+  for (auto &FuncData : NamesToMemEvents) {
+    const StringRef FuncName = FuncData.first;
     const std::optional<StringRef> CommonName = getLTOCommonName(FuncName);
     if (CommonName)
-      LTOCommonNameMemMap[*CommonName].push_back(&FuncData.getValue());
+      LTOCommonNameMemMap[*CommonName].push_back(&FuncData.second);
   }
 }
 
-namespace {
 template <typename MapTy>
-decltype(MapTy::MapEntryTy::second) *
+static typename MapTy::mapped_type *
 fetchMapEntry(MapTy &Map, const std::vector<MCSymbol *> &Symbols) {
   // Do a reverse order iteration since the name in profile has a higher chance
   // of matching a name at the end of the list.
   for (const MCSymbol *Symbol : llvm::reverse(Symbols)) {
     auto I = Map.find(normalizeName(Symbol->getName()));
     if (I != Map.end())
-      return &I->getValue();
+      return &I->second;
   }
   return nullptr;
 }
 
 template <typename MapTy>
-decltype(MapTy::MapEntryTy::second) *
+static typename MapTy::mapped_type *
 fetchMapEntry(MapTy &Map, const std::vector<StringRef> &FuncNames) {
   // Do a reverse order iteration since the name in profile has a higher chance
   // of matching a name at the end of the list.
   for (StringRef Name : llvm::reverse(FuncNames)) {
     auto I = Map.find(normalizeName(Name));
     if (I != Map.end())
-      return &I->getValue();
+      return &I->second;
   }
   return nullptr;
 }
 
 template <typename MapTy>
-std::vector<decltype(MapTy::MapEntryTy::second) *> fetchMapEntriesRegex(
-    MapTy &Map,
-    const StringMap<std::vector<decltype(MapTy::MapEntryTy::second) *>>
-        &LTOCommonNameMap,
-    const std::vector<StringRef> &FuncNames) {
-  std::vector<decltype(MapTy::MapEntryTy::second) *> AllData;
+static std::vector<typename MapTy::mapped_type *>
+fetchMapEntriesRegex(MapTy &Map,
+                     const StringMap<std::vector<typename MapTy::mapped_type *>>
+                         &LTOCommonNameMap,
+                     const std::vector<StringRef> &FuncNames) {
+  std::vector<typename MapTy::mapped_type *> AllData;
   // Do a reverse order iteration since the name in profile has a higher chance
   // of matching a name at the end of the list.
   for (StringRef FuncName : llvm::reverse(FuncNames)) {
@@ -1301,19 +1301,17 @@ std::vector<decltype(MapTy::MapEntryTy::second) *> fetchMapEntriesRegex(
     if (LTOCommonName) {
       auto I = LTOCommonNameMap.find(*LTOCommonName);
       if (I != LTOCommonNameMap.end()) {
-        const std::vector<decltype(MapTy::MapEntryTy::second) *> &CommonData =
-            I->getValue();
+        const std::vector<typename MapTy::mapped_type *> &CommonData =
+            I->second;
         AllData.insert(AllData.end(), CommonData.begin(), CommonData.end());
       }
     } else {
       auto I = Map.find(Name);
       if (I != Map.end())
-        return {&I->getValue()};
+        return {&I->second};
     }
   }
   return AllData;
-}
-
 }
 
 bool DataReader::mayHaveProfileData(const BinaryFunction &Function) {
@@ -1372,8 +1370,8 @@ DataReader::getMemDataForNamesRegex(const std::vector<StringRef> &FuncNames) {
 }
 
 bool DataReader::hasLocalsWithFileName() const {
-  for (const StringMapEntry<FuncBranchData> &Func : NamesToBranches) {
-    const StringRef &FuncName = Func.getKey();
+  for (const auto &Func : NamesToBranches) {
+    const StringRef &FuncName = Func.first;
     if (FuncName.count('/') == 2 && FuncName[0] != '/')
       return true;
   }
@@ -1381,13 +1379,15 @@ bool DataReader::hasLocalsWithFileName() const {
 }
 
 void DataReader::dump() const {
-  for (const StringMapEntry<FuncBranchData> &Func : NamesToBranches) {
-    Diag << Func.getKey() << " branches:\n";
-    for (const BranchInfo &BI : Func.getValue().Data)
+  for (const auto &KV : NamesToBranches) {
+    const StringRef Name = KV.first;
+    const FuncBranchData &FBD = KV.second;
+    Diag << Name << " branches:\n";
+    for (const BranchInfo &BI : FBD.Data)
       Diag << BI.From.Name << " " << BI.From.Offset << " " << BI.To.Name << " "
            << BI.To.Offset << " " << BI.Mispreds << " " << BI.Branches << "\n";
-    Diag << Func.getKey() << " entry points:\n";
-    for (const BranchInfo &BI : Func.getValue().EntryData)
+    Diag << Name << " entry points:\n";
+    for (const BranchInfo &BI : FBD.EntryData)
       Diag << BI.From.Name << " " << BI.From.Offset << " " << BI.To.Name << " "
            << BI.To.Offset << " " << BI.Mispreds << " " << BI.Branches << "\n";
   }
@@ -1396,16 +1396,20 @@ void DataReader::dump() const {
     StringRef Event = I->getKey();
     Diag << "Data was collected with event: " << Event << "\n";
   }
-  for (const StringMapEntry<FuncSampleData> &Func : NamesToSamples) {
-    Diag << Func.getKey() << " samples:\n";
-    for (const SampleInfo &SI : Func.getValue().Data)
+  for (const auto &KV : NamesToSamples) {
+    const StringRef Name = KV.first;
+    const FuncSampleData &FSD = KV.second;
+    Diag << Name << " samples:\n";
+    for (const SampleInfo &SI : FSD.Data)
       Diag << SI.Loc.Name << " " << SI.Loc.Offset << " " << SI.Hits << "\n";
   }
 
-  for (const StringMapEntry<FuncMemData> &Func : NamesToMemEvents) {
-    Diag << "Memory events for " << Func.getValue().Name;
+  for (const auto &KV : NamesToMemEvents) {
+    const StringRef Name = KV.first;
+    const FuncMemData &FMD = KV.second;
+    Diag << "Memory events for " << Name;
     Location LastOffset(0);
-    for (const MemInfo &MI : Func.getValue().Data) {
+    for (const MemInfo &MI : FMD.Data) {
       if (MI.Offset == LastOffset)
         Diag << ", " << MI.Addr << "/" << MI.Count;
       else

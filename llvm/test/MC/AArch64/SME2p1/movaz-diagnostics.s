@@ -98,3 +98,16 @@ movaz z31.s, za1h.d[w15, -1]
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid matrix operand, expected za[0-3]h.s or za[0-3]v.s
 // CHECK-NEXT: movaz z31.s, za1h.d[w15, -1]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+// --------------------------------------------------------------------------//
+// Tile-to-vector should not accept the VG suffix
+
+movaz { z0.b, z1.b }, za0h.b[w12, 0:1, vgx2]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// CHECK-NEXT: movaz { z0.b, z1.b }, za0h.b[w12, 0:1, vgx2]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
+movaz { z0.b - z3.b }, za0h.b[w12, 0:3, vgx4]
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// CHECK-NEXT: movaz { z0.b - z3.b }, za0h.b[w12, 0:3, vgx4]
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:

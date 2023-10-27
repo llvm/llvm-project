@@ -1,18 +1,14 @@
 // Tests use-after-scope detection and reporting.
-// RUN: %clang_hwasan -mllvm -hwasan-use-after-scope -g %s -o %t && not %run %t 2>&1 | FileCheck %s
-// RUN: %clang_hwasan -mllvm -hwasan-use-after-scope -g %s -o %t && not %env_hwasan_opts=symbolize=0 %run %t 2>&1 | FileCheck %s --check-prefix=NOSYM
+// RUN: %clang_hwasan -g %s -o %t && not %run %t 2>&1 | FileCheck %s
+// RUN: %clang_hwasan -g %s -o %t && not %env_hwasan_opts=symbolize=0 %run %t 2>&1 | FileCheck %s --check-prefix=NOSYM
 
 // RUN: %clang_hwasan -mllvm -hwasan-use-after-scope=false -g %s -o %t && %run %t 2>&1
-// Use after scope is turned off by default.
-// RUN: %clang_hwasan -g %s -o %t && %run %t 2>&1
 
-// RUN: %clang_hwasan -mllvm -hwasan-use-after-scope -g %s -o %t && not %run %t 2>&1 | FileCheck %s
+// RUN: %clang_hwasan -g %s -o %t && not %run %t 2>&1 | FileCheck %s
 
 // Run the same test as above, but using the __hwasan_add_frame_record libcall.
 // The output should be the exact same.
-// RUN: %clang_hwasan -mllvm -hwasan-use-after-scope -mllvm -hwasan-record-stack-history=libcall -g %s -o %t && not %env_hwasan_opts=symbolize=0 %run %t 2>&1 | FileCheck %s --check-prefix=NOSYM
-
-// REQUIRES: stable-runtime
+// RUN: %clang_hwasan -mllvm -hwasan-record-stack-history=libcall -g %s -o %t && not %env_hwasan_opts=symbolize=0 %run %t 2>&1 | FileCheck %s --check-prefix=NOSYM
 
 // Stack histories currently are not recorded on x86.
 // XFAIL: target=x86_64{{.*}}

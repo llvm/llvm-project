@@ -16,17 +16,10 @@ define i32 @test(ptr nocapture %G) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds double, ptr [[G:%.*]], i64 5
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[ARRAYIDX]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = fmul <2 x double> [[TMP0]], <double 4.000000e+00, double 3.000000e+00>
-; CHECK-NEXT:    [[TMP2:%.*]] = fadd <2 x double> [[TMP1]], <double 1.000000e+00, double 6.000000e+00>
-; CHECK-NEXT:    store <2 x double> [[TMP2]], ptr [[G]], align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x double> [[TMP1]], i32 0
-; CHECK-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds double, ptr [[G]], i64 2
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x double> [[TMP0]], i32 1
-; CHECK-NEXT:    [[MUL11:%.*]] = fmul double [[TMP4]], 4.000000e+00
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x double> poison, double [[TMP3]], i32 0
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x double> [[TMP5]], double [[MUL11]], i32 1
-; CHECK-NEXT:    [[TMP7:%.*]] = fadd <2 x double> [[TMP6]], <double 7.000000e+00, double 8.000000e+00>
-; CHECK-NEXT:    store <2 x double> [[TMP7]], ptr [[ARRAYIDX9]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x double> [[TMP0]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
+; CHECK-NEXT:    [[TMP2:%.*]] = fmul <4 x double> [[TMP1]], <double 4.000000e+00, double 3.000000e+00, double 4.000000e+00, double 4.000000e+00>
+; CHECK-NEXT:    [[TMP3:%.*]] = fadd <4 x double> [[TMP2]], <double 1.000000e+00, double 6.000000e+00, double 7.000000e+00, double 8.000000e+00>
+; CHECK-NEXT:    store <4 x double> [[TMP3]], ptr [[G]], align 8
 ; CHECK-NEXT:    ret i32 undef
 ;
 entry:

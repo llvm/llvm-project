@@ -1,7 +1,7 @@
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1100 -mattr=+wavefrontsize32,-wavefrontsize64 -show-encoding %s | FileCheck --check-prefixes=GFX11,W32 %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1100 -mattr=-wavefrontsize32,+wavefrontsize64 -show-encoding %s | FileCheck --check-prefixes=GFX11,W64 %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1100 -mattr=+wavefrontsize32,-wavefrontsize64 %s 2>&1 | FileCheck --check-prefixes=GFX11-ERR,W32-ERR --implicit-check-not=error: %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1100 -mattr=-wavefrontsize32,+wavefrontsize64 %s 2>&1 | FileCheck --check-prefixes=GFX11-ERR,W64-ERR --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1100 -mattr=+wavefrontsize32,-wavefrontsize64 -show-encoding %s | FileCheck --check-prefixes=GFX11,W32 %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1100 -mattr=-wavefrontsize32,+wavefrontsize64 -show-encoding %s | FileCheck --check-prefixes=GFX11,W64 %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1100 -mattr=+wavefrontsize32,-wavefrontsize64 %s 2>&1 | FileCheck --check-prefixes=GFX11-ERR,W32-ERR --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1100 -mattr=-wavefrontsize32,+wavefrontsize64 %s 2>&1 | FileCheck --check-prefixes=GFX11-ERR,W64-ERR --implicit-check-not=error: %s
 
 v_add3_u32_e64_dpp v5, v1, v2, v3 dpp8:[7,6,5,4,3,2,1,0]
 // GFX11: [0x05,0x00,0x55,0xd6,0xe9,0x04,0x0e,0x04,0x01,0x77,0x39,0x05]
@@ -672,52 +672,52 @@ v_cvt_pk_u8_f32_e64_dpp v5, v1, v2, 0.5 dpp8:[7,6,5,4,3,2,1,0] fi:1
 v_cvt_pk_u8_f32_e64_dpp v255, -|v255|, v255, src_scc dpp8:[0,0,0,0,0,0,0,0] fi:0
 // GFX11: [0xff,0x01,0x26,0xd6,0xe9,0xfe,0xf7,0x23,0xff,0x00,0x00,0x00]
 
-v_cvt_pknorm_i16_f16_e64_dpp v5, v1, v2 dpp8:[7,6,5,4,3,2,1,0]
+v_cvt_pk_norm_i16_f16_e64_dpp v5, v1, v2 dpp8:[7,6,5,4,3,2,1,0]
 // GFX11: [0x05,0x00,0x12,0xd7,0xe9,0x04,0x02,0x00,0x01,0x77,0x39,0x05]
 
-v_cvt_pknorm_i16_f16_e64_dpp v5, |v1|, -v2 dpp8:[7,6,5,4,3,2,1,0]
+v_cvt_pk_norm_i16_f16_e64_dpp v5, |v1|, -v2 dpp8:[7,6,5,4,3,2,1,0]
 // GFX11: [0x05,0x01,0x12,0xd7,0xe9,0x04,0x02,0x40,0x01,0x77,0x39,0x05]
 
-v_cvt_pknorm_i16_f16_e64_dpp v5, -v1, |v2| dpp8:[7,6,5,4,3,2,1,0] fi:1
+v_cvt_pk_norm_i16_f16_e64_dpp v5, -v1, |v2| dpp8:[7,6,5,4,3,2,1,0] fi:1
 // GFX11: [0x05,0x02,0x12,0xd7,0xea,0x04,0x02,0x20,0x01,0x77,0x39,0x05]
 
-v_cvt_pknorm_i16_f16_e64_dpp v255, -|v255|, -|v255| dpp8:[0,0,0,0,0,0,0,0] fi:0
+v_cvt_pk_norm_i16_f16_e64_dpp v255, -|v255|, -|v255| dpp8:[0,0,0,0,0,0,0,0] fi:0
 // GFX11: [0xff,0x03,0x12,0xd7,0xe9,0xfe,0x03,0x60,0xff,0x00,0x00,0x00]
 
-v_cvt_pknorm_i16_f32_e64_dpp v5, v1, v2 dpp8:[7,6,5,4,3,2,1,0]
+v_cvt_pk_norm_i16_f32_e64_dpp v5, v1, v2 dpp8:[7,6,5,4,3,2,1,0]
 // GFX11: [0x05,0x00,0x21,0xd7,0xe9,0x04,0x02,0x00,0x01,0x77,0x39,0x05]
 
-v_cvt_pknorm_i16_f32_e64_dpp v5, |v1|, -v2 dpp8:[7,6,5,4,3,2,1,0]
+v_cvt_pk_norm_i16_f32_e64_dpp v5, |v1|, -v2 dpp8:[7,6,5,4,3,2,1,0]
 // GFX11: [0x05,0x01,0x21,0xd7,0xe9,0x04,0x02,0x40,0x01,0x77,0x39,0x05]
 
-v_cvt_pknorm_i16_f32_e64_dpp v5, -v1, |v2| dpp8:[7,6,5,4,3,2,1,0] fi:1
+v_cvt_pk_norm_i16_f32_e64_dpp v5, -v1, |v2| dpp8:[7,6,5,4,3,2,1,0] fi:1
 // GFX11: [0x05,0x02,0x21,0xd7,0xea,0x04,0x02,0x20,0x01,0x77,0x39,0x05]
 
-v_cvt_pknorm_i16_f32_e64_dpp v255, -|v255|, -|v255| dpp8:[0,0,0,0,0,0,0,0] fi:0
+v_cvt_pk_norm_i16_f32_e64_dpp v255, -|v255|, -|v255| dpp8:[0,0,0,0,0,0,0,0] fi:0
 // GFX11: [0xff,0x03,0x21,0xd7,0xe9,0xfe,0x03,0x60,0xff,0x00,0x00,0x00]
 
-v_cvt_pknorm_u16_f16_e64_dpp v5, v1, v2 dpp8:[7,6,5,4,3,2,1,0]
+v_cvt_pk_norm_u16_f16_e64_dpp v5, v1, v2 dpp8:[7,6,5,4,3,2,1,0]
 // GFX11: [0x05,0x00,0x13,0xd7,0xe9,0x04,0x02,0x00,0x01,0x77,0x39,0x05]
 
-v_cvt_pknorm_u16_f16_e64_dpp v5, |v1|, -v2 dpp8:[7,6,5,4,3,2,1,0]
+v_cvt_pk_norm_u16_f16_e64_dpp v5, |v1|, -v2 dpp8:[7,6,5,4,3,2,1,0]
 // GFX11: [0x05,0x01,0x13,0xd7,0xe9,0x04,0x02,0x40,0x01,0x77,0x39,0x05]
 
-v_cvt_pknorm_u16_f16_e64_dpp v5, -v1, |v2| dpp8:[7,6,5,4,3,2,1,0] fi:1
+v_cvt_pk_norm_u16_f16_e64_dpp v5, -v1, |v2| dpp8:[7,6,5,4,3,2,1,0] fi:1
 // GFX11: [0x05,0x02,0x13,0xd7,0xea,0x04,0x02,0x20,0x01,0x77,0x39,0x05]
 
-v_cvt_pknorm_u16_f16_e64_dpp v255, -|v255|, -|v255| dpp8:[0,0,0,0,0,0,0,0] fi:0
+v_cvt_pk_norm_u16_f16_e64_dpp v255, -|v255|, -|v255| dpp8:[0,0,0,0,0,0,0,0] fi:0
 // GFX11: [0xff,0x03,0x13,0xd7,0xe9,0xfe,0x03,0x60,0xff,0x00,0x00,0x00]
 
-v_cvt_pknorm_u16_f32_e64_dpp v5, v1, v2 dpp8:[7,6,5,4,3,2,1,0]
+v_cvt_pk_norm_u16_f32_e64_dpp v5, v1, v2 dpp8:[7,6,5,4,3,2,1,0]
 // GFX11: [0x05,0x00,0x22,0xd7,0xe9,0x04,0x02,0x00,0x01,0x77,0x39,0x05]
 
-v_cvt_pknorm_u16_f32_e64_dpp v5, |v1|, -v2 dpp8:[7,6,5,4,3,2,1,0]
+v_cvt_pk_norm_u16_f32_e64_dpp v5, |v1|, -v2 dpp8:[7,6,5,4,3,2,1,0]
 // GFX11: [0x05,0x01,0x22,0xd7,0xe9,0x04,0x02,0x40,0x01,0x77,0x39,0x05]
 
-v_cvt_pknorm_u16_f32_e64_dpp v5, -v1, |v2| dpp8:[7,6,5,4,3,2,1,0] fi:1
+v_cvt_pk_norm_u16_f32_e64_dpp v5, -v1, |v2| dpp8:[7,6,5,4,3,2,1,0] fi:1
 // GFX11: [0x05,0x02,0x22,0xd7,0xea,0x04,0x02,0x20,0x01,0x77,0x39,0x05]
 
-v_cvt_pknorm_u16_f32_e64_dpp v255, -|v255|, -|v255| dpp8:[0,0,0,0,0,0,0,0] fi:0
+v_cvt_pk_norm_u16_f32_e64_dpp v255, -|v255|, -|v255| dpp8:[0,0,0,0,0,0,0,0] fi:0
 // GFX11: [0xff,0x03,0x22,0xd7,0xe9,0xfe,0x03,0x60,0xff,0x00,0x00,0x00]
 
 v_div_fixup_f16_e64_dpp v5, v1, v2, v3 dpp8:[7,6,5,4,3,2,1,0]

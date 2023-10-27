@@ -200,10 +200,6 @@ module TargetMachine : sig
       [llvm::TargetMachine::getFeatureString]. *)
   val features : t -> string
 
-  (** Adds the target-specific analysis passes to the pass manager.
-      See [llvm::TargetMachine::addAnalysisPasses]. *)
-  val add_analysis_passes : [< Llvm.PassManager.any ] Llvm.PassManager.t -> t -> unit
-
   (** Sets the assembly verbosity of this target machine.
       See [llvm::TargetMachine::setAsmVerbosity]. *)
   val set_verbose_asm : bool -> t -> unit

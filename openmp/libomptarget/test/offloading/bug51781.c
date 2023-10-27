@@ -32,10 +32,6 @@
 //
 // CUSTOM: Rewriting generic-mode kernel with a customized state machine.
 
-// Hangs
-// UNSUPPORTED: amdgcn-amd-amdhsa
-// UNSUPPORTED: amdgcn-amd-amdhsa-LTO
-
 #if ADD_REDUCTION
 #define REDUCTION(...) reduction(__VA_ARGS__)
 #else

@@ -27,13 +27,13 @@ public:
   virtual ~Frame();
 
   /// Generates a human-readable description of the call site.
-  virtual void describe(llvm::raw_ostream &OS) = 0;
+  virtual void describe(llvm::raw_ostream &OS) const = 0;
 
   /// Returns a pointer to the caller frame.
   virtual Frame *getCaller() const = 0;
 
   /// Returns the location of the call site.
-  virtual SourceLocation getCallLocation() const = 0;
+  virtual SourceRange getCallRange() const = 0;
 
   /// Returns the called function's declaration.
   virtual const FunctionDecl *getCallee() const = 0;

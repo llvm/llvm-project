@@ -7,27 +7,32 @@
 //===----------------------------------------------------------------------===//
 
 #include "pthread_attr_setstack.h"
+#include "pthread_attr_setstacksize.h"
 
 #include "src/__support/common.h"
+#include "src/__support/threads/thread.h" // For STACK_ALIGNMENT
 
 #include <errno.h>
-#include <linux/param.h> // For EXEC_PAGESIZE.
 #include <pthread.h>
 #include <stdint.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(int, pthread_attr_setstack,
                    (pthread_attr_t *__restrict attr, void *stack,
                     size_t stacksize)) {
+  uintptr_t stackaddr = reinterpret_cast<uintptr_t>(stack);
+  // TODO: Do we need to check for overflow on stackaddr + stacksize?
+  if ((stackaddr % STACK_ALIGNMENT != 0) ||
+      ((stackaddr + stacksize) % STACK_ALIGNMENT != 0))
+    return EINVAL;
+
   if (stacksize < PTHREAD_STACK_MIN)
     return EINVAL;
-  uintptr_t stackaddr = reinterpret_cast<uintptr_t>(stack);
-  if ((stackaddr % 16 != 0) || ((stackaddr + stacksize) % 16 != 0))
-    return EINVAL;
+
   attr->__stack = stack;
   attr->__stacksize = stacksize;
   return 0;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

@@ -4523,7 +4523,7 @@ define <2 x i64> @test_mm_set1_epi32(i32 %a0) nounwind {
 ; X86-AVX1:       # %bb.0:
 ; X86-AVX1-NEXT:    vmovss {{[0-9]+}}(%esp), %xmm0 # encoding: [0xc5,0xfa,0x10,0x44,0x24,0x04]
 ; X86-AVX1-NEXT:    # xmm0 = mem[0],zero,zero,zero
-; X86-AVX1-NEXT:    vpermilps $0, %xmm0, %xmm0 # encoding: [0xc4,0xe3,0x79,0x04,0xc0,0x00]
+; X86-AVX1-NEXT:    vshufps $0, %xmm0, %xmm0, %xmm0 # encoding: [0xc5,0xf8,0xc6,0xc0,0x00]
 ; X86-AVX1-NEXT:    # xmm0 = xmm0[0,0,0,0]
 ; X86-AVX1-NEXT:    retl # encoding: [0xc3]
 ;
@@ -5636,7 +5636,7 @@ define <2 x i64> @test_mm_shuffle_epi32(<2 x i64> %a0) {
 ;
 ; AVX1-LABEL: test_mm_shuffle_epi32:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpermilps $0, %xmm0, %xmm0 # encoding: [0xc4,0xe3,0x79,0x04,0xc0,0x00]
+; AVX1-NEXT:    vshufps $0, %xmm0, %xmm0, %xmm0 # encoding: [0xc5,0xf8,0xc6,0xc0,0x00]
 ; AVX1-NEXT:    # xmm0 = xmm0[0,0,0,0]
 ; AVX1-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
 ;
@@ -6552,7 +6552,7 @@ define void @test_mm_storeh_sd(ptr%a0, <2 x double> %a1) {
 ; X86-AVX1-LABEL: test_mm_storeh_sd:
 ; X86-AVX1:       # %bb.0:
 ; X86-AVX1-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
-; X86-AVX1-NEXT:    vpermilpd $1, %xmm0, %xmm0 # encoding: [0xc4,0xe3,0x79,0x05,0xc0,0x01]
+; X86-AVX1-NEXT:    vshufpd $1, %xmm0, %xmm0, %xmm0 # encoding: [0xc5,0xf9,0xc6,0xc0,0x01]
 ; X86-AVX1-NEXT:    # xmm0 = xmm0[1,0]
 ; X86-AVX1-NEXT:    vmovsd %xmm0, (%eax) # encoding: [0xc5,0xfb,0x11,0x00]
 ; X86-AVX1-NEXT:    retl # encoding: [0xc3]
@@ -6560,7 +6560,7 @@ define void @test_mm_storeh_sd(ptr%a0, <2 x double> %a1) {
 ; X86-AVX512-LABEL: test_mm_storeh_sd:
 ; X86-AVX512:       # %bb.0:
 ; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
-; X86-AVX512-NEXT:    vpermilpd $1, %xmm0, %xmm0 # EVEX TO VEX Compression encoding: [0xc4,0xe3,0x79,0x05,0xc0,0x01]
+; X86-AVX512-NEXT:    vshufpd $1, %xmm0, %xmm0, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf9,0xc6,0xc0,0x01]
 ; X86-AVX512-NEXT:    # xmm0 = xmm0[1,0]
 ; X86-AVX512-NEXT:    vmovsd %xmm0, (%eax) # EVEX TO VEX Compression encoding: [0xc5,0xfb,0x11,0x00]
 ; X86-AVX512-NEXT:    retl # encoding: [0xc3]
@@ -6574,14 +6574,14 @@ define void @test_mm_storeh_sd(ptr%a0, <2 x double> %a1) {
 ;
 ; X64-AVX1-LABEL: test_mm_storeh_sd:
 ; X64-AVX1:       # %bb.0:
-; X64-AVX1-NEXT:    vpermilpd $1, %xmm0, %xmm0 # encoding: [0xc4,0xe3,0x79,0x05,0xc0,0x01]
+; X64-AVX1-NEXT:    vshufpd $1, %xmm0, %xmm0, %xmm0 # encoding: [0xc5,0xf9,0xc6,0xc0,0x01]
 ; X64-AVX1-NEXT:    # xmm0 = xmm0[1,0]
 ; X64-AVX1-NEXT:    vmovsd %xmm0, (%rdi) # encoding: [0xc5,0xfb,0x11,0x07]
 ; X64-AVX1-NEXT:    retq # encoding: [0xc3]
 ;
 ; X64-AVX512-LABEL: test_mm_storeh_sd:
 ; X64-AVX512:       # %bb.0:
-; X64-AVX512-NEXT:    vpermilpd $1, %xmm0, %xmm0 # EVEX TO VEX Compression encoding: [0xc4,0xe3,0x79,0x05,0xc0,0x01]
+; X64-AVX512-NEXT:    vshufpd $1, %xmm0, %xmm0, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf9,0xc6,0xc0,0x01]
 ; X64-AVX512-NEXT:    # xmm0 = xmm0[1,0]
 ; X64-AVX512-NEXT:    vmovsd %xmm0, (%rdi) # EVEX TO VEX Compression encoding: [0xc5,0xfb,0x11,0x07]
 ; X64-AVX512-NEXT:    retq # encoding: [0xc3]
@@ -6595,14 +6595,14 @@ define void @test_mm_storeh_sd(ptr%a0, <2 x double> %a1) {
 ;
 ; X32-AVX1-LABEL: test_mm_storeh_sd:
 ; X32-AVX1:       # %bb.0:
-; X32-AVX1-NEXT:    vpermilpd $1, %xmm0, %xmm0 # encoding: [0xc4,0xe3,0x79,0x05,0xc0,0x01]
+; X32-AVX1-NEXT:    vshufpd $1, %xmm0, %xmm0, %xmm0 # encoding: [0xc5,0xf9,0xc6,0xc0,0x01]
 ; X32-AVX1-NEXT:    # xmm0 = xmm0[1,0]
 ; X32-AVX1-NEXT:    vmovsd %xmm0, (%edi) # encoding: [0x67,0xc5,0xfb,0x11,0x07]
 ; X32-AVX1-NEXT:    retq # encoding: [0xc3]
 ;
 ; X32-AVX512-LABEL: test_mm_storeh_sd:
 ; X32-AVX512:       # %bb.0:
-; X32-AVX512-NEXT:    vpermilpd $1, %xmm0, %xmm0 # EVEX TO VEX Compression encoding: [0xc4,0xe3,0x79,0x05,0xc0,0x01]
+; X32-AVX512-NEXT:    vshufpd $1, %xmm0, %xmm0, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf9,0xc6,0xc0,0x01]
 ; X32-AVX512-NEXT:    # xmm0 = xmm0[1,0]
 ; X32-AVX512-NEXT:    vmovsd %xmm0, (%edi) # EVEX TO VEX Compression encoding: [0x67,0xc5,0xfb,0x11,0x07]
 ; X32-AVX512-NEXT:    retq # encoding: [0xc3]
@@ -6736,7 +6736,7 @@ define void @test_mm_storer_pd(ptr%a0, <2 x double> %a1) {
 ; X86-AVX1-LABEL: test_mm_storer_pd:
 ; X86-AVX1:       # %bb.0:
 ; X86-AVX1-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
-; X86-AVX1-NEXT:    vpermilpd $1, %xmm0, %xmm0 # encoding: [0xc4,0xe3,0x79,0x05,0xc0,0x01]
+; X86-AVX1-NEXT:    vshufpd $1, %xmm0, %xmm0, %xmm0 # encoding: [0xc5,0xf9,0xc6,0xc0,0x01]
 ; X86-AVX1-NEXT:    # xmm0 = xmm0[1,0]
 ; X86-AVX1-NEXT:    vmovapd %xmm0, (%eax) # encoding: [0xc5,0xf9,0x29,0x00]
 ; X86-AVX1-NEXT:    retl # encoding: [0xc3]
@@ -6744,7 +6744,7 @@ define void @test_mm_storer_pd(ptr%a0, <2 x double> %a1) {
 ; X86-AVX512-LABEL: test_mm_storer_pd:
 ; X86-AVX512:       # %bb.0:
 ; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
-; X86-AVX512-NEXT:    vpermilpd $1, %xmm0, %xmm0 # EVEX TO VEX Compression encoding: [0xc4,0xe3,0x79,0x05,0xc0,0x01]
+; X86-AVX512-NEXT:    vshufpd $1, %xmm0, %xmm0, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf9,0xc6,0xc0,0x01]
 ; X86-AVX512-NEXT:    # xmm0 = xmm0[1,0]
 ; X86-AVX512-NEXT:    vmovapd %xmm0, (%eax) # EVEX TO VEX Compression encoding: [0xc5,0xf9,0x29,0x00]
 ; X86-AVX512-NEXT:    retl # encoding: [0xc3]
@@ -6758,14 +6758,14 @@ define void @test_mm_storer_pd(ptr%a0, <2 x double> %a1) {
 ;
 ; X64-AVX1-LABEL: test_mm_storer_pd:
 ; X64-AVX1:       # %bb.0:
-; X64-AVX1-NEXT:    vpermilpd $1, %xmm0, %xmm0 # encoding: [0xc4,0xe3,0x79,0x05,0xc0,0x01]
+; X64-AVX1-NEXT:    vshufpd $1, %xmm0, %xmm0, %xmm0 # encoding: [0xc5,0xf9,0xc6,0xc0,0x01]
 ; X64-AVX1-NEXT:    # xmm0 = xmm0[1,0]
 ; X64-AVX1-NEXT:    vmovapd %xmm0, (%rdi) # encoding: [0xc5,0xf9,0x29,0x07]
 ; X64-AVX1-NEXT:    retq # encoding: [0xc3]
 ;
 ; X64-AVX512-LABEL: test_mm_storer_pd:
 ; X64-AVX512:       # %bb.0:
-; X64-AVX512-NEXT:    vpermilpd $1, %xmm0, %xmm0 # EVEX TO VEX Compression encoding: [0xc4,0xe3,0x79,0x05,0xc0,0x01]
+; X64-AVX512-NEXT:    vshufpd $1, %xmm0, %xmm0, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf9,0xc6,0xc0,0x01]
 ; X64-AVX512-NEXT:    # xmm0 = xmm0[1,0]
 ; X64-AVX512-NEXT:    vmovapd %xmm0, (%rdi) # EVEX TO VEX Compression encoding: [0xc5,0xf9,0x29,0x07]
 ; X64-AVX512-NEXT:    retq # encoding: [0xc3]
@@ -6779,14 +6779,14 @@ define void @test_mm_storer_pd(ptr%a0, <2 x double> %a1) {
 ;
 ; X32-AVX1-LABEL: test_mm_storer_pd:
 ; X32-AVX1:       # %bb.0:
-; X32-AVX1-NEXT:    vpermilpd $1, %xmm0, %xmm0 # encoding: [0xc4,0xe3,0x79,0x05,0xc0,0x01]
+; X32-AVX1-NEXT:    vshufpd $1, %xmm0, %xmm0, %xmm0 # encoding: [0xc5,0xf9,0xc6,0xc0,0x01]
 ; X32-AVX1-NEXT:    # xmm0 = xmm0[1,0]
 ; X32-AVX1-NEXT:    vmovapd %xmm0, (%edi) # encoding: [0x67,0xc5,0xf9,0x29,0x07]
 ; X32-AVX1-NEXT:    retq # encoding: [0xc3]
 ;
 ; X32-AVX512-LABEL: test_mm_storer_pd:
 ; X32-AVX512:       # %bb.0:
-; X32-AVX512-NEXT:    vpermilpd $1, %xmm0, %xmm0 # EVEX TO VEX Compression encoding: [0xc4,0xe3,0x79,0x05,0xc0,0x01]
+; X32-AVX512-NEXT:    vshufpd $1, %xmm0, %xmm0, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf9,0xc6,0xc0,0x01]
 ; X32-AVX512-NEXT:    # xmm0 = xmm0[1,0]
 ; X32-AVX512-NEXT:    vmovapd %xmm0, (%edi) # EVEX TO VEX Compression encoding: [0x67,0xc5,0xf9,0x29,0x07]
 ; X32-AVX512-NEXT:    retq # encoding: [0xc3]

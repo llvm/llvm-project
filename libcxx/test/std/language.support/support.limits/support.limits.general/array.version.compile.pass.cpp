@@ -96,28 +96,51 @@
 #   error "__cpp_lib_to_array should have the value 201907L in c++20"
 # endif
 
-#elif TEST_STD_VER > 20
+#elif TEST_STD_VER == 23
 
 # ifndef __cpp_lib_array_constexpr
-#   error "__cpp_lib_array_constexpr should be defined in c++2b"
+#   error "__cpp_lib_array_constexpr should be defined in c++23"
 # endif
 # if __cpp_lib_array_constexpr != 201811L
-#   error "__cpp_lib_array_constexpr should have the value 201811L in c++2b"
+#   error "__cpp_lib_array_constexpr should have the value 201811L in c++23"
 # endif
 
 # ifndef __cpp_lib_nonmember_container_access
-#   error "__cpp_lib_nonmember_container_access should be defined in c++2b"
+#   error "__cpp_lib_nonmember_container_access should be defined in c++23"
 # endif
 # if __cpp_lib_nonmember_container_access != 201411L
-#   error "__cpp_lib_nonmember_container_access should have the value 201411L in c++2b"
+#   error "__cpp_lib_nonmember_container_access should have the value 201411L in c++23"
 # endif
 
 # ifndef __cpp_lib_to_array
-#   error "__cpp_lib_to_array should be defined in c++2b"
+#   error "__cpp_lib_to_array should be defined in c++23"
 # endif
 # if __cpp_lib_to_array != 201907L
-#   error "__cpp_lib_to_array should have the value 201907L in c++2b"
+#   error "__cpp_lib_to_array should have the value 201907L in c++23"
 # endif
 
-#endif // TEST_STD_VER > 20
+#elif TEST_STD_VER > 23
+
+# ifndef __cpp_lib_array_constexpr
+#   error "__cpp_lib_array_constexpr should be defined in c++26"
+# endif
+# if __cpp_lib_array_constexpr != 201811L
+#   error "__cpp_lib_array_constexpr should have the value 201811L in c++26"
+# endif
+
+# ifndef __cpp_lib_nonmember_container_access
+#   error "__cpp_lib_nonmember_container_access should be defined in c++26"
+# endif
+# if __cpp_lib_nonmember_container_access != 201411L
+#   error "__cpp_lib_nonmember_container_access should have the value 201411L in c++26"
+# endif
+
+# ifndef __cpp_lib_to_array
+#   error "__cpp_lib_to_array should be defined in c++26"
+# endif
+# if __cpp_lib_to_array != 201907L
+#   error "__cpp_lib_to_array should have the value 201907L in c++26"
+# endif
+
+#endif // TEST_STD_VER > 23
 

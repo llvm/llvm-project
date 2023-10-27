@@ -760,7 +760,7 @@ public:
 /// The null pointer literal (C++11 [lex.nullptr])
 ///
 /// Introduced in C++11, the only literal of type \c nullptr_t is \c nullptr.
-/// This also implements the null pointer literal in C2x (C2x 6.4.1) which is
+/// This also implements the null pointer literal in C23 (C23 6.4.1) which is
 /// intended to have the same semantics as the feature in C++.
 class CXXNullPtrLiteralExpr : public Expr {
 public:
@@ -1146,15 +1146,20 @@ public:
 /// };
 /// \endcode
 class CXXThisExpr : public Expr {
-public:
-  CXXThisExpr(SourceLocation L, QualType Ty, bool IsImplicit)
-      : Expr(CXXThisExprClass, Ty, VK_PRValue, OK_Ordinary) {
+  CXXThisExpr(SourceLocation L, QualType Ty, bool IsImplicit, ExprValueKind VK)
+      : Expr(CXXThisExprClass, Ty, VK, OK_Ordinary) {
     CXXThisExprBits.IsImplicit = IsImplicit;
     CXXThisExprBits.Loc = L;
     setDependence(computeDependence(this));
   }
 
   CXXThisExpr(EmptyShell Empty) : Expr(CXXThisExprClass, Empty) {}
+
+public:
+  static CXXThisExpr *Create(const ASTContext &Ctx, SourceLocation L,
+                             QualType Ty, bool IsImplicit);
+
+  static CXXThisExpr *CreateEmpty(const ASTContext &Ctx);
 
   SourceLocation getLocation() const { return CXXThisExprBits.Loc; }
   void setLocation(SourceLocation L) { CXXThisExprBits.Loc = L; }
@@ -1679,6 +1684,14 @@ public:
   void setArg(unsigned Arg, Expr *ArgExpr) {
     assert(Arg < getNumArgs() && "Arg access out of range!");
     getArgs()[Arg] = ArgExpr;
+  }
+
+  bool isImmediateEscalating() const {
+    return CXXConstructExprBits.IsImmediateEscalating;
+  }
+
+  void setIsImmediateEscalating(bool Set) {
+    CXXConstructExprBits.IsImmediateEscalating = Set;
   }
 
   SourceLocation getBeginLoc() const LLVM_READONLY;
@@ -2321,7 +2334,7 @@ public:
 
   /// This might return std::nullopt even if isArray() returns true,
   /// since there might not be an array size expression.
-  /// If the result is not-None, it will never wrap a nullptr.
+  /// If the result is not std::nullopt, it will never wrap a nullptr.
   std::optional<Expr *> getArraySize() {
     if (!isArray())
       return std::nullopt;
@@ -2335,7 +2348,7 @@ public:
 
   /// This might return std::nullopt even if isArray() returns true,
   /// since there might not be an array size expression.
-  /// If the result is not-None, it will never wrap a nullptr.
+  /// If the result is not std::nullopt, it will never wrap a nullptr.
   std::optional<const Expr *> getArraySize() const {
     if (!isArray())
       return std::nullopt;
@@ -3504,8 +3517,9 @@ class CXXUnresolvedConstructExpr final
   friend class ASTStmtReader;
   friend TrailingObjects;
 
-  /// The type being constructed.
-  TypeSourceInfo *TSI;
+  /// The type being constructed, and whether the construct expression models
+  /// list initialization or not.
+  llvm::PointerIntPair<TypeSourceInfo *, 1> TypeAndInitForm;
 
   /// The location of the left parentheses ('(').
   SourceLocation LParenLoc;
@@ -3515,30 +3529,31 @@ class CXXUnresolvedConstructExpr final
 
   CXXUnresolvedConstructExpr(QualType T, TypeSourceInfo *TSI,
                              SourceLocation LParenLoc, ArrayRef<Expr *> Args,
-                             SourceLocation RParenLoc);
+                             SourceLocation RParenLoc, bool IsListInit);
 
   CXXUnresolvedConstructExpr(EmptyShell Empty, unsigned NumArgs)
-      : Expr(CXXUnresolvedConstructExprClass, Empty), TSI(nullptr) {
+      : Expr(CXXUnresolvedConstructExprClass, Empty) {
     CXXUnresolvedConstructExprBits.NumArgs = NumArgs;
   }
 
 public:
-  static CXXUnresolvedConstructExpr *Create(const ASTContext &Context,
-                                            QualType T, TypeSourceInfo *TSI,
-                                            SourceLocation LParenLoc,
-                                            ArrayRef<Expr *> Args,
-                                            SourceLocation RParenLoc);
+  static CXXUnresolvedConstructExpr *
+  Create(const ASTContext &Context, QualType T, TypeSourceInfo *TSI,
+         SourceLocation LParenLoc, ArrayRef<Expr *> Args,
+         SourceLocation RParenLoc, bool IsListInit);
 
   static CXXUnresolvedConstructExpr *CreateEmpty(const ASTContext &Context,
                                                  unsigned NumArgs);
 
   /// Retrieve the type that is being constructed, as specified
   /// in the source code.
-  QualType getTypeAsWritten() const { return TSI->getType(); }
+  QualType getTypeAsWritten() const { return getTypeSourceInfo()->getType(); }
 
   /// Retrieve the type source information for the type being
   /// constructed.
-  TypeSourceInfo *getTypeSourceInfo() const { return TSI; }
+  TypeSourceInfo *getTypeSourceInfo() const {
+    return TypeAndInitForm.getPointer();
+  }
 
   /// Retrieve the location of the left parentheses ('(') that
   /// precedes the argument list.
@@ -3553,7 +3568,7 @@ public:
   /// Determine whether this expression models list-initialization.
   /// If so, there will be exactly one subexpression, which will be
   /// an InitListExpr.
-  bool isListInitialization() const { return LParenLoc.isInvalid(); }
+  bool isListInitialization() const { return TypeAndInitForm.getInt(); }
 
   /// Retrieve the number of arguments.
   unsigned getNumArgs() const { return CXXUnresolvedConstructExprBits.NumArgs; }

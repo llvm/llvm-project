@@ -1,0 +1,35 @@
+# RUN: yaml2obj %s -o %t.obj
+# RUN: llvm-objcopy --dump-section .data=%t.dat %t.obj
+# RUN: wc -c %t.dat | FileCheck %s --ignore-case -check-prefix CHECK-EMPTY-SIZE
+# RUN: llvm-objcopy --dump-section .text.f=%t.txt %t.obj
+# RUN: od -t x1 %t.txt | FileCheck %s --ignore-case -check-prefix CHECK-TEXT-F
+# RUN: not llvm-objcopy --dump-section non-existent=/dev/null %t.obj 2>&1 | FileCheck %s -check-prefix CHECK-NO-SECTION
+# RUN: not llvm-objcopy --dump-section .text=%T %t.obj 2>&1 | FileCheck -DOBJ=%t.obj -DMSG=%errc_EISDIR %s -check-prefix CHECK-INVALID-DESTINATION
+
+# CHECK-EMPTY-SIZE: 0
+
+# CHECK-TEXT-F: 0000000 b8 20 00 00 00 c3
+
+# CHECK-NO-SECTION: section 'non-existent' not found
+
+# CHECK-INVALID-DESTINATION: error: '[[OBJ]]': [[MSG]]
+
+--- !COFF
+header:
+  Machine:         IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [  ]
+sections:
+  - Name:            .text
+    Characteristics: [ ]
+    Alignment:       4
+    SectionData:     ''
+  - Name:            .data
+    Characteristics: [ ]
+    Alignment:       4
+    SectionData:     ''
+  - Name:            .text.f
+    Characteristics: [ ]
+    Alignment:       16
+    SectionData:     B820000000C3
+symbols:
+...

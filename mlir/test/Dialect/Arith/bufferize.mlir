@@ -1,5 +1,5 @@
-// RUN: mlir-opt %s -arith-bufferize -split-input-file | FileCheck %s
-// RUN: mlir-opt %s -arith-bufferize=alignment=64 -split-input-file | FileCheck --check-prefix=ALIGNED %s
+// RUN: mlir-opt %s -arith-bufferize -split-input-file -verify-diagnostics | FileCheck %s
+// RUN: mlir-opt %s -arith-bufferize=alignment=64 -split-input-file -verify-diagnostics | FileCheck --check-prefix=ALIGNED %s
 
 // CHECK-LABEL:   func @index_cast(
 // CHECK-SAME:  %[[TENSOR:.*]]: tensor<i32>, %[[SCALAR:.*]]: i32
@@ -95,4 +95,13 @@ func.func @non_tensor() {
 func.func @select(%arg0: i1, %arg1: tensor<f32>, %arg2: tensor<f32>) -> tensor<f32> {
   %0 = arith.select %arg0, %arg1, %arg2 : tensor<f32>
   return %0 : tensor<f32>
+}
+
+// -----
+
+func.func @elementwise_select(%arg0: tensor<5xi1>, %arg1: tensor<5xi32>, %arg2: tensor<5xi32>) -> tensor<5xi32> {
+  // expected-error @below{{only i1 condition values are supported}}
+  // expected-error @below{{failed to bufferize op}}
+  %0 = arith.select %arg0, %arg1, %arg2 : tensor<5xi1>, tensor<5xi32>
+  return %0 : tensor<5xi32>
 }

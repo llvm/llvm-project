@@ -5,18 +5,11 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-//
-//===----------------------------------------------------------------------===//
 
 #ifndef LLVM_ADT_GENERICUNIFORMITYINFO_H
 #define LLVM_ADT_GENERICUNIFORMITYINFO_H
 
-// #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/GenericCycleInfo.h"
-// #include "llvm/ADT/SmallPtrSet.h"
-// #include "llvm/ADT/Uniformity.h"
-// #include "llvm/Analysis/LegacyDivergenceAnalysis.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
@@ -39,6 +32,7 @@ public:
   using FunctionT = typename ContextT::FunctionT;
   using ValueRefT = typename ContextT::ValueRefT;
   using ConstValueRefT = typename ContextT::ConstValueRefT;
+  using UseT = typename ContextT::UseT;
   using InstructionT = typename ContextT::InstructionT;
   using DominatorTreeT = typename ContextT::DominatorTreeT;
   using ThisT = GenericUniformityInfo<ContextT>;
@@ -46,24 +40,39 @@ public:
   using CycleInfoT = GenericCycleInfo<ContextT>;
   using CycleT = typename CycleInfoT::CycleT;
 
-  GenericUniformityInfo(FunctionT &F, const DominatorTreeT &DT,
-                        const CycleInfoT &CI,
+  GenericUniformityInfo(const DominatorTreeT &DT, const CycleInfoT &CI,
                         const TargetTransformInfo *TTI = nullptr);
   GenericUniformityInfo() = default;
   GenericUniformityInfo(GenericUniformityInfo &&) = default;
   GenericUniformityInfo &operator=(GenericUniformityInfo &&) = default;
 
+  void compute() {
+    DA->initialize();
+    DA->compute();
+  }
+
   /// Whether any divergence was detected.
   bool hasDivergence() const;
 
   /// The GPU kernel this analysis result is for
-  const FunctionT &getFunction() const { return *F; }
+  const FunctionT &getFunction() const;
 
   /// Whether \p V is divergent at its definition.
   bool isDivergent(ConstValueRefT V) const;
 
   /// Whether \p V is uniform/non-divergent.
   bool isUniform(ConstValueRefT V) const { return !isDivergent(V); }
+
+  // Similar queries for InstructionT. These accept a pointer argument so that
+  // in LLVM IR, they overload the equivalent queries for Value*. For example,
+  // if querying whether a BranchInst is divergent, it should not be treated as
+  // a Value in LLVM IR.
+  bool isUniform(const InstructionT *I) const { return !isDivergent(I); };
+  bool isDivergent(const InstructionT *I) const;
+
+  /// \brief Whether \p U is divergent. Uses of a uniform value can be
+  /// divergent.
+  bool isDivergentUse(const UseT &U) const;
 
   bool hasDivergentTerminator(const BlockT &B);
 
@@ -72,7 +81,6 @@ public:
 private:
   using ImplT = GenericUniformityAnalysisImpl<ContextT>;
 
-  FunctionT *F;
   std::unique_ptr<ImplT, GenericUniformityAnalysisImplDeleter<ImplT>> DA;
 
   GenericUniformityInfo(const GenericUniformityInfo &) = delete;

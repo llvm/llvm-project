@@ -15,14 +15,14 @@ namespace objcopy {
 
 Expected<const COFFConfig &> ConfigManager::getCOFFConfig() const {
   if (!Common.SplitDWO.empty() || !Common.SymbolsPrefix.empty() ||
-      !Common.AllocSectionsPrefix.empty() || !Common.DumpSection.empty() ||
-      !Common.KeepSection.empty() || !Common.SymbolsToGlobalize.empty() ||
-      !Common.SymbolsToKeep.empty() || !Common.SymbolsToLocalize.empty() ||
-      !Common.SymbolsToWeaken.empty() || !Common.SymbolsToKeepGlobal.empty() ||
-      !Common.SectionsToRename.empty() || !Common.SetSectionAlignment.empty() ||
-      !Common.SetSectionType.empty() || Common.ExtractDWO ||
-      Common.PreserveDates || Common.StripDWO || Common.StripNonAlloc ||
-      Common.StripSections || Common.Weaken || Common.DecompressDebugSections ||
+      !Common.AllocSectionsPrefix.empty() || !Common.KeepSection.empty() ||
+      !Common.SymbolsToGlobalize.empty() || !Common.SymbolsToKeep.empty() ||
+      !Common.SymbolsToLocalize.empty() || !Common.SymbolsToWeaken.empty() ||
+      !Common.SymbolsToKeepGlobal.empty() || !Common.SectionsToRename.empty() ||
+      !Common.SetSectionAlignment.empty() || !Common.SetSectionType.empty() ||
+      Common.ExtractDWO || Common.PreserveDates || Common.StripDWO ||
+      Common.StripNonAlloc || Common.StripSections || Common.Weaken ||
+      Common.DecompressDebugSections ||
       Common.DiscardMode == DiscardType::Locals || !Common.SymbolsToAdd.empty())
     return createStringError(llvm::errc::invalid_argument,
                              "option is not supported for COFF");

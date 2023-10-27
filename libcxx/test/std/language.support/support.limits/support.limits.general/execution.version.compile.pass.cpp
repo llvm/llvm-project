@@ -65,14 +65,14 @@
 #   endif
 # endif
 
-#elif TEST_STD_VER > 20
+#elif TEST_STD_VER == 23
 
 # if !defined(_LIBCPP_VERSION)
 #   ifndef __cpp_lib_execution
-#     error "__cpp_lib_execution should be defined in c++2b"
+#     error "__cpp_lib_execution should be defined in c++23"
 #   endif
 #   if __cpp_lib_execution != 201902L
-#     error "__cpp_lib_execution should have the value 201902L in c++2b"
+#     error "__cpp_lib_execution should have the value 201902L in c++23"
 #   endif
 # else // _LIBCPP_VERSION
 #   ifdef __cpp_lib_execution
@@ -80,5 +80,20 @@
 #   endif
 # endif
 
-#endif // TEST_STD_VER > 20
+#elif TEST_STD_VER > 23
+
+# if !defined(_LIBCPP_VERSION)
+#   ifndef __cpp_lib_execution
+#     error "__cpp_lib_execution should be defined in c++26"
+#   endif
+#   if __cpp_lib_execution != 201902L
+#     error "__cpp_lib_execution should have the value 201902L in c++26"
+#   endif
+# else // _LIBCPP_VERSION
+#   ifdef __cpp_lib_execution
+#     error "__cpp_lib_execution should not be defined because it is unimplemented in libc++!"
+#   endif
+# endif
+
+#endif // TEST_STD_VER > 23
 

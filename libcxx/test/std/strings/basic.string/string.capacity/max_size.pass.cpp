@@ -26,69 +26,73 @@
 #include "min_allocator.h"
 
 template <class S>
-TEST_CONSTEXPR_CXX20 void
-test1(const S& s)
-{
-    S s2(s);
-    const size_t sz = s2.max_size() - 1;
-    try { s2.resize(sz, 'x'); }
-    catch ( const std::bad_alloc & ) { return ; }
-    assert ( s2.size() ==  sz );
+TEST_CONSTEXPR_CXX20 void test_resize_max_size_minus_1(const S& s) {
+  S s2(s);
+  const std::size_t sz = s2.max_size() - 1;
+  try {
+    s2.resize(sz, 'x');
+  } catch (const std::bad_alloc&) {
+    return;
+  }
+  assert(s2.size() == sz);
 }
 
 template <class S>
-TEST_CONSTEXPR_CXX20 void
-test2(const S& s)
-{
-    S s2(s);
-    const size_t sz = s2.max_size();
-    try { s2.resize(sz, 'x'); }
-    catch ( const std::bad_alloc & ) { return ; }
-    assert ( s.size() ==  sz );
-}
-
-template <class S>
-TEST_CONSTEXPR_CXX20 void
-test(const S& s)
-{
-    assert(s.max_size() >= s.size());
-    test1(s);
-    test2(s);
+TEST_CONSTEXPR_CXX20 void test_resize_max_size(const S& s) {
+  S s2(s);
+  const std::size_t sz = s2.max_size();
+  try {
+    s2.resize(sz, 'x');
+  } catch (const std::bad_alloc&) {
+    return;
+  }
+  assert(s.size() == sz);
 }
 
 template <class S>
 TEST_CONSTEXPR_CXX20 void test_string() {
-  test(S());
-  test(S("123"));
-  test(S("12345678901234567890123456789012345678901234567890"));
+  {
+    S s;
+    assert(s.max_size() >= s.size());
+    assert(s.max_size() > 0);
+    if (!TEST_IS_CONSTANT_EVALUATED) {
+      test_resize_max_size_minus_1(s);
+      test_resize_max_size(s);
+    }
+  }
+  {
+    S s("123");
+    assert(s.max_size() >= s.size());
+    assert(s.max_size() > 0);
+    if (!TEST_IS_CONSTANT_EVALUATED) {
+      test_resize_max_size_minus_1(s);
+      test_resize_max_size(s);
+    }
+  }
+  {
+    S s("12345678901234567890123456789012345678901234567890");
+    assert(s.max_size() >= s.size());
+    assert(s.max_size() > 0);
+    if (!TEST_IS_CONSTANT_EVALUATED) {
+      test_resize_max_size_minus_1(s);
+      test_resize_max_size(s);
+    }
+  }
 }
 
 TEST_CONSTEXPR_CXX20 bool test() {
   test_string<std::string>();
 #if TEST_STD_VER >= 11
-  test_string<std::basic_string<char, std::char_traits<char>, min_allocator<char>>>();
+  test_string<std::basic_string<char, std::char_traits<char>, min_allocator<char> > >();
 #endif
 
   return true;
 }
 
-#if TEST_STD_VER > 17
-constexpr bool test_constexpr() {
-  std::string str;
-
-  size_t size = str.max_size();
-  assert(size > 0);
-
-  return true;
-}
-#endif
-
-int main(int, char**)
-{
+int main(int, char**) {
   test();
-#if TEST_STD_VER > 17
-  test_constexpr();
-  static_assert(test_constexpr());
+#if TEST_STD_VER >= 20
+  static_assert(test());
 #endif
 
   return 0;

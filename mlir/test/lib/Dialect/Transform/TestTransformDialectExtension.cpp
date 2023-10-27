@@ -16,7 +16,10 @@
 #include "mlir/Dialect/PDL/IR/PDL.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
+#include "mlir/Dialect/Transform/IR/TransformOps.h"
+#include "mlir/Dialect/Transform/PDLExtension/PDLExtensionOps.h"
 #include "mlir/IR/OpImplementation.h"
+#include "mlir/IR/PatternMatch.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Compiler.h"
@@ -42,7 +45,8 @@ public:
     return llvm::StringLiteral("transform.test_transform_op");
   }
 
-  DiagnosedSilenceableFailure apply(transform::TransformResults &results,
+  DiagnosedSilenceableFailure apply(transform::TransformRewriter &rewriter,
+                                    transform::TransformResults &results,
                                     transform::TransformState &state) {
     InFlightDiagnostic remark = emitRemark() << "applying transformation";
     if (Attribute message = getMessage())
@@ -51,7 +55,9 @@ public:
     return DiagnosedSilenceableFailure::success();
   }
 
-  Attribute getMessage() { return getOperation()->getAttr("message"); }
+  Attribute getMessage() {
+    return getOperation()->getDiscardableAttr("message");
+  }
 
   static ParseResult parse(OpAsmParser &parser, OperationState &state) {
     StringAttr message;
@@ -95,7 +101,8 @@ public:
         "transform.test_transform_unrestricted_op_no_interface");
   }
 
-  DiagnosedSilenceableFailure apply(transform::TransformResults &results,
+  DiagnosedSilenceableFailure apply(transform::TransformRewriter &rewriter,
+                                    transform::TransformResults &results,
                                     transform::TransformState &state) {
     return DiagnosedSilenceableFailure::success();
   }
@@ -106,64 +113,191 @@ public:
 } // namespace
 
 DiagnosedSilenceableFailure
-mlir::test::TestProduceParamOrForwardOperandOp::apply(
+mlir::test::TestProduceSelfHandleOrForwardOperandOp::apply(
+    transform::TransformRewriter &rewriter,
     transform::TransformResults &results, transform::TransformState &state) {
   if (getOperation()->getNumOperands() != 0) {
-    results.set(getResult().cast<OpResult>(),
-                getOperation()->getOperand(0).getDefiningOp());
+    results.set(cast<OpResult>(getResult()),
+                {getOperation()->getOperand(0).getDefiningOp()});
   } else {
-    results.set(getResult().cast<OpResult>(),
-                reinterpret_cast<Operation *>(*getParameter()));
+    results.set(cast<OpResult>(getResult()), {getOperation()});
   }
   return DiagnosedSilenceableFailure::success();
 }
 
-LogicalResult mlir::test::TestProduceParamOrForwardOperandOp::verify() {
-  if (getParameter().has_value() ^ (getNumOperands() != 1))
-    return emitOpError() << "expects either a parameter or an operand";
-  return success();
+void mlir::test::TestProduceSelfHandleOrForwardOperandOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  if (getOperand())
+    transform::onlyReadsHandle(getOperand(), effects);
+  transform::producesHandle(getRes(), effects);
 }
 
 DiagnosedSilenceableFailure
-mlir::test::TestConsumeOperand::apply(transform::TransformResults &results,
+mlir::test::TestProduceValueHandleToSelfOperand::apply(
+    transform::TransformRewriter &rewriter,
+    transform::TransformResults &results, transform::TransformState &state) {
+  results.setValues(llvm::cast<OpResult>(getOut()), {getIn()});
+  return DiagnosedSilenceableFailure::success();
+}
+
+void mlir::test::TestProduceValueHandleToSelfOperand::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  transform::onlyReadsHandle(getIn(), effects);
+  transform::producesHandle(getOut(), effects);
+  transform::onlyReadsPayload(effects);
+}
+
+DiagnosedSilenceableFailure
+mlir::test::TestProduceValueHandleToResult::applyToOne(
+    transform::TransformRewriter &rewriter, Operation *target,
+    transform::ApplyToEachResultList &results,
+    transform::TransformState &state) {
+  if (target->getNumResults() <= getNumber())
+    return emitSilenceableError() << "payload has no result #" << getNumber();
+  results.push_back(target->getResult(getNumber()));
+  return DiagnosedSilenceableFailure::success();
+}
+
+void mlir::test::TestProduceValueHandleToResult::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  transform::onlyReadsHandle(getIn(), effects);
+  transform::producesHandle(getOut(), effects);
+  transform::onlyReadsPayload(effects);
+}
+
+DiagnosedSilenceableFailure
+mlir::test::TestProduceValueHandleToArgumentOfParentBlock::applyToOne(
+    transform::TransformRewriter &rewriter, Operation *target,
+    transform::ApplyToEachResultList &results,
+    transform::TransformState &state) {
+  if (!target->getBlock())
+    return emitSilenceableError() << "payload has no parent block";
+  if (target->getBlock()->getNumArguments() <= getNumber())
+    return emitSilenceableError()
+           << "parent of the payload has no argument #" << getNumber();
+  results.push_back(target->getBlock()->getArgument(getNumber()));
+  return DiagnosedSilenceableFailure::success();
+}
+
+void mlir::test::TestProduceValueHandleToArgumentOfParentBlock::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  transform::onlyReadsHandle(getIn(), effects);
+  transform::producesHandle(getOut(), effects);
+  transform::onlyReadsPayload(effects);
+}
+
+bool mlir::test::TestConsumeOperand::allowsRepeatedHandleOperands() {
+  return getAllowRepeatedHandles();
+}
+
+DiagnosedSilenceableFailure
+mlir::test::TestConsumeOperand::apply(transform::TransformRewriter &rewriter,
+                                      transform::TransformResults &results,
                                       transform::TransformState &state) {
   return DiagnosedSilenceableFailure::success();
 }
 
-DiagnosedSilenceableFailure
-mlir::test::TestConsumeOperandIfMatchesParamOrFail::apply(
+void mlir::test::TestConsumeOperand::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  transform::consumesHandle(getOperand(), effects);
+  if (getSecondOperand())
+    transform::consumesHandle(getSecondOperand(), effects);
+  transform::modifiesPayload(effects);
+}
+
+DiagnosedSilenceableFailure mlir::test::TestConsumeOperandOfOpKindOrFail::apply(
+    transform::TransformRewriter &rewriter,
     transform::TransformResults &results, transform::TransformState &state) {
-  ArrayRef<Operation *> payload = state.getPayloadOps(getOperand());
-  assert(payload.size() == 1 && "expected a single target op");
-  auto value = reinterpret_cast<intptr_t>(payload[0]);
-  if (static_cast<uint64_t>(value) != getParameter()) {
+  auto payload = state.getPayloadOps(getOperand());
+  assert(llvm::hasSingleElement(payload) && "expected a single target op");
+  if ((*payload.begin())->getName().getStringRef() != getOpKind()) {
     return emitSilenceableError()
-           << "op expected the operand to be associated with " << getParameter()
-           << " got " << value;
+           << "op expected the operand to be associated a payload op of kind "
+           << getOpKind() << " got "
+           << (*payload.begin())->getName().getStringRef();
   }
 
   emitRemark() << "succeeded";
   return DiagnosedSilenceableFailure::success();
 }
 
+void mlir::test::TestConsumeOperandOfOpKindOrFail::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  transform::consumesHandle(getOperand(), effects);
+  transform::modifiesPayload(effects);
+}
+
+DiagnosedSilenceableFailure
+mlir::test::TestSucceedIfOperandOfOpKind::matchOperation(
+    Operation *op, transform::TransformResults &results,
+    transform::TransformState &state) {
+  if (op->getName().getStringRef() != getOpKind()) {
+    return emitSilenceableError()
+           << "op expected the operand to be associated with a payload op of "
+              "kind "
+           << getOpKind() << " got " << op->getName().getStringRef();
+  }
+  return DiagnosedSilenceableFailure::success();
+}
+
+void mlir::test::TestSucceedIfOperandOfOpKind::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  transform::onlyReadsHandle(getOperand(), effects);
+  transform::onlyReadsPayload(effects);
+}
+
 DiagnosedSilenceableFailure mlir::test::TestPrintRemarkAtOperandOp::apply(
+    transform::TransformRewriter &rewriter,
     transform::TransformResults &results, transform::TransformState &state) {
-  ArrayRef<Operation *> payload = state.getPayloadOps(getOperand());
+  auto payload = state.getPayloadOps(getOperand());
   for (Operation *op : payload)
     op->emitRemark() << getMessage();
 
   return DiagnosedSilenceableFailure::success();
 }
 
-DiagnosedSilenceableFailure
-mlir::test::TestAddTestExtensionOp::apply(transform::TransformResults &results,
-                                          transform::TransformState &state) {
+void mlir::test::TestPrintRemarkAtOperandOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  transform::onlyReadsHandle(getOperand(), effects);
+  transform::onlyReadsPayload(effects);
+}
+
+DiagnosedSilenceableFailure mlir::test::TestPrintRemarkAtOperandValue::apply(
+    transform::TransformRewriter &rewriter,
+    transform::TransformResults &results, transform::TransformState &state) {
+  for (Value value : state.getPayloadValues(getIn())) {
+    std::string note;
+    llvm::raw_string_ostream os(note);
+    if (auto arg = llvm::dyn_cast<BlockArgument>(value)) {
+      os << "a block argument #" << arg.getArgNumber() << " in block #"
+         << std::distance(arg.getOwner()->getParent()->begin(),
+                          arg.getOwner()->getIterator())
+         << " in region #" << arg.getOwner()->getParent()->getRegionNumber();
+    } else {
+      os << "an op result #" << llvm::cast<OpResult>(value).getResultNumber();
+    }
+    InFlightDiagnostic diag = ::emitRemark(value.getLoc()) << getMessage();
+    diag.attachNote() << "value handle points to " << os.str();
+  }
+  return DiagnosedSilenceableFailure::success();
+}
+
+void mlir::test::TestPrintRemarkAtOperandValue::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  transform::onlyReadsHandle(getIn(), effects);
+  transform::onlyReadsPayload(effects);
+}
+
+DiagnosedSilenceableFailure mlir::test::TestAddTestExtensionOp::apply(
+    transform::TransformRewriter &rewriter,
+    transform::TransformResults &results, transform::TransformState &state) {
   state.addExtension<TestTransformStateExtension>(getMessageAttr());
   return DiagnosedSilenceableFailure::success();
 }
 
 DiagnosedSilenceableFailure
 mlir::test::TestCheckIfTestExtensionPresentOp::apply(
+    transform::TransformRewriter &rewriter,
     transform::TransformResults &results, transform::TransformState &state) {
   auto *extension = state.getExtension<TestTransformStateExtension>();
   if (!extension) {
@@ -187,34 +321,52 @@ mlir::test::TestCheckIfTestExtensionPresentOp::apply(
   return DiagnosedSilenceableFailure::success();
 }
 
+void mlir::test::TestCheckIfTestExtensionPresentOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  transform::onlyReadsHandle(getOperand(), effects);
+  transform::onlyReadsPayload(effects);
+}
+
 DiagnosedSilenceableFailure mlir::test::TestRemapOperandPayloadToSelfOp::apply(
+    transform::TransformRewriter &rewriter,
     transform::TransformResults &results, transform::TransformState &state) {
   auto *extension = state.getExtension<TestTransformStateExtension>();
   if (!extension)
     return emitDefiniteFailure("TestTransformStateExtension missing");
 
-  if (failed(extension->updateMapping(state.getPayloadOps(getOperand()).front(),
-                                      getOperation())))
+  if (failed(extension->updateMapping(
+          *state.getPayloadOps(getOperand()).begin(), getOperation())))
     return DiagnosedSilenceableFailure::definiteFailure();
+  if (getNumResults() > 0)
+    results.set(cast<OpResult>(getResult(0)), {getOperation()});
   return DiagnosedSilenceableFailure::success();
 }
 
+void mlir::test::TestRemapOperandPayloadToSelfOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  transform::onlyReadsHandle(getOperand(), effects);
+  transform::producesHandle(getOut(), effects);
+  transform::onlyReadsPayload(effects);
+}
+
 DiagnosedSilenceableFailure mlir::test::TestRemoveTestExtensionOp::apply(
+    transform::TransformRewriter &rewriter,
     transform::TransformResults &results, transform::TransformState &state) {
   state.removeExtension<TestTransformStateExtension>();
   return DiagnosedSilenceableFailure::success();
 }
 
-DiagnosedSilenceableFailure
-mlir::test::TestReversePayloadOpsOp::apply(transform::TransformResults &results,
-                                           transform::TransformState &state) {
-  ArrayRef<Operation *> payloadOps = state.getPayloadOps(getTarget());
+DiagnosedSilenceableFailure mlir::test::TestReversePayloadOpsOp::apply(
+    transform::TransformRewriter &rewriter,
+    transform::TransformResults &results, transform::TransformState &state) {
+  auto payloadOps = state.getPayloadOps(getTarget());
   auto reversedOps = llvm::to_vector(llvm::reverse(payloadOps));
-  results.set(getResult().cast<OpResult>(), reversedOps);
+  results.set(llvm::cast<OpResult>(getResult()), reversedOps);
   return DiagnosedSilenceableFailure::success();
 }
 
 DiagnosedSilenceableFailure mlir::test::TestTransformOpWithRegions::apply(
+    transform::TransformRewriter &rewriter,
     transform::TransformResults &results, transform::TransformState &state) {
   return DiagnosedSilenceableFailure::success();
 }
@@ -224,6 +376,7 @@ void mlir::test::TestTransformOpWithRegions::getEffects(
 
 DiagnosedSilenceableFailure
 mlir::test::TestBranchingTransformOpTerminator::apply(
+    transform::TransformRewriter &rewriter,
     transform::TransformResults &results, transform::TransformState &state) {
   return DiagnosedSilenceableFailure::success();
 }
@@ -232,18 +385,26 @@ void mlir::test::TestBranchingTransformOpTerminator::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {}
 
 DiagnosedSilenceableFailure mlir::test::TestEmitRemarkAndEraseOperandOp::apply(
+    transform::TransformRewriter &rewriter,
     transform::TransformResults &results, transform::TransformState &state) {
   emitRemark() << getRemark();
   for (Operation *op : state.getPayloadOps(getTarget()))
-    op->erase();
+    rewriter.eraseOp(op);
 
   if (getFailAfterErase())
     return emitSilenceableError() << "silenceable error";
   return DiagnosedSilenceableFailure::success();
 }
 
+void mlir::test::TestEmitRemarkAndEraseOperandOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  transform::consumesHandle(getTarget(), effects);
+  transform::modifiesPayload(effects);
+}
+
 DiagnosedSilenceableFailure mlir::test::TestWrongNumberOfResultsOp::applyToOne(
-    Operation *target, transform::ApplyToEachResultList &results,
+    transform::TransformRewriter &rewriter, Operation *target,
+    transform::ApplyToEachResultList &results,
     transform::TransformState &state) {
   OperationState opState(target->getLoc(), "foo");
   results.push_back(OpBuilder(target).create(opState));
@@ -252,7 +413,8 @@ DiagnosedSilenceableFailure mlir::test::TestWrongNumberOfResultsOp::applyToOne(
 
 DiagnosedSilenceableFailure
 mlir::test::TestWrongNumberOfMultiResultsOp::applyToOne(
-    Operation *target, transform::ApplyToEachResultList &results,
+    transform::TransformRewriter &rewriter, Operation *target,
+    transform::ApplyToEachResultList &results,
     transform::TransformState &state) {
   static int count = 0;
   if (count++ == 0) {
@@ -264,7 +426,8 @@ mlir::test::TestWrongNumberOfMultiResultsOp::applyToOne(
 
 DiagnosedSilenceableFailure
 mlir::test::TestCorrectNumberOfMultiResultsOp::applyToOne(
-    Operation *target, transform::ApplyToEachResultList &results,
+    transform::TransformRewriter &rewriter, Operation *target,
+    transform::ApplyToEachResultList &results,
     transform::TransformState &state) {
   OperationState opState(target->getLoc(), "foo");
   results.push_back(OpBuilder(target).create(opState));
@@ -274,7 +437,8 @@ mlir::test::TestCorrectNumberOfMultiResultsOp::applyToOne(
 
 DiagnosedSilenceableFailure
 mlir::test::TestMixedNullAndNonNullResultsOp::applyToOne(
-    Operation *target, transform::ApplyToEachResultList &results,
+    transform::TransformRewriter &rewriter, Operation *target,
+    transform::ApplyToEachResultList &results,
     transform::TransformState &state) {
   OperationState opState(target->getLoc(), "foo");
   results.push_back(nullptr);
@@ -284,7 +448,8 @@ mlir::test::TestMixedNullAndNonNullResultsOp::applyToOne(
 
 DiagnosedSilenceableFailure
 mlir::test::TestMixedSuccessAndSilenceableOp::applyToOne(
-    Operation *target, transform::ApplyToEachResultList &results,
+    transform::TransformRewriter &rewriter, Operation *target,
+    transform::ApplyToEachResultList &results,
     transform::TransformState &state) {
   if (target->hasAttr("target_me"))
     return DiagnosedSilenceableFailure::success();
@@ -293,10 +458,11 @@ mlir::test::TestMixedSuccessAndSilenceableOp::applyToOne(
 
 DiagnosedSilenceableFailure
 mlir::test::TestPrintNumberOfAssociatedPayloadIROps::apply(
+    transform::TransformRewriter &rewriter,
     transform::TransformResults &results, transform::TransformState &state) {
   if (!getHandle())
     emitRemark() << 0;
-  emitRemark() << state.getPayloadOps(getHandle()).size();
+  emitRemark() << llvm::range_size(state.getPayloadOps(getHandle()));
   return DiagnosedSilenceableFailure::success();
 }
 
@@ -306,10 +472,49 @@ void mlir::test::TestPrintNumberOfAssociatedPayloadIROps::getEffects(
 }
 
 DiagnosedSilenceableFailure
-mlir::test::TestCopyPayloadOp::apply(transform::TransformResults &results,
-                                     transform::TransformState &state) {
-  results.set(getCopy().cast<OpResult>(), state.getPayloadOps(getHandle()));
+mlir::test::TestPrintNumberOfAssociatedPayloadIRValues::apply(
+    transform::TransformRewriter &rewriter,
+    transform::TransformResults &results, transform::TransformState &state) {
+  if (!getValueHandle())
+    emitRemark() << 0;
+  emitRemark() << llvm::range_size(state.getPayloadValues(getValueHandle()));
   return DiagnosedSilenceableFailure::success();
+}
+
+void mlir::test::TestPrintNumberOfAssociatedPayloadIRValues::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  transform::onlyReadsHandle(getValueHandle(), effects);
+}
+
+DiagnosedSilenceableFailure
+mlir::test::TestPrintNumberOfAssociatedPayloadIRParams::apply(
+    transform::TransformRewriter &rewriter,
+    transform::TransformResults &results, transform::TransformState &state) {
+  if (!getParam())
+    emitRemark() << 0;
+  emitRemark() << llvm::range_size(state.getParams(getParam()));
+  return DiagnosedSilenceableFailure::success();
+}
+
+void mlir::test::TestPrintNumberOfAssociatedPayloadIRParams::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  transform::onlyReadsHandle(getParam(), effects);
+}
+
+DiagnosedSilenceableFailure
+mlir::test::TestCopyPayloadOp::apply(transform::TransformRewriter &rewriter,
+                                     transform::TransformResults &results,
+                                     transform::TransformState &state) {
+  results.set(llvm::cast<OpResult>(getCopy()),
+              state.getPayloadOps(getHandle()));
+  return DiagnosedSilenceableFailure::success();
+}
+
+void mlir::test::TestCopyPayloadOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  transform::onlyReadsHandle(getHandle(), effects);
+  transform::producesHandle(getCopy(), effects);
+  transform::onlyReadsPayload(effects);
 }
 
 DiagnosedSilenceableFailure mlir::transform::TestDialectOpType::checkPayload(
@@ -330,7 +535,7 @@ DiagnosedSilenceableFailure mlir::transform::TestDialectOpType::checkPayload(
 DiagnosedSilenceableFailure mlir::transform::TestDialectParamType::checkPayload(
     Location loc, ArrayRef<Attribute> payload) const {
   for (Attribute attr : payload) {
-    auto integerAttr = attr.dyn_cast<IntegerAttr>();
+    auto integerAttr = llvm::dyn_cast<IntegerAttr>(attr);
     if (integerAttr && integerAttr.getType().isSignlessInteger(32))
       continue;
     return emitSilenceableError(loc)
@@ -347,6 +552,7 @@ void mlir::test::TestReportNumberOfTrackedHandlesNestedUnder::getEffects(
 
 DiagnosedSilenceableFailure
 mlir::test::TestReportNumberOfTrackedHandlesNestedUnder::apply(
+    transform::TransformRewriter &rewriter,
     transform::TransformResults &results, transform::TransformState &state) {
   int64_t count = 0;
   for (Operation *op : state.getPayloadOps(getTarget())) {
@@ -363,26 +569,38 @@ mlir::test::TestReportNumberOfTrackedHandlesNestedUnder::apply(
 void mlir::test::TestPrintParamOp::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
   transform::onlyReadsHandle(getParam(), effects);
+  if (getAnchor())
+    transform::onlyReadsHandle(getAnchor(), effects);
+  transform::onlyReadsPayload(effects);
 }
 
 DiagnosedSilenceableFailure
-mlir::test::TestPrintParamOp::apply(transform::TransformResults &results,
+mlir::test::TestPrintParamOp::apply(transform::TransformRewriter &rewriter,
+                                    transform::TransformResults &results,
                                     transform::TransformState &state) {
   std::string str;
   llvm::raw_string_ostream os(str);
+  if (getMessage())
+    os << *getMessage() << " ";
   llvm::interleaveComma(state.getParams(getParam()), os);
-  auto diag = emitRemark() << os.str();
+  if (!getAnchor()) {
+    emitRemark() << os.str();
+    return DiagnosedSilenceableFailure::success();
+  }
+  for (Operation *payload : state.getPayloadOps(getAnchor()))
+    ::mlir::emitRemark(payload->getLoc()) << os.str();
   return DiagnosedSilenceableFailure::success();
 }
 
 DiagnosedSilenceableFailure
-mlir::test::TestAddToParamOp::apply(transform::TransformResults &results,
+mlir::test::TestAddToParamOp::apply(transform::TransformRewriter &rewriter,
+                                    transform::TransformResults &results,
                                     transform::TransformState &state) {
   SmallVector<uint32_t> values(/*Size=*/1, /*Value=*/0);
   if (Value param = getParam()) {
     values = llvm::to_vector(
         llvm::map_range(state.getParams(param), [](Attribute attr) -> uint32_t {
-          return attr.cast<IntegerAttr>().getValue().getLimitedValue(
+          return llvm::cast<IntegerAttr>(attr).getValue().getLimitedValue(
               UINT32_MAX);
         }));
   }
@@ -392,12 +610,13 @@ mlir::test::TestAddToParamOp::apply(transform::TransformResults &results,
       llvm::map_range(values, [this, &builder](uint32_t value) -> Attribute {
         return builder.getI32IntegerAttr(value + getAddendum());
       }));
-  results.setParams(getResult().cast<OpResult>(), result);
+  results.setParams(llvm::cast<OpResult>(getResult()), result);
   return DiagnosedSilenceableFailure::success();
 }
 
 DiagnosedSilenceableFailure
 mlir::test::TestProduceParamWithNumberOfTestOps::apply(
+    transform::TransformRewriter &rewriter,
     transform::TransformResults &results, transform::TransformState &state) {
   Builder builder(getContext());
   SmallVector<Attribute> result = llvm::to_vector(
@@ -410,23 +629,16 @@ mlir::test::TestProduceParamWithNumberOfTestOps::apply(
                         });
                         return builder.getI32IntegerAttr(count);
                       }));
-  results.setParams(getResult().cast<OpResult>(), result);
+  results.setParams(llvm::cast<OpResult>(getResult()), result);
   return DiagnosedSilenceableFailure::success();
 }
 
 DiagnosedSilenceableFailure
-mlir::test::TestProduceIntegerParamWithTypeOp::apply(
-    transform::TransformResults &results, transform::TransformState &state) {
-  Attribute zero = IntegerAttr::get(getType(), 0);
-  results.setParams(getResult().cast<OpResult>(), zero);
+mlir::test::TestProduceParamOp::apply(transform::TransformRewriter &rewriter,
+                                      transform::TransformResults &results,
+                                      transform::TransformState &state) {
+  results.setParams(llvm::cast<OpResult>(getResult()), getAttr());
   return DiagnosedSilenceableFailure::success();
-}
-
-LogicalResult mlir::test::TestProduceIntegerParamWithTypeOp::verify() {
-  if (!getType().isa<IntegerType>()) {
-    return emitOpError() << "expects an integer type";
-  }
-  return success();
 }
 
 void mlir::test::TestProduceTransformParamOrForwardOperandOp::getEffects(
@@ -438,7 +650,8 @@ void mlir::test::TestProduceTransformParamOrForwardOperandOp::getEffects(
 
 DiagnosedSilenceableFailure
 mlir::test::TestProduceTransformParamOrForwardOperandOp::applyToOne(
-    Operation *target, ::transform::ApplyToEachResultList &results,
+    transform::TransformRewriter &rewriter, Operation *target,
+    ::transform::ApplyToEachResultList &results,
     ::transform::TransformState &state) {
   Builder builder(getContext());
   if (getFirstResultIsParam()) {
@@ -446,11 +659,11 @@ mlir::test::TestProduceTransformParamOrForwardOperandOp::applyToOne(
   } else if (getFirstResultIsNull()) {
     results.push_back(nullptr);
   } else {
-    results.push_back(state.getPayloadOps(getIn()).front());
+    results.push_back(*state.getPayloadOps(getIn()).begin());
   }
 
   if (getSecondResultIsHandle()) {
-    results.push_back(state.getPayloadOps(getIn()).front());
+    results.push_back(*state.getPayloadOps(getIn()).begin());
   } else {
     results.push_back(builder.getI64IntegerAttr(42));
   }
@@ -464,9 +677,17 @@ void mlir::test::TestProduceNullPayloadOp::getEffects(
 }
 
 DiagnosedSilenceableFailure mlir::test::TestProduceNullPayloadOp::apply(
+    transform::TransformRewriter &rewriter,
     transform::TransformResults &results, transform::TransformState &state) {
   SmallVector<Operation *, 1> null({nullptr});
-  results.set(getOut().cast<OpResult>(), null);
+  results.set(llvm::cast<OpResult>(getOut()), null);
+  return DiagnosedSilenceableFailure::success();
+}
+
+DiagnosedSilenceableFailure mlir::test::TestProduceEmptyPayloadOp::apply(
+    transform::TransformRewriter &rewriter,
+    transform::TransformResults &results, transform::TransformState &state) {
+  results.set(cast<OpResult>(getOut()), {});
   return DiagnosedSilenceableFailure::success();
 }
 
@@ -475,10 +696,22 @@ void mlir::test::TestProduceNullParamOp::getEffects(
   transform::producesHandle(getOut(), effects);
 }
 
-DiagnosedSilenceableFailure
-mlir::test::TestProduceNullParamOp::apply(transform::TransformResults &results,
-                                          transform::TransformState &state) {
-  results.setParams(getOut().cast<OpResult>(), Attribute());
+DiagnosedSilenceableFailure mlir::test::TestProduceNullParamOp::apply(
+    transform::TransformRewriter &rewriter,
+    transform::TransformResults &results, transform::TransformState &state) {
+  results.setParams(llvm::cast<OpResult>(getOut()), Attribute());
+  return DiagnosedSilenceableFailure::success();
+}
+
+void mlir::test::TestProduceNullValueOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  transform::producesHandle(getOut(), effects);
+}
+
+DiagnosedSilenceableFailure mlir::test::TestProduceNullValueOp::apply(
+    transform::TransformRewriter &rewriter,
+    transform::TransformResults &results, transform::TransformState &state) {
+  results.setValues(llvm::cast<OpResult>(getOut()), {Value()});
   return DiagnosedSilenceableFailure::success();
 }
 
@@ -491,12 +724,258 @@ void mlir::test::TestRequiredMemoryEffectsOp::getEffects(
     transform::producesHandle(getOut(), effects);
   else
     transform::onlyReadsHandle(getOut(), effects);
+
+  if (getModifiesPayload())
+    transform::modifiesPayload(effects);
 }
 
 DiagnosedSilenceableFailure mlir::test::TestRequiredMemoryEffectsOp::apply(
+    transform::TransformRewriter &rewriter,
     transform::TransformResults &results, transform::TransformState &state) {
-  results.set(getOut().cast<OpResult>(), state.getPayloadOps(getIn()));
+  results.set(llvm::cast<OpResult>(getOut()), state.getPayloadOps(getIn()));
   return DiagnosedSilenceableFailure::success();
+}
+
+void mlir::test::TestTrackedRewriteOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  transform::onlyReadsHandle(getIn(), effects);
+  transform::modifiesPayload(effects);
+}
+
+void mlir::test::TestDummyPayloadOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  for (OpResult result : getResults())
+    transform::producesHandle(result, effects);
+}
+
+LogicalResult mlir::test::TestDummyPayloadOp::verify() {
+  if (getFailToVerify())
+    return emitOpError() << "fail_to_verify is set";
+  return success();
+}
+
+DiagnosedSilenceableFailure
+mlir::test::TestTrackedRewriteOp::apply(transform::TransformRewriter &rewriter,
+                                        transform::TransformResults &results,
+                                        transform::TransformState &state) {
+  int64_t numIterations = 0;
+
+  // `getPayloadOps` returns an iterator that skips ops that are erased in the
+  // loop body. Replacement ops are not enumerated.
+  for (Operation *op : state.getPayloadOps(getIn())) {
+    ++numIterations;
+    (void)op;
+
+    // Erase all payload ops. The outer loop should have only one iteration.
+    for (Operation *op : state.getPayloadOps(getIn())) {
+      rewriter.setInsertionPoint(op);
+      if (op->hasAttr("erase_me")) {
+        rewriter.eraseOp(op);
+        continue;
+      }
+      if (!op->hasAttr("replace_me")) {
+        continue;
+      }
+
+      SmallVector<NamedAttribute> attributes;
+      attributes.emplace_back(rewriter.getStringAttr("new_op"),
+                              rewriter.getUnitAttr());
+      OperationState opState(op->getLoc(), op->getName().getIdentifier(),
+                             /*operands=*/ValueRange(),
+                             /*types=*/op->getResultTypes(), attributes);
+      Operation *newOp = rewriter.create(opState);
+      rewriter.replaceOp(op, newOp->getResults());
+    }
+  }
+
+  emitRemark() << numIterations << " iterations";
+  return DiagnosedSilenceableFailure::success();
+}
+
+namespace {
+// Test pattern to replace an operation with a new op.
+class ReplaceWithNewOp : public RewritePattern {
+public:
+  ReplaceWithNewOp(MLIRContext *context)
+      : RewritePattern(MatchAnyOpTypeTag(), /*benefit=*/1, context) {}
+
+  LogicalResult matchAndRewrite(Operation *op,
+                                PatternRewriter &rewriter) const override {
+    auto newName = op->getAttrOfType<StringAttr>("replace_with_new_op");
+    if (!newName)
+      return failure();
+    Operation *newOp = rewriter.create(
+        op->getLoc(), OperationName(newName, op->getContext()).getIdentifier(),
+        op->getOperands(), op->getResultTypes());
+    rewriter.replaceOp(op, newOp->getResults());
+    return success();
+  }
+};
+
+// Test pattern to erase an operation.
+class EraseOp : public RewritePattern {
+public:
+  EraseOp(MLIRContext *context)
+      : RewritePattern("test.erase_op", /*benefit=*/1, context) {}
+  LogicalResult matchAndRewrite(Operation *op,
+                                PatternRewriter &rewriter) const override {
+    rewriter.eraseOp(op);
+    return success();
+  }
+};
+} // namespace
+
+void mlir::test::ApplyTestPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  patterns.insert<ReplaceWithNewOp, EraseOp>(patterns.getContext());
+}
+
+void mlir::test::TestReEnterRegionOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  transform::consumesHandle(getOperands(), effects);
+  transform::modifiesPayload(effects);
+}
+
+DiagnosedSilenceableFailure
+mlir::test::TestReEnterRegionOp::apply(transform::TransformRewriter &rewriter,
+                                       transform::TransformResults &results,
+                                       transform::TransformState &state) {
+
+  SmallVector<SmallVector<transform::MappedValue>> mappings;
+  for (BlockArgument arg : getBody().front().getArguments()) {
+    mappings.emplace_back(llvm::to_vector(llvm::map_range(
+        state.getPayloadOps(getOperand(arg.getArgNumber())),
+        [](Operation *op) -> transform::MappedValue { return op; })));
+  }
+
+  for (int i = 0; i < 4; ++i) {
+    auto scope = state.make_region_scope(getBody());
+    for (BlockArgument arg : getBody().front().getArguments()) {
+      if (failed(state.mapBlockArgument(arg, mappings[arg.getArgNumber()])))
+        return DiagnosedSilenceableFailure::definiteFailure();
+    }
+    for (Operation &op : getBody().front().without_terminator()) {
+      DiagnosedSilenceableFailure diag =
+          state.applyTransform(cast<transform::TransformOpInterface>(op));
+      if (!diag.succeeded())
+        return diag;
+    }
+  }
+  return DiagnosedSilenceableFailure::success();
+}
+
+LogicalResult mlir::test::TestReEnterRegionOp::verify() {
+  if (getNumOperands() != getBody().front().getNumArguments()) {
+    return emitOpError() << "expects as many operands as block arguments";
+  }
+  return success();
+}
+
+DiagnosedSilenceableFailure mlir::test::TestNotifyPayloadOpReplacedOp::apply(
+    transform::TransformRewriter &rewriter,
+    transform::TransformResults &results, transform::TransformState &state) {
+  auto originalOps = state.getPayloadOps(getOriginal());
+  auto replacementOps = state.getPayloadOps(getReplacement());
+  if (llvm::range_size(originalOps) != llvm::range_size(replacementOps))
+    return emitSilenceableError() << "expected same number of original and "
+                                     "replacement payload operations";
+  for (const auto &[original, replacement] :
+       llvm::zip(originalOps, replacementOps)) {
+    if (failed(
+            rewriter.notifyPayloadOperationReplaced(original, replacement))) {
+      auto diag = emitSilenceableError()
+                  << "unable to replace payload op in transform mapping";
+      diag.attachNote(original->getLoc()) << "original payload op";
+      diag.attachNote(replacement->getLoc()) << "replacement payload op";
+      return diag;
+    }
+  }
+  return DiagnosedSilenceableFailure::success();
+}
+
+void mlir::test::TestNotifyPayloadOpReplacedOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  transform::onlyReadsHandle(getOriginal(), effects);
+  transform::onlyReadsHandle(getReplacement(), effects);
+}
+
+DiagnosedSilenceableFailure mlir::test::TestProduceInvalidIR::applyToOne(
+    transform::TransformRewriter &rewriter, Operation *target,
+    transform::ApplyToEachResultList &results,
+    transform::TransformState &state) {
+  // Provide some IR that does not verify.
+  rewriter.setInsertionPointToStart(&target->getRegion(0).front());
+  rewriter.create<TestDummyPayloadOp>(target->getLoc(), TypeRange(),
+                                      ValueRange(), /*failToVerify=*/true);
+  return DiagnosedSilenceableFailure::success();
+}
+
+void mlir::test::TestProduceInvalidIR::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  transform::onlyReadsHandle(getTarget(), effects);
+  transform::modifiesPayload(effects);
+}
+
+namespace {
+/// Test conversion pattern that replaces ops with the "replace_with_new_op"
+/// attribute with "test.new_op".
+class ReplaceWithNewOpConversion : public ConversionPattern {
+public:
+  ReplaceWithNewOpConversion(TypeConverter &typeConverter, MLIRContext *context)
+      : ConversionPattern(typeConverter, RewritePattern::MatchAnyOpTypeTag(),
+                          /*benefit=*/1, context) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const override {
+    if (!op->hasAttr("replace_with_new_op"))
+      return failure();
+    SmallVector<Type> newResultTypes;
+    if (failed(getTypeConverter()->convertTypes(op->getResultTypes(),
+                                                newResultTypes)))
+      return failure();
+    Operation *newOp = rewriter.create(
+        op->getLoc(),
+        OperationName("test.new_op", op->getContext()).getIdentifier(),
+        operands, newResultTypes);
+    rewriter.replaceOp(op, newOp->getResults());
+    return success();
+  }
+};
+} // namespace
+
+void mlir::test::ApplyTestConversionPatternsOp::populatePatterns(
+    TypeConverter &typeConverter, RewritePatternSet &patterns) {
+  patterns.insert<ReplaceWithNewOpConversion>(typeConverter,
+                                              patterns.getContext());
+}
+
+namespace {
+/// Test type converter that converts tensor types to memref types.
+class TestTypeConverter : public TypeConverter {
+public:
+  TestTypeConverter() {
+    addConversion([](Type t) { return t; });
+    addConversion([](RankedTensorType type) -> Type {
+      return MemRefType::get(type.getShape(), type.getElementType());
+    });
+    auto unrealizedCastConverter = [&](OpBuilder &builder, Type resultType,
+                                       ValueRange inputs,
+                                       Location loc) -> std::optional<Value> {
+      if (inputs.size() != 1)
+        return std::nullopt;
+      return builder.create<UnrealizedConversionCastOp>(loc, resultType, inputs)
+          .getResult(0);
+    };
+    addSourceMaterialization(unrealizedCastConverter);
+    addTargetMaterialization(unrealizedCastConverter);
+  }
+};
+} // namespace
+
+std::unique_ptr<::mlir::TypeConverter>
+mlir::test::TestTypeConverterOp::getTypeConverter() {
+  return std::make_unique<TestTypeConverter>();
 }
 
 namespace {
@@ -520,6 +999,23 @@ public:
 #define GET_TYPEDEF_LIST
 #include "TestTransformDialectExtensionTypes.cpp.inc"
         >();
+
+    auto verboseConstraint = [](PatternRewriter &rewriter,
+                                ArrayRef<PDLValue> pdlValues) {
+      for (const PDLValue &pdlValue : pdlValues) {
+        if (Operation *op = pdlValue.dyn_cast<Operation *>()) {
+          op->emitWarning() << "from PDL constraint";
+        }
+      }
+      return success();
+    };
+
+    addDialectDataInitializer<transform::PDLMatchHooks>(
+        [&](transform::PDLMatchHooks &hooks) {
+          llvm::StringMap<PDLConstraintFunction> constraints;
+          constraints.try_emplace("verbose_constraint", verboseConstraint);
+          hooks.mergeInPDLMatchHooks(std::move(constraints));
+        });
   }
 };
 } // namespace

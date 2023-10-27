@@ -96,7 +96,7 @@ subroutine C939_C942a_C945b(xsrc1a, xsrc1c, xsrc0, xsrc2a, xsrc2c, pos)
 
  ! Test the check is not influenced by SOURCE
  !ERROR: The number of shape specifications, when they appear, must match the rank of allocatable object
- allocate(a1%x(5, 4, 3), SOURCE=xsrc2a(1:5, 1:4, 1:3))
+ allocate(a1%x(5, 4, 3), SOURCE=xsrc2a(4:8, 1:4, 1:3))
  !ERROR: The number of shape specifications, when they appear, must match the rank of allocatable object
  allocate(x2(5), MOLD=xsrc1a(1:5))
  !ERROR: The number of shape specifications, when they appear, must match the rank of allocatable object

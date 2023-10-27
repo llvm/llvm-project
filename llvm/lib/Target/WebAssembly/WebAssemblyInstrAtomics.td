@@ -192,16 +192,17 @@ multiclass AtomicStore<WebAssemblyRegClass rc, string name, int atomic_op> {
 defm ATOMIC_STORE_I32 : AtomicStore<I32, "i32.atomic.store", 0x17>;
 defm ATOMIC_STORE_I64 : AtomicStore<I64, "i64.atomic.store", 0x18>;
 
-// We need an 'atomic' version of store patterns because store and atomic_store
-// nodes have different operand orders:
-// store: (store $val, $ptr)
-// atomic_store: (store $ptr, $val)
+// We used to need an 'atomic' version of store patterns because store and atomic_store
+// nodes have different operand orders.
+//
+// TODO: This is no longer true and atomic_store and store patterns
+// can be unified.
 
 multiclass AStorePat<ValueType ty, PatFrag kind, string inst> {
-  def : Pat<(kind (AddrOps32 offset32_op:$offset, I32:$addr), ty:$val),
+  def : Pat<(kind ty:$val, (AddrOps32 offset32_op:$offset, I32:$addr)),
             (!cast<NI>(inst#_A32) 0, $offset, $addr, $val)>,
         Requires<[HasAddr32, HasAtomics]>;
-  def : Pat<(kind (AddrOps64 offset64_op:$offset, I64:$addr), ty:$val),
+  def : Pat<(kind ty:$val, (AddrOps64 offset64_op:$offset, I64:$addr)),
             (!cast<NI>(inst#_A64) 0, $offset, $addr, $val)>,
         Requires<[HasAddr64, HasAtomics]>;
 }
@@ -221,8 +222,8 @@ defm ATOMIC_STORE32_I64 : AtomicStore<I64, "i64.atomic.store32", 0x1d>;
 // instructions, we just need to match bare atomic stores. On the other hand,
 // truncating stores from i64 values are once truncated to i32 first.
 class trunc_astore_64<PatFrag kind> :
-  PatFrag<(ops node:$addr, node:$val),
-          (kind node:$addr, (i32 (trunc (i64 node:$val))))>;
+  PatFrag<(ops node:$val, node:$addr),
+          (kind (i32 (trunc (i64 node:$val))), node:$addr)>;
 def trunc_astore_8_64 : trunc_astore_64<atomic_store_8>;
 def trunc_astore_16_64 : trunc_astore_64<atomic_store_16>;
 def trunc_astore_32_64 : trunc_astore_64<atomic_store_32>;

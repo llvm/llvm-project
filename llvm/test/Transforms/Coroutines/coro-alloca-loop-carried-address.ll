@@ -7,7 +7,6 @@
 define void @foo() presplitcoroutine {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[STACKVAR0:%.*]] = alloca i64, align 8
 ; CHECK-NEXT:    [[ID:%.*]] = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr @foo.resumers)
 ; CHECK-NEXT:    [[ALLOC:%.*]] = call ptr @malloc(i64 40)
 ; CHECK-NEXT:    [[VFRAME:%.*]] = call noalias nonnull ptr @llvm.coro.begin(token [[ID]], ptr [[ALLOC]])
@@ -69,7 +68,7 @@ loop:
   ]
 
 exit:
-  call i1 @llvm.coro.end(ptr null, i1 false)
+  call i1 @llvm.coro.end(ptr null, i1 false, token none)
   ret void
 }
 
@@ -81,6 +80,6 @@ declare i64 @llvm.coro.size.i64()
 declare ptr @llvm.coro.begin(token, ptr writeonly)
 declare token @llvm.coro.save(ptr)
 declare i8 @llvm.coro.suspend(token, i1)
-declare i1 @llvm.coro.end(ptr, i1)
+declare i1 @llvm.coro.end(ptr, i1, token)
 declare void @llvm.lifetime.start(i64, ptr nocapture)
 declare void @llvm.lifetime.end(i64, ptr nocapture)

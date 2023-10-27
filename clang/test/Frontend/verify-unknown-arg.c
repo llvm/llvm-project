@@ -2,5 +2,5 @@
 
 // expected-no-diagnostics
 
-//      CHECK: error: 'error' diagnostics seen but not expected:
+//      CHECK: error: 'expected-error' diagnostics seen but not expected:
 // CHECK-NEXT: (frontend): unknown argument: '-asdf'

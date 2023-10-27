@@ -17,10 +17,10 @@ kernel void test(
     global void *v,
     global struct packed *p) {
 // CHECK-LABEL: spir_kernel void @test(
-// CHECK-SAME: ptr nocapture noundef align 4 %i32,
-// CHECK-SAME: ptr nocapture noundef align 8 %i64,
-// CHECK-SAME: ptr nocapture noundef align 16 %v4i32,
-// CHECK-SAME: ptr nocapture noundef align 8 %v2f32,
-// CHECK-SAME: ptr nocapture noundef %v,
-// CHECK-SAME: ptr nocapture noundef align 1 %p)
+// CHECK-SAME: ptr nocapture noundef readnone align 4 %i32,
+// CHECK-SAME: ptr nocapture noundef readnone align 8 %i64,
+// CHECK-SAME: ptr nocapture noundef readnone align 16 %v4i32,
+// CHECK-SAME: ptr nocapture noundef readnone align 8 %v2f32,
+// CHECK-SAME: ptr nocapture noundef readnone %v,
+// CHECK-SAME: ptr nocapture noundef readnone align 1 %p)
 }

@@ -1,7 +1,7 @@
-// RUN: %clang -### -fdebug-prefix-map=old %s 2>&1 | FileCheck %s -check-prefix CHECK-DEBUG-INVALID
-// RUN: %clang -### -fmacro-prefix-map=old %s 2>&1 | FileCheck %s -check-prefix CHECK-MACRO-INVALID
-// RUN: %clang -### -fcoverage-prefix-map=old %s 2>&1 | FileCheck %s -check-prefix CHECK-COVERAGE-INVALID
-// RUN: %clang -### -ffile-prefix-map=old %s 2>&1 | FileCheck %s -check-prefix CHECK-FILE-INVALID
+// RUN: not %clang -### -fdebug-prefix-map=old %s 2>&1 | FileCheck %s -check-prefix CHECK-DEBUG-INVALID
+// RUN: not %clang -### -fmacro-prefix-map=old %s 2>&1 | FileCheck %s -check-prefix CHECK-MACRO-INVALID
+// RUN: not %clang -### -fcoverage-prefix-map=old %s 2>&1 | FileCheck %s -check-prefix CHECK-COVERAGE-INVALID
+// RUN: not %clang -### -ffile-prefix-map=old %s 2>&1 | FileCheck %s -check-prefix CHECK-FILE-INVALID
 
 // RUN: %clang -### -fdebug-prefix-map=old=new %s 2>&1 | FileCheck %s -check-prefix CHECK-DEBUG-SIMPLE
 // RUN: %clang -### -fmacro-prefix-map=old=new %s 2>&1 | FileCheck %s -check-prefix CHECK-MACRO-SIMPLE

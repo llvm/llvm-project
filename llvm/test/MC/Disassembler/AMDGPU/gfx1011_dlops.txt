@@ -1,12 +1,12 @@
-# RUN: llvm-mc -arch=amdgcn -mcpu=gfx1011 -disassemble -show-encoding < %s | FileCheck -check-prefix=GFX10 %s
-# RUN: llvm-mc -arch=amdgcn -mcpu=gfx1012 -disassemble -show-encoding < %s | FileCheck -check-prefix=GFX10 %s
-# RUN: llvm-mc -arch=amdgcn -mcpu=gfx1030 -disassemble -show-encoding < %s | FileCheck -check-prefix=GFX10 %s
-# RUN: llvm-mc -arch=amdgcn -mcpu=gfx1031 -disassemble -show-encoding < %s | FileCheck -check-prefix=GFX10 %s
-# RUN: llvm-mc -arch=amdgcn -mcpu=gfx1032 -disassemble -show-encoding < %s | FileCheck -check-prefix=GFX10 %s
-# RUN: llvm-mc -arch=amdgcn -mcpu=gfx1033 -disassemble -show-encoding < %s | FileCheck -check-prefix=GFX10 %s
-# RUN: llvm-mc -arch=amdgcn -mcpu=gfx1034 -disassemble -show-encoding < %s | FileCheck -check-prefix=GFX10 %s
-# RUN: llvm-mc -arch=amdgcn -mcpu=gfx1035 -disassemble -show-encoding < %s | FileCheck -check-prefix=GFX10 %s
-# RUN: llvm-mc -arch=amdgcn -mcpu=gfx1036 -disassemble -show-encoding < %s | FileCheck -check-prefix=GFX10 %s
+# RUN: llvm-mc -triple=amdgcn -mcpu=gfx1011 -disassemble -show-encoding < %s | FileCheck -check-prefix=GFX10 %s
+# RUN: llvm-mc -triple=amdgcn -mcpu=gfx1012 -disassemble -show-encoding < %s | FileCheck -check-prefix=GFX10 %s
+# RUN: llvm-mc -triple=amdgcn -mcpu=gfx1030 -disassemble -show-encoding < %s | FileCheck -check-prefix=GFX10 %s
+# RUN: llvm-mc -triple=amdgcn -mcpu=gfx1031 -disassemble -show-encoding < %s | FileCheck -check-prefix=GFX10 %s
+# RUN: llvm-mc -triple=amdgcn -mcpu=gfx1032 -disassemble -show-encoding < %s | FileCheck -check-prefix=GFX10 %s
+# RUN: llvm-mc -triple=amdgcn -mcpu=gfx1033 -disassemble -show-encoding < %s | FileCheck -check-prefix=GFX10 %s
+# RUN: llvm-mc -triple=amdgcn -mcpu=gfx1034 -disassemble -show-encoding < %s | FileCheck -check-prefix=GFX10 %s
+# RUN: llvm-mc -triple=amdgcn -mcpu=gfx1035 -disassemble -show-encoding < %s | FileCheck -check-prefix=GFX10 %s
+# RUN: llvm-mc -triple=amdgcn -mcpu=gfx1036 -disassemble -show-encoding < %s | FileCheck -check-prefix=GFX10 %s
 
 # GFX10: v_dot2_f32_f16 v0, v1, v2, v3   ; encoding: [0x00,0x40,0x13,0xcc,0x01,0x05,0x0e,0x1c]
 0x00,0x40,0x13,0xcc,0x01,0x05,0x0e,0x1c

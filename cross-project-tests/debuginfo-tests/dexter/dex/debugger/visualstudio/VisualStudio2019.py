@@ -12,12 +12,12 @@ from dex.debugger.visualstudio.VisualStudio import VisualStudio
 class VisualStudio2019(VisualStudio):
     @classmethod
     def get_name(cls):
-        return 'Visual Studio 2019'
+        return "Visual Studio 2019"
 
     @classmethod
     def get_option_name(cls):
-        return 'vs2019'
+        return "vs2019"
 
     @property
     def _dte_version(self):
-        return 'VisualStudio.DTE.16.0'
+        return "VisualStudio.DTE.16.0"

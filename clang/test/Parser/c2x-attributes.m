@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -fdouble-square-bracket-attributes -verify %s
+// RUN: %clang_cc1 -fsyntax-only -verify %s
 // expected-no-diagnostics
 
 enum __attribute__((deprecated)) E1 : int; // ok

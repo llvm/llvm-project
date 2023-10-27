@@ -1,11 +1,11 @@
 // RUN: mlir-opt %s \
 // RUN: | mlir-opt -convert-scf-to-cf \
 // RUN: | mlir-opt -gpu-kernel-outlining \
-// RUN: | mlir-opt -pass-pipeline='builtin.module(gpu.module(strip-debuginfo,convert-gpu-to-rocdl{use-bare-ptr-memref-call-conv=true},gpu-to-hsaco{chip=%chip}))' \
-// RUN: | mlir-opt -gpu-to-llvm=use-bare-pointers-for-kernels=true \
+// RUN: | mlir-opt -pass-pipeline='builtin.module(gpu.module(strip-debuginfo,convert-gpu-to-rocdl{use-bare-ptr-memref-call-conv=true}),rocdl-attach-target{chip=%chip})' \
+// RUN: | mlir-opt -gpu-to-llvm=use-bare-pointers-for-kernels=true -gpu-module-to-binary \
 // RUN: | mlir-cpu-runner \
-// RUN:   --shared-libs=%mlir_lib_dir/libmlir_rocm_runtime%shlibext \
-// RUN:   --shared-libs=%mlir_lib_dir/libmlir_runner_utils%shlibext \
+// RUN:   --shared-libs=%mlir_rocm_runtime \
+// RUN:   --shared-libs=%mlir_runner_utils \
 // RUN:   --entry-point-result=void \
 // RUN: | FileCheck %s
 

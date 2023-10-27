@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++2b %s -verify
+// RUN: %clang_cc1 -std=c++23 %s -verify
 
 auto LL0 = [] {};
 auto LL1 = []() {};
@@ -18,7 +18,7 @@ auto L9 = []<typename T> { return true; };
 auto L10 = []<typename T> noexcept { return true; };
 auto L11 = []<typename T> -> bool { return true; };
 auto L12 = [] consteval {};
-auto L13 = []() requires true {};
+auto L13 = []() requires true {}; // expected-error{{non-templated function cannot have a requires clause}}
 auto L14 = []<auto> requires true() requires true {};
 auto L15 = []<auto> requires true noexcept {};
 auto L16 = [] [[maybe_unused]]{};

@@ -9,10 +9,10 @@
 #ifndef LLVM_LIBC_SRC_STRING_STRCASECMP_H
 #define LLVM_LIBC_SRC_STRING_STRCASECMP_H
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 int strcasecmp(const char *left, const char *right);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STRING_STRCASECMP_H

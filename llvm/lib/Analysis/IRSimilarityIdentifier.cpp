@@ -14,6 +14,7 @@
 
 #include "llvm/Analysis/IRSimilarityIdentifier.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SetOperations.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/User.h"
@@ -97,7 +98,8 @@ void IRInstructionData::setBranchSuccessors(
 
   int CurrentBlockNumber = static_cast<int>(BBNumIt->second);
 
-  for (BasicBlock *Successor : BI->successors()) {
+  for (Value *V : getBlockOperVals()) {
+    BasicBlock *Successor = cast<BasicBlock>(V);
     BBNumIt = BasicBlockToInteger.find(Successor);
     assert(BBNumIt != BasicBlockToInteger.end() &&
            "Could not find number for BasicBlock!");
@@ -106,6 +108,25 @@ void IRInstructionData::setBranchSuccessors(
     int Relative = OtherBlockNumber - CurrentBlockNumber;
     RelativeBlockLocations.push_back(Relative);
   }
+}
+
+ArrayRef<Value *> IRInstructionData::getBlockOperVals() {
+  assert((isa<BranchInst>(Inst) ||
+         isa<PHINode>(Inst)) && "Instruction must be branch or PHINode");
+  
+  if (BranchInst *BI = dyn_cast<BranchInst>(Inst))
+    return ArrayRef<Value *>(
+      std::next(OperVals.begin(), BI->isConditional() ? 1 : 0),
+      OperVals.end()
+    );
+
+  if (PHINode *PN = dyn_cast<PHINode>(Inst))
+    return ArrayRef<Value *>(
+      std::next(OperVals.begin(), PN->getNumIncomingValues()),
+      OperVals.end()
+    );
+
+  return ArrayRef<Value *>();
 }
 
 void IRInstructionData::setCalleeName(bool MatchByName) {
@@ -158,7 +179,6 @@ void IRInstructionData::setPHIPredecessors(
     int OtherBlockNumber = static_cast<int>(BBNumIt->second);
 
     int Relative = OtherBlockNumber - CurrentBlockNumber;
-    RelativeBlockLocations.push_back(Relative);
     RelativeBlockLocations.push_back(Relative);
   }
 }
@@ -439,7 +459,7 @@ IRSimilarityCandidate::IRSimilarityCandidate(unsigned StartIdx, unsigned Len,
     // Map the operand values to an unsigned integer if it does not already
     // have an unsigned integer assigned to it.
     for (Value *Arg : ID->OperVals)
-      if (ValueToNumber.find(Arg) == ValueToNumber.end()) {
+      if (!ValueToNumber.contains(Arg)) {
         ValueToNumber.try_emplace(Arg, LocalValNumber);
         NumberToValue.try_emplace(LocalValNumber, Arg);
         LocalValNumber++;
@@ -447,7 +467,7 @@ IRSimilarityCandidate::IRSimilarityCandidate(unsigned StartIdx, unsigned Len,
 
     // Mapping the instructions to an unsigned integer if it is not already
     // exist in the mapping.
-    if (ValueToNumber.find(ID->Inst) == ValueToNumber.end()) {
+    if (!ValueToNumber.contains(ID->Inst)) {
       ValueToNumber.try_emplace(ID->Inst, LocalValNumber);
       NumberToValue.try_emplace(LocalValNumber, ID->Inst);
       LocalValNumber++;
@@ -464,7 +484,7 @@ IRSimilarityCandidate::IRSimilarityCandidate(unsigned StartIdx, unsigned Len,
   DenseSet<BasicBlock *> BBSet;
   getBasicBlocks(BBSet);
   for (BasicBlock *BB : BBSet) {
-    if (ValueToNumber.find(BB) != ValueToNumber.end())
+    if (ValueToNumber.contains(BB))
       continue;
     
     ValueToNumber.try_emplace(BB, LocalValNumber);
@@ -698,11 +718,39 @@ bool IRSimilarityCandidate::compareCommutativeOperandMapping(
   return true;
 }
 
+bool IRSimilarityCandidate::compareAssignmentMapping(
+    const unsigned InstValA, const unsigned &InstValB,
+    DenseMap<unsigned, DenseSet<unsigned>> &ValueNumberMappingA,
+    DenseMap<unsigned, DenseSet<unsigned>> &ValueNumberMappingB) {
+  DenseMap<unsigned, DenseSet<unsigned>>::iterator ValueMappingIt;
+  bool WasInserted;
+  std::tie(ValueMappingIt, WasInserted) = ValueNumberMappingA.insert(
+      std::make_pair(InstValA, DenseSet<unsigned>({InstValB})));
+  if (!WasInserted && !ValueMappingIt->second.contains(InstValB))
+    return false;
+  else if (ValueMappingIt->second.size() != 1) {
+    for (unsigned OtherVal : ValueMappingIt->second) {
+      if (OtherVal == InstValB)
+        continue;
+      if (!ValueNumberMappingA.contains(OtherVal))
+        continue;
+      if (!ValueNumberMappingA[OtherVal].contains(InstValA))
+        continue;
+      ValueNumberMappingA[OtherVal].erase(InstValA);
+    }
+    ValueNumberMappingA.erase(ValueMappingIt);
+    std::tie(ValueMappingIt, WasInserted) = ValueNumberMappingA.insert(
+      std::make_pair(InstValA, DenseSet<unsigned>({InstValB})));
+  }
+
+  return true;
+}
+
 bool IRSimilarityCandidate::checkRelativeLocations(RelativeLocMapping A,
                                                    RelativeLocMapping B) {
   // Get the basic blocks the label refers to.
-  BasicBlock *ABB = static_cast<BasicBlock *>(A.OperVal);
-  BasicBlock *BBB = static_cast<BasicBlock *>(B.OperVal);
+  BasicBlock *ABB = cast<BasicBlock>(A.OperVal);
+  BasicBlock *BBB = cast<BasicBlock>(B.OperVal);
 
   // Get the basic blocks contained in each region.
   DenseSet<BasicBlock *> BasicBlockA;
@@ -715,7 +763,7 @@ bool IRSimilarityCandidate::checkRelativeLocations(RelativeLocMapping A,
   bool BContained = BasicBlockB.contains(BBB);
 
   // Both blocks need to be contained in the region, or both need to be outside
-  // the reigon.
+  // the region.
   if (AContained != BContained)
     return false;
   
@@ -755,8 +803,6 @@ bool IRSimilarityCandidate::compareStructure(
   // in one candidate to values in the other candidate.  If we create a set with
   // one element, and that same element maps to the original element in the
   // candidate we have a good mapping.
-  DenseMap<unsigned, DenseSet<unsigned>>::iterator ValueMappingIt;
-
 
   // Iterate over the instructions contained in each candidate
   unsigned SectionLength = A.getStartIdx() + A.getLength();
@@ -779,16 +825,13 @@ bool IRSimilarityCandidate::compareStructure(
     unsigned InstValA = A.ValueToNumber.find(IA)->second;
     unsigned InstValB = B.ValueToNumber.find(IB)->second;
 
-    bool WasInserted;
     // Ensure that the mappings for the instructions exists.
-    std::tie(ValueMappingIt, WasInserted) = ValueNumberMappingA.insert(
-        std::make_pair(InstValA, DenseSet<unsigned>({InstValB})));
-    if (!WasInserted && !ValueMappingIt->second.contains(InstValB))
+    if (!compareAssignmentMapping(InstValA, InstValB, ValueNumberMappingA,
+                                  ValueNumberMappingB))
       return false;
-
-    std::tie(ValueMappingIt, WasInserted) = ValueNumberMappingB.insert(
-        std::make_pair(InstValB, DenseSet<unsigned>({InstValA})));
-    if (!WasInserted && !ValueMappingIt->second.contains(InstValA))
+    
+    if (!compareAssignmentMapping(InstValB, InstValA, ValueNumberMappingB,
+                                  ValueNumberMappingA))
       return false;
 
     // We have different paths for commutative instructions and non-commutative
@@ -826,12 +869,22 @@ bool IRSimilarityCandidate::compareStructure(
 
     SmallVector<int, 4> &RelBlockLocsA = ItA->RelativeBlockLocations;
     SmallVector<int, 4> &RelBlockLocsB = ItB->RelativeBlockLocations;
+    ArrayRef<Value *> ABL = ItA->getBlockOperVals();
+    ArrayRef<Value *> BBL = ItB->getBlockOperVals();
+
+    // Check to make sure that the number of operands, and branching locations
+    // between BranchInsts is the same.
     if (RelBlockLocsA.size() != RelBlockLocsB.size() &&
-        OperValsA.size() != OperValsB.size())
+        ABL.size() != BBL.size())
       return false;
 
+    assert(RelBlockLocsA.size() == ABL.size() &&
+           "Block information vectors not the same size.");
+    assert(RelBlockLocsB.size() == BBL.size() &&
+           "Block information vectors not the same size.");
+
     ZippedRelativeLocationsT ZippedRelativeLocations =
-        zip(RelBlockLocsA, RelBlockLocsB, OperValsA, OperValsB);
+        zip(RelBlockLocsA, RelBlockLocsB, ABL, BBL);
     if (any_of(ZippedRelativeLocations,
                [&A, &B](std::tuple<int, int, Value *, Value *> R) {
                  return !checkRelativeLocations(
@@ -1026,7 +1079,7 @@ void IRSimilarityCandidate::createCanonicalRelationFrom(
 
     // We can skip the BasicBlock if the canonical numbering has already been
     // found in a separate instruction.
-    if (NumberToCanonNum.find(BBGVNForCurrCand) != NumberToCanonNum.end())
+    if (NumberToCanonNum.contains(BBGVNForCurrCand))
       continue;
 
     // If the basic block is the starting block, then the shared instruction may
@@ -1048,6 +1101,76 @@ void IRSimilarityCandidate::createCanonicalRelationFrom(
   }
 }
 
+void IRSimilarityCandidate::createCanonicalRelationFrom(
+    IRSimilarityCandidate &SourceCand, IRSimilarityCandidate &SourceCandLarge,
+    IRSimilarityCandidate &TargetCandLarge) {
+  assert(!SourceCand.CanonNumToNumber.empty() &&
+         "Canonical Relationship is non-empty");
+  assert(!SourceCand.NumberToCanonNum.empty() &&
+         "Canonical Relationship is non-empty");
+
+  assert(!SourceCandLarge.CanonNumToNumber.empty() &&
+         "Canonical Relationship is non-empty");
+  assert(!SourceCandLarge.NumberToCanonNum.empty() &&
+         "Canonical Relationship is non-empty");
+  
+  assert(!TargetCandLarge.CanonNumToNumber.empty() &&
+         "Canonical Relationship is non-empty");
+  assert(!TargetCandLarge.NumberToCanonNum.empty() &&
+         "Canonical Relationship is non-empty");
+
+  assert(CanonNumToNumber.empty() && "Canonical Relationship is non-empty");
+  assert(NumberToCanonNum.empty() && "Canonical Relationship is non-empty");
+
+  // We're going to use the larger candidates as a "bridge" to create the
+  // canonical number for the target candidate since we have idetified two
+  // candidates as subsequences of larger sequences, and therefore must be
+  // structurally similar.
+  for (std::pair<Value *, unsigned> &ValueNumPair : ValueToNumber) {
+    Value *CurrVal = ValueNumPair.first;
+    unsigned TargetCandGVN = ValueNumPair.second;
+
+    // Find the numbering in the large candidate that surrounds the 
+    // current candidate.
+    std::optional<unsigned> OLargeTargetGVN = TargetCandLarge.getGVN(CurrVal);
+    assert(OLargeTargetGVN.has_value() && "GVN not found for Value");
+
+    // Get the canonical numbering in the large target candidate.
+    std::optional<unsigned> OTargetCandCanon =
+        TargetCandLarge.getCanonicalNum(OLargeTargetGVN.value());
+    assert(OTargetCandCanon.has_value() &&
+           "Canononical Number not found for GVN");
+    
+    // Get the GVN in the large source candidate from the canonical numbering.
+    std::optional<unsigned> OLargeSourceGVN =
+        SourceCandLarge.fromCanonicalNum(OTargetCandCanon.value());
+    assert(OLargeSourceGVN.has_value() &&
+           "GVN Number not found for Canonical Number");
+    
+    // Get the Value from the GVN in the large source candidate.
+    std::optional<Value *> OLargeSourceV =
+        SourceCandLarge.fromGVN(OLargeSourceGVN.value());
+    assert(OLargeSourceV.has_value() && "Value not found for GVN");
+
+    // Get the GVN number for the Value in the source candidate.
+    std::optional<unsigned> OSourceGVN =
+        SourceCand.getGVN(OLargeSourceV.value());
+    assert(OSourceGVN.has_value() && "GVN Number not found for Value");
+
+    // Get the canonical numbering from the GVN/
+    std::optional<unsigned> OSourceCanon =
+        SourceCand.getCanonicalNum(OSourceGVN.value());
+    assert(OSourceCanon.has_value() && "Canon Number not found for GVN");
+
+    // Insert the canonical numbering and GVN pair into their respective
+    // mappings.
+    CanonNumToNumber.insert(
+        std::make_pair(OSourceCanon.value(), TargetCandGVN));
+    NumberToCanonNum.insert(
+        std::make_pair(TargetCandGVN, OSourceCanon.value()));
+  }
+}
+
 void IRSimilarityCandidate::createCanonicalMappingFor(
     IRSimilarityCandidate &CurrCand) {
   assert(CurrCand.CanonNumToNumber.size() == 0 &&
@@ -1065,6 +1188,81 @@ void IRSimilarityCandidate::createCanonicalMappingFor(
   }
 }
 
+/// Look for larger IRSimilarityCandidates From the previously matched
+/// IRSimilarityCandidates that fully contain \p CandA or \p CandB.  If there is
+/// an overlap, return a pair of structurally similar, larger
+/// IRSimilarityCandidates.
+///
+/// \param [in] CandA - The first candidate we are trying to determine the
+/// structure of.
+/// \param [in] CandB - The second candidate we are trying to determine the
+/// structure of.
+/// \param [in] IndexToIncludedCand - Mapping of index of the an instruction in
+/// a circuit to the IRSimilarityCandidates that include this instruction.
+/// \param [in] CandToOverallGroup - Mapping of IRSimilarityCandidate to a
+/// number representing the structural group assigned to it.
+static std::optional<
+    std::pair<IRSimilarityCandidate *, IRSimilarityCandidate *>>
+CheckLargerCands(
+    IRSimilarityCandidate &CandA, IRSimilarityCandidate &CandB,
+    DenseMap<unsigned, DenseSet<IRSimilarityCandidate *>> &IndexToIncludedCand,
+    DenseMap<IRSimilarityCandidate *, unsigned> &CandToGroup) {
+  DenseMap<unsigned, IRSimilarityCandidate *> IncludedGroupAndCandA;
+  DenseMap<unsigned, IRSimilarityCandidate *> IncludedGroupAndCandB;
+  DenseSet<unsigned> IncludedGroupsA;
+  DenseSet<unsigned> IncludedGroupsB;
+
+  // Find the overall similarity group numbers that fully contain the candidate,
+  // and record the larger candidate for each group.
+  auto IdxToCandidateIt = IndexToIncludedCand.find(CandA.getStartIdx());
+  std::optional<std::pair<IRSimilarityCandidate *, IRSimilarityCandidate *>>
+      Result;
+
+  unsigned CandAStart = CandA.getStartIdx();
+  unsigned CandAEnd = CandA.getEndIdx();
+  unsigned CandBStart = CandB.getStartIdx();
+  unsigned CandBEnd = CandB.getEndIdx();
+  if (IdxToCandidateIt == IndexToIncludedCand.end())
+    return Result;
+  for (IRSimilarityCandidate *MatchedCand : IdxToCandidateIt->second) {
+    if (MatchedCand->getStartIdx() > CandAStart ||
+        (MatchedCand->getEndIdx() < CandAEnd))
+      continue;
+    unsigned GroupNum = CandToGroup.find(MatchedCand)->second;
+    IncludedGroupAndCandA.insert(std::make_pair(GroupNum, MatchedCand));
+    IncludedGroupsA.insert(GroupNum);
+  }
+
+  // Find the overall similarity group numbers that fully contain the next
+  // candidate, and record the larger candidate for each group.
+  IdxToCandidateIt = IndexToIncludedCand.find(CandBStart);
+  if (IdxToCandidateIt == IndexToIncludedCand.end())
+    return Result;
+  for (IRSimilarityCandidate *MatchedCand : IdxToCandidateIt->second) {
+    if (MatchedCand->getStartIdx() > CandBStart ||
+        MatchedCand->getEndIdx() < CandBEnd)
+      continue;
+    unsigned GroupNum = CandToGroup.find(MatchedCand)->second;
+    IncludedGroupAndCandB.insert(std::make_pair(GroupNum, MatchedCand));
+    IncludedGroupsB.insert(GroupNum);
+  }
+
+  // Find the intersection between the two groups, these are the groups where
+  // the larger candidates exist.
+  set_intersect(IncludedGroupsA, IncludedGroupsB);
+
+  // If there is no intersection between the sets, then we cannot determine
+  // whether or not there is a match.
+  if (IncludedGroupsA.empty())
+    return Result;
+  
+  // Create a pair that contains the larger candidates.
+  auto ItA = IncludedGroupAndCandA.find(*IncludedGroupsA.begin());
+  auto ItB = IncludedGroupAndCandB.find(*IncludedGroupsA.begin());
+  Result = std::make_pair(ItA->second, ItB->second);
+  return Result;
+}
+
 /// From the list of IRSimilarityCandidates, perform a comparison between each
 /// IRSimilarityCandidate to determine if there are overlapping
 /// IRInstructionData, or if they do not have the same structure.
@@ -1074,9 +1272,16 @@ void IRSimilarityCandidate::createCanonicalMappingFor(
 /// \param [out] StructuralGroups - the mapping of unsigned integers to vector
 /// of IRSimilarityCandidates where each of the IRSimilarityCandidates in the
 /// vector are structurally similar to one another.
+/// \param [in] IndexToIncludedCand - Mapping of index of the an instruction in
+/// a circuit to the IRSimilarityCandidates that include this instruction.
+/// \param [in] CandToOverallGroup - Mapping of IRSimilarityCandidate to a
+/// number representing the structural group assigned to it.
 static void findCandidateStructures(
     std::vector<IRSimilarityCandidate> &CandsForRepSubstring,
-    DenseMap<unsigned, SimilarityGroup> &StructuralGroups) {
+    DenseMap<unsigned, SimilarityGroup> &StructuralGroups,
+    DenseMap<unsigned,  DenseSet<IRSimilarityCandidate *>> &IndexToIncludedCand,
+    DenseMap<IRSimilarityCandidate *, unsigned> &CandToOverallGroup
+    ) {
   std::vector<IRSimilarityCandidate>::iterator CandIt, CandEndIt, InnerCandIt,
       InnerCandEndIt;
 
@@ -1139,6 +1344,24 @@ static void findCandidateStructures(
       if (CandToGroupItInner != CandToGroup.end())
         continue;
 
+      // Check if we have found structural similarity between two candidates
+      // that fully contains the first and second candidates.
+      std::optional<std::pair<IRSimilarityCandidate *, IRSimilarityCandidate *>>
+          LargerPair = CheckLargerCands(
+              *CandIt, *InnerCandIt, IndexToIncludedCand, CandToOverallGroup);
+
+      // If a pair was found, it means that we can assume that these smaller
+      // substrings are also structurally similar.  Use the larger candidates to
+      // determine the canonical mapping between the two sections.
+      if (LargerPair.has_value()) {
+        SameStructure = true;
+        InnerCandIt->createCanonicalRelationFrom(
+            *CandIt, *LargerPair.value().first, *LargerPair.value().second);
+        CandToGroup.insert(std::make_pair(&*InnerCandIt, OuterGroupNum));
+        CurrentGroupPair->second.push_back(*InnerCandIt);
+        continue;
+      }
+
       // Otherwise we determine if they have the same structure and add it to
       // vector if they match.
       ValueNumberMappingA.clear();
@@ -1165,24 +1388,58 @@ void IRSimilarityIdentifier::findCandidates(
   std::vector<SimilarityGroup> NewCandidateGroups;
 
   DenseMap<unsigned, SimilarityGroup> StructuralGroups;
+  DenseMap<unsigned, DenseSet<IRSimilarityCandidate *>> IndexToIncludedCand;
+  DenseMap<IRSimilarityCandidate *, unsigned> CandToGroup; 
 
   // Iterate over the subsequences found by the Suffix Tree to create
   // IRSimilarityCandidates for each repeated subsequence and determine which
   // instances are structurally similar to one another.
-  for (SuffixTree::RepeatedSubstring &RS : ST) {
+
+  // Sort the suffix tree from longest substring to shortest.
+  std::vector<SuffixTree::RepeatedSubstring> RSes;
+  for (SuffixTree::RepeatedSubstring &RS : ST)
+    RSes.push_back(RS);
+
+  llvm::stable_sort(RSes, [](const SuffixTree::RepeatedSubstring &LHS,
+                             const SuffixTree::RepeatedSubstring &RHS) {
+    return LHS.Length > RHS.Length;
+  });
+  for (SuffixTree::RepeatedSubstring &RS : RSes) {
     createCandidatesFromSuffixTree(Mapper, InstrList, IntegerMapping, RS,
                                    CandsForRepSubstring);
 
     if (CandsForRepSubstring.size() < 2)
       continue;
 
-    findCandidateStructures(CandsForRepSubstring, StructuralGroups);
-    for (std::pair<unsigned, SimilarityGroup> &Group : StructuralGroups)
+    findCandidateStructures(CandsForRepSubstring, StructuralGroups,
+                            IndexToIncludedCand, CandToGroup);
+    for (std::pair<unsigned, SimilarityGroup> &Group : StructuralGroups) {
       // We only add the group if it contains more than one
       // IRSimilarityCandidate.  If there is only one, that means there is no
       // other repeated subsequence with the same structure.
-      if (Group.second.size() > 1)
+      if (Group.second.size() > 1) {
         SimilarityCandidates->push_back(Group.second);
+        // Iterate over each candidate in the group, and add an entry for each
+        // instruction included with a mapping to a set of
+        // IRSimilarityCandidates that include that instruction.
+        for (IRSimilarityCandidate &IRCand : SimilarityCandidates->back()) {
+          for (unsigned Idx = IRCand.getStartIdx(), Edx = IRCand.getEndIdx();
+               Idx <= Edx; ++Idx) {
+            DenseMap<unsigned, DenseSet<IRSimilarityCandidate *>>::iterator
+                IdIt;
+            IdIt = IndexToIncludedCand.find(Idx);
+            bool Inserted = false;
+            if (IdIt == IndexToIncludedCand.end())
+              std::tie(IdIt, Inserted) = IndexToIncludedCand.insert(
+                  std::make_pair(Idx, DenseSet<IRSimilarityCandidate *>()));
+            IdIt->second.insert(&IRCand);
+          }
+          // Add mapping of candidate to the overall similarity group number.
+          CandToGroup.insert(
+              std::make_pair(&IRCand, SimilarityCandidates->size() - 1));
+        }
+      }
+    }
 
     CandsForRepSubstring.clear();
     StructuralGroups.clear();

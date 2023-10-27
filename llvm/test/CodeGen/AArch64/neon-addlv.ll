@@ -150,3 +150,100 @@ define i32 @saddlv4h_from_v4i16(ptr %A) nounwind {
   %tmp5 = call i32 @llvm.vector.reduce.add.v2i32(<2 x i32> %tmp3)
   ret i32 %tmp5
 }
+
+declare i32 @llvm.aarch64.neon.uaddlv.i32.v8i8(<8 x i8>) nounwind readnone
+
+define i32 @uaddlv_known_bits_v8i8(<8 x i8> %a) {
+; CHECK-LABEL: uaddlv_known_bits_v8i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uaddlv h0, v0.8b
+; CHECK-NEXT:    fmov w0, s0
+; CHECK-NEXT:    ret
+  %tmp1 = tail call i32 @llvm.aarch64.neon.uaddlv.i32.v8i8(<8 x i8> %a)
+  %tmp2 = and i32 %tmp1, 65535
+  ret i32 %tmp2
+}
+
+declare i32 @llvm.aarch64.neon.uaddlv.i32.v16i8(<16 x i8>) nounwind readnone
+
+define i32 @uaddlv_known_bits_v16i8(<16 x i8> %a) {
+; CHECK-LABEL: uaddlv_known_bits_v16i8:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    uaddlv h0, v0.16b
+; CHECK-NEXT:    fmov w0, s0
+; CHECK-NEXT:    ret
+entry:
+  %vaddlv.i = tail call i32 @llvm.aarch64.neon.uaddlv.i32.v16i8(<16 x i8> %a)
+  %0 = and i32 %vaddlv.i, 65535
+  ret i32 %0
+}
+
+define dso_local <8 x i8> @uaddlv_v8i8_dup(<8 x i8> %a) {
+; CHECK-LABEL: uaddlv_v8i8_dup:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    uaddlv h0, v0.8b
+; CHECK-NEXT:    dup v0.8h, v0.h[0]
+; CHECK-NEXT:    rshrn v0.8b, v0.8h, #3
+; CHECK-NEXT:    ret
+entry:
+  %vaddlv.i = tail call i32 @llvm.aarch64.neon.uaddlv.i32.v8i8(<8 x i8> %a)
+  %0 = trunc i32 %vaddlv.i to i16
+  %vecinit.i = insertelement <8 x i16> undef, i16 %0, i64 0
+  %vecinit7.i = shufflevector <8 x i16> %vecinit.i, <8 x i16> poison, <8 x i32> zeroinitializer
+  %vrshrn_n2 = tail call <8 x i8> @llvm.aarch64.neon.rshrn.v8i8(<8 x i16> %vecinit7.i, i32 3)
+  ret <8 x i8> %vrshrn_n2
+}
+
+declare <8 x i8> @llvm.aarch64.neon.rshrn.v8i8(<8 x i16>, i32)
+declare i64 @llvm.aarch64.neon.urshl.i64(i64, i64)
+
+define <8 x i8> @uaddlv_v8i8_urshr(<8 x i8> %a) {
+; CHECK-LABEL: uaddlv_v8i8_urshr:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    uaddlv h0, v0.8b
+; CHECK-NEXT:    urshr d0, d0, #3
+; CHECK-NEXT:    dup v0.8b, v0.b[0]
+; CHECK-NEXT:    ret
+entry:
+  %vaddlv.i = tail call i32 @llvm.aarch64.neon.uaddlv.i32.v8i8(<8 x i8> %a)
+  %0 = and i32 %vaddlv.i, 65535
+  %conv = zext i32 %0 to i64
+  %vrshr_n = tail call i64 @llvm.aarch64.neon.urshl.i64(i64 %conv, i64 -3)
+  %conv1 = trunc i64 %vrshr_n to i8
+  %vecinit.i = insertelement <8 x i8> undef, i8 %conv1, i64 0
+  %vecinit7.i = shufflevector <8 x i8> %vecinit.i, <8 x i8> poison, <8 x i32> zeroinitializer
+  ret <8 x i8> %vecinit7.i
+}
+
+define <4 x i32> @uaddlv_dup_v4i16(<4 x i16> %a) {
+; CHECK-LABEL: uaddlv_dup_v4i16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    uaddlv s0, v0.4h
+; CHECK-NEXT:    dup v0.4s, v0.s[0]
+; CHECK-NEXT:    ushr v0.4s, v0.4s, #3
+; CHECK-NEXT:    ret
+entry:
+  %vaddlv.i = tail call i32 @llvm.aarch64.neon.uaddlv.i32.v4i16(<4 x i16> %a)
+  %vecinit.i = insertelement <4 x i32> undef, i32 %vaddlv.i, i64 0
+  %vecinit7.i = shufflevector <4 x i32> %vecinit.i, <4 x i32> poison, <4 x i32> zeroinitializer
+  %vshr_n = lshr <4 x i32> %vecinit7.i, <i32 3, i32 3, i32 3, i32 3>
+  ret <4 x i32> %vshr_n
+}
+
+define <4 x i32> @uaddlv_dup_v8i16(<8 x i16> %a) {
+; CHECK-LABEL: uaddlv_dup_v8i16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    uaddlv s0, v0.8h
+; CHECK-NEXT:    dup v0.4s, v0.s[0]
+; CHECK-NEXT:    ushr v0.4s, v0.4s, #3
+; CHECK-NEXT:    ret
+entry:
+  %vaddlv.i = tail call i32 @llvm.aarch64.neon.uaddlv.i32.v8i16(<8 x i16> %a)
+  %vecinit.i = insertelement <4 x i32> undef, i32 %vaddlv.i, i64 0
+  %vecinit7.i = shufflevector <4 x i32> %vecinit.i, <4 x i32> poison, <4 x i32> zeroinitializer
+  %vshr_n = lshr <4 x i32> %vecinit7.i, <i32 3, i32 3, i32 3, i32 3>
+  ret <4 x i32> %vshr_n
+}
+
+declare i32 @llvm.aarch64.neon.uaddlv.i32.v8i16(<8 x i16>)
+declare i32 @llvm.aarch64.neon.uaddlv.i32.v4i16(<4 x i16>)

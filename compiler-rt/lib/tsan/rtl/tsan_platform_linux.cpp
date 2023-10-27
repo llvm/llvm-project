@@ -66,7 +66,8 @@ extern "C" void *__libc_stack_end;
 void *__libc_stack_end = 0;
 #endif
 
-#if SANITIZER_LINUX && defined(__aarch64__) && !SANITIZER_GO
+#if SANITIZER_LINUX && (defined(__aarch64__) || defined(__loongarch_lp64)) && \
+    !SANITIZER_GO
 # define INIT_LONGJMP_XOR_KEY 1
 #else
 # define INIT_LONGJMP_XOR_KEY 0
@@ -151,7 +152,7 @@ void WriteMemoryProfile(char *buf, uptr buf_size, u64 uptime_ns) {
 #if !SANITIZER_GO
 // Mark shadow for .rodata sections with the special Shadow::kRodata marker.
 // Accesses to .rodata can't race, so this saves time, memory and trace space.
-static void MapRodata() {
+static NOINLINE void MapRodata(char* buffer, uptr size) {
   // First create temp file.
   const char *tmpdir = GetEnv("TMPDIR");
   if (tmpdir == 0)
@@ -162,13 +163,12 @@ static void MapRodata() {
 #endif
   if (tmpdir == 0)
     return;
-  char name[256];
-  internal_snprintf(name, sizeof(name), "%s/tsan.rodata.%d",
+  internal_snprintf(buffer, size, "%s/tsan.rodata.%d",
                     tmpdir, (int)internal_getpid());
-  uptr openrv = internal_open(name, O_RDWR | O_CREAT | O_EXCL, 0600);
+  uptr openrv = internal_open(buffer, O_RDWR | O_CREAT | O_EXCL, 0600);
   if (internal_iserror(openrv))
     return;
-  internal_unlink(name);  // Unlink it now, so that we can reuse the buffer.
+  internal_unlink(buffer);  // Unlink it now, so that we can reuse the buffer.
   fd_t fd = openrv;
   // Fill the file with Shadow::kRodata.
   const uptr kMarkerSize = 512 * 1024 / sizeof(RawShadow);
@@ -187,8 +187,8 @@ static void MapRodata() {
   }
   // Map the file into shadow of .rodata sections.
   MemoryMappingLayout proc_maps(/*cache_enabled*/true);
-  // Reusing the buffer 'name'.
-  MemoryMappedSegment segment(name, ARRAY_SIZE(name));
+  // Reusing the buffer 'buffer'.
+  MemoryMappedSegment segment(buffer, size);
   while (proc_maps.Next(&segment)) {
     if (segment.filename[0] != 0 && segment.filename[0] != '[' &&
         segment.IsReadable() && segment.IsExecutable() &&
@@ -208,7 +208,8 @@ static void MapRodata() {
 }
 
 void InitializeShadowMemoryPlatform() {
-  MapRodata();
+  char buffer[256];  // Keep in a different frame.
+  MapRodata(buffer, sizeof(buffer));
 }
 
 #endif  // #if !SANITIZER_GO
@@ -266,7 +267,17 @@ void InitializePlatformEarly() {
     Die();
   }
 # endif
-#endif
+#  elif SANITIZER_RISCV64
+  // the bottom half of vma is allocated for userspace
+  vmaSize = vmaSize + 1;
+#    if !SANITIZER_GO
+  if (vmaSize != 39 && vmaSize != 48) {
+    Printf("FATAL: ThreadSanitizer: unsupported VMA range\n");
+    Printf("FATAL: Found %zd - Supported 39 and 48\n", vmaSize);
+    Die();
+  }
+#    endif
+#  endif
 }
 
 void InitializePlatform() {
@@ -314,7 +325,7 @@ void InitializePlatform() {
     }
 
 #endif
-#if SANITIZER_LINUX && defined(__aarch64__)
+#if SANITIZER_LINUX && (defined(__aarch64__) || defined(__loongarch_lp64))
     // Initialize the xor key used in {sig}{set,long}jump.
     InitializeLongjmpXorKey();
 #endif
@@ -387,8 +398,8 @@ static uptr UnmangleLongJmpSp(uptr mangled_sp) {
 # else
   return mangled_sp;
 # endif
-#elif defined(__loongarch__)
-  return mangled_sp;
+#elif defined(__loongarch_lp64)
+  return mangled_sp ^ longjmp_xor_key;
 #elif defined(__powerpc64__)
   // Reverse of:
   //   ld   r4, -28696(r13)
@@ -398,13 +409,15 @@ static uptr UnmangleLongJmpSp(uptr mangled_sp) {
   return mangled_sp ^ xor_key;
 #elif defined(__mips__)
   return mangled_sp;
-#elif defined(__s390x__)
+#    elif SANITIZER_RISCV64
+  return mangled_sp;
+#    elif defined(__s390x__)
   // tcbhead_t.stack_guard
   uptr xor_key = ((uptr *)__builtin_thread_pointer())[5];
   return mangled_sp ^ xor_key;
-#else
-  #error "Unknown platform"
-#endif
+#    else
+#      error "Unknown platform"
+#    endif
 }
 
 #if SANITIZER_NETBSD
@@ -428,11 +441,13 @@ static uptr UnmangleLongJmpSp(uptr mangled_sp) {
 #  define LONG_JMP_SP_ENV_SLOT 1
 # elif defined(__mips64)
 #  define LONG_JMP_SP_ENV_SLOT 1
-# elif defined(__s390x__)
-#  define LONG_JMP_SP_ENV_SLOT 9
-# else
-#  define LONG_JMP_SP_ENV_SLOT 6
-# endif
+#      elif SANITIZER_RISCV64
+#        define LONG_JMP_SP_ENV_SLOT 13
+#      elif defined(__s390x__)
+#        define LONG_JMP_SP_ENV_SLOT 9
+#      else
+#        define LONG_JMP_SP_ENV_SLOT 6
+#      endif
 #endif
 
 uptr ExtractLongJmpSp(uptr *env) {
@@ -452,7 +467,11 @@ static void InitializeLongjmpXorKey() {
 
   // 2. Retrieve vanilla/mangled SP.
   uptr sp;
+#ifdef __loongarch__
+  asm("move  %0, $sp" : "=r" (sp));
+#else
   asm("mov  %0, sp" : "=r" (sp));
+#endif
   uptr mangled_sp = ((uptr *)&env)[LONG_JMP_SP_ENV_SLOT];
 
   // 3. xor SPs to obtain key.

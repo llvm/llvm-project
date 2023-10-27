@@ -18,7 +18,7 @@ define i32 @add_i32(i32* nocapture readonly %x, i32 %n) {
 ; CHECK-NEXT:    b .LBB0_7
 ; CHECK-NEXT:  .LBB0_3:
 ; CHECK-NEXT:    movs r0, #0
-; CHECK-NEXT:    b .LBB0_9
+; CHECK-NEXT:    pop {r7, pc}
 ; CHECK-NEXT:  .LBB0_4: @ %vector.ph
 ; CHECK-NEXT:    bic r3, r1, #3
 ; CHECK-NEXT:    movs r2, #1
@@ -43,7 +43,7 @@ define i32 @add_i32(i32* nocapture readonly %x, i32 %n) {
 ; CHECK-NEXT:    ldr r1, [r2], #4
 ; CHECK-NEXT:    add r0, r1
 ; CHECK-NEXT:    le lr, .LBB0_8
-; CHECK-NEXT:  .LBB0_9: @ %for.cond.cleanup
+; CHECK-NEXT:  @ %bb.9: @ %for.cond.cleanup
 ; CHECK-NEXT:    pop {r7, pc}
 entry:
   %cmp6 = icmp sgt i32 %n, 0
@@ -201,7 +201,8 @@ define i32 @and_i32(i32* nocapture readonly %x, i32 %n) {
 ; CHECK-NEXT:    b .LBB2_7
 ; CHECK-NEXT:  .LBB2_3:
 ; CHECK-NEXT:    mov.w r2, #-1
-; CHECK-NEXT:    b .LBB2_9
+; CHECK-NEXT:    mov r0, r2
+; CHECK-NEXT:    pop {r4, pc}
 ; CHECK-NEXT:  .LBB2_4: @ %vector.ph
 ; CHECK-NEXT:    bic r3, r1, #3
 ; CHECK-NEXT:    movs r2, #1
@@ -297,7 +298,8 @@ define i32 @or_i32(i32* nocapture readonly %x, i32 %n) {
 ; CHECK-NEXT:    b .LBB3_7
 ; CHECK-NEXT:  .LBB3_3:
 ; CHECK-NEXT:    movs r2, #0
-; CHECK-NEXT:    b .LBB3_9
+; CHECK-NEXT:    mov r0, r2
+; CHECK-NEXT:    pop {r4, pc}
 ; CHECK-NEXT:  .LBB3_4: @ %vector.ph
 ; CHECK-NEXT:    bic r3, r1, #3
 ; CHECK-NEXT:    movs r2, #1
@@ -393,7 +395,8 @@ define i32 @xor_i32(i32* nocapture readonly %x, i32 %n) {
 ; CHECK-NEXT:    b .LBB4_7
 ; CHECK-NEXT:  .LBB4_3:
 ; CHECK-NEXT:    movs r2, #0
-; CHECK-NEXT:    b .LBB4_9
+; CHECK-NEXT:    mov r0, r2
+; CHECK-NEXT:    pop {r4, pc}
 ; CHECK-NEXT:  .LBB4_4: @ %vector.ph
 ; CHECK-NEXT:    bic r3, r1, #3
 ; CHECK-NEXT:    movs r2, #1
@@ -489,7 +492,8 @@ define float @fadd_f32(float* nocapture readonly %x, i32 %n) {
 ; CHECK-NEXT:    b .LBB5_7
 ; CHECK-NEXT:  .LBB5_3:
 ; CHECK-NEXT:    vldr s0, .LCPI5_0
-; CHECK-NEXT:    b .LBB5_9
+; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    pop {r7, pc}
 ; CHECK-NEXT:  .LBB5_4: @ %vector.ph
 ; CHECK-NEXT:    bic r2, r1, #3
 ; CHECK-NEXT:    movs r3, #1
@@ -587,7 +591,8 @@ define float @fmul_f32(float* nocapture readonly %x, i32 %n) {
 ; CHECK-NEXT:    b .LBB6_7
 ; CHECK-NEXT:  .LBB6_3:
 ; CHECK-NEXT:    vmov.f32 s0, #1.000000e+00
-; CHECK-NEXT:    b .LBB6_9
+; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    pop {r7, pc}
 ; CHECK-NEXT:  .LBB6_4: @ %vector.ph
 ; CHECK-NEXT:    bic r2, r1, #3
 ; CHECK-NEXT:    movs r3, #1
@@ -681,7 +686,8 @@ define i32 @smin_i32(i32* nocapture readonly %x, i32 %n) {
 ; CHECK-NEXT:    b .LBB7_7
 ; CHECK-NEXT:  .LBB7_3:
 ; CHECK-NEXT:    mvn r2, #-2147483648
-; CHECK-NEXT:    b .LBB7_9
+; CHECK-NEXT:    mov r0, r2
+; CHECK-NEXT:    pop {r7, pc}
 ; CHECK-NEXT:  .LBB7_4: @ %vector.ph
 ; CHECK-NEXT:    bic r3, r1, #3
 ; CHECK-NEXT:    movs r2, #1
@@ -778,7 +784,7 @@ define i32 @smin_i32_inloop(i32* nocapture readonly %x, i32 %n) {
 ; CHECK-NEXT:    b .LBB8_7
 ; CHECK-NEXT:  .LBB8_3:
 ; CHECK-NEXT:    mvn r0, #-2147483648
-; CHECK-NEXT:    b .LBB8_9
+; CHECK-NEXT:    pop {r7, pc}
 ; CHECK-NEXT:  .LBB8_4: @ %vector.ph
 ; CHECK-NEXT:    bic r3, r1, #3
 ; CHECK-NEXT:    movs r2, #1
@@ -804,7 +810,7 @@ define i32 @smin_i32_inloop(i32* nocapture readonly %x, i32 %n) {
 ; CHECK-NEXT:    cmp r0, r1
 ; CHECK-NEXT:    csel r0, r0, r1, lt
 ; CHECK-NEXT:    le lr, .LBB8_8
-; CHECK-NEXT:  .LBB8_9: @ %for.cond.cleanup
+; CHECK-NEXT:  @ %bb.9: @ %for.cond.cleanup
 ; CHECK-NEXT:    pop {r7, pc}
 entry:
   %cmp6 = icmp sgt i32 %n, 0
@@ -873,7 +879,8 @@ define i32 @smax_i32(i32* nocapture readonly %x, i32 %n) {
 ; CHECK-NEXT:    b .LBB9_7
 ; CHECK-NEXT:  .LBB9_3:
 ; CHECK-NEXT:    mov.w r2, #-2147483648
-; CHECK-NEXT:    b .LBB9_9
+; CHECK-NEXT:    mov r0, r2
+; CHECK-NEXT:    pop {r7, pc}
 ; CHECK-NEXT:  .LBB9_4: @ %vector.ph
 ; CHECK-NEXT:    bic r3, r1, #3
 ; CHECK-NEXT:    movs r2, #1
@@ -970,7 +977,7 @@ define i32 @smax_i32_inloop(i32* nocapture readonly %x, i32 %n) {
 ; CHECK-NEXT:    b .LBB10_7
 ; CHECK-NEXT:  .LBB10_3:
 ; CHECK-NEXT:    mov.w r0, #-2147483648
-; CHECK-NEXT:    b .LBB10_9
+; CHECK-NEXT:    pop {r7, pc}
 ; CHECK-NEXT:  .LBB10_4: @ %vector.ph
 ; CHECK-NEXT:    bic r3, r1, #3
 ; CHECK-NEXT:    movs r2, #1
@@ -996,7 +1003,7 @@ define i32 @smax_i32_inloop(i32* nocapture readonly %x, i32 %n) {
 ; CHECK-NEXT:    cmp r0, r1
 ; CHECK-NEXT:    csel r0, r0, r1, gt
 ; CHECK-NEXT:    le lr, .LBB10_8
-; CHECK-NEXT:  .LBB10_9: @ %for.cond.cleanup
+; CHECK-NEXT:  @ %bb.9: @ %for.cond.cleanup
 ; CHECK-NEXT:    pop {r7, pc}
 entry:
   %cmp6 = icmp sgt i32 %n, 0
@@ -1065,7 +1072,8 @@ define i32 @umin_i32(i32* nocapture readonly %x, i32 %n) {
 ; CHECK-NEXT:    b .LBB11_7
 ; CHECK-NEXT:  .LBB11_3:
 ; CHECK-NEXT:    mov.w r2, #-1
-; CHECK-NEXT:    b .LBB11_9
+; CHECK-NEXT:    mov r0, r2
+; CHECK-NEXT:    pop {r7, pc}
 ; CHECK-NEXT:  .LBB11_4: @ %vector.ph
 ; CHECK-NEXT:    bic r3, r1, #3
 ; CHECK-NEXT:    movs r2, #1
@@ -1162,7 +1170,7 @@ define i32 @umin_i32_inloop(i32* nocapture readonly %x, i32 %n) {
 ; CHECK-NEXT:    b .LBB12_7
 ; CHECK-NEXT:  .LBB12_3:
 ; CHECK-NEXT:    mov.w r0, #-1
-; CHECK-NEXT:    b .LBB12_9
+; CHECK-NEXT:    pop {r7, pc}
 ; CHECK-NEXT:  .LBB12_4: @ %vector.ph
 ; CHECK-NEXT:    bic r3, r1, #3
 ; CHECK-NEXT:    movs r2, #1
@@ -1188,7 +1196,7 @@ define i32 @umin_i32_inloop(i32* nocapture readonly %x, i32 %n) {
 ; CHECK-NEXT:    cmp r0, r1
 ; CHECK-NEXT:    csel r0, r0, r1, hi
 ; CHECK-NEXT:    le lr, .LBB12_8
-; CHECK-NEXT:  .LBB12_9: @ %for.cond.cleanup
+; CHECK-NEXT:  @ %bb.9: @ %for.cond.cleanup
 ; CHECK-NEXT:    pop {r7, pc}
 entry:
   %cmp6 = icmp sgt i32 %n, 0
@@ -1257,7 +1265,8 @@ define i32 @umax_i32(i32* nocapture readonly %x, i32 %n) {
 ; CHECK-NEXT:    b .LBB13_7
 ; CHECK-NEXT:  .LBB13_3:
 ; CHECK-NEXT:    movs r2, #0
-; CHECK-NEXT:    b .LBB13_9
+; CHECK-NEXT:    mov r0, r2
+; CHECK-NEXT:    pop {r7, pc}
 ; CHECK-NEXT:  .LBB13_4: @ %vector.ph
 ; CHECK-NEXT:    bic r3, r1, #3
 ; CHECK-NEXT:    movs r2, #1
@@ -1354,7 +1363,7 @@ define i32 @umax_i32_inloop(i32* nocapture readonly %x, i32 %n) {
 ; CHECK-NEXT:    b .LBB14_7
 ; CHECK-NEXT:  .LBB14_3:
 ; CHECK-NEXT:    movs r0, #0
-; CHECK-NEXT:    b .LBB14_9
+; CHECK-NEXT:    pop {r7, pc}
 ; CHECK-NEXT:  .LBB14_4: @ %vector.ph
 ; CHECK-NEXT:    bic r3, r1, #3
 ; CHECK-NEXT:    movs r2, #1
@@ -1380,7 +1389,7 @@ define i32 @umax_i32_inloop(i32* nocapture readonly %x, i32 %n) {
 ; CHECK-NEXT:    cmp r0, r1
 ; CHECK-NEXT:    csel r0, r0, r1, hi
 ; CHECK-NEXT:    le lr, .LBB14_8
-; CHECK-NEXT:  .LBB14_9: @ %for.cond.cleanup
+; CHECK-NEXT:  @ %bb.9: @ %for.cond.cleanup
 ; CHECK-NEXT:    pop {r7, pc}
 entry:
   %cmp6 = icmp sgt i32 %n, 0
@@ -1449,7 +1458,8 @@ define float @fmin_f32(float* nocapture readonly %x, i32 %n) {
 ; CHECK-NEXT:    b .LBB15_7
 ; CHECK-NEXT:  .LBB15_3:
 ; CHECK-NEXT:    vldr s0, .LCPI15_0
-; CHECK-NEXT:    b .LBB15_9
+; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    pop {r7, pc}
 ; CHECK-NEXT:  .LBB15_4: @ %vector.ph
 ; CHECK-NEXT:    bic r2, r1, #3
 ; CHECK-NEXT:    movs r3, #1
@@ -1552,7 +1562,8 @@ define float @fmax_f32(float* nocapture readonly %x, i32 %n) {
 ; CHECK-NEXT:    b .LBB16_7
 ; CHECK-NEXT:  .LBB16_3:
 ; CHECK-NEXT:    vldr s0, .LCPI16_0
-; CHECK-NEXT:    b .LBB16_9
+; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    pop {r7, pc}
 ; CHECK-NEXT:  .LBB16_4: @ %vector.ph
 ; CHECK-NEXT:    bic r2, r1, #3
 ; CHECK-NEXT:    movs r3, #1

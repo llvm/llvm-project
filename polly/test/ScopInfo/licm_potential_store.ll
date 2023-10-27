@@ -1,11 +1,9 @@
-; RUN: opt %loadPolly -basic-aa -sroa -instcombine -simplifycfg -tailcallopt \
-; RUN:    -simplifycfg -reassociate -loop-rotate -instcombine -indvars \
-; RUN:    -polly-prepare -polly-print-scops -disable-output < %s \
+; RUN: opt %loadNPMPolly -passes='sroa,instcombine,simplifycfg,reassociate,loop(loop-rotate),instcombine,indvars,polly-prepare,print<polly-function-scops>' \
+; RUN:    -tailcallopt -disable-output < %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=NOLICM
 
-; RUN: opt %loadPolly -basic-aa -sroa -instcombine -simplifycfg -tailcallopt \
-; RUN:    -simplifycfg -reassociate -loop-rotate -instcombine -indvars -licm \
-; RUN:    -polly-prepare -polly-print-scops -disable-output < %s \
+; RUN: opt %loadNPMPolly -passes='sroa,instcombine,simplifycfg,reassociate,loop(loop-rotate),instcombine,indvars,loop-mssa(licm),polly-prepare,print<polly-function-scops>' \
+; RUN:    -tailcallopt -disable-output < %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefix=LICM
 
 ;    void foo(int n, float A[static const restrict n], float x) {

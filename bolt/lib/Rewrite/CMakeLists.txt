@@ -1,38 +1,27 @@
 set(LLVM_LINK_COMPONENTS
   DebugInfoDWARF
   DWP
-  ExecutionEngine
+  JITLink
   MC
   Object
   Support
+  DWARFLinker
+  AsmPrinter
   TargetParser
   )
-
-set(TARGET_LINK_LIBRARIES
-  LLVMBOLTCore
-  LLVMBOLTPasses
-  LLVMBOLTProfile
-  LLVMBOLTRuntimeLibs
-  LLVMBOLTUtils
-  )
-
-if ("AArch64" IN_LIST LLVM_TARGETS_TO_BUILD)
-  list(APPEND TARGET_LINK_LIBRARIES LLVMBOLTTargetAArch64)
-  set(BOLT_AArch64 On)
-endif()
-
-if ("X86" IN_LIST LLVM_TARGETS_TO_BUILD)
-  list(APPEND TARGET_LINK_LIBRARIES LLVMBOLTTargetX86)
-  set(BOLT_X64 On)
-endif()
 
 add_llvm_library(LLVMBOLTRewrite
   BinaryPassManager.cpp
   BoltDiff.cpp
   DWARFRewriter.cpp
   ExecutableFileMemoryManager.cpp
+  JITLinkLinker.cpp
+  LinuxKernelRewriter.cpp
   MachORewriteInstance.cpp
+  MetadataManager.cpp
+  PseudoProbeRewriter.cpp
   RewriteInstance.cpp
+  SDTRewriter.cpp
 
   DISABLE_LLVM_LINK_LLVM_DYLIB
 
@@ -42,13 +31,15 @@ add_llvm_library(LLVMBOLTRewrite
 
 target_link_libraries(LLVMBOLTRewrite
   PRIVATE
-  ${TARGET_LINK_LIBRARIES}
+  LLVMBOLTCore
+  LLVMBOLTPasses
+  LLVMBOLTProfile
+  LLVMBOLTRuntimeLibs
+  LLVMBOLTUtils
   )
 
-if (DEFINED BOLT_AArch64)
-  target_compile_definitions(LLVMBOLTRewrite PRIVATE AARCH64_AVAILABLE)
-endif()
-
-if (DEFINED BOLT_X64)
-  target_compile_definitions(LLVMBOLTRewrite PRIVATE X86_AVAILABLE)
-endif()
+foreach (tgt ${BOLT_TARGETS_TO_BUILD})
+  target_link_libraries(LLVMBOLTRewrite PRIVATE LLVMBOLTTarget${tgt})
+  string(TOUPPER "${tgt}" upper)
+  target_compile_definitions(LLVMBOLTRewrite PRIVATE ${upper}_AVAILABLE)
+endforeach()

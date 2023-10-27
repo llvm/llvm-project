@@ -1,10 +1,11 @@
 // Test the weak hooks.
-// RUN: %clangxx %s -o %t
-// RUN: %run %t
+// RUN: %clangxx %s -o %t && %run %t
 
-// Hooks are not implemented for lsan.
-// XFAIL: lsan
-// XFAIL: ubsan
+// Must not be implemented, no other reason to install interceptors.
+// XFAIL: lsan, ubsan
+
+// FIXME: Implement.
+// XFAIL: hwasan
 
 #include <assert.h>
 #include <string.h>

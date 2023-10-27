@@ -82,6 +82,111 @@ entry:
   ret i1 %res
 }
 
+define i1 @vscale_ule_max() vscale_range(4,8) {
+; CHECK-LABEL: @vscale_ule_max(
+; CHECK-NEXT:    ret i1 true
+;
+  %vscale = call i16 @llvm.vscale.i16()
+  %res = icmp ule i16 %vscale, 8
+  ret i1 %res
+}
+
+define i1 @vscale_ult_max() vscale_range(4,8) {
+; CHECK-LABEL: @vscale_ult_max(
+; CHECK-NEXT:    [[VSCALE:%.*]] = call i16 @llvm.vscale.i16()
+; CHECK-NEXT:    [[RES:%.*]] = icmp ult i16 [[VSCALE]], 8
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+  %vscale = call i16 @llvm.vscale.i16()
+  %res = icmp ult i16 %vscale, 8
+  ret i1 %res
+}
+
+define i1 @vscale_uge_min() vscale_range(4,8) {
+; CHECK-LABEL: @vscale_uge_min(
+; CHECK-NEXT:    ret i1 true
+;
+  %vscale = call i16 @llvm.vscale.i16()
+  %res = icmp uge i16 %vscale, 4
+  ret i1 %res
+}
+
+define i1 @vscale_ugt_min() vscale_range(4,8) {
+; CHECK-LABEL: @vscale_ugt_min(
+; CHECK-NEXT:    [[VSCALE:%.*]] = call i16 @llvm.vscale.i16()
+; CHECK-NEXT:    [[RES:%.*]] = icmp ugt i16 [[VSCALE]], 4
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+  %vscale = call i16 @llvm.vscale.i16()
+  %res = icmp ugt i16 %vscale, 4
+  ret i1 %res
+}
+
+define i1 @vscale_uge_no_max() vscale_range(4) {
+; CHECK-LABEL: @vscale_uge_no_max(
+; CHECK-NEXT:    ret i1 true
+;
+  %vscale = call i8 @llvm.vscale.i8()
+  %res = icmp uge i8 %vscale, 4
+  ret i1 %res
+}
+
+define i1 @vscale_ugt_no_max() vscale_range(4) {
+; CHECK-LABEL: @vscale_ugt_no_max(
+; CHECK-NEXT:    ret i1 false
+;
+  %vscale = call i8 @llvm.vscale.i8()
+  %res = icmp ugt i8 %vscale, 4
+  ret i1 %res
+}
+
+define i1 @vscale_uge_max_overflow() vscale_range(4,256) {
+; CHECK-LABEL: @vscale_uge_max_overflow(
+; CHECK-NEXT:    ret i1 true
+;
+  %vscale = call i8 @llvm.vscale.i8()
+  %res = icmp uge i8 %vscale, 4
+  ret i1 %res
+}
+
+define i1 @vscale_ugt_max_overflow() vscale_range(4,256) {
+; CHECK-LABEL: @vscale_ugt_max_overflow(
+; CHECK-NEXT:    [[VSCALE:%.*]] = call i8 @llvm.vscale.i8()
+; CHECK-NEXT:    [[RES:%.*]] = icmp ugt i8 [[VSCALE]], 4
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+  %vscale = call i8 @llvm.vscale.i8()
+  %res = icmp ugt i8 %vscale, 4
+  ret i1 %res
+}
+
+define i1 @vscale_eq_min_overflow() vscale_range(256,512) {
+; CHECK-LABEL: @vscale_eq_min_overflow(
+; CHECK-NEXT:    ret i1 true
+;
+  %vscale = call i8 @llvm.vscale.i8()
+  %res = icmp eq i8 %vscale, 42
+  ret i1 %res
+}
+
+define i1 @vscale_ult_min_overflow() vscale_range(256,512) {
+; CHECK-LABEL: @vscale_ult_min_overflow(
+; CHECK-NEXT:    ret i1 true
+;
+  %vscale = call i8 @llvm.vscale.i8()
+  %res = icmp ult i8 %vscale, 42
+  ret i1 %res
+}
+
+define i1 @vscale_ugt_min_overflow() vscale_range(256,512) {
+; CHECK-LABEL: @vscale_ugt_min_overflow(
+; CHECK-NEXT:    ret i1 true
+;
+  %vscale = call i8 @llvm.vscale.i8()
+  %res = icmp ugt i8 %vscale, 42
+  ret i1 %res
+}
+
 declare i8 @llvm.vscale.i8()
 declare i16 @llvm.vscale.i16()
 declare i32 @llvm.vscale.i32()

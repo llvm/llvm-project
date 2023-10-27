@@ -1,6 +1,6 @@
 from math import *
 
-'''
+"""
 This script is used to generate a table used by 
 libc/src/__support/high_precision_decimal.h.
 
@@ -46,20 +46,20 @@ tell us the number of additional digits. If the first digits of the number
 being shifted are greater than or equal to the digits of 5^i (the second value
 of each entry) then it is just the first value in the entry, else it is one
 fewer.
-'''
+"""
 
 
 # Generate Left Shift Table
 outStr = ""
 for i in range(61):
-  tenToTheI = 10**i
-  fiveToTheI = 5**i
-  outStr += "{"
-  # The number of new digits that would be created by multiplying 5**i by 2**i
-  outStr += str(ceil(log10(tenToTheI) - log10(fiveToTheI)))
-  outStr += ', "'
-  if not i == 0:
-    outStr += str(fiveToTheI)
-  outStr += '"},\n'
+    tenToTheI = 10**i
+    fiveToTheI = 5**i
+    outStr += "{"
+    # The number of new digits that would be created by multiplying 5**i by 2**i
+    outStr += str(ceil(log10(tenToTheI) - log10(fiveToTheI)))
+    outStr += ', "'
+    if not i == 0:
+        outStr += str(fiveToTheI)
+    outStr += '"},\n'
 
 print(outStr)

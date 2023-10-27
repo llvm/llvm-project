@@ -20,13 +20,15 @@ namespace mlir {
 class AffineDialect;
 class ModuleOp;
 
-namespace arith {
-class WideIntEmulationConverter;
-} // namespace arith
-
 namespace func {
+namespace arith {
+class ArithDialect;
+} // namespace arith
 class FuncDialect;
 } // namespace func
+namespace scf {
+class SCFDialect;
+} // namespace scf
 namespace tensor {
 class TensorDialect;
 } // namespace tensor
@@ -35,73 +37,6 @@ class VectorDialect;
 } // namespace vector
 
 namespace memref {
-class AllocOp;
-//===----------------------------------------------------------------------===//
-// Patterns
-//===----------------------------------------------------------------------===//
-
-/// Collects a set of patterns to rewrite ops within the memref dialect.
-void populateExpandOpsPatterns(RewritePatternSet &patterns);
-
-/// Appends patterns for folding memref aliasing ops into consumer load/store
-/// ops into `patterns`.
-void populateFoldMemRefAliasOpPatterns(RewritePatternSet &patterns);
-
-/// Appends patterns that resolve `memref.dim` operations with values that are
-/// defined by operations that implement the
-/// `ReifyRankedShapeTypeShapeOpInterface`, in terms of shapes of its input
-/// operands.
-void populateResolveRankedShapeTypeResultDimsPatterns(
-    RewritePatternSet &patterns);
-
-/// Appends patterns that resolve `memref.dim` operations with values that are
-/// defined by operations that implement the `InferShapedTypeOpInterface`, in
-/// terms of shapes of its input operands.
-void populateResolveShapedTypeResultDimsPatterns(RewritePatternSet &patterns);
-
-/// Appends patterns for expanding memref operations that modify the metadata
-/// (sizes, offset, strides) of a memref into easier to analyze constructs.
-void populateExpandStridedMetadataPatterns(RewritePatternSet &patterns);
-
-/// Appends patterns for emulating wide integer memref operations with ops over
-/// narrower integer types.
-void populateMemRefWideIntEmulationPatterns(
-    arith::WideIntEmulationConverter &typeConverter,
-    RewritePatternSet &patterns);
-
-/// Appends type converions for emulating wide integer memref operations with
-/// ops over narrowe integer types.
-void populateMemRefWideIntEmulationConversions(
-    arith::WideIntEmulationConverter &typeConverter);
-
-/// Transformation to do multi-buffering/array expansion to remove dependencies
-/// on the temporary allocation between consecutive loop iterations.
-/// It returns the new allocation if the original allocation was multi-buffered
-/// and returns failure() otherwise.
-/// Example:
-/// ```
-/// %0 = memref.alloc() : memref<4x128xf32>
-/// scf.for %iv = %c1 to %c1024 step %c3 {
-///   memref.copy %1, %0 : memref<4x128xf32> to memref<4x128xf32>
-///   "some_use"(%0) : (memref<4x128xf32>) -> ()
-/// }
-/// ```
-/// into:
-/// ```
-/// %0 = memref.alloc() : memref<5x4x128xf32>
-/// scf.for %iv = %c1 to %c1024 step %c3 {
-///   %s = arith.subi %iv, %c1 : index
-///   %d = arith.divsi %s, %c3 : index
-///   %i = arith.remsi %d, %c5 : index
-///   %sv = memref.subview %0[%i, 0, 0] [1, 4, 128] [1, 1, 1] :
-///     memref<5x4x128xf32> to memref<4x128xf32, strided<[128, 1], offset: ?>>
-///   memref.copy %1, %sv : memref<4x128xf32> to memref<4x128xf32, strided<...>>
-///   "some_use"(%sv) : (memref<4x128xf32, strided<...>) -> ()
-/// }
-/// ```
-FailureOr<memref::AllocOp> multiBuffer(memref::AllocOp allocOp,
-                                       unsigned multiplier);
-
 //===----------------------------------------------------------------------===//
 // Passes
 //===----------------------------------------------------------------------===//
@@ -137,6 +72,10 @@ std::unique_ptr<Pass> createResolveShapedTypeResultDimsPass();
 /// Creates an operation pass to expand some memref operation into
 /// easier to reason about operations.
 std::unique_ptr<Pass> createExpandStridedMetadataPass();
+
+/// Creates an operation pass to expand `memref.realloc` operations into their
+/// components.
+std::unique_ptr<Pass> createExpandReallocPass(bool emitDeallocs = true);
 
 //===----------------------------------------------------------------------===//
 // Registration

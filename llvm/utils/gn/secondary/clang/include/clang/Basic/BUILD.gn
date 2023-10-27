@@ -67,8 +67,23 @@ clang_tablegen("AttrList") {
   td_file = "Attr.td"
 }
 
+clang_tablegen("AttrLeftSideCanPrintList") {
+  args = [ "-gen-clang-attr-can-print-left-list" ]
+  td_file = "Attr.td"
+}
+
+clang_tablegen("AttrLeftSideMustPrintList") {
+  args = [ "-gen-clang-attr-must-print-left-list" ]
+  td_file = "Attr.td"
+}
+
 clang_tablegen("AttrSubMatchRulesList") {
   args = [ "-gen-clang-attr-subject-match-rule-list" ]
+  td_file = "Attr.td"
+}
+
+clang_tablegen("AttrTokenKinds") {
+  args = [ "-gen-clang-attr-token-kinds" ]
   td_file = "Attr.td"
 }
 
@@ -127,6 +142,21 @@ clang_tablegen("arm_sve_sema_rangechecks") {
   td_file = "arm_sve.td"
 }
 
+clang_tablegen("arm_sme_builtins") {
+  args = [ "-gen-arm-sme-builtins" ]
+  td_file = "arm_sme.td"
+}
+
+clang_tablegen("arm_sme_builtin_cg") {
+  args = [ "-gen-arm-sme-builtin-codegen" ]
+  td_file = "arm_sme.td"
+}
+
+clang_tablegen("arm_sme_sema_rangechecks") {
+  args = [ "-gen-arm-sme-sema-rangechecks" ]
+  td_file = "arm_sme.td"
+}
+
 clang_tablegen("arm_cde_builtins") {
   args = [ "-gen-arm-cde-builtin-def" ]
   td_file = "arm_cde.td"
@@ -162,4 +192,19 @@ clang_tablegen("riscv_vector_builtin_cg") {
 clang_tablegen("riscv_vector_builtin_sema") {
   args = [ "-gen-riscv-vector-builtin-sema" ]
   td_file = "riscv_vector.td"
+}
+
+clang_tablegen("riscv_sifive_vector_builtins") {
+  args = [ "-gen-riscv-sifive-vector-builtins" ]
+  td_file = "riscv_sifive_vector.td"
+}
+
+clang_tablegen("riscv_sifive_vector_builtin_cg") {
+  args = [ "-gen-riscv-sifive-vector-builtin-codegen" ]
+  td_file = "riscv_sifive_vector.td"
+}
+
+clang_tablegen("riscv_sifive_vector_builtin_sema") {
+  args = [ "-gen-riscv-sifive-vector-builtin-sema" ]
+  td_file = "riscv_sifive_vector.td"
 }

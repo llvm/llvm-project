@@ -8,7 +8,6 @@
 
 #include "LLVMTestBase.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
-#include "mlir/IR/SubElementInterfaces.h"
 
 using namespace mlir;
 using namespace mlir::LLVM;
@@ -31,33 +30,24 @@ TEST_F(LLVMIRTest, MutualReferencedSubElementTypes) {
   Type barBody[] = {LLVMPointerType::get(fooStructTy)};
   ASSERT_TRUE(succeeded(barStructTy.setBody(barBody, /*isPacked=*/false)));
 
-  auto subElementInterface = fooStructTy.dyn_cast<SubElementTypeInterface>();
-  ASSERT_TRUE(bool(subElementInterface));
   // Test if walkSubElements goes into infinite loops.
   SmallVector<Type, 4> subElementTypes;
-  subElementInterface.walkSubElements(
-      [](Attribute attr) {},
-      [&](Type type) { subElementTypes.push_back(type); });
-  // We don't record LLVMPointerType (because it's immutable), thus
-  // !llvm.ptr<struct<"bar",...>> will be visited twice.
-  ASSERT_EQ(subElementTypes.size(), 5U);
-
-  // !llvm.ptr<struct<"bar",...>>
-  ASSERT_TRUE(subElementTypes[0].isa<LLVMPointerType>());
-
-  // !llvm.struct<"foo",...>
-  auto structType = subElementTypes[1].dyn_cast<LLVMStructType>();
-  ASSERT_TRUE(bool(structType));
-  ASSERT_TRUE(structType.getName().equals("foo"));
+  fooStructTy.walk([&](Type type) { subElementTypes.push_back(type); });
+  ASSERT_EQ(subElementTypes.size(), 4U);
 
   // !llvm.ptr<struct<"foo",...>>
-  ASSERT_TRUE(subElementTypes[2].isa<LLVMPointerType>());
+  ASSERT_TRUE(isa<LLVMPointerType>(subElementTypes[0]));
 
   // !llvm.struct<"bar",...>
-  structType = subElementTypes[3].dyn_cast<LLVMStructType>();
+  auto structType = dyn_cast<LLVMStructType>(subElementTypes[1]);
   ASSERT_TRUE(bool(structType));
   ASSERT_TRUE(structType.getName().equals("bar"));
 
   // !llvm.ptr<struct<"bar",...>>
-  ASSERT_TRUE(subElementTypes[4].isa<LLVMPointerType>());
+  ASSERT_TRUE(isa<LLVMPointerType>(subElementTypes[2]));
+
+  // !llvm.struct<"foo",...>
+  structType = dyn_cast<LLVMStructType>(subElementTypes[3]);
+  ASSERT_TRUE(bool(structType));
+  ASSERT_TRUE(structType.getName().equals("foo"));
 }

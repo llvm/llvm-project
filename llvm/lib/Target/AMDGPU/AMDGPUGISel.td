@@ -31,6 +31,10 @@ def gi_vop3mods :
     GIComplexOperandMatcher<s32, "selectVOP3Mods">,
     GIComplexPatternEquiv<VOP3Mods>;
 
+def gi_vop3modsnoncanonicalizing :
+    GIComplexOperandMatcher<s32, "selectVOP3ModsNonCanonicalizing">,
+    GIComplexPatternEquiv<VOP3ModsNonCanonicalizing>;
+
 def gi_vop3_no_mods :
     GIComplexOperandMatcher<s32, "selectVOP3NoMods">,
     GIComplexPatternEquiv<VOP3NoMods>;
@@ -153,6 +157,10 @@ def gi_vop3_mad_mix_mods :
     GIComplexOperandMatcher<s64, "selectVOP3PMadMixMods">,
     GIComplexPatternEquiv<VOP3PMadMixMods>;
 
+def gi_vop3_mad_mix_mods_ext :
+    GIComplexOperandMatcher<s64, "selectVOP3PMadMixModsExt">,
+    GIComplexPatternEquiv<VOP3PMadMixModsExt>;
+
 // Separate load nodes are defined to glue m0 initialization in
 // SelectionDAG. The GISel selector can just insert m0 initialization
 // directly before selecting a glue-less load, so hide this
@@ -227,10 +235,8 @@ def : GINodeEquiv<G_AMDGPU_TBUFFER_STORE_FORMAT, SItbuffer_store>;
 def : GINodeEquiv<G_AMDGPU_TBUFFER_STORE_FORMAT_D16, SItbuffer_store_d16>;
 
 // FIXME: Check MMO is atomic
-def : GINodeEquiv<G_AMDGPU_ATOMIC_INC, SIatomic_inc>;
-def : GINodeEquiv<G_AMDGPU_ATOMIC_DEC, SIatomic_dec>;
-def : GINodeEquiv<G_AMDGPU_ATOMIC_INC, atomic_inc_glue>;
-def : GINodeEquiv<G_AMDGPU_ATOMIC_DEC, atomic_dec_glue>;
+def : GINodeEquiv<G_ATOMICRMW_UINC_WRAP, atomic_load_uinc_wrap_glue>;
+def : GINodeEquiv<G_ATOMICRMW_UDEC_WRAP, atomic_load_udec_wrap_glue>;
 def : GINodeEquiv<G_AMDGPU_ATOMIC_FMIN, SIatomic_fmin>;
 def : GINodeEquiv<G_AMDGPU_ATOMIC_FMAX, SIatomic_fmax>;
 def : GINodeEquiv<G_AMDGPU_ATOMIC_FMIN, atomic_load_fmin_glue>;
@@ -373,3 +379,6 @@ def gi_set_glc : GICustomOperandRenderer<"renderSetGLC">,
 
 def gi_frameindex_to_targetframeindex : GICustomOperandRenderer<"renderFrameIndex">,
   GISDNodeXFormEquiv<frameindex_to_targetframeindex>;
+
+def gi_fp_pow2_to_exponent : GICustomOperandRenderer<"renderFPPow2ToExponent">,
+  GISDNodeXFormEquiv<FPPow2ToExponentXForm>;

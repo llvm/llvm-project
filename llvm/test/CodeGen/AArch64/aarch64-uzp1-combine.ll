@@ -13,10 +13,10 @@ define <4 x i16> @test_combine_v4i16_v2i64(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-BE:       // %bb.0:
 ; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
 ; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; CHECK-BE-NEXT:    xtn v1.2s, v1.2d
 ; CHECK-BE-NEXT:    xtn v0.2s, v0.2d
-; CHECK-BE-NEXT:    rev32 v1.4h, v1.4h
+; CHECK-BE-NEXT:    xtn v1.2s, v1.2d
 ; CHECK-BE-NEXT:    rev32 v0.4h, v0.4h
+; CHECK-BE-NEXT:    rev32 v1.4h, v1.4h
 ; CHECK-BE-NEXT:    uzp1 v0.4h, v0.4h, v1.4h
 ; CHECK-BE-NEXT:    rev64 v0.4h, v0.4h
 ; CHECK-BE-NEXT:    ret
@@ -43,8 +43,8 @@ define <4 x i16> @test_combine_v4i16_v4i32(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-BE-NEXT:    rev64 v0.4s, v0.4s
 ; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
 ; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; CHECK-BE-NEXT:    xtn v1.4h, v1.4s
 ; CHECK-BE-NEXT:    xtn v0.4h, v0.4s
+; CHECK-BE-NEXT:    xtn v1.4h, v1.4s
 ; CHECK-BE-NEXT:    uzp1 v0.4h, v0.4h, v1.4h
 ; CHECK-BE-NEXT:    rev64 v0.4h, v0.4h
 ; CHECK-BE-NEXT:    ret
@@ -68,10 +68,10 @@ define <4 x i16> @test_combine_v4i16_v8i16(<8 x i16> %a, <8 x i16> %b) {
 ; CHECK-BE-NEXT:    rev64 v0.8h, v0.8h
 ; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
 ; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; CHECK-BE-NEXT:    xtn v1.8b, v1.8h
 ; CHECK-BE-NEXT:    xtn v0.8b, v0.8h
-; CHECK-BE-NEXT:    rev16 v1.8b, v1.8b
+; CHECK-BE-NEXT:    xtn v1.8b, v1.8h
 ; CHECK-BE-NEXT:    rev16 v0.8b, v0.8b
+; CHECK-BE-NEXT:    rev16 v1.8b, v1.8b
 ; CHECK-BE-NEXT:    uzp1 v0.4h, v0.4h, v1.4h
 ; CHECK-BE-NEXT:    rev64 v0.4h, v0.4h
 ; CHECK-BE-NEXT:    ret
@@ -97,10 +97,10 @@ define <8 x i8> @test_combine_v8i8_v2i64(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-BE:       // %bb.0:
 ; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
 ; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; CHECK-BE-NEXT:    xtn v1.2s, v1.2d
 ; CHECK-BE-NEXT:    xtn v0.2s, v0.2d
-; CHECK-BE-NEXT:    rev32 v1.8b, v1.8b
+; CHECK-BE-NEXT:    xtn v1.2s, v1.2d
 ; CHECK-BE-NEXT:    rev32 v0.8b, v0.8b
+; CHECK-BE-NEXT:    rev32 v1.8b, v1.8b
 ; CHECK-BE-NEXT:    uzp1 v0.8b, v0.8b, v1.8b
 ; CHECK-BE-NEXT:    rev64 v0.8b, v0.8b
 ; CHECK-BE-NEXT:    ret
@@ -127,10 +127,10 @@ define <8 x i8> @test_combine_v8i8_v4i32(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-BE-NEXT:    rev64 v0.4s, v0.4s
 ; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
 ; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; CHECK-BE-NEXT:    xtn v1.4h, v1.4s
 ; CHECK-BE-NEXT:    xtn v0.4h, v0.4s
-; CHECK-BE-NEXT:    rev16 v1.8b, v1.8b
+; CHECK-BE-NEXT:    xtn v1.4h, v1.4s
 ; CHECK-BE-NEXT:    rev16 v0.8b, v0.8b
+; CHECK-BE-NEXT:    rev16 v1.8b, v1.8b
 ; CHECK-BE-NEXT:    uzp1 v0.8b, v0.8b, v1.8b
 ; CHECK-BE-NEXT:    rev64 v0.8b, v0.8b
 ; CHECK-BE-NEXT:    ret
@@ -157,8 +157,8 @@ define <8 x i8> @test_combine_v8i8_v8i16(<8 x i16> %a, <8 x i16> %b) {
 ; CHECK-BE-NEXT:    rev64 v0.8h, v0.8h
 ; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
 ; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; CHECK-BE-NEXT:    xtn v1.8b, v1.8h
 ; CHECK-BE-NEXT:    xtn v0.8b, v0.8h
+; CHECK-BE-NEXT:    xtn v1.8b, v1.8h
 ; CHECK-BE-NEXT:    uzp1 v0.8b, v0.8b, v1.8b
 ; CHECK-BE-NEXT:    rev64 v0.8b, v0.8b
 ; CHECK-BE-NEXT:    ret
@@ -181,8 +181,8 @@ define <2 x i32> @test_combine_v2i32_v2i64(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-BE:       // %bb.0:
 ; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
 ; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; CHECK-BE-NEXT:    xtn v1.2s, v1.2d
 ; CHECK-BE-NEXT:    xtn v0.2s, v0.2d
+; CHECK-BE-NEXT:    xtn v1.2s, v1.2d
 ; CHECK-BE-NEXT:    zip1 v0.2s, v0.2s, v1.2s
 ; CHECK-BE-NEXT:    rev64 v0.2s, v0.2s
 ; CHECK-BE-NEXT:    ret
@@ -207,10 +207,10 @@ define <2 x i32> @test_combine_v2i32_v4i32(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-BE-NEXT:    rev64 v0.4s, v0.4s
 ; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
 ; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; CHECK-BE-NEXT:    xtn v1.4h, v1.4s
 ; CHECK-BE-NEXT:    xtn v0.4h, v0.4s
-; CHECK-BE-NEXT:    rev32 v1.4h, v1.4h
+; CHECK-BE-NEXT:    xtn v1.4h, v1.4s
 ; CHECK-BE-NEXT:    rev32 v0.4h, v0.4h
+; CHECK-BE-NEXT:    rev32 v1.4h, v1.4h
 ; CHECK-BE-NEXT:    zip1 v0.2s, v0.2s, v1.2s
 ; CHECK-BE-NEXT:    rev64 v0.2s, v0.2s
 ; CHECK-BE-NEXT:    ret
@@ -238,10 +238,10 @@ define <2 x i32> @test_combine_v2i32_v8i16(<8 x i16> %a, <8 x i16> %b) {
 ; CHECK-BE-NEXT:    rev64 v0.8h, v0.8h
 ; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
 ; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; CHECK-BE-NEXT:    xtn v1.8b, v1.8h
 ; CHECK-BE-NEXT:    xtn v0.8b, v0.8h
-; CHECK-BE-NEXT:    rev32 v1.8b, v1.8b
+; CHECK-BE-NEXT:    xtn v1.8b, v1.8h
 ; CHECK-BE-NEXT:    rev32 v0.8b, v0.8b
+; CHECK-BE-NEXT:    rev32 v1.8b, v1.8b
 ; CHECK-BE-NEXT:    zip1 v0.2s, v0.2s, v1.2s
 ; CHECK-BE-NEXT:    rev64 v0.2s, v0.2s
 ; CHECK-BE-NEXT:    ret
@@ -268,10 +268,10 @@ define i8 @trunc_v4i64_v4i8(<4 x i64> %input) {
 ; CHECK-BE:       // %bb.0:
 ; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
-; CHECK-BE-NEXT:    xtn v0.2s, v0.2d
 ; CHECK-BE-NEXT:    xtn v1.2s, v1.2d
-; CHECK-BE-NEXT:    rev32 v0.4h, v0.4h
+; CHECK-BE-NEXT:    xtn v0.2s, v0.2d
 ; CHECK-BE-NEXT:    rev32 v1.4h, v1.4h
+; CHECK-BE-NEXT:    rev32 v0.4h, v0.4h
 ; CHECK-BE-NEXT:    uzp1 v0.4h, v0.4h, v1.4h
 ; CHECK-BE-NEXT:    addv h0, v0.4h
 ; CHECK-BE-NEXT:    fmov w0, s0

@@ -34,7 +34,7 @@ define signext i32 @twoPairsAllOpInPairs(i32 signext %0, i32 signext %1, i32 sig
 ; CHECK-LABEL: @twoPairsAllOpInPairs(
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[TMP2:%.*]], [[TMP1:%.*]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = add i32 [[TMP5]], [[TMP0:%.*]]
-; CHECK-NEXT:    [[TMP7:%.*]] = add i32 [[TMP6]], [[TMP3:%.*]]
+; CHECK-NEXT:    [[TMP7:%.*]] = add nsw i32 [[TMP6]], [[TMP3:%.*]]
 ; CHECK-NEXT:    store i32 [[TMP7]], ptr @num1, align 4
 ; CHECK-NEXT:    store i32 [[TMP5]], ptr @num2, align 4
 ; CHECK-NEXT:    [[TMP8:%.*]] = add nsw i32 [[TMP3]], [[TMP0]]
@@ -57,8 +57,8 @@ define signext i32 @threePairsAllOpInPairs(i32 signext %0, i32 signext %1, i32 s
 ; CHECK-NEXT:    [[TMP7:%.*]] = add i32 [[TMP3:%.*]], [[TMP2:%.*]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = add i32 [[TMP7]], [[TMP0:%.*]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = add i32 [[TMP8]], [[TMP1:%.*]]
-; CHECK-NEXT:    [[TMP10:%.*]] = add i32 [[TMP9]], [[TMP4:%.*]]
-; CHECK-NEXT:    [[TMP11:%.*]] = add i32 [[TMP10]], [[TMP5:%.*]]
+; CHECK-NEXT:    [[TMP10:%.*]] = add nsw i32 [[TMP9]], [[TMP4:%.*]]
+; CHECK-NEXT:    [[TMP11:%.*]] = add nsw i32 [[TMP10]], [[TMP5:%.*]]
 ; CHECK-NEXT:    store i32 [[TMP11]], ptr @num1, align 4
 ; CHECK-NEXT:    [[TMP12:%.*]] = add nsw i32 [[TMP5]], [[TMP0]]
 ; CHECK-NEXT:    store i32 [[TMP12]], ptr @num2, align 4

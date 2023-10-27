@@ -189,6 +189,9 @@ public:
   /// unset for source.
   void copyEdgeProbabilities(BasicBlock *Src, BasicBlock *Dst);
 
+  /// Swap outgoing edges probabilities for \p Src with branch terminator
+  void swapSuccEdgesProbabilities(const BasicBlock *Src);
+
   static BranchProbability getBranchProbStackProtector(bool IsLikely) {
     static const BranchProbability LikelyProb((1u << 20) - 1, 1u << 20);
     return IsLikely ? LikelyProb : LikelyProb.getCompl();

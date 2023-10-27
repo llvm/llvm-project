@@ -7,11 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// When the debug mode is enabled, we don't unwrap iterators in `std::copy` and similar algorithms so we don't get this
-// optimization.
-// UNSUPPORTED: libcpp-has-debug-mode
 // In the modules build, adding another overload of `memmove` doesn't work.
-// UNSUPPORTED: modules-build
+// UNSUPPORTED: clang-modules-build
 // GCC complains about "ambiguating" `__builtin_memmove`.
 // UNSUPPORTED: gcc
 
@@ -36,7 +33,7 @@ static bool memmove_called = false;
 // This template is a better match than the actual `builtin_memmove` (it can match the pointer type exactly, without an
 // implicit conversion to `void*`), so it should hijack the call inside `std::copy` and similar algorithms if it's made.
 template <class Dst, class Src>
-constexpr void* __builtin_memmove(Dst* dst, Src* src, size_t count) {
+constexpr void* __builtin_memmove(Dst* dst, Src* src, std::size_t count) {
   memmove_called = true;
   return __builtin_memmove(static_cast<void*>(dst), static_cast<const void*>(src), count);
 }
@@ -135,7 +132,7 @@ void test_one(Func func) {
 
   // Normal case.
   {
-    const size_t N = 4;
+    const std::size_t N = 4;
 
     From input[N] = {make<From>(1), make<From>(2), make<From>(3), make<From>(4)};
     To output[N];
@@ -159,63 +156,43 @@ void test_one(Func func) {
         }
     }));
   }
-
-  // Empty input sequence.
-  {
-    const size_t N = 0;
-
-    From input[1]  = {make<From>(1)};
-    To output[1] = {make<To>(2)};
-
-    auto in     = InIter(input);
-    auto in_end = InIter(input + N);
-    auto sent   = SentWrapper<decltype(in_end)>(in_end);
-    auto out    = OutIter(output);
-
-    assert(!memmove_called);
-    func(in, sent, out, N);
-
-    assert(memmove_called);
-    memmove_called = false;
-    assert(output[0] == make<To>(2));
-  }
 }
 
 template <class InIter, template <class> class SentWrapper, class OutIter>
 void test_copy_and_move() {
   // Classic.
   if constexpr (std::same_as<InIter, SentWrapper<InIter>>) {
-    test_one<InIter, SentWrapper, OutIter>([](auto first, auto last, auto out, size_t) {
+    test_one<InIter, SentWrapper, OutIter>([](auto first, auto last, auto out, std::size_t) {
       std::copy(first, last, out);
     });
-    test_one<InIter, SentWrapper, OutIter>([](auto first, auto last, auto out, size_t n) {
+    test_one<InIter, SentWrapper, OutIter>([](auto first, auto last, auto out, std::size_t n) {
       std::copy_backward(first, last, out + n);
     });
-    test_one<InIter, SentWrapper, OutIter>([](auto first, auto, auto out, size_t n) {
+    test_one<InIter, SentWrapper, OutIter>([](auto first, auto, auto out, std::size_t n) {
       std::copy_n(first, n, out);
     });
-    test_one<InIter, SentWrapper, OutIter>([](auto first, auto last, auto out, size_t) {
+    test_one<InIter, SentWrapper, OutIter>([](auto first, auto last, auto out, std::size_t) {
       std::move(first, last, out);
     });
-    test_one<InIter, SentWrapper, OutIter>([](auto first, auto last, auto out, size_t n) {
+    test_one<InIter, SentWrapper, OutIter>([](auto first, auto last, auto out, std::size_t n) {
       std::move_backward(first, last, out + n);
     });
   }
 
   // Ranges.
-  test_one<InIter, SentWrapper, OutIter>([](auto first, auto last, auto out, size_t) {
+  test_one<InIter, SentWrapper, OutIter>([](auto first, auto last, auto out, std::size_t) {
     std::ranges::copy(first, last, out);
   });
-  test_one<InIter, SentWrapper, OutIter>([](auto first, auto last, auto out, size_t n) {
+  test_one<InIter, SentWrapper, OutIter>([](auto first, auto last, auto out, std::size_t n) {
     std::ranges::copy_backward(first, last, out + n);
   });
-  test_one<InIter, SentWrapper, OutIter>([](auto first, auto, auto out, size_t n) {
+  test_one<InIter, SentWrapper, OutIter>([](auto first, auto, auto out, std::size_t n) {
     std::ranges::copy_n(first, n, out);
   });
-  test_one<InIter, SentWrapper, OutIter>([](auto first, auto last, auto out, size_t) {
+  test_one<InIter, SentWrapper, OutIter>([](auto first, auto last, auto out, std::size_t) {
     std::ranges::move(first, last, out);
   });
-  test_one<InIter, SentWrapper, OutIter>([](auto first, auto last, auto out, size_t n) {
+  test_one<InIter, SentWrapper, OutIter>([](auto first, auto last, auto out, std::size_t n) {
     std::ranges::move_backward(first, last, out + n);
   });
 }
@@ -281,36 +258,36 @@ void test_different_signedness() {
     }
   };
 
-  check([](auto first, auto last, auto out, size_t) {
+  check([](auto first, auto last, auto out, std::size_t) {
     std::copy(first, last, out);
   });
-  check([](auto first, auto last, auto out, size_t n) {
+  check([](auto first, auto last, auto out, std::size_t n) {
     std::copy_backward(first, last, out + n);
   });
-  check([](auto first, auto, auto out, size_t n) {
+  check([](auto first, auto, auto out, std::size_t n) {
     std::copy_n(first, n, out);
   });
-  check([](auto first, auto last, auto out, size_t) {
+  check([](auto first, auto last, auto out, std::size_t) {
     std::move(first, last, out);
   });
-  check([](auto first, auto last, auto out, size_t n) {
+  check([](auto first, auto last, auto out, std::size_t n) {
     std::move_backward(first, last, out + n);
   });
 
   // Ranges.
-  check([](auto first, auto last, auto out, size_t) {
+  check([](auto first, auto last, auto out, std::size_t) {
     std::ranges::copy(first, last, out);
   });
-  check([](auto first, auto last, auto out, size_t n) {
+  check([](auto first, auto last, auto out, std::size_t n) {
     std::ranges::copy_backward(first, last, out + n);
   });
-  check([](auto first, auto, auto out, size_t n) {
+  check([](auto first, auto, auto out, std::size_t n) {
     std::ranges::copy_n(first, n, out);
   });
-  check([](auto first, auto last, auto out, size_t) {
+  check([](auto first, auto last, auto out, std::size_t) {
     std::ranges::move(first, last, out);
   });
-  check([](auto first, auto last, auto out, size_t n) {
+  check([](auto first, auto last, auto out, std::size_t n) {
     std::ranges::move_backward(first, last, out + n);
   });
 }

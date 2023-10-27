@@ -22,6 +22,9 @@ class LLT;
 
 def s32 : LLT;
 def s64 : LLT;
+def v2s32 : LLT;
+def v4s16 : LLT;
+def v8s8 : LLT;
 
 // Defines a matcher for complex operands. This is analogous to ComplexPattern
 // from SelectionDAG.

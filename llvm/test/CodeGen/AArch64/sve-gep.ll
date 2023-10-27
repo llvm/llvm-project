@@ -225,8 +225,8 @@ define <vscale x 2 x <vscale x 2 x i64>*> @scalable_of_scalable_3(<vscale x 2 x 
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    rdvl x8, #1
-; CHECK-NEXT:    sxtw z1.d, p0/m, z1.d
 ; CHECK-NEXT:    mov z2.d, x8
+; CHECK-NEXT:    sxtw z1.d, p0/m, z1.d
 ; CHECK-NEXT:    mla z0.d, p0/m, z1.d, z2.d
 ; CHECK-NEXT:    ret
   %d = getelementptr <vscale x 2 x i64>, <vscale x 2 x <vscale x 2 x i64>*> %base, <vscale x 2 x i32> %idx

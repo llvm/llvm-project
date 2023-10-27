@@ -987,11 +987,7 @@ public:
 
   // Check for presence of header handle in the header stack.
   bool isHeaderHandleInStack(HeaderHandle H) const {
-    for (auto I = HeaderStack.begin(), E = HeaderStack.end(); I != E; ++I) {
-      if (*I == H)
-        return true;
-    }
-    return false;
+    return llvm::is_contained(HeaderStack, H);
   }
 
   // Get the handle of a header inclusion path entry.
@@ -1296,8 +1292,8 @@ void PreprocessorCallbacks::FileChanged(
     PPTracker.handleHeaderEntry(PP, getSourceLocationFile(PP, Loc));
     break;
   case ExitFile: {
-    const clang::FileEntry *F =
-        PP.getSourceManager().getFileEntryForID(PrevFID);
+    clang::OptionalFileEntryRef F =
+        PP.getSourceManager().getFileEntryRefForID(PrevFID);
     if (F)
       PPTracker.handleHeaderExit(F->getName());
   } break;

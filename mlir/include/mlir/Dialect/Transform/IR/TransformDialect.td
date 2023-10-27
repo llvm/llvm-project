@@ -18,93 +18,149 @@ def Transform_Dialect : Dialect {
   let name = "transform";
   let cppNamespace = "::mlir::transform";
 
-  let dependentDialects = [
-    "::mlir::pdl::PDLDialect",
-    "::mlir::pdl_interp::PDLInterpDialect",
-  ];
-
-  let useFoldAPI = kEmitFoldAdaptorFolder;
-
+  let hasOperationAttrVerify = 1;
   let extraClassDeclaration = [{
-      /// Returns the named PDL constraint functions available in the dialect
-      /// as a map from their name to the function.
-      const ::llvm::StringMap<::mlir::PDLConstraintFunction> &
-      getPDLConstraintHooks() const;
+    /// Symbol name for the default entry point "named sequence".
+    constexpr const static ::llvm::StringLiteral
+        kTransformEntryPointSymbolName = "__transform_main";
+    
+    /// Name of the attribute attachable to the symbol table operation
+    /// containing named sequences. This is used to trigger verification.
+    constexpr const static ::llvm::StringLiteral
+        kWithNamedSequenceAttrName = "transform.with_named_sequence";
 
-      /// Parses a type registered by this dialect or one of its extensions.
-      ::mlir::Type parseType(::mlir::DialectAsmParser &parser) const override;
+    /// Name of the attribute attachable to an operation so it can be
+    /// identified as root by the default interpreter pass.
+    constexpr const static ::llvm::StringLiteral kTargetTagAttrName =
+        "transform.target_tag";
 
-      /// Prints a type registered by this dialect or one of its extensions.
-      void printType(::mlir::Type type,
-                     ::mlir::DialectAsmPrinter &printer) const override;
+    /// Name of the attribute attachable to an operation, indicating that
+    /// TrackingListener failures should be silenced.
+    constexpr const static ::llvm::StringLiteral
+        kSilenceTrackingFailuresAttrName =
+            "transform.silence_tracking_failures";
 
-      /// Parser callback for an individual type registered by this dialect or
-      /// its extensions.
-      using ExtensionTypeParsingHook = ::mlir::Type (*)(::mlir::AsmParser &);
+    /// Names of the attributes indicating whether an argument of an external
+    /// transform dialect symbol is consumed or only read.
+    constexpr const static ::llvm::StringLiteral kArgConsumedAttrName =
+        "transform.consumed";
+    constexpr const static ::llvm::StringLiteral kArgReadOnlyAttrName =
+        "transform.readonly";
 
-      /// Printer callback for an individual type registered by this dialect or
-      /// its extensions.
-      using ExtensionTypePrintingHook =
-          std::function<void (::mlir::Type, ::mlir::AsmPrinter &)>;
+    /// Names of the attributes indicating whether an argument of an external
+    /// transform dialect symbol is consumed or only read.
+    StringAttr getConsumedAttrName() const {
+      return StringAttr::get(getContext(), kArgConsumedAttrName);
+    }
+    StringAttr getReadOnlyAttrName() const {
+      return StringAttr::get(getContext(), kArgReadOnlyAttrName);
+    }
 
-    private:
-      /// Registers operations specified as template parameters with this
-      /// dialect. Checks that they implement the required interfaces.
-      template <typename... OpTys>
-      void addOperationsChecked() {
-        (addOperationIfNotRegistered<OpTys>(), ...);
-      }
-      template <typename OpTy>
-      void addOperationIfNotRegistered();
+    template <typename DataTy>
+    const DataTy &getExtraData() const {
+      return *static_cast<const DataTy *>(
+          extraData.at(::mlir::TypeID::get<DataTy>()).get());
+    }
 
-      /// Reports a repeated registration error of an op with the given name.
-      [[noreturn]] void reportDuplicateOpRegistration(StringRef opName);
+    /// Parses a type registered by this dialect or one of its extensions.
+    ::mlir::Type parseType(::mlir::DialectAsmParser & parser) const override;
 
-      /// Registers the types specified as template parameters with the
-      /// Transform dialect. Checks that they meet the requirements for
-      /// Transform IR types.
-      template <typename... TypeTys>
-      void addTypesChecked() {
-        (addTypeIfNotRegistered<TypeTys>(), ...);
-      }
-      template <typename Type>
-      void addTypeIfNotRegistered();
+    /// Prints a type registered by this dialect or one of its extensions.
+    void printType(::mlir::Type type, ::mlir::DialectAsmPrinter & printer)
+        const override;
 
-      /// Reports a repeated registration error of a type with the given
-      /// mnemonic.
-      [[noreturn]] void reportDuplicateTypeRegistration(StringRef mnemonic);
+    /// Parser callback for an individual type registered by this dialect or
+    /// its extensions.
+    using ExtensionTypeParsingHook = ::mlir::Type (*)(::mlir::AsmParser &);
 
-      void initializeTypes();
+    /// Printer callback for an individual type registered by this dialect or
+    /// its extensions.
+    using ExtensionTypePrintingHook =
+        std::function<void(::mlir::Type, ::mlir::AsmPrinter &)>;
 
-      template <typename, typename...>
-      friend class TransformDialectExtension;
+    /// Appends the given module as a transform symbol library available to
+    /// all dialect users.
+    void registerLibraryModule(::mlir::OwningOpRef<::mlir::ModuleOp> &&
+                                library) {
+      libraryModules.push_back(std::move(library));
+    }
 
-      /// Takes ownership of the named PDL constraint function from the given
-      /// map and makes them available for use by the operations in the dialect.
-      void mergeInPDLMatchHooks(
-          ::llvm::StringMap<::mlir::PDLConstraintFunction> &&constraintFns);
+    /// Returns a range of registered library modules.
+    auto getLibraryModules() const {
+      return ::llvm::map_range(
+          libraryModules,
+          [](const ::mlir::OwningOpRef<::mlir::ModuleOp> &library) {
+        return library.get();
+      });
+    }
 
-      //===----------------------------------------------------------------===//
-      // Data fields
-      //===----------------------------------------------------------------===//
+  private:
+    /// Registers operations specified as template parameters with this
+    /// dialect. Checks that they implement the required interfaces.
+    template <typename... OpTys>
+    void addOperationsChecked() {
+      (addOperationIfNotRegistered<OpTys>(), ...);
+    }
+    template <typename OpTy>
+    void addOperationIfNotRegistered();
 
-      /// A container for PDL constraint function that can be used by
-      /// operations in this dialect.
-      ::mlir::PDLPatternModule pdlMatchHooks;
+    /// Reports a repeated registration error of an op with the given name.
+    [[noreturn]] void reportDuplicateOpRegistration(StringRef opName);
 
-      /// A map from type mnemonic to its parsing function for the remainder of
-      /// the syntax. The parser has access to the mnemonic, so it is used for
-      /// further dispatch.
-      ::llvm::StringMap<ExtensionTypeParsingHook> typeParsingHooks;
+    /// Registers types specified as template parameters with the Transform
+    /// dialect. Checks that they meet the requirements for Transform IR types.
+    template <typename... TypeTys>
+    void addTypesChecked() {
+      (addTypeIfNotRegistered<TypeTys>(), ...);
+    }
+    template <typename Type>
+    void addTypeIfNotRegistered();
 
-      /// A map from type TypeID to its printing function. No need to do string
-      /// lookups when the type is fully constructed.
-      ::llvm::DenseMap<::mlir::TypeID, ExtensionTypePrintingHook>
-      typePrintingHooks;
+    /// Reports a repeated registration error of a type with the given
+    /// mnemonic.
+    [[noreturn]] void reportDuplicateTypeRegistration(StringRef mnemonic);
+
+    /// Registers dialect types with the context.
+    void initializeTypes();
+
+    // Give extensions access to injection functions.
+    template <typename, typename...>
+    friend class TransformDialectExtension;
+
+    /// Gets a mutable reference to extra data of the kind specified as
+    /// template argument. Allocates the data on the first call.
+    template <typename DataTy>
+    DataTy &getOrCreateExtraData();
+
+    //===----------------------------------------------------------------===//
+    // Data fields
+    //===----------------------------------------------------------------===//
+
+    /// Additional data associated with and owned by the dialect. Accessible
+    /// to extensions.
+    ::llvm::DenseMap<
+        ::mlir::TypeID,
+        std::unique_ptr<::mlir::transform::detail::TransformDialectDataBase>>
+        extraData;
+
+    /// A map from type mnemonic to its parsing function for the remainder of
+    /// the syntax. The parser has access to the mnemonic, so it is used for
+    /// further dispatch.
+    ::llvm::StringMap<ExtensionTypeParsingHook> typeParsingHooks;
+
+    /// A map from type TypeID to its printing function. No need to do string
+    /// lookups when the type is fully constructed.
+    ::llvm::DenseMap<::mlir::TypeID, ExtensionTypePrintingHook>
+        typePrintingHooks;
+
+    /// Modules containing symbols, e.g. named sequences, that will be
+    /// resolved by the interpreter when used.
+    ::llvm::SmallVector<::mlir::OwningOpRef<::mlir::ModuleOp>, 2>
+        libraryModules;
   }];
 }
 
-// Base class for ops that belong to the tranfsorm dialect. Ops defined in
+// Base class for ops that belong to the transform dialect. Ops defined in
 // extensions of this dialect may also use this.
 class TransformDialectOp<string mnemonic, list<Trait> traits = []>
     : Op<Transform_Dialect, mnemonic, traits>;

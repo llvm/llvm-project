@@ -6,14 +6,14 @@ void no_arguments() __attribute__((enforce_tcb)); // expected-error{{'enforce_tc
 
 void too_many_arguments() __attribute__((enforce_tcb("test", 12))); // expected-error{{'enforce_tcb' attribute takes one argument}}
 
-void wrong_argument_type() __attribute__((enforce_tcb(12))); // expected-error{{'enforce_tcb' attribute requires a string}}
+void wrong_argument_type() __attribute__((enforce_tcb(12))); // expected-error{{expected string literal as argument of 'enforce_tcb' attribute}}
 
 [[clang::enforce_tcb_leaf("oops")]] int wrong_subject_type_leaf; // expected-warning{{'enforce_tcb_leaf' attribute only applies to functions}}
 
 void no_arguments_leaf() __attribute__((enforce_tcb_leaf)); // expected-error{{'enforce_tcb_leaf' attribute takes one argument}}
 
 void too_many_arguments_leaf() __attribute__((enforce_tcb_leaf("test", 12))); // expected-error{{'enforce_tcb_leaf' attribute takes one argument}}
-void wrong_argument_type_leaf() __attribute__((enforce_tcb_leaf(12))); // expected-error{{'enforce_tcb_leaf' attribute requires a string}}
+void wrong_argument_type_leaf() __attribute__((enforce_tcb_leaf(12))); // expected-error{{expected string literal as argument of 'enforce_tcb_leaf' attribute}}
 
 void foo();
 

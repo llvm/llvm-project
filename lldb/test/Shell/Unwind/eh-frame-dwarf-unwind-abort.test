@@ -1,0 +1,20 @@
+# Test restoring of register values.
+
+# REQUIRES: target-x86_64, system-linux, native
+
+# RUN: %clang_host %p/Inputs/call-asm.c %p/Inputs/eh-frame-dwarf-unwind-abort.s -o %t
+# RUN: %lldb %t -s %s -o exit | FileCheck %s
+
+process launch
+# CHECK: stop reason = signal SIGTRAP
+
+thread backtrace
+# CHECK: frame #0: {{.*}}`asm_main + 23
+# CHECK: frame #1: {{.*}}`main + {{.*}}
+
+target modules show-unwind -n asm_main
+# CHECK: eh_frame UnwindPlan:
+# CHECK: row[0]:    0: CFA=rsp +8 => rip=[CFA-8]
+# CHECK: row[1]:   14: CFA=rsp+16 => rbp=[CFA-16] rip=[CFA-8]
+# CHECK: row[2]:   17: CFA=rbp+16 => rbp=[CFA-16] rip=[CFA-8]
+# CHECK: row[3]:   22: CFA=rsp +8 => rip=[CFA-8]

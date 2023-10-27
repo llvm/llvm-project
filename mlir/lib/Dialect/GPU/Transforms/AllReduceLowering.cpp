@@ -214,7 +214,7 @@ private:
 
   /// Returns an accumulator factory that creates an op specified by opName.
   AccumulatorFactory getFactory(gpu::AllReduceOperation opName) {
-    bool isFloatingPoint = valueType.isa<FloatType>();
+    bool isFloatingPoint = isa<FloatType>(valueType);
     switch (opName) {
     case gpu::AllReduceOperation::ADD:
       return isFloatingPoint ? getFactory<arith::AddFOp>()
@@ -387,8 +387,8 @@ private:
   static constexpr int kSubgroupSize = 32;
 };
 
-struct GpuAllReduceConversion : public RewritePattern {
-  explicit GpuAllReduceConversion(MLIRContext *context)
+struct GpuAllReduceRewrite : public RewritePattern {
+  explicit GpuAllReduceRewrite(MLIRContext *context)
       : RewritePattern(gpu::GPUFuncOp::getOperationName(), 1, context) {}
 
   LogicalResult matchAndRewrite(Operation *op,
@@ -417,5 +417,5 @@ struct GpuAllReduceConversion : public RewritePattern {
 } // namespace
 
 void mlir::populateGpuAllReducePatterns(RewritePatternSet &patterns) {
-  patterns.add<GpuAllReduceConversion>(patterns.getContext());
+  patterns.add<GpuAllReduceRewrite>(patterns.getContext());
 }

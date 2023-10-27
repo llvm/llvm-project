@@ -1,6 +1,6 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=fiji -mattr=-flat-for-global -enable-ipra=0 -amdgpu-sroa=0 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,CIVI %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=hawaii -enable-ipra=0 -amdgpu-sroa=0 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,CIVI %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -mattr=-flat-for-global -enable-ipra=0 -amdgpu-sroa=0 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=fiji -mattr=-flat-for-global -enable-ipra=0 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,CIVI %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=hawaii -enable-ipra=0 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,CIVI %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -mattr=-flat-for-global -enable-ipra=0 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9 %s
 target datalayout = "A5"
 
 ; FIXME: Why is this commuted only sometimes?
@@ -202,10 +202,9 @@ entry:
 ; GCN-NEXT: s_mov_b32 s33, s32
 ; GCN-NEXT: s_or_saveexec_b64 s{{\[[0-9]+:[0-9]+\]}}, -1
 ; GCN-NEXT: buffer_store_dword [[CSRV:v[0-9]+]], off, s[0:3], s33 offset:8 ; 4-byte Folded Spill
-; GCN-NEXT: buffer_store_dword [[CSRV_1:v[0-9]+]], off, s[0:3], s33 offset:12 ; 4-byte Folded Spill
 ; GCN-NEXT: s_mov_b64 exec
-; GCN-DAG: s_addk_i32 s32, 0x800
-; GCN: v_writelane_b32 [[CSRV_1]], [[FP_SCRATCH_COPY]], 0
+; GCN-DAG: s_addk_i32 s32, 0x400
+; GCN: v_writelane_b32 [[CSRV]], [[FP_SCRATCH_COPY]], 2
 
 ; GCN-DAG: s_getpc_b64 s[4:5]
 ; GCN-DAG: s_add_u32 s4, s4, i32_fastcc_i32_i32@gotpcrel32@lo+4
@@ -227,12 +226,11 @@ entry:
 ; GCN-NEXT: s_addc_u32 s5, s5, sibling_call_i32_fastcc_i32_i32@rel32@hi+12
 ; GCN-NEXT: v_readlane_b32 s31, [[CSRV]], 1
 ; GCN-NEXT: v_readlane_b32 s30, [[CSRV]], 0
-; GCN-NEXT: v_readlane_b32 [[FP_SCRATCH_COPY:s[0-9]+]], [[CSRV_1]], 0
+; GCN-NEXT: v_readlane_b32 [[FP_SCRATCH_COPY:s[0-9]+]], [[CSRV]], 2
 ; GCN-NEXT: s_or_saveexec_b64 s[8:9], -1
 ; GCN-NEXT: buffer_load_dword [[CSRV]], off, s[0:3], s33 offset:8 ; 4-byte Folded Reload
-; GCN-NEXT: buffer_load_dword [[CSRV_1]], off, s[0:3], s33 offset:12 ; 4-byte Folded Reload
 ; GCN-NEXT: s_mov_b64 exec, s[8:9]
-; GCN-NEXT: s_addk_i32 s32, 0xf800
+; GCN-NEXT: s_addk_i32 s32, 0xfc00
 ; GCN-NEXT: s_mov_b32 s33, [[FP_SCRATCH_COPY]]
 ; GCN-NEXT: s_setpc_b64 s[4:5]
 define fastcc i32 @sibling_call_i32_fastcc_i32_i32_other_call(i32 %a, i32 %b, i32 %c) #1 {

@@ -26,52 +26,52 @@ template <class CharT, class TestFunction, class ExceptionTest>
 void test_char(TestFunction check, ExceptionTest check_exception) {
   std::map<CharT, CharT> input{{CharT('a'), CharT('A')}, {CharT('c'), CharT('C')}, {CharT('b'), CharT('B')}};
 
-  check(SV("{a: A, b: B, c: C}"), SV("{}"), input);
+  check(SV("{'a': 'A', 'b': 'B', 'c': 'C'}"), SV("{}"), input);
 
   // ***** underlying has no format-spec
 
   // *** align-fill & width ***
-  check(SV("{a: A, b: B, c: C}     "), SV("{:23}"), input);
-  check(SV("{a: A, b: B, c: C}*****"), SV("{:*<23}"), input);
-  check(SV("__{a: A, b: B, c: C}___"), SV("{:_^23}"), input);
-  check(SV("#####{a: A, b: B, c: C}"), SV("{:#>23}"), input);
+  check(SV("{'a': 'A', 'b': 'B', 'c': 'C'}     "), SV("{:35}"), input);
+  check(SV("{'a': 'A', 'b': 'B', 'c': 'C'}*****"), SV("{:*<35}"), input);
+  check(SV("__{'a': 'A', 'b': 'B', 'c': 'C'}___"), SV("{:_^35}"), input);
+  check(SV("#####{'a': 'A', 'b': 'B', 'c': 'C'}"), SV("{:#>35}"), input);
 
-  check(SV("{a: A, b: B, c: C}     "), SV("{:{}}"), input, 23);
-  check(SV("{a: A, b: B, c: C}*****"), SV("{:*<{}}"), input, 23);
-  check(SV("__{a: A, b: B, c: C}___"), SV("{:_^{}}"), input, 23);
-  check(SV("#####{a: A, b: B, c: C}"), SV("{:#>{}}"), input, 23);
+  check(SV("{'a': 'A', 'b': 'B', 'c': 'C'}     "), SV("{:{}}"), input, 35);
+  check(SV("{'a': 'A', 'b': 'B', 'c': 'C'}*****"), SV("{:*<{}}"), input, 35);
+  check(SV("__{'a': 'A', 'b': 'B', 'c': 'C'}___"), SV("{:_^{}}"), input, 35);
+  check(SV("#####{'a': 'A', 'b': 'B', 'c': 'C'}"), SV("{:#>{}}"), input, 35);
 
-  check_exception("The format-spec range-fill field contains an invalid character", SV("{:}<}"), input);
-  check_exception("The format-spec range-fill field contains an invalid character", SV("{:{<}"), input);
-  check_exception("The format-spec range-fill field contains an invalid character", SV("{::<}"), input);
+  check_exception("The fill option contains an invalid value", SV("{:}<}"), input);
+  check_exception("The fill option contains an invalid value", SV("{:{<}"), input);
+  check_exception("The fill option contains an invalid value", SV("{::<}"), input);
 
   // *** sign ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:-}"), input);
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:+}"), input);
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{: }"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:-}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:+}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{: }"), input);
 
   // *** alternate form ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:#}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:#}"), input);
 
   // *** zero-padding ***
-  check_exception("A format-spec width field shouldn't have a leading zero", SV("{:0}"), input);
+  check_exception("The width option should not have a leading zero", SV("{:0}"), input);
 
   // *** precision ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:.}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:.}"), input);
 
   // *** locale-specific form ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:L}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:L}"), input);
 
   // *** n
-  check(SV("__a: A, b: B, c: C___"), SV("{:_^21n}"), input);
+  check(SV("__'a': 'A', 'b': 'B', 'c': 'C'___"), SV("{:_^33n}"), input);
 
   // *** type ***
-  check(SV("__{a: A, b: B, c: C}___"), SV("{:_^23m}"), input); // the m type does the same as the default.
-  check_exception("The range-format-spec type s requires formatting a character type", SV("{:s}"), input);
-  check_exception("The range-format-spec type ?s requires formatting a character type", SV("{:?s}"), input);
+  check(SV("__{'a': 'A', 'b': 'B', 'c': 'C'}___"), SV("{:_^35m}"), input); // the m type does the same as the default.
+  check_exception("Type s requires character type as formatting argument", SV("{:s}"), input);
+  check_exception("Type ?s requires character type as formatting argument", SV("{:?s}"), input);
 
   for (std::basic_string_view<CharT> fmt : fmt_invalid_types<CharT>("s"))
-    check_exception("The format-spec should consume the input or end with a '}'", fmt, input);
+    check_exception("The format specifier should consume the input or end with a '}'", fmt, input);
 
   // ***** Only underlying has a format-spec
 
@@ -85,43 +85,45 @@ void test_char(TestFunction check, ExceptionTest check_exception) {
   check(SV("{__'a': 'A'___, __'b': 'B'___, __'c': 'C'___}"), SV("{::_^{}}"), input, 13);
   check(SV("{#####'a': 'A', #####'b': 'B', #####'c': 'C'}"), SV("{::#>{}}"), input, 13);
 
-  check_exception("The format-spec range-fill field contains an invalid character", SV("{:::<}"), input);
-  check_exception("The format-spec range-fill field contains an invalid character", SV("{::}<}"), input);
-  check_exception("The format-spec range-fill field contains an invalid character", SV("{::{<}"), input);
+  check_exception("The fill option contains an invalid value", SV("{:::<}"), input);
+  check_exception("The fill option contains an invalid value", SV("{::}<}"), input);
+  check_exception("The fill option contains an invalid value", SV("{::{<}"), input);
 
   // *** sign ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{::-}"), input);
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{::+}"), input);
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:: }"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{::-}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{::+}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:: }"), input);
 
   // *** alternate form ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{::#}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{::#}"), input);
 
   // *** zero-padding ***
-  check_exception("A format-spec width field shouldn't have a leading zero", SV("{::05}"), input);
+  check_exception("The width option should not have a leading zero", SV("{::05}"), input);
 
   // *** precision ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{::.}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{::.}"), input);
 
   // *** locale-specific form ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{::L}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{::L}"), input);
 
   // *** type ***
   check(SV("{'a': 'A', 'b': 'B', 'c': 'C'}"), SV("{::m}"), input);
   check(SV("{'a': 'A', 'b': 'B', 'c': 'C'}"), SV("{::n}"), input);
-  check_exception("The range-format-spec type s requires formatting a character type", SV("{:s}"), input);
-  check_exception("The range-format-spec type ?s requires formatting a character type", SV("{:?s}"), input);
+  check_exception("Type s requires character type as formatting argument", SV("{:s}"), input);
+  check_exception("Type ?s requires character type as formatting argument", SV("{:?s}"), input);
 
   for (std::basic_string_view<CharT> fmt : fmt_invalid_types<CharT>("s"))
-    check_exception("The format-spec should consume the input or end with a '}'", fmt, input);
+    check_exception("The format specifier should consume the input or end with a '}'", fmt, input);
 
   // ***** Both have a format-spec
   check(SV("^^{###'a': 'A', ###'b': 'B', ###'c': 'C'}^^^"), SV("{:^^44:#>11}"), input);
   check(SV("^^{###'a': 'A', ###'b': 'B', ###'c': 'C'}^^^"), SV("{:^^{}:#>11}"), input, 44);
   check(SV("^^{###'a': 'A', ###'b': 'B', ###'c': 'C'}^^^"), SV("{:^^{}:#>{}}"), input, 44, 11);
 
-  check_exception("Argument index out of bounds", SV("{:^^{}:#>11}"), input);
-  check_exception("Argument index out of bounds", SV("{:^^{}:#>{}}"), input, 44);
+  check_exception(
+      "The argument index value is too large for the number of arguments supplied", SV("{:^^{}:#>11}"), input);
+  check_exception(
+      "The argument index value is too large for the number of arguments supplied", SV("{:^^{}:#>{}}"), input, 44);
 }
 
 //
@@ -134,52 +136,52 @@ void test_char_to_wchar(TestFunction check, ExceptionTest check_exception) {
   std::map<char, char> input{{'a', 'A'}, {'c', 'C'}, {'b', 'B'}};
 
   using CharT = wchar_t;
-  check(SV("{a: A, b: B, c: C}"), SV("{}"), input);
+  check(SV("{'a': 'A', 'b': 'B', 'c': 'C'}"), SV("{}"), input);
 
   // ***** underlying has no format-spec
 
   // *** align-fill & width ***
-  check(SV("{a: A, b: B, c: C}     "), SV("{:23}"), input);
-  check(SV("{a: A, b: B, c: C}*****"), SV("{:*<23}"), input);
-  check(SV("__{a: A, b: B, c: C}___"), SV("{:_^23}"), input);
-  check(SV("#####{a: A, b: B, c: C}"), SV("{:#>23}"), input);
+  check(SV("{'a': 'A', 'b': 'B', 'c': 'C'}     "), SV("{:35}"), input);
+  check(SV("{'a': 'A', 'b': 'B', 'c': 'C'}*****"), SV("{:*<35}"), input);
+  check(SV("__{'a': 'A', 'b': 'B', 'c': 'C'}___"), SV("{:_^35}"), input);
+  check(SV("#####{'a': 'A', 'b': 'B', 'c': 'C'}"), SV("{:#>35}"), input);
 
-  check(SV("{a: A, b: B, c: C}     "), SV("{:{}}"), input, 23);
-  check(SV("{a: A, b: B, c: C}*****"), SV("{:*<{}}"), input, 23);
-  check(SV("__{a: A, b: B, c: C}___"), SV("{:_^{}}"), input, 23);
-  check(SV("#####{a: A, b: B, c: C}"), SV("{:#>{}}"), input, 23);
+  check(SV("{'a': 'A', 'b': 'B', 'c': 'C'}     "), SV("{:{}}"), input, 35);
+  check(SV("{'a': 'A', 'b': 'B', 'c': 'C'}*****"), SV("{:*<{}}"), input, 35);
+  check(SV("__{'a': 'A', 'b': 'B', 'c': 'C'}___"), SV("{:_^{}}"), input, 35);
+  check(SV("#####{'a': 'A', 'b': 'B', 'c': 'C'}"), SV("{:#>{}}"), input, 35);
 
-  check_exception("The format-spec range-fill field contains an invalid character", SV("{:}<}"), input);
-  check_exception("The format-spec range-fill field contains an invalid character", SV("{:{<}"), input);
-  check_exception("The format-spec range-fill field contains an invalid character", SV("{::<}"), input);
+  check_exception("The fill option contains an invalid value", SV("{:}<}"), input);
+  check_exception("The fill option contains an invalid value", SV("{:{<}"), input);
+  check_exception("The fill option contains an invalid value", SV("{::<}"), input);
 
   // *** sign ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:-}"), input);
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:+}"), input);
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{: }"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:-}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:+}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{: }"), input);
 
   // *** alternate form ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:#}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:#}"), input);
 
   // *** zero-padding ***
-  check_exception("A format-spec width field shouldn't have a leading zero", SV("{:0}"), input);
+  check_exception("The width option should not have a leading zero", SV("{:0}"), input);
 
   // *** precision ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:.}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:.}"), input);
 
   // *** locale-specific form ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:L}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:L}"), input);
 
   // *** n
-  check(SV("__a: A, b: B, c: C___"), SV("{:_^21n}"), input);
+  check(SV("__'a': 'A', 'b': 'B', 'c': 'C'___"), SV("{:_^33n}"), input);
 
   // *** type ***
-  check(SV("__{a: A, b: B, c: C}___"), SV("{:_^23m}"), input); // the m type does the same as the default.
-  check_exception("The range-format-spec type s requires formatting a character type", SV("{:s}"), input);
-  check_exception("The range-format-spec type ?s requires formatting a character type", SV("{:?s}"), input);
+  check(SV("__{'a': 'A', 'b': 'B', 'c': 'C'}___"), SV("{:_^35m}"), input); // the m type does the same as the default.
+  check_exception("Type s requires character type as formatting argument", SV("{:s}"), input);
+  check_exception("Type ?s requires character type as formatting argument", SV("{:?s}"), input);
 
   for (std::basic_string_view<CharT> fmt : fmt_invalid_types<CharT>("s"))
-    check_exception("The format-spec should consume the input or end with a '}'", fmt, input);
+    check_exception("The format specifier should consume the input or end with a '}'", fmt, input);
 
   // ***** Only underlying has a format-spec
   check(SV("{'a': 'A'     , 'b': 'B'     , 'c': 'C'     }"), SV("{::13}"), input);
@@ -192,43 +194,45 @@ void test_char_to_wchar(TestFunction check, ExceptionTest check_exception) {
   check(SV("{__'a': 'A'___, __'b': 'B'___, __'c': 'C'___}"), SV("{::_^{}}"), input, 13);
   check(SV("{#####'a': 'A', #####'b': 'B', #####'c': 'C'}"), SV("{::#>{}}"), input, 13);
 
-  check_exception("The format-spec range-fill field contains an invalid character", SV("{:::<}"), input);
-  check_exception("The format-spec range-fill field contains an invalid character", SV("{::}<}"), input);
-  check_exception("The format-spec range-fill field contains an invalid character", SV("{::{<}"), input);
+  check_exception("The fill option contains an invalid value", SV("{:::<}"), input);
+  check_exception("The fill option contains an invalid value", SV("{::}<}"), input);
+  check_exception("The fill option contains an invalid value", SV("{::{<}"), input);
 
   // *** sign ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{::-}"), input);
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{::+}"), input);
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:: }"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{::-}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{::+}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:: }"), input);
 
   // *** alternate form ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{::#}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{::#}"), input);
 
   // *** zero-padding ***
-  check_exception("A format-spec width field shouldn't have a leading zero", SV("{::05}"), input);
+  check_exception("The width option should not have a leading zero", SV("{::05}"), input);
 
   // *** precision ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{::.}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{::.}"), input);
 
   // *** locale-specific form ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{::L}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{::L}"), input);
 
   // *** type ***
   check(SV("{'a': 'A', 'b': 'B', 'c': 'C'}"), SV("{::m}"), input);
   check(SV("{'a': 'A', 'b': 'B', 'c': 'C'}"), SV("{::n}"), input);
-  check_exception("The range-format-spec type s requires formatting a character type", SV("{:s}"), input);
-  check_exception("The range-format-spec type ?s requires formatting a character type", SV("{:?s}"), input);
+  check_exception("Type s requires character type as formatting argument", SV("{:s}"), input);
+  check_exception("Type ?s requires character type as formatting argument", SV("{:?s}"), input);
 
   for (std::basic_string_view<CharT> fmt : fmt_invalid_types<CharT>("s"))
-    check_exception("The format-spec should consume the input or end with a '}'", fmt, input);
+    check_exception("The format specifier should consume the input or end with a '}'", fmt, input);
 
   // ***** Both have a format-spec
   check(SV("^^{###'a': 'A', ###'b': 'B', ###'c': 'C'}^^^"), SV("{:^^44:#>11}"), input);
   check(SV("^^{###'a': 'A', ###'b': 'B', ###'c': 'C'}^^^"), SV("{:^^{}:#>11}"), input, 44);
   check(SV("^^{###'a': 'A', ###'b': 'B', ###'c': 'C'}^^^"), SV("{:^^{}:#>{}}"), input, 44, 11);
 
-  check_exception("Argument index out of bounds", SV("{:^^{}:#>11}"), input);
-  check_exception("Argument index out of bounds", SV("{:^^{}:#>{}}"), input, 44);
+  check_exception(
+      "The argument index value is too large for the number of arguments supplied", SV("{:^^{}:#>11}"), input);
+  check_exception(
+      "The argument index value is too large for the number of arguments supplied", SV("{:^^{}:#>{}}"), input, 44);
 }
 #endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
 
@@ -255,37 +259,37 @@ void test_bool(TestFunction check, ExceptionTest check_exception) {
   check(SV("__{false: 0, true: 42, true: 1}___"), SV("{:_^{}}"), input, 34);
   check(SV("#####{false: 0, true: 42, true: 1}"), SV("{:#>{}}"), input, 34);
 
-  check_exception("The format-spec range-fill field contains an invalid character", SV("{:}<}"), input);
-  check_exception("The format-spec range-fill field contains an invalid character", SV("{:{<}"), input);
-  check_exception("The format-spec range-fill field contains an invalid character", SV("{::<}"), input);
+  check_exception("The fill option contains an invalid value", SV("{:}<}"), input);
+  check_exception("The fill option contains an invalid value", SV("{:{<}"), input);
+  check_exception("The fill option contains an invalid value", SV("{::<}"), input);
 
   // *** sign ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:-}"), input);
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:+}"), input);
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{: }"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:-}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:+}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{: }"), input);
 
   // *** alternate form ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:#}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:#}"), input);
 
   // *** zero-padding ***
-  check_exception("A format-spec width field shouldn't have a leading zero", SV("{:0}"), input);
+  check_exception("The width option should not have a leading zero", SV("{:0}"), input);
 
   // *** precision ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:.}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:.}"), input);
 
   // *** locale-specific form ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:L}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:L}"), input);
 
   // *** n
   check(SV("__false: 0, true: 42, true: 1___"), SV("{:_^32n}"), input);
 
   // *** type ***
   check(SV("__{false: 0, true: 42, true: 1}___"), SV("{:_^34m}"), input); // the m type does the same as the default.
-  check_exception("The range-format-spec type s requires formatting a character type", SV("{:s}"), input);
-  check_exception("The range-format-spec type ?s requires formatting a character type", SV("{:?s}"), input);
+  check_exception("Type s requires character type as formatting argument", SV("{:s}"), input);
+  check_exception("Type ?s requires character type as formatting argument", SV("{:?s}"), input);
 
   for (std::basic_string_view<CharT> fmt : fmt_invalid_types<CharT>("s"))
-    check_exception("The format-spec should consume the input or end with a '}'", fmt, input);
+    check_exception("The format specifier should consume the input or end with a '}'", fmt, input);
 
   // ***** Only underlying has a format-spec
   check(SV("{false: 0  , true: 42  , true: 1   }"), SV("{::10}"), input);
@@ -298,38 +302,40 @@ void test_bool(TestFunction check, ExceptionTest check_exception) {
   check(SV("{_false: 0_, _true: 42_, _true: 1__}"), SV("{::_^{}}"), input, 10);
   check(SV("{##false: 0, ##true: 42, ###true: 1}"), SV("{::#>{}}"), input, 10);
 
-  check_exception("The format-spec range-fill field contains an invalid character", SV("{:::<}"), input);
-  check_exception("The format-spec range-fill field contains an invalid character", SV("{::}<}"), input);
-  check_exception("The format-spec range-fill field contains an invalid character", SV("{::{<}"), input);
+  check_exception("The fill option contains an invalid value", SV("{:::<}"), input);
+  check_exception("The fill option contains an invalid value", SV("{::}<}"), input);
+  check_exception("The fill option contains an invalid value", SV("{::{<}"), input);
 
   // *** sign ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{::-}"), input);
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{::+}"), input);
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:: }"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{::-}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{::+}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:: }"), input);
 
   // *** alternate form ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{::#}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{::#}"), input);
 
   // *** zero-padding ***
-  check_exception("A format-spec width field shouldn't have a leading zero", SV("{::05}"), input);
+  check_exception("The width option should not have a leading zero", SV("{::05}"), input);
 
   // *** precision ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{::.}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{::.}"), input);
 
   // *** locale-specific form ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{::L}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{::L}"), input);
 
   // *** type ***
   for (std::basic_string_view<CharT> fmt : fmt_invalid_nested_types<CharT>(""))
-    check_exception("The format-spec should consume the input or end with a '}'", fmt, input);
+    check_exception("The format specifier should consume the input or end with a '}'", fmt, input);
 
   // ***** Both have a format-spec
   check(SV("^^{##false: 0, ##true: 42, ###true: 1}^^^"), SV("{:^^41:#>10}"), input);
   check(SV("^^{##false: 0, ##true: 42, ###true: 1}^^^"), SV("{:^^{}:#>10}"), input, 41);
   check(SV("^^{##false: 0, ##true: 42, ###true: 1}^^^"), SV("{:^^{}:#>{}}"), input, 41, 10);
 
-  check_exception("Argument index out of bounds", SV("{:^^{}:#>10}"), input);
-  check_exception("Argument index out of bounds", SV("{:^^{}:#>{}}"), input, 41);
+  check_exception(
+      "The argument index value is too large for the number of arguments supplied", SV("{:^^{}:#>10}"), input);
+  check_exception(
+      "The argument index value is too large for the number of arguments supplied", SV("{:^^{}:#>{}}"), input, 41);
 }
 
 //
@@ -353,37 +359,37 @@ void test_int(TestFunction check, ExceptionTest check_exception, auto&& input) {
   check(SV("__{-42: 42, 1: -1, 42: -42}___"), SV("{:_^{}}"), input, 30);
   check(SV("#####{-42: 42, 1: -1, 42: -42}"), SV("{:#>{}}"), input, 30);
 
-  check_exception("The format-spec range-fill field contains an invalid character", SV("{:}<}"), input);
-  check_exception("The format-spec range-fill field contains an invalid character", SV("{:{<}"), input);
-  check_exception("The format-spec range-fill field contains an invalid character", SV("{::<}"), input);
+  check_exception("The fill option contains an invalid value", SV("{:}<}"), input);
+  check_exception("The fill option contains an invalid value", SV("{:{<}"), input);
+  check_exception("The fill option contains an invalid value", SV("{::<}"), input);
 
   // *** sign ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:-}"), input);
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:+}"), input);
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{: }"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:-}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:+}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{: }"), input);
 
   // *** alternate form ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:#}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:#}"), input);
 
   // *** zero-padding ***
-  check_exception("A format-spec width field shouldn't have a leading zero", SV("{:0}"), input);
+  check_exception("The width option should not have a leading zero", SV("{:0}"), input);
 
   // *** precision ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:.}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:.}"), input);
 
   // *** locale-specific form ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:L}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:L}"), input);
 
   // *** n
   check(SV("__-42: 42, 1: -1, 42: -42___"), SV("{:_^28n}"), input);
 
   // *** type ***
   check(SV("__{-42: 42, 1: -1, 42: -42}___"), SV("{:_^30m}"), input); // the m type does the same as the default.
-  check_exception("The range-format-spec type s requires formatting a character type", SV("{:s}"), input);
-  check_exception("The range-format-spec type ?s requires formatting a character type", SV("{:?s}"), input);
+  check_exception("Type s requires character type as formatting argument", SV("{:s}"), input);
+  check_exception("Type ?s requires character type as formatting argument", SV("{:?s}"), input);
 
   for (std::basic_string_view<CharT> fmt : fmt_invalid_types<CharT>("s"))
-    check_exception("The format-spec should consume the input or end with a '}'", fmt, input);
+    check_exception("The format specifier should consume the input or end with a '}'", fmt, input);
 
   // ***** Only underlying has a format-spec
   check(SV("{-42: 42   , 1: -1     , 42: -42   }"), SV("{::10}"), input);
@@ -396,38 +402,40 @@ void test_int(TestFunction check, ExceptionTest check_exception, auto&& input) {
   check(SV("{_-42: 42__, __1: -1___, _42: -42__}"), SV("{::_^{}}"), input, 10);
   check(SV("{###-42: 42, #####1: -1, ###42: -42}"), SV("{::#>{}}"), input, 10);
 
-  check_exception("The format-spec range-fill field contains an invalid character", SV("{:::<}"), input);
-  check_exception("The format-spec range-fill field contains an invalid character", SV("{::}<}"), input);
-  check_exception("The format-spec range-fill field contains an invalid character", SV("{::{<}"), input);
+  check_exception("The fill option contains an invalid value", SV("{:::<}"), input);
+  check_exception("The fill option contains an invalid value", SV("{::}<}"), input);
+  check_exception("The fill option contains an invalid value", SV("{::{<}"), input);
 
   // *** sign ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{::-}"), input);
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{::+}"), input);
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:: }"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{::-}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{::+}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:: }"), input);
 
   // *** alternate form ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{::#}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{::#}"), input);
 
   // *** zero-padding ***
-  check_exception("A format-spec width field shouldn't have a leading zero", SV("{::05}"), input);
+  check_exception("The width option should not have a leading zero", SV("{::05}"), input);
 
   // *** precision ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{::.}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{::.}"), input);
 
   // *** locale-specific form ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{::L}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{::L}"), input);
 
   // *** type ***
   for (std::basic_string_view<CharT> fmt : fmt_invalid_nested_types<CharT>(""))
-    check_exception("The format-spec should consume the input or end with a '}'", fmt, input);
+    check_exception("The format specifier should consume the input or end with a '}'", fmt, input);
 
   // ***** Both have a format-spec
   check(SV("^^{###-42: 42, #####1: -1, ###42: -42}^^^"), SV("{:^^41:#>10}"), input);
   check(SV("^^{###-42: 42, #####1: -1, ###42: -42}^^^"), SV("{:^^{}:#>10}"), input, 41);
   check(SV("^^{###-42: 42, #####1: -1, ###42: -42}^^^"), SV("{:^^{}:#>{}}"), input, 41, 10);
 
-  check_exception("Argument index out of bounds", SV("{:^^{}:#>10}"), input);
-  check_exception("Argument index out of bounds", SV("{:^^{}:#>{}}"), input, 41);
+  check_exception(
+      "The argument index value is too large for the number of arguments supplied", SV("{:^^{}:#>10}"), input);
+  check_exception(
+      "The argument index value is too large for the number of arguments supplied", SV("{:^^{}:#>{}}"), input, 41);
 }
 
 template <class CharT, class TestFunction, class ExceptionTest>
@@ -458,37 +466,37 @@ void test_floating_point(TestFunction check, ExceptionTest check_exception) {
   check(SV("__{-42: 42, 1: -1}___"), SV("{:_^{}}"), input, 21);
   check(SV("#####{-42: 42, 1: -1}"), SV("{:#>{}}"), input, 21);
 
-  check_exception("The format-spec range-fill field contains an invalid character", SV("{:}<}"), input);
-  check_exception("The format-spec range-fill field contains an invalid character", SV("{:{<}"), input);
-  check_exception("The format-spec range-fill field contains an invalid character", SV("{::<}"), input);
+  check_exception("The fill option contains an invalid value", SV("{:}<}"), input);
+  check_exception("The fill option contains an invalid value", SV("{:{<}"), input);
+  check_exception("The fill option contains an invalid value", SV("{::<}"), input);
 
   // *** sign ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:-}"), input);
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:+}"), input);
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{: }"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:-}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:+}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{: }"), input);
 
   // *** alternate form ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:#}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:#}"), input);
 
   // *** zero-padding ***
-  check_exception("A format-spec width field shouldn't have a leading zero", SV("{:0}"), input);
+  check_exception("The width option should not have a leading zero", SV("{:0}"), input);
 
   // *** precision ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:.}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:.}"), input);
 
   // *** locale-specific form ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:L}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:L}"), input);
 
   // *** n
   check(SV("__-42: 42, 1: -1___"), SV("{:_^19n}"), input);
 
   // *** type ***
   check(SV("__{-42: 42, 1: -1}___"), SV("{:_^21m}"), input); // the m type does the same as the default.
-  check_exception("The range-format-spec type s requires formatting a character type", SV("{:s}"), input);
-  check_exception("The range-format-spec type ?s requires formatting a character type", SV("{:?s}"), input);
+  check_exception("Type s requires character type as formatting argument", SV("{:s}"), input);
+  check_exception("Type ?s requires character type as formatting argument", SV("{:?s}"), input);
 
   for (std::basic_string_view<CharT> fmt : fmt_invalid_types<CharT>("s"))
-    check_exception("The format-spec should consume the input or end with a '}'", fmt, input);
+    check_exception("The format specifier should consume the input or end with a '}'", fmt, input);
 
   // ***** Only underlying has a format-spec
   check(SV("{-42: 42   , 1: -1     }"), SV("{::10}"), input);
@@ -501,38 +509,40 @@ void test_floating_point(TestFunction check, ExceptionTest check_exception) {
   check(SV("{_-42: 42__, __1: -1___}"), SV("{::_^{}}"), input, 10);
   check(SV("{###-42: 42, #####1: -1}"), SV("{::#>{}}"), input, 10);
 
-  check_exception("The format-spec range-fill field contains an invalid character", SV("{:::<}"), input);
-  check_exception("The format-spec range-fill field contains an invalid character", SV("{::}<}"), input);
-  check_exception("The format-spec range-fill field contains an invalid character", SV("{::{<}"), input);
+  check_exception("The fill option contains an invalid value", SV("{:::<}"), input);
+  check_exception("The fill option contains an invalid value", SV("{::}<}"), input);
+  check_exception("The fill option contains an invalid value", SV("{::{<}"), input);
 
   // *** sign ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{::-}"), input);
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{::+}"), input);
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:: }"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{::-}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{::+}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:: }"), input);
 
   // *** alternate form ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{::#}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{::#}"), input);
 
   // *** zero-padding ***
-  check_exception("A format-spec width field shouldn't have a leading zero", SV("{::05}"), input);
+  check_exception("The width option should not have a leading zero", SV("{::05}"), input);
 
   // *** precision ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{::.}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{::.}"), input);
 
   // *** locale-specific form ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{::L}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{::L}"), input);
 
   // *** type ***
   for (std::basic_string_view<CharT> fmt : fmt_invalid_nested_types<CharT>(""))
-    check_exception("The format-spec should consume the input or end with a '}'", fmt, input);
+    check_exception("The format specifier should consume the input or end with a '}'", fmt, input);
 
   // ***** Both have a format-spec
   check(SV("^^{###-42: 42, #####1: -1}^^^"), SV("{:^^29:#>10}"), input);
   check(SV("^^{###-42: 42, #####1: -1}^^^"), SV("{:^^{}:#>10}"), input, 29);
   check(SV("^^{###-42: 42, #####1: -1}^^^"), SV("{:^^{}:#>{}}"), input, 29, 10);
 
-  check_exception("Argument index out of bounds", SV("{:^^{}:#>10}"), input);
-  check_exception("Argument index out of bounds", SV("{:^^{}:#>{}}"), input, 29);
+  check_exception(
+      "The argument index value is too large for the number of arguments supplied", SV("{:^^{}:#>10}"), input);
+  check_exception(
+      "The argument index value is too large for the number of arguments supplied", SV("{:^^{}:#>{}}"), input, 29);
 }
 
 //
@@ -558,35 +568,35 @@ void test_pointer(TestFunction check, ExceptionTest check_exception) {
   check(SV("__{0x0: 0x0}___"), SV("{:_^{}}"), input, 15);
   check(SV("#####{0x0: 0x0}"), SV("{:#>{}}"), input, 15);
 
-  check_exception("The format-spec range-fill field contains an invalid character", SV("{:}<}"), input);
-  check_exception("The format-spec range-fill field contains an invalid character", SV("{:{<}"), input);
-  check_exception("The format-spec range-fill field contains an invalid character", SV("{::<}"), input);
+  check_exception("The fill option contains an invalid value", SV("{:}<}"), input);
+  check_exception("The fill option contains an invalid value", SV("{:{<}"), input);
+  check_exception("The fill option contains an invalid value", SV("{::<}"), input);
 
   // *** sign ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:#}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:#}"), input);
 
   // *** alternate form ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:#}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:#}"), input);
 
   // *** zero-padding ***
-  check_exception("A format-spec width field shouldn't have a leading zero", SV("{:0}"), input);
+  check_exception("The width option should not have a leading zero", SV("{:0}"), input);
 
   // *** precision ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:.}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:.}"), input);
 
   // *** locale-specific form ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:L}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:L}"), input);
 
   // *** n
   check(SV("__0x0: 0x0___"), SV("{:_^13n}"), input);
 
   // *** type ***
   check(SV("__{0x0: 0x0}___"), SV("{:_^15m}"), input); // the m type does the same as the default.
-  check_exception("The range-format-spec type s requires formatting a character type", SV("{:s}"), input);
-  check_exception("The range-format-spec type ?s requires formatting a character type", SV("{:?s}"), input);
+  check_exception("Type s requires character type as formatting argument", SV("{:s}"), input);
+  check_exception("Type ?s requires character type as formatting argument", SV("{:?s}"), input);
 
   for (std::basic_string_view<CharT> fmt : fmt_invalid_types<CharT>("s"))
-    check_exception("The format-spec should consume the input or end with a '}'", fmt, input);
+    check_exception("The format specifier should consume the input or end with a '}'", fmt, input);
 
   // ***** Only underlying has a format-spec
   check(SV("{0x0: 0x0     }"), SV("{::13}"), input);
@@ -599,38 +609,40 @@ void test_pointer(TestFunction check, ExceptionTest check_exception) {
   check(SV("{__0x0: 0x0___}"), SV("{::_^{}}"), input, 13);
   check(SV("{#####0x0: 0x0}"), SV("{::#>{}}"), input, 13);
 
-  check_exception("The format-spec range-fill field contains an invalid character", SV("{:::<}"), input);
-  check_exception("The format-spec range-fill field contains an invalid character", SV("{::}<}"), input);
-  check_exception("The format-spec range-fill field contains an invalid character", SV("{::{<}"), input);
+  check_exception("The fill option contains an invalid value", SV("{:::<}"), input);
+  check_exception("The fill option contains an invalid value", SV("{::}<}"), input);
+  check_exception("The fill option contains an invalid value", SV("{::{<}"), input);
 
   // *** sign ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{::-}"), input);
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{::+}"), input);
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:: }"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{::-}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{::+}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:: }"), input);
 
   // *** alternate form ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{::#}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{::#}"), input);
 
   // *** zero-padding ***
-  check_exception("A format-spec width field shouldn't have a leading zero", SV("{::05}"), input);
+  check_exception("The width option should not have a leading zero", SV("{::05}"), input);
 
   // *** precision ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{::.}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{::.}"), input);
 
   // *** locale-specific form ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{::L}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{::L}"), input);
 
   // *** type ***
   for (std::basic_string_view<CharT> fmt : fmt_invalid_nested_types<CharT>(""))
-    check_exception("The format-spec should consume the input or end with a '}'", fmt, input);
+    check_exception("The format specifier should consume the input or end with a '}'", fmt, input);
 
   // ***** Both have a format-spec
   check(SV("^^{###0x0: 0x0}^^^"), SV("{:^^18:#>11}"), input);
   check(SV("^^{###0x0: 0x0}^^^"), SV("{:^^{}:#>11}"), input, 18);
   check(SV("^^{###0x0: 0x0}^^^"), SV("{:^^{}:#>{}}"), input, 18, 11);
 
-  check_exception("Argument index out of bounds", SV("{:^^{}:#>11}"), input);
-  check_exception("Argument index out of bounds", SV("{:^^{}:#>{}}"), input, 18);
+  check_exception(
+      "The argument index value is too large for the number of arguments supplied", SV("{:^^{}:#>11}"), input);
+  check_exception(
+      "The argument index value is too large for the number of arguments supplied", SV("{:^^{}:#>{}}"), input, 18);
 }
 
 //
@@ -642,50 +654,50 @@ void test_string(TestFunction check, ExceptionTest check_exception) {
   std::map<std::basic_string<CharT>, std::basic_string<CharT>> input{
       {STR("hello"), STR("HELLO")}, {STR("world"), STR("WORLD")}};
 
-  check(SV(R"({hello: HELLO, world: WORLD})"), SV("{}"), input);
+  check(SV(R"({"hello": "HELLO", "world": "WORLD"})"), SV("{}"), input);
 
   // ***** underlying has no format-spec
 
   // *** align-fill & width ***
-  check(SV(R"({hello: HELLO, world: WORLD}     )"), SV("{:33}"), input);
-  check(SV(R"({hello: HELLO, world: WORLD}*****)"), SV("{:*<33}"), input);
-  check(SV(R"(__{hello: HELLO, world: WORLD}___)"), SV("{:_^33}"), input);
-  check(SV(R"(#####{hello: HELLO, world: WORLD})"), SV("{:#>33}"), input);
+  check(SV(R"({"hello": "HELLO", "world": "WORLD"}     )"), SV("{:41}"), input);
+  check(SV(R"({"hello": "HELLO", "world": "WORLD"}*****)"), SV("{:*<41}"), input);
+  check(SV(R"(__{"hello": "HELLO", "world": "WORLD"}___)"), SV("{:_^41}"), input);
+  check(SV(R"(#####{"hello": "HELLO", "world": "WORLD"})"), SV("{:#>41}"), input);
 
-  check(SV(R"({hello: HELLO, world: WORLD}     )"), SV("{:{}}"), input, 33);
-  check(SV(R"({hello: HELLO, world: WORLD}*****)"), SV("{:*<{}}"), input, 33);
-  check(SV(R"(__{hello: HELLO, world: WORLD}___)"), SV("{:_^{}}"), input, 33);
-  check(SV(R"(#####{hello: HELLO, world: WORLD})"), SV("{:#>{}}"), input, 33);
+  check(SV(R"({"hello": "HELLO", "world": "WORLD"}     )"), SV("{:{}}"), input, 41);
+  check(SV(R"({"hello": "HELLO", "world": "WORLD"}*****)"), SV("{:*<{}}"), input, 41);
+  check(SV(R"(__{"hello": "HELLO", "world": "WORLD"}___)"), SV("{:_^{}}"), input, 41);
+  check(SV(R"(#####{"hello": "HELLO", "world": "WORLD"})"), SV("{:#>{}}"), input, 41);
 
-  check_exception("The format-spec range-fill field contains an invalid character", SV("{:}<}"), input);
-  check_exception("The format-spec range-fill field contains an invalid character", SV("{:{<}"), input);
-  check_exception("The format-spec range-fill field contains an invalid character", SV("{::<}"), input);
+  check_exception("The fill option contains an invalid value", SV("{:}<}"), input);
+  check_exception("The fill option contains an invalid value", SV("{:{<}"), input);
+  check_exception("The fill option contains an invalid value", SV("{::<}"), input);
 
   // *** sign ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:#}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:#}"), input);
 
   // *** alternate form ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:#}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:#}"), input);
 
   // *** zero-padding ***
-  check_exception("A format-spec width field shouldn't have a leading zero", SV("{:0}"), input);
+  check_exception("The width option should not have a leading zero", SV("{:0}"), input);
 
   // *** precision ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:.}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:.}"), input);
 
   // *** locale-specific form ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:L}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:L}"), input);
 
   // *** n
-  check(SV(R"(__hello: HELLO, world: WORLD___)"), SV("{:_^31n}"), input);
+  check(SV(R"(__"hello": "HELLO", "world": "WORLD"___)"), SV("{:_^39n}"), input);
 
   // *** type ***
-  check(SV(R"(__{hello: HELLO, world: WORLD}___)"), SV("{:_^33m}"), input);
-  check_exception("The range-format-spec type s requires formatting a character type", SV("{:s}"), input);
-  check_exception("The range-format-spec type ?s requires formatting a character type", SV("{:?s}"), input);
+  check(SV(R"(__{"hello": "HELLO", "world": "WORLD"}___)"), SV("{:_^41m}"), input);
+  check_exception("Type s requires character type as formatting argument", SV("{:s}"), input);
+  check_exception("Type ?s requires character type as formatting argument", SV("{:?s}"), input);
 
   for (std::basic_string_view<CharT> fmt : fmt_invalid_types<CharT>("s"))
-    check_exception("The format-spec should consume the input or end with a '}'", fmt, input);
+    check_exception("The format specifier should consume the input or end with a '}'", fmt, input);
 
   // ***** Only underlying has a format-spec
   check(SV(R"({"hello": "HELLO"     , "world": "WORLD"     })"), SV("{::21}"), input);
@@ -698,30 +710,30 @@ void test_string(TestFunction check, ExceptionTest check_exception) {
   check(SV(R"({__"hello": "HELLO"___, __"world": "WORLD"___})"), SV("{::_^{}}"), input, 21);
   check(SV(R"({#####"hello": "HELLO", #####"world": "WORLD"})"), SV("{::#>{}}"), input, 21);
 
-  check_exception("The format-spec range-fill field contains an invalid character", SV("{:::<}"), input);
-  check_exception("The format-spec range-fill field contains an invalid character", SV("{::}<}"), input);
-  check_exception("The format-spec range-fill field contains an invalid character", SV("{::{<}"), input);
+  check_exception("The fill option contains an invalid value", SV("{:::<}"), input);
+  check_exception("The fill option contains an invalid value", SV("{::}<}"), input);
+  check_exception("The fill option contains an invalid value", SV("{::{<}"), input);
 
   // *** sign ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{::-}"), input);
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{::+}"), input);
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:: }"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{::-}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{::+}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:: }"), input);
 
   // *** alternate form ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{::#}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{::#}"), input);
 
   // *** zero-padding ***
-  check_exception("A format-spec width field shouldn't have a leading zero", SV("{::05}"), input);
+  check_exception("The width option should not have a leading zero", SV("{::05}"), input);
 
   // *** precision ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{::.}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{::.}"), input);
 
   // *** locale-specific form ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{::L}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{::L}"), input);
 
   // *** type ***
   for (std::basic_string_view<CharT> fmt : fmt_invalid_nested_types<CharT>(""))
-    check_exception("The format-spec should consume the input or end with a '}'", fmt, input);
+    check_exception("The format specifier should consume the input or end with a '}'", fmt, input);
 
   // ***** Both have a format-spec
 
@@ -729,8 +741,10 @@ void test_string(TestFunction check, ExceptionTest check_exception) {
   check(SV(R"(^^{#####"hello": "HELLO", #####"world": "WORLD"}^^^)"), SV("{:^^{}:#>21}"), input, 51);
   check(SV(R"(^^{#####"hello": "HELLO", #####"world": "WORLD"}^^^)"), SV("{:^^{}:#>{}}"), input, 51, 21);
 
-  check_exception("Argument index out of bounds", SV("{:^^{}:#>21}"), input);
-  check_exception("Argument index out of bounds", SV("{:^^{}:#>{}}"), input, 51);
+  check_exception(
+      "The argument index value is too large for the number of arguments supplied", SV("{:^^{}:#>21}"), input);
+  check_exception(
+      "The argument index value is too large for the number of arguments supplied", SV("{:^^{}:#>{}}"), input, 51);
 }
 
 //
@@ -756,34 +770,34 @@ void test_status(TestFunction check, ExceptionTest check_exception) {
   check(SV("__{0xaa55: 0xaaaa, 0xaa55: 0x5555}___"), SV("{:_^{}}"), input, 37);
   check(SV("#####{0xaa55: 0xaaaa, 0xaa55: 0x5555}"), SV("{:#>{}}"), input, 37);
 
-  check_exception("The format-spec range-fill field contains an invalid character", SV("{:}<}"), input);
-  check_exception("The format-spec range-fill field contains an invalid character", SV("{:{<}"), input);
-  check_exception("The format-spec range-fill field contains an invalid character", SV("{::<}"), input);
+  check_exception("The fill option contains an invalid value", SV("{:}<}"), input);
+  check_exception("The fill option contains an invalid value", SV("{:{<}"), input);
+  check_exception("The fill option contains an invalid value", SV("{::<}"), input);
 
   // *** sign ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:-}"), input);
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:+}"), input);
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{: }"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:-}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:+}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{: }"), input);
 
   // *** alternate form ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:#}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:#}"), input);
 
   // *** zero-padding ***
-  check_exception("A format-spec width field shouldn't have a leading zero", SV("{:0}"), input);
+  check_exception("The width option should not have a leading zero", SV("{:0}"), input);
 
   // *** precision ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:.}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:.}"), input);
 
   // *** locale-specific form ***
-  check_exception("The format-spec should consume the input or end with a '}'", SV("{:L}"), input);
+  check_exception("The format specifier should consume the input or end with a '}'", SV("{:L}"), input);
 
   // *** n
   check(SV("__0xaa55: 0xaaaa, 0xaa55: 0x5555___"), SV("{:_^35n}"), input);
 
   // *** type ***
   check(SV("__{0xaa55: 0xaaaa, 0xaa55: 0x5555}___"), SV("{:_^37}"), input); // the m type does the same as the default.
-  check_exception("The range-format-spec type s requires formatting a character type", SV("{:s}"), input);
-  check_exception("The range-format-spec type ?s requires formatting a character type", SV("{:?s}"), input);
+  check_exception("Type s requires character type as formatting argument", SV("{:s}"), input);
+  check_exception("Type ?s requires character type as formatting argument", SV("{:?s}"), input);
 
   // Underlying can't have a format-spec
 }

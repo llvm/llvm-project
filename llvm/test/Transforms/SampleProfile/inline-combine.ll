@@ -21,7 +21,7 @@ define void @foo(ptr %this) #0 align 2 !dbg !3 {
   store ptr %this, ptr %1, align 8
   %2 = load ptr, ptr %1, align 8
 ; the call should have been inlined after sample-profile pass
-; CHECK-NOT: call
+; CHECK-NOT: call void
   call void @bar(ptr %2), !dbg !7
   ret void
 }

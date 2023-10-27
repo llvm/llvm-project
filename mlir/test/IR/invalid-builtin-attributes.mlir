@@ -546,3 +546,46 @@ func.func @duplicate_dictionary_attr_key() {
 
 // expected-error@below {{expected '>' to close an array attribute}}
 #attr = array<i8: 1)
+
+// -----
+
+// expected-error@below {{expected '[' after 'distinct'}}
+#attr = distinct<
+
+// -----
+
+// expected-error@below {{expected distinct ID}}
+#attr = distinct[i8
+
+// -----
+
+// expected-error@below {{expected an unsigned 64-bit integer}}
+#attr = distinct[0xAAAABBBBEEEEFFFF1]
+
+// -----
+
+// expected-error@below {{expected ']' to close distinct ID}}
+#attr = distinct[8)
+
+// -----
+
+// expected-error@below {{expected '<' after distinct ID}}
+#attr = distinct[8](
+
+// -----
+
+// expected-error@below {{expected attribute}}
+#attr = distinct[8]<attribute
+
+// -----
+
+// expected-error@below {{expected '>' to close distinct attribute}}
+#attr = distinct[8]<@foo]
+
+// -----
+
+#attr = distinct[0]<42 : i32>
+// expected-error@below {{referenced attribute does not match previous definition: 42 : i32}}
+#attr1 = distinct[0]<43 : i32>
+
+// -----

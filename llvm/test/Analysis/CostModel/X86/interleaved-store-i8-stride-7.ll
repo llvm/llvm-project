@@ -15,14 +15,14 @@ target triple = "x86_64-unknown-linux-gnu"
 define void @test() {
 ; SSE2-LABEL: 'test'
 ; SSE2:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i8 %v6, ptr %out6, align 1
-; SSE2:  LV: Found an estimated cost of 56 for VF 2 For instruction: store i8 %v6, ptr %out6, align 1
+; SSE2:  LV: Found an estimated cost of 57 for VF 2 For instruction: store i8 %v6, ptr %out6, align 1
 ; SSE2:  LV: Found an estimated cost of 112 for VF 4 For instruction: store i8 %v6, ptr %out6, align 1
 ; SSE2:  LV: Found an estimated cost of 225 for VF 8 For instruction: store i8 %v6, ptr %out6, align 1
 ; SSE2:  LV: Found an estimated cost of 456 for VF 16 For instruction: store i8 %v6, ptr %out6, align 1
 ;
 ; AVX1-LABEL: 'test'
 ; AVX1:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i8 %v6, ptr %out6, align 1
-; AVX1:  LV: Found an estimated cost of 33 for VF 2 For instruction: store i8 %v6, ptr %out6, align 1
+; AVX1:  LV: Found an estimated cost of 34 for VF 2 For instruction: store i8 %v6, ptr %out6, align 1
 ; AVX1:  LV: Found an estimated cost of 63 for VF 4 For instruction: store i8 %v6, ptr %out6, align 1
 ; AVX1:  LV: Found an estimated cost of 119 for VF 8 For instruction: store i8 %v6, ptr %out6, align 1
 ; AVX1:  LV: Found an estimated cost of 232 for VF 16 For instruction: store i8 %v6, ptr %out6, align 1
@@ -30,7 +30,7 @@ define void @test() {
 ;
 ; AVX2-LABEL: 'test'
 ; AVX2:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i8 %v6, ptr %out6, align 1
-; AVX2:  LV: Found an estimated cost of 33 for VF 2 For instruction: store i8 %v6, ptr %out6, align 1
+; AVX2:  LV: Found an estimated cost of 34 for VF 2 For instruction: store i8 %v6, ptr %out6, align 1
 ; AVX2:  LV: Found an estimated cost of 63 for VF 4 For instruction: store i8 %v6, ptr %out6, align 1
 ; AVX2:  LV: Found an estimated cost of 119 for VF 8 For instruction: store i8 %v6, ptr %out6, align 1
 ; AVX2:  LV: Found an estimated cost of 232 for VF 16 For instruction: store i8 %v6, ptr %out6, align 1
@@ -38,7 +38,7 @@ define void @test() {
 ;
 ; AVX512DQ-LABEL: 'test'
 ; AVX512DQ:  LV: Found an estimated cost of 1 for VF 1 For instruction: store i8 %v6, ptr %out6, align 1
-; AVX512DQ:  LV: Found an estimated cost of 33 for VF 2 For instruction: store i8 %v6, ptr %out6, align 1
+; AVX512DQ:  LV: Found an estimated cost of 34 for VF 2 For instruction: store i8 %v6, ptr %out6, align 1
 ; AVX512DQ:  LV: Found an estimated cost of 63 for VF 4 For instruction: store i8 %v6, ptr %out6, align 1
 ; AVX512DQ:  LV: Found an estimated cost of 121 for VF 8 For instruction: store i8 %v6, ptr %out6, align 1
 ; AVX512DQ:  LV: Found an estimated cost of 234 for VF 16 For instruction: store i8 %v6, ptr %out6, align 1

@@ -59,17 +59,7 @@ test_use_move()
 }
 #endif // TEST_STD_VER > 17
 
-// C++20 can use string in constexpr evaluation, but both libc++ and MSVC
-// don't have the support yet. In these cases omit the constexpr test.
-// FIXME Remove constexpr string workaround introduced in D90569
-#if TEST_STD_VER > 17 && \
-    (!defined(__cpp_lib_constexpr_string) || __cpp_lib_constexpr_string < 201907L)
-void
-#else
-TEST_CONSTEXPR_CXX20 void
-#endif
-test_string()
-{
+TEST_CONSTEXPR_CXX20 void test_string() {
     std::string sa[] = {"a", "b", "c"};
     assert(std::accumulate(sa, sa + 3, std::string()) == "abc");
     assert(std::accumulate(sa, sa + 3, std::string(), std::plus<std::string>()) == "abc");
@@ -110,13 +100,7 @@ test()
 #if TEST_STD_VER > 17
     test_use_move();
 #endif // TEST_STD_VER > 17
-    // C++20 can use string in constexpr evaluation, but both libc++ and MSVC
-    // don't have the support yet. In these cases omit the constexpr test.
-    // FIXME Remove constexpr string workaround introduced in D90569
-#if TEST_STD_VER > 17 && \
-    (!defined(__cpp_lib_constexpr_string) || __cpp_lib_constexpr_string < 201907L)
-    if (!std::is_constant_evaluated())
-#endif
+
     test_string();
 
     return true;

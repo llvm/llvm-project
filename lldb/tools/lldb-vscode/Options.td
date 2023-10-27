@@ -17,20 +17,29 @@ def: Flag<["-"], "g">,
   Alias<wait_for_debugger>,
   HelpText<"Alias for --wait-for-debugger">;
 
-def port: Separate<["--", "-"], "port">,
+def port: S<"port">,
   MetaVarName<"<port>">,
   HelpText<"Communicate with the lldb-vscode tool over the defined port.">;
 def: Separate<["-"], "p">,
   Alias<port>,
   HelpText<"Alias for --port">;
 
-def launch_target: Separate<["--", "-"], "launch-target">,
+def launch_target: S<"launch-target">,
   MetaVarName<"<target>">,
   HelpText<"Launch a target for the launchInTerminal request. Any argument "
     "provided after this one will be passed to the target. The parameter "
-    "--comm-files-prefix must also be specified.">;
+    "--comm-file must also be specified.">;
 
-def comm_file: Separate<["--", "-"], "comm-file">,
+def comm_file: S<"comm-file">,
   MetaVarName<"<file>">,
-  HelpText<"The fifo file used to communicate the with the debug adaptor"
+  HelpText<"The fifo file used to communicate the with the debug adaptor "
     "when using --launch-target.">;
+
+def debugger_pid: S<"debugger-pid">,
+  MetaVarName<"<pid>">,
+  HelpText<"The PID of the lldb-vscode instance that sent the launchInTerminal "
+    "request when using --launch-target.">;
+
+def repl_mode: S<"repl-mode">,
+  MetaVarName<"<mode>">,
+  HelpText<"The mode for handling repl evaluation requests, supported modes: variable, command, auto.">;

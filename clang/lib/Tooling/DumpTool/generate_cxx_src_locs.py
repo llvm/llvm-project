@@ -8,22 +8,24 @@ import filecmp
 import shutil
 import argparse
 
+
 class Generator(object):
 
-    implementationContent = ''
+    implementationContent = ""
 
-    RefClades = {"DeclarationNameInfo",
+    RefClades = {
+        "DeclarationNameInfo",
         "NestedNameSpecifierLoc",
         "TemplateArgumentLoc",
-        "TypeLoc"}
+        "TypeLoc",
+    }
 
     def __init__(self, templateClasses):
         self.templateClasses = templateClasses
 
     def GeneratePrologue(self):
 
-        self.implementationContent += \
-            """
+        self.implementationContent += """
 /*===- Generated file -------------------------------------------*- C++ -*-===*\
 |*                                                                            *|
 |* Introspection of available AST node SourceLocations                        *|
@@ -63,20 +65,23 @@ std::vector<clang::TypeLoc> &TLRG;
         if CladeName in self.RefClades:
             InstanceDecoration = "&"
 
-        self.implementationContent += \
-            """
+        self.implementationContent += """
 void GetLocationsImpl(SharedLocationCall const& Prefix,
     clang::{0} const {1}Object, SourceLocationMap &Locs,
     SourceRangeMap &Rngs,
     std::vector<clang::TypeLoc> &TypeLocRecursionGuard);
-""".format(CladeName, InstanceDecoration)
+""".format(
+            CladeName, InstanceDecoration
+        )
 
-    def GenerateSrcLocMethod(self,
-            ClassName, ClassData, CreateLocalRecursionGuard):
+    def GenerateSrcLocMethod(self, ClassName, ClassData, CreateLocalRecursionGuard):
 
         NormalClassName = ClassName
-        RecursionGuardParam = ('' if CreateLocalRecursionGuard else \
-            ', std::vector<clang::TypeLoc>& TypeLocRecursionGuard')
+        RecursionGuardParam = (
+            ""
+            if CreateLocalRecursionGuard
+            else ", std::vector<clang::TypeLoc>& TypeLocRecursionGuard"
+        )
 
         if "templateParms" in ClassData:
             TemplatePreamble = "template <typename "
@@ -92,147 +97,163 @@ void GetLocationsImpl(SharedLocationCall const& Prefix,
                 TemplatePreamble += TA
 
             ClassName += ">"
-            TemplatePreamble += ">\n";
+            TemplatePreamble += ">\n"
             self.implementationContent += TemplatePreamble
 
-        self.implementationContent += \
-            """
+        self.implementationContent += """
 static void GetLocations{0}(SharedLocationCall const& Prefix,
     clang::{1} const &Object,
     SourceLocationMap &Locs, SourceRangeMap &Rngs {2})
 {{
-""".format(NormalClassName, ClassName, RecursionGuardParam)
+""".format(
+            NormalClassName, ClassName, RecursionGuardParam
+        )
 
-        if 'sourceLocations' in ClassData:
-            for locName in ClassData['sourceLocations']:
-                self.implementationContent += \
-                    """
+        if "sourceLocations" in ClassData:
+            for locName in ClassData["sourceLocations"]:
+                self.implementationContent += """
   Locs.insert(LocationAndString(Object.{0}(),
     llvm::makeIntrusiveRefCnt<LocationCall>(Prefix, "{0}")));
-""".format(locName)
+""".format(
+                    locName
+                )
 
-            self.implementationContent += '\n'
+            self.implementationContent += "\n"
 
-        if 'sourceRanges' in ClassData:
-            for rngName in ClassData['sourceRanges']:
-                self.implementationContent += \
-                    """
+        if "sourceRanges" in ClassData:
+            for rngName in ClassData["sourceRanges"]:
+                self.implementationContent += """
   Rngs.insert(RangeAndString(Object.{0}(),
     llvm::makeIntrusiveRefCnt<LocationCall>(Prefix, "{0}")));
-""".format(rngName)
+""".format(
+                    rngName
+                )
 
-            self.implementationContent += '\n'
+            self.implementationContent += "\n"
 
-        if 'typeLocs' in ClassData or 'typeSourceInfos' in ClassData \
-                or 'nestedNameLocs' in ClassData \
-                or 'declNameInfos' in ClassData:
+        if (
+            "typeLocs" in ClassData
+            or "typeSourceInfos" in ClassData
+            or "nestedNameLocs" in ClassData
+            or "declNameInfos" in ClassData
+        ):
             if CreateLocalRecursionGuard:
-                self.implementationContent += \
-                    'std::vector<clang::TypeLoc> TypeLocRecursionGuard;\n'
+                self.implementationContent += (
+                    "std::vector<clang::TypeLoc> TypeLocRecursionGuard;\n"
+                )
 
-            self.implementationContent += '\n'
+            self.implementationContent += "\n"
 
-            if 'typeLocs' in ClassData:
-                for typeLoc in ClassData['typeLocs']:
+            if "typeLocs" in ClassData:
+                for typeLoc in ClassData["typeLocs"]:
 
-                    self.implementationContent += \
-                        """
+                    self.implementationContent += """
               if (Object.{0}()) {{
                 GetLocationsImpl(
                     llvm::makeIntrusiveRefCnt<LocationCall>(Prefix, "{0}"),
                     Object.{0}(), Locs, Rngs, TypeLocRecursionGuard);
                 }}
-              """.format(typeLoc)
+              """.format(
+                        typeLoc
+                    )
 
-            self.implementationContent += '\n'
-            if 'typeSourceInfos' in ClassData:
-                for tsi in ClassData['typeSourceInfos']:
-                    self.implementationContent += \
-                        """
+            self.implementationContent += "\n"
+            if "typeSourceInfos" in ClassData:
+                for tsi in ClassData["typeSourceInfos"]:
+                    self.implementationContent += """
               if (Object.{0}()) {{
                 GetLocationsImpl(llvm::makeIntrusiveRefCnt<LocationCall>(
                     llvm::makeIntrusiveRefCnt<LocationCall>(Prefix, "{0}",
                         LocationCall::ReturnsPointer), "getTypeLoc"),
                     Object.{0}()->getTypeLoc(), Locs, Rngs, TypeLocRecursionGuard);
                     }}
-              """.format(tsi)
+              """.format(
+                        tsi
+                    )
 
-                self.implementationContent += '\n'
+                self.implementationContent += "\n"
 
-            if 'nestedNameLocs' in ClassData:
-                for NN in ClassData['nestedNameLocs']:
-                    self.implementationContent += \
-                        """
+            if "nestedNameLocs" in ClassData:
+                for NN in ClassData["nestedNameLocs"]:
+                    self.implementationContent += """
               if (Object.{0}())
                 GetLocationsImpl(
                     llvm::makeIntrusiveRefCnt<LocationCall>(Prefix, "{0}"),
                     Object.{0}(), Locs, Rngs, TypeLocRecursionGuard);
-              """.format(NN)
+              """.format(
+                        NN
+                    )
 
-            if 'declNameInfos' in ClassData:
-                for declName in ClassData['declNameInfos']:
+            if "declNameInfos" in ClassData:
+                for declName in ClassData["declNameInfos"]:
 
-                    self.implementationContent += \
-                        """
+                    self.implementationContent += """
                       GetLocationsImpl(
                           llvm::makeIntrusiveRefCnt<LocationCall>(Prefix, "{0}"),
                           Object.{0}(), Locs, Rngs, TypeLocRecursionGuard);
-                      """.format(declName)
+                      """.format(
+                        declName
+                    )
 
-        self.implementationContent += '}\n'
+        self.implementationContent += "}\n"
 
     def GenerateFiles(self, OutputFile):
-        with open(os.path.join(os.getcwd(),
-                  OutputFile), 'w') as f:
+        with open(os.path.join(os.getcwd(), OutputFile), "w") as f:
             f.write(self.implementationContent)
 
-    def GenerateBaseGetLocationsFunction(self, ASTClassNames,
-            ClassEntries, CladeName, InheritanceMap,
-            CreateLocalRecursionGuard):
+    def GenerateBaseGetLocationsFunction(
+        self,
+        ASTClassNames,
+        ClassEntries,
+        CladeName,
+        InheritanceMap,
+        CreateLocalRecursionGuard,
+    ):
 
-        MethodReturnType = 'NodeLocationAccessors'
+        MethodReturnType = "NodeLocationAccessors"
         InstanceDecoration = "*"
         if CladeName in self.RefClades:
             InstanceDecoration = "&"
 
-        Signature = \
-            'GetLocations(clang::{0} const {1}Object)'.format(
-                CladeName, InstanceDecoration)
-        ImplSignature = \
-            """
+        Signature = "GetLocations(clang::{0} const {1}Object)".format(
+            CladeName, InstanceDecoration
+        )
+        ImplSignature = """
     GetLocationsImpl(SharedLocationCall const& Prefix,
         clang::{0} const {1}Object, SourceLocationMap &Locs,
         SourceRangeMap &Rngs,
         std::vector<clang::TypeLoc> &TypeLocRecursionGuard)
-    """.format(CladeName, InstanceDecoration)
+    """.format(
+            CladeName, InstanceDecoration
+        )
 
-        self.implementationContent += 'void {0} {{ '.format(ImplSignature)
+        self.implementationContent += "void {0} {{ ".format(ImplSignature)
 
         if CladeName == "TypeLoc":
-            self.implementationContent += 'if (Object.isNull()) return;'
+            self.implementationContent += "if (Object.isNull()) return;"
 
-            self.implementationContent += \
-                """
+            self.implementationContent += """
             if (llvm::find(TypeLocRecursionGuard, Object) != TypeLocRecursionGuard.end())
               return;
             TypeLocRecursionGuard.push_back(Object);
             RecursionPopper RAII(TypeLocRecursionGuard);
                 """
 
-        RecursionGuardParam = ''
+        RecursionGuardParam = ""
         if not CreateLocalRecursionGuard:
-            RecursionGuardParam = ', TypeLocRecursionGuard'
+            RecursionGuardParam = ", TypeLocRecursionGuard"
 
-        ArgPrefix = '*'
+        ArgPrefix = "*"
         if CladeName in self.RefClades:
-            ArgPrefix = ''
-        self.implementationContent += \
-            'GetLocations{0}(Prefix, {1}Object, Locs, Rngs {2});'.format(
-                CladeName, ArgPrefix, RecursionGuardParam)
+            ArgPrefix = ""
+        self.implementationContent += (
+            "GetLocations{0}(Prefix, {1}Object, Locs, Rngs {2});".format(
+                CladeName, ArgPrefix, RecursionGuardParam
+            )
+        )
 
         if CladeName == "TypeLoc":
-            self.implementationContent += \
-                '''
+            self.implementationContent += """
         if (auto QTL = Object.getAs<clang::QualifiedTypeLoc>()) {
             auto Dequalified = QTL.getNextTypeLoc();
             return GetLocationsImpl(llvm::makeIntrusiveRefCnt<LocationCall>(Prefix, "getNextTypeLoc"),
@@ -240,7 +261,7 @@ static void GetLocations{0}(SharedLocationCall const& Prefix,
                                 Locs,
                                 Rngs,
                                 TypeLocRecursionGuard);
-        }'''
+        }"""
 
         for ASTClassName in ASTClassNames:
             if ASTClassName in self.templateClasses:
@@ -248,21 +269,22 @@ static void GetLocations{0}(SharedLocationCall const& Prefix,
             if ASTClassName == CladeName:
                 continue
             if CladeName != "TypeLoc":
-                self.implementationContent += \
-                """
+                self.implementationContent += """
 if (auto Derived = llvm::dyn_cast<clang::{0}>(Object)) {{
   GetLocations{0}(Prefix, *Derived, Locs, Rngs {1});
 }}
-""".format(ASTClassName, RecursionGuardParam)
+""".format(
+                    ASTClassName, RecursionGuardParam
+                )
                 continue
 
-            self.GenerateBaseTypeLocVisit(ASTClassName, ClassEntries,
-                RecursionGuardParam, InheritanceMap)
+            self.GenerateBaseTypeLocVisit(
+                ASTClassName, ClassEntries, RecursionGuardParam, InheritanceMap
+            )
 
-        self.implementationContent += '}'
+        self.implementationContent += "}"
 
-        self.implementationContent += \
-            """
+        self.implementationContent += """
 {0} NodeIntrospection::{1} {{
   NodeLocationAccessors Result;
   SharedLocationCall Prefix;
@@ -270,108 +292,125 @@ if (auto Derived = llvm::dyn_cast<clang::{0}>(Object)) {{
 
   GetLocationsImpl(Prefix, Object, Result.LocationAccessors,
                    Result.RangeAccessors, TypeLocRecursionGuard);
-""".format(MethodReturnType, Signature)
+""".format(
+            MethodReturnType, Signature
+        )
 
-        self.implementationContent += 'return Result; }'
+        self.implementationContent += "return Result; }"
 
-    def GenerateBaseTypeLocVisit(self, ASTClassName, ClassEntries,
-            RecursionGuardParam, InheritanceMap):
-        CallPrefix = 'Prefix'
-        if ASTClassName != 'TypeLoc':
-            CallPrefix = \
-                '''llvm::makeIntrusiveRefCnt<LocationCall>(Prefix,
+    def GenerateBaseTypeLocVisit(
+        self, ASTClassName, ClassEntries, RecursionGuardParam, InheritanceMap
+    ):
+        CallPrefix = "Prefix"
+        if ASTClassName != "TypeLoc":
+            CallPrefix = """llvm::makeIntrusiveRefCnt<LocationCall>(Prefix,
                     "getAs<clang::{0}>", LocationCall::IsCast)
-                '''.format(ASTClassName)
+                """.format(
+                ASTClassName
+            )
 
         if ASTClassName in ClassEntries:
 
-            self.implementationContent += \
-            """
+            self.implementationContent += """
             if (auto ConcreteTL = Object.getAs<clang::{0}>())
               GetLocations{1}({2}, ConcreteTL, Locs, Rngs {3});
-            """.format(ASTClassName, ASTClassName,
-                       CallPrefix, RecursionGuardParam)
+            """.format(
+                ASTClassName, ASTClassName, CallPrefix, RecursionGuardParam
+            )
 
         if ASTClassName in InheritanceMap:
             for baseTemplate in self.templateClasses:
                 if baseTemplate in InheritanceMap[ASTClassName]:
-                    self.implementationContent += \
-                    """
+                    self.implementationContent += """
     if (auto ConcreteTL = Object.getAs<clang::{0}>())
       GetLocations{1}({2}, ConcreteTL, Locs, Rngs {3});
-    """.format(InheritanceMap[ASTClassName], baseTemplate,
-            CallPrefix, RecursionGuardParam)
-
+    """.format(
+                        InheritanceMap[ASTClassName],
+                        baseTemplate,
+                        CallPrefix,
+                        RecursionGuardParam,
+                    )
 
     def GenerateDynNodeVisitor(self, CladeNames):
-        MethodReturnType = 'NodeLocationAccessors'
+        MethodReturnType = "NodeLocationAccessors"
 
-        Signature = \
-            'GetLocations(clang::DynTypedNode const &Node)'
+        Signature = "GetLocations(clang::DynTypedNode const &Node)"
 
-        self.implementationContent += MethodReturnType \
-            + ' NodeIntrospection::' + Signature + '{'
+        self.implementationContent += (
+            MethodReturnType + " NodeIntrospection::" + Signature + "{"
+        )
 
         for CladeName in CladeNames:
             if CladeName == "DeclarationNameInfo":
                 continue
-            self.implementationContent += \
-                """
+            self.implementationContent += """
     if (const auto *N = Node.get<{0}>())
-    """.format(CladeName)
+    """.format(
+                CladeName
+            )
             ArgPrefix = ""
             if CladeName in self.RefClades:
                 ArgPrefix = "*"
-            self.implementationContent += \
-            """
-      return GetLocations({0}const_cast<{1} *>(N));""".format(ArgPrefix, CladeName)
+            self.implementationContent += """
+      return GetLocations({0}const_cast<{1} *>(N));""".format(
+                ArgPrefix, CladeName
+            )
 
-        self.implementationContent += '\nreturn {}; }'
+        self.implementationContent += "\nreturn {}; }"
 
     def GenerateEpilogue(self):
 
-        self.implementationContent += '''
+        self.implementationContent += """
   }
 }
-'''
+"""
+
 
 def main():
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--json-input-path',
-                      help='Read API description from FILE', metavar='FILE')
-    parser.add_argument('--output-file', help='Generate output in FILEPATH',
-                      metavar='FILEPATH')
-    parser.add_argument('--use-empty-implementation',
-                      help='Generate empty implementation',
-                      action="store", type=int)
-    parser.add_argument('--empty-implementation',
-                      help='Copy empty implementation from FILEPATH',
-                      action="store", metavar='FILEPATH')
+    parser.add_argument(
+        "--json-input-path", help="Read API description from FILE", metavar="FILE"
+    )
+    parser.add_argument(
+        "--output-file", help="Generate output in FILEPATH", metavar="FILEPATH"
+    )
+    parser.add_argument(
+        "--use-empty-implementation",
+        help="Generate empty implementation",
+        action="store",
+        type=int,
+    )
+    parser.add_argument(
+        "--empty-implementation",
+        help="Copy empty implementation from FILEPATH",
+        action="store",
+        metavar="FILEPATH",
+    )
 
     options = parser.parse_args()
 
     use_empty_implementation = options.use_empty_implementation
 
-    if (not use_empty_implementation
-            and not os.path.exists(options.json_input_path)):
+    if not use_empty_implementation and not os.path.exists(options.json_input_path):
         use_empty_implementation = True
 
     if not use_empty_implementation:
         with open(options.json_input_path) as f:
             jsonData = json.load(f)
 
-        if not 'classesInClade' in jsonData or not jsonData["classesInClade"]:
+        if not "classesInClade" in jsonData or not jsonData["classesInClade"]:
             use_empty_implementation = True
 
     if use_empty_implementation:
-        if not os.path.exists(options.output_file) or \
-                not filecmp.cmp(options.empty_implementation, options.output_file):
+        if not os.path.exists(options.output_file) or not filecmp.cmp(
+            options.empty_implementation, options.output_file
+        ):
             shutil.copyfile(options.empty_implementation, options.output_file)
         sys.exit(0)
 
     templateClasses = []
-    for (ClassName, ClassAccessors) in jsonData['classEntries'].items():
+    for (ClassName, ClassAccessors) in jsonData["classEntries"].items():
         if "templateParms" in ClassAccessors:
             templateClasses.append(ClassName)
 
@@ -379,33 +418,35 @@ def main():
 
     g.GeneratePrologue()
 
-    for (CladeName, ClassNameData) in jsonData['classesInClade'].items():
+    for (CladeName, ClassNameData) in jsonData["classesInClade"].items():
         g.GenerateBaseGetLocationsDeclaration(CladeName)
 
     def getCladeName(ClassName):
-      for (CladeName, ClassNameData) in jsonData['classesInClade'].items():
-        if ClassName in ClassNameData:
-          return CladeName
+        for (CladeName, ClassNameData) in jsonData["classesInClade"].items():
+            if ClassName in ClassNameData:
+                return CladeName
 
-    for (ClassName, ClassAccessors) in jsonData['classEntries'].items():
+    for (ClassName, ClassAccessors) in jsonData["classEntries"].items():
         cladeName = getCladeName(ClassName)
         g.GenerateSrcLocMethod(
-            ClassName, ClassAccessors,
-            cladeName not in Generator.RefClades)
+            ClassName, ClassAccessors, cladeName not in Generator.RefClades
+        )
 
-    for (CladeName, ClassNameData) in jsonData['classesInClade'].items():
+    for (CladeName, ClassNameData) in jsonData["classesInClade"].items():
         g.GenerateBaseGetLocationsFunction(
             ClassNameData,
-            jsonData['classEntries'],
+            jsonData["classEntries"],
             CladeName,
             jsonData["classInheritance"],
-            CladeName not in Generator.RefClades)
+            CladeName not in Generator.RefClades,
+        )
 
-    g.GenerateDynNodeVisitor(jsonData['classesInClade'].keys())
+    g.GenerateDynNodeVisitor(jsonData["classesInClade"].keys())
 
     g.GenerateEpilogue()
 
     g.GenerateFiles(options.output_file)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

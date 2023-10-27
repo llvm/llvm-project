@@ -1,7 +1,6 @@
 // REQUIRES: x86-registered-target
 // RUN: %clang_cc1 -triple i386-apple-darwin10 -fobjc-runtime=macosx-fragile-10.5 -fblocks -debug-info-kind=limited -S %s -o -
 
-// rdar://7556129
 @implementation test
 - (void)wait {
   ^{};

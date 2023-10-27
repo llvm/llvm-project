@@ -13,8 +13,9 @@ declare void @llvm.experimental.guard(i1,...)
 define void @iter(i32 %a, i32 %b, ptr %c_p) {
 ; CHECK-LABEL: @iter(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[B_GW_FR:%.*]] = freeze i32 [[B:%.*]]
 ; CHECK-NEXT:    [[COND_0:%.*]] = icmp ult i32 [[A:%.*]], 10
-; CHECK-NEXT:    [[COND_1:%.*]] = icmp ult i32 [[B:%.*]], 10
+; CHECK-NEXT:    [[COND_1:%.*]] = icmp ult i32 [[B_GW_FR]], 10
 ; CHECK-NEXT:    [[WIDE_CHK:%.*]] = and i1 [[COND_0]], [[COND_1]]
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[WIDE_CHK]]) [ "deopt"() ]
 ; CHECK-NEXT:    [[CND:%.*]] = load i1, ptr [[C_P:%.*]], align 1
@@ -48,8 +49,9 @@ leave:                                            ; preds = %leave.loopexit, %en
 define void @within_loop(i32 %a, i32 %b, ptr %c_p) {
 ; CHECK-LABEL: @within_loop(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[B_GW_FR:%.*]] = freeze i32 [[B:%.*]]
 ; CHECK-NEXT:    [[COND_0:%.*]] = icmp ult i32 [[A:%.*]], 10
-; CHECK-NEXT:    [[COND_1:%.*]] = icmp ult i32 [[B:%.*]], 10
+; CHECK-NEXT:    [[COND_1:%.*]] = icmp ult i32 [[B_GW_FR]], 10
 ; CHECK-NEXT:    [[WIDE_CHK:%.*]] = and i1 [[COND_0]], [[COND_1]]
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[WIDE_CHK]]) [ "deopt"() ]
 ; CHECK-NEXT:    [[CND:%.*]] = load i1, ptr [[C_P:%.*]], align 1

@@ -198,40 +198,60 @@ public:
     printFlagsImpl(Label, hex(Value), SetFlags);
   }
 
-  virtual void printNumber(StringRef Label, uint64_t Value) {
+  virtual void printNumber(StringRef Label, char Value) {
+    startLine() << Label << ": " << static_cast<int>(Value) << "\n";
+  }
+
+  virtual void printNumber(StringRef Label, signed char Value) {
+    startLine() << Label << ": " << static_cast<int>(Value) << "\n";
+  }
+
+  virtual void printNumber(StringRef Label, unsigned char Value) {
+    startLine() << Label << ": " << static_cast<unsigned>(Value) << "\n";
+  }
+
+  virtual void printNumber(StringRef Label, short Value) {
     startLine() << Label << ": " << Value << "\n";
   }
 
-  virtual void printNumber(StringRef Label, uint32_t Value) {
+  virtual void printNumber(StringRef Label, unsigned short Value) {
     startLine() << Label << ": " << Value << "\n";
   }
 
-  virtual void printNumber(StringRef Label, uint16_t Value) {
+  virtual void printNumber(StringRef Label, int Value) {
     startLine() << Label << ": " << Value << "\n";
   }
 
-  virtual void printNumber(StringRef Label, uint8_t Value) {
-    startLine() << Label << ": " << unsigned(Value) << "\n";
-  }
-
-  virtual void printNumber(StringRef Label, int64_t Value) {
+  virtual void printNumber(StringRef Label, unsigned int Value) {
     startLine() << Label << ": " << Value << "\n";
   }
 
-  virtual void printNumber(StringRef Label, int32_t Value) {
+  virtual void printNumber(StringRef Label, long Value) {
     startLine() << Label << ": " << Value << "\n";
   }
 
-  virtual void printNumber(StringRef Label, int16_t Value) {
+  virtual void printNumber(StringRef Label, unsigned long Value) {
     startLine() << Label << ": " << Value << "\n";
   }
 
-  virtual void printNumber(StringRef Label, int8_t Value) {
-    startLine() << Label << ": " << int(Value) << "\n";
+  virtual void printNumber(StringRef Label, long long Value) {
+    startLine() << Label << ": " << Value << "\n";
+  }
+
+  virtual void printNumber(StringRef Label, unsigned long long Value) {
+    startLine() << Label << ": " << Value << "\n";
   }
 
   virtual void printNumber(StringRef Label, const APSInt &Value) {
     startLine() << Label << ": " << Value << "\n";
+  }
+
+  virtual void printNumber(StringRef Label, float Value) {
+    startLine() << Label << ": " << format("%5.1f", Value) << "\n";
+  }
+
+  virtual void printNumber(StringRef Label, double Value) {
+    startLine() << Label << ": " << format("%5.1f", Value) << "\n";
   }
 
   template <typename T>
@@ -554,35 +574,55 @@ public:
     return SP->getKind() == ScopedPrinter::ScopedPrinterKind::JSON;
   }
 
-  void printNumber(StringRef Label, uint64_t Value) override {
+  void printNumber(StringRef Label, char Value) override {
     JOS.attribute(Label, Value);
   }
 
-  void printNumber(StringRef Label, uint32_t Value) override {
+  void printNumber(StringRef Label, signed char Value) override {
     JOS.attribute(Label, Value);
   }
 
-  void printNumber(StringRef Label, uint16_t Value) override {
+  void printNumber(StringRef Label, unsigned char Value) override {
     JOS.attribute(Label, Value);
   }
 
-  void printNumber(StringRef Label, uint8_t Value) override {
+  void printNumber(StringRef Label, short Value) override {
     JOS.attribute(Label, Value);
   }
 
-  void printNumber(StringRef Label, int64_t Value) override {
+  void printNumber(StringRef Label, unsigned short Value) override {
     JOS.attribute(Label, Value);
   }
 
-  void printNumber(StringRef Label, int32_t Value) override {
+  void printNumber(StringRef Label, int Value) override {
     JOS.attribute(Label, Value);
   }
 
-  void printNumber(StringRef Label, int16_t Value) override {
+  void printNumber(StringRef Label, unsigned int Value) override {
     JOS.attribute(Label, Value);
   }
 
-  void printNumber(StringRef Label, int8_t Value) override {
+  void printNumber(StringRef Label, long Value) override {
+    JOS.attribute(Label, Value);
+  }
+
+  void printNumber(StringRef Label, unsigned long Value) override {
+    JOS.attribute(Label, Value);
+  }
+
+  void printNumber(StringRef Label, long long Value) override {
+    JOS.attribute(Label, Value);
+  }
+
+  void printNumber(StringRef Label, unsigned long long Value) override {
+    JOS.attribute(Label, Value);
+  }
+
+  void printNumber(StringRef Label, float Value) override {
+    JOS.attribute(Label, Value);
+  }
+
+  void printNumber(StringRef Label, double Value) override {
     JOS.attribute(Label, Value);
   }
 
@@ -682,7 +722,7 @@ private:
   void printFlagsImpl(StringRef Label, HexNumber Value,
                       ArrayRef<FlagEntry> Flags) override {
     JOS.attributeObject(Label, [&]() {
-      JOS.attribute("RawFlags", hexNumberToInt(Value));
+      JOS.attribute("Value", hexNumberToInt(Value));
       JOS.attributeArray("Flags", [&]() {
         for (const FlagEntry &Flag : Flags) {
           JOS.objectBegin();
@@ -697,7 +737,7 @@ private:
   void printFlagsImpl(StringRef Label, HexNumber Value,
                       ArrayRef<HexNumber> Flags) override {
     JOS.attributeObject(Label, [&]() {
-      JOS.attribute("RawFlags", hexNumberToInt(Value));
+      JOS.attribute("Value", hexNumberToInt(Value));
       JOS.attributeArray("Flags", [&]() {
         for (const HexNumber &Flag : Flags) {
           JOS.value(Flag.Value);
@@ -728,8 +768,8 @@ private:
 
   void printHexImpl(StringRef Label, StringRef Str, HexNumber Value) override {
     JOS.attributeObject(Label, [&]() {
-      JOS.attribute("Value", Str);
-      JOS.attribute("RawValue", hexNumberToInt(Value));
+      JOS.attribute("Name", Str);
+      JOS.attribute("Value", hexNumberToInt(Value));
     });
   }
 
@@ -744,8 +784,8 @@ private:
   void printNumberImpl(StringRef Label, StringRef Str,
                        StringRef Value) override {
     JOS.attributeObject(Label, [&]() {
-      JOS.attribute("Value", Str);
-      JOS.attributeBegin("RawValue");
+      JOS.attribute("Name", Str);
+      JOS.attributeBegin("Value");
       JOS.rawValueBegin() << Value;
       JOS.rawValueEnd();
       JOS.attributeEnd();

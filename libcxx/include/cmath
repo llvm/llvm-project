@@ -311,7 +311,9 @@ constexpr long double lerp(long double a, long double b, long double t) noexcept
 #include <__type_traits/is_constant_evaluated.h>
 #include <__type_traits/is_floating_point.h>
 #include <__type_traits/is_same.h>
+#include <__type_traits/promote.h>
 #include <__type_traits/remove_cv.h>
+#include <limits>
 #include <version>
 
 #include <math.h>
@@ -543,7 +545,7 @@ using ::scalbnl _LIBCPP_USING_IF_EXISTS;
 using ::tgammal _LIBCPP_USING_IF_EXISTS;
 using ::truncl _LIBCPP_USING_IF_EXISTS;
 
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
 inline _LIBCPP_INLINE_VISIBILITY float       hypot(       float __x,       float __y,       float __z ) { return sqrt(__x*__x + __y*__y + __z*__z); }
 inline _LIBCPP_INLINE_VISIBILITY double      hypot(      double __x,      double __y,      double __z ) { return sqrt(__x*__x + __y*__y + __z*__z); }
 inline _LIBCPP_INLINE_VISIBILITY long double hypot( long double __x, long double __y, long double __z ) { return sqrt(__x*__x + __y*__y + __z*__z); }
@@ -567,9 +569,9 @@ hypot(_A1 __lcpp_x, _A2 __lcpp_y, _A3 __lcpp_z) _NOEXCEPT
 }
 #endif
 
-template <class _A1>
+template <class _A1, __enable_if_t<is_floating_point<_A1>::value, int> = 0>
 _LIBCPP_INLINE_VISIBILITY
-_LIBCPP_CONSTEXPR typename enable_if<is_floating_point<_A1>::value, bool>::type
+_LIBCPP_CONSTEXPR bool
 __constexpr_isnan(_A1 __lcpp_x) _NOEXCEPT
 {
 #if __has_builtin(__builtin_isnan)
@@ -579,17 +581,17 @@ __constexpr_isnan(_A1 __lcpp_x) _NOEXCEPT
 #endif
 }
 
-template <class _A1>
+template <class _A1, __enable_if_t<!is_floating_point<_A1>::value, int> = 0>
 _LIBCPP_INLINE_VISIBILITY
-_LIBCPP_CONSTEXPR typename enable_if<!is_floating_point<_A1>::value, bool>::type
+_LIBCPP_CONSTEXPR bool
 __constexpr_isnan(_A1 __lcpp_x) _NOEXCEPT
 {
     return std::isnan(__lcpp_x);
 }
 
-template <class _A1>
+template <class _A1, __enable_if_t<is_floating_point<_A1>::value, int> = 0>
 _LIBCPP_INLINE_VISIBILITY
-_LIBCPP_CONSTEXPR typename enable_if<is_floating_point<_A1>::value, bool>::type
+_LIBCPP_CONSTEXPR bool
 __constexpr_isinf(_A1 __lcpp_x) _NOEXCEPT
 {
 #if __has_builtin(__builtin_isinf)
@@ -599,17 +601,17 @@ __constexpr_isinf(_A1 __lcpp_x) _NOEXCEPT
 #endif
 }
 
-template <class _A1>
+template <class _A1, __enable_if_t<!is_floating_point<_A1>::value, int> = 0>
 _LIBCPP_INLINE_VISIBILITY
-_LIBCPP_CONSTEXPR typename enable_if<!is_floating_point<_A1>::value, bool>::type
+_LIBCPP_CONSTEXPR bool
 __constexpr_isinf(_A1 __lcpp_x) _NOEXCEPT
 {
     return std::isinf(__lcpp_x);
 }
 
-template <class _A1>
+template <class _A1, __enable_if_t<is_floating_point<_A1>::value, int> = 0>
 _LIBCPP_INLINE_VISIBILITY
-_LIBCPP_CONSTEXPR typename enable_if<is_floating_point<_A1>::value, bool>::type
+_LIBCPP_CONSTEXPR bool
 __constexpr_isfinite(_A1 __lcpp_x) _NOEXCEPT
 {
 #if __has_builtin(__builtin_isfinite)
@@ -619,9 +621,9 @@ __constexpr_isfinite(_A1 __lcpp_x) _NOEXCEPT
 #endif
 }
 
-template <class _A1>
+template <class _A1, __enable_if_t<!is_floating_point<_A1>::value, int> = 0>
 _LIBCPP_INLINE_VISIBILITY
-_LIBCPP_CONSTEXPR typename enable_if<!is_floating_point<_A1>::value, bool>::type
+_LIBCPP_CONSTEXPR bool
 __constexpr_isfinite(_A1 __lcpp_x) _NOEXCEPT
 {
     return __builtin_isfinite(__lcpp_x);
@@ -640,10 +642,9 @@ __constexpr_copysign(long double __x, long double __y) _NOEXCEPT {
     return __builtin_copysignl(__x, __y);
 }
 
-template <class _A1, class _A2>
+template <class _A1, class _A2, __enable_if_t<std::is_arithmetic<_A1>::value && std::is_arithmetic<_A2>::value, int> = 0>
 _LIBCPP_CONSTEXPR inline _LIBCPP_HIDE_FROM_ABI
-    typename std::__enable_if_t<std::is_arithmetic<_A1>::value && std::is_arithmetic<_A2>::value,
-                                std::__promote<_A1, _A2> >::type
+    typename __promote<_A1, _A2>::type
     __constexpr_copysign(_A1 __x, _A2 __y) _NOEXCEPT {
     typedef typename std::__promote<_A1, _A2>::type __result_type;
     static_assert((!(std::_IsSame<_A1, __result_type>::value && std::_IsSame<_A2, __result_type>::value)), "");
@@ -782,7 +783,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Tp __constexpr_scalbn(_Tp _
   return __builtin_scalbn(__x, __exp);
 }
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 template <typename _Fp>
 _LIBCPP_HIDE_FROM_ABI constexpr
 _Fp __lerp(_Fp __a, _Fp __b, _Fp __t) noexcept {
@@ -823,7 +824,7 @@ lerp(_A1 __a, _A2 __b, _A3 __t) noexcept
                     _IsSame<_A3, __result_type>::value));
     return std::__lerp((__result_type)__a, (__result_type)__b, (__result_type)__t);
 }
-#endif // _LIBCPP_STD_VER > 17
+#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

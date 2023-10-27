@@ -1,6 +1,6 @@
-// RUN: not llvm-mc -arch=amdgcn %s 2>&1 | FileCheck -check-prefixes=GCN,GFX68 --implicit-check-not=error: %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=tonga %s 2>&1 | FileCheck -check-prefixes=GCN,GFX68 --implicit-check-not=error: %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx1100 %s 2>&1 | FileCheck -check-prefixes=GCN,GFX11 --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn %s 2>&1 | FileCheck -check-prefixes=GCN,GFX68 --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=tonga %s 2>&1 | FileCheck -check-prefixes=GCN,GFX68 --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1100 %s 2>&1 | FileCheck -check-prefixes=GCN,GFX11 --implicit-check-not=error: %s
 
 exp mrt8 v3, v2, v1, v0
 // GCN: :[[@LINE-1]]:5: error: invalid exp target

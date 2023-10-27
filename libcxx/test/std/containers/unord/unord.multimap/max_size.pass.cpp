@@ -33,7 +33,7 @@ int main(int, char**)
     LIBCPP_ASSERT(c.max_size() == 10);
   }
   {
-    typedef limited_allocator<KV, (size_t)-1> A;
+    typedef limited_allocator<KV, (std::size_t)-1> A;
     typedef std::unordered_multimap<int, int, std::hash<int>,
                                     std::equal_to<int>, A>
         C;

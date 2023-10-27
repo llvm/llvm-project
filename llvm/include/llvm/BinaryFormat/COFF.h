@@ -99,6 +99,7 @@ enum MachineTypes : unsigned {
   IMAGE_FILE_MACHINE_ARMNT = 0x1C4,
   IMAGE_FILE_MACHINE_ARM64 = 0xAA64,
   IMAGE_FILE_MACHINE_ARM64EC = 0xA641,
+  IMAGE_FILE_MACHINE_ARM64X = 0xA64E,
   IMAGE_FILE_MACHINE_EBC = 0xEBC,
   IMAGE_FILE_MACHINE_I386 = 0x14C,
   IMAGE_FILE_MACHINE_IA64 = 0x200,
@@ -119,6 +120,19 @@ enum MachineTypes : unsigned {
   IMAGE_FILE_MACHINE_THUMB = 0x1C2,
   IMAGE_FILE_MACHINE_WCEMIPSV2 = 0x169
 };
+
+template <typename T> bool isArm64EC(T Machine) {
+  return Machine == IMAGE_FILE_MACHINE_ARM64EC ||
+         Machine == IMAGE_FILE_MACHINE_ARM64X;
+}
+
+template <typename T> bool isAnyArm64(T Machine) {
+  return Machine == IMAGE_FILE_MACHINE_ARM64 || isArm64EC(Machine);
+}
+
+template <typename T> bool is64Bit(T Machine) {
+  return Machine == IMAGE_FILE_MACHINE_AMD64 || isAnyArm64(Machine);
+}
 
 enum Characteristics : unsigned {
   C_Invalid = 0,

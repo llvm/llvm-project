@@ -8,16 +8,16 @@ target triple = "arm64-apple-ios"
 define ptr @t1(ptr %base, ptr nocapture %offset, i32 %size) nounwind {
 ; CHECK-LABEL: t1:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    ldr w9, [x1]
-; CHECK-NEXT:    subs w8, w9, w2
+; CHECK-NEXT:    ldr w8, [x1]
+; CHECK-NEXT:    subs w9, w8, w2
 ; CHECK-NEXT:    b.ge LBB0_2
 ; CHECK-NEXT:  ; %bb.1:
 ; CHECK-NEXT:    mov x0, xzr
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  LBB0_2: ; %if.end
-; CHECK-NEXT:    sub w9, w9, w8
-; CHECK-NEXT:    add x0, x0, w8, sxtw
-; CHECK-NEXT:    str w9, [x1]
+; CHECK-NEXT:    add x0, x0, w9, sxtw
+; CHECK-NEXT:    sub w8, w8, w9
+; CHECK-NEXT:    str w8, [x1]
 ; CHECK-NEXT:    ret
 entry:
  %0 = load i32, ptr %offset, align 4

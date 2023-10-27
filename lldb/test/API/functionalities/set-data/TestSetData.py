@@ -3,7 +3,6 @@ Set the contents of variables and registers using raw data
 """
 
 
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -11,7 +10,6 @@ from lldbsuite.test import lldbutil
 
 
 class SetDataTestCase(TestBase):
-
     @add_test_categories(["objc"])
     def test_set_data(self):
         """Test setting the contents of variables and registers using raw data."""
@@ -24,24 +22,21 @@ class SetDataTestCase(TestBase):
 
         self.runCmd("run", RUN_SUCCEEDED)
 
-        self.expect("p myFoo.x", VARIABLES_DISPLAYED_CORRECTLY,
-                    substrs=['2'])
+        self.expect("expression myFoo.x", VARIABLES_DISPLAYED_CORRECTLY, substrs=["2"])
 
         process = self.dbg.GetSelectedTarget().GetProcess()
         frame = process.GetSelectedThread().GetFrameAtIndex(0)
 
         x = frame.FindVariable("myFoo").GetChildMemberWithName("x")
 
-        my_data = lldb.SBData.CreateDataFromSInt32Array(
-            lldb.eByteOrderLittle, 8, [4])
+        my_data = lldb.SBData.CreateDataFromSInt32Array(lldb.eByteOrderLittle, 8, [4])
         err = lldb.SBError()
 
         self.assertTrue(x.SetData(my_data, err))
 
         self.runCmd("continue")
 
-        self.expect("p myFoo.x", VARIABLES_DISPLAYED_CORRECTLY,
-                    substrs=['4'])
+        self.expect("expression myFoo.x", VARIABLES_DISPLAYED_CORRECTLY, substrs=["4"])
 
         frame = process.GetSelectedThread().GetFrameAtIndex(0)
 
@@ -49,10 +44,12 @@ class SetDataTestCase(TestBase):
 
         if process.GetAddressByteSize() == 8:
             my_data = lldb.SBData.CreateDataFromUInt64Array(
-                process.GetByteOrder(), 8, [0])
+                process.GetByteOrder(), 8, [0]
+            )
         else:
             my_data = lldb.SBData.CreateDataFromUInt32Array(
-                process.GetByteOrder(), 4, [0])
+                process.GetByteOrder(), 4, [0]
+            )
 
         err = lldb.SBError()
 
@@ -61,6 +58,5 @@ class SetDataTestCase(TestBase):
         self.expect(
             "fr var -d run-target string",
             VARIABLES_DISPLAYED_CORRECTLY,
-            substrs=[
-                'NSString *',
-                'nil'])
+            substrs=["NSString *", "nil"],
+        )

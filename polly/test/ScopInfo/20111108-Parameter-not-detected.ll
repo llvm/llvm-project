@@ -50,7 +50,7 @@ for.end7:                                         ; preds = %for.cond
   ret i32 0
 }
 
-; CHECK:      p0: {0,+,1}<%for.cond>
+; CHECK:      p0: {0,+,1}<nuw><nsw><%for.cond>
 ;
 ; CHECK:      Statements {
 ; CHECK-NEXT:     Stmt_if_then

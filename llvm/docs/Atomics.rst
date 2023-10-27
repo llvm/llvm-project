@@ -286,7 +286,7 @@ Relevant standard
 
 Notes for frontends
   If you are writing a frontend which uses this directly, use with caution.
-  Release only provides a semantic guarantee when paired with a Acquire
+  Release only provides a semantic guarantee when paired with an Acquire
   operation.
 
 Notes for optimizers
@@ -409,7 +409,7 @@ Atomics and Codegen
 Atomic operations are represented in the SelectionDAG with ``ATOMIC_*`` opcodes.
 On architectures which use barrier instructions for all atomic ordering (like
 ARM), appropriate fences can be emitted by the AtomicExpand Codegen pass if
-``setInsertFencesForAtomic()`` was used.
+``shouldInsertFencesForAtomic()`` returns true.
 
 The MachineMemOperand for all atomic operations is currently marked as volatile;
 this is not correct in the IR sense of volatile, but CodeGen handles anything

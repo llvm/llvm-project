@@ -41,24 +41,6 @@ TEST(InterfaceTest, OpInterfaceDenseMapKey) {
   EXPECT_FALSE(opSet.contains(op3));
 }
 
-TEST(InterfaceTest, AttrInterfaceDenseMapKey) {
-  MLIRContext context;
-  context.loadDialect<test::TestDialect>();
-
-  OpBuilder builder(&context);
-
-  DenseSet<SubElementAttrInterface> attrSet;
-  auto attr1 = builder.getArrayAttr({});
-  auto attr2 = builder.getI32ArrayAttr({0});
-  auto attr3 = builder.getI32ArrayAttr({1});
-  attrSet.insert(attr1);
-  attrSet.insert(attr2);
-  attrSet.erase(attr1);
-  EXPECT_FALSE(attrSet.contains(attr1));
-  EXPECT_TRUE(attrSet.contains(attr2));
-  EXPECT_FALSE(attrSet.contains(attr3));
-}
-
 TEST(InterfaceTest, TypeInterfaceDenseMapKey) {
   MLIRContext context;
   context.loadDialect<test::TestDialect>();
@@ -74,4 +56,30 @@ TEST(InterfaceTest, TypeInterfaceDenseMapKey) {
   EXPECT_FALSE(typeSet.contains(type1));
   EXPECT_TRUE(typeSet.contains(type2));
   EXPECT_FALSE(typeSet.contains(type3));
+}
+
+TEST(InterfaceTest, TestCustomClassOf) {
+  MLIRContext context;
+  context.loadDialect<test::TestDialect>();
+
+  OpBuilder builder(&context);
+  auto op = builder.create<TestOpOptionallyImplementingInterface>(
+      builder.getUnknownLoc(), /*implementsInterface=*/true);
+  EXPECT_TRUE(isa<TestOptionallyImplementedOpInterface>(*op));
+  op.setImplementsInterface(false);
+  EXPECT_FALSE(isa<TestOptionallyImplementedOpInterface>(*op));
+  op.erase();
+}
+
+TEST(InterfaceTest, TestImplicitConversion) {
+  MLIRContext context;
+  context.loadDialect<test::TestDialect>();
+
+  TestBaseTypeInterfacePrintTypeB typeB;
+  TestBaseTypeInterfacePrintTypeA typeA = typeB;
+  EXPECT_EQ(typeA, nullptr);
+
+  typeB = TestType::get(&context);
+  typeA = typeB;
+  EXPECT_EQ(typeA, typeB);
 }

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_NAMED_PAIR_H
-#define LLVM_LIBC_SRC_SUPPORT_NAMED_PAIR_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_NAMED_PAIR_H
+#define LLVM_LIBC_SRC___SUPPORT_NAMED_PAIR_H
 
 #define DEFINE_NAMED_PAIR_TEMPLATE(Name, FirstField, SecondField)              \
   template <typename T1, typename T2 = T1> struct Name {                       \
@@ -15,4 +15,4 @@
     T2 SecondField;                                                            \
   }
 
-#endif // LLVM_LIBC_SRC_SUPPORT_NAMED_PAIR_H
+#endif // LLVM_LIBC_SRC___SUPPORT_NAMED_PAIR_H

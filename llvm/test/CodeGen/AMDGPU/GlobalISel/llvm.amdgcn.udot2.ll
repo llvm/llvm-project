@@ -20,7 +20,6 @@ define i32 @v_udot2(<2 x i16> %a, <2 x i16> %b, i32 %c) {
 ; GFX10-LABEL: v_udot2:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_dot2_u32_u16 v0, v0, v1, v2
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %r = call i32 @llvm.amdgcn.udot2(<2 x i16> %a, <2 x i16> %b, i32 %c, i1 false)
@@ -43,7 +42,6 @@ define i32 @v_udot2_clamp(<2 x i16> %a, <2 x i16> %b, i32 %c) {
 ; GFX10-LABEL: v_udot2_clamp:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_dot2_u32_u16 v0, v0, v1, v2 clamp
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %r = call i32 @llvm.amdgcn.udot2(<2 x i16> %a, <2 x i16> %b, i32 %c, i1 true)
@@ -91,7 +89,6 @@ define i32 @v_udot2_inline_literal_a(<2 x i16> %b, i32 %c) {
 ; GFX10-LABEL: v_udot2_inline_literal_a:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_dot2_u32_u16 v0, 4, v0, v1 op_sel_hi:[0,1,1]
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %r = call i32 @llvm.amdgcn.udot2(<2 x i16> <i16 4, i16 4>, <2 x i16> %b, i32 %c, i1 false)
@@ -114,7 +111,6 @@ define i32 @v_udot2_inline_literal_b(<2 x i16> %a, i32 %c) {
 ; GFX10-LABEL: v_udot2_inline_literal_b:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_dot2_u32_u16 v0, v0, 4, v1 op_sel_hi:[1,0,1]
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %r = call i32 @llvm.amdgcn.udot2(<2 x i16> %a, <2 x i16> <i16 4, i16 4>, i32 %c, i1 false)
@@ -137,7 +133,6 @@ define i32 @v_udot2_inline_literal_a_b(<2 x i16> %a, i32 %c) {
 ; GFX10-LABEL: v_udot2_inline_literal_a_b:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_dot2_u32_u16 v0, 8, 4, v1 op_sel_hi:[0,0,1]
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %r = call i32 @llvm.amdgcn.udot2(<2 x i16> <i16 8, i16 8>, <2 x i16> <i16 4, i16 4>, i32 %c, i1 false)
@@ -160,7 +155,6 @@ define i32 @v_udot2_inline_literal_a_b_c() {
 ; GFX10-LABEL: v_udot2_inline_literal_a_b_c:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_dot2_u32_u16 v0, 8, 4, 8 op_sel_hi:[0,0,1]
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %r = call i32 @llvm.amdgcn.udot2(<2 x i16> <i16 8, i16 8>, <2 x i16> <i16 4, i16 4>, i32 8, i1 false)
@@ -183,7 +177,6 @@ define i32 @v_udot2_inline_literal_c(<2 x i16> %a, <2 x i16> %b) {
 ; GFX10-LABEL: v_udot2_inline_literal_c:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_dot2_u32_u16 v0, v0, v1, 7
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %r = call i32 @llvm.amdgcn.udot2(<2 x i16> %a, <2 x i16> %b, i32 7, i1 false)
@@ -206,7 +199,6 @@ define i32 @v_udot2_fneg_a(<2 x half> %a, <2 x i16> %b, i32 %c) {
 ; GFX10-LABEL: v_udot2_fneg_a:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_dot2_u32_u16 v0, v0, v1, v2 neg_lo:[1,0,0] neg_hi:[1,0,0]
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %neg.a = fneg <2 x half> %a
@@ -231,7 +223,6 @@ define i32 @v_udot2_fneg_b(<2 x i16> %a, <2 x half> %b, i32 %c) {
 ; GFX10-LABEL: v_udot2_fneg_b:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_dot2_u32_u16 v0, v0, v1, v2 neg_lo:[0,1,0] neg_hi:[0,1,0]
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %neg.b = fneg <2 x half> %b
@@ -258,7 +249,6 @@ define i32 @v_udot2_fnegf32_c(<2 x i16> %a, <2 x i16> %b, float %c) {
 ; GFX10-LABEL: v_udot2_fnegf32_c:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_xor_b32_e32 v2, 0x80000000, v2
 ; GFX10-NEXT:    v_dot2_u32_u16 v0, v0, v1, v2
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
@@ -286,7 +276,6 @@ define i32 @v_udot2_fnegv2f16_c(<2 x i16> %a, <2 x i16> %b, <2 x half> %c) {
 ; GFX10-LABEL: v_udot2_fnegv2f16_c:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_xor_b32_e32 v2, 0x80008000, v2
 ; GFX10-NEXT:    v_dot2_u32_u16 v0, v0, v1, v2
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
@@ -314,7 +303,6 @@ define i32 @v_udot2_shuffle10_a(<2 x i16> %a, <2 x i16> %b, i32 %c) {
 ; GFX10-LABEL: v_udot2_shuffle10_a:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_alignbit_b32 v0, v0, v0, 16
 ; GFX10-NEXT:    v_dot2_u32_u16 v0, v0, v1, v2
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
@@ -341,7 +329,6 @@ define i32 @v_udot2_shuffle10_b(<2 x i16> %a, <2 x i16> %b, i32 %c) {
 ; GFX10-LABEL: v_udot2_shuffle10_b:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_alignbit_b32 v1, v1, v1, 16
 ; GFX10-NEXT:    v_dot2_u32_u16 v0, v0, v1, v2
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]

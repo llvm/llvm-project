@@ -1,0 +1,35 @@
+# This test reproduces the issue with a section which ends at >4G address
+REQUIRES: asserts
+RUN: split-file %s %t
+RUN: yaml2obj %t/yaml -o %t.exe --max-size=0
+RUN: llvm-bolt %t.exe -o /dev/null --allow-stripped
+#--- yaml
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data: ELFDATA2LSB
+  Type: ET_EXEC
+  Machine: EM_X86_64
+ProgramHeaders:
+  - Type: PT_LOAD
+    FirstSec: .a
+    LastSec: .a
+    Align: 0x1000
+  - Type: PT_LOAD
+    Flags: [ PF_R, PF_W ]
+    FirstSec: .large_sec
+    LastSec: .large_sec
+    VAddr: 0x4a0279a8
+  - Type: PT_GNU_RELRO
+    Flags: [ PF_R ]
+Sections:
+  - Name: .a
+    Type: SHT_PROGBITS
+    Content: 00
+    AddressAlign: 0x1
+  - Name: .large_sec
+    Type: SHT_PROGBITS
+    Flags: [ SHF_WRITE, SHF_ALLOC ]
+    Address: 0x4a0279a8
+    Size: 0xdf8bb1a0
+...

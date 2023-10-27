@@ -287,18 +287,18 @@ TestTypeWithLayoutType::verifyEntries(DataLayoutEntryListRef params,
   for (DataLayoutEntryInterface entry : params) {
     // This is for testing purposes only, so assert well-formedness.
     assert(entry.isTypeEntry() && "unexpected identifier entry");
-    assert(entry.getKey().get<Type>().isa<TestTypeWithLayoutType>() &&
+    assert(llvm::isa<TestTypeWithLayoutType>(entry.getKey().get<Type>()) &&
            "wrong type passed in");
-    auto array = entry.getValue().dyn_cast<ArrayAttr>();
+    auto array = llvm::dyn_cast<ArrayAttr>(entry.getValue());
     assert(array && array.getValue().size() == 2 &&
            "expected array of two elements");
-    auto kind = array.getValue().front().dyn_cast<StringAttr>();
+    auto kind = llvm::dyn_cast<StringAttr>(array.getValue().front());
     (void)kind;
     assert(kind &&
            (kind.getValue() == "size" || kind.getValue() == "alignment" ||
             kind.getValue() == "preferred") &&
            "unexpected kind");
-    assert(array.getValue().back().isa<IntegerAttr>());
+    assert(llvm::isa<IntegerAttr>(array.getValue().back()));
   }
   return success();
 }
@@ -306,10 +306,11 @@ TestTypeWithLayoutType::verifyEntries(DataLayoutEntryListRef params,
 unsigned TestTypeWithLayoutType::extractKind(DataLayoutEntryListRef params,
                                              StringRef expectedKind) const {
   for (DataLayoutEntryInterface entry : params) {
-    ArrayRef<Attribute> pair = entry.getValue().cast<ArrayAttr>().getValue();
-    StringRef kind = pair.front().cast<StringAttr>().getValue();
+    ArrayRef<Attribute> pair =
+        llvm::cast<ArrayAttr>(entry.getValue()).getValue();
+    StringRef kind = llvm::cast<StringAttr>(pair.front()).getValue();
     if (kind == expectedKind)
-      return pair.back().cast<IntegerAttr>().getValue().getZExtValue();
+      return llvm::cast<IntegerAttr>(pair.back()).getValue().getZExtValue();
   }
   return 1;
 }
@@ -403,8 +404,7 @@ void TestDialect::registerTypes() {
   registerDynamicType(getCustomAssemblyFormatDynamicType(this));
 }
 
-Type TestDialect::parseTestType(AsmParser &parser,
-                                SetVector<Type> &stack) const {
+Type TestDialect::parseType(DialectAsmParser &parser) const {
   StringRef typeTag;
   {
     Type genType;
@@ -433,9 +433,12 @@ Type TestDialect::parseTestType(AsmParser &parser,
     return Type();
   auto rec = TestRecursiveType::get(parser.getContext(), name);
 
+  FailureOr<AsmParser::CyclicParseReset> cyclicParse =
+      parser.tryStartCyclicParse(rec);
+
   // If this type already has been parsed above in the stack, expect just the
   // name.
-  if (stack.contains(rec)) {
+  if (failed(cyclicParse)) {
     if (failed(parser.parseGreater()))
       return Type();
     return rec;
@@ -444,40 +447,79 @@ Type TestDialect::parseTestType(AsmParser &parser,
   // Otherwise, parse the body and update the type.
   if (failed(parser.parseComma()))
     return Type();
-  stack.insert(rec);
-  Type subtype = parseTestType(parser, stack);
-  stack.pop_back();
+  Type subtype = parseType(parser);
   if (!subtype || failed(parser.parseGreater()) || failed(rec.setBody(subtype)))
     return Type();
 
   return rec;
 }
 
-Type TestDialect::parseType(DialectAsmParser &parser) const {
-  SetVector<Type> stack;
-  return parseTestType(parser, stack);
-}
-
-void TestDialect::printTestType(Type type, AsmPrinter &printer,
-                                SetVector<Type> &stack) const {
+void TestDialect::printType(Type type, DialectAsmPrinter &printer) const {
   if (succeeded(generatedTypePrinter(type, printer)))
     return;
 
   if (succeeded(printIfDynamicType(type, printer)))
     return;
 
-  auto rec = type.cast<TestRecursiveType>();
+  auto rec = llvm::cast<TestRecursiveType>(type);
+
+  FailureOr<AsmPrinter::CyclicPrintReset> cyclicPrint =
+      printer.tryStartCyclicPrint(rec);
+
   printer << "test_rec<" << rec.getName();
-  if (!stack.contains(rec)) {
+  if (succeeded(cyclicPrint)) {
     printer << ", ";
-    stack.insert(rec);
-    printTestType(rec.getBody(), printer, stack);
-    stack.pop_back();
+    printType(rec.getBody(), printer);
   }
   printer << ">";
 }
 
-void TestDialect::printType(Type type, DialectAsmPrinter &printer) const {
-  SetVector<Type> stack;
-  printTestType(type, printer, stack);
+Type TestRecursiveAliasType::getBody() const { return getImpl()->body; }
+
+void TestRecursiveAliasType::setBody(Type type) { (void)Base::mutate(type); }
+
+StringRef TestRecursiveAliasType::getName() const { return getImpl()->name; }
+
+Type TestRecursiveAliasType::parse(AsmParser &parser) {
+  StringRef name;
+  if (parser.parseLess() || parser.parseKeyword(&name))
+    return Type();
+  auto rec = TestRecursiveAliasType::get(parser.getContext(), name);
+
+  FailureOr<AsmParser::CyclicParseReset> cyclicParse =
+      parser.tryStartCyclicParse(rec);
+
+  // If this type already has been parsed above in the stack, expect just the
+  // name.
+  if (failed(cyclicParse)) {
+    if (failed(parser.parseGreater()))
+      return Type();
+    return rec;
+  }
+
+  // Otherwise, parse the body and update the type.
+  if (failed(parser.parseComma()))
+    return Type();
+  Type subtype;
+  if (parser.parseType(subtype))
+    return nullptr;
+  if (!subtype || failed(parser.parseGreater()))
+    return Type();
+
+  rec.setBody(subtype);
+
+  return rec;
+}
+
+void TestRecursiveAliasType::print(AsmPrinter &printer) const {
+
+  FailureOr<AsmPrinter::CyclicPrintReset> cyclicPrint =
+      printer.tryStartCyclicPrint(*this);
+
+  printer << "<" << getName();
+  if (succeeded(cyclicPrint)) {
+    printer << ", ";
+    printer << getBody();
+  }
+  printer << ">";
 }

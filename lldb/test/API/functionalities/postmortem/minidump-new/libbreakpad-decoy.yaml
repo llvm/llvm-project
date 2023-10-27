@@ -9,7 +9,6 @@ FileHeader:
   Machine:         EM_ARM
   Flags:           [ EF_ARM_SOFT_FLOAT, EF_ARM_EABI_VER5 ]
 Sections:
-Sections:
   - Name:            .text
     Type:            SHT_PROGBITS
     Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]

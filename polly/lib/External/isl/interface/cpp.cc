@@ -649,11 +649,11 @@ void cpp_generator::class_printer::print_method_header(
 	else
 		os << cppstring;
 
-	method.print_cpp_arg_list(os, [&] (int i) {
+	method.print_cpp_arg_list(os, [&] (int i, int arg) {
 		std::string name = method.fd->getParamDecl(i)->getName().str();
 		ParmVarDecl *param = method.get_param(i);
 		QualType type = param->getOriginalType();
-		string cpptype = type_printer.param(i, type);
+		string cpptype = type_printer.param(arg, type);
 
 		if (!method.param_needs_copy(i))
 			os << "const " << cpptype << " &" << name;
@@ -928,6 +928,24 @@ bool cpp_generator::is_implicit_conversion(const Method &cons)
 	return false;
 }
 
+/* Construct a list combiner for printing a list.
+ */
+Method::list_combiner Method::print_combiner(std::ostream &os)
+{
+	return {
+		[&] () { os << "("; },
+		[&] () { os << ", "; },
+		[&] () { os << ")"; }
+	};
+}
+
+/* Construct a list combiner for simply iterating over a list.
+ */
+Method::list_combiner Method::empty_combiner()
+{
+	return { [&] () { }, [&] () { }, [&] () { } };
+}
+
 /* Get kind of "method" in "clazz".
  *
  * Given the declaration of a static or member method, returns its kind.
@@ -942,20 +960,20 @@ static Method::Kind get_kind(const isl_class &clazz, FunctionDecl *method)
 		return Method::Kind::member_method;
 }
 
-/* Return the callback argument of "fd", if there is any.
- * Return NULL otherwise.
+/* Return the callback arguments of "fd".
  */
-static ParmVarDecl *find_callback_arg(FunctionDecl *fd)
+static std::vector<ParmVarDecl *> find_callback_args(FunctionDecl *fd)
 {
+	std::vector<ParmVarDecl *> callbacks;
 	int num_params = fd->getNumParams();
 
 	for (int i = 0; i < num_params; ++i) {
 		ParmVarDecl *param = fd->getParamDecl(i);
 		if (generator::is_callback(param->getType()))
-			return param;
+			callbacks.emplace_back(param);
 	}
 
-	return NULL;
+	return callbacks;
 }
 
 /* Construct a C++ method object from the class to which is belongs,
@@ -968,7 +986,7 @@ Method::Method(const isl_class &clazz, FunctionDecl *fd,
 	const std::string &name) :
 		clazz(clazz), fd(fd), name(rename_method(name)),
 		kind(get_kind(clazz, fd)),
-		callback(find_callback_arg(fd))
+		callbacks(find_callback_args(fd))
 {
 }
 
@@ -985,19 +1003,13 @@ Method::Method(const isl_class &clazz, FunctionDecl *fd) :
 
 /* Return the number of parameters of the corresponding C function.
  *
- * If the method has a callback argument, we reduce the number of parameters
- * that are exposed by one to hide the user pointer from the interface. On
- * the C++ side no user pointer is needed, as arguments can be forwarded
- * as part of the std::function argument which specifies the callback function.
- *
- * The user pointer is also removed from the number of parameters
- * of the C function because the pair of callback and user pointer
- * is considered as a single argument that is printed as a whole
- * by Method::print_param_use.
+ * This number includes any possible user pointers that follow callback
+ * arguments.  These are skipped by Method::print_fd_arg_list
+ * during the actual argument printing.
  */
 int Method::c_num_params() const
 {
-	return fd->getNumParams() - (callback != NULL);
+	return fd->getNumParams();
 }
 
 /* Return the number of parameters of the method
@@ -1011,30 +1023,128 @@ int Method::num_params() const
 	return c_num_params();
 }
 
+/* Call "on_arg_skip_next" on the arguments from "start" (inclusive)
+ * to "end" (exclusive), calling the methods of "combiner"
+ * before, between and after the arguments.
+ * If "on_arg_skip_next" returns true then the next argument is skipped.
+ */
+void Method::on_arg_list(int start, int end,
+	const Method::list_combiner &combiner,
+	const std::function<bool(int i)> &on_arg_skip_next)
+{
+	combiner.before();
+	for (int i = start; i < end; ++i) {
+		if (i != start)
+			combiner.between();
+		if (on_arg_skip_next(i))
+			++i;
+	}
+	combiner.after();
+}
+
+/* Print the arguments from "start" (inclusive) to "end" (exclusive)
+ * as arguments to a method of C function call, using "print_arg_skip_next"
+ * to print each individual argument.  If this callback return true
+ * then the next argument is skipped.
+ */
+void Method::print_arg_list(std::ostream &os, int start, int end,
+	const std::function<bool(int i)> &print_arg_skip_next)
+{
+	on_arg_list(start, end, print_combiner(os), [&] (int i) {
+		return print_arg_skip_next(i);
+	});
+}
+
+/* Call "on_arg" on the arguments from "start" (inclusive) to "end" (exclusive),
+ * calling the methods of "combiner" before, between and after the arguments.
+ * The first argument to "on_arg" is the position of the argument
+ * in this->fd.
+ * The second argument is the (first) position in the list of arguments
+ * with all callback arguments spliced in.
+ *
+ * Call on_arg_list to do the actual iteration over the arguments, skipping
+ * the user argument that comes after every callback argument.
+ * On the C++ side no user pointer is needed, as arguments can be forwarded
+ * as part of the std::function argument which specifies the callback function.
+ * The user pointer is also removed from the number of parameters
+ * of the C function because the pair of callback and user pointer
+ * is considered as a single argument that is printed as a whole
+ * by Method::print_param_use.
+ *
+ * In case of a callback argument, the second argument to "print_arg"
+ * is also adjusted to account for the spliced-in arguments of the callback.
+ * The return value takes the place of the callback itself,
+ * while the arguments (excluding the final user pointer)
+ * take the following positions.
+ */
+void Method::on_fd_arg_list(int start, int end,
+	const Method::list_combiner &combiner,
+	const std::function<void(int i, int arg)> &on_arg) const
+{
+	int arg = start;
+
+	on_arg_list(start, end, combiner, [this, &on_arg, &arg] (int i) {
+		auto type = fd->getParamDecl(i)->getType();
+
+		on_arg(i, arg++);
+		if (!generator::is_callback(type))
+			return false;
+		arg += generator::prototype_n_args(type) - 1;
+		return true;
+	});
+}
+
 /* Print the arguments from "start" (inclusive) to "end" (exclusive)
  * as arguments to a method of C function call, using "print_arg"
  * to print each individual argument.
+ * The first argument to this callback is the position of the argument
+ * in this->fd.
+ * The second argument is the (first) position in the list of arguments
+ * with all callback arguments spliced in.
  */
-void Method::print_arg_list(std::ostream &os, int start, int end,
-	const std::function<void(int i)> &print_arg)
+void Method::print_fd_arg_list(std::ostream &os, int start, int end,
+	const std::function<void(int i, int arg)> &print_arg) const
 {
-	os << "(";
-	for (int i = start; i < end; ++i) {
-		if (i != start)
-			os << ", ";
-		print_arg(i);
-	}
-	os << ")";
+	on_fd_arg_list(start, end, print_combiner(os), print_arg);
+}
+
+/* Call "on_arg" on the arguments to the method call,
+ * calling the methods of "combiner" before, between and after the arguments.
+ * The first argument to "on_arg" is the position of the argument
+ * in this->fd.
+ * The second argument is the (first) position in the list of arguments
+ * with all callback arguments spliced in.
+ */
+void Method::on_cpp_arg_list(const Method::list_combiner &combiner,
+	const std::function<void(int i, int arg)> &on_arg) const
+{
+	int first_param = kind == member_method ? 1 : 0;
+	on_fd_arg_list(first_param, num_params(), combiner, on_arg);
+}
+
+/* Call "on_arg" on the arguments to the method call.
+ * The first argument to "on_arg" is the position of the argument
+ * in this->fd.
+ * The second argument is the (first) position in the list of arguments
+ * with all callback arguments spliced in.
+ */
+void Method::on_cpp_arg_list(
+	const std::function<void(int i, int arg)> &on_arg) const
+{
+	on_cpp_arg_list(empty_combiner(), on_arg);
 }
 
 /* Print the arguments to the method call, using "print_arg"
  * to print each individual argument.
+ * The first argument to this callback is the position of the argument
+ * in this->fd.
+ * The second argument is the (first) position in the list of arguments
+ * with all callback arguments spliced in.
  */
 void Method::print_cpp_arg_list(std::ostream &os,
-	const std::function<void(int i)> &print_arg) const
+	const std::function<void(int i, int arg)> &print_arg) const
 {
-	int first_param = kind == member_method ? 1 : 0;
-	print_arg_list(os, first_param, num_params(), print_arg);
+	on_cpp_arg_list(print_combiner(os), print_arg);
 }
 
 /* Should the parameter at position "pos" be a copy (rather than

@@ -38,14 +38,14 @@ struct WasmEHFuncInfo {
   // Helper functions
   const BasicBlock *getUnwindDest(const BasicBlock *BB) const {
     assert(hasUnwindDest(BB));
-    return SrcToUnwindDest.lookup(BB).get<const BasicBlock *>();
+    return cast<const BasicBlock *>(SrcToUnwindDest.lookup(BB));
   }
   SmallPtrSet<const BasicBlock *, 4> getUnwindSrcs(const BasicBlock *BB) const {
     assert(hasUnwindSrcs(BB));
     const auto &Set = UnwindDestToSrcs.lookup(BB);
     SmallPtrSet<const BasicBlock *, 4> Ret;
     for (const auto P : Set)
-      Ret.insert(P.get<const BasicBlock *>());
+      Ret.insert(cast<const BasicBlock *>(P));
     return Ret;
   }
   void setUnwindDest(const BasicBlock *BB, const BasicBlock *Dest) {
@@ -61,7 +61,7 @@ struct WasmEHFuncInfo {
 
   MachineBasicBlock *getUnwindDest(MachineBasicBlock *MBB) const {
     assert(hasUnwindDest(MBB));
-    return SrcToUnwindDest.lookup(MBB).get<MachineBasicBlock *>();
+    return cast<MachineBasicBlock *>(SrcToUnwindDest.lookup(MBB));
   }
   SmallPtrSet<MachineBasicBlock *, 4>
   getUnwindSrcs(MachineBasicBlock *MBB) const {
@@ -69,7 +69,7 @@ struct WasmEHFuncInfo {
     const auto &Set = UnwindDestToSrcs.lookup(MBB);
     SmallPtrSet<MachineBasicBlock *, 4> Ret;
     for (const auto P : Set)
-      Ret.insert(P.get<MachineBasicBlock *>());
+      Ret.insert(cast<MachineBasicBlock *>(P));
     return Ret;
   }
   void setUnwindDest(MachineBasicBlock *MBB, MachineBasicBlock *Dest) {

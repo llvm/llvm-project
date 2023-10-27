@@ -8,10 +8,16 @@ module m
   interface ifn3
     module procedure if3
   end interface
-  !ERROR: Automatic data object 'a' may not appear in the specification part of a module
+  !ERROR: Automatic data object 'a' may not appear in a module
   real :: a(if1(1))
-  !ERROR: No specific function of generic 'ifn2' matches the actual arguments
+  !ERROR: Automatic data object 'b' may not appear in a module
   real :: b(ifn2(1))
+  !ERROR: Automatic data object 'c' may not appear in COMMON block /blk/
+  real :: c(if1(1))
+  !ERROR: Automatic data object 'd' may not appear in COMMON block //
+  real :: d(ifn2(1))
+  common /blk/c
+  common d
  contains
   subroutine t1(n)
     integer :: iarr(if1(n))

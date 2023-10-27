@@ -450,10 +450,13 @@ let Class = PropertyTypeCase<APValue, "LValue"> in {
         lvalueBase ? lvalueBase.dyn_cast<const Expr *>() : nullptr;
     bool lvalueBaseIsExpr = (bool) expr;
     bool lvalueBaseIsTypeInfo = lvalueBase.is<TypeInfoLValue>();
+    bool lvalueBaseIsDynamicAlloc = lvalueBase.is<DynamicAllocLValue>();
     QualType elemTy;
     if (lvalueBase) {
       if (lvalueBaseIsTypeInfo) {
         elemTy = lvalueBase.getTypeInfoType();
+      } else if (lvalueBaseIsDynamicAlloc) {
+        elemTy = lvalueBase.getDynamicAllocType();
       } else if (lvalueBaseIsExpr) {
         elemTy = expr->getType();
       } else {
@@ -473,6 +476,9 @@ let Class = PropertyTypeCase<APValue, "LValue"> in {
   def : Property<"isTypeInfo", Bool> {
     let Read = [{ lvalueBaseIsTypeInfo }];
   }
+  def : Property<"isDynamicAlloc", Bool> {
+    let Read = [{ lvalueBaseIsDynamicAlloc }];
+  }
   def : Property<"hasBase", Bool> {
     let Read = [{ static_cast<bool>(lvalueBase) }];
   }
@@ -485,9 +491,17 @@ let Class = PropertyTypeCase<APValue, "LValue"> in {
       QualType(node.getLValueBase().get<TypeInfoLValue>().getType(), 0)
     }];
   }
+  def : Property<"dynamicAlloc", UInt32> {
+    let Conditional = [{ hasBase && isDynamicAlloc }];
+    let Read = [{ node.getLValueBase().get<DynamicAllocLValue>().getIndex() }];
+  }
   def : Property<"type", QualType> {
-    let Conditional = [{ hasBase && isTypeInfo }];
-    let Read = [{ node.getLValueBase().getTypeInfoType() }];
+    let Conditional = [{ hasBase && (isTypeInfo || isDynamicAlloc) }];
+    let Read = [{
+      isTypeInfo
+        ? node.getLValueBase().getTypeInfoType()
+        : node.getLValueBase().getDynamicAllocType()
+    }];
   }
   def : Property<"callIndex", UInt32> {
     let Conditional = [{ hasBase && !isTypeInfo }];
@@ -502,7 +516,7 @@ let Class = PropertyTypeCase<APValue, "LValue"> in {
     let Read = [{ const_cast<Expr *>(expr) }];
   }
   def : Property<"decl", DeclRef> {
-    let Conditional = [{ hasBase && !isTypeInfo && !isExpr }];
+    let Conditional = [{ hasBase && !isTypeInfo && !isDynamicAlloc && !isExpr }];
     let Read = [{ lvalueBase.get<const ValueDecl *>() }];
   }
   def : Property<"offsetQuantity", UInt32> {
@@ -521,6 +535,9 @@ let Class = PropertyTypeCase<APValue, "LValue"> in {
       if (isTypeInfo) {
         base = APValue::LValueBase::getTypeInfo(
             TypeInfoLValue(typeInfo->getTypePtr()), *type);
+      } else if (isDynamicAlloc) {
+        base = APValue::LValueBase::getDynamicAlloc(
+            DynamicAllocLValue(*dynamicAlloc), *type);
       } else if (isExpr) {
         base = APValue::LValueBase(cast<Expr>(*stmt),
                                    *callIndex, *version);
@@ -745,8 +762,11 @@ let Class = PropertyTypeCase<TemplateArgument, "Type"> in {
   def : Property<"type", QualType> {
     let Read = [{ node.getAsType() }];
   }
+  def : Property<"isDefaulted", Bool> {
+    let Read = [{ node.getIsDefaulted() }];
+  }
   def : Creator<[{
-    return TemplateArgument(type);
+    return TemplateArgument(type, /* isNullPtr */ false, isDefaulted);
   }]>;
 }
 let Class = PropertyTypeCase<TemplateArgument, "Declaration"> in {
@@ -756,16 +776,22 @@ let Class = PropertyTypeCase<TemplateArgument, "Declaration"> in {
   def : Property<"parameterType", QualType> {
     let Read = [{ node.getParamTypeForDecl() }];
   }
+  def : Property<"isDefaulted", Bool> {
+    let Read = [{ node.getIsDefaulted() }];
+  }
   def : Creator<[{
-    return TemplateArgument(declaration, parameterType);
+    return TemplateArgument(declaration, parameterType, isDefaulted);
   }]>;
 }
 let Class = PropertyTypeCase<TemplateArgument, "NullPtr"> in {
   def : Property<"type", QualType> {
     let Read = [{ node.getNullPtrType() }];
   }
+  def : Property<"isDefaulted", Bool> {
+    let Read = [{ node.getIsDefaulted() }];
+  }
   def : Creator<[{
-    return TemplateArgument(type, /*nullptr*/ true);
+    return TemplateArgument(type, /*nullptr*/ true, isDefaulted);
   }]>;
 }
 let Class = PropertyTypeCase<TemplateArgument, "Integral"> in {
@@ -775,16 +801,22 @@ let Class = PropertyTypeCase<TemplateArgument, "Integral"> in {
   def : Property<"type", QualType> {
     let Read = [{ node.getIntegralType() }];
   }
+  def : Property<"isDefaulted", Bool> {
+    let Read = [{ node.getIsDefaulted() }];
+  }
   def : Creator<[{
-    return TemplateArgument(ctx, value, type);
+    return TemplateArgument(ctx, value, type, isDefaulted);
   }]>;
 }
 let Class = PropertyTypeCase<TemplateArgument, "Template"> in {
   def : Property<"name", TemplateName> {
     let Read = [{ node.getAsTemplateOrTemplatePattern() }];
   }
+  def : Property<"isDefaulted", Bool> {
+    let Read = [{ node.getIsDefaulted() }];
+  }
   def : Creator<[{
-    return TemplateArgument(name);
+    return TemplateArgument(name, isDefaulted);
   }]>;
 }
 let Class = PropertyTypeCase<TemplateArgument, "TemplateExpansion"> in {
@@ -798,19 +830,25 @@ let Class = PropertyTypeCase<TemplateArgument, "TemplateExpansion"> in {
                               [](unsigned i) { return uint32_t(i); })
     }];
   }
+  def : Property<"isDefaulted", Bool> {
+    let Read = [{ node.getIsDefaulted() }];
+  }
   def : Creator<[{
     auto numExpansionsUnsigned = llvm::transformOptional(
         numExpansions, [](uint32_t i) { return unsigned(i); });
 
-    return TemplateArgument(name, numExpansionsUnsigned);
+    return TemplateArgument(name, numExpansionsUnsigned, isDefaulted);
   }]>;
 }
 let Class = PropertyTypeCase<TemplateArgument, "Expression"> in {
   def : Property<"expression", ExprRef> {
     let Read = [{ node.getAsExpr() }];
   }
+  def : Property<"isDefaulted", Bool> {
+    let Read = [{ node.getIsDefaulted() }];
+  }
   def : Creator<[{
-    return TemplateArgument(expression);
+    return TemplateArgument(expression, isDefaulted);
   }]>;
 }
 let Class = PropertyTypeCase<TemplateArgument, "Pack"> in {

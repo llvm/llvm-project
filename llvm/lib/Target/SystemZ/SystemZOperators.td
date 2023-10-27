@@ -127,6 +127,11 @@ def SDT_ZTBegin             : SDTypeProfile<1, 2,
                                             [SDTCisVT<0, i32>,
                                              SDTCisPtrTy<1>,
                                              SDTCisVT<2, i32>]>;
+def SDT_ZADAENTRY           : SDTypeProfile<1, 3,
+                                            [SDTCisPtrTy<0>,
+                                             SDTCisPtrTy<1>,
+                                             SDTCisPtrTy<2>,
+                                             SDTCisVT<3, i64>]>;
 def SDT_ZTEnd               : SDTypeProfile<1, 0,
                                             [SDTCisVT<0, i32>]>;
 def SDT_ZInsertVectorElt    : SDTypeProfile<1, 3,
@@ -235,7 +240,7 @@ def callseq_end         : SDNode<"ISD::CALLSEQ_END",   SDT_CallSeqEnd,
 def global_offset_table : SDNode<"ISD::GLOBAL_OFFSET_TABLE", SDTPtrLeaf>;
 
 // Nodes for SystemZISD::*.  See SystemZISelLowering.h for more details.
-def z_retflag           : SDNode<"SystemZISD::RET_FLAG", SDTNone,
+def z_retglue           : SDNode<"SystemZISD::RET_GLUE", SDTNone,
                                  [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
 def z_call              : SDNode<"SystemZISD::CALL", SDT_ZCall,
                                  [SDNPHasChain, SDNPOutGlue, SDNPOptInGlue,
@@ -432,6 +437,9 @@ def z_tbegin_nofloat    : SDNode<"SystemZISD::TBEGIN_NOFLOAT", SDT_ZTBegin,
                                  [SDNPHasChain, SDNPMayStore, SDNPSideEffect]>;
 def z_tend              : SDNode<"SystemZISD::TEND", SDT_ZTEnd,
                                  [SDNPHasChain, SDNPSideEffect]>;
+
+def z_ada_entry         : SDNode<"SystemZISD::ADA_ENTRY",
+                                  SDT_ZADAENTRY>;
 
 def z_vshl              : SDNode<"ISD::SHL", SDT_ZVecBinary>;
 def z_vsra              : SDNode<"ISD::SRA", SDT_ZVecBinary>;

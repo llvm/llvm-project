@@ -490,7 +490,7 @@ define i32 @test_cttz_not_bw_multiuse(i32 %x) {
 
 define <2 x i32> @test_ctlz_bw_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @test_ctlz_bw_vec(
-; CHECK-NEXT:    [[CT:%.*]] = tail call <2 x i32> @llvm.ctlz.v2i32(<2 x i32> [[X:%.*]], i1 false)
+; CHECK-NEXT:    [[CT:%.*]] = tail call <2 x i32> @llvm.ctlz.v2i32(<2 x i32> [[X:%.*]], i1 false), !range [[RNG1]]
 ; CHECK-NEXT:    ret <2 x i32> [[CT]]
 ;
   %ct = tail call <2 x i32> @llvm.ctlz.v2i32(<2 x i32> %x, i1 true)
@@ -501,7 +501,7 @@ define <2 x i32> @test_ctlz_bw_vec(<2 x i32> %x) {
 
 define <2 x i32> @test_ctlz_not_bw_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @test_ctlz_not_bw_vec(
-; CHECK-NEXT:    [[CT:%.*]] = tail call <2 x i32> @llvm.ctlz.v2i32(<2 x i32> [[X:%.*]], i1 true)
+; CHECK-NEXT:    [[CT:%.*]] = tail call <2 x i32> @llvm.ctlz.v2i32(<2 x i32> [[X:%.*]], i1 true), !range [[RNG1]]
 ; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq <2 x i32> [[X]], zeroinitializer
 ; CHECK-NEXT:    [[RES:%.*]] = select <2 x i1> [[CMP_NOT]], <2 x i32> zeroinitializer, <2 x i32> [[CT]]
 ; CHECK-NEXT:    ret <2 x i32> [[RES]]
@@ -514,7 +514,7 @@ define <2 x i32> @test_ctlz_not_bw_vec(<2 x i32> %x) {
 
 define <2 x i32> @test_cttz_bw_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @test_cttz_bw_vec(
-; CHECK-NEXT:    [[CT:%.*]] = tail call <2 x i32> @llvm.cttz.v2i32(<2 x i32> [[X:%.*]], i1 false)
+; CHECK-NEXT:    [[CT:%.*]] = tail call <2 x i32> @llvm.cttz.v2i32(<2 x i32> [[X:%.*]], i1 false), !range [[RNG1]]
 ; CHECK-NEXT:    ret <2 x i32> [[CT]]
 ;
   %ct = tail call <2 x i32> @llvm.cttz.v2i32(<2 x i32> %x, i1 true)
@@ -525,7 +525,7 @@ define <2 x i32> @test_cttz_bw_vec(<2 x i32> %x) {
 
 define <2 x i32> @test_cttz_not_bw_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @test_cttz_not_bw_vec(
-; CHECK-NEXT:    [[CT:%.*]] = tail call <2 x i32> @llvm.cttz.v2i32(<2 x i32> [[X:%.*]], i1 true)
+; CHECK-NEXT:    [[CT:%.*]] = tail call <2 x i32> @llvm.cttz.v2i32(<2 x i32> [[X:%.*]], i1 true), !range [[RNG1]]
 ; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq <2 x i32> [[X]], zeroinitializer
 ; CHECK-NEXT:    [[RES:%.*]] = select <2 x i1> [[CMP_NOT]], <2 x i32> zeroinitializer, <2 x i32> [[CT]]
 ; CHECK-NEXT:    ret <2 x i32> [[RES]]

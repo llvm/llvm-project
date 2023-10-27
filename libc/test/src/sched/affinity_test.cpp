@@ -7,38 +7,40 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/OSUtil/syscall.h"
+#include "src/errno/libc_errno.h"
 #include "src/sched/sched_getaffinity.h"
 #include "src/sched/sched_setaffinity.h"
-#include "test/ErrnoSetterMatcher.h"
+#include "test/UnitTest/ErrnoSetterMatcher.h"
 
-#include <errno.h>
 #include <sched.h>
 #include <sys/syscall.h>
 
 TEST(LlvmLibcSchedAffinityTest, SmokeTest) {
   cpu_set_t mask;
-  errno = 0;
-  using __llvm_libc::testing::ErrnoSetterMatcher::Succeeds;
-  pid_t tid = __llvm_libc::syscall_impl(SYS_gettid);
+  libc_errno = 0;
+  using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
+  pid_t tid = LIBC_NAMESPACE::syscall_impl<pid_t>(SYS_gettid);
   ASSERT_GT(tid, pid_t(0));
   // We just get and set the same mask.
-  ASSERT_THAT(__llvm_libc::sched_getaffinity(tid, sizeof(cpu_set_t), &mask),
+  ASSERT_THAT(LIBC_NAMESPACE::sched_getaffinity(tid, sizeof(cpu_set_t), &mask),
               Succeeds(0));
-  ASSERT_THAT(__llvm_libc::sched_setaffinity(tid, sizeof(cpu_set_t), &mask),
+  ASSERT_THAT(LIBC_NAMESPACE::sched_setaffinity(tid, sizeof(cpu_set_t), &mask),
               Succeeds(0));
 }
 
 TEST(LlvmLibcSchedAffinityTest, BadMask) {
-  using __llvm_libc::testing::ErrnoSetterMatcher::Fails;
-  pid_t tid = __llvm_libc::syscall_impl(SYS_gettid);
+  using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
+  pid_t tid = LIBC_NAMESPACE::syscall_impl<pid_t>(SYS_gettid);
 
-  errno = 0;
-  ASSERT_THAT(__llvm_libc::sched_getaffinity(tid, sizeof(cpu_set_t), nullptr),
-              Fails(EFAULT));
+  libc_errno = 0;
+  ASSERT_THAT(
+      LIBC_NAMESPACE::sched_getaffinity(tid, sizeof(cpu_set_t), nullptr),
+      Fails(EFAULT));
 
-  errno = 0;
-  ASSERT_THAT(__llvm_libc::sched_setaffinity(tid, sizeof(cpu_set_t), nullptr),
-              Fails(EFAULT));
+  libc_errno = 0;
+  ASSERT_THAT(
+      LIBC_NAMESPACE::sched_setaffinity(tid, sizeof(cpu_set_t), nullptr),
+      Fails(EFAULT));
 
-  errno = 0;
+  libc_errno = 0;
 }

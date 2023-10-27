@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SYS_STAT_LINUX_STATX_H
-#define LLVM_LIBC_SRC_SYS_STAT_LINUX_STATX_H
+#ifndef LLVM_LIBC_SRC_SYS_STAT_LINUX_KERNEL_STATX_H
+#define LLVM_LIBC_SRC_SYS_STAT_LINUX_KERNEL_STATX_H
 
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
+#include "src/__support/common.h"
 
-#include <errno.h>
 #include <stdint.h>
 #include <sys/stat.h>
 #include <sys/syscall.h> // For syscall numbers.
@@ -67,18 +67,16 @@ constexpr unsigned int STATX_BASIC_STATS_MASK = 0x7FF;
 
 } // Anonymous namespace
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
-inline int statx(int dirfd, const char *__restrict path, int flags,
-                 struct stat *__restrict statbuf) {
+LIBC_INLINE int statx(int dirfd, const char *__restrict path, int flags,
+                      struct stat *__restrict statbuf) {
   // We make a statx syscall and copy out the result into the |statbuf|.
   ::statx_buf xbuf;
-  long ret = __llvm_libc::syscall_impl(SYS_statx, dirfd, path, flags,
-                                       ::STATX_BASIC_STATS_MASK, &xbuf);
-  if (ret < 0) {
-    errno = -ret;
-    return -1;
-  }
+  int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_statx, dirfd, path, flags,
+                                              ::STATX_BASIC_STATS_MASK, &xbuf);
+  if (ret < 0)
+    return -ret;
 
   statbuf->st_dev = MKDEV(xbuf.stx_dev_major, xbuf.stx_dev_minor);
   statbuf->st_ino = xbuf.stx_ino;
@@ -100,6 +98,6 @@ inline int statx(int dirfd, const char *__restrict path, int flags,
   return 0;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_SRC_SYS_STAT_LINUX_STATX_H
+#endif // LLVM_LIBC_SRC_SYS_STAT_LINUX_KERNEL_STATX_H

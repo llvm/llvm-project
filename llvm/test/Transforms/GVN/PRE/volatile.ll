@@ -122,18 +122,14 @@ exit:
 define i32 @test7(i1 %c, ptr noalias nocapture %p, ptr noalias nocapture %q) {
 ; CHECK-LABEL: @test7(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 [[C:%.*]], label [[ENTRY_HEADER_CRIT_EDGE:%.*]], label [[SKIP:%.*]]
-; CHECK:       entry.header_crit_edge:
 ; CHECK-NEXT:    [[Y_PRE:%.*]] = load i32, ptr [[P:%.*]], align 4
-; CHECK-NEXT:    br label [[HEADER:%.*]]
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[HEADER:%.*]], label [[SKIP:%.*]]
 ; CHECK:       skip:
-; CHECK-NEXT:    [[Y1:%.*]] = load i32, ptr [[P]], align 4
-; CHECK-NEXT:    call void @use(i32 [[Y1]])
+; CHECK-NEXT:    call void @use(i32 [[Y_PRE]])
 ; CHECK-NEXT:    br label [[HEADER]]
 ; CHECK:       header:
-; CHECK-NEXT:    [[Y:%.*]] = phi i32 [ [[Y_PRE]], [[ENTRY_HEADER_CRIT_EDGE]] ], [ [[Y]], [[HEADER]] ], [ [[Y1]], [[SKIP]] ]
 ; CHECK-NEXT:    [[X:%.*]] = load volatile i32, ptr [[Q:%.*]], align 4
-; CHECK-NEXT:    [[ADD:%.*]] = sub i32 [[Y]], [[X]]
+; CHECK-NEXT:    [[ADD:%.*]] = sub i32 [[Y_PRE]], [[X]]
 ; CHECK-NEXT:    [[CND:%.*]] = icmp eq i32 [[ADD]], 0
 ; CHECK-NEXT:    br i1 [[CND]], label [[EXIT:%.*]], label [[HEADER]]
 ; CHECK:       exit:

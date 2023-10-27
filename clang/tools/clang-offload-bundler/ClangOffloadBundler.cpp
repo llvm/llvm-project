@@ -19,9 +19,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/ArchiveWriter.h"
 #include "llvm/Object/Binary.h"
@@ -33,7 +31,6 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/Host.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
@@ -41,6 +38,8 @@
 #include "llvm/Support/StringSaver.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/Host.h"
+#include "llvm/TargetParser/Triple.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -136,6 +135,11 @@ int main(int argc, const char **argv) {
     cl::desc("Treat hip and hipv4 offload kinds as "
              "compatible with openmp kind, and vice versa.\n"),
     cl::init(false), cl::cat(ClangOffloadBundlerCategory));
+  cl::opt<bool> Compress("compress",
+                         cl::desc("Compress output file when bundling.\n"),
+                         cl::init(false), cl::cat(ClangOffloadBundlerCategory));
+  cl::opt<bool> Verbose("verbose", cl::desc("Print debug information.\n"),
+                        cl::init(false), cl::cat(ClangOffloadBundlerCategory));
 
   // Process commandline options and report errors
   sys::PrintStackTraceOnErrorSignal(argv[0]);
@@ -163,6 +167,11 @@ int main(int argc, const char **argv) {
   BundlerConfig.BundleAlignment = BundleAlignment;
   BundlerConfig.FilesType = FilesType;
   BundlerConfig.ObjcopyPath = "";
+  // Do not override the default value Compress and Verbose in BundlerConfig.
+  if (Compress.getNumOccurrences() > 0)
+    BundlerConfig.Compress = Compress;
+  if (Verbose.getNumOccurrences() > 0)
+    BundlerConfig.Verbose = Verbose;
 
   BundlerConfig.TargetNames = TargetNames;
   BundlerConfig.InputFileNames = InputFileNames;
@@ -313,6 +322,8 @@ int main(int argc, const char **argv) {
   llvm::DenseSet<StringRef> ParsedTargets;
   // Map {offload-kind}-{triple} to target IDs.
   std::map<std::string, std::set<StringRef>> TargetIDs;
+  // Standardize target names to include env field
+  std::vector<std::string> StandardizedTargetNames;
   for (StringRef Target : TargetNames) {
     if (ParsedTargets.contains(Target)) {
       reportError(createStringError(errc::invalid_argument,
@@ -323,6 +334,8 @@ int main(int argc, const char **argv) {
     auto OffloadInfo = OffloadTargetInfo(Target, BundlerConfig);
     bool KindIsValid = OffloadInfo.isOffloadKindValid();
     bool TripleIsValid = OffloadInfo.isTripleValid();
+
+    StandardizedTargetNames.push_back(OffloadInfo.str());
 
     if (!KindIsValid || !TripleIsValid) {
       SmallVector<char, 128u> Buf;
@@ -348,6 +361,9 @@ int main(int argc, const char **argv) {
 
     ++Index;
   }
+
+  BundlerConfig.TargetNames = StandardizedTargetNames;
+
   for (const auto &TargetID : TargetIDs) {
     if (auto ConflictingTID =
             clang::getConflictTargetIDCombination(TargetID.second)) {

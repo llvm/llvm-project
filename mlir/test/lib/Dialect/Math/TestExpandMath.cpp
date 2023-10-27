@@ -13,6 +13,7 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Math/Transforms/Passes.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
+#include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
@@ -26,7 +27,8 @@ struct TestExpandMathPass
   void runOnOperation() override;
   StringRef getArgument() const final { return "test-expand-math"; }
   void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<arith::ArithDialect, scf::SCFDialect>();
+    registry
+        .insert<arith::ArithDialect, scf::SCFDialect, vector::VectorDialect>();
   }
   StringRef getDescription() const final { return "Test expanding math"; }
 };
@@ -35,7 +37,15 @@ struct TestExpandMathPass
 void TestExpandMathPass::runOnOperation() {
   RewritePatternSet patterns(&getContext());
   populateExpandCtlzPattern(patterns);
+  populateExpandExp2FPattern(patterns);
+  populateExpandTanPattern(patterns);
   populateExpandTanhPattern(patterns);
+  populateExpandFmaFPattern(patterns);
+  populateExpandFloorFPattern(patterns);
+  populateExpandCeilFPattern(patterns);
+  populateExpandPowFPattern(patterns);
+  populateExpandRoundFPattern(patterns);
+  populateExpandRoundEvenPattern(patterns);
   (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
 }
 

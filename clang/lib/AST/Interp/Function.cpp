@@ -7,21 +7,24 @@
 //===----------------------------------------------------------------------===//
 
 #include "Function.h"
-#include "Program.h"
 #include "Opcode.h"
+#include "Program.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/Basic/Builtins.h"
 
 using namespace clang;
 using namespace clang::interp;
 
 Function::Function(Program &P, const FunctionDecl *F, unsigned ArgSize,
-                   llvm::SmallVector<PrimType, 8> &&ParamTypes,
+                   llvm::SmallVectorImpl<PrimType> &&ParamTypes,
                    llvm::DenseMap<unsigned, ParamDescriptor> &&Params,
+                   llvm::SmallVectorImpl<unsigned> &&ParamOffsets,
                    bool HasThisPointer, bool HasRVO)
     : P(P), Loc(F->getBeginLoc()), F(F), ArgSize(ArgSize),
       ParamTypes(std::move(ParamTypes)), Params(std::move(Params)),
-      HasThisPointer(HasThisPointer), HasRVO(HasRVO) {}
+      ParamOffsets(std::move(ParamOffsets)), HasThisPointer(HasThisPointer),
+      HasRVO(HasRVO) {}
 
 Function::ParamDescriptor Function::getParamDescriptor(unsigned Offset) const {
   auto It = Params.find(Offset);
@@ -32,6 +35,7 @@ Function::ParamDescriptor Function::getParamDescriptor(unsigned Offset) const {
 SourceInfo Function::getSource(CodePtr PC) const {
   assert(PC >= getCodeBegin() && "PC does not belong to this function");
   assert(PC <= getCodeEnd() && "PC Does not belong to this function");
+  assert(hasBody() && "Function has no body");
   unsigned Offset = PC - getCodeBegin();
   using Elem = std::pair<unsigned, SourceInfo>;
   auto It = llvm::lower_bound(SrcMap, Elem{Offset, {}}, llvm::less_first());
@@ -40,7 +44,13 @@ SourceInfo Function::getSource(CodePtr PC) const {
 }
 
 bool Function::isVirtual() const {
-  if (auto *M = dyn_cast<CXXMethodDecl>(F))
+  if (const auto *M = dyn_cast<CXXMethodDecl>(F))
     return M->isVirtual();
   return false;
+}
+
+bool Function::needsRuntimeArgPop(const ASTContext &Ctx) const {
+  if (!isBuiltin())
+    return false;
+  return Ctx.BuiltinInfo.hasCustomTypechecking(getBuiltinID());
 }

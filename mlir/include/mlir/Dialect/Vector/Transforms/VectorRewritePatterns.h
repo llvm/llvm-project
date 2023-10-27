@@ -9,55 +9,27 @@
 #ifndef MLIR_DIALECT_VECTOR_TRANSFORMS_VECTORREWRITEPATTERNS_H
 #define MLIR_DIALECT_VECTOR_TRANSFORMS_VECTORREWRITEPATTERNS_H
 
-#include <utility>
 #include <optional>
+#include <utility>
 
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
-#include "mlir/Dialect/Vector/Transforms/VectorTransformsEnums.h.inc"
 #include "mlir/Dialect/Vector/Utils/VectorUtils.h"
-#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/Support/LogicalResult.h"
+
+#include "mlir/Dialect/Vector/Transforms/VectorTransformsEnums.h.inc"
 
 namespace mlir {
 class RewritePatternSet;
 
-namespace vector {
+namespace arith {
+class AndIOp;
+class NarrowTypeEmulationConverter;
+class TruncIOp;
+} // namespace arith
 
-//===----------------------------------------------------------------------===//
-// Vector transformation options exposed as auxiliary structs.
-//===----------------------------------------------------------------------===//
-/// Structure to control the behavior of vector transform patterns.
-struct VectorTransformsOptions {
-  /// Option to control the lowering of vector.contract.
-  VectorContractLowering vectorContractLowering = VectorContractLowering::Dot;
-  VectorTransformsOptions &
-  setVectorTransformsOptions(VectorContractLowering opt) {
-    vectorContractLowering = opt;
-    return *this;
-  }
-  /// Option to control the lowering of vector.multi_reduction.
-  VectorMultiReductionLowering vectorMultiReductionLowering =
-      VectorMultiReductionLowering::InnerParallel;
-  VectorTransformsOptions &
-  setVectorMultiReductionLowering(VectorMultiReductionLowering opt) {
-    vectorMultiReductionLowering = opt;
-    return *this;
-  }
-  /// Option to control the lowering of vector.transpose.
-  VectorTransposeLowering vectorTransposeLowering =
-      VectorTransposeLowering::EltWise;
-  VectorTransformsOptions &
-  setVectorTransposeLowering(VectorTransposeLowering opt) {
-    vectorTransposeLowering = opt;
-    return *this;
-  }
-  /// Option to control the splitting of vector transfers.
-  VectorTransferSplit vectorTransferSplit = VectorTransferSplit::None;
-  VectorTransformsOptions &setVectorTransferSplit(VectorTransferSplit opt) {
-    vectorTransferSplit = opt;
-    return *this;
-  }
-};
+namespace vector {
+struct VectorTransformsOptions;
 
 /// Options that control the vector unrolling.
 struct UnrollVectorOptions {
@@ -91,7 +63,7 @@ struct UnrollVectorOptions {
   }
 
   /// Function that returns the traversal order (in terms of "for loop order",
-  /// i.e. slowest varying dimension to fastest varying dimension) that shoudl
+  /// i.e. slowest varying dimension to fastest varying dimension) that should
   /// be used when unrolling the given operation into units of the native vector
   /// size.
   using UnrollTraversalOrderFnType =
@@ -104,115 +76,65 @@ struct UnrollVectorOptions {
   }
 };
 
-//===----------------------------------------------------------------------===//
-// Vector transformation exposed as populate functions over rewrite patterns.
-//===----------------------------------------------------------------------===//
-
-/// Insert TransposeLowering patterns into extraction/insertion.
-void populateVectorTransposeLoweringPatterns(
+/// Canonicalization of a `vector.contraction %a, %b, %c` with row-major matmul
+/// semantics to a contraction with MMT semantics (matrix matrix multiplication
+/// with the RHS transposed). This specific form is meant to have the vector
+/// operands are organized such that the reduction dimension is contiguous.
+/// Example:
+/// ```
+/// vector.contract {indexing_maps = [affine_map<(m, n, k) -> (m, k)>,
+///                                   affine_map<(m, n, k) -> (n, k)>,
+///                                   affine_map<(m, n, k) -> (m, n)>],
+///                  iterator_types = ["parallel", "parallel", "reduction"],
+///                  kind = #vector.kind<add>} %a, %b, %c : ...
+/// ```
+///
+///  The `constraint` predicate is used to decide which `vector.contraction` ops
+///  to filter out.
+void populateVectorContractCanonicalizeMatmulToMMT(
     RewritePatternSet &patterns,
-    VectorTransformsOptions options = VectorTransformsOptions(),
-    PatternBenefit benefit = 1);
-
-/// Collect a set of patterns to convert vector.multi_reduction op into
-/// a sequence of vector.reduction ops. The patterns comprise:
-/// - InnerOuterDimReductionConversion: rewrites vector.multi_reduction such
-/// that all reduction dimensions are either innermost or outermost, by adding
-/// the proper vector.transpose operations.
-/// - ReduceMultiDimReductionRank: once in innermost or outermost reduction
-/// form, rewrites n-D vector.multi_reduction into 2-D vector.multi_reduction,
-/// by introducing vector.shape_cast ops to collapse + multi-reduce + expand
-/// back.
-/// - TwoDimMultiReductionToElementWise: once in 2-D vector.multi_reduction
-/// form, with an **outermost** reduction dimension, unroll the outer dimension
-/// to obtain a sequence of 1-D vector ops. This also has an opportunity for
-/// tree-reduction (in the future).
-/// - TwoDimMultiReductionToReduction: once in 2-D vector.multi_reduction form,
-/// with an **innermost** reduction dimension, unroll the outer dimension to
-/// obtain a sequence of extract + vector.reduction + insert. This can further
-/// lower to horizontal reduction ops.
-/// - OneDimMultiReductionToTwoDim: for cases that reduce to 1-D vector<k>
-/// reduction (and are thus missing either a parallel or a reduction), we lift
-/// them back up to 2-D with a simple vector.shape_cast to vector<1xk> so that
-/// the other patterns can kick in, thus fully exiting out of the
-/// vector.multi_reduction abstraction.
-void populateVectorMultiReductionLoweringPatterns(
-    RewritePatternSet &patterns, VectorMultiReductionLowering options,
-    PatternBenefit benefit = 1);
-
-/// Collects patterns to progressively lower vector contraction ops on high-D
-/// into low-D reduction and product ops.
-void populateVectorContractLoweringPatterns(
-    RewritePatternSet &patterns,
-    VectorTransformsOptions options = VectorTransformsOptions(),
-    PatternBenefit benefit = 1);
+    std::function<LogicalResult(vector::ContractionOp)> constraint =
+        [](vector::ContractionOp) { return success(); },
+    PatternBenefit = 1);
 
 /// Collect patterns to convert reduction op to vector.contract and fold
 /// transpose/broadcast ops into the contract.
 void populateVectorReductionToContractPatterns(RewritePatternSet &patterns,
                                                PatternBenefit benefit = 1);
 
-/// Collect patterns to convert scan op
-void populateVectorScanLoweringPatterns(RewritePatternSet &patterns,
-                                        PatternBenefit benefit = 1);
-
-//===----------------------------------------------------------------------===//
-// Vector.transfer patterns.
-//===----------------------------------------------------------------------===//
-/// Collect a set of transfer read/write lowering patterns that simplify the
-/// permutation map (e.g., converting it to a minor identity map) by inserting
-/// broadcasts and transposes. More specifically:
+/// Populate `patterns` with the following patterns.
 ///
-/// [TransferReadPermutationLowering]
-/// Lower transfer_read op with permutation into a transfer_read with a
-/// permutation map composed of leading zeros followed by a minor identity +
-/// vector.transpose op.
-/// Ex:
-///     vector.transfer_read ...
-///         permutation_map: (d0, d1, d2) -> (0, d1)
-/// into:
-///     %v = vector.transfer_read ...
-///         permutation_map: (d0, d1, d2) -> (d1, 0)
-///     vector.transpose %v, [1, 0]
+///   - VectorTransferFullPartialRewriter
 ///
-///     vector.transfer_read ...
-///         permutation_map: (d0, d1, d2, d3) -> (0, 0, 0, d1, d3)
-/// into:
-///     %v = vector.transfer_read ...
-///         permutation_map: (d0, d1, d2, d3) -> (0, 0, d1, 0, d3)
-///     vector.transpose %v, [0, 1, 3, 2, 4]
-/// Note that an alternative is to transform it to linalg.transpose +
-/// vector.transfer_read to do the transpose in memory instead.
+/// Split a vector.transfer operation into an in-bounds (i.e., no out-of-bounds
+/// masking) fast path and a slow path.
 ///
-/// [TransferWritePermutationLowering]
-/// Lower transfer_write op with permutation into a transfer_write with a
-/// minor identity permutation map. (transfer_write ops cannot have broadcasts.)
-/// Ex:
-///     vector.transfer_write %v ...
-///         permutation_map: (d0, d1, d2) -> (d2, d0, d1)
-/// into:
-///     %tmp = vector.transpose %v, [2, 0, 1]
-///     vector.transfer_write %tmp ...
-///         permutation_map: (d0, d1, d2) -> (d0, d1, d2)
+/// Example (a 2-D vector.transfer_read):
+/// ```
+///    %1 = vector.transfer_read %0[...], %pad : memref<A...>, vector<...>
+/// ```
+/// is transformed into:
+/// ```
+///    %1:3 = scf.if (%inBounds) {
+///      // fast path, direct cast
+///      memref.cast %A: memref<A...> to compatibleMemRefType
+///      scf.yield %view : compatibleMemRefType, index, index
+///    } else {
+///      // slow path, not in-bounds vector.transfer or linalg.copy.
+///      memref.cast %alloc: memref<B...> to compatibleMemRefType
+///      scf.yield %4 : compatibleMemRefType, index, index
+//     }
+///    %0 = vector.transfer_read %1#0[%1#1, %1#2] {in_bounds = [true ... true]}
+/// ```
+/// where `alloc` is a top of the function alloca'ed buffer of one vector.
 ///
-///     vector.transfer_write %v ...
-///         permutation_map: (d0, d1, d2, d3) -> (d3, d2)
-/// into:
-///     %tmp = vector.transpose %v, [1, 0]
-///     %v = vector.transfer_write %tmp ...
-///         permutation_map: (d0, d1, d2, d3) -> (d2, d3)
-///
-/// [TransferOpReduceRank]
-/// Lower transfer_read op with broadcast in the leading dimensions into
-/// transfer_read of lower rank + vector.broadcast.
-/// Ex: vector.transfer_read ...
-///         permutation_map: (d0, d1, d2, d3) -> (0, d1, 0, d3)
-/// into:
-///     %v = vector.transfer_read ...
-///         permutation_map: (d0, d1, d2, d3) -> (d1, 0, d3)
-///     vector.broadcast %v
-void populateVectorTransferPermutationMapLoweringPatterns(
-    RewritePatternSet &patterns, PatternBenefit benefit = 1);
+/// Preconditions:
+///  1. `xferOp.permutation_map()` must be a minor identity map
+///  2. the rank of the `xferOp.memref()` and the rank of the `xferOp.vector()`
+///  must be equal. This will be relaxed in the future but requires
+///  rank-reducing subviews.
+void populateVectorTransferFullPartialPatterns(
+    RewritePatternSet &patterns, const VectorTransformsOptions &options);
 
 /// Collect a set of patterns to reduce the rank of the operands of vector
 /// transfer ops to operate on the largest contigious vector.
@@ -220,6 +142,10 @@ void populateVectorTransferPermutationMapLoweringPatterns(
 /// such as llvm and it will result fewer memory reads.
 void populateVectorTransferCollapseInnerMostContiguousDimsPatterns(
     RewritePatternSet &patterns, PatternBenefit benefit = 1);
+
+/// Patterns that remove redundant vector broadcasts.
+void populateSinkVectorBroadcastPatterns(RewritePatternSet &patterns,
+                                         PatternBenefit benefit = 1);
 
 /// Populate `patterns` with the following patterns.
 ///
@@ -255,6 +181,22 @@ void populateVectorInsertExtractStridedSliceDecompositionPatterns(
 void populateVectorExtractStridedSliceToExtractInsertChainPatterns(
     RewritePatternSet &patterns,
     std::function<bool(ExtractStridedSliceOp)> controlFn = nullptr,
+    PatternBenefit benefit = 1);
+
+/// Populate `patterns` with a pattern to break down 1-D vector.bitcast ops
+/// based on the destination vector shape. Bitcasts from a lower bitwidth
+/// element type to a higher bitwidth one are extracted from the lower bitwidth
+/// based on the native destination vector shape and inserted based on the ratio
+/// of the bitwidths.
+///
+/// This acts as a last resort way to break down vector.bitcast ops to smaller
+/// vector sizes. Because this pattern composes until it is bitcasting to a
+/// single element of the higher bitwidth, the is an optional control function.
+/// If `controlFn` is not nullptr, the pattern will only apply to ops where
+/// `controlFn` returns true, otherwise applies to all bitcast ops.
+void populateBreakDownVectorBitCastOpPatterns(
+    RewritePatternSet &patterns,
+    std::function<bool(BitCastOp)> controlFn = nullptr,
     PatternBenefit benefit = 1);
 
 /// Populate `patterns` with the following patterns.
@@ -312,211 +254,75 @@ void populateVectorUnrollPatterns(RewritePatternSet &patterns,
                                   const UnrollVectorOptions &options,
                                   PatternBenefit benefit = 1);
 
-//===----------------------------------------------------------------------===//
-// Finer-grained patterns exposed for more control over individual lowerings.
-//===----------------------------------------------------------------------===//
-/// Apply `splitFullAndPartialTransfer` selectively via a pattern. This pattern
-/// may take an extra filter to perform selection at a finer granularity.
-struct VectorTransferFullPartialRewriter : public RewritePattern {
-  using FilterConstraintType =
-      std::function<LogicalResult(VectorTransferOpInterface op)>;
+/// Collect a set of vector.shape_cast folding patterns.
+void populateShapeCastFoldingPatterns(RewritePatternSet &patterns,
+                                      PatternBenefit benefit = 1);
 
-  explicit VectorTransferFullPartialRewriter(
-      MLIRContext *context,
-      VectorTransformsOptions options = VectorTransformsOptions(),
-      FilterConstraintType filter =
-          [](VectorTransferOpInterface op) { return success(); },
-      PatternBenefit benefit = 1)
-      : RewritePattern(MatchAnyOpTypeTag(), benefit, context), options(options),
-        filter(std::move(filter)) {}
-
-  /// Performs the rewrite.
-  LogicalResult matchAndRewrite(Operation *op,
-                                PatternRewriter &rewriter) const override;
-
-private:
-  VectorTransformsOptions options;
-  FilterConstraintType filter;
-};
-
-/// Progressive lowering of a `vector.contract %a, %b, %c` with row-major matmul
-/// semantics to:
-/// ```
-///    %flattened_a = vector.shape_cast %a
-///    %flattened_b = vector.shape_cast %b
-///    %flattened_d = vector.matmul %flattened_a, %flattened_b
-///    %d = vector.shape_cast %%flattened_d
-///    %e = add %c, %d
-/// ```
-/// `vector.matmul` later lowers to `llvm.matrix.multiply`.
-//
-/// This only kicks in when VectorTransformsOptions is set to OuterProduct and
-/// the vector.contract op is a row-major matrix multiply.
-class ContractionOpToMatmulOpLowering
-    : public OpRewritePattern<vector::ContractionOp> {
-public:
-  using OpRewritePattern::OpRewritePattern;
-
-  using FilterConstraintType =
-      std::function<LogicalResult(vector::ContractionOp op)>;
-
-  static LogicalResult defaultFilter(vector::ContractionOp op) {
-    return success();
-  }
-
-  ContractionOpToMatmulOpLowering(
-      vector::VectorTransformsOptions vectorTransformOptions,
-      MLIRContext *context, PatternBenefit benefit = 1,
-      FilterConstraintType constraint = defaultFilter)
-      : OpRewritePattern<vector::ContractionOp>(context, benefit),
-        vectorTransformOptions(vectorTransformOptions),
-        filter(std::move(constraint)) {}
-
-  LogicalResult matchAndRewrite(vector::ContractionOp op,
-                                PatternRewriter &rewriter) const override;
-
-private:
-  /// Options to control the vector patterns.
-  vector::VectorTransformsOptions vectorTransformOptions;
-  FilterConstraintType filter;
-};
-
-/// Progressive lowering of a `vector.contract %a, %b, %c` with row-major matmul
-/// semantics to a reduction_size-unrolled sequence:
-/// ```
-///    %at = vector.transpose %a, [1, 0]
-///    %bRow0 = vector.extract %b[0]
-///    %atRow0 = vector.extract %at[0]
-///    %c0 = vector.outerproduct %atRow0, %bRow0, %c
-///    ...
-///    %bRowK = vector.extract %b[K]
-///    %atRowK = vector.extract %at[K]
-///    %cK = vector.outerproduct %atRowK, %bRowK, %cK-1
-/// ```
+/// Collect a set of leading one dimension removal patterns.
 ///
-/// This only kicks in when VectorTransformsOptions is set to OuterProduct and
-/// the vector.contract op is a row-major matrix multiply.
-class ContractionOpToOuterProductOpLowering
-    : public OpRewritePattern<vector::ContractionOp> {
-public:
-  using OpRewritePattern::OpRewritePattern;
+/// These patterns insert vector.shape_cast to remove leading one dimensions
+/// to expose more canonical forms of read/write/insert/extract operations.
+/// With them, there are more chances that we can cancel out extract-insert
+/// pairs or forward write-read pairs.
+void populateCastAwayVectorLeadingOneDimPatterns(RewritePatternSet &patterns,
+                                                 PatternBenefit benefit = 1);
 
-  using FilterConstraintType =
-      std::function<LogicalResult(vector::ContractionOp op)>;
-
-  static LogicalResult defaultFilter(vector::ContractionOp op) {
-    return success();
-  }
-
-  ContractionOpToOuterProductOpLowering(
-      vector::VectorTransformsOptions vectorTransformOptions,
-      MLIRContext *context, PatternBenefit benefit = 1,
-      FilterConstraintType constraint = defaultFilter)
-      : OpRewritePattern<vector::ContractionOp>(context, benefit),
-        vectorTransformOptions(vectorTransformOptions),
-        filter(std::move(constraint)) {}
-
-  LogicalResult matchAndRewrite(vector::ContractionOp op,
-                                PatternRewriter &rewriter) const override;
-
-private:
-  /// Options to control the vector patterns.
-  vector::VectorTransformsOptions vectorTransformOptions;
-  FilterConstraintType filter;
-};
-
-/// Progressive lowering of a `vector.contract %a, %b, %c` with row-major matmul
-/// semantics to an output-size-unrolled sequence:
-/// ```
-///    %out = arith.constant ... : vector<MxNxelt_type>
-///    %bt = vector.transpose %b, [1, 0]
-///    %aRow0 = vector.extract %a[0]
-///    %btRow0 = vector.extract %bt[0]
-///    %c00 = vector.reduce %atRow0, %bRow0
-///    %out00 = vector.insert %c00, %out[0, 0]
-///    ...
-///    %aRowLast = vector.extract %at[M-1]
-///    %btRowLast = vector.extract %b[N-1]
-///    %cLastLast = vector.reduce %atRowLast, %bRowLast
-///    %outcLastLast = vector.insert %cLastLast, %out[M-1, N-1]
-/// ```
+/// Collect a set of one dimension removal patterns.
 ///
-/// This only kicks in when VectorTransformsOptions is set to Dot and
-/// the vector.contract op is a row-major matmul or matvec.
-class ContractionOpToDotLowering
-    : public OpRewritePattern<vector::ContractionOp> {
-public:
-  using OpRewritePattern::OpRewritePattern;
+/// These patterns insert rank-reducing memref.subview ops to remove one
+/// dimensions. With them, there are more chances that we can avoid
+/// potentially expensive vector.shape_cast operations.
+void populateVectorTransferDropUnitDimsPatterns(RewritePatternSet &patterns,
+                                                PatternBenefit benefit = 1);
 
-  using FilterConstraintType =
-      std::function<LogicalResult(vector::ContractionOp op)>;
-
-  static LogicalResult defaultFilter(vector::ContractionOp op) {
-    return success();
-  }
-
-  ContractionOpToDotLowering(
-      vector::VectorTransformsOptions vectorTransformOptions,
-      MLIRContext *context, PatternBenefit benefit = 1,
-      const FilterConstraintType &constraint = defaultFilter)
-      : OpRewritePattern<vector::ContractionOp>(context, benefit),
-        vectorTransformOptions(vectorTransformOptions), filter(defaultFilter) {}
-
-  LogicalResult matchAndRewrite(vector::ContractionOp op,
-                                PatternRewriter &rewriter) const override;
-
-private:
-  /// Options to control the vector patterns.
-  vector::VectorTransformsOptions vectorTransformOptions;
-  FilterConstraintType filter;
-};
-
-/// Progressive lowering of ContractionOp.
+/// Collect a set of patterns to flatten n-D vector transfers on contiguous
+/// memref.
 ///
-/// One:
-///   %x = vector.contract with at least one free/batch dimension
-/// is replaced by:
-///   %a = vector.contract with one less free/batch dimension
-///   %b = vector.contract with one less free/batch dimension
-///   ..
-///   %x = combine %a %b ..
-/// until a pure contraction is reached (no free/batch dimensions),
-/// which is replaced by a dot-product.
+/// These patterns insert memref.collapse_shape + vector.shape_cast patterns
+/// to transform multiple small n-D transfers into a larger 1-D transfer where
+/// the memref contiguity properties allow it.
+void populateFlattenVectorTransferPatterns(RewritePatternSet &patterns,
+                                           PatternBenefit benefit = 1);
+
+/// Collect a set of patterns that bubble up/down bitcast ops.
 ///
-/// This only kicks in when either VectorTransformsOptions is set
-/// to Dot or when other contraction patterns fail.
-class ContractionOpLowering : public OpRewritePattern<vector::ContractionOp> {
-public:
-  using OpRewritePattern::OpRewritePattern;
-  using FilterConstraintType =
-      std::function<LogicalResult(vector::ContractionOp op)>;
+/// These patterns move vector.bitcast ops to be before insert ops or after
+/// extract ops where suitable. With them, bitcast will happen on smaller
+/// vectors and there are more chances to share extract/insert ops.
+void populateBubbleVectorBitCastOpPatterns(RewritePatternSet &patterns,
+                                           PatternBenefit benefit = 1);
 
-  static LogicalResult defaultFilter(vector::ContractionOp op) {
-    return success();
-  }
+/// These patterns materialize masks for various vector ops such as transfers.
+void populateVectorMaskMaterializationPatterns(RewritePatternSet &patterns,
+                                               bool force32BitVectorIndices,
+                                               PatternBenefit benefit = 1);
 
-  ContractionOpLowering(vector::VectorTransformsOptions vectorTransformOptions,
-                        MLIRContext *context, PatternBenefit benefit = 1,
-                        FilterConstraintType constraint = defaultFilter)
-      : OpRewritePattern<vector::ContractionOp>(context, benefit),
-        vectorTransformOptions(vectorTransformOptions),
-        filter(std::move(constraint)) {}
+/// Appends patterns for emulating vector operations over narrow types with ops
+/// over wider types.
+void populateVectorNarrowTypeEmulationPatterns(
+    arith::NarrowTypeEmulationConverter &typeConverter,
+    RewritePatternSet &patterns);
 
-  LogicalResult matchAndRewrite(vector::ContractionOp op,
-                                PatternRewriter &rewriter) const override;
+/// Rewrite a vector `bitcast(trunci)` to use a more efficient sequence of
+/// vector operations comprising `shuffle` and `bitwise` ops.
+/// Warning: these patterns currently only work for little endian targets.
+FailureOr<Value> rewriteBitCastOfTruncI(RewriterBase &rewriter,
+                                        vector::BitCastOp bitCastOp,
+                                        arith::TruncIOp truncOp,
+                                        vector::BroadcastOp maybeBroadcastOp);
 
-private:
-  /// Options to control the vector patterns.
-  vector::VectorTransformsOptions vectorTransformOptions;
-  FilterConstraintType filter;
-  // Lower one parallel dimension.
-  FailureOr<Value> lowerParallel(vector::ContractionOp op, int64_t lhsIndex,
-                                 int64_t rhsIndex,
-                                 PatternRewriter &rewriter) const;
-  // Lower one reduction dimension.
-  FailureOr<Value> lowerReduction(vector::ContractionOp op,
-                                  PatternRewriter &rewriter) const;
-};
+/// Rewrite a vector `ext(bitcast)` to use a more efficient sequence of
+/// vector operations comprising `shuffle` and `bitwise` ops.
+/// Warning: these patterns currently only work for little endian targets.
+FailureOr<Value> rewriteExtOfBitCast(RewriterBase &rewriter, Operation *extOp,
+                                     vector::BitCastOp bitCastOp,
+                                     vector::BroadcastOp maybeBroadcastOp);
+
+/// Appends patterns for rewriting vector operations over narrow types with
+/// ops over wider types.
+/// Warning: these patterns currently only work for little endian targets.
+void populateVectorNarrowTypeRewritePatterns(RewritePatternSet &patterns,
+                                             PatternBenefit benefit = 1);
 
 } // namespace vector
 } // namespace mlir

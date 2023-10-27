@@ -424,11 +424,11 @@ bool DWARFTypePrinter::appendTemplateParameters(DWARFDie D,
             OS << (char)Val;
             OS << "'";
           } else if (Val < 256)
-            OS << to_string(llvm::format("'\\x%02x'", Val));
+            OS << llvm::format("'\\x%02" PRIx64 "'", Val);
           else if (Val <= 0xFFFF)
-            OS << to_string(llvm::format("'\\u%04x'", Val));
+            OS << llvm::format("'\\u%04" PRIx64 "'", Val);
           else
-            OS << to_string(llvm::format("'\\U%08x'", Val));
+            OS << llvm::format("'\\U%08" PRIx64 "'", Val);
         }
       }
       continue;
@@ -619,6 +619,9 @@ void DWARFTypePrinter::appendSubroutineNameAfter(
       break;
     case CallingConvention::DW_CC_LLVM_X86RegCall:
       OS << " __attribute__((regcall))";
+      break;
+    case CallingConvention::DW_CC_LLVM_M68kRTD:
+      OS << " __attribute__((m68k_rtd))";
       break;
     }
   }

@@ -10,14 +10,15 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 from lldbsuite.test import lldbtest
 
-class StackCoreScriptedProcesTestCase(TestBase):
 
+class StackCoreScriptedProcesTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     def create_stack_skinny_corefile(self, file):
         self.build()
-        target, process, thread, _ = lldbutil.run_to_source_breakpoint(self, "// break here",
-                                                                       lldb.SBFileSpec("baz.cpp"))
+        target, process, thread, _ = lldbutil.run_to_source_breakpoint(
+            self, "// break here", lldb.SBFileSpec("baz.cpp")
+        )
         self.assertTrue(process.IsValid(), "Process is invalid.")
         # FIXME: Use SBAPI to save the process corefile.
         self.runCmd("process save-core -s stack  " + file)
@@ -33,6 +34,8 @@ class StackCoreScriptedProcesTestCase(TestBase):
     @skipUnlessDarwin
     @skipIfOutOfTreeDebugserver
     @skipIfRemote
+    @skipIfAsan  # On ASAN builds, this test times-out (rdar://98678134)
+    @skipIfDarwin
     def test_launch_scripted_process_stack_frames(self):
         """Test that we can launch an lldb scripted process from the command
         line, check its process ID and read string from memory."""
@@ -40,39 +43,56 @@ class StackCoreScriptedProcesTestCase(TestBase):
         target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
         self.assertTrue(target, VALID_TARGET)
 
-        main_module = self.get_module_with_name(target, 'a.out')
+        main_module = self.get_module_with_name(target, "a.out")
         self.assertTrue(main_module, "Invalid main module.")
         error = target.SetModuleLoadAddress(main_module, 0)
         self.assertSuccess(error, "Reloading main module at offset 0 failed.")
 
-        scripted_dylib = self.get_module_with_name(target, 'libbaz.dylib')
+        scripted_dylib = self.get_module_with_name(target, "libbaz.dylib")
         self.assertTrue(scripted_dylib, "Dynamic library libbaz.dylib not found.")
-        self.assertEqual(scripted_dylib.GetObjectFileHeaderAddress().GetLoadAddress(target), 0xffffffffffffffff)
+        self.assertEqual(
+            scripted_dylib.GetObjectFileHeaderAddress().GetLoadAddress(target),
+            0xFFFFFFFFFFFFFFFF,
+        )
 
-        os.environ['SKIP_SCRIPTED_PROCESS_LAUNCH'] = '1'
+        os.environ["SKIP_SCRIPTED_PROCESS_LAUNCH"] = "1"
+
         def cleanup():
-          del os.environ["SKIP_SCRIPTED_PROCESS_LAUNCH"]
+            del os.environ["SKIP_SCRIPTED_PROCESS_LAUNCH"]
+
         self.addTearDownHook(cleanup)
 
-        scripted_process_example_relpath = 'stack_core_scripted_process.py'
-        self.runCmd("command script import " + os.path.join(self.getSourceDir(),
-                                                            scripted_process_example_relpath))
+        scripted_process_example_relpath = "stack_core_scripted_process.py"
+        self.runCmd(
+            "command script import "
+            + os.path.join(self.getSourceDir(), scripted_process_example_relpath)
+        )
 
         corefile_process = None
         with tempfile.NamedTemporaryFile() as file:
             self.create_stack_skinny_corefile(file.name)
             corefile_target = self.dbg.CreateTarget(None)
-            corefile_process = corefile_target.LoadCore(self.getBuildArtifact(file.name))
+            corefile_process = corefile_target.LoadCore(
+                self.getBuildArtifact(file.name)
+            )
         self.assertTrue(corefile_process, PROCESS_IS_VALID)
 
         structured_data = lldb.SBStructuredData()
-        structured_data.SetFromJSON(json.dumps({
-            "backing_target_idx" : self.dbg.GetIndexOfTarget(corefile_process.GetTarget()),
-            "libbaz_path" : self.getBuildArtifact("libbaz.dylib")
-        }))
+        structured_data.SetFromJSON(
+            json.dumps(
+                {
+                    "backing_target_idx": self.dbg.GetIndexOfTarget(
+                        corefile_process.GetTarget()
+                    ),
+                    "libbaz_path": self.getBuildArtifact("libbaz.dylib"),
+                }
+            )
+        )
         launch_info = lldb.SBLaunchInfo(None)
         launch_info.SetProcessPluginName("ScriptedProcess")
-        launch_info.SetScriptedProcessClassName("stack_core_scripted_process.StackCoreScriptedProcess")
+        launch_info.SetScriptedProcessClassName(
+            "stack_core_scripted_process.StackCoreScriptedProcess"
+        )
         launch_info.SetScriptedProcessDictionary(structured_data)
 
         error = lldb.SBError()
@@ -87,13 +107,13 @@ class StackCoreScriptedProcesTestCase(TestBase):
         self.assertEqual(thread.GetName(), "StackCoreScriptedThread.thread-1")
 
         self.assertTrue(target.triple, "Invalid target triple")
-        arch = target.triple.split('-')[0]
-        supported_arch = ['x86_64', 'arm64', 'arm64e']
+        arch = target.triple.split("-")[0]
+        supported_arch = ["x86_64", "arm64", "arm64e"]
         self.assertIn(arch, supported_arch)
         # When creating a corefile of a arm process, lldb saves the exception
         # that triggers the breakpoint in the LC_NOTES of the corefile, so they
         # can be reloaded with the corefile on the next debug session.
-        if arch in 'arm64e':
+        if arch in "arm64e":
             self.assertTrue(thread.GetStopReason(), lldb.eStopReasonException)
         # However, it's architecture specific, and corefiles made from intel
         # process don't save any metadata to retrieve to stop reason.
@@ -110,12 +130,16 @@ class StackCoreScriptedProcesTestCase(TestBase):
 
         self.assertIn("baz", frame.GetFunctionName())
         self.assertGreater(frame.vars.GetSize(), 0)
-        self.assertEqual(int(frame.vars.GetFirstValueByName('k').GetValue()), 42)
-        self.assertEqual(int(frame.vars.GetFirstValueByName('j').Dereference().GetValue()), 42 * 42)
+        self.assertEqual(int(frame.vars.GetFirstValueByName("k").GetValue()), 42)
+        self.assertEqual(
+            int(frame.vars.GetFirstValueByName("j").Dereference().GetValue()), 42 * 42
+        )
 
-        corefile_dylib = self.get_module_with_name(corefile_target, 'libbaz.dylib')
+        corefile_dylib = self.get_module_with_name(corefile_target, "libbaz.dylib")
         self.assertTrue(corefile_dylib, "Dynamic library libbaz.dylib not found.")
-        scripted_dylib = self.get_module_with_name(target, 'libbaz.dylib')
+        scripted_dylib = self.get_module_with_name(target, "libbaz.dylib")
         self.assertTrue(scripted_dylib, "Dynamic library libbaz.dylib not found.")
-        self.assertEqual(scripted_dylib.GetObjectFileHeaderAddress().GetLoadAddress(target),
-                         corefile_dylib.GetObjectFileHeaderAddress().GetLoadAddress(target))
+        self.assertEqual(
+            scripted_dylib.GetObjectFileHeaderAddress().GetLoadAddress(target),
+            corefile_dylib.GetObjectFileHeaderAddress().GetLoadAddress(target),
+        )

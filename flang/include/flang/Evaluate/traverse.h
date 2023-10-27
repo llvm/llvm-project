@@ -38,6 +38,7 @@
 // expression of an ASSOCIATE (or related) construct entity.
 
 #include "expression.h"
+#include "flang/Common/indirection.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/type.h"
 #include <set>
@@ -52,6 +53,10 @@ public:
   template <typename A, bool C>
   Result operator()(const common::Indirection<A, C> &x) const {
     return visitor_(x.value());
+  }
+  template <typename A>
+  Result operator()(const common::ForwardOwningPointer<A> &p) const {
+    return visitor_(p.get());
   }
   template <typename _> Result operator()(const SymbolRef x) const {
     return visitor_(*x);
@@ -76,12 +81,16 @@ public:
       return visitor_.Default();
     }
   }
-  template <typename... A>
-  Result operator()(const std::variant<A...> &u) const {
-    return common::visit(visitor_, u);
+  template <typename... As>
+  Result operator()(const std::variant<As...> &u) const {
+    return common::visit([=](const auto &y) { return visitor_(y); }, u);
   }
   template <typename A> Result operator()(const std::vector<A> &x) const {
     return CombineContents(x);
+  }
+  template <typename A, typename B>
+  Result operator()(const std::pair<A, B> &x) const {
+    return Combine(x.first, x.second);
   }
 
   // Leaves
@@ -233,14 +242,24 @@ public:
   template <typename T> Result operator()(const Expr<T> &x) const {
     return visitor_(x.u);
   }
+  Result operator()(const Assignment &x) const {
+    return Combine(x.lhs, x.rhs, x.u);
+  }
+  Result operator()(const Assignment::Intrinsic &) const {
+    return visitor_.Default();
+  }
+  Result operator()(const GenericExprWrapper &x) const { return visitor_(x.v); }
+  Result operator()(const GenericAssignmentWrapper &x) const {
+    return visitor_(x.v);
+  }
 
 private:
   template <typename ITER> Result CombineRange(ITER iter, ITER end) const {
     if (iter == end) {
       return visitor_.Default();
     } else {
-      Result result{visitor_(*iter++)};
-      for (; iter != end; ++iter) {
+      Result result{visitor_(*iter)};
+      for (++iter; iter != end; ++iter) {
         result = visitor_.Combine(std::move(result), visitor_(*iter));
       }
       return result;

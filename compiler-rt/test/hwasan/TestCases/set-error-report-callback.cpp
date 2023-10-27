@@ -17,13 +17,13 @@ int main() {
   free(p);
   // CHECK: ERROR: HWAddressSanitizer:
   // CHECK: WRITE of size 1 at
-  // CHECK: allocated here:
+  // CHECK: allocated by thread {{.*}} here:
   // CHECK: Memory tags around the buggy address
 
   // CHECK: == error start
   // CHECK: ERROR: HWAddressSanitizer:
   // CHECK: WRITE of size 1 at
-  // CHECK: allocated here:
+  // CHECK: allocated by thread {{.*}} here:
   // CHECK: Memory tags around the buggy address
   // CHECK: == error end
 }

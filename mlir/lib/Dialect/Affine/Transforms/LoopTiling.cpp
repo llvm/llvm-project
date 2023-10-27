@@ -28,18 +28,21 @@
 #include <optional>
 
 namespace mlir {
+namespace affine {
 #define GEN_PASS_DEF_AFFINELOOPTILING
 #include "mlir/Dialect/Affine/Passes.h.inc"
+} // namespace affine
 } // namespace mlir
 
 using namespace mlir;
+using namespace mlir::affine;
 
 #define DEBUG_TYPE "affine-loop-tile"
 
 namespace {
 
 /// A pass to perform loop tiling on all suitable loop nests of a Function.
-struct LoopTiling : public impl::AffineLoopTilingBase<LoopTiling> {
+struct LoopTiling : public affine::impl::AffineLoopTilingBase<LoopTiling> {
   LoopTiling() = default;
   explicit LoopTiling(uint64_t cacheSizeBytes, bool avoidMaxMinBounds = true)
       : avoidMaxMinBounds(avoidMaxMinBounds) {
@@ -62,10 +65,11 @@ struct LoopTiling : public impl::AffineLoopTilingBase<LoopTiling> {
 /// Creates a pass to perform loop tiling on all suitable loop nests of a
 /// Function.
 std::unique_ptr<OperationPass<func::FuncOp>>
-mlir::createLoopTilingPass(uint64_t cacheSizeBytes) {
+mlir::affine::createLoopTilingPass(uint64_t cacheSizeBytes) {
   return std::make_unique<LoopTiling>(cacheSizeBytes);
 }
-std::unique_ptr<OperationPass<func::FuncOp>> mlir::createLoopTilingPass() {
+std::unique_ptr<OperationPass<func::FuncOp>>
+mlir::affine::createLoopTilingPass() {
   return std::make_unique<LoopTiling>();
 }
 
@@ -87,6 +91,70 @@ static void adjustToDivisorsOfTripCounts(ArrayRef<AffineForOp> band,
     while (constTripCount % tSizeAdjusted != 0)
       tSizeAdjusted--;
   }
+}
+
+/// Checks whether hyper-rectangular loop tiling of the nest represented by
+/// `origLoops` is valid. The validity condition is from Irigoin and Triolet,
+/// which states that two tiles cannot depend on each other. We simplify such
+/// condition to just checking whether there is any negative dependence
+/// direction, since we have the prior knowledge that the tiling results will be
+/// hyper-rectangles, which are scheduled in the lexicographically increasing
+/// order on the vector of loop indices. This function will return failure when
+/// any dependence component is negative along any of `origLoops`.
+static bool checkTilingLegality(MutableArrayRef<AffineForOp> origLoops) {
+  assert(!origLoops.empty() && "no original loops provided");
+
+  // We first find out all dependences we intend to check.
+  SmallVector<Operation *, 8> loadAndStoreOps;
+  origLoops[0]->walk([&](Operation *op) {
+    if (isa<AffineReadOpInterface, AffineWriteOpInterface>(op))
+      loadAndStoreOps.push_back(op);
+  });
+
+  unsigned numOps = loadAndStoreOps.size();
+  unsigned numLoops = origLoops.size();
+  for (unsigned d = 1; d <= numLoops + 1; ++d) {
+    for (unsigned i = 0; i < numOps; ++i) {
+      Operation *srcOp = loadAndStoreOps[i];
+      MemRefAccess srcAccess(srcOp);
+      for (unsigned j = 0; j < numOps; ++j) {
+        Operation *dstOp = loadAndStoreOps[j];
+        MemRefAccess dstAccess(dstOp);
+
+        SmallVector<DependenceComponent, 2> depComps;
+        DependenceResult result = checkMemrefAccessDependence(
+            srcAccess, dstAccess, d, /*dependenceConstraints=*/nullptr,
+            &depComps);
+
+        // Skip if there is no dependence in this case.
+        if (!hasDependence(result))
+          continue;
+
+        // Check whether there is any negative direction vector in the
+        // dependence components found above, which means that dependence is
+        // violated by the default hyper-rect tiling method.
+        LLVM_DEBUG(llvm::dbgs() << "Checking whether tiling legality violated "
+                                   "for dependence at depth: "
+                                << Twine(d) << " between:\n";);
+        LLVM_DEBUG(srcAccess.opInst->dump(););
+        LLVM_DEBUG(dstAccess.opInst->dump(););
+        for (unsigned k = 0, e = depComps.size(); k < e; k++) {
+          DependenceComponent depComp = depComps[k];
+          if (depComp.lb.has_value() && depComp.ub.has_value() &&
+              *depComp.lb < *depComp.ub && *depComp.ub < 0) {
+            LLVM_DEBUG(llvm::dbgs()
+                       << "Dependence component lb = " << Twine(*depComp.lb)
+                       << " ub = " << Twine(*depComp.ub)
+                       << " is negative  at depth: " << Twine(d)
+                       << " and thus violates the legality rule.\n");
+            return false;
+          }
+        }
+      }
+    }
+  }
+
+  return true;
 }
 
 // Returns tile sizes to use. Checks CL options; if none are specified, sets it
@@ -175,6 +243,11 @@ void LoopTiling::runOnOperation() {
 
   // Tile each band.
   for (auto &band : bands) {
+    if (!checkTilingLegality(band)) {
+      band.front().emitRemark("tiling code is illegal due to dependences");
+      continue;
+    }
+
     // Set up tile sizes; fill missing tile sizes at the end with default tile
     // size or tileSize if one was provided.
     SmallVector<unsigned, 6> tileSizes;

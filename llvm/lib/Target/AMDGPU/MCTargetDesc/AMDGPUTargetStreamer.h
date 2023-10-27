@@ -90,10 +90,16 @@ public:
   /// \returns True on success, false on failure.
   virtual bool EmitCodeEnd(const MCSubtargetInfo &STI) { return true; }
 
+  /// \returns True on success, false on failure.
+  virtual bool EmitKernargPreloadHeader(const MCSubtargetInfo &STI) {
+    return true;
+  }
+
   virtual void EmitAmdhsaKernelDescriptor(
       const MCSubtargetInfo &STI, StringRef KernelName,
       const amdhsa::kernel_descriptor_t &KernelDescriptor, uint64_t NextVGPR,
-      uint64_t NextSGPR, bool ReserveVCC, bool ReserveFlatScr){};
+      uint64_t NextSGPR, bool ReserveVCC, bool ReserveFlatScr,
+      unsigned CodeObjectVersion){};
 
   static StringRef getArchNameFromElfMach(unsigned ElfMach);
   static unsigned getElfMach(StringRef GPU);
@@ -104,12 +110,15 @@ public:
   std::optional<AMDGPU::IsaInfo::AMDGPUTargetID> &getTargetID() {
     return TargetID;
   }
-  void initializeTargetID(const MCSubtargetInfo &STI) {
+  void initializeTargetID(const MCSubtargetInfo &STI,
+                          unsigned CodeObjectVersion) {
     assert(TargetID == std::nullopt && "TargetID can only be initialized once");
     TargetID.emplace(STI);
+    getTargetID()->setCodeObjectVersion(CodeObjectVersion);
   }
-  void initializeTargetID(const MCSubtargetInfo &STI, StringRef FeatureString) {
-    initializeTargetID(STI);
+  void initializeTargetID(const MCSubtargetInfo &STI, StringRef FeatureString,
+                          unsigned CodeObjectVersion) {
+    initializeTargetID(STI, CodeObjectVersion);
 
     assert(getTargetID() != std::nullopt && "TargetID is None");
     getTargetID()->setTargetIDFromFeaturesString(FeatureString);
@@ -150,10 +159,14 @@ public:
   /// \returns True on success, false on failure.
   bool EmitCodeEnd(const MCSubtargetInfo &STI) override;
 
+  /// \returns True on success, false on failure.
+  bool EmitKernargPreloadHeader(const MCSubtargetInfo &STI) override;
+
   void EmitAmdhsaKernelDescriptor(
       const MCSubtargetInfo &STI, StringRef KernelName,
       const amdhsa::kernel_descriptor_t &KernelDescriptor, uint64_t NextVGPR,
-      uint64_t NextSGPR, bool ReserveVCC, bool ReserveFlatScr) override;
+      uint64_t NextSGPR, bool ReserveVCC, bool ReserveFlatScr,
+      unsigned CodeObjectVersion) override;
 };
 
 class AMDGPUTargetELFStreamer final : public AMDGPUTargetStreamer {
@@ -210,10 +223,14 @@ public:
   /// \returns True on success, false on failure.
   bool EmitCodeEnd(const MCSubtargetInfo &STI) override;
 
+  /// \returns True on success, false on failure.
+  bool EmitKernargPreloadHeader(const MCSubtargetInfo &STI) override;
+
   void EmitAmdhsaKernelDescriptor(
       const MCSubtargetInfo &STI, StringRef KernelName,
       const amdhsa::kernel_descriptor_t &KernelDescriptor, uint64_t NextVGPR,
-      uint64_t NextSGPR, bool ReserveVCC, bool ReserveFlatScr) override;
+      uint64_t NextSGPR, bool ReserveVCC, bool ReserveFlatScr,
+      unsigned CodeObjectVersion) override;
 };
 
 }

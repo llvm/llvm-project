@@ -36,7 +36,7 @@ struct B
 {
     typedef T value_type;
 
-    TEST_CONSTEXPR_CXX20 size_t max_size() const
+    TEST_CONSTEXPR_CXX20 std::size_t max_size() const
     {
         return 100;
     }

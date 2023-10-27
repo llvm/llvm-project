@@ -22,17 +22,16 @@ void SingleWorkItemBarrierCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       // Find function declarations...
       functionDecl(
-          allOf(
-              // That are OpenCL kernels...
-              hasAttr(attr::Kind::OpenCLKernel),
-              // And call a barrier function (either 1.x or 2.x version)...
-              forEachDescendant(callExpr(callee(functionDecl(hasAnyName(
-                                             "barrier", "work_group_barrier"))))
-                                    .bind("barrier")),
-              // But do not call an ID function.
-              unless(hasDescendant(callExpr(callee(functionDecl(
-                  hasAnyName("get_global_id", "get_local_id", "get_group_id",
-                             "get_local_linear_id"))))))))
+          // That are OpenCL kernels...
+          hasAttr(attr::Kind::OpenCLKernel),
+          // And call a barrier function (either 1.x or 2.x version)...
+          forEachDescendant(callExpr(callee(functionDecl(hasAnyName(
+                                         "barrier", "work_group_barrier"))))
+                                .bind("barrier")),
+          // But do not call an ID function.
+          unless(hasDescendant(callExpr(callee(functionDecl(
+              hasAnyName("get_global_id", "get_local_id", "get_group_id",
+                         "get_local_linear_id")))))))
           .bind("function"),
       this);
 }

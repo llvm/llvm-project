@@ -26,10 +26,6 @@ OPTIONS
   Build a static library only for the specified `<architecture>` and ignore all
   other architectures in the files.
 
-.. option:: -color
-
-  Use colors in output.
-
 .. option:: -D
 
   Use zero for timestamps and UIDs/GIDs. This is set by default.
@@ -44,11 +40,6 @@ OPTIONS
 .. option:: -h, -help
 
   Show help and usage for this command.
-
-.. option:: -help-list
-
-  Show help and usage for this command without grouping the options
-  into categories.
 
 .. option:: -l <x>
 

@@ -12,7 +12,7 @@ libc++ Zip Status (P2321R2)
 Overview
 ========
 
-This document contains the status of the C++2b zip implementation in libc++.
+This document contains the status of the C++23 zip implementation in libc++.
 It is used to track both the status of the sub-projects of the effort and who
 is assigned to these sub-projects. This avoids duplicating effort.
 

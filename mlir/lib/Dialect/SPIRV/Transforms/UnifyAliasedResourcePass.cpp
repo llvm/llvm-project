@@ -65,16 +65,16 @@ static AliasedResourceMap collectAliasedResources(spirv::ModuleOp moduleOp) {
 /// `!spirv.ptr<!spirv.struct<!spirv.rtarray<...>>>`. Returns null type
 /// otherwise.
 static Type getRuntimeArrayElementType(Type type) {
-  auto ptrType = type.dyn_cast<spirv::PointerType>();
+  auto ptrType = dyn_cast<spirv::PointerType>(type);
   if (!ptrType)
     return {};
 
-  auto structType = ptrType.getPointeeType().dyn_cast<spirv::StructType>();
+  auto structType = dyn_cast<spirv::StructType>(ptrType.getPointeeType());
   if (!structType || structType.getNumElements() != 1)
     return {};
 
   auto rtArrayType =
-      structType.getElementType(0).dyn_cast<spirv::RuntimeArrayType>();
+      dyn_cast<spirv::RuntimeArrayType>(structType.getElementType(0));
   if (!rtArrayType)
     return {};
 
@@ -97,7 +97,7 @@ deduceCanonicalResource(ArrayRef<spirv::SPIRVType> types) {
   for (const auto &indexedTypes : llvm::enumerate(types)) {
     spirv::SPIRVType type = indexedTypes.value();
     assert(type.isScalarOrVector());
-    if (auto vectorType = type.dyn_cast<VectorType>()) {
+    if (auto vectorType = dyn_cast<VectorType>(type)) {
       if (vectorType.getNumElements() % 2 != 0)
         return std::nullopt; // Odd-sized vector has special layout
                              // requirements.
@@ -220,6 +220,9 @@ ResourceAliasAnalysis::ResourceAliasAnalysis(Operation *root) {
 }
 
 bool ResourceAliasAnalysis::shouldUnify(Operation *op) const {
+  if (!op)
+    return false;
+
   if (auto varOp = dyn_cast<spirv::GlobalVariableOp>(op)) {
     auto canonicalOp = getCanonicalResource(varOp);
     return canonicalOp && varOp != canonicalOp;
@@ -274,7 +277,7 @@ void ResourceAliasAnalysis::recordIfUnifiable(
     if (!elementType)
       return; // Unexpected resource variable type.
 
-    auto type = elementType.cast<spirv::SPIRVType>();
+    auto type = cast<spirv::SPIRVType>(elementType);
     if (!type.isScalarOrVector())
       return; // Unexpected resource element type.
 
@@ -366,9 +369,8 @@ struct ConvertAccessChain : public ConvertAliasResource<spirv::AccessChainOp> {
     }
 
     Location loc = acOp.getLoc();
-    auto i32Type = rewriter.getI32Type();
 
-    if (srcElemType.isIntOrFloat() && dstElemType.isa<VectorType>()) {
+    if (srcElemType.isIntOrFloat() && isa<VectorType>(dstElemType)) {
       // The source indices are for a buffer with scalar element types. Rewrite
       // them into a buffer with vector element types. We need to scale the last
       // index for the vector as a whole, then add one level of index for inside
@@ -376,16 +378,19 @@ struct ConvertAccessChain : public ConvertAliasResource<spirv::AccessChainOp> {
       int srcNumBytes = *srcElemType.getSizeInBytes();
       int dstNumBytes = *dstElemType.getSizeInBytes();
       assert(dstNumBytes >= srcNumBytes && dstNumBytes % srcNumBytes == 0);
-      int ratio = dstNumBytes / srcNumBytes;
-      auto ratioValue = rewriter.create<spirv::ConstantOp>(
-          loc, i32Type, rewriter.getI32IntegerAttr(ratio));
 
       auto indices = llvm::to_vector<4>(acOp.getIndices());
       Value oldIndex = indices.back();
+      Type indexType = oldIndex.getType();
+
+      int ratio = dstNumBytes / srcNumBytes;
+      auto ratioValue = rewriter.create<spirv::ConstantOp>(
+          loc, indexType, rewriter.getIntegerAttr(indexType, ratio));
+
       indices.back() =
-          rewriter.create<spirv::SDivOp>(loc, i32Type, oldIndex, ratioValue);
+          rewriter.create<spirv::SDivOp>(loc, indexType, oldIndex, ratioValue);
       indices.push_back(
-          rewriter.create<spirv::SModOp>(loc, i32Type, oldIndex, ratioValue));
+          rewriter.create<spirv::SModOp>(loc, indexType, oldIndex, ratioValue));
 
       rewriter.replaceOpWithNewOp<spirv::AccessChainOp>(
           acOp, adaptor.getBasePtr(), indices);
@@ -393,21 +398,24 @@ struct ConvertAccessChain : public ConvertAliasResource<spirv::AccessChainOp> {
     }
 
     if ((srcElemType.isIntOrFloat() && dstElemType.isIntOrFloat()) ||
-        (srcElemType.isa<VectorType>() && dstElemType.isa<VectorType>())) {
+        (isa<VectorType>(srcElemType) && isa<VectorType>(dstElemType))) {
       // The source indices are for a buffer with larger bitwidth scalar/vector
       // element types. Rewrite them into a buffer with smaller bitwidth element
       // types. We only need to scale the last index.
       int srcNumBytes = *srcElemType.getSizeInBytes();
       int dstNumBytes = *dstElemType.getSizeInBytes();
       assert(srcNumBytes >= dstNumBytes && srcNumBytes % dstNumBytes == 0);
-      int ratio = srcNumBytes / dstNumBytes;
-      auto ratioValue = rewriter.create<spirv::ConstantOp>(
-          loc, i32Type, rewriter.getI32IntegerAttr(ratio));
 
       auto indices = llvm::to_vector<4>(acOp.getIndices());
       Value oldIndex = indices.back();
+      Type indexType = oldIndex.getType();
+
+      int ratio = srcNumBytes / dstNumBytes;
+      auto ratioValue = rewriter.create<spirv::ConstantOp>(
+          loc, indexType, rewriter.getIntegerAttr(indexType, ratio));
+
       indices.back() =
-          rewriter.create<spirv::IMulOp>(loc, i32Type, oldIndex, ratioValue);
+          rewriter.create<spirv::IMulOp>(loc, indexType, oldIndex, ratioValue);
 
       rewriter.replaceOpWithNewOp<spirv::AccessChainOp>(
           acOp, adaptor.getBasePtr(), indices);
@@ -425,10 +433,10 @@ struct ConvertLoad : public ConvertAliasResource<spirv::LoadOp> {
   LogicalResult
   matchAndRewrite(spirv::LoadOp loadOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    auto srcPtrType = loadOp.getPtr().getType().cast<spirv::PointerType>();
-    auto srcElemType = srcPtrType.getPointeeType().cast<spirv::SPIRVType>();
-    auto dstPtrType = adaptor.getPtr().getType().cast<spirv::PointerType>();
-    auto dstElemType = dstPtrType.getPointeeType().cast<spirv::SPIRVType>();
+    auto srcPtrType = cast<spirv::PointerType>(loadOp.getPtr().getType());
+    auto srcElemType = cast<spirv::SPIRVType>(srcPtrType.getPointeeType());
+    auto dstPtrType = cast<spirv::PointerType>(adaptor.getPtr().getType());
+    auto dstElemType = cast<spirv::SPIRVType>(dstPtrType.getPointeeType());
 
     Location loc = loadOp.getLoc();
     auto newLoadOp = rewriter.create<spirv::LoadOp>(loc, adaptor.getPtr());
@@ -446,7 +454,7 @@ struct ConvertLoad : public ConvertAliasResource<spirv::LoadOp> {
     }
 
     if ((srcElemType.isIntOrFloat() && dstElemType.isIntOrFloat()) ||
-        (srcElemType.isa<VectorType>() && dstElemType.isa<VectorType>())) {
+        (isa<VectorType>(srcElemType) && isa<VectorType>(dstElemType))) {
       // The source and destination have scalar types of different bitwidths, or
       // vector types of different component counts. For such cases, we load
       // multiple smaller bitwidth values and construct a larger bitwidth one.
@@ -485,12 +493,34 @@ struct ConvertLoad : public ConvertAliasResource<spirv::LoadOp> {
       // bitwidth element type. For spirv.bitcast, the lower-numbered components
       // of the vector map to lower-ordered bits of the larger bitwidth element
       // type.
+
       Type vectorType = srcElemType;
-      if (!srcElemType.isa<VectorType>())
+      if (!isa<VectorType>(srcElemType))
         vectorType = VectorType::get({ratio}, dstElemType);
+
+      // If both the source and destination are vector types, we need to make
+      // sure the scalar type is the same for composite construction later.
+      if (auto srcElemVecType = dyn_cast<VectorType>(srcElemType))
+        if (auto dstElemVecType = dyn_cast<VectorType>(dstElemType)) {
+          if (srcElemVecType.getElementType() !=
+              dstElemVecType.getElementType()) {
+            int64_t count =
+                dstNumBytes / (srcElemVecType.getElementTypeBitWidth() / 8);
+
+            // Make sure not to create 1-element vectors, which are illegal in
+            // SPIR-V.
+            Type castType = srcElemVecType.getElementType();
+            if (count > 1)
+              castType = VectorType::get({count}, castType);
+
+            for (Value &c : components)
+              c = rewriter.create<spirv::BitcastOp>(loc, castType, c);
+          }
+        }
       Value vectorValue = rewriter.create<spirv::CompositeConstructOp>(
           loc, vectorType, components);
-      if (!srcElemType.isa<VectorType>())
+
+      if (!isa<VectorType>(srcElemType))
         vectorValue =
             rewriter.create<spirv::BitcastOp>(loc, srcElemType, vectorValue);
       rewriter.replaceOp(loadOp, vectorValue);
@@ -509,9 +539,9 @@ struct ConvertStore : public ConvertAliasResource<spirv::StoreOp> {
   matchAndRewrite(spirv::StoreOp storeOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     auto srcElemType =
-        storeOp.getPtr().getType().cast<spirv::PointerType>().getPointeeType();
+        cast<spirv::PointerType>(storeOp.getPtr().getType()).getPointeeType();
     auto dstElemType =
-        adaptor.getPtr().getType().cast<spirv::PointerType>().getPointeeType();
+        cast<spirv::PointerType>(adaptor.getPtr().getType()).getPointeeType();
     if (!srcElemType.isIntOrFloat() || !dstElemType.isIntOrFloat())
       return rewriter.notifyMatchFailure(storeOp, "not scalar type");
     if (!areSameBitwidthScalarType(srcElemType, dstElemType))
@@ -544,16 +574,15 @@ public:
 private:
   spirv::GetTargetEnvFn getTargetEnvFn;
 };
-} // namespace
 
 void UnifyAliasedResourcePass::runOnOperation() {
   spirv::ModuleOp moduleOp = getOperation();
   MLIRContext *context = &getContext();
 
   if (getTargetEnvFn) {
-    // This pass is only needed for targeting WebGPU, Metal, or layering Vulkan
-    // on Metal via MoltenVK, where we need to translate SPIR-V into WGSL or
-    // MSL. The translation has limitations.
+    // This pass is only needed for targeting WebGPU, Metal, or layering
+    // Vulkan on Metal via MoltenVK, where we need to translate SPIR-V into
+    // WGSL or MSL. The translation has limitations.
     spirv::TargetEnvAttr targetEnv = getTargetEnvFn(moduleOp);
     spirv::ClientAPI clientAPI = targetEnv.getClientAPI();
     bool isVulkanOnAppleDevices =
@@ -592,6 +621,7 @@ void UnifyAliasedResourcePass::runOnOperation() {
       resources.front()->removeAttr("aliased");
   }
 }
+} // namespace
 
 std::unique_ptr<mlir::OperationPass<spirv::ModuleOp>>
 spirv::createUnifyAliasedResourcePass(spirv::GetTargetEnvFn getTargetEnv) {

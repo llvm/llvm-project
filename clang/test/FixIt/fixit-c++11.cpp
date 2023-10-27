@@ -59,8 +59,8 @@ void S2::f(int i) {
   (void)[] mutable {};
   (void)[]->int{};
 #if __cplusplus <= 202002L
-  // expected-warning@-3{{is a C++2b extension}}
-  // expected-warning@-3{{is a C++2b extension}}
+  // expected-warning@-3{{is a C++23 extension}}
+  // expected-warning@-3{{is a C++23 extension}}
 #endif
 
   delete []() { return new int; }(); // expected-error{{'[]' after delete interpreted as 'delete[]'}}

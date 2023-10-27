@@ -50,6 +50,11 @@ contains
   subroutine s(x)
     class(t) :: x
   end
+  subroutine test
+    type(t) x
+    !ERROR: Dummy argument 'x=' (#1) is not OPTIONAL and is not associated with an actual argument in this procedure reference
+    call x%p
+  end
 end
 
 module m4

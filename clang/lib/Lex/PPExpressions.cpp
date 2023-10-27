@@ -44,7 +44,7 @@ namespace {
 /// conditional and the source range covered by it.
 class PPValue {
   SourceRange Range;
-  IdentifierInfo *II;
+  IdentifierInfo *II = nullptr;
 
 public:
   llvm::APSInt Val;
@@ -323,21 +323,21 @@ static bool EvaluateValue(PPValue &Result, Token &PeekTok, DefinedTracker &DT,
         PP.Diag(PeekTok, diag::ext_c99_longlong);
     }
 
-    // 'z/uz' literals are a C++2b feature.
+    // 'z/uz' literals are a C++23 feature.
     if (Literal.isSizeT)
       PP.Diag(PeekTok, PP.getLangOpts().CPlusPlus
-                           ? PP.getLangOpts().CPlusPlus2b
+                           ? PP.getLangOpts().CPlusPlus23
                                  ? diag::warn_cxx20_compat_size_t_suffix
-                                 : diag::ext_cxx2b_size_t_suffix
-                           : diag::err_cxx2b_size_t_suffix);
+                                 : diag::ext_cxx23_size_t_suffix
+                           : diag::err_cxx23_size_t_suffix);
 
-    // 'wb/uwb' literals are a C2x feature. We explicitly do not support the
+    // 'wb/uwb' literals are a C23 feature. We explicitly do not support the
     // suffix in C++ as an extension because a library-based UDL that resolves
     // to a library type may be more appropriate there.
     if (Literal.isBitInt)
-      PP.Diag(PeekTok, PP.getLangOpts().C2x
-                           ? diag::warn_c2x_compat_bitint_suffix
-                           : diag::ext_c2x_bitint_suffix);
+      PP.Diag(PeekTok, PP.getLangOpts().C23
+                           ? diag::warn_c23_compat_bitint_suffix
+                           : diag::ext_c23_bitint_suffix);
 
     // Parse the integer literal into Result.
     if (Literal.GetIntegerValue(Result.Val)) {

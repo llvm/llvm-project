@@ -211,6 +211,9 @@ public:
   // validate consistency.
   unsigned ValidateASTInputFilesContent : 1;
 
+  // Whether the input files from C++20 Modules should be checked.
+  unsigned ForceCheckCXX20ModulesInputFiles : 1;
+
   /// Whether the module includes debug information (-gmodules).
   unsigned UseDebugInfo : 1;
 
@@ -233,7 +236,8 @@ public:
         UseStandardCXXIncludes(true), UseLibcxx(false), Verbose(false),
         ModulesValidateOncePerBuildSession(false),
         ModulesValidateSystemHeaders(false),
-        ValidateASTInputFilesContent(false), UseDebugInfo(false),
+        ValidateASTInputFilesContent(false),
+        ForceCheckCXX20ModulesInputFiles(false), UseDebugInfo(false),
         ModulesValidateDiagnosticOptions(true), ModulesHashContent(false),
         ModulesStrictContextHash(false) {}
 
@@ -263,8 +267,8 @@ inline llvm::hash_code hash_value(const HeaderSearchOptions::Entry &E) {
   return llvm::hash_combine(E.Path, E.Group, E.IsFramework, E.IgnoreSysRoot);
 }
 
-template <typename HasherT, llvm::support::endianness Endianness>
-inline void addHash(llvm::HashBuilderImpl<HasherT, Endianness> &HBuilder,
+template <typename HasherT, llvm::endianness Endianness>
+inline void addHash(llvm::HashBuilder<HasherT, Endianness> &HBuilder,
                     const HeaderSearchOptions::Entry &E) {
   HBuilder.add(E.Path, E.Group, E.IsFramework, E.IgnoreSysRoot);
 }
@@ -274,8 +278,8 @@ hash_value(const HeaderSearchOptions::SystemHeaderPrefix &SHP) {
   return llvm::hash_combine(SHP.Prefix, SHP.IsSystemHeader);
 }
 
-template <typename HasherT, llvm::support::endianness Endianness>
-inline void addHash(llvm::HashBuilderImpl<HasherT, Endianness> &HBuilder,
+template <typename HasherT, llvm::endianness Endianness>
+inline void addHash(llvm::HashBuilder<HasherT, Endianness> &HBuilder,
                     const HeaderSearchOptions::SystemHeaderPrefix &SHP) {
   HBuilder.add(SHP.Prefix, SHP.IsSystemHeader);
 }

@@ -118,7 +118,7 @@ static_assert(!HasPartitionCopyRange<R<int*>, int*, Uncopyable*>);
 static_assert(std::is_same_v<std::ranges::partition_copy_result<int, int, int>,
     std::ranges::in_out_out_result<int, int, int>>);
 
-template <class Iter, class Sent, class OutIter1, class OutIter2, size_t N1, size_t N2, size_t N3, class Pred>
+template <class Iter, class Sent, class OutIter1, class OutIter2, std::size_t N1, size_t N2, size_t N3, class Pred>
 constexpr void test_one(std::array<int, N1> input, Pred pred, std::array<int, N2> expected_true,
     std::array<int, N3> expected_false) {
   static_assert(N2 + N3 == N1);

@@ -1,4 +1,4 @@
-! RUN: bbc %s -o - | FileCheck %s
+! RUN: bbc --use-desc-for-alloc=false %s -o - | FileCheck %s
 
 !  Constant array ctor.
 ! CHECK-LABEL: func @_QPtest1(
@@ -10,11 +10,11 @@ subroutine test1(a, b)
   ! Array ctors for constant arrays should be outlined as constant globals.
 
   !  Look at inline constructor case
-  ! CHECK: %{{.*}} = fir.address_of(@_QQro.3xr4.6e55f044605a4991f15fd4505d83faf4) : !fir.ref<!fir.array<3xf32>>
+  ! CHECK: %{{.*}} = fir.address_of(@_QQro.3xr4.0) : !fir.ref<!fir.array<3xf32>>
   a = (/ 1.0, 2.0, 3.0 /)
 
   !  Look at PARAMETER case
-  ! CHECK: %{{.*}} = fir.address_of(@_QQro.4xi4.6a6af0eea868c84da59807d34f7e1a86) : !fir.ref<!fir.array<4xi32>>
+  ! CHECK: %{{.*}} = fir.address_of(@_QQro.4xi4.1) : !fir.ref<!fir.array<4xi32>>
   b = constant_array
 end subroutine test1
 
@@ -128,7 +128,7 @@ subroutine test5(a, array2)
   !  Array ctor with runtime element values and constant extents.
   !  Concatenation of array values of constant extent.
   ! CHECK: %[[res:.*]] = fir.allocmem !fir.array<4xf32>
-  ! CHECK: fir.address_of(@_QQro.2xr4.057a7f5ab69cb695657046b18832c330) : !fir.ref<!fir.array<2xf32>>
+  ! CHECK: fir.address_of(@_QQro.2xr4.2) : !fir.ref<!fir.array<2xf32>>
   ! CHECK: %[[tmp1:.*]] = fir.allocmem !fir.array<2xf32>
   ! CHECK: fir.call @llvm.memcpy.p0.p0.i64(%{{.*}}, %{{.*}}, %{{.*}}, %false{{.*}}) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
   ! CHECK: %[[tmp2:.*]] = fir.allocmem !fir.array<2xf32>
@@ -172,6 +172,6 @@ subroutine test7(a, n)
   a = (/ (CHAR(i), i=1,n) /)
 end subroutine test7
 
-! CHECK: fir.global internal @_QQro.3xr4.{{.*}}(dense<[1.000000e+00, 2.000000e+00, 3.000000e+00]> : tensor<3xf32>) constant : !fir.array<3xf32>
+! CHECK: fir.global internal @_QQro.3xr4.0(dense<[1.000000e+00, 2.000000e+00, 3.000000e+00]> : tensor<3xf32>) constant : !fir.array<3xf32>
 
-! CHECK: fir.global internal @_QQro.4xi4.{{.*}}(dense<[6, 7, 42, 9]> : tensor<4xi32>) constant : !fir.array<4xi32>
+! CHECK: fir.global internal @_QQro.4xi4.1(dense<[6, 7, 42, 9]> : tensor<4xi32>) constant : !fir.array<4xi32>

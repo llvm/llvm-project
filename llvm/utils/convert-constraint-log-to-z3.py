@@ -34,21 +34,23 @@ import re
 
 def main():
     parser = argparse.ArgumentParser(
-        description='Convert constraint log to script to verify using Z3.')
-    parser.add_argument('log_file', metavar='log', type=str,
-                        help='constraint-system log file')
+        description="Convert constraint log to script to verify using Z3."
+    )
+    parser.add_argument(
+        "log_file", metavar="log", type=str, help="constraint-system log file"
+    )
     args = parser.parse_args()
 
-    content = ''
-    with open(args.log_file, 'rt') as f:
+    content = ""
+    with open(args.log_file, "rt") as f:
         content = f.read()
 
-    groups = content.split('---')
-    var_re = re.compile('x\d+')
+    groups = content.split("---")
+    var_re = re.compile("x\d+")
 
-    print('from z3 import *')
+    print("from z3 import *")
     for group in groups:
-        constraints = [g.strip() for g in group.split('\n') if g.strip() != '']
+        constraints = [g.strip() for g in group.split("\n") if g.strip() != ""]
         variables = set()
         for c in constraints[:-1]:
             for m in var_re.finditer(c):
@@ -57,13 +59,13 @@ def main():
             continue
         for v in variables:
             print('{} = Int("{}")'.format(v, v))
-        print('s = Solver()')
+        print("s = Solver()")
         for c in constraints[:-1]:
-            print('s.add({})'.format(c))
+            print("s.add({})".format(c))
         expected = constraints[-1].strip()
-        print('assert(s.check() == {})'.format(expected))
+        print("assert(s.check() == {})".format(expected))
     print('print("all checks passed")')
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

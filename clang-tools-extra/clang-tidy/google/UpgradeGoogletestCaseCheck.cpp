@@ -45,7 +45,7 @@ class UpgradeGoogletestCasePPCallback : public PPCallbacks {
 public:
   UpgradeGoogletestCasePPCallback(UpgradeGoogletestCaseCheck *Check,
                                   Preprocessor *PP)
-      : ReplacementFound(false), Check(Check), PP(PP) {}
+      : Check(Check), PP(PP) {}
 
   void MacroExpands(const Token &MacroNameTok, const MacroDefinition &MD,
                     SourceRange Range, const MacroArgs *) override {
@@ -112,7 +112,7 @@ private:
           CharSourceRange::getTokenRange(Loc, Loc), *Replacement);
   }
 
-  bool ReplacementFound;
+  bool ReplacementFound = false;
   UpgradeGoogletestCaseCheck *Check;
   Preprocessor *PP;
 };
@@ -267,8 +267,8 @@ void UpgradeGoogletestCaseCheck::check(const MatchFinder::MatchResult &Result) {
   if (const auto *Method = Result.Nodes.getNodeAs<CXXMethodDecl>("method")) {
     ReplacementText = getNewMethodName(Method->getName());
 
-    bool IsInInstantiation;
-    bool IsInTemplate;
+    bool IsInInstantiation = false;
+    bool IsInTemplate = false;
     bool AddFix = true;
     if (const auto *Call = Result.Nodes.getNodeAs<CXXMemberCallExpr>("call")) {
       const auto *Callee = llvm::cast<MemberExpr>(Call->getCallee());

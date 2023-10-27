@@ -13,14 +13,16 @@
 //     -> common_type_t<ptrdiff_t, make_signed_t<decltype(c.size())>>;                    // C++20
 // template <class T, ptrdiff_t> constexpr ptrdiff_t ssize(const T (&array)[N]) noexcept; // C++20
 
-#include <iterator>
-#include <cassert>
-#include <vector>
 #include <array>
-#include <list>
+#include <cassert>
+#include <cstdint>
 #include <initializer_list>
-#include <string_view>
+#include <iterator>
 #include <limits>
+#include <list>
+#include <string_view>
+#include <type_traits>
+#include <vector>
 
 #include "test_macros.h"
 
@@ -28,7 +30,7 @@
 TEST_GCC_DIAGNOSTIC_IGNORED("-Wtype-limits")
 
 struct short_container {
-    uint16_t size() const { return 60000; } // not noexcept
+    std::uint16_t size() const { return 60000; } // not noexcept
 };
 
 template<typename C>
@@ -63,7 +65,7 @@ void test_container(std::initializer_list<T>& c)
     assert ( std::ssize(c)   == static_cast<decltype(std::ssize(c))>(c.size()));
 }
 
-template<typename T, size_t Sz>
+template<typename T, std::size_t Sz>
 void test_const_array(const T (&array)[Sz])
 {
     ASSERT_NOEXCEPT(std::ssize(array));
@@ -98,7 +100,7 @@ int main(int, char**)
     test_const_container ( sv );
 
     static constexpr int arrA [] { 1, 2, 3 };
-    ASSERT_SAME_TYPE(ptrdiff_t, decltype(std::ssize(arrA)));
+    ASSERT_SAME_TYPE(std::ptrdiff_t, decltype(std::ssize(arrA)));
     static_assert( std::is_signed_v<decltype(std::ssize(arrA))>, "");
     test_const_array ( arrA );
 

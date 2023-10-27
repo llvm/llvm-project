@@ -3,8 +3,6 @@
 
 // This test case tests the default behavior.
 
-// rdar://7933061
-
 @interface NSObject @end
 
 @interface NSArray : NSObject @end
@@ -53,7 +51,7 @@
 - (void) test2:(A*) object {}
 @end
 
-// rdar://problem/8597621 wants id -> A* to be an exception
+// wants id -> A* to be an exception
 @interface Test2 {}
 - (void) test1:(id) object; // broken-note {{previous definition is here}} 
 - (void) test2:(A*) object;
@@ -79,6 +77,6 @@
 - (A*) test2;
 @end
 @implementation Test4
-- (A*) test1 { return 0; } // id -> A* is rdar://problem/8596987
+- (A*) test1 { return 0; }
 - (id) test2 { return 0; }
 @end

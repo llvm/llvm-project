@@ -7,12 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "MipsABIInfo.h"
-#include "MipsRegisterInfo.h"
+#include "Mips.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/CodeGen/MachineMemOperand.h"
+#include "llvm/CodeGen/LowLevelType.h"
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/LowLevelTypeImpl.h"
 
 using namespace llvm;
 

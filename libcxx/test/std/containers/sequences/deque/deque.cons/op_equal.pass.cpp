@@ -10,6 +10,7 @@
 
 // deque& operator=(const deque& c);
 
+#include "asan_testing.h"
 #include <deque>
 #include <cassert>
 #include "test_macros.h"
@@ -23,6 +24,8 @@ test(const C& x)
     C c;
     c = x;
     assert(c == x);
+    LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(c));
+    LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(x));
 }
 
 int main(int, char**)
@@ -38,6 +41,8 @@ int main(int, char**)
         l2 = l;
         assert(l2 == l);
         assert(l2.get_allocator() == test_allocator<int>(3));
+        LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(l));
+        LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(l2));
     }
     {
         std::deque<int, other_allocator<int> > l(3, 2, other_allocator<int>(5));
@@ -45,6 +50,8 @@ int main(int, char**)
         l2 = l;
         assert(l2 == l);
         assert(l2.get_allocator() == other_allocator<int>(5));
+        LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(l));
+        LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(l2));
     }
 #if TEST_STD_VER >= 11
     {
@@ -58,6 +65,8 @@ int main(int, char**)
         l2 = l;
         assert(l2 == l);
         assert(l2.get_allocator() == min_allocator<int>());
+        LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(l));
+        LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(l2));
     }
 #endif
 

@@ -29,6 +29,7 @@ unittest("ScudoUnitTest") {
     "size_class_map_test.cpp",
     "stats_test.cpp",
     "strings_test.cpp",
+    "timing_test.cpp",
     "tsd_test.cpp",
     "vector_test.cpp",
   ]
@@ -64,5 +65,16 @@ unittest("ScudoCxxUnitTest") {
   if (is_clang) {
     cflags += [ "-Wno-mismatched-new-delete" ]
   }
+  has_custom_main = true
+}
+
+unittest("ScudoHooksUnitTest") {
+  configs += [ "//llvm/utils/gn/build:crt_code" ]
+  cflags = test_cflags
+  deps = [
+    "//compiler-rt/lib/scudo/standalone:c_wrapper_sources",
+    "//compiler-rt/lib/scudo/standalone:sources",
+  ]
+  sources = [ "scudo_unit_test_main.cpp" ]
   has_custom_main = true
 }

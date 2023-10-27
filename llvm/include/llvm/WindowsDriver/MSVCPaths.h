@@ -11,7 +11,7 @@
 
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Triple.h"
+#include "llvm/TargetParser/Triple.h"
 #include <optional>
 #include <string>
 
@@ -90,11 +90,15 @@ bool findVCToolChainViaEnvironment(vfs::FileSystem &VFS, std::string &Path,
                                    ToolsetLayout &VSLayout);
 
 // Query the Setup Config server for installs, then pick the newest version
-// and find its default VC toolchain.
+// and find its default VC toolchain. If `VCToolsVersion` is specified, that
+// version is preferred over the latest version.
+//
 // This is the preferred way to discover new Visual Studios, as they're no
 // longer listed in the registry.
-bool findVCToolChainViaSetupConfig(vfs::FileSystem &VFS, std::string &Path,
-                                   ToolsetLayout &VSLayout);
+bool
+findVCToolChainViaSetupConfig(vfs::FileSystem &VFS,
+                              std::optional<llvm::StringRef> VCToolsVersion,
+                              std::string &Path, ToolsetLayout &VSLayout);
 
 // Look in the registry for Visual Studio installs, and use that to get
 // a toolchain path. VS2017 and newer don't get added to the registry.

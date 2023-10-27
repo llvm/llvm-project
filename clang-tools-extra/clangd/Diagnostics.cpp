@@ -15,24 +15,35 @@
 #include "clang/Basic/AllDiagnostics.h" // IWYU pragma: keep
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticIDs.h"
+#include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/Basic/TokenKinds.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Lex/Token.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
-#include <cstddef>
 #include <optional>
+#include <set>
+#include <string>
+#include <tuple>
+#include <utility>
 #include <vector>
 
 namespace clang {
@@ -96,28 +107,39 @@ bool locationInRange(SourceLocation L, CharSourceRange R,
 
 // Clang diags have a location (shown as ^) and 0 or more ranges (~~~~).
 // LSP needs a single range.
-Range diagnosticRange(const clang::Diagnostic &D, const LangOptions &L) {
+std::optional<Range> diagnosticRange(const clang::Diagnostic &D,
+                                     const LangOptions &L) {
   auto &M = D.getSourceManager();
+  auto PatchedRange = [&M](CharSourceRange &R) {
+    R.setBegin(translatePreamblePatchLocation(R.getBegin(), M));
+    R.setEnd(translatePreamblePatchLocation(R.getEnd(), M));
+    return R;
+  };
   auto Loc = M.getFileLoc(D.getLocation());
   for (const auto &CR : D.getRanges()) {
     auto R = Lexer::makeFileCharRange(CR, M, L);
     if (locationInRange(Loc, R, M))
-      return halfOpenToRange(M, R);
+      return halfOpenToRange(M, PatchedRange(R));
   }
   // The range may be given as a fixit hint instead.
   for (const auto &F : D.getFixItHints()) {
     auto R = Lexer::makeFileCharRange(F.RemoveRange, M, L);
     if (locationInRange(Loc, R, M))
-      return halfOpenToRange(M, R);
+      return halfOpenToRange(M, PatchedRange(R));
   }
+  // Source locations from stale preambles might become OOB.
+  // FIXME: These diagnostics might point to wrong locations even when they're
+  // not OOB.
+  auto [FID, Offset] = M.getDecomposedLoc(Loc);
+  if (Offset > M.getBufferData(FID).size())
+    return std::nullopt;
   // If the token at the location is not a comment, we use the token.
   // If we can't get the token at the location, fall back to using the location
   auto R = CharSourceRange::getCharRange(Loc);
   Token Tok;
-  if (!Lexer::getRawToken(Loc, Tok, M, L, true) && Tok.isNot(tok::comment)) {
+  if (!Lexer::getRawToken(Loc, Tok, M, L, true) && Tok.isNot(tok::comment))
     R = CharSourceRange::getTokenRange(Tok.getLocation(), Tok.getEndLoc());
-  }
-  return halfOpenToRange(M, R);
+  return halfOpenToRange(M, PatchedRange(R));
 }
 
 // Try to find a location in the main-file to report the diagnostic D.
@@ -211,13 +233,6 @@ bool tryMoveToMainFile(Diag &D, FullSourceLoc DiagLoc) {
   // Update message to mention original file.
   D.Message = llvm::formatv("{0}: {1}", Prefix, D.Message);
   return true;
-}
-
-bool isInsideMainFile(const clang::Diagnostic &D) {
-  if (!D.hasSourceManager())
-    return false;
-
-  return clangd::isInsideMainFile(D.getLocation(), D.getSourceManager());
 }
 
 bool isNote(DiagnosticsEngine::Level L) {
@@ -425,15 +440,6 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Diag &D) {
   return OS;
 }
 
-CodeAction toCodeAction(const Fix &F, const URIForFile &File) {
-  CodeAction Action;
-  Action.title = F.Message;
-  Action.kind = std::string(CodeAction::QUICKFIX_KIND);
-  Action.edit.emplace();
-  Action.edit->changes[File.uri()] = {F.Edits.begin(), F.Edits.end()};
-  return Action;
-}
-
 Diag toDiag(const llvm::SMDiagnostic &D, Diag::DiagSource Source) {
   Diag Result;
   Result.Message = D.getMessage().str();
@@ -465,6 +471,14 @@ void toLSPDiags(
     llvm::function_ref<void(clangd::Diagnostic, llvm::ArrayRef<Fix>)> OutFn) {
   clangd::Diagnostic Main;
   Main.severity = getSeverity(D.Severity);
+  // We downgrade severity for certain noisy warnings, like deprecated
+  // declartions. These already have visible decorations inside the editor and
+  // most users find the extra clutter in the UI (gutter, minimap, diagnostics
+  // views) overwhelming.
+  if (D.Severity == DiagnosticsEngine::Warning) {
+    if (llvm::is_contained(D.Tags, DiagnosticTag::Deprecated))
+      Main.severity = getSeverity(DiagnosticsEngine::Remark);
+  }
 
   // Main diagnostic should always refer to a range inside main file. If a
   // diagnostic made it so for, it means either itself or one of its notes is
@@ -501,13 +515,6 @@ void toLSPDiags(
   case Diag::Unknown:
     break;
   }
-  if (Opts.EmbedFixesInDiagnostics) {
-    Main.codeActions.emplace();
-    for (const auto &Fix : D.Fixes)
-      Main.codeActions->push_back(toCodeAction(Fix, File));
-    if (Main.codeActions->size() == 1)
-      Main.codeActions->front().isPreferred = true;
-  }
   if (Opts.SendDiagnosticCategory && !D.Category.empty())
     Main.category = D.Category;
 
@@ -528,6 +535,9 @@ void toLSPDiags(
     }
   }
   Main.tags = D.Tags;
+  // FIXME: Get rid of the copies here by taking in a mutable clangd::Diag.
+  for (auto &Entry : D.OpaqueData)
+    Main.data.insert({Entry.first, Entry.second});
   OutFn(std::move(Main), D.Fixes);
 
   // If we didn't emit the notes as relatedLocations, emit separate diagnostics
@@ -542,10 +552,6 @@ void toLSPDiags(
       Res.message = noteMessage(D, Note, Opts);
       OutFn(std::move(Res), llvm::ArrayRef<Fix>());
     }
-
-  // FIXME: Get rid of the copies here by taking in a mutable clangd::Diag.
-  for (auto &Entry : D.OpaqueData)
-    Main.data.insert({Entry.first, Entry.second});
 }
 
 int getSeverity(DiagnosticsEngine::Level L) {
@@ -713,11 +719,18 @@ void StoreDiags::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
   auto FillDiagBase = [&](DiagBase &D) {
     fillNonLocationData(DiagLevel, Info, D);
 
-    D.InsideMainFile = isInsideMainFile(Info);
-    D.Range = diagnosticRange(Info, *LangOpts);
-    D.File = std::string(SM.getFilename(Info.getLocation()));
-    D.AbsFile = getCanonicalPath(
-        SM.getFileEntryForID(SM.getFileID(Info.getLocation())), SM);
+    SourceLocation PatchLoc =
+        translatePreamblePatchLocation(Info.getLocation(), SM);
+    D.InsideMainFile = isInsideMainFile(PatchLoc, SM);
+    if (auto DRange = diagnosticRange(Info, *LangOpts))
+      D.Range = *DRange;
+    else
+      D.Severity = DiagnosticsEngine::Ignored;
+    auto FID = SM.getFileID(Info.getLocation());
+    if (const auto FE = SM.getFileEntryRefForID(FID)) {
+      D.File = FE->getName().str();
+      D.AbsFile = getCanonicalPath(*FE, SM.getFileManager());
+    }
     D.ID = Info.getID();
     return D;
   };
@@ -785,7 +798,7 @@ void StoreDiags::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
     if (Message.empty()) // either !SyntheticMessage, or we failed to make one.
       Info.FormatDiagnostic(Message);
     LastDiag->Fixes.push_back(
-        Fix{std::string(Message.str()), std::move(Edits)});
+        Fix{std::string(Message.str()), std::move(Edits), {}});
     return true;
   };
 
@@ -933,7 +946,7 @@ std::optional<std::string> getDiagnosticDocURI(Diag::DiagSource Source,
         .str();
   }
   case Diag::Clangd:
-    if (Name == "unused-includes")
+    if (Name == "unused-includes" || Name == "missing-includes")
       return {"https://clangd.llvm.org/guides/include-cleaner"};
     break;
   case Diag::ClangdConfig:

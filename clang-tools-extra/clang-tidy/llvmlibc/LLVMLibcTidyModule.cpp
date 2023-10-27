@@ -11,6 +11,7 @@
 #include "../ClangTidyModuleRegistry.h"
 #include "CalleeNamespaceCheck.h"
 #include "ImplementationInNamespaceCheck.h"
+#include "InlineFunctionDeclCheck.h"
 #include "RestrictSystemLibcHeadersCheck.h"
 
 namespace clang::tidy {
@@ -23,6 +24,8 @@ public:
         "llvmlibc-callee-namespace");
     CheckFactories.registerCheck<ImplementationInNamespaceCheck>(
         "llvmlibc-implementation-in-namespace");
+    CheckFactories.registerCheck<InlineFunctionDeclCheck>(
+        "llvmlibc-inline-function-decl");
     CheckFactories.registerCheck<RestrictSystemLibcHeadersCheck>(
         "llvmlibc-restrict-system-libc-headers");
   }

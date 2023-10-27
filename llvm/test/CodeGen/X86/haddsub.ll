@@ -55,7 +55,7 @@ define <2 x double> @haddpd3(<2 x double> %x) {
 ;
 ; AVX-SLOW-LABEL: haddpd3:
 ; AVX-SLOW:       # %bb.0:
-; AVX-SLOW-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX-SLOW-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
 ; AVX-SLOW-NEXT:    vaddpd %xmm1, %xmm0, %xmm0
 ; AVX-SLOW-NEXT:    retq
 ;
@@ -224,7 +224,7 @@ define <2 x double> @hsubpd2(<2 x double> %x) {
 ;
 ; AVX-SLOW-LABEL: hsubpd2:
 ; AVX-SLOW:       # %bb.0:
-; AVX-SLOW-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX-SLOW-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
 ; AVX-SLOW-NEXT:    vsubpd %xmm1, %xmm0, %xmm0
 ; AVX-SLOW-NEXT:    retq
 ;
@@ -501,8 +501,8 @@ define float @extract_extract23_v4f32_fadd_f32(<4 x float> %x) {
 ;
 ; AVX-SLOW-LABEL: extract_extract23_v4f32_fadd_f32:
 ; AVX-SLOW:       # %bb.0:
-; AVX-SLOW-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
-; AVX-SLOW-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,3,3,3]
+; AVX-SLOW-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX-SLOW-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
 ; AVX-SLOW-NEXT:    vaddss %xmm0, %xmm1, %xmm0
 ; AVX-SLOW-NEXT:    retq
 ;
@@ -562,8 +562,8 @@ define float @extract_extract23_v4f32_fadd_f32_commute(<4 x float> %x) {
 ;
 ; AVX-SLOW-LABEL: extract_extract23_v4f32_fadd_f32_commute:
 ; AVX-SLOW:       # %bb.0:
-; AVX-SLOW-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
-; AVX-SLOW-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,3,3,3]
+; AVX-SLOW-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX-SLOW-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
 ; AVX-SLOW-NEXT:    vaddss %xmm1, %xmm0, %xmm0
 ; AVX-SLOW-NEXT:    retq
 ;
@@ -593,7 +593,7 @@ define double @extract_extract01_v2f64_fadd_f64(<2 x double> %x) {
 ;
 ; AVX-SLOW-LABEL: extract_extract01_v2f64_fadd_f64:
 ; AVX-SLOW:       # %bb.0:
-; AVX-SLOW-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX-SLOW-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
 ; AVX-SLOW-NEXT:    vaddsd %xmm1, %xmm0, %xmm0
 ; AVX-SLOW-NEXT:    retq
 ;
@@ -622,7 +622,7 @@ define double @extract_extract01_v2f64_fadd_f64_commute(<2 x double> %x) {
 ;
 ; AVX-SLOW-LABEL: extract_extract01_v2f64_fadd_f64_commute:
 ; AVX-SLOW:       # %bb.0:
-; AVX-SLOW-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX-SLOW-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
 ; AVX-SLOW-NEXT:    vaddsd %xmm0, %xmm1, %xmm0
 ; AVX-SLOW-NEXT:    retq
 ;
@@ -682,8 +682,8 @@ define float @extract_extract23_v4f32_fsub_f32(<4 x float> %x) {
 ;
 ; AVX-SLOW-LABEL: extract_extract23_v4f32_fsub_f32:
 ; AVX-SLOW:       # %bb.0:
-; AVX-SLOW-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
-; AVX-SLOW-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,3,3,3]
+; AVX-SLOW-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX-SLOW-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
 ; AVX-SLOW-NEXT:    vsubss %xmm0, %xmm1, %xmm0
 ; AVX-SLOW-NEXT:    retq
 ;
@@ -728,8 +728,8 @@ define float @extract_extract23_v4f32_fsub_f32_commute(<4 x float> %x) {
 ;
 ; AVX-LABEL: extract_extract23_v4f32_fsub_f32_commute:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
-; AVX-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,3,3,3]
+; AVX-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
 ; AVX-NEXT:    vsubss %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %x0 = extractelement <4 x float> %x, i32 2
@@ -753,7 +753,7 @@ define double @extract_extract01_v2f64_fsub_f64(<2 x double> %x) {
 ;
 ; AVX-SLOW-LABEL: extract_extract01_v2f64_fsub_f64:
 ; AVX-SLOW:       # %bb.0:
-; AVX-SLOW-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX-SLOW-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
 ; AVX-SLOW-NEXT:    vsubsd %xmm1, %xmm0, %xmm0
 ; AVX-SLOW-NEXT:    retq
 ;
@@ -778,7 +778,7 @@ define double @extract_extract01_v2f64_fsub_f64_commute(<2 x double> %x) {
 ;
 ; AVX-LABEL: extract_extract01_v2f64_fsub_f64_commute:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
 ; AVX-NEXT:    vsubsd %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    retq
   %x0 = extractelement <2 x double> %x, i32 0
@@ -836,8 +836,8 @@ define float @extract_extract23_v8f32_fadd_f32(<8 x float> %x) {
 ;
 ; AVX-SLOW-LABEL: extract_extract23_v8f32_fadd_f32:
 ; AVX-SLOW:       # %bb.0:
-; AVX-SLOW-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
-; AVX-SLOW-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,3,3,3]
+; AVX-SLOW-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX-SLOW-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
 ; AVX-SLOW-NEXT:    vaddss %xmm0, %xmm1, %xmm0
 ; AVX-SLOW-NEXT:    vzeroupper
 ; AVX-SLOW-NEXT:    retq
@@ -872,8 +872,8 @@ define float @extract_extract67_v8f32_fadd_f32(<8 x float> %x) {
 ; AVX-SLOW-LABEL: extract_extract67_v8f32_fadd_f32:
 ; AVX-SLOW:       # %bb.0:
 ; AVX-SLOW-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; AVX-SLOW-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
-; AVX-SLOW-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,3,3,3]
+; AVX-SLOW-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX-SLOW-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
 ; AVX-SLOW-NEXT:    vaddss %xmm0, %xmm1, %xmm0
 ; AVX-SLOW-NEXT:    vzeroupper
 ; AVX-SLOW-NEXT:    retq
@@ -938,8 +938,8 @@ define float @extract_extract23_v8f32_fadd_f32_commute(<8 x float> %x) {
 ;
 ; AVX-SLOW-LABEL: extract_extract23_v8f32_fadd_f32_commute:
 ; AVX-SLOW:       # %bb.0:
-; AVX-SLOW-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
-; AVX-SLOW-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,3,3,3]
+; AVX-SLOW-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX-SLOW-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
 ; AVX-SLOW-NEXT:    vaddss %xmm1, %xmm0, %xmm0
 ; AVX-SLOW-NEXT:    vzeroupper
 ; AVX-SLOW-NEXT:    retq
@@ -974,8 +974,8 @@ define float @extract_extract67_v8f32_fadd_f32_commute(<8 x float> %x) {
 ; AVX-SLOW-LABEL: extract_extract67_v8f32_fadd_f32_commute:
 ; AVX-SLOW:       # %bb.0:
 ; AVX-SLOW-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; AVX-SLOW-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
-; AVX-SLOW-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,3,3,3]
+; AVX-SLOW-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX-SLOW-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
 ; AVX-SLOW-NEXT:    vaddss %xmm1, %xmm0, %xmm0
 ; AVX-SLOW-NEXT:    vzeroupper
 ; AVX-SLOW-NEXT:    retq
@@ -1008,7 +1008,7 @@ define double @extract_extract01_v4f64_fadd_f64(<4 x double> %x) {
 ;
 ; AVX-SLOW-LABEL: extract_extract01_v4f64_fadd_f64:
 ; AVX-SLOW:       # %bb.0:
-; AVX-SLOW-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX-SLOW-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
 ; AVX-SLOW-NEXT:    vaddsd %xmm1, %xmm0, %xmm0
 ; AVX-SLOW-NEXT:    vzeroupper
 ; AVX-SLOW-NEXT:    retq
@@ -1041,7 +1041,7 @@ define double @extract_extract23_v4f64_fadd_f64(<4 x double> %x) {
 ; AVX-SLOW-LABEL: extract_extract23_v4f64_fadd_f64:
 ; AVX-SLOW:       # %bb.0:
 ; AVX-SLOW-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; AVX-SLOW-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX-SLOW-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
 ; AVX-SLOW-NEXT:    vaddsd %xmm1, %xmm0, %xmm0
 ; AVX-SLOW-NEXT:    vzeroupper
 ; AVX-SLOW-NEXT:    retq
@@ -1073,7 +1073,7 @@ define double @extract_extract01_v4f64_fadd_f64_commute(<4 x double> %x) {
 ;
 ; AVX-SLOW-LABEL: extract_extract01_v4f64_fadd_f64_commute:
 ; AVX-SLOW:       # %bb.0:
-; AVX-SLOW-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX-SLOW-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
 ; AVX-SLOW-NEXT:    vaddsd %xmm0, %xmm1, %xmm0
 ; AVX-SLOW-NEXT:    vzeroupper
 ; AVX-SLOW-NEXT:    retq
@@ -1106,7 +1106,7 @@ define double @extract_extract23_v4f64_fadd_f64_commute(<4 x double> %x) {
 ; AVX-SLOW-LABEL: extract_extract23_v4f64_fadd_f64_commute:
 ; AVX-SLOW:       # %bb.0:
 ; AVX-SLOW-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; AVX-SLOW-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX-SLOW-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
 ; AVX-SLOW-NEXT:    vaddsd %xmm0, %xmm1, %xmm0
 ; AVX-SLOW-NEXT:    vzeroupper
 ; AVX-SLOW-NEXT:    retq
@@ -1171,8 +1171,8 @@ define float @extract_extract23_v8f32_fsub_f32(<8 x float> %x) {
 ;
 ; AVX-SLOW-LABEL: extract_extract23_v8f32_fsub_f32:
 ; AVX-SLOW:       # %bb.0:
-; AVX-SLOW-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
-; AVX-SLOW-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,3,3,3]
+; AVX-SLOW-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX-SLOW-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[3,3,3,3]
 ; AVX-SLOW-NEXT:    vsubss %xmm0, %xmm1, %xmm0
 ; AVX-SLOW-NEXT:    vzeroupper
 ; AVX-SLOW-NEXT:    retq
@@ -1260,7 +1260,7 @@ define double @extract_extract01_v4f64_fsub_f64(<4 x double> %x) {
 ;
 ; AVX-SLOW-LABEL: extract_extract01_v4f64_fsub_f64:
 ; AVX-SLOW:       # %bb.0:
-; AVX-SLOW-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX-SLOW-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
 ; AVX-SLOW-NEXT:    vsubsd %xmm1, %xmm0, %xmm0
 ; AVX-SLOW-NEXT:    vzeroupper
 ; AVX-SLOW-NEXT:    retq
@@ -1289,7 +1289,7 @@ define double @extract_extract01_v4f64_fsub_f64_commute(<4 x double> %x) {
 ;
 ; AVX-LABEL: extract_extract01_v4f64_fsub_f64_commute:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
 ; AVX-NEXT:    vsubsd %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
@@ -1376,7 +1376,7 @@ define double @extract_extract01_v8f64_fadd_f64(<8 x double> %x) {
 ;
 ; AVX-SLOW-LABEL: extract_extract01_v8f64_fadd_f64:
 ; AVX-SLOW:       # %bb.0:
-; AVX-SLOW-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX-SLOW-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
 ; AVX-SLOW-NEXT:    vaddsd %xmm1, %xmm0, %xmm0
 ; AVX-SLOW-NEXT:    vzeroupper
 ; AVX-SLOW-NEXT:    retq
@@ -1407,7 +1407,7 @@ define double @extract_extract01_v8f64_fadd_f64_commute(<8 x double> %x) {
 ;
 ; AVX-SLOW-LABEL: extract_extract01_v8f64_fadd_f64_commute:
 ; AVX-SLOW:       # %bb.0:
-; AVX-SLOW-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX-SLOW-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
 ; AVX-SLOW-NEXT:    vaddsd %xmm0, %xmm1, %xmm0
 ; AVX-SLOW-NEXT:    vzeroupper
 ; AVX-SLOW-NEXT:    retq
@@ -1488,7 +1488,7 @@ define double @extract_extract01_v8f64_fsub_f64(<8 x double> %x) {
 ;
 ; AVX-SLOW-LABEL: extract_extract01_v8f64_fsub_f64:
 ; AVX-SLOW:       # %bb.0:
-; AVX-SLOW-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX-SLOW-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
 ; AVX-SLOW-NEXT:    vsubsd %xmm1, %xmm0, %xmm0
 ; AVX-SLOW-NEXT:    vzeroupper
 ; AVX-SLOW-NEXT:    retq
@@ -1515,7 +1515,7 @@ define double @extract_extract01_v8f64_fsub_f64_commute(<8 x double> %x) {
 ;
 ; AVX-LABEL: extract_extract01_v8f64_fsub_f64_commute:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
 ; AVX-NEXT:    vsubsd %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
@@ -1648,7 +1648,7 @@ define float @fadd_reduce_v8f32(float %a0, <8 x float> %a1) {
 ; AVX-SLOW:       # %bb.0:
 ; AVX-SLOW-NEXT:    vextractf128 $1, %ymm1, %xmm2
 ; AVX-SLOW-NEXT:    vaddps %xmm2, %xmm1, %xmm1
-; AVX-SLOW-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm1[1,0]
+; AVX-SLOW-NEXT:    vshufpd {{.*#+}} xmm2 = xmm1[1,0]
 ; AVX-SLOW-NEXT:    vaddps %xmm2, %xmm1, %xmm1
 ; AVX-SLOW-NEXT:    vmovshdup {{.*#+}} xmm2 = xmm1[1,1,3,3]
 ; AVX-SLOW-NEXT:    vaddss %xmm2, %xmm1, %xmm1
@@ -1690,7 +1690,7 @@ define double @fadd_reduce_v4f64(double %a0, <4 x double> %a1) {
 ; AVX-SLOW:       # %bb.0:
 ; AVX-SLOW-NEXT:    vextractf128 $1, %ymm1, %xmm2
 ; AVX-SLOW-NEXT:    vaddpd %xmm2, %xmm1, %xmm1
-; AVX-SLOW-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm1[1,0]
+; AVX-SLOW-NEXT:    vshufpd {{.*#+}} xmm2 = xmm1[1,0]
 ; AVX-SLOW-NEXT:    vaddsd %xmm2, %xmm1, %xmm1
 ; AVX-SLOW-NEXT:    vaddsd %xmm1, %xmm0, %xmm0
 ; AVX-SLOW-NEXT:    vzeroupper
@@ -1792,7 +1792,7 @@ define float @hadd32_4(<4 x float> %x225) {
 ;
 ; AVX-SLOW-LABEL: hadd32_4:
 ; AVX-SLOW:       # %bb.0:
-; AVX-SLOW-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX-SLOW-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
 ; AVX-SLOW-NEXT:    vaddps %xmm1, %xmm0, %xmm0
 ; AVX-SLOW-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
 ; AVX-SLOW-NEXT:    vaddss %xmm1, %xmm0, %xmm0
@@ -1800,7 +1800,7 @@ define float @hadd32_4(<4 x float> %x225) {
 ;
 ; AVX-FAST-LABEL: hadd32_4:
 ; AVX-FAST:       # %bb.0:
-; AVX-FAST-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX-FAST-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
 ; AVX-FAST-NEXT:    vaddps %xmm1, %xmm0, %xmm0
 ; AVX-FAST-NEXT:    vhaddps %xmm0, %xmm0, %xmm0
 ; AVX-FAST-NEXT:    retq
@@ -1832,7 +1832,7 @@ define float @hadd32_8(<8 x float> %x225) {
 ;
 ; AVX-SLOW-LABEL: hadd32_8:
 ; AVX-SLOW:       # %bb.0:
-; AVX-SLOW-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX-SLOW-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
 ; AVX-SLOW-NEXT:    vaddps %xmm1, %xmm0, %xmm0
 ; AVX-SLOW-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
 ; AVX-SLOW-NEXT:    vaddss %xmm1, %xmm0, %xmm0
@@ -1841,7 +1841,7 @@ define float @hadd32_8(<8 x float> %x225) {
 ;
 ; AVX-FAST-LABEL: hadd32_8:
 ; AVX-FAST:       # %bb.0:
-; AVX-FAST-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX-FAST-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
 ; AVX-FAST-NEXT:    vaddps %xmm1, %xmm0, %xmm0
 ; AVX-FAST-NEXT:    vhaddps %xmm0, %xmm0, %xmm0
 ; AVX-FAST-NEXT:    vzeroupper
@@ -1874,7 +1874,7 @@ define float @hadd32_16(<16 x float> %x225) {
 ;
 ; AVX-SLOW-LABEL: hadd32_16:
 ; AVX-SLOW:       # %bb.0:
-; AVX-SLOW-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX-SLOW-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
 ; AVX-SLOW-NEXT:    vaddps %xmm1, %xmm0, %xmm0
 ; AVX-SLOW-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
 ; AVX-SLOW-NEXT:    vaddss %xmm1, %xmm0, %xmm0
@@ -1883,7 +1883,7 @@ define float @hadd32_16(<16 x float> %x225) {
 ;
 ; AVX-FAST-LABEL: hadd32_16:
 ; AVX-FAST:       # %bb.0:
-; AVX-FAST-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX-FAST-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
 ; AVX-FAST-NEXT:    vaddps %xmm1, %xmm0, %xmm0
 ; AVX-FAST-NEXT:    vhaddps %xmm0, %xmm0, %xmm0
 ; AVX-FAST-NEXT:    vzeroupper
@@ -1907,7 +1907,7 @@ define float @hadd32_4_optsize(<4 x float> %x225) optsize {
 ;
 ; AVX-LABEL: hadd32_4_optsize:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
 ; AVX-NEXT:    vaddps %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vhaddps %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    retq
@@ -1930,7 +1930,7 @@ define float @hadd32_8_optsize(<8 x float> %x225) optsize {
 ;
 ; AVX-LABEL: hadd32_8_optsize:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
 ; AVX-NEXT:    vaddps %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vhaddps %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    vzeroupper
@@ -1954,7 +1954,7 @@ define float @hadd32_16_optsize(<16 x float> %x225) optsize {
 ;
 ; AVX-LABEL: hadd32_16_optsize:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
 ; AVX-NEXT:    vaddps %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vhaddps %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    vzeroupper
@@ -1978,7 +1978,7 @@ define float @hadd32_4_pgso(<4 x float> %x225) !prof !14 {
 ;
 ; AVX-LABEL: hadd32_4_pgso:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
 ; AVX-NEXT:    vaddps %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vhaddps %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    retq
@@ -2001,7 +2001,7 @@ define float @hadd32_8_pgso(<8 x float> %x225) !prof !14 {
 ;
 ; AVX-LABEL: hadd32_8_pgso:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
 ; AVX-NEXT:    vaddps %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vhaddps %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    vzeroupper
@@ -2025,7 +2025,7 @@ define float @hadd32_16_pgso(<16 x float> %x225) !prof !14 {
 ;
 ; AVX-LABEL: hadd32_16_pgso:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
 ; AVX-NEXT:    vaddps %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vhaddps %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    vzeroupper
@@ -2058,7 +2058,7 @@ define float @partial_reduction_fadd_v8f32(<8 x float> %x) {
 ;
 ; AVX-SLOW-LABEL: partial_reduction_fadd_v8f32:
 ; AVX-SLOW:       # %bb.0:
-; AVX-SLOW-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX-SLOW-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
 ; AVX-SLOW-NEXT:    vaddps %xmm1, %xmm0, %xmm0
 ; AVX-SLOW-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
 ; AVX-SLOW-NEXT:    vaddss %xmm1, %xmm0, %xmm0
@@ -2102,7 +2102,7 @@ define float @partial_reduction_fadd_v8f32_wrong_flags(<8 x float> %x) {
 ;
 ; AVX-SLOW-LABEL: partial_reduction_fadd_v8f32_wrong_flags:
 ; AVX-SLOW:       # %bb.0:
-; AVX-SLOW-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX-SLOW-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
 ; AVX-SLOW-NEXT:    vaddps %xmm1, %xmm0, %xmm0
 ; AVX-SLOW-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
 ; AVX-SLOW-NEXT:    vaddss %xmm1, %xmm0, %xmm0
@@ -2111,7 +2111,7 @@ define float @partial_reduction_fadd_v8f32_wrong_flags(<8 x float> %x) {
 ;
 ; AVX-FAST-LABEL: partial_reduction_fadd_v8f32_wrong_flags:
 ; AVX-FAST:       # %bb.0:
-; AVX-FAST-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX-FAST-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
 ; AVX-FAST-NEXT:    vaddps %xmm1, %xmm0, %xmm0
 ; AVX-FAST-NEXT:    vhaddps %xmm0, %xmm0, %xmm0
 ; AVX-FAST-NEXT:    vzeroupper
@@ -2144,7 +2144,7 @@ define float @partial_reduction_fadd_v16f32(<16 x float> %x) {
 ;
 ; AVX-SLOW-LABEL: partial_reduction_fadd_v16f32:
 ; AVX-SLOW:       # %bb.0:
-; AVX-SLOW-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; AVX-SLOW-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
 ; AVX-SLOW-NEXT:    vaddps %xmm1, %xmm0, %xmm0
 ; AVX-SLOW-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
 ; AVX-SLOW-NEXT:    vaddss %xmm1, %xmm0, %xmm0

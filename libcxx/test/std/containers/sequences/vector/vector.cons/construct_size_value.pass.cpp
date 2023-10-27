@@ -40,6 +40,8 @@ TEST_CONSTEXPR_CXX20 bool tests() {
 #if TEST_STD_VER >= 11
     test<std::vector<int, min_allocator<int>> >(0, 3);
     test<std::vector<int, min_allocator<int>> >(50, 3);
+    test<std::vector<int, safe_allocator<int>> >(0, 3);
+    test<std::vector<int, safe_allocator<int>> >(50, 3);
 #endif
 
     return true;

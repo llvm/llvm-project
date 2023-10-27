@@ -44,7 +44,6 @@ define void @memset_4(ptr %a, i8 %value) nounwind {
 define void @memset_8(ptr %a, i8 %value) nounwind {
 ; GPR-LABEL: memset_8:
 ; GPR:       # %bb.0:
-; GPR-NEXT:    # kill: def $esi killed $esi def $rsi
 ; GPR-NEXT:    movzbl %sil, %eax
 ; GPR-NEXT:    movabsq $72340172838076673, %rcx # imm = 0x101010101010101
 ; GPR-NEXT:    imulq %rax, %rcx
@@ -57,7 +56,6 @@ define void @memset_8(ptr %a, i8 %value) nounwind {
 define void @memset_16(ptr %a, i8 %value) nounwind {
 ; SSE2-LABEL: memset_16:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    # kill: def $esi killed $esi def $rsi
 ; SSE2-NEXT:    movzbl %sil, %eax
 ; SSE2-NEXT:    movabsq $72340172838076673, %rcx # imm = 0x101010101010101
 ; SSE2-NEXT:    imulq %rax, %rcx
@@ -94,7 +92,6 @@ define void @memset_16(ptr %a, i8 %value) nounwind {
 define void @memset_32(ptr %a, i8 %value) nounwind {
 ; SSE2-LABEL: memset_32:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    # kill: def $esi killed $esi def $rsi
 ; SSE2-NEXT:    movzbl %sil, %eax
 ; SSE2-NEXT:    movabsq $72340172838076673, %rcx # imm = 0x101010101010101
 ; SSE2-NEXT:    imulq %rax, %rcx
@@ -136,7 +133,6 @@ define void @memset_32(ptr %a, i8 %value) nounwind {
 define void @memset_64(ptr %a, i8 %value) nounwind {
 ; SSE2-LABEL: memset_64:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    # kill: def $esi killed $esi def $rsi
 ; SSE2-NEXT:    movzbl %sil, %eax
 ; SSE2-NEXT:    movabsq $72340172838076673, %rcx # imm = 0x101010101010101
 ; SSE2-NEXT:    imulq %rax, %rcx

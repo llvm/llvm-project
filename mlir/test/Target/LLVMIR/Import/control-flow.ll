@@ -46,33 +46,33 @@ bb2:
 
 ; CHECK-LABEL: @simple_switch(
 ; CHECK-SAME:  %[[ARG1:[a-zA-Z0-9]+]]
-define i32 @simple_switch(i32 %arg1) {
+define i64 @simple_switch(i64 %arg1) {
   ; CHECK: %[[VAL1:.+]] = llvm.add
   ; CHECK: %[[VAL2:.+]] = llvm.sub
   ; CHECK: %[[VAL3:.+]] = llvm.mul
-  %1 = add i32 %arg1, 42
-  %2 = sub i32 %arg1, 42
-  %3 = mul i32 %arg1, 42
-  ; CHECK: llvm.switch %[[ARG1]] : i32, ^[[BBD:.+]] [
+  %1 = add i64 %arg1, 42
+  %2 = sub i64 %arg1, 42
+  %3 = mul i64 %arg1, 42
+  ; CHECK: llvm.switch %[[ARG1]] : i64, ^[[BBD:.+]] [
   ; CHECK:   0: ^[[BB1:.+]],
   ; CHECK:   9: ^[[BB2:.+]]
   ; CHECK: ]
-  switch i32 %arg1, label %bbd [
-    i32 0, label %bb1
-    i32 9, label %bb2
+  switch i64 %arg1, label %bbd [
+    i64 0, label %bb1
+    i64 9, label %bb2
   ]
 bb1:
   ; CHECK: ^[[BB1]]:
   ; CHECK: llvm.return %[[VAL1]]
-  ret i32 %1
+  ret i64 %1
 bb2:
   ; CHECK: ^[[BB2]]:
   ; CHECK: llvm.return %[[VAL2]]
-  ret i32 %2
+  ret i64 %2
 bbd:
   ; CHECK: ^[[BBD]]:
   ; CHECK: llvm.return %[[VAL3]]
-  ret i32 %3
+  ret i64 %3
 }
 
 ; // -----

@@ -314,10 +314,7 @@ protected:
         // copy to be removed, or somewhere in between there and here). This
         // is necessary only if it is a physical register.
         if (!AddendSrcReg.isVirtual())
-          for (MCRegUnitIterator Units(AddendSrcReg.asMCReg(), TRI);
-               Units.isValid(); ++Units) {
-            unsigned Unit = *Units;
-
+          for (MCRegUnit Unit : TRI->regunits(AddendSrcReg.asMCReg())) {
             LiveRange &AddendSrcRange = LIS->getRegUnit(Unit);
             AddendSrcRange.extendInBlock(LIS->getMBBStartIdx(&MBB),
                                          FMAIdx.getRegSlot());

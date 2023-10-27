@@ -19,22 +19,20 @@
 #include "test_macros.h"
 
 #if TEST_STD_VER > 14
-constexpr bool test_constexpr()
-{
-    char c = '1';
-    std::char_traits<char>::assign(c, 'a');
-    return c == 'a';
+constexpr bool test_constexpr() {
+  char c = '1';
+  std::char_traits<char>::assign(c, 'a');
+  return c == 'a';
 }
 #endif
 
-int main(int, char**)
-{
-    char c = '\0';
-    std::char_traits<char>::assign(c, 'a');
-    assert(c == 'a');
+int main(int, char**) {
+  char c = '\0';
+  std::char_traits<char>::assign(c, 'a');
+  assert(c == 'a');
 
 #if TEST_STD_VER > 14
-    static_assert(test_constexpr(), "" );
+  static_assert(test_constexpr(), "");
 #endif
 
   return 0;

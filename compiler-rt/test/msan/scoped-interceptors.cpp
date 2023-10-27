@@ -26,13 +26,13 @@ int main(int argc, char *argv[]) {
       char *copy = strndup(uninit, sizeof(uninit));  // BOOM
       free(copy);
       break;
-      // CASE-0: Uninitialized bytes in __interceptor_strndup
+      // CASE-0: Uninitialized bytes in strndup
     }
     case '1': {
       puts(uninit);  // BOOM
       puts(uninit);  // Ensure previous call did not enable interceptor checks.
       break;
-      // CASE-1: Uninitialized bytes in __interceptor_puts
+      // CASE-1: Uninitialized bytes in puts
     }
     case '2': {
       int cmp = memcmp(uninit, uninit, sizeof(uninit));  // BOOM
@@ -42,7 +42,7 @@ int main(int argc, char *argv[]) {
     case '3': {
       size_t len = strlen(uninit);  // BOOM
       break;
-      // CASE-3: Uninitialized bytes in __interceptor_strlen
+      // CASE-3: Uninitialized bytes in strlen
     }
     default: assert(0);
   }

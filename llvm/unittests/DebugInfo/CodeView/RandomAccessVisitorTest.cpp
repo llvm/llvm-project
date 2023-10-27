@@ -152,7 +152,8 @@ protected:
   }
 
   struct GlobalTestState {
-    GlobalTestState() : Strings(Allocator), ItemStream(llvm::support::little) {}
+    GlobalTestState()
+        : Strings(Allocator), ItemStream(llvm::endianness::little) {}
 
     BumpPtrAllocator Allocator;
     StringSaver Strings;
@@ -181,7 +182,7 @@ protected:
     uint32_t Size = Count * sizeof(TypeIndexOffset);
     uint8_t *Buffer = GlobalState->Allocator.Allocate<uint8_t>(Size);
     MutableArrayRef<uint8_t> Bytes(Buffer, Size);
-    Storage = MutableBinaryByteStream(Bytes, support::little);
+    Storage = MutableBinaryByteStream(Bytes, llvm::endianness::little);
     BinaryStreamWriter Writer(Storage);
     for (const auto I : Indices)
       consumeError(Writer.writeObject(GlobalState->AllOffsets[I]));
@@ -222,7 +223,7 @@ TEST_F(RandomAccessVisitorTest, MultipleVisits) {
 
   // 5, 5, 5
   EXPECT_EQ(3u, TestState->Callbacks.count());
-  for (auto I : enumerate(IndicesToVisit))
+  for (const auto &I : enumerate(IndicesToVisit))
     EXPECT_TRUE(ValidateVisitedRecord(I.index(), I.value()));
 }
 
@@ -251,7 +252,7 @@ TEST_F(RandomAccessVisitorTest, DescendingWithinChunk) {
 
   // 2, 4, 7
   EXPECT_EQ(3u, TestState->Callbacks.count());
-  for (auto I : enumerate(IndicesToVisit))
+  for (const auto &I : enumerate(IndicesToVisit))
     EXPECT_TRUE(ValidateVisitedRecord(I.index(), I.value()));
 }
 
@@ -280,7 +281,7 @@ TEST_F(RandomAccessVisitorTest, AscendingWithinChunk) {
 
   // 2, 4, 7
   EXPECT_EQ(3u, TestState->Callbacks.count());
-  for (auto &I : enumerate(IndicesToVisit))
+  for (const auto &I : enumerate(IndicesToVisit))
     EXPECT_TRUE(ValidateVisitedRecord(I.index(), I.value()));
 }
 
@@ -311,7 +312,7 @@ TEST_F(RandomAccessVisitorTest, StopPrematurelyInChunk) {
 
   // [0, 2]
   EXPECT_EQ(3u, TestState->Callbacks.count());
-  for (auto I : enumerate(IndicesToVisit))
+  for (const auto &I : enumerate(IndicesToVisit))
     EXPECT_TRUE(ValidateVisitedRecord(I.index(), I.value()));
 }
 
@@ -341,7 +342,7 @@ TEST_F(RandomAccessVisitorTest, InnerChunk) {
 
   // 5, 7
   EXPECT_EQ(2u, TestState->Callbacks.count());
-  for (auto &I : enumerate(IndicesToVisit))
+  for (const auto &I : enumerate(IndicesToVisit))
     EXPECT_TRUE(ValidateVisitedRecord(I.index(), I.value()));
 }
 
@@ -370,7 +371,7 @@ TEST_F(RandomAccessVisitorTest, CrossChunkName) {
       {Builder.records()[0]},
       {Builder.records()[1]},
   };
-  BinaryItemStream<CVType> ItemStream(llvm::support::little);
+  BinaryItemStream<CVType> ItemStream(llvm::endianness::little);
   ItemStream.setItems(TypeArray);
   VarStreamArray<CVType> TypeStream(ItemStream);
 
@@ -386,7 +387,7 @@ TEST_F(RandomAccessVisitorTest, CrossChunkName) {
   ArrayRef<uint8_t> Buffer(reinterpret_cast<const uint8_t *>(TIO.data()),
                            TIO.size() * sizeof(TypeIndexOffset));
 
-  BinaryStreamReader Reader(Buffer, llvm::support::little);
+  BinaryStreamReader Reader(Buffer, llvm::endianness::little);
   FixedStreamArray<TypeIndexOffset> PartialOffsets;
   ASSERT_THAT_ERROR(Reader.readArray(PartialOffsets, 2), Succeeded());
 

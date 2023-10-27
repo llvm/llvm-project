@@ -62,14 +62,14 @@ multiclass AtomWriteResPair<X86FoldableSchedWrite SchedRW,
   // Register variant.
   def : WriteRes<SchedRW, RRPorts> {
     let Latency = RRLat;
-    let ResourceCycles = RRRes;
+    let ReleaseAtCycles = RRRes;
     let NumMicroOps = RRUOps;
   }
 
   // Memory variant.
   def : WriteRes<SchedRW.Folded, RMPorts> {
     let Latency = RMLat;
-    let ResourceCycles = RMRes;
+    let ReleaseAtCycles = RMRes;
     let NumMicroOps = RMUOps;
   }
 }
@@ -122,11 +122,11 @@ defm : X86WriteRes<WriteFCMOV, [AtomPort01], 9, [9], 1>; // x87 conditional move
 def  : WriteRes<WriteSETCC, [AtomPort01]>;
 def  : WriteRes<WriteSETCCStore, [AtomPort01]> {
   let Latency = 2;
-  let ResourceCycles = [2];
+  let ReleaseAtCycles = [2];
 }
 def  : WriteRes<WriteLAHFSAHF, [AtomPort01]> {
   let Latency = 2;
-  let ResourceCycles = [2];
+  let ReleaseAtCycles = [2];
 }
 defm : X86WriteRes<WriteBitTest,         [AtomPort1],  1, [1], 1>;
 defm : X86WriteRes<WriteBitTestImmLd,    [AtomPort0],  1, [1], 1>;
@@ -462,10 +462,10 @@ defm : X86WriteResPairUnsupported<WritePCmpEStrM>;
 // MOVMSK Instructions.
 ////////////////////////////////////////////////////////////////////////////////
 
-def  : WriteRes<WriteFMOVMSK,    [AtomPort0]> { let Latency = 3; let ResourceCycles = [3]; }
-def  : WriteRes<WriteVecMOVMSK,  [AtomPort0]> { let Latency = 3; let ResourceCycles = [3]; }
+def  : WriteRes<WriteFMOVMSK,    [AtomPort0]> { let Latency = 3; let ReleaseAtCycles = [3]; }
+def  : WriteRes<WriteVecMOVMSK,  [AtomPort0]> { let Latency = 3; let ReleaseAtCycles = [3]; }
 defm : X86WriteResUnsupported<WriteVecMOVMSKY>;
-def  : WriteRes<WriteMMXMOVMSK,  [AtomPort0]> { let Latency = 3; let ResourceCycles = [3]; }
+def  : WriteRes<WriteMMXMOVMSK,  [AtomPort0]> { let Latency = 3; let ReleaseAtCycles = [3]; }
 
 ////////////////////////////////////////////////////////////////////////////////
 // AES instructions.
@@ -505,7 +505,7 @@ defm : X86WriteRes<WriteSTMXCSR, [AtomPort0,AtomPort1], 15, [15,15], 4>;
 // Port0
 def AtomWrite0_1 : SchedWriteRes<[AtomPort0]> {
   let Latency = 1;
-  let ResourceCycles = [1];
+  let ReleaseAtCycles = [1];
 }
 def : InstRW<[AtomWrite0_1], (instrs XAM_F, LD_Frr,
                                      MOVSX64rr32)>;
@@ -517,14 +517,14 @@ def : InstRW<[AtomWrite0_1], (instregex "(RCL|RCR|ROL|ROR|SAR|SHL|SHR)(8|16|32|6
 // Port1
 def AtomWrite1_1 : SchedWriteRes<[AtomPort1]> {
   let Latency = 1;
-  let ResourceCycles = [1];
+  let ReleaseAtCycles = [1];
 }
 def : InstRW<[AtomWrite1_1], (instrs FCOMPP)>;
 def : InstRW<[AtomWrite1_1], (instregex "UCOM_F(P|PP)?r")>;
 
 def AtomWrite1_5 : SchedWriteRes<[AtomPort1]> {
   let Latency = 5;
-  let ResourceCycles = [5];
+  let ReleaseAtCycles = [5];
 }
 def : InstRW<[AtomWrite1_5], (instrs MMX_CVTPI2PSrr, MMX_CVTPI2PSrm,
                                      MMX_CVTPS2PIrr, MMX_CVTTPS2PIrr)>;
@@ -532,12 +532,12 @@ def : InstRW<[AtomWrite1_5], (instrs MMX_CVTPI2PSrr, MMX_CVTPI2PSrm,
 // Port0 and Port1
 def AtomWrite0_1_1 : SchedWriteRes<[AtomPort0, AtomPort1]> {
   let Latency = 1;
-  let ResourceCycles = [1, 1];
+  let ReleaseAtCycles = [1, 1];
 }
 def : InstRW<[AtomWrite0_1_1], (instrs POP32r, POP64r,
                                        POP16rmr, POP32rmr, POP64rmr,
                                        PUSH16r, PUSH32r, PUSH64r,
-                                       PUSHi16, PUSHi32,
+                                       PUSH16i, PUSH32i,
                                        PUSH16rmr, PUSH32rmr, PUSH64rmr,
                                        PUSH16i8, PUSH32i8, PUSH64i8, PUSH64i32,
                                        XCH_F)>;
@@ -546,41 +546,41 @@ def : InstRW<[AtomWrite0_1_1], (instregex "RETI(16|32|64)$",
 
 def AtomWrite0_1_5 : SchedWriteRes<[AtomPort0, AtomPort1]> {
   let Latency = 5;
-  let ResourceCycles = [5, 5];
+  let ReleaseAtCycles = [5, 5];
 }
 def : InstRW<[AtomWrite0_1_5], (instrs MMX_CVTPS2PIrm, MMX_CVTTPS2PIrm)>;
 def : InstRW<[AtomWrite0_1_5], (instregex "ILD_F(16|32|64)")>;
 
 def AtomWrite0_1_7 : SchedWriteRes<[AtomPort0,AtomPort1]> {
   let Latency = 7;
-  let ResourceCycles = [6,6];
+  let ReleaseAtCycles = [6,6];
 }
 def : InstRW<[AtomWrite0_1_7], (instregex "CVTSI642SDrm(_Int)?")>;
 
 def AtomWrite0_1_7_4 : SchedWriteRes<[AtomPort0,AtomPort1]> {
   let Latency = 7;
-  let ResourceCycles = [8,8];
+  let ReleaseAtCycles = [8,8];
   let NumMicroOps = 4;
 }
 def : InstRW<[AtomWrite0_1_7_4], (instregex "CVTSI642SSrr(_Int)?")>;
 
 def AtomWrite0_1_8_4 : SchedWriteRes<[AtomPort0,AtomPort1]> {
   let Latency = 8;
-  let ResourceCycles = [8,8];
+  let ReleaseAtCycles = [8,8];
   let NumMicroOps = 4;
 }
 def : InstRW<[AtomWrite0_1_7_4], (instregex "CVTSI642SSrm(_Int)?")>;
 
 def AtomWrite0_1_9 : SchedWriteRes<[AtomPort0,AtomPort1]> {
   let Latency = 9;
-  let ResourceCycles = [9,9];
+  let ReleaseAtCycles = [9,9];
   let NumMicroOps = 4;
 }
 def : InstRW<[AtomWrite0_1_9], (instregex "CVT(T)?SS2SI64rr(_Int)?")>;
 
 def AtomWrite0_1_10 : SchedWriteRes<[AtomPort0,AtomPort1]> {
   let Latency = 10;
-  let ResourceCycles = [11,11];
+  let ReleaseAtCycles = [11,11];
   let NumMicroOps = 5;
 }
 def : InstRW<[AtomWrite0_1_10], (instregex "CVT(T)?SS2SI64rm(_Int)?")>;
@@ -588,7 +588,7 @@ def : InstRW<[AtomWrite0_1_10], (instregex "CVT(T)?SS2SI64rm(_Int)?")>;
 // Port0 or Port1
 def AtomWrite01_1 : SchedWriteRes<[AtomPort01]> {
   let Latency = 1;
-  let ResourceCycles = [1];
+  let ReleaseAtCycles = [1];
 }
 def : InstRW<[AtomWrite01_1], (instrs FDECSTP, FFREE, FFREEP, FINCSTP, WAIT,
                                       LFENCE,
@@ -597,7 +597,7 @@ def : InstRW<[AtomWrite01_1], (instrs FDECSTP, FFREE, FFREEP, FINCSTP, WAIT,
 
 def AtomWrite01_2 : SchedWriteRes<[AtomPort01]> {
   let Latency = 2;
-  let ResourceCycles = [2];
+  let ReleaseAtCycles = [2];
 }
 def : InstRW<[AtomWrite01_2], (instrs LEAVE, LEAVE64, POP16r,
                                       PUSH16rmm, PUSH32rmm, PUSH64rmm,
@@ -614,7 +614,7 @@ def : SchedAlias<WriteBitTestSetImmRMW, AtomWrite01_2>;
 
 def AtomWrite01_3 : SchedWriteRes<[AtomPort01]> {
   let Latency = 3;
-  let ResourceCycles = [3];
+  let ReleaseAtCycles = [3];
 }
 def : InstRW<[AtomWrite01_3], (instrs CLD, LDDQUrm,
                                       CMPSB, CMPSL, CMPSQ, CMPSW,
@@ -630,7 +630,7 @@ def : InstRW<[AtomWrite01_3], (instregex "XADD(8|16|32|64)rm",
 
 def AtomWrite01_4 : SchedWriteRes<[AtomPort01]> {
   let Latency = 4;
-  let ResourceCycles = [4];
+  let ReleaseAtCycles = [4];
 }
 def : InstRW<[AtomWrite01_4], (instrs CBW, CWD, CWDE, CDQ, CDQE, CQO,
                                       JCXZ, JECXZ, JRCXZ,
@@ -640,14 +640,14 @@ def : InstRW<[AtomWrite01_4], (instregex "PH(ADD|SUB)Drm",
 
 def AtomWrite01_5 : SchedWriteRes<[AtomPort01]> {
   let Latency = 5;
-  let ResourceCycles = [5];
+  let ReleaseAtCycles = [5];
 }
 def : InstRW<[AtomWrite01_5], (instrs FLDCW16m, ST_FP80m)>;
 def : InstRW<[AtomWrite01_5], (instregex "MMX_PH(ADD|SUB)S?Wrr")>;
 
 def AtomWrite01_6 : SchedWriteRes<[AtomPort01]> {
   let Latency = 6;
-  let ResourceCycles = [6];
+  let ReleaseAtCycles = [6];
 }
 def : InstRW<[AtomWrite01_6], (instrs CMPXCHG8rm, INTO, XLAT,
                                       SHLD16rrCL, SHRD16rrCL,
@@ -659,13 +659,13 @@ def : InstRW<[AtomWrite01_6], (instregex "IST_F(P)?(16|32|64)?m",
 
 def AtomWrite01_7 : SchedWriteRes<[AtomPort01]> {
   let Latency = 7;
-  let ResourceCycles = [7];
+  let ReleaseAtCycles = [7];
 }
 def : InstRW<[AtomWrite01_7], (instrs AAD8i8)>;
 
 def AtomWrite01_8 : SchedWriteRes<[AtomPort01]> {
   let Latency = 8;
-  let ResourceCycles = [8];
+  let ReleaseAtCycles = [8];
 }
 def : InstRW<[AtomWrite01_8], (instrs LOOPE,
                                       PUSHA16, PUSHA32,
@@ -674,7 +674,7 @@ def : InstRW<[AtomWrite01_8], (instrs LOOPE,
 
 def AtomWrite01_9 : SchedWriteRes<[AtomPort01]> {
   let Latency = 9;
-  let ResourceCycles = [9];
+  let ReleaseAtCycles = [9];
 }
 def : InstRW<[AtomWrite01_9], (instrs POPA16, POPA32,
                                       PUSHF16, PUSHF32, PUSHF64,
@@ -686,256 +686,256 @@ def : InstRW<[AtomWrite01_9], (instregex "(U)?COM_FI", "TST_F")>;
 
 def AtomWrite01_10 : SchedWriteRes<[AtomPort01]> {
   let Latency = 10;
-  let ResourceCycles = [10];
+  let ReleaseAtCycles = [10];
 }
 def : SchedAlias<WriteFLDC, AtomWrite01_10>;
 
 def AtomWrite01_11 : SchedWriteRes<[AtomPort01]> {
   let Latency = 11;
-  let ResourceCycles = [11];
+  let ReleaseAtCycles = [11];
 }
 def : InstRW<[AtomWrite01_11], (instrs BOUNDS16rm, BOUNDS32rm)>;
 def : SchedAlias<WriteBitTestSetRegRMW, AtomWrite01_11>;
 
 def AtomWrite01_13 : SchedWriteRes<[AtomPort01]> {
   let Latency = 13;
-  let ResourceCycles = [13];
+  let ReleaseAtCycles = [13];
 }
 def : InstRW<[AtomWrite01_13], (instrs AAA, AAS)>;
 
 def AtomWrite01_14 : SchedWriteRes<[AtomPort01]> {
   let Latency = 14;
-  let ResourceCycles = [14];
+  let ReleaseAtCycles = [14];
 }
 def : InstRW<[AtomWrite01_14], (instrs CMPXCHG16rm, CMPXCHG32rm, CMPXCHG64rm)>;
 
 def AtomWrite01_17 : SchedWriteRes<[AtomPort01]> {
   let Latency = 17;
-  let ResourceCycles = [17];
+  let ReleaseAtCycles = [17];
 }
 def : InstRW<[AtomWrite01_17], (instrs LOOPNE, PAUSE)>;
 
 def AtomWrite01_18 : SchedWriteRes<[AtomPort01]> {
   let Latency = 18;
-  let ResourceCycles = [18];
+  let ReleaseAtCycles = [18];
 }
 def : InstRW<[AtomWrite01_18], (instrs CMPXCHG8B, DAA, LOOP)>;
 
 def AtomWrite01_20 : SchedWriteRes<[AtomPort01]> {
   let Latency = 20;
-  let ResourceCycles = [20];
+  let ReleaseAtCycles = [20];
 }
 def : InstRW<[AtomWrite01_20], (instrs DAS)>;
 
 def AtomWrite01_21 : SchedWriteRes<[AtomPort01]> {
   let Latency = 21;
-  let ResourceCycles = [21];
+  let ReleaseAtCycles = [21];
 }
 def : InstRW<[AtomWrite01_21], (instrs AAM8i8, STD)>;
 
 def AtomWrite01_22 : SchedWriteRes<[AtomPort01]> {
   let Latency = 22;
-  let ResourceCycles = [22];
+  let ReleaseAtCycles = [22];
 }
 def : InstRW<[AtomWrite01_22], (instrs CMPXCHG16B)>;
 
 def AtomWrite01_23 : SchedWriteRes<[AtomPort01]> {
   let Latency = 23;
-  let ResourceCycles = [23];
+  let ReleaseAtCycles = [23];
 }
 def : InstRW<[AtomWrite01_23], (instrs ARPL16mr, ARPL16rr)>;
 
 def AtomWrite01_25 : SchedWriteRes<[AtomPort01]> {
   let Latency = 25;
-  let ResourceCycles = [25];
+  let ReleaseAtCycles = [25];
 }
 def : InstRW<[AtomWrite01_25], (instrs FNCLEX, FXTRACT)>;
 
 def AtomWrite01_26 : SchedWriteRes<[AtomPort01]> {
   let Latency = 26;
-  let ResourceCycles = [26];
+  let ReleaseAtCycles = [26];
 }
 def : InstRW<[AtomWrite01_26], (instrs POPF32, POPF64)>;
 
 def AtomWrite01_29 : SchedWriteRes<[AtomPort01]> {
   let Latency = 29;
-  let ResourceCycles = [29];
+  let ReleaseAtCycles = [29];
 }
 def : InstRW<[AtomWrite01_29], (instregex "POP(DS|ES|FS|GS)(16|32|64)")>;
 
 def AtomWrite01_30 : SchedWriteRes<[AtomPort01]> {
   let Latency = 30;
-  let ResourceCycles = [30];
+  let ReleaseAtCycles = [30];
 }
 def : InstRW<[AtomWrite01_30], (instrs RDTSC, RDTSCP)>;
 
 def AtomWrite01_32 : SchedWriteRes<[AtomPort01]> {
   let Latency = 32;
-  let ResourceCycles = [32];
+  let ReleaseAtCycles = [32];
 }
 def : InstRW<[AtomWrite01_32], (instrs ENTER, POPF16)>;
 
 def AtomWrite01_45 : SchedWriteRes<[AtomPort01]> {
   let Latency = 45;
-  let ResourceCycles = [45];
+  let ReleaseAtCycles = [45];
 }
 def : InstRW<[AtomWrite01_45], (instrs MONITOR32rrr, MONITOR64rrr)>;
 
 def AtomWrite01_46 : SchedWriteRes<[AtomPort01]> {
   let Latency = 46;
-  let ResourceCycles = [46];
+  let ReleaseAtCycles = [46];
 }
 def : InstRW<[AtomWrite01_46], (instrs FRNDINT, MWAITrr, RDPMC)>;
 
 def AtomWrite01_48 : SchedWriteRes<[AtomPort01]> {
   let Latency = 48;
-  let ResourceCycles = [48];
+  let ReleaseAtCycles = [48];
 }
 def : InstRW<[AtomWrite01_48], (instrs POPSS16, POPSS32)>;
 
 def AtomWrite01_55 : SchedWriteRes<[AtomPort01]> {
   let Latency = 55;
-  let ResourceCycles = [55];
+  let ReleaseAtCycles = [55];
 }
 def : InstRW<[AtomWrite01_55], (instrs FPREM)>;
 
 def AtomWrite01_59 : SchedWriteRes<[AtomPort01]> {
   let Latency = 59;
-  let ResourceCycles = [59];
+  let ReleaseAtCycles = [59];
 }
 def : InstRW<[AtomWrite01_59], (instrs INSB, INSL, INSW)>;
 
 def AtomWrite01_63 : SchedWriteRes<[AtomPort01]> {
   let Latency = 63;
-  let ResourceCycles = [63];
+  let ReleaseAtCycles = [63];
 }
 def : InstRW<[AtomWrite01_63], (instrs FNINIT)>;
 
 def AtomWrite01_68 : SchedWriteRes<[AtomPort01]> {
   let Latency = 68;
-  let ResourceCycles = [68];
+  let ReleaseAtCycles = [68];
 }
 def : InstRW<[AtomWrite01_68], (instrs OUT8rr, OUT16rr, OUT32rr)>;
 
 def AtomWrite01_71 : SchedWriteRes<[AtomPort01]> {
   let Latency = 71;
-  let ResourceCycles = [71];
+  let ReleaseAtCycles = [71];
 }
 def : InstRW<[AtomWrite01_71], (instrs FPREM1,
                                        INVLPG, INVLPGA32, INVLPGA64)>;
 
 def AtomWrite01_72 : SchedWriteRes<[AtomPort01]> {
   let Latency = 72;
-  let ResourceCycles = [72];
+  let ReleaseAtCycles = [72];
 }
 def : InstRW<[AtomWrite01_72], (instrs OUT8ir, OUT16ir, OUT32ir)>;
 
 def AtomWrite01_74 : SchedWriteRes<[AtomPort01]> {
   let Latency = 74;
-  let ResourceCycles = [74];
+  let ReleaseAtCycles = [74];
 }
 def : InstRW<[AtomWrite01_74], (instrs OUTSB, OUTSL, OUTSW)>;
 
 def AtomWrite01_77 : SchedWriteRes<[AtomPort01]> {
   let Latency = 77;
-  let ResourceCycles = [77];
+  let ReleaseAtCycles = [77];
 }
 def : InstRW<[AtomWrite01_77], (instrs FSCALE)>;
 
 def AtomWrite01_78 : SchedWriteRes<[AtomPort01]> {
   let Latency = 78;
-  let ResourceCycles = [78];
+  let ReleaseAtCycles = [78];
 }
 def : InstRW<[AtomWrite01_78], (instrs RDMSR)>;
 
 def AtomWrite01_79 : SchedWriteRes<[AtomPort01]> {
   let Latency = 79;
-  let ResourceCycles = [79];
+  let ReleaseAtCycles = [79];
 }
 def : InstRW<[AtomWrite01_79], (instregex "RET(16|32|64)?$",
                                           "LRETI?(16|32|64)")>;
 
 def AtomWrite01_92 : SchedWriteRes<[AtomPort01]> {
   let Latency = 92;
-  let ResourceCycles = [92];
+  let ReleaseAtCycles = [92];
 }
 def : InstRW<[AtomWrite01_92], (instrs IN8ri, IN16ri, IN32ri)>;
 
 def AtomWrite01_94 : SchedWriteRes<[AtomPort01]> {
   let Latency = 94;
-  let ResourceCycles = [94];
+  let ReleaseAtCycles = [94];
 }
 def : InstRW<[AtomWrite01_94], (instrs IN8rr, IN16rr, IN32rr)>;
 
 def AtomWrite01_99 : SchedWriteRes<[AtomPort01]> {
   let Latency = 99;
-  let ResourceCycles = [99];
+  let ReleaseAtCycles = [99];
 }
 def : InstRW<[AtomWrite01_99], (instrs F2XM1)>;
 
 def AtomWrite01_121 : SchedWriteRes<[AtomPort01]> {
   let Latency = 121;
-  let ResourceCycles = [121];
+  let ReleaseAtCycles = [121];
 }
 def : InstRW<[AtomWrite01_121], (instrs CPUID)>;
 
 def AtomWrite01_127 : SchedWriteRes<[AtomPort01]> {
   let Latency = 127;
-  let ResourceCycles = [127];
+  let ReleaseAtCycles = [127];
 }
 def : InstRW<[AtomWrite01_127], (instrs INT)>;
 
 def AtomWrite01_130 : SchedWriteRes<[AtomPort01]> {
   let Latency = 130;
-  let ResourceCycles = [130];
+  let ReleaseAtCycles = [130];
 }
 def : InstRW<[AtomWrite01_130], (instrs INT3)>;
 
 def AtomWrite01_140 : SchedWriteRes<[AtomPort01]> {
   let Latency = 140;
-  let ResourceCycles = [140];
+  let ReleaseAtCycles = [140];
 }
 def : InstRW<[AtomWrite01_140], (instrs FXSAVE, FXSAVE64)>;
 
 def AtomWrite01_141 : SchedWriteRes<[AtomPort01]> {
   let Latency = 141;
-  let ResourceCycles = [141];
+  let ReleaseAtCycles = [141];
 }
 def : InstRW<[AtomWrite01_141], (instrs FXRSTOR, FXRSTOR64)>;
 
 def AtomWrite01_146 : SchedWriteRes<[AtomPort01]> {
   let Latency = 146;
-  let ResourceCycles = [146];
+  let ReleaseAtCycles = [146];
 }
 def : InstRW<[AtomWrite01_146], (instrs FYL2X)>;
 
 def AtomWrite01_147 : SchedWriteRes<[AtomPort01]> {
   let Latency = 147;
-  let ResourceCycles = [147];
+  let ReleaseAtCycles = [147];
 }
 def : InstRW<[AtomWrite01_147], (instrs FYL2XP1)>;
 
 def AtomWrite01_168 : SchedWriteRes<[AtomPort01]> {
   let Latency = 168;
-  let ResourceCycles = [168];
+  let ReleaseAtCycles = [168];
 }
 def : InstRW<[AtomWrite01_168], (instrs FPTAN)>;
 
 def AtomWrite01_174 : SchedWriteRes<[AtomPort01]> {
   let Latency = 174;
-  let ResourceCycles = [174];
+  let ReleaseAtCycles = [174];
 }
 def : InstRW<[AtomWrite01_174], (instrs FSINCOS, FSIN, FCOS)>;
 
 def AtomWrite01_183 : SchedWriteRes<[AtomPort01]> {
   let Latency = 183;
-  let ResourceCycles = [183];
+  let ReleaseAtCycles = [183];
 }
 def : InstRW<[AtomWrite01_183], (instrs FPATAN)>;
 
 def AtomWrite01_202 : SchedWriteRes<[AtomPort01]> {
   let Latency = 202;
-  let ResourceCycles = [202];
+  let ReleaseAtCycles = [202];
 }
 def : InstRW<[AtomWrite01_202], (instrs WRMSR)>;
 

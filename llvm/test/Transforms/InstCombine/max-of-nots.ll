@@ -4,8 +4,8 @@
 define <2 x i32> @umin_of_nots(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @umin_of_nots(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i32> @llvm.umax.v2i32(<2 x i32> [[X:%.*]], <2 x i32> [[Y:%.*]])
-; CHECK-NEXT:    [[TMP2:%.*]] = xor <2 x i32> [[TMP1]], <i32 -1, i32 -1>
-; CHECK-NEXT:    ret <2 x i32> [[TMP2]]
+; CHECK-NEXT:    [[MIN:%.*]] = xor <2 x i32> [[TMP1]], <i32 -1, i32 -1>
+; CHECK-NEXT:    ret <2 x i32> [[MIN]]
 ;
   %notx = xor <2 x i32> %x, <i32 -1, i32 -1>
   %noty = xor <2 x i32> %y, <i32 -1, i32 -1>
@@ -17,8 +17,8 @@ define <2 x i32> @umin_of_nots(<2 x i32> %x, <2 x i32> %y) {
 define <2 x i32> @smin_of_nots(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @smin_of_nots(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i32> @llvm.smax.v2i32(<2 x i32> [[X:%.*]], <2 x i32> [[Y:%.*]])
-; CHECK-NEXT:    [[TMP2:%.*]] = xor <2 x i32> [[TMP1]], <i32 -1, i32 -1>
-; CHECK-NEXT:    ret <2 x i32> [[TMP2]]
+; CHECK-NEXT:    [[MIN:%.*]] = xor <2 x i32> [[TMP1]], <i32 -1, i32 -1>
+; CHECK-NEXT:    ret <2 x i32> [[MIN]]
 ;
   %notx = xor <2 x i32> %x, <i32 -1, i32 -1>
   %noty = xor <2 x i32> %y, <i32 -1, i32 -1>
@@ -45,9 +45,9 @@ define i8 @umin_not_1_extra_use(i8 %x, i8 %y) {
 ; CHECK-LABEL: @umin_not_1_extra_use(
 ; CHECK-NEXT:    [[NX:%.*]] = xor i8 [[X:%.*]], -1
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.umax.i8(i8 [[Y:%.*]], i8 [[X]])
-; CHECK-NEXT:    [[TMP2:%.*]] = xor i8 [[TMP1]], -1
+; CHECK-NEXT:    [[MINXY:%.*]] = xor i8 [[TMP1]], -1
 ; CHECK-NEXT:    call void @extra_use(i8 [[NX]])
-; CHECK-NEXT:    ret i8 [[TMP2]]
+; CHECK-NEXT:    ret i8 [[MINXY]]
 ;
   %nx = xor i8 %x, -1
   %ny = xor i8 %y, -1
@@ -61,10 +61,10 @@ define i8 @umin_not_2_extra_use(i8 %x, i8 %y) {
 ; CHECK-LABEL: @umin_not_2_extra_use(
 ; CHECK-NEXT:    [[NX:%.*]] = xor i8 [[X:%.*]], -1
 ; CHECK-NEXT:    [[NY:%.*]] = xor i8 [[Y:%.*]], -1
-; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.umin.i8(i8 [[NX]], i8 [[NY]])
+; CHECK-NEXT:    [[MINXY:%.*]] = call i8 @llvm.umin.i8(i8 [[NX]], i8 [[NY]])
 ; CHECK-NEXT:    call void @extra_use(i8 [[NX]])
 ; CHECK-NEXT:    call void @extra_use(i8 [[NY]])
-; CHECK-NEXT:    ret i8 [[TMP1]]
+; CHECK-NEXT:    ret i8 [[MINXY]]
 ;
   %nx = xor i8 %x, -1
   %ny = xor i8 %y, -1
@@ -79,8 +79,8 @@ define i8 @umin_not_2_extra_use(i8 %x, i8 %y) {
 
 define i8 @umin3_not(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @umin3_not(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.umax.i8(i8 [[Y:%.*]], i8 [[X:%.*]])
-; CHECK-NEXT:    [[R_V:%.*]] = call i8 @llvm.umax.i8(i8 [[TMP1]], i8 [[Z:%.*]])
+; CHECK-NEXT:    [[MINMAXOP:%.*]] = call i8 @llvm.umax.i8(i8 [[Y:%.*]], i8 [[X:%.*]])
+; CHECK-NEXT:    [[R_V:%.*]] = call i8 @llvm.umax.i8(i8 [[MINMAXOP]], i8 [[Z:%.*]])
 ; CHECK-NEXT:    [[R:%.*]] = xor i8 [[R_V]], -1
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
@@ -130,12 +130,12 @@ define i8 @umin3_not_all_ops_extra_uses(i8 %x, i8 %y, i8 %z) {
 ; CHECK-NEXT:    [[XN:%.*]] = xor i8 [[X:%.*]], -1
 ; CHECK-NEXT:    [[YN:%.*]] = xor i8 [[Y:%.*]], -1
 ; CHECK-NEXT:    [[ZN:%.*]] = xor i8 [[Z:%.*]], -1
-; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.umin.i8(i8 [[XN]], i8 [[ZN]])
-; CHECK-NEXT:    [[TMP2:%.*]] = call i8 @llvm.umin.i8(i8 [[TMP1]], i8 [[YN]])
+; CHECK-NEXT:    [[MINXZ:%.*]] = call i8 @llvm.umin.i8(i8 [[XN]], i8 [[ZN]])
+; CHECK-NEXT:    [[MINXYZ:%.*]] = call i8 @llvm.umin.i8(i8 [[MINXZ]], i8 [[YN]])
 ; CHECK-NEXT:    call void @use8(i8 [[XN]])
 ; CHECK-NEXT:    call void @use8(i8 [[YN]])
 ; CHECK-NEXT:    call void @use8(i8 [[ZN]])
-; CHECK-NEXT:    ret i8 [[TMP2]]
+; CHECK-NEXT:    ret i8 [[MINXYZ]]
 ;
   %xn = xor i8 %x, -1
   %yn = xor i8 %y, -1
@@ -173,8 +173,8 @@ define i32 @compute_min_arithmetic(i32 %x, i32 %y) {
 ; CHECK-LABEL: @compute_min_arithmetic(
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X:%.*]], -4
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.smin.i32(i32 [[Y:%.*]], i32 [[TMP1]])
-; CHECK-NEXT:    [[TMP3:%.*]] = xor i32 [[TMP2]], -1
-; CHECK-NEXT:    ret i32 [[TMP3]]
+; CHECK-NEXT:    [[NOT_MIN:%.*]] = xor i32 [[TMP2]], -1
+; CHECK-NEXT:    ret i32 [[NOT_MIN]]
 ;
   %not_value = sub i32 3, %x
   %not_y = sub i32 -1, %y
@@ -190,8 +190,8 @@ define i32 @compute_min_pessimization(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[NOT_VALUE:%.*]] = sub i32 3, [[X:%.*]]
 ; CHECK-NEXT:    call void @fake_use(i32 [[NOT_VALUE]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X]], -4
-; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.smin.i32(i32 [[Y:%.*]], i32 [[TMP1]])
-; CHECK-NEXT:    ret i32 [[TMP2]]
+; CHECK-NEXT:    [[MIN:%.*]] = call i32 @llvm.smin.i32(i32 [[Y:%.*]], i32 [[TMP1]])
+; CHECK-NEXT:    ret i32 [[MIN]]
 ;
   %not_value = sub i32 3, %x
   call void @fake_use(i32 %not_value)
@@ -206,8 +206,8 @@ define i32 @max_of_nots(i32 %x, i32 %y) {
 ; CHECK-LABEL: @max_of_nots(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.smax.i32(i32 [[Y:%.*]], i32 0)
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.smin.i32(i32 [[TMP1]], i32 [[X:%.*]])
-; CHECK-NEXT:    [[TMP3:%.*]] = xor i32 [[TMP2]], -1
-; CHECK-NEXT:    ret i32 [[TMP3]]
+; CHECK-NEXT:    [[SMAX96:%.*]] = xor i32 [[TMP2]], -1
+; CHECK-NEXT:    ret i32 [[SMAX96]]
 ;
   %c0 = icmp sgt i32 %y, 0
   %xor_y = xor i32 %y, -1
@@ -223,9 +223,9 @@ define i32 @abs_of_min_of_not(i32 %x, i32 %y) {
 ; CHECK-LABEL: @abs_of_min_of_not(
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 -3, [[Y:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.smax.i32(i32 [[X:%.*]], i32 [[TMP1]])
-; CHECK-NEXT:    [[TMP3:%.*]] = xor i32 [[TMP2]], -1
-; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @llvm.abs.i32(i32 [[TMP3]], i1 false)
-; CHECK-NEXT:    ret i32 [[TMP4]]
+; CHECK-NEXT:    [[MIN:%.*]] = xor i32 [[TMP2]], -1
+; CHECK-NEXT:    [[ABS:%.*]] = call i32 @llvm.abs.i32(i32 [[MIN]], i1 false)
+; CHECK-NEXT:    ret i32 [[ABS]]
 ;
 
   %xord = xor i32 %x, -1
@@ -242,8 +242,8 @@ define <2 x i32> @max_of_nots_vec(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @max_of_nots_vec(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i32> @llvm.smax.v2i32(<2 x i32> [[Y:%.*]], <2 x i32> zeroinitializer)
 ; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i32> @llvm.smin.v2i32(<2 x i32> [[TMP1]], <2 x i32> [[X:%.*]])
-; CHECK-NEXT:    [[TMP3:%.*]] = xor <2 x i32> [[TMP2]], <i32 -1, i32 -1>
-; CHECK-NEXT:    ret <2 x i32> [[TMP3]]
+; CHECK-NEXT:    [[SMAX96:%.*]] = xor <2 x i32> [[TMP2]], <i32 -1, i32 -1>
+; CHECK-NEXT:    ret <2 x i32> [[SMAX96]]
 ;
   %c0 = icmp sgt <2 x i32> %y, zeroinitializer
   %xor_y = xor <2 x i32> %y, <i32 -1, i32 -1>
@@ -258,8 +258,8 @@ define <2 x i37> @max_of_nots_weird_type_vec(<2 x i37> %x, <2 x i37> %y) {
 ; CHECK-LABEL: @max_of_nots_weird_type_vec(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i37> @llvm.smax.v2i37(<2 x i37> [[Y:%.*]], <2 x i37> zeroinitializer)
 ; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i37> @llvm.smin.v2i37(<2 x i37> [[TMP1]], <2 x i37> [[X:%.*]])
-; CHECK-NEXT:    [[TMP3:%.*]] = xor <2 x i37> [[TMP2]], <i37 -1, i37 -1>
-; CHECK-NEXT:    ret <2 x i37> [[TMP3]]
+; CHECK-NEXT:    [[SMAX96:%.*]] = xor <2 x i37> [[TMP2]], <i37 -1, i37 -1>
+; CHECK-NEXT:    ret <2 x i37> [[SMAX96]]
 ;
   %c0 = icmp sgt <2 x i37> %y, zeroinitializer
   %xor_y = xor <2 x i37> %y, <i37 -1, i37 -1>

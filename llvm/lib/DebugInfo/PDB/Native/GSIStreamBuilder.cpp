@@ -26,6 +26,7 @@
 #include "llvm/Support/BinaryItemStream.h"
 #include "llvm/Support/BinaryStreamWriter.h"
 #include "llvm/Support/Parallel.h"
+#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/xxhash.h"
 #include <algorithm>
 #include <vector>
@@ -76,7 +77,7 @@ struct llvm::pdb::SymbolDenseMapInfo {
     return Tombstone;
   }
   static unsigned getHashValue(const CVSymbol &Val) {
-    return xxHash64(Val.RecordData);
+    return xxh3_64bits(Val.RecordData);
   }
   static bool isEqual(const CVSymbol &LHS, const CVSymbol &RHS) {
     return LHS.RecordData == RHS.RecordData;
@@ -393,7 +394,7 @@ static Error writePublics(BinaryStreamWriter &Writer,
 
 static Error writeRecords(BinaryStreamWriter &Writer,
                           ArrayRef<CVSymbol> Records) {
-  BinaryItemStream<CVSymbol> ItemStream(support::endianness::little);
+  BinaryItemStream<CVSymbol> ItemStream(llvm::endianness::little);
   ItemStream.setItems(Records);
   BinaryStreamRef RecordsRef(ItemStream);
   return Writer.writeStreamRef(RecordsRef);
@@ -478,6 +479,7 @@ Error GSIStreamBuilder::commitGlobalsHashStream(
 
 Error GSIStreamBuilder::commit(const msf::MSFLayout &Layout,
                                WritableBinaryStreamRef Buffer) {
+  llvm::TimeTraceScope timeScope("Commit GSI stream");
   auto GS = WritableMappedBlockStream::createIndexedStream(
       Layout, Buffer, getGlobalsStreamIndex(), Msf.getAllocator());
   auto PS = WritableMappedBlockStream::createIndexedStream(

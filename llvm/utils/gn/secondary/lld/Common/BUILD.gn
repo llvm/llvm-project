@@ -35,6 +35,7 @@ static_library("Common") {
     "Args.cpp",
     "CommonLinkerContext.cpp",
     "DWARF.cpp",
+    "DriverDispatcher.cpp",
     "ErrorHandler.cpp",
     "Filesystem.cpp",
     "Memory.cpp",

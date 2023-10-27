@@ -6,8 +6,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
-// Older Clangs do not support the C++20 feature to constrain destructors
-// XFAIL: clang-14, clang-15, apple-clang-14
 
 // friend constexpr void swap(expected& x, expected& y) noexcept(noexcept(swap(x,y)));
 

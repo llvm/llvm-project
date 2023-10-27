@@ -8,7 +8,9 @@
 
 namespace shifts {
   constexpr void test() { // ref-error {{constexpr function never produces a constant expression}} \
-                          // ref-cxx17-error {{constexpr function never produces a constant expression}}
+                          // ref-cxx17-error {{constexpr function never produces a constant expression}} \
+                          // expected-error {{constexpr function never produces a constant expression}} \
+                          // cxx17-error {{constexpr function never produces a constant expression}} \
 
     char c; // cxx17-warning {{uninitialized variable}} \
             // ref-cxx17-warning {{uninitialized variable}}
@@ -19,6 +21,8 @@ namespace shifts {
     c = 1 << -0;
     c = 1 >> -0;
     c = 1 << -1; // expected-warning {{shift count is negative}} \
+                 // expected-note {{negative shift count -1}} \
+                 // cxx17-note {{negative shift count -1}} \
                  // cxx17-warning {{shift count is negative}} \
                  // ref-warning {{shift count is negative}} \
                  // ref-note {{negative shift count -1}} \
@@ -139,4 +143,48 @@ namespace shifts {
 
   constexpr char c2 = 1;
   constexpr int i3 = c2 << (__CHAR_BIT__ + 1); // Not ill-formed
+
+  /// The purpose of these few lines is to test that we can shift more bits
+  /// than an unsigned *of the host* has. There was a bug where we casted
+  /// to host-unsigned. However, we cannot query what a host-unsigned even is
+  /// here, so only test this on platforms where `sizeof(long long) > sizeof(unsigned)`.
+  constexpr long long int L = 1;
+  constexpr signed int R = (sizeof(unsigned) * 8) + 1;
+  constexpr decltype(L) M  = (R > 32 && R < 64) ?  L << R : 0;
+  constexpr decltype(L) M2 = (R > 32 && R < 64) ?  L >> R : 0;
+
+
+  constexpr int signedShift() { // cxx17-error {{never produces a constant expression}} \
+                                // ref-cxx17-error {{never produces a constant expression}}
+    return 1024 << 31; // cxx17-warning {{signed shift result}} \
+                       // ref-cxx17-warning {{signed shift result}} \
+                       // cxx17-note {{signed left shift discards bits}} \
+                       // ref-cxx17-note {{signed left shift discards bits}}
+  }
+
+  constexpr int negativeShift() { // cxx17-error {{never produces a constant expression}} \
+                                  // ref-cxx17-error {{never produces a constant expression}}
+    return -1 << 2; // cxx17-warning {{shifting a negative signed value is undefined}} \
+                    // ref-cxx17-warning {{shifting a negative signed value is undefined}} \
+                    // cxx17-note {{left shift of negative value -1}} \
+                    // ref-cxx17-note {{left shift of negative value -1}}
+  }
+
+  constexpr int foo(int a) {
+    return -a << 2; // cxx17-note {{left shift of negative value -10}} \
+                    // ref-cxx17-note {{left shift of negative value -10}} \
+                    // cxx17-note {{left shift of negative value -2}} \
+                    // ref-cxx17-note {{left shift of negative value -2}}
+  }
+  static_assert(foo(10)); // cxx17-error {{not an integral constant expression}} \
+                          // cxx17-note {{in call to 'foo(10)'}} \
+                          // ref-cxx17-error {{not an integral constant expression}} \
+                          // ref-cxx17-note {{in call to 'foo(10)'}}
+
+  constexpr int a = -2;
+  static_assert(foo(a));
+  static_assert(foo(-a)); // cxx17-error {{not an integral constant expression}} \
+                          // cxx17-note {{in call to 'foo(2)'}} \
+                          // ref-cxx17-error {{not an integral constant expression}} \
+                          // ref-cxx17-note {{in call to 'foo(2)'}}
 };

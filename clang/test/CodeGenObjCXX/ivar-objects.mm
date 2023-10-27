@@ -73,7 +73,6 @@ int main() {
   [a release];
 }
 
-// rdar: // 7468090
 class S {
 public:
 	S& operator = (const S&);

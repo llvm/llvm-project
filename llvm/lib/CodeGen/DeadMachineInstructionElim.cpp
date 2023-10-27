@@ -31,8 +31,8 @@ namespace {
   class DeadMachineInstructionElim : public MachineFunctionPass {
     bool runOnMachineFunction(MachineFunction &MF) override;
 
-    const MachineRegisterInfo *MRI;
-    const TargetInstrInfo *TII;
+    const MachineRegisterInfo *MRI = nullptr;
+    const TargetInstrInfo *TII = nullptr;
     LiveRegUnits LivePhysRegs;
 
   public:
@@ -75,27 +75,25 @@ bool DeadMachineInstructionElim::isDead(const MachineInstr *MI) const {
     return false;
 
   // Examine each operand.
-  for (const MachineOperand &MO : MI->operands()) {
-    if (MO.isReg() && MO.isDef()) {
-      Register Reg = MO.getReg();
-      if (Reg.isPhysical()) {
-        // Don't delete live physreg defs, or any reserved register defs.
-        if (!LivePhysRegs.available(Reg) || MRI->isReserved(Reg))
-          return false;
-      } else {
-        if (MO.isDead()) {
+  for (const MachineOperand &MO : MI->all_defs()) {
+    Register Reg = MO.getReg();
+    if (Reg.isPhysical()) {
+      // Don't delete live physreg defs, or any reserved register defs.
+      if (!LivePhysRegs.available(Reg) || MRI->isReserved(Reg))
+        return false;
+    } else {
+      if (MO.isDead()) {
 #ifndef NDEBUG
-          // Basic check on the register. All of them should be 'undef'.
-          for (auto &U : MRI->use_nodbg_operands(Reg))
-            assert(U.isUndef() && "'Undef' use on a 'dead' register is found!");
+        // Basic check on the register. All of them should be 'undef'.
+        for (auto &U : MRI->use_nodbg_operands(Reg))
+          assert(U.isUndef() && "'Undef' use on a 'dead' register is found!");
 #endif
-          continue;
-        }
-        for (const MachineInstr &Use : MRI->use_nodbg_instructions(Reg)) {
-          if (&Use != MI)
-            // This def has a non-debug use. Don't delete the instruction!
-            return false;
-        }
+        continue;
+      }
+      for (const MachineInstr &Use : MRI->use_nodbg_instructions(Reg)) {
+        if (&Use != MI)
+          // This def has a non-debug use. Don't delete the instruction!
+          return false;
       }
     }
   }

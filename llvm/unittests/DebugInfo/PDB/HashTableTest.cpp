@@ -8,6 +8,7 @@
 
 #include "llvm/DebugInfo/PDB/Native/HashTable.h"
 
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/DebugInfo/PDB/Native/Hash.h"
 #include "llvm/DebugInfo/PDB/Native/NamedStreamMap.h"
 #include "llvm/Support/Allocator.h"
@@ -146,7 +147,7 @@ TEST(HashTableTest, Serialization) {
   }
 
   std::vector<uint8_t> Buffer(Table.calculateSerializedLength());
-  MutableBinaryByteStream Stream(Buffer, little);
+  MutableBinaryByteStream Stream(Buffer, llvm::endianness::little);
   BinaryStreamWriter Writer(Stream);
   EXPECT_THAT_ERROR(Table.commit(Writer), Succeeded());
   // We should have written precisely the number of bytes we calculated earlier.
@@ -250,7 +251,7 @@ TEST(HashTableTest, NonTrivialValueType) {
   }
 
   std::vector<uint8_t> Buffer(Table.calculateSerializedLength());
-  MutableBinaryByteStream Stream(Buffer, little);
+  MutableBinaryByteStream Stream(Buffer, llvm::endianness::little);
   BinaryStreamWriter Writer(Stream);
   EXPECT_THAT_ERROR(Table.commit(Writer), Succeeded());
   // We should have written precisely the number of bytes we calculated earlier.

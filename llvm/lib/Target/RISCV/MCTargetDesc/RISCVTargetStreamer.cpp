@@ -1,4 +1,4 @@
-//===-- RISCVTargetStreamer.cpp - RISCV Target Streamer Methods -----------===//
+//===-- RISCVTargetStreamer.cpp - RISC-V Target Streamer Methods ----------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file provides RISCV specific target streamer methods.
+// This file provides RISC-V specific target streamer methods.
 //
 //===----------------------------------------------------------------------===//
 
@@ -33,6 +33,8 @@ void RISCVTargetStreamer::emitDirectiveOptionRVC() {}
 void RISCVTargetStreamer::emitDirectiveOptionNoRVC() {}
 void RISCVTargetStreamer::emitDirectiveOptionRelax() {}
 void RISCVTargetStreamer::emitDirectiveOptionNoRelax() {}
+void RISCVTargetStreamer::emitDirectiveOptionArch(
+    ArrayRef<RISCVOptionArchArg> Args) {}
 void RISCVTargetStreamer::emitDirectiveVariantCC(MCSymbol &Symbol) {}
 void RISCVTargetStreamer::emitAttribute(unsigned Attribute, unsigned Value) {}
 void RISCVTargetStreamer::finishAttributeSection() {}
@@ -46,10 +48,12 @@ void RISCVTargetStreamer::setTargetABI(RISCVABI::ABI ABI) {
   TargetABI = ABI;
 }
 
-void RISCVTargetStreamer::emitTargetAttributes(const MCSubtargetInfo &STI) {
-  if (STI.hasFeature(RISCV::FeatureRV32E))
-    emitAttribute(RISCVAttrs::STACK_ALIGN, RISCVAttrs::ALIGN_4);
-  else
+void RISCVTargetStreamer::emitTargetAttributes(const MCSubtargetInfo &STI,
+                                               bool EmitStackAlign) {
+  if (STI.hasFeature(RISCV::FeatureRVE))
+    report_fatal_error("Codegen not yet implemented for RVE");
+
+  if (EmitStackAlign)
     emitAttribute(RISCVAttrs::STACK_ALIGN, RISCVAttrs::ALIGN_16);
 
   auto ParseResult = RISCVFeatures::parseFeatureBits(
@@ -97,6 +101,26 @@ void RISCVTargetAsmStreamer::emitDirectiveOptionRelax() {
 
 void RISCVTargetAsmStreamer::emitDirectiveOptionNoRelax() {
   OS << "\t.option\tnorelax\n";
+}
+
+void RISCVTargetAsmStreamer::emitDirectiveOptionArch(
+    ArrayRef<RISCVOptionArchArg> Args) {
+  OS << "\t.option\tarch";
+  for (const auto &Arg : Args) {
+    OS << ", ";
+    switch (Arg.Type) {
+    case RISCVOptionArchArgType::Full:
+      break;
+    case RISCVOptionArchArgType::Plus:
+      OS << "+";
+      break;
+    case RISCVOptionArchArgType::Minus:
+      OS << "-";
+      break;
+    }
+    OS << Arg.Value;
+  }
+  OS << "\n";
 }
 
 void RISCVTargetAsmStreamer::emitDirectiveVariantCC(MCSymbol &Symbol) {

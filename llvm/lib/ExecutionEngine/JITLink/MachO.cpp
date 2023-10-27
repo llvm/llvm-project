@@ -54,7 +54,7 @@ createLinkGraphFromMachOObject(MemoryBufferRef ObjectBuffer) {
     uint32_t CPUType;
     memcpy(&CPUType, Data.data() + 4, sizeof(uint32_t));
     if (Magic == MachO::MH_CIGAM_64)
-      CPUType = ByteSwap_32(CPUType);
+      CPUType = llvm::byteswap<uint32_t>(CPUType);
 
     LLVM_DEBUG({
       dbgs() << "jitLink_MachO: cputype = " << format("0x%08" PRIx32, CPUType)

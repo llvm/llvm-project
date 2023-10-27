@@ -13,7 +13,7 @@ def dump_module_sources(module, result):
 
 
 def info_sources(debugger, command, result, dict):
-    description = '''This command will dump all compile units in any modules that are listed as arguments, or for all modules if no arguments are supplied.'''
+    description = """This command will dump all compile units in any modules that are listed as arguments, or for all modules if no arguments are supplied."""
     module_names = shlex.split(command)
     target = debugger.GetSelectedTarget()
     if module_names:
@@ -26,6 +26,7 @@ def info_sources(debugger, command, result, dict):
 
 def __lldb_init_module(debugger, dict):
     # Add any commands contained in this module to LLDB
-    debugger.HandleCommand(
-        'command script add -o -f sources.info_sources info_sources')
-    print('The "info_sources" command has been installed, type "help info_sources" or "info_sources --help" for detailed help.')
+    debugger.HandleCommand("command script add -o -f sources.info_sources info_sources")
+    print(
+        'The "info_sources" command has been installed, type "help info_sources" or "info_sources --help" for detailed help.'
+    )

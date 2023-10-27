@@ -19,10 +19,12 @@
 // just the re-ordering of argv elements such that unknown arguments can be
 // easily iterated over.
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 template <typename T> struct RefWrapper {
-  RefWrapper(T *ptr) : ptr(ptr) {}
+  RefWrapper() = delete;
+  constexpr RefWrapper(T *p) : ptr{p} {}
+  constexpr RefWrapper(const RefWrapper &) = default;
   RefWrapper &operator=(const RefWrapper &) = default;
   operator T &() { return *ptr; }
   T &get() { return *ptr; }
@@ -35,7 +37,7 @@ struct GetoptContext {
   RefWrapper<int> optopt;
   RefWrapper<unsigned> optpos;
 
-  int opterr;
+  RefWrapper<int> opterr;
 
   FILE *errstream;
 
@@ -43,7 +45,10 @@ struct GetoptContext {
 
   template <typename... Ts> void report_error(const char *fmt, Ts... ts) {
     if (opterr)
-      __llvm_libc::fprintf(errstream, fmt, ts...);
+      LIBC_NAMESPACE::fprintf(
+          errstream ? errstream
+                    : reinterpret_cast<FILE *>(LIBC_NAMESPACE::stderr),
+          fmt, ts...);
   }
 };
 
@@ -171,25 +176,21 @@ int getopt_r(int argc, char *const argv[], const char *optstring,
 namespace impl {
 
 extern "C" {
-
 char *optarg = nullptr;
 int optind = 1;
 int optopt = 0;
 int opterr = 0;
-
 }
 
 static unsigned optpos;
 
-static GetoptContext ctx{
-    &impl::optarg, &impl::optind,
-    &impl::optopt, &optpos,
-    impl::opterr,  reinterpret_cast<FILE *>(__llvm_libc::stderr)};
+static GetoptContext ctx{&impl::optarg, &impl::optind, &impl::optopt,
+                         &optpos,       &impl::opterr, /*errstream=*/nullptr};
 
-#ifndef LLVM_LIBC_PUBLIC_PACKAGING
+#ifndef LIBC_COPT_PUBLIC_PACKAGING
 // This is used exclusively in tests.
 void set_getopt_state(char **optarg, int *optind, int *optopt, unsigned *optpos,
-                      int opterr, FILE *errstream) {
+                      int *opterr, FILE *errstream) {
   ctx = {optarg, optind, optopt, optpos, opterr, errstream};
 }
 #endif
@@ -201,4 +202,4 @@ LLVM_LIBC_FUNCTION(int, getopt,
   return getopt_r(argc, argv, optstring, impl::ctx);
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

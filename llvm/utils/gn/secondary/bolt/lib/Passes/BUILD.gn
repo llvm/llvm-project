@@ -24,6 +24,7 @@ static_library("Passes") {
     "CallGraphWalker.cpp",
     "DataflowAnalysis.cpp",
     "DataflowInfoManager.cpp",
+    "FixRISCVCallsPass.cpp",
     "FixRelaxationPass.cpp",
     "FrameAnalysis.cpp",
     "FrameOptimizer.cpp",

@@ -1,32 +1,32 @@
 ; Tests that CoroEarly pass correctly lowers coro.resume, coro.destroy
-; RUN: opt -opaque-pointers=0 < %s -S -passes=coro-early | FileCheck %s
+; RUN: opt < %s -S -passes=coro-early | FileCheck %s
 
 ; CHECK-LABEL: @callResume(
-define void @callResume(i8* %hdl) {
+define void @callResume(ptr %hdl) {
 ; CHECK-NEXT: entry
 entry:
-; CHECK-NEXT: %0 = call i8* @llvm.coro.subfn.addr(i8* %hdl, i8 0)
-; CHECK-NEXT: %1 = bitcast i8* %0 to void (i8*)*
-; CHECK-NEXT: call fastcc void %1(i8* %hdl)
-  call void @llvm.coro.resume(i8* %hdl)
+; CHECK-NEXT: %0 = call ptr @llvm.coro.subfn.addr(ptr %hdl, i8 0)
+; CHECK-NEXT: %1 = bitcast ptr %0 to ptr
+; CHECK-NEXT: call fastcc void %1(ptr %hdl)
+  call void @llvm.coro.resume(ptr %hdl)
 
-; CHECK-NEXT: %2 = call i8* @llvm.coro.subfn.addr(i8* %hdl, i8 1)
-; CHECK-NEXT: %3 = bitcast i8* %2 to void (i8*)*
-; CHECK-NEXT: call fastcc void %3(i8* %hdl)
-  call void @llvm.coro.destroy(i8* %hdl)
+; CHECK-NEXT: %2 = call ptr @llvm.coro.subfn.addr(ptr %hdl, i8 1)
+; CHECK-NEXT: %3 = bitcast ptr %2 to ptr
+; CHECK-NEXT: call fastcc void %3(ptr %hdl)
+  call void @llvm.coro.destroy(ptr %hdl)
 
   ret void
 ; CHECK-NEXT: ret void
 }
 
 ; CHECK-LABEL: @eh(
-define void @eh(i8* %hdl) personality i8* null {
+define void @eh(ptr %hdl) personality ptr null {
 ; CHECK-NEXT: entry
 entry:
-;  CHECK-NEXT: %0 = call i8* @llvm.coro.subfn.addr(i8* %hdl, i8 0)
-;  CHECK-NEXT: %1 = bitcast i8* %0 to void (i8*)*
-;  CHECK-NEXT: invoke fastcc void %1(i8* %hdl)
-  invoke void @llvm.coro.resume(i8* %hdl)
+;  CHECK-NEXT: %0 = call ptr @llvm.coro.subfn.addr(ptr %hdl, i8 0)
+;  CHECK-NEXT: %1 = bitcast ptr %0 to ptr
+;  CHECK-NEXT: invoke fastcc void %1(ptr %hdl)
+  invoke void @llvm.coro.resume(ptr %hdl)
           to label %cont unwind label %ehcleanup
 cont:
   ret void
@@ -37,5 +37,5 @@ ehcleanup:
 }
 
 
-declare void @llvm.coro.resume(i8*)
-declare void @llvm.coro.destroy(i8*)
+declare void @llvm.coro.resume(ptr)
+declare void @llvm.coro.destroy(ptr)

@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -Wno-unused-value -verify -std=c++11 -Wno-c99-designator %s
-// RUN: %clang_cc1 -fsyntax-only -Wno-unused-value -verify -std=c++2a -Wno-c99-designator %s
-// RUN: %clang_cc1 -fsyntax-only -Wno-unused-value -verify -std=c++2b -Wno-c99-designator %s
+// RUN: %clang_cc1 -fsyntax-only -Wno-unused-value -verify -std=c++20 -Wno-c99-designator %s
+// RUN: %clang_cc1 -fsyntax-only -Wno-unused-value -verify -std=c++23 -Wno-c99-designator %s
 
 enum E { e };
 
@@ -31,8 +31,8 @@ class C {
     [] -> int { return 0; };
     [] mutable -> int { return 0; };
 #if __cplusplus <= 202002L
-    // expected-warning@-3 {{lambda without a parameter clause is a C++2b extension}}
-    // expected-warning@-3 {{is a C++2b extension}}
+    // expected-warning@-3 {{lambda without a parameter clause is a C++23 extension}}
+    // expected-warning@-3 {{is a C++23 extension}}
 #endif
     [](int) -> {}; // PR13652 expected-error {{expected a type}}
     return 1;
@@ -108,7 +108,7 @@ class C {
   void attributes() {
     [] __attribute__((noreturn)){};
 #if __cplusplus <= 202002L
-    // expected-warning@-2 {{is a C++2b extension}}
+    // expected-warning@-2 {{is a C++23 extension}}
 #endif
     []() [[]]
       mutable {}; // expected-error {{expected body of lambda expression}}
@@ -128,17 +128,17 @@ class C {
     // rather than the type.
     [][[]](){};
 #if __cplusplus <= 202002L
-    // expected-warning@-2 {{an attribute specifier sequence in this position is a C++2b extension}}
+    // expected-warning@-2 {{an attribute specifier sequence in this position is a C++23 extension}}
 #endif
 #if __cplusplus > 201703L
     []<typename>[[]](){};
 #if __cplusplus <= 202002L
-    // expected-warning@-2 {{an attribute specifier sequence in this position is a C++2b extension}}
+    // expected-warning@-2 {{an attribute specifier sequence in this position is a C++23 extension}}
 #endif
 #endif
     [][[]]{};
 #if __cplusplus <= 202002L
-    // expected-warning@-2 {{an attribute specifier sequence in this position is a C++2b extension}}
+    // expected-warning@-2 {{an attribute specifier sequence in this position is a C++23 extension}}
 #endif
   }
 
@@ -146,8 +146,8 @@ class C {
     [] mutable {};
     [] noexcept {};
 #if __cplusplus <= 202002L
-    // expected-warning@-3 {{is a C++2b extension}}
-    // expected-warning@-3 {{is a C++2b extension}}
+    // expected-warning@-3 {{is a C++23 extension}}
+    // expected-warning@-3 {{is a C++23 extension}}
 #endif
   }
 };

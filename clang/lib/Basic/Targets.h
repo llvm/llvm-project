@@ -24,8 +24,8 @@ namespace clang {
 namespace targets {
 
 LLVM_LIBRARY_VISIBILITY
-clang::TargetInfo *AllocateTarget(const llvm::Triple &Triple,
-                                  const clang::TargetOptions &Opts);
+std::unique_ptr<clang::TargetInfo>
+AllocateTarget(const llvm::Triple &Triple, const clang::TargetOptions &Opts);
 
 /// DefineStd - Define a macro name and standard variants.  For example if
 /// MacroName is "unix", then this will define "__unix", "__unix__", and "unix"

@@ -129,10 +129,10 @@ private:
 
 public:
   ELFLinkGraphBuilder_loongarch(StringRef FileName,
-                                const object::ELFFile<ELFT> &Obj,
-                                const Triple T)
-      : ELFLinkGraphBuilder<ELFT>(Obj, std::move(T), FileName,
-                                  loongarch::getEdgeKindName) {}
+                                const object::ELFFile<ELFT> &Obj, Triple TT,
+                                SubtargetFeatures Features)
+      : ELFLinkGraphBuilder<ELFT>(Obj, std::move(TT), std::move(Features),
+                                  FileName, loongarch::getEdgeKindName) {}
 };
 
 Error buildTables_ELF_loongarch(LinkGraph &G) {
@@ -160,11 +160,15 @@ createLinkGraphFromELFObject_loongarch(MemoryBufferRef ObjectBuffer) {
   if (!ELFObj)
     return ELFObj.takeError();
 
+  auto Features = (*ELFObj)->getFeatures();
+  if (!Features)
+    return Features.takeError();
+
   if ((*ELFObj)->getArch() == Triple::loongarch64) {
     auto &ELFObjFile = cast<object::ELFObjectFile<object::ELF64LE>>(**ELFObj);
     return ELFLinkGraphBuilder_loongarch<object::ELF64LE>(
                (*ELFObj)->getFileName(), ELFObjFile.getELFFile(),
-               (*ELFObj)->makeTriple())
+               (*ELFObj)->makeTriple(), std::move(*Features))
         .buildGraph();
   }
 
@@ -173,7 +177,7 @@ createLinkGraphFromELFObject_loongarch(MemoryBufferRef ObjectBuffer) {
   auto &ELFObjFile = cast<object::ELFObjectFile<object::ELF32LE>>(**ELFObj);
   return ELFLinkGraphBuilder_loongarch<object::ELF32LE>(
              (*ELFObj)->getFileName(), ELFObjFile.getELFFile(),
-             (*ELFObj)->makeTriple())
+             (*ELFObj)->makeTriple(), std::move(*Features))
       .buildGraph();
 }
 
@@ -182,7 +186,7 @@ void link_ELF_loongarch(std::unique_ptr<LinkGraph> G,
   PassConfiguration Config;
   const Triple &TT = G->getTargetTriple();
   if (Ctx->shouldAddDefaultTargetPasses(TT)) {
-    // Add eh-frame passses.
+    // Add eh-frame passes.
     Config.PrePrunePasses.push_back(DWARFRecordSectionSplitter(".eh_frame"));
     Config.PrePrunePasses.push_back(
         EHFrameEdgeFixer(".eh_frame", G->getPointerSize(), Pointer32, Pointer64,

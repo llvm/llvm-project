@@ -23,6 +23,7 @@
 namespace llvm {
 class BasicBlock;
 class CallBase;
+class DbgVariableIntrinsic;
 class Function;
 class Instruction;
 class Value;
@@ -32,7 +33,9 @@ namespace mlir {
 namespace LLVM {
 
 namespace detail {
+class DataLayoutImporter;
 class DebugImporter;
+class LoopAnnotationImporter;
 } // namespace detail
 
 /// Module import implementation class that provides methods to import globals
@@ -43,7 +46,8 @@ class DebugImporter;
 /// that are introduced at the beginning of the region.
 class ModuleImport {
 public:
-  ModuleImport(ModuleOp mlirModule, std::unique_ptr<llvm::Module> llvmModule);
+  ModuleImport(ModuleOp mlirModule, std::unique_ptr<llvm::Module> llvmModule,
+               bool emitExpensiveWarnings);
 
   /// Calls the LLVMImportInterface initialization that queries the registered
   /// dialect interfaces for the supported LLVM IR intrinsics and metadata kinds
@@ -54,8 +58,16 @@ public:
   /// Converts all functions of the LLVM module to MLIR functions.
   LogicalResult convertFunctions();
 
+  /// Converts all comdat selectors of the LLVM module to MLIR comdat
+  /// operations.
+  LogicalResult convertComdats();
+
   /// Converts all global variables of the LLVM module to MLIR global variables.
   LogicalResult convertGlobals();
+
+  /// Converts the data layout of the LLVM module to an MLIR data layout
+  /// specification.
+  LogicalResult convertDataLayout();
 
   /// Stores the mapping between an LLVM value and its MLIR counterpart.
   void mapValue(llvm::Value *llvm, Value mlir) { mapValue(llvm) = mlir; }
@@ -118,6 +130,11 @@ public:
   /// LLVM values.
   FailureOr<Value> convertValue(llvm::Value *value);
 
+  /// Converts an LLVM metadata value to an MLIR value, or returns failure if
+  /// the conversion fails. Uses the `convertConstant` method to translate
+  /// constant LLVM values.
+  FailureOr<Value> convertMetadataValue(llvm::Value *value);
+
   /// Converts a range of LLVM values to a range of MLIR values using the
   /// `convertValue` method, or returns failure if the conversion fails.
   FailureOr<SmallVector<Value>> convertValues(ArrayRef<llvm::Value *> values);
@@ -125,9 +142,20 @@ public:
   /// Converts `value` to an integer attribute. Asserts if the matching fails.
   IntegerAttr matchIntegerAttr(llvm::Value *value);
 
+  /// Converts `value` to a float attribute. Asserts if the matching fails.
+  FloatAttr matchFloatAttr(llvm::Value *value);
+
   /// Converts `value` to a local variable attribute. Asserts if the matching
   /// fails.
   DILocalVariableAttr matchLocalVariableAttr(llvm::Value *value);
+
+  /// Converts `value` to a label attribute. Asserts if the matching fails.
+  DILabelAttr matchLabelAttr(llvm::Value *value);
+
+  /// Converts `value` to an array of alias scopes or returns failure if the
+  /// conversion fails.
+  FailureOr<SmallVector<AliasScopeAttr>>
+  matchAliasScopeAttrs(llvm::Value *value);
 
   /// Translates the debug location.
   Location translateLoc(llvm::DILocation *loc);
@@ -149,23 +177,46 @@ public:
   /// implement the fastmath interface.
   void setFastmathFlagsAttr(llvm::Instruction *inst, Operation *op) const;
 
-  /// Converts LLVM metadata to corresponding MLIR representation,
-  /// e.g. metadata nodes referenced via !tbaa are converted to
-  /// TBAA operations hosted inside a MetadataOp.
+  /// Converts all LLVM metadata nodes that translate to attributes such as
+  /// alias analysis or access group metadata, and builds a map from the
+  /// metadata nodes to the converted attributes.
+  /// Returns success if all conversions succeed and failure otherwise.
   LogicalResult convertMetadata();
 
-  /// Returns SymbolRefAttr representing TBAA metadata `node`
-  /// in `tbaaMapping`.
-  SymbolRefAttr lookupTBAAAttr(const llvm::MDNode *node) {
+  /// Returns the MLIR attribute mapped to the given LLVM TBAA
+  /// metadata `node`.
+  Attribute lookupTBAAAttr(const llvm::MDNode *node) const {
     return tbaaMapping.lookup(node);
   }
 
+  /// Returns the access group attributes that map to the access group nodes
+  /// starting from the access group metadata `node`. Returns failure, if any of
+  /// the attributes cannot be found.
+  FailureOr<SmallVector<AccessGroupAttr>>
+  lookupAccessGroupAttrs(const llvm::MDNode *node) const;
+
+  /// Returns the loop annotation attribute that corresponds to the given LLVM
+  /// loop metadata `node`.
+  LoopAnnotationAttr translateLoopAnnotationAttr(const llvm::MDNode *node,
+                                                 Location loc) const;
+
+  /// Returns the alias scope attributes that map to the alias scope nodes
+  /// starting from the metadata `node`. Returns failure, if any of the
+  /// attributes cannot be found.
+  FailureOr<SmallVector<AliasScopeAttr>>
+  lookupAliasScopeAttrs(const llvm::MDNode *node) const;
+
+  /// Adds a debug intrinsics to the list of intrinsics that should be converted
+  /// after the function conversion has finished.
+  void addDebugIntrinsic(llvm::CallInst *intrinsic);
+
 private:
-  /// Clears the block and value mapping before processing a new region.
-  void clearBlockAndValueMapping() {
+  /// Clears the accumulated state before processing a new region.
+  void clearRegionState() {
     valueMapping.clear();
     noResultOpMapping.clear();
     blockMapping.clear();
+    debugIntrinsics.clear();
   }
   /// Sets the constant insertion point to the start of the given block.
   void setConstantInsertionPointToStart(Block *block) {
@@ -182,6 +233,12 @@ private:
   FlatSymbolRefAttr getPersonalityAsAttr(llvm::Function *func);
   /// Imports `bb` into `block`, which must be initially empty.
   LogicalResult processBasicBlock(llvm::BasicBlock *bb, Block *block);
+  /// Converts all debug intrinsics in `debugIntrinsics`. Assumes that the
+  /// function containing the intrinsics has been fully converted to MLIR.
+  LogicalResult processDebugIntrinsics();
+  /// Converts a single debug intrinsic.
+  LogicalResult processDebugIntrinsic(llvm::DbgVariableIntrinsic *dbgIntr,
+                                      DominanceInfo &domInfo);
   /// Converts an LLVM intrinsic to an MLIR LLVM dialect operation if an MLIR
   /// counterpart exists. Otherwise, returns failure.
   LogicalResult convertIntrinsic(llvm::CallInst *inst);
@@ -210,11 +267,22 @@ private:
   LogicalResult convertCallTypeAndOperands(llvm::CallBase *callInst,
                                            SmallVectorImpl<Type> &types,
                                            SmallVectorImpl<Value> &operands);
-  /// Returns the builtin type equivalent to be used in attributes for the given
-  /// LLVM IR dialect type.
-  Type getStdTypeForAttr(Type type);
-  /// Returns `value` as an attribute to attach to a GlobalOp.
-  Attribute getConstantAsAttr(llvm::Constant *value);
+  /// Converts the parameter attributes attached to `func` and adds them to the
+  /// `funcOp`.
+  void convertParameterAttributes(llvm::Function *func, LLVMFuncOp funcOp,
+                                  OpBuilder &builder);
+  /// Converts the AttributeSet of one parameter in LLVM IR to a corresponding
+  /// DictionaryAttr for the LLVM dialect.
+  DictionaryAttr convertParameterAttribute(llvm::AttributeSet llvmParamAttrs,
+                                           OpBuilder &builder);
+  /// Returns the builtin type equivalent to the given LLVM dialect type or
+  /// nullptr if there is no equivalent. The returned type can be used to create
+  /// an attribute for a GlobalOp or a ConstantOp.
+  Type getBuiltinTypeForAttr(Type type);
+  /// Returns `constant` as an attribute to attach to a GlobalOp or ConstantOp
+  /// or nullptr if the constant is not convertible. It supports scalar integer
+  /// and float constants as well as shaped types thereof including strings.
+  Attribute getConstantAsAttr(llvm::Constant *constant);
   /// Returns the topologically sorted set of transitive dependencies needed to
   /// convert the given constant.
   SetVector<llvm::Constant *> getConstantsToConvert(llvm::Constant *constant);
@@ -229,25 +297,30 @@ private:
   /// them fails. All operations are inserted at the start of the current
   /// function entry block.
   FailureOr<Value> convertConstantExpr(llvm::Constant *constant);
-  /// Returns symbol name to be used for MetadataOp containing
-  /// TBAA metadata operations. It must not conflict with the user
-  /// name space.
-  StringRef getTBAAMetadataOpName() const { return "__tbaa"; }
-  /// Returns a terminated MetadataOp into which TBAA metadata
-  /// operations can be placed. The MetadataOp is created
-  /// on the first invocation of this function.
-  MetadataOp getTBAAMetadataOp();
+  /// Returns a global comdat operation that serves as a container for LLVM
+  /// comdat selectors. Creates the global comdat operation on the first
+  /// invocation.
+  ComdatOp getGlobalComdatOp();
   /// Performs conversion of LLVM TBAA metadata starting from
   /// `node`. On exit from this function all nodes reachable
   /// from `node` are converted, and tbaaMapping map is updated
   /// (unless all dependencies have been converted by a previous
   /// invocation of this function).
   LogicalResult processTBAAMetadata(const llvm::MDNode *node);
-  /// Returns unique string name of a symbol that may be used
-  /// for a TBAA metadata operation. The name will contain
-  /// the provided `basename` and will be uniqued via
-  /// tbaaNodeCounter (see below).
-  std::string getNewTBAANodeName(StringRef basename);
+  /// Converts all LLVM access groups starting from `node` to MLIR access group
+  /// operations and stores a mapping from every nested access group node to the
+  /// translated attribute. Returns success if all conversions succeed and
+  /// failure otherwise.
+  LogicalResult processAccessGroupMetadata(const llvm::MDNode *node);
+  /// Converts all LLVM alias scopes and domains starting from `node` to MLIR
+  /// alias scope and domain attributes and stores a mapping from every nested
+  /// alias scope or alias domain node to the translated attribute. Returns
+  /// success if all conversions succeed and failure otherwise.
+  LogicalResult processAliasScopeMetadata(const llvm::MDNode *node);
+  /// Converts the given LLVM comdat struct to an MLIR comdat selector operation
+  /// and stores a mapping from the struct to the symbol pointing to the
+  /// translated operation.
+  void processComdat(const llvm::Comdat *comdat);
 
   /// Builder pointing at where the next instruction should be generated.
   OpBuilder builder;
@@ -257,6 +330,8 @@ private:
   Operation *constantInsertionOp = nullptr;
   /// Operation to insert the next global after.
   Operation *globalInsertionOp = nullptr;
+  /// Operation to insert comdat selector operations into.
+  ComdatOp globalComdatOp = nullptr;
   /// The current context.
   MLIRContext *context;
   /// The MLIR module being created.
@@ -276,20 +351,29 @@ private:
   /// operations for all operations that return no result. All operations that
   /// return a result have a valueMapping entry instead.
   DenseMap<llvm::Instruction *, Operation *> noResultOpMapping;
+  /// Function-local list of debug intrinsics that need to be imported after the
+  /// function conversion has finished.
+  SetVector<llvm::Instruction *> debugIntrinsics;
+  /// Mapping between LLVM alias scope and domain metadata nodes and
+  /// attributes in the LLVM dialect corresponding to these nodes.
+  DenseMap<const llvm::MDNode *, Attribute> aliasScopeMapping;
+  /// Mapping between LLVM TBAA metadata nodes and LLVM dialect TBAA attributes
+  /// corresponding to these nodes.
+  DenseMap<const llvm::MDNode *, Attribute> tbaaMapping;
+  /// Mapping between LLVM comdat structs and symbol references to LLVM dialect
+  /// comdat selector operations corresponding to these structs.
+  DenseMap<const llvm::Comdat *, SymbolRefAttr> comdatMapping;
   /// The stateful type translator (contains named structs).
   LLVM::TypeFromLLVMIRTranslator typeTranslator;
   /// Stateful debug information importer.
   std::unique_ptr<detail::DebugImporter> debugImporter;
-  /// A terminated MetadataOp where TBAA metadata operations
-  /// can be inserted.
-  MetadataOp tbaaMetadataOp{};
-  /// Mapping between LLVM TBAA metadata nodes and symbol references
-  /// to the LLVMIR dialect TBAA operations corresponding to these
-  /// nodes.
-  DenseMap<const llvm::MDNode *, SymbolRefAttr> tbaaMapping;
-  /// A counter to be used as a unique suffix for symbols
-  /// defined by TBAA operations.
-  unsigned tbaaNodeCounter = 0;
+  /// Loop annotation importer.
+  std::unique_ptr<detail::LoopAnnotationImporter> loopAnnotationImporter;
+
+  /// An option to control if expensive but uncritical diagnostics should be
+  /// emitted. Avoids generating warnings for unhandled debug intrinsics and
+  /// metadata that otherwise dominate the translation time for large inputs.
+  bool emitExpensiveWarnings;
 };
 
 } // namespace LLVM

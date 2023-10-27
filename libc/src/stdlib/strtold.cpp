@@ -9,12 +9,20 @@
 #include "src/stdlib/strtold.h"
 #include "src/__support/common.h"
 #include "src/__support/str_to_float.h"
+#include "src/errno/libc_errno.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(long double, strtold,
                    (const char *__restrict str, char **__restrict str_end)) {
-  return internal::strtofloatingpoint<long double>(str, str_end);
+  auto result = internal::strtofloatingpoint<long double>(str);
+  if (result.has_error())
+    libc_errno = result.error;
+
+  if (str_end != NULL)
+    *str_end = const_cast<char *>(str + result.parsed_len);
+
+  return result.value;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

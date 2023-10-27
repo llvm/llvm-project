@@ -12,9 +12,9 @@
 #ifndef LLVM_LIBC_SRC_STRING_MEMORY_UTILS_OP_X86_H
 #define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_OP_X86_H
 
-#include "src/__support/architectures.h"
+#include "src/__support/macros/properties/architectures.h"
 
-#if defined(LLVM_LIBC_ARCH_X86_64)
+#if defined(LIBC_TARGET_ARCH_IS_X86_64)
 
 #include "src/__support/common.h"
 #include "src/string/memory_utils/op_builtin.h"
@@ -37,235 +37,218 @@
 #define _mm_movemask_epi8(A) 0
 #endif
 
-namespace __llvm_libc::x86 {
+namespace LIBC_NAMESPACE::x86 {
 
 // A set of constants to check compile time features.
-static inline constexpr bool kSse2 = LLVM_LIBC_IS_DEFINED(__SSE2__);
-static inline constexpr bool kAvx = LLVM_LIBC_IS_DEFINED(__AVX__);
-static inline constexpr bool kAvx2 = LLVM_LIBC_IS_DEFINED(__AVX2__);
-static inline constexpr bool kAvx512F = LLVM_LIBC_IS_DEFINED(__AVX512F__);
-static inline constexpr bool kAvx512BW = LLVM_LIBC_IS_DEFINED(__AVX512BW__);
+LIBC_INLINE_VAR constexpr bool kSse2 = LLVM_LIBC_IS_DEFINED(__SSE2__);
+LIBC_INLINE_VAR constexpr bool kSse41 = LLVM_LIBC_IS_DEFINED(__SSE4_1__);
+LIBC_INLINE_VAR constexpr bool kAvx = LLVM_LIBC_IS_DEFINED(__AVX__);
+LIBC_INLINE_VAR constexpr bool kAvx2 = LLVM_LIBC_IS_DEFINED(__AVX2__);
+LIBC_INLINE_VAR constexpr bool kAvx512F = LLVM_LIBC_IS_DEFINED(__AVX512F__);
+LIBC_INLINE_VAR constexpr bool kAvx512BW = LLVM_LIBC_IS_DEFINED(__AVX512BW__);
 
 ///////////////////////////////////////////////////////////////////////////////
 // Memcpy repmovsb implementation
 struct Memcpy {
-  static void repmovsb(void *dst, const void *src, size_t count) {
+  LIBC_INLINE static void repmovsb(void *dst, const void *src, size_t count) {
     asm volatile("rep movsb" : "+D"(dst), "+S"(src), "+c"(count) : : "memory");
   }
 };
 
+} // namespace LIBC_NAMESPACE::x86
+
+namespace LIBC_NAMESPACE::generic {
+
 ///////////////////////////////////////////////////////////////////////////////
-// Bcmp
-
-// Base implementation for the Bcmp specializations.
-//  - BlockSize is either 16, 32 or 64 depending on the available compile time
-// features, it is used to switch between "single native operation" or a
-// "sequence of native operations".
-//  - BlockBcmp is the function that implements the bcmp logic.
-template <size_t Size, size_t BlockSize, auto BlockBcmp> struct BcmpImpl {
-  static constexpr size_t SIZE = Size;
-  static inline BcmpReturnType block(CPtr p1, CPtr p2) {
-    if constexpr (Size == BlockSize) {
-      return BlockBcmp(p1, p2);
-    } else if constexpr (Size % BlockSize == 0) {
-      for (size_t offset = 0; offset < Size; offset += BlockSize)
-        if (auto value = BlockBcmp(p1 + offset, p2 + offset))
-          return value;
-    } else {
-      deferred_static_assert("SIZE not implemented");
-    }
-    return BcmpReturnType::ZERO();
-  }
-
-  static inline BcmpReturnType tail(CPtr p1, CPtr p2, size_t count) {
-    return block(p1 + count - Size, p2 + count - Size);
-  }
-
-  static inline BcmpReturnType head_tail(CPtr p1, CPtr p2, size_t count) {
-    return block(p1, p2) | tail(p1, p2, count);
-  }
-
-  static inline BcmpReturnType loop_and_tail(CPtr p1, CPtr p2, size_t count) {
-    static_assert(Size > 1, "a loop of size 1 does not need tail");
-    size_t offset = 0;
-    do {
-      if (auto value = block(p1 + offset, p2 + offset))
-        return value;
-      offset += Size;
-    } while (offset < count - Size);
-    return tail(p1, p2, count);
-  }
-};
-
-namespace sse2 {
-static inline BcmpReturnType bcmp16(CPtr p1, CPtr p2) {
-#if defined(__SSE2__)
-  using T = char __attribute__((__vector_size__(16)));
-  // A mask indicating which bytes differ after loading 16 bytes from p1 and p2.
-  const int mask =
-      _mm_movemask_epi8(cpp::bit_cast<__m128i>(load<T>(p1) != load<T>(p2)));
-  return static_cast<uint32_t>(mask);
-#else
-  (void)p1;
-  (void)p2;
-  return BcmpReturnType::ZERO();
-#endif // defined(__SSE2__)
+// Specializations for uint16_t
+template <> struct cmp_is_expensive<uint16_t> : public cpp::false_type {};
+template <> LIBC_INLINE bool eq<uint16_t>(CPtr p1, CPtr p2, size_t offset) {
+  return load<uint16_t>(p1, offset) == load<uint16_t>(p2, offset);
 }
-template <size_t Size> using Bcmp = BcmpImpl<Size, 16, bcmp16>;
-} // namespace sse2
-
-namespace avx2 {
-static inline BcmpReturnType bcmp32(CPtr p1, CPtr p2) {
-#if defined(__AVX2__)
-  using T = char __attribute__((__vector_size__(32)));
-  // A mask indicating which bytes differ after loading 32 bytes from p1 and p2.
-  const int mask =
-      _mm256_movemask_epi8(cpp::bit_cast<__m256i>(load<T>(p1) != load<T>(p2)));
-  // _mm256_movemask_epi8 returns an int but it is to be interpreted as a 32-bit
-  // mask.
-  return static_cast<uint32_t>(mask);
-#else
-  (void)p1;
-  (void)p2;
-  return BcmpReturnType::ZERO();
-#endif // defined(__AVX2__)
+template <>
+LIBC_INLINE uint32_t neq<uint16_t>(CPtr p1, CPtr p2, size_t offset) {
+  return load<uint16_t>(p1, offset) ^ load<uint16_t>(p2, offset);
 }
-template <size_t Size> using Bcmp = BcmpImpl<Size, 32, bcmp32>;
-} // namespace avx2
-
-namespace avx512bw {
-static inline BcmpReturnType bcmp64(CPtr p1, CPtr p2) {
-#if defined(__AVX512BW__)
-  using T = char __attribute__((__vector_size__(64)));
-  // A mask indicating which bytes differ after loading 64 bytes from p1 and p2.
-  const uint64_t mask = _mm512_cmpneq_epi8_mask(
-      cpp::bit_cast<__m512i>(load<T>(p1)), cpp::bit_cast<__m512i>(load<T>(p2)));
-  const bool mask_is_set = mask != 0;
-  return static_cast<uint32_t>(mask_is_set);
-#else
-  (void)p1;
-  (void)p2;
-  return BcmpReturnType::ZERO();
-#endif // defined(__AVX512BW__)
+template <>
+LIBC_INLINE MemcmpReturnType cmp<uint16_t>(CPtr p1, CPtr p2, size_t offset) {
+  return static_cast<int32_t>(load_be<uint16_t>(p1, offset)) -
+         static_cast<int32_t>(load_be<uint16_t>(p2, offset));
 }
-template <size_t Size> using Bcmp = BcmpImpl<Size, 64, bcmp64>;
-} // namespace avx512bw
+template <>
+LIBC_INLINE MemcmpReturnType cmp_neq<uint16_t>(CPtr p1, CPtr p2, size_t offset);
 
-// Assuming that the mask is non zero, the index of the first mismatching byte
-// is the number of trailing zeros in the mask. Trailing zeros and not leading
-// zeros because the x86 architecture is little endian.
-static inline MemcmpReturnType char_diff_no_zero(CPtr p1, CPtr p2,
-                                                 uint64_t mask) {
-  const size_t diff_index = __builtin_ctzll(mask);
-  const int16_t ca = cpp::to_integer<uint8_t>(p1[diff_index]);
-  const int16_t cb = cpp::to_integer<uint8_t>(p2[diff_index]);
-  return ca - cb;
+///////////////////////////////////////////////////////////////////////////////
+// Specializations for uint32_t
+template <> struct cmp_is_expensive<uint32_t> : public cpp::false_type {};
+template <> LIBC_INLINE bool eq<uint32_t>(CPtr p1, CPtr p2, size_t offset) {
+  return load<uint32_t>(p1, offset) == load<uint32_t>(p2, offset);
+}
+template <>
+LIBC_INLINE uint32_t neq<uint32_t>(CPtr p1, CPtr p2, size_t offset) {
+  return load<uint32_t>(p1, offset) ^ load<uint32_t>(p2, offset);
+}
+template <>
+LIBC_INLINE MemcmpReturnType cmp<uint32_t>(CPtr p1, CPtr p2, size_t offset) {
+  const auto a = load_be<uint32_t>(p1, offset);
+  const auto b = load_be<uint32_t>(p2, offset);
+  return cmp_uint32_t(a, b);
+}
+template <>
+LIBC_INLINE MemcmpReturnType cmp_neq<uint32_t>(CPtr p1, CPtr p2, size_t offset);
+
+///////////////////////////////////////////////////////////////////////////////
+// Specializations for uint64_t
+template <> struct cmp_is_expensive<uint64_t> : public cpp::true_type {};
+template <> LIBC_INLINE bool eq<uint64_t>(CPtr p1, CPtr p2, size_t offset) {
+  return load<uint64_t>(p1, offset) == load<uint64_t>(p2, offset);
+}
+template <>
+LIBC_INLINE uint32_t neq<uint64_t>(CPtr p1, CPtr p2, size_t offset) {
+  return !eq<uint64_t>(p1, p2, offset);
+}
+template <>
+LIBC_INLINE MemcmpReturnType cmp<uint64_t>(CPtr p1, CPtr p2, size_t offset);
+template <>
+LIBC_INLINE MemcmpReturnType cmp_neq<uint64_t>(CPtr p1, CPtr p2,
+                                               size_t offset) {
+  const auto a = load_be<uint64_t>(p1, offset);
+  const auto b = load_be<uint64_t>(p2, offset);
+  return cmp_neq_uint64_t(a, b);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-// Memcmp
-
-// Base implementation for the Memcmp specializations.
-//  - BlockSize is either 16, 32 or 64 depending on the available compile time
-// features, it is used to switch between "single native operation" or a
-// "sequence of native operations".
-//  - BlockMemcmp is the function that implements the memcmp logic.
-//  - BlockBcmp is the function that implements the bcmp logic.
-template <size_t Size, size_t BlockSize, auto BlockMemcmp, auto BlockBcmp>
-struct MemcmpImpl {
-  static constexpr size_t SIZE = Size;
-  static inline MemcmpReturnType block(CPtr p1, CPtr p2) {
-    if constexpr (Size == BlockSize) {
-      return BlockMemcmp(p1, p2);
-    } else if constexpr (Size % BlockSize == 0) {
-      for (size_t offset = 0; offset < Size; offset += BlockSize)
-        if (auto value = BlockBcmp(p1 + offset, p2 + offset))
-          return BlockMemcmp(p1 + offset, p2 + offset);
-    } else {
-      deferred_static_assert("SIZE not implemented");
-    }
-    return MemcmpReturnType::ZERO();
-  }
-
-  static inline MemcmpReturnType tail(CPtr p1, CPtr p2, size_t count) {
-    return block(p1 + count - Size, p2 + count - Size);
-  }
-
-  static inline MemcmpReturnType head_tail(CPtr p1, CPtr p2, size_t count) {
-    if (auto value = block(p1, p2))
-      return value;
-    return tail(p1, p2, count);
-  }
-
-  static inline MemcmpReturnType loop_and_tail(CPtr p1, CPtr p2, size_t count) {
-    static_assert(Size > 1, "a loop of size 1 does not need tail");
-    size_t offset = 0;
-    do {
-      if (auto value = block(p1 + offset, p2 + offset))
-        return value;
-      offset += Size;
-    } while (offset < count - Size);
-    return tail(p1, p2, count);
-  }
-};
-
-namespace sse2 {
-static inline MemcmpReturnType memcmp16(CPtr p1, CPtr p2) {
-#if defined(__SSE2__)
-  using T = char __attribute__((__vector_size__(16)));
-  // A mask indicating which bytes differ after loading 16 bytes from p1 and p2.
-  if (int mask =
-          _mm_movemask_epi8(cpp::bit_cast<__m128i>(load<T>(p1) != load<T>(p2))))
-    return char_diff_no_zero(p1, p2, mask);
-  return MemcmpReturnType::ZERO();
-#else
-  (void)p1;
-  (void)p2;
-  return MemcmpReturnType::ZERO();
-#endif // defined(__SSE2__)
+// Specializations for __m128i
+#if defined(__SSE4_1__)
+template <> struct is_vector<__m128i> : cpp::true_type {};
+template <> struct cmp_is_expensive<__m128i> : cpp::true_type {};
+LIBC_INLINE __m128i bytewise_max(__m128i a, __m128i b) {
+  return _mm_max_epu8(a, b);
 }
-template <size_t Size> using Memcmp = MemcmpImpl<Size, 16, memcmp16, bcmp16>;
-} // namespace sse2
+LIBC_INLINE __m128i bytewise_reverse(__m128i value) {
+  return _mm_shuffle_epi8(value, _mm_set_epi8(0, 1, 2, 3, 4, 5, 6, 7, //
+                                              8, 9, 10, 11, 12, 13, 14, 15));
+}
+LIBC_INLINE uint16_t big_endian_cmp_mask(__m128i max, __m128i value) {
+  return static_cast<uint16_t>(_mm_movemask_epi8(bytewise_reverse(_mm_cmpeq_epi8(max, value))));
+}
+template <> LIBC_INLINE bool eq<__m128i>(CPtr p1, CPtr p2, size_t offset) {
+  const auto a = load<__m128i>(p1, offset);
+  const auto b = load<__m128i>(p2, offset);
+  const auto xored = _mm_xor_si128(a, b);
+  return _mm_testz_si128(xored, xored) == 1; // 1 iff xored == 0
+}
+template <> LIBC_INLINE uint32_t neq<__m128i>(CPtr p1, CPtr p2, size_t offset) {
+  const auto a = load<__m128i>(p1, offset);
+  const auto b = load<__m128i>(p2, offset);
+  const auto xored = _mm_xor_si128(a, b);
+  return _mm_testz_si128(xored, xored) == 0; // 0 iff xored != 0
+}
+template <>
+LIBC_INLINE MemcmpReturnType cmp_neq<__m128i>(CPtr p1, CPtr p2, size_t offset) {
+  const auto a = load<__m128i>(p1, offset);
+  const auto b = load<__m128i>(p2, offset);
+  const auto vmax = bytewise_max(a, b);
+  const auto le = big_endian_cmp_mask(vmax, b);
+  const auto ge = big_endian_cmp_mask(vmax, a);
+  static_assert(cpp::is_same_v<cpp::remove_cv_t<decltype(le)>, uint16_t>);
+  return static_cast<int32_t>(ge) - static_cast<int32_t>(le);
+}
+#endif // __SSE4_1__
 
-namespace avx2 {
-static inline MemcmpReturnType memcmp32(CPtr p1, CPtr p2) {
+///////////////////////////////////////////////////////////////////////////////
+// Specializations for __m256i
+#if defined(__AVX__)
+template <> struct is_vector<__m256i> : cpp::true_type {};
+template <> struct cmp_is_expensive<__m256i> : cpp::true_type {};
+template <> LIBC_INLINE bool eq<__m256i>(CPtr p1, CPtr p2, size_t offset) {
+  const auto a = load<__m256i>(p1, offset);
+  const auto b = load<__m256i>(p2, offset);
+  const auto xored = _mm256_castps_si256(
+      _mm256_xor_ps(_mm256_castsi256_ps(a), _mm256_castsi256_ps(b)));
+  return _mm256_testz_si256(xored, xored) == 1; // 1 iff xored == 0
+}
+template <> LIBC_INLINE uint32_t neq<__m256i>(CPtr p1, CPtr p2, size_t offset) {
+  const auto a = load<__m256i>(p1, offset);
+  const auto b = load<__m256i>(p2, offset);
+  const auto xored = _mm256_castps_si256(
+      _mm256_xor_ps(_mm256_castsi256_ps(a), _mm256_castsi256_ps(b)));
+  return _mm256_testz_si256(xored, xored) == 0; // 0 iff xored != 0
+}
+#endif // __AVX__
+
 #if defined(__AVX2__)
-  using T = char __attribute__((__vector_size__(32)));
-  // A mask indicating which bytes differ after loading 32 bytes from p1 and p2.
-  if (int mask = _mm256_movemask_epi8(
-          cpp::bit_cast<__m256i>(load<T>(p1) != load<T>(p2))))
-    return char_diff_no_zero(p1, p2, mask);
-  return MemcmpReturnType::ZERO();
-#else
-  (void)p1;
-  (void)p2;
-  return MemcmpReturnType::ZERO();
-#endif // defined(__AVX2__)
+LIBC_INLINE __m256i bytewise_max(__m256i a, __m256i b) {
+  return _mm256_max_epu8(a, b);
 }
-template <size_t Size> using Memcmp = MemcmpImpl<Size, 32, memcmp32, bcmp32>;
-} // namespace avx2
+LIBC_INLINE __m256i bytewise_reverse(__m256i value) {
+  return _mm256_shuffle_epi8(value,
+                             _mm256_set_epi8(0, 1, 2, 3, 4, 5, 6, 7,         //
+                                             8, 9, 10, 11, 12, 13, 14, 15,   //
+                                             16, 17, 18, 19, 20, 21, 22, 23, //
+                                             24, 25, 26, 27, 28, 29, 30, 31));
+}
+LIBC_INLINE uint32_t big_endian_cmp_mask(__m256i max, __m256i value) {
+  return _mm256_movemask_epi8(bytewise_reverse(_mm256_cmpeq_epi8(max, value)));
+}
+template <>
+LIBC_INLINE MemcmpReturnType cmp_neq<__m256i>(CPtr p1, CPtr p2, size_t offset) {
+  const auto a = load<__m256i>(p1, offset);
+  const auto b = load<__m256i>(p2, offset);
+  const auto vmax = bytewise_max(a, b);
+  const auto le = big_endian_cmp_mask(vmax, b);
+  const auto ge = big_endian_cmp_mask(vmax, a);
+  static_assert(cpp::is_same_v<cpp::remove_cv_t<decltype(le)>, uint32_t>);
+  return cmp_uint32_t(ge, le);
+}
+#endif // __AVX2__
 
-namespace avx512bw {
-static inline MemcmpReturnType memcmp64(CPtr p1, CPtr p2) {
+///////////////////////////////////////////////////////////////////////////////
+// Specializations for __m512i
 #if defined(__AVX512BW__)
-  using T = char __attribute__((__vector_size__(64)));
-  // A mask indicating which bytes differ after loading 64 bytes from p1 and p2.
-  if (uint64_t mask =
-          _mm512_cmpneq_epi8_mask(cpp::bit_cast<__m512i>(load<T>(p1)),
-                                  cpp::bit_cast<__m512i>(load<T>(p2))))
-    return char_diff_no_zero(p1, p2, mask);
-  return MemcmpReturnType::ZERO();
-#else
-  (void)p1;
-  (void)p2;
-  return MemcmpReturnType::ZERO();
-#endif // defined(__AVX512BW__)
+template <> struct is_vector<__m512i> : cpp::true_type {};
+template <> struct cmp_is_expensive<__m512i> : cpp::true_type {};
+LIBC_INLINE __m512i bytewise_max(__m512i a, __m512i b) {
+  return _mm512_max_epu8(a, b);
 }
-template <size_t Size> using Memcmp = MemcmpImpl<Size, 64, memcmp64, bcmp64>;
-} // namespace avx512bw
+LIBC_INLINE __m512i bytewise_reverse(__m512i value) {
+  return _mm512_shuffle_epi8(value,
+                             _mm512_set_epi8(0, 1, 2, 3, 4, 5, 6, 7,         //
+                                             8, 9, 10, 11, 12, 13, 14, 15,   //
+                                             16, 17, 18, 19, 20, 21, 22, 23, //
+                                             24, 25, 26, 27, 28, 29, 30, 31, //
+                                             32, 33, 34, 35, 36, 37, 38, 39, //
+                                             40, 41, 42, 43, 44, 45, 46, 47, //
+                                             48, 49, 50, 51, 52, 53, 54, 55, //
+                                             56, 57, 58, 59, 60, 61, 62, 63));
+}
+LIBC_INLINE uint64_t big_endian_cmp_mask(__m512i max, __m512i value) {
+  return _mm512_cmpeq_epi8_mask(bytewise_reverse(max), bytewise_reverse(value));
+}
+template <> LIBC_INLINE bool eq<__m512i>(CPtr p1, CPtr p2, size_t offset) {
+  const auto a = load<__m512i>(p1, offset);
+  const auto b = load<__m512i>(p2, offset);
+  return _mm512_cmpneq_epi8_mask(a, b) == 0;
+}
+template <> LIBC_INLINE uint32_t neq<__m512i>(CPtr p1, CPtr p2, size_t offset) {
+  const auto a = load<__m512i>(p1, offset);
+  const auto b = load<__m512i>(p2, offset);
+  const uint64_t xored = _mm512_cmpneq_epi8_mask(a, b);
+  return (xored >> 32) | (xored & 0xFFFFFFFF);
+}
+template <>
+LIBC_INLINE MemcmpReturnType cmp_neq<__m512i>(CPtr p1, CPtr p2, size_t offset) {
+  const auto a = load<__m512i>(p1, offset);
+  const auto b = load<__m512i>(p2, offset);
+  const auto vmax = bytewise_max(a, b);
+  const auto le = big_endian_cmp_mask(vmax, b);
+  const auto ge = big_endian_cmp_mask(vmax, a);
+  static_assert(cpp::is_same_v<cpp::remove_cv_t<decltype(le)>, uint64_t>);
+  return cmp_neq_uint64_t(ge, le);
+}
+#endif // __AVX512BW__
 
-} // namespace __llvm_libc::x86
+} // namespace LIBC_NAMESPACE::generic
 
-#endif // LLVM_LIBC_ARCH_X86_64
+#endif // LIBC_TARGET_ARCH_IS_X86_64
 
 #endif // LLVM_LIBC_SRC_STRING_MEMORY_UTILS_OP_X86_H

@@ -10,8 +10,8 @@ define i16 @d(ptr %d.a, ptr %d.b) {
 ; CHECK-LABEL: @d(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[T0:%.*]] = load i16, ptr [[D_A:%.*]], align 1
-; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i16 [[T0]], 0
-; CHECK-NEXT:    br i1 [[TOBOOL]], label [[LAND_END:%.*]], label [[LAND_RHS:%.*]]
+; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i16 [[T0]], 0
+; CHECK-NEXT:    br i1 [[TOBOOL_NOT]], label [[LAND_END:%.*]], label [[LAND_RHS:%.*]]
 ; CHECK:       land.rhs:
 ; CHECK-NEXT:    br label [[LAND_END]]
 ; CHECK:       land.end:

@@ -686,7 +686,7 @@ bool CXXRecordDecl::lambdaIsDefaultConstructibleAndAssignable() const {
   // C++17 [expr.prim.lambda]p21:
   //   The closure type associated with a lambda-expression has no default
   //   constructor and a deleted copy assignment operator.
-  if (getLambdaCaptureDefault() != LCD_None || capture_size() != 0)
+  if (!isCapturelessLambda())
     return false;
   return getASTContext().getLangOpts().CPlusPlus20;
 }
@@ -838,7 +838,7 @@ void CXXRecordDecl::addedMember(Decl *D) {
       SMKind |= SMF_CopyAssignment;
 
       const auto *ParamTy =
-          Method->getParamDecl(0)->getType()->getAs<ReferenceType>();
+          Method->getNonObjectParameter(0)->getType()->getAs<ReferenceType>();
       if (!ParamTy || ParamTy->getPointeeType().isConstQualified())
         data().HasDeclaredCopyAssignmentWithConstParam = true;
     }
@@ -1484,7 +1484,8 @@ void CXXRecordDecl::setCaptures(ASTContext &Context,
     if (Captures[I].isExplicit())
       ++Data.NumExplicitCaptures;
 
-    *ToCapture++ = Captures[I];
+    new (ToCapture) LambdaCapture(Captures[I]);
+    ToCapture++;
   }
 
   if (!lambdaIsDefaultConstructibleAndAssignable())
@@ -1646,18 +1647,20 @@ Decl *CXXRecordDecl::getLambdaContextDecl() const {
   return getLambdaData().ContextDecl.get(Source);
 }
 
-void CXXRecordDecl::setDeviceLambdaManglingNumber(unsigned Num) const {
+void CXXRecordDecl::setLambdaNumbering(LambdaNumbering Numbering) {
   assert(isLambda() && "Not a lambda closure type!");
-  if (Num)
-    getASTContext().DeviceLambdaManglingNumbers[this] = Num;
+  getLambdaData().ManglingNumber = Numbering.ManglingNumber;
+  if (Numbering.DeviceManglingNumber)
+    getASTContext().DeviceLambdaManglingNumbers[this] =
+        Numbering.DeviceManglingNumber;
+  getLambdaData().IndexInContext = Numbering.IndexInContext;
+  getLambdaData().ContextDecl = Numbering.ContextDecl;
+  getLambdaData().HasKnownInternalLinkage = Numbering.HasKnownInternalLinkage;
 }
 
 unsigned CXXRecordDecl::getDeviceLambdaManglingNumber() const {
   assert(isLambda() && "Not a lambda closure type!");
-  auto I = getASTContext().DeviceLambdaManglingNumbers.find(this);
-  if (I != getASTContext().DeviceLambdaManglingNumbers.end())
-    return I->second;
-  return 0;
+  return getASTContext().DeviceLambdaManglingNumbers.lookup(this);
 }
 
 static CanQualType GetConversionType(ASTContext &Context, NamedDecl *Conv) {
@@ -2110,21 +2113,21 @@ ExplicitSpecifier ExplicitSpecifier::getFromDecl(FunctionDecl *Function) {
   }
 }
 
-CXXDeductionGuideDecl *
-CXXDeductionGuideDecl::Create(ASTContext &C, DeclContext *DC,
-                              SourceLocation StartLoc, ExplicitSpecifier ES,
-                              const DeclarationNameInfo &NameInfo, QualType T,
-                              TypeSourceInfo *TInfo, SourceLocation EndLocation,
-                              CXXConstructorDecl *Ctor) {
+CXXDeductionGuideDecl *CXXDeductionGuideDecl::Create(
+    ASTContext &C, DeclContext *DC, SourceLocation StartLoc,
+    ExplicitSpecifier ES, const DeclarationNameInfo &NameInfo, QualType T,
+    TypeSourceInfo *TInfo, SourceLocation EndLocation, CXXConstructorDecl *Ctor,
+    DeductionCandidate Kind) {
   return new (C, DC) CXXDeductionGuideDecl(C, DC, StartLoc, ES, NameInfo, T,
-                                           TInfo, EndLocation, Ctor);
+                                           TInfo, EndLocation, Ctor, Kind);
 }
 
 CXXDeductionGuideDecl *CXXDeductionGuideDecl::CreateDeserialized(ASTContext &C,
                                                                  unsigned ID) {
   return new (C, ID) CXXDeductionGuideDecl(
       C, nullptr, SourceLocation(), ExplicitSpecifier(), DeclarationNameInfo(),
-      QualType(), nullptr, SourceLocation(), nullptr);
+      QualType(), nullptr, SourceLocation(), nullptr,
+      DeductionCandidate::Normal);
 }
 
 RequiresExprBodyDecl *RequiresExprBodyDecl::Create(
@@ -2407,6 +2410,17 @@ bool CXXMethodDecl::isUsualDeallocationFunction(
   return Result;
 }
 
+bool CXXMethodDecl::isExplicitObjectMemberFunction() const {
+  // C++2b [dcl.fct]p6:
+  // An explicit object member function is a non-static member
+  // function with an explicit object parameter
+  return !isStatic() && hasCXXExplicitFunctionObjectParameter();
+}
+
+bool CXXMethodDecl::isImplicitObjectMemberFunction() const {
+  return !isStatic() && !hasCXXExplicitFunctionObjectParameter();
+}
+
 bool CXXMethodDecl::isCopyAssignmentOperator() const {
   // C++0x [class.copy]p17:
   //  A user-declared copy assignment operator X::operator= is a non-static
@@ -2414,11 +2428,12 @@ bool CXXMethodDecl::isCopyAssignmentOperator() const {
   //  type X, X&, const X&, volatile X& or const volatile X&.
   if (/*operator=*/getOverloadedOperator() != OO_Equal ||
       /*non-static*/ isStatic() ||
-      /*non-template*/getPrimaryTemplate() || getDescribedFunctionTemplate() ||
-      getNumParams() != 1)
+
+      /*non-template*/ getPrimaryTemplate() || getDescribedFunctionTemplate() ||
+      getNumExplicitParams() != 1)
     return false;
 
-  QualType ParamType = getParamDecl(0)->getType();
+  QualType ParamType = getNonObjectParameter(0)->getType();
   if (const auto *Ref = ParamType->getAs<LValueReferenceType>())
     ParamType = Ref->getPointeeType();
 
@@ -2435,10 +2450,10 @@ bool CXXMethodDecl::isMoveAssignmentOperator() const {
   //  X&&, const X&&, volatile X&&, or const volatile X&&.
   if (getOverloadedOperator() != OO_Equal || isStatic() ||
       getPrimaryTemplate() || getDescribedFunctionTemplate() ||
-      getNumParams() != 1)
+      getNumExplicitParams() != 1)
     return false;
 
-  QualType ParamType = getParamDecl(0)->getType();
+  QualType ParamType = getNonObjectParameter(0)->getType();
   if (!ParamType->isRValueReferenceType())
     return false;
   ParamType = ParamType->getPointeeType();
@@ -2490,13 +2505,8 @@ QualType CXXMethodDecl::getThisType(const FunctionProtoType *FPT,
                                     const CXXRecordDecl *Decl) {
   ASTContext &C = Decl->getASTContext();
   QualType ObjectTy = ::getThisObjectType(C, FPT, Decl);
-  return C.getPointerType(ObjectTy);
-}
-
-QualType CXXMethodDecl::getThisObjectType(const FunctionProtoType *FPT,
-                                          const CXXRecordDecl *Decl) {
-  ASTContext &C = Decl->getASTContext();
-  return ::getThisObjectType(C, FPT, Decl);
+  return C.getLangOpts().HLSL ? C.getLValueReferenceType(ObjectTy)
+                              : C.getPointerType(ObjectTy);
 }
 
 QualType CXXMethodDecl::getThisType() const {
@@ -2510,11 +2520,17 @@ QualType CXXMethodDecl::getThisType() const {
                                     getParent());
 }
 
-QualType CXXMethodDecl::getThisObjectType() const {
-  // Ditto getThisType.
-  assert(isInstance() && "No 'this' for static methods!");
-  return CXXMethodDecl::getThisObjectType(
-      getType()->castAs<FunctionProtoType>(), getParent());
+QualType CXXMethodDecl::getFunctionObjectParameterReferenceType() const {
+  if (isExplicitObjectMemberFunction())
+    return parameters()[0]->getType();
+
+  ASTContext &C = getParentASTContext();
+  const FunctionProtoType *FPT = getType()->castAs<FunctionProtoType>();
+  QualType Type = ::getThisObjectType(C, FPT, getParent());
+  RefQualifierKind RK = FPT->getRefQualifier();
+  if (RK == RefQualifierKind::RQ_RValue)
+    return C.getRValueReferenceType(Type);
+  return C.getLValueReferenceType(Type);
 }
 
 bool CXXMethodDecl::hasInlineBody() const {
@@ -3235,8 +3251,7 @@ void StaticAssertDecl::anchor() {}
 
 StaticAssertDecl *StaticAssertDecl::Create(ASTContext &C, DeclContext *DC,
                                            SourceLocation StaticAssertLoc,
-                                           Expr *AssertExpr,
-                                           StringLiteral *Message,
+                                           Expr *AssertExpr, Expr *Message,
                                            SourceLocation RParenLoc,
                                            bool Failed) {
   return new (C, DC) StaticAssertDecl(DC, StaticAssertLoc, AssertExpr, Message,

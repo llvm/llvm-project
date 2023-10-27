@@ -134,9 +134,6 @@ protected:
   // Can be only subclassed.
   explicit ARMBaseRegisterInfo();
 
-  // Return the opcode that implements 'Op', or 0 if no opcode
-  unsigned getOpcode(int Op) const;
-
 public:
   /// Code Generation virtual methods...
   const MCPhysReg *getCalleeSavedRegs(const MachineFunction *MF) const override;

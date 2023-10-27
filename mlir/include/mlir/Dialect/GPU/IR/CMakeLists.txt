@@ -16,6 +16,11 @@ mlir_tablegen(GPUOpsEnums.h.inc -gen-enum-decls)
 mlir_tablegen(GPUOpsEnums.cpp.inc -gen-enum-defs)
 add_public_tablegen_target(MLIRGPUOpsEnumsGen)
 
+set(LLVM_TARGET_DEFINITIONS CompilationAttrInterfaces.td)
+mlir_tablegen(CompilationAttrInterfaces.h.inc -gen-attr-interface-decls)
+mlir_tablegen(CompilationAttrInterfaces.cpp.inc -gen-attr-interface-defs)
+add_public_tablegen_target(MLIRGPUCompilationAttrInterfacesIncGen)
+
 set(LLVM_TARGET_DEFINITIONS GPUOps.td)
 mlir_tablegen(GPUOpsAttributes.h.inc -gen-attrdef-decls -attrdefs-dialect=gpu)
 mlir_tablegen(GPUOpsAttributes.cpp.inc -gen-attrdef-defs -attrdefs-dialect=gpu)

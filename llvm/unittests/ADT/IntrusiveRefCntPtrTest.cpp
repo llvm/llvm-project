@@ -140,4 +140,17 @@ TEST(IntrusiveRefCntPtr, InteropsWithConvertible) {
   EXPECT_EQ(P4, X4.get());
 }
 
+TEST(IntrusiveRefCntPtrTest, Unique) {
+  IntrusiveRefCntPtr<X> X1;
+  EXPECT_EQ(X1.useCount(), 0u);
+  X1 = new X();
+  EXPECT_EQ(X1.useCount(), 1u);
+  {
+    IntrusiveRefCntPtr<X> X2 = X1;
+    EXPECT_EQ(X1.useCount(), 2u);
+    EXPECT_EQ(X2.useCount(), 2u);
+  }
+  EXPECT_EQ(X1.useCount(), 1u);
+}
+
 } // end namespace llvm

@@ -291,30 +291,30 @@ define <2 x double> @clamp_sitofp_2i64_2f64(<2 x i64> %a) nounwind {
 ;
 ; X86-AVX-LABEL: clamp_sitofp_2i64_2f64:
 ; X86-AVX:       # %bb.0:
-; X86-AVX-NEXT:    vmovddup {{.*#+}} xmm1 = [18446744073709551361,18446744073709551361]
+; X86-AVX-NEXT:    vmovddup {{.*#+}} xmm1 = [4294967041,4294967295,4294967041,4294967295]
 ; X86-AVX-NEXT:    # xmm1 = mem[0,0]
 ; X86-AVX-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm2
 ; X86-AVX-NEXT:    vblendvpd %xmm2, %xmm0, %xmm1, %xmm0
-; X86-AVX-NEXT:    vmovddup {{.*#+}} xmm1 = [255,255]
+; X86-AVX-NEXT:    vmovddup {{.*#+}} xmm1 = [255,0,255,0]
 ; X86-AVX-NEXT:    # xmm1 = mem[0,0]
 ; X86-AVX-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm2
 ; X86-AVX-NEXT:    vblendvpd %xmm2, %xmm0, %xmm1, %xmm0
-; X86-AVX-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,2,2,3]
+; X86-AVX-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2,2,3]
 ; X86-AVX-NEXT:    vcvtdq2pd %xmm0, %xmm0
 ; X86-AVX-NEXT:    retl
 ;
 ; X86-AVX512F-LABEL: clamp_sitofp_2i64_2f64:
 ; X86-AVX512F:       # %bb.0:
-; X86-AVX512F-NEXT:    vpmaxsq {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
-; X86-AVX512F-NEXT:    vpminsq {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX512F-NEXT:    vpmaxsq {{\.?LCPI[0-9]+_[0-9]+}}{1to2}, %xmm0, %xmm0
+; X86-AVX512F-NEXT:    vpminsq {{\.?LCPI[0-9]+_[0-9]+}}{1to2}, %xmm0, %xmm0
 ; X86-AVX512F-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
 ; X86-AVX512F-NEXT:    vcvtdq2pd %xmm0, %xmm0
 ; X86-AVX512F-NEXT:    retl
 ;
 ; X86-AVX512DQ-LABEL: clamp_sitofp_2i64_2f64:
 ; X86-AVX512DQ:       # %bb.0:
-; X86-AVX512DQ-NEXT:    vpmaxsq {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
-; X86-AVX512DQ-NEXT:    vpminsq {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX512DQ-NEXT:    vpmaxsq {{\.?LCPI[0-9]+_[0-9]+}}{1to2}, %xmm0, %xmm0
+; X86-AVX512DQ-NEXT:    vpminsq {{\.?LCPI[0-9]+_[0-9]+}}{1to2}, %xmm0, %xmm0
 ; X86-AVX512DQ-NEXT:    vcvtqq2pd %xmm0, %xmm0
 ; X86-AVX512DQ-NEXT:    retl
 ;
@@ -353,13 +353,15 @@ define <2 x double> @clamp_sitofp_2i64_2f64(<2 x i64> %a) nounwind {
 ;
 ; X64-AVX-LABEL: clamp_sitofp_2i64_2f64:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vmovdqa {{.*#+}} xmm1 = [18446744073709551361,18446744073709551361]
+; X64-AVX-NEXT:    vmovddup {{.*#+}} xmm1 = [18446744073709551361,18446744073709551361]
+; X64-AVX-NEXT:    # xmm1 = mem[0,0]
 ; X64-AVX-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm2
 ; X64-AVX-NEXT:    vblendvpd %xmm2, %xmm0, %xmm1, %xmm0
-; X64-AVX-NEXT:    vmovdqa {{.*#+}} xmm1 = [255,255]
+; X64-AVX-NEXT:    vmovddup {{.*#+}} xmm1 = [255,255]
+; X64-AVX-NEXT:    # xmm1 = mem[0,0]
 ; X64-AVX-NEXT:    vpcmpgtq %xmm0, %xmm1, %xmm2
 ; X64-AVX-NEXT:    vblendvpd %xmm2, %xmm0, %xmm1, %xmm0
-; X64-AVX-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,2,2,3]
+; X64-AVX-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2,2,3]
 ; X64-AVX-NEXT:    vcvtdq2pd %xmm0, %xmm0
 ; X64-AVX-NEXT:    retq
 ;

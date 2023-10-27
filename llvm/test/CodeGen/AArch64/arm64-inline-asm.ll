@@ -367,13 +367,13 @@ entry:
 define void @test_zero_reg(ptr %addr) {
 ; CHECK-LABEL: test_zero_reg:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    mov w8, #1
 ; CHECK-NEXT:    ; InlineAsm Start
 ; CHECK-NEXT:    USE(xzr)
 ; CHECK-NEXT:    ; InlineAsm End
 ; CHECK-NEXT:    ; InlineAsm Start
 ; CHECK-NEXT:    USE(wzr)
 ; CHECK-NEXT:    ; InlineAsm End
+; CHECK-NEXT:    mov w8, #1 ; =0x1
 ; CHECK-NEXT:    ; InlineAsm Start
 ; CHECK-NEXT:    USE(w8)
 ; CHECK-NEXT:    ; InlineAsm End
@@ -487,8 +487,8 @@ define void @test_vector_too_large_r_m(ptr nocapture readonly %0) {
 ; CHECK-NEXT:    ldp q2, q1, [x0]
 ; CHECK-NEXT:    mov x8, sp
 ; CHECK-NEXT:    ldr s0, [x0, #32]
-; CHECK-NEXT:    stp q2, q1, [sp]
 ; CHECK-NEXT:    str s0, [sp, #32]
+; CHECK-NEXT:    stp q2, q1, [sp]
 ; CHECK-NEXT:    ; InlineAsm Start
 ; CHECK-NEXT:    ; InlineAsm End
 ; CHECK-NEXT:    add sp, sp, #64

@@ -14,6 +14,9 @@
 ; CHECK64: lg  7, 2072(4)
 ; CHECK64: aghi  4, 192
 ; CHECK64: b 2(7)
+
+; CHECK64: @@PPA1_func0_0:
+; CHECK64: .short	0  * Length/4 of Parms
 define void @func0() {
   call i64 (i64) @fun(i64 10) 
   ret void
@@ -27,6 +30,9 @@ define void @func0() {
 ; CHECK64: lmg 7, 15, 2072(4)
 ; CHECK64: aghi  4, 160
 ; CHECK64: b 2(7)
+
+; CHECK64: @@PPA1_func1_0:
+; CHECK64: .short	2  * Length/4 of Parms
 define void @func1(ptr %ptr) {
   %l01 = load volatile i64, ptr %ptr
   %l02 = load volatile i64, ptr %ptr
@@ -280,13 +286,14 @@ define void @func3() {
 
 ; Requires the saving of r4 due to variable sized
 ; object in stack frame. (Eg: VLA) Sets up frame pointer in r8
-; CHECK64: stmg  4, 9, 1856(4)
+; CHECK64: stmg  4, 10, 1856(4)
 ; CHECK64: aghi  4, -192
+; CHECK64: lg  6, 40(5)
+; CHECK64: lg  5, 32(5)
 ; CHECK64: lgr     8, 4
-; TODO Will change to basr with ADA introduction.
-; CHECK64: brasl   7, @@ALCAXP
-; CHECK64-NEXT: bcr     0, 3
-; CHECK64: lmg	4, 9, 2048(4)
+; CHECK64: basr   7, 6
+; CHECK64-NEXT: bcr     0, 0
+; CHECK64: lmg  4, 10, 2048(4)
 define i64 @func4(i64 %n) {
   %vla = alloca i64, i64 %n, align 8
   %call = call i64 @fun2(i64 %n, ptr nonnull %vla, ptr nonnull %vla)
@@ -297,12 +304,11 @@ define i64 @func4(i64 %n) {
 ; to force use of agfi before stmg.
 ; CHECK64: lgr	0, 4
 ; CHECK64: agfi	4, -1040192
-; CHECK64: stmg  4, 9, 2048(4)
+; CHECK64: stmg  4, 10, 2048(4)
 ; CHECK64: lgr     8, 4
-; TODO Will change to basr with ADA introduction.
-; CHECK64: brasl   7, @@ALCAXP
-; CHECK64-NEXT: bcr     0, 3
-;; CHECK64: lmg 4, 9, 2048(4)
+; CHECK64: basr   7, 6
+; CHECK64-NEXT: bcr     0, 0
+; CHECK64: lmg 4, 10, 2048(4)
 define i64 @func5(i64 %n) {
   %vla = alloca i64, i64 %n, align 8
   %arr = alloca [130000 x i64], align 8
@@ -319,13 +325,65 @@ define i64 @func5(i64 %n) {
 ; CHECK64: lg  3, 72(3)
 ; CHECK64: basr  3, 3
 ; CHECK64: stmg  6, 7, 2064(4)
-define void @large_stack() {
+define void @large_stack0() {
   %arr = alloca [131072 x i64], align 8
   call i64 (ptr) @fun1(ptr %arr)
   ret void
 }
 
+; CHECK-LABEL: large_stack1
+; CHECK64: agfi  4, -1048768
+; CHECK64: lgr 0, 3
+; CHECK64: llgt  3, 1208
+; CHECK64: cg  4, 64(3)
+; CHECK64: jhe @BB7_2
+; CHECK64: %bb.1:
+; CHECK64: lg  3, 72(3)
+; CHECK64: basr  3, 3
+; CHECK64: bcr 0, 7
+; CHECK64: @BB7_2:
+; CHECK64: stmg  6, 7, 2064(4)
+; CHECK64: lgr 3, 0
+
+; CHECK64: @@PPA1_large_stack1_0:
+; CHECK64: .short	6  * Length/4 of Parms
+define void @large_stack1(i64 %n1, i64 %n2, i64 %n3) {
+  %arr = alloca [131072 x i64], align 8
+  call i64 (ptr, i64, i64, i64) @fun3(ptr %arr,
+            i64 %n1, i64 %n2, i64 %n3)
+  ret void
+}
+
+
+; CHECK-LABEL: large_stack2
+; CHECK64: lgr 0, 4
+; CHECK64: stg 3, 2192(4)
+; CHECK64: agfi  4, -1048768
+; CHECK64: llgt  3, 1208
+; CHECK64: cg  4, 64(3)
+; CHECK64: jhe @BB8_2
+; CHECK64: %bb.1:
+; CHECK64: lg  3, 72(3)
+; CHECK64: basr  3, 3
+; CHECK64: bcr 0, 7
+; CHECK64: @BB8_2:
+; CHECK64: lgr 3, 0
+; CHECK64: lg  3, 2192(3)
+; CHECK64: stmg  4, 12, 2048(4)
+; CHECK64: lgr 8, 4
+define void @large_stack2(i64 %n1, i64 %n2, i64 %n3) {
+  %arr0 = alloca [131072 x i64], align 8
+  %arr1 = alloca i64, i64 %n1, align 8
+  call i64 (ptr, ptr, i64, i64, i64) @fun4(ptr %arr0,
+            ptr %arr1, i64 %n1, i64 %n2, i64 %n3)
+  ret void
+}
+
 ; CHECK-LABEL: leaf_func
+; CHECK: .long	8 * DSA Size 0x0
+; CHECK-NEXT:     * Entry Flags
+; CHECK-NEXT:     *   Bit 1: 1 = Leaf function
+; CHECK-NEXT:     *   Bit 2: 0 = Does not use alloca
 ; CHECK-NOT: aghi  4,
 ; CHECK-NOT: stmg
 ; CHECK: agr	1, 2
@@ -340,6 +398,29 @@ define i64 @leaf_func0(i64 %a, i64 %b, i64 %c) {
   ret i64 %o
 }
 
+
+; =============================
+;     Tests for PPA1 Fields
+; =============================
+; CHECK-LABEL: named_func
+; CHECK: .byte	129  * PPA1 Flags 4
+; CHECK-NEXT: *   Bit 7: 1 = Name Length and Name
+define i64 @named_func(i64 %arg) {
+  %sum = add i64 1, %arg
+  ret i64 %sum
+}
+
+; CHECK-LABEL: __unnamed_1
+; CHECK: .byte	128  * PPA1 Flags 4
+; CHECK-NOT: *   Bit 7: 1 = Name Length and Name
+define void @""(ptr %p) {
+  call i64 (ptr) @fun1(ptr %p)
+  ret void
+}
+
+
 declare i64 @fun(i64 %arg0)
 declare i64 @fun1(ptr %ptr)
 declare i64 @fun2(i64 %n, ptr %arr0, ptr %arr1)
+declare i64 @fun3(ptr %ptr, i64 %n1, i64 %n2, i64 %n3)
+declare i64 @fun4(ptr %ptr0, ptr %ptr1, i64 %n1, i64 %n2, i64 %n3)

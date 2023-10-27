@@ -57,12 +57,9 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Verifier.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/CodeMoverUtils.h"
@@ -1414,7 +1411,7 @@ private:
     }
 
     // Walk through all uses in FC1. For each use, find the reaching def. If the
-    // def is located in FC0 then it is is not safe to fuse.
+    // def is located in FC0 then it is not safe to fuse.
     for (BasicBlock *BB : FC1.L->blocks())
       for (Instruction &I : *BB)
         for (auto &Op : I.operands())
@@ -1476,12 +1473,13 @@ private:
 
     for (Instruction *I : HoistInsts) {
       assert(I->getParent() == FC1.Preheader);
-      I->moveBefore(FC0.Preheader->getTerminator());
+      I->moveBefore(*FC0.Preheader,
+                    FC0.Preheader->getTerminator()->getIterator());
     }
     // insert instructions in reverse order to maintain dominance relationship
     for (Instruction *I : reverse(SinkInsts)) {
       assert(I->getParent() == FC1.Preheader);
-      I->moveBefore(&*FC1.ExitBlock->getFirstInsertionPt());
+      I->moveBefore(*FC1.ExitBlock, FC1.ExitBlock->getFirstInsertionPt());
     }
   }
 
@@ -1494,7 +1492,7 @@ private:
   ///   2. The successors of the guard have the same flow into/around the loop.
   /// If the compare instructions are identical, then the first successor of the
   /// guard must go to the same place (either the preheader of the loop or the
-  /// NonLoopBlock). In other words, the the first successor of both loops must
+  /// NonLoopBlock). In other words, the first successor of both loops must
   /// both go into the loop (i.e., the preheader) or go around the loop (i.e.,
   /// the NonLoopBlock). The same must be true for the second successor.
   bool haveIdenticalGuards(const FusionCandidate &FC0,
@@ -1627,7 +1625,7 @@ private:
     // first, or undef otherwise. This is sound as exiting the first implies the
     // second will exit too, __without__ taking the back-edge. [Their
     // trip-counts are equal after all.
-    // KB: Would this sequence be simpler to just just make FC0.ExitingBlock go
+    // KB: Would this sequence be simpler to just make FC0.ExitingBlock go
     // to FC1.Header? I think this is basically what the three sequences are
     // trying to accomplish; however, doing this directly in the CFG may mean
     // the DT/PDT becomes invalid
@@ -1674,7 +1672,7 @@ private:
     // exiting the first and jumping to the header of the second does not break
     // the SSA property of the phis originally in the first loop. See also the
     // comment above.
-    Instruction *L1HeaderIP = &FC1.Header->front();
+    BasicBlock::iterator L1HeaderIP = FC1.Header->begin();
     for (PHINode *LCPHI : OriginalFC0PHIs) {
       int L1LatchBBIdx = LCPHI->getBasicBlockIndex(FC1.Latch);
       assert(L1LatchBBIdx >= 0 &&
@@ -1682,8 +1680,9 @@ private:
 
       Value *LCV = LCPHI->getIncomingValue(L1LatchBBIdx);
 
-      PHINode *L1HeaderPHI = PHINode::Create(
-          LCV->getType(), 2, LCPHI->getName() + ".afterFC0", L1HeaderIP);
+      PHINode *L1HeaderPHI =
+          PHINode::Create(LCV->getType(), 2, LCPHI->getName() + ".afterFC0");
+      L1HeaderPHI->insertBefore(L1HeaderIP);
       L1HeaderPHI->addIncoming(LCV, FC0.Latch);
       L1HeaderPHI->addIncoming(UndefValue::get(LCV->getType()),
                                FC0.ExitingBlock);
@@ -1956,7 +1955,7 @@ private:
     // exiting the first and jumping to the header of the second does not break
     // the SSA property of the phis originally in the first loop. See also the
     // comment above.
-    Instruction *L1HeaderIP = &FC1.Header->front();
+    BasicBlock::iterator L1HeaderIP = FC1.Header->begin();
     for (PHINode *LCPHI : OriginalFC0PHIs) {
       int L1LatchBBIdx = LCPHI->getBasicBlockIndex(FC1.Latch);
       assert(L1LatchBBIdx >= 0 &&
@@ -1964,8 +1963,9 @@ private:
 
       Value *LCV = LCPHI->getIncomingValue(L1LatchBBIdx);
 
-      PHINode *L1HeaderPHI = PHINode::Create(
-          LCV->getType(), 2, LCPHI->getName() + ".afterFC0", L1HeaderIP);
+      PHINode *L1HeaderPHI =
+          PHINode::Create(LCV->getType(), 2, LCPHI->getName() + ".afterFC0");
+      L1HeaderPHI->insertBefore(L1HeaderIP);
       L1HeaderPHI->addIncoming(LCV, FC0.Latch);
       L1HeaderPHI->addIncoming(UndefValue::get(LCV->getType()),
                                FC0.ExitingBlock);
@@ -2061,51 +2061,6 @@ private:
     return FC0.L;
   }
 };
-
-struct LoopFuseLegacy : public FunctionPass {
-
-  static char ID;
-
-  LoopFuseLegacy() : FunctionPass(ID) {
-    initializeLoopFuseLegacyPass(*PassRegistry::getPassRegistry());
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequiredID(LoopSimplifyID);
-    AU.addRequired<ScalarEvolutionWrapperPass>();
-    AU.addRequired<LoopInfoWrapperPass>();
-    AU.addRequired<DominatorTreeWrapperPass>();
-    AU.addRequired<PostDominatorTreeWrapperPass>();
-    AU.addRequired<OptimizationRemarkEmitterWrapperPass>();
-    AU.addRequired<DependenceAnalysisWrapperPass>();
-    AU.addRequired<AssumptionCacheTracker>();
-    AU.addRequired<TargetTransformInfoWrapperPass>();
-
-    AU.addPreserved<ScalarEvolutionWrapperPass>();
-    AU.addPreserved<LoopInfoWrapperPass>();
-    AU.addPreserved<DominatorTreeWrapperPass>();
-    AU.addPreserved<PostDominatorTreeWrapperPass>();
-  }
-
-  bool runOnFunction(Function &F) override {
-    if (skipFunction(F))
-      return false;
-
-    auto &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
-    auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-    auto &DI = getAnalysis<DependenceAnalysisWrapperPass>().getDI();
-    auto &SE = getAnalysis<ScalarEvolutionWrapperPass>().getSE();
-    auto &PDT = getAnalysis<PostDominatorTreeWrapperPass>().getPostDomTree();
-    auto &ORE = getAnalysis<OptimizationRemarkEmitterWrapperPass>().getORE();
-    auto &AC = getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
-    const TargetTransformInfo &TTI =
-        getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
-    const DataLayout &DL = F.getParent()->getDataLayout();
-
-    LoopFuser LF(LI, DT, DI, SE, PDT, ORE, DL, AC, TTI);
-    return LF.fuseLoops(F);
-  }
-};
 } // namespace
 
 PreservedAnalyses LoopFusePass::run(Function &F, FunctionAnalysisManager &AM) {
@@ -2142,19 +2097,3 @@ PreservedAnalyses LoopFusePass::run(Function &F, FunctionAnalysisManager &AM) {
   PA.preserve<LoopAnalysis>();
   return PA;
 }
-
-char LoopFuseLegacy::ID = 0;
-
-INITIALIZE_PASS_BEGIN(LoopFuseLegacy, "loop-fusion", "Loop Fusion", false,
-                      false)
-INITIALIZE_PASS_DEPENDENCY(PostDominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(ScalarEvolutionWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(DependenceAnalysisWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(OptimizationRemarkEmitterWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
-INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
-INITIALIZE_PASS_END(LoopFuseLegacy, "loop-fusion", "Loop Fusion", false, false)
-
-FunctionPass *llvm::createLoopFusePass() { return new LoopFuseLegacy(); }

@@ -17,7 +17,7 @@ from difflib import unified_diff
 
 cm.check_args(sys.argv)
 srcdir = cm.set_source(sys.argv[1])
-with open(srcdir, 'r') as f:
+with open(srcdir, "r") as f:
     src = f.readlines()
 actual = ""
 expect = ""
@@ -32,8 +32,14 @@ flang_fc1_options = "-fsyntax-only"
 cmd = [flang_fc1, *flang_fc1_args, flang_fc1_options, str(srcdir)]
 with tempfile.TemporaryDirectory() as tmpdir:
     try:
-        proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                              check=True, universal_newlines=True, cwd=tmpdir)
+        proc = subprocess.run(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=True,
+            universal_newlines=True,
+            cwd=tmpdir,
+        )
     except subprocess.CalledProcessError as e:
         log = e.stderr
         if e.returncode >= 128:
@@ -41,11 +47,11 @@ with tempfile.TemporaryDirectory() as tmpdir:
             sys.exit(1)
 
 # Cleans up the output from the compilation process to be easier to process
-for line in log.split('\n'):
+for line in log.split("\n"):
     m = re.search(r"[^:]*:(\d+:).*(?:error|warning|portability|because):(.*)", line)
     if m:
         if re.search(r"warning: .*fold.*host", line):
-            continue # ignore host-dependent folding warnings
+            continue  # ignore host-dependent folding warnings
         actual += m.expand(r"\1\2\n")
 
 # Gets the expected errors and their line numbers

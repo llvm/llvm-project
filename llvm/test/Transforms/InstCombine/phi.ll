@@ -133,12 +133,12 @@ BB2:
   ret i32 %B
 }
 
-define i32 @test7(i32 %A, i1 %b) {
-; CHECK-LABEL: @test7(
+define i32 @test_dead_cycle(i32 %A, i1 %cond) {
+; CHECK-LABEL: @test_dead_cycle(
 ; CHECK-NEXT:  BB0:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       Loop:
-; CHECK-NEXT:    br i1 [[B:%.*]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       Exit:
 ; CHECK-NEXT:    ret i32 0
 ;
@@ -146,10 +146,59 @@ BB0:
   br label %Loop
 
 Loop:           ; preds = %Loop, %BB0
-  ; PHI is dead.
   %B = phi i32 [ %A, %BB0 ], [ %C, %Loop ]
   %C = add i32 %B, 123
-  br i1 %b, label %Loop, label %Exit
+  br i1 %cond, label %Loop, label %Exit
+
+Exit:           ; preds = %Loop
+  ret i32 0
+}
+
+define i32 @test_dead_cycle_two_insts(i32 %A, i1 %cond) {
+; CHECK-LABEL: @test_dead_cycle_two_insts(
+; CHECK-NEXT:  BB0:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       Loop:
+; CHECK-NEXT:    [[B:%.*]] = phi i32 [ [[A:%.*]], [[BB0:%.*]] ], [ [[D:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[C:%.*]] = add i32 [[B]], 123
+; CHECK-NEXT:    [[D]] = lshr i32 [[C]], 1
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       Exit:
+; CHECK-NEXT:    ret i32 0
+;
+BB0:
+  br label %Loop
+
+Loop:           ; preds = %Loop, %BB0
+  %B = phi i32 [ %A, %BB0 ], [ %D, %Loop ]
+  %C = add i32 %B, 123
+  %D = lshr i32 %C, 1
+  br i1 %cond, label %Loop, label %Exit
+
+Exit:           ; preds = %Loop
+  ret i32 0
+}
+
+declare i32 @llvm.uadd.sat.i32(i32, i32)
+
+define i32 @test_dead_cycle_intrin(i32 %A, i1 %cond) {
+; CHECK-LABEL: @test_dead_cycle_intrin(
+; CHECK-NEXT:  BB0:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       Loop:
+; CHECK-NEXT:    [[B:%.*]] = phi i32 [ [[A:%.*]], [[BB0:%.*]] ], [ [[C:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[C]] = call i32 @llvm.uadd.sat.i32(i32 [[B]], i32 123)
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       Exit:
+; CHECK-NEXT:    ret i32 0
+;
+BB0:
+  br label %Loop
+
+Loop:           ; preds = %Loop, %BB0
+  %B = phi i32 [ %A, %BB0 ], [ %C, %Loop ]
+  %C = call i32 @llvm.uadd.sat.i32(i32 %B, i32 123)
+  br i1 %cond, label %Loop, label %Exit
 
 Exit:           ; preds = %Loop
   ret i32 0
@@ -330,8 +379,8 @@ define void @test13(i1 %cond, i32 %V1, double %Vald) {
 ; CHECK:       two:
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi double [ 0.000000e+00, [[ENTRY:%.*]] ], [ [[VALD:%.*]], [[TWO]] ]
-; CHECK-NEXT:    call void @test13f(double [[TMP0]], i32 [[V1:%.*]])
+; CHECK-NEXT:    [[T31:%.*]] = phi double [ 0.000000e+00, [[ENTRY:%.*]] ], [ [[VALD:%.*]], [[TWO]] ]
+; CHECK-NEXT:    call void @test13f(double [[T31]], i32 [[V1:%.*]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -459,8 +508,8 @@ define i32 @test16(ptr addrspace(1) %pointer1, i32 %flag, ptr %pointer2)
 ; CHECK-LABEL: @test16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    [[POINTER1_ADDR:%.*]] = alloca ptr addrspace(1), align 8
-; CHECK-NEXT:    [[POINTER2_ADDR:%.*]] = alloca ptr, align 8
+; CHECK-NEXT:    [[POINTER1_ADDR:%.*]] = alloca ptr addrspace(1), align 4
+; CHECK-NEXT:    [[POINTER2_ADDR:%.*]] = alloca ptr, align 4
 ; CHECK-NEXT:    store ptr addrspace(1) [[POINTER1:%.*]], ptr [[POINTER1_ADDR]], align 8
 ; CHECK-NEXT:    store ptr [[POINTER2:%.*]], ptr [[POINTER2_ADDR]], align 8
 ; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i32 [[FLAG:%.*]], 0
@@ -775,6 +824,60 @@ one:
 
 two:
   %y = phi i64 [%x, %one], [%i, %entry]
+  %d = call i1 @test25a()
+  br i1 %d, label %one, label %end
+
+end:
+  %f = phi i64 [ %x, %one], [%y, %two]
+  ; Change the %f to %i, and the optimizer suddenly becomes a lot smarter
+  ; even though %f must equal %i at this point
+  %g = inttoptr i64 %f to ptr
+  store i32 10, ptr %g
+  %z = call i1 @test25a()
+  ret i1 %z
+}
+
+; Same as above, but the input is also a phi
+define i1 @test25b(i1 %ci, i64 %ai, i64 %bi) {
+; CHECK-LABEL: @test25b(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[CI:%.*]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    br label [[ELSE]]
+; CHECK:       else:
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[AI:%.*]], [[ENTRY:%.*]] ], [ [[BI:%.*]], [[THEN]] ]
+; CHECK-NEXT:    [[B:%.*]] = call i1 @test25a()
+; CHECK-NEXT:    br i1 [[B]], label [[ONE:%.*]], label [[TWO:%.*]]
+; CHECK:       one:
+; CHECK-NEXT:    [[C:%.*]] = call i1 @test25a()
+; CHECK-NEXT:    br i1 [[C]], label [[TWO]], label [[END:%.*]]
+; CHECK:       two:
+; CHECK-NEXT:    [[D:%.*]] = call i1 @test25a()
+; CHECK-NEXT:    br i1 [[D]], label [[ONE]], label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    [[G:%.*]] = inttoptr i64 [[I]] to ptr
+; CHECK-NEXT:    store i32 10, ptr [[G]], align 4
+; CHECK-NEXT:    [[Z:%.*]] = call i1 @test25a()
+; CHECK-NEXT:    ret i1 [[Z]]
+;
+entry:
+  br i1 %ci, label %then, label %else
+
+then:
+  br label %else
+
+else:
+  %i = phi i64 [ %ai, %entry ], [ %bi, %then ]
+  %b = call i1 @test25a()
+  br i1 %b, label %one, label %two
+
+one:
+  %x = phi i64 [%y, %two], [%i, %else]
+  %c = call i1 @test25a()
+  br i1 %c, label %two, label %end
+
+two:
+  %y = phi i64 [%x, %one], [%i, %else]
   %d = call i1 @test25a()
   br i1 %d, label %one, label %end
 
@@ -1179,7 +1282,7 @@ define i1 @phi_knownnonzero_eq_2(i32 %n, i32 %s, ptr nocapture readonly %P) {
 ; CHECK:       if.else:
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
-; CHECK-NEXT:    [[A_0:%.*]] = phi i32 [ 2, [[IF_ELSE]] ], [ [[N]], [[ENTRY:%.*]] ], [ 2, [[IF_THEN]] ]
+; CHECK-NEXT:    [[A_0:%.*]] = phi i32 [ 1, [[IF_ELSE]] ], [ [[N]], [[ENTRY:%.*]] ], [ poison, [[IF_THEN]] ]
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[A_0]], 0
 ; CHECK-NEXT:    ret i1 [[CMP1]]
 ;
@@ -1213,7 +1316,7 @@ define i1 @phi_knownnonzero_ne_2(i32 %n, i32 %s, ptr nocapture readonly %P) {
 ; CHECK:       if.else:
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
-; CHECK-NEXT:    [[A_0:%.*]] = phi i32 [ 2, [[IF_ELSE]] ], [ [[N]], [[ENTRY:%.*]] ], [ 2, [[IF_THEN]] ]
+; CHECK-NEXT:    [[A_0:%.*]] = phi i32 [ 1, [[IF_ELSE]] ], [ [[N]], [[ENTRY:%.*]] ], [ poison, [[IF_THEN]] ]
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i32 [[A_0]], 0
 ; CHECK-NEXT:    ret i1 [[CMP1]]
 ;
@@ -1252,6 +1355,7 @@ define void @main(i1 %cond, i16 %x) {
 ; CHECK:       g.exit:
 ; CHECK-NEXT:    br label [[FOR_COND]]
 ; CHECK:       for.end:
+; CHECK-NEXT:    store double undef, ptr undef, align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -1450,4 +1554,794 @@ latch:
 
 exit:
   ret void
+}
+
+define i32 @add_two_phi_node_can_fold(i1 %c, i32 %i, i32 %j)  {
+; CHECK-LABEL: @add_two_phi_node_can_fold(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    br label [[IF_END]]
+; CHECK:       if.end:
+; CHECK-NEXT:    [[ADD:%.*]] = phi i32 [ [[I:%.*]], [[IF_THEN]] ], [ [[J:%.*]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    ret i32 [[ADD]]
+;
+entry:
+  br i1 %c, label %if.then, label %if.end
+
+if.then:
+  br label %if.end
+
+if.end:
+  %x = phi i32 [ 0, %if.then ], [ %j, %entry ]
+  %y = phi i32 [ %i, %if.then ], [ 0, %entry ]
+  %add = add i32 %y, %x
+  ret i32 %add
+}
+
+define i32 @add_two_phi_node_cannt_fold(i1 %c, i32 %i, i32 %j)  {
+; CHECK-LABEL: @add_two_phi_node_cannt_fold(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    br label [[IF_END]]
+; CHECK:       if.end:
+; CHECK-NEXT:    [[X:%.*]] = phi i32 [ 0, [[IF_THEN]] ], [ [[J:%.*]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[Y:%.*]] = phi i32 [ [[I:%.*]], [[IF_THEN]] ], [ 1, [[ENTRY]] ]
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[Y]], [[X]]
+; CHECK-NEXT:    ret i32 [[ADD]]
+;
+entry:
+  br i1 %c, label %if.then, label %if.end
+
+if.then:
+  br label %if.end
+
+if.end:
+  %x = phi i32 [ 0, %if.then ], [ %j, %entry ]
+  %y = phi i32 [ %i, %if.then ], [ 1, %entry ]
+  %add = add i32 %y, %x
+  ret i32 %add
+}
+
+define i32 @or_two_phi_node_can_fold(i1 %c, i32 %i, i32 %j)  {
+; CHECK-LABEL: @or_two_phi_node_can_fold(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    br label [[IF_END]]
+; CHECK:       if.end:
+; CHECK-NEXT:    [[ADD:%.*]] = phi i32 [ [[I:%.*]], [[IF_THEN]] ], [ [[J:%.*]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    ret i32 [[ADD]]
+;
+entry:
+  br i1 %c, label %if.then, label %if.end
+
+if.then:
+  br label %if.end
+
+if.end:
+  %x = phi i32 [ 0, %if.then ], [ %j, %entry ]
+  %y = phi i32 [ %i, %if.then ], [ 0, %entry ]
+  %add = or i32 %y, %x
+  ret i32 %add
+}
+
+define i32 @and_two_phi_node_can_fold(i1 %c, i32 %i, i32 %j)  {
+; CHECK-LABEL: @and_two_phi_node_can_fold(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    br label [[IF_END]]
+; CHECK:       if.end:
+; CHECK-NEXT:    [[ADD:%.*]] = phi i32 [ [[I:%.*]], [[IF_THEN]] ], [ [[J:%.*]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    ret i32 [[ADD]]
+;
+entry:
+  br i1 %c, label %if.then, label %if.end
+
+if.then:
+  br label %if.end
+
+if.end:
+  %x = phi i32 [ -1, %if.then ], [ %j, %entry ]
+  %y = phi i32 [ %i, %if.then ], [ -1, %entry ]
+  %add = and i32 %y, %x
+  ret i32 %add
+}
+
+define i32 @mul_two_phi_node_can_fold(i1 %c, i32 %i, i32 %j)  {
+; CHECK-LABEL: @mul_two_phi_node_can_fold(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    br label [[IF_END]]
+; CHECK:       if.end:
+; CHECK-NEXT:    [[ADD:%.*]] = phi i32 [ [[I:%.*]], [[IF_THEN]] ], [ [[J:%.*]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    ret i32 [[ADD]]
+;
+entry:
+  br i1 %c, label %if.then, label %if.end
+
+if.then:
+  br label %if.end
+
+if.end:
+  %x = phi i32 [ 1, %if.then ], [ %j, %entry ]
+  %y = phi i32 [ %i, %if.then ], [ 1, %entry ]
+  %add = mul i32 %y, %x
+  ret i32 %add
+}
+
+define i32 @xor_two_phi_node_can_fold(i1 %c, i32 %i, i32 %j)  {
+; CHECK-LABEL: @xor_two_phi_node_can_fold(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    br label [[IF_END]]
+; CHECK:       if.end:
+; CHECK-NEXT:    [[ADD:%.*]] = phi i32 [ [[I:%.*]], [[IF_THEN]] ], [ [[J:%.*]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    ret i32 [[ADD]]
+;
+entry:
+  br i1 %c, label %if.then, label %if.end
+
+if.then:
+  br label %if.end
+
+if.end:
+  %x = phi i32 [ 0, %if.then ], [ %j, %entry ]
+  %y = phi i32 [ %i, %if.then ], [ 0, %entry ]
+  %add = xor i32 %y, %x
+  ret i32 %add
+}
+
+define i32 @sub_two_phi_node_cant_fold(i1 %c, i32 %i, i32 %j)  {
+; CHECK-LABEL: @sub_two_phi_node_cant_fold(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    br label [[IF_END]]
+; CHECK:       if.end:
+; CHECK-NEXT:    [[X:%.*]] = phi i32 [ 0, [[IF_THEN]] ], [ [[J:%.*]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[Y:%.*]] = phi i32 [ [[I:%.*]], [[IF_THEN]] ], [ 0, [[ENTRY]] ]
+; CHECK-NEXT:    [[ADD:%.*]] = sub i32 [[Y]], [[X]]
+; CHECK-NEXT:    ret i32 [[ADD]]
+;
+entry:
+  br i1 %c, label %if.then, label %if.end
+
+if.then:
+  br label %if.end
+
+if.end:
+  %x = phi i32 [ 0, %if.then ], [ %j, %entry ]
+  %y = phi i32 [ %i, %if.then ], [ 0, %entry ]
+  %add = sub i32 %y, %x
+  ret i32 %add
+}
+
+define i1 @cmp_eq_phi_node_can_fold_1(ptr %C) {
+; CHECK-LABEL: @cmp_eq_phi_node_can_fold_1(
+; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr [[C:%.*]], align 1
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i8 [[TMP1]], 48
+; CHECK-NEXT:    br i1 [[TMP2]], label [[SUB_IS_ZERO:%.*]], label [[JOIN:%.*]]
+; CHECK:       sub_is_zero:
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[C]], i64 1
+; CHECK-NEXT:    [[TMP4:%.*]] = load i8, ptr [[TMP3]], align 1
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i8 [[TMP4]], 0
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[CMP:%.*]] = phi i1 [ false, [[TMP0:%.*]] ], [ [[TMP5]], [[SUB_IS_ZERO]] ]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %1 = load i8, ptr %C, align 1
+  %2 = zext i8 %1 to i32
+  %3 = sub nsw i32 %2, 48
+  %4 = icmp eq i32 %3, 0
+  br i1 %4, label %sub_is_zero, label %join
+
+sub_is_zero:
+  %5 = getelementptr inbounds i8, ptr %C, i64 1
+  %6 = load i8, ptr %5, align 1
+  %7 = zext i8 %6 to i32
+  br label %join
+
+join:
+  %8 = phi i32 [ %3, %0 ], [ %7, %sub_is_zero ]
+  %cmp = icmp eq i32 %8, 0
+  ret i1 %cmp
+}
+
+define i1 @cmp_eq_phi_node_can_fold_2(ptr %C) {
+; CHECK-LABEL: @cmp_eq_phi_node_can_fold_2(
+; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr [[C:%.*]], align 1
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i8 [[TMP1]], 48
+; CHECK-NEXT:    br i1 [[TMP2]], label [[SUB_IS_ZERO:%.*]], label [[JOIN:%.*]]
+; CHECK:       sub_is_zero:
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[C]], i64 1
+; CHECK-NEXT:    [[TMP4:%.*]] = load i8, ptr [[TMP3]], align 1
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i8 [[TMP4]], 49
+; CHECK-NEXT:    br i1 [[TMP5]], label [[SUB_IS_ZERO1:%.*]], label [[JOIN]]
+; CHECK:       sub_is_zero1:
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, ptr [[C]], i64 2
+; CHECK-NEXT:    [[TMP7:%.*]] = load i8, ptr [[TMP6]], align 1
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i8 [[TMP7]], 0
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[CMP:%.*]] = phi i1 [ false, [[TMP0:%.*]] ], [ false, [[SUB_IS_ZERO]] ], [ [[TMP8]], [[SUB_IS_ZERO1]] ]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %1 = load i8, ptr %C, align 1
+  %2 = zext i8 %1 to i32
+  %3 = sub nsw i32 %2, 48
+  %4 = icmp eq i32 %3, 0
+  br i1 %4, label %sub_is_zero, label %join
+
+sub_is_zero:
+  %5 = getelementptr inbounds i8, ptr %C, i64 1
+  %6 = load i8, ptr %5, align 1
+  %7 = zext i8 %6 to i32
+  %8 = sub nsw i32 %7, 49
+  %9 = icmp eq i32 %8, 0
+  br i1 %9, label %sub_is_zero1, label %join
+
+sub_is_zero1:
+  %10 = getelementptr inbounds i8, ptr %C, i64 2
+  %11 = load i8, ptr %10, align 1
+  %12 = zext i8 %11 to i32
+  br label %join
+
+join:
+  %13 = phi i32 [ %3, %0 ], [ %8, %sub_is_zero ], [ %12, %sub_is_zero1 ]
+  %cmp = icmp eq i32 %13, 0
+  ret i1 %cmp
+}
+
+define i1 @cmp_eq_phi_node_can_fold_3(ptr %C) {
+; CHECK-LABEL: @cmp_eq_phi_node_can_fold_3(
+; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr [[C:%.*]], align 1
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i8 [[TMP1]], 48
+; CHECK-NEXT:    br i1 [[TMP2]], label [[JOIN:%.*]], label [[SUB_IS_ZERO:%.*]]
+; CHECK:       sub_is_zero:
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[C]], i64 1
+; CHECK-NEXT:    [[TMP4:%.*]] = load i8, ptr [[TMP3]], align 1
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i8 [[TMP4]], 0
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[CMP:%.*]] = phi i1 [ true, [[TMP0:%.*]] ], [ [[TMP5]], [[SUB_IS_ZERO]] ]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %1 = load i8, ptr %C, align 1
+  %2 = zext i8 %1 to i32
+  %3 = sub nsw i32 %2, 48
+  %4 = icmp eq i32 %3, 0
+  br i1 %4, label %join, label %sub_is_zero
+
+sub_is_zero:
+  %5 = getelementptr inbounds i8, ptr %C, i64 1
+  %6 = load i8, ptr %5, align 1
+  %7 = zext i8 %6 to i32
+  br label %join
+
+join:
+  %8 = phi i32 [ %3, %0 ], [ %7, %sub_is_zero ]
+  %cmp = icmp eq i32 %8, 0
+  ret i1 %cmp
+}
+
+
+define i1 @cmp_eq_phi_node_can_fold_4(ptr %C) {
+; CHECK-LABEL: @cmp_eq_phi_node_can_fold_4(
+; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr [[C:%.*]], align 1
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i8 [[TMP1]], 48
+; CHECK-NEXT:    br i1 [[TMP2]], label [[JOIN:%.*]], label [[SUB_IS_ZERO:%.*]]
+; CHECK:       sub_is_zero:
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[C]], i64 1
+; CHECK-NEXT:    [[TMP4:%.*]] = load i8, ptr [[TMP3]], align 1
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i8 [[TMP4]], 49
+; CHECK-NEXT:    br i1 [[TMP5]], label [[JOIN]], label [[SUB_IS_ZERO1:%.*]]
+; CHECK:       sub_is_zero1:
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, ptr [[C]], i64 2
+; CHECK-NEXT:    [[TMP7:%.*]] = load i8, ptr [[TMP6]], align 1
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i8 [[TMP7]], 0
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[CMP:%.*]] = phi i1 [ true, [[TMP0:%.*]] ], [ true, [[SUB_IS_ZERO]] ], [ [[TMP8]], [[SUB_IS_ZERO1]] ]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %1 = load i8, ptr %C, align 1
+  %2 = zext i8 %1 to i32
+  %3 = sub nsw i32 %2, 48
+  %4 = icmp eq i32 %3, 0
+  br i1 %4, label %join, label %sub_is_zero
+
+sub_is_zero:
+  %5 = getelementptr inbounds i8, ptr %C, i64 1
+  %6 = load i8, ptr %5, align 1
+  %7 = zext i8 %6 to i32
+  %8 = sub nsw i32 %7, 49
+  %9 = icmp eq i32 %8, 0
+  br i1 %9, label %join, label %sub_is_zero1
+
+sub_is_zero1:
+  %10 = getelementptr inbounds i8, ptr %C, i64 2
+  %11 = load i8, ptr %10, align 1
+  %12 = zext i8 %11 to i32
+  br label %join
+
+join:
+  %13 = phi i32 [ %3, %0 ], [ %8, %sub_is_zero ], [ %12, %sub_is_zero1 ]
+  %cmp = icmp eq i32 %13, 0
+  ret i1 %cmp
+}
+
+define i1 @cmp_ne_phi_node_can_fold_1(ptr %C) {
+; CHECK-LABEL: @cmp_ne_phi_node_can_fold_1(
+; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr [[C:%.*]], align 1
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i8 [[TMP1]], 48
+; CHECK-NEXT:    br i1 [[TMP2]], label [[SUB_IS_ZERO:%.*]], label [[JOIN:%.*]]
+; CHECK:       sub_is_zero:
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[C]], i64 1
+; CHECK-NEXT:    [[TMP4:%.*]] = load i8, ptr [[TMP3]], align 1
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp ne i8 [[TMP4]], 0
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[CMP:%.*]] = phi i1 [ true, [[TMP0:%.*]] ], [ [[TMP5]], [[SUB_IS_ZERO]] ]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %1 = load i8, ptr %C, align 1
+  %2 = zext i8 %1 to i32
+  %3 = sub nsw i32 %2, 48
+  %4 = icmp eq i32 %3, 0
+  br i1 %4, label %sub_is_zero, label %join
+
+sub_is_zero:
+  %5 = getelementptr inbounds i8, ptr %C, i64 1
+  %6 = load i8, ptr %5, align 1
+  %7 = zext i8 %6 to i32
+  br label %join
+
+join:
+  %8 = phi i32 [ %3, %0 ], [ %7, %sub_is_zero ]
+  %cmp = icmp ne i32 %8, 0
+  ret i1 %cmp
+}
+
+define i1 @cmp_ne_phi_node_can_fold_2(ptr %C) {
+; CHECK-LABEL: @cmp_ne_phi_node_can_fold_2(
+; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr [[C:%.*]], align 1
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i8 [[TMP1]], 48
+; CHECK-NEXT:    br i1 [[TMP2]], label [[SUB_IS_ZERO:%.*]], label [[JOIN:%.*]]
+; CHECK:       sub_is_zero:
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[C]], i64 1
+; CHECK-NEXT:    [[TMP4:%.*]] = load i8, ptr [[TMP3]], align 1
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i8 [[TMP4]], 49
+; CHECK-NEXT:    br i1 [[TMP5]], label [[SUB_IS_ZERO1:%.*]], label [[JOIN]]
+; CHECK:       sub_is_zero1:
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, ptr [[C]], i64 2
+; CHECK-NEXT:    [[TMP7:%.*]] = load i8, ptr [[TMP6]], align 1
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp ne i8 [[TMP7]], 0
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[CMP:%.*]] = phi i1 [ true, [[TMP0:%.*]] ], [ true, [[SUB_IS_ZERO]] ], [ [[TMP8]], [[SUB_IS_ZERO1]] ]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %1 = load i8, ptr %C, align 1
+  %2 = zext i8 %1 to i32
+  %3 = sub nsw i32 %2, 48
+  %4 = icmp eq i32 %3, 0
+  br i1 %4, label %sub_is_zero, label %join
+
+sub_is_zero:                        ; preds = %0
+  %5 = getelementptr inbounds i8, ptr %C, i64 1
+  %6 = load i8, ptr %5, align 1
+  %7 = zext i8 %6 to i32
+  %8 = sub nsw i32 %7, 49
+  %9 = icmp eq i32 %8, 0
+  br i1 %9, label %sub_is_zero1, label %join
+
+sub_is_zero1:
+  %10 = getelementptr inbounds i8, ptr %C, i64 2
+  %11 = load i8, ptr %10, align 1
+  %12 = zext i8 %11 to i32
+  br label %join
+
+join:
+  %13 = phi i32 [ %3, %0 ], [ %8, %sub_is_zero ], [ %12, %sub_is_zero1 ]
+  %cmp = icmp ne i32 %13, 0
+  ret i1 %cmp
+}
+
+define i1 @cmp_ne_phi_node_can_fold_3(ptr %C) {
+; CHECK-LABEL: @cmp_ne_phi_node_can_fold_3(
+; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr [[C:%.*]], align 1
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i8 [[TMP1]], 48
+; CHECK-NEXT:    br i1 [[TMP2]], label [[JOIN:%.*]], label [[SUB_IS_ZERO:%.*]]
+; CHECK:       sub_is_zero:
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[C]], i64 1
+; CHECK-NEXT:    [[TMP4:%.*]] = load i8, ptr [[TMP3]], align 1
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp ne i8 [[TMP4]], 0
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[CMP:%.*]] = phi i1 [ false, [[TMP0:%.*]] ], [ [[TMP5]], [[SUB_IS_ZERO]] ]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %1 = load i8, ptr %C, align 1
+  %2 = zext i8 %1 to i32
+  %3 = sub nsw i32 %2, 48
+  %4 = icmp eq i32 %3, 0
+  br i1 %4, label %join, label %sub_is_zero
+
+sub_is_zero:
+  %5 = getelementptr inbounds i8, ptr %C, i64 1
+  %6 = load i8, ptr %5, align 1
+  %7 = zext i8 %6 to i32
+  br label %join
+
+join:
+  %8 = phi i32 [ %3, %0 ], [ %7, %sub_is_zero ]
+  %cmp = icmp ne i32 %8, 0
+  ret i1 %cmp
+}
+
+define i1 @cmp_ne_phi_node_can_fold_4(ptr %C) {
+; CHECK-LABEL: @cmp_ne_phi_node_can_fold_4(
+; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr [[C:%.*]], align 1
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i8 [[TMP1]], 48
+; CHECK-NEXT:    br i1 [[TMP2]], label [[JOIN:%.*]], label [[SUB_IS_ZERO:%.*]]
+; CHECK:       sub_is_zero:
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[C]], i64 1
+; CHECK-NEXT:    [[TMP4:%.*]] = load i8, ptr [[TMP3]], align 1
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i8 [[TMP4]], 49
+; CHECK-NEXT:    br i1 [[TMP5]], label [[JOIN]], label [[SUB_IS_ZERO1:%.*]]
+; CHECK:       sub_is_zero1:
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, ptr [[C]], i64 2
+; CHECK-NEXT:    [[TMP7:%.*]] = load i8, ptr [[TMP6]], align 1
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp ne i8 [[TMP7]], 0
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[CMP:%.*]] = phi i1 [ false, [[TMP0:%.*]] ], [ false, [[SUB_IS_ZERO]] ], [ [[TMP8]], [[SUB_IS_ZERO1]] ]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %1 = load i8, ptr %C, align 1
+  %2 = zext i8 %1 to i32
+  %3 = sub nsw i32 %2, 48
+  %4 = icmp eq i32 %3, 0
+  br i1 %4, label %join, label %sub_is_zero
+
+sub_is_zero:                        ; preds = %0
+  %5 = getelementptr inbounds i8, ptr %C, i64 1
+  %6 = load i8, ptr %5, align 1
+  %7 = zext i8 %6 to i32
+  %8 = sub nsw i32 %7, 49
+  %9 = icmp eq i32 %8, 0
+  br i1 %9, label %join, label %sub_is_zero1
+
+sub_is_zero1:
+  %10 = getelementptr inbounds i8, ptr %C, i64 2
+  %11 = load i8, ptr %10, align 1
+  %12 = zext i8 %11 to i32
+  br label %join
+
+join:
+  %13 = phi i32 [ %3, %0 ], [ %8, %sub_is_zero ], [ %12, %sub_is_zero1 ]
+  %cmp = icmp ne i32 %13, 0
+  ret i1 %cmp
+}
+
+define i1 @cmp_sgt_phi_node_can_fold_1(ptr %C) {
+; CHECK-LABEL: @cmp_sgt_phi_node_can_fold_1(
+; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr [[C:%.*]], align 1
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i8 [[TMP1]], 48
+; CHECK-NEXT:    br i1 [[TMP2]], label [[JOIN:%.*]], label [[SUB_IS_ZERO:%.*]]
+; CHECK:       sub_is_zero:
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[C]], i64 1
+; CHECK-NEXT:    [[TMP4:%.*]] = load i8, ptr [[TMP3]], align 1
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp ne i8 [[TMP4]], 0
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[CMP:%.*]] = phi i1 [ false, [[TMP0:%.*]] ], [ [[TMP5]], [[SUB_IS_ZERO]] ]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %1 = load i8, ptr %C, align 1
+  %2 = zext i8 %1 to i32
+  %3 = sub nsw i32 %2, 48
+  %4 = icmp eq i32 %3, 0
+  br i1 %4, label %join, label %sub_is_zero
+
+sub_is_zero:
+  %5 = getelementptr inbounds i8, ptr %C, i64 1
+  %6 = load i8, ptr %5, align 1
+  %7 = zext i8 %6 to i32
+  br label %join
+
+join:
+  %8 = phi i32 [ %3, %0 ], [ %7, %sub_is_zero ]
+  %cmp = icmp sgt i32 %8, 0
+  ret i1 %cmp
+}
+
+define i1 @cmp_sgt_phi_node_can_fold_2(ptr %C) {
+; CHECK-LABEL: @cmp_sgt_phi_node_can_fold_2(
+; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr [[C:%.*]], align 1
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i8 [[TMP1]], 48
+; CHECK-NEXT:    br i1 [[TMP2]], label [[JOIN:%.*]], label [[SUB_IS_ZERO:%.*]]
+; CHECK:       sub_is_zero:
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[C]], i64 1
+; CHECK-NEXT:    [[TMP4:%.*]] = load i8, ptr [[TMP3]], align 1
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i8 [[TMP4]], 49
+; CHECK-NEXT:    br i1 [[TMP5]], label [[JOIN]], label [[SUB_IS_ZERO1:%.*]]
+; CHECK:       sub_is_zero1:
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, ptr [[C]], i64 2
+; CHECK-NEXT:    [[TMP7:%.*]] = load i8, ptr [[TMP6]], align 1
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp ne i8 [[TMP7]], 0
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[CMP:%.*]] = phi i1 [ false, [[TMP0:%.*]] ], [ false, [[SUB_IS_ZERO]] ], [ [[TMP8]], [[SUB_IS_ZERO1]] ]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %1 = load i8, ptr %C, align 1
+  %2 = zext i8 %1 to i32
+  %3 = sub nsw i32 %2, 48
+  %4 = icmp eq i32 %3, 0
+  br i1 %4, label %join, label %sub_is_zero
+
+sub_is_zero:
+  %5 = getelementptr inbounds i8, ptr %C, i64 1
+  %6 = load i8, ptr %5, align 1
+  %7 = zext i8 %6 to i32
+  %8 = sub nsw i32 %7, 49
+  %9 = icmp eq i32 %8, 0
+  br i1 %9, label %join, label %sub_is_zero1
+
+sub_is_zero1:
+  %10 = getelementptr inbounds i8, ptr %C, i64 2
+  %11 = load i8, ptr %10, align 1
+  %12 = zext i8 %11 to i32
+  br label %join
+
+join:
+  %13 = phi i32 [ %3, %0 ], [ %8, %sub_is_zero ], [ %12, %sub_is_zero1 ]
+  %cmp = icmp sgt i32 %13, 0
+  ret i1 %cmp
+}
+
+define i1 @cmp_sgt_phi_node_cant_fold_1(ptr %C) {
+; CHECK-LABEL: @cmp_sgt_phi_node_cant_fold_1(
+; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr [[C:%.*]], align 1
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i8 [[TMP1]] to i32
+; CHECK-NEXT:    [[TMP3:%.*]] = add nsw i32 [[TMP2]], -48
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[TMP3]], 0
+; CHECK-NEXT:    br i1 [[TMP4]], label [[SUB_IS_ZERO:%.*]], label [[JOIN:%.*]]
+; CHECK:       sub_is_zero:
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[C]], i64 1
+; CHECK-NEXT:    [[TMP6:%.*]] = load i8, ptr [[TMP5]], align 1
+; CHECK-NEXT:    [[TMP7:%.*]] = zext i8 [[TMP6]] to i32
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[TMP8:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[TMP7]], [[SUB_IS_ZERO]] ]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[TMP8]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %1 = load i8, ptr %C, align 1
+  %2 = zext i8 %1 to i32
+  %3 = sub nsw i32 %2, 48
+  %4 = icmp eq i32 %3, 0
+  br i1 %4, label %sub_is_zero, label %join
+
+sub_is_zero:
+  %5 = getelementptr inbounds i8, ptr %C, i64 1
+  %6 = load i8, ptr %5, align 1
+  %7 = zext i8 %6 to i32
+  br label %join
+
+join:
+  %8 = phi i32 [ %3, %0 ], [ %7, %sub_is_zero ]
+  %cmp = icmp sgt i32 %8, 0
+  ret i1 %cmp
+}
+
+define i1 @cmp_sgt_phi_node_cant_fold_2(ptr %C) {
+; CHECK-LABEL: @cmp_sgt_phi_node_cant_fold_2(
+; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr [[C:%.*]], align 1
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i8 [[TMP1]] to i32
+; CHECK-NEXT:    [[TMP3:%.*]] = add nsw i32 [[TMP2]], -48
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[TMP3]], 0
+; CHECK-NEXT:    br i1 [[TMP4]], label [[SUB_IS_ZERO:%.*]], label [[JOIN:%.*]]
+; CHECK:       sub_is_zero:
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[C]], i64 1
+; CHECK-NEXT:    [[TMP6:%.*]] = load i8, ptr [[TMP5]], align 1
+; CHECK-NEXT:    [[TMP7:%.*]] = zext i8 [[TMP6]] to i32
+; CHECK-NEXT:    [[TMP8:%.*]] = add nsw i32 [[TMP7]], -49
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[TMP8]], 0
+; CHECK-NEXT:    br i1 [[TMP9]], label [[SUB_IS_ZERO1:%.*]], label [[JOIN]]
+; CHECK:       sub_is_zero1:
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i8, ptr [[C]], i64 2
+; CHECK-NEXT:    [[TMP11:%.*]] = load i8, ptr [[TMP10]], align 1
+; CHECK-NEXT:    [[TMP12:%.*]] = zext i8 [[TMP11]] to i32
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[TMP13:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[TMP8]], [[SUB_IS_ZERO]] ], [ [[TMP12]], [[SUB_IS_ZERO1]] ]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[TMP13]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %1 = load i8, ptr %C, align 1
+  %2 = zext i8 %1 to i32
+  %3 = sub nsw i32 %2, 48
+  %4 = icmp eq i32 %3, 0
+  br i1 %4, label %sub_is_zero, label %join
+
+sub_is_zero:
+  %5 = getelementptr inbounds i8, ptr %C, i64 1
+  %6 = load i8, ptr %5, align 1
+  %7 = zext i8 %6 to i32
+  %8 = sub nsw i32 %7, 49
+  %9 = icmp eq i32 %8, 0
+  br i1 %9, label %sub_is_zero1, label %join
+
+sub_is_zero1:
+  %10 = getelementptr inbounds i8, ptr %C, i64 2
+  %11 = load i8, ptr %10, align 1
+  %12 = zext i8 %11 to i32
+  br label %join
+
+join:
+  %13 = phi i32 [ %3, %0 ], [ %8, %sub_is_zero ], [ %12, %sub_is_zero1 ]
+  %cmp = icmp sgt i32 %13, 0
+  ret i1 %cmp
+}
+
+define i1 @cmp_slt_phi_node_can_fold_1(ptr %C) {
+; CHECK-LABEL: @cmp_slt_phi_node_can_fold_1(
+; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr [[C:%.*]], align 1
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i8 [[TMP1]], 48
+; CHECK-NEXT:    br i1 [[TMP2]], label [[JOIN:%.*]], label [[SUB_IS_ZERO:%.*]]
+; CHECK:       sub_is_zero:
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    ret i1 false
+;
+  %1 = load i8, ptr %C, align 1
+  %2 = zext i8 %1 to i32
+  %3 = sub nsw i32 %2, 48
+  %4 = icmp eq i32 %3, 0
+  br i1 %4, label %join, label %sub_is_zero
+
+sub_is_zero:
+  %5 = getelementptr inbounds i8, ptr %C, i64 1
+  %6 = load i8, ptr %5, align 1
+  %7 = zext i8 %6 to i32
+  br label %join
+
+join:
+  %8 = phi i32 [ %3, %0 ], [ %7, %sub_is_zero ]
+  %cmp = icmp slt i32 %8, 0
+  ret i1 %cmp
+}
+
+define i1 @cmp_slt_phi_node_can_fold_2(ptr %C) {
+; CHECK-LABEL: @cmp_slt_phi_node_can_fold_2(
+; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr [[C:%.*]], align 1
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i8 [[TMP1]], 48
+; CHECK-NEXT:    br i1 [[TMP2]], label [[JOIN:%.*]], label [[SUB_IS_ZERO:%.*]]
+; CHECK:       sub_is_zero:
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[C]], i64 1
+; CHECK-NEXT:    [[TMP4:%.*]] = load i8, ptr [[TMP3]], align 1
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i8 [[TMP4]], 49
+; CHECK-NEXT:    br i1 [[TMP5]], label [[JOIN]], label [[SUB_IS_ZERO1:%.*]]
+; CHECK:       sub_is_zero1:
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    ret i1 false
+;
+  %1 = load i8, ptr %C, align 1
+  %2 = zext i8 %1 to i32
+  %3 = sub nsw i32 %2, 48
+  %4 = icmp eq i32 %3, 0
+  br i1 %4, label %join, label %sub_is_zero
+
+sub_is_zero:
+  %5 = getelementptr inbounds i8, ptr %C, i64 1
+  %6 = load i8, ptr %5, align 1
+  %7 = zext i8 %6 to i32
+  %8 = sub nsw i32 %7, 49
+  %9 = icmp eq i32 %8, 0
+  br i1 %9, label %join, label %sub_is_zero1
+
+sub_is_zero1:
+  %10 = getelementptr inbounds i8, ptr %C, i64 2
+  %11 = load i8, ptr %10, align 1
+  %12 = zext i8 %11 to i32
+  br label %join
+
+join:
+  %13 = phi i32 [ %3, %0 ], [ %8, %sub_is_zero ], [ %12, %sub_is_zero1 ]
+  %cmp = icmp slt i32 %13, 0
+  ret i1 %cmp
+}
+
+define i1 @cmp_slt_phi_node_cant_fold_1(ptr %C) {
+; CHECK-LABEL: @cmp_slt_phi_node_cant_fold_1(
+; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr [[C:%.*]], align 1
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i8 [[TMP1]] to i32
+; CHECK-NEXT:    [[TMP3:%.*]] = add nsw i32 [[TMP2]], -48
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[TMP3]], 0
+; CHECK-NEXT:    br i1 [[TMP4]], label [[SUB_IS_ZERO:%.*]], label [[JOIN:%.*]]
+; CHECK:       sub_is_zero:
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[C]], i64 1
+; CHECK-NEXT:    [[TMP6:%.*]] = load i8, ptr [[TMP5]], align 1
+; CHECK-NEXT:    [[TMP7:%.*]] = zext i8 [[TMP6]] to i32
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[TMP8:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[TMP7]], [[SUB_IS_ZERO]] ]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TMP8]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %1 = load i8, ptr %C, align 1
+  %2 = zext i8 %1 to i32
+  %3 = sub nsw i32 %2, 48
+  %4 = icmp eq i32 %3, 0
+  br i1 %4, label %sub_is_zero, label %join
+
+sub_is_zero:
+  %5 = getelementptr inbounds i8, ptr %C, i64 1
+  %6 = load i8, ptr %5, align 1
+  %7 = zext i8 %6 to i32
+  br label %join
+
+join:
+  %8 = phi i32 [ %3, %0 ], [ %7, %sub_is_zero ]
+  %cmp = icmp slt i32 %8, 0
+  ret i1 %cmp
+}
+
+define i1 @cmp_slt_phi_node_cant_fold_2(ptr %C) {
+; CHECK-LABEL: @cmp_slt_phi_node_cant_fold_2(
+; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr [[C:%.*]], align 1
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i8 [[TMP1]] to i32
+; CHECK-NEXT:    [[TMP3:%.*]] = add nsw i32 [[TMP2]], -48
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[TMP3]], 0
+; CHECK-NEXT:    br i1 [[TMP4]], label [[SUB_IS_ZERO:%.*]], label [[JOIN:%.*]]
+; CHECK:       sub_is_zero:
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[C]], i64 1
+; CHECK-NEXT:    [[TMP6:%.*]] = load i8, ptr [[TMP5]], align 1
+; CHECK-NEXT:    [[TMP7:%.*]] = zext i8 [[TMP6]] to i32
+; CHECK-NEXT:    [[TMP8:%.*]] = add nsw i32 [[TMP7]], -49
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[TMP8]], 0
+; CHECK-NEXT:    br i1 [[TMP9]], label [[SUB_IS_ZERO1:%.*]], label [[JOIN]]
+; CHECK:       sub_is_zero1:
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i8, ptr [[C]], i64 2
+; CHECK-NEXT:    [[TMP11:%.*]] = load i8, ptr [[TMP10]], align 1
+; CHECK-NEXT:    [[TMP12:%.*]] = zext i8 [[TMP11]] to i32
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[TMP13:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[TMP8]], [[SUB_IS_ZERO]] ], [ [[TMP12]], [[SUB_IS_ZERO1]] ]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TMP13]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %1 = load i8, ptr %C, align 1
+  %2 = zext i8 %1 to i32
+  %3 = sub nsw i32 %2, 48
+  %4 = icmp eq i32 %3, 0
+  br i1 %4, label %sub_is_zero, label %join
+
+sub_is_zero:
+  %5 = getelementptr inbounds i8, ptr %C, i64 1
+  %6 = load i8, ptr %5, align 1
+  %7 = zext i8 %6 to i32
+  %8 = sub nsw i32 %7, 49
+  %9 = icmp eq i32 %8, 0
+  br i1 %9, label %sub_is_zero1, label %join
+
+sub_is_zero1:
+  %10 = getelementptr inbounds i8, ptr %C, i64 2
+  %11 = load i8, ptr %10, align 1
+  %12 = zext i8 %11 to i32
+  br label %join
+
+join:
+  %13 = phi i32 [ %3, %0 ], [ %8, %sub_is_zero ], [ %12, %sub_is_zero1 ]
+  %cmp = icmp slt i32 %13, 0
+  ret i1 %cmp
 }

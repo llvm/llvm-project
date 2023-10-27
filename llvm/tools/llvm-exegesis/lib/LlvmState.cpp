@@ -14,17 +14,17 @@
 #include "llvm/MC/MCFixup.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/TargetRegistry.h"
-#include "llvm/Support/Host.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
+#include "llvm/TargetParser/Host.h"
 
 namespace llvm {
 namespace exegesis {
 
 Expected<LLVMState> LLVMState::Create(std::string TripleName,
                                       std::string CpuName,
-                                      const StringRef Features) {
+                                      const StringRef Features,
+                                      bool UseDummyPerfCounters) {
   if (TripleName.empty())
     TripleName = Triple::normalize(sys::getDefaultTargetTriple());
 
@@ -73,16 +73,17 @@ Expected<LLVMState> LLVMState::Create(std::string TripleName,
         "no Exegesis target for triple " + TripleName,
         llvm::inconvertibleErrorCode());
   }
-  return LLVMState(std::move(TM), ET, CpuName);
+  const PfmCountersInfo &PCI = UseDummyPerfCounters
+                                   ? ET->getDummyPfmCounters()
+                                   : ET->getPfmCounters(CpuName);
+  return LLVMState(std::move(TM), ET, &PCI);
 }
 
 LLVMState::LLVMState(std::unique_ptr<const TargetMachine> TM,
-                     const ExegesisTarget *ET, const StringRef CpuName)
-    : TheExegesisTarget(ET), TheTargetMachine(std::move(TM)),
+                     const ExegesisTarget *ET, const PfmCountersInfo *PCI)
+    : TheExegesisTarget(ET), TheTargetMachine(std::move(TM)), PfmCounters(PCI),
       OpcodeNameToOpcodeIdxMapping(createOpcodeNameToOpcodeIdxMapping()),
       RegNameToRegNoMapping(createRegNameToRegNoMapping()) {
-  PfmCounters = &TheExegesisTarget->getPfmCounters(CpuName);
-
   BitVector ReservedRegs = getFunctionReservedRegs(getTargetMachine());
   for (const unsigned Reg : TheExegesisTarget->getUnavailableRegisters())
     ReservedRegs.set(Reg);
@@ -134,9 +135,8 @@ bool LLVMState::canAssemble(const MCInst &Inst) const {
           *TheTargetMachine->getMCInstrInfo(), Context));
   assert(CodeEmitter && "unable to create code emitter");
   SmallVector<char, 16> Tmp;
-  raw_svector_ostream OS(Tmp);
   SmallVector<MCFixup, 4> Fixups;
-  CodeEmitter->encodeInstruction(Inst, OS, Fixups,
+  CodeEmitter->encodeInstruction(Inst, Tmp, Fixups,
                                  *TheTargetMachine->getMCSubtargetInfo());
   return Tmp.size() > 0;
 }

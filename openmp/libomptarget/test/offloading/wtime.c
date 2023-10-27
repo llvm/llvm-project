@@ -1,9 +1,8 @@
-// RUN: %libomptarget-compileopt-run-and-check-generic
+// RUN: %libomptarget-compileopt-and-run-generic
 
 // UNSUPPORTED: amdgcn-amd-amdhsa
-// UNSUPPORTED: amdgcn-amd-amdhsa-oldDriver
-// UNSUPPORTED: amdgcn-amd-amdhsa-LTO
 
+#include <assert.h>
 #include <omp.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -12,17 +11,17 @@
 
 int main(int argc, char *argv[]) {
   int *data = (int *)malloc(N * sizeof(int));
-#pragma omp target map(from : data[0 : N])
+  double duration = 0.0;
+
+#pragma omp target map(from : data[0 : N]) map(from : duration)
   {
     double start = omp_get_wtime();
     for (int i = 0; i < N; ++i)
       data[i] = i;
     double end = omp_get_wtime();
-    double duration = end - start;
-    printf("duration: %lfs\n", duration);
+    duration = end - start;
   }
+  assert(duration > 0.0);
   free(data);
   return 0;
 }
-
-// CHECK: duration: {{.+[1-9]+}}

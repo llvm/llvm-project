@@ -72,6 +72,9 @@ enum class IdentFlag {
 #define OMP_IDENT_FLAG(Enum, ...) constexpr auto Enum = omp::IdentFlag::Enum;
 #include "llvm/Frontend/OpenMP/OMPKinds.def"
 
+// Version of the kernel argument format used by the omp runtime.
+#define OMP_KERNEL_ARG_VERSION 2
+
 /// \note This needs to be kept in sync with kmp.h enum sched_type.
 /// Todo: Update kmp.h to include this file, and remove the enums in kmp.h
 enum class OMPScheduleType {
@@ -239,6 +242,12 @@ enum class OpenMPOffloadMappingFlags : uint64_t {
   /// struct/class.
   OMP_MAP_MEMBER_OF = 0xffff000000000000,
   LLVM_MARK_AS_BITMASK_ENUM(/* LargestFlag = */ OMP_MAP_MEMBER_OF)
+};
+
+enum OpenMPOffloadingReservedDeviceIDs {
+  /// Device ID if the device was not defined, runtime should get it
+  /// from environment variables in the spec.
+  OMP_DEVICEID_UNDEF = -1
 };
 
 enum class AddressSpace : unsigned {

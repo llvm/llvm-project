@@ -208,3 +208,38 @@ namespace EvaluationCrashes {
     }
   }
 }
+
+namespace GH31643 {
+void f() {
+  int a = -(1<<31); // expected-warning {{overflow in expression; result is -2147483648 with type 'int'}}
+}
+}
+
+#if __cplusplus >= 201103L
+namespace GH63629 {
+typedef long long int64_t;
+
+template<typename T>
+class u_ptr {
+  T *ptr;
+public:
+  u_ptr(const u_ptr&) = delete;
+  u_ptr &operator=(const u_ptr&) = delete;
+  u_ptr(u_ptr &&other) : ptr(other.ptr) { other.ptr = 0; }
+  u_ptr(T *ptr) : ptr(ptr) { }
+  ~u_ptr() { delete ptr; }
+};
+
+u_ptr<bool> Wrap(int64_t x) {
+    return nullptr;
+}
+
+int64_t Pass(int64_t x) { return x; }
+
+int m() {
+    int64_t x = Pass(30 * 24 * 60 * 59 * 1000);  // expected-warning {{overflow in expression; result is -1746167296 with type 'int'}}
+    auto r = Wrap(Pass(30 * 24 * 60 * 59 * 1000));  // expected-warning {{overflow in expression; result is -1746167296 with type 'int'}}
+    return 0;
+}
+}
+#endif

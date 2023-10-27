@@ -6,7 +6,7 @@ lldb_tablegen(InterpreterPropertiesEnum.inc -gen-lldb-property-enum-defs
   SOURCE InterpreterProperties.td
   TARGET LLDBInterpreterPropertiesEnumGen)
 
-add_lldb_library(lldbInterpreter
+add_lldb_library(lldbInterpreter NO_PLUGIN_DEPENDENCIES
   CommandAlias.cpp
   CommandHistory.cpp
   CommandInterpreter.cpp

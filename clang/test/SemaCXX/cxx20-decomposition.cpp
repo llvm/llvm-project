@@ -177,7 +177,8 @@ namespace ODRUseTests {
     (void)[&b](auto c) { return b + [](auto) {   // expected-note 3{{lambda expression begins here}} \
                                                  // expected-note 6{{capture 'a'}} \
                                                  // expected-note 6{{default capture}} \
-                                                 // expected-note {{in instantiation}}
+                                                 // expected-note {{in instantiation}} \
+                                                 // expected-note {{while substituting into a lambda}}
         return a;  // expected-error 3{{variable 'a' cannot be implicitly captured}}
     }(0); }(0); // expected-note 2{{in instantiation}}
   }

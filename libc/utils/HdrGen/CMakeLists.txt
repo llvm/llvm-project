@@ -1,3 +1,5 @@
+include(TableGen)
+
 set(LLVM_LINK_COMPONENTS Support)
 
 add_tablegen(libc-hdrgen LIBC
@@ -12,7 +14,7 @@ add_tablegen(libc-hdrgen LIBC
   PublicAPICommand.h
 )
 
-target_include_directories(libc-hdrgen PRIVATE ${LIBC_SOURCE_DIR} ${LLVM_LIBC_INCLUDE_DIRS})
+target_include_directories(libc-hdrgen PRIVATE ${LLVM_INCLUDE_DIR} ${LLVM_MAIN_INCLUDE_DIR})
 target_link_libraries(libc-hdrgen PRIVATE LibcTableGenUtil)
 
 add_subdirectory(PrototypeTestGen)

@@ -556,12 +556,13 @@ int f263(int n, char * len) {
   x263.s2 = strdup("hello");
   char input[] = {'a', 'b', 'c', 'd'};
   memcpy(x263.s1, input, *(len + n));
-  clang_analyzer_eval(x263.s1[0] == 0); // expected-warning{{UNKNOWN}}
+  clang_analyzer_eval(x263.s1[0] == 0); // expected-warning{{UNKNOWN}}\
+  expected-warning{{Potential leak of memory pointed to by 'x263.s2'}}
   clang_analyzer_eval(x263.s1[1] == 0); // expected-warning{{UNKNOWN}}
   clang_analyzer_eval(x263.s1[2] == 0); // expected-warning{{UNKNOWN}}
   clang_analyzer_eval(x263.s1[3] == 0); // expected-warning{{UNKNOWN}}
   clang_analyzer_eval(x263.s2 == 0); // expected-warning{{UNKNOWN}}
-  return 0; // expected-warning{{Potential leak of memory pointed to by 'x263.s2'}}
+  return 0;
 }
 
 

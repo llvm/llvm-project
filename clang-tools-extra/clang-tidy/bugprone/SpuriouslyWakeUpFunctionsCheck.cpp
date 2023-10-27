@@ -25,30 +25,29 @@ void SpuriouslyWakeUpFunctionsCheck::registerMatchers(MatchFinder *Finder) {
 
   auto HasWaitDescendantCpp = hasDescendant(
       cxxMemberCallExpr(
-          anyOf(
-              allOf(hasDescendant(memberExpr(hasDeclaration(functionDecl(
-                        allOf(hasName("::std::condition_variable::wait"),
-                              parameterCountIs(1)))))),
-                    onImplicitObjectArgument(
-                        declRefExpr(to(varDecl(hasType(references(recordDecl(
-                            hasName("::std::condition_variable")))))))),
-                    HasUniqueLock),
-              allOf(hasDescendant(memberExpr(hasDeclaration(functionDecl(
-                        allOf(hasName("::std::condition_variable::wait_for"),
-                              parameterCountIs(2)))))),
-                    onImplicitObjectArgument(
-                        declRefExpr(to(varDecl(hasType(references(recordDecl(
-                            hasName("::std::condition_variable")))))))),
-                    HasUniqueLock),
-              allOf(hasDescendant(memberExpr(hasDeclaration(functionDecl(
-                        allOf(hasName("::std::condition_variable::wait_until"),
-                              parameterCountIs(2)))))),
-                    onImplicitObjectArgument(
-                        declRefExpr(to(varDecl(hasType(references(recordDecl(
-                            hasName("::std::condition_variable")))))))),
-                    HasUniqueLock)
+          anyOf(allOf(hasDescendant(memberExpr(hasDeclaration(functionDecl(
+                          hasName("::std::condition_variable::wait"),
+                          parameterCountIs(1))))),
+                      onImplicitObjectArgument(
+                          declRefExpr(to(varDecl(hasType(references(recordDecl(
+                              hasName("::std::condition_variable")))))))),
+                      HasUniqueLock),
+                allOf(hasDescendant(memberExpr(hasDeclaration(functionDecl(
+                          hasName("::std::condition_variable::wait_for"),
+                          parameterCountIs(2))))),
+                      onImplicitObjectArgument(
+                          declRefExpr(to(varDecl(hasType(references(recordDecl(
+                              hasName("::std::condition_variable")))))))),
+                      HasUniqueLock),
+                allOf(hasDescendant(memberExpr(hasDeclaration(functionDecl(
+                          hasName("::std::condition_variable::wait_until"),
+                          parameterCountIs(2))))),
+                      onImplicitObjectArgument(
+                          declRefExpr(to(varDecl(hasType(references(recordDecl(
+                              hasName("::std::condition_variable")))))))),
+                      HasUniqueLock)
 
-                  ))
+                    ))
           .bind("wait"));
 
   auto HasWaitDescendantC = hasDescendant(

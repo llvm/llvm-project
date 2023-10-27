@@ -224,8 +224,8 @@ define i1 @fshl_xor_eq_0(i32 %x, i32 %y) {
 define i1 @fshl_or_sgt_0(i32 %x, i32 %y) {
 ; CHECK-LABEL: fshl_or_sgt_0:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ror w8, w0, #30
-; CHECK-NEXT:    orr w8, w8, w1, lsl #2
+; CHECK-NEXT:    orr w8, w0, w1
+; CHECK-NEXT:    extr w8, w8, w0, #30
 ; CHECK-NEXT:    cmp w8, #0
 ; CHECK-NEXT:    cset w0, gt
 ; CHECK-NEXT:    ret
@@ -238,8 +238,8 @@ define i1 @fshl_or_sgt_0(i32 %x, i32 %y) {
 define i1 @fshl_or_ne_2(i32 %x, i32 %y) {
 ; CHECK-LABEL: fshl_or_ne_2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ror w8, w0, #30
-; CHECK-NEXT:    orr w8, w8, w1, lsl #2
+; CHECK-NEXT:    orr w8, w0, w1
+; CHECK-NEXT:    extr w8, w8, w0, #30
 ; CHECK-NEXT:    cmp w8, #2
 ; CHECK-NEXT:    cset w0, ne
 ; CHECK-NEXT:    ret

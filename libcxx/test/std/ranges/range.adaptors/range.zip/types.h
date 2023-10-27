@@ -201,7 +201,7 @@ struct forward_sized_iterator {
 
   using iterator_category = std::forward_iterator_tag;
   using value_type = int;
-  using difference_type = intptr_t;
+  using difference_type = std::intptr_t;
   using pointer = Base;
   using reference = decltype(*Base{});
 
@@ -405,7 +405,7 @@ struct iter_move_swap_iterator {
 
   using iterator_category = std::input_iterator_tag;
   using value_type = int;
-  using difference_type = intptr_t;
+  using difference_type = std::intptr_t;
 
   constexpr int operator*() const { return i; }
 

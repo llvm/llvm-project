@@ -54,20 +54,18 @@ public:
     unsigned getResolverCodeSize() const { return ResolverCodeSize; }
 
     virtual void writeResolverCode(char *ResolverWorkingMem,
-                                   JITTargetAddress ResolverTargetAddr,
-                                   JITTargetAddress ReentryFnAddr,
-                                   JITTargetAddress ReentryCtxAddr) const = 0;
+                                   ExecutorAddr ResolverTargetAddr,
+                                   ExecutorAddr ReentryFnAddr,
+                                   ExecutorAddr ReentryCtxAddr) const = 0;
 
     virtual void writeTrampolines(char *TrampolineBlockWorkingMem,
-                                  JITTargetAddress TrampolineBlockTragetAddr,
-                                  JITTargetAddress ResolverAddr,
+                                  ExecutorAddr TrampolineBlockTragetAddr,
+                                  ExecutorAddr ResolverAddr,
                                   unsigned NumTrampolines) const = 0;
 
-    virtual void
-    writeIndirectStubsBlock(char *StubsBlockWorkingMem,
-                            JITTargetAddress StubsBlockTargetAddress,
-                            JITTargetAddress PointersBlockTargetAddress,
-                            unsigned NumStubs) const = 0;
+    virtual void writeIndirectStubsBlock(
+        char *StubsBlockWorkingMem, ExecutorAddr StubsBlockTargetAddress,
+        ExecutorAddr PointersBlockTargetAddress, unsigned NumStubs) const = 0;
 
   private:
     unsigned PointerSize = 0;
@@ -86,6 +84,12 @@ public:
   static Expected<std::unique_ptr<EPCIndirectionUtils>>
   Create(ExecutorProcessControl &EPC);
 
+  /// Create based on the ExecutorProcessControl triple.
+  static Expected<std::unique_ptr<EPCIndirectionUtils>>
+  Create(ExecutionSession &ES) {
+    return Create(ES.getExecutorProcessControl());
+  }
+
   /// Return a reference to the ExecutorProcessControl object.
   ExecutorProcessControl &getExecutorProcessControl() const { return EPC; }
 
@@ -99,13 +103,12 @@ public:
   /// Write resolver code to the executor process and return its address.
   /// This must be called before any call to createTrampolinePool or
   /// createLazyCallThroughManager.
-  Expected<JITTargetAddress>
-  writeResolverBlock(JITTargetAddress ReentryFnAddr,
-                     JITTargetAddress ReentryCtxAddr);
+  Expected<ExecutorAddr> writeResolverBlock(ExecutorAddr ReentryFnAddr,
+                                            ExecutorAddr ReentryCtxAddr);
 
   /// Returns the address of the Resolver block. Returns zero if the
   /// writeResolverBlock method has not previously been called.
-  JITTargetAddress getResolverBlockAddress() const { return ResolverBlockAddr; }
+  ExecutorAddr getResolverBlockAddress() const { return ResolverBlockAddr; }
 
   /// Create an IndirectStubsManager for the executor process.
   std::unique_ptr<IndirectStubsManager> createIndirectStubsManager();
@@ -117,7 +120,7 @@ public:
   /// This function should only be called once.
   LazyCallThroughManager &
   createLazyCallThroughManager(ExecutionSession &ES,
-                               JITTargetAddress ErrorHandlerAddr);
+                               ExecutorAddr ErrorHandlerAddr);
 
   /// Create a LazyCallThroughManager for the executor process.
   LazyCallThroughManager &getLazyCallThroughManager() {
@@ -130,11 +133,10 @@ private:
 
   struct IndirectStubInfo {
     IndirectStubInfo() = default;
-    IndirectStubInfo(JITTargetAddress StubAddress,
-                     JITTargetAddress PointerAddress)
+    IndirectStubInfo(ExecutorAddr StubAddress, ExecutorAddr PointerAddress)
         : StubAddress(StubAddress), PointerAddress(PointerAddress) {}
-    JITTargetAddress StubAddress = 0;
-    JITTargetAddress PointerAddress = 0;
+    ExecutorAddr StubAddress;
+    ExecutorAddr PointerAddress;
   };
 
   using IndirectStubInfoVector = std::vector<IndirectStubInfo>;
@@ -148,7 +150,7 @@ private:
   std::mutex EPCUIMutex;
   ExecutorProcessControl &EPC;
   std::unique_ptr<ABISupport> ABI;
-  JITTargetAddress ResolverBlockAddr = 0;
+  ExecutorAddr ResolverBlockAddr;
   FinalizedAlloc ResolverBlock;
   std::unique_ptr<TrampolinePool> TP;
   std::unique_ptr<LazyCallThroughManager> LCTM;
@@ -181,16 +183,16 @@ public:
                    ORCABI::ResolverCodeSize) {}
 
   void writeResolverCode(char *ResolverWorkingMem,
-                         JITTargetAddress ResolverTargetAddr,
-                         JITTargetAddress ReentryFnAddr,
-                         JITTargetAddress ReentryCtxAddr) const override {
+                         ExecutorAddr ResolverTargetAddr,
+                         ExecutorAddr ReentryFnAddr,
+                         ExecutorAddr ReentryCtxAddr) const override {
     ORCABI::writeResolverCode(ResolverWorkingMem, ResolverTargetAddr,
                               ReentryFnAddr, ReentryCtxAddr);
   }
 
   void writeTrampolines(char *TrampolineBlockWorkingMem,
-                        JITTargetAddress TrampolineBlockTargetAddr,
-                        JITTargetAddress ResolverAddr,
+                        ExecutorAddr TrampolineBlockTargetAddr,
+                        ExecutorAddr ResolverAddr,
                         unsigned NumTrampolines) const override {
     ORCABI::writeTrampolines(TrampolineBlockWorkingMem,
                              TrampolineBlockTargetAddr, ResolverAddr,
@@ -198,8 +200,8 @@ public:
   }
 
   void writeIndirectStubsBlock(char *StubsBlockWorkingMem,
-                               JITTargetAddress StubsBlockTargetAddress,
-                               JITTargetAddress PointersBlockTargetAddress,
+                               ExecutorAddr StubsBlockTargetAddress,
+                               ExecutorAddr PointersBlockTargetAddress,
                                unsigned NumStubs) const override {
     ORCABI::writeIndirectStubsBlock(StubsBlockWorkingMem,
                                     StubsBlockTargetAddress,

@@ -216,7 +216,6 @@ simply return a class member.
       return &InstrInfo.getRegisterInfo();
     }
     virtual const DataLayout *getDataLayout() const { return &DataLayout; }
-    static unsigned getModuleMatchQuality(const Module &M);
 
     // Pass Pipeline Configuration
     virtual bool addInstSelector(PassManagerBase &PM, bool Fast);
@@ -1761,17 +1760,24 @@ command-line options ``-mcpu=`` and ``-mattr=``.
 TableGen uses definitions in the ``Target.td`` and ``Sparc.td`` files to
 generate code in ``SparcGenSubtarget.inc``.  In ``Target.td``, shown below, the
 ``SubtargetFeature`` interface is defined.  The first 4 string parameters of
-the ``SubtargetFeature`` interface are a feature name, an attribute set by the
-feature, the value of the attribute, and a description of the feature.  (The
-fifth parameter is a list of features whose presence is implied, and its
-default value is an empty array.)
+the ``SubtargetFeature`` interface are a feature name, a XXXSubtarget field set
+by the feature, the value of the XXXSubtarget field, and a description of the
+feature.  (The fifth parameter is a list of features whose presence is implied,
+and its default value is an empty array.)
+
+If the value for the field is the string "true" or "false", the field
+is assumed to be a bool and only one SubtargetFeature should refer to it.
+Otherwise, it is assumed to be an integer. The integer value may be the name
+of an enum constant. If multiple features use the same integer field, the
+field will be set to the maximum value of all enabled features that share
+the field.
 
 .. code-block:: text
 
-  class SubtargetFeature<string n, string a, string v, string d,
+  class SubtargetFeature<string n, string f, string v, string d,
                          list<SubtargetFeature> i = []> {
     string Name = n;
-    string Attribute = a;
+    string FieldName = f;
     string Value = v;
     string Desc = d;
     list<SubtargetFeature> Implies = i;
@@ -1785,7 +1791,7 @@ following features.
   def FeatureV9 : SubtargetFeature<"v9", "IsV9", "true",
                        "Enable SPARC-V9 instructions">;
   def FeatureV8Deprecated : SubtargetFeature<"deprecated-v8",
-                       "V8DeprecatedInsts", "true",
+                       "UseV8DeprecatedInsts", "true",
                        "Enable deprecated V8 instructions in V9 mode">;
   def FeatureVIS : SubtargetFeature<"vis", "IsVIS", "true",
                        "Enable UltraSPARC Visual Instruction Set extensions">;

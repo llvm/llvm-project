@@ -1,21 +1,13 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++20 %s
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++2b %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++23 %s
 
-consteval int undefined();  // expected-note 4 {{declared here}}
+consteval int undefined();  // expected-note 2 {{declared here}}
 
 void check_lambdas_unused(
-    int a = []
-    {
-        // The body of a lambda is not a subexpression of the lambda
-        // so this is immediately evaluated even if the parameter
-        // is never used.
-        return undefined();  // expected-error {{not a constant expression}} \
-                             // expected-note  {{undefined function 'undefined'}}
-    }(),
-    int b = [](int no_error = undefined()) {
+    int a = [](int no_error = undefined()) {
         return no_error;
     }(0),
-    int c = [](int defaulted = undefined()) {
+    int b = [](int defaulted = undefined()) {
         return defaulted;
     }()
 ) {}
@@ -28,7 +20,7 @@ int check_lambdas_used(
                               // expected-note  {{declared here}} \
                               // expected-note  {{undefined function 'undefined'}}
         return defaulted;
-    }(),  // expected-note {{in the default initalizer of 'defaulted'}}
+    }(),  // expected-note {{in the default initializer of 'defaulted'}}
     int d = [](int defaulted = sizeof(undefined())) {
         return defaulted;
     }()
@@ -40,8 +32,7 @@ int test_check_lambdas_used = check_lambdas_used();
 
 struct UnusedInitWithLambda {
     int a = [] {
-        return undefined();  // expected-error {{not a constant expression}} \
-                             // expected-note  {{undefined function 'undefined'}}
+        return undefined(); // never evaluated because immediate escalating
     }();
     // UnusedInitWithLambda is never constructed, so the initializer
     // of b and undefined() are never evaluated.
@@ -51,21 +42,20 @@ struct UnusedInitWithLambda {
 };
 
 consteval int ub(int n) {
-    return 0/n; // expected-note  {{division}}
+    return 0/n;
 }
 
-struct InitWithLambda {
-    int b = [](int error = undefined()) { // expected-error {{not a constant expression}} \
-                              // expected-note  {{declared here}} \
-                              // expected-note  {{undefined function 'undefined'}}
+struct InitWithLambda { // expected-note {{'InitWithLambda' is an immediate constructor because the default initializer of 'b' contains a call to a consteval function 'undefined' and that call is not a constant expression}}
+    int b = [](int error = undefined()) {  // expected-note {{undefined function 'undefined' cannot be used in a constant expression}}
         return error;
-    }(); // expected-note {{in the default initalizer of 'error'}}
-    int c = [](int error = sizeof(undefined()) + ub(0)) { // expected-error {{'ub' is not a constant expression}} \
-                                                          // expected-note  {{declared here}} \
-                                                          // expected-note {{in call to 'ub(0)}}
+    }();
+    int c = [](int error = sizeof(undefined()) + ub(0)) {
+
         return error;
-    }(); // expected-note {{in the default initalizer of 'error'}}
-} i; // expected-note {{in implicit default constructor}}
+    }();
+} i;
+// expected-error@-1 {{call to immediate function 'InitWithLambda::InitWithLambda' is not a constant expression}} \
+   expected-note@-1 {{in call to 'InitWithLambda()'}}
 
 namespace ShouldNotCrash {
     template<typename T>
@@ -78,4 +68,17 @@ namespace ShouldNotCrash {
         F<int> f = x;
     };
     void f(A a = A()) { }
+}
+
+namespace GH62224 {
+  consteval int fwd();
+  template <int i = fwd()>
+  struct C {
+    consteval C(int = fwd()) { }
+    consteval int get() { return i; }
+  };
+
+  consteval int fwd() { return 42; }
+  C<> Val; // No error since fwd is defined already.
+  static_assert(Val.get() == 42);
 }

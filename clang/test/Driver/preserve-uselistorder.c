@@ -1,4 +1,4 @@
-// RUN: %clang -target x86_64-apple-darwin -emit-llvm -arch x86_64 %s -### 2>&1 \
+// RUN: not %clang -target x86_64-apple-darwin -emit-llvm -arch x86_64 %s -### 2>&1 \
 // RUN:   | FileCheck %s
 // CHECK: "-emit-llvm-bc"
 // CHECK: "-emit-llvm-uselists"

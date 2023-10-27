@@ -19,7 +19,7 @@ define void @test_basic() #0 {
 ; Thumb-android-NEXT: ldr     r4, .LCPI0_0
 ; Thumb-android-NEXT: ldr     r4, [r4]
 ; Thumb-android-NEXT: cmp     r4, r5
-; Thumb-android-NEXT: blo     .LBB0_2
+; Thumb-android-NEXT: bls     .LBB0_2
 
 ; Thumb-android:      mov     r4, #48
 ; Thumb-android-NEXT: mov     r5, #0
@@ -43,7 +43,7 @@ define void @test_basic() #0 {
 ; Thumb-linux-NEXT: ldr     r4, .LCPI0_0
 ; Thumb-linux-NEXT: ldr     r4, [r4]
 ; Thumb-linux-NEXT: cmp     r4, r5
-; Thumb-linux-NEXT: blo     .LBB0_2
+; Thumb-linux-NEXT: bls     .LBB0_2
 
 ; Thumb-linux:      mov     r4, #48
 ; Thumb-linux-NEXT: mov     r5, #0
@@ -72,7 +72,7 @@ define i32 @test_nested(ptr nest %closure, i32 %other) #0 {
 ; Thumb-android-NEXT: ldr     r4, .LCPI1_0
 ; Thumb-android-NEXT: ldr     r4, [r4]
 ; Thumb-android-NEXT: cmp     r4, r5
-; Thumb-android-NEXT: blo     .LBB1_2
+; Thumb-android-NEXT: bls     .LBB1_2
 
 ; Thumb-android:      mov     r4, #56
 ; Thumb-android-NEXT: mov     r5, #0
@@ -92,7 +92,7 @@ define i32 @test_nested(ptr nest %closure, i32 %other) #0 {
 ; Thumb-linux-NEXT: ldr     r4, .LCPI1_0
 ; Thumb-linux-NEXT: ldr     r4, [r4]
 ; Thumb-linux-NEXT: cmp     r4, r5
-; Thumb-linux-NEXT: blo     .LBB1_2
+; Thumb-linux-NEXT: bls     .LBB1_2
 
 ; Thumb-linux:      mov     r4, #56
 ; Thumb-linux-NEXT: mov     r5, #0
@@ -121,7 +121,7 @@ define void @test_large() #0 {
 ; Thumb-android-NEXT: ldr     r4, .LCPI2_3
 ; Thumb-android-NEXT: ldr     r4, [r4]
 ; Thumb-android-NEXT: cmp     r4, r5
-; Thumb-android-NEXT: blo     .LBB2_2
+; Thumb-android-NEXT: bls     .LBB2_2
 
 ; Thumb-android:      ldr     r4, .LCPI2_2
 ; Thumb-android-NEXT: mov     r5, #0
@@ -146,7 +146,7 @@ define void @test_large() #0 {
 ; Thumb-linux-NEXT: ldr     r4, .LCPI2_3
 ; Thumb-linux-NEXT: ldr     r4, [r4]
 ; Thumb-linux-NEXT: cmp     r4, r5
-; Thumb-linux-NEXT: blo     .LBB2_2
+; Thumb-linux-NEXT: bls     .LBB2_2
 
 ; Thumb-linux:      ldr     r4, .LCPI2_2
 ; Thumb-linux-NEXT: mov     r5, #0
@@ -173,7 +173,7 @@ define fastcc void @test_fastcc() #0 {
 ; Thumb-android-NEXT: ldr     r4, .LCPI3_0
 ; Thumb-android-NEXT: ldr     r4, [r4]
 ; Thumb-android-NEXT: cmp     r4, r5
-; Thumb-android-NEXT: blo     .LBB3_2
+; Thumb-android-NEXT: bls     .LBB3_2
 
 ; Thumb-android:      mov     r4, #48
 ; Thumb-android-NEXT: mov     r5, #0
@@ -193,7 +193,7 @@ define fastcc void @test_fastcc() #0 {
 ; Thumb-linux-NEXT: ldr     r4, .LCPI3_0
 ; Thumb-linux-NEXT: ldr     r4, [r4]
 ; Thumb-linux-NEXT: cmp     r4, r5
-; Thumb-linux-NEXT: blo     .LBB3_2
+; Thumb-linux-NEXT: bls     .LBB3_2
 
 ; Thumb-linux:      mov     r4, #48
 ; Thumb-linux-NEXT: mov     r5, #0
@@ -222,7 +222,7 @@ define fastcc void @test_fastcc_large() #0 {
 ; Thumb-android-NEXT: ldr     r4, .LCPI4_3
 ; Thumb-android-NEXT: ldr     r4, [r4]
 ; Thumb-android-NEXT: cmp     r4, r5
-; Thumb-android-NEXT: blo     .LBB4_2
+; Thumb-android-NEXT: bls     .LBB4_2
 
 ; Thumb-android:      ldr     r4, .LCPI4_2
 ; Thumb-android-NEXT: mov     r5, #0
@@ -247,7 +247,7 @@ define fastcc void @test_fastcc_large() #0 {
 ; Thumb-linux-NEXT: ldr     r4, .LCPI4_3
 ; Thumb-linux-NEXT: ldr     r4, [r4]
 ; Thumb-linux-NEXT: cmp     r4, r5
-; Thumb-linux-NEXT: blo     .LBB4_2
+; Thumb-linux-NEXT: bls     .LBB4_2
 
 ; Thumb-linux:      ldr     r4, .LCPI4_2
 ; Thumb-linux-NEXT: mov     r5, #0

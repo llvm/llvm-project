@@ -1,4 +1,4 @@
-; RUN: opt -S --passes="ipsccp<func-spec>" -force-function-specialization -function-specialization-for-literal-constant < %s | FileCheck %s
+; RUN: opt -S --passes="ipsccp<func-spec>" -force-specialization -funcspec-for-literal-constant < %s | FileCheck %s
 define internal i32 @f(i32 %x, i32 %y) noinline {
     ret i32 %x
 }
@@ -17,4 +17,4 @@ define i32 @g1() {
 ; to be a constant without the need for function specialisation and
 ; the second parameter is unused.
 
-;  CHECK-NOT: @f.
+;  CHECK-NOT: @f.specialized.

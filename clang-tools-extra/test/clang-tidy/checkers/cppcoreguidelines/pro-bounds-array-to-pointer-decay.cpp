@@ -43,6 +43,9 @@ const char *g() {
 const char *g2() {
     return ("clang"); // OK, ParenExpr hides the literal-pointer decay
 }
+const char *g3() {
+    return __func__; // OK, don't diagnose PredefinedExpr
+}
 
 void f2(void *const *);
 void bug25362() {

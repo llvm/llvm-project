@@ -58,7 +58,7 @@ static_assert(!HasPopHeapR<UncheckedRange<int*, SentinelForNotWeaklyEqualityComp
 static_assert(!HasPopHeapR<UncheckedRange<int*>, BadComparator>);
 static_assert(!HasPopHeapR<UncheckedRange<const int*>>); // Doesn't satisfy `sortable`.
 
-template <size_t N, class T, class Iter>
+template <std::size_t N, class T, class Iter>
 constexpr void verify_heap(const std::array<T, N>& heapified, Iter last, std::array<T, N> expected) {
   assert(heapified == expected);
   assert(base(last) == heapified.data() + heapified.size());
@@ -66,7 +66,7 @@ constexpr void verify_heap(const std::array<T, N>& heapified, Iter last, std::ar
   assert(*std::max_element(heapified.begin(), heapified.end()) == heapified.back());
 }
 
-template <class Iter, class Sent, size_t N>
+template <class Iter, class Sent, std::size_t N>
 constexpr void test_one(const std::array<int, N> input, std::array<int, N> expected) {
   assert(!input.empty());
   assert(std::is_heap(input.begin(), input.end()));

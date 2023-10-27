@@ -6,10 +6,10 @@
 // RUN: echo 'void func1(int k) {}' > func1.c
 // RUN: echo 'void func2(int k) {}' > func2.c
 // RUN: echo 'void func3(int k) {}' > func3.c
-// RUN: %clang --coverage -fPIC -shared func1.c -o func1.so
-// RUN: %clang --coverage -fPIC -shared func2.c -o func2.so
-// RUN: %clang --coverage -fPIC -shared func3.c -o func3.so
-// RUN: %clang --coverage -fPIC -rpath %t.d %s -o %t
+// RUN: %clang --coverage -fPIC -shared func1.c -o func1.so -dumpdir ./
+// RUN: %clang --coverage -fPIC -shared func2.c -o func2.so -dumpdir ./
+// RUN: %clang --coverage -fPIC -shared func3.c -o func3.so -dumpdir ./
+// RUN: %clang --coverage -fPIC -rpath %t.d %s -o %t -dumpdir ./
 
 /// Test with two dlopened libraries.
 // RUN: rm -f gcov-dlopen.gcda func1.gcda func2.gcda
@@ -22,7 +22,7 @@
 // FUNC2:     1:    1:void func2(int k) {}
 
 /// Test with three dlopened libraries.
-// RUN: %clang -DUSE_LIB3 --coverage -fPIC -rpath %t.d %s -o %t
+// RUN: %clang -DUSE_LIB3 --coverage -fPIC -rpath %t.d %s -o %t -dumpdir ./
 // RUN: rm -f gcov-dlopen.gcda func1.gcda func2.gcda func3.gcda
 // RUN: %run %t
 // RUN: llvm-cov gcov -t gcov-dlopen.gcda | FileCheck %s --check-prefix=LIB3

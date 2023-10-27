@@ -27,6 +27,9 @@ using namespace llvm;
 
 #define DEBUG_TYPE "ppctti"
 
+static cl::opt<bool> VecMaskCost("ppc-vec-mask-cost",
+cl::desc("add masking cost for i1 vectors"), cl::init(true), cl::Hidden);
+
 static cl::opt<bool> DisablePPCConstHoist("disable-ppc-constant-hoisting",
 cl::desc("disable constant hoisting on PPC"), cl::init(false), cl::Hidden);
 
@@ -517,7 +520,7 @@ unsigned PPCTTIImpl::getPrefetchDistance() const {
   return 300;
 }
 
-unsigned PPCTTIImpl::getMaxInterleaveFactor(unsigned VF) {
+unsigned PPCTTIImpl::getMaxInterleaveFactor(ElementCount VF) {
   unsigned Directive = ST->getCPUDirective();
   // The 440 has no SIMD support, but floating-point instructions
   // have a 5-cycle latency, so unroll by 5x for latency hiding.
@@ -700,6 +703,9 @@ InstructionCost PPCTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
     return Cost;
 
   } else if (Val->getScalarType()->isIntegerTy() && Index != -1U) {
+    unsigned EltSize = Val->getScalarSizeInBits();
+    // Computing on 1 bit values requires extra mask or compare operations.
+    unsigned MaskCost = VecMaskCost && EltSize == 1 ? 1 : 0;
     if (ST->hasP9Altivec()) {
       if (ISD == ISD::INSERT_VECTOR_ELT)
         // A move-to VSR and a permute/insert.  Assume vector operation cost
@@ -721,12 +727,15 @@ InstructionCost PPCTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
       // We need a vector extract (or mfvsrld).  Assume vector operation cost.
       // The cost of the load constant for a vector extract is disregarded
       // (invariant, easily schedulable).
-      return CostFactor;
+      return CostFactor + MaskCost;
 
-    } else if (ST->hasDirectMove())
+    } else if (ST->hasDirectMove()) {
       // Assume permute has standard cost.
       // Assume move-to/move-from VSR have 2x standard cost.
-      return 3;
+      if (ISD == ISD::INSERT_VECTOR_ELT)
+        return 3;
+      return 3 + MaskCost;
+    }
   }
 
   // Estimated cost of a load-hit-store delay.  This was obtained
@@ -1079,17 +1088,5 @@ InstructionCost PPCTTIImpl::getVPMemoryOpCost(unsigned Opcode, Type *Src,
 }
 
 bool PPCTTIImpl::supportsTailCallFor(const CallBase *CB) const {
-  // Subtargets using PC-Relative addressing supported.
-  if (ST->isUsingPCRelativeCalls())
-    return true;
-
-  const Function *Callee = CB->getCalledFunction();
-  // Indirect calls and variadic argument functions not supported.
-  if (!Callee || Callee->isVarArg())
-    return false;
-
-  const Function *Caller = CB->getCaller();
-  // Support if we can share TOC base.
-  return ST->getTargetMachine().shouldAssumeDSOLocal(*Caller->getParent(),
-                                                     Callee);
+  return TLI->supportsTailCallFor(CB);
 }

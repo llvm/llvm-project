@@ -6,9 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "InterpStack.h"
+#include "Boolean.h"
+#include "Floating.h"
+#include "Integral.h"
+#include "Pointer.h"
 #include <cassert>
 #include <cstdlib>
-#include "InterpStack.h"
 
 using namespace clang;
 using namespace clang::interp;
@@ -19,11 +23,14 @@ InterpStack::~InterpStack() {
 
 void InterpStack::clear() {
   if (Chunk && Chunk->Next)
-    free(Chunk->Next);
+    std::free(Chunk->Next);
   if (Chunk)
-    free(Chunk);
+    std::free(Chunk);
   Chunk = nullptr;
   StackSize = 0;
+#ifndef NDEBUG
+  ItemTypes.clear();
+#endif
 }
 
 void *InterpStack::grow(size_t Size) {
@@ -33,7 +40,7 @@ void *InterpStack::grow(size_t Size) {
     if (Chunk && Chunk->Next) {
       Chunk = Chunk->Next;
     } else {
-      StackChunk *Next = new (malloc(ChunkSize)) StackChunk(Chunk);
+      StackChunk *Next = new (std::malloc(ChunkSize)) StackChunk(Chunk);
       if (Chunk)
         Chunk->Next = Next;
       Chunk = Next;
@@ -46,7 +53,7 @@ void *InterpStack::grow(size_t Size) {
   return Object;
 }
 
-void *InterpStack::peek(size_t Size) const {
+void *InterpStack::peekData(size_t Size) const {
   assert(Chunk && "Stack is empty!");
 
   StackChunk *Ptr = Chunk;
@@ -65,7 +72,7 @@ void InterpStack::shrink(size_t Size) {
   while (Size > Chunk->size()) {
     Size -= Chunk->size();
     if (Chunk->Next) {
-      free(Chunk->Next);
+      std::free(Chunk->Next);
       Chunk->Next = nullptr;
     }
     Chunk->End = Chunk->start();
@@ -75,4 +82,30 @@ void InterpStack::shrink(size_t Size) {
 
   Chunk->End -= Size;
   StackSize -= Size;
+}
+
+void InterpStack::dump() const {
+#ifndef NDEBUG
+  llvm::errs() << "Items: " << ItemTypes.size() << ". Size: " << size() << '\n';
+  if (ItemTypes.empty())
+    return;
+
+  size_t Index = 0;
+  size_t Offset = 0;
+
+  // The type of the item on the top of the stack is inserted to the back
+  // of the vector, so the iteration has to happen backwards.
+  for (auto TyIt = ItemTypes.rbegin(); TyIt != ItemTypes.rend(); ++TyIt) {
+    Offset += align(primSize(*TyIt));
+
+    llvm::errs() << Index << '/' << Offset << ": ";
+    TYPE_SWITCH(*TyIt, {
+      const T &V = peek<T>(Offset);
+      llvm::errs() << V;
+    });
+    llvm::errs() << '\n';
+
+    ++Index;
+  }
+#endif
 }

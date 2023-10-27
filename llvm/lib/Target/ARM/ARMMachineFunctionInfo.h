@@ -38,13 +38,6 @@ class ARMFunctionInfo : public MachineFunctionInfo {
   /// 'isThumb'.
   bool hasThumb2 = false;
 
-  /// StByValParamsPadding - For parameter that is split between
-  /// GPRs and memory; while recovering GPRs part, when
-  /// StackAlignment > 4, and GPRs-part-size mod StackAlignment != 0,
-  /// we need to insert gap before parameter start address. It allows to
-  /// "attach" GPR-part to the part that was passed via stack.
-  unsigned StByValParamsPadding = 0;
-
   /// ArgsRegSaveSize - Size of the register save area for vararg functions or
   /// those making guaranteed tail calls that need more stack argument space
   /// than is provided by this functions incoming parameters.
@@ -172,9 +165,6 @@ public:
 
   bool isCmseNSEntryFunction() const { return IsCmseNSEntry; }
   bool isCmseNSCallFunction() const { return IsCmseNSCall; }
-
-  unsigned getStoredByValParamsPadding() const { return StByValParamsPadding; }
-  void setStoredByValParamsPadding(unsigned p) { StByValParamsPadding = p; }
 
   unsigned getArgRegsSaveSize() const { return ArgRegsSaveSize; }
   void setArgRegsSaveSize(unsigned s) { ArgRegsSaveSize = s; }

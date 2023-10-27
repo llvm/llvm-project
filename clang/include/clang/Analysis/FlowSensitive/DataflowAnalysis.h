@@ -25,9 +25,13 @@
 #include "clang/Analysis/FlowSensitive/ControlFlowContext.h"
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
 #include "clang/Analysis/FlowSensitive/DataflowLattice.h"
+#include "clang/Analysis/FlowSensitive/MatchSwitch.h"
 #include "clang/Analysis/FlowSensitive/TypeErasedDataflowAnalysis.h"
-#include "llvm/ADT/Any.h"
+#include "clang/Analysis/FlowSensitive/WatchedLiteralsSolver.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 
 namespace clang {
@@ -41,7 +45,7 @@ namespace dataflow {
 ///  must provide the following public members:
 ///   * `LatticeT initialElement()` - returns a lattice element that models the
 ///     initial state of a basic block;
-///   * `void transfer(const CFGElement *, LatticeT &, Environment &)` - applies
+///   * `void transfer(const CFGElement &, LatticeT &, Environment &)` - applies
 ///     the analysis transfer function for a given CFG element and lattice
 ///     element.
 ///
@@ -61,6 +65,7 @@ namespace dataflow {
 ///     argument by computing their least upper bound, modifies the object if
 ///     necessary, and returns an effect indicating whether any changes were
 ///     made to it;
+///     FIXME: make it `static LatticeT join(const LatticeT&, const LatticeT&)`
 ///   * `bool operator==(const LatticeT &) const` - returns true if and only if
 ///     the object is equal to the argument.
 ///
@@ -80,14 +85,6 @@ public:
 
   explicit DataflowAnalysis(ASTContext &Context) : Context(Context) {}
 
-  /// Deprecated. Use the `DataflowAnalysisOptions` constructor instead.
-  explicit DataflowAnalysis(ASTContext &Context, bool ApplyBuiltinTransfer)
-      : DataflowAnalysis(
-            Context,
-            {ApplyBuiltinTransfer
-                 ? DataflowAnalysisContext::Options{}
-                 : std::optional<DataflowAnalysisContext::Options>()}) {}
-
   explicit DataflowAnalysis(ASTContext &Context,
                             DataflowAnalysisOptions Options)
       : TypeErasedDataflowAnalysis(Options), Context(Context) {}
@@ -98,11 +95,13 @@ public:
     return {static_cast<Derived *>(this)->initialElement()};
   }
 
-  LatticeJoinEffect joinTypeErased(TypeErasedLattice &E1,
+  TypeErasedLattice joinTypeErased(const TypeErasedLattice &E1,
                                    const TypeErasedLattice &E2) final {
-    Lattice &L1 = llvm::any_cast<Lattice &>(E1.Value);
+    // FIXME: change the signature of join() to avoid copying here.
+    Lattice L1 = llvm::any_cast<const Lattice &>(E1.Value);
     const Lattice &L2 = llvm::any_cast<const Lattice &>(E2.Value);
-    return L1.join(L2);
+    L1.join(L2);
+    return {std::move(L1)};
   }
 
   LatticeJoinEffect widenTypeErased(TypeErasedLattice &Current,
@@ -119,7 +118,7 @@ public:
     return L1 == L2;
   }
 
-  void transferTypeErased(const CFGElement *Element, TypeErasedLattice &E,
+  void transferTypeErased(const CFGElement &Element, TypeErasedLattice &E,
                           Environment &Env) final {
     Lattice &L = llvm::any_cast<Lattice &>(E.Value);
     static_cast<Derived *>(this)->transfer(Element, L, Env);
@@ -205,8 +204,10 @@ runDataflowAnalysis(
                               const TypeErasedDataflowAnalysisState &State) {
       auto *Lattice =
           llvm::any_cast<typename AnalysisT::Lattice>(&State.Lattice.Value);
+      // FIXME: we should not be copying the environment here!
+      // Ultimately the PostVisitCFG only gets a const reference anyway.
       PostVisitCFG(Element, DataflowAnalysisState<typename AnalysisT::Lattice>{
-                                *Lattice, State.Env});
+                                *Lattice, State.Env.fork()});
     };
   }
 
@@ -222,14 +223,69 @@ runDataflowAnalysis(
   llvm::transform(
       std::move(*TypeErasedBlockStates), std::back_inserter(BlockStates),
       [](auto &OptState) {
-        return llvm::transformOptional(std::move(OptState), [](auto &&State) {
-          return DataflowAnalysisState<typename AnalysisT::Lattice>{
-              llvm::any_cast<typename AnalysisT::Lattice>(
-                  std::move(State.Lattice.Value)),
-              std::move(State.Env)};
-        });
+        return llvm::transformOptional(
+            std::move(OptState), [](TypeErasedDataflowAnalysisState &&State) {
+              return DataflowAnalysisState<typename AnalysisT::Lattice>{
+                  llvm::any_cast<typename AnalysisT::Lattice>(
+                      std::move(State.Lattice.Value)),
+                  std::move(State.Env)};
+            });
       });
-  return BlockStates;
+  return std::move(BlockStates);
+}
+
+/// Runs a dataflow analysis over the given function and then runs `Diagnoser`
+/// over the results. Returns a list of diagnostics for `FuncDecl` or an
+/// error. Currently, errors can occur (at least) because the analysis requires
+/// too many iterations over the CFG or the SAT solver times out.
+///
+/// The default value of `MaxSATIterations` was chosen based on the following
+/// observations:
+/// - Non-pathological calls to the solver typically require only a few hundred
+///   iterations.
+/// - This limit is still low enough to keep runtimes acceptable (on typical
+///   machines) in cases where we hit the limit.
+template <typename AnalysisT, typename Diagnostic>
+llvm::Expected<llvm::SmallVector<Diagnostic>> diagnoseFunction(
+    const FunctionDecl &FuncDecl, ASTContext &ASTCtx,
+    llvm::function_ref<llvm::SmallVector<Diagnostic>(
+        const CFGElement &, ASTContext &,
+        const TransferStateForDiagnostics<typename AnalysisT::Lattice> &)>
+        Diagnoser,
+    std::int64_t MaxSATIterations = 1'000'000'000) {
+  llvm::Expected<ControlFlowContext> Context =
+      ControlFlowContext::build(FuncDecl);
+  if (!Context)
+    return Context.takeError();
+
+  auto OwnedSolver = std::make_unique<WatchedLiteralsSolver>(MaxSATIterations);
+  const WatchedLiteralsSolver *Solver = OwnedSolver.get();
+  DataflowAnalysisContext AnalysisContext(std::move(OwnedSolver));
+  Environment Env(AnalysisContext, FuncDecl);
+  AnalysisT Analysis(ASTCtx);
+  llvm::SmallVector<Diagnostic> Diagnostics;
+  if (llvm::Error Err =
+          runTypeErasedDataflowAnalysis(
+              *Context, Analysis, Env,
+              [&ASTCtx, &Diagnoser, &Diagnostics](
+                  const CFGElement &Elt,
+                  const TypeErasedDataflowAnalysisState &State) mutable {
+                auto EltDiagnostics = Diagnoser(
+                    Elt, ASTCtx,
+                    TransferStateForDiagnostics<typename AnalysisT::Lattice>(
+                        llvm::any_cast<const typename AnalysisT::Lattice &>(
+                            State.Lattice.Value),
+                        State.Env));
+                llvm::move(EltDiagnostics, std::back_inserter(Diagnostics));
+              })
+              .takeError())
+    return std::move(Err);
+
+  if (Solver->reachedLimit())
+    return llvm::createStringError(llvm::errc::interrupted,
+                                   "SAT solver timed out");
+
+  return Diagnostics;
 }
 
 /// Abstract base class for dataflow "models": reusable analysis components that
@@ -238,7 +294,7 @@ runDataflowAnalysis(
 class DataflowModel : public Environment::ValueModel {
 public:
   /// Return value indicates whether the model processed the `Element`.
-  virtual bool transfer(const CFGElement *Element, Environment &Env) = 0;
+  virtual bool transfer(const CFGElement &Element, Environment &Env) = 0;
 };
 
 } // namespace dataflow

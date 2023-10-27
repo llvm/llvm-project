@@ -1,3 +1,4 @@
+;; See also llvm/unittests/Transforms/Utils/CodeLayoutTest.cpp
 ; RUN: llc -mcpu=corei7 -mtriple=x86_64-linux -enable-ext-tsp-block-placement=1 < %s | FileCheck %s
 ; RUN: llc -mcpu=corei7 -mtriple=x86_64-linux -enable-ext-tsp-block-placement=1 -ext-tsp-chain-split-threshold=0 -ext-tsp-enable-chain-split-along-jumps=0 < %s | FileCheck %s -check-prefix=CHECK2
 

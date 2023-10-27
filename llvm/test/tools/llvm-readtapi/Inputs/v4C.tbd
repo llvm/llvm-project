@@ -1,0 +1,50 @@
+--- !tapi-tbd
+tbd-version: 4
+targets:  [ i386-macos, x86_64-ios ]
+uuids:
+  - target: i386-macos
+    value: 00000000-0000-0000-0000-000000000000
+  - target: x86_64-macos
+    value: 11111111-1111-1111-1111-111111111111
+  - target: x86_64-ios
+    value: 22222222-2222-2222-2222-222222222222
+flags: [ installapi ]
+install-name: Umbrella.framework/Umbrella
+current-version: 1.3.3
+compatibility-version: 1.2
+swift-abi-version: 3
+parent-umbrella:
+  - targets: [ i386-macos, x86_64-ios ]
+    umbrella: System
+allowable-clients:
+  - targets: [ i386-macos, x86_64-ios ]
+    clients: [ ClientA ]
+exports:
+  - targets: [ i386-macos ]
+    symbols: [ _symA ]
+    objc-classes: []
+    objc-eh-types: []
+    objc-ivars: []
+    weak-symbols: []
+    thread-local-symbols: []
+  - targets: [ x86_64-ios ]
+    symbols: [_symB]
+  - targets: [ x86_64-ios ]
+    symbols: [_symAB]
+reexports:
+  - targets: [ i386-macos ]
+    symbols: [_symC]
+    objc-classes: []
+    objc-eh-types: []
+    objc-ivars: []
+    weak-symbols: []
+    thread-local-symbols: []
+undefineds:
+  - targets: [ i386-macos ]
+    symbols: [ _symD ]
+    objc-classes: []
+    objc-eh-types: []
+    objc-ivars: []
+    weak-symbols: []
+    thread-local-symbols: []
+...

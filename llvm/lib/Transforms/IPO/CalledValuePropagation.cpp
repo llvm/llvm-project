@@ -21,8 +21,6 @@
 #include "llvm/Analysis/ValueLatticeUtils.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/MDBuilder.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/IPO.h"
 
@@ -404,34 +402,4 @@ PreservedAnalyses CalledValuePropagationPass::run(Module &M,
                                                   ModuleAnalysisManager &) {
   runCVP(M);
   return PreservedAnalyses::all();
-}
-
-namespace {
-class CalledValuePropagationLegacyPass : public ModulePass {
-public:
-  static char ID;
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesAll();
-  }
-
-  CalledValuePropagationLegacyPass() : ModulePass(ID) {
-    initializeCalledValuePropagationLegacyPassPass(
-        *PassRegistry::getPassRegistry());
-  }
-
-  bool runOnModule(Module &M) override {
-    if (skipModule(M))
-      return false;
-    return runCVP(M);
-  }
-};
-} // namespace
-
-char CalledValuePropagationLegacyPass::ID = 0;
-INITIALIZE_PASS(CalledValuePropagationLegacyPass, "called-value-propagation",
-                "Called Value Propagation", false, false)
-
-ModulePass *llvm::createCalledValuePropagationPass() {
-  return new CalledValuePropagationLegacyPass();
 }

@@ -8,7 +8,7 @@
 
 // UNSUPPORTED: c++03
 
-// ADDITIONAL_COMPILE_FLAGS: -fno-exceptions -D_LIBCPP_ENABLE_ASSERTIONS
+// ADDITIONAL_COMPILE_FLAGS: -fno-exceptions
 
 #include <utility>
 
@@ -16,4 +16,6 @@ int main(int, char**) {
   auto guard = std::__make_exception_guard([] {});
   auto guard2 = std::move(guard);
   guard2.__complete();
+
+  return 0;
 }

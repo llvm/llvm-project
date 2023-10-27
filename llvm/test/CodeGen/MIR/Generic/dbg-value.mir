@@ -1,0 +1,14 @@
+# RUN: llc -run-pass=machineinstr-printer -o - %s | FileCheck %s
+
+---
+name: test
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: test
+    ; CHECK: DBG_VALUE
+    ; CHECK-NEXT: DBG_VALUE_LIST
+    ; CHECK-NEXT: DBG_INSTR_REF
+    DBG_VALUE
+    DBG_VALUE_LIST
+    DBG_INSTR_REF
+...

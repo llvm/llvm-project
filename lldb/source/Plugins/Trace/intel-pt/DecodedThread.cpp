@@ -186,14 +186,12 @@ void DecodedThread::AppendInstruction(const pt_insn &insn) {
 }
 
 void DecodedThread::AppendError(const IntelPTError &error) {
-  CreateNewTraceItem(lldb::eTraceItemKindError).error =
-      ConstString(error.message()).AsCString();
+  CreateNewTraceItem(lldb::eTraceItemKindError).error = error.message();
   m_error_stats.RecordError(/*fatal=*/false);
 }
 
 void DecodedThread::AppendCustomError(StringRef err, bool fatal) {
-  CreateNewTraceItem(lldb::eTraceItemKindError).error =
-      ConstString(err).AsCString();
+  CreateNewTraceItem(lldb::eTraceItemKindError).error = err.str();
   m_error_stats.RecordError(fatal);
 }
 
@@ -238,7 +236,9 @@ DecodedThread::GetItemKindByIndex(uint64_t item_index) const {
   return static_cast<lldb::TraceItemKind>(m_item_kinds[item_index]);
 }
 
-const char *DecodedThread::GetErrorByIndex(uint64_t item_index) const {
+llvm::StringRef DecodedThread::GetErrorByIndex(uint64_t item_index) const {
+  if (item_index >= m_item_data.size())
+    return llvm::StringRef();
   return m_item_data[item_index].error;
 }
 

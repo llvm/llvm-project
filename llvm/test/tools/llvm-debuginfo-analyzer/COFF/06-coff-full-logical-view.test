@@ -1,0 +1,99 @@
+; REQUIRES: x86-registered-target
+
+; Test case 6 - Full logical view
+
+; test.cpp
+;  1  using INTPTR = const int *;
+;  2  int foo(INTPTR ParamPtr, unsigned ParamUnsigned, bool ParamBool) {
+;  3    if (ParamBool) {
+;  4      typedef int INTEGER;
+;  5      const INTEGER CONSTANT = 7;
+;  6      return CONSTANT;
+;  7    }
+;  8    return ParamUnsigned;
+;  9  }
+
+; Print low level details.
+; The following command prints low level information that includes
+; offsets within the debug information section, debug location
+; operands, linkage names, etc.
+
+; RUN: llvm-debuginfo-analyzer --attribute=all \
+; RUN:                         --print=all \
+; RUN:                         %p/Inputs/test-codeview-clang.o 2>&1 | \
+; RUN: FileCheck --strict-whitespace -check-prefix=ONE %s
+
+; ONE:      Logical View:
+; ONE-NEXT: [0x0000000000][000]            {File} '{{.*}}test-codeview-clang.o' -> COFF-x86-64
+; ONE-EMPTY:
+; ONE-NEXT: [0x0000000000][001]              {CompileUnit} 'test.cpp'
+; ONE-NEXT: [0x0000000000][002]                {Producer} 'clang version 15.0.0 {{.*}}'
+; ONE-NEXT:                                    {Directory} 'test.cpp'
+; ONE-NEXT:                                    {Directory} 'x:/tests/input'
+; ONE-NEXT:                                    {File} 'general'
+; ONE-NEXT:                                    {File} 'test.cpp'
+; ONE-NEXT:                                    {Public} 'foo' [0x0000000000:0x0000000046]
+; ONE-NEXT: [0x0000000000][002]                {TypeAlias} 'INTPTR' -> [0x0000001001]'* const int'
+; ONE-NEXT: [0x0000000030][002]                {BaseType} 'bool'
+; ONE-NEXT: [0x0000000000][002]                {Function} extern not_inlined 'foo' -> [0x0000000074]'int'
+; ONE-NEXT: [0x0000000000][003]                  {Range} Lines 2:9 [0x0000000000:0x0000000046]
+; ONE-NEXT: [0x0000000000][003]                  {Linkage}  0x1 '?foo@@YAHPEBHI_N@Z'
+; ONE-NEXT: [0x0000000000][003]                  {TypeAlias} 'INTEGER' -> [0x0000000074]'int'
+; ONE-NEXT: [0x0000000000][003]                  {Parameter} 'ParamBool' -> [0x0000000030]'bool'
+; ONE-NEXT: [0x0000000000][004]                    {Coverage} 70.00% (49/70)
+; ONE-NEXT: [0x0000000000][004]                    {Location} Lines 3:9 [0x0000000016:0x0000000047]
+; ONE-NEXT: [0x0000000000][005]                      {Entry} frame_pointer_rel 27
+; ONE-NEXT: [0x0000000000][003]                  {Parameter} 'ParamPtr' -> [0x0000001001]'* const int'
+; ONE-NEXT: [0x0000000000][004]                    {Coverage} 70.00% (49/70)
+; ONE-NEXT: [0x0000000000][004]                    {Location} Lines 3:9 [0x0000000016:0x0000000047]
+; ONE-NEXT: [0x0000000000][005]                      {Entry} frame_pointer_rel 8
+; ONE-NEXT: [0x0000000000][003]                  {Parameter} 'ParamUnsigned' -> [0x0000000075]'unsigned'
+; ONE-NEXT: [0x0000000000][004]                    {Coverage} 70.00% (49/70)
+; ONE-NEXT: [0x0000000000][004]                    {Location} Lines 3:9 [0x0000000016:0x0000000047]
+; ONE-NEXT: [0x0000000000][005]                      {Entry} frame_pointer_rel 20
+; ONE-NEXT: [0x0000000000][003]                  {Block}
+; ONE-NEXT: [0x0000000000][004]                    {Range} Lines ?:? [0x0000000021:0x0000000035]
+; ONE-NEXT: [0x0000000000][004]                    {Variable} 'CONSTANT' -> [0x0000001000]'const int'
+; ONE-NEXT: [0x0000000000][005]                      {Coverage} 105.00% (21/20)
+; ONE-NEXT: [0x0000000000][005]                      {Location} Lines ?:? [0x0000000021:0x0000000036]
+; ONE-NEXT: [0x0000000000][006]                        {Entry} frame_pointer_rel 4
+; ONE-EMPTY:
+; ONE-NEXT: [0x0000000021][004]   {Source} 'x:/tests/input/general/test.cpp'
+; ONE-NEXT: [0x0000000021][004]      5             {Line} 'x:/tests/input/general/test.cpp'
+; ONE-NEXT: [0x0000000021][004]                    {Code} 'movl	$0x7, 0x4(%rsp)'
+; ONE-NEXT: [0x0000000029][004]      6             {Line} 'x:/tests/input/general/test.cpp'
+; ONE-NEXT: [0x0000000029][004]                    {Code} 'movl	$0x7, 0x1c(%rsp)'
+; ONE-NEXT: [0x0000000031][004]                    {Code} 'jmp	0x8'
+; ONE-NEXT: [0x0000000000][003]      2           {Line} 'x:/tests/input/general/test.cpp'
+; ONE-NEXT: [0x0000000000][003]                  {Code} 'subq	$0x20, %rsp'
+; ONE-NEXT: [0x0000000004][003]                  {Code} 'andb	$0x1, %r8b'
+; ONE-NEXT: [0x0000000008][003]                  {Code} 'movb	%r8b, 0x1b(%rsp)'
+; ONE-NEXT: [0x000000000d][003]                  {Code} 'movl	%edx, 0x14(%rsp)'
+; ONE-NEXT: [0x0000000011][003]                  {Code} 'movq	%rcx, 0x8(%rsp)'
+; ONE-NEXT: [0x0000000016][003]      3           {Line} 'x:/tests/input/general/test.cpp'
+; ONE-NEXT: [0x0000000016][003]                  {Code} 'testb	$0x1, 0x1b(%rsp)'
+; ONE-NEXT: [0x000000001b][003]                  {Code} 'je	0x15'
+; ONE-NEXT: [0x0000000036][003]      8           {Line} 'x:/tests/input/general/test.cpp'
+; ONE-NEXT: [0x0000000036][003]                  {Code} 'movl	0x14(%rsp), %eax'
+; ONE-NEXT: [0x000000003a][003]                  {Code} 'movl	%eax, 0x1c(%rsp)'
+; ONE-NEXT: [0x000000003e][003]      9           {Line} 'x:/tests/input/general/test.cpp'
+; ONE-NEXT: [0x000000003e][003]                  {Code} 'movl	0x1c(%rsp), %eax'
+; ONE-NEXT: [0x0000000042][003]                  {Code} 'addq	$0x20, %rsp'
+; ONE-NEXT: [0x0000000046][003]                  {Code} 'retq'
+; ONE-NEXT: [0x0000000074][002]                {BaseType} 'int'
+; ONE-NEXT: [0x0000000075][002]                {BaseType} 'unsigned'
+; ONE-EMPTY:
+; ONE-NEXT: -----------------------------
+; ONE-NEXT: Element      Total    Printed
+; ONE-NEXT: -----------------------------
+; ONE-NEXT: Scopes           3          3
+; ONE-NEXT: Symbols          4          4
+; ONE-NEXT: Types            5          5
+; ONE-NEXT: Lines           21         21
+; ONE-NEXT: -----------------------------
+; ONE-NEXT: Total           33         33
+; ONE-EMPTY:
+; ONE-NEXT: Scope Sizes:
+; ONE-EMPTY:
+; ONE-NEXT: Totals by lexical level:
+; ONE-EMPTY:

@@ -26,12 +26,11 @@
 ;; dbg.assign/DIExpression. Ensure that only the value-expression gets fragment
 ;; info; that the address-expression remains untouched.
 
-; CHECK: %i.sroa.4.12.vec.insert = insertelement <2 x float> %i.sroa.4.0.vec.insert, float %2, i32 1, !dbg
+; CHECK: %i.sroa.2.12.vec.insert = insertelement <2 x float> %i.sroa.2.0.vec.insert, float %2, i32 1, !dbg
 ;; There's a few dbg intrinsics we're not interested in testing wedged in here.
 ; CHECK-NEXT: dbg.value
-; CHECK-NEXT: dbg.assign
-; CHECK-NEXT: dbg.assign
-; CHECK-NEXT: call void @llvm.dbg.assign(metadata float %2,{{.+}}, metadata !DIExpression(DW_OP_LLVM_fragment, 96, 32),{{.+}}, metadata ptr undef, metadata !DIExpression()), !dbg
+; CHECK-NEXT: dbg.value
+; CHECK-NEXT: call void @llvm.dbg.value(metadata float %2,{{.+}}, metadata !DIExpression(DW_OP_LLVM_fragment, 96, 32))
 
 %class.d = type { %class.a }
 %class.a = type { [4 x float] }
@@ -60,7 +59,6 @@ entry:
   call void @llvm.dbg.assign(metadata <2 x float> %0, metadata !30, metadata !DIExpression(DW_OP_LLVM_fragment, 0, 64), metadata !41, metadata ptr undef, metadata !DIExpression()), !dbg !33
   call void @llvm.dbg.assign(metadata <2 x float> %1, metadata !30, metadata !DIExpression(DW_OP_LLVM_fragment, 64, 64), metadata !42, metadata ptr undef, metadata !DIExpression()), !dbg !33
   %2 = bitcast ptr %i to ptr, !dbg !43
-  call void @llvm.lifetime.start.p0i8(i64 16, ptr nonnull %2) #5, !dbg !43
   %h.sroa.0.sroa.0.0.h.sroa.0.0..sroa_cast4.sroa_cast = bitcast ptr %i to ptr, !dbg !44
   store <2 x float> %0, ptr %h.sroa.0.sroa.0.0.h.sroa.0.0..sroa_cast4.sroa_cast, align 8, !dbg !44, !DIAssignID !45
   call void @llvm.dbg.assign(metadata <2 x float> %0, metadata !31, metadata !DIExpression(DW_OP_LLVM_fragment, 0, 64), metadata !45, metadata ptr %h.sroa.0.sroa.0.0.h.sroa.0.0..sroa_cast4.sroa_cast, metadata !DIExpression()), !dbg !33
@@ -71,7 +69,6 @@ entry:
   call void @llvm.dbg.assign(metadata i1 undef, metadata !47, metadata !DIExpression(), metadata !51, metadata ptr undef, metadata !DIExpression()), !dbg !52
   call void @llvm.dbg.assign(metadata ptr %i, metadata !47, metadata !DIExpression(), metadata !54, metadata ptr undef, metadata !DIExpression()), !dbg !52
   %3 = bitcast ptr %ref.tmp to ptr, !dbg !55
-  call void @llvm.lifetime.start.p0i8(i64 16, ptr nonnull %3) #5, !dbg !55
   call void @llvm.dbg.assign(metadata i1 undef, metadata !56, metadata !DIExpression(), metadata !59, metadata ptr undef, metadata !DIExpression()), !dbg !60
   call void @llvm.dbg.assign(metadata ptr %ref.tmp, metadata !56, metadata !DIExpression(), metadata !62, metadata ptr undef, metadata !DIExpression()), !dbg !60
   %4 = load float, ptr @c, align 4, !dbg !63
@@ -79,13 +76,8 @@ entry:
   store float %4, ptr %arrayidx.i, align 4, !dbg !70
   call void @llvm.memcpy.p0i8.p0i8.i64(ptr nonnull align 8 dereferenceable(16) %2, ptr nonnull align 4 dereferenceable(16) %3, i64 16, i1 false), !dbg !71, !DIAssignID !72
   call void @llvm.dbg.assign(metadata i1 undef, metadata !31, metadata !DIExpression(), metadata !72, metadata ptr %2, metadata !DIExpression()), !dbg !33
-  call void @llvm.lifetime.end.p0i8(i64 16, ptr nonnull %3) #5, !dbg !73
-  call void @llvm.lifetime.end.p0i8(i64 16, ptr nonnull %2) #5, !dbg !74
   ret void, !dbg !74
 }
-
-; Function Attrs: argmemonly nofree nosync nounwind willreturn
-declare void @llvm.lifetime.start.p0i8(i64 immarg, ptr nocapture) #1
 
 declare !dbg !75 dso_local { <2 x float>, <2 x float> } @_Z1fv() local_unnamed_addr #2
 
@@ -111,7 +103,6 @@ entry:
   ret void, !dbg !88
 }
 
-declare void @llvm.lifetime.end.p0i8(i64 immarg, ptr nocapture) #1
 declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, metadata) #4
 
 !llvm.dbg.cu = !{!2}

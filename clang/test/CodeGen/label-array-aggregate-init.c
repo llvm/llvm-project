@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -triple x86_64-windows-msvc -emit-llvm %s -o - | FileCheck %s
 
-// CHECK: @constinit = private global [3 x ptr] [ptr blockaddress(@main, %L), ptr null, ptr null]
+// CHECK: @constinit = private constant [3 x ptr] [ptr blockaddress(@main, %L), ptr null, ptr null]
 
 void receivePtrs(void **);
 

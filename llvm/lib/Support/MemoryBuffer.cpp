@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Config/config.h"
 #include "llvm/Support/Alignment.h"
@@ -22,6 +23,7 @@
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/SmallVectorMemoryBuffer.h"
+#include <algorithm>
 #include <cassert>
 #include <cstring>
 #include <new>
@@ -132,10 +134,13 @@ MemoryBuffer::getMemBuffer(MemoryBufferRef Ref, bool RequiresNullTerminator) {
 
 static ErrorOr<std::unique_ptr<WritableMemoryBuffer>>
 getMemBufferCopyImpl(StringRef InputData, const Twine &BufferName) {
-  auto Buf = WritableMemoryBuffer::getNewUninitMemBuffer(InputData.size(), BufferName);
+  auto Buf =
+      WritableMemoryBuffer::getNewUninitMemBuffer(InputData.size(), BufferName);
   if (!Buf)
     return make_error_code(errc::not_enough_memory);
-  memcpy(Buf->getBufferStart(), InputData.data(), InputData.size());
+  // Calling memcpy with null src/dst is UB, and an empty StringRef is
+  // represented with {nullptr, 0}.
+  llvm::copy(InputData, Buf->getBufferStart());
   return std::move(Buf);
 }
 

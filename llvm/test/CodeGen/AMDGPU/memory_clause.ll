@@ -205,25 +205,29 @@ define void @mubuf_clause(ptr addrspace(5) noalias nocapture readonly %arg, ptr 
 ; GCN-SCRATCH-LABEL: mubuf_clause:
 ; GCN-SCRATCH:       ; %bb.0: ; %bb
 ; GCN-SCRATCH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GCN-SCRATCH-NEXT:    v_lshlrev_b32_e32 v2, 4, v31
 ; GCN-SCRATCH-NEXT:    v_and_b32_e32 v18, 0x3ff0, v2
 ; GCN-SCRATCH-NEXT:    v_add_nc_u32_e32 v0, v0, v18
+; GCN-SCRATCH-NEXT:    v_add_nc_u32_e32 v6, 16, v0
+; GCN-SCRATCH-NEXT:    v_add_nc_u32_e32 v10, 32, v0
+; GCN-SCRATCH-NEXT:    v_add_nc_u32_e32 v14, 48, v0
 ; GCN-SCRATCH-NEXT:    s_clause 0x3
 ; GCN-SCRATCH-NEXT:    scratch_load_dwordx4 v[2:5], v0, off
-; GCN-SCRATCH-NEXT:    scratch_load_dwordx4 v[6:9], v0, off offset:16
-; GCN-SCRATCH-NEXT:    scratch_load_dwordx4 v[10:13], v0, off offset:32
-; GCN-SCRATCH-NEXT:    scratch_load_dwordx4 v[14:17], v0, off offset:48
+; GCN-SCRATCH-NEXT:    scratch_load_dwordx4 v[6:9], v6, off
+; GCN-SCRATCH-NEXT:    scratch_load_dwordx4 v[10:13], v10, off
+; GCN-SCRATCH-NEXT:    scratch_load_dwordx4 v[14:17], v14, off
 ; GCN-SCRATCH-NEXT:    v_add_nc_u32_e32 v0, v1, v18
+; GCN-SCRATCH-NEXT:    v_add_nc_u32_e32 v1, 16, v0
+; GCN-SCRATCH-NEXT:    v_add_nc_u32_e32 v18, 32, v0
+; GCN-SCRATCH-NEXT:    v_add_nc_u32_e32 v19, 48, v0
 ; GCN-SCRATCH-NEXT:    s_waitcnt vmcnt(3)
 ; GCN-SCRATCH-NEXT:    scratch_store_dwordx4 v0, v[2:5], off
 ; GCN-SCRATCH-NEXT:    s_waitcnt vmcnt(2)
-; GCN-SCRATCH-NEXT:    scratch_store_dwordx4 v0, v[6:9], off offset:16
+; GCN-SCRATCH-NEXT:    scratch_store_dwordx4 v1, v[6:9], off
 ; GCN-SCRATCH-NEXT:    s_waitcnt vmcnt(1)
-; GCN-SCRATCH-NEXT:    scratch_store_dwordx4 v0, v[10:13], off offset:32
+; GCN-SCRATCH-NEXT:    scratch_store_dwordx4 v18, v[10:13], off
 ; GCN-SCRATCH-NEXT:    s_waitcnt vmcnt(0)
-; GCN-SCRATCH-NEXT:    scratch_store_dwordx4 v0, v[14:17], off offset:48
-; GCN-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
+; GCN-SCRATCH-NEXT:    scratch_store_dwordx4 v19, v[14:17], off
 ; GCN-SCRATCH-NEXT:    s_setpc_b64 s[30:31]
 bb:
   %tmp = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -316,7 +320,6 @@ define void @load_global_d16_hi(ptr addrspace(1) %in, i16 %reg, ptr addrspace(1)
 ; GCN-SCRATCH-LABEL: load_global_d16_hi:
 ; GCN-SCRATCH:       ; %bb.0: ; %entry
 ; GCN-SCRATCH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GCN-SCRATCH-NEXT:    v_mov_b32_e32 v5, v2
 ; GCN-SCRATCH-NEXT:    s_clause 0x1
 ; GCN-SCRATCH-NEXT:    global_load_short_d16_hi v5, v[0:1], off
@@ -325,7 +328,6 @@ define void @load_global_d16_hi(ptr addrspace(1) %in, i16 %reg, ptr addrspace(1)
 ; GCN-SCRATCH-NEXT:    global_store_dword v[3:4], v5, off
 ; GCN-SCRATCH-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-SCRATCH-NEXT:    global_store_dword v[3:4], v2, off offset:128
-; GCN-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GCN-SCRATCH-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %gep = getelementptr inbounds i16, ptr addrspace(1) %in, i64 32
@@ -359,7 +361,6 @@ define void @load_global_d16_lo(ptr addrspace(1) %in, i32 %reg, ptr addrspace(1)
 ; GCN-SCRATCH-LABEL: load_global_d16_lo:
 ; GCN-SCRATCH:       ; %bb.0: ; %entry
 ; GCN-SCRATCH-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GCN-SCRATCH-NEXT:    v_mov_b32_e32 v5, v2
 ; GCN-SCRATCH-NEXT:    s_clause 0x1
 ; GCN-SCRATCH-NEXT:    global_load_short_d16 v5, v[0:1], off
@@ -368,7 +369,6 @@ define void @load_global_d16_lo(ptr addrspace(1) %in, i32 %reg, ptr addrspace(1)
 ; GCN-SCRATCH-NEXT:    global_store_dword v[3:4], v5, off
 ; GCN-SCRATCH-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-SCRATCH-NEXT:    global_store_dword v[3:4], v2, off offset:128
-; GCN-SCRATCH-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GCN-SCRATCH-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %gep = getelementptr inbounds i16, ptr addrspace(1) %in, i64 32

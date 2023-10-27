@@ -18,7 +18,6 @@
 #include "X86MCAsmInfo.h"
 #include "X86TargetStreamer.h"
 #include "llvm/ADT/APInt.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCInstrAnalysis.h"
@@ -29,7 +28,8 @@
 #include "llvm/MC/MachineLocation.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/Host.h"
+#include "llvm/TargetParser/Host.h"
+#include "llvm/TargetParser/Triple.h"
 
 using namespace llvm;
 
@@ -397,6 +397,18 @@ MCSubtargetInfo *X86_MC::createX86MCSubtargetInfo(const Triple &TT,
   if (CPU.empty())
     CPU = "generic";
 
+  size_t posNoEVEX512 = FS.rfind("-evex512");
+  // Make sure we won't be cheated by "-avx512fp16".
+  size_t posNoAVX512F = FS.endswith("-avx512f") ? FS.size() - 8
+                                                : FS.rfind("-avx512f,");
+  size_t posEVEX512 = FS.rfind("+evex512");
+  size_t posAVX512F = FS.rfind("+avx512"); // Any AVX512XXX will enable AVX512F.
+
+  if (posAVX512F != StringRef::npos &&
+      (posNoAVX512F == StringRef::npos || posNoAVX512F < posAVX512F))
+    if (posEVEX512 == StringRef::npos && posNoEVEX512 == StringRef::npos)
+      ArchFS += ",+evex512";
+
   return createX86MCSubtargetInfoImpl(TT, CPU, /*TuneCPU*/ CPU, ArchFS);
 }
 
@@ -440,6 +452,8 @@ static MCAsmInfo *createX86MCAsmInfo(const MCRegisterInfo &MRI,
       MAI = new X86MCAsmInfoMicrosoft(TheTriple);
   } else if (TheTriple.isOSCygMing() ||
              TheTriple.isWindowsItaniumEnvironment()) {
+    MAI = new X86MCAsmInfoGNUCOFF(TheTriple);
+  } else if (TheTriple.isUEFI()) {
     MAI = new X86MCAsmInfoGNUCOFF(TheTriple);
   } else {
     // The default is ELF.
@@ -501,7 +515,6 @@ public:
                             APInt &Mask) const override;
   std::vector<std::pair<uint64_t, uint64_t>>
   findPltEntries(uint64_t PltSectionVA, ArrayRef<uint8_t> PltContents,
-                 uint64_t GotSectionVA,
                  const Triple &TargetTriple) const override;
 
   bool evaluateBranch(const MCInst &Inst, uint64_t Addr, uint64_t Size,
@@ -522,7 +535,7 @@ bool X86MCInstrAnalysis::clearsSuperRegisters(const MCRegisterInfo &MRI,
                                               APInt &Mask) const {
   const MCInstrDesc &Desc = Info->get(Inst.getOpcode());
   unsigned NumDefs = Desc.getNumDefs();
-  unsigned NumImplicitDefs = Desc.getNumImplicitDefs();
+  unsigned NumImplicitDefs = Desc.implicit_defs().size();
   assert(Mask.getBitWidth() == NumDefs + NumImplicitDefs &&
          "Unexpected number of bits in the mask!");
 
@@ -561,7 +574,7 @@ bool X86MCInstrAnalysis::clearsSuperRegisters(const MCRegisterInfo &MRI,
   }
 
   for (unsigned I = 0, E = NumImplicitDefs; I < E; ++I) {
-    const MCPhysReg Reg = Desc.getImplicitDefs()[I];
+    const MCPhysReg Reg = Desc.implicit_defs()[I];
     if (ClearsSuperReg(Reg))
       Mask.setBit(NumDefs + I);
   }
@@ -570,8 +583,7 @@ bool X86MCInstrAnalysis::clearsSuperRegisters(const MCRegisterInfo &MRI,
 }
 
 static std::vector<std::pair<uint64_t, uint64_t>>
-findX86PltEntries(uint64_t PltSectionVA, ArrayRef<uint8_t> PltContents,
-                  uint64_t GotPltSectionVA) {
+findX86PltEntries(uint64_t PltSectionVA, ArrayRef<uint8_t> PltContents) {
   // Do a lightweight parsing of PLT entries.
   std::vector<std::pair<uint64_t, uint64_t>> Result;
   for (uint64_t Byte = 0, End = PltContents.size(); Byte + 6 < End; ) {
@@ -579,9 +591,11 @@ findX86PltEntries(uint64_t PltSectionVA, ArrayRef<uint8_t> PltContents,
     if (PltContents[Byte] == 0xff && PltContents[Byte + 1] == 0xa3) {
       // The jmp instruction at the beginning of each PLT entry jumps to the
       // address of the base of the .got.plt section plus the immediate.
+      // Set the 1 << 32 bit to let ELFObjectFileBase::getPltEntries convert the
+      // offset to an address. Imm may be a negative int32_t if the GOT entry is
+      // in .got.
       uint32_t Imm = support::endian::read32le(PltContents.data() + Byte + 2);
-      Result.push_back(
-          std::make_pair(PltSectionVA + Byte, GotPltSectionVA + Imm));
+      Result.emplace_back(PltSectionVA + Byte, Imm | (uint64_t(1) << 32));
       Byte += 6;
     } else if (PltContents[Byte] == 0xff && PltContents[Byte + 1] == 0x25) {
       // The jmp instruction at the beginning of each PLT entry jumps to the
@@ -614,23 +628,25 @@ findX86_64PltEntries(uint64_t PltSectionVA, ArrayRef<uint8_t> PltContents) {
   return Result;
 }
 
-std::vector<std::pair<uint64_t, uint64_t>> X86MCInstrAnalysis::findPltEntries(
-    uint64_t PltSectionVA, ArrayRef<uint8_t> PltContents,
-    uint64_t GotPltSectionVA, const Triple &TargetTriple) const {
+std::vector<std::pair<uint64_t, uint64_t>>
+X86MCInstrAnalysis::findPltEntries(uint64_t PltSectionVA,
+                                   ArrayRef<uint8_t> PltContents,
+                                   const Triple &TargetTriple) const {
   switch (TargetTriple.getArch()) {
-    case Triple::x86:
-      return findX86PltEntries(PltSectionVA, PltContents, GotPltSectionVA);
-    case Triple::x86_64:
-      return findX86_64PltEntries(PltSectionVA, PltContents);
-    default:
-      return {};
-    }
+  case Triple::x86:
+    return findX86PltEntries(PltSectionVA, PltContents);
+  case Triple::x86_64:
+    return findX86_64PltEntries(PltSectionVA, PltContents);
+  default:
+    return {};
+  }
 }
 
 bool X86MCInstrAnalysis::evaluateBranch(const MCInst &Inst, uint64_t Addr,
                                         uint64_t Size, uint64_t &Target) const {
   if (Inst.getNumOperands() == 0 ||
-      Info->get(Inst.getOpcode()).OpInfo[0].OperandType != MCOI::OPERAND_PCREL)
+      Info->get(Inst.getOpcode()).operands()[0].OperandType !=
+          MCOI::OPERAND_PCREL)
     return false;
   Target = Addr + Size + Inst.getOperand(0).getImm();
   return true;
@@ -741,22 +757,14 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeX86TargetMC() {
                                        createX86_64AsmBackend);
 }
 
-MCRegister llvm::getX86SubSuperRegisterOrZero(MCRegister Reg, unsigned Size,
-                                              bool High) {
+MCRegister llvm::getX86SubSuperRegister(MCRegister Reg, unsigned Size,
+                                        bool High) {
   switch (Size) {
-  default: return X86::NoRegister;
+  default: llvm_unreachable("illegal register size");
   case 8:
     if (High) {
       switch (Reg.id()) {
-      default: return getX86SubSuperRegisterOrZero(Reg, 64);
-      case X86::SIL: case X86::SI: case X86::ESI: case X86::RSI:
-        return X86::SI;
-      case X86::DIL: case X86::DI: case X86::EDI: case X86::RDI:
-        return X86::DI;
-      case X86::BPL: case X86::BP: case X86::EBP: case X86::RBP:
-        return X86::BP;
-      case X86::SPL: case X86::SP: case X86::ESP: case X86::RSP:
-        return X86::SP;
+      default: return X86::NoRegister;
       case X86::AH: case X86::AL: case X86::AX: case X86::EAX: case X86::RAX:
         return X86::AH;
       case X86::DH: case X86::DL: case X86::DX: case X86::EDX: case X86::RDX:
@@ -877,7 +885,7 @@ MCRegister llvm::getX86SubSuperRegisterOrZero(MCRegister Reg, unsigned Size,
     }
   case 64:
     switch (Reg.id()) {
-    default: return 0;
+    default: return X86::NoRegister;
     case X86::AH: case X86::AL: case X86::AX: case X86::EAX: case X86::RAX:
       return X86::RAX;
     case X86::DH: case X86::DL: case X86::DX: case X86::EDX: case X86::RDX:
@@ -913,11 +921,3 @@ MCRegister llvm::getX86SubSuperRegisterOrZero(MCRegister Reg, unsigned Size,
     }
   }
 }
-
-MCRegister llvm::getX86SubSuperRegister(MCRegister Reg, unsigned Size, bool High) {
-  MCRegister Res = getX86SubSuperRegisterOrZero(Reg, Size, High);
-  assert(Res != X86::NoRegister && "Unexpected register or VT");
-  return Res;
-}
-
-

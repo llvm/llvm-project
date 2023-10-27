@@ -19,7 +19,6 @@
 #include "MipsMCNaCl.h"
 #include "MipsTargetStreamer.h"
 #include "TargetInfo/MipsTargetInfo.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCELFStreamer.h"
 #include "llvm/MC/MCInstrAnalysis.h"
@@ -32,6 +31,7 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormattedStream.h"
+#include "llvm/TargetParser/Triple.h"
 
 using namespace llvm;
 
@@ -143,7 +143,7 @@ public:
     unsigned NumOps = Inst.getNumOperands();
     if (NumOps == 0)
       return false;
-    switch (Info->get(Inst.getOpcode()).OpInfo[NumOps - 1].OperandType) {
+    switch (Info->get(Inst.getOpcode()).operands()[NumOps - 1].OperandType) {
     case MCOI::OPERAND_UNKNOWN:
     case MCOI::OPERAND_IMMEDIATE: {
       // j, jal, jalx, jals

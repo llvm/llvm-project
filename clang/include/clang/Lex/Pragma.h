@@ -123,6 +123,13 @@ public:
   PragmaNamespace *getIfNamespace() override { return this; }
 };
 
+/// Destringize a \c _Pragma("") string according to C11 6.10.9.1:
+/// "The string literal is destringized by deleting any encoding prefix,
+/// deleting the leading and trailing double-quotes, replacing each escape
+/// sequence \" by a double-quote, and replacing each escape sequence \\ by a
+/// single backslash."
+void prepare_PragmaString(SmallVectorImpl<char> &StrVal);
+
 } // namespace clang
 
 #endif // LLVM_CLANG_LEX_PRAGMA_H

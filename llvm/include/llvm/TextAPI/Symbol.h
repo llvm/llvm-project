@@ -40,7 +40,13 @@ enum class SymbolFlags : uint8_t {
   /// Rexported
   Rexported        = 1U << 4,
 
-  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/Rexported),
+  /// Data Segment  
+  Data             = 1U << 5,
+
+  /// Text Segment
+  Text             = 1U << 6,
+  
+  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/Text),
 };
 
 // clang-format on
@@ -59,12 +65,26 @@ constexpr StringLiteral ObjC2EHTypePrefix = "_OBJC_EHTYPE_$_";
 constexpr StringLiteral ObjC2IVarPrefix = "_OBJC_IVAR_$_";
 
 using TargetList = SmallVector<Target, 5>;
+
+// Keep containers that hold Targets in sorted order and uniqued.
+template <typename C>
+typename C::iterator addEntry(C &Container, const Target &Targ) {
+  auto Iter =
+      lower_bound(Container, Targ, [](const Target &LHS, const Target &RHS) {
+        return LHS < RHS;
+      });
+  if ((Iter != std::end(Container)) && !(Targ < *Iter))
+    return Iter;
+
+  return Container.insert(Iter, Targ);
+}
+
 class Symbol {
 public:
   Symbol(SymbolKind Kind, StringRef Name, TargetList Targets, SymbolFlags Flags)
       : Name(Name), Targets(std::move(Targets)), Kind(Kind), Flags(Flags) {}
 
-  void addTarget(Target target) { Targets.emplace_back(target); }
+  void addTarget(Target InputTarget) { addEntry(Targets, InputTarget); }
   SymbolKind getKind() const { return Kind; }
   StringRef getName() const { return Name; }
   ArchitectureSet getArchitectures() const {
@@ -93,6 +113,22 @@ public:
     return (Flags & SymbolFlags::Rexported) == SymbolFlags::Rexported;
   }
 
+  bool isData() const {
+    return (Flags & SymbolFlags::Data) == SymbolFlags::Data;
+  }
+
+  bool isText() const {
+    return (Flags & SymbolFlags::Text) == SymbolFlags::Text;
+  }
+
+  bool hasArchitecture(Architecture Arch) const {
+    return mapToArchitectureSet(Targets).contains(Arch);
+  }
+
+  bool hasTarget(const Target &Targ) const {
+    return llvm::is_contained(Targets, Targ);
+  }
+
   using const_target_iterator = TargetList::const_iterator;
   using const_target_range = llvm::iterator_range<const_target_iterator>;
   const_target_range targets() const { return {Targets}; }
@@ -109,16 +145,12 @@ public:
   void dump() const { dump(llvm::errs()); }
 #endif
 
-  bool operator==(const Symbol &O) const {
-    return std::tie(Name, Kind, Targets, Flags) ==
-           std::tie(O.Name, O.Kind, O.Targets, O.Flags);
-  }
+  bool operator==(const Symbol &O) const;
 
   bool operator!=(const Symbol &O) const { return !(*this == O); }
 
   bool operator<(const Symbol &O) const {
-    return std::tie(Name, Kind, Targets, Flags) <
-           std::tie(O.Name, O.Kind, O.Targets, O.Flags);
+    return std::tie(Kind, Name) < std::tie(O.Kind, O.Name);
   }
 
 private:

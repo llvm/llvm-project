@@ -73,8 +73,8 @@ void testFoo(Foo *o) {
                  // expected-note@-1{{Passed-by-value struct argument contains uninitialized data (e.g., field: 'x')}}
 }
 
-// Test case from <rdar://problem/7780304>.  That shows an uninitialized value
-// being used in the LHS of a compound assignment.
+// Test case shows an uninitialized value being used in the LHS of a compound
+// assignment.
 void rdar_7780304(void) {
   typedef struct s_r7780304 { int x; } s_r7780304;
   s_r7780304 b;
@@ -169,7 +169,7 @@ void PR14765_test(void) {
 
   // FIXME: Assigning to 'testObj->origin' kills the default binding for the
   // whole region, meaning that we've forgotten that testObj->size should also
-  // default to 0. Tracked by <rdar://problem/12701038>.
+  // default to 0.
   // This should be TRUE.
   clang_analyzer_eval(testObj->size == 0); // expected-warning{{UNKNOWN}}
                                            // expected-note@-1{{UNKNOWN}}
@@ -230,7 +230,7 @@ void PR14765_test_int(void) {
 
   // FIXME: Assigning to 'testObj->origin' kills the default binding for the
   // whole region, meaning that we've forgotten that testObj->size should also
-  // default to 0. Tracked by <rdar://problem/12701038>.
+  // default to 0.
   // This should be TRUE.
   clang_analyzer_eval(testObj->size == 0); // expected-warning{{UNKNOWN}}
                                            // expected-note@-1{{UNKNOWN}}

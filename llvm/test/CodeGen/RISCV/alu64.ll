@@ -19,10 +19,9 @@ define i64 @addi(i64 %a) nounwind {
 ;
 ; RV32I-LABEL: addi:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    addi a2, a0, 1
-; RV32I-NEXT:    sltu a0, a2, a0
-; RV32I-NEXT:    add a1, a1, a0
-; RV32I-NEXT:    mv a0, a2
+; RV32I-NEXT:    addi a0, a0, 1
+; RV32I-NEXT:    seqz a2, a0
+; RV32I-NEXT:    add a1, a1, a2
 ; RV32I-NEXT:    ret
   %1 = add i64 %a, 1
   ret i64 %1
@@ -220,8 +219,7 @@ define i64 @sll(i64 %a, i64 %b) nounwind {
 ; RV32I-NEXT:    srl a0, a0, a2
 ; RV32I-NEXT:    or a1, a1, a0
 ; RV32I-NEXT:  .LBB11_3:
-; RV32I-NEXT:    slti a0, a4, 0
-; RV32I-NEXT:    neg a0, a0
+; RV32I-NEXT:    srai a0, a4, 31
 ; RV32I-NEXT:    and a0, a0, a3
 ; RV32I-NEXT:    ret
   %1 = shl i64 %a, %b
@@ -308,8 +306,7 @@ define i64 @srl(i64 %a, i64 %b) nounwind {
 ; RV32I-NEXT:    sll a1, a1, a2
 ; RV32I-NEXT:    or a0, a0, a1
 ; RV32I-NEXT:  .LBB15_3:
-; RV32I-NEXT:    slti a1, a4, 0
-; RV32I-NEXT:    neg a1, a1
+; RV32I-NEXT:    srai a1, a4, 31
 ; RV32I-NEXT:    and a1, a1, a3
 ; RV32I-NEXT:    ret
   %1 = lshr i64 %a, %b
@@ -530,4 +527,77 @@ define signext i32 @sraw(i64 %a, i32 zeroext %b) nounwind {
   %1 = trunc i64 %a to i32
   %2 = ashr i32 %1, %b
   ret i32 %2
+}
+
+define i64 @add_hi_and_lo_negone(i64 %0) {
+; RV64I-LABEL: add_hi_and_lo_negone:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi a0, a0, -1
+; RV64I-NEXT:    ret
+;
+; RV32I-LABEL: add_hi_and_lo_negone:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    seqz a2, a0
+; RV32I-NEXT:    sub a1, a1, a2
+; RV32I-NEXT:    addi a0, a0, -1
+; RV32I-NEXT:    ret
+  %2 = add nsw i64 %0, -1
+  ret i64 %2
+}
+
+define i64 @add_hi_zero_lo_negone(i64 %0) {
+; RV64I-LABEL: add_hi_zero_lo_negone:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    li a1, -1
+; RV64I-NEXT:    srli a1, a1, 32
+; RV64I-NEXT:    add a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV32I-LABEL: add_hi_zero_lo_negone:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    snez a2, a0
+; RV32I-NEXT:    add a1, a1, a2
+; RV32I-NEXT:    addi a0, a0, -1
+; RV32I-NEXT:    ret
+  %2 = add i64 %0, 4294967295
+  ret i64 %2
+}
+
+define i64 @add_lo_negone(i64 %0) {
+; RV64I-LABEL: add_lo_negone:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    li a1, -1
+; RV64I-NEXT:    slli a1, a1, 32
+; RV64I-NEXT:    addi a1, a1, -1
+; RV64I-NEXT:    add a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV32I-LABEL: add_lo_negone:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    snez a2, a0
+; RV32I-NEXT:    add a1, a1, a2
+; RV32I-NEXT:    addi a1, a1, -2
+; RV32I-NEXT:    addi a0, a0, -1
+; RV32I-NEXT:    ret
+  %2 = add nsw i64 %0, -4294967297
+  ret i64 %2
+}
+
+define i64 @add_hi_one_lo_negone(i64 %0) {
+; RV64I-LABEL: add_hi_one_lo_negone:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    li a1, -1
+; RV64I-NEXT:    srli a1, a1, 31
+; RV64I-NEXT:    add a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV32I-LABEL: add_hi_one_lo_negone:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    snez a2, a0
+; RV32I-NEXT:    add a1, a1, a2
+; RV32I-NEXT:    addi a1, a1, 1
+; RV32I-NEXT:    addi a0, a0, -1
+; RV32I-NEXT:    ret
+  %2 = add nsw i64 %0, 8589934591
+  ret i64 %2
 }

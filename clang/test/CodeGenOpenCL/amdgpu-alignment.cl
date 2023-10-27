@@ -1,6 +1,6 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang_cc1 -no-opaque-pointers -triple amdgcn-unknown-unknown -S -disable-llvm-passes -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers -triple amdgcn-unknown-unknown-opencl -S -disable-llvm-passes -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -S -disable-llvm-passes -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple amdgcn-unknown-unknown-opencl -S -disable-llvm-passes -emit-llvm -o - %s | FileCheck %s
 
 #pragma OPENCL EXTENSION cl_khr_fp64 : enable
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
@@ -92,48 +92,48 @@ typedef double __attribute__((ext_vector_type(16))) double16;
 
 
 // CHECK-LABEL: @local_memory_alignment_global(
-// CHECK: store volatile i8 0, i8 addrspace(3)* getelementptr inbounds ([4 x i8], [4 x i8] addrspace(3)* @local_memory_alignment_global.lds_i8, i64 0, i64 0), align 1
-// CHECK: store volatile <2 x i8> zeroinitializer, <2 x i8> addrspace(3)* getelementptr inbounds ([4 x <2 x i8>], [4 x <2 x i8>] addrspace(3)* @local_memory_alignment_global.lds_v2i8, i64 0, i64 0), align 2
-// CHECK: store volatile <4 x i8> <i8 0, i8 0, i8 0, i8 undef>, <4 x i8> addrspace(3)* bitcast ([4 x <3 x i8>] addrspace(3)* @local_memory_alignment_global.lds_v3i8 to <4 x i8> addrspace(3)*), align 4
-// CHECK: store volatile <4 x i8> zeroinitializer, <4 x i8> addrspace(3)* getelementptr inbounds ([4 x <4 x i8>], [4 x <4 x i8>] addrspace(3)* @local_memory_alignment_global.lds_v4i8, i64 0, i64 0), align 4
-// CHECK: store volatile <8 x i8> zeroinitializer, <8 x i8> addrspace(3)* getelementptr inbounds ([4 x <8 x i8>], [4 x <8 x i8>] addrspace(3)* @local_memory_alignment_global.lds_v8i8, i64 0, i64 0), align 8
-// CHECK: store volatile <16 x i8> zeroinitializer, <16 x i8> addrspace(3)* getelementptr inbounds ([4 x <16 x i8>], [4 x <16 x i8>] addrspace(3)* @local_memory_alignment_global.lds_v16i8, i64 0, i64 0), align 16
-// CHECK: store volatile i16 0, i16 addrspace(3)* getelementptr inbounds ([4 x i16], [4 x i16] addrspace(3)* @local_memory_alignment_global.lds_i16, i64 0, i64 0), align 2
-// CHECK: store volatile <2 x i16> zeroinitializer, <2 x i16> addrspace(3)* getelementptr inbounds ([4 x <2 x i16>], [4 x <2 x i16>] addrspace(3)* @local_memory_alignment_global.lds_v2i16, i64 0, i64 0), align 4
-// CHECK: store volatile <4 x i16> <i16 0, i16 0, i16 0, i16 undef>, <4 x i16> addrspace(3)* bitcast ([4 x <3 x i16>] addrspace(3)* @local_memory_alignment_global.lds_v3i16 to <4 x i16> addrspace(3)*), align 8
-// CHECK: store volatile <4 x i16> zeroinitializer, <4 x i16> addrspace(3)* getelementptr inbounds ([4 x <4 x i16>], [4 x <4 x i16>] addrspace(3)* @local_memory_alignment_global.lds_v4i16, i64 0, i64 0), align 8
-// CHECK: store volatile <8 x i16> zeroinitializer, <8 x i16> addrspace(3)* getelementptr inbounds ([4 x <8 x i16>], [4 x <8 x i16>] addrspace(3)* @local_memory_alignment_global.lds_v8i16, i64 0, i64 0), align 16
-// CHECK: store volatile <16 x i16> zeroinitializer, <16 x i16> addrspace(3)* getelementptr inbounds ([4 x <16 x i16>], [4 x <16 x i16>] addrspace(3)* @local_memory_alignment_global.lds_v16i16, i64 0, i64 0), align 32
-// CHECK: store volatile i32 0, i32 addrspace(3)* getelementptr inbounds ([4 x i32], [4 x i32] addrspace(3)* @local_memory_alignment_global.lds_i32, i64 0, i64 0), align 4
-// CHECK: store volatile <2 x i32> zeroinitializer, <2 x i32> addrspace(3)* getelementptr inbounds ([4 x <2 x i32>], [4 x <2 x i32>] addrspace(3)* @local_memory_alignment_global.lds_v2i32, i64 0, i64 0), align 8
-// CHECK: store volatile <4 x i32> <i32 0, i32 0, i32 0, i32 undef>, <4 x i32> addrspace(3)* bitcast ([4 x <3 x i32>] addrspace(3)* @local_memory_alignment_global.lds_v3i32 to <4 x i32> addrspace(3)*), align 16
-// CHECK: store volatile <4 x i32> zeroinitializer, <4 x i32> addrspace(3)* getelementptr inbounds ([4 x <4 x i32>], [4 x <4 x i32>] addrspace(3)* @local_memory_alignment_global.lds_v4i32, i64 0, i64 0), align 16
-// CHECK: store volatile <8 x i32> zeroinitializer, <8 x i32> addrspace(3)* getelementptr inbounds ([4 x <8 x i32>], [4 x <8 x i32>] addrspace(3)* @local_memory_alignment_global.lds_v8i32, i64 0, i64 0), align 32
-// CHECK: store volatile <16 x i32> zeroinitializer, <16 x i32> addrspace(3)* getelementptr inbounds ([4 x <16 x i32>], [4 x <16 x i32>] addrspace(3)* @local_memory_alignment_global.lds_v16i32, i64 0, i64 0), align 64
-// CHECK: store volatile i64 0, i64 addrspace(3)* getelementptr inbounds ([4 x i64], [4 x i64] addrspace(3)* @local_memory_alignment_global.lds_i64, i64 0, i64 0), align 8
-// CHECK: store volatile <2 x i64> zeroinitializer, <2 x i64> addrspace(3)* getelementptr inbounds ([4 x <2 x i64>], [4 x <2 x i64>] addrspace(3)* @local_memory_alignment_global.lds_v2i64, i64 0, i64 0), align 16
-// CHECK: store volatile <4 x i64> <i64 0, i64 0, i64 0, i64 undef>, <4 x i64> addrspace(3)* bitcast ([4 x <3 x i64>] addrspace(3)* @local_memory_alignment_global.lds_v3i64 to <4 x i64> addrspace(3)*), align 32
-// CHECK: store volatile <4 x i64> zeroinitializer, <4 x i64> addrspace(3)* getelementptr inbounds ([4 x <4 x i64>], [4 x <4 x i64>] addrspace(3)* @local_memory_alignment_global.lds_v4i64, i64 0, i64 0), align 32
-// CHECK: store volatile <8 x i64> zeroinitializer, <8 x i64> addrspace(3)* getelementptr inbounds ([4 x <8 x i64>], [4 x <8 x i64>] addrspace(3)* @local_memory_alignment_global.lds_v8i64, i64 0, i64 0), align 64
-// CHECK: store volatile <16 x i64> zeroinitializer, <16 x i64> addrspace(3)* getelementptr inbounds ([4 x <16 x i64>], [4 x <16 x i64>] addrspace(3)* @local_memory_alignment_global.lds_v16i64, i64 0, i64 0), align 128
-// CHECK: store volatile half 0xH0000, half addrspace(3)* getelementptr inbounds ([4 x half], [4 x half] addrspace(3)* @local_memory_alignment_global.lds_f16, i64 0, i64 0), align 2
-// CHECK: store volatile <2 x half> zeroinitializer, <2 x half> addrspace(3)* getelementptr inbounds ([4 x <2 x half>], [4 x <2 x half>] addrspace(3)* @local_memory_alignment_global.lds_v2f16, i64 0, i64 0), align 4
-// CHECK: store volatile <4 x half> <half 0xH0000, half 0xH0000, half 0xH0000, half undef>, <4 x half> addrspace(3)* bitcast ([4 x <3 x half>] addrspace(3)* @local_memory_alignment_global.lds_v3f16 to <4 x half> addrspace(3)*), align 8
-// CHECK: store volatile <4 x half> zeroinitializer, <4 x half> addrspace(3)* getelementptr inbounds ([4 x <4 x half>], [4 x <4 x half>] addrspace(3)* @local_memory_alignment_global.lds_v4f16, i64 0, i64 0), align 8
-// CHECK: store volatile <8 x half> zeroinitializer, <8 x half> addrspace(3)* getelementptr inbounds ([4 x <8 x half>], [4 x <8 x half>] addrspace(3)* @local_memory_alignment_global.lds_v8f16, i64 0, i64 0), align 16
-// CHECK: store volatile <16 x half> zeroinitializer, <16 x half> addrspace(3)* getelementptr inbounds ([4 x <16 x half>], [4 x <16 x half>] addrspace(3)* @local_memory_alignment_global.lds_v16f16, i64 0, i64 0), align 32
-// CHECK: store volatile float 0.000000e+00, float addrspace(3)* getelementptr inbounds ([4 x float], [4 x float] addrspace(3)* @local_memory_alignment_global.lds_f32, i64 0, i64 0), align 4
-// CHECK: store volatile <2 x float> zeroinitializer, <2 x float> addrspace(3)* getelementptr inbounds ([4 x <2 x float>], [4 x <2 x float>] addrspace(3)* @local_memory_alignment_global.lds_v2f32, i64 0, i64 0), align 8
-// CHECK: store volatile <4 x float> <float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float undef>, <4 x float> addrspace(3)* bitcast ([4 x <3 x float>] addrspace(3)* @local_memory_alignment_global.lds_v3f32 to <4 x float> addrspace(3)*), align 16
-// CHECK: store volatile <4 x float> zeroinitializer, <4 x float> addrspace(3)* getelementptr inbounds ([4 x <4 x float>], [4 x <4 x float>] addrspace(3)* @local_memory_alignment_global.lds_v4f32, i64 0, i64 0), align 16
-// CHECK: store volatile <8 x float> zeroinitializer, <8 x float> addrspace(3)* getelementptr inbounds ([4 x <8 x float>], [4 x <8 x float>] addrspace(3)* @local_memory_alignment_global.lds_v8f32, i64 0, i64 0), align 32
-// CHECK: store volatile <16 x float> zeroinitializer, <16 x float> addrspace(3)* getelementptr inbounds ([4 x <16 x float>], [4 x <16 x float>] addrspace(3)* @local_memory_alignment_global.lds_v16f32, i64 0, i64 0), align 64
-// CHECK: store volatile double 0.000000e+00, double addrspace(3)* getelementptr inbounds ([4 x double], [4 x double] addrspace(3)* @local_memory_alignment_global.lds_f64, i64 0, i64 0), align 8
-// CHECK: store volatile <2 x double> zeroinitializer, <2 x double> addrspace(3)* getelementptr inbounds ([4 x <2 x double>], [4 x <2 x double>] addrspace(3)* @local_memory_alignment_global.lds_v2f64, i64 0, i64 0), align 16
-// CHECK: store volatile <4 x double> <double 0.000000e+00, double 0.000000e+00, double 0.000000e+00, double undef>, <4 x double> addrspace(3)* bitcast ([4 x <3 x double>] addrspace(3)* @local_memory_alignment_global.lds_v3f64 to <4 x double> addrspace(3)*), align 32
-// CHECK: store volatile <4 x double> zeroinitializer, <4 x double> addrspace(3)* getelementptr inbounds ([4 x <4 x double>], [4 x <4 x double>] addrspace(3)* @local_memory_alignment_global.lds_v4f64, i64 0, i64 0), align 32
-// CHECK: store volatile <8 x double> zeroinitializer, <8 x double> addrspace(3)* getelementptr inbounds ([4 x <8 x double>], [4 x <8 x double>] addrspace(3)* @local_memory_alignment_global.lds_v8f64, i64 0, i64 0), align 64
-// CHECK: store volatile <16 x double> zeroinitializer, <16 x double> addrspace(3)* getelementptr inbounds ([4 x <16 x double>], [4 x <16 x double>] addrspace(3)* @local_memory_alignment_global.lds_v16f64, i64 0, i64 0), align 128
+// CHECK: store volatile i8 0, ptr addrspace(3) @local_memory_alignment_global.lds_i8, align 1
+// CHECK: store volatile <2 x i8> zeroinitializer, ptr addrspace(3) @local_memory_alignment_global.lds_v2i8, align 2
+// CHECK: store volatile <4 x i8> <i8 0, i8 0, i8 0, i8 undef>, ptr addrspace(3) @local_memory_alignment_global.lds_v3i8, align 4
+// CHECK: store volatile <4 x i8> zeroinitializer, ptr addrspace(3) @local_memory_alignment_global.lds_v4i8, align 4
+// CHECK: store volatile <8 x i8> zeroinitializer, ptr addrspace(3) @local_memory_alignment_global.lds_v8i8, align 8
+// CHECK: store volatile <16 x i8> zeroinitializer, ptr addrspace(3) @local_memory_alignment_global.lds_v16i8, align 16
+// CHECK: store volatile i16 0, ptr addrspace(3) @local_memory_alignment_global.lds_i16, align 2
+// CHECK: store volatile <2 x i16> zeroinitializer, ptr addrspace(3) @local_memory_alignment_global.lds_v2i16, align 4
+// CHECK: store volatile <4 x i16> <i16 0, i16 0, i16 0, i16 undef>, ptr addrspace(3) @local_memory_alignment_global.lds_v3i16, align 8
+// CHECK: store volatile <4 x i16> zeroinitializer, ptr addrspace(3) @local_memory_alignment_global.lds_v4i16, align 8
+// CHECK: store volatile <8 x i16> zeroinitializer, ptr addrspace(3) @local_memory_alignment_global.lds_v8i16, align 16
+// CHECK: store volatile <16 x i16> zeroinitializer, ptr addrspace(3) @local_memory_alignment_global.lds_v16i16, align 32
+// CHECK: store volatile i32 0, ptr addrspace(3) @local_memory_alignment_global.lds_i32, align 4
+// CHECK: store volatile <2 x i32> zeroinitializer, ptr addrspace(3) @local_memory_alignment_global.lds_v2i32, align 8
+// CHECK: store volatile <4 x i32> <i32 0, i32 0, i32 0, i32 undef>, ptr addrspace(3) @local_memory_alignment_global.lds_v3i32, align 16
+// CHECK: store volatile <4 x i32> zeroinitializer, ptr addrspace(3) @local_memory_alignment_global.lds_v4i32, align 16
+// CHECK: store volatile <8 x i32> zeroinitializer, ptr addrspace(3) @local_memory_alignment_global.lds_v8i32, align 32
+// CHECK: store volatile <16 x i32> zeroinitializer, ptr addrspace(3) @local_memory_alignment_global.lds_v16i32, align 64
+// CHECK: store volatile i64 0, ptr addrspace(3) @local_memory_alignment_global.lds_i64, align 8
+// CHECK: store volatile <2 x i64> zeroinitializer, ptr addrspace(3) @local_memory_alignment_global.lds_v2i64, align 16
+// CHECK: store volatile <4 x i64> <i64 0, i64 0, i64 0, i64 undef>, ptr addrspace(3) @local_memory_alignment_global.lds_v3i64, align 32
+// CHECK: store volatile <4 x i64> zeroinitializer, ptr addrspace(3) @local_memory_alignment_global.lds_v4i64, align 32
+// CHECK: store volatile <8 x i64> zeroinitializer, ptr addrspace(3) @local_memory_alignment_global.lds_v8i64, align 64
+// CHECK: store volatile <16 x i64> zeroinitializer, ptr addrspace(3) @local_memory_alignment_global.lds_v16i64, align 128
+// CHECK: store volatile half 0xH0000, ptr addrspace(3) @local_memory_alignment_global.lds_f16, align 2
+// CHECK: store volatile <2 x half> zeroinitializer, ptr addrspace(3) @local_memory_alignment_global.lds_v2f16, align 4
+// CHECK: store volatile <4 x half> <half 0xH0000, half 0xH0000, half 0xH0000, half undef>, ptr addrspace(3) @local_memory_alignment_global.lds_v3f16, align 8
+// CHECK: store volatile <4 x half> zeroinitializer, ptr addrspace(3) @local_memory_alignment_global.lds_v4f16, align 8
+// CHECK: store volatile <8 x half> zeroinitializer, ptr addrspace(3) @local_memory_alignment_global.lds_v8f16, align 16
+// CHECK: store volatile <16 x half> zeroinitializer, ptr addrspace(3) @local_memory_alignment_global.lds_v16f16, align 32
+// CHECK: store volatile float 0.000000e+00, ptr addrspace(3) @local_memory_alignment_global.lds_f32, align 4
+// CHECK: store volatile <2 x float> zeroinitializer, ptr addrspace(3) @local_memory_alignment_global.lds_v2f32, align 8
+// CHECK: store volatile <4 x float> <float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float undef>, ptr addrspace(3) @local_memory_alignment_global.lds_v3f32, align 16
+// CHECK: store volatile <4 x float> zeroinitializer, ptr addrspace(3) @local_memory_alignment_global.lds_v4f32, align 16
+// CHECK: store volatile <8 x float> zeroinitializer, ptr addrspace(3) @local_memory_alignment_global.lds_v8f32, align 32
+// CHECK: store volatile <16 x float> zeroinitializer, ptr addrspace(3) @local_memory_alignment_global.lds_v16f32, align 64
+// CHECK: store volatile double 0.000000e+00, ptr addrspace(3) @local_memory_alignment_global.lds_f64, align 8
+// CHECK: store volatile <2 x double> zeroinitializer, ptr addrspace(3) @local_memory_alignment_global.lds_v2f64, align 16
+// CHECK: store volatile <4 x double> <double 0.000000e+00, double 0.000000e+00, double 0.000000e+00, double undef>, ptr addrspace(3) @local_memory_alignment_global.lds_v3f64, align 32
+// CHECK: store volatile <4 x double> zeroinitializer, ptr addrspace(3) @local_memory_alignment_global.lds_v4f64, align 32
+// CHECK: store volatile <8 x double> zeroinitializer, ptr addrspace(3) @local_memory_alignment_global.lds_v8f64, align 64
+// CHECK: store volatile <16 x double> zeroinitializer, ptr addrspace(3) @local_memory_alignment_global.lds_v16f64, align 128
 kernel void local_memory_alignment_global()
 {
   volatile local char lds_i8[4];
@@ -379,48 +379,48 @@ kernel void local_memory_alignment_arg(
 // CHECK: %private_v8f64 = alloca [4 x <8 x double>], align 64, addrspace(5)
 // CHECK: %private_v16f64 = alloca [4 x <16 x double>], align 128, addrspace(5)
 
-// CHECK: store volatile i8 0, i8 addrspace(5)* %arraydecay, align 1
-// CHECK: store volatile <2 x i8> zeroinitializer, <2 x i8> addrspace(5)* %arraydecay{{[0-9]+}}, align 2
-// CHECK: store volatile <4 x i8> <i8 0, i8 0, i8 0, i8 undef>, <4 x i8> addrspace(5)* %storetmp, align 4
-// CHECK: store volatile <4 x i8> zeroinitializer, <4 x i8> addrspace(5)* %arraydecay{{[0-9]+}}, align 4
-// CHECK: store volatile <8 x i8> zeroinitializer, <8 x i8> addrspace(5)* %arraydecay{{[0-9]+}}, align 8
-// CHECK: store volatile <16 x i8> zeroinitializer, <16 x i8> addrspace(5)* %arraydecay{{[0-9]+}}, align 16
-// CHECK: store volatile i16 0, i16 addrspace(5)* %arraydecay{{[0-9]+}}, align 2
-// CHECK: store volatile <2 x i16> zeroinitializer, <2 x i16> addrspace(5)* %arraydecay{{[0-9]+}}, align 4
-// CHECK: store volatile <4 x i16> <i16 0, i16 0, i16 0, i16 undef>, <4 x i16> addrspace(5)* %storetmp{{[0-9]+}}, align 8
-// CHECK: store volatile <4 x i16> zeroinitializer, <4 x i16> addrspace(5)* %arraydecay{{[0-9]+}}, align 8
-// CHECK: store volatile <8 x i16> zeroinitializer, <8 x i16> addrspace(5)* %arraydecay{{[0-9]+}}, align 16
-// CHECK: store volatile <16 x i16> zeroinitializer, <16 x i16> addrspace(5)* %arraydecay{{[0-9]+}}, align 32
-// CHECK: store volatile i32 0, i32 addrspace(5)* %arraydecay{{[0-9]+}}, align 4
-// CHECK: store volatile <2 x i32> zeroinitializer, <2 x i32> addrspace(5)* %arraydecay{{[0-9]+}}, align 8
-// CHECK: store volatile <4 x i32> <i32 0, i32 0, i32 0, i32 undef>, <4 x i32> addrspace(5)* %storetmp16, align 16
-// CHECK: store volatile <4 x i32> zeroinitializer, <4 x i32> addrspace(5)* %arraydecay{{[0-9]+}}, align 16
-// CHECK: store volatile <8 x i32> zeroinitializer, <8 x i32> addrspace(5)* %arraydecay{{[0-9]+}}, align 32
-// CHECK: store volatile <16 x i32> zeroinitializer, <16 x i32> addrspace(5)* %arraydecay{{[0-9]+}}, align 64
-// CHECK: store volatile i64 0, i64 addrspace(5)* %arraydecay{{[0-9]+}}, align 8
-// CHECK: store volatile <2 x i64> zeroinitializer, <2 x i64> addrspace(5)* %arraydecay{{[0-9]+}}, align 16
-// CHECK: store volatile <4 x i64> <i64 0, i64 0, i64 0, i64 undef>, <4 x i64> addrspace(5)* %storetmp23, align 32
-// CHECK: store volatile <4 x i64> zeroinitializer, <4 x i64> addrspace(5)* %arraydecay{{[0-9]+}}, align 32
-// CHECK: store volatile <8 x i64> zeroinitializer, <8 x i64> addrspace(5)* %arraydecay{{[0-9]+}}, align 64
-// CHECK: store volatile <16 x i64> zeroinitializer, <16 x i64> addrspace(5)* %arraydecay{{[0-9]+}}, align 128
-// CHECK: store volatile half 0xH0000, half addrspace(5)* %arraydecay{{[0-9]+}}, align 2
-// CHECK: store volatile <2 x half> zeroinitializer, <2 x half> addrspace(5)* %arraydecay{{[0-9]+}}, align 4
-// CHECK: store volatile <4 x half> <half 0xH0000, half 0xH0000, half 0xH0000, half undef>, <4 x half> addrspace(5)* %storetmp{{[0-9]+}}, align 8
-// CHECK: store volatile <4 x half> zeroinitializer, <4 x half> addrspace(5)* %arraydecay{{[0-9]+}}, align 8
-// CHECK: store volatile <8 x half> zeroinitializer, <8 x half> addrspace(5)* %arraydecay{{[0-9]+}}, align 16
-// CHECK: store volatile <16 x half> zeroinitializer, <16 x half> addrspace(5)* %arraydecay{{[0-9]+}}, align 32
-// CHECK: store volatile float 0.000000e+00, float addrspace(5)* %arraydecay34, align 4
-// CHECK: store volatile <2 x float> zeroinitializer, <2 x float> addrspace(5)* %arraydecay{{[0-9]+}}, align 8
-// CHECK: store volatile <4 x float> <float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float undef>, <4 x float> addrspace(5)* %storetmp{{[0-9]+}}, align 16
-// CHECK: store volatile <4 x float> zeroinitializer, <4 x float> addrspace(5)* %arraydecay{{[0-9]+}}, align 16
-// CHECK: store volatile <8 x float> zeroinitializer, <8 x float> addrspace(5)* %arraydecay{{[0-9]+}}, align 32
-// CHECK: store volatile <16 x float> zeroinitializer, <16 x float> addrspace(5)* %arraydecay{{[0-9]+}}, align 64
-// CHECK: store volatile double 0.000000e+00, double addrspace(5)* %arraydecay{{[0-9]+}}, align 8
-// CHECK: store volatile <2 x double> zeroinitializer, <2 x double> addrspace(5)* %arraydecay{{[0-9]+}}, align 16
-// CHECK: store volatile <4 x double> <double 0.000000e+00, double 0.000000e+00, double 0.000000e+00, double undef>, <4 x double> addrspace(5)* %storetmp{{[0-9]+}}, align 32
-// CHECK: store volatile <4 x double> zeroinitializer, <4 x double> addrspace(5)* %arraydecay{{[0-9]+}}, align 32
-// CHECK: store volatile <8 x double> zeroinitializer, <8 x double> addrspace(5)* %arraydecay{{[0-9]+}}, align 64
-// CHECK: store volatile <16 x double> zeroinitializer, <16 x double> addrspace(5)* %arraydecay{{[0-9]+}}, align 128
+// CHECK: store volatile i8 0, ptr addrspace(5) %arraydecay, align 1
+// CHECK: store volatile <2 x i8> zeroinitializer, ptr addrspace(5) %arraydecay{{[0-9]+}}, align 2
+// CHECK: store volatile <4 x i8> <i8 0, i8 0, i8 0, i8 undef>, ptr addrspace(5) %arraydecay{{[0-9]+}}, align 4
+// CHECK: store volatile <4 x i8> zeroinitializer, ptr addrspace(5) %arraydecay{{[0-9]+}}, align 4
+// CHECK: store volatile <8 x i8> zeroinitializer, ptr addrspace(5) %arraydecay{{[0-9]+}}, align 8
+// CHECK: store volatile <16 x i8> zeroinitializer, ptr addrspace(5) %arraydecay{{[0-9]+}}, align 16
+// CHECK: store volatile i16 0, ptr addrspace(5) %arraydecay{{[0-9]+}}, align 2
+// CHECK: store volatile <2 x i16> zeroinitializer, ptr addrspace(5) %arraydecay{{[0-9]+}}, align 4
+// CHECK: store volatile <4 x i16> <i16 0, i16 0, i16 0, i16 undef>, ptr addrspace(5) %arraydecay{{[0-9]+}}, align 8
+// CHECK: store volatile <4 x i16> zeroinitializer, ptr addrspace(5) %arraydecay{{[0-9]+}}, align 8
+// CHECK: store volatile <8 x i16> zeroinitializer, ptr addrspace(5) %arraydecay{{[0-9]+}}, align 16
+// CHECK: store volatile <16 x i16> zeroinitializer, ptr addrspace(5) %arraydecay{{[0-9]+}}, align 32
+// CHECK: store volatile i32 0, ptr addrspace(5) %arraydecay{{[0-9]+}}, align 4
+// CHECK: store volatile <2 x i32> zeroinitializer, ptr addrspace(5) %arraydecay{{[0-9]+}}, align 8
+// CHECK: store volatile <4 x i32> <i32 0, i32 0, i32 0, i32 undef>, ptr addrspace(5) %arraydecay{{[0-9]+}}, align 16
+// CHECK: store volatile <4 x i32> zeroinitializer, ptr addrspace(5) %arraydecay{{[0-9]+}}, align 16
+// CHECK: store volatile <8 x i32> zeroinitializer, ptr addrspace(5) %arraydecay{{[0-9]+}}, align 32
+// CHECK: store volatile <16 x i32> zeroinitializer, ptr addrspace(5) %arraydecay{{[0-9]+}}, align 64
+// CHECK: store volatile i64 0, ptr addrspace(5) %arraydecay{{[0-9]+}}, align 8
+// CHECK: store volatile <2 x i64> zeroinitializer, ptr addrspace(5) %arraydecay{{[0-9]+}}, align 16
+// CHECK: store volatile <4 x i64> <i64 0, i64 0, i64 0, i64 undef>, ptr addrspace(5) %arraydecay{{[0-9]+}}, align 32
+// CHECK: store volatile <4 x i64> zeroinitializer, ptr addrspace(5) %arraydecay{{[0-9]+}}, align 32
+// CHECK: store volatile <8 x i64> zeroinitializer, ptr addrspace(5) %arraydecay{{[0-9]+}}, align 64
+// CHECK: store volatile <16 x i64> zeroinitializer, ptr addrspace(5) %arraydecay{{[0-9]+}}, align 128
+// CHECK: store volatile half 0xH0000, ptr addrspace(5) %arraydecay{{[0-9]+}}, align 2
+// CHECK: store volatile <2 x half> zeroinitializer, ptr addrspace(5) %arraydecay{{[0-9]+}}, align 4
+// CHECK: store volatile <4 x half> <half 0xH0000, half 0xH0000, half 0xH0000, half undef>, ptr addrspace(5) %arraydecay{{[0-9]+}}, align 8
+// CHECK: store volatile <4 x half> zeroinitializer, ptr addrspace(5) %arraydecay{{[0-9]+}}, align 8
+// CHECK: store volatile <8 x half> zeroinitializer, ptr addrspace(5) %arraydecay{{[0-9]+}}, align 16
+// CHECK: store volatile <16 x half> zeroinitializer, ptr addrspace(5) %arraydecay{{[0-9]+}}, align 32
+// CHECK: store volatile float 0.000000e+00, ptr addrspace(5) %arraydecay{{[0-9]+}}, align 4
+// CHECK: store volatile <2 x float> zeroinitializer, ptr addrspace(5) %arraydecay{{[0-9]+}}, align 8
+// CHECK: store volatile <4 x float> <float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float undef>, ptr addrspace(5) %arraydecay{{[0-9]+}}, align 16
+// CHECK: store volatile <4 x float> zeroinitializer, ptr addrspace(5) %arraydecay{{[0-9]+}}, align 16
+// CHECK: store volatile <8 x float> zeroinitializer, ptr addrspace(5) %arraydecay{{[0-9]+}}, align 32
+// CHECK: store volatile <16 x float> zeroinitializer, ptr addrspace(5) %arraydecay{{[0-9]+}}, align 64
+// CHECK: store volatile double 0.000000e+00, ptr addrspace(5) %arraydecay{{[0-9]+}}, align 8
+// CHECK: store volatile <2 x double> zeroinitializer, ptr addrspace(5) %arraydecay{{[0-9]+}}, align 16
+// CHECK: store volatile <4 x double> <double 0.000000e+00, double 0.000000e+00, double 0.000000e+00, double undef>, ptr addrspace(5) %arraydecay{{[0-9]+}}, align 32
+// CHECK: store volatile <4 x double> zeroinitializer, ptr addrspace(5) %arraydecay{{[0-9]+}}, align 32
+// CHECK: store volatile <8 x double> zeroinitializer, ptr addrspace(5) %arraydecay{{[0-9]+}}, align 64
+// CHECK: store volatile <16 x double> zeroinitializer, ptr addrspace(5) %arraydecay{{[0-9]+}}, align 128
 kernel void private_memory_alignment_alloca()
 {
   volatile private char private_i8[4];

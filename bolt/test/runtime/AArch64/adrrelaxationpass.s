@@ -1,5 +1,9 @@
 # The second and third ADR instructions are non-local to functions
 # and must be replaced with ADRP + ADD by BOLT
+# Also since main is non-simple, we can't change it's length so we have to
+# replace NOP with adrp, and if there is no nop before adr in non-simple
+# function, we can't guarantee we didn't break possible jump tables, so we
+# fail in strict mode
 
 # REQUIRES: system-linux
 
@@ -9,6 +13,8 @@
 # RUN: llvm-bolt %t.exe -o %t.bolt --adr-relaxation=true
 # RUN: llvm-objdump --no-print-imm-hex -d --disassemble-symbols=main %t.bolt | FileCheck %s
 # RUN: %t.bolt
+# RUN: not llvm-bolt %t.exe -o %t.bolt --adr-relaxation=true --strict \
+# RUN: 2>&1 | FileCheck %s --check-prefix CHECK-ERROR
 
   .data
   .align 8
@@ -31,6 +37,7 @@ test:
   .type main, %function
 main:
   adr x0, .CI
+  nop
   adr x1, test
   adr x2, Gvar2
   adr x3, br
@@ -41,9 +48,10 @@ br:
   .word 0xff
 
 # CHECK: <main>:
-# CHECK-NEXT: adr x0, #{{[0-9][0-9]*}}
+# CHECK-NEXT: adr x0, 0x{{[1-8a-f][0-9a-f]*}}
 # CHECK-NEXT: adrp x1, 0x{{[1-8a-f][0-9a-f]*}}
 # CHECK-NEXT: add x1, x1, #{{[1-8a-f][0-9a-f]*}}
 # CHECK-NEXT: adrp x2, 0x{{[1-8a-f][0-9a-f]*}}
 # CHECK-NEXT: add x2, x2, #{{[1-8a-f][0-9a-f]*}}
-# CHECK-NEXT: adr x3, #{{[0-9][0-9]*}}
+# CHECK-NEXT: adr x3, 0x{{[1-8a-f][0-9a-f]*}}
+# CHECK-ERROR: BOLT-ERROR: Cannot relax adr in non-simple function main

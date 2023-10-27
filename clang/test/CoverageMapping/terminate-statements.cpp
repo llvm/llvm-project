@@ -320,6 +320,32 @@ void include() {
   included_func();
 }
 
+// CHECK-LABEL: _Z7ornoretv:
+void abort() __attribute__((noreturn));
+
+int ornoret(void) {
+  ( true || (abort(), 0) );  // CHECK: Gap,File 0, [[@LINE]]:28 -> [[@LINE+1]]:3 = #0
+  ( false || (abort(), 0) ); // CHECK: Gap,File 0, [[@LINE]]:29 -> [[@LINE+1]]:3 = 0
+  return 0;
+}
+
+// CHECK-LABEL: _Z17abstractcondnoretv:
+int abstractcondnoret(void) {
+  ( true ? void (0) : abort() );  // CHECK: Gap,File 0, [[@LINE]]:33 -> [[@LINE+1]]:3 = #1
+  ( false ? void (0) : abort() ); // CHECK: Gap,File 0, [[@LINE]]:34 -> [[@LINE+1]]:3 = #2
+  ( true ? abort() : void (0) );  // CHECK: Gap,File 0, [[@LINE]]:33 -> [[@LINE+1]]:3 = (#2 - #3)
+  ( false ? abort() : void (0) ); // CHECK: Gap,File 0, [[@LINE]]:34 -> [[@LINE+1]]:3 = ((#2 - #3) - #4)
+  return 0;
+}
+
+// CHECK-LABEL: _Z13elsecondnoretv:
+int elsecondnoret(void) {
+  if (true) {} else {
+    true ? void (0) : abort();
+  } // CHECK: Gap,File 0, [[@LINE]]:4 -> [[@LINE+1]]:3 = (#1 + #2)
+  return 0;
+}
+
 int main() {
   foo(0);
   foo(1);
@@ -339,5 +365,8 @@ int main() {
   while_loop();
   gotos();
   include();
+  ornoret();
+  abstractcondnoret();
+  elsecondnoret();
   return 0;
 }

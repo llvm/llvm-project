@@ -3,6 +3,7 @@
 # RUN: opt -module-summary %p/Inputs/bar-mod.ll -o %T/bar-mod.bc
 
 # REQUIRES: default_triple
+# UNSUPPORTED: target=powerpc64{{.*}}
 
 # RUN: llvm-lto -thinlto -o %T/main-foo-bar %T/main-mod.bc %T/foo-mod.bc %T/bar-mod.bc
 

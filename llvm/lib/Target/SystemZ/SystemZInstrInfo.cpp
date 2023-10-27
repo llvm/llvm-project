@@ -1014,17 +1014,16 @@ MachineInstr *SystemZInstrInfo::foldMemoryOperandImpl(
   unsigned Opcode = MI.getOpcode();
 
   // Check CC liveness if new instruction introduces a dead def of CC.
-  MCRegUnitIterator CCUnit(MCRegister::from(SystemZ::CC), TRI);
   SlotIndex MISlot = SlotIndex();
   LiveRange *CCLiveRange = nullptr;
   bool CCLiveAtMI = true;
   if (LIS) {
     MISlot = LIS->getSlotIndexes()->getInstructionIndex(MI).getRegSlot();
-    CCLiveRange = &LIS->getRegUnit(*CCUnit);
+    auto CCUnits = TRI->regunits(MCRegister::from(SystemZ::CC));
+    assert(range_size(CCUnits) == 1 && "CC only has one reg unit.");
+    CCLiveRange = &LIS->getRegUnit(*CCUnits.begin());
     CCLiveAtMI = CCLiveRange->liveAt(MISlot);
   }
-  ++CCUnit;
-  assert(!CCUnit.isValid() && "CC only has one reg unit.");
 
   if (Ops.size() == 2 && Ops[0] == 0 && Ops[1] == 1) {
     if (!CCLiveAtMI && (Opcode == SystemZ::LA || Opcode == SystemZ::LAY) &&
@@ -1204,7 +1203,7 @@ MachineInstr *SystemZInstrInfo::foldMemoryOperandImpl(
   // to FP conversion.
   const MCInstrDesc &MCID = MI.getDesc();
   for (unsigned I = 0, E = MCID.getNumOperands(); I != E; ++I) {
-    const MCOperandInfo &MCOI = MCID.OpInfo[I];
+    const MCOperandInfo &MCOI = MCID.operands()[I];
     if (MCOI.OperandType != MCOI::OPERAND_REGISTER || I == OpNum)
       continue;
     const TargetRegisterClass *RC = TRI->getRegClass(MCOI.RegClass);
@@ -1711,20 +1710,6 @@ unsigned SystemZInstrInfo::getLoadAndTest(unsigned Opcode) const {
   }
 }
 
-// Return true if Mask matches the regexp 0*1+0*, given that zero masks
-// have already been filtered out.  Store the first set bit in LSB and
-// the number of set bits in Length if so.
-static bool isStringOfOnes(uint64_t Mask, unsigned &LSB, unsigned &Length) {
-  unsigned First = findFirstSet(Mask);
-  uint64_t Top = (Mask >> First) + 1;
-  if ((Top & -Top) == Top) {
-    LSB = First;
-    Length = findFirstSet(Top);
-    return true;
-  }
-  return false;
-}
-
 bool SystemZInstrInfo::isRxSBGMask(uint64_t Mask, unsigned BitSize,
                                    unsigned &Start, unsigned &End) const {
   // Reject trivial all-zero masks.
@@ -1735,7 +1720,7 @@ bool SystemZInstrInfo::isRxSBGMask(uint64_t Mask, unsigned BitSize,
   // Handle the 1+0+ or 0+1+0* cases.  Start then specifies the index of
   // the msb and End specifies the index of the lsb.
   unsigned LSB, Length;
-  if (isStringOfOnes(Mask, LSB, Length)) {
+  if (isShiftedMask_64(Mask, LSB, Length)) {
     Start = 63 - (LSB + Length - 1);
     End = 63 - LSB;
     return true;
@@ -1743,7 +1728,7 @@ bool SystemZInstrInfo::isRxSBGMask(uint64_t Mask, unsigned BitSize,
 
   // Handle the wrap-around 1+0+1+ cases.  Start then specifies the msb
   // of the low 1s and End specifies the lsb of the high 1s.
-  if (isStringOfOnes(Mask ^ allOnes(BitSize), LSB, Length)) {
+  if (isShiftedMask_64(Mask ^ allOnes(BitSize), LSB, Length)) {
     assert(LSB > 0 && "Bottom bit must be set");
     assert(LSB + Length < BitSize && "Top bit must be set");
     Start = 63 - (LSB - 1);
@@ -1999,7 +1984,7 @@ bool SystemZInstrInfo::verifyInstruction(const MachineInstr &MI,
     if (I >= MCID.getNumOperands())
       break;
     const MachineOperand &Op = MI.getOperand(I);
-    const MCOperandInfo &MCOI = MCID.OpInfo[I];
+    const MCOperandInfo &MCOI = MCID.operands()[I];
     // Addressing modes have register and immediate operands. Op should be a
     // register (or frame index) operand if MCOI.RegClass contains a valid
     // register class, or an immediate otherwise.

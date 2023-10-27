@@ -377,9 +377,9 @@ define void @test_vXi8(<2 x i8> %src16, <4 x i8> %src32, <8 x i8> %src64, <16 x 
 
 define void @identity_vXf32(<4 x float> %a128, <4 x float> %b128, <8 x float> %a256, <8 x float> %b256, <16 x float> %a512, <16 x float> %b512) {
 ; CHECK-LABEL: 'identity_vXf32'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %V128 = shufflevector <4 x float> %a128, <4 x float> %b128, <4 x i32> <i32 0, i32 undef, i32 2, i32 undef>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %V256 = shufflevector <8 x float> %a256, <8 x float> %b256, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 undef, i32 undef, i32 undef, i32 undef>
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %V512 = shufflevector <16 x float> %a512, <16 x float> %b512, <16 x i32> <i32 0, i32 undef, i32 2, i32 undef, i32 4, i32 undef, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 undef>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %V128 = shufflevector <4 x float> %a128, <4 x float> %b128, <4 x i32> <i32 0, i32 poison, i32 2, i32 poison>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %V256 = shufflevector <8 x float> %a256, <8 x float> %b256, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %V512 = shufflevector <16 x float> %a512, <16 x float> %b512, <16 x i32> <i32 0, i32 poison, i32 2, i32 poison, i32 4, i32 poison, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 poison>
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %V128 = shufflevector <4 x float> %a128, <4 x float> %b128, <4 x i32> <i32 0, i32 undef, i32 2, i32 undef>

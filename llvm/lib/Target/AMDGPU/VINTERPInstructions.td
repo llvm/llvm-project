@@ -23,7 +23,6 @@ class VINTERPe_gfx11 <bits<7> op, VOPProfile P> : Enc64 {
 
   let Inst{31-26} = 0x33; // VOP3P encoding
   let Inst{25-24} = 0x1; // VINTERP sub-encoding
-  let Inst{23}    = 0; // reserved
 
   let Inst{7-0}   = vdst;
   let Inst{10-8}  = waitexp;

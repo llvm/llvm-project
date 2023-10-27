@@ -78,6 +78,7 @@
 #include "llvm/Transforms/Scalar/MergedLoadStoreMotion.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/GlobalsModRef.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/Debug.h"
@@ -191,11 +192,16 @@ StoreInst *MergedLoadStoreMotion::canSinkFromBlock(BasicBlock *BB1,
 
     MemoryLocation Loc0 = MemoryLocation::get(Store0);
     MemoryLocation Loc1 = MemoryLocation::get(Store1);
-    if (AA->isMustAlias(Loc0, Loc1) && Store0->isSameOperationAs(Store1) &&
+
+    if (AA->isMustAlias(Loc0, Loc1) &&
         !isStoreSinkBarrierInRange(*Store1->getNextNode(), BB1->back(), Loc1) &&
-        !isStoreSinkBarrierInRange(*Store0->getNextNode(), BB0->back(), Loc0)) {
+        !isStoreSinkBarrierInRange(*Store0->getNextNode(), BB0->back(), Loc0) &&
+        Store0->hasSameSpecialState(Store1) &&
+        CastInst::isBitOrNoopPointerCastable(
+            Store0->getValueOperand()->getType(),
+            Store1->getValueOperand()->getType(),
+            Store0->getModule()->getDataLayout()))
       return Store1;
-    }
   }
   return nullptr;
 }
@@ -211,8 +217,8 @@ PHINode *MergedLoadStoreMotion::getPHIOperand(BasicBlock *BB, StoreInst *S0,
   if (Opd1 == Opd2)
     return nullptr;
 
-  auto *NewPN = PHINode::Create(Opd1->getType(), 2, Opd2->getName() + ".sink",
-                                &BB->front());
+  auto *NewPN = PHINode::Create(Opd1->getType(), 2, Opd2->getName() + ".sink");
+  NewPN->insertBefore(BB->begin());
   NewPN->applyMergedLocation(S0->getDebugLoc(), S1->getDebugLoc());
   NewPN->addIncoming(Opd1, S0->getParent());
   NewPN->addIncoming(Opd2, S1->getParent());
@@ -254,9 +260,16 @@ void MergedLoadStoreMotion::sinkStoresAndGEPs(BasicBlock *BB, StoreInst *S0,
   S0->applyMergedLocation(S0->getDebugLoc(), S1->getDebugLoc());
   S0->mergeDIAssignID(S1);
 
+  // Insert bitcast for conflicting typed stores (or just use original value if
+  // same type).
+  IRBuilder<> Builder(S0);
+  auto Cast = Builder.CreateBitOrPointerCast(S0->getValueOperand(),
+                                             S1->getValueOperand()->getType());
+  S0->setOperand(0, Cast);
+
   // Create the new store to be inserted at the join point.
   StoreInst *SNew = cast<StoreInst>(S0->clone());
-  SNew->insertBefore(&*InsertPt);
+  SNew->insertBefore(InsertPt);
   // New PHI operand? Use it.
   if (PHINode *NewPN = getPHIOperand(BB, S0, S1))
     SNew->setOperand(0, NewPN);
@@ -428,7 +441,7 @@ void MergedLoadStoreMotionPass::printPipeline(
     raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
   static_cast<PassInfoMixin<MergedLoadStoreMotionPass> *>(this)->printPipeline(
       OS, MapClassName2PassName);
-  OS << "<";
+  OS << '<';
   OS << (Options.SplitFooterBB ? "" : "no-") << "split-footer-bb";
-  OS << ">";
+  OS << '>';
 }

@@ -51,7 +51,6 @@ foo:;
 
 // globals
 asm ("");
-// <rdar://problem/7574870>
 asm volatile (""); // expected-error {{meaningless 'volatile' on asm outside function}}
 asm inline (""); // expected-error {{meaningless 'inline' on asm outside function}}
 asm goto (""::::noodle); // expected-error {{meaningless 'goto' on asm outside function}}

@@ -13,6 +13,9 @@ func.func @const() -> () {
   // CHECK: %cst43_i64
   %3 = spirv.Constant 43 : i64
 
+  // CHECK-NEXT: %cst6_ui8
+  %9 = spirv.Constant 6 : ui8  
+
   // CHECK: %cst_f32
   %4 = spirv.Constant 0.5 : f32
   // CHECK: %cst_f64

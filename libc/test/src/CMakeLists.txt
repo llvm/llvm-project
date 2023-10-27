@@ -1,7 +1,7 @@
 function(add_fp_unittest name)
   cmake_parse_arguments(
     "MATH_UNITTEST"
-    "NEED_MPFR" # Optional arguments
+    "NEED_MPFR;UNIT_TEST_ONLY;HERMETIC_TEST_ONLY" # Optional arguments
     "" # Single value arguments
     "LINK_LIBRARIES" # Multi-value arguments
     ${ARGN}
@@ -9,18 +9,28 @@ function(add_fp_unittest name)
 
   if(MATH_UNITTEST_NEED_MPFR)
     if(NOT LIBC_TESTS_CAN_USE_MPFR)
-      message("WARNING: Math test ${name} will be skipped as MPFR library is not available.")
+      message(VERBOSE "Math test ${name} will be skipped as MPFR library is not available.")
       return()
     endif()
   endif()
 
+  if(MATH_UNITTEST_HERMETIC_TEST_ONLY)
+    set(test_type HERMETIC_TEST_ONLY)
+  elseif(MATH_UNITTEST_UNIT_TEST_ONLY)
+    set(test_type UNIT_TEST_ONLY)
+  endif()
   if(MATH_UNITTEST_NEED_MPFR)
-    list(APPEND MATH_UNITTEST_LINK_LIBRARIES libcMPFRWrapper -lmpfr -lgmp)
+    if(MATH_UNITTEST_HERMETIC_TEST_ONLY)
+      message(FATAL "Hermetic math test cannot require MPFR.")
+    endif()
+    set(test_type UNIT_TEST_ONLY)
+    list(APPEND MATH_UNITTEST_LINK_LIBRARIES libcMPFRWrapper libc_math_test_utils -lmpfr -lgmp)
   endif()
   list(APPEND MATH_UNITTEST_LINK_LIBRARIES LibcFPTestHelpers)
 
-  add_libc_unittest(
+  add_libc_test(
     ${name}
+    ${test_type}
     LINK_LIBRARIES "${MATH_UNITTEST_LINK_LIBRARIES}"
     "${MATH_UNITTEST_UNPARSED_ARGUMENTS}"
   )
@@ -30,11 +40,12 @@ add_subdirectory(__support)
 add_subdirectory(ctype)
 add_subdirectory(errno)
 add_subdirectory(fenv)
-add_subdirectory(inttypes)
 add_subdirectory(math)
 add_subdirectory(string)
 add_subdirectory(stdlib)
+add_subdirectory(inttypes)
 add_subdirectory(stdio)
+add_subdirectory(wchar)
 
 if(${LIBC_TARGET_OS} STREQUAL "linux")
   add_subdirectory(fcntl)
@@ -50,6 +61,7 @@ endif()
 
 add_subdirectory(dirent)
 add_subdirectory(assert)
+add_subdirectory(network)
 add_subdirectory(setjmp)
 add_subdirectory(signal)
 add_subdirectory(spawn)
@@ -57,6 +69,15 @@ add_subdirectory(time)
 
 if(${LIBC_TARGET_OS} STREQUAL "linux")
   add_subdirectory(pthread)
+endif()
+
+if(LLVM_RUNTIMES_BUILD OR LIBC_HDRGEN_EXE)
+  # The public API test below uses tablegen to generate the test
+  # source file. Since tablegen is not available during a runtimes
+  # build, we will skip the test.
+  # If a different libc-hdrgen binary is being used, then also we
+  # skip the api-test as we cannot generate the test source file.
+  return()
 endif()
 
 set(public_test ${CMAKE_CURRENT_BINARY_DIR}/public_api_test.cpp)
@@ -87,6 +108,8 @@ add_custom_command(
 )
 
 add_custom_target(libc-api-test)
+add_dependencies(check-libc libc-api-test)
+
 set(
   allocator_entrypoints 
     libc.src.stdlib.malloc
@@ -103,8 +126,6 @@ add_integration_test(
     libc-api-test
   SRCS
     ${public_test}
-  STARTUP
-    libc.startup.linux.crt1
   DEPENDS
     ${api-test-entrypoints}
 )
@@ -113,7 +134,7 @@ if(COMPILER_RESOURCE_DIR AND LLVM_LIBC_ENABLE_LINTING)
   add_custom_target(
     libc-api-test-tidy
     VERBATIM
-    COMMAND $<TARGET_FILE:clang-tidy> --system-headers
+    COMMAND ${LLVM_LIBC_CLANG_TIDY} --system-headers
       --checks=-*,llvmlibc-restrict-system-libc-headers
       "--extra-arg=-resource-dir=${COMPILER_RESOURCE_DIR}"
       --header-filter=.*

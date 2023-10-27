@@ -36,6 +36,7 @@
 //
 #include "X86.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
@@ -382,7 +383,7 @@ public:
     bool C = false;
 
     // Prepare for fast register allocation at O0.
-    if (TM->getOptLevel() == CodeGenOpt::None) {
+    if (TM->getOptLevel() == CodeGenOptLevel::None) {
 
       // We pre-config each key AMX intrinsic at O0.
       // In theory, one tile config can cover several AMX intrinsics, but

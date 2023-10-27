@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx906 --amdhsa-code-object-version=5 < %s | FileCheck --check-prefixes=CHECK %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx906 < %s | FileCheck --check-prefixes=CHECK %s
 
 
 ; CHECK-LABEL: test_unaligned_to_eight:
@@ -56,3 +56,6 @@ define amdgpu_kernel void @test_aligned_to_eight(i64 %eight)  {
 ; CHECK-LABEL:        .name:           test_aligned_to_eight
 
 declare ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"amdgpu_code_object_version", i32 500}

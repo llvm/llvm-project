@@ -60,7 +60,7 @@ static bool hasDisjointValueRange(const EnumDecl *Enum1,
 }
 
 static bool isNonPowerOf2NorNullLiteral(const EnumConstantDecl *EnumConst) {
-  llvm::APSInt Val = EnumConst->getInitVal();
+  const llvm::APSInt &Val = EnumConst->getInitVal();
   if (Val.isPowerOf2() || !Val.getBoolValue())
     return false;
   const Expr *InitExpr = EnumConst->getInitExpr();
@@ -77,7 +77,7 @@ static bool isMaxValAllBitSetLiteral(const EnumDecl *EnumDec) {
       });
 
   if (const Expr *InitExpr = EnumConst->getInitExpr()) {
-    return EnumConst->getInitVal().countTrailingOnes() ==
+    return EnumConst->getInitVal().countr_one() ==
                EnumConst->getInitVal().getActiveBits() &&
            isa<IntegerLiteral>(InitExpr->IgnoreImpCasts());
   }

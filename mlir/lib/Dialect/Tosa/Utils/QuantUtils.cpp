@@ -44,11 +44,13 @@ static void computeMultiplierAndShiftTosaScale16(double scale,
 
   multiplier = static_cast<int32_t>(shiftedM);
 
-  // Shifting tops out at 63 bits. Right shift to make 63 bits the max.
-  if (shift > 63) {
+  // Shifting tops out at 62 bits. Right shift to make 62 bits the max.
+  // The limit of 62 on shift allows the shift to be decomposed as
+  // two right shifts of 31.
+  if (shift > 62) {
     // Shifting the multiplier by more than 31-bits is unnecessary.
-    multiplier = multiplier >> std::min<int32_t>(31, shift - 63);
-    shift = 63;
+    multiplier = multiplier >> std::min<int32_t>(31, shift - 62);
+    shift = 62;
   }
 }
 
@@ -79,11 +81,13 @@ static void computeMultiplierAndShiftTosaScale32(double scale,
 
   multiplier = static_cast<int32_t>(shiftedM);
 
-  // Shifting tops out at 63 bits. Right shift to make 63 bits the max.
-  if (shift > 63) {
+  // Shifting tops out at 62 bits. Right shift to make 62 bits the max.
+  // The limit of 62 on shift allows the shift to be decomposed as
+  // two right shifts of 31.
+  if (shift > 62) {
     // Shifting the multiplier by more than 32-bits is unnecessary.
-    multiplier = multiplier >> std::min<int32_t>(31, shift - 63);
-    shift = 63;
+    multiplier = multiplier >> std::min<int32_t>(31, shift - 62);
+    shift = 62;
   }
 }
 
@@ -104,9 +108,9 @@ void mlir::tosa::computeMultiplierAndShift(double scale, int32_t &multiplier,
 }
 
 #define GET_UQTYPE(input_type)                                                 \
-  ((input_type).getElementType().dyn_cast<quant::UniformQuantizedType>())
+  (llvm::dyn_cast<quant::UniformQuantizedType>((input_type).getElementType()))
 #define GET_QTYPE(input_type)                                                  \
-  ((input_type).getElementType().dyn_cast<quant::QuantizedType>())
+  (llvm::dyn_cast<quant::QuantizedType>((input_type).getElementType()))
 
 /// Method to build ConvOpQuantizationAttr, called from
 /// ConvOpQuantInfoBuilder/TransConvOpQuantInfoBuilder:
@@ -116,16 +120,16 @@ ConvOpQuantizationAttr
 mlir::tosa::buildConvOpQuantizationAttr(OpBuilder &builder, Value input,
                                         Value weight) {
 
-  auto inputType = input.getType().dyn_cast<ShapedType>();
-  auto weightType = weight.getType().dyn_cast<ShapedType>();
+  auto inputType = dyn_cast<ShapedType>(input.getType());
+  auto weightType = dyn_cast<ShapedType>(weight.getType());
 
   if (!inputType || !weightType)
     return nullptr;
 
   auto inputQType = GET_UQTYPE(inputType);
   auto weightPerTensorQType = GET_UQTYPE(weightType);
-  auto weightPerAxisQType = weightType.getElementType()
-                                .dyn_cast<quant::UniformQuantizedPerAxisType>();
+  auto weightPerAxisQType =
+      dyn_cast<quant::UniformQuantizedPerAxisType>(weightType.getElementType());
 
   // Weights must be either per-tensor quantized or per-axis quantized.
   assert(!((bool)weightPerTensorQType && (bool)weightPerAxisQType) &&
@@ -160,8 +164,8 @@ MatMulOpQuantizationAttr
 mlir::tosa::buildMatMulOpQuantizationAttr(OpBuilder &builder, Value a,
                                           Value b) {
 
-  auto aType = a.getType().dyn_cast<ShapedType>();
-  auto bType = b.getType().dyn_cast<ShapedType>();
+  auto aType = dyn_cast<ShapedType>(a.getType());
+  auto bType = dyn_cast<ShapedType>(b.getType());
 
   if (!aType || !bType)
     return nullptr;
@@ -189,8 +193,8 @@ UnaryOpQuantizationAttr
 mlir::tosa::buildUnaryOpQuantizationAttr(OpBuilder &builder, Value input,
                                          Type outputRawType) {
 
-  auto inputType = input.getType().dyn_cast<ShapedType>();
-  auto outputType = outputRawType.dyn_cast<ShapedType>();
+  auto inputType = dyn_cast<ShapedType>(input.getType());
+  auto outputType = dyn_cast<ShapedType>(outputRawType);
 
   if (!inputType || !outputType)
     return nullptr;
@@ -215,7 +219,7 @@ mlir::tosa::buildUnaryOpQuantizationAttr(OpBuilder &builder, Value input,
 PadOpQuantizationAttr mlir::tosa::buildPadOpQuantizationAttr(OpBuilder &builder,
                                                              Value input) {
 
-  auto inputType = input.getType().dyn_cast<ShapedType>();
+  auto inputType = dyn_cast<ShapedType>(input.getType());
 
   if (!inputType)
     return nullptr;
@@ -235,8 +239,8 @@ PadOpQuantizationAttr mlir::tosa::buildPadOpQuantizationAttr(OpBuilder &builder,
 Type mlir::tosa::buildConvOpResultTypeInfo(OpBuilder &builder, Type outputType,
                                            Value input, Value weight) {
 
-  auto inputType = input.getType().dyn_cast<ShapedType>();
-  auto weightType = weight.getType().dyn_cast<ShapedType>();
+  auto inputType = dyn_cast<ShapedType>(input.getType());
+  auto weightType = dyn_cast<ShapedType>(weight.getType());
 
   assert(inputType && weightType &&
          "Could not extract input or weight tensors from Conv op");
@@ -250,7 +254,7 @@ Type mlir::tosa::buildConvOpResultTypeInfo(OpBuilder &builder, Type outputType,
   unsigned inputBits = inputQType.getStorageTypeIntegralWidth();
   unsigned weightBits = weightQType.getStorageTypeIntegralWidth();
 
-  auto outputShapedType = outputType.dyn_cast<ShapedType>();
+  auto outputShapedType = dyn_cast<ShapedType>(outputType);
   assert(outputShapedType &&
          "Could not extract output shape type from Conv op");
 
@@ -274,8 +278,8 @@ Type mlir::tosa::buildQTypeFromMinMax(OpBuilder builder, Type inputDType,
   auto convfunc =
       quant::ExpressedToQuantizedConverter::forInputType(inputDType);
 
-  auto minElems = minAttr.dyn_cast<DenseFPElementsAttr>();
-  auto maxElems = maxAttr.dyn_cast<DenseFPElementsAttr>();
+  auto minElems = dyn_cast<DenseFPElementsAttr>(minAttr);
+  auto maxElems = dyn_cast<DenseFPElementsAttr>(maxAttr);
 
   SmallVector<double, 2> min, max;
 
@@ -291,12 +295,12 @@ Type mlir::tosa::buildQTypeFromMinMax(OpBuilder builder, Type inputDType,
     for (auto i : maxElems)
       max.push_back(FloatAttr::getValueAsDouble(i));
   } else { // Just a single FP value.
-    auto minVal = minAttr.dyn_cast<FloatAttr>();
+    auto minVal = dyn_cast<FloatAttr>(minAttr);
     if (minVal)
       min.push_back(minVal.getValueAsDouble());
     else
       return {};
-    auto maxVal = maxAttr.dyn_cast<FloatAttr>();
+    auto maxVal = dyn_cast<FloatAttr>(maxAttr);
     if (maxVal)
       max.push_back(maxVal.getValueAsDouble());
     else
@@ -309,7 +313,7 @@ Type mlir::tosa::buildQTypeFromMinMax(OpBuilder builder, Type inputDType,
           builder.getUnknownLoc(), quantBits.getInt(), min[0], max[0],
           narrowRange.getValue(), convfunc.expressedType, isSigned);
     } else if (min.size() > 1) { // Per-axis quant on filterQuantDim.
-      auto shape = inputDType.dyn_cast<ShapedType>();
+      auto shape = dyn_cast<ShapedType>(inputDType);
       if (!shape)
         return {};
       if ((filterQuantDim) >= 0 && (shape.getRank() > filterQuantDim)) {

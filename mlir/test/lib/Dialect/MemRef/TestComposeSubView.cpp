@@ -32,7 +32,7 @@ struct TestComposeSubViewPass
 
 void TestComposeSubViewPass::getDependentDialects(
     DialectRegistry &registry) const {
-  registry.insert<AffineDialect>();
+  registry.insert<affine::AffineDialect>();
 }
 
 void TestComposeSubViewPass::runOnOperation() {

@@ -1,7 +1,6 @@
 // RUN: %clang_cc1 %s -emit-llvm -fobjc-runtime=macosx-10.8 -triple x86_64-apple-macosx10.8.0 -o - | FileCheck %s
 // RUN: %clang_cc1 %s -emit-llvm -fobjc-runtime=ios-6.0.0  -triple x86_64-apple-ios6.0.0 -o - | FileCheck %s
 // RUN: %clang_cc1 %s -emit-llvm -fobjc-runtime=gnustep-1.7 -triple x86_64-unknown-freebsd -o - | FileCheck %s
-// rdar://10179974
 
 @interface I
 // void objc_setProperty_nonatomic(id self, SEL _cmd, id newValue, ptrdiff_t offset);

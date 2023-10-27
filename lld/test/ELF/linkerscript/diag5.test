@@ -9,6 +9,6 @@ SECTIONS {
   boom ^temp : { *(.temp) }
 }
 
-# CHECK:      9: malformed number: ^temp
+# CHECK:      9: malformed number: ^
 # CHECK-NEXT: >>>   boom ^temp : { *(.temp) }
 # CHECK-NEXT: >>>        ^

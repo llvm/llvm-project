@@ -39,18 +39,35 @@ static int getMessageSelectIndex(StringRef Tag) {
   return 0;
 }
 
+llvm::SmallVector<llvm::Regex>
+ReservedIdentifierCheck::parseAllowedIdentifiers() const {
+  llvm::SmallVector<llvm::Regex> AllowedIdentifiers;
+  AllowedIdentifiers.reserve(AllowedIdentifiersRaw.size());
+
+  for (const auto &Identifier : AllowedIdentifiersRaw) {
+    AllowedIdentifiers.emplace_back(Identifier.str());
+    if (!AllowedIdentifiers.back().isValid()) {
+      configurationDiag("Invalid allowed identifier regex '%0'") << Identifier;
+      AllowedIdentifiers.pop_back();
+    }
+  }
+
+  return AllowedIdentifiers;
+}
+
 ReservedIdentifierCheck::ReservedIdentifierCheck(StringRef Name,
                                                  ClangTidyContext *Context)
     : RenamerClangTidyCheck(Name, Context),
       Invert(Options.get("Invert", false)),
-      AllowedIdentifiers(utils::options::parseStringList(
-          Options.get("AllowedIdentifiers", ""))) {}
+      AllowedIdentifiersRaw(utils::options::parseStringList(
+          Options.get("AllowedIdentifiers", ""))),
+      AllowedIdentifiers(parseAllowedIdentifiers()) {}
 
 void ReservedIdentifierCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   RenamerClangTidyCheck::storeOptions(Opts);
   Options.store(Opts, "Invert", Invert);
   Options.store(Opts, "AllowedIdentifiers",
-                utils::options::serializeStringList(AllowedIdentifiers));
+                utils::options::serializeStringList(AllowedIdentifiersRaw));
 }
 
 static std::string collapseConsecutive(StringRef Str, char C) {
@@ -85,13 +102,15 @@ static std::optional<std::string> getUnderscoreCapitalFixup(StringRef Name) {
 }
 
 static bool startsWithUnderscoreInGlobalNamespace(StringRef Name,
-                                                  bool IsInGlobalNamespace) {
-  return IsInGlobalNamespace && Name.size() >= 1 && Name[0] == '_';
+                                                  bool IsInGlobalNamespace,
+                                                  bool IsMacro) {
+  return !IsMacro && IsInGlobalNamespace && !Name.empty() && Name[0] == '_';
 }
 
 static std::optional<std::string>
-getUnderscoreGlobalNamespaceFixup(StringRef Name, bool IsInGlobalNamespace) {
-  if (startsWithUnderscoreInGlobalNamespace(Name, IsInGlobalNamespace))
+getUnderscoreGlobalNamespaceFixup(StringRef Name, bool IsInGlobalNamespace,
+                                  bool IsMacro) {
+  if (startsWithUnderscoreInGlobalNamespace(Name, IsInGlobalNamespace, IsMacro))
     return std::string(Name.drop_front(1));
   return std::nullopt;
 }
@@ -106,13 +125,16 @@ static std::string getNonReservedFixup(std::string Name) {
 }
 
 static std::optional<RenamerClangTidyCheck::FailureInfo>
-getFailureInfoImpl(StringRef Name, bool IsInGlobalNamespace,
+getFailureInfoImpl(StringRef Name, bool IsInGlobalNamespace, bool IsMacro,
                    const LangOptions &LangOpts, bool Invert,
-                   ArrayRef<StringRef> AllowedIdentifiers) {
+                   ArrayRef<llvm::Regex> AllowedIdentifiers) {
   assert(!Name.empty());
-  if (llvm::is_contained(AllowedIdentifiers, Name))
-    return std::nullopt;
 
+  if (llvm::any_of(AllowedIdentifiers, [&](const llvm::Regex &Regex) {
+        return Regex.match(Name);
+      })) {
+    return std::nullopt;
+  }
   // TODO: Check for names identical to language keywords, and other names
   // specifically reserved by language standards, e.g. C++ 'zombie names' and C
   // future library directions
@@ -138,15 +160,16 @@ getFailureInfoImpl(StringRef Name, bool IsInGlobalNamespace,
       AppendFailure(DoubleUnderscoreTag, std::move(*Fixup));
     if (auto Fixup = getUnderscoreCapitalFixup(InProgressFixup()))
       AppendFailure(UnderscoreCapitalTag, std::move(*Fixup));
-    if (auto Fixup = getUnderscoreGlobalNamespaceFixup(InProgressFixup(),
-                                                       IsInGlobalNamespace))
+    if (auto Fixup = getUnderscoreGlobalNamespaceFixup(
+            InProgressFixup(), IsInGlobalNamespace, IsMacro))
       AppendFailure(GlobalUnderscoreTag, std::move(*Fixup));
 
     return Info;
   }
   if (!(hasReservedDoubleUnderscore(Name, LangOpts) ||
         startsWithUnderscoreCapital(Name) ||
-        startsWithUnderscoreInGlobalNamespace(Name, IsInGlobalNamespace)))
+        startsWithUnderscoreInGlobalNamespace(Name, IsInGlobalNamespace,
+                                              IsMacro)))
     return FailureInfo{NonReservedTag, getNonReservedFixup(std::string(Name))};
   return std::nullopt;
 }
@@ -157,16 +180,17 @@ ReservedIdentifierCheck::getDeclFailureInfo(const NamedDecl *Decl,
   assert(Decl && Decl->getIdentifier() && !Decl->getName().empty() &&
          !Decl->isImplicit() &&
          "Decl must be an explicit identifier with a name.");
-  return getFailureInfoImpl(Decl->getName(),
-                            isa<TranslationUnitDecl>(Decl->getDeclContext()),
-                            getLangOpts(), Invert, AllowedIdentifiers);
+  return getFailureInfoImpl(
+      Decl->getName(), isa<TranslationUnitDecl>(Decl->getDeclContext()),
+      /*IsMacro = */ false, getLangOpts(), Invert, AllowedIdentifiers);
 }
 
 std::optional<RenamerClangTidyCheck::FailureInfo>
 ReservedIdentifierCheck::getMacroFailureInfo(const Token &MacroNameTok,
                                              const SourceManager &) const {
   return getFailureInfoImpl(MacroNameTok.getIdentifierInfo()->getName(), true,
-                            getLangOpts(), Invert, AllowedIdentifiers);
+                            /*IsMacro = */ true, getLangOpts(), Invert,
+                            AllowedIdentifiers);
 }
 
 RenamerClangTidyCheck::DiagInfo

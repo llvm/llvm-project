@@ -1,4 +1,4 @@
-; RUN: opt < %s -opaque-pointers -passes='print<loop-cache-cost>' -disable-output 2>&1 | FileCheck %s
+; RUN: opt < %s -passes='print<loop-cache-cost>' -disable-output 2>&1 | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-n32:64"
 target triple = "powerpc64le-unknown-linux-gnu"

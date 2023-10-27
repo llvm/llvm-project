@@ -15,9 +15,6 @@
 #include <iomanip>
 #include <sstream>
 #include <string>
-#include <cassert>
-
-#include "test_macros.h"
 
 //  Test that mismatches in the traits between the quoted object and the dest string are diagnosed.
 
@@ -33,6 +30,6 @@ void round_trip ( const char *p ) {
     ss >> std::quoted(s); // expected-error {{invalid operands to binary expression}}
 }
 
-int main(int, char**) {
+void f() {
     round_trip("Hi Mom");
 }

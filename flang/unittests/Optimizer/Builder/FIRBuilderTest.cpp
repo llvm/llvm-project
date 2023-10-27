@@ -9,8 +9,8 @@
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "gtest/gtest.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
+#include "flang/Optimizer/Dialect/Support/KindMapping.h"
 #include "flang/Optimizer/Support/InitFIR.h"
-#include "flang/Optimizer/Support/KindMapping.h"
 
 using namespace mlir;
 

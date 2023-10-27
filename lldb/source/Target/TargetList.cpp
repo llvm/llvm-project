@@ -325,6 +325,7 @@ Status TargetList::CreateTargetInternal(Debugger &debugger,
         return error;
       }
       target_sp.reset(new Target(debugger, arch, platform_sp, is_dummy_target));
+      debugger.GetTargetList().RegisterInProcessTarget(target_sp);
       target_sp->SetExecutableModule(exe_module_sp, load_dependent_files);
       if (user_exe_path_is_bundle)
         exe_module_sp->GetFileSpec().GetPath(resolved_bundle_exe_path,
@@ -336,6 +337,7 @@ Status TargetList::CreateTargetInternal(Debugger &debugger,
     // No file was specified, just create an empty target with any arch if a
     // valid arch was specified
     target_sp.reset(new Target(debugger, arch, platform_sp, is_dummy_target));
+    debugger.GetTargetList().RegisterInProcessTarget(target_sp);
   }
 
   if (!target_sp)
@@ -368,7 +370,7 @@ Status TargetList::CreateTargetInternal(Debugger &debugger,
 
 bool TargetList::DeleteTarget(TargetSP &target_sp) {
   std::lock_guard<std::recursive_mutex> guard(m_target_list_mutex);
-  auto it = std::find(m_target_list.begin(), m_target_list.end(), target_sp);
+  auto it = llvm::find(m_target_list, target_sp);
   if (it == m_target_list.end())
     return false;
 
@@ -489,7 +491,7 @@ uint32_t TargetList::SignalIfRunning(lldb::pid_t pid, int signo) {
   return num_signals_sent;
 }
 
-int TargetList::GetNumTargets() const {
+size_t TargetList::GetNumTargets() const {
   std::lock_guard<std::recursive_mutex> guard(m_target_list_mutex);
   return m_target_list.size();
 }
@@ -504,7 +506,7 @@ lldb::TargetSP TargetList::GetTargetAtIndex(uint32_t idx) const {
 
 uint32_t TargetList::GetIndexOfTarget(lldb::TargetSP target_sp) const {
   std::lock_guard<std::recursive_mutex> guard(m_target_list_mutex);
-  auto it = std::find(m_target_list.begin(), m_target_list.end(), target_sp);
+  auto it = llvm::find(m_target_list, target_sp);
   if (it != m_target_list.end())
     return std::distance(m_target_list.begin(), it);
   return UINT32_MAX;
@@ -513,6 +515,7 @@ uint32_t TargetList::GetIndexOfTarget(lldb::TargetSP target_sp) const {
 void TargetList::AddTargetInternal(TargetSP target_sp, bool do_select) {
   lldbassert(!llvm::is_contained(m_target_list, target_sp) &&
              "target already exists it the list");
+  UnregisterInProcessTarget(target_sp);
   m_target_list.push_back(std::move(target_sp));
   if (do_select)
     SetSelectedTargetInternal(m_target_list.size() - 1);
@@ -530,7 +533,7 @@ void TargetList::SetSelectedTarget(uint32_t index) {
 
 void TargetList::SetSelectedTarget(const TargetSP &target_sp) {
   std::lock_guard<std::recursive_mutex> guard(m_target_list_mutex);
-  auto it = std::find(m_target_list.begin(), m_target_list.end(), target_sp);
+  auto it = llvm::find(m_target_list, target_sp);
   SetSelectedTargetInternal(std::distance(m_target_list.begin(), it));
 }
 
@@ -540,3 +543,36 @@ lldb::TargetSP TargetList::GetSelectedTarget() {
     m_selected_target_idx = 0;
   return GetTargetAtIndex(m_selected_target_idx);
 }
+
+bool TargetList::AnyTargetContainsModule(Module &module) {
+  std::lock_guard<std::recursive_mutex> guard(m_target_list_mutex);
+  for (const auto &target_sp : m_target_list) {
+    if (target_sp->GetImages().FindModule(&module))
+      return true;
+  }
+  for (const auto &target_sp: m_in_process_target_list) {
+    if (target_sp->GetImages().FindModule(&module))
+      return true;
+  }
+  return false;
+}
+
+  void TargetList::RegisterInProcessTarget(TargetSP target_sp) {
+    std::lock_guard<std::recursive_mutex> guard(m_target_list_mutex);
+    [[maybe_unused]] bool was_added;
+    std::tie(std::ignore, was_added) =
+        m_in_process_target_list.insert(target_sp);
+    assert(was_added && "Target pointer was left in the in-process map");
+  }
+  
+  void TargetList::UnregisterInProcessTarget(TargetSP target_sp) {
+    std::lock_guard<std::recursive_mutex> guard(m_target_list_mutex);
+    [[maybe_unused]] bool was_present =
+        m_in_process_target_list.erase(target_sp);
+    assert(was_present && "Target pointer being removed was not registered");
+  }
+  
+  bool TargetList::IsTargetInProcess(TargetSP target_sp) {
+    std::lock_guard<std::recursive_mutex> guard(m_target_list_mutex);
+    return m_in_process_target_list.count(target_sp) == 1; 
+  }

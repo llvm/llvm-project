@@ -16,7 +16,6 @@
 #include "ARMInstPrinter.h"
 #include "ARMMCAsmInfo.h"
 #include "TargetInfo/ARMTargetInfo.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCCodeEmitter.h"
@@ -29,7 +28,7 @@
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/TargetParser.h"
+#include "llvm/TargetParser/Triple.h"
 
 using namespace llvm;
 
@@ -38,7 +37,7 @@ using namespace llvm;
 
 static bool getMCRDeprecationInfo(MCInst &MI, const MCSubtargetInfo &STI,
                                   std::string &Info) {
-  if (STI.getFeatureBits()[llvm::ARM::HasV7Ops] &&
+  if (STI.hasFeature(llvm::ARM::HasV7Ops) &&
       (MI.getOperand(0).isImm() && MI.getOperand(0).getImm() == 15) &&
       (MI.getOperand(1).isImm() && MI.getOperand(1).getImm() == 0) &&
       // Checks for the deprecated CP15ISB encoding:
@@ -65,7 +64,7 @@ static bool getMCRDeprecationInfo(MCInst &MI, const MCSubtargetInfo &STI,
       return true;
     }
   }
-  if (STI.getFeatureBits()[llvm::ARM::HasV7Ops] &&
+  if (STI.hasFeature(llvm::ARM::HasV7Ops) &&
       ((MI.getOperand(0).isImm() && MI.getOperand(0).getImm() == 10) ||
        (MI.getOperand(0).isImm() && MI.getOperand(0).getImm() == 11))) {
     Info = "since v7, cp10 and cp11 are reserved for advanced SIMD or floating "
@@ -77,7 +76,7 @@ static bool getMCRDeprecationInfo(MCInst &MI, const MCSubtargetInfo &STI,
 
 static bool getMRCDeprecationInfo(MCInst &MI, const MCSubtargetInfo &STI,
                                   std::string &Info) {
-  if (STI.getFeatureBits()[llvm::ARM::HasV7Ops] &&
+  if (STI.hasFeature(llvm::ARM::HasV7Ops) &&
       ((MI.getOperand(0).isImm() && MI.getOperand(0).getImm() == 10) ||
        (MI.getOperand(0).isImm() && MI.getOperand(0).getImm() == 11))) {
     Info = "since v7, cp10 and cp11 are reserved for advanced SIMD or floating "
@@ -89,7 +88,7 @@ static bool getMRCDeprecationInfo(MCInst &MI, const MCSubtargetInfo &STI,
 
 static bool getARMStoreDeprecationInfo(MCInst &MI, const MCSubtargetInfo &STI,
                                        std::string &Info) {
-  assert(!STI.getFeatureBits()[llvm::ARM::ModeThumb] &&
+  assert(!STI.hasFeature(llvm::ARM::ModeThumb) &&
          "cannot predicate thumb instructions");
 
   assert(MI.getNumOperands() >= 4 && "expected >= 4 arguments");
@@ -105,7 +104,7 @@ static bool getARMStoreDeprecationInfo(MCInst &MI, const MCSubtargetInfo &STI,
 
 static bool getARMLoadDeprecationInfo(MCInst &MI, const MCSubtargetInfo &STI,
                                       std::string &Info) {
-  assert(!STI.getFeatureBits()[llvm::ARM::ModeThumb] &&
+  assert(!STI.hasFeature(llvm::ARM::ModeThumb) &&
          "cannot predicate thumb instructions");
 
   assert(MI.getNumOperands() >= 4 && "expected >= 4 arguments");
@@ -178,7 +177,7 @@ bool ARM_MC::isCPSRDefined(const MCInst &MI, const MCInstrInfo *MCII) {
   for (unsigned I = 0; I < MI.getNumOperands(); ++I) {
     const MCOperand &MO = MI.getOperand(I);
     if (MO.isReg() && MO.getReg() == ARM::CPSR &&
-        Desc.OpInfo[I].isOptionalDef())
+        Desc.operands()[I].isOptionalDef())
       return true;
   }
   return false;
@@ -422,7 +421,7 @@ public:
     // Find the PC-relative immediate operand in the instruction.
     for (unsigned OpNum = 0; OpNum < Desc.getNumOperands(); ++OpNum) {
       if (Inst.getOperand(OpNum).isImm() &&
-          Desc.OpInfo[OpNum].OperandType == MCOI::OPERAND_PCREL) {
+          Desc.operands()[OpNum].OperandType == MCOI::OPERAND_PCREL) {
         int64_t Imm = Inst.getOperand(OpNum).getImm();
         Target = ARM_MC::evaluateBranchTarget(Desc, Addr, Imm);
         return true;
@@ -578,7 +577,7 @@ std::optional<uint64_t> ARMMCInstrAnalysis::evaluateMemoryOperandAddress(
   // Find the memory addressing operand in the instruction.
   unsigned OpIndex = Desc.NumDefs;
   while (OpIndex < Desc.getNumOperands() &&
-         Desc.OpInfo[OpIndex].OperandType != MCOI::OPERAND_MEMORY)
+         Desc.operands()[OpIndex].OperandType != MCOI::OPERAND_MEMORY)
     ++OpIndex;
   if (OpIndex == Desc.getNumOperands())
     return std::nullopt;
@@ -598,7 +597,7 @@ std::optional<uint64_t> ARMMCInstrAnalysis::evaluateMemoryOperandAddress(
   // VLDR* instructions share the same opcode (and thus the same form) for Arm
   // and Thumb. Use a bit longer route through STI in that case.
   case ARMII::VFPLdStFrm:
-    Addr += STI->getFeatureBits()[ARM::ModeThumb] ? 4 : 8;
+    Addr += STI->hasFeature(ARM::ModeThumb) ? 4 : 8;
     break;
   }
 

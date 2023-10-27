@@ -25,7 +25,7 @@ _start:
 
  .balign 512
 /// ldrd r0, r1, _start
-// CHECK: {{.*}}.s.tmp.o:(.os1+0x200): relocation R_ARM_LDRS_PC_G0 out of range: 512 is not in [0, 255]; references _start
+// CHECK: {{.*}}.s.tmp.o:(.os1+0x200): relocation R_ARM_LDRS_PC_G0 out of range: 512 is not in [0, 255]; references '_start'
  .reloc ., R_ARM_LDRS_PC_G0, _start
  .inst 0xe14f00d0
 

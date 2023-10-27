@@ -13,8 +13,6 @@
 ; }
 
 
-; CHECK: .loc	1 2 0{{$}}
-; CHECK-NOT: .loc{{ }}
 ; CHECK: .loc	1 3 3 prologue_end{{$}}
 ; CHECK-NOT: .loc
 ; CHECK: .loc	1 3 9 is_stmt 0{{$}}
@@ -31,14 +29,13 @@
 
 ; INT: {{^}}Address
 ; INT: -----
-; INT-NEXT: 2 0 1 0 0 is_stmt{{$}}
-; INT-NEXT: 3 3 1 0 0 is_stmt prologue_end{{$}}
-; INT-NEXT: 3 9 1 0 0 {{$}}
-; INT-NEXT: 3 15 1 0 0 {{$}}
-; INT-NEXT: 4 3 1 0 0 is_stmt{{$}}
-; INT-NEXT: 4 9 1 0 0 {{$}}
-; INT-NEXT: 4 15 1 0 0 {{$}}
-; INT-NEXT: 5 1 1 0 0 is_stmt{{( epilogue_begin)?}}{{$}}
+; INT:      3 3 1 0 0 0 is_stmt prologue_end{{$}}
+; INT-NEXT: 3 9 1 0 0 0 {{$}}
+; INT-NEXT: 3 15 1 0 0 0 {{$}}
+; INT-NEXT: 4 3 1 0 0 0 is_stmt{{$}}
+; INT-NEXT: 4 9 1 0 0 0 {{$}}
+; INT-NEXT: 4 15 1 0 0 0 {{$}}
+; INT-NEXT: 5 1 1 0 0 0 is_stmt{{( epilogue_begin)?}}{{$}}
 
 
 ; Function Attrs: nounwind uwtable

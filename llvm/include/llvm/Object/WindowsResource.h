@@ -234,7 +234,7 @@ public:
   struct StringOrID {
     bool IsString;
     ArrayRef<UTF16> String;
-    uint32_t ID;
+    uint32_t ID = ~0u;
 
     StringOrID(uint32_t ID) : IsString(false), ID(ID) {}
     StringOrID(ArrayRef<UTF16> String) : IsString(true), String(String) {}

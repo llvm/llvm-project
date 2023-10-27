@@ -69,8 +69,7 @@ to format C/C++/Java/JavaScript/JSON/Objective-C/Protobuf/C# code.
     --ferror-limit=<uint>          - Set the maximum number of clang-format errors to emit
                                      before stopping (0 = no limit).
                                      Used only with --dry-run or -n
-    --files=<filename>             - A file containing a list of files to process, one
-                                     per line.
+    --files=<filename>             - A file containing a list of files to process, one per line.
     -i                             - Inplace edit <file>s, if specified.
     --length=<uint>                - Format a range of this length (in bytes).
                                      Multiple ranges can be formatted by specifying
@@ -145,8 +144,13 @@ This can be integrated by adding the following to your `.vimrc`:
 
 .. code-block:: vim
 
-  map <C-K> :pyf <path-to-this-file>/clang-format.py<cr>
-  imap <C-K> <c-o>:pyf <path-to-this-file>/clang-format.py<cr>
+  if has('python')
+    map <C-K> :pyf <path-to-this-file>/clang-format.py<cr>
+    imap <C-K> <c-o>:pyf <path-to-this-file>/clang-format.py<cr>
+  elseif has('python3')
+    map <C-K> :py3f <path-to-this-file>/clang-format.py<cr>
+    imap <C-K> <c-o>:py3f <path-to-this-file>/clang-format.py<cr>
+  endif
 
 The first line enables :program:`clang-format` for NORMAL and VISUAL mode, the
 second line adds support for INSERT mode. Change "C-K" to another binding if

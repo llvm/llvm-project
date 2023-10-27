@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -emit-llvm -debug-info-kind=limited -triple x86_64-pc-linux-gnu %s -o - | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm -debug-info-kind=limited -triple x86_64-pc-linux-gnu %s \
+// RUN:     -dwarf-version=5 -main-file-name debug-info-function-context.cpp  -o - | FileCheck %s
 
 struct C {
   void member_function();
@@ -21,11 +22,17 @@ void global_namespace_function() { global_variable.member_function(); }
 int global_namespace_variable = 1;
 }
 
+// Generate the artificial global functions to initialize a global.
+int global_initialized_variable = C::static_member_function();
+
 // Check that the functions that belong to C have C as a context and the
 // functions that belong to the namespace have it as a context, and the global
-// function has the file as a context.
+// functions (user-defined and artificial) have the file as a context.
 
-// CHECK: ![[FILE:[0-9]+]] = !DIFile(filename: "{{.*}}context.cpp",
+// The first DIFile is for the CU, the second is what everything else uses.
+// We're using DWARF v5 so both should have MD5 checksums.
+// CHECK: !DIFile(filename: "{{.*}}context.cpp",{{.*}} checksumkind: CSK_MD5, checksum: [[CKSUM:".*"]]
+// CHECK: ![[FILE:[0-9]+]] = !DIFile(filename: "{{.*}}context.cpp",{{.*}} checksumkind: CSK_MD5, checksum: [[CKSUM]]
 // CHECK: ![[C:[0-9]+]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "C",
 // CHECK: ![[NS:.*]] = !DINamespace(name: "ns"
 // CHECK: !DISubprogram(name: "member_function",{{.*}} scope: ![[C]],{{.*}} DISPFlagDefinition
@@ -35,3 +42,6 @@ int global_namespace_variable = 1;
 // CHECK: !DISubprogram(name: "global_function",{{.*}} scope: ![[FILE]],{{.*}} DISPFlagDefinition
 
 // CHECK: !DISubprogram(name: "global_namespace_function",{{.*}} scope: ![[NS]],{{.*}} DISPFlagDefinition
+
+// CHECK: !DISubprogram(name: "__cxx_global_var_init",{{.*}} scope: ![[FILE]],{{.*}} DISPFlagDefinition
+// CHECK: !DISubprogram(linkageName: "_GLOBAL__sub_I_{{.*}}",{{.*}} scope: ![[FILE]],{{.*}} DISPFlagDefinition

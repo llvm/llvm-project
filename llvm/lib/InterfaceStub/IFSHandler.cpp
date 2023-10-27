@@ -10,13 +10,13 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/InterfaceStub/IFSStub.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/GlobPattern.h"
 #include "llvm/Support/LineIterator.h"
 #include "llvm/Support/YAMLTraits.h"
+#include "llvm/TargetParser/Triple.h"
 #include <functional>
 #include <optional>
 
@@ -193,8 +193,13 @@ Expected<std::unique_ptr<IFSStub>> ifs::readIFSFromBuffer(StringRef Buf) {
         "IFS version " + Stub->IfsVersion.getAsString() + " is unsupported.",
         std::make_error_code(std::errc::invalid_argument));
   if (Stub->Target.ArchString) {
-    Stub->Target.Arch =
+    uint16_t eMachine =
         ELF::convertArchNameToEMachine(*Stub->Target.ArchString);
+    if (eMachine == ELF::EM_NONE)
+      return createStringError(
+          std::make_error_code(std::errc::invalid_argument),
+          "IFS arch '" + *Stub->Target.ArchString + "' is unsupported");
+    Stub->Target.Arch = eMachine;
   }
   return std::move(Stub);
 }
@@ -300,6 +305,9 @@ IFSTarget ifs::parseTriple(StringRef TripleStr) {
     break;
   case Triple::ArchType::x86_64:
     RetTarget.Arch = (IFSArch)ELF::EM_X86_64;
+    break;
+  case Triple::ArchType::riscv64:
+    RetTarget.Arch = (IFSArch)ELF::EM_RISCV;
     break;
   default:
     RetTarget.Arch = (IFSArch)ELF::EM_NONE;

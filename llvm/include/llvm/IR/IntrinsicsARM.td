@@ -702,13 +702,13 @@ def int_arm_neon_vld4 : DefaultAttrsIntrinsic<
 
 def int_arm_neon_vld1x2 : DefaultAttrsIntrinsic<
     [llvm_anyvector_ty, LLVMMatchType<0>],
-    [LLVMAnyPointerType<LLVMMatchType<0>>], [IntrReadMem, IntrArgMemOnly]>;
+    [llvm_anyptr_ty], [IntrReadMem, IntrArgMemOnly]>;
 def int_arm_neon_vld1x3 : DefaultAttrsIntrinsic<
     [llvm_anyvector_ty, LLVMMatchType<0>, LLVMMatchType<0>],
-    [LLVMAnyPointerType<LLVMMatchType<0>>], [IntrReadMem, IntrArgMemOnly]>;
+    [llvm_anyptr_ty], [IntrReadMem, IntrArgMemOnly]>;
 def int_arm_neon_vld1x4 : DefaultAttrsIntrinsic<
     [llvm_anyvector_ty, LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>],
-    [LLVMAnyPointerType<LLVMMatchType<0>>], [IntrReadMem, IntrArgMemOnly]>;
+    [llvm_anyptr_ty], [IntrReadMem, IntrArgMemOnly]>;
 
 // Vector load N-element structure to one lane.
 // Source operands are: the address, the N input vectors (since only one

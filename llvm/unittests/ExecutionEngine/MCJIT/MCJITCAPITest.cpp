@@ -19,7 +19,7 @@
 #include "llvm-c/Transforms/PassBuilder.h"
 #include "llvm/ExecutionEngine/SectionMemoryManager.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/Host.h"
+#include "llvm/TargetParser/Host.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -386,7 +386,7 @@ TEST_F(MCJITCAPITest, stackmap_creates_compact_unwind_on_darwin) {
   
   // This test is also not supported on non-x86 platforms.
   if (Triple(HostTriple).getArch() != Triple::x86_64)
-    return;
+    GTEST_SKIP();
   
   buildFunctionThatUsesStackmap();
   buildMCJITOptions();

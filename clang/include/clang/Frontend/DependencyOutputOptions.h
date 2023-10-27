@@ -34,6 +34,8 @@ enum ExtraDepKind {
 class DependencyOutputOptions {
 public:
   unsigned IncludeSystemHeaders : 1; ///< Include system header dependencies.
+  unsigned
+      CanonicalSystemHeaders : 1; ///< canonicalize system header dependencies.
   unsigned ShowHeaderIncludes : 1;   ///< Show header inclusions (-H).
   unsigned UsePhonyTargets : 1;      ///< Include phony targets for each
                                      /// dependency, which can avoid some 'make'
@@ -74,9 +76,6 @@ public:
   /// target.
   std::vector<std::pair<std::string, ExtraDepKind>> ExtraDeps;
 
-  /// In /showIncludes mode, pretend the main TU is a header with this name.
-  std::string ShowIncludesPretendHeader;
-
   /// The file to write GraphViz-formatted header dependencies to.
   std::string DOTOutputFile;
 
@@ -85,10 +84,11 @@ public:
 
 public:
   DependencyOutputOptions()
-      : IncludeSystemHeaders(0), ShowHeaderIncludes(0), UsePhonyTargets(0),
-        AddMissingHeaderDeps(0), IncludeModuleFiles(0),
-        ShowSkippedHeaderIncludes(0), HeaderIncludeFormat(HIFMT_Textual),
-        HeaderIncludeFiltering(HIFIL_None) {}
+      : IncludeSystemHeaders(0), CanonicalSystemHeaders(0),
+        ShowHeaderIncludes(0), UsePhonyTargets(0), AddMissingHeaderDeps(0),
+        IncludeModuleFiles(0), ShowSkippedHeaderIncludes(0),
+        HeaderIncludeFormat(HIFMT_Textual), HeaderIncludeFiltering(HIFIL_None) {
+  }
 };
 
 }  // end namespace clang

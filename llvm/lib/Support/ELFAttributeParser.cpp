@@ -127,10 +127,14 @@ Error ELFAttributeParser::parseSubsection(uint32_t length) {
     sw->printString("Vendor", vendorName);
   }
 
-  // Ignore unrecognized vendor-name.
-  if (vendorName.lower() != vendor)
-    return createStringError(errc::invalid_argument,
-                             "unrecognized vendor-name: " + vendorName);
+  // Handle a subsection with an unrecognized vendor-name by skipping
+  // over it to the next subsection. ADDENDA32 in the Arm ABI defines
+  // that vendor attribute sections must not affect compatibility, so
+  // this should always be safe.
+  if (vendorName.lower() != vendor) {
+    cursor.seek(end);
+    return Error::success();
+  }
 
   while (cursor.tell() < end) {
     /// Tag_File | Tag_Section | Tag_Symbol   uleb128:byte-size
@@ -185,9 +189,9 @@ Error ELFAttributeParser::parseSubsection(uint32_t length) {
 }
 
 Error ELFAttributeParser::parse(ArrayRef<uint8_t> section,
-                                support::endianness endian) {
+                                llvm::endianness endian) {
   unsigned sectionNumber = 0;
-  de = DataExtractor(section, endian == support::little, 0);
+  de = DataExtractor(section, endian == llvm::endianness::little, 0);
 
   // For early returns, we have more specific errors, consume the Error in
   // cursor.

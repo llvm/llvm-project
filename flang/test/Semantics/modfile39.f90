@@ -15,10 +15,10 @@ module m1
 end module
 !Expect: m1.mod
 !module m1
+!private::priv
 !interface gen
 !procedure::priv
 !end interface
-!private::priv
 !contains
 !pure function priv(n)
 !integer(4),intent(in)::n

@@ -75,7 +75,6 @@ define <4 x i32> @load_lds_v4i32_align1(ptr addrspace(3) %ptr) {
 ; GFX10-LABEL: load_lds_v4i32_align1:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX10-NEXT:    ds_read2_b32 v[0:1], v0 offset1:1
 ; GFX10-NEXT:    ds_read2_b32 v[2:3], v2 offset0:2 offset1:3
@@ -85,7 +84,6 @@ define <4 x i32> @load_lds_v4i32_align1(ptr addrspace(3) %ptr) {
 ; GFX11-LABEL: load_lds_v4i32_align1:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    ds_load_b128 v[0:3], v0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
@@ -148,7 +146,6 @@ define <3 x i32> @load_lds_v3i32_align1(ptr addrspace(3) %ptr) {
 ; GFX10-LABEL: load_lds_v3i32_align1:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX10-NEXT:    ds_read2_b32 v[0:1], v0 offset1:1
 ; GFX10-NEXT:    ds_read_b32 v2, v2 offset:8
@@ -158,7 +155,6 @@ define <3 x i32> @load_lds_v3i32_align1(ptr addrspace(3) %ptr) {
 ; GFX11-LABEL: load_lds_v3i32_align1:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    ds_load_b96 v[0:2], v0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
@@ -212,7 +208,6 @@ define void @store_lds_v4i32_align1(ptr addrspace(3) %out, <4 x i32> %x) {
 ; GFX10-LABEL: store_lds_v4i32_align1:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    ds_write2_b32 v0, v1, v2 offset1:1
 ; GFX10-NEXT:    ds_write2_b32 v0, v3, v4 offset0:2 offset1:3
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
@@ -221,7 +216,6 @@ define void @store_lds_v4i32_align1(ptr addrspace(3) %out, <4 x i32> %x) {
 ; GFX11-LABEL: store_lds_v4i32_align1:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    ds_store_b128 v0, v[1:4]
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
@@ -268,7 +262,6 @@ define void @store_lds_v3i32_align1(ptr addrspace(3) %out, <3 x i32> %x) {
 ; GFX10-LABEL: store_lds_v3i32_align1:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    ds_write2_b32 v0, v1, v2 offset1:1
 ; GFX10-NEXT:    ds_write_b32 v0, v3 offset:8
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
@@ -277,7 +270,6 @@ define void @store_lds_v3i32_align1(ptr addrspace(3) %out, <3 x i32> %x) {
 ; GFX11-LABEL: store_lds_v3i32_align1:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    ds_store_b96 v0, v[1:3]
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
@@ -334,6 +326,7 @@ define amdgpu_ps void @test_s_load_constant_v8i32_align1(ptr addrspace(4) inreg 
 ; GFX11-NEXT:    global_store_b128 v8, v[0:3], s[2:3]
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    global_store_b128 v8, v[4:7], s[2:3] offset:16
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %load = load <8 x i32>, ptr addrspace(4) %ptr, align 1

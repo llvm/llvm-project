@@ -13,7 +13,7 @@ import os
 import unittest
 from copy import copy
 from pathlib import PurePath
-from collections import defaultdict, OrderedDict
+from collections import defaultdict, OrderedDict, namedtuple
 
 from dex.utils.Exceptions import CommandParseError, NonFloatValueInCommand
 
@@ -26,7 +26,10 @@ from dex.command.commands.DexExpectStepKind import DexExpectStepKind
 from dex.command.commands.DexExpectStepOrder import DexExpectStepOrder
 from dex.command.commands.DexExpectWatchType import DexExpectWatchType
 from dex.command.commands.DexExpectWatchValue import DexExpectWatchValue
-from dex.command.commands.DexExpectWatchBase import AddressExpression, DexExpectWatchBase
+from dex.command.commands.DexExpectWatchBase import (
+    AddressExpression,
+    DexExpectWatchBase,
+)
 from dex.command.commands.DexLabel import DexLabel
 from dex.command.commands.DexLimitSteps import DexLimitSteps
 from dex.command.commands.DexFinishTest import DexFinishTest
@@ -35,6 +38,7 @@ from dex.command.commands.DexWatch import DexWatch
 from dex.utils import Timer
 from dex.utils.Exceptions import CommandParseError, DebuggerException
 
+
 def _get_valid_commands():
     """Return all top level DExTer test commands.
 
@@ -42,19 +46,19 @@ def _get_valid_commands():
         { name (str): command (class) }
     """
     return {
-      DexCommandLine.get_name() : DexCommandLine,
-      DexDeclareAddress.get_name() : DexDeclareAddress,
-      DexDeclareFile.get_name() : DexDeclareFile,
-      DexExpectProgramState.get_name() : DexExpectProgramState,
-      DexExpectStepKind.get_name() : DexExpectStepKind,
-      DexExpectStepOrder.get_name() : DexExpectStepOrder,
-      DexExpectWatchType.get_name() : DexExpectWatchType,
-      DexExpectWatchValue.get_name() : DexExpectWatchValue,
-      DexLabel.get_name() : DexLabel,
-      DexLimitSteps.get_name() : DexLimitSteps,
-      DexFinishTest.get_name() : DexFinishTest,
-      DexUnreachable.get_name() : DexUnreachable,
-      DexWatch.get_name() : DexWatch
+        DexCommandLine.get_name(): DexCommandLine,
+        DexDeclareAddress.get_name(): DexDeclareAddress,
+        DexDeclareFile.get_name(): DexDeclareFile,
+        DexExpectProgramState.get_name(): DexExpectProgramState,
+        DexExpectStepKind.get_name(): DexExpectStepKind,
+        DexExpectStepOrder.get_name(): DexExpectStepOrder,
+        DexExpectWatchType.get_name(): DexExpectWatchType,
+        DexExpectWatchValue.get_name(): DexExpectWatchValue,
+        DexLabel.get_name(): DexLabel,
+        DexLimitSteps.get_name(): DexLimitSteps,
+        DexFinishTest.get_name(): DexFinishTest,
+        DexUnreachable.get_name(): DexUnreachable,
+        DexWatch.get_name(): DexWatch,
     }
 
 
@@ -63,7 +67,7 @@ def _get_command_name(command_raw: str) -> str:
     command_raw on the first opening paranthesis and further stripping
     any potential leading or trailing whitespace.
     """
-    return command_raw.split('(', 1)[0].rstrip()
+    return command_raw.split("(", 1)[0].rstrip()
 
 
 def _merge_subcommands(command_name: str, valid_commands: dict) -> dict:
@@ -74,11 +78,13 @@ def _merge_subcommands(command_name: str, valid_commands: dict) -> dict:
     """
     subcommands = valid_commands[command_name].get_subcommands()
     if subcommands:
-        return { **valid_commands, **subcommands }
+        return {**valid_commands, **subcommands}
     return valid_commands
 
 
-def _build_command(command_type, labels, addresses, raw_text: str, path: str, lineno: str) -> CommandBase:
+def _build_command(
+    command_type, labels, addresses, raw_text: str, path, lineno: str
+) -> CommandBase:
     """Build a command object from raw text.
 
     This function will call eval().
@@ -89,29 +95,34 @@ def _build_command(command_type, labels, addresses, raw_text: str, path: str, li
     Returns:
         A dexter command object.
     """
+
     def label_to_line(label_name: str) -> int:
         line = labels.get(label_name, None)
         if line != None:
             return line
-        raise format_unresolved_label_err(label_name, raw_text, path, lineno)
+        raise format_unresolved_label_err(label_name, raw_text, path.base, lineno)
 
-    def get_address_object(address_name: str, offset: int=0):
+    def get_address_object(address_name: str, offset: int = 0):
         if address_name not in addresses:
-            raise format_undeclared_address_err(address_name, raw_text, path, lineno)
+            raise format_undeclared_address_err(
+                address_name, raw_text, path.base, lineno
+            )
         return AddressExpression(address_name, offset)
 
     valid_commands = _merge_subcommands(
-        command_type.get_name(), {
-            'ref': label_to_line,
-            'address': get_address_object,
+        command_type.get_name(),
+        {
+            "ref": label_to_line,
+            "address": get_address_object,
             command_type.get_name(): command_type,
-        })
+        },
+    )
 
     # pylint: disable=eval-used
     command = eval(raw_text, valid_commands)
     # pylint: enable=eval-used
     command.raw_text = raw_text
-    command.path = path
+    command.path = path.declared
     command.lineno = lineno
     return command
 
@@ -130,7 +141,7 @@ def _search_line_for_cmd_start(line: str, start: int, valid_commands: dict) -> i
         idx = line.find(command, start)
         if idx != -1:
             # Ignore escaped '\' commands.
-            if idx > 0 and line[idx - 1] == '\\':
+            if idx > 0 and line[idx - 1] == "\\":
                 continue
             return idx
     return -1
@@ -158,17 +169,17 @@ def _search_line_for_cmd_end(line: str, start: int, paren_balance: int) -> (int,
     """
     for end in range(start, len(line)):
         ch = line[end]
-        if ch == '(':
+        if ch == "(":
             paren_balance += 1
-        elif ch == ')':
-            paren_balance -=1
+        elif ch == ")":
+            paren_balance -= 1
         if paren_balance == 0:
             break
     end += 1
     return (end, paren_balance)
 
 
-class TextPoint():
+class TextPoint:
     def __init__(self, line, char):
         self.line = line
         self.char = char
@@ -180,37 +191,45 @@ class TextPoint():
         return self.char + 1
 
 
-def format_unresolved_label_err(label: str, src: str, filename: str, lineno) -> CommandParseError:
+def format_unresolved_label_err(
+    label: str, src: str, filename: str, lineno
+) -> CommandParseError:
     err = CommandParseError()
     err.src = src
-    err.caret = '' # Don't bother trying to point to the bad label.
+    err.caret = ""  # Don't bother trying to point to the bad label.
     err.filename = filename
     err.lineno = lineno
-    err.info = f'Unresolved label: \'{label}\''
+    err.info = f"Unresolved label: '{label}'"
     return err
 
-def format_undeclared_address_err(address: str, src: str, filename: str, lineno) -> CommandParseError:
+
+def format_undeclared_address_err(
+    address: str, src: str, filename: str, lineno
+) -> CommandParseError:
     err = CommandParseError()
     err.src = src
-    err.caret = '' # Don't bother trying to point to the bad address.
+    err.caret = ""  # Don't bother trying to point to the bad address.
     err.filename = filename
     err.lineno = lineno
-    err.info = f'Undeclared address: \'{address}\''
+    err.info = f"Undeclared address: '{address}'"
     return err
 
-def format_parse_err(msg: str, path: str, lines: list, point: TextPoint) -> CommandParseError:
+
+def format_parse_err(
+    msg: str, path: str, lines: list, point: TextPoint
+) -> CommandParseError:
     err = CommandParseError()
     err.filename = path
     err.src = lines[point.line].rstrip()
     err.lineno = point.get_lineno()
     err.info = msg
-    err.caret = '{}<r>^</>'.format(' ' * (point.char))
+    err.caret = "{}<r>^</>".format(" " * (point.char))
     return err
 
 
 def skip_horizontal_whitespace(line, point):
-    for idx, char in enumerate(line[point.char:]):
-        if char not in ' \t':
+    for idx, char in enumerate(line[point.char :]):
+        if char not in " \t":
             point.char += idx
             return
 
@@ -219,36 +238,39 @@ def add_line_label(labels, label, cmd_path, cmd_lineno):
     # Enforce unique line labels.
     if label.eval() in labels:
         err = CommandParseError()
-        err.info = f'Found duplicate line label: \'{label.eval()}\''
+        err.info = f"Found duplicate line label: '{label.eval()}'"
         err.lineno = cmd_lineno
         err.filename = cmd_path
         err.src = label.raw_text
         # Don't both trying to point to it since we're only printing the raw
         # command, which isn't much text.
-        err.caret = ''
+        err.caret = ""
         raise err
     labels[label.eval()] = label.get_line()
+
 
 def add_address(addresses, address, cmd_path, cmd_lineno):
     # Enforce unique address variables.
     address_name = address.get_address_name()
     if address_name in addresses:
         err = CommandParseError()
-        err.info = f'Found duplicate address: \'{address_name}\''
+        err.info = f"Found duplicate address: '{address_name}'"
         err.lineno = cmd_lineno
         err.filename = cmd_path
         err.src = address.raw_text
         # Don't both trying to point to it since we're only printing the raw
         # command, which isn't much text.
-        err.caret = ''
+        err.caret = ""
         raise err
     addresses.append(address_name)
 
+
 def _find_all_commands_in_file(path, file_lines, valid_commands, source_root_dir):
-    labels = {} # dict of {name: line}.
-    addresses = [] # list of addresses.
+    labels = {}  # dict of {name: line}.
+    addresses = []  # list of addresses.
     address_resolutions = {}
-    cmd_path = path
+    CmdPath = namedtuple("cmd_path", "base declared")
+    cmd_path = CmdPath(path, path)
     declared_files = set()
     commands = defaultdict(dict)
     paren_balance = 0
@@ -262,23 +284,30 @@ def _find_all_commands_in_file(path, file_lines, valid_commands, source_root_dir
         while True:
             # If parens are currently balanced we can look for a new command.
             if paren_balance == 0:
-                region_start.char = _search_line_for_cmd_start(line, region_start.char, valid_commands)
+                region_start.char = _search_line_for_cmd_start(
+                    line, region_start.char, valid_commands
+                )
                 if region_start.char == -1:
-                    break # Read next line.
+                    break  # Read next line.
 
-                command_name = _get_command_name(line[region_start.char:])
+                command_name = _get_command_name(line[region_start.char :])
                 cmd_point = copy(region_start)
                 cmd_text_list = [command_name]
 
-                region_start.char += len(command_name) # Start searching for parens after cmd.
+                region_start.char += len(
+                    command_name
+                )  # Start searching for parens after cmd.
                 skip_horizontal_whitespace(line, region_start)
-                if region_start.char >= len(line) or line[region_start.char] != '(':
+                if region_start.char >= len(line) or line[region_start.char] != "(":
                     raise format_parse_err(
-                        "Missing open parenthesis", path, file_lines, region_start)
+                        "Missing open parenthesis", path, file_lines, region_start
+                    )
 
-            end, paren_balance = _search_line_for_cmd_end(line, region_start.char, paren_balance)
+            end, paren_balance = _search_line_for_cmd_end(
+                line, region_start.char, paren_balance
+            )
             # Add this text blob to the command.
-            cmd_text_list.append(line[region_start.char:end])
+            cmd_text_list.append(line[region_start.char : end])
             # Move parse ptr to end of line or parens.
             region_start.char = end
 
@@ -302,8 +331,8 @@ def _find_all_commands_in_file(path, file_lines, valid_commands, source_root_dir
                 # This err should point to the problem line.
                 err_point = copy(cmd_point)
                 # To e the command start is the absolute start, so use as offset.
-                err_point.line += e.lineno - 1 # e.lineno is a position, not index.
-                err_point.char += e.offset - 1 # e.offset is a position, not index.
+                err_point.line += e.lineno - 1  # e.lineno is a position, not index.
+                err_point.char += e.offset - 1  # e.offset is a position, not index.
                 raise format_parse_err(e.msg, path, file_lines, err_point)
             except TypeError as e:
                 # This err should always point to the end of the command name.
@@ -320,20 +349,24 @@ def _find_all_commands_in_file(path, file_lines, valid_commands, source_root_dir
                 elif type(command) is DexDeclareAddress:
                     add_address(addresses, command, path, cmd_point.get_lineno())
                 elif type(command) is DexDeclareFile:
-                    cmd_path = command.declared_file
-                    if not os.path.isabs(cmd_path):
-                        source_dir = (source_root_dir if source_root_dir else
-                                      os.path.dirname(path))
-                        cmd_path = os.path.join(source_dir, cmd_path)
-                    # TODO: keep stored paths as PurePaths for 'longer'.
-                    cmd_path = str(PurePath(cmd_path))
-                    declared_files.add(cmd_path)
-                elif type(command) is DexCommandLine and 'DexCommandLine' in commands:
+                    declared_path = command.declared_file
+                    if not os.path.isabs(declared_path):
+                        source_dir = (
+                            source_root_dir
+                            if source_root_dir
+                            else os.path.dirname(path)
+                        )
+                        declared_path = os.path.join(source_dir, declared_path)
+                    cmd_path = CmdPath(cmd_path.base, str(PurePath(declared_path)))
+                    declared_files.add(cmd_path.declared)
+                elif type(command) is DexCommandLine and "DexCommandLine" in commands:
                     msg = "More than one DexCommandLine in file"
                     raise format_parse_err(msg, path, file_lines, err_point)
 
                 assert (path, cmd_point) not in commands[command_name], (
-                    command_name, commands[command_name])
+                    command_name,
+                    commands[command_name],
+                )
                 commands[command_name][path, cmd_point] = command
 
     if paren_balance != 0:
@@ -344,6 +377,7 @@ def _find_all_commands_in_file(path, file_lines, valid_commands, source_root_dir
         raise format_parse_err(msg, path, file_lines, err_point)
     return dict(commands), declared_files
 
+
 def _find_all_commands(test_files, source_root_dir):
     commands = defaultdict(dict)
     valid_commands = _get_valid_commands()
@@ -352,28 +386,32 @@ def _find_all_commands(test_files, source_root_dir):
         with open(test_file) as fp:
             lines = fp.readlines()
         file_commands, declared_files = _find_all_commands_in_file(
-            test_file, lines, valid_commands, source_root_dir)
+            test_file, lines, valid_commands, source_root_dir
+        )
         for command_name in file_commands:
             commands[command_name].update(file_commands[command_name])
         new_source_files |= declared_files
 
     return dict(commands), new_source_files
 
+
 def get_command_infos(test_files, source_root_dir):
-  with Timer('parsing commands'):
-      try:
-          commands, new_source_files = _find_all_commands(test_files, source_root_dir)
-          command_infos = OrderedDict()
-          for command_type in commands:
-              for command in commands[command_type].values():
-                  if command_type not in command_infos:
-                      command_infos[command_type] = []
-                  command_infos[command_type].append(command)
-          return OrderedDict(command_infos), new_source_files
-      except CommandParseError as e:
-          msg = 'parser error: <d>{}({}):</> {}\n{}\n{}\n'.format(
-                e.filename, e.lineno, e.info, e.src, e.caret)
-          raise DebuggerException(msg)
+    with Timer("parsing commands"):
+        try:
+            commands, new_source_files = _find_all_commands(test_files, source_root_dir)
+            command_infos = OrderedDict()
+            for command_type in commands:
+                for command in commands[command_type].values():
+                    if command_type not in command_infos:
+                        command_infos[command_type] = []
+                    command_infos[command_type].append(command)
+            return OrderedDict(command_infos), new_source_files
+        except CommandParseError as e:
+            msg = "parser error: <d>{}({}):</> {}\n{}\n{}\n".format(
+                e.filename, e.lineno, e.info, e.src, e.caret
+            )
+            raise DebuggerException(msg)
+
 
 class TestParseCommand(unittest.TestCase):
     class MockCmd(CommandBase):
@@ -384,7 +422,7 @@ class TestParseCommand(unittest.TestCase):
         """
 
         def __init__(self, *args):
-           self.value = args[0]
+            self.value = args[0]
 
         def get_name():
             return __class__.__name__
@@ -392,14 +430,12 @@ class TestParseCommand(unittest.TestCase):
         def eval(this):
             pass
 
-
     def __init__(self, *args):
         super().__init__(*args)
 
         self.valid_commands = {
-            TestParseCommand.MockCmd.get_name() : TestParseCommand.MockCmd
+            TestParseCommand.MockCmd.get_name(): TestParseCommand.MockCmd
         }
-
 
     def _find_all_commands_in_lines(self, lines):
         """Use DExTer parsing methods to find all the mock commands in lines.
@@ -407,9 +443,10 @@ class TestParseCommand(unittest.TestCase):
         Returns:
             { cmd_name: { (path, line): command_obj } }
         """
-        cmds, declared_files = _find_all_commands_in_file(__file__, lines, self.valid_commands, None)
+        cmds, declared_files = _find_all_commands_in_file(
+            __file__, lines, self.valid_commands, None
+        )
         return cmds
-
 
     def _find_all_mock_values_in_lines(self, lines):
         """Use DExTer parsing methods to find all mock command values in lines.
@@ -421,36 +458,34 @@ class TestParseCommand(unittest.TestCase):
         mocks = cmds.get(TestParseCommand.MockCmd.get_name(), None)
         return [v.value for v in mocks.values()] if mocks else []
 
-
     def test_parse_inline(self):
         """Commands can be embedded in other text."""
 
         lines = [
             'MockCmd("START") Lorem ipsum dolor sit amet, consectetur\n',
             'adipiscing elit, MockCmd("EMBEDDED") sed doeiusmod tempor,\n',
-            'incididunt ut labore et dolore magna aliqua.\n'
+            "incididunt ut labore et dolore magna aliqua.\n",
         ]
 
         values = self._find_all_mock_values_in_lines(lines)
 
-        self.assertTrue('START' in values)
-        self.assertTrue('EMBEDDED' in values)
-
+        self.assertTrue("START" in values)
+        self.assertTrue("EMBEDDED" in values)
 
     def test_parse_multi_line_comment(self):
         """Multi-line commands can embed comments."""
 
         lines = [
-            'Lorem ipsum dolor sit amet, consectetur\n',
-            'adipiscing elit, sed doeiusmod tempor,\n',
-            'incididunt ut labore et MockCmd(\n',
+            "Lorem ipsum dolor sit amet, consectetur\n",
+            "adipiscing elit, sed doeiusmod tempor,\n",
+            "incididunt ut labore et MockCmd(\n",
             '    "WITH_COMMENT" # THIS IS A COMMENT\n',
-            ') dolore magna aliqua. Ut enim ad minim\n',
+            ") dolore magna aliqua. Ut enim ad minim\n",
         ]
 
         values = self._find_all_mock_values_in_lines(lines)
 
-        self.assertTrue('WITH_COMMENT' in values)
+        self.assertTrue("WITH_COMMENT" in values)
 
     def test_parse_empty(self):
         """Empty files are silently ignored."""
@@ -462,7 +497,7 @@ class TestParseCommand(unittest.TestCase):
     def test_parse_bad_whitespace(self):
         """Throw exception when parsing badly formed whitespace."""
         lines = [
-            'MockCmd\n',
+            "MockCmd\n",
             '("XFAIL_CMD_LF_PAREN")\n',
         ]
 
@@ -478,42 +513,38 @@ class TestParseCommand(unittest.TestCase):
             'MockCmd\t\t("TABS")\n',
             'MockCmd(    "ARG_SPACE"    )\n',
             'MockCmd(\t\t"ARG_TABS"\t\t)\n',
-            'MockCmd(\n',
+            "MockCmd(\n",
             '"CMD_PAREN_LF")\n',
         ]
 
         values = self._find_all_mock_values_in_lines(lines)
 
-        self.assertTrue('NONE' in values)
-        self.assertTrue('SPACE' in values)
-        self.assertTrue('TABS' in values)
-        self.assertTrue('ARG_SPACE' in values)
-        self.assertTrue('ARG_TABS' in values)
-        self.assertTrue('CMD_PAREN_LF' in values)
-
+        self.assertTrue("NONE" in values)
+        self.assertTrue("SPACE" in values)
+        self.assertTrue("TABS" in values)
+        self.assertTrue("ARG_SPACE" in values)
+        self.assertTrue("ARG_TABS" in values)
+        self.assertTrue("CMD_PAREN_LF" in values)
 
     def test_parse_share_line(self):
         """More than one command can appear on one line."""
 
         lines = [
             'MockCmd("START") MockCmd("CONSECUTIVE") words '
-                'MockCmd("EMBEDDED") more words\n'
+            'MockCmd("EMBEDDED") more words\n'
         ]
 
         values = self._find_all_mock_values_in_lines(lines)
 
-        self.assertTrue('START' in values)
-        self.assertTrue('CONSECUTIVE' in values)
-        self.assertTrue('EMBEDDED' in values)
-
+        self.assertTrue("START" in values)
+        self.assertTrue("CONSECUTIVE" in values)
+        self.assertTrue("EMBEDDED" in values)
 
     def test_parse_escaped(self):
         """Escaped commands are ignored."""
 
-        lines = [
-            'words \MockCmd("IGNORED") words words words\n'
-        ]
+        lines = ['words \MockCmd("IGNORED") words words words\n']
 
         values = self._find_all_mock_values_in_lines(lines)
 
-        self.assertFalse('IGNORED' in values)
+        self.assertFalse("IGNORED" in values)

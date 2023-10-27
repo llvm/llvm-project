@@ -205,7 +205,6 @@ typedef NS_ENUM(unsigned int, UIP8_3) {
   Random6
 };
 
-// rdar://15200602
 #define NS_AVAILABLE_MAC(X)  __attribute__((availability(macosx,introduced=X)))
 #define NS_ENUM_AVAILABLE_MAC(X) __attribute__((availability(macosx,introduced=X)))
 
@@ -215,10 +214,8 @@ typedef NS_ENUM(NSInteger, NSModalResponse) {
     NSModalResponseContinue             = (-1002), 
 } NS_ENUM_AVAILABLE_MAC(10.9);
 
-// rdar://15201056
 typedef NSUInteger FarFarAwayOptions;
 
-// rdar://15200915
 typedef NS_OPTIONS(NSUInteger, FarAwayOptions) {
   FarAway1    = 1 << 1,
   FarAway2    = 1 << 2
@@ -266,7 +263,6 @@ enum {
   FarFarAway2    = 1 << 2
 };
 
-// rdar://15200915
 typedef NS_OPTIONS(NSUInteger, NSWindowOcclusionState) {
     NSWindowOcclusionStateVisible = 1UL << 1,
 };
@@ -287,14 +283,12 @@ typedef NS_ENUM(NSUInteger, NSSelectionDirection) {
 
 // standard window buttons
 
-// rdar://18262255
 typedef NS_ENUM(NSUInteger, Thing) {
    ThingOne,
    ThingTwo,
    ThingThree,
 };
 
-// rdar://18498539
 typedef NS_ENUM(unsigned int, NumericEnum) {
     one = 1
 };
@@ -311,7 +305,6 @@ typedef NS_OPTIONS(unsigned int, NumericEnum4) {
     Four = 4
 };
 
-// rdar://18532199
 typedef NS_ENUM(int8_t, MyEnumeratedType)
 {
   UI8one = 1
@@ -340,7 +333,6 @@ typedef NS_ENUM(uint8_t, UI8Type)
         UIU8one = 1
 };
 
-// rdar://19352510
 typedef NS_ENUM(NSInteger, MyEnum) {zero};
 
 typedef NS_ENUM(NSUInteger, MyEnumNSUInteger) {two};
@@ -356,7 +348,6 @@ typedef NS_ENUM(unsigned long long, MyEnumunsignedlonglong) {
   ll4
 };
 
-// rdar://19994496
 typedef NS_ENUM(int8_t, MyOneEnum) {int8_one};
 
 typedef NS_ENUM(int16_t, Myint16_tEnum) {

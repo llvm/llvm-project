@@ -4,7 +4,6 @@ include "mlir/IR/OpBase.td"
 
 def Test_Dialect : Dialect {
   let name = "test_dialect";
-  let useFoldAPI = kEmitFoldAdaptorFolder;
 }
 
 def OpTraitA : NativeOpTrait<"OpTraitA">, Deprecated<"use `bar` instead">;

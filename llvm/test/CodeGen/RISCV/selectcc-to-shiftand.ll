@@ -76,19 +76,12 @@ define i32 @not_pos_sel_same_variable(i32 signext %a) {
 
 ; Compare if positive and select of constants where one constant is zero.
 define i32 @pos_sel_constants(i32 signext %a) {
-; RV32-LABEL: pos_sel_constants:
-; RV32:       # %bb.0:
-; RV32-NEXT:    slti a0, a0, 0
-; RV32-NEXT:    addi a0, a0, -1
-; RV32-NEXT:    andi a0, a0, 5
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: pos_sel_constants:
-; RV64:       # %bb.0:
-; RV64-NEXT:    slti a0, a0, 0
-; RV64-NEXT:    addiw a0, a0, -1
-; RV64-NEXT:    andi a0, a0, 5
-; RV64-NEXT:    ret
+; CHECK-LABEL: pos_sel_constants:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slti a0, a0, 0
+; CHECK-NEXT:    addi a0, a0, -1
+; CHECK-NEXT:    andi a0, a0, 5
+; CHECK-NEXT:    ret
   %tmp.1 = icmp sgt i32 %a, -1
   %retval = select i1 %tmp.1, i32 5, i32 0
   ret i32 %retval

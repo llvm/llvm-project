@@ -11,9 +11,9 @@
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Basic/TargetInfo.h"
 #include "llvm/ADT/StringMap.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Regex.h"
+#include "llvm/TargetParser/Triple.h"
 
 using namespace clang::ast_matchers;
 
@@ -138,7 +138,7 @@ void SIMDIntrinsicsCheck::check(const MatchFinder::MatchResult &Result) {
           << SimdRegex.sub(SmallString<32>({Std, "::simd"}),
                            StdRegex.sub(Std, New));
     } else {
-      diag("'%0' is a non-portable %1 intrinsic function")
+      diag(Call->getExprLoc(), "'%0' is a non-portable %1 intrinsic function")
           << Old << llvm::Triple::getArchTypeName(Arch);
     }
   }

@@ -163,8 +163,8 @@ define void @test_memmove_loadstore_2(ptr %dest, ptr %src) {
 ; CHECK-LABEL: @test_memmove_loadstore_2(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load atomic i8, ptr [[SRC:%.*]] unordered, align 2
 ; CHECK-NEXT:    store atomic i8 [[TMP1]], ptr [[DEST:%.*]] unordered, align 2
-; CHECK-NEXT:    [[TMP4:%.*]] = load atomic i16, ptr [[SRC]] unordered, align 2
-; CHECK-NEXT:    store atomic i16 [[TMP4]], ptr [[DEST]] unordered, align 2
+; CHECK-NEXT:    [[TMP2:%.*]] = load atomic i16, ptr [[SRC]] unordered, align 2
+; CHECK-NEXT:    store atomic i16 [[TMP2]], ptr [[DEST]] unordered, align 2
 ; CHECK-NEXT:    call void @llvm.memmove.element.unordered.atomic.p0.p0.i32(ptr nonnull align 2 [[DEST]], ptr nonnull align 2 [[SRC]], i32 4, i32 2)
 ; CHECK-NEXT:    call void @llvm.memmove.element.unordered.atomic.p0.p0.i32(ptr nonnull align 2 [[DEST]], ptr nonnull align 2 [[SRC]], i32 8, i32 2)
 ; CHECK-NEXT:    call void @llvm.memmove.element.unordered.atomic.p0.p0.i32(ptr nonnull align 2 [[DEST]], ptr nonnull align 2 [[SRC]], i32 16, i32 2)
@@ -182,10 +182,10 @@ define void @test_memmove_loadstore_4(ptr %dest, ptr %src) {
 ; CHECK-LABEL: @test_memmove_loadstore_4(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load atomic i8, ptr [[SRC:%.*]] unordered, align 4
 ; CHECK-NEXT:    store atomic i8 [[TMP1]], ptr [[DEST:%.*]] unordered, align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = load atomic i16, ptr [[SRC]] unordered, align 4
-; CHECK-NEXT:    store atomic i16 [[TMP4]], ptr [[DEST]] unordered, align 4
-; CHECK-NEXT:    [[TMP7:%.*]] = load atomic i32, ptr [[SRC]] unordered, align 4
-; CHECK-NEXT:    store atomic i32 [[TMP7]], ptr [[DEST]] unordered, align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load atomic i16, ptr [[SRC]] unordered, align 4
+; CHECK-NEXT:    store atomic i16 [[TMP2]], ptr [[DEST]] unordered, align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = load atomic i32, ptr [[SRC]] unordered, align 4
+; CHECK-NEXT:    store atomic i32 [[TMP3]], ptr [[DEST]] unordered, align 4
 ; CHECK-NEXT:    call void @llvm.memmove.element.unordered.atomic.p0.p0.i32(ptr nonnull align 4 [[DEST]], ptr nonnull align 4 [[SRC]], i32 8, i32 4)
 ; CHECK-NEXT:    call void @llvm.memmove.element.unordered.atomic.p0.p0.i32(ptr nonnull align 4 [[DEST]], ptr nonnull align 4 [[SRC]], i32 16, i32 4)
 ; CHECK-NEXT:    ret void
@@ -202,12 +202,12 @@ define void @test_memmove_loadstore_8(ptr %dest, ptr %src) {
 ; CHECK-LABEL: @test_memmove_loadstore_8(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load atomic i8, ptr [[SRC:%.*]] unordered, align 8
 ; CHECK-NEXT:    store atomic i8 [[TMP1]], ptr [[DEST:%.*]] unordered, align 8
-; CHECK-NEXT:    [[TMP4:%.*]] = load atomic i16, ptr [[SRC]] unordered, align 8
-; CHECK-NEXT:    store atomic i16 [[TMP4]], ptr [[DEST]] unordered, align 8
-; CHECK-NEXT:    [[TMP7:%.*]] = load atomic i32, ptr [[SRC]] unordered, align 8
-; CHECK-NEXT:    store atomic i32 [[TMP7]], ptr [[DEST]] unordered, align 8
-; CHECK-NEXT:    [[TMP10:%.*]] = load atomic i64, ptr [[SRC]] unordered, align 8
-; CHECK-NEXT:    store atomic i64 [[TMP10]], ptr [[DEST]] unordered, align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load atomic i16, ptr [[SRC]] unordered, align 8
+; CHECK-NEXT:    store atomic i16 [[TMP2]], ptr [[DEST]] unordered, align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load atomic i32, ptr [[SRC]] unordered, align 8
+; CHECK-NEXT:    store atomic i32 [[TMP3]], ptr [[DEST]] unordered, align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = load atomic i64, ptr [[SRC]] unordered, align 8
+; CHECK-NEXT:    store atomic i64 [[TMP4]], ptr [[DEST]] unordered, align 8
 ; CHECK-NEXT:    call void @llvm.memmove.element.unordered.atomic.p0.p0.i32(ptr nonnull align 8 [[DEST]], ptr nonnull align 8 [[SRC]], i32 16, i32 8)
 ; CHECK-NEXT:    ret void
 ;
@@ -223,12 +223,12 @@ define void @test_memmove_loadstore_16(ptr %dest, ptr %src) {
 ; CHECK-LABEL: @test_memmove_loadstore_16(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load atomic i8, ptr [[SRC:%.*]] unordered, align 16
 ; CHECK-NEXT:    store atomic i8 [[TMP1]], ptr [[DEST:%.*]] unordered, align 16
-; CHECK-NEXT:    [[TMP4:%.*]] = load atomic i16, ptr [[SRC]] unordered, align 16
-; CHECK-NEXT:    store atomic i16 [[TMP4]], ptr [[DEST]] unordered, align 16
-; CHECK-NEXT:    [[TMP7:%.*]] = load atomic i32, ptr [[SRC]] unordered, align 16
-; CHECK-NEXT:    store atomic i32 [[TMP7]], ptr [[DEST]] unordered, align 16
-; CHECK-NEXT:    [[TMP10:%.*]] = load atomic i64, ptr [[SRC]] unordered, align 16
-; CHECK-NEXT:    store atomic i64 [[TMP10]], ptr [[DEST]] unordered, align 16
+; CHECK-NEXT:    [[TMP2:%.*]] = load atomic i16, ptr [[SRC]] unordered, align 16
+; CHECK-NEXT:    store atomic i16 [[TMP2]], ptr [[DEST]] unordered, align 16
+; CHECK-NEXT:    [[TMP3:%.*]] = load atomic i32, ptr [[SRC]] unordered, align 16
+; CHECK-NEXT:    store atomic i32 [[TMP3]], ptr [[DEST]] unordered, align 16
+; CHECK-NEXT:    [[TMP4:%.*]] = load atomic i64, ptr [[SRC]] unordered, align 16
+; CHECK-NEXT:    store atomic i64 [[TMP4]], ptr [[DEST]] unordered, align 16
 ; CHECK-NEXT:    call void @llvm.memmove.element.unordered.atomic.p0.p0.i32(ptr nonnull align 16 [[DEST]], ptr nonnull align 16 [[SRC]], i32 16, i32 16)
 ; CHECK-NEXT:    ret void
 ;
@@ -293,8 +293,8 @@ define void @test_memcpy_loadstore_2(ptr %dest, ptr %src) {
 ; CHECK-LABEL: @test_memcpy_loadstore_2(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load atomic i8, ptr [[SRC:%.*]] unordered, align 2
 ; CHECK-NEXT:    store atomic i8 [[TMP1]], ptr [[DEST:%.*]] unordered, align 2
-; CHECK-NEXT:    [[TMP4:%.*]] = load atomic i16, ptr [[SRC]] unordered, align 2
-; CHECK-NEXT:    store atomic i16 [[TMP4]], ptr [[DEST]] unordered, align 2
+; CHECK-NEXT:    [[TMP2:%.*]] = load atomic i16, ptr [[SRC]] unordered, align 2
+; CHECK-NEXT:    store atomic i16 [[TMP2]], ptr [[DEST]] unordered, align 2
 ; CHECK-NEXT:    call void @llvm.memcpy.element.unordered.atomic.p0.p0.i32(ptr nonnull align 2 [[DEST]], ptr nonnull align 2 [[SRC]], i32 4, i32 2)
 ; CHECK-NEXT:    call void @llvm.memcpy.element.unordered.atomic.p0.p0.i32(ptr nonnull align 2 [[DEST]], ptr nonnull align 2 [[SRC]], i32 8, i32 2)
 ; CHECK-NEXT:    call void @llvm.memcpy.element.unordered.atomic.p0.p0.i32(ptr nonnull align 2 [[DEST]], ptr nonnull align 2 [[SRC]], i32 16, i32 2)
@@ -312,10 +312,10 @@ define void @test_memcpy_loadstore_4(ptr %dest, ptr %src) {
 ; CHECK-LABEL: @test_memcpy_loadstore_4(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load atomic i8, ptr [[SRC:%.*]] unordered, align 4
 ; CHECK-NEXT:    store atomic i8 [[TMP1]], ptr [[DEST:%.*]] unordered, align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = load atomic i16, ptr [[SRC]] unordered, align 4
-; CHECK-NEXT:    store atomic i16 [[TMP4]], ptr [[DEST]] unordered, align 4
-; CHECK-NEXT:    [[TMP7:%.*]] = load atomic i32, ptr [[SRC]] unordered, align 4
-; CHECK-NEXT:    store atomic i32 [[TMP7]], ptr [[DEST]] unordered, align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load atomic i16, ptr [[SRC]] unordered, align 4
+; CHECK-NEXT:    store atomic i16 [[TMP2]], ptr [[DEST]] unordered, align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = load atomic i32, ptr [[SRC]] unordered, align 4
+; CHECK-NEXT:    store atomic i32 [[TMP3]], ptr [[DEST]] unordered, align 4
 ; CHECK-NEXT:    call void @llvm.memcpy.element.unordered.atomic.p0.p0.i32(ptr nonnull align 4 [[DEST]], ptr nonnull align 4 [[SRC]], i32 8, i32 4)
 ; CHECK-NEXT:    call void @llvm.memcpy.element.unordered.atomic.p0.p0.i32(ptr nonnull align 4 [[DEST]], ptr nonnull align 4 [[SRC]], i32 16, i32 4)
 ; CHECK-NEXT:    ret void
@@ -332,12 +332,12 @@ define void @test_memcpy_loadstore_8(ptr %dest, ptr %src) {
 ; CHECK-LABEL: @test_memcpy_loadstore_8(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load atomic i8, ptr [[SRC:%.*]] unordered, align 8
 ; CHECK-NEXT:    store atomic i8 [[TMP1]], ptr [[DEST:%.*]] unordered, align 8
-; CHECK-NEXT:    [[TMP4:%.*]] = load atomic i16, ptr [[SRC]] unordered, align 8
-; CHECK-NEXT:    store atomic i16 [[TMP4]], ptr [[DEST]] unordered, align 8
-; CHECK-NEXT:    [[TMP7:%.*]] = load atomic i32, ptr [[SRC]] unordered, align 8
-; CHECK-NEXT:    store atomic i32 [[TMP7]], ptr [[DEST]] unordered, align 8
-; CHECK-NEXT:    [[TMP10:%.*]] = load atomic i64, ptr [[SRC]] unordered, align 8
-; CHECK-NEXT:    store atomic i64 [[TMP10]], ptr [[DEST]] unordered, align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load atomic i16, ptr [[SRC]] unordered, align 8
+; CHECK-NEXT:    store atomic i16 [[TMP2]], ptr [[DEST]] unordered, align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load atomic i32, ptr [[SRC]] unordered, align 8
+; CHECK-NEXT:    store atomic i32 [[TMP3]], ptr [[DEST]] unordered, align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = load atomic i64, ptr [[SRC]] unordered, align 8
+; CHECK-NEXT:    store atomic i64 [[TMP4]], ptr [[DEST]] unordered, align 8
 ; CHECK-NEXT:    call void @llvm.memcpy.element.unordered.atomic.p0.p0.i32(ptr nonnull align 8 [[DEST]], ptr nonnull align 8 [[SRC]], i32 16, i32 8)
 ; CHECK-NEXT:    ret void
 ;
@@ -353,12 +353,12 @@ define void @test_memcpy_loadstore_16(ptr %dest, ptr %src) {
 ; CHECK-LABEL: @test_memcpy_loadstore_16(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load atomic i8, ptr [[SRC:%.*]] unordered, align 16
 ; CHECK-NEXT:    store atomic i8 [[TMP1]], ptr [[DEST:%.*]] unordered, align 16
-; CHECK-NEXT:    [[TMP4:%.*]] = load atomic i16, ptr [[SRC]] unordered, align 16
-; CHECK-NEXT:    store atomic i16 [[TMP4]], ptr [[DEST]] unordered, align 16
-; CHECK-NEXT:    [[TMP7:%.*]] = load atomic i32, ptr [[SRC]] unordered, align 16
-; CHECK-NEXT:    store atomic i32 [[TMP7]], ptr [[DEST]] unordered, align 16
-; CHECK-NEXT:    [[TMP10:%.*]] = load atomic i64, ptr [[SRC]] unordered, align 16
-; CHECK-NEXT:    store atomic i64 [[TMP10]], ptr [[DEST]] unordered, align 16
+; CHECK-NEXT:    [[TMP2:%.*]] = load atomic i16, ptr [[SRC]] unordered, align 16
+; CHECK-NEXT:    store atomic i16 [[TMP2]], ptr [[DEST]] unordered, align 16
+; CHECK-NEXT:    [[TMP3:%.*]] = load atomic i32, ptr [[SRC]] unordered, align 16
+; CHECK-NEXT:    store atomic i32 [[TMP3]], ptr [[DEST]] unordered, align 16
+; CHECK-NEXT:    [[TMP4:%.*]] = load atomic i64, ptr [[SRC]] unordered, align 16
+; CHECK-NEXT:    store atomic i64 [[TMP4]], ptr [[DEST]] unordered, align 16
 ; CHECK-NEXT:    call void @llvm.memcpy.element.unordered.atomic.p0.p0.i32(ptr nonnull align 16 [[DEST]], ptr nonnull align 16 [[SRC]], i32 16, i32 16)
 ; CHECK-NEXT:    ret void
 ;

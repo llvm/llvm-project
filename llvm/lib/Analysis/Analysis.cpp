@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm-c/Analysis.h"
-#include "llvm-c/Initialization.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/InitializePasses.h"
@@ -35,7 +34,6 @@ void llvm::initializeAnalysis(PassRegistry &Registry) {
   initializeCycleInfoWrapperPassPass(Registry);
   initializeDependenceAnalysisWrapperPassPass(Registry);
   initializeDelinearizationPass(Registry);
-  initializeDemandedBitsWrapperPassPass(Registry);
   initializeDominanceFrontierWrapperPassPass(Registry);
   initializeDomViewerWrapperPassPass(Registry);
   initializeDomPrinterWrapperPassPass(Registry);
@@ -55,16 +53,9 @@ void llvm::initializeAnalysis(PassRegistry &Registry) {
   initializeLazyBlockFrequencyInfoPassPass(Registry);
   initializeLazyValueInfoWrapperPassPass(Registry);
   initializeLazyValueInfoPrinterPass(Registry);
-  initializeLegacyDivergenceAnalysisPass(Registry);
-  initializeLintLegacyPassPass(Registry);
   initializeLoopInfoWrapperPassPass(Registry);
-  initializeMemDepPrinterPass(Registry);
-  initializeMemDerefPrinterPass(Registry);
   initializeMemoryDependenceWrapperPassPass(Registry);
-  initializeModuleDebugInfoLegacyPrinterPass(Registry);
   initializeModuleSummaryIndexWrapperPassPass(Registry);
-  initializeMustExecutePrinterPass(Registry);
-  initializeMustBeExecutedContextPrinterPass(Registry);
   initializeOptimizationRemarkEmitterWrapperPassPass(Registry);
   initializePhiValuesWrapperPassPass(Registry);
   initializePostDominatorTreeWrapperPassPass(Registry);
@@ -82,15 +73,6 @@ void llvm::initializeAnalysis(PassRegistry &Registry) {
   initializeScopedNoAliasAAWrapperPassPass(Registry);
   initializeLCSSAVerificationPassPass(Registry);
   initializeMemorySSAWrapperPassPass(Registry);
-  initializeMemorySSAPrinterLegacyPassPass(Registry);
-}
-
-void LLVMInitializeAnalysis(LLVMPassRegistryRef R) {
-  initializeAnalysis(*unwrap(R));
-}
-
-void LLVMInitializeIPA(LLVMPassRegistryRef R) {
-  initializeAnalysis(*unwrap(R));
 }
 
 LLVMBool LLVMVerifyModule(LLVMModuleRef M, LLVMVerifierFailureAction Action,

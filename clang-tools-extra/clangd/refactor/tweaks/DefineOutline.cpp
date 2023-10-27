@@ -131,6 +131,47 @@ getFunctionSourceAfterReplacements(const FunctionDecl *FD,
   return QualifiedFunc->substr(FuncBegin, FuncEnd - FuncBegin + 1);
 }
 
+// Returns replacements to delete tokens with kind `Kind` in the range
+// `FromRange`. Removes matching instances of given token preceeding the
+// function defition.
+llvm::Expected<tooling::Replacements>
+deleteTokensWithKind(const syntax::TokenBuffer &TokBuf, tok::TokenKind Kind,
+                     SourceRange FromRange) {
+  tooling::Replacements DelKeywordCleanups;
+  llvm::Error Errors = llvm::Error::success();
+  bool FoundAny = false;
+  for (const auto &Tok : TokBuf.expandedTokens(FromRange)) {
+    if (Tok.kind() != Kind)
+      continue;
+    FoundAny = true;
+    auto Spelling = TokBuf.spelledForExpanded(llvm::ArrayRef(Tok));
+    if (!Spelling) {
+      Errors = llvm::joinErrors(
+          std::move(Errors),
+          error("define outline: couldn't remove `{0}` keyword.",
+                tok::getKeywordSpelling(Kind)));
+      break;
+    }
+    auto &SM = TokBuf.sourceManager();
+    CharSourceRange DelRange =
+        syntax::Token::range(SM, Spelling->front(), Spelling->back())
+            .toCharRange(SM);
+    if (auto Err =
+            DelKeywordCleanups.add(tooling::Replacement(SM, DelRange, "")))
+      Errors = llvm::joinErrors(std::move(Errors), std::move(Err));
+  }
+  if (!FoundAny) {
+    Errors = llvm::joinErrors(
+        std::move(Errors),
+        error("define outline: couldn't find `{0}` keyword to remove.",
+              tok::getKeywordSpelling(Kind)));
+  }
+
+  if (Errors)
+    return std::move(Errors);
+  return DelKeywordCleanups;
+}
+
 // Creates a modified version of function definition that can be inserted at a
 // different location, qualifies return value and function name to achieve that.
 // Contains function signature, except defaulted parameter arguments, body and
@@ -182,6 +223,20 @@ getFunctionSourceCode(const FunctionDecl *FD, llvm::StringRef TargetNamespace,
           Errors = llvm::joinErrors(std::move(Errors), std::move(Err));
       },
       Resolver);
+
+  // findExplicitReferences doesn't provide references to
+  // constructor/destructors, it only provides references to type names inside
+  // them.
+  // this works for constructors, but doesn't work for destructor as type name
+  // doesn't cover leading `~`, so handle it specially.
+  if (const auto *Destructor = llvm::dyn_cast<CXXDestructorDecl>(FD)) {
+    if (auto Err = DeclarationCleanups.add(tooling::Replacement(
+            SM, Destructor->getLocation(), 0,
+            getQualification(AST, *TargetContext,
+                             SM.getLocForStartOfFile(SM.getMainFileID()),
+                             Destructor))))
+      Errors = llvm::joinErrors(std::move(Errors), std::move(Err));
+  }
 
   // Get rid of default arguments, since they should not be specified in
   // out-of-line definition.
@@ -237,34 +292,16 @@ getFunctionSourceCode(const FunctionDecl *FD, llvm::StringRef TargetNamespace,
   DelAttr(FD->getAttr<FinalAttr>());
 
   auto DelKeyword = [&](tok::TokenKind Kind, SourceRange FromRange) {
-    bool FoundAny = false;
-    for (const auto &Tok : TokBuf.expandedTokens(FromRange)) {
-      if (Tok.kind() != Kind)
-        continue;
-      FoundAny = true;
-      auto Spelling = TokBuf.spelledForExpanded(llvm::ArrayRef(Tok));
-      if (!Spelling) {
-        Errors = llvm::joinErrors(
-            std::move(Errors),
-            error("define outline: couldn't remove `{0}` keyword.",
-                  tok::getKeywordSpelling(Kind)));
-        break;
-      }
-      CharSourceRange DelRange =
-          syntax::Token::range(SM, Spelling->front(), Spelling->back())
-              .toCharRange(SM);
-      if (auto Err =
-              DeclarationCleanups.add(tooling::Replacement(SM, DelRange, "")))
-        Errors = llvm::joinErrors(std::move(Errors), std::move(Err));
+    auto DelKeywords = deleteTokensWithKind(TokBuf, Kind, FromRange);
+    if (!DelKeywords) {
+      Errors = llvm::joinErrors(std::move(Errors), DelKeywords.takeError());
+      return;
     }
-    if (!FoundAny) {
-      Errors = llvm::joinErrors(
-          std::move(Errors),
-          error("define outline: couldn't find `{0}` keyword to remove.",
-                tok::getKeywordSpelling(Kind)));
-    }
+    DeclarationCleanups = DeclarationCleanups.merge(*DelKeywords);
   };
 
+  if (FD->isInlineSpecified())
+    DelKeyword(tok::kw_inline, {FD->getBeginLoc(), FD->getLocation()});
   if (const auto *MD = dyn_cast<CXXMethodDecl>(FD)) {
     if (MD->isVirtualAsWritten())
       DelKeyword(tok::kw_virtual, {FD->getBeginLoc(), FD->getLocation()});
@@ -392,11 +429,20 @@ public:
     if (Source->getTemplateSpecializationInfo())
       return false;
 
-    // Bail out in templated classes, as it is hard to spell the class name, i.e
-    // if the template parameter is unnamed.
     if (auto *MD = llvm::dyn_cast<CXXMethodDecl>(Source)) {
+      // Bail out in templated classes, as it is hard to spell the class name,
+      // i.e if the template parameter is unnamed.
       if (MD->getParent()->isTemplated())
         return false;
+
+      // The refactoring is meaningless for unnamed classes and definitions
+      // within unnamed namespaces.
+      for (const DeclContext *DC = MD->getParent(); DC; DC = DC->getParent()) {
+        if (auto *ND = llvm::dyn_cast<NamedDecl>(DC)) {
+          if (ND->getDeclName().isEmpty())
+            return false;
+        }
+      }
     }
 
     // Note that we don't check whether an implementation file exists or not in
@@ -437,15 +483,23 @@ public:
     if (!Effect)
       return Effect.takeError();
 
-    // FIXME: We should also get rid of inline qualifier.
-    const tooling::Replacement DeleteFuncBody(
+    tooling::Replacements HeaderUpdates(tooling::Replacement(
         Sel.AST->getSourceManager(),
         CharSourceRange::getTokenRange(*toHalfOpenFileRange(
             SM, Sel.AST->getLangOpts(),
             getDeletionRange(Source, Sel.AST->getTokens()))),
-        ";");
-    auto HeaderFE = Effect::fileEdit(SM, SM.getMainFileID(),
-                                     tooling::Replacements(DeleteFuncBody));
+        ";"));
+
+    if (Source->isInlineSpecified()) {
+      auto DelInline =
+          deleteTokensWithKind(Sel.AST->getTokens(), tok::kw_inline,
+                               {Source->getBeginLoc(), Source->getLocation()});
+      if (!DelInline)
+        return DelInline.takeError();
+      HeaderUpdates = HeaderUpdates.merge(*DelInline);
+    }
+
+    auto HeaderFE = Effect::fileEdit(SM, SM.getMainFileID(), HeaderUpdates);
     if (!HeaderFE)
       return HeaderFE.takeError();
 

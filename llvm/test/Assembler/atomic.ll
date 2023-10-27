@@ -31,6 +31,17 @@ define void @f(ptr %x) {
   atomicrmw volatile xchg ptr %x, i32 10 monotonic
   ; CHECK: atomicrmw volatile xchg  ptr %x, i32 10 syncscope("agent") monotonic
   atomicrmw volatile xchg ptr %x, i32 10 syncscope("agent") monotonic
+
+  ; CHECK: atomicrmw volatile uinc_wrap ptr %x, i32 10 monotonic
+  atomicrmw volatile uinc_wrap ptr %x, i32 10 monotonic
+  ; CHECK: atomicrmw volatile uinc_wrap ptr %x, i32 10 syncscope("agent") monotonic
+  atomicrmw volatile uinc_wrap ptr %x, i32 10 syncscope("agent") monotonic
+
+  ; CHECK: atomicrmw volatile udec_wrap ptr %x, i32 10 monotonic
+  atomicrmw volatile udec_wrap ptr %x, i32 10 monotonic
+  ; CHECK: atomicrmw volatile udec_wrap ptr %x, i32 10 syncscope("agent") monotonic
+  atomicrmw volatile udec_wrap ptr %x, i32 10 syncscope("agent") monotonic
+
   ; CHECK: fence syncscope("singlethread") release
   fence syncscope("singlethread") release
   ; CHECK: fence seq_cst

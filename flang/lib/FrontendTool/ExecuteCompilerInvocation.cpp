@@ -22,6 +22,7 @@
 #include "mlir/IR/AsmState.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/Pass/PassManager.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Driver/Options.h"
 #include "llvm/Option/OptTable.h"
 #include "llvm/Option/Option.h"
@@ -40,8 +41,10 @@ createFrontendAction(CompilerInstance &ci) {
     return std::make_unique<PrintPreprocessedAction>();
   case ParseSyntaxOnly:
     return std::make_unique<ParseSyntaxOnlyAction>();
-  case EmitMLIR:
-    return std::make_unique<EmitMLIRAction>();
+  case EmitFIR:
+    return std::make_unique<EmitFIRAction>();
+  case EmitHLFIR:
+    return std::make_unique<EmitHLFIRAction>();
   case EmitLLVM:
     return std::make_unique<EmitLLVMAction>();
   case EmitLLVMBitcode:
@@ -98,15 +101,61 @@ createFrontendAction(CompilerInstance &ci) {
   llvm_unreachable("Invalid program action!");
 }
 
+static void emitUnknownDiagWarning(clang::DiagnosticsEngine &diags,
+                                   clang::diag::Flavor flavor,
+                                   llvm::StringRef prefix,
+                                   llvm::StringRef opt) {
+  llvm::StringRef suggestion =
+      clang::DiagnosticIDs::getNearestOption(flavor, opt);
+  diags.Report(clang::diag::warn_unknown_diag_option)
+      << (flavor == clang::diag::Flavor::WarningOrError ? 0 : 1)
+      << (prefix.str() += std::string(opt)) << !suggestion.empty()
+      << (prefix.str() += std::string(suggestion));
+}
+
+// Remarks are ignored by default in Diagnostic.td, hence, we have to
+// enable them here before execution. Clang follows same idea using
+// ProcessWarningOptions in Warnings.cpp
+// This function is also responsible for emitting early warnings for
+// invalid -R options.
+static void
+updateDiagEngineForOptRemarks(clang::DiagnosticsEngine &diagsEng,
+                              const clang::DiagnosticOptions &opts) {
+  llvm::SmallVector<clang::diag::kind, 10> diags;
+  const llvm::IntrusiveRefCntPtr<clang::DiagnosticIDs> diagIDs =
+      diagsEng.getDiagnosticIDs();
+
+  for (unsigned i = 0; i < opts.Remarks.size(); i++) {
+    llvm::StringRef remarkOpt = opts.Remarks[i];
+    const auto flavor = clang::diag::Flavor::Remark;
+
+    // Check to see if this opt starts with "no-", if so, this is a
+    // negative form of the option.
+    bool isPositive = !remarkOpt.startswith("no-");
+    if (!isPositive)
+      remarkOpt = remarkOpt.substr(3);
+
+    // Verify that this is a valid optimization remarks option
+    if (diagIDs->getDiagnosticsInGroup(flavor, remarkOpt, diags)) {
+      emitUnknownDiagWarning(diagsEng, flavor, isPositive ? "-R" : "-Rno-",
+                             remarkOpt);
+      return;
+    }
+
+    diagsEng.setSeverityForGroup(flavor, remarkOpt,
+                                 isPositive ? clang::diag::Severity::Remark
+                                            : clang::diag::Severity::Ignored);
+  }
+}
+
 bool executeCompilerInvocation(CompilerInstance *flang) {
   // Honor -help.
   if (flang->getFrontendOpts().showHelp) {
     clang::driver::getDriverOptTable().printHelp(
         llvm::outs(), "flang-new -fc1 [options] file...",
         "LLVM 'Flang' Compiler",
-        /*Include=*/clang::driver::options::FC1Option,
-        /*Exclude=*/llvm::opt::DriverFlag::HelpHidden,
-        /*ShowAllAliases=*/false);
+        /*ShowHidden=*/false, /*ShowAllAliases=*/false,
+        llvm::opt::Visibility(clang::driver::options::FC1Option));
     return true;
   }
 
@@ -161,8 +210,8 @@ bool executeCompilerInvocation(CompilerInstance *flang) {
     return false;
   }
 
-  // Honor color diagnostics.
-  flang->getDiagnosticOpts().ShowColors = flang->getFrontendOpts().showColors;
+  updateDiagEngineForOptRemarks(flang->getDiagnostics(),
+                                flang->getDiagnosticOpts());
 
   // Create and execute the frontend action.
   std::unique_ptr<FrontendAction> act(createFrontendAction(*flang));

@@ -18,8 +18,8 @@ define i1 @t0_const_after_fold_lshr_shl_ne(i32 %x, i64 %y, i32 %len) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[X:%.*]], 31
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP1]] to i64
 ; CHECK-NEXT:    [[TMP3:%.*]] = and i64 [[TMP2]], [[Y:%.*]]
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne i64 [[TMP3]], 0
-; CHECK-NEXT:    ret i1 [[TMP4]]
+; CHECK-NEXT:    [[T5:%.*]] = icmp ne i64 [[TMP3]], 0
+; CHECK-NEXT:    ret i1 [[T5]]
 ;
   %t0 = sub i32 32, %len
   %t1 = lshr i32 %x, %t0
@@ -41,8 +41,8 @@ define <2 x i1> @t1_vec_splat(<2 x i32> %x, <2 x i64> %y, <2 x i32> %len) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr <2 x i32> [[X:%.*]], <i32 31, i32 31>
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext <2 x i32> [[TMP1]] to <2 x i64>
 ; CHECK-NEXT:    [[TMP3:%.*]] = and <2 x i64> [[TMP2]], [[Y:%.*]]
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne <2 x i64> [[TMP3]], zeroinitializer
-; CHECK-NEXT:    ret <2 x i1> [[TMP4]]
+; CHECK-NEXT:    [[T5:%.*]] = icmp ne <2 x i64> [[TMP3]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[T5]]
 ;
   %t0 = sub <2 x i32> <i32 32, i32 32>, %len
   %t1 = lshr <2 x i32> %x, %t0
@@ -60,8 +60,8 @@ define <2 x i1> @t2_vec_nonsplat(<2 x i32> %x, <2 x i64> %y, <2 x i32> %len) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext <2 x i32> [[X:%.*]] to <2 x i64>
 ; CHECK-NEXT:    [[TMP2:%.*]] = lshr <2 x i64> [[TMP1]], <i64 31, i64 30>
 ; CHECK-NEXT:    [[TMP3:%.*]] = and <2 x i64> [[TMP2]], [[Y:%.*]]
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne <2 x i64> [[TMP3]], zeroinitializer
-; CHECK-NEXT:    ret <2 x i1> [[TMP4]]
+; CHECK-NEXT:    [[T5:%.*]] = icmp ne <2 x i64> [[TMP3]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[T5]]
 ;
   %t0 = sub <2 x i32> <i32 30, i32 32>, %len
   %t1 = lshr <2 x i32> %x, %t0
@@ -213,8 +213,8 @@ define i1 @t6_oneuse3(i32 %x, i64 %y, i32 %len) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[X:%.*]], 31
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP1]] to i64
 ; CHECK-NEXT:    [[TMP3:%.*]] = and i64 [[TMP2]], [[Y]]
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne i64 [[TMP3]], 0
-; CHECK-NEXT:    ret i1 [[TMP4]]
+; CHECK-NEXT:    [[T5:%.*]] = icmp ne i64 [[TMP3]], 0
+; CHECK-NEXT:    ret i1 [[T5]]
 ;
   %t0 = sub i32 32, %len
   call void @use32(i32 %t0)
@@ -245,8 +245,8 @@ define i1 @t7_oneuse4(i32 %x, i64 %y, i32 %len) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[X:%.*]], 31
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP1]] to i64
 ; CHECK-NEXT:    [[TMP3:%.*]] = and i64 [[TMP2]], [[Y]]
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne i64 [[TMP3]], 0
-; CHECK-NEXT:    ret i1 [[TMP4]]
+; CHECK-NEXT:    [[T5:%.*]] = icmp ne i64 [[TMP3]], 0
+; CHECK-NEXT:    ret i1 [[T5]]
 ;
   %t0 = sub i32 32, %len ; no extra uses
   %t1 = lshr i32 %x, %t0 ; no extra uses
@@ -279,8 +279,8 @@ define i1 @t8_oneuse5(i32 %x, i64 %y, i32 %len) {
 ; CHECK-NEXT:    [[T3_TRUNC:%.*]] = trunc i64 [[T3]] to i32
 ; CHECK-NEXT:    call void @use32(i32 [[T3_TRUNC]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[Y]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i64 [[TMP1]], 0
-; CHECK-NEXT:    ret i1 [[TMP2]]
+; CHECK-NEXT:    [[T5:%.*]] = icmp ne i64 [[TMP1]], 0
+; CHECK-NEXT:    ret i1 [[T5]]
 ;
   %t0 = sub i32 32, %len
   call void @use32(i32 %t0)
@@ -349,8 +349,8 @@ define i1 @t10_constants(i32 %x, i64 %y) {
 ; CHECK-NEXT:    [[Y_TR:%.*]] = trunc i64 [[Y:%.*]] to i32
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[X:%.*]], 26
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], [[Y_TR]]
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i32 [[TMP2]], 0
-; CHECK-NEXT:    ret i1 [[TMP3]]
+; CHECK-NEXT:    [[T3:%.*]] = icmp ne i32 [[TMP2]], 0
+; CHECK-NEXT:    ret i1 [[T3]]
 ;
   %t0 = lshr i32 %x, 12
   %t1 = shl i64 %y, 14
@@ -365,8 +365,8 @@ define <2 x i1> @t11_constants_vec_splat(<2 x i32> %x, <2 x i64> %y) {
 ; CHECK-NEXT:    [[Y_TR:%.*]] = trunc <2 x i64> [[Y:%.*]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr <2 x i32> [[X:%.*]], <i32 26, i32 26>
 ; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i32> [[TMP1]], [[Y_TR]]
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne <2 x i32> [[TMP2]], zeroinitializer
-; CHECK-NEXT:    ret <2 x i1> [[TMP3]]
+; CHECK-NEXT:    [[T3:%.*]] = icmp ne <2 x i32> [[TMP2]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[T3]]
 ;
   %t0 = lshr <2 x i32> %x, <i32 12, i32 12>
   %t1 = shl <2 x i64> %y, <i64 14, i64 14>
@@ -380,8 +380,8 @@ define <2 x i1> @t12_constants_vec_nonsplat(<2 x i32> %x, <2 x i64> %y) {
 ; CHECK-NEXT:    [[Y_TR:%.*]] = trunc <2 x i64> [[Y:%.*]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr <2 x i32> [[X:%.*]], <i32 28, i32 28>
 ; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i32> [[TMP1]], [[Y_TR]]
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne <2 x i32> [[TMP2]], zeroinitializer
-; CHECK-NEXT:    ret <2 x i1> [[TMP3]]
+; CHECK-NEXT:    [[T3:%.*]] = icmp ne <2 x i32> [[TMP2]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[T3]]
 ;
   %t0 = lshr <2 x i32> %x, <i32 12, i32 14>
   %t1 = shl <2 x i64> %y, <i64 16, i64 14>

@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=x86_64-unknown-linux-gnu -run-pass simple-register-coalescing -o - %s | FileCheck %s
+# RUN: llc -mtriple=x86_64-unknown-linux-gnu -run-pass register-coalescer -o - %s | FileCheck %s
 # Check there is no partial redundent copy left in the loop after register coalescing.
 --- |
   ; ModuleID = '<stdin>'

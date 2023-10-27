@@ -15,11 +15,14 @@ def sub_gt : SubRegIndex<1, 1>;
 def sub_eq : SubRegIndex<1, 2>;
 def sub_un : SubRegIndex<1, 3>;
 def sub_32 : SubRegIndex<32>;
+def sub_32_hi_phony : SubRegIndex<32,32>;
 def sub_64 : SubRegIndex<64>;
 def sub_vsx0 : SubRegIndex<128>;
 def sub_vsx1 : SubRegIndex<128, 128>;
 def sub_gp8_x0 : SubRegIndex<64>;
 def sub_gp8_x1 : SubRegIndex<64, 64>;
+def sub_fp0 : SubRegIndex<64>;
+def sub_fp1 : SubRegIndex<64, 64>;
 }
 
 
@@ -41,13 +44,12 @@ class GP8<GPR SubReg, string n> : PPCReg<n> {
   let SubRegIndices = [sub_32];
 }
 
-// SPE - One of the 32 64-bit general-purpose registers (SPE)
-class SPE<GPR SubReg, string n> : PPCReg<n> {
-  let HWEncoding = SubReg.HWEncoding;
-  let SubRegs = [SubReg];
-  let SubRegIndices = [sub_32];
+class SPE<string n, bits<5> Enc, list<Register> subregs = []> : PPCReg<n> {
+  let HWEncoding{4-0} = Enc;
+  let SubRegs = subregs;
+  let SubRegIndices = [sub_32, sub_32_hi_phony];
+  let CoveredBySubRegs = 1;
 }
-
 // SPR - One of the 32-bit special-purpose registers
 class SPR<bits<10> num, string n> : PPCReg<n> {
   let HWEncoding{9-0} = num;
@@ -56,6 +58,15 @@ class SPR<bits<10> num, string n> : PPCReg<n> {
 // FPR - One of the 32 64-bit floating-point registers
 class FPR<bits<5> num, string n> : PPCReg<n> {
   let HWEncoding{4-0} = num;
+}
+
+// FPPair - A pair of 64-bit floating-point registers.
+class FPPair<string n, bits<5> EvenIndex> : PPCReg<n> {
+  assert !eq(EvenIndex{0}, 0), "Index should be even.";
+  let HWEncoding{4-0} = EvenIndex;
+  let SubRegs = [!cast<FPR>("F"#EvenIndex), !cast<FPR>("F"#!add(EvenIndex, 1))];
+  let DwarfNumbers = [-1, -1];
+  let SubRegIndices = [sub_fp0, sub_fp1];
 }
 
 // VF - One of the 32 64-bit floating-point subregisters of the vector
@@ -118,6 +129,12 @@ foreach Index = 0-31 in {
   def R#Index : GPR<Index, "r"#Index>, DwarfRegNum<[-2, Index]>;
 }
 
+let isArtificial = 1 in {
+  foreach Index = 0-31 in {
+    def H#Index : GPR<-1,"">;
+  }
+}
+
 // 64-bit General-purpose registers
 foreach Index = 0-31 in {
   def X#Index : GP8<!cast<GPR>("R"#Index), "r"#Index>,
@@ -126,14 +143,21 @@ foreach Index = 0-31 in {
 
 // SPE registers
 foreach Index = 0-31 in {
-  def S#Index : SPE<!cast<GPR>("R"#Index), "r"#Index>,
+  def S#Index : SPE<"r"#Index, Index, [!cast<GPR>("R"#Index), !cast<GPR>("H"#Index)]>,
                     DwarfRegNum<[!add(Index, 1200), !add(Index, 1200)]>;
+
 }
+
 
 // Floating-point registers
 foreach Index = 0-31 in {
   def F#Index : FPR<Index, "f"#Index>,
                 DwarfRegNum<[!add(Index, 32), !add(Index, 32)]>;
+}
+
+// Floating-point pair registers
+foreach Index = { 0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30 } in {
+  def Fpair#Index : FPPair<"fp"#Index, Index>;
 }
 
 // 64-bit Floating-point subregisters of Altivec registers
@@ -277,6 +301,11 @@ def CARRY: SPR<1, "xer">, DwarfRegNum<[76]> {
 // that do nothing but change RM will not get deleted.
 def RM: PPCReg<"**ROUNDING MODE**">;
 
+let isAllocatable = 0 in
+def GPRC32 : RegisterClass<"PPC", [i32,f32], 32, (add (sequence "H%u", 2, 12),
+                                                      (sequence "H%u", 30, 13),
+                                                      H31, H0, H1)>;
+
 /// Register classes
 // Allocate volatiles first
 // then nonvolatiles in reverse order since stmw/lmw save from rN to r31
@@ -348,6 +377,21 @@ def SPERC : RegisterClass<"PPC", [f64], 64, (add (sequence "S%u", 2, 12),
 def F8RC : RegisterClass<"PPC", [f64], 64, (add (sequence "F%u", 0, 13),
                                                 (sequence "F%u", 31, 14))>;
 def F4RC : RegisterClass<"PPC", [f32], 32, (add F8RC)>;
+
+// Floating point pair registers.
+// Note that the type used for this register class is ppcf128. This is not
+// completely correct. However, since we are not pattern matching any
+// instructions for these registers and we are not register allocating or
+// scheduling any of these instructions it should be safe to do this.
+// The reason we didn't use the correct type (Decimal Floating Point) is that
+// at the time of this implementation the correct type was not available.
+def FpRC :
+  RegisterClass<"PPC", [ppcf128], 128,
+                (add Fpair0, Fpair2, Fpair4, Fpair6, Fpair8, Fpair10, Fpair12,
+                     Fpair14, Fpair16, Fpair18, Fpair20, Fpair22, Fpair24,
+                     Fpair26, Fpair28, Fpair30)> {
+  let Size = 128;
+}
 
 def VRRC : RegisterClass<"PPC",
                          [v16i8,v8i16,v4i32,v2i64,v1i128,v4f32,v2f64, f128],
@@ -504,6 +548,12 @@ def PPCRegF4RCAsmOperand : AsmOperandClass {
 def f4rc : RegisterOperand<F4RC> {
   let ParserMatchClass = PPCRegF4RCAsmOperand;
 }
+def PPCRegFpRCAsmOperand : AsmOperandClass {
+  let Name = "RegFpRC"; let PredicateMethod = "isEvenRegNumber";
+}
+def fpairrc : RegisterOperand<FpRC> {
+  let ParserMatchClass = PPCRegFpRCAsmOperand;
+}
 def PPCRegVRRCAsmOperand : AsmOperandClass {
   let Name = "RegVRRC"; let PredicateMethod = "isRegNumber";
 }
@@ -548,6 +598,7 @@ def PPCU1ImmAsmOperand : AsmOperandClass {
 def u1imm   : Operand<i32> {
   let PrintMethod = "printU1ImmOperand";
   let ParserMatchClass = PPCU1ImmAsmOperand;
+  let DecoderMethod = "decodeUImmOperand<1>";
   let OperandType = "OPERAND_IMMEDIATE";
 }
 
@@ -558,6 +609,7 @@ def PPCU2ImmAsmOperand : AsmOperandClass {
 def u2imm   : Operand<i32> {
   let PrintMethod = "printU2ImmOperand";
   let ParserMatchClass = PPCU2ImmAsmOperand;
+  let DecoderMethod = "decodeUImmOperand<2>";
   let OperandType = "OPERAND_IMMEDIATE";
 }
 
@@ -578,6 +630,7 @@ def PPCU3ImmAsmOperand : AsmOperandClass {
 def u3imm   : Operand<i32> {
   let PrintMethod = "printU3ImmOperand";
   let ParserMatchClass = PPCU3ImmAsmOperand;
+  let DecoderMethod = "decodeUImmOperand<3>";
   let OperandType = "OPERAND_IMMEDIATE";
 }
 
@@ -588,6 +641,7 @@ def PPCU4ImmAsmOperand : AsmOperandClass {
 def u4imm   : Operand<i32> {
   let PrintMethod = "printU4ImmOperand";
   let ParserMatchClass = PPCU4ImmAsmOperand;
+  let DecoderMethod = "decodeUImmOperand<4>";
   let OperandType = "OPERAND_IMMEDIATE";
 }
 def PPCS5ImmAsmOperand : AsmOperandClass {
@@ -799,20 +853,23 @@ def PPCDispRI34Operand : AsmOperandClass {
 }
 def dispRI34 : Operand<iPTR> {
   let ParserMatchClass = PPCDispRI34Operand;
+  let EncoderMethod = "getDispRI34Encoding";
+  let DecoderMethod = "decodeSImmOperand<34>";
+}
+def dispRI34_pcrel : Operand<iPTR> {
+  let ParserMatchClass = PPCDispRI34Operand;
+  let EncoderMethod = "getDispRI34PCRelEncoding";
+  let DecoderMethod = "decodeSImmOperand<34>";
 }
 def memri34 : Operand<iPTR> { // memri, imm is a 34-bit value.
   let PrintMethod = "printMemRegImm34";
   let MIOperandInfo = (ops dispRI34:$imm, ptr_rc_nor0:$reg);
-  let EncoderMethod = "getMemRI34Encoding";
-  let DecoderMethod = "decodeMemRI34Operands";
 }
 // memri, imm is a 34-bit value for pc-relative instructions where
 // base register is set to zero.
 def memri34_pcrel : Operand<iPTR> { // memri, imm is a 34-bit value.
   let PrintMethod = "printMemRegImm34PCRel";
-  let MIOperandInfo = (ops dispRI34:$imm, immZero:$reg);
-  let EncoderMethod = "getMemRI34PCRelEncoding";
-  let DecoderMethod = "decodeMemRI34PCRelOperands";
+  let MIOperandInfo = (ops dispRI34_pcrel:$imm, immZero:$reg);
 }
 
 // A version of ptr_rc usable with the asm parser.
@@ -829,6 +886,7 @@ def PPCDispRIOperand : AsmOperandClass {
 }
 def dispRI : Operand<iPTR> {
   let ParserMatchClass = PPCDispRIOperand;
+  let EncoderMethod = "getDispRIEncoding";
 }
 def PPCDispRIXOperand : AsmOperandClass {
  let Name = "DispRIX"; let PredicateMethod = "isS16ImmX4";
@@ -836,6 +894,8 @@ def PPCDispRIXOperand : AsmOperandClass {
 }
 def dispRIX : Operand<iPTR> {
   let ParserMatchClass = PPCDispRIXOperand;
+  let EncoderMethod = "getDispRIXEncoding";
+  let DecoderMethod = "decodeDispRIXOperand";
 }
 def PPCDispRIHashOperand : AsmOperandClass {
   let Name = "DispRIHash"; let PredicateMethod = "isHashImmX8";
@@ -843,6 +903,8 @@ def PPCDispRIHashOperand : AsmOperandClass {
 }
 def dispRIHash : Operand<iPTR> {
   let ParserMatchClass = PPCDispRIHashOperand;
+  let EncoderMethod = "getDispRIHashEncoding";
+  let DecoderMethod = "decodeDispRIHashOperand";
 }
 def PPCDispRIX16Operand : AsmOperandClass {
  let Name = "DispRIX16"; let PredicateMethod = "isS16ImmX16";
@@ -850,6 +912,9 @@ def PPCDispRIX16Operand : AsmOperandClass {
 }
 def dispRIX16 : Operand<iPTR> {
   let ParserMatchClass = PPCDispRIX16Operand;
+  let EncoderMethod = "getDispRIX16Encoding";
+  let DecoderMethod = "decodeDispRIX16Operand";
+
 }
 def PPCDispSPE8Operand : AsmOperandClass {
  let Name = "DispSPE8"; let PredicateMethod = "isU8ImmX8";
@@ -857,6 +922,8 @@ def PPCDispSPE8Operand : AsmOperandClass {
 }
 def dispSPE8 : Operand<iPTR> {
   let ParserMatchClass = PPCDispSPE8Operand;
+  let DecoderMethod = "decodeDispSPE8Operand";
+  let EncoderMethod = "getDispSPE8Encoding";
 }
 def PPCDispSPE4Operand : AsmOperandClass {
  let Name = "DispSPE4"; let PredicateMethod = "isU7ImmX4";
@@ -864,6 +931,8 @@ def PPCDispSPE4Operand : AsmOperandClass {
 }
 def dispSPE4 : Operand<iPTR> {
   let ParserMatchClass = PPCDispSPE4Operand;
+  let DecoderMethod = "decodeDispSPE4Operand";
+  let EncoderMethod = "getDispSPE4Encoding";
 }
 def PPCDispSPE2Operand : AsmOperandClass {
  let Name = "DispSPE2"; let PredicateMethod = "isU6ImmX2";
@@ -871,13 +940,13 @@ def PPCDispSPE2Operand : AsmOperandClass {
 }
 def dispSPE2 : Operand<iPTR> {
   let ParserMatchClass = PPCDispSPE2Operand;
+  let DecoderMethod = "decodeDispSPE2Operand";
+  let EncoderMethod = "getDispSPE2Encoding";
 }
 
 def memri : Operand<iPTR> {
   let PrintMethod = "printMemRegImm";
   let MIOperandInfo = (ops dispRI:$imm, ptr_rc_nor0:$reg);
-  let EncoderMethod = "getMemRIEncoding";
-  let DecoderMethod = "decodeMemRIOperands";
   let OperandType = "OPERAND_MEMORY";
 }
 def memrr : Operand<iPTR> {
@@ -888,44 +957,32 @@ def memrr : Operand<iPTR> {
 def memrix : Operand<iPTR> {   // memri where the imm is 4-aligned.
   let PrintMethod = "printMemRegImm";
   let MIOperandInfo = (ops dispRIX:$imm, ptr_rc_nor0:$reg);
-  let EncoderMethod = "getMemRIXEncoding";
-  let DecoderMethod = "decodeMemRIXOperands";
   let OperandType = "OPERAND_MEMORY";
 }
 def memrihash : Operand<iPTR> {
   // memrihash 8-aligned for ROP Protection Instructions.
   let PrintMethod = "printMemRegImmHash";
   let MIOperandInfo = (ops dispRIHash:$imm, ptr_rc_nor0:$reg);
-  let EncoderMethod = "getMemRIHashEncoding";
-  let DecoderMethod = "decodeMemRIHashOperands";
   let OperandType = "OPERAND_MEMORY";
 }
 def memrix16 : Operand<iPTR> { // memri, imm is 16-aligned, 12-bit, Inst{16:27}
   let PrintMethod = "printMemRegImm";
   let MIOperandInfo = (ops dispRIX16:$imm, ptr_rc_nor0:$reg);
-  let EncoderMethod = "getMemRIX16Encoding";
-  let DecoderMethod = "decodeMemRIX16Operands";
   let OperandType = "OPERAND_MEMORY";
 }
 def spe8dis : Operand<iPTR> {   // SPE displacement where the imm is 8-aligned.
   let PrintMethod = "printMemRegImm";
   let MIOperandInfo = (ops dispSPE8:$imm, ptr_rc_nor0:$reg);
-  let EncoderMethod = "getSPE8DisEncoding";
-  let DecoderMethod = "decodeSPE8Operands";
   let OperandType = "OPERAND_MEMORY";
 }
 def spe4dis : Operand<iPTR> {   // SPE displacement where the imm is 4-aligned.
   let PrintMethod = "printMemRegImm";
   let MIOperandInfo = (ops dispSPE4:$imm, ptr_rc_nor0:$reg);
-  let EncoderMethod = "getSPE4DisEncoding";
-  let DecoderMethod = "decodeSPE4Operands";
   let OperandType = "OPERAND_MEMORY";
 }
 def spe2dis : Operand<iPTR> {   // SPE displacement where the imm is 2-aligned.
   let PrintMethod = "printMemRegImm";
   let MIOperandInfo = (ops dispSPE2:$imm, ptr_rc_nor0:$reg);
-  let EncoderMethod = "getSPE2DisEncoding";
-  let DecoderMethod = "decodeSPE2Operands";
   let OperandType = "OPERAND_MEMORY";
 }
 

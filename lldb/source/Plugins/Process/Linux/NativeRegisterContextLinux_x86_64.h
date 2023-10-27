@@ -13,6 +13,7 @@
 
 #include "Plugins/Process/Linux/NativeRegisterContextLinux.h"
 #include "Plugins/Process/Utility/NativeRegisterContextDBReg_x86.h"
+#include "Plugins/Process/Utility/RegisterContextLinux_x86.h"
 #include "Plugins/Process/Utility/RegisterContext_x86.h"
 #include "Plugins/Process/Utility/lldb-x86-register-enums.h"
 #include <optional>
@@ -49,6 +50,8 @@ public:
   std::optional<SyscallData> GetSyscallData() override;
 
   std::optional<MmapData> GetMmapData() override;
+
+  const RegisterInfo *GetDR(int num) const override;
 
 protected:
   void *GetGPRBuffer() override { return &m_gpr_x86_64; }
@@ -103,7 +106,7 @@ private:
   YMM m_ymm_set;
   MPX m_mpx_set;
   RegInfo m_reg_info;
-  uint64_t m_gpr_x86_64[k_num_gpr_registers_x86_64];
+  uint64_t m_gpr_x86_64[x86_64_with_base::k_num_gpr_registers];
   uint32_t m_fctrl_offset_in_userarea;
 
   // Private member methods.
@@ -130,6 +133,11 @@ private:
   bool IsMPX(uint32_t reg_index) const;
 
   void UpdateXSTATEforWrite(uint32_t reg_index);
+
+  RegisterContextLinux_x86 &GetRegisterInfo() const {
+    return static_cast<RegisterContextLinux_x86 &>(
+        *m_register_info_interface_up);
+  }
 };
 
 } // namespace process_linux

@@ -27,9 +27,10 @@ def update_reference_results(project: ProjectInfo, git: bool = False):
     created_results_path = tester.get_output_dir()
 
     if not os.path.exists(created_results_path):
-        print(f"Skipping project '{project.name}', "
-              f"it doesn't have newer results.",
-              file=sys.stderr)
+        print(
+            f"Skipping project '{project.name}', " f"it doesn't have newer results.",
+            file=sys.stderr,
+        )
         return
 
     build_log_path = SATestBuild.get_build_log_path(ref_results_path)
@@ -38,6 +39,7 @@ def update_reference_results(project: ProjectInfo, git: bool = False):
     os.makedirs(build_log_dir)
 
     with open(build_log_path, "w+") as build_log_file:
+
         def run_cmd(command: str):
             if Verbose:
                 print(f"Executing {command}")
@@ -57,7 +59,8 @@ def update_reference_results(project: ProjectInfo, git: bool = False):
         SATestBuild.run_cleanup_script(project_dir, build_log_file)
 
         SATestBuild.normalize_reference_results(
-            project_dir, ref_results_path, project.mode)
+            project_dir, ref_results_path, project.mode
+        )
 
         # Clean up the generated difference results.
         SATestBuild.cleanup_reference_results(ref_results_path)

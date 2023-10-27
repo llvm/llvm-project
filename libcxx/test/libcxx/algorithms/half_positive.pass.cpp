@@ -35,7 +35,7 @@ int main(int, char**)
         assert(test<int>());
         assert(test<long>());
         assert((test<UserDefinedIntegral<int>, int>()));
-        assert(test<size_t>());
+        assert(test<std::size_t>());
 #if !defined(TEST_HAS_NO_INT128)
         assert(test<__int128_t>());
 #endif // !defined(TEST_HAS_NO_INT128)
@@ -46,7 +46,7 @@ int main(int, char**)
         static_assert(test<char>(), "");
         static_assert(test<int>(), "");
         static_assert(test<long>(), "");
-        static_assert(test<size_t>(), "");
+        static_assert(test<std::size_t>(), "");
 #if !defined(TEST_HAS_NO_INT128)
         static_assert(test<__int128_t>(), "");
 #endif // !defined(TEST_HAS_NO_INT128)

@@ -20,6 +20,10 @@
 #include <cmath>
 #include <complex>
 #include <functional>
+#if HAS_QUADMATHLIB
+#include "quadmath.h"
+#include "flang/Common/float128.h"
+#endif
 #include <type_traits>
 
 namespace Fortran::evaluate {
@@ -295,7 +299,7 @@ struct HostRuntimeLibrary<std::complex<HostT>, LibraryVersion::Libm> {
 /// Define libm extensions
 /// Bessel functions are defined in POSIX.1-2001.
 
-// Remove float bessel funcitons for AIX as they are not supported
+// Remove float bessel functions for AIX as they are not supported
 #ifndef _AIX
 template <> struct HostRuntimeLibrary<float, LibraryVersion::LibmExtensions> {
   using F = FuncPointer<float, float>;
@@ -307,6 +311,62 @@ template <> struct HostRuntimeLibrary<float, LibraryVersion::LibmExtensions> {
       FolderFactory<F, F{::y0f}>::Create("bessel_y0"),
       FolderFactory<F, F{::y1f}>::Create("bessel_y1"),
       FolderFactory<FN, FN{::ynf}>::Create("bessel_yn"),
+  };
+  static constexpr HostRuntimeMap map{table};
+  static_assert(map.Verify(), "map must be sorted");
+};
+#endif
+
+#if HAS_QUADMATHLIB
+template <> struct HostRuntimeLibrary<__float128, LibraryVersion::Libm> {
+  using F = FuncPointer<__float128, __float128>;
+  using F2 = FuncPointer<__float128, __float128, __float128>;
+  static constexpr HostRuntimeFunction table[]{
+      FolderFactory<F, F{::acosq}>::Create("acos"),
+      FolderFactory<F, F{::acoshq}>::Create("acosh"),
+      FolderFactory<F, F{::asinq}>::Create("asin"),
+      FolderFactory<F, F{::asinhq}>::Create("asinh"),
+      FolderFactory<F, F{::atanq}>::Create("atan"),
+      FolderFactory<F2, F2{::atan2q}>::Create("atan2"),
+      FolderFactory<F, F{::atanhq}>::Create("atanh"),
+      FolderFactory<F, F{::cosq}>::Create("cos"),
+      FolderFactory<F, F{::coshq}>::Create("cosh"),
+      FolderFactory<F, F{::erfq}>::Create("erf"),
+      FolderFactory<F, F{::erfcq}>::Create("erfc"),
+      FolderFactory<F, F{::expq}>::Create("exp"),
+      FolderFactory<F, F{::tgammaq}>::Create("gamma"),
+      FolderFactory<F, F{::logq}>::Create("log"),
+      FolderFactory<F, F{::log10q}>::Create("log10"),
+      FolderFactory<F, F{::lgammaq}>::Create("log_gamma"),
+      FolderFactory<F2, F2{::powq}>::Create("pow"),
+      FolderFactory<F, F{::sinq}>::Create("sin"),
+      FolderFactory<F, F{::sinhq}>::Create("sinh"),
+      FolderFactory<F, F{::tanq}>::Create("tan"),
+      FolderFactory<F, F{::tanhq}>::Create("tanh"),
+  };
+  static constexpr HostRuntimeMap map{table};
+  static_assert(map.Verify(), "map must be sorted");
+};
+template <> struct HostRuntimeLibrary<__complex128, LibraryVersion::Libm> {
+  using F = FuncPointer<__complex128, __complex128>;
+  using F2 = FuncPointer<__complex128, __complex128, __complex128>;
+  static constexpr HostRuntimeFunction table[]{
+      FolderFactory<F, F{::cacosq}>::Create("acos"),
+      FolderFactory<F, F{::cacoshq}>::Create("acosh"),
+      FolderFactory<F, F{::casinq}>::Create("asin"),
+      FolderFactory<F, F{::casinhq}>::Create("asinh"),
+      FolderFactory<F, F{::catanq}>::Create("atan"),
+      FolderFactory<F, F{::catanhq}>::Create("atanh"),
+      FolderFactory<F, F{::ccosq}>::Create("cos"),
+      FolderFactory<F, F{::ccoshq}>::Create("cosh"),
+      FolderFactory<F, F{::cexpq}>::Create("exp"),
+      FolderFactory<F, F{::clogq}>::Create("log"),
+      FolderFactory<F2, F2{::cpowq}>::Create("pow"),
+      FolderFactory<F, F{::csinq}>::Create("sin"),
+      FolderFactory<F, F{::csinhq}>::Create("sinh"),
+      FolderFactory<F, F{::csqrtq}>::Create("sqrt"),
+      FolderFactory<F, F{::ctanq}>::Create("tan"),
+      FolderFactory<F, F{::ctanhq}>::Create("tanh"),
   };
   static constexpr HostRuntimeMap map{table};
   static_assert(map.Verify(), "map must be sorted");
@@ -345,7 +405,7 @@ struct HostRuntimeLibrary<long double, LibraryVersion::LibmExtensions> {
   static_assert(map.Verify(), "map must be sorted");
 };
 #endif // LDBL_MANT_DIG == 80 || LDBL_MANT_DIG == 113
-#endif
+#endif //_POSIX_C_SOURCE >= 200112L || _XOPEN_SOURCE >= 600
 
 /// Define pgmath description
 #if LINK_WITH_LIBPGMATH
@@ -455,6 +515,12 @@ static const HostRuntimeMap *GetHostRuntimeMapVersion(DynamicType resultType) {
             GetHostRuntimeMapHelper<long double, version>(resultType)}) {
       return map;
     }
+#if HAS_QUADMATHLIB
+    if (const auto *map{
+            GetHostRuntimeMapHelper<__float128, version>(resultType)}) {
+      return map;
+    }
+#endif
   }
   if (resultType.category() == TypeCategory::Complex) {
     if (const auto *map{GetHostRuntimeMapHelper<std::complex<float>, version>(
@@ -470,6 +536,12 @@ static const HostRuntimeMap *GetHostRuntimeMapVersion(DynamicType resultType) {
                 resultType)}) {
       return map;
     }
+#if HAS_QUADMATHLIB
+    if (const auto *map{
+            GetHostRuntimeMapHelper<__complex128, version>(resultType)}) {
+      return map;
+    }
+#endif
   }
   return nullptr;
 }

@@ -27,4 +27,4 @@ int main() {
 
 // CHECK-ERROR: LeakSanitizer: detected memory leaks
 // CHECK-ERROR: Direct leak of 1337 byte(s) in 1 object(s) allocated from
-// CHECK-ERROR: SUMMARY: {{(Leak|Address)}}Sanitizer:
+// CHECK-ERROR: SUMMARY: {{.*}}Sanitizer:

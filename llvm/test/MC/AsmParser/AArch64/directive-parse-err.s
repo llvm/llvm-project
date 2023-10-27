@@ -1,5 +1,5 @@
-// RUN: not llvm-mc -triple aarch64-none-eabi %s 2>&1 | FileCheck %s
-// RUN: not llvm-mc -triple aarch64-none-eabi %s 2>&1 | grep "error:" | count 60
+// RUN: not llvm-mc -triple aarch64 %s 2>&1 | FileCheck %s
+// RUN: not llvm-mc -triple aarch64 %s 2>&1 | grep "error:" | count 60
 
 	// CHECK: [[#@LINE+1]]:19: error: expected newline
 	.equ   ident1, 0 $

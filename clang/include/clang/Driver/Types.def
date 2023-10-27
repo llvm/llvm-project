@@ -54,7 +54,7 @@ TYPE("objective-c++-cpp-output", PP_ObjCXX,    INVALID,         "mii",    phases
 TYPE("objc++-cpp-output",        PP_ObjCXX_Alias, INVALID,      "mii",    phases::Compile, phases::Backend, phases::Assemble, phases::Link)
 TYPE("objective-c++",            ObjCXX,       PP_ObjCXX,       "mm",     phases::Preprocess, phases::Compile, phases::Backend, phases::Assemble, phases::Link)
 TYPE("renderscript",             RenderScript, PP_C,            "rs",     phases::Preprocess, phases::Compile, phases::Backend, phases::Assemble, phases::Link)
-TYPE("hlsl",                     HLSL,         PP_CXX,          "hlsl",   phases::Preprocess, phases::Compile, phases::Backend)
+TYPE("hlsl",                     HLSL,         PP_CXX,          "hlsl",   phases::Preprocess, phases::Compile, phases::Backend, phases::Assemble)
 
 // C family input files to precompile.
 TYPE("c-header-cpp-output",      PP_CHeader,   INVALID,         "i",      phases::Precompile)
@@ -98,7 +98,7 @@ TYPE("plist",                    Plist,        INVALID,         "plist",  phases
 TYPE("rewritten-objc",           RewrittenObjC,INVALID,         "cpp",    phases::Compile, phases::Backend, phases::Assemble, phases::Link)
 TYPE("rewritten-legacy-objc",    RewrittenLegacyObjC,INVALID,   "cpp",    phases::Compile, phases::Backend, phases::Assemble, phases::Link)
 TYPE("remap",                    Remap,        INVALID,         "remap",  phases::Compile, phases::Backend, phases::Assemble, phases::Link)
-TYPE("precompiled-header",       PCH,          INVALID,         "gch",    phases::Compile, phases::Backend, phases::Assemble, phases::Link)
+TYPE("precompiled-header",       PCH,          INVALID,         "pch",    phases::Compile, phases::Backend, phases::Assemble, phases::Link)
 TYPE("object",                   Object,       INVALID,         "o",      phases::Link)
 TYPE("treelang",                 Treelang,     INVALID,         nullptr,  phases::Compile, phases::Backend, phases::Assemble, phases::Link)
 TYPE("image",                    Image,        INVALID,         "out",    phases::Compile, phases::Backend, phases::Assemble, phases::Link)
@@ -107,4 +107,5 @@ TYPE("dependencies",             Dependencies, INVALID,         "d",      phases
 TYPE("cuda-fatbin",              CUDA_FATBIN,  INVALID,         "fatbin", phases::Compile, phases::Backend, phases::Assemble, phases::Link)
 TYPE("hip-fatbin",               HIP_FATBIN,   INVALID,         "hipfb",  phases::Compile, phases::Backend, phases::Assemble, phases::Link)
 TYPE("api-information",          API_INFO,     INVALID,         "json",   phases::Precompile)
+TYPE("dx-container",             DX_CONTAINER, INVALID,         "dxo",    phases::Compile, phases::Backend)
 TYPE("none",                     Nothing,      INVALID,         nullptr,  phases::Compile, phases::Backend, phases::Assemble, phases::Link)

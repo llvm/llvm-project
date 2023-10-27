@@ -9,8 +9,6 @@
 #ifndef LLVM_LIBC_SRC_THREADS_LINUX_CNDVAR_H
 #define LLVM_LIBC_SRC_THREADS_LINUX_CNDVAR_H
 
-#include "include/sys/syscall.h" // For syscall numbers.
-#include "include/threads.h"     // For values like thrd_success etc.
 #include "src/__support/CPP/atomic.h"
 #include "src/__support/OSUtil/syscall.h" // For syscall functions.
 #include "src/__support/threads/linux/futex_word.h"
@@ -18,8 +16,10 @@
 
 #include <linux/futex.h> // For futex operations.
 #include <stdint.h>
+#include <sys/syscall.h> // For syscall numbers.
+#include <threads.h>     // For values like thrd_success etc.
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 struct CndVar {
   enum CndWaiterStatus : uint32_t {
@@ -84,8 +84,8 @@ struct CndVar {
       }
     }
 
-    __llvm_libc::syscall_impl(SYS_futex, &waiter.futex_word.val, FUTEX_WAIT,
-                              WS_Waiting, 0, 0, 0);
+    LIBC_NAMESPACE::syscall_impl<long>(FUTEX_SYSCALL_ID, &waiter.futex_word.val,
+                                       FUTEX_WAIT, WS_Waiting, 0, 0, 0);
 
     // At this point, if locking |m| fails, we can simply return as the
     // queued up waiter would have been removed from the queue.
@@ -109,8 +109,8 @@ struct CndVar {
 
     qmtx.futex_word = FutexWordType(Mutex::LockState::Free);
 
-    __llvm_libc::syscall_impl(
-        SYS_futex, &qmtx.futex_word.val, FUTEX_WAKE_OP, 1, 1,
+    LIBC_NAMESPACE::syscall_impl<long>(
+        FUTEX_SYSCALL_ID, &qmtx.futex_word.val, FUTEX_WAKE_OP, 1, 1,
         &first->futex_word.val,
         FUTEX_OP(FUTEX_OP_SET, WS_Signalled, FUTEX_OP_CMP_EQ, WS_Waiting));
     return thrd_success;
@@ -126,8 +126,8 @@ struct CndVar {
       // atomically update the waiter status to WS_Signalled before waking
       // up the waiter. A dummy location is used for the other futex of
       // FUTEX_WAKE_OP.
-      __llvm_libc::syscall_impl(
-          SYS_futex, &dummy_futex_word, FUTEX_WAKE_OP, 1, 1,
+      LIBC_NAMESPACE::syscall_impl<long>(
+          FUTEX_SYSCALL_ID, &dummy_futex_word, FUTEX_WAKE_OP, 1, 1,
           &waiter->futex_word.val,
           FUTEX_OP(FUTEX_OP_SET, WS_Signalled, FUTEX_OP_CMP_EQ, WS_Waiting));
       waiter = waiter->next;
@@ -141,6 +141,6 @@ static_assert(sizeof(CndVar) == sizeof(cnd_t),
               "internal representation of condition variable and the public "
               "cnd_t type.");
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_THREADS_LINUX_CNDVAR_H

@@ -10,8 +10,8 @@ file_input = sys.argv[3]
 try:
     input = open(file_input, "r")
 except Exception as err:
-   print(err, file=sys.stderr)
-   sys.exit(1)
+    print(err, file=sys.stderr)
+    sys.exit(1)
 
 InterestingStores = 0
 for line in input:
@@ -23,6 +23,6 @@ time.sleep(sleep_seconds)
 
 
 if InterestingStores > num_stores:
-  sys.exit(0) # interesting!
+    sys.exit(0)  # interesting!
 
-sys.exit(1) # IR isn't interesting
+sys.exit(1)  # IR isn't interesting

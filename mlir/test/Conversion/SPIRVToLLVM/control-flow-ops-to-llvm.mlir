@@ -1,4 +1,4 @@
-// RUN: mlir-opt -convert-spirv-to-llvm -split-input-file -verify-diagnostics %s | FileCheck %s
+// RUN: mlir-opt -convert-spirv-to-llvm='use-opaque-pointers=1' -split-input-file -verify-diagnostics %s | FileCheck %s
 
 //===----------------------------------------------------------------------===//
 // spirv.Branch
@@ -68,7 +68,7 @@ spirv.module Logical GLSL450 {
   }
 
   spirv.func @cond_branch_with_weights(%cond: i1) -> () "None" {
-    // CHECK: llvm.cond_br %{{.*}} weights(dense<[1, 2]> : vector<2xi32>), ^bb1, ^bb2
+    // CHECK: llvm.cond_br %{{.*}} weights([1, 2]), ^bb1, ^bb2
     spirv.BranchConditional %cond [1, 2], ^true, ^false
   // CHECK: ^bb1:
   ^true:

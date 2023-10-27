@@ -33,6 +33,17 @@ void RTNAME(AllocatableInitCharacter)(Descriptor &, SubscriptValue length = 0,
 void RTNAME(AllocatableInitDerived)(
     Descriptor &, const typeInfo::DerivedType &, int rank = 0, int corank = 0);
 
+// Initializes the descriptor for an allocatable of intrinsic or derived type.
+// These functions are meant to be used in the allocate statement lowering. If
+// the descriptor is allocated, the initialization is skiped so the error
+// handling can be done by AllocatableAllocate.
+void RTNAME(AllocatableInitIntrinsicForAllocate)(
+    Descriptor &, TypeCategory, int kind, int rank = 0, int corank = 0);
+void RTNAME(AllocatableInitCharacterForAllocate)(Descriptor &,
+    SubscriptValue length = 0, int kind = 1, int rank = 0, int corank = 0);
+void RTNAME(AllocatableInitDerivedForAllocate)(
+    Descriptor &, const typeInfo::DerivedType &, int rank = 0, int corank = 0);
+
 // Checks that an allocatable is not already allocated in statements
 // with STAT=.  Use this on a value descriptor before setting bounds or
 // type parameters.  Not necessary on a freshly initialized descriptor.
@@ -46,7 +57,8 @@ int RTNAME(AllocatableCheckAllocated)(Descriptor &,
 // For MOLD= allocation; sets bounds, cobounds, and length type
 // parameters from another descriptor. The destination descriptor must
 // be initialized and deallocated.
-void RTNAME(AllocatableApplyMold)(Descriptor &, const Descriptor &mold);
+void RTNAME(AllocatableApplyMold)(
+    Descriptor &, const Descriptor &mold, int rank = 0);
 
 // Explicitly sets the bounds and length type parameters of an initialized
 // deallocated allocatable.
@@ -94,8 +106,9 @@ int RTNAME(AllocatableAllocateSource)(Descriptor &, const Descriptor &source,
 // with the other APIs for allocatables.)  The destination descriptor
 // must be initialized.
 std::int32_t RTNAME(MoveAlloc)(Descriptor &to, Descriptor &from,
-    bool hasStat = false, const Descriptor *errMsg = nullptr,
-    const char *sourceFile = nullptr, int sourceLine = 0);
+    const typeInfo::DerivedType *, bool hasStat = false,
+    const Descriptor *errMsg = nullptr, const char *sourceFile = nullptr,
+    int sourceLine = 0);
 
 // Deallocates an allocatable.  Finalizes elements &/or components as needed.
 // The allocatable is left in an initialized state suitable for reallocation

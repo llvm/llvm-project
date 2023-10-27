@@ -866,7 +866,7 @@ HTMLGenerator::generateDocs(StringRef RootDir,
     llvm::SmallString<128> Path;
     llvm::sys::path::native(RootDir, Path);
     llvm::sys::path::append(Path, Info->getRelativeFilePath(""));
-    if (CreatedDirs.find(Path) == CreatedDirs.end()) {
+    if (!CreatedDirs.contains(Path)) {
       if (std::error_code Err = llvm::sys::fs::create_directories(Path);
           Err != std::error_code()) {
         return llvm::createStringError(Err, "Failed to create directory '%s'.",

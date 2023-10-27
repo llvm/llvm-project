@@ -30,8 +30,7 @@
 using namespace llvm;
 using namespace llvm::wasm;
 
-namespace lld {
-namespace wasm {
+namespace lld::wasm {
 
 namespace {
 
@@ -205,5 +204,4 @@ bool MarkLive::isCallCtorsLive() {
   return false;
 }
 
-} // namespace wasm
-} // namespace lld
+} // namespace lld::wasm

@@ -29,8 +29,8 @@ define i32 @test2(i32 %x, i32 %y, i32 %z) {
 define i32 @PR38781(i32 %a, i32 %b) {
 ; CHECK-LABEL: @PR38781(
 ; CHECK-NEXT:    [[TMP1:%.*]] = or i32 [[B:%.*]], [[A:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i32 [[TMP1]], -1
-; CHECK-NEXT:    [[AND:%.*]] = zext i1 [[TMP2]] to i32
+; CHECK-NEXT:    [[AND2:%.*]] = icmp sgt i32 [[TMP1]], -1
+; CHECK-NEXT:    [[AND:%.*]] = zext i1 [[AND2]] to i32
 ; CHECK-NEXT:    ret i32 [[AND]]
 ;
   %a.lobit = lshr i32 %a, 31

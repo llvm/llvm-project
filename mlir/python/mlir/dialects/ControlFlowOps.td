@@ -9,7 +9,6 @@
 #ifndef PYTHON_BINDINGS_CONTROL_FLOW_OPS
 #define PYTHON_BINDINGS_CONTROL_FLOW_OPS
 
-include "mlir/Bindings/Python/Attributes.td"
 include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.td"
 
 #endif

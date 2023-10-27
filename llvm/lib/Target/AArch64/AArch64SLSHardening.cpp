@@ -60,7 +60,7 @@ private:
   bool hardenReturnsAndBRs(MachineBasicBlock &MBB) const;
   bool hardenBLRs(MachineBasicBlock &MBB) const;
   MachineBasicBlock &ConvertBLRToBL(MachineBasicBlock &MBB,
-                                    MachineBasicBlock::iterator) const;
+                                    MachineBasicBlock::instr_iterator) const;
 };
 
 } // end anonymous namespace
@@ -185,13 +185,15 @@ static const struct ThunkNameAndReg {
 namespace {
 struct SLSBLRThunkInserter : ThunkInserter<SLSBLRThunkInserter> {
   const char *getThunkPrefix() { return SLSBLRNamePrefix; }
-  bool mayUseThunk(const MachineFunction &MF) {
+  bool mayUseThunk(const MachineFunction &MF, bool InsertedThunks) {
+    if (InsertedThunks)
+      return false;
     ComdatThunks &= !MF.getSubtarget<AArch64Subtarget>().hardenSlsNoComdat();
     // FIXME: This could also check if there are any BLRs in the function
     // to more accurately reflect if a thunk will be needed.
     return MF.getSubtarget<AArch64Subtarget>().hardenSlsBlr();
   }
-  void insertThunks(MachineModuleInfo &MMI);
+  bool insertThunks(MachineModuleInfo &MMI, MachineFunction &MF);
   void populateThunk(MachineFunction &MF);
 
 private:
@@ -199,12 +201,14 @@ private:
 };
 } // namespace
 
-void SLSBLRThunkInserter::insertThunks(MachineModuleInfo &MMI) {
+bool SLSBLRThunkInserter::insertThunks(MachineModuleInfo &MMI,
+                                       MachineFunction &MF) {
   // FIXME: It probably would be possible to filter which thunks to produce
   // based on which registers are actually used in BLR instructions in this
   // function. But would that be a worthwhile optimization?
   for (auto T : SLSBLRThunks)
     createThunkFunction(MMI, T.Name, ComdatThunks);
+  return true;
 }
 
 void SLSBLRThunkInserter::populateThunk(MachineFunction &MF) {
@@ -241,9 +245,8 @@ void SLSBLRThunkInserter::populateThunk(MachineFunction &MF) {
                            Entry->end(), DebugLoc(), true /*AlwaysUseISBDSB*/);
 }
 
-MachineBasicBlock &
-AArch64SLSHardening::ConvertBLRToBL(MachineBasicBlock &MBB,
-                                    MachineBasicBlock::iterator MBBI) const {
+MachineBasicBlock &AArch64SLSHardening::ConvertBLRToBL(
+    MachineBasicBlock &MBB, MachineBasicBlock::instr_iterator MBBI) const {
   // Transform a BLR to a BL as follows:
   // Before:
   //   |-----------------------------|
@@ -378,8 +381,9 @@ bool AArch64SLSHardening::hardenBLRs(MachineBasicBlock &MBB) const {
   if (!ST->hardenSlsBlr())
     return false;
   bool Modified = false;
-  MachineBasicBlock::iterator MBBI = MBB.begin(), E = MBB.end();
-  MachineBasicBlock::iterator NextMBBI;
+  MachineBasicBlock::instr_iterator MBBI = MBB.instr_begin(),
+                                    E = MBB.instr_end();
+  MachineBasicBlock::instr_iterator NextMBBI;
   for (; MBBI != E; MBBI = NextMBBI) {
     MachineInstr &MI = *MBBI;
     NextMBBI = std::next(MBBI);

@@ -58,17 +58,16 @@ CaptureTracker::~CaptureTracker() = default;
 bool CaptureTracker::shouldExplore(const Use *U) { return true; }
 
 bool CaptureTracker::isDereferenceableOrNull(Value *O, const DataLayout &DL) {
-  // An inbounds GEP can either be a valid pointer (pointing into
-  // or to the end of an allocation), or be null in the default
-  // address space. So for an inbounds GEP there is no way to let
-  // the pointer escape using clever GEP hacking because doing so
-  // would make the pointer point outside of the allocated object
-  // and thus make the GEP result a poison value. Similarly, other
-  // dereferenceable pointers cannot be manipulated without producing
-  // poison.
-  if (auto *GEP = dyn_cast<GetElementPtrInst>(O))
-    if (GEP->isInBounds())
-      return true;
+  // We want comparisons to null pointers to not be considered capturing,
+  // but need to guard against cases like gep(p, -ptrtoint(p2)) == null,
+  // which are equivalent to p == p2 and would capture the pointer.
+  //
+  // A dereferenceable pointer is a case where this is known to be safe,
+  // because the pointer resulting from such a construction would not be
+  // dereferenceable.
+  //
+  // It is not sufficient to check for inbounds GEP here, because GEP with
+  // zero offset is always inbounds.
   bool CanBeNull, CanBeFreed;
   return O->getPointerDereferenceableBytes(DL, CanBeNull, CanBeFreed);
 }
@@ -80,7 +79,10 @@ namespace {
         const SmallPtrSetImpl<const Value *> &EphValues, bool ReturnCaptures)
         : EphValues(EphValues), ReturnCaptures(ReturnCaptures) {}
 
-    void tooManyUses() override { Captured = true; }
+    void tooManyUses() override {
+      LLVM_DEBUG(dbgs() << "Captured due to too many uses\n");
+      Captured = true;
+    }
 
     bool captured(const Use *U) override {
       if (isa<ReturnInst>(U->getUser()) && !ReturnCaptures)
@@ -88,6 +90,8 @@ namespace {
 
       if (EphValues.contains(U->getUser()))
         return false;
+
+      LLVM_DEBUG(dbgs() << "Captured by: " << *U->getUser() << "\n");
 
       Captured = true;
       return true;
@@ -233,12 +237,16 @@ bool llvm::PointerMayBeCaptured(const Value *V, bool ReturnCaptures,
   // take advantage of this.
   (void)StoreCaptures;
 
+  LLVM_DEBUG(dbgs() << "Captured?: " << *V << " = ");
+
   SimpleCaptureTracker SCT(EphValues, ReturnCaptures);
   PointerMayBeCaptured(V, &SCT, MaxUsesToExplore);
   if (SCT.Captured)
     ++NumCaptured;
-  else
+  else {
     ++NumNotCaptured;
+    LLVM_DEBUG(dbgs() << "not captured\n");
+  }
   return SCT.Captured;
 }
 
@@ -296,7 +304,11 @@ llvm::FindEarliestCapture(const Value *V, Function &F, bool ReturnCaptures,
 UseCaptureKind llvm::DetermineUseCaptureKind(
     const Use &U,
     function_ref<bool(Value *, const DataLayout &)> IsDereferenceableOrNull) {
-  Instruction *I = cast<Instruction>(U.getUser());
+  Instruction *I = dyn_cast<Instruction>(U.getUser());
+
+  // TODO: Investigate non-instruction uses.
+  if (!I)
+    return UseCaptureKind::MAY_CAPTURE;
 
   switch (I->getOpcode()) {
   case Instruction::Call:
@@ -403,12 +415,7 @@ UseCaptureKind llvm::DetermineUseCaptureKind(
           return UseCaptureKind::NO_CAPTURE;
       }
     }
-    // Comparison against value stored in global variable. Given the pointer
-    // does not escape, its value cannot be guessed and stored separately in a
-    // global variable.
-    auto *LI = dyn_cast<LoadInst>(I->getOperand(OtherIdx));
-    if (LI && isa<GlobalVariable>(LI->getPointerOperand()))
-      return UseCaptureKind::NO_CAPTURE;
+
     // Otherwise, be conservative. There are crazy ways to capture pointers
     // using comparisons.
     return UseCaptureKind::MAY_CAPTURE;

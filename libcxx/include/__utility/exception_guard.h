@@ -19,6 +19,9 @@
 #  pragma GCC system_header
 #endif
 
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 // __exception_guard is a helper class for writing code with the strong exception guarantee.
@@ -41,7 +44,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 // less common, especially one that tries to catch an exception through -fno-exceptions code.
 //
 // __exception_guard can help greatly simplify code that would normally be cluttered by
-// `#if _LIBCPP_NO_EXCEPTIONS`. For example:
+// `#if _LIBCPP_HAS_NO_EXCEPTIONS`. For example:
 //
 //    template <class Iterator, class Size, class OutputIterator>
 //    Iterator uninitialized_copy_n(Iterator iter, Size n, OutputIterator out) {
@@ -58,27 +61,27 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 //    }
 //
 
-#ifndef _LIBCPP_NO_EXCEPTIONS
 template <class _Rollback>
-struct __exception_guard {
-  __exception_guard() = delete;
+struct __exception_guard_exceptions {
+  __exception_guard_exceptions() = delete;
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 explicit __exception_guard(_Rollback __rollback)
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 explicit __exception_guard_exceptions(_Rollback __rollback)
       : __rollback_(std::move(__rollback)), __completed_(false) {}
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __exception_guard(__exception_guard&& __other)
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
+  __exception_guard_exceptions(__exception_guard_exceptions&& __other)
       _NOEXCEPT_(is_nothrow_move_constructible<_Rollback>::value)
       : __rollback_(std::move(__other.__rollback_)), __completed_(__other.__completed_) {
     __other.__completed_ = true;
   }
 
-  __exception_guard(__exception_guard const&)            = delete;
-  __exception_guard& operator=(__exception_guard const&) = delete;
-  __exception_guard& operator=(__exception_guard&&)      = delete;
+  __exception_guard_exceptions(__exception_guard_exceptions const&)            = delete;
+  __exception_guard_exceptions& operator=(__exception_guard_exceptions const&) = delete;
+  __exception_guard_exceptions& operator=(__exception_guard_exceptions&&)      = delete;
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __complete() _NOEXCEPT { __completed_ = true; }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 ~__exception_guard() {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 ~__exception_guard_exceptions() {
     if (!__completed_)
       __rollback_();
   }
@@ -87,36 +90,47 @@ private:
   _Rollback __rollback_;
   bool __completed_;
 };
-#else  // _LIBCPP_NO_EXCEPTIONS
-template <class _Rollback>
-struct __exception_guard {
-  __exception_guard() = delete;
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_NODEBUG explicit __exception_guard(_Rollback) {}
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_NODEBUG __exception_guard(__exception_guard&& __other)
+_LIBCPP_CTAD_SUPPORTED_FOR_TYPE(__exception_guard_exceptions);
+
+template <class _Rollback>
+struct __exception_guard_noexceptions {
+  __exception_guard_noexceptions() = delete;
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
+      _LIBCPP_NODEBUG explicit __exception_guard_noexceptions(_Rollback) {}
+
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_NODEBUG
+  __exception_guard_noexceptions(__exception_guard_noexceptions&& __other)
       _NOEXCEPT_(is_nothrow_move_constructible<_Rollback>::value)
       : __completed_(__other.__completed_) {
     __other.__completed_ = true;
   }
 
-  __exception_guard(__exception_guard const&)            = delete;
-  __exception_guard& operator=(__exception_guard const&) = delete;
-  __exception_guard& operator=(__exception_guard&&)      = delete;
+  __exception_guard_noexceptions(__exception_guard_noexceptions const&)            = delete;
+  __exception_guard_noexceptions& operator=(__exception_guard_noexceptions const&) = delete;
+  __exception_guard_noexceptions& operator=(__exception_guard_noexceptions&&)      = delete;
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_NODEBUG void __complete() _NOEXCEPT {
     __completed_ = true;
   }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_NODEBUG ~__exception_guard() {
-    _LIBCPP_ASSERT(__completed_, "__exception_guard not completed with exceptions disabled");
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_NODEBUG ~__exception_guard_noexceptions() {
+    _LIBCPP_ASSERT_UNCATEGORIZED(__completed_, "__exception_guard not completed with exceptions disabled");
   }
 
 private:
   bool __completed_ = false;
 };
-#endif // _LIBCPP_NO_EXCEPTIONS
 
-_LIBCPP_CTAD_SUPPORTED_FOR_TYPE(__exception_guard);
+_LIBCPP_CTAD_SUPPORTED_FOR_TYPE(__exception_guard_noexceptions);
+
+#ifdef _LIBCPP_HAS_NO_EXCEPTIONS
+template <class _Rollback>
+using __exception_guard = __exception_guard_noexceptions<_Rollback>;
+#else
+template <class _Rollback>
+using __exception_guard = __exception_guard_exceptions<_Rollback>;
+#endif
 
 template <class _Rollback>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR __exception_guard<_Rollback> __make_exception_guard(_Rollback __rollback) {
@@ -124,5 +138,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR __exception_guard<_Rollback> __make_exce
 }
 
 _LIBCPP_END_NAMESPACE_STD
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___UTILITY_TRANSACTION_H

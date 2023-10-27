@@ -2,7 +2,7 @@
 # RUN: llc -march=amdgcn -mcpu=tahiti -run-pass=instruction-select -verify-machineinstrs -global-isel-abort=2 -pass-remarks-missed='gisel*' %s -o - 2> %t | FileCheck -check-prefix=GCN %s
 # RUN: FileCheck -check-prefix=ERR %s < %t
 
-# ERR: remark: <unknown>:0:0: cannot select: %1:sgpr(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.readfirstlane), %0:sgpr(s32) (in function: readfirstlane_s)
+# ERR: remark: <unknown>:0:0: cannot select: %1:sgpr(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), %0:sgpr(s32) (in function: readfirstlane_s)
 
 ---
 name: readfirstlane_v
@@ -20,7 +20,7 @@ body: |
     ; GCN-NEXT: [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32 = V_READFIRSTLANE_B32 [[COPY]], implicit $exec
     ; GCN-NEXT: S_ENDPGM 0, implicit [[V_READFIRSTLANE_B32_]]
     %0:vgpr(s32) = COPY $vgpr0
-    %1:sgpr(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.readfirstlane), %0
+    %1:sgpr(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), %0
     S_ENDPGM 0, implicit %1
 ...
 
@@ -39,7 +39,7 @@ body: |
     ; GCN-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 [[COPY]]
     ; GCN-NEXT: S_ENDPGM 0, implicit [[S_MOV_B32_]]
     %0:vgpr(s32) = G_CONSTANT i32 123
-    %1:sgpr(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.readfirstlane), %0
+    %1:sgpr(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), %0
     S_ENDPGM 0, implicit %1
 ...
 
@@ -57,9 +57,9 @@ body: |
     ; GCN: liveins: $sgpr0
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
-    ; GCN-NEXT: [[INT:%[0-9]+]]:sgpr(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.readfirstlane), [[COPY]](s32)
+    ; GCN-NEXT: [[INT:%[0-9]+]]:sgpr(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[COPY]](s32)
     ; GCN-NEXT: S_ENDPGM 0, implicit [[INT]](s32)
     %0:sgpr(s32) = COPY $sgpr0
-    %1:sgpr(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.readfirstlane), %0
+    %1:sgpr(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), %0
     S_ENDPGM 0, implicit %1
 ...

@@ -59,7 +59,6 @@ typedef struct _NSRect {
     NSSize size;
 } NSRect;
 
-// Reduced test case from crash in <rdar://problem/6253157>
 @interface A @end
 @implementation A
 - (void)foo:(void (^)(NSObject *x))block {
@@ -73,9 +72,6 @@ typedef struct _NSRect {
 unsigned foo(unsigned x) { return __alignof__((x)) + sizeof(x); }
 
 // Improvement to path-sensitivity involving compound assignments.
-//  Addresses false positive in <rdar://problem/6268365>
-//
-
 unsigned r6268365Aux(void);
 
 void r6268365(void) {
@@ -162,7 +158,6 @@ void pr_3543(void) {
   ({});
 }
 
-// <rdar://problem/6611677>
 // This test case test the use of a vector type within an array subscript
 // expression.
 typedef long long __a64vector __attribute__((__vector_size__(8)));
@@ -222,15 +217,14 @@ void pr3772(void)
 // PR 3780 - This tests that StmtIterator isn't broken for VLAs in DeclGroups.
 void pr3780(int sz) { typedef double MAT[sz][sz]; }
 
-// <rdar://problem/6695527> - Test that we don't symbolicate doubles before
-// we are ready to do something with them.
+// Test that we don't symbolicate doubles before we are ready to do something
+// with them.
 int rdar6695527(double x) {
   if (!x) { return 0; }
   return 1;
 }
 
-// <rdar://problem/6708148> - Test that we properly invalidate structs
-//  passed-by-reference to a function.
+// Test that we properly invalidate structs passed-by-reference to a function.
 void pr6708148_invalidate(NSRect *x);
 void pr6708148_use(NSRect x);
 void pr6708148_test(void) {
@@ -260,7 +254,7 @@ void rdar_6777003(int x) {
 }
 
 // Check that the pointer-to-conts arguments do not get invalidated by Obj C 
-// interfaces. radar://10595327
+// interfaces.
 int rdar_10595327(char *str) {
   char fl = str[0]; 
   int *p = 0;
@@ -273,7 +267,6 @@ int rdar_10595327(char *str) {
 // For pointer arithmetic, --/++ should be treated as preserving non-nullness,
 // regardless of how well the underlying StoreManager reasons about pointer
 // arithmetic.
-// <rdar://problem/6777209>
 void rdar_6777209(char *p) {
   if (p == 0)
     return;
@@ -310,10 +303,9 @@ int test_invalidate_by_ref(void) {
   return 0;  
 }
 
-// Test for <rdar://problem/7027684>.  This just tests that the CFG is
-// constructed correctly.  Previously, the successor block of the entrance
-// was the block containing the merge for '?', which would trigger an
-// assertion failure.
+// This just tests that the CFG is constructed correctly.  Previously, the
+// successor block of the entrance was the block containing the merge for '?',
+// which would trigger an assertion failure.
 int rdar_7027684_aux(void);
 int rdar_7027684_aux_2(void) __attribute__((noreturn));
 void rdar_7027684(int x, int y) {
@@ -337,7 +329,6 @@ void test_cast_from_incomplete_struct(void) {
   test_cast_from_incomplete_struct_aux(&_cmd);
 }
 
-// Test for <rdar://problem/7034511> 
 //  "ValueManager::makeIntVal(uint64_t X, QualType T) should return a 'Loc' 
 //   when 'T' is a pointer"
 //
@@ -413,8 +404,8 @@ void test_trivial_symbolic_comparison(int *x) {
 }
 
 // Test for:
-//  <rdar://problem/7062158> false positive null dereference due to
-//   BasicStoreManager not tracking *static* globals
+// false positive null dereference due to BasicStoreManager not tracking
+// *static* globals
 //
 // This just tests the proper tracking of symbolic values for globals (both 
 // static and non-static).
@@ -576,8 +567,8 @@ void pr4781(unsigned long *raw1) {
   }
 }
 
-// <rdar://problem/7185647> - 'self' should be treated as being non-null
-// upon entry to an objective-c method.
+// 'self' should be treated as being non-null upon entry to an objective-c
+// method.
 @interface RDar7185647
 - (id)foo;
 @end
@@ -631,8 +622,8 @@ void test_offsetof_4(void) {
   *p = 0xDEADBEEF; // expected-warning{{Dereference of null pointer}}
 }
 
-// <rdar://problem/6829164> "nil receiver" false positive: make tracking 
-// of the MemRegion for 'self' path-sensitive
+// "nil receiver" false positive: make tracking  of the MemRegion for 'self'
+// path-sensitive
 @interface RDar6829164 : NSObject {
   double x; int y;
 }
@@ -654,8 +645,8 @@ double rdar_6829164_2(void);
 }
 @end
 
-// <rdar://problem/7242015> - Invalidate values passed-by-reference
-// to functions when the pointer to the value is passed as an integer.
+// Invalidate values passed-by-reference to functions when the pointer to the
+// value is passed as an integer.
 void test_7242015_aux(unsigned long);
 int rdar_7242015(void) {
   int x;
@@ -664,8 +655,7 @@ int rdar_7242015(void) {
             // using RegionStore.
 }
 
-// <rdar://problem/7242006> [RegionStore] compound literal assignment with
-//  floats not honored
+// [RegionStore] compound literal assignment with floats not honored
 CGFloat rdar7242006(CGFloat x) {
   NSSize y = (NSSize){x, 10};
   return y.width; // no-warning
@@ -678,8 +668,7 @@ void pr_4988(void) {
   pr_4988; // expected-warning{{expression result unused}}
 }
 
-// <rdar://problem/7152418> - A 'signed char' is used as a flag, which is
-//  implicitly converted to an int.
+// A 'signed char' is used as a flag, which is implicitly converted to an int.
 void *rdar7152418_bar(void);
 @interface RDar7152418 {
   signed char x;
@@ -846,8 +835,8 @@ void f(kwset_t *kws, char const *p, char const *q) {
 }
 
 //===----------------------------------------------------------------------===//
-// <rdar://problem/7593875> When handling sizeof(VLA) it leads to a hole in
-// the ExplodedGraph (causing a false positive)
+// When handling sizeof(VLA) it leads to a hole in the ExplodedGraph (causing a
+// false positive).
 //===----------------------------------------------------------------------===//
 
 int rdar_7593875_aux(int x);
@@ -966,8 +955,8 @@ void pr6938_b(void) {
 }
 
 //===----------------------------------------------------------------------===//
-// <rdar://problem/7979430> - The CFG for code containing an empty
-//  @synchronized block was previously broken (and would crash the analyzer).
+// The CFG for code containing an empty @synchronized block was previously
+// broken (and would crash the analyzer).
 //===----------------------------------------------------------------------===//
 
 void r7979430(id x) {
@@ -1023,7 +1012,7 @@ void pr7475_warn(void) {
   *someStatic = 0; // expected-warning{{null pointer}}
 }
 
-// <rdar://problem/8202272> - __imag passed non-complex should not crash
+// __imag passed non-complex should not crash
 float f0(_Complex float x) {
   float l0 = __real x;
   return  __real l0 + __imag l0;
@@ -1048,8 +1037,8 @@ void reduce_to_constant(int x, int y) {
     (void)*(char*)0; // no-warning
 }
 
-// <rdar://problem/8360854> - Test that code after a switch statement with no 
-// 'case:' labels is correctly evaluated.
+// Test that code after a switch statement with no 'case:' labels is correctly
+// evaluated.
 void r8360854(int n) {
   switch (n) {
    default: ;
@@ -1070,8 +1059,8 @@ void pr8050(struct PR8050 **arg)
     *arg = malloc(1);
 }
 
-// <rdar://problem/5880430> Switch on enum should not consider default case live
-//  if all enum values are covered
+// Switch on enum should not consider default case live if all enum values are
+// covered.
 enum Cases { C1, C2, C3, C4 };
 void test_enum_cases(enum Cases C) {
   switch (C) {
@@ -1096,7 +1085,7 @@ void test_enum_cases_positive(enum Cases C) {
   *p = 0xDEADBEEF; // expected-warning{{Dereference of null pointer}}
 }
 
-// <rdar://problem/6351970> rule request: warn if synchronization mutex can be nil
+// Warn if synchronization mutex can be nil
 void rdar6351970(void) {
   id x = 0;
   @synchronized(x) {} // expected-warning{{Nil value used as mutex for @synchronized() (no synchronization will occur)}}
@@ -1126,7 +1115,7 @@ void rdar8578650(id x) {
   }
 }
 
-// <rdar://problem/6352035> rule request: direct structure member access null pointer dereference
+// Direct structure member access null pointer dereference
 @interface RDar6352035 {
   int c;
 }
@@ -1183,7 +1172,6 @@ void baz_pr8440(int n)
 
 // Support direct accesses to non-null memory.  Reported in:
 //  PR 5272
-//  <rdar://problem/6839683>
 int test_direct_address_load(void) {
   int *p = (int*) 0x4000;
   return *p; // no-warning
@@ -1197,7 +1185,7 @@ void pr5272_test(void) {
 
 // Support casting the return value of function to another different type
 // This previously caused a crash, although we likely need more precise
-// reasoning here. <rdar://problem/8663544>
+// reasoning here.
 void* rdar8663544(void);
 typedef struct {} Val8663544;
 Val8663544 bazR8663544(void) {

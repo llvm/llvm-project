@@ -104,7 +104,10 @@ program lcobound_tests
   !ERROR: missing mandatory 'coarray=' argument
   n = lcobound(dim=i, kind=c_int32_t)
 
+  !ERROR: actual argument #2 without a keyword may not follow an actual argument with a keyword
   n = lcobound(coarray=scalar_coarray, i)
+
+  n = lcobound(coarray=scalar_coarray, dim=i)
 
   !ERROR: missing mandatory 'coarray=' argument
   lcobounds = lcobound()

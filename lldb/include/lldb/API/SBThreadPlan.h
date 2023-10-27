@@ -13,6 +13,12 @@
 
 #include <cstdio>
 
+namespace lldb_private {
+namespace python {
+class SWIGBridge;
+}
+} // namespace lldb_private
+
 namespace lldb {
 
 class LLDB_API SBThreadPlan {
@@ -21,8 +27,6 @@ public:
   SBThreadPlan();
 
   SBThreadPlan(const lldb::SBThreadPlan &threadPlan);
-
-  SBThreadPlan(const lldb::ThreadPlanSP &lldb_object_sp);
 
   SBThreadPlan(lldb::SBThread &thread, const char *class_name);
 
@@ -111,6 +115,11 @@ public:
   SBThreadPlan QueueThreadPlanForStepScripted(const char *script_class_name,
                                               lldb::SBStructuredData &args_data,
                                               SBError &error);
+
+protected:
+  friend class lldb_private::python::SWIGBridge;
+
+  SBThreadPlan(const lldb::ThreadPlanSP &lldb_object_sp);
 
 private:
   friend class SBBreakpoint;

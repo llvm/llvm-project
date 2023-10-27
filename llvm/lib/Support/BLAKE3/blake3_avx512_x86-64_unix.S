@@ -1,5 +1,7 @@
 #if defined(__x86_64__)
 
+#include "llvm_blake3_prefix.h"
+
 #if defined(__ELF__) && defined(__linux__)
 .section .note.GNU-stack,"",%progbits
 #endif

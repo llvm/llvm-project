@@ -27,7 +27,7 @@ define double @FADD_DOUBLE_I(double %x) {
 ; CHECK-DF-NEXT:    rts16
 ; CHECK-DF-NEXT:    .p2align 1
 ; CHECK-DF-NEXT:  # %bb.1:
-; CHECK-DF-NEXT:    .p2align 2
+; CHECK-DF-NEXT:    .p2align 2, 0x0
 ; CHECK-DF-NEXT:  .LCPI1_0:
 ; CHECK-DF-NEXT:    .quad 0xbff0000000000000 # double -1
 ;
@@ -38,7 +38,7 @@ define double @FADD_DOUBLE_I(double %x) {
 ; CHECK-DF2-NEXT:    rts16
 ; CHECK-DF2-NEXT:    .p2align 1
 ; CHECK-DF2-NEXT:  # %bb.1:
-; CHECK-DF2-NEXT:    .p2align 2
+; CHECK-DF2-NEXT:    .p2align 2, 0x0
 ; CHECK-DF2-NEXT:  .LCPI1_0:
 ; CHECK-DF2-NEXT:    .quad 0xbff0000000000000 # double -1
 entry:
@@ -72,7 +72,7 @@ define double @FSUB_DOUBLE_I(double %x) {
 ; CHECK-DF-NEXT:    rts16
 ; CHECK-DF-NEXT:    .p2align 1
 ; CHECK-DF-NEXT:  # %bb.1:
-; CHECK-DF-NEXT:    .p2align 2
+; CHECK-DF-NEXT:    .p2align 2, 0x0
 ; CHECK-DF-NEXT:  .LCPI3_0:
 ; CHECK-DF-NEXT:    .quad 0x3ff0000000000000 # double 1
 ;
@@ -83,7 +83,7 @@ define double @FSUB_DOUBLE_I(double %x) {
 ; CHECK-DF2-NEXT:    rts16
 ; CHECK-DF2-NEXT:    .p2align 1
 ; CHECK-DF2-NEXT:  # %bb.1:
-; CHECK-DF2-NEXT:    .p2align 2
+; CHECK-DF2-NEXT:    .p2align 2, 0x0
 ; CHECK-DF2-NEXT:  .LCPI3_0:
 ; CHECK-DF2-NEXT:    .quad 0x3ff0000000000000 # double 1
 
@@ -108,29 +108,62 @@ entry:
   ret double %fmul
 }
 
+define double @FNMUL_DOUBLE_a(double %x, double %y) {
+;
+; CHECK-DF-LABEL: FNMUL_DOUBLE_a:
+; CHECK-DF:       # %bb.0: # %entry
+; CHECK-DF-NEXT:    fnmuld vr0, vr1, vr0
+; CHECK-DF-NEXT:    rts16
+;
+; CHECK-DF2-LABEL: FNMUL_DOUBLE_a:
+; CHECK-DF2:       # %bb.0: # %entry
+; CHECK-DF2-NEXT:    fnmul.64 vr0, vr1, vr0
+; CHECK-DF2-NEXT:    rts16
+entry:
+  %z = fneg double %y
+  %fnmul = fmul double %z, %x
+  ret double %fnmul
+}
+
+define double @FNMUL_DOUBLE_b(double %x, double %y) {
+; CHECK-DF-LABEL: FNMUL_DOUBLE_b:
+; CHECK-DF:       # %bb.0: # %entry
+; CHECK-DF-NEXT:    fnmuld vr0, vr0, vr1
+; CHECK-DF-NEXT:    rts16
+;
+; CHECK-DF2-LABEL: FNMUL_DOUBLE_b:
+; CHECK-DF2:       # %bb.0: # %entry
+; CHECK-DF2-NEXT:    fnmul.64 vr0, vr0, vr1
+; CHECK-DF2-NEXT:    rts16
+entry:
+  %z = fneg double %x
+  %fnmul = fmul double %y, %z
+  ret double %fnmul
+}
+
 define double @FMUL_DOUBLE_I(double %x) {
 ;
 ; CHECK-DF-LABEL: FMUL_DOUBLE_I:
 ; CHECK-DF:       # %bb.0: # %entry
-; CHECK-DF-NEXT:    grs32 a0, .LCPI5_0
+; CHECK-DF-NEXT:    grs32 a0, .LCPI7_0
 ; CHECK-DF-NEXT:    fldd vr1, (a0, 0)
 ; CHECK-DF-NEXT:    fmuld vr0, vr0, vr1
 ; CHECK-DF-NEXT:    rts16
 ; CHECK-DF-NEXT:    .p2align 1
 ; CHECK-DF-NEXT:  # %bb.1:
-; CHECK-DF-NEXT:    .p2align 2
-; CHECK-DF-NEXT:  .LCPI5_0:
+; CHECK-DF-NEXT:    .p2align 2, 0x0
+; CHECK-DF-NEXT:  .LCPI7_0:
 ; CHECK-DF-NEXT:    .quad 0xc01c000000000000 # double -7
 ;
 ; CHECK-DF2-LABEL: FMUL_DOUBLE_I:
 ; CHECK-DF2:       # %bb.0: # %entry
-; CHECK-DF2-NEXT:    flrw.64 vr1, [.LCPI5_0]
+; CHECK-DF2-NEXT:    flrw.64 vr1, [.LCPI7_0]
 ; CHECK-DF2-NEXT:    fmul.64 vr0, vr0, vr1
 ; CHECK-DF2-NEXT:    rts16
 ; CHECK-DF2-NEXT:    .p2align 1
 ; CHECK-DF2-NEXT:  # %bb.1:
-; CHECK-DF2-NEXT:    .p2align 2
-; CHECK-DF2-NEXT:  .LCPI5_0:
+; CHECK-DF2-NEXT:    .p2align 2, 0x0
+; CHECK-DF2-NEXT:  .LCPI7_0:
 ; CHECK-DF2-NEXT:    .quad 0xc01c000000000000 # double -7
 entry:
   %fmul = fmul  double %x, -7.0
@@ -159,25 +192,25 @@ define double @FDIV_DOUBLE_I(double %x) {
 ;
 ; CHECK-DF-LABEL: FDIV_DOUBLE_I:
 ; CHECK-DF:       # %bb.0: # %entry
-; CHECK-DF-NEXT:    grs32 a0, .LCPI7_0
+; CHECK-DF-NEXT:    grs32 a0, .LCPI9_0
 ; CHECK-DF-NEXT:    fldd vr1, (a0, 0)
 ; CHECK-DF-NEXT:    fdivd vr0, vr0, vr1
 ; CHECK-DF-NEXT:    rts16
 ; CHECK-DF-NEXT:    .p2align 1
 ; CHECK-DF-NEXT:  # %bb.1:
-; CHECK-DF-NEXT:    .p2align 2
-; CHECK-DF-NEXT:  .LCPI7_0:
+; CHECK-DF-NEXT:    .p2align 2, 0x0
+; CHECK-DF-NEXT:  .LCPI9_0:
 ; CHECK-DF-NEXT:    .quad 0xc01c000000000000 # double -7
 ;
 ; CHECK-DF2-LABEL: FDIV_DOUBLE_I:
 ; CHECK-DF2:       # %bb.0: # %entry
-; CHECK-DF2-NEXT:    flrw.64 vr1, [.LCPI7_0]
+; CHECK-DF2-NEXT:    flrw.64 vr1, [.LCPI9_0]
 ; CHECK-DF2-NEXT:    fdiv.64 vr0, vr0, vr1
 ; CHECK-DF2-NEXT:    rts16
 ; CHECK-DF2-NEXT:    .p2align 1
 ; CHECK-DF2-NEXT:  # %bb.1:
-; CHECK-DF2-NEXT:    .p2align 2
-; CHECK-DF2-NEXT:  .LCPI7_0:
+; CHECK-DF2-NEXT:    .p2align 2, 0x0
+; CHECK-DF2-NEXT:  .LCPI9_0:
 ; CHECK-DF2-NEXT:    .quad 0xc01c000000000000 # double -7
 entry:
   %fdiv = fdiv  double %x, -7.0

@@ -6,10 +6,10 @@
 // RUN: %clang -### -target armv7eb-unknown-none-eabi -fno-short-wchar -c %s -o /dev/null 2>&1 | FileCheck -check-prefix CHECK-LONG-UNSIGNED %s
 // RUN: %clang -### -target armv7eb-unknown-none-eabi -mthumb -c %s -o /dev/null 2>&1 | FileCheck -check-prefix CHECK-SHORT %s
 // RUN: %clang -### -target armv7eb-unknown-none-eabi -mthumb -fno-short-wchar -c %s -o /dev/null 2>&1 | FileCheck -check-prefix CHECK-LONG-UNSIGNED %s
-// RUN: %clang -### -target aarch64-unknown-none-eabi -c %s -o /dev/null 2>&1 | FileCheck -check-prefix CHECK-SHORT %s
-// RUN: %clang -### -target aarch64-unknown-none-eabi -fno-short-wchar -c %s -o /dev/null 2>&1 | FileCheck -check-prefix CHECK-LONG-UNSIGNED %s
-// RUN: %clang -### -target aarch64_be-unknown-none-eabi -c %s -o /dev/null 2>&1 | FileCheck -check-prefix CHECK-SHORT %s
-// RUN: %clang -### -target aarch64_be-unknown-none-eabi -fno-short-wchar -c %s -o /dev/null 2>&1 | FileCheck -check-prefix CHECK-LONG-UNSIGNED %s
+// RUN: %clang -### -target aarch64 -c %s -o /dev/null 2>&1 | FileCheck -check-prefix CHECK-SHORT %s
+// RUN: %clang -### -target aarch64 -fno-short-wchar -c %s -o /dev/null 2>&1 | FileCheck -check-prefix CHECK-LONG-UNSIGNED %s
+// RUN: %clang -### -target aarch64_be -c %s -o /dev/null 2>&1 | FileCheck -check-prefix CHECK-SHORT %s
+// RUN: %clang -### -target aarch64_be -fno-short-wchar -c %s -o /dev/null 2>&1 | FileCheck -check-prefix CHECK-LONG-UNSIGNED %s
 
 // RUN: %clang -### -target armv7-unknown-netbsd -c %s -o /dev/null 2>&1 | FileCheck -check-prefix CHECK-SHORT %s
 // RUN: %clang -### -target armv7-unknown-netbsd -fno-short-wchar -c %s -o /dev/null 2>&1 | FileCheck -check-prefix CHECK-LONG-SIGNED %s

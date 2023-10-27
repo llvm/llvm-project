@@ -24,7 +24,7 @@ void test_rcp_f16(global half* out, half a)
 }
 
 // CHECK-LABEL: @test_sqrt_f16
-// CHECK: call half @llvm.amdgcn.sqrt.f16
+// CHECK: call half @llvm.sqrt.f16
 void test_sqrt_f16(global half* out, half a)
 {
   *out = __builtin_amdgcn_sqrth(a);
@@ -52,7 +52,8 @@ void test_cos_f16(global half* out, half a)
 }
 
 // CHECK-LABEL: @test_ldexp_f16
-// CHECK: call half @llvm.amdgcn.ldexp.f16
+// CHECK: [[TRUNC:%[0-9a-z]+]] = trunc i32
+// CHECK: call half @llvm.ldexp.f16.i16(half %a, i16 [[TRUNC]])
 void test_ldexp_f16(global half* out, half a, int b)
 {
   *out = __builtin_amdgcn_ldexph(a, b);

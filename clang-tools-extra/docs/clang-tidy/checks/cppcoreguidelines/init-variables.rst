@@ -7,6 +7,11 @@ Checks whether there are local variables that are declared without an initial
 value. These may lead to unexpected behavior if there is a code path that reads
 the variable before assigning to it.
 
+This rule is part of the `Type safety (Type.5)
+<https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#Pro-type-init>`_
+profile and `ES.20 <https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#Res-always>`_
+from the C++ Core Guidelines.
+
 Only integers, booleans, floats, doubles and pointers are checked. The fix
 option initializes all detected values with the value of zero. An exception is
 float and double types, which are initialized to NaN.

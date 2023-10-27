@@ -174,11 +174,13 @@ DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
   sw    $31, (4 * 31)($4)
   # Store return address to pc
   sw    $31, (4 * 32)($4)
+#if __mips_isa_rev < 6
   # hi and lo
   mfhi  $8
   sw    $8,  (4 * 33)($4)
   mflo  $8
   sw    $8,  (4 * 34)($4)
+#endif
 #ifdef __mips_hard_float
 #if __mips_fpr != 64
   sdc1  $f0, (4 * 36 + 8 * 0)($4)
@@ -255,11 +257,13 @@ DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
   .endr
   # Store return address to pc
   sd    $31, (8 * 32)($4)
+#if __mips_isa_rev < 6
   # hi and lo
   mfhi  $8
   sd    $8,  (8 * 33)($4)
   mflo  $8
   sd    $8,  (8 * 34)($4)
+#endif
 #ifdef __mips_hard_float
   .irp i,FROM_0_TO_31
     sdc1 $f\i, (280+8*\i)($4)
@@ -301,9 +305,21 @@ DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
   mflr  0
   std   0, PPC64_OFFS_SRR0(3) // store lr as ssr0
   PPC64_STR(1)
+  PPC64_STR(4)        // Save r4 first since it will be used for fixing r2.
+#if defined(_AIX)
+  // The TOC register (r2) was changed by the glue code if unw_getcontext
+  // is called from a different module. Save the original TOC register
+  // in the context if this is the case.
+  mflr   4
+  lwz    4, 0(4)      // Get the first instruction at the return address.
+  xoris  0, 4, 0xe841 // Is it reloading the TOC register "ld 2,40(1)"?
+  cmplwi 0, 0x28
+  bne    0, LnoR2Fix  // No need to fix up r2 if it is not.
+  ld     2, 40(1)     // Use the saved TOC register in the stack.
+LnoR2Fix:
+#endif
   PPC64_STR(2)
   PPC64_STR(3)
-  PPC64_STR(4)
   PPC64_STR(5)
   PPC64_STR(6)
   PPC64_STR(7)
@@ -351,9 +367,20 @@ DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
   addi  4, 3, PPC64_OFFS_FP
 
 // store VS register
+#ifdef __LITTLE_ENDIAN__
+// For little-endian targets, we need a swap since stxvd2x will store the
+// register in the incorrect doubleword order.
+// FIXME: when supporting targets older than Power9 on LE is no longer required
+//        this can be changed to simply `stxv n, 16 * n(4)`.
+#define PPC64_STVS(n)      \
+  xxswapd n, n            ;\
+  stxvd2x n, 0, 4         ;\
+  addi    4, 4, 16
+#else
 #define PPC64_STVS(n)      \
   stxvd2x n, 0, 4         ;\
   addi    4, 4, 16
+#endif
 
   PPC64_STVS(0)
   PPC64_STVS(1)
@@ -532,9 +559,21 @@ DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
   mflr    0
   stw     0,   0(3) // store lr as ssr0
   stw     1,  12(3)
+  stw     4,  24(3) // Save r4 first since it will be used for fixing r2.
+#if defined(_AIX)
+  // The TOC register (r2) was changed by the glue code if unw_getcontext
+  // is called from a different module. Save the original TOC register
+  // in the context if this is the case.
+  mflr    4
+  lwz     4,   0(4)     // Get the instruction at the return address.
+  xoris   0,  4, 0x8041 // Is it reloading the TOC register "ld 2,40(1)"?
+  cmplwi  0,  0x14
+  bne     0,  LnoR2Fix  // No need to fix up r2 if it is not.
+  lwz     2,  20(1)     // Use the saved TOC register in the stack.
+LnoR2Fix:
+#endif
   stw     2,  16(3)
   stw     3,  20(3)
-  stw     4,  24(3)
   stw     5,  28(3)
   stw     6,  32(3)
   stw     7,  36(3)

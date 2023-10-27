@@ -11,6 +11,8 @@
 ; RUN:   | FileCheck -check-prefix=NoEMU %s
 ; RUN: llc < %s -mcpu=generic -mtriple=x86_64-linux-gnu -relocation-model=pic \
 ; RUN:   | FileCheck -check-prefix=NoEMU %s
+; RUN: llc < %s -mcpu=generic -mtriple=i386-linux-android29 -relocation-model=pic \
+; RUN:   | FileCheck -check-prefix=NoEMU %s
 ; RUN: llc < %s -mcpu=generic -mtriple=i386-linux-android -relocation-model=pic \
 ; RUN:   | FileCheck -check-prefix=X86 %s
 ; RUN: llc < %s -mcpu=generic -mtriple=x86_64-linux-android -relocation-model=pic \

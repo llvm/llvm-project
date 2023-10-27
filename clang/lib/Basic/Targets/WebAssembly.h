@@ -15,11 +15,35 @@
 
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/TargetParser/Triple.h"
 
 namespace clang {
 namespace targets {
+
+static const unsigned WebAssemblyAddrSpaceMap[] = {
+    0, // Default
+    0, // opencl_global
+    0, // opencl_local
+    0, // opencl_constant
+    0, // opencl_private
+    0, // opencl_generic
+    0, // opencl_global_device
+    0, // opencl_global_host
+    0, // cuda_device
+    0, // cuda_constant
+    0, // cuda_shared
+    0, // sycl_global
+    0, // sycl_global_device
+    0, // sycl_global_host
+    0, // sycl_local
+    0, // sycl_private
+    0, // ptr32_sptr
+    0, // ptr32_uptr
+    0, // ptr64
+    0, // hlsl_groupshared
+    20, // wasm_funcref
+};
 
 class LLVM_LIBRARY_VISIBILITY WebAssemblyTargetInfo : public TargetInfo {
 
@@ -39,17 +63,18 @@ class LLVM_LIBRARY_VISIBILITY WebAssemblyTargetInfo : public TargetInfo {
   bool HasTailCall = false;
   bool HasReferenceTypes = false;
   bool HasExtendedConst = false;
+  bool HasMultiMemory = false;
 
   std::string ABI;
 
 public:
   explicit WebAssemblyTargetInfo(const llvm::Triple &T, const TargetOptions &)
       : TargetInfo(T) {
+    AddrSpaceMap = &WebAssemblyAddrSpaceMap;
     NoAsmVariants = true;
     SuitableAlign = 128;
     LargeArrayMinWidth = 128;
     LargeArrayAlign = 128;
-    SimdDefaultAlign = 128;
     SigAtomicType = SignedLong;
     LongDoubleWidth = LongDoubleAlign = 128;
     LongDoubleFormat = &llvm::APFloat::IEEEquad();
@@ -106,7 +131,7 @@ private:
     return false;
   }
 
-  const char *getClobbers() const final { return ""; }
+  std::string_view getClobbers() const final { return ""; }
 
   bool isCLZForZeroUndef() const final { return false; }
 

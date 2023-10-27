@@ -1,0 +1,74 @@
+# RUN: llc -mtriple=amdgcn-- -run-pass=print-machine-uniformity -o - %s 2>&1 | FileCheck %s
+
+# This test was generated using SelectionDAG, where the compilation flow does
+# not match the assumptions made in MachineUA. For now, this test mostly serves
+# the purpose of catching in any crash when invoking MachineUA. The test should
+# be deleted when it is clear that it is not actually testing anything useful.
+
+---
+# CHECK-LABEL: MachineUniformityInfo for function: hidden_diverge
+# CHECK-LABEL: BLOCK bb.0
+# CHECK: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:vgpr_32(s32) = COPY $vgpr0
+# CHECK-LABEL: BLOCK bb.2
+# CHECK: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:vreg_1 = PHI %{{[0-9]*}}:vreg_1, %bb.0, %{{[0-9]*}}:sreg_64, %bb.1
+# CHECK-LABEL: BLOCK bb.3
+# CHECK-LABEL: BLOCK bb.4
+
+name:            hidden_diverge
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+    liveins: $vgpr0, $sgpr0_sgpr1
+
+    %11:sgpr_64(p4) = COPY $sgpr0_sgpr1
+    %10:vgpr_32(s32) = COPY $vgpr0
+    %15:sreg_64_xexec = S_LOAD_DWORDX2_IMM %11(p4), 36, 0
+    %16:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM %11(p4), 44, 0
+    %17:sreg_32 = COPY %15.sub1
+    %18:sreg_32 = COPY %15.sub0
+    %19:sgpr_96 = REG_SEQUENCE killed %18, %subreg.sub0, killed %17, %subreg.sub1, killed %16, %subreg.sub2
+    %0:sgpr_96 = COPY %19
+    %20:sreg_32 = S_MOV_B32 -1
+    %21:sreg_64 = V_CMP_GT_I32_e64 %10(s32), killed %20, implicit $exec
+    %22:sreg_32 = S_MOV_B32 0
+    %23:sreg_64 = V_CMP_LT_I32_e64 %10(s32), killed %22, implicit $exec
+    %1:vreg_1 = COPY %21
+    %14:sreg_32 = IMPLICIT_DEF
+    %2:sreg_64 = SI_IF killed %23, %bb.2, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    S_BRANCH %bb.1
+
+  bb.1:
+    successors: %bb.2(0x80000000)
+
+    %24:sreg_32 = COPY %0.sub0
+    %3:sreg_32 = COPY %0.sub1
+    %25:sreg_32 = S_MOV_B32 0
+    S_CMP_LT_I32 killed %24, killed %25, implicit-def $scc
+    %26:sreg_64 = COPY $scc
+    %4:sreg_64 = COPY %26
+
+  bb.2:
+    successors: %bb.3(0x40000000), %bb.4(0x40000000)
+
+    %5:sreg_32 = PHI %14, %bb.0, %3, %bb.1
+    %6:vreg_1 = PHI %1, %bb.0, %4, %bb.1
+    SI_END_CF %2, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    %27:sreg_64 = COPY %6
+    %7:sreg_64 = SI_IF %27, %bb.4, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    S_BRANCH %bb.3
+
+  bb.3:
+    successors: %bb.4(0x80000000)
+
+    %8:sreg_32 = COPY %0.sub2
+
+  bb.4:
+    %9:vgpr_32 = PHI %5, %bb.2, %8, %bb.3
+    SI_END_CF %7, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    %28:sreg_64 = IMPLICIT_DEF
+    %29:vreg_64 = COPY %28
+    GLOBAL_STORE_DWORD killed %29, %9, 0, 0, implicit $exec
+    S_ENDPGM 0
+
+...

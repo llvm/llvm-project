@@ -99,7 +99,7 @@ struct MinidumpContext_x86_32 {
 
   // The next field is included with
   // MinidumpContext_x86_32_Flags::ExtendedRegisters
-  // It contains vector (MMX/SSE) registers.  It it laid out in the
+  // It contains vector (MMX/SSE) registers.  It is laid out in the
   // format used by the fxsave and fsrstor instructions, so it includes
   // a copy of the x87 floating-point registers as well.  See FXSAVE in
   // "Intel Architecture Software Developer's Manual, Volume 2."

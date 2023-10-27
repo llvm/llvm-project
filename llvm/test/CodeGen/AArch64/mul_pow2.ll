@@ -107,13 +107,13 @@ define i64 @test6_64b(i64 %x) {
 define i64 @test6_umull(i32 %x) {
 ; CHECK-LABEL: test6_umull:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #6
+; CHECK-NEXT:    mov w8, #6 // =0x6
 ; CHECK-NEXT:    umull x0, w0, w8
 ; CHECK-NEXT:    ret
 ;
 ; GISEL-LABEL: test6_umull:
 ; GISEL:       // %bb.0:
-; GISEL-NEXT:    mov w8, #6
+; GISEL-NEXT:    mov w8, #6 // =0x6
 ; GISEL-NEXT:    umull x0, w0, w8
 ; GISEL-NEXT:    ret
 
@@ -125,13 +125,13 @@ define i64 @test6_umull(i32 %x) {
 define i64 @test6_smull(i32 %x) {
 ; CHECK-LABEL: test6_smull:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #6
+; CHECK-NEXT:    mov w8, #6 // =0x6
 ; CHECK-NEXT:    smull x0, w0, w8
 ; CHECK-NEXT:    ret
 ;
 ; GISEL-LABEL: test6_smull:
 ; GISEL:       // %bb.0:
-; GISEL-NEXT:    mov w8, #6
+; GISEL-NEXT:    mov w8, #6 // =0x6
 ; GISEL-NEXT:    smull x0, w0, w8
 ; GISEL-NEXT:    ret
 
@@ -143,13 +143,13 @@ define i64 @test6_smull(i32 %x) {
 define i32 @test6_madd(i32 %x, i32 %y) {
 ; CHECK-LABEL: test6_madd:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #6
+; CHECK-NEXT:    mov w8, #6 // =0x6
 ; CHECK-NEXT:    madd w0, w0, w8, w1
 ; CHECK-NEXT:    ret
 ;
 ; GISEL-LABEL: test6_madd:
 ; GISEL:       // %bb.0:
-; GISEL-NEXT:    mov w8, #6
+; GISEL-NEXT:    mov w8, #6 // =0x6
 ; GISEL-NEXT:    madd w0, w0, w8, w1
 ; GISEL-NEXT:    ret
 
@@ -161,13 +161,13 @@ define i32 @test6_madd(i32 %x, i32 %y) {
 define i32 @test6_msub(i32 %x, i32 %y) {
 ; CHECK-LABEL: test6_msub:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #6
+; CHECK-NEXT:    mov w8, #6 // =0x6
 ; CHECK-NEXT:    msub w0, w0, w8, w1
 ; CHECK-NEXT:    ret
 ;
 ; GISEL-LABEL: test6_msub:
 ; GISEL:       // %bb.0:
-; GISEL-NEXT:    mov w8, #6
+; GISEL-NEXT:    mov w8, #6 // =0x6
 ; GISEL-NEXT:    msub w0, w0, w8, w1
 ; GISEL-NEXT:    ret
 
@@ -179,13 +179,13 @@ define i32 @test6_msub(i32 %x, i32 %y) {
 define i64 @test6_umaddl(i32 %x, i64 %y) {
 ; CHECK-LABEL: test6_umaddl:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #6
+; CHECK-NEXT:    mov w8, #6 // =0x6
 ; CHECK-NEXT:    umaddl x0, w0, w8, x1
 ; CHECK-NEXT:    ret
 ;
 ; GISEL-LABEL: test6_umaddl:
 ; GISEL:       // %bb.0:
-; GISEL-NEXT:    mov w8, #6
+; GISEL-NEXT:    mov w8, #6 // =0x6
 ; GISEL-NEXT:    umaddl x0, w0, w8, x1
 ; GISEL-NEXT:    ret
 
@@ -198,13 +198,13 @@ define i64 @test6_umaddl(i32 %x, i64 %y) {
 define i64 @test6_smaddl(i32 %x, i64 %y) {
 ; CHECK-LABEL: test6_smaddl:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #6
+; CHECK-NEXT:    mov w8, #6 // =0x6
 ; CHECK-NEXT:    smaddl x0, w0, w8, x1
 ; CHECK-NEXT:    ret
 ;
 ; GISEL-LABEL: test6_smaddl:
 ; GISEL:       // %bb.0:
-; GISEL-NEXT:    mov w8, #6
+; GISEL-NEXT:    mov w8, #6 // =0x6
 ; GISEL-NEXT:    smaddl x0, w0, w8, x1
 ; GISEL-NEXT:    ret
 
@@ -217,13 +217,13 @@ define i64 @test6_smaddl(i32 %x, i64 %y) {
 define i64 @test6_umsubl(i32 %x, i64 %y) {
 ; CHECK-LABEL: test6_umsubl:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #6
+; CHECK-NEXT:    mov w8, #6 // =0x6
 ; CHECK-NEXT:    umsubl x0, w0, w8, x1
 ; CHECK-NEXT:    ret
 ;
 ; GISEL-LABEL: test6_umsubl:
 ; GISEL:       // %bb.0:
-; GISEL-NEXT:    mov w8, #6
+; GISEL-NEXT:    mov w8, #6 // =0x6
 ; GISEL-NEXT:    umsubl x0, w0, w8, x1
 ; GISEL-NEXT:    ret
 
@@ -236,13 +236,13 @@ define i64 @test6_umsubl(i32 %x, i64 %y) {
 define i64 @test6_smsubl(i32 %x, i64 %y) {
 ; CHECK-LABEL: test6_smsubl:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #6
+; CHECK-NEXT:    mov w8, #6 // =0x6
 ; CHECK-NEXT:    smsubl x0, w0, w8, x1
 ; CHECK-NEXT:    ret
 ;
 ; GISEL-LABEL: test6_smsubl:
 ; GISEL:       // %bb.0:
-; GISEL-NEXT:    mov w8, #6
+; GISEL-NEXT:    mov w8, #6 // =0x6
 ; GISEL-NEXT:    smsubl x0, w0, w8, x1
 ; GISEL-NEXT:    ret
 
@@ -255,13 +255,13 @@ define i64 @test6_smsubl(i32 %x, i64 %y) {
 define i64 @test6_umnegl(i32 %x) {
 ; CHECK-LABEL: test6_umnegl:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #6
+; CHECK-NEXT:    mov w8, #6 // =0x6
 ; CHECK-NEXT:    umnegl x0, w0, w8
 ; CHECK-NEXT:    ret
 ;
 ; GISEL-LABEL: test6_umnegl:
 ; GISEL:       // %bb.0:
-; GISEL-NEXT:    mov w8, #6
+; GISEL-NEXT:    mov w8, #6 // =0x6
 ; GISEL-NEXT:    umnegl x0, w0, w8
 ; GISEL-NEXT:    ret
 
@@ -274,13 +274,13 @@ define i64 @test6_umnegl(i32 %x) {
 define i64 @test6_smnegl(i32 %x) {
 ; CHECK-LABEL: test6_smnegl:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #6
+; CHECK-NEXT:    mov w8, #6 // =0x6
 ; CHECK-NEXT:    smnegl x0, w0, w8
 ; CHECK-NEXT:    ret
 ;
 ; GISEL-LABEL: test6_smnegl:
 ; GISEL:       // %bb.0:
-; GISEL-NEXT:    mov w8, #6
+; GISEL-NEXT:    mov w8, #6 // =0x6
 ; GISEL-NEXT:    smnegl x0, w0, w8
 ; GISEL-NEXT:    ret
 
@@ -294,15 +294,15 @@ define i64 @test6_smnegl(i32 %x) {
 define i32 @mull6_sub(i32 %x) {
 ; CHECK-LABEL: mull6_sub:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #6
-; CHECK-NEXT:    mov w9, #-1
+; CHECK-NEXT:    mov w8, #6 // =0x6
+; CHECK-NEXT:    mov w9, #-1 // =0xffffffff
 ; CHECK-NEXT:    madd w0, w0, w8, w9
 ; CHECK-NEXT:    ret
 ;
 ; GISEL-LABEL: mull6_sub:
 ; GISEL:       // %bb.0:
-; GISEL-NEXT:    mov w8, #6
-; GISEL-NEXT:    mov w9, #-1
+; GISEL-NEXT:    mov w8, #6 // =0x6
+; GISEL-NEXT:    mov w9, #-1 // =0xffffffff
 ; GISEL-NEXT:    madd w0, w0, w8, w9
 ; GISEL-NEXT:    ret
   %mul = mul nsw i32 %x, 6
@@ -313,15 +313,15 @@ define i32 @mull6_sub(i32 %x) {
 define i64 @mull6_sub_orr(i64 %x) {
 ; CHECK-LABEL: mull6_sub_orr:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #6
-; CHECK-NEXT:    mov x9, #16773120
+; CHECK-NEXT:    mov w8, #6 // =0x6
+; CHECK-NEXT:    mov x9, #16773120 // =0xfff000
 ; CHECK-NEXT:    madd x0, x0, x8, x9
 ; CHECK-NEXT:    ret
 ;
 ; GISEL-LABEL: mull6_sub_orr:
 ; GISEL:       // %bb.0:
-; GISEL-NEXT:    mov w8, #6
-; GISEL-NEXT:    mov x9, #16773120
+; GISEL-NEXT:    mov w8, #6 // =0x6
+; GISEL-NEXT:    mov x9, #16773120 // =0xfff000
 ; GISEL-NEXT:    madd x0, x0, x8, x9
 ; GISEL-NEXT:    ret
   %mul = mul nsw i64 %x, 6
@@ -396,13 +396,13 @@ define i32 @test10(i32 %x) {
 define i32 @test11(i32 %x) {
 ; CHECK-LABEL: test11:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #11
+; CHECK-NEXT:    mov w8, #11 // =0xb
 ; CHECK-NEXT:    mul w0, w0, w8
 ; CHECK-NEXT:    ret
 ;
 ; GISEL-LABEL: test11:
 ; GISEL:       // %bb.0:
-; GISEL-NEXT:    mov w8, #11
+; GISEL-NEXT:    mov w8, #11 // =0xb
 ; GISEL-NEXT:    mul w0, w0, w8
 ; GISEL-NEXT:    ret
 
@@ -430,13 +430,13 @@ define i32 @test12(i32 %x) {
 define i32 @test13(i32 %x) {
 ; CHECK-LABEL: test13:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #13
+; CHECK-NEXT:    mov w8, #13 // =0xd
 ; CHECK-NEXT:    mul w0, w0, w8
 ; CHECK-NEXT:    ret
 ;
 ; GISEL-LABEL: test13:
 ; GISEL:       // %bb.0:
-; GISEL-NEXT:    mov w8, #13
+; GISEL-NEXT:    mov w8, #13 // =0xd
 ; GISEL-NEXT:    mul w0, w0, w8
 ; GISEL-NEXT:    ret
 
@@ -453,7 +453,7 @@ define i32 @test14(i32 %x) {
 ;
 ; GISEL-LABEL: test14:
 ; GISEL:       // %bb.0:
-; GISEL-NEXT:    mov w8, #14
+; GISEL-NEXT:    mov w8, #14 // =0xe
 ; GISEL-NEXT:    mul w0, w0, w8
 ; GISEL-NEXT:    ret
 
@@ -493,7 +493,7 @@ define i32 @test16(i32 %x) {
   ret i32 %mul
 }
 
-define i32 @test25_fast_shift(i32 %x) "target-features"="+lsl-fast" {
+define i32 @test25_fast_shift(i32 %x) "target-features"="+alu-lsl-fast" {
 ; CHECK-LABEL: test25_fast_shift:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    add w8, w0, w0, lsl #2
@@ -502,7 +502,7 @@ define i32 @test25_fast_shift(i32 %x) "target-features"="+lsl-fast" {
 ;
 ; GISEL-LABEL: test25_fast_shift:
 ; GISEL:       // %bb.0:
-; GISEL-NEXT:    mov w8, #25
+; GISEL-NEXT:    mov w8, #25 // =0x19
 ; GISEL-NEXT:    mul w0, w0, w8
 ; GISEL-NEXT:    ret
 
@@ -510,7 +510,7 @@ define i32 @test25_fast_shift(i32 %x) "target-features"="+lsl-fast" {
   ret i32 %mul
 }
 
-define i32 @test45_fast_shift(i32 %x) "target-features"="+lsl-fast" {
+define i32 @test45_fast_shift(i32 %x) "target-features"="+alu-lsl-fast" {
 ; CHECK-LABEL: test45_fast_shift:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    add w8, w0, w0, lsl #2
@@ -519,7 +519,7 @@ define i32 @test45_fast_shift(i32 %x) "target-features"="+lsl-fast" {
 ;
 ; GISEL-LABEL: test45_fast_shift:
 ; GISEL:       // %bb.0:
-; GISEL-NEXT:    mov w8, #45
+; GISEL-NEXT:    mov w8, #45 // =0x2d
 ; GISEL-NEXT:    mul w0, w0, w8
 ; GISEL-NEXT:    ret
 
@@ -531,13 +531,13 @@ define i32 @test45_fast_shift(i32 %x) "target-features"="+lsl-fast" {
 define i32 @test45(i32 %x) {
 ; CHECK-LABEL: test45:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #45
+; CHECK-NEXT:    mov w8, #45 // =0x2d
 ; CHECK-NEXT:    mul w0, w0, w8
 ; CHECK-NEXT:    ret
 ;
 ; GISEL-LABEL: test45:
 ; GISEL:       // %bb.0:
-; GISEL-NEXT:    mov w8, #45
+; GISEL-NEXT:    mov w8, #45 // =0x2d
 ; GISEL-NEXT:    mul w0, w0, w8
 ; GISEL-NEXT:    ret
 
@@ -546,16 +546,16 @@ define i32 @test45(i32 %x) {
 }
 
 ; Negative test: The shift amount 4 larger than 3
-define i32 @test85_fast_shift(i32 %x) "target-features"="+lsl-fast" {
+define i32 @test85_fast_shift(i32 %x) "target-features"="+alu-lsl-fast" {
 ; CHECK-LABEL: test85_fast_shift:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #85
+; CHECK-NEXT:    mov w8, #85 // =0x55
 ; CHECK-NEXT:    mul w0, w0, w8
 ; CHECK-NEXT:    ret
 ;
 ; GISEL-LABEL: test85_fast_shift:
 ; GISEL:       // %bb.0:
-; GISEL-NEXT:    mov w8, #85
+; GISEL-NEXT:    mov w8, #85 // =0x55
 ; GISEL-NEXT:    mul w0, w0, w8
 ; GISEL-NEXT:    ret
 
@@ -564,16 +564,16 @@ define i32 @test85_fast_shift(i32 %x) "target-features"="+lsl-fast" {
 }
 
 ; Negative test: The shift amount 5 larger than 3
-define i32 @test297_fast_shift(i32 %x) "target-features"="+lsl-fast" {
+define i32 @test297_fast_shift(i32 %x) "target-features"="+alu-lsl-fast" {
 ; CHECK-LABEL: test297_fast_shift:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #297
+; CHECK-NEXT:    mov w8, #297 // =0x129
 ; CHECK-NEXT:    mul w0, w0, w8
 ; CHECK-NEXT:    ret
 ;
 ; GISEL-LABEL: test297_fast_shift:
 ; GISEL:       // %bb.0:
-; GISEL-NEXT:    mov w8, #297
+; GISEL-NEXT:    mov w8, #297 // =0x129
 ; GISEL-NEXT:    mul w0, w0, w8
 ; GISEL-NEXT:    ret
 
@@ -593,7 +593,7 @@ define i32 @ntest2(i32 %x) {
 ;
 ; GISEL-LABEL: ntest2:
 ; GISEL:       // %bb.0:
-; GISEL-NEXT:    mov w8, #-2
+; GISEL-NEXT:    mov w8, #-2 // =0xfffffffe
 ; GISEL-NEXT:    mul w0, w0, w8
 ; GISEL-NEXT:    ret
 
@@ -624,7 +624,7 @@ define i32 @ntest4(i32 %x) {
 ;
 ; GISEL-LABEL: ntest4:
 ; GISEL:       // %bb.0:
-; GISEL-NEXT:    mov w8, #-4
+; GISEL-NEXT:    mov w8, #-4 // =0xfffffffc
 ; GISEL-NEXT:    mul w0, w0, w8
 ; GISEL-NEXT:    ret
 
@@ -657,7 +657,7 @@ define i32 @ntest6(i32 %x) {
 ;
 ; GISEL-LABEL: ntest6:
 ; GISEL:       // %bb.0:
-; GISEL-NEXT:    mov w8, #-6
+; GISEL-NEXT:    mov w8, #-6 // =0xfffffffa
 ; GISEL-NEXT:    mul w0, w0, w8
 ; GISEL-NEXT:    ret
 
@@ -688,7 +688,7 @@ define i32 @ntest8(i32 %x) {
 ;
 ; GISEL-LABEL: ntest8:
 ; GISEL:       // %bb.0:
-; GISEL-NEXT:    mov w8, #-8
+; GISEL-NEXT:    mov w8, #-8 // =0xfffffff8
 ; GISEL-NEXT:    mul w0, w0, w8
 ; GISEL-NEXT:    ret
 
@@ -716,13 +716,13 @@ define i32 @ntest9(i32 %x) {
 define i32 @ntest10(i32 %x) {
 ; CHECK-LABEL: ntest10:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #-10
+; CHECK-NEXT:    mov w8, #-10 // =0xfffffff6
 ; CHECK-NEXT:    mul w0, w0, w8
 ; CHECK-NEXT:    ret
 ;
 ; GISEL-LABEL: ntest10:
 ; GISEL:       // %bb.0:
-; GISEL-NEXT:    mov w8, #-10
+; GISEL-NEXT:    mov w8, #-10 // =0xfffffff6
 ; GISEL-NEXT:    mul w0, w0, w8
 ; GISEL-NEXT:    ret
 
@@ -733,13 +733,13 @@ define i32 @ntest10(i32 %x) {
 define i32 @ntest11(i32 %x) {
 ; CHECK-LABEL: ntest11:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #-11
+; CHECK-NEXT:    mov w8, #-11 // =0xfffffff5
 ; CHECK-NEXT:    mul w0, w0, w8
 ; CHECK-NEXT:    ret
 ;
 ; GISEL-LABEL: ntest11:
 ; GISEL:       // %bb.0:
-; GISEL-NEXT:    mov w8, #-11
+; GISEL-NEXT:    mov w8, #-11 // =0xfffffff5
 ; GISEL-NEXT:    mul w0, w0, w8
 ; GISEL-NEXT:    ret
 
@@ -756,7 +756,7 @@ define i32 @ntest12(i32 %x) {
 ;
 ; GISEL-LABEL: ntest12:
 ; GISEL:       // %bb.0:
-; GISEL-NEXT:    mov w8, #-12
+; GISEL-NEXT:    mov w8, #-12 // =0xfffffff4
 ; GISEL-NEXT:    mul w0, w0, w8
 ; GISEL-NEXT:    ret
 
@@ -767,13 +767,13 @@ define i32 @ntest12(i32 %x) {
 define i32 @ntest13(i32 %x) {
 ; CHECK-LABEL: ntest13:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #-13
+; CHECK-NEXT:    mov w8, #-13 // =0xfffffff3
 ; CHECK-NEXT:    mul w0, w0, w8
 ; CHECK-NEXT:    ret
 ;
 ; GISEL-LABEL: ntest13:
 ; GISEL:       // %bb.0:
-; GISEL-NEXT:    mov w8, #-13
+; GISEL-NEXT:    mov w8, #-13 // =0xfffffff3
 ; GISEL-NEXT:    mul w0, w0, w8
 ; GISEL-NEXT:    ret
   %mul = mul nsw i32 %x, -13
@@ -789,7 +789,7 @@ define i32 @ntest14(i32 %x) {
 ;
 ; GISEL-LABEL: ntest14:
 ; GISEL:       // %bb.0:
-; GISEL-NEXT:    mov w8, #-14
+; GISEL-NEXT:    mov w8, #-14 // =0xfffffff2
 ; GISEL-NEXT:    mul w0, w0, w8
 ; GISEL-NEXT:    ret
 
@@ -820,7 +820,7 @@ define i32 @ntest16(i32 %x) {
 ;
 ; GISEL-LABEL: ntest16:
 ; GISEL:       // %bb.0:
-; GISEL-NEXT:    mov w8, #-16
+; GISEL-NEXT:    mov w8, #-16 // =0xfffffff0
 ; GISEL-NEXT:    mul w0, w0, w8
 ; GISEL-NEXT:    ret
 
@@ -837,7 +837,7 @@ define i32 @muladd_demand(i32 %x, i32 %y) {
 ;
 ; GISEL-LABEL: muladd_demand:
 ; GISEL:       // %bb.0:
-; GISEL-NEXT:    mov w8, #131008
+; GISEL-NEXT:    mov w8, #131008 // =0x1ffc0
 ; GISEL-NEXT:    madd w8, w0, w8, w1
 ; GISEL-NEXT:    and w0, w8, #0x1ffc0
 ; GISEL-NEXT:    ret
@@ -850,20 +850,19 @@ define i32 @muladd_demand(i32 %x, i32 %y) {
 define <4 x i32> @muladd_demand_commute(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: muladd_demand_commute:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v2.4s, #1, msl #16
 ; CHECK-NEXT:    shl v0.4s, v0.4s, #6
+; CHECK-NEXT:    movi v2.4s, #1, msl #16
 ; CHECK-NEXT:    sub v0.4s, v1.4s, v0.4s
 ; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
 ; CHECK-NEXT:    ret
 ;
 ; GISEL-LABEL: muladd_demand_commute:
 ; GISEL:       // %bb.0:
-; GISEL-NEXT:    adrp x8, .LCPI49_1
-; GISEL-NEXT:    ldr q2, [x8, :lo12:.LCPI49_1]
 ; GISEL-NEXT:    adrp x8, .LCPI49_0
+; GISEL-NEXT:    movi v3.4s, #1, msl #16
+; GISEL-NEXT:    ldr q2, [x8, :lo12:.LCPI49_0]
 ; GISEL-NEXT:    mla v1.4s, v0.4s, v2.4s
-; GISEL-NEXT:    ldr q0, [x8, :lo12:.LCPI49_0]
-; GISEL-NEXT:    and v0.16b, v1.16b, v0.16b
+; GISEL-NEXT:    and v0.16b, v1.16b, v3.16b
 ; GISEL-NEXT:    ret
   %m = mul <4 x i32> %x, <i32 131008, i32 131008, i32 131008, i32 131008>
   %a = add <4 x i32> %m, %y

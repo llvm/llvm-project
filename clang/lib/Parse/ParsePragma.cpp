@@ -19,6 +19,7 @@
 #include "clang/Parse/ParseDiagnostic.h"
 #include "clang/Parse/Parser.h"
 #include "clang/Parse/RAIIObjectsForParser.h"
+#include "clang/Sema/EnterExpressionEvaluationContext.h"
 #include "clang/Sema/Scope.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -665,18 +666,10 @@ void Parser::HandlePragmaVisibility() {
   Actions.ActOnPragmaVisibility(VisType, VisLoc);
 }
 
-namespace {
-struct PragmaPackInfo {
-  Sema::PragmaMsStackAction Action;
-  StringRef SlotLabel;
-  Token Alignment;
-};
-} // end anonymous namespace
-
 void Parser::HandlePragmaPack() {
   assert(Tok.is(tok::annot_pragma_pack));
-  PragmaPackInfo *Info =
-    static_cast<PragmaPackInfo *>(Tok.getAnnotationValue());
+  Sema::PragmaPackInfo *Info =
+      static_cast<Sema::PragmaPackInfo *>(Tok.getAnnotationValue());
   SourceLocation PragmaLoc = Tok.getLocation();
   ExprResult Alignment;
   if (Info->Alignment.is(tok::numeric_constant)) {
@@ -714,10 +707,36 @@ void Parser::HandlePragmaAlign() {
 
 void Parser::HandlePragmaDump() {
   assert(Tok.is(tok::annot_pragma_dump));
-  IdentifierInfo *II =
-      reinterpret_cast<IdentifierInfo *>(Tok.getAnnotationValue());
-  Actions.ActOnPragmaDump(getCurScope(), Tok.getLocation(), II);
   ConsumeAnnotationToken();
+  if (Tok.is(tok::eod)) {
+    PP.Diag(Tok, diag::warn_pragma_debug_missing_argument) << "dump";
+  } else if (NextToken().is(tok::eod)) {
+    if (Tok.isNot(tok::identifier)) {
+      PP.Diag(Tok, diag::warn_pragma_debug_unexpected_argument);
+      ConsumeAnyToken();
+      ExpectAndConsume(tok::eod);
+      return;
+    }
+    IdentifierInfo *II = Tok.getIdentifierInfo();
+    Actions.ActOnPragmaDump(getCurScope(), Tok.getLocation(), II);
+    ConsumeToken();
+  } else {
+    SourceLocation StartLoc = Tok.getLocation();
+    EnterExpressionEvaluationContext Ctx(
+      Actions, Sema::ExpressionEvaluationContext::Unevaluated);
+    ExprResult E = ParseExpression();
+    if (!E.isUsable() || E.get()->containsErrors()) {
+      // Diagnostics were emitted during parsing. No action needed.
+    } else if (E.get()->getDependence() != ExprDependence::None) {
+      PP.Diag(StartLoc, diag::warn_pragma_debug_dependent_argument)
+        << E.get()->isTypeDependent()
+        << SourceRange(StartLoc, Tok.getLocation());
+    } else {
+      Actions.ActOnPragmaDump(E.get());
+    }
+    SkipUntil(tok::eod, StopBeforeMatch);
+  }
+  ExpectAndConsume(tok::eod);
 }
 
 void Parser::HandlePragmaWeak() {
@@ -1800,7 +1819,8 @@ void Parser::HandlePragmaAttribute() {
     ConsumeToken();
   };
 
-  if (Tok.is(tok::l_square) && NextToken().is(tok::l_square)) {
+  if ((Tok.is(tok::l_square) && NextToken().is(tok::l_square)) ||
+      Tok.isRegularKeywordAttribute()) {
     // Parse the CXX11 style attribute.
     ParseCXX11AttributeSpecifier(Attrs);
   } else if (Tok.is(tok::kw___attribute)) {
@@ -1832,11 +1852,12 @@ void Parser::HandlePragmaAttribute() {
 
       if (Tok.isNot(tok::l_paren))
         Attrs.addNew(AttrName, AttrNameLoc, nullptr, AttrNameLoc, nullptr, 0,
-                     ParsedAttr::AS_GNU);
+                     ParsedAttr::Form::GNU());
       else
         ParseGNUAttributeArgs(AttrName, AttrNameLoc, Attrs, /*EndLoc=*/nullptr,
                               /*ScopeName=*/nullptr,
-                              /*ScopeLoc=*/SourceLocation(), ParsedAttr::AS_GNU,
+                              /*ScopeLoc=*/SourceLocation(),
+                              ParsedAttr::Form::GNU(),
                               /*Declarator=*/nullptr);
     } while (TryConsumeToken(tok::comma));
 
@@ -2110,8 +2131,8 @@ void PragmaPackHandler::HandlePragma(Preprocessor &PP,
     return;
   }
 
-  PragmaPackInfo *Info =
-      PP.getPreprocessorAllocator().Allocate<PragmaPackInfo>(1);
+  Sema::PragmaPackInfo *Info =
+      PP.getPreprocessorAllocator().Allocate<Sema::PragmaPackInfo>(1);
   Info->Action = Action;
   Info->SlotLabel = SlotLabel;
   Info->Alignment = Alignment;
@@ -4005,6 +4026,7 @@ void PragmaMaxTokensTotalHandler::HandlePragma(Preprocessor &PP,
 }
 
 // Handle '#pragma clang riscv intrinsic vector'.
+//        '#pragma clang riscv intrinsic sifive_vector'.
 void PragmaRISCVHandler::HandlePragma(Preprocessor &PP,
                                       PragmaIntroducer Introducer,
                                       Token &FirstToken) {
@@ -4020,9 +4042,10 @@ void PragmaRISCVHandler::HandlePragma(Preprocessor &PP,
 
   PP.Lex(Tok);
   II = Tok.getIdentifierInfo();
-  if (!II || !II->isStr("vector")) {
+  if (!II || !(II->isStr("vector") || II->isStr("sifive_vector"))) {
     PP.Diag(Tok.getLocation(), diag::warn_pragma_invalid_argument)
-        << PP.getSpelling(Tok) << "riscv" << /*Expected=*/true << "'vector'";
+        << PP.getSpelling(Tok) << "riscv" << /*Expected=*/true
+        << "'vector' or 'sifive_vector'";
     return;
   }
 
@@ -4033,5 +4056,8 @@ void PragmaRISCVHandler::HandlePragma(Preprocessor &PP,
     return;
   }
 
-  Actions.DeclareRISCVVBuiltins = true;
+  if (II->isStr("vector"))
+    Actions.DeclareRISCVVBuiltins = true;
+  else if (II->isStr("sifive_vector"))
+    Actions.DeclareRISCVSiFiveVectorBuiltins = true;
 }

@@ -936,3 +936,126 @@ for.body:
 exit:
   ret void
 }
+
+define void @forked_ptrs_with_different_base(ptr nocapture readonly %Preds, ptr nocapture %a, ptr nocapture %b, ptr nocapture readonly %c)  {
+; CHECK:       for.body:
+; CHECK-NEXT:    Memory dependences are safe with run-time checks
+; CHECK-NEXT:    Dependences:
+; CHECK-NEXT:    Run-time memory checks:
+; CHECK-NEXT:    Check 0:
+; CHECK-NEXT:      Comparing group ([[G1:.+]]):
+; CHECK-NEXT:        %arrayidx7 = getelementptr inbounds double, ptr %.sink, i64 %indvars.iv
+; CHECK-NEXT:      Against group ([[G2:.+]]):
+; CHECK-NEXT:        %arrayidx = getelementptr inbounds i32, ptr %Preds, i64 %indvars.iv
+; CHECK-NEXT:    Check 1:
+; CHECK-NEXT:      Comparing group ([[G1]]):
+; CHECK-NEXT:        %arrayidx7 = getelementptr inbounds double, ptr %.sink, i64 %indvars.iv
+; CHECK-NEXT:      Against group ([[G4:.+]]):
+; CHECK-NEXT:        %arrayidx5 = getelementptr inbounds double, ptr %0, i64 %indvars.iv
+; CHECK-NEXT:    Check 2:
+; CHECK-NEXT:      Comparing group ([[G3:.+]]):
+; CHECK-NEXT:        %arrayidx7 = getelementptr inbounds double, ptr %.sink, i64 %indvars.iv
+; CHECK-NEXT:      Against group ([[G2]]):
+; CHECK-NEXT:        %arrayidx = getelementptr inbounds i32, ptr %Preds, i64 %indvars.iv
+; CHECK-NEXT:    Check 3:
+; CHECK-NEXT:      Comparing group ([[G3]]):
+; CHECK-NEXT:        %arrayidx7 = getelementptr inbounds double, ptr %.sink, i64 %indvars.iv
+; CHECK-NEXT:      Against group ([[G4]]):
+; CHECK-NEXT:        %arrayidx5 = getelementptr inbounds double, ptr %0, i64 %indvars.iv
+; CHECK-NEXT:    Grouped accesses:
+; CHECK-NEXT:      Group [[G1]]:
+; CHECK-NEXT:        (Low: %1 High: (63992 + %1))
+; CHECK-NEXT:          Member: {%1,+,8}<nw><%for.body>
+; CHECK-NEXT:      Group [[G3]]:
+; CHECK-NEXT:        (Low: %2 High: (63992 + %2))
+; CHECK-NEXT:          Member: {%2,+,8}<nw><%for.body>
+; CHECK-NEXT:      Group [[G2]]:
+; CHECK-NEXT:        (Low: %Preds High: (31996 + %Preds))
+; CHECK-NEXT:          Member: {%Preds,+,4}<nuw><%for.body>
+; CHECK-NEXT:      Group [[G4]]:
+; CHECK-NEXT:        (Low: %0 High: (63992 + %0))
+; CHECK-NEXT:          Member: {%0,+,8}<nw><%for.body>
+; CHECK-EMPTY:
+; CHECK-NEXT:    Non vectorizable stores to invariant address were not found in loop.
+entry:
+  %0 = load ptr, ptr %c, align 64
+  %1 = load ptr, ptr %a, align 64
+  %2 = load ptr, ptr %b, align 64
+  br label %for.body
+
+for.cond.cleanup:                                 ; preds = %for.inc
+  ret void
+
+for.body:                                         ; preds = %entry, %for.inc
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.inc ]
+  %arrayidx = getelementptr inbounds i32, ptr %Preds, i64 %indvars.iv
+  %3 = load i32, ptr %arrayidx, align 4
+  %cmp2.not = icmp eq i32 %3, 0
+  br i1 %cmp2.not, label %if.else, label %if.then
+
+if.then:                                          ; preds = %for.body
+  %arrayidx5 = getelementptr inbounds double, ptr %0, i64 %indvars.iv
+  %4 = load double, ptr %arrayidx5, align 8
+  %add = fadd fast double %4, 1.000000e+00
+  br label %for.inc
+
+if.else:                                          ; preds = %for.body
+  %5 = mul nuw nsw i64 %indvars.iv, %indvars.iv
+  %6 = trunc i64 %5 to i32
+  %conv8 = sitofp i32 %6 to double
+  br label %for.inc
+
+for.inc:                                          ; preds = %if.then, %if.else
+  %.sink = phi ptr [ %1, %if.then ], [ %2, %if.else ]
+  %add.sink = phi double [ %add, %if.then ], [ %conv8, %if.else ]
+  %arrayidx7 = getelementptr inbounds double, ptr %.sink, i64 %indvars.iv
+  store double %add.sink, ptr %arrayidx7, align 8
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond.not = icmp eq i64 %indvars.iv.next, 7999
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
+
+; Negative test: the operator number of PhiNode is not 2.
+define void @forked_ptrs_with_different_base3(ptr nocapture readonly %Preds, ptr nocapture %a, ptr nocapture %b, ptr nocapture readonly %c)  {
+; CHECK:       for.body:
+; CHECK-NEXT:    Report: cannot identify array bounds
+; CHECK-NEXT:    Dependences:
+; CHECK-NEXT:    Run-time memory checks:
+; CHECK-NEXT:    Grouped accesses:
+; CHECK-EMPTY:
+; CHECK-NEXT:    Non vectorizable stores to invariant address were not found in loop.
+entry:
+  %ld.c = load ptr, ptr %c, align 64
+  %ld.a = load ptr, ptr %a, align 64
+  %ld.b = load ptr, ptr %b, align 64
+  br label %for.body
+
+for.body:                                         ; preds = %entry, %for.inc
+  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.inc ]
+  %arrayidx = getelementptr inbounds i32, ptr %Preds, i64 %indvars.iv
+  %ld.preds = load i32, ptr %arrayidx, align 4
+  switch i32 %ld.preds, label %if.else [
+    i32 0, label %if.br0
+	i32 1, label %if.br1
+  ]
+
+if.br0:                                          ; preds = %for.body
+  br label %for.inc
+
+if.br1:                                          ; preds = %for.body
+  br label %for.inc
+
+if.else:                                         ; preds = %for.body
+  br label %for.inc
+
+for.inc:                                          ; preds = %if.br1, %if.br0
+  %.sink = phi ptr [ %ld.a, %if.br0 ], [ %ld.b, %if.br1 ], [ %ld.c, %if.else ]
+  %arrayidx7 = getelementptr inbounds double, ptr %.sink, i64 %indvars.iv
+  store double 1.000000e+00, ptr %arrayidx7, align 8
+  %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
+  %exitcond.not = icmp eq i64 %indvars.iv.next, 7999
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+
+for.cond.cleanup:                                 ; preds = %for.inc
+  ret void
+}

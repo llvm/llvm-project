@@ -10,13 +10,15 @@
 
 // shared_ptr
 
-// template<class T, class U> shared_ptr<T> dynamic_pointer_cast(const shared_ptr<U>& r);
+// template<class T, class U> shared_ptr<T> dynamic_pointer_cast(const shared_ptr<U>& r) noexcept;
+// template<class T, class U> shared_ptr<T> dynamic_pointer_cast(shared_ptr<U>&& r) noexcept;
 
 // UNSUPPORTED: no-rtti
 
+#include <cassert>
 #include <memory>
 #include <type_traits>
-#include <cassert>
+#include <utility>
 
 #include "test_macros.h"
 
@@ -47,6 +49,7 @@ int main(int, char**)
 {
     {
         const std::shared_ptr<B> pB(new A);
+        ASSERT_NOEXCEPT(std::dynamic_pointer_cast<A>(pB));
         std::shared_ptr<A> pA = std::dynamic_pointer_cast<A>(pB);
         assert(pA.get() == pB.get());
         assert(!pB.owner_before(pA) && !pA.owner_before(pB));
@@ -65,6 +68,17 @@ int main(int, char**)
       assert(pA.use_count() == 0);
     }
 #endif // TEST_STD_VER > 14
+#if TEST_STD_VER > 20
+    {
+      A* pA_raw = new A;
+      std::shared_ptr<B> pB(pA_raw);
+      ASSERT_NOEXCEPT(std::dynamic_pointer_cast<A>(std::move(pB)));
+      std::shared_ptr<A> pA = std::dynamic_pointer_cast<A>(std::move(pB));
+      assert(pB.get() == nullptr);
+      assert(pA.get() == pA_raw);
+      assert(pA.use_count() == 1);
+    }
+#endif // TEST_STD_VER > 20
 
     return 0;
 }

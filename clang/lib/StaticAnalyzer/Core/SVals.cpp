@@ -174,6 +174,9 @@ public:
   QualType VisitSymbolicRegion(const SymbolicRegion *SR) {
     return Visit(SR->getSymbol());
   }
+  QualType VisitAllocaRegion(const AllocaRegion *) {
+    return QualType{Context.VoidPtrTy};
+  }
   QualType VisitTypedRegion(const TypedRegion *TR) {
     return TR->getLocationType();
   }

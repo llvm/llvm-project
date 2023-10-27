@@ -1,6 +1,7 @@
 ! RUN: %python %S/test_errors.py %s %flang_fc1
 ! Tests for the ALLOCATED() intrinsic
-subroutine alloc(coarray_alloc, coarray_not_alloc, t2_not_alloc)
+subroutine alloc(coarray_alloc, coarray_not_alloc, t2_not_alloc, &
+                 assumedRank)
 
   interface
     function return_allocatable()
@@ -30,6 +31,7 @@ subroutine alloc(coarray_alloc, coarray_not_alloc, t2_not_alloc)
   real :: coarray_not_alloc(:)[*]
 
   type(t2) :: t2_not_alloc
+  real, allocatable :: assumedRank(..)
 
 
   ! OK
@@ -42,6 +44,13 @@ subroutine alloc(coarray_alloc, coarray_not_alloc, t2_not_alloc)
   print *, allocated(coarray_alloc[2,3])
   print *, allocated(t2_not_alloc%coarray_alloc)
   print *, allocated(t2_not_alloc%coarray_alloc[2])
+  print *, allocated(assumedRank)
+  select rank (assumedRank)
+  rank (0)
+    print *, allocated(scalar=assumedRank)
+  rank default
+    print *, allocated(array=assumedRank)
+  end select
 
   !ERROR: Argument of ALLOCATED() must be an ALLOCATABLE object or component
   print *, allocated(not_alloc)

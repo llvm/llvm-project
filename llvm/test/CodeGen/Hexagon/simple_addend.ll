@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -filetype=obj -o - < %s | llvm-readobj -r - | FileCheck %s
+; RUN: llc -mtriple=hexagon -filetype=obj -o - < %s | llvm-readobj -r - | FileCheck %s
 
 declare void @bar(i32);
 

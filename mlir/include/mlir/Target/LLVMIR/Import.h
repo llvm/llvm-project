@@ -34,10 +34,12 @@ class ModuleOp;
 /// The translation supports operations from any dialect that has a registered
 /// implementation of the LLVMImportDialectInterface. It returns nullptr if the
 /// translation fails and reports errors using the error handler registered with
-/// the MLIR context.
+/// the MLIR context. The `emitExpensiveWarnings` option controls if expensive
+/// but uncritical diagnostics should be emitted.
 OwningOpRef<ModuleOp>
 translateLLVMIRToModule(std::unique_ptr<llvm::Module> llvmModule,
-                        MLIRContext *context);
+                        MLIRContext *context,
+                        bool emitExpensiveWarnings = true);
 
 /// Translate the given LLVM data layout into an MLIR equivalent using the DLTI
 /// dialect.

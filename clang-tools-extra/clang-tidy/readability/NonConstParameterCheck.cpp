@@ -103,7 +103,7 @@ void NonConstParameterCheck::check(const MatchFinder::MatchResult &Result) {
   } else if (const auto *VD = Result.Nodes.getNodeAs<VarDecl>("Mark")) {
     const QualType T = VD->getType();
     if ((T->isPointerType() && !T->getPointeeType().isConstQualified()) ||
-        T->isArrayType())
+        T->isArrayType() || T->isRecordType())
       markCanNotBeConst(VD->getInit(), true);
     else if (T->isLValueReferenceType() &&
              !T->getPointeeType().isConstQualified())

@@ -8,13 +8,14 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
-// constexpr lazy_split_view(View base, Pattern pattern);
-
-#include <ranges>
+// constexpr lazy_split_view(View base, Pattern pattern); // explicit since C++23
 
 #include <cassert>
+#include <ranges>
 #include <string_view>
 #include <utility>
+
+#include "test_convertible.h"
 #include "types.h"
 
 struct ViewWithCounting : std::ranges::view_base {
@@ -41,8 +42,26 @@ struct ViewWithCounting : std::ranges::view_base {
   constexpr ViewWithCounting& operator=(ViewWithCounting&&) = default;
   constexpr bool operator==(const ViewWithCounting&) const { return true; }
 };
+
 static_assert(std::ranges::forward_range<ViewWithCounting>);
 static_assert(std::ranges::view<ViewWithCounting>);
+
+using View = ViewWithCounting;
+using Pattern = ViewWithCounting;
+
+// SFINAE tests.
+
+#if TEST_STD_VER >= 23
+
+static_assert(!test_convertible<std::ranges::lazy_split_view<View, Pattern>, View, Pattern>(),
+              "This constructor must be explicit");
+
+#else
+
+static_assert( test_convertible<std::ranges::lazy_split_view<View, Pattern>, View, Pattern>(),
+              "This constructor must not be explicit");
+
+#endif // TEST_STD_VER >= 23
 
 constexpr bool test() {
   // Calling the constructor with `(ForwardView, ForwardView)`.
@@ -62,9 +81,6 @@ constexpr bool test() {
 
   // Make sure the arguments are moved, not copied.
   {
-    using View = ViewWithCounting;
-    using Pattern = ViewWithCounting;
-
     // Arguments are lvalues.
     {
       int view_copied = 0, view_moved = 0, pattern_copied = 0, pattern_moved = 0;

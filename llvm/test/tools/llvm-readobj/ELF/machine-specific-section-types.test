@@ -13,6 +13,10 @@
 # RUN: llvm-readobj --section-headers %t-mips.o | FileCheck %s --check-prefix=MIPS-LLVM
 # RUN: llvm-readelf --section-headers %t-mips.o | FileCheck %s --check-prefix=MIPS-GNU
 
+# RUN: yaml2obj %s --docnum=4 -o %t-aarch64.o
+# RUN: llvm-readobj --section-headers %t-aarch64.o | FileCheck %s --check-prefix=AARCH64-LLVM
+# RUN: llvm-readelf --section-headers %t-aarch64.o | FileCheck %s --check-prefix=AARCH64-GNU
+
 # ARM-LLVM: Name: exidx
 # ARM-LLVM: Type: SHT_ARM_EXIDX
 # ARM-LLVM: Name: preemptmap
@@ -48,6 +52,14 @@
 # MIPS-GNU: options  MIPS_OPTIONS
 # MIPS-GNU: abiflags MIPS_ABIFLAGS
 # MIPS-GNU: dwarf    MIPS_DWARF
+
+# AARCH64-LLVM: Name: .memtag.globals.dynamic
+# AARCH64-LLVM: Type: SHT_AARCH64_MEMTAG_GLOBALS_DYNAMIC
+# AARCH64-LLVM: Name: .memtag.globals.static
+# AARCH64-LLVM: Type: SHT_AARCH64_MEMTAG_GLOBALS_STATIC
+
+# AARCH64-GNU: .memtag.globals.dynamic AARCH64_MEMTAG_GLOBALS_DYNAMIC
+# AARCH64-GNU: .memtag.globals.static  AARCH64_MEMTAG_GLOBALS_STATIC
 
 --- !ELF
 FileHeader:
@@ -93,3 +105,15 @@ Sections:
     ISA:  MIPS64
   - Name: dwarf
     Type: SHT_MIPS_DWARF
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_AARCH64
+Sections:
+  - Name:  .memtag.globals.dynamic
+    Type:  SHT_AARCH64_MEMTAG_GLOBALS_DYNAMIC
+  - Name:  .memtag.globals.static
+    Type:  SHT_AARCH64_MEMTAG_GLOBALS_STATIC

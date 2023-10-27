@@ -15,10 +15,11 @@
 // RUN:   | FileCheck -check-prefix=CHECK-ARM-MFPU %s
 // CHECK-ARM-MFPU: as{{(.exe)?}}" "-EL" "-mfloat-abi=soft" "-mfpu=neon"
 //
-// RUN: %clang -target arm-linux -march=armv7-a -### \
+// RUN: %clang --target=arm-linux -march=armv7-a -mabi=aapcs-linux -### \
 // RUN:   -no-integrated-as -c %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-ARM-MARCH %s
 // CHECK-ARM-MARCH: as{{(.exe)?}}" "-EL" "-mfloat-abi=soft" "-march=armv7-a"
+// CHECK-ARM-MARCH-NOT: "-mabi=
 //
 // RUN: %clang -target armeb-linux -mlittle-endian -mcpu=cortex-a8 -mfpu=neon -march=armv7-a -### \
 // RUN:   -no-integrated-as -c %s 2>&1 \

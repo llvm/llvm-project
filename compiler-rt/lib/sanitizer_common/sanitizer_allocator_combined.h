@@ -29,9 +29,9 @@ class CombinedAllocator {
                          LargeMmapAllocatorPtrArray,
                          typename PrimaryAllocator::AddressSpaceView>;
 
-  void InitLinkerInitialized(s32 release_to_os_interval_ms) {
-    stats_.InitLinkerInitialized();
-    primary_.Init(release_to_os_interval_ms);
+  void InitLinkerInitialized(s32 release_to_os_interval_ms,
+                             uptr heap_start = 0) {
+    primary_.Init(release_to_os_interval_ms, heap_start);
     secondary_.InitLinkerInitialized();
   }
 
@@ -134,7 +134,7 @@ class CombinedAllocator {
 
   // This function does the same as GetBlockBegin, but is much faster.
   // Must be called with the allocator locked.
-  void *GetBlockBeginFastLocked(void *p) {
+  void *GetBlockBeginFastLocked(const void *p) {
     if (primary_.PointerIsMine(p))
       return primary_.GetBlockBegin(p);
     return secondary_.GetBlockBeginFastLocked(p);

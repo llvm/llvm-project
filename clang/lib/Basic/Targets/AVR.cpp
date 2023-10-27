@@ -428,12 +428,28 @@ bool AVRTargetInfo::setCPU(const std::string &Name) {
   return false;
 }
 
+std::optional<std::string>
+AVRTargetInfo::handleAsmEscapedChar(char EscChar) const {
+  switch (EscChar) {
+  // "%~" represents for 'r' depends on the device has long jump/call.
+  case '~':
+    return ArchHasJMPCALL(Arch) ? std::string("") : std::string(1, 'r');
+
+  // "%!" represents for 'e' depends on the PC register size.
+  case '!':
+    return ArchHas3BytePC(Arch) ? std::string(1, 'e') : std::string("");
+
+  // This is an invalid escape character for AVR.
+  default:
+    return std::nullopt;
+  }
+}
+
 void AVRTargetInfo::getTargetDefines(const LangOptions &Opts,
                                      MacroBuilder &Builder) const {
   Builder.defineMacro("AVR");
   Builder.defineMacro("__AVR");
   Builder.defineMacro("__AVR__");
-  Builder.defineMacro("__ELF__");
 
   if (ABI == "avrtiny")
     Builder.defineMacro("__AVR_TINY__", "1");

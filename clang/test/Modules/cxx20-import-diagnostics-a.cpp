@@ -9,31 +9,32 @@
 // RUN:  -o %t/C.pcm
 
 // RUN: %clang_cc1 -std=c++20 -emit-module-interface %t/import-diags-tu3.cpp \
-// RUN:  -fmodule-file=%t/B.pcm -fmodule-file=%t/C.pcm -o %t/AOK1.pcm
+// RUN:  -fmodule-file=B=%t/B.pcm -fmodule-file=C=%t/C.pcm -o %t/AOK1.pcm
 
 // RUN: %clang_cc1 -std=c++20 -S %t/import-diags-tu4.cpp \
-// RUN:  -fmodule-file=%t/AOK1.pcm -o %t/tu_3.s -verify
+// RUN:  -fmodule-file=AOK1=%t/AOK1.pcm -fmodule-file=B=%t/B.pcm \
+// RUN:  -fmodule-file=C=%t/C.pcm -o %t/tu_3.s -verify
 
 // RUN: %clang_cc1 -std=c++20 -emit-module-interface %t/import-diags-tu5.cpp \
-// RUN:  -fmodule-file=%t/B.pcm -fmodule-file=%t/C.pcm -o %t/BC.pcm -verify
+// RUN:  -fmodule-file=B=%t/B.pcm -fmodule-file=C=%t/C.pcm -o %t/BC.pcm -verify
 
 // RUN: %clang_cc1 -std=c++20 -S %t/import-diags-tu6.cpp \
-// RUN:  -fmodule-file=%t/B.pcm -fmodule-file=%t/C.pcm -o %t/tu_5.s -verify
+// RUN:  -fmodule-file=B=%t/B.pcm -fmodule-file=C=%t/C.pcm -o %t/tu_5.s -verify
 
 // RUN: %clang_cc1 -std=c++20 -emit-module-interface %t/import-diags-tu7.cpp \
-// RUN:  -fmodule-file=%t/B.pcm -o %t/D.pcm -verify
+// RUN:  -fmodule-file=B=%t/B.pcm -o %t/D.pcm -verify
 
 // RUN: %clang_cc1 -std=c++20 -emit-module-interface %t/import-diags-tu8.cpp \
-// RUN:  -fmodule-file=%t/B.pcm -o %t/D.pcm -verify
+// RUN:  -fmodule-file=B=%t/B.pcm -o %t/D.pcm -verify
 
 // RUN: %clang_cc1 -std=c++20 -S %t/import-diags-tu9.cpp \
-// RUN:  -fmodule-file=%t/B.pcm -o %t/tu_8.s -verify
+// RUN:  -fmodule-file=B=%t/B.pcm -o %t/tu_8.s -verify
 
 // RUN: %clang_cc1 -std=c++20 -emit-module-interface %t/import-diags-tu10.cpp \
 // RUN:  -o %t/B.pcm -verify
 
 // RUN: %clang_cc1 -std=c++20 -emit-obj %t/import-diags-tu11.cpp \
-// RUN:  -fmodule-file=%t/C.pcm  -o %t/impl.o
+// RUN:  -fmodule-file=C=%t/C.pcm  -o %t/impl.o
 
 // Test diagnostics for incorrect module import sequences.
 
@@ -70,7 +71,7 @@ module;
 
 module AOK1;
 
-export import C; // expected-error {{export declaration can only be used within a module interface unit}}
+export import C; // expected-error {{export declaration can only be used within a module purview}}
 
 int theAnswer () { return 42; }
 

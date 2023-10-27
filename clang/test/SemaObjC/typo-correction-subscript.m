@@ -5,7 +5,6 @@
 @interface Test
 @end
 @implementation Test
-// rdar://problem/47403222
 - (void)rdar47403222:(Dictionary *)opts {
   [self undeclaredMethod:undeclaredArg];
   // expected-error@-1{{no visible @interface for 'Test' declares the selector 'undeclaredMethod:'}}

@@ -87,7 +87,7 @@ entry:
 ; 32BIT-DAG:      $r3 = COPY %0
 ; 32BIT-DAG:      $r4 = COPY %1
 ; 32BIT-DAG:      $r5 = COPY %2
-; 32BIT-NEXT:     BL_NOP &".memcpy[PR]", csr_aix32, implicit-def dead $lr, implicit $rm, implicit $r3, implicit $r4, implicit $r5, implicit $r2, implicit-def $r1, implicit-def $r3
+; 32BIT-NEXT:     BL_NOP &".___memmove[PR]", csr_aix32, implicit-def dead $lr, implicit $rm, implicit $r3, implicit $r4, implicit $r5, implicit $r2, implicit-def $r1, implicit-def $r3
 ; 32BIT-NEXT:     ADJCALLSTACKUP 56, 0, implicit-def dead $r1, implicit $r1
 ; 32BIT:          ADJCALLSTACKDOWN 312, 0, implicit-def dead $r1, implicit $r1
 ; 32BIT-DAG:      $r3 = COPY %{{[0-9]+}}
@@ -108,7 +108,7 @@ entry:
 ; ASM32BIT-DAG:   lwz 4, L..C{{[0-9]+}}(2)
 ; ASM32BIT-DAG:   li 5, 256
 ; ASM32BIT-DAG:   stw 0, 328(1)
-; ASM32BIT-NEXT:  bl .memcpy[PR]
+; ASM32BIT-NEXT:  bl .___memmove[PR]
 ; ASM32BIT:       bl .test_byval_mem2
 ; ASM32BIT:       addi 1, 1, 320
 
@@ -120,7 +120,7 @@ entry:
 ; 64BIT-DAG:      $x3 = COPY %0
 ; 64BIT-DAG:      $x4 = COPY %1
 ; 64BIT-DAG:      $x5 = COPY %2
-; 64BIT-NEXT:     BL8_NOP &".memcpy[PR]", csr_ppc64, implicit-def dead $lr8, implicit $rm, implicit $x3, implicit $x4, implicit $x5, implicit $x2, implicit-def $r1, implicit-def $x3
+; 64BIT-NEXT:     BL8_NOP &".___memmove64[PR]", csr_ppc64, implicit-def dead $lr8, implicit $rm, implicit $x3, implicit $x4, implicit $x5, implicit $x2, implicit-def $r1, implicit-def $x3
 ; 64BIT-NEXT:     ADJCALLSTACKUP 112, 0, implicit-def dead $r1, implicit $r1
 ; 64BIT:          ADJCALLSTACKDOWN 368, 0, implicit-def dead $r1, implicit $r1
 ; 64BIT-DAG:      $x3 = COPY %{{[0-9]+}}
@@ -139,7 +139,7 @@ entry:
 ; ASM64BIT-DAG:   ld 4, L..C{{[0-9]+}}(2)
 ; ASM64BIT-DAG:   li 5, 256
 ; ASM64BIT-DAG:   std 0, 384(1)
-; ASM64BIT-NEXT:  bl .memcpy[PR]
+; ASM64BIT-NEXT:  bl .___memmove64[PR]
 ; ASM64BIT:       bl .test_byval_mem2
 ; ASM64BIT:       addi 1, 1, 368
 
@@ -188,7 +188,7 @@ entry:
 ; 32BIT-DAG:      $r3 = COPY %2
 ; 32BIT-DAG:      $r4 = COPY %1
 ; 32BIT-DAG:      $r5 = COPY %3
-; 32BIT-NEXT:     BL_NOP &".memcpy[PR]", csr_aix32, implicit-def dead $lr, implicit $rm, implicit $r3, implicit $r4, implicit $r5, implicit $r2, implicit-def $r1, implicit-def $r3
+; 32BIT-NEXT:     BL_NOP &".___memmove[PR]", csr_aix32, implicit-def dead $lr, implicit $rm, implicit $r3, implicit $r4, implicit $r5, implicit $r2, implicit-def $r1, implicit-def $r3
 ; 32BIT-NEXT:     ADJCALLSTACKUP 56, 0, implicit-def dead $r1, implicit $r1
 ; 32BIT:          ADJCALLSTACKDOWN 92, 0, implicit-def dead $r1, implicit $r1
 ; 32BIT-DAG:      $r3 = COPY %{{[0-9]+}}
@@ -209,7 +209,7 @@ entry:
 ; ASM32BIT-DAG:   addi 3, 1, 56
 ; ASM32BIT-DAG:   addi 4, [[REG]], 24
 ; ASM32BIT-DAG:   li 5, 33
-; ASM32BIT-NEXT:  bl .memcpy[PR]
+; ASM32BIT-NEXT:  bl .___memmove[PR]
 ; ASM32BIT-DAG:   lwz 5, 0([[REG]])
 ; ASM32BIT-DAG:   lwz 6, 4([[REG]])
 ; ASM32BIT-DAG:   lwz 7, 8([[REG]])
@@ -306,7 +306,7 @@ entry:
 ; 32BIT-DAG:      $r3 = COPY %3
 ; 32BIT-DAG:      $r4 = COPY %4
 ; 32BIT-DAG:      $r5 = COPY %5
-; 32BIT-NEXT:     BL_NOP &".memcpy[PR]", csr_aix32, implicit-def dead $lr, implicit $rm, implicit $r3, implicit $r4, implicit $r5, implicit $r2, implicit-def $r1, implicit-def $r3
+; 32BIT-NEXT:     BL_NOP &".___memmove[PR]", csr_aix32, implicit-def dead $lr, implicit $rm, implicit $r3, implicit $r4, implicit $r5, implicit $r2, implicit-def $r1, implicit-def $r3
 ; 32BIT-NEXT:     ADJCALLSTACKUP 56, 0, implicit-def dead $r1, implicit $r1
 ; 32BIT:          ADJCALLSTACKDOWN 316, 0, implicit-def dead $r1, implicit $r1
 ; 32BIT-DAG:      $r3 = COPY %{{[0-9]+}}
@@ -331,7 +331,7 @@ entry:
 ; ASM32BIT-DAG:   addi 3, 1, 60
 ; ASM32BIT-DAG:   lwz 4, L..C{{[0-9]+}}(2)
 ; ASM32BIT-DAG:   li 5, 256
-; ASM32BIT-NEXT:  bl .memcpy[PR]
+; ASM32BIT-NEXT:  bl .___memmove[PR]
 ; ASM32BIT-DAG:   lwz 4, 0([[REG1]])
 ; ASM32BIT-DAG:   lwz 5, 4([[REG1]])
 ; ASM32BIT-DAG:   lwz 6, 8([[REG1]])
@@ -351,7 +351,7 @@ entry:
 ; 64BIT-DAG:      $x3 = COPY %2
 ; 64BIT-DAG:      $x4 = COPY %1
 ; 64BIT-DAG:      $x5 = COPY %3
-; 64BIT-NEXT:     BL8_NOP &".memcpy[PR]", csr_ppc64, implicit-def dead $lr8, implicit $rm, implicit $x3, implicit $x4, implicit $x5, implicit $x2, implicit-def $r1, implicit-def $x3
+; 64BIT-NEXT:     BL8_NOP &".___memmove64[PR]", csr_ppc64, implicit-def dead $lr8, implicit $rm, implicit $x3, implicit $x4, implicit $x5, implicit $x2, implicit-def $r1, implicit-def $x3
 ; 64BIT-NEXT:     ADJCALLSTACKUP 112, 0, implicit-def dead $r1, implicit $r1
 ; 64BIT:          ADJCALLSTACKDOWN 344, 0, implicit-def dead $r1, implicit $r1
 ; 64BIT-DAG:      $x3 = COPY %{{[0-9]+}}
@@ -370,7 +370,7 @@ entry:
 ; ASM64BIT-DAG:   addi 3, 1, 112
 ; ASM64BIT-DAG:   addi 4, [[REG1]], 24
 ; ASM64BIT-DAG:   li 5, 232
-; ASM64BIT-NEXT:  bl .memcpy[PR]
+; ASM64BIT-NEXT:  bl .___memmove64[PR]
 ; ASM64BIT-DAG:   ld [[REG2:[0-9]+]], L..C{{[0-9]+}}(2)
 ; ASM64BIT-DAG:   ld 4, 0([[REG2]])
 ; ASM64BIT-DAG:   ld 5, 8([[REG2]])

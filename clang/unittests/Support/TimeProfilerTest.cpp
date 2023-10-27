@@ -179,6 +179,7 @@ constexpr int slow_init_list[] = {1, 1, 2, 3, 5, 8, 13, 21}; // 25th line
 Frontend
 | EvaluateAsRValue (<test.cc:8:21>)
 | EvaluateForOverflow (<test.cc:8:21, col:25>)
+| EvaluateForOverflow (<test.cc:8:30, col:32>)
 | EvaluateAsRValue (<test.cc:9:14>)
 | EvaluateForOverflow (<test.cc:9:9, col:14>)
 | isPotentialConstantExpr (slow_namespace::slow_func)
@@ -189,6 +190,7 @@ Frontend
 | EvaluateAsInitializer (slow_value)
 | EvaluateAsConstantExpr (<test.cc:17:33, col:59>)
 | EvaluateAsConstantExpr (<test.cc:18:11, col:37>)
+| EvaluateAsConstantExpr (<test.cc:23:31, col:57>)
 | EvaluateAsRValue (<test.cc:22:14, line:23:58>)
 | EvaluateAsInitializer (slow_init_list)
 | PerformPendingInstantiations

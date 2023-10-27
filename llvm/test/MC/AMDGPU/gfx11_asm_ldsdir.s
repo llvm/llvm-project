@@ -1,4 +1,4 @@
-// RUN: llvm-mc -arch=amdgcn -mcpu=gfx1100 -show-encoding %s | FileCheck -check-prefix=GFX11 %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=gfx1100 -show-encoding %s | FileCheck -check-prefix=GFX11 %s
 
 lds_direct_load v1 wait_vdst:15
 // GFX11: lds_direct_load v1 wait_vdst:15  ; encoding: [0x01,0x00,0x1f,0xce]
@@ -46,10 +46,10 @@ lds_direct_load v15 wait_vdst:1
 // GFX11: lds_direct_load v15 wait_vdst:1  ; encoding: [0x0f,0x00,0x11,0xce]
 
 lds_direct_load v16 wait_vdst:0
-// GFX11: lds_direct_load v16  ; encoding: [0x10,0x00,0x10,0xce]
+// GFX11: lds_direct_load v16 wait_vdst:0  ; encoding: [0x10,0x00,0x10,0xce]
 
 lds_direct_load v17
-// GFX11: lds_direct_load v17  ; encoding: [0x11,0x00,0x10,0xce]
+// GFX11: lds_direct_load v17 wait_vdst:0 ; encoding: [0x11,0x00,0x10,0xce]
 
 lds_param_load v1, attr0.x wait_vdst:15
 // GFX11: lds_param_load v1, attr0.x wait_vdst:15   ; encoding: [0x01,0x00,0x0f,0xce]
@@ -84,20 +84,5 @@ lds_param_load v10, attr11.x wait_vdst:6
 lds_param_load v11, attr22.y wait_vdst:5
 // GFX11: lds_param_load v11, attr22.y wait_vdst:5  ; encoding: [0x0b,0x59,0x05,0xce]
 
-lds_param_load v12, attr33.z wait_vdst:4
-// GFX11: lds_param_load v12, attr33.z wait_vdst:4  ; encoding: [0x0c,0x86,0x04,0xce]
-
-lds_param_load v13, attr63.x wait_vdst:3
-// GFX11: lds_param_load v13, attr63.x wait_vdst:3  ; encoding: [0x0d,0xfc,0x03,0xce]
-
-lds_param_load v14, attr63.y wait_vdst:2
-// GFX11: lds_param_load v14, attr63.y wait_vdst:2  ; encoding: [0x0e,0xfd,0x02,0xce]
-
-lds_param_load v15, attr63.z wait_vdst:1
-// GFX11: lds_param_load v15, attr63.z wait_vdst:1  ; encoding: [0x0f,0xfe,0x01,0xce]
-
-lds_param_load v16, attr63.w wait_vdst:0
-// GFX11: lds_param_load v16, attr63.w  ; encoding: [0x10,0xff,0x00,0xce]
-
-lds_param_load v17, attr63.w
-// GFX11: lds_param_load v17, attr63.w  ; encoding: [0x11,0xff,0x00,0xce]
+lds_param_load v12, attr32.z wait_vdst:4
+// GFX11: lds_param_load v12, attr32.z wait_vdst:4  ; encoding: [0x0c,0x82,0x04,0xce]

@@ -1,16 +1,17 @@
-<!--===- docs/FIRArrayOperations.md 
-  
+<!--===- docs/FIRArrayOperations.md
+
    Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
    See https://llvm.org/LICENSE.txt for license information.
    SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-  
+
 -->
 
 # Design: FIR Array operations
 
-```eval_rst
-.. contents::
-   :local:
+```{contents}
+---
+local:
+---
 ```
 
 ## General
@@ -18,7 +19,7 @@
 The array operations in FIR model the copy-in/copy-out semantics over Fortran
 statements.
 
-Fortran language semantics sometimes require the compiler to make a temporary 
+Fortran language semantics sometimes require the compiler to make a temporary
 copy of an array or array slice. Situations where this can occur include:
 
 * Passing a non-contiguous array to a procedure that does not declare it as
@@ -39,7 +40,7 @@ There are currently the following operations:
 `array_load`(s) and `array_merge_store` are a pairing that brackets the lifetime
 of the array copies.
 
-`array_fetch` and `array_update` are defined to work as getter/setter pairs on 
+`array_fetch` and `array_update` are defined to work as getter/setter pairs on
 values of elements from loaded array copies. These have "GEP-like" syntax and
 semantics.
 
@@ -82,7 +83,7 @@ alter its composite value. This operation lets one load an array as a
 value while applying a runtime shape, shift, or slice to the memory
 reference, and its semantics guarantee immutability.
 
-```mlir
+```
 %s = fir.shape_shift %lb1, %ex1, %lb2, %ex2 : (index, index, index, index) -> !fir.shapeshift<2>
 // load the entire array 'a'
 %v = fir.array_load %a(%s) : (!fir.ref<!fir.array<?x?xf32>>, !fir.shapeshift<2>) -> !fir.array<?x?xf32>
@@ -91,7 +92,7 @@ reference, and its semantics guarantee immutability.
 
 # array_merge_store
 
-The `array_merge_store` operation stores a merged array value to memory. 
+The `array_merge_store` operation stores a merged array value to memory.
 
 
 ```fortran
@@ -103,7 +104,7 @@ The `array_merge_store` operation stores a merged array value to memory.
 One can use `fir.array_merge_store` to merge/copy the value of `a` in an
 array expression as shown above.
 
-```mlir
+```
   %v = fir.array_load %a(%shape) : ...
   %r = fir.array_update %v, %f, %i, %j : (!fir.array<?x?xf32>, f32, index, index) -> !fir.array<?x?xf32>
   fir.array_merge_store %v, %r to %a : !fir.ref<!fir.array<?x?xf32>>
@@ -136,7 +137,7 @@ One can use `fir.array_fetch` to fetch the (implied) value of `a(i,j)` in
 an array expression as shown above. It can also be used to extract the
 element `a(r,s+1)` in the second expression.
 
-```mlir
+```
   %s = fir.shape %n, %m : (index, index) -> !fir.shape<2>
   // load the entire array 'a'
   %v = fir.array_load %a(%s) : (!fir.ref<!fir.array<?x?xf32>>, !fir.shape<2>) -> !fir.array<?x?xf32>
@@ -164,7 +165,7 @@ the update.
 One can use `fir.array_update` to update the (implied) value of `a(i,j)`
 in an array expression as shown above.
 
-```mlir
+```
   %s = fir.shape %n, %m : (index, index) -> !fir.shape<2>
   // load the entire array 'a'
   %v = fir.array_load %a(%s) : (!fir.ref<!fir.array<?x?xf32>>, !fir.shape<2>) -> !fir.array<?x?xf32>
@@ -205,7 +206,7 @@ the element `a(i,j)` in an array expression `a` as shown above. It can also
 be used to recover the reference element `a(r,s+1)` in the second
 expression.
 
-```mlir
+```
   %s = fir.shape %n, %m : (index, index) -> !fir.shape<2>
   // load the entire array 'a'
   %v = fir.array_load %a(%s) : (!fir.ref<!fir.array<?x?xf32>>, !fir.shape<2>) -> !fir.array<?x?xf32>
@@ -219,9 +220,9 @@ source. Other array operation such as `array_amend` can be in between.
 
 `array_access` if mainly used with `character`'s arrays and arrays of derived
 types where because they might have a non-compile time sizes that would be
-useless too load entirely or too big to load. 
+useless too load entirely or too big to load.
 
-Here is a simple example with a `character` array assignment. 
+Here is a simple example with a `character` array assignment.
 
 Fortran
 ```
@@ -270,12 +271,12 @@ it has dynamic length, and even if constant, could be too long to do so.
 
 ## array_amend
 
-The `array_amend` operation marks an array value as having been changed via a 
+The `array_amend` operation marks an array value as having been changed via a
 reference obtain by an `array_access`. It acts as a logical transaction log
 that is used to merge the final result back with an `array_merge_store`
 operation.
 
-```mlir
+```
   // fetch the value of one of the array value's elements
   %1 = fir.array_access %v, %i, %j : (!fir.array<?x?xT>, index, index) -> !fir.ref<T>
   // modify the element by storing data using %1 as a reference
@@ -316,7 +317,7 @@ func @_QPs(%arg0: !fir.box<!fir.array<?x!fir.type<_QFsTt{m:i32}>>>, %arg1: !fir.
   // This is the "seed" for the "copy-out" array on the LHS. It'll flow from iteration to iteration and gets
   // updated at each iteration.
   %array_a_dest_init = fir.array_load %arg0 : (!fir.box<!fir.array<?x!fir.type<_QFsTt{m:i32}>>>) -> !fir.array<?x!fir.type<_QFsTt{m:i32}>>
-  
+
   %array_a_final = fir.do_loop %i = %l_index to %u_index step %c1 unordered iter_args(%array_a_dest = %array_a_dest_init) -> (!fir.array<?x!fir.type<_QFsTt{m:i32}>>) {
     // Compute indexing for the RHS and array the element.
     %u_minus_i = arith.subi %u_index, %i : index // u-i

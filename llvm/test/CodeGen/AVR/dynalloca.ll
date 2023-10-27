@@ -19,8 +19,8 @@ define void @test1(i16 %x) {
 ; CHECK-NEXT: out 63, r0
 ; CHECK-NEXT: out 61, {{.*}}
 ; Test writes
-; CHECK: std Z+12, {{.*}}
 ; CHECK: std Z+13, {{.*}}
+; CHECK: std Z+12, {{.*}}
 ; CHECK: std Z+7, {{.*}}
 ; CHECK-NOT: std
 ; Test SP restore
@@ -66,14 +66,14 @@ define void @dynalloca2(i16 %x) {
 ; Store values on the stack
 ; CHECK: ldi r16, 0
 ; CHECK: ldi r17, 0
-; CHECK: std Z+7, r16
 ; CHECK: std Z+8, r17
-; CHECK: std Z+5, r16
+; CHECK: std Z+7, r16
 ; CHECK: std Z+6, r17
-; CHECK: std Z+3, r16
+; CHECK: std Z+5, r16
 ; CHECK: std Z+4, r17
-; CHECK: std Z+1, r16
+; CHECK: std Z+3, r16
 ; CHECK: std Z+2, r17
+; CHECK: std Z+1, r16
 ; CHECK: call
 ; Call frame restore
 ; CHECK-NEXT: in r30, 61

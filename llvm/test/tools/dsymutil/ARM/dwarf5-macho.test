@@ -1,0 +1,111 @@
+; This test checks to that DWARF v5 debug info can be correctly linked
+; into a dSYM bundle by dsymutil, with the correct section names and DWARF v5
+; headers for the different sections.
+
+; 1.o was produced with the source file:
+
+; a.cpp
+; __attribute__((section("1,__text_foo"))) void foo() {}
+;
+; int foo2(int a) {
+;     return a+5;
+; }
+; int main () {
+;     return 1;
+; }
+
+; clang -g -c -O1 a.cpp -Xclang -gdwarf-5 -o 1.o
+
+
+RUN: rm -rf %t.dir && mkdir -p %t.dir
+RUN: dsymutil -y %p/dummy-debug-map-amr64.map -oso-prepend-path=%p/../Inputs/DWARF5 -o %t.dir/dwarf5-macho.dSYM
+RUN: llvm-dwarfdump %t.dir/dwarf5-macho.dSYM -a --verbose | FileCheck %s
+
+RUN: rm -rf %t.dir && mkdir -p %t.dir
+RUN: dsymutil --linker llvm -y %p/dummy-debug-map-amr64.map \
+RUN:   -oso-prepend-path=%p/../Inputs/DWARF5 -o %t.dir/dwarf5-macho.dSYM
+RUN: llvm-dwarfdump %t.dir/dwarf5-macho.dSYM -a --verbose | FileCheck %s
+
+CHECK:.debug_abbrev contents:
+CHECK-NEXT: Abbrev table for offset: 0x00000000
+
+CHECK: .debug_info contents:
+CHECK-NEXT: Compile Unit: length = 0x0000004a, format = DWARF32, version = 0x0005, unit_type = DW_UT_compile, abbr_offset = 0x0000, addr_size = 0x08 
+CHECK: DW_AT_ranges [DW_FORM_sec_offset] (0x[[RANGELIST_OFFSET:[0-9a-f]+]]
+CHECK-NEXT:                  [0x[[RANGELIST_OFFSET_START:[0-9a-f]+]], 0x[[RANGELIST_OFFSET_END:[0-9a-f]+]]))
+CHECK-NEXT: DW_AT_addr_base [DW_FORM_sec_offset]      (0x00000008)
+CHECK: 0x0000002c:   DW_TAG_subprogram [2] * (0x0000000c)
+CHECK-NEXT:  DW_AT_low_pc [DW_FORM_addrx]     (indexed (00000000) address = 0x[[#%.16x,LOCLIST_LOWPC:]])
+CHECK: 0x0000003c:     DW_TAG_formal_parameter [3]   (0x0000002c)
+CHECK-NEXT:                   DW_AT_location [DW_FORM_sec_offset]   (0x[[LOC_OFFSET:[0-9a-f]+]]: 
+CHECK-NEXT:                      [0x[[#%.16x,LOCLIST_PAIR_START:]], 0x[[#%.16x,LOCLIST_PAIR_END:]]): [[LOCLIST_EXPR:.*]]
+CHECK-NEXT:                      [0x[[#%.16x,LOCLIST_PAIR_START2:]], 0x[[#%.16x,LOCLIST_PAIR_END2:]]): [[LOCLIST_EXPR2:.*]])
+
+CHECK: .debug_loclists contents:
+CHECK-NEXT: 0x00000000: locations list header: length = 0x00000018, format = DWARF32, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000000
+CHECK-NEXT: 0x[[LOC_OFFSET]]: 
+CHECK-NEXT:            DW_LLE_base_addressx   (0x0000000000000000)
+CHECK-NEXT:            DW_LLE_offset_pair     (0x[[#sub(LOCLIST_PAIR_START,LOCLIST_LOWPC)]], 0x[[#sub(LOCLIST_PAIR_END,LOCLIST_LOWPC)]])
+CHECK-NEXT:            DW_LLE_offset_pair     (0x[[#sub(LOCLIST_PAIR_START2,LOCLIST_LOWPC)]], 0x[[#sub(LOCLIST_PAIR_END2,LOCLIST_LOWPC)]])
+CHECK-NEXT:            DW_LLE_end_of_list     ()
+
+CHECK: .debug_line contents:
+CHECK-NEXT: debug_line[0x00000000]
+CHECK-NEXT: Line table prologue:
+CHECK-NEXT:     total_length: 0x00000048
+CHECK-NEXT:           format: DWARF32
+CHECK-NEXT:          version: 5
+CHECK-NEXT:     address_size: 8
+CHECK-NEXT:  seg_select_size: 0
+CHECK-NEXT:  prologue_length: 0x00000025
+CHECK-NEXT:  min_inst_length: 1
+CHECK-NEXT: max_ops_per_inst: 1
+CHECK-NEXT:  default_is_stmt: 1
+CHECK-NEXT:        line_base: -5
+CHECK-NEXT:       line_range: 14
+CHECK-NEXT:      opcode_base: 13
+CHECK-NEXT: standard_opcode_lengths[DW_LNS_copy] = 0
+CHECK-NEXT: standard_opcode_lengths[DW_LNS_advance_pc] = 1
+CHECK-NEXT: standard_opcode_lengths[DW_LNS_advance_line] = 1
+CHECK-NEXT: standard_opcode_lengths[DW_LNS_set_file] = 1
+CHECK-NEXT: standard_opcode_lengths[DW_LNS_set_column] = 1
+CHECK-NEXT: standard_opcode_lengths[DW_LNS_negate_stmt] = 0
+CHECK-NEXT: standard_opcode_lengths[DW_LNS_set_basic_block] = 0
+CHECK-NEXT: standard_opcode_lengths[DW_LNS_const_add_pc] = 0
+CHECK-NEXT: standard_opcode_lengths[DW_LNS_fixed_advance_pc] = 1
+CHECK-NEXT: standard_opcode_lengths[DW_LNS_set_prologue_end] = 0
+CHECK-NEXT: standard_opcode_lengths[DW_LNS_set_epilogue_begin] = 0
+CHECK-NEXT: standard_opcode_lengths[DW_LNS_set_isa] = 1
+CHECK-NEXT: include_directories[  0] =  .debug_line_str[0x00000000] = "/Users/shubham/Development/test109275485"
+CHECK-NEXT: file_names[  0]:
+CHECK-NEXT:            name:  .debug_line_str[0x00000029] = "a.cpp"
+CHECK-NEXT:       dir_index: 0
+
+
+CHECK: .debug_str contents:
+
+CHECK: .debug_line_str contents:
+CHECK-NEXT: 0x00000000: "/Users/shubham/Development/test109275485"
+CHECK-NEXT: 0x00000029: "a.cpp"
+
+CHECK: .debug_rnglists contents:
+CHECK-NEXT: 0x00000000: range list header: length = 0x0000000e, format = DWARF32, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000000
+CHECK-NEXT: ranges:
+CHECK-NEXT: [[RANGELIST_OFFSET]]: [DW_RLE_base_addressx]:  0x0000000000000000
+CHECK-NEXT: 0x0000000e: [DW_RLE_offset_pair  ]: {{.*}}[0x[[RANGELIST_OFFSET_START]], 0x[[RANGELIST_OFFSET_END]])
+CHECK-NEXT: 0x00000011: [DW_RLE_end_of_list  ]
+
+CHECK: .debug_names contents:
+CHECK-NEX:T Name Index @ 0x0 {
+CHECK-NEX:T   Header {
+CHECK-NEX:T     Length: 0x7C
+CHECK-NEX:T     Format: DWARF32
+CHECK-NEX:T     Version: 5
+CHECK-NEX:T     CU count: 1
+CHECK-NEX:T     Local TU count: 0
+CHECK-NEX:T     Foreign TU count: 0
+CHECK-NEX:T     Bucket count: 3
+CHECK-NEX:T     Name count: 3
+CHECK-NEX:T     Abbreviations table size: 0xD
+CHECK-NEX:T     Augmentation: 'LLVM0700'
+CHECK-NEX:T   }

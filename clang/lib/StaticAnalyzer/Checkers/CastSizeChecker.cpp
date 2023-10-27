@@ -24,7 +24,7 @@ using namespace ento;
 
 namespace {
 class CastSizeChecker : public Checker< check::PreStmt<CastExpr> > {
-  mutable std::unique_ptr<BuiltinBug> BT;
+  mutable std::unique_ptr<BugType> BT;
 
 public:
   void checkPreStmt(const CastExpr *CE, CheckerContext &C) const;
@@ -132,11 +132,11 @@ void CastSizeChecker::checkPreStmt(const CastExpr *CE,CheckerContext &C) const {
 
   if (ExplodedNode *errorNode = C.generateErrorNode()) {
     if (!BT)
-      BT.reset(new BuiltinBug(this, "Cast region with wrong size.",
-                                    "Cast a region whose size is not a multiple"
-                                    " of the destination type size."));
-    auto R = std::make_unique<PathSensitiveBugReport>(*BT, BT->getDescription(),
-                                                      errorNode);
+      BT.reset(new BugType(this, "Cast region with wrong size."));
+    constexpr llvm::StringLiteral Msg =
+        "Cast a region whose size is not a multiple of the destination type "
+        "size.";
+    auto R = std::make_unique<PathSensitiveBugReport>(*BT, Msg, errorNode);
     R->addRange(CE->getSourceRange());
     C.emitReport(std::move(R));
   }

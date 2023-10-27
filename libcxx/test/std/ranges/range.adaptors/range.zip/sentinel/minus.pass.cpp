@@ -34,7 +34,7 @@ struct convertible_forward_sized_iterator {
 
   using iterator_category = std::forward_iterator_tag;
   using value_type = int;
-  using difference_type = intptr_t;
+  using difference_type = std::intptr_t;
 
   convertible_forward_sized_iterator() = default;
   constexpr convertible_forward_sized_iterator(Base it) : it_(it) {}

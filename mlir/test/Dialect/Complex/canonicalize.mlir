@@ -155,3 +155,129 @@ func.func @complex_sub_zero() -> complex<f32> {
   %sub = complex.sub %complex1, %complex2 : complex<f32>
   return %sub : complex<f32>
 }
+
+// CHECK-LABEL: func @re_neg
+//  CHECK-SAME: (%[[ARG0:.*]]: f32, %[[ARG1:.*]]: f32)
+func.func @re_neg(%arg0: f32, %arg1: f32) -> f32 {
+  %create = complex.create %arg0, %arg1: complex<f32>
+  // CHECK: %[[NEG:.*]] = arith.negf %[[ARG0]]
+  %neg = complex.neg %create : complex<f32>
+  %re = complex.re %neg : complex<f32>
+  // CHECK-NEXT: return %[[NEG]]
+  return %re : f32
+}
+
+// CHECK-LABEL: func @im_neg
+//  CHECK-SAME: (%[[ARG0:.*]]: f32, %[[ARG1:.*]]: f32)
+func.func @im_neg(%arg0: f32, %arg1: f32) -> f32 {
+  %create = complex.create %arg0, %arg1: complex<f32>
+  // CHECK: %[[NEG:.*]] = arith.negf %[[ARG1]]
+  %neg = complex.neg %create : complex<f32>
+  %im = complex.im %neg : complex<f32>
+  // CHECK-NEXT: return %[[NEG]]
+  return %im : f32
+}
+
+// CHECK-LABEL: func @mul_one_f16
+//  CHECK-SAME: (%[[ARG0:.*]]: f16, %[[ARG1:.*]]: f16) -> complex<f16>
+func.func @mul_one_f16(%arg0: f16, %arg1: f16) -> complex<f16> {
+  %create = complex.create %arg0, %arg1: complex<f16>  
+  %one = complex.constant [1.0 : f16, 0.0 : f16] : complex<f16>
+  %mul = complex.mul %create, %one : complex<f16>
+  // CHECK: %[[CREATE:.*]] = complex.create %[[ARG0]], %[[ARG1]] : complex<f16>
+  // CHECK-NEXT: return %[[CREATE]]
+  return %mul : complex<f16>
+}
+
+// CHECK-LABEL: func @mul_one_f32
+//  CHECK-SAME: (%[[ARG0:.*]]: f32, %[[ARG1:.*]]: f32) -> complex<f32>
+func.func @mul_one_f32(%arg0: f32, %arg1: f32) -> complex<f32> {
+  %create = complex.create %arg0, %arg1: complex<f32>  
+  %one = complex.constant [1.0 : f32, 0.0 : f32] : complex<f32>
+  %mul = complex.mul %create, %one : complex<f32>
+  // CHECK: %[[CREATE:.*]] = complex.create %[[ARG0]], %[[ARG1]] : complex<f32>
+  // CHECK-NEXT: return %[[CREATE]]
+  return %mul : complex<f32>
+}
+
+// CHECK-LABEL: func @mul_one_f64
+//  CHECK-SAME: (%[[ARG0:.*]]: f64, %[[ARG1:.*]]: f64) -> complex<f64>
+func.func @mul_one_f64(%arg0: f64, %arg1: f64) -> complex<f64> {
+  %create = complex.create %arg0, %arg1: complex<f64>  
+  %one = complex.constant [1.0 : f64, 0.0 : f64] : complex<f64>
+  %mul = complex.mul %create, %one : complex<f64>
+  // CHECK: %[[CREATE:.*]] = complex.create %[[ARG0]], %[[ARG1]] : complex<f64>
+  // CHECK-NEXT: return %[[CREATE]]
+  return %mul : complex<f64>
+}
+
+// CHECK-LABEL: func @mul_one_f80
+//  CHECK-SAME: (%[[ARG0:.*]]: f80, %[[ARG1:.*]]: f80) -> complex<f80>
+func.func @mul_one_f80(%arg0: f80, %arg1: f80) -> complex<f80> {
+  %create = complex.create %arg0, %arg1: complex<f80>  
+  %one = complex.constant [1.0 : f80, 0.0 : f80] : complex<f80>
+  %mul = complex.mul %create, %one : complex<f80>
+  // CHECK: %[[CREATE:.*]] = complex.create %[[ARG0]], %[[ARG1]] : complex<f80>
+  // CHECK-NEXT: return %[[CREATE]]
+  return %mul : complex<f80>
+}
+
+// CHECK-LABEL: func @mul_one_f128
+//  CHECK-SAME: (%[[ARG0:.*]]: f128, %[[ARG1:.*]]: f128) -> complex<f128>
+func.func @mul_one_f128(%arg0: f128, %arg1: f128) -> complex<f128> {
+  %create = complex.create %arg0, %arg1: complex<f128>  
+  %one = complex.constant [1.0 : f128, 0.0 : f128] : complex<f128>
+  %mul = complex.mul %create, %one : complex<f128>
+  // CHECK: %[[CREATE:.*]] = complex.create %[[ARG0]], %[[ARG1]] : complex<f128>
+  // CHECK-NEXT: return %[[CREATE]]
+  return %mul : complex<f128>
+}
+
+// CHECK-LABEL: func @fold_between_complex
+//  CHECK-SAME: %[[ARG0:.*]]: complex<f32>
+func.func @fold_between_complex(%arg0 : complex<f32>) -> complex<f32> {
+  %0 = complex.bitcast %arg0 : complex<f32> to i64
+  %1 = complex.bitcast %0 : i64 to complex<f32>
+  // CHECK: return %[[ARG0]] : complex<f32>
+  func.return %1 : complex<f32>
+}
+
+// CHECK-LABEL: func @fold_between_i64
+//  CHECK-SAME: %[[ARG0:.*]]: i64
+func.func @fold_between_i64(%arg0 : i64) -> i64 {
+  %0 = complex.bitcast %arg0 : i64 to complex<f32>
+  %1 = complex.bitcast %0 : complex<f32> to i64
+  // CHECK: return %[[ARG0]] : i64
+  func.return %1 : i64
+}
+
+// CHECK-LABEL: func @canon_arith_bitcast
+//  CHECK-SAME: %[[ARG0:.*]]: f64
+func.func @canon_arith_bitcast(%arg0 : f64) -> i64 {
+  %0 = complex.bitcast %arg0 : f64 to complex<f32>
+  %1 = complex.bitcast %0 : complex<f32> to i64
+  // CHECK: %[[R0:.+]] = arith.bitcast %[[ARG0]]
+  // CHECK: return %[[R0]] : i64
+  func.return %1 : i64
+}
+
+
+// CHECK-LABEL: func @double_bitcast
+//  CHECK-SAME: %[[ARG0:.*]]: f64
+func.func @double_bitcast(%arg0 : f64) -> complex<f32> {
+  // CHECK: %[[R0:.+]] = complex.bitcast %[[ARG0]]
+  %0 = arith.bitcast %arg0 : f64 to i64
+  %1 = complex.bitcast %0 : i64 to complex<f32>
+  // CHECK: return %[[R0]] : complex<f32>
+  func.return %1 : complex<f32>
+}
+
+// CHECK-LABEL: func @double_reverse_bitcast
+//  CHECK-SAME: %[[ARG0:.*]]: complex<f32>
+func.func @double_reverse_bitcast(%arg0 : complex<f32>) -> f64 {
+  // CHECK: %[[R0:.+]] = complex.bitcast %[[ARG0]]
+  %0 = complex.bitcast %arg0 : complex<f32> to i64
+  %1 = arith.bitcast %0 : i64 to f64
+  // CHECK: return %[[R0]] : f64
+  func.return %1 : f64
+}

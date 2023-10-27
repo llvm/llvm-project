@@ -32,6 +32,9 @@ extern "C" {
 // before any instrumented code is executed and before any call to malloc.
 SANITIZER_INTERFACE_ATTRIBUTE void __tsan_init();
 
+SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE const char *
+__tsan_default_options();
+
 SANITIZER_INTERFACE_ATTRIBUTE void __tsan_flush_memory();
 
 SANITIZER_INTERFACE_ATTRIBUTE void __tsan_read1(void *addr);
@@ -84,6 +87,8 @@ SANITIZER_INTERFACE_ATTRIBUTE void __tsan_func_exit();
 
 SANITIZER_INTERFACE_ATTRIBUTE void __tsan_ignore_thread_begin();
 SANITIZER_INTERFACE_ATTRIBUTE void __tsan_ignore_thread_end();
+
+SANITIZER_INTERFACE_ATTRIBUTE void __tsan_on_thread_idle();
 
 SANITIZER_INTERFACE_ATTRIBUTE
 void *__tsan_external_register_tag(const char *object_type);

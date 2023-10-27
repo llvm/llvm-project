@@ -113,8 +113,25 @@ protected:
     return {object};
   }
 
+  python::PythonObject Transform(bool arg) {
+    // Boolean arguments need to be turned into python objects.
+    return python::PythonBoolean(arg);
+  }
+
   python::PythonObject Transform(Status arg) {
-    return python::ToSWIGWrapper(arg);
+    return python::SWIGBridge::ToSWIGWrapper(arg);
+  }
+
+  python::PythonObject Transform(lldb::ProcessAttachInfoSP arg) {
+    return python::SWIGBridge::ToSWIGWrapper(arg);
+  }
+
+  python::PythonObject Transform(lldb::ProcessLaunchInfoSP arg) {
+    return python::SWIGBridge::ToSWIGWrapper(arg);
+  }
+
+  python::PythonObject Transform(lldb::DataExtractorSP arg) {
+    return python::SWIGBridge::ToSWIGWrapper(arg);
   }
 
   template <typename T, typename U>
@@ -127,6 +144,19 @@ protected:
   void ReverseTransform(T &original_arg, python::PythonObject transformed_arg,
                         Status &error) {
     original_arg = ExtractValueFromPythonObject<T>(transformed_arg, error);
+  }
+
+
+  void ReverseTransform(bool &original_arg,
+                        python::PythonObject transformed_arg, Status &error) {
+    python::PythonBoolean boolean_arg = python::PythonBoolean(
+        python::PyRefType::Borrowed, transformed_arg.get());
+    if (boolean_arg.IsValid())
+      original_arg = boolean_arg.GetValue();
+    else
+      error.SetErrorString(
+          llvm::formatv("{}: Invalid boolean argument.", LLVM_PRETTY_FUNCTION)
+              .str());
   }
 
   template <std::size_t... I, typename... Args>
@@ -197,6 +227,19 @@ ScriptedPythonInterface::ExtractValueFromPythonObject<
 template <>
 Status ScriptedPythonInterface::ExtractValueFromPythonObject<Status>(
     python::PythonObject &p, Status &error);
+
+template <>
+lldb::BreakpointSP
+ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::BreakpointSP>(
+    python::PythonObject &p, Status &error);
+
+template <>
+lldb::ProcessAttachInfoSP ScriptedPythonInterface::ExtractValueFromPythonObject<
+    lldb::ProcessAttachInfoSP>(python::PythonObject &p, Status &error);
+
+template <>
+lldb::ProcessLaunchInfoSP ScriptedPythonInterface::ExtractValueFromPythonObject<
+    lldb::ProcessLaunchInfoSP>(python::PythonObject &p, Status &error);
 
 template <>
 lldb::DataExtractorSP

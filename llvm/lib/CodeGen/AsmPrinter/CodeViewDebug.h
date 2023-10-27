@@ -13,15 +13,18 @@
 #ifndef LLVM_LIB_CODEGEN_ASMPRINTER_CODEVIEWDEBUG_H
 #define LLVM_LIB_CODEGEN_ASMPRINTER_CODEVIEWDEBUG_H
 
+#include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/DbgEntityHistoryCalculator.h"
 #include "llvm/CodeGen/DebugHandlerBase.h"
+#include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/GlobalTypeTableBuilder.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
@@ -132,6 +135,15 @@ private:
     StringRef Name;
   };
 
+  struct JumpTableInfo {
+    codeview::JumpTableEntrySize EntrySize;
+    const MCSymbol *Base;
+    uint64_t BaseOffset;
+    const MCSymbol *Branch;
+    const MCSymbol *Table;
+    size_t TableSize;
+  };
+
   // For each function, store a vector of labels to its instructions, as well as
   // to the end of the function.
   struct FunctionInfo {
@@ -147,6 +159,9 @@ private:
     /// Ordered list of top-level inlined call sites.
     SmallVector<const DILocation *, 1> ChildSites;
 
+    /// Set of all functions directly inlined into this one.
+    SmallSet<codeview::TypeIndex, 1> Inlinees;
+
     SmallVector<LocalVariable, 1> Locals;
     SmallVector<CVGlobalVariable, 1> Globals;
 
@@ -158,6 +173,8 @@ private:
     std::vector<std::pair<MCSymbol *, MDNode *>> Annotations;
     std::vector<std::tuple<const MCSymbol *, const MCSymbol *, const DIType *>>
         HeapAllocSites;
+
+    std::vector<JumpTableInfo> JumpTables;
 
     const MCSymbol *Begin = nullptr;
     const MCSymbol *End = nullptr;
@@ -191,6 +208,8 @@ private:
     bool HasStackRealignment = false;
 
     bool HaveLineInfo = false;
+
+    bool HasFramePointer = false;
   };
   FunctionInfo *CurFn = nullptr;
 
@@ -356,6 +375,8 @@ private:
   void emitInlinedCallSite(const FunctionInfo &FI, const DILocation *InlinedAt,
                            const InlineSite &Site);
 
+  void emitInlinees(const SmallSet<codeview::TypeIndex, 1> &Inlinees);
+
   using InlinedEntity = DbgValueHistoryMap::InlinedEntity;
 
   void collectGlobalVariableInfo();
@@ -474,6 +495,10 @@ private:
   std::string getFullyQualifiedName(const DIScope *Scope);
 
   unsigned getPointerSizeInBytes();
+
+  void discoverJumpTableBranches(const MachineFunction *MF, bool isThumb);
+  void collectDebugInfoForJumpTables(const MachineFunction *MF, bool isThumb);
+  void emitDebugInfoForJumpTables(const FunctionInfo &FI);
 
 protected:
   /// Gather pre-function debug information.

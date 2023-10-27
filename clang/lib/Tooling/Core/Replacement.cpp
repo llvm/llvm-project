@@ -67,7 +67,7 @@ bool Replacement::isApplicable() const {
 
 bool Replacement::apply(Rewriter &Rewrite) const {
   SourceManager &SM = Rewrite.getSourceMgr();
-  auto Entry = SM.getFileManager().getFile(FilePath);
+  auto Entry = SM.getFileManager().getOptionalFileRef(FilePath);
   if (!Entry)
     return false;
 
@@ -122,7 +122,8 @@ void Replacement::setFromSourceLocation(const SourceManager &Sources,
                                         StringRef ReplacementText) {
   const std::pair<FileID, unsigned> DecomposedLocation =
       Sources.getDecomposedLoc(Start);
-  const FileEntry *Entry = Sources.getFileEntryForID(DecomposedLocation.first);
+  OptionalFileEntryRef Entry =
+      Sources.getFileEntryRefForID(DecomposedLocation.first);
   this->FilePath = std::string(Entry ? Entry->getName() : InvalidLocation);
   this->ReplacementRange = Range(DecomposedLocation.second, Length);
   this->ReplacementText = std::string(ReplacementText);

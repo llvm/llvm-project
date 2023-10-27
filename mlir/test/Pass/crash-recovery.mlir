@@ -1,3 +1,5 @@
+// The crash recovery mechanism will leak memory allocated in the crashing thread.
+// RUN: export LSAN_OPTIONS=detect_leaks=0
 // RUN: mlir-opt %s -pass-pipeline='builtin.module(builtin.module(test-module-pass, test-pass-crash))' -mlir-pass-pipeline-crash-reproducer=%t -verify-diagnostics
 // RUN: cat %t | FileCheck -check-prefix=REPRO %s
 // RUN: mlir-opt %s -pass-pipeline='builtin.module(builtin.module(test-module-pass, test-pass-crash))' -mlir-pass-pipeline-crash-reproducer=%t -verify-diagnostics -mlir-pass-pipeline-local-reproducer -mlir-disable-threading

@@ -51,7 +51,7 @@ def SPIRV_BitcastOp : SPIRV_Op<"Bitcast", [Pure]> {
 
     If Result Type has a different number of components than Operand, the
     total number of bits in Result Type must equal the total number of bits
-    in Operand. Let L be the type, either Result Type or Operand’s type,
+    in Operand. Let L be the type, either Result Type or Operand's type,
     that has the larger number of components. Let S be the other type, with
     the smaller number of components. The number of components in L must be
     an integer multiple of the number of components in S. The first
@@ -332,6 +332,118 @@ def SPIRV_UConvertOp : SPIRV_CastOp<"UConvert",
 }
 
 // -----
+
+def SPIRV_ConvertPtrToUOp : SPIRV_Op<"ConvertPtrToU", []> {
+  let summary = [{
+    Bit pattern-preserving conversion of a pointer to
+    an unsigned scalar integer of possibly different bit width.
+  }];
+
+  let description = [{
+    Result Type must be a scalar of integer type, whose Signedness operand is 0.
+
+    Pointer must be a physical pointer type. If the bit width of Pointer is
+    smaller than that of Result Type, the conversion zero extends Pointer.
+    If the bit width of Pointer is larger than that of Result Type,
+    the conversion truncates Pointer.
+
+    For same bit width Pointer and Result Type, this is the same as OpBitcast.
+
+    <!-- End of AutoGen section -->
+
+    ```
+    ptr-to-u-convert-op ::= ssa-id `=` `spirv.ConvertPtrToUOp` ssa-use
+                 `:` operand-type `to` result-type
+    ```
+
+    #### Example:
+
+    ```mlir
+    %1 = spirv.ConvertPtrToU %0 : !spirv.ptr<i32, Generic> to i32
+    ```
+  }];
+
+  let availability = [
+    MinVersion<SPIRV_V_1_0>,
+    MaxVersion<SPIRV_V_1_6>,
+    Extension<[]>,
+    Capability<[SPIRV_C_Addresses, SPIRV_C_PhysicalStorageBufferAddresses]>
+  ];
+
+  let arguments = (ins
+    SPIRV_AnyPtr:$pointer
+  );
+
+  let results = (outs
+    SPIRV_Integer:$result
+  );
+
+  let assemblyFormat = [{
+    $pointer attr-dict `:` type($pointer) `to` type($result)
+  }];
+
+  let hasVerifier = 1;
+}
+
+
+// -----
+
+def SPIRV_ConvertUToPtrOp : SPIRV_Op<"ConvertUToPtr", [UnsignedOp]> {
+  let summary = [{
+    Bit pattern-preserving conversion of an unsigned scalar integer
+    to a pointer.
+  }];
+
+  let description = [{
+    Result Type must be a physical pointer type.
+
+    Integer Value must be a scalar of integer type, whose Signedness
+    operand is 0. If the bit width of Integer Value is smaller
+    than that of Result Type, the conversion zero extends Integer Value.
+    If the bit width of Integer Value is larger than that of Result Type,
+    the conversion truncates Integer Value.
+
+    For same-width Integer Value and Result Type, this is the same as OpBitcast.
+
+    <!-- End of AutoGen section -->
+
+    ```
+    u-to-ptr-convert-op ::= ssa-id `=` `spirv.ConvertUToPtr` ssa-use
+                 `:` operand-type `to` result-type
+    ```
+
+    #### Example:
+
+    ```mlir
+    %1 = spirv.ConvertUToPtr %0 :  i32 to !spirv.ptr<i32, Generic>
+    ```
+  }];
+
+  let availability = [
+    MinVersion<SPIRV_V_1_0>,
+    MaxVersion<SPIRV_V_1_6>,
+    Extension<[]>,
+    Capability<[SPIRV_C_Addresses, SPIRV_C_PhysicalStorageBufferAddresses]>
+  ];
+
+  let arguments = (ins
+    SPIRV_Integer:$operand
+  );
+
+  let results = (outs
+    SPIRV_AnyPtr:$result
+  );
+
+  let assemblyFormat = [{
+    $operand attr-dict `:` type($operand) `to` type($result)
+  }];
+
+  let hasVerifier = 1;
+}
+
+// -----
+
+
 def SPIRV_PtrCastToGenericOp : SPIRV_Op<"PtrCastToGeneric", [Pure]> {
   let summary = "Convert a pointer’s Storage Class to Generic.";
 

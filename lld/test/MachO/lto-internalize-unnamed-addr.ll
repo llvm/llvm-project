@@ -23,9 +23,9 @@
 
 ; RUN: %lld -lSystem -dylib %t/test.thinlto.o %t/test2.thinlto.o -o \
 ; RUN:   %t/test.thinlto.dylib -save-temps
-; RUN: llvm-dis < %t/test.thinlto.o.2.internalize.bc | FileCheck %s --check-prefix=THINLTO-BC
+; RUN: llvm-dis < %t/test.thinlto.o.2.internalize.bc | FileCheck %s --check-prefix=THINLTO-BC-DYLIB
 ; RUN: llvm-dis < %t/test2.thinlto.o.2.internalize.bc | FileCheck %s --check-prefix=THINLTO-BC-2
-; RUN: llvm-nm -m %t/test.thinlto.dylib | FileCheck %s --check-prefix=THINLTO
+; RUN: llvm-nm -m %t/test.thinlto.dylib | FileCheck %s --check-prefix=THINLTO-DYLIB
 
 ; LTO-BC-DAG: @global_unnamed = internal unnamed_addr global i8 42
 ; LTO-BC-DAG: @global_unnamed_sometimes_linkonce = internal unnamed_addr global i8 42
@@ -41,12 +41,19 @@
 ; LTO-BC-DYLIB-DAG: @local_unnamed_always_const = internal constant i8 42
 ; LTO-BC-DYLIB-DAG: @local_unnamed_sometimes_const = weak_odr constant i8 42
 
-; THINLTO-BC-DAG: @global_unnamed = weak_odr hidden unnamed_addr global i8 42
+; THINLTO-BC-DAG: @global_unnamed = internal unnamed_addr global i8 42
 ; THINLTO-BC-DAG: @global_unnamed_sometimes_linkonce = weak_odr unnamed_addr global i8 42
-; THINLTO-BC-DAG: @local_unnamed_const = weak_odr hidden local_unnamed_addr constant i8 42
+; THINLTO-BC-DAG: @local_unnamed_const = internal local_unnamed_addr constant i8 42
 ; THINLTO-BC-DAG: @local_unnamed_always_const = weak_odr hidden local_unnamed_addr constant i8 42
 ; THINLTO-BC-DAG: @local_unnamed_sometimes_const = weak_odr local_unnamed_addr constant i8 42
-; THINLTO-BC-DAG: @local_unnamed = weak_odr local_unnamed_addr global i8 42
+; THINLTO-BC-DAG: @local_unnamed = internal local_unnamed_addr global i8 42
+
+; THINLTO-BC-DYLIB-DAG: @global_unnamed = internal unnamed_addr global i8 42
+; THINLTO-BC-DYLIB-DAG: @global_unnamed_sometimes_linkonce = weak_odr unnamed_addr global i8 42
+; THINLTO-BC-DYLIB-DAG: @local_unnamed_const = internal local_unnamed_addr constant i8 42
+; THINLTO-BC-DYLIB-DAG: @local_unnamed_always_const = weak_odr hidden local_unnamed_addr constant i8 42
+; THINLTO-BC-DYLIB-DAG: @local_unnamed_sometimes_const = weak_odr local_unnamed_addr constant i8 42
+; THINLTO-BC-DYLIB-DAG: @local_unnamed = weak_odr local_unnamed_addr global i8 42
 
 ; THINLTO-BC-2-DAG: @global_unnamed_sometimes_linkonce = available_externally unnamed_addr global i8 42
 ; THINLTO-BC-2-DAG: @local_unnamed_always_const = available_externally local_unnamed_addr constant i8 42
@@ -73,17 +80,24 @@
 ; LTO-DYLIB-DAG: (__TEXT,__const) non-external _local_unnamed_const
 ; LTO-DYLIB-DAG: (__TEXT,__const) weak external _local_unnamed_sometimes_const
 
-; THINLTO-DAG: (__DATA,__data) non-external (was a private external) _global_unnamed
-;; FIXME: These next two symbols should probably be internalized, just like they
-;; are under fullLTO.
+; THINLTO-DAG: (__DATA,__data) non-external _global_unnamed
+;; FIXME: This next symbol should probably be internalized, just like it is
+;; under fullLTO.
 ; THINLTO-DAG: (__DATA,__data) weak external _global_unnamed_sometimes_linkonce
-; THINLTO-DAG: (__DATA,__data) weak external _local_unnamed
+; THINLTO-DAG: (__DATA,__data) non-external _local_unnamed
 ; THINLTO-DAG: (__TEXT,__const) non-external (was a private external) _local_unnamed_always_const
-; THINLTO-DAG: (__TEXT,__const) non-external (was a private external) _local_unnamed_const
+; THINLTO-DAG: (__TEXT,__const) non-external _local_unnamed_const
 ;; LD64 actually fails to link when the following symbol is included in the test
 ;; input, instead producing this error:
 ;; reference to bitcode symbol '_local_unnamed_sometimes_const' which LTO has not compiled in '_used' from /tmp/lto.o for architecture x86_64
 ; THINLTO-DAG: (__TEXT,__const) weak external _local_unnamed_sometimes_const
+
+; THINLTO-DYLIB-DAG: (__DATA,__data) non-external _global_unnamed
+; THINLTO-DYLIB-DAG: (__DATA,__data) weak external _global_unnamed_sometimes_linkonce
+; THINLTO-DYLIB-DAG: (__DATA,__data) weak external _local_unnamed
+; THINLTO-DYLIB-DAG: (__TEXT,__const) non-external (was a private external) _local_unnamed_always_const
+; THINLTO-DYLIB-DAG: (__TEXT,__const) non-external _local_unnamed_const
+; THINLTO-DYLIB-DAG: (__TEXT,__const) weak external _local_unnamed_sometimes_const
 
 ;--- test.ll
 target triple = "x86_64-apple-darwin"

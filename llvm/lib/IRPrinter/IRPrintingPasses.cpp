@@ -53,7 +53,7 @@ PreservedAnalyses PrintModulePass::run(Module &M, ModuleAnalysisManager &AM) {
                        : nullptr;
   if (Index) {
     if (Index->modulePaths().empty())
-      Index->addModule("", 0);
+      Index->addModule("");
     Index->print(OS);
   }
 

@@ -9,7 +9,7 @@
 # RUN: llvm-mc %s -triple=riscv32 -mattr=+e -filetype=obj -o - \
 # RUN:   | llvm-readobj -A - | FileCheck %s
 
-.attribute arch, "rv32i2p0"
+.attribute arch, "rv32i2p1"
 ## Invalid operand for RV32E, because x16 is an invalid register for RV32E.
 ## Use RV32I to assemble, since it will not trigger an assembly error.
 lui x16, 1
@@ -18,4 +18,4 @@ lui x16, 1
 ## option.
 # CHECK:      Tag: 5
 # CHECK-NEXT: TagName: arch
-# CHECK-NEXT: Value: rv32i2p0
+# CHECK-NEXT: Value: rv32i2p1

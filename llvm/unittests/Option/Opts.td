@@ -4,6 +4,8 @@ def OptFlag1 : OptionFlag;
 def OptFlag2 : OptionFlag;
 def OptFlag3 : OptionFlag;
 
+def SubtoolVis : OptionVisibility;
+
 def A : Flag<["-"], "A">, HelpText<"The A option">, Flags<[OptFlag1]>;
 def AB : Flag<["-"], "AB">;
 def B : Joined<["-"], "B">, HelpText<"The B option">, MetaVarName<"B">, Flags<[OptFlag2]>;
@@ -35,6 +37,8 @@ def Blarn : Flag<["--", "-"], "blarn">, HelpText<"The blarn option">, Flags<[Opt
 def Cramb : Joined<["/"], "cramb:">, HelpText<"The cramb option">, MetaVarName<"CRAMB">, Flags<[OptFlag1]>;
 def Doopf1 : Flag<["-"], "doopf1">, HelpText<"The doopf1 option">, Flags<[OptFlag1]>;
 def Doopf2 : Flag<["-"], "doopf2">, HelpText<"The doopf2 option">, Flags<[OptFlag2]>;
+def Xyzzy1 : Flag<["-"], "xyzzy1">, HelpText<"The xyzzy1 option">, Visibility<[SubtoolVis]>;
+def Xyzzy2 : Flag<["-"], "xyzzy2">, HelpText<"The xyzzy2 option">, Visibility<[DefaultVis]>;
 def Ermgh : Joined<["--"], "ermgh">, HelpText<"The ermgh option">, MetaVarName<"ERMGH">, Flags<[OptFlag1]>;
 def Fjormp : Flag<["--"], "fjormp">, HelpText<"The fjormp option">, Flags<[OptFlag1]>;
 
@@ -43,7 +47,8 @@ def Glorrmp_eq : Flag<["--"], "glorrmp=">;
 def Blurmpq : Flag<["--"], "blurmp">;
 def Blurmpq_eq : Flag<["--"], "blurmp=">;
 
-def DashDash : Option<["--"], "", KIND_REMAINING_ARGS>;
+def Q : Flag<["-"], "Q">, Visibility<[SubtoolVis]>;
+def R : Flag<["-"], "R">, Visibility<[DefaultVis, SubtoolVis]>;
 
 class XOpts<string base> : KeyPathAndMacro<"X->", base> {}
 

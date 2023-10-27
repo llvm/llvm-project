@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -x objective-c++ -fcxx-exceptions -fsyntax-only -Werror -verify -Wno-objc-root-class %s
-// rdar://10387088
 
 @interface MyClass
 - (void)someMethod;

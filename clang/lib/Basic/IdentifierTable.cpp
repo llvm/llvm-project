@@ -25,7 +25,6 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Allocator.h"
-#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cstdio>
@@ -52,8 +51,7 @@ namespace {
 
 /// A simple identifier lookup iterator that represents an
 /// empty sequence of identifiers.
-class EmptyLookupIterator : public IdentifierIterator
-{
+class EmptyLookupIterator : public IdentifierIterator {
 public:
   StringRef Next() override { return StringRef(); }
 };
@@ -94,7 +92,7 @@ namespace {
     KEYNOCXX      = 0x80,
     KEYBORLAND    = 0x100,
     KEYOPENCLC    = 0x200,
-    KEYC2X        = 0x400,
+    KEYC23        = 0x400,
     KEYNOMS18     = 0x800,
     KEYNOOPENCL   = 0x1000,
     WCHARSUPPORT  = 0x2000,
@@ -145,8 +143,8 @@ static KeywordStatus getKeywordStatusHelper(const LangOptions &LangOpts,
     if (LangOpts.C99)
       return KS_Enabled;
     return !LangOpts.CPlusPlus ? KS_Future : KS_Unknown;
-  case KEYC2X:
-    if (LangOpts.C2x)
+  case KEYC23:
+    if (LangOpts.C23)
       return KS_Enabled;
     return !LangOpts.CPlusPlus ? KS_Future : KS_Unknown;
   case KEYCXX:
@@ -191,7 +189,7 @@ static KeywordStatus getKeywordStatusHelper(const LangOptions &LangOpts,
   case KEYCOROUTINES:
     return LangOpts.Coroutines ? KS_Enabled : KS_Unknown;
   case KEYMODULES:
-    return LangOpts.ModulesTS ? KS_Enabled : KS_Unknown;
+    return KS_Unknown;
   case KEYOPENCLCXX:
     return LangOpts.OpenCLCPlusPlus ? KS_Enabled : KS_Unknown;
   case KEYMSCOMPAT:
@@ -279,6 +277,16 @@ static void AddObjCKeyword(StringRef Name,
   Table.get(Name).setObjCKeywordID(ObjCID);
 }
 
+static void AddInterestingIdentifier(StringRef Name,
+                                     tok::InterestingIdentifierKind BTID,
+                                     IdentifierTable &Table) {
+  // Don't add 'not_interesting' identifier.
+  if (BTID != tok::not_interesting) {
+    IdentifierInfo &Info = Table.get(Name, tok::identifier);
+    Info.setInterestingIdentifierID(BTID);
+  }
+}
+
 /// AddKeywords - Add all keywords to the symbol table.
 ///
 void IdentifierTable::AddKeywords(const LangOptions &LangOpts) {
@@ -295,6 +303,9 @@ void IdentifierTable::AddKeywords(const LangOptions &LangOpts) {
 #define OBJC_AT_KEYWORD(NAME)  \
   if (LangOpts.ObjC)           \
     AddObjCKeyword(StringRef(#NAME), tok::objc_##NAME, *this);
+#define INTERESTING_IDENTIFIER(NAME)                                           \
+  AddInterestingIdentifier(StringRef(#NAME), tok::NAME, *this);
+
 #define TESTING_KEYWORD(NAME, FLAGS)
 #include "clang/Basic/TokenKinds.def"
 
@@ -382,6 +393,19 @@ IdentifierInfo::isReserved(const LangOptions &LangOpts) const {
     return ReservedIdentifierStatus::ContainsDoubleUnderscore;
 
   return ReservedIdentifierStatus::NotReserved;
+}
+
+ReservedLiteralSuffixIdStatus
+IdentifierInfo::isReservedLiteralSuffixId() const {
+  StringRef Name = getName();
+
+  if (Name[0] != '_')
+    return ReservedLiteralSuffixIdStatus::NotStartsWithUnderscore;
+
+  if (Name.contains("__"))
+    return ReservedLiteralSuffixIdStatus::ContainsDoubleUnderscore;
+
+  return ReservedLiteralSuffixIdStatus::NotReserved;
 }
 
 StringRef IdentifierInfo::deuglifiedName() const {
@@ -849,6 +873,21 @@ StringRef clang::getNullabilitySpelling(NullabilityKind kind,
   llvm_unreachable("Unknown nullability kind.");
 }
 
+llvm::raw_ostream &clang::operator<<(llvm::raw_ostream &OS,
+                                     NullabilityKind NK) {
+  switch (NK) {
+  case NullabilityKind::NonNull:
+    return OS << "NonNull";
+  case NullabilityKind::Nullable:
+    return OS << "Nullable";
+  case NullabilityKind::NullableResult:
+    return OS << "NullableResult";
+  case NullabilityKind::Unspecified:
+    return OS << "Unspecified";
+  }
+  llvm_unreachable("Unknown nullability kind.");
+}
+
 diag::kind
 IdentifierTable::getFutureCompatDiagKind(const IdentifierInfo &II,
                                          const LangOptions &LangOpts) {
@@ -873,8 +912,8 @@ IdentifierTable::getFutureCompatDiagKind(const IdentifierInfo &II,
   } else {
     if ((Flags & KEYC99) == KEYC99)
       return diag::warn_c99_keyword;
-    if ((Flags & KEYC2X) == KEYC2X)
-      return diag::warn_c2x_keyword;
+    if ((Flags & KEYC23) == KEYC23)
+      return diag::warn_c23_keyword;
   }
 
   llvm_unreachable(

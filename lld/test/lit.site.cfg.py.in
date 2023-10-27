@@ -3,23 +3,23 @@
 import lit.util
 
 config.have_dia_sdk = lit.util.pythonize_bool("@LLVM_ENABLE_DIA_SDK@")
-config.llvm_src_root = "@LLVM_SOURCE_DIR@"
-config.llvm_obj_root = "@LLVM_BINARY_DIR@"
-config.llvm_tools_dir = lit_config.substitute("@LLVM_TOOLS_DIR@")
-config.llvm_libs_dir = lit_config.substitute("@LLVM_LIBS_DIR@")
-config.llvm_shlib_dir = "@SHLIBDIR@"
+config.llvm_src_root = path(r"@LLVM_SOURCE_DIR@")
+config.llvm_obj_root = path(r"@LLVM_BINARY_DIR@")
+config.llvm_tools_dir = lit_config.substitute(path(r"@LLVM_TOOLS_DIR@"))
+config.llvm_libs_dir = lit_config.substitute(path(r"@LLVM_LIBS_DIR@"))
+config.llvm_shlib_dir = path(r"@SHLIBDIR@")
 config.llvm_shlib_ext = "@SHLIBEXT@"
-config.lit_tools_dir = "@LLVM_LIT_TOOLS_DIR@"
+config.lit_tools_dir = path(r"@LLVM_LIT_TOOLS_DIR@")
 config.enable_backtrace = @ENABLE_BACKTRACES@
 config.errc_messages = "@LLVM_LIT_ERRC_MESSAGES@"
-config.lld_obj_root = "@LLD_BINARY_DIR@"
-config.lld_libs_dir = lit_config.substitute("@CURRENT_LIBS_DIR@")
-config.lld_tools_dir = lit_config.substitute("@CURRENT_TOOLS_DIR@")
+config.lld_obj_root = path(r"@LLD_BINARY_DIR@")
+config.lld_libs_dir = lit_config.substitute(path(r"@CURRENT_LIBS_DIR@"))
+config.lld_tools_dir = lit_config.substitute(path(r"@CURRENT_TOOLS_DIR@"))
+config.host_triple = "@LLVM_HOST_TRIPLE@"
 config.target_triple = "@LLVM_TARGET_TRIPLE@"
 config.python_executable = "@Python3_EXECUTABLE@"
 config.have_zlib = @LLVM_ENABLE_ZLIB@
 config.have_zstd = @LLVM_ENABLE_ZSTD@
-config.have_libxar = @LLVM_HAVE_LIBXAR@
 config.have_libxml2 = @LLVM_ENABLE_LIBXML2@
 config.sizeof_void_p = @CMAKE_SIZEOF_VOID_P@
 config.ld_lld_default_mingw = @LLD_DEFAULT_LD_LLD_IS_MINGW@
@@ -31,4 +31,5 @@ import lit.llvm
 lit.llvm.initialize(lit_config, config)
 
 # Let the main config do the real work.
-lit_config.load_config(config, "@LLD_SOURCE_DIR@/test/lit.cfg.py")
+lit_config.load_config(
+    config, os.path.join(path(r"@LLD_SOURCE_DIR@"), "test/lit.cfg.py"))

@@ -1,6 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 // expected-no-diagnostics
-// radar 7682116
 
 @interface Super @end
 

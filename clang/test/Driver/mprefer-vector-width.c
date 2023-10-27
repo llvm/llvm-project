@@ -14,11 +14,11 @@
 
 //// Check invalid parameters.
 
-// RUN: %clang -### -S %s -mprefer-vector-width=one  2>&1 | FileCheck --check-prefix=WIDTHONE %s
+// RUN: not %clang -### -S %s -mprefer-vector-width=one  2>&1 | FileCheck --check-prefix=WIDTHONE %s
 // WIDTHONE: invalid value 'one' in 'mprefer-vector-width='
 
-// RUN: %clang -### -S %s -mprefer-vector-width=128.5  2>&1 | FileCheck --check-prefix=WIDTH128p5 %s
+// RUN: not %clang -### -S %s -mprefer-vector-width=128.5  2>&1 | FileCheck --check-prefix=WIDTH128p5 %s
 // WIDTH128p5: invalid value '128.5' in 'mprefer-vector-width='
 
-// RUN: %clang -### -S %s -mprefer-vector-width=-128  2>&1 | FileCheck --check-prefix=WIDTHNEG128 %s
+// RUN: not %clang -### -S %s -mprefer-vector-width=-128  2>&1 | FileCheck --check-prefix=WIDTHNEG128 %s
 // WIDTHNEG128: invalid value '-128' in 'mprefer-vector-width='

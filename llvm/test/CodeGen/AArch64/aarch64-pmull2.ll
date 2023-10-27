@@ -8,19 +8,19 @@
 define void @test1(ptr %0, ptr %1) {
 ; CHECK-LABEL: test1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w9, #61186
-; CHECK-NEXT:    mov w8, #56824
-; CHECK-NEXT:    movk w9, #29710, lsl #16
+; CHECK-NEXT:    mov w8, #56824 // =0xddf8
+; CHECK-NEXT:    mov w9, #61186 // =0xef02
 ; CHECK-NEXT:    movk w8, #40522, lsl #16
+; CHECK-NEXT:    movk w9, #29710, lsl #16
 ; CHECK-NEXT:    ldp q0, q1, [x1]
-; CHECK-NEXT:    fmov d3, x9
 ; CHECK-NEXT:    dup v2.2d, x8
-; CHECK-NEXT:    pmull2 v4.1q, v0.2d, v2.2d
-; CHECK-NEXT:    pmull v0.1q, v0.1d, v3.1d
-; CHECK-NEXT:    pmull2 v2.1q, v1.2d, v2.2d
-; CHECK-NEXT:    pmull v1.1q, v1.1d, v3.1d
-; CHECK-NEXT:    eor v0.16b, v0.16b, v4.16b
-; CHECK-NEXT:    eor v1.16b, v1.16b, v2.16b
+; CHECK-NEXT:    fmov d3, x9
+; CHECK-NEXT:    pmull v4.1q, v0.1d, v3.1d
+; CHECK-NEXT:    pmull v3.1q, v1.1d, v3.1d
+; CHECK-NEXT:    pmull2 v0.1q, v0.2d, v2.2d
+; CHECK-NEXT:    pmull2 v1.1q, v1.2d, v2.2d
+; CHECK-NEXT:    eor v0.16b, v4.16b, v0.16b
+; CHECK-NEXT:    eor v1.16b, v3.16b, v1.16b
 ; CHECK-NEXT:    stp q0, q1, [x1]
 ; CHECK-NEXT:    ret
   %3 = load <2 x i64>, ptr %1

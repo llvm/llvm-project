@@ -10,11 +10,11 @@
 #define LLDB_SOURCE_PLUGINS_SYMBOLFILE_BREAKPAD_SYMBOLFILEBREAKPAD_H
 
 #include "Plugins/ObjectFile/Breakpad/BreakpadRecords.h"
-#include "lldb/Core/FileSpecList.h"
 #include "lldb/Symbol/LineTable.h"
 #include "lldb/Symbol/PostfixExpression.h"
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Symbol/UnwindPlan.h"
+#include "lldb/Utility/FileSpecList.h"
 #include <optional>
 
 namespace lldb_private {
@@ -134,9 +134,9 @@ public:
         llvm::inconvertibleErrorCode());
   }
 
-  CompilerDeclContext
-  FindNamespace(ConstString name,
-                const CompilerDeclContext &parent_decl_ctx) override {
+  CompilerDeclContext FindNamespace(ConstString name,
+                                    const CompilerDeclContext &parent_decl_ctx,
+                                    bool only_root_namespaces) override {
     return CompilerDeclContext();
   }
 

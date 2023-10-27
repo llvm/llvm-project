@@ -6,12 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Transforms/VectorRewritePatterns.h"
+#include "mlir/Dialect/Vector/Transforms/VectorTransforms.h"
 #include "mlir/Dialect/Vector/Utils/VectorUtils.h"
 #include "mlir/IR/Builders.h"
-#include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/IR/TypeUtilities.h"
 
 #define DEBUG_TYPE "vector-drop-unit-dim"
@@ -23,12 +24,23 @@ using namespace mlir::vector;
 // Returns `vector<1xT>` if `oldType` only has one element.
 static VectorType trimLeadingOneDims(VectorType oldType) {
   ArrayRef<int64_t> oldShape = oldType.getShape();
-  ArrayRef<int64_t> newShape =
-      oldShape.drop_while([](int64_t dim) { return dim == 1; });
+  ArrayRef<int64_t> newShape = oldShape;
+
+  ArrayRef<bool> oldScalableDims = oldType.getScalableDims();
+  ArrayRef<bool> newScalableDims = oldScalableDims;
+
+  while (!newShape.empty() && newShape.front() == 1 &&
+         !newScalableDims.front()) {
+    newShape = newShape.drop_front(1);
+    newScalableDims = newScalableDims.drop_front(1);
+  }
+
   // Make sure we have at least 1 dimension per vector type requirements.
-  if (newShape.empty())
+  if (newShape.empty()) {
     newShape = oldShape.take_back();
-  return VectorType::get(newShape, oldType.getElementType());
+    newScalableDims = oldType.getScalableDims().take_back();
+  }
+  return VectorType::get(newShape, oldType.getElementType(), newScalableDims);
 }
 
 /// Return a smallVector of size `rank` containing all zeros.
@@ -48,7 +60,7 @@ struct CastAwayExtractStridedSliceLeadingOneDim
     // vector.extract_strided_slice requires the input and output vector to have
     // the same rank. Here we drop leading one dimensions from the input vector
     // type to make sure we don't cause mismatch.
-    VectorType oldSrcType = extractOp.getVectorType();
+    VectorType oldSrcType = extractOp.getSourceVectorType();
     VectorType newSrcType = trimLeadingOneDims(oldSrcType);
 
     if (newSrcType.getRank() == oldSrcType.getRank())
@@ -136,10 +148,10 @@ struct CastAwayInsertLeadingOneDim : public OpRewritePattern<vector::InsertOp> {
     Type oldSrcType = insertOp.getSourceType();
     Type newSrcType = oldSrcType;
     int64_t oldSrcRank = 0, newSrcRank = 0;
-    if (auto type = oldSrcType.dyn_cast<VectorType>()) {
+    if (auto type = dyn_cast<VectorType>(oldSrcType)) {
       newSrcType = trimLeadingOneDims(type);
       oldSrcRank = type.getRank();
-      newSrcRank = newSrcType.cast<VectorType>().getRank();
+      newSrcRank = cast<VectorType>(newSrcType).getRank();
     }
 
     VectorType oldDstType = insertOp.getDestVectorType();
@@ -161,18 +173,20 @@ struct CastAwayInsertLeadingOneDim : public OpRewritePattern<vector::InsertOp> {
     Value newDstVector = rewriter.create<vector::ExtractOp>(
         loc, insertOp.getDest(), splatZero(dstDropCount));
 
-    unsigned oldPosRank = insertOp.getPosition().getValue().size();
-    unsigned newPosRank = newDstType.getRank() - newSrcRank;
-    SmallVector<Attribute> newPositions = llvm::to_vector(
-        insertOp.getPosition().getValue().take_back(newPosRank));
-    if (newPosRank > oldPosRank) {
-      auto zeroAttr = rewriter.getZeroAttr(rewriter.getI64Type());
-      newPositions.resize(newPosRank, zeroAttr);
-    }
+    // New position rank needs to be computed in two steps: (1) if destination
+    // type has leading unit dims, we also trim the position array accordingly,
+    // then (2) if source type also has leading unit dims, we need to append
+    // zeroes to the position array accordingly.
+    unsigned oldPosRank = insertOp.getNumIndices();
+    unsigned newPosRank = std::max<int64_t>(0, oldPosRank - dstDropCount);
+    SmallVector<OpFoldResult> oldPosition = insertOp.getMixedPosition();
+    SmallVector<OpFoldResult> newPosition =
+        llvm::to_vector(ArrayRef(oldPosition).take_back(newPosRank));
+    newPosition.resize(newDstType.getRank() - newSrcRank,
+                       rewriter.getI64IntegerAttr(0));
 
     auto newInsertOp = rewriter.create<vector::InsertOp>(
-        loc, newDstType, newSrcVector, newDstVector,
-        rewriter.getArrayAttr(newPositions));
+        loc, newSrcVector, newDstVector, newPosition);
 
     rewriter.replaceOpWithNewOp<vector::BroadcastOp>(insertOp, oldDstType,
                                                      newInsertOp);
@@ -197,7 +211,7 @@ struct CastAwayTransferReadLeadingOneDim
     if (read.getMask())
       return failure();
 
-    auto shapedType = read.getSource().getType().cast<ShapedType>();
+    auto shapedType = cast<ShapedType>(read.getSource().getType());
     if (shapedType.getElementType() != read.getVectorType().getElementType())
       return failure();
 
@@ -245,7 +259,7 @@ struct CastAwayTransferWriteLeadingOneDim
     if (write.getMask())
       return failure();
 
-    auto shapedType = write.getSource().getType().dyn_cast<ShapedType>();
+    auto shapedType = dyn_cast<ShapedType>(write.getSource().getType());
     if (shapedType.getElementType() != write.getVectorType().getElementType())
       return failure();
 
@@ -277,6 +291,121 @@ struct CastAwayTransferWriteLeadingOneDim
   }
 };
 
+} // namespace
+
+LogicalResult
+mlir::vector::castAwayContractionLeadingOneDim(vector::ContractionOp contractOp,
+                                               RewriterBase &rewriter) {
+  VectorType oldAccType = dyn_cast<VectorType>(contractOp.getAccType());
+  if (oldAccType == nullptr)
+    return failure();
+  if (oldAccType.getRank() < 2)
+    return failure();
+  if (oldAccType.getShape()[0] != 1)
+    return failure();
+  // currently we support only dropping one dim but the pattern can be applied
+  // greedily to drop more.
+  int64_t dropDim = 1;
+
+  auto oldIndexingMaps = contractOp.getIndexingMapsArray();
+  SmallVector<AffineMap> newIndexingMaps;
+
+  auto oldIteratorTypes = contractOp.getIteratorTypes();
+  SmallVector<Attribute> newIteratorTypes;
+
+  int64_t dimToDrop = oldIndexingMaps[2].getDimPosition(0);
+
+  if (!isParallelIterator(oldIteratorTypes[dimToDrop]))
+    // only parallel type iterators can be dropped.
+    return failure();
+
+  for (const auto &it : llvm::enumerate(oldIteratorTypes)) {
+    int64_t currDim = it.index();
+    if (currDim == dimToDrop)
+      continue;
+    newIteratorTypes.push_back(it.value());
+  }
+
+  SmallVector<Value> operands = {contractOp.getLhs(), contractOp.getRhs(),
+                                 contractOp.getAcc()};
+  SmallVector<Value> newOperands;
+
+  for (const auto &it : llvm::enumerate(oldIndexingMaps)) {
+    // Check if the dim to be dropped exists as a leading dim in the operand
+    // if it does then we use vector.extract to drop it.
+    bool validExtract = false;
+    SmallVector<AffineExpr> results;
+    auto map = it.value();
+    int64_t orginalZeroDim = it.value().getDimPosition(0);
+    if (orginalZeroDim != dimToDrop) {
+      // There are two reasons to be in this path, 1. We need to
+      // tranpose the operand to make the dim to be dropped
+      // leading. 2. The dim to be dropped does not exist and in
+      // that case we dont want to add a unit tranpose but we must
+      // check all the indices to make sure this is the case.
+      bool tranposeNeeded = false;
+      SmallVector<int64_t> perm;
+      SmallVector<AffineExpr> transposeResults;
+
+      for (int64_t i = 0, e = map.getNumResults(); i < e; ++i) {
+        int64_t currDim = map.getDimPosition(i);
+        if (currDim == dimToDrop) {
+          tranposeNeeded = true;
+          perm.insert(perm.begin(), i);
+          auto targetExpr = rewriter.getAffineDimExpr(currDim);
+          transposeResults.insert(transposeResults.begin(), targetExpr);
+        } else {
+          perm.push_back(i);
+          auto targetExpr = rewriter.getAffineDimExpr(currDim);
+          transposeResults.push_back(targetExpr);
+        }
+      }
+      // Do the tranpose now if needed so that we can drop the
+      // correct dim using extract later.
+      if (tranposeNeeded) {
+        map = AffineMap::get(map.getNumDims(), 0, transposeResults,
+                             contractOp.getContext());
+        operands[it.index()] = rewriter.create<vector::TransposeOp>(
+            contractOp.getLoc(), operands[it.index()], perm);
+      }
+    }
+    // We have taken care to have the dim to be dropped be
+    // the leading dim. If its still not leading that means it
+    // does not exist in this operand and hence we do not need
+    // an extract.
+    if (map.getDimPosition(0) == dimToDrop)
+      validExtract = true;
+
+    for (int64_t i = 0, e = map.getNumResults(); i < e; ++i) {
+      int64_t currDim = map.getDimPosition(i);
+      if (currDim == dimToDrop)
+        // This is the dim we are dropping.
+        continue;
+      auto targetExpr = rewriter.getAffineDimExpr(
+          currDim < dimToDrop ? currDim : currDim - 1);
+      results.push_back(targetExpr);
+    }
+    newIndexingMaps.push_back(AffineMap::get(map.getNumDims() - 1, 0, results,
+                                             contractOp.getContext()));
+    // Extract if its a valid extraction, otherwise use the operand
+    // without extraction.
+    newOperands.push_back(
+        validExtract ? rewriter.create<vector::ExtractOp>(contractOp.getLoc(),
+                                                          operands[it.index()],
+                                                          splatZero(dropDim))
+                     : operands[it.index()]);
+  }
+  auto newContractOp = rewriter.create<vector::ContractionOp>(
+      contractOp.getLoc(), newOperands[0], newOperands[1], newOperands[2],
+      rewriter.getAffineMapArrayAttr(newIndexingMaps),
+      rewriter.getArrayAttr(newIteratorTypes), contractOp.getKind());
+  rewriter.replaceOpWithNewOp<vector::BroadcastOp>(
+      contractOp, contractOp->getResultTypes()[0], newContractOp);
+  return success();
+}
+
+namespace {
+
 /// Turns vector.contract on vector with leading 1 dimensions into
 /// vector.extract followed by vector.contract on vector without leading
 /// 1 dimensions. Also performs tranpose of lhs and rhs operands if required
@@ -287,118 +416,22 @@ struct CastAwayContractionLeadingOneDim
 
   LogicalResult matchAndRewrite(vector::ContractionOp contractOp,
                                 PatternRewriter &rewriter) const override {
-    VectorType oldAccType = contractOp.getAccType().dyn_cast<VectorType>();
-    if (oldAccType == nullptr)
-      return failure();
-    if (oldAccType.getRank() < 2)
-      return failure();
-    // TODO: implement masks.
-    if (!contractOp.getMasks().empty())
-      return failure();
-    if (oldAccType.getShape()[0] != 1)
-      return failure();
-    // currently we support only dropping one dim but the pattern can be applied
-    // greedily to drop more.
-    int64_t dropDim = 1;
-
-    auto oldIndexingMaps = contractOp.getIndexingMapsArray();
-    SmallVector<AffineMap> newIndexingMaps;
-
-    auto oldIteratorTypes = contractOp.getIteratorTypes();
-    SmallVector<Attribute> newIteratorTypes;
-
-    int64_t dimToDrop = oldIndexingMaps[2].getDimPosition(0);
-
-    if (!isParallelIterator(oldIteratorTypes[dimToDrop]))
-      // only parallel type iterators can be dropped.
-      return failure();
-
-    for (const auto &it : llvm::enumerate(oldIteratorTypes)) {
-      int64_t currDim = it.index();
-      if (currDim == dimToDrop)
-        continue;
-      newIteratorTypes.push_back(it.value());
-    }
-
-    SmallVector<Value> operands = {contractOp.getLhs(), contractOp.getRhs(),
-                                   contractOp.getAcc()};
-    SmallVector<Value> newOperands;
-
-    for (const auto &it : llvm::enumerate(oldIndexingMaps)) {
-      // Check if the dim to be dropped exists as a leading dim in the operand
-      // if it does then we use vector.extract to drop it.
-      bool validExtract = false;
-      SmallVector<AffineExpr> results;
-      auto map = it.value();
-      int64_t orginalZeroDim = it.value().getDimPosition(0);
-      if (orginalZeroDim != dimToDrop) {
-        // There are two reasons to be in this path, 1. We need to
-        // tranpose the operand to make the dim to be dropped
-        // leading. 2. The dim to be dropped does not exist and in
-        // that case we dont want to add a unit tranpose but we must
-        // check all the indices to make sure this is the case.
-        bool tranposeNeeded = false;
-        SmallVector<int64_t> perm;
-        SmallVector<AffineExpr> transposeResults;
-
-        for (int64_t i = 0, e = map.getNumResults(); i < e; ++i) {
-          int64_t currDim = map.getDimPosition(i);
-          if (currDim == dimToDrop) {
-            tranposeNeeded = true;
-            perm.insert(perm.begin(), i);
-            auto targetExpr = rewriter.getAffineDimExpr(currDim);
-            transposeResults.insert(transposeResults.begin(), targetExpr);
-          } else {
-            perm.push_back(i);
-            auto targetExpr = rewriter.getAffineDimExpr(currDim);
-            transposeResults.push_back(targetExpr);
-          }
-        }
-        // Do the tranpose now if needed so that we can drop the
-        // correct dim using extract later.
-        if (tranposeNeeded) {
-          map = AffineMap::get(map.getNumDims(), 0, transposeResults,
-                               contractOp.getContext());
-          operands[it.index()] = rewriter.create<vector::TransposeOp>(
-              contractOp.getLoc(), operands[it.index()], perm);
-        }
-      }
-      // We have taken care to have the dim to be dropped be
-      // the leading dim. If its still not leading that means it
-      // does not exist in this operand and hence we do not need
-      // an extract.
-      if (map.getDimPosition(0) == dimToDrop)
-        validExtract = true;
-
-      for (int64_t i = 0, e = map.getNumResults(); i < e; ++i) {
-        int64_t currDim = map.getDimPosition(i);
-        if (currDim == dimToDrop)
-          // This is the dim we are dropping.
-          continue;
-        auto targetExpr = rewriter.getAffineDimExpr(
-            currDim < dimToDrop ? currDim : currDim - 1);
-        results.push_back(targetExpr);
-      }
-      newIndexingMaps.push_back(AffineMap::get(map.getNumDims() - 1, 0, results,
-                                               contractOp.getContext()));
-      // Extract if its a valid extraction, otherwise use the operand
-      // without extraction.
-      newOperands.push_back(validExtract
-                                ? rewriter.create<vector::ExtractOp>(
-                                      contractOp.getLoc(), operands[it.index()],
-                                      splatZero(dropDim))
-                                : operands[it.index()]);
-    }
-    auto newContractOp = rewriter.create<vector::ContractionOp>(
-        contractOp.getLoc(), newOperands[0], newOperands[1], newOperands[2],
-        rewriter.getAffineMapArrayAttr(newIndexingMaps),
-        rewriter.getArrayAttr(newIteratorTypes), contractOp.getKind());
-    rewriter.replaceOpWithNewOp<vector::BroadcastOp>(
-        contractOp, contractOp->getResultTypes()[0], newContractOp);
-    return success();
+    return castAwayContractionLeadingOneDim(contractOp, rewriter);
   }
 };
 
+/// Looks at elementwise operations on vectors with at least one leading
+/// dimension equal 1, e.g. vector<1x[4]x1xf32> (but not vector<2x[4]x1xf32>),
+/// and cast aways the leading one dimensions (_plural_) and then broadcasts
+/// the results.
+///
+/// Example before:
+///     %1 = arith.mulf %arg0, %arg1 : vector<1x4x1xf32>
+/// Example after:
+///    %2 = arith.mulf %0, %1 : vector<4x1xf32>
+///    %3 = vector.broadcast %2 : vector<4x1xf32> to vector<1x4x1xf32>
+///
+/// Does support scalable vectors.
 class CastAwayElementwiseLeadingOneDim : public RewritePattern {
 public:
   CastAwayElementwiseLeadingOneDim(MLIRContext *context,
@@ -409,7 +442,7 @@ public:
                                 PatternRewriter &rewriter) const override {
     if (!OpTrait::hasElementwiseMappableTraits(op) || op->getNumResults() != 1)
       return failure();
-    auto vecType = op->getResultTypes()[0].dyn_cast<VectorType>();
+    auto vecType = dyn_cast<VectorType>(op->getResultTypes()[0]);
     if (!vecType)
       return failure();
     VectorType newVecType = trimLeadingOneDims(vecType);
@@ -418,7 +451,7 @@ public:
     int64_t dropDim = vecType.getRank() - newVecType.getRank();
     SmallVector<Value, 4> newOperands;
     for (Value operand : op->getOperands()) {
-      if (auto opVecType = operand.getType().dyn_cast<VectorType>()) {
+      if (auto opVecType = dyn_cast<VectorType>(operand.getType())) {
         newOperands.push_back(rewriter.create<vector::ExtractOp>(
             op->getLoc(), operand, splatZero(dropDim)));
       } else {

@@ -6,19 +6,18 @@
 
 define void @test1(ptr %p) {
 ; CHECK-LABEL: @test1(
-; CHECK-NEXT:    [[P_I12:%.*]] = getelementptr i16, ptr [[P:%.*]], i32 1
-; CHECK-NEXT:    [[P_I11:%.*]] = getelementptr i32, ptr [[P]], i32 1
+; CHECK-NEXT:    [[P_I11:%.*]] = getelementptr i16, ptr [[P:%.*]], i32 1
 ; CHECK-NEXT:    [[P_I2:%.*]] = getelementptr i32, ptr [[P]], i32 2
 ; CHECK-NEXT:    [[P_I3:%.*]] = getelementptr i32, ptr [[P]], i32 3
 ; CHECK-NEXT:    store i32 0, ptr [[P]], align 8
 ; CHECK-NEXT:    [[P_I1:%.*]] = getelementptr i32, ptr [[P]], i32 1
 ; CHECK-NEXT:    store i32 0, ptr [[P_I1]], align 4
 ; CHECK-NEXT:    store i32 0, ptr [[P]], align 16
-; CHECK-NEXT:    store i32 0, ptr [[P_I11]], align 4
+; CHECK-NEXT:    store i32 0, ptr [[P_I1]], align 4
 ; CHECK-NEXT:    store i32 0, ptr [[P_I2]], align 8
 ; CHECK-NEXT:    store i32 0, ptr [[P_I3]], align 4
 ; CHECK-NEXT:    store i16 0, ptr [[P]], align 4
-; CHECK-NEXT:    store i16 0, ptr [[P_I12]], align 2
+; CHECK-NEXT:    store i16 0, ptr [[P_I11]], align 2
 ; CHECK-NEXT:    ret void
 ;
   store <2 x i32> zeroinitializer, ptr %p

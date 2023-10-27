@@ -2,6 +2,8 @@
 // RUN: not llvm-tblgen -DERROR1 %s 2>&1 | FileCheck --check-prefix=ERROR1 %s
 // RUN: not llvm-tblgen -DERROR2 %s 2>&1 | FileCheck --check-prefix=ERROR2 %s
 // RUN: not llvm-tblgen -DERROR3 %s 2>&1 | FileCheck --check-prefix=ERROR3 %s
+// RUN: not llvm-tblgen -DERROR4 %s 2>&1 | FileCheck --check-prefix=ERROR4 %s
+// RUN: not llvm-tblgen -DERROR5 %s 2>&1 | FileCheck --check-prefix=ERROR5 %s
 
 #ifdef ERROR1
 // Refer to a variable we haven't defined *yet*, expecting an error.
@@ -133,6 +135,62 @@ foreach first = [ 1, 2 ] in {
   // Now the outer variable is back in scope again.
   def shadowOuterBelowIf # first { int var = shadowedVariable; }
 }
+
+class RedefinitionTest<int a, int b> {
+  #ifdef ERROR4
+  defvar value = !add(a, b);
+  #endif
+  // ERROR4: [[@LINE+1]]:7: error: local variable of this name already exists
+  int value = !add(a, b);
+  #ifdef ERROR5
+  // ERROR5: [[@LINE+1]]:10: error: field of this name already exists
+  defvar value = !add(a, b);
+  #endif
+}
+
+// These variables should be shadowed by class/multiclass template arguments.
+defvar a = 2333;
+defvar b = 2333;
+defvar c = 2333;
+class ShadowGlobalsTest<int a, int b, int c> {
+  // Template arguments have higher priorities than global variables.
+  int value = !add(a, b, c);
+}
+
+class ShadowClassArgumentTest<int a, int b, int c> {
+  // Local variable 'c' has higher priority than class template argument 'c'.
+  defvar c = !add(c, c);
+  int value = !add(a, b, c);
+}
+
+multiclass ShadowMulticlassArgumentTest<int a, int b, int c> {
+  // Local variable 'c' has higher priority than multiclass template argument 'c'.
+  defvar c = !add(c, c);
+  def "" {
+    int value = !add(a, b, c);
+  }
+}
+
+// CHECK: def shadowTestOfClassArgument {
+// CHECK-NEXT: int value = 11;
+// CHECK: def shadowTestOfGlobals {
+// CHECK-NEXT: int value = 8;
+// CHECK: def shadowTestOfLoopIterator0 {
+// CHECK-NEXT: int value = 10;
+// CHECK: def shadowTestOfLoopIterator1 {
+// CHECK-NEXT: int value = 11;
+// CHECK: def shadowTestOfMulticlassArgument {
+// CHECK-NEXT: int value = 11;
+def shadowTestOfClassArgument: ShadowClassArgumentTest<2, 3, 3>;
+def shadowTestOfGlobals: ShadowGlobalsTest<2, 3, 3>;
+foreach i = 0...1 in {
+  // Local variable 'i' has higher priority than loop iterator 'i'.
+  def shadowTestOfLoopIterator # i {
+    defvar i = !add(10, i);
+    int value = i;
+  }
+}
+defm shadowTestOfMulticlassArgument: ShadowMulticlassArgumentTest<2, 3, 3>;
 
 // Test that a top-level let statement also makes a variable scope (on the
 // general principle of consistency, because it defines a braced sub-block).

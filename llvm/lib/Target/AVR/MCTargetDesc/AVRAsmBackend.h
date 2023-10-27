@@ -16,8 +16,8 @@
 
 #include "MCTargetDesc/AVRFixupKinds.h"
 
-#include "llvm/ADT/Triple.h"
 #include "llvm/MC/MCAsmBackend.h"
+#include "llvm/TargetParser/Triple.h"
 
 namespace llvm {
 
@@ -29,7 +29,7 @@ struct MCFixupKindInfo;
 class AVRAsmBackend : public MCAsmBackend {
 public:
   AVRAsmBackend(Triple::OSType OSType)
-      : MCAsmBackend(support::little), OSType(OSType) {}
+      : MCAsmBackend(llvm::endianness::little), OSType(OSType) {}
 
   void adjustFixupValue(const MCFixup &Fixup, const MCValue &Target,
                         uint64_t &Value, MCContext *Ctx = nullptr) const;

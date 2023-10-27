@@ -29,7 +29,7 @@ struct AllocController;
     // 'AllocController' is a concrete type that instruments and controls the
     // behavior of test allocators.
 
-template <class T, size_t ID = 0>
+template <class T, std::size_t ID = 0>
 class CountingAllocator;
     // 'CountingAllocator' is an basic implementation of the 'Allocator'
     // requirements that use the 'AllocController' interface.
@@ -97,7 +97,7 @@ struct AllocController {
 
     AllocController() = default;
 
-    void countAlloc(void* p, size_t s, size_t a) {
+    void countAlloc(void* p, std::size_t s, size_t a) {
         ++alive;
         ++alloc_count;
         alive_size += s;
@@ -107,7 +107,7 @@ struct AllocController {
         last_align = last_alloc_align = a;
     }
 
-    void countDealloc(void* p, size_t s, size_t a) {
+    void countDealloc(void* p, std::size_t s, size_t a) {
         --alive;
         ++dealloc_count;
         alive_size -= s;
@@ -144,35 +144,35 @@ struct AllocController {
       last_destroy_pointer = nullptr;
     }
 public:
-    bool checkAlloc(void* p, size_t s, size_t a) const {
+    bool checkAlloc(void* p, std::size_t s, size_t a) const {
         return p == last_alloc_pointer &&
                s == last_alloc_size &&
                a == last_alloc_align;
     }
 
-    bool checkAlloc(void* p, size_t s) const {
+    bool checkAlloc(void* p, std::size_t s) const {
         return p == last_alloc_pointer &&
                s == last_alloc_size;
     }
 
-    bool checkAllocAtLeast(void* p, size_t s, size_t a) const {
+    bool checkAllocAtLeast(void* p, std::size_t s, size_t a) const {
         return p == last_alloc_pointer &&
                s <= last_alloc_size &&
                a <= last_alloc_align;
     }
 
-    bool checkAllocAtLeast(void* p, size_t s) const {
+    bool checkAllocAtLeast(void* p, std::size_t s) const {
         return p == last_alloc_pointer &&
                s <= last_alloc_size;
     }
 
-    bool checkDealloc(void* p, size_t s, size_t a) const {
+    bool checkDealloc(void* p, std::size_t s, size_t a) const {
         return p == last_dealloc_pointer &&
                s == last_dealloc_size &&
                a == last_dealloc_align;
     }
 
-    bool checkDealloc(void* p, size_t s) const {
+    bool checkDealloc(void* p, std::size_t s) const {
         return p == last_dealloc_pointer &&
                s == last_dealloc_size;
     }
@@ -222,7 +222,7 @@ private:
   DISALLOW_COPY(AllocController);
 };
 
-template <class T, size_t ID>
+template <class T, std::size_t ID>
 class CountingAllocator
 {
 public:
@@ -282,12 +282,12 @@ public:
     AllocController& getController() const { return *P; }
 
 private:
-    template <class Tp, size_t XID> friend class CountingAllocator;
+    template <class Tp, std::size_t XID> friend class CountingAllocator;
     AllocController *P;
 };
 
 
-template <size_t ID>
+template <std::size_t ID>
 class CountingAllocator<void, ID>
 {
 public:
@@ -325,17 +325,17 @@ public:
     AllocController& getController() const { return *P; }
 
 private:
-    template <class Tp, size_t> friend class CountingAllocator;
+    template <class Tp, std::size_t> friend class CountingAllocator;
     AllocController *P;
 };
 
-template <class T, class U, size_t ID>
+template <class T, class U, std::size_t ID>
 inline bool operator==(CountingAllocator<T, ID> const& x,
                        CountingAllocator<U, ID> const& y) {
     return &x.getController() == &y.getController();
 }
 
-template <class T, class U, size_t ID>
+template <class T, class U, std::size_t ID>
 inline bool operator!=(CountingAllocator<T, ID> const& x,
                        CountingAllocator<U, ID> const& y) {
     return !(x == y);

@@ -32,7 +32,7 @@ const SourceFile *Parsing::Prescan(const std::string &path, Options options) {
 
   std::string buf;
   llvm::raw_string_ostream fileError{buf};
-  const SourceFile *sourceFile;
+  const SourceFile *sourceFile{nullptr};
   if (path == "-") {
     sourceFile = allSources.ReadStandardInput(fileError);
   } else if (options.isModuleFile) {
@@ -84,6 +84,11 @@ const SourceFile *Parsing::Prescan(const std::string &path, Options options) {
     prescanner.AddCompilerDirectiveSentinel("$omp");
     prescanner.AddCompilerDirectiveSentinel("$"); // OMP conditional line
   }
+  if (options.features.IsEnabled(LanguageFeature::CUDA)) {
+    prescanner.AddCompilerDirectiveSentinel("$cuf");
+    prescanner.AddCompilerDirectiveSentinel("@cuf");
+    preprocessor.Define("_CUDA", "1");
+  }
   ProvenanceRange range{allSources.AddIncludedFile(
       *sourceFile, ProvenanceRange{}, options.isModuleFile)};
   prescanner.Prescan(range);
@@ -104,7 +109,7 @@ const SourceFile *Parsing::Prescan(const std::string &path, Options options) {
 
 void Parsing::EmitPreprocessedSource(
     llvm::raw_ostream &out, bool lineDirectives) const {
-  const SourceFile *sourceFile{nullptr};
+  const std::string *sourcePath{nullptr};
   int sourceLine{0};
   int column{1};
   bool inDirective{false};
@@ -157,8 +162,8 @@ void Parsing::EmitPreprocessedSource(
               ? allSources.GetSourcePosition(provenance->start())
               : std::nullopt};
       if (lineDirectives && column == 1 && position) {
-        if (&position->file != sourceFile) {
-          out << "#line \"" << position->file.path() << "\" " << position->line
+        if (&*position->path != sourcePath) {
+          out << "#line \"" << *position->path << "\" " << position->line
               << '\n';
         } else if (position->line != sourceLine) {
           if (sourceLine < position->line &&
@@ -173,7 +178,7 @@ void Parsing::EmitPreprocessedSource(
             out << "#line " << position->line << '\n';
           }
         }
-        sourceFile = &position->file;
+        sourcePath = &*position->path;
         sourceLine = position->line;
       }
       if (column > 72) {

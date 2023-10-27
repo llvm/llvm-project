@@ -184,7 +184,7 @@ private:
     bool Found;
   };
 
-  AggressivenessKind Aggressiveness;
+  AggressivenessKind Aggressiveness = AK_KnownsAndLocals;
 
 public:
   void setAggressiveness(StringRef Str, CheckerManager &Mgr) {
@@ -213,8 +213,9 @@ private:
 
   // Returns the exploded node against which the report was emitted.
   // The caller *must* add any further transitions against this node.
-  ExplodedNode *reportBug(const MemRegion *Region, const CXXRecordDecl *RD,
-                          CheckerContext &C, MisuseKind MK) const;
+  // Returns nullptr and does not report if such node already exists.
+  ExplodedNode *tryToReportBug(const MemRegion *Region, const CXXRecordDecl *RD,
+                               CheckerContext &C, MisuseKind MK) const;
 
   bool isInMoveSafeContext(const LocationContext *LC) const;
   bool isStateResetMethod(const CXXMethodDecl *MethodDec) const;
@@ -377,19 +378,20 @@ void MoveChecker::modelUse(ProgramStateRef State, const MemRegion *Region,
     return;
   }
 
-  ExplodedNode *N = reportBug(Region, RD, C, MK);
+  ExplodedNode *N = tryToReportBug(Region, RD, C, MK);
 
   // If the program has already crashed on this path, don't bother.
-  if (N->isSink())
+  if (!N || N->isSink())
     return;
 
   State = State->set<TrackedRegionMap>(Region, RegionState::getReported());
   C.addTransition(State, N);
 }
 
-ExplodedNode *MoveChecker::reportBug(const MemRegion *Region,
-                                     const CXXRecordDecl *RD, CheckerContext &C,
-                                     MisuseKind MK) const {
+ExplodedNode *MoveChecker::tryToReportBug(const MemRegion *Region,
+                                          const CXXRecordDecl *RD,
+                                          CheckerContext &C,
+                                          MisuseKind MK) const {
   if (ExplodedNode *N = misuseCausesCrash(MK) ? C.generateErrorNode()
                                               : C.generateNonFatalErrorNode()) {
     // Uniqueing report to the same object.
@@ -552,8 +554,9 @@ MoveChecker::classifyObject(const MemRegion *MR,
   // For the purposes of this checker, we classify move-safe STL types
   // as not-"STL" types, because that's how the checker treats them.
   MR = unwrapRValueReferenceIndirection(MR);
-  bool IsLocal = isa_and_nonnull<VarRegion>(MR) &&
-                 isa<StackSpaceRegion>(MR->getMemorySpace());
+  bool IsLocal =
+      isa_and_nonnull<VarRegion, CXXLifetimeExtendedObjectRegion>(MR) &&
+      isa<StackSpaceRegion>(MR->getMemorySpace());
 
   if (!RD || !RD->getDeclContext()->isStdNamespace())
     return { IsLocal, SK_NonStd };

@@ -33,7 +33,6 @@ translating the following operations:
     *   `func.return`
 *   'scf' Dialect
     *   `scf.for`
-    *   `scf.if`
     *   `scf.yield`
 *   'arith' Dialect
     *   `arith.constant`

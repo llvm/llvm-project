@@ -84,8 +84,6 @@ bool M68kSubtarget::isPositionIndependent() const {
 
 bool M68kSubtarget::isLegalToCallImmediateAddr() const { return true; }
 
-bool M68kSubtarget::abiUsesSoftFloat() const { return true; }
-
 M68kSubtarget &M68kSubtarget::initializeSubtargetDependencies(
     StringRef CPU, Triple TT, StringRef FS, const M68kTargetMachine &TM) {
   std::string CPUName = selectM68kCPU(TT, CPU).str();

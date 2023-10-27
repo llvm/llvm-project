@@ -40,9 +40,9 @@ define void @foo1(<4 x float> %val, <4 x float> %test, ptr %p) nounwind {
 define <4 x float> @foo2(<4 x float> %val, <4 x float> %test) nounwind {
 ; CHECK-LABEL: foo2:
 ; CHECK:       ; %bb.0:
+; CHECK-NEXT:    fcmeq.4s v0, v0, v1
 ; CHECK-NEXT:  Lloh0:
 ; CHECK-NEXT:    adrp x8, lCPI2_0@PAGE
-; CHECK-NEXT:    fcmeq.4s v0, v0, v1
 ; CHECK-NEXT:  Lloh1:
 ; CHECK-NEXT:    ldr q1, [x8, lCPI2_0@PAGEOFF]
 ; CHECK-NEXT:    and.16b v0, v0, v1

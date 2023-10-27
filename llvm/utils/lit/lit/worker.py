@@ -78,9 +78,9 @@ def _execute_test_handle_errors(test, lit_config):
     except:
         if lit_config.debug:
             raise
-        output = 'Exception during script execution:\n'
+        output = "Exception during script execution:\n"
         output += traceback.format_exc()
-        output += '\n'
+        output += "\n"
         return lit.Test.Result(lit.Test.UNRESOLVED, output)
 
 

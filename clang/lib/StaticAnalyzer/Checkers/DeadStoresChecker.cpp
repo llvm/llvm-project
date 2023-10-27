@@ -93,9 +93,9 @@ void ReachableCode::computeReachableBlocks() {
     if (isReachable)
       continue;
     isReachable = true;
-    for (CFGBlock::const_succ_iterator i = block->succ_begin(),
-                                       e = block->succ_end(); i != e; ++i)
-      if (const CFGBlock *succ = *i)
+
+    for (const CFGBlock *succ : block->succs())
+      if (succ)
         worklist.push_back(succ);
   }
 }

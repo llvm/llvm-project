@@ -28,9 +28,9 @@ define double @test2(double %a, double %b) {
 define double @test3(double %a, double %b, double %c) {
 ; CHECK-LABEL: test3:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fadd d2, d2, d2
 ; CHECK-NEXT:    fmul d0, d0, d1
-; CHECK-NEXT:    fsub d0, d0, d2
+; CHECK-NEXT:    fadd d1, d2, d2
+; CHECK-NEXT:    fsub d0, d0, d1
 ; CHECK-NEXT:    ret
   %mul = fmul double %a, %b
   %mul1 = fmul double %c, 2.000000e+00
@@ -41,9 +41,9 @@ define double @test3(double %a, double %b, double %c) {
 define double @test4(double %a, double %b, double %c) {
 ; CHECK-LABEL: test4:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fadd d2, d2, d2
 ; CHECK-NEXT:    fmul d0, d0, d1
-; CHECK-NEXT:    fsub d0, d0, d2
+; CHECK-NEXT:    fadd d1, d2, d2
+; CHECK-NEXT:    fsub d0, d0, d1
 ; CHECK-NEXT:    ret
   %mul = fmul double %a, %b
   %mul1 = fmul double %c, -2.000000e+00
@@ -132,8 +132,8 @@ define double @test7(double %a, double %b) nounwind {
 define float @fadd_const_multiuse_fmf(float %x) {
 ; CHECK-LABEL: fadd_const_multiuse_fmf:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #1109917696
-; CHECK-NEXT:    mov w9, #1114374144
+; CHECK-NEXT:    mov w8, #1109917696 // =0x42280000
+; CHECK-NEXT:    mov w9, #1114374144 // =0x426c0000
 ; CHECK-NEXT:    fmov s1, w8
 ; CHECK-NEXT:    fmov s2, w9
 ; CHECK-NEXT:    fadd s1, s0, s1
@@ -150,8 +150,8 @@ define float @fadd_const_multiuse_fmf(float %x) {
 define float @fadd_const_multiuse_attr(float %x) {
 ; CHECK-LABEL: fadd_const_multiuse_attr:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #1109917696
-; CHECK-NEXT:    mov w9, #1114374144
+; CHECK-NEXT:    mov w8, #1109917696 // =0x42280000
+; CHECK-NEXT:    mov w9, #1114374144 // =0x426c0000
 ; CHECK-NEXT:    fmov s1, w8
 ; CHECK-NEXT:    fmov s2, w9
 ; CHECK-NEXT:    fadd s1, s0, s1

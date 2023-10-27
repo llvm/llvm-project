@@ -100,13 +100,13 @@ constexpr void test_iterators() {
 // clang-format on
 
 constexpr bool test() {
-  meta::for_each(meta::forward_iterator_list<int*>{}, []<class Out>() {
+  types::for_each(types::forward_iterator_list<int*>{}, []<class Out>() {
     test_iterators<cpp20_input_iterator<int*>, Out, sentinel_wrapper<cpp20_input_iterator<int*>>>();
     test_iterators<ProxyIterator<cpp20_input_iterator<int*>>,
                    ProxyIterator<Out>,
                    sentinel_wrapper<ProxyIterator<cpp20_input_iterator<int*>>>>();
 
-    meta::for_each(meta::forward_iterator_list<int*>{}, []<class In>() {
+    types::for_each(types::forward_iterator_list<int*>{}, []<class In>() {
       test_iterators<In, Out>();
       test_iterators<In, Out, sized_sentinel<In>>();
       test_iterators<In, Out, sentinel_wrapper<In>>();

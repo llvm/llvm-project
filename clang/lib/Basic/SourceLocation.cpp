@@ -227,6 +227,11 @@ const FileEntry *FullSourceLoc::getFileEntry() const {
   return SrcMgr->getFileEntryForID(getFileID());
 }
 
+OptionalFileEntryRef FullSourceLoc::getFileEntryRef() const {
+  assert(isValid());
+  return SrcMgr->getFileEntryRefForID(getFileID());
+}
+
 unsigned FullSourceLoc::getExpansionLineNumber(bool *Invalid) const {
   assert(isValid());
   return SrcMgr->getExpansionLineNumber(*this, Invalid);

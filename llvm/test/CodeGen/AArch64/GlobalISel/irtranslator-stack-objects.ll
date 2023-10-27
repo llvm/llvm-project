@@ -1,5 +1,4 @@
 ; RUN: llc -global-isel -mtriple=aarch64-unknown-unknown -stop-after=irtranslator -verify-machineinstrs %s -o - | FileCheck %s
-; RUN: llc -global-isel -mtriple=aarch64-unknown-unknown -stop-after=irtranslator -verify-machineinstrs -opaque-pointers %s -o - | FileCheck %s
 
 ; The byval object should not be immutable, but the non-byval stack
 ; passed argument should be.

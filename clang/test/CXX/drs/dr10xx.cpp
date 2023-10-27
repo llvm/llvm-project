@@ -1,7 +1,9 @@
 // RUN: %clang_cc1 -std=c++98 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++11 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++14 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++1z %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++17 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++20 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++23 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
 
 namespace std {
   __extension__ typedef __SIZE_TYPE__ size_t;
@@ -33,6 +35,19 @@ namespace dr1004 { // dr1004: 5
   // name lookup of "T::template A" names the constructor.
   template<class T, template<class> class U = T::template A> struct Third { }; // expected-error {{is a constructor name}}
   Third<A<int> > t; // expected-note {{in instantiation of default argument}}
+}
+
+namespace dr1042 { // dr1042: 3.5
+#if __cplusplus >= 201402L
+  // C++14 added an attribute that we can test the semantics of.
+  using foo [[deprecated]] = int; // expected-note {{'foo' has been explicitly marked deprecated here}}
+  foo f = 12; // expected-warning {{'foo' is deprecated}}
+#elif __cplusplus >= 201103L
+  // C++11 did not have any attributes that could be applied to an alias
+  // declaration, so the best we can test is that we accept an empty attribute
+  // list in this mode.
+  using foo [[]] = int;
+#endif
 }
 
 namespace dr1048 { // dr1048: 3.6

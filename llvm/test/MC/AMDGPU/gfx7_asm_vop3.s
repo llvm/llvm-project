@@ -1,4 +1,4 @@
-// RUN: llvm-mc -arch=amdgcn -mcpu=bonaire -show-encoding %s | FileCheck %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=bonaire -show-encoding %s | FileCheck %s
 
 v_nop_e64
 // CHECK: [0x00,0x00,0x00,0xd3,0x00,0x00,0x00,0x00]

@@ -41,6 +41,7 @@ add_llvm_target(PowerPCCodeGen
   PPCMachineFunctionInfo.cpp
   PPCMachineScheduler.cpp
   PPCMacroFusion.cpp
+  PPCMergeStringPool.cpp
   PPCMIPeephole.cpp
   PPCRegisterInfo.cpp
   PPCSubtarget.cpp
@@ -66,7 +67,9 @@ add_llvm_target(PowerPCCodeGen
   AsmPrinter
   BinaryFormat
   CodeGen
+  CodeGenTypes
   Core
+  GlobalISel
   MC
   PowerPCDesc
   PowerPCInfo
@@ -76,7 +79,6 @@ add_llvm_target(PowerPCCodeGen
   Target
   TargetParser
   TransformUtils
-  GlobalISel
 
   ADD_TO_COMPONENT
   PowerPC

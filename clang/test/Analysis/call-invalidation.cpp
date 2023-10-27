@@ -78,7 +78,7 @@ void testReferenceStruct() {
 }
 
 // FIXME: This test is split into two functions because region invalidation
-// does not preserve reference bindings. <rdar://problem/13320347>
+// does not preserve reference bindings.
 void testConstReferenceStruct() {
   int x;
   RefWrapper w = { x };

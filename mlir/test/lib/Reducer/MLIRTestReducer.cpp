@@ -18,7 +18,7 @@ using namespace mlir;
 
 namespace {
 
-/// This pass looks for for the presence of an operation with the name
+/// This pass looks for the presence of an operation with the name
 /// "crashOp" in the input MLIR file and crashes the mlir-opt tool if the
 /// operation is found.
 struct TestReducer : public PassWrapper<TestReducer, OperationPass<>> {

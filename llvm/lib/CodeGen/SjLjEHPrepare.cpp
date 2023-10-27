@@ -38,21 +38,21 @@ STATISTIC(NumSpilled, "Number of registers live across unwind edges");
 
 namespace {
 class SjLjEHPrepare : public FunctionPass {
-  IntegerType *DataTy;
-  Type *doubleUnderDataTy;
-  Type *doubleUnderJBufTy;
-  Type *FunctionContextTy;
+  IntegerType *DataTy = nullptr;
+  Type *doubleUnderDataTy = nullptr;
+  Type *doubleUnderJBufTy = nullptr;
+  Type *FunctionContextTy = nullptr;
   FunctionCallee RegisterFn;
   FunctionCallee UnregisterFn;
-  Function *BuiltinSetupDispatchFn;
-  Function *FrameAddrFn;
-  Function *StackAddrFn;
-  Function *StackRestoreFn;
-  Function *LSDAAddrFn;
-  Function *CallSiteFn;
-  Function *FuncCtxFn;
-  AllocaInst *FuncCtx;
-  const TargetMachine *TM;
+  Function *BuiltinSetupDispatchFn = nullptr;
+  Function *FrameAddrFn = nullptr;
+  Function *StackAddrFn = nullptr;
+  Function *StackRestoreFn = nullptr;
+  Function *LSDAAddrFn = nullptr;
+  Function *CallSiteFn = nullptr;
+  Function *FuncCtxFn = nullptr;
+  AllocaInst *FuncCtx = nullptr;
+  const TargetMachine *TM = nullptr;
 
 public:
   static char ID; // Pass identification, replacement for typeid
@@ -490,12 +490,15 @@ bool SjLjEHPrepare::runOnFunction(Function &F) {
   UnregisterFn = M.getOrInsertFunction(
       "_Unwind_SjLj_Unregister", Type::getVoidTy(M.getContext()),
       PointerType::getUnqual(FunctionContextTy));
-  FrameAddrFn = Intrinsic::getDeclaration(
-      &M, Intrinsic::frameaddress,
-      {Type::getInt8PtrTy(M.getContext(),
-                          M.getDataLayout().getAllocaAddrSpace())});
-  StackAddrFn = Intrinsic::getDeclaration(&M, Intrinsic::stacksave);
-  StackRestoreFn = Intrinsic::getDeclaration(&M, Intrinsic::stackrestore);
+
+  PointerType *AllocaPtrTy = M.getDataLayout().getAllocaPtrType(M.getContext());
+
+  FrameAddrFn =
+      Intrinsic::getDeclaration(&M, Intrinsic::frameaddress, {AllocaPtrTy});
+  StackAddrFn =
+      Intrinsic::getDeclaration(&M, Intrinsic::stacksave, {AllocaPtrTy});
+  StackRestoreFn =
+      Intrinsic::getDeclaration(&M, Intrinsic::stackrestore, {AllocaPtrTy});
   BuiltinSetupDispatchFn =
     Intrinsic::getDeclaration(&M, Intrinsic::eh_sjlj_setup_dispatch);
   LSDAAddrFn = Intrinsic::getDeclaration(&M, Intrinsic::eh_sjlj_lsda);

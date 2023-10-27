@@ -6,9 +6,8 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-has-no-incomplete-format
 // TODO FMT __builtin_memcpy isn't constexpr in GCC
-// UNSUPPORTED: gcc-12
+// UNSUPPORTED: gcc-13
 
 // <format>
 
@@ -21,6 +20,7 @@
 #include <format>
 #include <cassert>
 #include <concepts>
+#include <iterator>
 #include <type_traits>
 
 #include "test_format_context.h"
@@ -33,24 +33,25 @@
 
 // This is based on the method found in
 // clang/test/CXX/temp/temp.arg/temp.arg.nontype/p1-cxx20.cpp
-template <size_t N>
+template <std::size_t N>
 struct Tester {
   // This is not part of the real test, but is used the deduce the size of the input.
   constexpr Tester(const char (&r)[N]) { __builtin_memcpy(text, r, N); }
   char text[N];
 
   // The size of the array shouldn't include the NUL character.
-  static const size_t size = N - 1;
+  static const std::size_t size = N - 1;
 
   template <class CharT>
-  void test(const std::basic_string<CharT>& expected, const std::basic_string_view<CharT>& fmt) const {
+  void
+  test(const std::basic_string<CharT>& expected, const std::basic_string_view<CharT>& fmt, std::size_t offset) const {
     using Str = CharT[size];
     std::basic_format_parse_context<CharT> parse_ctx{fmt};
     std::formatter<Str, CharT> formatter;
     static_assert(std::semiregular<decltype(formatter)>);
 
     auto it = formatter.parse(parse_ctx);
-    assert(it == fmt.end() - (!fmt.empty() && fmt.back() == '}'));
+    assert(it == fmt.end() - offset);
 
     std::basic_string<CharT> result;
     auto out = std::back_inserter(result);
@@ -75,13 +76,13 @@ struct Tester {
     std::basic_string_view<CharT> fmt{f};
     assert(fmt.back() == CharT('}') && "Pre-condition failure");
 
-    test(expected, fmt);
+    test(expected, fmt, 1);
     fmt.remove_suffix(1);
-    test(expected, fmt);
+    test(expected, fmt, 0);
   }
 };
 
-template <size_t N>
+template <std::size_t N>
 Tester(const char (&)[N]) -> Tester<N>;
 
 template <Tester t, class CharT>

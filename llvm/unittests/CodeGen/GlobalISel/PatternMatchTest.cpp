@@ -32,7 +32,7 @@ namespace {
 TEST_F(AArch64GISelMITest, MatchIntConstant) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
   auto MIBCst = B.buildConstant(LLT::scalar(64), 42);
   int64_t Cst;
   bool match = mi_match(MIBCst.getReg(0), *MRI, m_ICst(Cst));
@@ -43,7 +43,7 @@ TEST_F(AArch64GISelMITest, MatchIntConstant) {
 TEST_F(AArch64GISelMITest, MatchIntConstantRegister) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
   auto MIBCst = B.buildConstant(LLT::scalar(64), 42);
   std::optional<ValueAndVReg> Src0;
   bool match = mi_match(MIBCst.getReg(0), *MRI, m_GCst(Src0));
@@ -54,7 +54,7 @@ TEST_F(AArch64GISelMITest, MatchIntConstantRegister) {
 TEST_F(AArch64GISelMITest, MatchIntConstantSplat) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   LLT s64 = LLT::scalar(64);
   LLT v2s64 = LLT::fixed_vector(2, s64);
@@ -79,7 +79,7 @@ TEST_F(AArch64GISelMITest, MatchIntConstantSplat) {
 TEST_F(AArch64GISelMITest, MachineInstrPtrBind) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
   auto MIBAdd = B.buildAdd(LLT::scalar(64), Copies[0], Copies[1]);
   // Test 'MachineInstr *' bind.
   // Default mi_match.
@@ -110,7 +110,7 @@ TEST_F(AArch64GISelMITest, MachineInstrPtrBind) {
 TEST_F(AArch64GISelMITest, MatchBinaryOp) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
   LLT s32 = LLT::scalar(32);
   LLT s64 = LLT::scalar(64);
   LLT p0 = LLT::pointer(0, 64);
@@ -282,7 +282,7 @@ TEST_F(AArch64GISelMITest, MatchBinaryOp) {
 TEST_F(AArch64GISelMITest, MatchICmp) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   const LLT s1 = LLT::scalar(1);
   auto CmpEq = B.buildICmp(CmpInst::ICMP_EQ, s1, Copies[0], Copies[1]);
@@ -307,7 +307,7 @@ TEST_F(AArch64GISelMITest, MatchICmp) {
 TEST_F(AArch64GISelMITest, MatchFCmp) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   const LLT s1 = LLT::scalar(1);
   auto CmpEq = B.buildFCmp(CmpInst::FCMP_OEQ, s1, Copies[0], Copies[1]);
@@ -332,7 +332,7 @@ TEST_F(AArch64GISelMITest, MatchFCmp) {
 TEST_F(AArch64GISelMITest, MatcCommutativeICmp) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
   const LLT s1 = LLT::scalar(1);
   Register LHS = Copies[0];
   Register RHS = Copies[1];
@@ -361,7 +361,7 @@ TEST_F(AArch64GISelMITest, MatcCommutativeICmp) {
 TEST_F(AArch64GISelMITest, MatcCommutativeFCmp) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
   const LLT s1 = LLT::scalar(1);
   Register LHS = Copies[0];
   Register RHS = Copies[1];
@@ -390,7 +390,7 @@ TEST_F(AArch64GISelMITest, MatcCommutativeFCmp) {
 TEST_F(AArch64GISelMITest, MatchFPUnaryOp) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   // Truncate s64 to s32.
   LLT s32 = LLT::scalar(32);
@@ -452,7 +452,7 @@ TEST_F(AArch64GISelMITest, MatchFPUnaryOp) {
 TEST_F(AArch64GISelMITest, MatchExtendsTrunc) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   LLT s64 = LLT::scalar(64);
   LLT s32 = LLT::scalar(32);
@@ -499,7 +499,7 @@ TEST_F(AArch64GISelMITest, MatchExtendsTrunc) {
 TEST_F(AArch64GISelMITest, MatchSpecificType) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   // Try to match a 64bit add.
   LLT s64 = LLT::scalar(64);
@@ -536,7 +536,7 @@ TEST_F(AArch64GISelMITest, MatchSpecificType) {
 TEST_F(AArch64GISelMITest, MatchCombinators) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   LLT s64 = LLT::scalar(64);
   LLT s32 = LLT::scalar(32);
@@ -570,7 +570,7 @@ TEST_F(AArch64GISelMITest, MatchCombinators) {
 TEST_F(AArch64GISelMITest, MatchMiscellaneous) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   LLT s64 = LLT::scalar(64);
   auto MIBAdd = B.buildAdd(s64, Copies[0], Copies[1]);
@@ -597,7 +597,7 @@ TEST_F(AArch64GISelMITest, MatchMiscellaneous) {
 TEST_F(AArch64GISelMITest, MatchSpecificConstant) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   // Basic case: Can we match a G_CONSTANT with a specific value?
   auto FortyTwo = B.buildConstant(LLT::scalar(64), 42);
@@ -619,7 +619,7 @@ TEST_F(AArch64GISelMITest, MatchSpecificConstant) {
 TEST_F(AArch64GISelMITest, MatchSpecificConstantSplat) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   LLT s64 = LLT::scalar(64);
   LLT v4s64 = LLT::fixed_vector(4, s64);
@@ -649,7 +649,7 @@ TEST_F(AArch64GISelMITest, MatchSpecificConstantSplat) {
 TEST_F(AArch64GISelMITest, MatchSpecificConstantOrSplat) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   LLT s64 = LLT::scalar(64);
   LLT v4s64 = LLT::fixed_vector(4, s64);
@@ -680,7 +680,7 @@ TEST_F(AArch64GISelMITest, MatchSpecificConstantOrSplat) {
 TEST_F(AArch64GISelMITest, MatchZeroInt) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
   auto Zero = B.buildConstant(LLT::scalar(64), 0);
   EXPECT_TRUE(mi_match(Zero.getReg(0), *MRI, m_ZeroInt()));
 
@@ -691,7 +691,7 @@ TEST_F(AArch64GISelMITest, MatchZeroInt) {
 TEST_F(AArch64GISelMITest, MatchAllOnesInt) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
   auto AllOnes = B.buildConstant(LLT::scalar(64), -1);
   EXPECT_TRUE(mi_match(AllOnes.getReg(0), *MRI, m_AllOnesInt()));
 
@@ -702,7 +702,7 @@ TEST_F(AArch64GISelMITest, MatchAllOnesInt) {
 TEST_F(AArch64GISelMITest, MatchFPOrIntConst) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   Register IntOne = B.buildConstant(LLT::scalar(64), 1).getReg(0);
   Register FPOne = B.buildFConstant(LLT::scalar(64), 1.0).getReg(0);
@@ -721,7 +721,7 @@ TEST_F(AArch64GISelMITest, MatchFPOrIntConst) {
 TEST_F(AArch64GISelMITest, MatchConstantSplat) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   LLT s64 = LLT::scalar(64);
   LLT v2s64 = LLT::fixed_vector(2, 64);
@@ -811,7 +811,7 @@ TEST_F(AArch64GISelMITest, MatchConstantSplat) {
 TEST_F(AArch64GISelMITest, MatchNeg) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   LLT s64 = LLT::scalar(64);
   auto Zero = B.buildConstant(LLT::scalar(64), 0);
@@ -843,7 +843,7 @@ TEST_F(AArch64GISelMITest, MatchNeg) {
 TEST_F(AArch64GISelMITest, MatchNot) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   LLT s64 = LLT::scalar(64);
   auto AllOnes = B.buildConstant(LLT::scalar(64), -1);
@@ -876,7 +876,7 @@ TEST_F(AArch64GISelMITest, MatchNot) {
 TEST_F(AArch64GISelMITest, MatchSpecificReg) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
   auto Cst1 = B.buildConstant(LLT::scalar(64), 42);
   auto Cst2 = B.buildConstant(LLT::scalar(64), 314);
   Register Reg = Cst1.getReg(0);

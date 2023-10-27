@@ -13,6 +13,7 @@
 #include "llvm/ObjCopy/COFF/COFFConfig.h"
 #include "llvm/ObjCopy/CommonConfig.h"
 
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Support/CRC.h"
@@ -130,8 +131,37 @@ static uint32_t flagsToCharacteristics(SectionFlag AllFlags, uint32_t OldChar) {
   return NewCharacteristics;
 }
 
+static Error dumpSection(Object &O, StringRef SectionName, StringRef FileName) {
+  for (const coff::Section &Section : O.getSections()) {
+    if (Section.Name != SectionName)
+      continue;
+
+    ArrayRef<uint8_t> Contents = Section.getContents();
+
+    std::unique_ptr<FileOutputBuffer> Buffer;
+    if (auto B = FileOutputBuffer::create(FileName, Contents.size()))
+      Buffer = std::move(*B);
+    else
+      return B.takeError();
+
+    llvm::copy(Contents, Buffer->getBufferStart());
+    if (Error E = Buffer->commit())
+      return E;
+
+    return Error::success();
+  }
+  return createStringError(object_error::parse_failed, "section '%s' not found",
+                           SectionName.str().c_str());
+}
+
 static Error handleArgs(const CommonConfig &Config,
                         const COFFConfig &COFFConfig, Object &Obj) {
+  for (StringRef Op : Config.DumpSection) {
+    auto [Section, File] = Op.split('=');
+    if (Error E = dumpSection(Obj, Section, File))
+      return E;
+  }
+
   // Perform the actual section removals.
   Obj.removeSections([&Config](const Section &Sec) {
     // Contrary to --only-keep-debug, --only-section fully removes sections that

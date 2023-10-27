@@ -20,7 +20,6 @@ typedef struct objc_object {
 // We do not want to overhelm user with error messages in case they forgot to 
 // assign to self and check that the result of [super init] is non-nil. So 
 // stop tracking the receiver of init with respect to Retain Release checker.  
-// radar://12115830
 @interface ParentOfCell : NSObject
 - (id)initWithInt: (int)inInt;
 @end

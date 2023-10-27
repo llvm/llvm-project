@@ -18,3 +18,10 @@ define void @can_replace_gep_idx_with_zero_typesize(i64 %n, ptr %a, i64 %b) {
   call void @do_something(<vscale x 4 x i32> %tmp)
   ret void
 }
+
+define void @can_replace_gep_idx_with_zero_typesize_2(i64 %n, ptr %a, i64 %b) {
+  %idx = getelementptr [2 x <vscale x 4 x i32>], ptr %a, i64 %b, i64 0
+  %tmp = load <vscale x 4 x i32>, ptr %idx
+  call void @do_something(<vscale x 4 x i32> %tmp)
+  ret void
+}

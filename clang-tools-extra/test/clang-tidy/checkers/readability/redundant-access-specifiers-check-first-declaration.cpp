@@ -1,5 +1,5 @@
 // RUN: %check_clang_tidy %s readability-redundant-access-specifiers %t -- \
-// RUN:   -config="{CheckOptions: [{key: readability-redundant-access-specifiers.CheckFirstDeclaration, value: true}]}" --
+// RUN:   -config="{CheckOptions: {readability-redundant-access-specifiers.CheckFirstDeclaration: true}}" --
 
 class FooPublic {
 private: // comment-0

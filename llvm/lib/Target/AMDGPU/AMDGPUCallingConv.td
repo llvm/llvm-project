@@ -213,6 +213,16 @@ def CC_AMDGPU : CallingConv<[
         CCDelegateTo<CC_AMDGPU_Func>>
 ]>;
 
+def CC_AMDGPU_CS_CHAIN : CallingConv<[
+  CCIfInReg<CCIfType<[f32, i32, f16, i16, v2i16, v2f16] , CCAssignToReg<
+    !foreach(i, !range(105), !cast<Register>("SGPR"#i))
+  >>>,
+
+  CCIfNotInReg<CCIfType<[f32, i32, f16, i16, v2i16, v2f16] , CCAssignToReg<
+    !foreach(i, !range(8, 255), !cast<Register>("VGPR"#i))
+  >>>
+]>;
+
 // Trivial class to denote when a def is used only to get a RegMask, i.e.
 // SaveList is ignored and the def is not used as part of any calling
 // convention.

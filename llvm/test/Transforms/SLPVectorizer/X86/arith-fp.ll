@@ -607,49 +607,25 @@ define <8 x double> @buildvector_div_8f64(<8 x double> %a, <8 x double> %b) {
 ; SSE-NEXT:    ret <8 x double> [[TMP1]]
 ;
 ; SLM-LABEL: @buildvector_div_8f64(
-; SLM-NEXT:    [[A0:%.*]] = extractelement <8 x double> [[A:%.*]], i32 0
-; SLM-NEXT:    [[A1:%.*]] = extractelement <8 x double> [[A]], i32 1
-; SLM-NEXT:    [[A2:%.*]] = extractelement <8 x double> [[A]], i32 2
-; SLM-NEXT:    [[A3:%.*]] = extractelement <8 x double> [[A]], i32 3
-; SLM-NEXT:    [[A4:%.*]] = extractelement <8 x double> [[A]], i32 4
-; SLM-NEXT:    [[A5:%.*]] = extractelement <8 x double> [[A]], i32 5
-; SLM-NEXT:    [[A6:%.*]] = extractelement <8 x double> [[A]], i32 6
-; SLM-NEXT:    [[A7:%.*]] = extractelement <8 x double> [[A]], i32 7
-; SLM-NEXT:    [[B0:%.*]] = extractelement <8 x double> [[B:%.*]], i32 0
-; SLM-NEXT:    [[B1:%.*]] = extractelement <8 x double> [[B]], i32 1
-; SLM-NEXT:    [[B2:%.*]] = extractelement <8 x double> [[B]], i32 2
-; SLM-NEXT:    [[B3:%.*]] = extractelement <8 x double> [[B]], i32 3
-; SLM-NEXT:    [[B4:%.*]] = extractelement <8 x double> [[B]], i32 4
-; SLM-NEXT:    [[B5:%.*]] = extractelement <8 x double> [[B]], i32 5
-; SLM-NEXT:    [[B6:%.*]] = extractelement <8 x double> [[B]], i32 6
-; SLM-NEXT:    [[B7:%.*]] = extractelement <8 x double> [[B]], i32 7
-; SLM-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> poison, double [[A0]], i32 0
-; SLM-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> [[TMP1]], double [[A1]], i32 1
-; SLM-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> poison, double [[B0]], i32 0
-; SLM-NEXT:    [[TMP4:%.*]] = insertelement <2 x double> [[TMP3]], double [[B1]], i32 1
-; SLM-NEXT:    [[TMP5:%.*]] = fdiv <2 x double> [[TMP2]], [[TMP4]]
-; SLM-NEXT:    [[TMP6:%.*]] = insertelement <2 x double> poison, double [[A2]], i32 0
-; SLM-NEXT:    [[TMP7:%.*]] = insertelement <2 x double> [[TMP6]], double [[A3]], i32 1
-; SLM-NEXT:    [[TMP8:%.*]] = insertelement <2 x double> poison, double [[B2]], i32 0
-; SLM-NEXT:    [[TMP9:%.*]] = insertelement <2 x double> [[TMP8]], double [[B3]], i32 1
-; SLM-NEXT:    [[TMP10:%.*]] = fdiv <2 x double> [[TMP7]], [[TMP9]]
-; SLM-NEXT:    [[TMP11:%.*]] = insertelement <2 x double> poison, double [[A4]], i32 0
-; SLM-NEXT:    [[TMP12:%.*]] = insertelement <2 x double> [[TMP11]], double [[A5]], i32 1
-; SLM-NEXT:    [[TMP13:%.*]] = insertelement <2 x double> poison, double [[B4]], i32 0
-; SLM-NEXT:    [[TMP14:%.*]] = insertelement <2 x double> [[TMP13]], double [[B5]], i32 1
-; SLM-NEXT:    [[TMP15:%.*]] = fdiv <2 x double> [[TMP12]], [[TMP14]]
-; SLM-NEXT:    [[TMP16:%.*]] = insertelement <2 x double> poison, double [[A6]], i32 0
-; SLM-NEXT:    [[TMP17:%.*]] = insertelement <2 x double> [[TMP16]], double [[A7]], i32 1
-; SLM-NEXT:    [[TMP18:%.*]] = insertelement <2 x double> poison, double [[B6]], i32 0
-; SLM-NEXT:    [[TMP19:%.*]] = insertelement <2 x double> [[TMP18]], double [[B7]], i32 1
-; SLM-NEXT:    [[TMP20:%.*]] = fdiv <2 x double> [[TMP17]], [[TMP19]]
-; SLM-NEXT:    [[TMP21:%.*]] = shufflevector <2 x double> [[TMP5]], <2 x double> poison, <8 x i32> <i32 0, i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-; SLM-NEXT:    [[TMP22:%.*]] = shufflevector <2 x double> [[TMP10]], <2 x double> poison, <8 x i32> <i32 0, i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-; SLM-NEXT:    [[R31:%.*]] = shufflevector <8 x double> [[TMP21]], <8 x double> [[TMP22]], <8 x i32> <i32 0, i32 1, i32 8, i32 9, i32 4, i32 5, i32 6, i32 7>
-; SLM-NEXT:    [[TMP23:%.*]] = shufflevector <2 x double> [[TMP15]], <2 x double> poison, <8 x i32> <i32 0, i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-; SLM-NEXT:    [[R52:%.*]] = shufflevector <8 x double> [[R31]], <8 x double> [[TMP23]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 6, i32 7>
-; SLM-NEXT:    [[TMP24:%.*]] = shufflevector <2 x double> [[TMP20]], <2 x double> poison, <8 x i32> <i32 0, i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-; SLM-NEXT:    [[R73:%.*]] = shufflevector <8 x double> [[R52]], <8 x double> [[TMP24]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 8, i32 9>
+; SLM-NEXT:    [[TMP1:%.*]] = shufflevector <8 x double> [[A:%.*]], <8 x double> poison, <2 x i32> <i32 0, i32 1>
+; SLM-NEXT:    [[TMP2:%.*]] = shufflevector <8 x double> [[B:%.*]], <8 x double> poison, <2 x i32> <i32 0, i32 1>
+; SLM-NEXT:    [[TMP3:%.*]] = fdiv <2 x double> [[TMP1]], [[TMP2]]
+; SLM-NEXT:    [[TMP4:%.*]] = shufflevector <8 x double> [[A]], <8 x double> poison, <2 x i32> <i32 2, i32 3>
+; SLM-NEXT:    [[TMP5:%.*]] = shufflevector <8 x double> [[B]], <8 x double> poison, <2 x i32> <i32 2, i32 3>
+; SLM-NEXT:    [[TMP6:%.*]] = fdiv <2 x double> [[TMP4]], [[TMP5]]
+; SLM-NEXT:    [[TMP7:%.*]] = shufflevector <8 x double> [[A]], <8 x double> poison, <2 x i32> <i32 4, i32 5>
+; SLM-NEXT:    [[TMP8:%.*]] = shufflevector <8 x double> [[B]], <8 x double> poison, <2 x i32> <i32 4, i32 5>
+; SLM-NEXT:    [[TMP9:%.*]] = fdiv <2 x double> [[TMP7]], [[TMP8]]
+; SLM-NEXT:    [[TMP10:%.*]] = shufflevector <8 x double> [[A]], <8 x double> poison, <2 x i32> <i32 6, i32 7>
+; SLM-NEXT:    [[TMP11:%.*]] = shufflevector <8 x double> [[B]], <8 x double> poison, <2 x i32> <i32 6, i32 7>
+; SLM-NEXT:    [[TMP12:%.*]] = fdiv <2 x double> [[TMP10]], [[TMP11]]
+; SLM-NEXT:    [[TMP13:%.*]] = shufflevector <2 x double> [[TMP3]], <2 x double> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; SLM-NEXT:    [[TMP14:%.*]] = shufflevector <2 x double> [[TMP6]], <2 x double> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; SLM-NEXT:    [[R31:%.*]] = shufflevector <8 x double> [[TMP13]], <8 x double> [[TMP14]], <8 x i32> <i32 0, i32 1, i32 8, i32 9, i32 4, i32 5, i32 6, i32 7>
+; SLM-NEXT:    [[TMP15:%.*]] = shufflevector <2 x double> [[TMP9]], <2 x double> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; SLM-NEXT:    [[R52:%.*]] = shufflevector <8 x double> [[R31]], <8 x double> [[TMP15]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 6, i32 7>
+; SLM-NEXT:    [[TMP16:%.*]] = shufflevector <2 x double> [[TMP12]], <2 x double> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+; SLM-NEXT:    [[R73:%.*]] = shufflevector <8 x double> [[R52]], <8 x double> [[TMP16]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 8, i32 9>
 ; SLM-NEXT:    ret <8 x double> [[R73]]
 ;
 ; AVX-LABEL: @buildvector_div_8f64(

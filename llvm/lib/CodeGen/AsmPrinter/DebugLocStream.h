@@ -49,7 +49,7 @@ private:
   SmallVector<Entry, 32> Entries;
   SmallString<256> DWARFBytes;
   std::vector<std::string> Comments;
-  MCSymbol *Sym;
+  MCSymbol *Sym = nullptr;
 
   /// Only verbose textual output needs comments.  This will be set to
   /// true for that case, and false otherwise.
@@ -156,14 +156,13 @@ class DebugLocStream::ListBuilder {
   DebugLocStream &Locs;
   AsmPrinter &Asm;
   DbgVariable &V;
-  const MachineInstr &MI;
   size_t ListIndex;
   std::optional<uint8_t> TagOffset;
 
 public:
   ListBuilder(DebugLocStream &Locs, DwarfCompileUnit &CU, AsmPrinter &Asm,
-              DbgVariable &V, const MachineInstr &MI)
-      : Locs(Locs), Asm(Asm), V(V), MI(MI), ListIndex(Locs.startList(&CU)),
+              DbgVariable &V)
+      : Locs(Locs), Asm(Asm), V(V), ListIndex(Locs.startList(&CU)),
         TagOffset(std::nullopt) {}
 
   void setTagOffset(uint8_t TO) {

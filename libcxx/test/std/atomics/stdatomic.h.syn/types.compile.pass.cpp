@@ -200,12 +200,12 @@ void f() {
   static_assert(std::is_same_v<std::atomic<int_fast64_t>,   ::atomic_int_fast64_t>);
   static_assert(std::is_same_v<std::atomic<uint_fast64_t>,  ::atomic_uint_fast64_t>);
 
-  static_assert(std::is_same_v<std::atomic<intptr_t>,  ::atomic_intptr_t>);
-  static_assert(std::is_same_v<std::atomic<uintptr_t>, ::atomic_uintptr_t>);
-  static_assert(std::is_same_v<std::atomic<size_t>,    ::atomic_size_t>);
-  static_assert(std::is_same_v<std::atomic<ptrdiff_t>, ::atomic_ptrdiff_t>);
-  static_assert(std::is_same_v<std::atomic<intmax_t>,  ::atomic_intmax_t>);
-  static_assert(std::is_same_v<std::atomic<uintmax_t>, ::atomic_uintmax_t>);
+  static_assert(std::is_same_v<std::atomic<std::intptr_t>,  ::atomic_intptr_t>);
+  static_assert(std::is_same_v<std::atomic<std::uintptr_t>, ::atomic_uintptr_t>);
+  static_assert(std::is_same_v<std::atomic<std::size_t>,    ::atomic_size_t>);
+  static_assert(std::is_same_v<std::atomic<std::ptrdiff_t>, ::atomic_ptrdiff_t>);
+  static_assert(std::is_same_v<std::atomic<std::intmax_t>,  ::atomic_intmax_t>);
+  static_assert(std::is_same_v<std::atomic<std::uintmax_t>, ::atomic_uintmax_t>);
 
   // Just check that the symbols in the global namespace are visible.
   using ::atomic_compare_exchange_strong;

@@ -22,19 +22,19 @@
 // CHECK-SOFT: "-msoft-float" "-mfloat-abi" "soft"
 //
 // -mfloat-abi=soft
-// RUN: %clang -c %s -### -o %t.o 2>&1 \
+// RUN: not %clang -c %s -### -o %t.o 2>&1 \
 // RUN:     -target s390x-linux-gnu -mfloat-abi=soft \
 // RUN:   | FileCheck --check-prefix=CHECK-FLOATABISOFT %s
 // CHECK-FLOATABISOFT: error: unsupported option '-mfloat-abi=soft'
 //
 // -mfloat-abi=hard
-// RUN: %clang -c %s -### -o %t.o 2>&1 \
+// RUN: not %clang -c %s -### -o %t.o 2>&1 \
 // RUN:     -target s390x-linux-gnu -mfloat-abi=hard \
 // RUN:   | FileCheck --check-prefix=CHECK-FLOATABIHARD %s
 // CHECK-FLOATABIHARD: error: unsupported option '-mfloat-abi=hard'
 //
 // check invalid -mfloat-abi
-// RUN: %clang -c %s -### -o %t.o 2>&1 \
+// RUN: not %clang -c %s -### -o %t.o 2>&1 \
 // RUN:     -target s390x-linux-gnu -mfloat-abi=x \
 // RUN:   | FileCheck --check-prefix=CHECK-ERRMSG %s
 // CHECK-ERRMSG: error: unsupported option '-mfloat-abi=x'

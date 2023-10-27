@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "LoopConvertUtils.h"
+#include "../utils/ASTUtils.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/Lambda.h"
@@ -48,10 +49,10 @@ bool StmtAncestorASTVisitor::TraverseStmt(Stmt *Statement) {
 /// Combined with StmtAncestors, this provides roughly the same information as
 /// Scope, as we can map a VarDecl to its DeclStmt, then walk up the parent tree
 /// using StmtAncestors.
-bool StmtAncestorASTVisitor::VisitDeclStmt(DeclStmt *Decls) {
-  for (const auto *Decl : Decls->decls()) {
+bool StmtAncestorASTVisitor::VisitDeclStmt(DeclStmt *Statement) {
+  for (const auto *Decl : Statement->decls()) {
     if (const auto *V = dyn_cast<VarDecl>(Decl))
-      DeclParents.insert(std::make_pair(V, Decls));
+      DeclParents.insert(std::make_pair(V, Statement));
   }
   return true;
 }
@@ -190,13 +191,7 @@ const Expr *digThroughConstructorsConversions(const Expr *E) {
 
 /// Returns true when two Exprs are equivalent.
 bool areSameExpr(ASTContext *Context, const Expr *First, const Expr *Second) {
-  if (!First || !Second)
-    return false;
-
-  llvm::FoldingSetNodeID FirstID, SecondID;
-  First->Profile(FirstID, *Context, true);
-  Second->Profile(SecondID, *Context, true);
-  return FirstID == SecondID;
+  return utils::areStatementsIdentical(First, Second, *Context, true);
 }
 
 /// Returns the DeclRefExpr represented by E, or NULL if there isn't one.
@@ -460,10 +455,8 @@ ForLoopIndexUseVisitor::ForLoopIndexUseVisitor(ASTContext *Context,
     : Context(Context), IndexVar(IndexVar), EndVar(EndVar),
       ContainerExpr(ContainerExpr), ArrayBoundExpr(ArrayBoundExpr),
       ContainerNeedsDereference(ContainerNeedsDereference),
-      OnlyUsedAsIndex(true), AliasDecl(nullptr),
-      ConfidenceLevel(Confidence::CL_Safe), NextStmtParent(nullptr),
-      CurrStmtParent(nullptr), ReplaceWithAliasUse(false),
-      AliasFromForInit(false) {
+
+      ConfidenceLevel(Confidence::CL_Safe) {
   if (ContainerExpr)
     addComponent(ContainerExpr);
 }

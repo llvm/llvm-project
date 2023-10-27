@@ -13,7 +13,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/Object/Binary.h"
@@ -26,6 +25,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBufferRef.h"
+#include "llvm/TargetParser/Triple.h"
 #include <algorithm>
 #include <cassert>
 #include <cinttypes>
@@ -753,6 +753,54 @@ Error COFFObjectFile::initLoadConfigPtr() {
     return E;
 
   LoadConfig = (const void *)IntPtr;
+
+  if (is64()) {
+    auto Config = getLoadConfig64();
+    if (Config->Size >=
+            offsetof(coff_load_configuration64, CHPEMetadataPointer) +
+                sizeof(Config->CHPEMetadataPointer) &&
+        Config->CHPEMetadataPointer) {
+      uint64_t ChpeOff = Config->CHPEMetadataPointer;
+      if (Error E =
+              getRvaPtr(ChpeOff - getImageBase(), IntPtr, "CHPE metadata"))
+        return E;
+      if (Error E = checkOffset(Data, IntPtr, sizeof(CHPEMetadata)))
+        return E;
+
+      CHPEMetadata = reinterpret_cast<const chpe_metadata *>(IntPtr);
+
+      // Validate CHPE metadata
+      if (CHPEMetadata->CodeMapCount) {
+        if (Error E = getRvaPtr(CHPEMetadata->CodeMap, IntPtr, "CHPE code map"))
+          return E;
+        if (Error E = checkOffset(Data, IntPtr,
+                                  CHPEMetadata->CodeMapCount *
+                                      sizeof(chpe_range_entry)))
+          return E;
+      }
+
+      if (CHPEMetadata->CodeRangesToEntryPointsCount) {
+        if (Error E = getRvaPtr(CHPEMetadata->CodeRangesToEntryPoints, IntPtr,
+                                "CHPE entry point ranges"))
+          return E;
+        if (Error E = checkOffset(Data, IntPtr,
+                                  CHPEMetadata->CodeRangesToEntryPointsCount *
+                                      sizeof(chpe_code_range_entry)))
+          return E;
+      }
+
+      if (CHPEMetadata->RedirectionMetadataCount) {
+        if (Error E = getRvaPtr(CHPEMetadata->RedirectionMetadata, IntPtr,
+                                "CHPE redirection metadata"))
+          return E;
+        if (Error E = checkOffset(Data, IntPtr,
+                                  CHPEMetadata->RedirectionMetadataCount *
+                                      sizeof(chpe_redirection_entry)))
+          return E;
+      }
+    }
+  }
+
   return Error::success();
 }
 
@@ -1016,6 +1064,8 @@ StringRef COFFObjectFile::getFileFormatName() const {
     return "COFF-ARM64";
   case COFF::IMAGE_FILE_MACHINE_ARM64EC:
     return "COFF-ARM64EC";
+  case COFF::IMAGE_FILE_MACHINE_ARM64X:
+    return "COFF-ARM64X";
   default:
     return "COFF-<unknown arch>";
   }
@@ -1031,6 +1081,7 @@ Triple::ArchType COFFObjectFile::getArch() const {
     return Triple::thumb;
   case COFF::IMAGE_FILE_MACHINE_ARM64:
   case COFF::IMAGE_FILE_MACHINE_ARM64EC:
+  case COFF::IMAGE_FILE_MACHINE_ARM64X:
     return Triple::aarch64;
   default:
     return Triple::UnknownArch;
@@ -1318,6 +1369,7 @@ StringRef COFFObjectFile::getRelocationTypeName(uint16_t Type) const {
     break;
   case COFF::IMAGE_FILE_MACHINE_ARM64:
   case COFF::IMAGE_FILE_MACHINE_ARM64EC:
+  case COFF::IMAGE_FILE_MACHINE_ARM64X:
     switch (Type) {
     LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM64_ABSOLUTE);
     LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM64_ADDR32);
@@ -1855,7 +1907,7 @@ Error ResourceSectionRef::load(const COFFObjectFile *O, const SectionRef &S) {
   Expected<StringRef> Contents = Section.getContents();
   if (!Contents)
     return Contents.takeError();
-  BBS = BinaryByteStream(*Contents, support::little);
+  BBS = BinaryByteStream(*Contents, llvm::endianness::little);
   const coff_section *COFFSect = Obj->getCOFFSection(Section);
   ArrayRef<coff_relocation> OrigRelocs = Obj->getRelocations(COFFSect);
   Relocs.reserve(OrigRelocs.size());
@@ -1901,6 +1953,7 @@ ResourceSectionRef::getContents(const coff_resource_data_entry &Entry) {
       break;
     case COFF::IMAGE_FILE_MACHINE_ARM64:
     case COFF::IMAGE_FILE_MACHINE_ARM64EC:
+    case COFF::IMAGE_FILE_MACHINE_ARM64X:
       RVAReloc = COFF::IMAGE_REL_ARM64_ADDR32NB;
       break;
     default:

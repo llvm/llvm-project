@@ -14,8 +14,8 @@
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/MacroBuilder.h"
 #include "clang/Basic/TargetBuiltins.h"
-#include "llvm/Support/TargetParser.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/LoongArchTargetParser.h"
 
 using namespace clang;
 using namespace clang::targets;
@@ -31,34 +31,89 @@ ArrayRef<const char *> LoongArchTargetInfo::getGCCRegNames() const {
       "$f0", "$f1", "$f2", "$f3", "$f4", "$f5", "$f6", "$f7", "$f8", "$f9",
       "$f10", "$f11", "$f12", "$f13", "$f14", "$f15", "$f16", "$f17", "$f18",
       "$f19", "$f20", "$f21", "$f22", "$f23", "$f24", "$f25", "$f26", "$f27",
-      "$f28", "$f29", "$f30", "$f31"};
+      "$f28", "$f29", "$f30", "$f31",
+      // Condition flag registers.
+      "$fcc0", "$fcc1", "$fcc2", "$fcc3", "$fcc4", "$fcc5", "$fcc6", "$fcc7",
+      // 128-bit vector registers.
+      "$vr0", "$vr1", "$vr2", "$vr3", "$vr4", "$vr5", "$vr6", "$vr7", "$vr8",
+      "$vr9", "$vr10", "$vr11", "$vr12", "$vr13", "$vr14", "$vr15", "$vr16",
+      "$vr17", "$vr18", "$vr19", "$vr20", "$vr21", "$vr22", "$vr23", "$vr24",
+      "$vr25", "$vr26", "$vr27", "$vr28", "$vr29", "$vr30", "$vr31",
+      // 256-bit vector registers.
+      "$xr0", "$xr1", "$xr2", "$xr3", "$xr4", "$xr5", "$xr6", "$xr7", "$xr8",
+      "$xr9", "$xr10", "$xr11", "$xr12", "$xr13", "$xr14", "$xr15", "$xr16",
+      "$xr17", "$xr18", "$xr19", "$xr20", "$xr21", "$xr22", "$xr23", "$xr24",
+      "$xr25", "$xr26", "$xr27", "$xr28", "$xr29", "$xr30", "$xr31"};
   return llvm::ArrayRef(GCCRegNames);
 }
 
 ArrayRef<TargetInfo::GCCRegAlias>
 LoongArchTargetInfo::getGCCRegAliases() const {
   static const TargetInfo::GCCRegAlias GCCRegAliases[] = {
-      {{"$zero"}, "$r0"},       {{"$ra"}, "$r1"},    {{"$tp"}, "$r2"},
-      {{"$sp"}, "$r3"},         {{"$a0"}, "$r4"},    {{"$a1"}, "$r5"},
-      {{"$a2"}, "$r6"},         {{"$a3"}, "$r7"},    {{"$a4"}, "$r8"},
-      {{"$a5"}, "$r9"},         {{"$a6"}, "$r10"},   {{"$a7"}, "$r11"},
-      {{"$t0"}, "$r12"},        {{"$t1"}, "$r13"},   {{"$t2"}, "$r14"},
-      {{"$t3"}, "$r15"},        {{"$t4"}, "$r16"},   {{"$t5"}, "$r17"},
-      {{"$t6"}, "$r18"},        {{"$t7"}, "$r19"},   {{"$t8"}, "$r20"},
-      {{"$fp", "$s9"}, "$r22"}, {{"$s0"}, "$r23"},   {{"$s1"}, "$r24"},
-      {{"$s2"}, "$r25"},        {{"$s3"}, "$r26"},   {{"$s4"}, "$r27"},
-      {{"$s5"}, "$r28"},        {{"$s6"}, "$r29"},   {{"$s7"}, "$r30"},
-      {{"$s8"}, "$r31"},        {{"$fa0"}, "$f0"},   {{"$fa1"}, "$f1"},
-      {{"$fa2"}, "$f2"},        {{"$fa3"}, "$f3"},   {{"$fa4"}, "$f4"},
-      {{"$fa5"}, "$f5"},        {{"$fa6"}, "$f6"},   {{"$fa7"}, "$f7"},
-      {{"$ft0"}, "$f8"},        {{"$ft1"}, "$f9"},   {{"$ft2"}, "$f10"},
-      {{"$ft3"}, "$f11"},       {{"$ft4"}, "$f12"},  {{"$ft5"}, "$f13"},
-      {{"$ft6"}, "$f14"},       {{"$ft7"}, "$f15"},  {{"$ft8"}, "$f16"},
-      {{"$ft9"}, "$f17"},       {{"$ft10"}, "$f18"}, {{"$ft11"}, "$f19"},
-      {{"$ft12"}, "$f20"},      {{"$ft13"}, "$f21"}, {{"$ft14"}, "$f22"},
-      {{"$ft15"}, "$f23"},      {{"$fs0"}, "$f24"},  {{"$fs1"}, "$f25"},
-      {{"$fs2"}, "$f26"},       {{"$fs3"}, "$f27"},  {{"$fs4"}, "$f28"},
-      {{"$fs5"}, "$f29"},       {{"$fs6"}, "$f30"},  {{"$fs7"}, "$f31"},
+      {{"zero", "$zero", "r0"}, "$r0"},
+      {{"ra", "$ra", "r1"}, "$r1"},
+      {{"tp", "$tp", "r2"}, "$r2"},
+      {{"sp", "$sp", "r3"}, "$r3"},
+      {{"a0", "$a0", "r4"}, "$r4"},
+      {{"a1", "$a1", "r5"}, "$r5"},
+      {{"a2", "$a2", "r6"}, "$r6"},
+      {{"a3", "$a3", "r7"}, "$r7"},
+      {{"a4", "$a4", "r8"}, "$r8"},
+      {{"a5", "$a5", "r9"}, "$r9"},
+      {{"a6", "$a6", "r10"}, "$r10"},
+      {{"a7", "$a7", "r11"}, "$r11"},
+      {{"t0", "$t0", "r12"}, "$r12"},
+      {{"t1", "$t1", "r13"}, "$r13"},
+      {{"t2", "$t2", "r14"}, "$r14"},
+      {{"t3", "$t3", "r15"}, "$r15"},
+      {{"t4", "$t4", "r16"}, "$r16"},
+      {{"t5", "$t5", "r17"}, "$r17"},
+      {{"t6", "$t6", "r18"}, "$r18"},
+      {{"t7", "$t7", "r19"}, "$r19"},
+      {{"t8", "$t8", "r20"}, "$r20"},
+      {{"r21"}, "$r21"},
+      {{"s9", "$s9", "r22", "fp", "$fp"}, "$r22"},
+      {{"s0", "$s0", "r23"}, "$r23"},
+      {{"s1", "$s1", "r24"}, "$r24"},
+      {{"s2", "$s2", "r25"}, "$r25"},
+      {{"s3", "$s3", "r26"}, "$r26"},
+      {{"s4", "$s4", "r27"}, "$r27"},
+      {{"s5", "$s5", "r28"}, "$r28"},
+      {{"s6", "$s6", "r29"}, "$r29"},
+      {{"s7", "$s7", "r30"}, "$r30"},
+      {{"s8", "$s8", "r31"}, "$r31"},
+      {{"$fa0"}, "$f0"},
+      {{"$fa1"}, "$f1"},
+      {{"$fa2"}, "$f2"},
+      {{"$fa3"}, "$f3"},
+      {{"$fa4"}, "$f4"},
+      {{"$fa5"}, "$f5"},
+      {{"$fa6"}, "$f6"},
+      {{"$fa7"}, "$f7"},
+      {{"$ft0"}, "$f8"},
+      {{"$ft1"}, "$f9"},
+      {{"$ft2"}, "$f10"},
+      {{"$ft3"}, "$f11"},
+      {{"$ft4"}, "$f12"},
+      {{"$ft5"}, "$f13"},
+      {{"$ft6"}, "$f14"},
+      {{"$ft7"}, "$f15"},
+      {{"$ft8"}, "$f16"},
+      {{"$ft9"}, "$f17"},
+      {{"$ft10"}, "$f18"},
+      {{"$ft11"}, "$f19"},
+      {{"$ft12"}, "$f20"},
+      {{"$ft13"}, "$f21"},
+      {{"$ft14"}, "$f22"},
+      {{"$ft15"}, "$f23"},
+      {{"$fs0"}, "$f24"},
+      {{"$fs1"}, "$f25"},
+      {{"$fs2"}, "$f26"},
+      {{"$fs3"}, "$f27"},
+      {{"$fs4"}, "$f28"},
+      {{"$fs5"}, "$f29"},
+      {{"$fs6"}, "$f30"},
+      {{"$fs7"}, "$f31"},
   };
   return llvm::ArrayRef(GCCRegAliases);
 }
@@ -143,7 +198,15 @@ void LoongArchTargetInfo::getTargetDefines(const LangOptions &Opts,
   else
     Builder.defineMacro("__loongarch_frlen", "0");
 
-  // TODO: define __loongarch_arch and __loongarch_tune.
+  // Define __loongarch_arch.
+  StringRef ArchName = getCPU();
+  Builder.defineMacro("__loongarch_arch", Twine('"') + ArchName + Twine('"'));
+
+  // Define __loongarch_tune.
+  StringRef TuneCPU = getTargetOpts().TuneCPU;
+  if (TuneCPU.empty())
+    TuneCPU = ArchName;
+  Builder.defineMacro("__loongarch_tune", Twine('"') + TuneCPU + Twine('"'));
 
   StringRef ABI = getABI();
   if (ABI == "lp64d" || ABI == "lp64f" || ABI == "lp64s")
@@ -168,9 +231,9 @@ void LoongArchTargetInfo::getTargetDefines(const LangOptions &Opts,
 
 static constexpr Builtin::Info BuiltinInfo[] = {
 #define BUILTIN(ID, TYPE, ATTRS)                                               \
-  {#ID, TYPE, ATTRS, nullptr, ALL_LANGUAGES, nullptr},
+  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
 #define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE)                               \
-  {#ID, TYPE, ATTRS, nullptr, ALL_LANGUAGES, FEATURE},
+  {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
 #include "clang/Basic/BuiltinsLoongArch.def"
 };
 
@@ -214,4 +277,13 @@ bool LoongArchTargetInfo::handleTargetFeatures(
     }
   }
   return true;
+}
+
+bool LoongArchTargetInfo::isValidCPUName(StringRef Name) const {
+  return llvm::LoongArch::isValidCPUName(Name);
+}
+
+void LoongArchTargetInfo::fillValidCPUList(
+    SmallVectorImpl<StringRef> &Values) const {
+  llvm::LoongArch::fillValidCPUList(Values);
 }

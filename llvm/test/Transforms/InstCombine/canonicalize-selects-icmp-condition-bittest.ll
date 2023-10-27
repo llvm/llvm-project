@@ -9,7 +9,7 @@ define i8 @p0(i8 %x, i8 %v0, i8 %v1) {
 ; CHECK-LABEL: @p0(
 ; CHECK-NEXT:    [[T0:%.*]] = and i8 [[X:%.*]], 1
 ; CHECK-NEXT:    [[T1_NOT:%.*]] = icmp eq i8 [[T0]], 0
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[T1_NOT]], i8 [[V1:%.*]], i8 [[V0:%.*]], !prof !0
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[T1_NOT]], i8 [[V1:%.*]], i8 [[V0:%.*]], !prof [[PROF0:![0-9]+]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %t0 = and i8 %x, 1

@@ -1100,3 +1100,46 @@ TEST(DominatorTree, ValueDomination) {
     EXPECT_TRUE(DT->dominates(C, U));
   });
 }
+TEST(DominatorTree, CallBrDomination) {
+  StringRef ModuleString = R"(
+define void @x() {
+  %y = alloca i32
+  %w = callbr i32 asm "", "=r,!i"()
+          to label %asm.fallthrough [label %z]
+
+asm.fallthrough:
+  br label %cleanup
+
+z:
+  store i32 %w, ptr %y
+  br label %cleanup
+
+cleanup:
+  ret void
+})";
+
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
+
+  runWithDomTree(
+      *M, "x", [&](Function &F, DominatorTree *DT, PostDominatorTree *PDT) {
+        Function::iterator FI = F.begin();
+
+        BasicBlock *Entry = &*FI++;
+        BasicBlock *ASMFallthrough = &*FI++;
+        BasicBlock *Z = &*FI++;
+
+        EXPECT_TRUE(DT->dominates(Entry, ASMFallthrough));
+        EXPECT_TRUE(DT->dominates(Entry, Z));
+
+        BasicBlock::iterator BBI = Entry->begin();
+        ++BBI;
+        Instruction &I = *BBI;
+        EXPECT_TRUE(isa<CallBrInst>(I));
+        EXPECT_TRUE(isa<Value>(I));
+        for (const User *U : I.users()) {
+          EXPECT_TRUE(isa<Instruction>(U));
+          EXPECT_TRUE(DT->dominates(cast<Value>(&I), cast<Instruction>(U)));
+        }
+      });
+}

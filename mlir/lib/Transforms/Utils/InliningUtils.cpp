@@ -103,6 +103,23 @@ void InlinerInterface::handleTerminator(Operation *op,
   handler->handleTerminator(op, valuesToRepl);
 }
 
+Value InlinerInterface::handleArgument(OpBuilder &builder, Operation *call,
+                                       Operation *callable, Value argument,
+                                       DictionaryAttr argumentAttrs) const {
+  auto *handler = getInterfaceFor(callable);
+  assert(handler && "expected valid dialect handler");
+  return handler->handleArgument(builder, call, callable, argument,
+                                 argumentAttrs);
+}
+
+Value InlinerInterface::handleResult(OpBuilder &builder, Operation *call,
+                                     Operation *callable, Value result,
+                                     DictionaryAttr resultAttrs) const {
+  auto *handler = getInterfaceFor(callable);
+  assert(handler && "expected valid dialect handler");
+  return handler->handleResult(builder, call, callable, result, resultAttrs);
+}
+
 void InlinerInterface::processInlinedCallBlocks(
     Operation *call, iterator_range<Region::iterator> inlinedBlocks) const {
   auto *handler = getInterfaceFor(call);
@@ -141,12 +158,71 @@ static bool isLegalToInline(InlinerInterface &interface, Region *src,
 // Inline Methods
 //===----------------------------------------------------------------------===//
 
+static void handleArgumentImpl(InlinerInterface &interface, OpBuilder &builder,
+                               CallOpInterface call,
+                               CallableOpInterface callable,
+                               IRMapping &mapper) {
+  // Unpack the argument attributes if there are any.
+  SmallVector<DictionaryAttr> argAttrs(
+      callable.getCallableRegion()->getNumArguments(),
+      builder.getDictionaryAttr({}));
+  if (ArrayAttr arrayAttr = callable.getArgAttrsAttr()) {
+    assert(arrayAttr.size() == argAttrs.size());
+    for (auto [idx, attr] : llvm::enumerate(arrayAttr))
+      argAttrs[idx] = cast<DictionaryAttr>(attr);
+  }
+
+  // Run the argument attribute handler for the given argument and attribute.
+  for (auto [blockArg, argAttr] :
+       llvm::zip(callable.getCallableRegion()->getArguments(), argAttrs)) {
+    Value newArgument = interface.handleArgument(
+        builder, call, callable, mapper.lookup(blockArg), argAttr);
+    assert(newArgument.getType() == mapper.lookup(blockArg).getType() &&
+           "expected the argument type to not change");
+
+    // Update the mapping to point the new argument returned by the handler.
+    mapper.map(blockArg, newArgument);
+  }
+}
+
+static void handleResultImpl(InlinerInterface &interface, OpBuilder &builder,
+                             CallOpInterface call, CallableOpInterface callable,
+                             ValueRange results) {
+  // Unpack the result attributes if there are any.
+  SmallVector<DictionaryAttr> resAttrs(results.size(),
+                                       builder.getDictionaryAttr({}));
+  if (ArrayAttr arrayAttr = callable.getResAttrsAttr()) {
+    assert(arrayAttr.size() == resAttrs.size());
+    for (auto [idx, attr] : llvm::enumerate(arrayAttr))
+      resAttrs[idx] = cast<DictionaryAttr>(attr);
+  }
+
+  // Run the result attribute handler for the given result and attribute.
+  SmallVector<DictionaryAttr> resultAttributes;
+  for (auto [result, resAttr] : llvm::zip(results, resAttrs)) {
+    // Store the original result users before running the handler.
+    DenseSet<Operation *> resultUsers;
+    for (Operation *user : result.getUsers())
+      resultUsers.insert(user);
+
+    Value newResult =
+        interface.handleResult(builder, call, callable, result, resAttr);
+    assert(newResult.getType() == result.getType() &&
+           "expected the result type to not change");
+
+    // Replace the result uses except for the ones introduce by the handler.
+    result.replaceUsesWithIf(newResult, [&](OpOperand &operand) {
+      return resultUsers.count(operand.getOwner());
+    });
+  }
+}
+
 static LogicalResult
 inlineRegionImpl(InlinerInterface &interface, Region *src, Block *inlineBlock,
                  Block::iterator inlinePoint, IRMapping &mapper,
                  ValueRange resultsToReplace, TypeRange regionResultTypes,
                  std::optional<Location> inlineLoc,
-                 bool shouldCloneInlinedRegion, Operation *call = nullptr) {
+                 bool shouldCloneInlinedRegion, CallOpInterface call = {}) {
   assert(resultsToReplace.size() == regionResultTypes.size());
   // We expect the region to have at least one block.
   if (src->empty())
@@ -166,6 +242,12 @@ inlineRegionImpl(InlinerInterface &interface, Region *src, Block *inlineBlock,
                        mapper))
     return failure();
 
+  // Run the argument attribute handler before inlining the callable region.
+  OpBuilder builder(inlineBlock, inlinePoint);
+  auto callable = dyn_cast<CallableOpInterface>(src->getParentOp());
+  if (call && callable)
+    handleArgumentImpl(interface, builder, call, callable, mapper);
+
   // Check to see if the region is being cloned, or moved inline. In either
   // case, move the new blocks after the 'insertBlock' to improve IR
   // readability.
@@ -184,7 +266,7 @@ inlineRegionImpl(InlinerInterface &interface, Region *src, Block *inlineBlock,
 
   // Remap the locations of the inlined operations if a valid source location
   // was provided.
-  if (inlineLoc && !inlineLoc->isa<UnknownLoc>())
+  if (inlineLoc && !llvm::isa<UnknownLoc>(*inlineLoc))
     remapInlinedLocations(newBlocks, *inlineLoc);
 
   // If the blocks were moved in-place, make sure to remap any necessary
@@ -199,8 +281,14 @@ inlineRegionImpl(InlinerInterface &interface, Region *src, Block *inlineBlock,
 
   // Handle the case where only a single block was inlined.
   if (std::next(newBlocks.begin()) == newBlocks.end()) {
+    // Run the result attribute handler on the terminator operands.
+    Operation *firstBlockTerminator = firstNewBlock->getTerminator();
+    builder.setInsertionPoint(firstBlockTerminator);
+    if (call && callable)
+      handleResultImpl(interface, builder, call, callable,
+                       firstBlockTerminator->getOperands());
+
     // Have the interface handle the terminator of this block.
-    auto *firstBlockTerminator = firstNewBlock->getTerminator();
     interface.handleTerminator(firstBlockTerminator,
                                llvm::to_vector<6>(resultsToReplace));
     firstBlockTerminator->erase();
@@ -218,6 +306,12 @@ inlineRegionImpl(InlinerInterface &interface, Region *src, Block *inlineBlock,
                                        resultToRepl.value().getLoc()));
     }
 
+    // Run the result attribute handler on the post insertion block arguments.
+    builder.setInsertionPointToStart(postInsertBlock);
+    if (call && callable)
+      handleResultImpl(interface, builder, call, callable,
+                       postInsertBlock->getArguments());
+
     /// Handle the terminators for each of the new blocks.
     for (auto &newBlock : newBlocks)
       interface.handleTerminator(newBlock.getTerminator(), postInsertBlock);
@@ -234,7 +328,7 @@ static LogicalResult
 inlineRegionImpl(InlinerInterface &interface, Region *src, Block *inlineBlock,
                  Block::iterator inlinePoint, ValueRange inlinedOperands,
                  ValueRange resultsToReplace, std::optional<Location> inlineLoc,
-                 bool shouldCloneInlinedRegion, Operation *call = nullptr) {
+                 bool shouldCloneInlinedRegion, CallOpInterface call = {}) {
   // We expect the region to have at least one block.
   if (src->empty())
     return failure();
@@ -340,7 +434,7 @@ LogicalResult mlir::inlineCall(InlinerInterface &interface,
   if (src->empty())
     return failure();
   auto *entryBlock = &src->front();
-  ArrayRef<Type> callableResultTypes = callable.getCallableResults();
+  ArrayRef<Type> callableResultTypes = callable.getResultTypes();
 
   // Make sure that the number of arguments and results matchup between the call
   // and the region.

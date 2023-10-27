@@ -31,12 +31,14 @@ set(SANITIZER_SOURCES_NOTERMINATION
   sanitizer_procmaps_linux.cpp
   sanitizer_procmaps_mac.cpp
   sanitizer_procmaps_solaris.cpp
+  sanitizer_range.cpp
   sanitizer_solaris.cpp
   sanitizer_stoptheworld_fuchsia.cpp
   sanitizer_stoptheworld_mac.cpp
   sanitizer_stoptheworld_win.cpp
   sanitizer_suppressions.cpp
   sanitizer_tls_get_addr.cpp
+  sanitizer_thread_arg_retval.cpp
   sanitizer_thread_registry.cpp
   sanitizer_type_traits.cpp
   sanitizer_win.cpp
@@ -112,6 +114,7 @@ set(SANITIZER_IMPL_HEADERS
   sanitizer_allocator_secondary.h
   sanitizer_allocator_size_class_map.h
   sanitizer_allocator_stats.h
+  sanitizer_array_ref.h
   sanitizer_asm.h
   sanitizer_atomic.h
   sanitizer_atomic_clang.h
@@ -126,6 +129,7 @@ set(SANITIZER_IMPL_HEADERS
   sanitizer_common_interceptors.inc
   sanitizer_common_interceptors_format.inc
   sanitizer_common_interceptors_ioctl.inc
+  sanitizer_common_interceptors_memintrinsics.inc
   sanitizer_common_interface.inc
   sanitizer_common_interface_posix.inc
   sanitizer_common_syscalls.inc
@@ -170,6 +174,8 @@ set(SANITIZER_IMPL_HEADERS
   sanitizer_procmaps.h
   sanitizer_ptrauth.h
   sanitizer_quarantine.h
+  sanitizer_range.h
+  sanitizer_redefine_builtins.h
   sanitizer_report_decorator.h
   sanitizer_ring_buffer.h
   sanitizer_signal_interceptors.inc
@@ -348,4 +354,15 @@ endif()
 # Unit tests for common sanitizer runtime.
 if(COMPILER_RT_INCLUDE_TESTS)
   add_subdirectory(tests)
+endif()
+
+
+foreach(arch ${SANITIZER_COMMON_SUPPORTED_ARCH})
+  # Library implementing InternalSymbolizer. Empty by default.
+  add_library(RTSanitizerCommonSymbolizerInternal.${arch}
+              OBJECT IMPORTED GLOBAL)
+endforeach()
+
+if (COMPILER_RT_ENABLE_INTERNAL_SYMBOLIZER)
+  add_subdirectory(symbolizer)
 endif()

@@ -122,8 +122,6 @@ module TargetMachine = struct
                     = "llvm_targetmachine_features"
   external data_layout : t -> DataLayout.t
                        = "llvm_targetmachine_data_layout"
-  external add_analysis_passes : [< Llvm.PassManager.any ] Llvm.PassManager.t -> t -> unit
-                               = "llvm_targetmachine_add_analysis_passes"
   external set_verbose_asm : bool -> t -> unit
                            = "llvm_targetmachine_set_verbose_asm"
   external emit_to_file : Llvm.llmodule -> CodeGenFileType.t -> string ->

@@ -10,13 +10,13 @@
 ...
 ---
 name:            test
-alignment:       16
-registers:
-  - { id: 0, class: gpr, preferred-register: '' }
 body:             |
   bb.1:
     ; CHECK-LABEL: name: test
-    ; CHECK: dead [[C:%[0-9]+]]:gpr(s32) = G_CONSTANT i32 0
-    dead %0(s32) = G_CONSTANT i32 0
-
+    ; CHECK: dead [[C:%[0-9]+]]:gr32(s32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: dead undef [[C1:%[0-9]+]].sub_32bit:gr64(s32) = G_CONSTANT i32 1
+    ; CHECK-NEXT: undef [[C2:%[0-9]+]].sub_32bit:gr64(s32) = G_CONSTANT i32 2
+    dead %0:gr32(s32) = G_CONSTANT i32 0
+    dead undef %1.sub_32bit:gr64(s32) = G_CONSTANT i32 1
+    undef %2.sub_32bit:gr64(s32) = G_CONSTANT i32 2
 ...

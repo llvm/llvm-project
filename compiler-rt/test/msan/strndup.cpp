@@ -18,7 +18,7 @@ int main(int argc, char **argv) {
   assert(__msan_test_shadow(copy, 4) == 2); // Poisoning is preserved.
   free(copy);
   return 0;
-  // ON: Uninitialized bytes in __interceptor_{{(__)?}}strndup at offset 2 inside [{{.*}}, 4)
+  // ON: Uninitialized bytes in {{(__)?}}strndup at offset 2 inside [{{.*}}, 4)
   // ON: MemorySanitizer: use-of-uninitialized-value
   // ON: #0 {{.*}}main {{.*}}strndup.cpp:[[@LINE-6]]
   // ON-LABEL: SUMMARY

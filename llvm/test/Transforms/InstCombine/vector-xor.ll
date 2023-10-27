@@ -96,8 +96,8 @@ define <4 x i32> @test_v4i32_demorgan_or(<4 x i32> %x, <4 x i32> %y) {
 
 define <4 x i32> @test_v4i32_not_ashr_not(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: @test_v4i32_not_ashr_not(
-; CHECK-NEXT:    [[TMP1:%.*]] = ashr <4 x i32> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    ret <4 x i32> [[TMP1]]
+; CHECK-NEXT:    [[DOTNOT:%.*]] = ashr <4 x i32> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret <4 x i32> [[DOTNOT]]
 ;
   %1 = xor  <4 x i32> <i32 -1, i32 -1, i32 -1, i32 -1>, %x
   %2 = ashr <4 x i32> %1, %y
@@ -107,8 +107,8 @@ define <4 x i32> @test_v4i32_not_ashr_not(<4 x i32> %x, <4 x i32> %y) {
 
 define <4 x i32> @test_v4i32_not_ashr_not_undef(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: @test_v4i32_not_ashr_not_undef(
-; CHECK-NEXT:    [[TMP1:%.*]] = ashr <4 x i32> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    ret <4 x i32> [[TMP1]]
+; CHECK-NEXT:    [[DOTNOT:%.*]] = ashr <4 x i32> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret <4 x i32> [[DOTNOT]]
 ;
   %1 = xor  <4 x i32> <i32 -1, i32 -1, i32 -1, i32 undef>, %x
   %2 = ashr <4 x i32> %1, %y

@@ -9,10 +9,6 @@
 # RUN:     | llvm-objdump --mattr=+svinval -M no-aliases -d - \
 # RUN:     | FileCheck -check-prefix=CHECK-INST %s
 
-# CHECK-INST: uret
-# CHECK: encoding: [0x73,0x00,0x20,0x00]
-uret
-
 # CHECK-INST: sret
 # CHECK: encoding: [0x73,0x00,0x20,0x10]
 sret

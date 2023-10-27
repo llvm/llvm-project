@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -verify -triple x86_64-apple-darwin10 -fopenmp -fopenmp-version=50 -x c++ -emit-llvm %s -o - | FileCheck %s
-// RUN: %clang_cc1 -fopenmp -fopenmp-version=50 -x c++ -triple x86_64-apple-darwin10 -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp -fopenmp-version=50 -x c++ -triple x86_64-apple-darwin10 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -verify -triple x86_64-apple-darwin10 -fopenmp -x c++ -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -fopenmp -x c++ -triple x86_64-apple-darwin10 -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp -x c++ -triple x86_64-apple-darwin10 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s
 //
-// RUN: %clang_cc1 -verify -triple x86_64-apple-darwin10 -fopenmp-simd -fopenmp-version=50 -x c++ -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY0 %s
-// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=50 -x c++ -triple x86_64-apple-darwin10 -emit-pch -o %t %s
-// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=50 -x c++ -triple x86_64-apple-darwin10 -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY0 %s
+// RUN: %clang_cc1 -verify -triple x86_64-apple-darwin10 -fopenmp-simd -x c++ -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY0 %s
+// RUN: %clang_cc1 -fopenmp-simd -x c++ -triple x86_64-apple-darwin10 -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp-simd -x c++ -triple x86_64-apple-darwin10 -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY0 %s
 // SIMD-ONLY0-NOT: {{__kmpc|__tgt}}
 // expected-no-diagnostics
 #ifndef HEADER
@@ -46,7 +46,7 @@ int main() {
 
   // <num_elem> = <num_iters> + 1 constant affinity for affinity(a)
   // CHECK: [[NUM_ELEMS:%.+]] = add nuw i64 1, [[CONV]]
-  // CHECK: [[SV:%.+]] = call ptr @llvm.stacksave()
+  // CHECK: [[SV:%.+]] = call ptr @llvm.stacksave.p0()
   // CHECK: store ptr [[SV]], ptr [[SV_ADDR:%.+]],
 
   // kmp_task_affinity_info_t affs[<num_elem>];
@@ -121,7 +121,7 @@ int main() {
   // CHECK: [[DONE]]:
   // CHECK: call i32 @__kmpc_omp_reg_task_with_affinity(ptr @{{.+}} i32 [[GTID]], ptr [[TD]], i32 [[NAFFS]], ptr [[AFFS_ADDR]])
   // CHECK: [[SV:%.+]] = load ptr, ptr [[SV_ADDR]],
-  // CHECK: call void @llvm.stackrestore(ptr [[SV]])
+  // CHECK: call void @llvm.stackrestore.p0(ptr [[SV]])
 #pragma omp task affinity(iterator(i=0:a): p[i]) affinity(a)
   ;
   return 0;

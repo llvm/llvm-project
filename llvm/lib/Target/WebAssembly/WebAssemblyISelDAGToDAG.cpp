@@ -47,7 +47,7 @@ public:
   WebAssemblyDAGToDAGISel() = delete;
 
   WebAssemblyDAGToDAGISel(WebAssemblyTargetMachine &TM,
-                          CodeGenOpt::Level OptLevel)
+                          CodeGenOptLevel OptLevel)
       : SelectionDAGISel(ID, TM, OptLevel), Subtarget(nullptr) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override {
@@ -64,7 +64,8 @@ public:
 
   void Select(SDNode *Node) override;
 
-  bool SelectInlineAsmMemoryOperand(const SDValue &Op, unsigned ConstraintID,
+  bool SelectInlineAsmMemoryOperand(const SDValue &Op,
+                                    InlineAsm::ConstraintCode ConstraintID,
                                     std::vector<SDValue> &OutOps) override;
 
   bool SelectAddrOperands32(SDValue Op, SDValue &Offset, SDValue &Addr);
@@ -249,8 +250,22 @@ void WebAssemblyDAGToDAGISel::Select(SDNode *Node) {
     SmallVector<SDValue, 16> Ops;
     for (size_t i = 1; i < Node->getNumOperands(); ++i) {
       SDValue Op = Node->getOperand(i);
-      if (i == 1 && Op->getOpcode() == WebAssemblyISD::Wrapper)
-        Op = Op->getOperand(0);
+      // Remove the wrapper when the call target is a function, an external
+      // symbol (which will be lowered to a library function), or an alias of
+      // a function. If the target is not a function/external symbol, we
+      // shouldn't remove the wrapper, because we cannot call it directly and
+      // instead we want it to be loaded with a CONST instruction and called
+      // with a call_indirect later.
+      if (i == 1 && Op->getOpcode() == WebAssemblyISD::Wrapper) {
+        SDValue NewOp = Op->getOperand(0);
+        if (auto *GlobalOp = dyn_cast<GlobalAddressSDNode>(NewOp.getNode())) {
+          if (isa<Function>(
+                  GlobalOp->getGlobal()->stripPointerCastsAndAliases()))
+            Op = NewOp;
+        } else if (isa<ExternalSymbolSDNode>(NewOp.getNode())) {
+          Op = NewOp;
+        }
+      }
       Ops.push_back(Op);
     }
 
@@ -279,9 +294,10 @@ void WebAssemblyDAGToDAGISel::Select(SDNode *Node) {
 }
 
 bool WebAssemblyDAGToDAGISel::SelectInlineAsmMemoryOperand(
-    const SDValue &Op, unsigned ConstraintID, std::vector<SDValue> &OutOps) {
+    const SDValue &Op, InlineAsm::ConstraintCode ConstraintID,
+    std::vector<SDValue> &OutOps) {
   switch (ConstraintID) {
-  case InlineAsm::Constraint_m:
+  case InlineAsm::ConstraintCode::m:
     // We just support simple memory operands that just have a single address
     // operand and need no special handling.
     OutOps.push_back(Op);
@@ -392,6 +408,6 @@ bool WebAssemblyDAGToDAGISel::SelectAddrOperands64(SDValue Op, SDValue &Offset,
 /// This pass converts a legalized DAG into a WebAssembly-specific DAG, ready
 /// for instruction scheduling.
 FunctionPass *llvm::createWebAssemblyISelDag(WebAssemblyTargetMachine &TM,
-                                             CodeGenOpt::Level OptLevel) {
+                                             CodeGenOptLevel OptLevel) {
   return new WebAssemblyDAGToDAGISel(TM, OptLevel);
 }

@@ -7,18 +7,37 @@ import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 
+
 class UniqueTypesTestCase4(TestBase):
     def do_test(self, debug_flags):
         """Test that we display the correct template instantiation."""
         self.build(dictionary=debug_flags)
-        lldbutil.run_to_source_breakpoint(self, "// Set breakpoint here", lldb.SBFileSpec("main.cpp"))
+        lldbutil.run_to_source_breakpoint(
+            self, "// Set breakpoint here", lldb.SBFileSpec("main.cpp")
+        )
         # FIXME: these should successfully print the values
-        self.expect("print ns::Foo<double>::value", substrs=["no member named"], error=True)
-        self.expect("print ns::Foo<int>::value", substrs=["no member named"], error=True)
-        self.expect("print ns::Bar<double>::value", substrs=["no member named"], error=True)
-        self.expect("print ns::Bar<int>::value", substrs=["no member named"], error=True)
-        self.expect("print ns::FooDouble::value", substrs=["Couldn't lookup symbols"], error=True)
-        self.expect("print ns::FooInt::value", substrs=["Couldn't lookup symbols"], error=True)
+        self.expect(
+            "expression ns::Foo<double>::value", substrs=["no member named"], error=True
+        )
+        self.expect(
+            "expression ns::Foo<int>::value", substrs=["no member named"], error=True
+        )
+        self.expect(
+            "expression ns::Bar<double>::value", substrs=["no member named"], error=True
+        )
+        self.expect(
+            "expression ns::Bar<int>::value", substrs=["no member named"], error=True
+        )
+        self.expect(
+            "expression ns::FooDouble::value",
+            substrs=["Couldn't look up symbols"],
+            error=True,
+        )
+        self.expect(
+            "expression ns::FooInt::value",
+            substrs=["Couldn't look up symbols"],
+            error=True,
+        )
 
     @skipIf(compiler=no_match("clang"))
     @skipIf(compiler_version=["<", "15.0"])

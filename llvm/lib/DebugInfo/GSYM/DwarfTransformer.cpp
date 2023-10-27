@@ -205,9 +205,21 @@ static bool hasInlineInfo(DWARFDie Die, uint32_t Depth) {
   return false;
 }
 
-static void parseInlineInfo(GsymCreator &Gsym, CUInfo &CUI, DWARFDie Die,
-                            uint32_t Depth, FunctionInfo &FI,
-                            InlineInfo &parent) {
+static AddressRanges
+ConvertDWARFRanges(const DWARFAddressRangesVector &DwarfRanges) {
+  AddressRanges Ranges;
+  for (const DWARFAddressRange &DwarfRange : DwarfRanges) {
+    if (DwarfRange.LowPC < DwarfRange.HighPC)
+      Ranges.insert({DwarfRange.LowPC, DwarfRange.HighPC});
+  }
+  return Ranges;
+}
+
+static void parseInlineInfo(GsymCreator &Gsym, raw_ostream *Log, CUInfo &CUI,
+                            DWARFDie Die, uint32_t Depth, FunctionInfo &FI,
+                            InlineInfo &Parent,
+                            const AddressRanges &AllParentRanges,
+                            bool &WarnIfEmpty) {
   if (!hasInlineInfo(Die, Depth))
     return;
 
@@ -215,16 +227,45 @@ static void parseInlineInfo(GsymCreator &Gsym, CUInfo &CUI, DWARFDie Die,
   if (Tag == dwarf::DW_TAG_inlined_subroutine) {
     // create new InlineInfo and append to parent.children
     InlineInfo II;
-    DWARFAddressRange FuncRange =
-        DWARFAddressRange(FI.startAddress(), FI.endAddress());
+    AddressRanges AllInlineRanges;
     Expected<DWARFAddressRangesVector> RangesOrError = Die.getAddressRanges();
     if (RangesOrError) {
-      for (const DWARFAddressRange &Range : RangesOrError.get()) {
-        // Check that the inlined function is within the range of the function
-        // info, it might not be in case of split functions
-        if (FuncRange.LowPC <= Range.LowPC && Range.HighPC <= FuncRange.HighPC)
-          II.Ranges.insert(AddressRange(Range.LowPC, Range.HighPC));
+      AllInlineRanges = ConvertDWARFRanges(RangesOrError.get());
+      uint32_t EmptyCount = 0;
+      for (const AddressRange &InlineRange : AllInlineRanges) {
+        // Check for empty inline range in case inline function was outlined
+        // or has not code
+        if (InlineRange.empty()) {
+          ++EmptyCount;
+        } else {
+          if (Parent.Ranges.contains(InlineRange)) {
+            II.Ranges.insert(InlineRange);
+          } else {
+            // Only warn if the current inline range is not within any of all
+            // of the parent ranges. If we have a DW_TAG_subpgram with multiple
+            // ranges we will emit a FunctionInfo for each range of that
+            // function that only emits information within the current range,
+            // so we only want to emit an error if the DWARF has issues, not
+            // when a range currently just isn't in the range we are currently
+            // parsing for.
+            if (AllParentRanges.contains(InlineRange)) {
+              WarnIfEmpty = false;
+            } else if (Log) {
+              *Log << "error: inlined function DIE at "
+                   << HEX32(Die.getOffset()) << " has a range ["
+                   << HEX64(InlineRange.start()) << " - "
+                   << HEX64(InlineRange.end()) << ") that isn't contained in "
+                   << "any parent address ranges, this inline range will be "
+                      "removed.\n";
+            }
+          }
+        }
       }
+      // If we have all empty ranges for the inlines, then don't warn if we
+      // have an empty InlineInfo at the top level as all inline functions
+      // were elided.
+      if (EmptyCount == AllInlineRanges.size())
+        WarnIfEmpty = false;
     }
     if (II.Ranges.empty())
       return;
@@ -236,18 +277,20 @@ static void parseInlineInfo(GsymCreator &Gsym, CUInfo &CUI, DWARFDie Die,
     II.CallLine = dwarf::toUnsigned(Die.find(dwarf::DW_AT_call_line), 0);
     // parse all children and append to parent
     for (DWARFDie ChildDie : Die.children())
-      parseInlineInfo(Gsym, CUI, ChildDie, Depth + 1, FI, II);
-    parent.Children.emplace_back(std::move(II));
+      parseInlineInfo(Gsym, Log, CUI, ChildDie, Depth + 1, FI, II,
+                      AllInlineRanges, WarnIfEmpty);
+    Parent.Children.emplace_back(std::move(II));
     return;
   }
   if (Tag == dwarf::DW_TAG_subprogram || Tag == dwarf::DW_TAG_lexical_block) {
     // skip this Die and just recurse down
     for (DWARFDie ChildDie : Die.children())
-      parseInlineInfo(Gsym, CUI, ChildDie, Depth + 1, FI, parent);
+      parseInlineInfo(Gsym, Log, CUI, ChildDie, Depth + 1, FI, Parent,
+                      AllParentRanges, WarnIfEmpty);
   }
 }
 
-static void convertFunctionLineTable(raw_ostream &Log, CUInfo &CUI,
+static void convertFunctionLineTable(raw_ostream *Log, CUInfo &CUI,
                                      DWARFDie Die, GsymCreator &Gsym,
                                      FunctionInfo &FI) {
   std::vector<uint32_t> RowVector;
@@ -289,10 +332,12 @@ static void convertFunctionLineTable(raw_ostream &Log, CUInfo &CUI,
     // an error, but not worth stopping the creation of the GSYM.
     if (!FI.Range.contains(RowAddress)) {
       if (RowAddress < FI.Range.start()) {
-        Log << "error: DIE has a start address whose LowPC is between the "
-          "line table Row[" << RowIndex << "] with address "
-          << HEX64(RowAddress) << " and the next one.\n";
-        Die.dump(Log, 0, DIDumpOptions::getForSingleDIE());
+        if (Log) {
+          *Log << "error: DIE has a start address whose LowPC is between the "
+                  "line table Row[" << RowIndex << "] with address "
+               << HEX64(RowAddress) << " and the next one.\n";
+          Die.dump(*Log, 0, DIDumpOptions::getForSingleDIE());
+        }
         RowAddress = FI.Range.start();
       } else {
         continue;
@@ -302,25 +347,25 @@ static void convertFunctionLineTable(raw_ostream &Log, CUInfo &CUI,
     LineEntry LE(RowAddress, FileIdx, Row.Line);
     if (RowIndex != RowVector[0] && Row.Address < PrevRow.Address) {
       // We have seen full duplicate line tables for functions in some
-      // DWARF files. Watch for those here by checking the the last
+      // DWARF files. Watch for those here by checking the last
       // row was the function's end address (HighPC) and that the
       // current line table entry's address is the same as the first
       // line entry we already have in our "function_info.Lines". If
       // so break out after printing a warning.
       auto FirstLE = FI.OptLineTable->first();
       if (FirstLE && *FirstLE == LE) {
-        if (!Gsym.isQuiet()) {
-          Log << "warning: duplicate line table detected for DIE:\n";
-          Die.dump(Log, 0, DIDumpOptions::getForSingleDIE());
+        if (Log && !Gsym.isQuiet()) {
+          *Log << "warning: duplicate line table detected for DIE:\n";
+          Die.dump(*Log, 0, DIDumpOptions::getForSingleDIE());
         }
       } else {
-        // Print out (ignore if os == nulls as this is expensive)
-        Log << "error: line table has addresses that do not "
-             << "monotonically increase:\n";
-        for (uint32_t RowIndex2 : RowVector) {
-          CUI.LineTable->Rows[RowIndex2].dump(Log);
+        if (Log) {
+          *Log << "error: line table has addresses that do not "
+               << "monotonically increase:\n";
+          for (uint32_t RowIndex2 : RowVector)
+            CUI.LineTable->Rows[RowIndex2].dump(*Log);
+          Die.dump(*Log, 0, DIDumpOptions::getForSingleDIE());
         }
-        Die.dump(Log, 0, DIDumpOptions::getForSingleDIE());
       }
       break;
     }
@@ -349,7 +394,7 @@ static void convertFunctionLineTable(raw_ostream &Log, CUInfo &CUI,
     FI.OptLineTable = std::nullopt;
 }
 
-void DwarfTransformer::handleDie(raw_ostream &OS, CUInfo &CUI, DWARFDie Die) {
+void DwarfTransformer::handleDie(raw_ostream *OS, CUInfo &CUI, DWARFDie Die) {
   switch (Die.getTag()) {
   case dwarf::DW_TAG_subprogram: {
     Expected<DWARFAddressRangesVector> RangesOrError = Die.getAddressRanges();
@@ -362,11 +407,20 @@ void DwarfTransformer::handleDie(raw_ostream &OS, CUInfo &CUI, DWARFDie Die) {
       break;
     auto NameIndex = getQualifiedNameIndex(Die, CUI.Language, Gsym);
     if (!NameIndex) {
-      OS << "error: function at " << HEX64(Die.getOffset())
-         << " has no name\n ";
-      Die.dump(OS, 0, DIDumpOptions::getForSingleDIE());
+      if (OS) {
+        *OS << "error: function at " << HEX64(Die.getOffset())
+            << " has no name\n ";
+        Die.dump(*OS, 0, DIDumpOptions::getForSingleDIE());
+      }
       break;
     }
+    // All ranges for the subprogram DIE in case it has multiple. We need to
+    // pass this down into parseInlineInfo so we don't warn about inline
+    // ranges that are not in the current subrange of a function when they
+    // actually are in another subgrange. We do this because when a function
+    // has discontiguos ranges, we create multiple function entries with only
+    // the info for that range contained inside of it.
+    AddressRanges AllSubprogramRanges = ConvertDWARFRanges(Ranges);
 
     // Create a function_info for each range
     for (const DWARFAddressRange &Range : Ranges) {
@@ -393,11 +447,13 @@ void DwarfTransformer::handleDie(raw_ostream &OS, CUInfo &CUI, DWARFDie Die) {
         if (Range.LowPC != 0) {
           if (!Gsym.isQuiet()) {
             // Unexpected invalid address, emit a warning
-            OS << "warning: DIE has an address range whose start address is "
-                  "not in any executable sections ("
-               << *Gsym.GetValidTextRanges()
-               << ") and will not be processed:\n";
-            Die.dump(OS, 0, DIDumpOptions::getForSingleDIE());
+            if (OS) {
+              *OS << "warning: DIE has an address range whose start address "
+                     "is not in any executable sections ("
+                  << *Gsym.GetValidTextRanges()
+                  << ") and will not be processed:\n";
+              Die.dump(*OS, 0, DIDumpOptions::getForSingleDIE());
+            }
           }
         }
         break;
@@ -406,14 +462,33 @@ void DwarfTransformer::handleDie(raw_ostream &OS, CUInfo &CUI, DWARFDie Die) {
       FunctionInfo FI;
       FI.Range = {Range.LowPC, Range.HighPC};
       FI.Name = *NameIndex;
-      if (CUI.LineTable) {
+      if (CUI.LineTable)
         convertFunctionLineTable(OS, CUI, Die, Gsym, FI);
-      }
+
       if (hasInlineInfo(Die, 0)) {
         FI.Inline = InlineInfo();
         FI.Inline->Name = *NameIndex;
         FI.Inline->Ranges.insert(FI.Range);
-        parseInlineInfo(Gsym, CUI, Die, 0, FI, *FI.Inline);
+        bool WarnIfEmpty = true;
+        parseInlineInfo(Gsym, OS, CUI, Die, 0, FI, *FI.Inline,
+                        AllSubprogramRanges, WarnIfEmpty);
+        // Make sure we at least got some valid inline info other than just
+        // the top level function. If we didn't then remove the inline info
+        // from the function info. We have seen cases where LTO tries to modify
+        // the DWARF for functions and it messes up the address ranges for
+        // the inline functions so it is no longer valid.
+        //
+        // By checking if there are any valid children on the top level inline
+        // information object, we will know if we got anything valid from the
+        // debug info.
+        if (FI.Inline->Children.empty()) {
+          if (WarnIfEmpty && OS && !Gsym.isQuiet()) {
+            *OS << "warning: DIE contains inline function information that has "
+                  "no valid ranges, removing inline information:\n";
+            Die.dump(*OS, 0, DIDumpOptions::getForSingleDIE());
+          }
+          FI.Inline = std::nullopt;
+        }
       }
       Gsym.addFunctionInfo(std::move(FI));
     }
@@ -425,18 +500,18 @@ void DwarfTransformer::handleDie(raw_ostream &OS, CUInfo &CUI, DWARFDie Die) {
     handleDie(OS, CUI, ChildDie);
 }
 
-Error DwarfTransformer::convert(uint32_t NumThreads) {
+Error DwarfTransformer::convert(uint32_t NumThreads, raw_ostream *OS) {
   size_t NumBefore = Gsym.getNumFunctionInfos();
   auto getDie = [&](DWARFUnit &DwarfUnit) -> DWARFDie {
     DWARFDie ReturnDie = DwarfUnit.getUnitDIE(false);
-    if (std::optional<uint64_t> DWOId = DwarfUnit.getDWOId()) {
+    if (DwarfUnit.getDWOId()) {
       DWARFUnit *DWOCU = DwarfUnit.getNonSkeletonUnitDIE(false).getDwarfUnit();
-      if (!DWOCU->isDWOUnit()) {
+      if (OS && !DWOCU->isDWOUnit()) {
         std::string DWOName = dwarf::toString(
             DwarfUnit.getUnitDIE().find(
                 {dwarf::DW_AT_dwo_name, dwarf::DW_AT_GNU_dwo_name}),
             "");
-        Log << "warning: Unable to retrieve DWO .debug_info section for "
+        *OS << "warning: Unable to retrieve DWO .debug_info section for "
             << DWOName << "\n";
       } else {
         ReturnDie = DWOCU->getUnitDIE(false);
@@ -450,7 +525,7 @@ Error DwarfTransformer::convert(uint32_t NumThreads) {
     for (const auto &CU : DICtx.compile_units()) {
       DWARFDie Die = getDie(*CU);
       CUInfo CUI(DICtx, dyn_cast<DWARFCompileUnit>(CU.get()));
-      handleDie(Log, CUI, Die);
+      handleDie(OS, CUI, Die);
     }
   } else {
     // LLVM Dwarf parser is not thread-safe and we need to parse all DWARF up
@@ -476,15 +551,15 @@ Error DwarfTransformer::convert(uint32_t NumThreads) {
       DWARFDie Die = getDie(*CU);
       if (Die) {
         CUInfo CUI(DICtx, dyn_cast<DWARFCompileUnit>(CU.get()));
-        pool.async([this, CUI, &LogMutex, Die]() mutable {
+        pool.async([this, CUI, &LogMutex, OS, Die]() mutable {
           std::string ThreadLogStorage;
           raw_string_ostream ThreadOS(ThreadLogStorage);
-          handleDie(ThreadOS, CUI, Die);
+          handleDie(OS ? &ThreadOS: nullptr, CUI, Die);
           ThreadOS.flush();
-          if (!ThreadLogStorage.empty()) {
+          if (OS && !ThreadLogStorage.empty()) {
             // Print ThreadLogStorage lines into an actual stream under a lock
             std::lock_guard<std::mutex> guard(LogMutex);
-            Log << ThreadLogStorage;
+            *OS << ThreadLogStorage;
           }
         });
       }
@@ -492,11 +567,12 @@ Error DwarfTransformer::convert(uint32_t NumThreads) {
     pool.wait();
   }
   size_t FunctionsAddedCount = Gsym.getNumFunctionInfos() - NumBefore;
-  Log << "Loaded " << FunctionsAddedCount << " functions from DWARF.\n";
+  if (OS)
+    *OS << "Loaded " << FunctionsAddedCount << " functions from DWARF.\n";
   return Error::success();
 }
 
-llvm::Error DwarfTransformer::verify(StringRef GsymPath) {
+llvm::Error DwarfTransformer::verify(StringRef GsymPath, raw_ostream &Log) {
   Log << "Verifying GSYM file \"" << GsymPath << "\":\n";
 
   auto Gsym = GsymReader::openFile(GsymPath);

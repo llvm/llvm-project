@@ -46,10 +46,10 @@ public:
   ///     The execution context to install the functions into.
   ///
   /// \return
-  ///     True on success; false on failure, or if the functions have
-  ///     already been installed.
-  bool Install(DiagnosticManager &diagnostic_manager,
-               ExecutionContext &exe_ctx) override;
+  ///     Either llvm::ErrorSuccess or Error with llvm::ErrorInfo
+  ///
+  llvm::Error Install(DiagnosticManager &diagnostic_manager,
+                      ExecutionContext &exe_ctx) override;
 
   bool DoCheckersExplainStop(lldb::addr_t addr, Stream &message) override;
 

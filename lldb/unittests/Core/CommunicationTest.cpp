@@ -86,8 +86,9 @@ static void CommunicationReadTest(bool use_read_thread) {
 
   // Test using Communication that is disconnected.
   ASSERT_EQ(comm.Disconnect(), lldb::eConnectionStatusSuccess);
-  if (use_read_thread)
+  if (use_read_thread) {
     ASSERT_TRUE(comm.StartReadThread());
+  }
   error.Clear();
   EXPECT_EQ(
       comm.Read(buf, sizeof(buf), std::chrono::seconds(5), status, &error), 0U);
@@ -97,8 +98,9 @@ static void CommunicationReadTest(bool use_read_thread) {
 
   // Test using Communication without a connection.
   comm.SetConnection(nullptr);
-  if (use_read_thread)
+  if (use_read_thread) {
     ASSERT_TRUE(comm.StartReadThread());
+  }
   error.Clear();
   EXPECT_EQ(
       comm.Read(buf, sizeof(buf), std::chrono::seconds(5), status, &error), 0U);

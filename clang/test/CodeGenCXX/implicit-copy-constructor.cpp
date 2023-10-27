@@ -72,7 +72,6 @@ void test_X2()
   pdata.f0( new impl(*i));
 }
 
-// rdar://problem/9598341
 namespace test3 {
   struct A { A(const A&); A&operator=(const A&); };
   struct B { A a; unsigned : 0; };

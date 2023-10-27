@@ -71,6 +71,18 @@ void ValueObjectPrinter::Init(
 }
 
 bool ValueObjectPrinter::PrintValueObject() {
+  if (!m_orig_valobj)
+    return false;
+
+  // If the incoming ValueObject is in an error state, the best we're going to 
+  // get out of it is its type.  But if we don't even have that, just print
+  // the error and exit early.
+  if (m_orig_valobj->GetError().Fail() 
+      && !m_orig_valobj->GetCompilerType().IsValid()) {
+    m_stream->Printf("Error: '%s'", m_orig_valobj->GetError().AsCString());
+    return true;
+  }
+   
   if (!GetMostSpecializedValue() || m_valobj == nullptr)
     return false;
 
@@ -263,7 +275,7 @@ void ValueObjectPrinter::PrintDecl() {
 
   StreamString varName;
 
-  if (!m_options.m_hide_name) {
+  if (ShouldShowName()) {
     if (m_options.m_flat_output)
       m_valobj->GetExpressionPath(varName);
     else
@@ -288,9 +300,14 @@ void ValueObjectPrinter::PrintDecl() {
     ConstString type_name_cstr(typeName.GetString());
     ConstString var_name_cstr(varName.GetString());
 
+    DumpValueObjectOptions decl_print_options = m_options;
+    // Pass printing helpers an option object that indicates whether the name
+    // should be shown or hidden.
+    decl_print_options.SetHideName(!ShouldShowName());
+
     StreamString dest_stream;
     if (m_options.m_decl_printing_helper(type_name_cstr, var_name_cstr,
-                                         m_options, dest_stream)) {
+                                         decl_print_options, dest_stream)) {
       decl_printed = true;
       m_stream->PutCString(dest_stream.GetString());
     }
@@ -302,7 +319,7 @@ void ValueObjectPrinter::PrintDecl() {
       m_stream->Printf("(%s) ", typeName.GetData());
     if (!varName.Empty())
       m_stream->Printf("%s =", varName.GetData());
-    else if (!m_options.m_hide_name)
+    else if (ShouldShowName())
       m_stream->Printf(" =");
   }
 }
@@ -425,13 +442,17 @@ bool ValueObjectPrinter::PrintValueAndSummaryIfNeeded(bool &value_printed,
         if (m_options.m_hide_pointer_value &&
             IsPointerValue(m_valobj->GetCompilerType())) {
         } else {
-          m_stream->Printf(" %s", m_value.c_str());
+          if (ShouldShowName())
+            m_stream->PutChar(' ');
+          m_stream->PutCString(m_value);
           value_printed = true;
         }
       }
 
       if (m_summary.size()) {
-        m_stream->Printf(" %s", m_summary.c_str());
+        if (ShouldShowName() || value_printed)
+          m_stream->PutChar(' ');
+        m_stream->PutCString(m_summary);
         summary_printed = true;
       }
     }
@@ -445,7 +466,7 @@ bool ValueObjectPrinter::PrintObjectDescriptionIfNeeded(bool value_printed,
     // let's avoid the overly verbose no description error for a nil thing
     if (m_options.m_use_objc && !IsNil() && !IsUninitialized() &&
         (!m_options.m_pointer_as_array)) {
-      if (!m_options.m_hide_value || !m_options.m_hide_name)
+      if (!m_options.m_hide_value || ShouldShowName())
         m_stream->Printf(" ");
       const char *object_desc = nullptr;
       if (value_printed || summary_printed)
@@ -481,7 +502,6 @@ bool DumpValueObjectOptions::PointerDepth::CanAllowExpansion() const {
 }
 
 bool ValueObjectPrinter::ShouldPrintChildren(
-    bool is_failed_description,
     DumpValueObjectOptions::PointerDepth &curr_ptr_depth) {
   const bool is_ref = IsRef();
   const bool is_ptr = IsPtr();
@@ -490,47 +510,50 @@ bool ValueObjectPrinter::ShouldPrintChildren(
   if (is_uninit)
     return false;
 
+  // If we have reached the maximum depth we shouldn't print any more children.
+  if (HasReachedMaximumDepth())
+    return false;
+
   // if the user has specified an element count, always print children as it is
   // explicit user demand being honored
   if (m_options.m_pointer_as_array)
     return true;
 
-  TypeSummaryImpl *entry = GetSummaryFormatter();
-
   if (m_options.m_use_objc)
     return false;
 
-  if (is_failed_description || !HasReachedMaximumDepth()) {
-    // We will show children for all concrete types. We won't show pointer
-    // contents unless a pointer depth has been specified. We won't reference
-    // contents unless the reference is the root object (depth of zero).
+  bool print_children = true;
+  if (TypeSummaryImpl *type_summary = GetSummaryFormatter())
+    print_children = type_summary->DoesPrintChildren(m_valobj);
 
-    // Use a new temporary pointer depth in case we override the current
-    // pointer depth below...
+  // We will show children for all concrete types. We won't show pointer
+  // contents unless a pointer depth has been specified. We won't reference
+  // contents unless the reference is the root object (depth of zero).
 
-    if (is_ptr || is_ref) {
-      // We have a pointer or reference whose value is an address. Make sure
-      // that address is not NULL
-      AddressType ptr_address_type;
-      if (m_valobj->GetPointerValue(&ptr_address_type) == 0)
-        return false;
+  // Use a new temporary pointer depth in case we override the current
+  // pointer depth below...
 
-      const bool is_root_level = m_curr_depth == 0;
+  if (is_ptr || is_ref) {
+    // We have a pointer or reference whose value is an address. Make sure
+    // that address is not NULL
+    AddressType ptr_address_type;
+    if (m_valobj->GetPointerValue(&ptr_address_type) == 0)
+      return false;
 
-      if (is_ref && is_root_level) {
-        // If this is the root object (depth is zero) that we are showing and
-        // it is a reference, and no pointer depth has been supplied print out
-        // what it references. Don't do this at deeper depths otherwise we can
-        // end up with infinite recursion...
-        return true;
-      }
+    const bool is_root_level = m_curr_depth == 0;
 
-      return curr_ptr_depth.CanAllowExpansion();
+    if (is_ref && is_root_level && print_children) {
+      // If this is the root object (depth is zero) that we are showing and
+      // it is a reference, and no pointer depth has been supplied print out
+      // what it references. Don't do this at deeper depths otherwise we can
+      // end up with infinite recursion...
+      return true;
     }
 
-    return (!entry || entry->DoesPrintChildren(m_valobj) || m_summary.empty());
+    return curr_ptr_depth.CanAllowExpansion();
   }
-  return false;
+
+  return print_children || m_summary.empty();
 }
 
 bool ValueObjectPrinter::ShouldExpandEmptyAggregates() {
@@ -546,13 +569,20 @@ ValueObject *ValueObjectPrinter::GetValueObjectForChildrenGeneration() {
   return m_valobj;
 }
 
-void ValueObjectPrinter::PrintChildrenPreamble() {
+void ValueObjectPrinter::PrintChildrenPreamble(bool value_printed,
+                                               bool summary_printed) {
   if (m_options.m_flat_output) {
     if (ShouldPrintValueObject())
       m_stream->EOL();
   } else {
-    if (ShouldPrintValueObject())
-      m_stream->PutCString(IsRef() ? ": {\n" : " {\n");
+    if (ShouldPrintValueObject()) {
+      if (IsRef()) {
+        m_stream->PutCString(": ");
+      } else if (value_printed || summary_printed || ShouldShowName()) {
+        m_stream->PutChar(' ');
+      }
+      m_stream->PutCString("{\n");
+    }
     m_stream->IndentMore();
   }
 }
@@ -560,7 +590,7 @@ void ValueObjectPrinter::PrintChildrenPreamble() {
 void ValueObjectPrinter::PrintChild(
     ValueObjectSP child_sp,
     const DumpValueObjectOptions::PointerDepth &curr_ptr_depth) {
-  const uint32_t consumed_depth = (!m_options.m_pointer_as_array) ? 1 : 0;
+  const uint32_t consumed_summary_depth = m_options.m_pointer_as_array ? 0 : 1;
   const bool does_consume_ptr_depth =
       ((IsPtr() && !m_options.m_pointer_as_array) || IsRef());
 
@@ -573,15 +603,18 @@ void ValueObjectPrinter::PrintChild(
       .SetHideValue(m_options.m_hide_value)
       .SetOmitSummaryDepth(child_options.m_omit_summary_depth > 1
                                ? child_options.m_omit_summary_depth -
-                                     consumed_depth
+                                     consumed_summary_depth
                                : 0)
       .SetElementCount(0);
 
   if (child_sp.get()) {
-    ValueObjectPrinter child_printer(
-        child_sp.get(), m_stream, child_options,
-        does_consume_ptr_depth ? --curr_ptr_depth : curr_ptr_depth,
-        m_curr_depth + consumed_depth, m_printed_instance_pointers);
+    auto ptr_depth = curr_ptr_depth;
+    if (does_consume_ptr_depth)
+      ptr_depth = curr_ptr_depth.Decremented();
+
+    ValueObjectPrinter child_printer(child_sp.get(), m_stream, child_options,
+                                     ptr_depth, m_curr_depth + 1,
+                                     m_printed_instance_pointers);
     child_printer.PrintValueObject();
   }
 }
@@ -657,7 +690,7 @@ ValueObjectSP ValueObjectPrinter::GenerateChild(ValueObject *synth_valobj,
         true);
   } else {
     // otherwise, do the usual thing
-    return synth_valobj->GetChildAtIndex(idx, true);
+    return synth_valobj->GetChildAtIndex(idx);
   }
 }
 
@@ -673,8 +706,11 @@ void ValueObjectPrinter::PrintChildren(
 
     for (size_t idx = 0; idx < num_children; ++idx) {
       if (ValueObjectSP child_sp = GenerateChild(synth_m_valobj, idx)) {
+        if (m_options.m_child_printing_decider &&
+            !m_options.m_child_printing_decider(child_sp->GetName()))
+          continue;
         if (!any_children_printed) {
-          PrintChildrenPreamble();
+          PrintChildrenPreamble(value_printed, summary_printed);
           any_children_printed = true;
         }
         PrintChild(child_sp, curr_ptr_depth);
@@ -721,14 +757,19 @@ bool ValueObjectPrinter::PrintChildrenOneLiner(bool hide_names) {
   if (num_children) {
     m_stream->PutChar('(');
 
+    bool did_print_children = false;
     for (uint32_t idx = 0; idx < num_children; ++idx) {
-      lldb::ValueObjectSP child_sp(synth_m_valobj->GetChildAtIndex(idx, true));
+      lldb::ValueObjectSP child_sp(synth_m_valobj->GetChildAtIndex(idx));
       if (child_sp)
         child_sp = child_sp->GetQualifiedRepresentationIfAvailable(
             m_options.m_use_dynamic, m_options.m_use_synthetic);
       if (child_sp) {
-        if (idx)
+        if (m_options.m_child_printing_decider &&
+            !m_options.m_child_printing_decider(child_sp->GetName()))
+          continue;
+        if (idx && did_print_children)
           m_stream->PutCString(", ");
+        did_print_children = true;
         if (!hide_names) {
           const char *name = child_sp.get()->GetName().AsCString();
           if (name && *name) {
@@ -753,14 +794,10 @@ bool ValueObjectPrinter::PrintChildrenOneLiner(bool hide_names) {
 
 void ValueObjectPrinter::PrintChildrenIfNeeded(bool value_printed,
                                                bool summary_printed) {
-  // This flag controls whether we tried to display a description for this
-  // object and failed if that happens, we want to display the children if any.
-  bool is_failed_description =
-      !PrintObjectDescriptionIfNeeded(value_printed, summary_printed);
+  PrintObjectDescriptionIfNeeded(value_printed, summary_printed);
 
   DumpValueObjectOptions::PointerDepth curr_ptr_depth = m_ptr_depth;
-  const bool print_children =
-      ShouldPrintChildren(is_failed_description, curr_ptr_depth);
+  const bool print_children = ShouldPrintChildren(curr_ptr_depth);
   const bool print_oneline =
       (curr_ptr_depth.CanAllowExpansion() || m_options.m_show_types ||
        !m_options.m_allow_oneliner_mode || m_options.m_flat_output ||
@@ -804,4 +841,10 @@ void ValueObjectPrinter::PrintChildrenIfNeeded(bool value_printed,
 
 bool ValueObjectPrinter::HasReachedMaximumDepth() {
   return m_curr_depth >= m_options.m_max_depth;
+}
+
+bool ValueObjectPrinter::ShouldShowName() const {
+  if (m_curr_depth == 0)
+    return !m_options.m_hide_root_name && !m_options.m_hide_name;
+  return !m_options.m_hide_name;
 }

@@ -4,7 +4,11 @@
 module m
   type :: t
   end type
-  procedure(sin) :: ext
+  abstract interface
+    subroutine iface
+    end
+  end interface
+  procedure(iface) :: ext
   interface
     subroutine subr(p1,p2)
       import ext, t
@@ -22,8 +26,11 @@ end module
 !module m
 !type::t
 !end type
-!intrinsic::sin
-!procedure(sin)::ext
+!abstract interface
+!subroutine iface()
+!end
+!end interface
+!procedure(iface)::ext
 !interface
 !subroutine subr(p1,p2)
 !import::ext

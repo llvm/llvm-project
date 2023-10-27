@@ -89,8 +89,8 @@ define float @diff_of_sums_type_mismatch(float %a0, <4 x float> %v0, float %a1, 
 define i32 @diff_of_sums_v4i32(<4 x i32> %v0, <4 x i32> %v1) {
 ; CHECK-LABEL: @diff_of_sums_v4i32(
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub <4 x i32> [[V0:%.*]], [[V1:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP1]])
-; CHECK-NEXT:    ret i32 [[TMP2]]
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP1]])
+; CHECK-NEXT:    ret i32 [[R]]
 ;
   %r0 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %v0)
   %r1 = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> %v1)

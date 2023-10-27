@@ -45,7 +45,8 @@ define <4 x float> @f4(<4 x float> %val) {
 define <2 x double> @f5(<2 x double> %val) {
 ; CHECK-LABEL: f5:
 ; CHECK: vgbm %v0, 0
-; CHECK-NEXT: vfmaxdb %v24, %v24, %v0, 1
+; CHECK-NEXT: vfchedb	%v1, %v0, %v24
+; CHECK-NEXT: vsel	%v24, %v0, %v24, %v1
 ; CHECK-NEXT: br %r14
   %cmp = fcmp ugt <2 x double> %val,  zeroinitializer
   %ret = select <2 x i1> %cmp, <2 x double> %val, <2 x double> zeroinitializer
@@ -55,7 +56,8 @@ define <2 x double> @f5(<2 x double> %val) {
 define <2 x double> @f6(<2 x double> %val) {
 ; CHECK-LABEL: f6:
 ; CHECK: vgbm %v0, 0
-; CHECK-NEXT: vfmindb %v24, %v24, %v0, 1
+; CHECK-NEXT: vfchedb	%v1, %v24, %v0
+; CHECK-NEXT: vsel	%v24, %v0, %v24, %v1
 ; CHECK-NEXT: br %r14
   %cmp = fcmp ult <2 x double> %val,  zeroinitializer
   %ret = select <2 x i1> %cmp, <2 x double> %val, <2 x double> zeroinitializer
@@ -65,7 +67,8 @@ define <2 x double> @f6(<2 x double> %val) {
 define <4 x float> @f7(<4 x float> %val) {
 ; CHECK-LABEL: f7:
 ; CHECK: vgbm %v0, 0
-; CHECK-NEXT: vfmaxsb %v24, %v24, %v0, 1
+; CHECK-NEXT: vfchesb	%v1, %v0, %v24
+; CHECK-NEXT: vsel	%v24, %v0, %v24, %v1
 ; CHECK-NEXT: br %r14
   %cmp = fcmp ugt <4 x float> %val,  zeroinitializer
   %ret = select <4 x i1> %cmp, <4 x float> %val, <4 x float> zeroinitializer
@@ -75,7 +78,8 @@ define <4 x float> @f7(<4 x float> %val) {
 define <4 x float> @f8(<4 x float> %val) {
 ; CHECK-LABEL: f8:
 ; CHECK: vgbm %v0, 0
-; CHECK-NEXT: vfminsb %v24, %v24, %v0, 1
+; CHECK-NEXT: vfchesb	%v1, %v24, %v0
+; CHECK-NEXT: vsel	%v24, %v0, %v24, %v1
 ; CHECK-NEXT: br %r14
   %cmp = fcmp ult <4 x float> %val,  zeroinitializer
   %ret = select <4 x i1> %cmp, <4 x float> %val, <4 x float> zeroinitializer

@@ -587,11 +587,6 @@ func.func @bad_arrow(%arg : !unreg.ptr<(i32)->)
 
 // -----
 
-// expected-error @+1 {{attribute 'attr' occurs more than once in the attribute list}}
-test.format_symbol_name_attr_op @name { attr = "xx" }
-
-// -----
-
 func.func @forward_reference_type_check() -> (i8) {
   cf.br ^bb2
 

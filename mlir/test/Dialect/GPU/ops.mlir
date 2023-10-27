@@ -121,6 +121,22 @@ module attributes {gpu.container_module} {
     }
   }
 
+  gpu.binary @binary_1 [#gpu.object<#nvvm.target, "">]
+
+  gpu.binary @binary_2 <#gpu.select_object<#nvvm.target<chip = "sm_90">>> [#gpu.object<#nvvm.target, "">, #gpu.object<#nvvm.target<chip = "sm_90">, "">]
+
+  gpu.binary @binary_3 <#gpu.select_object<1>> [#gpu.object<#nvvm.target, "">, #gpu.object<#nvvm.target<chip = "sm_90">, "">]
+
+  gpu.binary @binary_4 [#gpu.object<#nvvm.target, bin = "">,
+                        #gpu.object<#nvvm.target, assembly = "">,
+                        #gpu.object<#nvvm.target, offload = "">,
+                        #gpu.object<#nvvm.target, properties = { O = 3 : i32 }, offload = "">
+                        ]
+
+  // Check that fatbin gets ellided as it's the default format.
+  // CHECK: gpu.binary @binary_5 [#gpu.object<#nvvm.target, properties = {O = 3 : i32}, "">]
+  gpu.binary @binary_5 [#gpu.object<#nvvm.target, properties = {O = 3 : i32}, fatbin = "">]
+
   func.func private @two_value_generator() -> (f32, memref<?xf32, 1>)
 
   func.func @foo() {
@@ -128,8 +144,10 @@ module attributes {gpu.container_module} {
     %1 = "op"() : () -> (memref<?xf32, 1>)
     // CHECK: %{{.*}} = arith.constant 8
     %cst = arith.constant 8 : index
+    %cstI64 = arith.constant 8 : i64
     %c0 = arith.constant 0 : i32
     %t0 = gpu.wait async
+    %lowStream = llvm.mlir.zero : !llvm.ptr
 
     // CHECK: gpu.launch_func @kernels::@kernel_1 blocks in (%{{.*}}, %{{.*}}, %{{.*}}) threads in (%{{.*}}, %{{.*}}, %{{.*}}) args(%{{.*}} : f32, %{{.*}} : memref<?xf32, 1>)
     gpu.launch_func @kernels::@kernel_1 blocks in (%cst, %cst, %cst) threads in (%cst, %cst, %cst) args(%0 : f32, %1 : memref<?xf32, 1>)
@@ -141,6 +159,15 @@ module attributes {gpu.container_module} {
 
     // CHECK: %{{.*}} = gpu.launch_func async [%{{.*}}] @kernels::@kernel_2 blocks in (%{{.*}}, %{{.*}}, %{{.*}}) threads in (%{{.*}}, %{{.*}}, %{{.*}})
     %t1 = gpu.launch_func async [%t0] @kernels::@kernel_2  blocks in (%cst, %cst, %cst) threads in (%cst, %cst, %cst)
+
+    // CHECK: gpu.launch_func <%{{.*}} : !llvm.ptr> @kernels::@kernel_1 blocks in (%{{.*}}, %{{.*}}, %{{.*}}) threads in (%{{.*}}, %{{.*}}, %{{.*}}) : i64 args(%{{.*}} : f32, %{{.*}} : memref<?xf32, 1>)
+    gpu.launch_func <%lowStream : !llvm.ptr> @kernels::@kernel_1 blocks in (%cstI64, %cstI64, %cstI64) threads in (%cstI64, %cstI64, %cstI64) : i64 args(%0 : f32, %1 : memref<?xf32, 1>)
+
+    // CHECK: gpu.launch_func @kernels::@kernel_1 blocks in (%{{.*}}, %{{.*}}, %{{.*}}) threads in (%{{.*}}, %{{.*}}, %{{.*}}) : i32 args(%{{.*}} : f32, %{{.*}} : memref<?xf32, 1>)
+    gpu.launch_func @kernels::@kernel_1 blocks in (%c0, %c0, %c0) threads in (%c0, %c0, %c0) : i32 args(%0 : f32, %1 : memref<?xf32, 1>)
+
+    // CHECK: gpu.launch_func @binary_1::@kernel blocks in (%{{.*}}, %{{.*}}, %{{.*}}) threads in (%{{.*}}, %{{.*}}, %{{.*}}) : i32 args(%{{.*}} : f32, %{{.*}} : memref<?xf32, 1>)
+    gpu.launch_func @binary_1::@kernel blocks in (%c0, %c0, %c0) threads in (%c0, %c0, %c0) : i32 args(%0 : f32, %1 : memref<?xf32, 1>)
 
     // CHECK: %[[VALUES:.*]]:2 = call
     %values:2 = func.call @two_value_generator() : () -> (f32, memref<?xf32, 1>)
@@ -317,6 +344,45 @@ module attributes {gpu.container_module} {
     gpu.set_default_device %arg0
     return
   }
+
+  // CHECK-LABEL: func @sparse_ops
+  func.func @sparse_ops(%arg0: index) {
+    // CHECK: gpu.wait async
+    %token0 = gpu.wait async
+    // CHECK: gpu.alloc async
+    %mem1, %token1 = gpu.alloc async [%token0] (%arg0) : memref<?xindex>
+    // CHECK: gpu.alloc async
+    %mem2, %token2 = gpu.alloc async [%token1] (%arg0) : memref<?xf64>
+    // CHECK: gpu.create_coo async
+    %spmat, %token4 = gpu.create_coo async [%token2] %arg0, %arg0, %arg0, %mem1, %mem1, %mem2 : memref<?xindex>, memref<?xindex>, memref<?xf64>
+    // CHECK: gpu.create_csr async
+    %spmat2, %token5 = gpu.create_csr async [%token4] %arg0, %arg0, %arg0, %mem1, %mem1, %mem2 : memref<?xindex>, memref<?xindex>, memref<?xf64>
+    // CHECK: gpu.create_dn_tensor async
+    %dnvec, %token6 = gpu.create_dn_tensor async [%token5]  %mem2, %arg0 : index into memref<?xf64>
+    // CHECK: gpu.spmv_buffer_size async
+    %bufferSz, %token7 = gpu.spmv_buffer_size async [%token6] %spmat, %dnvec, %dnvec  into f64
+    // CHECK: gpu.spmv async
+    %token8 = gpu.spmv async [%token7] %spmat, %dnvec, %dnvec, %mem2 : memref<?xf64>  into f64
+    // CHECK: gpu.create_dn_tensor async
+    %dnmat, %token9 = gpu.create_dn_tensor async [%token8]  %mem2, %arg0, %arg0 : index, index into memref<?xf64>
+    // CHECK: gpu.spmm_buffer_size async
+    %bufferSz2, %token10 = gpu.spmm_buffer_size async [%token9] %spmat, %dnmat, %dnmat : index into f64
+    // CHECK: gpu.spmm async
+    %token11 = gpu.spmm async [%token10]  %spmat, %dnmat, %dnmat, %mem2 : memref<?xf64>  into f64
+    // CHECK: gpu.sddmm_buffer_size async
+    %bufferSz3, %token12 = gpu.sddmm_buffer_size async [%token11] %dnmat, %dnmat, %spmat  into f64
+    // CHECK: gpu.sddmm async
+    %token13 = gpu.sddmm async [%token12]  %dnmat, %dnmat, %spmat, %mem2 : memref<?xf64>  into f64
+    // CHECK: gpu.destroy_dn_tensor async
+    %token14 = gpu.destroy_dn_tensor async [%token13] %dnmat
+    // CHECK: gpu.destroy_sp_mat async
+    %token15 = gpu.destroy_sp_mat async [%token14] %spmat
+    // CHECK: gpu.destroy_dn_tensor async
+    %token16 = gpu.destroy_dn_tensor async [%token15] %dnvec
+    // CHECK: gpu.wait
+    gpu.wait [%token16]
+    return
+  }
 }
 
 // Just check that this doesn't crash.
@@ -324,4 +390,17 @@ gpu.module @module {
   "gpu.func"() ({
     gpu.return
   }) {function_type = () -> (), sym_name = "func"} : () -> ()
+}
+
+// Check that this doesn't crash.
+gpu.module @module_with_one_target [#nvvm.target] {
+  gpu.func @kernel(%arg0 : f32) kernel {
+    gpu.return
+  }
+}
+
+gpu.module @module_with_two_target [#nvvm.target, #rocdl.target<chip = "gfx90a">] {
+  gpu.func @kernel(%arg0 : f32) kernel {
+    gpu.return
+  }
 }

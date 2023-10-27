@@ -17,6 +17,7 @@
 #include <memory>
 #include <new>
 #include <type_traits>
+#include <cstring>
 
 #include "test_macros.h"
 
@@ -84,12 +85,12 @@ public:
 };
 
 struct malloc_allocator_base {
-    static size_t outstanding_bytes;
-    static size_t alloc_count;
-    static size_t dealloc_count;
+    static std::size_t outstanding_bytes;
+    static std::size_t alloc_count;
+    static std::size_t dealloc_count;
     static bool disable_default_constructor;
 
-    static size_t outstanding_alloc() {
+    static std::size_t outstanding_alloc() {
       assert(alloc_count >= dealloc_count);
       return (alloc_count - dealloc_count);
     }
@@ -122,7 +123,7 @@ public:
 
     T* allocate(std::size_t n)
     {
-        const size_t nbytes = n*sizeof(T);
+        const std::size_t nbytes = n*sizeof(T);
         ++alloc_count;
         outstanding_bytes += nbytes;
         return static_cast<T*>(std::malloc(nbytes));
@@ -130,7 +131,7 @@ public:
 
     void deallocate(T* p, std::size_t n)
     {
-        const size_t nbytes = n*sizeof(T);
+        const std::size_t nbytes = n*sizeof(T);
         ++dealloc_count;
         outstanding_bytes -= nbytes;
         std::free(static_cast<void*>(p));
@@ -193,7 +194,7 @@ struct cpp03_overload_allocator : bare_allocator<T>
 };
 template <class T> bool cpp03_overload_allocator<T>::construct_called = false;
 
-template <class T, class = std::integral_constant<size_t, 0> > class min_pointer;
+template <class T, class = std::integral_constant<std::size_t, 0> > class min_pointer;
 template <class T, class ID> class min_pointer<const T, ID>;
 template <class ID> class min_pointer<void, ID>;
 template <class ID> class min_pointer<const void, ID>;
@@ -430,6 +431,53 @@ public:
 
     TEST_CONSTEXPR_CXX20 friend bool operator==(explicit_allocator, explicit_allocator) {return true;}
     TEST_CONSTEXPR_CXX20 friend bool operator!=(explicit_allocator x, explicit_allocator y) {return !(x == y);}
+};
+
+template <class T>
+class unaligned_allocator {
+public:
+  static_assert(TEST_ALIGNOF(T) == 1, "Type T cannot be created on unaligned address (UB)");
+  typedef T value_type;
+
+  TEST_CONSTEXPR_CXX20 unaligned_allocator() TEST_NOEXCEPT {}
+
+  template <class U>
+  TEST_CONSTEXPR_CXX20 explicit unaligned_allocator(unaligned_allocator<U>) TEST_NOEXCEPT {}
+
+  TEST_CONSTEXPR_CXX20 T* allocate(std::size_t n) { return std::allocator<T>().allocate(n + 1) + 1; }
+
+  TEST_CONSTEXPR_CXX20 void deallocate(T* p, std::size_t n) { std::allocator<T>().deallocate(p - 1, n + 1); }
+
+  TEST_CONSTEXPR_CXX20 friend bool operator==(unaligned_allocator, unaligned_allocator) { return true; }
+  TEST_CONSTEXPR_CXX20 friend bool operator!=(unaligned_allocator x, unaligned_allocator y) { return !(x == y); }
+};
+
+template <class T>
+class safe_allocator {
+public:
+  typedef T value_type;
+
+  TEST_CONSTEXPR_CXX20 safe_allocator() TEST_NOEXCEPT {}
+
+  template <class U>
+  TEST_CONSTEXPR_CXX20 safe_allocator(safe_allocator<U>) TEST_NOEXCEPT {}
+
+  TEST_CONSTEXPR_CXX20 T* allocate(std::size_t n) {
+    T* memory = std::allocator<T>().allocate(n);
+    if (!std::__libcpp_is_constant_evaluated())
+      std::memset(memory, 0, sizeof(T) * n);
+
+    return memory;
+  }
+
+  TEST_CONSTEXPR_CXX20 void deallocate(T* p, std::size_t n) {
+    if (!std::__libcpp_is_constant_evaluated())
+      DoNotOptimize(std::memset(p, 0, sizeof(T) * n));
+    std::allocator<T>().deallocate(p, n);
+  }
+
+  TEST_CONSTEXPR_CXX20 friend bool operator==(safe_allocator, safe_allocator) { return true; }
+  TEST_CONSTEXPR_CXX20 friend bool operator!=(safe_allocator x, safe_allocator y) { return !(x == y); }
 };
 
 #endif // MIN_ALLOCATOR_H

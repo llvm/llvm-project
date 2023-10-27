@@ -39,7 +39,7 @@ catch:                                            ; preds = %catch.dispatch
   %4 = catchpad within %2 [ptr null, i32 0, ptr null]
   %exn.adjusted = tail call ptr @llvm.objc.begin_catch(ptr undef)
   tail call void @llvm.objc.end_catch(), !clang.arc.no_objc_arc_exceptions !0
-  br label %eh.cont
+  catchret from %4 to label %eh.cont
 }
 
 ; CHECK-LABEL: @f

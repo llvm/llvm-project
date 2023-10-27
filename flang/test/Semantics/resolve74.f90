@@ -10,7 +10,7 @@ subroutine s()
   type(derived(34)) :: a
 
   procedure(character(len=*)) :: externCharFunc
-  !ERROR: An assumed (*) type parameter may be used only for a (non-statement function) dummy argument, associate name, named constant, or external function result
+  !ERROR: An assumed (*) type parameter may be used only for a (non-statement function) dummy argument, associate name, character named constant, or external function result
   procedure(type(derived(param =*))) :: externDerivedFunc
 
   interface
@@ -24,14 +24,14 @@ subroutine s()
       type(derived(param=4)) :: works
     end function works
 
-  !ERROR: An assumed (*) type parameter may be used only for a (non-statement function) dummy argument, associate name, named constant, or external function result
+  !ERROR: An assumed (*) type parameter may be used only for a (non-statement function) dummy argument, associate name, character named constant, or external function result
     function fails1()
       character(len=*) :: fails1
     end function fails1
 
-  !ERROR: An assumed (*) type parameter may be used only for a (non-statement function) dummy argument, associate name, named constant, or external function result
+  !ERROR: An assumed (*) type parameter may be used only for a (non-statement function) dummy argument, associate name, character named constant, or external function result
     function fails2()
-  !ERROR: An assumed (*) type parameter may be used only for a (non-statement function) dummy argument, associate name, named constant, or external function result
+  !ERROR: An assumed (*) type parameter may be used only for a (non-statement function) dummy argument, associate name, character named constant, or external function result
       type(derived(param=*)) :: fails2
     end function fails2
 

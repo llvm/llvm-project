@@ -19,7 +19,7 @@
 # RUN: rm %t.o %t1
 
 ## Note: GNU ld uses sldi 11, 11, 34 and add 12, 11, 12 to support offsets beyond +-2**33.
-# CHECK: error: R12 setup stub offset is out of range: 8589934592 is not in [-8589934592, 8589934591]; references high
+# CHECK: error: R12 setup stub offset is out of range: 8589934592 is not in [-8589934592, 8589934591]; references 'high'
 # CHECK-NEXT: >>> defined in {{.*}}.o
 
 //--- asm

@@ -12,7 +12,13 @@
 // A header intended to contain C standard input and output library
 // declarations.
 
+typedef struct structFILE {} FILE;
+extern FILE *stderr;
+
 int printf(const char *, ...);
+int fprintf(FILE *, const char *, ...);
+
+#define NULL (0)
 
 #endif // _STDIO_H_
 

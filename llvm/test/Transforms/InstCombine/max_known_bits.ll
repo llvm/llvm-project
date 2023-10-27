@@ -19,9 +19,9 @@ define i16 @foo(i16 %x)  {
 ; By analyzing the clamp pattern, we can tell the add doesn't have signed overflow.
 define i16 @min_max_clamp(i16 %x) {
 ; CHECK-LABEL: @min_max_clamp(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i16 @llvm.smax.i16(i16 [[X:%.*]], i16 -2048)
-; CHECK-NEXT:    [[TMP2:%.*]] = call i16 @llvm.smin.i16(i16 [[TMP1]], i16 2047)
-; CHECK-NEXT:    [[E:%.*]] = add nsw i16 [[TMP2]], 1
+; CHECK-NEXT:    [[B:%.*]] = call i16 @llvm.smax.i16(i16 [[X:%.*]], i16 -2048)
+; CHECK-NEXT:    [[D:%.*]] = call i16 @llvm.smin.i16(i16 [[B]], i16 2047)
+; CHECK-NEXT:    [[E:%.*]] = add nsw i16 [[D]], 1
 ; CHECK-NEXT:    ret i16 [[E]]
 ;
   %a = icmp sgt i16 %x, -2048
@@ -35,9 +35,9 @@ define i16 @min_max_clamp(i16 %x) {
 ; Same as above with min/max reversed.
 define i16 @min_max_clamp_2(i16 %x) {
 ; CHECK-LABEL: @min_max_clamp_2(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i16 @llvm.smin.i16(i16 [[X:%.*]], i16 2047)
-; CHECK-NEXT:    [[TMP2:%.*]] = call i16 @llvm.smax.i16(i16 [[TMP1]], i16 -2048)
-; CHECK-NEXT:    [[E:%.*]] = add nsw i16 [[TMP2]], 1
+; CHECK-NEXT:    [[B:%.*]] = call i16 @llvm.smin.i16(i16 [[X:%.*]], i16 2047)
+; CHECK-NEXT:    [[D:%.*]] = call i16 @llvm.smax.i16(i16 [[B]], i16 -2048)
+; CHECK-NEXT:    [[E:%.*]] = add nsw i16 [[D]], 1
 ; CHECK-NEXT:    ret i16 [[E]]
 ;
   %a = icmp slt i16 %x, 2047
@@ -53,10 +53,10 @@ define i16 @min_max_clamp_2(i16 %x) {
 ; overflow the original type and can be moved before the extend.
 define i32 @min_max_clamp_3(i16 %x) {
 ; CHECK-LABEL: @min_max_clamp_3(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i16 @llvm.smax.i16(i16 [[X:%.*]], i16 -2048)
-; CHECK-NEXT:    [[TMP2:%.*]] = call i16 @llvm.smin.i16(i16 [[TMP1]], i16 2047)
-; CHECK-NEXT:    [[TMP3:%.*]] = sext i16 [[TMP2]] to i32
-; CHECK-NEXT:    ret i32 [[TMP3]]
+; CHECK-NEXT:    [[B:%.*]] = call i16 @llvm.smax.i16(i16 [[X:%.*]], i16 -2048)
+; CHECK-NEXT:    [[D:%.*]] = call i16 @llvm.smin.i16(i16 [[B]], i16 2047)
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i16 [[D]] to i32
+; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
   %a = icmp sgt i16 %x, -2048
   %b = select i1 %a, i16 %x, i16 -2048
@@ -71,10 +71,10 @@ define i32 @min_max_clamp_3(i16 %x) {
 ; Same as above with min/max order reversed
 define i32 @min_max_clamp_4(i16 %x) {
 ; CHECK-LABEL: @min_max_clamp_4(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i16 @llvm.smin.i16(i16 [[X:%.*]], i16 2047)
-; CHECK-NEXT:    [[TMP2:%.*]] = call i16 @llvm.smax.i16(i16 [[TMP1]], i16 -2048)
-; CHECK-NEXT:    [[TMP3:%.*]] = sext i16 [[TMP2]] to i32
-; CHECK-NEXT:    ret i32 [[TMP3]]
+; CHECK-NEXT:    [[B:%.*]] = call i16 @llvm.smin.i16(i16 [[X:%.*]], i16 2047)
+; CHECK-NEXT:    [[D:%.*]] = call i16 @llvm.smax.i16(i16 [[B]], i16 -2048)
+; CHECK-NEXT:    [[TMP1:%.*]] = sext i16 [[D]] to i32
+; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
   %a = icmp slt i16 %x, 2047
   %b = select i1 %a, i16 %x, i16 2047

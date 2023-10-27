@@ -195,6 +195,34 @@
 @ CHECK-ERRORS: note: operand must be an immediate in the range [0,31]
 @ CHECK-ERRORS: note: too many operands for instruction
 
+@ Out of range immediates for MOVS/ADDS instruction.
+        movs r3, #-1
+        adds r3, #256
+@ CHECK-ERRORS: error: invalid instruction, any one of the following would fix this:
+@ CHECK-ERRORS-NEXT: movs r3, #-1
+@ CHECK-ERRORS-NEXT: ^
+@ CHECK-ERRORS: note: operand must be an immediate in the range [0,255] or a relocatable expression
+@ CHECK-ERRORS-NEXT: movs r3, #-1
+@ CHECK-ERRORS-NEXT:          ^
+@ CHECK-ERRORS: note: operand must be a register in range [r0, r7]
+@ CHECK-ERRORS-NEXT: movs r3, #-1
+@ CHECK-ERRORS-NEXT:          ^
+@ CHECK-ERRORS: error: invalid instruction, any one of the following would fix this:
+@ CHECK-ERRORS-NEXT: adds r3, #256
+@ CHECK-ERRORS-NEXT: ^
+@ CHECK-ERRORS: note: instruction requires: thumb2
+@ CHECK-ERRORS-NEXT: adds r3, #256
+@ CHECK-ERRORS-NEXT: ^
+@ CHECK-ERRORS: note: invalid operand for instruction
+@ CHECK-ERRORS-NEXT: adds r3, #256
+@ CHECK-ERRORS-NEXT:          ^
+@ CHECK-ERRORS-NEXT: note: operand must be an immediate in the range [0,255] or a relocatable expression
+@ CHECK-ERRORS-NEXT: adds r3, #256
+@ CHECK-ERRORS-NEXT:          ^
+@ CHECK-ERRORS-NEXT: note: operand must be a register in range [r0, r7]
+@ CHECK-ERRORS-NEXT: adds r3, #256
+@ CHECK-ERRORS-NEXT:          ^
+
 @ Mismatched source/destination operands for MUL instruction.
         muls r1, r2, r3
 @ CHECK-ERRORS: error: destination register must match source register

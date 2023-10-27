@@ -1,0 +1,57 @@
+# RUN: llc -mtriple=s390x-linux-gnu -mcpu=z15 -O3 -run-pass=machine-sink %s -o - \
+# RUN:   -verify-machineinstrs | FileCheck %s
+#
+# Test that the AGHIK can be sunk into %bb.4. It has a def of CC, but it is dead.
+
+--- |
+  define void @fun() {  ret void  }
+...
+
+# CHECK-LABEL: bb.4:
+# CHECK:         %1:gr64bit = nsw AGHIK %0, -4, implicit-def dead $cc
+# CHECK-NEXT:    CGHI %1, 0, implicit-def $cc
+# CHECK-NEXT:    BRC 14, 6, %bb.1, implicit $cc
+# CHECK-NEXT:    J %bb.5
+
+
+---
+name:            fun
+alignment:       16
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: gr64bit }
+  - { id: 1, class: gr64bit }
+  - { id: 2, class: grx32bit }
+  - { id: 3, class: gr64bit }
+frameInfo:
+  maxAlignment:    1
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+
+    %2:grx32bit = LHIMux 0
+    %3:gr64bit = IMPLICIT_DEF
+
+  bb.1:
+
+    %0:gr64bit = PHI %3, %bb.0, %1, %bb.4
+  
+  bb.2:
+  
+    %1:gr64bit = nsw AGHIK %0, -4, implicit-def dead $cc
+    CHIMux %2, 0, implicit-def $cc
+    BRC 14, 6, %bb.4, implicit $cc
+    J %bb.3
+  
+  bb.3:
+  
+  bb.4:
+  
+    CGHI %1, 0, implicit-def $cc
+    BRC 14, 6, %bb.1, implicit $cc
+    J %bb.5
+  
+  bb.5:
+    Return
+
+...

@@ -14,7 +14,7 @@ define dso_local float @fma(float %0, float %1, float %2) local_unnamed_addr #0 
 declare void @llvm.dbg.value(metadata, metadata, metadata) #1
 
 ; CHECK: attributes #0 = { nounwind memory(none) }
-; CHECK-NOT attributes #
+; CHECK-NOT: attributes #
 
 attributes #0 = { norecurse nounwind readnone willreturn }
 attributes #1 = { nofree nosync nounwind readnone speculatable willreturn }

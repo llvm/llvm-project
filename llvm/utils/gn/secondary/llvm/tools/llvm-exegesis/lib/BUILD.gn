@@ -24,6 +24,7 @@ static_library("lib") {
     "BenchmarkRunner.cpp",
     "Clustering.cpp",
     "CodeTemplate.cpp",
+    "DisassemblerHelper.cpp",
     "Error.cpp",
     "LatencyBenchmarkRunner.cpp",
     "LlvmState.cpp",
@@ -37,6 +38,7 @@ static_library("lib") {
     "SnippetFile.cpp",
     "SnippetGenerator.cpp",
     "SnippetRepetitor.cpp",
+    "SubprocessMemory.cpp",
     "Target.cpp",
     "UopsBenchmarkRunner.cpp",
   ]

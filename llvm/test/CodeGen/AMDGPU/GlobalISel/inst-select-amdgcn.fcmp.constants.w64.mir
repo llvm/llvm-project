@@ -23,7 +23,7 @@ body: |
     %1:vgpr(s32) = COPY $vgpr1
     %2:vgpr(s16) = G_FPTRUNC %0
     %3:vgpr(s16) = G_FPTRUNC %1
-    %4:sgpr(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.fcmp), %2, %3, 0
+    %4:sgpr(s64) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.fcmp), %2, %3, 0
     S_ENDPGM 0, implicit %4
 ...
 
@@ -49,7 +49,7 @@ body: |
     %1:vgpr(s32) = COPY $vgpr1
     %2:vgpr(s16) = G_FPTRUNC %0
     %3:vgpr(s16) = G_FPTRUNC %1
-    %4:sgpr(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.fcmp), %2, %3, 15
+    %4:sgpr(s64) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.fcmp), %2, %3, 15
     S_ENDPGM 0, implicit %4
 ...
 
@@ -71,7 +71,7 @@ body: |
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[V_CMP_F_F32_e64_]]
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s32) = COPY $vgpr1
-    %4:sgpr(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.fcmp), %0, %1, 0
+    %4:sgpr(s64) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.fcmp), %0, %1, 0
     S_ENDPGM 0, implicit %4
 ...
 
@@ -93,7 +93,7 @@ body: |
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[V_CMP_TRU_F32_e64_]]
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s32) = COPY $vgpr1
-    %4:sgpr(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.fcmp), %0, %1, 15
+    %4:sgpr(s64) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.fcmp), %0, %1, 15
     S_ENDPGM 0, implicit %4
 ...
 
@@ -119,7 +119,7 @@ body: |
     %1:vgpr(s32) = COPY $vgpr1
     %2:vgpr(s64) = G_FPEXT %0
     %3:vgpr(s64) = G_FPEXT %1
-    %4:sgpr(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.fcmp), %2, %3, 0
+    %4:sgpr(s64) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.fcmp), %2, %3, 0
     S_ENDPGM 0, implicit %4
 ...
 
@@ -145,6 +145,6 @@ body: |
     %1:vgpr(s32) = COPY $vgpr1
     %2:vgpr(s64) = G_FPEXT %0
     %3:vgpr(s64) = G_FPEXT %1
-    %4:sgpr(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.fcmp), %2, %3, 15
+    %4:sgpr(s64) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.fcmp), %2, %3, 15
     S_ENDPGM 0, implicit %4
 ...

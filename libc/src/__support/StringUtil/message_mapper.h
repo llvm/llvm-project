@@ -6,19 +6,21 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_STRING_UTIL_MESSAGE_MAPPER
-#define LLVM_LIBC_SRC_SUPPORT_STRING_UTIL_MESSAGE_MAPPER
+#ifndef LLVM_LIBC_SRC___SUPPORT_STRING_UTIL_MESSAGE_MAPPER_H
+#define LLVM_LIBC_SRC___SUPPORT_STRING_UTIL_MESSAGE_MAPPER_H
 
+#include "src/__support/CPP/array.h"
 #include "src/__support/CPP/optional.h"
 #include "src/__support/CPP/string_view.h"
 #include <stddef.h>
 
-namespace __llvm_libc {
-namespace internal {
+namespace LIBC_NAMESPACE {
 
 struct MsgMapping {
   int num;
   cpp::string_view msg;
+
+  constexpr MsgMapping() : num(0), msg() { ; }
 
   constexpr MsgMapping(int init_num, const char *init_msg)
       : num(init_num), msg(init_msg) {
@@ -26,13 +28,27 @@ struct MsgMapping {
   }
 };
 
-constexpr size_t total_str_len(const MsgMapping *array, size_t len) {
+template <size_t N> using MsgTable = cpp::array<MsgMapping, N>;
+
+template <size_t N> constexpr size_t total_str_len(const MsgTable<N> &table) {
   size_t total = 0;
-  for (size_t i = 0; i < len; ++i) {
+  for (size_t i = 0; i < table.size(); ++i) {
     // add 1 for the null terminator.
-    total += array[i].msg.size() + 1;
+    total += table[i].msg.size() + 1;
   }
   return total;
+}
+
+template <size_t N> constexpr size_t max_key_val(const MsgTable<N> &table) {
+  int max = 0;
+  for (size_t i = 0; i < table.size(); ++i) {
+    if (table[i].num > max) {
+      max = table[i].num;
+    }
+  }
+  // max will never be negative since the starting value is 0. This is good,
+  // since it's used as a length.
+  return static_cast<size_t>(max);
 }
 
 template <size_t ARR_SIZE, size_t TOTAL_STR_LEN> class MessageMapper {
@@ -40,10 +56,10 @@ template <size_t ARR_SIZE, size_t TOTAL_STR_LEN> class MessageMapper {
   char string_array[TOTAL_STR_LEN] = {'\0'};
 
 public:
-  constexpr MessageMapper(const MsgMapping raw_array[], size_t raw_array_len) {
+  template <size_t N> constexpr MessageMapper(const MsgTable<N> &table) {
     cpp::string_view string_mappings[ARR_SIZE] = {""};
-    for (size_t i = 0; i < raw_array_len; ++i)
-      string_mappings[raw_array[i].num] = raw_array[i].msg;
+    for (size_t i = 0; i < table.size(); ++i)
+      string_mappings[table[i].num] = table[i].msg;
 
     int string_array_index = 0;
     for (size_t cur_num = 0; cur_num < ARR_SIZE; ++cur_num) {
@@ -71,7 +87,17 @@ public:
   }
 };
 
-} // namespace internal
-} // namespace __llvm_libc
+template <size_t N1, size_t N2>
+constexpr MsgTable<N1 + N2> operator+(const MsgTable<N1> &t1,
+                                      const MsgTable<N2> &t2) {
+  MsgTable<N1 + N2> res{};
+  for (size_t i = 0; i < N1; ++i)
+    res[i] = t1[i];
+  for (size_t i = 0; i < N2; ++i)
+    res[N1 + i] = t2[i];
+  return res;
+}
 
-#endif // LLVM_LIBC_SRC_SUPPORT_STRING_UTIL_MESSAGE_MAPPER
+} // namespace LIBC_NAMESPACE
+
+#endif // LLVM_LIBC_SRC___SUPPORT_STRING_UTIL_MESSAGE_MAPPER_H

@@ -1,7 +1,5 @@
 // RUN: %clang_cc1 -std=c++11 -fsyntax-only -verify %s
 
-// rdar://13784901
-
 struct S0 {
   int x;
   static const int test0 = __alignof__(x); // expected-error {{invalid application of 'alignof' to a field of a class still being defined}}

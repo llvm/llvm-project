@@ -267,6 +267,27 @@ LogicalResult spirv::Deserializer::processDecoration(ArrayRef<uint32_t> words) {
     }
     typeDecorations[words[0]] = words[2];
     break;
+  case spirv::Decoration::LinkageAttributes: {
+    if (words.size() < 4) {
+      return emitError(unknownLoc, "OpDecorate with ")
+             << decorationName
+             << " needs at least 1 string and 1 integer literal";
+    }
+    // LinkageAttributes has two parameters ["linkageName", linkageType]
+    // e.g., OpDecorate %imported_func LinkageAttributes "outside.func" Import
+    // "linkageName" is a stringliteral encoded as uint32_t,
+    // hence the size of name is variable length which results in words.size()
+    // being variable length, words.size() = 3 + strlen(name)/4 + 1 or
+    // 3 + ceildiv(strlen(name), 4).
+    unsigned wordIndex = 2;
+    auto linkageName = spirv::decodeStringLiteral(words, wordIndex).str();
+    auto linkageTypeAttr = opBuilder.getAttr<::mlir::spirv::LinkageTypeAttr>(
+        static_cast<::mlir::spirv::LinkageType>(words[wordIndex++]));
+    auto linkageAttr = opBuilder.getAttr<::mlir::spirv::LinkageAttributesAttr>(
+        linkageName, linkageTypeAttr);
+    decorations[words[0]].set(symbol, llvm::dyn_cast<Attribute>(linkageAttr));
+    break;
+  }
   case spirv::Decoration::Aliased:
   case spirv::Decoration::Block:
   case spirv::Decoration::BufferBlock:
@@ -364,11 +385,11 @@ spirv::Deserializer::processFunction(ArrayRef<uint32_t> operands) {
   }
 
   Type fnType = getType(operands[3]);
-  if (!fnType || !fnType.isa<FunctionType>()) {
+  if (!fnType || !isa<FunctionType>(fnType)) {
     return emitError(unknownLoc, "unknown function type from <id> ")
            << operands[3];
   }
-  auto functionType = fnType.cast<FunctionType>();
+  auto functionType = cast<FunctionType>(fnType);
 
   if ((isVoidType(resultType) && functionType.getNumResults() != 0) ||
       (functionType.getNumResults() == 1 &&
@@ -380,6 +401,12 @@ spirv::Deserializer::processFunction(ArrayRef<uint32_t> operands) {
   std::string fnName = getFunctionSymbol(fnID);
   auto funcOp = opBuilder.create<spirv::FuncOp>(
       unknownLoc, fnName, functionType, fnControl.value());
+  // Processing other function attributes.
+  if (decorations.count(fnID)) {
+    for (auto attr : decorations[fnID].getAttrs()) {
+      funcOp->setAttr(attr.getName(), attr.getValue());
+    }
+  }
   curFunction = funcMap[fnID] = funcOp;
   auto *entryBlock = funcOp.addEntryBlock();
   LLVM_DEBUG({
@@ -429,6 +456,16 @@ spirv::Deserializer::processFunction(ArrayRef<uint32_t> operands) {
       valueMap[operands[1]] = argValue;
     }
   }
+
+  // entryBlock is needed to access the arguments, Once that is done, we can
+  // erase the block for functions with 'Import' LinkageAttributes, since these
+  // are essentially function declarations, so they have no body.
+  auto linkageAttr = funcOp.getLinkageAttributes();
+  auto hasImportLinkage =
+      linkageAttr && (linkageAttr.value().getLinkageType().getValue() ==
+                      spirv::LinkageType::Import);
+  if (hasImportLinkage)
+    funcOp.eraseBody();
 
   // RAII guard to reset the insertion point to the module's region after
   // deserializing the body of this function.
@@ -535,7 +572,7 @@ std::string spirv::Deserializer::getSpecConstantSymbol(uint32_t id) {
 
 spirv::SpecConstantOp
 spirv::Deserializer::createSpecConstant(Location loc, uint32_t resultID,
-                                        Attribute defaultValue) {
+                                        TypedAttr defaultValue) {
   auto symName = opBuilder.getStringAttr(getSpecConstantSymbol(resultID));
   auto op = opBuilder.create<spirv::SpecConstantOp>(unknownLoc, symName,
                                                     defaultValue);
@@ -562,7 +599,7 @@ spirv::Deserializer::processGlobalVariable(ArrayRef<uint32_t> operands) {
     return emitError(unknownLoc, "unknown result type <id> : ")
            << operands[wordIndex];
   }
-  auto ptrType = type.dyn_cast<spirv::PointerType>();
+  auto ptrType = dyn_cast<spirv::PointerType>(type);
   if (!ptrType) {
     return emitError(unknownLoc,
                      "expected a result type <id> to be a spirv.ptr, found : ")
@@ -623,7 +660,7 @@ IntegerAttr spirv::Deserializer::getConstantInt(uint32_t id) {
   if (!constInfo) {
     return nullptr;
   }
-  return constInfo->first.dyn_cast<IntegerAttr>();
+  return dyn_cast<IntegerAttr>(constInfo->first);
 }
 
 LogicalResult spirv::Deserializer::processName(ArrayRef<uint32_t> operands) {
@@ -728,8 +765,10 @@ LogicalResult spirv::Deserializer::processType(spirv::Opcode opcode,
   } break;
   case spirv::Opcode::OpTypeArray:
     return processArrayType(operands);
+  case spirv::Opcode::OpTypeCooperativeMatrixKHR:
+    return processCooperativeMatrixTypeKHR(operands);
   case spirv::Opcode::OpTypeCooperativeMatrixNV:
-    return processCooperativeMatrixType(operands);
+    return processCooperativeMatrixTypeNV(operands);
   case spirv::Opcode::OpTypeFunction:
     return processFunctionType(operands);
   case spirv::Opcode::OpTypeJointMatrixINTEL:
@@ -825,7 +864,7 @@ spirv::Deserializer::processArrayType(ArrayRef<uint32_t> operands) {
            << operands[2] << "can only come from normal constant right now";
   }
 
-  if (auto intVal = countInfo->first.dyn_cast<IntegerAttr>()) {
+  if (auto intVal = dyn_cast<IntegerAttr>(countInfo->first)) {
     count = intVal.getValue().getZExtValue();
   } else {
     return emitError(unknownLoc, "OpTypeArray count must come from a "
@@ -863,32 +902,76 @@ spirv::Deserializer::processFunctionType(ArrayRef<uint32_t> operands) {
   return success();
 }
 
-LogicalResult
-spirv::Deserializer::processCooperativeMatrixType(ArrayRef<uint32_t> operands) {
-  if (operands.size() != 5) {
-    return emitError(unknownLoc, "OpTypeCooperativeMatrix must have element "
-                                 "type and row x column parameters");
+LogicalResult spirv::Deserializer::processCooperativeMatrixTypeKHR(
+    ArrayRef<uint32_t> operands) {
+  if (operands.size() != 6) {
+    return emitError(unknownLoc,
+                     "OpTypeCooperativeMatrixKHR must have element type, "
+                     "scope, row and column parameters, and use");
   }
 
   Type elementTy = getType(operands[1]);
   if (!elementTy) {
     return emitError(unknownLoc,
-                     "OpTypeCooperativeMatrix references undefined <id> ")
+                     "OpTypeCooperativeMatrixKHR references undefined <id> ")
            << operands[1];
   }
 
-  auto scope = spirv::symbolizeScope(getConstantInt(operands[2]).getInt());
+  std::optional<spirv::Scope> scope =
+      spirv::symbolizeScope(getConstantInt(operands[2]).getInt());
   if (!scope) {
-    return emitError(unknownLoc,
-                     "OpTypeCooperativeMatrix references undefined scope <id> ")
+    return emitError(
+               unknownLoc,
+               "OpTypeCooperativeMatrixKHR references undefined scope <id> ")
            << operands[2];
   }
 
   unsigned rows = getConstantInt(operands[3]).getInt();
   unsigned columns = getConstantInt(operands[4]).getInt();
 
-  typeMap[operands[0]] = spirv::CooperativeMatrixNVType::get(
-      elementTy, scope.value(), rows, columns);
+  std::optional<spirv::CooperativeMatrixUseKHR> use =
+      spirv::symbolizeCooperativeMatrixUseKHR(
+          getConstantInt(operands[5]).getInt());
+  if (!use) {
+    return emitError(
+               unknownLoc,
+               "OpTypeCooperativeMatrixKHR references undefined use <id> ")
+           << operands[5];
+  }
+
+  typeMap[operands[0]] =
+      spirv::CooperativeMatrixType::get(elementTy, rows, columns, *scope, *use);
+  return success();
+}
+
+LogicalResult spirv::Deserializer::processCooperativeMatrixTypeNV(
+    ArrayRef<uint32_t> operands) {
+  if (operands.size() != 5) {
+    return emitError(unknownLoc, "OpTypeCooperativeMatrixNV must have element "
+                                 "type and row x column parameters");
+  }
+
+  Type elementTy = getType(operands[1]);
+  if (!elementTy) {
+    return emitError(unknownLoc,
+                     "OpTypeCooperativeMatrixNV references undefined <id> ")
+           << operands[1];
+  }
+
+  std::optional<spirv::Scope> scope =
+      spirv::symbolizeScope(getConstantInt(operands[2]).getInt());
+  if (!scope) {
+    return emitError(
+               unknownLoc,
+               "OpTypeCooperativeMatrixNV references undefined scope <id> ")
+           << operands[2];
+  }
+
+  unsigned rows = getConstantInt(operands[3]).getInt();
+  unsigned columns = getConstantInt(operands[4]).getInt();
+
+  typeMap[operands[0]] =
+      spirv::CooperativeMatrixNVType::get(elementTy, *scope, rows, columns);
   return success();
 }
 
@@ -1172,7 +1255,7 @@ LogicalResult spirv::Deserializer::processConstant(ArrayRef<uint32_t> operands,
 
   auto resultID = operands[1];
 
-  if (auto intType = resultType.dyn_cast<IntegerType>()) {
+  if (auto intType = dyn_cast<IntegerType>(resultType)) {
     auto bitwidth = intType.getWidth();
     if (failed(checkOperandSizeForBitwidth(bitwidth))) {
       return failure();
@@ -1205,7 +1288,7 @@ LogicalResult spirv::Deserializer::processConstant(ArrayRef<uint32_t> operands,
     return success();
   }
 
-  if (auto floatType = resultType.dyn_cast<FloatType>()) {
+  if (auto floatType = dyn_cast<FloatType>(resultType)) {
     auto bitwidth = floatType.getWidth();
     if (failed(checkOperandSizeForBitwidth(bitwidth))) {
       return failure();
@@ -1295,12 +1378,12 @@ spirv::Deserializer::processConstantComposite(ArrayRef<uint32_t> operands) {
   }
 
   auto resultID = operands[1];
-  if (auto vectorType = resultType.dyn_cast<VectorType>()) {
+  if (auto vectorType = dyn_cast<VectorType>(resultType)) {
     auto attr = DenseElementsAttr::get(vectorType, elements);
     // For normal constants, we just record the attribute (and its type) for
     // later materialization at use sites.
     constantMap.try_emplace(resultID, attr, resultType);
-  } else if (auto arrayType = resultType.dyn_cast<spirv::ArrayType>()) {
+  } else if (auto arrayType = dyn_cast<spirv::ArrayType>(resultType)) {
     auto attr = opBuilder.getArrayAttr(elements);
     constantMap.try_emplace(resultID, attr, resultType);
   } else {
@@ -1444,7 +1527,7 @@ spirv::Deserializer::processConstantNull(ArrayRef<uint32_t> operands) {
   }
 
   auto resultID = operands[1];
-  if (resultType.isIntOrFloat() || resultType.isa<VectorType>()) {
+  if (resultType.isIntOrFloat() || isa<VectorType>(resultType)) {
     auto attr = opBuilder.getZeroAttr(resultType);
     // For normal constants, we just record the attribute (and its type) for
     // later materialization at use sites.

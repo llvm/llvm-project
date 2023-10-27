@@ -4,6 +4,7 @@
 // that may have been allocated in the end.
 
 // RUN: fir-opt --array-value-copy %s | FileCheck %s
+// RUN: fir-opt --array-value-copy="optimize-conflicts=true" %s | FileCheck %s
 
 
 !t_with_alloc_comp = !fir.type<t{i:!fir.box<!fir.heap<!fir.array<?xi32>>>}>

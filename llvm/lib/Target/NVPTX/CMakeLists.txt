@@ -11,6 +11,7 @@ tablegen(LLVM NVPTXGenSubtargetInfo.inc -gen-subtarget)
 add_public_tablegen_target(NVPTXCommonTableGen)
 
 set(NVPTXCodeGen_sources
+  NVPTXAliasAnalysis.cpp
   NVPTXAllocaHoisting.cpp
   NVPTXAtomicLower.cpp
   NVPTXAsmPrinter.cpp
@@ -24,6 +25,7 @@ set(NVPTXCodeGen_sources
   NVPTXLowerAggrCopies.cpp
   NVPTXLowerArgs.cpp
   NVPTXLowerAlloca.cpp
+  NVPTXLowerUnreachable.cpp
   NVPTXPeephole.cpp
   NVPTXMCExpr.cpp
   NVPTXPrologEpilogPass.cpp
@@ -36,6 +38,7 @@ set(NVPTXCodeGen_sources
   NVVMIntrRange.cpp
   NVVMReflect.cpp
   NVPTXProxyRegErasure.cpp
+  NVPTXCtorDtorLowering.cpp
   )
 
 add_llvm_target(NVPTXCodeGen
@@ -45,6 +48,7 @@ add_llvm_target(NVPTXCodeGen
   Analysis
   AsmPrinter
   CodeGen
+  CodeGenTypes
   Core
   IPO
   MC
@@ -60,7 +64,7 @@ add_llvm_target(NVPTXCodeGen
 
   ADD_TO_COMPONENT
   NVPTX
-)
+  )
 
 add_subdirectory(MCTargetDesc)
 add_subdirectory(TargetInfo)

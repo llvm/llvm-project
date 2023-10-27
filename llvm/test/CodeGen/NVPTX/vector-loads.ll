@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=nvptx -mcpu=sm_20 | FileCheck %s
-; RUN: %if ptxas %{ llc < %s -march=nvptx -mcpu=sm_20 | %ptxas-verify %}
+; RUN: llc < %s -march=nvptx64 -mcpu=sm_20 | FileCheck %s
+; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_20 | %ptxas-verify %}
 
 ; Even though general vector types are not supported in PTX, we can still
 ; optimize loads/stores with pseudo-vector instructions of the form:
@@ -94,6 +94,59 @@ define void @foo_complex(ptr nocapture readonly align 16 dereferenceable(1342177
   %t34 = select i1 %t33, i8 %t32, i8 %t28
   store i8 %t34, ptr %t31
 ; CHECK: ret
+  ret void
+}
+
+; CHECK-LABEL: extv8f16_global_a16(
+define void @extv8f16_global_a16(ptr addrspace(1) noalias readonly align 16 %dst, ptr addrspace(1) noalias readonly align 16 %src) #0 {
+; CHECK: ld.global.v4.b16 {%f
+; CHECK: ld.global.v4.b16 {%f
+  %v = load <8 x half>, ptr addrspace(1) %src, align 16
+  %ext = fpext <8 x half> %v to <8 x float>
+; CHECK: st.global.v4.f32
+; CHECK: st.global.v4.f32
+  store <8 x float> %ext, ptr addrspace(1) %dst, align 16
+  ret void
+}
+
+; CHECK-LABEL: extv8f16_global_a4(
+define void @extv8f16_global_a4(ptr addrspace(1) noalias readonly align 16 %dst, ptr addrspace(1) noalias readonly align 16 %src) #0 {
+; CHECK: ld.global.v2.b16 {%f
+; CHECK: ld.global.v2.b16 {%f
+; CHECK: ld.global.v2.b16 {%f
+; CHECK: ld.global.v2.b16 {%f
+  %v = load <8 x half>, ptr addrspace(1) %src, align 4
+  %ext = fpext <8 x half> %v to <8 x float>
+; CHECK: st.global.v4.f32
+; CHECK: st.global.v4.f32
+  store <8 x float> %ext, ptr addrspace(1) %dst, align 16
+  ret void
+}
+
+
+; CHECK-LABEL: extv8f16_generic_a16(
+define void @extv8f16_generic_a16(ptr noalias readonly align 16 %dst, ptr noalias readonly align 16 %src) #0 {
+; CHECK: ld.v4.b16 {%f
+; CHECK: ld.v4.b16 {%f
+  %v = load <8 x half>, ptr %src, align 16
+  %ext = fpext <8 x half> %v to <8 x float>
+; CHECK: st.v4.f32
+; CHECK: st.v4.f32
+  store <8 x float> %ext, ptr %dst, align 16
+  ret void
+}
+
+; CHECK-LABEL: extv8f16_generic_a4(
+define void @extv8f16_generic_a4(ptr noalias readonly align 16 %dst, ptr noalias readonly align 16 %src) #0 {
+; CHECK: ld.v2.b16 {%f
+; CHECK: ld.v2.b16 {%f
+; CHECK: ld.v2.b16 {%f
+; CHECK: ld.v2.b16 {%f
+  %v = load <8 x half>, ptr %src, align 4
+  %ext = fpext <8 x half> %v to <8 x float>
+; CHECK: st.v4.f32
+; CHECK: st.v4.f32
+  store <8 x float> %ext, ptr %dst, align 16
   ret void
 }
 

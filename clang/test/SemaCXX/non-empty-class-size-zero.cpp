@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fsyntax-only %s
-// rdar://8945175
 
 struct X { 
   int array[0]; 

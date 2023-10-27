@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -fsyntax-only -fblocks -verify -std=c++11 %s
-// rdar://9293227
 
 @class NSArray;
 
@@ -30,7 +29,6 @@ void ft(Collection col) {
 
 template void ft(NSArray *);
 
-/* // rdar://9072298 */
 @protocol NSObject @end
 
 @interface NSObject <NSObject> {
@@ -65,7 +63,6 @@ int main ()
  return 0;
 }
 
-/* rdar://problem/11068137 */
 @interface Test2
 @property (assign) id prop;
 @end

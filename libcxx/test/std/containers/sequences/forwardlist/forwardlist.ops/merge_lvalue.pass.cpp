@@ -68,7 +68,7 @@ int main(int, char**) {
     c1.merge(c2);
     assert(c2.empty());
 
-    for (size_t i = 0; i < 3; ++i) {
+    for (std::size_t i = 0; i < 3; ++i) {
       assert(to[i] == *io[i]);
 #if TEST_STD_VER >= 11
       assert(to[i] == ro[i].get());

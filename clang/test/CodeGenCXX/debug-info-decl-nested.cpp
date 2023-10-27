@@ -7,8 +7,6 @@
 // definition of the constructor for OuterClass. The declaration is
 // necessary so the backend can emit the DW_AT_specification attribute
 // for the definition.
-//
-// rdar://problem/13116508
 
 class Foo;
 class OuterClass

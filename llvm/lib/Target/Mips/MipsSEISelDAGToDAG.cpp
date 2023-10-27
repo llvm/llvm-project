@@ -204,15 +204,15 @@ void MipsSEDAGToDAGISel::processFunctionAfterISel(MachineFunction &MF) {
 }
 
 void MipsSEDAGToDAGISel::selectAddE(SDNode *Node, const SDLoc &DL) const {
-  SDValue InFlag = Node->getOperand(2);
-  unsigned Opc = InFlag.getOpcode();
+  SDValue InGlue = Node->getOperand(2);
+  unsigned Opc = InGlue.getOpcode();
   SDValue LHS = Node->getOperand(0), RHS = Node->getOperand(1);
   EVT VT = LHS.getValueType();
 
   // In the base case, we can rely on the carry bit from the addsc
   // instruction.
   if (Opc == ISD::ADDC) {
-    SDValue Ops[3] = {LHS, RHS, InFlag};
+    SDValue Ops[3] = {LHS, RHS, InGlue};
     CurDAG->SelectNodeTo(Node, Mips::ADDWC, VT, MVT::Glue, Ops);
     return;
   }
@@ -236,7 +236,7 @@ void MipsSEDAGToDAGISel::selectAddE(SDNode *Node, const SDLoc &DL) const {
   SDValue OuFlag = CurDAG->getTargetConstant(20, DL, MVT::i32);
 
   SDNode *DSPCtrlField = CurDAG->getMachineNode(Mips::RDDSP, DL, MVT::i32,
-                                                MVT::Glue, CstOne, InFlag);
+                                                MVT::Glue, CstOne, InGlue);
 
   SDNode *Carry = CurDAG->getMachineNode(
       Mips::EXT, DL, MVT::i32, SDValue(DSPCtrlField, 0), OuFlag, CstOne);
@@ -670,8 +670,7 @@ bool MipsSEDAGToDAGISel::selectVSplatMaskL(SDValue N, SDValue &Imm) const {
     // as the original value.
     if (ImmValue == ~(~ImmValue & ~(~ImmValue + 1))) {
 
-      Imm = CurDAG->getTargetConstant(ImmValue.countPopulation() - 1, SDLoc(N),
-                                      EltTy);
+      Imm = CurDAG->getTargetConstant(ImmValue.popcount() - 1, SDLoc(N), EltTy);
       return true;
     }
   }
@@ -702,8 +701,7 @@ bool MipsSEDAGToDAGISel::selectVSplatMaskR(SDValue N, SDValue &Imm) const {
     // Extract the run of set bits starting with bit zero, and test that the
     // result is the same as the original value
     if (ImmValue == (ImmValue & ~(ImmValue + 1))) {
-      Imm = CurDAG->getTargetConstant(ImmValue.countPopulation() - 1, SDLoc(N),
-                                      EltTy);
+      Imm = CurDAG->getTargetConstant(ImmValue.popcount() - 1, SDLoc(N), EltTy);
       return true;
     }
   }
@@ -1379,17 +1377,17 @@ bool MipsSEDAGToDAGISel::trySelect(SDNode *Node) {
   return false;
 }
 
-bool MipsSEDAGToDAGISel::
-SelectInlineAsmMemoryOperand(const SDValue &Op, unsigned ConstraintID,
-                             std::vector<SDValue> &OutOps) {
+bool MipsSEDAGToDAGISel::SelectInlineAsmMemoryOperand(
+    const SDValue &Op, InlineAsm::ConstraintCode ConstraintID,
+    std::vector<SDValue> &OutOps) {
   SDValue Base, Offset;
 
   switch(ConstraintID) {
   default:
     llvm_unreachable("Unexpected asm memory constraint");
   // All memory constraints can at least accept raw pointers.
-  case InlineAsm::Constraint_m:
-  case InlineAsm::Constraint_o:
+  case InlineAsm::ConstraintCode::m:
+  case InlineAsm::ConstraintCode::o:
     if (selectAddrRegImm16(Op, Base, Offset)) {
       OutOps.push_back(Base);
       OutOps.push_back(Offset);
@@ -1398,7 +1396,7 @@ SelectInlineAsmMemoryOperand(const SDValue &Op, unsigned ConstraintID,
     OutOps.push_back(Op);
     OutOps.push_back(CurDAG->getTargetConstant(0, SDLoc(Op), MVT::i32));
     return false;
-  case InlineAsm::Constraint_R:
+  case InlineAsm::ConstraintCode::R:
     // The 'R' constraint is supposed to be much more complicated than this.
     // However, it's becoming less useful due to architectural changes and
     // ought to be replaced by other constraints such as 'ZC'.
@@ -1412,7 +1410,7 @@ SelectInlineAsmMemoryOperand(const SDValue &Op, unsigned ConstraintID,
     OutOps.push_back(Op);
     OutOps.push_back(CurDAG->getTargetConstant(0, SDLoc(Op), MVT::i32));
     return false;
-  case InlineAsm::Constraint_ZC:
+  case InlineAsm::ConstraintCode::ZC:
     // ZC matches whatever the pref, ll, and sc instructions can handle for the
     // given subtarget.
     if (Subtarget->inMicroMipsMode()) {
@@ -1444,6 +1442,6 @@ SelectInlineAsmMemoryOperand(const SDValue &Op, unsigned ConstraintID,
 }
 
 FunctionPass *llvm::createMipsSEISelDag(MipsTargetMachine &TM,
-                                        CodeGenOpt::Level OptLevel) {
+                                        CodeGenOptLevel OptLevel) {
   return new MipsSEDAGToDAGISel(TM, OptLevel);
 }

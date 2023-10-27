@@ -22,7 +22,7 @@
 //
 // Tests that clang will reject the command line if it specifies -fmodule-output with
 // multiple archs.
-// RUN: %clang %t/Hello.cppm -fmodule-output -arch i386 -arch x86_64 -### -target \
+// RUN: not %clang %t/Hello.cppm -fmodule-output -arch i386 -arch x86_64 -### -target \
 // RUN:   x86_64-apple-darwin 2>&1 | FileCheck %t/Hello.cppm -check-prefix=MULTIPLE-ARCH
 
 // Tests that the .pcm file will be generated in the same path with the specified one

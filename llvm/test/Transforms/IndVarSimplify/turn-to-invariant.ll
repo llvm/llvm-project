@@ -8,13 +8,13 @@ define i32 @test_simple_case(i32 %start, i32 %len) {
 ; CHECK-LABEL: @test_simple_case(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[START:%.*]], -1
+; CHECK-NEXT:    [[RANGE_CHECK_FIRST_ITER:%.*]] = icmp ult i32 [[TMP0]], [[LEN:%.*]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
 ; CHECK-NEXT:    [[ZERO_CHECK:%.*]] = icmp ne i32 [[IV]], 0
 ; CHECK-NEXT:    br i1 [[ZERO_CHECK]], label [[RANGE_CHECK_BLOCK:%.*]], label [[FAILED_1:%.*]]
 ; CHECK:       range_check_block:
-; CHECK-NEXT:    [[RANGE_CHECK_FIRST_ITER:%.*]] = icmp ult i32 [[TMP0]], [[LEN:%.*]]
 ; CHECK-NEXT:    br i1 [[RANGE_CHECK_FIRST_ITER]], label [[BACKEDGE]], label [[FAILED_2:%.*]]
 ; CHECK:       backedge:
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], -1
@@ -64,6 +64,7 @@ define i32 @test_litter_conditions(i32 %start, i32 %len) {
 ; CHECK-LABEL: @test_litter_conditions(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[START:%.*]], -1
+; CHECK-NEXT:    [[RANGE_CHECK_FIRST_ITER:%.*]] = icmp ult i32 [[TMP0]], [[LEN:%.*]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
@@ -72,7 +73,6 @@ define i32 @test_litter_conditions(i32 %start, i32 %len) {
 ; CHECK-NEXT:    [[AND_1:%.*]] = and i1 [[ZERO_CHECK]], [[FAKE_1]]
 ; CHECK-NEXT:    br i1 [[AND_1]], label [[RANGE_CHECK_BLOCK:%.*]], label [[FAILED_1:%.*]]
 ; CHECK:       range_check_block:
-; CHECK-NEXT:    [[RANGE_CHECK_FIRST_ITER:%.*]] = icmp ult i32 [[TMP0]], [[LEN:%.*]]
 ; CHECK-NEXT:    [[FAKE_2:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    [[AND_2:%.*]] = and i1 [[RANGE_CHECK_FIRST_ITER]], [[FAKE_2]]
 ; CHECK-NEXT:    br i1 [[AND_2]], label [[BACKEDGE]], label [[FAILED_2:%.*]]
@@ -126,6 +126,7 @@ define i32 @test_litter_conditions_inverse(i32 %start, i32 %len) {
 ; CHECK-LABEL: @test_litter_conditions_inverse(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[START:%.*]], -1
+; CHECK-NEXT:    [[RANGE_CHECK_FAILED_FIRST_ITER:%.*]] = icmp uge i32 [[TMP0]], [[LEN:%.*]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
@@ -134,7 +135,6 @@ define i32 @test_litter_conditions_inverse(i32 %start, i32 %len) {
 ; CHECK-NEXT:    [[AND_1:%.*]] = and i1 [[ZERO_CHECK]], [[FAKE_1]]
 ; CHECK-NEXT:    br i1 [[AND_1]], label [[RANGE_CHECK_BLOCK:%.*]], label [[FAILED_1:%.*]]
 ; CHECK:       range_check_block:
-; CHECK-NEXT:    [[RANGE_CHECK_FAILED_FIRST_ITER:%.*]] = icmp uge i32 [[TMP0]], [[LEN:%.*]]
 ; CHECK-NEXT:    [[FAKE_2:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    [[OR_2:%.*]] = or i1 [[RANGE_CHECK_FAILED_FIRST_ITER]], [[FAKE_2]]
 ; CHECK-NEXT:    br i1 [[OR_2]], label [[FAILED_2:%.*]], label [[BACKEDGE]]
@@ -186,6 +186,7 @@ define i32 @test_litter_conditions_01(i32 %start, i32 %len) {
 ; CHECK-LABEL: @test_litter_conditions_01(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[START:%.*]], -1
+; CHECK-NEXT:    [[RANGE_CHECK_FIRST_ITER:%.*]] = icmp ult i32 [[TMP0]], [[LEN:%.*]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
@@ -194,7 +195,6 @@ define i32 @test_litter_conditions_01(i32 %start, i32 %len) {
 ; CHECK-NEXT:    [[AND_1:%.*]] = and i1 [[ZERO_CHECK]], [[FAKE_1]]
 ; CHECK-NEXT:    br i1 [[AND_1]], label [[RANGE_CHECK_BLOCK:%.*]], label [[FAILED_1:%.*]]
 ; CHECK:       range_check_block:
-; CHECK-NEXT:    [[RANGE_CHECK_FIRST_ITER:%.*]] = icmp ult i32 [[TMP0]], [[LEN:%.*]]
 ; CHECK-NEXT:    br i1 [[RANGE_CHECK_FIRST_ITER]], label [[BACKEDGE]], label [[FAILED_2:%.*]]
 ; CHECK:       backedge:
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], -1
@@ -244,6 +244,7 @@ define i32 @test_litter_conditions_01_inverse(i32 %start, i32 %len) {
 ; CHECK-LABEL: @test_litter_conditions_01_inverse(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[START:%.*]], -1
+; CHECK-NEXT:    [[RANGE_CHECK_FAILED_FIRST_ITER:%.*]] = icmp uge i32 [[TMP0]], [[LEN:%.*]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
@@ -252,7 +253,6 @@ define i32 @test_litter_conditions_01_inverse(i32 %start, i32 %len) {
 ; CHECK-NEXT:    [[AND_1:%.*]] = and i1 [[ZERO_CHECK]], [[FAKE_1]]
 ; CHECK-NEXT:    br i1 [[AND_1]], label [[RANGE_CHECK_BLOCK:%.*]], label [[FAILED_1:%.*]]
 ; CHECK:       range_check_block:
-; CHECK-NEXT:    [[RANGE_CHECK_FAILED_FIRST_ITER:%.*]] = icmp uge i32 [[TMP0]], [[LEN:%.*]]
 ; CHECK-NEXT:    br i1 [[RANGE_CHECK_FAILED_FIRST_ITER]], label [[FAILED_2:%.*]], label [[BACKEDGE]]
 ; CHECK:       backedge:
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], -1
@@ -301,13 +301,13 @@ define i32 @test_litter_conditions_02(i32 %start, i32 %len) {
 ; CHECK-LABEL: @test_litter_conditions_02(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[START:%.*]], -1
+; CHECK-NEXT:    [[RANGE_CHECK_FIRST_ITER:%.*]] = icmp ult i32 [[TMP0]], [[LEN:%.*]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
 ; CHECK-NEXT:    [[ZERO_CHECK:%.*]] = icmp ne i32 [[IV]], 0
 ; CHECK-NEXT:    br i1 [[ZERO_CHECK]], label [[RANGE_CHECK_BLOCK:%.*]], label [[FAILED_1:%.*]]
 ; CHECK:       range_check_block:
-; CHECK-NEXT:    [[RANGE_CHECK_FIRST_ITER:%.*]] = icmp ult i32 [[TMP0]], [[LEN:%.*]]
 ; CHECK-NEXT:    [[FAKE_2:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    [[AND_2:%.*]] = and i1 [[RANGE_CHECK_FIRST_ITER]], [[FAKE_2]]
 ; CHECK-NEXT:    br i1 [[AND_2]], label [[BACKEDGE]], label [[FAILED_2:%.*]]
@@ -359,13 +359,13 @@ define i32 @test_litter_conditions_02_inverse(i32 %start, i32 %len) {
 ; CHECK-LABEL: @test_litter_conditions_02_inverse(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[START:%.*]], -1
+; CHECK-NEXT:    [[RANGE_CHECK_FAILED_FIRST_ITER:%.*]] = icmp uge i32 [[TMP0]], [[LEN:%.*]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
 ; CHECK-NEXT:    [[ZERO_CHECK:%.*]] = icmp ne i32 [[IV]], 0
 ; CHECK-NEXT:    br i1 [[ZERO_CHECK]], label [[RANGE_CHECK_BLOCK:%.*]], label [[FAILED_1:%.*]]
 ; CHECK:       range_check_block:
-; CHECK-NEXT:    [[RANGE_CHECK_FAILED_FIRST_ITER:%.*]] = icmp uge i32 [[TMP0]], [[LEN:%.*]]
 ; CHECK-NEXT:    [[FAKE_2:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    [[OR_2:%.*]] = or i1 [[RANGE_CHECK_FAILED_FIRST_ITER]], [[FAKE_2]]
 ; CHECK-NEXT:    br i1 [[OR_2]], label [[FAILED_2:%.*]], label [[BACKEDGE]]
@@ -418,13 +418,13 @@ define i32 @test_litter_conditions_bad_context(i32 %start, i32 %len) {
 ; CHECK-LABEL: @test_litter_conditions_bad_context(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[START:%.*]], -1
+; CHECK-NEXT:    [[RANGE_CHECK_FIRST_ITER:%.*]] = icmp ult i32 [[TMP0]], [[LEN:%.*]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
 ; CHECK-NEXT:    [[ZERO_CHECK:%.*]] = icmp ne i32 [[IV]], 0
 ; CHECK-NEXT:    [[FAKE_1:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    [[AND_1:%.*]] = and i1 [[ZERO_CHECK]], [[FAKE_1]]
-; CHECK-NEXT:    [[RANGE_CHECK_FIRST_ITER:%.*]] = icmp ult i32 [[TMP0]], [[LEN:%.*]]
 ; CHECK-NEXT:    [[FAKE_2:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    [[AND_2:%.*]] = and i1 [[RANGE_CHECK_FIRST_ITER]], [[FAKE_2]]
 ; CHECK-NEXT:    br i1 [[AND_1]], label [[RANGE_CHECK_BLOCK:%.*]], label [[FAILED_1:%.*]]
@@ -480,13 +480,13 @@ define i32 @test_litter_conditions_bad_context_inverse(i32 %start, i32 %len) {
 ; CHECK-LABEL: @test_litter_conditions_bad_context_inverse(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[START:%.*]], -1
+; CHECK-NEXT:    [[RANGE_CHECK_FAILED_FIRST_ITER:%.*]] = icmp uge i32 [[TMP0]], [[LEN:%.*]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
 ; CHECK-NEXT:    [[ZERO_CHECK:%.*]] = icmp ne i32 [[IV]], 0
 ; CHECK-NEXT:    [[FAKE_1:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    [[AND_1:%.*]] = and i1 [[ZERO_CHECK]], [[FAKE_1]]
-; CHECK-NEXT:    [[RANGE_CHECK_FAILED_FIRST_ITER:%.*]] = icmp uge i32 [[TMP0]], [[LEN:%.*]]
 ; CHECK-NEXT:    [[FAKE_2:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    [[OR_2:%.*]] = or i1 [[RANGE_CHECK_FAILED_FIRST_ITER]], [[FAKE_2]]
 ; CHECK-NEXT:    br i1 [[AND_1]], label [[RANGE_CHECK_BLOCK:%.*]], label [[FAILED_1:%.*]]
@@ -536,20 +536,20 @@ failed_2:
   ret i32 -2
 }
 
-; TODO: This test is equivalent to @test_simple_case, with only difference
-;       that both checks are merged together into one 'and' check. This
-;       should not prevent turning the range check into invariant.
-;       https://alive2.llvm.org/ce/z/G-2ERB
+; This test is equivalent to @test_simple_case, with only difference
+; that both checks are merged together into one 'and' check. This
+; should not prevent turning the range check into invariant.
+; https://alive2.llvm.org/ce/z/G-2ERB
 define i32 @test_and_conditions(i32 %start, i32 %len) {
 ; CHECK-LABEL: @test_and_conditions(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[START:%.*]], -1
+; CHECK-NEXT:    [[RANGE_CHECK_FIRST_ITER:%.*]] = icmp ult i32 [[TMP0]], [[LEN:%.*]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START:%.*]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
 ; CHECK-NEXT:    [[ZERO_CHECK:%.*]] = icmp ne i32 [[IV]], 0
-; CHECK-NEXT:    [[IV_MINUS_1:%.*]] = add i32 [[IV]], -1
-; CHECK-NEXT:    [[RANGE_CHECK:%.*]] = icmp ult i32 [[IV_MINUS_1]], [[LEN:%.*]]
-; CHECK-NEXT:    [[BOTH_CHECKS:%.*]] = and i1 [[ZERO_CHECK]], [[RANGE_CHECK]]
+; CHECK-NEXT:    [[BOTH_CHECKS:%.*]] = and i1 [[ZERO_CHECK]], [[RANGE_CHECK_FIRST_ITER]]
 ; CHECK-NEXT:    br i1 [[BOTH_CHECKS]], label [[BACKEDGE]], label [[FAILED:%.*]]
 ; CHECK:       backedge:
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], -1
@@ -584,18 +584,18 @@ failed:
   ret i32 -3
 }
 
-; TODO: Same as test_and_conditions, but swapped exit block branches,
-;       and condition is expressed as OR. Still optimizable.
+; Same as test_and_conditions, but swapped exit block branches,
+; and condition is expressed as OR. Still optimizable.
 define i32 @test_and_conditions_inverse(i32 %start, i32 %len) {
 ; CHECK-LABEL: @test_and_conditions_inverse(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[START:%.*]], -1
+; CHECK-NEXT:    [[RANGE_CHECK_FAILED_FIRST_ITER:%.*]] = icmp uge i32 [[TMP0]], [[LEN:%.*]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START:%.*]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
 ; CHECK-NEXT:    [[ZERO_CHECK_FAILED:%.*]] = icmp eq i32 [[IV]], 0
-; CHECK-NEXT:    [[IV_MINUS_1:%.*]] = add i32 [[IV]], -1
-; CHECK-NEXT:    [[RANGE_CHECK_FAILED:%.*]] = icmp uge i32 [[IV_MINUS_1]], [[LEN:%.*]]
-; CHECK-NEXT:    [[EITHER_CHECK:%.*]] = or i1 [[ZERO_CHECK_FAILED]], [[RANGE_CHECK_FAILED]]
+; CHECK-NEXT:    [[EITHER_CHECK:%.*]] = or i1 [[ZERO_CHECK_FAILED]], [[RANGE_CHECK_FAILED_FIRST_ITER]]
 ; CHECK-NEXT:    br i1 [[EITHER_CHECK]], label [[FAILED:%.*]], label [[BACKEDGE]]
 ; CHECK:       backedge:
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], -1
@@ -635,6 +635,7 @@ define i32 @test_litter_conditions_logical_and(i32 %start, i32 %len) {
 ; CHECK-LABEL: @test_litter_conditions_logical_and(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[START:%.*]], -1
+; CHECK-NEXT:    [[RANGE_CHECK_FIRST_ITER:%.*]] = icmp ult i32 [[TMP0]], [[LEN:%.*]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
@@ -643,7 +644,6 @@ define i32 @test_litter_conditions_logical_and(i32 %start, i32 %len) {
 ; CHECK-NEXT:    [[AND_1:%.*]] = and i1 [[ZERO_CHECK]], [[FAKE_1]]
 ; CHECK-NEXT:    br i1 [[AND_1]], label [[RANGE_CHECK_BLOCK:%.*]], label [[FAILED_1:%.*]]
 ; CHECK:       range_check_block:
-; CHECK-NEXT:    [[RANGE_CHECK_FIRST_ITER:%.*]] = icmp ult i32 [[TMP0]], [[LEN:%.*]]
 ; CHECK-NEXT:    [[FAKE_2:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    [[AND_2:%.*]] = select i1 [[RANGE_CHECK_FIRST_ITER]], i1 [[FAKE_2]], i1 false
 ; CHECK-NEXT:    br i1 [[AND_2]], label [[BACKEDGE]], label [[FAILED_2:%.*]]
@@ -696,6 +696,7 @@ define i32 @test_litter_conditions_inverse_logical_or(i32 %start, i32 %len) {
 ; CHECK-LABEL: @test_litter_conditions_inverse_logical_or(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[START:%.*]], -1
+; CHECK-NEXT:    [[RANGE_CHECK_FAILED_FIRST_ITER:%.*]] = icmp uge i32 [[TMP0]], [[LEN:%.*]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
@@ -704,7 +705,6 @@ define i32 @test_litter_conditions_inverse_logical_or(i32 %start, i32 %len) {
 ; CHECK-NEXT:    [[AND_1:%.*]] = and i1 [[ZERO_CHECK]], [[FAKE_1]]
 ; CHECK-NEXT:    br i1 [[AND_1]], label [[RANGE_CHECK_BLOCK:%.*]], label [[FAILED_1:%.*]]
 ; CHECK:       range_check_block:
-; CHECK-NEXT:    [[RANGE_CHECK_FAILED_FIRST_ITER:%.*]] = icmp uge i32 [[TMP0]], [[LEN:%.*]]
 ; CHECK-NEXT:    [[FAKE_2:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    [[OR_2:%.*]] = select i1 [[RANGE_CHECK_FAILED_FIRST_ITER]], i1 true, i1 [[FAKE_2]]
 ; CHECK-NEXT:    br i1 [[OR_2]], label [[FAILED_2:%.*]], label [[BACKEDGE]]
@@ -752,17 +752,17 @@ failed_2:
   ret i32 -2
 }
 
-; TODO: Same as test_and_conditions, but with logical AND.
+; Same as test_and_conditions, but with logical AND.
 define i32 @test_and_conditions_logical_and(i32 %start, i32 %len) {
 ; CHECK-LABEL: @test_and_conditions_logical_and(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[START:%.*]], -1
+; CHECK-NEXT:    [[RANGE_CHECK_FIRST_ITER:%.*]] = icmp ult i32 [[TMP0]], [[LEN:%.*]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START:%.*]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
 ; CHECK-NEXT:    [[ZERO_CHECK:%.*]] = icmp ne i32 [[IV]], 0
-; CHECK-NEXT:    [[IV_MINUS_1:%.*]] = add i32 [[IV]], -1
-; CHECK-NEXT:    [[RANGE_CHECK:%.*]] = icmp ult i32 [[IV_MINUS_1]], [[LEN:%.*]]
-; CHECK-NEXT:    [[BOTH_CHECKS:%.*]] = select i1 [[ZERO_CHECK]], i1 [[RANGE_CHECK]], i1 false
+; CHECK-NEXT:    [[BOTH_CHECKS:%.*]] = select i1 [[ZERO_CHECK]], i1 [[RANGE_CHECK_FIRST_ITER]], i1 false
 ; CHECK-NEXT:    br i1 [[BOTH_CHECKS]], label [[BACKEDGE]], label [[FAILED:%.*]]
 ; CHECK:       backedge:
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], -1
@@ -797,17 +797,17 @@ failed:
   ret i32 -3
 }
 
-; TODO: Same as test_and_conditions_inverse, but with logical OR.
+; Same as test_and_conditions_inverse, but with logical OR.
 define i32 @test_and_conditions_inverse_logical_or(i32 %start, i32 %len) {
 ; CHECK-LABEL: @test_and_conditions_inverse_logical_or(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[START:%.*]], -1
+; CHECK-NEXT:    [[RANGE_CHECK_FAILED_FIRST_ITER:%.*]] = icmp uge i32 [[TMP0]], [[LEN:%.*]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START:%.*]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
 ; CHECK-NEXT:    [[ZERO_CHECK_FAILED:%.*]] = icmp eq i32 [[IV]], 0
-; CHECK-NEXT:    [[IV_MINUS_1:%.*]] = add i32 [[IV]], -1
-; CHECK-NEXT:    [[RANGE_CHECK_FAILED:%.*]] = icmp uge i32 [[IV_MINUS_1]], [[LEN:%.*]]
-; CHECK-NEXT:    [[EITHER_CHECK:%.*]] = select i1 [[ZERO_CHECK_FAILED]], i1 true, i1 [[RANGE_CHECK_FAILED]]
+; CHECK-NEXT:    [[EITHER_CHECK:%.*]] = select i1 [[ZERO_CHECK_FAILED]], i1 true, i1 [[RANGE_CHECK_FAILED_FIRST_ITER]]
 ; CHECK-NEXT:    br i1 [[EITHER_CHECK]], label [[FAILED:%.*]], label [[BACKEDGE]]
 ; CHECK:       backedge:
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], -1
@@ -842,13 +842,15 @@ failed:
   ret i32 -3
 }
 
-; TODO: Same as test_litter_conditions, but an extra check with known exact exit count is preventing the opt.
+; Same as test_litter_conditions, but an extra check with known exact exit count is preventing the opt.
 define i32 @test_litter_conditions_constant(i32 %start, i32 %len) {
 ; CHECK-LABEL: @test_litter_conditions_constant(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[START:%.*]], -1
+; CHECK-NEXT:    [[RANGE_CHECK_FIRST_ITER:%.*]] = icmp ult i32 [[TMP0]], [[LEN:%.*]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START:%.*]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
 ; CHECK-NEXT:    [[CANONICAL_IV:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[CANONICAL_IV_NEXT:%.*]], [[BACKEDGE]] ]
 ; CHECK-NEXT:    [[CONSTANT_CHECK:%.*]] = icmp ult i32 [[CANONICAL_IV]], 65635
 ; CHECK-NEXT:    br i1 [[CONSTANT_CHECK]], label [[CONSTANT_CHECK_PASSED:%.*]], label [[CONSTANT_CHECK_FAILED:%.*]]
@@ -858,10 +860,8 @@ define i32 @test_litter_conditions_constant(i32 %start, i32 %len) {
 ; CHECK-NEXT:    [[AND_1:%.*]] = and i1 [[ZERO_CHECK]], [[FAKE_1]]
 ; CHECK-NEXT:    br i1 [[AND_1]], label [[RANGE_CHECK_BLOCK:%.*]], label [[FAILED_1:%.*]]
 ; CHECK:       range_check_block:
-; CHECK-NEXT:    [[IV_MINUS_1:%.*]] = add i32 [[IV]], -1
-; CHECK-NEXT:    [[RANGE_CHECK:%.*]] = icmp ult i32 [[IV_MINUS_1]], [[LEN:%.*]]
 ; CHECK-NEXT:    [[FAKE_2:%.*]] = call i1 @cond()
-; CHECK-NEXT:    [[AND_2:%.*]] = and i1 [[RANGE_CHECK]], [[FAKE_2]]
+; CHECK-NEXT:    [[AND_2:%.*]] = and i1 [[RANGE_CHECK_FIRST_ITER]], [[FAKE_2]]
 ; CHECK-NEXT:    br i1 [[AND_2]], label [[BACKEDGE]], label [[FAILED_2:%.*]]
 ; CHECK:       backedge:
 ; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], -1
@@ -917,4 +917,145 @@ failed_2:
 
 constant_check_failed:
   ret i32 -3
+}
+
+; TODO: the backedge is predicated by iv.next <u len. It means that starting the
+; 2nd iteration, iv <u len is a known fact. We can replace %check with
+; %check.first.iter = icmp ult i32 0, %len.
+define i32 @test_predicated_backedge_no_side_exit(i32 %len) {
+; CHECK-LABEL: @test_predicated_backedge_no_side_exit(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[UMAX:%.*]] = call i32 @llvm.umax.i32(i32 [[LEN:%.*]], i32 1)
+; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[UMAX]], -1
+; CHECK-NEXT:    [[UMIN:%.*]] = call i32 @llvm.umin.i32(i32 [[LEN]], i32 [[TMP0]])
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i32 [[LEN]], [[UMIN]]
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw i32 [[IV]], 1
+; CHECK-NEXT:    br i1 [[TMP1]], label [[BACKEDGE]], label [[FAILED:%.*]]
+; CHECK:       backedge:
+; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp ult i32 [[IV_NEXT]], [[LEN]]
+; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[IV_NEXT_LCSSA1:%.*]] = phi i32 [ [[IV_NEXT]], [[BACKEDGE]] ]
+; CHECK-NEXT:    ret i32 [[IV_NEXT_LCSSA1]]
+; CHECK:       failed:
+; CHECK-NEXT:    ret i32 -1
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [0, %entry], [%iv.next, %backedge]
+  %iv.next = add i32 %iv, 1
+  %check = icmp ult i32 %iv, %len
+  br i1 %check, label %backedge, label %failed
+
+backedge:
+  %loop.cond = icmp ult i32 %iv.next, %len
+  br i1 %loop.cond, label %loop, label %exit
+
+exit:
+  ret i32 %iv.next
+
+failed:
+  ret i32 -1
+}
+
+; TODO: the backedge is predicated by iv.next <u len. It means that starting the
+; 2nd iteration, iv <u len is a known fact. We can replace %check with
+; %check.first.iter = icmp ult i32 0, %len.
+define i32 @test_predicated_backedge_with_side_exit(i32 %len) {
+; CHECK-LABEL: @test_predicated_backedge_with_side_exit(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[UMAX:%.*]] = call i32 @llvm.umax.i32(i32 [[LEN:%.*]], i32 1)
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw i32 [[IV]], 1
+; CHECK-NEXT:    [[CHECK:%.*]] = icmp ult i32 [[IV]], [[LEN]]
+; CHECK-NEXT:    br i1 [[CHECK]], label [[INNER_BLOCK:%.*]], label [[FAILED:%.*]]
+; CHECK:       inner_block:
+; CHECK-NEXT:    [[COND_1:%.*]] = call i1 @cond()
+; CHECK-NEXT:    br i1 [[COND_1]], label [[BACKEDGE]], label [[FAILED]]
+; CHECK:       backedge:
+; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp ult i32 [[IV_NEXT]], [[LEN]]
+; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i32 [[UMAX]]
+; CHECK:       failed:
+; CHECK-NEXT:    ret i32 -1
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [0, %entry], [%iv.next, %backedge]
+  %iv.next = add i32 %iv, 1
+  %check = icmp ult i32 %iv, %len
+  br i1 %check, label %inner_block, label %failed
+
+inner_block:
+  %cond_1 = call i1 @cond()
+  br i1 %cond_1, label %backedge, label %failed
+
+backedge:
+  %loop.cond = icmp ult i32 %iv.next, %len
+  br i1 %loop.cond, label %loop, label %exit
+
+exit:
+  ret i32 %iv.next
+
+failed:
+  ret i32 -1
+}
+
+; TODO: the backedge is predicated by iv.next <u len. It means that starting the
+; 2nd iteration, iv <u len is a known fact. We can replace %check with
+; %check.first.iter = icmp ult i32 %start, %len.
+define i32 @test_predicated_backedge_with_side_exit_unknown_start(i32 %start, i32 %len) {
+; CHECK-LABEL: @test_predicated_backedge_with_side_exit_unknown_start(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[START:%.*]], 1
+; CHECK-NEXT:    [[UMAX:%.*]] = call i32 @llvm.umax.i32(i32 [[LEN:%.*]], i32 [[TMP0]])
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[START]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    [[CHECK:%.*]] = icmp ult i32 [[IV]], [[LEN]]
+; CHECK-NEXT:    br i1 [[CHECK]], label [[INNER_BLOCK:%.*]], label [[FAILED:%.*]]
+; CHECK:       inner_block:
+; CHECK-NEXT:    [[COND_1:%.*]] = call i1 @cond()
+; CHECK-NEXT:    br i1 [[COND_1]], label [[BACKEDGE]], label [[FAILED]]
+; CHECK:       backedge:
+; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp ult i32 [[IV_NEXT]], [[LEN]]
+; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i32 [[UMAX]]
+; CHECK:       failed:
+; CHECK-NEXT:    ret i32 -1
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [%start, %entry], [%iv.next, %backedge]
+  %iv.next = add i32 %iv, 1
+  %check = icmp ult i32 %iv, %len
+  br i1 %check, label %inner_block, label %failed
+
+inner_block:
+  %cond_1 = call i1 @cond()
+  br i1 %cond_1, label %backedge, label %failed
+
+backedge:
+  %loop.cond = icmp ult i32 %iv.next, %len
+  br i1 %loop.cond, label %loop, label %exit
+
+exit:
+  ret i32 %iv.next
+
+failed:
+  ret i32 -1
 }

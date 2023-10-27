@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Analysis/Analyses/ReachableCode.h"
+#include "clang/AST/Attr.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprObjC.h"
@@ -629,6 +630,10 @@ void DeadCodeScan::reportDeadCode(const CFGBlock *B,
     UK = reachable_code::UK_Return;
   }
 
+  const auto *AS = dyn_cast<AttributedStmt>(S);
+  bool HasFallThroughAttr =
+      AS && hasSpecificAttr<FallThroughAttr>(AS->getAttrs());
+
   SourceRange SilenceableCondVal;
 
   if (UK == reachable_code::UK_Other) {
@@ -645,8 +650,9 @@ void DeadCodeScan::reportDeadCode(const CFGBlock *B,
         R2 = Inc->getSourceRange();
       }
 
-      CB.HandleUnreachable(reachable_code::UK_Loop_Increment,
-                           Loc, SourceRange(), SourceRange(Loc, Loc), R2);
+      CB.HandleUnreachable(reachable_code::UK_Loop_Increment, Loc,
+                           SourceRange(), SourceRange(Loc, Loc), R2,
+                           HasFallThroughAttr);
       return;
     }
 
@@ -665,7 +671,7 @@ void DeadCodeScan::reportDeadCode(const CFGBlock *B,
 
   SourceRange R1, R2;
   SourceLocation Loc = GetUnreachableLoc(S, R1, R2);
-  CB.HandleUnreachable(UK, Loc, SilenceableCondVal, R1, R2);
+  CB.HandleUnreachable(UK, Loc, SilenceableCondVal, R1, R2, HasFallThroughAttr);
 }
 
 //===----------------------------------------------------------------------===//

@@ -379,6 +379,64 @@ static bool isArithmeticLogicPair(const MachineInstr *FirstMI,
   return false;
 }
 
+// "(A + B) + 1" or "(A - B) - 1"
+static bool isAddSub2RegAndConstOnePair(const MachineInstr *FirstMI,
+                                        const MachineInstr &SecondMI) {
+  bool NeedsSubtract = false;
+
+  // The 2nd instr must be an add-immediate or subtract-immediate.
+  switch (SecondMI.getOpcode()) {
+  case AArch64::SUBWri:
+  case AArch64::SUBXri:
+    NeedsSubtract = true;
+    [[fallthrough]];
+  case AArch64::ADDWri:
+  case AArch64::ADDXri:
+    break;
+
+  default:
+    return false;
+  }
+
+  // The immediate in the 2nd instr must be "1".
+  if (!SecondMI.getOperand(2).isImm() || SecondMI.getOperand(2).getImm() != 1) {
+    return false;
+  }
+
+  // Assume the 1st instr to be a wildcard if it is unspecified.
+  if (FirstMI == nullptr) {
+    return true;
+  }
+
+  switch (FirstMI->getOpcode()) {
+  case AArch64::SUBWrs:
+  case AArch64::SUBXrs:
+    if (AArch64InstrInfo::hasShiftedReg(*FirstMI))
+      return false;
+    [[fallthrough]];
+  case AArch64::SUBWrr:
+  case AArch64::SUBXrr:
+    if (NeedsSubtract) {
+      return true;
+    }
+    break;
+
+  case AArch64::ADDWrs:
+  case AArch64::ADDXrs:
+    if (AArch64InstrInfo::hasShiftedReg(*FirstMI))
+      return false;
+    [[fallthrough]];
+  case AArch64::ADDWrr:
+  case AArch64::ADDXrr:
+    if (!NeedsSubtract) {
+      return true;
+    }
+    break;
+  }
+
+  return false;
+}
+
 /// \brief Check if the instr pair, FirstMI and SecondMI, should be fused
 /// together. Given SecondMI, when FirstMI is unspecified, then check if
 /// SecondMI may be part of a fused pair at all.
@@ -410,6 +468,9 @@ static bool shouldScheduleAdjacent(const TargetInstrInfo &TII,
   if (ST.hasFuseCCSelect() && isCCSelectPair(FirstMI, SecondMI))
     return true;
   if (ST.hasFuseArithmeticLogic() && isArithmeticLogicPair(FirstMI, SecondMI))
+    return true;
+  if (ST.hasFuseAddSub2RegAndConstOne() &&
+      isAddSub2RegAndConstOnePair(FirstMI, SecondMI))
     return true;
 
   return false;

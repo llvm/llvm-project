@@ -7,11 +7,11 @@
 define i64 @csed_impdef_killflag(i64 %a) {
 ; CHECK-LABEL: csed_impdef_killflag:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    mov w8, #1
+; CHECK-NEXT:    mov w8, #1 ; =0x1
 ; CHECK-NEXT:    cmp x0, #0
+; CHECK-NEXT:    mov x9, #2 ; =0x2
 ; CHECK-NEXT:    csel w8, wzr, w8, ne
-; CHECK-NEXT:    mov x9, #2
-; CHECK-NEXT:    mov x10, #3
+; CHECK-NEXT:    mov x10, #3 ; =0x3
 ; CHECK-NEXT:    ubfx x8, x8, #0, #32
 ; CHECK-NEXT:    csel x9, x9, x10, ne
 ; CHECK-NEXT:    add x0, x9, x8

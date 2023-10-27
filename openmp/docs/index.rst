@@ -91,6 +91,21 @@ please refer to :doc:`remarks/OptimizationRemarks`.
 
    remarks/OptimizationRemarks
 
+OpenMP Command-Line Argument Reference
+======================================
+In addition to the 
+`Clang command-line argument reference <https://clang.llvm.org/docs/ClangCommandLineReference.html>`_ 
+we also recommend the OpenMP 
+:doc:`command-line argument reference <CommandLineArgumentReference>` 
+page that offers a detailed overview of options specific to OpenMP. It also 
+contains a list of OpenMP offloading related command-line arguments.
+
+
+.. toctree::
+   :hidden:
+   :maxdepth: 1
+
+   CommandLineArgumentReference
 
 Support, Getting Involved, and Frequently Asked Questions (FAQ)
 ===============================================================

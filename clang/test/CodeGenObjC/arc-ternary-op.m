@@ -104,7 +104,6 @@ void test1(int cond) {
   // CHECK:      ret void
 }
 
-// rdar://13113981
 // Test that, when emitting an expression at +1 that we can't peephole,
 // we emit the retain inside the full-expression.  If we ever peephole
 // +1s of conditional expressions (which we probably ought to), we'll

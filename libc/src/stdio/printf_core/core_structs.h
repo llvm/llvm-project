@@ -15,7 +15,7 @@
 #include <inttypes.h>
 #include <stddef.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace printf_core {
 
 // These length modifiers match the length modifiers in the format string, which
@@ -53,7 +53,7 @@ struct FormatSection {
 
   // This operator is only used for testing and should be automatically
   // optimized out for release builds.
-  bool operator==(const FormatSection &other) {
+  bool operator==(const FormatSection &other) const {
     if (has_conv != other.has_conv)
       return false;
 
@@ -77,6 +77,30 @@ struct FormatSection {
   }
 };
 
+enum PrimaryType : uint8_t { Unknown = 0, Float = 1, Pointer = 2, Integer = 3 };
+
+// TypeDesc stores the information about a type that is relevant to printf in
+// a relatively compact manner.
+struct TypeDesc {
+  uint8_t size;
+  PrimaryType primary_type;
+  LIBC_INLINE constexpr bool operator==(const TypeDesc &other) const {
+    return (size == other.size) && (primary_type == other.primary_type);
+  }
+};
+
+template <typename T> LIBC_INLINE constexpr TypeDesc type_desc_from_type() {
+  if constexpr (cpp::is_same_v<T, void>) {
+    return TypeDesc{0, PrimaryType::Unknown};
+  } else {
+    constexpr bool isPointer = cpp::is_pointer_v<T>;
+    constexpr bool isFloat = cpp::is_floating_point_v<T>;
+    return TypeDesc{sizeof(T), isPointer ? PrimaryType::Pointer
+                               : isFloat ? PrimaryType::Float
+                                         : PrimaryType::Integer};
+  }
+}
+
 // This is the value to be returned by conversions when no error has occurred.
 constexpr int WRITE_OK = 0;
 // These are the printf return values for when an error has occurred. They are
@@ -87,6 +111,6 @@ constexpr int NULLPTR_WRITE_ERROR = -3;
 constexpr int INT_CONVERSION_ERROR = -4;
 
 } // namespace printf_core
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STDIO_PRINTF_CORE_CORE_STRUCTS_H

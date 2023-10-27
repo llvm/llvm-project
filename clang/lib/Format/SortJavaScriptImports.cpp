@@ -72,6 +72,7 @@ struct JsImportedSymbol {
 struct JsModuleReference {
   bool FormattingOff = false;
   bool IsExport = false;
+  bool IsTypeOnly = false;
   // Module references are sorted into these categories, in order.
   enum ReferenceCategory {
     SIDE_EFFECT,     // "import 'something';"
@@ -195,8 +196,7 @@ public:
     // Separate references from the main code body of the file.
     if (FirstNonImportLine && FirstNonImportLine->First->NewlinesBefore < 2 &&
         !(FirstNonImportLine->First->is(tok::comment) &&
-          FirstNonImportLine->First->TokenText.trim() ==
-              "// clang-format on")) {
+          isClangFormatOn(FirstNonImportLine->First->TokenText.trim()))) {
       ReferencesText += "\n";
     }
 
@@ -217,8 +217,8 @@ public:
   }
 
 private:
-  FormatToken *Current;
-  FormatToken *LineEnd;
+  FormatToken *Current = nullptr;
+  FormatToken *LineEnd = nullptr;
 
   FormatToken invalidToken;
 
@@ -307,6 +307,7 @@ private:
       if (Reference->Category == JsModuleReference::SIDE_EFFECT ||
           PreviousReference->Category == JsModuleReference::SIDE_EFFECT ||
           Reference->IsExport != PreviousReference->IsExport ||
+          Reference->IsTypeOnly != PreviousReference->IsTypeOnly ||
           !PreviousReference->Prefix.empty() || !Reference->Prefix.empty() ||
           !PreviousReference->DefaultImport.empty() ||
           !Reference->DefaultImport.empty() || Reference->Symbols.empty() ||
@@ -376,9 +377,9 @@ private:
       // This is tracked in FormattingOff here and on JsModuleReference.
       while (Current && Current->is(tok::comment)) {
         StringRef CommentText = Current->TokenText.trim();
-        if (CommentText == "// clang-format off") {
+        if (isClangFormatOff(CommentText)) {
           FormattingOff = true;
-        } else if (CommentText == "// clang-format on") {
+        } else if (isClangFormatOn(CommentText)) {
           FormattingOff = false;
           // Special case: consider a trailing "clang-format on" line to be part
           // of the module reference, so that it gets moved around together with
@@ -489,6 +490,11 @@ private:
   bool parseStarBinding(const AdditionalKeywords &Keywords,
                         JsModuleReference &Reference) {
     // * as prefix from '...';
+    if (Current->is(Keywords.kw_type) && Current->Next &&
+        Current->Next->is(tok::star)) {
+      Reference.IsTypeOnly = true;
+      nextToken();
+    }
     if (Current->isNot(tok::star))
       return false;
     nextToken();
@@ -504,8 +510,14 @@ private:
 
   bool parseNamedBindings(const AdditionalKeywords &Keywords,
                           JsModuleReference &Reference) {
+    if (Current->is(Keywords.kw_type) && Current->Next &&
+        Current->Next->isOneOf(tok::identifier, tok::l_brace)) {
+      Reference.IsTypeOnly = true;
+      nextToken();
+    }
+
     // eat a potential "import X, " prefix.
-    if (Current->is(tok::identifier)) {
+    if (!Reference.IsExport && Current->is(tok::identifier)) {
       Reference.DefaultImport = Current->TokenText;
       nextToken();
       if (Current->is(Keywords.kw_from))
@@ -518,7 +530,7 @@ private:
           nextToken();
           if (Current->is(tok::semi))
             return true;
-          if (!Current->is(tok::period))
+          if (Current->isNot(tok::period))
             return false;
           nextToken();
         }
@@ -536,14 +548,19 @@ private:
       nextToken();
       if (Current->is(tok::r_brace))
         break;
-      if (!Current->isOneOf(tok::identifier, tok::kw_default))
+      bool isTypeOnly =
+          Current->is(Keywords.kw_type) && Current->Next &&
+          Current->Next->isOneOf(tok::identifier, tok::kw_default);
+      if (!isTypeOnly && !Current->isOneOf(tok::identifier, tok::kw_default))
         return false;
 
       JsImportedSymbol Symbol;
-      Symbol.Symbol = Current->TokenText;
       // Make sure to include any preceding comments.
       Symbol.Range.setBegin(
           Current->getPreviousNonComment()->Next->WhitespaceRange.getBegin());
+      if (isTypeOnly)
+        nextToken();
+      Symbol.Symbol = Current->TokenText;
       nextToken();
 
       if (Current->is(Keywords.kw_as)) {

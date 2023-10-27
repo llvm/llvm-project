@@ -4,7 +4,7 @@
 
 load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
 load("//llvm:tblgen.bzl", "gentbl")
-
+load("//llvm:binary_alias.bzl", "binary_alias")
 load(
     "//:vars.bzl",
     "LLVM_VERSION",
@@ -52,6 +52,7 @@ cc_library(
         "//llvm:Option",
         "//llvm:Support",
         "//llvm:Target",
+        "//llvm:TargetParser",
         "//llvm:config",
     ],
 )
@@ -105,8 +106,11 @@ cc_library(
         "//llvm:Passes",
         "//llvm:Remarks",
         "//llvm:Support",
+        "//llvm:TargetParser",
         "//llvm:TransformUtils",
         "//llvm:config",
+        "@llvm_zlib//:zlib",
+        "@llvm_zstd//:zstd",
     ],
 )
 
@@ -158,6 +162,7 @@ cc_library(
         "//llvm:Support",
         "//llvm:Symbolize",
         "//llvm:Target",
+        "//llvm:TargetParser",
         "//llvm:TransformUtils",
         "//llvm:WindowsDriver",
         "//llvm:WindowsManifest",
@@ -190,6 +195,7 @@ cc_library(
         ":mingw_options_inc_gen",
         "//llvm:Option",
         "//llvm:Support",
+        "//llvm:TargetParser",
     ],
 )
 
@@ -231,6 +237,7 @@ cc_library(
         "//llvm:Object",
         "//llvm:Option",
         "//llvm:Support",
+        "//llvm:TargetParser",
         "//llvm:TextAPI",
         "//llvm:config",
     ],
@@ -271,6 +278,7 @@ cc_library(
         "//llvm:Object",
         "//llvm:Option",
         "//llvm:Support",
+        "//llvm:TargetParser",
         "//llvm:config",
     ],
 )
@@ -298,6 +306,7 @@ cc_binary(
         ":MinGW",
         ":Wasm",
         "//llvm:Support",
+        "//llvm:TargetParser",
     ],
 )
 
@@ -307,16 +316,15 @@ cc_binary(
 # macOS require that the binary be named "ld64.lld".
 # Windows require that the binary be named "lld-link".
 # WebAssembly builds require that the binary be named "wasm-ld".
-genrule(
-    name = "gen_lld",
-    srcs = [":lld"],
-    outs = [
+[
+    binary_alias(
+        name = name,
+        binary = ":lld",
+    )
+    for name in [
         "ld.lld",
         "ld64.lld",
         "lld-link",
         "wasm-ld",
-    ],
-    cmd =
-        "target=$$(basename $<); for n in ld.lld ld64.lld lld-link wasm-ld; do ln -sf $$target $(@D)/$$n; done",
-    output_to_bindir = 1,
-)
+    ]
+]

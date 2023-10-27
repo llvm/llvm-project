@@ -40,7 +40,7 @@
 #endif
 
 #ifndef __APPLE__
-#include "Utility/UuidCompatibility.h"
+#include "lldb/Utility/AppleUuidCompatibility.h"
 #else
 #include <uuid/uuid.h>
 #endif
@@ -693,7 +693,7 @@ bool DynamicLoaderMacOSXDYLD::ReadImageInfos(
          i++) {
       image_infos[i].address = info_data_ref.GetAddress(&info_data_offset);
       lldb::addr_t path_addr = info_data_ref.GetAddress(&info_data_offset);
-      image_infos[i].mod_date = info_data_ref.GetAddress(&info_data_offset);
+      info_data_ref.GetAddress(&info_data_offset); // mod_date, unused */
 
       char raw_path[PATH_MAX];
       m_process->ReadCStringFromMemory(path_addr, raw_path, sizeof(raw_path),

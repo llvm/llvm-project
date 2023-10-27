@@ -777,4 +777,48 @@ def SPIRV_CLUMinOp : SPIRV_CLBinaryArithmeticOp<"u_min", 159, SPIRV_Integer> {
   }];
 }
 
+// -----
+
+def SPIRV_CLPrintfOp : SPIRV_CLOp<"printf", 184, []> {
+  let summary = [{
+    The printf extended instruction writes output to an implementation-
+    defined stream such as stdout under control of the string pointed to by
+    format that specifies how subsequent arguments are converted for output.
+  }];
+
+  let description = [{
+    printf returns 0 if it was executed successfully and -1 otherwise.
+
+    Result Type must be i32.
+
+    Format must be a pointer(constant) to i8. If there are insufficient 
+    arguments for the format, the behavior is undefined. If the format 
+    is exhausted while arguments remain, the excess arguments are evaluated
+    (as always) but are otherwise ignored. The printf instruction returns 
+    when the end of the format string is encountered.
+
+    <!-- End of AutoGen section -->
+
+    #### Example:
+
+    ```mlir
+    %0 = spirv.CL.printf %0 %1 %2 : (!spirv.ptr<i8, UniformConstant>, (i32, i32)) -> i32
+    ```
+  }];
+
+  let arguments = (ins
+    SPIRV_AnyPtr:$format,
+    Variadic<SPIRV_Type>:$arguments
+  );
+  
+   let results = (outs
+    SPIRV_Integer:$result
+  );
+
+  let assemblyFormat = [{
+  $format `,` $arguments  attr-dict `:`  `(` type($format) `,` `(` type($arguments) `)` `)` `->` type($result)
+  }];
+
+  let hasVerifier = 0;
+}
 #endif // MLIR_DIALECT_SPIRV_IR_CL_OPS

@@ -4,7 +4,7 @@
 // TODO: Re-enable LLVM lowering test.
 //
 // Test that we can lower all the way to LLVM without crashing, don't check results here.
-// DISABLED: mlir-opt %s --convert-linalg-to-llvm -o=/dev/null 2>&1
+// DISABLED: mlir-opt %s -='use-opaque-pointers=1' -o=/dev/null 2>&1
 
 func.func @views(%arg0: index) {
   %c0 = arith.constant 0 : index
@@ -599,3 +599,17 @@ func.func @reduce_arith_with_attr(%input: tensor<16x32x64xf32>,
 // CHECK-SAME:    outs
 // CHECK-SAME:    dimensions = [1]
 // CHECK-NEXT:    return %[[REDUCED]] : tensor<16x64xf32>
+
+// -----
+
+func.func @softmax(%arg0: tensor<2x16x32xf32>) -> tensor<2x16x32xf32> {
+  %0 = tensor.empty() : tensor<2x16x32xf32>
+  %1 = linalg.softmax dimension(2) ins(%arg0 : tensor<2x16x32xf32>) outs(%0: tensor<2x16x32xf32>) -> tensor<2x16x32xf32>
+  return %1 : tensor<2x16x32xf32>
+}
+// CHECK:      func.func @softmax(%[[ARG0:[a-zA-Z0-9_]+]]: tensor<2x16x32xf32>) -> tensor<2x16x32xf32> {
+// CHECK:        %[[D0:.+]] = tensor.empty() : tensor<2x16x32xf32>
+// CHECK:        %[[D1:.+]] = linalg.softmax dimension(2) ins(%[[ARG0]] : tensor<2x16x32xf32>) outs(%[[D0]] :
+// CHECK-SAME:     tensor<2x16x32xf32>) -> tensor<2x16x32xf32>
+// CHECK:        return %[[D1]] : tensor<2x16x32xf32>
+// CHECK:      }

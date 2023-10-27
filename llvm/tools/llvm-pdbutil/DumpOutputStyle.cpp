@@ -15,6 +15,7 @@
 #include "llvm-pdbutil.h"
 
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/DebugInfo/CodeView/CVSymbolVisitor.h"
 #include "llvm/DebugInfo/CodeView/CVTypeVisitor.h"
 #include "llvm/DebugInfo/CodeView/DebugChecksumsSubsection.h"
@@ -1285,7 +1286,7 @@ Error DumpOutputStyle::dumpTypesFromObjectFile() {
       return ContentsOrErr.takeError();
 
     uint32_t Magic;
-    BinaryStreamReader Reader(*ContentsOrErr, llvm::support::little);
+    BinaryStreamReader Reader(*ContentsOrErr, llvm::endianness::little);
     if (auto EC = Reader.readInteger(Magic))
       return EC;
     if (Magic != COFF::DEBUG_SECTION_MAGIC)

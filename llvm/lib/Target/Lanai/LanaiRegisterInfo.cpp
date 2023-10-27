@@ -167,7 +167,7 @@ bool LanaiRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
     assert(RS && "Register scavenging must be on");
     Register Reg = RS->FindUnusedReg(&Lanai::GPRRegClass);
     if (!Reg)
-      Reg = RS->scavengeRegister(&Lanai::GPRRegClass, II, SPAdj);
+      Reg = RS->scavengeRegisterBackwards(Lanai::GPRRegClass, II, false, SPAdj);
     assert(Reg && "Register scavenger failed");
 
     bool HasNegOffset = false;
@@ -235,10 +235,11 @@ bool LanaiRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
         .addReg(FrameReg)
         .addImm(-Offset);
     MI.eraseFromParent();
-  } else {
-    MI.getOperand(FIOperandNum).ChangeToRegister(FrameReg, /*isDef=*/false);
-    MI.getOperand(FIOperandNum + 1).ChangeToImmediate(Offset);
+    return true;
   }
+
+  MI.getOperand(FIOperandNum).ChangeToRegister(FrameReg, /*isDef=*/false);
+  MI.getOperand(FIOperandNum + 1).ChangeToImmediate(Offset);
   return false;
 }
 

@@ -12,12 +12,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/SourceMgr.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
+#include "llvm/TableGen/TableGenBackend.h"
 #include <algorithm>
-#include <string>
 #include <vector>
 using namespace llvm;
 
@@ -86,8 +86,5 @@ void CTagsEmitter::run(raw_ostream &OS) {
     T.emit(OS);
 }
 
-namespace llvm {
-
-void EmitCTags(RecordKeeper &RK, raw_ostream &OS) { CTagsEmitter(RK).run(OS); }
-
-} // End llvm namespace.
+static TableGen::Emitter::OptClass<CTagsEmitter>
+    X("gen-ctags", "Generate ctags-compatible index");

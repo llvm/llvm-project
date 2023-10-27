@@ -135,6 +135,14 @@ std::string InputSection::getSourceLocation(uint64_t off) const {
   return {};
 }
 
+const Reloc *InputSection::getRelocAt(uint32_t off) const {
+  auto it = llvm::find_if(
+      relocs, [=](const macho::Reloc &r) { return r.offset == off; });
+  if (it == relocs.end())
+    return nullptr;
+  return &*it;
+}
+
 void ConcatInputSection::foldIdentical(ConcatInputSection *copy) {
   align = std::max(align, copy->align);
   copy->live = false;
@@ -189,7 +197,7 @@ void ConcatInputSection::writeTo(uint8_t *buf) {
           !referentSym->isInGot())
         target->relaxGotLoad(loc, r.type);
       // For dtrace symbols, do not handle them as normal undefined symbols
-      if (referentSym->getName().startswith("___dtrace_")) {
+      if (referentSym->getName().starts_with("___dtrace_")) {
         // Change dtrace call site to pre-defined instructions
         target->handleDtraceReloc(referentSym, r, loc);
         continue;
@@ -238,7 +246,7 @@ void CStringInputSection::splitIntoPieces() {
     size_t end = s.find(0);
     if (end == StringRef::npos)
       fatal(getLocation(off) + ": string is not null terminated");
-    uint32_t hash = deduplicateLiterals ? xxHash64(s.take_front(end)) : 0;
+    uint32_t hash = deduplicateLiterals ? xxh3_64bits(s.take_front(end)) : 0;
     pieces.emplace_back(off, hash);
     size_t size = end + 1; // include null terminator
     s = s.substr(size);
@@ -257,6 +265,15 @@ StringPiece &CStringInputSection::getStringPiece(uint64_t off) {
 
 const StringPiece &CStringInputSection::getStringPiece(uint64_t off) const {
   return const_cast<CStringInputSection *>(this)->getStringPiece(off);
+}
+
+size_t CStringInputSection::getStringPieceIndex(uint64_t off) const {
+  if (off >= data.size())
+    fatal(toString(this) + ": offset is outside the section");
+
+  auto it =
+      partition_point(pieces, [=](StringPiece p) { return p.inSecOff <= off; });
+  return std::distance(pieces.begin(), it) - 1;
 }
 
 uint64_t CStringInputSection::getOffset(uint64_t off) const {

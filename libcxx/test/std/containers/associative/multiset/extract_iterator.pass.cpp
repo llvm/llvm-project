@@ -22,7 +22,7 @@
 template <class Container>
 void test(Container& c)
 {
-    size_t sz = c.size();
+    std::size_t sz = c.size();
 
     for (auto first = c.cbegin(); first != c.cend();)
     {

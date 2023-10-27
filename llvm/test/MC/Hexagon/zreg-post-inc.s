@@ -1,4 +1,4 @@
-# RUN: not llvm-mc -arch=hexagon -filetype=obj -mhvx -mcpu=hexagonv66 %s 2> %t; FileCheck --implicit-check-not=error %s <%t
+# RUN: not llvm-mc -triple=hexagon -filetype=obj -mhvx -mcpu=hexagonv66 %s 2> %t; FileCheck --implicit-check-not=error: %s <%t
 
 {
   if (p0) memb(r14+#8)=r4.new

@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -fsanitize=kcfi -o - %s | FileCheck %s
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -fsanitize=kcfi -x c++ -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -fsanitize=kcfi -x c++ -o - %s | FileCheck %s --check-prefixes=CHECK,MEMBER
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -fsanitize=kcfi -fpatchable-function-entry-offset=3 -o - %s | FileCheck %s --check-prefixes=CHECK,OFFSET
 #if !__has_feature(kcfi)
 #error Missing kcfi?
@@ -54,7 +54,21 @@ int test(void) {
          f6();
 }
 
+#ifdef __cplusplus
+struct A {
+  // MEMBER-DAG: define{{.*}} void @_ZN1A1fEv(ptr{{.*}} %this){{.*}} !kcfi_type ![[#TYPE3:]]
+  void f() {}
+};
+
+void test_member_call(void) {
+  void (A::* p)() = &A::f;
+  // MEMBER-DAG: call void %[[#]](ptr{{.*}} [ "kcfi"(i32 [[#%d,HASH3:]]) ]
+  (A().*p)();
+}
+#endif
+
 // CHECK-DAG: ![[#]] = !{i32 4, !"kcfi", i32 1}
 // OFFSET-DAG: ![[#]] = !{i32 4, !"kcfi-offset", i32 3}
 // CHECK-DAG: ![[#TYPE]] = !{i32 [[#HASH]]}
 // CHECK-DAG: ![[#TYPE2]] = !{i32 [[#%d,HASH2:]]}
+// MEMBER-DAG: ![[#TYPE3]] = !{i32 [[#HASH3]]}

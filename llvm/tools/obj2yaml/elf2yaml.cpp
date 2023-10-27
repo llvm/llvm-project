@@ -300,7 +300,7 @@ template <class ELFT> Expected<ELFYAML::Object *> ELFDumper<ELFT>::dump() {
   }
 
   // Normally an object that does not have sections has e_shnum == 0.
-  // Also, e_shnum might be 0, when the the number of entries in the section
+  // Also, e_shnum might be 0, when the number of entries in the section
   // header table is larger than or equal to SHN_LORESERVE (0xff00). In this
   // case the real number of entries is held in the sh_size member of the
   // initial entry. We have a section header table when `e_shoff` is not 0.
@@ -484,6 +484,7 @@ ELFDumper<ELFT>::dumpProgramHeaders(
     PH.Flags = Phdr.p_flags;
     PH.VAddr = Phdr.p_vaddr;
     PH.PAddr = Phdr.p_paddr;
+    PH.Offset = Phdr.p_offset;
 
     // yaml2obj sets the alignment of a segment to 1 by default.
     // We do not print the default alignment to reduce noise in the output.
@@ -1221,6 +1222,7 @@ ELFDumper<ELFT>::dumpNoteSection(const Elf_Shdr *Shdr) {
 
   std::vector<ELFYAML::NoteEntry> Entries;
   ArrayRef<uint8_t> Content = *ContentOrErr;
+  size_t Align = std::max<size_t>(Shdr->sh_addralign, 4);
   while (!Content.empty()) {
     if (Content.size() < sizeof(Elf_Nhdr)) {
       S->Content = yaml::BinaryRef(*ContentOrErr);
@@ -1228,16 +1230,16 @@ ELFDumper<ELFT>::dumpNoteSection(const Elf_Shdr *Shdr) {
     }
 
     const Elf_Nhdr *Header = reinterpret_cast<const Elf_Nhdr *>(Content.data());
-    if (Content.size() < Header->getSize()) {
+    if (Content.size() < Header->getSize(Align)) {
       S->Content = yaml::BinaryRef(*ContentOrErr);
       return S.release();
     }
 
     Elf_Note Note(*Header);
     Entries.push_back(
-        {Note.getName(), Note.getDesc(), (ELFYAML::ELF_NT)Note.getType()});
+        {Note.getName(), Note.getDesc(Align), (ELFYAML::ELF_NT)Note.getType()});
 
-    Content = Content.drop_front(Header->getSize());
+    Content = Content.drop_front(Header->getSize(Align));
   }
 
   S->Notes = std::move(Entries);

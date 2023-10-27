@@ -595,19 +595,19 @@ void *COFFPlatformRuntimeState::findJITDylibBaseByPC(uint64_t PC) {
   return Range.Header;
 }
 
-ORC_RT_INTERFACE __orc_rt_CWrapperFunctionResult
+ORC_RT_INTERFACE orc_rt_CWrapperFunctionResult
 __orc_rt_coff_platform_bootstrap(char *ArgData, size_t ArgSize) {
   COFFPlatformRuntimeState::initialize();
   return WrapperFunctionResult().release();
 }
 
-ORC_RT_INTERFACE __orc_rt_CWrapperFunctionResult
+ORC_RT_INTERFACE orc_rt_CWrapperFunctionResult
 __orc_rt_coff_platform_shutdown(char *ArgData, size_t ArgSize) {
   COFFPlatformRuntimeState::destroy();
   return WrapperFunctionResult().release();
 }
 
-ORC_RT_INTERFACE __orc_rt_CWrapperFunctionResult
+ORC_RT_INTERFACE orc_rt_CWrapperFunctionResult
 __orc_rt_coff_register_jitdylib(char *ArgData, size_t ArgSize) {
   return WrapperFunction<SPSError(SPSString, SPSExecutorAddr)>::handle(
              ArgData, ArgSize,
@@ -618,7 +618,7 @@ __orc_rt_coff_register_jitdylib(char *ArgData, size_t ArgSize) {
       .release();
 }
 
-ORC_RT_INTERFACE __orc_rt_CWrapperFunctionResult
+ORC_RT_INTERFACE orc_rt_CWrapperFunctionResult
 __orc_rt_coff_deregister_jitdylib(char *ArgData, size_t ArgSize) {
   return WrapperFunction<SPSError(SPSExecutorAddr)>::handle(
              ArgData, ArgSize,
@@ -629,7 +629,7 @@ __orc_rt_coff_deregister_jitdylib(char *ArgData, size_t ArgSize) {
       .release();
 }
 
-ORC_RT_INTERFACE __orc_rt_CWrapperFunctionResult
+ORC_RT_INTERFACE orc_rt_CWrapperFunctionResult
 __orc_rt_coff_register_object_sections(char *ArgData, size_t ArgSize) {
   return WrapperFunction<SPSError(SPSExecutorAddr, SPSCOFFObjectSectionsMap,
                                   bool)>::
@@ -644,7 +644,7 @@ __orc_rt_coff_register_object_sections(char *ArgData, size_t ArgSize) {
           .release();
 }
 
-ORC_RT_INTERFACE __orc_rt_CWrapperFunctionResult
+ORC_RT_INTERFACE orc_rt_CWrapperFunctionResult
 __orc_rt_coff_deregister_object_sections(char *ArgData, size_t ArgSize) {
   return WrapperFunction<SPSError(SPSExecutorAddr, SPSCOFFObjectSectionsMap)>::
       handle(ArgData, ArgSize,

@@ -9,6 +9,13 @@
 /// \file
 /// AMDHSA kernel descriptor definitions. For more information, visit
 /// https://llvm.org/docs/AMDGPUUsage.html#kernel-descriptor
+///
+/// \warning
+/// Any changes to this file should also be audited for corresponding changes
+/// needed in both the assembler and disassembler, namely:
+/// * AMDGPUAsmPrinter.{cpp,h}
+/// * AMDGPUTargetStreamer.{cpp,h}
+/// * AMDGPUDisassembler.{cpp,h}
 //
 //===----------------------------------------------------------------------===//
 
@@ -166,6 +173,15 @@ enum : int32_t {
 };
 #undef KERNEL_CODE_PROPERTY
 
+// Kernarg preload specification.
+#define KERNARG_PRELOAD_SPEC(NAME, SHIFT, WIDTH)                               \
+  AMDHSA_BITS_ENUM_ENTRY(KERNARG_PRELOAD_SPEC_##NAME, SHIFT, WIDTH)
+enum : int32_t {
+  KERNARG_PRELOAD_SPEC(LENGTH, 0, 7),
+  KERNARG_PRELOAD_SPEC(OFFSET, 7, 9),
+};
+#undef KERNARG_PRELOAD_SPEC
+
 // Kernel descriptor. Must be kept backwards compatible.
 struct kernel_descriptor_t {
   uint32_t group_segment_fixed_size;
@@ -178,7 +194,8 @@ struct kernel_descriptor_t {
   uint32_t compute_pgm_rsrc1;
   uint32_t compute_pgm_rsrc2;
   uint16_t kernel_code_properties;
-  uint8_t reserved2[6];
+  uint16_t kernarg_preload;
+  uint8_t reserved3[4];
 };
 
 enum : uint32_t {
@@ -192,7 +209,8 @@ enum : uint32_t {
   COMPUTE_PGM_RSRC1_OFFSET = 48,
   COMPUTE_PGM_RSRC2_OFFSET = 52,
   KERNEL_CODE_PROPERTIES_OFFSET = 56,
-  RESERVED2_OFFSET = 58,
+  KERNARG_PRELOAD_OFFSET = 58,
+  RESERVED3_OFFSET = 60
 };
 
 static_assert(
@@ -226,8 +244,11 @@ static_assert(offsetof(kernel_descriptor_t, compute_pgm_rsrc2) ==
 static_assert(offsetof(kernel_descriptor_t, kernel_code_properties) ==
                   KERNEL_CODE_PROPERTIES_OFFSET,
               "invalid offset for kernel_code_properties");
-static_assert(offsetof(kernel_descriptor_t, reserved2) == RESERVED2_OFFSET,
-              "invalid offset for reserved2");
+static_assert(offsetof(kernel_descriptor_t, kernarg_preload) ==
+                  KERNARG_PRELOAD_OFFSET,
+              "invalid offset for kernarg_preload");
+static_assert(offsetof(kernel_descriptor_t, reserved3) == RESERVED3_OFFSET,
+              "invalid offset for reserved3");
 
 } // end namespace amdhsa
 } // end namespace llvm

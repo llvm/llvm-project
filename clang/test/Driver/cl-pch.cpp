@@ -79,12 +79,12 @@
 
 // If /Yc /Yu refer to different files, semantics are pretty wonky.  Since this
 // doesn't seem like something that's important in practice, just punt for now.
-// RUN: %clang_cl -Werror /Ycfoo1.h /Yufoo2.h /FIfoo1.h /FIfoo2.h /c -### -- %s 2>&1 \
+// RUN: not %clang_cl -Werror /Ycfoo1.h /Yufoo2.h /FIfoo1.h /FIfoo2.h /c -### -- %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-YC-YU-MISMATCH %s
 // CHECK-YC-YU-MISMATCH: error: support for '/Yc' and '/Yu' with different filenames not implemented yet; flags ignored
 
 // Similarly, punt on /Yc with more than one input file.
-// RUN: %clang_cl -Werror /Ycfoo1.h /FIfoo1.h /c -### -- %s %s 2>&1 \
+// RUN: not %clang_cl -Werror /Ycfoo1.h /FIfoo1.h /c -### -- %s %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-YC-MULTIINPUT %s
 // CHECK-YC-MULTIINPUT: error: support for '/Yc' with more than one source file not implemented yet; flag ignored
 
@@ -336,7 +336,7 @@
 // /FI without /Yu => pch file not used, even if it exists (different from
 // -include, which picks up .gch files if they exist).
 // RUN: touch %t.pch
-// RUN: %clang_cl -Werror /FI%t.pch /Fp%t.pch /c -### -- %s 2>&1 \
+// RUN: not %clang_cl -Werror /FI%t.pch /Fp%t.pch /c -### -- %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-FI %s
 // CHECK-FI-NOT: -include-pch
 // CHECK-FI: -include
@@ -364,7 +364,7 @@
 // CHECK-YCTc: "c"
 
 // Don't crash when a non-source file is passed.
-// RUN: %clang_cl -Werror /Ycpchfile.h /FIpchfile.h /c -### -- %S/Inputs/file.prof 2>&1 \
+// RUN: not %clang_cl -Werror /Ycpchfile.h /FIpchfile.h /c -### -- %S/Inputs/file.prof 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-NoSource %s
 // CHECK-NoSource: file.prof:{{.*}}input unused
 

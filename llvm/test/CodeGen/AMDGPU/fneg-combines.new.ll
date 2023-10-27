@@ -216,10 +216,10 @@ define amdgpu_ps float @fneg_fadd_0_f32(float inreg %tmp2, float inreg %tmp6, <4
 ; SI-NSZ-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 4, 2), 0
 ; SI-NSZ-NEXT:    v_div_fmas_f32 v0, v0, v1, v3
 ; SI-NSZ-NEXT:    v_div_fixup_f32 v0, v0, s1, 1.0
-; SI-NSZ-NEXT:    v_mul_f32_e32 v0, 0x80000000, v0
+; SI-NSZ-NEXT:    v_mul_f32_e32 v0, 0, v0
 ; SI-NSZ-NEXT:    v_mov_b32_e32 v1, s0
-; SI-NSZ-NEXT:    v_cmp_nlt_f32_e64 vcc, -v0, s0
-; SI-NSZ-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
+; SI-NSZ-NEXT:    v_cmp_ngt_f32_e32 vcc, s0, v0
+; SI-NSZ-NEXT:    v_cndmask_b32_e64 v0, -v0, v1, vcc
 ; SI-NSZ-NEXT:    v_mov_b32_e32 v1, 0x7fc00000
 ; SI-NSZ-NEXT:    v_cmp_nlt_f32_e32 vcc, 0, v0
 ; SI-NSZ-NEXT:    v_cndmask_b32_e64 v0, v1, 0, vcc
@@ -266,9 +266,9 @@ define amdgpu_ps float @fneg_fadd_0_f32(float inreg %tmp2, float inreg %tmp6, <4
 ; VI-NSZ-NEXT:    v_mov_b32_e32 v2, s0
 ; VI-NSZ-NEXT:    v_mov_b32_e32 v1, 0x7fc00000
 ; VI-NSZ-NEXT:    v_div_fixup_f32 v0, v0, s1, 1.0
-; VI-NSZ-NEXT:    v_mul_f32_e32 v0, 0x80000000, v0
-; VI-NSZ-NEXT:    v_cmp_nlt_f32_e64 vcc, -v0, s0
-; VI-NSZ-NEXT:    v_cndmask_b32_e32 v0, v0, v2, vcc
+; VI-NSZ-NEXT:    v_mul_f32_e32 v0, 0, v0
+; VI-NSZ-NEXT:    v_cmp_ngt_f32_e32 vcc, s0, v0
+; VI-NSZ-NEXT:    v_cndmask_b32_e64 v0, -v0, v2, vcc
 ; VI-NSZ-NEXT:    v_cmp_nlt_f32_e32 vcc, 0, v0
 ; VI-NSZ-NEXT:    v_cndmask_b32_e64 v0, v1, 0, vcc
 ; VI-NSZ-NEXT:    ; return to shader part epilog
@@ -291,12 +291,10 @@ define amdgpu_ps float @fneg_fadd_0_f32(float inreg %tmp2, float inreg %tmp6, <4
 define amdgpu_ps float @fneg_fadd_0_nsz_f32(float inreg %tmp2, float inreg %tmp6, <4 x i32> %arg) #2 {
 ; SI-SAFE-LABEL: fneg_fadd_0_nsz_f32:
 ; SI-SAFE:       ; %bb.0: ; %.entry
-; SI-SAFE-NEXT:    v_bfrev_b32_e32 v0, 1
-; SI-SAFE-NEXT:    v_mov_b32_e32 v1, s0
-; SI-SAFE-NEXT:    v_cmp_ngt_f32_e64 vcc, s0, 0
-; SI-SAFE-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
+; SI-SAFE-NEXT:    v_min_legacy_f32_e64 v0, 0, s0
+; SI-SAFE-NEXT:    s_brev_b32 s0, 1
 ; SI-SAFE-NEXT:    v_mov_b32_e32 v1, 0x7fc00000
-; SI-SAFE-NEXT:    v_cmp_nlt_f32_e32 vcc, 0, v0
+; SI-SAFE-NEXT:    v_cmp_ngt_f32_e32 vcc, s0, v0
 ; SI-SAFE-NEXT:    v_cndmask_b32_e64 v0, v1, 0, vcc
 ; SI-SAFE-NEXT:    ; return to shader part epilog
 ;
@@ -304,9 +302,9 @@ define amdgpu_ps float @fneg_fadd_0_nsz_f32(float inreg %tmp2, float inreg %tmp6
 ; GCN-NSZ:       ; %bb.0: ; %.entry
 ; GCN-NSZ-NEXT:    v_rcp_f32_e32 v0, s1
 ; GCN-NSZ-NEXT:    v_mov_b32_e32 v1, s0
-; GCN-NSZ-NEXT:    v_mul_f32_e32 v0, 0x80000000, v0
-; GCN-NSZ-NEXT:    v_cmp_nlt_f32_e64 vcc, -v0, s0
-; GCN-NSZ-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
+; GCN-NSZ-NEXT:    v_mul_f32_e32 v0, 0, v0
+; GCN-NSZ-NEXT:    v_cmp_ngt_f32_e32 vcc, s0, v0
+; GCN-NSZ-NEXT:    v_cndmask_b32_e64 v0, -v0, v1, vcc
 ; GCN-NSZ-NEXT:    v_mov_b32_e32 v1, 0x7fc00000
 ; GCN-NSZ-NEXT:    v_cmp_nlt_f32_e32 vcc, 0, v0
 ; GCN-NSZ-NEXT:    v_cndmask_b32_e64 v0, v1, 0, vcc
@@ -2027,6 +2025,22 @@ define { float, float } @v_fneg_rcp_multi_use_fneg_f32(float %a, float %c) #0 {
   ret { float, float } %insert.1
 }
 
+; Test getNegatedExpression works for rcp nodes
+define float @v_negated_rcp_f32(float %arg0, float %arg1) #1 {
+; GCN-LABEL: v_negated_rcp_f32:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_fma_f32 v0, v0, v1, 2.0
+; GCN-NEXT:    v_rcp_f32_e32 v0, v0
+; GCN-NEXT:    v_add_f32_e32 v0, v1, v0
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %neg.arg0 = fneg float %arg0
+  %fma = call nsz float @llvm.fma.f32(float %neg.arg0, float %arg1, float -2.0)
+  %rcp0 = call float @llvm.amdgcn.rcp.f32(float %fma)
+  %mul = fsub nsz float %arg1, %rcp0
+  ret float %mul
+}
+
 ; --------------------------------------------------------------------------------
 ; fmul_legacy tests
 ; --------------------------------------------------------------------------------
@@ -2193,26 +2207,26 @@ define float @v_fneg_round_f32(float %a) #0 {
 ; GCN-SAFE-LABEL: v_fneg_round_f32:
 ; GCN-SAFE:       ; %bb.0:
 ; GCN-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-SAFE-NEXT:    v_trunc_f32_e32 v1, v0
+; GCN-SAFE-NEXT:    v_sub_f32_e32 v2, v0, v1
+; GCN-SAFE-NEXT:    v_cmp_ge_f32_e64 s[4:5], |v2|, 0.5
+; GCN-SAFE-NEXT:    v_cndmask_b32_e64 v2, 0, 1.0, s[4:5]
 ; GCN-SAFE-NEXT:    s_brev_b32 s4, -2
-; GCN-SAFE-NEXT:    v_trunc_f32_e32 v2, v0
-; GCN-SAFE-NEXT:    v_bfi_b32 v1, s4, 1.0, v0
-; GCN-SAFE-NEXT:    v_sub_f32_e32 v0, v0, v2
-; GCN-SAFE-NEXT:    v_cmp_ge_f32_e64 vcc, |v0|, 0.5
-; GCN-SAFE-NEXT:    v_cndmask_b32_e32 v0, 0, v1, vcc
-; GCN-SAFE-NEXT:    v_add_f32_e32 v0, v2, v0
+; GCN-SAFE-NEXT:    v_bfi_b32 v0, s4, v2, v0
+; GCN-SAFE-NEXT:    v_add_f32_e32 v0, v1, v0
 ; GCN-SAFE-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
 ; GCN-SAFE-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GCN-NSZ-LABEL: v_fneg_round_f32:
 ; GCN-NSZ:       ; %bb.0:
 ; GCN-NSZ-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NSZ-NEXT:    v_trunc_f32_e32 v1, v0
+; GCN-NSZ-NEXT:    v_sub_f32_e32 v2, v0, v1
+; GCN-NSZ-NEXT:    v_cmp_ge_f32_e64 s[4:5], |v2|, 0.5
+; GCN-NSZ-NEXT:    v_cndmask_b32_e64 v2, 0, 1.0, s[4:5]
 ; GCN-NSZ-NEXT:    s_brev_b32 s4, -2
-; GCN-NSZ-NEXT:    v_trunc_f32_e32 v2, v0
-; GCN-NSZ-NEXT:    v_bfi_b32 v1, s4, 1.0, v0
-; GCN-NSZ-NEXT:    v_sub_f32_e32 v0, v0, v2
-; GCN-NSZ-NEXT:    v_cmp_ge_f32_e64 vcc, |v0|, 0.5
-; GCN-NSZ-NEXT:    v_cndmask_b32_e32 v0, 0, v1, vcc
-; GCN-NSZ-NEXT:    v_sub_f32_e64 v0, -v2, v0
+; GCN-NSZ-NEXT:    v_bfi_b32 v0, s4, v2, v0
+; GCN-NSZ-NEXT:    v_sub_f32_e64 v0, -v1, v0
 ; GCN-NSZ-NEXT:    s_setpc_b64 s[30:31]
   %round = call float @llvm.round.f32(float %a)
   %fneg = fneg float %round
@@ -2371,12 +2385,12 @@ define void @v_fneg_copytoreg_f32(ptr addrspace(1) %out, float %a, float %b, flo
 ; SI-NEXT:    v_mul_f32_e32 v2, v2, v3
 ; SI-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v5
 ; SI-NEXT:    s_and_saveexec_b64 s[4:5], vcc
-; SI-NEXT:    s_cbranch_execz .LBB117_2
+; SI-NEXT:    s_cbranch_execz .LBB118_2
 ; SI-NEXT:  ; %bb.1: ; %if
 ; SI-NEXT:    v_mul_f32_e64 v3, -v2, v4
 ; SI-NEXT:    flat_store_dword v[0:1], v3
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:  .LBB117_2: ; %endif
+; SI-NEXT:  .LBB118_2: ; %endif
 ; SI-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; SI-NEXT:    flat_store_dword v[0:1], v2
 ; SI-NEXT:    s_waitcnt vmcnt(0)
@@ -2392,12 +2406,12 @@ define void @v_fneg_copytoreg_f32(ptr addrspace(1) %out, float %a, float %b, flo
 ; VI-NEXT:    v_mul_f32_e32 v2, v2, v3
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v5
 ; VI-NEXT:    s_and_saveexec_b64 s[4:5], vcc
-; VI-NEXT:    s_cbranch_execz .LBB117_2
+; VI-NEXT:    s_cbranch_execz .LBB118_2
 ; VI-NEXT:  ; %bb.1: ; %if
 ; VI-NEXT:    v_mul_f32_e64 v3, -v2, v4
 ; VI-NEXT:    flat_store_dword v[0:1], v3
 ; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:  .LBB117_2: ; %endif
+; VI-NEXT:  .LBB118_2: ; %endif
 ; VI-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; VI-NEXT:    flat_store_dword v[0:1], v2
 ; VI-NEXT:    s_waitcnt vmcnt(0)
@@ -2627,8 +2641,7 @@ define float @nnan_fmul_neg1_to_fneg(float %x, float %y) #0 {
 ; GCN-LABEL: nnan_fmul_neg1_to_fneg:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_sub_f32_e32 v0, 0x80000000, v0
-; GCN-NEXT:    v_mul_f32_e32 v0, v0, v1
+; GCN-NEXT:    v_mul_f32_e64 v0, -v0, v1
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %mul = fmul float %x, -1.0
   %add = fmul nnan float %mul, %y
@@ -2667,8 +2680,7 @@ define float @flush_snan_fmul_neg1_to_fneg(float %x, float %y) #0 {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_mul_f32_e32 v0, 1.0, v0
-; GCN-NEXT:    v_sub_f32_e32 v0, 0x80000000, v0
-; GCN-NEXT:    v_mul_f32_e32 v0, v0, v1
+; GCN-NEXT:    v_mul_f32_e64 v0, -v0, v1
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %quiet = call float @llvm.canonicalize.f32(float %x)
   %mul = fmul float %quiet, -1.0
@@ -2782,11 +2794,617 @@ define <2 x half> @fadd_select_fneg_fneg_v2f16(i32 %arg0, <2 x half> %x, <2 x ha
   ret <2 x half> %add
 }
 
+; --------------------------------------------------------------------------------
+; select tests
+; --------------------------------------------------------------------------------
+
+define amdgpu_kernel void @s_fneg_select_infloop_regression_f32(float %arg, i1 %arg1, ptr addrspace(1) %ptr) {
+; SI-LABEL: s_fneg_select_infloop_regression_f32:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; SI-NEXT:    s_waitcnt lgkmcnt(0)
+; SI-NEXT:    s_bitcmp1_b32 s1, 0
+; SI-NEXT:    v_mov_b32_e32 v0, s0
+; SI-NEXT:    s_cselect_b64 s[0:1], -1, 0
+; SI-NEXT:    v_cndmask_b32_e64 v0, v0, 0, s[0:1]
+; SI-NEXT:    v_cndmask_b32_e64 v2, -v0, 0, s[0:1]
+; SI-NEXT:    v_mov_b32_e32 v0, s2
+; SI-NEXT:    v_mov_b32_e32 v1, s3
+; SI-NEXT:    flat_store_dword v[0:1], v2
+; SI-NEXT:    s_endpgm
+;
+; VI-LABEL: s_fneg_select_infloop_regression_f32:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; VI-NEXT:    s_waitcnt lgkmcnt(0)
+; VI-NEXT:    s_bitcmp1_b32 s1, 0
+; VI-NEXT:    v_mov_b32_e32 v0, s0
+; VI-NEXT:    s_cselect_b64 s[0:1], -1, 0
+; VI-NEXT:    v_cndmask_b32_e64 v0, v0, 0, s[0:1]
+; VI-NEXT:    v_cndmask_b32_e64 v2, -v0, 0, s[0:1]
+; VI-NEXT:    v_mov_b32_e32 v0, s2
+; VI-NEXT:    v_mov_b32_e32 v1, s3
+; VI-NEXT:    flat_store_dword v[0:1], v2
+; VI-NEXT:    s_endpgm
+  %i = select i1 %arg1, float 0.0, float %arg
+  %i2 = fneg float %i
+  %i3 = select i1 %arg1, float 0.0, float %i2
+  store float %i3, ptr addrspace(1) %ptr, align 4
+  ret void
+}
+
+define float @v_fneg_select_infloop_regression_f32(float %arg, i1 %arg1) {
+; GCN-LABEL: v_fneg_select_infloop_regression_f32:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_and_b32_e32 v1, 1, v1
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v1
+; GCN-NEXT:    v_cndmask_b32_e64 v0, v0, 0, vcc
+; GCN-NEXT:    v_cndmask_b32_e64 v0, -v0, 0, vcc
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %i = select i1 %arg1, float 0.0, float %arg
+  %i2 = fneg float %i
+  %i3 = select i1 %arg1, float 0.0, float %i2
+  ret float %i3
+}
+
+define float @v_fneg_select_infloop_regression_f32_commute0(float %arg, i1 %arg1) {
+; GCN-LABEL: v_fneg_select_infloop_regression_f32_commute0:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_and_b32_e32 v1, 1, v1
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v1
+; GCN-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
+; GCN-NEXT:    v_cndmask_b32_e64 v0, -v0, 0, vcc
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %i = select i1 %arg1, float %arg, float 0.0
+  %i2 = fneg float %i
+  %i3 = select i1 %arg1, float 0.0, float %i2
+  ret float %i3
+}
+
+define float @v_fneg_select_infloop_regression_f32_commute1(float %arg, i1 %arg1) {
+; GCN-LABEL: v_fneg_select_infloop_regression_f32_commute1:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_and_b32_e32 v1, 1, v1
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v1
+; GCN-NEXT:    v_cndmask_b32_e64 v0, v0, 0, vcc
+; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, -v0, vcc
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %i = select i1 %arg1, float 0.0, float %arg
+  %i2 = fneg float %i
+  %i3 = select i1 %arg1, float %i2, float 0.0
+  ret float %i3
+}
+
+define float @v_fneg_select_infloop_regression_f32_commute2(float %arg, i1 %arg1) {
+; GCN-LABEL: v_fneg_select_infloop_regression_f32_commute2:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_and_b32_e32 v1, 1, v1
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v1
+; GCN-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
+; GCN-NEXT:    v_cndmask_b32_e64 v0, 0, -v0, vcc
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %i = select i1 %arg1, float %arg, float 0.0
+  %i2 = fneg float %i
+  %i3 = select i1 %arg1, float %i2, float 0.0
+  ret float %i3
+}
+
+; Check with an inline constant that's equally cheap to negate
+define float @v_fneg_select_infloop_regression_inline_imm_f32(float %arg, i1 %arg1) {
+; GCN-LABEL: v_fneg_select_infloop_regression_inline_imm_f32:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_and_b32_e32 v1, 1, v1
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v1
+; GCN-NEXT:    v_cndmask_b32_e64 v0, v0, 2.0, vcc
+; GCN-NEXT:    v_cndmask_b32_e64 v0, -v0, 2.0, vcc
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %i = select i1 %arg1, float 2.0, float %arg
+  %i2 = fneg float %i
+  %i3 = select i1 %arg1, float 2.0, float %i2
+  ret float %i3
+}
+
+define float @v_fneg_select_infloop_regression_inline_imm_f32_commute0(float %arg, i1 %arg1) {
+; GCN-LABEL: v_fneg_select_infloop_regression_inline_imm_f32_commute0:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_and_b32_e32 v1, 1, v1
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v1
+; GCN-NEXT:    v_cndmask_b32_e32 v0, 2.0, v0, vcc
+; GCN-NEXT:    v_cndmask_b32_e64 v0, -v0, 2.0, vcc
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %i = select i1 %arg1, float %arg, float 2.0
+  %i2 = fneg float %i
+  %i3 = select i1 %arg1, float 2.0, float %i2
+  ret float %i3
+}
+
+define float @v_fneg_select_infloop_regression_inline_imm_f32_commute1(float %arg, i1 %arg1) {
+; GCN-LABEL: v_fneg_select_infloop_regression_inline_imm_f32_commute1:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_and_b32_e32 v1, 1, v1
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v1
+; GCN-NEXT:    v_cndmask_b32_e64 v0, v0, 2.0, vcc
+; GCN-NEXT:    v_cndmask_b32_e64 v0, 2.0, -v0, vcc
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %i = select i1 %arg1, float 2.0, float %arg
+  %i2 = fneg float %i
+  %i3 = select i1 %arg1, float %i2, float 2.0
+  ret float %i3
+}
+
+define float @v_fneg_select_infloop_regression_inline_imm_f32_commute2(float %arg, i1 %arg1) {
+; GCN-LABEL: v_fneg_select_infloop_regression_inline_imm_f32_commute2:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_and_b32_e32 v1, 1, v1
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v1
+; GCN-NEXT:    v_cndmask_b32_e32 v0, 2.0, v0, vcc
+; GCN-NEXT:    v_cndmask_b32_e64 v0, 2.0, -v0, vcc
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %i = select i1 %arg1, float %arg, float 2.0
+  %i2 = fneg float %i
+  %i3 = select i1 %arg1, float %i2, float 2.0
+  ret float %i3
+}
+
+; Check with an inline constant that's equally cheap to negate
+define float @v_fneg_select_infloop_regression_neg_inline_imm_f32(float %arg, i1 %arg1) {
+; GCN-LABEL: v_fneg_select_infloop_regression_neg_inline_imm_f32:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_and_b32_e32 v1, 1, v1
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v1
+; GCN-NEXT:    v_cndmask_b32_e64 v0, v0, -2.0, vcc
+; GCN-NEXT:    v_cndmask_b32_e64 v0, -v0, -2.0, vcc
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %i = select i1 %arg1, float -2.0, float %arg
+  %i2 = fneg float %i
+  %i3 = select i1 %arg1, float -2.0, float %i2
+  ret float %i3
+}
+
+define float @v_fneg_select_infloop_regression_neg_inline_imm_f32_commute0(float %arg, i1 %arg1) {
+; GCN-LABEL: v_fneg_select_infloop_regression_neg_inline_imm_f32_commute0:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_and_b32_e32 v1, 1, v1
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v1
+; GCN-NEXT:    v_cndmask_b32_e32 v0, -2.0, v0, vcc
+; GCN-NEXT:    v_cndmask_b32_e64 v0, -v0, -2.0, vcc
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %i = select i1 %arg1, float %arg, float -2.0
+  %i2 = fneg float %i
+  %i3 = select i1 %arg1, float -2.0, float %i2
+  ret float %i3
+}
+
+define float @v_fneg_select_infloop_regression_neg_inline_imm_f32_commute1(float %arg, i1 %arg1) {
+; GCN-LABEL: v_fneg_select_infloop_regression_neg_inline_imm_f32_commute1:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_and_b32_e32 v1, 1, v1
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v1
+; GCN-NEXT:    v_cndmask_b32_e64 v0, v0, -2.0, vcc
+; GCN-NEXT:    v_cndmask_b32_e64 v0, -2.0, -v0, vcc
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %i = select i1 %arg1, float -2.0, float %arg
+  %i2 = fneg float %i
+  %i3 = select i1 %arg1, float %i2, float -2.0
+  ret float %i3
+}
+
+define float @v_fneg_select_infloop_regression_neg_inline_imm_f32_commute2(float %arg, i1 %arg1) {
+; GCN-LABEL: v_fneg_select_infloop_regression_neg_inline_imm_f32_commute2:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_and_b32_e32 v1, 1, v1
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v1
+; GCN-NEXT:    v_cndmask_b32_e32 v0, -2.0, v0, vcc
+; GCN-NEXT:    v_cndmask_b32_e64 v0, -2.0, -v0, vcc
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %i = select i1 %arg1, float %arg, float -2.0
+  %i2 = fneg float %i
+  %i3 = select i1 %arg1, float %i2, float -2.0
+  ret float %i3
+}
+
+define amdgpu_kernel void @s_fneg_select_infloop_regression_f64(double %arg, i1 %arg1, ptr addrspace(1) %ptr) {
+; SI-LABEL: s_fneg_select_infloop_regression_f64:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_load_dword s4, s[0:1], 0xb
+; SI-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x9
+; SI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0xd
+; SI-NEXT:    v_bfrev_b32_e32 v0, 1
+; SI-NEXT:    s_waitcnt lgkmcnt(0)
+; SI-NEXT:    s_bitcmp1_b32 s4, 0
+; SI-NEXT:    s_cselect_b64 s[4:5], -1, 0
+; SI-NEXT:    v_mov_b32_e32 v1, s3
+; SI-NEXT:    s_and_b64 s[6:7], s[4:5], exec
+; SI-NEXT:    v_cndmask_b32_e64 v0, -v1, v0, s[4:5]
+; SI-NEXT:    s_cselect_b32 s2, 0, s2
+; SI-NEXT:    v_mov_b32_e32 v3, s1
+; SI-NEXT:    v_cndmask_b32_e64 v1, v0, 0, s[4:5]
+; SI-NEXT:    v_mov_b32_e32 v0, s2
+; SI-NEXT:    v_mov_b32_e32 v2, s0
+; SI-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
+; SI-NEXT:    s_endpgm
+;
+; VI-LABEL: s_fneg_select_infloop_regression_f64:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_load_dword s4, s[0:1], 0x2c
+; VI-NEXT:    s_load_dwordx2 s[2:3], s[0:1], 0x24
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x34
+; VI-NEXT:    v_bfrev_b32_e32 v0, 1
+; VI-NEXT:    s_waitcnt lgkmcnt(0)
+; VI-NEXT:    s_bitcmp1_b32 s4, 0
+; VI-NEXT:    s_cselect_b64 s[4:5], -1, 0
+; VI-NEXT:    v_mov_b32_e32 v1, s3
+; VI-NEXT:    s_and_b64 s[6:7], s[4:5], exec
+; VI-NEXT:    v_cndmask_b32_e64 v0, -v1, v0, s[4:5]
+; VI-NEXT:    s_cselect_b32 s2, 0, s2
+; VI-NEXT:    v_mov_b32_e32 v3, s1
+; VI-NEXT:    v_cndmask_b32_e64 v1, v0, 0, s[4:5]
+; VI-NEXT:    v_mov_b32_e32 v0, s2
+; VI-NEXT:    v_mov_b32_e32 v2, s0
+; VI-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
+; VI-NEXT:    s_endpgm
+  %i = select i1 %arg1, double 0.0, double %arg
+  %i2 = fneg double %i
+  %i3 = select i1 %arg1, double 0.0, double %i2
+  store double %i3, ptr addrspace(1) %ptr, align 4
+  ret void
+}
+
+define double @v_fneg_select_infloop_regression_f64(double %arg, i1 %arg1) {
+; GCN-LABEL: v_fneg_select_infloop_regression_f64:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_and_b32_e32 v2, 1, v2
+; GCN-NEXT:    v_bfrev_b32_e32 v3, 1
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v2
+; GCN-NEXT:    v_cndmask_b32_e64 v1, -v1, v3, vcc
+; GCN-NEXT:    v_cndmask_b32_e64 v0, v0, 0, vcc
+; GCN-NEXT:    v_cndmask_b32_e64 v1, v1, 0, vcc
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %i = select i1 %arg1, double 0.0, double %arg
+  %i2 = fneg double %i
+  %i3 = select i1 %arg1, double 0.0, double %i2
+  ret double %i3
+}
+
+define amdgpu_kernel void @s_fneg_select_infloop_regression_f16(half %arg, i1 %arg1, ptr addrspace(1) %ptr) {
+; SI-LABEL: s_fneg_select_infloop_regression_f16:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_load_dword s2, s[0:1], 0x9
+; SI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0xb
+; SI-NEXT:    s_waitcnt lgkmcnt(0)
+; SI-NEXT:    v_cvt_f32_f16_e32 v0, s2
+; SI-NEXT:    s_bitcmp1_b32 s2, 16
+; SI-NEXT:    s_cselect_b64 s[2:3], -1, 0
+; SI-NEXT:    v_cndmask_b32_e64 v0, v0, 0, s[2:3]
+; SI-NEXT:    v_cndmask_b32_e64 v0, -v0, 0, s[2:3]
+; SI-NEXT:    v_cvt_f16_f32_e32 v2, v0
+; SI-NEXT:    v_mov_b32_e32 v0, s0
+; SI-NEXT:    v_mov_b32_e32 v1, s1
+; SI-NEXT:    flat_store_short v[0:1], v2
+; SI-NEXT:    s_endpgm
+;
+; VI-LABEL: s_fneg_select_infloop_regression_f16:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_load_dword s2, s[0:1], 0x24
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x2c
+; VI-NEXT:    s_waitcnt lgkmcnt(0)
+; VI-NEXT:    s_bitcmp1_b32 s2, 16
+; VI-NEXT:    v_mov_b32_e32 v0, s2
+; VI-NEXT:    s_cselect_b64 s[2:3], -1, 0
+; VI-NEXT:    v_cndmask_b32_e64 v0, v0, 0, s[2:3]
+; VI-NEXT:    v_xor_b32_e32 v0, 0x8000, v0
+; VI-NEXT:    v_cndmask_b32_e64 v2, v0, 0, s[2:3]
+; VI-NEXT:    v_mov_b32_e32 v0, s0
+; VI-NEXT:    v_mov_b32_e32 v1, s1
+; VI-NEXT:    flat_store_short v[0:1], v2
+; VI-NEXT:    s_endpgm
+  %i = select i1 %arg1, half 0.0, half %arg
+  %i2 = fneg half %i
+  %i3 = select i1 %arg1, half 0.0, half %i2
+  store half %i3, ptr addrspace(1) %ptr, align 4
+  ret void
+}
+
+define half @v_fneg_select_infloop_regression_f16(half %arg, i1 %arg1) {
+; SI-LABEL: v_fneg_select_infloop_regression_f16:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; SI-NEXT:    v_and_b32_e32 v1, 1, v1
+; SI-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v1
+; SI-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; SI-NEXT:    v_cndmask_b32_e64 v0, v0, 0, vcc
+; SI-NEXT:    v_cndmask_b32_e64 v0, -v0, 0, vcc
+; SI-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-LABEL: v_fneg_select_infloop_regression_f16:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    v_and_b32_e32 v1, 1, v1
+; VI-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v1
+; VI-NEXT:    v_cndmask_b32_e64 v0, v0, 0, vcc
+; VI-NEXT:    v_xor_b32_e32 v0, 0x8000, v0
+; VI-NEXT:    v_cndmask_b32_e64 v0, v0, 0, vcc
+; VI-NEXT:    s_setpc_b64 s[30:31]
+  %i = select i1 %arg1, half 0.0, half %arg
+  %i2 = fneg half %i
+  %i3 = select i1 %arg1, half 0.0, half %i2
+  ret half %i3
+}
+
+define amdgpu_kernel void @s_fneg_select_infloop_regression_v2f16(<2 x half> %arg, i1 %arg1, ptr addrspace(1) %ptr) {
+; SI-LABEL: s_fneg_select_infloop_regression_v2f16:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; SI-NEXT:    s_waitcnt lgkmcnt(0)
+; SI-NEXT:    s_and_b32 s1, 1, s1
+; SI-NEXT:    s_cselect_b32 s0, 0, s0
+; SI-NEXT:    s_xor_b32 s0, s0, 0x80008000
+; SI-NEXT:    s_cmp_eq_u32 s1, 1
+; SI-NEXT:    s_cselect_b32 s0, 0, s0
+; SI-NEXT:    v_mov_b32_e32 v0, s2
+; SI-NEXT:    v_mov_b32_e32 v1, s3
+; SI-NEXT:    v_mov_b32_e32 v2, s0
+; SI-NEXT:    flat_store_dword v[0:1], v2
+; SI-NEXT:    s_endpgm
+;
+; VI-LABEL: s_fneg_select_infloop_regression_v2f16:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; VI-NEXT:    s_waitcnt lgkmcnt(0)
+; VI-NEXT:    s_and_b32 s1, 1, s1
+; VI-NEXT:    s_cselect_b32 s0, 0, s0
+; VI-NEXT:    s_xor_b32 s0, s0, 0x80008000
+; VI-NEXT:    s_cmp_eq_u32 s1, 1
+; VI-NEXT:    s_cselect_b32 s0, 0, s0
+; VI-NEXT:    v_mov_b32_e32 v0, s2
+; VI-NEXT:    v_mov_b32_e32 v1, s3
+; VI-NEXT:    v_mov_b32_e32 v2, s0
+; VI-NEXT:    flat_store_dword v[0:1], v2
+; VI-NEXT:    s_endpgm
+  %i = select i1 %arg1, <2 x half> zeroinitializer, <2 x half> %arg
+  %i2 = fneg <2 x half> %i
+  %i3 = select i1 %arg1, <2 x half> zeroinitializer, <2 x half> %i2
+  store <2 x half> %i3, ptr addrspace(1) %ptr, align 4
+  ret void
+}
+
+define <2 x half> @v_fneg_select_infloop_regression_v2f16(<2 x half> %arg, i1 %arg1) {
+; SI-LABEL: v_fneg_select_infloop_regression_v2f16:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    v_cvt_f16_f32_e32 v1, v1
+; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; SI-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; SI-NEXT:    v_or_b32_e32 v0, v0, v1
+; SI-NEXT:    v_and_b32_e32 v1, 1, v2
+; SI-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v1
+; SI-NEXT:    v_cndmask_b32_e64 v0, v0, 0, vcc
+; SI-NEXT:    v_xor_b32_e32 v0, 0x80008000, v0
+; SI-NEXT:    v_cndmask_b32_e64 v1, v0, 0, vcc
+; SI-NEXT:    v_cvt_f32_f16_e32 v0, v1
+; SI-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
+; SI-NEXT:    v_cvt_f32_f16_e32 v1, v1
+; SI-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-LABEL: v_fneg_select_infloop_regression_v2f16:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    v_and_b32_e32 v1, 1, v1
+; VI-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v1
+; VI-NEXT:    v_cndmask_b32_e64 v0, v0, 0, vcc
+; VI-NEXT:    v_xor_b32_e32 v0, 0x80008000, v0
+; VI-NEXT:    v_cndmask_b32_e64 v0, v0, 0, vcc
+; VI-NEXT:    s_setpc_b64 s[30:31]
+  %i = select i1 %arg1, <2 x half> zeroinitializer, <2 x half> %arg
+  %i2 = fneg <2 x half> %i
+  %i3 = select i1 %arg1, <2 x half> zeroinitializer, <2 x half> %i2
+  ret <2 x half> %i3
+}
+
+define amdgpu_kernel void @s_fneg_select_infloop_regression_v2f32(<2 x float> %arg, i1 %arg1, ptr addrspace(1) %ptr) {
+; SI-LABEL: s_fneg_select_infloop_regression_v2f32:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
+; SI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0xd
+; SI-NEXT:    v_bfrev_b32_e32 v0, 1
+; SI-NEXT:    s_waitcnt lgkmcnt(0)
+; SI-NEXT:    s_bitcmp1_b32 s6, 0
+; SI-NEXT:    v_mov_b32_e32 v1, s4
+; SI-NEXT:    s_cselect_b64 s[2:3], -1, 0
+; SI-NEXT:    v_cndmask_b32_e64 v2, -v1, v0, s[2:3]
+; SI-NEXT:    v_mov_b32_e32 v1, s5
+; SI-NEXT:    v_cndmask_b32_e64 v0, -v1, v0, s[2:3]
+; SI-NEXT:    v_cndmask_b32_e64 v1, v0, 0, s[2:3]
+; SI-NEXT:    v_cndmask_b32_e64 v0, v2, 0, s[2:3]
+; SI-NEXT:    v_mov_b32_e32 v3, s1
+; SI-NEXT:    v_mov_b32_e32 v2, s0
+; SI-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
+; SI-NEXT:    s_endpgm
+;
+; VI-LABEL: s_fneg_select_infloop_regression_v2f32:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x24
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x34
+; VI-NEXT:    v_bfrev_b32_e32 v0, 1
+; VI-NEXT:    s_waitcnt lgkmcnt(0)
+; VI-NEXT:    s_bitcmp1_b32 s6, 0
+; VI-NEXT:    v_mov_b32_e32 v1, s4
+; VI-NEXT:    s_cselect_b64 s[2:3], -1, 0
+; VI-NEXT:    v_cndmask_b32_e64 v2, -v1, v0, s[2:3]
+; VI-NEXT:    v_mov_b32_e32 v1, s5
+; VI-NEXT:    v_cndmask_b32_e64 v0, -v1, v0, s[2:3]
+; VI-NEXT:    v_cndmask_b32_e64 v1, v0, 0, s[2:3]
+; VI-NEXT:    v_cndmask_b32_e64 v0, v2, 0, s[2:3]
+; VI-NEXT:    v_mov_b32_e32 v3, s1
+; VI-NEXT:    v_mov_b32_e32 v2, s0
+; VI-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
+; VI-NEXT:    s_endpgm
+  %i = select i1 %arg1, <2 x float> zeroinitializer, <2 x float> %arg
+  %i2 = fneg <2 x float> %i
+  %i3 = select i1 %arg1, <2 x float> zeroinitializer, <2 x float> %i2
+  store <2 x float> %i3, ptr addrspace(1) %ptr, align 4
+  ret void
+}
+
+define <2 x float> @v_fneg_select_infloop_regression_v2f32(<2 x float> %arg, i1 %arg1) {
+; GCN-LABEL: v_fneg_select_infloop_regression_v2f32:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_and_b32_e32 v2, 1, v2
+; GCN-NEXT:    v_bfrev_b32_e32 v3, 1
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v2
+; GCN-NEXT:    v_cndmask_b32_e64 v1, -v1, v3, vcc
+; GCN-NEXT:    v_cndmask_b32_e64 v0, -v0, v3, vcc
+; GCN-NEXT:    v_cndmask_b32_e64 v0, v0, 0, vcc
+; GCN-NEXT:    v_cndmask_b32_e64 v1, v1, 0, vcc
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %i = select i1 %arg1, <2 x float> zeroinitializer, <2 x float> %arg
+  %i2 = fneg <2 x float> %i
+  %i3 = select i1 %arg1, <2 x float> zeroinitializer, <2 x float> %i2
+  ret <2 x float> %i3
+}
+
+define amdgpu_kernel void @s_fabs_select_infloop_regression_f32(float %arg, i1 %arg1, ptr addrspace(1) %ptr) {
+; SI-LABEL: s_fabs_select_infloop_regression_f32:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; SI-NEXT:    s_waitcnt lgkmcnt(0)
+; SI-NEXT:    s_bitcmp1_b32 s1, 0
+; SI-NEXT:    v_mov_b32_e32 v0, s0
+; SI-NEXT:    s_cselect_b64 s[0:1], -1, 0
+; SI-NEXT:    v_cndmask_b32_e64 v0, v0, 0, s[0:1]
+; SI-NEXT:    v_cndmask_b32_e64 v2, |v0|, 0, s[0:1]
+; SI-NEXT:    v_mov_b32_e32 v0, s2
+; SI-NEXT:    v_mov_b32_e32 v1, s3
+; SI-NEXT:    flat_store_dword v[0:1], v2
+; SI-NEXT:    s_endpgm
+;
+; VI-LABEL: s_fabs_select_infloop_regression_f32:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; VI-NEXT:    s_waitcnt lgkmcnt(0)
+; VI-NEXT:    s_bitcmp1_b32 s1, 0
+; VI-NEXT:    v_mov_b32_e32 v0, s0
+; VI-NEXT:    s_cselect_b64 s[0:1], -1, 0
+; VI-NEXT:    v_cndmask_b32_e64 v0, v0, 0, s[0:1]
+; VI-NEXT:    v_cndmask_b32_e64 v2, |v0|, 0, s[0:1]
+; VI-NEXT:    v_mov_b32_e32 v0, s2
+; VI-NEXT:    v_mov_b32_e32 v1, s3
+; VI-NEXT:    flat_store_dword v[0:1], v2
+; VI-NEXT:    s_endpgm
+  %i = select i1 %arg1, float 0.0, float %arg
+  %i2 = call float @llvm.fabs.f32(float %i)
+  %i3 = select i1 %arg1, float 0.0, float %i2
+  store float %i3, ptr addrspace(1) %ptr, align 4
+  ret void
+}
+
+define float @v_fabs_select_infloop_regression_f32(float %arg, i1 %arg1) {
+; GCN-LABEL: v_fabs_select_infloop_regression_f32:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_and_b32_e32 v1, 1, v1
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v1
+; GCN-NEXT:    v_cndmask_b32_e64 v0, v0, 0, vcc
+; GCN-NEXT:    v_cndmask_b32_e64 v0, |v0|, 0, vcc
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %i = select i1 %arg1, float 0.0, float %arg
+  %i2 = call float @llvm.fabs.f32(float %i)
+  %i3 = select i1 %arg1, float 0.0, float %i2
+  ret float %i3
+}
+
+define amdgpu_kernel void @s_fneg_fabs_select_infloop_regression(float %arg, i1 %arg1, ptr addrspace(1) %ptr) {
+; SI-LABEL: s_fneg_fabs_select_infloop_regression:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
+; SI-NEXT:    s_waitcnt lgkmcnt(0)
+; SI-NEXT:    s_bitcmp1_b32 s1, 0
+; SI-NEXT:    v_mov_b32_e32 v0, s0
+; SI-NEXT:    s_cselect_b64 s[0:1], -1, 0
+; SI-NEXT:    v_cndmask_b32_e64 v0, v0, 0, s[0:1]
+; SI-NEXT:    v_cndmask_b32_e64 v2, -|v0|, 0, s[0:1]
+; SI-NEXT:    v_mov_b32_e32 v0, s2
+; SI-NEXT:    v_mov_b32_e32 v1, s3
+; SI-NEXT:    flat_store_dword v[0:1], v2
+; SI-NEXT:    s_endpgm
+;
+; VI-LABEL: s_fneg_fabs_select_infloop_regression:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
+; VI-NEXT:    s_waitcnt lgkmcnt(0)
+; VI-NEXT:    s_bitcmp1_b32 s1, 0
+; VI-NEXT:    v_mov_b32_e32 v0, s0
+; VI-NEXT:    s_cselect_b64 s[0:1], -1, 0
+; VI-NEXT:    v_cndmask_b32_e64 v0, v0, 0, s[0:1]
+; VI-NEXT:    v_cndmask_b32_e64 v2, -|v0|, 0, s[0:1]
+; VI-NEXT:    v_mov_b32_e32 v0, s2
+; VI-NEXT:    v_mov_b32_e32 v1, s3
+; VI-NEXT:    flat_store_dword v[0:1], v2
+; VI-NEXT:    s_endpgm
+  %i = select i1 %arg1, float 0.0, float %arg
+  %i2 = call float @llvm.fabs.f32(float %i)
+  %neg.i2 = fneg float %i2
+  %i3 = select i1 %arg1, float 0.0, float %neg.i2
+  store float %i3, ptr addrspace(1) %ptr, align 4
+  ret void
+}
+
+define float @v_fneg_fabs_select_infloop_regression(float %arg, i1 %arg1) {
+; GCN-LABEL: v_fneg_fabs_select_infloop_regression:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_and_b32_e32 v1, 1, v1
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v1
+; GCN-NEXT:    v_cndmask_b32_e64 v0, v0, 0, vcc
+; GCN-NEXT:    v_cndmask_b32_e64 v0, -|v0|, 0, vcc
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %i = select i1 %arg1, float 0.0, float %arg
+  %i2 = call float @llvm.fabs.f32(float %i)
+  %neg.i2 = fneg float %i2
+  %i3 = select i1 %arg1, float 0.0, float %neg.i2
+  ret float %i3
+}
+
+define float @v_fmul_0_fsub_0_infloop_regression(float %arg) {
+; GCN-SAFE-LABEL: v_fmul_0_fsub_0_infloop_regression:
+; GCN-SAFE:       ; %bb.0: ; %bb
+; GCN-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-SAFE-NEXT:    v_mul_f32_e32 v0, 0, v0
+; GCN-SAFE-NEXT:    v_sub_f32_e32 v0, 0, v0
+; GCN-SAFE-NEXT:    s_setpc_b64 s[30:31]
+;
+; GCN-NSZ-LABEL: v_fmul_0_fsub_0_infloop_regression:
+; GCN-NSZ:       ; %bb.0: ; %bb
+; GCN-NSZ-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NSZ-NEXT:    v_mul_f32_e32 v0, 0x80000000, v0
+; GCN-NSZ-NEXT:    s_setpc_b64 s[30:31]
+bb:
+  %i = fmul float %arg, 0.0
+  %i1 = fsub float 0.0, %i
+  ret float %i1
+}
+
 declare i32 @llvm.amdgcn.workitem.id.x() #1
 declare float @llvm.fma.f32(float, float, float) #1
 declare <2 x float> @llvm.fma.v2f32(<2 x float>, <2 x float>, <2 x float>)
 declare float @llvm.fmuladd.f32(float, float, float) #1
 declare <4 x float> @llvm.fmuladd.v4f32(<4 x float>, <4 x float>, <4 x float>) #1
+declare float @llvm.fabs.f32(float) #1
 declare float @llvm.sin.f32(float) #1
 declare float @llvm.trunc.f32(float) #1
 declare float @llvm.round.f32(float) #1

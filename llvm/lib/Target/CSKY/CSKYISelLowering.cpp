@@ -51,15 +51,14 @@ CSKYTargetLowering::CSKYTargetLowering(const TargetMachine &TM,
       addRegisterClass(MVT::f64, &CSKY::FPR64RegClass);
   }
 
-  setOperationAction(ISD::ADDCARRY, MVT::i32, Legal);
-  setOperationAction(ISD::SUBCARRY, MVT::i32, Legal);
+  setOperationAction(ISD::UADDO_CARRY, MVT::i32, Legal);
+  setOperationAction(ISD::USUBO_CARRY, MVT::i32, Legal);
   setOperationAction(ISD::BITREVERSE, MVT::i32, Legal);
 
   setOperationAction(ISD::SREM, MVT::i32, Expand);
   setOperationAction(ISD::UREM, MVT::i32, Expand);
   setOperationAction(ISD::UDIVREM, MVT::i32, Expand);
   setOperationAction(ISD::SDIVREM, MVT::i32, Expand);
-  setOperationAction(ISD::CTTZ, MVT::i32, Expand);
   setOperationAction(ISD::CTPOP, MVT::i32, Expand);
   setOperationAction(ISD::ROTR, MVT::i32, Expand);
   setOperationAction(ISD::SHL_PARTS, MVT::i32, Expand);
@@ -103,6 +102,7 @@ CSKYTargetLowering::CSKYTargetLowering(const TargetMachine &TM,
   if (!Subtarget.has2E3()) {
     setOperationAction(ISD::ABS, MVT::i32, Expand);
     setOperationAction(ISD::BITREVERSE, MVT::i32, Expand);
+    setOperationAction(ISD::CTTZ, MVT::i32, Expand);
     setOperationAction(ISD::SDIV, MVT::i32, Expand);
     setOperationAction(ISD::UDIV, MVT::i32, Expand);
   }
@@ -116,8 +116,9 @@ CSKYTargetLowering::CSKYTargetLowering(const TargetMachine &TM,
       ISD::SETUGE, ISD::SETULT, ISD::SETULE,
   };
 
-  ISD::NodeType FPOpToExpand[] = {ISD::FSIN, ISD::FCOS, ISD::FSINCOS,
-                                  ISD::FPOW, ISD::FREM, ISD::FCOPYSIGN};
+  ISD::NodeType FPOpToExpand[] = {
+      ISD::FSIN, ISD::FCOS,      ISD::FSINCOS,    ISD::FPOW,
+      ISD::FREM, ISD::FCOPYSIGN, ISD::FP16_TO_FP, ISD::FP_TO_FP16};
 
   if (STI.useHardFloat()) {
 
@@ -136,10 +137,14 @@ CSKYTargetLowering::CSKYTargetLowering(const TargetMachine &TM,
 
     if (STI.hasFPUv2SingleFloat() || STI.hasFPUv3SingleFloat()) {
       setOperationAction(ISD::ConstantFP, MVT::f32, Legal);
+      setLoadExtAction(ISD::EXTLOAD, MVT::f32, MVT::f16, Expand);
+      setTruncStoreAction(MVT::f32, MVT::f16, Expand);
     }
     if (STI.hasFPUv2DoubleFloat() || STI.hasFPUv3DoubleFloat()) {
       setLoadExtAction(ISD::EXTLOAD, MVT::f64, MVT::f32, Expand);
       setTruncStoreAction(MVT::f64, MVT::f32, Expand);
+      setLoadExtAction(ISD::EXTLOAD, MVT::f64, MVT::f16, Expand);
+      setTruncStoreAction(MVT::f64, MVT::f16, Expand);
     }
   }
 
@@ -153,8 +158,7 @@ CSKYTargetLowering::CSKYTargetLowering(const TargetMachine &TM,
   setMaxAtomicSizeInBitsSupported(0);
 
   setStackPointerRegisterToSaveRestore(CSKY::R14);
-  const Align FunctionAlignment(2);
-  setMinFunctionAlignment(FunctionAlignment);
+  setMinFunctionAlignment(Align(2));
   setSchedulingPreference(Sched::Source);
 }
 
@@ -379,7 +383,7 @@ SDValue CSKYTargetLowering::LowerFormalArguments(
     // If all registers are allocated, then all varargs must be passed on the
     // stack and we don't need to save any argregs.
     if (ArgRegs.size() == Idx) {
-      VaArgOffset = CCInfo.getNextStackOffset();
+      VaArgOffset = CCInfo.getStackSize();
       VarArgsSaveSize = 0;
     } else {
       VarArgsSaveSize = XLenInBytes * (ArgRegs.size() - Idx);
@@ -532,7 +536,7 @@ SDValue CSKYTargetLowering::LowerCall(CallLoweringInfo &CLI,
                        "site marked musttail");
 
   // Get a count of how many bytes are to be pushed on the stack.
-  unsigned NumBytes = ArgCCInfo.getNextStackOffset();
+  unsigned NumBytes = ArgCCInfo.getStackSize();
 
   // Create local copies for byval args
   SmallVector<SDValue, 8> ByValArgs;
@@ -1371,4 +1375,44 @@ SDValue CSKYTargetLowering::getDynamicTLSAddr(GlobalAddressSDNode *N,
   SDValue V = LowerCallTo(CLI).first;
 
   return V;
+}
+
+bool CSKYTargetLowering::decomposeMulByConstant(LLVMContext &Context, EVT VT,
+                                                SDValue C) const {
+  if (!VT.isScalarInteger())
+    return false;
+
+  // Omit if data size exceeds.
+  if (VT.getSizeInBits() > Subtarget.XLen)
+    return false;
+
+  if (auto *ConstNode = dyn_cast<ConstantSDNode>(C.getNode())) {
+    const APInt &Imm = ConstNode->getAPIntValue();
+    // Break MULT to LSLI + ADDU/SUBU.
+    if ((Imm + 1).isPowerOf2() || (Imm - 1).isPowerOf2() ||
+        (1 - Imm).isPowerOf2())
+      return true;
+    // Only break MULT for sub targets without MULT32, since an extra
+    // instruction will be generated against the above 3 cases. We leave it
+    // unchanged on sub targets with MULT32, since not sure it is better.
+    if (!Subtarget.hasE2() && (-1 - Imm).isPowerOf2())
+      return true;
+    // Break (MULT x, imm) to ([IXH32|IXW32|IXD32] (LSLI32 x, i0), x) when
+    // imm=(1<<i0)+[2|4|8] and imm has to be composed via a MOVIH32/ORI32 pair.
+    if (Imm.ugt(0xffff) && ((Imm - 2).isPowerOf2() || (Imm - 4).isPowerOf2()) &&
+        Subtarget.hasE2())
+      return true;
+    if (Imm.ugt(0xffff) && (Imm - 8).isPowerOf2() && Subtarget.has2E3())
+      return true;
+  }
+
+  return false;
+}
+
+bool CSKYTargetLowering::isCheapToSpeculateCttz(Type *Ty) const {
+  return Subtarget.has2E3();
+}
+
+bool CSKYTargetLowering::isCheapToSpeculateCtlz(Type *Ty) const {
+  return Subtarget.hasE2();
 }

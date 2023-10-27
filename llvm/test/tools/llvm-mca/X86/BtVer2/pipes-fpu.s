@@ -93,6 +93,7 @@ vsqrtps     %ymm0, %ymm2
 # CHECK-NEXT: [1,2]     .    .  DeeeE--------------------------------------------------------R.   vcvttps2dq	%xmm0, %xmm2
 # CHECK-NEXT: [1,3]     .    .  DeeE----------------------------------------------------------R   vpclmulqdq	$0, %xmm0, %xmm1, %xmm2
 # CHECK-NEXT: [1,4]     .    .   DeeeE--------------------------------------------------------R   vaddps	%xmm0, %xmm1, %xmm2
+# CHECK-NEXT: Truncated display due to cycle limit
 
 # CHECK:      Average Wait times (based on the timeline view):
 # CHECK-NEXT: [0]: Executions

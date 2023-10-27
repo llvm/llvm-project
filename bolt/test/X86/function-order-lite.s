@@ -8,8 +8,9 @@
 # RUN:   --function-order=%p/Inputs/order-lite.txt -o %t -print-all 2>&1 \
 # RUN:   | FileCheck %s
 
-# CHECK: 1 out of 2 functions in the binary (50.0%) have non-empty execution profile
-# CHECK: Binary Function "main" after reorder-functions
+# CHECK: 1 out of 3 functions in the binary (33.3%) have non-empty execution profile
+# CHECK-DAG: Binary Function "main" after reorder-functions
+# CHECK-DAG: Binary Function "foo.__uniq.123" after reorder-functions
 
   .globl main
   .type main, %function
@@ -33,3 +34,15 @@ testfunc:
 	retq
 	.cfi_endproc
 .size testfunc, .-testfunc
+
+  .globl foo.__uniq.123
+  .type foo.__uniq.123, %function
+foo.__uniq.123:
+	.cfi_startproc
+	pushq	%rbp
+	movq	%rsp, %rbp
+	movl	$0x0, %eax
+	popq	%rbp
+	retq
+	.cfi_endproc
+.size foo.__uniq.123, .-foo.__uniq.123

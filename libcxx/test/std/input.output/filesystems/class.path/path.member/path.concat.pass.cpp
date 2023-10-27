@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03
+// UNSUPPORTED: availability-filesystem-missing
 
 // These tests require locale for non-char paths
 // UNSUPPORTED: no-localization
@@ -39,10 +40,11 @@
 // On Windows, charset conversions cause allocations in the path class in
 // cases where no allocations are done on other platforms.
 
-#include "test_macros.h"
-#include "test_iterators.h"
+#include "../path_helper.h"
 #include "count_new.h"
-#include "filesystem_test_helper.h"
+#include "make_string.h"
+#include "test_iterators.h"
+#include "test_macros.h"
 
 
 struct ConcatOperatorTestcase {

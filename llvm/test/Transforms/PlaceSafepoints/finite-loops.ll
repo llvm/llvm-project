@@ -1,7 +1,7 @@
 ; Tests to ensure that we are not placing backedge safepoints in
 ; loops which are clearly finite.
-;; RUN: opt < %s -place-safepoints -spp-counted-loop-trip-width=32 -S -enable-new-pm=0 | FileCheck %s
-;; RUN: opt < %s -place-safepoints -spp-counted-loop-trip-width=64 -S -enable-new-pm=0 | FileCheck %s -check-prefix=COUNTED-64
+;; RUN: opt < %s -passes=place-safepoints -spp-counted-loop-trip-width=32 -S | FileCheck %s
+;; RUN: opt < %s -passes=place-safepoints -spp-counted-loop-trip-width=64 -S | FileCheck %s -check-prefix=COUNTED-64
 
 
 ; A simple counted loop with trivially known range

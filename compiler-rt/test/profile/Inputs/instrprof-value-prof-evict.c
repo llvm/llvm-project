@@ -61,80 +61,80 @@ int main() {
   }
 
   // check site, target patterns
-  // CHECK: 0, callee_0
+  // CHECK: 0, {{_?}}callee_0
   INDIRECT_CALLSITE(CallSeqTwoTarget_1, 1);
 
-  // CHECK-NEXT: 1, callee_0
+  // CHECK-NEXT: 1, {{_?}}callee_0
   INDIRECT_CALLSITE(CallSeqTwoTarget_2, 1);
 
-  // CHECK-NEXT: 2, callee_0
+  // CHECK-NEXT: 2, {{_?}}callee_0
   INDIRECT_CALLSITE(CallSeqTwoTarget_3, 1);
 
-  // CHECK-NEXT: 3, callee_0
+  // CHECK-NEXT: 3, {{_?}}callee_0
   INDIRECT_CALLSITE(CallSeqTwoTarget_4, 1);
 
-  // CHECK-NEXT: 4, callee_0
+  // CHECK-NEXT: 4, {{_?}}callee_0
   INDIRECT_CALLSITE(CallSeqThreeTarget_1, 1);
 
-  // CHECK-NEXT: 5, callee_0
+  // CHECK-NEXT: 5, {{_?}}callee_0
   INDIRECT_CALLSITE(CallSeqThreeTarget_2, 1);
 
-  // CHECK-NEXT: 6, callee_0
+  // CHECK-NEXT: 6, {{_?}}callee_0
   INDIRECT_CALLSITE(CallSeqThreeTarget_3, 1);
 
-  // CHECK-NEXT: 7, callee_0
+  // CHECK-NEXT: 7, {{_?}}callee_0
   INDIRECT_CALLSITE(CallSeqThreeTarget_4, 1);
 
-  // CHECK-NEXT: 8, callee_0
-  // CHECK-NEXT: 8, callee_1
+  // CHECK-NEXT: 8, {{_?}}callee_0
+  // CHECK-NEXT: 8, {{_?}}callee_1
   INDIRECT_CALLSITE(CallSeqThreeTarget_1, 2);
 
-  // CHECK-NEXT: 9, callee_0
-  // CHECK-NEXT: 9, callee_1
+  // CHECK-NEXT: 9, {{_?}}callee_0
+  // CHECK-NEXT: 9, {{_?}}callee_1
   INDIRECT_CALLSITE(CallSeqThreeTarget_2, 2);
 
-  // CHECK-NEXT: 10, callee_0
-  // CHECK-NEXT: 10, callee_1
+  // CHECK-NEXT: 10, {{_?}}callee_0
+  // CHECK-NEXT: 10, {{_?}}callee_1
   INDIRECT_CALLSITE(CallSeqThreeTarget_3, 2);
 
-  // CHECK-NEXT: 11, callee_0
-  // CHECK-NEXT: 11, callee_1
+  // CHECK-NEXT: 11, {{_?}}callee_0
+  // CHECK-NEXT: 11, {{_?}}callee_1
   INDIRECT_CALLSITE(CallSeqThreeTarget_4, 2);
 
-  // CHECK-NEXT: 12, callee_0
+  // CHECK-NEXT: 12, {{_?}}callee_0
   INDIRECT_CALLSITE(CallSeqFourTarget_1, 1);
 
-  // CHECK-NEXT: 13, callee_0
+  // CHECK-NEXT: 13, {{_?}}callee_0
   INDIRECT_CALLSITE(CallSeqFourTarget_2, 1);
 
-  // CHECK-NEXT: 14, callee_0
+  // CHECK-NEXT: 14, {{_?}}callee_0
   INDIRECT_CALLSITE(CallSeqFourTarget_3, 1);
 
-  // CHECK-NEXT: 15, callee_0
-  // CHECK-NEXT: 15, callee_3
+  // CHECK-NEXT: 15, {{_?}}callee_0
+  // CHECK-NEXT: 15, {{_?}}callee_3
   INDIRECT_CALLSITE(CallSeqFourTarget_1, 2);
 
-  // CHECK-NEXT: 16, callee_0
-  // CHECK-NEXT: 16, callee_3
+  // CHECK-NEXT: 16, {{_?}}callee_0
+  // CHECK-NEXT: 16, {{_?}}callee_3
   INDIRECT_CALLSITE(CallSeqFourTarget_2, 2);
 
-  // CHECK-NEXT: 17, callee_0
-  // CHECK-NEXT: 17, callee_3
+  // CHECK-NEXT: 17, {{_?}}callee_0
+  // CHECK-NEXT: 17, {{_?}}callee_3
   INDIRECT_CALLSITE(CallSeqFourTarget_3, 2);
 
-  // CHECK-NEXT: 18, callee_0
-  // CHECK-NEXT: 18, callee_3
-  // CHECK-NEXT: 18, callee_2
+  // CHECK-NEXT: 18, {{_?}}callee_0
+  // CHECK-NEXT: 18, {{_?}}callee_3
+  // CHECK-NEXT: 18, {{_?}}callee_2
   INDIRECT_CALLSITE(CallSeqFourTarget_1, 3);
 
-  // CHECK-NEXT: 19, callee_0
-  // CHECK-NEXT: 19, callee_3
-  // CHECK-NEXT: 19, callee_2
+  // CHECK-NEXT: 19, {{_?}}callee_0
+  // CHECK-NEXT: 19, {{_?}}callee_3
+  // CHECK-NEXT: 19, {{_?}}callee_2
   INDIRECT_CALLSITE(CallSeqFourTarget_2, 3);
 
-  // CHECK-NEXT: 20, callee_0
-  // CHECK-NEXT: 20, callee_3
-  // CHECK-NEXT: 20, callee_2
+  // CHECK-NEXT: 20, {{_?}}callee_0
+  // CHECK-NEXT: 20, {{_?}}callee_3
+  // CHECK-NEXT: 20, {{_?}}callee_2
   INDIRECT_CALLSITE(CallSeqFourTarget_3, 3);
 
   return 0;

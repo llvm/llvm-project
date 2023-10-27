@@ -38,7 +38,7 @@
 // RUN: %run %t.dir4/merge4
 // RUN: %run %t.dir4/merge4
 // RUN: %run %t.dir4/merge4
-// RUN: rm -f %t.dir4/merge4
+// RUN: rm -f %t.dir4/merge4*
 // RUN: llvm-profdata merge -o %t.m4.profdata ./
 // RUN: %clang_profuse=%t.m4.profdata -O0 -o - -S -emit-llvm %s | FileCheck %s --check-prefix=COMMON  --check-prefix=PGOMERGE
 

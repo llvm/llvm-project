@@ -105,7 +105,8 @@ public:
 
   static Character REPEAT(const Character &str, ConstantSubscript ncopies) {
     Character result;
-    if (!str.empty()) {
+    if (!str.empty() && ncopies > 0) {
+      result.reserve(ncopies * str.size());
       while (ncopies-- > 0) {
         result += str;
       }

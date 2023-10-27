@@ -22,18 +22,18 @@
 
 
 template <typename Span>
-constexpr bool testConstexprSpan(Span sp, size_t sz)
+constexpr bool testConstexprSpan(Span sp, std::size_t sz)
 {
     ASSERT_NOEXCEPT(sp.size_bytes());
-    return (size_t) sp.size_bytes() == sz * sizeof(typename Span::element_type);
+    return (std::size_t) sp.size_bytes() == sz * sizeof(typename Span::element_type);
 }
 
 
 template <typename Span>
-void testRuntimeSpan(Span sp, size_t sz)
+void testRuntimeSpan(Span sp, std::size_t sz)
 {
     ASSERT_NOEXCEPT(sp.size_bytes());
-    assert((size_t) sp.size_bytes() == sz * sizeof(typename Span::element_type));
+    assert((std::size_t) sp.size_bytes() == sz * sizeof(typename Span::element_type));
 }
 
 struct A{};

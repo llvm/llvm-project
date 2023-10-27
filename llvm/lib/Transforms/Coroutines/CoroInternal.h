@@ -25,11 +25,14 @@ bool declaresIntrinsics(const Module &M,
                         const std::initializer_list<StringRef>);
 void replaceCoroFree(CoroIdInst *CoroId, bool Elide);
 
-/// Recover a dbg.declare prepared by the frontend and emit an alloca
-/// holding a pointer to the coroutine frame.
+/// Attempts to rewrite the location operand of debug intrinsics in terms of
+/// the coroutine frame pointer, folding pointer offsets into the DIExpression
+/// of the intrinsic.
+/// If the frame pointer is an Argument, store it into an alloca if
+/// OptimizeFrame is false.
 void salvageDebugInfo(
-    SmallDenseMap<llvm::Value *, llvm::AllocaInst *, 4> &DbgPtrAllocaCache,
-    DbgVariableIntrinsic *DVI, bool OptimizeFrame);
+    SmallDenseMap<Argument *, AllocaInst *, 4> &ArgToAllocaMap,
+    DbgVariableIntrinsic *DVI, bool OptimizeFrame, bool IsEntryPoint);
 
 // Keeps data and helper functions for lowering coroutine intrinsics.
 struct LowererBase {
@@ -124,7 +127,6 @@ struct LLVM_LIBRARY_VISIBILITY Shape {
   };
 
   struct AsyncLoweringStorage {
-    FunctionType *AsyncFuncTy;
     Value *Context;
     CallingConv::ID AsyncCC;
     unsigned ContextArgNo;
@@ -261,7 +263,10 @@ struct LLVM_LIBRARY_VISIBILITY Shape {
   void buildFrom(Function &F);
 };
 
-void buildCoroutineFrame(Function &F, Shape &Shape);
+bool defaultMaterializable(Instruction &V);
+void buildCoroutineFrame(
+    Function &F, Shape &Shape,
+    const std::function<bool(Instruction &)> &MaterializableCallback);
 CallInst *createMustTailCall(DebugLoc Loc, Function *MustTailCallFn,
                              ArrayRef<Value *> Arguments, IRBuilder<> &);
 } // End namespace coro.

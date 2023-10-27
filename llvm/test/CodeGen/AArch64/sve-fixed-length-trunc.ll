@@ -26,8 +26,8 @@ define <16 x i8> @trunc_v16i16_v16i8(ptr %in) vscale_range(2,0) #0 {
 define void @trunc_v32i16_v32i8(ptr %in, ptr %out) #0 {
 ; VBITS_GE_256-LABEL: trunc_v32i16_v32i8:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #16
 ; VBITS_GE_256-NEXT:    ptrue p0.h, vl16
+; VBITS_GE_256-NEXT:    mov x8, #16 // =0x10
 ; VBITS_GE_256-NEXT:    ld1h { z0.h }, p0/z, [x0, x8, lsl #1]
 ; VBITS_GE_256-NEXT:    ld1h { z1.h }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    ptrue p0.b, vl16
@@ -112,8 +112,8 @@ define <8 x i8> @trunc_v8i32_v8i8(ptr %in) vscale_range(2,0) #0 {
 define <16 x i8> @trunc_v16i32_v16i8(ptr %in) #0 {
 ; VBITS_GE_256-LABEL: trunc_v16i32_v16i8:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #8
 ; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
+; VBITS_GE_256-NEXT:    mov x8, #8 // =0x8
 ; VBITS_GE_256-NEXT:    ld1w { z0.s }, p0/z, [x0, x8, lsl #2]
 ; VBITS_GE_256-NEXT:    ld1w { z1.s }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    uzp1 z0.h, z0.h, z0.h
@@ -196,8 +196,8 @@ define <8 x i16> @trunc_v8i32_v8i16(ptr %in) vscale_range(2,0) #0 {
 define void @trunc_v16i32_v16i16(ptr %in, ptr %out) #0 {
 ; VBITS_GE_256-LABEL: trunc_v16i32_v16i16:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #8
 ; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
+; VBITS_GE_256-NEXT:    mov x8, #8 // =0x8
 ; VBITS_GE_256-NEXT:    ld1w { z0.s }, p0/z, [x0, x8, lsl #2]
 ; VBITS_GE_256-NEXT:    ld1w { z1.s }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    ptrue p0.h, vl8
@@ -283,8 +283,8 @@ define <4 x i8> @trunc_v4i64_v4i8(ptr %in) vscale_range(2,0) #0 {
 define <8 x i8> @trunc_v8i64_v8i8(ptr %in) #0 {
 ; VBITS_GE_256-LABEL: trunc_v8i64_v8i8:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #4
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
+; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
 ; VBITS_GE_256-NEXT:    ld1d { z0.d }, p0/z, [x0, x8, lsl #3]
 ; VBITS_GE_256-NEXT:    ld1d { z1.d }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    ptrue p0.s, vl4
@@ -366,8 +366,8 @@ define <4 x i16> @trunc_v4i64_v4i16(ptr %in) vscale_range(2,0) #0 {
 define <8 x i16> @trunc_v8i64_v8i16(ptr %in) #0 {
 ; VBITS_GE_256-LABEL: trunc_v8i64_v8i16:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #4
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
+; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
 ; VBITS_GE_256-NEXT:    ld1d { z0.d }, p0/z, [x0, x8, lsl #3]
 ; VBITS_GE_256-NEXT:    ld1d { z1.d }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    uzp1 z0.s, z0.s, z0.s
@@ -450,8 +450,8 @@ define <4 x i32> @trunc_v4i64_v4i32(ptr %in) vscale_range(2,0) #0 {
 define void @trunc_v8i64_v8i32(ptr %in, ptr %out) #0 {
 ; VBITS_GE_256-LABEL: trunc_v8i64_v8i32:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #4
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
+; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
 ; VBITS_GE_256-NEXT:    ld1d { z0.d }, p0/z, [x0, x8, lsl #3]
 ; VBITS_GE_256-NEXT:    ld1d { z1.d }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    ptrue p0.s, vl4

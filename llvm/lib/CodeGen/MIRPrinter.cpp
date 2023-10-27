@@ -18,6 +18,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/CodeGen/LowLevelType.h"
 #include "llvm/CodeGen/MIRYamlMapping.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
@@ -47,7 +48,6 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
-#include "llvm/Support/LowLevelTypeImpl.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
@@ -119,6 +119,9 @@ public:
                const MachineJumpTableInfo &JTI);
   void convertStackObjects(yaml::MachineFunction &YMF,
                            const MachineFunction &MF, ModuleSlotTracker &MST);
+  void convertEntryValueObjects(yaml::MachineFunction &YMF,
+                                const MachineFunction &MF,
+                                ModuleSlotTracker &MST);
   void convertCallSiteObjects(yaml::MachineFunction &YMF,
                               const MachineFunction &MF,
                               ModuleSlotTracker &MST);
@@ -200,6 +203,7 @@ void MIRPrinter::print(const MachineFunction &MF) {
   YamlMF.HasEHCatchret = MF.hasEHCatchret();
   YamlMF.HasEHScopes = MF.hasEHScopes();
   YamlMF.HasEHFunclets = MF.hasEHFunclets();
+  YamlMF.IsOutlined = MF.isOutlined();
   YamlMF.UseDebugInstrRef = MF.useDebugInstrRef();
 
   YamlMF.Legalized = MF.getProperties().hasProperty(
@@ -220,6 +224,7 @@ void MIRPrinter::print(const MachineFunction &MF) {
   MST.incorporateFunction(MF.getFunction());
   convert(MST, YamlMF.FrameInfo, MF.getFrameInfo());
   convertStackObjects(YamlMF, MF, MST);
+  convertEntryValueObjects(YamlMF, MF, MST);
   convertCallSiteObjects(YamlMF, MF, MST);
   for (const auto &Sub : MF.DebugValueSubstitutions) {
     const auto &SubSrc = Sub.Src;
@@ -372,6 +377,19 @@ void MIRPrinter::convert(ModuleSlotTracker &MST,
   }
 }
 
+void MIRPrinter::convertEntryValueObjects(yaml::MachineFunction &YMF,
+                                          const MachineFunction &MF,
+                                          ModuleSlotTracker &MST) {
+  const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
+  for (const MachineFunction::VariableDbgInfo &DebugVar :
+       MF.getEntryValueVariableDbgInfo()) {
+    yaml::EntryValueObject &Obj = YMF.EntryValueObjects.emplace_back();
+    printStackObjectDbgInfo(DebugVar, Obj, MST);
+    MCRegister EntryValReg = DebugVar.getEntryValueRegister();
+    printRegMIR(EntryValReg, Obj.EntryValueRegister, TRI);
+  }
+}
+
 void MIRPrinter::convertStackObjects(yaml::MachineFunction &YMF,
                                      const MachineFunction &MF,
                                      ModuleSlotTracker &MST) {
@@ -490,17 +508,17 @@ void MIRPrinter::convertStackObjects(yaml::MachineFunction &YMF,
 
   // Print the debug variable information.
   for (const MachineFunction::VariableDbgInfo &DebugVar :
-       MF.getVariableDbgInfo()) {
-    assert(DebugVar.Slot >= MFI.getObjectIndexBegin() &&
-           DebugVar.Slot < MFI.getObjectIndexEnd() &&
+       MF.getInStackSlotVariableDbgInfo()) {
+    int Idx = DebugVar.getStackSlot();
+    assert(Idx >= MFI.getObjectIndexBegin() && Idx < MFI.getObjectIndexEnd() &&
            "Invalid stack object index");
-    if (DebugVar.Slot < 0) { // Negative index means fixed objects.
+    if (Idx < 0) { // Negative index means fixed objects.
       auto &Object =
-          YMF.FixedStackObjects[FixedStackObjectsIdx[DebugVar.Slot +
+          YMF.FixedStackObjects[FixedStackObjectsIdx[Idx +
                                                      MFI.getNumFixedObjects()]];
       printStackObjectDbgInfo(DebugVar, Object, MST);
     } else {
-      auto &Object = YMF.StackObjects[StackObjectsIdx[DebugVar.Slot]];
+      auto &Object = YMF.StackObjects[StackObjectsIdx[Idx]];
       printStackObjectDbgInfo(DebugVar, Object, MST);
     }
   }
@@ -783,6 +801,10 @@ void MIPrinter::print(const MachineInstr &MI) {
     OS << "nofpexcept ";
   if (MI.getFlag(MachineInstr::NoMerge))
     OS << "nomerge ";
+  if (MI.getFlag(MachineInstr::Unpredictable))
+    OS << "unpredictable ";
+  if (MI.getFlag(MachineInstr::NoConvergent))
+    OS << "noconvergent ";
 
   OS << TII->getName(MI.getOpcode());
   if (I < E)

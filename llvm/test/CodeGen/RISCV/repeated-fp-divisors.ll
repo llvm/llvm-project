@@ -5,8 +5,8 @@
 define void @single_fdiv(double %a0, double %a1, ptr %res) {
 ; CHECK-LABEL: single_fdiv:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    fdiv.d ft0, fa1, fa0
-; CHECK-NEXT:    fsd ft0, 0(a0)
+; CHECK-NEXT:    fdiv.d fa5, fa1, fa0
+; CHECK-NEXT:    fsd fa5, 0(a0)
 ; CHECK-NEXT:    ret
 entry:
   %div = fdiv arcp double %a1, %a0
@@ -18,12 +18,12 @@ define void @two_fdivs(double %a0, double %a1, double %a2, ptr %res) {
 ; CHECK-LABEL: two_fdivs:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lui a1, %hi(.LCPI1_0)
-; CHECK-NEXT:    fld ft0, %lo(.LCPI1_0)(a1)
-; CHECK-NEXT:    fdiv.d ft0, ft0, fa0
-; CHECK-NEXT:    fmul.d ft1, fa1, ft0
-; CHECK-NEXT:    fmul.d ft0, fa2, ft0
-; CHECK-NEXT:    fsd ft1, 0(a0)
-; CHECK-NEXT:    fsd ft0, 8(a0)
+; CHECK-NEXT:    fld fa5, %lo(.LCPI1_0)(a1)
+; CHECK-NEXT:    fdiv.d fa5, fa5, fa0
+; CHECK-NEXT:    fmul.d fa4, fa1, fa5
+; CHECK-NEXT:    fmul.d fa5, fa2, fa5
+; CHECK-NEXT:    fsd fa4, 0(a0)
+; CHECK-NEXT:    fsd fa5, 8(a0)
 ; CHECK-NEXT:    ret
 entry:
   %div = fdiv arcp double %a1, %a0
@@ -38,10 +38,10 @@ entry:
 define void @no_arcp(double %a0, double %a1, double %a2, ptr %res) {
 ; CHECK-LABEL: no_arcp:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    fdiv.d ft0, fa1, fa0
-; CHECK-NEXT:    fdiv.d ft1, fa2, fa0
-; CHECK-NEXT:    fsd ft0, 0(a0)
-; CHECK-NEXT:    fsd ft1, 8(a0)
+; CHECK-NEXT:    fdiv.d fa5, fa1, fa0
+; CHECK-NEXT:    fdiv.d fa4, fa2, fa0
+; CHECK-NEXT:    fsd fa5, 0(a0)
+; CHECK-NEXT:    fsd fa4, 8(a0)
 ; CHECK-NEXT:    ret
 entry:
   %div = fdiv arcp double %a1, %a0

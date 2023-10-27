@@ -81,10 +81,10 @@ TYPE_CONTEXT_PARSER("specification part"_en_US,
 // are in contexts that impose constraints on the kinds of statements that
 // are allowed, and so we have a variant production for declaration-construct
 // that implements those constraints.
-constexpr auto execPartLookAhead{
-    first(actionStmt >> ok, openaccConstruct >> ok, openmpConstruct >> ok,
-        "ASSOCIATE ("_tok, "BLOCK"_tok, "SELECT"_tok, "CHANGE TEAM"_sptok,
-        "CRITICAL"_tok, "DO"_tok, "IF ("_tok, "WHERE ("_tok, "FORALL ("_tok)};
+constexpr auto execPartLookAhead{first(actionStmt >> ok, openaccConstruct >> ok,
+    openmpConstruct >> ok, "ASSOCIATE ("_tok, "BLOCK"_tok, "SELECT"_tok,
+    "CHANGE TEAM"_sptok, "CRITICAL"_tok, "DO"_tok, "IF ("_tok, "WHERE ("_tok,
+    "FORALL ("_tok, "!$CUF"_tok)};
 constexpr auto declErrorRecovery{
     stmtErrorRecoveryStart >> !execPartLookAhead >> skipStmtErrorRecovery};
 constexpr auto misplacedSpecificationStmt{Parser<UseStmt>{} >>
@@ -168,7 +168,8 @@ TYPE_CONTEXT_PARSER("specification construct"_en_US,
 //        codimension-stmt | contiguous-stmt | dimension-stmt | external-stmt |
 //        intent-stmt | intrinsic-stmt | namelist-stmt | optional-stmt |
 //        pointer-stmt | protected-stmt | save-stmt | target-stmt |
-//        volatile-stmt | value-stmt | common-stmt | equivalence-stmt
+//        volatile-stmt | value-stmt | common-stmt | equivalence-stmt |
+// (CUDA) CUDA-attributes-stmt
 TYPE_PARSER(first(
     construct<OtherSpecificationStmt>(indirect(Parser<AccessStmt>{})),
     construct<OtherSpecificationStmt>(indirect(Parser<AllocatableStmt>{})),
@@ -190,7 +191,8 @@ TYPE_PARSER(first(
     construct<OtherSpecificationStmt>(indirect(Parser<VolatileStmt>{})),
     construct<OtherSpecificationStmt>(indirect(Parser<CommonStmt>{})),
     construct<OtherSpecificationStmt>(indirect(Parser<EquivalenceStmt>{})),
-    construct<OtherSpecificationStmt>(indirect(Parser<BasedPointerStmt>{}))))
+    construct<OtherSpecificationStmt>(indirect(Parser<BasedPointerStmt>{})),
+    construct<OtherSpecificationStmt>(indirect(Parser<CUDAAttributesStmt>{}))))
 
 // R1401 main-program ->
 //         [program-stmt] [specification-part] [execution-part]
@@ -422,16 +424,25 @@ TYPE_PARSER(
 TYPE_PARSER(
     "INTRINSIC" >> maybe("::"_tok) >> construct<IntrinsicStmt>(listOfNames))
 
-// R1520 function-reference -> procedure-designator ( [actual-arg-spec-list] )
+// R1520 function-reference -> procedure-designator
+//                               ( [actual-arg-spec-list] )
 TYPE_CONTEXT_PARSER("function reference"_en_US,
-    construct<FunctionReference>(
-        sourced(construct<Call>(Parser<ProcedureDesignator>{},
+    sourced(construct<FunctionReference>(
+        construct<Call>(Parser<ProcedureDesignator>{},
             parenthesized(optionalList(actualArgSpec))))) /
         !"["_tok)
 
-// R1521 call-stmt -> CALL procedure-designator [( [actual-arg-spec-list] )]
+// R1521 call-stmt -> CALL procedure-designator [chevrons]
+///                          [( [actual-arg-spec-list] )]
+// (CUDA) chevrons -> <<< scalar-expr, scalar-expr [, scalar-int-expr
+//                      [, scalar-int-expr ] ] >>>
+TYPE_PARSER(extension<LanguageFeature::CUDA>(
+    "<<<" >> construct<CallStmt::Chevrons>(scalarExpr, "," >> scalarExpr,
+                 maybe("," >> scalarIntExpr), maybe("," >> scalarIntExpr)) /
+        ">>>"))
 TYPE_PARSER(construct<CallStmt>(
-    sourced(construct<Call>("CALL" >> Parser<ProcedureDesignator>{},
+    sourced(construct<CallStmt>("CALL" >> Parser<ProcedureDesignator>{},
+        maybe(Parser<CallStmt::Chevrons>{}),
         defaulted(parenthesized(optionalList(actualArgSpec)))))))
 
 // R1522 procedure-designator ->
@@ -467,7 +478,13 @@ TYPE_PARSER(construct<AltReturnSpec>(star >> label))
 
 // R1527 prefix-spec ->
 //         declaration-type-spec | ELEMENTAL | IMPURE | MODULE |
-//         NON_RECURSIVE | PURE | RECURSIVE
+//         NON_RECURSIVE | PURE | RECURSIVE |
+// (CUDA)  ATTRIBUTES ( (DEVICE | GLOBAL | GRID_GLOBAL | HOST)... ) |
+//         LAUNCH_BOUNDS(expr-list) | CLUSTER_DIMS(expr-list)
+TYPE_PARSER(first("DEVICE" >> pure(common::CUDASubprogramAttrs::Device),
+    "GLOBAL" >> pure(common::CUDASubprogramAttrs::Global),
+    "GRID_GLOBAL" >> pure(common::CUDASubprogramAttrs::Grid_Global),
+    "HOST" >> pure(common::CUDASubprogramAttrs::Host)))
 TYPE_PARSER(first(construct<PrefixSpec>(declarationTypeSpec),
     construct<PrefixSpec>(construct<PrefixSpec::Elemental>("ELEMENTAL"_tok)),
     construct<PrefixSpec>(construct<PrefixSpec::Impure>("IMPURE"_tok)),
@@ -475,7 +492,19 @@ TYPE_PARSER(first(construct<PrefixSpec>(declarationTypeSpec),
     construct<PrefixSpec>(
         construct<PrefixSpec::Non_Recursive>("NON_RECURSIVE"_tok)),
     construct<PrefixSpec>(construct<PrefixSpec::Pure>("PURE"_tok)),
-    construct<PrefixSpec>(construct<PrefixSpec::Recursive>("RECURSIVE"_tok))))
+    construct<PrefixSpec>(construct<PrefixSpec::Recursive>("RECURSIVE"_tok)),
+    extension<LanguageFeature::CUDA>(
+        construct<PrefixSpec>(construct<PrefixSpec::Attributes>("ATTRIBUTES" >>
+            parenthesized(
+                optionalList(Parser<common::CUDASubprogramAttrs>{}))))),
+    extension<LanguageFeature::CUDA>(construct<PrefixSpec>(
+        construct<PrefixSpec::Launch_Bounds>("LAUNCH_BOUNDS" >>
+            parenthesized(nonemptyList(
+                "expected launch bounds"_err_en_US, scalarIntConstantExpr))))),
+    extension<LanguageFeature::CUDA>(construct<PrefixSpec>(
+        construct<PrefixSpec::Cluster_Dims>("CLUSTER_DIMS" >>
+            parenthesized(nonemptyList("expected cluster dimensions"_err_en_US,
+                scalarIntConstantExpr)))))))
 
 // R1529 function-subprogram ->
 //         function-stmt [specification-part] [execution-part]

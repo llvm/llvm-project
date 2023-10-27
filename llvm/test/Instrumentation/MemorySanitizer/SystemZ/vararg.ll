@@ -197,3 +197,16 @@ define i64 @bar_128() {
 ; CHECK: declare void @__msan_maybe_store_origin_4(i32 zeroext, ptr, i32 zeroext)
 ; CHECK: declare void @__msan_maybe_warning_8(i64 zeroext, i32 zeroext)
 ; CHECK: declare void @__msan_maybe_store_origin_8(i64 zeroext, ptr, i32 zeroext)
+
+; Test vararg function pointers.
+;
+; void (*ptr)(int, ...);
+; void call_ptr(void) { ptr(0); }
+
+@ptr = dso_local global ptr null, align 8
+
+define dso_local void @call_ptr() {
+  %1 = load ptr, ptr @ptr, align 8
+  call void (i32, ...) %1(i32 noundef signext 0)
+  ret void
+}

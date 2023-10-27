@@ -12,19 +12,19 @@ define void @test(ptr %p) {
 ; CHECK-NEXT:    %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop.latch ]
 ; CHECK-NEXT:    --> %iv U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop.header: Variant, %loop2: Invariant, %loop3: Invariant }
 ; CHECK-NEXT:    %iv2 = phi i32 [ %iv, %loop.header ], [ %iv2.next, %loop2 ]
-; CHECK-NEXT:    --> {%iv,+,1}<nsw><%loop2> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop2: Computable, %loop.header: Variant }
+; CHECK-NEXT:    --> {%iv,+,1}<%loop2> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop2: Computable, %loop.header: Variant }
 ; CHECK-NEXT:    %iv2.next = add i32 %iv2, 1
-; CHECK-NEXT:    --> {(1 + %iv),+,1}<nw><%loop2> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop2: Computable, %loop.header: Variant }
+; CHECK-NEXT:    --> {(1 + %iv),+,1}<%loop2> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop2: Computable, %loop.header: Variant }
 ; CHECK-NEXT:    %v = load i32, ptr %p, align 4
 ; CHECK-NEXT:    --> %v U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop2: Variant, %loop.header: Variant }
 ; CHECK-NEXT:    %iv2.ext = sext i32 %iv2 to i64
-; CHECK-NEXT:    --> (sext i32 {%iv,+,1}<nsw><%loop2> to i64) U: [-2147483648,2147483648) S: [-2147483648,2147483648) Exits: <<Unknown>> LoopDispositions: { %loop.header: Variant, %loop2: Computable, %loop3: Invariant }
+; CHECK-NEXT:    --> (sext i32 {%iv,+,1}<%loop2> to i64) U: [-2147483648,2147483648) S: [-2147483648,2147483648) Exits: <<Unknown>> LoopDispositions: { %loop.header: Variant, %loop2: Computable, %loop3: Invariant }
 ; CHECK-NEXT:    %iv3 = phi i64 [ %iv2.ext, %loop2.end ], [ %iv3.next, %loop3 ]
-; CHECK-NEXT:    --> {(sext i32 {%iv,+,1}<nsw><%loop2> to i64),+,1}<nsw><%loop3> U: [-2147483648,2147483648) S: [-2147483648,2147483648) Exits: (sext i32 {%iv,+,1}<nsw><%loop2> to i64) LoopDispositions: { %loop3: Computable, %loop.header: Variant }
+; CHECK-NEXT:    --> {(sext i32 {%iv,+,1}<%loop2> to i64),+,1}<nsw><%loop3> U: [-2147483648,2147483648) S: [-2147483648,2147483648) Exits: (sext i32 {%iv,+,1}<%loop2> to i64) LoopDispositions: { %loop3: Computable, %loop.header: Variant }
 ; CHECK-NEXT:    %iv3.next = add nsw i64 %iv3, 1
-; CHECK-NEXT:    --> {(1 + (sext i32 {%iv,+,1}<nsw><%loop2> to i64))<nsw>,+,1}<nsw><%loop3> U: [-2147483647,2147483649) S: [-2147483647,2147483649) Exits: (1 + (sext i32 {%iv,+,1}<nsw><%loop2> to i64))<nsw> LoopDispositions: { %loop3: Computable, %loop.header: Variant }
+; CHECK-NEXT:    --> {(1 + (sext i32 {%iv,+,1}<%loop2> to i64))<nsw>,+,1}<nsw><%loop3> U: [-2147483647,2147483649) S: [-2147483647,2147483649) Exits: (1 + (sext i32 {%iv,+,1}<%loop2> to i64))<nsw> LoopDispositions: { %loop3: Computable, %loop.header: Variant }
 ; CHECK-NEXT:    %iv.next = trunc i64 %iv3 to i32
-; CHECK-NEXT:    --> {{\{}}{%iv,+,1}<nsw><%loop2>,+,1}<%loop3> U: full-set S: full-set --> {%iv,+,1}<nsw><%loop2> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop.header: Variant, %loop2: Variant, %loop3: Computable }
+; CHECK-NEXT:    --> {{{.*}}{%iv,+,1}<%loop2>,+,1}<%loop3> U: full-set S: full-set --> {%iv,+,1}<%loop2> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop.header: Variant, %loop2: Variant, %loop3: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test
 ; CHECK-NEXT:  Loop %loop2: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %loop2: constant max backedge-taken count is -1

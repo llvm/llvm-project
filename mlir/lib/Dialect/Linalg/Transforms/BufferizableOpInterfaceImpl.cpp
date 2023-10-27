@@ -95,15 +95,45 @@ struct LinalgOpInterface
   bool bufferizesToMemoryRead(Operation *op, OpOperand &opOperand,
                               const AnalysisState &state) const {
     // Operand is read if it is used in the computation.
-    auto genericOp = cast<linalg::LinalgOp>(op);
-    return genericOp.payloadUsesValueFromOperand(&opOperand);
+    auto linalgOp = cast<linalg::LinalgOp>(op);
+    return linalgOp.payloadUsesValueFromOperand(&opOperand);
   }
 
   bool bufferizesToMemoryWrite(Operation *op, OpOperand &opOperand,
                                const AnalysisState &state) const {
-    // Operand is written to if it has an aliasing OpResult.
-    auto bufferizableOp = cast<BufferizableOpInterface>(op);
-    return !bufferizableOp.getAliasingOpResult(opOperand, state).empty();
+    // Operand is written to if it is not an input/init.
+    auto dpsOp = cast<DestinationStyleOpInterface>(op);
+    return dpsOp.isDpsInit(&opOperand);
+  }
+
+  bool bufferizesToElementwiseAccess(Operation *op, const AnalysisState &state,
+                                     ArrayRef<OpOperand *> opOperands) const {
+    auto linalgOp = cast<linalg::LinalgOp>(op);
+
+    // All loops must be parallel.
+    if (linalgOp.getNumLoops() != linalgOp.getNumParallelLoops())
+      return false;
+
+    // All index maps of tensors must be identity maps.
+    SmallVector<AffineMap> indexingMaps = linalgOp.getIndexingMapsArray();
+    assert(linalgOp->getNumOperands() == indexingMaps.size() &&
+           "unexpected number of indexing maps");
+    for (auto [operand, map] :
+         llvm::zip(linalgOp->getOpOperands(), indexingMaps)) {
+      // Non-tensors do not participate in bufferization, so they can be
+      // ignored.
+      if (!isa<RankedTensorType, MemRefType>(operand.get().getType()))
+        continue;
+      // Only consider operands in `opOperands`.
+      if (llvm::find(opOperands, &operand) == opOperands.end())
+        continue;
+      // TODO: This could be generalized to other indexing maps. (All indexing
+      // must be the same.)
+      if (!map.isIdentity())
+        return false;
+    }
+
+    return true;
   }
 
   LogicalResult bufferize(Operation *op, RewriterBase &rewriter,

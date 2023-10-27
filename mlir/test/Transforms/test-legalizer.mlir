@@ -2,7 +2,7 @@
 
 // CHECK-LABEL: verifyDirectPattern
 func.func @verifyDirectPattern() -> i32 {
-  // CHECK-NEXT:  "test.legal_op_a"() {status = "Success"}
+  // CHECK-NEXT:  "test.legal_op_a"() <{status = "Success"}
   %result = "test.illegal_op_a"() : () -> (i32)
   // expected-remark@+1 {{op 'func.return' is not legalizable}}
   return %result : i32
@@ -10,7 +10,7 @@ func.func @verifyDirectPattern() -> i32 {
 
 // CHECK-LABEL: verifyLargerBenefit
 func.func @verifyLargerBenefit() -> i32 {
-  // CHECK-NEXT:  "test.legal_op_a"() {status = "Success"}
+  // CHECK-NEXT:  "test.legal_op_a"() <{status = "Success"}
   %result = "test.illegal_op_c"() : () -> (i32)
   // expected-remark@+1 {{op 'func.return' is not legalizable}}
   return %result : i32
@@ -316,4 +316,17 @@ func.func @typemismatch(%arg: f32) -> i32 {
   // expected-remark@+1 {{op 'test.passthrough_fold' is not legalizable}}
   %0 = "test.passthrough_fold"(%arg) : (f32) -> (i32)
   "test.return"(%0) : (i32) -> ()
+}
+
+// -----
+
+// expected-remark @below {{applyPartialConversion failed}}
+module {
+  func.func private @callee(%0 : f32) -> f32
+
+  func.func @caller( %arg: f32) {
+    // expected-error @below {{failed to legalize}}
+    %1 = func.call @callee(%arg) : (f32) -> f32
+    return
+  }
 }

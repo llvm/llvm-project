@@ -182,35 +182,10 @@ SBData SBSection::GetSectionData(uint64_t offset, uint64_t size) {
   SBData sb_data;
   SectionSP section_sp(GetSP());
   if (section_sp) {
-    const uint64_t sect_file_size = section_sp->GetFileSize();
-    if (sect_file_size > 0) {
-      ModuleSP module_sp(section_sp->GetModule());
-      if (module_sp) {
-        ObjectFile *objfile = module_sp->GetObjectFile();
-        if (objfile) {
-          const uint64_t sect_file_offset =
-              objfile->GetFileOffset() + section_sp->GetFileOffset();
-          const uint64_t file_offset = sect_file_offset + offset;
-          uint64_t file_size = size;
-          if (file_size == UINT64_MAX) {
-            file_size = section_sp->GetByteSize();
-            if (file_size > offset)
-              file_size -= offset;
-            else
-              file_size = 0;
-          }
-          auto data_buffer_sp = FileSystem::Instance().CreateDataBuffer(
-              objfile->GetFileSpec().GetPath(), file_size, file_offset);
-          if (data_buffer_sp && data_buffer_sp->GetByteSize() > 0) {
-            DataExtractorSP data_extractor_sp(
-                new DataExtractor(data_buffer_sp, objfile->GetByteOrder(),
-                                  objfile->GetAddressByteSize()));
-
-            sb_data.SetOpaque(data_extractor_sp);
-          }
-        }
-      }
-    }
+    DataExtractor section_data;
+    section_sp->GetSectionData(section_data);
+    sb_data.SetOpaque(
+        std::make_shared<DataExtractor>(section_data, offset, size));
   }
   return sb_data;
 }

@@ -2,10 +2,10 @@
 ! Resolve generic based on number of arguments
 subroutine subr1
   interface f
-    real function f1(x)
+    real function s1f1(x)
       optional :: x
     end
-    real function f2(x, y)
+    real function s1f2(x, y)
     end
   end interface
   z = f(1.0)
@@ -17,10 +17,10 @@ end
 ! Elemental and non-element function both match: non-elemental one should be used
 subroutine subr2
   interface f
-    logical elemental function f1(x)
+    logical elemental function s2f1(x)
       intent(in) :: x
     end
-    real function f2(x)
+    real function s2f2(x)
       real :: x(10)
     end
   end interface

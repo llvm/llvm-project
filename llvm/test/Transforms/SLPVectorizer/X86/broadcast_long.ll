@@ -17,7 +17,7 @@ define void @bcast_long(ptr %A, ptr %S) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A0:%.*]] = load i32, ptr [[A:%.*]], align 8
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <8 x i32> poison, i32 [[A0]], i32 0
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <8 x i32> [[TMP0]], <8 x i32> poison, <8 x i32> <i32 0, i32 0, i32 undef, i32 0, i32 0, i32 0, i32 0, i32 0>
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <8 x i32> [[TMP0]], <8 x i32> poison, <8 x i32> <i32 0, i32 0, i32 poison, i32 0, i32 0, i32 0, i32 0, i32 0>
 ; CHECK-NEXT:    [[TMP1:%.*]] = freeze <8 x i32> [[SHUFFLE]]
 ; CHECK-NEXT:    store <8 x i32> [[TMP1]], ptr [[S:%.*]], align 8
 ; CHECK-NEXT:    ret void

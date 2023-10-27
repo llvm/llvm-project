@@ -12,14 +12,14 @@
 
 #include <stdint.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace fputil {
 
 // Store and manipulate positive double precision numbers at |Precision| bits.
 template <size_t Precision> class XFloat {
   static constexpr uint64_t OneMask = (uint64_t(1) << 63);
   UInt<Precision> man;
-  static constexpr uint64_t WordCount = Precision / 64;
+  static constexpr uint64_t WORDCOUNT = Precision / 64;
   int exp;
 
   size_t bit_width(uint64_t x) {
@@ -35,25 +35,25 @@ template <size_t Precision> class XFloat {
 
 public:
   XFloat() : exp(0) {
-    for (int i = 0; i < WordCount; ++i)
+    for (int i = 0; i < WORDCOUNT; ++i)
       man[i] = 0;
   }
 
   XFloat(const XFloat &other) : exp(other.exp) {
-    for (int i = 0; i < WordCount; ++i)
+    for (int i = 0; i < WORDCOUNT; ++i)
       man[i] = other.man[i];
   }
 
   explicit XFloat(double x) {
     auto xn = NormalFloat<double>(x);
     exp = xn.exponent;
-    man[WordCount - 1] = xn.mantissa << 11;
-    for (int i = 0; i < WordCount - 1; ++i)
+    man[WORDCOUNT - 1] = xn.mantissa << 11;
+    for (int i = 0; i < WORDCOUNT - 1; ++i)
       man[i] = 0;
   }
 
   XFloat(int e, const UInt<Precision> &bits) : exp(e) {
-    for (size_t i = 0; i < WordCount; ++i)
+    for (size_t i = 0; i < WORDCOUNT; ++i)
       man[i] = bits[i];
   }
 
@@ -65,7 +65,7 @@ public:
     size_t carry_width = bit_width(carry);
     carry_width = (carry_width == 64 ? 64 : 63);
     man.shift_right(carry_width);
-    man[WordCount - 1] = man[WordCount - 1] + (carry << (64 - carry_width));
+    man[WORDCOUNT - 1] = man[WORDCOUNT - 1] + (carry << (64 - carry_width));
     exp += carry_width == 64 ? 1 : 0;
     normalize();
   }
@@ -74,7 +74,7 @@ public:
     if (exp < 0)
       return;
     if (exp > int(Precision - 1)) {
-      for (size_t i = 0; i < WordCount; ++i)
+      for (size_t i = 0; i < WORDCOUNT; ++i)
         man[i] = 0;
       return;
     }
@@ -86,14 +86,14 @@ public:
   }
 
   double mul(const XFloat<Precision> &other) {
-    constexpr size_t row_words = 2 * WordCount + 1;
+    constexpr size_t row_words = 2 * WORDCOUNT + 1;
     constexpr size_t row_precision = row_words * 64;
     constexpr size_t result_bits = 2 * Precision;
-    UInt<row_precision> rows[WordCount];
+    UInt<row_precision> rows[WORDCOUNT];
 
-    for (size_t r = 0; r < WordCount; ++r) {
+    for (size_t r = 0; r < WORDCOUNT; ++r) {
       for (size_t i = 0; i < row_words; ++i) {
-        if (i < WordCount)
+        if (i < WORDCOUNT)
           rows[r][i] = man[i];
         else
           rows[r][i] = 0;
@@ -102,7 +102,7 @@ public:
       rows[r].shift_left(r * 64);
     }
 
-    for (size_t r = 1; r < WordCount; ++r) {
+    for (size_t r = 1; r < WORDCOUNT; ++r) {
       rows[0].add(rows[r]);
     }
     int result_exp = exp + other.exp;
@@ -134,14 +134,14 @@ public:
 
     constexpr uint64_t one = uint64_t(1) << 10;
     constexpr uint64_t excess_mask = (one << 1) - 1;
-    uint64_t excess = man[WordCount - 1] & excess_mask;
-    uint64_t new_man = man[WordCount - 1] >> 11;
+    uint64_t excess = man[WORDCOUNT - 1] & excess_mask;
+    uint64_t new_man = man[WORDCOUNT - 1] >> 11;
     if (excess > one) {
       // We have to round up.
       ++new_man;
     } else if (excess == one) {
       bool greater_than_one = false;
-      for (size_t i = 0; i < WordCount - 1; ++i) {
+      for (size_t i = 0; i < WORDCOUNT - 1; ++i) {
         greater_than_one = (man[i] != 0);
         if (greater_than_one)
           break;
@@ -163,13 +163,13 @@ public:
   // Normalizes this number.
   void normalize() {
     uint64_t man_bits = 0;
-    for (size_t i = 0; i < WordCount; ++i)
+    for (size_t i = 0; i < WORDCOUNT; ++i)
       man_bits |= man[i];
 
     if (man_bits == 0)
       return;
 
-    while ((man[WordCount - 1] & OneMask) == 0) {
+    while ((man[WORDCOUNT - 1] & OneMask) == 0) {
       man.shift_left(1);
       --exp;
     }
@@ -177,4 +177,4 @@ public:
 };
 
 } // namespace fputil
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

@@ -32,15 +32,16 @@
 #include "min_allocator.h"
 
 template <class StringView, class Allocator, class = void>
-struct CanDeduce : std::false_type { };
+struct CanDeduce : std::false_type {};
 
 template <class StringView, class Allocator>
-struct CanDeduce<StringView, Allocator, decltype((void)
-  std::basic_string{std::declval<StringView>(), std::declval<Allocator>()}
-)> : std::true_type { };
+struct CanDeduce<StringView,
+                 Allocator,
+                 decltype((void)std::basic_string{std::declval<StringView>(), std::declval<Allocator>()})>
+    : std::true_type {};
 
-struct NotAnAllocator { };
-static_assert( CanDeduce<std::string_view, std::allocator<char>>::value);
+struct NotAnAllocator {};
+static_assert(CanDeduce<std::string_view, std::allocator<char>>::value);
 static_assert(!CanDeduce<std::string_view, NotAnAllocator>::value);
 
 TEST_CONSTEXPR_CXX20 bool test() {
@@ -48,9 +49,9 @@ TEST_CONSTEXPR_CXX20 bool test() {
     std::string_view sv = "12345678901234";
     std::basic_string s1(sv);
     using S = decltype(s1); // what type did we get?
-    static_assert(std::is_same_v<S::value_type,                      char>,  "");
-    static_assert(std::is_same_v<S::traits_type,    std::char_traits<char>>, "");
-    static_assert(std::is_same_v<S::allocator_type,   std::allocator<char>>, "");
+    static_assert(std::is_same_v<S::value_type, char>, "");
+    static_assert(std::is_same_v<S::traits_type, std::char_traits<char>>, "");
+    static_assert(std::is_same_v<S::allocator_type, std::allocator<char>>, "");
     assert(s1.size() == sv.size());
     assert(s1.compare(0, s1.size(), sv.data(), s1.size()) == 0);
   }
@@ -59,9 +60,9 @@ TEST_CONSTEXPR_CXX20 bool test() {
     std::string_view sv = "12345678901234";
     std::basic_string s1{sv, std::allocator<char>{}};
     using S = decltype(s1); // what type did we get?
-    static_assert(std::is_same_v<S::value_type,                      char>,  "");
-    static_assert(std::is_same_v<S::traits_type,    std::char_traits<char>>, "");
-    static_assert(std::is_same_v<S::allocator_type,   std::allocator<char>>, "");
+    static_assert(std::is_same_v<S::value_type, char>, "");
+    static_assert(std::is_same_v<S::traits_type, std::char_traits<char>>, "");
+    static_assert(std::is_same_v<S::allocator_type, std::allocator<char>>, "");
     assert(s1.size() == sv.size());
     assert(s1.compare(0, s1.size(), sv.data(), s1.size()) == 0);
   }
@@ -70,9 +71,9 @@ TEST_CONSTEXPR_CXX20 bool test() {
     std::wstring_view sv = L"12345678901234";
     std::basic_string s1{sv, test_allocator<wchar_t>{}};
     using S = decltype(s1); // what type did we get?
-    static_assert(std::is_same_v<S::value_type,                      wchar_t>,  "");
-    static_assert(std::is_same_v<S::traits_type,    std::char_traits<wchar_t>>, "");
-    static_assert(std::is_same_v<S::allocator_type,   test_allocator<wchar_t>>, "");
+    static_assert(std::is_same_v<S::value_type, wchar_t>, "");
+    static_assert(std::is_same_v<S::traits_type, std::char_traits<wchar_t>>, "");
+    static_assert(std::is_same_v<S::allocator_type, test_allocator<wchar_t>>, "");
     assert(s1.size() == sv.size());
     assert(s1.compare(0, s1.size(), sv.data(), s1.size()) == 0);
   }
@@ -82,9 +83,9 @@ TEST_CONSTEXPR_CXX20 bool test() {
     std::u8string_view sv = u8"12345678901234";
     std::basic_string s1{sv, min_allocator<char8_t>{}};
     using S = decltype(s1); // what type did we get?
-    static_assert(std::is_same_v<S::value_type,                      char8_t>,  "");
-    static_assert(std::is_same_v<S::traits_type,    std::char_traits<char8_t>>, "");
-    static_assert(std::is_same_v<S::allocator_type,    min_allocator<char8_t>>, "");
+    static_assert(std::is_same_v<S::value_type, char8_t>, "");
+    static_assert(std::is_same_v<S::traits_type, std::char_traits<char8_t>>, "");
+    static_assert(std::is_same_v<S::allocator_type, min_allocator<char8_t>>, "");
     assert(s1.size() == sv.size());
     assert(s1.compare(0, s1.size(), sv.data(), s1.size()) == 0);
   }
@@ -93,9 +94,9 @@ TEST_CONSTEXPR_CXX20 bool test() {
     std::u16string_view sv = u"12345678901234";
     std::basic_string s1{sv, min_allocator<char16_t>{}};
     using S = decltype(s1); // what type did we get?
-    static_assert(std::is_same_v<S::value_type,                      char16_t>,  "");
-    static_assert(std::is_same_v<S::traits_type,    std::char_traits<char16_t>>, "");
-    static_assert(std::is_same_v<S::allocator_type,    min_allocator<char16_t>>, "");
+    static_assert(std::is_same_v<S::value_type, char16_t>, "");
+    static_assert(std::is_same_v<S::traits_type, std::char_traits<char16_t>>, "");
+    static_assert(std::is_same_v<S::allocator_type, min_allocator<char16_t>>, "");
     assert(s1.size() == sv.size());
     assert(s1.compare(0, s1.size(), sv.data(), s1.size()) == 0);
   }
@@ -103,8 +104,8 @@ TEST_CONSTEXPR_CXX20 bool test() {
     std::u32string_view sv = U"12345678901234";
     std::basic_string s1{sv, explicit_allocator<char32_t>{}};
     using S = decltype(s1); // what type did we get?
-    static_assert(std::is_same_v<S::value_type,                        char32_t>,  "");
-    static_assert(std::is_same_v<S::traits_type,      std::char_traits<char32_t>>, "");
+    static_assert(std::is_same_v<S::value_type, char32_t>, "");
+    static_assert(std::is_same_v<S::traits_type, std::char_traits<char32_t>>, "");
     static_assert(std::is_same_v<S::allocator_type, explicit_allocator<char32_t>>, "");
     assert(s1.size() == sv.size());
     assert(s1.compare(0, s1.size(), sv.data(), s1.size()) == 0);
@@ -113,8 +114,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
   return true;
 }
 
-int main(int, char**)
-{
+int main(int, char**) {
   test();
 #if TEST_STD_VER > 17
   static_assert(test());

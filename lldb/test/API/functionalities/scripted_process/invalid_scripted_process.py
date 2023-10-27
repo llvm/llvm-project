@@ -1,4 +1,4 @@
-import os,struct, signal
+import os, struct, signal
 
 from typing import Any, Dict
 
@@ -6,21 +6,15 @@ import lldb
 from lldb.plugins.scripted_process import ScriptedProcess
 from lldb.plugins.scripted_process import ScriptedThread
 
+
 class InvalidScriptedProcess(ScriptedProcess):
-    def __init__(self, exe_ctx: lldb.SBExecutionContext, args : lldb.SBStructuredData):
+    def __init__(self, exe_ctx: lldb.SBExecutionContext, args: lldb.SBStructuredData):
         super().__init__(exe_ctx, args)
         self.threads[0] = InvalidScriptedThread(self, None)
 
-    def get_memory_region_containing_address(self, addr: int) -> lldb.SBMemoryRegionInfo:
-        return None
-
-    def get_thread_with_id(self, tid: int):
-        return {}
-
-    def get_registers_for_thread(self, tid: int):
-        return {}
-
-    def read_memory_at_address(self, addr: int, size: int, error: lldb.SBError) -> lldb.SBData:
+    def read_memory_at_address(
+        self, addr: int, size: int, error: lldb.SBError
+    ) -> lldb.SBData:
         error.SetErrorString("This is an invalid scripted process!")
         return lldb.SBData()
 
@@ -54,18 +48,19 @@ class InvalidScriptedThread(ScriptedThread):
         return lldb.eStateInvalid
 
     def get_stop_reason(self) -> Dict[str, Any]:
-        return { "type": lldb.eStopReasonSignal, "data": {
-            "signal": signal.SIGTRAP
-        } }
+        return {"type": lldb.eStopReasonSignal, "data": {"signal": signal.SIGTRAP}}
 
     def get_register_context(self) -> str:
         return None
 
+
 def __lldb_init_module(debugger, dict):
-    if not 'SKIP_SCRIPTED_PROCESS_LAUNCH' in os.environ:
+    if not "SKIP_SCRIPTED_PROCESS_LAUNCH" in os.environ:
         debugger.HandleCommand(
-            "process launch -C %s.%s" % (__name__,
-                                     InvalidScriptedProcess.__name__))
+            "process launch -C %s.%s" % (__name__, InvalidScriptedProcess.__name__)
+        )
     else:
-        print("Name of the class that will manage the scripted process: '%s.%s'"
-                % (__name__, InvalidScriptedProcess.__name__))
+        print(
+            "Name of the class that will manage the scripted process: '%s.%s'"
+            % (__name__, InvalidScriptedProcess.__name__)
+        )

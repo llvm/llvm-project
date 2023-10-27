@@ -156,7 +156,7 @@ private:
 // Generic structure checker for directives/clauses language such as OpenMP
 // and OpenACC.
 // typename D is the directive enumeration.
-// tyepname C is the clause enumeration.
+// typename C is the clause enumeration.
 // typename PC is the parser class defined in parse-tree.h for the clauses.
 template <typename D, typename C, typename PC, std::size_t ClauseEnumSize>
 class DirectiveStructureChecker : public virtual BaseChecker {
@@ -331,7 +331,7 @@ protected:
   // Check that only clauses in set are after the specific clauses.
   void CheckOnlyAllowedAfter(C clause, common::EnumSet<C, ClauseEnumSize> set);
 
-  void CheckRequireAtLeastOneOf();
+  void CheckRequireAtLeastOneOf(bool warnInsteadOfError = false);
 
   void CheckAllowed(C clause);
 
@@ -422,7 +422,7 @@ DirectiveStructureChecker<D, C, PC, ClauseEnumSize>::ClauseSetToString(
 // directive.
 template <typename D, typename C, typename PC, std::size_t ClauseEnumSize>
 void DirectiveStructureChecker<D, C, PC,
-    ClauseEnumSize>::CheckRequireAtLeastOneOf() {
+    ClauseEnumSize>::CheckRequireAtLeastOneOf(bool warnInsteadOfError) {
   if (GetContext().requiredClauses.empty())
     return;
   for (auto cl : GetContext().actualClauses) {
@@ -430,10 +430,16 @@ void DirectiveStructureChecker<D, C, PC,
       return;
   }
   // No clause matched in the actual clauses list
-  context_.Say(GetContext().directiveSource,
-      "At least one of %s clause must appear on the %s directive"_err_en_US,
-      ClauseSetToString(GetContext().requiredClauses),
-      ContextDirectiveAsFortran());
+  if (warnInsteadOfError)
+    context_.Say(GetContext().directiveSource,
+        "At least one of %s clause should appear on the %s directive"_port_en_US,
+        ClauseSetToString(GetContext().requiredClauses),
+        ContextDirectiveAsFortran());
+  else
+    context_.Say(GetContext().directiveSource,
+        "At least one of %s clause must appear on the %s directive"_err_en_US,
+        ClauseSetToString(GetContext().requiredClauses),
+        ContextDirectiveAsFortran());
 }
 
 template <typename D, typename C, typename PC, std::size_t ClauseEnumSize>

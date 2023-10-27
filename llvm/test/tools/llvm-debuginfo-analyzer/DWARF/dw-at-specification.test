@@ -1,0 +1,29 @@
+; REQUIRES: x86-registered-target
+
+; dw-at-specification.cpp
+; 1  struct S {
+; 2      static const int Arr[];
+; 3  };
+; 4  const int S::Arr[] = {
+; 5      0, 1, 2
+; 6  };
+
+; The above test compiled with clang++ produces both a DW_AT_type and
+; DW_AT_specification on the definition die for S::Arr, which previously caused
+; an assert in the LVELFReader:
+; $ clang++ -g -c dw-at-specification.cpp -o dw-at-specification.o
+
+; RUN: llvm-debuginfo-analyzer --attribute=level,format,producer \
+; RUN:                         --output-sort=name \
+; RUN:                         --print=symbols \
+; RUN:                         %p/Inputs/dw-at-specification.o 2>&1 | \
+; RUN: FileCheck --strict-whitespace -check-prefix=CHECK %s
+
+; CHECK: Logical View:
+; CHECK: [000]           {File} 'dw-at-specification.o' -> elf64-x86-64
+; CHECK-EMPTY:
+; CHECK: [001]             {CompileUnit} 'a.cpp'
+; CHECK: [002]               {Producer} 'clang version 11.0.0 ({{.*}})'
+; CHECK: [002]               {Variable} 'Arr' -> 'const int [3]'
+; CHECK: [002]     1         {Struct} 'S'
+; CHECK: [003]     2           {Member} extern public 'Arr' -> 'const int [1]'

@@ -42,6 +42,15 @@ public:
     Other.Alloc.setPointer(nullptr);
   }
 
+  // The move assignment operator is defined as deleted pending further
+  // motivation.
+  BumpVectorContext &operator=(BumpVectorContext &&) = delete;
+
+  // The copy constrcutor and copy assignment operator is defined as deleted
+  // pending further motivation.
+  BumpVectorContext(const BumpVectorContext &) = delete;
+  BumpVectorContext &operator=(const BumpVectorContext &) = delete;
+
   /// Construct a new BumpVectorContext that reuses an existing
   /// BumpPtrAllocator.  This BumpPtrAllocator is not destroyed when the
   /// BumpVectorContext object is destroyed.

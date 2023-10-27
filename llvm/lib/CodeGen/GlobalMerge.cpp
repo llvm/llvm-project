@@ -67,7 +67,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/IR/BasicBlock.h"
@@ -92,6 +91,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/TargetParser/Triple.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -156,7 +156,7 @@ namespace {
     /// Whether we should merge global variables that have external linkage.
     bool MergeExternalGlobals = false;
 
-    bool IsMachO;
+    bool IsMachO = false;
 
     bool doMerge(SmallVectorImpl<GlobalVariable*> &Globals,
                  Module &M, bool isConst, unsigned AddrSpace) const;
@@ -650,6 +650,14 @@ bool GlobalMerge::doInitialization(Module &M) {
 
     // Ignore all "required" globals:
     if (isMustKeepGlobalVariable(&GV))
+      continue;
+
+    // Don't merge tagged globals, as each global should have its own unique
+    // memory tag at runtime. TODO(hctim): This can be relaxed: constant globals
+    // with compatible alignment and the same contents may be merged as long as
+    // the globals occupy the same number of tag granules (i.e. `size_a / 16 ==
+    // size_b / 16`).
+    if (GV.isTagged())
       continue;
 
     Type *Ty = GV.getValueType();

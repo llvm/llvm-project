@@ -311,3 +311,31 @@ entry:
 }
 
 declare arm_aapcs_vfpcc void @useptr(ptr noundef)
+
+; CHECK-LABEL: func_fp:
+; CHECK-NEXT: .seh_proc func_fp
+; CHECK-NEXT: @ %bb.0:                                @ %entry
+; CHECK-NEXT:         str     r11, [sp, #-4]!
+; CHECK-NEXT:         .seh_save_regs_w        {r11}
+; CHECK-NEXT:         mov     r11, sp
+; CHECK-NEXT:         .seh_save_sp    r11
+; CHECK-NEXT:         .seh_endprologue
+
+; CHECK-NEXT:         mov     r0, r11
+
+; CHECK-NEXT:         .seh_startepilogue
+; CHECK-NEXT:         ldr     r11, [sp], #4
+; CHECK-NEXT:         .seh_save_regs_w        {r11}
+; CHECK-NEXT:         bx      lr
+; CHECK-NEXT:         .seh_nop
+; CHECK-NEXT:         .seh_endepilogue
+; CHECK-NEXT:         .seh_endproc
+
+define arm_aapcs_vfpcc i32 @func_fp() {
+entry:
+  %0 = tail call ptr @llvm.frameaddress.p0(i32 0)
+  %1 = ptrtoint ptr %0 to i32
+  ret i32 %1
+}
+
+declare ptr @llvm.frameaddress.p0(i32 immarg)

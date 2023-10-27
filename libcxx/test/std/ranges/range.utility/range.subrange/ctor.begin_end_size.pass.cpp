@@ -28,8 +28,8 @@ static_assert( std::is_constructible_v<SizedSentinelForwardSubrange, Conditional
 static_assert(!std::is_constructible_v<SizedSentinelForwardSubrange, Empty, ConditionallyConvertibleIter, ConditionallyConvertibleIter::udifference_type>); // 1.
 static_assert( std::is_constructible_v<ConvertibleSizedSentinelForwardSubrange, ConvertibleSizedSentinelForwardIter, int*, ConvertibleSizedSentinelForwardIter::udifference_type>); // 2.
 static_assert( std::is_constructible_v<SizedSentinelForwardSubrange, ConditionallyConvertibleIter, ConditionallyConvertibleIter, ConditionallyConvertibleIter::udifference_type>); // 3. (Same as default case.)
-static_assert(!std::is_constructible_v<SizedIntPtrSubrange, long*, int*, size_t>); // 4.
-static_assert( std::is_constructible_v<SizedIntPtrSubrange, int*, int*, size_t>); // 5.
+static_assert(!std::is_constructible_v<SizedIntPtrSubrange, long*, int*, std::size_t>); // 4.
+static_assert( std::is_constructible_v<SizedIntPtrSubrange, int*, int*, std::size_t>); // 5.
 
 constexpr bool test() {
   SizedSentinelForwardSubrange a(ConditionallyConvertibleIter(globalBuff), ConditionallyConvertibleIter(globalBuff + 8), 8);

@@ -1,5 +1,5 @@
 // REQUIRES: aarch64-registered-target
-// RUN: llvm-mc -filetype=obj -triple aarch64-arm-none-eabi %s -o - | llvm-dwarfdump - -v | FileCheck %s
+// RUN: llvm-mc -filetype=obj -triple aarch64 %s -o - | llvm-dwarfdump - -v | FileCheck %s
 #CHECK:   Augmentation:          "zRB"
 f1:
         .cfi_startproc

@@ -10,20 +10,27 @@
 #define LLVM_LIBC_SRC_STDIO_PRINTF_CORE_STRING_CONVERTER_H
 
 #include "src/__support/CPP/string_view.h"
+#include "src/__support/common.h"
 #include "src/stdio/printf_core/converter_utils.h"
 #include "src/stdio/printf_core/core_structs.h"
 #include "src/stdio/printf_core/writer.h"
 
 #include <stddef.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace printf_core {
 
-int inline convert_string(Writer *writer, const FormatSection &to_conv) {
+LIBC_INLINE int convert_string(Writer *writer, const FormatSection &to_conv) {
   size_t string_len = 0;
+  const char *str_ptr = reinterpret_cast<const char *>(to_conv.conv_val_ptr);
 
-  for (char *cur_str = reinterpret_cast<char *>(to_conv.conv_val_ptr);
-       cur_str[string_len]; ++string_len) {
+#ifndef LIBC_COPT_PRINTF_NO_NULLPTR_CHECKS
+  if (str_ptr == nullptr) {
+    str_ptr = "null";
+  }
+#endif // LIBC_COPT_PRINTF_NO_NULLPTR_CHECKS
+
+  for (const char *cur_str = (str_ptr); cur_str[string_len]; ++string_len) {
     ;
   }
 
@@ -38,21 +45,20 @@ int inline convert_string(Writer *writer, const FormatSection &to_conv) {
   // If the padding is on the left side, write the spaces first.
   if (padding_spaces > 0 &&
       (to_conv.flags & FormatFlags::LEFT_JUSTIFIED) == 0) {
-    RET_IF_RESULT_NEGATIVE(writer->write(' ', to_conv.min_width - string_len));
+    RET_IF_RESULT_NEGATIVE(writer->write(' ', padding_spaces));
   }
 
-  RET_IF_RESULT_NEGATIVE(writer->write(
-      {reinterpret_cast<const char *>(to_conv.conv_val_ptr), string_len}));
+  RET_IF_RESULT_NEGATIVE(writer->write({(str_ptr), string_len}));
 
   // If the padding is on the right side, write the spaces last.
   if (padding_spaces > 0 &&
       (to_conv.flags & FormatFlags::LEFT_JUSTIFIED) != 0) {
-    RET_IF_RESULT_NEGATIVE(writer->write(' ', to_conv.min_width - string_len));
+    RET_IF_RESULT_NEGATIVE(writer->write(' ', padding_spaces));
   }
   return WRITE_OK;
 }
 
 } // namespace printf_core
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STDIO_PRINTF_CORE_STRING_CONVERTER_H

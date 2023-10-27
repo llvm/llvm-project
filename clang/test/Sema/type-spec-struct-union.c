@@ -46,7 +46,6 @@ void test_S6(void) {
         a.e = BAR;
 }
 
-// <rdar://problem/6487669>
 typedef struct z_foo_s {
   struct bar_baz *baz;
 } z_foo;

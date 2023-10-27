@@ -11,12 +11,10 @@ void test(void) {
 
 /// Names not prefixed with '$' are invalid.
 
-// CHECK: :[[#@LINE+1]]:24: error: unknown register name 'r4' in asm
-  register int a3 asm ("r4");
-// CHECK: :[[#@LINE+1]]:24: error: unknown register name 'a0' in asm
-  register int a4 asm ("a0");
 // CHECK: :[[#@LINE+1]]:26: error: unknown register name 'f0' in asm
   register float a5 asm ("f0");
 // CHECK: :[[#@LINE+1]]:26: error: unknown register name 'fa0' in asm
   register float a6 asm ("fa0");
+// CHECK: :[[#@LINE+1]]:15: error: unknown register name 'fcc0' in asm
+  asm ("" ::: "fcc0");
 }

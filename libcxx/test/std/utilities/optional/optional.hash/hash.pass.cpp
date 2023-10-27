@@ -27,7 +27,7 @@ namespace std {
 
 template <>
 struct hash<B> {
-  size_t operator()(B const&) noexcept(false) { return 0; }
+  std::size_t operator()(B const&) noexcept(false) { return 0; }
 };
 
 }

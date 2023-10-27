@@ -12,8 +12,8 @@ define i1 @eq_10(i32 %x, i32 %y) {
 ; CHECK-LABEL: @eq_10(
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[X:%.*]] to i16
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc i32 [[Y:%.*]] to i16
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i16 [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    ret i1 [[TMP3]]
+; CHECK-NEXT:    [[C_10:%.*]] = icmp eq i16 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    ret i1 [[C_10]]
 ;
   %x.0 = trunc i32 %x to i8
   %x.321 = lshr i32 %x, 8
@@ -31,8 +31,8 @@ define i1 @eq_210(i32 %x, i32 %y) {
 ; CHECK-LABEL: @eq_210(
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[X:%.*]] to i24
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc i32 [[Y:%.*]] to i24
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i24 [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    ret i1 [[TMP3]]
+; CHECK-NEXT:    [[C_210:%.*]] = icmp eq i24 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    ret i1 [[C_210]]
 ;
   %x.0 = trunc i32 %x to i8
   %x.321 = lshr i32 %x, 8
@@ -54,8 +54,8 @@ define i1 @eq_210(i32 %x, i32 %y) {
 
 define i1 @eq_3210(i32 %x, i32 %y) {
 ; CHECK-LABEL: @eq_3210(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[C_3210:%.*]] = icmp eq i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[C_3210]]
 ;
   %x.0 = trunc i32 %x to i8
   %x.321 = lshr i32 %x, 8
@@ -87,8 +87,8 @@ define i1 @eq_21(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc i32 [[TMP1]] to i16
 ; CHECK-NEXT:    [[TMP3:%.*]] = lshr i32 [[Y:%.*]], 8
 ; CHECK-NEXT:    [[TMP4:%.*]] = trunc i32 [[TMP3]] to i16
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i16 [[TMP2]], [[TMP4]]
-; CHECK-NEXT:    ret i1 [[TMP5]]
+; CHECK-NEXT:    [[C_210:%.*]] = icmp eq i16 [[TMP2]], [[TMP4]]
+; CHECK-NEXT:    ret i1 [[C_210]]
 ;
   %x.321 = lshr i32 %x, 8
   %x.1 = trunc i32 %x.321 to i8
@@ -112,8 +112,8 @@ define i1 @eq_21_comm_and(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc i32 [[TMP1]] to i16
 ; CHECK-NEXT:    [[TMP3:%.*]] = lshr i32 [[Y:%.*]], 8
 ; CHECK-NEXT:    [[TMP4:%.*]] = trunc i32 [[TMP3]] to i16
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i16 [[TMP2]], [[TMP4]]
-; CHECK-NEXT:    ret i1 [[TMP5]]
+; CHECK-NEXT:    [[C_210:%.*]] = icmp eq i16 [[TMP2]], [[TMP4]]
+; CHECK-NEXT:    ret i1 [[C_210]]
 ;
   %x.321 = lshr i32 %x, 8
   %x.1 = trunc i32 %x.321 to i8
@@ -135,8 +135,8 @@ define i1 @eq_21_comm_eq(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc i32 [[TMP1]] to i16
 ; CHECK-NEXT:    [[TMP3:%.*]] = lshr i32 [[X:%.*]], 8
 ; CHECK-NEXT:    [[TMP4:%.*]] = trunc i32 [[TMP3]] to i16
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i16 [[TMP2]], [[TMP4]]
-; CHECK-NEXT:    ret i1 [[TMP5]]
+; CHECK-NEXT:    [[C_210:%.*]] = icmp eq i16 [[TMP2]], [[TMP4]]
+; CHECK-NEXT:    ret i1 [[C_210]]
 ;
   %x.321 = lshr i32 %x, 8
   %x.1 = trunc i32 %x.321 to i8
@@ -158,8 +158,8 @@ define i1 @eq_21_comm_eq2(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc i32 [[TMP1]] to i16
 ; CHECK-NEXT:    [[TMP3:%.*]] = lshr i32 [[Y:%.*]], 8
 ; CHECK-NEXT:    [[TMP4:%.*]] = trunc i32 [[TMP3]] to i16
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i16 [[TMP2]], [[TMP4]]
-; CHECK-NEXT:    ret i1 [[TMP5]]
+; CHECK-NEXT:    [[C_210:%.*]] = icmp eq i16 [[TMP2]], [[TMP4]]
+; CHECK-NEXT:    ret i1 [[C_210]]
 ;
   %x.321 = lshr i32 %x, 8
   %x.1 = trunc i32 %x.321 to i8
@@ -183,8 +183,8 @@ define <2x i1> @eq_21_vector(<2x i32> %x, <2x i32> %y) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc <2 x i32> [[TMP1]] to <2 x i16>
 ; CHECK-NEXT:    [[TMP3:%.*]] = lshr <2 x i32> [[Y:%.*]], <i32 8, i32 8>
 ; CHECK-NEXT:    [[TMP4:%.*]] = trunc <2 x i32> [[TMP3]] to <2 x i16>
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq <2 x i16> [[TMP2]], [[TMP4]]
-; CHECK-NEXT:    ret <2 x i1> [[TMP5]]
+; CHECK-NEXT:    [[C_210:%.*]] = icmp eq <2 x i16> [[TMP2]], [[TMP4]]
+; CHECK-NEXT:    ret <2 x i1> [[C_210]]
 ;
   %x.321 = lshr <2x i32> %x, <i32 8, i32 8>
   %x.1 = trunc <2x i32> %x.321 to <2x i8>
@@ -209,8 +209,8 @@ define i1 @eq_irregular_bit_widths(i31 %x, i31 %y) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc i31 [[TMP1]] to i11
 ; CHECK-NEXT:    [[TMP3:%.*]] = lshr i31 [[Y:%.*]], 7
 ; CHECK-NEXT:    [[TMP4:%.*]] = trunc i31 [[TMP3]] to i11
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i11 [[TMP2]], [[TMP4]]
-; CHECK-NEXT:    ret i1 [[TMP5]]
+; CHECK-NEXT:    [[C_210:%.*]] = icmp eq i11 [[TMP2]], [[TMP4]]
+; CHECK-NEXT:    ret i1 [[C_210]]
 ;
   %x.321 = lshr i31 %x, 7
   %x.1 = trunc i31 %x.321 to i6
@@ -360,8 +360,8 @@ define i1 @eq_21_logical(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc i32 [[TMP1]] to i16
 ; CHECK-NEXT:    [[TMP3:%.*]] = lshr i32 [[Y:%.*]], 8
 ; CHECK-NEXT:    [[TMP4:%.*]] = trunc i32 [[TMP3]] to i16
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i16 [[TMP2]], [[TMP4]]
-; CHECK-NEXT:    ret i1 [[TMP5]]
+; CHECK-NEXT:    [[C_210:%.*]] = icmp eq i16 [[TMP2]], [[TMP4]]
+; CHECK-NEXT:    ret i1 [[C_210]]
 ;
   %x.321 = lshr i32 %x, 8
   %x.1 = trunc i32 %x.321 to i8
@@ -677,8 +677,8 @@ define i1 @ne_10(i32 %x, i32 %y) {
 ; CHECK-LABEL: @ne_10(
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[X:%.*]] to i16
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc i32 [[Y:%.*]] to i16
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i16 [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    ret i1 [[TMP3]]
+; CHECK-NEXT:    [[C_10:%.*]] = icmp ne i16 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    ret i1 [[C_10]]
 ;
   %x.0 = trunc i32 %x to i8
   %x.321 = lshr i32 %x, 8
@@ -696,8 +696,8 @@ define i1 @ne_210(i32 %x, i32 %y) {
 ; CHECK-LABEL: @ne_210(
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[X:%.*]] to i24
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc i32 [[Y:%.*]] to i24
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i24 [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    ret i1 [[TMP3]]
+; CHECK-NEXT:    [[C_210:%.*]] = icmp ne i24 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    ret i1 [[C_210]]
 ;
   %x.0 = trunc i32 %x to i8
   %x.321 = lshr i32 %x, 8
@@ -719,8 +719,8 @@ define i1 @ne_210(i32 %x, i32 %y) {
 
 define i1 @ne_3210(i32 %x, i32 %y) {
 ; CHECK-LABEL: @ne_3210(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[C_3210:%.*]] = icmp ne i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i1 [[C_3210]]
 ;
   %x.0 = trunc i32 %x to i8
   %x.321 = lshr i32 %x, 8
@@ -752,8 +752,8 @@ define i1 @ne_21(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc i32 [[TMP1]] to i16
 ; CHECK-NEXT:    [[TMP3:%.*]] = lshr i32 [[Y:%.*]], 8
 ; CHECK-NEXT:    [[TMP4:%.*]] = trunc i32 [[TMP3]] to i16
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp ne i16 [[TMP2]], [[TMP4]]
-; CHECK-NEXT:    ret i1 [[TMP5]]
+; CHECK-NEXT:    [[C_210:%.*]] = icmp ne i16 [[TMP2]], [[TMP4]]
+; CHECK-NEXT:    ret i1 [[C_210]]
 ;
   %x.321 = lshr i32 %x, 8
   %x.1 = trunc i32 %x.321 to i8
@@ -777,8 +777,8 @@ define i1 @ne_21_comm_or(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc i32 [[TMP1]] to i16
 ; CHECK-NEXT:    [[TMP3:%.*]] = lshr i32 [[Y:%.*]], 8
 ; CHECK-NEXT:    [[TMP4:%.*]] = trunc i32 [[TMP3]] to i16
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp ne i16 [[TMP2]], [[TMP4]]
-; CHECK-NEXT:    ret i1 [[TMP5]]
+; CHECK-NEXT:    [[C_210:%.*]] = icmp ne i16 [[TMP2]], [[TMP4]]
+; CHECK-NEXT:    ret i1 [[C_210]]
 ;
   %x.321 = lshr i32 %x, 8
   %x.1 = trunc i32 %x.321 to i8
@@ -800,8 +800,8 @@ define i1 @ne_21_comm_ne(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc i32 [[TMP1]] to i16
 ; CHECK-NEXT:    [[TMP3:%.*]] = lshr i32 [[X:%.*]], 8
 ; CHECK-NEXT:    [[TMP4:%.*]] = trunc i32 [[TMP3]] to i16
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp ne i16 [[TMP2]], [[TMP4]]
-; CHECK-NEXT:    ret i1 [[TMP5]]
+; CHECK-NEXT:    [[C_210:%.*]] = icmp ne i16 [[TMP2]], [[TMP4]]
+; CHECK-NEXT:    ret i1 [[C_210]]
 ;
   %x.321 = lshr i32 %x, 8
   %x.1 = trunc i32 %x.321 to i8
@@ -823,8 +823,8 @@ define i1 @ne_21_comm_ne2(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc i32 [[TMP1]] to i16
 ; CHECK-NEXT:    [[TMP3:%.*]] = lshr i32 [[Y:%.*]], 8
 ; CHECK-NEXT:    [[TMP4:%.*]] = trunc i32 [[TMP3]] to i16
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp ne i16 [[TMP2]], [[TMP4]]
-; CHECK-NEXT:    ret i1 [[TMP5]]
+; CHECK-NEXT:    [[C_210:%.*]] = icmp ne i16 [[TMP2]], [[TMP4]]
+; CHECK-NEXT:    ret i1 [[C_210]]
 ;
   %x.321 = lshr i32 %x, 8
   %x.1 = trunc i32 %x.321 to i8
@@ -848,8 +848,8 @@ define <2x i1> @ne_21_vector(<2x i32> %x, <2x i32> %y) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc <2 x i32> [[TMP1]] to <2 x i16>
 ; CHECK-NEXT:    [[TMP3:%.*]] = lshr <2 x i32> [[Y:%.*]], <i32 8, i32 8>
 ; CHECK-NEXT:    [[TMP4:%.*]] = trunc <2 x i32> [[TMP3]] to <2 x i16>
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp ne <2 x i16> [[TMP2]], [[TMP4]]
-; CHECK-NEXT:    ret <2 x i1> [[TMP5]]
+; CHECK-NEXT:    [[C_210:%.*]] = icmp ne <2 x i16> [[TMP2]], [[TMP4]]
+; CHECK-NEXT:    ret <2 x i1> [[C_210]]
 ;
   %x.321 = lshr <2x i32> %x, <i32 8, i32 8>
   %x.1 = trunc <2x i32> %x.321 to <2x i8>
@@ -874,8 +874,8 @@ define i1 @ne_irregular_bit_widths(i31 %x, i31 %y) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc i31 [[TMP1]] to i11
 ; CHECK-NEXT:    [[TMP3:%.*]] = lshr i31 [[Y:%.*]], 7
 ; CHECK-NEXT:    [[TMP4:%.*]] = trunc i31 [[TMP3]] to i11
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp ne i11 [[TMP2]], [[TMP4]]
-; CHECK-NEXT:    ret i1 [[TMP5]]
+; CHECK-NEXT:    [[C_210:%.*]] = icmp ne i11 [[TMP2]], [[TMP4]]
+; CHECK-NEXT:    ret i1 [[C_210]]
 ;
   %x.321 = lshr i31 %x, 7
   %x.1 = trunc i31 %x.321 to i6
@@ -1025,8 +1025,8 @@ define i1 @ne_21_logical(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc i32 [[TMP1]] to i16
 ; CHECK-NEXT:    [[TMP3:%.*]] = lshr i32 [[Y:%.*]], 8
 ; CHECK-NEXT:    [[TMP4:%.*]] = trunc i32 [[TMP3]] to i16
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp ne i16 [[TMP2]], [[TMP4]]
-; CHECK-NEXT:    ret i1 [[TMP5]]
+; CHECK-NEXT:    [[C_210:%.*]] = icmp ne i16 [[TMP2]], [[TMP4]]
+; CHECK-NEXT:    ret i1 [[C_210]]
 ;
   %x.321 = lshr i32 %x, 8
   %x.1 = trunc i32 %x.321 to i8

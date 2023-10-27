@@ -29,14 +29,15 @@ enum class FunctionType {
 };
 
 struct AllFunctionTypes : EnumValuesAsTuple<AllFunctionTypes, FunctionType, 8> {
-  static constexpr const char* Names[] = {"Null",
-                                          "FuncPtr",
-                                          "MemFuncPtr",
-                                          "MemPtr",
-                                          "SmallTrivialFunctor",
-                                          "SmallNonTrivialFunctor",
-                                          "LargeTrivialFunctor",
-                                          "LargeNonTrivialFunctor"};
+  static constexpr const char* Names[] = {
+      "Null",
+      "FuncPtr",
+      "MemFuncPtr",
+      "MemPtr",
+      "SmallTrivialFunctor",
+      "SmallNonTrivialFunctor",
+      "LargeTrivialFunctor",
+      "LargeNonTrivialFunctor"};
 };
 
 enum class Opacity { kOpaque, kTransparent };
@@ -63,7 +64,7 @@ struct SmallNonTrivialFunctor {
 };
 struct LargeTrivialFunctor {
   LargeTrivialFunctor() {
-      // Do not spend time initializing the padding.
+    // Do not spend time initializing the padding.
   }
   int padding[16];
   int operator()(const S*) const { return 0; }
@@ -71,7 +72,7 @@ struct LargeTrivialFunctor {
 struct LargeNonTrivialFunctor {
   int padding[16];
   LargeNonTrivialFunctor() {
-      // Do not spend time initializing the padding.
+    // Do not spend time initializing the padding.
   }
   LargeNonTrivialFunctor(const LargeNonTrivialFunctor&) {}
   ~LargeNonTrivialFunctor() {}
@@ -83,22 +84,22 @@ using Function = std::function<int(const S*)>;
 TEST_ALWAYS_INLINE
 inline Function MakeFunction(FunctionType type, bool opaque = false) {
   switch (type) {
-    case FunctionType::Null:
-      return nullptr;
-    case FunctionType::FunctionPointer:
-      return maybeOpaque(FunctionWithS, opaque);
-    case FunctionType::MemberFunctionPointer:
-      return maybeOpaque(&S::function, opaque);
-    case FunctionType::MemberPointer:
-      return maybeOpaque(&S::field, opaque);
-    case FunctionType::SmallTrivialFunctor:
-      return maybeOpaque(SmallTrivialFunctor{}, opaque);
-    case FunctionType::SmallNonTrivialFunctor:
-      return maybeOpaque(SmallNonTrivialFunctor{}, opaque);
-    case FunctionType::LargeTrivialFunctor:
-      return maybeOpaque(LargeTrivialFunctor{}, opaque);
-    case FunctionType::LargeNonTrivialFunctor:
-      return maybeOpaque(LargeNonTrivialFunctor{}, opaque);
+  case FunctionType::Null:
+    return nullptr;
+  case FunctionType::FunctionPointer:
+    return maybeOpaque(FunctionWithS, opaque);
+  case FunctionType::MemberFunctionPointer:
+    return maybeOpaque(&S::function, opaque);
+  case FunctionType::MemberPointer:
+    return maybeOpaque(&S::field, opaque);
+  case FunctionType::SmallTrivialFunctor:
+    return maybeOpaque(SmallTrivialFunctor{}, opaque);
+  case FunctionType::SmallNonTrivialFunctor:
+    return maybeOpaque(SmallNonTrivialFunctor{}, opaque);
+  case FunctionType::LargeTrivialFunctor:
+    return maybeOpaque(LargeTrivialFunctor{}, opaque);
+  case FunctionType::LargeNonTrivialFunctor:
+    return maybeOpaque(LargeNonTrivialFunctor{}, opaque);
   }
 }
 
@@ -114,9 +115,7 @@ struct ConstructAndDestroy {
     }
   }
 
-  static std::string name() {
-    return "BM_ConstructAndDestroy" + FunctionType::name() + Opacity::name();
-  }
+  static std::string name() { return "BM_ConstructAndDestroy" + FunctionType::name() + Opacity::name(); }
 };
 
 template <class FunctionType>
@@ -125,7 +124,7 @@ struct Copy {
     auto value = MakeFunction(FunctionType());
     for (auto _ : state) {
       benchmark::DoNotOptimize(value);
-      auto copy = value;  // NOLINT
+      auto copy = value; // NOLINT
       benchmark::DoNotOptimize(copy);
     }
   }
@@ -137,7 +136,7 @@ template <class FunctionType>
 struct Move {
   static void run(benchmark::State& state) {
     Function values[2] = {MakeFunction(FunctionType())};
-    int i = 0;
+    int i              = 0;
     for (auto _ : state) {
       benchmark::DoNotOptimize(values);
       benchmark::DoNotOptimize(values[i ^ 1] = std::move(values[i]));
@@ -145,9 +144,7 @@ struct Move {
     }
   }
 
-  static std::string name() {
-    return "BM_Move" + FunctionType::name();
-  }
+  static std::string name() { return "BM_Move" + FunctionType::name(); }
 };
 
 template <class Function1, class Function2>
@@ -162,9 +159,7 @@ struct Swap {
 
   static bool skip() { return Function1() > Function2(); }
 
-  static std::string name() {
-    return "BM_Swap" + Function1::name() + Function2::name();
-  }
+  static std::string name() { return "BM_Swap" + Function1::name() + Function2::name(); }
 };
 
 template <class FunctionType>
@@ -207,20 +202,17 @@ struct InvokeInlined {
 
   static bool skip() { return FunctionType() == ::FunctionType::Null; }
 
-  static std::string name() {
-    return "BM_InvokeInlined" + FunctionType::name();
-  }
+  static std::string name() { return "BM_InvokeInlined" + FunctionType::name(); }
 };
 
-}  // namespace
+} // namespace
 
 int main(int argc, char** argv) {
   benchmark::Initialize(&argc, argv);
   if (benchmark::ReportUnrecognizedArguments(argc, argv))
     return 1;
 
-  makeCartesianProductBenchmark<ConstructAndDestroy, AllOpacity,
-                                AllFunctionTypes>();
+  makeCartesianProductBenchmark<ConstructAndDestroy, AllOpacity, AllFunctionTypes>();
   makeCartesianProductBenchmark<Copy, AllFunctionTypes>();
   makeCartesianProductBenchmark<Move, AllFunctionTypes>();
   makeCartesianProductBenchmark<Swap, AllFunctionTypes, AllFunctionTypes>();

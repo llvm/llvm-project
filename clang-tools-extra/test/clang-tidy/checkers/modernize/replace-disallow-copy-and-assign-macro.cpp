@@ -3,25 +3,25 @@
 
 // RUN: %check_clang_tidy -format-style=LLVM -check-suffix=DIFFERENT-NAME %s \
 // RUN:  modernize-replace-disallow-copy-and-assign-macro %t \
-// RUN:  -config="{CheckOptions: [ \
-// RUN:   {key: modernize-replace-disallow-copy-and-assign-macro.MacroName, \
-// RUN:    value: MY_MACRO_NAME}]}"
+// RUN:  -config="{CheckOptions: { \
+// RUN:   modernize-replace-disallow-copy-and-assign-macro.MacroName: \
+// RUN:     MY_MACRO_NAME}}"
 
 // RUN: %check_clang_tidy -format-style=LLVM -check-suffix=FINALIZE %s \
 // RUN:  modernize-replace-disallow-copy-and-assign-macro %t \
-// RUN:  -config="{CheckOptions: [ \
-// RUN:   {key: modernize-replace-disallow-copy-and-assign-macro.MacroName, \
-// RUN:    value: DISALLOW_COPY_AND_ASSIGN_FINALIZE}]}"
+// RUN:  -config="{CheckOptions: { \
+// RUN:   modernize-replace-disallow-copy-and-assign-macro.MacroName: \
+// RUN:     DISALLOW_COPY_AND_ASSIGN_FINALIZE}}"
 
 // RUN: clang-tidy %s -checks="-*,modernize-replace-disallow-copy-and-assign-macro" \
-// RUN:   -config="{CheckOptions: [ \
-// RUN:    {key: modernize-replace-disallow-copy-and-assign-macro.MacroName, \
-// RUN:     value: DISALLOW_COPY_AND_ASSIGN_MORE_AGUMENTS}]}" -- -Wno-extra-semi | count 0
+// RUN:  -config="{CheckOptions: { \
+// RUN:    modernize-replace-disallow-copy-and-assign-macro.MacroName: \
+// RUN:      DISALLOW_COPY_AND_ASSIGN_MORE_AGUMENTS}}" -- -Wno-extra-semi | count 0
 
 // RUN: clang-tidy %s -checks="-*,modernize-replace-disallow-copy-and-assign-macro" \
-// RUN:   -config="{CheckOptions: [ \
-// RUN:    {key: modernize-replace-disallow-copy-and-assign-macro.MacroName, \
-// RUN:     value: DISALLOW_COPY_AND_ASSIGN_NEEDS_PREEXPANSION}]}" -- -Wno-extra-semi | count 0
+// RUN:  -config="{CheckOptions: { \
+// RUN:    modernize-replace-disallow-copy-and-assign-macro.MacroName: \
+// RUN:      DISALLOW_COPY_AND_ASSIGN_NEEDS_PREEXPANSION}}" -- -Wno-extra-semi | count 0
 
 // Note: the last two tests expect no diagnostics, but FileCheck cannot handle
 // that, hence the use of | count 0.

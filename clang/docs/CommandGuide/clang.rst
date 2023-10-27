@@ -193,13 +193,21 @@ Language Selection and Mode Options
 
    ISO C++ 2020 with amendments and GNU extensions
 
-  | ``c++2b``
+  | ``c++23``
 
-   Working draft for ISO C++ 2023
+   ISO C++ 2023 with amendments
 
-  | ``gnu++2b``
+  | ``gnu++23``
 
-   Working draft for ISO C++ 2023 with GNU extensions
+   ISO C++ 2023 with amendments and GNU extensions
+
+  | ``c++2c``
+
+   Working draft for C++2c
+
+  | ``gnu++2c``
+
+   Working draft for C++2c with GNU extensions
 
  The default C++ language standard is ``gnu++17``.
 
@@ -293,7 +301,8 @@ Language Selection and Mode Options
 
 .. option:: -fmsc-version=
 
- Set _MSC_VER. Defaults to 1300 on Windows. Not set otherwise.
+ Set ``_MSC_VER``. When on Windows, this defaults to either the same value as
+ the currently installed version of cl.exe, or ``1920``. Not set otherwise.
 
 .. option:: -fborland-extensions
 
@@ -370,6 +379,10 @@ number of cross compilers, or may only support a native target.
   target is specified, the system default target will be used.
 
 .. option:: -mcpu=?, -mtune=?
+
+  Acts as an alias for :option:`--print-supported-cpus`.
+
+.. option:: -mcpu=help, -mtune=help
 
   Acts as an alias for :option:`--print-supported-cpus`.
 
@@ -469,8 +482,10 @@ Code Generation Options
 
 .. option:: -fexceptions
 
-  Enable generation of unwind information. This allows exceptions to be thrown
-  through Clang compiled stack frames.  This is on by default in x86-64.
+  Allow exceptions to be thrown through Clang compiled stack frames (on many
+  targets, this will enable unwind information for functions that might have
+  an exception thrown through them). For most targets, this is enabled by
+  default for C++.
 
 .. option:: -ftrapv
 
@@ -592,6 +607,16 @@ Driver Options
   directory (:option:`-save-stats`/"-save-stats=cwd") or the directory
   of the output file ("-save-state=obj").
 
+  You can also use environment variables to control the statistics reporting.
+  Setting ``CC_PRINT_INTERNAL_STAT`` to ``1`` enables the feature, the report
+  goes to stdout in JSON format.
+
+  Setting ``CC_PRINT_INTERNAL_STAT_FILE`` to a file path makes it report
+  statistics to the given file in the JSON format.
+
+  Note that ``-save-stats`` take precedence over ``CC_PRINT_INTERNAL_STAT``
+  and ``CC_PRINT_INTERNAL_STAT_FILE``.
+
 .. option:: -integrated-as, -no-integrated-as
 
   Used to enable and disable, respectively, the use of the integrated
@@ -658,6 +683,21 @@ Preprocessor Options
 .. option:: -nobuiltininc
 
   Do not search clang's builtin directory for include files.
+
+.. option:: -fkeep-system-includes
+
+  Usable only with :option:`-E`. Do not copy the preprocessed content of
+  "system" headers to the output; instead, preserve the #include directive.
+  This can greatly reduce the volume of text produced by :option:`-E` which
+  can be helpful when trying to produce a "small" reproduceable test case.
+
+  This option does not guarantee reproduceability, however. If the including
+  source defines preprocessor symbols that influence the behavior of system
+  headers (for example, ``_XOPEN_SOURCE``) the operation of :option:`-E` will
+  remove that definition and thus can change the semantics of the included
+  header. Also, using a different version of the system headers (especially a
+  different version of the STL) may result in different behavior. Always verify
+  the preprocessed file by compiling it separately.
 
 
 ENVIRONMENT

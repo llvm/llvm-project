@@ -26,8 +26,8 @@ define dso_local void @caller_to8_from0() {
 ; CHECK-LABEL: caller_to8_from0:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #32
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    mov w8, #42
 ; CHECK-NEXT:    str x8, [sp]
@@ -58,8 +58,8 @@ define dso_local void @caller_to16_from8([8 x i64], i64 %a) {
 ; CHECK-LABEL: caller_to16_from8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #32
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    bl callee_stack16
 ; CHECK-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload

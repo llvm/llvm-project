@@ -169,14 +169,6 @@ static SmallString<0> ProcessChunkFromSerializedBitcode(
 
 using SharedTaskQueue = std::deque<std::shared_future<SmallString<0>>>;
 
-static void waitAndDiscardResultsBarrier(SharedTaskQueue &TaskQueue) {
-  while (!TaskQueue.empty()) {
-    auto &Future = TaskQueue.front();
-    Future.wait();
-    TaskQueue.pop_front();
-  }
-}
-
 /// Runs the Delta Debugging algorithm, splits the code into chunks and
 /// reduces the amount of chunks that are considered interesting by the
 /// given test. The number of chunks is determined by a preliminary run of the
@@ -261,7 +253,7 @@ void llvm::runDeltaPass(TestRunner &Test, ReductionFunc ExtractChunksFromModule,
         unsigned NumChunksProcessed = 0;
 
         ThreadPool &ChunkThreadPool = *ChunkThreadPoolPtr;
-        TaskQueue.clear();
+        assert(TaskQueue.empty());
 
         AnyReduced = false;
         // Queue jobs to process NumInitialTasks chunks in parallel using
@@ -317,7 +309,8 @@ void llvm::runDeltaPass(TestRunner &Test, ReductionFunc ExtractChunksFromModule,
         //
         // TODO: Create a way to kill remaining items we're ignoring; they could
         // take a long time.
-        waitAndDiscardResultsBarrier(TaskQueue);
+        ChunkThreadPoolPtr->wait();
+        TaskQueue.clear();
 
         // Forward I to the last chunk processed in parallel.
         I += NumChunksProcessed - 1;
@@ -335,9 +328,6 @@ void llvm::runDeltaPass(TestRunner &Test, ReductionFunc ExtractChunksFromModule,
       FoundAtLeastOneNewUninterestingChunkWithCurrentGranularity = true;
       UninterestingChunks.insert(ChunkToCheckForUninterestingness);
       ReducedProgram = std::move(Result);
-
-      // FIXME: Report meaningful progress info
-      Test.writeOutput(" **** SUCCESS | Saved new best reduction to ");
     }
     // Delete uninteresting chunks
     erase_if(ChunksStillConsideredInteresting,
@@ -349,8 +339,11 @@ void llvm::runDeltaPass(TestRunner &Test, ReductionFunc ExtractChunksFromModule,
             increaseGranularity(ChunksStillConsideredInteresting)));
 
   // If we reduced the testcase replace it
-  if (ReducedProgram)
+  if (ReducedProgram) {
     Test.setProgram(std::move(ReducedProgram));
+    // FIXME: Report meaningful progress info
+    Test.writeOutput(" **** SUCCESS | Saved new best reduction to ");
+  }
   if (Verbose)
     errs() << "Couldn't increase anymore.\n";
   errs() << "----------------------------\n";

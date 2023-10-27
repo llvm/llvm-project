@@ -88,11 +88,8 @@ define <4 x i32> @bool_logic_and_math_vec(<4 x i32> %a, <4 x i32> %b, <4 x i32> 
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    vpcmpeqd %xmm3, %xmm2, %xmm1
-; CHECK-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vpxor %xmm2, %xmm1, %xmm1
-; CHECK-NEXT:    vpandn %xmm1, %xmm0, %xmm0
-; CHECK-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [1,1,1,1]
-; CHECK-NEXT:    vpandn %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vpor %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vpsrld $31, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %cmp1 = icmp ne <4 x i32> %a, %b
   %cmp2 = icmp ne <4 x i32> %c, %d

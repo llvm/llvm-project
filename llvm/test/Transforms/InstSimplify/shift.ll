@@ -350,3 +350,51 @@ define <vscale x 4 x i16> @lshr_scalable_overshift(<vscale x 4 x i16> %va) {
   %vc = lshr <vscale x 4 x i16> %va, shufflevector (<vscale x 4 x i16> insertelement (<vscale x 4 x i16> poison, i16 16, i32 0), <vscale x 4 x i16> poison, <vscale x 4 x i32> zeroinitializer)
   ret <vscale x 4 x i16> %vc
 }
+
+; shl nsw+nuw is 0
+define i8 @shl_nsw_nuw_7_eq_0(i8 %x) {
+; CHECK-LABEL: @shl_nsw_nuw_7_eq_0(
+; CHECK-NEXT:    ret i8 0
+;
+  %y = shl nsw nuw i8 %x, 7
+  ret i8 %y
+}
+
+; Make sure we match the element width
+define <2 x i8> @shl_vec_nsw_nuw_7_eq_0(<2 x i8> %x) {
+; CHECK-LABEL: @shl_vec_nsw_nuw_7_eq_0(
+; CHECK-NEXT:    ret <2 x i8> zeroinitializer
+;
+  %y = shl nsw nuw <2 x i8> %x, <i8 7, i8 7>
+  ret <2 x i8> %y
+}
+
+; negative test (missing nuw)
+define i8 @shl_nsw_7_fail_missing_nuw(i8 %x) {
+; CHECK-LABEL: @shl_nsw_7_fail_missing_nuw(
+; CHECK-NEXT:    [[Y:%.*]] = shl nsw i8 [[X:%.*]], 7
+; CHECK-NEXT:    ret i8 [[Y]]
+;
+  %y = shl nsw i8 %x, 7
+  ret i8 %y
+}
+
+; negative test (missing nsw)
+define i8 @shl_nuw_7_fail_missing_nsw(i8 %x) {
+; CHECK-LABEL: @shl_nuw_7_fail_missing_nsw(
+; CHECK-NEXT:    [[Y:%.*]] = shl nuw i8 [[X:%.*]], 7
+; CHECK-NEXT:    ret i8 [[Y]]
+;
+  %y = shl nuw i8 %x, 7
+  ret i8 %y
+}
+
+; negative test (shift value != bitwdth - 1)
+define i8 @shl_nsw_nuw_6_do_nothing(i8 %x) {
+; CHECK-LABEL: @shl_nsw_nuw_6_do_nothing(
+; CHECK-NEXT:    [[Y:%.*]] = shl nuw nsw i8 [[X:%.*]], 6
+; CHECK-NEXT:    ret i8 [[Y]]
+;
+  %y = shl nsw nuw i8 %x, 6
+  ret i8 %y
+}

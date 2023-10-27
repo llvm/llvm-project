@@ -7,7 +7,7 @@
 // RUN: env LLVM_PROFILE_FILE=%t.profraw %run %t.normal
 // RUN: llvm-profdata merge -o %t.normal.profdata %t.profraw
 
-// RUN: diff %t.normal.profdata %t.profdata
+// RUN: diff <(llvm-profdata show --all-functions --counts %t.normal.profdata) <(llvm-profdata show --all-functions --counts %t.profdata)
 
 // RUN: %clang_pgogen -o %t.cov -g -mllvm --debug-info-correlate -mllvm -pgo-function-entry-coverage -mllvm --disable-vp=true %S/../Inputs/instrprof-debug-info-correlate-main.cpp %S/../Inputs/instrprof-debug-info-correlate-foo.cpp
 // RUN: env LLVM_PROFILE_FILE=%t.cov.proflite %run %t.cov
@@ -17,4 +17,24 @@
 // RUN: env LLVM_PROFILE_FILE=%t.cov.profraw %run %t.cov.normal
 // RUN: llvm-profdata merge -o %t.cov.normal.profdata %t.cov.profraw
 
-// RUN: diff %t.cov.normal.profdata %t.cov.profdata
+// RUN: diff <(llvm-profdata show --all-functions --counts %t.cov.normal.profdata) <(llvm-profdata show --all-functions --counts %t.cov.profdata)
+
+// Test debug info correlate with online merging.
+
+// RUN: env LLVM_PROFILE_FILE=%t-1.profraw %run %t.normal
+// RUN: env LLVM_PROFILE_FILE=%t-2.profraw %run %t.normal
+// RUN: llvm-profdata merge -o %t.normal.profdata %t-1.profraw %t-2.profraw
+
+// RUN: rm -rf %t.profdir && mkdir %t.profdir
+// RUN: env LLVM_PROFILE_FILE=%t.profdir/%m.proflite %run %t
+// RUN: env LLVM_PROFILE_FILE=%t.profdir/%m.proflite %run %t
+// RUN: llvm-profdata merge -o %t.profdata --debug-info=%t.dSYM %t.profdir/
+
+// RUN: diff <(llvm-profdata show --all-functions --counts %t.normal.profdata) <(llvm-profdata show --all-functions --counts %t.profdata)
+
+// RUN: rm -rf %t.profdir && mkdir %t.profdir
+// RUN: env LLVM_PROFILE_FILE=%t.profdir/%m.cov.proflite %run %t.cov
+// RUN: env LLVM_PROFILE_FILE=%t.profdir/%m.cov.proflite %run %t.cov
+// RUN: llvm-profdata merge -o %t.cov.profdata --debug-info=%t.cov.dSYM %t.profdir/
+
+// RUN: diff <(llvm-profdata show --all-functions --counts %t.cov.normal.profdata) <(llvm-profdata show --all-functions --counts %t.cov.profdata)

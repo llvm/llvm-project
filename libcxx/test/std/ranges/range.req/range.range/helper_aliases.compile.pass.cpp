@@ -20,6 +20,9 @@
 // template<range R>
 // using range_rvalue_reference_t = iter_rvalue_reference_t<iterator_t<R>>;
 
+// template <range R>
+// using range_common_reference_t = iter_common_reference_t<iterator_t<R>>;
+
 #include <ranges>
 
 #include <concepts>
@@ -27,9 +30,8 @@
 #include "test_iterators.h"
 #include "test_range.h"
 
-
-
 static_assert(std::same_as<std::ranges::range_difference_t<test_range<cpp20_input_iterator> >, std::iter_difference_t<int*> >);
 static_assert(std::same_as<std::ranges::range_value_t<test_range<cpp20_input_iterator> >, std::iter_value_t<int*> >);
 static_assert(std::same_as<std::ranges::range_reference_t<test_range<cpp20_input_iterator> >, std::iter_reference_t<int*> >);
 static_assert(std::same_as<std::ranges::range_rvalue_reference_t<test_range<cpp20_input_iterator> >, std::iter_rvalue_reference_t<int*> >);
+static_assert(std::same_as<std::ranges::range_common_reference_t<test_range<cpp20_input_iterator> >, std::iter_common_reference_t<int*> >);

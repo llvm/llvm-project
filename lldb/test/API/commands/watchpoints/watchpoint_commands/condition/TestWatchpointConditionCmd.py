@@ -3,7 +3,6 @@ Test watchpoint modify command to set condition on a watchpoint.
 """
 
 
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -17,17 +16,15 @@ class WatchpointConditionCmdTestCase(TestBase):
         # Call super's setUp().
         TestBase.setUp(self)
         # Our simple source filename.
-        self.source = 'main.cpp'
+        self.source = "main.cpp"
         # Find the line number to break inside main().
-        self.line = line_number(
-            self.source, '// Set break point at this line.')
+        self.line = line_number(self.source, "// Set break point at this line.")
         # And the watchpoint variable declaration line number.
-        self.decl = line_number(self.source,
-                                '// Watchpoint variable declaration.')
+        self.decl = line_number(self.source, "// Watchpoint variable declaration.")
         # Build dictionary to have unique executable names for each test
         # method.
         self.exe_name = self.testMethodName
-        self.d = {'CXX_SOURCES': self.source, 'EXE': self.exe_name}
+        self.d = {"CXX_SOURCES": self.source, "EXE": self.exe_name}
 
     def test_watchpoint_cond(self):
         """Test watchpoint condition."""
@@ -39,16 +36,19 @@ class WatchpointConditionCmdTestCase(TestBase):
 
         # Add a breakpoint to set a watchpoint when stopped on the breakpoint.
         lldbutil.run_break_set_by_file_and_line(
-            self, None, self.line, num_expected_locations=1)
+            self, None, self.line, num_expected_locations=1
+        )
 
         # Run the program.
         self.runCmd("run", RUN_SUCCEEDED)
 
         # We should be stopped again due to the breakpoint.
         # The stop reason of the thread should be breakpoint.
-        self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
-                    substrs=['stopped',
-                             'stop reason = breakpoint'])
+        self.expect(
+            "thread list",
+            STOPPED_DUE_TO_BREAKPOINT,
+            substrs=["stopped", "stop reason = breakpoint"],
+        )
 
         # Now let's set a write-type watchpoint for 'global'.
         # With a condition of 'global==5'.
@@ -56,30 +56,32 @@ class WatchpointConditionCmdTestCase(TestBase):
             "watchpoint set variable -w write global",
             WATCHPOINT_CREATED,
             substrs=[
-                'Watchpoint created',
-                'size = 4',
-                'type = w',
-                '%s:%d' %
-                (self.source,
-                 self.decl)])
+                "Watchpoint created",
+                "size = 4",
+                "type = w",
+                "%s:%d" % (self.source, self.decl),
+            ],
+        )
 
         self.runCmd("watchpoint modify -c 'global==5'")
 
         # Use the '-v' option to do verbose listing of the watchpoint.
         # The hit count should be 0 initially.
-        self.expect("watchpoint list -v",
-                    substrs=['global==5', 'hit_count = 0'])
+        self.expect("watchpoint list -v", substrs=["global==5", "hit_count = 0"])
 
         self.runCmd("process continue")
 
         # We should be stopped again due to the watchpoint (write type).
         # The stop reason of the thread should be watchpoint.
-        self.expect("thread backtrace", STOPPED_DUE_TO_WATCHPOINT,
-                    substrs=['stop reason = watchpoint'])
-        self.expect("frame variable --show-globals global",
-                    substrs=['(int32_t)', 'global = 5'])
+        self.expect(
+            "thread backtrace",
+            STOPPED_DUE_TO_WATCHPOINT,
+            substrs=["stop reason = watchpoint"],
+        )
+        self.expect(
+            "frame variable --show-globals global", substrs=["(int32_t)", "global = 5"]
+        )
 
         # Use the '-v' option to do verbose listing of the watchpoint.
         # The hit count should now be 2.
-        self.expect("watchpoint list -v",
-                    substrs=['hit_count = 1'])
+        self.expect("watchpoint list -v", substrs=["hit_count = 1"])

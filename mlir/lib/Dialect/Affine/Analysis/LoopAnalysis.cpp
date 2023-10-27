@@ -28,17 +28,18 @@
 #include <type_traits>
 
 using namespace mlir;
+using namespace mlir::affine;
 
 /// Returns the trip count of the loop as an affine expression if the latter is
 /// expressible as an affine expression, and nullptr otherwise. The trip count
 /// expression is simplified before returning. This method only utilizes map
 /// composition to construct lower and upper bounds before computing the trip
 /// count expressions.
-void mlir::getTripCountMapAndOperands(
+void mlir::affine::getTripCountMapAndOperands(
     AffineForOp forOp, AffineMap *tripCountMap,
     SmallVectorImpl<Value> *tripCountOperands) {
   MLIRContext *context = forOp.getContext();
-  int64_t step = forOp.getStep();
+  int64_t step = forOp.getStepAsInt();
   int64_t loopSpan;
   if (forOp.hasConstantBounds()) {
     int64_t lb = forOp.getConstantLowerBound();
@@ -83,7 +84,7 @@ void mlir::getTripCountMapAndOperands(
 /// otherwise. This method uses affine expression analysis (in turn using
 /// getTripCount) and is able to determine constant trip count in non-trivial
 /// cases.
-std::optional<uint64_t> mlir::getConstantTripCount(AffineForOp forOp) {
+std::optional<uint64_t> mlir::affine::getConstantTripCount(AffineForOp forOp) {
   SmallVector<Value, 4> operands;
   AffineMap map;
   getTripCountMapAndOperands(forOp, &map, &operands);
@@ -109,7 +110,7 @@ std::optional<uint64_t> mlir::getConstantTripCount(AffineForOp forOp) {
 /// Returns the greatest known integral divisor of the trip count. Affine
 /// expression analysis is used (indirectly through getTripCount), and
 /// this method is thus able to determine non-trivial divisors.
-uint64_t mlir::getLargestDivisorOfTripCount(AffineForOp forOp) {
+uint64_t mlir::affine::getLargestDivisorOfTripCount(AffineForOp forOp) {
   SmallVector<Value, 4> operands;
   AffineMap map;
   getTripCountMapAndOperands(forOp, &map, &operands);
@@ -161,7 +162,7 @@ uint64_t mlir::getLargestDivisorOfTripCount(AffineForOp forOp) {
 /// conservative.
 static bool isAccessIndexInvariant(Value iv, Value index) {
   assert(isAffineForInductionVar(iv) && "iv must be a AffineForOp");
-  assert(index.getType().isa<IndexType>() && "index must be of IndexType");
+  assert(isa<IndexType>(index.getType()) && "index must be of IndexType");
   SmallVector<Operation *, 4> affineApplyOps;
   getReachableAffineApplyOps({index}, affineApplyOps);
 
@@ -183,7 +184,8 @@ static bool isAccessIndexInvariant(Value iv, Value index) {
   return !composeOp.getAffineValueMap().isFunctionOf(0, iv);
 }
 
-DenseSet<Value> mlir::getInvariantAccesses(Value iv, ArrayRef<Value> indices) {
+DenseSet<Value> mlir::affine::getInvariantAccesses(Value iv,
+                                                   ArrayRef<Value> indices) {
   DenseSet<Value> res;
   for (auto val : indices) {
     if (isAccessIndexInvariant(iv, val)) {
@@ -260,7 +262,7 @@ static bool isContiguousAccess(Value iv, LoadOrStoreOp memoryOp,
 template <typename LoadOrStoreOp>
 static bool isVectorElement(LoadOrStoreOp memoryOp) {
   auto memRefType = memoryOp.getMemRefType();
-  return memRefType.getElementType().template isa<VectorType>();
+  return isa<VectorType>(memRefType.getElementType());
 }
 
 using VectorizableOpFun = std::function<bool(AffineForOp, Operation &)>;
@@ -276,6 +278,25 @@ isVectorizableLoopBodyWithOpCond(AffineForOp loop,
   SmallVector<NestedMatch, 8> conditionalsMatched;
   conditionals.match(forOp, &conditionalsMatched);
   if (!conditionalsMatched.empty()) {
+    return false;
+  }
+
+  // No vectorization for ops with operand or result types that are not
+  // vectorizable.
+  auto types = matcher::Op([](Operation &op) -> bool {
+    if (llvm::any_of(op.getOperandTypes(), [](Type type) {
+          if (MemRefType t = dyn_cast<MemRefType>(type))
+            return !VectorType::isValidElementType(t.getElementType());
+          return !VectorType::isValidElementType(type);
+        }))
+      return true;
+    return llvm::any_of(op.getResultTypes(), [](Type type) {
+      return !VectorType::isValidElementType(type);
+    });
+  });
+  SmallVector<NestedMatch, 8> opsMatched;
+  types.match(forOp, &opsMatched);
+  if (!opsMatched.empty()) {
     return false;
   }
 
@@ -316,8 +337,8 @@ isVectorizableLoopBodyWithOpCond(AffineForOp loop,
   return true;
 }
 
-bool mlir::isVectorizableLoopBody(AffineForOp loop, int *memRefDim,
-                                  NestedPattern &vectorTransferMatcher) {
+bool mlir::affine::isVectorizableLoopBody(
+    AffineForOp loop, int *memRefDim, NestedPattern &vectorTransferMatcher) {
   *memRefDim = -1;
   VectorizableOpFun fun([memRefDim](AffineForOp loop, Operation &op) {
     auto load = dyn_cast<AffineLoadOp>(op);
@@ -339,8 +360,8 @@ bool mlir::isVectorizableLoopBody(AffineForOp loop, int *memRefDim,
   return isVectorizableLoopBodyWithOpCond(loop, fun, vectorTransferMatcher);
 }
 
-bool mlir::isVectorizableLoopBody(AffineForOp loop,
-                                  NestedPattern &vectorTransferMatcher) {
+bool mlir::affine::isVectorizableLoopBody(
+    AffineForOp loop, NestedPattern &vectorTransferMatcher) {
   return isVectorizableLoopBodyWithOpCond(loop, nullptr, vectorTransferMatcher);
 }
 
@@ -349,7 +370,8 @@ bool mlir::isVectorizableLoopBody(AffineForOp loop,
 /// 'def' and all its uses have the same shift factor.
 // TODO: extend this to check for memory-based dependence violation when we have
 // the support.
-bool mlir::isOpwiseShiftValid(AffineForOp forOp, ArrayRef<uint64_t> shifts) {
+bool mlir::affine::isOpwiseShiftValid(AffineForOp forOp,
+                                      ArrayRef<uint64_t> shifts) {
   auto *forBody = forOp.getBody();
   assert(shifts.size() == forBody->getOperations().size());
 

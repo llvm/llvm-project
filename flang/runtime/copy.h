@@ -18,11 +18,12 @@ namespace Fortran::runtime {
 
 // Assigns to uninitialized storage.
 // Duplicates allocatable & automatic components.
-void CopyElement(const Descriptor &to, const SubscriptValue toAt[],
+RT_API_ATTRS void CopyElement(const Descriptor &to, const SubscriptValue toAt[],
     const Descriptor &from, const SubscriptValue fromAt[], Terminator &);
 
 // Copies data from one allocated descriptor's array to another.
-void CopyArray(const Descriptor &to, const Descriptor &from, Terminator &);
+RT_API_ATTRS void CopyArray(
+    const Descriptor &to, const Descriptor &from, Terminator &);
 
 } // namespace Fortran::runtime
 #endif // FORTRAN_RUNTIME_COPY_H_

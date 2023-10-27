@@ -4,6 +4,8 @@
 # RUN: yaml2obj %s -o %t.o
 # RUN: llvm-dwarfutil --tombstone=maxpc --garbage-collection %t.o - | llvm-dwarfdump -a - | FileCheck %s
 
+# RUN: llvm-dwarfutil --linker llvm --tombstone=maxpc --garbage-collection %t.o - | llvm-dwarfdump -a - | FileCheck %s
+
 # CHECK: DW_TAG_compile_unit
 # CHECK: DW_AT_name{{.*}}"CU1"
 # CHECK: DW_TAG_class_type

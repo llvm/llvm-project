@@ -18,6 +18,7 @@ add_clang_library(clangAnalysis
   CodeInjector.cpp
   Dominators.cpp
   ExprMutationAnalyzer.cpp
+  IntervalPartition.cpp
   IssueHash.cpp
   LiveVariables.cpp
   MacroExpansionContext.cpp
@@ -42,6 +43,7 @@ add_clang_library(clangAnalysis
 
   DEPENDS
   omp_gen
+  ClangDriverOptions
   )
 
 add_subdirectory(plugins)

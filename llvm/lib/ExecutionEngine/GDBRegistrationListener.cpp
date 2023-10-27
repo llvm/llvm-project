@@ -176,7 +176,7 @@ void GDBJITRegistrationListener::notifyObjectLoaded(
   size_t      Size = DebugObj.getBinary()->getMemoryBufferRef().getBufferSize();
 
   std::lock_guard<llvm::sys::Mutex> locked(JITDebugLock);
-  assert(ObjectBufferMap.find(K) == ObjectBufferMap.end() &&
+  assert(!ObjectBufferMap.contains(K) &&
          "Second attempt to perform debug registration.");
   jit_code_entry* JITCodeEntry = new jit_code_entry();
 

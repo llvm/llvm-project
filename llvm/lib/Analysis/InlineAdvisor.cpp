@@ -13,6 +13,7 @@
 
 #include "llvm/Analysis/InlineAdvisor.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/InlineCost.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
@@ -208,6 +209,10 @@ bool InlineAdvisorAnalysis::Result::tryCreate(
     Advisor.reset(DA.Factory(M, FAM, Params, IC));
     return !!Advisor;
   }
+  auto GetDefaultAdvice = [&FAM, Params](CallBase &CB) {
+    auto OIC = getDefaultInlineAdvice(CB, FAM, Params);
+    return OIC.has_value();
+  };
   switch (Mode) {
   case InliningAdvisorMode::Default:
     LLVM_DEBUG(dbgs() << "Using default inliner heuristic.\n");
@@ -223,18 +228,12 @@ bool InlineAdvisorAnalysis::Result::tryCreate(
   case InliningAdvisorMode::Development:
 #ifdef LLVM_HAVE_TFLITE
     LLVM_DEBUG(dbgs() << "Using development-mode inliner policy.\n");
-    Advisor =
-        llvm::getDevelopmentModeAdvisor(M, MAM, [&FAM, Params](CallBase &CB) {
-          auto OIC = getDefaultInlineAdvice(CB, FAM, Params);
-          return OIC.has_value();
-        });
+    Advisor = llvm::getDevelopmentModeAdvisor(M, MAM, GetDefaultAdvice);
 #endif
     break;
   case InliningAdvisorMode::Release:
-#ifdef LLVM_HAVE_TF_AOT
     LLVM_DEBUG(dbgs() << "Using release-mode inliner policy.\n");
-    Advisor = llvm::getReleaseModeAdvisor(M, MAM);
-#endif
+    Advisor = llvm::getReleaseModeAdvisor(M, MAM, GetDefaultAdvice);
     break;
   }
 

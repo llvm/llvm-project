@@ -14,6 +14,7 @@
 #define LLVM_CODEGEN_ACCELTABLE_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -24,6 +25,7 @@
 #include "llvm/Support/DJB.h"
 #include "llvm/Support/Debug.h"
 #include <cstdint>
+#include <variant>
 #include <vector>
 
 /// \file
@@ -142,9 +144,6 @@ public:
     std::vector<AccelTableData *> Values;
     MCSymbol *Sym;
 
-    HashData(DwarfStringPoolEntryRef Name, HashFn *Hash)
-        : Name(Name), HashValue(Hash(Name.getString())) {}
-
 #ifndef NDEBUG
     void print(raw_ostream &OS) const;
     void dump() const { print(dbgs()); }
@@ -157,19 +156,19 @@ protected:
   /// Allocator for HashData and Values.
   BumpPtrAllocator Allocator;
 
-  using StringEntries = StringMap<HashData, BumpPtrAllocator &>;
+  using StringEntries = MapVector<StringRef, HashData>;
   StringEntries Entries;
 
   HashFn *Hash;
-  uint32_t BucketCount;
-  uint32_t UniqueHashCount;
+  uint32_t BucketCount = 0;
+  uint32_t UniqueHashCount = 0;
 
   HashList Hashes;
   BucketList Buckets;
 
   void computeBucketCount();
 
-  AccelTableBase(HashFn *Hash) : Entries(Allocator), Hash(Hash) {}
+  AccelTableBase(HashFn *Hash) : Hash(Hash) {}
 
 public:
   void finalize(AsmPrinter *Asm, StringRef Prefix);
@@ -207,10 +206,13 @@ void AccelTable<AccelTableDataT>::addName(DwarfStringPoolEntryRef Name,
   assert(Buckets.empty() && "Already finalized!");
   // If the string is in the list already then add this die to the list
   // otherwise add a new one.
-  auto Iter = Entries.try_emplace(Name.getString(), Name, Hash).first;
-  assert(Iter->second.Name == Name);
-  Iter->second.Values.push_back(
-      new (Allocator) AccelTableDataT(std::forward<Types>(Args)...));
+  auto &It = Entries[Name.getString()];
+  if (It.Values.empty()) {
+    It.Name = Name;
+    It.HashValue = Hash(Name.getString());
+  }
+  It.Values.push_back(new (Allocator)
+                          AccelTableDataT(std::forward<Types>(Args)...));
 }
 
 /// A base class for different implementations of Data classes for Apple
@@ -309,9 +311,13 @@ void emitDWARF5AccelTable(AsmPrinter *Asm,
                           const DwarfDebug &DD,
                           ArrayRef<std::unique_ptr<DwarfCompileUnit>> CUs);
 
+/// Emit a DWARFv5 Accelerator Table consisting of entries in the specified
+/// AccelTable. The \p CUs contains either symbols keeping offsets to the
+/// start of compilation unit, either offsets to the start of compilation
+/// unit themselves.
 void emitDWARF5AccelTable(
     AsmPrinter *Asm, AccelTable<DWARF5AccelTableStaticData> &Contents,
-    ArrayRef<MCSymbol *> CUs,
+    ArrayRef<std::variant<MCSymbol *, uint64_t>> CUs,
     llvm::function_ref<unsigned(const DWARF5AccelTableStaticData &)>
         getCUIndexForEntry);
 

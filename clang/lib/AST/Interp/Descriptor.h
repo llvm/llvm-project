@@ -28,24 +28,22 @@ using DeclTy = llvm::PointerUnion<const Decl *, const Expr *>;
 /// Invoked whenever a block is created. The constructor method fills in the
 /// inline descriptors of all fields and array elements. It also initializes
 /// all the fields which contain non-trivial types.
-using BlockCtorFn = void (*)(Block *Storage, char *FieldPtr, bool IsConst,
+using BlockCtorFn = void (*)(Block *Storage, std::byte *FieldPtr, bool IsConst,
                              bool IsMutable, bool IsActive,
-                             Descriptor *FieldDesc);
+                             const Descriptor *FieldDesc);
 
 /// Invoked when a block is destroyed. Invokes the destructors of all
 /// non-trivial nested fields of arrays and records.
-using BlockDtorFn = void (*)(Block *Storage, char *FieldPtr,
-                             Descriptor *FieldDesc);
+using BlockDtorFn = void (*)(Block *Storage, std::byte *FieldPtr,
+                             const Descriptor *FieldDesc);
 
 /// Invoked when a block with pointers referencing it goes out of scope. Such
 /// blocks are persisted: the move function copies all inline descriptors and
 /// non-trivial fields, as existing pointers might need to reference those
 /// descriptors. Data is not copied since it cannot be legally read.
-using BlockMoveFn = void (*)(Block *Storage, char *SrcFieldPtr,
-                             char *DstFieldPtr, Descriptor *FieldDesc);
-
-/// Object size as used by the interpreter.
-using InterpSize = unsigned;
+using BlockMoveFn = void (*)(Block *Storage, const std::byte *SrcFieldPtr,
+                             std::byte *DstFieldPtr,
+                             const Descriptor *FieldDesc);
 
 /// Inline descriptor embedded in structures and arrays.
 ///
@@ -81,13 +79,13 @@ private:
   /// Original declaration, used to emit the error message.
   const DeclTy Source;
   /// Size of an element, in host bytes.
-  const InterpSize ElemSize;
+  const unsigned ElemSize;
   /// Size of the storage, in host bytes.
-  const InterpSize Size;
+  const unsigned Size;
   // Size of the metadata.
-  const InterpSize MDSize;
+  const unsigned MDSize;
   /// Size of the allocation (storage + metadata), in host bytes.
-  const InterpSize AllocSize;
+  const unsigned AllocSize;
 
   /// Value to denote arrays of unknown size.
   static constexpr unsigned UnknownSizeMark = (unsigned)-1;
@@ -96,7 +94,7 @@ public:
   /// Token to denote structures of unknown size.
   struct UnknownSize {};
 
-  using MetadataSize = std::optional<InterpSize>;
+  using MetadataSize = std::optional<unsigned>;
   static constexpr MetadataSize InlineDescMD = sizeof(InlineDescriptor);
 
   /// Pointer to the record, if block contains records.
@@ -140,6 +138,7 @@ public:
              bool IsTemporary, bool IsMutable);
 
   QualType getType() const;
+  QualType getElemQualType() const;
   SourceLocation getLocation() const;
 
   const Decl *asDecl() const { return Source.dyn_cast<const Decl *>(); }
@@ -177,6 +176,8 @@ public:
 
   /// Checks if the descriptor is of an array of primitives.
   bool isPrimitiveArray() const { return IsArray && !ElemDesc; }
+  /// Checks if the descriptor is of an array of composites.
+  bool isCompositeArray() const { return IsArray && ElemDesc; }
   /// Checks if the descriptor is of an array of zero size.
   bool isZeroSizeArray() const { return Size == 0; }
   /// Checks if the descriptor is of an array of unknown size.
@@ -187,6 +188,8 @@ public:
 
   /// Checks if the descriptor is of an array.
   bool isArray() const { return IsArray; }
+  /// Checks if the descriptor is of a record.
+  bool isRecord() const { return !IsArray && ElemRecord; }
 };
 
 /// Bitfield tracking the initialisation status of elements of primitive arrays.

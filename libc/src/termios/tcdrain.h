@@ -6,15 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_UNISTD_TCDRAIN_H
-#define LLVM_LIBC_SRC_UNISTD_TCDRAIN_H
+#ifndef LLVM_LIBC_SRC_TERMIOS_TCDRAIN_H
+#define LLVM_LIBC_SRC_TERMIOS_TCDRAIN_H
 
 #include <termios.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 int tcdrain(int fd);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_SRC_UNISTD_TCDRAIN_H
+#endif // LLVM_LIBC_SRC_TERMIOS_TCDRAIN_H

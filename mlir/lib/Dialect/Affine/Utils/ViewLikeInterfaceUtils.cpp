@@ -8,10 +8,13 @@
 
 #include "mlir/Dialect/Affine/ViewLikeInterfaceUtils.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Arith/Utils/Utils.h"
+#include "mlir/IR/PatternMatch.h"
 
 using namespace mlir;
+using namespace affine;
 
-LogicalResult mlir::mergeOffsetsSizesAndStrides(
+LogicalResult mlir::affine::mergeOffsetsSizesAndStrides(
     OpBuilder &builder, Location loc, ArrayRef<OpFoldResult> producerOffsets,
     ArrayRef<OpFoldResult> producerSizes,
     ArrayRef<OpFoldResult> producerStrides,
@@ -56,7 +59,7 @@ LogicalResult mlir::mergeOffsetsSizesAndStrides(
   return success();
 }
 
-LogicalResult mlir::mergeOffsetsSizesAndStrides(
+LogicalResult mlir::affine::mergeOffsetsSizesAndStrides(
     OpBuilder &builder, Location loc, OffsetSizeAndStrideOpInterface producer,
     OffsetSizeAndStrideOpInterface consumer,
     const llvm::SmallBitVector &droppedProducerDims,
@@ -73,4 +76,51 @@ LogicalResult mlir::mergeOffsetsSizesAndStrides(
       builder, loc, producerOffsets, producerSizes, producerStrides,
       droppedProducerDims, consumerOffsets, consumerSizes, consumerStrides,
       combinedOffsets, combinedSizes, combinedStrides);
+}
+
+void mlir::affine::resolveIndicesIntoOpWithOffsetsAndStrides(
+    RewriterBase &rewriter, Location loc,
+    ArrayRef<OpFoldResult> mixedSourceOffsets,
+    ArrayRef<OpFoldResult> mixedSourceStrides,
+    const llvm::SmallBitVector &rankReducedDims,
+    ArrayRef<OpFoldResult> consumerIndices,
+    SmallVectorImpl<Value> &resolvedIndices) {
+  OpFoldResult zero = rewriter.getIndexAttr(0);
+
+  // For each dimension that is rank-reduced, add a zero to the indices.
+  int64_t indicesDim = 0;
+  SmallVector<OpFoldResult> indices;
+  for (auto dim : llvm::seq<int64_t>(0, mixedSourceOffsets.size())) {
+    OpFoldResult ofr =
+        (rankReducedDims.test(dim)) ? zero : consumerIndices[indicesDim++];
+    indices.push_back(ofr);
+  }
+
+  resolvedIndices.resize(indices.size());
+  resolvedIndices.clear();
+  for (auto [offset, index, stride] :
+       llvm::zip_equal(mixedSourceOffsets, indices, mixedSourceStrides)) {
+    AffineExpr off, idx, str;
+    bindSymbols(rewriter.getContext(), off, idx, str);
+    OpFoldResult ofr = makeComposedFoldedAffineApply(
+        rewriter, loc, AffineMap::get(0, 3, off + idx * str),
+        {offset, index, stride});
+    resolvedIndices.push_back(
+        getValueOrCreateConstantIndexOp(rewriter, loc, ofr));
+  }
+}
+
+void mlir::affine::resolveSizesIntoOpWithSizes(
+    ArrayRef<OpFoldResult> sourceSizes, ArrayRef<OpFoldResult> destSizes,
+    const llvm::SmallBitVector &rankReducedSourceDims,
+    SmallVectorImpl<OpFoldResult> &resolvedSizes) {
+  int64_t dim = 0;
+  int64_t srcRank = sourceSizes.size();
+  for (int64_t srcDim = 0; srcDim < srcRank; ++srcDim) {
+    if (rankReducedSourceDims[srcDim]) {
+      resolvedSizes.push_back(sourceSizes[srcDim]);
+      continue;
+    }
+    resolvedSizes.push_back(destSizes[dim++]);
+  }
 }

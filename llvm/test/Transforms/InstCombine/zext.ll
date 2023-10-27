@@ -702,3 +702,63 @@ define i8 @zext_icmp_eq_pow2(i8 %y, i8 %x) {
   %r = zext i1 %c to i8
   ret i8 %r
 }
+
+define i64 @zext_icmp_eq_bool_0(ptr %ptr) {
+; CHECK-LABEL: @zext_icmp_eq_bool_0(
+; CHECK-NEXT:    [[VAL:%.*]] = load i64, ptr [[PTR:%.*]], align 8, !range [[RNG0:![0-9]+]]
+; CHECK-NEXT:    [[LEN:%.*]] = xor i64 [[VAL]], 1
+; CHECK-NEXT:    ret i64 [[LEN]]
+;
+  %val = load i64, ptr %ptr, align 8, !range !{i64 0, i64 2}
+  %cmp = icmp eq i64 %val, 0
+  %len = zext i1 %cmp to i64
+  ret i64 %len
+}
+
+define i64 @zext_icmp_eq_bool_1(ptr %ptr) {
+; CHECK-LABEL: @zext_icmp_eq_bool_1(
+; CHECK-NEXT:    [[VAL:%.*]] = load i64, ptr [[PTR:%.*]], align 8, !range [[RNG0]]
+; CHECK-NEXT:    ret i64 [[VAL]]
+;
+  %val = load i64, ptr %ptr, align 8, !range !{i64 0, i64 2}
+  %cmp = icmp eq i64 %val, 1
+  %len = zext i1 %cmp to i64
+  ret i64 %len
+}
+
+define i64 @zext_icmp_ne_bool_0(ptr %ptr) {
+; CHECK-LABEL: @zext_icmp_ne_bool_0(
+; CHECK-NEXT:    [[VAL:%.*]] = load i64, ptr [[PTR:%.*]], align 8, !range [[RNG0]]
+; CHECK-NEXT:    ret i64 [[VAL]]
+;
+  %val = load i64, ptr %ptr, align 8, !range !{i64 0, i64 2}
+  %cmp = icmp ne i64 %val, 0
+  %len = zext i1 %cmp to i64
+  ret i64 %len
+}
+
+define i64 @zext_icmp_ne_bool_1(ptr %ptr) {
+; CHECK-LABEL: @zext_icmp_ne_bool_1(
+; CHECK-NEXT:    [[VAL:%.*]] = load i64, ptr [[PTR:%.*]], align 8, !range [[RNG0]]
+; CHECK-NEXT:    [[LEN:%.*]] = xor i64 [[VAL]], 1
+; CHECK-NEXT:    ret i64 [[LEN]]
+;
+  %val = load i64, ptr %ptr, align 8, !range !{i64 0, i64 2}
+  %cmp = icmp ne i64 %val, 1
+  %len = zext i1 %cmp to i64
+  ret i64 %len
+}
+
+; https://alive2.llvm.org/ce/z/k7qosS
+define i32  @zext_icmp_eq0_no_shift(ptr %ptr ) {
+; CHECK-LABEL: @zext_icmp_eq0_no_shift(
+; CHECK-NEXT:    [[X:%.*]] = load i8, ptr [[PTR:%.*]], align 1, !range [[RNG1:![0-9]+]]
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[X]], 1
+; CHECK-NEXT:    [[RES:%.*]] = zext i8 [[TMP1]] to i32
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %X = load i8, ptr %ptr,align 1, !range !{i8 0, i8 2} ; range [0, 2)
+  %cmp = icmp eq i8 %X, 0
+  %res = zext i1 %cmp to i32
+  ret i32 %res
+}

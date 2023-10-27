@@ -36,15 +36,11 @@ entry:
 land.rhs:                                         ; preds = %entry
 ; CHECK: land.rhs:
 ; CHECK-NEXT: call void @llvm.dbg.label
-; CHECK-NEXT: %x = alloca i32, align 4
-; CHECK-NEXT: call void @llvm.dbg.addr(metadata ptr %x
 ; CHECK-NEXT: %y = alloca i32, align 4
 ; CHECK-NEXT: call void @llvm.dbg.declare(metadata ptr %y
 ; CHECK-NEXT: %a0 = load i32, ptr undef, align 1
 ; CHECK-NEXT: call void @llvm.dbg.value(metadata i32 %a0
   call void @llvm.dbg.label(metadata !11), !dbg !10
-  %x = alloca i32, align 4
-  call void @llvm.dbg.addr(metadata ptr %x, metadata !12, metadata !DIExpression()), !dbg !10
   %y = alloca i32, align 4
   call void @llvm.dbg.declare(metadata ptr %y, metadata !14, metadata !DIExpression()), !dbg !10
 
@@ -64,7 +60,6 @@ land.end:                                         ; preds = %land.rhs, %entry
 declare void @llvm.dbg.value(metadata, metadata, metadata) #1
 declare void @llvm.dbg.label(metadata)
 declare void @llvm.dbg.declare(metadata, metadata, metadata)
-declare void @llvm.dbg.addr(metadata, metadata, metadata)
 
 attributes #1 = { nounwind readnone speculatable willreturn }
 

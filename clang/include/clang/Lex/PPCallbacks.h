@@ -83,6 +83,16 @@ public:
                            const Token &FilenameTok,
                            SrcMgr::CharacteristicKind FileType) {}
 
+  /// Callback invoked whenever the preprocessor cannot find a file for an
+  /// inclusion directive.
+  ///
+  /// \param FileName The name of the file being included, as written in the
+  /// source code.
+  ///
+  /// \returns true to indicate that the preprocessor should skip this file
+  /// and not issue any diagnostic.
+  virtual bool FileNotFound(StringRef FileName) { return false; }
+
   /// Callback invoked whenever an inclusion directive of
   /// any kind (\c \#include, \c \#import, etc.) has been processed, regardless
   /// of whether the inclusion will actually result in an inclusion.
@@ -449,6 +459,14 @@ public:
                    SrcMgr::CharacteristicKind FileType) override {
     First->FileSkipped(SkippedFile, FilenameTok, FileType);
     Second->FileSkipped(SkippedFile, FilenameTok, FileType);
+  }
+
+  bool FileNotFound(StringRef FileName) override {
+    bool Skip = First->FileNotFound(FileName);
+    // Make sure to invoke the second callback, no matter if the first already
+    // returned true to skip the file.
+    Skip |= Second->FileNotFound(FileName);
+    return Skip;
   }
 
   void InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,

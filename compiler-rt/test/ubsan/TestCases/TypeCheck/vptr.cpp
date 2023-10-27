@@ -44,6 +44,10 @@
 // UNSUPPORTED: target={{.*openbsd.*}}
 // Compilation error
 // UNSUPPORTED: target={{.*freebsd.*}}
+// FIXME: For MinGW targets, the vptr tests do generally work, but Itanium
+// demangling isn't done for the type names. The "(echo ..." line fails to
+// be handled by the shell.
+// XFAIL: target={{.*windows-gnu.*}}
 #include <new>
 #include <typeinfo>
 #include <assert.h>

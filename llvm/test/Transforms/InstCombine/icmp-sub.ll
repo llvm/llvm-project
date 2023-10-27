@@ -561,3 +561,88 @@ bb_loop:
 bb_exit:
   ret void
 }
+
+; https://alive2.llvm.org/ce/z/D2Aph4
+define i1 @PR60818_ne(i32 %a) {
+; CHECK-LABEL: @PR60818_ne(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = and i32 [[A:%.*]], 2147483647
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[TMP0]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %sub = sub i32 0, %a
+  %cmp = icmp ne i32 %sub, %a
+  ret i1 %cmp
+}
+
+define i1 @PR60818_eq(i32 %a) {
+; CHECK-LABEL: @PR60818_eq(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = and i32 [[A:%.*]], 2147483647
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP0]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %sub = sub i32 0, %a
+  %cmp = icmp eq i32 %sub, %a
+  ret i1 %cmp
+}
+
+define i1 @PR60818_eq_commuted(i32 %x) {
+; CHECK-LABEL: @PR60818_eq_commuted(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[A:%.*]] = mul i32 [[X:%.*]], 43
+; CHECK-NEXT:    [[TMP0:%.*]] = and i32 [[A]], 2147483647
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP0]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %a = mul i32 %x, 43         ; thwart complexity-based canonicalization
+  %sub = sub i32 0, %a
+  %cmp = icmp eq i32 %a, %sub ; negation on RHS
+  ret i1 %cmp
+}
+
+define <2 x i1> @PR60818_ne_vector(<2 x i32> %a) {
+; CHECK-LABEL: @PR60818_ne_vector(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = and <2 x i32> [[A:%.*]], <i32 2147483647, i32 2147483647>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i32> [[TMP0]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+entry:
+  %sub = sub <2 x i32> zeroinitializer, %a
+  %cmp = icmp ne <2 x i32> %a, %sub
+  ret <2 x i1> %cmp
+}
+
+; Negative as multi-use
+define i1 @PR60818_eq_multi_use(i32 %a) {
+; CHECK-LABEL: @PR60818_eq_multi_use(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SUB:%.*]] = sub i32 0, [[A:%.*]]
+; CHECK-NEXT:    call void @use(i32 [[SUB]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[SUB]], [[A]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %sub = sub i32 0, %a
+  call void @use(i32 %sub)  ; add new user
+  %cmp = icmp eq i32 %sub, %a
+  ret i1 %cmp
+}
+
+; Negative as non-equality predicate
+define i1 @PR60818_sgt(i32 %a) {
+; CHECK-LABEL: @PR60818_sgt(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SUB:%.*]] = sub i32 0, [[A:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[SUB]], [[A]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+entry:
+  %sub = sub i32 0, %a
+  %cmp = icmp sgt i32 %sub, %a
+  ret i1 %cmp
+}

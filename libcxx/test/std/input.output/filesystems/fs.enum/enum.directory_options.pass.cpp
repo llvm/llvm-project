@@ -15,7 +15,6 @@
 #include "filesystem_include.h"
 #include <type_traits>
 #include <cassert>
-#include <sys/stat.h>
 
 #include "test_macros.h"
 #include "check_bitmask_types.h"

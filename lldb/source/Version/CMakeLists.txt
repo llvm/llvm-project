@@ -17,6 +17,8 @@ add_custom_command(OUTPUT "${vcs_version_inc}"
   COMMAND ${CMAKE_COMMAND} "-DNAMES=LLDB"
                            "-DLLDB_SOURCE_DIR=${lldb_source_dir}"
                            "-DHEADER_FILE=${vcs_version_inc}"
+                           "-DLLVM_FORCE_VC_REVISION=${LLVM_FORCE_VC_REVISION}"
+                           "-DLLVM_FORCE_VC_REPOSITORY=${LLVM_FORCE_VC_REPOSITORY}"
                            -P "${generate_vcs_version_script}")
 
 set_source_files_properties("${vcs_version_inc}"
@@ -36,7 +38,7 @@ set_source_files_properties("${version_inc}"
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
-add_lldb_library(lldbVersion
+add_lldb_library(lldbVersion NO_PLUGIN_DEPENDENCIES
   Version.cpp
   ${vcs_version_inc}
   ${version_inc})

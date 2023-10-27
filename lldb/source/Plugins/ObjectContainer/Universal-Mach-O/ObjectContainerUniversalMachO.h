@@ -63,11 +63,46 @@ public:
 
 protected:
   llvm::MachO::fat_header m_header;
-  std::vector<llvm::MachO::fat_arch> m_fat_archs;
+
+  struct FatArch {
+    FatArch(llvm::MachO::fat_arch arch) : m_arch(arch), m_is_fat64(false) {}
+    FatArch(llvm::MachO::fat_arch_64 arch) : m_arch(arch), m_is_fat64(true) {}
+
+    uint32_t GetCPUType() const {
+      return m_is_fat64 ? m_arch.fat_arch_64.cputype : m_arch.fat_arch.cputype;
+    }
+
+    uint32_t GetCPUSubType() const {
+      return m_is_fat64 ? m_arch.fat_arch_64.cpusubtype
+                        : m_arch.fat_arch.cpusubtype;
+    }
+
+    uint64_t GetOffset() const {
+      return m_is_fat64 ? m_arch.fat_arch_64.offset : m_arch.fat_arch.offset;
+    }
+
+    uint64_t GetSize() const {
+      return m_is_fat64 ? m_arch.fat_arch_64.size : m_arch.fat_arch.size;
+    }
+
+    uint32_t GetAlign() const {
+      return m_is_fat64 ? m_arch.fat_arch_64.align : m_arch.fat_arch.align;
+    }
+
+  private:
+    const union Arch {
+      Arch(llvm::MachO::fat_arch arch) : fat_arch(arch) {}
+      Arch(llvm::MachO::fat_arch_64 arch) : fat_arch_64(arch) {}
+      llvm::MachO::fat_arch fat_arch;
+      llvm::MachO::fat_arch_64 fat_arch_64;
+    } m_arch;
+    const bool m_is_fat64;
+  };
+  std::vector<FatArch> m_fat_archs;
 
   static bool ParseHeader(lldb_private::DataExtractor &data,
                           llvm::MachO::fat_header &header,
-                          std::vector<llvm::MachO::fat_arch> &fat_archs);
+                          std::vector<FatArch> &fat_archs);
 };
 
 #endif // LLDB_SOURCE_PLUGINS_OBJECTCONTAINER_UNIVERSAL_MACH_O_OBJECTCONTAINERUNIVERSALMACHO_H

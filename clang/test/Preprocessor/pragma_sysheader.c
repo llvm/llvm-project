@@ -3,7 +3,6 @@
 // RUN: %clang_cc1 -verify -std=c99 -Wunknown-pragmas -pedantic %s -fsyntax-only -DCLANG
 // RUN: %clang_cc1 -verify -std=c99 -Wunknown-pragmas -pedantic %s -fsyntax-only -fms-extensions -DMS
 
-// rdar://6899937
 #include "Inputs/pragma_sysheader.h"
 
 // RUN: %clang_cc1 -E %s | FileCheck %s
@@ -12,4 +11,4 @@
 // CHECK-NEXT: # 12 "{{.*}}pragma_sysheader.h"
 // CHECK: typedef int x;
 // CHECK: typedef int x;
-// CHECK-NEXT: # 8 "{{.*}}pragma_sysheader.c" 2
+// CHECK-NEXT: # 7 "{{.*}}pragma_sysheader.c" 2

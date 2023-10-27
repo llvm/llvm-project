@@ -9,12 +9,14 @@
 // COFF-DAG: define dso_local ptr @zed()
 // COFF-DAG: declare dllimport void @import_func()
 
-// RUN: %clang_cc1 -triple x86_64-w64-mingw32 -emit-llvm %s -o - | FileCheck --check-prefixes=MINGW,MINGW-NATIVE_TLS %s
-// RUN: %clang_cc1 -triple x86_64-w64-mingw32 -emit-llvm %s -o - -femulated-tls | FileCheck --check-prefixes=MINGW,MINGW-EMUTLS %s
+// RUN: %clang_cc1 -triple x86_64-w64-mingw32 -emit-llvm %s -o - | FileCheck --check-prefixes=MINGW,MINGW-NATIVE_TLS,MINGW-AUTO-IMPORT %s
+// RUN: %clang_cc1 -triple x86_64-w64-mingw32 -emit-llvm %s -o - -fno-auto-import | FileCheck --check-prefixes=MINGW,MINGW-NATIVE_TLS,MINGW-NO-AUTO-IMPORT %s
+// RUN: %clang_cc1 -triple x86_64-w64-mingw32 -emit-llvm %s -o - -femulated-tls | FileCheck --check-prefixes=MINGW,MINGW-EMUTLS,MINGW-AUTO-IMPORT %s
 // MINGW:      @baz = dso_local global i32 42
 // MINGW-NEXT: @import_var = external dllimport global i32
 // MINGW-NEXT: @weak_bar = extern_weak global i32
-// MINGW-NEXT: @bar = external global i32
+// MINGW-AUTO-IMPORT-NEXT: @bar = external global i32
+// MINGW-NO-AUTO-IMPORT-NEXT: @bar = external dso_local global i32
 // MINGW-NEXT: @local_thread_var = dso_local thread_local global i32 42
 // MINGW-NATIVE_TLS-NEXT: @thread_var = external dso_local thread_local global i32
 // MINGW-EMUTLS-NEXT: @thread_var = external thread_local global i32
@@ -36,6 +38,8 @@
 // STATIC-DAG: define dso_local ptr @zed()
 // STATIC-DAG: declare dso_local void @import_func()
 
+// STATIC-NOT: !"direct-access-external-data"
+
 /// If -fno-direct-access-external-data is set, drop dso_local from global variable
 /// declarations.
 // RUN: %clang_cc1 -triple x86_64 -emit-llvm %s -mrelocation-model static -fno-direct-access-external-data -o - | FileCheck --check-prefix=STATIC-INDIRECT %s
@@ -49,6 +53,8 @@
 // STATIC-INDIRECT-DAG:  define dso_local ptr @zed()
 // STATIC-INDIRECT-DAG:  declare void @foo()
 
+// STATIC-INDIRECT:      ![[#]] = !{i32 7, !"direct-access-external-data", i32 0}
+
 // RUN: %clang_cc1 -triple x86_64 -emit-llvm -pic-level 1 -pic-is-pie %s -o - | FileCheck --check-prefix=PIE %s
 // PIE:      @baz = dso_local global i32 42
 // PIE-NEXT: @import_var = external global i32
@@ -60,6 +66,8 @@
 // PIE-DAG: define dso_local ptr @zed()
 // PIE-DAG: declare void @import_func()
 
+// PIE-NOT:  !"direct-access-external-data"
+
 // RUN: %clang_cc1 -triple x86_64 -emit-llvm -pic-level 1 -pic-is-pie -fdirect-access-external-data %s -o - | FileCheck --check-prefix=PIE-DIRECT %s
 // PIE-DIRECT:      @baz = dso_local global i32 42
 // PIE-DIRECT-NEXT: @import_var = external dso_local global i32
@@ -70,6 +78,8 @@
 // PIE-DIRECT-DAG: declare void @foo()
 // PIE-DIRECT-DAG: define dso_local ptr @zed()
 // PIE-DIRECT-DAG: declare void @import_func()
+
+// PIE-DIRECT:      ![[#]] = !{i32 7, !"direct-access-external-data", i32 1}
 
 // RUN: %clang_cc1 -triple x86_64 -emit-llvm -mrelocation-model static -fno-plt %s -o - | FileCheck --check-prefix=NOPLT %s
 // NOPLT:      @baz = dso_local global i32 42

@@ -166,31 +166,31 @@ void test_core(void) {
   // CHECK-ASM: vlvgg
 
   vsc = vec_promote(sc, idx);
-  // CHECK: insertelement <16 x i8> undef, i8 %{{.*}}, i32 %{{.*}}
+  // CHECK: insertelement <16 x i8> poison, i8 %{{.*}}, i32 %{{.*}}
   // CHECK-ASM: vlvgb
   vuc = vec_promote(uc, idx);
-  // CHECK: insertelement <16 x i8> undef, i8 %{{.*}}, i32 %{{.*}}
+  // CHECK: insertelement <16 x i8> poison, i8 %{{.*}}, i32 %{{.*}}
   // CHECK-ASM: vlvgb
   vss = vec_promote(ss, idx);
-  // CHECK: insertelement <8 x i16> undef, i16 %{{.*}}, i32 %{{.*}}
+  // CHECK: insertelement <8 x i16> poison, i16 %{{.*}}, i32 %{{.*}}
   // CHECK-ASM: vlvgh
   vus = vec_promote(us, idx);
-  // CHECK: insertelement <8 x i16> undef, i16 %{{.*}}, i32 %{{.*}}
+  // CHECK: insertelement <8 x i16> poison, i16 %{{.*}}, i32 %{{.*}}
   // CHECK-ASM: vlvgh
   vsi = vec_promote(si, idx);
-  // CHECK: insertelement <4 x i32> undef, i32 %{{.*}}, i32 %{{.*}}
+  // CHECK: insertelement <4 x i32> poison, i32 %{{.*}}, i32 %{{.*}}
   // CHECK-ASM: vlvgf
   vui = vec_promote(ui, idx);
-  // CHECK: insertelement <4 x i32> undef, i32 %{{.*}}, i32 %{{.*}}
+  // CHECK: insertelement <4 x i32> poison, i32 %{{.*}}, i32 %{{.*}}
   // CHECK-ASM: vlvgf
   vsl = vec_promote(sl, idx);
-  // CHECK: insertelement <2 x i64> undef, i64 %{{.*}}, i32 %{{.*}}
+  // CHECK: insertelement <2 x i64> poison, i64 %{{.*}}, i32 %{{.*}}
   // CHECK-ASM: vlvgg
   vul = vec_promote(ul, idx);
-  // CHECK: insertelement <2 x i64> undef, i64 %{{.*}}, i32 %{{.*}}
+  // CHECK: insertelement <2 x i64> poison, i64 %{{.*}}, i32 %{{.*}}
   // CHECK-ASM: vlvgg
   vd = vec_promote(d, idx);
-  // CHECK: insertelement <2 x double> undef, double %{{.*}}, i32 %{{.*}}
+  // CHECK: insertelement <2 x double> poison, double %{{.*}}, i32 %{{.*}}
   // CHECK-ASM: vlvgg
 
   vsc = vec_insert_and_zero(cptrsc);

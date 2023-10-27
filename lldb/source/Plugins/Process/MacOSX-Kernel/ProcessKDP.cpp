@@ -65,8 +65,8 @@ enum {
 
 class PluginProperties : public Properties {
 public:
-  static ConstString GetSettingName() {
-    return ConstString(ProcessKDP::GetPluginNameStatic());
+  static llvm::StringRef GetSettingName() {
+    return ProcessKDP::GetPluginNameStatic();
   }
 
   PluginProperties() : Properties() {
@@ -78,8 +78,8 @@ public:
 
   uint64_t GetPacketTimeout() {
     const uint32_t idx = ePropertyKDPPacketTimeout;
-    return m_collection_sp->GetPropertyAtIndexAsUInt64(
-        NULL, idx, g_processkdp_properties[idx].default_uint_value);
+    return GetPropertyAtIndexAs<uint64_t>(
+        idx, g_processkdp_properties[idx].default_uint_value);
   }
 };
 
@@ -713,8 +713,7 @@ void ProcessKDP::DebuggerInitialize(lldb_private::Debugger &debugger) {
     const bool is_global_setting = true;
     PluginManager::CreateSettingForProcessPlugin(
         debugger, GetGlobalPluginProperties().GetValueProperties(),
-        ConstString("Properties for the kdp-remote process plug-in."),
-        is_global_setting);
+        "Properties for the kdp-remote process plug-in.", is_global_setting);
   }
 }
 
@@ -730,7 +729,7 @@ bool ProcessKDP::StartAsyncThread() {
       "<lldb.process.kdp-remote.async>", [this] { return AsyncThread(); });
   if (!async_thread) {
     LLDB_LOG_ERROR(GetLog(LLDBLog::Host), async_thread.takeError(),
-                   "failed to launch host thread: {}");
+                   "failed to launch host thread: {0}");
     return false;
   }
   m_async_thread = *async_thread;
@@ -888,7 +887,7 @@ public:
           "the --command option must be set to a valid command byte");
     } else {
       const uint64_t command_byte =
-          m_command_byte.GetOptionValue().GetUInt64Value(0);
+          m_command_byte.GetOptionValue().GetValueAs<uint64_t>().value_or(0);
       if (command_byte > 0 && command_byte <= UINT8_MAX) {
         ProcessKDP *process =
             (ProcessKDP *)m_interpreter.GetExecutionContext().GetProcessPtr();

@@ -5,9 +5,6 @@ Here's a short precis of how to run lldb if you are familiar with the gdb
 command set. We will start with some details on lldb command structure and
 syntax to help orient you.
 
-.. contents::
-   :local:
-
 Command Structure
 -----------------
 
@@ -20,10 +17,23 @@ Unlike gdb's command set, which is rather free-form, we tried to make the lldb c
 The command line parsing is done before command execution, so it is uniform
 across all the commands. The command syntax for basic commands is very simple,
 arguments, options and option values are all white-space separated, and
-double-quotes are used to protect white-spaces in an argument. If you need to
-put a backslash or double-quote character in an argument you back-slash it in
-the argument. That makes the command syntax more regular, but it also means you
-may have to quote some arguments in lldb that you wouldn't in gdb.
+either single or double-quotes (in pairs) are used to protect white-spaces
+in an argument.  If you need to put a backslash or double-quote character in an
+argument you back-slash it in the argument. That makes the command syntax more
+regular, but it also means you may have to quote some arguments in lldb that
+you wouldn't in gdb.
+
+There is one other special quote character in lldb - the backtick.
+If you put backticks around an argument or option value, lldb will run the text
+of the value through the expression parser, and the result of the expression
+will be passed to the command.  So for instance, if "len" is a local
+int variable with the value 5, then the command:
+
+::
+
+   (lldb) memory read -c `len` 0x12345
+
+will receive the value 5 for the count option, rather than the string "len".
 
 
 Options can be placed anywhere on the command line, but if the arguments begin
@@ -350,7 +360,7 @@ That is better, but suffers from the problem that when new breakpoints get
 added, they don't pick up these modifications, and the options only exist in
 the context of actual breakpoints, so they are hard to store & reuse.
 
-A even better solution is to make a fully configured breakpoint name:
+An even better solution is to make a fully configured breakpoint name:
 
 ::
 

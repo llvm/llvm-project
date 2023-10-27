@@ -34,7 +34,7 @@ std::string escapeForDiagnostic(std::string ToEscape) {
   // Optimize for the common case that the string does not contain `%` at the
   // cost of an extra scan over the string in the slow case.
   auto Pos = ToEscape.find('%');
-  if (Pos == ToEscape.npos)
+  if (Pos == std::string::npos)
     return ToEscape;
 
   std::string Result;

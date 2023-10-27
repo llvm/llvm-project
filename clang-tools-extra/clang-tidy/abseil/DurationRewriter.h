@@ -14,9 +14,7 @@
 #include <cinttypes>
 #include <optional>
 
-namespace clang {
-namespace tidy {
-namespace abseil {
+namespace clang::tidy::abseil {
 
 /// Duration factory and conversion scales
 enum class DurationScale : std::uint8_t {
@@ -135,8 +133,6 @@ AST_MATCHER_FUNCTION_P(ast_matchers::internal::Matcher<Stmt>,
       hasEitherOperand(ignoringImpCasts(callExpr(callee(funcDecl)))));
 }
 
-} // namespace abseil
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::abseil
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_ABSEIL_DURATIONREWRITER_H

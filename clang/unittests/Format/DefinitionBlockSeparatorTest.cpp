@@ -283,6 +283,15 @@ TEST_F(DefinitionBlockSeparatorTest, UntouchBlockStartStyle) {
 TEST_F(DefinitionBlockSeparatorTest, Always) {
   FormatStyle Style = getLLVMStyle();
   Style.SeparateDefinitionBlocks = FormatStyle::SDS_Always;
+
+  verifyFormat("// clang-format off\n"
+               "template<class T>\n"
+               "concept C = not A<S<T>>;\n"
+               "// clang-format on\n"
+               "\n"
+               "struct E {};",
+               Style);
+
   std::string Prefix = "namespace {\n";
   std::string Infix = "\n"
                       "// Enum test1\n"

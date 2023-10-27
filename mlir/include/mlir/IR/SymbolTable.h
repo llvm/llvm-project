@@ -13,6 +13,7 @@
 #include "mlir/IR/OpDefinition.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/Support/RWMutex.h"
 
 namespace mlir {
 
@@ -53,6 +54,23 @@ public:
   /// symbol is not inside another operation. Return the name of the symbol
   /// after insertion as attribute.
   StringAttr insert(Operation *symbol, Block::iterator insertPt = {});
+
+  /// Renames the given op or the op refered to by the given name to the given
+  /// new name and updates the symbol table and all usages of the symbol
+  /// accordingly. Fails if the updating of the usages fails.
+  LogicalResult rename(StringAttr from, StringAttr to);
+  LogicalResult rename(Operation *op, StringAttr to);
+  LogicalResult rename(StringAttr from, StringRef to);
+  LogicalResult rename(Operation *op, StringRef to);
+
+  /// Renames the given op or the op refered to by the given name to the a name
+  /// that is unique within this and the provided other symbol tables and
+  /// updates the symbol table and all usages of the symbol accordingly. Returns
+  /// the new name or failure if the renaming fails.
+  FailureOr<StringAttr> renameToUnique(StringAttr from,
+                                       ArrayRef<SymbolTable *> others);
+  FailureOr<StringAttr> renameToUnique(Operation *op,
+                                       ArrayRef<SymbolTable *> others);
 
   /// Return the name of the attribute used for symbol names.
   static StringRef getSymbolAttrName() { return "sym_name"; }
@@ -281,8 +299,64 @@ public:
   SymbolTable &getSymbolTable(Operation *op);
 
 private:
+  friend class LockedSymbolTableCollection;
+
   /// The constructed symbol tables nested within this table.
   DenseMap<Operation *, std::unique_ptr<SymbolTable>> symbolTables;
+};
+
+//===----------------------------------------------------------------------===//
+// LockedSymbolTableCollection
+//===----------------------------------------------------------------------===//
+
+/// This class implements a lock-based shared wrapper around a symbol table
+/// collection that allows shared access to the collection of symbol tables.
+/// This class does not protect shared access to individual symbol tables.
+/// `SymbolTableCollection` lazily instantiates `SymbolTable` instances for
+/// symbol table operations, making read operations not thread-safe. This class
+/// provides a thread-safe `lookupSymbolIn` implementation by synchronizing the
+/// lazy `SymbolTable` lookup.
+class LockedSymbolTableCollection : public SymbolTableCollection {
+public:
+  explicit LockedSymbolTableCollection(SymbolTableCollection &collection)
+      : collection(collection) {}
+
+  /// Look up a symbol with the specified name within the specified symbol table
+  /// operation, returning null if no such name exists.
+  Operation *lookupSymbolIn(Operation *symbolTableOp, StringAttr symbol);
+  /// Look up a symbol with the specified name within the specified symbol table
+  /// operation, returning null if no such name exists.
+  Operation *lookupSymbolIn(Operation *symbolTableOp, FlatSymbolRefAttr symbol);
+  /// Look up a potentially nested symbol within the specified symbol table
+  /// operation, returning null if no such symbol exists.
+  Operation *lookupSymbolIn(Operation *symbolTableOp, SymbolRefAttr name);
+
+  /// Lookup a symbol of a particular kind within the specified symbol table,
+  /// returning null if the symbol was not found.
+  template <typename T, typename NameT>
+  T lookupSymbolIn(Operation *symbolTableOp, NameT &&name) {
+    return dyn_cast_or_null<T>(
+        lookupSymbolIn(symbolTableOp, std::forward<NameT>(name)));
+  }
+
+  /// A variant of 'lookupSymbolIn' that returns all of the symbols referenced
+  /// by a given SymbolRefAttr when resolved within the provided symbol table
+  /// operation. Returns failure if any of the nested references could not be
+  /// resolved.
+  LogicalResult lookupSymbolIn(Operation *symbolTableOp, SymbolRefAttr name,
+                               SmallVectorImpl<Operation *> &symbols);
+
+private:
+  /// Get the symbol table for the symbol table operation, constructing if it
+  /// does not exist. This function provides thread safety over `collection`
+  /// by locking when performing the lookup and when inserting
+  /// lazily-constructed symbol tables.
+  SymbolTable &getSymbolTable(Operation *symbolTableOp);
+
+  /// The symbol tables to manage.
+  SymbolTableCollection &collection;
+  /// The mutex protecting access to the symbol table collection.
+  llvm::sys::SmartRWMutex<true> mutex;
 };
 
 //===----------------------------------------------------------------------===//

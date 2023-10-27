@@ -47,10 +47,13 @@ protected:
   friend class SBBreakpoint;
   friend class SBBreakpointLocation;
   friend class SBBreakpointName;
+  friend class SBStructuredData;
 
   SBStringList(const lldb_private::StringList *lldb_strings);
 
   void AppendList(const lldb_private::StringList &strings);
+
+  lldb_private::StringList *operator->();
 
   const lldb_private::StringList *operator->() const;
 

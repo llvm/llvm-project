@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Utility/Args.h"
-#include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StringList.h"
@@ -26,7 +25,7 @@ static llvm::StringRef ParseDoubleQuotes(llvm::StringRef quoted,
   // Inside double quotes, '\' and '"' are special.
   static const char *k_escapable_characters = "\"\\";
   while (true) {
-    // Skip over over regular characters and append them.
+    // Skip over regular characters and append them.
     size_t regular = quoted.find_first_of(k_escapable_characters);
     result += quoted.substr(0, regular);
     quoted = quoted.substr(regular);
@@ -94,7 +93,7 @@ ParseSingleArgument(llvm::StringRef command) {
 
   bool arg_complete = false;
   do {
-    // Skip over over regular characters and append them.
+    // Skip over regular characters and append them.
     size_t regular = command.find_first_of(" \t\r\"'`\\");
     arg += command.substr(0, regular);
     command = command.substr(regular);
@@ -385,20 +384,21 @@ void Args::Clear() {
 std::string Args::GetShellSafeArgument(const FileSpec &shell,
                                        llvm::StringRef unsafe_arg) {
   struct ShellDescriptor {
-    ConstString m_basename;
+    llvm::StringRef m_basename;
     llvm::StringRef m_escapables;
   };
 
-  static ShellDescriptor g_Shells[] = {{ConstString("bash"), " '\"<>()&;"},
-                                       {ConstString("fish"), " '\"<>()&\\|;"},
-                                       {ConstString("tcsh"), " '\"<>()&;"},
-                                       {ConstString("zsh"), " '\"<>()&;\\|"},
-                                       {ConstString("sh"), " '\"<>()&;"}};
+  static ShellDescriptor g_Shells[] = {{"bash", " '\"<>()&;"},
+                                       {"fish", " '\"<>()&\\|;"},
+                                       {"tcsh", " '\"<>()&;"},
+                                       {"zsh", " '\"<>()&;\\|"},
+                                       {"sh", " '\"<>()&;"}};
 
   // safe minimal set
   llvm::StringRef escapables = " '\"";
 
-  if (auto basename = shell.GetFilename()) {
+  auto basename = shell.GetFilename().GetStringRef();
+  if (!basename.empty()) {
     for (const auto &Shell : g_Shells) {
       if (Shell.m_basename == basename) {
         escapables = Shell.m_escapables;
@@ -445,6 +445,7 @@ uint32_t Args::StringToGenericRegister(llvm::StringRef s) {
                         .Case("arg6", LLDB_REGNUM_GENERIC_ARG6)
                         .Case("arg7", LLDB_REGNUM_GENERIC_ARG7)
                         .Case("arg8", LLDB_REGNUM_GENERIC_ARG8)
+                        .Case("tp", LLDB_REGNUM_GENERIC_TP)
                         .Default(LLDB_INVALID_REGNUM);
   return result;
 }

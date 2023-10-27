@@ -67,17 +67,38 @@ AST_MATCHER_P(CallExpr, hasLastArgument,
 // function had parameters defined (this is useful to check if there is only one
 // variadic argument).
 AST_MATCHER(CXXMemberCallExpr, hasSameNumArgsAsDeclNumParams) {
-  if (Node.getMethodDecl()->isFunctionTemplateSpecialization())
-    return Node.getNumArgs() == Node.getMethodDecl()
-                                    ->getPrimaryTemplate()
-                                    ->getTemplatedDecl()
-                                    ->getNumParams();
+  if (const FunctionTemplateDecl *Primary =
+          Node.getMethodDecl()->getPrimaryTemplate())
+    return Node.getNumArgs() == Primary->getTemplatedDecl()->getNumParams();
 
   return Node.getNumArgs() == Node.getMethodDecl()->getNumParams();
 }
 
 AST_MATCHER(DeclRefExpr, hasExplicitTemplateArgs) {
   return Node.hasExplicitTemplateArgs();
+}
+
+// Helper Matcher which applies the given QualType Matcher either directly or by
+// resolving a pointer type to its pointee. Used to match v.push_back() as well
+// as p->push_back().
+auto hasTypeOrPointeeType(
+    const ast_matchers::internal::Matcher<QualType> &TypeMatcher) {
+  return anyOf(hasType(TypeMatcher),
+               hasType(pointerType(pointee(TypeMatcher))));
+}
+
+// Matches if the node has canonical type matching any of the given names.
+auto hasWantedType(llvm::ArrayRef<StringRef> TypeNames) {
+  return hasCanonicalType(hasDeclaration(cxxRecordDecl(hasAnyName(TypeNames))));
+}
+
+// Matches member call expressions of the named method on the listed container
+// types.
+auto cxxMemberCallExprOnContainer(
+    StringRef MethodName, llvm::ArrayRef<StringRef> ContainerNames) {
+  return cxxMemberCallExpr(
+      hasDeclaration(functionDecl(hasName(MethodName))),
+      on(hasTypeOrPointeeType(hasWantedType(ContainerNames))));
 }
 
 const auto DefaultContainersWithPushBack =
@@ -130,27 +151,19 @@ void UseEmplaceCheck::registerMatchers(MatchFinder *Finder) {
   // because this requires special treatment (it could cause performance
   // regression)
   // + match for emplace calls that should be replaced with insertion
-  auto CallPushBack = cxxMemberCallExpr(
-      hasDeclaration(functionDecl(hasName("push_back"))),
-      on(hasType(hasCanonicalType(
-          hasDeclaration(cxxRecordDecl(hasAnyName(ContainersWithPushBack)))))));
-
-  auto CallPush =
-      cxxMemberCallExpr(hasDeclaration(functionDecl(hasName("push"))),
-                        on(hasType(hasCanonicalType(hasDeclaration(
-                            cxxRecordDecl(hasAnyName(ContainersWithPush)))))));
-
-  auto CallPushFront = cxxMemberCallExpr(
-      hasDeclaration(functionDecl(hasName("push_front"))),
-      on(hasType(hasCanonicalType(hasDeclaration(
-          cxxRecordDecl(hasAnyName(ContainersWithPushFront)))))));
+  auto CallPushBack =
+      cxxMemberCallExprOnContainer("push_back", ContainersWithPushBack);
+  auto CallPush = cxxMemberCallExprOnContainer("push", ContainersWithPush);
+  auto CallPushFront =
+      cxxMemberCallExprOnContainer("push_front", ContainersWithPushFront);
 
   auto CallEmplacy = cxxMemberCallExpr(
       hasDeclaration(
           functionDecl(hasAnyNameIgnoringTemplates(EmplacyFunctions))),
-      on(hasType(hasCanonicalType(hasDeclaration(has(typedefNameDecl(
-          hasName("value_type"), hasType(type(hasUnqualifiedDesugaredType(
-                                     recordType().bind("value_type")))))))))));
+      on(hasTypeOrPointeeType(hasCanonicalType(hasDeclaration(
+          has(typedefNameDecl(hasName("value_type"),
+                              hasType(type(hasUnqualifiedDesugaredType(
+                                  recordType().bind("value_type")))))))))));
 
   // We can't replace push_backs of smart pointer because
   // if emplacement fails (f.e. bad_alloc in vector) we will have leak of
@@ -165,7 +178,8 @@ void UseEmplaceCheck::registerMatchers(MatchFinder *Finder) {
 
   // Initializer list can't be passed to universal reference.
   auto InitializerListAsArgument = hasAnyArgument(
-      ignoringImplicit(cxxConstructExpr(isListInitialization())));
+      ignoringImplicit(allOf(cxxConstructExpr(isListInitialization()),
+                             unless(cxxTemporaryObjectExpr()))));
 
   // We could have leak of resource.
   auto NewExprAsArgument = hasAnyArgument(ignoringImplicit(cxxNewExpr()));
@@ -190,6 +204,16 @@ void UseEmplaceCheck::registerMatchers(MatchFinder *Finder) {
           .bind("ctor");
   auto HasConstructExpr = has(ignoringImplicit(SoughtConstructExpr));
 
+  // allow for T{} to be replaced, even if no CTOR is declared
+  auto HasConstructInitListExpr = has(initListExpr(anyOf(
+      allOf(has(SoughtConstructExpr),
+            has(cxxConstructExpr(argumentCountIs(0)))),
+      has(cxxBindTemporaryExpr(has(SoughtConstructExpr),
+                               has(cxxConstructExpr(argumentCountIs(0))))))));
+  auto HasBracedInitListExpr =
+      anyOf(has(cxxBindTemporaryExpr(HasConstructInitListExpr)),
+            HasConstructInitListExpr);
+
   auto MakeTuple = ignoringImplicit(
       callExpr(callee(expr(ignoringImplicit(declRefExpr(
                    unless(hasExplicitTemplateArgs()),
@@ -202,19 +226,35 @@ void UseEmplaceCheck::registerMatchers(MatchFinder *Finder) {
       has(materializeTemporaryExpr(MakeTuple)),
       hasDeclaration(cxxConstructorDecl(ofClass(hasAnyName(TupleTypes))))));
 
-  auto SoughtParam = materializeTemporaryExpr(
-      anyOf(has(MakeTuple), has(MakeTupleCtor), HasConstructExpr,
-            has(cxxFunctionalCastExpr(HasConstructExpr))));
+  auto SoughtParam =
+      materializeTemporaryExpr(
+          anyOf(has(MakeTuple), has(MakeTupleCtor), HasConstructExpr,
+                HasBracedInitListExpr,
+                has(cxxFunctionalCastExpr(HasConstructExpr)),
+                has(cxxFunctionalCastExpr(HasBracedInitListExpr))))
+          .bind("temporary_expr");
 
   auto HasConstructExprWithValueTypeType =
       has(ignoringImplicit(cxxConstructExpr(
           SoughtConstructExpr, hasType(type(hasUnqualifiedDesugaredType(
                                    type(equalsBoundNode("value_type"))))))));
 
-  auto HasConstructExprWithValueTypeTypeAsLastArgument =
-      hasLastArgument(materializeTemporaryExpr(anyOf(
-          HasConstructExprWithValueTypeType,
-          has(cxxFunctionalCastExpr(HasConstructExprWithValueTypeType)))));
+  auto HasBracedInitListWithValueTypeType =
+      anyOf(allOf(HasConstructInitListExpr,
+                  has(initListExpr(hasType(type(hasUnqualifiedDesugaredType(
+                      type(equalsBoundNode("value_type")))))))),
+            has(cxxBindTemporaryExpr(
+                HasConstructInitListExpr,
+                has(initListExpr(hasType(type(hasUnqualifiedDesugaredType(
+                    type(equalsBoundNode("value_type"))))))))));
+
+  auto HasConstructExprWithValueTypeTypeAsLastArgument = hasLastArgument(
+      materializeTemporaryExpr(
+          anyOf(HasConstructExprWithValueTypeType,
+                HasBracedInitListWithValueTypeType,
+                has(cxxFunctionalCastExpr(HasConstructExprWithValueTypeType)),
+                has(cxxFunctionalCastExpr(HasBracedInitListWithValueTypeType))))
+          .bind("temporary_expr"));
 
   Finder->addMatcher(
       traverse(TK_AsIs, cxxMemberCallExpr(CallPushBack, has(SoughtParam),
@@ -270,6 +310,8 @@ void UseEmplaceCheck::check(const MatchFinder::MatchResult &Result) {
       Result.Nodes.getNodeAs<CXXMemberCallExpr>("emplacy_call");
   const auto *CtorCall = Result.Nodes.getNodeAs<CXXConstructExpr>("ctor");
   const auto *MakeCall = Result.Nodes.getNodeAs<CallExpr>("make");
+  const auto *TemporaryExpr =
+      Result.Nodes.getNodeAs<MaterializeTemporaryExpr>("temporary_expr");
 
   const CXXMemberCallExpr *Call = [&]() {
     if (PushBackCall) {
@@ -296,7 +338,9 @@ void UseEmplaceCheck::check(const MatchFinder::MatchResult &Result) {
 
   auto Diag =
       EmplacyCall
-          ? diag(CtorCall ? CtorCall->getBeginLoc() : MakeCall->getBeginLoc(),
+          ? diag(TemporaryExpr ? TemporaryExpr->getBeginLoc()
+                 : CtorCall    ? CtorCall->getBeginLoc()
+                               : MakeCall->getBeginLoc(),
                  "unnecessary temporary object created while calling %0")
           : diag(Call->getExprLoc(), "use emplace%select{|_back|_front}0 "
                                      "instead of push%select{|_back|_front}0");
@@ -335,16 +379,22 @@ void UseEmplaceCheck::check(const MatchFinder::MatchResult &Result) {
   if (CallParensRange.getBegin().isInvalid())
     return;
 
-  const SourceLocation ExprBegin =
-      CtorCall ? CtorCall->getExprLoc() : MakeCall->getExprLoc();
+  // FIXME: Will there ever be a CtorCall, if there is no TemporaryExpr?
+  const SourceLocation ExprBegin = TemporaryExpr ? TemporaryExpr->getExprLoc()
+                                   : CtorCall    ? CtorCall->getExprLoc()
+                                                 : MakeCall->getExprLoc();
 
   // Range for constructor name and opening brace.
   const auto ParamCallSourceRange =
       CharSourceRange::getTokenRange(ExprBegin, CallParensRange.getBegin());
 
+  // Range for constructor closing brace and end of temporary expr.
+  const auto EndCallSourceRange = CharSourceRange::getTokenRange(
+      CallParensRange.getEnd(),
+      TemporaryExpr ? TemporaryExpr->getEndLoc() : CallParensRange.getEnd());
+
   Diag << FixItHint::CreateRemoval(ParamCallSourceRange)
-       << FixItHint::CreateRemoval(CharSourceRange::getTokenRange(
-              CallParensRange.getEnd(), CallParensRange.getEnd()));
+       << FixItHint::CreateRemoval(EndCallSourceRange);
 
   if (MakeCall && EmplacyCall) {
     // Remove extra left parenthesis

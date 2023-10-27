@@ -36,6 +36,7 @@
 #define DEBUG_TYPE "loops-to-gpu"
 
 using namespace mlir;
+using namespace mlir::affine;
 using namespace mlir::scf;
 
 // Name of internal attribute to mark visited operations during conversion.
@@ -85,7 +86,7 @@ static Operation::operand_range getUpperBoundOperands(AffineForOp forOp) {
 // materialize a corresponding constant using builder.
 static Value getOrCreateStep(AffineForOp forOp, OpBuilder &builder) {
   return builder.create<arith::ConstantIndexOp>(forOp.getLoc(),
-                                                forOp.getStep());
+                                                forOp.getStepAsInt());
 }
 
 // Get a Value for the loop lower bound.  If the value requires computation,
@@ -170,13 +171,6 @@ struct AffineLoopToGpuConverter {
 };
 } // namespace
 
-// Return true if the value is obviously a constant "one".
-static bool isConstantOne(Value value) {
-  if (auto def = value.getDefiningOp<arith::ConstantIndexOp>())
-    return def.value() == 1;
-  return false;
-}
-
 // Collect ranges, bounds, steps and induction variables in preparation for
 // mapping a loop nest of depth "numLoops" rooted at "forOp" to a GPU kernel.
 // This may fail if the IR for computing loop bounds cannot be constructed, for
@@ -200,7 +194,7 @@ AffineLoopToGpuConverter::collectBounds(AffineForOp forOp, unsigned numLoops) {
     Value range = builder.create<arith::SubIOp>(currentLoop.getLoc(),
                                                 upperBound, lowerBound);
     Value step = getOrCreateStep(currentLoop, builder);
-    if (!isConstantOne(step))
+    if (getConstantIntValue(step) != static_cast<int64_t>(1))
       range = builder.create<arith::DivSIOp>(currentLoop.getLoc(), range, step);
     dims.push_back(range);
 
@@ -268,7 +262,7 @@ void AffineLoopToGpuConverter::createLaunch(AffineForOp rootForOp,
             ? getDim3Value(launchOp.getBlockIds(), en.index())
             : getDim3Value(launchOp.getThreadIds(), en.index() - numBlockDims);
     Value step = steps[en.index()];
-    if (!isConstantOne(step))
+    if (getConstantIntValue(step) != static_cast<int64_t>(1))
       id = builder.create<arith::MulIOp>(rootForOp.getLoc(), step, id);
 
     Value ivReplacement =
@@ -440,7 +434,7 @@ static LogicalResult processParallelLoop(
     Value iv, lowerBound, upperBound, step;
     std::tie(mappingAttribute, iv, lowerBound, upperBound, step) = config;
     auto annotation =
-        mappingAttribute.dyn_cast<gpu::ParallelLoopDimMappingAttr>();
+        dyn_cast<gpu::ParallelLoopDimMappingAttr>(mappingAttribute);
     if (!annotation)
       return parallelOp.emitOpError()
              << "expected mapping attribute for lowering to GPU";
@@ -513,7 +507,7 @@ static LogicalResult processParallelLoop(
                   ensureLaunchIndependent(cloningMap.lookupOrDefault(step))});
           // todo(herhut,ravishankarm): Update the behavior of setMappingAttr
           // when this condition is relaxed.
-          if (bounds.find(processor) != bounds.end()) {
+          if (bounds.contains(processor)) {
             return rewriter.notifyMatchFailure(
                 parallelOp, "cannot redefine the bound for processor " +
                                 Twine(static_cast<int64_t>(processor)));

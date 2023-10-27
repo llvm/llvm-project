@@ -4,7 +4,7 @@
 ; Note that this test case shows that function specialization pass would
 ; transform the function even if no specialization happened.
 
-; RUN: opt -passes="ipsccp<func-spec>" -force-function-specialization -S < %s | FileCheck %s
+; RUN: opt -passes="ipsccp<func-spec>" -force-specialization -S < %s | FileCheck %s
 
 %struct = type { i8, i16, i32, i64, i64}
 @Global = internal constant %struct {i8 0, i16 1, i32 2, i64 3, i64 4}
@@ -30,13 +30,13 @@ define internal i64 @zoo(i1 %flag) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[FLAG:%.*]], label [[PLUS:%.*]], label [[MINUS:%.*]]
 ; CHECK:       plus:
-; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @func2.2(ptr getelementptr inbounds ([[STRUCT:%.*]], ptr @Global, i32 0, i32 3))
+; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @func2.specialized.2(ptr getelementptr inbounds ([[STRUCT:%.*]], ptr @Global, i64 0, i32 3))
 ; CHECK-NEXT:    br label [[MERGE:%.*]]
 ; CHECK:       minus:
-; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @func2.1(ptr getelementptr inbounds ([[STRUCT]], ptr @Global, i32 0, i32 4))
+; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @func2.specialized.1(ptr getelementptr inbounds ([[STRUCT]], ptr @Global, i64 0, i32 4))
 ; CHECK-NEXT:    br label [[MERGE]]
 ; CHECK:       merge:
-; CHECK-NEXT:    [[TMP2:%.*]] = phi i64 [ [[TMP0]], [[PLUS]] ], [ [[TMP1]], [[MINUS]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = phi i64 [ ptrtoint (ptr getelementptr inbounds ([[STRUCT]], ptr @Global, i64 0, i32 3) to i64), [[PLUS]] ], [ ptrtoint (ptr getelementptr inbounds ([[STRUCT]], ptr @Global, i64 0, i32 4) to i64), [[MINUS]] ]
 ; CHECK-NEXT:    ret i64 [[TMP2]]
 ;
 entry:
@@ -70,3 +70,4 @@ define i64 @main() {
   %3 = add i64 %1, %2
   ret i64 %3
 }
+

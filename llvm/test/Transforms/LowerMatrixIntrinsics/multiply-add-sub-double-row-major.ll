@@ -46,8 +46,8 @@ define void @multiply_sub_add_2x3_3x2(ptr %a.ptr, ptr %b.ptr, ptr %c.ptr) {
 ; RM-NEXT:    [[SPLAT_SPLAT15:%.*]] = shufflevector <1 x double> [[SPLAT_SPLATINSERT14]], <1 x double> poison, <1 x i32> zeroinitializer
 ; RM-NEXT:    [[TMP11:%.*]] = fmul <1 x double> [[SPLAT_SPLAT15]], [[BLOCK13]]
 ; RM-NEXT:    [[TMP12:%.*]] = fadd <1 x double> [[TMP9]], [[TMP11]]
-; RM-NEXT:    [[TMP13:%.*]] = shufflevector <1 x double> [[TMP12]], <1 x double> poison, <2 x i32> <i32 0, i32 undef>
-; RM-NEXT:    [[TMP14:%.*]] = shufflevector <2 x double> undef, <2 x double> [[TMP13]], <2 x i32> <i32 2, i32 1>
+; RM-NEXT:    [[TMP13:%.*]] = shufflevector <1 x double> [[TMP12]], <1 x double> poison, <2 x i32> <i32 0, i32 poison>
+; RM-NEXT:    [[TMP14:%.*]] = shufflevector <2 x double> poison, <2 x double> [[TMP13]], <2 x i32> <i32 2, i32 1>
 ; RM-NEXT:    [[BLOCK16:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> poison, <1 x i32> <i32 1>
 ; RM-NEXT:    [[TMP15:%.*]] = extractelement <3 x double> [[TMP0]], i64 0
 ; RM-NEXT:    [[SPLAT_SPLATINSERT17:%.*]] = insertelement <1 x double> poison, double [[TMP15]], i64 0
@@ -65,7 +65,7 @@ define void @multiply_sub_add_2x3_3x2(ptr %a.ptr, ptr %b.ptr, ptr %c.ptr) {
 ; RM-NEXT:    [[SPLAT_SPLAT24:%.*]] = shufflevector <1 x double> [[SPLAT_SPLATINSERT23]], <1 x double> poison, <1 x i32> zeroinitializer
 ; RM-NEXT:    [[TMP21:%.*]] = fmul <1 x double> [[SPLAT_SPLAT24]], [[BLOCK22]]
 ; RM-NEXT:    [[TMP22:%.*]] = fadd <1 x double> [[TMP19]], [[TMP21]]
-; RM-NEXT:    [[TMP23:%.*]] = shufflevector <1 x double> [[TMP22]], <1 x double> poison, <2 x i32> <i32 0, i32 undef>
+; RM-NEXT:    [[TMP23:%.*]] = shufflevector <1 x double> [[TMP22]], <1 x double> poison, <2 x i32> <i32 0, i32 poison>
 ; RM-NEXT:    [[TMP24:%.*]] = shufflevector <2 x double> [[TMP14]], <2 x double> [[TMP23]], <2 x i32> <i32 0, i32 2>
 ; RM-NEXT:    [[BLOCK25:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> poison, <1 x i32> zeroinitializer
 ; RM-NEXT:    [[TMP25:%.*]] = extractelement <3 x double> [[TMP1]], i64 0
@@ -84,8 +84,8 @@ define void @multiply_sub_add_2x3_3x2(ptr %a.ptr, ptr %b.ptr, ptr %c.ptr) {
 ; RM-NEXT:    [[SPLAT_SPLAT33:%.*]] = shufflevector <1 x double> [[SPLAT_SPLATINSERT32]], <1 x double> poison, <1 x i32> zeroinitializer
 ; RM-NEXT:    [[TMP31:%.*]] = fmul <1 x double> [[SPLAT_SPLAT33]], [[BLOCK31]]
 ; RM-NEXT:    [[TMP32:%.*]] = fadd <1 x double> [[TMP29]], [[TMP31]]
-; RM-NEXT:    [[TMP33:%.*]] = shufflevector <1 x double> [[TMP32]], <1 x double> poison, <2 x i32> <i32 0, i32 undef>
-; RM-NEXT:    [[TMP34:%.*]] = shufflevector <2 x double> undef, <2 x double> [[TMP33]], <2 x i32> <i32 2, i32 1>
+; RM-NEXT:    [[TMP33:%.*]] = shufflevector <1 x double> [[TMP32]], <1 x double> poison, <2 x i32> <i32 0, i32 poison>
+; RM-NEXT:    [[TMP34:%.*]] = shufflevector <2 x double> poison, <2 x double> [[TMP33]], <2 x i32> <i32 2, i32 1>
 ; RM-NEXT:    [[BLOCK34:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> poison, <1 x i32> <i32 1>
 ; RM-NEXT:    [[TMP35:%.*]] = extractelement <3 x double> [[TMP1]], i64 0
 ; RM-NEXT:    [[SPLAT_SPLATINSERT35:%.*]] = insertelement <1 x double> poison, double [[TMP35]], i64 0
@@ -103,7 +103,7 @@ define void @multiply_sub_add_2x3_3x2(ptr %a.ptr, ptr %b.ptr, ptr %c.ptr) {
 ; RM-NEXT:    [[SPLAT_SPLAT42:%.*]] = shufflevector <1 x double> [[SPLAT_SPLATINSERT41]], <1 x double> poison, <1 x i32> zeroinitializer
 ; RM-NEXT:    [[TMP41:%.*]] = fmul <1 x double> [[SPLAT_SPLAT42]], [[BLOCK40]]
 ; RM-NEXT:    [[TMP42:%.*]] = fadd <1 x double> [[TMP39]], [[TMP41]]
-; RM-NEXT:    [[TMP43:%.*]] = shufflevector <1 x double> [[TMP42]], <1 x double> poison, <2 x i32> <i32 0, i32 undef>
+; RM-NEXT:    [[TMP43:%.*]] = shufflevector <1 x double> [[TMP42]], <1 x double> poison, <2 x i32> <i32 0, i32 poison>
 ; RM-NEXT:    [[TMP44:%.*]] = shufflevector <2 x double> [[TMP34]], <2 x double> [[TMP43]], <2 x i32> <i32 0, i32 2>
 ; RM-NEXT:    [[COL_LOAD43:%.*]] = load <2 x double>, ptr [[C_PTR:%.*]], align 8
 ; RM-NEXT:    [[VEC_GEP44:%.*]] = getelementptr double, ptr [[C_PTR]], i64 2

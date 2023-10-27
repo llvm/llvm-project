@@ -12,6 +12,7 @@
 #ifndef FORTRAN_RUNTIME_NUMERIC_H_
 #define FORTRAN_RUNTIME_NUMERIC_H_
 
+#include "flang/Common/float128.h"
 #include "flang/Runtime/cpp-type.h"
 #include "flang/Runtime/entry-names.h"
 

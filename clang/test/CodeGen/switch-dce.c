@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -triple i386-unknown-unknown %s -emit-llvm -o - | FileCheck %s
 
-// PR9322 and rdar://6970405
+// PR9322
 
 // CHECK: @test1
 // CHECK-NOT: switch

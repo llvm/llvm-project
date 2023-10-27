@@ -79,7 +79,7 @@ static cl::opt<unsigned> MaxNumberOfUseBBsForSinking(
 ///     AdjustedFreq(BBs) = 99 / SinkFrequencyPercentThreshold%
 static BlockFrequency adjustedSumFreq(SmallPtrSetImpl<BasicBlock *> &BBs,
                                       BlockFrequencyInfo &BFI) {
-  BlockFrequency T = 0;
+  BlockFrequency T(0);
   for (BasicBlock *B : BBs)
     T += BFI.getBlockFreq(B);
   if (BBs.size() > 1)
@@ -177,13 +177,27 @@ static bool sinkInstruction(
   SmallPtrSet<BasicBlock *, 2> BBs;
   for (auto &U : I.uses()) {
     Instruction *UI = cast<Instruction>(U.getUser());
-    // We cannot sink I to PHI-uses.
-    if (isa<PHINode>(UI))
-      return false;
+
     // We cannot sink I if it has uses outside of the loop.
     if (!L.contains(LI.getLoopFor(UI->getParent())))
       return false;
-    BBs.insert(UI->getParent());
+
+    if (!isa<PHINode>(UI)) {
+      BBs.insert(UI->getParent());
+      continue;
+    }
+
+    // We cannot sink I to PHI-uses, try to look through PHI to find the incoming
+    // block of the value being used.
+    PHINode *PN = dyn_cast<PHINode>(UI);
+    BasicBlock *PhiBB = PN->getIncomingBlock(U);
+
+    // If value's incoming block is from loop preheader directly, there's no
+    // place to sink to, bailout.
+    if (L.getLoopPreheader() == PhiBB)
+      return false;
+
+    BBs.insert(PhiBB);
   }
 
   // findBBsToSinkInto is O(BBs.size() * ColdLoopBBs.size()). We cap the max
@@ -208,9 +222,11 @@ static bool sinkInstruction(
   // order. No need to stable sort as the block numbers are a total ordering.
   SmallVector<BasicBlock *, 2> SortedBBsToSinkInto;
   llvm::append_range(SortedBBsToSinkInto, BBsToSinkInto);
-  llvm::sort(SortedBBsToSinkInto, [&](BasicBlock *A, BasicBlock *B) {
-    return LoopBlockNumber.find(A)->second < LoopBlockNumber.find(B)->second;
-  });
+  if (SortedBBsToSinkInto.size() > 1) {
+    llvm::sort(SortedBBsToSinkInto, [&](BasicBlock *A, BasicBlock *B) {
+      return LoopBlockNumber.find(A)->second < LoopBlockNumber.find(B)->second;
+    });
+  }
 
   BasicBlock *MoveBB = *SortedBBsToSinkInto.begin();
   // FIXME: Optimize the efficiency for cloned value replacement. The current
@@ -238,9 +254,11 @@ static bool sinkInstruction(
       }
     }
 
-    // Replaces uses of I with IC in N
+    // Replaces uses of I with IC in N, except PHI-use which is being taken
+    // care of by defs in PHI's incoming blocks.
     I.replaceUsesWithIf(IC, [N](Use &U) {
-      return cast<Instruction>(U.getUser())->getParent() == N;
+      Instruction *UIToReplace = cast<Instruction>(U.getUser());
+      return UIToReplace->getParent() == N && !isa<PHINode>(UIToReplace);
     });
     // Replaces uses of I with IC in blocks dominated by N
     replaceDominatedUsesWith(&I, IC, DT, N);
@@ -283,7 +301,7 @@ static bool sinkLoopInvariantInstructions(Loop &L, AAResults &AA, LoopInfo &LI,
     return false;
 
   MemorySSAUpdater MSSAU(&MSSA);
-  SinkAndHoistLICMFlags LICMFlags(/*IsSink=*/true, &L, &MSSA);
+  SinkAndHoistLICMFlags LICMFlags(/*IsSink=*/true, L, MSSA);
 
   bool Changed = false;
 
@@ -323,6 +341,11 @@ static bool sinkLoopInvariantInstructions(Loop &L, AAResults &AA, LoopInfo &LI,
 }
 
 PreservedAnalyses LoopSinkPass::run(Function &F, FunctionAnalysisManager &FAM) {
+  // Enable LoopSink only when runtime profile is available.
+  // With static profile, the sinking decision may be sub-optimal.
+  if (!F.hasProfileData())
+    return PreservedAnalyses::all();
+
   LoopInfo &LI = FAM.getResult<LoopAnalysis>(F);
   // Nothing to do if there are no loops.
   if (LI.empty())
@@ -346,11 +369,6 @@ PreservedAnalyses LoopSinkPass::run(Function &F, FunctionAnalysisManager &FAM) {
 
     BasicBlock *Preheader = L.getLoopPreheader();
     if (!Preheader)
-      continue;
-
-    // Enable LoopSink only when runtime profile is available.
-    // With static profile, the sinking decision may be sub-optimal.
-    if (!Preheader->getParent()->hasProfileData())
       continue;
 
     // Note that we don't pass SCEV here because it is only used to invalidate

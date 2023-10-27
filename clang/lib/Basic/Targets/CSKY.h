@@ -15,7 +15,7 @@
 
 #include "clang/Basic/MacroBuilder.h"
 #include "clang/Basic/TargetInfo.h"
-#include "llvm/Support/CSKYTargetParser.h"
+#include "llvm/TargetParser/CSKYTargetParser.h"
 
 namespace clang {
 namespace targets {
@@ -82,7 +82,7 @@ public:
   bool validateAsmConstraint(const char *&Name,
                              TargetInfo::ConstraintInfo &info) const override;
 
-  const char *getClobbers() const override { return ""; }
+  std::string_view getClobbers() const override { return ""; }
 
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;

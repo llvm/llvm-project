@@ -13,7 +13,6 @@ define i1 @test_add_nuw(i8 %start, i8 %low, i8 %high) {
 ; CHECK-NEXT:    [[UC_4:%.*]] = icmp uge i8 [[START_1_1]], [[HIGH]]
 ; CHECK-NEXT:    [[RES_11:%.*]] = xor i1 [[UC_3]], [[UC_4]]
 ; CHECK-NEXT:    [[START_3_1:%.*]] = add nuw i8 [[START]], 3
-; CHECK-NEXT:    [[T_0:%.*]] = icmp uge i8 [[START_3_1]], [[HIGH]]
 ; CHECK-NEXT:    [[RES_12:%.*]] = xor i1 [[RES_11]], true
 ; CHECK-NEXT:    [[UC_5:%.*]] = icmp ugt i8 [[START_3_1]], [[HIGH]]
 ; CHECK-NEXT:    [[RES_13:%.*]] = xor i1 [[RES_12]], [[UC_5]]
@@ -23,23 +22,19 @@ define i1 @test_add_nuw(i8 %start, i8 %low, i8 %high) {
 ; CHECK-NEXT:    [[RES_15:%.*]] = xor i1 [[RES_14]], [[SC_9]]
 ; CHECK-NEXT:    ret i1 [[RES_15]]
 ; CHECK:       if.else:
-; CHECK-NEXT:    [[F_0:%.*]] = icmp ugt i8 [[START]], [[HIGH]]
 ; CHECK-NEXT:    [[START_1:%.*]] = add nuw i8 [[START]], 1
-; CHECK-NEXT:    [[F_1:%.*]] = icmp uge i8 [[START_1]], [[HIGH]]
 ; CHECK-NEXT:    [[RES_0:%.*]] = xor i1 false, false
 ; CHECK-NEXT:    [[SC_1:%.*]] = icmp sgt i8 [[START]], [[HIGH]]
 ; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 [[RES_0]], [[SC_1]]
 ; CHECK-NEXT:    [[SC_2:%.*]] = icmp sge i8 [[START_1]], [[HIGH]]
 ; CHECK-NEXT:    [[RES_2:%.*]] = xor i1 [[RES_1]], [[SC_2]]
 ; CHECK-NEXT:    [[START_2:%.*]] = add nuw i8 [[START]], 2
-; CHECK-NEXT:    [[F_2:%.*]] = icmp uge i8 [[START_2]], [[HIGH]]
 ; CHECK-NEXT:    [[RES_3:%.*]] = xor i1 [[RES_2]], false
 ; CHECK-NEXT:    [[SC_3:%.*]] = icmp sge i8 [[START_2]], [[HIGH]]
 ; CHECK-NEXT:    [[RES_4:%.*]] = xor i1 [[RES_3]], [[SC_3]]
 ; CHECK-NEXT:    [[SC_4:%.*]] = icmp sle i8 [[START_2]], [[START_1]]
 ; CHECK-NEXT:    [[RES_5:%.*]] = xor i1 [[RES_4]], [[SC_4]]
 ; CHECK-NEXT:    [[START_3:%.*]] = add nuw i8 [[START]], 3
-; CHECK-NEXT:    [[F_3:%.*]] = icmp uge i8 [[START_3]], [[HIGH]]
 ; CHECK-NEXT:    [[RES_6:%.*]] = xor i1 [[RES_5]], false
 ; CHECK-NEXT:    [[SC_5:%.*]] = icmp sge i8 [[START_3]], [[START_1]]
 ; CHECK-NEXT:    [[RES_7:%.*]] = xor i1 [[RES_6]], [[SC_5]]
@@ -147,7 +142,6 @@ define i1 @test_add_nsw(i8 %start, i8 %low, i8 %high) {
 ; CHECK-NEXT:    [[START_1:%.*]] = add nuw i8 [[START]], 1
 ; CHECK-NEXT:    [[F_1:%.*]] = icmp uge i8 [[START_1]], [[HIGH]]
 ; CHECK-NEXT:    [[RES_0:%.*]] = xor i1 [[F_0]], [[F_1]]
-; CHECK-NEXT:    [[SC_1:%.*]] = icmp sgt i8 [[START]], [[HIGH]]
 ; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 [[RES_0]], false
 ; CHECK-NEXT:    [[SC_2:%.*]] = icmp sge i8 [[START_1]], [[HIGH]]
 ; CHECK-NEXT:    [[RES_2:%.*]] = xor i1 [[RES_1]], [[SC_2]]
@@ -248,14 +242,10 @@ define i1 @test_sub_nuw(i8 %start, i8 %low, i8 %high) {
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp uge i8 [[ADD_PTR_I]], [[HIGH:%.*]]
 ; CHECK-NEXT:    br i1 [[C_1]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[UC_3:%.*]] = icmp ugt i8 [[START]], [[HIGH]]
 ; CHECK-NEXT:    [[START_1_1:%.*]] = sub nuw i8 [[START]], 1
-; CHECK-NEXT:    [[UC_4:%.*]] = icmp uge i8 [[START_1_1]], [[HIGH]]
 ; CHECK-NEXT:    [[RES_11:%.*]] = xor i1 true, true
 ; CHECK-NEXT:    [[START_3_1:%.*]] = add nuw i8 [[START]], 3
-; CHECK-NEXT:    [[T_0:%.*]] = icmp uge i8 [[START_3_1]], [[HIGH]]
 ; CHECK-NEXT:    [[RES_12:%.*]] = xor i1 [[RES_11]], true
-; CHECK-NEXT:    [[UC_5:%.*]] = icmp ugt i8 [[START_3_1]], [[HIGH]]
 ; CHECK-NEXT:    [[RES_13:%.*]] = xor i1 [[RES_12]], true
 ; CHECK-NEXT:    [[SC_8:%.*]] = icmp sge i8 [[START_1_1]], [[HIGH]]
 ; CHECK-NEXT:    [[RES_14:%.*]] = xor i1 [[RES_13]], [[SC_8]]
@@ -279,12 +269,10 @@ define i1 @test_sub_nuw(i8 %start, i8 %low, i8 %high) {
 ; CHECK-NEXT:    [[SC_4:%.*]] = icmp sle i8 [[START_2]], [[START_1]]
 ; CHECK-NEXT:    [[RES_5:%.*]] = xor i1 [[RES_4]], [[SC_4]]
 ; CHECK-NEXT:    [[START_3:%.*]] = sub nuw i8 [[START]], 3
-; CHECK-NEXT:    [[F_3:%.*]] = icmp uge i8 [[START_3]], [[HIGH]]
 ; CHECK-NEXT:    [[RES_6:%.*]] = xor i1 [[RES_5]], false
 ; CHECK-NEXT:    [[SC_5:%.*]] = icmp sge i8 [[START_3]], [[START_1]]
 ; CHECK-NEXT:    [[RES_7:%.*]] = xor i1 [[RES_6]], [[SC_5]]
 ; CHECK-NEXT:    [[START_4:%.*]] = sub nuw i8 [[START]], 4
-; CHECK-NEXT:    [[UC_2:%.*]] = icmp uge i8 [[START_4]], [[HIGH]]
 ; CHECK-NEXT:    [[RES_8:%.*]] = xor i1 [[RES_7]], false
 ; CHECK-NEXT:    [[SC_6:%.*]] = icmp sge i8 [[START_4]], [[START_1]]
 ; CHECK-NEXT:    [[RES_9:%.*]] = xor i1 [[RES_8]], [[SC_6]]
@@ -370,7 +358,6 @@ define i1 @test_and_ule_sge(i32 %x, i32 %y, i32 %z, i32 %a) {
 ; CHECK-NEXT:    br i1 [[AND]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    [[UC_1:%.*]] = icmp ule i32 [[X]], [[Z]]
-; CHECK-NEXT:    [[UC_2:%.*]] = icmp ule i32 [[X]], [[Y]]
 ; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 [[UC_1]], true
 ; CHECK-NEXT:    [[UC_3:%.*]] = icmp ule i32 [[Y]], [[Z]]
 ; CHECK-NEXT:    [[RES_2:%.*]] = xor i1 [[RES_1]], [[UC_3]]
@@ -380,7 +367,6 @@ define i1 @test_and_ule_sge(i32 %x, i32 %y, i32 %z, i32 %a) {
 ; CHECK-NEXT:    [[RES_5:%.*]] = xor i1 [[RES_4]], [[SC_1]]
 ; CHECK-NEXT:    [[SC_2:%.*]] = icmp sle i32 [[X]], [[Y]]
 ; CHECK-NEXT:    [[RES_6:%.*]] = xor i1 [[RES_5]], [[SC_2]]
-; CHECK-NEXT:    [[SC_3:%.*]] = icmp sle i32 [[Y]], [[Z]]
 ; CHECK-NEXT:    [[RES_7:%.*]] = xor i1 [[RES_6]], true
 ; CHECK-NEXT:    [[SC_4:%.*]] = icmp sle i32 [[X]], [[A]]
 ; CHECK-NEXT:    [[RES_8:%.*]] = xor i1 [[RES_7]], [[SC_4]]

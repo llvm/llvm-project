@@ -69,7 +69,7 @@ Scheduler::Status Scheduler::isAvailable(const InstRef &IR) {
 
 void Scheduler::issueInstructionImpl(
     InstRef &IR,
-    SmallVectorImpl<std::pair<ResourceRef, ResourceCycles>> &UsedResources) {
+    SmallVectorImpl<std::pair<ResourceRef, ReleaseAtCycles>> &UsedResources) {
   Instruction *IS = IR.getInstruction();
   const InstrDesc &D = IS->getDesc();
 
@@ -98,7 +98,7 @@ void Scheduler::issueInstructionImpl(
 // Release the buffered resources and issue the instruction.
 void Scheduler::issueInstruction(
     InstRef &IR,
-    SmallVectorImpl<std::pair<ResourceRef, ResourceCycles>> &UsedResources,
+    SmallVectorImpl<std::pair<ResourceRef, ReleaseAtCycles>> &UsedResources,
     SmallVectorImpl<InstRef> &PendingInstructions,
     SmallVectorImpl<InstRef> &ReadyInstructions) {
   const Instruction &Inst = *IR.getInstruction();

@@ -371,10 +371,6 @@
 	ppno	%r2, %r4
 
 #CHECK: error: invalid operand
-#CHECK: risbgn	%r0,%r0,0,0,-1
-#CHECK: error: invalid operand
-#CHECK: risbgn	%r0,%r0,0,0,64
-#CHECK: error: invalid operand
 #CHECK: risbgn	%r0,%r0,0,-1,0
 #CHECK: error: invalid operand
 #CHECK: risbgn	%r0,%r0,0,256,0
@@ -383,8 +379,6 @@
 #CHECK: error: invalid operand
 #CHECK: risbgn	%r0,%r0,256,0,0
 
-	risbgn	%r0,%r0,0,0,-1
-	risbgn	%r0,%r0,0,0,64
 	risbgn	%r0,%r0,0,-1,0
 	risbgn	%r0,%r0,0,256,0
 	risbgn	%r0,%r0,-1,0,0

@@ -19,32 +19,32 @@ body:             |
     ; CHECK-NEXT: ADJCALLSTACKDOWN
     ; CHECK-NEXT: $s0 = COPY [[V1_S32]](s32)
     ; CHECK-NEXT: BL &logf
-    ; CHECK-NEXT: [[ELT1_S32:%[0-9]+]]:_(s32) = COPY $s0
     ; CHECK-NEXT: ADJCALLSTACKUP
+    ; CHECK-NEXT: [[ELT1_S32:%[0-9]+]]:_(s32) = COPY $s0
     ; CHECK-NEXT: [[ELT1:%[0-9]+]]:_(s16) = G_FPTRUNC [[ELT1_S32]](s32)
 
     ; CHECK-DAG: [[V2_S32:%[0-9]+]]:_(s32) = G_FPEXT [[V2]](s16)
     ; CHECK-NEXT: ADJCALLSTACKDOWN
     ; CHECK-NEXT: $s0 = COPY [[V2_S32]](s32)
     ; CHECK-NEXT: BL &logf
-    ; CHECK-NEXT: [[ELT2_S32:%[0-9]+]]:_(s32) = COPY $s0
     ; CHECK-NEXT: ADJCALLSTACKUP
+    ; CHECK-NEXT: [[ELT2_S32:%[0-9]+]]:_(s32) = COPY $s0
     ; CHECK-NEXT: [[ELT2:%[0-9]+]]:_(s16) = G_FPTRUNC [[ELT2_S32]](s32)
 
     ; CHECK-DAG: [[V3_S32:%[0-9]+]]:_(s32) = G_FPEXT [[V3]](s16)
     ; CHECK-NEXT: ADJCALLSTACKDOWN
     ; CHECK-NEXT: $s0 = COPY [[V3_S32]](s32)
     ; CHECK-NEXT: BL &logf
-    ; CHECK-NEXT: [[ELT3_S32:%[0-9]+]]:_(s32) = COPY $s0
     ; CHECK-NEXT: ADJCALLSTACKUP
+    ; CHECK-NEXT: [[ELT3_S32:%[0-9]+]]:_(s32) = COPY $s0
     ; CHECK-NEXT: [[ELT3:%[0-9]+]]:_(s16) = G_FPTRUNC [[ELT3_S32]](s32)
 
     ; CHECK-DAG: [[V4_S32:%[0-9]+]]:_(s32) = G_FPEXT [[V4]](s16)
     ; CHECK-NEXT: ADJCALLSTACKDOWN
     ; CHECK-NEXT: $s0 = COPY [[V4_S32]](s32)
     ; CHECK-NEXT: BL &logf
-    ; CHECK-NEXT: [[ELT4_S32:%[0-9]+]]:_(s32) = COPY $s0
     ; CHECK-NEXT: ADJCALLSTACKUP
+    ; CHECK-NEXT: [[ELT4_S32:%[0-9]+]]:_(s32) = COPY $s0
     ; CHECK-NEXT: [[ELT4:%[0-9]+]]:_(s16) = G_FPTRUNC [[ELT4_S32]](s32)
 
     ; CHECK-DAG: %{{[0-9]+}}:_(<4 x s16>) = G_BUILD_VECTOR [[ELT1]](s16), [[ELT2]](s16), [[ELT3]](s16), [[ELT4]](s16)
@@ -217,8 +217,8 @@ body:             |
     ; CHECK-NEXT: ADJCALLSTACKDOWN
     ; CHECK-NEXT: $s0 = COPY [[REG1]](s32)
     ; CHECK-NEXT: BL &logf
-    ; CHECK-NEXT: [[REG2:%[0-9]+]]:_(s32) = COPY $s0
     ; CHECK-NEXT: ADJCALLSTACKUP
+    ; CHECK-NEXT: [[REG2:%[0-9]+]]:_(s32) = COPY $s0
     ; CHECK-NEXT: [[RES:%[0-9]+]]:_(s16) = G_FPTRUNC [[REG2]](s32)
 
     %0:_(s16) = COPY $h0

@@ -7,7 +7,7 @@
 // RUN:   --hip-device-lib=lib1.bc --hip-device-lib=lib2.bc \
 // RUN:   --hip-device-lib-path=%S/Inputs/hip_multiple_inputs/lib1 \
 // RUN:   --hip-device-lib-path=%S/Inputs/hip_multiple_inputs/lib2 \
-// RUN:   -fuse-ld=lld -fgpu-rdc -nogpuinc \
+// RUN:   -fuse-ld=lld -B%S/Inputs/lld -fgpu-rdc -nogpuinc \
 // RUN:   %S/Inputs/hip_multiple_inputs/a.cu \
 // RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
 // RUN: 2>&1 | FileCheck %s
@@ -85,19 +85,19 @@
 // RUN: touch %t/a.o %t/b.o
 // RUN: %clang --hip-link -### --target=x86_64-linux-gnu \
 // RUN:   --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 \
-// RUN:   -fuse-ld=lld -fgpu-rdc -nogpuinc \
+// RUN:   -fuse-ld=lld -B%S/Inputs/lld -fgpu-rdc -nogpuinc \
 // RUN:   %t/a.o %t/b.o \
 // RUN: 2>&1 | FileCheck -check-prefixes=LINK,LINK-HOST-UNBUNDLE,LLD-TMP,LINK-BUNDLE,LINK-EMBED %s
 
 // RUN: %clang --hip-link -### --target=x86_64-linux-gnu \
 // RUN:   --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 \
-// RUN:   -fuse-ld=lld -fgpu-rdc -nogpuinc \
+// RUN:   -fuse-ld=lld -B%S/Inputs/lld -fgpu-rdc -nogpuinc \
 // RUN:   %t/a.o %t/b.o --cuda-device-only \
 // RUN: 2>&1 | FileCheck -check-prefixes=LINK,LLD-TMP,LINK-BUNDLE,LINK-NOEMBED %s
 
 // RUN: %clang --hip-link -### --target=x86_64-linux-gnu \
 // RUN:   --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 \
-// RUN:   -fuse-ld=lld -fgpu-rdc -nogpuinc \
+// RUN:   -fuse-ld=lld -B%S/Inputs/lld -fgpu-rdc -nogpuinc \
 // RUN:   %t/a.o %t/b.o --cuda-device-only --no-gpu-bundle-output \
 // RUN: 2>&1 | FileCheck -check-prefixes=LINK,LLD-FIN,LINK-NOBUNDLE,LINK-NOEMBED %s
 
@@ -126,18 +126,22 @@
 // LINK-NOT: ".*llc"
 // LINK: {{".*lld.*"}} {{.*}} "-plugin-opt=-amdgpu-internalize-symbols"
 // LINK-SAME: "-plugin-opt=mcpu=gfx803"
+// LINK-SAME: "--whole-archive"
 // LLD-TMP-SAME: "-o" "[[IMG_DEV1:.*.out]]"
 // LLD-FIN-SAME: "-o" "[[IMG_DEV1:a.out-.*gfx803]]"
 // LINK-SAME "[[A_BC1]]" "[[B_BC1]]"
+// LINK-SAME: "--no-whole-archive"
 
 // LINK-NOT: "*.llvm-link"
 // LINK-NOT: ".*opt"
 // LINK-NOT: ".*llc"
 // LINK: {{".*lld.*"}} {{.*}} "-plugin-opt=-amdgpu-internalize-symbols"
 // LINK-SAME: "-plugin-opt=mcpu=gfx900"
+// LINK-SAME: "--whole-archive"
 // LLD-TMP-SAME: "-o" "[[IMG_DEV2:.*.out]]"
 // LLD-FIN-SAME: "-o" "[[IMG_DEV1:a.out-.*gfx900]]"
 // LINK-SAME "[[A_BC2]]" "[[B_BC2]]"
+// LINK-SAME: "--no-whole-archive"
 
 // LINK-BUNDLE: [[BUNDLER:".*clang-offload-bundler"]] "-type=o"
 // LINK-BUNDLE-SAME: "-targets={{.*}},hipv4-amdgcn-amd-amdhsa--gfx803,hipv4-amdgcn-amd-amdhsa--gfx900"

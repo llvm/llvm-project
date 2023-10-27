@@ -6,14 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
+// TODO: Investigate
+// UNSUPPORTED: LIBCXX-AIX-FIXME
+
 // <iostream>
 
 // istream cin;
 
-// UNSUPPORTED: executor-has-no-bash
-// FILE_DEPENDENCIES: ../send-stdin.sh
 // RUN: %{build}
-// RUN: %{exec} bash send-stdin.sh "%t.exe" "1234"
+// RUN: echo -n 1234 | %{exec} %t.exe
 
 #include <iostream>
 #include <cassert>

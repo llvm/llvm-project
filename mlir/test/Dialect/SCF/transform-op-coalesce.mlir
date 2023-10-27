@@ -23,9 +23,9 @@ func.func @coalesce_inner() {
 }
 
 transform.sequence failures(propagate) {
-^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["scf.for"]} attributes {coalesce} in %arg1
-  %1 = transform.cast %0 : !pdl.operation to !transform.op<"scf.for">
+^bb1(%arg1: !transform.any_op):
+  %0 = transform.structured.match ops{["scf.for"]} attributes {coalesce} in %arg1 : (!transform.any_op) -> !transform.any_op
+  %1 = transform.cast %0 : !transform.any_op to !transform.op<"scf.for">
   %2 = transform.loop.coalesce %1: (!transform.op<"scf.for">) -> (!transform.op<"scf.for">)
 }
 
@@ -49,9 +49,9 @@ func.func @coalesce_outer(%arg1: memref<64x64xf32, 1>, %arg2: memref<64x64xf32, 
 }
 
 transform.sequence failures(propagate) {
-^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["affine.for"]} attributes {coalesce} in %arg1
-  %1 = transform.cast %0 : !pdl.operation to !transform.op<"affine.for">
+^bb1(%arg1: !transform.any_op):
+  %0 = transform.structured.match ops{["affine.for"]} attributes {coalesce} in %arg1 : (!transform.any_op) -> !transform.any_op
+  %1 = transform.cast %0 : !transform.any_op to !transform.op<"affine.for">
   %2 = transform.loop.coalesce %1 : (!transform.op<"affine.for">) -> (!transform.op<"affine.for">)
 }
 
@@ -84,9 +84,9 @@ func.func @coalesce_and_unroll(%arg1: memref<64x64xf32, 1>, %arg2: memref<64x64x
 }
 
 transform.sequence failures(propagate) {
-^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["scf.for"]} attributes {coalesce} in %arg1
-  %1 = transform.cast %0 : !pdl.operation to !transform.op<"scf.for">
+^bb1(%arg1: !transform.any_op):
+  %0 = transform.structured.match ops{["scf.for"]} attributes {coalesce} in %arg1 : (!transform.any_op) -> !transform.any_op
+  %1 = transform.cast %0 : !transform.any_op to !transform.op<"scf.for">
   %2 = transform.loop.coalesce %1 : (!transform.op<"scf.for">) -> (!transform.op<"scf.for">)
   transform.loop.unroll %2 {factor = 3} : !transform.op<"scf.for">
 }

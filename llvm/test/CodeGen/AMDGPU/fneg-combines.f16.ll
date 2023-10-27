@@ -50,7 +50,6 @@ define half @v_fneg_add_f16(half %a, half %b) #0 {
 ; GFX11-SAFE-LABEL: v_fneg_add_f16:
 ; GFX11-SAFE:       ; %bb.0:
 ; GFX11-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SAFE-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-SAFE-NEXT:    v_add_f16_e32 v0, v0, v1
 ; GFX11-SAFE-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SAFE-NEXT:    v_xor_b32_e32 v0, 0x8000, v0
@@ -59,7 +58,6 @@ define half @v_fneg_add_f16(half %a, half %b) #0 {
 ; GFX11-NSZ-LABEL: v_fneg_add_f16:
 ; GFX11-NSZ:       ; %bb.0:
 ; GFX11-NSZ-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NSZ-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NSZ-NEXT:    v_sub_f16_e64 v0, -v0, v1
 ; GFX11-NSZ-NEXT:    s_setpc_b64 s[30:31]
   %add = fadd half %a, %b
@@ -89,7 +87,6 @@ define { half, half } @v_fneg_add_store_use_add_f16(half %a, half %b) #0 {
 ; GFX11-LABEL: v_fneg_add_store_use_add_f16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_add_f16_e32 v1, v0, v1
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_xor_b32_e32 v0, 0x8000, v1
@@ -143,7 +140,6 @@ define { half, half } @v_fneg_add_multi_use_add_f16(half %a, half %b) #0 {
 ; GFX11-SAFE-LABEL: v_fneg_add_multi_use_add_f16:
 ; GFX11-SAFE:       ; %bb.0:
 ; GFX11-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SAFE-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-SAFE-NEXT:    v_add_f16_e32 v1, v0, v1
 ; GFX11-SAFE-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SAFE-NEXT:    v_xor_b32_e32 v0, 0x8000, v1
@@ -153,7 +149,6 @@ define { half, half } @v_fneg_add_multi_use_add_f16(half %a, half %b) #0 {
 ; GFX11-NSZ-LABEL: v_fneg_add_multi_use_add_f16:
 ; GFX11-NSZ:       ; %bb.0:
 ; GFX11-NSZ-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NSZ-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NSZ-NEXT:    v_sub_f16_e64 v0, -v0, v1
 ; GFX11-NSZ-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NSZ-NEXT:    v_mul_f16_e32 v1, -4.0, v0
@@ -205,7 +200,6 @@ define half @v_fneg_add_fneg_x_f16(half %a, half %b) #0 {
 ; GFX11-SAFE-LABEL: v_fneg_add_fneg_x_f16:
 ; GFX11-SAFE:       ; %bb.0:
 ; GFX11-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SAFE-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-SAFE-NEXT:    v_sub_f16_e32 v0, v1, v0
 ; GFX11-SAFE-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SAFE-NEXT:    v_xor_b32_e32 v0, 0x8000, v0
@@ -214,7 +208,6 @@ define half @v_fneg_add_fneg_x_f16(half %a, half %b) #0 {
 ; GFX11-NSZ-LABEL: v_fneg_add_fneg_x_f16:
 ; GFX11-NSZ:       ; %bb.0:
 ; GFX11-NSZ-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NSZ-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NSZ-NEXT:    v_sub_f16_e32 v0, v0, v1
 ; GFX11-NSZ-NEXT:    s_setpc_b64 s[30:31]
   %fneg.a = fneg half %a
@@ -261,7 +254,6 @@ define half @v_fneg_add_x_fneg_f16(half %a, half %b) #0 {
 ; GFX11-SAFE-LABEL: v_fneg_add_x_fneg_f16:
 ; GFX11-SAFE:       ; %bb.0:
 ; GFX11-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SAFE-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-SAFE-NEXT:    v_sub_f16_e32 v0, v0, v1
 ; GFX11-SAFE-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SAFE-NEXT:    v_xor_b32_e32 v0, 0x8000, v0
@@ -270,7 +262,6 @@ define half @v_fneg_add_x_fneg_f16(half %a, half %b) #0 {
 ; GFX11-NSZ-LABEL: v_fneg_add_x_fneg_f16:
 ; GFX11-NSZ:       ; %bb.0:
 ; GFX11-NSZ-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NSZ-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NSZ-NEXT:    v_sub_f16_e32 v0, v1, v0
 ; GFX11-NSZ-NEXT:    s_setpc_b64 s[30:31]
   %fneg.b = fneg half %b
@@ -317,7 +308,6 @@ define half @v_fneg_add_fneg_fneg_f16(half %a, half %b) #0 {
 ; GFX11-SAFE-LABEL: v_fneg_add_fneg_fneg_f16:
 ; GFX11-SAFE:       ; %bb.0:
 ; GFX11-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SAFE-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-SAFE-NEXT:    v_sub_f16_e64 v0, -v0, v1
 ; GFX11-SAFE-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SAFE-NEXT:    v_xor_b32_e32 v0, 0x8000, v0
@@ -326,7 +316,6 @@ define half @v_fneg_add_fneg_fneg_f16(half %a, half %b) #0 {
 ; GFX11-NSZ-LABEL: v_fneg_add_fneg_fneg_f16:
 ; GFX11-NSZ:       ; %bb.0:
 ; GFX11-NSZ-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NSZ-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NSZ-NEXT:    v_add_f16_e32 v0, v0, v1
 ; GFX11-NSZ-NEXT:    s_setpc_b64 s[30:31]
   %fneg.a = fneg half %a
@@ -380,7 +369,6 @@ define { half, half } @v_fneg_add_store_use_fneg_x_f16(half %a, half %b) #0 {
 ; GFX11-SAFE-LABEL: v_fneg_add_store_use_fneg_x_f16:
 ; GFX11-SAFE:       ; %bb.0:
 ; GFX11-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SAFE-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-SAFE-NEXT:    v_sub_f16_e32 v1, v1, v0
 ; GFX11-SAFE-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX11-SAFE-NEXT:    v_xor_b32_e32 v2, 0x8000, v1
@@ -391,7 +379,6 @@ define { half, half } @v_fneg_add_store_use_fneg_x_f16(half %a, half %b) #0 {
 ; GFX11-NSZ-LABEL: v_fneg_add_store_use_fneg_x_f16:
 ; GFX11-NSZ:       ; %bb.0:
 ; GFX11-NSZ-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NSZ-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NSZ-NEXT:    v_sub_f16_e32 v2, v0, v1
 ; GFX11-NSZ-NEXT:    v_xor_b32_e32 v1, 0x8000, v0
 ; GFX11-NSZ-NEXT:    s_delay_alu instid0(VALU_DEP_2)
@@ -455,7 +442,6 @@ define { half, half } @v_fneg_add_multi_use_fneg_x_f16(half %a, half %b, half %c
 ; GFX11-SAFE-LABEL: v_fneg_add_multi_use_fneg_x_f16:
 ; GFX11-SAFE:       ; %bb.0:
 ; GFX11-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SAFE-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-SAFE-NEXT:    v_sub_f16_e32 v1, v1, v0
 ; GFX11-SAFE-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX11-SAFE-NEXT:    v_xor_b32_e32 v3, 0x8000, v1
@@ -466,7 +452,6 @@ define { half, half } @v_fneg_add_multi_use_fneg_x_f16(half %a, half %b, half %c
 ; GFX11-NSZ-LABEL: v_fneg_add_multi_use_fneg_x_f16:
 ; GFX11-NSZ:       ; %bb.0:
 ; GFX11-NSZ-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NSZ-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NSZ-NEXT:    v_sub_f16_e32 v3, v0, v1
 ; GFX11-NSZ-NEXT:    v_mul_f16_e64 v1, -v0, v2
 ; GFX11-NSZ-NEXT:    s_delay_alu instid0(VALU_DEP_2)
@@ -542,69 +527,54 @@ define amdgpu_ps half @fneg_fadd_0_f16(half inreg %tmp2, half inreg %tmp6, <4 x 
 ;
 ; VI-SAFE-LABEL: fneg_fadd_0_f16:
 ; VI-SAFE:       ; %bb.0: ; %.entry
-; VI-SAFE-NEXT:    v_cvt_f32_f16_e32 v0, s1
-; VI-SAFE-NEXT:    v_mov_b32_e32 v2, s0
-; VI-SAFE-NEXT:    v_mov_b32_e32 v1, 0x7e00
-; VI-SAFE-NEXT:    v_rcp_f32_e32 v0, v0
-; VI-SAFE-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; VI-SAFE-NEXT:    v_div_fixup_f16 v0, v0, s1, 1.0
+; VI-SAFE-NEXT:    v_rcp_f16_e32 v0, s1
+; VI-SAFE-NEXT:    v_mov_b32_e32 v1, s0
 ; VI-SAFE-NEXT:    v_mul_f16_e32 v0, 0, v0
 ; VI-SAFE-NEXT:    v_add_f16_e32 v0, 0, v0
-; VI-SAFE-NEXT:    v_xor_b32_e32 v3, 0x8000, v0
+; VI-SAFE-NEXT:    v_xor_b32_e32 v2, 0x8000, v0
 ; VI-SAFE-NEXT:    v_cmp_ngt_f16_e32 vcc, s0, v0
-; VI-SAFE-NEXT:    v_cndmask_b32_e32 v0, v3, v2, vcc
+; VI-SAFE-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
+; VI-SAFE-NEXT:    v_mov_b32_e32 v1, 0x7e00
 ; VI-SAFE-NEXT:    v_cmp_nlt_f16_e32 vcc, 0, v0
 ; VI-SAFE-NEXT:    v_cndmask_b32_e64 v0, v1, 0, vcc
 ; VI-SAFE-NEXT:    ; return to shader part epilog
 ;
 ; VI-NSZ-LABEL: fneg_fadd_0_f16:
 ; VI-NSZ:       ; %bb.0: ; %.entry
-; VI-NSZ-NEXT:    v_cvt_f32_f16_e32 v0, s1
-; VI-NSZ-NEXT:    v_mov_b32_e32 v2, s0
-; VI-NSZ-NEXT:    v_mov_b32_e32 v1, 0x7e00
-; VI-NSZ-NEXT:    v_rcp_f32_e32 v0, v0
-; VI-NSZ-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; VI-NSZ-NEXT:    v_div_fixup_f16 v0, v0, s1, 1.0
+; VI-NSZ-NEXT:    v_rcp_f16_e32 v0, s1
+; VI-NSZ-NEXT:    v_mov_b32_e32 v1, s0
 ; VI-NSZ-NEXT:    v_mul_f16_e32 v0, 0x8000, v0
 ; VI-NSZ-NEXT:    v_cmp_nlt_f16_e64 vcc, -v0, s0
-; VI-NSZ-NEXT:    v_cndmask_b32_e32 v0, v0, v2, vcc
+; VI-NSZ-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc
+; VI-NSZ-NEXT:    v_mov_b32_e32 v1, 0x7e00
 ; VI-NSZ-NEXT:    v_cmp_nlt_f16_e32 vcc, 0, v0
 ; VI-NSZ-NEXT:    v_cndmask_b32_e64 v0, v1, 0, vcc
 ; VI-NSZ-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-SAFE-LABEL: fneg_fadd_0_f16:
 ; GFX11-SAFE:       ; %bb.0: ; %.entry
-; GFX11-SAFE-NEXT:    v_cvt_f32_f16_e32 v0, s1
-; GFX11-SAFE-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
-; GFX11-SAFE-NEXT:    v_rcp_f32_e32 v0, v0
+; GFX11-SAFE-NEXT:    v_rcp_f16_e32 v0, s1
 ; GFX11-SAFE-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-SAFE-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX11-SAFE-NEXT:    v_div_fixup_f16 v0, v0, s1, 1.0
-; GFX11-SAFE-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-SAFE-NEXT:    v_mul_f16_e32 v0, 0, v0
+; GFX11-SAFE-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-SAFE-NEXT:    v_add_f16_e32 v0, 0, v0
-; GFX11-SAFE-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX11-SAFE-NEXT:    v_xor_b32_e32 v1, 0x8000, v0
 ; GFX11-SAFE-NEXT:    v_cmp_ngt_f16_e32 vcc_lo, s0, v0
+; GFX11-SAFE-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-SAFE-NEXT:    v_cndmask_b32_e64 v0, v1, s0, vcc_lo
-; GFX11-SAFE-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SAFE-NEXT:    v_cmp_nlt_f16_e32 vcc_lo, 0, v0
 ; GFX11-SAFE-NEXT:    v_cndmask_b32_e64 v0, 0x7e00, 0, vcc_lo
 ; GFX11-SAFE-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-NSZ-LABEL: fneg_fadd_0_f16:
 ; GFX11-NSZ:       ; %bb.0: ; %.entry
-; GFX11-NSZ-NEXT:    v_cvt_f32_f16_e32 v0, s1
-; GFX11-NSZ-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
-; GFX11-NSZ-NEXT:    v_rcp_f32_e32 v0, v0
+; GFX11-NSZ-NEXT:    v_rcp_f16_e32 v0, s1
 ; GFX11-NSZ-NEXT:    s_waitcnt_depctr 0xfff
-; GFX11-NSZ-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GFX11-NSZ-NEXT:    v_div_fixup_f16 v0, v0, s1, 1.0
-; GFX11-NSZ-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NSZ-NEXT:    v_mul_f16_e32 v0, 0x8000, v0
-; GFX11-NSZ-NEXT:    v_cmp_nlt_f16_e64 s1, -v0, s0
 ; GFX11-NSZ-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-NSZ-NEXT:    v_cmp_nlt_f16_e64 s1, -v0, s0
 ; GFX11-NSZ-NEXT:    v_cndmask_b32_e64 v0, v0, s0, s1
+; GFX11-NSZ-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NSZ-NEXT:    v_cmp_nlt_f16_e32 vcc_lo, 0, v0
 ; GFX11-NSZ-NEXT:    v_cndmask_b32_e64 v0, 0x7e00, 0, vcc_lo
 ; GFX11-NSZ-NEXT:    ; return to shader part epilog
@@ -628,13 +598,12 @@ define amdgpu_ps half @fneg_fadd_0_nsz_f16(half inreg %tmp2, half inreg %tmp6, <
 ; SI-SAFE-LABEL: fneg_fadd_0_nsz_f16:
 ; SI-SAFE:       ; %bb.0: ; %.entry
 ; SI-SAFE-NEXT:    v_cvt_f16_f32_e32 v0, s0
-; SI-SAFE-NEXT:    v_bfrev_b32_e32 v1, 1
-; SI-SAFE-NEXT:    v_mov_b32_e32 v2, 0x7fc00000
+; SI-SAFE-NEXT:    s_brev_b32 s0, 1
+; SI-SAFE-NEXT:    v_mov_b32_e32 v1, 0x7fc00000
 ; SI-SAFE-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; SI-SAFE-NEXT:    v_cmp_nlt_f32_e32 vcc, 0, v0
-; SI-SAFE-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc
-; SI-SAFE-NEXT:    v_cmp_nlt_f32_e32 vcc, 0, v0
-; SI-SAFE-NEXT:    v_cndmask_b32_e64 v0, v2, 0, vcc
+; SI-SAFE-NEXT:    v_min_legacy_f32_e32 v0, 0, v0
+; SI-SAFE-NEXT:    v_cmp_ngt_f32_e32 vcc, s0, v0
+; SI-SAFE-NEXT:    v_cndmask_b32_e64 v0, v1, 0, vcc
 ; SI-SAFE-NEXT:    ; return to shader part epilog
 ;
 ; SI-NSZ-LABEL: fneg_fadd_0_nsz_f16:
@@ -735,7 +704,6 @@ define half @v_fneg_mul_f16(half %a, half %b) #0 {
 ; GFX11-LABEL: v_fneg_mul_f16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_mul_f16_e64 v0, v0, -v1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %mul = fmul half %a, %b
@@ -765,7 +733,6 @@ define { half, half } @v_fneg_mul_store_use_mul_f16(half %a, half %b) #0 {
 ; GFX11-LABEL: v_fneg_mul_store_use_mul_f16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_mul_f16_e32 v1, v0, v1
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_xor_b32_e32 v0, 0x8000, v1
@@ -799,7 +766,6 @@ define { half, half } @v_fneg_mul_multi_use_mul_f16(half %a, half %b) #0 {
 ; GFX11-LABEL: v_fneg_mul_multi_use_mul_f16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_mul_f16_e64 v0, v0, -v1
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_mul_f16_e32 v1, -4.0, v0
@@ -832,7 +798,6 @@ define half @v_fneg_mul_fneg_x_f16(half %a, half %b) #0 {
 ; GFX11-LABEL: v_fneg_mul_fneg_x_f16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_mul_f16_e32 v0, v0, v1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %fneg.a = fneg half %a
@@ -861,7 +826,6 @@ define half @v_fneg_mul_x_fneg_f16(half %a, half %b) #0 {
 ; GFX11-LABEL: v_fneg_mul_x_fneg_f16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_mul_f16_e32 v0, v0, v1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %fneg.b = fneg half %b
@@ -890,7 +854,6 @@ define half @v_fneg_mul_fneg_fneg_f16(half %a, half %b) #0 {
 ; GFX11-LABEL: v_fneg_mul_fneg_fneg_f16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_mul_f16_e64 v0, v0, -v1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %fneg.a = fneg half %a
@@ -923,7 +886,6 @@ define { half, half } @v_fneg_mul_store_use_fneg_x_f16(half %a, half %b) #0 {
 ; GFX11-LABEL: v_fneg_mul_store_use_fneg_x_f16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_mul_f16_e32 v2, v0, v1
 ; GFX11-NEXT:    v_xor_b32_e32 v1, 0x8000, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
@@ -963,7 +925,6 @@ define { half, half } @v_fneg_mul_multi_use_fneg_x_f16(half %a, half %b, half %c
 ; GFX11-LABEL: v_fneg_mul_multi_use_fneg_x_f16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_mul_f16_e32 v3, v0, v1
 ; GFX11-NEXT:    v_mul_f16_e64 v1, -v0, v2
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
@@ -1006,7 +967,6 @@ define half @v_fneg_minnum_f16_ieee(half %a, half %b) #0 {
 ; GFX11-LABEL: v_fneg_minnum_f16_ieee:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_max_f16_e64 v1, -v1, -v1
 ; GFX11-NEXT:    v_max_f16_e64 v0, -v0, -v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -1037,7 +997,6 @@ define half @v_fneg_minnum_f16_no_ieee(half %a, half %b) #4 {
 ; GFX11-LABEL: v_fneg_minnum_f16_no_ieee:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_max_f16_e64 v0, -v0, -v1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %min = call half @llvm.minnum.f16(half %a, half %b)
@@ -1061,7 +1020,6 @@ define half @v_fneg_self_minnum_f16_ieee(half %a) #0 {
 ; GFX11-LABEL: v_fneg_self_minnum_f16_ieee:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_xor_b32_e32 v0, 0x8000, v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %min = call half @llvm.minnum.f16(half %a, half %a)
@@ -1085,7 +1043,6 @@ define half @v_fneg_self_minnum_f16_no_ieee(half %a) #4 {
 ; GFX11-LABEL: v_fneg_self_minnum_f16_no_ieee:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_xor_b32_e32 v0, 0x8000, v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %min = call half @llvm.minnum.f16(half %a, half %a)
@@ -1113,7 +1070,6 @@ define half @v_fneg_posk_minnum_f16_ieee(half %a) #0 {
 ; GFX11-LABEL: v_fneg_posk_minnum_f16_ieee:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_max_f16_e64 v0, -v0, -v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_max_f16_e32 v0, -4.0, v0
@@ -1141,7 +1097,6 @@ define half @v_fneg_posk_minnum_f16_no_ieee(half %a) #4 {
 ; GFX11-LABEL: v_fneg_posk_minnum_f16_no_ieee:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_max_f16_e64 v0, -v0, -4.0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %min = call half @llvm.minnum.f16(half 4.0, half %a)
@@ -1169,7 +1124,6 @@ define half @v_fneg_negk_minnum_f16_ieee(half %a) #0 {
 ; GFX11-LABEL: v_fneg_negk_minnum_f16_ieee:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_max_f16_e64 v0, -v0, -v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_max_f16_e32 v0, 4.0, v0
@@ -1197,7 +1151,6 @@ define half @v_fneg_negk_minnum_f16_no_ieee(half %a) #4 {
 ; GFX11-LABEL: v_fneg_negk_minnum_f16_no_ieee:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_max_f16_e64 v0, -v0, 4.0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %min = call half @llvm.minnum.f16(half -4.0, half %a)
@@ -1225,7 +1178,6 @@ define half @v_fneg_0_minnum_f16(half %a) #0 {
 ; GFX11-LABEL: v_fneg_0_minnum_f16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_min_f16_e32 v0, 0, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_xor_b32_e32 v0, 0x8000, v0
@@ -1255,7 +1207,6 @@ define half @v_fneg_neg0_minnum_f16_ieee(half %a) #0 {
 ; GFX11-LABEL: v_fneg_neg0_minnum_f16_ieee:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_max_f16_e64 v0, -v0, -v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_max_f16_e32 v0, 0, v0
@@ -1286,7 +1237,6 @@ define half @v_fneg_inv2pi_minnum_f16(half %a) #0 {
 ; GFX11-LABEL: v_fneg_inv2pi_minnum_f16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_max_f16_e32 v0, v0, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_min_f16_e32 v0, 0.15915494, v0
@@ -1318,7 +1268,6 @@ define half @v_fneg_neg_inv2pi_minnum_f16(half %a) #0 {
 ; GFX11-LABEL: v_fneg_neg_inv2pi_minnum_f16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_max_f16_e32 v0, v0, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_min_f16_e32 v0, 0.15915494, v0
@@ -1347,7 +1296,6 @@ define half @v_fneg_neg0_minnum_f16_no_ieee(half %a) #4 {
 ; GFX11-LABEL: v_fneg_neg0_minnum_f16_no_ieee:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_max_f16_e64 v0, -v0, 0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %min = call half @llvm.minnum.f16(half -0.0, half %a)
@@ -1379,7 +1327,6 @@ define half @v_fneg_0_minnum_foldable_use_f16_ieee(half %a, half %b) #0 {
 ; GFX11-LABEL: v_fneg_0_minnum_foldable_use_f16_ieee:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_max_f16_e32 v0, v0, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_min_f16_e32 v0, 0, v0
@@ -1415,7 +1362,6 @@ define half @v_fneg_inv2pi_minnum_foldable_use_f16(half %a, half %b) #0 {
 ; GFX11-LABEL: v_fneg_inv2pi_minnum_foldable_use_f16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_max_f16_e32 v0, v0, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_min_f16_e32 v0, 0.15915494, v0
@@ -1449,7 +1395,6 @@ define half @v_fneg_0_minnum_foldable_use_f16_no_ieee(half %a, half %b) #4 {
 ; GFX11-LABEL: v_fneg_0_minnum_foldable_use_f16_no_ieee:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_min_f16_e32 v0, 0, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_mul_f16_e64 v0, -v0, v1
@@ -1486,7 +1431,6 @@ define { half, half } @v_fneg_minnum_multi_use_minnum_f16_ieee(half %a, half %b)
 ; GFX11-LABEL: v_fneg_minnum_multi_use_minnum_f16_ieee:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_max_f16_e64 v1, -v1, -v1
 ; GFX11-NEXT:    v_max_f16_e64 v0, -v0, -v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
@@ -1525,7 +1469,6 @@ define <2 x half> @v_fneg_minnum_multi_use_minnum_f16_no_ieee(half %a, half %b) 
 ; GFX11-LABEL: v_fneg_minnum_multi_use_minnum_f16_no_ieee:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_min_f16_e32 v0, v0, v1
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_mul_f16_e32 v1, 4.0, v0
@@ -1567,7 +1510,6 @@ define half @v_fneg_maxnum_f16_ieee(half %a, half %b) #0 {
 ; GFX11-LABEL: v_fneg_maxnum_f16_ieee:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_max_f16_e64 v1, -v1, -v1
 ; GFX11-NEXT:    v_max_f16_e64 v0, -v0, -v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -1598,7 +1540,6 @@ define half @v_fneg_maxnum_f16_no_ieee(half %a, half %b) #4 {
 ; GFX11-LABEL: v_fneg_maxnum_f16_no_ieee:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_min_f16_e64 v0, -v0, -v1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %max = call half @llvm.maxnum.f16(half %a, half %b)
@@ -1622,7 +1563,6 @@ define half @v_fneg_self_maxnum_f16_ieee(half %a) #0 {
 ; GFX11-LABEL: v_fneg_self_maxnum_f16_ieee:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_xor_b32_e32 v0, 0x8000, v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %max = call half @llvm.maxnum.f16(half %a, half %a)
@@ -1646,7 +1586,6 @@ define half @v_fneg_self_maxnum_f16_no_ieee(half %a) #4 {
 ; GFX11-LABEL: v_fneg_self_maxnum_f16_no_ieee:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_xor_b32_e32 v0, 0x8000, v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %max = call half @llvm.maxnum.f16(half %a, half %a)
@@ -1674,7 +1613,6 @@ define half @v_fneg_posk_maxnum_f16_ieee(half %a) #0 {
 ; GFX11-LABEL: v_fneg_posk_maxnum_f16_ieee:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_max_f16_e64 v0, -v0, -v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_min_f16_e32 v0, -4.0, v0
@@ -1702,7 +1640,6 @@ define half @v_fneg_posk_maxnum_f16_no_ieee(half %a) #4 {
 ; GFX11-LABEL: v_fneg_posk_maxnum_f16_no_ieee:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_min_f16_e64 v0, -v0, -4.0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %max = call half @llvm.maxnum.f16(half 4.0, half %a)
@@ -1730,7 +1667,6 @@ define half @v_fneg_negk_maxnum_f16_ieee(half %a) #0 {
 ; GFX11-LABEL: v_fneg_negk_maxnum_f16_ieee:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_max_f16_e64 v0, -v0, -v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_min_f16_e32 v0, 4.0, v0
@@ -1758,7 +1694,6 @@ define half @v_fneg_negk_maxnum_f16_no_ieee(half %a) #4 {
 ; GFX11-LABEL: v_fneg_negk_maxnum_f16_no_ieee:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_min_f16_e64 v0, -v0, 4.0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %max = call half @llvm.maxnum.f16(half -4.0, half %a)
@@ -1786,7 +1721,6 @@ define half @v_fneg_0_maxnum_f16(half %a) #0 {
 ; GFX11-LABEL: v_fneg_0_maxnum_f16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_max_f16_e32 v0, 0, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_xor_b32_e32 v0, 0x8000, v0
@@ -1816,7 +1750,6 @@ define half @v_fneg_neg0_maxnum_f16_ieee(half %a) #0 {
 ; GFX11-LABEL: v_fneg_neg0_maxnum_f16_ieee:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_max_f16_e64 v0, -v0, -v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_min_f16_e32 v0, 0, v0
@@ -1844,7 +1777,6 @@ define half @v_fneg_neg0_maxnum_f16_no_ieee(half %a) #4 {
 ; GFX11-LABEL: v_fneg_neg0_maxnum_f16_no_ieee:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_min_f16_e64 v0, -v0, 0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %max = call half @llvm.maxnum.f16(half -0.0, half %a)
@@ -1876,7 +1808,6 @@ define half @v_fneg_0_maxnum_foldable_use_f16_ieee(half %a, half %b) #0 {
 ; GFX11-LABEL: v_fneg_0_maxnum_foldable_use_f16_ieee:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_max_f16_e32 v0, v0, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_max_f16_e32 v0, 0, v0
@@ -1910,7 +1841,6 @@ define half @v_fneg_0_maxnum_foldable_use_f16_no_ieee(half %a, half %b) #4 {
 ; GFX11-LABEL: v_fneg_0_maxnum_foldable_use_f16_no_ieee:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_max_f16_e32 v0, 0, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_mul_f16_e64 v0, -v0, v1
@@ -1947,7 +1877,6 @@ define { half, half } @v_fneg_maxnum_multi_use_maxnum_f16_ieee(half %a, half %b)
 ; GFX11-LABEL: v_fneg_maxnum_multi_use_maxnum_f16_ieee:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_max_f16_e64 v1, -v1, -v1
 ; GFX11-NEXT:    v_max_f16_e64 v0, -v0, -v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
@@ -1986,7 +1915,6 @@ define <2 x half> @v_fneg_maxnum_multi_use_maxnum_f16_no_ieee(half %a, half %b) 
 ; GFX11-LABEL: v_fneg_maxnum_multi_use_maxnum_f16_no_ieee:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_max_f16_e32 v0, v0, v1
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_mul_f16_e32 v1, 4.0, v0
@@ -2046,7 +1974,6 @@ define half @v_fneg_fma_f16(half %a, half %b, half %c) #0 {
 ; GFX11-SAFE-LABEL: v_fneg_fma_f16:
 ; GFX11-SAFE:       ; %bb.0:
 ; GFX11-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SAFE-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-SAFE-NEXT:    v_fmac_f16_e32 v2, v0, v1
 ; GFX11-SAFE-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SAFE-NEXT:    v_xor_b32_e32 v0, 0x8000, v2
@@ -2055,7 +1982,6 @@ define half @v_fneg_fma_f16(half %a, half %b, half %c) #0 {
 ; GFX11-NSZ-LABEL: v_fneg_fma_f16:
 ; GFX11-NSZ:       ; %bb.0:
 ; GFX11-NSZ-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NSZ-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NSZ-NEXT:    v_fma_f16 v0, v0, -v1, -v2
 ; GFX11-NSZ-NEXT:    s_setpc_b64 s[30:31]
   %fma = call half @llvm.fma.f16(half %a, half %b, half %c)
@@ -2087,7 +2013,6 @@ define { half, half } @v_fneg_fma_store_use_fma_f16(half %a, half %b, half %c) #
 ; GFX11-LABEL: v_fneg_fma_store_use_fma_f16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_fma_f16 v1, v0, v1, v2
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_xor_b32_e32 v0, 0x8000, v1
@@ -2145,7 +2070,6 @@ define { half, half } @v_fneg_fma_multi_use_fma_f16(half %a, half %b, half %c) #
 ; GFX11-SAFE-LABEL: v_fneg_fma_multi_use_fma_f16:
 ; GFX11-SAFE:       ; %bb.0:
 ; GFX11-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SAFE-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-SAFE-NEXT:    v_fmac_f16_e32 v2, v0, v1
 ; GFX11-SAFE-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SAFE-NEXT:    v_xor_b32_e32 v0, 0x8000, v2
@@ -2155,7 +2079,6 @@ define { half, half } @v_fneg_fma_multi_use_fma_f16(half %a, half %b, half %c) #
 ; GFX11-NSZ-LABEL: v_fneg_fma_multi_use_fma_f16:
 ; GFX11-NSZ:       ; %bb.0:
 ; GFX11-NSZ-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NSZ-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NSZ-NEXT:    v_fma_f16 v0, v0, -v1, -v2
 ; GFX11-NSZ-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NSZ-NEXT:    v_mul_f16_e32 v1, -4.0, v0
@@ -2210,7 +2133,6 @@ define half @v_fneg_fma_fneg_x_y_f16(half %a, half %b, half %c) #0 {
 ; GFX11-SAFE-LABEL: v_fneg_fma_fneg_x_y_f16:
 ; GFX11-SAFE:       ; %bb.0:
 ; GFX11-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SAFE-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-SAFE-NEXT:    v_fma_f16 v0, -v0, v1, v2
 ; GFX11-SAFE-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SAFE-NEXT:    v_xor_b32_e32 v0, 0x8000, v0
@@ -2219,7 +2141,6 @@ define half @v_fneg_fma_fneg_x_y_f16(half %a, half %b, half %c) #0 {
 ; GFX11-NSZ-LABEL: v_fneg_fma_fneg_x_y_f16:
 ; GFX11-NSZ:       ; %bb.0:
 ; GFX11-NSZ-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NSZ-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NSZ-NEXT:    v_fma_f16 v0, v0, v1, -v2
 ; GFX11-NSZ-NEXT:    s_setpc_b64 s[30:31]
   %fneg.a = fneg half %a
@@ -2270,7 +2191,6 @@ define half @v_fneg_fma_x_fneg_y_f16(half %a, half %b, half %c) #0 {
 ; GFX11-SAFE-LABEL: v_fneg_fma_x_fneg_y_f16:
 ; GFX11-SAFE:       ; %bb.0:
 ; GFX11-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SAFE-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-SAFE-NEXT:    v_fma_f16 v0, v0, -v1, v2
 ; GFX11-SAFE-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SAFE-NEXT:    v_xor_b32_e32 v0, 0x8000, v0
@@ -2279,7 +2199,6 @@ define half @v_fneg_fma_x_fneg_y_f16(half %a, half %b, half %c) #0 {
 ; GFX11-NSZ-LABEL: v_fneg_fma_x_fneg_y_f16:
 ; GFX11-NSZ:       ; %bb.0:
 ; GFX11-NSZ-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NSZ-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NSZ-NEXT:    v_fma_f16 v0, v0, v1, -v2
 ; GFX11-NSZ-NEXT:    s_setpc_b64 s[30:31]
   %fneg.b = fneg half %b
@@ -2330,7 +2249,6 @@ define half @v_fneg_fma_fneg_fneg_y_f16(half %a, half %b, half %c) #0 {
 ; GFX11-SAFE-LABEL: v_fneg_fma_fneg_fneg_y_f16:
 ; GFX11-SAFE:       ; %bb.0:
 ; GFX11-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SAFE-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-SAFE-NEXT:    v_fmac_f16_e32 v2, v0, v1
 ; GFX11-SAFE-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SAFE-NEXT:    v_xor_b32_e32 v0, 0x8000, v2
@@ -2339,7 +2257,6 @@ define half @v_fneg_fma_fneg_fneg_y_f16(half %a, half %b, half %c) #0 {
 ; GFX11-NSZ-LABEL: v_fneg_fma_fneg_fneg_y_f16:
 ; GFX11-NSZ:       ; %bb.0:
 ; GFX11-NSZ-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NSZ-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NSZ-NEXT:    v_fma_f16 v0, v0, -v1, -v2
 ; GFX11-NSZ-NEXT:    s_setpc_b64 s[30:31]
   %fneg.a = fneg half %a
@@ -2391,7 +2308,6 @@ define half @v_fneg_fma_fneg_x_fneg_f16(half %a, half %b, half %c) #0 {
 ; GFX11-SAFE-LABEL: v_fneg_fma_fneg_x_fneg_f16:
 ; GFX11-SAFE:       ; %bb.0:
 ; GFX11-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SAFE-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-SAFE-NEXT:    v_fma_f16 v0, -v0, v1, -v2
 ; GFX11-SAFE-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SAFE-NEXT:    v_xor_b32_e32 v0, 0x8000, v0
@@ -2400,7 +2316,6 @@ define half @v_fneg_fma_fneg_x_fneg_f16(half %a, half %b, half %c) #0 {
 ; GFX11-NSZ-LABEL: v_fneg_fma_fneg_x_fneg_f16:
 ; GFX11-NSZ:       ; %bb.0:
 ; GFX11-NSZ-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NSZ-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NSZ-NEXT:    v_fma_f16 v0, v0, v1, v2
 ; GFX11-NSZ-NEXT:    s_setpc_b64 s[30:31]
   %fneg.a = fneg half %a
@@ -2452,7 +2367,6 @@ define half @v_fneg_fma_x_y_fneg_f16(half %a, half %b, half %c) #0 {
 ; GFX11-SAFE-LABEL: v_fneg_fma_x_y_fneg_f16:
 ; GFX11-SAFE:       ; %bb.0:
 ; GFX11-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SAFE-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-SAFE-NEXT:    v_fma_f16 v0, v0, v1, -v2
 ; GFX11-SAFE-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SAFE-NEXT:    v_xor_b32_e32 v0, 0x8000, v0
@@ -2461,7 +2375,6 @@ define half @v_fneg_fma_x_y_fneg_f16(half %a, half %b, half %c) #0 {
 ; GFX11-NSZ-LABEL: v_fneg_fma_x_y_fneg_f16:
 ; GFX11-NSZ:       ; %bb.0:
 ; GFX11-NSZ-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NSZ-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NSZ-NEXT:    v_fma_f16 v0, v0, -v1, v2
 ; GFX11-NSZ-NEXT:    s_setpc_b64 s[30:31]
   %fneg.c = fneg half %c
@@ -2518,7 +2431,6 @@ define { half, half } @v_fneg_fma_store_use_fneg_x_y_f16(half %a, half %b, half 
 ; GFX11-SAFE-LABEL: v_fneg_fma_store_use_fneg_x_y_f16:
 ; GFX11-SAFE:       ; %bb.0:
 ; GFX11-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SAFE-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-SAFE-NEXT:    v_fma_f16 v1, -v0, v1, v2
 ; GFX11-SAFE-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX11-SAFE-NEXT:    v_xor_b32_e32 v2, 0x8000, v1
@@ -2529,7 +2441,6 @@ define { half, half } @v_fneg_fma_store_use_fneg_x_y_f16(half %a, half %b, half 
 ; GFX11-NSZ-LABEL: v_fneg_fma_store_use_fneg_x_y_f16:
 ; GFX11-NSZ:       ; %bb.0:
 ; GFX11-NSZ-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NSZ-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NSZ-NEXT:    v_fma_f16 v2, v0, v1, -v2
 ; GFX11-NSZ-NEXT:    v_xor_b32_e32 v1, 0x8000, v0
 ; GFX11-NSZ-NEXT:    s_delay_alu instid0(VALU_DEP_2)
@@ -2596,7 +2507,6 @@ define { half, half } @v_fneg_fma_multi_use_fneg_x_y_f16(half %a, half %b, half 
 ; GFX11-SAFE-LABEL: v_fneg_fma_multi_use_fneg_x_y_f16:
 ; GFX11-SAFE:       ; %bb.0:
 ; GFX11-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SAFE-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-SAFE-NEXT:    v_fma_f16 v1, -v0, v1, v2
 ; GFX11-SAFE-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX11-SAFE-NEXT:    v_xor_b32_e32 v2, 0x8000, v1
@@ -2607,7 +2517,6 @@ define { half, half } @v_fneg_fma_multi_use_fneg_x_y_f16(half %a, half %b, half 
 ; GFX11-NSZ-LABEL: v_fneg_fma_multi_use_fneg_x_y_f16:
 ; GFX11-NSZ:       ; %bb.0:
 ; GFX11-NSZ-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NSZ-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NSZ-NEXT:    v_fma_f16 v2, v0, v1, -v2
 ; GFX11-NSZ-NEXT:    v_mul_f16_e64 v1, -v0, v3
 ; GFX11-NSZ-NEXT:    s_delay_alu instid0(VALU_DEP_2)
@@ -2668,7 +2577,6 @@ define half @v_fneg_fmad_f16(half %a, half %b, half %c) #0 {
 ; GFX11-SAFE-LABEL: v_fneg_fmad_f16:
 ; GFX11-SAFE:       ; %bb.0:
 ; GFX11-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SAFE-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-SAFE-NEXT:    v_fmac_f16_e32 v2, v0, v1
 ; GFX11-SAFE-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SAFE-NEXT:    v_xor_b32_e32 v0, 0x8000, v2
@@ -2677,7 +2585,6 @@ define half @v_fneg_fmad_f16(half %a, half %b, half %c) #0 {
 ; GFX11-NSZ-LABEL: v_fneg_fmad_f16:
 ; GFX11-NSZ:       ; %bb.0:
 ; GFX11-NSZ-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NSZ-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NSZ-NEXT:    v_fma_f16 v0, v0, -v1, -v2
 ; GFX11-NSZ-NEXT:    s_setpc_b64 s[30:31]
   %fma = call half @llvm.fmuladd.f16(half %a, half %b, half %c)
@@ -2799,7 +2706,6 @@ define <4 x half> @v_fneg_fmad_v4f32(<4 x half> %a, <4 x half> %b, <4 x half> %c
 ; GFX11-SAFE-LABEL: v_fneg_fmad_v4f32:
 ; GFX11-SAFE:       ; %bb.0:
 ; GFX11-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SAFE-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-SAFE-NEXT:    v_pk_fma_f16 v0, v0, v2, v4
 ; GFX11-SAFE-NEXT:    v_pk_fma_f16 v1, v1, v3, v5
 ; GFX11-SAFE-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
@@ -2810,7 +2716,6 @@ define <4 x half> @v_fneg_fmad_v4f32(<4 x half> %a, <4 x half> %b, <4 x half> %c
 ; GFX11-NSZ-LABEL: v_fneg_fmad_v4f32:
 ; GFX11-NSZ:       ; %bb.0:
 ; GFX11-NSZ-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NSZ-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NSZ-NEXT:    v_pk_fma_f16 v0, v0, v2, v4 neg_lo:[0,1,1] neg_hi:[0,1,1]
 ; GFX11-NSZ-NEXT:    v_pk_fma_f16 v1, v1, v3, v5 neg_lo:[0,1,1] neg_hi:[0,1,1]
 ; GFX11-NSZ-NEXT:    s_setpc_b64 s[30:31]
@@ -2865,7 +2770,6 @@ define { half, half } @v_fneg_fmad_multi_use_fmad_f16(half %a, half %b, half %c)
 ; GFX11-SAFE-LABEL: v_fneg_fmad_multi_use_fmad_f16:
 ; GFX11-SAFE:       ; %bb.0:
 ; GFX11-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SAFE-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-SAFE-NEXT:    v_fmac_f16_e32 v2, v0, v1
 ; GFX11-SAFE-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SAFE-NEXT:    v_xor_b32_e32 v0, 0x8000, v2
@@ -2875,7 +2779,6 @@ define { half, half } @v_fneg_fmad_multi_use_fmad_f16(half %a, half %b, half %c)
 ; GFX11-NSZ-LABEL: v_fneg_fmad_multi_use_fmad_f16:
 ; GFX11-NSZ:       ; %bb.0:
 ; GFX11-NSZ-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NSZ-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NSZ-NEXT:    v_fma_f16 v0, v0, -v1, -v2
 ; GFX11-NSZ-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NSZ-NEXT:    v_mul_f16_e32 v1, -4.0, v0
@@ -2910,7 +2813,6 @@ define double @v_fneg_fp_extend_f16_to_f64(half %a) #0 {
 ; GFX11-LABEL: v_fneg_fp_extend_f16_to_f64:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_xor_b32_e32 v0, 0x8000, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_cvt_f32_f16_e32 v0, v0
@@ -2938,7 +2840,6 @@ define double @v_fneg_fp_extend_fneg_f16_to_f64(half %a) #0 {
 ; GFX11-LABEL: v_fneg_fp_extend_fneg_f16_to_f64:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_cvt_f64_f32_e32 v[0:1], v0
@@ -2970,7 +2871,6 @@ define { double, half } @v_fneg_fp_extend_store_use_fneg_f16_to_f64(half %a) #0 
 ; GFX11-LABEL: v_fneg_fp_extend_store_use_fneg_f16_to_f64:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_cvt_f32_f16_e32 v0, v2
@@ -3006,7 +2906,6 @@ define { double, double } @v_fneg_multi_use_fp_extend_fneg_f16_to_f64(half %a) #
 ; GFX11-LABEL: v_fneg_multi_use_fp_extend_fneg_f16_to_f64:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_cvt_f64_f32_e32 v[2:3], v0
@@ -3043,7 +2942,6 @@ define { double, double } @v_fneg_multi_foldable_use_fp_extend_fneg_f16_to_f64(h
 ; GFX11-LABEL: v_fneg_multi_foldable_use_fp_extend_fneg_f16_to_f64:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_cvt_f64_f32_e32 v[0:1], v0
@@ -3076,7 +2974,6 @@ define { float, float } @v_fneg_multi_use_fp_extend_fneg_f16_to_f32(half %a) #0 
 ; GFX11-LABEL: v_fneg_multi_use_fp_extend_fneg_f16_to_f32:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_cvt_f32_f16_e32 v1, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_xor_b32_e32 v0, 0x80000000, v1
@@ -3193,7 +3090,6 @@ define half @v_fneg_fp_round_f64_to_f16(double %a) #0 {
 ; GFX11-LABEL: v_fneg_fp_round_f64_to_f16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_xor_b32_e32 v1, 0x80000000, v1
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_3) | instid1(VALU_DEP_4)
 ; GFX11-NEXT:    v_and_or_b32 v0, 0x1ff, v1, v0
@@ -3341,7 +3237,6 @@ define half @v_fneg_fp_round_fneg_f64_to_f16(double %a) #0 {
 ; GFX11-LABEL: v_fneg_fp_round_fneg_f64_to_f16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_and_or_b32 v0, 0x1ff, v1, v0
 ; GFX11-NEXT:    v_lshrrev_b32_e32 v2, 8, v1
 ; GFX11-NEXT:    v_bfe_u32 v3, v1, 20, 11
@@ -3497,7 +3392,6 @@ define { half, double } @v_fneg_fp_round_store_use_fneg_f64_to_f16(double %a) #0
 ; GFX11-LABEL: v_fneg_fp_round_store_use_fneg_f64_to_f16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_and_or_b32 v2, 0x1ff, v1, v0
 ; GFX11-NEXT:    v_lshrrev_b32_e32 v3, 8, v1
 ; GFX11-NEXT:    v_bfe_u32 v4, v1, 20, 11
@@ -3656,7 +3550,6 @@ define { half, double } @v_fneg_fp_round_multi_use_fneg_f64_to_f16(double %a, do
 ; GFX11-LABEL: v_fneg_fp_round_multi_use_fneg_f64_to_f16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_and_or_b32 v4, 0x1ff, v1, v0
 ; GFX11-NEXT:    v_lshrrev_b32_e32 v5, 8, v1
 ; GFX11-NEXT:    v_bfe_u32 v6, v1, 20, 11
@@ -3811,7 +3704,6 @@ define { half, half } @v_fneg_multi_use_fp_round_fneg_f64_to_f16(double %a) #0 {
 ; GFX11-LABEL: v_fneg_multi_use_fp_round_fneg_f64_to_f16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_and_or_b32 v0, 0x1ff, v1, v0
 ; GFX11-NEXT:    v_lshrrev_b32_e32 v2, 8, v1
 ; GFX11-NEXT:    v_bfe_u32 v3, v1, 20, 11
@@ -3886,7 +3778,6 @@ define half @v_fneg_trunc_f16(half %a) #0 {
 ; GFX11-LABEL: v_fneg_trunc_f16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_trunc_f16_e64 v0, -v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %trunc = call half @llvm.trunc.f16(half %a)
@@ -3903,14 +3794,14 @@ define half @v_fneg_round_f16(half %a) #0 {
 ; SI-SAFE:       ; %bb.0:
 ; SI-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-SAFE-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; SI-SAFE-NEXT:    s_brev_b32 s4, -2
 ; SI-SAFE-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; SI-SAFE-NEXT:    v_trunc_f32_e32 v2, v0
-; SI-SAFE-NEXT:    v_bfi_b32 v1, s4, 1.0, v0
-; SI-SAFE-NEXT:    v_sub_f32_e32 v0, v0, v2
-; SI-SAFE-NEXT:    v_cmp_ge_f32_e64 vcc, |v0|, 0.5
-; SI-SAFE-NEXT:    v_cndmask_b32_e32 v0, 0, v1, vcc
-; SI-SAFE-NEXT:    v_add_f32_e32 v0, v2, v0
+; SI-SAFE-NEXT:    v_trunc_f32_e32 v1, v0
+; SI-SAFE-NEXT:    v_sub_f32_e32 v2, v0, v1
+; SI-SAFE-NEXT:    v_cmp_ge_f32_e64 s[4:5], |v2|, 0.5
+; SI-SAFE-NEXT:    v_cndmask_b32_e64 v2, 0, 1.0, s[4:5]
+; SI-SAFE-NEXT:    s_brev_b32 s4, -2
+; SI-SAFE-NEXT:    v_bfi_b32 v0, s4, v2, v0
+; SI-SAFE-NEXT:    v_add_f32_e32 v0, v1, v0
 ; SI-SAFE-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
 ; SI-SAFE-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -3918,72 +3809,69 @@ define half @v_fneg_round_f16(half %a) #0 {
 ; SI-NSZ:       ; %bb.0:
 ; SI-NSZ-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NSZ-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; SI-NSZ-NEXT:    s_brev_b32 s4, -2
 ; SI-NSZ-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; SI-NSZ-NEXT:    v_trunc_f32_e32 v2, v0
-; SI-NSZ-NEXT:    v_bfi_b32 v1, s4, 1.0, v0
-; SI-NSZ-NEXT:    v_sub_f32_e32 v0, v0, v2
-; SI-NSZ-NEXT:    v_cmp_ge_f32_e64 vcc, |v0|, 0.5
-; SI-NSZ-NEXT:    v_cndmask_b32_e32 v0, 0, v1, vcc
-; SI-NSZ-NEXT:    v_sub_f32_e64 v0, -v2, v0
+; SI-NSZ-NEXT:    v_trunc_f32_e32 v1, v0
+; SI-NSZ-NEXT:    v_sub_f32_e32 v2, v0, v1
+; SI-NSZ-NEXT:    v_cmp_ge_f32_e64 s[4:5], |v2|, 0.5
+; SI-NSZ-NEXT:    v_cndmask_b32_e64 v2, 0, 1.0, s[4:5]
+; SI-NSZ-NEXT:    s_brev_b32 s4, -2
+; SI-NSZ-NEXT:    v_bfi_b32 v0, s4, v2, v0
+; SI-NSZ-NEXT:    v_sub_f32_e64 v0, -v1, v0
 ; SI-NSZ-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-SAFE-LABEL: v_fneg_round_f16:
 ; VI-SAFE:       ; %bb.0:
 ; VI-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-SAFE-NEXT:    v_trunc_f16_e32 v1, v0
+; VI-SAFE-NEXT:    v_sub_f16_e32 v2, v0, v1
+; VI-SAFE-NEXT:    v_mov_b32_e32 v3, 0x3c00
+; VI-SAFE-NEXT:    v_cmp_ge_f16_e64 vcc, |v2|, 0.5
+; VI-SAFE-NEXT:    v_cndmask_b32_e32 v2, 0, v3, vcc
 ; VI-SAFE-NEXT:    s_movk_i32 s4, 0x7fff
-; VI-SAFE-NEXT:    v_mov_b32_e32 v1, 0x3c00
-; VI-SAFE-NEXT:    v_trunc_f16_e32 v2, v0
-; VI-SAFE-NEXT:    v_bfi_b32 v1, s4, v1, v0
-; VI-SAFE-NEXT:    v_sub_f16_e32 v0, v0, v2
-; VI-SAFE-NEXT:    v_cmp_ge_f16_e64 vcc, |v0|, 0.5
-; VI-SAFE-NEXT:    v_cndmask_b32_e32 v0, 0, v1, vcc
-; VI-SAFE-NEXT:    v_add_f16_e32 v0, v2, v0
+; VI-SAFE-NEXT:    v_bfi_b32 v0, s4, v2, v0
+; VI-SAFE-NEXT:    v_add_f16_e32 v0, v1, v0
 ; VI-SAFE-NEXT:    v_xor_b32_e32 v0, 0x8000, v0
 ; VI-SAFE-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-NSZ-LABEL: v_fneg_round_f16:
 ; VI-NSZ:       ; %bb.0:
 ; VI-NSZ-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NSZ-NEXT:    v_trunc_f16_e32 v1, v0
+; VI-NSZ-NEXT:    v_sub_f16_e32 v2, v0, v1
+; VI-NSZ-NEXT:    v_mov_b32_e32 v3, 0x3c00
+; VI-NSZ-NEXT:    v_cmp_ge_f16_e64 vcc, |v2|, 0.5
+; VI-NSZ-NEXT:    v_cndmask_b32_e32 v2, 0, v3, vcc
 ; VI-NSZ-NEXT:    s_movk_i32 s4, 0x7fff
-; VI-NSZ-NEXT:    v_mov_b32_e32 v1, 0x3c00
-; VI-NSZ-NEXT:    v_trunc_f16_e32 v2, v0
-; VI-NSZ-NEXT:    v_bfi_b32 v1, s4, v1, v0
-; VI-NSZ-NEXT:    v_sub_f16_e32 v0, v0, v2
-; VI-NSZ-NEXT:    v_cmp_ge_f16_e64 vcc, |v0|, 0.5
-; VI-NSZ-NEXT:    v_cndmask_b32_e32 v0, 0, v1, vcc
-; VI-NSZ-NEXT:    v_sub_f16_e64 v0, -v2, v0
+; VI-NSZ-NEXT:    v_bfi_b32 v0, s4, v2, v0
+; VI-NSZ-NEXT:    v_sub_f16_e64 v0, -v1, v0
 ; VI-NSZ-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-SAFE-LABEL: v_fneg_round_f16:
 ; GFX11-SAFE:       ; %bb.0:
 ; GFX11-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SAFE-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-SAFE-NEXT:    v_trunc_f16_e32 v1, v0
-; GFX11-SAFE-NEXT:    s_movk_i32 s0, 0x3c00
-; GFX11-SAFE-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX11-SAFE-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-SAFE-NEXT:    v_sub_f16_e32 v2, v0, v1
-; GFX11-SAFE-NEXT:    v_bfi_b32 v0, 0x7fff, s0, v0
-; GFX11-SAFE-NEXT:    v_cmp_ge_f16_e64 vcc_lo, |v2|, 0.5
-; GFX11-SAFE-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-SAFE-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc_lo
+; GFX11-SAFE-NEXT:    v_cmp_ge_f16_e64 s0, |v2|, 0.5
+; GFX11-SAFE-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-SAFE-NEXT:    v_cndmask_b32_e64 v2, 0, 0x3c00, s0
+; GFX11-SAFE-NEXT:    v_bfi_b32 v0, 0x7fff, v2, v0
+; GFX11-SAFE-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-SAFE-NEXT:    v_add_f16_e32 v0, v1, v0
-; GFX11-SAFE-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SAFE-NEXT:    v_xor_b32_e32 v0, 0x8000, v0
 ; GFX11-SAFE-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-NSZ-LABEL: v_fneg_round_f16:
 ; GFX11-NSZ:       ; %bb.0:
 ; GFX11-NSZ-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NSZ-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NSZ-NEXT:    v_trunc_f16_e32 v1, v0
-; GFX11-NSZ-NEXT:    s_movk_i32 s0, 0x3c00
-; GFX11-NSZ-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
+; GFX11-NSZ-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NSZ-NEXT:    v_sub_f16_e32 v2, v0, v1
-; GFX11-NSZ-NEXT:    v_bfi_b32 v0, 0x7fff, s0, v0
-; GFX11-NSZ-NEXT:    v_cmp_ge_f16_e64 vcc_lo, |v2|, 0.5
-; GFX11-NSZ-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-NSZ-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc_lo
+; GFX11-NSZ-NEXT:    v_cmp_ge_f16_e64 s0, |v2|, 0.5
+; GFX11-NSZ-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-NSZ-NEXT:    v_cndmask_b32_e64 v2, 0, 0x3c00, s0
+; GFX11-NSZ-NEXT:    v_bfi_b32 v0, 0x7fff, v2, v0
+; GFX11-NSZ-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NSZ-NEXT:    v_sub_f16_e64 v0, -v1, v0
 ; GFX11-NSZ-NEXT:    s_setpc_b64 s[30:31]
   %round = call half @llvm.round.f16(half %a)
@@ -4013,7 +3901,6 @@ define half @v_fneg_rint_f16(half %a) #0 {
 ; GFX11-LABEL: v_fneg_rint_f16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_rndne_f16_e64 v0, -v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %rint = call half @llvm.rint.f16(half %a)
@@ -4043,7 +3930,6 @@ define half @v_fneg_nearbyint_f16(half %a) #0 {
 ; GFX11-LABEL: v_fneg_nearbyint_f16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_rndne_f16_e64 v0, -v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %nearbyint = call half @llvm.nearbyint.f16(half %a)
@@ -4077,7 +3963,6 @@ define half @v_fneg_sin_f16(half %a) #0 {
 ; GFX11-LABEL: v_fneg_sin_f16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_mul_f16_e32 v0, 0xb118, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_sin_f16_e32 v0, v0
@@ -4107,7 +3992,6 @@ define half @v_fneg_canonicalize_f16(half %a) #0 {
 ; GFX11-LABEL: v_fneg_canonicalize_f16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_max_f16_e64 v0, -v0, -v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %trunc = call half @llvm.canonicalize.f16(half %a)
@@ -4175,7 +4059,6 @@ define void @v_fneg_copytoreg_f16(ptr addrspace(1) %out, half %a, half %b, half 
 ; GFX11-LABEL: v_fneg_copytoreg_f16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_and_b32_e32 v6, 0x3ff, v31
 ; GFX11-NEXT:    v_mul_f16_e32 v2, v2, v3
 ; GFX11-NEXT:    s_mov_b32 s0, exec_lo
@@ -4244,7 +4127,6 @@ define half @v_fneg_inlineasm_f16(half %a, half %b, half %c, i32 %d) #0 {
 ; GFX11-LABEL: v_fneg_inlineasm_f16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_mul_f16_e64 v0, v0, -v1
 ; GFX11-NEXT:    ;;#ASMSTART
 ; GFX11-NEXT:    ; use v0
@@ -4289,7 +4171,6 @@ define half @v_fneg_inlineasm_multi_use_src_f16(ptr addrspace(1) %out, half %a, 
 ; GFX11-LABEL: v_fneg_inlineasm_multi_use_src_f16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_mul_f16_e32 v0, v2, v3
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_xor_b32_e32 v1, 0x8000, v0
@@ -4337,7 +4218,6 @@ define { half, half } @multiuse_fneg_2_vop3_users_f16(half %a, half %b, half %c)
 ; GFX11-LABEL: multiuse_fneg_2_vop3_users_f16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_fma_f16 v3, -v0, v1, v2
 ; GFX11-NEXT:    v_fma_f16 v1, -v0, v2, 2.0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
@@ -4378,7 +4258,6 @@ define { half, half } @multiuse_fneg_2_vop2_users_f16(half %a, half %b, half %c)
 ; GFX11-LABEL: multiuse_fneg_2_vop2_users_f16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_mul_f16_e64 v3, -v0, v1
 ; GFX11-NEXT:    v_mul_f16_e64 v1, -v0, v2
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
@@ -4417,7 +4296,6 @@ define { half, half } @multiuse_fneg_vop2_vop3_users_f16(ptr addrspace(1) %out, 
 ; GFX11-LABEL: multiuse_fneg_vop2_vop3_users_f16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_fma_f16 v0, -v2, v3, 2.0
 ; GFX11-NEXT:    v_mul_f16_e64 v1, -v2, v4
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
@@ -4488,7 +4366,6 @@ define { half, half } @free_fold_src_code_size_cost_use_f16(ptr addrspace(1) %ou
 ; GFX11-SAFE-LABEL: free_fold_src_code_size_cost_use_f16:
 ; GFX11-SAFE:       ; %bb.0:
 ; GFX11-SAFE-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-SAFE-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-SAFE-NEXT:    v_fma_f16 v1, v2, v3, 2.0
 ; GFX11-SAFE-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SAFE-NEXT:    v_mul_f16_e64 v0, -v1, v4
@@ -4498,7 +4375,6 @@ define { half, half } @free_fold_src_code_size_cost_use_f16(ptr addrspace(1) %ou
 ; GFX11-NSZ-LABEL: free_fold_src_code_size_cost_use_f16:
 ; GFX11-NSZ:       ; %bb.0:
 ; GFX11-NSZ-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NSZ-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NSZ-NEXT:    v_fma_f16 v1, v2, -v3, -2.0
 ; GFX11-NSZ-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NSZ-NEXT:    v_mul_f16_e32 v0, v1, v4
@@ -4544,7 +4420,6 @@ define half @one_use_cost_to_fold_into_src_f16(ptr addrspace(1) %out, half %a, h
 ; GFX11-LABEL: one_use_cost_to_fold_into_src_f16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_trunc_f16_e32 v0, v2
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_fma_f16 v0, -v0, v3, v4
@@ -4587,7 +4462,6 @@ define { half, half } @multi_use_cost_to_fold_into_src(ptr addrspace(1) %out, ha
 ; GFX11-LABEL: multi_use_cost_to_fold_into_src:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_trunc_f16_e32 v1, v2
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_fma_f16 v0, -v1, v3, v4
@@ -4658,7 +4532,6 @@ define <2 x half> @fneg_fma_fneg_dagcombine_loop(<2 x half> %arg, <2 x half> %ar
 ; GFX11-LABEL: fneg_fma_fneg_dagcombine_loop:
 ; GFX11:       ; %bb.0: ; %bb
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_pk_fma_f16 v1, v1, v2, 0x8000 op_sel_hi:[1,1,0] neg_lo:[0,1,0] neg_hi:[0,1,0]
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_pk_add_f16 v0, v1, v0 neg_lo:[0,1] neg_hi:[0,1]
@@ -4694,7 +4567,6 @@ define half @nnan_fmul_neg1_to_fneg(half %x, half %y) #0 {
 ; GFX11-LABEL: nnan_fmul_neg1_to_fneg:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_mul_f16_e64 v0, -v0, v1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %mul = fmul half %x, -1.0
@@ -4724,7 +4596,6 @@ define half @denormal_fmul_neg1_to_fneg(half %x, half %y) {
 ; GFX11-LABEL: denormal_fmul_neg1_to_fneg:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_mul_f16_e64 v0, -v0, v1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %mul = fmul nnan half %x, -1.0
@@ -4756,7 +4627,6 @@ define half @denorm_snan_fmul_neg1_to_fneg(half %x, half %y) {
 ; GFX11-LABEL: denorm_snan_fmul_neg1_to_fneg:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_mul_f16_e64 v0, v0, -v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_mul_f16_e32 v0, v0, v1
@@ -4788,7 +4658,6 @@ define half @flush_snan_fmul_neg1_to_fneg(half %x, half %y) #0 {
 ; GFX11-LABEL: flush_snan_fmul_neg1_to_fneg:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_max_f16_e64 v0, -v0, -v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_mul_f16_e32 v0, v0, v1
@@ -4825,7 +4694,6 @@ define half @fadd_select_fneg_fneg_f16(i32 %arg0, half %x, half %y, half %z) {
 ; GFX11-LABEL: fadd_select_fneg_fneg_f16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
 ; GFX11-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc_lo
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -4878,7 +4746,6 @@ define <2 x half> @fadd_select_fneg_fneg_v2f16(i32 %arg0, <2 x half> %x, <2 x ha
 ; GFX11-LABEL: fadd_select_fneg_fneg_v2f16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
 ; GFX11-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc_lo
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)

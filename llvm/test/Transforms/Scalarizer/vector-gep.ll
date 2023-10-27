@@ -13,13 +13,13 @@ define void @test1() {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x ptr>, ptr @vec, align 32
-; CHECK-NEXT:    [[DOTI0:%.*]] = extractelement <4 x ptr> [[TMP0]], i32 0
+; CHECK-NEXT:    [[DOTI0:%.*]] = extractelement <4 x ptr> [[TMP0]], i64 0
 ; CHECK-NEXT:    [[DOTI01:%.*]] = getelementptr i16, ptr [[DOTI0]], i16 1
-; CHECK-NEXT:    [[DOTI1:%.*]] = extractelement <4 x ptr> [[TMP0]], i32 1
+; CHECK-NEXT:    [[DOTI1:%.*]] = extractelement <4 x ptr> [[TMP0]], i64 1
 ; CHECK-NEXT:    [[DOTI12:%.*]] = getelementptr i16, ptr [[DOTI1]], i16 1
-; CHECK-NEXT:    [[DOTI2:%.*]] = extractelement <4 x ptr> [[TMP0]], i32 2
+; CHECK-NEXT:    [[DOTI2:%.*]] = extractelement <4 x ptr> [[TMP0]], i64 2
 ; CHECK-NEXT:    [[DOTI23:%.*]] = getelementptr i16, ptr [[DOTI2]], i16 1
-; CHECK-NEXT:    [[DOTI3:%.*]] = extractelement <4 x ptr> [[TMP0]], i32 3
+; CHECK-NEXT:    [[DOTI3:%.*]] = extractelement <4 x ptr> [[TMP0]], i64 3
 ; CHECK-NEXT:    [[DOTI34:%.*]] = getelementptr i16, ptr [[DOTI3]], i16 1
 ; CHECK-NEXT:    ret void
 ;
@@ -35,21 +35,15 @@ define void @test2() {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x ptr>, ptr @vec, align 32
-; CHECK-NEXT:    [[DOTI0:%.*]] = extractelement <4 x ptr> [[TMP0]], i32 0
-; CHECK-NEXT:    [[DOTI1:%.*]] = extractelement <4 x ptr> [[TMP0]], i32 1
-; CHECK-NEXT:    [[DOTI2:%.*]] = extractelement <4 x ptr> [[TMP0]], i32 2
-; CHECK-NEXT:    [[DOTI3:%.*]] = extractelement <4 x ptr> [[TMP0]], i32 3
+; CHECK-NEXT:    [[DOTI0:%.*]] = extractelement <4 x ptr> [[TMP0]], i64 0
+; CHECK-NEXT:    [[DOTI1:%.*]] = extractelement <4 x ptr> [[TMP0]], i64 1
+; CHECK-NEXT:    [[DOTI2:%.*]] = extractelement <4 x ptr> [[TMP0]], i64 2
+; CHECK-NEXT:    [[DOTI3:%.*]] = extractelement <4 x ptr> [[TMP0]], i64 3
 ; CHECK-NEXT:    [[INDEX:%.*]] = load i16, ptr @index, align 2
-; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x i16> poison, i16 [[INDEX]], i64 0
-; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <4 x i16> [[DOTSPLATINSERT]], <4 x i16> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[DOTSPLAT_I0:%.*]] = extractelement <4 x i16> [[DOTSPLAT]], i32 0
-; CHECK-NEXT:    [[DOTI01:%.*]] = getelementptr i16, ptr [[DOTI0]], i16 [[DOTSPLAT_I0]]
-; CHECK-NEXT:    [[DOTSPLAT_I1:%.*]] = extractelement <4 x i16> [[DOTSPLAT]], i32 1
-; CHECK-NEXT:    [[DOTI12:%.*]] = getelementptr i16, ptr [[DOTI1]], i16 [[DOTSPLAT_I1]]
-; CHECK-NEXT:    [[DOTSPLAT_I2:%.*]] = extractelement <4 x i16> [[DOTSPLAT]], i32 2
-; CHECK-NEXT:    [[DOTI23:%.*]] = getelementptr i16, ptr [[DOTI2]], i16 [[DOTSPLAT_I2]]
-; CHECK-NEXT:    [[DOTSPLAT_I3:%.*]] = extractelement <4 x i16> [[DOTSPLAT]], i32 3
-; CHECK-NEXT:    [[DOTI34:%.*]] = getelementptr i16, ptr [[DOTI3]], i16 [[DOTSPLAT_I3]]
+; CHECK-NEXT:    [[DOTI01:%.*]] = getelementptr i16, ptr [[DOTI0]], i16 [[INDEX]]
+; CHECK-NEXT:    [[DOTI12:%.*]] = getelementptr i16, ptr [[DOTI1]], i16 [[INDEX]]
+; CHECK-NEXT:    [[DOTI23:%.*]] = getelementptr i16, ptr [[DOTI2]], i16 [[INDEX]]
+; CHECK-NEXT:    [[DOTI34:%.*]] = getelementptr i16, ptr [[DOTI3]], i16 [[INDEX]]
 ; CHECK-NEXT:    ret void
 ;
 bb:
@@ -77,20 +71,14 @@ define <4 x ptr> @test3_constbase(i16 %idx) {
 ; CHECK-LABEL: @test3_constbase(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[OFFSET:%.*]] = getelementptr [4 x i16], ptr @ptr, i16 0, i16 [[IDX:%.*]]
-; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x ptr> poison, ptr [[OFFSET]], i64 0
-; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <4 x ptr> [[DOTSPLATINSERT]], <4 x ptr> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[DOTSPLAT_I0:%.*]] = extractelement <4 x ptr> [[DOTSPLAT]], i32 0
-; CHECK-NEXT:    [[GEP_I0:%.*]] = getelementptr i16, ptr [[DOTSPLAT_I0]], i16 0
-; CHECK-NEXT:    [[DOTSPLAT_I1:%.*]] = extractelement <4 x ptr> [[DOTSPLAT]], i32 1
-; CHECK-NEXT:    [[GEP_I1:%.*]] = getelementptr i16, ptr [[DOTSPLAT_I1]], i16 1
-; CHECK-NEXT:    [[DOTSPLAT_I2:%.*]] = extractelement <4 x ptr> [[DOTSPLAT]], i32 2
-; CHECK-NEXT:    [[GEP_I2:%.*]] = getelementptr i16, ptr [[DOTSPLAT_I2]], i16 2
-; CHECK-NEXT:    [[DOTSPLAT_I3:%.*]] = extractelement <4 x ptr> [[DOTSPLAT]], i32 3
-; CHECK-NEXT:    [[GEP_I3:%.*]] = getelementptr i16, ptr [[DOTSPLAT_I3]], i16 3
-; CHECK-NEXT:    [[GEP_UPTO0:%.*]] = insertelement <4 x ptr> poison, ptr [[GEP_I0]], i32 0
-; CHECK-NEXT:    [[GEP_UPTO1:%.*]] = insertelement <4 x ptr> [[GEP_UPTO0]], ptr [[GEP_I1]], i32 1
-; CHECK-NEXT:    [[GEP_UPTO2:%.*]] = insertelement <4 x ptr> [[GEP_UPTO1]], ptr [[GEP_I2]], i32 2
-; CHECK-NEXT:    [[GEP:%.*]] = insertelement <4 x ptr> [[GEP_UPTO2]], ptr [[GEP_I3]], i32 3
+; CHECK-NEXT:    [[GEP_I0:%.*]] = getelementptr i16, ptr [[OFFSET]], i16 0
+; CHECK-NEXT:    [[GEP_I1:%.*]] = getelementptr i16, ptr [[OFFSET]], i16 1
+; CHECK-NEXT:    [[GEP_I2:%.*]] = getelementptr i16, ptr [[OFFSET]], i16 2
+; CHECK-NEXT:    [[GEP_I3:%.*]] = getelementptr i16, ptr [[OFFSET]], i16 3
+; CHECK-NEXT:    [[GEP_UPTO0:%.*]] = insertelement <4 x ptr> poison, ptr [[GEP_I0]], i64 0
+; CHECK-NEXT:    [[GEP_UPTO1:%.*]] = insertelement <4 x ptr> [[GEP_UPTO0]], ptr [[GEP_I1]], i64 1
+; CHECK-NEXT:    [[GEP_UPTO2:%.*]] = insertelement <4 x ptr> [[GEP_UPTO1]], ptr [[GEP_I2]], i64 2
+; CHECK-NEXT:    [[GEP:%.*]] = insertelement <4 x ptr> [[GEP_UPTO2]], ptr [[GEP_I3]], i64 3
 ; CHECK-NEXT:    ret <4 x ptr> [[GEP]]
 ;
 bb:
@@ -103,18 +91,18 @@ bb:
 define <4 x ptr> @test3_varoffset(<4 x i16> %offset) {
 ; CHECK-LABEL: @test3_varoffset(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[OFFSET_I0:%.*]] = extractelement <4 x i16> [[OFFSET:%.*]], i32 0
+; CHECK-NEXT:    [[OFFSET_I0:%.*]] = extractelement <4 x i16> [[OFFSET:%.*]], i64 0
 ; CHECK-NEXT:    [[GEP_I0:%.*]] = getelementptr i16, ptr @ptr, i16 [[OFFSET_I0]]
-; CHECK-NEXT:    [[OFFSET_I1:%.*]] = extractelement <4 x i16> [[OFFSET]], i32 1
+; CHECK-NEXT:    [[OFFSET_I1:%.*]] = extractelement <4 x i16> [[OFFSET]], i64 1
 ; CHECK-NEXT:    [[GEP_I1:%.*]] = getelementptr i16, ptr @ptr, i16 [[OFFSET_I1]]
-; CHECK-NEXT:    [[OFFSET_I2:%.*]] = extractelement <4 x i16> [[OFFSET]], i32 2
+; CHECK-NEXT:    [[OFFSET_I2:%.*]] = extractelement <4 x i16> [[OFFSET]], i64 2
 ; CHECK-NEXT:    [[GEP_I2:%.*]] = getelementptr i16, ptr @ptr, i16 [[OFFSET_I2]]
-; CHECK-NEXT:    [[OFFSET_I3:%.*]] = extractelement <4 x i16> [[OFFSET]], i32 3
+; CHECK-NEXT:    [[OFFSET_I3:%.*]] = extractelement <4 x i16> [[OFFSET]], i64 3
 ; CHECK-NEXT:    [[GEP_I3:%.*]] = getelementptr i16, ptr @ptr, i16 [[OFFSET_I3]]
-; CHECK-NEXT:    [[GEP_UPTO0:%.*]] = insertelement <4 x ptr> poison, ptr [[GEP_I0]], i32 0
-; CHECK-NEXT:    [[GEP_UPTO1:%.*]] = insertelement <4 x ptr> [[GEP_UPTO0]], ptr [[GEP_I1]], i32 1
-; CHECK-NEXT:    [[GEP_UPTO2:%.*]] = insertelement <4 x ptr> [[GEP_UPTO1]], ptr [[GEP_I2]], i32 2
-; CHECK-NEXT:    [[GEP:%.*]] = insertelement <4 x ptr> [[GEP_UPTO2]], ptr [[GEP_I3]], i32 3
+; CHECK-NEXT:    [[GEP_UPTO0:%.*]] = insertelement <4 x ptr> poison, ptr [[GEP_I0]], i64 0
+; CHECK-NEXT:    [[GEP_UPTO1:%.*]] = insertelement <4 x ptr> [[GEP_UPTO0]], ptr [[GEP_I1]], i64 1
+; CHECK-NEXT:    [[GEP_UPTO2:%.*]] = insertelement <4 x ptr> [[GEP_UPTO1]], ptr [[GEP_I2]], i64 2
+; CHECK-NEXT:    [[GEP:%.*]] = insertelement <4 x ptr> [[GEP_UPTO2]], ptr [[GEP_I3]], i64 3
 ; CHECK-NEXT:    ret <4 x ptr> [[GEP]]
 ;
 bb:
@@ -127,16 +115,10 @@ define void @test4() {
 ; CHECK-LABEL: @test4(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr @ptrptr, align 8
-; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <4 x ptr> poison, ptr [[TMP0]], i64 0
-; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <4 x ptr> [[DOTSPLATINSERT]], <4 x ptr> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[DOTSPLAT_I0:%.*]] = extractelement <4 x ptr> [[DOTSPLAT]], i32 0
-; CHECK-NEXT:    [[DOTI0:%.*]] = getelementptr i16, ptr [[DOTSPLAT_I0]], i16 0
-; CHECK-NEXT:    [[DOTSPLAT_I1:%.*]] = extractelement <4 x ptr> [[DOTSPLAT]], i32 1
-; CHECK-NEXT:    [[DOTI1:%.*]] = getelementptr i16, ptr [[DOTSPLAT_I1]], i16 1
-; CHECK-NEXT:    [[DOTSPLAT_I2:%.*]] = extractelement <4 x ptr> [[DOTSPLAT]], i32 2
-; CHECK-NEXT:    [[DOTI2:%.*]] = getelementptr i16, ptr [[DOTSPLAT_I2]], i16 2
-; CHECK-NEXT:    [[DOTSPLAT_I3:%.*]] = extractelement <4 x ptr> [[DOTSPLAT]], i32 3
-; CHECK-NEXT:    [[DOTI3:%.*]] = getelementptr i16, ptr [[DOTSPLAT_I3]], i16 3
+; CHECK-NEXT:    [[DOTI0:%.*]] = getelementptr i16, ptr [[TMP0]], i16 0
+; CHECK-NEXT:    [[DOTI1:%.*]] = getelementptr i16, ptr [[TMP0]], i16 1
+; CHECK-NEXT:    [[DOTI2:%.*]] = getelementptr i16, ptr [[TMP0]], i16 2
+; CHECK-NEXT:    [[DOTI3:%.*]] = getelementptr i16, ptr [[TMP0]], i16 3
 ; CHECK-NEXT:    ret void
 ;
 bb:
@@ -151,13 +133,13 @@ define void @test5() {
 ; CHECK-LABEL: @test5(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x ptr>, ptr @vec, align 32
-; CHECK-NEXT:    [[DOTI0:%.*]] = extractelement <4 x ptr> [[TMP0]], i32 0
+; CHECK-NEXT:    [[DOTI0:%.*]] = extractelement <4 x ptr> [[TMP0]], i64 0
 ; CHECK-NEXT:    [[DOTI01:%.*]] = getelementptr inbounds i16, ptr [[DOTI0]], i16 1
-; CHECK-NEXT:    [[DOTI1:%.*]] = extractelement <4 x ptr> [[TMP0]], i32 1
+; CHECK-NEXT:    [[DOTI1:%.*]] = extractelement <4 x ptr> [[TMP0]], i64 1
 ; CHECK-NEXT:    [[DOTI12:%.*]] = getelementptr inbounds i16, ptr [[DOTI1]], i16 1
-; CHECK-NEXT:    [[DOTI2:%.*]] = extractelement <4 x ptr> [[TMP0]], i32 2
+; CHECK-NEXT:    [[DOTI2:%.*]] = extractelement <4 x ptr> [[TMP0]], i64 2
 ; CHECK-NEXT:    [[DOTI23:%.*]] = getelementptr inbounds i16, ptr [[DOTI2]], i16 1
-; CHECK-NEXT:    [[DOTI3:%.*]] = extractelement <4 x ptr> [[TMP0]], i32 3
+; CHECK-NEXT:    [[DOTI3:%.*]] = extractelement <4 x ptr> [[TMP0]], i64 3
 ; CHECK-NEXT:    [[DOTI34:%.*]] = getelementptr inbounds i16, ptr [[DOTI3]], i16 1
 ; CHECK-NEXT:    ret void
 ;

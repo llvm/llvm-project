@@ -132,7 +132,6 @@ namespace llvm {
 
 namespace clang {
 
-  // Basic
 class StreamingDiagnostic;
 
 // Determines whether the low bit of the result pointer for the
@@ -140,164 +139,147 @@ class StreamingDiagnostic;
 // for it's "invalid" flag.
 template <class Ptr> struct IsResultPtrLowBitFree {
   static const bool value = false;
-  };
+};
 
-  /// ActionResult - This structure is used while parsing/acting on
-  /// expressions, stmts, etc.  It encapsulates both the object returned by
-  /// the action, plus a sense of whether or not it is valid.
-  /// When CompressInvalid is true, the "invalid" flag will be
-  /// stored in the low bit of the Val pointer.
-  template<class PtrTy,
-           bool CompressInvalid = IsResultPtrLowBitFree<PtrTy>::value>
-  class ActionResult {
-    PtrTy Val;
-    bool Invalid;
+/// The result of parsing/analyzing an expression, statement etc.
+///
+/// It may be:
+/// - usable: a valid pointer to the result object
+/// - unset (null but valid): for constructs that may legitimately be absent
+///   (for example, the condition of a for loop)
+/// - invalid: indicating an error
+///   (no detail is provided, usually the error has already been diagnosed)
+template <class PtrTy, bool Compress = IsResultPtrLowBitFree<PtrTy>::value>
+class ActionResult {
+  PtrTy Val = {};
+  bool Invalid = false;
 
-  public:
-    ActionResult(bool Invalid = false) : Val(PtrTy()), Invalid(Invalid) {}
-    ActionResult(PtrTy val) : Val(val), Invalid(false) {}
-    ActionResult(const DiagnosticBuilder &) : Val(PtrTy()), Invalid(true) {}
+public:
+  ActionResult(bool Invalid = false) : Val(PtrTy()), Invalid(Invalid) {}
+  ActionResult(PtrTy Val) { *this = Val; }
+  ActionResult(const DiagnosticBuilder &) : ActionResult(/*Invalid=*/true) {}
 
-    // These two overloads prevent void* -> bool conversions.
-    ActionResult(const void *) = delete;
-    ActionResult(volatile void *) = delete;
+  // These two overloads prevent void* -> bool conversions.
+  ActionResult(const void *) = delete;
+  ActionResult(volatile void *) = delete;
 
-    bool isInvalid() const { return Invalid; }
-    bool isUsable() const { return !Invalid && Val; }
-    bool isUnset() const { return !Invalid && !Val; }
+  bool isInvalid() const { return Invalid; }
+  bool isUnset() const { return !Invalid && !Val; }
+  bool isUsable() const { return !isInvalid() && !isUnset(); }
 
-    PtrTy get() const { return Val; }
-    template <typename T> T *getAs() { return static_cast<T*>(get()); }
+  PtrTy get() const { return Val; }
+  template <typename T> T *getAs() { return static_cast<T *>(get()); }
 
-    void set(PtrTy V) { Val = V; }
-
-    const ActionResult &operator=(PtrTy RHS) {
-      Val = RHS;
-      Invalid = false;
-      return *this;
-    }
-  };
-
-  // This ActionResult partial specialization places the "invalid"
-  // flag into the low bit of the pointer.
-  template<typename PtrTy>
-  class ActionResult<PtrTy, true> {
-    // A pointer whose low bit is 1 if this result is invalid, 0
-    // otherwise.
-    uintptr_t PtrWithInvalid;
-
-    using PtrTraits = llvm::PointerLikeTypeTraits<PtrTy>;
-
-  public:
-    ActionResult(bool Invalid = false)
-        : PtrWithInvalid(static_cast<uintptr_t>(Invalid)) {}
-
-    ActionResult(PtrTy V) {
-      void *VP = PtrTraits::getAsVoidPointer(V);
-      PtrWithInvalid = reinterpret_cast<uintptr_t>(VP);
-      assert((PtrWithInvalid & 0x01) == 0 && "Badly aligned pointer");
-    }
-
-    ActionResult(const DiagnosticBuilder &) : PtrWithInvalid(0x01) {}
-
-    // These two overloads prevent void* -> bool conversions.
-    ActionResult(const void *) = delete;
-    ActionResult(volatile void *) = delete;
-
-    bool isInvalid() const { return PtrWithInvalid & 0x01; }
-    bool isUsable() const { return PtrWithInvalid > 0x01; }
-    bool isUnset() const { return PtrWithInvalid == 0; }
-
-    PtrTy get() const {
-      void *VP = reinterpret_cast<void *>(PtrWithInvalid & ~0x01);
-      return PtrTraits::getFromVoidPointer(VP);
-    }
-
-    template <typename T> T *getAs() { return static_cast<T*>(get()); }
-
-    void set(PtrTy V) {
-      void *VP = PtrTraits::getAsVoidPointer(V);
-      PtrWithInvalid = reinterpret_cast<uintptr_t>(VP);
-      assert((PtrWithInvalid & 0x01) == 0 && "Badly aligned pointer");
-    }
-
-    const ActionResult &operator=(PtrTy RHS) {
-      void *VP = PtrTraits::getAsVoidPointer(RHS);
-      PtrWithInvalid = reinterpret_cast<uintptr_t>(VP);
-      assert((PtrWithInvalid & 0x01) == 0 && "Badly aligned pointer");
-      return *this;
-    }
-
-    // For types where we can fit a flag in with the pointer, provide
-    // conversions to/from pointer type.
-    static ActionResult getFromOpaquePointer(void *P) {
-      ActionResult Result;
-      Result.PtrWithInvalid = (uintptr_t)P;
-      return Result;
-    }
-    void *getAsOpaquePointer() const { return (void*)PtrWithInvalid; }
-  };
-
-  /// An opaque type for threading parsed type information through the
-  /// parser.
-  using ParsedType = OpaquePtr<QualType>;
-  using UnionParsedType = UnionOpaquePtr<QualType>;
-
-  // We can re-use the low bit of expression, statement, base, and
-  // member-initializer pointers for the "invalid" flag of
-  // ActionResult.
-  template<> struct IsResultPtrLowBitFree<Expr*> {
-    static const bool value = true;
-  };
-  template<> struct IsResultPtrLowBitFree<Stmt*> {
-    static const bool value = true;
-  };
-  template<> struct IsResultPtrLowBitFree<CXXBaseSpecifier*> {
-    static const bool value = true;
-  };
-  template<> struct IsResultPtrLowBitFree<CXXCtorInitializer*> {
-    static const bool value = true;
-  };
-
-  using ExprResult = ActionResult<Expr *>;
-  using StmtResult = ActionResult<Stmt *>;
-  using TypeResult = ActionResult<ParsedType>;
-  using BaseResult = ActionResult<CXXBaseSpecifier *>;
-  using MemInitResult = ActionResult<CXXCtorInitializer *>;
-
-  using DeclResult = ActionResult<Decl *>;
-  using ParsedTemplateTy = OpaquePtr<TemplateName>;
-  using UnionParsedTemplateTy = UnionOpaquePtr<TemplateName>;
-
-  using MultiExprArg = MutableArrayRef<Expr *>;
-  using MultiStmtArg = MutableArrayRef<Stmt *>;
-  using ASTTemplateArgsPtr = MutableArrayRef<ParsedTemplateArgument>;
-  using MultiTypeArg = MutableArrayRef<ParsedType>;
-  using MultiTemplateParamsArg = MutableArrayRef<TemplateParameterList *>;
-
-  inline ExprResult ExprError() { return ExprResult(true); }
-  inline StmtResult StmtError() { return StmtResult(true); }
-  inline TypeResult TypeError() { return TypeResult(true); }
-
-  inline ExprResult ExprError(const StreamingDiagnostic &) {
-    return ExprError();
+  ActionResult &operator=(PtrTy RHS) {
+    Val = RHS;
+    Invalid = false;
+    return *this;
   }
-  inline StmtResult StmtError(const StreamingDiagnostic &) {
-    return StmtError();
+};
+
+// If we PtrTy has a free bit, we can represent "invalid" as nullptr|1.
+template <typename PtrTy> class ActionResult<PtrTy, true> {
+  static constexpr uintptr_t UnsetValue = 0x0;
+  static constexpr uintptr_t InvalidValue = 0x1;
+
+  uintptr_t Value = UnsetValue;
+
+  using PtrTraits = llvm::PointerLikeTypeTraits<PtrTy>;
+
+public:
+  ActionResult(bool Invalid = false)
+      : Value(Invalid ? InvalidValue : UnsetValue) {}
+  ActionResult(PtrTy V) { *this = V; }
+  ActionResult(const DiagnosticBuilder &) : ActionResult(/*Invalid=*/true) {}
+
+  // These two overloads prevent void* -> bool conversions.
+  ActionResult(const void *) = delete;
+  ActionResult(volatile void *) = delete;
+
+  bool isInvalid() const { return Value == InvalidValue; }
+  bool isUnset() const { return Value == UnsetValue; }
+  bool isUsable() const { return !isInvalid() && !isUnset(); }
+
+  PtrTy get() const {
+    void *VP = reinterpret_cast<void *>(Value & ~0x01);
+    return PtrTraits::getFromVoidPointer(VP);
+  }
+  template <typename T> T *getAs() { return static_cast<T *>(get()); }
+
+  ActionResult &operator=(PtrTy RHS) {
+    void *VP = PtrTraits::getAsVoidPointer(RHS);
+    Value = reinterpret_cast<uintptr_t>(VP);
+    assert((Value & 0x01) == 0 && "Badly aligned pointer");
+    return *this;
   }
 
-  inline ExprResult ExprEmpty() { return ExprResult(false); }
-  inline StmtResult StmtEmpty() { return StmtResult(false); }
-
-  inline Expr *AssertSuccess(ExprResult R) {
-    assert(!R.isInvalid() && "operation was asserted to never fail!");
-    return R.get();
+  // For types where we can fit a flag in with the pointer, provide
+  // conversions to/from pointer type.
+  static ActionResult getFromOpaquePointer(void *P) {
+    ActionResult Result;
+    Result.Value = (uintptr_t)P;
+    assert(Result.isInvalid() ||
+           PtrTraits::getAsVoidPointer(Result.get()) == P);
+    return Result;
   }
+  void *getAsOpaquePointer() const { return (void *)Value; }
+};
 
-  inline Stmt *AssertSuccess(StmtResult R) {
-    assert(!R.isInvalid() && "operation was asserted to never fail!");
-    return R.get();
-  }
+/// An opaque type for threading parsed type information through the parser.
+using ParsedType = OpaquePtr<QualType>;
+using UnionParsedType = UnionOpaquePtr<QualType>;
+
+// We can re-use the low bit of expression, statement, base, and
+// member-initializer pointers for the "invalid" flag of
+// ActionResult.
+template <> struct IsResultPtrLowBitFree<Expr *> {
+  static const bool value = true;
+};
+template <> struct IsResultPtrLowBitFree<Stmt *> {
+  static const bool value = true;
+};
+template <> struct IsResultPtrLowBitFree<CXXBaseSpecifier *> {
+  static const bool value = true;
+};
+template <> struct IsResultPtrLowBitFree<CXXCtorInitializer *> {
+  static const bool value = true;
+};
+
+using ExprResult = ActionResult<Expr *>;
+using StmtResult = ActionResult<Stmt *>;
+using TypeResult = ActionResult<ParsedType>;
+using BaseResult = ActionResult<CXXBaseSpecifier *>;
+using MemInitResult = ActionResult<CXXCtorInitializer *>;
+
+using DeclResult = ActionResult<Decl *>;
+using ParsedTemplateTy = OpaquePtr<TemplateName>;
+using UnionParsedTemplateTy = UnionOpaquePtr<TemplateName>;
+
+using MultiExprArg = MutableArrayRef<Expr *>;
+using MultiStmtArg = MutableArrayRef<Stmt *>;
+using ASTTemplateArgsPtr = MutableArrayRef<ParsedTemplateArgument>;
+using MultiTypeArg = MutableArrayRef<ParsedType>;
+using MultiTemplateParamsArg = MutableArrayRef<TemplateParameterList *>;
+
+inline ExprResult ExprError() { return ExprResult(true); }
+inline StmtResult StmtError() { return StmtResult(true); }
+inline TypeResult TypeError() { return TypeResult(true); }
+
+inline ExprResult ExprError(const StreamingDiagnostic &) { return ExprError(); }
+inline StmtResult StmtError(const StreamingDiagnostic &) { return StmtError(); }
+
+inline ExprResult ExprEmpty() { return ExprResult(false); }
+inline StmtResult StmtEmpty() { return StmtResult(false); }
+
+inline Expr *AssertSuccess(ExprResult R) {
+  assert(!R.isInvalid() && "operation was asserted to never fail!");
+  return R.get();
+}
+
+inline Stmt *AssertSuccess(StmtResult R) {
+  assert(!R.isInvalid() && "operation was asserted to never fail!");
+  return R.get();
+}
 
 } // namespace clang
 

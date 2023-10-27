@@ -1,6 +1,6 @@
 ; RUN: llc %s -o - -print-after=machine-cse -mtriple=x86_64-- 2>&1 | FileCheck %s --match-full-lines
 
-; CHECK: %5:gr32 = SUB32ri8 %0:gr32(tied-def 0), 1, implicit-def $eflags, debug-location !24; a.c:3:13
+; CHECK: %5:gr32 = SUB32ri %0:gr32(tied-def 0), 1, implicit-def $eflags, debug-location !24; a.c:3:13
 ; CHECK-NEXT: %10:gr32 = MOVSX32rr8 %4:gr8
 ; CHECK-NEXT: JCC_1 %bb.2, 15, implicit $eflags, debug-location !25; a.c:3:18
 

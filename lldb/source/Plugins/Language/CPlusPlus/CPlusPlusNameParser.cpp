@@ -172,7 +172,7 @@ CPlusPlusNameParser::ParseFuncPtr(bool expect_return_type) {
   //
   // Consume inner function name. This will fail unless
   // we stripped all the pointers on the left hand side
-  // of the funciton name.
+  // of the function name.
   {
     Bookmark before_inner_function_pos = SetBookmark();
     auto maybe_inner_function_name = ParseFunctionImpl(false);
@@ -750,6 +750,7 @@ static const clang::LangOptions &GetLangOptions() {
     g_options.CPlusPlus11 = true;
     g_options.CPlusPlus14 = true;
     g_options.CPlusPlus17 = true;
+    g_options.CPlusPlus20 = true;
   });
   return g_options;
 }

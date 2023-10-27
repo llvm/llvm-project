@@ -7,8 +7,7 @@
 
 
 class BuilderIR:
-    """Data class which represents the compiler related options passed to Dexter
-    """
+    """Data class which represents the compiler related options passed to Dexter"""
 
     def __init__(self, name: str, cflags: str, ldflags: str):
         self.name = name

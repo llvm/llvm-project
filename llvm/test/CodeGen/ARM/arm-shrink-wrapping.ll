@@ -62,7 +62,8 @@
 ; bx lr
 define i32 @foo(i32 %a, i32 %b) "frame-pointer"="all" {
 ; ARM-ENABLE-LABEL: foo:
-; ARM-ENABLE:       @ %bb.0:
+; ARM-ENABLE:       Lfunc_begin0:
+; ARM-ENABLE-NEXT:  @ %bb.0:
 ; ARM-ENABLE-NEXT:    cmp r0, r1
 ; ARM-ENABLE-NEXT:    bge LBB0_2
 ; ARM-ENABLE-NEXT:  @ %bb.1: @ %true
@@ -76,9 +77,11 @@ define i32 @foo(i32 %a, i32 %b) "frame-pointer"="all" {
 ; ARM-ENABLE-NEXT:    pop {r7, lr}
 ; ARM-ENABLE-NEXT:  LBB0_2: @ %false
 ; ARM-ENABLE-NEXT:    bx lr
+; ARM-ENABLE-NEXT:  Lfunc_end0:
 ;
 ; ARM-DISABLE-LABEL: foo:
-; ARM-DISABLE:       @ %bb.0:
+; ARM-DISABLE:       Lfunc_begin0:
+; ARM-DISABLE-NEXT:  @ %bb.0:
 ; ARM-DISABLE-NEXT:    push {r7, lr}
 ; ARM-DISABLE-NEXT:    mov r7, sp
 ; ARM-DISABLE-NEXT:    sub sp, sp, #4
@@ -92,9 +95,11 @@ define i32 @foo(i32 %a, i32 %b) "frame-pointer"="all" {
 ; ARM-DISABLE-NEXT:  LBB0_2: @ %false
 ; ARM-DISABLE-NEXT:    mov sp, r7
 ; ARM-DISABLE-NEXT:    pop {r7, pc}
+; ARM-DISABLE-NEXT:  Lfunc_end0:
 ;
 ; THUMB-ENABLE-LABEL: foo:
-; THUMB-ENABLE:       @ %bb.0:
+; THUMB-ENABLE:       Lfunc_begin0:
+; THUMB-ENABLE-NEXT:  @ %bb.0:
 ; THUMB-ENABLE-NEXT:    cmp r0, r1
 ; THUMB-ENABLE-NEXT:    bge LBB0_2
 ; THUMB-ENABLE-NEXT:  @ %bb.1: @ %true
@@ -108,9 +113,11 @@ define i32 @foo(i32 %a, i32 %b) "frame-pointer"="all" {
 ; THUMB-ENABLE-NEXT:    pop.w {r7, lr}
 ; THUMB-ENABLE-NEXT:  LBB0_2: @ %false
 ; THUMB-ENABLE-NEXT:    bx lr
+; THUMB-ENABLE-NEXT:  Lfunc_end0:
 ;
 ; THUMB-DISABLE-LABEL: foo:
-; THUMB-DISABLE:       @ %bb.0:
+; THUMB-DISABLE:       Lfunc_begin0:
+; THUMB-DISABLE-NEXT:  @ %bb.0:
 ; THUMB-DISABLE-NEXT:    push {r7, lr}
 ; THUMB-DISABLE-NEXT:    mov r7, sp
 ; THUMB-DISABLE-NEXT:    sub sp, #4
@@ -124,6 +131,7 @@ define i32 @foo(i32 %a, i32 %b) "frame-pointer"="all" {
 ; THUMB-DISABLE-NEXT:  LBB0_2: @ %false
 ; THUMB-DISABLE-NEXT:    add sp, #4
 ; THUMB-DISABLE-NEXT:    pop {r7, pc}
+; THUMB-DISABLE-NEXT:  Lfunc_end0:
   %tmp = alloca i32, align 4
   %tmp2 = icmp slt i32 %a, %b
   br i1 %tmp2, label %true, label %false
@@ -190,7 +198,8 @@ declare i32 @doSomething(i32, ptr)
 ; bx lr
 define i32 @freqSaveAndRestoreOutsideLoop(i32 %cond, i32 %N) "frame-pointer"="all" {
 ; ARM-ENABLE-LABEL: freqSaveAndRestoreOutsideLoop:
-; ARM-ENABLE:       @ %bb.0: @ %entry
+; ARM-ENABLE:       Lfunc_begin1:
+; ARM-ENABLE-NEXT:  @ %bb.0: @ %entry
 ; ARM-ENABLE-NEXT:    cmp r0, #0
 ; ARM-ENABLE-NEXT:    beq LBB1_4
 ; ARM-ENABLE-NEXT:  @ %bb.1: @ %for.preheader
@@ -215,9 +224,11 @@ define i32 @freqSaveAndRestoreOutsideLoop(i32 %cond, i32 %N) "frame-pointer"="al
 ; ARM-ENABLE-NEXT:  LBB1_4: @ %if.else
 ; ARM-ENABLE-NEXT:    lsl r0, r1, #1
 ; ARM-ENABLE-NEXT:    bx lr
+; ARM-ENABLE-NEXT:  Lfunc_end1:
 ;
 ; ARM-DISABLE-LABEL: freqSaveAndRestoreOutsideLoop:
-; ARM-DISABLE:       @ %bb.0: @ %entry
+; ARM-DISABLE:       Lfunc_begin1:
+; ARM-DISABLE-NEXT:  @ %bb.0: @ %entry
 ; ARM-DISABLE-NEXT:    push {r4, r7, lr}
 ; ARM-DISABLE-NEXT:    add r7, sp, #4
 ; ARM-DISABLE-NEXT:    cmp r0, #0
@@ -242,9 +253,11 @@ define i32 @freqSaveAndRestoreOutsideLoop(i32 %cond, i32 %N) "frame-pointer"="al
 ; ARM-DISABLE-NEXT:  LBB1_4: @ %if.else
 ; ARM-DISABLE-NEXT:    lsl r0, r1, #1
 ; ARM-DISABLE-NEXT:    pop {r4, r7, pc}
+; ARM-DISABLE-NEXT:  Lfunc_end1:
 ;
 ; THUMB-ENABLE-LABEL: freqSaveAndRestoreOutsideLoop:
-; THUMB-ENABLE:       @ %bb.0: @ %entry
+; THUMB-ENABLE:       Lfunc_begin1:
+; THUMB-ENABLE-NEXT:  @ %bb.0: @ %entry
 ; THUMB-ENABLE-NEXT:    cbz r0, LBB1_4
 ; THUMB-ENABLE-NEXT:  @ %bb.1: @ %for.preheader
 ; THUMB-ENABLE-NEXT:    push {r4, r7, lr}
@@ -268,9 +281,11 @@ define i32 @freqSaveAndRestoreOutsideLoop(i32 %cond, i32 %N) "frame-pointer"="al
 ; THUMB-ENABLE-NEXT:  LBB1_4: @ %if.else
 ; THUMB-ENABLE-NEXT:    lsls r0, r1, #1
 ; THUMB-ENABLE-NEXT:    bx lr
+; THUMB-ENABLE-NEXT:  Lfunc_end1:
 ;
 ; THUMB-DISABLE-LABEL: freqSaveAndRestoreOutsideLoop:
-; THUMB-DISABLE:       @ %bb.0: @ %entry
+; THUMB-DISABLE:       Lfunc_begin1:
+; THUMB-DISABLE-NEXT:  @ %bb.0: @ %entry
 ; THUMB-DISABLE-NEXT:    push {r4, r7, lr}
 ; THUMB-DISABLE-NEXT:    add r7, sp, #4
 ; THUMB-DISABLE-NEXT:    cbz r0, LBB1_4
@@ -294,6 +309,7 @@ define i32 @freqSaveAndRestoreOutsideLoop(i32 %cond, i32 %N) "frame-pointer"="al
 ; THUMB-DISABLE-NEXT:  LBB1_4: @ %if.else
 ; THUMB-DISABLE-NEXT:    lsls r0, r1, #1
 ; THUMB-DISABLE-NEXT:    pop {r4, r7, pc}
+; THUMB-DISABLE-NEXT:  Lfunc_end1:
 entry:
   %tobool = icmp eq i32 %cond, 0
   br i1 %tobool, label %if.else, label %for.preheader
@@ -394,7 +410,8 @@ define i32 @freqSaveAndRestoreOutsideLoop2(i32 %cond) "frame-pointer"="all" {
 ; THUMB-NEXT:    @ InlineAsm End
 ; THUMB-NEXT:    pop {r4, r7, pc}
 ; ARM-ENABLE-LABEL: freqSaveAndRestoreOutsideLoop2:
-; ARM-ENABLE:       @ %bb.0: @ %entry
+; ARM-ENABLE:       Lfunc_begin2:
+; ARM-ENABLE-NEXT:  @ %bb.0: @ %entry
 ; ARM-ENABLE-NEXT:    push {r4, r7, lr}
 ; ARM-ENABLE-NEXT:    add r7, sp, #4
 ; ARM-ENABLE-NEXT:    mov r0, #0
@@ -415,9 +432,11 @@ define i32 @freqSaveAndRestoreOutsideLoop2(i32 %cond) "frame-pointer"="all" {
 ; ARM-ENABLE-NEXT:    nop
 ; ARM-ENABLE-NEXT:    @ InlineAsm End
 ; ARM-ENABLE-NEXT:    pop {r4, r7, pc}
+; ARM-ENABLE-NEXT:  Lfunc_end2:
 ;
 ; ARM-DISABLE-LABEL: freqSaveAndRestoreOutsideLoop2:
-; ARM-DISABLE:       @ %bb.0: @ %entry
+; ARM-DISABLE:       Lfunc_begin2:
+; ARM-DISABLE-NEXT:  @ %bb.0: @ %entry
 ; ARM-DISABLE-NEXT:    push {r4, r7, lr}
 ; ARM-DISABLE-NEXT:    add r7, sp, #4
 ; ARM-DISABLE-NEXT:    mov r0, #0
@@ -438,9 +457,11 @@ define i32 @freqSaveAndRestoreOutsideLoop2(i32 %cond) "frame-pointer"="all" {
 ; ARM-DISABLE-NEXT:    nop
 ; ARM-DISABLE-NEXT:    @ InlineAsm End
 ; ARM-DISABLE-NEXT:    pop {r4, r7, pc}
+; ARM-DISABLE-NEXT:  Lfunc_end2:
 ;
 ; THUMB-ENABLE-LABEL: freqSaveAndRestoreOutsideLoop2:
-; THUMB-ENABLE:       @ %bb.0: @ %entry
+; THUMB-ENABLE:       Lfunc_begin2:
+; THUMB-ENABLE-NEXT:  @ %bb.0: @ %entry
 ; THUMB-ENABLE-NEXT:    push {r4, r7, lr}
 ; THUMB-ENABLE-NEXT:    add r7, sp, #4
 ; THUMB-ENABLE-NEXT:    movs r0, #0
@@ -461,9 +482,11 @@ define i32 @freqSaveAndRestoreOutsideLoop2(i32 %cond) "frame-pointer"="all" {
 ; THUMB-ENABLE-NEXT:    nop
 ; THUMB-ENABLE-NEXT:    @ InlineAsm End
 ; THUMB-ENABLE-NEXT:    pop {r4, r7, pc}
+; THUMB-ENABLE-NEXT:  Lfunc_end2:
 ;
 ; THUMB-DISABLE-LABEL: freqSaveAndRestoreOutsideLoop2:
-; THUMB-DISABLE:       @ %bb.0: @ %entry
+; THUMB-DISABLE:       Lfunc_begin2:
+; THUMB-DISABLE-NEXT:  @ %bb.0: @ %entry
 ; THUMB-DISABLE-NEXT:    push {r4, r7, lr}
 ; THUMB-DISABLE-NEXT:    add r7, sp, #4
 ; THUMB-DISABLE-NEXT:    movs r0, #0
@@ -484,6 +507,7 @@ define i32 @freqSaveAndRestoreOutsideLoop2(i32 %cond) "frame-pointer"="all" {
 ; THUMB-DISABLE-NEXT:    nop
 ; THUMB-DISABLE-NEXT:    @ InlineAsm End
 ; THUMB-DISABLE-NEXT:    pop {r4, r7, pc}
+; THUMB-DISABLE-NEXT:  Lfunc_end2:
 entry:
   br label %for.preheader
 
@@ -555,7 +579,8 @@ for.end:                                          ; preds = %for.body
 ; bx lr
 define i32 @loopInfoSaveOutsideLoop(i32 %cond, i32 %N) "frame-pointer"="all" {
 ; ARM-ENABLE-LABEL: loopInfoSaveOutsideLoop:
-; ARM-ENABLE:       @ %bb.0: @ %entry
+; ARM-ENABLE:       Lfunc_begin3:
+; ARM-ENABLE-NEXT:  @ %bb.0: @ %entry
 ; ARM-ENABLE-NEXT:    cmp r0, #0
 ; ARM-ENABLE-NEXT:    beq LBB3_4
 ; ARM-ENABLE-NEXT:  @ %bb.1: @ %for.preheader
@@ -583,9 +608,11 @@ define i32 @loopInfoSaveOutsideLoop(i32 %cond, i32 %N) "frame-pointer"="all" {
 ; ARM-ENABLE-NEXT:  LBB3_4: @ %if.else
 ; ARM-ENABLE-NEXT:    lsl r0, r1, #1
 ; ARM-ENABLE-NEXT:    bx lr
+; ARM-ENABLE-NEXT:  Lfunc_end3:
 ;
 ; ARM-DISABLE-LABEL: loopInfoSaveOutsideLoop:
-; ARM-DISABLE:       @ %bb.0: @ %entry
+; ARM-DISABLE:       Lfunc_begin3:
+; ARM-DISABLE-NEXT:  @ %bb.0: @ %entry
 ; ARM-DISABLE-NEXT:    push {r4, r7, lr}
 ; ARM-DISABLE-NEXT:    add r7, sp, #4
 ; ARM-DISABLE-NEXT:    cmp r0, #0
@@ -613,9 +640,11 @@ define i32 @loopInfoSaveOutsideLoop(i32 %cond, i32 %N) "frame-pointer"="all" {
 ; ARM-DISABLE-NEXT:  LBB3_4: @ %if.else
 ; ARM-DISABLE-NEXT:    lsl r0, r1, #1
 ; ARM-DISABLE-NEXT:    pop {r4, r7, pc}
+; ARM-DISABLE-NEXT:  Lfunc_end3:
 ;
 ; THUMB-ENABLE-LABEL: loopInfoSaveOutsideLoop:
-; THUMB-ENABLE:       @ %bb.0: @ %entry
+; THUMB-ENABLE:       Lfunc_begin3:
+; THUMB-ENABLE-NEXT:  @ %bb.0: @ %entry
 ; THUMB-ENABLE-NEXT:    cbz r0, LBB3_4
 ; THUMB-ENABLE-NEXT:  @ %bb.1: @ %for.preheader
 ; THUMB-ENABLE-NEXT:    push {r4, r7, lr}
@@ -642,9 +671,11 @@ define i32 @loopInfoSaveOutsideLoop(i32 %cond, i32 %N) "frame-pointer"="all" {
 ; THUMB-ENABLE-NEXT:  LBB3_4: @ %if.else
 ; THUMB-ENABLE-NEXT:    lsls r0, r1, #1
 ; THUMB-ENABLE-NEXT:    bx lr
+; THUMB-ENABLE-NEXT:  Lfunc_end3:
 ;
 ; THUMB-DISABLE-LABEL: loopInfoSaveOutsideLoop:
-; THUMB-DISABLE:       @ %bb.0: @ %entry
+; THUMB-DISABLE:       Lfunc_begin3:
+; THUMB-DISABLE-NEXT:  @ %bb.0: @ %entry
 ; THUMB-DISABLE-NEXT:    push {r4, r7, lr}
 ; THUMB-DISABLE-NEXT:    add r7, sp, #4
 ; THUMB-DISABLE-NEXT:    cbz r0, LBB3_4
@@ -671,6 +702,7 @@ define i32 @loopInfoSaveOutsideLoop(i32 %cond, i32 %N) "frame-pointer"="all" {
 ; THUMB-DISABLE-NEXT:  LBB3_4: @ %if.else
 ; THUMB-DISABLE-NEXT:    lsls r0, r1, #1
 ; THUMB-DISABLE-NEXT:    pop {r4, r7, pc}
+; THUMB-DISABLE-NEXT:  Lfunc_end3:
 entry:
   %tobool = icmp eq i32 %cond, 0
   br i1 %tobool, label %if.else, label %for.preheader
@@ -751,7 +783,8 @@ declare void @somethingElse(...)
 ; bx lr
 define i32 @loopInfoRestoreOutsideLoop(i32 %cond, i32 %N) "frame-pointer"="all" nounwind {
 ; ARM-ENABLE-LABEL: loopInfoRestoreOutsideLoop:
-; ARM-ENABLE:       @ %bb.0: @ %entry
+; ARM-ENABLE:       Lfunc_begin4:
+; ARM-ENABLE-NEXT:  @ %bb.0: @ %entry
 ; ARM-ENABLE-NEXT:    cmp r0, #0
 ; ARM-ENABLE-NEXT:    beq LBB4_4
 ; ARM-ENABLE-NEXT:  @ %bb.1: @ %if.then
@@ -776,9 +809,11 @@ define i32 @loopInfoRestoreOutsideLoop(i32 %cond, i32 %N) "frame-pointer"="all" 
 ; ARM-ENABLE-NEXT:  LBB4_4: @ %if.else
 ; ARM-ENABLE-NEXT:    lsl r0, r1, #1
 ; ARM-ENABLE-NEXT:    bx lr
+; ARM-ENABLE-NEXT:  Lfunc_end4:
 ;
 ; ARM-DISABLE-LABEL: loopInfoRestoreOutsideLoop:
-; ARM-DISABLE:       @ %bb.0: @ %entry
+; ARM-DISABLE:       Lfunc_begin4:
+; ARM-DISABLE-NEXT:  @ %bb.0: @ %entry
 ; ARM-DISABLE-NEXT:    push {r4, r7, lr}
 ; ARM-DISABLE-NEXT:    add r7, sp, #4
 ; ARM-DISABLE-NEXT:    cmp r0, #0
@@ -803,9 +838,11 @@ define i32 @loopInfoRestoreOutsideLoop(i32 %cond, i32 %N) "frame-pointer"="all" 
 ; ARM-DISABLE-NEXT:  LBB4_4: @ %if.else
 ; ARM-DISABLE-NEXT:    lsl r0, r1, #1
 ; ARM-DISABLE-NEXT:    pop {r4, r7, pc}
+; ARM-DISABLE-NEXT:  Lfunc_end4:
 ;
 ; THUMB-ENABLE-LABEL: loopInfoRestoreOutsideLoop:
-; THUMB-ENABLE:       @ %bb.0: @ %entry
+; THUMB-ENABLE:       Lfunc_begin4:
+; THUMB-ENABLE-NEXT:  @ %bb.0: @ %entry
 ; THUMB-ENABLE-NEXT:    cbz r0, LBB4_4
 ; THUMB-ENABLE-NEXT:  @ %bb.1: @ %if.then
 ; THUMB-ENABLE-NEXT:    push {r4, r7, lr}
@@ -829,9 +866,11 @@ define i32 @loopInfoRestoreOutsideLoop(i32 %cond, i32 %N) "frame-pointer"="all" 
 ; THUMB-ENABLE-NEXT:  LBB4_4: @ %if.else
 ; THUMB-ENABLE-NEXT:    lsls r0, r1, #1
 ; THUMB-ENABLE-NEXT:    bx lr
+; THUMB-ENABLE-NEXT:  Lfunc_end4:
 ;
 ; THUMB-DISABLE-LABEL: loopInfoRestoreOutsideLoop:
-; THUMB-DISABLE:       @ %bb.0: @ %entry
+; THUMB-DISABLE:       Lfunc_begin4:
+; THUMB-DISABLE-NEXT:  @ %bb.0: @ %entry
 ; THUMB-DISABLE-NEXT:    push {r4, r7, lr}
 ; THUMB-DISABLE-NEXT:    add r7, sp, #4
 ; THUMB-DISABLE-NEXT:    cbz r0, LBB4_4
@@ -855,6 +894,7 @@ define i32 @loopInfoRestoreOutsideLoop(i32 %cond, i32 %N) "frame-pointer"="all" 
 ; THUMB-DISABLE-NEXT:  LBB4_4: @ %if.else
 ; THUMB-DISABLE-NEXT:    lsls r0, r1, #1
 ; THUMB-DISABLE-NEXT:    pop {r4, r7, pc}
+; THUMB-DISABLE-NEXT:  Lfunc_end4:
 entry:
   %tobool = icmp eq i32 %cond, 0
   br i1 %tobool, label %if.else, label %if.then
@@ -901,24 +941,32 @@ define i32 @emptyFrame() {
 ; THUMB-NEXT:    movs r0, #0
 ; THUMB-NEXT:    bx lr
 ; ARM-ENABLE-LABEL: emptyFrame:
-; ARM-ENABLE:       @ %bb.0: @ %entry
+; ARM-ENABLE:       Lfunc_begin5:
+; ARM-ENABLE-NEXT:  @ %bb.0: @ %entry
 ; ARM-ENABLE-NEXT:    mov r0, #0
 ; ARM-ENABLE-NEXT:    bx lr
+; ARM-ENABLE-NEXT:  Lfunc_end5:
 ;
 ; ARM-DISABLE-LABEL: emptyFrame:
-; ARM-DISABLE:       @ %bb.0: @ %entry
+; ARM-DISABLE:       Lfunc_begin5:
+; ARM-DISABLE-NEXT:  @ %bb.0: @ %entry
 ; ARM-DISABLE-NEXT:    mov r0, #0
 ; ARM-DISABLE-NEXT:    bx lr
+; ARM-DISABLE-NEXT:  Lfunc_end5:
 ;
 ; THUMB-ENABLE-LABEL: emptyFrame:
-; THUMB-ENABLE:       @ %bb.0: @ %entry
+; THUMB-ENABLE:       Lfunc_begin5:
+; THUMB-ENABLE-NEXT:  @ %bb.0: @ %entry
 ; THUMB-ENABLE-NEXT:    movs r0, #0
 ; THUMB-ENABLE-NEXT:    bx lr
+; THUMB-ENABLE-NEXT:  Lfunc_end5:
 ;
 ; THUMB-DISABLE-LABEL: emptyFrame:
-; THUMB-DISABLE:       @ %bb.0: @ %entry
+; THUMB-DISABLE:       Lfunc_begin5:
+; THUMB-DISABLE-NEXT:  @ %bb.0: @ %entry
 ; THUMB-DISABLE-NEXT:    movs r0, #0
 ; THUMB-DISABLE-NEXT:    bx lr
+; THUMB-DISABLE-NEXT:  Lfunc_end5:
 entry:
   ret i32 0
 }
@@ -962,7 +1010,8 @@ entry:
 ; bx lr
 define i32 @inlineAsm(i32 %cond, i32 %N) "frame-pointer"="all" {
 ; ARM-ENABLE-LABEL: inlineAsm:
-; ARM-ENABLE:       @ %bb.0: @ %entry
+; ARM-ENABLE:       Lfunc_begin6:
+; ARM-ENABLE-NEXT:  @ %bb.0: @ %entry
 ; ARM-ENABLE-NEXT:    cmp r0, #0
 ; ARM-ENABLE-NEXT:    beq LBB6_4
 ; ARM-ENABLE-NEXT:  @ %bb.1: @ %for.preheader
@@ -988,9 +1037,11 @@ define i32 @inlineAsm(i32 %cond, i32 %N) "frame-pointer"="all" {
 ; ARM-ENABLE-NEXT:  LBB6_4: @ %if.else
 ; ARM-ENABLE-NEXT:    lsl r0, r1, #1
 ; ARM-ENABLE-NEXT:    bx lr
+; ARM-ENABLE-NEXT:  Lfunc_end6:
 ;
 ; ARM-DISABLE-LABEL: inlineAsm:
-; ARM-DISABLE:       @ %bb.0: @ %entry
+; ARM-DISABLE:       Lfunc_begin6:
+; ARM-DISABLE-NEXT:  @ %bb.0: @ %entry
 ; ARM-DISABLE-NEXT:    push {r4, r7, lr}
 ; ARM-DISABLE-NEXT:    add r7, sp, #4
 ; ARM-DISABLE-NEXT:    cmp r0, #0
@@ -1016,9 +1067,11 @@ define i32 @inlineAsm(i32 %cond, i32 %N) "frame-pointer"="all" {
 ; ARM-DISABLE-NEXT:  LBB6_4: @ %if.else
 ; ARM-DISABLE-NEXT:    lsl r0, r1, #1
 ; ARM-DISABLE-NEXT:    pop {r4, r7, pc}
+; ARM-DISABLE-NEXT:  Lfunc_end6:
 ;
 ; THUMB-ENABLE-LABEL: inlineAsm:
-; THUMB-ENABLE:       @ %bb.0: @ %entry
+; THUMB-ENABLE:       Lfunc_begin6:
+; THUMB-ENABLE-NEXT:  @ %bb.0: @ %entry
 ; THUMB-ENABLE-NEXT:    cbz r0, LBB6_4
 ; THUMB-ENABLE-NEXT:  @ %bb.1: @ %for.preheader
 ; THUMB-ENABLE-NEXT:    push {r4, r7, lr}
@@ -1043,9 +1096,11 @@ define i32 @inlineAsm(i32 %cond, i32 %N) "frame-pointer"="all" {
 ; THUMB-ENABLE-NEXT:  LBB6_4: @ %if.else
 ; THUMB-ENABLE-NEXT:    lsls r0, r1, #1
 ; THUMB-ENABLE-NEXT:    bx lr
+; THUMB-ENABLE-NEXT:  Lfunc_end6:
 ;
 ; THUMB-DISABLE-LABEL: inlineAsm:
-; THUMB-DISABLE:       @ %bb.0: @ %entry
+; THUMB-DISABLE:       Lfunc_begin6:
+; THUMB-DISABLE-NEXT:  @ %bb.0: @ %entry
 ; THUMB-DISABLE-NEXT:    push {r4, r7, lr}
 ; THUMB-DISABLE-NEXT:    add r7, sp, #4
 ; THUMB-DISABLE-NEXT:    cbz r0, LBB6_4
@@ -1070,6 +1125,7 @@ define i32 @inlineAsm(i32 %cond, i32 %N) "frame-pointer"="all" {
 ; THUMB-DISABLE-NEXT:  LBB6_4: @ %if.else
 ; THUMB-DISABLE-NEXT:    lsls r0, r1, #1
 ; THUMB-DISABLE-NEXT:    pop {r4, r7, pc}
+; THUMB-DISABLE-NEXT:  Lfunc_end6:
 entry:
   %tobool = icmp eq i32 %cond, 0
   br i1 %tobool, label %if.else, label %for.preheader
@@ -1140,7 +1196,8 @@ if.end:                                           ; preds = %for.body, %if.else
 ; pop {r7, pc}
 define i32 @callVariadicFunc(i32 %cond, i32 %N) "frame-pointer"="all" {
 ; ARM-ENABLE-LABEL: callVariadicFunc:
-; ARM-ENABLE:       @ %bb.0: @ %entry
+; ARM-ENABLE:       Lfunc_begin7:
+; ARM-ENABLE-NEXT:  @ %bb.0: @ %entry
 ; ARM-ENABLE-NEXT:    cmp r0, #0
 ; ARM-ENABLE-NEXT:    beq LBB7_2
 ; ARM-ENABLE-NEXT:  @ %bb.1: @ %if.then
@@ -1160,9 +1217,11 @@ define i32 @callVariadicFunc(i32 %cond, i32 %N) "frame-pointer"="all" {
 ; ARM-ENABLE-NEXT:  LBB7_2: @ %if.else
 ; ARM-ENABLE-NEXT:    lsl r0, r1, #1
 ; ARM-ENABLE-NEXT:    bx lr
+; ARM-ENABLE-NEXT:  Lfunc_end7:
 ;
 ; ARM-DISABLE-LABEL: callVariadicFunc:
-; ARM-DISABLE:       @ %bb.0: @ %entry
+; ARM-DISABLE:       Lfunc_begin7:
+; ARM-DISABLE-NEXT:  @ %bb.0: @ %entry
 ; ARM-DISABLE-NEXT:    push {r7, lr}
 ; ARM-DISABLE-NEXT:    mov r7, sp
 ; ARM-DISABLE-NEXT:    sub sp, sp, #12
@@ -1183,9 +1242,11 @@ define i32 @callVariadicFunc(i32 %cond, i32 %N) "frame-pointer"="all" {
 ; ARM-DISABLE-NEXT:    lsl r0, r1, #1
 ; ARM-DISABLE-NEXT:    mov sp, r7
 ; ARM-DISABLE-NEXT:    pop {r7, pc}
+; ARM-DISABLE-NEXT:  Lfunc_end7:
 ;
 ; THUMB-ENABLE-LABEL: callVariadicFunc:
-; THUMB-ENABLE:       @ %bb.0: @ %entry
+; THUMB-ENABLE:       Lfunc_begin7:
+; THUMB-ENABLE-NEXT:  @ %bb.0: @ %entry
 ; THUMB-ENABLE-NEXT:    cbz r0, LBB7_2
 ; THUMB-ENABLE-NEXT:  @ %bb.1: @ %if.then
 ; THUMB-ENABLE-NEXT:    push {r7, lr}
@@ -1203,9 +1264,11 @@ define i32 @callVariadicFunc(i32 %cond, i32 %N) "frame-pointer"="all" {
 ; THUMB-ENABLE-NEXT:  LBB7_2: @ %if.else
 ; THUMB-ENABLE-NEXT:    lsls r0, r1, #1
 ; THUMB-ENABLE-NEXT:    bx lr
+; THUMB-ENABLE-NEXT:  Lfunc_end7:
 ;
 ; THUMB-DISABLE-LABEL: callVariadicFunc:
-; THUMB-DISABLE:       @ %bb.0: @ %entry
+; THUMB-DISABLE:       Lfunc_begin7:
+; THUMB-DISABLE-NEXT:  @ %bb.0: @ %entry
 ; THUMB-DISABLE-NEXT:    push {r7, lr}
 ; THUMB-DISABLE-NEXT:    mov r7, sp
 ; THUMB-DISABLE-NEXT:    sub sp, #12
@@ -1224,6 +1287,7 @@ define i32 @callVariadicFunc(i32 %cond, i32 %N) "frame-pointer"="all" {
 ; THUMB-DISABLE-NEXT:    lsls r0, r1, #1
 ; THUMB-DISABLE-NEXT:    add sp, #12
 ; THUMB-DISABLE-NEXT:    pop {r7, pc}
+; THUMB-DISABLE-NEXT:  Lfunc_end7:
 entry:
   %tobool = icmp eq i32 %cond, 0
   br i1 %tobool, label %if.else, label %if.then
@@ -1272,7 +1336,8 @@ declare i32 @someVariadicFunc(i32, ...)
 ; pop
 define i32 @noreturn(i8 signext %bad_thing) "frame-pointer"="all" {
 ; ARM-ENABLE-LABEL: noreturn:
-; ARM-ENABLE:       @ %bb.0: @ %entry
+; ARM-ENABLE:       Lfunc_begin8:
+; ARM-ENABLE-NEXT:  @ %bb.0: @ %entry
 ; ARM-ENABLE-NEXT:    cmp r0, #0
 ; ARM-ENABLE-NEXT:    bne LBB8_2
 ; ARM-ENABLE-NEXT:  @ %bb.1: @ %if.end
@@ -1285,9 +1350,11 @@ define i32 @noreturn(i8 signext %bad_thing) "frame-pointer"="all" {
 ; ARM-ENABLE-NEXT:    mov r0, #1
 ; ARM-ENABLE-NEXT:    @ InlineAsm End
 ; ARM-ENABLE-NEXT:    bl _abort
+; ARM-ENABLE-NEXT:  Lfunc_end8:
 ;
 ; ARM-DISABLE-LABEL: noreturn:
-; ARM-DISABLE:       @ %bb.0: @ %entry
+; ARM-DISABLE:       Lfunc_begin8:
+; ARM-DISABLE-NEXT:  @ %bb.0: @ %entry
 ; ARM-DISABLE-NEXT:    push {r4, r7, lr}
 ; ARM-DISABLE-NEXT:    add r7, sp, #4
 ; ARM-DISABLE-NEXT:    cmp r0, #0
@@ -1300,9 +1367,11 @@ define i32 @noreturn(i8 signext %bad_thing) "frame-pointer"="all" {
 ; ARM-DISABLE-NEXT:    mov r0, #1
 ; ARM-DISABLE-NEXT:    @ InlineAsm End
 ; ARM-DISABLE-NEXT:    bl _abort
+; ARM-DISABLE-NEXT:  Lfunc_end8:
 ;
 ; THUMB-ENABLE-LABEL: noreturn:
-; THUMB-ENABLE:       @ %bb.0: @ %entry
+; THUMB-ENABLE:       Lfunc_begin8:
+; THUMB-ENABLE-NEXT:  @ %bb.0: @ %entry
 ; THUMB-ENABLE-NEXT:    cbnz r0, LBB8_2
 ; THUMB-ENABLE-NEXT:  @ %bb.1: @ %if.end
 ; THUMB-ENABLE-NEXT:    movs r0, #42
@@ -1314,9 +1383,11 @@ define i32 @noreturn(i8 signext %bad_thing) "frame-pointer"="all" {
 ; THUMB-ENABLE-NEXT:    mov.w r0, #1
 ; THUMB-ENABLE-NEXT:    @ InlineAsm End
 ; THUMB-ENABLE-NEXT:    bl _abort
+; THUMB-ENABLE-NEXT:  Lfunc_end8:
 ;
 ; THUMB-DISABLE-LABEL: noreturn:
-; THUMB-DISABLE:       @ %bb.0: @ %entry
+; THUMB-DISABLE:       Lfunc_begin8:
+; THUMB-DISABLE-NEXT:  @ %bb.0: @ %entry
 ; THUMB-DISABLE-NEXT:    push {r4, r7, lr}
 ; THUMB-DISABLE-NEXT:    add r7, sp, #4
 ; THUMB-DISABLE-NEXT:    cbnz r0, LBB8_2
@@ -1328,6 +1399,7 @@ define i32 @noreturn(i8 signext %bad_thing) "frame-pointer"="all" {
 ; THUMB-DISABLE-NEXT:    mov.w r0, #1
 ; THUMB-DISABLE-NEXT:    @ InlineAsm End
 ; THUMB-DISABLE-NEXT:    bl _abort
+; THUMB-DISABLE-NEXT:  Lfunc_end8:
 entry:
   %tobool = icmp eq i8 %bad_thing, 0
   br i1 %tobool, label %if.end, label %if.abort
@@ -1400,7 +1472,8 @@ define void @infiniteloop() "frame-pointer"="all" {
 ; THUMB-NEXT:    mov sp, r4
 ; THUMB-NEXT:    pop {r4, r5, r7, pc}
 ; ARM-ENABLE-LABEL: infiniteloop:
-; ARM-ENABLE:       @ %bb.0: @ %entry
+; ARM-ENABLE:       Lfunc_begin9:
+; ARM-ENABLE-NEXT:  @ %bb.0: @ %entry
 ; ARM-ENABLE-NEXT:    push {r4, r5, r7, lr}
 ; ARM-ENABLE-NEXT:    add r7, sp, #8
 ; ARM-ENABLE-NEXT:    mov r0, #0
@@ -1420,9 +1493,11 @@ define void @infiniteloop() "frame-pointer"="all" {
 ; ARM-ENABLE-NEXT:  LBB9_3: @ %if.end
 ; ARM-ENABLE-NEXT:    sub sp, r7, #8
 ; ARM-ENABLE-NEXT:    pop {r4, r5, r7, pc}
+; ARM-ENABLE-NEXT:  Lfunc_end9:
 ;
 ; ARM-DISABLE-LABEL: infiniteloop:
-; ARM-DISABLE:       @ %bb.0: @ %entry
+; ARM-DISABLE:       Lfunc_begin9:
+; ARM-DISABLE-NEXT:  @ %bb.0: @ %entry
 ; ARM-DISABLE-NEXT:    push {r4, r5, r7, lr}
 ; ARM-DISABLE-NEXT:    add r7, sp, #8
 ; ARM-DISABLE-NEXT:    mov r0, #0
@@ -1442,9 +1517,11 @@ define void @infiniteloop() "frame-pointer"="all" {
 ; ARM-DISABLE-NEXT:  LBB9_3: @ %if.end
 ; ARM-DISABLE-NEXT:    sub sp, r7, #8
 ; ARM-DISABLE-NEXT:    pop {r4, r5, r7, pc}
+; ARM-DISABLE-NEXT:  Lfunc_end9:
 ;
 ; THUMB-ENABLE-LABEL: infiniteloop:
-; THUMB-ENABLE:       @ %bb.0: @ %entry
+; THUMB-ENABLE:       Lfunc_begin9:
+; THUMB-ENABLE-NEXT:  @ %bb.0: @ %entry
 ; THUMB-ENABLE-NEXT:    push {r4, r5, r7, lr}
 ; THUMB-ENABLE-NEXT:    add r7, sp, #8
 ; THUMB-ENABLE-NEXT:    movs r0, #0
@@ -1465,9 +1542,11 @@ define void @infiniteloop() "frame-pointer"="all" {
 ; THUMB-ENABLE-NEXT:    sub.w r4, r7, #8
 ; THUMB-ENABLE-NEXT:    mov sp, r4
 ; THUMB-ENABLE-NEXT:    pop {r4, r5, r7, pc}
+; THUMB-ENABLE-NEXT:  Lfunc_end9:
 ;
 ; THUMB-DISABLE-LABEL: infiniteloop:
-; THUMB-DISABLE:       @ %bb.0: @ %entry
+; THUMB-DISABLE:       Lfunc_begin9:
+; THUMB-DISABLE-NEXT:  @ %bb.0: @ %entry
 ; THUMB-DISABLE-NEXT:    push {r4, r5, r7, lr}
 ; THUMB-DISABLE-NEXT:    add r7, sp, #8
 ; THUMB-DISABLE-NEXT:    movs r0, #0
@@ -1488,6 +1567,7 @@ define void @infiniteloop() "frame-pointer"="all" {
 ; THUMB-DISABLE-NEXT:    sub.w r4, r7, #8
 ; THUMB-DISABLE-NEXT:    mov sp, r4
 ; THUMB-DISABLE-NEXT:    pop {r4, r5, r7, pc}
+; THUMB-DISABLE-NEXT:  Lfunc_end9:
 entry:
   br i1 undef, label %if.then, label %if.end
 
@@ -1510,6 +1590,119 @@ if.end:
 ; infiniteloop2
 ; pop
 define void @infiniteloop2() "frame-pointer"="all" {
+; ARM-ENABLE-LABEL: infiniteloop2:
+; ARM-ENABLE:       Lfunc_begin10:
+; ARM-ENABLE-NEXT:  @ %bb.0: @ %entry
+; ARM-ENABLE-NEXT:    push {r4, r5, r7, lr}
+; ARM-ENABLE-NEXT:    add r7, sp, #8
+; ARM-ENABLE-NEXT:    mov r0, #0
+; ARM-ENABLE-NEXT:    cmp r0, #0
+; ARM-ENABLE-NEXT:    bne LBB10_3
+; ARM-ENABLE-NEXT:  @ %bb.1: @ %if.then
+; ARM-ENABLE-NEXT:    sub r1, sp, #16
+; ARM-ENABLE-NEXT:    mov sp, r1
+; ARM-ENABLE-NEXT:    @ InlineAsm Start
+; ARM-ENABLE-NEXT:    mov r2, #0
+; ARM-ENABLE-NEXT:    @ InlineAsm End
+; ARM-ENABLE-NEXT:  LBB10_2: @ %for.body
+; ARM-ENABLE-NEXT:    @ =>This Inner Loop Header: Depth=1
+; ARM-ENABLE-NEXT:    add r0, r2, r0
+; ARM-ENABLE-NEXT:    str r0, [r1]
+; ARM-ENABLE-NEXT:    @ InlineAsm Start
+; ARM-ENABLE-NEXT:    nop
+; ARM-ENABLE-NEXT:    @ InlineAsm End
+; ARM-ENABLE-NEXT:    mov r0, #1
+; ARM-ENABLE-NEXT:    b LBB10_2
+; ARM-ENABLE-NEXT:  LBB10_3: @ %if.end
+; ARM-ENABLE-NEXT:    sub sp, r7, #8
+; ARM-ENABLE-NEXT:    pop {r4, r5, r7, pc}
+; ARM-ENABLE-NEXT:  Lfunc_end10:
+;
+; ARM-DISABLE-LABEL: infiniteloop2:
+; ARM-DISABLE:       Lfunc_begin10:
+; ARM-DISABLE-NEXT:  @ %bb.0: @ %entry
+; ARM-DISABLE-NEXT:    push {r4, r5, r7, lr}
+; ARM-DISABLE-NEXT:    add r7, sp, #8
+; ARM-DISABLE-NEXT:    mov r0, #0
+; ARM-DISABLE-NEXT:    cmp r0, #0
+; ARM-DISABLE-NEXT:    bne LBB10_3
+; ARM-DISABLE-NEXT:  @ %bb.1: @ %if.then
+; ARM-DISABLE-NEXT:    sub r1, sp, #16
+; ARM-DISABLE-NEXT:    mov sp, r1
+; ARM-DISABLE-NEXT:    @ InlineAsm Start
+; ARM-DISABLE-NEXT:    mov r2, #0
+; ARM-DISABLE-NEXT:    @ InlineAsm End
+; ARM-DISABLE-NEXT:  LBB10_2: @ %for.body
+; ARM-DISABLE-NEXT:    @ =>This Inner Loop Header: Depth=1
+; ARM-DISABLE-NEXT:    add r0, r2, r0
+; ARM-DISABLE-NEXT:    str r0, [r1]
+; ARM-DISABLE-NEXT:    @ InlineAsm Start
+; ARM-DISABLE-NEXT:    nop
+; ARM-DISABLE-NEXT:    @ InlineAsm End
+; ARM-DISABLE-NEXT:    mov r0, #1
+; ARM-DISABLE-NEXT:    b LBB10_2
+; ARM-DISABLE-NEXT:  LBB10_3: @ %if.end
+; ARM-DISABLE-NEXT:    sub sp, r7, #8
+; ARM-DISABLE-NEXT:    pop {r4, r5, r7, pc}
+; ARM-DISABLE-NEXT:  Lfunc_end10:
+;
+; THUMB-ENABLE-LABEL: infiniteloop2:
+; THUMB-ENABLE:       Lfunc_begin10:
+; THUMB-ENABLE-NEXT:  @ %bb.0: @ %entry
+; THUMB-ENABLE-NEXT:    push {r4, r5, r7, lr}
+; THUMB-ENABLE-NEXT:    add r7, sp, #8
+; THUMB-ENABLE-NEXT:    movs r0, #0
+; THUMB-ENABLE-NEXT:    cbnz r0, LBB10_3
+; THUMB-ENABLE-NEXT:  @ %bb.1: @ %if.then
+; THUMB-ENABLE-NEXT:    sub.w r0, sp, #16
+; THUMB-ENABLE-NEXT:    mov sp, r0
+; THUMB-ENABLE-NEXT:    movs r1, #0
+; THUMB-ENABLE-NEXT:    @ InlineAsm Start
+; THUMB-ENABLE-NEXT:    mov.w r2, #0
+; THUMB-ENABLE-NEXT:    @ InlineAsm End
+; THUMB-ENABLE-NEXT:  LBB10_2: @ %for.body
+; THUMB-ENABLE-NEXT:    @ =>This Inner Loop Header: Depth=1
+; THUMB-ENABLE-NEXT:    add r1, r2
+; THUMB-ENABLE-NEXT:    str r1, [r0]
+; THUMB-ENABLE-NEXT:    @ InlineAsm Start
+; THUMB-ENABLE-NEXT:    nop
+; THUMB-ENABLE-NEXT:    @ InlineAsm End
+; THUMB-ENABLE-NEXT:    movs r1, #1
+; THUMB-ENABLE-NEXT:    b LBB10_2
+; THUMB-ENABLE-NEXT:  LBB10_3: @ %if.end
+; THUMB-ENABLE-NEXT:    sub.w r4, r7, #8
+; THUMB-ENABLE-NEXT:    mov sp, r4
+; THUMB-ENABLE-NEXT:    pop {r4, r5, r7, pc}
+; THUMB-ENABLE-NEXT:  Lfunc_end10:
+;
+; THUMB-DISABLE-LABEL: infiniteloop2:
+; THUMB-DISABLE:       Lfunc_begin10:
+; THUMB-DISABLE-NEXT:  @ %bb.0: @ %entry
+; THUMB-DISABLE-NEXT:    push {r4, r5, r7, lr}
+; THUMB-DISABLE-NEXT:    add r7, sp, #8
+; THUMB-DISABLE-NEXT:    movs r0, #0
+; THUMB-DISABLE-NEXT:    cbnz r0, LBB10_3
+; THUMB-DISABLE-NEXT:  @ %bb.1: @ %if.then
+; THUMB-DISABLE-NEXT:    sub.w r0, sp, #16
+; THUMB-DISABLE-NEXT:    mov sp, r0
+; THUMB-DISABLE-NEXT:    movs r1, #0
+; THUMB-DISABLE-NEXT:    @ InlineAsm Start
+; THUMB-DISABLE-NEXT:    mov.w r2, #0
+; THUMB-DISABLE-NEXT:    @ InlineAsm End
+; THUMB-DISABLE-NEXT:  LBB10_2: @ %for.body
+; THUMB-DISABLE-NEXT:    @ =>This Inner Loop Header: Depth=1
+; THUMB-DISABLE-NEXT:    add r1, r2
+; THUMB-DISABLE-NEXT:    str r1, [r0]
+; THUMB-DISABLE-NEXT:    @ InlineAsm Start
+; THUMB-DISABLE-NEXT:    nop
+; THUMB-DISABLE-NEXT:    @ InlineAsm End
+; THUMB-DISABLE-NEXT:    movs r1, #1
+; THUMB-DISABLE-NEXT:    b LBB10_2
+; THUMB-DISABLE-NEXT:  LBB10_3: @ %if.end
+; THUMB-DISABLE-NEXT:    sub.w r4, r7, #8
+; THUMB-DISABLE-NEXT:    mov sp, r4
+; THUMB-DISABLE-NEXT:    pop {r4, r5, r7, pc}
+; THUMB-DISABLE-NEXT:  Lfunc_end10:
 entry:
   br i1 undef, label %if.then, label %if.end
 
@@ -1594,7 +1787,8 @@ define void @infiniteloop3() "frame-pointer"="all" {
 ; THUMB-NEXT:  LBB11_5: @ %end
 ; THUMB-NEXT:    bx lr
 ; ARM-ENABLE-LABEL: infiniteloop3:
-; ARM-ENABLE:       @ %bb.0: @ %entry
+; ARM-ENABLE:       Lfunc_begin11:
+; ARM-ENABLE-NEXT:  @ %bb.0: @ %entry
 ; ARM-ENABLE-NEXT:    mov r0, #0
 ; ARM-ENABLE-NEXT:    cmp r0, #0
 ; ARM-ENABLE-NEXT:    bne LBB11_5
@@ -1619,9 +1813,11 @@ define void @infiniteloop3() "frame-pointer"="all" {
 ; ARM-ENABLE-NEXT:    b LBB11_3
 ; ARM-ENABLE-NEXT:  LBB11_5: @ %end
 ; ARM-ENABLE-NEXT:    bx lr
+; ARM-ENABLE-NEXT:  Lfunc_end11:
 ;
 ; ARM-DISABLE-LABEL: infiniteloop3:
-; ARM-DISABLE:       @ %bb.0: @ %entry
+; ARM-DISABLE:       Lfunc_begin11:
+; ARM-DISABLE-NEXT:  @ %bb.0: @ %entry
 ; ARM-DISABLE-NEXT:    mov r0, #0
 ; ARM-DISABLE-NEXT:    cmp r0, #0
 ; ARM-DISABLE-NEXT:    bne LBB11_5
@@ -1646,9 +1842,11 @@ define void @infiniteloop3() "frame-pointer"="all" {
 ; ARM-DISABLE-NEXT:    b LBB11_3
 ; ARM-DISABLE-NEXT:  LBB11_5: @ %end
 ; ARM-DISABLE-NEXT:    bx lr
+; ARM-DISABLE-NEXT:  Lfunc_end11:
 ;
 ; THUMB-ENABLE-LABEL: infiniteloop3:
-; THUMB-ENABLE:       @ %bb.0: @ %entry
+; THUMB-ENABLE:       Lfunc_begin11:
+; THUMB-ENABLE-NEXT:  @ %bb.0: @ %entry
 ; THUMB-ENABLE-NEXT:    movs r0, #0
 ; THUMB-ENABLE-NEXT:    cbnz r0, LBB11_5
 ; THUMB-ENABLE-NEXT:  @ %bb.1: @ %loop2a.preheader
@@ -1672,9 +1870,11 @@ define void @infiniteloop3() "frame-pointer"="all" {
 ; THUMB-ENABLE-NEXT:    b LBB11_3
 ; THUMB-ENABLE-NEXT:  LBB11_5: @ %end
 ; THUMB-ENABLE-NEXT:    bx lr
+; THUMB-ENABLE-NEXT:  Lfunc_end11:
 ;
 ; THUMB-DISABLE-LABEL: infiniteloop3:
-; THUMB-DISABLE:       @ %bb.0: @ %entry
+; THUMB-DISABLE:       Lfunc_begin11:
+; THUMB-DISABLE-NEXT:  @ %bb.0: @ %entry
 ; THUMB-DISABLE-NEXT:    movs r0, #0
 ; THUMB-DISABLE-NEXT:    cbnz r0, LBB11_5
 ; THUMB-DISABLE-NEXT:  @ %bb.1: @ %loop2a.preheader
@@ -1698,6 +1898,7 @@ define void @infiniteloop3() "frame-pointer"="all" {
 ; THUMB-DISABLE-NEXT:    b LBB11_3
 ; THUMB-DISABLE-NEXT:  LBB11_5: @ %end
 ; THUMB-DISABLE-NEXT:    bx lr
+; THUMB-DISABLE-NEXT:  Lfunc_end11:
 entry:
   br i1 undef, label %loop2a, label %body
 
@@ -1757,24 +1958,26 @@ declare double @llvm.pow.f64(double, double)
 ; bl
 define float @debug_info(float %gamma, float %slopeLimit, i1 %or.cond, double %tmp) "frame-pointer"="all" {
 ; ARM-ENABLE-LABEL: debug_info:
-; ARM-ENABLE:       @ %bb.0: @ %bb
+; ARM-ENABLE:       Lfunc_begin12:
+; ARM-ENABLE-NEXT:  @ %bb.0: @ %bb
+; ARM-ENABLE-NEXT:    tst r2, #1
+; ARM-ENABLE-NEXT:    beq LBB12_2
+; ARM-ENABLE-NEXT:  @ %bb.1: @ %bb3
 ; ARM-ENABLE-NEXT:    push {r4, r7, lr}
 ; ARM-ENABLE-NEXT:    add r7, sp, #4
 ; ARM-ENABLE-NEXT:    sub r4, sp, #16
 ; ARM-ENABLE-NEXT:    bfc r4, #0, #4
 ; ARM-ENABLE-NEXT:    mov sp, r4
-; ARM-ENABLE-NEXT:    tst r2, #1
-; ARM-ENABLE-NEXT:    vst1.64 {d8, d9}, [r4:128]
-; ARM-ENABLE-NEXT:    beq LBB12_2
-; ARM-ENABLE-NEXT:  @ %bb.1: @ %bb3
 ; ARM-ENABLE-NEXT:    ldr r1, [r7, #8]
+; ARM-ENABLE-NEXT:    mov r2, r3
+; ARM-ENABLE-NEXT:    vst1.64 {d8, d9}, [r4:128]
 ; ARM-ENABLE-NEXT:    vmov s16, r0
 ; ARM-ENABLE-NEXT:    mov r0, r3
-; ARM-ENABLE-NEXT:    mov r2, r3
 ; ARM-ENABLE-NEXT:    vmov d9, r3, r1
 ; ARM-ENABLE-NEXT:    mov r3, r1
 ; ARM-ENABLE-NEXT:    bl _pow
 ; ARM-ENABLE-NEXT:    vmov.f32 s0, #1.000000e+00
+; ARM-ENABLE-NEXT:    mov r4, sp
 ; ARM-ENABLE-NEXT:    vmov.f64 d16, #1.000000e+00
 ; ARM-ENABLE-NEXT:    vadd.f64 d16, d9, d16
 ; ARM-ENABLE-NEXT:    vcmp.f32 s16, s0
@@ -1787,24 +1990,26 @@ define float @debug_info(float %gamma, float %slopeLimit, i1 %or.cond, double %t
 ; ARM-ENABLE-NEXT:    vmrs APSR_nzcv, fpscr
 ; ARM-ENABLE-NEXT:    vmovne.f64 d9, d17
 ; ARM-ENABLE-NEXT:    vcvt.f32.f64 s0, d9
-; ARM-ENABLE-NEXT:    b LBB12_3
+; ARM-ENABLE-NEXT:    vld1.64 {d8, d9}, [r4:128]
+; ARM-ENABLE-NEXT:    sub sp, r7, #4
+; ARM-ENABLE-NEXT:    pop {r4, r7, lr}
+; ARM-ENABLE-NEXT:    vmov r0, s0
+; ARM-ENABLE-NEXT:    bx lr
 ; ARM-ENABLE-NEXT:  LBB12_2:
 ; ARM-ENABLE-NEXT:    vldr s0, LCPI12_0
-; ARM-ENABLE-NEXT:  LBB12_3: @ %bb13
-; ARM-ENABLE-NEXT:    mov r4, sp
-; ARM-ENABLE-NEXT:    vld1.64 {d8, d9}, [r4:128]
 ; ARM-ENABLE-NEXT:    vmov r0, s0
-; ARM-ENABLE-NEXT:    sub sp, r7, #4
-; ARM-ENABLE-NEXT:    pop {r4, r7, pc}
+; ARM-ENABLE-NEXT:    bx lr
 ; ARM-ENABLE-NEXT:    .p2align 2
-; ARM-ENABLE-NEXT:  @ %bb.4:
+; ARM-ENABLE-NEXT:  @ %bb.3:
 ; ARM-ENABLE-NEXT:    .data_region
 ; ARM-ENABLE-NEXT:  LCPI12_0:
 ; ARM-ENABLE-NEXT:    .long 0x00000000 @ float 0
 ; ARM-ENABLE-NEXT:    .end_data_region
+; ARM-ENABLE-NEXT:  Lfunc_end12:
 ;
 ; ARM-DISABLE-LABEL: debug_info:
-; ARM-DISABLE:       @ %bb.0: @ %bb
+; ARM-DISABLE:       Lfunc_begin12:
+; ARM-DISABLE-NEXT:  @ %bb.0: @ %bb
 ; ARM-DISABLE-NEXT:    push {r4, r7, lr}
 ; ARM-DISABLE-NEXT:    add r7, sp, #4
 ; ARM-DISABLE-NEXT:    sub r4, sp, #16
@@ -1849,26 +2054,29 @@ define float @debug_info(float %gamma, float %slopeLimit, i1 %or.cond, double %t
 ; ARM-DISABLE-NEXT:  LCPI12_0:
 ; ARM-DISABLE-NEXT:    .long 0x00000000 @ float 0
 ; ARM-DISABLE-NEXT:    .end_data_region
+; ARM-DISABLE-NEXT:  Lfunc_end12:
 ;
 ; THUMB-ENABLE-LABEL: debug_info:
-; THUMB-ENABLE:       @ %bb.0: @ %bb
+; THUMB-ENABLE:       Lfunc_begin12:
+; THUMB-ENABLE-NEXT:  @ %bb.0: @ %bb
+; THUMB-ENABLE-NEXT:    lsls r1, r2, #31
+; THUMB-ENABLE-NEXT:    beq LBB12_2
+; THUMB-ENABLE-NEXT:  @ %bb.1: @ %bb3
 ; THUMB-ENABLE-NEXT:    push {r4, r7, lr}
 ; THUMB-ENABLE-NEXT:    add r7, sp, #4
 ; THUMB-ENABLE-NEXT:    sub.w r4, sp, #16
 ; THUMB-ENABLE-NEXT:    bfc r4, #0, #4
 ; THUMB-ENABLE-NEXT:    mov sp, r4
-; THUMB-ENABLE-NEXT:    lsls r1, r2, #31
-; THUMB-ENABLE-NEXT:    vst1.64 {d8, d9}, [r4:128]
-; THUMB-ENABLE-NEXT:    beq LBB12_2
-; THUMB-ENABLE-NEXT:  @ %bb.1: @ %bb3
 ; THUMB-ENABLE-NEXT:    ldr r1, [r7, #8]
+; THUMB-ENABLE-NEXT:    mov r2, r3
+; THUMB-ENABLE-NEXT:    vst1.64 {d8, d9}, [r4:128]
 ; THUMB-ENABLE-NEXT:    vmov s16, r0
 ; THUMB-ENABLE-NEXT:    mov r0, r3
-; THUMB-ENABLE-NEXT:    mov r2, r3
 ; THUMB-ENABLE-NEXT:    vmov d9, r3, r1
 ; THUMB-ENABLE-NEXT:    mov r3, r1
 ; THUMB-ENABLE-NEXT:    bl _pow
 ; THUMB-ENABLE-NEXT:    vmov.f32 s0, #1.000000e+00
+; THUMB-ENABLE-NEXT:    mov r4, sp
 ; THUMB-ENABLE-NEXT:    vmov.f64 d16, #1.000000e+00
 ; THUMB-ENABLE-NEXT:    vmov.f64 d18, d9
 ; THUMB-ENABLE-NEXT:    vcmp.f32 s16, s0
@@ -1883,25 +2091,27 @@ define float @debug_info(float %gamma, float %slopeLimit, i1 %or.cond, double %t
 ; THUMB-ENABLE-NEXT:    it ne
 ; THUMB-ENABLE-NEXT:    vmovne.f64 d9, d17
 ; THUMB-ENABLE-NEXT:    vcvt.f32.f64 s0, d9
-; THUMB-ENABLE-NEXT:    b LBB12_3
-; THUMB-ENABLE-NEXT:  LBB12_2:
-; THUMB-ENABLE-NEXT:    vldr s0, LCPI12_0
-; THUMB-ENABLE-NEXT:  LBB12_3: @ %bb13
-; THUMB-ENABLE-NEXT:    mov r4, sp
 ; THUMB-ENABLE-NEXT:    vld1.64 {d8, d9}, [r4:128]
 ; THUMB-ENABLE-NEXT:    subs r4, r7, #4
-; THUMB-ENABLE-NEXT:    vmov r0, s0
 ; THUMB-ENABLE-NEXT:    mov sp, r4
-; THUMB-ENABLE-NEXT:    pop {r4, r7, pc}
+; THUMB-ENABLE-NEXT:    pop.w {r4, r7, lr}
+; THUMB-ENABLE-NEXT:    vmov r0, s0
+; THUMB-ENABLE-NEXT:    bx lr
+; THUMB-ENABLE-NEXT:  LBB12_2:
+; THUMB-ENABLE-NEXT:    vldr s0, LCPI12_0
+; THUMB-ENABLE-NEXT:    vmov r0, s0
+; THUMB-ENABLE-NEXT:    bx lr
 ; THUMB-ENABLE-NEXT:    .p2align 2
-; THUMB-ENABLE-NEXT:  @ %bb.4:
+; THUMB-ENABLE-NEXT:  @ %bb.3:
 ; THUMB-ENABLE-NEXT:    .data_region
 ; THUMB-ENABLE-NEXT:  LCPI12_0:
 ; THUMB-ENABLE-NEXT:    .long 0x00000000 @ float 0
 ; THUMB-ENABLE-NEXT:    .end_data_region
+; THUMB-ENABLE-NEXT:  Lfunc_end12:
 ;
 ; THUMB-DISABLE-LABEL: debug_info:
-; THUMB-DISABLE:       @ %bb.0: @ %bb
+; THUMB-DISABLE:       Lfunc_begin12:
+; THUMB-DISABLE-NEXT:  @ %bb.0: @ %bb
 ; THUMB-DISABLE-NEXT:    push {r4, r7, lr}
 ; THUMB-DISABLE-NEXT:    add r7, sp, #4
 ; THUMB-DISABLE-NEXT:    sub.w r4, sp, #16
@@ -1949,6 +2159,7 @@ define float @debug_info(float %gamma, float %slopeLimit, i1 %or.cond, double %t
 ; THUMB-DISABLE-NEXT:  LCPI12_0:
 ; THUMB-DISABLE-NEXT:    .long 0x00000000 @ float 0
 ; THUMB-DISABLE-NEXT:    .end_data_region
+; THUMB-DISABLE-NEXT:  Lfunc_end12:
 bb:
   br i1 %or.cond, label %bb3, label %bb13
 

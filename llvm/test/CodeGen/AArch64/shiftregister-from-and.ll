@@ -21,7 +21,7 @@ define i64 @and_shiftedreg_from_and(i64 %a, i64 %b) {
 define i64 @bic_shiftedreg_from_and(i64 %a, i64 %b) {
 ; CHECK-LABEL: bic_shiftedreg_from_and:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #16777215
+; CHECK-NEXT:    mov w8, #16777215 // =0xffffff
 ; CHECK-NEXT:    orn x8, x8, x0, asr #23
 ; CHECK-NEXT:    and x0, x1, x8
 ; CHECK-NEXT:    ret
@@ -67,7 +67,7 @@ define i64 @eor_shiftedreg_from_and(i64 %a, i64 %b) {
 define i64 @mvn_shiftedreg_from_and(i64 %a) {
 ; CHECK-LABEL: mvn_shiftedreg_from_and:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #9007199254740991
+; CHECK-NEXT:    mov x8, #9007199254740991 // =0x1fffffffffffff
 ; CHECK-NEXT:    orn x0, x8, x0, lsl #36
 ; CHECK-NEXT:    ret
   %shl = shl i64 %a, 36
@@ -157,7 +157,7 @@ define <2 x i32> @shiftedreg_from_and_negative_type(<2 x i32> %a, <2 x i32> %b) 
 ; CHECK-LABEL: shiftedreg_from_and_negative_type:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    shl v0.2s, v0.2s, #2
-; CHECK-NEXT:    bic v0.2s, #31
+; CHECK-NEXT:    bic v0.2s, #28
 ; CHECK-NEXT:    sub v0.2s, v1.2s, v0.2s
 ; CHECK-NEXT:    ret
   %shl = shl <2 x i32> %a, <i32 2, i32 2>
@@ -205,7 +205,7 @@ define i32 @shiftedreg_from_and_negative_oneuse2(i32 %a, i32 %b) {
 define i32 @shiftedreg_from_and_negative_andc1(i32 %a, i32 %b) {
 ; CHECK-LABEL: shiftedreg_from_and_negative_andc1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #26215
+; CHECK-NEXT:    mov w8, #26215 // =0x6667
 ; CHECK-NEXT:    movk w8, #65510, lsl #16
 ; CHECK-NEXT:    and w8, w8, w0, asr #23
 ; CHECK-NEXT:    add w0, w8, w1
@@ -221,7 +221,7 @@ define i32 @shiftedreg_from_and_negative_andc1(i32 %a, i32 %b) {
 define i32 @shiftedreg_from_and_negative_andc2(i32 %a, i32 %b) {
 ; CHECK-LABEL: shiftedreg_from_and_negative_andc2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #-285212672
+; CHECK-NEXT:    mov w8, #-285212672 // =0xef000000
 ; CHECK-NEXT:    and w8, w8, w0, asr #23
 ; CHECK-NEXT:    add w0, w8, w1
 ; CHECK-NEXT:    ret

@@ -19,6 +19,7 @@
 #include <initializer_list>
 #include <iterator>
 #include <ranges>
+#include "test_macros.h"
 
 struct Foo {
   int val;
@@ -69,10 +70,13 @@ constexpr bool test_all() {
   Bar c{Foo{3}};
 
   Foo x{2};
-  size_t count = 1;
+  std::size_t count = 1;
 
   test(std::ranges::any_of, in, &Foo::unary_pred, &Bar::val);
   test(std::ranges::all_of, in, &Foo::unary_pred, &Bar::val);
+#if TEST_STD_VER >= 23
+  test(std::ranges::ends_with, in, in2, &Foo::binary_pred, &Bar::val, &Bar::val);
+#endif
   test(std::ranges::none_of, in, &Foo::unary_pred, &Bar::val);
   test(std::ranges::find, in, x, &Bar::val);
   test(std::ranges::find_if, in, &Foo::unary_pred, &Bar::val);
@@ -143,6 +147,9 @@ constexpr bool test_all() {
   test(std::ranges::partition_copy, in, out, out2, &Foo::unary_pred, &Bar::val);
   test(std::ranges::partial_sort_copy, in, in2, &Foo::binary_pred, &Bar::val, &Bar::val);
   test(std::ranges::merge, in, in2, out, &Foo::binary_pred, &Bar::val, &Bar::val);
+#if TEST_STD_VER > 20
+  test(std::ranges::starts_with, in, in2, &Foo::binary_pred, &Bar::val, &Bar::val);
+#endif
   test(std::ranges::set_difference, in, in2, out, &Foo::binary_pred, &Bar::val, &Bar::val);
   test(std::ranges::set_intersection, in, in2, out, &Foo::binary_pred, &Bar::val, &Bar::val);
   test(std::ranges::set_symmetric_difference, in, in2, out, &Foo::binary_pred, &Bar::val, &Bar::val);

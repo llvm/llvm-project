@@ -344,6 +344,16 @@ void __ompt_lw_taskteam_unlink(kmp_info_t *thr) {
 // task support
 //----------------------------------------------------------
 
+ompt_data_t *__ompt_get_task_data() {
+  kmp_info_t *thr = ompt_get_thread();
+  ompt_data_t *task_data = thr ? OMPT_CUR_TASK_DATA(thr) : NULL;
+  return task_data;
+}
+
+ompt_data_t *__ompt_get_target_task_data() {
+  return &__kmp_threads[__kmp_get_gtid()]->th.ompt_thread_info.target_task_data;
+}
+
 int __ompt_get_task_info_internal(int ancestor_level, int *type,
                                   ompt_data_t **task_data,
                                   ompt_frame_t **task_frame,
@@ -453,6 +463,7 @@ int __ompt_get_task_info_internal(int ancestor_level, int *type,
 }
 
 int __ompt_get_task_memory_internal(void **addr, size_t *size, int blocknum) {
+  *size = 0;
   if (blocknum != 0)
     return 0; // support only a single block
 
@@ -461,27 +472,13 @@ int __ompt_get_task_memory_internal(void **addr, size_t *size, int blocknum) {
     return 0;
 
   kmp_taskdata_t *taskdata = thr->th.th_current_task;
-  kmp_task_t *task = KMP_TASKDATA_TO_TASK(taskdata);
 
   if (taskdata->td_flags.tasktype != TASK_EXPLICIT)
     return 0; // support only explicit task
 
-  void *ret_addr;
-  int64_t ret_size = taskdata->td_size_alloc - sizeof(kmp_taskdata_t);
-
-  // kmp_task_t->data1 is an optional member
-  if (taskdata->td_flags.destructors_thunk)
-    ret_addr = &task->data1 + 1;
-  else
-    ret_addr = &task->part_id + 1;
-
-  ret_size -= (char *)(ret_addr) - (char *)(task);
-  if (ret_size < 0)
-    return 0;
-
-  *addr = ret_addr;
-  *size = (size_t)ret_size;
-  return 1;
+  *addr = taskdata;
+  *size = taskdata->td_size_alloc;
+  return 0;
 }
 
 //----------------------------------------------------------

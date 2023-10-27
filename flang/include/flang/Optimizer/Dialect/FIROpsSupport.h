@@ -106,13 +106,26 @@ inline bool isInternalPorcedure(mlir::func::FuncOp func) {
 
 /// Tell if \p value is:
 ///   - a function argument that has attribute \p attributeName
-///   - or, the result of fir.alloca/fir.allocamem op that has attribute \p
+///   - or, the result of fir.alloca/fir.allocmem op that has attribute \p
 ///     attributeName
 ///   - or, the result of a fir.address_of of a fir.global that has attribute \p
 ///     attributeName
 ///   - or, a fir.box loaded from a fir.ref<fir.box> that matches one of the
 ///     previous cases.
 bool valueHasFirAttribute(mlir::Value value, llvm::StringRef attributeName);
+
+/// A more conservative version of valueHasFirAttribute().
+/// If `value` is one of the operation/function-argument cases listed
+/// for valueHasFirAttribute():
+///   * if any of the `attributeNames` attributes is set, then the function
+///     will return true.
+///   * otherwise, it will return false.
+///
+/// Otherwise, the function will return true indicating that the attributes
+/// may actually be set but we were not able to reach the point of definition
+/// to confirm that.
+bool valueMayHaveFirAttributes(mlir::Value value,
+                               llvm::ArrayRef<llvm::StringRef> attributeNames);
 
 /// Scan the arguments of a FuncOp to determine if any arguments have the
 /// attribute `attr` placed on them. This can be used to determine if the

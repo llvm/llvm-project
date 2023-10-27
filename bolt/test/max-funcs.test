@@ -1,0 +1,13 @@
+## Check that --max-funcs=<N> option works properly in llvm-bolt,
+## resulting in processing of no more than N functions in the binary.
+
+REQUIRES: system-linux
+
+RUN: %clangxx %p/Inputs/bolt_icf.cpp -g -Wl,-q -o %t.exe
+RUN: llvm-bolt %t.exe --relocs -o %t --max-funcs=2
+RUN: llvm-objdump -d -j .text %t | FileCheck %s
+
+## Check that there are only two functions in the dump of .text
+CHECK: <{{.*}}>:
+CHECK: <{{.*}}>:
+CHECK-NOT: <{{.*}}>:

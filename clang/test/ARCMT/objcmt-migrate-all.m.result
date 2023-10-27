@@ -2,7 +2,6 @@
 // RUN: %clang_cc1 -objcmt-migrate-all -mt-migrate-directory %t %s -x objective-c -fobjc-runtime-has-weak -fobjc-arc -triple x86_64-apple-darwin11
 // RUN: c-arcmt-test -mt-migrate-directory %t | arcmt-test -verify-transformed-files %s.result
 // RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fsyntax-only -x objective-c -fobjc-runtime-has-weak -fobjc-arc %s.result
-// rdar://15396636
 
 #ifndef NS_RETURNS_INNER_POINTER // defined in iOS 6 for sure
 #define NS_RETURNS_INNER_POINTER __attribute__((objc_returns_inner_pointer))
@@ -109,7 +108,6 @@ CF_IMPLICIT_BRIDGING_DISABLED
 @property (nonatomic, readonly) JSObjectRef *JSObject2;
 @end
 
-// rdar://15044991
 typedef void *SecTrustRef;
 
 @interface NSURLProtectionSpace

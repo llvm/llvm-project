@@ -16,16 +16,15 @@ struct StableSort {
   size_t Quantity;
 
   void run(benchmark::State& state) const {
-    runOpOnCopies<ValueType>(
-        state, Quantity, Order(), BatchSize::CountElements,
-        [](auto& Copy) { std::stable_sort(Copy.begin(), Copy.end()); });
+    runOpOnCopies<ValueType>(state, Quantity, Order(), BatchSize::CountBatch, [](auto& Copy) {
+      std::stable_sort(Copy.begin(), Copy.end());
+    });
   }
 
   bool skip() const { return Order() == ::Order::Heap; }
 
   std::string name() const {
-    return "BM_StableSort" + ValueType::name() + Order::name() + "_" +
-           std::to_string(Quantity);
+    return "BM_StableSort" + ValueType::name() + Order::name() + "_" + std::to_string(Quantity);
   };
 };
 } // namespace

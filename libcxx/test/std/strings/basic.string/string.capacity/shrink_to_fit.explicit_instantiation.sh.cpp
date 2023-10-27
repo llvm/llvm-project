@@ -31,15 +31,15 @@ struct string16_char_traits {
   typedef std::mbstate_t state_type;
   typedef std::fpos<state_type> pos_type;
 
-  static void assign(char_type&, const char_type&) { }
+  static void assign(char_type&, const char_type&) {}
   static bool eq(const char_type&, const char_type&) { return false; }
   static bool lt(const char_type&, const char_type&) { return false; }
-  static int compare(const char_type*, const char_type*, size_t) { return 0; }
-  static size_t length(const char_type*) { return 0; }
-  static const char_type* find(const char_type*, size_t, const char_type&) { return nullptr; }
-  static char_type* move(char_type*, const char_type*, size_t) { return nullptr; }
-  static char_type* copy(char_type*, const char_type*, size_t) { return nullptr; }
-  static char_type* assign(char_type*, size_t, char_type) { return nullptr; }
+  static int compare(const char_type*, const char_type*, std::size_t) { return 0; }
+  static std::size_t length(const char_type*) { return 0; }
+  static const char_type* find(const char_type*, std::size_t, const char_type&) { return nullptr; }
+  static char_type* move(char_type*, const char_type*, std::size_t) { return nullptr; }
+  static char_type* copy(char_type*, const char_type*, std::size_t) { return nullptr; }
+  static char_type* assign(char_type*, std::size_t, char_type) { return nullptr; }
   static int_type not_eof(const int_type&) { return 0; }
   static char_type to_char_type(const int_type&) { return char_type(); }
   static int_type to_int_type(const char_type&) { return int_type(); }
@@ -53,7 +53,7 @@ template class std::basic_string<char16, string16_char_traits>;
 extern template class std::basic_string<char16, string16_char_traits>;
 
 int main(int, char**) {
-    std::basic_string<char16, string16_char_traits> s;
-    s.shrink_to_fit();
+  std::basic_string<char16, string16_char_traits> s;
+  s.shrink_to_fit();
 }
 #endif

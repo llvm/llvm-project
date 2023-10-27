@@ -78,6 +78,19 @@ int main() {
   }
 }
 
+TEST(FindRecordTypeAt, Nonexistent) {
+  Annotations Source(R"cpp(
+    int *wa^ldo;
+  )cpp");
+  TestTU TU = TestTU::withCode(Source.code());
+  auto AST = TU.build();
+
+  for (Position Pt : Source.points()) {
+    auto Records = findRecordTypeAt(AST, Pt);
+    ASSERT_THAT(Records, SizeIs(0));
+  }
+}
+
 TEST(FindRecordTypeAt, Method) {
   Annotations Source(R"cpp(
 struct Child2 {
@@ -119,7 +132,7 @@ int main() {
 
   for (Position Pt : Source.points()) {
     // A field does not unambiguously specify a record type
-    // (possible associated reocrd types could be the field's type,
+    // (possible associated record types could be the field's type,
     // or the type of the record that the field is a member of).
     EXPECT_THAT(findRecordTypeAt(AST, Pt), SizeIs(0));
   }
@@ -402,7 +415,7 @@ TEST(TypeHierarchy, RecursiveHierarchyUnbounded) {
 
   // The compiler should produce a diagnostic for hitting the
   // template instantiation depth.
-  ASSERT_TRUE(!AST.getDiagnostics()->empty());
+  ASSERT_FALSE(AST.getDiagnostics().empty());
 
   // Make sure getTypeHierarchy() doesn't get into an infinite recursion.
   // The parent is reported as "S" because "S<0>" is an invalid instantiation.

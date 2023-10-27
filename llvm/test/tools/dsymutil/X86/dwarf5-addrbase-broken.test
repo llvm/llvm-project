@@ -1,0 +1,284 @@
+## This test checks handling of DWARFv5 address attribute.
+## It contains two compile units. One is a good one and
+## should be processed correctly. Second is a bad - it 
+## missing DW_AT_addr_base attribute. All address attributes
+## inside this unit should be skipped. 
+
+# RUN: yaml2obj %s -o %t.o
+# RUN: echo '---' > %t2.map
+# RUN: echo "triple:          'x86_64-apple-darwin'" >> %t2.map
+# RUN: echo 'objects:'  >> %t2.map
+# RUN: echo " -  filename: '%t.o'" >> %t2.map
+# RUN: echo '    symbols:' >> %t2.map
+# RUN: echo '      - { sym: __Z3foov, objAddr: 0x0, binAddr: 0x10000, size: 0x10 }' >> %t2.map
+# RUN: echo '...' >> %t2.map
+# RUN: dsymutil -y %t2.map -f -o - | llvm-dwarfdump -a - | FileCheck %s
+
+# CHECK: file format Mach-O 64-bit x86-64
+# CHECK: .debug_info contents:
+# CHECK: Compile Unit:
+# CHECK: DW_TAG_compile_unit
+# CHECK: DW_AT_name{{.*}}"GoodCU"
+# CHECK: DW_AT_low_pc
+# CHECK: DW_TAG_subprogram
+# CHECK: DW_AT_name{{.*}}"foo"
+# CHECK: DW_TAG_variable
+# CHECK: DW_AT_name{{.*}}"var1"
+# CHECK: DW_AT_location        (DW_OP_addr
+# CHECK: 0x00000043:   NULL
+# CHECK: Compile Unit:
+# CHECK: DW_TAG_compile_unit
+# CHECK-NOT: DW_AT_low_pc
+# CHECK: DW_AT_name{{.*}}"BadCU"
+# CHECK-NOT: DW_TAG_subprogram
+# CHECK-NOT: DW_TAG_variable
+# CHECK: 0x0000005b:   NULL
+
+--- !mach-o
+FileHeader:
+  magic:      0xFEEDFACF
+  cputype:    0x01000007
+  cpusubtype: 0x00000003
+  filetype:   0x00000001
+  ncmds:      2
+  sizeofcmds: 472
+  flags:      0x00002000
+  reserved:   0x00000000
+LoadCommands:
+  - cmd:      LC_SEGMENT_64
+    cmdsize:  312
+    segname:  ''
+    vmaddr:   0x00
+    vmsize:   0x300
+    fileoff:  0x300
+    filesize: 0x300
+    maxprot:  7
+    initprot: 7
+    nsects:   3
+    flags:    0
+    Sections:
+      - sectname:  __debug_abbrev
+        segname:   __DWARF
+        addr:      0x000000000000000F
+        size:      0x60
+        offset:    0x00000210
+        align:     0
+        reloff:    0x00000000
+        nreloc:    0
+        flags:     0x00000000
+        reserved1: 0x00000000
+        reserved2: 0x00000000
+        reserved3: 0x00000000
+      - sectname:  __debug_info
+        segname:   __DWARF
+        addr:      0x000000000000100
+        size:      0x9e
+        offset:    0x00000310
+        align:     0
+        reloff:    0x00000000
+        nreloc:    0
+        flags:     0x00000000
+        reserved1: 0x00000000
+        reserved2: 0x00000000
+        reserved3: 0x00000000
+      - sectname:  __debug_addr
+        segname:   __DWARF
+        addr:      0x0000000000000200
+        size:      0x30
+        offset:    0x00000400
+        align:     0
+        reloff:    0x00000600
+        nreloc:    2
+        flags:     0x02000000
+        reserved1: 0x00000000
+        reserved2: 0x00000000
+        reserved3: 0x00000000
+        relocations:
+          - address:         0x8
+            symbolnum:       1
+            pcrel:           true
+            length:          3
+            extern:          true
+            type:            0
+            scattered:       false
+            value:           0
+          - address:         0x1c
+            symbolnum:       1
+            pcrel:           true
+            length:          3
+            extern:          true
+            type:            0
+            scattered:       false
+            value:           0
+  - cmd:             LC_SYMTAB
+    cmdsize:         24
+    symoff:          0x700
+    nsyms:           2
+    stroff:          0x720
+    strsize:         10
+LinkEditData:
+  NameList:
+    - n_strx:          1
+      n_type:          0x0F
+      n_sect:          1
+      n_desc:          0
+      n_value:         0
+    - n_strx:          1
+      n_type:          0x0F
+      n_sect:          1
+      n_desc:          0
+      n_value:         0
+  StringTable:
+    - ''
+    - '__Z3foov'
+    - ''
+DWARF:
+  debug_abbrev:
+    - Table:
+      - Tag:      DW_TAG_compile_unit
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_producer
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_language
+            Form:      DW_FORM_data2
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_low_pc
+            Form:      DW_FORM_addrx
+          - Attribute: DW_AT_high_pc
+            Form:      DW_FORM_data8
+          - Attribute: DW_AT_addr_base
+            Form:      DW_FORM_sec_offset
+      - Tag:      DW_TAG_subprogram
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_low_pc
+            Form:      DW_FORM_addrx
+          - Attribute: DW_AT_high_pc
+            Form:      DW_FORM_data8
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref4
+      - Tag:      DW_TAG_base_type
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+      - Tag:      DW_TAG_variable
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref4
+          - Attribute: DW_AT_location
+            Form:      DW_FORM_exprloc
+    - Table:
+      - Tag:      DW_TAG_compile_unit
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_producer
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_language
+            Form:      DW_FORM_data2
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_low_pc
+            Form:      DW_FORM_addrx
+          - Attribute: DW_AT_high_pc
+            Form:      DW_FORM_data8
+      - Tag:      DW_TAG_subprogram
+        Children: DW_CHILDREN_yes
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_low_pc
+            Form:      DW_FORM_addrx
+          - Attribute: DW_AT_high_pc
+            Form:      DW_FORM_data8
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref4
+      - Tag:      DW_TAG_base_type
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+      - Tag:      DW_TAG_variable
+        Children: DW_CHILDREN_no
+        Attributes:
+          - Attribute: DW_AT_name
+            Form:      DW_FORM_string
+          - Attribute: DW_AT_type
+            Form:      DW_FORM_ref4
+          - Attribute: DW_AT_location
+            Form:      DW_FORM_exprloc
+  debug_info:
+    - Version: 5
+      UnitType:   DW_UT_compile
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - CStr: by_hand
+            - Value:  0x04
+            - CStr: GoodCU 
+            - Value:  0x0
+            - Value:  0x10
+            - Value:  0x8
+        - AbbrCode: 2
+          Values:
+            - CStr: foo
+            - Value: 0x0
+            - Value: 0x10
+            - Value: 0x3e
+        - AbbrCode: 0
+        - AbbrCode: 3
+          Values:
+            - CStr: int
+        - AbbrCode: 4
+          Values:
+            - CStr: var1
+            - Value:  0x0000003e
+            - BlockData:
+                - 0xa1
+                - 0x00
+        - AbbrCode: 0
+    - Version: 5
+      UnitType:   DW_UT_compile
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - CStr: by_hand
+            - Value:  0x04
+            - CStr: BadCU
+            - Value:  0x0
+            - Value:  0x10
+        - AbbrCode: 2
+          Values:
+            - CStr: foo1
+            - Value: 0x0
+            - Value: 0x10
+            - Value: 0x3e
+        - AbbrCode: 0
+        - AbbrCode: 3
+          Values:
+            - CStr: int
+        - AbbrCode: 4
+          Values:
+            - CStr: var1
+            - Value:  0x0000003e
+            - BlockData:
+                - 0xa1
+                - 0x00
+        - AbbrCode: 0
+  debug_addr:
+    - Version: 5
+      AddressSize: 0x08
+      Entries:
+        - Address: 0x1130
+    - Version: 5
+      AddressSize: 0x08
+      Entries:
+        - Address: 0x10
+...

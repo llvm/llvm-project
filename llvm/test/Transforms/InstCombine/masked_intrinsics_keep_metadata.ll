@@ -18,8 +18,8 @@ define inreg <4 x i32> @mload2() #0 {
 ; CHECK-LABEL: @mload2(
 ; CHECK-NEXT:  b0:
 ; CHECK-NEXT:    [[UNMASKEDLOAD:%.*]] = load <4 x i32>, ptr @g0, align 16, !tbaa [[TBAA0]]
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> [[UNMASKEDLOAD]], i32 0, i64 0
-; CHECK-NEXT:    ret <4 x i32> [[TMP0]]
+; CHECK-NEXT:    [[V01:%.*]] = insertelement <4 x i32> [[UNMASKEDLOAD]], i32 0, i64 0
+; CHECK-NEXT:    ret <4 x i32> [[V01]]
 ;
 b0:
   %v0 = call <4 x i32> @llvm.masked.load.v4i1.p0(ptr @g0, i32 16, <4 x i1> <i1 false, i1 true, i1 true, i1 true>, <4 x i32> zeroinitializer), !tbaa !0

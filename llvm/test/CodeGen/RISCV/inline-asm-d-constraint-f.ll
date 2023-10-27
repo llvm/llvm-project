@@ -12,13 +12,13 @@ define double @constraint_f_double(double %a) nounwind {
 ; RV32F-NEXT:    addi sp, sp, -16
 ; RV32F-NEXT:    sw a0, 8(sp)
 ; RV32F-NEXT:    sw a1, 12(sp)
-; RV32F-NEXT:    fld ft0, 8(sp)
+; RV32F-NEXT:    fld fa5, 8(sp)
 ; RV32F-NEXT:    lui a0, %hi(gd)
-; RV32F-NEXT:    fld ft1, %lo(gd)(a0)
+; RV32F-NEXT:    fld fa4, %lo(gd)(a0)
 ; RV32F-NEXT:    #APP
-; RV32F-NEXT:    fadd.d ft0, ft0, ft1
+; RV32F-NEXT:    fadd.d fa5, fa5, fa4
 ; RV32F-NEXT:    #NO_APP
-; RV32F-NEXT:    fsd ft0, 8(sp)
+; RV32F-NEXT:    fsd fa5, 8(sp)
 ; RV32F-NEXT:    lw a0, 8(sp)
 ; RV32F-NEXT:    lw a1, 12(sp)
 ; RV32F-NEXT:    addi sp, sp, 16
@@ -27,12 +27,12 @@ define double @constraint_f_double(double %a) nounwind {
 ; RV64F-LABEL: constraint_f_double:
 ; RV64F:       # %bb.0:
 ; RV64F-NEXT:    lui a1, %hi(gd)
-; RV64F-NEXT:    fld ft0, %lo(gd)(a1)
-; RV64F-NEXT:    fmv.d.x ft1, a0
+; RV64F-NEXT:    fld fa5, %lo(gd)(a1)
+; RV64F-NEXT:    fmv.d.x fa4, a0
 ; RV64F-NEXT:    #APP
-; RV64F-NEXT:    fadd.d ft0, ft1, ft0
+; RV64F-NEXT:    fadd.d fa5, fa4, fa5
 ; RV64F-NEXT:    #NO_APP
-; RV64F-NEXT:    fmv.x.d a0, ft0
+; RV64F-NEXT:    fmv.x.d a0, fa5
 ; RV64F-NEXT:    ret
   %1 = load double, ptr @gd
   %2 = tail call double asm "fadd.d $0, $1, $2", "=f,f,f"(double %a, double %1)
@@ -79,8 +79,8 @@ define double @constraint_gpr(double %x) {
 ; RV32F-NEXT:    .cfi_def_cfa_offset 32
 ; RV32F-NEXT:    sw a0, 8(sp)
 ; RV32F-NEXT:    sw a1, 12(sp)
-; RV32F-NEXT:    fld ft0, 8(sp)
-; RV32F-NEXT:    fsd ft0, 24(sp)
+; RV32F-NEXT:    fld fa5, 8(sp)
+; RV32F-NEXT:    fsd fa5, 24(sp)
 ; RV32F-NEXT:    lw a0, 24(sp)
 ; RV32F-NEXT:    lw a1, 28(sp)
 ; RV32F-NEXT:    #APP
@@ -88,8 +88,8 @@ define double @constraint_gpr(double %x) {
 ; RV32F-NEXT:    #NO_APP
 ; RV32F-NEXT:    sw a1, 20(sp)
 ; RV32F-NEXT:    sw a0, 16(sp)
-; RV32F-NEXT:    fld ft0, 16(sp)
-; RV32F-NEXT:    fsd ft0, 8(sp)
+; RV32F-NEXT:    fld fa5, 16(sp)
+; RV32F-NEXT:    fsd fa5, 8(sp)
 ; RV32F-NEXT:    lw a0, 8(sp)
 ; RV32F-NEXT:    lw a1, 12(sp)
 ; RV32F-NEXT:    addi sp, sp, 32

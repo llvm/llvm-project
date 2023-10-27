@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s --gpu-to-llvm | FileCheck %s
+// RUN: mlir-opt %s --gpu-to-llvm='use-opaque-pointers=1' | FileCheck %s
 
 module attributes {gpu.container_module} {
 
@@ -7,9 +7,8 @@ module attributes {gpu.container_module} {
     // CHECK: %[[t0:.*]] = llvm.call @mgpuStreamCreate
     %t0 = gpu.wait async
     // CHECK: %[[size_bytes:.*]] = llvm.mlir.constant
-    // CHECK: %[[value:.*]] = llvm.bitcast
-    // CHECK: %[[dst:.*]] = llvm.bitcast
-    // CHECK: llvm.call @mgpuMemset32(%[[dst]], %[[value]], %[[size_bytes]], %[[t0]])
+    // CHECK: %[[addr_cast:.*]] = llvm.addrspacecast
+    // CHECK: llvm.call @mgpuMemset32(%[[addr_cast]], %{{.*}}, %[[size_bytes]], %[[t0]])
     %t1 = gpu.memset async [%t0] %dst, %value : memref<7xf32, 1>, f32
     // CHECK: llvm.call @mgpuStreamSynchronize(%[[t0]])
     // CHECK: llvm.call @mgpuStreamDestroy(%[[t0]])

@@ -233,7 +233,7 @@ static ArrayRef<ProcessorGroup> getProcessorGroups() {
         unsigned CurrentGroupID = (*ActiveGroups)[0];
         ProcessorGroup NewG{Groups[CurrentGroupID]};
         NewG.Affinity = ProcessAffinityMask;
-        NewG.UsableThreads = countPopulation(ProcessAffinityMask);
+        NewG.UsableThreads = llvm::popcount(ProcessAffinityMask);
         Groups.clear();
         Groups.push_back(NewG);
       }

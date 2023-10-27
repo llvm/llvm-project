@@ -23,7 +23,6 @@ TEST(ScudoReportDeathTest, Generic) {
   EXPECT_DEATH(scudo::reportError("TEST123"), "Scudo ERROR.*TEST123");
   EXPECT_DEATH(scudo::reportInvalidFlag("ABC", "DEF"), "Scudo ERROR.*ABC.*DEF");
   EXPECT_DEATH(scudo::reportHeaderCorruption(P), "Scudo ERROR.*42424242");
-  EXPECT_DEATH(scudo::reportHeaderRace(P), "Scudo ERROR.*42424242");
   EXPECT_DEATH(scudo::reportSanityCheckError("XYZ"), "Scudo ERROR.*XYZ");
   EXPECT_DEATH(scudo::reportAlignmentTooBig(123, 456), "Scudo ERROR.*123.*456");
   EXPECT_DEATH(scudo::reportAllocationSizeTooBig(123, 456, 789),

@@ -18,7 +18,7 @@
 
 namespace mlir {
 class Operation;
-class PatternRewriter;
+class RewriterBase;
 class TilingInterface;
 } // namespace mlir
 
@@ -26,7 +26,7 @@ namespace mlir {
 namespace scf {
 
 using SCFTileSizeComputationFunction =
-    std::function<SmallVector<Value>(OpBuilder &, Operation *)>;
+    std::function<SmallVector<OpFoldResult>(OpBuilder &, Operation *)>;
 
 /// Options to use to control tiling.
 struct SCFTilingOptions {
@@ -40,17 +40,10 @@ struct SCFTilingOptions {
     tileSizeComputationFunction = std::move(fun);
     return *this;
   }
-  /// Set the `tileSizeComputationFunction` to return the values `ts`. The
-  /// values must not fold away when tiling. Otherwise, use a more robust
-  /// `tileSizeComputationFunction`.
-  SCFTilingOptions &setTileSizes(const SmallVector<Value, 4> &ts) {
-    tileSizeComputationFunction = [=](OpBuilder &, Operation *) { return ts; };
-    return *this;
-  }
   /// Convenience function to set the `tileSizeComputationFunction` to a
   /// function that computes tile sizes at the point they are needed. Allows
   /// proper interaction with folding.
-  SCFTilingOptions &setTileSizes(ArrayRef<int64_t> ts);
+  SCFTilingOptions &setTileSizes(ArrayRef<OpFoldResult> ts);
 
   /// The interchange vector to reorder the tiled loops.
   SmallVector<int64_t> interchangeVector = {};
@@ -67,7 +60,7 @@ struct SCFTilingResult {
   /// of the last op.
   SmallVector<Operation *> tiledOps;
   /// The `scf.for` operations that iterate over the tiles.
-  SmallVector<scf::ForOp> loops;
+  SmallVector<Operation *> loops;
   /// Values to use as replacements for the untiled op. Is the same size as the
   /// number of results of the untiled op.
   SmallVector<Value> replacements;
@@ -96,6 +89,7 @@ struct SCFTileAndFuseOptions {
 struct SCFFuseProducerOfSliceResult {
   OpResult origProducer;       // Original untiled producer.
   Value tiledAndFusedProducer; // Tile and fused producer value.
+  SmallVector<Operation *> tiledOps;
 };
 std::optional<SCFFuseProducerOfSliceResult>
 tileAndFuseProducerOfSlice(RewriterBase &rewriter,
@@ -166,7 +160,7 @@ struct SCFTileAndFuseResult {
   /// generated operation.
   llvm::SetVector<Operation *> tiledAndFusedOps;
   /// The `scf.for` operations that iterate over the tiles.
-  SmallVector<scf::ForOp> loops;
+  SmallVector<Operation *> loops;
   /// The replacement values to use for the tiled and fused operations.
   llvm::DenseMap<Value, Value> replacements;
 };
@@ -243,7 +237,7 @@ struct SCFReductionTilingResult {
 ///   : tensor<7x4xf32> -> tensor<7xf32>
 /// ```
 FailureOr<scf::SCFReductionTilingResult>
-tileReductionUsingScf(PatternRewriter &b, PartialReductionOpInterface op,
+tileReductionUsingScf(RewriterBase &b, PartialReductionOpInterface op,
                       ArrayRef<OpFoldResult> tileSize);
 
 } // namespace scf

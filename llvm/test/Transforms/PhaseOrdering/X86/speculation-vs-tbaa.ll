@@ -41,11 +41,11 @@ define void @licm(ptr align 8 dereferenceable(8) %_M_start.i, i64 %numElem) {
 ; O23-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; O23-NEXT:    [[TMP1:%.*]] = getelementptr inbounds double, ptr [[TMP0]], i64 [[INDEX]]
 ; O23-NEXT:    store <2 x double> <double 2.000000e+00, double 2.000000e+00>, ptr [[TMP1]], align 8, !tbaa [[TBAA8:![0-9]+]]
-; O23-NEXT:    [[TMP3:%.*]] = getelementptr inbounds double, ptr [[TMP1]], i64 2
-; O23-NEXT:    store <2 x double> <double 2.000000e+00, double 2.000000e+00>, ptr [[TMP3]], align 8, !tbaa [[TBAA8]]
+; O23-NEXT:    [[TMP2:%.*]] = getelementptr inbounds double, ptr [[TMP1]], i64 2
+; O23-NEXT:    store <2 x double> <double 2.000000e+00, double 2.000000e+00>, ptr [[TMP2]], align 8, !tbaa [[TBAA8]]
 ; O23-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; O23-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; O23-NEXT:    br i1 [[TMP5]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
+; O23-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; O23-NEXT:    br i1 [[TMP3]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP10:![0-9]+]]
 ; O23:       middle.block:
 ; O23-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N_VEC]], [[NUMELEM]]
 ; O23-NEXT:    br i1 [[CMP_N]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY_PREHEADER]]
@@ -58,7 +58,7 @@ define void @licm(ptr align 8 dereferenceable(8) %_M_start.i, i64 %numElem) {
 ; O23-NEXT:    store double 2.000000e+00, ptr [[ADD_PTR_I]], align 8, !tbaa [[TBAA8]]
 ; O23-NEXT:    [[INC]] = add nuw i64 [[K_02]], 1
 ; O23-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INC]], [[NUMELEM]]
-; O23-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
+; O23-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
 ; O23:       for.cond.cleanup:
 ; O23-NEXT:    ret void
 ;

@@ -8,7 +8,7 @@
 
 #include "flang/Runtime/numeric.h"
 #include "terminator.h"
-#include "flang/Runtime/float128.h"
+#include "flang/Common/float128.h"
 #include <cfloat>
 #include <climits>
 #include <cmath>
@@ -83,7 +83,7 @@ template <typename T> inline T Fraction(T x) {
   } else if (std::isinf(x)) {
     return std::numeric_limits<T>::quiet_NaN(); // +/-Inf -> NaN
   } else if (x == 0) {
-    return 0; // 0 -> 0
+    return x; // 0 -> same 0
   } else {
     int ignoredExp;
     return std::frexp(x, &ignoredExp);
@@ -239,8 +239,9 @@ template <int PREC, typename T> inline T Spacing(T x) {
     // subnormal.
     return std::numeric_limits<T>::min(); // 0 -> TINY(x)
   } else {
-    return std::ldexp(
-        static_cast<T>(1.0), std::ilogb(x) + 1 - PREC); // 2**(e-p)
+    T result{
+        std::ldexp(static_cast<T>(1.0), std::ilogb(x) + 1 - PREC)}; // 2**(e-p)
+    return result == 0 ? /*TINY(x)*/ std::numeric_limits<T>::min() : result;
   }
 }
 
@@ -305,7 +306,7 @@ CppTypeFor<TypeCategory::Integer, 8> RTNAME(Ceiling4_8)(
     CppTypeFor<TypeCategory::Real, 4> x) {
   return Ceiling<CppTypeFor<TypeCategory::Integer, 8>>(x);
 }
-#ifdef __SIZEOF_INT128__
+#if defined __SIZEOF_INT128__ && !AVOID_NATIVE_UINT128_T
 CppTypeFor<TypeCategory::Integer, 16> RTNAME(Ceiling4_16)(
     CppTypeFor<TypeCategory::Real, 4> x) {
   return Ceiling<CppTypeFor<TypeCategory::Integer, 16>>(x);
@@ -327,7 +328,7 @@ CppTypeFor<TypeCategory::Integer, 8> RTNAME(Ceiling8_8)(
     CppTypeFor<TypeCategory::Real, 8> x) {
   return Ceiling<CppTypeFor<TypeCategory::Integer, 8>>(x);
 }
-#ifdef __SIZEOF_INT128__
+#if defined __SIZEOF_INT128__ && !AVOID_NATIVE_UINT128_T
 CppTypeFor<TypeCategory::Integer, 16> RTNAME(Ceiling8_16)(
     CppTypeFor<TypeCategory::Real, 8> x) {
   return Ceiling<CppTypeFor<TypeCategory::Integer, 16>>(x);
@@ -350,7 +351,7 @@ CppTypeFor<TypeCategory::Integer, 8> RTNAME(Ceiling10_8)(
     CppTypeFor<TypeCategory::Real, 10> x) {
   return Ceiling<CppTypeFor<TypeCategory::Integer, 8>>(x);
 }
-#ifdef __SIZEOF_INT128__
+#if defined __SIZEOF_INT128__ && !AVOID_NATIVE_UINT128_T
 CppTypeFor<TypeCategory::Integer, 16> RTNAME(Ceiling10_16)(
     CppTypeFor<TypeCategory::Real, 10> x) {
   return Ceiling<CppTypeFor<TypeCategory::Integer, 16>>(x);
@@ -373,7 +374,7 @@ CppTypeFor<TypeCategory::Integer, 8> RTNAME(Ceiling16_8)(
     CppTypeFor<TypeCategory::Real, 16> x) {
   return Ceiling<CppTypeFor<TypeCategory::Integer, 8>>(x);
 }
-#ifdef __SIZEOF_INT128__
+#if defined __SIZEOF_INT128__ && !AVOID_NATIVE_UINT128_T
 CppTypeFor<TypeCategory::Integer, 16> RTNAME(Ceiling16_16)(
     CppTypeFor<TypeCategory::Real, 16> x) {
   return Ceiling<CppTypeFor<TypeCategory::Integer, 16>>(x);
@@ -433,7 +434,7 @@ CppTypeFor<TypeCategory::Integer, 8> RTNAME(Floor4_8)(
     CppTypeFor<TypeCategory::Real, 4> x) {
   return Floor<CppTypeFor<TypeCategory::Integer, 8>>(x);
 }
-#ifdef __SIZEOF_INT128__
+#if defined __SIZEOF_INT128__ && !AVOID_NATIVE_UINT128_T
 CppTypeFor<TypeCategory::Integer, 16> RTNAME(Floor4_16)(
     CppTypeFor<TypeCategory::Real, 4> x) {
   return Floor<CppTypeFor<TypeCategory::Integer, 16>>(x);
@@ -455,7 +456,7 @@ CppTypeFor<TypeCategory::Integer, 8> RTNAME(Floor8_8)(
     CppTypeFor<TypeCategory::Real, 8> x) {
   return Floor<CppTypeFor<TypeCategory::Integer, 8>>(x);
 }
-#ifdef __SIZEOF_INT128__
+#if defined __SIZEOF_INT128__ && !AVOID_NATIVE_UINT128_T
 CppTypeFor<TypeCategory::Integer, 16> RTNAME(Floor8_16)(
     CppTypeFor<TypeCategory::Real, 8> x) {
   return Floor<CppTypeFor<TypeCategory::Integer, 16>>(x);
@@ -478,7 +479,7 @@ CppTypeFor<TypeCategory::Integer, 8> RTNAME(Floor10_8)(
     CppTypeFor<TypeCategory::Real, 10> x) {
   return Floor<CppTypeFor<TypeCategory::Integer, 8>>(x);
 }
-#ifdef __SIZEOF_INT128__
+#if defined __SIZEOF_INT128__ && !AVOID_NATIVE_UINT128_T
 CppTypeFor<TypeCategory::Integer, 16> RTNAME(Floor10_16)(
     CppTypeFor<TypeCategory::Real, 10> x) {
   return Floor<CppTypeFor<TypeCategory::Integer, 16>>(x);
@@ -501,7 +502,7 @@ CppTypeFor<TypeCategory::Integer, 8> RTNAME(Floor16_8)(
     CppTypeFor<TypeCategory::Real, 16> x) {
   return Floor<CppTypeFor<TypeCategory::Integer, 8>>(x);
 }
-#ifdef __SIZEOF_INT128__
+#if defined __SIZEOF_INT128__ && !AVOID_NATIVE_UINT128_T
 CppTypeFor<TypeCategory::Integer, 16> RTNAME(Floor16_16)(
     CppTypeFor<TypeCategory::Real, 16> x) {
   return Floor<CppTypeFor<TypeCategory::Integer, 16>>(x);
@@ -709,7 +710,7 @@ CppTypeFor<TypeCategory::Integer, 8> RTNAME(Nint4_8)(
     CppTypeFor<TypeCategory::Real, 4> x) {
   return Nint<CppTypeFor<TypeCategory::Integer, 8>>(x);
 }
-#ifdef __SIZEOF_INT128__
+#if defined __SIZEOF_INT128__ && !AVOID_NATIVE_UINT128_T
 CppTypeFor<TypeCategory::Integer, 16> RTNAME(Nint4_16)(
     CppTypeFor<TypeCategory::Real, 4> x) {
   return Nint<CppTypeFor<TypeCategory::Integer, 16>>(x);
@@ -731,7 +732,7 @@ CppTypeFor<TypeCategory::Integer, 8> RTNAME(Nint8_8)(
     CppTypeFor<TypeCategory::Real, 8> x) {
   return Nint<CppTypeFor<TypeCategory::Integer, 8>>(x);
 }
-#ifdef __SIZEOF_INT128__
+#if defined __SIZEOF_INT128__ && !AVOID_NATIVE_UINT128_T
 CppTypeFor<TypeCategory::Integer, 16> RTNAME(Nint8_16)(
     CppTypeFor<TypeCategory::Real, 8> x) {
   return Nint<CppTypeFor<TypeCategory::Integer, 16>>(x);
@@ -754,7 +755,7 @@ CppTypeFor<TypeCategory::Integer, 8> RTNAME(Nint10_8)(
     CppTypeFor<TypeCategory::Real, 10> x) {
   return Nint<CppTypeFor<TypeCategory::Integer, 8>>(x);
 }
-#ifdef __SIZEOF_INT128__
+#if defined __SIZEOF_INT128__ && !AVOID_NATIVE_UINT128_T
 CppTypeFor<TypeCategory::Integer, 16> RTNAME(Nint10_16)(
     CppTypeFor<TypeCategory::Real, 10> x) {
   return Nint<CppTypeFor<TypeCategory::Integer, 16>>(x);
@@ -777,7 +778,7 @@ CppTypeFor<TypeCategory::Integer, 8> RTNAME(Nint16_8)(
     CppTypeFor<TypeCategory::Real, 16> x) {
   return Nint<CppTypeFor<TypeCategory::Integer, 8>>(x);
 }
-#ifdef __SIZEOF_INT128__
+#if defined __SIZEOF_INT128__ && !AVOID_NATIVE_UINT128_T
 CppTypeFor<TypeCategory::Integer, 16> RTNAME(Nint16_16)(
     CppTypeFor<TypeCategory::Real, 16> x) {
   return Nint<CppTypeFor<TypeCategory::Integer, 16>>(x);

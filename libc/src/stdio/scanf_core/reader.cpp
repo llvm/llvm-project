@@ -9,36 +9,20 @@
 #include "src/stdio/scanf_core/reader.h"
 #include <stddef.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace scanf_core {
-
-char Reader::getc() {
-  ++cur_chars_read;
-  if (reader_type == ReaderType::String) {
-    return string_reader->get_char();
-  } else {
-    return file_reader->get_char();
-  }
-}
 
 void Reader::ungetc(char c) {
   --cur_chars_read;
-  if (reader_type == ReaderType::String) {
-    // The string reader ignores the char c passed to unget since it doesn't
-    // need to place anything back into a buffer, and modifying the source
-    // string would be dangerous.
-    return string_reader->unget_char();
-  } else {
-    return file_reader->unget_char(c);
+  if (rb != nullptr && rb->buff_cur > 0) {
+    // While technically c should be written back to the buffer, in scanf we
+    // always write the character that was already there. Additionally, the
+    // buffer is most likely to contain a string that isn't part of a file,
+    // which may not be writable.
+    --(rb->buff_cur);
+    return;
   }
+  stream_ungetc(static_cast<int>(c), input_stream);
 }
-
-bool Reader::has_error() {
-  if (reader_type == ReaderType::File) {
-    return file_reader->has_error();
-  }
-  return false;
-}
-
 } // namespace scanf_core
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

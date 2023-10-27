@@ -139,7 +139,7 @@ define inreg {i16} @ret_struct_i16() nounwind {
 ; N64-LE-NEXT:    jr $ra
 ; N64-LE-NEXT:    daddiu $sp, $sp, 16
 entry:
-        %retval = alloca {i8,i8}, align 1
+        %retval = alloca {i8,i8}, align 8
         call void @llvm.memcpy.p0.p0.i64(ptr %retval, ptr @struct_2byte, i64 2, i1 false)
         %0 = load volatile {i16}, ptr %retval
         ret {i16} %0

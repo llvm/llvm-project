@@ -1,5 +1,5 @@
 // RUN: %check_clang_tidy -std=c++11,c++14 %s modernize-use-noexcept %t -- \
-// RUN:   -config="{CheckOptions: [{key: modernize-use-noexcept.UseNoexceptFalse, value: false}]}" \
+// RUN:   -config="{CheckOptions: {modernize-use-noexcept.UseNoexceptFalse: false}}" \
 // RUN:   -- -fexceptions
 // This test is not run in C++17 or later because dynamic exception
 // specifications were removed in C++17.

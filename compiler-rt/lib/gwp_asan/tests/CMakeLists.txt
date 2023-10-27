@@ -27,7 +27,8 @@ set(GWP_ASAN_UNITTESTS
   enable_disable.cpp
   late_init.cpp
   options.cpp
-  recoverable.cpp)
+  recoverable.cpp
+  never_allocated.cpp)
 
 set(GWP_ASAN_UNIT_TEST_HEADERS
   ${GWP_ASAN_HEADERS}
@@ -58,7 +59,8 @@ if(COMPILER_RT_DEFAULT_TARGET_ARCH IN_LIST GWP_ASAN_SUPPORTED_ARCH)
     $<TARGET_OBJECTS:RTGwpAsanOptionsParser.${arch}>
     $<TARGET_OBJECTS:RTSanitizerCommon.${arch}>
     $<TARGET_OBJECTS:RTSanitizerCommonLibc.${arch}>
-    $<TARGET_OBJECTS:RTSanitizerCommonSymbolizer.${arch}>)
+    $<TARGET_OBJECTS:RTSanitizerCommonSymbolizer.${arch}>
+    $<TARGET_OBJECTS:RTSanitizerCommonSymbolizerInternal.${arch}>)
 
   add_library(${GWP_ASAN_TEST_RUNTIME} STATIC
     ${GWP_ASAN_TEST_RUNTIME_OBJECTS})

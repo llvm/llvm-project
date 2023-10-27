@@ -16,5 +16,5 @@ int main(int argc, char** argv) {
         modify(global);
 
     printf("global=%d\n", global);
-    printf("cookie=%d\n", cookie);
+    printf("cookie=%d\n", cookie); // Set another breakpoint here.
 }

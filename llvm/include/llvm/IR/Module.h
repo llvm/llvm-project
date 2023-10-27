@@ -251,7 +251,7 @@ public:
   }
 
   /// Get the data layout for the module's target platform.
-  const DataLayout &getDataLayout() const;
+  const DataLayout &getDataLayout() const { return DL; }
 
   /// Get the target triple which is a string describing the target host.
   /// @returns a string containing the target triple.
@@ -542,6 +542,24 @@ public:
 
   llvm::Error materializeMetadata();
 
+  /// Detach global variable \p GV from the list but don't delete it.
+  void removeGlobalVariable(GlobalVariable *GV) { GlobalList.remove(GV); }
+  /// Remove global variable \p GV from the list and delete it.
+  void eraseGlobalVariable(GlobalVariable *GV) { GlobalList.erase(GV); }
+  /// Insert global variable \p GV at the end of the global variable list and
+  /// take ownership.
+  void insertGlobalVariable(GlobalVariable *GV) {
+    insertGlobalVariable(GlobalList.end(), GV);
+  }
+  /// Insert global variable \p GV into the global variable list before \p
+  /// Where and take ownership.
+  void insertGlobalVariable(GlobalListType::iterator Where, GlobalVariable *GV) {
+    GlobalList.insert(Where, GV);
+  }
+  // Use global_size() to get the total number of global variables.
+  // Use globals() to get the range of all global variables.
+
+private:
 /// @}
 /// @name Direct access to the globals list, functions list, and symbol table
 /// @{
@@ -554,7 +572,9 @@ public:
   static GlobalListType Module::*getSublistAccess(GlobalVariable*) {
     return &Module::GlobalList;
   }
+  friend class llvm::SymbolTableListTraits<llvm::GlobalVariable>;
 
+public:
   /// Get the Module's list of functions (constant).
   const FunctionListType &getFunctionList() const     { return FunctionList; }
   /// Get the Module's list of functions.
@@ -563,6 +583,36 @@ public:
     return &Module::FunctionList;
   }
 
+  /// Detach \p Alias from the list but don't delete it.
+  void removeAlias(GlobalAlias *Alias) { AliasList.remove(Alias); }
+  /// Remove \p Alias from the list and delete it.
+  void eraseAlias(GlobalAlias *Alias) { AliasList.erase(Alias); }
+  /// Insert \p Alias at the end of the alias list and take ownership.
+  void insertAlias(GlobalAlias *Alias) { AliasList.insert(AliasList.end(), Alias); }
+  // Use alias_size() to get the size of AliasList.
+  // Use aliases() to get a range of all Alias objects in AliasList.
+
+  /// Detach \p IFunc from the list but don't delete it.
+  void removeIFunc(GlobalIFunc *IFunc) { IFuncList.remove(IFunc); }
+  /// Remove \p IFunc from the list and delete it.
+  void eraseIFunc(GlobalIFunc *IFunc) { IFuncList.erase(IFunc); }
+  /// Insert \p IFunc at the end of the alias list and take ownership.
+  void insertIFunc(GlobalIFunc *IFunc) { IFuncList.push_back(IFunc); }
+  // Use ifunc_size() to get the number of functions in IFuncList.
+  // Use ifuncs() to get the range of all IFuncs.
+
+  /// Detach \p MDNode from the list but don't delete it.
+  void removeNamedMDNode(NamedMDNode *MDNode) { NamedMDList.remove(MDNode); }
+  /// Remove \p MDNode from the list and delete it.
+  void eraseNamedMDNode(NamedMDNode *MDNode) { NamedMDList.erase(MDNode); }
+  /// Insert \p MDNode at the end of the alias list and take ownership.
+  void insertNamedMDNode(NamedMDNode *MDNode) {
+    NamedMDList.push_back(MDNode);
+  }
+  // Use named_metadata_size() to get the size of the named meatadata list.
+  // Use named_metadata() to get the range of all named metadata.
+
+private: // Please use functions like insertAlias(), removeAlias() etc.
   /// Get the Module's list of aliases (constant).
   const AliasListType    &getAliasList() const        { return AliasList; }
   /// Get the Module's list of aliases.
@@ -571,6 +621,7 @@ public:
   static AliasListType Module::*getSublistAccess(GlobalAlias*) {
     return &Module::AliasList;
   }
+  friend class llvm::SymbolTableListTraits<llvm::GlobalAlias>;
 
   /// Get the Module's list of ifuncs (constant).
   const IFuncListType    &getIFuncList() const        { return IFuncList; }
@@ -580,6 +631,7 @@ public:
   static IFuncListType Module::*getSublistAccess(GlobalIFunc*) {
     return &Module::IFuncList;
   }
+  friend class llvm::SymbolTableListTraits<llvm::GlobalIFunc>;
 
   /// Get the Module's list of named metadata (constant).
   const NamedMDListType  &getNamedMDList() const      { return NamedMDList; }
@@ -590,6 +642,7 @@ public:
     return &Module::NamedMDList;
   }
 
+public:
   /// Get the symbol table of global variable and function identifiers
   const ValueSymbolTable &getValueSymbolTable() const { return *ValSymTab; }
   /// Get the Module's symbol table of global variable and function identifiers.
@@ -869,6 +922,17 @@ public:
   void setCodeModel(CodeModel::Model CL);
   /// @}
 
+  /// @}
+  /// @name Utility function for querying and setting the large data threshold
+  /// @{
+
+  /// Returns the code model (tiny, small, kernel, medium or large model)
+  std::optional<uint64_t> getLargeDataThreshold() const;
+
+  /// Set the code model (tiny, small, kernel, medium or large)
+  void setLargeDataThreshold(uint64_t Threshold);
+  /// @}
+
   /// @name Utility functions for querying and setting PGO summary
   /// @{
 
@@ -891,6 +955,11 @@ public:
 
   /// Set that PLT should be avoid for RTLib calls.
   void setRtLibUseGOT();
+
+  /// Get/set whether referencing global variables can use direct access
+  /// relocations on ELF targets.
+  bool getDirectAccessExternalData() const;
+  void setDirectAccessExternalData(bool Value);
 
   /// Get/set whether synthesized functions should get the uwtable attribute.
   UWTableKind getUwtable() const;
@@ -922,6 +991,8 @@ public:
   /// Get/set the stack alignment overridden from the default.
   unsigned getOverrideStackAlignment() const;
   void setOverrideStackAlignment(unsigned Align);
+
+  unsigned getMaxTLSAlignment() const;
 
   /// @name Utility functions for querying and setting the build SDK version
   /// @{

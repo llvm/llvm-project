@@ -8,8 +8,6 @@
 
 #include "Futex.h"
 
-#include "include/sys/syscall.h" // For syscall numbers.
-#include "include/threads.h"     // For call_once related type definition.
 #include "src/__support/CPP/atomic.h"
 #include "src/__support/OSUtil/syscall.h" // For syscall functions.
 #include "src/__support/common.h"
@@ -18,8 +16,10 @@
 
 #include <limits.h>
 #include <linux/futex.h>
+#include <sys/syscall.h> // For syscall numbers.
+#include <threads.h>     // For call_once related type definition.
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 static constexpr FutexWordType START = 0x11;
 static constexpr FutexWordType WAITING = 0x22;
@@ -46,9 +46,10 @@ LLVM_LIBC_FUNCTION(void, call_once,
     func();
     auto status = futex_word->exchange(FINISH);
     if (status == WAITING) {
-      __llvm_libc::syscall_impl(SYS_futex, &futex_word->val, FUTEX_WAKE_PRIVATE,
-                                INT_MAX, // Wake all waiters.
-                                0, 0, 0);
+      LIBC_NAMESPACE::syscall_impl(FUTEX_SYSCALL_ID, &futex_word->val,
+                                   FUTEX_WAKE_PRIVATE,
+                                   INT_MAX, // Wake all waiters.
+                                   0, 0, 0);
     }
     return;
   }
@@ -56,11 +57,11 @@ LLVM_LIBC_FUNCTION(void, call_once,
   FutexWordType status = START;
   if (futex_word->compare_exchange_strong(status, WAITING) ||
       status == WAITING) {
-    __llvm_libc::syscall_impl(
-        SYS_futex, &futex_word->val, FUTEX_WAIT_PRIVATE,
+    LIBC_NAMESPACE::syscall_impl(
+        FUTEX_SYSCALL_ID, &futex_word->val, FUTEX_WAIT_PRIVATE,
         WAITING, // Block only if status is still |WAITING|.
         0, 0, 0);
   }
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

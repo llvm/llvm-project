@@ -12,10 +12,10 @@ define double @testBranchCoal(double %a, double %b, double %c, i32 %x) {
 ; CHECK-NEXT:    beq 0, .LBB0_2
 ; CHECK-NEXT:  # %bb.1: # %entry
 ; CHECK-NEXT:    addis 3, 2, .LCPI0_0@toc@ha
-; CHECK-NEXT:    addis 4, 2, .LCPI0_1@toc@ha
 ; CHECK-NEXT:    xxlxor 2, 2, 2
 ; CHECK-NEXT:    lfd 1, .LCPI0_0@toc@l(3)
-; CHECK-NEXT:    lfd 3, .LCPI0_1@toc@l(4)
+; CHECK-NEXT:    addis 3, 2, .LCPI0_1@toc@ha
+; CHECK-NEXT:    lfd 3, .LCPI0_1@toc@l(3)
 ; CHECK-NEXT:  .LBB0_2: # %entry
 ; CHECK-NEXT:    xsadddp 0, 1, 2
 ; CHECK-NEXT:    xsadddp 1, 0, 3

@@ -1,7 +1,6 @@
 // RUN: %check_clang_tidy %s cppcoreguidelines-narrowing-conversions %t \
-// RUN: -config="{CheckOptions: [ \
-// RUN:   {key: "cppcoreguidelines-narrowing-conversions.PedanticMode", value: true} \
-// RUN: ]}" \
+// RUN: -config="{CheckOptions: { \
+// RUN:   cppcoreguidelines-narrowing-conversions.PedanticMode: true}}" \
 // RUN: -- -target x86_64-unknown-linux -fsigned-char
 
 namespace floats {

@@ -16,10 +16,10 @@
 #include "OSTargets.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
-#include "llvm/ADT/Triple.h"
-#include "llvm/Support/ARMTargetParser.h"
-#include "llvm/Support/ARMTargetParserCommon.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/TargetParser/ARMTargetParser.h"
+#include "llvm/TargetParser/ARMTargetParserCommon.h"
+#include "llvm/TargetParser/Triple.h"
 
 namespace clang {
 namespace targets {
@@ -181,7 +181,7 @@ public:
   bool
   validateConstraintModifier(StringRef Constraint, char Modifier, unsigned Size,
                              std::string &SuggestedModifier) const override;
-  const char *getClobbers() const override;
+  std::string_view getClobbers() const override;
 
   StringRef getConstraintRegister(StringRef Constraint,
                                   StringRef Expression) const override {

@@ -1,4 +1,4 @@
-; RUN: llc -filetype=obj -march=amdgcn -mcpu=gfx801 < %s | llvm-readobj --file-headers - | FileCheck --check-prefixes=NONE %s
+; RUN: llc -filetype=obj -mtriple=amdgcn -mcpu=gfx801 < %s | llvm-readobj --file-headers - | FileCheck --check-prefixes=NONE %s
 ; RUN: llc -filetype=obj -mtriple=amdgcn-amd- -mcpu=gfx801 < %s | llvm-readobj --file-headers - | FileCheck --check-prefixes=NONE %s
 ; RUN: llc -filetype=obj -mtriple=amdgcn-amd-unknown -mcpu=gfx801 < %s | llvm-readobj --file-headers - | FileCheck --check-prefixes=NONE %s
 ; RUN: llc -filetype=obj -mtriple=amdgcn--amdhsa -mcpu=gfx801 < %s | llvm-readobj --file-headers - | FileCheck --check-prefixes=HSA %s

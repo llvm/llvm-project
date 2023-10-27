@@ -9,9 +9,19 @@
 // CHECK: %[[dst1:[0-9-]+]] = catchpad within %[[dst]] [ptr null, i32 0, ptr null]
 // CHECK: "funclet"(token %[[dst1]])
 
+// CHECK: define dso_local void @"?bar@@YAXXZ
+// CHECK: invoke void @llvm.seh.try.begin()
+// CHECK: invoke void @_CxxThrowException
+// CHECK: %[[dst:[0-9-]+]] = catchpad within %0 [ptr null, i32 0, ptr null]
+// CHECK: invoke void @llvm.seh.try.begin() [ "funclet"(token %[[dst]]) ]
+
 // CHECK: invoke void @llvm.seh.try.begin()
 // CHECK: %[[src:[0-9-]+]] = load volatile i32, ptr %i
 // CHECK-NEXT: invoke void @"?crash@@YAXH@Z"(i32 noundef %[[src]])
+// CHECK: invoke void @llvm.seh.try.end()
+
+// CHECK: invoke void @llvm.seh.try.begin()
+// CHECK: invoke void @"?bar@@YAXXZ"()
 // CHECK: invoke void @llvm.seh.try.end()
 
 // *****************************************************************************
@@ -46,6 +56,18 @@ void crash(int i) {
   }
 }
 
+void bar() {
+  try {
+    throw 1;
+  } catch(...) {
+    try {
+      *NullPtr = 0;
+    } catch (...) {
+       throw 1;
+    }
+  }
+}
+
 int main() {
   for (int i = 0; i < 2; i++) {
     __try {
@@ -53,6 +75,11 @@ int main() {
     } __except (1) {
       printf(" Test CPP unwind: in except handler i = %d \n", i);
     }
+  }
+  __try {
+   bar();
+  } __except (1) {
+    printf("Test CPP unwind: in except handler \n");
   }
   return 0;
 }

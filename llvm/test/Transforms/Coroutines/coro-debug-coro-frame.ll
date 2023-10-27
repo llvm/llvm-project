@@ -1,17 +1,16 @@
-; RUN: opt -opaque-pointers=0 < %s -passes='module(coro-early),cgscc(coro-split,coro-split)' -S | FileCheck %s
+; RUN: opt < %s -passes='module(coro-early),cgscc(coro-split,coro-split)' -S | FileCheck %s
 
 ; Checks whether the dbg.declare for `__coro_frame` are created.
 
 ; CHECK-LABEL: define void @f(
 ; CHECK:       coro.init:
-; CHECK:        %[[begin:.*]] = call noalias nonnull i8* @llvm.coro.begin(
-; CHECK:        call void @llvm.dbg.declare(metadata i8* %[[begin]], metadata ![[CORO_FRAME:[0-9]+]], metadata !DIExpression())
-; CHECK:        %[[FramePtr:.*]] = bitcast i8* %[[begin]] to
+; CHECK:        %[[begin:.*]] = call noalias nonnull ptr @llvm.coro.begin(
+; CHECK:        call void @llvm.dbg.declare(metadata ptr %[[begin]], metadata ![[CORO_FRAME:[0-9]+]], metadata !DIExpression())
 ;
 ; CHECK:       define internal fastcc void @f.resume(
 ; CHECK:       entry.resume:
-; CHECK:            %[[FramePtr_RESUME:.*]] = alloca %f.Frame*
-; CHECK:            call void @llvm.dbg.declare(metadata %f.Frame** %[[FramePtr_RESUME]], metadata ![[CORO_FRAME_IN_RESUME:[0-9]+]], metadata !DIExpression(DW_OP_deref)
+; CHECK:            %[[FramePtr_RESUME:.*]] = alloca ptr
+; CHECK:            call void @llvm.dbg.declare(metadata ptr %[[FramePtr_RESUME]], metadata ![[CORO_FRAME_IN_RESUME:[0-9]+]], metadata !DIExpression(DW_OP_deref)
 ;
 ; CHECK-DAG: ![[FILE:[0-9]+]] = !DIFile(filename: "coro-debug.cpp"
 ; CHECK-DAG: ![[RAMP:[0-9]+]] = distinct !DISubprogram(name: "foo", linkageName: "_Z3foov",
@@ -33,8 +32,6 @@
 ; CHECK-DAG: ![[I64_BASE]] = !DIBasicType(name: "__int_64", size: 64, encoding: DW_ATE_signed, flags: DIFlagArtificial)
 ; CHECK-DAG: ![[DOUBLE_1]] = !DIDerivedType(tag: DW_TAG_member, name: "__double__2", scope: ![[FRAME_TYPE]], file: ![[FILE]], line: [[PROMISE_VAR_LINE]], baseType: ![[DOUBLE_BASE:[0-9]+]]{{.*}}, flags: DIFlagArtificial
 ; CHECK-DAG: ![[DOUBLE_BASE]] = !DIBasicType(name: "__double_", size: 64, encoding: DW_ATE_float, flags: DIFlagArtificial)
-; CHECK-DAG: ![[INT64_PTR]] = !DIDerivedType(tag: DW_TAG_member, name: "__int_64_Ptr_3",{{.*}} baseType: ![[INT64_PTR_BASE:[0-9]+]]
-; CHECK-DAG: ![[INT64_PTR_BASE]] = !DIDerivedType(tag: DW_TAG_pointer_type, name: "__int_64_Ptr", baseType: null, size: 64, align: 64
 ; CHECK-DAG: ![[INT32_2]] = !DIDerivedType(tag: DW_TAG_member, name: "__int_32_4", scope: ![[FRAME_TYPE]], file: ![[FILE]], line: [[PROMISE_VAR_LINE]], baseType: ![[I32_BASE:[0-9]+]]{{.*}}, flags: DIFlagArtificial
 ; CHECK-DAG: ![[I32_BASE]] = !DIBasicType(name: "__int_32", size: 32, encoding: DW_ATE_signed, flags: DIFlagArtificial)
 ; CHECK-DAG: ![[INT32_3]] = !DIDerivedType(tag: DW_TAG_member, name: "__int_32_5", scope: ![[FRAME_TYPE]], file: ![[FILE]], line: [[PROMISE_VAR_LINE]], baseType: ![[I32_BASE]]
@@ -58,7 +55,6 @@
 ; CHECK-DAG: ![[VECTOR_TYPE_IN_BAR]] = !DIDerivedType(tag: DW_TAG_member, name: "_0", scope: ![[FRAME_TYPE_IN_BAR]], file: ![[FILE]], line: [[BAR_LINE]], baseType: ![[VECTOR_TYPE_BASE]]
 ; CHECK-DAG: ![[INT64_IN_BAR]] = !DIDerivedType(tag: DW_TAG_member, name: "__int_64_1", scope: ![[FRAME_TYPE_IN_BAR]], file: ![[FILE]], line: [[BAR_LINE]], baseType: ![[I64_BASE]]
 ; CHECK-DAG: ![[DOUBLE_IN_BAR]] = !DIDerivedType(tag: DW_TAG_member, name: "__double__2", scope: ![[FRAME_TYPE_IN_BAR]], file: ![[FILE]], line: [[BAR_LINE]], baseType: ![[DOUBLE_BASE]]
-; CHECK-DAG: ![[INT64_PTR_IN_BAR]] = !DIDerivedType(tag: DW_TAG_member, name: "__int_64_Ptr_3", scope: ![[FRAME_TYPE_IN_BAR]], file: ![[FILE]], line: [[BAR_LINE]], baseType: ![[INT64_PTR_BASE]]
 ; CHECK-DAG: ![[INT32_IN_BAR]] = !DIDerivedType(tag: DW_TAG_member, name: "__int_32_4", scope: ![[FRAME_TYPE_IN_BAR]], file: ![[FILE]], line: [[BAR_LINE]], baseType: ![[I32_BASE]]
 ; CHECK-DAG: ![[STRUCT_IN_BAR]] = !DIDerivedType(tag: DW_TAG_member, name: "struct_big_structure_5", scope: ![[FRAME_TYPE_IN_BAR]], file: ![[FILE]], line: [[BAR_LINE]], baseType: ![[STRUCT_BASE_IN_BAR:[0-9]+]]
 ; CHECK-DAG: ![[STRUCT_BASE_IN_BAR]] = !DICompositeType(tag: DW_TAG_structure_type, name: "struct_big_structure", scope: ![[FRAME_TYPE_IN_BAR]], file: ![[FILE]], line: [[BAR_LINE]],{{.*}}, align: 64
@@ -67,60 +63,59 @@
 
 %promise_type = type { i32, i32, double }
 %struct.big_structure = type { [500 x i8] }
-declare void @produce(%struct.big_structure*)
-declare void @consume(%struct.big_structure*)
-declare void @produce_vector(<4 x i32> *)
-declare void @consume_vector(<4 x i32> *)
-declare void @produce_vectori5(<5 x i1> *)
-declare void @consume_vectori5(<5 x i1> *)
-declare void @produce_vectori9(<9 x i1> *)
-declare void @consume_vectori9(<9 x i1> *)
-declare void @pi32(i32*)
-declare void @pi64(i64*)
-declare void @pdouble(double*)
-declare void @pi64p(i64**)
+declare void @produce(ptr)
+declare void @consume(ptr)
+declare void @produce_vector(ptr)
+declare void @consume_vector(ptr)
+declare void @produce_vectori5(ptr)
+declare void @consume_vectori5(ptr)
+declare void @produce_vectori9(ptr)
+declare void @consume_vectori9(ptr)
+declare void @pi32(ptr)
+declare void @pi64(ptr)
+declare void @pdouble(ptr)
+declare void @pi64p(ptr)
 
-define void @f(i32 %a, i32 %b, i64 %c, double %d, i64* %e) presplitcoroutine !dbg !8 {
+define void @f(i32 %a, i32 %b, i64 %c, double %d, ptr %e) presplitcoroutine !dbg !8 {
 entry:
     %__promise = alloca %promise_type, align 8
-    %0 = bitcast %promise_type* %__promise to i8*
     %a.alloc = alloca i32, align 4
     %b.alloc = alloca i32, align 4
     %c.alloc = alloca i64, align 4
     %d.alloc = alloca double, align 4
-    %e.alloc = alloca i64*, align 4
-    store i32 %a, i32* %a.alloc
-    store i32 %b, i32* %b.alloc
-    store i64 %c, i64* %c.alloc
-    store double %d, double* %d.alloc
-    store i64* %e, i64** %e.alloc
+    %e.alloc = alloca ptr, align 4
+    store i32 %a, ptr %a.alloc
+    store i32 %b, ptr %b.alloc
+    store i64 %c, ptr %c.alloc
+    store double %d, ptr %d.alloc
+    store ptr %e, ptr %e.alloc
     %struct.data = alloca %struct.big_structure, align 1
-    call void @produce(%struct.big_structure* %struct.data)
+    call void @produce(ptr %struct.data)
     ; We treat vector type as unresolved type now for test coverage.
     %unresolved_data = alloca <4 x i32>
-    call void @produce_vector(<4 x i32> *%unresolved_data)
+    call void @produce_vector(ptr %unresolved_data)
     %unresolved_data2 = alloca <5 x i1>
-    call void @produce_vectori5(<5 x i1> *%unresolved_data2)
+    call void @produce_vectori5(ptr %unresolved_data2)
     %unresolved_data3 = alloca <9 x i1>
-    call void @produce_vectori9(<9 x i1> *%unresolved_data3)
-    %id = call token @llvm.coro.id(i32 16, i8* %0, i8* null, i8* null)
+    call void @produce_vectori9(ptr %unresolved_data3)
+    %id = call token @llvm.coro.id(i32 16, ptr %__promise, ptr null, ptr null)
     %alloc = call i1 @llvm.coro.alloc(token %id)
     br i1 %alloc, label %coro.alloc, label %coro.init
 
 coro.alloc:                                       ; preds = %entry
     %size = call i64 @llvm.coro.size.i64()
-    %memory = call i8* @new(i64 %size)
+    %memory = call ptr @new(i64 %size)
     br label %coro.init
 
 coro.init:                                        ; preds = %coro.alloc, %entry
-    %phi.entry.alloc = phi i8* [ null, %entry ], [ %memory, %coro.alloc ]
-    %begin = call i8* @llvm.coro.begin(token %id, i8* %phi.entry.alloc)
-    call void @llvm.dbg.declare(metadata %promise_type* %__promise, metadata !6, metadata !DIExpression()), !dbg !18
+    %phi.entry.alloc = phi ptr [ null, %entry ], [ %memory, %coro.alloc ]
+    %begin = call ptr @llvm.coro.begin(token %id, ptr %phi.entry.alloc)
+    call void @llvm.dbg.declare(metadata ptr %__promise, metadata !6, metadata !DIExpression()), !dbg !18
     %ready = call i1 @await_ready()
     br i1 %ready, label %init.ready, label %init.suspend
 
 init.suspend:                                     ; preds = %coro.init
-    %save = call token @llvm.coro.save(i8* null)
+    %save = call token @llvm.coro.save(ptr null)
     call void @await_suspend()
     %suspend = call i8 @llvm.coro.suspend(token %save, i1 false)
     switch i8 %suspend, label %coro.ret [
@@ -137,8 +132,8 @@ init.ready:                                       ; preds = %init.suspend, %coro
     br i1 %ready.again, label %await.ready, label %await.suspend
 
 await.suspend:                                    ; preds = %init.ready
-    %save.again = call token @llvm.coro.save(i8* null)
-    %from.address = call i8* @from_address(i8* %begin)
+    %save.again = call token @llvm.coro.save(ptr null)
+    %from.address = call ptr @from_address(ptr %begin)
     call void @await_suspend()
     %suspend.again = call i8 @llvm.coro.suspend(token %save.again, i1 false)
     switch i8 %suspend.again, label %coro.ret [
@@ -151,21 +146,20 @@ await.cleanup:                                    ; preds = %await.suspend
 
 await.ready:                                      ; preds = %await.suspend, %init.ready
     call void @await_resume()
-    %i.i = getelementptr inbounds %promise_type, %promise_type* %__promise, i64 0, i32 0
-    store i32 1, i32* %i.i, align 8
-    %j.i = getelementptr inbounds %promise_type, %promise_type* %__promise, i64 0, i32 1
-    store i32 2, i32* %j.i, align 4
-    %k.i = getelementptr inbounds %promise_type, %promise_type* %__promise, i64 0, i32 2
-    store double 3.000000e+00, double* %k.i, align 8
-    call void @consume(%struct.big_structure* %struct.data)
-    call void @consume_vector(<4 x i32> *%unresolved_data)
-    call void @consume_vectori5(<5 x i1> *%unresolved_data2)
-    call void @consume_vectori9(<9 x i1> *%unresolved_data3)
-    call void @pi32(i32* %a.alloc)
-    call void @pi32(i32* %b.alloc)
-    call void @pi64(i64* %c.alloc)
-    call void @pdouble(double* %d.alloc)
-    call void @pi64p(i64** %e.alloc)
+    store i32 1, ptr %__promise, align 8
+    %j.i = getelementptr inbounds %promise_type, ptr %__promise, i64 0, i32 1
+    store i32 2, ptr %j.i, align 4
+    %k.i = getelementptr inbounds %promise_type, ptr %__promise, i64 0, i32 2
+    store double 3.000000e+00, ptr %k.i, align 8
+    call void @consume(ptr %struct.data)
+    call void @consume_vector(ptr %unresolved_data)
+    call void @consume_vectori5(ptr %unresolved_data2)
+    call void @consume_vectori9(ptr %unresolved_data3)
+    call void @pi32(ptr %a.alloc)
+    call void @pi32(ptr %b.alloc)
+    call void @pi64(ptr %c.alloc)
+    call void @pdouble(ptr %d.alloc)
+    call void @pi64p(ptr %e.alloc)
     call void @return_void()
     br label %coro.final
 
@@ -175,8 +169,8 @@ coro.final:                                       ; preds = %await.ready
     br i1 %coro.final.await_ready, label %final.ready, label %final.suspend
 
 final.suspend:                                    ; preds = %coro.final
-    %final.suspend.coro.save = call token @llvm.coro.save(i8* null)
-    %final.suspend.from_address = call i8* @from_address(i8* %begin)
+    %final.suspend.coro.save = call token @llvm.coro.save(ptr null)
+    %final.suspend.from_address = call ptr @from_address(ptr %begin)
     call void @await_suspend()
     %final.suspend.coro.suspend = call i8 @llvm.coro.suspend(token %final.suspend.coro.save, i1 true)
     switch i8 %final.suspend.coro.suspend, label %coro.ret [
@@ -193,12 +187,12 @@ final.ready:                                      ; preds = %final.suspend, %cor
 
 cleanup:                                          ; preds = %final.ready, %final.cleanup, %await.cleanup, %init.cleanup
     %cleanup.dest.slot.0 = phi i32 [ 0, %final.ready ], [ 2, %final.cleanup ], [ 2, %await.cleanup ], [ 2, %init.cleanup ]
-    %free.memory = call i8* @llvm.coro.free(token %id, i8* %begin)
-    %free = icmp ne i8* %free.memory, null
+    %free.memory = call ptr @llvm.coro.free(token %id, ptr %begin)
+    %free = icmp ne ptr %free.memory, null
     br i1 %free, label %coro.free, label %after.coro.free
 
 coro.free:                                        ; preds = %cleanup
-    call void @delete(i8* %free.memory)
+    call void @delete(ptr %free.memory)
     br label %after.coro.free
 
 after.coro.free:                                  ; preds = %coro.free, %cleanup
@@ -211,7 +205,7 @@ cleanup.cont:                                     ; preds = %after.coro.free
     br label %coro.ret
 
 coro.ret:                                         ; preds = %cleanup.cont, %after.coro.free, %final.suspend, %await.suspend, %init.suspend
-    %end = call i1 @llvm.coro.end(i8* null, i1 false)
+    %end = call i1 @llvm.coro.end(ptr null, i1 false, token none)
     ret void
 
 unreachable:                                      ; preds = %after.coro.free
@@ -220,41 +214,40 @@ unreachable:                                      ; preds = %after.coro.free
 }
 
 ; bar is used to check that we wouldn't create duplicate DIType
-define void @bar(i32 %a, i64 %c, double %d, i64* %e) presplitcoroutine !dbg !19 {
+define void @bar(i32 %a, i64 %c, double %d, ptr %e) presplitcoroutine !dbg !19 {
 entry:
     %__promise = alloca %promise_type, align 8
-    %0 = bitcast %promise_type* %__promise to i8*
     %a.alloc = alloca i32, align 4
     %c.alloc = alloca i64, align 4
     %d.alloc = alloca double, align 4
-    %e.alloc = alloca i64*, align 4
-    store i32 %a, i32* %a.alloc
-    store i64 %c, i64* %c.alloc
-    store double %d, double* %d.alloc
-    store i64* %e, i64** %e.alloc
+    %e.alloc = alloca ptr, align 4
+    store i32 %a, ptr %a.alloc
+    store i64 %c, ptr %c.alloc
+    store double %d, ptr %d.alloc
+    store ptr %e, ptr %e.alloc
     %struct.data = alloca %struct.big_structure, align 1
-    call void @produce(%struct.big_structure* %struct.data)
+    call void @produce(ptr %struct.data)
     ; We treat vector type as unresolved type now for test coverage.
     %unresolved_data = alloca <4 x i32>
-    call void @produce_vector(<4 x i32> *%unresolved_data)
-    %id = call token @llvm.coro.id(i32 16, i8* %0, i8* null, i8* null)
+    call void @produce_vector(ptr %unresolved_data)
+    %id = call token @llvm.coro.id(i32 16, ptr %__promise, ptr null, ptr null)
     %alloc = call i1 @llvm.coro.alloc(token %id)
     br i1 %alloc, label %coro.alloc, label %coro.init
 
 coro.alloc:                                       ; preds = %entry
     %size = call i64 @llvm.coro.size.i64()
-    %memory = call i8* @new(i64 %size)
+    %memory = call ptr @new(i64 %size)
     br label %coro.init
 
 coro.init:                                        ; preds = %coro.alloc, %entry
-    %phi.entry.alloc = phi i8* [ null, %entry ], [ %memory, %coro.alloc ]
-    %begin = call i8* @llvm.coro.begin(token %id, i8* %phi.entry.alloc)
-    call void @llvm.dbg.declare(metadata %promise_type* %__promise, metadata !21, metadata !DIExpression()), !dbg !22
+    %phi.entry.alloc = phi ptr [ null, %entry ], [ %memory, %coro.alloc ]
+    %begin = call ptr @llvm.coro.begin(token %id, ptr %phi.entry.alloc)
+    call void @llvm.dbg.declare(metadata ptr %__promise, metadata !21, metadata !DIExpression()), !dbg !22
     %ready = call i1 @await_ready()
     br i1 %ready, label %init.ready, label %init.suspend
 
 init.suspend:                                     ; preds = %coro.init
-    %save = call token @llvm.coro.save(i8* null)
+    %save = call token @llvm.coro.save(ptr null)
     call void @await_suspend()
     %suspend = call i8 @llvm.coro.suspend(token %save, i1 false)
     switch i8 %suspend, label %coro.ret [
@@ -271,8 +264,8 @@ init.ready:                                       ; preds = %init.suspend, %coro
     br i1 %ready.again, label %await.ready, label %await.suspend
 
 await.suspend:                                    ; preds = %init.ready
-    %save.again = call token @llvm.coro.save(i8* null)
-    %from.address = call i8* @from_address(i8* %begin)
+    %save.again = call token @llvm.coro.save(ptr null)
+    %from.address = call ptr @from_address(ptr %begin)
     call void @await_suspend()
     %suspend.again = call i8 @llvm.coro.suspend(token %save.again, i1 false)
     switch i8 %suspend.again, label %coro.ret [
@@ -285,18 +278,17 @@ await.cleanup:                                    ; preds = %await.suspend
 
 await.ready:                                      ; preds = %await.suspend, %init.ready
     call void @await_resume()
-    %i.i = getelementptr inbounds %promise_type, %promise_type* %__promise, i64 0, i32 0
-    store i32 1, i32* %i.i, align 8
-    %j.i = getelementptr inbounds %promise_type, %promise_type* %__promise, i64 0, i32 1
-    store i32 2, i32* %j.i, align 4
-    %k.i = getelementptr inbounds %promise_type, %promise_type* %__promise, i64 0, i32 2
-    store double 3.000000e+00, double* %k.i, align 8
-    call void @consume(%struct.big_structure* %struct.data)
-    call void @consume_vector(<4 x i32> *%unresolved_data)
-    call void @pi32(i32* %a.alloc)
-    call void @pi64(i64* %c.alloc)
-    call void @pdouble(double* %d.alloc)
-    call void @pi64p(i64** %e.alloc)
+    store i32 1, ptr %__promise, align 8
+    %j.i = getelementptr inbounds %promise_type, ptr %__promise, i64 0, i32 1
+    store i32 2, ptr %j.i, align 4
+    %k.i = getelementptr inbounds %promise_type, ptr %__promise, i64 0, i32 2
+    store double 3.000000e+00, ptr %k.i, align 8
+    call void @consume(ptr %struct.data)
+    call void @consume_vector(ptr %unresolved_data)
+    call void @pi32(ptr %a.alloc)
+    call void @pi64(ptr %c.alloc)
+    call void @pdouble(ptr %d.alloc)
+    call void @pi64p(ptr %e.alloc)
     call void @return_void()
     br label %coro.final
 
@@ -306,8 +298,8 @@ coro.final:                                       ; preds = %await.ready
     br i1 %coro.final.await_ready, label %final.ready, label %final.suspend
 
 final.suspend:                                    ; preds = %coro.final
-    %final.suspend.coro.save = call token @llvm.coro.save(i8* null)
-    %final.suspend.from_address = call i8* @from_address(i8* %begin)
+    %final.suspend.coro.save = call token @llvm.coro.save(ptr null)
+    %final.suspend.from_address = call ptr @from_address(ptr %begin)
     call void @await_suspend()
     %final.suspend.coro.suspend = call i8 @llvm.coro.suspend(token %final.suspend.coro.save, i1 true)
     switch i8 %final.suspend.coro.suspend, label %coro.ret [
@@ -324,12 +316,12 @@ final.ready:                                      ; preds = %final.suspend, %cor
 
 cleanup:                                          ; preds = %final.ready, %final.cleanup, %await.cleanup, %init.cleanup
     %cleanup.dest.slot.0 = phi i32 [ 0, %final.ready ], [ 2, %final.cleanup ], [ 2, %await.cleanup ], [ 2, %init.cleanup ]
-    %free.memory = call i8* @llvm.coro.free(token %id, i8* %begin)
-    %free = icmp ne i8* %free.memory, null
+    %free.memory = call ptr @llvm.coro.free(token %id, ptr %begin)
+    %free = icmp ne ptr %free.memory, null
     br i1 %free, label %coro.free, label %after.coro.free
 
 coro.free:                                        ; preds = %cleanup
-    call void @delete(i8* %free.memory)
+    call void @delete(ptr %free.memory)
     br label %after.coro.free
 
 after.coro.free:                                  ; preds = %coro.free, %cleanup
@@ -342,7 +334,7 @@ cleanup.cont:                                     ; preds = %after.coro.free
     br label %coro.ret
 
 coro.ret:                                         ; preds = %cleanup.cont, %after.coro.free, %final.suspend, %await.suspend, %init.suspend
-    %end = call i1 @llvm.coro.end(i8* null, i1 false)
+    %end = call i1 @llvm.coro.end(ptr null, i1 false, token none)
     ret void
 
 unreachable:                                      ; preds = %after.coro.free
@@ -351,22 +343,22 @@ unreachable:                                      ; preds = %after.coro.free
 }
 
 declare void @llvm.dbg.declare(metadata, metadata, metadata)
-declare token @llvm.coro.id(i32, i8* readnone, i8* nocapture readonly, i8*)
+declare token @llvm.coro.id(i32, ptr readnone, ptr nocapture readonly, ptr)
 declare i1 @llvm.coro.alloc(token)
 declare i64 @llvm.coro.size.i64()
-declare token @llvm.coro.save(i8*)
-declare i8* @llvm.coro.begin(token, i8* writeonly)
+declare token @llvm.coro.save(ptr)
+declare ptr @llvm.coro.begin(token, ptr writeonly)
 declare i8 @llvm.coro.suspend(token, i1)
-declare i8* @llvm.coro.free(token, i8* nocapture readonly)
-declare i1 @llvm.coro.end(i8*, i1)
+declare ptr @llvm.coro.free(token, ptr nocapture readonly)
+declare i1 @llvm.coro.end(ptr, i1, token)
 
-declare i8* @new(i64)
-declare void @delete(i8*)
+declare ptr @new(i64)
+declare void @delete(ptr)
 declare i1 @await_ready()
 declare void @await_suspend()
 declare void @await_resume()
 declare void @print(i32)
-declare i8* @from_address(i8*)
+declare ptr @from_address(ptr)
 declare void @return_void()
 declare void @final_suspend()
 

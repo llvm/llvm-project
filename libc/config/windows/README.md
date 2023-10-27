@@ -83,7 +83,7 @@ libc, and finally, build and test the libc.
 10. Build LLVM libc using:
 
     ```
-    ninja llvmlibc
+    ninja libc
 
     ```
 

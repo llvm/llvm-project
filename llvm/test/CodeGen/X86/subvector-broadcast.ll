@@ -1153,9 +1153,8 @@ define <8 x double> @reg_broadcast_2f64_8f64(<2 x double> %a0) nounwind {
 ;
 ; X86-AVX512-LABEL: reg_broadcast_2f64_8f64:
 ; X86-AVX512:       # %bb.0:
-; X86-AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
-; X86-AVX512-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
-; X86-AVX512-NEXT:    vinsertf64x4 $1, %ymm0, %zmm0, %zmm0
+; X86-AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; X86-AVX512-NEXT:    vshuff64x2 {{.*#+}} zmm0 = zmm0[0,1,0,1,0,1,0,1]
 ; X86-AVX512-NEXT:    retl
 ;
 ; X64-AVX-LABEL: reg_broadcast_2f64_8f64:
@@ -1167,9 +1166,8 @@ define <8 x double> @reg_broadcast_2f64_8f64(<2 x double> %a0) nounwind {
 ;
 ; X64-AVX512-LABEL: reg_broadcast_2f64_8f64:
 ; X64-AVX512:       # %bb.0:
-; X64-AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
-; X64-AVX512-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
-; X64-AVX512-NEXT:    vinsertf64x4 $1, %ymm0, %zmm0, %zmm0
+; X64-AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; X64-AVX512-NEXT:    vshuff64x2 {{.*#+}} zmm0 = zmm0[0,1,0,1,0,1,0,1]
 ; X64-AVX512-NEXT:    retq
  %1 = shufflevector <2 x double> %a0, <2 x double> undef, <8 x i32> <i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1>
  ret <8 x double> %1
@@ -1227,9 +1225,8 @@ define <8 x i64> @reg_broadcast_2i64_8i64(<2 x i64> %a0) nounwind {
 ;
 ; X86-AVX512-LABEL: reg_broadcast_2i64_8i64:
 ; X86-AVX512:       # %bb.0:
-; X86-AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
-; X86-AVX512-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
-; X86-AVX512-NEXT:    vinsertf64x4 $1, %ymm0, %zmm0, %zmm0
+; X86-AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; X86-AVX512-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,0,1,0,1,0,1]
 ; X86-AVX512-NEXT:    retl
 ;
 ; X64-AVX-LABEL: reg_broadcast_2i64_8i64:
@@ -1241,9 +1238,8 @@ define <8 x i64> @reg_broadcast_2i64_8i64(<2 x i64> %a0) nounwind {
 ;
 ; X64-AVX512-LABEL: reg_broadcast_2i64_8i64:
 ; X64-AVX512:       # %bb.0:
-; X64-AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
-; X64-AVX512-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
-; X64-AVX512-NEXT:    vinsertf64x4 $1, %ymm0, %zmm0, %zmm0
+; X64-AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; X64-AVX512-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,0,1,0,1,0,1]
 ; X64-AVX512-NEXT:    retq
  %1 = shufflevector <2 x i64> %a0, <2 x i64> undef, <8 x i32> <i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1>
  ret <8 x i64> %1
@@ -1301,9 +1297,8 @@ define <16 x float> @reg_broadcast_4f32_16f32(<4 x float> %a0) nounwind {
 ;
 ; X86-AVX512-LABEL: reg_broadcast_4f32_16f32:
 ; X86-AVX512:       # %bb.0:
-; X86-AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
-; X86-AVX512-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
-; X86-AVX512-NEXT:    vinsertf64x4 $1, %ymm0, %zmm0, %zmm0
+; X86-AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; X86-AVX512-NEXT:    vshuff64x2 {{.*#+}} zmm0 = zmm0[0,1,0,1,0,1,0,1]
 ; X86-AVX512-NEXT:    retl
 ;
 ; X64-AVX-LABEL: reg_broadcast_4f32_16f32:
@@ -1315,9 +1310,8 @@ define <16 x float> @reg_broadcast_4f32_16f32(<4 x float> %a0) nounwind {
 ;
 ; X64-AVX512-LABEL: reg_broadcast_4f32_16f32:
 ; X64-AVX512:       # %bb.0:
-; X64-AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
-; X64-AVX512-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
-; X64-AVX512-NEXT:    vinsertf64x4 $1, %ymm0, %zmm0, %zmm0
+; X64-AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; X64-AVX512-NEXT:    vshuff64x2 {{.*#+}} zmm0 = zmm0[0,1,0,1,0,1,0,1]
 ; X64-AVX512-NEXT:    retq
  %1 = shufflevector <4 x float> %a0, <4 x float> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
  ret <16 x float> %1
@@ -1375,9 +1369,8 @@ define <16 x i32> @reg_broadcast_4i32_16i32(<4 x i32> %a0) nounwind {
 ;
 ; X86-AVX512-LABEL: reg_broadcast_4i32_16i32:
 ; X86-AVX512:       # %bb.0:
-; X86-AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
-; X86-AVX512-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
-; X86-AVX512-NEXT:    vinsertf64x4 $1, %ymm0, %zmm0, %zmm0
+; X86-AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; X86-AVX512-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,0,1,0,1,0,1]
 ; X86-AVX512-NEXT:    retl
 ;
 ; X64-AVX-LABEL: reg_broadcast_4i32_16i32:
@@ -1389,9 +1382,8 @@ define <16 x i32> @reg_broadcast_4i32_16i32(<4 x i32> %a0) nounwind {
 ;
 ; X64-AVX512-LABEL: reg_broadcast_4i32_16i32:
 ; X64-AVX512:       # %bb.0:
-; X64-AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
-; X64-AVX512-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
-; X64-AVX512-NEXT:    vinsertf64x4 $1, %ymm0, %zmm0, %zmm0
+; X64-AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; X64-AVX512-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,0,1,0,1,0,1]
 ; X64-AVX512-NEXT:    retq
  %1 = shufflevector <4 x i32> %a0, <4 x i32> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
  ret <16 x i32> %1
@@ -1449,9 +1441,8 @@ define <32 x i16> @reg_broadcast_8i16_32i16(<8 x i16> %a0) nounwind {
 ;
 ; X86-AVX512-LABEL: reg_broadcast_8i16_32i16:
 ; X86-AVX512:       # %bb.0:
-; X86-AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
-; X86-AVX512-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
-; X86-AVX512-NEXT:    vinsertf64x4 $1, %ymm0, %zmm0, %zmm0
+; X86-AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; X86-AVX512-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,0,1,0,1,0,1]
 ; X86-AVX512-NEXT:    retl
 ;
 ; X64-AVX-LABEL: reg_broadcast_8i16_32i16:
@@ -1463,9 +1454,8 @@ define <32 x i16> @reg_broadcast_8i16_32i16(<8 x i16> %a0) nounwind {
 ;
 ; X64-AVX512-LABEL: reg_broadcast_8i16_32i16:
 ; X64-AVX512:       # %bb.0:
-; X64-AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
-; X64-AVX512-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
-; X64-AVX512-NEXT:    vinsertf64x4 $1, %ymm0, %zmm0, %zmm0
+; X64-AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; X64-AVX512-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,0,1,0,1,0,1]
 ; X64-AVX512-NEXT:    retq
  %1 = shufflevector <8 x i16> %a0, <8 x i16> undef, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
  ret <32 x i16> %1
@@ -1523,9 +1513,8 @@ define <64 x i8> @reg_broadcast_16i8_64i8(<16 x i8> %a0) nounwind {
 ;
 ; X86-AVX512-LABEL: reg_broadcast_16i8_64i8:
 ; X86-AVX512:       # %bb.0:
-; X86-AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
-; X86-AVX512-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
-; X86-AVX512-NEXT:    vinsertf64x4 $1, %ymm0, %zmm0, %zmm0
+; X86-AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; X86-AVX512-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,0,1,0,1,0,1]
 ; X86-AVX512-NEXT:    retl
 ;
 ; X64-AVX-LABEL: reg_broadcast_16i8_64i8:
@@ -1537,9 +1526,8 @@ define <64 x i8> @reg_broadcast_16i8_64i8(<16 x i8> %a0) nounwind {
 ;
 ; X64-AVX512-LABEL: reg_broadcast_16i8_64i8:
 ; X64-AVX512:       # %bb.0:
-; X64-AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
-; X64-AVX512-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
-; X64-AVX512-NEXT:    vinsertf64x4 $1, %ymm0, %zmm0, %zmm0
+; X64-AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; X64-AVX512-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,0,1,0,1,0,1]
 ; X64-AVX512-NEXT:    retq
  %1 = shufflevector <16 x i8> %a0, <16 x i8> undef, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
  ret <64 x i8> %1
@@ -1768,8 +1756,8 @@ define void @PR51226() {
 ; X86-AVX2-LABEL: PR51226:
 ; X86-AVX2:       # %bb.0:
 ; X86-AVX2-NEXT:    vpmovzxwd {{.*#+}} xmm0 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
+; X86-AVX2-NEXT:    vpslld $16, %xmm0, %xmm0
 ; X86-AVX2-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; X86-AVX2-NEXT:    vpslld $16, %ymm0, %ymm0
 ; X86-AVX2-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; X86-AVX2-NEXT:    vminps %ymm1, %ymm0, %ymm0
 ; X86-AVX2-NEXT:    vmovups %ymm0, (%eax)
@@ -1779,8 +1767,8 @@ define void @PR51226() {
 ; X86-AVX512-LABEL: PR51226:
 ; X86-AVX512:       # %bb.0:
 ; X86-AVX512-NEXT:    vpmovzxwd {{.*#+}} xmm0 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
+; X86-AVX512-NEXT:    vpslld $16, %xmm0, %xmm0
 ; X86-AVX512-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; X86-AVX512-NEXT:    vpslld $16, %ymm0, %ymm0
 ; X86-AVX512-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; X86-AVX512-NEXT:    vminps %ymm1, %ymm0, %ymm0
 ; X86-AVX512-NEXT:    vmovups %ymm0, (%eax)
@@ -1801,8 +1789,8 @@ define void @PR51226() {
 ; X64-AVX2-LABEL: PR51226:
 ; X64-AVX2:       # %bb.0:
 ; X64-AVX2-NEXT:    vpmovzxwd {{.*#+}} xmm0 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
+; X64-AVX2-NEXT:    vpslld $16, %xmm0, %xmm0
 ; X64-AVX2-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; X64-AVX2-NEXT:    vpslld $16, %ymm0, %ymm0
 ; X64-AVX2-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; X64-AVX2-NEXT:    vminps %ymm1, %ymm0, %ymm0
 ; X64-AVX2-NEXT:    vmovups %ymm0, (%rax)
@@ -1812,8 +1800,8 @@ define void @PR51226() {
 ; X64-AVX512-LABEL: PR51226:
 ; X64-AVX512:       # %bb.0:
 ; X64-AVX512-NEXT:    vpmovzxwd {{.*#+}} xmm0 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero
+; X64-AVX512-NEXT:    vpslld $16, %xmm0, %xmm0
 ; X64-AVX512-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; X64-AVX512-NEXT:    vpslld $16, %ymm0, %ymm0
 ; X64-AVX512-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; X64-AVX512-NEXT:    vminps %ymm1, %ymm0, %ymm0
 ; X64-AVX512-NEXT:    vmovups %ymm0, (%rax)

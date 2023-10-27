@@ -1,7 +1,6 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin9.0.0 -fsyntax-only -verify %s
 // RUN: %clang_cc1 -x objective-c++ -std=c++11 -triple x86_64-apple-darwin9.0.0 -fsyntax-only -verify %s
 // RUN: %clang_cc1 -x objective-c++ -std=c++03 -triple x86_64-apple-darwin9.0.0 -fsyntax-only -verify %s
-// rdar://18490958
 
 #if !__has_feature(attribute_availability_with_version_underscores)
 # error "missing feature"
@@ -22,7 +21,6 @@
 - (void)overridden6 __attribute__((availability(macosx,introduced=10_3))); // expected-note{{overridden method is here}}
 @end
 
-// rdar://11475360
 @interface B : A
 - (void)method; // NOTE: we expect 'method' to *not* inherit availability.
 - (void)overridden __attribute__((availability(macosx,introduced=10_4))); // expected-warning{{overriding method introduced after overridden method on macOS (10.4 vs. 10.3)}}
@@ -40,8 +38,7 @@ void f(A *a, B *b) {
   [b proto_method]; // expected-warning{{'proto_method' is deprecated: first deprecated in macOS 10.2}}
 }
 
-// Test case for <rdar://problem/11627873>.  Warn about
-// using a deprecated method when that method is re-implemented in a
+// Warn about using a deprecated method when that method is re-implemented in a
 // subclass where the redeclared method is not deprecated.
 @interface C
 - (void) method __attribute__((availability(macosx,introduced=10_1,deprecated=10_2))); // expected-note {{'method' has been explicitly marked deprecated here}}
@@ -67,7 +64,6 @@ void f(A *a, B *b) {
 }
 @end
 
-// rdar://18059669
 @class NSMutableArray;
 
 @interface NSDictionary
@@ -100,7 +96,6 @@ id NSNibOwner, topNibObjects;
 - (void)Meth2 __attribute__((availability(macosx,introduced=10_3.1))); // expected-warning {{use same version number separators '_' or '.'}}
 @end
 
-// rdar://18804883
 @protocol P18804883
 - (void)proto_method __attribute__((availability(macosx,introduced=10_1,deprecated=NA))); // means nothing (not deprecated)
 @end

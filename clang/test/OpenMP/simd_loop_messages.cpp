@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -fsyntax-only -fopenmp -fopenmp-version=45 -x c++ -std=c++11 -fexceptions -fcxx-exceptions -verify=expected,omp4,expectedw %s -Wuninitialized
 // RUN: %clang_cc1 -fsyntax-only -fopenmp-simd -fopenmp-version=45 -x c++ -std=c++11 -fexceptions -fcxx-exceptions -verify=expected,omp4,expectedw %s -Wuninitialized
-// RUN: %clang_cc1 -fsyntax-only -fopenmp -x c++ -std=c++11 -fexceptions -fcxx-exceptions -verify=expected,omp5,expectedw %s -fopenmp-version=50 -DOMP50 -Wuninitialized
-// RUN: %clang_cc1 -fsyntax-only -fopenmp-simd -x c++ -std=c++11 -fexceptions -fcxx-exceptions -verify=expected,omp5,expectedw %s -fopenmp-version=50 -DOMP50 -Wuninitialized
+// RUN: %clang_cc1 -fsyntax-only -fopenmp -x c++ -std=c++11 -fexceptions -fcxx-exceptions -verify=expected,omp5,expectedw %s -DOMP51 -Wuninitialized
+// RUN: %clang_cc1 -fsyntax-only -fopenmp-simd -x c++ -std=c++11 -fexceptions -fcxx-exceptions -verify=expected,omp5,expectedw %s -DOMP51 -Wuninitialized
 // RUN: %clang_cc1 -fsyntax-only -fopenmp -fopenmp-version=45 -x c++ -std=c++11 -fexceptions -fcxx-exceptions -verify=expected,omp4 %s -Wuninitialized -Wno-openmp-loop-form
 // RUN: %clang_cc1 -fsyntax-only -fopenmp -fopenmp-version=45 -x c++ -std=c++11 -fexceptions -fcxx-exceptions -verify=expected,omp4 %s -Wuninitialized -Wno-openmp
 
@@ -248,18 +248,18 @@ int test_iteration_spaces() {
   for (ii = 0; (ii < 10); (ii-=0))
     c[ii] = a[ii];
 
-#ifndef OMP50
+#ifndef OMP51
   // expected-note@+3  {{defined as private}}
   // expected-error@+3 {{loop iteration variable in the associated loop of 'omp simd' directive may not be private, predetermined as linear}}
-#endif // OMP50
+#endif // OMP51
   #pragma omp simd private(ii)
   for (ii = 0; ii < 10; ii++)
     c[ii] = a[ii];
 
-#ifndef OMP50
+#ifndef OMP51
   // expected-note@+3  {{defined as lastprivate}}
   // expected-error@+3 {{loop iteration variable in the associated loop of 'omp simd' directive may not be lastprivate, predetermined as linear}}
-#endif // OMP50
+#endif // OMP51
   #pragma omp simd lastprivate(ii)
   for (ii = 0; ii < 10; ii++)
     c[ii] = a[ii];

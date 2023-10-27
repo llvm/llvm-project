@@ -7,9 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/stdlib/rand_util.h"
+#include "src/__support/macros/attributes.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
-thread_local unsigned long rand_next;
+// C standard 7.10p2: If 'rand' is called before 'srand' it is to proceed as if
+// the 'srand' function was called with a value of '1'.
+LIBC_THREAD_LOCAL unsigned long rand_next = 1;
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

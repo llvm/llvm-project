@@ -97,14 +97,13 @@ define float @select_const_fp(i1 zeroext %a) nounwind {
 ; RV32IF:       # %bb.0:
 ; RV32IF-NEXT:    bnez a0, .LBB4_2
 ; RV32IF-NEXT:  # %bb.1:
-; RV32IF-NEXT:    lui a0, %hi(.LCPI4_0)
-; RV32IF-NEXT:    flw ft0, %lo(.LCPI4_0)(a0)
-; RV32IF-NEXT:    fmv.x.w a0, ft0
-; RV32IF-NEXT:    ret
+; RV32IF-NEXT:    lui a0, 264192
+; RV32IF-NEXT:    j .LBB4_3
 ; RV32IF-NEXT:  .LBB4_2:
-; RV32IF-NEXT:    lui a0, %hi(.LCPI4_1)
-; RV32IF-NEXT:    flw ft0, %lo(.LCPI4_1)(a0)
-; RV32IF-NEXT:    fmv.x.w a0, ft0
+; RV32IF-NEXT:    lui a0, 263168
+; RV32IF-NEXT:  .LBB4_3:
+; RV32IF-NEXT:    fmv.w.x fa5, a0
+; RV32IF-NEXT:    fmv.x.w a0, fa5
 ; RV32IF-NEXT:    ret
 ;
 ; RV64I-LABEL: select_const_fp:
@@ -121,14 +120,13 @@ define float @select_const_fp(i1 zeroext %a) nounwind {
 ; RV64IFD:       # %bb.0:
 ; RV64IFD-NEXT:    bnez a0, .LBB4_2
 ; RV64IFD-NEXT:  # %bb.1:
-; RV64IFD-NEXT:    lui a0, %hi(.LCPI4_0)
-; RV64IFD-NEXT:    flw ft0, %lo(.LCPI4_0)(a0)
-; RV64IFD-NEXT:    fmv.x.w a0, ft0
-; RV64IFD-NEXT:    ret
+; RV64IFD-NEXT:    lui a0, 264192
+; RV64IFD-NEXT:    j .LBB4_3
 ; RV64IFD-NEXT:  .LBB4_2:
-; RV64IFD-NEXT:    lui a0, %hi(.LCPI4_1)
-; RV64IFD-NEXT:    flw ft0, %lo(.LCPI4_1)(a0)
-; RV64IFD-NEXT:    fmv.x.w a0, ft0
+; RV64IFD-NEXT:    lui a0, 263168
+; RV64IFD-NEXT:  .LBB4_3:
+; RV64IFD-NEXT:    fmv.w.x fa5, a0
+; RV64IFD-NEXT:    fmv.x.w a0, fa5
 ; RV64IFD-NEXT:    ret
   %1 = select i1 %a, float 3.0, float 4.0
   ret float %1

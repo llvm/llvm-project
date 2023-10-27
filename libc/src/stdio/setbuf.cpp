@@ -9,20 +9,20 @@
 #include "src/stdio/setbuf.h"
 #include "src/__support/File/file.h"
 
-#include <errno.h>
+#include "src/errno/libc_errno.h"
 #include <stdio.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(void, setbuf,
                    (::FILE *__restrict stream, char *__restrict buf)) {
   int mode = _IOFBF;
   if (buf == nullptr)
     mode = _IONBF;
-  int err = reinterpret_cast<__llvm_libc::File *>(stream)->set_buffer(
+  int err = reinterpret_cast<LIBC_NAMESPACE::File *>(stream)->set_buffer(
       buf, BUFSIZ, mode);
   if (err != 0)
-    errno = err;
+    libc_errno = err;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

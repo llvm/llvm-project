@@ -287,12 +287,6 @@ public:
   // This could be zero if no forced alignment is required.
   CharUnits BlockHeaderForcedGapSize;
 
-  /// The next block in the block-info chain.  Invalid if this block
-  /// info is not part of the CGF's block-info chain, which is true
-  /// if it corresponds to a global block or a block whose expression
-  /// has been encountered.
-  CGBlockInfo *NextBlockInfo;
-
   void buildCaptureMap() {
     for (auto &C : SortedCaptures)
       Captures[C.Cap->getVariable()] = &C;

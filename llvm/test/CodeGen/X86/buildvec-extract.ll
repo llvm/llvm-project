@@ -83,7 +83,7 @@ define <2 x i64> @extract1_i32_zext_insert0_i64_zero(<4 x i32> %x) {
 ;
 ; AVX-LABEL: extract1_i32_zext_insert0_i64_zero:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[1,1,1,1]
+; AVX-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; AVX-NEXT:    retq
@@ -128,7 +128,7 @@ define <2 x i64> @extract2_i32_zext_insert0_i64_zero(<4 x i32> %x) {
 ;
 ; AVX-LABEL: extract2_i32_zext_insert0_i64_zero:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[2,3,2,3]
+; AVX-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[2,3,2,3]
 ; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; AVX-NEXT:    retq
@@ -187,7 +187,7 @@ define <2 x i64> @extract0_i32_zext_insert1_i64_undef(<4 x i32> %x) {
 ;
 ; AVX-LABEL: extract0_i32_zext_insert1_i64_undef:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,1,0,1]
+; AVX-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0,1,2],xmm1[3]
 ; AVX-NEXT:    retq

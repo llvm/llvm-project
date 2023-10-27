@@ -156,6 +156,11 @@ public:
     denoms[i] = divisor;
   }
 
+  // Find the greatest common divisor (GCD) of the dividends and divisor for
+  // each valid division. Divide the dividends and divisor by the GCD to
+  // simplify the expression.
+  void normalizeDivs();
+
   void insertDiv(unsigned pos, ArrayRef<MPInt> dividend, const MPInt &divisor);
   void insertDiv(unsigned pos, unsigned num = 1);
 
@@ -177,7 +182,7 @@ private:
   /// Each row of the Matrix represents a single division dividend. The
   /// `i^th` row represents the dividend of the variable at `divOffset + i`
   /// in the constraint system (and the `i^th` local variable).
-  Matrix dividends;
+  IntMatrix dividends;
 
   /// Denominators of each division. If a denominator of a division is `0`, the
   /// division variable is considered to not have a division representation.

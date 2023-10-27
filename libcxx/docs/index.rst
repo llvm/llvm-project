@@ -34,16 +34,24 @@ Getting Started with libc++
 .. toctree::
    :maxdepth: 1
 
-   ReleaseNotes
+   ReleaseNotes/17
+   ReleaseNotes/18
    UsingLibcxx
    BuildingLibcxx
    TestingLibcxx
    Contributing
+   ImplementationDefinedBehavior
+   Modules
+   Hardening
+   ReleaseProcedure
    Status/Cxx14
    Status/Cxx17
    Status/Cxx20
-   Status/Cxx2b
+   Status/Cxx23
+   Status/Cxx2c
    Status/Format
+   Status/Parallelism
+   Status/PSTL
    Status/Ranges
    Status/Spaceship
    Status/Zip
@@ -93,6 +101,9 @@ reasons, but some of the major ones are:
   Further, both projects are apparently abandoned: STLport 5.2.1 was
   released in Oct'08, and STDCXX 4.2.1 in May'08.
 
+..
+  LLVM RELEASE bump version
+
 .. _SupportedPlatforms:
 
 Platform and Compiler Support
@@ -105,8 +116,8 @@ velocity, libc++ drops support for older compilers as newer ones are released.
 ============ =============== ========================== =====================
 Compiler     Versions        Restrictions               Support policy
 ============ =============== ========================== =====================
-Clang        14, 15, 16-git                             latest two stable releases per `LLVM's release page <https://releases.llvm.org>`_ and the development version
-AppleClang   14                                         latest stable release per `Xcode's release page <https://developer.apple.com/documentation/xcode-release-notes>`_
+Clang        16, 17, 18-git                             latest two stable releases per `LLVM's release page <https://releases.llvm.org>`_ and the development version
+AppleClang   15                                         latest stable release per `Xcode's release page <https://developer.apple.com/documentation/xcode-release-notes>`_
 Open XL      17.1 (AIX)                                 latest stable release per `Open XL's documentation page <https://www.ibm.com/docs/en/openxl-c-and-cpp-aix>`_
 GCC          12              In C++11 or later only     latest stable release per `GCC's release page <https://gcc.gnu.org/releases.html>`_
 ============ =============== ========================== =====================
@@ -116,11 +127,11 @@ Libc++ also supports common platforms and architectures:
 =============== ========================= ============================
 Target platform Target architecture       Notes
 =============== ========================= ============================
-macOS 10.9+     i386, x86_64, arm64       Building the shared library itself requires targetting macOS 10.11+
-FreeBSD 10+     i386, x86_64, arm
-Linux           i386, x86_64, arm, arm64
-Windows         i386, x86_64              Both MSVC and MinGW style environments
-AIX             powerpc, powerpc64
+macOS 10.9+     i386, x86_64, arm64       Building the shared library itself requires targetting macOS 10.13+
+FreeBSD 12+     i386, x86_64, arm
+Linux           i386, x86_64, arm, arm64  Only glibc-2.24 and later and no other libc is officially supported
+Windows         i386, x86_64              Both MSVC and MinGW style environments, ABI in MSVC environments is :doc:`unstable <DesignDocs/ABIVersioning>`
+AIX 7.2TL5+     powerpc, powerpc64
 =============== ========================= ============================
 
 Generally speaking, libc++ should work on any platform that provides a fairly complete
@@ -144,7 +155,8 @@ C++ Dialect Support
 * :ref:`C++14 - Complete <cxx14-status>`
 * :ref:`C++17 - In Progress <cxx17-status>`
 * :ref:`C++20 - In Progress <cxx20-status>`
-* :ref:`C++2b - In Progress <cxx2b-status>`
+* :ref:`C++23 - In Progress <cxx23-status>`
+* :ref:`C++2c - In Progress <cxx2c-status>`
 * :ref:`C++ Feature Test Macro Status <feature-status>`
 
 
@@ -171,17 +183,18 @@ Design Documents
    DesignDocs/ABIVersioning
    DesignDocs/AtomicDesign
    DesignDocs/CapturingConfigInfo
-   DesignDocs/DebugMode
    DesignDocs/ExperimentalFeatures
    DesignDocs/ExtendedCXX03Support
    DesignDocs/FeatureTestMacros
    DesignDocs/FileTimeType
    DesignDocs/HeaderRemovalPolicy
    DesignDocs/NoexceptPolicy
+   DesignDocs/PSTLIntegration
    DesignDocs/ThreadingSupportAPI
    DesignDocs/UniquePtrTrivialAbi
    DesignDocs/UnspecifiedBehaviorRandomization
    DesignDocs/VisibilityMacros
+   DesignDocs/TimeZone
 
 
 Build Bots and Test Coverage

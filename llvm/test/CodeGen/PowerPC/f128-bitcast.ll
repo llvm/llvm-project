@@ -75,8 +75,8 @@ define i64 @checkBitcast(fp128 %in, <2 x i64> %in2, ptr %out) local_unnamed_addr
 ; CHECK-P8-NEXT:    xxswapd vs0, v2
 ; CHECK-P8-NEXT:    vaddudm v2, v2, v3
 ; CHECK-P8-NEXT:    mffprd r3, f0
-; CHECK-P8-NEXT:    xxswapd vs0, v2
-; CHECK-P8-NEXT:    stxvd2x vs0, 0, r7
+; CHECK-P8-NEXT:    xxswapd vs1, v2
+; CHECK-P8-NEXT:    stxvd2x vs1, 0, r7
 ; CHECK-P8-NEXT:    blr
 entry:
   %0 = bitcast fp128 %in to <2 x i64>

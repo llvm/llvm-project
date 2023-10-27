@@ -7,17 +7,17 @@ define float @test_atomicrmw_fsub_f32_flat(ptr %ptr, float %value) {
 ; GCN-NEXT:    [[TMP1:%.*]] = load float, ptr [[PTR:%.*]], align 4
 ; GCN-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GCN:       atomicrmw.start:
-; GCN-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GCN-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
 ; GCN-NEXT:    [[NEW:%.*]] = fsub float [[LOADED]], [[VALUE:%.*]]
-; GCN-NEXT:    [[TMP3:%.*]] = bitcast float [[NEW]] to i32
-; GCN-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
-; GCN-NEXT:    [[TMP5:%.*]] = cmpxchg ptr [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4
-; GCN-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
-; GCN-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
-; GCN-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
+; GCN-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
+; GCN-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
+; GCN-NEXT:    [[TMP4:%.*]] = cmpxchg ptr [[PTR]], i32 [[TMP3]], i32 [[TMP2]] seq_cst seq_cst, align 4
+; GCN-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
+; GCN-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
+; GCN-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
 ; GCN-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
 ; GCN:       atomicrmw.end:
-; GCN-NEXT:    ret float [[TMP6]]
+; GCN-NEXT:    ret float [[TMP5]]
 ;
   %res = atomicrmw fsub ptr %ptr, float %value seq_cst
   ret float %res
@@ -28,17 +28,17 @@ define float @test_atomicrmw_fsub_f32_global(ptr addrspace(1) %ptr, float %value
 ; GCN-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR:%.*]], align 4
 ; GCN-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GCN:       atomicrmw.start:
-; GCN-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GCN-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
 ; GCN-NEXT:    [[NEW:%.*]] = fsub float [[LOADED]], [[VALUE:%.*]]
-; GCN-NEXT:    [[TMP3:%.*]] = bitcast float [[NEW]] to i32
-; GCN-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
-; GCN-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4
-; GCN-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
-; GCN-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
-; GCN-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
+; GCN-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
+; GCN-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
+; GCN-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] seq_cst seq_cst, align 4
+; GCN-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
+; GCN-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
+; GCN-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
 ; GCN-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
 ; GCN:       atomicrmw.end:
-; GCN-NEXT:    ret float [[TMP6]]
+; GCN-NEXT:    ret float [[TMP5]]
 ;
   %res = atomicrmw fsub ptr addrspace(1) %ptr, float %value seq_cst
   ret float %res
@@ -49,17 +49,17 @@ define float @test_atomicrmw_fsub_f32_local(ptr addrspace(3) %ptr, float %value)
 ; GCN-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(3) [[PTR:%.*]], align 4
 ; GCN-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GCN:       atomicrmw.start:
-; GCN-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GCN-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
 ; GCN-NEXT:    [[NEW:%.*]] = fsub float [[LOADED]], [[VALUE:%.*]]
-; GCN-NEXT:    [[TMP3:%.*]] = bitcast float [[NEW]] to i32
-; GCN-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
-; GCN-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(3) [[PTR]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4
-; GCN-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
-; GCN-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
-; GCN-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
+; GCN-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
+; GCN-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
+; GCN-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(3) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] seq_cst seq_cst, align 4
+; GCN-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
+; GCN-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
+; GCN-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
 ; GCN-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
 ; GCN:       atomicrmw.end:
-; GCN-NEXT:    ret float [[TMP6]]
+; GCN-NEXT:    ret float [[TMP5]]
 ;
   %res = atomicrmw fsub ptr addrspace(3) %ptr, float %value seq_cst
   ret float %res
@@ -84,17 +84,17 @@ define half @test_atomicrmw_fsub_f16_flat(ptr %ptr, half %value) {
 ; GCN-NEXT:    [[NEW:%.*]] = fsub half [[TMP4]], [[VALUE:%.*]]
 ; GCN-NEXT:    [[TMP5:%.*]] = bitcast half [[NEW]] to i16
 ; GCN-NEXT:    [[EXTENDED:%.*]] = zext i16 [[TMP5]] to i32
-; GCN-NEXT:    [[SHIFTED2:%.*]] = shl nuw i32 [[EXTENDED]], [[SHIFTAMT]]
+; GCN-NEXT:    [[SHIFTED1:%.*]] = shl nuw i32 [[EXTENDED]], [[SHIFTAMT]]
 ; GCN-NEXT:    [[UNMASKED:%.*]] = and i32 [[LOADED]], [[INV_MASK]]
-; GCN-NEXT:    [[INSERTED:%.*]] = or i32 [[UNMASKED]], [[SHIFTED2]]
+; GCN-NEXT:    [[INSERTED:%.*]] = or i32 [[UNMASKED]], [[SHIFTED1]]
 ; GCN-NEXT:    [[TMP6:%.*]] = cmpxchg ptr [[ALIGNEDADDR]], i32 [[LOADED]], i32 [[INSERTED]] seq_cst seq_cst, align 4
 ; GCN-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP6]], 1
 ; GCN-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP6]], 0
 ; GCN-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
 ; GCN:       atomicrmw.end:
-; GCN-NEXT:    [[SHIFTED3:%.*]] = lshr i32 [[NEWLOADED]], [[SHIFTAMT]]
-; GCN-NEXT:    [[EXTRACTED4:%.*]] = trunc i32 [[SHIFTED3]] to i16
-; GCN-NEXT:    [[TMP7:%.*]] = bitcast i16 [[EXTRACTED4]] to half
+; GCN-NEXT:    [[SHIFTED2:%.*]] = lshr i32 [[NEWLOADED]], [[SHIFTAMT]]
+; GCN-NEXT:    [[EXTRACTED3:%.*]] = trunc i32 [[SHIFTED2]] to i16
+; GCN-NEXT:    [[TMP7:%.*]] = bitcast i16 [[EXTRACTED3]] to half
 ; GCN-NEXT:    ret half [[TMP7]]
 ;
   %res = atomicrmw fsub ptr %ptr, half %value seq_cst
@@ -120,17 +120,17 @@ define half @test_atomicrmw_fsub_f16_global(ptr addrspace(1) %ptr, half %value) 
 ; GCN-NEXT:    [[NEW:%.*]] = fsub half [[TMP4]], [[VALUE:%.*]]
 ; GCN-NEXT:    [[TMP5:%.*]] = bitcast half [[NEW]] to i16
 ; GCN-NEXT:    [[EXTENDED:%.*]] = zext i16 [[TMP5]] to i32
-; GCN-NEXT:    [[SHIFTED2:%.*]] = shl nuw i32 [[EXTENDED]], [[SHIFTAMT]]
+; GCN-NEXT:    [[SHIFTED1:%.*]] = shl nuw i32 [[EXTENDED]], [[SHIFTAMT]]
 ; GCN-NEXT:    [[UNMASKED:%.*]] = and i32 [[LOADED]], [[INV_MASK]]
-; GCN-NEXT:    [[INSERTED:%.*]] = or i32 [[UNMASKED]], [[SHIFTED2]]
+; GCN-NEXT:    [[INSERTED:%.*]] = or i32 [[UNMASKED]], [[SHIFTED1]]
 ; GCN-NEXT:    [[TMP6:%.*]] = cmpxchg ptr addrspace(1) [[ALIGNEDADDR]], i32 [[LOADED]], i32 [[INSERTED]] seq_cst seq_cst, align 4
 ; GCN-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP6]], 1
 ; GCN-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP6]], 0
 ; GCN-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
 ; GCN:       atomicrmw.end:
-; GCN-NEXT:    [[SHIFTED3:%.*]] = lshr i32 [[NEWLOADED]], [[SHIFTAMT]]
-; GCN-NEXT:    [[EXTRACTED4:%.*]] = trunc i32 [[SHIFTED3]] to i16
-; GCN-NEXT:    [[TMP7:%.*]] = bitcast i16 [[EXTRACTED4]] to half
+; GCN-NEXT:    [[SHIFTED2:%.*]] = lshr i32 [[NEWLOADED]], [[SHIFTAMT]]
+; GCN-NEXT:    [[EXTRACTED3:%.*]] = trunc i32 [[SHIFTED2]] to i16
+; GCN-NEXT:    [[TMP7:%.*]] = bitcast i16 [[EXTRACTED3]] to half
 ; GCN-NEXT:    ret half [[TMP7]]
 ;
   %res = atomicrmw fsub ptr addrspace(1) %ptr, half %value seq_cst
@@ -182,17 +182,17 @@ define half @test_atomicrmw_fsub_f16_local(ptr addrspace(3) %ptr, half %value) {
 ; GCN-NEXT:    [[NEW:%.*]] = fsub half [[TMP4]], [[VALUE:%.*]]
 ; GCN-NEXT:    [[TMP5:%.*]] = bitcast half [[NEW]] to i16
 ; GCN-NEXT:    [[EXTENDED:%.*]] = zext i16 [[TMP5]] to i32
-; GCN-NEXT:    [[SHIFTED2:%.*]] = shl nuw i32 [[EXTENDED]], [[SHIFTAMT]]
+; GCN-NEXT:    [[SHIFTED1:%.*]] = shl nuw i32 [[EXTENDED]], [[SHIFTAMT]]
 ; GCN-NEXT:    [[UNMASKED:%.*]] = and i32 [[LOADED]], [[INV_MASK]]
-; GCN-NEXT:    [[INSERTED:%.*]] = or i32 [[UNMASKED]], [[SHIFTED2]]
+; GCN-NEXT:    [[INSERTED:%.*]] = or i32 [[UNMASKED]], [[SHIFTED1]]
 ; GCN-NEXT:    [[TMP6:%.*]] = cmpxchg ptr addrspace(3) [[ALIGNEDADDR]], i32 [[LOADED]], i32 [[INSERTED]] seq_cst seq_cst, align 4
 ; GCN-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP6]], 1
 ; GCN-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP6]], 0
 ; GCN-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
 ; GCN:       atomicrmw.end:
-; GCN-NEXT:    [[SHIFTED3:%.*]] = lshr i32 [[NEWLOADED]], [[SHIFTAMT]]
-; GCN-NEXT:    [[EXTRACTED4:%.*]] = trunc i32 [[SHIFTED3]] to i16
-; GCN-NEXT:    [[TMP7:%.*]] = bitcast i16 [[EXTRACTED4]] to half
+; GCN-NEXT:    [[SHIFTED2:%.*]] = lshr i32 [[NEWLOADED]], [[SHIFTAMT]]
+; GCN-NEXT:    [[EXTRACTED3:%.*]] = trunc i32 [[SHIFTED2]] to i16
+; GCN-NEXT:    [[TMP7:%.*]] = bitcast i16 [[EXTRACTED3]] to half
 ; GCN-NEXT:    ret half [[TMP7]]
 ;
   %res = atomicrmw fsub ptr addrspace(3) %ptr, half %value seq_cst
@@ -204,17 +204,17 @@ define double @test_atomicrmw_fsub_f64_flat(ptr %ptr, double %value) {
 ; GCN-NEXT:    [[TMP1:%.*]] = load double, ptr [[PTR:%.*]], align 8
 ; GCN-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GCN:       atomicrmw.start:
-; GCN-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GCN-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
 ; GCN-NEXT:    [[NEW:%.*]] = fsub double [[LOADED]], [[VALUE:%.*]]
-; GCN-NEXT:    [[TMP3:%.*]] = bitcast double [[NEW]] to i64
-; GCN-NEXT:    [[TMP4:%.*]] = bitcast double [[LOADED]] to i64
-; GCN-NEXT:    [[TMP5:%.*]] = cmpxchg ptr [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8
-; GCN-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
-; GCN-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
-; GCN-NEXT:    [[TMP6]] = bitcast i64 [[NEWLOADED]] to double
+; GCN-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
+; GCN-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
+; GCN-NEXT:    [[TMP4:%.*]] = cmpxchg ptr [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8
+; GCN-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
+; GCN-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
+; GCN-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
 ; GCN-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
 ; GCN:       atomicrmw.end:
-; GCN-NEXT:    ret double [[TMP6]]
+; GCN-NEXT:    ret double [[TMP5]]
 ;
   %res = atomicrmw fsub ptr %ptr, double %value seq_cst
   ret double %res
@@ -225,17 +225,17 @@ define double @test_atomicrmw_fsub_f64_global(ptr addrspace(1) %ptr, double %val
 ; GCN-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(1) [[PTR:%.*]], align 8
 ; GCN-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GCN:       atomicrmw.start:
-; GCN-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GCN-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
 ; GCN-NEXT:    [[NEW:%.*]] = fsub double [[LOADED]], [[VALUE:%.*]]
-; GCN-NEXT:    [[TMP3:%.*]] = bitcast double [[NEW]] to i64
-; GCN-NEXT:    [[TMP4:%.*]] = bitcast double [[LOADED]] to i64
-; GCN-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8
-; GCN-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
-; GCN-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
-; GCN-NEXT:    [[TMP6]] = bitcast i64 [[NEWLOADED]] to double
+; GCN-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
+; GCN-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
+; GCN-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8
+; GCN-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
+; GCN-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
+; GCN-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
 ; GCN-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
 ; GCN:       atomicrmw.end:
-; GCN-NEXT:    ret double [[TMP6]]
+; GCN-NEXT:    ret double [[TMP5]]
 ;
   %res = atomicrmw fsub ptr addrspace(1) %ptr, double %value seq_cst
   ret double %res
@@ -246,18 +246,385 @@ define double @test_atomicrmw_fsub_f64_local(ptr addrspace(3) %ptr, double %valu
 ; GCN-NEXT:    [[TMP1:%.*]] = load double, ptr addrspace(3) [[PTR:%.*]], align 8
 ; GCN-NEXT:    br label [[ATOMICRMW_START:%.*]]
 ; GCN:       atomicrmw.start:
-; GCN-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP6:%.*]], [[ATOMICRMW_START]] ]
+; GCN-NEXT:    [[LOADED:%.*]] = phi double [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
 ; GCN-NEXT:    [[NEW:%.*]] = fsub double [[LOADED]], [[VALUE:%.*]]
-; GCN-NEXT:    [[TMP3:%.*]] = bitcast double [[NEW]] to i64
-; GCN-NEXT:    [[TMP4:%.*]] = bitcast double [[LOADED]] to i64
-; GCN-NEXT:    [[TMP5:%.*]] = cmpxchg ptr addrspace(3) [[PTR]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8
-; GCN-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
-; GCN-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
-; GCN-NEXT:    [[TMP6]] = bitcast i64 [[NEWLOADED]] to double
+; GCN-NEXT:    [[TMP2:%.*]] = bitcast double [[NEW]] to i64
+; GCN-NEXT:    [[TMP3:%.*]] = bitcast double [[LOADED]] to i64
+; GCN-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(3) [[PTR]], i64 [[TMP3]], i64 [[TMP2]] seq_cst seq_cst, align 8
+; GCN-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP4]], 1
+; GCN-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP4]], 0
+; GCN-NEXT:    [[TMP5]] = bitcast i64 [[NEWLOADED]] to double
 ; GCN-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
 ; GCN:       atomicrmw.end:
-; GCN-NEXT:    ret double [[TMP6]]
+; GCN-NEXT:    ret double [[TMP5]]
 ;
   %res = atomicrmw fsub ptr addrspace(3) %ptr, double %value seq_cst
   ret double %res
+}
+
+define float @test_atomicrmw_fsub_f32_global_strictfp(ptr addrspace(1) %ptr, float %value) strictfp {
+; GCN-LABEL: @test_atomicrmw_fsub_f32_global_strictfp(
+; GCN-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(1) [[PTR:%.*]], align 4
+; GCN-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GCN:       atomicrmw.start:
+; GCN-NEXT:    [[LOADED:%.*]] = phi float [ [[TMP1]], [[TMP0:%.*]] ], [ [[TMP5:%.*]], [[ATOMICRMW_START]] ]
+; GCN-NEXT:    [[NEW:%.*]] = call float @llvm.experimental.constrained.fsub.f32(float [[LOADED]], float [[VALUE:%.*]], metadata !"round.dynamic", metadata !"fpexcept.strict") #[[ATTR4:[0-9]+]]
+; GCN-NEXT:    [[TMP2:%.*]] = bitcast float [[NEW]] to i32
+; GCN-NEXT:    [[TMP3:%.*]] = bitcast float [[LOADED]] to i32
+; GCN-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[TMP3]], i32 [[TMP2]] seq_cst seq_cst, align 4
+; GCN-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
+; GCN-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP4]], 0
+; GCN-NEXT:    [[TMP5]] = bitcast i32 [[NEWLOADED]] to float
+; GCN-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GCN:       atomicrmw.end:
+; GCN-NEXT:    ret float [[TMP5]]
+;
+  %res = atomicrmw fsub ptr addrspace(1) %ptr, float %value seq_cst
+  ret float %res
+}
+
+define bfloat @test_atomicrmw_fadd_bf16_local(ptr addrspace(3) %ptr, bfloat %value) {
+; GCN-LABEL: @test_atomicrmw_fadd_bf16_local(
+; GCN-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr addrspace(3) @llvm.ptrmask.p3.i64(ptr addrspace(3) [[PTR:%.*]], i64 -4)
+; GCN-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(3) [[PTR]] to i64
+; GCN-NEXT:    [[PTRLSB:%.*]] = and i64 [[TMP1]], 3
+; GCN-NEXT:    [[TMP2:%.*]] = shl i64 [[PTRLSB]], 3
+; GCN-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP2]] to i32
+; GCN-NEXT:    [[MASK:%.*]] = shl i32 65535, [[SHIFTAMT]]
+; GCN-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
+; GCN-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(3) [[ALIGNEDADDR]], align 4
+; GCN-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GCN:       atomicrmw.start:
+; GCN-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
+; GCN-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[LOADED]], [[SHIFTAMT]]
+; GCN-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[SHIFTED]] to i16
+; GCN-NEXT:    [[TMP4:%.*]] = bitcast i16 [[EXTRACTED]] to bfloat
+; GCN-NEXT:    [[NEW:%.*]] = fadd bfloat [[TMP4]], [[VALUE:%.*]]
+; GCN-NEXT:    [[TMP5:%.*]] = bitcast bfloat [[NEW]] to i16
+; GCN-NEXT:    [[EXTENDED:%.*]] = zext i16 [[TMP5]] to i32
+; GCN-NEXT:    [[SHIFTED1:%.*]] = shl nuw i32 [[EXTENDED]], [[SHIFTAMT]]
+; GCN-NEXT:    [[UNMASKED:%.*]] = and i32 [[LOADED]], [[INV_MASK]]
+; GCN-NEXT:    [[INSERTED:%.*]] = or i32 [[UNMASKED]], [[SHIFTED1]]
+; GCN-NEXT:    [[TMP6:%.*]] = cmpxchg ptr addrspace(3) [[ALIGNEDADDR]], i32 [[LOADED]], i32 [[INSERTED]] monotonic monotonic, align 4
+; GCN-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP6]], 1
+; GCN-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP6]], 0
+; GCN-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GCN:       atomicrmw.end:
+; GCN-NEXT:    [[SHIFTED2:%.*]] = lshr i32 [[NEWLOADED]], [[SHIFTAMT]]
+; GCN-NEXT:    [[EXTRACTED3:%.*]] = trunc i32 [[SHIFTED2]] to i16
+; GCN-NEXT:    [[TMP7:%.*]] = bitcast i16 [[EXTRACTED3]] to bfloat
+; GCN-NEXT:    ret bfloat [[TMP7]]
+;
+  %res = atomicrmw fadd ptr addrspace(3) %ptr, bfloat %value monotonic
+  ret bfloat %res
+}
+
+define bfloat @test_atomicrmw_fadd_bf16_local_align4(ptr addrspace(3) %ptr, bfloat %value) {
+; GCN-LABEL: @test_atomicrmw_fadd_bf16_local_align4(
+; GCN-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(3) [[PTR:%.*]], align 4
+; GCN-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GCN:       atomicrmw.start:
+; GCN-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
+; GCN-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[LOADED]] to i16
+; GCN-NEXT:    [[TMP2:%.*]] = bitcast i16 [[EXTRACTED]] to bfloat
+; GCN-NEXT:    [[NEW:%.*]] = fadd bfloat [[TMP2]], [[VALUE:%.*]]
+; GCN-NEXT:    [[TMP3:%.*]] = bitcast bfloat [[NEW]] to i16
+; GCN-NEXT:    [[EXTENDED:%.*]] = zext i16 [[TMP3]] to i32
+; GCN-NEXT:    [[UNMASKED:%.*]] = and i32 [[LOADED]], -65536
+; GCN-NEXT:    [[INSERTED:%.*]] = or i32 [[UNMASKED]], [[EXTENDED]]
+; GCN-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(3) [[PTR]], i32 [[LOADED]], i32 [[INSERTED]] monotonic monotonic, align 4
+; GCN-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
+; GCN-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP4]], 0
+; GCN-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GCN:       atomicrmw.end:
+; GCN-NEXT:    [[EXTRACTED1:%.*]] = trunc i32 [[NEWLOADED]] to i16
+; GCN-NEXT:    [[TMP5:%.*]] = bitcast i16 [[EXTRACTED1]] to bfloat
+; GCN-NEXT:    ret bfloat [[TMP5]]
+;
+  %res = atomicrmw fadd ptr addrspace(3) %ptr, bfloat %value monotonic, align 4
+  ret bfloat %res
+}
+
+define bfloat @test_atomicrmw_fadd_bf16_global_agent(ptr addrspace(1) %ptr, bfloat %value) {
+; GCN-LABEL: @test_atomicrmw_fadd_bf16_global_agent(
+; GCN-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr addrspace(1) @llvm.ptrmask.p1.i64(ptr addrspace(1) [[PTR:%.*]], i64 -4)
+; GCN-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(1) [[PTR]] to i64
+; GCN-NEXT:    [[PTRLSB:%.*]] = and i64 [[TMP1]], 3
+; GCN-NEXT:    [[TMP2:%.*]] = shl i64 [[PTRLSB]], 3
+; GCN-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP2]] to i32
+; GCN-NEXT:    [[MASK:%.*]] = shl i32 65535, [[SHIFTAMT]]
+; GCN-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
+; GCN-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(1) [[ALIGNEDADDR]], align 4
+; GCN-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GCN:       atomicrmw.start:
+; GCN-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
+; GCN-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[LOADED]], [[SHIFTAMT]]
+; GCN-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[SHIFTED]] to i16
+; GCN-NEXT:    [[TMP4:%.*]] = bitcast i16 [[EXTRACTED]] to bfloat
+; GCN-NEXT:    [[NEW:%.*]] = fadd bfloat [[TMP4]], [[VALUE:%.*]]
+; GCN-NEXT:    [[TMP5:%.*]] = bitcast bfloat [[NEW]] to i16
+; GCN-NEXT:    [[EXTENDED:%.*]] = zext i16 [[TMP5]] to i32
+; GCN-NEXT:    [[SHIFTED1:%.*]] = shl nuw i32 [[EXTENDED]], [[SHIFTAMT]]
+; GCN-NEXT:    [[UNMASKED:%.*]] = and i32 [[LOADED]], [[INV_MASK]]
+; GCN-NEXT:    [[INSERTED:%.*]] = or i32 [[UNMASKED]], [[SHIFTED1]]
+; GCN-NEXT:    [[TMP6:%.*]] = cmpxchg ptr addrspace(1) [[ALIGNEDADDR]], i32 [[LOADED]], i32 [[INSERTED]] syncscope("agent") monotonic monotonic, align 4
+; GCN-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP6]], 1
+; GCN-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP6]], 0
+; GCN-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GCN:       atomicrmw.end:
+; GCN-NEXT:    [[SHIFTED2:%.*]] = lshr i32 [[NEWLOADED]], [[SHIFTAMT]]
+; GCN-NEXT:    [[EXTRACTED3:%.*]] = trunc i32 [[SHIFTED2]] to i16
+; GCN-NEXT:    [[TMP7:%.*]] = bitcast i16 [[EXTRACTED3]] to bfloat
+; GCN-NEXT:    ret bfloat [[TMP7]]
+;
+  %res = atomicrmw fadd ptr addrspace(1) %ptr, bfloat %value syncscope("agent") monotonic
+  ret bfloat %res
+}
+
+define bfloat @test_atomicrmw_fadd_bf16_global_agent_align4(ptr addrspace(1) %ptr, bfloat %value) {
+; GCN-LABEL: @test_atomicrmw_fadd_bf16_global_agent_align4(
+; GCN-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(1) [[PTR:%.*]], align 4
+; GCN-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GCN:       atomicrmw.start:
+; GCN-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
+; GCN-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[LOADED]] to i16
+; GCN-NEXT:    [[TMP2:%.*]] = bitcast i16 [[EXTRACTED]] to bfloat
+; GCN-NEXT:    [[NEW:%.*]] = fadd bfloat [[TMP2]], [[VALUE:%.*]]
+; GCN-NEXT:    [[TMP3:%.*]] = bitcast bfloat [[NEW]] to i16
+; GCN-NEXT:    [[EXTENDED:%.*]] = zext i16 [[TMP3]] to i32
+; GCN-NEXT:    [[UNMASKED:%.*]] = and i32 [[LOADED]], -65536
+; GCN-NEXT:    [[INSERTED:%.*]] = or i32 [[UNMASKED]], [[EXTENDED]]
+; GCN-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[LOADED]], i32 [[INSERTED]] syncscope("agent") monotonic monotonic, align 4
+; GCN-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
+; GCN-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP4]], 0
+; GCN-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GCN:       atomicrmw.end:
+; GCN-NEXT:    [[EXTRACTED1:%.*]] = trunc i32 [[NEWLOADED]] to i16
+; GCN-NEXT:    [[TMP5:%.*]] = bitcast i16 [[EXTRACTED1]] to bfloat
+; GCN-NEXT:    ret bfloat [[TMP5]]
+;
+  %res = atomicrmw fadd ptr addrspace(1) %ptr, bfloat %value syncscope("agent") monotonic, align 4
+  ret bfloat %res
+}
+
+define bfloat @test_atomicrmw_fadd_bf16_global_system(ptr addrspace(1) %ptr, bfloat %value) {
+; GCN-LABEL: @test_atomicrmw_fadd_bf16_global_system(
+; GCN-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr addrspace(1) @llvm.ptrmask.p1.i64(ptr addrspace(1) [[PTR:%.*]], i64 -4)
+; GCN-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(1) [[PTR]] to i64
+; GCN-NEXT:    [[PTRLSB:%.*]] = and i64 [[TMP1]], 3
+; GCN-NEXT:    [[TMP2:%.*]] = shl i64 [[PTRLSB]], 3
+; GCN-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP2]] to i32
+; GCN-NEXT:    [[MASK:%.*]] = shl i32 65535, [[SHIFTAMT]]
+; GCN-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
+; GCN-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(1) [[ALIGNEDADDR]], align 4
+; GCN-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GCN:       atomicrmw.start:
+; GCN-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
+; GCN-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[LOADED]], [[SHIFTAMT]]
+; GCN-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[SHIFTED]] to i16
+; GCN-NEXT:    [[TMP4:%.*]] = bitcast i16 [[EXTRACTED]] to bfloat
+; GCN-NEXT:    [[NEW:%.*]] = fadd bfloat [[TMP4]], [[VALUE:%.*]]
+; GCN-NEXT:    [[TMP5:%.*]] = bitcast bfloat [[NEW]] to i16
+; GCN-NEXT:    [[EXTENDED:%.*]] = zext i16 [[TMP5]] to i32
+; GCN-NEXT:    [[SHIFTED1:%.*]] = shl nuw i32 [[EXTENDED]], [[SHIFTAMT]]
+; GCN-NEXT:    [[UNMASKED:%.*]] = and i32 [[LOADED]], [[INV_MASK]]
+; GCN-NEXT:    [[INSERTED:%.*]] = or i32 [[UNMASKED]], [[SHIFTED1]]
+; GCN-NEXT:    [[TMP6:%.*]] = cmpxchg ptr addrspace(1) [[ALIGNEDADDR]], i32 [[LOADED]], i32 [[INSERTED]] monotonic monotonic, align 4
+; GCN-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP6]], 1
+; GCN-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP6]], 0
+; GCN-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GCN:       atomicrmw.end:
+; GCN-NEXT:    [[SHIFTED2:%.*]] = lshr i32 [[NEWLOADED]], [[SHIFTAMT]]
+; GCN-NEXT:    [[EXTRACTED3:%.*]] = trunc i32 [[SHIFTED2]] to i16
+; GCN-NEXT:    [[TMP7:%.*]] = bitcast i16 [[EXTRACTED3]] to bfloat
+; GCN-NEXT:    ret bfloat [[TMP7]]
+;
+  %res = atomicrmw fadd ptr addrspace(1) %ptr, bfloat %value monotonic
+  ret bfloat %res
+}
+
+define bfloat @test_atomicrmw_fadd_bf16_global_system_align4(ptr addrspace(1) %ptr, bfloat %value) {
+; GCN-LABEL: @test_atomicrmw_fadd_bf16_global_system_align4(
+; GCN-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(1) [[PTR:%.*]], align 4
+; GCN-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GCN:       atomicrmw.start:
+; GCN-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
+; GCN-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[LOADED]] to i16
+; GCN-NEXT:    [[TMP2:%.*]] = bitcast i16 [[EXTRACTED]] to bfloat
+; GCN-NEXT:    [[NEW:%.*]] = fadd bfloat [[TMP2]], [[VALUE:%.*]]
+; GCN-NEXT:    [[TMP3:%.*]] = bitcast bfloat [[NEW]] to i16
+; GCN-NEXT:    [[EXTENDED:%.*]] = zext i16 [[TMP3]] to i32
+; GCN-NEXT:    [[UNMASKED:%.*]] = and i32 [[LOADED]], -65536
+; GCN-NEXT:    [[INSERTED:%.*]] = or i32 [[UNMASKED]], [[EXTENDED]]
+; GCN-NEXT:    [[TMP4:%.*]] = cmpxchg ptr addrspace(1) [[PTR]], i32 [[LOADED]], i32 [[INSERTED]] monotonic monotonic, align 4
+; GCN-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
+; GCN-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP4]], 0
+; GCN-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GCN:       atomicrmw.end:
+; GCN-NEXT:    [[EXTRACTED1:%.*]] = trunc i32 [[NEWLOADED]] to i16
+; GCN-NEXT:    [[TMP5:%.*]] = bitcast i16 [[EXTRACTED1]] to bfloat
+; GCN-NEXT:    ret bfloat [[TMP5]]
+;
+  %res = atomicrmw fadd ptr addrspace(1) %ptr, bfloat %value monotonic, align 4
+  ret bfloat %res
+}
+
+define bfloat @test_atomicrmw_fadd_bf16_local_strictfp(ptr addrspace(3) %ptr, bfloat %value) #2 {
+; GCN-LABEL: @test_atomicrmw_fadd_bf16_local_strictfp(
+; GCN-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr addrspace(3) @llvm.ptrmask.p3.i64(ptr addrspace(3) [[PTR:%.*]], i64 -4)
+; GCN-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(3) [[PTR]] to i64
+; GCN-NEXT:    [[PTRLSB:%.*]] = and i64 [[TMP1]], 3
+; GCN-NEXT:    [[TMP2:%.*]] = shl i64 [[PTRLSB]], 3
+; GCN-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP2]] to i32
+; GCN-NEXT:    [[MASK:%.*]] = shl i32 65535, [[SHIFTAMT]]
+; GCN-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
+; GCN-NEXT:    [[TMP3:%.*]] = load i32, ptr addrspace(3) [[ALIGNEDADDR]], align 4
+; GCN-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GCN:       atomicrmw.start:
+; GCN-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
+; GCN-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[LOADED]], [[SHIFTAMT]]
+; GCN-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[SHIFTED]] to i16
+; GCN-NEXT:    [[TMP4:%.*]] = bitcast i16 [[EXTRACTED]] to bfloat
+; GCN-NEXT:    [[NEW:%.*]] = fadd bfloat [[TMP4]], [[VALUE:%.*]]
+; GCN-NEXT:    [[TMP5:%.*]] = bitcast bfloat [[NEW]] to i16
+; GCN-NEXT:    [[EXTENDED:%.*]] = zext i16 [[TMP5]] to i32
+; GCN-NEXT:    [[SHIFTED1:%.*]] = shl nuw i32 [[EXTENDED]], [[SHIFTAMT]]
+; GCN-NEXT:    [[UNMASKED:%.*]] = and i32 [[LOADED]], [[INV_MASK]]
+; GCN-NEXT:    [[INSERTED:%.*]] = or i32 [[UNMASKED]], [[SHIFTED1]]
+; GCN-NEXT:    [[TMP6:%.*]] = cmpxchg ptr addrspace(3) [[ALIGNEDADDR]], i32 [[LOADED]], i32 [[INSERTED]] monotonic monotonic, align 4
+; GCN-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP6]], 1
+; GCN-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP6]], 0
+; GCN-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GCN:       atomicrmw.end:
+; GCN-NEXT:    [[SHIFTED2:%.*]] = lshr i32 [[NEWLOADED]], [[SHIFTAMT]]
+; GCN-NEXT:    [[EXTRACTED3:%.*]] = trunc i32 [[SHIFTED2]] to i16
+; GCN-NEXT:    [[TMP7:%.*]] = bitcast i16 [[EXTRACTED3]] to bfloat
+; GCN-NEXT:    ret bfloat [[TMP7]]
+;
+  %res = atomicrmw fadd ptr addrspace(3) %ptr, bfloat %value monotonic
+  ret bfloat %res
+}
+
+define bfloat @test_atomicrmw_fadd_bf16_flat_agent(ptr %ptr, bfloat %value) {
+; GCN-LABEL: @test_atomicrmw_fadd_bf16_flat_agent(
+; GCN-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[PTR:%.*]], i64 -4)
+; GCN-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[PTR]] to i64
+; GCN-NEXT:    [[PTRLSB:%.*]] = and i64 [[TMP1]], 3
+; GCN-NEXT:    [[TMP2:%.*]] = shl i64 [[PTRLSB]], 3
+; GCN-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP2]] to i32
+; GCN-NEXT:    [[MASK:%.*]] = shl i32 65535, [[SHIFTAMT]]
+; GCN-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
+; GCN-NEXT:    [[TMP3:%.*]] = load i32, ptr [[ALIGNEDADDR]], align 4
+; GCN-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GCN:       atomicrmw.start:
+; GCN-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
+; GCN-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[LOADED]], [[SHIFTAMT]]
+; GCN-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[SHIFTED]] to i16
+; GCN-NEXT:    [[TMP4:%.*]] = bitcast i16 [[EXTRACTED]] to bfloat
+; GCN-NEXT:    [[NEW:%.*]] = fadd bfloat [[TMP4]], [[VALUE:%.*]]
+; GCN-NEXT:    [[TMP5:%.*]] = bitcast bfloat [[NEW]] to i16
+; GCN-NEXT:    [[EXTENDED:%.*]] = zext i16 [[TMP5]] to i32
+; GCN-NEXT:    [[SHIFTED1:%.*]] = shl nuw i32 [[EXTENDED]], [[SHIFTAMT]]
+; GCN-NEXT:    [[UNMASKED:%.*]] = and i32 [[LOADED]], [[INV_MASK]]
+; GCN-NEXT:    [[INSERTED:%.*]] = or i32 [[UNMASKED]], [[SHIFTED1]]
+; GCN-NEXT:    [[TMP6:%.*]] = cmpxchg ptr [[ALIGNEDADDR]], i32 [[LOADED]], i32 [[INSERTED]] syncscope("agent") monotonic monotonic, align 4
+; GCN-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP6]], 1
+; GCN-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP6]], 0
+; GCN-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GCN:       atomicrmw.end:
+; GCN-NEXT:    [[SHIFTED2:%.*]] = lshr i32 [[NEWLOADED]], [[SHIFTAMT]]
+; GCN-NEXT:    [[EXTRACTED3:%.*]] = trunc i32 [[SHIFTED2]] to i16
+; GCN-NEXT:    [[TMP7:%.*]] = bitcast i16 [[EXTRACTED3]] to bfloat
+; GCN-NEXT:    ret bfloat [[TMP7]]
+;
+  %res = atomicrmw fadd ptr %ptr, bfloat %value syncscope("agent") monotonic
+  ret bfloat %res
+}
+
+define bfloat @test_atomicrmw_fadd_bf16_flat_agent_align4(ptr %ptr, bfloat %value) {
+; GCN-LABEL: @test_atomicrmw_fadd_bf16_flat_agent_align4(
+; GCN-NEXT:    [[TMP1:%.*]] = load i32, ptr [[PTR:%.*]], align 4
+; GCN-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GCN:       atomicrmw.start:
+; GCN-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
+; GCN-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[LOADED]] to i16
+; GCN-NEXT:    [[TMP2:%.*]] = bitcast i16 [[EXTRACTED]] to bfloat
+; GCN-NEXT:    [[NEW:%.*]] = fadd bfloat [[TMP2]], [[VALUE:%.*]]
+; GCN-NEXT:    [[TMP3:%.*]] = bitcast bfloat [[NEW]] to i16
+; GCN-NEXT:    [[EXTENDED:%.*]] = zext i16 [[TMP3]] to i32
+; GCN-NEXT:    [[UNMASKED:%.*]] = and i32 [[LOADED]], -65536
+; GCN-NEXT:    [[INSERTED:%.*]] = or i32 [[UNMASKED]], [[EXTENDED]]
+; GCN-NEXT:    [[TMP4:%.*]] = cmpxchg ptr [[PTR]], i32 [[LOADED]], i32 [[INSERTED]] syncscope("agent") monotonic monotonic, align 4
+; GCN-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
+; GCN-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP4]], 0
+; GCN-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GCN:       atomicrmw.end:
+; GCN-NEXT:    [[EXTRACTED1:%.*]] = trunc i32 [[NEWLOADED]] to i16
+; GCN-NEXT:    [[TMP5:%.*]] = bitcast i16 [[EXTRACTED1]] to bfloat
+; GCN-NEXT:    ret bfloat [[TMP5]]
+;
+  %res = atomicrmw fadd ptr %ptr, bfloat %value syncscope("agent") monotonic, align 4
+  ret bfloat %res
+}
+
+define bfloat @test_atomicrmw_fadd_bf16_flat_system(ptr %ptr, bfloat %value) {
+; GCN-LABEL: @test_atomicrmw_fadd_bf16_flat_system(
+; GCN-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[PTR:%.*]], i64 -4)
+; GCN-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[PTR]] to i64
+; GCN-NEXT:    [[PTRLSB:%.*]] = and i64 [[TMP1]], 3
+; GCN-NEXT:    [[TMP2:%.*]] = shl i64 [[PTRLSB]], 3
+; GCN-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP2]] to i32
+; GCN-NEXT:    [[MASK:%.*]] = shl i32 65535, [[SHIFTAMT]]
+; GCN-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
+; GCN-NEXT:    [[TMP3:%.*]] = load i32, ptr [[ALIGNEDADDR]], align 4
+; GCN-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GCN:       atomicrmw.start:
+; GCN-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
+; GCN-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[LOADED]], [[SHIFTAMT]]
+; GCN-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[SHIFTED]] to i16
+; GCN-NEXT:    [[TMP4:%.*]] = bitcast i16 [[EXTRACTED]] to bfloat
+; GCN-NEXT:    [[NEW:%.*]] = fadd bfloat [[TMP4]], [[VALUE:%.*]]
+; GCN-NEXT:    [[TMP5:%.*]] = bitcast bfloat [[NEW]] to i16
+; GCN-NEXT:    [[EXTENDED:%.*]] = zext i16 [[TMP5]] to i32
+; GCN-NEXT:    [[SHIFTED1:%.*]] = shl nuw i32 [[EXTENDED]], [[SHIFTAMT]]
+; GCN-NEXT:    [[UNMASKED:%.*]] = and i32 [[LOADED]], [[INV_MASK]]
+; GCN-NEXT:    [[INSERTED:%.*]] = or i32 [[UNMASKED]], [[SHIFTED1]]
+; GCN-NEXT:    [[TMP6:%.*]] = cmpxchg ptr [[ALIGNEDADDR]], i32 [[LOADED]], i32 [[INSERTED]] monotonic monotonic, align 4
+; GCN-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP6]], 1
+; GCN-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP6]], 0
+; GCN-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GCN:       atomicrmw.end:
+; GCN-NEXT:    [[SHIFTED2:%.*]] = lshr i32 [[NEWLOADED]], [[SHIFTAMT]]
+; GCN-NEXT:    [[EXTRACTED3:%.*]] = trunc i32 [[SHIFTED2]] to i16
+; GCN-NEXT:    [[TMP7:%.*]] = bitcast i16 [[EXTRACTED3]] to bfloat
+; GCN-NEXT:    ret bfloat [[TMP7]]
+;
+  %res = atomicrmw fadd ptr %ptr, bfloat %value monotonic
+  ret bfloat %res
+}
+
+define bfloat @test_atomicrmw_fadd_bf16_flat_system_align4(ptr %ptr, bfloat %value) {
+; GCN-LABEL: @test_atomicrmw_fadd_bf16_flat_system_align4(
+; GCN-NEXT:    [[TMP1:%.*]] = load i32, ptr [[PTR:%.*]], align 4
+; GCN-NEXT:    br label [[ATOMICRMW_START:%.*]]
+; GCN:       atomicrmw.start:
+; GCN-NEXT:    [[LOADED:%.*]] = phi i32 [ [[TMP1]], [[TMP0:%.*]] ], [ [[NEWLOADED:%.*]], [[ATOMICRMW_START]] ]
+; GCN-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[LOADED]] to i16
+; GCN-NEXT:    [[TMP2:%.*]] = bitcast i16 [[EXTRACTED]] to bfloat
+; GCN-NEXT:    [[NEW:%.*]] = fadd bfloat [[TMP2]], [[VALUE:%.*]]
+; GCN-NEXT:    [[TMP3:%.*]] = bitcast bfloat [[NEW]] to i16
+; GCN-NEXT:    [[EXTENDED:%.*]] = zext i16 [[TMP3]] to i32
+; GCN-NEXT:    [[UNMASKED:%.*]] = and i32 [[LOADED]], -65536
+; GCN-NEXT:    [[INSERTED:%.*]] = or i32 [[UNMASKED]], [[EXTENDED]]
+; GCN-NEXT:    [[TMP4:%.*]] = cmpxchg ptr [[PTR]], i32 [[LOADED]], i32 [[INSERTED]] monotonic monotonic, align 4
+; GCN-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP4]], 1
+; GCN-NEXT:    [[NEWLOADED]] = extractvalue { i32, i1 } [[TMP4]], 0
+; GCN-NEXT:    br i1 [[SUCCESS]], label [[ATOMICRMW_END:%.*]], label [[ATOMICRMW_START]]
+; GCN:       atomicrmw.end:
+; GCN-NEXT:    [[EXTRACTED1:%.*]] = trunc i32 [[NEWLOADED]] to i16
+; GCN-NEXT:    [[TMP5:%.*]] = bitcast i16 [[EXTRACTED1]] to bfloat
+; GCN-NEXT:    ret bfloat [[TMP5]]
+;
+  %res = atomicrmw fadd ptr %ptr, bfloat %value monotonic, align 4
+  ret bfloat %res
 }

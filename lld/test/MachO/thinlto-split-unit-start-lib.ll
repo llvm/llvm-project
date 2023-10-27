@@ -37,9 +37,9 @@
 
 ; % clang -c vtable_use.cc vtable.cc -emit-llvm -S -fno-exceptions -arch x86_64 -mmacos-version-min=11 -O1
 
-; ...and then manually ading `, !type !8, type !9` based on `clang -S -emit-llvm -flto=thin` output,
+; ...and then manually adding `, !type !8, type !9` based on `clang -S -emit-llvm -flto=thin` output,
 ; because splitAndWriteThinLTOBitcode() in ThinLTOBitcodeWriter.cpp only splits bitcode
-; if type annotations are present. While at it, also removed unneccessary metadata.
+; if type annotations are present. While at it, also removed unnecessary metadata.
 ; (NB: The first comment creates vtable.ll while the latter generates vtable.s! vtable.s
 ; contains a few things opt complains about, so we can't use the output of that directly.)
 

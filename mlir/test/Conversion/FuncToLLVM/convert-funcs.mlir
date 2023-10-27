@@ -1,39 +1,30 @@
-// RUN: mlir-opt -convert-func-to-llvm -split-input-file -verify-diagnostics %s | FileCheck %s
+// RUN: mlir-opt -convert-func-to-llvm='use-opaque-pointers=1' -split-input-file -verify-diagnostics %s | FileCheck %s
 
-//CHECK: llvm.func @second_order_arg(!llvm.ptr<func<void ()>>)
+//CHECK: llvm.func @second_order_arg(!llvm.ptr)
 func.func private @second_order_arg(%arg0 : () -> ())
 
-//CHECK: llvm.func @second_order_result() -> !llvm.ptr<func<void ()>>
+//CHECK: llvm.func @second_order_result() -> !llvm.ptr
 func.func private @second_order_result() -> (() -> ())
 
-//CHECK: llvm.func @second_order_multi_result() -> !llvm.struct<(ptr<func<i32 ()>>, ptr<func<i64 ()>>, ptr<func<f32 ()>>)>
+//CHECK: llvm.func @second_order_multi_result() -> !llvm.struct<(ptr, ptr, ptr)>
 func.func private @second_order_multi_result() -> (() -> (i32), () -> (i64), () -> (f32))
 
-//CHECK: llvm.func @third_order(!llvm.ptr<func<ptr<func<void ()>> (ptr<func<void ()>>)>>) -> !llvm.ptr<func<ptr<func<void ()>> (ptr<func<void ()>>)>>
-func.func private @third_order(%arg0 : (() -> ()) -> (() -> ())) -> ((() -> ()) -> (() -> ()))
-
-//CHECK: llvm.func @fifth_order_left(!llvm.ptr<func<void (ptr<func<void (ptr<func<void (ptr<func<void ()>>)>>)>>)>>)
-func.func private @fifth_order_left(%arg0: (((() -> ()) -> ()) -> ()) -> ())
-
-//CHECK: llvm.func @fifth_order_right(!llvm.ptr<func<ptr<func<ptr<func<ptr<func<void ()>> ()>> ()>> ()>>)
-func.func private @fifth_order_right(%arg0: () -> (() -> (() -> (() -> ()))))
-
 // Check that memrefs are converted to argument packs if appear as function arguments.
-// CHECK: llvm.func @memref_call_conv(!llvm.ptr<f32>, !llvm.ptr<f32>, i64, i64, i64)
+// CHECK: llvm.func @memref_call_conv(!llvm.ptr, !llvm.ptr, i64, i64, i64)
 func.func private @memref_call_conv(%arg0: memref<?xf32>)
 
 // Same in nested functions.
-// CHECK: llvm.func @memref_call_conv_nested(!llvm.ptr<func<void (ptr<f32>, ptr<f32>, i64, i64, i64)>>)
+// CHECK: llvm.func @memref_call_conv_nested(!llvm.ptr)
 func.func private @memref_call_conv_nested(%arg0: (memref<?xf32>) -> ())
 
-//CHECK-LABEL: llvm.func @pass_through(%arg0: !llvm.ptr<func<void ()>>) -> !llvm.ptr<func<void ()>> {
+//CHECK-LABEL: llvm.func @pass_through(%arg0: !llvm.ptr) -> !llvm.ptr {
 func.func @pass_through(%arg0: () -> ()) -> (() -> ()) {
-// CHECK-NEXT:  llvm.br ^bb1(%arg0 : !llvm.ptr<func<void ()>>)
+// CHECK-NEXT:  llvm.br ^bb1(%arg0 : !llvm.ptr)
   cf.br ^bb1(%arg0 : () -> ())
 
-//CHECK-NEXT: ^bb1(%0: !llvm.ptr<func<void ()>>):
+//CHECK-NEXT: ^bb1(%0: !llvm.ptr):
 ^bb1(%bbarg: () -> ()):
-// CHECK-NEXT:  llvm.return %0 : !llvm.ptr<func<void ()>>
+// CHECK-NEXT:  llvm.return %0 : !llvm.ptr
   return %bbarg : () -> ()
 }
 
@@ -50,17 +41,17 @@ func.func private @body(i32)
 // CHECK-LABEL: llvm.func @indirect_const_call
 // CHECK-SAME: (%[[ARG0:.*]]: i32) {
 func.func @indirect_const_call(%arg0: i32) {
-// CHECK-NEXT: %[[ADDR:.*]] = llvm.mlir.addressof @body : !llvm.ptr<func<void (i32)>>
+// CHECK-NEXT: %[[ADDR:.*]] = llvm.mlir.addressof @body : !llvm.ptr
   %0 = constant @body : (i32) -> ()
-// CHECK-NEXT:  llvm.call %[[ADDR]](%[[ARG0:.*]]) : (i32) -> ()
+// CHECK-NEXT:  llvm.call %[[ADDR]](%[[ARG0:.*]]) : !llvm.ptr, (i32) -> ()
   call_indirect %0(%arg0) : (i32) -> ()
 // CHECK-NEXT:  llvm.return
   return
 }
 
-// CHECK-LABEL: llvm.func @indirect_call(%arg0: !llvm.ptr<func<i32 (f32)>>, %arg1: f32) -> i32 {
+// CHECK-LABEL: llvm.func @indirect_call(%arg0: !llvm.ptr, %arg1: f32) -> i32 {
 func.func @indirect_call(%arg0: (f32) -> i32, %arg1: f32) -> i32 {
-// CHECK-NEXT:  %0 = llvm.call %arg0(%arg1) : (f32) -> i32
+// CHECK-NEXT:  %0 = llvm.call %arg0(%arg1) : !llvm.ptr, (f32) -> i32
   %0 = call_indirect %arg0(%arg1) : (f32) -> i32
 // CHECK-NEXT:  llvm.return %0 : i32
   return %0 : i32
@@ -68,6 +59,21 @@ func.func @indirect_call(%arg0: (f32) -> i32, %arg1: f32) -> i32 {
 
 func.func @variadic_func(%arg0: i32) attributes { "func.varargs" = true } {
   return
+}
+
+// -----
+
+// CHECK-LABEL: llvm.func @private_callee
+// CHECK-SAME: sym_visibility = "private"
+func.func private @private_callee(%arg1: f32) -> i32 {
+  %0 = arith.constant 0 : i32
+  return %0 : i32
+}
+
+// CHECK-LABEL: llvm.func @caller_private_callee
+func.func @caller_private_callee(%arg1: f32) -> i32 {
+  %0 = call @private_callee(%arg1) : (f32) -> i32
+  return %0 : i32
 }
 
 // -----

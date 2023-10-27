@@ -45,11 +45,17 @@
 
 #elif TEST_STD_VER == 17
 
-# ifndef __cpp_lib_memory_resource
-#   error "__cpp_lib_memory_resource should be defined in c++17"
-# endif
-# if __cpp_lib_memory_resource != 201603L
-#   error "__cpp_lib_memory_resource should have the value 201603L in c++17"
+# if !defined(_LIBCPP_AVAILABILITY_HAS_NO_PMR)
+#   ifndef __cpp_lib_memory_resource
+#     error "__cpp_lib_memory_resource should be defined in c++17"
+#   endif
+#   if __cpp_lib_memory_resource != 201603L
+#     error "__cpp_lib_memory_resource should have the value 201603L in c++17"
+#   endif
+# else
+#   ifdef __cpp_lib_memory_resource
+#     error "__cpp_lib_memory_resource should not be defined when the requirement '!defined(_LIBCPP_AVAILABILITY_HAS_NO_PMR)' is not met!"
+#   endif
 # endif
 
 # ifdef __cpp_lib_polymorphic_allocator
@@ -58,35 +64,87 @@
 
 #elif TEST_STD_VER == 20
 
-# ifndef __cpp_lib_memory_resource
-#   error "__cpp_lib_memory_resource should be defined in c++20"
-# endif
-# if __cpp_lib_memory_resource != 201603L
-#   error "__cpp_lib_memory_resource should have the value 201603L in c++20"
-# endif
-
-# ifndef __cpp_lib_polymorphic_allocator
-#   error "__cpp_lib_polymorphic_allocator should be defined in c++20"
-# endif
-# if __cpp_lib_polymorphic_allocator != 201902L
-#   error "__cpp_lib_polymorphic_allocator should have the value 201902L in c++20"
-# endif
-
-#elif TEST_STD_VER > 20
-
-# ifndef __cpp_lib_memory_resource
-#   error "__cpp_lib_memory_resource should be defined in c++2b"
-# endif
-# if __cpp_lib_memory_resource != 201603L
-#   error "__cpp_lib_memory_resource should have the value 201603L in c++2b"
+# if !defined(_LIBCPP_AVAILABILITY_HAS_NO_PMR)
+#   ifndef __cpp_lib_memory_resource
+#     error "__cpp_lib_memory_resource should be defined in c++20"
+#   endif
+#   if __cpp_lib_memory_resource != 201603L
+#     error "__cpp_lib_memory_resource should have the value 201603L in c++20"
+#   endif
+# else
+#   ifdef __cpp_lib_memory_resource
+#     error "__cpp_lib_memory_resource should not be defined when the requirement '!defined(_LIBCPP_AVAILABILITY_HAS_NO_PMR)' is not met!"
+#   endif
 # endif
 
-# ifndef __cpp_lib_polymorphic_allocator
-#   error "__cpp_lib_polymorphic_allocator should be defined in c++2b"
-# endif
-# if __cpp_lib_polymorphic_allocator != 201902L
-#   error "__cpp_lib_polymorphic_allocator should have the value 201902L in c++2b"
+# if !defined(_LIBCPP_AVAILABILITY_HAS_NO_PMR)
+#   ifndef __cpp_lib_polymorphic_allocator
+#     error "__cpp_lib_polymorphic_allocator should be defined in c++20"
+#   endif
+#   if __cpp_lib_polymorphic_allocator != 201902L
+#     error "__cpp_lib_polymorphic_allocator should have the value 201902L in c++20"
+#   endif
+# else
+#   ifdef __cpp_lib_polymorphic_allocator
+#     error "__cpp_lib_polymorphic_allocator should not be defined when the requirement '!defined(_LIBCPP_AVAILABILITY_HAS_NO_PMR)' is not met!"
+#   endif
 # endif
 
-#endif // TEST_STD_VER > 20
+#elif TEST_STD_VER == 23
+
+# if !defined(_LIBCPP_AVAILABILITY_HAS_NO_PMR)
+#   ifndef __cpp_lib_memory_resource
+#     error "__cpp_lib_memory_resource should be defined in c++23"
+#   endif
+#   if __cpp_lib_memory_resource != 201603L
+#     error "__cpp_lib_memory_resource should have the value 201603L in c++23"
+#   endif
+# else
+#   ifdef __cpp_lib_memory_resource
+#     error "__cpp_lib_memory_resource should not be defined when the requirement '!defined(_LIBCPP_AVAILABILITY_HAS_NO_PMR)' is not met!"
+#   endif
+# endif
+
+# if !defined(_LIBCPP_AVAILABILITY_HAS_NO_PMR)
+#   ifndef __cpp_lib_polymorphic_allocator
+#     error "__cpp_lib_polymorphic_allocator should be defined in c++23"
+#   endif
+#   if __cpp_lib_polymorphic_allocator != 201902L
+#     error "__cpp_lib_polymorphic_allocator should have the value 201902L in c++23"
+#   endif
+# else
+#   ifdef __cpp_lib_polymorphic_allocator
+#     error "__cpp_lib_polymorphic_allocator should not be defined when the requirement '!defined(_LIBCPP_AVAILABILITY_HAS_NO_PMR)' is not met!"
+#   endif
+# endif
+
+#elif TEST_STD_VER > 23
+
+# if !defined(_LIBCPP_AVAILABILITY_HAS_NO_PMR)
+#   ifndef __cpp_lib_memory_resource
+#     error "__cpp_lib_memory_resource should be defined in c++26"
+#   endif
+#   if __cpp_lib_memory_resource != 201603L
+#     error "__cpp_lib_memory_resource should have the value 201603L in c++26"
+#   endif
+# else
+#   ifdef __cpp_lib_memory_resource
+#     error "__cpp_lib_memory_resource should not be defined when the requirement '!defined(_LIBCPP_AVAILABILITY_HAS_NO_PMR)' is not met!"
+#   endif
+# endif
+
+# if !defined(_LIBCPP_AVAILABILITY_HAS_NO_PMR)
+#   ifndef __cpp_lib_polymorphic_allocator
+#     error "__cpp_lib_polymorphic_allocator should be defined in c++26"
+#   endif
+#   if __cpp_lib_polymorphic_allocator != 201902L
+#     error "__cpp_lib_polymorphic_allocator should have the value 201902L in c++26"
+#   endif
+# else
+#   ifdef __cpp_lib_polymorphic_allocator
+#     error "__cpp_lib_polymorphic_allocator should not be defined when the requirement '!defined(_LIBCPP_AVAILABILITY_HAS_NO_PMR)' is not met!"
+#   endif
+# endif
+
+#endif // TEST_STD_VER > 23
 

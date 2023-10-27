@@ -14,7 +14,6 @@
 #include <string>
 
 #include "lldb/Core/Module.h"
-#include "lldb/Core/StreamFile.h"
 #include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/ExpressionVariable.h"
@@ -36,9 +35,9 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/ThreadPlan.h"
 #include "lldb/Target/ThreadPlanCallUserExpression.h"
-#include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/State.h"
 #include "lldb/Utility/StreamString.h"
 
 using namespace lldb_private;
@@ -99,13 +98,12 @@ bool UserExpression::MatchesContext(ExecutionContext &exe_ctx) {
 }
 
 lldb::ValueObjectSP UserExpression::GetObjectPointerValueObject(
-    lldb::StackFrameSP frame_sp, ConstString const &object_name, Status &err) {
+    lldb::StackFrameSP frame_sp, llvm::StringRef object_name, Status &err) {
   err.Clear();
 
   if (!frame_sp) {
-    err.SetErrorStringWithFormat(
-        "Couldn't load '%s' because the context is incomplete",
-        object_name.AsCString());
+    err.SetErrorStringWithFormatv(
+        "Couldn't load '{0}' because the context is incomplete", object_name);
     return {};
   }
 
@@ -113,7 +111,7 @@ lldb::ValueObjectSP UserExpression::GetObjectPointerValueObject(
   lldb::ValueObjectSP valobj_sp;
 
   return frame_sp->GetValueForVariableExpressionPath(
-      object_name.GetStringRef(), lldb::eNoDynamicValues,
+      object_name, lldb::eNoDynamicValues,
       StackFrame::eExpressionPathOptionCheckPtrVsMember |
           StackFrame::eExpressionPathOptionsNoFragileObjcIvar |
           StackFrame::eExpressionPathOptionsNoSyntheticChildren |
@@ -122,7 +120,7 @@ lldb::ValueObjectSP UserExpression::GetObjectPointerValueObject(
 }
 
 lldb::addr_t UserExpression::GetObjectPointer(lldb::StackFrameSP frame_sp,
-                                              ConstString &object_name,
+                                              llvm::StringRef object_name,
                                               Status &err) {
   auto valobj_sp =
       GetObjectPointerValueObject(std::move(frame_sp), object_name, err);
@@ -133,9 +131,9 @@ lldb::addr_t UserExpression::GetObjectPointer(lldb::StackFrameSP frame_sp,
   lldb::addr_t ret = valobj_sp->GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
 
   if (ret == LLDB_INVALID_ADDRESS) {
-    err.SetErrorStringWithFormat(
-        "Couldn't load '%s' because its value couldn't be evaluated",
-        object_name.AsCString());
+    err.SetErrorStringWithFormatv(
+        "Couldn't load '{0}' because its value couldn't be evaluated",
+        object_name);
     return LLDB_INVALID_ADDRESS;
   }
 
@@ -202,14 +200,17 @@ UserExpression::Evaluate(ExecutionContext &exe_ctx,
 
     return execution_results;
   }
-  // Since we might need to call allocate memory and maybe call code to make
-  // the caller, we need to be stopped.
+
+  // Since we might need to allocate memory, we need to be stopped to run
+  // an expression.
   if (process != nullptr && process->GetState() != lldb::eStateStopped) {
-    error.SetErrorString("Can't make a function caller while the process is " 
-                          "running");
+    error.SetErrorStringWithFormatv(
+        "unable to evaluate expression while the process is {0}: the process "
+        "must be stopped because the expression might require allocating "
+        "memory.",
+        StateAsCString(process->GetState()));
     return execution_results;
   }
-
 
   // Explicitly force the IR interpreter to evaluate the expression when the
   // there is no process that supports running the expression for us. Don't
@@ -252,7 +253,7 @@ UserExpression::Evaluate(ExecutionContext &exe_ctx,
       target->GetUserExpressionForLanguage(expr, full_prefix, language,
                                            desired_type, options, ctx_obj,
                                            error));
-  if (error.Fail()) {
+  if (error.Fail() || !user_expression_sp) {
     LLDB_LOG(log, "== [UserExpression::Evaluate] Getting expression: {0} ==",
              error.AsCString());
     return lldb::eExpressionSetupError;
@@ -326,11 +327,10 @@ UserExpression::Evaluate(ExecutionContext &exe_ctx,
       std::string msg;
       {
         llvm::raw_string_ostream os(msg);
-        os << "expression failed to parse:\n";
         if (!diagnostic_manager.Diagnostics().empty())
           os << diagnostic_manager.GetString();
         else
-          os << "unknown error";
+          os << "expression failed to parse (no further compiler diagnostics)";
         if (target->GetEnableNotifyAboutFixIts() && fixed_expression &&
             !fixed_expression->empty())
           os << "\nfixed expression suggested:\n  " << *fixed_expression;
@@ -424,7 +424,7 @@ UserExpression::Execute(DiagnosticManager &diagnostic_manager,
   lldb::ExpressionResults expr_result = DoExecute(
       diagnostic_manager, exe_ctx, options, shared_ptr_to_me, result_var);
   Target *target = exe_ctx.GetTargetPtr();
-  if (options.GetResultIsInternal() && result_var && target) {
+  if (options.GetSuppressPersistentResult() && result_var && target) {
     if (auto *persistent_state =
             target->GetPersistentExpressionStateForLanguage(m_language))
       persistent_state->RemovePersistentVariable(result_var);

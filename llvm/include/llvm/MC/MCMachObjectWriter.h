@@ -32,7 +32,7 @@ class MCMachObjectTargetWriter : public MCObjectTargetWriter {
 protected:
   uint32_t CPUSubtype;
 public:
-  unsigned LocalDifference_RIT;
+  unsigned LocalDifference_RIT = 0;
 
 protected:
   MCMachObjectTargetWriter(bool Is64Bit_, uint32_t CPUType_,
@@ -131,7 +131,8 @@ public:
       : TargetObjectWriter(std::move(MOTW)),
         StringTable(TargetObjectWriter->is64Bit() ? StringTableBuilder::MachO64
                                                   : StringTableBuilder::MachO),
-        W(OS, IsLittleEndian ? support::little : support::big) {}
+        W(OS,
+          IsLittleEndian ? llvm::endianness::little : llvm::endianness::big) {}
 
   support::endian::Writer W;
 

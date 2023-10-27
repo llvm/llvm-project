@@ -17,7 +17,6 @@
 #include "lld/Common/DWARF.h"
 #include "llvm-c/lto.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/DebugInfo/CodeView/DebugSubsectionRecord.h"
@@ -36,6 +35,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Target/TargetOptions.h"
+#include "llvm/TargetParser/Triple.h"
 #include <cstring>
 #include <optional>
 #include <system_error>
@@ -237,7 +237,7 @@ SectionChunk *ObjFile::readSection(uint32_t sectionNumber,
   // and then write it to a separate .pdb file.
 
   // Ignore DWARF debug info unless /debug is given.
-  if (!ctx.config.debug && name.startswith(".debug_"))
+  if (!ctx.config.debug && name.starts_with(".debug_"))
     return nullptr;
 
   if (sec->Characteristics & llvm::COFF::IMAGE_SCN_LNK_REMOVE)
@@ -261,12 +261,12 @@ SectionChunk *ObjFile::readSection(uint32_t sectionNumber,
   else if (name == ".sxdata")
     sxDataChunks.push_back(c);
   else if (ctx.config.tailMerge && sec->NumberOfRelocations == 0 &&
-           name == ".rdata" && leaderName.startswith("??_C@"))
+           name == ".rdata" && leaderName.starts_with("??_C@"))
     // COFF sections that look like string literal sections (i.e. no
     // relocations, in .rdata, leader symbol name matches the MSVC name mangling
     // for string literals) are subject to string tail merging.
     MergeChunk::addSection(ctx, c);
-  else if (name == ".rsrc" || name.startswith(".rsrc$"))
+  else if (name == ".rsrc" || name.starts_with(".rsrc$"))
     resourceChunks.push_back(c);
   else
     chunks.push_back(c);
@@ -366,7 +366,7 @@ Symbol *ObjFile::createRegular(COFFSymbolRef sym) {
     // everything should be fine. If something actually refers to the symbol
     // (e.g. the undefined weak alias), linking will fail due to undefined
     // references at the end.
-    if (ctx.config.mingw && name.startswith(".weak."))
+    if (ctx.config.mingw && name.starts_with(".weak."))
       return nullptr;
     return ctx.symtab.addUndefined(name, this, false);
   }
@@ -661,6 +661,8 @@ std::optional<Symbol *> ObjFile::createDefined(
     if (prevailing) {
       SectionChunk *c = readSection(sectionNumber, def, getName());
       sparseChunks[sectionNumber] = c;
+      if (!c)
+        return nullptr;
       c->sym = cast<DefinedRegular>(leader);
       c->selection = selection;
       cast<DefinedRegular>(leader)->data = &c->repl;
@@ -707,7 +709,7 @@ void ObjFile::initializeFlags() {
 
   DebugSubsectionArray subsections;
 
-  BinaryStreamReader reader(data, support::little);
+  BinaryStreamReader reader(data, llvm::endianness::little);
   ExitOnError exitOnErr;
   exitOnErr(reader.readArray(subsections, data.size()));
 
@@ -773,7 +775,7 @@ void ObjFile::initializeDependencies() {
   // Get the first type record. It will indicate if this object uses a type
   // server (/Zi) or a PCH file (/Yu).
   CVTypeArray types;
-  BinaryStreamReader reader(data, support::little);
+  BinaryStreamReader reader(data, llvm::endianness::little);
   cantFail(reader.readArray(types, reader.getLength()));
   CVTypeArray::Iterator firstType = types.begin();
   if (firstType == types.end())

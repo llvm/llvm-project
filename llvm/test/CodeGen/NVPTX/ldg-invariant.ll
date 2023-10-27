@@ -1,5 +1,5 @@
 ; RUN: llc < %s -march=nvptx64 -mcpu=sm_35 -verify-machineinstrs | FileCheck %s
-; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_35 | %ptxas-verify -arch=sm_35 %}
+; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_35 | %ptxas-verify %}
 
 ; Check that invariant loads from the global addrspace are lowered to
 ; ld.global.nc.
@@ -15,7 +15,7 @@ define i32 @ld_global(ptr addrspace(1) %ptr) {
 define half @ld_global_v2f16(ptr addrspace(1) %ptr) {
 ; Load of v2f16 is weird. We consider it to be a legal type, which happens to be
 ; loaded/stored as a 32-bit scalar.
-; CHECK: ld.global.nc.b32
+; CHECK: ld.global.nc.u32
   %a = load <2 x half>, ptr addrspace(1) %ptr, !invariant.load !0
   %v1 = extractelement <2 x half> %a, i32 0
   %v2 = extractelement <2 x half> %a, i32 1
@@ -28,7 +28,7 @@ define half @ld_global_v4f16(ptr addrspace(1) %ptr) {
 ; Larger f16 vectors may be split into individual f16 elements and multiple
 ; loads/stores may be vectorized using f16 element type. Practically it's
 ; limited to v4 variant only.
-; CHECK: ld.global.nc.v4.b16
+; CHECK: ld.global.nc.v4.u16
   %a = load <4 x half>, ptr addrspace(1) %ptr, !invariant.load !0
   %v1 = extractelement <4 x half> %a, i32 0
   %v2 = extractelement <4 x half> %a, i32 1
@@ -44,7 +44,7 @@ define half @ld_global_v4f16(ptr addrspace(1) %ptr) {
 define half @ld_global_v8f16(ptr addrspace(1) %ptr) {
 ; Larger vectors are, again, loaded as v4i32. PTX has no v8 variants of loads/stores,
 ; so load/store vectorizer has to convert v8f16 -> v4 x v2f16.
-; CHECK: ld.global.nc.v4.b32
+; CHECK: ld.global.nc.v4.u32
   %a = load <8 x half>, ptr addrspace(1) %ptr, !invariant.load !0
   %v1 = extractelement <8 x half> %a, i32 0
   %v2 = extractelement <8 x half> %a, i32 2

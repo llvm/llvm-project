@@ -1,4 +1,4 @@
-add_libc_testsuite(libc_assert_unittests)
+add_custom_target(libc_assert_unittests)
 
 add_libc_unittest(
   assert_test

@@ -178,6 +178,14 @@ __isl_give isl_union_map *isl_union_map_intersect_range_factor_domain(
 __isl_export
 __isl_give isl_union_map *isl_union_map_intersect_range_factor_range(
 	__isl_take isl_union_map *umap, __isl_take isl_union_map *factor);
+__isl_overload
+__isl_give isl_union_map *
+isl_union_map_intersect_domain_wrapped_domain_union_set(
+	__isl_take isl_union_map *umap, __isl_take isl_union_set *domain);
+__isl_overload
+__isl_give isl_union_map *
+isl_union_map_intersect_range_wrapped_domain_union_set(
+	__isl_take isl_union_map *umap, __isl_take isl_union_set *domain);
 
 __isl_export
 __isl_give isl_union_map *isl_union_map_subtract_domain(
@@ -234,6 +242,12 @@ __isl_give isl_union_map *isl_union_map_deltas_map(
 __isl_export
 __isl_give isl_union_map *isl_union_set_identity(__isl_take isl_union_set *uset);
 
+__isl_overload
+__isl_give isl_union_map *isl_union_map_project_out_param_id(
+	__isl_take isl_union_map *umap, __isl_take isl_id *id);
+__isl_overload
+__isl_give isl_union_map *isl_union_map_project_out_param_id_list(
+	__isl_take isl_union_map *umap, __isl_take isl_id_list *list);
 __isl_give isl_union_map *isl_union_map_project_out(
 	__isl_take isl_union_map *umap,
 	enum isl_dim_type type, unsigned first, unsigned n);

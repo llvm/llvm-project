@@ -12,10 +12,10 @@ define void @test() {
 ; CHECK-NEXT:    [[TMP1:%.*]] = fsub <2 x float> zeroinitializer, [[TMP0]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = load float, ptr [[ARRAYIDX10_I_I86]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = load float, ptr undef, align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x float> <float 0.000000e+00, float poison>, <2 x float> [[TMP0]], <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x float> [[TMP0]], <2 x float> <float 0.000000e+00, float poison>, <2 x i32> <i32 2, i32 1>
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x float> poison, float [[TMP3]], i32 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x float> [[TMP5]], float [[TMP2]], i32 1
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x float> <float poison, float 0.000000e+00>, float [[TMP2]], i32 0
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x float> [[TMP6]], <2 x float> <float poison, float 0.000000e+00>, <2 x i32> <i32 1, i32 3>
 ; CHECK-NEXT:    [[TMP8:%.*]] = call <2 x float> @llvm.fmuladd.v2f32(<2 x float> [[TMP4]], <2 x float> [[TMP6]], <2 x float> [[TMP7]])
 ; CHECK-NEXT:    br i1 false, label [[BB2:%.*]], label [[BB3:%.*]]
 ; CHECK:       bb2:
@@ -23,12 +23,12 @@ define void @test() {
 ; CHECK-NEXT:    br label [[BB3]]
 ; CHECK:       bb3:
 ; CHECK-NEXT:    [[TMP10:%.*]] = phi <2 x float> [ [[TMP9]], [[BB2]] ], [ zeroinitializer, [[BB1]] ]
-; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x float> [[TMP10]], <2 x float> poison, <2 x i32> <i32 1, i32 0>
-; CHECK-NEXT:    [[TMP11:%.*]] = fadd <2 x float> [[TMP1]], [[SHUFFLE]]
-; CHECK-NEXT:    [[TMP12:%.*]] = fadd <2 x float> [[TMP11]], zeroinitializer
-; CHECK-NEXT:    [[TMP13:%.*]] = fsub <2 x float> [[TMP12]], zeroinitializer
+; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <2 x float> [[TMP10]], <2 x float> poison, <2 x i32> <i32 1, i32 0>
+; CHECK-NEXT:    [[TMP12:%.*]] = fadd <2 x float> [[TMP1]], [[TMP11]]
+; CHECK-NEXT:    [[TMP13:%.*]] = fadd <2 x float> [[TMP12]], zeroinitializer
 ; CHECK-NEXT:    [[TMP14:%.*]] = fsub <2 x float> [[TMP13]], zeroinitializer
-; CHECK-NEXT:    store <2 x float> [[TMP14]], ptr [[ARRAYIDX21_I]], align 16
+; CHECK-NEXT:    [[TMP15:%.*]] = fsub <2 x float> [[TMP14]], zeroinitializer
+; CHECK-NEXT:    store <2 x float> [[TMP15]], ptr [[ARRAYIDX21_I]], align 16
 ; CHECK-NEXT:    ret void
 ;
 entry:

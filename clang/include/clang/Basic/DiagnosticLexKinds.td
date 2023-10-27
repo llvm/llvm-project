@@ -82,8 +82,8 @@ def warn_cxx20_keyword : Warning<"'%0' is a keyword in C++20">,
   InGroup<CXX20Compat>, DefaultIgnore;
 def warn_c99_keyword : Warning<"'%0' is a keyword in C99">,
   InGroup<C99Compat>, DefaultIgnore;
-def warn_c2x_keyword : Warning<"'%0' is a keyword in C2x">,
-  InGroup<C2xCompat>, DefaultIgnore;
+def warn_c23_keyword : Warning<"'%0' is a keyword in C23">,
+  InGroup<C23Compat>, DefaultIgnore;
 
 def ext_unterminated_char_or_string : ExtWarn<
   "missing terminating %select{'|'\"'}0 character">, InGroup<InvalidPPToken>;
@@ -138,13 +138,13 @@ def ext_mathematical_notation : ExtWarn<
 
 def ext_delimited_escape_sequence : Extension<
   "%select{delimited|named}0 escape sequences are a "
-  "%select{Clang|C++2b}1 extension">,
+  "%select{Clang|C++23}1 extension">,
   InGroup<DiagGroup<"delimited-escape-sequence-extension">>;
 
-def warn_cxx2b_delimited_escape_sequence : Warning<
+def warn_cxx23_delimited_escape_sequence : Warning<
   "%select{delimited|named}0 escape sequences are "
-  "incompatible with C++ standards before C++2b">,
-  InGroup<CXXPre2bCompat>, DefaultIgnore;
+  "incompatible with C++ standards before C++23">,
+  InGroup<CXXPre23Compat>, DefaultIgnore;
 
 def err_delimited_escape_empty : Error<
   "delimited escape sequence cannot be empty">;
@@ -197,6 +197,14 @@ def warn_cxx98_compat_literal_ucn_escape_basic_scs : Warning<
 def warn_cxx98_compat_literal_ucn_control_character : Warning<
   "universal character name referring to a control character "
   "is incompatible with C++98">, InGroup<CXX98Compat>, DefaultIgnore;
+def warn_c23_compat_literal_ucn_escape_basic_scs : Warning<
+  "specifying character '%0' with a universal character name is "
+  "incompatible with C standards before C23">,
+  InGroup<CPre23Compat>, DefaultIgnore;
+def warn_c23_compat_literal_ucn_control_character : Warning<
+  "universal character name referring to a control character "
+  "is incompatible with C standards before C23">,
+  InGroup<CPre23Compat>, DefaultIgnore;
 def warn_ucn_not_valid_in_c89 : Warning<
   "universal character names are only valid in C99 or C++; "
   "treating as '\\' followed by identifier">, InGroup<Unicode>;
@@ -216,9 +224,9 @@ def err_invalid_suffix_constant : Error<
 def warn_cxx11_compat_digit_separator : Warning<
   "digit separators are incompatible with C++ standards before C++14">,
   InGroup<CXXPre14Compat>, DefaultIgnore;
-def warn_c2x_compat_digit_separator : Warning<
-  "digit separators are incompatible with C standards before C2x">,
-  InGroup<CPre2xCompat>, DefaultIgnore;
+def warn_c23_compat_digit_separator : Warning<
+  "digit separators are incompatible with C standards before C23">,
+  InGroup<CPre23Compat>, DefaultIgnore;
 def err_digit_separator_not_between_digits : Error<
   "digit separator cannot appear at %select{start|end}0 of digit sequence">;
 def warn_char_constant_too_large : Warning<
@@ -276,6 +284,17 @@ def ext_ms_reserved_user_defined_literal : ExtWarn<
   "identifier">, InGroup<ReservedUserDefinedLiteral>;
 def err_unsupported_string_concat : Error<
   "unsupported non-standard concatenation of string literals">;
+
+def warn_unevaluated_string_prefix : Warning<
+  "encoding prefix '%0' on an unevaluated string literal has no effect"
+  "%select{| and is incompatible with c++2c}1">,
+  InGroup<DiagGroup<"invalid-unevaluated-string">>;
+def err_unevaluated_string_prefix : Error<
+  "an unevaluated string literal cannot have an encoding prefix">;
+def err_unevaluated_string_udl : Error<
+  "an unevaluated string literal cannot be a user-defined literal">;
+def err_unevaluated_string_invalid_escape_sequence : Error<
+  "invalid escape sequence '%0' in an unevaluated string literal">;
 def err_string_concat_mixed_suffix : Error<
   "differing user-defined suffixes ('%0' and '%1') in string literal "
   "concatenation">;
@@ -396,13 +415,13 @@ def ext_pp_include_next_directive : Extension<
   "#include_next is a language extension">, InGroup<GNUIncludeNext>;
 
 def ext_pp_warning_directive : Extension<
-  "#warning is a %select{C2x|C++2b}0 extension">;
-def warn_cxx2b_compat_warning_directive : Warning<
-  "#warning is incompatible with C++ standards before C++2b">,
-  InGroup<CXXPre2bCompat>, DefaultIgnore;
-def warn_c2x_compat_warning_directive : Warning<
-  "#warning is incompatible with C standards before C2x">,
-  InGroup<CPre2xCompat>, DefaultIgnore;
+  "#warning is a %select{C23|C++23}0 extension">;
+def warn_cxx23_compat_warning_directive : Warning<
+  "#warning is incompatible with C++ standards before C++23">,
+  InGroup<CXXPre23Compat>, DefaultIgnore;
+def warn_c23_compat_warning_directive : Warning<
+  "#warning is incompatible with C standards before C23">,
+  InGroup<CPre23Compat>, DefaultIgnore;
 
 def ext_pp_extra_tokens_at_eol : ExtWarn<
   "extra tokens at end of #%0 directive">, InGroup<ExtraTokens>;
@@ -655,10 +674,6 @@ def warn_pragma_debug_missing_command : Warning<
   "missing debug command">, InGroup<IgnoredPragmas>;
 def warn_pragma_debug_unexpected_command : Warning<
   "unexpected debug command '%0'">, InGroup<IgnoredPragmas>;
-def warn_pragma_debug_missing_argument : Warning<
-  "missing argument to debug command '%0'">, InGroup<IgnoredPragmas>;
-def warn_pragma_debug_unexpected_argument : Warning<
-  "unexpected argument to debug command">, InGroup<IgnoredPragmas>;
 def warn_pragma_debug_unknown_module : Warning<
   "unknown module '%0'">, InGroup<IgnoredPragmas>;
 // #pragma module
@@ -735,22 +750,22 @@ def warn_cxx98_compat_pp_line_too_big : Warning<
   "#line number greater than 32767 is incompatible with C++98">,
   InGroup<CXX98CompatPedantic>, DefaultIgnore;
 
-def warn_c2x_compat_pp_directive : Warning<
+def warn_c23_compat_pp_directive : Warning<
   "use of a '#%select{<BUG IF SEEN>|elifdef|elifndef}0' directive "
-  "is incompatible with C standards before C2x">,
-  InGroup<CPre2xCompat>, DefaultIgnore;
-def ext_c2x_pp_directive : ExtWarn<
+  "is incompatible with C standards before C23">,
+  InGroup<CPre23Compat>, DefaultIgnore;
+def ext_c23_pp_directive : ExtWarn<
   "use of a '#%select{<BUG IF SEEN>|elifdef|elifndef}0' directive "
-  "is a C2x extension">,
-  InGroup<C2x>;
-def warn_cxx2b_compat_pp_directive : Warning<
+  "is a C23 extension">,
+  InGroup<C23>;
+def warn_cxx23_compat_pp_directive : Warning<
   "use of a '#%select{<BUG IF SEEN>|elifdef|elifndef}0' directive "
-  "is incompatible with C++ standards before C++2b">,
-  InGroup<CXXPre2bCompat>, DefaultIgnore;
-def ext_cxx2b_pp_directive : ExtWarn<
+  "is incompatible with C++ standards before C++23">,
+  InGroup<CXXPre23Compat>, DefaultIgnore;
+def ext_cxx23_pp_directive : ExtWarn<
   "use of a '#%select{<BUG IF SEEN>|elifdef|elifndef}0' directive "
-  "is a C++2b extension">,
-  InGroup<CXX2b>;
+  "is a C++23 extension">,
+  InGroup<CXX23>;
 
 def err_pp_visibility_non_macro : Error<"no macro named %0">;
 
@@ -888,6 +903,8 @@ def warn_use_of_private_header_outside_module : Warning<
   InGroup<DiagGroup<"private-header">>, DefaultError;
 def err_undeclared_use_of_module : Error<
   "module %0 does not depend on a module exporting '%1'">;
+def err_undeclared_use_of_module_indirect : Error<
+  "module %0 does not directly depend on a module exporting '%1', which is part of indirectly-used module %2">;
 def warn_non_modular_include_in_framework_module : Warning<
   "include of non-modular header inside framework module '%0': '%1'">,
   InGroup<NonModularIncludeInFrameworkModule>, DefaultIgnore;
@@ -943,4 +960,15 @@ def err_dep_source_scanner_unexpected_tokens_at_import : Error<
 
 }
 
+def err_pp_double_begin_pragma_unsafe_buffer_usage :
+Error<"already inside '#pragma unsafe_buffer_usage'">;
+
+def err_pp_unmatched_end_begin_pragma_unsafe_buffer_usage :
+Error<"not currently inside '#pragma unsafe_buffer_usage'">;
+
+def err_pp_unclosed_pragma_unsafe_buffer_usage :
+Error<"'#pragma unsafe_buffer_usage' was not ended">;
+
+def err_pp_pragma_unsafe_buffer_usage_syntax :
+Error<"Expected 'begin' or 'end'">;
 }

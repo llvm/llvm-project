@@ -703,8 +703,12 @@ static bool GetFrameDataProgram(PdbIndex &index,
   if (frame_data_it == new_fpo_data.end())
     return false;
 
-  PDBStringTable &strings = cantFail(index.pdb().getStringTable());
-  out_program = cantFail(strings.getStringForID(frame_data_it->FrameFunc));
+  auto strings = index.pdb().getStringTable();
+  if (!strings) {
+    consumeError(strings.takeError());
+    return false;
+  }
+  out_program = cantFail(strings->getStringForID(frame_data_it->FrameFunc));
   return true;
 }
 

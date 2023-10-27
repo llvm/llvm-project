@@ -28,13 +28,16 @@ entry:
 @gv = global i32 zeroinitializer
 
 ; CHECK-LABEL: name: debug_value
+; CHECK: stack:
+; CHECK:    - { id: {{.*}}, name: addr
 ; CHECK: [[IN:%[0-9]+]]:_(s32) = COPY $w0
 define void @debug_value(i32 %in) #0 !dbg !16 {
+; CHECK: G_FRAME_INDEX %[[stack_slot:.*]]
   %addr = alloca i32
 ; CHECK: DBG_VALUE [[IN]](s32), $noreg, !17, !DIExpression(), debug-location !18
   call void @llvm.dbg.value(metadata i32 %in, i64 0, metadata !17, metadata !DIExpression()), !dbg !18
   store i32 %in, ptr %addr
-; CHECK: DBG_VALUE %1(p0), $noreg, !17, !DIExpression(DW_OP_deref), debug-location !18
+; CHECK: DBG_VALUE %[[stack_slot]], 0, !17, !DIExpression(), debug-location !18
   call void @llvm.dbg.value(metadata ptr %addr, i64 0, metadata !17, metadata !DIExpression(DW_OP_deref)), !dbg !18
 ; CHECK: DBG_VALUE 123, 0, !17, !DIExpression(), debug-location !18
   call void @llvm.dbg.value(metadata i32 123, i64 0, metadata !17, metadata !DIExpression()), !dbg !18

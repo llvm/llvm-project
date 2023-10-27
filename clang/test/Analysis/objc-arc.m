@@ -201,7 +201,7 @@ void test_objc_arrays(void) {
     }
 }
 
-// <rdar://problem/11059275> - dispatch_set_context and ARC.
+// dispatch_set_context and ARC.
 __attribute__((cf_returns_retained)) CFTypeRef CFBridgingRetain(id X);
 typedef void* dispatch_object_t;
 void dispatch_set_context(dispatch_object_t object, const void *context);

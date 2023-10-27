@@ -10,7 +10,7 @@ define dso_local i32 @_Z3barv() {
 ; CHECK-LABEL:	_Z3barv:
 ; CHECK-NEXT:	[[BAR_BEGIN:.Lfunc_begin[0-9]+]]:
 ; CHECK:		.section .llvm_bb_addr_map,"o",@llvm_bb_addr_map,.text._Z3barv{{$}}
-; CHECK-NEXT:		.byte 1			# version
+; CHECK-NEXT:		.byte 2			# version
 ; CHECK-NEXT:		.byte 0			# feature
 ; CHECK-NEXT:		.quad [[BAR_BEGIN]]	# function address
 
@@ -23,7 +23,7 @@ define dso_local i32 @_Z3foov() {
 ; CHECK-LABEL:	_Z3foov:
 ; CHECK-NEXT:	[[FOO_BEGIN:.Lfunc_begin[0-9]+]]:
 ; CHECK:		.section  .llvm_bb_addr_map,"o",@llvm_bb_addr_map,.text._Z3foov{{$}}
-; CHECK-NEXT:		.byte 1			# version
+; CHECK-NEXT:		.byte 2			# version
 ; CHECK-NEXT:		.byte 0			# feature
 ; CHECK-NEXT:		.quad [[FOO_BEGIN]]	# function address
 
@@ -36,6 +36,6 @@ define linkonce_odr dso_local i32 @_Z4fooTIiET_v() comdat {
 ; CHECK-LABEL:	_Z4fooTIiET_v:
 ; CHECK-NEXT:	[[FOOCOMDAT_BEGIN:.Lfunc_begin[0-9]+]]:
 ; CHECK:		.section .llvm_bb_addr_map,"Go",@llvm_bb_addr_map,_Z4fooTIiET_v,comdat,.text._Z4fooTIiET_v{{$}}
-; CHECK-NEXT:		.byte 1				# version
+; CHECK-NEXT:		.byte 2				# version
 ; CHECK-NEXT:		.byte 0				# feature
 ; CHECK-NEXT:		.quad [[FOOCOMDAT_BEGIN]]	# function address

@@ -59,11 +59,4 @@ define void @ghc_caller() {
   ret void
 }
 
-declare hhvm_ccc void @hhvm_c_callee()
-
-define hhvmcc void @hhvm_caller() {
-  call hhvm_ccc void @hhvm_c_callee()
-  ret void
-}
-
 declare i32 @__gxx_personality_v0(...)

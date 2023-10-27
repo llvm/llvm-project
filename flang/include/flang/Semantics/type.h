@@ -249,6 +249,8 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &, const ArraySpec &);
 // The name may not match the symbol's name in case of a USE rename.
 class DerivedTypeSpec {
 public:
+  enum class Category { DerivedType, IntrinsicVector, PairVector, QuadVector };
+
   using RawParameter = std::pair<const parser::Keyword *, ParamValue>;
   using RawParameters = std::vector<RawParameter>;
   using ParameterMapType = std::map<SourceName, ParamValue>;
@@ -266,7 +268,8 @@ public:
 
   bool MightBeParameterized() const;
   bool IsForwardReferenced() const;
-  bool HasDefaultInitialization(bool ignoreAllocatable = false) const;
+  bool HasDefaultInitialization(
+      bool ignoreAllocatable = false, bool ignorePointer = true) const;
   bool HasDestruction() const;
 
   // The "raw" type parameter list is a simple transcription from the
@@ -303,6 +306,14 @@ public:
   // explicit and equal, len type parameters are ignored.
   bool Match(const DerivedTypeSpec &) const;
   std::string AsFortran() const;
+  std::string VectorTypeAsFortran() const;
+
+  Category category() const { return category_; }
+  void set_category(Category category) { category_ = category; }
+  bool IsVectorType() const {
+    return category_ == Category::IntrinsicVector ||
+        category_ == Category::PairVector || category_ == Category::QuadVector;
+  }
 
 private:
   SourceName name_;
@@ -313,6 +324,7 @@ private:
   bool instantiated_{false};
   RawParameters rawParameters_;
   ParameterMapType parameters_;
+  Category category_{Category::DerivedType};
   bool RawEquals(const DerivedTypeSpec &that) const {
     return &typeSymbol_ == &that.typeSymbol_ && cooked_ == that.cooked_ &&
         rawParameters_ == that.rawParameters_;
@@ -444,6 +456,9 @@ inline DerivedTypeSpec *DeclTypeSpec::AsDerived() {
 inline const DerivedTypeSpec *DeclTypeSpec::AsDerived() const {
   return const_cast<DeclTypeSpec *>(this)->AsDerived();
 }
+
+bool IsInteroperableIntrinsicType(
+    const DeclTypeSpec &, const common::LanguageFeatureControl &);
 
 } // namespace Fortran::semantics
 #endif // FORTRAN_SEMANTICS_TYPE_H_

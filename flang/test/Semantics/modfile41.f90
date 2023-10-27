@@ -94,3 +94,9 @@ subroutine testUse12
   !ERROR: 'a' is use-associated from module 'm4' and cannot be re-declared
   integer :: a = 2
 end
+subroutine testUse13
+  use m1, a => a
+  use m1, z => a ! should not erase 'a', it was renamed
+  !ERROR: 'a' is use-associated from module 'm1' and cannot be re-declared
+  integer :: a = 13
+end

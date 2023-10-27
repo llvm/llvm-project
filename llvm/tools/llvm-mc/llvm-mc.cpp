@@ -31,13 +31,13 @@
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/FormattedStream.h"
-#include "llvm/Support/Host.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/WithColor.h"
+#include "llvm/TargetParser/Host.h"
 
 using namespace llvm;
 
@@ -216,6 +216,7 @@ enum ActionType {
   AC_Assemble,
   AC_Disassemble,
   AC_MDisassemble,
+  AC_CDisassemble,
 };
 
 static cl::opt<ActionType> Action(
@@ -226,7 +227,9 @@ static cl::opt<ActionType> Action(
                clEnumValN(AC_Disassemble, "disassemble",
                           "Disassemble strings of hex bytes"),
                clEnumValN(AC_MDisassemble, "mdis",
-                          "Marked up disassembly of strings of hex bytes")),
+                          "Marked up disassembly of strings of hex bytes"),
+               clEnumValN(AC_CDisassemble, "cdis",
+                          "Colored disassembly of strings of hex bytes")),
     cl::cat(MCCategory));
 
 static const Target *GetTarget(const char *ProgName) {
@@ -544,6 +547,11 @@ int main(int argc, char **argv) {
     std::unique_ptr<MCAsmBackend> MAB(
         TheTarget->createMCAsmBackend(*STI, *MRI, MCOptions));
     auto FOut = std::make_unique<formatted_raw_ostream>(*OS);
+    // FIXME: Workaround for bug in formatted_raw_ostream. Color escape codes
+    // are (incorrectly) written directly to the unbuffered raw_ostream wrapped
+    // by the formatted_raw_ostream.
+    if (Action == AC_CDisassemble)
+      FOut->SetUnbuffered();
     Str.reset(
         TheTarget->createAsmStreamer(Ctx, std::move(FOut), /*asmverbose*/ true,
                                      /*useDwarfDirectory*/ true, IP,
@@ -586,8 +594,11 @@ int main(int argc, char **argv) {
                         *MCII, MCOptions);
     break;
   case AC_MDisassemble:
-    assert(IP && "Expected assembly output");
     IP->setUseMarkup(true);
+    disassemble = true;
+    break;
+  case AC_CDisassemble:
+    IP->setUseColor(true);
     disassemble = true;
     break;
   case AC_Disassemble:
@@ -596,7 +607,7 @@ int main(int argc, char **argv) {
   }
   if (disassemble)
     Res = Disassembler::disassemble(*TheTarget, TripleName, *STI, *Str, *Buffer,
-                                    SrcMgr, Ctx, Out->os(), MCOptions);
+                                    SrcMgr, Ctx, MCOptions);
 
   // Keep output if no errors.
   if (Res == 0) {

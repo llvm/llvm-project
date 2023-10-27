@@ -8,10 +8,33 @@
 #ifndef MLIR_PASS_PASSDETAIL_H_
 #define MLIR_PASS_PASSDETAIL_H_
 
+#include "mlir/IR/Action.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/Support/FormatVariadic.h"
 
 namespace mlir {
+/// Encapsulate the "action" of executing a single pass, used for the MLIR
+/// tracing infrastructure.
+struct PassExecutionAction : public tracing::ActionImpl<PassExecutionAction> {
+  using Base = tracing::ActionImpl<PassExecutionAction>;
+  PassExecutionAction(ArrayRef<IRUnit> irUnits, const Pass &pass)
+      : Base(irUnits), pass(pass) {}
+  static constexpr StringLiteral tag = "pass-execution";
+  void print(raw_ostream &os) const override;
+  const Pass &getPass() const { return pass; }
+  Operation *getOp() const {
+    ArrayRef<IRUnit> irUnits = getContextIRUnits();
+    return irUnits.empty() ? nullptr
+                           : llvm::dyn_cast_if_present<Operation *>(irUnits[0]);
+  }
+
+public:
+  const Pass &pass;
+  Operation *op;
+};
+
 namespace detail {
 
 //===----------------------------------------------------------------------===//

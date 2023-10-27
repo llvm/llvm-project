@@ -11,19 +11,20 @@
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
 
-#include <errno.h>
+#include "src/errno/libc_errno.h"
 #include <sys/resource.h> // For struct rlimit
 #include <sys/syscall.h>  // For syscall numbers.
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(int, getrlimit, (int res, struct rlimit *limits)) {
-  long ret = __llvm_libc::syscall_impl(SYS_prlimit64, 0, res, nullptr, limits);
+  int ret =
+      LIBC_NAMESPACE::syscall_impl<int>(SYS_prlimit64, 0, res, nullptr, limits);
   if (ret < 0) {
-    errno = -ret;
+    libc_errno = -ret;
     return -1;
   }
   return 0;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

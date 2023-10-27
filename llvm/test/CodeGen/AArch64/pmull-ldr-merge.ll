@@ -6,10 +6,10 @@
 define void @test1(ptr %0, i64 %1, i64 %2) {
 ; CHECK-LABEL: test1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add x8, x0, x2, lsl #4
-; CHECK-NEXT:    add x9, x0, x1, lsl #4
-; CHECK-NEXT:    ldr d0, [x8, #8]
-; CHECK-NEXT:    ldr d1, [x9, #8]
+; CHECK-NEXT:    add x8, x0, x1, lsl #4
+; CHECK-NEXT:    add x9, x0, x2, lsl #4
+; CHECK-NEXT:    ldr d0, [x9, #8]
+; CHECK-NEXT:    ldr d1, [x8, #8]
 ; CHECK-NEXT:    pmull v0.1q, v1.1d, v0.1d
 ; CHECK-NEXT:    str q0, [x0]
 ; CHECK-NEXT:    ret
@@ -49,9 +49,9 @@ define void @test3(ptr %0, i64 %1, i64 %2, i64 %3) {
 ; CHECK-LABEL: test3:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    add x8, x0, x1, lsl #4
-; CHECK-NEXT:    fmov d0, x3
-; CHECK-NEXT:    ldr d1, [x8, #8]
-; CHECK-NEXT:    pmull v0.1q, v1.1d, v0.1d
+; CHECK-NEXT:    fmov d1, x3
+; CHECK-NEXT:    ldr d0, [x8, #8]
+; CHECK-NEXT:    pmull v0.1q, v0.1d, v1.1d
 ; CHECK-NEXT:    str q0, [x8]
 ; CHECK-NEXT:    ret
   %5 = getelementptr inbounds <2 x i64>, ptr %0, i64 %1

@@ -11,9 +11,7 @@
 
 #include "../ClangTidyCheck.h"
 
-namespace clang {
-namespace tidy {
-namespace concurrency {
+namespace clang::tidy::concurrency {
 
 /// Checks that non-thread-safe functions are not used.
 ///
@@ -36,8 +34,6 @@ private:
   const FunctionSet FuncSet;
 };
 
-} // namespace concurrency
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::concurrency
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CONCURRENCY_MTUNSAFECHECK_H

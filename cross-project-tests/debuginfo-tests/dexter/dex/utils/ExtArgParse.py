@@ -22,32 +22,32 @@ for argitem in argparse.__all__:
 
 def _did_you_mean(val, possibles):
     close_matches = difflib.get_close_matches(val, possibles)
-    did_you_mean = ''
+    did_you_mean = ""
     if close_matches:
-        did_you_mean = 'did you mean {}?'.format(' or '.join(
-            "<y>'{}'</>".format(c) for c in close_matches[:2]))
+        did_you_mean = "did you mean {}?".format(
+            " or ".join("<y>'{}'</>".format(c) for c in close_matches[:2])
+        )
     return did_you_mean
 
 
 def _colorize(message):
     lines = message.splitlines()
     for i, line in enumerate(lines):
-        lines[i] = lines[i].replace('usage:', '<g>usage:</>')
-        if line.endswith(':'):
-            lines[i] = '<g>{}</>'.format(line)
-    return '\n'.join(lines)
+        lines[i] = lines[i].replace("usage:", "<g>usage:</>")
+        if line.endswith(":"):
+            lines[i] = "<g>{}</>".format(line)
+    return "\n".join(lines)
 
 
 class ExtArgumentParser(argparse.ArgumentParser):
     def error(self, message):
-        """Use the Dexception Error mechanism (including auto-colored output).
-        """
-        raise Error('{}\n\n{}'.format(message, self.format_usage()))
+        """Use the Dexception Error mechanism (including auto-colored output)."""
+        raise Error("{}\n\n{}".format(message, self.format_usage()))
 
     # pylint: disable=redefined-builtin
     def _print_message(self, message, file=None):
         if message:
-            if file and file.name == '<stdout>':
+            if file and file.name == "<stdout>":
                 file = PrettyOutput.stdout
             else:
                 file = PrettyOutput.stderr
@@ -60,13 +60,14 @@ class ExtArgumentParser(argparse.ArgumentParser):
         return _colorize(super(ExtArgumentParser, self).format_usage())
 
     def format_help(self):
-        return _colorize(super(ExtArgumentParser, self).format_help() + '\n\n')
+        return _colorize(super(ExtArgumentParser, self).format_help() + "\n\n")
 
     @property
     def _valid_visible_options(self):
         """A list of all non-suppressed command line flags."""
         return [
-            item for sublist in vars(self)['_actions']
+            item
+            for sublist in vars(self)["_actions"]
             for item in sublist.option_strings
             if sublist.help != argparse.SUPPRESS
         ]
@@ -83,29 +84,32 @@ class ExtArgumentParser(argparse.ArgumentParser):
                     error = "unrecognized argument: <y>'{}'</>".format(arg)
                     dym = _did_you_mean(arg, self._valid_visible_options)
                     if dym:
-                        error += '  ({})'.format(dym)
+                        error += "  ({})".format(dym)
                 errors.append(error)
-            self.error('\n       '.join(errors))
+            self.error("\n       ".join(errors))
 
         return args
 
     def add_argument(self, *args, **kwargs):
         """Automatically add the default value to help text."""
-        if 'default' in kwargs:
-            default = kwargs['default']
+        if "default" in kwargs:
+            default = kwargs["default"]
             if default is None:
-                default = kwargs.pop('display_default', None)
+                default = kwargs.pop("display_default", None)
 
-            if (default and isinstance(default, (str, int, float))
-                    and default != argparse.SUPPRESS):
+            if (
+                default
+                and isinstance(default, (str, int, float))
+                and default != argparse.SUPPRESS
+            ):
                 assert (
-                    'choices' not in kwargs or default in kwargs['choices']), (
-                        "default value '{}' is not one of allowed choices: {}".
-                        format(default, kwargs['choices']))
-                if 'help' in kwargs and kwargs['help'] != argparse.SUPPRESS:
-                    assert isinstance(kwargs['help'], str), type(kwargs['help'])
-                    kwargs['help'] = ('{} (default:{})'.format(
-                        kwargs['help'], default))
+                    "choices" not in kwargs or default in kwargs["choices"]
+                ), "default value '{}' is not one of allowed choices: {}".format(
+                    default, kwargs["choices"]
+                )
+                if "help" in kwargs and kwargs["help"] != argparse.SUPPRESS:
+                    assert isinstance(kwargs["help"], str), type(kwargs["help"])
+                    kwargs["help"] = "{} (default:{})".format(kwargs["help"], default)
 
         super(ExtArgumentParser, self).add_argument(*args, **kwargs)
 
@@ -117,32 +121,34 @@ class ExtArgumentParser(argparse.ArgumentParser):
 class TestExtArgumentParser(unittest.TestCase):
     def test_did_you_mean(self):
         parser = ExtArgumentParser(None)
-        parser.add_argument('--foo')
-        parser.add_argument('--qoo', help=argparse.SUPPRESS)
-        parser.add_argument('jam', nargs='?')
+        parser.add_argument("--foo")
+        parser.add_argument("--qoo", help=argparse.SUPPRESS)
+        parser.add_argument("jam", nargs="?")
 
-        parser.parse_args(['--foo', '0'])
+        parser.parse_args(["--foo", "0"])
 
-        expected = (r"^unrecognized argument\: <y>'\-\-doo'</>\s+"
-                    r"\(did you mean <y>'\-\-foo'</>\?\)\n"
-                    r"\s*<g>usage:</>")
+        expected = (
+            r"^unrecognized argument\: <y>'\-\-doo'</>\s+"
+            r"\(did you mean <y>'\-\-foo'</>\?\)\n"
+            r"\s*<g>usage:</>"
+        )
         with self.assertRaisesRegex(Error, expected):
-            parser.parse_args(['--doo'])
+            parser.parse_args(["--doo"])
 
-        parser.add_argument('--noo')
+        parser.add_argument("--noo")
 
-        expected = (r"^unrecognized argument\: <y>'\-\-doo'</>\s+"
-                    r"\(did you mean <y>'\-\-noo'</> or <y>'\-\-foo'</>\?\)\n"
-                    r"\s*<g>usage:</>")
+        expected = (
+            r"^unrecognized argument\: <y>'\-\-doo'</>\s+"
+            r"\(did you mean <y>'\-\-noo'</> or <y>'\-\-foo'</>\?\)\n"
+            r"\s*<g>usage:</>"
+        )
         with self.assertRaisesRegex(Error, expected):
-            parser.parse_args(['--doo'])
+            parser.parse_args(["--doo"])
 
-        expected = (r"^unrecognized argument\: <y>'\-\-bar'</>\n"
-                    r"\s*<g>usage:</>")
+        expected = r"^unrecognized argument\: <y>'\-\-bar'</>\n" r"\s*<g>usage:</>"
         with self.assertRaisesRegex(Error, expected):
-            parser.parse_args(['--bar'])
+            parser.parse_args(["--bar"])
 
-        expected = (r"^unexpected argument\: <y>'\-\-foo'</>\n"
-                    r"\s*<g>usage:</>")
+        expected = r"^unexpected argument\: <y>'\-\-foo'</>\n" r"\s*<g>usage:</>"
         with self.assertRaisesRegex(Error, expected):
-            parser.parse_args(['--', 'x', '--foo'])
+            parser.parse_args(["--", "x", "--foo"])

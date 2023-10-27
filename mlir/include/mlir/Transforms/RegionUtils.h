@@ -51,6 +51,24 @@ void getUsedValuesDefinedAbove(Region &region, Region &limit,
 void getUsedValuesDefinedAbove(MutableArrayRef<Region> regions,
                                SetVector<Value> &values);
 
+/// Make a region isolated from above
+/// - Capture the values that are defined above the region and used within it.
+/// - Append to the entry block arguments that represent the captured values
+/// (one per captured value).
+/// - Replace all uses within the region of the captured values with the
+///   newly added arguments.
+/// - `cloneOperationIntoRegion` is a callback that allows caller to specify
+///   if the operation defining an `OpOperand` needs to be cloned into the
+///   region. Then the operands of this operation become part of the captured
+///   values set (unless the operations that define the operands themeselves
+///   are to be cloned). The cloned operations are added to the entry block
+///   of the region.
+/// Return the set of captured values for the operation.
+SmallVector<Value> makeRegionIsolatedFromAbove(
+    RewriterBase &rewriter, Region &region,
+    llvm::function_ref<bool(Operation *)> cloneOperationIntoRegion =
+        [](Operation *) { return false; });
+
 /// Run a set of structural simplifications over the given regions. This
 /// includes transformations like unreachable block elimination, dead argument
 /// elimination, as well as some other DCE. This function returns success if any
@@ -68,6 +86,9 @@ LogicalResult eraseUnreachableBlocks(RewriterBase &rewriter,
 /// failure otherwise.
 LogicalResult runRegionDCE(RewriterBase &rewriter,
                            MutableArrayRef<Region> regions);
+
+/// Get a topologically sorted list of blocks of the given region.
+SetVector<Block *> getTopologicallySortedBlocks(Region &region);
 
 } // namespace mlir
 

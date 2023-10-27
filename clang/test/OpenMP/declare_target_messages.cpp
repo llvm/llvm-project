@@ -1,19 +1,19 @@
 // RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify=expected,omp45 -fopenmp -fopenmp-version=45 -fnoopenmp-use-tls -ferror-limit 100 -o - %s
-// RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify=expected,omp5,host5 -fopenmp -fopenmp-targets=x86_64-apple-macos10.7.0 -fnoopenmp-use-tls -ferror-limit 100 -o - %s
-// RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify=expected,omp5,dev5 -fopenmp -fopenmp-is-device -fopenmp-targets=x86_64-apple-macos10.7.0 -aux-triple x86_64-apple-macos10.7.0 -fnoopenmp-use-tls -ferror-limit 100 -o - %s
+// RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify=expected,omp5,host5 -fopenmp -fopenmp-version=50 -fopenmp-targets=x86_64-apple-macos10.7.0 -fnoopenmp-use-tls -ferror-limit 100 -o - %s
+// RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify=expected,omp5,dev5 -fopenmp -fopenmp-version=50 -fopenmp-is-target-device -fopenmp-targets=x86_64-apple-macos10.7.0 -aux-triple x86_64-apple-macos10.7.0 -fnoopenmp-use-tls -ferror-limit 100 -o - %s
 
-// RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify=expected,omp5,host5 -fopenmp-simd -fopenmp-targets=x86_64-apple-macos10.7.0 -fnoopenmp-use-tls -ferror-limit 100 -o - %s
-// RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify=expected,omp5,host5 -fopenmp-simd -fopenmp-is-device -fopenmp-targets=x86_64-apple-macos10.7.0 -fnoopenmp-use-tls -ferror-limit 100 -o - %s
+// RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify=expected,omp5,host5 -fopenmp-simd -fopenmp-version=50 -fopenmp-targets=x86_64-apple-macos10.7.0 -fnoopenmp-use-tls -ferror-limit 100 -o - %s
+// RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify=expected,omp5,host5 -fopenmp-simd -fopenmp-version=50 -fopenmp-is-target-device -fopenmp-targets=x86_64-apple-macos10.7.0 -fnoopenmp-use-tls -ferror-limit 100 -o - %s
 // RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify=expected,omp45 -fopenmp-version=45 -fopenmp-simd -fnoopenmp-use-tls -ferror-limit 100 -o - %s
-// RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify=expected,omp51 -fopenmp -fopenmp-version=51 -fnoopenmp-use-tls -ferror-limit 100 -o - %s
-// RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify=expected,omp51 -fopenmp -fopenmp-version=51 -fnoopenmp-use-tls -ferror-limit 100 -DTESTEND=1 -o - %s
-// RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify=expected,omp51 -fopenmp -fopenmp-version=51 -fnoopenmp-use-tls -ferror-limit 100 -I%S/Inputs -DTESTENDINC=1 -o - %s
-// RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify=expected,omp51 -fopenmp-version=51 -fopenmp-simd -fnoopenmp-use-tls -ferror-limit 100 -o - %s
-// RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify=expected,omp51 -fopenmp-version=51 -fopenmp-simd -fnoopenmp-use-tls -ferror-limit 100 -o - %s
+// RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify=expected,omp51 -fopenmp -fnoopenmp-use-tls -ferror-limit 100 -o - %s
+// RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify=expected,omp51 -fopenmp -fnoopenmp-use-tls -ferror-limit 100 -DTESTEND=1 -o - %s
+// RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify=expected,omp51 -fopenmp -fnoopenmp-use-tls -ferror-limit 100 -I%S/Inputs -DTESTENDINC=1 -o - %s
+// RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify=expected,omp51 -fopenmp-simd -fnoopenmp-use-tls -ferror-limit 100 -o - %s
+// RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify=expected,omp51 -fopenmp-simd -fnoopenmp-use-tls -ferror-limit 100 -o - %s
 
 // RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify=expected,omp52 -fopenmp -fopenmp-version=52 -DVERBOSE_MODE=1 -fnoopenmp-use-tls -ferror-limit 100 -o - %s
-
-// RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify=expected,omp5 -fopenmp -fnoopenmp-use-tls -ferror-limit 100 -o - %s
+// RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify=expected,omp5 -fopenmp -fopenmp-version=50 -fnoopenmp-use-tls -ferror-limit 100 -o - %s
+// RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify=expected,omp51 -fopenmp -fnoopenmp-use-tls -ferror-limit 100 -o - %s
 #pragma omp end declare target // expected-error {{unexpected OpenMP directive '#pragma omp end declare target'}}
 
 int a, b, z; // omp5-error {{variable captured in declare target region must appear in a to clause}} // omp51-error {{variable captured in declare target region must appear in a to clause}} omp52-error {{variable captured in declare target region must appear in a to clause}}
@@ -232,6 +232,42 @@ int MultiDevTy;
 #pragma omp declare target to(MultiDevTy) device_type(any)    // omp45-error {{unexpected 'device_type' clause, only 'to' or 'link' clauses expected}} omp52-error {{unexpected 'to' clause, use 'enter' instead}} omp52-error {{expected at least one 'enter', 'link' or 'indirect' clause}}
 #pragma omp declare target to(MultiDevTy) device_type(host)   // omp45-error {{unexpected 'device_type' clause, only 'to' or 'link' clauses expected}} omp5-error {{'device_type(host)' does not match previously specified 'device_type(any)' for the same declaration}} omp51-error {{'device_type(host)' does not match previously specified 'device_type(any)' for the same declaration}} omp52-error {{unexpected 'to' clause, use 'enter' instead}} omp52-error {{expected at least one 'enter', 'link' or 'indirect' clause}}
 #pragma omp declare target to(MultiDevTy) device_type(nohost) // omp45-error {{unexpected 'device_type' clause, only 'to' or 'link' clauses expected}} omp5-error {{'device_type(nohost)' does not match previously specified 'device_type(any)' for the same declaration}} // omp51-error {{'device_type(nohost)' does not match previously specified 'device_type(any)' for the same declaration}} omp52-error {{unexpected 'to' clause, use 'enter' instead}} omp52-error {{expected at least one 'enter', 'link' or 'indirect' clause}}
+
+static int variable = 100;  //expected-warning {{declaration is not declared in any declare target region}}
+static float variable1 = 200;
+static float variable2 = variable1;  //expected-warning {{declaration is not declared in any declare target region}}
+
+static int var = 1;  //expected-warning {{declaration is not declared in any declare target region}}
+
+static int var1 = 10;
+static int *var2 = &var1;
+static int **ptr1 = &var2;  //expected-warning {{declaration is not declared in any declare target region}}
+
+int arr[2] = {1,2};
+int (*arrptr)[2] = &arr;  //expected-warning {{declaration is not declared in any declare target region}}
+
+class declare{
+  public: int x;
+          void print();
+};
+declare obj1;
+declare *obj2 = &obj1;  //expected-warning {{declaration is not declared in any declare target region}}
+
+struct target{
+  int x;
+  void print();
+};
+static target S;  //expected-warning {{declaration is not declared in any declare target region}}
+
+#pragma omp declare target
+int target_var = variable;  //expected-note {{used here}}
+float target_var1 = variable2;  //expected-note {{used here}}
+int *ptr = &var;  //expected-note {{used here}}
+int ***ptr2 = &ptr1;  //expected-note {{used here}}
+int (**ptr3)[2] = &arrptr;  //expected-note {{used here}}
+declare **obj3 = &obj2;  //expected-note {{used here}}
+target *S1 = &S; //expected-note {{used here}}
+#pragma omp end declare target
 
 #if TESTENDINC
 #include "unterminated_declare_target_include.h"

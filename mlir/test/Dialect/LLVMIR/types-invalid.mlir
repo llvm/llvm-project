@@ -21,15 +21,8 @@ func.func @function_taking_function() {
 
 // -----
 
-func.func @void_pointer() {
-  // expected-error @+1 {{invalid pointer element type}}
-  "some.op"() : () -> !llvm.ptr<void>
-}
-
-// -----
-
 func.func @repeated_struct_name() {
-  "some.op"() : () -> !llvm.struct<"a", (ptr<struct<"a">>)>
+  "some.op"() : () -> !llvm.struct<"a", (ptr)>
   // expected-error @+1 {{identified type already used with a different body}}
   "some.op"() : () -> !llvm.struct<"a", (i32)>
 }
@@ -75,6 +68,20 @@ func.func @struct_literal_opaque() {
 
 // -----
 
+func.func @top_level_struct_no_body() {
+  // expected-error @below {{struct without a body only allowed in a recursive struct}}
+  "some.op"() : () -> !llvm.struct<"a">
+}
+
+// -----
+
+func.func @nested_redefine_attempt() {
+  // expected-error @below {{identifier already used for an enclosing struct}}
+  "some.op"() : () -> !llvm.struct<"a", (struct<"a", ()>)>
+}
+
+// -----
+
 func.func @unexpected_type() {
   // expected-error @+1 {{unexpected type, expected keyword}}
   "some.op"() : () -> !llvm.tensor<*xf32>
@@ -113,28 +120,28 @@ func.func @identified_struct_with_void() {
 
 func.func @dynamic_vector() {
   // expected-error @+1 {{expected '? x <integer> x <type>' or '<integer> x <type>'}}
-  "some.op"() : () -> !llvm.vec<? x ptr<f32>>
+  "some.op"() : () -> !llvm.vec<? x ptr>
 }
 
 // -----
 
 func.func @dynamic_scalable_vector() {
   // expected-error @+1 {{expected '? x <integer> x <type>' or '<integer> x <type>'}}
-  "some.op"() : () -> !llvm.vec<?x? x ptr<f32>>
+  "some.op"() : () -> !llvm.vec<?x? x ptr>
 }
 
 // -----
 
 func.func @unscalable_vector() {
   // expected-error @+1 {{expected '? x <integer> x <type>' or '<integer> x <type>'}}
-  "some.op"() : () -> !llvm.vec<4x4 x ptr<i32>>
+  "some.op"() : () -> !llvm.vec<4x4 x ptr>
 }
 
 // -----
 
 func.func @zero_vector() {
   // expected-error @+1 {{the number of vector elements must be positive}}
-  "some.op"() : () -> !llvm.vec<0 x ptr<i32>>
+  "some.op"() : () -> !llvm.vec<0 x ptr>
 }
 
 // -----
@@ -165,3 +172,18 @@ func.func private @unexpected_type() -> !llvm.f32
 
 // expected-error @below {{cannot use !llvm.vec for built-in primitives, use 'vector' instead}}
 func.func private @llvm_vector_primitive() -> !llvm.vec<4 x f32>
+
+// -----
+
+func.func private @target_ext_invalid_order() {
+  // expected-error @+1 {{failed to parse parameter list for target extension type}}
+  "some.op"() : () -> !llvm.target<"target1", 5, i32, 1>
+}
+
+// -----
+
+func.func private @target_ext_no_name() {
+  // expected-error@below {{expected string}}
+  // expected-error@below {{failed to parse LLVMTargetExtType parameter 'extTypeName' which is to be a `::llvm::StringRef`}}
+  "some.op"() : () -> !llvm.target<i32, 42>
+}

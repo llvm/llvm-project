@@ -42,15 +42,21 @@ TEST(Chrono, TimePointFormat) {
   TM.tm_isdst = -1;
   TimePoint<> T =
       system_clock::from_time_t(mktime(&TM)) + nanoseconds(123456789);
+  TimePoint<> T2 =
+      system_clock::from_time_t(mktime(&TM)) + nanoseconds(23456789);
 
   // operator<< uses the format YYYY-MM-DD HH:MM:SS.NNNNNNNNN
   std::string S;
   raw_string_ostream OS(S);
   OS << T;
   EXPECT_EQ("2006-01-02 15:04:05.123456789", OS.str());
+  S.clear();
+  OS << T2;
+  EXPECT_EQ("2006-01-02 15:04:05.023456789", OS.str());
 
   // formatv default style matches operator<<.
   EXPECT_EQ("2006-01-02 15:04:05.123456789", formatv("{0}", T).str());
+  EXPECT_EQ("2006-01-02 15:04:05.023456789", formatv("{0}", T2).str());
   // formatv supports strftime-style format strings.
   EXPECT_EQ("15:04:05", formatv("{0:%H:%M:%S}", T).str());
   // formatv supports our strftime extensions for sub-second precision.

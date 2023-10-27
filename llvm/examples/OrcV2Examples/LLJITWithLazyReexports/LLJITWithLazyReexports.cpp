@@ -122,7 +122,7 @@ int main(int argc, char *argv[]) {
     ISM = ISMBuilder();
   }
   auto LCTM = ExitOnErr(createLocalLazyCallThroughManager(
-      J->getTargetTriple(), J->getExecutionSession(), 0));
+      J->getTargetTriple(), J->getExecutionSession(), ExecutorAddr()));
 
   // (4) Add modules.
   ExitOnErr(J->addIRModule(ExitOnErr(parseExampleModule(FooMod, "foo-mod"))));

@@ -1,22 +1,8 @@
 # Transform Dialect
 
-Fine-grain transformation control dialect.
+Fine-grain transformation control dialect. See [tutorial](../Tutorials/transform) for more introductory information.
 
 [TOC]
-
-## Disclaimer
-
-**This dialect is actively developed and may change frequently.**
-
-To decrease the maintenance burden and churn, please post a description of
-the intended use case on the MLIR forum. A few in-tree use cases are
-currently supported:
-
-  - high-level transformations on "structured ops" (i.e. ops that operate on
-    chunks of data in a way that can be decomposed into operations on
-    smaller chunks of data and control flow) in Linalg, Tensor and Vector
-    dialects;
-  - loop transformations in the SCF dialect.
 
 ## Overview
 
@@ -25,20 +11,19 @@ of the IR using a different portion of the IR. It refers to the IR being
 transformed as payload IR, and to the IR guiding the transformation as
 transform IR.
 
-The main use case for this dialect is orchestrating fine-grain
-transformations on individual operations or sets thereof. For example, it
-may involve finding loop-like operations with specific properties (e.g.,
-large size) in the payload IR, applying loop tiling to those and only those
-operations, and then applying loop unrolling to the inner loops produced
-by the previous transformations. As such, it is not intended as a
-replacement for the pass infrastructure, nor for the pattern rewriting
-infrastructure. In the most common case, the transform IR will be processed
-and applied to the payload IR by a pass. Transformations expressed by the
-transform dialect may be implemented using the pattern infrastructure or any
-other relevant MLIR component.
+The main use case for this dialect is orchestrating fine-grain transformations
+on individual IR objects (operations or values) or sets thereof. For example, it
+may involve finding loop-like operations with specific properties (e.g., large
+size) in the payload IR, applying loop tiling to those and only those
+operations, and then applying loop unrolling to the inner loops produced by the
+previous transformations. As such, it is not intended as a replacement for the
+pass infrastructure, nor for the pattern rewriting infrastructure. In the most
+common case, the transform IR will be processed and applied to the payload IR by
+a pass. Transformations expressed by the transform dialect may be implemented
+using the pattern infrastructure or any other relevant MLIR component.
 
 The following IR gives a rough idea of what the operations in this dialect
-may look like:
+may look like without using actually existing operations:
 
 ```mlir
 %0 = transform.loop.find { size > 42 } : !transform.interface<tileable>
@@ -46,57 +31,88 @@ may look like:
 %2:2 = transform.loop.tile %0 tile_sizes(1, 4, %1)
       : (!transform.interface<tileable>)
      -> (!transform.op<loop>, !transform.op<loop>)
+%3 = transform.get_op_result [0] %2#0 : !transform.any_value
+transform.assign_to_fast_memory %3
 transform.loop.unroll %1#1 : !transform.op<loop>
 ```
 
-The values used in the Transform dialect may correspond to either:
+The values used in the Transform dialect may correspond to:
 
   * sets of operations in the payload IR;
+
+  * sets of values in the payload IR;
 
   * sets of parameters (attributes) known at the execution time of the
     transform dialect.
 
-The former kind of values is also referred to as *handles*. In the example
-above, `%0` corresponds to the set of loops found in the payload IR that
-satisfy the condition, and `%2` correspond to groups of outer and inner
-loops, respectively, produced by the tiling transformation, whereas `%1`
-corresponds to a list of tile sizes selected for each of the operations
-that `%0` corresponds to.
+The former two kinds of values are also referred to as operation and value
+*handles*, respectively. In the example above, `%0` corresponds to the set of
+loops found in the payload IR that satisfy the condition, and `%2` correspond to
+groups of outer and inner loops, respectively, produced by the tiling
+transformation. `%3` corresponds to a set of values that are produced by the
+outer loops after tiling. `%1` corresponds to a list of tile sizes selected for
+each of the operations that `%0` corresponds to.
 
-A transform handle such as `%0` may be associated with multiple payload
+An operation handle such as `%0` may be associated with multiple payload
 operations. This is conceptually a set of operations and no assumptions should
 be made about the order of ops unless specified otherwise by the operation.
-Operations may take as operands and produce an arbitrary combination of values
-representing handles and parameters. Most Transform IR ops support operand
-values that are mapped to multiple operations. They usually apply the respective
-transformation for every mapped op ("batched execution"). Deviations from this
-convention are described in the documentation of Transform IR ops.
+Similarly, a value handle such as `%3` may be associated with a set of payload
+IR values. Transform dialect operations may take as operands and produce an
+arbitrary combination of values representing handles and parameters. Most
+Transform IR ops support operand values that are mapped to multiple payload
+objects. They usually apply the respective transformation for every mapped
+object ("batched execution"). Deviations from this convention are described in
+the documentation of Transform IR ops.
 
-The transform IR values have transform IR types, which implement either
-[TransformHandleTypeInterface](Transform.md#transformhandletypeinterface-transformhandletypeinterface)
-or
-[TransformParamTypeInterface](Transform.md##transformparamtypeinterface-transformparamtypeinterface).
-The former interface verifiers properties of payload IR operations associated
-with the value that are known to the transform dialect, for example, all
-associated payload operations implement a "TileableOp" interface, or have a
-specific "loop" kind. Similarly, the latter interface verifies properties of
-attributes associated with the parameter value. These properties are used to
-statically indicate pre- and post-conditions of a transformation connected to a
-Transform dialect operation. The conditions are verified when attributes or
-payload IR operations are first associated with a transform handle. By
-convention, Transform dialect operations are expected to indicate narrow
-preconditions for their operands by enforcing operand type constraints in the
-their definitions and verifiers. On the contrary, operations are expected to
-have few constraints on their results. Specific instances of a transform
-operation can then be created with a more restricted result type than the
-constraint in the operation (e.g., the "find" operation only constrains the
-result type to be a transform IR type while its concrete instance can have a
-type with stricter constraints such as implementing the "tilable" interface).
-The verification will then happen at transform execution time. This approach
-allows one to capture payload IR operation properties in the transform IR
-without resorting to excessive use of type casts or coupling dialect extensions
-between themselves. It is a trade-off between verbosity/complexity and static
-hardening, which can be revised in the future.
+Parameters, such as `%1` in the above example, have two logical roles in
+transform IR. In parameter based control, they carry the values needed to
+execute the explicit control defined by the transforms, for example:
+
+```mlir
+%0 = transform.match.structured.rank %linalg_op_handle : !transform.param<index>
+%1 = transform.param.constant 3 : i32 -> !transform.param<index>
+transform.execute_if_cmpi eq %0, %1 : !transform.param<index>, !transform.param<index>
+// Some nested body of transform ops
+```
+
+Alternatively, parameters can associate with the payload IR where the specific
+value at execution time has no bearing on the execution of the transform IR. In
+other words, parameters can either associate with the transform IR or the
+payload IR.  Note that it is generally discouraged to use parameters containing
+arbitrary attributes within transform control. Parameter based control should
+try to be explicitly typed when possible.
+
+The transform IR values have transform IR types, which should implement exactly one of:
+
+  * [TransformHandleTypeInterface](Transform.md#transformhandletypeinterface-transformhandletypeinterface),
+
+  * [TransformValueHandleTypeInterface](Transform.md#transformvaluehandletypeinterface-transformvaluehandletypeinterface),
+
+  * [TransformParamTypeInterface](Transform.md##transformparamtypeinterface-transformparamtypeinterface).
+
+The goal of these type interfaces, beyond providing a common base for accepted
+types, is to verify the properties of the associated objects. For example, a
+handle type interface implementation may check whether all associated payload IR
+operations implement the "TileableOp" interface or have a specific "loop" kind.
+Similarly, a value handle type interface implementation may check if the
+associated payload IR values are block arguments or have a specific type, or a
+parameter type interface may check whether the associated attributes contain
+non-negative integer values. These properties are used to statically indicate
+ pre- and post-conditions of a transformation connected to a Transform dialect
+operation. The conditions are verified when payload objects operations are first
+associated with a transform handle. By convention, Transform dialect operations
+are expected to indicate narrow preconditions for their operands by enforcing
+operand type constraints in the their definitions and verifiers. On the
+contrary, operations are expected to have few constraints on their results.
+Specific instances of a transform operation can then be created with a more
+restricted result type than the constraint in the operation (e.g., the "find"
+operation only constrains the result type to be a transform IR type while its
+concrete instance can have a type with stricter constraints such as implementing
+the "tilable" interface). The verification will then happen at transform
+execution time. This approach allows one to capture payload IR operation
+properties in the transform IR without resorting to excessive use of type casts
+or coupling dialect extensions between themselves. It is a trade-off between
+verbosity/complexity and static hardening, which can be revised in the future.
 
 Overall, Transform IR ops are expected to be contained in a single top-level
 op. Such top-level ops specify how to apply the transformations described
@@ -109,13 +125,19 @@ A program transformation expressed using the Transform dialect can be
 programmatically triggered by calling:
 
 ```c++
-LogicalResult transform::applyTransforms(Operation *payloadRoot,
-                                         TransformOpInterface transform,
-                                         const TransformOptions &options);
+LogicalResult transform::applyTransforms(
+    Operation *payloadRoot,
+    const RaggedArray<transform::MappedValue> &extraMappings,
+    TransformOpInterface transform,
+    const TransformOptions &options);
 ```
 
 that applies the transformations specified by the top-level `transform` to
-payload IR contained in `payloadRoot`.
+payload IR contained in `payloadRoot`. The payload root operation will be
+associated with the first argument of the entry block of the top-level transform
+op. This block may have additional arguments, handles or parameters. They will
+be associated with values provided as `extraMappings`. The call will report an
+error and return if the wrong number of mappings is provided.
 
 ## Dialect Extension Mechanism
 
@@ -157,7 +179,7 @@ Similarly to operations, additional types can be injected into the dialect using
 the same extension mechanism. The types must:
 
   * Implement exactly one of `TransformHandleTypeInterface`,
-    `TransformParamTypeInterface`.
+    `TransformValueHandleTypeInterface`, `TransformParamTypeInterface`.
 
 ## Side Effects
 
@@ -168,12 +190,12 @@ effects on these resources.
 
   * `TransformMappingResource` - side effect resource corresponding to the
     mapping between transform IR values and payload IR operations.
-    
+
     - An `Allocate` effect from this resource means creating a new mapping
       entry, it is always accompanied by a `Write` effect.
-      
+
     - A `Read` effect from this resource means accessing the mapping.
-    
+
     - A `Free` effect on this resource indicates the removal of the mapping
       entry, typically after a transformation that modifies the payload IR
       operations associated with one of the transform IR operation's
@@ -249,18 +271,57 @@ operation lists.
 
 ## Handle Invalidation
 
-The execution model of the transform dialect allows a payload IR operation
-to be associated with _multiple_ handles as well as nested payload IR
-operations to be associated with different handles. A transform IR operation
-that consumes a handle automatically _invalidates_ all the other handles
-associated with the same payload IR operations, or with any of their
-descendants, as the consumed handle. Note that the _entire_ handle is
-invalidated, even if some of the payload IR operations associated with it
-or their ancestors were not associated with the consumed handle. Any use of
-the invalidated handle results in undefined behavior since the payload IR
-operations associated with it are likely to have been mutated or erased. The
-mere fact of the handle being invalidated does _not_ trigger undefined
-behavior, only its appearance as an operand does.
+The execution model of the transform dialect allows a payload IR operation to be
+associated with _multiple_ handles as well as nested payload IR operations to be
+associated with different handles. Similarly, a payload IR value may be
+associated with multiple transform IR value handles. When a transform IR
+operation consumes a handle, it usually indicates that the corresponding payload
+IR object was destroyed and should no longer be referenced. Transform IR handles
+that _may_ be pointing to an erased payload IR object are _invalidated_. The
+mere presence of an invalidated handle in the transform IR is not a problem, but
+_using_ it results in undefined behavior. Invalidated handles can be thought of
+as dangling pointers. Note that the _entire_ handle is invalidated, even if some
+of the payload IR objects associated with it remain live.
+
+The following handle invalidation rules apply.
+
+  * When an operation handle is consumed, are invalidated:
+
+    - operation handles associated with one of the payload operations that the
+      consumed handle is associated with;
+
+    - operation handles associated with one of the operations _nested_ in the
+      payload operations described above;
+
+    - value handles associated with any result of any operation described above;
+
+    - value handles associated with any argument of a block contained in a
+      region attached to any operation described above.
+
+  * When a value handle is consumed, are invalidated:
+
+    - operation handles associated with payload operations that produce as
+      result any value associated with the consumed handle (when the associated
+      is an operation result);
+
+    - operation handles associated with payload operations _nested_ in the
+      payload operations described above;
+
+    - operation handles associated with payload operations (recursively)
+      _contained_ in the block that defines as argument any value associated
+      with the consumed handle (when the associated value is a block argument);
+      note that the adjacent blocks are not affected;
+
+    - value handles associated with any result of any operation described above,
+      including all results of the operation defining as result the value
+      associated with the consumed handle;
+
+    - value handles associated with any argument of a block contained in a
+      region attached to any operation described above.
+
+More intuitively, consuming a handle invalidates any handle that may be pointing
+to an object defined or contained in the payload IR subtree rooted at the
+closest operation or block.
 
 The Transform dialect infrastructure has the capability of checking whether
 the transform IR op operand is invalidated before applying the
@@ -354,9 +415,17 @@ ops rather than having the methods directly act on the payload IR.
 
 [include "Dialects/TransformOps.md"]
 
+## Affine Transform Operations
+
+[include "Dialects/AffineLoopTransformOps.md"]
+
 ## Bufferization Transform Operations
 
 [include "Dialects/BufferizationTransformOps.md"]
+
+## Func Transform Operations
+
+[include "Dialects/FuncTransformOps.md"]
 
 ## GPU Transform Operations
 
@@ -366,9 +435,29 @@ ops rather than having the methods directly act on the payload IR.
 
 [include "Dialects/SCFLoopTransformOps.md"]
 
+## MemRef Transform Operations
+
+[include "Dialects/MemRefTransformOps.md"]
+
+## PDL (extension) Transform Operations
+
+[include "Dialects/PDLExtensionOps.md"]
+
+## Structured (Linalg) Match Operations
+
+[include "Dialects/LinalgStructuredMatchOps.md"]
+
 ## Structured (Linalg) Transform Operations
 
 [include "Dialects/LinalgStructuredTransformOps.md"]
+
+## Tensor Transform Operations
+
+[include "Dialects/TensorTransformOps.md"]
+
+## Vector Transform Operations
+
+[include "Dialects/VectorTransformOps.md"]
 
 [include "Dialects/TransformTypeInterfaces.md"]
 

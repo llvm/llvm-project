@@ -15,7 +15,7 @@ template<B> void f() {}
 
 int n = 0;
 // CHECK: define weak_odr void @_Z1fIXtl1BadL_Z1nEEEEvv(
-// MSABI: define {{.*}} @"??$f@$2UB@@PEBH1?n@@3HAH0A@@@@YAXXZ"
+// MSABI: define {{.*}} @"??$f@$2UB@@PEBHE?n@@3HAH0A@@@@YAXXZ"
 template void f<B{&n}>();
 // CHECK: define weak_odr void @_Z1fIXtl1BLPKi0ELi1EEEEvv(
 // MSABI: define {{.*}} @"??$f@$2UB@@PEBH0A@H00@@@YAXXZ"
@@ -36,15 +36,19 @@ template void f<B{fold(reinterpret_cast<int*>(0))}>();
 
 // Pointers to subobjects.
 struct Nested { union { int k; int arr[2]; }; } nested[2];
-struct Derived : A, Nested { int z; } extern derived;
+struct Derived : A, Nested { int z; A a_field; } extern derived;
 // CHECK: define weak_odr void @_Z1fIXtl1BadsoKiL_Z7derivedE16EEEEvv
 // MSABI: define {{.*}} void @"??$f@$2UB@@PEBH56E?derived@@3UDerived@@Az@@@H0A@@@@YAXXZ"
 template void f<B{&derived.z}>();
-// FIXME: We don't know the MS ABI mangling for array subscripting and
-// past-the-end pointers yet.
-#ifndef _WIN32
+// CHECK: define weak_odr void @_Z1fIXtl1BadsoKiL_Z7derivedE20EEEEvv
+// MSABI: define {{.*}} void @"??$f@$2UB@@PEBH566E?derived@@3UDerived@@Aa_field@@a@@@H0A@@@@YAXXZ"
+template void f<B{&derived.a_field.a}>();
 // CHECK: define weak_odr void @_Z1fIXtl1BadsoKiL_Z6nestedE_EEEEvv
+// MSABI: define {{.*}} void @"??$f@$2UB@@PEBH56CE?nested@@3PAUNested@@A0A@@k@@@H0A@@@@YAXXZ"
 template void f<B{&nested[0].k}>();
+// Mangling of pointers to nested array elements and past-the-end pointers
+// is still incorrect in MSVC.
+#ifndef _WIN32
 // CHECK: define weak_odr void @_Z1fIXtl1BadsoKiL_Z6nestedE16_0pEEEEvv
 template void f<B{&nested[1].arr[2]}>();
 // CHECK: define weak_odr void @_Z1fIXtl1BadsoKiL_Z7derivedE8pEEEEvv
@@ -59,14 +63,16 @@ template<BR> void f() {}
 // CHECK: define weak_odr void @_Z1fIXtl2BRsoKiL_Z7derivedE16EEEEvv
 // MSABI: define {{.*}} void @"??$f@$2UBR@@AEBH6E?derived@@3UDerived@@Az@@@@@YAXXZ"
 template void f<BR{derived.z}>();
-// FIXME: We don't know the MS ABI mangling for array subscripting yet.
-#ifndef _WIN32
 // CHECK: define weak_odr void @_Z1fIXtl2BRsoKiL_Z6nestedE_EEEEvv
+// MSABI: define {{.*}} void @"??$f@$2UBR@@AEBH6CE?nested@@3PAUNested@@A0A@@k@@@@@YAXXZ"
 template void f<BR{nested[0].k}>();
 // CHECK: define weak_odr void @_Z1fIXtl2BRsoKiL_Z6nestedE12_0EEEEvv
+// MSABI: define {{.*}} void @"??$f@$2UBR@@AEBHC6CE?nested@@3PAUNested@@A00@arr@@00@@@@YAXXZ"
 template void f<BR{nested[1].arr[1]}>();
 // CHECK: define weak_odr void @_Z1fIXtl2BRsoKiL_Z7derivedE4EEEEvv
+// MSABI: define {{.*}} void @"??$f@$2UBR@@AEBH66E?derived@@3UDerived@@AA@@b@@@@@YAXXZ"
 template void f<BR{derived.b}>();
+#ifndef _WIN32
 // CHECK: define weak_odr void @_Z1fIXtl2BRdecvPKiplcvPcadL_Z7derivedELl16EEEEvv
 template void f<BR{fold(*(&derived.b + 3))}>();
 #endif
@@ -77,42 +83,93 @@ template<C> void f() {}
 // CHECK: define weak_odr void @_Z1fIXtl1CadsoKiL_Z7derivedE16EEEEvv
 // MSABI: define {{.*}} void @"??$f@$2UC@@PEBH56E?derived@@3UDerived@@Az@@@@@@YAXXZ"
 template void f<C{&derived.z}>();
-#ifndef _WIN32
 // CHECK: define weak_odr void @_Z1fIXtl1CadsoKiL_Z7derivedE4EEEEvv
+// MSABI: define {{.*}} void @"??$f@$2UC@@PEBH566E?derived@@3UDerived@@AA@@b@@@@@@YAXXZ"
 template void f<C{&derived.b}>();
-#endif
 
 // Pointers to members.
 struct D { const int Derived::*p; int k; };
 template<D> void f() {}
 // CHECK: define weak_odr void @_Z1fIXtl1DLM7DerivedKi0ELi1EEEEvv
-// MSABI: define {{.*}} @"??$f@$2UD@@PERDerived@@H0?0H00@@@YAXXZ"
+// MSABI: define {{.*}} @"??$f@$2UD@@PERDerived@@HNH00@@@YAXXZ"
 template void f<D{nullptr, 1}>();
 // CHECK: define weak_odr void @_Z1fIXtl1DEEEvv
-// MSABI: define {{.*}} @"??$f@$2UD@@PERDerived@@H0?0H0A@@@@YAXXZ"
+// MSABI: define {{.*}} @"??$f@$2UD@@PERDerived@@HNH0A@@@@YAXXZ"
 template void f<D{nullptr}>();
 // CHECK: define weak_odr void @_Z1fIXtl1DadL_ZN7Derived1zEEEEEvv
-// MSABI: define {{.*}} @"??$f@$2UD@@PERDerived@@H0BA@H0A@@@@YAXXZ"
+// MSABI: define {{.*}} @"??$f@$2UD@@PERDerived@@H82@z@@H0A@@@@YAXXZ"
 template void f<D{&Derived::z}>();
-#ifndef _WIN32
 // CHECK: define weak_odr void @_Z1fIXtl1DmcM7DerivedKiadL_ZN1A1aEEEEEEvv
-// MSABI-FIXME: define {{.*}} @"??$f@$2UD@@PERDerived@@H0A@H0A@@@@YAXXZ"
+// MSABI: define {{.*}} @"??$f@$2UD@@PERDerived@@H8A@@a@@H0A@@@@YAXXZ"
 template void f<D{&A::a}>();
 // CHECK: define weak_odr void @_Z1fIXtl1DmcM7DerivedKiadL_ZN1A1bEEEEEEvv
-// MSABI-FIXME: define {{.*}} @"??$f@$2UD@@PERDerived@@H03H0A@@@@YAXXZ"
+// MSABI: define {{.*}} @"??$f@$2UD@@PERDerived@@H8A@@b@@H0A@@@@YAXXZ"
 template void f<D{&A::b}>();
 // FIXME: Is the Ut_1 mangling here correct?
 // CHECK: define weak_odr void @_Z1fIXtl1DmcM7DerivedKiadL_ZN6NestedUt_1kEE8ELi2EEEEvv
-// FIXME: This mangles the same as &A::a (bug in the MS ABI).
-// MSABI-FIXME: define {{.*}} @"??$f@$2UD@@PERDerived@@H0A@H01@@@YAXXZ"
+// MSABI: define {{.*}} @"??$f@$2UD@@PERDerived@@H8<unnamed-tag>@Nested@@k@@H01@@@YAXXZ"
 template void f<D{&Nested::k, 2}>();
 struct MoreDerived : A, Derived { int z; };
 // CHECK: define weak_odr void @_Z1fIXtl1DmcM7DerivedKiadL_ZN11MoreDerived1zEEn8EEEEvv
-// MSABI-FIXME: define {{.*}} @"??$f@$2UD@@PERDerived@@H0BI@H0A@@@@YAXXZ"
+// MSABI: define {{.*}} @"??$f@$2UD@@PERDerived@@H8MoreDerived@@z@@H0A@@@@YAXXZ"
 template void f<D{(int Derived::*)&MoreDerived::z}>();
-#endif
 
-// FIXME: Pointers to member functions.
+struct DerivedVirtually : virtual A, Nested { int z; };
+struct D2 { const int DerivedVirtually::*p; int k; };
+template<D2> void f() {}
+// CHECK: define weak_odr void @_Z1fIXtl2D2LM16DerivedVirtuallyKi0ELi1EEEEvv
+// MSABI: define {{.*}} @"??$f@$2UD2@@PERDerivedVirtually@@HFA@?0H00@@@YAXXZ"
+template void f<D2{nullptr, 1}>();
+// CHECK: define weak_odr void @_Z1fIXtl2D2EEEvv
+// MSABI: define {{.*}} @"??$f@$2UD2@@PERDerivedVirtually@@HFA@?0H0A@@@@YAXXZ"
+template void f<D2{nullptr}>();
+// CHECK: define weak_odr void @_Z1fIXtl2D2adL_ZN16DerivedVirtually1zEEEEEvv
+// MSABI: define {{.*}} @"??$f@$2UD2@@PERDerivedVirtually@@HFBA@A@H0A@@@@YAXXZ"
+template void f<D2{&DerivedVirtually::z}>();
+
+// Forward-decl without MS inheritance keyword means unspecified inheritance
+// which is different from e. g. single inheritance.
+struct UnspecInherStruct;
+struct D3 { const int UnspecInherStruct::*p; };
+template<D3> void f() {}
+struct UnspecInherStruct { int i; };
+// CHECK: define weak_odr void @_Z1fIXtl2D3adL_ZN17UnspecInherStruct1iEEEEEvv
+// MSABI: define {{.*}} @"??$f@$2UD3@@PERUnspecInherStruct@@HGA@A@A@@@@YAXXZ"
+template void f<D3{&UnspecInherStruct::i}>();
+
+// Pointers to member functions.
+// Test struct templates instead of function templates so as to cover
+// the separate code which handles nullptr in their pointer-to-member arguments.
+struct Derived2 : A, Nested { void f(); virtual void g(); };
+struct D4 { void (Derived2::*p)(); };
+template <D4> struct S1 { static void fn() {} };
+// CHECK: define weak_odr void @_ZN2S1IXtl2D4adL_ZN8Derived21fEvEEEE2fnEv
+// MSABI: define {{.*}} @"?fn@?$S1@$2UD4@@P8Derived2@@EAAXXZE?f@2@QEAAXXZ@@@SAXXZ"
+template void S1<D4{&Derived2::f}>::fn();
+// CHECK: define weak_odr void @_ZN2S1IXtl2D4adL_ZN8Derived21gEvEEEE2fnEv
+// MSABI: define {{.*}} @"?fn@?$S1@$2UD4@@P8Derived2@@EAAXXZE??_92@$BA@AA@@@SAXXZ"
+template void S1<D4{&Derived2::g}>::fn();
+// CHECK: define weak_odr void @_ZN2S1IXtl2D4EEE2fnEv
+// MSABI: define {{.*}} @"?fn@?$S1@$2UD4@@P8Derived2@@EAAXXZHA@@@@SAXXZ"
+template void S1<D4{nullptr}>::fn();
+
+struct NoInheritance { void f(); };
+struct D5 { void (NoInheritance::*p)(); };
+template <D5> struct S2 { static void fn() {} };
+// CHECK: define weak_odr void @_ZN2S2IXtl2D5adL_ZN13NoInheritance1fEvEEEE2fnEv
+// MSABI: define {{.*}} @"?fn@?$S2@$2UD5@@P8NoInheritance@@EAAXXZE?f@2@QEAAXXZ@@@SAXXZ"
+template void S2<D5{&NoInheritance::f}>::fn();
+// CHECK: define weak_odr void @_ZN2S2IXtl2D5EEE2fnEv
+// MSABI: define {{.*}} @"?fn@?$S2@$2UD5@@P8NoInheritance@@EAAXXZN@@@SAXXZ"
+template void S2<D5{nullptr}>::fn();
+
+struct NoInheritanceButUnspecified;
+struct D6 { void (NoInheritanceButUnspecified::*p)(); };
+template <D6> struct S3 { static void fn() {} };
+// CHECK: define weak_odr void @_ZN2S3IXtl2D6EEE2fnEv
+// MSABI: define {{.*}} @"?fn@?$S3@$2UD6@@P8NoInheritanceButUnspecified@@EAAXXZJA@A@?0@@@SAXXZ"
+template void S3<D6{nullptr}>::fn();
+
 
 union E {
   int n;
@@ -204,8 +261,6 @@ template void f<G{1, 2}>();
 template void f<G{-8, -32}>();
 
 // Empty and nearly-empty unions.
-// Some of the MSVC manglings here are our invention, because MSVC rejects, but
-// seem likely to be right.
 union H1 {};
 union H2 { int : 1, : 2, : 3; };
 union H3 { int : 1, a, : 2, b, : 3; };

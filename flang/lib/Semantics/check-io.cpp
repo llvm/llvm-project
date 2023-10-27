@@ -35,7 +35,8 @@ private:
 };
 
 bool FormatErrorReporter::Say(const common::FormatMessage &msg) {
-  if (!msg.isError && !context_.warnOnNonstandardUsage()) {
+  if (!msg.isError &&
+      !context_.ShouldWarn(common::LanguageFeature::AdditionalFormats)) {
     return false;
   }
   parser::MessageFormattedText text{
@@ -101,7 +102,7 @@ void IoChecker::Enter(const parser::ConnectSpec &spec) {
 // Ignore trailing spaces (12.5.6.2 p1) and convert to upper case
 static std::string Normalize(const std::string &value) {
   auto upper{parser::ToUpperCaseLetters(value)};
-  std::size_t lastNonBlank{upper.find_last_not_of(" ")};
+  std::size_t lastNonBlank{upper.find_last_not_of(' ')};
   upper.resize(lastNonBlank == std::string::npos ? 0 : lastNonBlank + 1);
   return upper;
 }
@@ -327,8 +328,8 @@ void IoChecker::Enter(const parser::InputItem &spec) {
   CheckForDefinableVariable(*var, "Input");
   if (auto expr{AnalyzeExpr(context_, *var)}) {
     CheckForBadIoType(*expr,
-        flags_.test(Flag::FmtOrNml) ? GenericKind::DefinedIo::ReadFormatted
-                                    : GenericKind::DefinedIo::ReadUnformatted,
+        flags_.test(Flag::FmtOrNml) ? common::DefinedIo::ReadFormatted
+                                    : common::DefinedIo::ReadUnformatted,
         var->GetSource());
   }
 }
@@ -423,8 +424,12 @@ void IoChecker::Enter(const parser::InquireSpec::CharVar &spec) {
     specKind = IoSpecKind::Dispose;
     break;
   }
-  CheckForDefinableVariable(std::get<parser::ScalarDefaultCharVariable>(spec.t),
-      parser::ToUpperCaseLetters(common::EnumToString(specKind)));
+  const parser::Variable &var{
+      std::get<parser::ScalarDefaultCharVariable>(spec.t).thing.thing};
+  std::string what{parser::ToUpperCaseLetters(common::EnumToString(specKind))};
+  CheckForDefinableVariable(var, what);
+  WarnOnDeferredLengthCharacterScalar(
+      context_, GetExpr(context_, var), var.GetSource(), what.c_str());
   SetSpecifier(specKind);
 }
 
@@ -582,6 +587,8 @@ void IoChecker::Enter(const parser::IoUnit &spec) {
     } else { // CHARACTER variable (internal I/O)
       if (stmt_ == IoStmtKind::Write) {
         CheckForDefinableVariable(*var, "Internal file");
+        WarnOnDeferredLengthCharacterScalar(
+            context_, expr, var->GetSource(), "Internal file");
       }
       if (HasVectorSubscript(*expr)) {
         context_.Say(parser::FindSourceLocation(*var), // C1201
@@ -596,14 +603,19 @@ void IoChecker::Enter(const parser::IoUnit &spec) {
   }
 }
 
-void IoChecker::Enter(const parser::MsgVariable &var) {
+void IoChecker::Enter(const parser::MsgVariable &msgVar) {
+  const parser::Variable &var{msgVar.v.thing.thing};
   if (stmt_ == IoStmtKind::None) {
     // allocate, deallocate, image control
     CheckForDefinableVariable(var, "ERRMSG");
-    return;
+    WarnOnDeferredLengthCharacterScalar(
+        context_, GetExpr(context_, var), var.GetSource(), "ERRMSG=");
+  } else {
+    CheckForDefinableVariable(var, "IOMSG");
+    WarnOnDeferredLengthCharacterScalar(
+        context_, GetExpr(context_, var), var.GetSource(), "IOMSG=");
+    SetSpecifier(IoSpecKind::Iomsg);
   }
-  CheckForDefinableVariable(var, "IOMSG");
-  SetSpecifier(IoSpecKind::Iomsg);
 }
 
 void IoChecker::Enter(const parser::OutputItem &item) {
@@ -613,16 +625,13 @@ void IoChecker::Enter(const parser::OutputItem &item) {
       if (evaluate::IsBOZLiteral(*expr)) {
         context_.Say(parser::FindSourceLocation(*x), // C7109
             "Output item must not be a BOZ literal constant"_err_en_US);
-      }
-      const Symbol *last{GetLastSymbol(*expr)};
-      if (last && IsProcedurePointer(*last)) {
+      } else if (IsProcedure(*expr)) {
         context_.Say(parser::FindSourceLocation(*x),
-            "Output item must not be a procedure pointer"_err_en_US); // C1233
+            "Output item must not be a procedure"_err_en_US); // C1233
       }
       CheckForBadIoType(*expr,
-          flags_.test(Flag::FmtOrNml)
-              ? GenericKind::DefinedIo::WriteFormatted
-              : GenericKind::DefinedIo::WriteUnformatted,
+          flags_.test(Flag::FmtOrNml) ? common::DefinedIo::WriteFormatted
+                                      : common::DefinedIo::WriteUnformatted,
           parser::FindSourceLocation(item));
     }
   }
@@ -656,10 +665,10 @@ void IoChecker::Enter(const parser::StatVariable &var) {
   if (stmt_ == IoStmtKind::None) {
     // allocate, deallocate, image control
     CheckForDefinableVariable(var, "STAT");
-    return;
+  } else {
+    CheckForDefinableVariable(var, "IOSTAT");
+    SetSpecifier(IoSpecKind::Iostat);
   }
-  CheckForDefinableVariable(var, "IOSTAT");
-  SetSpecifier(IoSpecKind::Iostat);
 }
 
 void IoChecker::Leave(const parser::BackspaceStmt &) {
@@ -771,7 +780,7 @@ void IoChecker::Leave(const parser::ReadStmt &readStmt) {
   }
   if (const parser::Name * namelist{FindNamelist(readStmt.controls)}) {
     if (namelist->symbol) {
-      CheckNamelist(*namelist->symbol, GenericKind::DefinedIo::ReadFormatted,
+      CheckNamelist(*namelist->symbol, common::DefinedIo::ReadFormatted,
           namelist->source);
     }
   }
@@ -814,7 +823,7 @@ void IoChecker::Leave(const parser::WriteStmt &writeStmt) {
   }
   if (const parser::Name * namelist{FindNamelist(writeStmt.controls)}) {
     if (namelist->symbol) {
-      CheckNamelist(*namelist->symbol, GenericKind::DefinedIo::WriteFormatted,
+      CheckNamelist(*namelist->symbol, common::DefinedIo::WriteFormatted,
           namelist->source);
     }
   }
@@ -907,8 +916,7 @@ void IoChecker::CheckStringValue(IoSpecKind specKind, const std::string &value,
   auto upper{Normalize(value)};
   if (specValues.at(specKind).count(upper) == 0) {
     if (specKind == IoSpecKind::Access && upper == "APPEND") {
-      if (context_.languageFeatures().ShouldWarn(
-              common::LanguageFeature::OpenAccessAppend)) {
+      if (context_.ShouldWarn(common::LanguageFeature::OpenAccessAppend)) {
         context_.Say(source,
             "ACCESS='%s' interpreted as POSITION='%s'"_port_en_US, value,
             upper);
@@ -1028,19 +1036,16 @@ void IoChecker::CheckForDefinableVariable(
 
 void IoChecker::CheckForPureSubprogram() const { // C1597
   CHECK(context_.location());
-  if (const Scope *
-      scope{context_.globalScope().FindScope(*context_.location())}) {
-    if (FindPureProcedureContaining(*scope)) {
-      context_.Say(
-          "External I/O is not allowed in a pure subprogram"_err_en_US);
-    }
+  const Scope &scope{context_.FindScope(*context_.location())};
+  if (FindPureProcedureContaining(scope)) {
+    context_.Say("External I/O is not allowed in a pure subprogram"_err_en_US);
   }
 }
 
 // Seeks out an allocatable or pointer ultimate component that is not
 // nested in a nonallocatable/nonpointer component with a specific
 // defined I/O procedure.
-static const Symbol *FindUnsafeIoDirectComponent(GenericKind::DefinedIo which,
+static const Symbol *FindUnsafeIoDirectComponent(common::DefinedIo which,
     const DerivedTypeSpec &derived, const Scope &scope) {
   if (HasDefinedIo(which, derived, &scope)) {
     return nullptr;
@@ -1071,7 +1076,7 @@ static const Symbol *FindUnsafeIoDirectComponent(GenericKind::DefinedIo which,
 // For a type that does not have a defined I/O subroutine, finds a direct
 // component that is a witness to an accessibility violation outside the module
 // in which the type was defined.
-static const Symbol *FindInaccessibleComponent(GenericKind::DefinedIo which,
+static const Symbol *FindInaccessibleComponent(common::DefinedIo which,
     const DerivedTypeSpec &derived, const Scope &scope) {
   if (const Scope * dtScope{derived.scope()}) {
     if (const Scope * module{FindModuleContaining(*dtScope)}) {
@@ -1113,7 +1118,7 @@ static const Symbol *FindInaccessibleComponent(GenericKind::DefinedIo which,
 
 // Fortran 2018, 12.6.3 paragraphs 5 & 7
 parser::Message *IoChecker::CheckForBadIoType(const evaluate::DynamicType &type,
-    GenericKind::DefinedIo which, parser::CharBlock where) const {
+    common::DefinedIo which, parser::CharBlock where) const {
   if (type.IsUnlimitedPolymorphic()) {
     return &context_.Say(
         where, "I/O list item may not be unlimited polymorphic"_err_en_US);
@@ -1143,15 +1148,15 @@ parser::Message *IoChecker::CheckForBadIoType(const evaluate::DynamicType &type,
   return nullptr;
 }
 
-void IoChecker::CheckForBadIoType(const SomeExpr &expr,
-    GenericKind::DefinedIo which, parser::CharBlock where) const {
+void IoChecker::CheckForBadIoType(const SomeExpr &expr, common::DefinedIo which,
+    parser::CharBlock where) const {
   if (auto type{expr.GetType()}) {
     CheckForBadIoType(*type, which, where);
   }
 }
 
 parser::Message *IoChecker::CheckForBadIoType(const Symbol &symbol,
-    GenericKind::DefinedIo which, parser::CharBlock where) const {
+    common::DefinedIo which, parser::CharBlock where) const {
   if (auto type{evaluate::DynamicType::From(symbol)}) {
     if (auto *msg{CheckForBadIoType(*type, which, where)}) {
       evaluate::AttachDeclaration(*msg, symbol);
@@ -1161,13 +1166,25 @@ parser::Message *IoChecker::CheckForBadIoType(const Symbol &symbol,
   return nullptr;
 }
 
-void IoChecker::CheckNamelist(const Symbol &namelist,
-    GenericKind::DefinedIo which, parser::CharBlock namelistLocation) const {
-  const auto &details{namelist.GetUltimate().get<NamelistDetails>()};
-  for (const Symbol &object : details.objects()) {
-    context_.CheckIndexVarRedefine(namelistLocation, object);
-    if (auto *msg{CheckForBadIoType(object, which, namelistLocation)}) {
-      evaluate::AttachDeclaration(*msg, namelist);
+void IoChecker::CheckNamelist(const Symbol &namelist, common::DefinedIo which,
+    parser::CharBlock namelistLocation) const {
+  if (!context_.HasError(namelist)) {
+    const auto &details{namelist.GetUltimate().get<NamelistDetails>()};
+    for (const Symbol &object : details.objects()) {
+      context_.CheckIndexVarRedefine(namelistLocation, object);
+      if (auto *msg{CheckForBadIoType(object, which, namelistLocation)}) {
+        evaluate::AttachDeclaration(*msg, namelist);
+      } else if (which == common::DefinedIo::ReadFormatted) {
+        if (auto why{WhyNotDefinable(namelistLocation, namelist.owner(),
+                DefinabilityFlags{}, object)}) {
+          context_
+              .Say(namelistLocation,
+                  "NAMELIST input group must not contain undefinable item '%s'"_err_en_US,
+                  object.name())
+              .Attach(std::move(*why));
+          context_.SetError(namelist);
+        }
+      }
     }
   }
 }

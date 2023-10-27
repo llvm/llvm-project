@@ -19,7 +19,7 @@ int main (void)
 	[a : "Hello\n" :2 another:(i+10), (i,j-1,5),6,8]; // expected-warning{{not found}} \
            // expected-warning 2{{left operand of comma operator has no effect}}
 
-	// Comma expression as receiver (rdar://6222856)
+	// Comma expression as receiver
 	[a, b, c foo]; // expected-warning{{not found}} \
            // expected-warning 2{{left operand of comma operator has no effect}}
 

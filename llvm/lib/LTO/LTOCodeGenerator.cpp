@@ -43,12 +43,10 @@
 #include "llvm/Linker/Linker.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
-#include "llvm/MC/SubtargetFeature.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Remarks/HotnessThresholdParser.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/Host.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Signals.h"
@@ -57,6 +55,8 @@
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetOptions.h"
+#include "llvm/TargetParser/Host.h"
+#include "llvm/TargetParser/SubtargetFeature.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/IPO/Internalize.h"
 #include "llvm/Transforms/IPO/WholeProgramDevirt.h"
@@ -200,21 +200,10 @@ void LTOCodeGenerator::setOptLevel(unsigned Level) {
   Config.OptLevel = Level;
   Config.PTO.LoopVectorization = Config.OptLevel > 1;
   Config.PTO.SLPVectorization = Config.OptLevel > 1;
-  switch (Config.OptLevel) {
-  case 0:
-    Config.CGOptLevel = CodeGenOpt::None;
-    return;
-  case 1:
-    Config.CGOptLevel = CodeGenOpt::Less;
-    return;
-  case 2:
-    Config.CGOptLevel = CodeGenOpt::Default;
-    return;
-  case 3:
-    Config.CGOptLevel = CodeGenOpt::Aggressive;
-    return;
-  }
-  llvm_unreachable("Unknown optimization level!");
+  std::optional<CodeGenOptLevel> CGOptLevelOrNone =
+      CodeGenOpt::getLevel(Config.OptLevel);
+  assert(CGOptLevelOrNone && "Unknown optimization level!");
+  Config.CGOptLevel = *CGOptLevelOrNone;
 }
 
 bool LTOCodeGenerator::writeMergedModules(StringRef Path) {
@@ -255,7 +244,7 @@ bool LTOCodeGenerator::writeMergedModules(StringRef Path) {
 
 bool LTOCodeGenerator::useAIXSystemAssembler() {
   const auto &Triple = TargetMach->getTargetTriple();
-  return Triple.isOSAIX();
+  return Triple.isOSAIX() && Config.Options.DisableIntegratedAS;
 }
 
 bool LTOCodeGenerator::runAIXSystemAssembler(SmallString<128> &AssemblyFile) {
@@ -317,7 +306,7 @@ bool LTOCodeGenerator::runAIXSystemAssembler(SmallString<128> &AssemblyFile) {
 
 bool LTOCodeGenerator::compileOptimizedToFile(const char **Name) {
   if (useAIXSystemAssembler())
-    setFileType(CGFT_AssemblyFile);
+    setFileType(CodeGenFileType::AssemblyFile);
 
   // make unique temp output file to put generated code
   SmallString<128> Filename;
@@ -325,7 +314,8 @@ bool LTOCodeGenerator::compileOptimizedToFile(const char **Name) {
   auto AddStream =
       [&](size_t Task,
           const Twine &ModuleName) -> std::unique_ptr<CachedFileStream> {
-    StringRef Extension(Config.CGFileType == CGFT_AssemblyFile ? "s" : "o");
+    StringRef Extension(
+        Config.CGFileType == CodeGenFileType::AssemblyFile ? "s" : "o");
 
     int FD;
     std::error_code EC =
@@ -615,11 +605,14 @@ bool LTOCodeGenerator::optimize() {
   // pipeline run below.
   updatePublicTypeTestCalls(*MergedModule,
                             /* WholeProgramVisibilityEnabledInLTO */ false);
-  updateVCallVisibilityInModule(*MergedModule,
-                                /* WholeProgramVisibilityEnabledInLTO */ false,
-                                // FIXME: This needs linker information via a
-                                // TBD new interface.
-                                /* DynamicExportSymbols */ {});
+  updateVCallVisibilityInModule(
+      *MergedModule,
+      /* WholeProgramVisibilityEnabledInLTO */ false,
+      // FIXME: These need linker information via a
+      // TBD new interface.
+      /*DynamicExportSymbols=*/{},
+      /*ValidateAllVtablesHaveTypeInfos=*/false,
+      /*IsVisibleToRegularObj=*/[](StringRef) { return true; });
 
   // We always run the verifier once on the merged module, the `DisableVerify`
   // parameter only applies to subsequent verify.
@@ -627,9 +620,6 @@ bool LTOCodeGenerator::optimize() {
 
   // Mark which symbols can not be internalized
   this->applyScopeRestrictions();
-
-  // Write LTOPostLink flag for passes that require all the modules.
-  MergedModule->addModuleFlag(Module::Error, "LTOPostLink", 1);
 
   // Add an appropriate DataLayout instance for this module...
   MergedModule->setDataLayout(TargetMach->createDataLayout());

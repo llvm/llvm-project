@@ -13,9 +13,8 @@
 #ifndef LLVM_IR_FMF_H
 #define LLVM_IR_FMF_H
 
-#include "llvm/Support/raw_ostream.h"
-
 namespace llvm {
+class raw_ostream;
 
 /// Convenience struct for specifying and reasoning about fast-math flags.
 class FastMathFlags {
@@ -110,6 +109,16 @@ public:
   /// Print fast-math flags to \p O.
   void print(raw_ostream &O) const;
 };
+
+inline FastMathFlags operator|(FastMathFlags LHS, FastMathFlags RHS) {
+  LHS |= RHS;
+  return LHS;
+}
+
+inline FastMathFlags operator&(FastMathFlags LHS, FastMathFlags RHS) {
+  LHS &= RHS;
+  return LHS;
+}
 
 inline raw_ostream &operator<<(raw_ostream &O, FastMathFlags FMF) {
   FMF.print(O);

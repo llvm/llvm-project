@@ -15,6 +15,10 @@ def note_constexpr_invalid_cast : Note<
   " performs the conversions of a reinterpret_cast}1|cast from %1}0"
   " is not allowed in a constant expression"
   "%select{| in C++ standards before C++20||}0">;
+def note_constexpr_invalid_void_star_cast : Note<
+  "cast from %0 is not allowed in a constant expression "
+  "%select{in C++ standards before C++2c|because the pointed object "
+  "type %2 is not similar to the target type %3}1">;
 def note_constexpr_invalid_downcast : Note<
   "cannot cast object of dynamic type %0 to type %1">;
 def note_constexpr_overflow : Note<
@@ -65,7 +69,9 @@ def note_consteval_address_accessible : Note<
   "%select{pointer|reference}0 to a consteval declaration "
   "is not a constant expression">;
 def note_constexpr_uninitialized : Note<
-  "%select{|sub}0object of type %1 is not initialized">;
+  "subobject %0 is not initialized">;
+def note_constexpr_uninitialized_base : Note<
+  "constructor of base class %0 is not called">;
 def note_constexpr_static_local : Note<
   "control flows through the definition of a %select{static|thread_local}0 variable">;
 def note_constexpr_subobject_declared_here : Note<
@@ -127,6 +133,8 @@ def note_constexpr_null_subobject : Note<
   "access array element of|perform pointer arithmetic on|"
   "access real component of|"
   "access imaginary component of}0 null pointer">;
+def note_constexpr_null_callee : Note<
+  "'%0' evaluates to a null function pointer">;
 def note_constexpr_function_param_value_unknown : Note<
   "function parameter %0 with unknown value cannot be used in a constant "
   "expression">;
@@ -345,6 +353,9 @@ def note_constexpr_new_negative : Note<
   "cannot allocate array; evaluated array bound %0 is negative">;
 def note_constexpr_new_too_large : Note<
   "cannot allocate array; evaluated array bound %0 is too large">;
+def note_constexpr_new_exceeds_limits : Note<
+  "cannot allocate array; evaluated array bound %0 exceeds the limit (%1); "
+  "use '-fconstexpr-steps' to increase this limit">;
 def note_constexpr_new_too_small : Note<
   "cannot allocate array; evaluated array bound %0 is too small to hold "
   "%1 explicitly initialized elements">;
@@ -393,8 +404,9 @@ def warn_fixedpoint_constant_overflow : Warning<
   "overflow in expression; result is %0 with type %1">,
   InGroup<DiagGroup<"fixed-point-overflow">>;
 def warn_constexpr_unscoped_enum_out_of_range : Warning<
-  "integer value %0 is outside the valid range of values [%1, %2] for this "
-  "enumeration type">, DefaultError, InGroup<DiagGroup<"enum-constexpr-conversion">>;
+  "integer value %0 is outside the valid range of values [%1, %2] for the "
+  "enumeration type %3">, DefaultError, ShowInSystemHeader, ShowInSystemMacro,
+  InGroup<DiagGroup<"enum-constexpr-conversion">>;
 
 // This is a temporary diagnostic, and shall be removed once our
 // implementation is complete, and like the preceding constexpr notes belongs
@@ -775,7 +787,7 @@ def err_module_odr_violation_field : Error<
   "%select{non-|}5bitfield %4|"
   "bitfield %4 with one width expression|"
   "%select{non-|}5mutable field %4|"
-  "field %4 with %select{no|an}5 initalizer|"
+  "field %4 with %select{no|an}5 initializer|"
   "field %4 with an initializer"
   "}3">;
 def note_module_odr_violation_field : Note<

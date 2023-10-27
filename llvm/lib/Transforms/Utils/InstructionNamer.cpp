@@ -17,9 +17,6 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Type.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
-#include "llvm/Transforms/Utils.h"
 
 using namespace llvm;
 
@@ -41,35 +38,7 @@ void nameInstructions(Function &F) {
   }
 }
 
-struct InstNamer : public FunctionPass {
-  static char ID; // Pass identification, replacement for typeid
-  InstNamer() : FunctionPass(ID) {
-    initializeInstNamerPass(*PassRegistry::getPassRegistry());
-  }
-
-  void getAnalysisUsage(AnalysisUsage &Info) const override {
-    Info.setPreservesAll();
-  }
-
-  bool runOnFunction(Function &F) override {
-    nameInstructions(F);
-    return true;
-  }
-};
-
-  char InstNamer::ID = 0;
-  } // namespace
-
-INITIALIZE_PASS(InstNamer, "instnamer",
-                "Assign names to anonymous instructions", false, false)
-char &llvm::InstructionNamerID = InstNamer::ID;
-//===----------------------------------------------------------------------===//
-//
-// InstructionNamer - Give any unnamed non-void instructions "tmp" names.
-//
-FunctionPass *llvm::createInstructionNamerPass() {
-  return new InstNamer();
-}
+} // namespace
 
 PreservedAnalyses InstructionNamerPass::run(Function &F,
                                             FunctionAnalysisManager &FAM) {

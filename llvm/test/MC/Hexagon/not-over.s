@@ -1,4 +1,4 @@
-# RUN: llvm-mc -arch=hexagon -filetype=asm %s 2>%t; FileCheck %s <%t
+# RUN: llvm-mc -triple=hexagon -filetype=asm %s 2>%t; FileCheck %s <%t
 #
 
 # Check that proper packets are not wrongly flagged as invalid.

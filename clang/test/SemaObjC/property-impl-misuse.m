@@ -15,7 +15,6 @@
 @synthesize Z=Y; // expected-error {{synthesized properties 'Z' and 'Y' both claim instance variable 'Y'}}
 @end
 
-// rdar://8703553
 @interface IDEPathCell 
 {
 @private
@@ -35,7 +34,6 @@
 }
 @end
 
-// rdar://11054153
 @interface rdar11054153
 @property int P; // expected-error {{type of property 'P' ('int') does not match type of accessor 'P' ('void')}}
 - (void)P; // expected-note {{declared here}}

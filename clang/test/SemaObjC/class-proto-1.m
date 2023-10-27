@@ -36,7 +36,6 @@
 @interface I4 : U2 <p1,p2>
 @end
 
-// rdar://16111182
 @interface NSObject @end
 
 @protocol UndefinedParentProtocol; // expected-note {{protocol 'UndefinedParentProtocol' has no definition}}

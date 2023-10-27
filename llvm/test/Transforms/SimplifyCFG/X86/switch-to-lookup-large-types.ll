@@ -25,7 +25,7 @@ define i8 @switch_to_lookup_i64(i64 %x){
 ; INLINE-NEXT:  start:
 ; INLINE-NEXT:    [[TMP0:%.*]] = icmp ult i64 [[X:%.*]], 3
 ; INLINE-NEXT:    [[SWITCH_CAST:%.*]] = trunc i64 [[X]] to i24
-; INLINE-NEXT:    [[SWITCH_SHIFTAMT:%.*]] = mul i24 [[SWITCH_CAST]], 8
+; INLINE-NEXT:    [[SWITCH_SHIFTAMT:%.*]] = mul nuw nsw i24 [[SWITCH_CAST]], 8
 ; INLINE-NEXT:    [[SWITCH_DOWNSHIFT:%.*]] = lshr i24 131331, [[SWITCH_SHIFTAMT]]
 ; INLINE-NEXT:    [[SWITCH_MASKED:%.*]] = trunc i24 [[SWITCH_DOWNSHIFT]] to i8
 ; INLINE-NEXT:    [[COMMON_RET_OP:%.*]] = select i1 [[TMP0]], i8 [[SWITCH_MASKED]], i8 10
@@ -69,7 +69,7 @@ define i8 @switch_to_lookup_i128(i128 %x){
 ; INLINE-NEXT:  start:
 ; INLINE-NEXT:    [[TMP0:%.*]] = icmp ult i128 [[X:%.*]], 3
 ; INLINE-NEXT:    [[SWITCH_CAST:%.*]] = trunc i128 [[X]] to i24
-; INLINE-NEXT:    [[SWITCH_SHIFTAMT:%.*]] = mul i24 [[SWITCH_CAST]], 8
+; INLINE-NEXT:    [[SWITCH_SHIFTAMT:%.*]] = mul nuw nsw i24 [[SWITCH_CAST]], 8
 ; INLINE-NEXT:    [[SWITCH_DOWNSHIFT:%.*]] = lshr i24 131331, [[SWITCH_SHIFTAMT]]
 ; INLINE-NEXT:    [[SWITCH_MASKED:%.*]] = trunc i24 [[SWITCH_DOWNSHIFT]] to i8
 ; INLINE-NEXT:    [[COMMON_RET_OP:%.*]] = select i1 [[TMP0]], i8 [[SWITCH_MASKED]], i8 10

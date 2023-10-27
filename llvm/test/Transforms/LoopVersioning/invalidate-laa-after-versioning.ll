@@ -68,9 +68,9 @@ define void @test(ptr %arg, i64 %arg1) {
 ; CHECK-NEXT:    [[GEP_7:%.*]] = getelementptr inbounds double, ptr [[LCSSA_PTR_IV_2]], i64 1
 ; CHECK-NEXT:    [[TMP0:%.*]] = shl i64 [[INDVAR_LCSSA]], 3
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[TMP0]], 24
-; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[LCSSA_PTR_IV_1]], i64 [[TMP1]]
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[LCSSA_PTR_IV_1]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[GEP_7]], [[GEP_1]]
-; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[PTR_PHI]], [[UGLYGEP]]
+; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[PTR_PHI]], [[SCEVGEP]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label [[INNER_3_PH_LVER_ORIG:%.*]], label [[INNER_3_PH:%.*]]
 ; CHECK:       inner.3.ph.lver.orig:

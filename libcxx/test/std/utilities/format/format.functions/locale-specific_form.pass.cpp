@@ -7,10 +7,9 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: no-localization
-// UNSUPPORTED: libcpp-has-no-incomplete-format
+// UNSUPPORTED: GCC-ALWAYS_INLINE-FIXME
 
-// TODO FMT Evaluate gcc-12 status
-// UNSUPPORTED: gcc-12
+// XFAIL: availability-fp_to_chars-missing
 
 // REQUIRES: locale.en_US.UTF-8
 
@@ -94,6 +93,7 @@
 #include "string_literal.h"
 #include "test_format_string.h"
 #include "assert_macros.h"
+#include "concat_macros.h"
 
 #define STR(S) MAKE_STRING(CharT, S)
 #define SV(S) MAKE_STRING_VIEW(CharT, S)
@@ -129,7 +129,7 @@ void test(std::basic_string_view<CharT> expected, test_format_string<CharT, Args
   {
     std::basic_string<CharT> out = std::format(fmt, std::forward<Args>(args)...);
     TEST_REQUIRE(out == expected,
-                 test_concat_message(
+                 TEST_WRITE_CONCATENATED(
                      "\nFormat string   ", fmt.get(), "\nExpected output ", expected, "\nActual output   ", out, '\n'));
   }
   // *** vformat ***
@@ -164,7 +164,7 @@ void test(std::basic_string_view<CharT> expected, test_format_string<CharT, Args
   }
   // *** formatted_size ***
   {
-    size_t size = std::formatted_size(fmt, std::forward<Args>(args)...);
+    std::size_t size = std::formatted_size(fmt, std::forward<Args>(args)...);
     assert(size == expected.size());
   }
 }
@@ -214,7 +214,7 @@ void test(
   }
   // *** formatted_size ***
   {
-    size_t size = std::formatted_size(loc, fmt, std::forward<Args>(args)...);
+    std::size_t size = std::formatted_size(loc, fmt, std::forward<Args>(args)...);
     assert(size == expected.size());
   }
 }

@@ -18,7 +18,8 @@ There are two buildmasters running.
   the build.
 * The staging buildmaster at `<https://lab.llvm.org/staging>`_. All builders
   attached to this machine will be completely silent by default when the build
-  is broken.
+  is broken. This buildmaster is reconfigured every two hours with any new
+  commits from the llvm-zorg repository.
 
 In order to remain connected to the main buildmaster (and thus notify
 developers of failures), a builbot must:
@@ -62,15 +63,14 @@ Here are the steps you can follow to do so:
    will get feedback sooner after changes get committed.
 
 #. The computer you will be registering with the LLVM buildbot
-   infrastructure should have all dependencies installed and you can
-   actually build your configuration successfully. Please check what degree
+   infrastructure should have all dependencies installed and be able to
+   build your configuration successfully. Please check what degree
    of parallelism (-j param) would give the fastest build.  You can build
    multiple configurations on one computer.
 
-#. Install buildbot-worker (currently we are using buildbot version 2.8.5).
-   Depending on the platform, buildbot-worker could be available to download and
-   install with your package manager, or you can download it directly from
-   `<http://trac.buildbot.net>`_ and install it manually.
+#. Install buildbot-worker (currently we are using buildbot version 2.8.4).
+   This specific version can be installed using ``pip``, with a command such
+   as ``pip3 install buildbot-worker==2.8.4``.
 
 #. Create a designated user account, your buildbot-worker will be running under,
    and set appropriate permissions.
@@ -92,10 +92,24 @@ Here are the steps you can follow to do so:
                     <buildbot-worker-access-name> \
                     <buildbot-worker-access-password>
 
-   This will cause your new worker to connect to the staging buildmaster
-   which is silent by default.  Only once a new worker is stable, and
+   Only once a new worker is stable, and
    approval from Galina has been received (see last step) should it
    be pointed at the main buildmaster.
+
+   Now start the worker:
+
+    .. code-block:: bash
+
+       $ buildbot-worker start <buildbot-worker-root-directory>
+
+   This will cause your new worker to connect to the staging buildmaster
+   which is silent by default.
+
+   Try this once then check the log file
+   ``<buildbot-worker-root-directory>/worker/twistd.log``. If your settings
+   are correct you will see a refused connection. This is good and expected,
+   as the credentials have not been established on both ends. Now stop the
+   worker and proceed to the next steps.
 
 #. Fill the buildbot-worker description and admin name/e-mail.  Here is an
    example of the buildbot-worker description::
@@ -108,10 +122,8 @@ Here are the steps you can follow to do so:
        cmake version 2.8.4
        Microsoft(R) 32-bit C/C++ Optimizing Compiler Version 16.00.40219.01 for 80x86
 
-#. Make sure you can actually start the buildbot-worker successfully. Then set
-   up your buildbot-worker to start automatically at the start up time.  See the
-   buildbot documentation for help.  You may want to restart your computer
-   to see if it works.
+   See `here <http://docs.buildbot.net/current/manual/installation/worker.html>`_
+   for which files to edit.
 
 #. Send a patch which adds your build worker and your builder to
    `zorg <https://github.com/llvm/llvm-zorg>`_. Use the typical LLVM
@@ -138,9 +150,14 @@ Here are the steps you can follow to do so:
    otherwise.
 
 #. Send the buildbot-worker access name and the access password directly to
-   `Galina Kistanova <mailto:gkistanova@gmail.com>`_, and wait till she
-   will let you know that your changes are applied and buildmaster is
+   `Galina Kistanova <mailto:gkistanova@gmail.com>`_, and wait until she
+   lets you know that your changes are applied and buildmaster is
    reconfigured.
+
+#. Make sure you can start the buildbot-worker and successfully connect
+   to the silent buildmaster. Then set up your buildbot-worker to start
+   automatically at the start up time.  See the buildbot documentation
+   for help.  You may want to restart your computer to see if it works.
 
 #. Check the status of your buildbot-worker on the `Waterfall Display (Staging)
    <http://lab.llvm.org/staging/#/waterfall>`_ to make sure it is
@@ -154,7 +171,7 @@ Here are the steps you can follow to do so:
    keep an unstable builder connected to staging indefinitely.
 
 #. (Optional) Once the builder is stable on the staging buildmaster with
-   several days of green history, you can chose to move it to the production
+   several days of green history, you can choose to move it to the production
    buildmaster to enable developer notifications.  Please email `Galina
    Kistanova <mailto:gkistanova@gmail.com>`_ for review and approval.
 
@@ -219,7 +236,7 @@ Use Ninja & LLD
   Ninja really does help build times over Make, particularly for highly
   parallel builds.  LLD helps to reduce both link times and memory usage
   during linking significantly.  With a build machine with sufficient
-  parallism, link times tend to dominate critical path of the build, and are
+  parallelism, link times tend to dominate critical path of the build, and are
   thus worth optimizing.
 
 Use CCache and NOT incremental builds

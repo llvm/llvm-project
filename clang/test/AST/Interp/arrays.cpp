@@ -42,6 +42,21 @@ constexpr int getElement(const int *Arr, int index) {
   return *(Arr + index);
 }
 
+constexpr int derefPtr(const int *d) {
+  return *d;
+}
+static_assert(derefPtr(data) == 5, "");
+
+constexpr int storePtr() {
+  int b[] = {1,2,3,4};
+  int *c = b;
+
+  *c = 4;
+  return *c;
+}
+static_assert(storePtr() == 4, "");
+
+
 static_assert(getElement(data, 1) == 4, "");
 static_assert(getElement(data, 4) == 1, "");
 
@@ -194,7 +209,8 @@ class AU {
 public:
   int a;
   constexpr AU() : a(5 / 0) {} // expected-warning {{division by zero is undefined}} \
-                               // expected-note {{division by zero}} \
+                               // expected-note 2{{division by zero}} \
+                               // expected-error {{never produces a constant expression}} \
                                // ref-error {{never produces a constant expression}} \
                                // ref-note 2{{division by zero}} \
                                // ref-warning {{division by zero is undefined}}
@@ -220,9 +236,6 @@ constexpr BU bu; // expected-error {{must be initialized by a constant expressio
                  // ref-note {{in call to 'BU()'}}
 
 namespace IncDec {
-  // FIXME: Pointer arithmethic needs to be supported in inc/dec
-  //   unary operators
-#if 0
   constexpr int getNextElem(const int *A, int I) {
     const int *B = (A + I);
     ++B;
@@ -230,6 +243,150 @@ namespace IncDec {
   }
   constexpr int E[] = {1,2,3,4};
 
-  static_assert(getNextElem(E, 1) == 3);
-#endif
+  static_assert(getNextElem(E, 1) == 3, "");
+
+  constexpr int getFirst() {
+    const int *e = E;
+    return *(e++);
+  }
+  static_assert(getFirst() == 1, "");
+
+  constexpr int getFirst2() {
+    const int *e = E;
+    e++;
+    return *e;
+  }
+  static_assert(getFirst2() == 2, "");
+
+  constexpr int getSecond() {
+    const int *e = E;
+    return *(++e);
+  }
+  static_assert(getSecond() == 2, "");
+
+  constexpr int getSecond2() {
+    const int *e = E;
+    ++e;
+    return *e;
+  }
+  static_assert(getSecond2() == 2, "");
+
+  constexpr int getLast() {
+    const int *e = E + 3;
+    return *(e--);
+  }
+  static_assert(getLast() == 4, "");
+
+  constexpr int getLast2() {
+    const int *e = E + 3;
+    e--;
+    return *e;
+  }
+  static_assert(getLast2() == 3, "");
+
+  constexpr int getSecondToLast() {
+    const int *e = E + 3;
+    return *(--e);
+  }
+  static_assert(getSecondToLast() == 3, "");
+
+  constexpr int getSecondToLast2() {
+    const int *e = E + 3;
+    --e;
+    return *e;
+  }
+  static_assert(getSecondToLast2() == 3, "");
+
+  constexpr int bad1() { // ref-error {{never produces a constant expression}} \
+                         // expected-error {{never produces a constant expression}}
+    const int *e =  E + 3;
+    e++; // This is fine because it's a one-past-the-end pointer
+    return *e; // expected-note 2{{read of dereferenced one-past-the-end pointer}} \
+               // ref-note 2{{read of dereferenced one-past-the-end pointer}}
+  }
+  static_assert(bad1() == 0, ""); // expected-error {{not an integral constant expression}} \
+                                  // expected-note {{in call to}} \
+                                  // ref-error {{not an integral constant expression}} \
+                                  // ref-note {{in call to}}
+
+  constexpr int bad2() { // ref-error {{never produces a constant expression}} \
+                         // expected-error {{never produces a constant expression}}
+    const int *e = E + 4;
+    e++; // expected-note 2{{cannot refer to element 5 of array of 4 elements}} \
+         // ref-note 2{{cannot refer to element 5 of array of 4 elements}}
+    return *e; // This is UB as well
+  }
+  static_assert(bad2() == 0, ""); // expected-error {{not an integral constant expression}} \
+                                  // expected-note {{in call to}} \
+                                  // ref-error {{not an integral constant expression}} \
+                                  // ref-note {{in call to}}
+
+
+  constexpr int bad3() { // ref-error {{never produces a constant expression}} \
+                         // expected-error {{never produces a constant expression}}
+    const int *e = E;
+    e--; // expected-note 2{{cannot refer to element -1 of array of 4 elements}} \
+         // ref-note 2{{cannot refer to element -1 of array of 4 elements}}
+    return *e; // This is UB as well
+  }
+   static_assert(bad3() == 0, ""); // expected-error {{not an integral constant expression}} \
+                                   // expected-note {{in call to}} \
+                                   // ref-error {{not an integral constant expression}} \
+                                  // ref-note {{in call to}}
 };
+
+namespace ZeroInit {
+  struct A {
+    int *p[2];
+  };
+  constexpr A a = {};
+  static_assert(a.p[0] == nullptr, "");
+  static_assert(a.p[1] == nullptr, "");
+
+  struct B {
+    double f[2];
+  };
+  constexpr B b = {};
+  static_assert(b.f[0] == 0.0, "");
+  static_assert(b.f[1] == 0.0, "");
+}
+
+namespace ArrayInitLoop {
+  /// FIXME: The ArrayInitLoop for the decomposition initializer in g() has
+  /// f(n) as its CommonExpr. We need to evaluate that exactly once and not
+  /// N times as we do right now.
+  struct X {
+      int arr[3];
+  };
+  constexpr X f(int &r) {
+      return {++r, ++r, ++r};
+  }
+  constexpr int g() {
+      int n = 0;
+      auto [a, b, c] = f(n).arr;
+      return a + b + c;
+  }
+  static_assert(g() == 6); // expected-error {{failed}} \
+                           // expected-note {{15 == 6}}
+}
+
+namespace StringZeroFill {
+  struct A {
+    char c[6];
+  };
+  constexpr A a = { "abc" };
+  static_assert(a.c[0] == 'a', "");
+  static_assert(a.c[1] == 'b', "");
+  static_assert(a.c[2] == 'c', "");
+  static_assert(a.c[3] == '\0', "");
+  static_assert(a.c[4] == '\0', "");
+  static_assert(a.c[5] == '\0', "");
+
+  constexpr char b[6] = "foo";
+  static_assert(b[0] == 'f', "");
+  static_assert(b[1] == 'o', "");
+  static_assert(b[2] == 'o', "");
+  static_assert(b[3] == '\0', "");
+  static_assert(b[4] == '\0', "");
+  static_assert(b[5] == '\0', "");
+}

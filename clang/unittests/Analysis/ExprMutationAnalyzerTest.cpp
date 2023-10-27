@@ -284,6 +284,36 @@ TEST(ExprMutationAnalyzerTest, TypeDependentMemberCall) {
   EXPECT_THAT(mutatedBy(Results, AST.get()), ElementsAre("x.push_back(T())"));
 }
 
+TEST(ExprMutationAnalyzerTest, MemberPointerMemberCall) {
+  {
+    const auto AST =
+        buildASTFromCode("struct X {};"
+                         "using T = int (X::*)();"
+                         "void f(X &x, T m) { X &ref = x; (ref.*m)(); }");
+    const auto Results =
+        match(withEnclosingCompound(declRefTo("ref")), AST->getASTContext());
+    EXPECT_THAT(mutatedBy(Results, AST.get()), ElementsAre("(ref .* m)()"));
+  }
+  {
+    const auto AST =
+        buildASTFromCode("struct X {};"
+                         "using T = int (X::*)();"
+                         "void f(X &x, T const m) { X &ref = x; (ref.*m)(); }");
+    const auto Results =
+        match(withEnclosingCompound(declRefTo("ref")), AST->getASTContext());
+    EXPECT_THAT(mutatedBy(Results, AST.get()), ElementsAre("(ref .* m)()"));
+  }
+  {
+    const auto AST =
+        buildASTFromCode("struct X {};"
+                         "using T = int (X::*)() const;"
+                         "void f(X &x, T m) { X &ref = x; (ref.*m)(); }");
+    const auto Results =
+        match(withEnclosingCompound(declRefTo("ref")), AST->getASTContext());
+    EXPECT_FALSE(isMutated(Results, AST.get()));
+  }
+}
+
 // Section: overloaded operators
 
 TEST(ExprMutationAnalyzerTest, NonConstOperator) {

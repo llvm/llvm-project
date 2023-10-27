@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 %s -fsyntax-only -std=c99 -verify
+// RUN: %clang_cc1 %s -fsyntax-only -std=c2x -Wc99-compat -verify
 // RUN: %clang_cc1 %s -fsyntax-only -std=c11 -Wc99-compat -verify
 // RUN: %clang_cc1 %s -fsyntax-only -x c++ -std=c++03 -Wc++11-compat -verify
 // RUN: %clang_cc1 %s -fsyntax-only -x c++ -std=c++11 -Wc++98-compat -verify
@@ -9,7 +10,6 @@ extern char a\u00AA; // C99, C11, C++11
 extern char a\u0384; // C++03, C11, C++11
 extern char a\u0E50; // C99, C++03, C11, C++11
 extern char a\uFFFF; // none
-
 
 
 
@@ -38,8 +38,8 @@ extern char \u0D61; // C99, C11, C++03, C++11
 
 
 #if __cplusplus
-// expected-error@9 {{character <U+0384> not allowed in an identifier}}
-// expected-error@11 {{character <U+FFFF> not allowed in an identifier}}
+// expected-error@10 {{character <U+0384> not allowed in an identifier}}
+// expected-error@12 {{character <U+FFFF> not allowed in an identifier}}
 // expected-error@18 {{expected unqualified-id}}
 # if __cplusplus >= 201103L
 // C++11
@@ -53,23 +53,49 @@ extern char \u0D61; // C99, C11, C++03, C++11
 
 # endif
 #else
-# if __STDC_VERSION__ >= 201112L
+# if __STDC_VERSION__ >= 202311L
+// C23
+// expected-warning@8 {{using this character in an identifier is incompatible with C99}}
+// expected-error@10 {{character <U+0384> not allowed in an identifier}}
+// expected-error@12 {{character <U+FFFF> not allowed in an identifier}}
+// expected-error@18 {{expected identifier}}
+// expected-error@19 {{expected identifier}}
+// expected-error@33 {{invalid universal character}}
+# elif __STDC_VERSION__ >= 201112L
 // C11
-// expected-warning@7 {{using this character in an identifier is incompatible with C99}}
-// expected-warning@9 {{using this character in an identifier is incompatible with C99}}
-// expected-error@11 {{character <U+FFFF> not allowed in an identifier}}
+// expected-warning@8 {{using this character in an identifier is incompatible with C99}}
+// expected-warning@10 {{using this character in an identifier is incompatible with C99}}
+// expected-error@12 {{character <U+FFFF> not allowed in an identifier}}
 // expected-warning@18 {{starting an identifier with this character is incompatible with C99}}
 // expected-error@19 {{expected identifier}}
 // expected-error@33 {{invalid universal character}}
 
 # else
 // C99
-// expected-error@7 {{not allowed in an identifier}}
-// expected-error@9 {{not allowed in an identifier}}
-// expected-error@11 {{not allowed in an identifier}}
+// expected-error@8 {{not allowed in an identifier}}
+// expected-error@10 {{not allowed in an identifier}}
+// expected-error@12 {{not allowed in an identifier}}
 // expected-error@18 {{expected identifier}}
 // expected-error@19 {{expected identifier}}
 // expected-error@33 {{invalid universal character}}
 
 # endif
 #endif
+
+#define AAA\u0024 // expected-error {{character '$' cannot be specified by a universal character name}} \
+                  // expected-warning {{whitespace}}
+#define AAB\u0040 // expected-error {{character '@' cannot be specified by a universal character name}} \
+                  // expected-warning {{whitespace}}
+#define AAC\u0060 // expected-error {{character '`' cannot be specified by a universal character name}} \
+                  // expected-warning {{whitespace}}
+
+#define ABA \u0024 // expected-error {{character '$' cannot be specified by a universal character name}}
+#define ABB \u0040 // expected-error {{character '@' cannot be specified by a universal character name}}
+#define ABC \u0060 // expected-error {{character '`' cannot be specified by a universal character name}}
+
+int GH62133_a\u0024; // expected-error {{character '$' cannot be specified by a universal character name}} \
+                     // expected-error {{}}
+int GH62133_b\u0040; // expected-error {{character '@' cannot be specified by a universal character name}} \
+                     // expected-error {{}}
+int GH62133_c\u0060; // expected-error {{character '`' cannot be specified by a universal character name}} \
+                     // expected-error {{}}

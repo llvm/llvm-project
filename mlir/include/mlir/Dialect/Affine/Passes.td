@@ -17,7 +17,7 @@ include "mlir/Pass/PassBase.td"
 
 def AffineDataCopyGeneration : Pass<"affine-data-copy-generate", "func::FuncOp"> {
   let summary = "Generate explicit copying for affine memory operations";
-  let constructor = "mlir::createAffineDataCopyGenerationPass()";
+  let constructor = "mlir::affine::createAffineDataCopyGenerationPass()";
   let dependentDialects = ["memref::MemRefDialect"];
   let options = [
     Option<"fastMemoryCapacity", "fast-mem-capacity", "uint64_t",
@@ -152,7 +152,7 @@ def AffineLoopFusion : Pass<"affine-loop-fusion"> {
     }
     ```
   }];
-  let constructor = "mlir::createLoopFusionPass()";
+  let constructor = "mlir::affine::createLoopFusionPass()";
   let options = [
     Option<"computeToleranceThreshold", "fusion-compute-tolerance", "double",
            /*default=*/"0.30f", "Fractional increase in additional computation "
@@ -166,12 +166,12 @@ def AffineLoopFusion : Pass<"affine-loop-fusion"> {
     Option<"maximalFusion", "fusion-maximal", "bool", /*default=*/"false",
            "Enables maximal loop fusion">,
     Option<"affineFusionMode", "mode", "enum FusionMode",
-           "mlir::FusionMode::Greedy", "fusion mode to attempt",
-           "llvm::cl::values(clEnumValN(mlir::FusionMode::Greedy,"
+           "mlir::affine::FusionMode::Greedy", "fusion mode to attempt",
+           "llvm::cl::values(clEnumValN(mlir::affine::FusionMode::Greedy,"
            " \"greedy\", \"Perform greedy (both producer-consumer and sibling)  fusion\"), "
-           "clEnumValN( mlir::FusionMode::ProducerConsumer, "
+           "clEnumValN( mlir::affine::FusionMode::ProducerConsumer, "
            "\"producer\", \"Perform only producer-consumer fusion\"), "
-           "clEnumValN( mlir::FusionMode::Sibling, "
+           "clEnumValN( mlir::affine::FusionMode::Sibling, "
            "\"sibling\", \"Perform only sibling fusion\"))">,
     ];
   let dependentDialects = ["memref::MemRefDialect"];
@@ -180,12 +180,12 @@ def AffineLoopFusion : Pass<"affine-loop-fusion"> {
 def AffineLoopInvariantCodeMotion
     : Pass<"affine-loop-invariant-code-motion", "func::FuncOp"> {
   let summary = "Hoist loop invariant instructions outside of affine loops";
-  let constructor = "mlir::createAffineLoopInvariantCodeMotionPass()";
+  let constructor = "mlir::affine::createAffineLoopInvariantCodeMotionPass()";
 }
 
 def AffineLoopTiling : Pass<"affine-loop-tile", "func::FuncOp"> {
   let summary = "Tile affine loop nests";
-  let constructor = "mlir::createLoopTilingPass()";
+  let constructor = "mlir::affine::createLoopTilingPass()";
   let options = [
     Option<"cacheSizeInKiB", "cache-size", "uint64_t", /*default=*/"512",
            "Set size of cache to tile for in KiB (default: 512)">,
@@ -201,7 +201,7 @@ def AffineLoopTiling : Pass<"affine-loop-tile", "func::FuncOp"> {
 
 def AffineLoopUnroll : Pass<"affine-loop-unroll", "func::FuncOp"> {
   let summary = "Unroll affine loops";
-  let constructor = "mlir::createLoopUnrollPass()";
+  let constructor = "mlir::affine::createLoopUnrollPass()";
   let options = [
     Option<"unrollFactor", "unroll-factor", "unsigned", /*default=*/"4",
            "Use this unroll factor for all loops being unrolled">,
@@ -221,7 +221,7 @@ def AffineLoopUnroll : Pass<"affine-loop-unroll", "func::FuncOp"> {
 
 def AffineLoopUnrollAndJam : Pass<"affine-loop-unroll-jam", "func::FuncOp"> {
   let summary = "Unroll and jam affine loops";
-  let constructor = "mlir::createLoopUnrollAndJamPass()";
+  let constructor = "mlir::affine::createLoopUnrollAndJamPass()";
   let options = [
     Option<"unrollJamFactor", "unroll-jam-factor", "unsigned",
            /*default=*/"4",
@@ -295,7 +295,7 @@ def AffinePipelineDataTransfer
     }
     ```
   }];
-  let constructor = "mlir::createPipelineDataTransferPass()";
+  let constructor = "mlir::affine::createPipelineDataTransferPass()";
 }
 
 def AffineScalarReplacement : Pass<"affine-scalrep", "func::FuncOp"> {
@@ -341,7 +341,7 @@ def AffineScalarReplacement : Pass<"affine-scalrep", "func::FuncOp"> {
     }
     ```
   }];
-  let constructor = "mlir::createAffineScalarReplacementPass()";
+  let constructor = "mlir::affine::createAffineScalarReplacementPass()";
 }
 
 def AffineVectorize : Pass<"affine-super-vectorize", "func::FuncOp"> {
@@ -349,7 +349,8 @@ def AffineVectorize : Pass<"affine-super-vectorize", "func::FuncOp"> {
   let dependentDialects = ["vector::VectorDialect"];
   let options = [
     ListOption<"vectorSizes", "virtual-vector-size", "int64_t",
-               "Specify an n-D virtual vector size for vectorization">,
+               "Specify an n-D virtual vector size for vectorization. "
+               "This must be greater than zero.">,
     // Optionally, the fixed mapping from loop to fastest varying MemRef
     // dimension for all the MemRefs within a loop pattern:
     //   the index represents the loop depth, the value represents the k^th
@@ -369,7 +370,7 @@ def AffineVectorize : Pass<"affine-super-vectorize", "func::FuncOp"> {
 
 def AffineParallelize : Pass<"affine-parallelize", "func::FuncOp"> {
   let summary = "Convert affine.for ops into 1-D affine.parallel";
-  let constructor = "mlir::createAffineParallelizePass()";
+  let constructor = "mlir::affine::createAffineParallelizePass()";
   let options = [
     Option<"maxNested", "max-nested", "unsigned", /*default=*/"-1u",
            "Maximum number of nested parallel loops to produce. "
@@ -382,7 +383,7 @@ def AffineParallelize : Pass<"affine-parallelize", "func::FuncOp"> {
 
 def AffineLoopNormalize : Pass<"affine-loop-normalize", "func::FuncOp"> {
   let summary = "Apply normalization transformations to affine loop-like ops";
-  let constructor = "mlir::createAffineLoopNormalizePass()";
+  let constructor = "mlir::affine::createAffineLoopNormalizePass()";
   let options = [
     Option<"promoteSingleIter", "promote-single-iter", "bool",
            /*default=*/"true", "Promote single iteration loops">,
@@ -392,19 +393,19 @@ def AffineLoopNormalize : Pass<"affine-loop-normalize", "func::FuncOp"> {
 def LoopCoalescing : Pass<"affine-loop-coalescing", "func::FuncOp"> {
   let summary = "Coalesce nested loops with independent bounds into a single "
                 "loop";
-  let constructor = "mlir::createLoopCoalescingPass()";
+  let constructor = "mlir::affine::createLoopCoalescingPass()";
   let dependentDialects = ["arith::ArithDialect"];
 }
 
 def SimplifyAffineStructures : Pass<"affine-simplify-structures", "func::FuncOp"> {
   let summary = "Simplify affine expressions in maps/sets and normalize "
                 "memrefs";
-  let constructor = "mlir::createSimplifyAffineStructuresPass()";
+  let constructor = "mlir::affine::createSimplifyAffineStructuresPass()";
 }
 
 def AffineExpandIndexOps : Pass<"affine-expand-index-ops"> {
   let summary = "Lower affine operations operating on indices into more fundamental operations";
-  let constructor = "mlir::createAffineExpandIndexOpsPass()";
+  let constructor = "mlir::affine::createAffineExpandIndexOpsPass()";
 }
 
 #endif // MLIR_DIALECT_AFFINE_PASSES

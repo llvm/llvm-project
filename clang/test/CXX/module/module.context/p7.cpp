@@ -12,13 +12,14 @@
 // RUN: -o stuff.pcm
 
 // RUN: %clang_cc1 -std=c++20 -emit-module-interface std-10-6-ex1-M1.cpp \
-// RUN: -fmodule-file=stuff.pcm -o M1.pcm  -fmodule-file=defn.pcm
+// RUN:   -fmodule-file=stuff=stuff.pcm -o M1.pcm  -fmodule-file=defn.pcm
 
 // RUN: %clang_cc1 -std=c++20 -emit-module-interface std-10-6-ex1-M2.cpp \
-// RUN: -fmodule-file=stuff.pcm -o M2.pcm  -fmodule-file=decl.pcm
+// RUN:   -fmodule-file=stuff=stuff.pcm -o M2.pcm  -fmodule-file=decl.pcm
 
 // RUN: %clang_cc1 -std=c++20 std-10-6-ex1-use.cpp \
-// RUN: -fmodule-file=M1.pcm -fmodule-file=M2.pcm  -fsyntax-only -verify
+// RUN:   -fmodule-file=M1=M1.pcm -fmodule-file=M2=M2.pcm -fmodule-file=stuff=stuff.pcm \
+// RUN:   -fsyntax-only -verify
 
 //--- std-10-6-ex1-decl.h
 struct X;

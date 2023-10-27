@@ -15,6 +15,7 @@ add_clang_library(clangIncludeFixer
 
   DEPENDS
   omp_gen
+  ClangDriverOptions
   )
 
 clang_target_link_libraries(clangIncludeFixer

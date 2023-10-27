@@ -16,7 +16,8 @@
 // RUN: %clang_cc1 -triple x86_64-pc-openbsd -fsyntax-only %s
 // RUN: %clang_cc1 -triple i386-pc-openbsd -fsyntax-only %s
 
-// Haiku does not support TLS.
-// RUN: not %clang_cc1 -triple i586-pc-haiku -fsyntax-only %s
+// Haiku supports TLS.
+// RUN: %clang_cc1 -triple x86_64-unknown-haiku -fsyntax-only %s
+// RUN: %clang_cc1 -triple i586-pc-haiku -fsyntax-only %s
 
 __thread int x;

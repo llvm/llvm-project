@@ -24,6 +24,7 @@
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/Register.h"
 #include "llvm/CodeGen/ScheduleDAG.h"
 #include "llvm/CodeGen/ScheduleHazardRecognizer.h"
@@ -45,7 +46,6 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/MachineValueType.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
@@ -156,16 +156,16 @@ private:
   unsigned CurCycle = 0;
 
   /// MinAvailableCycle - Cycle of the soonest available instruction.
-  unsigned MinAvailableCycle;
+  unsigned MinAvailableCycle = ~0u;
 
   /// IssueCount - Count instructions issued in this cycle
   /// Currently valid only for bottom-up scheduling.
-  unsigned IssueCount;
+  unsigned IssueCount = 0u;
 
   /// LiveRegDefs - A set of physical registers and their definition
   /// that are "live". These nodes must be scheduled before any other nodes that
   /// modifies the registers can be scheduled.
-  unsigned NumLiveRegs;
+  unsigned NumLiveRegs = 0u;
   std::unique_ptr<SUnit*[]> LiveRegDefs;
   std::unique_ptr<SUnit*[]> LiveRegGens;
 
@@ -188,10 +188,9 @@ private:
 public:
   ScheduleDAGRRList(MachineFunction &mf, bool needlatency,
                     SchedulingPriorityQueue *availqueue,
-                    CodeGenOpt::Level OptLevel)
-    : ScheduleDAGSDNodes(mf),
-      NeedLatency(needlatency), AvailableQueue(availqueue),
-      Topo(SUnits, nullptr) {
+                    CodeGenOptLevel OptLevel)
+      : ScheduleDAGSDNodes(mf), NeedLatency(needlatency),
+        AvailableQueue(availqueue), Topo(SUnits, nullptr) {
     const TargetSubtargetInfo &STI = mf.getSubtarget();
     if (DisableSchedCycles || !NeedLatency)
       HazardRec = new ScheduleHazardRecognizer();
@@ -340,7 +339,7 @@ static void GetCostForDef(const ScheduleDAGSDNodes::RegDefIter &RegDefPos,
     }
 
     unsigned Idx = RegDefPos.GetIdx();
-    const MCInstrDesc Desc = TII->get(Opcode);
+    const MCInstrDesc &Desc = TII->get(Opcode);
     const TargetRegisterClass *RC = TII->getRegClass(Desc, Idx, TRI, MF);
     assert(RC && "Not a valid register class");
     RegClass = RC->getID();
@@ -987,11 +986,6 @@ SUnit *ScheduleDAGRRList::TryUnfoldSU(SUnit *SU) {
   if (!TII->unfoldMemoryOperand(*DAG, N, NewNodes))
     return nullptr;
 
-  // unfolding an x86 DEC64m operation results in store, dec, load which
-  // can't be handled here so quit
-  if (NewNodes.size() == 3)
-    return nullptr;
-
   assert(NewNodes.size() == 2 && "Expected a load folding node!");
 
   N = NewNodes[1];
@@ -1284,11 +1278,11 @@ static MVT getPhysicalRegisterVT(SDNode *N, unsigned Reg,
     NumRes = 1;
   } else {
     const MCInstrDesc &MCID = TII->get(N->getMachineOpcode());
-    assert(MCID.getImplicitDefs() &&
+    assert(!MCID.implicit_defs().empty() &&
            "Physical reg def must be in implicit def list!");
     NumRes = MCID.getNumDefs();
-    for (const MCPhysReg *ImpDef = MCID.getImplicitDefs(); *ImpDef; ++ImpDef) {
-      if (Reg == *ImpDef)
+    for (MCPhysReg ImpDef : MCID.implicit_defs()) {
+      if (Reg == ImpDef)
         break;
       ++NumRes;
     }
@@ -1377,12 +1371,12 @@ DelayForLiveRegsBottomUp(SUnit *SU, SmallVectorImpl<unsigned> &LRegs) {
       for (unsigned i = InlineAsm::Op_FirstOperand; i != NumOps;) {
         unsigned Flags =
           cast<ConstantSDNode>(Node->getOperand(i))->getZExtValue();
-        unsigned NumVals = InlineAsm::getNumOperandRegisters(Flags);
+        const InlineAsm::Flag F(Flags);
+        unsigned NumVals = F.getNumOperandRegisters();
 
         ++i; // Skip the ID value.
-        if (InlineAsm::isRegDefKind(Flags) ||
-            InlineAsm::isRegDefEarlyClobberKind(Flags) ||
-            InlineAsm::isClobberKind(Flags)) {
+        if (F.isRegDefKind() || F.isRegDefEarlyClobberKind() ||
+            F.isClobberKind()) {
           // Check for def of register or earlyclobber register.
           for (; NumVals; --NumVals, ++i) {
             Register Reg = cast<RegisterSDNode>(Node->getOperand(i))->getReg();
@@ -1433,16 +1427,14 @@ DelayForLiveRegsBottomUp(SUnit *SU, SmallVectorImpl<unsigned> &LRegs) {
       // of %noreg.  When the OptionalDef is set to a valid register, we need to
       // handle it in the same way as an ImplicitDef.
       for (unsigned i = 0; i < MCID.getNumDefs(); ++i)
-        if (MCID.OpInfo[i].isOptionalDef()) {
+        if (MCID.operands()[i].isOptionalDef()) {
           const SDValue &OptionalDef = Node->getOperand(i - Node->getNumValues());
           Register Reg = cast<RegisterSDNode>(OptionalDef)->getReg();
           CheckForLiveRegDef(SU, Reg, LiveRegDefs.get(), RegAdded, LRegs, TRI);
         }
     }
-    if (!MCID.getImplicitDefs())
-      continue;
-    for (const MCPhysReg *Reg = MCID.getImplicitDefs(); *Reg; ++Reg)
-      CheckForLiveRegDef(SU, *Reg, LiveRegDefs.get(), RegAdded, LRegs, TRI);
+    for (MCPhysReg Reg : MCID.implicit_defs())
+      CheckForLiveRegDef(SU, Reg, LiveRegDefs.get(), RegAdded, LRegs, TRI);
   }
 
   return !LRegs.empty();
@@ -1746,12 +1738,12 @@ protected:
   bool SrcOrder;
 
   // SUnits - The SUnits for the current graph.
-  std::vector<SUnit> *SUnits;
+  std::vector<SUnit> *SUnits = nullptr;
 
   MachineFunction &MF;
-  const TargetInstrInfo *TII;
-  const TargetRegisterInfo *TRI;
-  const TargetLowering *TLI;
+  const TargetInstrInfo *TII = nullptr;
+  const TargetRegisterInfo *TRI = nullptr;
+  const TargetLowering *TLI = nullptr;
   ScheduleDAGRRList *scheduleDAG = nullptr;
 
   // SethiUllmanNumbers - The SethiUllman number for each node.
@@ -2867,10 +2859,10 @@ static bool canClobberReachingPhysRegUse(const SUnit *DepSU, const SUnit *SU,
                                          ScheduleDAGRRList *scheduleDAG,
                                          const TargetInstrInfo *TII,
                                          const TargetRegisterInfo *TRI) {
-  const MCPhysReg *ImpDefs
-    = TII->get(SU->getNode()->getMachineOpcode()).getImplicitDefs();
+  ArrayRef<MCPhysReg> ImpDefs =
+      TII->get(SU->getNode()->getMachineOpcode()).implicit_defs();
   const uint32_t *RegMask = getNodeRegMask(SU->getNode());
-  if(!ImpDefs && !RegMask)
+  if (ImpDefs.empty() && !RegMask)
     return false;
 
   for (const SDep &Succ : SU->Succs) {
@@ -2884,14 +2876,14 @@ static bool canClobberReachingPhysRegUse(const SUnit *DepSU, const SUnit *SU,
           scheduleDAG->IsReachable(DepSU, SuccPred.getSUnit()))
         return true;
 
-      if (ImpDefs)
-        for (const MCPhysReg *ImpDef = ImpDefs; *ImpDef; ++ImpDef)
-          // Return true if SU clobbers this physical register use and the
-          // definition of the register reaches from DepSU. IsReachable queries
-          // a topological forward sort of the DAG (following the successors).
-          if (TRI->regsOverlap(*ImpDef, SuccPred.getReg()) &&
-              scheduleDAG->IsReachable(DepSU, SuccPred.getSUnit()))
-            return true;
+      for (MCPhysReg ImpDef : ImpDefs) {
+        // Return true if SU clobbers this physical register use and the
+        // definition of the register reaches from DepSU. IsReachable queries
+        // a topological forward sort of the DAG (following the successors).
+        if (TRI->regsOverlap(ImpDef, SuccPred.getReg()) &&
+            scheduleDAG->IsReachable(DepSU, SuccPred.getSUnit()))
+          return true;
+      }
     }
   }
   return false;
@@ -2904,16 +2896,16 @@ static bool canClobberPhysRegDefs(const SUnit *SuccSU, const SUnit *SU,
                                   const TargetRegisterInfo *TRI) {
   SDNode *N = SuccSU->getNode();
   unsigned NumDefs = TII->get(N->getMachineOpcode()).getNumDefs();
-  const MCPhysReg *ImpDefs = TII->get(N->getMachineOpcode()).getImplicitDefs();
-  assert(ImpDefs && "Caller should check hasPhysRegDefs");
+  ArrayRef<MCPhysReg> ImpDefs = TII->get(N->getMachineOpcode()).implicit_defs();
+  assert(!ImpDefs.empty() && "Caller should check hasPhysRegDefs");
   for (const SDNode *SUNode = SU->getNode(); SUNode;
        SUNode = SUNode->getGluedNode()) {
     if (!SUNode->isMachineOpcode())
       continue;
-    const MCPhysReg *SUImpDefs =
-      TII->get(SUNode->getMachineOpcode()).getImplicitDefs();
+    ArrayRef<MCPhysReg> SUImpDefs =
+        TII->get(SUNode->getMachineOpcode()).implicit_defs();
     const uint32_t *SURegMask = getNodeRegMask(SUNode);
-    if (!SUImpDefs && !SURegMask)
+    if (SUImpDefs.empty() && !SURegMask)
       continue;
     for (unsigned i = NumDefs, e = N->getNumValues(); i != e; ++i) {
       MVT VT = N->getSimpleValueType(i);
@@ -2924,10 +2916,7 @@ static bool canClobberPhysRegDefs(const SUnit *SuccSU, const SUnit *SU,
       MCPhysReg Reg = ImpDefs[i - NumDefs];
       if (SURegMask && MachineOperand::clobbersPhysReg(SURegMask, Reg))
         return true;
-      if (!SUImpDefs)
-        continue;
-      for (;*SUImpDefs; ++SUImpDefs) {
-        MCPhysReg SUReg = *SUImpDefs;
+      for (MCPhysReg SUReg : SUImpDefs) {
         if (TRI->regsOverlap(Reg, SUReg))
           return true;
       }
@@ -3155,9 +3144,8 @@ void RegReductionPQBase::AddPseudoTwoAddrDeps() {
 //                         Public Constructor Functions
 //===----------------------------------------------------------------------===//
 
-ScheduleDAGSDNodes *
-llvm::createBURRListDAGScheduler(SelectionDAGISel *IS,
-                                 CodeGenOpt::Level OptLevel) {
+ScheduleDAGSDNodes *llvm::createBURRListDAGScheduler(SelectionDAGISel *IS,
+                                                     CodeGenOptLevel OptLevel) {
   const TargetSubtargetInfo &STI = IS->MF->getSubtarget();
   const TargetInstrInfo *TII = STI.getInstrInfo();
   const TargetRegisterInfo *TRI = STI.getRegisterInfo();
@@ -3171,7 +3159,7 @@ llvm::createBURRListDAGScheduler(SelectionDAGISel *IS,
 
 ScheduleDAGSDNodes *
 llvm::createSourceListDAGScheduler(SelectionDAGISel *IS,
-                                   CodeGenOpt::Level OptLevel) {
+                                   CodeGenOptLevel OptLevel) {
   const TargetSubtargetInfo &STI = IS->MF->getSubtarget();
   const TargetInstrInfo *TII = STI.getInstrInfo();
   const TargetRegisterInfo *TRI = STI.getRegisterInfo();
@@ -3185,7 +3173,7 @@ llvm::createSourceListDAGScheduler(SelectionDAGISel *IS,
 
 ScheduleDAGSDNodes *
 llvm::createHybridListDAGScheduler(SelectionDAGISel *IS,
-                                   CodeGenOpt::Level OptLevel) {
+                                   CodeGenOptLevel OptLevel) {
   const TargetSubtargetInfo &STI = IS->MF->getSubtarget();
   const TargetInstrInfo *TII = STI.getInstrInfo();
   const TargetRegisterInfo *TRI = STI.getRegisterInfo();
@@ -3199,9 +3187,8 @@ llvm::createHybridListDAGScheduler(SelectionDAGISel *IS,
   return SD;
 }
 
-ScheduleDAGSDNodes *
-llvm::createILPListDAGScheduler(SelectionDAGISel *IS,
-                                CodeGenOpt::Level OptLevel) {
+ScheduleDAGSDNodes *llvm::createILPListDAGScheduler(SelectionDAGISel *IS,
+                                                    CodeGenOptLevel OptLevel) {
   const TargetSubtargetInfo &STI = IS->MF->getSubtarget();
   const TargetInstrInfo *TII = STI.getInstrInfo();
   const TargetRegisterInfo *TRI = STI.getRegisterInfo();

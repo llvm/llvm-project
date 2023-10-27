@@ -1,4 +1,4 @@
-# RUN: llvm-mc -arch=hexagon -mcpu=hexagonv65 -filetype=obj %s | llvm-objdump --no-print-imm-hex --mcpu=hexagonv65 -d - | FileCheck --implicit-check-not='{' %s
+# RUN: llvm-mc -triple=hexagon -mcpu=hexagonv65 -filetype=obj %s | llvm-objdump --no-print-imm-hex --mcpu=hexagonv65 -d - | FileCheck --implicit-check-not='{' %s
 
 # This case requires compounding only some of the instructions which are
 # possible compounds.  Compounding all possible opcodes is ideal for code size

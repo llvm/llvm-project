@@ -17,14 +17,14 @@ body:             |
   bb.0:
     liveins: $eax, $ebp
 
-    ; CHECK: $eax = ADD32ri8 {{.*}} debug-instr-number 2
+    ; CHECK: $eax = ADD32ri {{.*}} debug-instr-number 2
     $eax = LEA32r killed $eax, 1, killed $ebp, -5, $noreg, debug-instr-number 1
     RET64 $eax
 
 ...
 ---
-name:            test1mov1add_ebp_32
-# CHECK-LABEL: name: test1mov1add_ebp_32
+name:            testleais_ebp_32
+# CHECK-LABEL: name: testleais_ebp_32
 alignment:       16
 tracksRegLiveness: true
 debugInstrRef: true
@@ -38,14 +38,14 @@ body:             |
   bb.0:
     liveins: $eax, $ebp, $ebx
 
-    ; CHECK: $ebx = ADD32rr {{.*}} debug-instr-number 2
+    ; CHECK: $ebx = LEA32r $noreg, 2, $ebp, 0, $noreg, debug-instr-number 2
     $ebx = LEA32r killed $ebp, 1, $ebp, 0, $noreg, debug-instr-number 1
     RET64 $ebx
 
 ...
 ---
-name:            testleaadd_ebp_index_32
-# CHECK-LABEL: name: testleaadd_ebp_index_32
+name:            testleabid_ebp_leaisd_32
+# CHECK-LABEL: name: testleabid_ebp_leaisd_32
 alignment:       16
 tracksRegLiveness: true
 debugInstrRef: true
@@ -58,7 +58,7 @@ body:             |
   bb.0:
     liveins: $eax, $ebp, $ebx
 
-    ; CHECK: $ebx = ADD32rr {{.*}} debug-instr-number 2
+    ; CHECK: $ebx = LEA32r $noreg, 2, $ebp, 5, $noreg, debug-instr-number 2
     $ebx = LEA32r $ebp, 1, $ebp, 5, $noreg, debug-instr-number 1
     RET64 $ebx
 

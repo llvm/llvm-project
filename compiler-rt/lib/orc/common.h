@@ -41,7 +41,7 @@ ORC_RT_IMPORT __orc_rt_Opaque __orc_rt_jit_dispatch_ctx ORC_RT_WEAK_IMPORT;
 /// This is declared for use by the runtime, but should be implemented in the
 /// executor or provided by a definition added to the JIT before the runtime
 /// is loaded.
-ORC_RT_IMPORT __orc_rt_CWrapperFunctionResult
+ORC_RT_IMPORT orc_rt_CWrapperFunctionResult
 __orc_rt_jit_dispatch(__orc_rt_Opaque *DispatchCtx, const void *FnTag,
                       const char *Data, size_t Size) ORC_RT_WEAK_IMPORT;
 

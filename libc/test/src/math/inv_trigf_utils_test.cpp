@@ -9,12 +9,12 @@
 #include "in_float_range_test_helper.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/math/generic/inv_trigf_utils.h"
+#include "test/UnitTest/FPMatcher.h"
+#include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
-#include "utils/UnitTest/FPMatcher.h"
-#include "utils/UnitTest/Test.h"
 #include <math.h>
 
-namespace mpfr = __llvm_libc::testing::mpfr;
+namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
 DECLARE_SPECIAL_CONSTANTS(float)
 
@@ -24,11 +24,11 @@ constexpr float def_prec = 0.500001f;
 auto f_normal = [](float x) -> bool { return !(isnan(x) || isinf(x)); };
 
 TEST(LlvmLibcAtanfPosTest, InFloatRange) {
-  CHECK_DATA(0.0f, inf, mpfr::Operation::Atan, __llvm_libc::atan_eval, f_normal,
-             def_count, def_prec);
+  CHECK_DATA(0.0f, inf, mpfr::Operation::Atan, LIBC_NAMESPACE::atan_eval,
+             f_normal, def_count, def_prec);
 }
 
 TEST(LlvmLibcAtanfNegTest, InFloatRange) {
-  CHECK_DATA(-0.0f, neg_inf, mpfr::Operation::Atan, __llvm_libc::atan_eval,
+  CHECK_DATA(-0.0f, neg_inf, mpfr::Operation::Atan, LIBC_NAMESPACE::atan_eval,
              f_normal, def_count, def_prec);
 }

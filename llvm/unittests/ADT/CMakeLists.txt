@@ -17,6 +17,7 @@ add_llvm_unittest(ADTTests
   BumpPtrListTest.cpp
   CoalescingBitVectorTest.cpp
   CombinationGeneratorTest.cpp
+  ConcurrentHashtableTest.cpp
   DAGDeltaAlgorithmTest.cpp
   DeltaAlgorithmTest.cpp
   DenseMapTest.cpp
@@ -46,10 +47,12 @@ add_llvm_unittest(ADTTests
   IntervalTreeTest.cpp
   IntrusiveRefCntPtrTest.cpp
   IteratorTest.cpp
+  LazyAtomicPointerTest.cpp
   MappedIteratorTest.cpp
   MapVectorTest.cpp
   MoveOnly.cpp
   PackedVectorTest.cpp
+  PagedVectorTest.cpp
   PointerEmbeddedIntTest.cpp
   PointerIntPairTest.cpp
   PointerSumTypeTest.cpp
@@ -62,6 +65,7 @@ add_llvm_unittest(ADTTests
   STLForwardCompatTest.cpp
   ScopeExitTest.cpp
   SequenceTest.cpp
+  SetOperationsTest.cpp
   SetVectorTest.cpp
   SimpleIListTest.cpp
   SmallPtrSetTest.cpp

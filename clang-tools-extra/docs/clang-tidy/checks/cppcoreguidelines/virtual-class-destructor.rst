@@ -9,7 +9,7 @@ in one of these ways to prevent undefined behavior.
 
 This check implements
 `C.35 <http://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#Rc-dtor-virtual>`_
-from the CppCoreGuidelines.
+from the C++ Core Guidelines.
 
 Note that this check will diagnose a class with a virtual method regardless of
 whether the class is used as a base class or not.

@@ -1,5 +1,5 @@
 // RUN: %check_clang_tidy -check-suffixes=DEFAULT       %s cppcoreguidelines-avoid-do-while %t
-// RUN: %check_clang_tidy -check-suffixes=IGNORE-MACROS %s cppcoreguidelines-avoid-do-while %t -- -config='{CheckOptions: [{key: cppcoreguidelines-avoid-do-while.IgnoreMacros, value: true}]}'
+// RUN: %check_clang_tidy -check-suffixes=IGNORE-MACROS %s cppcoreguidelines-avoid-do-while %t -- -config='{CheckOptions: {cppcoreguidelines-avoid-do-while.IgnoreMacros: true}}'
 
 #define FOO(x) \
   do { \

@@ -68,6 +68,7 @@ void MCObjectStreamer::addPendingLabel(MCSymbol* S) {
 }
 
 void MCObjectStreamer::flushPendingLabels(MCFragment *F, uint64_t FOffset) {
+  assert(F);
   MCSection *CurSection = getCurrentSectionOnly();
   if (!CurSection) {
     assert(PendingLabels.empty());
@@ -80,12 +81,8 @@ void MCObjectStreamer::flushPendingLabels(MCFragment *F, uint64_t FOffset) {
     PendingLabels.clear();
   }
 
-  // Associate a fragment with this label, either the supplied fragment
-  // or an empty data fragment.
-  if (F)
-    CurSection->flushPendingLabels(F, FOffset, CurSubsectionIdx);
-  else
-    CurSection->flushPendingLabels(nullptr, 0, CurSubsectionIdx);
+  // Associate the labels with F.
+  CurSection->flushPendingLabels(F, FOffset, CurSubsectionIdx);
 }
 
 void MCObjectStreamer::flushPendingLabels() {
@@ -214,6 +211,11 @@ static bool canReuseDataFragment(const MCDataFragment &F,
                                  const MCSubtargetInfo *STI) {
   if (!F.hasInstructions())
     return true;
+  // Do not add data after a linker-relaxable instruction. The difference
+  // between a new label and a label at or before the linker-relaxable
+  // instruction cannot be resolved at assemble-time.
+  if (F.isLinkerRelaxable())
+    return false;
   // When bundling is enabled, we don't want to add data to a fragment that
   // already has instructions (see MCELFStreamer::emitInstToData for details)
   if (Assembler.isBundlingEnabled())
@@ -376,10 +378,16 @@ bool MCObjectStreamer::changeSectionImpl(MCSection *Section,
 
   int64_t IntSubsection = 0;
   if (Subsection &&
-      !Subsection->evaluateAsAbsolute(IntSubsection, getAssemblerPtr()))
-    report_fatal_error("Cannot evaluate subsection number");
-  if (IntSubsection < 0 || IntSubsection > 8192)
-    report_fatal_error("Subsection number out of range");
+      !Subsection->evaluateAsAbsolute(IntSubsection, getAssemblerPtr())) {
+    getContext().reportError(Subsection->getLoc(),
+                             "cannot evaluate subsection number");
+  }
+  if (!isUInt<31>(IntSubsection)) {
+    getContext().reportError(Subsection->getLoc(),
+                             "subsection number " + Twine(IntSubsection) +
+                                 " is not within [0,2147483647]");
+  }
+
   CurSubsectionIdx = unsigned(IntSubsection);
   CurInsertionPoint =
       Section->getSubsectionInsertionPoint(CurSubsectionIdx);
@@ -471,8 +479,7 @@ void MCObjectStreamer::emitInstToFragment(const MCInst &Inst,
   insert(IF);
 
   SmallString<128> Code;
-  raw_svector_ostream VecOS(Code);
-  getAssembler().getEmitter().encodeInstruction(Inst, VecOS, IF->getFixups(),
+  getAssembler().getEmitter().encodeInstruction(Inst, Code, IF->getFixups(),
                                                 STI);
   IF->getContents().append(Code.begin(), Code.end());
 }
@@ -508,13 +515,13 @@ void MCObjectStreamer::emitDwarfLocDirective(unsigned FileNo, unsigned Line,
 }
 
 static const MCExpr *buildSymbolDiff(MCObjectStreamer &OS, const MCSymbol *A,
-                                     const MCSymbol *B) {
+                                     const MCSymbol *B, SMLoc Loc) {
   MCContext &Context = OS.getContext();
   MCSymbolRefExpr::VariantKind Variant = MCSymbolRefExpr::VK_None;
   const MCExpr *ARef = MCSymbolRefExpr::create(A, Variant, Context);
   const MCExpr *BRef = MCSymbolRefExpr::create(B, Variant, Context);
   const MCExpr *AddrDelta =
-      MCBinaryExpr::create(MCBinaryExpr::Sub, ARef, BRef, Context);
+      MCBinaryExpr::create(MCBinaryExpr::Sub, ARef, BRef, Context, Loc);
   return AddrDelta;
 }
 
@@ -541,13 +548,7 @@ void MCObjectStreamer::emitDwarfAdvanceLineAddr(int64_t LineDelta,
                          Label, PointerSize);
     return;
   }
-  const MCExpr *AddrDelta = buildSymbolDiff(*this, Label, LastLabel);
-  int64_t Res;
-  if (AddrDelta->evaluateAsAbsolute(Res, getAssemblerPtr())) {
-    MCDwarfLineAddr::Emit(this, Assembler->getDWARFLinetableParams(), LineDelta,
-                          Res);
-    return;
-  }
+  const MCExpr *AddrDelta = buildSymbolDiff(*this, Label, LastLabel, SMLoc());
   insert(new MCDwarfLineAddrFragment(LineDelta, *AddrDelta));
 }
 
@@ -570,14 +571,10 @@ void MCObjectStreamer::emitDwarfLineEndEntry(MCSection *Section,
 }
 
 void MCObjectStreamer::emitDwarfAdvanceFrameAddr(const MCSymbol *LastLabel,
-                                                 const MCSymbol *Label) {
-  const MCExpr *AddrDelta = buildSymbolDiff(*this, Label, LastLabel);
-  int64_t Res;
-  if (AddrDelta->evaluateAsAbsolute(Res, getAssemblerPtr())) {
-    MCDwarfFrameEmitter::EmitAdvanceLoc(*this, Res);
-    return;
-  }
-  insert(new MCDwarfCallFrameFragment(*AddrDelta));
+                                                 const MCSymbol *Label,
+                                                 SMLoc Loc) {
+  const MCExpr *AddrDelta = buildSymbolDiff(*this, Label, LastLabel, Loc);
+  insert(new MCDwarfCallFrameFragment(*AddrDelta, nullptr));
 }
 
 void MCObjectStreamer::emitCVLocDirective(unsigned FunctionId, unsigned FileNo,

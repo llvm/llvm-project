@@ -129,7 +129,7 @@ static bool checkForMigration(StringRef resourcesPath,
     return true;
   }
 
-  if (!CI.getLangOpts()->ObjC)
+  if (!CI.getLangOpts().ObjC)
     return false;
 
   arcmt::checkForManualIssues(CI, CI.getFrontendOpts().Inputs[0],
@@ -167,14 +167,14 @@ static bool performTransformations(StringRef resourcesPath,
     return true;
   }
 
-  if (!origCI.getLangOpts()->ObjC)
+  if (!origCI.getLangOpts().ObjC)
     return false;
 
   MigrationProcess migration(origCI, std::make_shared<PCHContainerOperations>(),
                              DiagClient);
 
   std::vector<TransformFn>
-    transforms = arcmt::getAllTransformations(origCI.getLangOpts()->getGC(),
+    transforms = arcmt::getAllTransformations(origCI.getLangOpts().getGC(),
                                  origCI.getMigratorOpts().NoFinalizeRemoval);
   assert(!transforms.empty());
 

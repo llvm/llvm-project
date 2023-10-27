@@ -8,57 +8,55 @@ define dso_local void @poly2_lshift1(ptr nocapture %p) local_unnamed_addr #0 {
 ; CHECK-LABEL: poly2_lshift1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    li r4, 72
-; CHECK-NEXT:    addis r5, r2, .LCPI0_0@toc@ha
 ; CHECK-NEXT:    addis r6, r2, .LCPI0_1@toc@ha
-; CHECK-NEXT:    ld r7, 64(r3)
-; CHECK-NEXT:    ld r8, 16(r3)
-; CHECK-NEXT:    ld r10, 24(r3)
-; CHECK-NEXT:    ld r11, 32(r3)
+; CHECK-NEXT:    ld r5, 64(r3)
 ; CHECK-NEXT:    lxvd2x vs0, r3, r4
-; CHECK-NEXT:    addi r5, r5, .LCPI0_0@toc@l
 ; CHECK-NEXT:    addi r6, r6, .LCPI0_1@toc@l
-; CHECK-NEXT:    ld r12, 56(r3)
-; CHECK-NEXT:    lxvd2x vs1, 0, r5
-; CHECK-NEXT:    mtfprd f2, r7
-; CHECK-NEXT:    ld r5, 0(r3)
+; CHECK-NEXT:    lxvd2x v4, 0, r6
+; CHECK-NEXT:    addis r6, r2, .LCPI0_0@toc@ha
+; CHECK-NEXT:    addi r6, r6, .LCPI0_0@toc@l
 ; CHECK-NEXT:    xxswapd v2, vs0
-; CHECK-NEXT:    lxvd2x vs0, 0, r6
-; CHECK-NEXT:    ld r6, 8(r3)
-; CHECK-NEXT:    rotldi r9, r5, 1
-; CHECK-NEXT:    sldi r5, r5, 1
-; CHECK-NEXT:    xxswapd v3, vs1
-; CHECK-NEXT:    std r5, 0(r3)
-; CHECK-NEXT:    rotldi r5, r10, 1
-; CHECK-NEXT:    rldimi r9, r6, 1, 0
+; CHECK-NEXT:    mtfprd f0, r5
+; CHECK-NEXT:    xxpermdi v3, v2, vs0, 2
+; CHECK-NEXT:    vsld v2, v2, v4
+; CHECK-NEXT:    lxvd2x v4, 0, r6
+; CHECK-NEXT:    ld r6, 0(r3)
+; CHECK-NEXT:    sldi r7, r6, 1
 ; CHECK-NEXT:    rotldi r6, r6, 1
-; CHECK-NEXT:    xxpermdi v4, v2, vs2, 2
-; CHECK-NEXT:    xxswapd v5, vs0
-; CHECK-NEXT:    rldimi r6, r8, 1, 0
-; CHECK-NEXT:    rotldi r8, r8, 1
-; CHECK-NEXT:    std r9, 8(r3)
-; CHECK-NEXT:    ld r9, 40(r3)
-; CHECK-NEXT:    rldimi r8, r10, 1, 0
-; CHECK-NEXT:    rldimi r5, r11, 1, 0
-; CHECK-NEXT:    std r6, 16(r3)
-; CHECK-NEXT:    rotldi r10, r11, 1
-; CHECK-NEXT:    ld r11, 48(r3)
-; CHECK-NEXT:    std r5, 32(r3)
-; CHECK-NEXT:    rotldi r6, r12, 1
-; CHECK-NEXT:    vsrd v3, v4, v3
-; CHECK-NEXT:    rldimi r10, r9, 1, 0
-; CHECK-NEXT:    rotldi r9, r9, 1
-; CHECK-NEXT:    std r8, 24(r3)
-; CHECK-NEXT:    vsld v2, v2, v5
-; CHECK-NEXT:    rotldi r5, r11, 1
-; CHECK-NEXT:    rldimi r9, r11, 1, 0
-; CHECK-NEXT:    std r10, 40(r3)
-; CHECK-NEXT:    rldimi r5, r12, 1, 0
-; CHECK-NEXT:    rldimi r6, r7, 1, 0
-; CHECK-NEXT:    std r9, 48(r3)
+; CHECK-NEXT:    std r7, 0(r3)
+; CHECK-NEXT:    ld r7, 8(r3)
+; CHECK-NEXT:    vsrd v3, v3, v4
 ; CHECK-NEXT:    xxlor vs0, v2, v3
-; CHECK-NEXT:    std r5, 56(r3)
-; CHECK-NEXT:    std r6, 64(r3)
+; CHECK-NEXT:    rldimi r6, r7, 1, 0
+; CHECK-NEXT:    rotldi r7, r7, 1
+; CHECK-NEXT:    std r6, 8(r3)
+; CHECK-NEXT:    ld r6, 16(r3)
+; CHECK-NEXT:    rldimi r7, r6, 1, 0
+; CHECK-NEXT:    rotldi r6, r6, 1
+; CHECK-NEXT:    std r7, 16(r3)
+; CHECK-NEXT:    ld r7, 24(r3)
+; CHECK-NEXT:    rldimi r6, r7, 1, 0
+; CHECK-NEXT:    rotldi r7, r7, 1
+; CHECK-NEXT:    std r6, 24(r3)
+; CHECK-NEXT:    ld r6, 32(r3)
+; CHECK-NEXT:    rldimi r7, r6, 1, 0
+; CHECK-NEXT:    rotldi r6, r6, 1
+; CHECK-NEXT:    std r7, 32(r3)
+; CHECK-NEXT:    ld r7, 40(r3)
+; CHECK-NEXT:    rldimi r6, r7, 1, 0
+; CHECK-NEXT:    rotldi r7, r7, 1
+; CHECK-NEXT:    std r6, 40(r3)
+; CHECK-NEXT:    ld r6, 48(r3)
+; CHECK-NEXT:    rldimi r7, r6, 1, 0
+; CHECK-NEXT:    rotldi r6, r6, 1
+; CHECK-NEXT:    std r7, 48(r3)
+; CHECK-NEXT:    ld r7, 56(r3)
+; CHECK-NEXT:    rldimi r6, r7, 1, 0
+; CHECK-NEXT:    std r6, 56(r3)
+; CHECK-NEXT:    rotldi r6, r7, 1
 ; CHECK-NEXT:    xxswapd vs0, vs0
+; CHECK-NEXT:    rldimi r6, r5, 1, 0
+; CHECK-NEXT:    std r6, 64(r3)
 ; CHECK-NEXT:    stxvd2x vs0, r3, r4
 ; CHECK-NEXT:    blr
 entry:

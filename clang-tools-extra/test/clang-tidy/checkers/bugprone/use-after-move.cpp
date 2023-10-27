@@ -369,6 +369,18 @@ void lambdas() {
     };
     a.foo();
   }
+  // Don't warn if 'a' is a copy inside a synchronous lambda
+  {
+    A a;
+    A copied{[a] mutable { return std::move(a); }()};
+    a.foo();
+  }
+  // False negative (should warn if 'a' is a ref inside a synchronous lambda)
+  {
+    A a;
+    A moved{[&a] mutable { return std::move(a); }()};
+    a.foo();
+  }
   // Warn if the use consists of a capture that happens after a move.
   {
     A a;
@@ -1148,27 +1160,62 @@ void commaOperatorSequences() {
   }
 }
 
+namespace InitializerListSequences {
+
+struct S1 {
+  int i;
+  A a;
+};
+
+struct S2 {
+  A a;
+  int i;
+};
+
+struct S3 {
+  S3() {}
+  S3(int, A) {}
+  S3(A, int) {}
+};
+
 // An initializer list sequences its initialization clauses.
 void initializerListSequences() {
   {
-    struct S1 {
-      int i;
-      A a;
-    };
     A a;
     S1 s1{a.getInt(), std::move(a)};
   }
   {
-    struct S2 {
-      A a;
-      int i;
-    };
+    A a;
+    S1 s1{.i = a.getInt(), .a = std::move(a)};
+  }
+  {
     A a;
     S2 s2{std::move(a), a.getInt()};
     // CHECK-NOTES: [[@LINE-1]]:25: warning: 'a' used after it was moved
     // CHECK-NOTES: [[@LINE-2]]:11: note: move occurred here
   }
+  {
+    A a;
+    S2 s2{.a = std::move(a), .i = a.getInt()};
+    // CHECK-NOTES: [[@LINE-1]]:35: warning: 'a' used after it was moved
+    // CHECK-NOTES: [[@LINE-2]]:11: note: move occurred here
+  }
+  {
+    // Check the case where the constructed type has a constructor and the
+    // initializer list therefore manifests as a `CXXConstructExpr` instead of
+    // an `InitListExpr`.
+    A a;
+    S3 s3{a.getInt(), std::move(a)};
+  }
+  {
+    A a;
+    S3 s3{std::move(a), a.getInt()};
+    // CHECK-NOTES: [[@LINE-1]]:25: warning: 'a' used after it was moved
+    // CHECK-NOTES: [[@LINE-2]]:11: note: move occurred here
+  }
 }
+
+} // namespace InitializerListSequences
 
 // A declaration statement containing multiple declarations sequences the
 // initializer expressions.
@@ -1352,6 +1399,120 @@ void typeId() {
   Foo Other{std::move(Bar)};
 }
 } // namespace UnevalContext
+
+class CtorInit {
+public:
+  CtorInit(std::string val)
+      : a{val.empty()},    // fine
+        s{std::move(val)},
+        b{val.empty()}
+  // CHECK-NOTES: [[@LINE-1]]:11: warning: 'val' used after it was moved
+  // CHECK-NOTES: [[@LINE-3]]:9: note: move occurred here
+  {}
+
+private:
+  bool a;
+  std::string s;
+  bool b;
+};
+
+class CtorInitLambda {
+public:
+  CtorInitLambda(std::string val)
+      : a{val.empty()},    // fine
+        s{std::move(val)},
+        b{[&] { return val.empty(); }()},
+        // CHECK-NOTES: [[@LINE-1]]:12: warning: 'val' used after it was moved
+        // CHECK-NOTES: [[@LINE-3]]:9: note: move occurred here
+        c{[] {
+          std::string str{};
+          std::move(str);
+          return str.empty();
+          // CHECK-NOTES: [[@LINE-1]]:18: warning: 'str' used after it was moved
+          // CHECK-NOTES: [[@LINE-3]]:11: note: move occurred here
+        }()} {
+    std::move(val);
+    // CHECK-NOTES: [[@LINE-1]]:15: warning: 'val' used after it was moved
+    // CHECK-NOTES: [[@LINE-13]]:9: note: move occurred here
+    std::string val2{};
+    std::move(val2);
+    val2.empty();
+    // CHECK-NOTES: [[@LINE-1]]:5: warning: 'val2' used after it was moved
+    // CHECK-NOTES: [[@LINE-3]]:5: note: move occurred here
+  }
+
+private:
+  bool a;
+  std::string s;
+  bool b;
+  bool c;
+  bool d{};
+};
+
+class CtorInitOrder {
+public:
+  CtorInitOrder(std::string val)
+      : a{val.empty()}, // fine
+        b{val.empty()},
+        // CHECK-NOTES: [[@LINE-1]]:11: warning: 'val' used after it was moved
+        s{std::move(val)} {} // wrong order
+  // CHECK-NOTES: [[@LINE-1]]:9: note: move occurred here
+  // CHECK-NOTES: [[@LINE-4]]:11: note: the use happens in a later loop iteration than the move
+
+private:
+  bool a;
+  std::string s;
+  bool b;
+};
+
+struct Obj {};
+struct CtorD {
+  CtorD(Obj b);
+};
+
+struct CtorC {
+  CtorC(Obj b);
+};
+
+struct CtorB {
+  CtorB(Obj &b);
+};
+
+struct CtorA : CtorB, CtorC, CtorD {
+  CtorA(Obj b) : CtorB{b}, CtorC{std::move(b)}, CtorD{b} {}
+  // CHECK-NOTES: [[@LINE-1]]:55: warning: 'b' used after it was moved
+  // CHECK-NOTES: [[@LINE-2]]:34: note: move occurred here
+};
+
+struct Base {
+  Base(Obj b) : bb{std::move(b)} {}
+  template <typename Call> Base(Call &&c) : bb{c()} {};
+
+  Obj bb;
+};
+
+struct Derived : Base, CtorC {
+  Derived(Obj b)
+      : Base{[&] mutable { return std::move(b); }()},
+        // False negative: The lambda/std::move was executed, so it should warn
+        // below
+        CtorC{b} {}
+};
+
+struct Derived2 : Base, CtorC {
+  Derived2(Obj b)
+      : Base{[&] mutable { return std::move(b); }},
+        // This was a move, but it doesn't warn below, because it can't know if
+        // the lambda/std::move was actually called
+        CtorC{b} {}
+};
+
+struct Derived3 : Base, CtorC {
+  Derived3(Obj b)
+      : Base{[c = std::move(b)] mutable { return std::move(c); }}, CtorC{b} {}
+  // CHECK-NOTES: [[@LINE-1]]:74: warning: 'b' used after it was moved
+  // CHECK-NOTES: [[@LINE-2]]:19: note: move occurred here
+};
 
 class PR38187 {
 public:

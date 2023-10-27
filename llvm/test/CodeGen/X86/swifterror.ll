@@ -1708,11 +1708,11 @@ define swiftcc { i64, i64, i64, i64} @params_and_return_in_reg(i64, i64, i64, i6
 ; CHECK-i386-NEXT:    .cfi_offset %edi, -16
 ; CHECK-i386-NEXT:    .cfi_offset %ebx, -12
 ; CHECK-i386-NEXT:    .cfi_offset %ebp, -8
+; CHECK-i386-NEXT:    movl 148(%esp), %esi
 ; CHECK-i386-NEXT:    movl $0, 64(%esp)
-; CHECK-i386-NEXT:    movl 188(%esp), %ebp
 ; CHECK-i386-NEXT:    movl 192(%esp), %ebx
-; CHECK-i386-NEXT:    movl 196(%esp), %edi
-; CHECK-i386-NEXT:    movl 200(%esp), %esi
+; CHECK-i386-NEXT:    movl 196(%esp), %ebp
+; CHECK-i386-NEXT:    movl 200(%esp), %edi
 ; CHECK-i386-NEXT:    leal 64(%esp), %eax
 ; CHECK-i386-NEXT:    movl %eax, 52(%esp)
 ; CHECK-i386-NEXT:    movl $0, 48(%esp)
@@ -1729,10 +1729,11 @@ define swiftcc { i64, i64, i64, i64} @params_and_return_in_reg(i64, i64, i64, i6
 ; CHECK-i386-NEXT:    movl $0, 4(%esp)
 ; CHECK-i386-NEXT:    movl $1, (%esp)
 ; CHECK-i386-NEXT:    calll _params_in_reg2
-; CHECK-i386-NEXT:    movl %esi, 56(%esp)
-; CHECK-i386-NEXT:    movl %edi, 52(%esp)
+; CHECK-i386-NEXT:    movl %edi, 56(%esp)
+; CHECK-i386-NEXT:    movl %ebp, 52(%esp)
 ; CHECK-i386-NEXT:    movl %ebx, 48(%esp)
-; CHECK-i386-NEXT:    movl %ebp, 44(%esp)
+; CHECK-i386-NEXT:    movl 188(%esp), %eax
+; CHECK-i386-NEXT:    movl %eax, 44(%esp)
 ; CHECK-i386-NEXT:    movl 184(%esp), %eax
 ; CHECK-i386-NEXT:    movl %eax, 40(%esp)
 ; CHECK-i386-NEXT:    movl 180(%esp), %eax
@@ -1751,8 +1752,7 @@ define swiftcc { i64, i64, i64, i64} @params_and_return_in_reg(i64, i64, i64, i6
 ; CHECK-i386-NEXT:    movl %eax, 12(%esp)
 ; CHECK-i386-NEXT:    movl 152(%esp), %eax
 ; CHECK-i386-NEXT:    movl %eax, 8(%esp)
-; CHECK-i386-NEXT:    movl 148(%esp), %eax
-; CHECK-i386-NEXT:    movl %eax, 4(%esp)
+; CHECK-i386-NEXT:    movl %esi, 4(%esp)
 ; CHECK-i386-NEXT:    leal 88(%esp), %eax
 ; CHECK-i386-NEXT:    movl %eax, (%esp)
 ; CHECK-i386-NEXT:    calll _params_and_return_in_reg2
@@ -1767,8 +1767,8 @@ define swiftcc { i64, i64, i64, i64} @params_and_return_in_reg(i64, i64, i64, i6
 ; CHECK-i386-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) ## 4-byte Spill
 ; CHECK-i386-NEXT:    movl 104(%esp), %ebp
 ; CHECK-i386-NEXT:    movl 108(%esp), %edi
-; CHECK-i386-NEXT:    movl 112(%esp), %ebx
-; CHECK-i386-NEXT:    movl 116(%esp), %esi
+; CHECK-i386-NEXT:    movl 112(%esp), %esi
+; CHECK-i386-NEXT:    movl 116(%esp), %ebx
 ; CHECK-i386-NEXT:    leal 64(%esp), %eax
 ; CHECK-i386-NEXT:    movl %eax, 52(%esp)
 ; CHECK-i386-NEXT:    movl $0, 48(%esp)
@@ -1786,8 +1786,8 @@ define swiftcc { i64, i64, i64, i64} @params_and_return_in_reg(i64, i64, i64, i6
 ; CHECK-i386-NEXT:    movl $1, (%esp)
 ; CHECK-i386-NEXT:    calll _params_in_reg2
 ; CHECK-i386-NEXT:    movl 144(%esp), %eax
-; CHECK-i386-NEXT:    movl %esi, 28(%eax)
-; CHECK-i386-NEXT:    movl %ebx, 24(%eax)
+; CHECK-i386-NEXT:    movl %ebx, 28(%eax)
+; CHECK-i386-NEXT:    movl %esi, 24(%eax)
 ; CHECK-i386-NEXT:    movl %edi, 20(%eax)
 ; CHECK-i386-NEXT:    movl %ebp, 16(%eax)
 ; CHECK-i386-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx ## 4-byte Reload

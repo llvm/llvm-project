@@ -24,13 +24,10 @@ define void @test1(i32 %I, i32 %E, ptr noalias nocapture %A, ptr noalias nocaptu
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[ADD8_3:%.*]], [[FOR_LATCH:%.*]] ], [ 0, [[FOR_OUTER_PREHEADER_NEW]] ]
 ; CHECK-NEXT:    [[NITER:%.*]] = phi i32 [ 0, [[FOR_OUTER_PREHEADER_NEW]] ], [ [[NITER_NEXT_3:%.*]], [[FOR_LATCH]] ]
 ; CHECK-NEXT:    [[ADD8:%.*]] = add nuw nsw i32 [[I]], 1
-; CHECK-NEXT:    [[NITER_NEXT:%.*]] = add nuw nsw i32 [[NITER]], 1
-; CHECK-NEXT:    [[ADD8_1:%.*]] = add nuw nsw i32 [[ADD8]], 1
-; CHECK-NEXT:    [[NITER_NEXT_1:%.*]] = add nuw nsw i32 [[NITER_NEXT]], 1
-; CHECK-NEXT:    [[ADD8_2:%.*]] = add nuw nsw i32 [[ADD8_1]], 1
-; CHECK-NEXT:    [[NITER_NEXT_2:%.*]] = add nuw nsw i32 [[NITER_NEXT_1]], 1
-; CHECK-NEXT:    [[ADD8_3]] = add nuw i32 [[ADD8_2]], 1
-; CHECK-NEXT:    [[NITER_NEXT_3]] = add i32 [[NITER_NEXT_2]], 1
+; CHECK-NEXT:    [[ADD8_1:%.*]] = add nuw nsw i32 [[I]], 2
+; CHECK-NEXT:    [[ADD8_2:%.*]] = add nuw nsw i32 [[I]], 3
+; CHECK-NEXT:    [[ADD8_3]] = add nuw i32 [[I]], 4
+; CHECK-NEXT:    [[NITER_NEXT_3]] = add i32 [[NITER]], 4
 ; CHECK-NEXT:    br label [[FOR_INNER:%.*]]
 ; CHECK:       for.inner:
 ; CHECK-NEXT:    [[J:%.*]] = phi i32 [ 0, [[FOR_OUTER]] ], [ [[INC:%.*]], [[FOR_INNER]] ]
@@ -116,7 +113,7 @@ define void @test1(i32 %I, i32 %E, ptr noalias nocapture %A, ptr noalias nocaptu
 ; CHECK-NEXT:    [[ADD_LCSSA_EPIL_1:%.*]] = phi i32 [ [[ADD_EPIL_1]], [[FOR_INNER_EPIL_1]] ]
 ; CHECK-NEXT:    [[ARRAYIDX6_EPIL_1:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[ADD8_EPIL]]
 ; CHECK-NEXT:    store i32 [[ADD_LCSSA_EPIL_1]], ptr [[ARRAYIDX6_EPIL_1]], align 4, !tbaa [[TBAA0]]
-; CHECK-NEXT:    [[ADD8_EPIL_1:%.*]] = add nuw i32 [[ADD8_EPIL]], 1
+; CHECK-NEXT:    [[ADD8_EPIL_1:%.*]] = add nuw i32 [[I_UNR]], 2
 ; CHECK-NEXT:    [[EPIL_ITER_CMP_1:%.*]] = icmp ne i32 2, [[XTRAITER]]
 ; CHECK-NEXT:    br i1 [[EPIL_ITER_CMP_1]], label [[FOR_OUTER_EPIL_2:%.*]], label [[FOR_END_LOOPEXIT_EPILOG_LCSSA]]
 ; CHECK:       for.outer.epil.2:
@@ -204,19 +201,16 @@ define void @test2(i32 %I, i32 %E, ptr noalias nocapture %A, ptr noalias nocaptu
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i32 [[I]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[ARRAYIDX]], align 4, !tbaa [[TBAA0]]
 ; CHECK-NEXT:    [[ADD9:%.*]] = add nuw nsw i32 [[I]], 1
-; CHECK-NEXT:    [[NITER_NEXT:%.*]] = add nuw nsw i32 [[NITER]], 1
 ; CHECK-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[ADD9]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[ARRAYIDX_1]], align 4, !tbaa [[TBAA0]]
-; CHECK-NEXT:    [[ADD9_1:%.*]] = add nuw nsw i32 [[ADD9]], 1
-; CHECK-NEXT:    [[NITER_NEXT_1:%.*]] = add nuw nsw i32 [[NITER_NEXT]], 1
+; CHECK-NEXT:    [[ADD9_1:%.*]] = add nuw nsw i32 [[I]], 2
 ; CHECK-NEXT:    [[ARRAYIDX_2:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[ADD9_1]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[ARRAYIDX_2]], align 4, !tbaa [[TBAA0]]
-; CHECK-NEXT:    [[ADD9_2:%.*]] = add nuw nsw i32 [[ADD9_1]], 1
-; CHECK-NEXT:    [[NITER_NEXT_2:%.*]] = add nuw nsw i32 [[NITER_NEXT_1]], 1
+; CHECK-NEXT:    [[ADD9_2:%.*]] = add nuw nsw i32 [[I]], 3
 ; CHECK-NEXT:    [[ARRAYIDX_3:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[ADD9_2]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[ARRAYIDX_3]], align 4, !tbaa [[TBAA0]]
-; CHECK-NEXT:    [[ADD9_3]] = add nuw i32 [[ADD9_2]], 1
-; CHECK-NEXT:    [[NITER_NEXT_3]] = add i32 [[NITER_NEXT_2]], 1
+; CHECK-NEXT:    [[ADD9_3]] = add nuw i32 [[I]], 4
+; CHECK-NEXT:    [[NITER_NEXT_3]] = add i32 [[NITER]], 4
 ; CHECK-NEXT:    br label [[FOR_INNER:%.*]]
 ; CHECK:       for.inner:
 ; CHECK-NEXT:    [[J:%.*]] = phi i32 [ 0, [[FOR_OUTER]] ], [ [[INC:%.*]], [[FOR_INNER]] ]
@@ -300,7 +294,7 @@ define void @test2(i32 %I, i32 %E, ptr noalias nocapture %A, ptr noalias nocaptu
 ; CHECK:       for.latch.epil.1:
 ; CHECK-NEXT:    [[ADD_LCSSA_EPIL_1:%.*]] = phi i32 [ [[ADD_EPIL_1]], [[FOR_INNER_EPIL_1]] ]
 ; CHECK-NEXT:    store i32 [[ADD_LCSSA_EPIL_1]], ptr [[ARRAYIDX_EPIL_1]], align 4, !tbaa [[TBAA0]]
-; CHECK-NEXT:    [[ADD9_EPIL_1:%.*]] = add nuw i32 [[ADD9_EPIL]], 1
+; CHECK-NEXT:    [[ADD9_EPIL_1:%.*]] = add nuw i32 [[I_UNR]], 2
 ; CHECK-NEXT:    [[EPIL_ITER_CMP_1:%.*]] = icmp ne i32 2, [[XTRAITER]]
 ; CHECK-NEXT:    br i1 [[EPIL_ITER_CMP_1]], label [[FOR_OUTER_EPIL_2:%.*]], label [[FOR_END10_LOOPEXIT_EPILOG_LCSSA]]
 ; CHECK:       for.outer.epil.2:
@@ -623,14 +617,8 @@ define i32 @test6() #0 {
 ; CHECK:       for.outer:
 ; CHECK-NEXT:    [[INC5_SINK9:%.*]] = phi i32 [ 2, [[ENTRY_NEW]] ], [ [[INC5_3:%.*]], [[FOR_LATCH:%.*]] ]
 ; CHECK-NEXT:    [[NITER:%.*]] = phi i32 [ 0, [[ENTRY_NEW]] ], [ [[NITER_NEXT_3:%.*]], [[FOR_LATCH]] ]
-; CHECK-NEXT:    [[INC5:%.*]] = add nuw nsw i32 [[INC5_SINK9]], 1
-; CHECK-NEXT:    [[NITER_NEXT:%.*]] = add nuw nsw i32 [[NITER]], 1
-; CHECK-NEXT:    [[INC5_1:%.*]] = add nuw nsw i32 [[INC5]], 1
-; CHECK-NEXT:    [[NITER_NEXT_1:%.*]] = add nuw nsw i32 [[NITER_NEXT]], 1
-; CHECK-NEXT:    [[INC5_2:%.*]] = add nuw nsw i32 [[INC5_1]], 1
-; CHECK-NEXT:    [[NITER_NEXT_2:%.*]] = add nuw nsw i32 [[NITER_NEXT_1]], 1
-; CHECK-NEXT:    [[INC5_3]] = add nuw nsw i32 [[INC5_2]], 1
-; CHECK-NEXT:    [[NITER_NEXT_3]] = add nuw nsw i32 [[NITER_NEXT_2]], 1
+; CHECK-NEXT:    [[INC5_3]] = add nuw nsw i32 [[INC5_SINK9]], 4
+; CHECK-NEXT:    [[NITER_NEXT_3]] = add nuw nsw i32 [[NITER]], 4
 ; CHECK-NEXT:    br label [[FOR_INNER:%.*]]
 ; CHECK:       for.inner:
 ; CHECK-NEXT:    [[INC_SINK8:%.*]] = phi i32 [ 0, [[FOR_OUTER]] ], [ [[INC:%.*]], [[FOR_INNER]] ]
@@ -727,25 +715,22 @@ define void @test7(i32 %I, i32 %E, ptr noalias nocapture %A, ptr noalias nocaptu
 ; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[I]], 1
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[ADD]]
 ; CHECK-NEXT:    store i32 2, ptr [[ARRAYIDX2]], align 4, !tbaa [[TBAA0]]
-; CHECK-NEXT:    [[NITER_NEXT:%.*]] = add nuw nsw i32 [[NITER]], 1
 ; CHECK-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[ADD]]
 ; CHECK-NEXT:    store i32 0, ptr [[ARRAYIDX_1]], align 4, !tbaa [[TBAA0]]
-; CHECK-NEXT:    [[ADD_1:%.*]] = add nuw nsw i32 [[ADD]], 1
+; CHECK-NEXT:    [[ADD_1:%.*]] = add nuw nsw i32 [[I]], 2
 ; CHECK-NEXT:    [[ARRAYIDX2_1:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[ADD_1]]
 ; CHECK-NEXT:    store i32 2, ptr [[ARRAYIDX2_1]], align 4, !tbaa [[TBAA0]]
-; CHECK-NEXT:    [[NITER_NEXT_1:%.*]] = add nuw nsw i32 [[NITER_NEXT]], 1
 ; CHECK-NEXT:    [[ARRAYIDX_2:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[ADD_1]]
 ; CHECK-NEXT:    store i32 0, ptr [[ARRAYIDX_2]], align 4, !tbaa [[TBAA0]]
-; CHECK-NEXT:    [[ADD_2:%.*]] = add nuw nsw i32 [[ADD_1]], 1
+; CHECK-NEXT:    [[ADD_2:%.*]] = add nuw nsw i32 [[I]], 3
 ; CHECK-NEXT:    [[ARRAYIDX2_2:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[ADD_2]]
 ; CHECK-NEXT:    store i32 2, ptr [[ARRAYIDX2_2]], align 4, !tbaa [[TBAA0]]
-; CHECK-NEXT:    [[NITER_NEXT_2:%.*]] = add nuw nsw i32 [[NITER_NEXT_1]], 1
 ; CHECK-NEXT:    [[ARRAYIDX_3:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[ADD_2]]
 ; CHECK-NEXT:    store i32 0, ptr [[ARRAYIDX_3]], align 4, !tbaa [[TBAA0]]
-; CHECK-NEXT:    [[ADD_3]] = add nuw i32 [[ADD_2]], 1
+; CHECK-NEXT:    [[ADD_3]] = add nuw i32 [[I]], 4
 ; CHECK-NEXT:    [[ARRAYIDX2_3:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[ADD_3]]
 ; CHECK-NEXT:    store i32 2, ptr [[ARRAYIDX2_3]], align 4, !tbaa [[TBAA0]]
-; CHECK-NEXT:    [[NITER_NEXT_3]] = add i32 [[NITER_NEXT_2]], 1
+; CHECK-NEXT:    [[NITER_NEXT_3]] = add i32 [[NITER]], 4
 ; CHECK-NEXT:    br label [[FOR_INNER:%.*]]
 ; CHECK:       for.latch:
 ; CHECK-NEXT:    [[ADD9_LCSSA:%.*]] = phi i32 [ [[ADD9:%.*]], [[FOR_INNER]] ]
@@ -818,7 +803,7 @@ define void @test7(i32 %I, i32 %E, ptr noalias nocapture %A, ptr noalias nocaptu
 ; CHECK:       for.outer.epil.1:
 ; CHECK-NEXT:    [[ARRAYIDX_EPIL_1:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[ADD_EPIL]]
 ; CHECK-NEXT:    store i32 0, ptr [[ARRAYIDX_EPIL_1]], align 4, !tbaa [[TBAA0]]
-; CHECK-NEXT:    [[ADD_EPIL_1:%.*]] = add nuw i32 [[ADD_EPIL]], 1
+; CHECK-NEXT:    [[ADD_EPIL_1:%.*]] = add nuw i32 [[I_UNR]], 2
 ; CHECK-NEXT:    [[ARRAYIDX2_EPIL_1:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[ADD_EPIL_1]]
 ; CHECK-NEXT:    store i32 2, ptr [[ARRAYIDX2_EPIL_1]], align 4, !tbaa [[TBAA0]]
 ; CHECK-NEXT:    br label [[FOR_INNER_EPIL_1:%.*]]
@@ -839,7 +824,7 @@ define void @test7(i32 %I, i32 %E, ptr noalias nocapture %A, ptr noalias nocaptu
 ; CHECK:       for.outer.epil.2:
 ; CHECK-NEXT:    [[ARRAYIDX_EPIL_2:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[ADD_EPIL_1]]
 ; CHECK-NEXT:    store i32 0, ptr [[ARRAYIDX_EPIL_2]], align 4, !tbaa [[TBAA0]]
-; CHECK-NEXT:    [[ADD_EPIL_2:%.*]] = add nuw i32 [[ADD_EPIL_1]], 1
+; CHECK-NEXT:    [[ADD_EPIL_2:%.*]] = add nuw i32 [[I_UNR]], 3
 ; CHECK-NEXT:    [[ARRAYIDX2_EPIL_2:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[ADD_EPIL_2]]
 ; CHECK-NEXT:    store i32 2, ptr [[ARRAYIDX2_EPIL_2]], align 4, !tbaa [[TBAA0]]
 ; CHECK-NEXT:    br label [[FOR_INNER_EPIL_2:%.*]]
@@ -928,25 +913,22 @@ define void @test8(i32 %I, i32 %E, ptr noalias nocapture %A, ptr noalias nocaptu
 ; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[I]], 1
 ; CHECK-NEXT:    [[ARRAYIDX6:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[ADD]]
 ; CHECK-NEXT:    store i32 2, ptr [[ARRAYIDX6]], align 4, !tbaa [[TBAA0]]
-; CHECK-NEXT:    [[NITER_NEXT:%.*]] = add nuw nsw i32 [[NITER]], 1
 ; CHECK-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[ADD]]
 ; CHECK-NEXT:    store i32 0, ptr [[ARRAYIDX_1]], align 4, !tbaa [[TBAA0]]
-; CHECK-NEXT:    [[ADD_1:%.*]] = add nuw nsw i32 [[ADD]], 1
+; CHECK-NEXT:    [[ADD_1:%.*]] = add nuw nsw i32 [[I]], 2
 ; CHECK-NEXT:    [[ARRAYIDX6_1:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[ADD_1]]
 ; CHECK-NEXT:    store i32 2, ptr [[ARRAYIDX6_1]], align 4, !tbaa [[TBAA0]]
-; CHECK-NEXT:    [[NITER_NEXT_1:%.*]] = add nuw nsw i32 [[NITER_NEXT]], 1
 ; CHECK-NEXT:    [[ARRAYIDX_2:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[ADD_1]]
 ; CHECK-NEXT:    store i32 0, ptr [[ARRAYIDX_2]], align 4, !tbaa [[TBAA0]]
-; CHECK-NEXT:    [[ADD_2:%.*]] = add nuw nsw i32 [[ADD_1]], 1
+; CHECK-NEXT:    [[ADD_2:%.*]] = add nuw nsw i32 [[I]], 3
 ; CHECK-NEXT:    [[ARRAYIDX6_2:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[ADD_2]]
 ; CHECK-NEXT:    store i32 2, ptr [[ARRAYIDX6_2]], align 4, !tbaa [[TBAA0]]
-; CHECK-NEXT:    [[NITER_NEXT_2:%.*]] = add nuw nsw i32 [[NITER_NEXT_1]], 1
 ; CHECK-NEXT:    [[ARRAYIDX_3:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[ADD_2]]
 ; CHECK-NEXT:    store i32 0, ptr [[ARRAYIDX_3]], align 4, !tbaa [[TBAA0]]
-; CHECK-NEXT:    [[ADD_3]] = add nuw i32 [[ADD_2]], 1
+; CHECK-NEXT:    [[ADD_3]] = add nuw i32 [[I]], 4
 ; CHECK-NEXT:    [[ARRAYIDX6_3:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[ADD_3]]
 ; CHECK-NEXT:    store i32 2, ptr [[ARRAYIDX6_3]], align 4, !tbaa [[TBAA0]]
-; CHECK-NEXT:    [[NITER_NEXT_3]] = add i32 [[NITER_NEXT_2]], 1
+; CHECK-NEXT:    [[NITER_NEXT_3]] = add i32 [[NITER]], 4
 ; CHECK-NEXT:    br label [[FOR_INNER:%.*]]
 ; CHECK:       for.inner:
 ; CHECK-NEXT:    [[SUM:%.*]] = phi i32 [ 0, [[FOR_OUTER]] ], [ [[ADD9:%.*]], [[FOR_INNER]] ]
@@ -1019,7 +1001,7 @@ define void @test8(i32 %I, i32 %E, ptr noalias nocapture %A, ptr noalias nocaptu
 ; CHECK:       for.outer.epil.1:
 ; CHECK-NEXT:    [[ARRAYIDX_EPIL_1:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[ADD_EPIL]]
 ; CHECK-NEXT:    store i32 0, ptr [[ARRAYIDX_EPIL_1]], align 4, !tbaa [[TBAA0]]
-; CHECK-NEXT:    [[ADD_EPIL_1:%.*]] = add nuw i32 [[ADD_EPIL]], 1
+; CHECK-NEXT:    [[ADD_EPIL_1:%.*]] = add nuw i32 [[I_UNR]], 2
 ; CHECK-NEXT:    [[ARRAYIDX6_EPIL_1:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[ADD_EPIL_1]]
 ; CHECK-NEXT:    store i32 2, ptr [[ARRAYIDX6_EPIL_1]], align 4, !tbaa [[TBAA0]]
 ; CHECK-NEXT:    br label [[FOR_INNER_EPIL_1:%.*]]
@@ -1040,7 +1022,7 @@ define void @test8(i32 %I, i32 %E, ptr noalias nocapture %A, ptr noalias nocaptu
 ; CHECK:       for.outer.epil.2:
 ; CHECK-NEXT:    [[ARRAYIDX_EPIL_2:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[ADD_EPIL_1]]
 ; CHECK-NEXT:    store i32 0, ptr [[ARRAYIDX_EPIL_2]], align 4, !tbaa [[TBAA0]]
-; CHECK-NEXT:    [[ADD_EPIL_2:%.*]] = add nuw i32 [[ADD_EPIL_1]], 1
+; CHECK-NEXT:    [[ADD_EPIL_2:%.*]] = add nuw i32 [[I_UNR]], 3
 ; CHECK-NEXT:    [[ARRAYIDX6_EPIL_2:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[ADD_EPIL_2]]
 ; CHECK-NEXT:    store i32 2, ptr [[ARRAYIDX6_EPIL_2]], align 4, !tbaa [[TBAA0]]
 ; CHECK-NEXT:    br label [[FOR_INNER_EPIL_2:%.*]]
@@ -1135,13 +1117,10 @@ define void @test9(i32 %I, i32 %E, ptr nocapture %A, ptr nocapture readonly %B) 
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[ADD8_3:%.*]], [[FOR_LATCH:%.*]] ], [ 0, [[FOR_OUTER_PREHEADER_NEW]] ]
 ; CHECK-NEXT:    [[NITER:%.*]] = phi i32 [ 0, [[FOR_OUTER_PREHEADER_NEW]] ], [ [[NITER_NEXT_3:%.*]], [[FOR_LATCH]] ]
 ; CHECK-NEXT:    [[ADD8:%.*]] = add nuw nsw i32 [[I]], 1
-; CHECK-NEXT:    [[NITER_NEXT:%.*]] = add nuw nsw i32 [[NITER]], 1
-; CHECK-NEXT:    [[ADD8_1:%.*]] = add nuw nsw i32 [[ADD8]], 1
-; CHECK-NEXT:    [[NITER_NEXT_1:%.*]] = add nuw nsw i32 [[NITER_NEXT]], 1
-; CHECK-NEXT:    [[ADD8_2:%.*]] = add nuw nsw i32 [[ADD8_1]], 1
-; CHECK-NEXT:    [[NITER_NEXT_2:%.*]] = add nuw nsw i32 [[NITER_NEXT_1]], 1
-; CHECK-NEXT:    [[ADD8_3]] = add nuw i32 [[ADD8_2]], 1
-; CHECK-NEXT:    [[NITER_NEXT_3]] = add i32 [[NITER_NEXT_2]], 1
+; CHECK-NEXT:    [[ADD8_1:%.*]] = add nuw nsw i32 [[I]], 2
+; CHECK-NEXT:    [[ADD8_2:%.*]] = add nuw nsw i32 [[I]], 3
+; CHECK-NEXT:    [[ADD8_3]] = add nuw i32 [[I]], 4
+; CHECK-NEXT:    [[NITER_NEXT_3]] = add i32 [[NITER]], 4
 ; CHECK-NEXT:    br label [[FOR_INNER:%.*]]
 ; CHECK:       for.inner:
 ; CHECK-NEXT:    [[J:%.*]] = phi i32 [ 0, [[FOR_OUTER]] ], [ [[INC:%.*]], [[FOR_INNER]] ]
@@ -1233,7 +1212,7 @@ define void @test9(i32 %I, i32 %E, ptr nocapture %A, ptr nocapture readonly %B) 
 ; CHECK-NEXT:    [[ADD_LCSSA_EPIL_1:%.*]] = phi i32 [ [[ADD_EPIL_1]], [[FOR_INNER_EPIL_1]] ]
 ; CHECK-NEXT:    [[ARRAYIDX6_EPIL_1:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[ADD8_EPIL]]
 ; CHECK-NEXT:    store i32 [[ADD_LCSSA_EPIL_1]], ptr [[ARRAYIDX6_EPIL_1]], align 4, !tbaa [[TBAA0]]
-; CHECK-NEXT:    [[ADD8_EPIL_1:%.*]] = add nuw i32 [[ADD8_EPIL]], 1
+; CHECK-NEXT:    [[ADD8_EPIL_1:%.*]] = add nuw i32 [[I_UNR]], 2
 ; CHECK-NEXT:    [[EPIL_ITER_CMP_1:%.*]] = icmp ne i32 2, [[XTRAITER]]
 ; CHECK-NEXT:    br i1 [[EPIL_ITER_CMP_1]], label [[FOR_OUTER_EPIL_2:%.*]], label [[FOR_END_LOOPEXIT_EPILOG_LCSSA]]
 ; CHECK:       for.outer.epil.2:
@@ -1316,14 +1295,8 @@ define signext i16 @test10(i32 %k) #0 {
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[STOREMERGE82:%.*]] = phi i64 [ 0, [[ENTRY_NEW]] ], [ [[INC25_3:%.*]], [[FOR_INC24:%.*]] ]
 ; CHECK-NEXT:    [[NITER:%.*]] = phi i64 [ 0, [[ENTRY_NEW]] ], [ [[NITER_NEXT_3:%.*]], [[FOR_INC24]] ]
-; CHECK-NEXT:    [[INC25:%.*]] = add nuw nsw i64 [[STOREMERGE82]], 1
-; CHECK-NEXT:    [[NITER_NEXT:%.*]] = add nuw nsw i64 [[NITER]], 1
-; CHECK-NEXT:    [[INC25_1:%.*]] = add nuw nsw i64 [[INC25]], 1
-; CHECK-NEXT:    [[NITER_NEXT_1:%.*]] = add nuw nsw i64 [[NITER_NEXT]], 1
-; CHECK-NEXT:    [[INC25_2:%.*]] = add nuw nsw i64 [[INC25_1]], 1
-; CHECK-NEXT:    [[NITER_NEXT_2:%.*]] = add nuw nsw i64 [[NITER_NEXT_1]], 1
-; CHECK-NEXT:    [[INC25_3]] = add nuw nsw i64 [[INC25_2]], 1
-; CHECK-NEXT:    [[NITER_NEXT_3]] = add nuw nsw i64 [[NITER_NEXT_2]], 1
+; CHECK-NEXT:    [[INC25_3]] = add nuw nsw i64 [[STOREMERGE82]], 4
+; CHECK-NEXT:    [[NITER_NEXT_3]] = add nuw nsw i64 [[NITER]], 4
 ; CHECK-NEXT:    br label [[FOR_BODY2:%.*]]
 ; CHECK:       for.body2:
 ; CHECK-NEXT:    [[STOREMERGE:%.*]] = phi i64 [ 4, [[FOR_BODY]] ], [ [[DEC:%.*]], [[FOR_INC21_3:%.*]] ]

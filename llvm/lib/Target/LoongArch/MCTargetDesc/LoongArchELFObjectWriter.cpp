@@ -59,7 +59,7 @@ unsigned LoongArchELFObjectWriter::getRelocType(MCContext &Ctx,
   case FK_Data_4:
     return IsPCRel ? ELF::R_LARCH_32_PCREL : ELF::R_LARCH_32;
   case FK_Data_8:
-    return ELF::R_LARCH_64;
+    return IsPCRel ? ELF::R_LARCH_64_PCREL : ELF::R_LARCH_64;
   case LoongArch::fixup_loongarch_b16:
     return ELF::R_LARCH_B16;
   case LoongArch::fixup_loongarch_b21:

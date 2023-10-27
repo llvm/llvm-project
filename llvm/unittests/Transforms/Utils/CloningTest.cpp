@@ -137,7 +137,7 @@ TEST_F(CloneInstruction, OverflowBits) {
 }
 
 TEST_F(CloneInstruction, Inbounds) {
-  V = new Argument(Type::getInt32PtrTy(context));
+  V = new Argument(PointerType::get(context, 0));
 
   Constant *Z = Constant::getNullValue(Type::getInt32Ty(context));
   std::vector<Value *> ops;
@@ -161,8 +161,9 @@ TEST_F(CloneInstruction, Exact) {
 }
 
 TEST_F(CloneInstruction, Attributes) {
-  Type *ArgTy1[] = { Type::getInt32PtrTy(context) };
-  FunctionType *FT1 =  FunctionType::get(Type::getVoidTy(context), ArgTy1, false);
+  Type *ArgTy1[] = {PointerType::get(context, 0)};
+  FunctionType *FT1 =
+      FunctionType::get(Type::getVoidTy(context), ArgTy1, false);
 
   Function *F1 = Function::Create(FT1, Function::ExternalLinkage);
   BasicBlock *BB = BasicBlock::Create(context, "", F1);
@@ -187,8 +188,9 @@ TEST_F(CloneInstruction, Attributes) {
 }
 
 TEST_F(CloneInstruction, CallingConvention) {
-  Type *ArgTy1[] = { Type::getInt32PtrTy(context) };
-  FunctionType *FT1 =  FunctionType::get(Type::getVoidTy(context), ArgTy1, false);
+  Type *ArgTy1[] = {PointerType::get(context, 0)};
+  FunctionType *FT1 =
+      FunctionType::get(Type::getVoidTy(context), ArgTy1, false);
 
   Function *F1 = Function::Create(FT1, Function::ExternalLinkage);
   F1->setCallingConv(CallingConv::Cold);
@@ -211,7 +213,7 @@ TEST_F(CloneInstruction, CallingConvention) {
 }
 
 TEST_F(CloneInstruction, DuplicateInstructionsToSplit) {
-  Type *ArgTy1[] = {Type::getInt32PtrTy(context)};
+  Type *ArgTy1[] = {PointerType::get(context, 0)};
   FunctionType *FT = FunctionType::get(Type::getVoidTy(context), ArgTy1, false);
   V = new Argument(Type::getInt32Ty(context));
 
@@ -260,7 +262,7 @@ TEST_F(CloneInstruction, DuplicateInstructionsToSplit) {
 }
 
 TEST_F(CloneInstruction, DuplicateInstructionsToSplitBlocksEq1) {
-  Type *ArgTy1[] = {Type::getInt32PtrTy(context)};
+  Type *ArgTy1[] = {PointerType::get(context, 0)};
   FunctionType *FT = FunctionType::get(Type::getVoidTy(context), ArgTy1, false);
   V = new Argument(Type::getInt32Ty(context));
 
@@ -313,7 +315,7 @@ TEST_F(CloneInstruction, DuplicateInstructionsToSplitBlocksEq1) {
 }
 
 TEST_F(CloneInstruction, DuplicateInstructionsToSplitBlocksEq2) {
-  Type *ArgTy1[] = {Type::getInt32PtrTy(context)};
+  Type *ArgTy1[] = {PointerType::get(context, 0)};
   FunctionType *FT = FunctionType::get(Type::getVoidTy(context), ArgTy1, false);
   V = new Argument(Type::getInt32Ty(context));
 
@@ -925,7 +927,7 @@ protected:
     // Add ifuncs
     {
       const unsigned AddrSpace = 123;
-      auto *FuncPtrTy = Type::getInt8Ty(C)->getPointerTo(123);
+      auto *FuncPtrTy = PointerType::get(C, AddrSpace);
       auto *FuncTy = FunctionType::get(FuncPtrTy, false);
 
       auto *ResolverF = Function::Create(FuncTy, GlobalValue::PrivateLinkage,

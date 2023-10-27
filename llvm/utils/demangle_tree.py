@@ -18,20 +18,22 @@ import multiprocessing
 
 args = None
 
+
 def parse_line(line):
-    question = line.find('?')
+    question = line.find("?")
     if question == -1:
         return None, None
 
-    open_paren = line.find('(', question)
+    open_paren = line.find("(", question)
     if open_paren == -1:
         return None, None
-    close_paren = line.rfind(')', open_paren)
+    close_paren = line.rfind(")", open_paren)
     if open_paren == -1:
         return None, None
-    mangled = line[question : open_paren]
-    demangled = line[open_paren+1 : close_paren]
+    mangled = line[question:open_paren]
+    demangled = line[open_paren + 1 : close_paren]
     return mangled.strip(), demangled.strip()
+
 
 class Result(object):
     def __init__(self):
@@ -41,6 +43,7 @@ class Result(object):
         self.errors = set()
         self.nfiles = 0
 
+
 class MapContext(object):
     def __init__(self):
         self.rincomplete = None
@@ -48,18 +51,19 @@ class MapContext(object):
         self.pending_objs = []
         self.npending = 0
 
+
 def process_file(path, objdump):
     r = Result()
     r.file = path
 
-    popen_args = [objdump, '-t', '-demangle', path]
+    popen_args = [objdump, "-t", "-demangle", path]
     p = subprocess.Popen(popen_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, stderr = p.communicate()
     if p.returncode != 0:
         r.crashed = [r.file]
         return r
 
-    output = stdout.decode('utf-8')
+    output = stdout.decode("utf-8")
 
     for line in output.splitlines():
         mangled, demangled = parse_line(line)
@@ -70,15 +74,25 @@ def process_file(path, objdump):
             r.errors.add(mangled)
     return r
 
+
 def add_results(r1, r2):
     r1.crashed.extend(r2.crashed)
     r1.errors.update(r2.errors)
     r1.nsymbols += r2.nsymbols
     r1.nfiles += r2.nfiles
 
+
 def print_result_row(directory, result):
-    print("[{0} files, {1} crashes, {2} errors, {3} symbols]: '{4}'".format(
-        result.nfiles, len(result.crashed), len(result.errors), result.nsymbols, directory))
+    print(
+        "[{0} files, {1} crashes, {2} errors, {3} symbols]: '{4}'".format(
+            result.nfiles,
+            len(result.crashed),
+            len(result.errors),
+            result.nsymbols,
+            directory,
+        )
+    )
+
 
 def process_one_chunk(pool, chunk_size, objdump, context):
     objs = []
@@ -112,7 +126,7 @@ def process_one_chunk(pool, chunk_size, objdump, context):
 
         re.nfiles += ntaken
 
-    assert(len(objs) == chunk_size or context.npending == 0)
+    assert len(objs) == chunk_size or context.npending == 0
 
     copier = functools.partial(process_file, objdump=objdump)
     mapped_results = list(pool.map(copier, objs))
@@ -134,17 +148,18 @@ def process_one_chunk(pool, chunk_size, objdump, context):
         add_results(context.rcumulative, re)
         print_result_row(c, re)
 
+
 def process_pending_files(pool, chunk_size, objdump, context):
     while context.npending >= chunk_size:
         process_one_chunk(pool, chunk_size, objdump, context)
+
 
 def go():
     global args
 
     obj_dir = args.dir
-    extensions = args.extensions.split(',')
-    extensions = [x if x[0] == '.' else '.' + x for x in extensions]
-
+    extensions = args.extensions.split(",")
+    extensions = [x if x[0] == "." else "." + x for x in extensions]
 
     pool_size = 48
     pool = Pool(processes=pool_size)
@@ -178,7 +193,7 @@ def go():
             # `pool_size` tasks remaining.
             process_pending_files(pool, pool_size, args.objdump, context)
 
-        assert(context.npending < pool_size);
+        assert context.npending < pool_size
         process_one_chunk(pool, pool_size, args.objdump, context)
 
         total = context.rcumulative
@@ -186,43 +201,58 @@ def go():
         nsuccess = total.nsymbols - nfailed
         ncrashed = len(total.crashed)
 
-        if (nfailed > 0):
+        if nfailed > 0:
             print("Failures:")
             for m in sorted(total.errors):
                 print("  " + m)
-        if (ncrashed > 0):
+        if ncrashed > 0:
             print("Crashes:")
             for f in sorted(total.crashed):
                 print("  " + f)
         print("Summary:")
-        spct = float(nsuccess)/float(total.nsymbols)
-        fpct = float(nfailed)/float(total.nsymbols)
-        cpct = float(ncrashed)/float(nfiles)
+        spct = float(nsuccess) / float(total.nsymbols)
+        fpct = float(nfailed) / float(total.nsymbols)
+        cpct = float(ncrashed) / float(nfiles)
         print("Processed {0} object files.".format(nfiles))
-        print("{0}/{1} symbols successfully demangled ({2:.4%})".format(nsuccess, total.nsymbols, spct))
+        print(
+            "{0}/{1} symbols successfully demangled ({2:.4%})".format(
+                nsuccess, total.nsymbols, spct
+            )
+        )
         print("{0} symbols could not be demangled ({1:.4%})".format(nfailed, fpct))
         print("{0} files crashed while demangling ({1:.4%})".format(ncrashed, cpct))
-            
+
     except:
         traceback.print_exc()
 
     pool.close()
     pool.join()
 
-if __name__ == "__main__":
-    def_obj = 'obj' if sys.platform == 'win32' else 'o'
 
-    parser = argparse.ArgumentParser(description='Demangle all symbols in a tree of object files, looking for failures.')
-    parser.add_argument('dir', type=str, help='the root directory at which to start crawling')
-    parser.add_argument('--objdump', type=str, help='path to llvm-objdump.  If not specified ' +
-                        'the tool is located as if by `which llvm-objdump`.')
-    parser.add_argument('--extensions', type=str, default=def_obj,
-                        help='comma separated list of extensions to demangle (e.g. `o,obj`).  ' +
-                        'By default this will be `obj` on Windows and `o` otherwise.')
+if __name__ == "__main__":
+    def_obj = "obj" if sys.platform == "win32" else "o"
+
+    parser = argparse.ArgumentParser(
+        description="Demangle all symbols in a tree of object files, looking for failures."
+    )
+    parser.add_argument(
+        "dir", type=str, help="the root directory at which to start crawling"
+    )
+    parser.add_argument(
+        "--objdump",
+        type=str,
+        help="path to llvm-objdump.  If not specified "
+        + "the tool is located as if by `which llvm-objdump`.",
+    )
+    parser.add_argument(
+        "--extensions",
+        type=str,
+        default=def_obj,
+        help="comma separated list of extensions to demangle (e.g. `o,obj`).  "
+        + "By default this will be `obj` on Windows and `o` otherwise.",
+    )
 
     args = parser.parse_args()
 
-
     multiprocessing.freeze_support()
     go()
-

@@ -139,10 +139,8 @@ MachODumper::constructSection(MachO::section_64 Sec, size_t SecIndex) {
 
 static Error dumpDebugSection(StringRef SecName, DWARFContext &DCtx,
                               DWARFYAML::Data &DWARF) {
-  if (SecName == "__debug_abbrev") {
-    dumpDebugAbbrev(DCtx, DWARF);
-    return Error::success();
-  }
+  if (SecName == "__debug_abbrev")
+    return dumpDebugAbbrev(DCtx, DWARF);
   if (SecName == "__debug_aranges")
     return dumpDebugARanges(DCtx, DWARF);
   if (SecName == "__debug_info") {
@@ -533,7 +531,7 @@ void MachODumper::dumpBindOpcodes(
  * terminal.
 */
 
-const uint8_t *processExportNode(const uint8_t *CurrPtr,
+const uint8_t *processExportNode(const uint8_t *Start, const uint8_t *CurrPtr,
                                  const uint8_t *const End,
                                  MachOYAML::ExportEntry &Entry) {
   if (CurrPtr >= End)
@@ -572,7 +570,7 @@ const uint8_t *processExportNode(const uint8_t *CurrPtr,
     CurrPtr += Count;
   }
   for (auto &Child : Entry.Children) {
-    CurrPtr = processExportNode(CurrPtr, End, Child);
+    CurrPtr = processExportNode(Start, Start + Child.NodeOffset, End, Child);
   }
   return CurrPtr;
 }
@@ -583,7 +581,8 @@ void MachODumper::dumpExportTrie(std::unique_ptr<MachOYAML::Object> &Y) {
   auto ExportsTrie = Obj.getDyldInfoExportsTrie();
   if (ExportsTrie.empty())
     ExportsTrie = Obj.getDyldExportsTrie();
-  processExportNode(ExportsTrie.begin(), ExportsTrie.end(), LEData.ExportTrie);
+  processExportNode(ExportsTrie.begin(), ExportsTrie.begin(), ExportsTrie.end(),
+                    LEData.ExportTrie);
 }
 
 template <typename nlist_t>

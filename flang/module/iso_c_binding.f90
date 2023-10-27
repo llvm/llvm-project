@@ -11,14 +11,16 @@
 module iso_c_binding
 
   use __Fortran_builtins, only: &
-    c_f_pointer => __builtin_c_f_pointer, &
-    c_ptr => __builtin_c_ptr, &
+    c_associated => __builtin_c_associated, &
+    c_funloc => __builtin_c_funloc, &
     c_funptr => __builtin_c_funptr, &
+    c_f_pointer => __builtin_c_f_pointer, &
+    c_loc => __builtin_c_loc, &
+    c_null_funptr => __builtin_c_null_funptr, &
+    c_null_ptr => __builtin_c_null_ptr, &
+    c_ptr => __builtin_c_ptr, &
     c_sizeof => sizeof, &
-    c_loc => __builtin_c_loc
-
-  type(c_ptr), parameter :: c_null_ptr = c_ptr(0)
-  type(c_funptr), parameter :: c_null_funptr = c_funptr(0)
+    operator(==), operator(/=)
 
   ! Table 18.2 (in clause 18.3.1)
   ! TODO: Specialize (via macros?) for alternative targets
@@ -64,7 +66,7 @@ module iso_c_binding
     c_double_complex = c_double, &
     c_long_double_complex = c_long_double
 
-  integer, parameter :: c_bool = 1 ! TODO: or default LOGICAL?
+  integer, parameter :: c_bool = 1
   integer, parameter :: c_char = 1
 
   ! C characters with special semantics
@@ -77,12 +79,6 @@ module iso_c_binding
   character(kind=c_char, len=1), parameter :: c_horizontal_tab = achar(9)
   character(kind=c_char, len=1), parameter :: c_vertical_tab =  achar(11)
 
-  interface c_associated
-    module procedure c_associated_c_ptr
-    module procedure c_associated_c_funptr
-  end interface
-  private :: c_associated_c_ptr, c_associated_c_funptr
-
   interface c_f_procpointer
     module procedure c_f_procpointer
   end interface
@@ -93,36 +89,6 @@ module iso_c_binding
     c_float128_complex = c_float128
 
  contains
-
-  pure logical function c_associated_c_ptr(c_ptr_1, c_ptr_2)
-    type(c_ptr), intent(in) :: c_ptr_1
-    type(c_ptr), intent(in), optional :: c_ptr_2
-    if (c_ptr_1%__address == c_null_ptr%__address) then
-      c_associated_c_ptr = .false.
-    else if (present(c_ptr_2)) then
-      c_associated_c_ptr = c_ptr_1%__address == c_ptr_2%__address
-    else
-      c_associated_c_ptr = .true.
-    end if
-  end function c_associated_c_ptr
-
-  pure logical function c_associated_c_funptr(c_funptr_1, c_funptr_2)
-    type(c_funptr), intent(in) :: c_funptr_1
-    type(c_funptr), intent(in), optional :: c_funptr_2
-    if (c_funptr_1%__address == c_null_ptr%__address) then
-      c_associated_c_funptr = .false.
-    else if (present(c_funptr_2)) then
-      c_associated_c_funptr = c_funptr_1%__address == c_funptr_2%__address
-    else
-      c_associated_c_funptr = .true.
-    end if
-  end function c_associated_c_funptr
-
-  function c_funloc(x)
-    type(c_funptr) :: c_funloc
-    external :: x
-    c_funloc = c_funptr(loc(x))
-  end function c_funloc
 
   subroutine c_f_procpointer(cptr, fptr)
     type(c_funptr), intent(in) :: cptr

@@ -55,7 +55,7 @@ public:
     OperandBundlesToKeepIndexes.reserve(Call.getNumOperandBundles());
 
     // Enumerate every operand bundle on this call.
-    for (unsigned BundleIndex : seq(0U, Call.getNumOperandBundles()))
+    for (unsigned BundleIndex : seq(Call.getNumOperandBundles()))
       if (O.shouldKeep()) // Should we keep this one?
         OperandBundlesToKeepIndexes.emplace_back(BundleIndex);
   }

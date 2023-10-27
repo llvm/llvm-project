@@ -14,6 +14,7 @@
 #define LLVM_OBJECT_ELF_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -315,7 +316,16 @@ public:
                       ") or size (0x" + Twine::utohexstr(Phdr.p_filesz) + ")");
       return Elf_Note_Iterator(Err);
     }
-    return Elf_Note_Iterator(base() + Phdr.p_offset, Phdr.p_filesz, Err);
+    // Allow 4, 8, and (for Linux core dumps) 0.
+    // TODO: Disallow 1 after all tests are fixed.
+    if (Phdr.p_align != 0 && Phdr.p_align != 1 && Phdr.p_align != 4 &&
+        Phdr.p_align != 8) {
+      Err =
+          createError("alignment (" + Twine(Phdr.p_align) + ") is not 4 or 8");
+      return Elf_Note_Iterator(Err);
+    }
+    return Elf_Note_Iterator(base() + Phdr.p_offset, Phdr.p_filesz,
+                             std::max<size_t>(Phdr.p_align, 4), Err);
   }
 
   /// Get an iterator over notes in a section.
@@ -334,7 +344,15 @@ public:
                       ") or size (0x" + Twine::utohexstr(Shdr.sh_size) + ")");
       return Elf_Note_Iterator(Err);
     }
-    return Elf_Note_Iterator(base() + Shdr.sh_offset, Shdr.sh_size, Err);
+    // TODO: Allow just 4 and 8 after all tests are fixed.
+    if (Shdr.sh_addralign != 0 && Shdr.sh_addralign != 1 &&
+        Shdr.sh_addralign != 4 && Shdr.sh_addralign != 8) {
+      Err = createError("alignment (" + Twine(Shdr.sh_addralign) +
+                        ") is not 4 or 8");
+      return Elf_Note_Iterator(Err);
+    }
+    return Elf_Note_Iterator(base() + Shdr.sh_offset, Shdr.sh_size,
+                             std::max<size_t>(Shdr.sh_addralign, 4), Err);
   }
 
   /// Get the end iterator for notes.
@@ -391,7 +409,21 @@ public:
   Expected<ArrayRef<T>> getSectionContentsAsArray(const Elf_Shdr &Sec) const;
   Expected<ArrayRef<uint8_t>> getSectionContents(const Elf_Shdr &Sec) const;
   Expected<ArrayRef<uint8_t>> getSegmentContents(const Elf_Phdr &Phdr) const;
-  Expected<std::vector<BBAddrMap>> decodeBBAddrMap(const Elf_Shdr &Sec) const;
+
+  /// Returns a vector of BBAddrMap structs corresponding to each function
+  /// within the text section that the SHT_LLVM_BB_ADDR_MAP section \p Sec
+  /// is associated with. If the current ELFFile is relocatable, a corresponding
+  /// \p RelaSec must be passed in as an argument.
+  Expected<std::vector<BBAddrMap>>
+  decodeBBAddrMap(const Elf_Shdr &Sec, const Elf_Shdr *RelaSec = nullptr) const;
+
+  /// Returns a map from every section matching \p IsMatch to its relocation
+  /// section, or \p nullptr if it has no relocation section. This function
+  /// returns an error if any of the \p IsMatch calls fail or if it fails to
+  /// retrieve the content section of any relocation section.
+  Expected<MapVector<const Elf_Shdr *, const Elf_Shdr *>>
+  getSectionAndRelocations(
+      std::function<Expected<bool>(const Elf_Shdr &)> IsMatch) const;
 
   void createFakeSections();
 };
@@ -1221,16 +1253,13 @@ Expected<StringRef> ELFFile<ELFT>::getSectionName(const Elf_Shdr &Section,
 /// This function returns the hash value for a symbol in the .dynsym section
 /// Name of the API remains consistent as specified in the libelf
 /// REF : http://www.sco.com/developers/gabi/latest/ch5.dynamic.html#hash
-inline unsigned hashSysV(StringRef SymbolName) {
-  unsigned h = 0, g;
-  for (char C : SymbolName) {
-    h = (h << 4) + C;
-    g = h & 0xf0000000L;
-    if (g != 0)
-      h ^= g >> 24;
-    h &= ~g;
+inline uint32_t hashSysV(StringRef SymbolName) {
+  uint32_t H = 0;
+  for (uint8_t C : SymbolName) {
+    H = (H << 4) + C;
+    H ^= (H >> 24) & 0xf0;
   }
-  return h;
+  return H & 0x0fffffff;
 }
 
 /// This function returns the hash value for a symbol in the .dynsym section

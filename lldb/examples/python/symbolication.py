@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-#----------------------------------------------------------------------
+# ----------------------------------------------------------------------
 # Be sure to add the python path that points to the LLDB shared library.
 #
 # To use this in the embedded python interpreter using "lldb":
@@ -24,7 +24,7 @@
 #
 # On MacOSX sh, bash:
 #   PYTHONPATH=/path/to/LLDB.framework/Resources/Python ./crashlog.py ~/Library/Logs/DiagnosticReports/a.crash
-#----------------------------------------------------------------------
+# ----------------------------------------------------------------------
 
 import lldb
 import optparse
@@ -35,6 +35,8 @@ import shlex
 import sys
 import time
 import uuid
+import json
+import tempfile
 
 
 class Address:
@@ -50,7 +52,9 @@ class Address:
         # Any original textual description of this address to be used as a
         # backup in case symbolication fails
         self.description = None
-        self.symbolication = None  # The cached symbolicated string that describes this address
+        self.symbolication = (
+            None  # The cached symbolicated string that describes this address
+        )
         self.inlined = False
 
     def __str__(self):
@@ -76,7 +80,8 @@ class Address:
             sb_addr = self.resolve_addr()
             if sb_addr:
                 self.sym_ctx = self.target.ResolveSymbolContextForAddress(
-                    sb_addr, lldb.eSymbolContextEverything)
+                    sb_addr, lldb.eSymbolContextEverything
+                )
             else:
                 self.sym_ctx = lldb.SBSymbolContext()
         return self.sym_ctx
@@ -92,7 +97,7 @@ class Address:
 
     def symbolicate(self, verbose=False):
         if self.symbolication is None:
-            self.symbolication = ''
+            self.symbolication = ""
             self.inlined = False
             sym_ctx = self.get_symbol_context()
             if sym_ctx:
@@ -100,9 +105,9 @@ class Address:
                 if module:
                     # Print full source file path in verbose mode
                     if verbose:
-                        self.symbolication += str(module.GetFileSpec()) + '`'
+                        self.symbolication += str(module.GetFileSpec()) + "`"
                     else:
-                        self.symbolication += module.GetFileSpec().GetFilename() + '`'
+                        self.symbolication += module.GetFileSpec().GetFilename() + "`"
                     function_start_load_addr = -1
                     function = sym_ctx.GetFunction()
                     block = sym_ctx.GetBlock()
@@ -114,22 +119,30 @@ class Address:
 
                         if inlined_block:
                             self.inlined = True
-                            self.symbolication += ' [inlined] ' + \
-                                inlined_block.GetInlinedName()
-                            block_range_idx = inlined_block.GetRangeIndexForBlockAddress(
-                                self.so_addr)
+                            self.symbolication += (
+                                " [inlined] " + inlined_block.GetInlinedName()
+                            )
+                            block_range_idx = (
+                                inlined_block.GetRangeIndexForBlockAddress(self.so_addr)
+                            )
                             if block_range_idx < lldb.UINT32_MAX:
-                                block_range_start_addr = inlined_block.GetRangeStartAddress(
-                                    block_range_idx)
-                                function_start_load_addr = block_range_start_addr.GetLoadAddress(
-                                    self.target)
+                                block_range_start_addr = (
+                                    inlined_block.GetRangeStartAddress(block_range_idx)
+                                )
+                                function_start_load_addr = (
+                                    block_range_start_addr.GetLoadAddress(self.target)
+                                )
                         if function_start_load_addr == -1:
-                            function_start_load_addr = function.GetStartAddress().GetLoadAddress(self.target)
+                            function_start_load_addr = (
+                                function.GetStartAddress().GetLoadAddress(self.target)
+                            )
                     elif symbol:
                         self.symbolication += symbol.GetName()
-                        function_start_load_addr = symbol.GetStartAddress().GetLoadAddress(self.target)
+                        function_start_load_addr = (
+                            symbol.GetStartAddress().GetLoadAddress(self.target)
+                        )
                     else:
-                        self.symbolication = ''
+                        self.symbolication = ""
                         return False
 
                     # Dump the offset from the current function or symbol if it
@@ -138,29 +151,36 @@ class Address:
                     if function_offset > 0:
                         self.symbolication += " + %u" % (function_offset)
                     elif function_offset < 0:
-                        self.symbolication += " %i (invalid negative offset, file a bug) " % function_offset
+                        self.symbolication += (
+                            " %i (invalid negative offset, file a bug) "
+                            % function_offset
+                        )
 
                     # Print out any line information if any is available
                     if line_entry.GetFileSpec():
                         # Print full source file path in verbose mode
                         if verbose:
-                            self.symbolication += ' at %s' % line_entry.GetFileSpec()
+                            self.symbolication += " at %s" % line_entry.GetFileSpec()
                         else:
-                            self.symbolication += ' at %s' % line_entry.GetFileSpec().GetFilename()
-                        self.symbolication += ':%u' % line_entry.GetLine()
+                            self.symbolication += (
+                                " at %s" % line_entry.GetFileSpec().GetFilename()
+                            )
+                        self.symbolication += ":%u" % line_entry.GetLine()
                         column = line_entry.GetColumn()
                         if column > 0:
-                            self.symbolication += ':%u' % column
+                            self.symbolication += ":%u" % column
                     return True
         return False
 
 
 class Section:
     """Class that represents an load address range"""
-    sect_info_regex = re.compile('(?P<name>[^=]+)=(?P<range>.*)')
-    addr_regex = re.compile('^\s*(?P<start>0x[0-9A-Fa-f]+)\s*$')
+
+    sect_info_regex = re.compile("(?P<name>[^=]+)=(?P<range>.*)")
+    addr_regex = re.compile("^\s*(?P<start>0x[0-9A-Fa-f]+)\s*$")
     range_regex = re.compile(
-        '^\s*(?P<start>0x[0-9A-Fa-f]+)\s*(?P<op>[-+])\s*(?P<end>0x[0-9A-Fa-f]+)\s*$')
+        "^\s*(?P<start>0x[0-9A-Fa-f]+)\s*(?P<op>[-+])\s*(?P<end>0x[0-9A-Fa-f]+)\s*$"
+    )
 
     def __init__(self, start_addr=None, end_addr=None, name=None):
         self.start_addr = start_addr
@@ -171,11 +191,7 @@ class Section:
     def InitWithSBTargetAndSBSection(cls, target, section):
         sect_load_addr = section.GetLoadAddress(target)
         if sect_load_addr != lldb.LLDB_INVALID_ADDRESS:
-            obj = cls(
-                sect_load_addr,
-                sect_load_addr +
-                section.size,
-                section.name)
+            obj = cls(sect_load_addr, sect_load_addr + section.size, section.name)
             return obj
         else:
             return None
@@ -186,29 +202,35 @@ class Section:
     def set_from_string(self, s):
         match = self.sect_info_regex.match(s)
         if match:
-            self.name = match.group('name')
-            range_str = match.group('range')
+            self.name = match.group("name")
+            range_str = match.group("range")
             addr_match = self.addr_regex.match(range_str)
             if addr_match:
-                self.start_addr = int(addr_match.group('start'), 16)
+                self.start_addr = int(addr_match.group("start"), 16)
                 self.end_addr = None
                 return True
 
             range_match = self.range_regex.match(range_str)
             if range_match:
-                self.start_addr = int(range_match.group('start'), 16)
-                self.end_addr = int(range_match.group('end'), 16)
-                op = range_match.group('op')
-                if op == '+':
+                self.start_addr = int(range_match.group("start"), 16)
+                self.end_addr = int(range_match.group("end"), 16)
+                op = range_match.group("op")
+                if op == "+":
                     self.end_addr += self.start_addr
                 return True
         print('error: invalid section info string "%s"' % s)
-        print('Valid section info formats are:')
-        print('Format                Example                    Description')
-        print('--------------------- -----------------------------------------------')
-        print('<name>=<base>        __TEXT=0x123000             Section from base address only')
-        print('<name>=<base>-<end>  __TEXT=0x123000-0x124000    Section from base address and end address')
-        print('<name>=<base>+<size> __TEXT=0x123000+0x1000      Section from base address and size')
+        print("Valid section info formats are:")
+        print("Format                Example                    Description")
+        print("--------------------- -----------------------------------------------")
+        print(
+            "<name>=<base>        __TEXT=0x123000             Section from base address only"
+        )
+        print(
+            "<name>=<base>-<end>  __TEXT=0x123000-0x124000    Section from base address and end address"
+        )
+        print(
+            "<name>=<base>+<size> __TEXT=0x123000+0x1000      Section from base address and size"
+        )
         return False
 
     def __str__(self):
@@ -216,7 +238,10 @@ class Section:
             if self.end_addr is not None:
                 if self.start_addr is not None:
                     return "%s=[0x%16.16x - 0x%16.16x)" % (
-                        self.name, self.start_addr, self.end_addr)
+                        self.name,
+                        self.start_addr,
+                        self.end_addr,
+                    )
             else:
                 if self.start_addr is not None:
                     return "%s=0x%16.16x" % (self.name, self.start_addr)
@@ -230,6 +255,7 @@ class Image:
     def __init__(self, path, uuid=None):
         self.path = path
         self.resolved_path = None
+        self.resolve = False
         self.resolved = False
         self.unavailable = False
         self.uuid = uuid
@@ -240,16 +266,16 @@ class Image:
         self.module = None
         self.symfile = None
         self.slide = None
+        self.symbols = dict()
 
     @classmethod
     def InitWithSBTargetAndSBModule(cls, target, module):
-        '''Initialize this Image object with a module from a target.'''
+        """Initialize this Image object with a module from a target."""
         obj = cls(module.file.fullpath, module.uuid)
         obj.resolved_path = module.platform_file.fullpath
         obj.resolved = True
         for section in module.sections:
-            symb_section = Section.InitWithSBTargetAndSBSection(
-                target, section)
+            symb_section = Section.InitWithSBTargetAndSBSection(target, section)
             if symb_section:
                 obj.section_infos.append(symb_section)
         obj.arch = module.triple
@@ -264,19 +290,19 @@ class Image:
     def debug_dump(self):
         print('path = "%s"' % (self.path))
         print('resolved_path = "%s"' % (self.resolved_path))
-        print('resolved = %i' % (self.resolved))
-        print('unavailable = %i' % (self.unavailable))
-        print('uuid = %s' % (self.uuid))
-        print('section_infos = %s' % (self.section_infos))
+        print("resolved = %i" % (self.resolved))
+        print("unavailable = %i" % (self.unavailable))
+        print("uuid = %s" % (self.uuid))
+        print("section_infos = %s" % (self.section_infos))
         print('identifier = "%s"' % (self.identifier))
-        print('version = %s' % (self.version))
-        print('arch = %s' % (self.arch))
-        print('module = %s' % (self.module))
+        print("version = %s" % (self.version))
+        print("arch = %s" % (self.arch))
+        print("module = %s" % (self.module))
         print('symfile = "%s"' % (self.symfile))
-        print('slide = %i (0x%x)' % (self.slide, self.slide))
+        print("slide = %i (0x%x)" % (self.slide, self.slide))
 
     def __str__(self):
-        s = ''
+        s = ""
         if self.uuid:
             s += "%s " % (self.get_uuid())
         if self.arch:
@@ -289,7 +315,7 @@ class Image:
         for section_info in self.section_infos:
             s += ", %s" % (section_info)
         if self.slide is not None:
-            s += ', slide = 0x%16.16x' % self.slide
+            s += ", slide = 0x%16.16x" % self.slide
         return s
 
     def add_section(self, section):
@@ -335,59 +361,97 @@ class Image:
                         num_sections_loaded = 0
                         for section_info in self.section_infos:
                             if section_info.name:
-                                section = self.module.FindSection(
-                                    section_info.name)
+                                section = self.module.FindSection(section_info.name)
                                 if section:
                                     error = target.SetSectionLoadAddress(
-                                        section, section_info.start_addr)
+                                        section, section_info.start_addr
+                                    )
                                     if error.Success():
                                         num_sections_loaded += 1
                                     else:
-                                        return 'error: %s' % error.GetCString()
+                                        return "error: %s" % error.GetCString()
                                 else:
-                                    return 'error: unable to find the section named "%s"' % section_info.name
+                                    return (
+                                        'error: unable to find the section named "%s"'
+                                        % section_info.name
+                                    )
                             else:
                                 return 'error: unable to find "%s" section in "%s"' % (
-                                    range.name, self.get_resolved_path())
+                                    range.name,
+                                    self.get_resolved_path(),
+                                )
                         if num_sections_loaded == 0:
-                            return 'error: no sections were successfully loaded'
+                            return "error: no sections were successfully loaded"
                     else:
-                        err = target.SetModuleLoadAddress(
-                            self.module, self.slide)
+                        err = target.SetModuleLoadAddress(self.module, self.slide)
                         if err.Fail():
                             return err.GetCString()
                     return None
                 else:
-                    return 'error: invalid module'
+                    return "error: invalid module"
             else:
-                return 'error: invalid target'
+                return "error: invalid target"
         else:
-            return 'error: no section infos'
+            return "error: no section infos"
 
-    def add_module(self, target):
-        '''Add the Image described in this object to "target" and load the sections if "load" is True.'''
+    def add_module(self, target, obj_dir=None):
+        """Add the Image described in this object to "target" and load the sections if "load" is True."""
+        if not self.path and self.uuid == uuid.UUID(int=0):
+            return "error: invalid image"
+
         if target:
             # Try and find using UUID only first so that paths need not match
             # up
             uuid_str = self.get_normalized_uuid_string()
             if uuid_str:
                 self.module = target.AddModule(None, None, uuid_str)
-            if not self.module:
+            if not self.module and self.resolve:
                 self.locate_module_and_debug_symbols()
-                if self.unavailable:
-                    return None
-                resolved_path = self.get_resolved_path()
-                self.module = target.AddModule(
-                    resolved_path, None, uuid_str, self.symfile)
-            if not self.module:
+                if not self.unavailable:
+                    resolved_path = self.get_resolved_path()
+                    self.module = target.AddModule(
+                        resolved_path, None, uuid_str, self.symfile
+                    )
+            if not self.module and self.section_infos:
+                name = os.path.basename(self.path)
+                if obj_dir and os.path.isdir(obj_dir):
+                    data = {
+                        "triple": target.triple,
+                        "uuid": uuid_str,
+                        "type": "sharedlibrary",
+                        "sections": list(),
+                        "symbols": list(),
+                    }
+                    for section in self.section_infos:
+                        data["sections"].append(
+                            {
+                                "name": section.name,
+                                "size": section.end_addr - section.start_addr,
+                            }
+                        )
+                    data["symbols"] = list(self.symbols.values())
+                    obj_file = os.path.join(obj_dir, name)
+                    with open(obj_file, "w") as f:
+                        f.write(json.dumps(data, indent=4))
+                    self.module = target.AddModule(obj_file, None, uuid_str)
+                    if self.module:
+                        # If we were able to add the module with inlined
+                        # symbols, we should mark it as available so load_module
+                        # does not exit early.
+                        self.unavailable = False
+            if not self.module and not self.unavailable:
                 return 'error: unable to get module for (%s) "%s"' % (
-                    self.arch, self.get_resolved_path())
+                    self.arch,
+                    self.get_resolved_path(),
+                )
             if self.has_section_load_info():
                 return self.load_module(target)
             else:
-                return None  # No sections, the module was added to the target, so success
+                return (
+                    None  # No sections, the module was added to the target, so success
+                )
         else:
-            return 'error: invalid target'
+            return "error: invalid target"
 
     def locate_module_and_debug_symbols(self):
         # By default, just use the paths that were supplied in:
@@ -410,7 +474,7 @@ class Image:
         return None
 
     def create_target(self, debugger):
-        '''Create a target using the information in this Image object.'''
+        """Create a target using the information in this Image object."""
         if self.unavailable:
             return None
 
@@ -418,25 +482,29 @@ class Image:
             resolved_path = self.get_resolved_path()
             path_spec = lldb.SBFileSpec(resolved_path)
             error = lldb.SBError()
-            target = debugger.CreateTarget(
-                resolved_path, self.arch, None, False, error)
+            target = debugger.CreateTarget(resolved_path, self.arch, None, False, error)
             if target:
                 self.module = target.FindModule(path_spec)
                 if self.has_section_load_info():
                     err = self.load_module(target)
                     if err:
-                        print('ERROR: ', err)
+                        print("ERROR: ", err)
                 return target
             else:
-                print('error: unable to create a valid target for (%s) "%s"' % (self.arch, self.path))
+                print(
+                    'error: unable to create a valid target for (%s) "%s"'
+                    % (self.arch, self.path)
+                )
         else:
-            print('error: unable to locate main executable (%s) "%s"' % (self.arch, self.path))
+            print(
+                'error: unable to locate main executable (%s) "%s"'
+                % (self.arch, self.path)
+            )
         return None
 
 
 class Symbolicator:
-
-    def __init__(self, debugger=None, target=None, images=list()):
+    def __init__(self, debugger=None, target=None, images=None):
         """A class the represents the information needed to symbolicate
         addresses in a program.
 
@@ -445,8 +513,9 @@ class Symbolicator:
         """
         self.debugger = debugger
         self.target = target
-        self.images = images  # a list of images to be used when symbolicating
-        self.addr_mask = 0xffffffffffffffff
+        # a list of images to be used when symbolicating
+        self.images = images if images else list()
+        self.addr_mask = 0xFFFFFFFFFFFFFFFF
 
     @classmethod
     def InitWithSBTarget(cls, target):
@@ -454,9 +523,9 @@ class Symbolicator:
         obj = cls(target=target)
         triple = target.triple
         if triple:
-            arch = triple.split('-')[0]
+            arch = triple.split("-")[0]
             if "arm" in arch:
-                obj.addr_mask = 0xfffffffffffffffe
+                obj.addr_mask = 0xFFFFFFFFFFFFFFFE
 
         for module in target.modules:
             image = Image.InitWithSBTargetAndSBModule(target, module)
@@ -479,7 +548,7 @@ class Symbolicator:
                 s += str(m) + "\n"
         s += "Images:\n"
         for image in self.images:
-            s += '    %s\n' % (image)
+            s += "    %s\n" % (image)
         return s
 
     def find_images_with_identifier(self, identifier):
@@ -488,7 +557,7 @@ class Symbolicator:
             if image.identifier == identifier:
                 images.append(image)
         if len(images) == 0:
-            regex_text = '^.*\.%s$' % (re.escape(identifier))
+            regex_text = "^.*\.%s$" % (re.escape(identifier))
             regex = re.compile(regex_text)
             for image in self.images:
                 if regex.match(image.identifier):
@@ -512,9 +581,9 @@ class Symbolicator:
                     if self.target.GetAddressByteSize() == 4:
                         triple = self.target.triple
                         if triple:
-                            arch = triple.split('-')[0]
+                            arch = triple.split("-")[0]
                             if "arm" in arch:
-                                self.addr_mask = 0xfffffffffffffffe
+                                self.addr_mask = 0xFFFFFFFFFFFFFFFE
                     return self.target
         return None
 
@@ -543,16 +612,20 @@ class Symbolicator:
                     # See if we were able to reconstruct anything?
                     while True:
                         inlined_parent_so_addr = lldb.SBAddress()
-                        inlined_parent_sym_ctx = symbolicated_address.sym_ctx.GetParentOfInlinedScope(
-                            symbolicated_address.so_addr, inlined_parent_so_addr)
+                        inlined_parent_sym_ctx = (
+                            symbolicated_address.sym_ctx.GetParentOfInlinedScope(
+                                symbolicated_address.so_addr, inlined_parent_so_addr
+                            )
+                        )
                         if not inlined_parent_sym_ctx:
                             break
                         if not inlined_parent_so_addr:
                             break
 
                         symbolicated_address = Address(
-                            self.target, inlined_parent_so_addr.GetLoadAddress(
-                                self.target))
+                            self.target,
+                            inlined_parent_so_addr.GetLoadAddress(self.target),
+                        )
                         symbolicated_address.sym_ctx = inlined_parent_sym_ctx
                         symbolicated_address.so_addr = inlined_parent_so_addr
                         symbolicated_address.symbolicate(verbose)
@@ -563,17 +636,13 @@ class Symbolicator:
                     if symbolicated_addresses:
                         return symbolicated_addresses
         else:
-            print('error: no target in Symbolicator')
+            print("error: no target in Symbolicator")
         return None
 
 
 def disassemble_instructions(
-        target,
-        instructions,
-        pc,
-        insts_before_pc,
-        insts_after_pc,
-        non_zeroeth_frame):
+    target, instructions, pc, insts_before_pc, insts_after_pc, non_zeroeth_frame
+):
     lines = list()
     pc_index = -1
     comment_column = 50
@@ -588,7 +657,7 @@ def disassemble_instructions(
         if comment:
             line_len = len(lines[-1])
             if line_len < comment_column:
-                lines[-1] += ' ' * (comment_column - line_len)
+                lines[-1] += " " * (comment_column - line_len)
                 lines[-1] += "; %s" % comment
 
     if pc_index >= 0:
@@ -610,9 +679,9 @@ def disassemble_instructions(
             end_idx = inst_idx
         for i in range(start_idx, end_idx + 1):
             if i == pc_index:
-                print(' -> ', lines[i])
+                print(" -> ", lines[i])
             else:
-                print('    ', lines[i])
+                print("    ", lines[i])
 
 
 def print_module_section_data(section):
@@ -629,8 +698,7 @@ def print_module_section(section, depth):
     if depth > 0:
         num_sub_sections = section.GetNumSubSections()
         for sect_idx in range(num_sub_sections):
-            print_module_section(
-                section.GetSubSectionAtIndex(sect_idx), depth - 1)
+            print_module_section(section.GetSubSectionAtIndex(sect_idx), depth - 1)
 
 
 def print_module_sections(module, depth):
@@ -644,55 +712,61 @@ def print_module_symbols(module):
 
 
 def Symbolicate(debugger, command_args):
-
     usage = "usage: %prog [options] <addr1> [addr2 ...]"
-    description = '''Symbolicate one or more addresses using LLDB's python scripting API..'''
+    description = (
+        """Symbolicate one or more addresses using LLDB's python scripting API.."""
+    )
     parser = optparse.OptionParser(
-        description=description,
-        prog='crashlog.py',
-        usage=usage)
+        description=description, prog="crashlog.py", usage=usage
+    )
     parser.add_option(
-        '-v',
-        '--verbose',
-        action='store_true',
-        dest='verbose',
-        help='display verbose debug info',
-        default=False)
+        "-v",
+        "--verbose",
+        action="store_true",
+        dest="verbose",
+        help="display verbose debug info",
+        default=False,
+    )
     parser.add_option(
-        '-p',
-        '--platform',
-        type='string',
-        metavar='platform',
-        dest='platform',
-        help='Specify the platform to use when creating the debug target. Valid values include "localhost", "darwin-kernel", "ios-simulator", "remote-freebsd", "remote-macosx", "remote-ios", "remote-linux".')
+        "-p",
+        "--platform",
+        type="string",
+        metavar="platform",
+        dest="platform",
+        help='Specify the platform to use when creating the debug target. Valid values include "localhost", "darwin-kernel", "ios-simulator", "remote-freebsd", "remote-macosx", "remote-ios", "remote-linux".',
+    )
     parser.add_option(
-        '-f',
-        '--file',
-        type='string',
-        metavar='file',
-        dest='file',
-        help='Specify a file to use when symbolicating')
+        "-f",
+        "--file",
+        type="string",
+        metavar="file",
+        dest="file",
+        help="Specify a file to use when symbolicating",
+    )
     parser.add_option(
-        '-a',
-        '--arch',
-        type='string',
-        metavar='arch',
-        dest='arch',
-        help='Specify a architecture to use when symbolicating')
+        "-a",
+        "--arch",
+        type="string",
+        metavar="arch",
+        dest="arch",
+        help="Specify a architecture to use when symbolicating",
+    )
     parser.add_option(
-        '-s',
-        '--slide',
-        type='int',
-        metavar='slide',
-        dest='slide',
-        help='Specify the slide to use on the file specified with the --file option',
-        default=None)
+        "-s",
+        "--slide",
+        type="int",
+        metavar="slide",
+        dest="slide",
+        help="Specify the slide to use on the file specified with the --file option",
+        default=None,
+    )
     parser.add_option(
-        '--section',
-        type='string',
-        action='append',
-        dest='section_strings',
-        help='specify <sect-name>=<start-addr> or <sect-name>=<start-addr>-<end-addr>')
+        "--section",
+        type="string",
+        action="append",
+        dest="section_strings",
+        help="specify <sect-name>=<start-addr> or <sect-name>=<start-addr>-<end-addr>",
+    )
     try:
         (options, args) = parser.parse_args(command_args)
     except:
@@ -721,15 +795,15 @@ def Symbolicate(debugger, command_args):
     if target:
         for addr_str in args:
             addr = int(addr_str, 0)
-            symbolicated_addrs = symbolicator.symbolicate(
-                addr, options.verbose)
+            symbolicated_addrs = symbolicator.symbolicate(addr, options.verbose)
             for symbolicated_addr in symbolicated_addrs:
                 print(symbolicated_addr)
             print()
     else:
-        print('error: no target for %s' % (symbolicator))
+        print("error: no target for %s" % (symbolicator))
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     # Create a new debugger instance
     debugger = lldb.SBDebugger.Create()
     Symbolicate(debugger, sys.argv[1:])

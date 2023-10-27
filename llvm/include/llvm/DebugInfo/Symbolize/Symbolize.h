@@ -119,6 +119,13 @@ public:
     BIDFetcher = std::move(Fetcher);
   }
 
+  /// Returns a SymbolizableModule or an error if loading debug info failed.
+  /// Only one attempt is made to load a module, and errors during loading are
+  /// only reported once. Subsequent calls to get module info for a module that
+  /// failed to load will return nullptr.
+  Expected<SymbolizableModule *>
+  getOrCreateModuleInfo(const std::string &ModuleName);
+
 private:
   // Bundles together object file with code/data and object file with
   // corresponding debug info. These objects can be the same.
@@ -140,12 +147,6 @@ private:
   symbolizeFrameCommon(const T &ModuleSpecifier,
                        object::SectionedAddress ModuleOffset);
 
-  /// Returns a SymbolizableModule or an error if loading debug info failed.
-  /// Only one attempt is made to load a module, and errors during loading are
-  /// only reported once. Subsequent calls to get module info for a module that
-  /// failed to load will return nullptr.
-  Expected<SymbolizableModule *>
-  getOrCreateModuleInfo(const std::string &ModuleName);
   Expected<SymbolizableModule *> getOrCreateModuleInfo(const ObjectFile &Obj);
 
   /// Returns a SymbolizableModule or an error if loading debug info failed.

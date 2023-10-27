@@ -34,6 +34,7 @@ add_llvm_target(LanaiCodeGen
   Analysis
   AsmPrinter
   CodeGen
+  CodeGenTypes
   Core
   LanaiAsmParser
   LanaiDesc
@@ -47,7 +48,7 @@ add_llvm_target(LanaiCodeGen
 
   ADD_TO_COMPONENT
   Lanai
-)
+  )
 
 add_subdirectory(AsmParser)
 add_subdirectory(Disassembler)

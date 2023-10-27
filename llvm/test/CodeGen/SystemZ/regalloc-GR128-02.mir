@@ -1,5 +1,5 @@
 # RUN: llc %s -mtriple=s390x-linux-gnu -mcpu=z13 \
-# RUN:   -start-before=simple-register-coalescing -o - 2>&1 > /dev/null
+# RUN:   -start-before=register-coalescer -o - 2>&1 > /dev/null
 
 # Test that the SystemZ shouldCoalesce() implementation does not crash in
 # case of an undef use in another MBB. This was discovered in testing with

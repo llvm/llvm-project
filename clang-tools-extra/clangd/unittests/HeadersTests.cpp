@@ -33,7 +33,6 @@ namespace {
 using ::testing::AllOf;
 using ::testing::Contains;
 using ::testing::ElementsAre;
-using ::testing::Eq;
 using ::testing::IsEmpty;
 using ::testing::Not;
 using ::testing::UnorderedElementsAre;
@@ -147,7 +146,6 @@ MATCHER_P(written, Name, "") { return arg.Written == Name; }
 MATCHER_P(resolved, Name, "") { return arg.Resolved == Name; }
 MATCHER_P(includeLine, N, "") { return arg.HashLine == N; }
 MATCHER_P(directive, D, "") { return arg.Directive == D; }
-MATCHER_P(hasPragmaKeep, H, "") { return arg.BehindPragmaKeep == H; }
 
 MATCHER_P2(Distance, File, D, "") {
   if (arg.getFirst() != File)
@@ -195,6 +193,36 @@ TEST_F(HeadersTest, OnlyCollectInclusionsInMain) {
   EXPECT_THAT(Includes.includeDepth(getID(BarHeader, Includes)),
               UnorderedElementsAre(Distance(getID(BarHeader, Includes), 0u),
                                    Distance(getID(BazHeader, Includes), 1u)));
+}
+
+TEST_F(HeadersTest, CacheBySpellingIsBuiltForMainInclusions) {
+  std::string FooHeader = testPath("foo.h");
+  FS.Files[FooHeader] = R"cpp(
+  void foo();
+)cpp";
+  std::string BarHeader = testPath("bar.h");
+  FS.Files[BarHeader] = R"cpp(
+  void bar();
+)cpp";
+  std::string BazHeader = testPath("baz.h");
+  FS.Files[BazHeader] = R"cpp(
+  void baz();
+)cpp";
+  FS.Files[MainFile] = R"cpp(
+#include "foo.h"
+#include "bar.h"
+#include "baz.h"
+)cpp";
+  auto Includes = collectIncludes();
+  EXPECT_THAT(Includes.MainFileIncludes,
+              UnorderedElementsAre(written("\"foo.h\""), written("\"bar.h\""),
+                                   written("\"baz.h\"")));
+  EXPECT_THAT(Includes.mainFileIncludesWithSpelling("\"foo.h\""),
+              UnorderedElementsAre(&Includes.MainFileIncludes[0]));
+  EXPECT_THAT(Includes.mainFileIncludesWithSpelling("\"bar.h\""),
+              UnorderedElementsAre(&Includes.MainFileIncludes[1]));
+  EXPECT_THAT(Includes.mainFileIncludesWithSpelling("\"baz.h\""),
+              UnorderedElementsAre(&Includes.MainFileIncludes[2]));
 }
 
 TEST_F(HeadersTest, PreambleIncludesPresentOnce) {
@@ -263,16 +291,13 @@ TEST_F(HeadersTest, IncludeDirective) {
                                    directive(tok::pp_include_next)));
 }
 
-TEST_F(HeadersTest, IWYUPragmaKeep) {
-  FS.Files[MainFile] = R"cpp(
-#include "bar.h" // IWYU pragma: keep
-#include "foo.h"
-)cpp";
-
-  EXPECT_THAT(
-      collectIncludes().MainFileIncludes,
-      UnorderedElementsAre(AllOf(written("\"foo.h\""), hasPragmaKeep(false)),
-                           AllOf(written("\"bar.h\""), hasPragmaKeep(true))));
+TEST_F(HeadersTest, SearchPath) {
+  FS.Files["foo/bar.h"] = "x";
+  FS.Files["foo/bar/baz.h"] = "y";
+  CDB.ExtraClangFlags.push_back("-Ifoo/bar");
+  CDB.ExtraClangFlags.push_back("-Ifoo/bar/..");
+  EXPECT_THAT(collectIncludes().SearchPathsCanonical,
+              ElementsAre(Subdir, testPath("foo/bar"), testPath("foo")));
 }
 
 TEST_F(HeadersTest, InsertInclude) {
@@ -383,75 +408,6 @@ TEST_F(HeadersTest, PresumedLocations) {
   CDB.ExtraClangFlags = {"-include", testPath(HeaderFile)};
   EXPECT_THAT(collectIncludes().MainFileIncludes,
               Contains(AllOf(includeLine(2), written("<a.h>"))));
-}
-
-TEST_F(HeadersTest, SelfContainedHeaders) {
-  // Including through non-builtin file has no effects.
-  FS.Files[MainFile] = R"cpp(
-#include "includeguarded.h"
-#include "nonguarded.h"
-#include "pp_depend.h"
-#include "pragmaguarded.h"
-#include "recursive.h"
-)cpp";
-  FS.Files["pragmaguarded.h"] = R"cpp(
-#pragma once
-)cpp";
-  FS.Files["includeguarded.h"] = R"cpp(
-#ifndef INCLUDE_GUARDED_H
-#define INCLUDE_GUARDED_H
-void foo();
-#endif // INCLUDE_GUARDED_H
-)cpp";
-  FS.Files["nonguarded.h"] = R"cpp(
-)cpp";
-  FS.Files["pp_depend.h"] = R"cpp(
-  #ifndef REQUIRED_PP_DIRECTIVE
-  # error You have to have PP directive set to include this one!
-  #endif
-)cpp";
-  FS.Files["recursive.h"] = R"cpp(
-  #ifndef RECURSIVE_H
-  #define RECURSIVE_H
-
-  #include "recursive.h"
-
-  #endif // RECURSIVE_H
-)cpp";
-
-  auto Includes = collectIncludes();
-  EXPECT_TRUE(Includes.isSelfContained(getID("pragmaguarded.h", Includes)));
-  EXPECT_TRUE(Includes.isSelfContained(getID("includeguarded.h", Includes)));
-  EXPECT_TRUE(Includes.isSelfContained(getID("recursive.h", Includes)));
-  EXPECT_FALSE(Includes.isSelfContained(getID("nonguarded.h", Includes)));
-  EXPECT_FALSE(Includes.isSelfContained(getID("pp_depend.h", Includes)));
-}
-
-TEST_F(HeadersTest, HasIWYUPragmas) {
-  FS.Files[MainFile] = R"cpp(
-#include "export.h"
-#include "begin_exports.h"
-#include "none.h"
-)cpp";
-  FS.Files["export.h"] = R"cpp(
-#pragma once
-#include "none.h" // IWYU pragma: export
-)cpp";
-  FS.Files["begin_exports.h"] = R"cpp(
-#pragma once
-// IWYU pragma: begin_exports
-#include "none.h"
-// IWYU pragma: end_exports
-)cpp";
-  FS.Files["none.h"] = R"cpp(
-#pragma once
-// Not a pragma.
-)cpp";
-
-  auto Includes = collectIncludes();
-  EXPECT_TRUE(Includes.hasIWYUExport(getID("export.h", Includes)));
-  EXPECT_TRUE(Includes.hasIWYUExport(getID("begin_exports.h", Includes)));
-  EXPECT_FALSE(Includes.hasIWYUExport(getID("none.h", Includes)));
 }
 
 } // namespace

@@ -12,16 +12,16 @@ auto with_float_2 = [&f(f)] { // ok, refers to outer f
   using T = double&;
 };
 
-// Within the lambda-expression's compound-statement,
-// the identifier in the init-capture hides any declaration
-// of the same name in scopes enclosing the lambda-expression.
+// Within the lambda-expression the identifier in the init-capture
+// hides any declaration of the same name in scopes enclosing
+// the lambda-expression.
 void hiding() {
   char c;
   (void) [c("foo")] {
     static_assert(sizeof(c) == sizeof(const char*), "");
   };
-  (void) [c("bar")] () -> decltype(c) { // outer c, not init-capture
-    return "baz"; // expected-error {{cannot initialize}}
+  (void)[c("bar")]()->decltype(c) { // inner c
+    return "baz";
   };
 }
 
@@ -35,6 +35,7 @@ auto init_kind_2 = [ec = ExplicitCopy()] {}; // expected-error {{no matching con
 template<typename T> void init_kind_template() {
   auto init_kind_1 = [ec(T())] {};
   auto init_kind_2 = [ec = T()] {}; // expected-error {{no matching constructor}}
+                                    // expected-note@-1 {{while substituting into a lambda expression here}}
 }
 template void init_kind_template<int>();
 template void init_kind_template<ExplicitCopy>(); // expected-note {{instantiation of}}
@@ -52,6 +53,7 @@ auto bad_init_6 = [a{overload_fn}] {}; // expected-error {{cannot deduce type fo
 auto bad_init_7 = [a{{1}}] {}; // expected-error {{cannot deduce type for lambda capture 'a' from nested initializer list}}
 
 template<typename...T> void pack_1(T...t) { (void)[a(t...)] {}; } // expected-error {{initializer missing for lambda capture 'a'}}
+                                                                  // expected-note@-1 {{while substituting into a lambda expression here}}
 template void pack_1<>(); // expected-note {{instantiation of}}
 
 // No lifetime-extension of the temporary here.
@@ -74,6 +76,7 @@ auto s = [s(move(S()))] {};
 
 template<typename T> T instantiate_test(T t) {
   [x(&t)]() { *x = 1; } (); // expected-error {{assigning to 'const char *'}}
+                            // expected-note@-1 {{while substituting into a lambda expression here}}
   return t;
 }
 int instantiate_test_1 = instantiate_test(0);

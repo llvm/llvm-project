@@ -30,24 +30,32 @@ Configure the full libc build
 ===============================
 
 Below is the list of commands for a simple recipe to build and install the
-libc components along with other components of an LLVM only toolchain.
+libc components along with other components of an LLVM only toolchain.  In this
+we've set the Ninja generator, enabled a full compiler suite, set the build
+type to "Debug", and enabled the Scudo allocator.  The build also tells clang
+to use the freshly built lld and compiler-rt.
 
 .. code-block:: sh
 
    $> cd llvm-project  # The llvm-project checkout
    $> mkdir build
    $> cd build
+   $> SYSROOT=/path/to/sysroot # Remember to set this!
    $> cmake ../llvm  \
-      -G Ninja  \ # Generator
-      -DLLVM_ENABLE_PROJECTS="clang;libc;lld;compiler-rt"   \ # Enabled projects
-      -DCMAKE_BUILD_TYPE=<Debug|Release>  \ # Select build type
-      -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ \
-      -DLLVM_LIBC_FULL_BUILD=ON      \  # We want the full libc
-      -DLLVM_LIBC_INCLUDE_SCUDO=ON   \  # Include Scudo in the libc
+      -G Ninja  \
+      -DLLVM_ENABLE_PROJECTS="clang;libc;lld;compiler-rt"   \
+      -DCMAKE_BUILD_TYPE=Debug  \
+      -DCMAKE_C_COMPILER=clang \
+      -DCMAKE_CXX_COMPILER=clang++ \
+      -DLLVM_LIBC_FULL_BUILD=ON \
+      -DLLVM_LIBC_INCLUDE_SCUDO=ON \
       -DCOMPILER_RT_BUILD_SCUDO_STANDALONE_WITH_LLVM_LIBC=ON \
       -DCOMPILER_RT_BUILD_GWP_ASAN=OFF                       \
       -DCOMPILER_RT_SCUDO_STANDALONE_BUILD_SHARED=OFF        \
-      -DCMAKE_INSTALL_PREFIX=<SYSROOT>  # Specify a sysroot directory
+      -DCLANG_DEFAULT_LINKER=lld \
+      -DCLANG_DEFAULT_RTLIB=compiler-rt \
+      -DDEFAULT_SYSROOT=$SYSROOT \
+      -DCMAKE_INSTALL_PREFIX=$SYSROOT
 
 We will go over some of the special options passed to the ``cmake`` command
 above.
@@ -62,8 +70,8 @@ above.
   So, when building the full libc, we should specify that we want to include
   Scudo in the libc. Since the libc currently only supports static linking, we
   also specify that we do not want to build the Scudo shared library.
-* **The install prefix** - This is the path to the tool chain install directory.
-  This is the directory where you intend to set up the sysroot.
+* **Default sysroot and install prefix** - This is the path to the tool chain
+  install directory.  This is the directory where you intend to set up the sysroot.
 
 Build and install
 =================
@@ -73,11 +81,11 @@ install the libc, clang (and its support libraries and builtins), lld and
 compiler-rt, with the following command:
 
 .. code-block:: sh
-   
+
    $> ninja install-clang install-builtins install-compiler-rt  \
       install-core-resource-headers install-libc install-lld
 
-Once the above command completes successfully, the ``<SYSROOT>`` directory you
+Once the above command completes successfully, the ``$SYSROOT`` directory you
 have specified with the CMake configure step above will contain a full LLVM-only
 toolchain with which you can build practical/real-world C applications. See
 `<https://github.com/llvm/llvm-project/tree/main/libc/examples>`_ for examples
@@ -87,5 +95,29 @@ Linux Headers
 =============
 
 If you are using the full libc on Linux, then you will also need to install
-Linux headers in your sysroot. It is left to the reader to figure out the best
-way to install Linux headers on the system they want to use the full libc on.
+Linux headers in your sysroot.  The way to do this varies per system.
+
+These instructions should work on a Debian-based x86_64 system:
+
+.. code-block:: sh
+
+   $> apt download linux-libc-dev
+   $> dpkg -x linux-libc-dev*deb .
+   $> mv usr/include/* /path/to/sysroot/include
+   $> rm -rf usr linux-libc-dev*deb
+   $> ln -s x86_64-linux-gnu/asm ~/Programming/sysroot/include/asm
+
+Using your newly built libc
+===========================
+
+You can now use your newly built libc nearly like you would use any compiler
+invocation:
+
+.. code-block:: sh
+
+   $> /path/to/sysroot/bin/clang -static main.c
+
+.. warning::
+   Because the libc does not yet support dynamic linking, the -static parameter
+   must be added to all clang invocations.
+

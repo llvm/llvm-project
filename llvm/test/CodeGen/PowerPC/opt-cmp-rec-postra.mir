@@ -11,7 +11,7 @@ body:             |
     renamable $x3 = OR8 killed renamable $x3, killed renamable $x4
     renamable $cr0 = CMPDI renamable $x3, 0, implicit killed $x3
     ; CHECK-LABEL: name: test1
-    ; CHECK: renamable $x3 = OR8_rec renamable $x3, killed renamable $x4, implicit-def $cr0
+    ; CHECK: renamable $x3 = OR8_rec killed renamable $x3, killed renamable $x4, implicit-def $cr0
     ; CHECK-NOT: CMPDI
     BCC 68, killed renamable $cr0, %bb.2
 

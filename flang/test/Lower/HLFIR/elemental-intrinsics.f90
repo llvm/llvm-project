@@ -2,7 +2,7 @@
 ! The goal here is not to test every intrinsics, it is to test the
 ! lowering framework for elemental intrinsics. This test various
 ! intrinsics that have different number or arguments and argument types.
-! RUN: bbc -emit-fir -hlfir -o - %s | FileCheck %s
+! RUN: bbc -emit-hlfir -o - %s | FileCheck %s
 
 subroutine simple_elemental(x,y)
   real :: x(100), y(100)
@@ -11,7 +11,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPsimple_elemental(
 ! CHECK:  %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_0:[a-z0-9]*]](%[[VAL_3:[a-z0-9]*]])  {{.*}}Ex
 ! CHECK:  %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_1:[a-z0-9]*]](%[[VAL_6:[a-z0-9]*]])  {{.*}}Ey
-! CHECK:  %[[VAL_8:.*]] = hlfir.elemental %[[VAL_6]] : (!fir.shape<1>) -> !hlfir.expr<100xf32> {
+! CHECK:  %[[VAL_8:.*]] = hlfir.elemental %[[VAL_6]] unordered : (!fir.shape<1>) -> !hlfir.expr<100xf32> {
 ! CHECK:  ^bb0(%[[VAL_9:.*]]: index):
 ! CHECK:    %[[VAL_10:.*]] = hlfir.designate %[[VAL_7]]#0 (%[[VAL_9]])  : (!fir.ref<!fir.array<100xf32>>, index) -> !fir.ref<f32>
 ! CHECK:    %[[VAL_11:.*]] = fir.load %[[VAL_10]] : !fir.ref<f32>
@@ -34,7 +34,7 @@ end subroutine
 ! CHECK:  %[[VAL_8:.*]] = fir.shape %[[VAL_7]] : (index) -> !fir.shape<1>
 ! CHECK:  %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_1:[a-z0-9]*]](%[[VAL_8:[a-z0-9]*]])  {{.*}}Ey
 ! CHECK:  %[[VAL_10:.*]] = fir.load %[[VAL_3]]#0 : !fir.ref<f32>
-! CHECK:  %[[VAL_11:.*]] = hlfir.elemental %[[VAL_5]] : (!fir.shape<1>) -> !hlfir.expr<100xf32> {
+! CHECK:  %[[VAL_11:.*]] = hlfir.elemental %[[VAL_5]] unordered : (!fir.shape<1>) -> !hlfir.expr<100xf32> {
 ! CHECK:  ^bb0(%[[VAL_12:.*]]: index):
 ! CHECK:    %[[VAL_13:.*]] = hlfir.designate %[[VAL_6]]#0 (%[[VAL_12]])  : (!fir.ref<!fir.array<100xf32>>, index) -> !fir.ref<f32>
 ! CHECK:    %[[VAL_14:.*]] = fir.load %[[VAL_13]] : !fir.ref<f32>
@@ -53,7 +53,7 @@ end subroutine
 ! CHECK:  %[[VAL_7:.*]] = arith.constant 0 : index
 ! CHECK:  %[[VAL_8:.*]]:3 = fir.box_dims %[[VAL_1]]#0, %[[VAL_7]] : (!fir.box<!fir.array<?xf32>>, index) -> (index, index, index)
 ! CHECK:  %[[VAL_9:.*]] = fir.shape %[[VAL_8]]#1 : (index) -> !fir.shape<1>
-! CHECK:  %[[VAL_10:.*]] = hlfir.elemental %[[VAL_9]] : (!fir.shape<1>) -> !hlfir.expr<?xf32> {
+! CHECK:  %[[VAL_10:.*]] = hlfir.elemental %[[VAL_9]] unordered : (!fir.shape<1>) -> !hlfir.expr<?xf32> {
 ! CHECK:  ^bb0(%[[VAL_11:.*]]: index):
 ! CHECK:    %[[VAL_12:.*]] = hlfir.designate %[[VAL_1]]#0 (%[[VAL_11]])  : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
 ! CHECK:    %[[VAL_13:.*]] = fir.load %[[VAL_12]] : !fir.ref<f32>
@@ -70,12 +70,12 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPelemental_with_char_args(
 ! CHECK:  %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_3:[a-z0-9]*]](%[[VAL_5:[a-z0-9]*]]) typeparams %[[VAL_2:[a-z0-9]*]]#1  {{.*}}Ex
 ! CHECK:  %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_1:[a-z0-9]*]]  {{.*}}Ey
-! CHECK:  %[[VAL_13:.*]] = hlfir.elemental %[[VAL_5]] : (!fir.shape<1>) -> !hlfir.expr<100xi32> {
+! CHECK:  %[[VAL_13:.*]] = hlfir.elemental %[[VAL_5]] unordered : (!fir.shape<1>) -> !hlfir.expr<100xi32> {
 ! CHECK:  ^bb0(%[[VAL_14:.*]]: index):
 ! CHECK:    %[[VAL_15:.*]] = hlfir.designate %[[VAL_6]]#0 (%[[VAL_14]])  typeparams %[[VAL_2]]#1 : (!fir.box<!fir.array<100x!fir.char<1,?>>>, index, index) -> !fir.boxchar<1>
+! CHECK:    %[[VAL_18:.*]]:2 = fir.unboxchar %[[VAL_15]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
 ! CHECK:    %[[VAL_16:.*]] = fir.box_elesize %[[VAL_7]]#1 : (!fir.box<!fir.array<?x!fir.char<1,?>>>) -> index
 ! CHECK:    %[[VAL_17:.*]] = hlfir.designate %[[VAL_7]]#0 (%[[VAL_14]])  typeparams %[[VAL_16]] : (!fir.box<!fir.array<?x!fir.char<1,?>>>, index, index) -> !fir.boxchar<1>
-! CHECK:    %[[VAL_18:.*]]:2 = fir.unboxchar %[[VAL_15]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
 ! CHECK:    %[[VAL_19:.*]]:2 = fir.unboxchar %[[VAL_17]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
 ! CHECK:    %[[VAL_20:.*]] = arith.constant false
 ! CHECK:    %[[VAL_21:.*]] = fir.convert %[[VAL_18]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
@@ -101,7 +101,7 @@ subroutine test_adjustl(x)
 end subroutine
 ! CHECK-LABEL: func.func @_QPtest_adjustl(
 ! CHECK:  %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_3:.*]](%[[VAL_5:[a-z0-9]*]]) typeparams %[[VAL_2:[a-z0-9]*]]#1  {{.*}}Ex
-! CHECK:  %[[VAL_7:.*]] = hlfir.elemental %[[VAL_5]] typeparams %[[VAL_2]]#1 : (!fir.shape<1>, index) -> !hlfir.expr<100x!fir.char<1,?>> {
+! CHECK:  %[[VAL_7:.*]] = hlfir.elemental %[[VAL_5]] typeparams %[[VAL_2]]#1 unordered : (!fir.shape<1>, index) -> !hlfir.expr<100x!fir.char<1,?>> {
 ! CHECK:  ^bb0(%[[VAL_8:.*]]: index):
 ! CHECK:    %[[VAL_9:.*]] = hlfir.designate %[[VAL_6]]#0 (%[[VAL_8]])  typeparams %[[VAL_2]]#1 : (!fir.box<!fir.array<100x!fir.char<1,?>>>, index, index) -> !fir.boxchar<1>
 ! CHECK:    fir.call @_FortranAAdjustl
@@ -117,7 +117,7 @@ subroutine test_adjustr(x)
 end subroutine
 ! CHECK-LABEL: func.func @_QPtest_adjustr(
 ! CHECK:  %[[VAL_6:.*]]:2 = hlfir.declare %[[VAL_3:.*]](%[[VAL_5:[a-z0-9]*]]) typeparams %[[VAL_2:[a-z0-9]*]]#1  {{.*}}Ex
-! CHECK:  %[[VAL_7:.*]] = hlfir.elemental %[[VAL_5]] typeparams %[[VAL_2]]#1 : (!fir.shape<1>, index) -> !hlfir.expr<100x!fir.char<1,?>> {
+! CHECK:  %[[VAL_7:.*]] = hlfir.elemental %[[VAL_5]] typeparams %[[VAL_2]]#1 unordered : (!fir.shape<1>, index) -> !hlfir.expr<100x!fir.char<1,?>> {
 ! CHECK:  ^bb0(%[[VAL_8:.*]]: index):
 ! CHECK:    %[[VAL_9:.*]] = hlfir.designate %[[VAL_6]]#0 (%[[VAL_8]])  typeparams %[[VAL_2]]#1 : (!fir.box<!fir.array<100x!fir.char<1,?>>>, index, index) -> !fir.boxchar<1>
 ! CHECK:    fir.call @_FortranAAdjustr
@@ -136,13 +136,13 @@ end subroutine
 ! CHECK:  %[[VAL_5:.*]]:2 = hlfir.declare %[[VAL_2:[a-z0-9]*]](%[[VAL_4:[a-z0-9]*]])  {{.*}}Emask
 ! CHECK:  %[[VAL_10:.*]]:2 = hlfir.declare %[[VAL_7:[a-z0-9]*]](%[[VAL_9:[a-z0-9]*]]) typeparams %[[VAL_6:[a-z0-9]*]]#1  {{.*}}Ex
 ! CHECK:  %[[VAL_15:.*]]:2 = hlfir.declare %[[VAL_12:[a-z0-9]*]](%[[VAL_14:[a-z0-9]*]]) typeparams %[[VAL_11:[a-z0-9]*]]#1  {{.*}}Ey
-! CHECK:  %[[VAL_16:.*]] = hlfir.elemental %[[VAL_9]] typeparams %[[VAL_6]]#1 : (!fir.shape<1>, index) -> !hlfir.expr<100x!fir.char<1,?>> {
+! CHECK:  %[[VAL_16:.*]] = hlfir.elemental %[[VAL_9]] typeparams %[[VAL_6]]#1 unordered : (!fir.shape<1>, index) -> !hlfir.expr<100x!fir.char<1,?>> {
 ! CHECK:  ^bb0(%[[VAL_17:.*]]: index):
 ! CHECK:    %[[VAL_18:.*]] = hlfir.designate %[[VAL_10]]#0 (%[[VAL_17]])  typeparams %[[VAL_6]]#1 : (!fir.box<!fir.array<100x!fir.char<1,?>>>, index, index) -> !fir.boxchar<1>
-! CHECK:    %[[VAL_19:.*]] = hlfir.designate %[[VAL_15]]#0 (%[[VAL_17]])  typeparams %[[VAL_11]]#1 : (!fir.box<!fir.array<100x!fir.char<1,?>>>, index, index) -> !fir.boxchar<1>
-! CHECK:    %[[VAL_20:.*]] = hlfir.designate %[[VAL_5]]#0 (%[[VAL_17]])  : (!fir.ref<!fir.array<100x!fir.logical<4>>>, index) -> !fir.ref<!fir.logical<4>>
 ! CHECK:    %[[VAL_21:.*]]:2 = fir.unboxchar %[[VAL_18]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
+! CHECK:    %[[VAL_19:.*]] = hlfir.designate %[[VAL_15]]#0 (%[[VAL_17]])  typeparams %[[VAL_11]]#1 : (!fir.box<!fir.array<100x!fir.char<1,?>>>, index, index) -> !fir.boxchar<1>
 ! CHECK:    %[[VAL_22:.*]]:2 = fir.unboxchar %[[VAL_19]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
+! CHECK:    %[[VAL_20:.*]] = hlfir.designate %[[VAL_5]]#0 (%[[VAL_17]])  : (!fir.ref<!fir.array<100x!fir.logical<4>>>, index) -> !fir.ref<!fir.logical<4>>
 ! CHECK:    %[[VAL_23:.*]] = fir.load %[[VAL_20]] : !fir.ref<!fir.logical<4>>
 ! CHECK:    %[[VAL_24:.*]] = fir.convert %[[VAL_23]] : (!fir.logical<4>) -> i1
 ! CHECK:    %[[VAL_25:.*]] = arith.select %[[VAL_24]], %[[VAL_21]]#0, %[[VAL_22]]#0 : !fir.ref<!fir.char<1,?>>

@@ -15,7 +15,7 @@
 #define RISCV_INEXACT    0x1
 
 CRT_FE_ROUND_MODE __fe_getround(void) {
-#if defined(__riscv_f)
+#if defined(__riscv_f) || defined(__riscv_zfinx)
   int frm;
   __asm__ __volatile__("frrm %0" : "=r" (frm));
   switch (frm) {
@@ -35,7 +35,7 @@ CRT_FE_ROUND_MODE __fe_getround(void) {
 }
 
 int __fe_raise_inexact(void) {
-#if defined(__riscv_f)
+#if defined(__riscv_f) || defined(__riscv_zfinx)
   __asm__ __volatile__("csrsi fflags, %0" :: "i" (RISCV_INEXACT));
 #endif
   return 0;

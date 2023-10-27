@@ -9,12 +9,12 @@
 #ifndef LLVM_LIBC_SRC_THREADS_THRD_EQUAL_H
 #define LLVM_LIBC_SRC_THREADS_THRD_EQUAL_H
 
-#include "include/threads.h"
+#include <threads.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 int thrd_equal(thrd_t lhs, thrd_t rhs);
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_THREADS_THRD_EQUAL_H

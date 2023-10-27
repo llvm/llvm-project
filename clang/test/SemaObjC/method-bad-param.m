@@ -29,13 +29,11 @@ void func_with_bad_call(bar* b, foo* f) {
 void somefunc(foo x) {} // expected-error {{interface type 'foo' cannot be passed by value; did you forget * in 'foo'}}
 foo somefunc2(void) {} // expected-error {{interface type 'foo' cannot be returned by value; did you forget * in 'foo'}}
 
-// rdar://6780761
 void f0(foo *a0) {
   extern void g0(int x, ...);
   g0(1, *(foo*)a0);  // expected-error {{cannot pass object with interface type 'foo' by value through variadic function}}
 }
 
-// rdar://8421082
 enum bogus; // expected-note {{forward declaration of 'enum bogus'}}
 
 @interface fee  {

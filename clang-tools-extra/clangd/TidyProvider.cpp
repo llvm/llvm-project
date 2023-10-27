@@ -8,6 +8,7 @@
 
 #include "TidyProvider.h"
 #include "../clang-tidy/ClangTidyModuleRegistry.h"
+#include "../clang-tidy/ClangTidyOptions.h"
 #include "Config.h"
 #include "support/FileCache.h"
 #include "support/Logger.h"
@@ -195,32 +196,35 @@ TidyProvider addTidyChecks(llvm::StringRef Checks,
 
 TidyProvider disableUnusableChecks(llvm::ArrayRef<std::string> ExtraBadChecks) {
   constexpr llvm::StringLiteral Seperator(",");
-  static const std::string BadChecks =
-      llvm::join_items(Seperator,
-                       // We want this list to start with a seperator to
-                       // simplify appending in the lambda. So including an
-                       // empty string here will force that.
-                       "",
-                       // ----- False Positives -----
+  static const std::string BadChecks = llvm::join_items(
+      Seperator,
+      // We want this list to start with a seperator to
+      // simplify appending in the lambda. So including an
+      // empty string here will force that.
+      "",
+      // include-cleaner is directly integrated in IncludeCleaner.cpp
+      "-misc-include-cleaner",
 
-                       // Check relies on seeing ifndef/define/endif directives,
-                       // clangd doesn't replay those when using a preamble.
-                       "-llvm-header-guard", "-modernize-macro-to-enum",
+      // ----- False Positives -----
 
-                       // ----- Crashing Checks -----
+      // Check relies on seeing ifndef/define/endif directives,
+      // clangd doesn't replay those when using a preamble.
+      "-llvm-header-guard", "-modernize-macro-to-enum",
 
-                       // Check can choke on invalid (intermediate) c++
-                       // code, which is often the case when clangd
-                       // tries to build an AST.
-                       "-bugprone-use-after-move",
-                       // Alias for bugprone-use-after-move.
-                       "-hicpp-invalid-access-moved",
+      // ----- Crashing Checks -----
 
-                       // ----- Performance problems -----
+      // Check can choke on invalid (intermediate) c++
+      // code, which is often the case when clangd
+      // tries to build an AST.
+      "-bugprone-use-after-move",
+      // Alias for bugprone-use-after-move.
+      "-hicpp-invalid-access-moved",
 
-                       // This check runs expensive analysis for each variable.
-                       // It has been observed to increase reparse time by 10x.
-                       "-misc-const-correctness");
+      // ----- Performance problems -----
+
+      // This check runs expensive analysis for each variable.
+      // It has been observed to increase reparse time by 10x.
+      "-misc-const-correctness");
 
   size_t Size = BadChecks.size();
   for (const std::string &Str : ExtraBadChecks) {
@@ -283,8 +287,15 @@ TidyProvider combine(std::vector<TidyProvider> Providers) {
 
 tidy::ClangTidyOptions getTidyOptionsForFile(TidyProviderRef Provider,
                                              llvm::StringRef Filename) {
-  tidy::ClangTidyOptions Opts = tidy::ClangTidyOptions::getDefaults();
-  Opts.Checks->clear();
+  // getDefaults instantiates all check factories, which are registered at link
+  // time. So cache the results once.
+  static const auto *DefaultOpts = [] {
+    auto *Opts = new tidy::ClangTidyOptions;
+    *Opts = tidy::ClangTidyOptions::getDefaults();
+    Opts->Checks->clear();
+    return Opts;
+  }();
+  auto Opts = *DefaultOpts;
   if (Provider)
     Provider(Opts, Filename);
   return Opts;

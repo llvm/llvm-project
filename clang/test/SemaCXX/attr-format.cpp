@@ -72,11 +72,19 @@ void do_format() {
   int x = 123;
   int &y = x;
   const char *s = "world";
+  bool b = false;
   format("bare string");
   format("%s", 123); // expected-warning{{format specifies type 'char *' but the argument has type 'int'}}
   format("%s %s %u %d %i %p\n", "hello", s, 10u, x, y, &do_format);
   format("%s %s %u %d %i %p\n", "hello", s, 10u, x, y, do_format);
   format("bad format %s"); // expected-warning{{more '%' conversions than data arguments}}
+
+  format("%c %c %hhd %hd %d\n", (char)'a', 'a', 'a', (short)123, (int)123);
+  format("%f %f %f\n", (__fp16)123.f, 123.f, 123.);
+  format("%Lf", (__fp16)123.f); // expected-warning{{format specifies type 'long double' but the argument has type '__fp16'}}
+  format("%Lf", 123.f); // expected-warning{{format specifies type 'long double' but the argument has type 'float'}}
+  format("%hhi %hhu %hi %hu %i %u", b, b, b, b, b, b);
+  format("%li", b); // expected-warning{{format specifies type 'long' but the argument has type 'bool'}}
 
   struct foo f;
   format_invalid_nonpod("hello %i", f); // expected-warning{{format specifies type 'int' but the argument has type 'struct foo'}}

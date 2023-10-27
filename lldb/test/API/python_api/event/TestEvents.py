@@ -9,7 +9,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
-@skipIfLinux   # llvm.org/pr25924, sometimes generating SIGSEGV
+@skipIfLinux  # llvm.org/pr25924, sometimes generating SIGSEGV
 class EventAPITestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
@@ -18,12 +18,13 @@ class EventAPITestCase(TestBase):
         TestBase.setUp(self)
         # Find the line number to of function 'c'.
         self.line = line_number(
-            'main.c', '// Find the line number of function "c" here.')
+            "main.c", '// Find the line number of function "c" here.'
+        )
 
     @expectedFailureAll(
-        oslist=["linux"],
-        bugnumber="llvm.org/pr23730 Flaky, fails ~1/10 cases")
-    @skipIfWindows # This is flakey on Windows AND when it fails, it hangs: llvm.org/pr38373
+        oslist=["linux"], bugnumber="llvm.org/pr23730 Flaky, fails ~1/10 cases"
+    )
+    @skipIfWindows  # This is flakey on Windows AND when it fails, it hangs: llvm.org/pr38373
     @skipIfNetBSD
     def test_listen_for_and_print_event(self):
         """Exercise SBEvent API."""
@@ -37,27 +38,27 @@ class EventAPITestCase(TestBase):
         self.assertTrue(target, VALID_TARGET)
 
         # Now create a breakpoint on main.c by name 'c'.
-        breakpoint = target.BreakpointCreateByName('c', 'a.out')
+        breakpoint = target.BreakpointCreateByName("c", "a.out")
 
         listener = lldb.SBListener("my listener")
 
         # Now launch the process, and do not stop at the entry point.
         error = lldb.SBError()
         flags = target.GetLaunchInfo().GetLaunchFlags()
-        process = target.Launch(listener,
-                                None,      # argv
-                                None,      # envp
-                                None,      # stdin_path
-                                None,      # stdout_path
-                                None,      # stderr_path
-                                None,      # working directory
-                                flags,     # launch flags
-                                False,     # Stop at entry
-                                error)     # error
+        process = target.Launch(
+            listener,
+            None,  # argv
+            None,  # envp
+            None,  # stdin_path
+            None,  # stdout_path
+            None,  # stderr_path
+            None,  # working directory
+            flags,  # launch flags
+            False,  # Stop at entry
+            error,
+        )  # error
 
-        self.assertEqual(
-            process.GetState(), lldb.eStateStopped,
-            PROCESS_STOPPED)
+        self.assertEqual(process.GetState(), lldb.eStateStopped, PROCESS_STOPPED)
 
         # Create an empty event object.
         event = lldb.SBEvent()
@@ -70,7 +71,6 @@ class EventAPITestCase(TestBase):
         import threading
 
         class MyListeningThread(threading.Thread):
-
             def run(self):
                 count = 0
                 # Let's only try at most 4 times to retrieve any kind of event.
@@ -85,8 +85,8 @@ class EventAPITestCase(TestBase):
                             print("Event data flavor:", event.GetDataFlavor())
                             print(
                                 "Process state:",
-                                lldbutil.state_type_to_str(
-                                    process.GetState()))
+                                lldbutil.state_type_to_str(process.GetState()),
+                            )
                             print()
                     else:
                         if traceOn:
@@ -113,7 +113,7 @@ class EventAPITestCase(TestBase):
         # Shouldn't we be testing against some kind of expectation here?
 
     @expectedFlakeyLinux("llvm.org/pr23730")  # Flaky, fails ~1/100 cases
-    @skipIfWindows # This is flakey on Windows AND when it fails, it hangs: llvm.org/pr38373
+    @skipIfWindows  # This is flakey on Windows AND when it fails, it hangs: llvm.org/pr38373
     @skipIfNetBSD
     def test_wait_for_event(self):
         """Exercise SBListener.WaitForEvent() API."""
@@ -127,11 +127,11 @@ class EventAPITestCase(TestBase):
         self.assertTrue(target, VALID_TARGET)
 
         # Now create a breakpoint on main.c by name 'c'.
-        breakpoint = target.BreakpointCreateByName('c', 'a.out')
+        breakpoint = target.BreakpointCreateByName("c", "a.out")
         self.trace("breakpoint:", breakpoint)
-        self.assertTrue(breakpoint and
-                        breakpoint.GetNumLocations() == 1,
-                        VALID_BREAKPOINT)
+        self.assertTrue(
+            breakpoint and breakpoint.GetNumLocations() == 1, VALID_BREAKPOINT
+        )
 
         # Get the debugger listener.
         listener = self.dbg.GetListener()
@@ -139,16 +139,18 @@ class EventAPITestCase(TestBase):
         # Now launch the process, and do not stop at entry point.
         error = lldb.SBError()
         flags = target.GetLaunchInfo().GetLaunchFlags()
-        process = target.Launch(listener,
-                                None,      # argv
-                                None,      # envp
-                                None,      # stdin_path
-                                None,      # stdout_path
-                                None,      # stderr_path
-                                None,      # working directory
-                                flags,     # launch flags
-                                False,     # Stop at entry
-                                error)     # error
+        process = target.Launch(
+            listener,
+            None,  # argv
+            None,  # envp
+            None,  # stdin_path
+            None,  # stdout_path
+            None,  # stderr_path
+            None,  # working directory
+            flags,  # launch flags
+            False,  # Stop at entry
+            error,
+        )  # error
         self.assertTrue(error.Success() and process, PROCESS_IS_VALID)
 
         # Create an empty event object.
@@ -159,7 +161,6 @@ class EventAPITestCase(TestBase):
         import threading
 
         class MyListeningThread(threading.Thread):
-
             def run(self):
                 count = 0
                 # Let's only try at most 3 times to retrieve any kind of event.
@@ -167,7 +168,9 @@ class EventAPITestCase(TestBase):
                     if listener.WaitForEvent(5, event):
                         self.context.trace("Got a valid event:", event)
                         self.context.trace("Event data flavor:", event.GetDataFlavor())
-                        self.context.trace("Event type:", lldbutil.state_type_to_str(event.GetType()))
+                        self.context.trace(
+                            "Event type:", lldbutil.state_type_to_str(event.GetType())
+                        )
                         listener.Clear()
                         return
                     count = count + 1
@@ -187,13 +190,12 @@ class EventAPITestCase(TestBase):
         # Wait until the 'MyListeningThread' terminates.
         my_thread.join()
 
-        self.assertTrue(event,
-                        "My listening thread successfully received an event")
+        self.assertTrue(event, "My listening thread successfully received an event")
 
     @expectedFailureAll(
-        oslist=["linux"],
-        bugnumber="llvm.org/pr23617 Flaky, fails ~1/10 cases")
-    @skipIfWindows # This is flakey on Windows AND when it fails, it hangs: llvm.org/pr38373
+        oslist=["linux"], bugnumber="llvm.org/pr23617 Flaky, fails ~1/10 cases"
+    )
+    @skipIfWindows  # This is flakey on Windows AND when it fails, it hangs: llvm.org/pr38373
     @expectedFailureNetBSD
     def test_add_listener_to_broadcaster(self):
         """Exercise some SBBroadcaster APIs."""
@@ -207,27 +209,29 @@ class EventAPITestCase(TestBase):
         self.assertTrue(target, VALID_TARGET)
 
         # Now create a breakpoint on main.c by name 'c'.
-        breakpoint = target.BreakpointCreateByName('c', 'a.out')
+        breakpoint = target.BreakpointCreateByName("c", "a.out")
         self.trace("breakpoint:", breakpoint)
-        self.assertTrue(breakpoint and
-                        breakpoint.GetNumLocations() == 1,
-                        VALID_BREAKPOINT)
+        self.assertTrue(
+            breakpoint and breakpoint.GetNumLocations() == 1, VALID_BREAKPOINT
+        )
 
         listener = lldb.SBListener("my listener")
 
         # Now launch the process, and do not stop at the entry point.
         error = lldb.SBError()
         flags = target.GetLaunchInfo().GetLaunchFlags()
-        process = target.Launch(listener,
-                                None,      # argv
-                                None,      # envp
-                                None,      # stdin_path
-                                None,      # stdout_path
-                                None,      # stderr_path
-                                None,      # working directory
-                                flags,     # launch flags
-                                False,     # Stop at entry
-                                error)     # error
+        process = target.Launch(
+            listener,
+            None,  # argv
+            None,  # envp
+            None,  # stdin_path
+            None,  # stdout_path
+            None,  # stderr_path
+            None,  # working directory
+            flags,  # launch flags
+            False,  # Stop at entry
+            error,
+        )  # error
 
         # Create an empty event object.
         event = lldb.SBEvent()
@@ -248,7 +252,6 @@ class EventAPITestCase(TestBase):
         import threading
 
         class MyListeningThread(threading.Thread):
-
             def run(self):
                 self.context.trace("Running MyListeningThread:", self)
 
@@ -264,22 +267,23 @@ class EventAPITestCase(TestBase):
                         match = pattern.search(desc)
                         if not match:
                             break
-                        if match.group(1) == 'connected':
+                        if match.group(1) == "connected":
                             # When debugging remote targets with lldb-server, we
                             # first get the 'connected' event.
                             self.context.assertTrue(self.context.state is None)
-                            self.context.state = 'connected'
+                            self.context.state = "connected"
                             continue
-                        elif match.group(1) == 'running':
+                        elif match.group(1) == "running":
                             self.context.assertTrue(
-                                self.context.state is None or self.context.state == 'connected')
-                            self.context.state = 'running'
+                                self.context.state is None
+                                or self.context.state == "connected"
+                            )
+                            self.context.state = "running"
                             continue
-                        elif match.group(1) == 'stopped':
-                            self.context.assertTrue(
-                                self.context.state == 'running')
+                        elif match.group(1) == "stopped":
+                            self.context.assertTrue(self.context.state == "running")
                             # Whoopee, both events have been received!
-                            self.context.state = 'stopped'
+                            self.context.state = "stopped"
                             break
                         else:
                             break
@@ -306,5 +310,144 @@ class EventAPITestCase(TestBase):
         my_thread.join()
 
         # The final judgement. :-)
-        self.assertEqual(self.state, 'stopped',
-                        "Both expected state changed events received")
+        self.assertEqual(
+            self.state, "stopped", "Both expected state changed events received"
+        )
+
+    def wait_for_next_event(self, expected_state, test_shadow=False):
+        """Wait for an event from self.primary & self.shadow listener.
+        If test_shadow is true, we also check that the shadow listener only
+        receives events AFTER the primary listener does."""
+        # Waiting on the shadow listener shouldn't have events yet because
+        # we haven't fetched them for the primary listener yet:
+        event = lldb.SBEvent()
+
+        if test_shadow:
+            success = self.shadow_listener.WaitForEvent(1, event)
+            self.assertFalse(success, "Shadow listener doesn't pull events")
+
+        # But there should be an event for the primary listener:
+        success = self.primary_listener.WaitForEvent(5, event)
+        self.assertTrue(success, "Primary listener got the event")
+
+        state = lldb.SBProcess.GetStateFromEvent(event)
+        restart = False
+        if state == lldb.eStateStopped:
+            restart = lldb.SBProcess.GetRestartedFromEvent(event)
+
+        if expected_state != None:
+            self.assertEqual(
+                state, expected_state, "Primary thread got the correct event"
+            )
+
+        # And after pulling that one there should be an equivalent event for the shadow
+        # listener:
+        success = self.shadow_listener.WaitForEvent(5, event)
+        self.assertTrue(success, "Shadow listener got event too")
+        self.assertEqual(
+            state, lldb.SBProcess.GetStateFromEvent(event), "It was the same event"
+        )
+        self.assertEqual(
+            restart,
+            lldb.SBProcess.GetRestartedFromEvent(event),
+            "It was the same restarted",
+        )
+
+        return state, restart
+
+    @expectedFlakeyLinux("llvm.org/pr23730")  # Flaky, fails ~1/100 cases
+    @skipIfWindows  # This is flakey on Windows AND when it fails, it hangs: llvm.org/pr38373
+    @skipIfNetBSD
+    def test_shadow_listener(self):
+        self.build()
+        exe = self.getBuildArtifact("a.out")
+
+        # Create a target by the debugger.
+        target = self.dbg.CreateTarget(exe)
+        self.assertTrue(target, VALID_TARGET)
+
+        # Now create a breakpoint on main.c by name 'c'.
+        bkpt1 = target.BreakpointCreateByName("c", "a.out")
+        self.trace("breakpoint:", bkpt1)
+        self.assertTrue(bkpt1.GetNumLocations() == 1, VALID_BREAKPOINT)
+
+        self.primary_listener = lldb.SBListener("my listener")
+        self.shadow_listener = lldb.SBListener("shadow listener")
+
+        self.cur_thread = None
+
+        error = lldb.SBError()
+        launch_info = target.GetLaunchInfo()
+        launch_info.SetListener(self.primary_listener)
+        launch_info.SetShadowListener(self.shadow_listener)
+
+        self.runCmd(
+            "settings set target.process.extra-startup-command QSetLogging:bitmask=LOG_PROCESS|LOG_EXCEPTIONS|LOG_RNB_PACKETS|LOG_STEP;"
+        )
+        self.dbg.SetAsync(True)
+
+        self.process = target.Launch(launch_info, error)
+        self.assertSuccess(error, "Process launched successfully")
+
+        # Keep fetching events from the primary to trigger the do on removal and
+        # then from the shadow listener, and make sure they match:
+
+        # Events in the launch sequence might be platform dependent, so don't
+        # expect any particular event till we get the stopped:
+        state = lldb.eStateInvalid
+        while state != lldb.eStateStopped:
+            state, restart = self.wait_for_next_event(None, False)
+
+        # Okay, we're now at a good stop, so try a next:
+        self.cur_thread = self.process.threads[0]
+
+        # Make sure we're at our expected breakpoint:
+        self.assertTrue(self.cur_thread.IsValid(), "Got a zeroth thread")
+        self.assertEqual(self.cur_thread.stop_reason, lldb.eStopReasonBreakpoint)
+        self.assertEqual(
+            self.cur_thread.GetStopReasonDataCount(), 2, "Only one breakpoint/loc here"
+        )
+        self.assertEqual(
+            bkpt1.GetID(),
+            self.cur_thread.GetStopReasonDataAtIndex(0),
+            "Hit the right breakpoint",
+        )
+        # Disable the first breakpoint so it doesn't get in the way...
+        bkpt1.SetEnabled(False)
+
+        self.cur_thread.StepOver()
+        # We'll run the test for "shadow listener blocked by primary listener
+        # for the first couple rounds, then we'll skip the 1 second pause...
+        self.wait_for_next_event(lldb.eStateRunning, True)
+        self.wait_for_next_event(lldb.eStateStopped, True)
+
+        # Next try an auto-continue breakpoint and make sure the shadow listener got
+        # the resumed info as well.  Note that I'm not explicitly counting
+        # running events here.  At the point when I wrote this lldb sometimes
+        # emits two running events in a row.  Apparently the code to coalesce running
+        # events isn't working.  But that's not what this test is testing, we're really
+        # testing that the primary & shadow listeners hear the same thing and in the
+        # right order.
+
+        main_spec = lldb.SBFileSpec("main.c")
+        bkpt2 = target.BreakpointCreateBySourceRegex("b.2. returns %d", main_spec)
+        self.assertTrue(bkpt2.GetNumLocations() > 0, "BP2 worked")
+        bkpt2.SetAutoContinue(True)
+
+        bkpt3 = target.BreakpointCreateBySourceRegex("a.3. returns %d", main_spec)
+        self.assertTrue(bkpt3.GetNumLocations() > 0, "BP3 worked")
+
+        state = lldb.eStateStopped
+        restarted = False
+
+        # Put in a counter to make sure we don't spin forever if there is some
+        # error in the logic.
+        counter = 0
+        while state != lldb.eStateExited:
+            counter += 1
+            self.assertLess(
+                counter, 50, "Took more than 50 events to hit two breakpoints."
+            )
+            if state == lldb.eStateStopped and not restarted:
+                self.process.Continue()
+            state, restarted = self.wait_for_next_event(None, False)

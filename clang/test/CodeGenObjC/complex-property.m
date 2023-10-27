@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin10  -emit-llvm -o - %s | FileCheck -check-prefix CHECK-LP64 %s
-// rdar: // 7351147
 
 @interface A
 @property __complex int COMPLEX_PROP;
@@ -16,7 +15,6 @@ void f0(A *a) {
 // CHECK-LP64: private unnamed_addr constant [13 x i8] c"COMPLEX_PROP
 // CHECK-LP64: private unnamed_addr constant [17 x i8] c"setCOMPLEX_PROP
 
-// rdar: // 7351147
 @interface B
 @property (assign) _Complex float f_complex_ivar;
 @end

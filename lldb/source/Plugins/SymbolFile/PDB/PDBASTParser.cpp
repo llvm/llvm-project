@@ -190,8 +190,7 @@ static ConstString GetPDBBuiltinTypeName(const PDBSymbolTypeBuiltin &pdb_type,
   return compiler_type.GetTypeName();
 }
 
-static bool GetDeclarationForSymbol(const PDBSymbol &symbol,
-                                    Declaration &decl) {
+static bool AddSourceInfoToDecl(const PDBSymbol &symbol, Declaration &decl) {
   auto &raw_sym = symbol.getRawSymbol();
   auto first_line_up = raw_sym.getSrcLineOnTypeDefn();
 
@@ -408,8 +407,8 @@ lldb::TypeSP PDBASTParser::CreateLLDBTypeFromPDBType(const PDBSymbol &type) {
     // symbols in PDB for types with const or volatile modifiers, but we need
     // to create only one declaration for them all.
     Type::ResolveState type_resolve_state;
-    CompilerType clang_type = m_ast.GetTypeForIdentifier<clang::CXXRecordDecl>(
-        ConstString(name), decl_context);
+    CompilerType clang_type =
+        m_ast.GetTypeForIdentifier<clang::CXXRecordDecl>(name, decl_context);
     if (!clang_type.IsValid()) {
       auto access = GetAccessibilityForUdt(*udt);
 
@@ -464,7 +463,7 @@ lldb::TypeSP PDBASTParser::CreateLLDBTypeFromPDBType(const PDBSymbol &type) {
     if (udt->isVolatileType())
       clang_type = clang_type.AddVolatileModifier();
 
-    GetDeclarationForSymbol(type, decl);
+    AddSourceInfoToDecl(type, decl);
     return m_ast.GetSymbolFile()->MakeType(
         type.getSymIndexId(), ConstString(name), udt->getLength(), nullptr,
         LLDB_INVALID_UID, lldb_private::Type::eEncodingIsUID, decl, clang_type,
@@ -480,8 +479,8 @@ lldb::TypeSP PDBASTParser::CreateLLDBTypeFromPDBType(const PDBSymbol &type) {
     uint64_t bytes = enum_type->getLength();
 
     // Check if such an enum already exists in the current context
-    CompilerType ast_enum = m_ast.GetTypeForIdentifier<clang::EnumDecl>(
-        ConstString(name), decl_context);
+    CompilerType ast_enum =
+        m_ast.GetTypeForIdentifier<clang::EnumDecl>(name, decl_context);
     if (!ast_enum.IsValid()) {
       auto underlying_type_up = enum_type->getUnderlyingType();
       if (!underlying_type_up)
@@ -533,7 +532,7 @@ lldb::TypeSP PDBASTParser::CreateLLDBTypeFromPDBType(const PDBSymbol &type) {
     if (enum_type->isVolatileType())
       ast_enum = ast_enum.AddVolatileModifier();
 
-    GetDeclarationForSymbol(type, decl);
+    AddSourceInfoToDecl(type, decl);
     return m_ast.GetSymbolFile()->MakeType(
         type.getSymIndexId(), ConstString(name), bytes, nullptr,
         LLDB_INVALID_UID, lldb_private::Type::eEncodingIsUID, decl, ast_enum,
@@ -558,8 +557,7 @@ lldb::TypeSP PDBASTParser::CreateLLDBTypeFromPDBType(const PDBSymbol &type) {
 
     // Check if such a typedef already exists in the current context
     CompilerType ast_typedef =
-        m_ast.GetTypeForIdentifier<clang::TypedefNameDecl>(ConstString(name),
-                                                           decl_ctx);
+        m_ast.GetTypeForIdentifier<clang::TypedefNameDecl>(name, decl_ctx);
     if (!ast_typedef.IsValid()) {
       CompilerType target_ast_type = target_type->GetFullCompilerType();
 
@@ -579,7 +577,7 @@ lldb::TypeSP PDBASTParser::CreateLLDBTypeFromPDBType(const PDBSymbol &type) {
     if (type_def->isVolatileType())
       ast_typedef = ast_typedef.AddVolatileModifier();
 
-    GetDeclarationForSymbol(type, decl);
+    AddSourceInfoToDecl(type, decl);
     std::optional<uint64_t> size;
     if (type_def->getLength())
       size = type_def->getLength();
@@ -659,7 +657,7 @@ lldb::TypeSP PDBASTParser::CreateLLDBTypeFromPDBType(const PDBSymbol &type) {
         m_ast.CreateFunctionType(return_ast_type, arg_list.data(),
                                  arg_list.size(), is_variadic, type_quals, cc);
 
-    GetDeclarationForSymbol(type, decl);
+    AddSourceInfoToDecl(type, decl);
     return m_ast.GetSymbolFile()->MakeType(
         type.getSymIndexId(), ConstString(name), std::nullopt, nullptr,
         LLDB_INVALID_UID, lldb_private::Type::eEncodingIsUID, decl,
@@ -1300,6 +1298,15 @@ void PDBASTParser::AddRecordMembers(
       // Query the symbol's value as the variable initializer if valid.
       if (member_comp_type.IsConst()) {
         auto value = member->getValue();
+        if (value.Type == llvm::pdb::Empty) {
+          LLDB_LOG(GetLog(LLDBLog::AST),
+                   "Class '{0}' has member '{1}' of type '{2}' with an unknown "
+                   "constant size.",
+                   record_type.GetTypeName(), member_name,
+                   member_comp_type.GetTypeName());
+          continue;
+        }
+
         clang::QualType qual_type = decl->getType();
         unsigned type_width = m_ast.getASTContext().getIntWidth(qual_type);
         unsigned constant_width = value.getBitWidth();

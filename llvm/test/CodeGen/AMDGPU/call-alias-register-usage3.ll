@@ -8,7 +8,7 @@
 
 ; CHECK-LABEL: {{^}}kernel3:
 ; CHECK: .amdhsa_next_free_vgpr 253
-; CHECK-NEXT: .amdhsa_next_free_sgpr 33
+; CHECK-NEXT: .amdhsa_next_free_sgpr 36
 define amdgpu_kernel void @kernel3() #0 {
 bb:
   call void @alias3() #2

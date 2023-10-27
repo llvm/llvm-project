@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -emit-llvm-only  -triple x86_64-apple-darwin9 %s
-// rdar://8823265
 
 extern void abort(void);
 #define ATTR __attribute__((__ms_struct__))

@@ -1,24 +1,25 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx700 --amdhsa-code-object-version=2 -enable-misched=0 -filetype=obj -o - < %s | llvm-readelf --notes - | FileCheck --check-prefixes=CHECK,GFX700 %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx803 --amdhsa-code-object-version=2 -mattr=-xnack -enable-misched=0 -filetype=obj -o - < %s | llvm-readelf --notes - | FileCheck --check-prefixes=CHECK,GFX803 %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 --amdhsa-code-object-version=2 -mattr=-xnack -enable-misched=0 -filetype=obj -o - < %s | llvm-readelf --notes - | FileCheck --check-prefixes=CHECK,GFX900 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx700 -enable-misched=0 -filetype=obj -o - < %s | llvm-readelf --notes - | FileCheck --check-prefixes=CHECK,GFX700,WAVE64 %s
+; RUN: llc -mattr=-xnack -mtriple=amdgcn-amd-amdhsa -mcpu=gfx803 -enable-misched=0 -filetype=obj -o - < %s | llvm-readelf --notes - | FileCheck --check-prefixes=CHECK,GFX803,WAVE64 %s
+; RUN: llc -mattr=-xnack -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -enable-misched=0 -filetype=obj -o - < %s | llvm-readelf --notes - | FileCheck --check-prefixes=CHECK,GFX900,WAVE64 %s
+; RUN: llc -mattr=-xnack -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -enable-misched=0 -filetype=obj -o - < %s | llvm-readelf --notes - | FileCheck --check-prefixes=CHECK,GFX1010,WAVE32 %s
 
 @var = addrspace(1) global float 0.0
 
 ; CHECK: ---
-; CHECK:  Version: [ 1, 0 ]
-; CHECK:  Kernels:
+; CHECK:  amdhsa.kernels:
 
-; CHECK-LABEL: - Name:       test
-; CHECK:   SymbolName: 'test@kd'
-; CHECK:   CodeProps:
-; CHECK:     KernargSegmentSize:      24
-; CHECK:     GroupSegmentFixedSize:   0
-; CHECK:     PrivateSegmentFixedSize: 0
-; CHECK:     KernargSegmentAlign:     8
-; CHECK:     WavefrontSize:           64
-; CHECK:     NumSGPRs:                6
-; CHECK:     NumVGPRs:                {{3|6}}
-; CHECK:     MaxFlatWorkGroupSize:    1024
+; CHECK:   - .args:
+; CHECK:     .group_segment_fixed_size: 0
+; CHECK:     .kernarg_segment_align: 8
+; CHECK:     .kernarg_segment_size: 24
+; CHECK:     .max_flat_workgroup_size: 1024
+; CHECK:     .name:           test
+; CHECK:     .private_segment_fixed_size: 0
+; CHECK:     .sgpr_count:     6
+; CHECK:     .symbol:         test.kd
+; CHECK:     .vgpr_count:     {{3|6}}
+; WAVE64:    .wavefront_size: 64
+; WAVE32:    .wavefront_size: 32
 define amdgpu_kernel void @test(
     ptr addrspace(1) %r,
     ptr addrspace(1) %a,
@@ -31,17 +32,8 @@ entry:
   ret void
 }
 
-; CHECK-LABEL: - Name:       test_max_flat_workgroup_size
-; CHECK:   SymbolName: 'test_max_flat_workgroup_size@kd'
-; CHECK:   CodeProps:
-; CHECK:     KernargSegmentSize:      24
-; CHECK:     GroupSegmentFixedSize:   0
-; CHECK:     PrivateSegmentFixedSize: 0
-; CHECK:     KernargSegmentAlign:     8
-; CHECK:     WavefrontSize:           64
-; CHECK:     NumSGPRs:                6
-; CHECK:     NumVGPRs:                {{3|6}}
-; CHECK:     MaxFlatWorkGroupSize:    256
+; CHECK:   - .args:
+; CHECK:     .max_flat_workgroup_size: 256
 define amdgpu_kernel void @test_max_flat_workgroup_size(
     ptr addrspace(1) %r,
     ptr addrspace(1) %a,
@@ -54,12 +46,12 @@ entry:
   ret void
 }
 
-; CHECK-LABEL: - Name:       num_spilled_sgprs
-; CHECK:   SymbolName: 'num_spilled_sgprs@kd'
-; CHECK:   CodeProps:
-; GFX700:     NumSpilledSGPRs: 38
-; GFX803:     NumSpilledSGPRs: 22
-; GFX900:     NumSpilledSGPRs: {{22|48}}
+; CHECK:   .name:       num_spilled_sgprs
+; GFX700:   .sgpr_spill_count: 38
+; GFX803:   .sgpr_spill_count: 22
+; GFX900:   .sgpr_spill_count: 48
+; GFX1010:  .sgpr_spill_count: 48
+; CHECK:   .symbol:     num_spilled_sgprs.kd
 define amdgpu_kernel void @num_spilled_sgprs(
     ptr addrspace(1) %out0, ptr addrspace(1) %out1, [8 x i32],
     ptr addrspace(1) %out2, ptr addrspace(1) %out3, [8 x i32],
@@ -93,10 +85,9 @@ entry:
   ret void
 }
 
-; CHECK-LABEL: - Name:       num_spilled_vgprs
-; CHECK:   SymbolName: 'num_spilled_vgprs@kd'
-; CHECK:   CodeProps:
-; CHECK:     NumSpilledVGPRs: {{13|14}}
+; CHECK:   .name:       num_spilled_vgprs
+; CHECK:   .symbol:     num_spilled_vgprs.kd
+; CHECK:   .vgpr_spill_count: {{13|14}}
 define amdgpu_kernel void @num_spilled_vgprs() #1 {
   %val0 = load volatile float, ptr addrspace(1) @var
   %val1 = load volatile float, ptr addrspace(1) @var
@@ -165,6 +156,13 @@ define amdgpu_kernel void @num_spilled_vgprs() #1 {
   ret void
 }
 
+; CHECK:  amdhsa.version:
+; CHECK-NEXT: - 1
+; CHECK-NEXT: - 1
+
 attributes #0 = { "amdgpu-num-sgpr"="14" }
 attributes #1 = { "amdgpu-num-vgpr"="20" }
 attributes #2 = { "amdgpu-flat-work-group-size"="1,256" }
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"amdgpu_code_object_version", i32 400}

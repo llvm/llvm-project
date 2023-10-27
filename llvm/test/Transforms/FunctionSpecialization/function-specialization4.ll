@@ -1,8 +1,8 @@
-; RUN: opt -passes="ipsccp<func-spec>" -force-function-specialization \
-; RUN:   -func-specialization-max-clones=2 -S < %s | FileCheck %s
+; RUN: opt -passes="ipsccp<func-spec>" -force-specialization \
+; RUN:   -funcspec-max-clones=2 -S < %s | FileCheck %s
 
-; RUN: opt -passes="ipsccp<func-spec>" -force-function-specialization \
-; RUN:   -func-specialization-max-clones=1 -S < %s | FileCheck %s --check-prefix=CONST1
+; RUN: opt -passes="ipsccp<func-spec>" -force-specialization \
+; RUN:   -funcspec-max-clones=1 -S < %s | FileCheck %s --check-prefix=CONST1
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 
@@ -39,10 +39,10 @@ entry:
   ret i32 %add1
 }
 
-; CONST1:     define internal i32 @foo.1(i32 %x, ptr %b, ptr %c)
-; CONST1-NOT: define internal i32 @foo.2(i32 %x, ptr %b, ptr %c)
+; CONST1:     define internal i32 @foo.specialized.1(i32 %x, ptr %b, ptr %c)
+; CONST1-NOT: define internal i32 @foo.specialized.2(i32 %x, ptr %b, ptr %c)
 
-; CHECK:        define internal i32 @foo.1(i32 %x, ptr %b, ptr %c) {
+; CHECK:        define internal i32 @foo.specialized.1(i32 %x, ptr %b, ptr %c) {
 ; CHECK-NEXT:   entry:
 ; CHECK-NEXT:     %0 = load i32, ptr @A, align 4
 ; CHECK-NEXT:     %add = add nsw i32 %x, %0
@@ -51,7 +51,7 @@ entry:
 ; CHECK-NEXT:     ret i32 %add1
 ; CHECK-NEXT:   }
 
-; CHECK: define internal i32 @foo.2(i32 %x, ptr %b, ptr %c) {
+; CHECK: define internal i32 @foo.specialized.2(i32 %x, ptr %b, ptr %c) {
 ; CHECK-NEXT:   entry:
 ; CHECK-NEXT:     %0 = load i32, ptr @B, align 4
 ; CHECK-NEXT:     %add = add nsw i32 %x, %0

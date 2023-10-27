@@ -7,7 +7,8 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
-class ListenToModuleLoadedEvents (TestBase):
+
+class ListenToModuleLoadedEvents(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     def test_clearing_listener(self):
@@ -21,15 +22,18 @@ class ListenToModuleLoadedEvents (TestBase):
         my_listener.StartListeningForEventClass(
             self.dbg,
             lldb.SBTarget.GetBroadcasterClassName(),
-            lldb.SBTarget.eBroadcastBitBreakpointChanged)
+            lldb.SBTarget.eBroadcastBitBreakpointChanged,
+        )
         my_first_listener.StartListeningForEventClass(
             self.dbg,
             lldb.SBTarget.GetBroadcasterClassName(),
-            lldb.SBTarget.eBroadcastBitWatchpointChanged)
+            lldb.SBTarget.eBroadcastBitWatchpointChanged,
+        )
         my_third_listener.StartListeningForEventClass(
             self.dbg,
             lldb.SBTarget.GetBroadcasterClassName(),
-            lldb.SBTarget.eBroadcastBitModulesUnloaded)
+            lldb.SBTarget.eBroadcastBitModulesUnloaded,
+        )
 
         my_listener.Clear()
 
@@ -39,18 +43,20 @@ class ListenToModuleLoadedEvents (TestBase):
 
         event = lldb.SBEvent()
         my_listener.WaitForEvent(1, event)
-        self.assertTrue(not event.IsValid(), "We don't get events we aren't listening to.")
-        
+        self.assertTrue(
+            not event.IsValid(), "We don't get events we aren't listening to."
+        )
+
     def test_receiving_breakpoint_added_from_debugger(self):
         """Test that we get breakpoint added events, waiting on event classes on the debugger"""
         self.build()
 
         my_listener = lldb.SBListener("test_listener")
-
         my_listener.StartListeningForEventClass(
             self.dbg,
             lldb.SBTarget.GetBroadcasterClassName(),
-            lldb.SBTarget.eBroadcastBitBreakpointChanged)
+            lldb.SBTarget.eBroadcastBitBreakpointChanged,
+        )
 
         target = self.createTestTarget()
 
@@ -61,26 +67,34 @@ class ListenToModuleLoadedEvents (TestBase):
 
         self.assertTrue(event.IsValid(), "Got a valid event.")
         self.assertTrue(
-            lldb.SBBreakpoint.EventIsBreakpointEvent(event),
-            "It is a breakpoint event.")
-        self.assertEqual(lldb.SBBreakpoint.GetBreakpointEventTypeFromEvent(event),
-            lldb.eBreakpointEventTypeAdded, "It is a breakpoint added event.")
+            lldb.SBBreakpoint.EventIsBreakpointEvent(event), "It is a breakpoint event."
+        )
         self.assertEqual(
-            bkpt, lldb.SBBreakpoint.GetBreakpointFromEvent(event),
-            "It is our breakpoint.")
+            lldb.SBBreakpoint.GetBreakpointEventTypeFromEvent(event),
+            lldb.eBreakpointEventTypeAdded,
+            "It is a breakpoint added event.",
+        )
+        self.assertEqual(
+            bkpt,
+            lldb.SBBreakpoint.GetBreakpointFromEvent(event),
+            "It is our breakpoint.",
+        )
 
         # Now make sure if we stop listening for events we don't get them:
         my_listener.StopListeningForEventClass(
             self.dbg,
             lldb.SBTarget.GetBroadcasterClassName(),
-            lldb.SBTarget.eBroadcastBitBreakpointChanged)
+            lldb.SBTarget.eBroadcastBitBreakpointChanged,
+        )
         my_listener.StopListeningForEvents(
-            target.GetBroadcaster(),
-            lldb.SBTarget.eBroadcastBitBreakpointChanged)
-            
+            target.GetBroadcaster(), lldb.SBTarget.eBroadcastBitBreakpointChanged
+        )
+
         bkpt2 = target.BreakpointCreateByName("main")
         my_listener.WaitForEvent(1, event)
-        self.assertTrue(not event.IsValid(), "We don't get events we aren't listening to.")
+        self.assertTrue(
+            not event.IsValid(), "We don't get events we aren't listening to."
+        )
 
     def test_recieving_breakpoint_added_from_target(self):
         """Test that we get breakpoint added events, waiting on event classes on the debugger"""
@@ -90,12 +104,16 @@ class ListenToModuleLoadedEvents (TestBase):
         my_listener.StartListeningForEventClass(
             self.dbg,
             lldb.SBTarget.GetBroadcasterClassName(),
-            lldb.SBTarget.eBroadcastBitBreakpointChanged)
+            lldb.SBTarget.eBroadcastBitBreakpointChanged,
+        )
 
         target = self.createTestTarget()
-        result = target.GetBroadcaster().AddListener(my_listener,
-                                                     lldb.SBTarget.eBroadcastBitBreakpointChanged)
-        self.assertEqual(result, lldb.SBTarget.eBroadcastBitBreakpointChanged,"Got our bit")
+        result = target.GetBroadcaster().AddListener(
+            my_listener, lldb.SBTarget.eBroadcastBitBreakpointChanged
+        )
+        self.assertEqual(
+            result, lldb.SBTarget.eBroadcastBitBreakpointChanged, "Got our bit"
+        )
 
         bkpt = target.BreakpointCreateByName("main")
 
@@ -104,18 +122,24 @@ class ListenToModuleLoadedEvents (TestBase):
 
         self.assertTrue(event.IsValid(), "Got a valid event.")
         self.assertTrue(
-            lldb.SBBreakpoint.EventIsBreakpointEvent(event),
-            "It is a breakpoint event.")
-        self.assertEqual(lldb.SBBreakpoint.GetBreakpointEventTypeFromEvent(event),
-            lldb.eBreakpointEventTypeAdded, "It is a breakpoint added event.")
+            lldb.SBBreakpoint.EventIsBreakpointEvent(event), "It is a breakpoint event."
+        )
         self.assertEqual(
-            bkpt, lldb.SBBreakpoint.GetBreakpointFromEvent(event),
-            "It is our breakpoint.")
+            lldb.SBBreakpoint.GetBreakpointEventTypeFromEvent(event),
+            lldb.eBreakpointEventTypeAdded,
+            "It is a breakpoint added event.",
+        )
+        self.assertEqual(
+            bkpt,
+            lldb.SBBreakpoint.GetBreakpointFromEvent(event),
+            "It is our breakpoint.",
+        )
 
         # Now make sure if we stop listening for events we don't get them:
         target.GetBroadcaster().RemoveListener(my_listener)
-            
+
         bkpt2 = target.BreakpointCreateByName("main")
         my_listener.WaitForEvent(1, event)
-        self.assertTrue(not event.IsValid(), "We don't get events we aren't listening to.")
- 
+        self.assertTrue(
+            not event.IsValid(), "We don't get events we aren't listening to."
+        )

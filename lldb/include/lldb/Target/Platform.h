@@ -44,7 +44,7 @@ class PlatformProperties : public Properties {
 public:
   PlatformProperties();
 
-  static ConstString GetSettingName();
+  static llvm::StringRef GetSettingName();
 
   bool GetUseModuleCache() const;
   bool SetUseModuleCache(bool use_module_cache);
@@ -286,12 +286,17 @@ public:
   // current computers global settings.
   virtual FileSpecList
   LocateExecutableScriptingResources(Target *target, Module &module,
-                                     Stream *feedback_stream);
+                                     Stream &feedback_stream);
 
   virtual Status GetSharedModule(
       const ModuleSpec &module_spec, Process *process,
       lldb::ModuleSP &module_sp, const FileSpecList *module_search_paths_ptr,
       llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules, bool *did_create_ptr);
+
+  void CallLocateModuleCallbackIfSet(const ModuleSpec &module_spec,
+                                     lldb::ModuleSP &module_sp,
+                                     FileSpec &symbol_file_spec,
+                                     bool *did_create_ptr);
 
   virtual bool GetModuleSpec(const FileSpec &module_file_spec,
                              const ArchSpec &arch, ModuleSpec &module_spec);
@@ -402,6 +407,8 @@ public:
   virtual uint32_t FindProcesses(const ProcessInstanceInfoMatch &match_info,
                                  ProcessInstanceInfoList &proc_infos);
 
+  ProcessInstanceInfoList GetAllProcesses();
+
   virtual bool GetProcessInfo(lldb::pid_t pid, ProcessInstanceInfo &proc_info);
 
   // Set a breakpoint on all functions that can end up creating a thread for
@@ -448,13 +455,15 @@ public:
   // Used for column widths
   size_t GetMaxGroupIDNameLength() const { return m_max_gid_name_len; }
 
-  ConstString GetSDKRootDirectory() const { return m_sdk_sysroot; }
+  const std::string &GetSDKRootDirectory() const { return m_sdk_sysroot; }
 
-  void SetSDKRootDirectory(ConstString dir) { m_sdk_sysroot = dir; }
+  void SetSDKRootDirectory(std::string dir) { m_sdk_sysroot = std::move(dir); }
 
-  ConstString GetSDKBuild() const { return m_sdk_build; }
+  const std::string &GetSDKBuild() const { return m_sdk_build; }
 
-  void SetSDKBuild(ConstString sdk_build) { m_sdk_build = sdk_build; }
+  void SetSDKBuild(std::string sdk_build) {
+    m_sdk_build = std::move(sdk_build);
+  }
 
   // Override this to return true if your platform supports Clang modules. You
   // may also need to override AddClangModuleCompilationOptions to pass the
@@ -876,8 +885,21 @@ public:
   }
 
   virtual CompilerType GetSiginfoType(const llvm::Triple &triple);
-  
+
   virtual Args GetExtraStartupCommands();
+
+  typedef std::function<Status(const ModuleSpec &module_spec,
+                               FileSpec &module_file_spec,
+                               FileSpec &symbol_file_spec)>
+      LocateModuleCallback;
+
+  /// Set locate module callback. This allows users to implement their own
+  /// module cache system. For example, to leverage artifacts of build system,
+  /// to bypass pulling files from remote platform, or to search symbol files
+  /// from symbol servers.
+  void SetLocateModuleCallback(LocateModuleCallback callback);
+
+  LocateModuleCallback GetLocateModuleCallback() const;
 
 protected:
   /// Create a list of ArchSpecs with the given OS and a architectures. The
@@ -900,9 +922,9 @@ protected:
   // the once we call HostInfo::GetOSVersion().
   bool m_os_version_set_while_connected;
   bool m_system_arch_set_while_connected;
-  ConstString
+  std::string
       m_sdk_sysroot; // the root location of where the SDK files are all located
-  ConstString m_sdk_build;
+  std::string m_sdk_build;
   FileSpec m_working_dir; // The working directory which is used when installing
                           // modules that have no install path set
   std::string m_remote_url;
@@ -926,6 +948,7 @@ protected:
   std::vector<ConstString> m_trap_handlers;
   bool m_calculated_trap_handlers;
   const std::unique_ptr<ModuleCache> m_module_cache;
+  LocateModuleCallback m_locate_module_callback;
 
   /// Ask the Platform subclass to fill in the list of trap handler names
   ///

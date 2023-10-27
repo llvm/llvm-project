@@ -122,9 +122,7 @@ protected:
                       // SaveRegisterState/RestoreRegisterState
 };
 
-#include "MacOSX/arm/DNBArchImpl.h"
 #include "MacOSX/arm64/DNBArchImplARM64.h"
-#include "MacOSX/i386/DNBArchImplI386.h"
 #include "MacOSX/x86_64/DNBArchImplX86_64.h"
 
 #endif

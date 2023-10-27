@@ -53,6 +53,7 @@ body:             |
     ; GFX6-NEXT: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[AND4]], [[AND3]](s32)
     ; GFX6-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[SHL]], [[LSHR1]]
     ; GFX6-NEXT: $sgpr0 = COPY [[OR]](s32)
+    ;
     ; GFX8-LABEL: name: rotl_i15
     ; GFX8: liveins: $sgpr0, $sgpr1
     ; GFX8-NEXT: {{  $}}
@@ -75,33 +76,30 @@ body:             |
     ; GFX8-NEXT: [[UMULH1:%[0-9]+]]:_(s32) = G_UMULH [[AND]], [[ADD]]
     ; GFX8-NEXT: [[MUL1:%[0-9]+]]:_(s32) = G_MUL [[UMULH1]], [[COPY2]]
     ; GFX8-NEXT: [[SUB1:%[0-9]+]]:_(s32) = G_SUB [[AND]], [[MUL1]]
-    ; GFX8-NEXT: [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
     ; GFX8-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(uge), [[SUB1]](s32), [[COPY2]]
     ; GFX8-NEXT: [[SUB2:%[0-9]+]]:_(s32) = G_SUB [[SUB1]], [[COPY2]]
     ; GFX8-NEXT: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[ICMP]](s1), [[SUB2]], [[SUB1]]
     ; GFX8-NEXT: [[ICMP1:%[0-9]+]]:_(s1) = G_ICMP intpred(uge), [[SELECT]](s32), [[COPY2]]
     ; GFX8-NEXT: [[SUB3:%[0-9]+]]:_(s32) = G_SUB [[SELECT]], [[COPY2]]
     ; GFX8-NEXT: [[SELECT1:%[0-9]+]]:_(s32) = G_SELECT [[ICMP1]](s1), [[SUB3]], [[SELECT]]
-    ; GFX8-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[SELECT1]], [[C1]]
-    ; GFX8-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
-    ; GFX8-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[AND1]](s32)
-    ; GFX8-NEXT: [[SHL:%[0-9]+]]:_(s16) = G_SHL [[TRUNC]], [[TRUNC1]](s16)
+    ; GFX8-NEXT: [[C4:%[0-9]+]]:_(s16) = G_CONSTANT i16 32767
+    ; GFX8-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[SELECT1]](s32)
+    ; GFX8-NEXT: [[AND1:%[0-9]+]]:_(s16) = G_AND [[TRUNC]], [[C4]]
+    ; GFX8-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
+    ; GFX8-NEXT: [[SHL:%[0-9]+]]:_(s16) = G_SHL [[TRUNC1]], [[AND1]](s16)
     ; GFX8-NEXT: [[C5:%[0-9]+]]:_(s16) = G_CONSTANT i16 14
-    ; GFX8-NEXT: [[TRUNC2:%[0-9]+]]:_(s16) = G_TRUNC [[SELECT1]](s32)
-    ; GFX8-NEXT: [[SUB4:%[0-9]+]]:_(s16) = G_SUB [[C5]], [[TRUNC2]]
-    ; GFX8-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY [[C4]](s32)
-    ; GFX8-NEXT: [[C6:%[0-9]+]]:_(s16) = G_CONSTANT i16 32767
-    ; GFX8-NEXT: [[AND2:%[0-9]+]]:_(s16) = G_AND [[TRUNC]], [[C6]]
-    ; GFX8-NEXT: [[TRUNC3:%[0-9]+]]:_(s16) = G_TRUNC [[COPY3]](s32)
-    ; GFX8-NEXT: [[LSHR:%[0-9]+]]:_(s16) = G_LSHR [[AND2]], [[TRUNC3]](s16)
-    ; GFX8-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[SUB4]](s16)
-    ; GFX8-NEXT: [[AND3:%[0-9]+]]:_(s32) = G_AND [[ANYEXT]], [[C1]]
-    ; GFX8-NEXT: [[AND4:%[0-9]+]]:_(s16) = G_AND [[LSHR]], [[C6]]
-    ; GFX8-NEXT: [[TRUNC4:%[0-9]+]]:_(s16) = G_TRUNC [[AND3]](s32)
-    ; GFX8-NEXT: [[LSHR1:%[0-9]+]]:_(s16) = G_LSHR [[AND4]], [[TRUNC4]](s16)
-    ; GFX8-NEXT: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[SHL]](s16)
-    ; GFX8-NEXT: [[ANYEXT2:%[0-9]+]]:_(s32) = G_ANYEXT [[LSHR1]](s16)
-    ; GFX8-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[ANYEXT1]], [[ANYEXT2]]
+    ; GFX8-NEXT: [[COPY3:%[0-9]+]]:_(s16) = COPY [[TRUNC]](s16)
+    ; GFX8-NEXT: [[SUB4:%[0-9]+]]:_(s16) = G_SUB [[C5]], [[COPY3]]
+    ; GFX8-NEXT: [[C6:%[0-9]+]]:_(s16) = G_CONSTANT i16 1
+    ; GFX8-NEXT: [[AND2:%[0-9]+]]:_(s16) = G_AND [[C6]], [[C4]]
+    ; GFX8-NEXT: [[AND3:%[0-9]+]]:_(s16) = G_AND [[TRUNC1]], [[C4]]
+    ; GFX8-NEXT: [[LSHR:%[0-9]+]]:_(s16) = G_LSHR [[AND3]], [[AND2]](s16)
+    ; GFX8-NEXT: [[AND4:%[0-9]+]]:_(s16) = G_AND [[SUB4]], [[C4]]
+    ; GFX8-NEXT: [[AND5:%[0-9]+]]:_(s16) = G_AND [[LSHR]], [[C4]]
+    ; GFX8-NEXT: [[LSHR1:%[0-9]+]]:_(s16) = G_LSHR [[AND5]], [[AND4]](s16)
+    ; GFX8-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[SHL]](s16)
+    ; GFX8-NEXT: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[LSHR1]](s16)
+    ; GFX8-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[ANYEXT]], [[ANYEXT1]]
     ; GFX8-NEXT: $sgpr0 = COPY [[OR]](s32)
     %2:_(s32) = COPY $sgpr0
     %0:_(s15) = G_TRUNC %2(s32)
@@ -145,6 +143,7 @@ body:             |
     ; GFX6-NEXT: [[OR:%[0-9]+]]:_(s16) = G_OR [[TRUNC2]], [[TRUNC3]]
     ; GFX6-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[OR]](s16)
     ; GFX6-NEXT: $sgpr0 = COPY [[ANYEXT]](s32)
+    ;
     ; GFX8-LABEL: name: rotl_i16
     ; GFX8: liveins: $sgpr0, $sgpr1
     ; GFX8-NEXT: {{  $}}
@@ -359,6 +358,7 @@ body:             |
     ; GFX6-NEXT: [[OR:%[0-9]+]]:_(s16) = G_OR [[TRUNC2]], [[TRUNC3]]
     ; GFX6-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[OR]](s16)
     ; GFX6-NEXT: $sgpr0 = COPY [[ANYEXT]](s32)
+    ;
     ; GFX8-LABEL: name: rotr_i16
     ; GFX8: liveins: $sgpr0, $sgpr1
     ; GFX8-NEXT: {{  $}}

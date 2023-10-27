@@ -1,5 +1,5 @@
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
-! RUN: %flang_fc1 -emit-fir %s -o - | FileCheck %s
+! RUN: bbc --use-desc-for-alloc=false --emit-fir %s -o - | FileCheck %s
+! RUN: %flang_fc1 -mllvm --use-desc-for-alloc=false -emit-fir %s -o - | FileCheck %s
 
 ! Test intrinsic module procedure c_loc
 
@@ -177,7 +177,7 @@ end
 ! CHECK:         %[[VAL_2:.*]] = fir.zero_bits !fir.ptr<i32>
 ! CHECK:         fir.store %[[VAL_2]] to %[[VAL_1]] : !fir.ref<!fir.ptr<i32>>
 ! CHECK:         %[[VAL_3:.*]] = fir.alloca !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}> {bindc_name = "ptr", uniq_name = "_QFc_loc_non_save_pointer_scalarEptr"}
-! CHECK:         %[[VAL_4:.*]] = fir.allocmem i32 {uniq_name = "_QFc_loc_non_save_pointer_scalarEi.alloc"}
+! CHECK:         %[[VAL_4:.*]] = fir.allocmem i32 {fir.must_be_heap = true, uniq_name = "_QFc_loc_non_save_pointer_scalarEi.alloc"}
 ! CHECK:         %[[VAL_5:.*]] = fir.convert %[[VAL_4]] : (!fir.heap<i32>) -> !fir.ptr<i32>
 ! CHECK:         fir.store %[[VAL_5]] to %[[VAL_1]] : !fir.ref<!fir.ptr<i32>>
 ! CHECK:         %[[VAL_6:.*]] = arith.constant 10 : i32

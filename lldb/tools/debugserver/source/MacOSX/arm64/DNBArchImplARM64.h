@@ -13,6 +13,7 @@
 
 #include <mach/thread_status.h>
 #include <map>
+#include <vector>
 
 #if defined(ARM_THREAD_STATE64_COUNT)
 
@@ -34,6 +35,13 @@ public:
     m_disabled_breakpoints.resize(16);
     memset(&m_dbg_save, 0, sizeof(m_dbg_save));
   }
+
+  struct WatchpointSpec {
+    nub_addr_t aligned_start;
+    nub_addr_t requested_start;
+    nub_size_t aligned_size;
+    nub_size_t requested_size;
+  };
 
   virtual ~DNBArchMachARM64() {}
 
@@ -71,8 +79,15 @@ public:
                                     bool also_set_on_task) override;
   bool DisableHardwareBreakpoint(uint32_t hw_break_index,
                                  bool also_set_on_task) override;
+  std::vector<WatchpointSpec>
+  AlignRequestedWatchpoint(nub_addr_t requested_addr,
+                           nub_size_t requested_size);
   uint32_t EnableHardwareWatchpoint(nub_addr_t addr, nub_size_t size, bool read,
                                     bool write, bool also_set_on_task) override;
+  uint32_t SetBASWatchpoint(WatchpointSpec wp, bool read, bool write,
+                            bool also_set_on_task);
+  uint32_t SetMASKWatchpoint(WatchpointSpec wp, bool read, bool write,
+                             bool also_set_on_task);
   bool DisableHardwareWatchpoint(uint32_t hw_break_index,
                                  bool also_set_on_task) override;
   bool DisableHardwareWatchpoint_helper(uint32_t hw_break_index,

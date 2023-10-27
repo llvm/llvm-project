@@ -7,11 +7,18 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
+#include <array>
 #include <climits>
+#include <cstddef>
+#include <initializer_list>
 #include <list>
+#include <tuple>
+#include <type_traits>
+#include <utility>
 #include <vector>
 
 using namespace llvm;
@@ -149,6 +156,131 @@ TEST(STLExtrasTest, EnumerateModifyRValue) {
                                    PairType(2u, '4')));
 }
 
+TEST(STLExtrasTest, EnumerateTwoRanges) {
+  using Tuple = std::tuple<size_t, int, bool>;
+
+  std::vector<int> Ints = {1, 2};
+  std::vector<bool> Bools = {true, false};
+  EXPECT_THAT(llvm::enumerate(Ints, Bools),
+              ElementsAre(Tuple(0, 1, true), Tuple(1, 2, false)));
+
+  // Check that we can modify the values when the temporary is a const
+  // reference.
+  for (const auto &[Idx, Int, Bool] : llvm::enumerate(Ints, Bools)) {
+    (void)Idx;
+    Bool = false;
+    Int = -1;
+  }
+
+  EXPECT_THAT(Ints, ElementsAre(-1, -1));
+  EXPECT_THAT(Bools, ElementsAre(false, false));
+
+  // Check that we can modify the values when the result gets copied.
+  for (auto [Idx, Bool, Int] : llvm::enumerate(Bools, Ints)) {
+    (void)Idx;
+    Int = 3;
+    Bool = true;
+  }
+
+  EXPECT_THAT(Ints, ElementsAre(3, 3));
+  EXPECT_THAT(Bools, ElementsAre(true, true));
+
+  // Check that we can modify the values through `.value()`.
+  size_t Iters = 0;
+  for (auto It : llvm::enumerate(Bools, Ints)) {
+    EXPECT_EQ(It.index(), Iters);
+    ++Iters;
+
+    std::get<0>(It.value()) = false;
+    std::get<1>(It.value()) = 4;
+  }
+
+  EXPECT_THAT(Ints, ElementsAre(4, 4));
+  EXPECT_THAT(Bools, ElementsAre(false, false));
+}
+
+TEST(STLExtrasTest, EnumerateThreeRanges) {
+  using Tuple = std::tuple<size_t, int, bool, char>;
+
+  std::vector<int> Ints = {1, 2};
+  std::vector<bool> Bools = {true, false};
+  char Chars[] = {'X', 'D'};
+  EXPECT_THAT(llvm::enumerate(Ints, Bools, Chars),
+              ElementsAre(Tuple(0, 1, true, 'X'), Tuple(1, 2, false, 'D')));
+
+  for (auto [Idx, Int, Bool, Char] : llvm::enumerate(Ints, Bools, Chars)) {
+    (void)Idx;
+    Int = 0;
+    Bool = true;
+    Char = '!';
+  }
+
+  EXPECT_THAT(Ints, ElementsAre(0, 0));
+  EXPECT_THAT(Bools, ElementsAre(true, true));
+  EXPECT_THAT(Chars, ElementsAre('!', '!'));
+
+  // Check that we can modify the values through `.values()`.
+  size_t Iters = 0;
+  for (auto It : llvm::enumerate(Ints, Bools, Chars)) {
+    EXPECT_EQ(It.index(), Iters);
+    ++Iters;
+    auto [Int, Bool, Char] = It.value();
+    Int = 42;
+    Bool = false;
+    Char = '$';
+  }
+
+  EXPECT_THAT(Ints, ElementsAre(42, 42));
+  EXPECT_THAT(Bools, ElementsAre(false, false));
+  EXPECT_THAT(Chars, ElementsAre('$', '$'));
+}
+
+TEST(STLExtrasTest, EnumerateTemporaries) {
+  using Tuple = std::tuple<size_t, int, bool>;
+
+  EXPECT_THAT(
+      llvm::enumerate(llvm::SmallVector<int>({1, 2, 3}),
+                      std::vector<bool>({true, false, true})),
+      ElementsAre(Tuple(0, 1, true), Tuple(1, 2, false), Tuple(2, 3, true)));
+
+  size_t Iters = 0;
+  // This is fine from the point of view of range lifetimes because `zippy` will
+  // move all temporaries into its storage. No lifetime extension is necessary.
+  for (auto [Idx, Int, Bool] :
+       llvm::enumerate(llvm::SmallVector<int>({1, 2, 3}),
+                       std::vector<bool>({true, false, true}))) {
+    EXPECT_EQ(Idx, Iters);
+    ++Iters;
+    Int = 0;
+    Bool = true;
+  }
+
+  Iters = 0;
+  // The same thing but with the result as a const reference.
+  for (const auto &[Idx, Int, Bool] :
+       llvm::enumerate(llvm::SmallVector<int>({1, 2, 3}),
+                       std::vector<bool>({true, false, true}))) {
+    EXPECT_EQ(Idx, Iters);
+    ++Iters;
+    Int = 0;
+    Bool = true;
+  }
+}
+
+#if defined(GTEST_HAS_DEATH_TEST) && !defined(NDEBUG)
+TEST(STLExtrasTest, EnumerateDifferentLengths) {
+  std::vector<int> Ints = {0, 1};
+  bool Bools[] = {true, false, true};
+  std::string Chars = "abc";
+  EXPECT_DEATH(llvm::enumerate(Ints, Bools, Chars),
+               "Ranges have different length");
+  EXPECT_DEATH(llvm::enumerate(Bools, Ints, Chars),
+               "Ranges have different length");
+  EXPECT_DEATH(llvm::enumerate(Bools, Chars, Ints),
+               "Ranges have different length");
+}
+#endif
+
 template <bool B> struct CanMove {};
 template <> struct CanMove<false> {
   CanMove(CanMove &&) = delete;
@@ -186,8 +318,8 @@ public:
 template <bool Moveable, bool Copyable>
 struct Range : Counted<Moveable, Copyable> {
   using Counted<Moveable, Copyable>::Counted;
-  int *begin() { return nullptr; }
-  int *end() { return nullptr; }
+  int *begin() const { return nullptr; }
+  int *end() const { return nullptr; }
 };
 
 TEST(STLExtrasTest, EnumerateLifetimeSemanticsPRValue) {
@@ -255,6 +387,46 @@ TEST(STLExtrasTest, EnumerateLifetimeSemanticsLValue) {
   EXPECT_EQ(0, Copies);
   EXPECT_EQ(0, Moves);
   EXPECT_EQ(1, Destructors);
+}
+
+namespace some_namespace {
+struct some_struct {
+  std::vector<int> data;
+  std::string swap_val;
+};
+
+std::vector<int>::const_iterator begin(const some_struct &s) {
+  return s.data.begin();
+}
+
+std::vector<int>::const_iterator end(const some_struct &s) {
+  return s.data.end();
+}
+
+void swap(some_struct &lhs, some_struct &rhs) {
+  // make swap visible as non-adl swap would even seem to
+  // work with std::swap which defaults to moving
+  lhs.swap_val = "lhs";
+  rhs.swap_val = "rhs";
+}
+
+struct requires_move {};
+int *begin(requires_move &&) { return nullptr; }
+int *end(requires_move &&) { return nullptr; }
+} // namespace some_namespace
+
+TEST(STLExtrasTest, EnumerateCustomBeginEnd) {
+  // Check that `enumerate` uses ADL to find `begin`/`end` iterators
+  // of the enumerated type.
+  some_namespace::some_struct X{};
+  X.data = {1, 2, 3};
+
+  unsigned Iters = 0;
+  for (auto [Idx, Val] : enumerate(X)) {
+    EXPECT_EQ(Val, X.data[Idx]);
+    ++Iters;
+  }
+  EXPECT_EQ(Iters, 3u);
 }
 
 TEST(STLExtrasTest, CountAdaptor) {
@@ -353,35 +525,21 @@ TEST(STLExtrasTest, EraseIf) {
 }
 
 TEST(STLExtrasTest, AppendRange) {
-  auto AppendVals = {3};
   std::vector<int> V = {1, 2};
-  append_range(V, AppendVals);
-  EXPECT_EQ(1, V[0]);
-  EXPECT_EQ(2, V[1]);
-  EXPECT_EQ(3, V[2]);
-}
+  auto AppendVals1 = {3};
+  append_range(V, AppendVals1);
+  EXPECT_THAT(V, ElementsAre(1, 2, 3));
 
-namespace some_namespace {
-struct some_struct {
-  std::vector<int> data;
-  std::string swap_val;
-};
+  int AppendVals2[] = {4, 5};
+  append_range(V, AppendVals2);
+  EXPECT_THAT(V, ElementsAre(1, 2, 3, 4, 5));
 
-std::vector<int>::const_iterator begin(const some_struct &s) {
-  return s.data.begin();
+  std::string Str;
+  append_range(Str, "abc");
+  EXPECT_THAT(Str, ElementsAre('a', 'b', 'c', '\0'));
+  append_range(Str, "def");
+  EXPECT_THAT(Str, ElementsAre('a', 'b', 'c', '\0', 'd', 'e', 'f', '\0'));
 }
-
-std::vector<int>::const_iterator end(const some_struct &s) {
-  return s.data.end();
-}
-
-void swap(some_struct &lhs, some_struct &rhs) {
-  // make swap visible as non-adl swap would even seem to
-  // work with std::swap which defaults to moving
-  lhs.swap_val = "lhs";
-  rhs.swap_val = "rhs";
-}
-} // namespace some_namespace
 
 TEST(STLExtrasTest, ADLTest) {
   some_namespace::some_struct s{{1, 2, 3, 4, 5}, ""};
@@ -396,7 +554,58 @@ TEST(STLExtrasTest, ADLTest) {
 
   int count = 0;
   llvm::for_each(s, [&count](int) { ++count; });
-  EXPECT_EQ(5, count);
+  EXPECT_EQ(count, 5);
+}
+
+TEST(STLExtrasTest, ADLTestTemporaryRange) {
+  EXPECT_EQ(adl_begin(some_namespace::requires_move{}), nullptr);
+  EXPECT_EQ(adl_end(some_namespace::requires_move{}), nullptr);
+}
+
+TEST(STLExtrasTest, ADLTestConstexpr) {
+  // `std::begin`/`std::end` are marked as `constexpr`; check that
+  // `adl_begin`/`adl_end` also work in constant-evaluated contexts.
+  static constexpr int c_arr[] = {7, 8, 9};
+  static_assert(adl_begin(c_arr) == c_arr);
+  static_assert(adl_end(c_arr) == c_arr + 3);
+
+  static constexpr std::array<int, 2> std_arr = {1, 2};
+  static_assert(adl_begin(std_arr) == std_arr.begin());
+  static_assert(adl_end(std_arr) == std_arr.end());
+  SUCCEED();
+}
+
+struct FooWithMemberSize {
+  size_t size() const { return 42; }
+  auto begin() { return Data.begin(); }
+  auto end() { return Data.end(); }
+
+  std::set<int> Data;
+};
+
+namespace some_namespace {
+struct FooWithFreeSize {
+  auto begin() { return Data.begin(); }
+  auto end() { return Data.end(); }
+
+  std::set<int> Data;
+};
+
+size_t size(const FooWithFreeSize &) { return 13; }
+} // namespace some_namespace
+
+TEST(STLExtrasTest, ADLSizeTest) {
+  FooWithMemberSize foo1;
+  EXPECT_EQ(adl_size(foo1), 42u);
+
+  some_namespace::FooWithFreeSize foo2;
+  EXPECT_EQ(adl_size(foo2), 13u);
+
+  static constexpr int c_arr[] = {1, 2, 3};
+  static_assert(adl_size(c_arr) == 3u);
+
+  static constexpr std::array<int, 4> cpp_arr = {};
+  static_assert(adl_size(cpp_arr) == 4u);
 }
 
 TEST(STLExtrasTest, DropBeginTest) {
@@ -947,11 +1156,29 @@ enum Doggos {
   Longboi,
 };
 
+struct WooferCmp {
+  // Not copyable.
+  WooferCmp() = default;
+  WooferCmp(const WooferCmp &) = delete;
+  WooferCmp &operator=(const WooferCmp &) = delete;
+
+  friend bool operator==(const Doggos &Doggo, const WooferCmp &) {
+    return Doggo == Doggos::Woofer;
+  }
+};
+
 TEST(STLExtrasTest, IsContainedInitializerList) {
   EXPECT_TRUE(is_contained({Woofer, SubWoofer}, Woofer));
   EXPECT_TRUE(is_contained({Woofer, SubWoofer}, SubWoofer));
   EXPECT_FALSE(is_contained({Woofer, SubWoofer}, Pupper));
-  EXPECT_FALSE(is_contained({}, Longboi));
+
+  // Check that the initializer list type and the element type do not have to
+  // match exactly.
+  EXPECT_TRUE(is_contained({Floofer, Woofer, SubWoofer}, WooferCmp{}));
+  EXPECT_FALSE(is_contained({Floofer, SubWoofer}, WooferCmp{}));
+
+  EXPECT_TRUE(is_contained({"a", "bb", "ccc", "dddd"}, llvm::StringRef("ccc")));
+  EXPECT_FALSE(is_contained({"a", "bb", "ccc", "dddd"}, llvm::StringRef("x")));
 
   static_assert(is_contained({Woofer, SubWoofer}, SubWoofer), "SubWoofer!");
   static_assert(!is_contained({Woofer, SubWoofer}, Pupper), "Missing Pupper!");
@@ -961,6 +1188,56 @@ TEST(STLExtrasTest, IsContainedInitializerList) {
 
   static_assert(is_contained({1, 2, 3, 4}, 3), "It's there!");
   static_assert(!is_contained({1, 2, 3, 4}, 5), "It's not there :(");
+}
+
+TEST(STLExtrasTest, IsContainedMemberContains) {
+  // Check that `llvm::is_contained` uses the member `.contains()` when
+  // available. Check that `.contains()` is preferred over `.find()`.
+  struct Foo {
+    bool contains(int) const {
+      ++NumContainsCalls;
+      return ContainsResult;
+    }
+    int *begin() { return nullptr; }
+    int *end() { return nullptr; }
+    int *find(int) { return nullptr; }
+
+    bool ContainsResult = false;
+    mutable unsigned NumContainsCalls = 0;
+  } Container;
+
+  EXPECT_EQ(Container.NumContainsCalls, 0u);
+  EXPECT_FALSE(is_contained(Container, 1));
+  EXPECT_EQ(Container.NumContainsCalls, 1u);
+
+  Container.ContainsResult = true;
+  EXPECT_TRUE(is_contained(Container, 1));
+  EXPECT_EQ(Container.NumContainsCalls, 2u);
+}
+
+TEST(STLExtrasTest, IsContainedMemberFind) {
+  // Check that `llvm::is_contained` uses the member `.find(x)` when available.
+  struct Foo {
+    auto begin() { return Data.begin(); }
+    auto end() { return Data.end(); }
+    auto find(int X) {
+      ++NumFindCalls;
+      return std::find(begin(), end(), X);
+    }
+
+    std::vector<int> Data;
+    mutable unsigned NumFindCalls = 0;
+  } Container;
+
+  Container.Data = {1, 2, 3};
+
+  EXPECT_EQ(Container.NumFindCalls, 0u);
+  EXPECT_TRUE(is_contained(Container, 1));
+  EXPECT_TRUE(is_contained(Container, 3));
+  EXPECT_EQ(Container.NumFindCalls, 2u);
+
+  EXPECT_FALSE(is_contained(Container, 4));
+  EXPECT_EQ(Container.NumFindCalls, 3u);
 }
 
 TEST(STLExtrasTest, addEnumValues) {
@@ -990,5 +1267,43 @@ TEST(STLExtrasTest, addEnumValues) {
                     static_cast<unsigned long long>(ULLONG_MAX) + 2,
                 "addEnumValues(ULongLongMax, C::Two) failed.");
 }
+
+TEST(STLExtrasTest, LessFirst) {
+  {
+    std::pair<int, int> A(0, 1);
+    std::pair<int, int> B(1, 0);
+    EXPECT_TRUE(less_first()(A, B));
+    EXPECT_FALSE(less_first()(B, A));
+  }
+
+  {
+    std::tuple<int, int> A(0, 1);
+    std::tuple<int, int> B(1, 0);
+    EXPECT_TRUE(less_first()(A, B));
+    EXPECT_FALSE(less_first()(B, A));
+  }
+}
+
+TEST(STLExtrasTest, LessSecond) {
+  {
+    std::pair<int, int> A(0, 1);
+    std::pair<int, int> B(1, 0);
+    EXPECT_FALSE(less_second()(A, B));
+    EXPECT_TRUE(less_second()(B, A));
+  }
+
+  {
+    std::tuple<int, int> A(0, 1);
+    std::tuple<int, int> B(1, 0);
+    EXPECT_FALSE(less_second()(A, B));
+    EXPECT_TRUE(less_second()(B, A));
+  }
+}
+
+struct Foo;
+struct Bar {};
+
+static_assert(is_incomplete_v<Foo>, "Foo is incomplete");
+static_assert(!is_incomplete_v<Bar>, "Bar is defined");
 
 } // namespace

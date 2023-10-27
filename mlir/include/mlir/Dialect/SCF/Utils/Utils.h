@@ -34,27 +34,6 @@ class CallOp;
 class FuncOp;
 } // namespace func
 
-/// Replace the `loop` with `newIterOperands` added as new initialization
-/// values. `newYieldValuesFn` is a callback that can be used to specify
-/// the additional values to be yielded by the loop. The number of
-/// values returned by the callback should match the number of new
-/// initialization values. This function
-/// - Moves (i.e. doesnt clone) operations from the `loop` to the newly created
-///   loop
-/// - Replaces the uses of `loop` with the new loop.
-/// - `loop` isnt erased, but is left in a "no-op" state where the body of the
-///   loop just yields the basic block arguments that correspond to the
-///   initialization values of a loop. The loop is dead after this method.
-/// - If `replaceIterOperandsUsesInLoop` is true, all uses of the
-///   `newIterOperands` within the generated new loop are replaced
-///   with the corresponding `BlockArgument` in the loop body.
-using NewYieldValueFn = std::function<SmallVector<Value>(
-    OpBuilder &b, Location loc, ArrayRef<BlockArgument> newBBArgs)>;
-scf::ForOp replaceLoopWithNewYields(OpBuilder &builder, scf::ForOp loop,
-                                    ValueRange newIterOperands,
-                                    const NewYieldValueFn &newYieldValuesFn,
-                                    bool replaceIterOperandsUsesInLoop = true);
-
 /// Update a perfectly nested loop nest to yield new values from the innermost
 /// loop and propagating it up through the loop nest. This function
 /// - Expects `loopNest` to be a perfectly nested loop with outer most loop
@@ -70,11 +49,10 @@ scf::ForOp replaceLoopWithNewYields(OpBuilder &builder, scf::ForOp loop,
 /// - If `replaceIterOperandsUsesInLoop` is true, all uses of the
 ///   `newIterOperands` within the generated new loop are replaced with the
 ///   corresponding `BlockArgument` in the loop body.
-SmallVector<scf::ForOp>
-replaceLoopNestWithNewYields(OpBuilder &builder, ArrayRef<scf::ForOp> loopNest,
-                             ValueRange newIterOperands,
-                             const NewYieldValueFn &newYieldValueFn,
-                             bool replaceIterOperandsUsesInLoop = true);
+SmallVector<scf::ForOp> replaceLoopNestWithNewYields(
+    RewriterBase &rewriter, MutableArrayRef<scf::ForOp> loopNest,
+    ValueRange newIterOperands, const NewYieldValuesFn &newYieldValuesFn,
+    bool replaceIterOperandsUsesInLoop = true);
 
 /// Outline a region with a single block into a new FuncOp.
 /// Assumes the FuncOp result types is the type of the yielded operands of the
@@ -129,10 +107,6 @@ LogicalResult coalesceLoops(MutableArrayRef<scf::ForOp> loops);
 void collapseParallelLoops(scf::ParallelOp loops,
                            ArrayRef<std::vector<unsigned>> combinedDimensions);
 
-/// Promotes the loop body of a scf::ForOp to its containing block if the loop
-/// was known to have a single iteration.
-LogicalResult promoteIfSingleIteration(scf::ForOp forOp);
-
 /// Unrolls this for operation by the specified unroll factor. Returns failure
 /// if the loop cannot be unrolled either due to restrictions or due to invalid
 /// unroll factors. Requires positive loop bounds and step. If specified,
@@ -176,6 +150,17 @@ Loops tilePerfectlyNested(scf::ForOp rootForOp, ArrayRef<Value> sizes);
 /// AffineForOp, and the second op is a terminator).
 void getPerfectlyNestedLoops(SmallVectorImpl<scf::ForOp> &nestedLoops,
                              scf::ForOp root);
+
+/// Given two scf.forall loops, `target` and `source`, fuses `target` into
+/// `source`. Assumes that the given loops are siblings and are independent of
+/// each other.
+///
+/// This function does not perform any legality checks and simply fuses the
+/// loops. The caller is responsible for ensuring that the loops are legal to
+/// fuse.
+scf::ForallOp fuseIndependentSiblingForallLoops(scf::ForallOp target,
+                                                scf::ForallOp source,
+                                                RewriterBase &rewriter);
 
 } // namespace mlir
 

@@ -1,9 +1,10 @@
-! RUN: bbc -emit-fir %s -o - | FileCheck %s --check-prefixes="CHECK,CMPLX,CMPLX-FAST"
+! RUN: bbc -emit-fir %s -o - | FileCheck %s --check-prefixes="CHECK,CMPLX,CMPLX-PRECISE"
 ! RUN: bbc -emit-fir --math-runtime=precise %s -o - | FileCheck %s --check-prefixes="CMPLX,CMPLX-PRECISE"
-! RUN: bbc --disable-mlir-complex -emit-fir %s -o - | FileCheck %s --check-prefixes="CMPLX,CMPLX-PRECISE"
-! RUN: %flang_fc1 -emit-fir %s -o - | FileCheck %s --check-prefixes="CHECK,CMPLX,CMPLX-FAST"
+! RUN: bbc --force-mlir-complex -emit-fir %s -o - | FileCheck %s --check-prefixes="CMPLX,CMPLX-FAST"
+! RUN: %flang_fc1 -emit-fir %s -o - | FileCheck %s --check-prefixes="CHECK,CMPLX,CMPLX-PRECISE"
 ! RUN: %flang_fc1 -emit-fir -mllvm --math-runtime=precise %s -o - | FileCheck %s --check-prefixes="CMPLX,CMPLX-PRECISE"
-! RUN: %flang_fc1 -emit-fir -mllvm --disable-mlir-complex %s -o - | FileCheck %s --check-prefixes="CMPLX,CMPLX-PRECISE"
+! RUN: %flang_fc1 -emit-fir -mllvm --force-mlir-complex %s -o - | FileCheck %s --check-prefixes="CMPLX,CMPLX-FAST"
+! RUN: %flang_fc1 -fapprox-func -emit-fir %s -o - | FileCheck %s --check-prefixes="CMPLX,CMPLX-APPROX"
 
 ! Test abs intrinsic for various types (int, float, complex)
 
@@ -99,7 +100,9 @@ end subroutine
 subroutine abs_testzr(a, b)
 ! CMPLX:  %[[VAL_2:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.complex<4>>
 ! CMPLX-FAST: %[[VAL_3:.*]] = fir.convert %[[VAL_2]] : (!fir.complex<4>) -> complex<f32>
-! CMPLX-FAST: %[[VAL_4:.*]] = complex.abs %[[VAL_3]] : complex<f32>
+! CMPLX-FAST: %[[VAL_4:.*]] = complex.abs %[[VAL_3]] fastmath<contract> : complex<f32>
+! CMPLX-APPROX: %[[VAL_3:.*]] = fir.convert %[[VAL_2]] : (!fir.complex<4>) -> complex<f32>
+! CMPLX-APPROX: %[[VAL_4:.*]] = complex.abs %[[VAL_3]] fastmath<contract,afn> : complex<f32>
 ! CMPLX-PRECISE:  %[[VAL_4:.*]] = fir.call @cabsf(%[[VAL_2]]) {{.*}}: (!fir.complex<4>) -> f32
 ! CMPLX:  fir.store %[[VAL_4]] to %[[VAL_1]] : !fir.ref<f32>
 ! CMPLX:  return
@@ -113,7 +116,9 @@ end subroutine abs_testzr
 subroutine abs_testzd(a, b)
 ! CMPLX:  %[[VAL_2:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.complex<8>>
 ! CMPLX-FAST: %[[VAL_3:.*]] = fir.convert %[[VAL_2]] : (!fir.complex<8>) -> complex<f64>
-! CMPLX-FAST: %[[VAL_4:.*]] = complex.abs %[[VAL_3]] : complex<f64>
+! CMPLX-FAST: %[[VAL_4:.*]] = complex.abs %[[VAL_3]] fastmath<contract> : complex<f64>
+! CMPLX-APPROX: %[[VAL_3:.*]] = fir.convert %[[VAL_2]] : (!fir.complex<8>) -> complex<f64>
+! CMPLX-APPROX: %[[VAL_4:.*]] = complex.abs %[[VAL_3]] fastmath<contract,afn> : complex<f64>
 ! CMPLX-PRECISE:  %[[VAL_4:.*]] = fir.call @cabs(%[[VAL_2]]) {{.*}}: (!fir.complex<8>) -> f64
 ! CMPLX:  fir.store %[[VAL_4]] to %[[VAL_1]] : !fir.ref<f64>
 ! CMPLX:  return

@@ -22,6 +22,7 @@
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/IR/PseudoProbe.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Discriminator.h"
@@ -1377,7 +1378,8 @@ public:
     Default = 0,
     GNU = 1,
     None = 2,
-    LastDebugNameTableKind = None
+    Apple = 3,
+    LastDebugNameTableKind = Apple
   };
 
   static std::optional<DebugEmissionKind> getEmissionKind(StringRef Str);
@@ -1599,254 +1601,6 @@ public:
   }
 };
 
-/// Debug location.
-///
-/// A debug location in source code, used for debug info and otherwise.
-class DILocation : public MDNode {
-  friend class LLVMContextImpl;
-  friend class MDNode;
-
-  DILocation(LLVMContext &C, StorageType Storage, unsigned Line,
-             unsigned Column, ArrayRef<Metadata *> MDs, bool ImplicitCode);
-  ~DILocation() { dropAllReferences(); }
-
-  static DILocation *getImpl(LLVMContext &Context, unsigned Line,
-                             unsigned Column, Metadata *Scope,
-                             Metadata *InlinedAt, bool ImplicitCode,
-                             StorageType Storage, bool ShouldCreate = true);
-  static DILocation *getImpl(LLVMContext &Context, unsigned Line,
-                             unsigned Column, DILocalScope *Scope,
-                             DILocation *InlinedAt, bool ImplicitCode,
-                             StorageType Storage, bool ShouldCreate = true) {
-    return getImpl(Context, Line, Column, static_cast<Metadata *>(Scope),
-                   static_cast<Metadata *>(InlinedAt), ImplicitCode, Storage,
-                   ShouldCreate);
-  }
-
-  TempDILocation cloneImpl() const {
-    // Get the raw scope/inlinedAt since it is possible to invoke this on
-    // a DILocation containing temporary metadata.
-    return getTemporary(getContext(), getLine(), getColumn(), getRawScope(),
-                        getRawInlinedAt(), isImplicitCode());
-  }
-
-public:
-  // Disallow replacing operands.
-  void replaceOperandWith(unsigned I, Metadata *New) = delete;
-
-  DEFINE_MDNODE_GET(DILocation,
-                    (unsigned Line, unsigned Column, Metadata *Scope,
-                     Metadata *InlinedAt = nullptr, bool ImplicitCode = false),
-                    (Line, Column, Scope, InlinedAt, ImplicitCode))
-  DEFINE_MDNODE_GET(DILocation,
-                    (unsigned Line, unsigned Column, DILocalScope *Scope,
-                     DILocation *InlinedAt = nullptr,
-                     bool ImplicitCode = false),
-                    (Line, Column, Scope, InlinedAt, ImplicitCode))
-
-  /// Return a (temporary) clone of this.
-  TempDILocation clone() const { return cloneImpl(); }
-
-  unsigned getLine() const { return SubclassData32; }
-  unsigned getColumn() const { return SubclassData16; }
-  DILocalScope *getScope() const { return cast<DILocalScope>(getRawScope()); }
-
-  DILocation *getInlinedAt() const {
-    return cast_or_null<DILocation>(getRawInlinedAt());
-  }
-
-  /// Check if the location corresponds to an implicit code.
-  /// When the ImplicitCode flag is true, it means that the Instruction
-  /// with this DILocation has been added by the front-end but it hasn't been
-  /// written explicitly by the user (e.g. cleanup stuff in C++ put on a closing
-  /// bracket). It's useful for code coverage to not show a counter on "empty"
-  /// lines.
-  bool isImplicitCode() const { return SubclassData1; }
-  void setImplicitCode(bool ImplicitCode) { SubclassData1 = ImplicitCode; }
-
-  DIFile *getFile() const { return getScope()->getFile(); }
-  StringRef getFilename() const { return getScope()->getFilename(); }
-  StringRef getDirectory() const { return getScope()->getDirectory(); }
-  std::optional<StringRef> getSource() const { return getScope()->getSource(); }
-
-  /// Get the scope where this is inlined.
-  ///
-  /// Walk through \a getInlinedAt() and return \a getScope() from the deepest
-  /// location.
-  DILocalScope *getInlinedAtScope() const {
-    if (auto *IA = getInlinedAt())
-      return IA->getInlinedAtScope();
-    return getScope();
-  }
-
-  /// Get the DWARF discriminator.
-  ///
-  /// DWARF discriminators distinguish identical file locations between
-  /// instructions that are on different basic blocks.
-  ///
-  /// There are 3 components stored in discriminator, from lower bits:
-  ///
-  /// Base discriminator: assigned by AddDiscriminators pass to identify IRs
-  ///                     that are defined by the same source line, but
-  ///                     different basic blocks.
-  /// Duplication factor: assigned by optimizations that will scale down
-  ///                     the execution frequency of the original IR.
-  /// Copy Identifier: assigned by optimizations that clones the IR.
-  ///                  Each copy of the IR will be assigned an identifier.
-  ///
-  /// Encoding:
-  ///
-  /// The above 3 components are encoded into a 32bit unsigned integer in
-  /// order. If the lowest bit is 1, the current component is empty, and the
-  /// next component will start in the next bit. Otherwise, the current
-  /// component is non-empty, and its content starts in the next bit. The
-  /// value of each components is either 5 bit or 12 bit: if the 7th bit
-  /// is 0, the bit 2~6 (5 bits) are used to represent the component; if the
-  /// 7th bit is 1, the bit 2~6 (5 bits) and 8~14 (7 bits) are combined to
-  /// represent the component. Thus, the number of bits used for a component
-  /// is either 0 (if it and all the next components are empty); 1 - if it is
-  /// empty; 7 - if its value is up to and including 0x1f (lsb and msb are both
-  /// 0); or 14, if its value is up to and including 0x1ff. Note that the last
-  /// component is also capped at 0x1ff, even in the case when both first
-  /// components are 0, and we'd technically have 29 bits available.
-  ///
-  /// For precise control over the data being encoded in the discriminator,
-  /// use encodeDiscriminator/decodeDiscriminator.
-
-  inline unsigned getDiscriminator() const;
-
-  // For the regular discriminator, it stands for all empty components if all
-  // the lowest 3 bits are non-zero and all higher 29 bits are unused(zero by
-  // default). Here we fully leverage the higher 29 bits for pseudo probe use.
-  // This is the format:
-  // [2:0] - 0x7
-  // [31:3] - pseudo probe fields guaranteed to be non-zero as a whole
-  // So if the lower 3 bits is non-zero and the others has at least one
-  // non-zero bit, it guarantees to be a pseudo probe discriminator
-  inline static bool isPseudoProbeDiscriminator(unsigned Discriminator) {
-    return ((Discriminator & 0x7) == 0x7) && (Discriminator & 0xFFFFFFF8);
-  }
-
-  /// Returns a new DILocation with updated \p Discriminator.
-  inline const DILocation *cloneWithDiscriminator(unsigned Discriminator) const;
-
-  /// Returns a new DILocation with updated base discriminator \p BD. Only the
-  /// base discriminator is set in the new DILocation, the other encoded values
-  /// are elided.
-  /// If the discriminator cannot be encoded, the function returns std::nullopt.
-  inline std::optional<const DILocation *>
-  cloneWithBaseDiscriminator(unsigned BD) const;
-
-  /// Returns the duplication factor stored in the discriminator, or 1 if no
-  /// duplication factor (or 0) is encoded.
-  inline unsigned getDuplicationFactor() const;
-
-  /// Returns the copy identifier stored in the discriminator.
-  inline unsigned getCopyIdentifier() const;
-
-  /// Returns the base discriminator stored in the discriminator.
-  inline unsigned getBaseDiscriminator() const;
-
-  /// Returns a new DILocation with duplication factor \p DF * current
-  /// duplication factor encoded in the discriminator. The current duplication
-  /// factor is as defined by getDuplicationFactor().
-  /// Returns std::nullopt if encoding failed.
-  inline std::optional<const DILocation *>
-  cloneByMultiplyingDuplicationFactor(unsigned DF) const;
-
-  /// When two instructions are combined into a single instruction we also
-  /// need to combine the original locations into a single location.
-  /// When the locations are the same we can use either location.
-  /// When they differ, we need a third location which is distinct from either.
-  /// If they share a common scope, use this scope and compare the line/column
-  /// pair of the locations with the common scope:
-  /// * if both match, keep the line and column;
-  /// * if only the line number matches, keep the line and set the column as 0;
-  /// * otherwise set line and column as 0.
-  /// If they do not share a common scope the location is ambiguous and can't be
-  /// represented in a line entry. In this case, set line and column as 0 and
-  /// use the scope of any location.
-  ///
-  /// \p LocA \p LocB: The locations to be merged.
-  static const DILocation *getMergedLocation(const DILocation *LocA,
-                                             const DILocation *LocB);
-
-  /// Try to combine the vector of locations passed as input in a single one.
-  /// This function applies getMergedLocation() repeatedly left-to-right.
-  ///
-  /// \p Locs: The locations to be merged.
-  static const DILocation *
-  getMergedLocations(ArrayRef<const DILocation *> Locs);
-
-  /// Return the masked discriminator value for an input discrimnator value D
-  /// (i.e. zero out the (B+1)-th and above bits for D (B is 0-base).
-  // Example: an input of (0x1FF, 7) returns 0xFF.
-  static unsigned getMaskedDiscriminator(unsigned D, unsigned B) {
-    return (D & getN1Bits(B));
-  }
-
-  /// Return the bits used for base discriminators.
-  static unsigned getBaseDiscriminatorBits() { return getBaseFSBitEnd(); }
-
-  /// Returns the base discriminator for a given encoded discriminator \p D.
-  static unsigned
-  getBaseDiscriminatorFromDiscriminator(unsigned D,
-                                        bool IsFSDiscriminator = false) {
-    if (IsFSDiscriminator)
-      return getMaskedDiscriminator(D, getBaseDiscriminatorBits());
-    return getUnsignedFromPrefixEncoding(D);
-  }
-
-  /// Raw encoding of the discriminator. APIs such as cloneWithDuplicationFactor
-  /// have certain special case behavior (e.g. treating empty duplication factor
-  /// as the value '1').
-  /// This API, in conjunction with cloneWithDiscriminator, may be used to
-  /// encode the raw values provided.
-  ///
-  /// \p BD: base discriminator
-  /// \p DF: duplication factor
-  /// \p CI: copy index
-  ///
-  /// The return is std::nullopt if the values cannot be encoded in 32 bits -
-  /// for example, values for BD or DF larger than 12 bits. Otherwise, the
-  /// return is the encoded value.
-  static std::optional<unsigned> encodeDiscriminator(unsigned BD, unsigned DF,
-                                                     unsigned CI);
-
-  /// Raw decoder for values in an encoded discriminator D.
-  static void decodeDiscriminator(unsigned D, unsigned &BD, unsigned &DF,
-                                  unsigned &CI);
-
-  /// Returns the duplication factor for a given encoded discriminator \p D, or
-  /// 1 if no value or 0 is encoded.
-  static unsigned getDuplicationFactorFromDiscriminator(unsigned D) {
-    if (EnableFSDiscriminator)
-      return 1;
-    D = getNextComponentInDiscriminator(D);
-    unsigned Ret = getUnsignedFromPrefixEncoding(D);
-    if (Ret == 0)
-      return 1;
-    return Ret;
-  }
-
-  /// Returns the copy identifier for a given encoded discriminator \p D.
-  static unsigned getCopyIdentifierFromDiscriminator(unsigned D) {
-    return getUnsignedFromPrefixEncoding(
-        getNextComponentInDiscriminator(getNextComponentInDiscriminator(D)));
-  }
-
-  Metadata *getRawScope() const { return getOperand(0); }
-  Metadata *getRawInlinedAt() const {
-    if (getNumOperands() == 2)
-      return getOperand(1);
-    return nullptr;
-  }
-
-  static bool classof(const Metadata *MD) {
-    return MD->getMetadataID() == DILocationKind;
-  }
-};
-
 /// Subprogram description.
 class DISubprogram : public DILocalScope {
   friend class LLVMContextImpl;
@@ -2065,6 +1819,7 @@ public:
   DISubprogram *getDeclaration() const {
     return cast_or_null<DISubprogram>(getRawDeclaration());
   }
+  void replaceDeclaration(DISubprogram *Decl) { replaceOperandWith(6, Decl); }
   DINodeArray getRetainedNodes() const {
     return cast_or_null<MDTuple>(getRawRetainedNodes());
   }
@@ -2104,6 +1859,9 @@ public:
   void replaceRawLinkageName(MDString *LinkageName) {
     replaceOperandWith(3, LinkageName);
   }
+  void replaceRetainedNodes(DINodeArray N) {
+    replaceOperandWith(7, N.get());
+  }
 
   /// Check if this subprogram describes the given function.
   ///
@@ -2112,6 +1870,272 @@ public:
 
   static bool classof(const Metadata *MD) {
     return MD->getMetadataID() == DISubprogramKind;
+  }
+};
+
+/// Debug location.
+///
+/// A debug location in source code, used for debug info and otherwise.
+class DILocation : public MDNode {
+  friend class LLVMContextImpl;
+  friend class MDNode;
+
+  DILocation(LLVMContext &C, StorageType Storage, unsigned Line,
+             unsigned Column, ArrayRef<Metadata *> MDs, bool ImplicitCode);
+  ~DILocation() { dropAllReferences(); }
+
+  static DILocation *getImpl(LLVMContext &Context, unsigned Line,
+                             unsigned Column, Metadata *Scope,
+                             Metadata *InlinedAt, bool ImplicitCode,
+                             StorageType Storage, bool ShouldCreate = true);
+  static DILocation *getImpl(LLVMContext &Context, unsigned Line,
+                             unsigned Column, DILocalScope *Scope,
+                             DILocation *InlinedAt, bool ImplicitCode,
+                             StorageType Storage, bool ShouldCreate = true) {
+    return getImpl(Context, Line, Column, static_cast<Metadata *>(Scope),
+                   static_cast<Metadata *>(InlinedAt), ImplicitCode, Storage,
+                   ShouldCreate);
+  }
+
+  TempDILocation cloneImpl() const {
+    // Get the raw scope/inlinedAt since it is possible to invoke this on
+    // a DILocation containing temporary metadata.
+    return getTemporary(getContext(), getLine(), getColumn(), getRawScope(),
+                        getRawInlinedAt(), isImplicitCode());
+  }
+
+public:
+  // Disallow replacing operands.
+  void replaceOperandWith(unsigned I, Metadata *New) = delete;
+
+  DEFINE_MDNODE_GET(DILocation,
+                    (unsigned Line, unsigned Column, Metadata *Scope,
+                     Metadata *InlinedAt = nullptr, bool ImplicitCode = false),
+                    (Line, Column, Scope, InlinedAt, ImplicitCode))
+  DEFINE_MDNODE_GET(DILocation,
+                    (unsigned Line, unsigned Column, DILocalScope *Scope,
+                     DILocation *InlinedAt = nullptr,
+                     bool ImplicitCode = false),
+                    (Line, Column, Scope, InlinedAt, ImplicitCode))
+
+  /// Return a (temporary) clone of this.
+  TempDILocation clone() const { return cloneImpl(); }
+
+  unsigned getLine() const { return SubclassData32; }
+  unsigned getColumn() const { return SubclassData16; }
+  DILocalScope *getScope() const { return cast<DILocalScope>(getRawScope()); }
+
+  /// Return the linkage name of Subprogram. If the linkage name is empty,
+  /// return scope name (the demangled name).
+  StringRef getSubprogramLinkageName() const {
+    DISubprogram *SP = getScope()->getSubprogram();
+    if (!SP)
+      return "";
+    auto Name = SP->getLinkageName();
+    if (!Name.empty())
+      return Name;
+    return SP->getName();
+  }
+
+  DILocation *getInlinedAt() const {
+    return cast_or_null<DILocation>(getRawInlinedAt());
+  }
+
+  /// Check if the location corresponds to an implicit code.
+  /// When the ImplicitCode flag is true, it means that the Instruction
+  /// with this DILocation has been added by the front-end but it hasn't been
+  /// written explicitly by the user (e.g. cleanup stuff in C++ put on a closing
+  /// bracket). It's useful for code coverage to not show a counter on "empty"
+  /// lines.
+  bool isImplicitCode() const { return SubclassData1; }
+  void setImplicitCode(bool ImplicitCode) { SubclassData1 = ImplicitCode; }
+
+  DIFile *getFile() const { return getScope()->getFile(); }
+  StringRef getFilename() const { return getScope()->getFilename(); }
+  StringRef getDirectory() const { return getScope()->getDirectory(); }
+  std::optional<StringRef> getSource() const { return getScope()->getSource(); }
+
+  /// Get the scope where this is inlined.
+  ///
+  /// Walk through \a getInlinedAt() and return \a getScope() from the deepest
+  /// location.
+  DILocalScope *getInlinedAtScope() const {
+    if (auto *IA = getInlinedAt())
+      return IA->getInlinedAtScope();
+    return getScope();
+  }
+
+  /// Get the DWARF discriminator.
+  ///
+  /// DWARF discriminators distinguish identical file locations between
+  /// instructions that are on different basic blocks.
+  ///
+  /// There are 3 components stored in discriminator, from lower bits:
+  ///
+  /// Base discriminator: assigned by AddDiscriminators pass to identify IRs
+  ///                     that are defined by the same source line, but
+  ///                     different basic blocks.
+  /// Duplication factor: assigned by optimizations that will scale down
+  ///                     the execution frequency of the original IR.
+  /// Copy Identifier: assigned by optimizations that clones the IR.
+  ///                  Each copy of the IR will be assigned an identifier.
+  ///
+  /// Encoding:
+  ///
+  /// The above 3 components are encoded into a 32bit unsigned integer in
+  /// order. If the lowest bit is 1, the current component is empty, and the
+  /// next component will start in the next bit. Otherwise, the current
+  /// component is non-empty, and its content starts in the next bit. The
+  /// value of each components is either 5 bit or 12 bit: if the 7th bit
+  /// is 0, the bit 2~6 (5 bits) are used to represent the component; if the
+  /// 7th bit is 1, the bit 2~6 (5 bits) and 8~14 (7 bits) are combined to
+  /// represent the component. Thus, the number of bits used for a component
+  /// is either 0 (if it and all the next components are empty); 1 - if it is
+  /// empty; 7 - if its value is up to and including 0x1f (lsb and msb are both
+  /// 0); or 14, if its value is up to and including 0x1ff. Note that the last
+  /// component is also capped at 0x1ff, even in the case when both first
+  /// components are 0, and we'd technically have 29 bits available.
+  ///
+  /// For precise control over the data being encoded in the discriminator,
+  /// use encodeDiscriminator/decodeDiscriminator.
+
+  inline unsigned getDiscriminator() const;
+
+  // For the regular discriminator, it stands for all empty components if all
+  // the lowest 3 bits are non-zero and all higher 29 bits are unused(zero by
+  // default). Here we fully leverage the higher 29 bits for pseudo probe use.
+  // This is the format:
+  // [2:0] - 0x7
+  // [31:3] - pseudo probe fields guaranteed to be non-zero as a whole
+  // So if the lower 3 bits is non-zero and the others has at least one
+  // non-zero bit, it guarantees to be a pseudo probe discriminator
+  inline static bool isPseudoProbeDiscriminator(unsigned Discriminator) {
+    return ((Discriminator & 0x7) == 0x7) && (Discriminator & 0xFFFFFFF8);
+  }
+
+  /// Returns a new DILocation with updated \p Discriminator.
+  inline const DILocation *cloneWithDiscriminator(unsigned Discriminator) const;
+
+  /// Returns a new DILocation with updated base discriminator \p BD. Only the
+  /// base discriminator is set in the new DILocation, the other encoded values
+  /// are elided.
+  /// If the discriminator cannot be encoded, the function returns std::nullopt.
+  inline std::optional<const DILocation *>
+  cloneWithBaseDiscriminator(unsigned BD) const;
+
+  /// Returns the duplication factor stored in the discriminator, or 1 if no
+  /// duplication factor (or 0) is encoded.
+  inline unsigned getDuplicationFactor() const;
+
+  /// Returns the copy identifier stored in the discriminator.
+  inline unsigned getCopyIdentifier() const;
+
+  /// Returns the base discriminator stored in the discriminator.
+  inline unsigned getBaseDiscriminator() const;
+
+  /// Returns a new DILocation with duplication factor \p DF * current
+  /// duplication factor encoded in the discriminator. The current duplication
+  /// factor is as defined by getDuplicationFactor().
+  /// Returns std::nullopt if encoding failed.
+  inline std::optional<const DILocation *>
+  cloneByMultiplyingDuplicationFactor(unsigned DF) const;
+
+  /// When two instructions are combined into a single instruction we also
+  /// need to combine the original locations into a single location.
+  /// When the locations are the same we can use either location.
+  /// When they differ, we need a third location which is distinct from either.
+  /// If they share a common scope, use this scope and compare the line/column
+  /// pair of the locations with the common scope:
+  /// * if both match, keep the line and column;
+  /// * if only the line number matches, keep the line and set the column as 0;
+  /// * otherwise set line and column as 0.
+  /// If they do not share a common scope the location is ambiguous and can't be
+  /// represented in a line entry. In this case, set line and column as 0 and
+  /// use the scope of any location.
+  ///
+  /// \p LocA \p LocB: The locations to be merged.
+  static DILocation *getMergedLocation(DILocation *LocA, DILocation *LocB);
+
+  /// Try to combine the vector of locations passed as input in a single one.
+  /// This function applies getMergedLocation() repeatedly left-to-right.
+  ///
+  /// \p Locs: The locations to be merged.
+  static DILocation *getMergedLocations(ArrayRef<DILocation *> Locs);
+
+  /// Return the masked discriminator value for an input discrimnator value D
+  /// (i.e. zero out the (B+1)-th and above bits for D (B is 0-base).
+  // Example: an input of (0x1FF, 7) returns 0xFF.
+  static unsigned getMaskedDiscriminator(unsigned D, unsigned B) {
+    return (D & getN1Bits(B));
+  }
+
+  /// Return the bits used for base discriminators.
+  static unsigned getBaseDiscriminatorBits() { return getBaseFSBitEnd(); }
+
+  /// Returns the base discriminator for a given encoded discriminator \p D.
+  static unsigned
+  getBaseDiscriminatorFromDiscriminator(unsigned D,
+                                        bool IsFSDiscriminator = false) {
+    // Return the probe id instead of zero for a pseudo probe discriminator.
+    // This should help differenciate callsites with same line numbers to
+    // achieve a decent AutoFDO profile under -fpseudo-probe-for-profiling,
+    // where the original callsite dwarf discriminator is overwritten by
+    // callsite probe information.
+    if (isPseudoProbeDiscriminator(D))
+      return PseudoProbeDwarfDiscriminator::extractProbeIndex(D);
+
+    if (IsFSDiscriminator)
+      return getMaskedDiscriminator(D, getBaseDiscriminatorBits());
+    return getUnsignedFromPrefixEncoding(D);
+  }
+
+  /// Raw encoding of the discriminator. APIs such as cloneWithDuplicationFactor
+  /// have certain special case behavior (e.g. treating empty duplication factor
+  /// as the value '1').
+  /// This API, in conjunction with cloneWithDiscriminator, may be used to
+  /// encode the raw values provided.
+  ///
+  /// \p BD: base discriminator
+  /// \p DF: duplication factor
+  /// \p CI: copy index
+  ///
+  /// The return is std::nullopt if the values cannot be encoded in 32 bits -
+  /// for example, values for BD or DF larger than 12 bits. Otherwise, the
+  /// return is the encoded value.
+  static std::optional<unsigned> encodeDiscriminator(unsigned BD, unsigned DF,
+                                                     unsigned CI);
+
+  /// Raw decoder for values in an encoded discriminator D.
+  static void decodeDiscriminator(unsigned D, unsigned &BD, unsigned &DF,
+                                  unsigned &CI);
+
+  /// Returns the duplication factor for a given encoded discriminator \p D, or
+  /// 1 if no value or 0 is encoded.
+  static unsigned getDuplicationFactorFromDiscriminator(unsigned D) {
+    if (EnableFSDiscriminator)
+      return 1;
+    D = getNextComponentInDiscriminator(D);
+    unsigned Ret = getUnsignedFromPrefixEncoding(D);
+    if (Ret == 0)
+      return 1;
+    return Ret;
+  }
+
+  /// Returns the copy identifier for a given encoded discriminator \p D.
+  static unsigned getCopyIdentifierFromDiscriminator(unsigned D) {
+    return getUnsignedFromPrefixEncoding(
+        getNextComponentInDiscriminator(getNextComponentInDiscriminator(D)));
+  }
+
+  Metadata *getRawScope() const { return getOperand(0); }
+  Metadata *getRawInlinedAt() const {
+    if (getNumOperands() == 2)
+      return getOperand(1);
+    return nullptr;
+  }
+
+  static bool classof(const Metadata *MD) {
+    return MD->getMetadataID() == DILocationKind;
   }
 };
 
@@ -2296,6 +2320,12 @@ DILocation::cloneWithBaseDiscriminator(unsigned D) const {
 std::optional<const DILocation *>
 DILocation::cloneByMultiplyingDuplicationFactor(unsigned DF) const {
   assert(!EnableFSDiscriminator && "FSDiscriminator should not call this.");
+  // Do no interfere with pseudo probes. Pseudo probe doesn't need duplication
+  // factor support as samples collected on cloned probes will be aggregated.
+  // Also pseudo probe at a callsite uses the dwarf discriminator to store
+  // pseudo probe related information, such as the probe id.
+  if (isPseudoProbeDiscriminator(getDiscriminator()))
+    return this;
 
   DF *= getDuplicationFactor();
   if (DF <= 1)
@@ -2769,10 +2799,31 @@ public:
   /// Return whether the first element a DW_OP_deref.
   bool startsWithDeref() const;
 
+  /// Return whether there is exactly one operator and it is a DW_OP_deref;
+  bool isDeref() const;
+
   /// Holds the characteristics of one fragment of a larger variable.
   struct FragmentInfo {
+    FragmentInfo() = default;
+    FragmentInfo(uint64_t SizeInBits, uint64_t OffsetInBits)
+        : SizeInBits(SizeInBits), OffsetInBits(OffsetInBits) {}
     uint64_t SizeInBits;
     uint64_t OffsetInBits;
+    /// Return the index of the first bit of the fragment.
+    uint64_t startInBits() const { return OffsetInBits; }
+    /// Return the index of the bit after the end of the fragment, e.g. for
+    /// fragment offset=16 and size=32 return their sum, 48.
+    uint64_t endInBits() const { return OffsetInBits + SizeInBits; }
+
+    /// Returns a zero-sized fragment if A and B don't intersect.
+    static DIExpression::FragmentInfo intersect(DIExpression::FragmentInfo A,
+                                                DIExpression::FragmentInfo B) {
+      uint64_t StartInBits = std::max(A.OffsetInBits, B.OffsetInBits);
+      uint64_t EndInBits = std::min(A.endInBits(), B.endInBits());
+      if (EndInBits <= StartInBits)
+        return {0, 0};
+      return DIExpression::FragmentInfo(EndInBits - StartInBits, StartInBits);
+    }
   };
 
   /// Retrieve the details of this fragment expression.
@@ -2799,6 +2850,13 @@ public:
   /// DW_OP_LLVM_arg op as its first operand, or if it contains none.
   bool isSingleLocationExpression() const;
 
+  /// Returns a reference to the elements contained in this expression, skipping
+  /// past the leading `DW_OP_LLVM_arg, 0` if one is present.
+  /// Similar to `convertToNonVariadicExpression`, but faster and cheaper - it
+  /// does not check whether the expression is a single-location expression, and
+  /// it returns elements rather than creating a new DIExpression.
+  std::optional<ArrayRef<uint64_t>> getSingleLocationExpressionElements() const;
+
   /// Removes all elements from \p Expr that do not apply to an undef debug
   /// value, which includes every operator that computes the value/location on
   /// the DWARF stack, including any DW_OP_LLVM_arg elements (making the result
@@ -2817,6 +2875,9 @@ public:
   /// single debug operand at the start of the expression, then return that
   /// expression in a non-variadic form by removing DW_OP_LLVM_arg from the
   /// expression if it is present; otherwise returns std::nullopt.
+  /// See also `getSingleLocationExpressionElements` above, which skips
+  /// checking `isSingleLocationExpression` and returns a list of elements
+  /// rather than a DIExpression.
   static std::optional<const DIExpression *>
   convertToNonVariadicExpression(const DIExpression *Expr);
 
@@ -2835,9 +2896,9 @@ public:
   /// non-variadic form and not considering the debug operands.
   /// \p FirstExpr is the DIExpression for the first debug value.
   /// \p FirstIndirect should be true if the first debug value is indirect; in
-  /// IR this should be true for dbg.declare and dbg.addr intrinsics and false
-  /// for dbg.values, and in MIR this should be true only for DBG_VALUE
-  /// instructions whose second operand is an immediate value.
+  /// IR this should be true for dbg.declare intrinsics and false for
+  /// dbg.values, and in MIR this should be true only for DBG_VALUE instructions
+  /// whose second operand is an immediate value.
   /// \p SecondExpr and \p SecondIndirect have the same meaning as the prior
   /// arguments, but apply to the second debug value.
   static bool isEqualExpression(const DIExpression *FirstExpr,
@@ -3797,6 +3858,18 @@ template <> struct DenseMapInfo<DebugVariable> {
   }
 };
 
+/// Identifies a unique instance of a whole variable (discards/ignores fragment
+/// information).
+class DebugVariableAggregate : public DebugVariable {
+public:
+  DebugVariableAggregate(const DbgVariableIntrinsic *DVI);
+  DebugVariableAggregate(const DebugVariable &V)
+      : DebugVariable(V.getVariable(), std::nullopt, V.getInlinedAt()) {}
+};
+
+template <>
+struct DenseMapInfo<DebugVariableAggregate>
+    : public DenseMapInfo<DebugVariable> {};
 } // end namespace llvm
 
 #undef DEFINE_MDNODE_GET_UNPACK_IMPL

@@ -1,4 +1,5 @@
 set(LLVM_LINK_COMPONENTS
+  BinaryFormat
   Object
   Support
   TargetParser
@@ -15,8 +16,6 @@ set(CLANG_OFFLOAD_BUNDLER_LIB_DEPS
   clangBasic
   clangDriver
   )
-
-add_dependencies(clang clang-offload-bundler)
 
 clang_target_link_libraries(clang-offload-bundler
   PRIVATE

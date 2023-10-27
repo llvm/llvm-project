@@ -119,7 +119,7 @@ define i32 @test8(ptr %p) {
 ; ordering imposed.
 define i32 @test9() {
 ; CHECK-LABEL: @test9(
-; CHECK-NEXT:    store i32 poison, ptr null, align 4294967296
+; CHECK-NEXT:    store i1 true, ptr poison, align 1
 ; CHECK-NEXT:    ret i32 poison
 ;
   %x = load atomic i32, ptr null unordered, align 4
@@ -128,7 +128,7 @@ define i32 @test9() {
 
 define i32 @test9_no_null_opt() #0 {
 ; CHECK-LABEL: @test9_no_null_opt(
-; CHECK-NEXT:    [[X:%.*]] = load atomic i32, ptr null unordered, align 4294967296
+; CHECK-NEXT:    [[X:%.*]] = load atomic i32, ptr null unordered, align 4
 ; CHECK-NEXT:    ret i32 [[X]]
 ;
   %x = load atomic i32, ptr null unordered, align 4
@@ -138,7 +138,7 @@ define i32 @test9_no_null_opt() #0 {
 ; FIXME: Could also fold
 define i32 @test10() {
 ; CHECK-LABEL: @test10(
-; CHECK-NEXT:    [[X:%.*]] = load atomic i32, ptr null monotonic, align 4294967296
+; CHECK-NEXT:    [[X:%.*]] = load atomic i32, ptr null monotonic, align 4
 ; CHECK-NEXT:    ret i32 [[X]]
 ;
   %x = load atomic i32, ptr null monotonic, align 4
@@ -147,7 +147,7 @@ define i32 @test10() {
 
 define i32 @test10_no_null_opt() #0 {
 ; CHECK-LABEL: @test10_no_null_opt(
-; CHECK-NEXT:    [[X:%.*]] = load atomic i32, ptr null monotonic, align 4294967296
+; CHECK-NEXT:    [[X:%.*]] = load atomic i32, ptr null monotonic, align 4
 ; CHECK-NEXT:    ret i32 [[X]]
 ;
   %x = load atomic i32, ptr null monotonic, align 4
@@ -157,7 +157,7 @@ define i32 @test10_no_null_opt() #0 {
 ; Would this be legal to fold?  Probably?
 define i32 @test11() {
 ; CHECK-LABEL: @test11(
-; CHECK-NEXT:    [[X:%.*]] = load atomic i32, ptr null seq_cst, align 4294967296
+; CHECK-NEXT:    [[X:%.*]] = load atomic i32, ptr null seq_cst, align 4
 ; CHECK-NEXT:    ret i32 [[X]]
 ;
   %x = load atomic i32, ptr null seq_cst, align 4
@@ -166,7 +166,7 @@ define i32 @test11() {
 
 define i32 @test11_no_null_opt() #0 {
 ; CHECK-LABEL: @test11_no_null_opt(
-; CHECK-NEXT:    [[X:%.*]] = load atomic i32, ptr null seq_cst, align 4294967296
+; CHECK-NEXT:    [[X:%.*]] = load atomic i32, ptr null seq_cst, align 4
 ; CHECK-NEXT:    ret i32 [[X]]
 ;
   %x = load atomic i32, ptr null seq_cst, align 4
@@ -177,7 +177,7 @@ define i32 @test11_no_null_opt() #0 {
 ; ordering imposed.
 define i32 @test12() {
 ; CHECK-LABEL: @test12(
-; CHECK-NEXT:    store atomic i32 poison, ptr null unordered, align 4294967296
+; CHECK-NEXT:    store atomic i32 poison, ptr null unordered, align 4
 ; CHECK-NEXT:    ret i32 0
 ;
   store atomic i32 0, ptr null unordered, align 4
@@ -186,7 +186,7 @@ define i32 @test12() {
 
 define i32 @test12_no_null_opt() #0 {
 ; CHECK-LABEL: @test12_no_null_opt(
-; CHECK-NEXT:    store atomic i32 0, ptr null unordered, align 4294967296
+; CHECK-NEXT:    store atomic i32 0, ptr null unordered, align 4
 ; CHECK-NEXT:    ret i32 0
 ;
   store atomic i32 0, ptr null unordered, align 4
@@ -196,7 +196,7 @@ define i32 @test12_no_null_opt() #0 {
 ; FIXME: Could also fold
 define i32 @test13() {
 ; CHECK-LABEL: @test13(
-; CHECK-NEXT:    store atomic i32 0, ptr null monotonic, align 4294967296
+; CHECK-NEXT:    store atomic i32 0, ptr null monotonic, align 4
 ; CHECK-NEXT:    ret i32 0
 ;
   store atomic i32 0, ptr null monotonic, align 4
@@ -205,7 +205,7 @@ define i32 @test13() {
 
 define i32 @test13_no_null_opt() #0 {
 ; CHECK-LABEL: @test13_no_null_opt(
-; CHECK-NEXT:    store atomic i32 0, ptr null monotonic, align 4294967296
+; CHECK-NEXT:    store atomic i32 0, ptr null monotonic, align 4
 ; CHECK-NEXT:    ret i32 0
 ;
   store atomic i32 0, ptr null monotonic, align 4
@@ -215,7 +215,7 @@ define i32 @test13_no_null_opt() #0 {
 ; Would this be legal to fold?  Probably?
 define i32 @test14() {
 ; CHECK-LABEL: @test14(
-; CHECK-NEXT:    store atomic i32 0, ptr null seq_cst, align 4294967296
+; CHECK-NEXT:    store atomic i32 0, ptr null seq_cst, align 4
 ; CHECK-NEXT:    ret i32 0
 ;
   store atomic i32 0, ptr null seq_cst, align 4
@@ -224,7 +224,7 @@ define i32 @test14() {
 
 define i32 @test14_no_null_opt() #0 {
 ; CHECK-LABEL: @test14_no_null_opt(
-; CHECK-NEXT:    store atomic i32 0, ptr null seq_cst, align 4294967296
+; CHECK-NEXT:    store atomic i32 0, ptr null seq_cst, align 4
 ; CHECK-NEXT:    ret i32 0
 ;
   store atomic i32 0, ptr null seq_cst, align 4

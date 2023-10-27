@@ -19,9 +19,43 @@
 #include "llvm/Support/type_traits.h"
 #include <cassert>
 #include <cstdint>
+#include <cstring>
 #include <limits>
 
 namespace llvm {
+
+namespace detail {
+template <typename Ptr> struct PunnedPointer {
+  static_assert(sizeof(Ptr) == sizeof(intptr_t), "");
+
+  // Asserts that allow us to let the compiler implement the destructor and
+  // copy/move constructors
+  static_assert(std::is_trivially_destructible<Ptr>::value, "");
+  static_assert(std::is_trivially_copy_constructible<Ptr>::value, "");
+  static_assert(std::is_trivially_move_constructible<Ptr>::value, "");
+
+  explicit constexpr PunnedPointer(intptr_t i = 0) { *this = i; }
+
+  constexpr intptr_t asInt() const {
+    intptr_t R = 0;
+    std::memcpy(&R, Data, sizeof(R));
+    return R;
+  }
+
+  constexpr operator intptr_t() const { return asInt(); }
+
+  constexpr PunnedPointer &operator=(intptr_t V) {
+    std::memcpy(Data, &V, sizeof(Data));
+    return *this;
+  }
+
+  Ptr *getPointerAddress() { return reinterpret_cast<Ptr *>(Data); }
+  const Ptr *getPointerAddress() const { return reinterpret_cast<Ptr *>(Data); }
+
+private:
+  alignas(Ptr) unsigned char Data[sizeof(Ptr)];
+};
+} // namespace detail
 
 template <typename T, typename Enable> struct DenseMapInfo;
 template <typename PointerT, unsigned IntBits, typename PtrTraits>
@@ -46,7 +80,7 @@ template <typename PointerTy, unsigned IntBits, typename IntType = unsigned,
 class PointerIntPair {
   // Used by MSVC visualizer and generally helpful for debugging/visualizing.
   using InfoTy = Info;
-  intptr_t Value = 0;
+  detail::PunnedPointer<PointerTy> Value;
 
 public:
   constexpr PointerIntPair() = default;
@@ -86,10 +120,12 @@ public:
     assert(Value == reinterpret_cast<intptr_t>(getPointer()) &&
            "Can only return the address if IntBits is cleared and "
            "PtrTraits doesn't change the pointer");
-    return reinterpret_cast<PointerTy *>(&Value);
+    return Value.getPointerAddress();
   }
 
-  void *getOpaqueValue() const { return reinterpret_cast<void *>(Value); }
+  void *getOpaqueValue() const {
+    return reinterpret_cast<void *>(Value.asInt());
+  }
 
   void setFromOpaqueValue(void *Val) & {
     Value = reinterpret_cast<intptr_t>(Val);

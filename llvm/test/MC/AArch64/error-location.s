@@ -1,4 +1,4 @@
-// RUN: not llvm-mc -triple aarch64--none-eabi -filetype obj < %s -o /dev/null 2>&1 | FileCheck %s
+// RUN: not llvm-mc -triple aarch64 -filetype obj < %s -o /dev/null 2>&1 | FileCheck %s
 
 // Note: These errors are not always emitted in the order in which the relevant
 // source appears, this file is carefully ordered so that that is the case.

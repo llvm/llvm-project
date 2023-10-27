@@ -199,7 +199,7 @@ define i8 @lshr_imm1_i8(i8 %a) {
 ; CHECK-LABEL: lshr_imm1_i8:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    shrb $1, %al
+; CHECK-NEXT:    shrb %al
 ; CHECK-NEXT:    ## kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq
   %c = lshr i8 %a, 1
@@ -210,7 +210,7 @@ define i16 @lshr_imm1_i16(i16 %a) {
 ; CHECK-LABEL: lshr_imm1_i16:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    shrw $1, %ax
+; CHECK-NEXT:    shrw %ax
 ; CHECK-NEXT:    ## kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retq
   %c = lshr i16 %a, 1
@@ -221,7 +221,7 @@ define i32 @lshr_imm1_i32(i32 %a) {
 ; CHECK-LABEL: lshr_imm1_i32:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    shrl $1, %eax
+; CHECK-NEXT:    shrl %eax
 ; CHECK-NEXT:    retq
   %c = lshr i32 %a, 1
   ret i32 %c
@@ -231,7 +231,7 @@ define i64 @lshr_imm1_i64(i64 %a) {
 ; CHECK-LABEL: lshr_imm1_i64:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    shrq $1, %rax
+; CHECK-NEXT:    shrq %rax
 ; CHECK-NEXT:    retq
   %c = lshr i64 %a, 1
   ret i64 %c
@@ -241,7 +241,7 @@ define i8 @ashr_imm1_i8(i8 %a) {
 ; CHECK-LABEL: ashr_imm1_i8:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    sarb $1, %al
+; CHECK-NEXT:    sarb %al
 ; CHECK-NEXT:    ## kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq
   %c = ashr i8 %a, 1
@@ -252,7 +252,7 @@ define i16 @ashr_imm1_i16(i16 %a) {
 ; CHECK-LABEL: ashr_imm1_i16:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    sarw $1, %ax
+; CHECK-NEXT:    sarw %ax
 ; CHECK-NEXT:    ## kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retq
   %c = ashr i16 %a, 1
@@ -263,7 +263,7 @@ define i32 @ashr_imm1_i32(i32 %a) {
 ; CHECK-LABEL: ashr_imm1_i32:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    sarl $1, %eax
+; CHECK-NEXT:    sarl %eax
 ; CHECK-NEXT:    retq
   %c = ashr i32 %a, 1
   ret i32 %c
@@ -273,7 +273,7 @@ define i64 @ashr_imm1_i64(i64 %a) {
 ; CHECK-LABEL: ashr_imm1_i64:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    sarq $1, %rax
+; CHECK-NEXT:    sarq %rax
 ; CHECK-NEXT:    retq
   %c = ashr i64 %a, 1
   ret i64 %c

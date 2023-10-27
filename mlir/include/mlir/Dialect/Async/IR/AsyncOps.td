@@ -20,7 +20,7 @@ include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Interfaces/CallInterfaces.td"
 include "mlir/IR/SymbolInterfaces.td"
-include "mlir/IR/FunctionInterfaces.td"
+include "mlir/Interfaces/FunctionInterfaces.td"
 include "mlir/IR/OpAsmInterface.td"
 
 
@@ -35,7 +35,7 @@ class Async_Op<string mnemonic, list<Trait> traits = []> :
 def Async_ExecuteOp :
   Async_Op<"execute", [SingleBlockImplicitTerminator<"YieldOp">,
                        DeclareOpInterfaceMethods<RegionBranchOpInterface,
-                                                 ["getSuccessorEntryOperands",
+                                                 ["getEntrySuccessorOperands",
                                                   "areTypesCompatible"]>,
                        AttrSizedOperandSegments,
                        AutomaticAllocationScope]> {
@@ -105,8 +105,7 @@ def Async_ExecuteOp :
 }
 
 def Async_FuncOp : Async_Op<"func",
-    [CallableOpInterface, FunctionOpInterface,
-     IsolatedFromAbove, OpAsmOpInterface]> {
+    [FunctionOpInterface, IsolatedFromAbove, OpAsmOpInterface]> {
   let summary = "async function operation";
   let description = [{
     An async function is like a normal function, but supports non-blocking
@@ -154,7 +153,7 @@ def Async_FuncOp : Async_Op<"func",
 
   let extraClassDeclaration = [{
     //===------------------------------------------------------------------===//
-    // CallableOpInterface
+    // FunctionOpInterface Methods
     //===------------------------------------------------------------------===//
 
     /// Returns the region on the current operation that is callable. This may
@@ -162,15 +161,6 @@ def Async_FuncOp : Async_Op<"func",
     /// function.
     ::mlir::Region *getCallableRegion() { return isExternal() ? nullptr
                                                               : &getBody(); }
-
-    /// Returns the results types that the callable region produces when
-    /// executed.
-    ArrayRef<Type> getCallableResults() { return getFunctionType()
-                                                    .getResults(); }
-
-    //===------------------------------------------------------------------===//
-    // FunctionOpInterface Methods
-    //===------------------------------------------------------------------===//
 
     /// Returns the argument types of this async function.
     ArrayRef<Type> getArgumentTypes() { return getFunctionType().getInputs(); }
@@ -252,12 +242,21 @@ def Async_CallOp : Async_Op<"call",
       return {arg_operand_begin(), arg_operand_end()};
     }
 
+    MutableOperandRange getArgOperandsMutable() {
+      return getOperandsMutable();
+    }
+
     operand_iterator arg_operand_begin() { return operand_begin(); }
     operand_iterator arg_operand_end() { return operand_end(); }
 
     /// Return the callee of this operation.
     CallInterfaceCallable getCallableForCallee() {
       return (*this)->getAttrOfType<SymbolRefAttr>("callee");
+    }
+
+    /// Set the callee for this operation.
+    void setCalleeFromCallable(CallInterfaceCallable callee) {
+      (*this)->setAttr("callee", callee.get<SymbolRefAttr>());
     }
   }];
 
@@ -291,8 +290,7 @@ def Async_ReturnOp : Async_Op<"return",
 
 def Async_YieldOp :
     Async_Op<"yield", [
-      HasParent<"ExecuteOp">, Pure, Terminator,
-      DeclareOpInterfaceMethods<RegionBranchTerminatorOpInterface>]> {
+      HasParent<"ExecuteOp">, Pure, Terminator, ReturnLike]> {
   let summary = "terminator for Async execute operation";
   let description = [{
     The `async.yield` is a special terminator operation for the block inside
@@ -301,7 +299,6 @@ def Async_YieldOp :
 
   let arguments = (ins Variadic<AnyType>:$operands);
   let assemblyFormat = "($operands^ `:` type($operands))? attr-dict";
-  let hasVerifier = 1;
 }
 
 def Async_AwaitOp : Async_Op<"await"> {
@@ -624,7 +621,7 @@ def Async_RuntimeAwaitAndResumeOp : Async_Op<"runtime.await_and_resume"> {
 def Async_RuntimeStoreOp : Async_Op<"runtime.store",
       [TypesMatchWith<"type of 'value' matches element type of 'storage'",
                      "storage", "value",
-                     "$_self.cast<ValueType>().getValueType()">]> {
+                     "::llvm::cast<ValueType>($_self).getValueType()">]> {
   let summary = "stores the value into the runtime async.value";
   let description = [{
     The `async.runtime.store` operation stores the value into the runtime
@@ -639,7 +636,7 @@ def Async_RuntimeStoreOp : Async_Op<"runtime.store",
 def Async_RuntimeLoadOp : Async_Op<"runtime.load",
       [TypesMatchWith<"type of 'value' matches element type of 'storage'",
                      "storage", "result",
-                     "$_self.cast<ValueType>().getValueType()">]> {
+                     "::llvm::cast<ValueType>($_self).getValueType()">]> {
   let summary = "loads the value from the runtime async.value";
   let description = [{
     The `async.runtime.load` operation loads the value from the runtime

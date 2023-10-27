@@ -102,7 +102,7 @@ define void @pr57000(i64 %a) {
 ; CHECK-NEXT:    [[CMP_EXT:%.*]] = zext i1 [[CMP]] to i8
 ; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP_1]], label [[LOOP_2_HEADER_PREHEADER:%.*]]
 ; CHECK:       loop.2.header.preheader:
-; CHECK-NEXT:    [[CMP_LCSSA:%.*]] = phi i1 [ [[CMP]], [[LOOP_1]] ]
+; CHECK-NEXT:    [[CMP_LCSSA2:%.*]] = phi i1 [ [[CMP]], [[LOOP_1]] ]
 ; CHECK-NEXT:    [[CMP_EXT_LCSSA:%.*]] = phi i8 [ [[CMP_EXT]], [[LOOP_1]] ]
 ; CHECK-NEXT:    br label [[LOOP_2_HEADER_OUTER:%.*]]
 ; CHECK:       loop.2.header.outer:
@@ -114,7 +114,7 @@ define void @pr57000(i64 %a) {
 ; CHECK-NEXT:    i8 4, label [[LOOP_2_HEADER]]
 ; CHECK-NEXT:    ]
 ; CHECK:       loop.2.latch:
-; CHECK-NEXT:    [[CMP_TRUNC_LCSSA1:%.*]] = phi i1 [ [[CMP_LCSSA]], [[LOOP_2_HEADER]] ], [ [[CMP_LCSSA]], [[LOOP_2_HEADER]] ]
+; CHECK-NEXT:    [[CMP_TRUNC_LCSSA1:%.*]] = phi i1 [ [[CMP_LCSSA2]], [[LOOP_2_HEADER]] ], [ [[CMP_LCSSA2]], [[LOOP_2_HEADER]] ]
 ; CHECK-NEXT:    call void @use(i1 [[CMP_TRUNC_LCSSA1]])
 ; CHECK-NEXT:    br label [[LOOP_2_HEADER_OUTER]]
 ;
@@ -139,6 +139,65 @@ loop.2.header:
 loop.2.latch:
   call void @use(i1 %cmp.trunc)
   br label %loop.2.header
+}
+
+define void @D149435(i16 %arg) {
+; CHECK-LABEL: @D149435(
+; CHECK-NEXT:    br label [[LOOP1:%.*]]
+; CHECK:       loop1:
+; CHECK-NEXT:    [[FR:%.*]] = freeze i16 [[ARG:%.*]]
+; CHECK-NEXT:    [[ARRAYIDX_IDX:%.*]] = shl i16 [[FR]], 1
+; CHECK-NEXT:    [[OR:%.*]] = or i16 [[ARRAYIDX_IDX]], 1
+; CHECK-NEXT:    br i1 false, label [[LOOP1]], label [[LOOP2_PREHEADER:%.*]]
+; CHECK:       loop2.preheader:
+; CHECK-NEXT:    [[FR_LCSSA:%.*]] = phi i16 [ [[FR]], [[LOOP1]] ]
+; CHECK-NEXT:    [[OR_LCSSA:%.*]] = phi i16 [ [[OR]], [[LOOP1]] ]
+; CHECK-NEXT:    [[UMAX:%.*]] = call i16 @llvm.umax.i16(i16 [[OR_LCSSA]], i16 2)
+; CHECK-NEXT:    [[TMP1:%.*]] = add i16 [[UMAX]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = shl i16 [[FR_LCSSA]], 1
+; CHECK-NEXT:    [[TMP3:%.*]] = sub i16 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i16 [[TMP3]], 0
+; CHECK-NEXT:    [[UMAX1:%.*]] = call i16 @llvm.umax.i16(i16 [[ARG]], i16 2)
+; CHECK-NEXT:    [[TMP5:%.*]] = sub i16 [[UMAX1]], [[ARG]]
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i16 [[TMP5]], 0
+; CHECK-NEXT:    br label [[LOOP2:%.*]]
+; CHECK:       loop2:
+; CHECK-NEXT:    br i1 [[TMP4]], label [[TRAP:%.*]], label [[FOR_BODY8:%.*]]
+; CHECK:       for.body8:
+; CHECK-NEXT:    br i1 [[TMP6]], label [[TRAP]], label [[LOOP2_LATCH:%.*]]
+; CHECK:       loop2.latch:
+; CHECK-NEXT:    br i1 false, label [[LOOP2]], label [[TRAP]]
+; CHECK:       trap:
+; CHECK-NEXT:    unreachable
+;
+  br label %loop1
+
+loop1:
+  %fr = freeze i16 %arg
+  %arrayidx.idx = shl i16 %fr, 1
+  %or = or i16 %arrayidx.idx, 1
+  br i1 false, label %loop1, label %loop2.preheader
+
+loop2.preheader:
+  br label %loop2
+
+loop2:
+  %iv = phi i16 [ %iv.next, %loop2.latch ], [ 0, %loop2.preheader ]
+  %add = add i16 %or, %iv
+  %cmp = icmp ugt i16 %add, 1
+  br i1 %cmp, label %trap, label %for.body8
+
+for.body8:
+  %add2 = add i16 %arg, %iv
+  %cmp2 = icmp ugt i16 %add2, 1
+  br i1 %cmp2, label %trap, label %loop2.latch
+
+loop2.latch:
+  %iv.next = add i16 %iv, 1
+  br i1 false, label %loop2, label %trap
+
+trap:
+  unreachable
 }
 
 declare void @use(i1)

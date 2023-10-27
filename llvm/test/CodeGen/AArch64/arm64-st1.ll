@@ -1,4 +1,5 @@
 ; RUN: llc < %s -mtriple=arm64-eabi -aarch64-neon-syntax=apple -verify-machineinstrs | FileCheck %s
+; RUN: llc < %s -global-isel -mtriple=arm64-eabi -aarch64-neon-syntax=apple -verify-machineinstrs | FileCheck %s
 ; The instruction latencies of Exynos-M3 trigger the transform we see under the Exynos check.
 ; RUN: llc < %s -mtriple=arm64-eabi -aarch64-neon-syntax=apple -verify-machineinstrs -mcpu=exynos-m3 | FileCheck --check-prefix=EXYNOS %s
 

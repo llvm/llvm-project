@@ -25,13 +25,41 @@
 
 namespace llvm {
 
+static constexpr unsigned InstCombineDefaultMaxIterations = 1;
+
+struct InstCombineOptions {
+  bool UseLoopInfo = false;
+  // Verify that a fix point has been reached after MaxIterations.
+  bool VerifyFixpoint = false;
+  unsigned MaxIterations = InstCombineDefaultMaxIterations;
+
+  InstCombineOptions() = default;
+
+  InstCombineOptions &setUseLoopInfo(bool Value) {
+    UseLoopInfo = Value;
+    return *this;
+  }
+
+  InstCombineOptions &setVerifyFixpoint(bool Value) {
+    VerifyFixpoint = Value;
+    return *this;
+  }
+
+  InstCombineOptions &setMaxIterations(unsigned Value) {
+    MaxIterations = Value;
+    return *this;
+  }
+};
+
 class InstCombinePass : public PassInfoMixin<InstCombinePass> {
+private:
   InstructionWorklist Worklist;
-  const unsigned MaxIterations;
+  InstCombineOptions Options;
 
 public:
-  explicit InstCombinePass();
-  explicit InstCombinePass(unsigned MaxIterations);
+  explicit InstCombinePass(InstCombineOptions Opts = {});
+  void printPipeline(raw_ostream &OS,
+                     function_ref<StringRef(StringRef)> MapClassName2PassName);
 
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
@@ -42,13 +70,11 @@ public:
 /// will try to combine all instructions in the function.
 class InstructionCombiningPass : public FunctionPass {
   InstructionWorklist Worklist;
-  const unsigned MaxIterations;
 
 public:
   static char ID; // Pass identification, replacement for typeid
 
   explicit InstructionCombiningPass();
-  explicit InstructionCombiningPass(unsigned MaxIterations);
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;
   bool runOnFunction(Function &F) override;
@@ -67,7 +93,6 @@ public:
 //    %Z = add int 2, %X
 //
 FunctionPass *createInstructionCombiningPass();
-FunctionPass *createInstructionCombiningPass(unsigned MaxIterations);
 }
 
 #undef DEBUG_TYPE

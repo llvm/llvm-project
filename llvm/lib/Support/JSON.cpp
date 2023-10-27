@@ -8,12 +8,14 @@
 
 #include "llvm/Support/JSON.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Format.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/NativeFormatting.h"
+#include "llvm/Support/raw_ostream.h"
 #include <cctype>
+#include <cerrno>
 #include <optional>
 
 namespace llvm {

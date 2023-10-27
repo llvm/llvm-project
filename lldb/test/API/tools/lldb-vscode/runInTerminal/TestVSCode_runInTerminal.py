@@ -17,7 +17,6 @@ from threading import Thread
 
 
 class TestVSCode_runInTerminal(lldbvscode_testcase.VSCodeTestCaseBase):
-
     def readPidMessage(self, fifo_file):
         with open(fifo_file, "r") as file:
             self.assertIn("pid", file.readline())
@@ -46,67 +45,89 @@ class TestVSCode_runInTerminal(lldbvscode_testcase.VSCodeTestCaseBase):
 
     @skipIfWindows
     @skipIfRemote
-    @skipIf(archs=no_match(['x86_64']))
+    @skipIf(archs=no_match(["x86_64"]))
     def test_runInTerminal(self):
         if not self.isTestSupported():
             return
-        '''
+        """
             Tests the "runInTerminal" reverse request. It makes sure that the IDE can
             launch the inferior with the correct environment variables and arguments.
-        '''
+        """
         program = self.getBuildArtifact("a.out")
-        source = 'main.c'
+        source = "main.c"
         self.build_and_launch(
-            program, stopOnEntry=True, runInTerminal=True, args=["foobar"],
-            env=["FOO=bar"])
+            program, runInTerminal=True, args=["foobar"], env=["FOO=bar"]
+        )
 
-        breakpoint_line = line_number(source, '// breakpoint')
+        self.assertEqual(
+            len(self.vscode.reverse_requests), 1, "make sure we got a reverse request"
+        )
+
+        request = self.vscode.reverse_requests[0]
+        self.assertIn(self.lldbVSCodeExec, request["arguments"]["args"])
+        self.assertIn(program, request["arguments"]["args"])
+        self.assertIn("foobar", request["arguments"]["args"])
+        self.assertIn("FOO", request["arguments"]["env"])
+
+        breakpoint_line = line_number(source, "// breakpoint")
 
         self.set_source_breakpoints(source, [breakpoint_line])
         self.continue_to_next_stop()
 
         # We verify we actually stopped inside the loop
-        counter = int(self.vscode.get_local_variable_value('counter'))
+        counter = int(self.vscode.get_local_variable_value("counter"))
         self.assertTrue(counter > 0)
 
         # We verify we were able to set the launch arguments
-        argc = int(self.vscode.get_local_variable_value('argc'))
+        argc = int(self.vscode.get_local_variable_value("argc"))
         self.assertEqual(argc, 2)
 
-        argv1 = self.vscode.request_evaluate('argv[1]')['body']['result']
-        self.assertIn('foobar', argv1)
+        argv1 = self.vscode.request_evaluate("argv[1]")["body"]["result"]
+        self.assertIn("foobar", argv1)
 
         # We verify we were able to set the environment
-        env = self.vscode.request_evaluate('foo')['body']['result']
-        self.assertIn('bar', env)
+        env = self.vscode.request_evaluate("foo")["body"]["result"]
+        self.assertIn("bar", env)
 
     @skipIfWindows
     @skipIfRemote
-    @skipIf(archs=no_match(['x86_64']))
+    @skipIf(archs=no_match(["x86_64"]))
     def test_runInTerminalInvalidTarget(self):
         if not self.isTestSupported():
             return
         self.build_and_create_debug_adaptor()
         response = self.launch(
-            "INVALIDPROGRAM", stopOnEntry=True, runInTerminal=True, args=["foobar"], env=["FOO=bar"], expectFailure=True)
-        self.assertFalse(response['success'])
-        self.assertIn("Could not create a target for a program 'INVALIDPROGRAM': unable to find executable",
-            response['message'])
+            "INVALIDPROGRAM",
+            runInTerminal=True,
+            args=["foobar"],
+            env=["FOO=bar"],
+            expectFailure=True,
+        )
+        self.assertFalse(response["success"])
+        self.assertIn(
+            "Could not create a target for a program 'INVALIDPROGRAM': unable to find executable",
+            response["message"],
+        )
 
     @skipIfWindows
     @skipIfRemote
-    @skipIf(archs=no_match(['x86_64']))
+    @skipIf(archs=no_match(["x86_64"]))
     def test_missingArgInRunInTerminalLauncher(self):
         if not self.isTestSupported():
             return
-        proc = subprocess.run([self.lldbVSCodeExec,  "--launch-target", "INVALIDPROGRAM"],
-            capture_output=True, universal_newlines=True)
+        proc = subprocess.run(
+            [self.lldbVSCodeExec, "--launch-target", "INVALIDPROGRAM"],
+            capture_output=True,
+            universal_newlines=True,
+        )
         self.assertTrue(proc.returncode != 0)
-        self.assertIn('"--launch-target" requires "--comm-file" to be specified', proc.stderr)
+        self.assertIn(
+            '"--launch-target" requires "--comm-file" to be specified', proc.stderr
+        )
 
     @skipIfWindows
     @skipIfRemote
-    @skipIf(archs=no_match(['x86_64']))
+    @skipIf(archs=no_match(["x86_64"]))
     def test_FakeAttachedRunInTerminalLauncherWithInvalidProgram(self):
         if not self.isTestSupported():
             return
@@ -114,19 +135,27 @@ class TestVSCode_runInTerminal(lldbvscode_testcase.VSCodeTestCaseBase):
         os.mkfifo(comm_file)
 
         proc = subprocess.Popen(
-            [self.lldbVSCodeExec, "--comm-file", comm_file, "--launch-target", "INVALIDPROGRAM"],
-            universal_newlines=True, stderr=subprocess.PIPE)
+            [
+                self.lldbVSCodeExec,
+                "--comm-file",
+                comm_file,
+                "--launch-target",
+                "INVALIDPROGRAM",
+            ],
+            universal_newlines=True,
+            stderr=subprocess.PIPE,
+        )
 
         self.readPidMessage(comm_file)
         self.sendDidAttachMessage(comm_file)
         self.assertIn("No such file or directory", self.readErrorMessage(comm_file))
-        
+
         _, stderr = proc.communicate()
         self.assertIn("No such file or directory", stderr)
 
     @skipIfWindows
     @skipIfRemote
-    @skipIf(archs=no_match(['x86_64']))
+    @skipIf(archs=no_match(["x86_64"]))
     def test_FakeAttachedRunInTerminalLauncherWithValidProgram(self):
         if not self.isTestSupported():
             return
@@ -134,8 +163,17 @@ class TestVSCode_runInTerminal(lldbvscode_testcase.VSCodeTestCaseBase):
         os.mkfifo(comm_file)
 
         proc = subprocess.Popen(
-            [self.lldbVSCodeExec, "--comm-file", comm_file, "--launch-target", "echo", "foo"],
-            universal_newlines=True, stdout=subprocess.PIPE)
+            [
+                self.lldbVSCodeExec,
+                "--comm-file",
+                comm_file,
+                "--launch-target",
+                "echo",
+                "foo",
+            ],
+            universal_newlines=True,
+            stdout=subprocess.PIPE,
+        )
 
         self.readPidMessage(comm_file)
         self.sendDidAttachMessage(comm_file)
@@ -145,7 +183,7 @@ class TestVSCode_runInTerminal(lldbvscode_testcase.VSCodeTestCaseBase):
 
     @skipIfWindows
     @skipIfRemote
-    @skipIf(archs=no_match(['x86_64']))
+    @skipIf(archs=no_match(["x86_64"]))
     def test_FakeAttachedRunInTerminalLauncherAndCheckEnvironment(self):
         if not self.isTestSupported():
             return
@@ -154,9 +192,11 @@ class TestVSCode_runInTerminal(lldbvscode_testcase.VSCodeTestCaseBase):
 
         proc = subprocess.Popen(
             [self.lldbVSCodeExec, "--comm-file", comm_file, "--launch-target", "env"],
-            universal_newlines=True, stdout=subprocess.PIPE,
-            env={**os.environ, "FOO": "BAR"})
-        
+            universal_newlines=True,
+            stdout=subprocess.PIPE,
+            env={**os.environ, "FOO": "BAR"},
+        )
+
         self.readPidMessage(comm_file)
         self.sendDidAttachMessage(comm_file)
 
@@ -165,7 +205,7 @@ class TestVSCode_runInTerminal(lldbvscode_testcase.VSCodeTestCaseBase):
 
     @skipIfWindows
     @skipIfRemote
-    @skipIf(archs=no_match(['x86_64']))
+    @skipIf(archs=no_match(["x86_64"]))
     def test_NonAttachedRunInTerminalLauncher(self):
         if not self.isTestSupported():
             return
@@ -173,11 +213,20 @@ class TestVSCode_runInTerminal(lldbvscode_testcase.VSCodeTestCaseBase):
         os.mkfifo(comm_file)
 
         proc = subprocess.Popen(
-            [self.lldbVSCodeExec, "--comm-file", comm_file, "--launch-target", "echo", "foo"],
-            universal_newlines=True, stderr=subprocess.PIPE,
-            env={**os.environ, "LLDB_VSCODE_RIT_TIMEOUT_IN_MS": "1000"})
+            [
+                self.lldbVSCodeExec,
+                "--comm-file",
+                comm_file,
+                "--launch-target",
+                "echo",
+                "foo",
+            ],
+            universal_newlines=True,
+            stderr=subprocess.PIPE,
+            env={**os.environ, "LLDB_VSCODE_RIT_TIMEOUT_IN_MS": "1000"},
+        )
 
         self.readPidMessage(comm_file)
-        
+
         _, stderr = proc.communicate()
         self.assertIn("Timed out trying to get messages from the debug adaptor", stderr)

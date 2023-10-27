@@ -8,6 +8,7 @@
 
 #include "llvm/IR/Attributes.h"
 #include "llvm/AsmParser/Parser.h"
+#include "llvm/IR/AttributeMask.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/LLVMContext.h"

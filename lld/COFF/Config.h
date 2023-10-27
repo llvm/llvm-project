@@ -28,7 +28,6 @@ using llvm::COFF::IMAGE_FILE_MACHINE_UNKNOWN;
 using llvm::COFF::WindowsSubsystem;
 using llvm::StringRef;
 class DefinedAbsolute;
-class DefinedRelative;
 class StringChunk;
 class Symbol;
 class InputFile;
@@ -37,8 +36,19 @@ class SectionChunk;
 // Short aliases.
 static const auto AMD64 = llvm::COFF::IMAGE_FILE_MACHINE_AMD64;
 static const auto ARM64 = llvm::COFF::IMAGE_FILE_MACHINE_ARM64;
+static const auto ARM64EC = llvm::COFF::IMAGE_FILE_MACHINE_ARM64EC;
+static const auto ARM64X = llvm::COFF::IMAGE_FILE_MACHINE_ARM64X;
 static const auto ARMNT = llvm::COFF::IMAGE_FILE_MACHINE_ARMNT;
 static const auto I386 = llvm::COFF::IMAGE_FILE_MACHINE_I386;
+
+enum class ExportSource {
+  Unset,
+  Directives,
+  Export,
+  ModuleDefinition,
+};
+
+enum class EmitKind { Obj, LLVM, ASM };
 
 // Represents an /export option.
 struct Export {
@@ -58,12 +68,11 @@ struct Export {
   StringRef forwardTo;
   StringChunk *forwardChunk = nullptr;
 
-  // True if this /export option was in .drectves section.
-  bool directives = false;
+  ExportSource source = ExportSource::Unset;
   StringRef symbolName;
   StringRef exportName; // Name in DLL
 
-  bool operator==(const Export &e) {
+  bool operator==(const Export &e) const {
     return (name == e.name && extName == e.extName &&
             aliasTarget == e.aliasTarget &&
             ordinal == e.ordinal && noname == e.noname &&
@@ -96,7 +105,7 @@ enum class ICFLevel {
 // Global configuration.
 struct Configuration {
   enum ManifestKind { Default, SideBySide, Embed, No };
-  bool is64() const { return machine == AMD64 || machine == ARM64; }
+  bool is64() const { return llvm::COFF::is64Bit(machine); }
 
   llvm::COFF::MachineTypes machine = IMAGE_FILE_MACHINE_UNKNOWN;
   size_t wordsize;
@@ -123,6 +132,7 @@ struct Configuration {
   bool driverWdm = false;
   bool showTiming = false;
   bool showSummary = false;
+  bool printSearchPaths = false;
   unsigned debugTypes = static_cast<unsigned>(DebugType::None);
   llvm::SmallVector<llvm::StringRef, 0> mllvmOpts;
   std::vector<std::string> natvisFiles;
@@ -162,6 +172,8 @@ struct Configuration {
 
   // Used for /opt:lldlto=N
   unsigned ltoo = 2;
+  // Used for /opt:lldltocgo=N
+  std::optional<unsigned> ltoCgo;
 
   // Used for /opt:lldltojobs=N
   std::string thinLTOJobs;
@@ -192,6 +204,9 @@ struct Configuration {
   StringRef manifestUIAccess = "'false'";
   StringRef manifestFile;
 
+  // used for /dwodir
+  StringRef dwoDir;
+
   // Used for /aligncomm.
   std::map<std::string, int> alignComm;
 
@@ -216,8 +231,16 @@ struct Configuration {
   // Used for /thinlto-index-only:
   llvm::StringRef thinLTOIndexOnlyArg;
 
-  // Used for /thinlto-object-prefix-replace:
-  std::pair<llvm::StringRef, llvm::StringRef> thinLTOPrefixReplace;
+  // Used for /thinlto-prefix-replace:
+  // Replace the prefix in paths generated for ThinLTO, replacing
+  // thinLTOPrefixReplaceOld with thinLTOPrefixReplaceNew. If
+  // thinLTOPrefixReplaceNativeObject is defined, replace the prefix of object
+  // file paths written to the response file given in the
+  // --thinlto-index-only=${response} option with
+  // thinLTOPrefixReplaceNativeObject, instead of thinLTOPrefixReplaceNew.
+  llvm::StringRef thinLTOPrefixReplaceOld;
+  llvm::StringRef thinLTOPrefixReplaceNew;
+  llvm::StringRef thinLTOPrefixReplaceNativeObject;
 
   // Used for /thinlto-object-suffix-replace:
   std::pair<llvm::StringRef, llvm::StringRef> thinLTOObjectSuffixReplace;
@@ -263,6 +286,7 @@ struct Configuration {
   uint32_t minorSubsystemVersion = 0;
   uint32_t timestamp = 0;
   uint32_t functionPadMin = 0;
+  uint32_t timeTraceGranularity = 0;
   bool dynamicBase = true;
   bool allowBind = true;
   bool cetCompat = false;
@@ -286,10 +310,12 @@ struct Configuration {
   bool swaprunNet = false;
   bool thinLTOEmitImportsFiles;
   bool thinLTOIndexOnly;
+  bool timeTraceEnabled = false;
   bool autoImport = false;
   bool pseudoRelocs = false;
   bool stdcallFixup = false;
   bool writeCheckSum = false;
+  EmitKind emit = EmitKind::Obj;
 };
 
 } // namespace lld::coff

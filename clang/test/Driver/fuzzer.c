@@ -18,16 +18,13 @@
 
 
 // Check that we don't link in libFuzzer.a when producing a shared object.
-// RUN: %clang -fsanitize=fuzzer %s -shared -o %t.so -### 2>&1 | FileCheck --check-prefixes=CHECK-NOLIB-SO %s
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=fuzzer %s -shared -### 2>&1 | FileCheck --check-prefixes=CHECK-NOLIB-SO %s
 // CHECK-NOLIB-SO-NOT: libclang_rt.libfuzzer
 
 // Check that we don't link in libFuzzer when compiling with -fsanitize=fuzzer-no-link.
 // RUN: %clang -fsanitize=fuzzer-no-link %s -target x86_64-apple-darwin14 -### 2>&1 | FileCheck --check-prefixes=CHECK-NOLIB,CHECK-COV %s
 // CHECK-NOLIB-NOT: libclang_rt.libfuzzer
 // CHECK-COV: -fsanitize-coverage-inline-8bit-counters
-
-// RUN: %clang -fsanitize=fuzzer -fsanitize-coverage=trace-pc %s -### 2>&1 | FileCheck --check-prefixes=CHECK-MSG %s
-// CHECK-MSG-NOT: argument unused during compilation
 
 // Check that we respect whether thes tandard library should be linked
 // statically.

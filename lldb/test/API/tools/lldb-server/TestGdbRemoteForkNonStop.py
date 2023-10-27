@@ -7,30 +7,37 @@ from fork_testbase import GdbRemoteForkTestBase
 class TestGdbRemoteForkNonStop(GdbRemoteForkTestBase):
     def setUp(self):
         GdbRemoteForkTestBase.setUp(self)
-        if self.getPlatform() == "linux" and self.getArchitecture() in ['arm', 'aarch64']:
+        if self.getPlatform() == "linux" and self.getArchitecture() in [
+            "arm",
+            "aarch64",
+        ]:
             self.skipTest("Unsupported for Arm/AArch64 Linux")
 
     @add_test_categories(["fork"])
     def test_vfork_nonstop(self):
-        parent_pid, parent_tid = self.fork_and_detach_test("vfork",
-                                                           nonstop=True)
+        parent_pid, parent_tid = self.fork_and_detach_test("vfork", nonstop=True)
 
         # resume the parent
-        self.test_sequence.add_log_lines([
-            "read packet: $c#00",
-            "send packet: $OK#00",
-            {"direction": "send",
-             "regex": r"%Stop:T[0-9a-fA-F]{{2}}thread:p{}[.]{}.*vforkdone.*"
-                      .format(parent_pid, parent_tid),
-             },
-            "read packet: $vStopped#00",
-            "send packet: $OK#00",
-            "read packet: $c#00",
-            "send packet: $OK#00",
-            "send packet: %Stop:W00;process:{}#00".format(parent_pid),
-            "read packet: $vStopped#00",
-            "send packet: $OK#00",
-        ], True)
+        self.test_sequence.add_log_lines(
+            [
+                "read packet: $c#00",
+                "send packet: $OK#00",
+                {
+                    "direction": "send",
+                    "regex": r"%Stop:T[0-9a-fA-F]{{2}}thread:p{}[.]{}.*vforkdone.*".format(
+                        parent_pid, parent_tid
+                    ),
+                },
+                "read packet: $vStopped#00",
+                "send packet: $OK#00",
+                "read packet: $c#00",
+                "send packet: $OK#00",
+                "send packet: %Stop:W00;process:{}#00".format(parent_pid),
+                "read packet: $vStopped#00",
+                "send packet: $OK#00",
+            ],
+            True,
+        )
         self.expect_gdbremote_sequence()
 
     @add_test_categories(["fork"])
@@ -38,13 +45,16 @@ class TestGdbRemoteForkNonStop(GdbRemoteForkTestBase):
         parent_pid, _ = self.fork_and_detach_test("fork", nonstop=True)
 
         # resume the parent
-        self.test_sequence.add_log_lines([
-            "read packet: $c#00",
-            "send packet: $OK#00",
-            "send packet: %Stop:W00;process:{}#00".format(parent_pid),
-            "read packet: $vStopped#00",
-            "send packet: $OK#00",
-        ], True)
+        self.test_sequence.add_log_lines(
+            [
+                "read packet: $c#00",
+                "send packet: $OK#00",
+                "send packet: %Stop:W00;process:{}#00".format(parent_pid),
+                "read packet: $vStopped#00",
+                "send packet: $OK#00",
+            ],
+            True,
+        )
         self.expect_gdbremote_sequence()
 
     @add_test_categories(["fork"])
@@ -61,8 +71,7 @@ class TestGdbRemoteForkNonStop(GdbRemoteForkTestBase):
 
     @add_test_categories(["fork"])
     def test_kill_all_nonstop(self):
-        parent_pid, _, child_pid, _ = self.start_fork_test(["fork"],
-                                                           nonstop=True)
+        parent_pid, _, child_pid, _ = self.start_fork_test(["fork"], nonstop=True)
 
         exit_regex = "X09;process:([0-9a-f]+)"
         # Depending on a potential race, the second kill may make it into
@@ -71,31 +80,49 @@ class TestGdbRemoteForkNonStop(GdbRemoteForkTestBase):
         # In the latter, we should expect an OK response (queue empty),
         # followed by another async notification.
         vstop_regex = "[$](OK|{})#.*".format(exit_regex)
-        self.test_sequence.add_log_lines([
-            # kill all processes
-            "read packet: $k#00",
-            "send packet: $OK#00",
-            {"direction": "send", "regex": "%Stop:{}#.*".format(exit_regex),
-             "capture": {1: "pid1"}},
-            "read packet: $vStopped#00",
-            {"direction": "send", "regex": vstop_regex,
-             "capture": {1: "vstop_reply", 2: "pid2"}},
-        ], True)
+        self.test_sequence.add_log_lines(
+            [
+                # kill all processes
+                "read packet: $k#00",
+                "send packet: $OK#00",
+                {
+                    "direction": "send",
+                    "regex": "%Stop:{}#.*".format(exit_regex),
+                    "capture": {1: "pid1"},
+                },
+                "read packet: $vStopped#00",
+                {
+                    "direction": "send",
+                    "regex": vstop_regex,
+                    "capture": {1: "vstop_reply", 2: "pid2"},
+                },
+            ],
+            True,
+        )
         ret = self.expect_gdbremote_sequence()
         pid1 = ret["pid1"]
         if ret["vstop_reply"] == "OK":
             self.reset_test_sequence()
-            self.test_sequence.add_log_lines([
-                {"direction": "send", "regex": "%Stop:{}#.*".format(exit_regex),
-                 "capture": {1: "pid2"}},
-            ], True)
+            self.test_sequence.add_log_lines(
+                [
+                    {
+                        "direction": "send",
+                        "regex": "%Stop:{}#.*".format(exit_regex),
+                        "capture": {1: "pid2"},
+                    },
+                ],
+                True,
+            )
             ret = self.expect_gdbremote_sequence()
         pid2 = ret["pid2"]
         self.reset_test_sequence()
-        self.test_sequence.add_log_lines([
-            "read packet: $vStopped#00",
-            "send packet: $OK#00",
-        ], True)
+        self.test_sequence.add_log_lines(
+            [
+                "read packet: $vStopped#00",
+                "send packet: $OK#00",
+            ],
+            True,
+        )
         self.expect_gdbremote_sequence()
         self.assertEqual(set([pid1, pid2]), set([parent_pid, child_pid]))
 
@@ -105,13 +132,17 @@ class TestGdbRemoteForkNonStop(GdbRemoteForkTestBase):
 
     @add_test_categories(["fork"])
     def test_c_interspersed_nonstop(self):
-        self.resume_one_test(run_order=["parent", "child", "parent", "child"],
-                             nonstop=True)
+        self.resume_one_test(
+            run_order=["parent", "child", "parent", "child"], nonstop=True
+        )
 
     @add_test_categories(["fork"])
     def test_vCont_interspersed_nonstop(self):
-        self.resume_one_test(run_order=["parent", "child", "parent", "child"],
-                             use_vCont=True, nonstop=True)
+        self.resume_one_test(
+            run_order=["parent", "child", "parent", "child"],
+            use_vCont=True,
+            nonstop=True,
+        )
 
     def get_all_output_via_vStdio(self, output_test):
         # The output may be split into an arbitrary number of messages.
@@ -127,26 +158,36 @@ class TestGdbRemoteForkNonStop(GdbRemoteForkTestBase):
     def test_c_both_nonstop(self):
         lock1 = self.getBuildArtifact("lock1")
         lock2 = self.getBuildArtifact("lock2")
-        parent_pid, parent_tid, child_pid, child_tid = (
-            self.start_fork_test(["fork", "process:sync:" + lock1, "print-pid",
-                                  "process:sync:" + lock2, "stop"],
-                                 nonstop=True))
+        parent_pid, parent_tid, child_pid, child_tid = self.start_fork_test(
+            [
+                "fork",
+                "process:sync:" + lock1,
+                "print-pid",
+                "process:sync:" + lock2,
+                "stop",
+            ],
+            nonstop=True,
+        )
 
-        self.test_sequence.add_log_lines([
-            "read packet: $Hcp{}.{}#00".format(parent_pid, parent_tid),
-            "send packet: $OK#00",
-            "read packet: $c#00",
-            "send packet: $OK#00",
-            "read packet: $Hcp{}.{}#00".format(child_pid, child_tid),
-            "send packet: $OK#00",
-            "read packet: $c#00",
-            "send packet: $OK#00",
-            {"direction": "send", "regex": "%Stop:T.*"},
-            ], True)
+        self.test_sequence.add_log_lines(
+            [
+                "read packet: $Hcp{}.{}#00".format(parent_pid, parent_tid),
+                "send packet: $OK#00",
+                "read packet: $c#00",
+                "send packet: $OK#00",
+                "read packet: $Hcp{}.{}#00".format(child_pid, child_tid),
+                "send packet: $OK#00",
+                "read packet: $c#00",
+                "send packet: $OK#00",
+                {"direction": "send", "regex": "%Stop:T.*"},
+            ],
+            True,
+        )
         self.expect_gdbremote_sequence()
 
         output = self.get_all_output_via_vStdio(
-            lambda output: output.count(b"PID: ") >= 2)
+            lambda output: output.count(b"PID: ") >= 2
+        )
         self.assertEqual(output.count(b"PID: "), 2)
         self.assertIn("PID: {}".format(int(parent_pid, 16)).encode(), output)
         self.assertIn("PID: {}".format(int(child_pid, 16)).encode(), output)
@@ -155,21 +196,32 @@ class TestGdbRemoteForkNonStop(GdbRemoteForkTestBase):
     def test_vCont_both_nonstop(self):
         lock1 = self.getBuildArtifact("lock1")
         lock2 = self.getBuildArtifact("lock2")
-        parent_pid, parent_tid, child_pid, child_tid = (
-            self.start_fork_test(["fork", "process:sync:" + lock1, "print-pid",
-                                  "process:sync:" + lock2, "stop"],
-                                 nonstop=True))
+        parent_pid, parent_tid, child_pid, child_tid = self.start_fork_test(
+            [
+                "fork",
+                "process:sync:" + lock1,
+                "print-pid",
+                "process:sync:" + lock2,
+                "stop",
+            ],
+            nonstop=True,
+        )
 
-        self.test_sequence.add_log_lines([
-            "read packet: $vCont;c:p{}.{};c:p{}.{}#00".format(
-                parent_pid, parent_tid, child_pid, child_tid),
-            "send packet: $OK#00",
-            {"direction": "send", "regex": "%Stop:T.*"},
-            ], True)
+        self.test_sequence.add_log_lines(
+            [
+                "read packet: $vCont;c:p{}.{};c:p{}.{}#00".format(
+                    parent_pid, parent_tid, child_pid, child_tid
+                ),
+                "send packet: $OK#00",
+                {"direction": "send", "regex": "%Stop:T.*"},
+            ],
+            True,
+        )
         self.expect_gdbremote_sequence()
 
         output = self.get_all_output_via_vStdio(
-            lambda output: output.count(b"PID: ") >= 2)
+            lambda output: output.count(b"PID: ") >= 2
+        )
         self.assertEqual(output.count(b"PID: "), 2)
         self.assertIn("PID: {}".format(int(parent_pid, 16)).encode(), output)
         self.assertIn("PID: {}".format(int(child_pid, 16)).encode(), output)
@@ -177,20 +229,30 @@ class TestGdbRemoteForkNonStop(GdbRemoteForkTestBase):
     def vCont_both_nonstop_test(self, vCont_packet):
         lock1 = self.getBuildArtifact("lock1")
         lock2 = self.getBuildArtifact("lock2")
-        parent_pid, parent_tid, child_pid, child_tid = (
-            self.start_fork_test(["fork", "process:sync:" + lock1, "print-pid",
-                                  "process:sync:" + lock2, "stop"],
-                                 nonstop=True))
+        parent_pid, parent_tid, child_pid, child_tid = self.start_fork_test(
+            [
+                "fork",
+                "process:sync:" + lock1,
+                "print-pid",
+                "process:sync:" + lock2,
+                "stop",
+            ],
+            nonstop=True,
+        )
 
-        self.test_sequence.add_log_lines([
-            "read packet: ${}#00".format(vCont_packet),
-            "send packet: $OK#00",
-            {"direction": "send", "regex": "%Stop:T.*"},
-            ], True)
+        self.test_sequence.add_log_lines(
+            [
+                "read packet: ${}#00".format(vCont_packet),
+                "send packet: $OK#00",
+                {"direction": "send", "regex": "%Stop:T.*"},
+            ],
+            True,
+        )
         self.expect_gdbremote_sequence()
 
         output = self.get_all_output_via_vStdio(
-            lambda output: output.count(b"PID: ") >= 2)
+            lambda output: output.count(b"PID: ") >= 2
+        )
         self.assertEqual(output.count(b"PID: "), 2)
         self.assertIn("PID: {}".format(int(parent_pid, 16)).encode(), output)
         self.assertIn("PID: {}".format(int(child_pid, 16)).encode(), output)

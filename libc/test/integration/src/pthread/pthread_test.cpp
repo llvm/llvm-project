@@ -8,9 +8,10 @@
 
 #include "src/pthread/pthread_create.h"
 #include "src/pthread/pthread_join.h"
-#include "utils/IntegrationTest/test.h"
+#include "test/IntegrationTest/test.h"
 
 #include <pthread.h>
+#include <stdint.h> // uintptr_t
 
 static constexpr int thread_count = 1000;
 static int counter = 0;
@@ -24,11 +25,12 @@ void create_and_join() {
     pthread_t thread;
     int old_counter_val = counter;
     ASSERT_EQ(
-        __llvm_libc::pthread_create(&thread, nullptr, thread_func, nullptr), 0);
+        LIBC_NAMESPACE::pthread_create(&thread, nullptr, thread_func, nullptr),
+        0);
 
     // Start with a retval we dont expect.
     void *retval = reinterpret_cast<void *>(thread_count + 1);
-    ASSERT_EQ(__llvm_libc::pthread_join(thread, &retval), 0);
+    ASSERT_EQ(LIBC_NAMESPACE::pthread_join(thread, &retval), 0);
     ASSERT_EQ(uintptr_t(retval), uintptr_t(nullptr));
     ASSERT_EQ(counter, old_counter_val + 1);
   }
@@ -42,15 +44,15 @@ void spawn_and_join() {
 
   for (int i = 0; i < thread_count; ++i) {
     args[i] = i;
-    ASSERT_EQ(__llvm_libc::pthread_create(thread_list + i, nullptr, return_arg,
-                                          args + i),
+    ASSERT_EQ(LIBC_NAMESPACE::pthread_create(thread_list + i, nullptr,
+                                             return_arg, args + i),
               0);
   }
 
   for (int i = 0; i < thread_count; ++i) {
     // Start with a retval we dont expect.
     void *retval = reinterpret_cast<void *>(thread_count + 1);
-    ASSERT_EQ(__llvm_libc::pthread_join(thread_list[i], &retval), 0);
+    ASSERT_EQ(LIBC_NAMESPACE::pthread_join(thread_list[i], &retval), 0);
     ASSERT_EQ(*reinterpret_cast<int *>(retval), i);
   }
 }

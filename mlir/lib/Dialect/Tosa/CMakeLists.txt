@@ -9,6 +9,7 @@ add_mlir_dialect_library(MLIRTosaDialect
 
   DEPENDS
   MLIRTosaAttributesIncGen
+  MLIRTosaDialectBytecodeIncGen
   MLIRTosaOpsIncGen
   MLIRTosaInterfacesIncGen
 
@@ -21,6 +22,7 @@ add_mlir_dialect_library(MLIRTosaDialect
   MLIRQuantUtils
   MLIRSideEffectInterfaces
   MLIRTensorDialect
+  MLIRVectorInterfaces
   MLIRViewLikeInterface
   )
 

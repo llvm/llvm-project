@@ -55,6 +55,8 @@ enum OpenMPInfoType : uint32_t {
   OMP_INFOTYPE_PLUGIN_KERNEL = 0x0010,
   // Print whenever data is transferred to the device
   OMP_INFOTYPE_DATA_TRANSFER = 0x0020,
+  // Print whenever data does not have a viable device counterpart.
+  OMP_INFOTYPE_EMPTY_MAPPING = 0x0040,
   // Enable every flag.
   OMP_INFOTYPE_ALL = 0xffffffff,
 };
@@ -119,7 +121,7 @@ inline uint32_t getDebugLevel() {
 /// Print fatal error message with a printf string and error identifier
 #define FATAL_MESSAGE(_num, _str, ...)                                         \
   do {                                                                         \
-    fprintf(stderr, GETNAME(TARGET_NAME) " fatal error %d:" _str "\n", _num,   \
+    fprintf(stderr, GETNAME(TARGET_NAME) " fatal error %d: " _str "\n", _num,  \
             __VA_ARGS__);                                                      \
     abort();                                                                   \
   } while (0)

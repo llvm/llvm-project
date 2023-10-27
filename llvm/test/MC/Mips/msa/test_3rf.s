@@ -1,4 +1,4 @@
-# RUN: llvm-mc %s -arch=mips -mcpu=mips32r2 -mattr=+msa -show-encoding | FileCheck %s
+# RUN: llvm-mc %s -triple=mips -mcpu=mips32r2 -mattr=+msa -show-encoding | FileCheck %s
 #
 # CHECK:        fadd.w          $w28, $w19, $w28        # encoding: [0x78,0x1c,0x9f,0x1b]
 # CHECK:        fadd.d          $w13, $w2, $w29         # encoding: [0x78,0x3d,0x13,0x5b]

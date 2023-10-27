@@ -50,7 +50,7 @@ TEST(CRCTest, LargeCRC32) {
   size_t TestSize = (size_t)UINT32_MAX + 42;
   uint8_t *TestData = (uint8_t*)calloc(TestSize, 1);
   if (!TestData)
-    return;
+    GTEST_SKIP();
 
   // Test expectation generated with:
   // $ truncate --size=`echo 2^32-1+42 | bc` /tmp/foo

@@ -2195,8 +2195,6 @@ extern unsigned IOCTL_TIOCDRAIN;
 extern unsigned IOCTL_TIOCGFLAGS;
 extern unsigned IOCTL_TIOCSFLAGS;
 extern unsigned IOCTL_TIOCDCDTIMESTAMP;
-extern unsigned IOCTL_TIOCRCVFRAME;
-extern unsigned IOCTL_TIOCXMTFRAME;
 extern unsigned IOCTL_TIOCPTMGET;
 extern unsigned IOCTL_TIOCGRANTPT;
 extern unsigned IOCTL_TIOCPTSNAME;

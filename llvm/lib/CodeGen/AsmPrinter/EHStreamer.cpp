@@ -410,7 +410,7 @@ MCSymbol *EHStreamer::emitExceptionTable() {
   computeActionsTable(LandingPads, Actions, FirstActions);
 
   // Compute the call-site table and call-site ranges. Normally, there is only
-  // one call-site-range which covers the whole funciton. With
+  // one call-site-range which covers the whole function. With
   // -basic-block-sections, there is one call-site-range per basic block
   // section.
   SmallVector<CallSiteEntry, 64> CallSites;

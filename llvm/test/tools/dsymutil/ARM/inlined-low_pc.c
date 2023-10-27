@@ -5,6 +5,10 @@ int bar(int a) { return foo(a); }
 
 // RUN: dsymutil -f -y %p/dummy-debug-map-amr64.map -oso-prepend-path %p/../Inputs/inlined-low_pc -o - | llvm-dwarfdump - | FileCheck %s
 
+// RUN: dsymutil --linker llvm -f -y %p/dummy-debug-map-amr64.map \
+// RUN: -oso-prepend-path %p/../Inputs/inlined-low_pc -o - | \
+// RUN: llvm-dwarfdump - | FileCheck %s
+
 // CHECK: DW_TAG_subprogram
 // CHECK: DW_AT_low_pc{{.*}}0x0000000000010000
 // CHECK: DW_AT_name{{.*}}"bar"

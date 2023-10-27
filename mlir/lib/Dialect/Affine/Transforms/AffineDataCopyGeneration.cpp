@@ -35,13 +35,16 @@
 #include <optional>
 
 namespace mlir {
+namespace affine {
 #define GEN_PASS_DEF_AFFINEDATACOPYGENERATION
 #include "mlir/Dialect/Affine/Passes.h.inc"
+} // namespace affine
 } // namespace mlir
 
 #define DEBUG_TYPE "affine-data-copy-generate"
 
 using namespace mlir;
+using namespace mlir::affine;
 
 namespace {
 
@@ -57,7 +60,8 @@ namespace {
 // TODO: We currently can't generate copies correctly when stores
 // are strided. Check for strided stores.
 struct AffineDataCopyGeneration
-    : public impl::AffineDataCopyGenerationBase<AffineDataCopyGeneration> {
+    : public affine::impl::AffineDataCopyGenerationBase<
+          AffineDataCopyGeneration> {
   AffineDataCopyGeneration() = default;
   explicit AffineDataCopyGeneration(unsigned slowMemorySpace,
                                     unsigned fastMemorySpace,
@@ -85,17 +89,15 @@ struct AffineDataCopyGeneration
 /// by the latter. Only load op's handled for now.
 /// TODO: extend this to store op's.
 std::unique_ptr<OperationPass<func::FuncOp>>
-mlir::createAffineDataCopyGenerationPass(unsigned slowMemorySpace,
-                                         unsigned fastMemorySpace,
-                                         unsigned tagMemorySpace,
-                                         int minDmaTransferSize,
-                                         uint64_t fastMemCapacityBytes) {
+mlir::affine::createAffineDataCopyGenerationPass(
+    unsigned slowMemorySpace, unsigned fastMemorySpace, unsigned tagMemorySpace,
+    int minDmaTransferSize, uint64_t fastMemCapacityBytes) {
   return std::make_unique<AffineDataCopyGeneration>(
       slowMemorySpace, fastMemorySpace, tagMemorySpace, minDmaTransferSize,
       fastMemCapacityBytes);
 }
 std::unique_ptr<OperationPass<func::FuncOp>>
-mlir::createAffineDataCopyGenerationPass() {
+mlir::affine::createAffineDataCopyGenerationPass() {
   return std::make_unique<AffineDataCopyGeneration>();
 }
 
@@ -239,6 +241,7 @@ void AffineDataCopyGeneration::runOnOperation() {
   AffineLoadOp::getCanonicalizationPatterns(patterns, &getContext());
   AffineStoreOp::getCanonicalizationPatterns(patterns, &getContext());
   FrozenRewritePatternSet frozenPatterns(std::move(patterns));
-  (void)applyOpPatternsAndFold(copyOps, frozenPatterns,
-                               GreedyRewriteStrictness::ExistingAndNewOps);
+  GreedyRewriteConfig config;
+  config.strictMode = GreedyRewriteStrictness::ExistingAndNewOps;
+  (void)applyOpPatternsAndFold(copyOps, frozenPatterns, config);
 }

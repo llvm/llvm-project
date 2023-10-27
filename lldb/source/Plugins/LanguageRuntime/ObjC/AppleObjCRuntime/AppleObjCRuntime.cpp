@@ -156,7 +156,7 @@ bool AppleObjCRuntime::GetObjectDescription(Stream &strm, Value &value,
       thread = exe_ctx.GetThreadPtr();
     }
     if (thread) {
-      exe_ctx.SetFrameSP(thread->GetSelectedFrame());
+      exe_ctx.SetFrameSP(thread->GetSelectedFrame(DoNoSelectMostRelevantFrame));
     }
   }
 
@@ -514,7 +514,7 @@ static ThreadSP FailExceptionParsing(llvm::StringRef msg) {
 ThreadSP AppleObjCRuntime::GetBacktraceThreadFromException(
     lldb::ValueObjectSP exception_sp) {
   ValueObjectSP reserved_dict =
-      exception_sp->GetChildMemberWithName(ConstString("reserved"), true);
+      exception_sp->GetChildMemberWithName("reserved");
   if (!reserved_dict)
     return FailExceptionParsing("Failed to get 'reserved' member.");
 
@@ -540,7 +540,7 @@ ThreadSP AppleObjCRuntime::GetBacktraceThreadFromException(
   };
 
   for (size_t idx = 0; idx < reserved_dict->GetNumChildren(); idx++) {
-    ValueObjectSP dict_entry = reserved_dict->GetChildAtIndex(idx, true);
+    ValueObjectSP dict_entry = reserved_dict->GetChildAtIndex(idx);
 
     DataExtractor data;
     data.SetAddressByteSize(dict_entry->GetProcessSP()->GetAddressByteSize());
@@ -567,18 +567,15 @@ ThreadSP AppleObjCRuntime::GetBacktraceThreadFromException(
 
   if (!return_addresses)
     return FailExceptionParsing("Failed to get return addresses.");
-  auto frames_value =
-      return_addresses->GetChildMemberWithName(ConstString("_frames"), true);
+  auto frames_value = return_addresses->GetChildMemberWithName("_frames");
   if (!frames_value)
     return FailExceptionParsing("Failed to get frames_value.");
   addr_t frames_addr = frames_value->GetValueAsUnsigned(0);
-  auto count_value =
-      return_addresses->GetChildMemberWithName(ConstString("_cnt"), true);
+  auto count_value = return_addresses->GetChildMemberWithName("_cnt");
   if (!count_value)
     return FailExceptionParsing("Failed to get count_value.");
   size_t count = count_value->GetValueAsUnsigned(0);
-  auto ignore_value =
-      return_addresses->GetChildMemberWithName(ConstString("_ignore"), true);
+  auto ignore_value = return_addresses->GetChildMemberWithName("_ignore");
   if (!ignore_value)
     return FailExceptionParsing("Failed to get ignore_value.");
   size_t ignore = ignore_value->GetValueAsUnsigned(0);

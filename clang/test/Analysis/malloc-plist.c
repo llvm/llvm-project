@@ -89,7 +89,6 @@ void use_ret(void) {
 
 // Passing a block as a parameter to an inlined call for which we generate
 // a stack hint message caused crashes.
-// rdar://problem/21291971
 void myfree_takingblock(void (^ignored)(void), int *p) {
   free(p);
 }

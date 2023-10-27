@@ -5,12 +5,12 @@
   "uri":"test:///foo.mlir",
   "languageId":"mlir",
   "version":1,
-  "text":"func.func @foo() -> i1 {\n%value = arith.constant true\nreturn %value : i1\n}"
+  "text":"#attr = 1 : index\n!type = index\nfunc.func @foo(%arg0: !type) -> i1 attributes {attr = #attr} {\n%value = arith.constant true loc(#loc)\nreturn %value : i1\n}\n#loc = loc(\"foo.mlir\":1:2)"
 }}}
 // -----
 {"jsonrpc":"2.0","id":1,"method":"textDocument/definition","params":{
   "textDocument":{"uri":"test:///foo.mlir"},
-  "position":{"line":2,"character":12}
+  "position":{"line":4,"character":12}
 }}
 //      CHECK:  "id": 1
 // CHECK-NEXT:  "jsonrpc": "2.0",
@@ -19,6 +19,48 @@
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:        "end": {
 // CHECK-NEXT:          "character": 6,
+// CHECK-NEXT:          "line": 3
+// CHECK-NEXT:        },
+// CHECK-NEXT:        "start": {
+// CHECK-NEXT:          "character": 0,
+// CHECK-NEXT:          "line": 3
+// CHECK-NEXT:        }
+// CHECK-NEXT:      },
+// CHECK-NEXT:      "uri": "{{.*}}/foo.mlir"
+// CHECK-NEXT:    }
+// -----
+{"jsonrpc":"2.0","id":2,"method":"textDocument/definition","params":{
+  "textDocument":{"uri":"test:///foo.mlir"},
+  "position":{"line":2,"character":12}
+}}
+//      CHECK:  "id": 2
+// CHECK-NEXT:  "jsonrpc": "2.0",
+// CHECK-NEXT:  "result": [
+// CHECK-NEXT:    {
+// CHECK-NEXT:      "range": {
+// CHECK-NEXT:        "end": {
+// CHECK-NEXT:          "character": 9,
+// CHECK-NEXT:          "line": 2
+// CHECK-NEXT:        },
+// CHECK-NEXT:        "start": {
+// CHECK-NEXT:          "character": 0,
+// CHECK-NEXT:          "line": 2
+// CHECK-NEXT:        }
+// CHECK-NEXT:      },
+// CHECK-NEXT:      "uri": "{{.*}}/foo.mlir"
+// CHECK-NEXT:    }
+// -----
+{"jsonrpc":"2.0","id":2,"method":"textDocument/definition","params":{
+  "textDocument":{"uri":"test:///foo.mlir"},
+  "position":{"line":2,"character":25}
+}}
+//      CHECK:  "id": 2
+// CHECK-NEXT:  "jsonrpc": "2.0",
+// CHECK-NEXT:  "result": [
+// CHECK-NEXT:    {
+// CHECK-NEXT:      "range": {
+// CHECK-NEXT:        "end": {
+// CHECK-NEXT:          "character": 5,
 // CHECK-NEXT:          "line": 1
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "start": {
@@ -31,7 +73,7 @@
 // -----
 {"jsonrpc":"2.0","id":2,"method":"textDocument/definition","params":{
   "textDocument":{"uri":"test:///foo.mlir"},
-  "position":{"line":0,"character":12}
+  "position":{"line":2,"character":57}
 }}
 //      CHECK:  "id": 2
 // CHECK-NEXT:  "jsonrpc": "2.0",
@@ -39,12 +81,33 @@
 // CHECK-NEXT:    {
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:        "end": {
-// CHECK-NEXT:          "character": 9,
+// CHECK-NEXT:          "character": 5,
 // CHECK-NEXT:          "line": 0
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "start": {
 // CHECK-NEXT:          "character": 0,
 // CHECK-NEXT:          "line": 0
+// CHECK-NEXT:        }
+// CHECK-NEXT:      },
+// CHECK-NEXT:      "uri": "{{.*}}/foo.mlir"
+// CHECK-NEXT:    }
+// -----
+{"jsonrpc":"2.0","id":2,"method":"textDocument/definition","params":{
+  "textDocument":{"uri":"test:///foo.mlir"},
+  "position":{"line":3,"character":37}
+}}
+//      CHECK:  "id": 2
+// CHECK-NEXT:  "jsonrpc": "2.0",
+// CHECK-NEXT:  "result": [
+// CHECK-NEXT:    {
+// CHECK-NEXT:      "range": {
+// CHECK-NEXT:        "end": {
+// CHECK-NEXT:          "character": 4,
+// CHECK-NEXT:          "line": 6
+// CHECK-NEXT:        },
+// CHECK-NEXT:        "start": {
+// CHECK-NEXT:          "character": 0,
+// CHECK-NEXT:          "line": 6
 // CHECK-NEXT:        }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "uri": "{{.*}}/foo.mlir"

@@ -111,7 +111,7 @@ tbz x0, #0, target
 // DISASM: 40:       91000000     add     x0, x0, #0
 // DISASM: 44:       91400000     add     x0, x0, #0, lsl #12
 // DISASM: 48:       f9400000     ldr     x0, [x0]
-// DISASM: 4c:       30091a20     adr     x0, #74565
+// DISASM: 4c:       30091a20     adr     x0, 0x12391
 
 // DATA: Contents of section .rdata:
 // DATA-NEXT:  0000 30000000 08000000

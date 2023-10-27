@@ -1,4 +1,4 @@
-// RUN: llvm-mc -arch=amdgcn -show-encoding -mcpu=gfx1100 %s | FileCheck --check-prefix=GFX11 %s
+// RUN: llvm-mc -triple=amdgcn -show-encoding -mcpu=gfx1100 %s | FileCheck --check-prefix=GFX11 %s
 
 s_add_u32 s0, s1, s2
 // GFX11: encoding: [0x01,0x02,0x00,0x80]

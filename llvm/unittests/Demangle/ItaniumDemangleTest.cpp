@@ -11,6 +11,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <cstdlib>
+#include <string_view>
 #include <vector>
 
 using namespace llvm;
@@ -83,7 +84,7 @@ TEST(ItaniumDemangle, MethodOverride) {
 }
 
 static std::string toString(OutputBuffer &OB) {
-  StringView SV = OB;
+  std::string_view SV = OB;
   return {SV.begin(), SV.end()};
 }
 
@@ -98,7 +99,7 @@ TEST(ItaniumDemangle, HalfType) {
       OutputBuffer OB;
       Node *N = AbstractManglingParser<TestParser, TestAllocator>::parseType();
       N->printLeft(OB);
-      StringView Name = N->getBaseName();
+      std::string_view Name = N->getBaseName();
       if (!Name.empty())
         Types.push_back(std::string(Name.begin(), Name.end()));
       else

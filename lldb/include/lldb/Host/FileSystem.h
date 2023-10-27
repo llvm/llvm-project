@@ -12,7 +12,9 @@
 #include "lldb/Host/File.h"
 #include "lldb/Utility/DataBuffer.h"
 #include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/Status.h"
+#include "lldb/Utility/TildeExpressionResolver.h"
 
 #include "llvm/Support/Chrono.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -30,17 +32,25 @@ public:
   static const char *DEV_NULL;
   static const char *PATH_CONVERSION_ERROR;
 
-  FileSystem() : m_fs(llvm::vfs::getRealFileSystem()) {}
+  FileSystem()
+      : m_fs(llvm::vfs::getRealFileSystem()),
+        m_tilde_resolver(std::make_unique<StandardTildeExpressionResolver>()) {}
   FileSystem(llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> fs)
-      : m_fs(std::move(fs)) {}
+      : m_fs(std::move(fs)),
+        m_tilde_resolver(std::make_unique<StandardTildeExpressionResolver>()) {}
+  FileSystem(std::unique_ptr<TildeExpressionResolver> tilde_resolver)
+      : m_fs(llvm::vfs::getRealFileSystem()),
+        m_tilde_resolver(std::move(tilde_resolver)) {}
 
   FileSystem(const FileSystem &fs) = delete;
   FileSystem &operator=(const FileSystem &fs) = delete;
 
   static FileSystem &Instance();
 
-  static void Initialize();
-  static void Initialize(llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> fs);
+  template <class... T> static void Initialize(T &&...t) {
+    lldbassert(!InstanceImpl() && "Already initialized.");
+    InstanceImpl().emplace(std::forward<T>(t)...);
+  }
   static void Terminate();
 
   Status Symlink(const FileSpec &src, const FileSpec &dst);
@@ -52,7 +62,7 @@ public:
   FILE *Fopen(const char *path, const char *mode);
 
   /// Wraps ::open in a platform-independent way.
-  int Open(const char *path, int flags, int mode);
+  int Open(const char *path, int flags, int mode = 0600);
 
   llvm::Expected<std::unique_ptr<File>>
   Open(const FileSpec &file_spec, File::OpenOptions options,
@@ -197,6 +207,7 @@ public:
 private:
   static std::optional<FileSystem> &InstanceImpl();
   llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> m_fs;
+  std::unique_ptr<TildeExpressionResolver> m_tilde_resolver;
   std::string m_home_directory;
 };
 } // namespace lldb_private

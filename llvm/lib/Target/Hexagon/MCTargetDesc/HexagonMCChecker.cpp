@@ -79,9 +79,9 @@ void HexagonMCChecker::initReg(MCInst const &MCI, unsigned R, unsigned &PredReg,
   } else
     // Note register use.  Super-registers are not tracked directly,
     // but their components.
-    for (MCRegAliasIterator SRI(R, &RI, !MCSubRegIterator(R, &RI).isValid());
-         SRI.isValid(); ++SRI)
-      if (!MCSubRegIterator(*SRI, &RI).isValid())
+    for (MCRegAliasIterator SRI(R, &RI, RI.subregs(R).empty()); SRI.isValid();
+         ++SRI)
+      if (RI.subregs(*SRI).empty())
         // Skip super-registers used indirectly.
         Uses.insert(*SRI);
 
@@ -98,41 +98,38 @@ void HexagonMCChecker::init(MCInst const &MCI) {
   for (unsigned i = MCID.getNumDefs(); i < MCID.getNumOperands(); ++i)
     if (MCI.getOperand(i).isReg())
       initReg(MCI, MCI.getOperand(i).getReg(), PredReg, isTrue);
-  for (unsigned i = 0; i < MCID.getNumImplicitUses(); ++i)
-    initReg(MCI, MCID.getImplicitUses()[i], PredReg, isTrue);
+  for (MCPhysReg ImpUse : MCID.implicit_uses())
+    initReg(MCI, ImpUse, PredReg, isTrue);
 
   const bool IgnoreTmpDst = (HexagonMCInstrInfo::hasTmpDst(MCII, MCI) ||
                              HexagonMCInstrInfo::hasHvxTmp(MCII, MCI)) &&
-                            STI.getFeatureBits()[Hexagon::ArchV69];
+                            STI.hasFeature(Hexagon::ArchV69);
 
   // Get implicit register definitions.
-  if (const MCPhysReg *ImpDef = MCID.getImplicitDefs())
-    for (; *ImpDef; ++ImpDef) {
-      unsigned R = *ImpDef;
+  for (MCPhysReg R : MCID.implicit_defs()) {
+    if (Hexagon::R31 != R && MCID.isCall())
+      // Any register other than the LR and the PC are actually volatile ones
+      // as defined by the ABI, not modified implicitly by the call insn.
+      continue;
+    if (Hexagon::PC == R)
+      // Branches are the only insns that can change the PC,
+      // otherwise a read-only register.
+      continue;
 
-      if (Hexagon::R31 != R && MCID.isCall())
-        // Any register other than the LR and the PC are actually volatile ones
-        // as defined by the ABI, not modified implicitly by the call insn.
-        continue;
-      if (Hexagon::PC == R)
-        // Branches are the only insns that can change the PC,
-        // otherwise a read-only register.
-        continue;
-
-      if (Hexagon::USR_OVF == R)
-        // Many insns change the USR implicitly, but only one or another flag.
-        // The instruction table models the USR.OVF flag, which can be
-        // implicitly modified more than once, but cannot be modified in the
-        // same packet with an instruction that modifies is explicitly. Deal
-        // with such situations individually.
-        SoftDefs.insert(R);
-      else if (HexagonMCInstrInfo::isPredReg(RI, R) &&
-               HexagonMCInstrInfo::isPredicateLate(MCII, MCI))
-        // Include implicit late predicates.
-        LatePreds.insert(R);
-      else if (!IgnoreTmpDst)
-        Defs[R].insert(PredSense(PredReg, isTrue));
-    }
+    if (Hexagon::USR_OVF == R)
+      // Many insns change the USR implicitly, but only one or another flag.
+      // The instruction table models the USR.OVF flag, which can be
+      // implicitly modified more than once, but cannot be modified in the
+      // same packet with an instruction that modifies is explicitly. Deal
+      // with such situations individually.
+      SoftDefs.insert(R);
+    else if (HexagonMCInstrInfo::isPredReg(RI, R) &&
+             HexagonMCInstrInfo::isPredicateLate(MCII, MCI))
+      // Include implicit late predicates.
+      LatePreds.insert(R);
+    else if (!IgnoreTmpDst)
+      Defs[R].insert(PredSense(PredReg, isTrue));
+  }
 
   // Figure out explicit register definitions.
   for (unsigned i = 0; i < MCID.getNumDefs(); ++i) {
@@ -148,9 +145,9 @@ void HexagonMCChecker::init(MCInst const &MCI) {
 
     // Note register definitions, direct ones as well as indirect side-effects.
     // Super-registers are not tracked directly, but their components.
-    for (MCRegAliasIterator SRI(R, &RI, !MCSubRegIterator(R, &RI).isValid());
-         SRI.isValid(); ++SRI) {
-      if (MCSubRegIterator(*SRI, &RI).isValid())
+    for (MCRegAliasIterator SRI(R, &RI, RI.subregs(R).empty()); SRI.isValid();
+         ++SRI) {
+      if (!RI.subregs(*SRI).empty())
         // Skip super-registers defined indirectly.
         continue;
 
@@ -181,10 +178,6 @@ void HexagonMCChecker::init(MCInst const &MCI) {
         // TODO: relies on the impossibility of a current and a temporary loads
         // in the same packet.
         TmpDefs.insert(*SRI);
-      else if (i <= 1 && HexagonMCInstrInfo::hasNewValue2(MCII, MCI))
-        // vshuff(Vx, Vy, Rx) <- Vx(0) and Vy(1) are both source and
-        // destination registers with this instruction. same for vdeal(Vx,Vy,Rx)
-        Uses.insert(*SRI);
       else if (!IgnoreTmpDst)
         Defs[*SRI].insert(PredSense(PredReg, isTrue));
     }
@@ -480,7 +473,7 @@ bool HexagonMCChecker::checkNewValues() {
     MCInstrDesc const &Desc = HexagonMCInstrInfo::getDesc(MCII, *ProducerInst);
     const unsigned ProducerOpIndex = std::get<1>(Producer);
 
-    if (Desc.OpInfo[ProducerOpIndex].RegClass ==
+    if (Desc.operands()[ProducerOpIndex].RegClass ==
         Hexagon::DoubleRegsRegClassID) {
       reportNote(ProducerInst->getLoc(),
                  "Double registers cannot be new-value producers");
@@ -716,7 +709,7 @@ bool HexagonMCChecker::checkShuffle() {
 }
 
 bool HexagonMCChecker::checkValidTmpDst() {
-  if (!STI.getFeatureBits()[Hexagon::ArchV69]) {
+  if (!STI.hasFeature(Hexagon::ArchV69)) {
     return true;
   }
   auto HasTmp = [&](MCInst const &I) {
@@ -806,7 +799,7 @@ void HexagonMCChecker::reportWarning(Twine const &Msg) {
 }
 
 bool HexagonMCChecker::checkLegalVecRegPair() {
-  const bool IsPermitted = STI.getFeatureBits()[Hexagon::ArchV67];
+  const bool IsPermitted = STI.hasFeature(Hexagon::ArchV67);
   const bool HasReversePairs = ReversePairs.size() != 0;
 
   if (!IsPermitted && HasReversePairs) {

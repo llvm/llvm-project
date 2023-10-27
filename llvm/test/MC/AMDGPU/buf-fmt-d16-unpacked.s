@@ -1,6 +1,6 @@
-// RUN: llvm-mc -arch=amdgcn -mcpu=fiji -show-encoding %s | FileCheck -check-prefix=UNPACKED %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx810 2>&1 %s | FileCheck -check-prefix=PACKED-ERR --implicit-check-not=error: %s
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx900 2>&1 %s | FileCheck -check-prefix=PACKED-ERR --implicit-check-not=error: %s
+// RUN: llvm-mc -triple=amdgcn -mcpu=fiji -show-encoding %s | FileCheck -check-prefix=UNPACKED %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx810 2>&1 %s | FileCheck -check-prefix=PACKED-ERR --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx900 2>&1 %s | FileCheck -check-prefix=PACKED-ERR --implicit-check-not=error: %s
 
 
 //===----------------------------------------------------------------------===//

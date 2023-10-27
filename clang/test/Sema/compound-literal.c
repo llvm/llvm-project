@@ -14,7 +14,7 @@ static int *p2 = (int []){2,x}; // expected-error {{initializer element is not a
 static long *p3 = (long []){2,"x"}; // expected-error {{incompatible pointer to integer conversion initializing 'long' with an expression of type 'char[2]'}}
 
 typedef struct { } cache_t; // expected-warning{{empty struct is a GNU extension}}
-static cache_t clo_I1_cache = ((cache_t) { } ); // expected-warning{{use of GNU empty initializer extension}}
+static cache_t clo_I1_cache = ((cache_t) { } ); // expected-warning{{use of an empty initializer is a C23 extension}}
 
 typedef struct Test {int a;int b;} Test;
 static Test* ll = &(Test) {0,0};
@@ -37,7 +37,7 @@ void IncompleteFunc(unsigned x) {
 // PR6080
 int array[(sizeof(int[3]) == sizeof( (int[]) {0,1,2} )) ? 1 : -1];
 
-// rdar://28949016 - Constant restriction should not apply to compound literals in blocks
+// Constant restriction should not apply to compound literals in blocks
 int (^block)(int) = ^(int i) {
   int *array = (int[]) {i, i + 2, i + 4};
   return array[i];

@@ -12,6 +12,7 @@
 #include <memory>
 
 namespace mlir {
+class DialectRegistry;
 class LLVMTypeConverter;
 class RewritePatternSet;
 class Pass;
@@ -22,6 +23,9 @@ class Pass;
 namespace index {
 void populateIndexToLLVMConversionPatterns(LLVMTypeConverter &converter,
                                            RewritePatternSet &patterns);
+
+void registerConvertIndexToLLVMInterface(DialectRegistry &registry);
+
 } // namespace index
 } // namespace mlir
 

@@ -39,7 +39,7 @@ def SDT_LanaiAdjDynAlloc  : SDTypeProfile<1,  1, [SDTCisVT<0, i32>,
 def Call             : SDNode<"LanaiISD::CALL", SDT_LanaiCall,
                               [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue,
                                SDNPVariadic]>;
-def RetFlag          : SDNode<"LanaiISD::RET_FLAG", SDTNone,
+def RetGlue          : SDNode<"LanaiISD::RET_GLUE", SDTNone,
                               [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
 def CallSeqStart     : SDNode<"ISD::CALLSEQ_START", SDT_LanaiCallSeqStart,
                               [SDNPHasChain, SDNPOutGlue]>;
@@ -732,7 +732,7 @@ let isReturn = 1, isTerminator = 1, hasDelaySlot = 1, isBarrier = 1,
     Uses = [RCA] in {
   def RET : InstRM<0b0, (outs), (ins),
                    "ld\t-4[%fp], %pc ! return",
-                   [(RetFlag)]> {
+                   [(RetGlue)]> {
     let Rd = PC.Num;
     let Rs1 = FP.Num;
     let P = 1;

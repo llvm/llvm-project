@@ -21,7 +21,7 @@ define i256 @sub256(i256 %a, i256 %b) nounwind {
 ; CHECK-LABEL: sub256:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    subq %r9, %rsi
+; CHECK-NEXT:    subq {{[0-9]+}}(%rsp), %rsi
 ; CHECK-NEXT:    sbbq {{[0-9]+}}(%rsp), %rdx
 ; CHECK-NEXT:    sbbq {{[0-9]+}}(%rsp), %rcx
 ; CHECK-NEXT:    sbbq {{[0-9]+}}(%rsp), %r8
@@ -392,7 +392,6 @@ define { i64, i1 } @subcarry_carry_not_zext(i64 %a, i64 %b, i64 %carryin) {
 define { i64, i1 } @subcarry_carry_not_i1(i64 %a, i64 %b, i8 %carryin) {
 ; CHECK-LABEL: subcarry_carry_not_i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $edx killed $edx def $rdx
 ; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    subq %rsi, %rax
 ; CHECK-NEXT:    setb %cl

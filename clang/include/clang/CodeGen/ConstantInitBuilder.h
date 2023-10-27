@@ -41,7 +41,7 @@ class CodeGenModule;
 ///    for (auto &widget : widgets) {
 ///      auto widgetDesc = widgetArray.beginStruct();
 ///      widgetDesc.addInt(CGM.SizeTy, widget.getPower());
-///      widgetDesc.add(CGM.GetAddrOfConstantString(widget.getName()));
+///      widgetDesc.add(CGM.GetAddrOfConstantStringFromLiteral(widget.getName()));
 ///      widgetDesc.add(CGM.GetAddrOfGlobal(widget.getInitializerDecl()));
 ///      widgetDesc.finishAndAddTo(widgetArray);
 ///    }

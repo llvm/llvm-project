@@ -20,6 +20,8 @@
 #include "flang/Optimizer/Builder/Complex.h"
 #include "flang/Optimizer/Builder/Todo.h"
 
+#include <algorithm>
+
 /// Convert string, \p s, to an APFloat value. Recognize and handle Inf and
 /// NaN strings as well. \p s is assumed to not contain any spaces.
 static llvm::APFloat consAPFloat(const llvm::fltSemantics &fsem,
@@ -48,16 +50,35 @@ static mlir::Attribute convertToAttribute(
     const Fortran::evaluate::Scalar<Fortran::evaluate::Type<TC, KIND>> &value,
     mlir::Type type) {
   if constexpr (TC == Fortran::common::TypeCategory::Integer) {
-    return builder.getIntegerAttr(type, value.ToInt64());
+    if constexpr (KIND <= 8)
+      return builder.getIntegerAttr(type, value.ToInt64());
+    else {
+      static_assert(KIND <= 16, "integers with KIND > 16 are not supported");
+      return builder.getIntegerAttr(
+          type, llvm::APInt(KIND * 8,
+                            {value.ToUInt64(), value.SHIFTR(64).ToUInt64()}));
+    }
   } else if constexpr (TC == Fortran::common::TypeCategory::Logical) {
     return builder.getIntegerAttr(type, value.IsTrue());
   } else {
-    static_assert(TC == Fortran::common::TypeCategory::Real,
-                  "type values cannot be converted to attributes");
-    std::string str = value.DumpHexadecimal();
-    auto floatVal =
-        consAPFloat(builder.getKindMap().getFloatSemantics(KIND), str);
-    return builder.getFloatAttr(type, floatVal);
+    auto getFloatAttr = [&](const auto &value, mlir::Type type) {
+      std::string str = value.DumpHexadecimal();
+      auto floatVal =
+          consAPFloat(builder.getKindMap().getFloatSemantics(KIND), str);
+      return builder.getFloatAttr(type, floatVal);
+    };
+
+    if constexpr (TC == Fortran::common::TypeCategory::Real) {
+      return getFloatAttr(value, type);
+    } else {
+      static_assert(TC == Fortran::common::TypeCategory::Complex,
+                    "type values cannot be converted to attributes");
+      mlir::Type eleTy = mlir::cast<mlir::ComplexType>(type).getElementType();
+      llvm::SmallVector<mlir::Attribute, 2> attrs = {
+          getFloatAttr(value.REAL(), eleTy),
+          getFloatAttr(value.AIMAG(), eleTy)};
+      return builder.getArrayAttr(attrs);
+    }
   }
   return {};
 }
@@ -66,17 +87,11 @@ namespace {
 /// Helper class to lower an array constant to a global with an MLIR dense
 /// attribute.
 ///
-/// If we have a rank-1 array of integer, real, or logical, then we can
+/// If we have an array of integer, real, complex, or logical, then we can
 /// create a global array with the dense attribute.
 ///
-/// The mlir tensor type can only handle integer, real, or logical. It
-/// does not currently support nested structures which is required for
-/// complex.
-///
-/// Also, we currently handle just rank-1 since tensor type assumes
-/// row major array ordering. We will need to reorder the dimensions
-/// in the tensor type to support Fortran's column major array ordering.
-/// How to create this tensor type is to be determined.
+/// The mlir tensor type can only handle integer, real, complex, or logical.
+/// It does not currently support nested structures.
 class DenseGlobalBuilder {
 public:
   static fir::GlobalOp tryCreating(fir::FirOpBuilder &builder,
@@ -94,6 +109,8 @@ public:
             [&](const Fortran::evaluate::Expr<Fortran::evaluate::SomeReal> &x) {
               globalBuilder.tryConvertingToAttributes(builder, x);
             },
+            [&](const Fortran::evaluate::Expr<Fortran::evaluate::SomeComplex> &
+                    x) { globalBuilder.tryConvertingToAttributes(builder, x); },
             [](const auto &) {},
         },
         initExpr.u);
@@ -124,13 +141,14 @@ private:
           &constant) {
     static_assert(TC != Fortran::common::TypeCategory::Character,
                   "must be numerical or logical");
-    if (constant.Rank() != 1)
-      return;
     auto attrTc = TC == Fortran::common::TypeCategory::Logical
                       ? Fortran::common::TypeCategory::Integer
                       : TC;
     attributeElementType = Fortran::lower::getFIRType(
         builder.getContext(), attrTc, KIND, std::nullopt);
+    if (auto firCTy = mlir::dyn_cast<fir::ComplexType>(attributeElementType))
+      attributeElementType =
+          mlir::ComplexType::get(firCTy.getEleType(builder.getKindMap()));
     for (auto element : constant.values())
       attributes.push_back(
           convertToAttribute<TC, KIND>(builder, element, attributeElementType));
@@ -158,12 +176,16 @@ private:
                                   llvm::StringRef globalName,
                                   mlir::StringAttr linkage,
                                   bool isConst) const {
-    // Not a rank 1 "trivial" intrinsic constant array, or empty array.
+    // Not a "trivial" intrinsic constant array, or empty array.
     if (!attributeElementType || attributes.empty())
       return {};
 
+    assert(symTy.isa<fir::SequenceType>() && "expecting an array global");
+    auto arrTy = symTy.cast<fir::SequenceType>();
+    llvm::SmallVector<int64_t> tensorShape(arrTy.getShape());
+    std::reverse(tensorShape.begin(), tensorShape.end());
     auto tensorTy =
-        mlir::RankedTensorType::get(attributes.size(), attributeElementType);
+        mlir::RankedTensorType::get(tensorShape, attributeElementType);
     auto init = mlir::DenseElementsAttr::get(tensorTy, attributes);
     return builder.createGlobal(loc, symTy, globalName, linkage, init, isConst);
   }
@@ -301,7 +323,8 @@ genScalarLit(fir::FirOpBuilder &builder, mlir::Location loc,
 
   auto size = builder.getKindMap().getCharacterBitsize(KIND) / 8 * value.size();
   llvm::StringRef strVal(reinterpret_cast<const char *>(value.c_str()), size);
-  std::string globalName = fir::factory::uniqueCGIdent("cl", strVal);
+  std::string globalName = fir::factory::uniqueCGIdent(
+      KIND == 1 ? "cl"s : "cl"s + std::to_string(KIND), strVal);
   fir::GlobalOp global = builder.getNamedGlobal(globalName);
   fir::CharacterType type =
       fir::CharacterType::get(builder.getContext(), KIND, len);
@@ -340,8 +363,9 @@ static mlir::Value genInlinedStructureCtorLitImpl(
     if (sym->test(Fortran::semantics::Symbol::Flag::ParentComp))
       TODO(loc, "parent component in structure constructor");
 
-    llvm::StringRef name = toStringRef(sym->name());
+    std::string name = converter.getRecordTypeFieldName(sym);
     mlir::Type componentTy = recTy.getType(name);
+    assert(componentTy && "failed to retrieve component");
     // FIXME: type parameters must come from the derived-type-spec
     auto field = builder.create<fir::FieldIndexOp>(
         loc, fieldTy, name, type,
@@ -362,35 +386,40 @@ static mlir::Value genInlinedStructureCtorLitImpl(
     if (Fortran::lower::isDerivedTypeWithLenParameters(sym))
       TODO(loc, "component with length parameters in structure constructor");
 
-    if (Fortran::semantics::IsBuiltinCPtr(sym)) {
-      // Builtin c_ptr and c_funptr have special handling because initial
-      // values are handled for them as an extension.
+    // Special handling for scalar c_ptr/c_funptr constants. The array constant
+    // must fall through to genConstantValue() below.
+    if (Fortran::semantics::IsBuiltinCPtr(sym) && sym->Rank() == 0 &&
+        (Fortran::evaluate::GetLastSymbol(expr.value()) ||
+         Fortran::evaluate::IsNullPointer(expr.value()))) {
+      // Builtin c_ptr and c_funptr have special handling because designators
+      // and NULL() are handled as initial values for them as an extension
+      // (otherwise only c_ptr_null/c_funptr_null are allowed and these are
+      // replaced by structure constructors by semantics, so GetLastSymbol
+      // returns nothing).
+
+      // The Ev::Expr is an initializer that is a pointer target (e.g., 'x' or
+      // NULL()) that must be inserted into an intermediate cptr record value's
+      // address field, which ought to be an intptr_t on the target.
       mlir::Value addr = fir::getBase(Fortran::lower::genExtAddrInInitializer(
           converter, loc, expr.value()));
-      if (addr.getType() == componentTy) {
-        // Do nothing. The Ev::Expr was returned as a value that can be
-        // inserted directly to the component without an intermediary.
-      } else {
-        // The Ev::Expr returned is an initializer that is a pointer (e.g.,
-        // null) that must be inserted into an intermediate cptr record
-        // value's address field, which ought to be an intptr_t on the target.
-        assert((fir::isa_ref_type(addr.getType()) ||
-                addr.getType().isa<mlir::FunctionType>()) &&
-               "expect reference type for address field");
-        assert(fir::isa_derived(componentTy) &&
-               "expect C_PTR, C_FUNPTR to be a record");
-        auto cPtrRecTy = componentTy.cast<fir::RecordType>();
-        llvm::StringRef addrFieldName = Fortran::lower::builtin::cptrFieldName;
-        mlir::Type addrFieldTy = cPtrRecTy.getType(addrFieldName);
-        auto addrField = builder.create<fir::FieldIndexOp>(
-            loc, fieldTy, addrFieldName, componentTy,
-            /*typeParams=*/mlir::ValueRange{});
-        mlir::Value castAddr = builder.createConvert(loc, addrFieldTy, addr);
-        auto undef = builder.create<fir::UndefOp>(loc, componentTy);
-        addr = builder.create<fir::InsertValueOp>(
-            loc, componentTy, undef, castAddr,
-            builder.getArrayAttr(addrField.getAttributes()));
-      }
+      if (addr.getType().isa<fir::BoxProcType>())
+        addr = builder.create<fir::BoxAddrOp>(loc, addr);
+      assert((fir::isa_ref_type(addr.getType()) ||
+              addr.getType().isa<mlir::FunctionType>()) &&
+             "expect reference type for address field");
+      assert(fir::isa_derived(componentTy) &&
+             "expect C_PTR, C_FUNPTR to be a record");
+      auto cPtrRecTy = componentTy.cast<fir::RecordType>();
+      llvm::StringRef addrFieldName = Fortran::lower::builtin::cptrFieldName;
+      mlir::Type addrFieldTy = cPtrRecTy.getType(addrFieldName);
+      auto addrField = builder.create<fir::FieldIndexOp>(
+          loc, fieldTy, addrFieldName, componentTy,
+          /*typeParams=*/mlir::ValueRange{});
+      mlir::Value castAddr = builder.createConvert(loc, addrFieldTy, addr);
+      auto undef = builder.create<fir::UndefOp>(loc, componentTy);
+      addr = builder.create<fir::InsertValueOp>(
+          loc, componentTy, undef, castAddr,
+          builder.getArrayAttr(addrField.getAttributes()));
       res = builder.create<fir::InsertValueOp>(
           loc, recTy, res, addr, builder.getArrayAttr(field.getAttributes()));
       continue;
@@ -413,9 +442,10 @@ static mlir::Value genScalarLit(
   if (!outlineBigConstantsInReadOnlyMemory)
     return genInlinedStructureCtorLitImpl(converter, loc, value, eleTy);
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
-  std::string globalName = Fortran::lower::mangle::mangleArrayLiteral(
-      eleTy,
-      Fortran::evaluate::Constant<Fortran::evaluate::SomeDerived>(value));
+  auto expr = std::make_unique<Fortran::lower::SomeExpr>(toEvExpr(
+      Fortran::evaluate::Constant<Fortran::evaluate::SomeDerived>(value)));
+  llvm::StringRef globalName =
+      converter.getUniqueLitName(loc, std::move(expr), eleTy);
   fir::GlobalOp global = builder.getNamedGlobal(globalName);
   if (!global) {
     global = builder.createGlobalConstant(
@@ -523,8 +553,9 @@ genOutlineArrayLit(Fortran::lower::AbstractConverter &converter,
                    const Fortran::evaluate::Constant<T> &constant) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   mlir::Type eleTy = arrayTy.cast<fir::SequenceType>().getEleTy();
-  std::string globalName =
-      Fortran::lower::mangle::mangleArrayLiteral(eleTy, constant);
+  llvm::StringRef globalName = converter.getUniqueLitName(
+      loc, std::make_unique<Fortran::lower::SomeExpr>(toEvExpr(constant)),
+      eleTy);
   fir::GlobalOp global = builder.getNamedGlobal(globalName);
   if (!global) {
     // Using a dense attribute for the initial value instead of creating an
@@ -532,12 +563,20 @@ genOutlineArrayLit(Fortran::lower::AbstractConverter &converter,
     // always possible.
     if constexpr (T::category == Fortran::common::TypeCategory::Logical ||
                   T::category == Fortran::common::TypeCategory::Integer ||
-                  T::category == Fortran::common::TypeCategory::Real) {
+                  T::category == Fortran::common::TypeCategory::Real ||
+                  T::category == Fortran::common::TypeCategory::Complex) {
       global = DenseGlobalBuilder::tryCreating(
           builder, loc, arrayTy, globalName, builder.createInternalLinkage(),
           true, constant);
     }
     if (!global)
+      // If the number of elements of the array is huge, the compilation may
+      // use a lot of memory and take a very long time to complete.
+      // Empirical evidence shows that an array with 150000 elements of
+      // complex type takes roughly 30 seconds to compile and uses 4GB of RAM,
+      // on a modern machine.
+      // It would be nice to add a driver switch to control the array size
+      // after which flang should not continue to compile.
       global = builder.createGlobalConstant(
           loc, arrayTy, globalName,
           [&](fir::FirOpBuilder &builder) {

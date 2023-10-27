@@ -111,8 +111,12 @@ public:
   /// either getSExtValue() or getZExtValue() will yield a correctly sized and
   /// signed value for the type Ty.
   /// Get a ConstantInt for a specific signed value.
-  static ConstantInt *getSigned(IntegerType *Ty, int64_t V);
-  static Constant *getSigned(Type *Ty, int64_t V);
+  static ConstantInt *getSigned(IntegerType *Ty, int64_t V) {
+    return get(Ty, V, true);
+  }
+  static Constant *getSigned(Type *Ty, int64_t V) {
+    return get(Ty, V, true);
+  }
 
   /// Return a ConstantInt with the specified value and an implied Type. The
   /// type is the integer type that corresponds to the bit width of the value.
@@ -264,11 +268,6 @@ class ConstantFP final : public ConstantData {
 
 public:
   ConstantFP(const ConstantFP &) = delete;
-
-  /// Floating point negation must be implemented with f(x) = -0.0 - x. This
-  /// method returns the negative zero constant for floating point or vector
-  /// floating point types; for all other types, it returns the null value.
-  static Constant *getZeroValueForNegation(Type *Ty);
 
   /// This returns a ConstantFP, or a vector containing a splat of a ConstantFP,
   /// for the specified value in the specified type. This should only be used
@@ -1027,16 +1026,6 @@ public:
   ///
   static Constant *getSizeOf(Type *Ty);
 
-  /// getOffsetOf constant expr - computes the offset of a struct field in a
-  /// target independent way (Note: the return type is an i64).
-  ///
-  static Constant *getOffsetOf(StructType *STy, unsigned FieldNo);
-
-  /// getOffsetOf constant expr - This is a generalized form of getOffsetOf,
-  /// which supports any aggregate type, and any Constant index.
-  ///
-  static Constant *getOffsetOf(Type *Ty, Constant *FieldNo);
-
   static Constant *getNeg(Constant *C, bool HasNUW = false,
                           bool HasNSW = false);
   static Constant *getNot(Constant *C);
@@ -1046,10 +1035,7 @@ public:
                           bool HasNSW = false);
   static Constant *getMul(Constant *C1, Constant *C2, bool HasNUW = false,
                           bool HasNSW = false);
-  static Constant *getAnd(Constant *C1, Constant *C2);
-  static Constant *getOr(Constant *C1, Constant *C2);
   static Constant *getXor(Constant *C1, Constant *C2);
-  static Constant *getUMin(Constant *C1, Constant *C2);
   static Constant *getShl(Constant *C1, Constant *C2, bool HasNUW = false,
                           bool HasNSW = false);
   static Constant *getLShr(Constant *C1, Constant *C2, bool isExact = false);
@@ -1209,12 +1195,6 @@ public:
   /// Return true if this is a compare constant expression
   bool isCompare() const;
 
-  /// Select constant expr
-  ///
-  /// \param OnlyIfReducedTy see \a getWithOperands() docs.
-  static Constant *getSelect(Constant *C, Constant *V1, Constant *V2,
-                             Type *OnlyIfReducedTy = nullptr);
-
   /// get - Return a binary or shift operator constant expression,
   /// folding if possible.
   ///
@@ -1349,6 +1329,15 @@ public:
   /// Whether creating a constant expression for this binary operator is
   /// supported.
   static bool isSupportedBinOp(unsigned Opcode);
+
+  /// Whether creating a constant expression for this cast is desirable.
+  static bool isDesirableCastOp(unsigned Opcode);
+
+  /// Whether creating a constant expression for this getelementptr type is
+  /// supported.
+  static bool isSupportedGetElementPtr(const Type *SrcElemTy) {
+    return !SrcElemTy->isScalableTy();
+  }
 
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
   static bool classof(const Value *V) {

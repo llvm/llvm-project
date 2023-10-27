@@ -25,7 +25,7 @@ ENDIF:                                            ; preds = %IF, %main_body
 ; GCN: {{^}}[[LOOP:.L[A-Z0-9_]+]]:
 ; GCN: s_cbranch_scc1 [[LOOP]]
 ; GCN: {{^}}[[BB0]]:
-define amdgpu_kernel void @fix_sgpr_live_ranges_crash(i32 %arg, i32 %arg1)  {
+define amdgpu_kernel void @fix_sgpr_live_ranges_crash(i32 %arg, i32 %arg1, i1 %c0)  {
 bb:
   %cnd = trunc i32 %arg to i1
   br i1 %cnd, label %bb2, label %bb5
@@ -45,7 +45,7 @@ bb5:                                              ; preds = %bb3, %bb
   br i1 %tmp10, label %bb11, label %bb12
 
 bb11:                                             ; preds = %bb11, %bb5
-  br i1 undef, label %bb11, label %bb12
+  br i1 %c0, label %bb11, label %bb12
 
 bb12:                                             ; preds = %bb11, %bb5
   ret void

@@ -63,7 +63,7 @@ bool llvm::checkVOPDRegConstraints(const SIInstrInfo &TII,
   }() && "Expected FirstMI to precede SecondMI");
   // Cannot pair dependent instructions
   for (const auto &Use : SecondMI.uses())
-    if (Use.isReg() && FirstMI.modifiesRegister(Use.getReg()))
+    if (Use.isReg() && FirstMI.modifiesRegister(Use.getReg(), TRI))
       return false;
 
   auto getVRegIdx = [&](unsigned OpcodeIdx, unsigned OperandIdx) {

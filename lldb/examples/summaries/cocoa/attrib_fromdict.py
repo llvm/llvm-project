@@ -8,11 +8,10 @@ SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
 
 class AttributesDictionary:
-
     def __init__(self, allow_reset=True):
         # need to do it this way to prevent endless recursion
-        self.__dict__['_dictionary'] = {}
-        self.__dict__['_allow_reset'] = allow_reset
+        self.__dict__["_dictionary"] = {}
+        self.__dict__["_allow_reset"] = allow_reset
 
     def __getattr__(self, name):
         if not self._check_exists(name):

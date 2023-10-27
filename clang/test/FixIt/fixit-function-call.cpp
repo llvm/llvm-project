@@ -1,4 +1,4 @@
-// RUN: not %clang_cc1 -fdiagnostics-parseable-fixits -x c++ %s 2> %t
+// RUN: not %clang_cc1 -fdiagnostics-parseable-fixits -fno-diagnostics-show-line-numbers -fcaret-diagnostics-max-lines=1 -x c++ %s 2> %t
 // RUN: FileCheck %s < %t
 // PR5941
 // END.

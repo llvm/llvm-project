@@ -4,6 +4,7 @@
 #include <isl/space.h>
 #include <isl/hash.h>
 #include <isl/id_type.h>
+#include <isl/stream.h>
 
 struct isl_name;
 struct isl_space {
@@ -96,5 +97,7 @@ __isl_give isl_space *isl_space_unbind_params_insert_domain(
 	__isl_take isl_space *space, __isl_keep isl_multi_id *tuple);
 
 int isl_space_cmp(__isl_keep isl_space *space1, __isl_keep isl_space *space2);
+
+__isl_give isl_space *isl_stream_read_space(__isl_keep isl_stream *s);
 
 #endif

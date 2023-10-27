@@ -152,51 +152,6 @@ define <vscale x 4 x float> @bitcast() {
 ;; Memory Access and Addressing Operations
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-; getelementptr
-
-define <vscale x 4 x ptr> @getelementptr_constant_foldable_1() {
-; CHECK-LABEL: @getelementptr_constant_foldable_1(
-; CHECK-NEXT:    ret <vscale x 4 x ptr> zeroinitializer
-;
-  %ptr = getelementptr i32, <vscale x 4 x ptr> zeroinitializer, <vscale x 4 x i64> undef
-  ret <vscale x 4 x ptr> %ptr
-}
-
-define <vscale x 4 x ptr> @getelementptr_constant_foldable_2() {
-; CHECK-LABEL: @getelementptr_constant_foldable_2(
-; CHECK-NEXT:    ret <vscale x 4 x ptr> zeroinitializer
-;
-  %ptr = getelementptr <vscale x 4 x i32>, ptr null, <vscale x 4 x i64> undef
-  ret <vscale x 4 x ptr> %ptr
-}
-
-; fold getelementptr P, 0 -> P.
-define ptr @getelementptr_constant_foldable_3() {
-; CHECK-LABEL: @getelementptr_constant_foldable_3(
-; CHECK-NEXT:    ret ptr null
-;
-  ret ptr null
-}
-
-define ptr @getelementptr_not_constant_foldable(i64 %x) {
-; CHECK-LABEL: @getelementptr_not_constant_foldable(
-; CHECK-NEXT:    [[PTR:%.*]] = getelementptr <vscale x 4 x i32>, ptr null, i64 [[X:%.*]]
-; CHECK-NEXT:    ret ptr [[PTR]]
-;
-  %ptr = getelementptr <vscale x 4 x i32>, ptr null, i64 %x
-  ret ptr %ptr
-}
-
-; Check GEP's result is known to be non-null.
-define i1 @getelementptr_check_non_null(ptr %ptr) {
-; CHECK-LABEL: @getelementptr_check_non_null(
-; CHECK-NEXT:    ret i1 false
-;
-  %x = getelementptr inbounds <vscale x 16 x i8>, ptr %ptr, i32 1
-  %cmp = icmp eq ptr %x, null
-  ret i1 %cmp
-}
-
 define i32 @extractelement_splat_constant_index(i32 %v) {
 ; CHECK-LABEL: @extractelement_splat_constant_index(
 ; CHECK-NEXT:    ret i32 [[V:%.*]]

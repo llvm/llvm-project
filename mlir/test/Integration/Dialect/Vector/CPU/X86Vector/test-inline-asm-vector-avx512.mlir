@@ -1,6 +1,6 @@
-// RUN: mlir-opt %s -convert-linalg-to-loops -convert-vector-to-scf='full-unroll=true' -lower-affine -convert-scf-to-cf -convert-vector-to-llvm -convert-memref-to-llvm  -convert-func-to-llvm='use-bare-ptr-memref-call-conv=1' -convert-arith-to-llvm -reconcile-unrealized-casts |\
+// RUN: mlir-opt %s -convert-linalg-to-loops -convert-vector-to-scf='full-unroll=true' -lower-affine -convert-scf-to-cf -convert-vector-to-llvm -finalize-memref-to-llvm  -convert-func-to-llvm='use-bare-ptr-memref-call-conv=1' -convert-arith-to-llvm -reconcile-unrealized-casts |\
 // RUN: mlir-translate --mlir-to-llvmir |\
-// RUN: %lli --entry-function=entry --mattr="avx512f" --dlopen=%mlir_lib_dir/libmlir_c_runner_utils%shlibext |\
+// RUN: %lli --entry-function=entry --mattr="avx512f" --dlopen=%mlir_c_runner_utils |\
 // RUN: FileCheck %s
 
 module {
@@ -27,11 +27,11 @@ module {
       : (!llvm.ptr<vector<16xi32>>) -> vector<16xi32>
 
     // CHECK: 0
-    %v0 = vector.extract %v[0]: vector<16xi32>
+    %v0 = vector.extract %v[0]: i32 from vector<16xi32>
     vector.print %v0 : i32
 
     // CHECK: 9
-    %v9 = vector.extract %v[9]: vector<16xi32>
+    %v9 = vector.extract %v[9]: i32 from vector<16xi32>
     vector.print %v9 : i32
 
     %i0 = arith.constant 0 : i32

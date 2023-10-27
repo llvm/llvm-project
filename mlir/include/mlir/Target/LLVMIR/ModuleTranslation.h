@@ -14,9 +14,10 @@
 #ifndef MLIR_TARGET_LLVMIR_MODULETRANSLATION_H
 #define MLIR_TARGET_LLVMIR_MODULETRANSLATION_H
 
+#include "mlir/Dialect/LLVMIR/LLVMInterfaces.h"
 #include "mlir/IR/Operation.h"
-#include "mlir/IR/Value.h"
 #include "mlir/IR/SymbolTable.h"
+#include "mlir/IR/Value.h"
 #include "mlir/Target/LLVMIR/Export.h"
 #include "mlir/Target/LLVMIR/LLVMTranslationInterface.h"
 #include "mlir/Target/LLVMIR/TypeToLLVM.h"
@@ -40,10 +41,14 @@ namespace LLVM {
 
 namespace detail {
 class DebugTranslation;
+class LoopAnnotationTranslation;
 } // namespace detail
 
+class AliasScopeAttr;
+class AliasScopeDomainAttr;
 class DINodeAttr;
 class LLVMFuncOp;
+class ComdatSelectorOp;
 
 /// Implementation class for module translation. Holds a reference to the module
 /// being translated, and the mappings between the original and the translated
@@ -115,42 +120,51 @@ public:
     return branchMapping.lookup(op);
   }
 
+  /// Stores a mapping between an MLIR call operation and a corresponding LLVM
+  /// call instruction.
+  void mapCall(Operation *mlir, llvm::CallInst *llvm) {
+    auto result = callMapping.try_emplace(mlir, llvm);
+    (void)result;
+    assert(result.second && "attempting to map a call that is already mapped");
+  }
+
+  /// Finds an LLVM call instruction that corresponds to the given MLIR call
+  /// operation.
+  llvm::CallInst *lookupCall(Operation *op) const {
+    return callMapping.lookup(op);
+  }
+
   /// Removes the mapping for blocks contained in the region and values defined
   /// in these blocks.
   void forgetMapping(Region &region);
 
-  /// Returns the LLVM metadata corresponding to a reference to an mlir LLVM
-  /// dialect access group operation.
-  llvm::MDNode *getAccessGroup(Operation &opInst,
-                               SymbolRefAttr accessGroupRef) const;
+  /// Returns the LLVM metadata corresponding to a mlir LLVM dialect alias scope
+  /// attribute. Creates the metadata node if it has not been converted before.
+  llvm::MDNode *getOrCreateAliasScope(AliasScopeAttr aliasScopeAttr);
 
-  /// Returns the LLVM metadata corresponding to a reference to an mlir LLVM
-  /// dialect alias scope operation
-  llvm::MDNode *getAliasScope(Operation &opInst,
-                              SymbolRefAttr aliasScopeRef) const;
-
-  /// Returns the LLVM metadata corresponding to a llvm loop's codegen
-  /// options attribute.
-  llvm::MDNode *lookupLoopOptionsMetadata(Attribute options) const {
-    return loopOptionsMetadataMapping.lookup(options);
-  }
-
-  void mapLoopOptionsMetadata(Attribute options, llvm::MDNode *metadata) {
-    auto result = loopOptionsMetadataMapping.try_emplace(options, metadata);
-    (void)result;
-    assert(result.second &&
-           "attempting to map loop options that was already mapped");
-  }
+  /// Returns the LLVM metadata corresponding to an array of mlir LLVM dialect
+  /// alias scope attributes. Creates the metadata nodes if they have not been
+  /// converted before.
+  llvm::MDNode *
+  getOrCreateAliasScopes(ArrayRef<AliasScopeAttr> aliasScopeAttrs);
 
   // Sets LLVM metadata for memory operations that are in a parallel loop.
-  void setAccessGroupsMetadata(Operation *op, llvm::Instruction *inst);
+  void setAccessGroupsMetadata(AccessGroupOpInterface op,
+                               llvm::Instruction *inst);
 
   // Sets LLVM metadata for memory operations that have alias scope information.
-  void setAliasScopeMetadata(Operation *op, llvm::Instruction *inst);
+  void setAliasScopeMetadata(AliasAnalysisOpInterface op,
+                             llvm::Instruction *inst);
 
-  /// Sets LLVM TBAA metadata for memory operations that have
-  /// TBAA attributes.
-  void setTBAAMetadata(Operation *op, llvm::Instruction *inst);
+  /// Sets LLVM TBAA metadata for memory operations that have TBAA attributes.
+  void setTBAAMetadata(AliasAnalysisOpInterface op, llvm::Instruction *inst);
+
+  /// Sets LLVM profiling metadata for operations that have branch weights.
+  void setBranchWeightsMetadata(BranchWeightOpInterface op);
+
+  /// Sets LLVM loop metadata for branch operations that have a loop annotation
+  /// attribute.
+  void setLoopMetadata(Operation *op, llvm::Instruction *inst);
 
   /// Converts the type from MLIR LLVM dialect to LLVM.
   llvm::Type *convertType(Type type);
@@ -169,16 +183,13 @@ public:
 
   /// Returns the OpenMP IR builder associated with the LLVM IR module being
   /// constructed.
-  llvm::OpenMPIRBuilder *getOpenMPBuilder() {
-    if (!ompBuilder) {
-      ompBuilder = std::make_unique<llvm::OpenMPIRBuilder>(*llvmModule);
-      ompBuilder->initialize();
-    }
-    return ompBuilder.get();
-  }
+  llvm::OpenMPIRBuilder *getOpenMPBuilder();
+
+  /// Returns the LLVM module in which the IR is being constructed.
+  llvm::Module *getLLVMModule() { return llvmModule.get(); }
 
   /// Translates the given location.
-  const llvm::DILocation *translateLoc(Location loc, llvm::DILocalScope *scope);
+  llvm::DILocation *translateLoc(Location loc, llvm::DILocalScope *scope);
 
   /// Translates the given LLVM debug info metadata.
   llvm::Metadata *translateDebugInfo(LLVM::DINodeAttr attr);
@@ -273,7 +284,7 @@ public:
     ModuleTranslation &moduleTranslation;
   };
 
-  SymbolTableCollection& symbolTable() { return symbolTableCollection; }
+  SymbolTableCollection &symbolTable() { return symbolTableCollection; }
 
 private:
   ModuleTranslation(Operation *module,
@@ -284,20 +295,13 @@ private:
   LogicalResult convertOperation(Operation &op, llvm::IRBuilderBase &builder);
   LogicalResult convertFunctionSignatures();
   LogicalResult convertFunctions();
+  LogicalResult convertComdats();
   LogicalResult convertGlobals();
   LogicalResult convertOneFunction(LLVMFuncOp func);
 
-  /// Process access_group LLVM Metadata operations and create LLVM
-  /// metadata nodes.
-  LogicalResult createAccessGroupMetadata();
-
-  /// Process alias.scope LLVM Metadata operations and create LLVM
-  /// metadata nodes for them and their domains.
-  LogicalResult createAliasScopeMetadata();
-
-  /// Returns the LLVM metadata corresponding to a reference to an mlir LLVM
-  /// dialect TBAATagOp operation.
-  llvm::MDNode *getTBAANode(Operation &memOp, SymbolRefAttr tagRef) const;
+  /// Returns the LLVM metadata corresponding to the given mlir LLVM dialect
+  /// TBAATagAttr.
+  llvm::MDNode *getTBAANode(TBAATagAttr tbaaAttr) const;
 
   /// Process tbaa LLVM Metadata operations and create LLVM
   /// metadata nodes for them.
@@ -306,11 +310,17 @@ private:
   /// Translates dialect attributes attached to the given operation.
   LogicalResult convertDialectAttributes(Operation *op);
 
+  /// Translates parameter attributes and adds them to the returned AttrBuilder.
+  llvm::AttrBuilder convertParameterAttrs(DictionaryAttr paramAttrs);
+
   /// Original and translated module.
   Operation *mlirModule;
   std::unique_ptr<llvm::Module> llvmModule;
   /// A converter for translating debug information.
   std::unique_ptr<detail::DebugTranslation> debugTranslation;
+
+  /// A converter for translating loop annotations.
+  std::unique_ptr<detail::LoopAnnotationTranslation> loopAnnotationTranslation;
 
   /// Builder for LLVM IR generation of OpenMP constructs.
   std::unique_ptr<llvm::OpenMPIRBuilder> ompBuilder;
@@ -335,23 +345,26 @@ private:
   /// values after all operations are converted.
   DenseMap<Operation *, llvm::Instruction *> branchMapping;
 
-  /// Mapping from an access group metadata operation to its LLVM metadata.
-  /// This map is populated on module entry and is used to annotate loops (as
-  /// identified via their branches) and contained memory accesses.
-  DenseMap<Operation *, llvm::MDNode *> accessGroupMetadataMapping;
+  /// A mapping between MLIR LLVM dialect call operations and LLVM IR call
+  /// instructions. This allows for adding branch weights after the operations
+  /// have been converted.
+  DenseMap<Operation *, llvm::CallInst *> callMapping;
 
-  /// Mapping from an attribute describing loop codegen options to its LLVM
-  /// metadata. The metadata is attached to Latch block branches with this
-  /// attribute.
-  DenseMap<Attribute, llvm::MDNode *> loopOptionsMetadataMapping;
+  /// Mapping from an alias scope attribute to its LLVM metadata.
+  /// This map is populated lazily.
+  DenseMap<AliasScopeAttr, llvm::MDNode *> aliasScopeMetadataMapping;
 
-  /// Mapping from an alias scope metadata operation to its LLVM metadata.
+  /// Mapping from an alias scope domain attribute to its LLVM metadata.
+  /// This map is populated lazily.
+  DenseMap<AliasScopeDomainAttr, llvm::MDNode *> aliasDomainMetadataMapping;
+
+  /// Mapping from a tbaa attribute to its LLVM metadata.
   /// This map is populated on module entry.
-  DenseMap<Operation *, llvm::MDNode *> aliasScopeMetadataMapping;
+  DenseMap<Attribute, llvm::MDNode *> tbaaMetadataMapping;
 
-  /// Mapping from a tbaa metadata operation to its LLVM metadata.
+  /// Mapping from a comdat selector operation to its LLVM comdat struct.
   /// This map is populated on module entry.
-  DenseMap<const Operation *, llvm::MDNode *> tbaaMetadataMapping;
+  DenseMap<ComdatSelectorOp, llvm::Comdat *> comdatMapping;
 
   /// Stack of user-specified state elements, useful when translating operations
   /// with regions.
@@ -367,9 +380,6 @@ namespace detail {
 /// to the results of preceding blocks.
 void connectPHINodes(Region &region, const ModuleTranslation &state);
 
-/// Get a topologically sorted list of blocks of the given region.
-SetVector<Block *> getTopologicallySortedBlocks(Region &region);
-
 /// Create an LLVM IR constant of `llvmType` from the MLIR attribute `attr`.
 /// This currently supports integer, floating point, splat and dense element
 /// attributes and combinations thereof. Also, an array attribute with two
@@ -380,10 +390,10 @@ llvm::Constant *getLLVMConstant(llvm::Type *llvmType, Attribute attr,
                                 const ModuleTranslation &moduleTranslation);
 
 /// Creates a call to an LLVM IR intrinsic function with the given arguments.
-llvm::Value *createIntrinsicCall(llvm::IRBuilderBase &builder,
-                                 llvm::Intrinsic::ID intrinsic,
-                                 ArrayRef<llvm::Value *> args = {},
-                                 ArrayRef<llvm::Type *> tys = {});
+llvm::CallInst *createIntrinsicCall(llvm::IRBuilderBase &builder,
+                                    llvm::Intrinsic::ID intrinsic,
+                                    ArrayRef<llvm::Value *> args = {},
+                                    ArrayRef<llvm::Type *> tys = {});
 } // namespace detail
 
 } // namespace LLVM

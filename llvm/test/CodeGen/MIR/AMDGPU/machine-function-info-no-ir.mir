@@ -11,6 +11,7 @@
 # FULL-NEXT: gdsSize: 256
 # FULL-NEXT: dynLDSAlign: 1
 # FULL-NEXT: isEntryFunction: true
+# FULL-NEXT: isChainFunction: false
 # FULL-NEXT: noSignedZerosFPMath: false
 # FULL-NEXT: memoryBound:     true
 # FULL-NEXT: waveLimiter:     true
@@ -36,6 +37,8 @@
 # FULL-NEXT: workItemIDX:     { reg: '$vgpr0' }
 # FULL-NEXT: workItemIDY:     { reg: '$vgpr31', mask: 1047552 }
 # FULL-NEXT: workItemIDZ:     { reg: '$vgpr31', mask: 1072693248 }
+# FULL-NEXT: psInputAddr:     0
+# FULL-NEXT: psInputEnable:   0
 # FULL-NEXT: mode:
 # FULL-NEXT: ieee: true
 # FULL-NEXT: dx10-clamp: true
@@ -44,8 +47,10 @@
 # FULL-NEXT: fp64-fp16-input-denormals: true
 # FULL-NEXT: fp64-fp16-output-denormals: true
 # FULL-NEXT:  highBitsOf32BitAddress: 0
-# FULL-NEXT:  occupancy: 10
+# FULL-NEXT:  occupancy: 8
 # FULL-NEXT:  vgprForAGPRCopy: ''
+# FULL-NEXT:  sgprForEXECCopy: ''
+# FULL-NEXT:  longBranchReservedReg: ''
 # FULL-NEXT: body:
 
 # SIMPLE: machineFunctionInfo:
@@ -74,7 +79,7 @@
 # SIMPLE-NEXT: workItemIDX: { reg: '$vgpr0' }
 # SIMPLE-NEXT: workItemIDY:     { reg: '$vgpr31', mask: 1047552 }
 # SIMPLE-NEXT: workItemIDZ:     { reg: '$vgpr31', mask: 1072693248 }
-# SIMPLE-NEXT: occupancy: 10
+# SIMPLE-NEXT: occupancy: 8
 # SIMPLE-NEXT: body:
 name: kernel0
 machineFunctionInfo:
@@ -111,6 +116,7 @@ body:             |
 # FULL-NEXT: gdsSize: 0
 # FULL-NEXT: dynLDSAlign: 1
 # FULL-NEXT: isEntryFunction: false
+# FULL-NEXT: isChainFunction: false
 # FULL-NEXT: noSignedZerosFPMath: false
 # FULL-NEXT: memoryBound:     false
 # FULL-NEXT: waveLimiter:     false
@@ -134,6 +140,8 @@ body:             |
 # FULL-NEXT: workItemIDX:     { reg: '$vgpr31', mask: 1023 }
 # FULL-NEXT: workItemIDY:     { reg: '$vgpr31', mask: 1047552 }
 # FULL-NEXT: workItemIDZ:     { reg: '$vgpr31', mask: 1072693248 }
+# FULL-NEXT: psInputAddr:     0
+# FULL-NEXT: psInputEnable:   0
 # FULL-NEXT: mode:
 # FULL-NEXT: ieee: true
 # FULL-NEXT: dx10-clamp: true
@@ -142,8 +150,10 @@ body:             |
 # FULL-NEXT: fp64-fp16-input-denormals: true
 # FULL-NEXT: fp64-fp16-output-denormals: true
 # FULL-NEXT:  highBitsOf32BitAddress: 0
-# FULL-NEXT:  occupancy: 10
+# FULL-NEXT:  occupancy: 8
 # FULL-NEXT: vgprForAGPRCopy: ''
+# FULL-NEXT: sgprForEXECCopy: ''
+# FULL-NEXT: longBranchReservedReg: ''
 # FULL-NEXT: body:
 
 # SIMPLE: machineFunctionInfo:
@@ -161,7 +171,7 @@ body:             |
 # SIMPLE-NEXT: workItemIDX:     { reg: '$vgpr31', mask: 1023 }
 # SIMPLE-NEXT: workItemIDY:     { reg: '$vgpr31', mask: 1047552 }
 # SIMPLE-NEXT: workItemIDZ:     { reg: '$vgpr31', mask: 1072693248 }
-# SIMPLE-NEXT:  occupancy: 10
+# SIMPLE-NEXT:  occupancy: 8
 # SIMPLE-NEXT: body:
 
 name: no_mfi
@@ -180,6 +190,7 @@ body:             |
 # FULL-NEXT: gdsSize: 0
 # FULL-NEXT: dynLDSAlign: 1
 # FULL-NEXT: isEntryFunction: false
+# FULL-NEXT: isChainFunction: false
 # FULL-NEXT: noSignedZerosFPMath: false
 # FULL-NEXT: memoryBound:     false
 # FULL-NEXT: waveLimiter:     false
@@ -203,6 +214,8 @@ body:             |
 # FULL-NEXT: workItemIDX:     { reg: '$vgpr31', mask: 1023 }
 # FULL-NEXT: workItemIDY:     { reg: '$vgpr31', mask: 1047552 }
 # FULL-NEXT: workItemIDZ:     { reg: '$vgpr31', mask: 1072693248 }
+# FULL-NEXT: psInputAddr:     0
+# FULL-NEXT: psInputEnable:   0
 # FULL-NEXT: mode:
 # FULL-NEXT: ieee: true
 # FULL-NEXT: dx10-clamp: true
@@ -211,8 +224,10 @@ body:             |
 # FULL-NEXT: fp64-fp16-input-denormals: true
 # FULL-NEXT: fp64-fp16-output-denormals: true
 # FULL-NEXT:  highBitsOf32BitAddress: 0
-# FULL-NEXT:  occupancy: 10
+# FULL-NEXT:  occupancy: 8
 # FULL-NEXT: vgprForAGPRCopy: ''
+# FULL-NEXT: sgprForEXECCopy: ''
+# FULL-NEXT: longBranchReservedReg: ''
 # FULL-NEXT: body:
 
 # SIMPLE: machineFunctionInfo:
@@ -230,7 +245,7 @@ body:             |
 # SIMPLE-NEXT: workItemIDX:     { reg: '$vgpr31', mask: 1023 }
 # SIMPLE-NEXT: workItemIDY:     { reg: '$vgpr31', mask: 1047552 }
 # SIMPLE-NEXT: workItemIDZ:     { reg: '$vgpr31', mask: 1072693248 }
-# SIMPLE-NEXT:  occupancy: 10
+# SIMPLE-NEXT:  occupancy: 8
 # SIMPLE-NEXT: body:
 
 name: empty_mfi
@@ -250,6 +265,7 @@ body:             |
 # FULL-NEXT: gdsSize: 0
 # FULL-NEXT: dynLDSAlign: 1
 # FULL-NEXT: isEntryFunction: true
+# FULL-NEXT: isChainFunction: false
 # FULL-NEXT: noSignedZerosFPMath: false
 # FULL-NEXT: memoryBound:     false
 # FULL-NEXT: waveLimiter:     false
@@ -273,6 +289,8 @@ body:             |
 # FULL-NEXT: workItemIDX:     { reg: '$vgpr31', mask: 1023 }
 # FULL-NEXT: workItemIDY:     { reg: '$vgpr31', mask: 1047552 }
 # FULL-NEXT: workItemIDZ:     { reg: '$vgpr31', mask: 1072693248 }
+# FULL-NEXT: psInputAddr:     0
+# FULL-NEXT: psInputEnable:   0
 # FULL-NEXT: mode:
 # FULL-NEXT: ieee: true
 # FULL-NEXT: dx10-clamp: true
@@ -281,8 +299,10 @@ body:             |
 # FULL-NEXT: fp64-fp16-input-denormals: true
 # FULL-NEXT: fp64-fp16-output-denormals: true
 # FULL-NEXT:  highBitsOf32BitAddress: 0
-# FULL-NEXT:  occupancy: 10
+# FULL-NEXT:  occupancy: 8
 # FULL-NEXT: vgprForAGPRCopy: ''
+# FULL-NEXT: sgprForEXECCopy: ''
+# FULL-NEXT: longBranchReservedReg: ''
 # FULL-NEXT: body:
 
 # SIMPLE: machineFunctionInfo:
@@ -301,7 +321,7 @@ body:             |
 # SIMPLE-NEXT: workItemIDX:     { reg: '$vgpr31', mask: 1023 }
 # SIMPLE-NEXT: workItemIDY:     { reg: '$vgpr31', mask: 1047552 }
 # SIMPLE-NEXT: workItemIDZ:     { reg: '$vgpr31', mask: 1072693248 }
-# SIMPLE-NEXT: occupancy: 10
+# SIMPLE-NEXT: occupancy: 8
 # SIMPLE-NEXT: body:
 
 name: empty_mfi_entry_func
@@ -430,7 +450,7 @@ body:             |
 
 ---
 # ALL-LABEL: name: occupancy_0
-# ALL: occupancy: 10
+# ALL: occupancy: 8
 name: occupancy_0
 machineFunctionInfo:
   occupancy: 0
@@ -524,6 +544,31 @@ body:             |
 name: vgpr_for_agpr_copy_noreg
 machineFunctionInfo:
   vgprForAGPRCopy: '$noreg'
+body:             |
+  bb.0:
+    SI_RETURN
+
+...
+
+---
+# ALL-LABEL: name: sgpr_for_exec_copy
+# ALL: sgprForEXECCopy: '$sgpr2_sgpr3'
+name: sgpr_for_exec_copy
+machineFunctionInfo:
+  sgprForEXECCopy: '$sgpr2_sgpr3'
+body:             |
+  bb.0:
+    SI_RETURN
+
+...
+
+---
+# ALL-LABEL: name: sgpr_for_exec_copy_noreg
+# FULL: sgprForEXECCopy: ''
+# SIMPLE-NOT: sgprForEXECCopy
+name: sgpr_for_exec_copy_noreg
+machineFunctionInfo:
+  sgprForEXECCopy: '$noreg'
 body:             |
   bb.0:
     SI_RETURN

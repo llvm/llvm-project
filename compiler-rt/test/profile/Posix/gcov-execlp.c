@@ -2,12 +2,12 @@
 /// fork/exec* so the lines before exec* are counted once while succeeding
 /// lines are not counted.
 // RUN: mkdir -p %t.d && cd %t.d
-// RUN: %clang --coverage %s -o %t
+// RUN: %clang --coverage %s -o %t -dumpdir ./
 // RUN: test -f gcov-execlp.gcno
 // RUN: rm -f gcov-execlp.gcda && %run %t
 // RUN: llvm-cov gcov -t gcov-execlp.gcda | FileCheck %s --check-prefixes=CHECK,EXECLP
 
-// RUN: %clang --coverage -DEXECVP %s -o %t
+// RUN: %clang --coverage -DEXECVP %s -o %t -dumpdir ./
 // RUN: rm -f gcov-execlp.gcda && %run %t
 // RUN: llvm-cov gcov -t gcov-execlp.gcda | FileCheck %s --check-prefixes=CHECK,EXECVP
 

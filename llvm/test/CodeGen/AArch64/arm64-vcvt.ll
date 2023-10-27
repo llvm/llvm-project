@@ -402,8 +402,8 @@ define <2 x i64> @fcvtzs_2d_intrinsic(<2 x double> %A) nounwind {
 define <1 x i64> @fcvtzs_1d_intrinsic(<1 x double> %A) nounwind {
 ;CHECK-LABEL: fcvtzs_1d_intrinsic:
 ;CHECK-NOT: ld1
-;CHECK: fcvtzs d0, d0
-;CHECK-NEXT: ret
+;CHECK: fcvtzs{{.*}}, d0
+;CHECK: ret
 	%tmp3 = call <1 x i64> @llvm.aarch64.neon.fcvtzs.v1i64.v1f64(<1 x double> %A)
 	ret <1 x i64> %tmp3
 }
@@ -481,8 +481,8 @@ define <2 x i64> @fcvtzu_2d_intrinsic(<2 x double> %A) nounwind {
 define <1 x i64> @fcvtzu_1d_intrinsic(<1 x double> %A) nounwind {
 ;CHECK-LABEL: fcvtzu_1d_intrinsic:
 ;CHECK-NOT: ld1
-;CHECK: fcvtzu d0, d0
-;CHECK-NEXT: ret
+;CHECK: fcvtzu{{.*}}, d0
+;CHECK: ret
 	%tmp3 = call <1 x i64> @llvm.aarch64.neon.fcvtzu.v1i64.v1f64(<1 x double> %A)
 	ret <1 x i64> %tmp3
 }

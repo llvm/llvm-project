@@ -3,9 +3,60 @@
 target datalayout = "E-m:e-i1:8:16-i8:8:16-i64:64-f128:64-a:8:16-n32:64"
 target triple = "s390x-unknown-linux-gnu"
 
-declare i64 @foo(i64 %guard, ...) #0
+%struct.__va_list = type { i64, i64, ptr, ptr }
+declare void @llvm.lifetime.start.p0(i64, ptr)
+declare void @llvm.va_start(ptr)
+declare void @llvm.va_end(ptr)
+declare void @llvm.lifetime.end.p0(i64, ptr)
 
-attributes #0 = { "target-features"="+soft-float" "use-soft-float"="true" }
+define i64 @foo(i64 %guard, ...) #1 {
+  %vl = alloca %struct.__va_list
+  call void @llvm.lifetime.start.p0(i64 32, ptr %vl)
+  call void @llvm.va_start(ptr %vl)
+  call void @llvm.va_end(ptr %vl)
+  call void @llvm.lifetime.end.p0(i64 32, ptr %vl)
+  ret i64 0
+}
+
+; CHECK-LABEL: define {{[^@]+}}@foo(
+
+; Callers store variadic arguments' shadow and origins into va_arg_shadow and
+; va_arg_origin. Their layout is: the register save area (160 bytes) followed
+; by the overflow arg area. It does not depend on "packed-stack".
+; Check that callees correctly backup shadow into a local variable.
+
+; CHECK: [[TMP:%.*]] = alloca { ptr, ptr }
+; CHECK: [[OverflowSize:%.*]] = load i64, ptr %va_arg_overflow_size
+; CHECK: [[MetaSize:%.*]] = add i64 160, [[OverflowSize]]
+; CHECK: [[ShadowBackup:%.*]] = alloca {{.*}} [[MetaSize]]
+; CHECK: [[MetaCopySize:%.*]] = call i64 @llvm.umin.i64(i64 [[MetaSize]], i64 800)
+; CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[ShadowBackup]], ptr align 8 %va_arg_shadow, i64 [[MetaCopySize]], i1 false)
+; CHECK: [[OverflowBackup:%.*]] = alloca {{.*}} [[MetaSize]]
+; CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[OverflowBackup]], ptr align 8 %va_arg_origin, i64 [[MetaCopySize]], i1 false)
+
+; Check that va_start() correctly copies the shadow backup into the shadow of
+; the va_list. Register save area and overflow arg area are copied separately.
+; Only 56 bytes of the register save area is copied, because of
+; "use-soft-float".
+
+; CHECK: call void @llvm.va_start(ptr %vl)
+; CHECK: [[VlAddr:%.*]] = ptrtoint ptr %vl to i64
+; CHECK: [[RegSaveAreaAddrAddr:%.*]] = add i64 [[VlAddr]], 24
+; CHECK: [[RegSaveAreaAddr:%.*]] = inttoptr i64 [[RegSaveAreaAddrAddr]] to ptr
+; CHECK: [[RegSaveArea:%.*]] = load ptr, ptr [[RegSaveAreaAddr]]
+; CHECK: call void @__msan_metadata_ptr_for_store_1(ptr [[TMP]], ptr [[RegSaveArea]])
+; CHECK: [[RegSaveAreaMeta:%.*]] = load { ptr, ptr }, ptr [[TMP]]
+; CHECK: [[RegSaveAreaShadow:%.*]] = extractvalue { ptr, ptr } [[RegSaveAreaMeta]], 0
+; CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[RegSaveAreaShadow]], ptr align 8 [[ShadowBackup]], i64 56, i1 false)
+; CHECK: [[VlAddr:%.*]] = ptrtoint ptr %vl to i64
+; CHECK: [[OverflowAddrAddr:%.*]] = add i64 [[VlAddr]], 16
+; CHECK: [[OverflowAddr:%.*]] = inttoptr i64 [[OverflowAddrAddr]] to ptr
+; CHECK: [[Overflow:%.*]] = load ptr, ptr [[OverflowAddr]]
+; CHECK: call void @__msan_metadata_ptr_for_store_1(ptr [[TMP]], ptr [[Overflow]])
+; CHECK: [[OverflowMeta:%.*]] = load { ptr, ptr }, ptr [[TMP]]
+; CHECK: [[OverflowShadow:%.*]] = extractvalue { ptr, ptr } [[OverflowMeta]], 0
+; CHECK: [[OverflowShadowBackup:%.*]] = getelementptr i8, ptr [[ShadowBackup]], i32 160
+; CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[OverflowShadow]], ptr align 8 [[OverflowShadowBackup]], i64 [[OverflowSize]], i1 false)
 
 declare i32 @random_i32()
 declare i64 @random_i64()
@@ -31,7 +82,7 @@ define i64 @bar() #1 {
   ret i64 %1
 }
 
-attributes #1 = { sanitize_memory }
+attributes #1 = { sanitize_memory "target-features"="+soft-float" "use-soft-float"="true" }
 
 ; In kernel the floating point values are passed in GPRs:
 ; - r2@16              == i64 1            - skipped, because it's fixed

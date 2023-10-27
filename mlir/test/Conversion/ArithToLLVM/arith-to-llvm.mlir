@@ -1,5 +1,9 @@
 // RUN: mlir-opt -pass-pipeline="builtin.module(func.func(convert-arith-to-llvm))" %s -split-input-file | FileCheck %s
 
+// Same below, but using the `ConvertToLLVMPatternInterface` entry point
+// and the generic `convert-to-llvm` pass.
+// RUN: mlir-opt --convert-to-llvm="filter-dialects=arith" --split-input-file %s | FileCheck %s
+
 // CHECK-LABEL: @vector_ops
 func.func @vector_ops(%arg0: vector<4xf32>, %arg1: vector<4xi1>, %arg2: vector<4xi64>, %arg3: vector<4xi64>) -> vector<4xf32> {
 // CHECK-NEXT:  %0 = llvm.mlir.constant(dense<4.200000e+01> : vector<4xf32>) : vector<4xf32>
@@ -518,10 +522,14 @@ func.func @minmaxi(%arg0 : i32, %arg1 : i32) -> i32 {
 
 // CHECK-LABEL: @minmaxf
 func.func @minmaxf(%arg0 : f32, %arg1 : f32) -> f32 {
+  // CHECK: = llvm.intr.minimum(%arg0, %arg1) : (f32, f32) -> f32
+  %0 = arith.minimumf %arg0, %arg1 : f32
+  // CHECK: = llvm.intr.maximum(%arg0, %arg1) : (f32, f32) -> f32
+  %1 = arith.maximumf %arg0, %arg1 : f32
   // CHECK: = llvm.intr.minnum(%arg0, %arg1) : (f32, f32) -> f32
-  %0 = arith.minf %arg0, %arg1 : f32
+  %2 = arith.minnumf %arg0, %arg1 : f32
   // CHECK: = llvm.intr.maxnum(%arg0, %arg1) : (f32, f32) -> f32
-  %1 = arith.maxf %arg0, %arg1 : f32
+  %3 = arith.maxnumf %arg0, %arg1 : f32
   return %0 : f32
 }
 
@@ -550,10 +558,10 @@ func.func @ops_supporting_fastmath(%arg0: f32, %arg1: f32, %arg2: i32) {
   %0 = arith.addf %arg0, %arg1 fastmath<fast> : f32
 // CHECK: llvm.fdiv %arg0, %arg1  {fastmathFlags = #llvm.fastmath<fast>} : f32
   %1 = arith.divf %arg0, %arg1 fastmath<fast> : f32
-// CHECK: llvm.intr.maxnum(%arg0, %arg1) {fastmathFlags = #llvm.fastmath<fast>} : (f32, f32) -> f32
-  %2 = arith.maxf %arg0, %arg1 fastmath<fast> : f32
-// CHECK: llvm.intr.minnum(%arg0, %arg1) {fastmathFlags = #llvm.fastmath<fast>} : (f32, f32) -> f32
-  %3 = arith.minf %arg0, %arg1 fastmath<fast> : f32
+// CHECK: llvm.intr.maximum(%arg0, %arg1) {fastmathFlags = #llvm.fastmath<fast>} : (f32, f32) -> f32
+  %2 = arith.maximumf %arg0, %arg1 fastmath<fast> : f32
+// CHECK: llvm.intr.minimum(%arg0, %arg1) {fastmathFlags = #llvm.fastmath<fast>} : (f32, f32) -> f32
+  %3 = arith.minimumf %arg0, %arg1 fastmath<fast> : f32
 // CHECK: llvm.fmul %arg0, %arg1  {fastmathFlags = #llvm.fastmath<fast>} : f32
   %4 = arith.mulf %arg0, %arg1 fastmath<fast> : f32
 // CHECK: llvm.fneg %arg0  {fastmathFlags = #llvm.fastmath<fast>} : f32

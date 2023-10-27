@@ -1,4 +1,4 @@
-'''
+"""
 Minimal clang-rename integration with Vim.
 
 Before installing make sure one of the following is satisfied:
@@ -20,39 +20,43 @@ IMPORTANT NOTE: Before running the tool, make sure you saved the file.
 All you have to do now is to place a cursor on a variable/function/class which
 you would like to rename and press '<leader>cr'. You will be prompted for a new
 name if the cursor points to a valid symbol.
-'''
+"""
 
 from __future__ import absolute_import, division, print_function
 import vim
 import subprocess
 import sys
 
+
 def main():
-    binary = 'clang-rename'
+    binary = "clang-rename"
     if vim.eval('exists("g:clang_rename_path")') == "1":
-        binary = vim.eval('g:clang_rename_path')
+        binary = vim.eval("g:clang_rename_path")
 
     # Get arguments for clang-rename binary.
     offset = int(vim.eval('line2byte(line("."))+col(".")')) - 2
     if offset < 0:
-        print('Couldn\'t determine cursor position. Is your file empty?',
-              file=sys.stderr)
+        print(
+            "Couldn't determine cursor position. Is your file empty?", file=sys.stderr
+        )
         return
     filename = vim.current.buffer.name
 
-    new_name_request_message = 'type new name:'
+    new_name_request_message = "type new name:"
     new_name = vim.eval("input('{}\n')".format(new_name_request_message))
 
     # Call clang-rename.
-    command = [binary,
-               filename,
-               '-i',
-               '-offset', str(offset),
-               '-new-name', str(new_name)]
+    command = [
+        binary,
+        filename,
+        "-i",
+        "-offset",
+        str(offset),
+        "-new-name",
+        str(new_name),
+    ]
     # FIXME: make it possible to run the tool on unsaved file.
-    p = subprocess.Popen(command,
-                         stdout=subprocess.PIPE,
-                         stderr=subprocess.PIPE)
+    p = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, stderr = p.communicate()
 
     if stderr:
@@ -62,5 +66,5 @@ def main():
     vim.command("checktime")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

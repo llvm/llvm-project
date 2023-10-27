@@ -9,17 +9,20 @@
 #ifndef LLVM_LIBC_SRC_MATH_GENERIC_EXPLOGXF_H
 #define LLVM_LIBC_SRC_MATH_GENERIC_EXPLOGXF_H
 
+#include "common_constants.h"
 #include "math_utils.h"
+#include "src/__support/CPP/bit.h"
+#include "src/__support/CPP/optional.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/PolyEval.h"
 #include "src/__support/FPUtil/nearest_integer.h"
 #include "src/__support/common.h"
-#include <src/__support/FPUtil/NearestIntegerOperations.h>
+#include "src/__support/macros/properties/cpu_features.h"
 
 #include <errno.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 struct ExpBase {
   // Base = e
@@ -56,7 +59,7 @@ struct ExpBase {
       0x1.ffffffffe5bc8p-2, 0x1.555555555cd67p-3, 0x1.5555c2a9b48b4p-5,
       0x1.11112a0e34bdbp-7};
 
-  static double powb_lo(double dx) {
+  LIBC_INLINE static double powb_lo(double dx) {
     using fputil::multiply_add;
     double dx2 = dx * dx;
     double c0 = 1.0 + dx;
@@ -150,7 +153,7 @@ struct exp_b_reduc_t {
 //   - EXP_2_MID   : look up table for bit fields of 2^mid
 // Return:
 //   { 2^(hi + mid), lo }
-template <class Base> static inline exp_b_reduc_t exp_b_range_reduc(float x) {
+template <class Base> LIBC_INLINE exp_b_reduc_t exp_b_range_reduc(float x) {
   double xd = static_cast<double>(x);
   // kd = round((hi + mid) * log2(b) * 2^MID_BITS)
   double kd = fputil::nearest_integer(Base::LOG2_B * xd);
@@ -207,16 +210,27 @@ template <class Base> static inline exp_b_reduc_t exp_b_range_reduc(float x) {
 // The main point of these formulas is that the expensive part of calculating
 // the polynomials approximating lower parts of e^(x) and e^(-x) are shared
 // and only done once.
-template <bool is_sinh> static inline double exp_pm_eval(float x) {
+template <bool is_sinh> LIBC_INLINE double exp_pm_eval(float x) {
   double xd = static_cast<double>(x);
 
-  // round(x * log2(e) * 2^5)
-  double kd = fputil::nearest_integer(ExpBase::LOG2_B * xd);
-
+  // kd = round(x * log2(e) * 2^5)
   // k_p = round(x * log2(e) * 2^5)
-  int k_p = static_cast<int>(kd);
   // k_m = round(-x * log2(e) * 2^5)
-  int k_m = -k_p;
+  double kd;
+  int k_p, k_m;
+
+#ifdef LIBC_TARGET_CPU_HAS_NEAREST_INT
+  kd = fputil::nearest_integer(ExpBase::LOG2_B * xd);
+  k_p = static_cast<int>(kd);
+  k_m = -k_p;
+#else
+  constexpr double HALF_WAY[2] = {0.5, -0.5};
+
+  k_p = static_cast<int>(
+      fputil::multiply_add(xd, ExpBase::LOG2_B, HALF_WAY[x < 0.0f]));
+  k_m = -k_p;
+  kd = static_cast<double>(k_p);
+#endif // LIBC_TARGET_CPU_HAS_NEAREST_INT
 
   // hi = floor(kf * 2^(-5))
   // exp_hi = shift hi to the exponent field of double precision.
@@ -243,23 +257,23 @@ template <bool is_sinh> static inline double exp_pm_eval(float x) {
   double dx2 = dx * dx;
 
   // c0 = 1 + COEFFS[0] * lo^2
-  // P_even = 1 + COEFFS[0] * lo^2 + COEFFS[2] * lo^4
-  double p_even =
-      fputil::polyeval(dx2, 1.0, ExpBase::COEFFS[0], ExpBase::COEFFS[2]);
-  // P_odd = 1 + COEFFS[1] * lo^2 + COEFFS[3] * lo^4
-  double p_odd =
-      fputil::polyeval(dx2, 1.0, ExpBase::COEFFS[1], ExpBase::COEFFS[3]);
+  // P_even = (1 + COEFFS[0] * lo^2 + COEFFS[2] * lo^4) / 2
+  double p_even = fputil::polyeval(dx2, 0.5, ExpBase::COEFFS[0] * 0.5,
+                                   ExpBase::COEFFS[2] * 0.5);
+  // P_odd = (1 + COEFFS[1] * lo^2 + COEFFS[3] * lo^4) / 2
+  double p_odd = fputil::polyeval(dx2, 0.5, ExpBase::COEFFS[1] * 0.5,
+                                  ExpBase::COEFFS[3] * 0.5);
 
   double r;
   if constexpr (is_sinh)
     r = fputil::multiply_add(dx * mh_sum, p_odd, p_even * mh_diff);
   else
     r = fputil::multiply_add(dx * mh_diff, p_odd, p_even * mh_sum);
-  return 0.5 * r;
+  return r;
 }
 
 // x should be positive, normal finite value
-inline static double log2_eval(double x) {
+LIBC_INLINE static double log2_eval(double x) {
   using FPB = fputil::FPBits<double>;
   FPB bs(x);
 
@@ -282,16 +296,91 @@ inline static double log2_eval(double x) {
 
   // c0 = dx * (1.0 / ln(2)) + LOG_P1_LOG2[p1]
   double c0 = fputil::multiply_add(dx, 0x1.71547652b82fep+0, LOG_P1_LOG2[p1]);
-  result += __llvm_libc::fputil::polyeval(dx * dx, c0, c1, c2, c3, c4);
+  result += LIBC_NAMESPACE::fputil::polyeval(dx * dx, c0, c1, c2, c3, c4);
   return result;
 }
 
 // x should be positive, normal finite value
-inline static double log_eval(double x) {
-  // ln(x) = log[2,x] * ln(2)
-  return log2_eval(x) * 0x1.62e42fefa39efp-1;
+LIBC_INLINE static double log_eval(double x) {
+  // For x = 2^ex * (1 + mx)
+  //   log(x) = ex * log(2) + log(1 + mx)
+  using FPB = fputil::FPBits<double>;
+  FPB bs(x);
+
+  double ex = static_cast<double>(bs.get_exponent());
+
+  // p1 is the leading 7 bits of mx, i.e.
+  // p1 * 2^(-7) <= m_x < (p1 + 1) * 2^(-7).
+  int p1 = (bs.get_mantissa() >> (FPB::FloatProp::MANTISSA_WIDTH - 7));
+
+  // Set bs to (1 + (mx - p1*2^(-7))
+  bs.bits &= FPB::FloatProp::MANTISSA_MASK >> 7;
+  bs.set_unbiased_exponent(FPB::FloatProp::EXPONENT_BIAS);
+  // dx = (mx - p1*2^(-7)) / (1 + p1*2^(-7)).
+  double dx = (bs.get_val() - 1.0) * ONE_OVER_F[p1];
+
+  // Minimax polynomial of log(1 + dx) generated by Sollya with:
+  // > P = fpminimax(log(1 + x)/x, 6, [|D...|], [0, 2^-7]);
+  const double COEFFS[6] = {-0x1.ffffffffffffcp-2, 0x1.5555555552ddep-2,
+                            -0x1.ffffffefe562dp-3, 0x1.9999817d3a50fp-3,
+                            -0x1.554317b3f67a5p-3, 0x1.1dc5c45e09c18p-3};
+  double dx2 = dx * dx;
+  double c1 = fputil::multiply_add(dx, COEFFS[1], COEFFS[0]);
+  double c2 = fputil::multiply_add(dx, COEFFS[3], COEFFS[2]);
+  double c3 = fputil::multiply_add(dx, COEFFS[5], COEFFS[4]);
+
+  double p = fputil::polyeval(dx2, dx, c1, c2, c3);
+  double result =
+      fputil::multiply_add(ex, /*log(2)*/ 0x1.62e42fefa39efp-1, LOG_F[p1] + p);
+  return result;
 }
 
-} // namespace __llvm_libc
+// Rounding tests for 2^hi * (mid + lo) when the output might be denormal. We
+// assume further that 1 <= mid < 2, mid + lo < 2, and |lo| << mid.
+// Notice that, if 0 < x < 2^-1022,
+//   double(2^-1022 + x) - 2^-1022 = double(x).
+// So if we scale x up by 2^1022, we can use
+//   double(1.0 + 2^1022 * x) - 1.0 to test how x is rounded in denormal range.
+LIBC_INLINE cpp::optional<double> ziv_test_denorm(int hi, double mid, double lo,
+                                                  double err) {
+  using FloatProp = typename fputil::FloatProperties<double>;
+
+  // Scaling factor = 1/(min normal number) = 2^1022
+  int64_t exp_hi = static_cast<int64_t>(hi + 1022) << FloatProp::MANTISSA_WIDTH;
+  double mid_hi = cpp::bit_cast<double>(exp_hi + cpp::bit_cast<int64_t>(mid));
+  double lo_scaled =
+      (lo != 0.0) ? cpp::bit_cast<double>(exp_hi + cpp::bit_cast<int64_t>(lo))
+                  : 0.0;
+
+  double extra_factor = 0.0;
+  uint64_t scale_down = 0x3FE0'0000'0000'0000; // 1022 in the exponent field.
+
+  // Result is denormal if (mid_hi + lo_scale < 1.0).
+  if ((1.0 - mid_hi) > lo_scaled) {
+    // Extra rounding step is needed, which adds more rounding errors.
+    err += 0x1.0p-52;
+    extra_factor = 1.0;
+    scale_down = 0x3FF0'0000'0000'0000; // 1023 in the exponent field.
+  }
+
+  double err_scaled =
+      cpp::bit_cast<double>(exp_hi + cpp::bit_cast<int64_t>(err));
+
+  double lo_u = lo_scaled + err_scaled;
+  double lo_l = lo_scaled - err_scaled;
+
+  // By adding 1.0, the results will have similar rounding points as denormal
+  // outputs.
+  double upper = extra_factor + (mid_hi + lo_u);
+  double lower = extra_factor + (mid_hi + lo_l);
+
+  if (LIBC_LIKELY(upper == lower)) {
+    return cpp::bit_cast<double>(cpp::bit_cast<uint64_t>(upper) - scale_down);
+  }
+
+  return cpp::nullopt;
+}
+
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_MATH_GENERIC_EXPLOGXF_H

@@ -1,40 +1,98 @@
 REQUIRES: x86_64-linux
 
-This test ensures that llvm-profdata fails with a descriptive error message
-when invoked on a memprof profiled binary which was built with position
-independent code.
-
-The input raw profile test has been generated from the following source code:
-
-```
-#include <stdlib.h>
-#include <string.h>
-int main(int argc, char **argv) {
-  char *x = (char *)malloc(10);
-  memset(x, 0, 10);
-  free(x);
-  x = (char *)malloc(10);
-  memset(x, 0, 10);
-  free(x);
-  return 0;
-}
-```
-
-The following commands were used to compile the source to a memprof instrumented
-executable and collect a raw binary format profile. Since the profile contains
-virtual addresses for the callstack, we do not expect the raw binary profile to
-be deterministic. The summary should be deterministic apart from changes to
-the shared libraries linked in which could change the number of segments
+Since the profile contains virtual addresses for the callstack,
+we do not expect the raw binary profile to be deterministic. The
+summary should be deterministic apart from changes to the shared
+libraries linked in which could change the number of segments
 recorded.
 
-```
-clang -fuse-ld=lld -Wl,--no-rosegment -gmlt -fdebug-info-for-profiling \
-      -fmemory-profile -mno-omit-leaf-frame-pointer -fno-omit-frame-pointer \
-      -fno-optimize-sibling-calls -m64 -Wl,-build-id -pie \
-      source.c -o pic.memprofexe
+To update the inputs used below run Inputs/update_memprof_inputs.sh /path/to/updated/clang
+RUN: llvm-profdata show --memory %p/Inputs/pic.memprofraw --profiled-binary %p/Inputs/pic.memprofexe -o - 2>&1 | FileCheck %s
 
-env MEMPROF_OPTIONS=log_path=stdout ./pic.memprofexe > pic.memprofraw
-```
+CHECK:  MemprofProfile:
+CHECK-NEXT:   Summary:
+CHECK-NEXT:     Version: 3
+CHECK-NEXT:     NumSegments: {{[0-9]+}}
+CHECK-NEXT:     NumMibInfo: 2
+CHECK-NEXT:     NumAllocFunctions: 1
+CHECK-NEXT:     NumStackOffsets: 2
+CHECK-NEXT:   Segments:
+CHECK-NEXT:   -
+CHECK-NEXT:     BuildId: {{[[:xdigit:]]+}}
+CHECK-NEXT:     Start: 0x{{[[:xdigit:]]+}}
+CHECK-NEXT:     End: 0x{{[[:xdigit:]]+}}
+CHECK-NEXT:     Offset: 0x{{[[:xdigit:]]+}}
+CHECK-NEXT:   -
 
-RUN: not llvm-profdata show --memory %p/Inputs/pic.memprofraw --profiled-binary %p/Inputs/pic.memprofexe -o - |& FileCheck %s
-CHECK: Unsupported position independent code
+CHECK:   Records:
+CHECK-NEXT:   -
+CHECK-NEXT:     FunctionGUID: {{[0-9]+}}
+CHECK-NEXT:     AllocSites:
+CHECK-NEXT:     -
+CHECK-NEXT:       Callstack:
+CHECK-NEXT:       -
+CHECK-NEXT:         Function: {{[0-9]+}}
+CHECK-NEXT:         SymbolName: main
+CHECK-NEXT:         LineOffset: 1
+CHECK-NEXT:         Column: 21
+CHECK-NEXT:         Inline: 0
+CHECK-NEXT:       MemInfoBlock:
+CHECK-NEXT:         AllocCount: 1
+CHECK-NEXT:         TotalAccessCount: 2
+CHECK-NEXT:         MinAccessCount: 2
+CHECK-NEXT:         MaxAccessCount: 2
+CHECK-NEXT:         TotalSize: 10
+CHECK-NEXT:         MinSize: 10
+CHECK-NEXT:         MaxSize: 10
+CHECK-NEXT:         AllocTimestamp: {{[0-9]+}}
+CHECK-NEXT:         DeallocTimestamp: {{[0-9]+}}
+CHECK-NEXT:         TotalLifetime: 0
+CHECK-NEXT:         MinLifetime: 0
+CHECK-NEXT:         MaxLifetime: 0
+CHECK-NEXT:         AllocCpuId: {{[0-9]+}}
+CHECK-NEXT:         DeallocCpuId: {{[0-9]+}}
+CHECK-NEXT:         NumMigratedCpu: 0
+CHECK-NEXT:         NumLifetimeOverlaps: 0
+CHECK-NEXT:         NumSameAllocCpu: 0
+CHECK-NEXT:         NumSameDeallocCpu: 0
+CHECK-NEXT:         DataTypeId: {{[0-9]+}}
+CHECK-NEXT:         TotalAccessDensity: 20
+CHECK-NEXT:         MinAccessDensity: 20
+CHECK-NEXT:         MaxAccessDensity: 20
+CHECK-NEXT:         TotalLifetimeAccessDensity: 20000
+CHECK-NEXT:         MinLifetimeAccessDensity: 20000
+CHECK-NEXT:         MaxLifetimeAccessDensity: 20000
+CHECK-NEXT:     -
+CHECK-NEXT:       Callstack:
+CHECK-NEXT:       -
+CHECK-NEXT:         Function: {{[0-9]+}}
+CHECK-NEXT:         SymbolName: main
+CHECK-NEXT:         LineOffset: 4
+CHECK-NEXT:         Column: 15
+CHECK-NEXT:         Inline: 0
+CHECK-NEXT:       MemInfoBlock:
+CHECK-NEXT:         AllocCount: 1
+CHECK-NEXT:         TotalAccessCount: 2
+CHECK-NEXT:         MinAccessCount: 2
+CHECK-NEXT:         MaxAccessCount: 2
+CHECK-NEXT:         TotalSize: 10
+CHECK-NEXT:         MinSize: 10
+CHECK-NEXT:         MaxSize: 10
+CHECK-NEXT:         AllocTimestamp: {{[0-9]+}}
+CHECK-NEXT:         DeallocTimestamp: {{[0-9]+}}
+CHECK-NEXT:         TotalLifetime: 0
+CHECK-NEXT:         MinLifetime: 0
+CHECK-NEXT:         MaxLifetime: 0
+CHECK-NEXT:         AllocCpuId: {{[0-9]+}}
+CHECK-NEXT:         DeallocCpuId: {{[0-9]+}}
+CHECK-NEXT:         NumMigratedCpu: 0
+CHECK-NEXT:         NumLifetimeOverlaps: 0
+CHECK-NEXT:         NumSameAllocCpu: 0
+CHECK-NEXT:         NumSameDeallocCpu: 0
+CHECK-NEXT:         DataTypeId: {{[0-9]+}}
+CHECK-NEXT:         TotalAccessDensity: 20
+CHECK-NEXT:         MinAccessDensity: 20
+CHECK-NEXT:         MaxAccessDensity: 20
+CHECK-NEXT:         TotalLifetimeAccessDensity: 20000
+CHECK-NEXT:         MinLifetimeAccessDensity: 20000
+CHECK-NEXT:         MaxLifetimeAccessDensity: 20000

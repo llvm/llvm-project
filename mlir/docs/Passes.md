@@ -16,71 +16,83 @@ This document describes the available MLIR passes and their contracts.
 
 [include "ConversionPasses.md"]
 
-## `async` Dialect Passes
-
-[include "AsyncPasses.md"]
-
-## `affine` Dialect Passes
+## 'affine' Dialect Passes
 
 [include "AffinePasses.md"]
 
-## `arith` Dialect Passes
+## 'amdgpu' Dialect Passes
+
+[include "AMDGPUPasses.md"]
+
+## 'arith' Dialect Passes
 
 [include "ArithPasses.md"]
 
-## `func` Dialect Passes
+## 'arm\_sme' Dialect Passes
+
+[include "ArmSMEPasses.md"]
+
+## 'async' Dialect Passes
+
+[include "AsyncPasses.md"]
+
+## 'func' Dialect Passes
 
 [include "FuncPasses.md"]
 
-## `gpu` Dialect Passes
+## 'gpu' Dialect Passes
 
 [include "GPUPasses.md"]
 
-## `linalg` Dialect Passes
+## 'linalg' Dialect Passes
 
 [include "LinalgPasses.md"]
 
-## `llvm` Dialect Passes
+## 'llvm' Dialect Passes
 
 [include "LLVMPasses.md"]
 
-## `memref` Dialect Passes
+## 'math' Dialect Passes
+
+[include "MathPasses.md"]
+
+## 'memref' Dialect Passes
 
 [include "MemRefPasses.md"]
 
-## `quant` Dialect Passes
+## 'nvgpu' Dialect Passes
 
-[include "QuantPasses.md"]
+[include "NVGPUPasses.md"]
 
 ## Reducer Passes
 
 [include "ReducerPasses.md"]
 
-## `scf` Dialect Passes
+## 'scf' Dialect Passes
 
 [include "SCFPasses.md"]
 
-## `shape` Dialect Passes
+## 'shape' Dialect Passes
 
 [include "ShapePasses.md"]
 
-## `sparse_tensor` Dialect Passes
+## 'sparse_tensor' Dialect Passes
 
 [include "SparseTensorPasses.md"]
 
-## `spv` Dialect Passes
+## 'spv' Dialect Passes
 
 [include "SPIRVPasses.md"]
 
-## `tensor` Dialect Passes
+## 'tensor' Dialect Passes
 
 [include "TensorPasses.md"]
 
-## `transform` Dialect Passes
+## 'transform' Dialect Passes
 
 [include "TransformPasses.md"]
 
-## `vector` Dialect Passes
+## 'vector' Dialect Passes
 
 [include "VectorPasses.md"]
 

@@ -2,24 +2,24 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+zksed -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s -check-prefix=RV64ZKSED
 
-declare i64 @llvm.riscv.sm4ks.i64(i64, i64, i8);
+declare i32 @llvm.riscv.sm4ks(i32, i32, i32);
 
-define i64 @sm4ks_i64(i64 %a, i64 %b) nounwind {
-; RV64ZKSED-LABEL: sm4ks_i64:
+define signext i32 @sm4ks_i32(i32 signext %a, i32 signext %b) nounwind {
+; RV64ZKSED-LABEL: sm4ks_i32:
 ; RV64ZKSED:       # %bb.0:
-; RV64ZKSED-NEXT:    sm4ks a0, a0, a1, 0
+; RV64ZKSED-NEXT:    sm4ks a0, a0, a1, 2
 ; RV64ZKSED-NEXT:    ret
-  %val = call i64 @llvm.riscv.sm4ks.i64(i64 %a, i64 %b, i8 0)
-  ret i64 %val
+  %val = call i32 @llvm.riscv.sm4ks(i32 %a, i32 %b, i32 2)
+  ret i32 %val
 }
 
-declare i64 @llvm.riscv.sm4ed.i64(i64, i64, i8);
+declare i32 @llvm.riscv.sm4ed(i32, i32, i32);
 
-define i64 @sm4ed_i64(i64 %a, i64 %b) nounwind {
-; RV64ZKSED-LABEL: sm4ed_i64:
+define signext i32 @sm4ed_i32(i32 signext %a, i32 signext %b) nounwind {
+; RV64ZKSED-LABEL: sm4ed_i32:
 ; RV64ZKSED:       # %bb.0:
-; RV64ZKSED-NEXT:    sm4ed a0, a0, a1, 1
+; RV64ZKSED-NEXT:    sm4ed a0, a0, a1, 3
 ; RV64ZKSED-NEXT:    ret
-  %val = call i64 @llvm.riscv.sm4ed.i64(i64 %a, i64 %b, i8 1)
-  ret i64 %val
+  %val = call i32 @llvm.riscv.sm4ed(i32 %a, i32 %b, i32 3)
+  ret i32 %val
 }

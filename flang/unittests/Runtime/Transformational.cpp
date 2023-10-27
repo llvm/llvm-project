@@ -9,6 +9,7 @@
 #include "flang/Runtime/transformational.h"
 #include "gtest/gtest.h"
 #include "tools.h"
+#include "flang/Common/float128.h"
 #include "flang/Runtime/type-code.h"
 #include <vector>
 

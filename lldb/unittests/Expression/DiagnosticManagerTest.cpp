@@ -75,6 +75,9 @@ TEST(DiagnosticManagerTest, HasFixits) {
 TEST(DiagnosticManagerTest, GetStringNoDiags) {
   DiagnosticManager mgr;
   EXPECT_EQ("", mgr.GetString());
+  std::unique_ptr<Diagnostic> empty;
+  mgr.AddDiagnostic(std::move(empty));
+  EXPECT_EQ("", mgr.GetString());
 }
 
 TEST(DiagnosticManagerTest, GetStringBasic) {

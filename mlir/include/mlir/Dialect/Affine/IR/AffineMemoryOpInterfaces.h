@@ -17,8 +17,6 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/OpDefinition.h"
 
-namespace mlir {
 #include "mlir/Dialect/Affine/IR/AffineMemoryOpInterfaces.h.inc"
-} // namespace mlir
 
 #endif // MLIR_DIALECT_AFFINE_IR_AFFINEMEMORYOPINTERFACES_H

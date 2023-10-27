@@ -9,6 +9,7 @@
 #include "mlir/Dialect/Affine/ViewLikeInterfaceUtils.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tensor/Transforms/Transforms.h"
+#include "mlir/Dialect/Tensor/Utils/Utils.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/PatternMatch.h"
@@ -18,6 +19,7 @@ using namespace mlir::tensor;
 
 namespace {
 /// Merges consecutive tensor.extract_slice ops into one.
+// TODO: move to FoldTensorSubsetOps and unify APIs with FoldMemRefAliasOps.
 struct MergeConsecutiveExtractSlice : public OpRewritePattern<ExtractSliceOp> {
   using OpRewritePattern::OpRewritePattern;
 
@@ -28,9 +30,9 @@ struct MergeConsecutiveExtractSlice : public OpRewritePattern<ExtractSliceOp> {
       return failure();
 
     SmallVector<OpFoldResult> newOffsets, newSizes, newStrides;
-    if (failed(mergeOffsetsSizesAndStrides(rewriter, nextOp.getLoc(), prevOp,
-                                           nextOp, prevOp.getDroppedDims(),
-                                           newOffsets, newSizes, newStrides)))
+    if (failed(affine::mergeOffsetsSizesAndStrides(
+            rewriter, nextOp.getLoc(), prevOp, nextOp, prevOp.getDroppedDims(),
+            newOffsets, newSizes, newStrides)))
       return failure();
 
     rewriter.replaceOpWithNewOp<ExtractSliceOp>(nextOp, nextOp.getType(),
@@ -41,6 +43,7 @@ struct MergeConsecutiveExtractSlice : public OpRewritePattern<ExtractSliceOp> {
 };
 
 /// Merges consecutive tensor.insert_slice ops into one.
+// TODO: move to FoldTensorSubsetOps and unify APIs with FoldMemRefAliasOps.
 template <typename OpTy>
 struct MergeConsecutiveInsertSlice : public OpRewritePattern<OpTy> {
   using OpRewritePattern<OpTy>::OpRewritePattern;
@@ -74,6 +77,63 @@ struct MergeConsecutiveInsertSlice : public OpRewritePattern<OpTy> {
     return success();
   }
 };
+
+/// Drop redundant rank expansion. I.e., rank expansions that are directly
+/// followed by rank reductions. E.g.:
+/// %0 = tensor.insert_slice ... : tensor<5x10xf32> into tensor<1x1x5x10xf32>
+/// %1 = tensor.extract_slice %0[0, 0, 2, 3] [1, 1, 2, 2] [1, 1, 1, 1]
+///     : tensor<1x1x5x10xf32> to tensor<2x2xf32>
+struct DropRedundantInsertSliceRankExpansion
+    : public OpRewritePattern<ExtractSliceOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(ExtractSliceOp extractSliceOp,
+                                PatternRewriter &rewriter) const override {
+    // Nothing to do if no dims are dropped.
+    llvm::SmallBitVector droppedDims = extractSliceOp.getDroppedDims();
+    if (droppedDims.empty())
+      return failure();
+
+    // Look for tensor.insert_slice op that has an inverse rank expansion.
+    auto insertSliceOp =
+        extractSliceOp.getSource().getDefiningOp<InsertSliceOp>();
+    if (!insertSliceOp)
+      return failure();
+    llvm::SmallBitVector expandedDims = insertSliceOp.getDroppedDims();
+
+    // TODO: This could be extended to support cases where the dropped dims are
+    // a subset of the expanded dims.
+    if (expandedDims != droppedDims)
+      return failure();
+
+    // The tensor.insert_slice may not be redundant if it has multiple users.
+    if (!insertSliceOp->hasOneUse())
+      return failure();
+
+    // Only consider tensor.insert_slice ops that are pure rank-reductions.
+    // I.e., no elements are taken from the destination.
+    if (!isCastLikeInsertSliceOp(insertSliceOp))
+      return failure();
+
+    // Extract directly from the source.
+    OpBuilder::InsertionGuard g(rewriter);
+    rewriter.setInsertionPoint(extractSliceOp);
+    SmallVector<OpFoldResult> newOffsets, newSizes, newStrides;
+    for (int64_t i = 0, e = extractSliceOp.getSourceType().getRank(); i < e;
+         ++i) {
+      if (droppedDims.test(i))
+        continue;
+      newOffsets.push_back(extractSliceOp.getMixedOffsets()[i]);
+      newSizes.push_back(extractSliceOp.getMixedSizes()[i]);
+      newStrides.push_back(extractSliceOp.getMixedStrides()[i]);
+    }
+    rewriter.replaceOpWithNewOp<ExtractSliceOp>(
+        extractSliceOp, /*source=*/insertSliceOp.getSource(), newOffsets,
+        newSizes, newStrides);
+    rewriter.eraseOp(insertSliceOp);
+    return success();
+  }
+};
 } // namespace
 
 void mlir::tensor::populateMergeConsecutiveInsertExtractSlicePatterns(
@@ -82,4 +142,9 @@ void mlir::tensor::populateMergeConsecutiveInsertExtractSlicePatterns(
                MergeConsecutiveInsertSlice<InsertSliceOp>,
                MergeConsecutiveInsertSlice<ParallelInsertSliceOp>>(
       patterns.getContext());
+}
+
+void mlir::tensor::populateDropRedundantInsertSliceRankExpansionPatterns(
+    RewritePatternSet &patterns) {
+  patterns.add<DropRedundantInsertSliceRankExpansion>(patterns.getContext());
 }

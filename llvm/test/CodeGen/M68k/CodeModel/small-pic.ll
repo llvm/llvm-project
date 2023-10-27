@@ -66,7 +66,6 @@ define void @test3() nounwind {
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    suba.l #4, %sp
 ; CHECK-NEXT:    jsr (afoo@PLT,%pc)
-; CHECK-NEXT:    move.l %d0, %a0
 ; CHECK-NEXT:    move.l (pfoo@GOTPCREL,%pc), %a1
 ; CHECK-NEXT:    move.l %a0, (%a1)
 ; CHECK-NEXT:    jsr (%a0)

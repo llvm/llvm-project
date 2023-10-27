@@ -2,4 +2,4 @@
 # RUN: not llvm-libtool-darwin -o %t.lib %t.input 2>&1 | \
 # RUN:   FileCheck %s --check-prefix=MISSING-OPERATION
 
-# MISSING-OPERATION: Library Type: option: must be specified
+# MISSING-OPERATION: -static option: must be specified

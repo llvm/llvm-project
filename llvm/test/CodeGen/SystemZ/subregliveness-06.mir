@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=s390x-linux-gnu -mcpu=z13 -misched=shuffle -verify-machineinstrs -start-before=simple-register-coalescing -systemz-subreg-liveness %s -o - | FileCheck %s
+# RUN: llc -mtriple=s390x-linux-gnu -mcpu=z13 -misched=shuffle -verify-machineinstrs -start-before=register-coalescer -systemz-subreg-liveness %s -o - | FileCheck %s
 
 # -misched=shuffle is under !NDEBUG.
 # REQUIRES: asserts

@@ -1,5 +1,5 @@
 // RUN: %check_clang_tidy %s readability-redundant-smartptr-get %t -- \
-// RUN:   -config="{CheckOptions: [{key: readability-redundant-smartptr-get.IgnoreMacros, value: false}]}"
+// RUN:   -config="{CheckOptions: {readability-redundant-smartptr-get.IgnoreMacros: false}}"
 
 namespace std {
 

@@ -27,6 +27,9 @@
 ; CHECK-DAG: ![[A:[0-9]+]] = !DILocalVariable(name: "a",
 
 ; CHECK:      DBG_VALUE %stack.0.a.addr, $noreg, ![[A]], !DIExpression(DW_OP_deref)
+; CHECK-NEXT: ADJCALLSTACKDOWN
+; CHECK-NEXT: @step
+; CHECK-NEXT: ADJCALLSTACKUP
 ; CHECK-NEXT: DBG_VALUE 5,               $noreg, ![[A]], !DIExpression(DW_OP_LLVM_fragment, 0, 32)
 ; CHECK-NEXT: DBG_VALUE $noreg,          $noreg, ![[A]], !DIExpression(DW_OP_LLVM_fragment, 32, 32)
 ; CHECK-NEXT:   MOV32mi %stack.0.a.addr, 1, $noreg, 0, $noreg, 123
@@ -34,16 +37,13 @@
 ; CHECK-NEXT:   MOV32mr %stack.0.a.addr, 1, $noreg, 4, $noreg, %1 :: (store (s32) into %ir.add.ptr, align 8)
 ; CHECK-NEXT: DBG_VALUE %stack.0.a.addr, $noreg, ![[A]], !DIExpression(DW_OP_deref, DW_OP_LLVM_fragment, 32, 32)
 
-;; NOTE: The second and third DBG_VALUE combined make the first redundant. If
-;; removeRedundantDbgInstrs gets smarter, add an instruction between the first
-;; dbg.assign and the subsequent dbg.value.
-
 target triple = "x86_64-unknown-linux-gnu"
 
 define dso_local noundef i64 @_Z1fl(i64 noundef %a, i32 %b) #0 !dbg !8 {
 entry:
   %a.addr = alloca i64, align 8, !DIAssignID !13
   call void @llvm.dbg.assign(metadata i1 undef, metadata !14, metadata !DIExpression(), metadata !13, metadata ptr %a.addr, metadata !DIExpression()), !dbg !15
+  call void @step()
   call void @llvm.dbg.value(metadata i64 5, metadata !14, metadata !DIExpression(DW_OP_LLVM_fragment, 0, 32)), !dbg !15
   call void @llvm.dbg.assign(metadata i1 undef, metadata !14, metadata !DIExpression(DW_OP_LLVM_fragment, 32, 32), metadata !16, metadata ptr %a.addr, metadata !DIExpression()), !dbg !15
   %frag.addr = bitcast ptr %a.addr to ptr
@@ -55,6 +55,7 @@ entry:
   ret i64 %1
 }
 
+declare void @step()
 declare void @llvm.dbg.value(metadata, metadata, metadata) #1
 declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, metadata) #1
 

@@ -336,6 +336,20 @@ define half @fcopysign(half %x, half %y) {
 }
 declare half @llvm.copysign.f16(half, half)
 
+define half @fround(half %x) {
+; CHECK-LABEL: fround:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    vpbroadcastw {{.*#+}} xmm1 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; CHECK-NEXT:    vpbroadcastw {{.*#+}} xmm2 = [4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1]
+; CHECK-NEXT:    vpternlogq $248, %xmm1, %xmm0, %xmm2
+; CHECK-NEXT:    vaddsh %xmm2, %xmm0, %xmm0
+; CHECK-NEXT:    vrndscalesh $11, %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    retq
+  %a = call half @llvm.round.f16(half %x)
+  ret half %a
+}
+declare half @llvm.round.f16(half)
+
 define <8 x half> @fnegv8f16(<8 x half> %x) {
 ; CHECK-LABEL: fnegv8f16:
 ; CHECK:       ## %bb.0:
@@ -376,6 +390,20 @@ define <8 x half> @fcopysignv8f16(<8 x half> %x, <8 x half> %y) {
   ret <8 x half> %a
 }
 declare <8 x half> @llvm.copysign.v8f16(<8 x half>, <8 x half>)
+
+define <8 x half> @roundv8f16(<8 x half> %x) {
+; CHECK-LABEL: roundv8f16:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    vpbroadcastw {{.*#+}} xmm1 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; CHECK-NEXT:    vpbroadcastw {{.*#+}} xmm2 = [4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1]
+; CHECK-NEXT:    vpternlogq $248, %xmm1, %xmm0, %xmm2
+; CHECK-NEXT:    vaddph %xmm2, %xmm0, %xmm0
+; CHECK-NEXT:    vrndscaleph $11, %xmm0, %xmm0
+; CHECK-NEXT:    retq
+  %a = call <8 x half> @llvm.round.v8f16(<8 x half> %x)
+  ret <8 x half> %a
+}
+declare <8 x half> @llvm.round.v8f16(<8 x half>)
 
 define <16 x half> @fnegv16f16(<16 x half> %x) {
 ; CHECK-LABEL: fnegv16f16:
@@ -418,6 +446,20 @@ define <16 x half> @fcopysignv16f16(<16 x half> %x, <16 x half> %y) {
 }
 declare <16 x half> @llvm.copysign.v16f16(<16 x half>, <16 x half>)
 
+define <16 x half> @roundv16f16(<16 x half> %x) {
+; CHECK-LABEL: roundv16f16:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    vpbroadcastw {{.*#+}} ymm1 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; CHECK-NEXT:    vpbroadcastw {{.*#+}} ymm2 = [4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1]
+; CHECK-NEXT:    vpternlogq $248, %ymm1, %ymm0, %ymm2
+; CHECK-NEXT:    vaddph %ymm2, %ymm0, %ymm0
+; CHECK-NEXT:    vrndscaleph $11, %ymm0, %ymm0
+; CHECK-NEXT:    retq
+  %a = call <16 x half> @llvm.round.v16f16(<16 x half> %x)
+  ret <16 x half> %a
+}
+declare <16 x half> @llvm.round.v16f16(<16 x half>)
+
 define <32 x half> @fnegv32f16(<32 x half> %x) {
 ; CHECK-LABEL: fnegv32f16:
 ; CHECK:       ## %bb.0:
@@ -458,6 +500,20 @@ define <32 x half> @fcopysignv32f16(<32 x half> %x, <32 x half> %y) {
   ret <32 x half> %a
 }
 declare <32 x half> @llvm.copysign.v32f16(<32 x half>, <32 x half>)
+
+define <32 x half> @roundv32f16(<32 x half> %x) {
+; CHECK-LABEL: roundv32f16:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    vpbroadcastw {{.*#+}} zmm1 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; CHECK-NEXT:    vpbroadcastw {{.*#+}} zmm2 = [4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1]
+; CHECK-NEXT:    vpternlogq $248, %zmm1, %zmm0, %zmm2
+; CHECK-NEXT:    vaddph %zmm2, %zmm0, %zmm0
+; CHECK-NEXT:    vrndscaleph $11, %zmm0, %zmm0
+; CHECK-NEXT:    retq
+  %a = call <32 x half> @llvm.round.v32f16(<32 x half> %x)
+  ret <32 x half> %a
+}
+declare <32 x half> @llvm.round.v32f16(<32 x half>)
 
 define <8 x half>  @regression_test1(<8 x half> %x, <8 x half> %y) #0 {
 ; CHECK-LABEL: regression_test1:

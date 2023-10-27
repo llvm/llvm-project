@@ -1,6 +1,7 @@
 /*
  * Copyright 2011      INRIA Saclay
  * Copyright 2014      Ecole Normale Superieure
+ * Copyright 2015      Sven Verdoolaege
  *
  * Use of this software is governed by the MIT license
  *
@@ -36,6 +37,13 @@ isl_ctx *isl_local_get_ctx(__isl_keep isl_local *local)
 __isl_give isl_local *isl_local_alloc_from_mat(__isl_take isl_mat *mat)
 {
 	return mat;
+}
+
+/* Return a new reference to "local".
+ */
+__isl_give isl_local *isl_local_copy(__isl_keep isl_local *local)
+{
+	return isl_local_alloc_from_mat(isl_mat_copy(local));
 }
 
 /* Free "local" and return NULL.
@@ -222,6 +230,32 @@ int isl_local_cmp(__isl_keep isl_local *local1, __isl_keep isl_local *local2)
 	return 0;
 }
 
+/* Return the position of the variables of the given type
+ * within the sequence of variables of "local".
+ *
+ * Only the position of the local variables can be obtained.
+ * It is equal to the total number of variables minus
+ * the number of local variables.
+ */
+isl_size isl_local_var_offset(__isl_keep isl_local *local,
+	enum isl_dim_type type)
+{
+	isl_size n_div, n_all;
+
+	if (!local)
+		return isl_size_error;
+	if (type != isl_dim_div)
+		isl_die(isl_local_get_ctx(local), isl_error_unsupported,
+			"only the offset of the local variables "
+			"can be obtained", return isl_size_error);
+
+	n_div = isl_local_dim(local, isl_dim_div);
+	n_all = isl_local_dim(local, isl_dim_all);
+	if (n_div < 0 || n_all < 0)
+		return isl_size_error;
+	return n_all - n_div;
+}
+
 /* Reorder the columns of the given local variables according to the
  * given reordering.
  * The order of the local variables themselves is assumed not to change.
@@ -231,19 +265,13 @@ __isl_give isl_local *isl_local_reorder(__isl_take isl_local *local,
 {
 	isl_mat *div = local;
 	int i, j;
-	isl_size dim;
-	isl_space *space;
 	isl_mat *mat;
 	int extra;
 
 	if (!local || !r)
 		goto error;
 
-	space = isl_reordering_peek_space(r);
-	dim = isl_space_dim(space, isl_dim_all);
-	if (dim < 0)
-		goto error;
-	extra = dim + div->n_row - r->len;
+	extra = r->dst_len - r->src_len;
 	mat = isl_mat_alloc(div->ctx, div->n_row, div->n_col + extra);
 	if (!mat)
 		goto error;
@@ -251,7 +279,7 @@ __isl_give isl_local *isl_local_reorder(__isl_take isl_local *local,
 	for (i = 0; i < div->n_row; ++i) {
 		isl_seq_cpy(mat->row[i], div->row[i], 2);
 		isl_seq_clr(mat->row[i] + 2, mat->n_col - 2);
-		for (j = 0; j < r->len; ++j)
+		for (j = 0; j < r->src_len; ++j)
 			isl_int_set(mat->row[i][2 + r->pos[j]],
 				    div->row[i][2 + j]);
 	}
@@ -263,6 +291,32 @@ error:
 	isl_reordering_free(r);
 	isl_local_free(local);
 	return NULL;
+}
+
+/* Move the "n" variables starting at "src_pos" of "local" to "dst_pos".
+ *
+ * Moving local variables is not allowed.
+ */
+__isl_give isl_local *isl_local_move_vars(__isl_take isl_local *local,
+	unsigned dst_pos, unsigned src_pos, unsigned n)
+{
+	isl_mat *mat = local;
+	isl_size v_div;
+
+	v_div = isl_local_var_offset(local, isl_dim_div);
+	if (v_div < 0)
+		return isl_local_free(local);
+	if (n == 0)
+		return local;
+
+	if (dst_pos >= v_div || src_pos >= v_div)
+		isl_die(isl_local_get_ctx(local), isl_error_invalid,
+			"cannot move local variables",
+			return isl_local_free(local));
+
+	mat = isl_mat_move_cols(mat, 2 + dst_pos, 2 + src_pos, n);
+
+	return isl_local_alloc_from_mat(mat);
 }
 
 /* Extend a vector "v" representing an integer point

@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=aarch64-arm-none-eabi < %s -filetype=obj -o - \
+; RUN: llc -mtriple=aarch64 < %s -filetype=obj -o - \
 ; RUN:    | llvm-dwarfdump -v - | FileCheck -check-prefix=CHECK %s
 
 ;CHECK: CIE

@@ -11,19 +11,19 @@
 
 #include "src/__support/OSUtil/syscall.h"
 #include "src/__support/common.h"
+#include "src/errno/libc_errno.h"
 
 #include <asm/ioctls.h> // Safe to include without the risk of name pollution.
-#include <errno.h>
 #include <sys/syscall.h> // For syscall numbers
 #include <termios.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 LLVM_LIBC_FUNCTION(int, tcgetattr, (int fd, struct termios *t)) {
-  __llvm_libc::kernel_termios kt;
-  long ret = __llvm_libc::syscall_impl(SYS_ioctl, fd, TCGETS, &kt);
+  LIBC_NAMESPACE::kernel_termios kt;
+  int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_ioctl, fd, TCGETS, &kt);
   if (ret < 0) {
-    errno = -ret;
+    libc_errno = -ret;
     return -1;
   }
   t->c_iflag = kt.c_iflag;
@@ -43,4 +43,4 @@ LLVM_LIBC_FUNCTION(int, tcgetattr, (int fd, struct termios *t)) {
   return 0;
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

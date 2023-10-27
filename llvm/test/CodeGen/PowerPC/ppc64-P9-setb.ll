@@ -17,12 +17,12 @@ define i64 @setb1(i64 %a, i64 %b) {
 ;
 ; CHECK-PWR8-LABEL: setb1:
 ; CHECK-PWR8:       # %bb.0:
-; CHECK-PWR8-NEXT:    xor r6, r3, r4
-; CHECK-PWR8-NEXT:    li r5, -1
-; CHECK-PWR8-NEXT:    addic r7, r6, -1
+; CHECK-PWR8-NEXT:    xor r5, r3, r4
 ; CHECK-PWR8-NEXT:    cmpd r3, r4
-; CHECK-PWR8-NEXT:    subfe r6, r7, r6
-; CHECK-PWR8-NEXT:    isellt r3, r5, r6
+; CHECK-PWR8-NEXT:    li r3, -1
+; CHECK-PWR8-NEXT:    addic r6, r5, -1
+; CHECK-PWR8-NEXT:    subfe r5, r6, r5
+; CHECK-PWR8-NEXT:    isellt r3, r3, r5
 ; CHECK-PWR8-NEXT:    blr
   %t1 = icmp slt i64 %a, %b
   %t2 = icmp ne i64 %a, %b
@@ -41,12 +41,12 @@ define i64 @setb2(i64 %a, i64 %b) {
 ;
 ; CHECK-PWR8-LABEL: setb2:
 ; CHECK-PWR8:       # %bb.0:
-; CHECK-PWR8-NEXT:    xor r6, r3, r4
-; CHECK-PWR8-NEXT:    li r5, -1
-; CHECK-PWR8-NEXT:    addic r7, r6, -1
+; CHECK-PWR8-NEXT:    xor r5, r3, r4
 ; CHECK-PWR8-NEXT:    cmpd r4, r3
-; CHECK-PWR8-NEXT:    subfe r6, r7, r6
-; CHECK-PWR8-NEXT:    iselgt r3, r5, r6
+; CHECK-PWR8-NEXT:    li r3, -1
+; CHECK-PWR8-NEXT:    addic r6, r5, -1
+; CHECK-PWR8-NEXT:    subfe r5, r6, r5
+; CHECK-PWR8-NEXT:    iselgt r3, r3, r5
 ; CHECK-PWR8-NEXT:    blr
   %t1 = icmp sgt i64 %b, %a
   %t2 = icmp ne i64 %a, %b
@@ -65,12 +65,12 @@ define i64 @setb3(i64 %a, i64 %b) {
 ;
 ; CHECK-PWR8-LABEL: setb3:
 ; CHECK-PWR8:       # %bb.0:
-; CHECK-PWR8-NEXT:    xor r6, r4, r3
-; CHECK-PWR8-NEXT:    li r5, -1
-; CHECK-PWR8-NEXT:    addic r7, r6, -1
+; CHECK-PWR8-NEXT:    xor r5, r4, r3
 ; CHECK-PWR8-NEXT:    cmpd r3, r4
-; CHECK-PWR8-NEXT:    subfe r6, r7, r6
-; CHECK-PWR8-NEXT:    isellt r3, r5, r6
+; CHECK-PWR8-NEXT:    li r3, -1
+; CHECK-PWR8-NEXT:    addic r6, r5, -1
+; CHECK-PWR8-NEXT:    subfe r5, r6, r5
+; CHECK-PWR8-NEXT:    isellt r3, r3, r5
 ; CHECK-PWR8-NEXT:    blr
   %t1 = icmp slt i64 %a, %b
   %t2 = icmp ne i64 %b, %a
@@ -89,12 +89,12 @@ define i64 @setb4(i64 %a, i64 %b) {
 ;
 ; CHECK-PWR8-LABEL: setb4:
 ; CHECK-PWR8:       # %bb.0:
-; CHECK-PWR8-NEXT:    xor r6, r4, r3
-; CHECK-PWR8-NEXT:    li r5, -1
-; CHECK-PWR8-NEXT:    addic r7, r6, -1
+; CHECK-PWR8-NEXT:    xor r5, r4, r3
 ; CHECK-PWR8-NEXT:    cmpd r4, r3
-; CHECK-PWR8-NEXT:    subfe r6, r7, r6
-; CHECK-PWR8-NEXT:    iselgt r3, r5, r6
+; CHECK-PWR8-NEXT:    li r3, -1
+; CHECK-PWR8-NEXT:    addic r6, r5, -1
+; CHECK-PWR8-NEXT:    subfe r5, r6, r5
+; CHECK-PWR8-NEXT:    iselgt r3, r3, r5
 ; CHECK-PWR8-NEXT:    blr
   %t1 = icmp sgt i64 %b, %a
   %t2 = icmp ne i64 %b, %a
@@ -113,14 +113,14 @@ define i64 @setb5(i64 %a, i64 %b) {
 ;
 ; CHECK-PWR8-LABEL: setb5:
 ; CHECK-PWR8:       # %bb.0:
-; CHECK-PWR8-NEXT:    sradi r6, r4, 63
-; CHECK-PWR8-NEXT:    rldicl r7, r3, 1, 63
-; CHECK-PWR8-NEXT:    li r5, -1
-; CHECK-PWR8-NEXT:    subc r8, r4, r3
+; CHECK-PWR8-NEXT:    sradi r5, r4, 63
+; CHECK-PWR8-NEXT:    rldicl r6, r3, 1, 63
+; CHECK-PWR8-NEXT:    subc r7, r4, r3
+; CHECK-PWR8-NEXT:    adde r5, r6, r5
 ; CHECK-PWR8-NEXT:    cmpd r3, r4
-; CHECK-PWR8-NEXT:    adde r6, r7, r6
-; CHECK-PWR8-NEXT:    xori r6, r6, 1
-; CHECK-PWR8-NEXT:    isellt r3, r5, r6
+; CHECK-PWR8-NEXT:    li r3, -1
+; CHECK-PWR8-NEXT:    xori r5, r5, 1
+; CHECK-PWR8-NEXT:    isellt r3, r3, r5
 ; CHECK-PWR8-NEXT:    blr
   %t1 = icmp slt i64 %a, %b
   %t2 = icmp sgt i64 %a, %b
@@ -139,14 +139,14 @@ define i64 @setb6(i64 %a, i64 %b) {
 ;
 ; CHECK-PWR8-LABEL: setb6:
 ; CHECK-PWR8:       # %bb.0:
-; CHECK-PWR8-NEXT:    sradi r6, r4, 63
-; CHECK-PWR8-NEXT:    rldicl r7, r3, 1, 63
-; CHECK-PWR8-NEXT:    li r5, -1
-; CHECK-PWR8-NEXT:    subc r8, r4, r3
+; CHECK-PWR8-NEXT:    sradi r5, r4, 63
+; CHECK-PWR8-NEXT:    rldicl r6, r3, 1, 63
+; CHECK-PWR8-NEXT:    subc r7, r4, r3
+; CHECK-PWR8-NEXT:    adde r5, r6, r5
 ; CHECK-PWR8-NEXT:    cmpd r4, r3
-; CHECK-PWR8-NEXT:    adde r6, r7, r6
-; CHECK-PWR8-NEXT:    xori r6, r6, 1
-; CHECK-PWR8-NEXT:    iselgt r3, r5, r6
+; CHECK-PWR8-NEXT:    li r3, -1
+; CHECK-PWR8-NEXT:    xori r5, r5, 1
+; CHECK-PWR8-NEXT:    iselgt r3, r3, r5
 ; CHECK-PWR8-NEXT:    blr
   %t1 = icmp sgt i64 %b, %a
   %t2 = icmp sgt i64 %a, %b
@@ -165,14 +165,14 @@ define i64 @setb7(i64 %a, i64 %b) {
 ;
 ; CHECK-PWR8-LABEL: setb7:
 ; CHECK-PWR8:       # %bb.0:
-; CHECK-PWR8-NEXT:    sradi r6, r4, 63
-; CHECK-PWR8-NEXT:    rldicl r7, r3, 1, 63
-; CHECK-PWR8-NEXT:    li r5, -1
-; CHECK-PWR8-NEXT:    subc r8, r4, r3
+; CHECK-PWR8-NEXT:    sradi r5, r4, 63
+; CHECK-PWR8-NEXT:    rldicl r6, r3, 1, 63
+; CHECK-PWR8-NEXT:    subc r7, r4, r3
+; CHECK-PWR8-NEXT:    adde r5, r6, r5
 ; CHECK-PWR8-NEXT:    cmpd r3, r4
-; CHECK-PWR8-NEXT:    adde r6, r7, r6
-; CHECK-PWR8-NEXT:    xori r6, r6, 1
-; CHECK-PWR8-NEXT:    isellt r3, r5, r6
+; CHECK-PWR8-NEXT:    li r3, -1
+; CHECK-PWR8-NEXT:    xori r5, r5, 1
+; CHECK-PWR8-NEXT:    isellt r3, r3, r5
 ; CHECK-PWR8-NEXT:    blr
   %t1 = icmp slt i64 %a, %b
   %t2 = icmp slt i64 %b, %a
@@ -191,14 +191,14 @@ define i64 @setb8(i64 %a, i64 %b) {
 ;
 ; CHECK-PWR8-LABEL: setb8:
 ; CHECK-PWR8:       # %bb.0:
-; CHECK-PWR8-NEXT:    sradi r6, r4, 63
-; CHECK-PWR8-NEXT:    rldicl r7, r3, 1, 63
-; CHECK-PWR8-NEXT:    li r5, -1
-; CHECK-PWR8-NEXT:    subc r8, r4, r3
+; CHECK-PWR8-NEXT:    sradi r5, r4, 63
+; CHECK-PWR8-NEXT:    rldicl r6, r3, 1, 63
+; CHECK-PWR8-NEXT:    subc r7, r4, r3
+; CHECK-PWR8-NEXT:    adde r5, r6, r5
 ; CHECK-PWR8-NEXT:    cmpd r4, r3
-; CHECK-PWR8-NEXT:    adde r6, r7, r6
-; CHECK-PWR8-NEXT:    xori r6, r6, 1
-; CHECK-PWR8-NEXT:    iselgt r3, r5, r6
+; CHECK-PWR8-NEXT:    li r3, -1
+; CHECK-PWR8-NEXT:    xori r5, r5, 1
+; CHECK-PWR8-NEXT:    iselgt r3, r3, r5
 ; CHECK-PWR8-NEXT:    blr
   %t1 = icmp sgt i64 %b, %a
   %t2 = icmp slt i64 %b, %a
@@ -217,12 +217,12 @@ define i64 @setb9(i64 %a, i64 %b) {
 ;
 ; CHECK-PWR8-LABEL: setb9:
 ; CHECK-PWR8:       # %bb.0:
-; CHECK-PWR8-NEXT:    xor r6, r3, r4
-; CHECK-PWR8-NEXT:    li r5, 1
-; CHECK-PWR8-NEXT:    subfic r6, r6, 0
+; CHECK-PWR8-NEXT:    xor r5, r3, r4
 ; CHECK-PWR8-NEXT:    cmpd r3, r4
-; CHECK-PWR8-NEXT:    subfe r3, r6, r6
-; CHECK-PWR8-NEXT:    iselgt r3, r5, r3
+; CHECK-PWR8-NEXT:    li r3, 1
+; CHECK-PWR8-NEXT:    subfic r5, r5, 0
+; CHECK-PWR8-NEXT:    subfe r5, r5, r5
+; CHECK-PWR8-NEXT:    iselgt r3, r3, r5
 ; CHECK-PWR8-NEXT:    blr
   %t1 = icmp sgt i64 %a, %b
   %t2 = icmp ne i64 %a, %b
@@ -241,12 +241,12 @@ define i64 @setb10(i64 %a, i64 %b) {
 ;
 ; CHECK-PWR8-LABEL: setb10:
 ; CHECK-PWR8:       # %bb.0:
-; CHECK-PWR8-NEXT:    xor r6, r3, r4
-; CHECK-PWR8-NEXT:    li r5, 1
-; CHECK-PWR8-NEXT:    subfic r6, r6, 0
+; CHECK-PWR8-NEXT:    xor r5, r3, r4
 ; CHECK-PWR8-NEXT:    cmpd r4, r3
-; CHECK-PWR8-NEXT:    subfe r3, r6, r6
-; CHECK-PWR8-NEXT:    isellt r3, r5, r3
+; CHECK-PWR8-NEXT:    li r3, 1
+; CHECK-PWR8-NEXT:    subfic r5, r5, 0
+; CHECK-PWR8-NEXT:    subfe r5, r5, r5
+; CHECK-PWR8-NEXT:    isellt r3, r3, r5
 ; CHECK-PWR8-NEXT:    blr
   %t1 = icmp slt i64 %b, %a
   %t2 = icmp ne i64 %a, %b
@@ -265,12 +265,12 @@ define i64 @setb11(i64 %a, i64 %b) {
 ;
 ; CHECK-PWR8-LABEL: setb11:
 ; CHECK-PWR8:       # %bb.0:
-; CHECK-PWR8-NEXT:    xor r6, r4, r3
-; CHECK-PWR8-NEXT:    li r5, 1
-; CHECK-PWR8-NEXT:    subfic r6, r6, 0
+; CHECK-PWR8-NEXT:    xor r5, r4, r3
 ; CHECK-PWR8-NEXT:    cmpd r3, r4
-; CHECK-PWR8-NEXT:    subfe r3, r6, r6
-; CHECK-PWR8-NEXT:    iselgt r3, r5, r3
+; CHECK-PWR8-NEXT:    li r3, 1
+; CHECK-PWR8-NEXT:    subfic r5, r5, 0
+; CHECK-PWR8-NEXT:    subfe r5, r5, r5
+; CHECK-PWR8-NEXT:    iselgt r3, r3, r5
 ; CHECK-PWR8-NEXT:    blr
   %t1 = icmp sgt i64 %a, %b
   %t2 = icmp ne i64 %b, %a
@@ -289,12 +289,12 @@ define i64 @setb12(i64 %a, i64 %b) {
 ;
 ; CHECK-PWR8-LABEL: setb12:
 ; CHECK-PWR8:       # %bb.0:
-; CHECK-PWR8-NEXT:    xor r6, r4, r3
-; CHECK-PWR8-NEXT:    li r5, 1
-; CHECK-PWR8-NEXT:    subfic r6, r6, 0
+; CHECK-PWR8-NEXT:    xor r5, r4, r3
 ; CHECK-PWR8-NEXT:    cmpd r4, r3
-; CHECK-PWR8-NEXT:    subfe r3, r6, r6
-; CHECK-PWR8-NEXT:    isellt r3, r5, r3
+; CHECK-PWR8-NEXT:    li r3, 1
+; CHECK-PWR8-NEXT:    subfic r5, r5, 0
+; CHECK-PWR8-NEXT:    subfe r5, r5, r5
+; CHECK-PWR8-NEXT:    isellt r3, r3, r5
 ; CHECK-PWR8-NEXT:    blr
   %t1 = icmp slt i64 %b, %a
   %t2 = icmp ne i64 %b, %a
@@ -313,15 +313,15 @@ define i64 @setb13(i64 %a, i64 %b) {
 ;
 ; CHECK-PWR8-LABEL: setb13:
 ; CHECK-PWR8:       # %bb.0:
-; CHECK-PWR8-NEXT:    sradi r6, r3, 63
-; CHECK-PWR8-NEXT:    rldicl r7, r4, 1, 63
-; CHECK-PWR8-NEXT:    li r5, 1
-; CHECK-PWR8-NEXT:    subc r8, r3, r4
+; CHECK-PWR8-NEXT:    sradi r5, r3, 63
+; CHECK-PWR8-NEXT:    rldicl r6, r4, 1, 63
+; CHECK-PWR8-NEXT:    subc r7, r3, r4
+; CHECK-PWR8-NEXT:    adde r5, r6, r5
 ; CHECK-PWR8-NEXT:    cmpd r3, r4
-; CHECK-PWR8-NEXT:    adde r6, r7, r6
-; CHECK-PWR8-NEXT:    xori r6, r6, 1
-; CHECK-PWR8-NEXT:    neg r6, r6
-; CHECK-PWR8-NEXT:    iselgt r3, r5, r6
+; CHECK-PWR8-NEXT:    li r3, 1
+; CHECK-PWR8-NEXT:    xori r5, r5, 1
+; CHECK-PWR8-NEXT:    neg r5, r5
+; CHECK-PWR8-NEXT:    iselgt r3, r3, r5
 ; CHECK-PWR8-NEXT:    blr
   %t1 = icmp sgt i64 %a, %b
   %t2 = icmp slt i64 %a, %b
@@ -340,15 +340,15 @@ define i64 @setb14(i64 %a, i64 %b) {
 ;
 ; CHECK-PWR8-LABEL: setb14:
 ; CHECK-PWR8:       # %bb.0:
-; CHECK-PWR8-NEXT:    sradi r6, r3, 63
-; CHECK-PWR8-NEXT:    rldicl r7, r4, 1, 63
-; CHECK-PWR8-NEXT:    li r5, 1
-; CHECK-PWR8-NEXT:    subc r8, r3, r4
+; CHECK-PWR8-NEXT:    sradi r5, r3, 63
+; CHECK-PWR8-NEXT:    rldicl r6, r4, 1, 63
+; CHECK-PWR8-NEXT:    subc r7, r3, r4
+; CHECK-PWR8-NEXT:    adde r5, r6, r5
 ; CHECK-PWR8-NEXT:    cmpd r4, r3
-; CHECK-PWR8-NEXT:    adde r6, r7, r6
-; CHECK-PWR8-NEXT:    xori r6, r6, 1
-; CHECK-PWR8-NEXT:    neg r6, r6
-; CHECK-PWR8-NEXT:    isellt r3, r5, r6
+; CHECK-PWR8-NEXT:    li r3, 1
+; CHECK-PWR8-NEXT:    xori r5, r5, 1
+; CHECK-PWR8-NEXT:    neg r5, r5
+; CHECK-PWR8-NEXT:    isellt r3, r3, r5
 ; CHECK-PWR8-NEXT:    blr
   %t1 = icmp slt i64 %b, %a
   %t2 = icmp slt i64 %a, %b
@@ -367,15 +367,15 @@ define i64 @setb15(i64 %a, i64 %b) {
 ;
 ; CHECK-PWR8-LABEL: setb15:
 ; CHECK-PWR8:       # %bb.0:
-; CHECK-PWR8-NEXT:    sradi r6, r3, 63
-; CHECK-PWR8-NEXT:    rldicl r7, r4, 1, 63
-; CHECK-PWR8-NEXT:    li r5, 1
-; CHECK-PWR8-NEXT:    subc r8, r3, r4
+; CHECK-PWR8-NEXT:    sradi r5, r3, 63
+; CHECK-PWR8-NEXT:    rldicl r6, r4, 1, 63
+; CHECK-PWR8-NEXT:    subc r7, r3, r4
+; CHECK-PWR8-NEXT:    adde r5, r6, r5
 ; CHECK-PWR8-NEXT:    cmpd r3, r4
-; CHECK-PWR8-NEXT:    adde r6, r7, r6
-; CHECK-PWR8-NEXT:    xori r6, r6, 1
-; CHECK-PWR8-NEXT:    neg r6, r6
-; CHECK-PWR8-NEXT:    iselgt r3, r5, r6
+; CHECK-PWR8-NEXT:    li r3, 1
+; CHECK-PWR8-NEXT:    xori r5, r5, 1
+; CHECK-PWR8-NEXT:    neg r5, r5
+; CHECK-PWR8-NEXT:    iselgt r3, r3, r5
 ; CHECK-PWR8-NEXT:    blr
   %t1 = icmp sgt i64 %a, %b
   %t2 = icmp sgt i64 %b, %a
@@ -394,15 +394,15 @@ define i64 @setb16(i64 %a, i64 %b) {
 ;
 ; CHECK-PWR8-LABEL: setb16:
 ; CHECK-PWR8:       # %bb.0:
-; CHECK-PWR8-NEXT:    sradi r6, r3, 63
-; CHECK-PWR8-NEXT:    rldicl r7, r4, 1, 63
-; CHECK-PWR8-NEXT:    li r5, 1
-; CHECK-PWR8-NEXT:    subc r8, r3, r4
+; CHECK-PWR8-NEXT:    sradi r5, r3, 63
+; CHECK-PWR8-NEXT:    rldicl r6, r4, 1, 63
+; CHECK-PWR8-NEXT:    subc r7, r3, r4
+; CHECK-PWR8-NEXT:    adde r5, r6, r5
 ; CHECK-PWR8-NEXT:    cmpd r4, r3
-; CHECK-PWR8-NEXT:    adde r6, r7, r6
-; CHECK-PWR8-NEXT:    xori r6, r6, 1
-; CHECK-PWR8-NEXT:    neg r6, r6
-; CHECK-PWR8-NEXT:    isellt r3, r5, r6
+; CHECK-PWR8-NEXT:    li r3, 1
+; CHECK-PWR8-NEXT:    xori r5, r5, 1
+; CHECK-PWR8-NEXT:    neg r5, r5
+; CHECK-PWR8-NEXT:    isellt r3, r3, r5
 ; CHECK-PWR8-NEXT:    blr
   %t1 = icmp slt i64 %b, %a
   %t2 = icmp sgt i64 %b, %a
@@ -421,8 +421,8 @@ define i64 @setb17(i64 %a, i64 %b) {
 ;
 ; CHECK-PWR8-LABEL: setb17:
 ; CHECK-PWR8:       # %bb.0:
-; CHECK-PWR8-NEXT:    li r5, -1
 ; CHECK-PWR8-NEXT:    cmpd r3, r4
+; CHECK-PWR8-NEXT:    li r5, -1
 ; CHECK-PWR8-NEXT:    li r6, 1
 ; CHECK-PWR8-NEXT:    iselgt r5, r6, r5
 ; CHECK-PWR8-NEXT:    cmpld r3, r4
@@ -445,8 +445,8 @@ define i64 @setb18(i64 %a, i64 %b) {
 ;
 ; CHECK-PWR8-LABEL: setb18:
 ; CHECK-PWR8:       # %bb.0:
-; CHECK-PWR8-NEXT:    li r5, -1
 ; CHECK-PWR8-NEXT:    cmpd r3, r4
+; CHECK-PWR8-NEXT:    li r5, -1
 ; CHECK-PWR8-NEXT:    li r6, 1
 ; CHECK-PWR8-NEXT:    iselgt r5, r6, r5
 ; CHECK-PWR8-NEXT:    cmpld r4, r3
@@ -469,8 +469,8 @@ define i64 @setb19(i64 %a, i64 %b) {
 ;
 ; CHECK-PWR8-LABEL: setb19:
 ; CHECK-PWR8:       # %bb.0:
-; CHECK-PWR8-NEXT:    li r5, -1
 ; CHECK-PWR8-NEXT:    cmpd r4, r3
+; CHECK-PWR8-NEXT:    li r5, -1
 ; CHECK-PWR8-NEXT:    li r6, 1
 ; CHECK-PWR8-NEXT:    isellt r5, r6, r5
 ; CHECK-PWR8-NEXT:    cmpld r3, r4
@@ -493,8 +493,8 @@ define i64 @setb20(i64 %a, i64 %b) {
 ;
 ; CHECK-PWR8-LABEL: setb20:
 ; CHECK-PWR8:       # %bb.0:
-; CHECK-PWR8-NEXT:    li r5, -1
 ; CHECK-PWR8-NEXT:    cmpd r4, r3
+; CHECK-PWR8-NEXT:    li r5, -1
 ; CHECK-PWR8-NEXT:    li r6, 1
 ; CHECK-PWR8-NEXT:    isellt r5, r6, r5
 ; CHECK-PWR8-NEXT:    cmpld r4, r3
@@ -517,8 +517,8 @@ define i64 @setb21(i64 %a, i64 %b) {
 ;
 ; CHECK-PWR8-LABEL: setb21:
 ; CHECK-PWR8:       # %bb.0:
-; CHECK-PWR8-NEXT:    li r5, 1
 ; CHECK-PWR8-NEXT:    cmpd r3, r4
+; CHECK-PWR8-NEXT:    li r5, 1
 ; CHECK-PWR8-NEXT:    li r6, -1
 ; CHECK-PWR8-NEXT:    isellt r5, r6, r5
 ; CHECK-PWR8-NEXT:    cmpld r3, r4
@@ -541,8 +541,8 @@ define i64 @setb22(i64 %a, i64 %b) {
 ;
 ; CHECK-PWR8-LABEL: setb22:
 ; CHECK-PWR8:       # %bb.0:
-; CHECK-PWR8-NEXT:    li r5, 1
 ; CHECK-PWR8-NEXT:    cmpd r3, r4
+; CHECK-PWR8-NEXT:    li r5, 1
 ; CHECK-PWR8-NEXT:    li r6, -1
 ; CHECK-PWR8-NEXT:    isellt r5, r6, r5
 ; CHECK-PWR8-NEXT:    cmpld r4, r3
@@ -565,8 +565,8 @@ define i64 @setb23(i64 %a, i64 %b) {
 ;
 ; CHECK-PWR8-LABEL: setb23:
 ; CHECK-PWR8:       # %bb.0:
-; CHECK-PWR8-NEXT:    li r5, 1
 ; CHECK-PWR8-NEXT:    cmpd r4, r3
+; CHECK-PWR8-NEXT:    li r5, 1
 ; CHECK-PWR8-NEXT:    li r6, -1
 ; CHECK-PWR8-NEXT:    iselgt r5, r6, r5
 ; CHECK-PWR8-NEXT:    cmpld r3, r4
@@ -589,8 +589,8 @@ define i64 @setb24(i64 %a, i64 %b) {
 ;
 ; CHECK-PWR8-LABEL: setb24:
 ; CHECK-PWR8:       # %bb.0:
-; CHECK-PWR8-NEXT:    li r5, 1
 ; CHECK-PWR8-NEXT:    cmpd r4, r3
+; CHECK-PWR8-NEXT:    li r5, 1
 ; CHECK-PWR8-NEXT:    li r6, -1
 ; CHECK-PWR8-NEXT:    iselgt r5, r6, r5
 ; CHECK-PWR8-NEXT:    cmpld r4, r3
@@ -616,12 +616,12 @@ define i64 @setb25(i64 %a, i64 %b) {
 ;
 ; CHECK-PWR8-LABEL: setb25:
 ; CHECK-PWR8:       # %bb.0:
-; CHECK-PWR8-NEXT:    xor r6, r4, r3
-; CHECK-PWR8-NEXT:    li r5, -1
-; CHECK-PWR8-NEXT:    addic r7, r6, -1
+; CHECK-PWR8-NEXT:    xor r5, r4, r3
 ; CHECK-PWR8-NEXT:    cmpd r4, r3
-; CHECK-PWR8-NEXT:    subfe r6, r7, r6
-; CHECK-PWR8-NEXT:    isellt r3, r5, r6
+; CHECK-PWR8-NEXT:    li r3, -1
+; CHECK-PWR8-NEXT:    addic r6, r5, -1
+; CHECK-PWR8-NEXT:    subfe r5, r6, r5
+; CHECK-PWR8-NEXT:    isellt r3, r3, r5
 ; CHECK-PWR8-NEXT:    blr
   %t1 = icmp slt i64 %b, %a
   %t2 = icmp ne i64 %b, %a
@@ -640,12 +640,12 @@ define i64 @setb26(i64 %a, i64 %b) {
 ;
 ; CHECK-PWR8-LABEL: setb26:
 ; CHECK-PWR8:       # %bb.0:
-; CHECK-PWR8-NEXT:    xor r6, r4, r3
-; CHECK-PWR8-NEXT:    li r5, -1
-; CHECK-PWR8-NEXT:    addic r7, r6, -1
+; CHECK-PWR8-NEXT:    xor r5, r4, r3
 ; CHECK-PWR8-NEXT:    cmpd r3, r4
-; CHECK-PWR8-NEXT:    subfe r6, r7, r6
-; CHECK-PWR8-NEXT:    iselgt r3, r5, r6
+; CHECK-PWR8-NEXT:    li r3, -1
+; CHECK-PWR8-NEXT:    addic r6, r5, -1
+; CHECK-PWR8-NEXT:    subfe r5, r6, r5
+; CHECK-PWR8-NEXT:    iselgt r3, r3, r5
 ; CHECK-PWR8-NEXT:    blr
   %t1 = icmp sgt i64 %a, %b
   %t2 = icmp ne i64 %b, %a
@@ -667,12 +667,12 @@ define i64 @setb27(i64 %a, i64 %b) {
 ;
 ; CHECK-PWR8-LABEL: setb27:
 ; CHECK-PWR8:       # %bb.0:
-; CHECK-PWR8-NEXT:    xor r6, r4, r3
-; CHECK-PWR8-NEXT:    li r5, -1
-; CHECK-PWR8-NEXT:    addic r7, r6, -1
+; CHECK-PWR8-NEXT:    xor r5, r4, r3
 ; CHECK-PWR8-NEXT:    cmpd r3, r4
-; CHECK-PWR8-NEXT:    subfe r6, r7, r6
-; CHECK-PWR8-NEXT:    isellt r3, r5, r6
+; CHECK-PWR8-NEXT:    li r3, -1
+; CHECK-PWR8-NEXT:    addic r6, r5, -1
+; CHECK-PWR8-NEXT:    subfe r5, r6, r5
+; CHECK-PWR8-NEXT:    isellt r3, r3, r5
 ; CHECK-PWR8-NEXT:    extsw r3, r3
 ; CHECK-PWR8-NEXT:    blr
   %t1 = icmp slt i64 %a, %b
@@ -693,12 +693,12 @@ define i64 @setb28(i64 %a, i64 %b) {
 ;
 ; CHECK-PWR8-LABEL: setb28:
 ; CHECK-PWR8:       # %bb.0:
-; CHECK-PWR8-NEXT:    xor r6, r4, r3
-; CHECK-PWR8-NEXT:    li r5, -1
-; CHECK-PWR8-NEXT:    addic r7, r6, -1
+; CHECK-PWR8-NEXT:    xor r5, r4, r3
 ; CHECK-PWR8-NEXT:    cmpd r4, r3
-; CHECK-PWR8-NEXT:    subfe r6, r7, r6
-; CHECK-PWR8-NEXT:    iselgt r3, r5, r6
+; CHECK-PWR8-NEXT:    li r3, -1
+; CHECK-PWR8-NEXT:    addic r6, r5, -1
+; CHECK-PWR8-NEXT:    subfe r5, r6, r5
+; CHECK-PWR8-NEXT:    iselgt r3, r3, r5
 ; CHECK-PWR8-NEXT:    extsw r3, r3
 ; CHECK-PWR8-NEXT:    blr
   %t1 = icmp sgt i64 %b, %a
@@ -720,14 +720,14 @@ define i64 @setb29(i64 %a, i64 %b) {
 ;
 ; CHECK-PWR8-LABEL: setb29:
 ; CHECK-PWR8:       # %bb.0:
-; CHECK-PWR8-NEXT:    sradi r6, r4, 63
-; CHECK-PWR8-NEXT:    rldicl r7, r3, 1, 63
-; CHECK-PWR8-NEXT:    li r5, -1
-; CHECK-PWR8-NEXT:    subc r8, r4, r3
+; CHECK-PWR8-NEXT:    sradi r5, r4, 63
+; CHECK-PWR8-NEXT:    rldicl r6, r3, 1, 63
+; CHECK-PWR8-NEXT:    subc r7, r4, r3
+; CHECK-PWR8-NEXT:    adde r5, r6, r5
 ; CHECK-PWR8-NEXT:    cmpd r3, r4
-; CHECK-PWR8-NEXT:    adde r6, r7, r6
-; CHECK-PWR8-NEXT:    xori r6, r6, 1
-; CHECK-PWR8-NEXT:    isellt r3, r5, r6
+; CHECK-PWR8-NEXT:    li r3, -1
+; CHECK-PWR8-NEXT:    xori r5, r5, 1
+; CHECK-PWR8-NEXT:    isellt r3, r3, r5
 ; CHECK-PWR8-NEXT:    clrldi r3, r3, 56
 ; CHECK-PWR8-NEXT:    blr
   %t1 = icmp slt i64 %a, %b
@@ -751,13 +751,13 @@ define i64 @setbsw1(i32 %a, i32 %b) {
 ;
 ; CHECK-PWR8-LABEL: setbsw1:
 ; CHECK-PWR8:       # %bb.0:
-; CHECK-PWR8-NEXT:    xor r6, r3, r4
-; CHECK-PWR8-NEXT:    li r5, -1
-; CHECK-PWR8-NEXT:    cntlzw r6, r6
+; CHECK-PWR8-NEXT:    xor r5, r3, r4
 ; CHECK-PWR8-NEXT:    cmpw r3, r4
-; CHECK-PWR8-NEXT:    srwi r6, r6, 5
-; CHECK-PWR8-NEXT:    xori r3, r6, 1
-; CHECK-PWR8-NEXT:    isellt r3, r5, r3
+; CHECK-PWR8-NEXT:    li r3, -1
+; CHECK-PWR8-NEXT:    cntlzw r5, r5
+; CHECK-PWR8-NEXT:    srwi r5, r5, 5
+; CHECK-PWR8-NEXT:    xori r5, r5, 1
+; CHECK-PWR8-NEXT:    isellt r3, r3, r5
 ; CHECK-PWR8-NEXT:    blr
   %t1 = icmp slt i32 %a, %b
   %t2 = icmp ne i32 %a, %b
@@ -776,13 +776,13 @@ define i64 @setbsw2(i32 %a, i32 %b) {
 ;
 ; CHECK-PWR8-LABEL: setbsw2:
 ; CHECK-PWR8:       # %bb.0:
-; CHECK-PWR8-NEXT:    xor r6, r3, r4
-; CHECK-PWR8-NEXT:    li r5, -1
-; CHECK-PWR8-NEXT:    cntlzw r6, r6
+; CHECK-PWR8-NEXT:    xor r5, r3, r4
 ; CHECK-PWR8-NEXT:    cmpw r4, r3
-; CHECK-PWR8-NEXT:    srwi r6, r6, 5
-; CHECK-PWR8-NEXT:    xori r3, r6, 1
-; CHECK-PWR8-NEXT:    iselgt r3, r5, r3
+; CHECK-PWR8-NEXT:    li r3, -1
+; CHECK-PWR8-NEXT:    cntlzw r5, r5
+; CHECK-PWR8-NEXT:    srwi r5, r5, 5
+; CHECK-PWR8-NEXT:    xori r5, r5, 1
+; CHECK-PWR8-NEXT:    iselgt r3, r3, r5
 ; CHECK-PWR8-NEXT:    blr
   %t1 = icmp sgt i32 %b, %a
   %t2 = icmp ne i32 %a, %b
@@ -801,8 +801,8 @@ define i64 @setbsw3(i32 %a, i32 %b) {
 ;
 ; CHECK-PWR8-LABEL: setbsw3:
 ; CHECK-PWR8:       # %bb.0:
-; CHECK-PWR8-NEXT:    li r5, 1
 ; CHECK-PWR8-NEXT:    cmpw r4, r3
+; CHECK-PWR8-NEXT:    li r5, 1
 ; CHECK-PWR8-NEXT:    li r6, -1
 ; CHECK-PWR8-NEXT:    iselgt r5, r6, r5
 ; CHECK-PWR8-NEXT:    cmplw r3, r4
@@ -825,13 +825,13 @@ define i64 @setbsh1(i16 signext %a, i16 signext %b) {
 ;
 ; CHECK-PWR8-LABEL: setbsh1:
 ; CHECK-PWR8:       # %bb.0:
-; CHECK-PWR8-NEXT:    xor r6, r4, r3
-; CHECK-PWR8-NEXT:    li r5, -1
-; CHECK-PWR8-NEXT:    cntlzw r6, r6
+; CHECK-PWR8-NEXT:    xor r5, r4, r3
 ; CHECK-PWR8-NEXT:    cmpw r3, r4
-; CHECK-PWR8-NEXT:    srwi r6, r6, 5
-; CHECK-PWR8-NEXT:    xori r3, r6, 1
-; CHECK-PWR8-NEXT:    isellt r3, r5, r3
+; CHECK-PWR8-NEXT:    li r3, -1
+; CHECK-PWR8-NEXT:    cntlzw r5, r5
+; CHECK-PWR8-NEXT:    srwi r5, r5, 5
+; CHECK-PWR8-NEXT:    xori r5, r5, 1
+; CHECK-PWR8-NEXT:    isellt r3, r3, r5
 ; CHECK-PWR8-NEXT:    blr
   %t1 = icmp slt i16 %a, %b
   %t2 = icmp ne i16 %b, %a
@@ -850,13 +850,13 @@ define i64 @setbsh2(i16 signext %a, i16 signext %b) {
 ;
 ; CHECK-PWR8-LABEL: setbsh2:
 ; CHECK-PWR8:       # %bb.0:
-; CHECK-PWR8-NEXT:    xor r6, r4, r3
-; CHECK-PWR8-NEXT:    li r5, -1
-; CHECK-PWR8-NEXT:    cntlzw r6, r6
+; CHECK-PWR8-NEXT:    xor r5, r4, r3
 ; CHECK-PWR8-NEXT:    cmpw r4, r3
-; CHECK-PWR8-NEXT:    srwi r6, r6, 5
-; CHECK-PWR8-NEXT:    xori r3, r6, 1
-; CHECK-PWR8-NEXT:    iselgt r3, r5, r3
+; CHECK-PWR8-NEXT:    li r3, -1
+; CHECK-PWR8-NEXT:    cntlzw r5, r5
+; CHECK-PWR8-NEXT:    srwi r5, r5, 5
+; CHECK-PWR8-NEXT:    xori r5, r5, 1
+; CHECK-PWR8-NEXT:    iselgt r3, r3, r5
 ; CHECK-PWR8-NEXT:    blr
   %t1 = icmp sgt i16 %b, %a
   %t2 = icmp ne i16 %b, %a
@@ -879,11 +879,11 @@ define i64 @setbsc1(i8 %a, i8 %b) {
 ; CHECK-PWR8:       # %bb.0:
 ; CHECK-PWR8-NEXT:    extsb r4, r4
 ; CHECK-PWR8-NEXT:    extsb r3, r3
-; CHECK-PWR8-NEXT:    li r5, -1
-; CHECK-PWR8-NEXT:    sub r6, r4, r3
+; CHECK-PWR8-NEXT:    sub r5, r4, r3
 ; CHECK-PWR8-NEXT:    cmpw r3, r4
-; CHECK-PWR8-NEXT:    rldicl r3, r6, 1, 63
-; CHECK-PWR8-NEXT:    isellt r3, r5, r3
+; CHECK-PWR8-NEXT:    li r3, -1
+; CHECK-PWR8-NEXT:    rldicl r5, r5, 1, 63
+; CHECK-PWR8-NEXT:    isellt r3, r3, r5
 ; CHECK-PWR8-NEXT:    blr
   %t1 = icmp slt i8 %a, %b
   %t2 = icmp sgt i8 %a, %b
@@ -906,11 +906,11 @@ define i64 @setbsc2(i8 %a, i8 %b) {
 ; CHECK-PWR8:       # %bb.0:
 ; CHECK-PWR8-NEXT:    extsb r4, r4
 ; CHECK-PWR8-NEXT:    extsb r3, r3
-; CHECK-PWR8-NEXT:    li r5, -1
-; CHECK-PWR8-NEXT:    sub r6, r4, r3
+; CHECK-PWR8-NEXT:    sub r5, r4, r3
 ; CHECK-PWR8-NEXT:    cmpw r4, r3
-; CHECK-PWR8-NEXT:    rldicl r3, r6, 1, 63
-; CHECK-PWR8-NEXT:    iselgt r3, r5, r3
+; CHECK-PWR8-NEXT:    li r3, -1
+; CHECK-PWR8-NEXT:    rldicl r5, r5, 1, 63
+; CHECK-PWR8-NEXT:    iselgt r3, r3, r5
 ; CHECK-PWR8-NEXT:    blr
   %t1 = icmp sgt i8 %b, %a
   %t2 = icmp sgt i8 %a, %b
@@ -935,13 +935,13 @@ define i64 @setbsc3(i4 %a, i4 %b) {
 ; CHECK-PWR8:       # %bb.0:
 ; CHECK-PWR8-NEXT:    slwi r4, r4, 28
 ; CHECK-PWR8-NEXT:    slwi r3, r3, 28
-; CHECK-PWR8-NEXT:    li r5, -1
 ; CHECK-PWR8-NEXT:    srawi r4, r4, 28
 ; CHECK-PWR8-NEXT:    srawi r3, r3, 28
-; CHECK-PWR8-NEXT:    sub r6, r4, r3
 ; CHECK-PWR8-NEXT:    cmpw r3, r4
-; CHECK-PWR8-NEXT:    rldicl r3, r6, 1, 63
-; CHECK-PWR8-NEXT:    isellt r3, r5, r3
+; CHECK-PWR8-NEXT:    sub r5, r4, r3
+; CHECK-PWR8-NEXT:    li r3, -1
+; CHECK-PWR8-NEXT:    rldicl r5, r5, 1, 63
+; CHECK-PWR8-NEXT:    isellt r3, r3, r5
 ; CHECK-PWR8-NEXT:    blr
   %t1 = icmp slt i4 %a, %b
   %t2 = icmp slt i4 %b, %a
@@ -962,12 +962,12 @@ define i64 @setbud1(i64 %a, i64 %b) {
 ;
 ; CHECK-PWR8-LABEL: setbud1:
 ; CHECK-PWR8:       # %bb.0:
-; CHECK-PWR8-NEXT:    subc r6, r4, r3
-; CHECK-PWR8-NEXT:    li r5, -1
-; CHECK-PWR8-NEXT:    subfe r6, r4, r4
+; CHECK-PWR8-NEXT:    subc r5, r4, r3
 ; CHECK-PWR8-NEXT:    cmpld r4, r3
-; CHECK-PWR8-NEXT:    neg r3, r6
-; CHECK-PWR8-NEXT:    iselgt r3, r5, r3
+; CHECK-PWR8-NEXT:    li r3, -1
+; CHECK-PWR8-NEXT:    subfe r5, r4, r4
+; CHECK-PWR8-NEXT:    neg r5, r5
+; CHECK-PWR8-NEXT:    iselgt r3, r3, r5
 ; CHECK-PWR8-NEXT:    blr
   %t1 = icmp ugt i64 %b, %a
   %t2 = icmp ult i64 %b, %a
@@ -986,12 +986,12 @@ define i64 @setbud2(i64 %a, i64 %b) {
 ;
 ; CHECK-PWR8-LABEL: setbud2:
 ; CHECK-PWR8:       # %bb.0:
-; CHECK-PWR8-NEXT:    xor r6, r3, r4
-; CHECK-PWR8-NEXT:    li r5, 1
-; CHECK-PWR8-NEXT:    subfic r6, r6, 0
+; CHECK-PWR8-NEXT:    xor r5, r3, r4
 ; CHECK-PWR8-NEXT:    cmpld r3, r4
-; CHECK-PWR8-NEXT:    subfe r3, r6, r6
-; CHECK-PWR8-NEXT:    iselgt r3, r5, r3
+; CHECK-PWR8-NEXT:    li r3, 1
+; CHECK-PWR8-NEXT:    subfic r5, r5, 0
+; CHECK-PWR8-NEXT:    subfe r5, r5, r5
+; CHECK-PWR8-NEXT:    iselgt r3, r3, r5
 ; CHECK-PWR8-NEXT:    blr
   %t1 = icmp ugt i64 %a, %b
   %t2 = icmp ne i64 %a, %b
@@ -1010,10 +1010,10 @@ define i64 @setbud3(i64 %a, i64 %b) {
 ;
 ; CHECK-PWR8-LABEL: setbud3:
 ; CHECK-PWR8:       # %bb.0:
-; CHECK-PWR8-NEXT:    li r5, 1
 ; CHECK-PWR8-NEXT:    cmpld r4, r3
-; CHECK-PWR8-NEXT:    li r3, -1
-; CHECK-PWR8-NEXT:    iselgt r3, r3, r5
+; CHECK-PWR8-NEXT:    li r3, 1
+; CHECK-PWR8-NEXT:    li r4, -1
+; CHECK-PWR8-NEXT:    iselgt r3, r4, r3
 ; CHECK-PWR8-NEXT:    iseleq r3, 0, r3
 ; CHECK-PWR8-NEXT:    blr
   %t1 = icmp eq i64 %b, %a
@@ -1033,14 +1033,14 @@ define i64 @setbuw1(i32 %a, i32 %b) {
 ;
 ; CHECK-PWR8-LABEL: setbuw1:
 ; CHECK-PWR8:       # %bb.0:
-; CHECK-PWR8-NEXT:    xor r6, r3, r4
-; CHECK-PWR8-NEXT:    li r5, 1
-; CHECK-PWR8-NEXT:    cntlzw r6, r6
+; CHECK-PWR8-NEXT:    xor r5, r3, r4
 ; CHECK-PWR8-NEXT:    cmplw r4, r3
-; CHECK-PWR8-NEXT:    srwi r6, r6, 5
-; CHECK-PWR8-NEXT:    xori r6, r6, 1
-; CHECK-PWR8-NEXT:    neg r3, r6
-; CHECK-PWR8-NEXT:    isellt r3, r5, r3
+; CHECK-PWR8-NEXT:    li r3, 1
+; CHECK-PWR8-NEXT:    cntlzw r5, r5
+; CHECK-PWR8-NEXT:    srwi r5, r5, 5
+; CHECK-PWR8-NEXT:    xori r5, r5, 1
+; CHECK-PWR8-NEXT:    neg r5, r5
+; CHECK-PWR8-NEXT:    isellt r3, r3, r5
 ; CHECK-PWR8-NEXT:    blr
   %t1 = icmp ult i32 %b, %a
   %t2 = icmp ne i32 %a, %b
@@ -1059,14 +1059,14 @@ define i64 @setbuw2(i32 %a, i32 %b) {
 ;
 ; CHECK-PWR8-LABEL: setbuw2:
 ; CHECK-PWR8:       # %bb.0:
-; CHECK-PWR8-NEXT:    xor r6, r4, r3
-; CHECK-PWR8-NEXT:    li r5, 1
-; CHECK-PWR8-NEXT:    cntlzw r6, r6
+; CHECK-PWR8-NEXT:    xor r5, r4, r3
 ; CHECK-PWR8-NEXT:    cmplw r3, r4
-; CHECK-PWR8-NEXT:    srwi r6, r6, 5
-; CHECK-PWR8-NEXT:    xori r6, r6, 1
-; CHECK-PWR8-NEXT:    neg r3, r6
-; CHECK-PWR8-NEXT:    iselgt r3, r5, r3
+; CHECK-PWR8-NEXT:    li r3, 1
+; CHECK-PWR8-NEXT:    cntlzw r5, r5
+; CHECK-PWR8-NEXT:    srwi r5, r5, 5
+; CHECK-PWR8-NEXT:    xori r5, r5, 1
+; CHECK-PWR8-NEXT:    neg r5, r5
+; CHECK-PWR8-NEXT:    iselgt r3, r3, r5
 ; CHECK-PWR8-NEXT:    blr
   %t1 = icmp ugt i32 %a, %b
   %t2 = icmp ne i32 %b, %a
@@ -1089,14 +1089,14 @@ define i64 @setbuh(i16 %a, i16 %b) {
 ; CHECK-PWR8:       # %bb.0:
 ; CHECK-PWR8-NEXT:    clrlwi r3, r3, 16
 ; CHECK-PWR8-NEXT:    clrlwi r4, r4, 16
-; CHECK-PWR8-NEXT:    li r5, 1
-; CHECK-PWR8-NEXT:    xor r6, r4, r3
+; CHECK-PWR8-NEXT:    xor r5, r4, r3
 ; CHECK-PWR8-NEXT:    cmplw r4, r3
-; CHECK-PWR8-NEXT:    cntlzw r6, r6
-; CHECK-PWR8-NEXT:    srwi r6, r6, 5
-; CHECK-PWR8-NEXT:    xori r6, r6, 1
-; CHECK-PWR8-NEXT:    neg r3, r6
-; CHECK-PWR8-NEXT:    isellt r3, r5, r3
+; CHECK-PWR8-NEXT:    li r3, 1
+; CHECK-PWR8-NEXT:    cntlzw r5, r5
+; CHECK-PWR8-NEXT:    srwi r5, r5, 5
+; CHECK-PWR8-NEXT:    xori r5, r5, 1
+; CHECK-PWR8-NEXT:    neg r5, r5
+; CHECK-PWR8-NEXT:    isellt r3, r3, r5
 ; CHECK-PWR8-NEXT:    blr
   %t1 = icmp ult i16 %b, %a
   %t2 = icmp ne i16 %b, %a
@@ -1119,13 +1119,13 @@ define i64 @setbuc(i8 %a, i8 %b) {
 ; CHECK-PWR8:       # %bb.0:
 ; CHECK-PWR8-NEXT:    clrlwi r3, r3, 24
 ; CHECK-PWR8-NEXT:    clrlwi r4, r4, 24
-; CHECK-PWR8-NEXT:    li r5, 1
-; CHECK-PWR8-NEXT:    clrldi r6, r3, 32
-; CHECK-PWR8-NEXT:    clrldi r7, r4, 32
-; CHECK-PWR8-NEXT:    sub r6, r6, r7
+; CHECK-PWR8-NEXT:    clrldi r5, r3, 32
+; CHECK-PWR8-NEXT:    clrldi r6, r4, 32
 ; CHECK-PWR8-NEXT:    cmplw r3, r4
-; CHECK-PWR8-NEXT:    sradi r6, r6, 63
-; CHECK-PWR8-NEXT:    iselgt r3, r5, r6
+; CHECK-PWR8-NEXT:    li r3, 1
+; CHECK-PWR8-NEXT:    sub r5, r5, r6
+; CHECK-PWR8-NEXT:    sradi r5, r5, 63
+; CHECK-PWR8-NEXT:    iselgt r3, r3, r5
 ; CHECK-PWR8-NEXT:    blr
   %t1 = icmp ugt i8 %a, %b
   %t2 = icmp ult i8 %a, %b
@@ -1147,12 +1147,12 @@ define i64 @setbf1(float %a, float %b) {
 ; CHECK-PWR8-LABEL: setbf1:
 ; CHECK-PWR8:       # %bb.0:
 ; CHECK-PWR8-NEXT:    fcmpu cr0, f2, f1
-; CHECK-PWR8-NEXT:    fcmpu cr1, f1, f2
 ; CHECK-PWR8-NEXT:    li r3, 0
 ; CHECK-PWR8-NEXT:    li r4, 1
 ; CHECK-PWR8-NEXT:    isellt r3, r4, r3
+; CHECK-PWR8-NEXT:    fcmpu cr0, f1, f2
 ; CHECK-PWR8-NEXT:    li r4, -1
-; CHECK-PWR8-NEXT:    isel r3, r4, r3, 4*cr1+lt
+; CHECK-PWR8-NEXT:    isellt r3, r4, r3
 ; CHECK-PWR8-NEXT:    blr
   %t1 = fcmp nnan olt float %a, %b
   %t2 = fcmp nnan olt float %b, %a
@@ -1219,12 +1219,12 @@ define i64 @setbdf2(double %a, double %b) {
 ; CHECK-PWR8-LABEL: setbdf2:
 ; CHECK-PWR8:       # %bb.0:
 ; CHECK-PWR8-NEXT:    fcmpu cr0, f2, f1
-; CHECK-PWR8-NEXT:    xscmpudp cr1, f2, f1
 ; CHECK-PWR8-NEXT:    li r3, 0
 ; CHECK-PWR8-NEXT:    li r4, -1
 ; CHECK-PWR8-NEXT:    iselgt r3, r4, r3
+; CHECK-PWR8-NEXT:    xscmpudp cr0, f2, f1
 ; CHECK-PWR8-NEXT:    li r4, 1
-; CHECK-PWR8-NEXT:    isel r3, r4, r3, 4*cr1+lt
+; CHECK-PWR8-NEXT:    isellt r3, r4, r3
 ; CHECK-PWR8-NEXT:    blr
   %t1 = fcmp nnan olt double %b, %a
   %t2 = fcmp nnan ogt double %b, %a
@@ -1260,18 +1260,18 @@ define i64 @setbf128(fp128 %a, fp128 %b) {
 ; CHECK-PWR8-NEXT:    bl __ltkf2
 ; CHECK-PWR8-NEXT:    nop
 ; CHECK-PWR8-NEXT:    vmr v2, v30
-; CHECK-PWR8-NEXT:    srawi r30, r3, 31
 ; CHECK-PWR8-NEXT:    vmr v3, v31
+; CHECK-PWR8-NEXT:    srawi r30, r3, 31
 ; CHECK-PWR8-NEXT:    bl __gtkf2
 ; CHECK-PWR8-NEXT:    nop
-; CHECK-PWR8-NEXT:    li r4, 1
-; CHECK-PWR8-NEXT:    cmpwi r3, 0
-; CHECK-PWR8-NEXT:    iselgt r3, r4, r30
 ; CHECK-PWR8-NEXT:    li r4, 64
-; CHECK-PWR8-NEXT:    ld r30, 80(r1) # 8-byte Folded Reload
+; CHECK-PWR8-NEXT:    cmpwi r3, 0
+; CHECK-PWR8-NEXT:    li r3, 1
 ; CHECK-PWR8-NEXT:    lvx v31, r1, r4 # 16-byte Folded Reload
 ; CHECK-PWR8-NEXT:    li r4, 48
 ; CHECK-PWR8-NEXT:    lvx v30, r1, r4 # 16-byte Folded Reload
+; CHECK-PWR8-NEXT:    iselgt r3, r3, r30
+; CHECK-PWR8-NEXT:    ld r30, 80(r1) # 8-byte Folded Reload
 ; CHECK-PWR8-NEXT:    addi r1, r1, 96
 ; CHECK-PWR8-NEXT:    ld r0, 16(r1)
 ; CHECK-PWR8-NEXT:    mtlr r0
@@ -1298,12 +1298,12 @@ define i64 @setbn1(i64 %a, i64 %b) {
 ;
 ; CHECK-PWR8-LABEL: setbn1:
 ; CHECK-PWR8:       # %bb.0:
-; CHECK-PWR8-NEXT:    xor r6, r3, r4
-; CHECK-PWR8-NEXT:    li r5, -1
-; CHECK-PWR8-NEXT:    cntlzd r6, r6
+; CHECK-PWR8-NEXT:    xor r5, r3, r4
 ; CHECK-PWR8-NEXT:    cmpd r3, r4
-; CHECK-PWR8-NEXT:    rldicl r3, r6, 58, 63
-; CHECK-PWR8-NEXT:    isellt r3, r5, r3
+; CHECK-PWR8-NEXT:    li r3, -1
+; CHECK-PWR8-NEXT:    cntlzd r5, r5
+; CHECK-PWR8-NEXT:    rldicl r5, r5, 58, 63
+; CHECK-PWR8-NEXT:    isellt r3, r3, r5
 ; CHECK-PWR8-NEXT:    blr
   %t1 = icmp slt i64 %a, %b
   %t2 = icmp eq i64 %a, %b
@@ -1327,12 +1327,12 @@ define i64 @setbn2(double %a, double %b) {
 ; CHECK-PWR8-LABEL: setbn2:
 ; CHECK-PWR8:       # %bb.0:
 ; CHECK-PWR8-NEXT:    fcmpu cr0, f1, f2
-; CHECK-PWR8-NEXT:    xscmpudp cr1, f1, f2
 ; CHECK-PWR8-NEXT:    li r3, 1
 ; CHECK-PWR8-NEXT:    li r4, -1
 ; CHECK-PWR8-NEXT:    cror 4*cr5+lt, un, eq
+; CHECK-PWR8-NEXT:    xscmpudp cr0, f1, f2
 ; CHECK-PWR8-NEXT:    isel r3, 0, r3, 4*cr5+lt
-; CHECK-PWR8-NEXT:    isel r3, r4, r3, 4*cr1+lt
+; CHECK-PWR8-NEXT:    isellt r3, r4, r3
 ; CHECK-PWR8-NEXT:    blr
   %t1 = fcmp olt double %a, %b
   %t2 = fcmp one double %a, %b
@@ -1357,8 +1357,8 @@ define i64 @setbn3(float %a, float %b) {
 ; CHECK-PWR8-NEXT:    fcmpu cr0, f1, f2
 ; CHECK-PWR8-NEXT:    li r3, 1
 ; CHECK-PWR8-NEXT:    li r4, -1
-; CHECK-PWR8-NEXT:    cror 4*cr5+lt, lt, un
 ; CHECK-PWR8-NEXT:    iseleq r3, 0, r3
+; CHECK-PWR8-NEXT:    cror 4*cr5+lt, lt, un
 ; CHECK-PWR8-NEXT:    isel r3, r4, r3, 4*cr5+lt
 ; CHECK-PWR8-NEXT:    blr
   %t1 = fcmp ult float %a, %b

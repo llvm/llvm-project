@@ -1,4 +1,5 @@
 // RUN: mlir-opt %s -test-scalar-vector-transfer-lowering -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -test-scalar-vector-transfer-lowering=allow-multiple-uses -split-input-file | FileCheck %s --check-prefix=MULTIUSE
 
 // CHECK-LABEL: func @transfer_read_0d(
 //  CHECK-SAME:     %[[m:.*]]: memref<?x?x?xf32>, %[[idx:.*]]: index
@@ -92,7 +93,7 @@ func.func @transfer_read_2d_extract(%m: memref<?x?x?x?xf32>, %idx: index, %idx2:
   %cst = arith.constant 0.0 : f32
   %c0 = arith.constant 0 : index
   %0 = vector.transfer_read %m[%idx, %idx, %idx, %idx], %cst {in_bounds = [true, true]} : memref<?x?x?x?xf32>, vector<10x5xf32>
-  %1 = vector.extract %0[8, 1] : vector<10x5xf32>
+  %1 = vector.extract %0[8, 1] : f32 from vector<10x5xf32>
   return %1 : f32
 }
 
@@ -101,10 +102,54 @@ func.func @transfer_read_2d_extract(%m: memref<?x?x?x?xf32>, %idx: index, %idx2:
 // CHECK-LABEL: func @transfer_write_arith_constant(
 //  CHECK-SAME:     %[[m:.*]]: memref<?x?x?xf32>, %[[idx:.*]]: index
 //       CHECK:   %[[cst:.*]] = arith.constant dense<5.000000e+00> : vector<1x1xf32>
-//       CHECK:   %[[extract:.*]] = vector.extract %[[cst]][0, 0] : vector<1x1xf32>
+//       CHECK:   %[[extract:.*]] = vector.extract %[[cst]][0, 0] : f32 from vector<1x1xf32>
 //       CHECK:   memref.store %[[extract]], %[[m]][%[[idx]], %[[idx]], %[[idx]]]
 func.func @transfer_write_arith_constant(%m: memref<?x?x?xf32>, %idx: index) {
   %cst = arith.constant dense<5.000000e+00> : vector<1x1xf32>
   vector.transfer_write %cst, %m[%idx, %idx, %idx] : vector<1x1xf32>, memref<?x?x?xf32>
   return
 }
+
+// -----
+
+// CHECK-LABEL: func @transfer_read_multi_use(
+//  CHECK-SAME:   %[[m:.*]]: memref<?xf32>, %[[idx:.*]]: index
+//   CHECK-NOT:   memref.load
+//       CHECK:   %[[r:.*]] = vector.transfer_read %[[m]][%[[idx]]]
+//       CHECK:   %[[e0:.*]] = vector.extract %[[r]][0]
+//       CHECK:   %[[e1:.*]] = vector.extract %[[r]][1]
+//       CHECK:   return %[[e0]], %[[e1]]
+
+// MULTIUSE-LABEL: func @transfer_read_multi_use(
+//  MULTIUSE-SAME:   %[[m:.*]]: memref<?xf32>, %[[idx0:.*]]: index
+//   MULTIUSE-NOT:   vector.transfer_read
+//       MULTIUSE:   %[[r0:.*]] = memref.load %[[m]][%[[idx0]]
+//       MULTIUSE:   %[[idx1:.*]] = affine.apply
+//       MULTIUSE:   %[[r1:.*]] = memref.load %[[m]][%[[idx1]]
+//       MULTIUSE:   return %[[r0]], %[[r1]]
+
+func.func @transfer_read_multi_use(%m: memref<?xf32>, %idx: index) -> (f32, f32) {
+  %cst = arith.constant 0.0 : f32
+  %0 = vector.transfer_read %m[%idx], %cst {in_bounds = [true]} : memref<?xf32>, vector<16xf32>
+  %1 = vector.extract %0[0] : f32 from vector<16xf32>
+  %2 = vector.extract %0[1] : f32 from vector<16xf32>
+  return %1, %2 : f32, f32
+}
+
+// -----
+
+// Check that patterns don't trigger for an sub-vector (not scalar) extraction.
+// CHECK-LABEL: func @subvector_extract(
+//  CHECK-SAME:   %[[m:.*]]: memref<?x?xf32>, %[[idx:.*]]: index
+//   CHECK-NOT:   memref.load
+//       CHECK:   %[[r:.*]] = vector.transfer_read %[[m]][%[[idx]], %[[idx]]]
+//       CHECK:   %[[e0:.*]] = vector.extract %[[r]][0]
+//       CHECK:   return %[[e0]]
+
+func.func @subvector_extract(%m: memref<?x?xf32>, %idx: index) -> vector<16xf32> {
+  %cst = arith.constant 0.0 : f32
+  %0 = vector.transfer_read %m[%idx, %idx], %cst {in_bounds = [true, true]} : memref<?x?xf32>, vector<8x16xf32>
+  %1 = vector.extract %0[0] : vector<16xf32> from vector<8x16xf32>
+  return %1 : vector<16xf32>
+}
+

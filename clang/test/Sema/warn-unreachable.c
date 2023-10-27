@@ -135,8 +135,7 @@ void PR9774(int *s) {
         s[i] = 0;
 }
 
-// Test case for <rdar://problem/11005770>.  We should treat code guarded
-// by 'x & 0' and 'x * 0' as unreachable.
+// We should treat code guarded by 'x & 0' and 'x * 0' as unreachable.
 int calledFun(void);
 void test_mul_and_zero(int x) {
   if (x & 0) calledFun(); // expected-warning {{will never be executed}}
@@ -397,8 +396,6 @@ void test_with_paren_silencing(int x) {
   else
     calledFun();
 }
-
-// rdar://24570531
 
 struct StructWithPointer {
   void *p;

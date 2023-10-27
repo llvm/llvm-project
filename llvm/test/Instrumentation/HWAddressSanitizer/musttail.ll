@@ -4,7 +4,7 @@
 ; RUN: opt -S -passes=hwasan -hwasan-use-stack-safety=0 %s -o - | FileCheck %s
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
-target triple = "aarch64-arm-unknown-eabi"
+target triple = "aarch64"
 
 define dso_local noundef i32 @_Z3bari(i32 noundef %0) sanitize_hwaddress {
   %2 = alloca i32, align 4

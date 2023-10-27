@@ -9,7 +9,6 @@ import lldbsuite.test.lldbutil as lldbutil
 
 
 class UbsanUserExpressionTestCase(TestBase):
-
     @skipUnlessUndefinedBehaviorSanitizer
     def test(self):
         self.build()
@@ -18,7 +17,7 @@ class UbsanUserExpressionTestCase(TestBase):
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
-        self.line_breakpoint = line_number('main.c', '// breakpoint line')
+        self.line_breakpoint = line_number("main.c", "// breakpoint line")
 
     def ubsan_tests(self):
         # Load the test
@@ -35,10 +34,16 @@ class UbsanUserExpressionTestCase(TestBase):
         thread = process.GetSelectedThread()
         frame = thread.GetSelectedFrame()
 
-        self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
-                    substrs=['stopped', 'stop reason = breakpoint'])
+        self.expect(
+            "thread list",
+            STOPPED_DUE_TO_BREAKPOINT,
+            substrs=["stopped", "stop reason = breakpoint"],
+        )
 
-        self.expect("p foo()", substrs=["(int) $0 = 42"])
+        self.expect("expression foo()", substrs=["(int) $0 = 42"])
 
-        self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
-                    substrs=['stopped', 'stop reason = breakpoint'])
+        self.expect(
+            "thread list",
+            STOPPED_DUE_TO_BREAKPOINT,
+            substrs=["stopped", "stop reason = breakpoint"],
+        )

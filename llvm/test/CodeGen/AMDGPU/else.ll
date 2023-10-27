@@ -48,11 +48,11 @@ else:
 
 end:
   %r = phi float [ %v.if, %if ], [ %v.else, %else ]
-  call void @llvm.amdgcn.raw.buffer.store.f32(float %r, <4 x i32> undef, i32 0, i32 0, i32 0)
+  call void @llvm.amdgcn.raw.ptr.buffer.store.f32(float %r, ptr addrspace(8) undef, i32 0, i32 0, i32 0)
   ret void
 }
 
-declare void @llvm.amdgcn.raw.buffer.store.f32(float, <4 x i32>, i32, i32, i32 immarg) #1
+declare void @llvm.amdgcn.raw.ptr.buffer.store.f32(float, ptr addrspace(8), i32, i32, i32 immarg) #1
 declare <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 immarg, float, <8 x i32>, <4 x i32>, i1 immarg, i32 immarg, i32 immarg) #2
 
 attributes #0 = { nounwind }

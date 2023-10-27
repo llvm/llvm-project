@@ -38,6 +38,16 @@ static llvm::cl::opt<IndexFileFormat>
                                        "binary RIFF format")),
            llvm::cl::init(IndexFileFormat::RIFF));
 
+static llvm::cl::list<std::string> QueryDriverGlobs{
+    "query-driver",
+    llvm::cl::desc(
+        "Comma separated list of globs for white-listing gcc-compatible "
+        "drivers that are safe to execute. Drivers matching any of these globs "
+        "will be used to extract system includes. e.g. "
+        "/usr/bin/**/clang-*,/path/to/repo/**/g++-*"),
+    llvm::cl::CommaSeparated,
+};
+
 class IndexActionFactory : public tooling::FrontendActionFactory {
 public:
   IndexActionFactory(IndexFileIn &Result) : Result(Result) {}
@@ -46,10 +56,10 @@ public:
     SymbolCollector::Options Opts;
     Opts.CountReferences = true;
     Opts.FileFilter = [&](const SourceManager &SM, FileID FID) {
-      const auto *F = SM.getFileEntryForID(FID);
+      const auto F = SM.getFileEntryRefForID(FID);
       if (!F)
         return false; // Skip invalid files.
-      auto AbsPath = getCanonicalPath(F, SM);
+      auto AbsPath = getCanonicalPath(*F, SM.getFileManager());
       if (!AbsPath)
         return false; // Skip files without absolute path.
       std::lock_guard<std::mutex> Lock(FilesMu);
@@ -144,12 +154,16 @@ int main(int argc, const char **argv) {
 
   // Collect symbols found in each translation unit, merging as we go.
   clang::clangd::IndexFileIn Data;
+  auto Mangler = std::make_shared<clang::clangd::CommandMangler>(
+      clang::clangd::CommandMangler::detect());
+  Mangler->SystemIncludeExtractor = clang::clangd::getSystemIncludeExtractor(
+      static_cast<llvm::ArrayRef<std::string>>(
+          clang::clangd::QueryDriverGlobs));
   auto Err = Executor->get()->execute(
       std::make_unique<clang::clangd::IndexActionFactory>(Data),
       clang::tooling::ArgumentsAdjuster(
-          [Mangler = std::make_shared<clang::clangd::CommandMangler>(
-               clang::clangd::CommandMangler::detect())](
-              const std::vector<std::string> &Args, llvm::StringRef File) {
+          [Mangler = std::move(Mangler)](const std::vector<std::string> &Args,
+                                         llvm::StringRef File) {
             clang::tooling::CompileCommand Cmd;
             Cmd.CommandLine = Args;
             Mangler->operator()(Cmd, File);

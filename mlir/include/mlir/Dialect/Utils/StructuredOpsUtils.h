@@ -20,6 +20,7 @@
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Location.h"
+#include "mlir/IR/TypeRange.h"
 #include "mlir/Support/LLVM.h"
 
 // Pull in all enum type definitions and utility function declarations.
@@ -28,8 +29,6 @@
 namespace mlir {
 
 class OpBuilder;
-class TypeRange;
-class ValueRange;
 class RewriterBase;
 
 /// Tests whether the given maps describe a row major matmul. The test is
@@ -116,12 +115,22 @@ protected:
 // Note: this is a true builder that notifies the OpBuilder listener.
 Operation *clone(OpBuilder &b, Operation *op, TypeRange newResultTypes,
                  ValueRange newOperands);
+template <typename OpT>
+OpT clone(OpBuilder &b, OpT op, TypeRange newResultTypes,
+          ValueRange newOperands) {
+  return cast<OpT>(clone(b, op.getOperation(), newResultTypes, newOperands));
+}
 
 // Clone the current operation with the operands but leave the regions empty.
 // Note: this is a true builder that notifies the OpBuilder listener.
 Operation *cloneWithoutRegions(OpBuilder &b, Operation *op,
                                TypeRange newResultTypes,
                                ValueRange newOperands);
+
+// Get the list of attributes associated with the op, ignoring
+// those with the provided name.
+SmallVector<NamedAttribute>
+getPrunedAttributeList(Operation *op, ArrayRef<StringRef> elidedAttrs);
 
 } // namespace mlir
 

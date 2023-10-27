@@ -28,8 +28,8 @@
 
 ; Check that all the names are present in the output
 ; CHECK:  Hash 0x597841
-; CHECK:    String: 0x{{[0-9a-f]*}} "is"
 ; CHECK:    String: 0x{{[0-9a-f]*}} "k1"
+; CHECK:    String: 0x{{[0-9a-f]*}} "is"
 
 ; CHECK: Hash 0xa4b42a1e
 ; CHECK:    String: 0x{{[0-9a-f]*}} "_ZN5clang23DataRecursiveASTVisitorIN12_GLOBAL__N_124UnusedBackingIvarCheckerEE26TraverseCUDAKernelCallExprEPNS_18CUDAKernelCallExprE"

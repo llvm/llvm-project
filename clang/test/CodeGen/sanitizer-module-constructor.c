@@ -18,4 +18,4 @@ void h(void) { f(e); }
 
 // CHECK: Running pass: {{.*}}SanitizerPass
 // CHECK-NOT: Running pass: LoopSimplifyPass on {{.*}}san.module_ctor
-// CHECK: Running analysis: DominatorTreeAnalysis on {{.*}}san.module_ctor
+// CHECK: Running analysis: TargetLibraryAnalysis on {{.*}}san.module_ctor

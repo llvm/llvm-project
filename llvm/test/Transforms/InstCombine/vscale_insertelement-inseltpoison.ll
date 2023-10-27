@@ -86,17 +86,17 @@ define <vscale x 4 x float> @insertelement_sequene_may_not_be_splat(float %x) {
 
 ; OSS-Fuzz #27416
 ; https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=27416
-define void @ossfuzz_27416(i32 %v) {
+define void @ossfuzz_27416(i32 %v, ptr %p) {
 ; CHECK-LABEL: @ossfuzz_27416(
 ; CHECK-NEXT:    [[IN:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[V:%.*]], i64 0
 ; CHECK-NEXT:    [[SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[IN]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[I1:%.*]] = insertelement <vscale x 4 x i32> [[SPLAT]], i32 undef, i64 128
-; CHECK-NEXT:    store <vscale x 4 x i32> [[I1]], ptr undef, align 16
+; CHECK-NEXT:    store <vscale x 4 x i32> [[I1]], ptr [[P:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %in = insertelement <vscale x 4 x i32> poison, i32 %v, i32 0
   %splat = shufflevector <vscale x 4 x i32> %in, <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
   %I1 = insertelement <vscale x 4 x i32> %splat, i32 undef, i8 -128
-  store <vscale x 4 x i32> %I1, ptr undef, align 16
+  store <vscale x 4 x i32> %I1, ptr %p, align 16
   ret void
 }

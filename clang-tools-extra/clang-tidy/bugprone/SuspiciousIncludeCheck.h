@@ -12,9 +12,7 @@
 #include "../ClangTidyCheck.h"
 #include "../utils/FileExtensionsUtils.h"
 
-namespace clang {
-namespace tidy {
-namespace bugprone {
+namespace clang::tidy::bugprone {
 
 /// Warns on inclusion of files whose names suggest that they're implementation
 /// files, instead of headers. E.g:
@@ -42,16 +40,14 @@ public:
                            Preprocessor *ModuleExpanderPP) override;
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
 
-  utils::FileExtensionsSet HeaderFileExtensions;
-  utils::FileExtensionsSet ImplementationFileExtensions;
+  FileExtensionsSet HeaderFileExtensions;
+  FileExtensionsSet ImplementationFileExtensions;
 
 private:
-  const StringRef RawStringHeaderFileExtensions;
-  const StringRef RawStringImplementationFileExtensions;
+  StringRef RawStringHeaderFileExtensions;
+  StringRef RawStringImplementationFileExtensions;
 };
 
-} // namespace bugprone
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::bugprone
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_SUSPICIOUSINCLUDECHECK_H

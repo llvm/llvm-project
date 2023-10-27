@@ -1,5 +1,4 @@
 // RUN: %clang_cc1  -fobjc-arc -verify %s
-// rdar://18222007
 
 #if __has_feature(arc_cf_code_audited)
 #define CF_IMPLICIT_BRIDGING_ENABLED _Pragma("clang arc_cf_code_audited begin")

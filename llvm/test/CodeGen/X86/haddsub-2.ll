@@ -684,10 +684,10 @@ define <16 x i16> @avx2_vphadd_w_test(<16 x i16> %a, <16 x i16> %b) nounwind {
 ; SSE3-NEXT:    pextrw $6, %xmm3, %r13d
 ; SSE3-NEXT:    pextrw $7, %xmm3, %eax
 ; SSE3-NEXT:    addl %r13d, %eax
-; SSE3-NEXT:    movd %r12d, %xmm2
-; SSE3-NEXT:    movd %r14d, %xmm3
+; SSE3-NEXT:    movd %r12d, %xmm4
+; SSE3-NEXT:    movd %r14d, %xmm2
 ; SSE3-NEXT:    movd %ebx, %xmm5
-; SSE3-NEXT:    movd %r10d, %xmm4
+; SSE3-NEXT:    movd %r10d, %xmm3
 ; SSE3-NEXT:    movd %r8d, %xmm6
 ; SSE3-NEXT:    movd %esi, %xmm7
 ; SSE3-NEXT:    movd {{[-0-9]+}}(%r{{[sb]}}p), %xmm8 # 4-byte Folded Reload
@@ -702,13 +702,13 @@ define <16 x i16> @avx2_vphadd_w_test(<16 x i16> %a, <16 x i16> %b) nounwind {
 ; SSE3-NEXT:    movd %r9d, %xmm14
 ; SSE3-NEXT:    movd %edi, %xmm15
 ; SSE3-NEXT:    movd %edx, %xmm1
-; SSE3-NEXT:    punpcklwd {{.*#+}} xmm3 = xmm3[0],xmm2[0],xmm3[1],xmm2[1],xmm3[2],xmm2[2],xmm3[3],xmm2[3]
-; SSE3-NEXT:    punpcklwd {{.*#+}} xmm4 = xmm4[0],xmm5[0],xmm4[1],xmm5[1],xmm4[2],xmm5[2],xmm4[3],xmm5[3]
-; SSE3-NEXT:    punpckldq {{.*#+}} xmm4 = xmm4[0],xmm3[0],xmm4[1],xmm3[1]
+; SSE3-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm4[0],xmm2[1],xmm4[1],xmm2[2],xmm4[2],xmm2[3],xmm4[3]
+; SSE3-NEXT:    punpcklwd {{.*#+}} xmm3 = xmm3[0],xmm5[0],xmm3[1],xmm5[1],xmm3[2],xmm5[2],xmm3[3],xmm5[3]
+; SSE3-NEXT:    punpckldq {{.*#+}} xmm3 = xmm3[0],xmm2[0],xmm3[1],xmm2[1]
 ; SSE3-NEXT:    punpcklwd {{.*#+}} xmm7 = xmm7[0],xmm6[0],xmm7[1],xmm6[1],xmm7[2],xmm6[2],xmm7[3],xmm6[3]
 ; SSE3-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm8[0],xmm0[1],xmm8[1],xmm0[2],xmm8[2],xmm0[3],xmm8[3]
 ; SSE3-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm7[0],xmm0[1],xmm7[1]
-; SSE3-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm4[0]
+; SSE3-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm3[0]
 ; SSE3-NEXT:    punpcklwd {{.*#+}} xmm10 = xmm10[0],xmm9[0],xmm10[1],xmm9[1],xmm10[2],xmm9[2],xmm10[3],xmm9[3]
 ; SSE3-NEXT:    punpcklwd {{.*#+}} xmm12 = xmm12[0],xmm11[0],xmm12[1],xmm11[1],xmm12[2],xmm11[2],xmm12[3],xmm11[3]
 ; SSE3-NEXT:    punpckldq {{.*#+}} xmm12 = xmm12[0],xmm10[0],xmm12[1],xmm10[1]
@@ -906,14 +906,14 @@ define <4 x float> @not_a_hsub_2(<4 x float> %A, <4 x float> %B) {
 ;
 ; AVX-LABEL: not_a_hsub_2:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm0[1,0]
-; AVX-NEXT:    vpermilps {{.*#+}} xmm3 = xmm0[3,3,3,3]
+; AVX-NEXT:    vshufpd {{.*#+}} xmm2 = xmm0[1,0]
+; AVX-NEXT:    vshufps {{.*#+}} xmm3 = xmm0[3,3,3,3]
 ; AVX-NEXT:    vsubss %xmm3, %xmm2, %xmm2
 ; AVX-NEXT:    vmovshdup {{.*#+}} xmm3 = xmm0[1,1,3,3]
 ; AVX-NEXT:    vsubss %xmm3, %xmm0, %xmm0
 ; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[2,3]
-; AVX-NEXT:    vpermilps {{.*#+}} xmm2 = xmm1[3,3,3,3]
-; AVX-NEXT:    vpermilpd {{.*#+}} xmm3 = xmm1[1,0]
+; AVX-NEXT:    vshufps {{.*#+}} xmm2 = xmm1[3,3,3,3]
+; AVX-NEXT:    vshufpd {{.*#+}} xmm3 = xmm1[1,0]
 ; AVX-NEXT:    vsubss %xmm3, %xmm2, %xmm2
 ; AVX-NEXT:    vmovshdup {{.*#+}} xmm3 = xmm1[1,1,3,3]
 ; AVX-NEXT:    vsubss %xmm3, %xmm1, %xmm1
@@ -954,9 +954,9 @@ define <2 x double> @not_a_hsub_3(<2 x double> %A, <2 x double> %B) {
 ;
 ; AVX-LABEL: not_a_hsub_3:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm1[1,0]
+; AVX-NEXT:    vshufpd {{.*#+}} xmm2 = xmm1[1,0]
 ; AVX-NEXT:    vsubsd %xmm2, %xmm1, %xmm1
-; AVX-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm0[1,0]
+; AVX-NEXT:    vshufpd {{.*#+}} xmm2 = xmm0[1,0]
 ; AVX-NEXT:    vsubsd %xmm0, %xmm2, %xmm0
 ; AVX-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; AVX-NEXT:    retq
@@ -1296,10 +1296,10 @@ define <16 x i16> @avx2_hadd_w(<16 x i16> %a, <16 x i16> %b) nounwind {
 ; SSE3-NEXT:    pextrw $6, %xmm3, %r13d
 ; SSE3-NEXT:    pextrw $7, %xmm3, %eax
 ; SSE3-NEXT:    addl %r13d, %eax
-; SSE3-NEXT:    movd %r12d, %xmm2
-; SSE3-NEXT:    movd %r15d, %xmm3
+; SSE3-NEXT:    movd %r12d, %xmm4
+; SSE3-NEXT:    movd %r15d, %xmm2
 ; SSE3-NEXT:    movd %r14d, %xmm5
-; SSE3-NEXT:    movd %ebp, %xmm4
+; SSE3-NEXT:    movd %ebp, %xmm3
 ; SSE3-NEXT:    movd %r10d, %xmm6
 ; SSE3-NEXT:    movd %r9d, %xmm7
 ; SSE3-NEXT:    movd %esi, %xmm8
@@ -1314,13 +1314,13 @@ define <16 x i16> @avx2_hadd_w(<16 x i16> %a, <16 x i16> %b) nounwind {
 ; SSE3-NEXT:    # xmm15 = mem[0],zero,zero,zero
 ; SSE3-NEXT:    movd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 4-byte Folded Reload
 ; SSE3-NEXT:    # xmm1 = mem[0],zero,zero,zero
-; SSE3-NEXT:    punpcklwd {{.*#+}} xmm3 = xmm3[0],xmm2[0],xmm3[1],xmm2[1],xmm3[2],xmm2[2],xmm3[3],xmm2[3]
-; SSE3-NEXT:    punpcklwd {{.*#+}} xmm4 = xmm4[0],xmm5[0],xmm4[1],xmm5[1],xmm4[2],xmm5[2],xmm4[3],xmm5[3]
-; SSE3-NEXT:    punpckldq {{.*#+}} xmm4 = xmm4[0],xmm3[0],xmm4[1],xmm3[1]
+; SSE3-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm4[0],xmm2[1],xmm4[1],xmm2[2],xmm4[2],xmm2[3],xmm4[3]
+; SSE3-NEXT:    punpcklwd {{.*#+}} xmm3 = xmm3[0],xmm5[0],xmm3[1],xmm5[1],xmm3[2],xmm5[2],xmm3[3],xmm5[3]
+; SSE3-NEXT:    punpckldq {{.*#+}} xmm3 = xmm3[0],xmm2[0],xmm3[1],xmm2[1]
 ; SSE3-NEXT:    punpcklwd {{.*#+}} xmm7 = xmm7[0],xmm6[0],xmm7[1],xmm6[1],xmm7[2],xmm6[2],xmm7[3],xmm6[3]
 ; SSE3-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm8[0],xmm0[1],xmm8[1],xmm0[2],xmm8[2],xmm0[3],xmm8[3]
 ; SSE3-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm7[0],xmm0[1],xmm7[1]
-; SSE3-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm4[0]
+; SSE3-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm3[0]
 ; SSE3-NEXT:    punpcklwd {{.*#+}} xmm10 = xmm10[0],xmm9[0],xmm10[1],xmm9[1],xmm10[2],xmm9[2],xmm10[3],xmm9[3]
 ; SSE3-NEXT:    punpcklwd {{.*#+}} xmm12 = xmm12[0],xmm11[0],xmm12[1],xmm11[1],xmm12[2],xmm11[2],xmm12[3],xmm11[3]
 ; SSE3-NEXT:    punpckldq {{.*#+}} xmm12 = xmm12[0],xmm10[0],xmm12[1],xmm10[1]

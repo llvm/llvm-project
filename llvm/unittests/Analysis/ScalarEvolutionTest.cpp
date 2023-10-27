@@ -19,7 +19,6 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/LLVMContext.h"
-#include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/Support/SourceMgr.h"
@@ -353,7 +352,7 @@ TEST_F(ScalarEvolutionsTest, CompareSCEVComplexity) {
 
 TEST_F(ScalarEvolutionsTest, CompareValueComplexity) {
   IntegerType *IntPtrTy = M.getDataLayout().getIntPtrType(Context);
-  PointerType *IntPtrPtrTy = IntPtrTy->getPointerTo();
+  PointerType *IntPtrPtrTy = PointerType::getUnqual(Context);
 
   FunctionType *FTy =
       FunctionType::get(Type::getVoidTy(Context), {IntPtrTy, IntPtrTy}, false);
@@ -741,7 +740,7 @@ TEST_F(ScalarEvolutionsTest, SCEVExitLimitForgetLoop) {
   NIM.setDataLayout(DataLayout);
 
   Type *T_int64 = Type::getInt64Ty(Context);
-  Type *T_pint64 = T_int64->getPointerTo(10);
+  Type *T_pint64 = PointerType::get(Context, 10);
 
   FunctionType *FTy =
       FunctionType::get(Type::getVoidTy(Context), {T_pint64}, false);
@@ -839,7 +838,7 @@ TEST_F(ScalarEvolutionsTest, SCEVExitLimitForgetValue) {
   NIM.setDataLayout(DataLayout);
 
   Type *T_int64 = Type::getInt64Ty(Context);
-  Type *T_pint64 = T_int64->getPointerTo(10);
+  Type *T_pint64 = PointerType::get(Context, 10);
 
   FunctionType *FTy =
       FunctionType::get(Type::getVoidTy(Context), {T_pint64}, false);
@@ -1536,211 +1535,57 @@ TEST_F(ScalarEvolutionsTest, SCEVUDivFloorCeiling) {
   });
 }
 
-TEST_F(ScalarEvolutionsTest, ComputeMaxTripCountFromArrayNormal) {
-  LLVMContext C;
-  SMDiagnostic Err;
-  std::unique_ptr<Module> M = parseAssemblyString(
-      "define void @foo(i32 signext %len) { "
-      "entry: "
-      "  %a = alloca [7 x i32], align 4 "
-      "  %cmp4 = icmp sgt i32 %len, 0 "
-      "  br i1 %cmp4, label %for.body.preheader, label %for.cond.cleanup "
-      "for.body.preheader: "
-      "  br label %for.body "
-      "for.cond.cleanup.loopexit: "
-      "  br label %for.cond.cleanup "
-      "for.cond.cleanup: "
-      "  ret void "
-      "for.body: "
-      "  %iv = phi i32 [ %inc, %for.body ], [ 0, %for.body.preheader ] "
-      "  %idxprom = zext i32 %iv to i64 "
-      "  %arrayidx = getelementptr inbounds [7 x i32], [7 x i32]* %a, i64 0, \
-    i64 %idxprom "
-      "  store i32 0, i32* %arrayidx, align 4 "
-      "  %inc = add nuw nsw i32 %iv, 1 "
-      "  %cmp = icmp slt i32 %inc, %len "
-      "  br i1 %cmp, label %for.body, label %for.cond.cleanup.loopexit "
-      "} ",
-      Err, C);
+TEST_F(ScalarEvolutionsTest, CheckGetPowerOfTwo) {
+  Module M("CheckGetPowerOfTwo", Context);
+  FunctionType *FTy = FunctionType::get(Type::getVoidTy(Context), {}, false);
+  Function *F = Function::Create(FTy, Function::ExternalLinkage, "foo", M);
+  BasicBlock *Entry = BasicBlock::Create(Context, "entry", F);
+  IRBuilder<> Builder(Entry);
+  Builder.CreateRetVoid();
+  ScalarEvolution SE = buildSE(*F);
 
-  ASSERT_TRUE(M && "Could not parse module?");
-  ASSERT_TRUE(!verifyModule(*M) && "Must have been well formed!");
-
-  runWithSE(*M, "foo", [](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
-    auto *ScevIV = SE.getSCEV(getInstructionByName(F, "iv"));
-    const Loop *L = cast<SCEVAddRecExpr>(ScevIV)->getLoop();
-
-    const SCEV *ITC = SE.getConstantMaxTripCountFromArray(L);
-    EXPECT_FALSE(isa<SCEVCouldNotCompute>(ITC));
-    EXPECT_TRUE(isa<SCEVConstant>(ITC));
-    EXPECT_EQ(cast<SCEVConstant>(ITC)->getAPInt().getSExtValue(), 8);
-  });
+  for (unsigned short i = 0; i < 64; ++i)
+    EXPECT_TRUE(
+        dyn_cast<SCEVConstant>(SE.getPowerOfTwo(Type::getInt64Ty(Context), i))
+            ->getValue()
+            ->equalsInt(1ULL << i));
 }
 
-TEST_F(ScalarEvolutionsTest, ComputeMaxTripCountFromZeroArray) {
+TEST_F(ScalarEvolutionsTest, ApplyLoopGuards) {
   LLVMContext C;
   SMDiagnostic Err;
   std::unique_ptr<Module> M = parseAssemblyString(
-      "define void @foo(i32 signext %len) { "
-      "entry: "
-      "  %a = alloca [0 x i32], align 4 "
-      "  %cmp4 = icmp sgt i32 %len, 0 "
-      "  br i1 %cmp4, label %for.body.preheader, label %for.cond.cleanup "
-      "for.body.preheader: "
-      "  br label %for.body "
-      "for.cond.cleanup.loopexit: "
-      "  br label %for.cond.cleanup "
-      "for.cond.cleanup: "
-      "  ret void "
-      "for.body: "
-      "  %iv = phi i32 [ %inc, %for.body ], [ 0, %for.body.preheader ] "
-      "  %idxprom = zext i32 %iv to i64 "
-      "  %arrayidx = getelementptr inbounds [0 x i32], [0 x i32]* %a, i64 0, \
-    i64 %idxprom "
-      "  store i32 0, i32* %arrayidx, align 4 "
-      "  %inc = add nuw nsw i32 %iv, 1 "
-      "  %cmp = icmp slt i32 %inc, %len "
-      "  br i1 %cmp, label %for.body, label %for.cond.cleanup.loopexit "
-      "} ",
+      "declare void @llvm.assume(i1)\n"
+      "define void @test(i32 %num) {\n"
+      "entry:\n"
+      "  %u = urem i32 %num, 4\n"
+      "  %cmp = icmp eq i32 %u, 0\n"
+      "  tail call void @llvm.assume(i1 %cmp)\n"
+      "  %cmp.1 = icmp ugt i32 %num, 0\n"
+      "  tail call void @llvm.assume(i1 %cmp.1)\n"
+      "  br label %for.body\n"
+      "for.body:\n"
+      "  %i.010 = phi i32 [ 0, %entry ], [ %inc, %for.body ]\n"
+      "  %inc = add nuw nsw i32 %i.010, 1\n"
+      "  %cmp2 = icmp ult i32 %inc, %num\n"
+      "  br i1 %cmp2, label %for.body, label %exit\n"
+      "exit:\n"
+      "  ret void\n"
+      "}\n",
       Err, C);
 
   ASSERT_TRUE(M && "Could not parse module?");
   ASSERT_TRUE(!verifyModule(*M) && "Must have been well formed!");
 
-  runWithSE(*M, "foo", [](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
-    auto *ScevIV = SE.getSCEV(getInstructionByName(F, "iv"));
-    const Loop *L = cast<SCEVAddRecExpr>(ScevIV)->getLoop();
-
-    const SCEV *ITC = SE.getConstantMaxTripCountFromArray(L);
-    EXPECT_FALSE(isa<SCEVCouldNotCompute>(ITC));
-    EXPECT_TRUE(isa<SCEVConstant>(ITC));
-    EXPECT_EQ(cast<SCEVConstant>(ITC)->getAPInt().getSExtValue(), 1);
-  });
-}
-
-TEST_F(ScalarEvolutionsTest, ComputeMaxTripCountFromExtremArray) {
-  LLVMContext C;
-  SMDiagnostic Err;
-  std::unique_ptr<Module> M = parseAssemblyString(
-      "define void @foo(i32 signext %len) { "
-      "entry: "
-      "  %a = alloca [4294967295 x i1], align 4 "
-      "  %cmp4 = icmp sgt i32 %len, 0 "
-      "  br i1 %cmp4, label %for.body.preheader, label %for.cond.cleanup "
-      "for.body.preheader: "
-      "  br label %for.body "
-      "for.cond.cleanup.loopexit: "
-      "  br label %for.cond.cleanup "
-      "for.cond.cleanup: "
-      "  ret void "
-      "for.body: "
-      "  %iv = phi i32 [ %inc, %for.body ], [ 0, %for.body.preheader ] "
-      "  %idxprom = zext i32 %iv to i64 "
-      "  %arrayidx = getelementptr inbounds [4294967295 x i1], \
-    [4294967295 x i1]* %a, i64 0, i64 %idxprom "
-      "  store i1 0, i1* %arrayidx, align 4 "
-      "  %inc = add nuw nsw i32 %iv, 1 "
-      "  %cmp = icmp slt i32 %inc, %len "
-      "  br i1 %cmp, label %for.body, label %for.cond.cleanup.loopexit "
-      "} ",
-      Err, C);
-
-  ASSERT_TRUE(M && "Could not parse module?");
-  ASSERT_TRUE(!verifyModule(*M) && "Must have been well formed!");
-
-  runWithSE(*M, "foo", [](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
-    auto *ScevIV = SE.getSCEV(getInstructionByName(F, "iv"));
-    const Loop *L = cast<SCEVAddRecExpr>(ScevIV)->getLoop();
-
-    const SCEV *ITC = SE.getConstantMaxTripCountFromArray(L);
-    EXPECT_TRUE(isa<SCEVCouldNotCompute>(ITC));
-  });
-}
-
-TEST_F(ScalarEvolutionsTest, ComputeMaxTripCountFromArrayInBranch) {
-  LLVMContext C;
-  SMDiagnostic Err;
-  std::unique_ptr<Module> M = parseAssemblyString(
-      "define void @foo(i32 signext %len) { "
-      "entry: "
-      "  %a = alloca [8 x i32], align 4 "
-      "  br label %for.cond "
-      "for.cond: "
-      "  %iv = phi i32 [ %inc, %for.inc ], [ 0, %entry ] "
-      "  %cmp = icmp slt i32 %iv, %len "
-      "  br i1 %cmp, label %for.body, label %for.cond.cleanup "
-      "for.cond.cleanup: "
-      "  br label %for.end "
-      "for.body: "
-      "  %cmp1 = icmp slt i32 %iv, 8 "
-      "  br i1 %cmp1, label %if.then, label %if.end "
-      "if.then: "
-      "  %idxprom = sext i32 %iv to i64 "
-      "  %arrayidx = getelementptr inbounds [8 x i32], [8 x i32]* %a, i64 0, \
-    i64 %idxprom "
-      "  store i32 0, i32* %arrayidx, align 4 "
-      "  br label %if.end "
-      "if.end: "
-      "  br label %for.inc "
-      "for.inc: "
-      "  %inc = add nsw i32 %iv, 1 "
-      "  br label %for.cond "
-      "for.end: "
-      "  ret void "
-      "} ",
-      Err, C);
-
-  ASSERT_TRUE(M && "Could not parse module?");
-  ASSERT_TRUE(!verifyModule(*M) && "Must have been well formed!");
-
-  runWithSE(*M, "foo", [](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
-    auto *ScevIV = SE.getSCEV(getInstructionByName(F, "iv"));
-    const Loop *L = cast<SCEVAddRecExpr>(ScevIV)->getLoop();
-
-    const SCEV *ITC = SE.getConstantMaxTripCountFromArray(L);
-    EXPECT_TRUE(isa<SCEVCouldNotCompute>(ITC));
-  });
-}
-
-TEST_F(ScalarEvolutionsTest, ComputeMaxTripCountFromMultiDemArray) {
-  LLVMContext C;
-  SMDiagnostic Err;
-  std::unique_ptr<Module> M = parseAssemblyString(
-      "define void @foo(i32 signext %len) { "
-      "entry: "
-      "  %a = alloca [3 x [5 x i32]], align 4 "
-      "  br label %for.cond "
-      "for.cond: "
-      "  %iv = phi i32 [ %inc, %for.inc ], [ 0, %entry ] "
-      "  %cmp = icmp slt i32 %iv, %len "
-      "  br i1 %cmp, label %for.body, label %for.cond.cleanup "
-      "for.cond.cleanup: "
-      "  br label %for.end "
-      "for.body: "
-      "  %arrayidx = getelementptr inbounds [3 x [5 x i32]], \
-    [3 x [5 x i32]]* %a, i64 0, i64 3 "
-      "  %idxprom = sext i32 %iv to i64 "
-      "  %arrayidx1 = getelementptr inbounds [5 x i32], [5 x i32]* %arrayidx, \
-    i64 0, i64 %idxprom "
-      "  store i32 0, i32* %arrayidx1, align 4"
-      "  br label %for.inc "
-      "for.inc: "
-      "  %inc = add nsw i32 %iv, 1 "
-      "  br label %for.cond "
-      "for.end: "
-      "  ret void "
-      "} ",
-      Err, C);
-
-  ASSERT_TRUE(M && "Could not parse module?");
-  ASSERT_TRUE(!verifyModule(*M) && "Must have been well formed!");
-
-  runWithSE(*M, "foo", [](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
-    auto *ScevIV = SE.getSCEV(getInstructionByName(F, "iv"));
-    const Loop *L = cast<SCEVAddRecExpr>(ScevIV)->getLoop();
-
-    const SCEV *ITC = SE.getConstantMaxTripCountFromArray(L);
-    EXPECT_TRUE(isa<SCEVCouldNotCompute>(ITC));
+  runWithSE(*M, "test", [](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+    auto *TCScev = SE.getSCEV(getArgByName(F, "num"));
+    auto *ApplyLoopGuardsTC = SE.applyLoopGuards(TCScev, *LI.begin());
+    // Assert that the new TC is (4 * ((4 umax %num) /u 4))
+    APInt Four(32, 4);
+    auto *Constant4 = SE.getConstant(Four);
+    auto *Max = SE.getUMaxExpr(TCScev, Constant4);
+    auto *Mul = SE.getMulExpr(SE.getUDivExpr(Max, Constant4), Constant4);
+    ASSERT_TRUE(Mul == ApplyLoopGuardsTC);
   });
 }
 

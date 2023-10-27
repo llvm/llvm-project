@@ -38,7 +38,6 @@ class BPFSubtarget : public BPFGenSubtargetInfo {
 private:
   void initializeEnvironment();
   void initSubtargetFeatures(StringRef CPU, StringRef FS);
-  bool probeJmpExt();
 
 protected:
   // unused
@@ -57,6 +56,9 @@ protected:
   // whether we should enable MCAsmInfo DwarfUsesRelocationsAcrossSections
   bool UseDwarfRIS;
 
+  // whether cpu v4 insns are enabled.
+  bool HasLdsx, HasMovsx, HasBswap, HasSdivSmod, HasGotol, HasStoreImm;
+
 public:
   // This constructor initializes the data members to match that
   // of the specified triple.
@@ -72,6 +74,12 @@ public:
   bool getHasJmp32() const { return HasJmp32; }
   bool getHasAlu32() const { return HasAlu32; }
   bool getUseDwarfRIS() const { return UseDwarfRIS; }
+  bool hasLdsx() const { return HasLdsx; }
+  bool hasMovsx() const { return HasMovsx; }
+  bool hasBswap() const { return HasBswap; }
+  bool hasSdivSmod() const { return HasSdivSmod; }
+  bool hasGotol() const { return HasGotol; }
+  bool hasStoreImm() const { return HasStoreImm; }
 
   const BPFInstrInfo *getInstrInfo() const override { return &InstrInfo; }
   const BPFFrameLowering *getFrameLowering() const override {

@@ -159,13 +159,13 @@ void UpdateVCEPass::runOnOperation() {
     SmallVector<ArrayRef<spirv::Capability>, 8> typeCapabilities;
     for (Type valueType : valueTypes) {
       typeExtensions.clear();
-      valueType.cast<spirv::SPIRVType>().getExtensions(typeExtensions);
+      cast<spirv::SPIRVType>(valueType).getExtensions(typeExtensions);
       if (failed(checkAndUpdateExtensionRequirements(
               op, targetEnv, typeExtensions, deducedExtensions)))
         return WalkResult::interrupt();
 
       typeCapabilities.clear();
-      valueType.cast<spirv::SPIRVType>().getCapabilities(typeCapabilities);
+      cast<spirv::SPIRVType>(valueType).getCapabilities(typeCapabilities);
       if (failed(checkAndUpdateCapabilityRequirements(
               op, targetEnv, typeCapabilities, deducedCapabilities)))
         return WalkResult::interrupt();

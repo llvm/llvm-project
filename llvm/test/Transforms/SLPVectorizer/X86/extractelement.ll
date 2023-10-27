@@ -82,23 +82,19 @@ define float @f_used_twice_in_tree(<2 x float> %x) {
 ; CHECK-NEXT:    ret float [[ADD]]
 ;
 ; THRESH1-LABEL: @f_used_twice_in_tree(
-; THRESH1-NEXT:    [[TMP1:%.*]] = extractelement <2 x float> [[X:%.*]], i32 1
-; THRESH1-NEXT:    [[TMP2:%.*]] = insertelement <2 x float> poison, float [[TMP1]], i32 0
-; THRESH1-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x float> [[TMP2]], <2 x float> poison, <2 x i32> zeroinitializer
-; THRESH1-NEXT:    [[TMP3:%.*]] = fmul <2 x float> [[SHUFFLE]], [[X]]
-; THRESH1-NEXT:    [[TMP4:%.*]] = extractelement <2 x float> [[TMP3]], i32 0
-; THRESH1-NEXT:    [[TMP5:%.*]] = extractelement <2 x float> [[TMP3]], i32 1
-; THRESH1-NEXT:    [[ADD:%.*]] = fadd float [[TMP4]], [[TMP5]]
+; THRESH1-NEXT:    [[TMP1:%.*]] = shufflevector <2 x float> [[X:%.*]], <2 x float> poison, <2 x i32> <i32 1, i32 1>
+; THRESH1-NEXT:    [[TMP2:%.*]] = fmul <2 x float> [[TMP1]], [[X]]
+; THRESH1-NEXT:    [[TMP3:%.*]] = extractelement <2 x float> [[TMP2]], i32 0
+; THRESH1-NEXT:    [[TMP4:%.*]] = extractelement <2 x float> [[TMP2]], i32 1
+; THRESH1-NEXT:    [[ADD:%.*]] = fadd float [[TMP3]], [[TMP4]]
 ; THRESH1-NEXT:    ret float [[ADD]]
 ;
 ; THRESH2-LABEL: @f_used_twice_in_tree(
-; THRESH2-NEXT:    [[TMP1:%.*]] = extractelement <2 x float> [[X:%.*]], i32 1
-; THRESH2-NEXT:    [[TMP2:%.*]] = insertelement <2 x float> poison, float [[TMP1]], i32 0
-; THRESH2-NEXT:    [[SHUFFLE:%.*]] = shufflevector <2 x float> [[TMP2]], <2 x float> poison, <2 x i32> zeroinitializer
-; THRESH2-NEXT:    [[TMP3:%.*]] = fmul <2 x float> [[SHUFFLE]], [[X]]
-; THRESH2-NEXT:    [[TMP4:%.*]] = extractelement <2 x float> [[TMP3]], i32 0
-; THRESH2-NEXT:    [[TMP5:%.*]] = extractelement <2 x float> [[TMP3]], i32 1
-; THRESH2-NEXT:    [[ADD:%.*]] = fadd float [[TMP4]], [[TMP5]]
+; THRESH2-NEXT:    [[TMP1:%.*]] = shufflevector <2 x float> [[X:%.*]], <2 x float> poison, <2 x i32> <i32 1, i32 1>
+; THRESH2-NEXT:    [[TMP2:%.*]] = fmul <2 x float> [[TMP1]], [[X]]
+; THRESH2-NEXT:    [[TMP3:%.*]] = extractelement <2 x float> [[TMP2]], i32 0
+; THRESH2-NEXT:    [[TMP4:%.*]] = extractelement <2 x float> [[TMP2]], i32 1
+; THRESH2-NEXT:    [[ADD:%.*]] = fadd float [[TMP3]], [[TMP4]]
 ; THRESH2-NEXT:    ret float [[ADD]]
 ;
   %x0 = extractelement <2 x float> %x, i32 0

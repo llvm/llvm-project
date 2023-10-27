@@ -1,6 +1,6 @@
 // RUN: %clang -target i386-unknown-linux -masm=intel -c %s -### 2>&1 | FileCheck --check-prefix=CHECK-INTEL %s
 // RUN: %clang -target i386-unknown-linux -masm=att -c %s -### 2>&1 | FileCheck --check-prefix=CHECK-ATT %s
-// RUN: %clang -target i386-unknown-linux -c -masm=somerequired %s -### 2>&1 | FileCheck --check-prefix=CHECK-SOMEREQUIRED %s
+// RUN: not %clang --target=i386-unknown-linux -c -masm=somerequired %s -### 2>&1 | FileCheck --check-prefix=CHECK-SOMEREQUIRED %s
 // RUN: %clang -target arm-unknown-eabi -c -masm=intel %s -### 2>&1 | FileCheck --check-prefix=CHECK-ARM %s
 
 // CHECK-INTEL: -x86-asm-syntax=intel

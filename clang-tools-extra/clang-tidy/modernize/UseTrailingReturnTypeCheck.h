@@ -13,9 +13,7 @@
 #include "clang/Lex/Token.h"
 #include <optional>
 
-namespace clang {
-namespace tidy {
-namespace modernize {
+namespace clang::tidy::modernize {
 
 struct ClassifiedToken {
   Token T;
@@ -60,8 +58,6 @@ private:
                       const SourceManager &SM, const LangOptions &LangOpts);
 };
 
-} // namespace modernize
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::modernize
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_USETRAILINGRETURNTYPECHECK_H

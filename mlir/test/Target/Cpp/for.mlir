@@ -82,3 +82,23 @@ func.func @test_for_yield() {
 // CPP-DECLTOP-NEXT: [[SE]] = [[SI]];
 // CPP-DECLTOP-NEXT: [[PE]] = [[PI]];
 // CPP-DECLTOP-NEXT: return;
+
+func.func @test_for_yield_2() {
+  %start = emitc.literal "0" : index
+  %stop = emitc.literal "10" : index
+  %step = emitc.literal "1" : index
+
+  %s0 = emitc.literal "0" : i32
+  %p0 = emitc.literal "M_PI" : f32
+
+  %result:2 = scf.for %iter = %start to %stop step %step iter_args(%si = %s0, %pi = %p0) -> (i32, f32) {
+    %sn = emitc.call "add"(%si, %iter) : (i32, index) -> i32
+    %pn = emitc.call "mul"(%pi, %iter) : (f32, index) -> f32
+    scf.yield %sn, %pn : i32, f32
+  }
+
+  return
+}
+// CPP-DEFAULT: void test_for_yield_2() {
+// CPP-DEFAULT: float{{.*}}= M_PI
+// CPP-DEFAULT: for (size_t [[IN:.*]] = 0; [[IN]] < 10; [[IN]] += 1) {

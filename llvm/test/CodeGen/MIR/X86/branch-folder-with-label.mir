@@ -355,7 +355,7 @@ body:             |
   bb.5.if.then:
     liveins: $eax
   
-    $rsp = frame-destroy ADD64ri8 $rsp, 8, implicit-def dead $eflags
+    $rsp = frame-destroy ADD64ri32 $rsp, 8, implicit-def dead $eflags
     CFI_INSTRUCTION def_cfa_offset 24
     $rbx = frame-destroy POP64r implicit-def $rsp, implicit $rsp
     CFI_INSTRUCTION def_cfa_offset 16
@@ -367,7 +367,7 @@ body:             |
     successors: %bb.8(0x30000000), %bb.7(0x50000000)
     liveins: $rbx, $r14
   
-    CMP32mi8 $rsp, 1, $noreg, 4, $noreg, 0, implicit-def $eflags :: (dereferenceable load (s32) from %ir.idx)
+    CMP32mi $rsp, 1, $noreg, 4, $noreg, 0, implicit-def $eflags :: (dereferenceable load (s32) from %ir.idx)
     JCC_1 %bb.8, 8, implicit killed $eflags
     JMP_1 %bb.7
   
@@ -375,7 +375,7 @@ body:             |
     successors: %bb.8(0x30000000), %bb.3(0x50000000)
     liveins: $rbx, $r14
   
-    CMP32mi8 renamable $rbx, 1, $noreg, 0, $noreg, 0, implicit-def $eflags :: (load (s32) from %ir.1)
+    CMP32mi renamable $rbx, 1, $noreg, 0, $noreg, 0, implicit-def $eflags :: (load (s32) from %ir.1)
     JCC_1 %bb.3, 5, implicit killed $eflags
     JMP_1 %bb.8
   

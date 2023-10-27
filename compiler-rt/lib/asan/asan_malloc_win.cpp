@@ -508,10 +508,10 @@ void ReplaceSystemMalloc() {
   TryToOverrideFunction("_expand_base", (uptr)_expand);
 
   if (flags()->windows_hook_rtl_allocators) {
-    INTERCEPT_FUNCTION(HeapSize);
-    INTERCEPT_FUNCTION(HeapFree);
-    INTERCEPT_FUNCTION(HeapReAlloc);
-    INTERCEPT_FUNCTION(HeapAlloc);
+    ASAN_INTERCEPT_FUNC(HeapSize);
+    ASAN_INTERCEPT_FUNC(HeapFree);
+    ASAN_INTERCEPT_FUNC(HeapReAlloc);
+    ASAN_INTERCEPT_FUNC(HeapAlloc);
 
     // Undocumented functions must be intercepted by name, not by symbol.
     __interception::OverrideFunction("RtlSizeHeap", (uptr)WRAP(RtlSizeHeap),

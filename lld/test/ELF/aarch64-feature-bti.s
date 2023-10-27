@@ -1,6 +1,7 @@
 # REQUIRES: aarch64
 # RUN: llvm-mc -filetype=obj -triple=aarch64-linux-gnu %s -o %t.o
 # RUN: llvm-mc -filetype=obj -triple=aarch64-linux-gnu --defsym CANONICAL_PLT=1 %s -o %tcanon.o
+# RUN: llvm-mc -filetype=obj -triple=aarch64-linux-gnu --defsym RELVTABLE_PLT=1 %s -o %trelvtable.o
 # RUN: llvm-mc -filetype=obj -triple=aarch64-linux-gnu %p/Inputs/aarch64-bti1.s -o %t1.o
 # RUN: llvm-mc -filetype=obj -triple=aarch64-linux-gnu %p/Inputs/aarch64-func3.s -o %t2.o
 # RUN: llvm-mc -filetype=obj -triple=aarch64-linux-gnu %p/Inputs/aarch64-func3-bti.s -o %t3.o
@@ -154,6 +155,42 @@
 # PIE-NEXT:           nop
 # PIE-NEXT:           nop
 
+## We expect the same for R_AARCH64_PLT32, as the address of an plt entry escapes
+# RUN: ld.lld --shared %trelvtable.o -o %trelv.exe
+# RUN: llvm-readelf -n %trelv.exe | FileCheck --check-prefix=BTIPROP %s
+# RUN: llvm-readelf --dynamic-table -n %trelv.exe | FileCheck --check-prefix=BTIPROP %s
+# RUN: llvm-objdump --no-print-imm-hex -d --mattr=+bti --no-show-raw-insn %trelv.exe | FileCheck --check-prefix=RELV %s
+
+# RELV:       Disassembly of section .text:
+# RELV-LABEL: <func1>:
+# RELV-NEXT:    10380: bl     0x103b0 <func2@plt>
+# RELV-NEXT:           bl      0x103c8 <funcRelVtable@plt>
+# RELV-NEXT:           ret
+# RELV:        Disassembly of section .plt:
+# RELV-LABEL:  <.plt>:
+# RELV-NEXT:    10390: bti    c
+# RELV-NEXT:           stp    x16, x30, [sp, #-16]!
+# RELV-NEXT:           adrp   x16, 0x30000
+# RELV-NEXT:           ldr    x17, [x16, #1200]
+# RELV-NEXT:           add    x16, x16, #1200
+# RELV-NEXT:           br     x17
+# RELV-NEXT:           nop
+# RELV-NEXT:           nop
+# RELV-LABEL: <func2@plt>:
+# RELV-NEXT:    103b0: adrp   x16, 0x30000
+# RELV-NEXT:           ldr    x17, [x16, #1208]
+# RELV-NEXT:           add    x16, x16, #1208
+# RELV-NEXT:           br     x17
+# RELV-NEXT:           nop
+# RELV-NEXT:           nop
+# RELV-LABEL: <funcRelVtable@plt>:
+# RELV-NEXT:   103c8:  bti     c
+# RELV-NEXT:           adrp    x16, 0x30000
+# RELV-NEXT:           ldr     x17, [x16, #1216]
+# RELV-NEXT:           add     x16, x16, #1216
+# RELV-NEXT:           br      x17
+# RELV-NEXT:           nop
+
 ## Build and executable with not all relocatable inputs having the BTI
 ## .note.property, expect no bti c and no .note.gnu.property entry
 
@@ -242,4 +279,12 @@ func1:
 .else
   bl func2
 .endif
+.ifdef RELVTABLE_PLT
+  bl funcRelVtable
+.endif
   ret
+
+.ifdef RELVTABLE_PLT
+// R_AARCH64_PLT32
+.word funcRelVtable@PLT - .
+.endif

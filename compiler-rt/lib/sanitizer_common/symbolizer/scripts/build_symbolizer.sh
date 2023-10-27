@@ -1,29 +1,18 @@
 #!/usr/bin/env bash
 #
-# Run as: CLANG=bin/clang ZLIB_SRC=src/zlib \
-#             build_symbolizer.sh runtime_build/lib/clang/4.0.0/lib/linux/
+# Run as: CLANG=bin/clang build_symbolizer.sh out.o
 # zlib can be downloaded from http://www.zlib.net.
 #
-# Script compiles self-contained object file with symbolization code and injects
-# it into the given set of runtime libraries. Script updates only libraries
-# which has unresolved __sanitizer_symbolize_* symbols and matches architecture.
-# Object file is be compiled from LLVM sources with dependencies like libc++ and
-# zlib. Then it internalizes symbols in the file, so that it can be linked
-# into arbitrary programs, avoiding conflicts with the program own symbols and
-# avoiding dependencies on any program symbols. The only acceptable dependencies
-# are libc and __sanitizer::internal_* from sanitizer runtime.
+# Script compiles self-contained object file with symbolization code.
 #
 # Symbols exported by the object file will be used by Sanitizer runtime
 # libraries to symbolize code/data in-process.
-#
-# The script will modify the output directory which is given as the first
-# argument to the script.
 #
 # FIXME: We should really be using a simpler approach to building this object
 # file, and it should be available as a regular cmake rule. Conceptually, we
 # want to be doing "ld -r" followed by "objcopy -G" to create a relocatable
 # object file with only our entry points exposed. However, this does not work at
-# present, see PR30750.
+# present, see https://github.com/llvm/llvm-project/issues/30098.
 
 set -x
 set -e
@@ -31,25 +20,13 @@ set -u
 
 SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
 SRC_DIR=$(readlink -f $SCRIPT_DIR/..)
-TARGE_DIR=$(readlink -f $1)
+OUTPUT=$(readlink -f $1)
 COMPILER_RT_SRC=$(readlink -f ${SCRIPT_DIR}/../../../..)
 LLVM_SRC=${LLVM_SRC:-${COMPILER_RT_SRC}/../llvm}
 LLVM_SRC=$(readlink -f $LLVM_SRC)
 
-if [[ "$ZLIB_SRC" == ""  ||
-      ! -x "${ZLIB_SRC}/configure" ||
-      ! -f "${ZLIB_SRC}/zlib.h" ]]; then
-  echo "Missing or incomplete ZLIB_SRC"
-  exit 1
-fi
-ZLIB_SRC=$(readlink -f $ZLIB_SRC)
-
 CLANG="${CLANG:-`which clang`}"
 CLANG_DIR=$(readlink -f $(dirname "$CLANG"))
-
-BUILD_DIR=$(readlink -f ./symbolizer)
-mkdir -p $BUILD_DIR
-cd $BUILD_DIR
 
 CC=$CLANG_DIR/clang
 CXX=$CLANG_DIR/clang++
@@ -65,6 +42,10 @@ for F in $CC $CXX $TBLGEN $LINK $OPT $AR; do
   fi
 done
 
+BUILD_DIR=${PWD}/symbolizer
+mkdir -p $BUILD_DIR
+cd $BUILD_DIR
+
 ZLIB_BUILD=${BUILD_DIR}/zlib
 LIBCXX_BUILD=${BUILD_DIR}/libcxx
 LLVM_BUILD=${BUILD_DIR}/llvm
@@ -77,25 +58,31 @@ if [[ "$FLAGS" =~ "-m32" ]] ; then
   FLAGS+=" -U_FILE_OFFSET_BITS"
 fi
 FLAGS+=" -fPIC -flto -Oz -g0 -DNDEBUG -target $TARGET_TRIPLE -Wno-unused-command-line-argument"
+FLAGS+=" -include ${SRC_DIR}/../sanitizer_redefine_builtins.h -DSANITIZER_COMMON_REDEFINE_BUILTINS_IN_STD -Wno-language-extension-token"
+
 LINKFLAGS="-fuse-ld=lld -target $TARGET_TRIPLE"
 
 # Build zlib.
-mkdir -p ${ZLIB_BUILD}
+[[ -d ${ZLIB_BUILD} ]] || git clone https://github.com/madler/zlib ${ZLIB_BUILD}
 cd ${ZLIB_BUILD}
-cp -r ${ZLIB_SRC}/* .
 AR="${AR}" CC="${CC}" CFLAGS="$FLAGS -Wno-deprecated-non-prototype" RANLIB=/bin/true ./configure --static
 make -j libz.a
 
 # Build and install libcxxabi and libcxx.
-if [[ ! -d ${LIBCXX_BUILD} ]]; then
+if [[ ! -f ${LLVM_BUILD}/build.ninja ]]; then
+  rm -rf ${LIBCXX_BUILD}
   mkdir -p ${LIBCXX_BUILD}
   cd ${LIBCXX_BUILD}
   LIBCXX_FLAGS="${FLAGS} -Wno-macro-redefined"
   cmake -GNinja \
     -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi" \
     -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_C_COMPILER_WORKS=ON \
+    -DCMAKE_CXX_COMPILER_WORKS=ON \
     -DCMAKE_C_COMPILER=$CC \
     -DCMAKE_CXX_COMPILER=$CXX \
+    -DLIBCXX_ABI_NAMESPACE=__InternalSymbolizer \
+    '-DLIBCXX_EXTRA_SITE_DEFINES=_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS;_LIBCXXABI_DISABLE_VISIBILITY_ANNOTATIONS' \
     -DCMAKE_C_FLAGS_RELEASE="${LIBCXX_FLAGS}" \
     -DCMAKE_CXX_FLAGS_RELEASE="${LIBCXX_FLAGS}" \
     -DLIBCXXABI_ENABLE_ASSERTIONS=OFF \
@@ -104,6 +91,8 @@ if [[ ! -d ${LIBCXX_BUILD} ]]; then
     -DLIBCXX_ENABLE_EXCEPTIONS=OFF \
     -DLIBCXX_ENABLE_RTTI=OFF \
     -DCMAKE_SHARED_LINKER_FLAGS="$LINKFLAGS" \
+    -DLIBCXX_ENABLE_SHARED=OFF \
+    -DLIBCXXABI_ENABLE_SHARED=OFF \
   $LLVM_SRC/../runtimes
 fi
 cd ${LIBCXX_BUILD}
@@ -114,18 +103,24 @@ LLVM_CFLAGS="${FLAGS} -Wno-global-constructors"
 LLVM_CXXFLAGS="${LLVM_CFLAGS} -nostdinc++ -I${ZLIB_BUILD} -isystem ${LIBCXX_BUILD}/include -isystem ${LIBCXX_BUILD}/include/c++/v1"
 
 # Build LLVM.
-if [[ ! -d ${LLVM_BUILD} ]]; then
+if [[ ! -f ${LLVM_BUILD}/build.ninja ]]; then
+  rm -rf ${LLVM_BUILD}
   mkdir -p ${LLVM_BUILD}
   cd ${LLVM_BUILD}
   cmake -GNinja \
     -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_C_COMPILER_WORKS=ON \
+    -DCMAKE_CXX_COMPILER_WORKS=ON \
     -DCMAKE_C_COMPILER=$CC \
     -DCMAKE_CXX_COMPILER=$CXX \
-    -DCMAKE_C_FLAGS="${LLVM_CFLAGS}" \
-    -DCMAKE_CXX_FLAGS="${LLVM_CXXFLAGS}" \
+    -DLLVM_ENABLE_LIBCXX=ON \
+    -DCMAKE_C_FLAGS_RELEASE="${LLVM_CFLAGS}" \
+    -DCMAKE_CXX_FLAGS_RELEASE="${LLVM_CXXFLAGS}" \
     -DCMAKE_EXE_LINKER_FLAGS="$LINKFLAGS -stdlib=libc++ -L${LIBCXX_BUILD}/lib" \
     -DLLVM_TABLEGEN=$TBLGEN \
+    -DLLVM_INCLUDE_TESTS=OFF \
     -DLLVM_ENABLE_ZLIB=ON \
+    -DLLVM_ENABLE_ZSTD=OFF \
     -DLLVM_ENABLE_TERMINFO=OFF \
     -DLLVM_ENABLE_THREADS=OFF \
   $LLVM_SRC
@@ -145,6 +140,7 @@ $AR rc symbolizer.a sanitizer_symbolize.o sanitizer_wrappers.o
 
 SYMBOLIZER_API_LIST=__sanitizer_symbolize_code
 SYMBOLIZER_API_LIST+=,__sanitizer_symbolize_data
+SYMBOLIZER_API_LIST+=,__sanitizer_symbolize_frame
 SYMBOLIZER_API_LIST+=,__sanitizer_symbolize_flush
 SYMBOLIZER_API_LIST+=,__sanitizer_symbolize_demangle
 SYMBOLIZER_API_LIST+=,__sanitizer_symbolize_set_demangle
@@ -181,20 +177,6 @@ nm -f posix -g symbolizer.o | cut -f 1,2 -d \  | LC_COLLATE=C sort -u > undefine
 (diff -u $SCRIPT_DIR/global_symbols.txt undefined.new | grep -E "^\+[^+]") && \
   (echo "Failed: unexpected symbols"; exit 1)
 
-arch() {
-  objdump -f $1 | grep -m1 -Po "(?<=file format ).*$"
-}
-
-SYMBOLIZER_FORMAT=$(arch symbolizer.o)
-echo "Injecting $SYMBOLIZER_FORMAT symbolizer..."
-for A in $TARGE_DIR/libclang_rt.*san*.a; do
-  A_FORMAT=$(arch $A)
-  if [[ "$A_FORMAT" != "$SYMBOLIZER_FORMAT" ]] ; then
-    continue
-  fi
-  (nm -u $A 2>/dev/null | grep -E "__sanitizer_symbolize_code" >/dev/null) || continue
-  echo "$A"
-  $AR rcs $A symbolizer.o
-done
+cp -f symbolizer.o $OUTPUT
 
 echo "Success!"

@@ -12,12 +12,60 @@
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Support/LLVM.h"
+#include "mlir/Support/TypeID.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringMap.h"
 #include <optional>
 
 namespace mlir {
 namespace transform {
+
+namespace detail {
+/// Concrete base class for CRTP TransformDialectDataBase. Must not be used
+/// directly.
+class TransformDialectDataBase {
+public:
+  virtual ~TransformDialectDataBase() = default;
+
+  /// Returns the dynamic type ID of the subclass.
+  TypeID getTypeID() const { return typeID; }
+
+protected:
+  /// Must be called by the subclass with the appropriate type ID.
+  explicit TransformDialectDataBase(TypeID typeID, MLIRContext *ctx)
+      : typeID(typeID), ctx(ctx) {}
+
+  /// Return the MLIR context.
+  MLIRContext *getContext() const { return ctx; }
+
+private:
+  /// The type ID of the subclass.
+  const TypeID typeID;
+
+  /// The MLIR context.
+  MLIRContext *ctx;
+};
+} // namespace detail
+
+/// Base class for additional data owned by the Transform dialect. Extensions
+/// may communicate with each other using this data. The data object is
+/// identified by the TypeID of the specific data subclass, querying the data of
+/// the same subclass returns a reference to the same object. When a Transform
+/// dialect extension is initialized, it can populate the data in the specific
+/// subclass. When a Transform op is applied, it can read (but not mutate) the
+/// data in the specific subclass, including the data provided by other
+/// extensions.
+///
+/// This follows CRTP: derived classes must list themselves as template
+/// argument.
+template <typename DerivedTy>
+class TransformDialectData : public detail::TransformDialectDataBase {
+protected:
+  /// Forward the TypeID of the derived class to the base.
+  TransformDialectData(MLIRContext *ctx)
+      : TransformDialectDataBase(TypeID::get<DerivedTy>(), ctx) {}
+};
+
 #ifndef NDEBUG
 namespace detail {
 /// Asserts that the operations provided as template arguments implement the
@@ -85,9 +133,8 @@ public:
       for (const DialectLoader &loader : generatedDialectLoaders)
         loader(context);
 
-    for (const Initializer &init : opInitializers)
+    for (const Initializer &init : initializers)
       init(transformDialect);
-    transformDialect->mergeInPDLMatchHooks(std::move(pdlMatchConstraintFns));
   }
 
 protected:
@@ -100,6 +147,41 @@ protected:
     static_cast<DerivedTy *>(this)->init();
   }
 
+  /// Registers a custom initialization step to be performed when the extension
+  /// is applied to the dialect while loading. This is discouraged in favor of
+  /// more specific calls `declareGeneratedDialect`, `addDialectDataInitializer`
+  /// etc. `Func` must be convertible to the `void (MLIRContext *)` form. It
+  /// will be called during the extension initialization and given the current
+  /// MLIR context. This may be used to attach additional interfaces that cannot
+  /// be attached elsewhere.
+  template <typename Func>
+  void addCustomInitializationStep(Func &&func) {
+    std::function<void(MLIRContext *)> initializer = func;
+    dialectLoaders.push_back(
+        [init = std::move(initializer)](MLIRContext *ctx) { init(ctx); });
+  }
+
+  /// Registers the given function as one of the initializers for the
+  /// dialect-owned data of the kind specified as template argument. The
+  /// function must be convertible to the `void (DataTy &)` form. It will be
+  /// called during the extension initialization and will be given a mutable
+  /// reference to `DataTy`. The callback is expected to append data to the
+  /// given storage, and is not allowed to remove or destructively mutate the
+  /// existing data. The order in which callbacks from different extensions are
+  /// executed is unspecified so the callbacks may not rely on data being
+  /// already present. `DataTy` must be a class deriving `TransformDialectData`.
+  template <typename DataTy, typename Func>
+  void addDialectDataInitializer(Func &&func) {
+    static_assert(std::is_base_of_v<detail::TransformDialectDataBase, DataTy>,
+                  "only classes deriving TransformDialectData are accepted");
+
+    std::function<void(DataTy &)> initializer = func;
+    initializers.push_back(
+        [init = std::move(initializer)](TransformDialect *transformDialect) {
+          init(transformDialect->getOrCreateExtraData<DataTy>());
+        });
+  }
+
   /// Hook for derived classes to inject constructor behavior.
   void init() {}
 
@@ -108,7 +190,7 @@ protected:
   /// implementations must be already available when the operation is injected.
   template <typename... OpTys>
   void registerTransformOps() {
-    opInitializers.push_back([](TransformDialect *transformDialect) {
+    initializers.push_back([](TransformDialect *transformDialect) {
       transformDialect->addOperationsChecked<OpTys...>();
     });
   }
@@ -120,7 +202,7 @@ protected:
   /// `StringRef` that is unique across all injected types.
   template <typename... TypeTys>
   void registerTypes() {
-    opInitializers.push_back([](TransformDialect *transformDialect) {
+    initializers.push_back([](TransformDialect *transformDialect) {
       transformDialect->addTypesChecked<TypeTys...>();
     });
   }
@@ -151,22 +233,10 @@ protected:
         [](MLIRContext *context) { context->loadDialect<DialectTy>(); });
   }
 
-  /// Injects the named constraint to make it available for use with the
-  /// PDLMatchOp in the transform dialect.
-  void registerPDLMatchConstraintFn(StringRef name,
-                                    PDLConstraintFunction &&fn) {
-    pdlMatchConstraintFns.try_emplace(name,
-                                      std::forward<PDLConstraintFunction>(fn));
-  }
-  template <typename ConstraintFnTy>
-  void registerPDLMatchConstraintFn(StringRef name, ConstraintFnTy &&fn) {
-    pdlMatchConstraintFns.try_emplace(
-        name, ::mlir::detail::pdl_function_builder::buildConstraintFn(
-                  std::forward<ConstraintFnTy>(fn)));
-  }
-
 private:
-  SmallVector<Initializer> opInitializers;
+  /// Callbacks performing extension initialization, e.g., registering ops,
+  /// types and defining the additional data.
+  SmallVector<Initializer> initializers;
 
   /// Callbacks loading the dependent dialects, i.e. the dialect needed for the
   /// extension ops.
@@ -175,13 +245,6 @@ private:
   /// Callbacks loading the generated dialects, i.e. the dialects produced when
   /// applying the transformations.
   SmallVector<DialectLoader> generatedDialectLoaders;
-
-  /// A list of constraints that should be made available to PDL patterns
-  /// processed by PDLMatchOp in the Transform dialect.
-  ///
-  /// Declared as mutable so its contents can be moved in the `apply` const
-  /// method, which is only called once.
-  mutable llvm::StringMap<PDLConstraintFunction> pdlMatchConstraintFns;
 
   /// Indicates that the extension is in build-only mode.
   bool buildOnly;
@@ -232,6 +295,18 @@ void TransformDialect::addTypeIfNotRegistered() {
 #endif // NDEBUG
 }
 
+template <typename DataTy>
+DataTy &TransformDialect::getOrCreateExtraData() {
+  TypeID typeID = TypeID::get<DataTy>();
+  auto it = extraData.find(typeID);
+  if (it != extraData.end())
+    return static_cast<DataTy &>(*it->getSecond());
+
+  auto emplaced =
+      extraData.try_emplace(typeID, std::make_unique<DataTy>(getContext()));
+  return static_cast<DataTy &>(*emplaced.first->getSecond());
+}
+
 /// A wrapper for transform dialect extensions that forces them to be
 /// constructed in the build-only mode.
 template <typename DerivedTy>
@@ -242,7 +317,5 @@ public:
 
 } // namespace transform
 } // namespace mlir
-
-#include "mlir/Dialect/Transform/IR/TransformDialectEnums.h.inc"
 
 #endif // MLIR_DIALECT_TRANSFORM_IR_TRANSFORMDIALECT_H

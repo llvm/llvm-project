@@ -25,14 +25,8 @@ def P10vMU_Read : SchedRead;
 
 def P10Model : SchedMachineModel {
   let IssueWidth = 8;
-
-  // TODO - Need to be updated according to P10 UM.
   let MicroOpBufferSize = 44;
-
-  // TODO - tune this on real HW once it arrives. For now, we will use the same
-  // value as we do on P9.
   let LoopMicroOpBufferSize = 60;
-
   let CompleteModel = 1;
 
   // Do not support SPE (Signal Procesing Engine) on Power 10.
@@ -93,27 +87,27 @@ let SchedModel = P10Model in {
   }
 
   def P10W_BF_22C : SchedWriteRes<[P10_BF]> {
-    let ResourceCycles = [ 5 ];
+    let ReleaseAtCycles = [ 5 ];
     let Latency = 22;
   }
 
   def P10W_BF_24C : SchedWriteRes<[P10_BF]> {
-    let ResourceCycles = [ 8 ];
+    let ReleaseAtCycles = [ 8 ];
     let Latency = 24;
   }
 
   def P10W_BF_26C : SchedWriteRes<[P10_BF]> {
-    let ResourceCycles = [ 5 ];
+    let ReleaseAtCycles = [ 5 ];
     let Latency = 26;
   }
 
   def P10W_BF_27C : SchedWriteRes<[P10_BF]> {
-    let ResourceCycles = [ 7 ];
+    let ReleaseAtCycles = [ 7 ];
     let Latency = 27;
   }
 
   def P10W_BF_36C : SchedWriteRes<[P10_BF]> {
-    let ResourceCycles = [ 10 ];
+    let ReleaseAtCycles = [ 10 ];
     let Latency = 36;
   }
 
@@ -134,134 +128,134 @@ let SchedModel = P10Model in {
   }
 
   def P10W_DF_24C : SchedWriteRes<[P10_DF]> {
-    let ResourceCycles = [ 16 ];
+    let ReleaseAtCycles = [ 16 ];
     let Latency = 24;
   }
 
   def P10W_DF_25C : SchedWriteRes<[P10_DF]> {
-    let ResourceCycles = [ 17 ];
+    let ReleaseAtCycles = [ 17 ];
     let Latency = 25;
   }
 
   def P10W_DF_26C : SchedWriteRes<[P10_DF]> {
-    let ResourceCycles = [ 18 ];
+    let ReleaseAtCycles = [ 18 ];
     let Latency = 26;
   }
 
   def P10W_DF_32C : SchedWriteRes<[P10_DF]> {
-    let ResourceCycles = [ 22 ];
+    let ReleaseAtCycles = [ 22 ];
     let Latency = 32;
   }
 
   def P10W_DF_33C : SchedWriteRes<[P10_DF]> {
-    let ResourceCycles = [ 25 ];
+    let ReleaseAtCycles = [ 25 ];
     let Latency = 33;
   }
 
   def P10W_DF_34C : SchedWriteRes<[P10_DF]> {
-    let ResourceCycles = [ 25 ];
+    let ReleaseAtCycles = [ 25 ];
     let Latency = 34;
   }
 
   def P10W_DF_38C : SchedWriteRes<[P10_DF]> {
-    let ResourceCycles = [ 30 ];
+    let ReleaseAtCycles = [ 30 ];
     let Latency = 38;
   }
 
   def P10W_DF_40C : SchedWriteRes<[P10_DF]> {
-    let ResourceCycles = [ 17 ];
+    let ReleaseAtCycles = [ 17 ];
     let Latency = 40;
   }
 
   def P10W_DF_43C : SchedWriteRes<[P10_DF]> {
-    let ResourceCycles = [ 34 ];
+    let ReleaseAtCycles = [ 34 ];
     let Latency = 43;
   }
 
   def P10W_DF_59C : SchedWriteRes<[P10_DF]> {
-    let ResourceCycles = [ 49 ];
+    let ReleaseAtCycles = [ 49 ];
     let Latency = 59;
   }
 
   def P10W_DF_61C : SchedWriteRes<[P10_DF]> {
-    let ResourceCycles = [ 12 ];
+    let ReleaseAtCycles = [ 12 ];
     let Latency = 61;
   }
 
   def P10W_DF_68C : SchedWriteRes<[P10_DF]> {
-    let ResourceCycles = [ 15 ];
+    let ReleaseAtCycles = [ 15 ];
     let Latency = 68;
   }
 
   def P10W_DF_77C : SchedWriteRes<[P10_DF]> {
-    let ResourceCycles = [ 67 ];
+    let ReleaseAtCycles = [ 67 ];
     let Latency = 77;
   }
 
   def P10W_DF_87C : SchedWriteRes<[P10_DF]> {
-    let ResourceCycles = [ 12 ];
+    let ReleaseAtCycles = [ 12 ];
     let Latency = 87;
   }
 
   def P10W_DF_100C : SchedWriteRes<[P10_DF]> {
-    let ResourceCycles = [ 32 ];
+    let ReleaseAtCycles = [ 32 ];
     let Latency = 100;
   }
 
   def P10W_DF_174C : SchedWriteRes<[P10_DF]> {
-    let ResourceCycles = [ 33 ];
+    let ReleaseAtCycles = [ 33 ];
     let Latency = 174;
   }
 
   // A DV pipeline may take from 20 to 83 cycles to complete.
   // Some DV operations may keep the pipeline busy for up to 33 cycles.
   def P10W_DV_20C : SchedWriteRes<[P10_DV]> {
-    let ResourceCycles = [ 10 ];
+    let ReleaseAtCycles = [ 10 ];
     let Latency = 20;
   }
 
   def P10W_DV_25C : SchedWriteRes<[P10_DV]> {
-    let ResourceCycles = [ 10 ];
+    let ReleaseAtCycles = [ 10 ];
     let Latency = 25;
   }
 
   def P10W_DV_27C : SchedWriteRes<[P10_DV]> {
-    let ResourceCycles = [ 10 ];
+    let ReleaseAtCycles = [ 10 ];
     let Latency = 27;
   }
 
   def P10W_DV_41C : SchedWriteRes<[P10_DV]> {
-    let ResourceCycles = [ 10 ];
+    let ReleaseAtCycles = [ 10 ];
     let Latency = 41;
   }
 
   def P10W_DV_43C : SchedWriteRes<[P10_DV]> {
-    let ResourceCycles = [ 21 ];
+    let ReleaseAtCycles = [ 21 ];
     let Latency = 43;
   }
 
   def P10W_DV_47C : SchedWriteRes<[P10_DV]> {
-    let ResourceCycles = [ 21 ];
+    let ReleaseAtCycles = [ 21 ];
     let Latency = 47;
   }
 
   def P10W_DV_54C : SchedWriteRes<[P10_DV]> {
-    let ResourceCycles = [ 33 ];
+    let ReleaseAtCycles = [ 33 ];
     let Latency = 54;
   }
 
   def P10W_DV_60C : SchedWriteRes<[P10_DV]> {
-    let ResourceCycles = [ 33 ];
+    let ReleaseAtCycles = [ 33 ];
     let Latency = 60;
   }
 
   def P10W_DV_75C : SchedWriteRes<[P10_DV]> {
-    let ResourceCycles = [ 21 ];
+    let ReleaseAtCycles = [ 21 ];
     let Latency = 75;
   }
 
   def P10W_DV_83C : SchedWriteRes<[P10_DV]> {
-    let ResourceCycles = [ 33 ];
+    let ReleaseAtCycles = [ 33 ];
     let Latency = 83;
   }
 

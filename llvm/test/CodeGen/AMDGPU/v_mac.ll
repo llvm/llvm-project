@@ -253,7 +253,7 @@ bb:
 
 ; SI: v_add_f32_e32 [[TMP2:v[0-9]+]], [[CVT_A]], [[CVT_A]]
 ; SI: v_mad_f32 v{{[0-9]+}}, [[TMP2]], -4.0, 1.0
-; SI: v_mac_f32_e32 v{{[0-9]+}}, 0x41000000, v{{[0-9]+}}
+; SI: v_madmk_f32 v{{[0-9]+}}, v{{[0-9]+}}, 0x41000000, v{{[0-9]+}}
 
 ; VI-FLUSH: v_add_f16_e32 [[TMP2:v[0-9]+]], [[A]], [[A]]
 ; VI-FLUSH: v_mad_f16 v{{[0-9]+}}, [[TMP2]], -4.0, 1.0
@@ -277,6 +277,34 @@ bb:
   %tmp10 = fadd half %tmp5, %tmp9
   store half %tmp10, ptr addrspace(1) %gep.out
   ret void
+}
+
+; Need to assume denormal handling is needed for dynamic denormal mode
+; GCN-LABEL: {{^}}v_mac_f32_dynamic:
+; GCN: v_mul_f32
+; GCN: v_add_f32
+define float @v_mac_f32_dynamic(float %a, float %b, float %c) "denormal-fp-math-f32"="dynamic,dynamic" {
+  %mul = fmul float %a, %b
+  %mad = fadd float %mul, %c
+  ret float %mad
+}
+
+; GCN-LABEL: {{^}}v_mac_f32_dynamic_daz:
+; GCN: v_mul_f32
+; GCN: v_add_f32
+define float @v_mac_f32_dynamic_daz(float %a, float %b, float %c) "denormal-fp-math-f32"="preserve-sign,dynamic" {
+  %mul = fmul float %a, %b
+  %mad = fadd float %mul, %c
+  ret float %mad
+}
+
+; GCN-LABEL: {{^}}v_mac_f32_dynamic_ftz:
+; GCN: v_mul_f32
+; GCN: v_add_f32
+define float @v_mac_f32_dynamic_ftz(float %a, float %b, float %c) "denormal-fp-math-f32"="dynamic,preserve-sign" {
+  %mul = fmul float %a, %b
+  %mad = fadd float %mul, %c
+  ret float %mad
 }
 
 declare i32 @llvm.amdgcn.workitem.id.x() #2

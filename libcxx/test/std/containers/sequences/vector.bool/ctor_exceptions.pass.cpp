@@ -13,6 +13,7 @@
 
 #include <cstddef>
 #include <type_traits>
+#include <memory>
 #include <vector>
 
 #include "count_new.h"

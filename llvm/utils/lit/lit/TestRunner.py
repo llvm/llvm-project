@@ -8,11 +8,13 @@ import re
 import stat
 import pathlib
 import platform
+import shlex
 import shutil
 import tempfile
 import threading
 
 import io
+
 try:
     from StringIO import StringIO
 except ImportError:
@@ -25,12 +27,14 @@ import lit.util
 from lit.util import to_bytes, to_string, to_unicode
 from lit.BooleanExpression import BooleanExpression
 
+
 class InternalShellError(Exception):
     def __init__(self, command, message):
         self.command = command
         self.message = message
 
-kIsWindows = platform.system() == 'Windows'
+
+kIsWindows = platform.system() == "Windows"
 
 # Don't use close_fds on Windows.
 kUseCloseFDs = not kIsWindows
@@ -51,7 +55,16 @@ kDevNull = "/dev/null"
 #
 # COMMAND that follows %dbg(ARG) is also captured. COMMAND can be
 # empty as a result of conditinal substitution.
-kPdbgRegex = '%dbg\\(([^)\'"]*)\\)(.*)'
+kPdbgRegex = "%dbg\\(([^)'\"]*)\\)((?:.|\\n)*)"
+
+
+def buildPdbgCommand(msg, cmd):
+    res = f"%dbg({msg}) {cmd}"
+    assert re.fullmatch(
+        kPdbgRegex, res
+    ), f"kPdbgRegex expected to match actual %dbg usage: {res}"
+    return res
+
 
 class ShellEnvironment(object):
 
@@ -70,15 +83,17 @@ class ShellEnvironment(object):
         if os.path.isabs(newdir):
             self.cwd = newdir
         else:
-            self.cwd = os.path.realpath(os.path.join(self.cwd, newdir))
+            self.cwd = lit.util.abs_path_preserve_drive(os.path.join(self.cwd, newdir))
+
 
 class TimeoutHelper(object):
     """
-        Object used to helper manage enforcing a timeout in
-        _executeShCmd(). It is passed through recursive calls
-        to collect processes that have been executed so that when
-        the timeout happens they can be killed.
+    Object used to helper manage enforcing a timeout in
+    _executeShCmd(). It is passed through recursive calls
+    to collect processes that have been executed so that when
+    the timeout happens they can be killed.
     """
+
     def __init__(self, timeout):
         self.timeout = timeout
         self._procs = []
@@ -135,24 +150,26 @@ class TimeoutHelper(object):
 
     def _kill(self):
         """
-            This method may be called multiple times as we might get unlucky
-            and be in the middle of creating a new process in _executeShCmd()
-            which won't yet be in ``self._procs``. By locking here and in
-            addProcess() we should be able to kill processes launched after
-            the initial call to _kill()
+        This method may be called multiple times as we might get unlucky
+        and be in the middle of creating a new process in _executeShCmd()
+        which won't yet be in ``self._procs``. By locking here and in
+        addProcess() we should be able to kill processes launched after
+        the initial call to _kill()
         """
         with self._lock:
             for p in self._procs:
                 lit.util.killProcessAndChildren(p.pid)
             # Empty the list and note that we've done a pass over the list
-            self._procs = [] # Python2 doesn't have list.clear()
+            self._procs = []  # Python2 doesn't have list.clear()
             self._doneKillPass = True
+
 
 class ShellCommandResult(object):
     """Captures the result of an individual command."""
 
-    def __init__(self, command, stdout, stderr, exitCode, timeoutReached,
-                 outputFiles = []):
+    def __init__(
+        self, command, stdout, stderr, exitCode, timeoutReached, outputFiles=[]
+    ):
         self.command = command
         self.stdout = stdout
         self.stderr = stderr
@@ -160,10 +177,11 @@ class ShellCommandResult(object):
         self.timeoutReached = timeoutReached
         self.outputFiles = list(outputFiles)
 
+
 def executeShCmd(cmd, shenv, results, timeout=0):
     """
-        Wrapper around _executeShCmd that handles
-        timeout
+    Wrapper around _executeShCmd that handles
+    timeout
     """
     # Use the helper even when no timeout is required to make
     # other code simpler (i.e. avoid bunch of ``!= None`` checks)
@@ -174,14 +192,16 @@ def executeShCmd(cmd, shenv, results, timeout=0):
     timeoutHelper.cancel()
     timeoutInfo = None
     if timeoutHelper.timeoutReached():
-        timeoutInfo = 'Reached timeout of {} seconds'.format(timeout)
+        timeoutInfo = "Reached timeout of {} seconds".format(timeout)
 
     return (finalExitCode, timeoutInfo)
+
 
 def expand_glob(arg, cwd):
     if isinstance(arg, GlobItem):
         return sorted(arg.resolve(cwd))
     return [arg]
+
 
 def expand_glob_expressions(args, cwd):
     result = [args[0]]
@@ -189,8 +209,9 @@ def expand_glob_expressions(args, cwd):
         result.extend(expand_glob(arg, cwd))
     return result
 
+
 def quote_windows_command(seq):
-    """
+    r"""
     Reimplement Python's private subprocess.list2cmdline for MSys compatibility
 
     Based on CPython implementation here:
@@ -218,20 +239,27 @@ def quote_windows_command(seq):
 
         # Add a space to separate this argument from the others
         if result:
-            result.append(' ')
+            result.append(" ")
 
         # This logic differs from upstream list2cmdline.
-        needquote = (" " in arg) or ("\t" in arg) or ("\"" in arg) or ("[" in arg) or (";" in arg) or not arg
+        needquote = (
+            (" " in arg)
+            or ("\t" in arg)
+            or ('"' in arg)
+            or ("[" in arg)
+            or (";" in arg)
+            or not arg
+        )
         if needquote:
             result.append('"')
 
         for c in arg:
-            if c == '\\':
+            if c == "\\":
                 # Don't know if we need to double yet.
                 bs_buf.append(c)
             elif c == '"':
                 # Double backslashes.
-                result.append('\\' * len(bs_buf)*2)
+                result.append("\\" * len(bs_buf) * 2)
                 bs_buf = []
                 result.append('\\"')
             else:
@@ -249,7 +277,8 @@ def quote_windows_command(seq):
             result.extend(bs_buf)
             result.append('"')
 
-    return ''.join(result)
+    return "".join(result)
+
 
 # args are from 'export' or 'env' command.
 # Skips the command, and parses its arguments.
@@ -262,7 +291,7 @@ def updateEnv(env, args):
         # Support for the -u flag (unsetting) for env command
         # e.g., env -u FOO -u BAR will remove both FOO and BAR
         # from the environment.
-        if arg == '-u':
+        if arg == "-u":
             unset_next_env_var = True
             continue
         if unset_next_env_var:
@@ -272,13 +301,14 @@ def updateEnv(env, args):
             continue
 
         # Partition the string into KEY=VALUE.
-        key, eq, val = arg.partition('=')
+        key, eq, val = arg.partition("=")
         # Stop if there was no equals.
-        if eq == '':
+        if eq == "":
             arg_idx_next = arg_idx + 1
             break
         env.env[key] = val
     return args[arg_idx_next:]
+
 
 def executeBuiltinCd(cmd, shenv):
     """executeBuiltinCd - Change the current directory."""
@@ -290,6 +320,7 @@ def executeBuiltinCd(cmd, shenv):
     # following Popen calls will fail instead.
     return ShellCommandResult(cmd, "", "", 0, False)
 
+
 def executeBuiltinPushd(cmd, shenv):
     """executeBuiltinPushd - Change the current dir and save the old."""
     if len(cmd.args) != 2:
@@ -297,6 +328,7 @@ def executeBuiltinPushd(cmd, shenv):
     shenv.dirStack.append(shenv.cwd)
     shenv.change_dir(cmd.args[1])
     return ShellCommandResult(cmd, "", "", 0, False)
+
 
 def executeBuiltinPopd(cmd, shenv):
     """executeBuiltinPopd - Restore a previously saved working directory."""
@@ -307,6 +339,7 @@ def executeBuiltinPopd(cmd, shenv):
     shenv.cwd = shenv.dirStack.pop()
     return ShellCommandResult(cmd, "", "", 0, False)
 
+
 def executeBuiltinExport(cmd, shenv):
     """executeBuiltinExport - Set an environment variable."""
     if len(cmd.args) != 2:
@@ -314,19 +347,20 @@ def executeBuiltinExport(cmd, shenv):
     updateEnv(shenv, cmd.args)
     return ShellCommandResult(cmd, "", "", 0, False)
 
+
 def executeBuiltinEcho(cmd, shenv):
-    """Interpret a redirected echo command"""
+    """Interpret a redirected echo or @echo command"""
     opened_files = []
-    stdin, stdout, stderr = processRedirects(cmd, subprocess.PIPE, shenv,
-                                             opened_files)
+    stdin, stdout, stderr = processRedirects(cmd, subprocess.PIPE, shenv, opened_files)
     if stdin != subprocess.PIPE or stderr != subprocess.PIPE:
         raise InternalShellError(
-                cmd, "stdin and stderr redirects not supported for echo")
+            cmd, f"stdin and stderr redirects not supported for {cmd.args[0]}"
+        )
 
     # Some tests have un-redirected echo commands to help debug test failures.
     # Buffer our output and return it to the caller.
     is_redirected = True
-    encode = lambda x : x
+    encode = lambda x: x
     if stdout == subprocess.PIPE:
         is_redirected = False
         stdout = StringIO()
@@ -337,7 +371,7 @@ def executeBuiltinEcho(cmd, shenv):
         # When we open as binary, however, this also means that we have to write
         # 'bytes' objects to stdout instead of 'str' objects.
         encode = lit.util.to_bytes
-        stdout = open(stdout.name, stdout.mode + 'b')
+        stdout = open(stdout.name, stdout.mode + "b")
         opened_files.append((None, None, stdout, None))
 
     # Implement echo flags. We only support -e and -n, and not yet in
@@ -346,12 +380,12 @@ def executeBuiltinEcho(cmd, shenv):
     args = cmd.args[1:]
     interpret_escapes = False
     write_newline = True
-    while len(args) >= 1 and args[0] in ('-e', '-n'):
+    while len(args) >= 1 and args[0] in ("-e", "-n"):
         flag = args[0]
         args = args[1:]
-        if flag == '-e':
+        if flag == "-e":
             interpret_escapes = True
-        elif flag == '-n':
+        elif flag == "-n":
             write_newline = False
 
     def maybeUnescape(arg):
@@ -359,16 +393,16 @@ def executeBuiltinEcho(cmd, shenv):
             return arg
 
         arg = lit.util.to_bytes(arg)
-        codec = 'string_escape' if sys.version_info < (3,0) else 'unicode_escape'
+        codec = "string_escape" if sys.version_info < (3, 0) else "unicode_escape"
         return arg.decode(codec)
 
     if args:
         for arg in args[:-1]:
             stdout.write(encode(maybeUnescape(arg)))
-            stdout.write(encode(' '))
+            stdout.write(encode(" "))
         stdout.write(encode(maybeUnescape(args[-1])))
     if write_newline:
-        stdout.write(encode('\n'))
+        stdout.write(encode("\n"))
 
     for (name, mode, f, path) in opened_files:
         f.close()
@@ -376,11 +410,12 @@ def executeBuiltinEcho(cmd, shenv):
     output = "" if is_redirected else stdout.getvalue()
     return ShellCommandResult(cmd, output, "", 0, False)
 
+
 def executeBuiltinMkdir(cmd, cmd_shenv):
     """executeBuiltinMkdir - Create new directories."""
     args = expand_glob_expressions(cmd.args, cmd_shenv.cwd)[1:]
     try:
-        opts, args = getopt.gnu_getopt(args, 'p')
+        opts, args = getopt.gnu_getopt(args, "p")
     except getopt.GetoptError as err:
         raise InternalShellError(cmd, "Unsupported: 'mkdir':  %s" % str(err))
 
@@ -401,7 +436,7 @@ def executeBuiltinMkdir(cmd, cmd_shenv):
         dir = to_unicode(dir) if kIsWindows else to_bytes(dir)
         cwd = to_unicode(cwd) if kIsWindows else to_bytes(cwd)
         if not os.path.isabs(dir):
-            dir = os.path.realpath(os.path.join(cwd, dir))
+            dir = lit.util.abs_path_preserve_drive(os.path.join(cwd, dir))
         if parent:
             lit.util.mkdir_p(dir)
         else:
@@ -411,6 +446,7 @@ def executeBuiltinMkdir(cmd, cmd_shenv):
                 stderr.write("Error: 'mkdir' command failed, %s\n" % str(err))
                 exitCode = 1
     return ShellCommandResult(cmd, "", stderr.getvalue(), exitCode, False)
+
 
 def executeBuiltinRm(cmd, cmd_shenv):
     """executeBuiltinRm - Removes (deletes) files or directories."""
@@ -436,7 +472,7 @@ def executeBuiltinRm(cmd, cmd_shenv):
     def on_rm_error(func, path, exc_info):
         # path contains the path of the file that couldn't be removed
         # let's just assume that it's read-only and remove it.
-        os.chmod(path, stat.S_IMODE( os.stat(path).st_mode) | stat.S_IWRITE)
+        os.chmod(path, stat.S_IMODE(os.stat(path).st_mode) | stat.S_IWRITE)
         os.remove(path)
 
     stderr = StringIO()
@@ -446,7 +482,7 @@ def executeBuiltinRm(cmd, cmd_shenv):
         path = to_unicode(path) if kIsWindows else to_bytes(path)
         cwd = to_unicode(cwd) if kIsWindows else to_bytes(cwd)
         if not os.path.isabs(path):
-            path = os.path.realpath(os.path.join(cwd, path))
+            path = lit.util.abs_path_preserve_drive(os.path.join(cwd, path))
         if force and not os.path.exists(path):
             continue
         try:
@@ -454,7 +490,7 @@ def executeBuiltinRm(cmd, cmd_shenv):
                 if not recursive:
                     stderr.write("Error: %s is a directory\n" % path)
                     exitCode = 1
-                if platform.system() == 'Windows':
+                if platform.system() == "Windows":
                     # NOTE: use ctypes to access `SHFileOperationsW` on Windows to
                     # use the NT style path to get access to long file paths which
                     # cannot be removed otherwise.
@@ -465,14 +501,14 @@ def executeBuiltinRm(cmd, cmd_shenv):
 
                     class SHFILEOPSTRUCTW(Structure):
                         _fields_ = [
-                                ('hWnd', HWND),
-                                ('wFunc', UINT),
-                                ('pFrom', LPCWSTR),
-                                ('pTo', LPCWSTR),
-                                ('fFlags', WORD),
-                                ('fAnyOperationsAborted', BOOL),
-                                ('hNameMappings', c_void_p),
-                                ('lpszProgressTitle', LPCWSTR),
+                            ("hWnd", HWND),
+                            ("wFunc", UINT),
+                            ("pFrom", LPCWSTR),
+                            ("pTo", LPCWSTR),
+                            ("fFlags", WORD),
+                            ("fAnyOperationsAborted", BOOL),
+                            ("hNameMappings", c_void_p),
+                            ("lpszProgressTitle", LPCWSTR),
                         ]
 
                     FO_MOVE, FO_COPY, FO_DELETE, FO_RENAME = range(1, 5)
@@ -482,7 +518,12 @@ def executeBuiltinRm(cmd, cmd_shenv):
                     FOF_NOCONFIRMMKDIR = 512
                     FOF_NOERRORUI = 1024
 
-                    FOF_NO_UI = FOF_SILENT | FOF_NOCONFIRMATION | FOF_NOERRORUI | FOF_NOCONFIRMMKDIR
+                    FOF_NO_UI = (
+                        FOF_SILENT
+                        | FOF_NOCONFIRMATION
+                        | FOF_NOERRORUI
+                        | FOF_NOCONFIRMMKDIR
+                    )
 
                     SHFileOperationW = windll.shell32.SHFileOperationW
                     SHFileOperationW.argtypes = [POINTER(SHFILEOPSTRUCTW)]
@@ -490,28 +531,31 @@ def executeBuiltinRm(cmd, cmd_shenv):
                     path = os.path.abspath(path)
 
                     pFrom = create_unicode_buffer(path, len(path) + 2)
-                    pFrom[len(path)] = pFrom[len(path) + 1] = '\0'
-                    operation = SHFILEOPSTRUCTW(wFunc=UINT(FO_DELETE),
-                                                pFrom=LPCWSTR(addressof(pFrom)),
-                                                fFlags=FOF_NO_UI)
+                    pFrom[len(path)] = pFrom[len(path) + 1] = "\0"
+                    operation = SHFILEOPSTRUCTW(
+                        wFunc=UINT(FO_DELETE),
+                        pFrom=LPCWSTR(addressof(pFrom)),
+                        fFlags=FOF_NO_UI,
+                    )
                     result = SHFileOperationW(byref(operation))
                     if result:
                         raise WinError(result)
                 else:
-                    shutil.rmtree(path, onerror = on_rm_error if force else None)
+                    shutil.rmtree(path, onerror=on_rm_error if force else None)
             else:
                 if force and not os.access(path, os.W_OK):
-                    os.chmod(path,
-                             stat.S_IMODE(os.stat(path).st_mode) | stat.S_IWRITE)
+                    os.chmod(path, stat.S_IMODE(os.stat(path).st_mode) | stat.S_IWRITE)
                 os.remove(path)
         except OSError as err:
             stderr.write("Error: 'rm' command failed, %s" % str(err))
             exitCode = 1
     return ShellCommandResult(cmd, "", stderr.getvalue(), exitCode, False)
 
+
 def executeBuiltinColon(cmd, cmd_shenv):
     """executeBuiltinColon - Discard arguments and exit with status 0."""
     return ShellCommandResult(cmd, "", "", 0, False)
+
 
 def processRedirects(cmd, stdin_source, cmd_shenv, opened_files):
     """Return the standard fds for cmd after applying redirects
@@ -527,22 +571,24 @@ def processRedirects(cmd, stdin_source, cmd_shenv, opened_files):
     # where file-object is initially None.
     redirects = [(0,), (1,), (2,)]
     for (op, filename) in cmd.redirects:
-        if op == ('>',2):
-            redirects[2] = [filename, 'w', None]
-        elif op == ('>>',2):
-            redirects[2] = [filename, 'a', None]
-        elif op == ('>&',2) and filename in '012':
+        if op == (">", 2):
+            redirects[2] = [filename, "w", None]
+        elif op == (">>", 2):
+            redirects[2] = [filename, "a", None]
+        elif op == (">&", 2) and filename in "012":
             redirects[2] = redirects[int(filename)]
-        elif op == ('>&',) or op == ('&>',):
-            redirects[1] = redirects[2] = [filename, 'w', None]
-        elif op == ('>',):
-            redirects[1] = [filename, 'w', None]
-        elif op == ('>>',):
-            redirects[1] = [filename, 'a', None]
-        elif op == ('<',):
-            redirects[0] = [filename, 'r', None]
+        elif op == (">&",) or op == ("&>",):
+            redirects[1] = redirects[2] = [filename, "w", None]
+        elif op == (">",):
+            redirects[1] = [filename, "w", None]
+        elif op == (">>",):
+            redirects[1] = [filename, "a", None]
+        elif op == ("<",):
+            redirects[0] = [filename, "r", None]
         else:
-            raise InternalShellError(cmd, "Unsupported redirect: %r" % ((op, filename),))
+            raise InternalShellError(
+                cmd, "Unsupported redirect: %r" % ((op, filename),)
+            )
 
     # Open file descriptors in a second pass.
     std_fds = [None, None, None]
@@ -578,25 +624,27 @@ def processRedirects(cmd, stdin_source, cmd_shenv, opened_files):
         redir_filename = None
         name = expand_glob(filename, cmd_shenv.cwd)
         if len(name) != 1:
-           raise InternalShellError(cmd, "Unsupported: glob in "
-                                    "redirect expanded to multiple files")
+            raise InternalShellError(
+                cmd, "Unsupported: glob in " "redirect expanded to multiple files"
+            )
         name = name[0]
         if kAvoidDevNull and name == kDevNull:
             fd = tempfile.TemporaryFile(mode=mode)
-        elif kIsWindows and name == '/dev/tty':
+        elif kIsWindows and name == "/dev/tty":
             # Simulate /dev/tty on Windows.
             # "CON" is a special filename for the console.
             fd = open("CON", mode)
         else:
             # Make sure relative paths are relative to the cwd.
             redir_filename = os.path.join(cmd_shenv.cwd, name)
-            redir_filename = to_unicode(redir_filename) \
-                    if kIsWindows else to_bytes(redir_filename)
+            redir_filename = (
+                to_unicode(redir_filename) if kIsWindows else to_bytes(redir_filename)
+            )
             fd = open(redir_filename, mode)
         # Workaround a Win32 and/or subprocess bug when appending.
         #
         # FIXME: Actually, this is probably an instance of PR6753.
-        if mode == 'a':
+        if mode == "a":
             fd.seek(0, 2)
         # Mutate the underlying redirect list so that we can redirect stdout
         # and stderr to the same place without opening the file twice.
@@ -606,6 +654,7 @@ def processRedirects(cmd, stdin_source, cmd_shenv, opened_files):
 
     return std_fds
 
+
 def _executeShCmd(cmd, shenv, results, timeoutHelper):
     if timeoutHelper.timeoutReached():
         # Prevent further recursion if the timeout has been hit
@@ -613,20 +662,20 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
         return None
 
     if isinstance(cmd, ShUtil.Seq):
-        if cmd.op == ';':
+        if cmd.op == ";":
             res = _executeShCmd(cmd.lhs, shenv, results, timeoutHelper)
             return _executeShCmd(cmd.rhs, shenv, results, timeoutHelper)
 
-        if cmd.op == '&':
-            raise InternalShellError(cmd,"unsupported shell operator: '&'")
+        if cmd.op == "&":
+            raise InternalShellError(cmd, "unsupported shell operator: '&'")
 
-        if cmd.op == '||':
+        if cmd.op == "||":
             res = _executeShCmd(cmd.lhs, shenv, results, timeoutHelper)
             if res != 0:
                 res = _executeShCmd(cmd.rhs, shenv, results, timeoutHelper)
             return res
 
-        if cmd.op == '&&':
+        if cmd.op == "&&":
             res = _executeShCmd(cmd.lhs, shenv, results, timeoutHelper)
             if res is None:
                 return res
@@ -635,7 +684,7 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
                 res = _executeShCmd(cmd.rhs, shenv, results, timeoutHelper)
             return res
 
-        raise ValueError('Unknown shell command: %r' % cmd.op)
+        raise ValueError("Unknown shell command: %r" % cmd.op)
     assert isinstance(cmd, ShUtil.Pipeline)
 
     procs = []
@@ -644,20 +693,25 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
     stderrTempFiles = []
     opened_files = []
     named_temp_files = []
-    builtin_commands = set(['cat', 'diff'])
-    builtin_commands_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "builtin_commands")
-    inproc_builtins = {'cd': executeBuiltinCd,
-                       'export': executeBuiltinExport,
-                       'echo': executeBuiltinEcho,
-                       'mkdir': executeBuiltinMkdir,
-                       'popd': executeBuiltinPopd,
-                       'pushd': executeBuiltinPushd,
-                       'rm': executeBuiltinRm,
-                       ':': executeBuiltinColon}
+    builtin_commands = set(["cat", "diff"])
+    builtin_commands_dir = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)), "builtin_commands"
+    )
+    inproc_builtins = {
+        "cd": executeBuiltinCd,
+        "export": executeBuiltinExport,
+        "echo": executeBuiltinEcho,
+        "@echo": executeBuiltinEcho,
+        "mkdir": executeBuiltinMkdir,
+        "popd": executeBuiltinPopd,
+        "pushd": executeBuiltinPushd,
+        "rm": executeBuiltinRm,
+        ":": executeBuiltinColon,
+    }
     # To avoid deadlock, we use a single stderr stream for piped
     # output. This is null until we have seen some output using
     # stderr.
-    for i,j in enumerate(cmd.commands):
+    for i, j in enumerate(cmd.commands):
         # Reference the global environment by default.
         cmd_shenv = shenv
         args = list(j.args)
@@ -665,7 +719,7 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
         not_count = 0
         not_crash = False
         while True:
-            if args[0] == 'env':
+            if args[0] == "env":
                 # Create a copy of the global environment and modify it for
                 # this one command. There might be multiple envs in a pipeline,
                 # and there might be multiple envs in a command (usually when
@@ -676,23 +730,20 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
                     cmd_shenv = ShellEnvironment(shenv.cwd, shenv.env)
                 args = updateEnv(cmd_shenv, args)
                 if not args:
-                    raise InternalShellError(j, "Error: 'env' requires a"
-                                                " subcommand")
-            elif args[0] == 'not':
+                    raise InternalShellError(j, "Error: 'env' requires a" " subcommand")
+            elif args[0] == "not":
                 not_args.append(args.pop(0))
                 not_count += 1
-                if args and args[0] == '--crash':
+                if args and args[0] == "--crash":
                     not_args.append(args.pop(0))
                     not_crash = True
                 if not args:
-                    raise InternalShellError(j, "Error: 'not' requires a"
-                                                " subcommand")
-            elif args[0] == '!':
+                    raise InternalShellError(j, "Error: 'not' requires a" " subcommand")
+            elif args[0] == "!":
                 not_args.append(args.pop(0))
                 not_count += 1
                 if not args:
-                    raise InternalShellError(j, "Error: '!' requires a"
-                                                " subcommand")
+                    raise InternalShellError(j, "Error: '!' requires a" " subcommand")
             else:
                 break
 
@@ -704,22 +755,26 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
         # FIXME: Standardize on the builtin echo implementation. We can use a
         # temporary file to sidestep blocking pipe write issues.
         inproc_builtin = inproc_builtins.get(args[0], None)
-        if inproc_builtin and (args[0] != 'echo' or len(cmd.commands) == 1):
+        if inproc_builtin and (args[0] != "echo" or len(cmd.commands) == 1):
             # env calling an in-process builtin is useless, so we take the safe
             # approach of complaining.
             if not cmd_shenv is shenv:
-                raise InternalShellError(j, "Error: 'env' cannot call '{}'"
-                                            .format(args[0]))
+                raise InternalShellError(
+                    j, "Error: 'env' cannot call '{}'".format(args[0])
+                )
             if not_crash:
-                raise InternalShellError(j, "Error: 'not --crash' cannot call"
-                                            " '{}'".format(args[0]))
+                raise InternalShellError(
+                    j, "Error: 'not --crash' cannot call" " '{}'".format(args[0])
+                )
             if len(cmd.commands) != 1:
-                raise InternalShellError(j, "Unsupported: '{}' cannot be part"
-                                            " of a pipeline".format(args[0]))
+                raise InternalShellError(
+                    j,
+                    "Unsupported: '{}' cannot be part" " of a pipeline".format(args[0]),
+                )
             result = inproc_builtin(Command(args, j.redirects), cmd_shenv)
             if not_count % 2:
                 result.exitCode = int(not result.exitCode)
-            result.command.args = j.args;
+            result.command.args = j.args
             results.append(result)
             return result.exitCode
 
@@ -727,8 +782,7 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
         # commands.
         if args[0] in builtin_commands:
             args.insert(0, sys.executable)
-            cmd_shenv.env['PYTHONPATH'] = \
-                os.path.dirname(os.path.abspath(__file__))
+            cmd_shenv.env["PYTHONPATH"] = os.path.dirname(os.path.abspath(__file__))
             args[1] = os.path.join(builtin_commands_dir, args[1] + ".py")
 
         # We had to search through the 'not' commands to find all the 'env'
@@ -749,12 +803,13 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
         else:
             not_args = []
 
-        stdin, stdout, stderr = processRedirects(j, default_stdin, cmd_shenv,
-                                                 opened_files)
+        stdin, stdout, stderr = processRedirects(
+            j, default_stdin, cmd_shenv, opened_files
+        )
 
         # If stderr wants to come from stdout, but stdout isn't a pipe, then put
         # stderr on a pipe and treat it as stdout.
-        if (stderr == subprocess.STDOUT and stdout != subprocess.PIPE):
+        if stderr == subprocess.STDOUT and stdout != subprocess.PIPE:
             stderr = subprocess.PIPE
             stderrIsStdout = True
         else:
@@ -765,20 +820,20 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
             #
             # FIXME: This is slow, but so is deadlock.
             if stderr == subprocess.PIPE and j != cmd.commands[-1]:
-                stderr = tempfile.TemporaryFile(mode='w+b')
+                stderr = tempfile.TemporaryFile(mode="w+b")
                 stderrTempFiles.append((i, stderr))
 
         # Resolve the executable path ourselves.
         executable = None
         # For paths relative to cwd, use the cwd of the shell environment.
-        if args[0].startswith('.'):
+        if args[0].startswith("."):
             exe_in_cwd = os.path.join(cmd_shenv.cwd, args[0])
             if os.path.isfile(exe_in_cwd):
                 executable = exe_in_cwd
         if not executable:
-            executable = lit.util.which(args[0], cmd_shenv.env['PATH'])
+            executable = lit.util.which(args[0], cmd_shenv.env["PATH"])
         if not executable:
-            raise InternalShellError(j, '%r: command not found' % args[0])
+            raise InternalShellError(j, "%r: command not found" % args[0])
 
         # Replace uses of /dev/null with temporary files.
         if kAvoidDevNull:
@@ -788,7 +843,7 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
                 str_type = basestring
             except NameError:
                 str_type = str
-            for i,arg in enumerate(args):
+            for i, arg in enumerate(args):
                 if isinstance(arg, str_type) and kDevNull in arg:
                     f = tempfile.NamedTemporaryFile(delete=False)
                     f.close()
@@ -804,20 +859,27 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
             args = quote_windows_command(args)
 
         try:
-            procs.append(subprocess.Popen(args, cwd=cmd_shenv.cwd,
-                                          executable = executable,
-                                          stdin = stdin,
-                                          stdout = stdout,
-                                          stderr = stderr,
-                                          env = cmd_shenv.env,
-                                          close_fds = kUseCloseFDs,
-                                          universal_newlines = True,
-                                          errors = 'replace'))
+            procs.append(
+                subprocess.Popen(
+                    args,
+                    cwd=cmd_shenv.cwd,
+                    executable=executable,
+                    stdin=stdin,
+                    stdout=stdout,
+                    stderr=stderr,
+                    env=cmd_shenv.env,
+                    close_fds=kUseCloseFDs,
+                    universal_newlines=True,
+                    errors="replace",
+                )
+            )
             proc_not_counts.append(not_count)
             # Let the helper know about this process
             timeoutHelper.addProcess(procs[-1])
         except OSError as e:
-            raise InternalShellError(j, 'Could not create process ({}) due to {}'.format(executable, e))
+            raise InternalShellError(
+                j, "Could not create process ({}) due to {}".format(executable, e)
+            )
 
         # Immediately close stdin for any process taking stdin from us.
         if stdin == subprocess.PIPE:
@@ -847,43 +909,43 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
         if procs[i].stdout is not None:
             out = procs[i].stdout.read()
         else:
-            out = ''
+            out = ""
         if procs[i].stderr is not None:
             err = procs[i].stderr.read()
         else:
-            err = ''
-        procData[i] = (out,err)
+            err = ""
+        procData[i] = (out, err)
 
     # Read stderr out of the temp files.
-    for i,f in stderrTempFiles:
+    for i, f in stderrTempFiles:
         f.seek(0, 0)
         procData[i] = (procData[i][0], f.read())
         f.close()
 
     exitCode = None
-    for i,(out,err) in enumerate(procData):
+    for i, (out, err) in enumerate(procData):
         res = procs[i].wait()
         # Detect Ctrl-C in subprocess.
         if res == -signal.SIGINT:
             raise KeyboardInterrupt
         if proc_not_counts[i] % 2:
-            res = not res
+            res = 1 if res == 0 else 0
         elif proc_not_counts[i] > 1:
             res = 1 if res != 0 else 0
 
         # Ensure the resulting output is always of string type.
         try:
             if out is None:
-                out = ''
+                out = ""
             else:
-                out = to_string(out.decode('utf-8', errors='replace'))
+                out = to_string(out.decode("utf-8", errors="replace"))
         except:
             out = str(out)
         try:
             if err is None:
-                err = ''
+                err = ""
             else:
-                err = to_string(err.decode('utf-8', errors='replace'))
+                err = to_string(err.decode("utf-8", errors="replace"))
         except:
             err = str(err)
 
@@ -891,18 +953,25 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
         output_files = []
         if res != 0:
             for (name, mode, f, path) in sorted(opened_files):
-                if path is not None and mode in ('w', 'a'):
+                if path is not None and mode in ("w", "a"):
                     try:
-                        with open(path, 'rb') as f:
+                        with open(path, "rb") as f:
                             data = f.read()
                     except:
                         data = None
                     if data is not None:
                         output_files.append((name, path, data))
 
-        results.append(ShellCommandResult(
-            cmd.commands[i], out, err, res, timeoutHelper.timeoutReached(),
-            output_files))
+        results.append(
+            ShellCommandResult(
+                cmd.commands[i],
+                out,
+                err,
+                res,
+                timeoutHelper.timeoutReached(),
+                output_files,
+            )
+        )
         if cmd.pipe_err:
             # Take the last failing exit code from the pipeline.
             if not exitCode or res != 0:
@@ -922,67 +991,138 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
 
     return exitCode
 
-def executeScriptInternal(test, litConfig, tmpBase, commands, cwd):
+
+def formatOutput(title, data, limit=None):
+    if not data.strip():
+        return ""
+    if not limit is None and len(data) > limit:
+        data = data[:limit] + "\n...\n"
+        msg = "data was truncated"
+    else:
+        msg = ""
+    ndashes = 30
+    # fmt: off
+    out =  f"# .---{title}{'-' * (ndashes - 4 - len(title))}\n"
+    out += f"# | " + "\n# | ".join(data.splitlines()) + "\n"
+    out += f"# `---{msg}{'-' * (ndashes - 4 - len(msg))}\n"
+    # fmt: on
+    return out
+
+
+# Normally returns out, err, exitCode, timeoutInfo.
+#
+# If debug is True (the normal lit behavior), err is empty, and out contains an
+# execution trace, including stdout and stderr shown per command executed.
+#
+# If debug is False (set by some custom lit test formats that call this
+# function), out contains only stdout from the script, err contains only stderr
+# from the script, and there is no execution trace.
+def executeScriptInternal(test, litConfig, tmpBase, commands, cwd, debug=True):
     cmds = []
     for i, ln in enumerate(commands):
-        match = re.match(kPdbgRegex, ln)
+        # Within lit, we try to always add '%dbg(...)' to command lines in order
+        # to maximize debuggability.  However, custom lit test formats might not
+        # always add it, so add a generic debug message in that case.
+        match = re.fullmatch(kPdbgRegex, ln)
         if match:
+            dbg = match.group(1)
             command = match.group(2)
-            ln = commands[i] = \
-                match.expand(": '\\1'; \\2" if command else ": '\\1'")
+        else:
+            dbg = "command line"
+            command = ln
+        if debug:
+            ln = f"@echo '# {dbg}' "
+            if command:
+                ln += f"&& @echo {shlex.quote(command.lstrip())} && {command}"
+            else:
+                ln += "has no command after substitutions"
+        else:
+            ln = command
         try:
-            cmds.append(ShUtil.ShParser(ln, litConfig.isWindows,
-                                        test.config.pipefail).parse())
+            cmds.append(
+                ShUtil.ShParser(ln, litConfig.isWindows, test.config.pipefail).parse()
+            )
         except:
-            return lit.Test.Result(Test.FAIL, "shell parser error on: %r" % ln)
+            return lit.Test.Result(
+                Test.FAIL, f"shell parser error on {dbg}: {command.lstrip()}\n"
+            )
 
     cmd = cmds[0]
     for c in cmds[1:]:
-        cmd = ShUtil.Seq(cmd, '&&', c)
+        cmd = ShUtil.Seq(cmd, "&&", c)
 
     results = []
     timeoutInfo = None
     try:
         shenv = ShellEnvironment(cwd, test.config.environment)
-        exitCode, timeoutInfo = executeShCmd(cmd, shenv, results, timeout=litConfig.maxIndividualTestTime)
+        exitCode, timeoutInfo = executeShCmd(
+            cmd, shenv, results, timeout=litConfig.maxIndividualTestTime
+        )
     except InternalShellError:
         e = sys.exc_info()[1]
         exitCode = 127
-        results.append(
-            ShellCommandResult(e.command, '', e.message, exitCode, False))
+        results.append(ShellCommandResult(e.command, "", e.message, exitCode, False))
 
-    out = err = ''
-    for i,result in enumerate(results):
-        # Write the command line run.
-        out += '$ %s\n' % (' '.join('"%s"' % s
-                                    for s in result.command.args),)
+    out = err = ""
+    for i, result in enumerate(results):
+        if not debug:
+            out += result.stdout
+            err += result.stderr
+            continue
+
+        # The purpose of an "@echo" command is merely to add a debugging message
+        # directly to lit's output.  It is used internally by lit's internal
+        # shell and is not currently documented for use in lit tests.  However,
+        # if someone misuses it (e.g., both "echo" and "@echo" complain about
+        # stdin redirection), produce the normal execution trace to facilitate
+        # debugging.
+        if (
+            result.command.args[0] == "@echo"
+            and result.exitCode == 0
+            and not result.stderr
+            and not result.outputFiles
+            and not result.timeoutReached
+        ):
+            out += result.stdout
+            continue
+
+        # Write the command line that was run.  Properly quote it.  Leading
+        # "!" commands should not be quoted as that would indicate they are not
+        # the builtins.
+        out += "# executed command: "
+        nLeadingBangs = next(
+            (i for i, cmd in enumerate(result.command.args) if cmd != "!"),
+            len(result.command.args),
+        )
+        out += "! " * nLeadingBangs
+        out += " ".join(
+            shlex.quote(str(s))
+            for i, s in enumerate(result.command.args)
+            if i >= nLeadingBangs
+        )
+        out += "\n"
 
         # If nothing interesting happened, move on.
-        if litConfig.maxIndividualTestTime == 0 and \
-               result.exitCode == 0 and \
-               not result.stdout.strip() and not result.stderr.strip():
+        if (
+            litConfig.maxIndividualTestTime == 0
+            and result.exitCode == 0
+            and not result.stdout.strip()
+            and not result.stderr.strip()
+        ):
             continue
 
         # Otherwise, something failed or was printed, show it.
 
         # Add the command output, if redirected.
         for (name, path, data) in result.outputFiles:
-            if data.strip():
-                out += "# redirected output from %r:\n" % (name,)
-                data = to_string(data.decode('utf-8', errors='replace'))
-                if len(data) > 1024:
-                    out += data[:1024] + "\n...\n"
-                    out += "note: data was truncated\n"
-                else:
-                    out += data
-                out += "\n"
-
+            data = to_string(data.decode("utf-8", errors="replace"))
+            out += formatOutput(f"redirected output from '{name}'", data, limit=1024)
         if result.stdout.strip():
-            out += '# command output:\n%s\n' % (result.stdout,)
+            out += formatOutput("command stdout", result.stdout)
         if result.stderr.strip():
-            out += '# command stderr:\n%s\n' % (result.stderr,)
+            out += formatOutput("command stderr", result.stderr)
         if not result.stdout.strip() and not result.stderr.strip():
-            out += "note: command had no output on stdout or stderr\n"
+            out += "# note: command had no output on stdout or stderr\n"
 
         # Show the error conditions:
         if result.exitCode != 0:
@@ -992,79 +1132,111 @@ def executeScriptInternal(test, litConfig, tmpBase, commands, cwd):
                 codeStr = hex(int(result.exitCode & 0xFFFFFFFF)).rstrip("L")
             else:
                 codeStr = str(result.exitCode)
-            out += "error: command failed with exit status: %s\n" % (
-                codeStr,)
+            out += "# error: command failed with exit status: %s\n" % (codeStr,)
         if litConfig.maxIndividualTestTime > 0 and result.timeoutReached:
-            out += 'error: command reached timeout: %s\n' % (
-                str(result.timeoutReached),)
+            out += "# error: command reached timeout: %s\n" % (
+                str(result.timeoutReached),
+            )
 
     return out, err, exitCode, timeoutInfo
 
+
 def executeScript(test, litConfig, tmpBase, commands, cwd):
     bashPath = litConfig.getBashPath()
-    isWin32CMDEXE = (litConfig.isWindows and not bashPath)
-    script = tmpBase + '.script'
+    isWin32CMDEXE = litConfig.isWindows and not bashPath
+    script = tmpBase + ".script"
     if isWin32CMDEXE:
-        script += '.bat'
+        script += ".bat"
 
     # Write script file
-    mode = 'w'
+    mode = "w"
     open_kwargs = {}
     if litConfig.isWindows and not isWin32CMDEXE:
-        mode += 'b'  # Avoid CRLFs when writing bash scripts.
-    elif sys.version_info > (3,0):
-        open_kwargs['encoding'] = 'utf-8'
+        mode += "b"  # Avoid CRLFs when writing bash scripts.
+    elif sys.version_info > (3, 0):
+        open_kwargs["encoding"] = "utf-8"
     f = open(script, mode, **open_kwargs)
     if isWin32CMDEXE:
         for i, ln in enumerate(commands):
-            match = re.match(kPdbgRegex, ln)
+            match = re.fullmatch(kPdbgRegex, ln)
             if match:
                 command = match.group(2)
-                commands[i] = \
-                    match.expand("echo '\\1' > nul && " if command
-                                 else "echo '\\1' > nul")
-        if litConfig.echo_all_commands:
-            f.write('@echo on\n')
-        else:
-            f.write('@echo off\n')
-        f.write('\n@if %ERRORLEVEL% NEQ 0 EXIT\n'.join(commands))
+                commands[i] = match.expand(
+                    "echo '\\1' > nul && " if command else "echo '\\1' > nul"
+                )
+        f.write("@echo on\n")
+        f.write("\n@if %ERRORLEVEL% NEQ 0 EXIT\n".join(commands))
     else:
         for i, ln in enumerate(commands):
-            match = re.match(kPdbgRegex, ln)
+            match = re.fullmatch(kPdbgRegex, ln)
             if match:
+                dbg = match.group(1)
                 command = match.group(2)
-                commands[i] = match.expand(": '\\1'; \\2" if command
-                                           else ": '\\1'")
+                # Echo the debugging diagnostic to stderr.
+                #
+                # For that echo command, use 'set' commands to suppress the
+                # shell's execution trace, which would just add noise.  Suppress
+                # the shell's execution trace for the 'set' commands by
+                # redirecting their stderr to /dev/null.
+                if command:
+                    msg = f"'{dbg}': {shlex.quote(command.lstrip())}"
+                else:
+                    msg = f"'{dbg}' has no command after substitutions"
+                commands[i] = (
+                    f"{{ set +x; }} 2>/dev/null && "
+                    f"echo {msg} >&2 && "
+                    f"{{ set -x; }} 2>/dev/null"
+                )
+                # Execute the command, if any.
+                #
+                # 'command' might be something like:
+                #
+                #   subcmd & PID=$!
+                #
+                # In that case, we need something like:
+                #
+                #   echo_dbg && { subcmd & PID=$!; }
+                #
+                # Without the '{ ...; }' enclosing the original 'command', '&'
+                # would put all of 'echo_dbg && subcmd' in the background.  This
+                # would cause 'echo_dbg' to execute at the wrong time, and a
+                # later kill of $PID would target the wrong process. We have
+                # seen the latter manage to terminate the shell running lit.
+                if command:
+                    commands[i] += f" && {{ {command}; }}"
         if test.config.pipefail:
-            f.write(b'set -o pipefail;' if mode == 'wb' else 'set -o pipefail;')
-        if litConfig.echo_all_commands:
-            f.write(b'set -x;' if mode == 'wb' else 'set -x;')
-        if sys.version_info > (3,0) and mode == 'wb':
-            f.write(bytes('{ ' + '; } &&\n{ '.join(commands) + '; }', 'utf-8'))
+            f.write(b"set -o pipefail;" if mode == "wb" else "set -o pipefail;")
+        f.write(b"set -x;" if mode == "wb" else "set -x;")
+        if sys.version_info > (3, 0) and mode == "wb":
+            f.write(bytes("{ " + "; } &&\n{ ".join(commands) + "; }", "utf-8"))
         else:
-            f.write('{ ' + '; } &&\n{ '.join(commands) + '; }')
-    f.write(b'\n' if mode == 'wb' else '\n')
+            f.write("{ " + "; } &&\n{ ".join(commands) + "; }")
+    f.write(b"\n" if mode == "wb" else "\n")
     f.close()
 
     if isWin32CMDEXE:
-        command = ['cmd','/c', script]
+        command = ["cmd", "/c", script]
     else:
         if bashPath:
             command = [bashPath, script]
         else:
-            command = ['/bin/sh', script]
+            command = ["/bin/sh", script]
         if litConfig.useValgrind:
             # FIXME: Running valgrind on sh is overkill. We probably could just
             # run on clang with no real loss.
             command = litConfig.valgrindArgs + command
 
     try:
-        out, err, exitCode = lit.util.executeCommand(command, cwd=cwd,
-                                       env=test.config.environment,
-                                       timeout=litConfig.maxIndividualTestTime)
+        out, err, exitCode = lit.util.executeCommand(
+            command,
+            cwd=cwd,
+            env=test.config.environment,
+            timeout=litConfig.maxIndividualTestTime,
+        )
         return (out, err, exitCode, None)
     except lit.util.ExecuteCommandTimeoutException as e:
         return (e.out, e.err, e.exitCode, e.msg)
+
 
 def parseIntegratedTestScriptCommands(source_path, keywords):
     """
@@ -1086,16 +1258,17 @@ def parseIntegratedTestScriptCommands(source_path, keywords):
     # version.
 
     keywords_re = re.compile(
-        to_bytes("(%s)(.*)\n" % ("|".join(re.escape(k) for k in keywords),)))
+        to_bytes("(%s)(.*)\n" % ("|".join(re.escape(k) for k in keywords),))
+    )
 
-    f = open(source_path, 'rb')
+    f = open(source_path, "rb")
     try:
         # Read the entire file contents.
         data = f.read()
 
         # Ensure the data ends with a newline.
-        if not data.endswith(to_bytes('\n')):
-            data = data + to_bytes('\n')
+        if not data.endswith(to_bytes("\n")):
+            data = data + to_bytes("\n")
 
         # Iterate over the matches.
         line_number = 1
@@ -1104,8 +1277,9 @@ def parseIntegratedTestScriptCommands(source_path, keywords):
             # Compute the updated line number by counting the intervening
             # newlines.
             match_position = match.start()
-            line_number += data.count(to_bytes('\n'), last_match_position,
-                                      match_position)
+            line_number += data.count(
+                to_bytes("\n"), last_match_position, match_position
+            )
             last_match_position = match_position
 
             # Convert the keyword and line to UTF-8 strings and yield the
@@ -1116,27 +1290,33 @@ def parseIntegratedTestScriptCommands(source_path, keywords):
             # Opening the file in binary mode prevented Windows \r newline
             # characters from being converted to Unix \n newlines, so manually
             # strip those from the yielded lines.
-            keyword,ln = match.groups()
-            yield (line_number, to_string(keyword.decode('utf-8')),
-                   to_string(ln.decode('utf-8').rstrip('\r')))
+            keyword, ln = match.groups()
+            yield (
+                line_number,
+                to_string(keyword.decode("utf-8")),
+                to_string(ln.decode("utf-8").rstrip("\r")),
+            )
     finally:
         f.close()
+
 
 def getTempPaths(test):
     """Get the temporary location, this is always relative to the test suite
     root, not test source root."""
     execpath = test.getExecPath()
-    execdir,execbase = os.path.split(execpath)
-    tmpDir = os.path.join(execdir, 'Output')
+    execdir, execbase = os.path.split(execpath)
+    tmpDir = os.path.join(execdir, "Output")
     tmpBase = os.path.join(tmpDir, execbase)
     return tmpDir, tmpBase
 
+
 def colonNormalizePath(path):
     if kIsWindows:
-        return re.sub(r'^(.):', r'\1', path.replace('\\', '/'))
+        return re.sub(r"^(.):", r"\1", path.replace("\\", "/"))
     else:
-        assert path[0] == '/'
+        assert path[0] == "/"
         return path[1:]
+
 
 def getDefaultSubstitutions(test, tmpDir, tmpBase, normalize_slashes=False):
     sourcepath = test.getSourcePath()
@@ -1144,80 +1324,86 @@ def getDefaultSubstitutions(test, tmpDir, tmpBase, normalize_slashes=False):
 
     # Normalize slashes, if requested.
     if normalize_slashes:
-        sourcepath = sourcepath.replace('\\', '/')
-        sourcedir = sourcedir.replace('\\', '/')
-        tmpDir = tmpDir.replace('\\', '/')
-        tmpBase = tmpBase.replace('\\', '/')
+        sourcepath = sourcepath.replace("\\", "/")
+        sourcedir = sourcedir.replace("\\", "/")
+        tmpDir = tmpDir.replace("\\", "/")
+        tmpBase = tmpBase.replace("\\", "/")
 
     substitutions = []
     substitutions.extend(test.config.substitutions)
-    tmpName = tmpBase + '.tmp'
+    tmpName = tmpBase + ".tmp"
     baseName = os.path.basename(tmpBase)
-    substitutions.extend([('%s', sourcepath),
-                          ('%S', sourcedir),
-                          ('%p', sourcedir),
-                          ('%{pathsep}', os.pathsep),
-                          ('%t', tmpName),
-                          ('%basename_t', baseName),
-                          ('%T', tmpDir)])
 
-    substitutions.extend([
-        ('%{fs-src-root}', pathlib.Path(sourcedir).anchor),
-        ('%{fs-tmp-root}', pathlib.Path(tmpBase).anchor),
-        ('%{fs-sep}', os.path.sep),
-    ])
+    substitutions.append(("%{pathsep}", os.pathsep))
+    substitutions.append(("%basename_t", baseName))
+    
+    substitutions.extend(
+        [
+            ("%{fs-src-root}", pathlib.Path(sourcedir).anchor),
+            ("%{fs-tmp-root}", pathlib.Path(tmpBase).anchor),
+            ("%{fs-sep}", os.path.sep),
+        ]
+    )
 
-    # "%/[STpst]" should be normalized.
-    substitutions.extend([
-            ('%/s', sourcepath.replace('\\', '/')),
-            ('%/S', sourcedir.replace('\\', '/')),
-            ('%/p', sourcedir.replace('\\', '/')),
-            ('%/t', tmpBase.replace('\\', '/') + '.tmp'),
-            ('%/T', tmpDir.replace('\\', '/')),
-            ('%/et',tmpName.replace('\\', '\\\\\\\\\\\\\\\\')),
-            ])
+    substitutions.append(("%/et", tmpName.replace("\\", "\\\\\\\\\\\\\\\\")))
 
-    # "%{/[STpst]:regex_replacement}" should be normalized like "%/[STpst]" but we're
-    # also in a regex replacement context of a s@@@ regex.
     def regex_escape(s):
-        s = s.replace('@', r'\@')
-        s = s.replace('&', r'\&')
+        s = s.replace("@", r"\@")
+        s = s.replace("&", r"\&")
         return s
-    substitutions.extend([
-            ('%{/s:regex_replacement}',
-             regex_escape(sourcepath.replace('\\', '/'))),
-            ('%{/S:regex_replacement}',
-             regex_escape(sourcedir.replace('\\', '/'))),
-            ('%{/p:regex_replacement}',
-             regex_escape(sourcedir.replace('\\', '/'))),
-            ('%{/t:regex_replacement}',
-             regex_escape(tmpBase.replace('\\', '/')) + '.tmp'),
-            ('%{/T:regex_replacement}',
-             regex_escape(tmpDir.replace('\\', '/'))),
-            ])
 
-    # "%:[STpst]" are normalized paths without colons and without a leading
-    # slash.
-    substitutions.extend([
-            ('%:s', colonNormalizePath(sourcepath)),
-            ('%:S', colonNormalizePath(sourcedir)),
-            ('%:p', colonNormalizePath(sourcedir)),
-            ('%:t', colonNormalizePath(tmpBase + '.tmp')),
-            ('%:T', colonNormalizePath(tmpDir)),
-            ])
+    path_substitutions = [
+        ("s", sourcepath), ("S", sourcedir), ("p", sourcedir),
+        ("t", tmpName), ("T", tmpDir)
+    ]
+    for path_substitution in path_substitutions:
+        letter = path_substitution[0]
+        path = path_substitution[1]
+
+        # Original path variant
+        substitutions.append(("%" + letter, path))
+
+        # Normalized path separator variant
+        substitutions.append(("%/" + letter, path.replace("\\", "/")))
+
+        # realpath variants
+        # Windows paths with substitute drives are not expanded by default
+        # as they are used to avoid MAX_PATH issues, but sometimes we do
+        # need the fully expanded path.
+        real_path = os.path.realpath(path)
+        substitutions.append(("%{" + letter + ":real}", real_path))
+        substitutions.append(("%{/" + letter + ":real}",
+            real_path.replace("\\", "/")))
+
+        # "%{/[STpst]:regex_replacement}" should be normalized like
+        # "%/[STpst]" but we're also in a regex replacement context
+        # of a s@@@ regex.
+        substitutions.append(
+            ("%{/" + letter + ":regex_replacement}",
+            regex_escape(path.replace("\\", "/"))))
+
+        # "%:[STpst]" are normalized paths without colons and without
+        # a leading slash.
+        substitutions.append(("%:" + letter, colonNormalizePath(path)))
+
     return substitutions
+
 
 def _memoize(f):
     cache = {}  # Intentionally unbounded, see applySubstitutions()
+
     def memoized(x):
         if x not in cache:
             cache[x] = f(x)
         return cache[x]
+
     return memoized
+
 
 @_memoize
 def _caching_re_compile(r):
     return re.compile(r)
+
 
 class ExpandableScriptDirective(object):
     """
@@ -1270,8 +1456,9 @@ class ExpandableScriptDirective(object):
         this directive and any line continuations.
         """
         if self.start_line_number == self.end_line_number:
-            return f'at line {self.start_line_number}'
-        return f'from line {self.start_line_number} to {self.end_line_number}'
+            return f"at line {self.start_line_number}"
+        return f"from line {self.start_line_number} to {self.end_line_number}"
+
 
 class CommandDirective(ExpandableScriptDirective):
     """
@@ -1296,7 +1483,8 @@ class CommandDirective(ExpandableScriptDirective):
     def needs_continuation(self):
         # Trailing whitespace is stripped immediately when each line is added,
         # so '\' is never hidden here.
-        return self.command[-1] == '\\'
+        return self.command[-1] == "\\"
+
 
 class SubstDirective(ExpandableScriptDirective):
     """
@@ -1313,8 +1501,7 @@ class SubstDirective(ExpandableScriptDirective):
         still required.
     """
 
-    def __init__(self, start_line_number, end_line_number, keyword, new_subst,
-                 line):
+    def __init__(self, start_line_number, end_line_number, keyword, new_subst, line):
         super().__init__(start_line_number, end_line_number, keyword)
         self.new_subst = new_subst
         self.body = line
@@ -1329,13 +1516,13 @@ class SubstDirective(ExpandableScriptDirective):
             raise ValueError("Substitution's continuation is empty")
         # Append line.  Replace the '\' and any adjacent whitespace with a
         # single space.
-        self.body = self.body.rstrip()[:-1].rstrip() + ' ' + line.lstrip()
+        self.body = self.body.rstrip()[:-1].rstrip() + " " + line.lstrip()
         self.end_line_number = line_number
         self._parse_body()
         return True
 
     def needs_continuation(self):
-        return self.body.rstrip()[-1:] == '\\'
+        return self.body.rstrip()[-1:] == "\\"
 
     def _parse_body(self):
         """
@@ -1348,7 +1535,7 @@ class SubstDirective(ExpandableScriptDirective):
 
         # Extract the left-hand side and value, and discard any whitespace
         # enclosing each.
-        parts = self.body.split('=', 1)
+        parts = self.body.split("=", 1)
         if len(parts) == 1:
             raise ValueError("Substitution's definition does not contain '='")
         self.name = parts[0].strip()
@@ -1369,31 +1556,34 @@ class SubstDirective(ExpandableScriptDirective):
         #
         # Actually, '{' and '}' are special if they contain only digits possibly
         # separated by a comma.  Requiring a leading letter avoids that.
-        if not re.fullmatch(r'%{[_a-zA-Z][-_:0-9a-zA-Z]*}', self.name):
+        if not re.fullmatch(r"%{[_a-zA-Z][-_:0-9a-zA-Z]*}", self.name):
             raise ValueError(
                 f"Substitution name '{self.name}' is malformed as it must "
                 f"start with '%{{', it must end with '}}', and the rest must "
                 f"start with a letter or underscore and contain only "
-                f"alphanumeric characters, hyphens, underscores, and colons")
+                f"alphanumeric characters, hyphens, underscores, and colons"
+            )
 
     def adjust_substitutions(self, substitutions):
         """
         Modify the specified substitution list as specified by this directive.
         """
-        assert not self.needs_continuation(), \
-               "expected directive continuations to be parsed before applying"
-        value_repl = self.value.replace('\\', '\\\\')
-        existing = [i for i, subst in enumerate(substitutions)
-                    if self.name in subst[0]]
-        existing_res = ''.join("\nExisting pattern: " + substitutions[i][0]
-                               for i in existing)
+        assert (
+            not self.needs_continuation()
+        ), "expected directive continuations to be parsed before applying"
+        value_repl = self.value.replace("\\", "\\\\")
+        existing = [i for i, subst in enumerate(substitutions) if self.name in subst[0]]
+        existing_res = "".join(
+            "\nExisting pattern: " + substitutions[i][0] for i in existing
+        )
         if self.new_subst:
             if existing:
                 raise ValueError(
                     f"Substitution whose pattern contains '{self.name}' is "
                     f"already defined before '{self.keyword}' directive "
                     f"{self.get_location()}"
-                    f"{existing_res}")
+                    f"{existing_res}"
+                )
             substitutions.insert(0, (self.name, value_repl))
             return
         if len(existing) > 1:
@@ -1401,23 +1591,25 @@ class SubstDirective(ExpandableScriptDirective):
                 f"Multiple substitutions whose patterns contain '{self.name}' "
                 f"are defined before '{self.keyword}' directive "
                 f"{self.get_location()}"
-                f"{existing_res}")
+                f"{existing_res}"
+            )
         if not existing:
             raise ValueError(
                 f"No substitution for '{self.name}' is defined before "
-                f"'{self.keyword}' directive {self.get_location()}")
+                f"'{self.keyword}' directive {self.get_location()}"
+            )
         if substitutions[existing[0]][0] != self.name:
             raise ValueError(
                 f"Existing substitution whose pattern contains '{self.name}' "
                 f"does not have the pattern specified by '{self.keyword}' "
                 f"directive {self.get_location()}\n"
                 f"Expected pattern: {self.name}"
-                f"{existing_res}")
+                f"{existing_res}"
+            )
         substitutions[existing[0]] = (self.name, value_repl)
 
 
-def applySubstitutions(script, substitutions, conditions={},
-                       recursion_limit=None):
+def applySubstitutions(script, substitutions, conditions={}, recursion_limit=None):
     """
     Apply substitutions to the script.  Allow full regular expression syntax.
     Replace each matching occurrence of regular expression pattern a with
@@ -1432,44 +1624,44 @@ def applySubstitutions(script, substitutions, conditions={},
 
     # We use #_MARKER_# to hide %% while we do the other substitutions.
     def escapePercents(ln):
-        return _caching_re_compile('%%').sub('#_MARKER_#', ln)
+        return _caching_re_compile("%%").sub("#_MARKER_#", ln)
 
     def unescapePercents(ln):
-        return _caching_re_compile('#_MARKER_#').sub('%', ln)
+        return _caching_re_compile("#_MARKER_#").sub("%", ln)
 
     def substituteIfElse(ln):
         # early exit to avoid wasting time on lines without
         # conditional substitutions
-        if ln.find('%if ') == -1:
+        if ln.find("%if ") == -1:
             return ln
 
         def tryParseIfCond(ln):
             # space is important to not conflict with other (possible)
             # substitutions
-            if not ln.startswith('%if '):
+            if not ln.startswith("%if "):
                 return None, ln
             ln = ln[4:]
 
             # stop at '%{'
-            match = _caching_re_compile('%{').search(ln)
+            match = _caching_re_compile("%{").search(ln)
             if not match:
                 raise ValueError("'%{' is missing for %if substitution")
-            cond = ln[:match.start()]
+            cond = ln[: match.start()]
 
             # eat '%{' as well
-            ln = ln[match.end():]
+            ln = ln[match.end() :]
             return cond, ln
 
         def tryParseElse(ln):
-            match = _caching_re_compile('^\s*%else\s*(%{)?').search(ln)
+            match = _caching_re_compile(r"^\s*%else\s*(%{)?").search(ln)
             if not match:
                 return False, ln
             if not match.group(1):
                 raise ValueError("'%{' is missing for %else substitution")
-            return True, ln[match.end():]
+            return True, ln[match.end() :]
 
         def tryParseEnd(ln):
-            if ln.startswith('%}'):
+            if ln.startswith("%}"):
                 return True, ln[2:]
             return False, ln
 
@@ -1477,16 +1669,17 @@ def applySubstitutions(script, substitutions, conditions={},
             # parse everything until %if, or %} if we're parsing a
             # nested expression.
             match = _caching_re_compile(
-                '(.*?)(?:%if|%})' if isNested else '(.*?)(?:%if)').search(ln)
+                "(.*?)(?:%if|%})" if isNested else "(.*?)(?:%if)"
+            ).search(ln)
             if not match:
                 # there is no terminating pattern, so treat the whole
                 # line as text
-                return ln, ''
+                return ln, ""
             text_end = match.end(1)
             return ln[:text_end], ln[text_end:]
 
         def parseRecursive(ln, isNested):
-            result = ''
+            result = ""
             while len(ln):
                 if isNested:
                     found_end, _ = tryParseEnd(ln)
@@ -1501,7 +1694,7 @@ def applySubstitutions(script, substitutions, conditions={},
                     if not found_end:
                         raise ValueError("'%}' is missing for %if substitution")
 
-                    branch_else = ''
+                    branch_else = ""
                     found_else, ln = tryParseElse(ln)
                     if found_else:
                         branch_else, ln = parseRecursive(ln, isNested=True)
@@ -1528,9 +1721,9 @@ def applySubstitutions(script, substitutions, conditions={},
     def processLine(ln):
         # Apply substitutions
         ln = substituteIfElse(escapePercents(ln))
-        for a,b in substitutions:
+        for a, b in substitutions:
             if kIsWindows:
-                b = b.replace("\\","\\\\")
+                b = b.replace("\\", "\\\\")
             # re.compile() has a built-in LRU cache with 512 entries. In some
             # test suites lit ends up thrashing that cache, which made e.g.
             # check-llvm run 50% slower.  Use an explicit, unbounded cache
@@ -1554,9 +1747,10 @@ def applySubstitutions(script, substitutions, conditions={},
             steps += 1
 
         if processed != ln:
-            raise ValueError("Recursive substitution of '%s' did not complete "
-                             "in the provided recursion limit (%s)" % \
-                             (origLine, recursion_limit))
+            raise ValueError(
+                "Recursive substitution of '%s' did not complete "
+                "in the provided recursion limit (%s)" % (origLine, recursion_limit)
+            )
 
         return processed
 
@@ -1594,6 +1788,7 @@ class ParserKind(object):
     REDEFINE: A keyword taking a lit substitution redefinition. Ex
         'REDEFINE: %{name}=value'
     """
+
     TAG = 0
     COMMAND = 1
     LIST = 2
@@ -1605,27 +1800,29 @@ class ParserKind(object):
 
     @staticmethod
     def allowedKeywordSuffixes(value):
-        return { ParserKind.TAG:          ['.'],
-                 ParserKind.COMMAND:      [':'],
-                 ParserKind.LIST:         [':'],
-                 ParserKind.BOOLEAN_EXPR: [':'],
-                 ParserKind.INTEGER:      [':'],
-                 ParserKind.CUSTOM:       [':', '.'],
-                 ParserKind.DEFINE:       [':'],
-                 ParserKind.REDEFINE:     [':']
-               } [value]
+        return {
+            ParserKind.TAG: ["."],
+            ParserKind.COMMAND: [":"],
+            ParserKind.LIST: [":"],
+            ParserKind.BOOLEAN_EXPR: [":"],
+            ParserKind.INTEGER: [":"],
+            ParserKind.CUSTOM: [":", "."],
+            ParserKind.DEFINE: [":"],
+            ParserKind.REDEFINE: [":"],
+        }[value]
 
     @staticmethod
     def str(value):
-        return { ParserKind.TAG:          'TAG',
-                 ParserKind.COMMAND:      'COMMAND',
-                 ParserKind.LIST:         'LIST',
-                 ParserKind.BOOLEAN_EXPR: 'BOOLEAN_EXPR',
-                 ParserKind.INTEGER:      'INTEGER',
-                 ParserKind.CUSTOM:       'CUSTOM',
-                 ParserKind.DEFINE:       'DEFINE',
-                 ParserKind.REDEFINE:     'REDEFINE'
-               } [value]
+        return {
+            ParserKind.TAG: "TAG",
+            ParserKind.COMMAND: "COMMAND",
+            ParserKind.LIST: "LIST",
+            ParserKind.BOOLEAN_EXPR: "BOOLEAN_EXPR",
+            ParserKind.INTEGER: "INTEGER",
+            ParserKind.CUSTOM: "CUSTOM",
+            ParserKind.DEFINE: "DEFINE",
+            ParserKind.REDEFINE: "REDEFINE",
+        }[value]
 
 
 class IntegratedTestKeywordParser(object):
@@ -1636,22 +1833,26 @@ class IntegratedTestKeywordParser(object):
     parser: A custom parser. This value may only be specified with
             ParserKind.CUSTOM.
     """
+
     def __init__(self, keyword, kind, parser=None, initial_value=None):
         allowedSuffixes = ParserKind.allowedKeywordSuffixes(kind)
         if len(keyword) == 0 or keyword[-1] not in allowedSuffixes:
             if len(allowedSuffixes) == 1:
-                raise ValueError("Keyword '%s' of kind '%s' must end in '%s'"
-                                 % (keyword, ParserKind.str(kind),
-                                    allowedSuffixes[0]))
+                raise ValueError(
+                    "Keyword '%s' of kind '%s' must end in '%s'"
+                    % (keyword, ParserKind.str(kind), allowedSuffixes[0])
+                )
             else:
-                raise ValueError("Keyword '%s' of kind '%s' must end in "
-                                 " one of '%s'"
-                                 % (keyword, ParserKind.str(kind),
-                                    ' '.join(allowedSuffixes)))
+                raise ValueError(
+                    "Keyword '%s' of kind '%s' must end in "
+                    " one of '%s'"
+                    % (keyword, ParserKind.str(kind), " ".join(allowedSuffixes))
+                )
 
         if parser is not None and kind != ParserKind.CUSTOM:
-            raise ValueError("custom parsers can only be specified with "
-                             "ParserKind.CUSTOM")
+            raise ValueError(
+                "custom parsers can only be specified with " "ParserKind.CUSTOM"
+            )
         self.keyword = keyword
         self.kind = kind
         self.parsed_lines = []
@@ -1659,9 +1860,9 @@ class IntegratedTestKeywordParser(object):
         self.parser = parser
 
         if kind == ParserKind.COMMAND:
-            self.parser = lambda line_number, line, output: \
-                                 self._handleCommand(line_number, line, output,
-                                                     self.keyword)
+            self.parser = lambda line_number, line, output: self._handleCommand(
+                line_number, line, output, self.keyword
+            )
         elif kind == ParserKind.LIST:
             self.parser = self._handleList
         elif kind == ParserKind.BOOLEAN_EXPR:
@@ -1675,14 +1876,13 @@ class IntegratedTestKeywordParser(object):
                 raise ValueError("ParserKind.CUSTOM requires a custom parser")
             self.parser = parser
         elif kind == ParserKind.DEFINE:
-            self.parser = lambda line_number, line, output: \
-                                 self._handleSubst(line_number, line, output,
-                                                   self.keyword, new_subst=True)
+            self.parser = lambda line_number, line, output: self._handleSubst(
+                line_number, line, output, self.keyword, new_subst=True
+            )
         elif kind == ParserKind.REDEFINE:
-            self.parser = lambda line_number, line, output: \
-                                 self._handleSubst(line_number, line, output,
-                                                   self.keyword,
-                                                   new_subst=False)
+            self.parser = lambda line_number, line, output: self._handleSubst(
+                line_number, line, output, self.keyword, new_subst=False
+            )
         else:
             raise ValueError("Unknown kind '%s'" % kind)
 
@@ -1691,8 +1891,10 @@ class IntegratedTestKeywordParser(object):
             self.parsed_lines += [(line_number, line)]
             self.value = self.parser(line_number, line, self.value)
         except ValueError as e:
-            raise ValueError(str(e) + ("\nin %s directive on test line %d" %
-                                       (self.keyword, line_number)))
+            raise ValueError(
+                str(e)
+                + ("\nin %s directive on test line %d" % (self.keyword, line_number))
+            )
 
     def getValue(self):
         return self.value
@@ -1700,17 +1902,19 @@ class IntegratedTestKeywordParser(object):
     @staticmethod
     def _handleTag(line_number, line, output):
         """A helper for parsing TAG type keywords"""
-        return (not line.strip() or output)
+        return not line.strip() or output
 
     @staticmethod
     def _substituteLineNumbers(line_number, line):
-        line = re.sub(r'%\(line\)', str(line_number), line)
+        line = re.sub(r"%\(line\)", str(line_number), line)
+
         def replace_line_number(match):
-            if match.group(1) == '+':
+            if match.group(1) == "+":
                 return str(line_number + int(match.group(2)))
-            if match.group(1) == '-':
+            if match.group(1) == "-":
                 return str(line_number - int(match.group(2)))
-        return re.sub(r'%\(line *([\+-]) *(\d+)\)', replace_line_number, line)
+
+        return re.sub(r"%\(line *([\+-]) *(\d+)\)", replace_line_number, line)
 
     @classmethod
     def _handleCommand(cls, line_number, line, output, keyword):
@@ -1720,20 +1924,11 @@ class IntegratedTestKeywordParser(object):
 
         # Collapse lines with trailing '\\', or add line with line number to
         # start a new pipeline.
-        if not output or not output[-1].add_continuation(line_number, keyword,
-                                                         line):
+        if not output or not output[-1].add_continuation(line_number, keyword, line):
             if output is None:
                 output = []
-            pdbg = "%dbg({keyword} at line {line_number})".format(
-                keyword=keyword,
-                line_number=line_number)
-            assert re.match(kPdbgRegex + "$", pdbg), \
-                   "kPdbgRegex expected to match actual %dbg usage"
-            line = "{pdbg} {real_command}".format(
-                pdbg=pdbg,
-                real_command=line)
-            output.append(CommandDirective(line_number, line_number, keyword,
-                                           line))
+            line = buildPdbgCommand(f"{keyword} at line {line_number}", line)
+            output.append(CommandDirective(line_number, line_number, keyword, line))
         return output
 
     @staticmethod
@@ -1741,7 +1936,7 @@ class IntegratedTestKeywordParser(object):
         """A parser for LIST type keywords"""
         if output is None:
             output = []
-        output.extend([s.strip() for s in line.split(',')])
+        output.extend([s.strip() for s in line.split(",")])
         return output
 
     @staticmethod
@@ -1752,15 +1947,19 @@ class IntegratedTestKeywordParser(object):
         try:
             n = int(line)
         except ValueError:
-            raise ValueError("INTEGER parser requires the input to be an integer (got {})".format(line))
+            raise ValueError(
+                "INTEGER parser requires the input to be an integer (got {})".format(
+                    line
+                )
+            )
         output.append(n)
         return output
 
     @staticmethod
     def _handleBooleanExpr(line_number, line, output):
         """A parser for BOOLEAN_EXPR type keywords"""
-        parts = [s.strip() for s in line.split(',') if s.strip() != '']
-        if output and output[-1][-1] == '\\':
+        parts = [s.strip() for s in line.split(",") if s.strip() != ""]
+        if output and output[-1][-1] == "\\":
             output[-1] = output[-1][:-1] + parts[0]
             del parts[0]
         if output is None:
@@ -1769,7 +1968,7 @@ class IntegratedTestKeywordParser(object):
         # Evaluate each expression to verify syntax.
         # We don't want any results, just the raised ValueError.
         for s in output:
-            if s != '*' and not s.endswith('\\'):
+            if s != "*" and not s.endswith("\\"):
                 BooleanExpression.evaluate(s, [])
         return output
 
@@ -1781,13 +1980,13 @@ class IntegratedTestKeywordParser(object):
             return output
         if output is None:
             output = []
-        output.append(SubstDirective(line_number, line_number, keyword,
-                                     new_subst, line))
+        output.append(
+            SubstDirective(line_number, line_number, keyword, new_subst, line)
+        )
         return output
 
 
-def _parseKeywords(sourcepath, additional_parsers=[],
-                   require_script=True):
+def _parseKeywords(sourcepath, additional_parsers=[], require_script=True):
     """_parseKeywords
 
     Scan an LLVM/Clang style integrated test script and extract all the lines
@@ -1801,41 +2000,43 @@ def _parseKeywords(sourcepath, additional_parsers=[],
     # Install the built-in keyword parsers.
     script = []
     builtin_parsers = [
-        IntegratedTestKeywordParser('RUN:', ParserKind.COMMAND, initial_value=script),
-        IntegratedTestKeywordParser('XFAIL:', ParserKind.BOOLEAN_EXPR),
-        IntegratedTestKeywordParser('REQUIRES:', ParserKind.BOOLEAN_EXPR),
-        IntegratedTestKeywordParser('UNSUPPORTED:', ParserKind.BOOLEAN_EXPR),
-        IntegratedTestKeywordParser('ALLOW_RETRIES:', ParserKind.INTEGER),
-        IntegratedTestKeywordParser('END.', ParserKind.TAG),
-        IntegratedTestKeywordParser('DEFINE:', ParserKind.DEFINE,
-                                    initial_value=script),
-        IntegratedTestKeywordParser('REDEFINE:', ParserKind.REDEFINE,
-                                    initial_value=script)
+        IntegratedTestKeywordParser("RUN:", ParserKind.COMMAND, initial_value=script),
+        IntegratedTestKeywordParser("XFAIL:", ParserKind.BOOLEAN_EXPR),
+        IntegratedTestKeywordParser("REQUIRES:", ParserKind.BOOLEAN_EXPR),
+        IntegratedTestKeywordParser("UNSUPPORTED:", ParserKind.BOOLEAN_EXPR),
+        IntegratedTestKeywordParser("ALLOW_RETRIES:", ParserKind.INTEGER),
+        IntegratedTestKeywordParser("END.", ParserKind.TAG),
+        IntegratedTestKeywordParser("DEFINE:", ParserKind.DEFINE, initial_value=script),
+        IntegratedTestKeywordParser(
+            "REDEFINE:", ParserKind.REDEFINE, initial_value=script
+        ),
     ]
     keyword_parsers = {p.keyword: p for p in builtin_parsers}
 
     # Install user-defined additional parsers.
     for parser in additional_parsers:
         if not isinstance(parser, IntegratedTestKeywordParser):
-            raise ValueError('Additional parser must be an instance of '
-                             'IntegratedTestKeywordParser')
+            raise ValueError(
+                "Additional parser must be an instance of "
+                "IntegratedTestKeywordParser"
+            )
         if parser.keyword in keyword_parsers:
-            raise ValueError("Parser for keyword '%s' already exists"
-                             % parser.keyword)
+            raise ValueError("Parser for keyword '%s' already exists" % parser.keyword)
         keyword_parsers[parser.keyword] = parser
 
     # Collect the test lines from the script.
-    for line_number, command_type, ln in \
-            parseIntegratedTestScriptCommands(sourcepath,
-                                              keyword_parsers.keys()):
+    for line_number, command_type, ln in parseIntegratedTestScriptCommands(
+        sourcepath, keyword_parsers.keys()
+    ):
         parser = keyword_parsers[command_type]
         parser.parseLine(line_number, ln)
-        if command_type == 'END.' and parser.getValue() is True:
+        if command_type == "END." and parser.getValue() is True:
             break
 
     # Verify the script contains a run line.
-    if require_script and not any(isinstance(directive, CommandDirective)
-                                  for directive in script):
+    if require_script and not any(
+        isinstance(directive, CommandDirective) for directive in script
+    ):
         raise ValueError("Test has no 'RUN:' line")
 
     # Check for unterminated run or subst lines.
@@ -1846,9 +2047,11 @@ def _parseKeywords(sourcepath, additional_parsers=[],
     # here.
     for directive in script:
         if directive.needs_continuation():
-            raise ValueError(f"Test has unterminated '{directive.keyword}' "
-                             f"directive (with '\\') "
-                             f"{directive.get_location()}")
+            raise ValueError(
+                f"Test has unterminated '{directive.keyword}' "
+                f"directive (with '\\') "
+                f"{directive.get_location()}"
+            )
 
     # Check boolean expressions for unterminated lines.
     for key in keyword_parsers:
@@ -1856,20 +2059,20 @@ def _parseKeywords(sourcepath, additional_parsers=[],
         if kp.kind != ParserKind.BOOLEAN_EXPR:
             continue
         value = kp.getValue()
-        if value and value[-1][-1] == '\\':
-            raise ValueError("Test has unterminated '{key}' lines (with '\\')"
-                             .format(key=key))
+        if value and value[-1][-1] == "\\":
+            raise ValueError(
+                "Test has unterminated '{key}' lines (with '\\')".format(key=key)
+            )
 
     # Make sure there's at most one ALLOW_RETRIES: line
-    allowed_retries = keyword_parsers['ALLOW_RETRIES:'].getValue()
+    allowed_retries = keyword_parsers["ALLOW_RETRIES:"].getValue()
     if allowed_retries and len(allowed_retries) > 1:
         raise ValueError("Test has more than one ALLOW_RETRIES lines")
 
     return {p.keyword: p.getValue() for p in keyword_parsers.values()}
 
 
-def parseIntegratedTestScript(test, additional_parsers=[],
-                              require_script=True):
+def parseIntegratedTestScript(test, additional_parsers=[], require_script=True):
     """parseIntegratedTestScript - Scan an LLVM/Clang style integrated test
     script and extract the lines to 'RUN' as well as 'XFAIL', 'REQUIRES',
     'UNSUPPORTED' and 'ALLOW_RETRIES' information into the given test.
@@ -1883,56 +2086,86 @@ def parseIntegratedTestScript(test, additional_parsers=[],
     """
     # Parse the test sources and extract test properties
     try:
-        parsed = _parseKeywords(test.getSourcePath(), additional_parsers,
-                                require_script)
+        parsed = _parseKeywords(
+            test.getSourcePath(), additional_parsers, require_script
+        )
     except ValueError as e:
         return lit.Test.Result(Test.UNRESOLVED, str(e))
-    script = parsed['RUN:'] or []
-    assert parsed['DEFINE:'] == script
-    assert parsed['REDEFINE:'] == script
-    test.xfails += parsed['XFAIL:'] or []
-    test.requires += parsed['REQUIRES:'] or []
-    test.unsupported += parsed['UNSUPPORTED:'] or []
-    if parsed['ALLOW_RETRIES:']:
-        test.allowed_retries = parsed['ALLOW_RETRIES:'][0]
+    script = parsed["RUN:"] or []
+    assert parsed["DEFINE:"] == script
+    assert parsed["REDEFINE:"] == script
+    test.xfails += parsed["XFAIL:"] or []
+    test.requires += parsed["REQUIRES:"] or []
+    test.unsupported += parsed["UNSUPPORTED:"] or []
+    if parsed["ALLOW_RETRIES:"]:
+        test.allowed_retries = parsed["ALLOW_RETRIES:"][0]
 
     # Enforce REQUIRES:
     missing_required_features = test.getMissingRequiredFeatures()
     if missing_required_features:
-        msg = ', '.join(missing_required_features)
-        return lit.Test.Result(Test.UNSUPPORTED,
-                               "Test requires the following unavailable "
-                               "features: %s" % msg)
+        msg = ", ".join(missing_required_features)
+        return lit.Test.Result(
+            Test.UNSUPPORTED,
+            "Test requires the following unavailable " "features: %s" % msg,
+        )
 
     # Enforce UNSUPPORTED:
     unsupported_features = test.getUnsupportedFeatures()
     if unsupported_features:
-        msg = ', '.join(unsupported_features)
+        msg = ", ".join(unsupported_features)
         return lit.Test.Result(
             Test.UNSUPPORTED,
-            "Test does not support the following features "
-            "and/or targets: %s" % msg)
+            "Test does not support the following features " "and/or targets: %s" % msg,
+        )
 
     # Enforce limit_to_features.
     if not test.isWithinFeatureLimits():
-        msg = ', '.join(test.config.limit_to_features)
-        return lit.Test.Result(Test.UNSUPPORTED,
-                               "Test does not require any of the features "
-                               "specified in limit_to_features: %s" % msg)
+        msg = ", ".join(test.config.limit_to_features)
+        return lit.Test.Result(
+            Test.UNSUPPORTED,
+            "Test does not require any of the features "
+            "specified in limit_to_features: %s" % msg,
+        )
 
     return script
 
 
 def _runShTest(test, litConfig, useExternalSh, script, tmpBase):
     def runOnce(execdir):
+        # script is modified below (for litConfig.per_test_coverage, and for
+        # %dbg expansions).  runOnce can be called multiple times, but applying
+        # the modifications multiple times can corrupt script, so always modify
+        # a copy.
+        scriptCopy = script[:]
+        # Set unique LLVM_PROFILE_FILE for each run command
+        if litConfig.per_test_coverage:
+            # Extract the test case name from the test object, and remove the
+            # file extension.
+            test_case_name = test.path_in_suite[-1]
+            test_case_name = test_case_name.rsplit(".", 1)[0]
+            coverage_index = 0  # Counter for coverage file index
+            for i, ln in enumerate(scriptCopy):
+                match = re.fullmatch(kPdbgRegex, ln)
+                if match:
+                    dbg = match.group(1)
+                    command = match.group(2)
+                else:
+                    command = ln
+                profile = f"{test_case_name}{coverage_index}.profraw"
+                coverage_index += 1
+                command = f"export LLVM_PROFILE_FILE={profile}; {command}"
+                if match:
+                    command = buildPdbgCommand(dbg, command)
+                scriptCopy[i] = command
+
         if useExternalSh:
-            res = executeScript(test, litConfig, tmpBase, script, execdir)
+            res = executeScript(test, litConfig, tmpBase, scriptCopy, execdir)
         else:
-            res = executeScriptInternal(test, litConfig, tmpBase, script, execdir)
+            res = executeScriptInternal(test, litConfig, tmpBase, scriptCopy, execdir)
         if isinstance(res, lit.Test.Result):
             return res
 
-        out,err,exitCode,timeoutInfo = res
+        out, err, exitCode, timeoutInfo = res
         if exitCode == 0:
             status = Test.PASS
         else:
@@ -1940,7 +2173,7 @@ def _runShTest(test, litConfig, useExternalSh, script, tmpBase):
                 status = Test.FAIL
             else:
                 status = Test.TIMEOUT
-        return out,err,exitCode,timeoutInfo,status
+        return out, err, exitCode, timeoutInfo, status
 
     # Create the output directory if it does not already exist.
     lit.util.mkdir_p(os.path.dirname(tmpBase))
@@ -1953,7 +2186,7 @@ def _runShTest(test, litConfig, useExternalSh, script, tmpBase):
         if isinstance(res, lit.Test.Result):
             return res
 
-        out,err,exitCode,timeoutInfo,status = res
+        out, err, exitCode, timeoutInfo, status = res
         if status != Test.FAIL:
             break
 
@@ -1963,8 +2196,7 @@ def _runShTest(test, litConfig, useExternalSh, script, tmpBase):
         status = Test.FLAKYPASS
 
     # Form the output log.
-    output = """Script:\n--\n%s\n--\nExit Code: %d\n""" % (
-        '\n'.join(script), exitCode)
+    output = f"Exit Code: {exitCode}\n"
 
     if timeoutInfo is not None:
         output += """Timeout: %s\n""" % (timeoutInfo,)
@@ -1979,13 +2211,15 @@ def _runShTest(test, litConfig, useExternalSh, script, tmpBase):
     return lit.Test.Result(status, output)
 
 
-def executeShTest(test, litConfig, useExternalSh,
-                  extra_substitutions=[],
-                  preamble_commands=[]):
+def executeShTest(
+    test, litConfig, useExternalSh, extra_substitutions=[], preamble_commands=[]
+):
     if test.config.unsupported:
-        return lit.Test.Result(Test.UNSUPPORTED, 'Test is unsupported')
+        return lit.Test.Result(Test.UNSUPPORTED, "Test is unsupported")
 
     script = list(preamble_commands)
+    script = [buildPdbgCommand(f"preamble command line", ln) for ln in script]
+
     parsed = parseIntegratedTestScript(test, require_script=not script)
     if isinstance(parsed, lit.Test.Result):
         return parsed
@@ -1996,10 +2230,15 @@ def executeShTest(test, litConfig, useExternalSh,
 
     tmpDir, tmpBase = getTempPaths(test)
     substitutions = list(extra_substitutions)
-    substitutions += getDefaultSubstitutions(test, tmpDir, tmpBase,
-                                             normalize_slashes=useExternalSh)
-    conditions = { feature: True for feature in test.config.available_features }
-    script = applySubstitutions(script, substitutions, conditions,
-                                recursion_limit=test.config.recursiveExpansionLimit)
+    substitutions += getDefaultSubstitutions(
+        test, tmpDir, tmpBase, normalize_slashes=useExternalSh
+    )
+    conditions = {feature: True for feature in test.config.available_features}
+    script = applySubstitutions(
+        script,
+        substitutions,
+        conditions,
+        recursion_limit=test.config.recursiveExpansionLimit,
+    )
 
     return _runShTest(test, litConfig, useExternalSh, script, tmpBase)

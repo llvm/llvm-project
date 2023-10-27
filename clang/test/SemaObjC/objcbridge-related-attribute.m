@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -fsyntax-only -x objective-c -verify -Wno-objc-root-class %s
-// rdar://15499111
 
 typedef struct __attribute__((objc_bridge_related(NSColor,colorWithCGColor:,CGColor))) CGColor *CGColorRef; // expected-note 5 {{declared here}}
 typedef struct __attribute__((objc_bridge_related(NSColor,,CGColor1))) CGColor1 *CGColorRef1;

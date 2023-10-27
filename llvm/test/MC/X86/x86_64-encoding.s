@@ -1,10 +1,5 @@
 // RUN: llvm-mc -triple x86_64-unknown-unknown --show-encoding %s | FileCheck %s
 
-// PR7195
-// CHECK: callw 42
-// CHECK: encoding: [0x66,0xe8,A,A]
-       callw 42
-
 // rdar://8127102
 // CHECK: movq	%gs:(%rdi), %rax
 // CHECK: encoding: [0x65,0x48,0x8b,0x07]

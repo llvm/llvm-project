@@ -47,7 +47,7 @@ define void @test2(ptr %call1559, i64 %indvars.iv4198, <4 x i1> %tmp1895) {
 ; AVX1-NEXT:    vpmovsxdq %xmm0, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; AVX1-NEXT:    movq (%rdi,%rsi,8), %rax
-; AVX1-NEXT:    vmovapd {{.*#+}} ymm1 = [5.0E-1,5.0E-1,5.0E-1,5.0E-1]
+; AVX1-NEXT:    vbroadcastsd {{.*#+}} ymm1 = [5.0E-1,5.0E-1,5.0E-1,5.0E-1]
 ; AVX1-NEXT:    vblendvpd %ymm0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm0
 ; AVX1-NEXT:    vmovupd %ymm0, (%rax)
 ; AVX1-NEXT:    vzeroupper
@@ -101,9 +101,6 @@ define void @test3(<4 x i32> %induction30, ptr %tmp16, ptr %tmp17,  <4 x i16> %t
 ; AVX1-NEXT:    vpcmpeqd %xmm3, %xmm0, %xmm0
 ; AVX1-NEXT:    vpackssdw %xmm0, %xmm0, %xmm0
 ; AVX1-NEXT:    vpblendvb %xmm0, %xmm1, %xmm2, %xmm1
-; AVX1-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
-; AVX1-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; AVX1-NEXT:    vpblendvb %xmm0, %xmm2, %xmm3, %xmm0
 ; AVX1-NEXT:    vmovq %xmm0, (%rdi)
 ; AVX1-NEXT:    vmovq %xmm1, (%rsi)
 ; AVX1-NEXT:    retq
@@ -119,9 +116,6 @@ define void @test3(<4 x i32> %induction30, ptr %tmp16, ptr %tmp17,  <4 x i16> %t
 ; AVX2-NEXT:    vpcmpeqd %xmm3, %xmm0, %xmm0
 ; AVX2-NEXT:    vpackssdw %xmm0, %xmm0, %xmm0
 ; AVX2-NEXT:    vpblendvb %xmm0, %xmm1, %xmm2, %xmm1
-; AVX2-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
-; AVX2-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; AVX2-NEXT:    vpblendvb %xmm0, %xmm2, %xmm3, %xmm0
 ; AVX2-NEXT:    vmovq %xmm0, (%rdi)
 ; AVX2-NEXT:    vmovq %xmm1, (%rsi)
 ; AVX2-NEXT:    retq
@@ -134,7 +128,7 @@ define void @test3(<4 x i32> %induction30, ptr %tmp16, ptr %tmp17,  <4 x i16> %t
 ; AVX512-NEXT:    vpcmpeqd %ymm0, %ymm0, %ymm0
 ; AVX512-NEXT:    vmovdqa32 %ymm0, %ymm0 {%k1} {z}
 ; AVX512-NEXT:    vpmovdw %ymm0, %xmm0
-; AVX512-NEXT:    vpblendvb %xmm0, %xmm1, %xmm2, %xmm1
+; AVX512-NEXT:    vpternlogq $226, %xmm2, %xmm0, %xmm1
 ; AVX512-NEXT:    vmovq %xmm0, (%rdi)
 ; AVX512-NEXT:    vmovq %xmm1, (%rsi)
 ; AVX512-NEXT:    vzeroupper
@@ -157,11 +151,11 @@ define <32 x i8> @PR22706(<32 x i1> %x) {
 ; AVX1:       ## %bb.0:
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; AVX1-NEXT:    vpsllw $7, %xmm1, %xmm1
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128]
+; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm2 = [128,128,128,128,128,128,128,128,128,128,128,128,128,128,128,128]
 ; AVX1-NEXT:    vpand %xmm2, %xmm1, %xmm1
 ; AVX1-NEXT:    vpxor %xmm3, %xmm3, %xmm3
 ; AVX1-NEXT:    vpcmpgtb %xmm1, %xmm3, %xmm1
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm4 = [2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2]
+; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm4 = [2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2]
 ; AVX1-NEXT:    vpaddb %xmm4, %xmm1, %xmm1
 ; AVX1-NEXT:    vpsllw $7, %xmm0, %xmm0
 ; AVX1-NEXT:    vpand %xmm2, %xmm0, %xmm0
@@ -182,7 +176,7 @@ define <32 x i8> @PR22706(<32 x i1> %x) {
 ; AVX512-LABEL: PR22706:
 ; AVX512:       ## %bb.0:
 ; AVX512-NEXT:    vpsllw $7, %ymm0, %ymm0
-; AVX512-NEXT:    vmovdqa {{.*#+}} ymm1 = [2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2]
+; AVX512-NEXT:    vpbroadcastd {{.*#+}} ymm1 = [2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2]
 ; AVX512-NEXT:    vpblendvb %ymm0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm0
 ; AVX512-NEXT:    retq
   %tmp = select <32 x i1> %x, <32 x i8> <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>, <32 x i8> <i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2, i8 2>
@@ -288,16 +282,16 @@ define void @vselect_concat_splat() {
 ; AVX1-LABEL: vselect_concat_splat:
 ; AVX1:       ## %bb.0: ## %entry
 ; AVX1-NEXT:    vmovups (%rax), %xmm0
-; AVX1-NEXT:    vpermilps {{.*#+}} xmm1 = xmm0[0,3,2,1]
-; AVX1-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[1,0,3,2]
+; AVX1-NEXT:    vshufps {{.*#+}} xmm1 = xmm0[0,3,2,1]
+; AVX1-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[1,0,3,2]
 ; AVX1-NEXT:    vmovups 16, %xmm2
 ; AVX1-NEXT:    vmovups 32, %xmm3
 ; AVX1-NEXT:    vblendps {{.*#+}} xmm4 = mem[0],xmm3[1],mem[2,3]
 ; AVX1-NEXT:    vblendps {{.*#+}} xmm4 = xmm4[0,1],xmm2[2],xmm4[3]
-; AVX1-NEXT:    vpermilps {{.*#+}} xmm4 = xmm4[0,3,2,1]
+; AVX1-NEXT:    vshufps {{.*#+}} xmm4 = xmm4[0,3,2,1]
 ; AVX1-NEXT:    vblendps {{.*#+}} xmm3 = mem[0,1],xmm3[2,3]
 ; AVX1-NEXT:    vblendps {{.*#+}} xmm2 = xmm2[0],xmm3[1,2],xmm2[3]
-; AVX1-NEXT:    vpermilps {{.*#+}} xmm2 = xmm2[1,0,3,2]
+; AVX1-NEXT:    vshufps {{.*#+}} xmm2 = xmm2[1,0,3,2]
 ; AVX1-NEXT:    vxorps %xmm3, %xmm3, %xmm3
 ; AVX1-NEXT:    vcmpneqps %xmm3, %xmm1, %xmm3
 ; AVX1-NEXT:    vblendvps %xmm3, %xmm4, %xmm1, %xmm1
@@ -336,20 +330,18 @@ define void @vselect_concat_splat() {
 ; AVX512-NEXT:    vmovups (%rax), %ymm0
 ; AVX512-NEXT:    vmovups (%rax), %xmm1
 ; AVX512-NEXT:    vmovaps {{.*#+}} xmm2 = [0,3,6,9]
-; AVX512-NEXT:    vmovaps %ymm0, %ymm3
-; AVX512-NEXT:    vpermt2ps %ymm1, %ymm2, %ymm3
-; AVX512-NEXT:    vmovaps {{.*#+}} xmm4 = [1,4,7,10]
-; AVX512-NEXT:    vpermt2ps %ymm1, %ymm4, %ymm0
-; AVX512-NEXT:    vmovups 0, %ymm1
-; AVX512-NEXT:    vmovups 32, %xmm5
-; AVX512-NEXT:    vpermi2ps %ymm5, %ymm1, %ymm2
-; AVX512-NEXT:    vpermt2ps %ymm5, %ymm4, %ymm1
-; AVX512-NEXT:    vxorps %xmm4, %xmm4, %xmm4
-; AVX512-NEXT:    vcmpneqps %xmm4, %xmm3, %k1
-; AVX512-NEXT:    vmovaps %xmm2, %xmm3 {%k1}
-; AVX512-NEXT:    vmovaps %xmm1, %xmm0 {%k1}
-; AVX512-NEXT:    vmovups %xmm0, (%rax)
-; AVX512-NEXT:    vmovups %xmm3, (%rax)
+; AVX512-NEXT:    vpermi2ps %ymm1, %ymm0, %ymm2
+; AVX512-NEXT:    vmovups 32, %xmm3
+; AVX512-NEXT:    vmovups 0, %ymm4
+; AVX512-NEXT:    vxorps %xmm5, %xmm5, %xmm5
+; AVX512-NEXT:    vcmpneqps %xmm5, %xmm2, %k0
+; AVX512-NEXT:    kshiftlw $4, %k0, %k1
+; AVX512-NEXT:    korw %k1, %k0, %k1
+; AVX512-NEXT:    vmovaps {{.*#+}} ymm2 = [0,3,6,9,1,4,7,10]
+; AVX512-NEXT:    vpermt2ps %ymm3, %ymm2, %ymm4
+; AVX512-NEXT:    vpermt2ps %ymm1, %ymm2, %ymm0
+; AVX512-NEXT:    vmovaps %ymm4, %ymm0 {%k1}
+; AVX512-NEXT:    vmovups %ymm0, (%rax)
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
 entry:

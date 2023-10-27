@@ -7,4 +7,4 @@ function foo(x)
   foo = acos(x)
 end function
 
-! CHECK: llvm.func internal @fir.acos.f32.f32
+! CHECK: llvm.func internal @fir.acos.contract.f32.f32

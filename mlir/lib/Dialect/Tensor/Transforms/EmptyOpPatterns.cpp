@@ -18,24 +18,33 @@ namespace {
 
 template <typename ReshapeOp>
 struct FoldEmptyTensorWithReshapeOp : public OpRewritePattern<ReshapeOp> {
-  using OpRewritePattern<ReshapeOp>::OpRewritePattern;
+  FoldEmptyTensorWithReshapeOp(MLIRContext *ctx, PatternBenefit benefit = 1,
+                               bool foldSingleUseOnly = false)
+      : OpRewritePattern<ReshapeOp>(ctx, benefit),
+        foldSingleUseOnly(foldSingleUseOnly) {}
 
   LogicalResult matchAndRewrite(ReshapeOp reshapeOp,
                                 PatternRewriter &rewriter) const override {
-    if (!reshapeOp.getSrc().template getDefiningOp<EmptyOp>())
+    // Check for tensor.empty source.
+    auto emptyOp = reshapeOp.getSrc().template getDefiningOp<EmptyOp>();
+    if (!emptyOp)
       return failure();
+
+    // Check for single use.
+    if (foldSingleUseOnly && !llvm::hasSingleElement(emptyOp->getUses()))
+      return failure();
+
+    // Reify result shape.
     Location loc = reshapeOp.getLoc();
     ReifiedRankedShapedTypeDims resultShapes;
-    ReifyRankedShapedTypeOpInterface reifyShapedTypeInterface =
-        cast<ReifyRankedShapedTypeOpInterface>(reshapeOp.getOperation());
-    if (failed(reifyShapedTypeInterface.reifyResultShapes(rewriter,
-                                                          resultShapes)) ||
+    if (failed(reifyResultShapes(rewriter, reshapeOp, resultShapes)) ||
         !llvm::hasSingleElement(resultShapes))
       return failure();
+
+    // Create new tensor.empty op.
     // TODO: Do not drop tensor type encoding.
-    Value emptyTensor =
-        rewriter.create<EmptyOp>(loc, getAsOpFoldResult(resultShapes[0]),
-                                 reshapeOp.getResultType().getElementType());
+    Value emptyTensor = rewriter.create<EmptyOp>(
+        loc, resultShapes[0], reshapeOp.getResultType().getElementType());
     if (emptyTensor.getType() != reshapeOp.getResultType()) {
       rewriter.replaceOpWithNewOp<tensor::CastOp>(
           reshapeOp, reshapeOp.getResultType(), emptyTensor);
@@ -44,21 +53,34 @@ struct FoldEmptyTensorWithReshapeOp : public OpRewritePattern<ReshapeOp> {
     }
     return success();
   }
+
+private:
+  bool foldSingleUseOnly = false;
 };
 
-/// `tensor.empty` does not define any tensor contents, so a slice of a
-/// `tensor.empty` can be canonicalized to a smaller `tensor.empty`.
+/// tensor.empty does not define any tensor contents, so a slice of a
+/// tensor.empty can be folded to a smaller tensor.empty.
 struct FoldEmptyTensorWithExtractSliceOp
     : public OpRewritePattern<ExtractSliceOp> {
-  using OpRewritePattern<ExtractSliceOp>::OpRewritePattern;
+  FoldEmptyTensorWithExtractSliceOp(MLIRContext *ctx,
+                                    PatternBenefit benefit = 1,
+                                    bool foldSingleUseOnly = false)
+      : OpRewritePattern<ExtractSliceOp>(ctx, benefit),
+        foldSingleUseOnly(foldSingleUseOnly) {}
 
   LogicalResult matchAndRewrite(ExtractSliceOp sliceOp,
                                 PatternRewriter &rewriter) const override {
-    if (!sliceOp.getSource().getDefiningOp<EmptyOp>())
+    // Check for tensor.empty source.
+    auto emptyOp = sliceOp.getSource().template getDefiningOp<EmptyOp>();
+    if (!emptyOp)
       return failure();
 
-    // ExtractSliceOp may be rank-reducing; its dynamic sizes must be
-    // preserved as well as its result type.
+    // Check for single use.
+    if (foldSingleUseOnly && !llvm::hasSingleElement(emptyOp->getUses()))
+      return failure();
+
+    // Create new tensor.empty op. tensor.extract_slice may be rank-reducing;
+    // its dynamic sizes must be preserved as well as its result type.
     auto tensorType = RankedTensorType::get(sliceOp.getType().getShape(),
                                             sliceOp.getType().getElementType(),
                                             sliceOp.getType().getEncoding());
@@ -66,14 +88,17 @@ struct FoldEmptyTensorWithExtractSliceOp
                                          sliceOp.getSizes());
     return success();
   }
+
+private:
+  bool foldSingleUseOnly = false;
 };
 
 } // namespace
 
-void mlir::tensor::populateFoldTensorEmptyPatterns(
-    RewritePatternSet &patterns) {
+void mlir::tensor::populateFoldTensorEmptyPatterns(RewritePatternSet &patterns,
+                                                   bool foldSingleUseOnly) {
   patterns.add<FoldEmptyTensorWithExtractSliceOp,
                FoldEmptyTensorWithReshapeOp<tensor::ExpandShapeOp>,
                FoldEmptyTensorWithReshapeOp<tensor::CollapseShapeOp>>(
-      patterns.getContext());
+      patterns.getContext(), /*benefit=*/1, foldSingleUseOnly);
 }

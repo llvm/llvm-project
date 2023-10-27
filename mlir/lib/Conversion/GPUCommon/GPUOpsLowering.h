@@ -15,8 +15,9 @@
 namespace mlir {
 
 struct GPUFuncOpLowering : ConvertOpToLLVMPattern<gpu::GPUFuncOp> {
-  GPUFuncOpLowering(LLVMTypeConverter &converter, unsigned allocaAddrSpace,
-                    unsigned workgroupAddrSpace, StringAttr kernelAttributeName)
+  GPUFuncOpLowering(const LLVMTypeConverter &converter,
+                    unsigned allocaAddrSpace, unsigned workgroupAddrSpace,
+                    StringAttr kernelAttributeName)
       : ConvertOpToLLVMPattern<gpu::GPUFuncOp>(converter),
         allocaAddrSpace(allocaAddrSpace),
         workgroupAddrSpace(workgroupAddrSpace),
@@ -57,7 +58,7 @@ struct GPUPrintfOpToHIPLowering : public ConvertOpToLLVMPattern<gpu::PrintfOp> {
 /// will lower printf calls to appropriate device-side code
 struct GPUPrintfOpToLLVMCallLowering
     : public ConvertOpToLLVMPattern<gpu::PrintfOp> {
-  GPUPrintfOpToLLVMCallLowering(LLVMTypeConverter &converter,
+  GPUPrintfOpToLLVMCallLowering(const LLVMTypeConverter &converter,
                                 int addressSpace = 0)
       : ConvertOpToLLVMPattern<gpu::PrintfOp>(converter),
         addressSpace(addressSpace) {}
@@ -95,7 +96,7 @@ namespace impl {
 /// Unrolls op if it's operating on vectors.
 LogicalResult scalarizeVectorOp(Operation *op, ValueRange operands,
                                 ConversionPatternRewriter &rewriter,
-                                LLVMTypeConverter &converter);
+                                const LLVMTypeConverter &converter);
 } // namespace impl
 
 /// Rewriting that unrolls SourceOp to scalars if it's operating on vectors.
@@ -111,7 +112,6 @@ public:
                                    *this->getTypeConverter());
   }
 };
-
 } // namespace mlir
 
 #endif // MLIR_CONVERSION_GPUCOMMON_GPUOPSLOWERING_H_

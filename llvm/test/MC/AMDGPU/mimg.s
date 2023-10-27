@@ -1,16 +1,16 @@
-// RUN: not llvm-mc -arch=amdgcn -show-encoding %s | FileCheck %s --check-prefix=GCN --check-prefix=SICI --check-prefix=SICIVI
-// RUN: not llvm-mc -arch=amdgcn -mcpu=tahiti -show-encoding %s | FileCheck %s --check-prefix=GCN --check-prefix=SICI --check-prefix=SICIVI
-// RUN: not llvm-mc -arch=amdgcn -mcpu=bonaire -show-encoding %s | FileCheck %s --check-prefix=GCN --check-prefix=SICI --check-prefix=SICIVI
-// RUN: not llvm-mc -arch=amdgcn -mcpu=fiji -show-encoding %s | FileCheck %s --check-prefix=GCN  --check-prefix=SICIVI --check-prefix=VI --check-prefix=GFX89 --check-prefix=GFX8_0
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx810 -show-encoding %s | FileCheck %s --check-prefix=GCN  --check-prefix=SICIVI --check-prefix=VI --check-prefix=GFX89 --check-prefix=GFX8_1
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx900 -show-encoding %s | FileCheck %s --check-prefix=GCN --check-prefix=GFX9 --check-prefix=GFX89
+// RUN: not llvm-mc -triple=amdgcn -show-encoding %s | FileCheck %s --check-prefix=GCN --check-prefix=SICI --check-prefix=SICIVI
+// RUN: not llvm-mc -triple=amdgcn -mcpu=tahiti -show-encoding %s | FileCheck %s --check-prefix=GCN --check-prefix=SICI --check-prefix=SICIVI
+// RUN: not llvm-mc -triple=amdgcn -mcpu=bonaire -show-encoding %s | FileCheck %s --check-prefix=GCN --check-prefix=SICI --check-prefix=SICIVI
+// RUN: not llvm-mc -triple=amdgcn -mcpu=fiji -show-encoding %s | FileCheck %s --check-prefix=GCN  --check-prefix=SICIVI --check-prefix=VI --check-prefix=GFX89 --check-prefix=GFX8_0
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx810 -show-encoding %s | FileCheck %s --check-prefix=GCN  --check-prefix=SICIVI --check-prefix=VI --check-prefix=GFX89 --check-prefix=GFX8_1
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx900 -show-encoding %s | FileCheck %s --check-prefix=GCN --check-prefix=GFX9 --check-prefix=GFX89
 
-// RUN: not llvm-mc -arch=amdgcn %s 2>&1 | FileCheck %s --check-prefix=NOSICI --implicit-check-not=error:
-// RUN: not llvm-mc -arch=amdgcn -mcpu=tahiti %s 2>&1 | FileCheck %s --check-prefix=NOSICI --implicit-check-not=error:
-// RUN: not llvm-mc -arch=amdgcn -mcpu=bonaire %s 2>&1 | FileCheck %s --check-prefix=NOSICI --implicit-check-not=error:
-// RUN: not llvm-mc -arch=amdgcn -mcpu=fiji %s 2>&1 | FileCheck %s --check-prefix=NOVI --check-prefix=NOGFX8_0 --implicit-check-not=error:
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx810 %s 2>&1 | FileCheck %s --check-prefix=NOVI --check-prefix=NOGFX8_1 --implicit-check-not=error:
-// RUN: not llvm-mc -arch=amdgcn -mcpu=gfx900 %s 2>&1 | FileCheck %s --check-prefix=NOGFX9 --implicit-check-not=error:
+// RUN: not llvm-mc -triple=amdgcn %s 2>&1 | FileCheck %s --check-prefix=NOSICI --implicit-check-not=error:
+// RUN: not llvm-mc -triple=amdgcn -mcpu=tahiti %s 2>&1 | FileCheck %s --check-prefix=NOSICI --implicit-check-not=error:
+// RUN: not llvm-mc -triple=amdgcn -mcpu=bonaire %s 2>&1 | FileCheck %s --check-prefix=NOSICI --implicit-check-not=error:
+// RUN: not llvm-mc -triple=amdgcn -mcpu=fiji %s 2>&1 | FileCheck %s --check-prefix=NOVI --check-prefix=NOGFX8_0 --implicit-check-not=error:
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx810 %s 2>&1 | FileCheck %s --check-prefix=NOVI --check-prefix=NOGFX8_1 --implicit-check-not=error:
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx900 %s 2>&1 | FileCheck %s --check-prefix=NOGFX9 --implicit-check-not=error:
 
 //===----------------------------------------------------------------------===//
 // Image Load/Store

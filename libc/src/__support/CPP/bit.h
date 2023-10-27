@@ -6,28 +6,37 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SUPPORT_CPP_BIT_H
-#define LLVM_LIBC_SUPPORT_CPP_BIT_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_CPP_BIT_H
+#define LLVM_LIBC_SRC___SUPPORT_CPP_BIT_H
 
-#include "src/__support/compiler_features.h"
+#include "src/__support/CPP/type_traits.h"
+#include "src/__support/macros/attributes.h"
+#include "src/__support/macros/config.h" // LIBC_HAS_BUILTIN
 
-namespace __llvm_libc::cpp {
+namespace LIBC_NAMESPACE::cpp {
 
-#if LLVM_LIBC_HAS_BUILTIN(__builtin_bit_cast)
+#if LIBC_HAS_BUILTIN(__builtin_bit_cast)
 #define LLVM_LIBC_HAS_BUILTIN_BIT_CAST
 #endif
 
-#if LLVM_LIBC_HAS_BUILTIN(__builtin_memcpy_inline)
+#if LIBC_HAS_BUILTIN(__builtin_memcpy_inline)
 #define LLVM_LIBC_HAS_BUILTIN_MEMCPY_INLINE
 #endif
 
 // This function guarantees the bitcast to be optimized away by the compiler for
 // GCC >= 8 and Clang >= 6.
-template <class To, class From> constexpr To bit_cast(const From &from) {
+template <class To, class From>
+LIBC_INLINE constexpr To bit_cast(const From &from) {
   static_assert(sizeof(To) == sizeof(From), "To and From must be of same size");
+  static_assert(cpp::is_trivially_copyable<To>::value &&
+                    cpp::is_trivially_copyable<From>::value,
+                "Cannot bit-cast instances of non-trivially copyable classes.");
 #if defined(LLVM_LIBC_HAS_BUILTIN_BIT_CAST)
   return __builtin_bit_cast(To, from);
 #else
+  static_assert(cpp::is_trivially_constructible<To>::value,
+                "This implementation additionally requires destination type to "
+                "be trivially constructible");
   To to;
   char *dst = reinterpret_cast<char *>(&to);
   const char *src = reinterpret_cast<const char *>(&from);
@@ -41,6 +50,15 @@ template <class To, class From> constexpr To bit_cast(const From &from) {
 #endif // defined(LLVM_LIBC_HAS_BUILTIN_BIT_CAST)
 }
 
-} // namespace __llvm_libc::cpp
+template <class To, class From>
+LIBC_INLINE constexpr To bit_or_static_cast(const From &from) {
+  if constexpr (sizeof(To) == sizeof(From)) {
+    return bit_cast<To>(from);
+  } else {
+    return static_cast<To>(from);
+  }
+}
 
-#endif // LLVM_LIBC_SUPPORT_CPP_BIT_H
+} // namespace LIBC_NAMESPACE::cpp
+
+#endif // LLVM_LIBC_SRC___SUPPORT_CPP_BIT_H

@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 %s -triple x86_64-linux -emit-llvm -fblocks -o - | FileCheck %s
-// rdar://5865221
 
 // These will be inlined by the optimizers provided the block descriptors
 // and block literals are internal constants.

@@ -1,5 +1,6 @@
 ; RUN: llc %s -stop-before finalize-isel -o - \
 ; RUN:    -experimental-debug-variable-locations=false \
+; RUN:    -debug-ata-coalesce-frags=true \
 ; RUN: | FileCheck %s --implicit-check-not=DBG_
 ; RUN: llc %s -stop-before finalize-isel -o - \
 ; RUN:    -experimental-debug-variable-locations=true \
@@ -50,7 +51,17 @@ entry:
   store i32 2, ptr %c, align 8, !dbg !25, !DIAssignID !31
 ; CHECK: MOV32mi %stack.0.nums, 1, $noreg, 8, $noreg, 2
   call void @llvm.dbg.assign(metadata i32 2, metadata !12, metadata !DIExpression(DW_OP_LLVM_fragment, 64, 32), metadata !31, metadata ptr %c, metadata !DIExpression()), !dbg !19
-; CHECK-NEXT: DBG_VALUE %stack.0.nums, $noreg, ![[nums]], !DIExpression(DW_OP_plus_uconst, 8, DW_OP_deref, DW_OP_LLVM_fragment, 64, 32)
+; CHECK-NEXT: DBG_VALUE %stack.0.nums, $noreg, ![[nums]], !DIExpression(DW_OP_deref)
+  tail call void @_Z4stepv(), !dbg !32
+;; Next dbg.assign added by hand to test that the bits [64, 32) have been
+;; correctly tracked as in memory - we know this has worked if
+;; mem-loc-frag-fill reinstates the memory location after this kill-location
+;; for bits [80, 96).
+  call void @llvm.dbg.assign(metadata i32 poison, metadata !12, metadata !DIExpression(DW_OP_LLVM_fragment, 80, 16), metadata !44, metadata ptr poison, metadata !DIExpression()), !dbg !19
+; CHECK: CALL64pcrel32 @_Z4stepv
+; CHECK-NEXT: ADJCALLSTACKUP64
+; CHECK-NEXT: DBG_VALUE $noreg, $noreg, ![[nums]], !DIExpression(DW_OP_LLVM_fragment, 80, 16)
+; CHECK-NEXT: DBG_VALUE %stack.0.nums, $noreg, ![[nums]], !DIExpression(DW_OP_deref, DW_OP_LLVM_fragment, 0, 80)
   tail call void @_Z4stepv(), !dbg !32
   call void @_Z3escP4Nums(ptr noundef nonnull %nums), !dbg !33
   ret i32 0, !dbg !35
@@ -105,4 +116,5 @@ declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, 
 !41 = !DISubroutineType(types: !42)
 !42 = !{null, !43}
 !43 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !13, size: 64)
+!44 = distinct !DIAssignID()
 !1000 = !{i32 7, !"debug-info-assignment-tracking", i1 true}

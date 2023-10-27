@@ -1,6 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin11 -fobjc-runtime-has-weak -fsyntax-only -fobjc-arc -verify -Wno-objc-root-class %s
 // RUN: %clang_cc1 -triple x86_64-apple-darwin11 -fobjc-runtime-has-weak -fsyntax-only -fobjc-weak -verify -Wno-objc-root-class %s
-// rdar://9693477
 
 __attribute__((objc_arc_weak_reference_unavailable))
 @interface NSOptOut1072  // expected-note {{class is declared here}}
@@ -20,7 +19,6 @@ int main(void) {
                            // expected-error {{explicit ownership qualifier on cast result has no effect}}
 }
 
-// rdar://9732636
 __attribute__((objc_arc_weak_reference_unavailable))
 @interface NOWEAK
 + (id) new;
@@ -49,7 +47,6 @@ NOWEAK<P, P1> * Test2(void) {
                                 // expected-error {{explicit ownership qualifier on cast result has no effect}}
 }
 
-// rdar://10535245
 __attribute__((objc_arc_weak_reference_unavailable))
 @interface NSFont
 @end
@@ -64,7 +61,6 @@ __attribute__((objc_arc_weak_reference_unavailable))
 @synthesize font = _font;
 @end
 
-// rdar://13676793
 @protocol MyProtocol
 @property (weak) NSFont *font; // expected-error {{synthesizing __weak instance variable of type 'NSFont *', which does not support weak references}}
 @end

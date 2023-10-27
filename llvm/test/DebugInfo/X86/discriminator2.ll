@@ -55,7 +55,7 @@ attributes #1 = { "disable-tail-calls"="false" "less-precise-fpmad"="false" "fra
 !13 = !DILocation(line: 5, column: 21, scope: !12)
 !14 = !DILocation(line: 6, column: 1, scope: !6)
 
-; CHECK: Address            Line   Column File   ISA Discriminator Flags
-; CHECK: ------------------ ------ ------ ------ --- ------------- -------------
-; CHECK: {{.*}}      4      3      1   0             1  {{.*}}
-; CHECK: {{.*}}      5     21      1   0             1  {{.*}}
+; CHECK: Address            Line   Column File   ISA Discriminator OpIndex Flags
+; CHECK: ------------------ ------ ------ ------ --- ------------- ------- -------------
+; CHECK: {{.*}}                  4      3      1   0             1       0 {{.*}}
+; CHECK: {{.*}}                  5     21      1   0             1       0 {{.*}}

@@ -29,9 +29,8 @@ define <4 x i32> @zextbool_sub_vector(<4 x i32> %c1, <4 x i32> %c2, <4 x i32> %x
 ;
 ; GISEL-LABEL: zextbool_sub_vector:
 ; GISEL:       // %bb.0:
-; GISEL-NEXT:    adrp x8, .LCPI1_0
+; GISEL-NEXT:    movi v3.4s, #1
 ; GISEL-NEXT:    cmeq v0.4s, v0.4s, v1.4s
-; GISEL-NEXT:    ldr q3, [x8, :lo12:.LCPI1_0]
 ; GISEL-NEXT:    and v0.16b, v0.16b, v3.16b
 ; GISEL-NEXT:    sub v0.4s, v2.4s, v0.4s
 ; GISEL-NEXT:    ret
@@ -107,7 +106,7 @@ define i32 @caller_signext_i1() {
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    mov w0, #-1
+; CHECK-NEXT:    mov w0, #-1 // =0xffffffff
 ; CHECK-NEXT:    bl callee_signext_i1
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
@@ -117,8 +116,7 @@ define i32 @caller_signext_i1() {
 ; GISEL-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; GISEL-NEXT:    .cfi_def_cfa_offset 16
 ; GISEL-NEXT:    .cfi_offset w30, -16
-; GISEL-NEXT:    mov w8, #1
-; GISEL-NEXT:    sbfx w0, w8, #0, #1
+; GISEL-NEXT:    mov w0, #-1 // =0xffffffff
 ; GISEL-NEXT:    bl callee_signext_i1
 ; GISEL-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; GISEL-NEXT:    ret

@@ -1740,10 +1740,8 @@ define void @insert_v16i8(i32 signext %a) nounwind {
 ; O32-NEXT:    addiu $2, $2, %lo(_gp_disp)
 ; O32-NEXT:    addu $1, $2, $25
 ; O32-NEXT:    lw $1, %got(v16i8)($1)
-; O32-NEXT:    ld.b $w0, 0($1)
-; O32-NEXT:    insert.b $w0[1], $4
 ; O32-NEXT:    jr $ra
-; O32-NEXT:    st.b $w0, 0($1)
+; O32-NEXT:    sb $4, 1($1)
 ;
 ; N32-LABEL: insert_v16i8:
 ; N32:       # %bb.0:
@@ -1751,10 +1749,8 @@ define void @insert_v16i8(i32 signext %a) nounwind {
 ; N32-NEXT:    addu $1, $1, $25
 ; N32-NEXT:    addiu $1, $1, %lo(%neg(%gp_rel(insert_v16i8)))
 ; N32-NEXT:    lw $1, %got_disp(v16i8)($1)
-; N32-NEXT:    ld.b $w0, 0($1)
-; N32-NEXT:    insert.b $w0[1], $4
 ; N32-NEXT:    jr $ra
-; N32-NEXT:    st.b $w0, 0($1)
+; N32-NEXT:    sb $4, 1($1)
 ;
 ; N64-LABEL: insert_v16i8:
 ; N64:       # %bb.0:
@@ -1762,10 +1758,8 @@ define void @insert_v16i8(i32 signext %a) nounwind {
 ; N64-NEXT:    daddu $1, $1, $25
 ; N64-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(insert_v16i8)))
 ; N64-NEXT:    ld $1, %got_disp(v16i8)($1)
-; N64-NEXT:    ld.b $w0, 0($1)
-; N64-NEXT:    insert.b $w0[1], $4
 ; N64-NEXT:    jr $ra
-; N64-NEXT:    st.b $w0, 0($1)
+; N64-NEXT:    sb $4, 1($1)
   %1 = load <16 x i8>, ptr @v16i8
   %a2 = trunc i32 %a to i8
   %a3 = sext i8 %a2 to i32
@@ -1782,10 +1776,8 @@ define void @insert_v8i16(i32 signext %a) nounwind {
 ; O32-NEXT:    addiu $2, $2, %lo(_gp_disp)
 ; O32-NEXT:    addu $1, $2, $25
 ; O32-NEXT:    lw $1, %got(v8i16)($1)
-; O32-NEXT:    ld.h $w0, 0($1)
-; O32-NEXT:    insert.h $w0[1], $4
 ; O32-NEXT:    jr $ra
-; O32-NEXT:    st.h $w0, 0($1)
+; O32-NEXT:    sh $4, 2($1)
 ;
 ; N32-LABEL: insert_v8i16:
 ; N32:       # %bb.0:
@@ -1793,10 +1785,8 @@ define void @insert_v8i16(i32 signext %a) nounwind {
 ; N32-NEXT:    addu $1, $1, $25
 ; N32-NEXT:    addiu $1, $1, %lo(%neg(%gp_rel(insert_v8i16)))
 ; N32-NEXT:    lw $1, %got_disp(v8i16)($1)
-; N32-NEXT:    ld.h $w0, 0($1)
-; N32-NEXT:    insert.h $w0[1], $4
 ; N32-NEXT:    jr $ra
-; N32-NEXT:    st.h $w0, 0($1)
+; N32-NEXT:    sh $4, 2($1)
 ;
 ; N64-LABEL: insert_v8i16:
 ; N64:       # %bb.0:
@@ -1804,10 +1794,8 @@ define void @insert_v8i16(i32 signext %a) nounwind {
 ; N64-NEXT:    daddu $1, $1, $25
 ; N64-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(insert_v8i16)))
 ; N64-NEXT:    ld $1, %got_disp(v8i16)($1)
-; N64-NEXT:    ld.h $w0, 0($1)
-; N64-NEXT:    insert.h $w0[1], $4
 ; N64-NEXT:    jr $ra
-; N64-NEXT:    st.h $w0, 0($1)
+; N64-NEXT:    sh $4, 2($1)
   %1 = load <8 x i16>, ptr @v8i16
   %a2 = trunc i32 %a to i16
   %a3 = sext i16 %a2 to i32
@@ -1824,10 +1812,8 @@ define void @insert_v4i32(i32 signext %a) nounwind {
 ; O32-NEXT:    addiu $2, $2, %lo(_gp_disp)
 ; O32-NEXT:    addu $1, $2, $25
 ; O32-NEXT:    lw $1, %got(v4i32)($1)
-; O32-NEXT:    ld.w $w0, 0($1)
-; O32-NEXT:    insert.w $w0[1], $4
 ; O32-NEXT:    jr $ra
-; O32-NEXT:    st.w $w0, 0($1)
+; O32-NEXT:    sw $4, 4($1)
 ;
 ; N32-LABEL: insert_v4i32:
 ; N32:       # %bb.0:
@@ -1835,10 +1821,8 @@ define void @insert_v4i32(i32 signext %a) nounwind {
 ; N32-NEXT:    addu $1, $1, $25
 ; N32-NEXT:    addiu $1, $1, %lo(%neg(%gp_rel(insert_v4i32)))
 ; N32-NEXT:    lw $1, %got_disp(v4i32)($1)
-; N32-NEXT:    ld.w $w0, 0($1)
-; N32-NEXT:    insert.w $w0[1], $4
 ; N32-NEXT:    jr $ra
-; N32-NEXT:    st.w $w0, 0($1)
+; N32-NEXT:    sw $4, 4($1)
 ;
 ; N64-LABEL: insert_v4i32:
 ; N64:       # %bb.0:
@@ -1846,10 +1830,8 @@ define void @insert_v4i32(i32 signext %a) nounwind {
 ; N64-NEXT:    daddu $1, $1, $25
 ; N64-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(insert_v4i32)))
 ; N64-NEXT:    ld $1, %got_disp(v4i32)($1)
-; N64-NEXT:    ld.w $w0, 0($1)
-; N64-NEXT:    insert.w $w0[1], $4
 ; N64-NEXT:    jr $ra
-; N64-NEXT:    st.w $w0, 0($1)
+; N64-NEXT:    sw $4, 4($1)
   %1 = load <4 x i32>, ptr @v4i32
   %2 = insertelement <4 x i32> %1, i32 %a, i32 1
   store <4 x i32> %2, ptr @v4i32
@@ -1862,11 +1844,9 @@ define void @insert_v2i64(i64 signext %a) nounwind {
 ; O32-NEXT:    addiu $2, $2, %lo(_gp_disp)
 ; O32-NEXT:    addu $1, $2, $25
 ; O32-NEXT:    lw $1, %got(v2i64)($1)
-; O32-NEXT:    ld.w $w0, 0($1)
-; O32-NEXT:    insert.w $w0[2], $4
-; O32-NEXT:    insert.w $w0[3], $5
+; O32-NEXT:    sw $5, 12($1)
 ; O32-NEXT:    jr $ra
-; O32-NEXT:    st.w $w0, 0($1)
+; O32-NEXT:    sw $4, 8($1)
 ;
 ; N32-LABEL: insert_v2i64:
 ; N32:       # %bb.0:
@@ -1874,10 +1854,8 @@ define void @insert_v2i64(i64 signext %a) nounwind {
 ; N32-NEXT:    addu $1, $1, $25
 ; N32-NEXT:    addiu $1, $1, %lo(%neg(%gp_rel(insert_v2i64)))
 ; N32-NEXT:    lw $1, %got_disp(v2i64)($1)
-; N32-NEXT:    ld.d $w0, 0($1)
-; N32-NEXT:    insert.d $w0[1], $4
 ; N32-NEXT:    jr $ra
-; N32-NEXT:    st.d $w0, 0($1)
+; N32-NEXT:    sd $4, 8($1)
 ;
 ; N64-LABEL: insert_v2i64:
 ; N64:       # %bb.0:
@@ -1885,10 +1863,8 @@ define void @insert_v2i64(i64 signext %a) nounwind {
 ; N64-NEXT:    daddu $1, $1, $25
 ; N64-NEXT:    daddiu $1, $1, %lo(%neg(%gp_rel(insert_v2i64)))
 ; N64-NEXT:    ld $1, %got_disp(v2i64)($1)
-; N64-NEXT:    ld.d $w0, 0($1)
-; N64-NEXT:    insert.d $w0[1], $4
 ; N64-NEXT:    jr $ra
-; N64-NEXT:    st.d $w0, 0($1)
+; N64-NEXT:    sd $4, 8($1)
   %1 = load <2 x i64>, ptr @v2i64
   %2 = insertelement <2 x i64> %1, i64 %a, i32 1
   store <2 x i64> %2, ptr @v2i64
@@ -1904,13 +1880,9 @@ define void @insert_v16i8_vidx(i32 signext %a) nounwind {
 ; O32-NEXT:    lw $2, %got(i32)($1)
 ; O32-NEXT:    lw $2, 0($2)
 ; O32-NEXT:    lw $1, %got(v16i8)($1)
-; O32-NEXT:    ld.b $w0, 0($1)
-; O32-NEXT:    sld.b $w0, $w0[$2]
-; O32-NEXT:    insert.b $w0[0], $4
-; O32-NEXT:    neg $2, $2
-; O32-NEXT:    sld.b $w0, $w0[$2]
+; O32-NEXT:    addu $1, $1, $2
 ; O32-NEXT:    jr $ra
-; O32-NEXT:    st.b $w0, 0($1)
+; O32-NEXT:    sb $4, 0($1)
 ;
 ; N32-LABEL: insert_v16i8_vidx:
 ; N32:       # %bb.0:
@@ -1920,13 +1892,9 @@ define void @insert_v16i8_vidx(i32 signext %a) nounwind {
 ; N32-NEXT:    lw $2, %got_disp(i32)($1)
 ; N32-NEXT:    lw $2, 0($2)
 ; N32-NEXT:    lw $1, %got_disp(v16i8)($1)
-; N32-NEXT:    ld.b $w0, 0($1)
-; N32-NEXT:    sld.b $w0, $w0[$2]
-; N32-NEXT:    insert.b $w0[0], $4
-; N32-NEXT:    neg $2, $2
-; N32-NEXT:    sld.b $w0, $w0[$2]
+; N32-NEXT:    addu $1, $1, $2
 ; N32-NEXT:    jr $ra
-; N32-NEXT:    st.b $w0, 0($1)
+; N32-NEXT:    sb $4, 0($1)
 ;
 ; N64-LABEL: insert_v16i8_vidx:
 ; N64:       # %bb.0:
@@ -1936,13 +1904,9 @@ define void @insert_v16i8_vidx(i32 signext %a) nounwind {
 ; N64-NEXT:    ld $2, %got_disp(i32)($1)
 ; N64-NEXT:    lwu $2, 0($2)
 ; N64-NEXT:    ld $1, %got_disp(v16i8)($1)
-; N64-NEXT:    ld.b $w0, 0($1)
-; N64-NEXT:    sld.b $w0, $w0[$2]
-; N64-NEXT:    insert.b $w0[0], $4
-; N64-NEXT:    dneg $2, $2
-; N64-NEXT:    sld.b $w0, $w0[$2]
+; N64-NEXT:    daddu $1, $1, $2
 ; N64-NEXT:    jr $ra
-; N64-NEXT:    st.b $w0, 0($1)
+; N64-NEXT:    sb $4, 0($1)
   %1 = load <16 x i8>, ptr @v16i8
   %2 = load i32, ptr @i32
   %a2 = trunc i32 %a to i8
@@ -1962,14 +1926,9 @@ define void @insert_v8i16_vidx(i32 signext %a) nounwind {
 ; O32-NEXT:    lw $2, %got(i32)($1)
 ; O32-NEXT:    lw $2, 0($2)
 ; O32-NEXT:    lw $1, %got(v8i16)($1)
-; O32-NEXT:    ld.h $w0, 0($1)
-; O32-NEXT:    sll $2, $2, 1
-; O32-NEXT:    sld.b $w0, $w0[$2]
-; O32-NEXT:    insert.h $w0[0], $4
-; O32-NEXT:    neg $2, $2
-; O32-NEXT:    sld.b $w0, $w0[$2]
+; O32-NEXT:    lsa $1, $2, $1, 1
 ; O32-NEXT:    jr $ra
-; O32-NEXT:    st.h $w0, 0($1)
+; O32-NEXT:    sh $4, 0($1)
 ;
 ; N32-LABEL: insert_v8i16_vidx:
 ; N32:       # %bb.0:
@@ -1979,14 +1938,9 @@ define void @insert_v8i16_vidx(i32 signext %a) nounwind {
 ; N32-NEXT:    lw $2, %got_disp(i32)($1)
 ; N32-NEXT:    lw $2, 0($2)
 ; N32-NEXT:    lw $1, %got_disp(v8i16)($1)
-; N32-NEXT:    ld.h $w0, 0($1)
-; N32-NEXT:    sll $2, $2, 1
-; N32-NEXT:    sld.b $w0, $w0[$2]
-; N32-NEXT:    insert.h $w0[0], $4
-; N32-NEXT:    neg $2, $2
-; N32-NEXT:    sld.b $w0, $w0[$2]
+; N32-NEXT:    lsa $1, $2, $1, 1
 ; N32-NEXT:    jr $ra
-; N32-NEXT:    st.h $w0, 0($1)
+; N32-NEXT:    sh $4, 0($1)
 ;
 ; N64-LABEL: insert_v8i16_vidx:
 ; N64:       # %bb.0:
@@ -1996,14 +1950,9 @@ define void @insert_v8i16_vidx(i32 signext %a) nounwind {
 ; N64-NEXT:    ld $2, %got_disp(i32)($1)
 ; N64-NEXT:    lwu $2, 0($2)
 ; N64-NEXT:    ld $1, %got_disp(v8i16)($1)
-; N64-NEXT:    ld.h $w0, 0($1)
-; N64-NEXT:    dsll $2, $2, 1
-; N64-NEXT:    sld.b $w0, $w0[$2]
-; N64-NEXT:    insert.h $w0[0], $4
-; N64-NEXT:    dneg $2, $2
-; N64-NEXT:    sld.b $w0, $w0[$2]
+; N64-NEXT:    dlsa $1, $2, $1, 1
 ; N64-NEXT:    jr $ra
-; N64-NEXT:    st.h $w0, 0($1)
+; N64-NEXT:    sh $4, 0($1)
   %1 = load <8 x i16>, ptr @v8i16
   %2 = load i32, ptr @i32
   %a2 = trunc i32 %a to i16
@@ -2023,14 +1972,9 @@ define void @insert_v4i32_vidx(i32 signext %a) nounwind {
 ; O32-NEXT:    lw $2, %got(i32)($1)
 ; O32-NEXT:    lw $2, 0($2)
 ; O32-NEXT:    lw $1, %got(v4i32)($1)
-; O32-NEXT:    ld.w $w0, 0($1)
-; O32-NEXT:    sll $2, $2, 2
-; O32-NEXT:    sld.b $w0, $w0[$2]
-; O32-NEXT:    insert.w $w0[0], $4
-; O32-NEXT:    neg $2, $2
-; O32-NEXT:    sld.b $w0, $w0[$2]
+; O32-NEXT:    lsa $1, $2, $1, 2
 ; O32-NEXT:    jr $ra
-; O32-NEXT:    st.w $w0, 0($1)
+; O32-NEXT:    sw $4, 0($1)
 ;
 ; N32-LABEL: insert_v4i32_vidx:
 ; N32:       # %bb.0:
@@ -2040,14 +1984,9 @@ define void @insert_v4i32_vidx(i32 signext %a) nounwind {
 ; N32-NEXT:    lw $2, %got_disp(i32)($1)
 ; N32-NEXT:    lw $2, 0($2)
 ; N32-NEXT:    lw $1, %got_disp(v4i32)($1)
-; N32-NEXT:    ld.w $w0, 0($1)
-; N32-NEXT:    sll $2, $2, 2
-; N32-NEXT:    sld.b $w0, $w0[$2]
-; N32-NEXT:    insert.w $w0[0], $4
-; N32-NEXT:    neg $2, $2
-; N32-NEXT:    sld.b $w0, $w0[$2]
+; N32-NEXT:    lsa $1, $2, $1, 2
 ; N32-NEXT:    jr $ra
-; N32-NEXT:    st.w $w0, 0($1)
+; N32-NEXT:    sw $4, 0($1)
 ;
 ; N64-LABEL: insert_v4i32_vidx:
 ; N64:       # %bb.0:
@@ -2057,14 +1996,9 @@ define void @insert_v4i32_vidx(i32 signext %a) nounwind {
 ; N64-NEXT:    ld $2, %got_disp(i32)($1)
 ; N64-NEXT:    lwu $2, 0($2)
 ; N64-NEXT:    ld $1, %got_disp(v4i32)($1)
-; N64-NEXT:    ld.w $w0, 0($1)
-; N64-NEXT:    dsll $2, $2, 2
-; N64-NEXT:    sld.b $w0, $w0[$2]
-; N64-NEXT:    insert.w $w0[0], $4
-; N64-NEXT:    dneg $2, $2
-; N64-NEXT:    sld.b $w0, $w0[$2]
+; N64-NEXT:    dlsa $1, $2, $1, 2
 ; N64-NEXT:    jr $ra
-; N64-NEXT:    st.w $w0, 0($1)
+; N64-NEXT:    sw $4, 0($1)
   %1 = load <4 x i32>, ptr @v4i32
   %2 = load i32, ptr @i32
   %3 = insertelement <4 x i32> %1, i32 %a, i32 %2
@@ -2084,22 +2018,11 @@ define void @insert_v2i64_vidx(i64 signext %a) nounwind {
 ; O32-NEXT:    addu $1, $2, $25
 ; O32-NEXT:    lw $2, %got(i32)($1)
 ; O32-NEXT:    lw $2, 0($2)
-; O32-NEXT:    addu $2, $2, $2
 ; O32-NEXT:    lw $1, %got(v2i64)($1)
-; O32-NEXT:    ld.w $w0, 0($1)
-; O32-NEXT:    sll $3, $2, 2
-; O32-NEXT:    sld.b $w0, $w0[$3]
-; O32-NEXT:    insert.w $w0[0], $4
-; O32-NEXT:    neg $3, $3
-; O32-NEXT:    sld.b $w0, $w0[$3]
-; O32-NEXT:    addiu $2, $2, 1
-; O32-NEXT:    sll $2, $2, 2
-; O32-NEXT:    sld.b $w0, $w0[$2]
-; O32-NEXT:    insert.w $w0[0], $5
-; O32-NEXT:    neg $2, $2
-; O32-NEXT:    sld.b $w0, $w0[$2]
+; O32-NEXT:    lsa $1, $2, $1, 3
+; O32-NEXT:    sw $5, 4($1)
 ; O32-NEXT:    jr $ra
-; O32-NEXT:    st.w $w0, 0($1)
+; O32-NEXT:    sw $4, 0($1)
 ;
 ; N32-LABEL: insert_v2i64_vidx:
 ; N32:       # %bb.0:
@@ -2109,14 +2032,9 @@ define void @insert_v2i64_vidx(i64 signext %a) nounwind {
 ; N32-NEXT:    lw $2, %got_disp(i32)($1)
 ; N32-NEXT:    lw $2, 0($2)
 ; N32-NEXT:    lw $1, %got_disp(v2i64)($1)
-; N32-NEXT:    ld.d $w0, 0($1)
-; N32-NEXT:    sll $2, $2, 3
-; N32-NEXT:    sld.b $w0, $w0[$2]
-; N32-NEXT:    insert.d $w0[0], $4
-; N32-NEXT:    neg $2, $2
-; N32-NEXT:    sld.b $w0, $w0[$2]
+; N32-NEXT:    lsa $1, $2, $1, 3
 ; N32-NEXT:    jr $ra
-; N32-NEXT:    st.d $w0, 0($1)
+; N32-NEXT:    sd $4, 0($1)
 ;
 ; N64-LABEL: insert_v2i64_vidx:
 ; N64:       # %bb.0:
@@ -2126,14 +2044,9 @@ define void @insert_v2i64_vidx(i64 signext %a) nounwind {
 ; N64-NEXT:    ld $2, %got_disp(i32)($1)
 ; N64-NEXT:    lwu $2, 0($2)
 ; N64-NEXT:    ld $1, %got_disp(v2i64)($1)
-; N64-NEXT:    ld.d $w0, 0($1)
-; N64-NEXT:    dsll $2, $2, 3
-; N64-NEXT:    sld.b $w0, $w0[$2]
-; N64-NEXT:    insert.d $w0[0], $4
-; N64-NEXT:    dneg $2, $2
-; N64-NEXT:    sld.b $w0, $w0[$2]
+; N64-NEXT:    dlsa $1, $2, $1, 3
 ; N64-NEXT:    jr $ra
-; N64-NEXT:    st.d $w0, 0($1)
+; N64-NEXT:    sd $4, 0($1)
   %1 = load <2 x i64>, ptr @v2i64
   %2 = load i32, ptr @i32
   %3 = insertelement <2 x i64> %1, i64 %a, i32 %2

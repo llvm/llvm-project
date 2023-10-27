@@ -17,7 +17,6 @@ define i32 @test_01(ptr %p, ptr %array, i32 %min_length) {
 ; CHECK-NEXT:    [[IN_BOUNDS:%.*]] = icmp ult i32 [[IDX]], [[MIN_LENGTH:%.*]]
 ; CHECK-NEXT:    br i1 [[IN_BOUNDS]], label [[RANGE_CHECK_BLOCK:%.*]], label [[OUT_OF_BOUNDS:%.*]]
 ; CHECK:       range_check_block:
-; CHECK-NEXT:    [[RANGE_CHECK:%.*]] = icmp ult i32 [[IDX]], [[MIN_LENGTH]]
 ; CHECK-NEXT:    br i1 true, label [[BACKEDGE]], label [[RANGE_CHECK_FAILED:%.*]]
 ; CHECK:       backedge:
 ; CHECK-NEXT:    [[ARR_PTR:%.*]] = getelementptr i32, ptr [[ARRAY:%.*]], i32 [[IDX]]
@@ -81,7 +80,6 @@ define i32 @test_02(ptr %p, ptr %array, i32 %length, i32 %min_length) {
 ; CHECK-NEXT:    [[IN_BOUNDS:%.*]] = icmp ult i32 [[IDX]], [[MIN_LENGTH]]
 ; CHECK-NEXT:    br i1 [[IN_BOUNDS]], label [[RANGE_CHECK_BLOCK:%.*]], label [[OUT_OF_BOUNDS:%.*]]
 ; CHECK:       range_check_block:
-; CHECK-NEXT:    [[RANGE_CHECK:%.*]] = icmp ult i32 [[IDX]], [[LENGTH]]
 ; CHECK-NEXT:    br i1 true, label [[BACKEDGE]], label [[RANGE_CHECK_FAILED:%.*]]
 ; CHECK:       backedge:
 ; CHECK-NEXT:    [[ARR_PTR:%.*]] = getelementptr i32, ptr [[ARRAY:%.*]], i32 [[IDX]]

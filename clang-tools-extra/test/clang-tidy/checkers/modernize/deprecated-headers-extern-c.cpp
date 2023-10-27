@@ -14,7 +14,7 @@
 
 // RUN: %check_clang_tidy -std=c++11 %s modernize-deprecated-headers %t \
 // RUN:   -check-suffixes=DEFAULT,CHECK-HEADER-FILE \
-// RUN:   -config="{CheckOptions: [{key: modernize-deprecated-headers.CheckHeaderFile, value: 'true'}]}" \
+// RUN:   -config="{CheckOptions: {modernize-deprecated-headers.CheckHeaderFile: 'true'}}" \
 // RUN:   --header-filter='.*' --system-headers \
 // RUN:   -- -I %t/usr -isystem %t/sys -isystem %S/Inputs/deprecated-headers
 

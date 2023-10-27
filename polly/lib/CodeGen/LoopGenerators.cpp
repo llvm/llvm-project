@@ -186,15 +186,12 @@ Value *ParallelLoopGenerator::createParallelLoop(
   *LoopBody = Builder.GetInsertPoint();
   Builder.SetInsertPoint(&*BeforeLoop);
 
-  Value *SubFnParam = Builder.CreateBitCast(Struct, Builder.getInt8PtrTy(),
-                                            "polly.par.userContext");
-
   // Add one as the upper bound provided by OpenMP is a < comparison
   // whereas the codegenForSequential function creates a <= comparison.
   UB = Builder.CreateAdd(UB, ConstantInt::get(LongType, 1));
 
   // Execute the prepared subfunction in parallel.
-  deployParallelExecution(SubFn, SubFnParam, LB, UB, Stride);
+  deployParallelExecution(SubFn, Struct, LB, UB, Stride);
 
   return IV;
 }

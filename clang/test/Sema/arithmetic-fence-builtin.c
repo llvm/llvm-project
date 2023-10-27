@@ -2,6 +2,7 @@
 // RUN: %clang_cc1 -triple ppc64le -DPPC     -emit-llvm -o - -verify -x c++ %s
 // RUN: not %clang_cc1 -triple ppc64le -DPPC     -emit-llvm -o - -x c++ %s \
 // RUN:            -fprotect-parens 2>&1 | FileCheck -check-prefix=PPC %s
+// RUN: %clang_cc1 -triple spir64 -emit-llvm -o - -verify -x c++ %s
 #ifndef PPC
 int v;
 template <typename T> T addT(T a, T b) {

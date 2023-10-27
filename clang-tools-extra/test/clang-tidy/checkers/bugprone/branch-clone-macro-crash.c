@@ -9,6 +9,6 @@ int y = 1;
     d = b;
 
 void f(void) {
-  // CHECK-MESSAGES: warning: repeated branch in conditional chain [bugprone-branch-clone]
+  // CHECK-MESSAGES: warning: repeated branch body in conditional chain [bugprone-branch-clone]
   a(x, y)
 }

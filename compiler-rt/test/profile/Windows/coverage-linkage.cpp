@@ -3,7 +3,7 @@
 // RUN: env LLVM_PROFILE_FILE=%t.profraw %run %t
 // RUN: llvm-profdata show %t.profraw --all-functions | FileCheck %s
 
-// RUN: %clang_profgen -fcoverage-mapping -ffunction-sections -Wl,-opt:ref %s -o %t
+// RUN: %clang_profgen -fcoverage-mapping -ffunction-sections %if target={{.*-windows-msvc.*}} %{ -Wl,-opt:ref %} %s -o %t
 // RUN: env LLVM_PROFILE_FILE=%t.profraw %run %t
 // RUN: llvm-profdata show %t.profraw --all-functions | FileCheck %s
 

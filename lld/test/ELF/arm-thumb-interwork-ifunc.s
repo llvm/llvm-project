@@ -57,7 +57,7 @@ thumb_caller:
 
 // CHECK: Disassembly of section .iplt:
 
-// CHECK:      00021030 <$a>:
+// CHECK:      00021030 <.iplt>:
 // CHECK-NEXT: add     r12, pc, #0, #12
 // CHECK-NEXT: add     r12, r12, #16, #20
 // CHECK-NEXT: ldr     pc, [r12, #8]!

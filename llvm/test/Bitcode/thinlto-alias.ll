@@ -22,7 +22,6 @@
 ; See if the call to func is registered.
 ; The value id 1 matches the second FUNCTION record above.
 ; CHECK-NEXT:    <PERMODULE {{.*}} op7=1/>
-; CHECK-NEXT:    <BLOCK_COUNT op0=1/>
 ; CHECK-NEXT:  </GLOBALVAL_SUMMARY_BLOCK>
 
 ; CHECK: <STRTAB_BLOCK
@@ -38,7 +37,6 @@
 ; COMBINED-NEXT:    <COMBINED {{.*}} op9=[[ALIASID]]/>
 ; COMBINED-NEXT:    <COMBINED {{.*}}
 ; COMBINED-NEXT:    <COMBINED_ALIAS  {{.*}} op3=[[ALIASEEID]]
-; COMBINED-NEXT:    <BLOCK_COUNT op0=2/>
 ; COMBINED-NEXT:  </GLOBALVAL_SUMMARY_BLOCK
 
 ; ModuleID = 'thinlto-function-summary-callgraph.ll'
@@ -57,11 +55,9 @@ declare void @analias(...)
 ; DIS: ^0 = module: (path: "{{.*}}", hash: (0, 0, 0, 0, 0))
 ; DIS: ^1 = gv: (name: "analias", summaries: (alias: (module: ^0, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 0, canAutoHide: 0), aliasee: ^2))) ; guid = 12695095382722328222
 ; DIS: ^2 = gv: (name: "aliasee", summaries: (function: (module: ^0, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 0, canAutoHide: 0), insts: 1))) ; guid = 17407585008595848568
-; DIS: ^3 = blockcount: 1
 
 ; COMBINED-DIS: ^0 = module: (path: "{{.*}}thinlto-alias.ll.tmp.o", hash: (0, 0, 0, 0, 0))
 ; COMBINED-DIS: ^1 = module: (path: "{{.*}}thinlto-alias.ll.tmp2.o", hash: (0, 0, 0, 0, 0))
 ; COMBINED-DIS: ^2 = gv: (guid: 12695095382722328222, summaries: (alias: (module: ^1, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 0, canAutoHide: 0), aliasee: ^4)))
 ; COMBINED-DIS: ^3 = gv: (guid: 15822663052811949562, summaries: (function: (module: ^0, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 0, canAutoHide: 0), insts: 2, calls: ((callee: ^2)))))
 ; COMBINED-DIS: ^4 = gv: (guid: 17407585008595848568, summaries: (function: (module: ^1, flags: (linkage: external, visibility: default, notEligibleToImport: 0, live: 0, dsoLocal: 0, canAutoHide: 0), insts: 1)))
-; COMBINED-DIS: ^5 = blockcount: 2

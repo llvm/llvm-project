@@ -413,7 +413,7 @@ subroutine simple_derived(x, y)
 ! CHECK:   %[[VAL_286:.*]] = fir.array_coor %[[VAL_287]](%[[VAL_277]]) {{\[}}%[[VAL_278]]] %[[VAL_285]] : (!fir.ref<!fir.array<6x!fir.type<_QMderived_typesTt{i:i32,c:!fir.char<1,2>}>>>, !fir.shapeshift<1>, !fir.slice<1>, index) -> !fir.ref<!fir.type<_QMderived_typesTt{i:i32,c:!fir.char<1,2>}>>
 ! CHECK:   %[[VAL_288:.*]] = fir.embox %[[VAL_286]] : (!fir.ref<!fir.type<_QMderived_typesTt{i:i32,c:!fir.char<1,2>}>>) -> !fir.box<!fir.type<_QMderived_typesTt{i:i32,c:!fir.char<1,2>}>>
 ! CHECK:   %[[VAL_289:.*]] = fir.convert %[[VAL_288]] : (!fir.box<!fir.type<_QMderived_typesTt{i:i32,c:!fir.char<1,2>}>>) -> !fir.box<none>
-! CHECK:   %[[VAL_290:.*]] = fir.call @_FortranAioInputDescriptor(%[[VAL_276]], %[[VAL_289]]) {{.*}}: (!fir.ref<i8>, !fir.box<none>) -> i1
+! CHECK:   %[[VAL_290:.*]] = fir.call @_FortranAioInputDerivedType(%[[VAL_276]], %[[VAL_289]], {{.*}}) {{.*}}: (!fir.ref<i8>, !fir.box<none>, !fir.ref<none>) -> i1
 ! CHECK:   %[[VAL_291:.*]] = arith.addi %[[VAL_279]], %[[VAL_273]] : index
 ! CHECK:   %[[VAL_292:.*]] = arith.subi %[[VAL_280]], %[[VAL_273]] : index
 ! CHECK:   cf.br ^bb1(%[[VAL_291]], %[[VAL_292]] : index, index)

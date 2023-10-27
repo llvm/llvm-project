@@ -32,6 +32,7 @@ public:
     RT_EXEC_COUNT,
     RT_HFSORT,
     RT_HFSORT_PLUS,
+    RT_CDS,
     RT_PETTIS_HANSEN,
     RT_RANDOM,
     RT_USER

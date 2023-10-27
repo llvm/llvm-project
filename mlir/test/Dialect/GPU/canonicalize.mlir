@@ -170,8 +170,8 @@ func.func @simplify_gpu_launch() attributes {llvm.emit_c_interface} {
 // CHECK-DAG: %[[C1:.*]] = arith.constant 1 : index
 // CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
 // CHECK: gpu.launch blocks(%{{.*}}, %{{.*}}, %{{.*}}) in (%{{.*}} = %[[C1]], %{{.*}} = %[[C1]], %{{.*}} = %[[C1]]) threads(%[[TIDX:.*]], %{{.*}}, %{{.*}}) in (%{{.*}} = %c32, %{{.*}} = %[[C1]], %{{.*}} = %[[C1]]) {
-// CHECK-NEXT:  	arith.divui %[[TIDX]], %c32 : index
-// CHECK-NEXT:  	arith.muli %{{.*}}, %c2 : index
+// CHECK-NEXT:    arith.divui %[[TIDX]], %c32 : index
+// CHECK-NEXT:    arith.muli %{{.*}}, %c2 : index
 // CHECK-NEXT:    memref.load %memref[%{{.*}}, %[[C0]], %[[C0]]] : memref<2x16x16xf32>
 // CHECK-NEXT:    arith.addi %{{.*}}, %[[C1]] : index
 // CHECK-NEXT:    memref.load %memref[%{{.*}}, %[[C0]], %[[C0]]] : memref<2x16x16xf32>
@@ -179,3 +179,41 @@ func.func @simplify_gpu_launch() attributes {llvm.emit_c_interface} {
 // CHECK-NEXT:    memref.store %{{.*}}, %memref[%{{.*}}, %[[C0]], %[[C0]]] : memref<2x16x16xf32>
 // CHECK-NEXT:    gpu.terminator
 // CHECK-NEXT:  }
+
+// -----
+
+// CHECK-LABEL: func @make_reduce_uniform
+//       CHECK: gpu.launch blocks
+//       CHECK: %[[V1:.*]] = "test.test2"() : () -> i32
+//       CHECK: %[[V2:.*]] = gpu.all_reduce add %[[V1]] uniform {
+//       CHECK: "test.test3"(%[[V2]]) : (i32) -> ()
+func.func @make_reduce_uniform() {
+  %0:6 = "test.test1"() : () -> (index, index, index, index, index, index)
+  gpu.launch blocks(%arg0, %arg1, %arg2) in (%arg6 = %0#0, %arg7 = %0#1, %arg8 = %0#2)
+    threads(%arg3, %arg4, %arg5) in (%arg9 = %0#3, %arg10 = %0#4, %arg11 = %0#5) {
+    %1 = "test.test2"() : () -> i32
+    %2 = gpu.all_reduce add %1 {} : (i32) -> (i32)
+    "test.test3"(%2) : (i32) -> ()
+    gpu.terminator
+  }
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func @make_subgroup_reduce_uniform
+//       CHECK: gpu.launch blocks
+//       CHECK: %[[V1:.*]] = "test.test2"() : () -> i32
+//       CHECK: %[[V2:.*]] = gpu.subgroup_reduce add %[[V1]] uniform
+//       CHECK: "test.test3"(%[[V2]]) : (i32) -> ()
+func.func @make_subgroup_reduce_uniform() {
+  %0:6 = "test.test1"() : () -> (index, index, index, index, index, index)
+  gpu.launch blocks(%arg0, %arg1, %arg2) in (%arg6 = %0#0, %arg7 = %0#1, %arg8 = %0#2)
+    threads(%arg3, %arg4, %arg5) in (%arg9 = %0#3, %arg10 = %0#4, %arg11 = %0#5) {
+    %1 = "test.test2"() : () -> i32
+    %2 = gpu.subgroup_reduce add %1 : (i32) -> (i32)
+    "test.test3"(%2) : (i32) -> ()
+    gpu.terminator
+  }
+  return
+}

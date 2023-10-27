@@ -6,6 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-int @TOOL_NAME@_main(int argc, char **argv);
+#include "llvm/Support/LLVMDriver.h"
+#include "llvm/ADT/ArrayRef.h"
 
-int main(int argc, char **argv) { return @TOOL_NAME@_main(argc, argv); }
+int @TOOL_NAME@_main(int argc, char **, const llvm::ToolContext &);
+
+int main(int argc, char **argv) {
+  return @TOOL_NAME@_main(argc, argv, {argv[0], nullptr, false});
+}

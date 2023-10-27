@@ -12,7 +12,4 @@
 #ifndef POLLY_CONFIG_H
 #define POLLY_CONFIG_H
 
-#cmakedefine CUDA_FOUND
-#cmakedefine GPU_CODEGEN
-
 #endif

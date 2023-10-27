@@ -17,7 +17,7 @@
 
 // This class is not meant for affine analysis and operations like set
 // operations, emptiness checks, or other math operations for analysis and
-// transformation. For the latter, use FlatAffineConstraints.
+// transformation. For the latter, use FlatAffineValueConstraints.
 //
 //===----------------------------------------------------------------------===//
 

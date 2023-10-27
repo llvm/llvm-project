@@ -80,7 +80,8 @@ bool CXXRecordDecl::isDerivedFrom(const CXXRecordDecl *Base,
   const CXXRecordDecl *BaseDecl = Base->getCanonicalDecl();
   return lookupInBases(
       [BaseDecl](const CXXBaseSpecifier *Specifier, CXXBasePath &Path) {
-        return FindBaseClass(Specifier, Path, BaseDecl);
+        return Specifier->getType()->getAsRecordDecl() &&
+               FindBaseClass(Specifier, Path, BaseDecl);
       },
       Paths);
 }

@@ -123,8 +123,8 @@ void OwningMemoryCheck::registerMatchers(MatchFinder *Finder) {
   // Matching on initialization operations where the initial value is a newly
   // created owner, but the LHS is not an owner.
   Finder->addMatcher(
-      traverse(TK_AsIs, namedDecl(varDecl(allOf(hasInitializer(CreatesOwner),
-                                                unless(IsOwnerType)))
+      traverse(TK_AsIs, namedDecl(varDecl(hasInitializer(CreatesOwner),
+                                          unless(IsOwnerType))
                                       .bind("bad_owner_creation_variable"))),
       this);
 

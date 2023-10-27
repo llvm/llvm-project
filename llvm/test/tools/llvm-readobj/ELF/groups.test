@@ -4,6 +4,7 @@
 # RUN: yaml2obj %s -o %t.o
 # RUN: llvm-readobj -g %t.o | FileCheck %s
 # RUN: llvm-readobj --elf-section-groups %t.o | FileCheck %s
+# RUN: llvm-readobj --elf-section-groups %t.o --elf-output-style=JSON --pretty-print | FileCheck %s --check-prefix=JSON
 # RUN: llvm-readelf -g %t.o | FileCheck --check-prefix=GNU %s
 
 # CHECK:      Groups {
@@ -40,6 +41,57 @@
 # GNU-NEXT:  [Index]  Name
 # GNU-NEXT:  [    5] .text.bar
 # GNU-NEXT:  [    6] .rela.text.bar
+
+# JSON:      "Groups": {
+# JSON-NEXT:   "Group": {
+# JSON-NEXT:     "Name": {
+# JSON-NEXT:       "Name": ".group",
+# JSON-NEXT:       "Value": 16
+# JSON-NEXT:     },
+# JSON-NEXT:     "Index": 1,
+# JSON-NEXT:     "Link": 7,
+# JSON-NEXT:     "Info": 1,
+# JSON-NEXT:     "Type": {
+# JSON-NEXT:       "Name": "COMDAT",
+# JSON-NEXT:       "Value": 1
+# JSON-NEXT:     },
+# JSON-NEXT:     "Signature": "foo",
+# JSON-NEXT:     "GroupSections": [
+# JSON-NEXT:       {
+# JSON-NEXT:         "Name": ".text.foo",
+# JSON-NEXT:         "Index": 3
+# JSON-NEXT:       },
+# JSON-NEXT:       {
+# JSON-NEXT:         "Name": ".rela.text.foo",
+# JSON-NEXT:         "Index": 4
+# JSON-NEXT:       }
+# JSON-NEXT:     ]
+# JSON-NEXT:   },
+# JSON-NEXT:   "Group": {
+# JSON-NEXT:     "Name": {
+# JSON-NEXT:       "Name": ".group1",
+# JSON-NEXT:       "Value": 64
+# JSON-NEXT:     },
+# JSON-NEXT:     "Index": 2,
+# JSON-NEXT:     "Link": 7,
+# JSON-NEXT:     "Info": 2,
+# JSON-NEXT:     "Type": {
+# JSON-NEXT:       "Name": "COMDAT",
+# JSON-NEXT:       "Value": 1
+# JSON-NEXT:     },
+# JSON-NEXT:     "Signature": "bar",
+# JSON-NEXT:     "GroupSections": [
+# JSON-NEXT:       {
+# JSON-NEXT:         "Name": ".text.bar",
+# JSON-NEXT:         "Index": 5
+# JSON-NEXT:       },
+# JSON-NEXT:       {
+# JSON-NEXT:         "Name": ".rela.text.bar",
+# JSON-NEXT:         "Index": 6
+# JSON-NEXT:       }
+# JSON-NEXT:     ]
+# JSON-NEXT:   }
+# JSON-NEXT: }
 
 --- !ELF
 FileHeader:

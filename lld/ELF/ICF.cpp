@@ -165,7 +165,7 @@ static bool isEligible(InputSection *s) {
   // Don't merge writable sections. .data.rel.ro sections are marked as writable
   // but are semantically read-only.
   if ((s->flags & SHF_WRITE) && s->name != ".data.rel.ro" &&
-      !s->name.startswith(".data.rel.ro."))
+      !s->name.starts_with(".data.rel.ro."))
     return false;
 
   // SHF_LINK_ORDER sections are ICF'd as a unit with their dependent sections,
@@ -323,8 +323,9 @@ bool ICF<ELFT>::equalsConstant(const InputSection *a, const InputSection *b) {
 
   const RelsOrRelas<ELFT> ra = a->template relsOrRelas<ELFT>();
   const RelsOrRelas<ELFT> rb = b->template relsOrRelas<ELFT>();
-  return ra.areRelocsRel() ? constantEq(a, ra.rels, b, rb.rels)
-                           : constantEq(a, ra.relas, b, rb.relas);
+  return ra.areRelocsRel() || rb.areRelocsRel()
+             ? constantEq(a, ra.rels, b, rb.rels)
+             : constantEq(a, ra.relas, b, rb.relas);
 }
 
 // Compare two lists of relocations. Returns true if all pairs of
@@ -371,8 +372,9 @@ template <class ELFT>
 bool ICF<ELFT>::equalsVariable(const InputSection *a, const InputSection *b) {
   const RelsOrRelas<ELFT> ra = a->template relsOrRelas<ELFT>();
   const RelsOrRelas<ELFT> rb = b->template relsOrRelas<ELFT>();
-  return ra.areRelocsRel() ? variableEq(a, ra.rels, b, rb.rels)
-                           : variableEq(a, ra.relas, b, rb.relas);
+  return ra.areRelocsRel() || rb.areRelocsRel()
+             ? variableEq(a, ra.rels, b, rb.rels)
+             : variableEq(a, ra.relas, b, rb.relas);
 }
 
 template <class ELFT> size_t ICF<ELFT>::findBoundary(size_t begin, size_t end) {
@@ -492,7 +494,7 @@ template <class ELFT> void ICF<ELFT>::run() {
   // Initially, we use hash values to partition sections.
   parallelForEach(sections, [&](InputSection *s) {
     // Set MSB to 1 to avoid collisions with unique IDs.
-    s->eqClass[0] = xxHash64(s->content()) | (1U << 31);
+    s->eqClass[0] = xxh3_64bits(s->content()) | (1U << 31);
   });
 
   // Perform 2 rounds of relocation hash propagation. 2 is an empirical value to

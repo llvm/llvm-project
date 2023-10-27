@@ -15,6 +15,8 @@
 
 #include "mlir/Transforms/DialectConversion.h"
 
+#include "mlir/Dialect/SPIRV/IR/SPIRVEnums.h"
+
 namespace mlir {
 class LLVMTypeConverter;
 class MLIRContext;
@@ -37,11 +39,16 @@ protected:
 void encodeBindAttribute(ModuleOp module);
 
 /// Populates type conversions with additional SPIR-V types.
-void populateSPIRVToLLVMTypeConversion(LLVMTypeConverter &typeConverter);
+void populateSPIRVToLLVMTypeConversion(
+    LLVMTypeConverter &typeConverter,
+    spirv::ClientAPI clientAPIForAddressSpaceMapping =
+        spirv::ClientAPI::Unknown);
 
 /// Populates the given list with patterns that convert from SPIR-V to LLVM.
-void populateSPIRVToLLVMConversionPatterns(LLVMTypeConverter &typeConverter,
-                                           RewritePatternSet &patterns);
+void populateSPIRVToLLVMConversionPatterns(
+    LLVMTypeConverter &typeConverter, RewritePatternSet &patterns,
+    spirv::ClientAPI clientAPIForAddressSpaceMapping =
+        spirv::ClientAPI::Unknown);
 
 /// Populates the given list with patterns for function conversion from SPIR-V
 /// to LLVM.

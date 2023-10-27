@@ -95,13 +95,20 @@ catch_mach_exception_raise(mach_port_t exc_port, mach_port_t thread_port,
                            mach_exception_data_t exc_data,
                            mach_msg_type_number_t exc_data_count) {
   if (DNBLogCheckLogBit(LOG_EXCEPTIONS)) {
+    std::vector<uint64_t> exc_datas;
+    uint64_t tmp;
+    for (unsigned i = 0; i < exc_data_count; ++i) {
+      // Perform an unaligned copy.
+      memcpy(&tmp, &exc_data[i], sizeof(uint64_t));
+      exc_datas.push_back(tmp);
+    }
     DNBLogThreaded("::%s ( exc_port = 0x%4.4x, thd_port = 0x%4.4x, tsk_port = "
                    "0x%4.4x, exc_type = %d ( %s ), exc_data[%d] = { 0x%llx, "
                    "0x%llx })",
                    __FUNCTION__, exc_port, thread_port, task_port, exc_type,
                    MachException::Name(exc_type), exc_data_count,
-                   (uint64_t)(exc_data_count > 0 ? exc_data[0] : 0xBADDBADD),
-                   (uint64_t)(exc_data_count > 1 ? exc_data[1] : 0xBADDBADD));
+                   (uint64_t)(exc_data_count > 0 ? exc_datas[0] : 0xBADDBADD),
+                   (uint64_t)(exc_data_count > 1 ? exc_datas[1] : 0xBADDBADD));
   }
   g_message->exc_type = 0;
   g_message->exc_data.clear();
@@ -157,6 +164,19 @@ bool MachException::Data::GetStopInfo(
     stop_info->reason = eStopTypeInvalid;
     return true;
   }
+
+#if defined(__arm64__) || defined(__aarch64__)
+  if (exc_type == EXC_BREAKPOINT && exc_data[0] == EXC_ARM_DA_DEBUG &&
+      exc_data.size() > 1) {
+    stop_info->reason = eStopTypeWatchpoint;
+    stop_info->details.watchpoint.mach_exception_addr = exc_data[1];
+    stop_info->details.watchpoint.addr = INVALID_NUB_ADDRESS;
+    if (exc_data.size() > 2) {
+      stop_info->details.watchpoint.hw_idx = exc_data[2];
+    }
+    return true;
+  }
+#endif
 
   // We always stop with a mach exceptions
   stop_info->reason = eStopTypeException;

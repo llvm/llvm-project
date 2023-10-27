@@ -296,3 +296,38 @@ void positiveValueIteratorUsedElseWhere() {
     // SS : createView(*ValueReturningIterator<S>())) {
   }
 }
+
+void positiveConstMemberExpr() {
+  struct Struct {
+    Mutable Member;
+  };
+  for (Struct SS : View<Iterator<Struct>>()) {
+    // CHECK-MESSAGES: [[@LINE-1]]:15: warning: loop variable is copied
+    // CHECK-FIXES: for (const Struct& SS : View<Iterator<Struct>>()) {
+    auto MemberCopy = SS.Member;
+    const auto &ConstRef = SS.Member;
+    bool b = SS.Member.constMethod();
+    use(SS.Member);
+    useByConstValue(SS.Member);
+    useByValue(SS.Member);
+  }
+}
+
+void negativeNonConstMemberExpr() {
+  struct Struct {
+    Mutable Member;
+  };
+  for (Struct SS : View<Iterator<Struct>>()) {
+    SS.Member.setBool(true);
+  }
+  for (Struct SS : View<Iterator<Struct>>()) {
+    SS.Member[1];
+  }
+  for (Struct SS : View<Iterator<Struct>>()) {
+    mutate(SS.Member);
+  }
+  for (Struct SS : View<Iterator<Struct>>()) {
+    mutate(&SS.Member);
+  }
+}
+

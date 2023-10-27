@@ -12,7 +12,6 @@
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
-#include "mlir/Dialect/Linalg/Analysis/DependenceAnalysis.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
@@ -151,8 +150,8 @@ static LinalgOp fuse(OpBuilder &b, LinalgOp producer,
   // fully dynamic at construction time.
   SmallVector<Type, 4> resultTypes;
   resultTypes.reserve(producer->getNumResults());
-  for (OpOperand *operand : producer.getDpsInitOperands()) {
-    auto tensorType = operand->get().getType().dyn_cast<RankedTensorType>();
+  for (Value operand : producer.getDpsInits()) {
+    auto tensorType = dyn_cast<RankedTensorType>(operand.getType());
     if (!tensorType)
       continue;
     unsigned rank = tensorType.getRank();
@@ -166,7 +165,7 @@ static LinalgOp fuse(OpBuilder &b, LinalgOp producer,
         staticStridesVector));
   }
 
-  Operation *clonedOp = clone(b, producer, resultTypes, clonedShapes);
+  LinalgOp clonedOp = clone(b, producer, resultTypes, clonedShapes);
 
   // Shift all IndexOp results by the tile offset.
   SmallVector<OpFoldResult> allIvs = llvm::to_vector(
@@ -204,173 +203,6 @@ static LinalgOp fuse(OpBuilder &b, LinalgOp producerOp, AffineMap producerMap,
   return fuse(b, producerOp, fusedLoopsAndRanges);
 }
 
-// Encode structural fusion safety preconditions.
-// Some of these will be lifted in the future with better analysis.
-static bool isStructurallyFusableProducer(LinalgOp producer, Value consumedView,
-                                          LinalgOp consumer) {
-  assert(producer.hasBufferSemantics() &&
-         "expected linalg op with buffer semantics");
-  assert(consumer.hasBufferSemantics() &&
-         "expected linalg op with buffer semantics");
-  if (producer.getNumDpsInits() != 1) {
-    LLVM_DEBUG(llvm::dbgs() << "\nNot structurally fusable (multi-output)");
-    return false;
-  }
-  // Only fuse when the producer block dominates.
-  DominanceInfo dom(producer.getOperation());
-  if (!dom.dominates(producer->getBlock(), consumer->getBlock())) {
-    LLVM_DEBUG(
-        llvm::dbgs()
-        << "\nNot structurally fusable (producer block does not dominate)");
-    return false;
-  }
-  return true;
-}
-
-bool mlir::linalg::isProducerLastWriteOfView(const LinalgDependenceGraph &graph,
-                                             LinalgOp consumer,
-                                             Value consumedView,
-                                             LinalgOp producer) {
-  assert(producer.hasBufferSemantics() &&
-         "expected linalg op with buffer semantics");
-  assert(consumer.hasBufferSemantics() &&
-         "expected linalg op with buffer semantics");
-  // Make some simple structural checks that alleviate the need for more
-  // complex analyses.
-  if (!isStructurallyFusableProducer(producer, consumedView, consumer)) {
-    LLVM_DEBUG(llvm::dbgs() << "\n***Not static last write due to structure:\t"
-                            << *producer.getOperation());
-    return false;
-  }
-  // Check for any interleaved write to consumedView.
-  if (!graph.findCoveringWrites(producer, consumer, consumedView).empty()) {
-    LLVM_DEBUG(llvm::dbgs() << "\n***Not fusable due to interleaved write:\t"
-                            << *producer.getOperation());
-    return false;
-  }
-  return true;
-}
-
-bool mlir::linalg::isFusableInto(const LinalgDependenceGraph &graph,
-                                 LinalgOp consumer, Value consumedView,
-                                 LinalgOp producer) {
-  assert(producer.hasBufferSemantics() &&
-         "expected linalg op with buffer semantics");
-  assert(consumer.hasBufferSemantics() &&
-         "expected linalg op with buffer semantics");
-  if (!isProducerLastWriteOfView(graph, consumer, consumedView, producer))
-    return false;
-  // Check for any fusion-preventing dependence to any shape read/written that
-  // would violate dependences.
-  if (!graph.findCoveringDependences(producer, consumer).empty()) {
-    LLVM_DEBUG(llvm::dbgs()
-               << "\n***Not fusable due to an interleaved dependence:\t"
-               << *producer.getOperation());
-    return false;
-  }
-  return true;
-}
-
-/// For `consumer` with buffer semantics, find the Linalg operation on buffers
-/// that is the last writer of `consumerOpOperand`. For now the fusable
-/// dependence is returned as an instance of the `dependenceGraph`.
-static FailureOr<LinalgDependenceGraph::LinalgDependenceGraphElem>
-findFusableProducer(OpOperand &consumerOpOperand,
-                    const LinalgDependenceGraph &dependenceGraph) {
-  LLVM_DEBUG(llvm::dbgs() << "findFusableProducer for: "
-                          << consumerOpOperand.get() << " @"
-                          << consumerOpOperand.getOperandNumber() << " in "
-                          << *consumerOpOperand.getOwner() << "\n");
-  LinalgOp consumerOp = dyn_cast<LinalgOp>(consumerOpOperand.getOwner());
-  if (!consumerOp)
-    return failure();
-
-  // Only consider RAW and WAW atm.
-  for (auto depType : {
-           LinalgDependenceGraph::DependenceType::RAW,
-           LinalgDependenceGraph::DependenceType::WAW,
-       }) {
-    LLVM_DEBUG(llvm::dbgs()
-               << "Dependencies into: " << *consumerOp.getOperation() << "\n");
-    for (auto dependence : llvm::make_filter_range(
-             dependenceGraph.getDependencesInto(consumerOp, depType),
-             [&](LinalgDependenceGraph::LinalgDependenceGraphElem elem) {
-               LLVM_DEBUG(llvm::dbgs() << "Inspect dependence btw: "
-                                       << elem.getIndexingValue() << " and "
-                                       << elem.getDependentValue() << "\n");
-               Value v = elem.getIndexingValue();
-               std::optional<unsigned> operandNum =
-                   elem.getIndexingOpViewOperandNum();
-               return isa<LinalgOp>(elem.getDependentOp()) &&
-                      v == consumerOpOperand.get() && operandNum &&
-                      *operandNum == consumerOpOperand.getOperandNumber();
-             })) {
-      // Consumer consumes this view, `isStructurallyFusableProducer` also
-      // checks whether it is a strict subview of the producer view.
-      auto producer = cast<LinalgOp>(dependence.getDependentOp());
-      LLVM_DEBUG(llvm::dbgs()
-                 << "\n"
-                 << LinalgDependenceGraph::getDependenceTypeStr(depType)
-                 << "producer: " << *dependence.getDependentOp()
-                 << " view: " << dependence.getDependentValue() << "\n");
-
-      // If the producer and consumer have tensor semantics, the only dependence
-      // between them is through a RAW dependence and they are fusable by
-      // construction. For buffer semantics need additional checks.
-      if (producer.hasBufferSemantics() && consumerOp.hasBufferSemantics() &&
-          isFusableInto(dependenceGraph, consumerOp, consumerOpOperand.get(),
-                        producer))
-        return dependence;
-      if (producer.hasTensorSemantics() && consumerOp.hasTensorSemantics()) {
-        assert(dependence.dependenceType ==
-               LinalgDependenceGraph::DependenceType::RAW);
-        return dependence;
-      }
-    }
-  }
-  return failure();
-}
-
-FailureOr<FusionInfo>
-mlir::linalg::fuseProducerOfBuffer(OpBuilder &b, OpOperand &consumerOpOperand,
-                                   const LinalgDependenceGraph &graph) {
-  std::optional<LinalgDependenceGraph::LinalgDependenceGraphElem>
-      fusableDependence = findFusableProducer(consumerOpOperand, graph);
-  if (!fusableDependence)
-    return failure();
-
-  LinalgOp producerOp = dyn_cast<LinalgOp>(fusableDependence->getDependentOp());
-  if (!producerOp)
-    return failure();
-
-  // If producer is already in the same block as consumer, we are done.
-  if (consumerOpOperand.get().getParentBlock() ==
-      fusableDependence->getDependentValue().getParentBlock())
-    return failure();
-
-  std::optional<AffineMap> producerMap =
-      fusableDependence->getDependentOpViewIndexingMap();
-  if (!producerMap)
-    return failure();
-
-  // Must be a subview or an extract_slice to guarantee there are loops we can
-  // fuse into.
-  auto subView = consumerOpOperand.get().getDefiningOp<memref::SubViewOp>();
-  if (!subView) {
-    LLVM_DEBUG(llvm::dbgs() << "\nNot fusable (not a subview)");
-    return failure();
-  }
-
-  // Fuse `producer` just before `consumer`.
-  OpBuilder::InsertionGuard g(b);
-  b.setInsertionPoint(consumerOpOperand.getOwner());
-  LLVM_DEBUG(llvm::dbgs() << "Fuse into consumer: "
-                          << *consumerOpOperand.getOwner() << "\n");
-
-  auto fusedProducer = fuse(b, producerOp, *producerMap, consumerOpOperand);
-  return FusionInfo{producerOp, fusedProducer};
-}
-
 /// Walk back use-def chain through scf::For yields.
 /// Sets `producer` and `outputIndex` if it finds a producer LinalgOp
 
@@ -378,22 +210,22 @@ mlir::linalg::fuseProducerOfBuffer(OpBuilder &b, OpOperand &consumerOpOperand,
 // dependence tracking since the dependence tracking is similar to what is done
 // w.r.t to buffers.
 static void getProducerOfTensor(Value tensor, OpResult &opResult) {
-  if (!tensor.getType().isa<RankedTensorType>())
+  if (!isa<RankedTensorType>(tensor.getType()))
     return;
 
   while (true) {
     LLVM_DEBUG(llvm::dbgs() << "\ngetProducerOfTensor: " << tensor);
     if (auto linalgOp = tensor.getDefiningOp<LinalgOp>()) {
-      opResult = tensor.cast<OpResult>();
+      opResult = cast<OpResult>(tensor);
       return;
     }
     if (auto sliceOp = tensor.getDefiningOp<tensor::ExtractSliceOp>()) {
       tensor = sliceOp.getSource();
       continue;
     }
-    if (auto blockArg = tensor.dyn_cast<BlockArgument>()) {
+    if (auto blockArg = dyn_cast<BlockArgument>(tensor)) {
       if (auto forOp = blockArg.getDefiningOp<scf::ForOp>()) {
-        tensor = *(forOp.getIterOperands().begin() + blockArg.getArgNumber());
+        tensor = forOp.getInitArgs()[blockArg.getArgNumber()];
         continue;
       }
     }

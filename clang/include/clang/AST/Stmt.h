@@ -364,6 +364,10 @@ protected:
     /// for the predefined identifier.
     unsigned HasFunctionName : 1;
 
+    /// True if this PredefinedExpr should be treated as a StringLiteral (for
+    /// MSVC compatibility).
+    unsigned IsTransparent : 1;
+
     /// The location of this PredefinedExpr.
     SourceLocation Loc;
   };
@@ -379,7 +383,9 @@ protected:
     unsigned HasFoundDecl : 1;
     unsigned HadMultipleCandidates : 1;
     unsigned RefersToEnclosingVariableOrCapture : 1;
+    unsigned CapturedByCopyInLambdaWithExplicitObjectParameter : 1;
     unsigned NonOdrUseReason : 2;
+    unsigned IsImmediateEscalating : 1;
 
     /// The location of the declaration name itself.
     SourceLocation Loc;
@@ -588,10 +594,8 @@ protected:
 
     unsigned : NumExprBits;
 
-    // These don't need to be particularly wide, because they're
-    // strictly limited by the forms of expressions we permit.
-    unsigned NumSubExprs : 8;
-    unsigned ResultIndex : 32 - 8 - NumExprBits;
+    unsigned NumSubExprs : 16;
+    unsigned ResultIndex : 16;
   };
 
   class SourceLocExprBitfields {
@@ -823,6 +827,7 @@ protected:
     unsigned StdInitListInitialization : 1;
     unsigned ZeroInitialization : 1;
     unsigned ConstructionKind : 3;
+    unsigned IsImmediateEscalating : 1;
 
     SourceLocation Loc;
   };
@@ -978,7 +983,7 @@ protected:
     SourceLocation RequiresKWLoc;
   };
 
-  //===--- C++ Coroutines TS bitfields classes ---===//
+  //===--- C++ Coroutines bitfields classes ---===//
 
   class CoawaitExprBitfields {
     friend class CoawaitExpr;
@@ -1082,7 +1087,7 @@ protected:
     LambdaExprBitfields LambdaExprBits;
     RequiresExprBitfields RequiresExprBits;
 
-    // C++ Coroutines TS expressions
+    // C++ Coroutines expressions
     CoawaitExprBitfields CoawaitBits;
 
     // Obj-C Expressions
@@ -1291,8 +1296,13 @@ public:
   /// parameters are identified by index/level rather than their
   /// declaration pointers) or the exact representation of the statement as
   /// written in the source.
+  /// \param ProfileLambdaExpr whether or not to profile lambda expressions.
+  /// When false, the lambda expressions are never considered to be equal to
+  /// other lambda expressions. When true, the lambda expressions with the same
+  /// implementation will be considered to be the same. ProfileLambdaExpr should
+  /// only be true when we try to merge two declarations within modules.
   void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context,
-               bool Canonical) const;
+               bool Canonical, bool ProfileLambdaExpr = false) const;
 
   /// Calculate a unique representation for a statement that is
   /// stable across compiler invocations.
@@ -2092,6 +2102,11 @@ public:
                            : nullptr;
   }
 
+  void setConditionVariableDeclStmt(DeclStmt *CondVar) {
+    assert(hasVarStorage());
+    getTrailingObjects<Stmt *>()[varOffset()] = CondVar;
+  }
+
   Stmt *getInit() {
     return hasInitStorage() ? getTrailingObjects<Stmt *>()[initOffset()]
                             : nullptr;
@@ -2324,6 +2339,11 @@ public:
                            : nullptr;
   }
 
+  void setConditionVariableDeclStmt(DeclStmt *CondVar) {
+    assert(hasVarStorage());
+    getTrailingObjects<Stmt *>()[varOffset()] = CondVar;
+  }
+
   SwitchCase *getSwitchCaseList() { return FirstCase; }
   const SwitchCase *getSwitchCaseList() const { return FirstCase; }
   void setSwitchCaseList(SwitchCase *SC) { FirstCase = SC; }
@@ -2487,6 +2507,11 @@ public:
                            : nullptr;
   }
 
+  void setConditionVariableDeclStmt(DeclStmt *CondVar) {
+    assert(hasVarStorage());
+    getTrailingObjects<Stmt *>()[varOffset()] = CondVar;
+  }
+
   SourceLocation getWhileLoc() const { return WhileStmtBits.WhileLoc; }
   void setWhileLoc(SourceLocation L) { WhileStmtBits.WhileLoc = L; }
 
@@ -2576,6 +2601,8 @@ public:
 /// the init/cond/inc parts of the ForStmt will be null if they were not
 /// specified in the source.
 class ForStmt : public Stmt {
+  friend class ASTStmtReader;
+
   enum { INIT, CONDVAR, COND, INC, BODY, END_EXPR };
   Stmt* SubExprs[END_EXPR]; // SubExprs[INIT] is an expression or declstmt.
   SourceLocation LParenLoc, RParenLoc;
@@ -2603,8 +2630,16 @@ public:
 
   /// If this ForStmt has a condition variable, return the faux DeclStmt
   /// associated with the creation of that condition variable.
+  DeclStmt *getConditionVariableDeclStmt() {
+    return reinterpret_cast<DeclStmt*>(SubExprs[CONDVAR]);
+  }
+
   const DeclStmt *getConditionVariableDeclStmt() const {
     return reinterpret_cast<DeclStmt*>(SubExprs[CONDVAR]);
+  }
+
+  void setConditionVariableDeclStmt(DeclStmt *CondVar) {
+    SubExprs[CONDVAR] = CondVar;
   }
 
   Expr *getCond() { return reinterpret_cast<Expr*>(SubExprs[COND]); }
@@ -3558,8 +3593,11 @@ public:
     llvm::PointerIntPair<VarDecl *, 2, VariableCaptureKind> VarAndKind;
     SourceLocation Loc;
 
+    Capture() = default;
+
   public:
     friend class ASTStmtReader;
+    friend class CapturedStmt;
 
     /// Create a new capture.
     ///

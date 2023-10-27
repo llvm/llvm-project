@@ -6,17 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LIBC_SRC_SUPPORT_STR_TO_INTEGER_H
-#define LIBC_SRC_SUPPORT_STR_TO_INTEGER_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_STR_TO_INTEGER_H
+#define LLVM_LIBC_SRC___SUPPORT_STR_TO_INTEGER_H
 
 #include "src/__support/CPP/limits.h"
+#include "src/__support/CPP/type_traits.h"
 #include "src/__support/common.h"
 #include "src/__support/ctype_utils.h"
 #include "src/__support/str_to_num_result.h"
-#include <errno.h>
+#include "src/errno/libc_errno.h" // For ERANGE
 #include <limits.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace internal {
 
 // Returns a pointer to the first character in src that is not a whitespace
@@ -48,7 +49,7 @@ LIBC_INLINE bool is_hex_start(const char *__restrict src) {
 // base.
 LIBC_INLINE int infer_base(const char *__restrict *__restrict src) {
   // A hexadecimal number is defined as "the prefix 0x or 0X followed by a
-  // sequence of the deimal digits and the letters a (or A) through f (or F)
+  // sequence of the decimal digits and the letters a (or A) through f (or F)
   // with values 10 through 15 respectively." (C standard 6.4.4.1)
   if (is_hex_start(*src)) {
     (*src) += 2;
@@ -135,18 +136,20 @@ LIBC_INLINE StrToNumResult<T> strtointeger(const char *__restrict src,
 
   ptrdiff_t str_len = is_number ? (src - original_src) : 0;
 
-  if (result == abs_max) {
+  if (error_val == ERANGE) {
     if (is_positive || IS_UNSIGNED)
       return {cpp::numeric_limits<T>::max(), str_len, error_val};
     else // T is signed and there is a negative overflow
       return {cpp::numeric_limits<T>::min(), str_len, error_val};
   }
 
-  return {is_positive ? static_cast<T>(result) : -static_cast<T>(result),
+  return {is_positive
+              ? static_cast<T>(result)
+              : static_cast<T>(-static_cast<cpp::make_unsigned_t<T>>(result)),
           str_len, error_val};
 }
 
 } // namespace internal
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
-#endif // LIBC_SRC_SUPPORT_STR_TO_INTEGER_H
+#endif // LLVM_LIBC_SRC___SUPPORT_STR_TO_INTEGER_H

@@ -1,4 +1,4 @@
-//===-- RISCVMCTargetDesc.cpp - RISCV Target Descriptions -----------------===//
+//===-- RISCVMCTargetDesc.cpp - RISC-V Target Descriptions ----------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 ///
-/// This file provides RISCV-specific target descriptions.
+/// This file provides RISC-V specific target descriptions.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -141,6 +141,96 @@ public:
     }
 
     return false;
+  }
+
+  bool isTerminator(const MCInst &Inst) const override {
+    if (MCInstrAnalysis::isTerminator(Inst))
+      return true;
+
+    switch (Inst.getOpcode()) {
+    default:
+      return false;
+    case RISCV::JAL:
+    case RISCV::JALR:
+      return Inst.getOperand(0).getReg() == RISCV::X0;
+    }
+  }
+
+  bool isCall(const MCInst &Inst) const override {
+    if (MCInstrAnalysis::isCall(Inst))
+      return true;
+
+    switch (Inst.getOpcode()) {
+    default:
+      return false;
+    case RISCV::JAL:
+    case RISCV::JALR:
+      return Inst.getOperand(0).getReg() != RISCV::X0;
+    }
+  }
+
+  bool isReturn(const MCInst &Inst) const override {
+    if (MCInstrAnalysis::isReturn(Inst))
+      return true;
+
+    switch (Inst.getOpcode()) {
+    default:
+      return false;
+    case RISCV::JALR:
+      return Inst.getOperand(0).getReg() == RISCV::X0 &&
+             maybeReturnAddress(Inst.getOperand(1).getReg());
+    case RISCV::C_JR:
+      return maybeReturnAddress(Inst.getOperand(0).getReg());
+    }
+  }
+
+  bool isBranch(const MCInst &Inst) const override {
+    if (MCInstrAnalysis::isBranch(Inst))
+      return true;
+
+    return isBranchImpl(Inst);
+  }
+
+  bool isUnconditionalBranch(const MCInst &Inst) const override {
+    if (MCInstrAnalysis::isUnconditionalBranch(Inst))
+      return true;
+
+    return isBranchImpl(Inst);
+  }
+
+  bool isIndirectBranch(const MCInst &Inst) const override {
+    if (MCInstrAnalysis::isIndirectBranch(Inst))
+      return true;
+
+    switch (Inst.getOpcode()) {
+    default:
+      return false;
+    case RISCV::JALR:
+      return Inst.getOperand(0).getReg() == RISCV::X0 &&
+             !maybeReturnAddress(Inst.getOperand(1).getReg());
+    case RISCV::C_JR:
+      return !maybeReturnAddress(Inst.getOperand(0).getReg());
+    }
+  }
+
+private:
+  static bool maybeReturnAddress(unsigned Reg) {
+    // X1 is used for normal returns, X5 for returns from outlined functions.
+    return Reg == RISCV::X1 || Reg == RISCV::X5;
+  }
+
+  static bool isBranchImpl(const MCInst &Inst) {
+    switch (Inst.getOpcode()) {
+    default:
+      return false;
+    case RISCV::JAL:
+      return Inst.getOperand(0).getReg() == RISCV::X0;
+    case RISCV::JALR:
+      return Inst.getOperand(0).getReg() == RISCV::X0 &&
+             !maybeReturnAddress(Inst.getOperand(1).getReg());
+    case RISCV::C_JR:
+      return !maybeReturnAddress(Inst.getOperand(0).getReg());
+    }
   }
 };
 

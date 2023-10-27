@@ -29,8 +29,6 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBundle.h"
 #include "llvm/CodeGen/ScheduleDAG.h"
-#include "llvm/CodeGen/ScheduleDAGInstrs.h"
-#include "llvm/CodeGen/ScheduleDAGMutation.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/MC/MCInstrDesc.h"
@@ -98,34 +96,6 @@ unsigned DFAPacketizer::getUsedResources(unsigned InstIdx) {
   return RS[InstIdx] ^ RS[InstIdx - 1];
 }
 
-namespace llvm {
-
-// This class extends ScheduleDAGInstrs and overrides the schedule method
-// to build the dependence graph.
-class DefaultVLIWScheduler : public ScheduleDAGInstrs {
-private:
-  AAResults *AA;
-  /// Ordered list of DAG postprocessing steps.
-  std::vector<std::unique_ptr<ScheduleDAGMutation>> Mutations;
-
-public:
-  DefaultVLIWScheduler(MachineFunction &MF, MachineLoopInfo &MLI,
-                       AAResults *AA);
-
-  // Actual scheduling work.
-  void schedule() override;
-
-  /// DefaultVLIWScheduler takes ownership of the Mutation object.
-  void addMutation(std::unique_ptr<ScheduleDAGMutation> Mutation) {
-    Mutations.push_back(std::move(Mutation));
-  }
-
-protected:
-  void postprocessDAG();
-};
-
-} // end namespace llvm
-
 DefaultVLIWScheduler::DefaultVLIWScheduler(MachineFunction &MF,
                                            MachineLoopInfo &MLI,
                                            AAResults *AA)
@@ -134,7 +104,7 @@ DefaultVLIWScheduler::DefaultVLIWScheduler(MachineFunction &MF,
 }
 
 /// Apply each ScheduleDAGMutation step in order.
-void DefaultVLIWScheduler::postprocessDAG() {
+void DefaultVLIWScheduler::postProcessDAG() {
   for (auto &M : Mutations)
     M->apply(this);
 }
@@ -142,7 +112,7 @@ void DefaultVLIWScheduler::postprocessDAG() {
 void DefaultVLIWScheduler::schedule() {
   // Build the scheduling graph.
   buildSchedGraph(AA);
-  postprocessDAG();
+  postProcessDAG();
 }
 
 VLIWPacketizerList::VLIWPacketizerList(MachineFunction &mf,
@@ -264,7 +234,7 @@ void VLIWPacketizerList::PacketizeMIs(MachineBasicBlock *MBB,
                     "added to packet\n  "
                  << MI);
       // End the packet if resource is not available, or if the instruction
-      // shoud not be added to the current packet.
+      // should not be added to the current packet.
       endPacket(MBB, MI);
     }
 

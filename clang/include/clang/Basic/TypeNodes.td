@@ -3,7 +3,7 @@ include "clang/Basic/ASTNode.td"
 class TypeNode<TypeNode base, bit abstract = 0> : ASTNode {
 	TypeNode Base = base;
   bit Abstract = abstract;
-} 
+}
 
 /// A type node that is only used to represent dependent types in C++.  For
 /// example, DependentTemplateSpecializationType is used to represent types

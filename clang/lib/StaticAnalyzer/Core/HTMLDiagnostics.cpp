@@ -112,7 +112,7 @@ public:
   // Add HTML header/footers to file specified by FID
   void FinalizeHTML(const PathDiagnostic &D, Rewriter &R,
                     const SourceManager &SMgr, const PathPieces &path,
-                    FileID FID, const FileEntry *Entry, const char *declName);
+                    FileID FID, FileEntryRef Entry, const char *declName);
 
   // Rewrite the file specified by FID with HTML formatting.
   void RewriteFile(Rewriter &R, const PathPieces &path, FileID FID);
@@ -326,7 +326,7 @@ void HTMLDiagnostics::ReportDiag(const PathDiagnostic& D,
     FileID ReportFile =
         path.back()->getLocation().asLocation().getExpansionLoc().getFileID();
 
-    const FileEntry *Entry = SMgr.getFileEntryForID(ReportFile);
+    OptionalFileEntryRef Entry = SMgr.getFileEntryRefForID(ReportFile);
 
     FileName << llvm::sys::path::filename(Entry->getName()).str() << "-"
              << declName.c_str() << "-" << offsetDecl << "-";
@@ -396,7 +396,7 @@ std::string HTMLDiagnostics::GenerateHTML(const PathDiagnostic& D, Rewriter &R,
         os << "<div class=FileNav><a href=\"#File" << (I - 1)->getHashValue()
            << "\">&#x2190;</a></div>";
 
-      os << "<h4 class=FileName>" << SMgr.getFileEntryForID(*I)->getName()
+      os << "<h4 class=FileName>" << SMgr.getFileEntryRefForID(*I)->getName()
          << "</h4>\n";
 
       // Right nav arrow
@@ -429,8 +429,8 @@ std::string HTMLDiagnostics::GenerateHTML(const PathDiagnostic& D, Rewriter &R,
   // Add CSS, header, and footer.
   FileID FID =
       path.back()->getLocation().asLocation().getExpansionLoc().getFileID();
-  const FileEntry* Entry = SMgr.getFileEntryForID(FID);
-  FinalizeHTML(D, R, SMgr, path, FileIDs[0], Entry, declName);
+  OptionalFileEntryRef Entry = SMgr.getFileEntryRefForID(FID);
+  FinalizeHTML(D, R, SMgr, path, FileIDs[0], *Entry, declName);
 
   std::string file;
   llvm::raw_string_ostream os(file);
@@ -537,16 +537,17 @@ document.addEventListener("DOMContentLoaded", function() {
   return s;
 }
 
-void HTMLDiagnostics::FinalizeHTML(const PathDiagnostic& D, Rewriter &R,
-    const SourceManager& SMgr, const PathPieces& path, FileID FID,
-    const FileEntry *Entry, const char *declName) {
+void HTMLDiagnostics::FinalizeHTML(const PathDiagnostic &D, Rewriter &R,
+                                   const SourceManager &SMgr,
+                                   const PathPieces &path, FileID FID,
+                                   FileEntryRef Entry, const char *declName) {
   // This is a cludge; basically we want to append either the full
   // working directory if we have no directory information.  This is
   // a work in progress.
 
   llvm::SmallString<0> DirName;
 
-  if (llvm::sys::path::is_relative(Entry->getName())) {
+  if (llvm::sys::path::is_relative(Entry.getName())) {
     llvm::sys::fs::current_path(DirName);
     DirName += '/';
   }
@@ -575,7 +576,7 @@ void HTMLDiagnostics::FinalizeHTML(const PathDiagnostic& D, Rewriter &R,
        << "<h3>Bug Summary</h3>\n<table class=\"simpletable\">\n"
           "<tr><td class=\"rowname\">File:</td><td>"
        << html::EscapeText(DirName)
-       << html::EscapeText(Entry->getName())
+       << html::EscapeText(Entry.getName())
        << "</td></tr>\n<tr><td class=\"rowname\">Warning:</td><td>"
           "<a href=\"#EndPath\">line "
        << LineNumber
@@ -592,19 +593,19 @@ void HTMLDiagnostics::FinalizeHTML(const PathDiagnostic& D, Rewriter &R,
             P->getLocation().asLocation().getExpansionLineNumber();
         int ColumnNumber =
             P->getLocation().asLocation().getExpansionColumnNumber();
+        ++NumExtraPieces;
         os << "<tr><td class=\"rowname\">Note:</td><td>"
            << "<a href=\"#Note" << NumExtraPieces << "\">line "
            << LineNumber << ", column " << ColumnNumber << "</a><br />"
            << P->getString() << "</td></tr>";
-        ++NumExtraPieces;
       }
     }
 
     // Output any other meta data.
 
-    for (PathDiagnostic::meta_iterator I = D.meta_begin(), E = D.meta_end();
-         I != E; ++I) {
-      os << "<tr><td></td><td>" << html::EscapeText(*I) << "</td></tr>\n";
+    for (const std::string &Metadata :
+         llvm::make_range(D.meta_begin(), D.meta_end())) {
+      os << "<tr><td></td><td>" << html::EscapeText(Metadata) << "</td></tr>\n";
     }
 
     os << R"<<<(
@@ -656,9 +657,9 @@ void HTMLDiagnostics::FinalizeHTML(const PathDiagnostic& D, Rewriter &R,
     if (!BugCategory.empty())
       os << "\n<!-- BUGCATEGORY " << BugCategory << " -->\n";
 
-    os << "\n<!-- BUGFILE " << DirName << Entry->getName() << " -->\n";
+    os << "\n<!-- BUGFILE " << DirName << Entry.getName() << " -->\n";
 
-    os << "\n<!-- FILENAME " << llvm::sys::path::filename(Entry->getName()) << " -->\n";
+    os << "\n<!-- FILENAME " << llvm::sys::path::filename(Entry.getName()) << " -->\n";
 
     os  << "\n<!-- FUNCTIONNAME " <<  declName << " -->\n";
 
@@ -682,7 +683,7 @@ void HTMLDiagnostics::FinalizeHTML(const PathDiagnostic& D, Rewriter &R,
     R.InsertTextBefore(SMgr.getLocForStartOfFile(FID), os.str());
   }
 
-  html::AddHeaderFooterInternalBuiltinCSS(R, FID, Entry->getName());
+  html::AddHeaderFooterInternalBuiltinCSS(R, FID, Entry.getName());
 }
 
 StringRef HTMLDiagnostics::showHelpJavascript() {

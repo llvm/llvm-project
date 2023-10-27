@@ -1,4 +1,5 @@
 add_lldb_unittest(SymbolTests
+  JSONSymbolTest.cpp
   LocateSymbolFileTest.cpp
   MangledTest.cpp
   PostfixExpressionTest.cpp

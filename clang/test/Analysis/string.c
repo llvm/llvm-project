@@ -71,6 +71,7 @@ void clang_analyzer_eval(int);
 int scanf(const char *restrict format, ...);
 void *malloc(size_t);
 void free(void *);
+void *memcpy(void *dest, const void *src, size_t n);
 
 //===----------------------------------------------------------------------===
 // strlen()
@@ -94,6 +95,29 @@ void strlen_constant2(char x) {
 
   a[0] = x;
   clang_analyzer_eval(strlen(a) == 3); // expected-warning{{UNKNOWN}}
+}
+
+const char *const global_str_ptr = "abcd";
+const char global_str_arr[] = "efgh";
+const char *global_non_const_ptr1 = "ijk";
+char *global_non_const_ptr2 = "lmn";
+char global_non_const_arr[] = "op";
+
+void strlen_global_constant_ptr(void) {
+  clang_analyzer_eval(strlen(global_str_ptr) == 4); // expected-warning{{TRUE}}
+}
+
+void strlen_global_constant_arr(void) {
+  clang_analyzer_eval(strlen(global_str_arr) == 4); // expected-warning{{TRUE}}
+}
+
+void strlen_global_non_const_ptr(void) {
+  clang_analyzer_eval(strlen(global_non_const_ptr1) == 3); // expected-warning{{UNKNOWN}}
+  clang_analyzer_eval(strlen(global_non_const_ptr2) == 3); // expected-warning{{UNKNOWN}}
+}
+
+void strlen_global_non_const_arr(void) {
+  clang_analyzer_eval(strlen(global_non_const_arr) == 2); // expected-warning{{UNKNOWN}}
 }
 
 size_t strlen_null(void) {
@@ -1665,5 +1689,69 @@ void strcpy_no_overflow_2(char *y) {
 void strcpy_no_overflow_2(char *y) {
   char x[3];
   strcpy(x, "12\0");
+}
+#endif
+
+#ifndef SUPPRESS_OUT_OF_BOUND
+void testStrcpyDestinationWritableFirstByte(void) {
+  char dst[10];
+  char *p = dst - 8;
+  strcpy(p, "src"); // expected-warning {{String copy function overflows the destination buffer}}
+}
+
+void CWE124_Buffer_Underwrite__malloc_char_cpy() {
+  char * dataBuffer = (char *)malloc(100*sizeof(char));
+  if (dataBuffer == NULL) return;
+  memset(dataBuffer, 'A', 100-1);
+  dataBuffer[100-1] = '\0';
+  char * data = dataBuffer - 8;
+  char source[100];
+  memset(source, 'C', 100-1); // fill with 'C's
+  source[100-1] = '\0'; // null terminate
+  strcpy(data, source); // expected-warning {{String copy function overflows the destination buffer}}
+  free(dataBuffer);
+}
+#endif
+
+#ifndef SUPPRESS_OUT_OF_BOUND
+void testStrncpyDestinationWritableFirstByte(void) {
+  char source[100];
+  use_string(source); // escape
+  char buf[100];
+  char *p = buf - 8;
+  strncpy(p, source, 100-1); // expected-warning {{String copy function overflows the destination buffer}}
+}
+
+void CWE124_Buffer_Underwrite__malloc_char_ncpy() {
+  char * dataBuffer = (char *)malloc(100*sizeof(char));
+  if (dataBuffer == 0) return;
+  memset(dataBuffer, 'A', 100-1);
+  dataBuffer[100-1] = '\0';
+  char *data = dataBuffer - 8;
+
+  char source[100];
+  memset(source, 'C', 100-1); // fill with 'C's
+  source[100-1] = '\0'; // null terminate
+  strncpy(data, source, 100-1); // expected-warning {{String copy function overflows the destination buffer}}
+  data[100-1] = '\0'; // null terminate
+  free(dataBuffer);
+}
+#endif
+
+#ifndef SUPPRESS_OUT_OF_BOUND
+void CWE124_Buffer_Underwrite__malloc_char_memcpy() {
+  char * dataBuffer = (char *)malloc(100*sizeof(char));
+  if (dataBuffer == NULL) return;
+  memset(dataBuffer, 'A', 100-1);
+  dataBuffer[100-1] = '\0';
+  char *data = dataBuffer - 8;
+
+  char source[100];
+  memset(source, 'C', 100-1); // fill with 'C's
+  source[100-1] = '\0'; // null terminate
+
+  memcpy(data, source, 100*sizeof(char)); // expected-warning {{Memory copy function overflows the destination buffer}}
+  data[100-1] = '\0';
+  free(dataBuffer);
 }
 #endif

@@ -154,11 +154,11 @@ DecodedCharBuffer GetPrintableImpl<StringElementType::ASCII>(
   switch (escape_style) {
   case StringPrinter::EscapeStyle::CXX:
     // Prints 4 characters, then a \0 terminator.
-    escaped_len = sprintf((char *)data, "\\x%02x", *buffer);
+    escaped_len = snprintf((char *)data, max_buffer_size, "\\x%02x", *buffer);
     break;
   case StringPrinter::EscapeStyle::Swift:
     // Prints up to 6 characters, then a \0 terminator.
-    escaped_len = sprintf((char *)data, "\\u{%x}", *buffer);
+    escaped_len = snprintf((char *)data, max_buffer_size, "\\u{%x}", *buffer);
     break;
   }
   lldbassert(escaped_len > 0 && "unknown string escape style");
@@ -201,11 +201,11 @@ DecodedCharBuffer GetPrintableImpl<StringElementType::UTF8>(
   switch (escape_style) {
   case StringPrinter::EscapeStyle::CXX:
     // Prints 10 characters, then a \0 terminator.
-    escaped_len = sprintf((char *)data, "\\U%08x", codepoint);
+    escaped_len = snprintf((char *)data, max_buffer_size, "\\U%08x", codepoint);
     break;
   case StringPrinter::EscapeStyle::Swift:
     // Prints up to 12 characters, then a \0 terminator.
-    escaped_len = sprintf((char *)data, "\\u{%x}", codepoint);
+    escaped_len = snprintf((char *)data, max_buffer_size, "\\u{%x}", codepoint);
     break;
   }
   lldbassert(escaped_len > 0 && "unknown string escape style");

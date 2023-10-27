@@ -2,4 +2,4 @@
 
 <#placeholder#>;
 
-// CHECK-NOT: error
+// CHECK-NOT: error:

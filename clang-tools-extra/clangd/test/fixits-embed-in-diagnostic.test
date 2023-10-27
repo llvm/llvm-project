@@ -48,6 +48,7 @@
 # CHECK-NEXT:        "source": "clang"
 # CHECK-NEXT:      },
 # CHECK-NEXT:      {
+# CHECK-NEXT:        "codeActions": [],
 # CHECK-NEXT:        "message": "Previous use is here\n\nfoo.c:1:18: error: use of 'Point' with tag type that does not match previous declaration",
 # CHECK-NEXT:        "range": {
 # CHECK-NEXT:          "end": {

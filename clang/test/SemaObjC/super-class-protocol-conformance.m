@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -disable-objc-default-synthesize-properties %s
-// rdar://7884086
 
 @interface NSObject @end
 
@@ -45,8 +44,6 @@
 @interface SubClass5 : SubClass4 <NewProtocol> @end
 @implementation SubClass5 @end   // expected-warning {{property 'myNewString' requires method 'myNewString' to be defined}}
 
-
-// Radar 8035776
 @protocol SuperProtocol
 @end
 

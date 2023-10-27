@@ -157,6 +157,12 @@ void InternalDescriptorUnit<DIR>::BackspaceRecord(IoErrorHandler &handler) {
   BeginRecord();
 }
 
+template <Direction DIR>
+std::int64_t InternalDescriptorUnit<DIR>::InquirePos() {
+  return (currentRecordNumber - 1) * recordLength.value_or(0) +
+      positionInRecord + 1;
+}
+
 template class InternalDescriptorUnit<Direction::Output>;
 template class InternalDescriptorUnit<Direction::Input>;
 } // namespace Fortran::runtime::io

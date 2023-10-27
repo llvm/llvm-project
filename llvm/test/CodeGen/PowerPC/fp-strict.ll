@@ -73,8 +73,6 @@ define double @fadd_f64(double %f1, double %f2) #0 {
 ; SPE-NEXT:    evmergelo r3, r3, r4
 ; SPE-NEXT:    efdadd r4, r3, r5
 ; SPE-NEXT:    evmergehi r3, r4, r4
-; SPE-NEXT:    # kill: def $r4 killed $r4 killed $s4
-; SPE-NEXT:    # kill: def $r3 killed $r3 killed $s3
 ; SPE-NEXT:    blr
   %res = call double @llvm.experimental.constrained.fadd.f64(
                         double %f1, double %f2,
@@ -92,9 +90,9 @@ define <4 x float> @fadd_v4f32(<4 x float> %vf1, <4 x float> %vf2) #0 {
 ; NOVSX-LABEL: fadd_v4f32:
 ; NOVSX:       # %bb.0:
 ; NOVSX-NEXT:    addi r3, r1, -32
-; NOVSX-NEXT:    addi r4, r1, -48
 ; NOVSX-NEXT:    stvx v3, 0, r3
-; NOVSX-NEXT:    stvx v2, 0, r4
+; NOVSX-NEXT:    addi r3, r1, -48
+; NOVSX-NEXT:    stvx v2, 0, r3
 ; NOVSX-NEXT:    addi r3, r1, -16
 ; NOVSX-NEXT:    lfs f0, -20(r1)
 ; NOVSX-NEXT:    lfs f1, -36(r1)
@@ -200,8 +198,6 @@ define double @fsub_f64(double %f1, double %f2) #0 {
 ; SPE-NEXT:    evmergelo r3, r3, r4
 ; SPE-NEXT:    efdsub r4, r3, r5
 ; SPE-NEXT:    evmergehi r3, r4, r4
-; SPE-NEXT:    # kill: def $r4 killed $r4 killed $s4
-; SPE-NEXT:    # kill: def $r3 killed $r3 killed $s3
 ; SPE-NEXT:    blr
 
   %res = call double @llvm.experimental.constrained.fsub.f64(
@@ -220,9 +216,9 @@ define <4 x float> @fsub_v4f32(<4 x float> %vf1, <4 x float> %vf2) #0 {
 ; NOVSX-LABEL: fsub_v4f32:
 ; NOVSX:       # %bb.0:
 ; NOVSX-NEXT:    addi r3, r1, -32
-; NOVSX-NEXT:    addi r4, r1, -48
 ; NOVSX-NEXT:    stvx v3, 0, r3
-; NOVSX-NEXT:    stvx v2, 0, r4
+; NOVSX-NEXT:    addi r3, r1, -48
+; NOVSX-NEXT:    stvx v2, 0, r3
 ; NOVSX-NEXT:    addi r3, r1, -16
 ; NOVSX-NEXT:    lfs f0, -20(r1)
 ; NOVSX-NEXT:    lfs f1, -36(r1)
@@ -328,8 +324,6 @@ define double @fmul_f64(double %f1, double %f2) #0 {
 ; SPE-NEXT:    evmergelo r3, r3, r4
 ; SPE-NEXT:    efdmul r4, r3, r5
 ; SPE-NEXT:    evmergehi r3, r4, r4
-; SPE-NEXT:    # kill: def $r4 killed $r4 killed $s4
-; SPE-NEXT:    # kill: def $r3 killed $r3 killed $s3
 ; SPE-NEXT:    blr
 
   %res = call double @llvm.experimental.constrained.fmul.f64(
@@ -348,9 +342,9 @@ define <4 x float> @fmul_v4f32(<4 x float> %vf1, <4 x float> %vf2) #0 {
 ; NOVSX-LABEL: fmul_v4f32:
 ; NOVSX:       # %bb.0:
 ; NOVSX-NEXT:    addi r3, r1, -32
-; NOVSX-NEXT:    addi r4, r1, -48
 ; NOVSX-NEXT:    stvx v3, 0, r3
-; NOVSX-NEXT:    stvx v2, 0, r4
+; NOVSX-NEXT:    addi r3, r1, -48
+; NOVSX-NEXT:    stvx v2, 0, r3
 ; NOVSX-NEXT:    addi r3, r1, -16
 ; NOVSX-NEXT:    lfs f0, -20(r1)
 ; NOVSX-NEXT:    lfs f1, -36(r1)
@@ -456,8 +450,6 @@ define double @fdiv_f64(double %f1, double %f2) #0 {
 ; SPE-NEXT:    evmergelo r3, r3, r4
 ; SPE-NEXT:    efddiv r4, r3, r5
 ; SPE-NEXT:    evmergehi r3, r4, r4
-; SPE-NEXT:    # kill: def $r4 killed $r4 killed $s4
-; SPE-NEXT:    # kill: def $r3 killed $r3 killed $s3
 ; SPE-NEXT:    blr
 
   %res = call double @llvm.experimental.constrained.fdiv.f64(
@@ -476,9 +468,9 @@ define <4 x float> @fdiv_v4f32(<4 x float> %vf1, <4 x float> %vf2) #0 {
 ; NOVSX-LABEL: fdiv_v4f32:
 ; NOVSX:       # %bb.0:
 ; NOVSX-NEXT:    addi r3, r1, -32
-; NOVSX-NEXT:    addi r4, r1, -48
 ; NOVSX-NEXT:    stvx v3, 0, r3
-; NOVSX-NEXT:    stvx v2, 0, r4
+; NOVSX-NEXT:    addi r3, r1, -48
+; NOVSX-NEXT:    stvx v2, 0, r3
 ; NOVSX-NEXT:    addi r3, r1, -16
 ; NOVSX-NEXT:    lfs f0, -20(r1)
 ; NOVSX-NEXT:    lfs f1, -36(r1)
@@ -565,8 +557,6 @@ define double @no_fma_fold(double %f1, double %f2, double %f3) #0 {
 ; SPE-NEXT:    efdmul r3, r3, r5
 ; SPE-NEXT:    efdadd r4, r3, r7
 ; SPE-NEXT:    evmergehi r3, r4, r4
-; SPE-NEXT:    # kill: def $r4 killed $r4 killed $s4
-; SPE-NEXT:    # kill: def $r3 killed $r3 killed $s3
 ; SPE-NEXT:    blr
   %mul = call double @llvm.experimental.constrained.fmul.f64(
                         double %f1, double %f2,
@@ -635,18 +625,10 @@ define double @fmadd_f64(double %f0, double %f1, double %f2) #0 {
 ; SPE-NEXT:    evmergehi r3, r4, r4
 ; SPE-NEXT:    evmergehi r5, r6, r6
 ; SPE-NEXT:    evmergehi r7, r8, r8
-; SPE-NEXT:    # kill: def $r4 killed $r4 killed $s4
-; SPE-NEXT:    # kill: def $r6 killed $r6 killed $s6
-; SPE-NEXT:    # kill: def $r8 killed $r8 killed $s8
-; SPE-NEXT:    # kill: def $r3 killed $r3 killed $s3
-; SPE-NEXT:    # kill: def $r5 killed $r5 killed $s5
-; SPE-NEXT:    # kill: def $r7 killed $r7 killed $s7
 ; SPE-NEXT:    bl fma
 ; SPE-NEXT:    evmergelo r4, r3, r4
 ; SPE-NEXT:    evmergehi r3, r4, r4
-; SPE-NEXT:    # kill: def $r4 killed $r4 killed $s4
 ; SPE-NEXT:    lwz r0, 20(r1)
-; SPE-NEXT:    # kill: def $r3 killed $r3 killed $s3
 ; SPE-NEXT:    addi r1, r1, 16
 ; SPE-NEXT:    mtlr r0
 ; SPE-NEXT:    blr
@@ -667,10 +649,10 @@ define <4 x float> @fmadd_v4f32(<4 x float> %vf0, <4 x float> %vf1, <4 x float> 
 ; NOVSX-LABEL: fmadd_v4f32:
 ; NOVSX:       # %bb.0:
 ; NOVSX-NEXT:    addi r3, r1, -32
-; NOVSX-NEXT:    addi r4, r1, -48
 ; NOVSX-NEXT:    stvx v4, 0, r3
+; NOVSX-NEXT:    addi r3, r1, -48
+; NOVSX-NEXT:    stvx v3, 0, r3
 ; NOVSX-NEXT:    addi r3, r1, -64
-; NOVSX-NEXT:    stvx v3, 0, r4
 ; NOVSX-NEXT:    stvx v2, 0, r3
 ; NOVSX-NEXT:    addi r3, r1, -16
 ; NOVSX-NEXT:    lfs f0, -20(r1)
@@ -699,42 +681,42 @@ define <4 x float> @fmadd_v4f32(<4 x float> %vf0, <4 x float> %vf1, <4 x float> 
 ; SPE-LABEL: fmadd_v4f32:
 ; SPE:       # %bb.0:
 ; SPE-NEXT:    mflr r0
-; SPE-NEXT:    stwu r1, -96(r1)
-; SPE-NEXT:    stw r0, 100(r1)
-; SPE-NEXT:    .cfi_def_cfa_offset 96
+; SPE-NEXT:    stwu r1, -64(r1)
+; SPE-NEXT:    stw r0, 68(r1)
+; SPE-NEXT:    .cfi_def_cfa_offset 64
 ; SPE-NEXT:    .cfi_offset lr, 4
-; SPE-NEXT:    .cfi_offset r21, -88
-; SPE-NEXT:    .cfi_offset r22, -80
-; SPE-NEXT:    .cfi_offset r23, -72
-; SPE-NEXT:    .cfi_offset r24, -64
-; SPE-NEXT:    .cfi_offset r25, -56
-; SPE-NEXT:    .cfi_offset r26, -48
-; SPE-NEXT:    .cfi_offset r27, -40
-; SPE-NEXT:    .cfi_offset r28, -32
-; SPE-NEXT:    .cfi_offset r29, -24
-; SPE-NEXT:    .cfi_offset r30, -16
-; SPE-NEXT:    evstdd r27, 56(r1) # 8-byte Folded Spill
+; SPE-NEXT:    .cfi_offset r21, -44
+; SPE-NEXT:    .cfi_offset r22, -40
+; SPE-NEXT:    .cfi_offset r23, -36
+; SPE-NEXT:    .cfi_offset r24, -32
+; SPE-NEXT:    .cfi_offset r25, -28
+; SPE-NEXT:    .cfi_offset r26, -24
+; SPE-NEXT:    .cfi_offset r27, -20
+; SPE-NEXT:    .cfi_offset r28, -16
+; SPE-NEXT:    .cfi_offset r29, -12
+; SPE-NEXT:    .cfi_offset r30, -8
+; SPE-NEXT:    stw r27, 44(r1) # 4-byte Folded Spill
 ; SPE-NEXT:    mr r27, r5
-; SPE-NEXT:    lwz r5, 116(r1)
-; SPE-NEXT:    evstdd r25, 40(r1) # 8-byte Folded Spill
+; SPE-NEXT:    lwz r5, 84(r1)
+; SPE-NEXT:    stw r25, 36(r1) # 4-byte Folded Spill
 ; SPE-NEXT:    mr r25, r3
-; SPE-NEXT:    evstdd r26, 48(r1) # 8-byte Folded Spill
+; SPE-NEXT:    stw r26, 40(r1) # 4-byte Folded Spill
 ; SPE-NEXT:    mr r26, r4
 ; SPE-NEXT:    mr r3, r6
 ; SPE-NEXT:    mr r4, r10
-; SPE-NEXT:    evstdd r21, 8(r1) # 8-byte Folded Spill
-; SPE-NEXT:    evstdd r22, 16(r1) # 8-byte Folded Spill
-; SPE-NEXT:    evstdd r23, 24(r1) # 8-byte Folded Spill
-; SPE-NEXT:    evstdd r24, 32(r1) # 8-byte Folded Spill
-; SPE-NEXT:    evstdd r28, 64(r1) # 8-byte Folded Spill
+; SPE-NEXT:    stw r21, 20(r1) # 4-byte Folded Spill
+; SPE-NEXT:    stw r22, 24(r1) # 4-byte Folded Spill
+; SPE-NEXT:    stw r23, 28(r1) # 4-byte Folded Spill
+; SPE-NEXT:    stw r24, 32(r1) # 4-byte Folded Spill
+; SPE-NEXT:    stw r28, 48(r1) # 4-byte Folded Spill
 ; SPE-NEXT:    mr r28, r7
-; SPE-NEXT:    evstdd r29, 72(r1) # 8-byte Folded Spill
+; SPE-NEXT:    stw r29, 52(r1) # 4-byte Folded Spill
 ; SPE-NEXT:    mr r29, r8
-; SPE-NEXT:    evstdd r30, 80(r1) # 8-byte Folded Spill
+; SPE-NEXT:    stw r30, 56(r1) # 4-byte Folded Spill
 ; SPE-NEXT:    mr r30, r9
-; SPE-NEXT:    lwz r24, 104(r1)
-; SPE-NEXT:    lwz r23, 108(r1)
-; SPE-NEXT:    lwz r22, 112(r1)
+; SPE-NEXT:    lwz r24, 72(r1)
+; SPE-NEXT:    lwz r23, 76(r1)
+; SPE-NEXT:    lwz r22, 80(r1)
 ; SPE-NEXT:    bl fmaf
 ; SPE-NEXT:    mr r21, r3
 ; SPE-NEXT:    mr r3, r27
@@ -754,18 +736,18 @@ define <4 x float> @fmadd_v4f32(<4 x float> %vf0, <4 x float> %vf1, <4 x float> 
 ; SPE-NEXT:    mr r4, r29
 ; SPE-NEXT:    mr r5, r30
 ; SPE-NEXT:    mr r6, r21
-; SPE-NEXT:    evldd r30, 80(r1) # 8-byte Folded Reload
-; SPE-NEXT:    evldd r29, 72(r1) # 8-byte Folded Reload
-; SPE-NEXT:    evldd r28, 64(r1) # 8-byte Folded Reload
-; SPE-NEXT:    evldd r27, 56(r1) # 8-byte Folded Reload
-; SPE-NEXT:    evldd r26, 48(r1) # 8-byte Folded Reload
-; SPE-NEXT:    evldd r25, 40(r1) # 8-byte Folded Reload
-; SPE-NEXT:    evldd r24, 32(r1) # 8-byte Folded Reload
-; SPE-NEXT:    evldd r23, 24(r1) # 8-byte Folded Reload
-; SPE-NEXT:    evldd r22, 16(r1) # 8-byte Folded Reload
-; SPE-NEXT:    evldd r21, 8(r1) # 8-byte Folded Reload
-; SPE-NEXT:    lwz r0, 100(r1)
-; SPE-NEXT:    addi r1, r1, 96
+; SPE-NEXT:    lwz r30, 56(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r29, 52(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r28, 48(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r27, 44(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r26, 40(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r25, 36(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r24, 32(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r23, 28(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r22, 24(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r21, 20(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r0, 68(r1)
+; SPE-NEXT:    addi r1, r1, 64
 ; SPE-NEXT:    mtlr r0
 ; SPE-NEXT:    blr
   %res = call <4 x float> @llvm.experimental.constrained.fma.v4f32(
@@ -791,36 +773,31 @@ define <2 x double> @fmadd_v2f64(<2 x double> %vf0, <2 x double> %vf1, <2 x doub
 ; SPE-LABEL: fmadd_v2f64:
 ; SPE:       # %bb.0:
 ; SPE-NEXT:    mflr r0
-; SPE-NEXT:    stwu r1, -64(r1)
-; SPE-NEXT:    stw r0, 68(r1)
-; SPE-NEXT:    .cfi_def_cfa_offset 64
+; SPE-NEXT:    stwu r1, -80(r1)
+; SPE-NEXT:    stw r0, 84(r1)
+; SPE-NEXT:    .cfi_def_cfa_offset 80
 ; SPE-NEXT:    .cfi_offset lr, 4
-; SPE-NEXT:    .cfi_offset r26, -48
-; SPE-NEXT:    .cfi_offset r27, -40
-; SPE-NEXT:    .cfi_offset r28, -32
-; SPE-NEXT:    .cfi_offset r29, -24
-; SPE-NEXT:    .cfi_offset r30, -16
+; SPE-NEXT:    .cfi_offset r26, -64
+; SPE-NEXT:    .cfi_offset r27, -56
+; SPE-NEXT:    .cfi_offset r28, -48
+; SPE-NEXT:    .cfi_offset r29, -40
+; SPE-NEXT:    .cfi_offset r30, -8
 ; SPE-NEXT:    evstdd r26, 16(r1) # 8-byte Folded Spill
 ; SPE-NEXT:    evstdd r27, 24(r1) # 8-byte Folded Spill
 ; SPE-NEXT:    evstdd r28, 32(r1) # 8-byte Folded Spill
 ; SPE-NEXT:    evstdd r29, 40(r1) # 8-byte Folded Spill
-; SPE-NEXT:    evstdd r30, 48(r1) # 8-byte Folded Spill
+; SPE-NEXT:    stw r30, 72(r1) # 4-byte Folded Spill
 ; SPE-NEXT:    evmergelo r27, r7, r8
 ; SPE-NEXT:    evmergelo r9, r9, r10
 ; SPE-NEXT:    evmergelo r4, r5, r6
 ; SPE-NEXT:    mr r30, r3
-; SPE-NEXT:    evldd r8, 80(r1)
+; SPE-NEXT:    evldd r8, 96(r1)
 ; SPE-NEXT:    evmergehi r3, r4, r4
 ; SPE-NEXT:    evmergehi r5, r9, r9
 ; SPE-NEXT:    mr r6, r9
-; SPE-NEXT:    evldd r29, 88(r1)
-; SPE-NEXT:    # kill: def $r3 killed $r3 killed $s3
-; SPE-NEXT:    # kill: def $r4 killed $r4 killed $s4
-; SPE-NEXT:    # kill: def $r5 killed $r5 killed $s5
+; SPE-NEXT:    evldd r29, 104(r1)
 ; SPE-NEXT:    evmergehi r7, r8, r8
-; SPE-NEXT:    evldd r28, 72(r1)
-; SPE-NEXT:    # kill: def $r7 killed $r7 killed $s7
-; SPE-NEXT:    # kill: def $r8 killed $r8 killed $s8
+; SPE-NEXT:    evldd r28, 88(r1)
 ; SPE-NEXT:    bl fma
 ; SPE-NEXT:    evmergelo r26, r3, r4
 ; SPE-NEXT:    evmergehi r3, r27, r27
@@ -829,21 +806,18 @@ define <2 x double> @fmadd_v2f64(<2 x double> %vf0, <2 x double> %vf1, <2 x doub
 ; SPE-NEXT:    mr r4, r27
 ; SPE-NEXT:    mr r6, r28
 ; SPE-NEXT:    mr r8, r29
-; SPE-NEXT:    # kill: def $r3 killed $r3 killed $s3
-; SPE-NEXT:    # kill: def $r5 killed $r5 killed $s5
-; SPE-NEXT:    # kill: def $r7 killed $r7 killed $s7
 ; SPE-NEXT:    bl fma
 ; SPE-NEXT:    li r5, 8
 ; SPE-NEXT:    evmergelo r3, r3, r4
 ; SPE-NEXT:    evstddx r3, r30, r5
 ; SPE-NEXT:    evstdd r26, 0(r30)
-; SPE-NEXT:    evldd r30, 48(r1) # 8-byte Folded Reload
+; SPE-NEXT:    lwz r30, 72(r1) # 4-byte Folded Reload
 ; SPE-NEXT:    evldd r29, 40(r1) # 8-byte Folded Reload
 ; SPE-NEXT:    evldd r28, 32(r1) # 8-byte Folded Reload
 ; SPE-NEXT:    evldd r27, 24(r1) # 8-byte Folded Reload
 ; SPE-NEXT:    evldd r26, 16(r1) # 8-byte Folded Reload
-; SPE-NEXT:    lwz r0, 68(r1)
-; SPE-NEXT:    addi r1, r1, 64
+; SPE-NEXT:    lwz r0, 84(r1)
+; SPE-NEXT:    addi r1, r1, 80
 ; SPE-NEXT:    mtlr r0
 ; SPE-NEXT:    blr
   %res = call <2 x double> @llvm.experimental.constrained.fma.v2f64(
@@ -911,19 +885,11 @@ define double @fmsub_f64(double %f0, double %f1, double %f2) #0 {
 ; SPE-NEXT:    efdneg r8, r3
 ; SPE-NEXT:    evmergehi r3, r4, r4
 ; SPE-NEXT:    evmergehi r5, r6, r6
-; SPE-NEXT:    # kill: def $r4 killed $r4 killed $s4
-; SPE-NEXT:    # kill: def $r6 killed $r6 killed $s6
 ; SPE-NEXT:    evmergehi r7, r8, r8
-; SPE-NEXT:    # kill: def $r3 killed $r3 killed $s3
-; SPE-NEXT:    # kill: def $r5 killed $r5 killed $s5
-; SPE-NEXT:    # kill: def $r8 killed $r8 killed $s8
-; SPE-NEXT:    # kill: def $r7 killed $r7 killed $s7
 ; SPE-NEXT:    bl fma
 ; SPE-NEXT:    evmergelo r4, r3, r4
 ; SPE-NEXT:    evmergehi r3, r4, r4
-; SPE-NEXT:    # kill: def $r4 killed $r4 killed $s4
 ; SPE-NEXT:    lwz r0, 20(r1)
-; SPE-NEXT:    # kill: def $r3 killed $r3 killed $s3
 ; SPE-NEXT:    addi r1, r1, 16
 ; SPE-NEXT:    mtlr r0
 ; SPE-NEXT:    blr
@@ -946,12 +912,12 @@ define <4 x float> @fmsub_v4f32(<4 x float> %vf0, <4 x float> %vf1, <4 x float> 
 ; NOVSX:       # %bb.0:
 ; NOVSX-NEXT:    vspltisb v5, -1
 ; NOVSX-NEXT:    addi r3, r1, -48
-; NOVSX-NEXT:    addi r4, r1, -64
-; NOVSX-NEXT:    stvx v3, 0, r3
-; NOVSX-NEXT:    addi r3, r1, -32
-; NOVSX-NEXT:    stvx v2, 0, r4
 ; NOVSX-NEXT:    vslw v5, v5, v5
+; NOVSX-NEXT:    stvx v3, 0, r3
+; NOVSX-NEXT:    addi r3, r1, -64
 ; NOVSX-NEXT:    vsubfp v4, v5, v4
+; NOVSX-NEXT:    stvx v2, 0, r3
+; NOVSX-NEXT:    addi r3, r1, -32
 ; NOVSX-NEXT:    stvx v4, 0, r3
 ; NOVSX-NEXT:    addi r3, r1, -16
 ; NOVSX-NEXT:    lfs f0, -36(r1)
@@ -980,45 +946,45 @@ define <4 x float> @fmsub_v4f32(<4 x float> %vf0, <4 x float> %vf1, <4 x float> 
 ; SPE-LABEL: fmsub_v4f32:
 ; SPE:       # %bb.0:
 ; SPE-NEXT:    mflr r0
-; SPE-NEXT:    stwu r1, -96(r1)
-; SPE-NEXT:    stw r0, 100(r1)
-; SPE-NEXT:    .cfi_def_cfa_offset 96
+; SPE-NEXT:    stwu r1, -64(r1)
+; SPE-NEXT:    stw r0, 68(r1)
+; SPE-NEXT:    .cfi_def_cfa_offset 64
 ; SPE-NEXT:    .cfi_offset lr, 4
-; SPE-NEXT:    .cfi_offset r21, -88
-; SPE-NEXT:    .cfi_offset r22, -80
-; SPE-NEXT:    .cfi_offset r23, -72
-; SPE-NEXT:    .cfi_offset r24, -64
-; SPE-NEXT:    .cfi_offset r25, -56
-; SPE-NEXT:    .cfi_offset r26, -48
-; SPE-NEXT:    .cfi_offset r27, -40
-; SPE-NEXT:    .cfi_offset r28, -32
-; SPE-NEXT:    .cfi_offset r29, -24
-; SPE-NEXT:    .cfi_offset r30, -16
-; SPE-NEXT:    evstdd r25, 40(r1) # 8-byte Folded Spill
+; SPE-NEXT:    .cfi_offset r21, -44
+; SPE-NEXT:    .cfi_offset r22, -40
+; SPE-NEXT:    .cfi_offset r23, -36
+; SPE-NEXT:    .cfi_offset r24, -32
+; SPE-NEXT:    .cfi_offset r25, -28
+; SPE-NEXT:    .cfi_offset r26, -24
+; SPE-NEXT:    .cfi_offset r27, -20
+; SPE-NEXT:    .cfi_offset r28, -16
+; SPE-NEXT:    .cfi_offset r29, -12
+; SPE-NEXT:    .cfi_offset r30, -8
+; SPE-NEXT:    stw r25, 36(r1) # 4-byte Folded Spill
 ; SPE-NEXT:    mr r25, r3
-; SPE-NEXT:    evstdd r26, 48(r1) # 8-byte Folded Spill
+; SPE-NEXT:    stw r26, 40(r1) # 4-byte Folded Spill
 ; SPE-NEXT:    mr r26, r4
-; SPE-NEXT:    evstdd r27, 56(r1) # 8-byte Folded Spill
+; SPE-NEXT:    stw r27, 44(r1) # 4-byte Folded Spill
 ; SPE-NEXT:    mr r27, r5
-; SPE-NEXT:    evstdd r28, 64(r1) # 8-byte Folded Spill
+; SPE-NEXT:    stw r28, 48(r1) # 4-byte Folded Spill
 ; SPE-NEXT:    mr r28, r7
-; SPE-NEXT:    lwz r3, 112(r1)
-; SPE-NEXT:    lwz r4, 104(r1)
-; SPE-NEXT:    lwz r5, 108(r1)
-; SPE-NEXT:    lwz r7, 116(r1)
-; SPE-NEXT:    evstdd r22, 16(r1) # 8-byte Folded Spill
+; SPE-NEXT:    lwz r3, 80(r1)
+; SPE-NEXT:    lwz r4, 72(r1)
+; SPE-NEXT:    lwz r5, 76(r1)
+; SPE-NEXT:    lwz r7, 84(r1)
+; SPE-NEXT:    stw r22, 24(r1) # 4-byte Folded Spill
 ; SPE-NEXT:    efsneg r22, r3
-; SPE-NEXT:    evstdd r23, 24(r1) # 8-byte Folded Spill
+; SPE-NEXT:    stw r23, 28(r1) # 4-byte Folded Spill
 ; SPE-NEXT:    efsneg r23, r5
-; SPE-NEXT:    evstdd r24, 32(r1) # 8-byte Folded Spill
+; SPE-NEXT:    stw r24, 32(r1) # 4-byte Folded Spill
 ; SPE-NEXT:    efsneg r24, r4
 ; SPE-NEXT:    efsneg r5, r7
 ; SPE-NEXT:    mr r3, r6
 ; SPE-NEXT:    mr r4, r10
-; SPE-NEXT:    evstdd r21, 8(r1) # 8-byte Folded Spill
-; SPE-NEXT:    evstdd r29, 72(r1) # 8-byte Folded Spill
+; SPE-NEXT:    stw r21, 20(r1) # 4-byte Folded Spill
+; SPE-NEXT:    stw r29, 52(r1) # 4-byte Folded Spill
 ; SPE-NEXT:    mr r29, r8
-; SPE-NEXT:    evstdd r30, 80(r1) # 8-byte Folded Spill
+; SPE-NEXT:    stw r30, 56(r1) # 4-byte Folded Spill
 ; SPE-NEXT:    mr r30, r9
 ; SPE-NEXT:    bl fmaf
 ; SPE-NEXT:    mr r21, r3
@@ -1039,18 +1005,18 @@ define <4 x float> @fmsub_v4f32(<4 x float> %vf0, <4 x float> %vf1, <4 x float> 
 ; SPE-NEXT:    mr r4, r29
 ; SPE-NEXT:    mr r5, r30
 ; SPE-NEXT:    mr r6, r21
-; SPE-NEXT:    evldd r30, 80(r1) # 8-byte Folded Reload
-; SPE-NEXT:    evldd r29, 72(r1) # 8-byte Folded Reload
-; SPE-NEXT:    evldd r28, 64(r1) # 8-byte Folded Reload
-; SPE-NEXT:    evldd r27, 56(r1) # 8-byte Folded Reload
-; SPE-NEXT:    evldd r26, 48(r1) # 8-byte Folded Reload
-; SPE-NEXT:    evldd r25, 40(r1) # 8-byte Folded Reload
-; SPE-NEXT:    evldd r24, 32(r1) # 8-byte Folded Reload
-; SPE-NEXT:    evldd r23, 24(r1) # 8-byte Folded Reload
-; SPE-NEXT:    evldd r22, 16(r1) # 8-byte Folded Reload
-; SPE-NEXT:    evldd r21, 8(r1) # 8-byte Folded Reload
-; SPE-NEXT:    lwz r0, 100(r1)
-; SPE-NEXT:    addi r1, r1, 96
+; SPE-NEXT:    lwz r30, 56(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r29, 52(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r28, 48(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r27, 44(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r26, 40(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r25, 36(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r24, 32(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r23, 28(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r22, 24(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r21, 20(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r0, 68(r1)
+; SPE-NEXT:    addi r1, r1, 64
 ; SPE-NEXT:    mtlr r0
 ; SPE-NEXT:    blr
   %neg = fneg <4 x float> %vf2
@@ -1077,19 +1043,19 @@ define <2 x double> @fmsub_v2f64(<2 x double> %vf0, <2 x double> %vf1, <2 x doub
 ; SPE-LABEL: fmsub_v2f64:
 ; SPE:       # %bb.0:
 ; SPE-NEXT:    mflr r0
-; SPE-NEXT:    stwu r1, -64(r1)
-; SPE-NEXT:    stw r0, 68(r1)
-; SPE-NEXT:    .cfi_def_cfa_offset 64
+; SPE-NEXT:    stwu r1, -80(r1)
+; SPE-NEXT:    stw r0, 84(r1)
+; SPE-NEXT:    .cfi_def_cfa_offset 80
 ; SPE-NEXT:    .cfi_offset lr, 4
-; SPE-NEXT:    .cfi_offset r26, -48
-; SPE-NEXT:    .cfi_offset r27, -40
-; SPE-NEXT:    .cfi_offset r28, -32
-; SPE-NEXT:    .cfi_offset r29, -24
-; SPE-NEXT:    .cfi_offset r30, -16
-; SPE-NEXT:    evstdd r30, 48(r1) # 8-byte Folded Spill
+; SPE-NEXT:    .cfi_offset r26, -64
+; SPE-NEXT:    .cfi_offset r27, -56
+; SPE-NEXT:    .cfi_offset r28, -48
+; SPE-NEXT:    .cfi_offset r29, -40
+; SPE-NEXT:    .cfi_offset r30, -8
+; SPE-NEXT:    stw r30, 72(r1) # 4-byte Folded Spill
 ; SPE-NEXT:    mr r30, r3
-; SPE-NEXT:    evldd r3, 80(r1)
-; SPE-NEXT:    evldd r11, 88(r1)
+; SPE-NEXT:    evldd r3, 96(r1)
+; SPE-NEXT:    evldd r11, 104(r1)
 ; SPE-NEXT:    evstdd r26, 16(r1) # 8-byte Folded Spill
 ; SPE-NEXT:    evstdd r27, 24(r1) # 8-byte Folded Spill
 ; SPE-NEXT:    efdneg r27, r11
@@ -1103,12 +1069,7 @@ define <2 x double> @fmsub_v2f64(<2 x double> %vf0, <2 x double> %vf1, <2 x doub
 ; SPE-NEXT:    evmergehi r5, r9, r9
 ; SPE-NEXT:    evmergehi r7, r8, r8
 ; SPE-NEXT:    mr r6, r9
-; SPE-NEXT:    evldd r28, 72(r1)
-; SPE-NEXT:    # kill: def $r3 killed $r3 killed $s3
-; SPE-NEXT:    # kill: def $r4 killed $r4 killed $s4
-; SPE-NEXT:    # kill: def $r5 killed $r5 killed $s5
-; SPE-NEXT:    # kill: def $r7 killed $r7 killed $s7
-; SPE-NEXT:    # kill: def $r8 killed $r8 killed $s8
+; SPE-NEXT:    evldd r28, 88(r1)
 ; SPE-NEXT:    bl fma
 ; SPE-NEXT:    evmergelo r26, r3, r4
 ; SPE-NEXT:    evmergehi r3, r29, r29
@@ -1117,21 +1078,18 @@ define <2 x double> @fmsub_v2f64(<2 x double> %vf0, <2 x double> %vf1, <2 x doub
 ; SPE-NEXT:    mr r4, r29
 ; SPE-NEXT:    mr r6, r28
 ; SPE-NEXT:    mr r8, r27
-; SPE-NEXT:    # kill: def $r3 killed $r3 killed $s3
-; SPE-NEXT:    # kill: def $r5 killed $r5 killed $s5
-; SPE-NEXT:    # kill: def $r7 killed $r7 killed $s7
 ; SPE-NEXT:    bl fma
 ; SPE-NEXT:    li r5, 8
 ; SPE-NEXT:    evmergelo r3, r3, r4
 ; SPE-NEXT:    evstddx r3, r30, r5
 ; SPE-NEXT:    evstdd r26, 0(r30)
-; SPE-NEXT:    evldd r30, 48(r1) # 8-byte Folded Reload
+; SPE-NEXT:    lwz r30, 72(r1) # 4-byte Folded Reload
 ; SPE-NEXT:    evldd r29, 40(r1) # 8-byte Folded Reload
 ; SPE-NEXT:    evldd r28, 32(r1) # 8-byte Folded Reload
 ; SPE-NEXT:    evldd r27, 24(r1) # 8-byte Folded Reload
 ; SPE-NEXT:    evldd r26, 16(r1) # 8-byte Folded Reload
-; SPE-NEXT:    lwz r0, 68(r1)
-; SPE-NEXT:    addi r1, r1, 64
+; SPE-NEXT:    lwz r0, 84(r1)
+; SPE-NEXT:    addi r1, r1, 80
 ; SPE-NEXT:    mtlr r0
 ; SPE-NEXT:    blr
   %neg = fneg <2 x double> %vf2
@@ -1200,19 +1158,11 @@ define double @fnmadd_f64(double %f0, double %f1, double %f2) #0 {
 ; SPE-NEXT:    evmergehi r3, r4, r4
 ; SPE-NEXT:    evmergehi r5, r6, r6
 ; SPE-NEXT:    evmergehi r7, r8, r8
-; SPE-NEXT:    # kill: def $r4 killed $r4 killed $s4
-; SPE-NEXT:    # kill: def $r6 killed $r6 killed $s6
-; SPE-NEXT:    # kill: def $r8 killed $r8 killed $s8
-; SPE-NEXT:    # kill: def $r3 killed $r3 killed $s3
-; SPE-NEXT:    # kill: def $r5 killed $r5 killed $s5
-; SPE-NEXT:    # kill: def $r7 killed $r7 killed $s7
 ; SPE-NEXT:    bl fma
 ; SPE-NEXT:    evmergelo r3, r3, r4
 ; SPE-NEXT:    efdneg r4, r3
 ; SPE-NEXT:    evmergehi r3, r4, r4
-; SPE-NEXT:    # kill: def $r4 killed $r4 killed $s4
 ; SPE-NEXT:    lwz r0, 20(r1)
-; SPE-NEXT:    # kill: def $r3 killed $r3 killed $s3
 ; SPE-NEXT:    addi r1, r1, 16
 ; SPE-NEXT:    mtlr r0
 ; SPE-NEXT:    blr
@@ -1234,17 +1184,17 @@ define <4 x float> @fnmadd_v4f32(<4 x float> %vf0, <4 x float> %vf1, <4 x float>
 ; NOVSX-LABEL: fnmadd_v4f32:
 ; NOVSX:       # %bb.0:
 ; NOVSX-NEXT:    addi r3, r1, -32
-; NOVSX-NEXT:    addi r4, r1, -48
+; NOVSX-NEXT:    vspltisb v5, -1
 ; NOVSX-NEXT:    stvx v4, 0, r3
+; NOVSX-NEXT:    addi r3, r1, -48
+; NOVSX-NEXT:    stvx v3, 0, r3
 ; NOVSX-NEXT:    addi r3, r1, -64
-; NOVSX-NEXT:    stvx v3, 0, r4
+; NOVSX-NEXT:    vslw v3, v5, v5
 ; NOVSX-NEXT:    stvx v2, 0, r3
-; NOVSX-NEXT:    vspltisb v2, -1
 ; NOVSX-NEXT:    addi r3, r1, -16
 ; NOVSX-NEXT:    lfs f0, -20(r1)
 ; NOVSX-NEXT:    lfs f1, -36(r1)
 ; NOVSX-NEXT:    lfs f2, -52(r1)
-; NOVSX-NEXT:    vslw v2, v2, v2
 ; NOVSX-NEXT:    fmadds f0, f2, f1, f0
 ; NOVSX-NEXT:    lfs f1, -40(r1)
 ; NOVSX-NEXT:    lfs f2, -56(r1)
@@ -1262,49 +1212,49 @@ define <4 x float> @fnmadd_v4f32(<4 x float> %vf0, <4 x float> %vf1, <4 x float>
 ; NOVSX-NEXT:    lfs f0, -32(r1)
 ; NOVSX-NEXT:    fmadds f0, f2, f1, f0
 ; NOVSX-NEXT:    stfs f0, -16(r1)
-; NOVSX-NEXT:    lvx v3, 0, r3
-; NOVSX-NEXT:    vsubfp v2, v2, v3
+; NOVSX-NEXT:    lvx v2, 0, r3
+; NOVSX-NEXT:    vsubfp v2, v3, v2
 ; NOVSX-NEXT:    blr
 ;
 ; SPE-LABEL: fnmadd_v4f32:
 ; SPE:       # %bb.0:
 ; SPE-NEXT:    mflr r0
-; SPE-NEXT:    stwu r1, -96(r1)
-; SPE-NEXT:    stw r0, 100(r1)
-; SPE-NEXT:    .cfi_def_cfa_offset 96
+; SPE-NEXT:    stwu r1, -64(r1)
+; SPE-NEXT:    stw r0, 68(r1)
+; SPE-NEXT:    .cfi_def_cfa_offset 64
 ; SPE-NEXT:    .cfi_offset lr, 4
-; SPE-NEXT:    .cfi_offset r21, -88
-; SPE-NEXT:    .cfi_offset r22, -80
-; SPE-NEXT:    .cfi_offset r23, -72
-; SPE-NEXT:    .cfi_offset r24, -64
-; SPE-NEXT:    .cfi_offset r25, -56
-; SPE-NEXT:    .cfi_offset r26, -48
-; SPE-NEXT:    .cfi_offset r27, -40
-; SPE-NEXT:    .cfi_offset r28, -32
-; SPE-NEXT:    .cfi_offset r29, -24
-; SPE-NEXT:    .cfi_offset r30, -16
-; SPE-NEXT:    evstdd r27, 56(r1) # 8-byte Folded Spill
+; SPE-NEXT:    .cfi_offset r21, -44
+; SPE-NEXT:    .cfi_offset r22, -40
+; SPE-NEXT:    .cfi_offset r23, -36
+; SPE-NEXT:    .cfi_offset r24, -32
+; SPE-NEXT:    .cfi_offset r25, -28
+; SPE-NEXT:    .cfi_offset r26, -24
+; SPE-NEXT:    .cfi_offset r27, -20
+; SPE-NEXT:    .cfi_offset r28, -16
+; SPE-NEXT:    .cfi_offset r29, -12
+; SPE-NEXT:    .cfi_offset r30, -8
+; SPE-NEXT:    stw r27, 44(r1) # 4-byte Folded Spill
 ; SPE-NEXT:    mr r27, r5
-; SPE-NEXT:    lwz r5, 116(r1)
-; SPE-NEXT:    evstdd r25, 40(r1) # 8-byte Folded Spill
+; SPE-NEXT:    lwz r5, 84(r1)
+; SPE-NEXT:    stw r25, 36(r1) # 4-byte Folded Spill
 ; SPE-NEXT:    mr r25, r3
-; SPE-NEXT:    evstdd r26, 48(r1) # 8-byte Folded Spill
+; SPE-NEXT:    stw r26, 40(r1) # 4-byte Folded Spill
 ; SPE-NEXT:    mr r26, r4
 ; SPE-NEXT:    mr r3, r6
 ; SPE-NEXT:    mr r4, r10
-; SPE-NEXT:    evstdd r21, 8(r1) # 8-byte Folded Spill
-; SPE-NEXT:    evstdd r22, 16(r1) # 8-byte Folded Spill
-; SPE-NEXT:    evstdd r23, 24(r1) # 8-byte Folded Spill
-; SPE-NEXT:    evstdd r24, 32(r1) # 8-byte Folded Spill
-; SPE-NEXT:    evstdd r28, 64(r1) # 8-byte Folded Spill
+; SPE-NEXT:    stw r21, 20(r1) # 4-byte Folded Spill
+; SPE-NEXT:    stw r22, 24(r1) # 4-byte Folded Spill
+; SPE-NEXT:    stw r23, 28(r1) # 4-byte Folded Spill
+; SPE-NEXT:    stw r24, 32(r1) # 4-byte Folded Spill
+; SPE-NEXT:    stw r28, 48(r1) # 4-byte Folded Spill
 ; SPE-NEXT:    mr r28, r7
-; SPE-NEXT:    evstdd r29, 72(r1) # 8-byte Folded Spill
+; SPE-NEXT:    stw r29, 52(r1) # 4-byte Folded Spill
 ; SPE-NEXT:    mr r29, r8
-; SPE-NEXT:    evstdd r30, 80(r1) # 8-byte Folded Spill
+; SPE-NEXT:    stw r30, 56(r1) # 4-byte Folded Spill
 ; SPE-NEXT:    mr r30, r9
-; SPE-NEXT:    lwz r24, 104(r1)
-; SPE-NEXT:    lwz r23, 108(r1)
-; SPE-NEXT:    lwz r22, 112(r1)
+; SPE-NEXT:    lwz r24, 72(r1)
+; SPE-NEXT:    lwz r23, 76(r1)
+; SPE-NEXT:    lwz r22, 80(r1)
 ; SPE-NEXT:    bl fmaf
 ; SPE-NEXT:    mr r21, r3
 ; SPE-NEXT:    mr r3, r27
@@ -1325,18 +1275,18 @@ define <4 x float> @fnmadd_v4f32(<4 x float> %vf0, <4 x float> %vf1, <4 x float>
 ; SPE-NEXT:    efsneg r5, r30
 ; SPE-NEXT:    efsneg r3, r3
 ; SPE-NEXT:    efsneg r6, r21
-; SPE-NEXT:    evldd r30, 80(r1) # 8-byte Folded Reload
-; SPE-NEXT:    evldd r29, 72(r1) # 8-byte Folded Reload
-; SPE-NEXT:    evldd r28, 64(r1) # 8-byte Folded Reload
-; SPE-NEXT:    evldd r27, 56(r1) # 8-byte Folded Reload
-; SPE-NEXT:    evldd r26, 48(r1) # 8-byte Folded Reload
-; SPE-NEXT:    evldd r25, 40(r1) # 8-byte Folded Reload
-; SPE-NEXT:    evldd r24, 32(r1) # 8-byte Folded Reload
-; SPE-NEXT:    evldd r23, 24(r1) # 8-byte Folded Reload
-; SPE-NEXT:    evldd r22, 16(r1) # 8-byte Folded Reload
-; SPE-NEXT:    evldd r21, 8(r1) # 8-byte Folded Reload
-; SPE-NEXT:    lwz r0, 100(r1)
-; SPE-NEXT:    addi r1, r1, 96
+; SPE-NEXT:    lwz r30, 56(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r29, 52(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r28, 48(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r27, 44(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r26, 40(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r25, 36(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r24, 32(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r23, 28(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r22, 24(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r21, 20(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r0, 68(r1)
+; SPE-NEXT:    addi r1, r1, 64
 ; SPE-NEXT:    mtlr r0
 ; SPE-NEXT:    blr
   %fma = call <4 x float> @llvm.experimental.constrained.fma.v4f32(
@@ -1363,36 +1313,31 @@ define <2 x double> @fnmadd_v2f64(<2 x double> %vf0, <2 x double> %vf1, <2 x dou
 ; SPE-LABEL: fnmadd_v2f64:
 ; SPE:       # %bb.0:
 ; SPE-NEXT:    mflr r0
-; SPE-NEXT:    stwu r1, -64(r1)
-; SPE-NEXT:    stw r0, 68(r1)
-; SPE-NEXT:    .cfi_def_cfa_offset 64
+; SPE-NEXT:    stwu r1, -80(r1)
+; SPE-NEXT:    stw r0, 84(r1)
+; SPE-NEXT:    .cfi_def_cfa_offset 80
 ; SPE-NEXT:    .cfi_offset lr, 4
-; SPE-NEXT:    .cfi_offset r26, -48
-; SPE-NEXT:    .cfi_offset r27, -40
-; SPE-NEXT:    .cfi_offset r28, -32
-; SPE-NEXT:    .cfi_offset r29, -24
-; SPE-NEXT:    .cfi_offset r30, -16
+; SPE-NEXT:    .cfi_offset r26, -64
+; SPE-NEXT:    .cfi_offset r27, -56
+; SPE-NEXT:    .cfi_offset r28, -48
+; SPE-NEXT:    .cfi_offset r29, -40
+; SPE-NEXT:    .cfi_offset r30, -8
 ; SPE-NEXT:    evstdd r26, 16(r1) # 8-byte Folded Spill
 ; SPE-NEXT:    evstdd r27, 24(r1) # 8-byte Folded Spill
 ; SPE-NEXT:    evstdd r28, 32(r1) # 8-byte Folded Spill
 ; SPE-NEXT:    evstdd r29, 40(r1) # 8-byte Folded Spill
-; SPE-NEXT:    evstdd r30, 48(r1) # 8-byte Folded Spill
+; SPE-NEXT:    stw r30, 72(r1) # 4-byte Folded Spill
 ; SPE-NEXT:    evmergelo r27, r7, r8
 ; SPE-NEXT:    evmergelo r9, r9, r10
 ; SPE-NEXT:    evmergelo r4, r5, r6
 ; SPE-NEXT:    mr r30, r3
-; SPE-NEXT:    evldd r8, 80(r1)
+; SPE-NEXT:    evldd r8, 96(r1)
 ; SPE-NEXT:    evmergehi r3, r4, r4
 ; SPE-NEXT:    evmergehi r5, r9, r9
 ; SPE-NEXT:    mr r6, r9
-; SPE-NEXT:    evldd r29, 88(r1)
-; SPE-NEXT:    # kill: def $r3 killed $r3 killed $s3
-; SPE-NEXT:    # kill: def $r4 killed $r4 killed $s4
-; SPE-NEXT:    # kill: def $r5 killed $r5 killed $s5
+; SPE-NEXT:    evldd r29, 104(r1)
 ; SPE-NEXT:    evmergehi r7, r8, r8
-; SPE-NEXT:    evldd r28, 72(r1)
-; SPE-NEXT:    # kill: def $r7 killed $r7 killed $s7
-; SPE-NEXT:    # kill: def $r8 killed $r8 killed $s8
+; SPE-NEXT:    evldd r28, 88(r1)
 ; SPE-NEXT:    bl fma
 ; SPE-NEXT:    evmergelo r26, r3, r4
 ; SPE-NEXT:    evmergehi r3, r27, r27
@@ -1401,9 +1346,6 @@ define <2 x double> @fnmadd_v2f64(<2 x double> %vf0, <2 x double> %vf1, <2 x dou
 ; SPE-NEXT:    mr r4, r27
 ; SPE-NEXT:    mr r6, r28
 ; SPE-NEXT:    mr r8, r29
-; SPE-NEXT:    # kill: def $r3 killed $r3 killed $s3
-; SPE-NEXT:    # kill: def $r5 killed $r5 killed $s5
-; SPE-NEXT:    # kill: def $r7 killed $r7 killed $s7
 ; SPE-NEXT:    bl fma
 ; SPE-NEXT:    evmergelo r3, r3, r4
 ; SPE-NEXT:    li r5, 8
@@ -1411,13 +1353,13 @@ define <2 x double> @fnmadd_v2f64(<2 x double> %vf0, <2 x double> %vf1, <2 x dou
 ; SPE-NEXT:    evstddx r3, r30, r5
 ; SPE-NEXT:    efdneg r3, r26
 ; SPE-NEXT:    evstdd r3, 0(r30)
-; SPE-NEXT:    evldd r30, 48(r1) # 8-byte Folded Reload
+; SPE-NEXT:    lwz r30, 72(r1) # 4-byte Folded Reload
 ; SPE-NEXT:    evldd r29, 40(r1) # 8-byte Folded Reload
 ; SPE-NEXT:    evldd r28, 32(r1) # 8-byte Folded Reload
 ; SPE-NEXT:    evldd r27, 24(r1) # 8-byte Folded Reload
 ; SPE-NEXT:    evldd r26, 16(r1) # 8-byte Folded Reload
-; SPE-NEXT:    lwz r0, 68(r1)
-; SPE-NEXT:    addi r1, r1, 64
+; SPE-NEXT:    lwz r0, 84(r1)
+; SPE-NEXT:    addi r1, r1, 80
 ; SPE-NEXT:    mtlr r0
 ; SPE-NEXT:    blr
   %fma = call <2 x double> @llvm.experimental.constrained.fma.v2f64(
@@ -1488,20 +1430,12 @@ define double @fnmsub_f64(double %f0, double %f1, double %f2) #0 {
 ; SPE-NEXT:    efdneg r8, r3
 ; SPE-NEXT:    evmergehi r3, r4, r4
 ; SPE-NEXT:    evmergehi r5, r6, r6
-; SPE-NEXT:    # kill: def $r4 killed $r4 killed $s4
-; SPE-NEXT:    # kill: def $r6 killed $r6 killed $s6
 ; SPE-NEXT:    evmergehi r7, r8, r8
-; SPE-NEXT:    # kill: def $r3 killed $r3 killed $s3
-; SPE-NEXT:    # kill: def $r5 killed $r5 killed $s5
-; SPE-NEXT:    # kill: def $r8 killed $r8 killed $s8
-; SPE-NEXT:    # kill: def $r7 killed $r7 killed $s7
 ; SPE-NEXT:    bl fma
 ; SPE-NEXT:    evmergelo r3, r3, r4
 ; SPE-NEXT:    efdneg r4, r3
 ; SPE-NEXT:    evmergehi r3, r4, r4
-; SPE-NEXT:    # kill: def $r4 killed $r4 killed $s4
 ; SPE-NEXT:    lwz r0, 20(r1)
-; SPE-NEXT:    # kill: def $r3 killed $r3 killed $s3
 ; SPE-NEXT:    addi r1, r1, 16
 ; SPE-NEXT:    mtlr r0
 ; SPE-NEXT:    blr
@@ -1525,12 +1459,12 @@ define <4 x float> @fnmsub_v4f32(<4 x float> %vf0, <4 x float> %vf1, <4 x float>
 ; NOVSX:       # %bb.0:
 ; NOVSX-NEXT:    vspltisb v5, -1
 ; NOVSX-NEXT:    addi r3, r1, -48
-; NOVSX-NEXT:    addi r4, r1, -64
-; NOVSX-NEXT:    stvx v3, 0, r3
-; NOVSX-NEXT:    addi r3, r1, -32
-; NOVSX-NEXT:    stvx v2, 0, r4
 ; NOVSX-NEXT:    vslw v5, v5, v5
+; NOVSX-NEXT:    stvx v3, 0, r3
+; NOVSX-NEXT:    addi r3, r1, -64
 ; NOVSX-NEXT:    vsubfp v4, v5, v4
+; NOVSX-NEXT:    stvx v2, 0, r3
+; NOVSX-NEXT:    addi r3, r1, -32
 ; NOVSX-NEXT:    stvx v4, 0, r3
 ; NOVSX-NEXT:    addi r3, r1, -16
 ; NOVSX-NEXT:    lfs f0, -36(r1)
@@ -1560,45 +1494,45 @@ define <4 x float> @fnmsub_v4f32(<4 x float> %vf0, <4 x float> %vf1, <4 x float>
 ; SPE-LABEL: fnmsub_v4f32:
 ; SPE:       # %bb.0:
 ; SPE-NEXT:    mflr r0
-; SPE-NEXT:    stwu r1, -96(r1)
-; SPE-NEXT:    stw r0, 100(r1)
-; SPE-NEXT:    .cfi_def_cfa_offset 96
+; SPE-NEXT:    stwu r1, -64(r1)
+; SPE-NEXT:    stw r0, 68(r1)
+; SPE-NEXT:    .cfi_def_cfa_offset 64
 ; SPE-NEXT:    .cfi_offset lr, 4
-; SPE-NEXT:    .cfi_offset r21, -88
-; SPE-NEXT:    .cfi_offset r22, -80
-; SPE-NEXT:    .cfi_offset r23, -72
-; SPE-NEXT:    .cfi_offset r24, -64
-; SPE-NEXT:    .cfi_offset r25, -56
-; SPE-NEXT:    .cfi_offset r26, -48
-; SPE-NEXT:    .cfi_offset r27, -40
-; SPE-NEXT:    .cfi_offset r28, -32
-; SPE-NEXT:    .cfi_offset r29, -24
-; SPE-NEXT:    .cfi_offset r30, -16
-; SPE-NEXT:    evstdd r25, 40(r1) # 8-byte Folded Spill
+; SPE-NEXT:    .cfi_offset r21, -44
+; SPE-NEXT:    .cfi_offset r22, -40
+; SPE-NEXT:    .cfi_offset r23, -36
+; SPE-NEXT:    .cfi_offset r24, -32
+; SPE-NEXT:    .cfi_offset r25, -28
+; SPE-NEXT:    .cfi_offset r26, -24
+; SPE-NEXT:    .cfi_offset r27, -20
+; SPE-NEXT:    .cfi_offset r28, -16
+; SPE-NEXT:    .cfi_offset r29, -12
+; SPE-NEXT:    .cfi_offset r30, -8
+; SPE-NEXT:    stw r25, 36(r1) # 4-byte Folded Spill
 ; SPE-NEXT:    mr r25, r3
-; SPE-NEXT:    evstdd r26, 48(r1) # 8-byte Folded Spill
+; SPE-NEXT:    stw r26, 40(r1) # 4-byte Folded Spill
 ; SPE-NEXT:    mr r26, r4
-; SPE-NEXT:    evstdd r27, 56(r1) # 8-byte Folded Spill
+; SPE-NEXT:    stw r27, 44(r1) # 4-byte Folded Spill
 ; SPE-NEXT:    mr r27, r5
-; SPE-NEXT:    evstdd r28, 64(r1) # 8-byte Folded Spill
+; SPE-NEXT:    stw r28, 48(r1) # 4-byte Folded Spill
 ; SPE-NEXT:    mr r28, r7
-; SPE-NEXT:    lwz r3, 112(r1)
-; SPE-NEXT:    lwz r4, 104(r1)
-; SPE-NEXT:    lwz r5, 108(r1)
-; SPE-NEXT:    lwz r7, 116(r1)
-; SPE-NEXT:    evstdd r22, 16(r1) # 8-byte Folded Spill
+; SPE-NEXT:    lwz r3, 80(r1)
+; SPE-NEXT:    lwz r4, 72(r1)
+; SPE-NEXT:    lwz r5, 76(r1)
+; SPE-NEXT:    lwz r7, 84(r1)
+; SPE-NEXT:    stw r22, 24(r1) # 4-byte Folded Spill
 ; SPE-NEXT:    efsneg r22, r3
-; SPE-NEXT:    evstdd r23, 24(r1) # 8-byte Folded Spill
+; SPE-NEXT:    stw r23, 28(r1) # 4-byte Folded Spill
 ; SPE-NEXT:    efsneg r23, r5
-; SPE-NEXT:    evstdd r24, 32(r1) # 8-byte Folded Spill
+; SPE-NEXT:    stw r24, 32(r1) # 4-byte Folded Spill
 ; SPE-NEXT:    efsneg r24, r4
 ; SPE-NEXT:    efsneg r5, r7
 ; SPE-NEXT:    mr r3, r6
 ; SPE-NEXT:    mr r4, r10
-; SPE-NEXT:    evstdd r21, 8(r1) # 8-byte Folded Spill
-; SPE-NEXT:    evstdd r29, 72(r1) # 8-byte Folded Spill
+; SPE-NEXT:    stw r21, 20(r1) # 4-byte Folded Spill
+; SPE-NEXT:    stw r29, 52(r1) # 4-byte Folded Spill
 ; SPE-NEXT:    mr r29, r8
-; SPE-NEXT:    evstdd r30, 80(r1) # 8-byte Folded Spill
+; SPE-NEXT:    stw r30, 56(r1) # 4-byte Folded Spill
 ; SPE-NEXT:    mr r30, r9
 ; SPE-NEXT:    bl fmaf
 ; SPE-NEXT:    mr r21, r3
@@ -1620,18 +1554,18 @@ define <4 x float> @fnmsub_v4f32(<4 x float> %vf0, <4 x float> %vf1, <4 x float>
 ; SPE-NEXT:    efsneg r5, r30
 ; SPE-NEXT:    efsneg r3, r3
 ; SPE-NEXT:    efsneg r6, r21
-; SPE-NEXT:    evldd r30, 80(r1) # 8-byte Folded Reload
-; SPE-NEXT:    evldd r29, 72(r1) # 8-byte Folded Reload
-; SPE-NEXT:    evldd r28, 64(r1) # 8-byte Folded Reload
-; SPE-NEXT:    evldd r27, 56(r1) # 8-byte Folded Reload
-; SPE-NEXT:    evldd r26, 48(r1) # 8-byte Folded Reload
-; SPE-NEXT:    evldd r25, 40(r1) # 8-byte Folded Reload
-; SPE-NEXT:    evldd r24, 32(r1) # 8-byte Folded Reload
-; SPE-NEXT:    evldd r23, 24(r1) # 8-byte Folded Reload
-; SPE-NEXT:    evldd r22, 16(r1) # 8-byte Folded Reload
-; SPE-NEXT:    evldd r21, 8(r1) # 8-byte Folded Reload
-; SPE-NEXT:    lwz r0, 100(r1)
-; SPE-NEXT:    addi r1, r1, 96
+; SPE-NEXT:    lwz r30, 56(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r29, 52(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r28, 48(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r27, 44(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r26, 40(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r25, 36(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r24, 32(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r23, 28(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r22, 24(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r21, 20(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r0, 68(r1)
+; SPE-NEXT:    addi r1, r1, 64
 ; SPE-NEXT:    mtlr r0
 ; SPE-NEXT:    blr
   %neg = fneg <4 x float> %vf2
@@ -1659,19 +1593,19 @@ define <2 x double> @fnmsub_v2f64(<2 x double> %vf0, <2 x double> %vf1, <2 x dou
 ; SPE-LABEL: fnmsub_v2f64:
 ; SPE:       # %bb.0:
 ; SPE-NEXT:    mflr r0
-; SPE-NEXT:    stwu r1, -64(r1)
-; SPE-NEXT:    stw r0, 68(r1)
-; SPE-NEXT:    .cfi_def_cfa_offset 64
+; SPE-NEXT:    stwu r1, -80(r1)
+; SPE-NEXT:    stw r0, 84(r1)
+; SPE-NEXT:    .cfi_def_cfa_offset 80
 ; SPE-NEXT:    .cfi_offset lr, 4
-; SPE-NEXT:    .cfi_offset r26, -48
-; SPE-NEXT:    .cfi_offset r27, -40
-; SPE-NEXT:    .cfi_offset r28, -32
-; SPE-NEXT:    .cfi_offset r29, -24
-; SPE-NEXT:    .cfi_offset r30, -16
-; SPE-NEXT:    evstdd r30, 48(r1) # 8-byte Folded Spill
+; SPE-NEXT:    .cfi_offset r26, -64
+; SPE-NEXT:    .cfi_offset r27, -56
+; SPE-NEXT:    .cfi_offset r28, -48
+; SPE-NEXT:    .cfi_offset r29, -40
+; SPE-NEXT:    .cfi_offset r30, -8
+; SPE-NEXT:    stw r30, 72(r1) # 4-byte Folded Spill
 ; SPE-NEXT:    mr r30, r3
-; SPE-NEXT:    evldd r3, 80(r1)
-; SPE-NEXT:    evldd r11, 88(r1)
+; SPE-NEXT:    evldd r3, 96(r1)
+; SPE-NEXT:    evldd r11, 104(r1)
 ; SPE-NEXT:    evstdd r26, 16(r1) # 8-byte Folded Spill
 ; SPE-NEXT:    evstdd r27, 24(r1) # 8-byte Folded Spill
 ; SPE-NEXT:    efdneg r27, r11
@@ -1685,12 +1619,7 @@ define <2 x double> @fnmsub_v2f64(<2 x double> %vf0, <2 x double> %vf1, <2 x dou
 ; SPE-NEXT:    evmergehi r5, r9, r9
 ; SPE-NEXT:    evmergehi r7, r8, r8
 ; SPE-NEXT:    mr r6, r9
-; SPE-NEXT:    evldd r28, 72(r1)
-; SPE-NEXT:    # kill: def $r3 killed $r3 killed $s3
-; SPE-NEXT:    # kill: def $r4 killed $r4 killed $s4
-; SPE-NEXT:    # kill: def $r5 killed $r5 killed $s5
-; SPE-NEXT:    # kill: def $r7 killed $r7 killed $s7
-; SPE-NEXT:    # kill: def $r8 killed $r8 killed $s8
+; SPE-NEXT:    evldd r28, 88(r1)
 ; SPE-NEXT:    bl fma
 ; SPE-NEXT:    evmergelo r26, r3, r4
 ; SPE-NEXT:    evmergehi r3, r29, r29
@@ -1699,9 +1628,6 @@ define <2 x double> @fnmsub_v2f64(<2 x double> %vf0, <2 x double> %vf1, <2 x dou
 ; SPE-NEXT:    mr r4, r29
 ; SPE-NEXT:    mr r6, r28
 ; SPE-NEXT:    mr r8, r27
-; SPE-NEXT:    # kill: def $r3 killed $r3 killed $s3
-; SPE-NEXT:    # kill: def $r5 killed $r5 killed $s5
-; SPE-NEXT:    # kill: def $r7 killed $r7 killed $s7
 ; SPE-NEXT:    bl fma
 ; SPE-NEXT:    evmergelo r3, r3, r4
 ; SPE-NEXT:    li r5, 8
@@ -1709,13 +1635,13 @@ define <2 x double> @fnmsub_v2f64(<2 x double> %vf0, <2 x double> %vf1, <2 x dou
 ; SPE-NEXT:    evstddx r3, r30, r5
 ; SPE-NEXT:    efdneg r3, r26
 ; SPE-NEXT:    evstdd r3, 0(r30)
-; SPE-NEXT:    evldd r30, 48(r1) # 8-byte Folded Reload
+; SPE-NEXT:    lwz r30, 72(r1) # 4-byte Folded Reload
 ; SPE-NEXT:    evldd r29, 40(r1) # 8-byte Folded Reload
 ; SPE-NEXT:    evldd r28, 32(r1) # 8-byte Folded Reload
 ; SPE-NEXT:    evldd r27, 24(r1) # 8-byte Folded Reload
 ; SPE-NEXT:    evldd r26, 16(r1) # 8-byte Folded Reload
-; SPE-NEXT:    lwz r0, 68(r1)
-; SPE-NEXT:    addi r1, r1, 64
+; SPE-NEXT:    lwz r0, 84(r1)
+; SPE-NEXT:    addi r1, r1, 80
 ; SPE-NEXT:    mtlr r0
 ; SPE-NEXT:    blr
   %neg = fneg <2 x double> %vf2
@@ -1777,14 +1703,10 @@ define double @fsqrt_f64(double %f1) #0 {
 ; SPE-NEXT:    .cfi_offset lr, 4
 ; SPE-NEXT:    evmergelo r4, r3, r4
 ; SPE-NEXT:    evmergehi r3, r4, r4
-; SPE-NEXT:    # kill: def $r4 killed $r4 killed $s4
-; SPE-NEXT:    # kill: def $r3 killed $r3 killed $s3
 ; SPE-NEXT:    bl sqrt
 ; SPE-NEXT:    evmergelo r4, r3, r4
 ; SPE-NEXT:    evmergehi r3, r4, r4
-; SPE-NEXT:    # kill: def $r4 killed $r4 killed $s4
 ; SPE-NEXT:    lwz r0, 20(r1)
-; SPE-NEXT:    # kill: def $r3 killed $r3 killed $s3
 ; SPE-NEXT:    addi r1, r1, 16
 ; SPE-NEXT:    mtlr r0
 ; SPE-NEXT:    blr
@@ -1824,21 +1746,21 @@ define <4 x float> @fsqrt_v4f32(<4 x float> %vf1) #0 {
 ; SPE-LABEL: fsqrt_v4f32:
 ; SPE:       # %bb.0:
 ; SPE-NEXT:    mflr r0
-; SPE-NEXT:    stwu r1, -48(r1)
-; SPE-NEXT:    stw r0, 52(r1)
-; SPE-NEXT:    .cfi_def_cfa_offset 48
+; SPE-NEXT:    stwu r1, -32(r1)
+; SPE-NEXT:    stw r0, 36(r1)
+; SPE-NEXT:    .cfi_def_cfa_offset 32
 ; SPE-NEXT:    .cfi_offset lr, 4
-; SPE-NEXT:    .cfi_offset r27, -40
-; SPE-NEXT:    .cfi_offset r28, -32
-; SPE-NEXT:    .cfi_offset r29, -24
-; SPE-NEXT:    .cfi_offset r30, -16
-; SPE-NEXT:    evstdd r28, 16(r1) # 8-byte Folded Spill
+; SPE-NEXT:    .cfi_offset r27, -20
+; SPE-NEXT:    .cfi_offset r28, -16
+; SPE-NEXT:    .cfi_offset r29, -12
+; SPE-NEXT:    .cfi_offset r30, -8
+; SPE-NEXT:    stw r28, 16(r1) # 4-byte Folded Spill
 ; SPE-NEXT:    mr r28, r3
 ; SPE-NEXT:    mr r3, r6
-; SPE-NEXT:    evstdd r27, 8(r1) # 8-byte Folded Spill
-; SPE-NEXT:    evstdd r29, 24(r1) # 8-byte Folded Spill
+; SPE-NEXT:    stw r27, 12(r1) # 4-byte Folded Spill
+; SPE-NEXT:    stw r29, 20(r1) # 4-byte Folded Spill
 ; SPE-NEXT:    mr r29, r4
-; SPE-NEXT:    evstdd r30, 32(r1) # 8-byte Folded Spill
+; SPE-NEXT:    stw r30, 24(r1) # 4-byte Folded Spill
 ; SPE-NEXT:    mr r30, r5
 ; SPE-NEXT:    bl sqrtf
 ; SPE-NEXT:    mr r27, r3
@@ -1853,12 +1775,12 @@ define <4 x float> @fsqrt_v4f32(<4 x float> %vf1) #0 {
 ; SPE-NEXT:    mr r4, r29
 ; SPE-NEXT:    mr r5, r30
 ; SPE-NEXT:    mr r6, r27
-; SPE-NEXT:    evldd r30, 32(r1) # 8-byte Folded Reload
-; SPE-NEXT:    evldd r29, 24(r1) # 8-byte Folded Reload
-; SPE-NEXT:    evldd r28, 16(r1) # 8-byte Folded Reload
-; SPE-NEXT:    evldd r27, 8(r1) # 8-byte Folded Reload
-; SPE-NEXT:    lwz r0, 52(r1)
-; SPE-NEXT:    addi r1, r1, 48
+; SPE-NEXT:    lwz r30, 24(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r29, 20(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r28, 16(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r27, 12(r1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz r0, 36(r1)
+; SPE-NEXT:    addi r1, r1, 32
 ; SPE-NEXT:    mtlr r0
 ; SPE-NEXT:    blr
   %res = call <4 x float> @llvm.experimental.constrained.sqrt.v4f32(
@@ -1883,37 +1805,34 @@ define <2 x double> @fsqrt_v2f64(<2 x double> %vf1) #0 {
 ; SPE-LABEL: fsqrt_v2f64:
 ; SPE:       # %bb.0:
 ; SPE-NEXT:    mflr r0
-; SPE-NEXT:    stwu r1, -48(r1)
-; SPE-NEXT:    stw r0, 52(r1)
-; SPE-NEXT:    .cfi_def_cfa_offset 48
+; SPE-NEXT:    stwu r1, -64(r1)
+; SPE-NEXT:    stw r0, 68(r1)
+; SPE-NEXT:    .cfi_def_cfa_offset 64
 ; SPE-NEXT:    .cfi_offset lr, 4
-; SPE-NEXT:    .cfi_offset r28, -32
-; SPE-NEXT:    .cfi_offset r29, -24
-; SPE-NEXT:    .cfi_offset r30, -16
+; SPE-NEXT:    .cfi_offset r28, -48
+; SPE-NEXT:    .cfi_offset r29, -40
+; SPE-NEXT:    .cfi_offset r30, -8
 ; SPE-NEXT:    evstdd r28, 16(r1) # 8-byte Folded Spill
 ; SPE-NEXT:    evstdd r29, 24(r1) # 8-byte Folded Spill
-; SPE-NEXT:    evstdd r30, 32(r1) # 8-byte Folded Spill
+; SPE-NEXT:    stw r30, 56(r1) # 4-byte Folded Spill
 ; SPE-NEXT:    evmergelo r29, r7, r8
 ; SPE-NEXT:    evmergelo r4, r5, r6
 ; SPE-NEXT:    mr r30, r3
 ; SPE-NEXT:    evmergehi r3, r4, r4
-; SPE-NEXT:    # kill: def $r4 killed $r4 killed $s4
-; SPE-NEXT:    # kill: def $r3 killed $r3 killed $s3
 ; SPE-NEXT:    bl sqrt
 ; SPE-NEXT:    evmergelo r28, r3, r4
 ; SPE-NEXT:    evmergehi r3, r29, r29
 ; SPE-NEXT:    mr r4, r29
-; SPE-NEXT:    # kill: def $r3 killed $r3 killed $s3
 ; SPE-NEXT:    bl sqrt
 ; SPE-NEXT:    li r5, 8
 ; SPE-NEXT:    evmergelo r3, r3, r4
 ; SPE-NEXT:    evstddx r3, r30, r5
 ; SPE-NEXT:    evstdd r28, 0(r30)
-; SPE-NEXT:    evldd r30, 32(r1) # 8-byte Folded Reload
+; SPE-NEXT:    lwz r30, 56(r1) # 4-byte Folded Reload
 ; SPE-NEXT:    evldd r29, 24(r1) # 8-byte Folded Reload
 ; SPE-NEXT:    evldd r28, 16(r1) # 8-byte Folded Reload
-; SPE-NEXT:    lwz r0, 52(r1)
-; SPE-NEXT:    addi r1, r1, 48
+; SPE-NEXT:    lwz r0, 68(r1)
+; SPE-NEXT:    addi r1, r1, 64
 ; SPE-NEXT:    mtlr r0
 ; SPE-NEXT:    blr
   %res = call <2 x double> @llvm.experimental.constrained.sqrt.v2f64(

@@ -12,7 +12,7 @@
 #include "clang/Driver/Options.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Option/ArgList.h"
-#include "llvm/Support/Host.h"
+#include "llvm/TargetParser/Host.h"
 
 using namespace clang::driver;
 using namespace clang::driver::tools;
@@ -63,10 +63,6 @@ const char *sparc::getSparcAsmModeForCPU(StringRef Name,
         .Case("ma2480", "-Aleon")
         .Case("ma2485", "-Aleon")
         .Case("ma2x8x", "-Aleon")
-        .Case("myriad2", "-Aleon")
-        .Case("myriad2.1", "-Aleon")
-        .Case("myriad2.2", "-Aleon")
-        .Case("myriad2.3", "-Aleon")
         .Case("leon2", "-Av8")
         .Case("at697e", "-Av8")
         .Case("at697f", "-Av8")
@@ -118,12 +114,6 @@ sparc::FloatABI sparc::getSparcFloatABI(const Driver &D,
 
 std::string sparc::getSparcTargetCPU(const Driver &D, const ArgList &Args,
                                      const llvm::Triple &Triple) {
-  if (const Arg *A = Args.getLastArg(clang::driver::options::OPT_march_EQ)) {
-    D.Diag(diag::err_drv_unsupported_opt_for_target)
-        << A->getSpelling() << Triple.getTriple();
-    return "";
-  }
-
   if (const Arg *A = Args.getLastArg(clang::driver::options::OPT_mcpu_EQ)) {
     StringRef CPUName = A->getValue();
     if (CPUName == "native") {

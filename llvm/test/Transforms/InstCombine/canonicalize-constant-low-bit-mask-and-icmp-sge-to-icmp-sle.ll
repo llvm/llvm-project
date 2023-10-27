@@ -16,8 +16,8 @@
 
 define i1 @p0(i8 %x) {
 ; CHECK-LABEL: @p0(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i8 [[X:%.*]], 4
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RET:%.*]] = icmp slt i8 [[X:%.*]], 4
+; CHECK-NEXT:    ret i1 [[RET]]
 ;
   %tmp0 = and i8 %x, 3
   %ret = icmp sge i8 %tmp0, %x
@@ -30,8 +30,8 @@ define i1 @p0(i8 %x) {
 
 define <2 x i1> @p1_vec_splat(<2 x i8> %x) {
 ; CHECK-LABEL: @p1_vec_splat(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt <2 x i8> [[X:%.*]], <i8 4, i8 4>
-; CHECK-NEXT:    ret <2 x i1> [[TMP1]]
+; CHECK-NEXT:    [[RET:%.*]] = icmp slt <2 x i8> [[X:%.*]], <i8 4, i8 4>
+; CHECK-NEXT:    ret <2 x i1> [[RET]]
 ;
   %tmp0 = and <2 x i8> %x, <i8 3, i8 3>
   %ret = icmp sge <2 x i8> %tmp0, %x
@@ -40,8 +40,8 @@ define <2 x i1> @p1_vec_splat(<2 x i8> %x) {
 
 define <2 x i1> @p2_vec_nonsplat(<2 x i8> %x) {
 ; CHECK-LABEL: @p2_vec_nonsplat(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt <2 x i8> [[X:%.*]], <i8 4, i8 16>
-; CHECK-NEXT:    ret <2 x i1> [[TMP1]]
+; CHECK-NEXT:    [[RET:%.*]] = icmp slt <2 x i8> [[X:%.*]], <i8 4, i8 16>
+; CHECK-NEXT:    ret <2 x i1> [[RET]]
 ;
   %tmp0 = and <2 x i8> %x, <i8 3, i8 15> ; doesn't have to be splat.
   %ret = icmp sge <2 x i8> %tmp0, %x
@@ -61,8 +61,8 @@ define <2 x i1> @p2_vec_nonsplat_edgecase(<2 x i8> %x) {
 
 define <3 x i1> @p3_vec_splat_undef(<3 x i8> %x) {
 ; CHECK-LABEL: @p3_vec_splat_undef(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt <3 x i8> [[X:%.*]], <i8 4, i8 4, i8 4>
-; CHECK-NEXT:    ret <3 x i1> [[TMP1]]
+; CHECK-NEXT:    [[RET:%.*]] = icmp slt <3 x i8> [[X:%.*]], <i8 4, i8 4, i8 4>
+; CHECK-NEXT:    ret <3 x i1> [[RET]]
 ;
   %tmp0 = and <3 x i8> %x, <i8 3, i8 undef, i8 3>
   %ret = icmp sge <3 x i8> %tmp0, %x
@@ -79,8 +79,8 @@ define i1 @oneuse0(i8 %x) {
 ; CHECK-LABEL: @oneuse0(
 ; CHECK-NEXT:    [[TMP0:%.*]] = and i8 [[X:%.*]], 3
 ; CHECK-NEXT:    call void @use8(i8 [[TMP0]])
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i8 [[X]], 4
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[RET:%.*]] = icmp slt i8 [[X]], 4
+; CHECK-NEXT:    ret i1 [[RET]]
 ;
   %tmp0 = and i8 %x, 3
   call void @use8(i8 %tmp0)

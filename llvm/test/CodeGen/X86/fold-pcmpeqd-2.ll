@@ -17,18 +17,16 @@
 define void @program_1(ptr %dest, ptr %t0, <4 x float> %p0, <4 x float> %p1, <4 x float> %p4, <4 x float> %p5, <4 x float> %p6) nounwind {
 ; X32-LABEL: program_1:
 ; X32:       ## %bb.0: ## %entry
-; X32-NEXT:    pushl %esi
-; X32-NEXT:    subl $88, %esp
 ; X32-NEXT:    cmpl $0, 0
 ; X32-NEXT:    jle LBB0_2
 ; X32-NEXT:  ## %bb.1: ## %forcond
 ; X32-NEXT:    cmpl $0, 0
 ; X32-NEXT:    jg LBB0_3
 ; X32-NEXT:  LBB0_2: ## %ifthen
-; X32-NEXT:    addl $88, %esp
-; X32-NEXT:    popl %esi
 ; X32-NEXT:    retl
 ; X32-NEXT:  LBB0_3: ## %forbody
+; X32-NEXT:    pushl %esi
+; X32-NEXT:    subl $88, %esp
 ; X32-NEXT:    movaps {{.*#+}} xmm1 = [1.28E+2,1.28E+2,1.28E+2,1.28E+2]
 ; X32-NEXT:    minps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
 ; X32-NEXT:    cvttps2dq %xmm1, %xmm0
@@ -101,18 +99,16 @@ define void @program_1(ptr %dest, ptr %t0, <4 x float> %p0, <4 x float> %p1, <4 
 ;
 ; X64-LABEL: program_1:
 ; X64:       ## %bb.0: ## %entry
-; X64-NEXT:    pushq %rbx
-; X64-NEXT:    subq $64, %rsp
 ; X64-NEXT:    cmpl $0, 0
 ; X64-NEXT:    jle LBB0_2
 ; X64-NEXT:  ## %bb.1: ## %forcond
 ; X64-NEXT:    cmpl $0, 0
 ; X64-NEXT:    jg LBB0_3
 ; X64-NEXT:  LBB0_2: ## %ifthen
-; X64-NEXT:    addq $64, %rsp
-; X64-NEXT:    popq %rbx
 ; X64-NEXT:    retq
 ; X64-NEXT:  LBB0_3: ## %forbody
+; X64-NEXT:    pushq %rbx
+; X64-NEXT:    subq $64, %rsp
 ; X64-NEXT:    xorps %xmm0, %xmm0
 ; X64-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) ## 16-byte Spill
 ; X64-NEXT:    movaps {{.*#+}} xmm1 = [1.28E+2,1.28E+2,1.28E+2,1.28E+2]

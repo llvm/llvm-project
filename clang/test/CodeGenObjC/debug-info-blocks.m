@@ -1,25 +1,23 @@
-// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -fblocks -debug-info-kind=limited  -triple x86_64-apple-darwin10 -fobjc-dispatch-method=mixed -x objective-c < %s -o - | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm -fblocks -debug-info-kind=limited  -triple x86_64-apple-darwin10 -fobjc-dispatch-method=mixed -x objective-c < %s -o - | FileCheck %s
 
-// rdar://problem/9279956
 // Test that we generate the proper debug location for a captured self.
 // The second half of this test is in llvm/tests/DebugInfo/debug-info-blocks.ll
 
 // CHECK: define {{.*}}_block_invoke
-// CHECK: %[[BLOCK:.*]] = bitcast i8* %.block_descriptor to <{ i8*, i32, i32, i8*, %struct.__block_descriptor*, %0* }>*, !dbg
-// CHECK-NEXT: store <{ i8*, i32, i32, i8*, %struct.__block_descriptor*, %0* }>* %[[BLOCK]], <{ i8*, i32, i32, i8*, %struct.__block_descriptor*, %0* }>** %[[ALLOCA:.*]], align
-// CHECK-NEXT: call void @llvm.dbg.declare(metadata <{ i8*, i32, i32, i8*, %struct.__block_descriptor*, %0* }>** %[[ALLOCA]], metadata ![[SELF:[0-9]+]], metadata !{{.*}})
-// CHECK-NEXT: call void @llvm.dbg.declare(metadata %1** %d, metadata ![[D:[0-9]+]], metadata !{{.*}})
+// CHECK: store ptr %.block_descriptor, ptr %[[ALLOCA:block.addr]], align
+// CHECK-NEXT: call void @llvm.dbg.declare(metadata ptr %[[ALLOCA]], metadata ![[SELF:[0-9]+]], metadata !{{.*}})
+// CHECK-NEXT: call void @llvm.dbg.declare(metadata ptr %d, metadata ![[D:[0-9]+]], metadata !{{.*}})
 
 // Test that we do emit scope info for the helper functions, and that the
 // parameters to these functions are marked as artificial (so the debugger
 // doesn't accidentally step into the function).
-// CHECK: define {{.*}} @__copy_helper_block_{{.*}}(i8* noundef %0, i8* noundef %1)
+// CHECK: define {{.*}} @__copy_helper_block_{{.*}}(ptr noundef %0, ptr noundef %1)
 // CHECK-NOT: ret
 // CHECK: call {{.*}}, !dbg ![[DBG_LINE:[0-9]+]]
 // CHECK-NOT: ret
 // CHECK: load {{.*}}, !dbg ![[DBG_LINE]]
 // CHECK: ret {{.*}}, !dbg ![[DBG_LINE]]
-// CHECK: define {{.*}} @__destroy_helper_block_{{.*}}(i8*
+// CHECK: define {{.*}} @__destroy_helper_block_{{.*}}(ptr
 // CHECK-NOT: ret
 // CHECK: load {{.*}}, !dbg ![[DESTROY_LINE:[0-9]+]]
 // CHECK: ret {{.*}}, !dbg ![[DESTROY_LINE]]

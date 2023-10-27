@@ -34,18 +34,18 @@ Sections:
         Flags:           [ BINDING_LOCAL ]
 ...
 
-# CHECK:        Name:            green
-# CHECK-NEXT:   Payload:         626172717578AA0600000003000000
 # CHECK:        Name:            red
 # CHECK-NEXT:   Payload:         666F6FBB0000000000000000
+# CHECK:        Name:            green
+# CHECK-NEXT:   Payload:         626172717578AA0600000003000000
 
 # RELOC:        Relocations:
 # RELOC-NEXT:       - Type:            R_WASM_SECTION_OFFSET_I32
-# RELOC-NEXT:         Index:           0
+# RELOC-NEXT:         Index:           1
 # RELOC-NEXT:         Offset:          0x7
 # RELOC-NEXT:         Addend:          6
 # RELOC-NEXT:       - Type:            R_WASM_SECTION_OFFSET_I32
-# RELOC-NEXT:         Index:           1
+# RELOC-NEXT:         Index:           0
 # RELOC-NEXT:         Offset:          0xB
 # RELOC-NEXT:         Addend:          3
 # RELOC-NEXT:    Name:            green

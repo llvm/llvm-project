@@ -1,9 +1,9 @@
 // Check code generation
-// RUN: %clang_cc1 -verify -triple x86_64-pc-linux-gnu -fopenmp -fopenmp-version=51 -emit-llvm %s -o - | FileCheck %s --check-prefix=IR
+// RUN: %clang_cc1 -verify -triple x86_64-pc-linux-gnu -fopenmp -emit-llvm %s -o - | FileCheck %s --check-prefix=IR
 
 // Check same results after serialization round-trip
-// RUN: %clang_cc1 -verify -triple x86_64-pc-linux-gnu -fopenmp -fopenmp-version=51 -emit-pch -o %t %s
-// RUN: %clang_cc1 -verify -triple x86_64-pc-linux-gnu -fopenmp -fopenmp-version=51 -include-pch %t -emit-llvm %s -o - | FileCheck %s --check-prefix=IR
+// RUN: %clang_cc1 -verify -triple x86_64-pc-linux-gnu -fopenmp -emit-pch -o %t %s
+// RUN: %clang_cc1 -verify -triple x86_64-pc-linux-gnu -fopenmp -include-pch %t -emit-llvm %s -o - | FileCheck %s --check-prefix=IR
 // expected-no-diagnostics
 
 #ifndef HEADER
@@ -21,7 +21,7 @@ extern "C" void body(...) {}
 // IR-NEXT:    store i32 %[[START:.+]], ptr %[[START_ADDR]], align 4
 // IR-NEXT:    store i32 %[[END:.+]], ptr %[[END_ADDR]], align 4
 // IR-NEXT:    store i32 %[[STEP:.+]], ptr %[[STEP_ADDR]], align 4
-// IR-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @2, i32 3, ptr @.omp_outlined., ptr %[[END_ADDR]], ptr %[[STEP_ADDR]], ptr %[[START_ADDR]])
+// IR-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @2, i32 3, ptr @func.omp_outlined, ptr %[[START_ADDR]], ptr %[[END_ADDR]], ptr %[[STEP_ADDR]])
 // IR-NEXT:    ret void
 // IR-NEXT:  }
 extern "C" void func(int start, int end, int step) {
@@ -32,13 +32,13 @@ extern "C" void func(int start, int end, int step) {
 }
 
 
-// IR-LABEL: @.omp_outlined.(
+// IR-LABEL: @func.omp_outlined(
 // IR-NEXT:  [[ENTRY:.*]]:
 // IR-NEXT:    %[[DOTGLOBAL_TID__ADDR:.+]] = alloca ptr, align 8
 // IR-NEXT:    %[[DOTBOUND_TID__ADDR:.+]] = alloca ptr, align 8
+// IR-NEXT:    %[[START_ADDR:.+]] = alloca ptr, align 8
 // IR-NEXT:    %[[END_ADDR:.+]] = alloca ptr, align 8
 // IR-NEXT:    %[[STEP_ADDR:.+]] = alloca ptr, align 8
-// IR-NEXT:    %[[START_ADDR:.+]] = alloca ptr, align 8
 // IR-NEXT:    %[[DOTOMP_IV:.+]] = alloca i32, align 4
 // IR-NEXT:    %[[TMP:.+]] = alloca i32, align 4
 // IR-NEXT:    %[[I:.+]] = alloca i32, align 4
@@ -57,12 +57,12 @@ extern "C" void func(int start, int end, int step) {
 // IR-NEXT:    %[[DOTUNROLL_INNER_IV_I:.+]] = alloca i32, align 4
 // IR-NEXT:    store ptr %[[DOTGLOBAL_TID_:.+]], ptr %[[DOTGLOBAL_TID__ADDR]], align 8
 // IR-NEXT:    store ptr %[[DOTBOUND_TID_:.+]], ptr %[[DOTBOUND_TID__ADDR]], align 8
+// IR-NEXT:    store ptr %[[START:.+]], ptr %[[START_ADDR]], align 8
 // IR-NEXT:    store ptr %[[END:.+]], ptr %[[END_ADDR]], align 8
 // IR-NEXT:    store ptr %[[STEP:.+]], ptr %[[STEP_ADDR]], align 8
-// IR-NEXT:    store ptr %[[START:.+]], ptr %[[START_ADDR]], align 8
+// IR-NEXT:    %[[TMP2:.+]] = load ptr, ptr %[[START_ADDR]], align 8
 // IR-NEXT:    %[[TMP0:.+]] = load ptr, ptr %[[END_ADDR]], align 8
 // IR-NEXT:    %[[TMP1:.+]] = load ptr, ptr %[[STEP_ADDR]], align 8
-// IR-NEXT:    %[[TMP2:.+]] = load ptr, ptr %[[START_ADDR]], align 8
 // IR-NEXT:    %[[TMP3:.+]] = load i32, ptr %[[TMP2]], align 4
 // IR-NEXT:    store i32 %[[TMP3]], ptr %[[I]], align 4
 // IR-NEXT:    %[[TMP4:.+]] = load i32, ptr %[[TMP2]], align 4

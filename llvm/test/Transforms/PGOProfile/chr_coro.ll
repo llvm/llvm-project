@@ -36,26 +36,38 @@ define ptr @test_chr_with_coro_id(ptr %i) !prof !14 {
 ; CHECK-LABEL: @test_chr_with_coro_id(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[I:%.*]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[TMP0]], 3
+; CHECK-NEXT:    [[DOTFR1:%.*]] = freeze i32 [[TMP0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[DOTFR1]], 3
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 3
-; CHECK-NEXT:    br i1 [[TMP2]], label %[[BB0:.*]], label %[[ENTRY_SPLIT_NONCHR:.*]], !prof !15
-; CHECK:       [[BB0]]:
+; CHECK-NEXT:    br i1 [[TMP2]], label [[BB0:%.*]], label [[ENTRY_SPLIT_NONCHR:%.*]], !prof [[PROF15:![0-9]+]]
+; CHECK:       bb0:
 ; CHECK-NEXT:    call void @foo()
-; CHECK-NEXT:    br label %[[BB_CORO_ID:.*]]
+; CHECK-NEXT:    br label [[BB_CORO_ID:%.*]]
+; CHECK:       entry.split.nonchr:
+; CHECK-NEXT:    [[TMP3:%.*]] = and i32 [[DOTFR1]], 1
+; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp eq i32 [[TMP3]], 0
+; CHECK-NEXT:    br i1 [[DOTNOT]], label [[BB1_NONCHR:%.*]], label [[BB0_NONCHR:%.*]], !prof [[PROF16:![0-9]+]]
+; CHECK:       bb0.nonchr:
+; CHECK-NEXT:    call void @foo()
+; CHECK-NEXT:    br label [[BB1_NONCHR]]
 ; CHECK:       bb1.nonchr:
-; CHECK-NEXT:    [[TMP4:%.*]] = and i32 [[TMP0]], 2
+; CHECK-NEXT:    [[TMP4:%.*]] = and i32 [[DOTFR1]], 2
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[TMP4]], 0
-; CHECK-NEXT:    br i1 [[TMP5]], label %[[BB2_NONCHR:.*]], label %[[BB_CORO_ID]], !prof !16
-; CHECK:       [[BB2_NONCHR]]:
+; CHECK-NEXT:    br i1 [[TMP5]], label [[BB2_NONCHR:%.*]], label [[BB_CORO_ID]], !prof [[PROF16]]
+; CHECK:       bb2.nonchr:
 ; CHECK-NEXT:    call void @foo()
-; CHECK-NEXT:    br label %[[BB_CORO_ID]]
-; CHECK:       [[BB_CORO_ID]]:
-; CHECK-NEXT:    [[ID:%.*]] = call token @llvm.coro.id
+; CHECK-NEXT:    br label [[BB_CORO_ID]]
+; CHECK:       bb.coro.id:
+; CHECK-NEXT:    [[ID:%.*]] = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr nonnull @f.resumers)
 ; CHECK-NEXT:    [[NEED_DYN_ALLOC:%.*]] = call i1 @llvm.coro.alloc(token [[ID]])
-; CHECK-NEXT:    br i1 [[NEED_DYN_ALLOC]], label %[[BB_CORO_DYN_ALLOC:.*]], label %[[BB_CORO_BEGIN:.*]]
-; CHECK:       [[BB_CORO_BEGIN]]:
-; CHECK-NEXT:    [[PHI:%.*]] = phi ptr [ null, %[[BB_CORO_ID]] ], [ %alloc, %[[BB_CORO_DYN_ALLOC]] ]
+; CHECK-NEXT:    br i1 [[NEED_DYN_ALLOC]], label [[BB_CORO_DYN_ALLOC:%.*]], label [[BB_CORO_BEGIN:%.*]]
+; CHECK:       bb.coro.dyn.alloc:
+; CHECK-NEXT:    [[ALLOC:%.*]] = call ptr @malloc(i32 24)
+; CHECK-NEXT:    br label [[BB_CORO_BEGIN]]
+; CHECK:       bb.coro.begin:
+; CHECK-NEXT:    [[PHI:%.*]] = phi ptr [ null, [[BB_CORO_ID]] ], [ [[ALLOC]], [[BB_CORO_DYN_ALLOC]] ]
 ; CHECK-NEXT:    [[HDL:%.*]] = call noalias nonnull ptr @llvm.coro.begin(token [[ID]], ptr [[PHI]])
+; CHECK-NEXT:    ret ptr [[HDL]]
 ;
 entry:
   %0 = load i32, ptr %i

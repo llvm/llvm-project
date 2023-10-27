@@ -9,7 +9,9 @@
 // <algorithm>
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-
+// TODO: make `join_view` non-experimental once D2770 is implemented.
+// UNSUPPORTED: !c++experimental
+// UNSUPPORTED: GCC-ALWAYS_INLINE-FIXME
 
 // template<bidirectional_iterator I1, sentinel_for<I1> S1, bidirectional_iterator I2>
 //   requires indirectly_copyable<I1, I2>

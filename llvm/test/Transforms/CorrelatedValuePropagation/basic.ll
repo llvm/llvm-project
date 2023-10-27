@@ -735,7 +735,7 @@ define i1 @umin_rhs_overdefined_lhs_range(i32 %a, i32 %b) {
   ret i1 %cmp2
 }
 
-define i1 @clamp_low1(i32 %a) {
+define i1 @clamp_low1(i32 noundef %a) {
 ; CHECK-LABEL: @clamp_low1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sge i32 [[A:%.*]], 5
@@ -762,7 +762,7 @@ out:
   ret i1 false
 }
 
-define i1 @clamp_low2(i32 %a) {
+define i1 @clamp_low2(i32 noundef %a) {
 ; CHECK-LABEL: @clamp_low2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sge i32 [[A:%.*]], 5
@@ -789,7 +789,7 @@ out:
   ret i1 false
 }
 
-define i1 @clamp_low3(i32 %a) {
+define i1 @clamp_low3(i32 noundef %a) {
 ; CHECK-LABEL: @clamp_low3(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sge i32 [[A:%.*]], 5
@@ -816,7 +816,7 @@ out:
   ret i1 false
 }
 
-define i1 @clamp_low4(i32 %a) {
+define i1 @clamp_low4(i32 noundef %a) {
 ; CHECK-LABEL: @clamp_low4(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sge i32 [[A:%.*]], 5
@@ -843,7 +843,7 @@ out:
   ret i1 false
 }
 
-define i1 @clamp_high1(i32 %a) {
+define i1 @clamp_high1(i32 noundef %a) {
 ; CHECK-LABEL: @clamp_high1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i32 [[A:%.*]], 5
@@ -870,7 +870,7 @@ out:
   ret i1 false
 }
 
-define i1 @clamp_high2(i32 %a) {
+define i1 @clamp_high2(i32 noundef %a) {
 ; CHECK-LABEL: @clamp_high2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i32 [[A:%.*]], 5
@@ -897,7 +897,7 @@ out:
   ret i1 false
 }
 
-define i1 @clamp_high3(i32 %a) {
+define i1 @clamp_high3(i32 noundef %a) {
 ; CHECK-LABEL: @clamp_high3(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i32 [[A:%.*]], 5
@@ -924,7 +924,7 @@ out:
   ret i1 false
 }
 
-define i1 @clamp_high4(i32 %a) {
+define i1 @clamp_high4(i32 noundef %a) {
 ; CHECK-LABEL: @clamp_high4(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i32 [[A:%.*]], 5
@@ -952,7 +952,7 @@ out:
 }
 
 ; Just showing arbitrary constants work, not really a clamp
-define i1 @not_clamp_high(i32 %a) {
+define i1 @not_clamp_high(i32 noundef %a) {
 ; CHECK-LABEL: @not_clamp_high(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i32 [[A:%.*]], 5

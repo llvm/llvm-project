@@ -172,9 +172,9 @@ public:
   /// If the union is set to the first pointer type get an address pointing to
   /// it.
   First *getAddrOfPtr1() {
-    assert(is<First>() && "Val is not the first pointer");
+    assert(isa<First>(*this) && "Val is not the first pointer");
     assert(
-        PointerLikeTypeTraits<First>::getAsVoidPointer(get<First>()) ==
+        PointerLikeTypeTraits<First>::getAsVoidPointer(cast<First>(*this)) ==
             this->Val.getPointer() &&
         "Can't get the address because PointerLikeTypeTraits changes the ptr");
     return const_cast<First *>(
@@ -231,7 +231,7 @@ template <typename... PTs> struct CastInfoPointerUnionImpl {
   }
 
   template <typename To> static To doCast(From &F) {
-    assert(isPossible<To>(F) && "cast to an incompatible type !");
+    assert(isPossible<To>(F) && "cast to an incompatible type!");
     return PointerLikeTypeTraits<To>::getFromVoidPointer(F.Val.getPointer());
   }
 };

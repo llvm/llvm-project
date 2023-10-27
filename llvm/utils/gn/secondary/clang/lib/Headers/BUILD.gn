@@ -22,6 +22,13 @@ clang_tablegen("arm_sve") {
   output_name = "arm_sve.h"
 }
 
+# Generate arm_sme_draft_spec_subject_to_change.h
+clang_tablegen("arm_sme_draft_spec_subject_to_change") {
+  args = [ "-gen-arm-sme-header" ]
+  td_file = "//clang/include/clang/Basic/arm_sme.td"
+  output_name = "arm_sme_draft_spec_subject_to_change.h"
+}
+
 # Generate arm_bf16.h
 clang_tablegen("arm_bf16") {
   args = [ "-gen-arm-bf16" ]
@@ -58,6 +65,7 @@ copy("tablegen_headers") {
     ":arm_fp16",
     ":arm_mve",
     ":arm_neon",
+    ":arm_sme_draft_spec_subject_to_change",
     ":arm_sve",
     ":riscv_vector",
   ]
@@ -87,12 +95,27 @@ copy("Headers") {
     "__clang_hip_math.h",
     "__clang_hip_runtime_wrapper.h",
     "__clang_hip_stdlib.h",
+    "__stdarg___gnuc_va_list.h",
+    "__stdarg___va_copy.h",
+    "__stdarg_va_arg.h",
+    "__stdarg_va_copy.h",
+    "__stdarg_va_list.h",
     "__stddef_max_align_t.h",
+    "__stddef_null.h",
+    "__stddef_nullptr_t.h",
+    "__stddef_offsetof.h",
+    "__stddef_ptrdiff_t.h",
+    "__stddef_rsize_t.h",
+    "__stddef_size_t.h",
+    "__stddef_unreachable.h",
+    "__stddef_wchar_t.h",
+    "__stddef_wint_t.h",
     "__wmmintrin_aes.h",
     "__wmmintrin_pclmul.h",
     "adxintrin.h",
     "altivec.h",
     "ammintrin.h",
+    "amxcomplexintrin.h",
     "amxfp16intrin.h",
     "amxintrin.h",
     "arm64intr.h",
@@ -132,6 +155,7 @@ copy("Headers") {
     "avxifmaintrin.h",
     "avxintrin.h",
     "avxneconvertintrin.h",
+    "avxvnniint16intrin.h",
     "avxvnniint8intrin.h",
     "avxvnniintrin.h",
     "bmi2intrin.h",
@@ -147,6 +171,8 @@ copy("Headers") {
     "cpuid.h",
     "crc32intrin.h",
     "cuda_wrappers/algorithm",
+    "cuda_wrappers/bits/basic_string.h",
+    "cuda_wrappers/bits/shared_ptr_base.h",
     "cuda_wrappers/complex",
     "cuda_wrappers/new",
     "emmintrin.h",
@@ -176,6 +202,13 @@ copy("Headers") {
     "keylockerintrin.h",
     "larchintrin.h",
     "limits.h",
+    "llvm_libc_wrappers/assert.h",
+    "llvm_libc_wrappers/ctype.h",
+    "llvm_libc_wrappers/inttypes.h",
+    "llvm_libc_wrappers/stdio.h",
+    "llvm_libc_wrappers/stdlib.h",
+    "llvm_libc_wrappers/string.h",
+    "llvm_libc_wrappers/time.h",
     "lwpintrin.h",
     "lzcntintrin.h",
     "mm3dnow.h",
@@ -203,6 +236,7 @@ copy("Headers") {
     "ppc_wrappers/immintrin.h",
     "ppc_wrappers/mm_malloc.h",
     "ppc_wrappers/mmintrin.h",
+    "ppc_wrappers/nmmintrin.h",
     "ppc_wrappers/pmmintrin.h",
     "ppc_wrappers/smmintrin.h",
     "ppc_wrappers/tmmintrin.h",
@@ -215,11 +249,16 @@ copy("Headers") {
     "raointintrin.h",
     "rdpruintrin.h",
     "rdseedintrin.h",
+    "riscv_ntlh.h",
     "rtmintrin.h",
     "s390intrin.h",
     "serializeintrin.h",
     "sgxintrin.h",
+    "sha512intrin.h",
     "shaintrin.h",
+    "sifive_vector.h",
+    "sm3intrin.h",
+    "sm4intrin.h",
     "smmintrin.h",
     "stdalign.h",
     "stdarg.h",
@@ -234,6 +273,7 @@ copy("Headers") {
     "tsxldtrkintrin.h",
     "uintrintrin.h",
     "unwind.h",
+    "usermsrintrin.h",
     "vadefs.h",
     "vaesintrin.h",
     "varargs.h",

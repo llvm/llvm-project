@@ -9,8 +9,8 @@
 #ifndef LLVM_MC_MCOBJECTWRITER_H
 #define LLVM_MC_MCOBJECTWRITER_H
 
-#include "llvm/ADT/Triple.h"
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/TargetParser/Triple.h"
 #include <cstdint>
 
 namespace llvm {
@@ -109,6 +109,9 @@ public:
                                  unsigned LanguageCode, unsigned ReasonCode,
                                  unsigned FunctionSize, bool hasDebug) {
     report_fatal_error("addExceptionEntry is only supported on XCOFF targets");
+  }
+  virtual void addCInfoSymEntry(StringRef Name, StringRef Metadata) {
+    report_fatal_error("addCInfoSymEntry is only supported on XCOFF targets");
   }
   /// Write the object file and returns the number of bytes written.
   ///

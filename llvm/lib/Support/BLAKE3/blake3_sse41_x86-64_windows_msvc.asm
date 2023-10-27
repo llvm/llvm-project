@@ -1,15 +1,15 @@
-public _blake3_hash_many_sse41
-public blake3_hash_many_sse41
-public blake3_compress_in_place_sse41
-public _blake3_compress_in_place_sse41
-public blake3_compress_xof_sse41
-public _blake3_compress_xof_sse41
+public _llvm_blake3_hash_many_sse41
+public llvm_blake3_hash_many_sse41
+public llvm_blake3_compress_in_place_sse41
+public _llvm_blake3_compress_in_place_sse41
+public llvm_blake3_compress_xof_sse41
+public _llvm_blake3_compress_xof_sse41
 
 _TEXT   SEGMENT ALIGN(16) 'CODE'
 
 ALIGN   16
-blake3_hash_many_sse41 PROC
-_blake3_hash_many_sse41 PROC
+llvm_blake3_hash_many_sse41 PROC
+_llvm_blake3_hash_many_sse41 PROC
         push    r15
         push    r14
         push    r13
@@ -1797,11 +1797,11 @@ endroundloop1:
         movups  xmmword ptr [rbx], xmm0
         movups  xmmword ptr [rbx+10H], xmm1
         jmp     unwind
-_blake3_hash_many_sse41 ENDP
-blake3_hash_many_sse41 ENDP
+_llvm_blake3_hash_many_sse41 ENDP
+llvm_blake3_hash_many_sse41 ENDP
 
-blake3_compress_in_place_sse41 PROC
-_blake3_compress_in_place_sse41 PROC
+llvm_blake3_compress_in_place_sse41 PROC
+_llvm_blake3_compress_in_place_sse41 PROC
         sub     rsp, 120
         movdqa  xmmword ptr [rsp], xmm6
         movdqa  xmmword ptr [rsp+10H], xmm7
@@ -1916,12 +1916,12 @@ _blake3_compress_in_place_sse41 PROC
         movdqa  xmm15, xmmword ptr [rsp+60H]
         add     rsp, 120
         ret
-_blake3_compress_in_place_sse41 ENDP
-blake3_compress_in_place_sse41 ENDP
+_llvm_blake3_compress_in_place_sse41 ENDP
+llvm_blake3_compress_in_place_sse41 ENDP
 
 ALIGN 16
-blake3_compress_xof_sse41 PROC
-_blake3_compress_xof_sse41 PROC
+llvm_blake3_compress_xof_sse41 PROC
+_llvm_blake3_compress_xof_sse41 PROC
         sub     rsp, 120
         movdqa  xmmword ptr [rsp], xmm6
         movdqa  xmmword ptr [rsp+10H], xmm7
@@ -2043,8 +2043,8 @@ _blake3_compress_xof_sse41 PROC
         movdqa  xmm15, xmmword ptr [rsp+60H]
         add     rsp, 120
         ret
-_blake3_compress_xof_sse41 ENDP
-blake3_compress_xof_sse41 ENDP
+_llvm_blake3_compress_xof_sse41 ENDP
+llvm_blake3_compress_xof_sse41 ENDP
 
 _TEXT ENDS
 

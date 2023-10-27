@@ -23,7 +23,6 @@ struct S {
 
 // CHECK: return (*(struct S *)((char *)self + OBJC_IVAR_$_I$struct_ivar));
 
-// rdar://11323187
 @interface Foo{
     @protected 
     struct {

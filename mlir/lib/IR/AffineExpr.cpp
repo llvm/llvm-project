@@ -533,6 +533,14 @@ AffineExpr mlir::getAffineConstantExpr(int64_t constant, MLIRContext *context) {
   return uniquer.get<AffineConstantExprStorage>(assignCtx, constant);
 }
 
+SmallVector<AffineExpr>
+mlir::getAffineConstantExprs(ArrayRef<int64_t> constants,
+                             MLIRContext *context) {
+  return llvm::to_vector(llvm::map_range(constants, [&](int64_t constant) {
+    return getAffineConstantExpr(constant, context);
+  }));
+}
+
 /// Simplify add expression. Return nullptr if it can't be simplified.
 static AffineExpr simplifyAdd(AffineExpr lhs, AffineExpr rhs) {
   auto lhsConst = lhs.dyn_cast<AffineConstantExpr>();
@@ -1290,7 +1298,7 @@ void SimpleAffineExprFlattener::addLocalVariableSemiAffine(
 // A floordiv is thus flattened by introducing a new local variable q, and
 // replacing that expression with 'q' while adding the constraints
 // c * q <= expr <= c * q + c - 1 to localVarCst (done by
-// FlatAffineConstraints::addLocalFloorDiv).
+// IntegerRelation::addLocalFloorDiv).
 //
 // A ceildiv is similarly flattened:
 // t = expr ceildiv c   <=> t =  (expr + c - 1) floordiv c

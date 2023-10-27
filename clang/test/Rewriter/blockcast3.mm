@@ -3,7 +3,6 @@
 // RUN: FileCheck -check-prefix CHECK-LP --input-file=%t-rw.cpp %s
 // RUN: %clang_cc1 -x objective-c++ -fblocks -fms-extensions -rewrite-objc %t.mm -o %t-modern-rw.cpp
 // RUN: FileCheck -check-prefix CHECK-LP --input-file=%t-modern-rw.cpp %s
-// radar 7607781
 
 typedef struct {
 	int a;

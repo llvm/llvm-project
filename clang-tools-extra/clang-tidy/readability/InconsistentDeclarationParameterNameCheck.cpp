@@ -91,8 +91,8 @@ bool nameMatch(StringRef L, StringRef R, bool Strict) {
     return L.empty() || R.empty() || L == R;
   // We allow two names if one is a prefix/suffix of the other, ignoring case.
   // Important special case: this is true if either parameter has no name!
-  return L.startswith_insensitive(R) || R.startswith_insensitive(L) ||
-         L.endswith_insensitive(R) || R.endswith_insensitive(L);
+  return L.starts_with_insensitive(R) || R.starts_with_insensitive(L) ||
+         L.ends_with_insensitive(R) || R.ends_with_insensitive(L);
 }
 
 DifferingParamsContainer

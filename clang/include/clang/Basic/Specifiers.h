@@ -19,6 +19,9 @@
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/ErrorHandling.h"
 
+namespace llvm {
+class raw_ostream;
+} // namespace llvm
 namespace clang {
 
   /// Define the meaning of possible values of the kind in ExplicitSpecifier.
@@ -79,10 +82,10 @@ namespace clang {
     TST_class,     // C++ class type
     TST_interface, // C++ (Microsoft-specific) __interface type
     TST_typename,  // Typedef, C++ class-name or enum name, etc.
-    TST_typeofType,        // C2x (and GNU extension) typeof(type-name)
-    TST_typeofExpr,        // C2x (and GNU extension) typeof(expression)
-    TST_typeof_unqualType, // C2x typeof_unqual(type-name)
-    TST_typeof_unqualExpr, // C2x typeof_unqual(expression)
+    TST_typeofType,        // C23 (and GNU extension) typeof(type-name)
+    TST_typeofExpr,        // C23 (and GNU extension) typeof(expression)
+    TST_typeof_unqualType, // C23 typeof_unqual(type-name)
+    TST_typeof_unqualExpr, // C23 typeof_unqual(expression)
     TST_decltype, // C++11 decltype
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) TST_##Trait,
 #include "clang/Basic/TransformTypeTraits.def"
@@ -285,6 +288,7 @@ namespace clang {
     CC_AArch64VectorCall, // __attribute__((aarch64_vector_pcs))
     CC_AArch64SVEPCS, // __attribute__((aarch64_sve_pcs))
     CC_AMDGPUKernelCall, // __attribute__((amdgpu_kernel))
+    CC_M68kRTD,       // __attribute__((m68k_rtd))
   };
 
   /// Checks whether the given calling convention supports variadic
@@ -301,6 +305,7 @@ namespace clang {
     case CC_OpenCLKernel:
     case CC_Swift:
     case CC_SwiftAsync:
+    case CC_M68kRTD:
       return false;
     default:
       return true;
@@ -333,6 +338,8 @@ namespace clang {
     // parameters are assumed to only get null on error.
     NullableResult,
   };
+  /// Prints human-readable debug representation.
+  llvm::raw_ostream &operator<<(llvm::raw_ostream&, NullabilityKind);
 
   /// Return true if \p L has a weaker nullability annotation than \p R. The
   /// ordering is: Unspecified < Nullable < NonNull.

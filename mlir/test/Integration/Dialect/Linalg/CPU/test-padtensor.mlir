@@ -1,10 +1,11 @@
 // RUN: mlir-opt %s -test-linalg-transform-patterns=test-linalg-to-vector-patterns \
 // RUN: -empty-tensor-to-alloc-tensor -linalg-bufferize -arith-bufferize \
 // RUN: -bufferization-bufferize -tensor-bufferize -func-bufferize \
-// RUN: -finalizing-bufferize -buffer-deallocation \
-// RUN: -convert-linalg-to-loops -convert-scf-to-cf -convert-linalg-to-llvm -expand-strided-metadata -lower-affine -convert-arith-to-llvm -convert-memref-to-llvm -convert-func-to-llvm -reconcile-unrealized-casts | \
+// RUN: -finalizing-bufferize -buffer-deallocation-pipeline -convert-bufferization-to-memref \
+// RUN: -convert-linalg-to-loops -convert-scf-to-cf -expand-strided-metadata \
+// RUN: -lower-affine -convert-arith-to-llvm -finalize-memref-to-llvm -convert-func-to-llvm -reconcile-unrealized-casts | \
 // RUN: mlir-cpu-runner -e main -entry-point-result=void \
-// RUN:   -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext,%mlir_lib_dir/libmlir_runner_utils%shlibext \
+// RUN:   -shared-libs=%mlir_c_runner_utils,%mlir_runner_utils \
 // RUN: | FileCheck %s
 
 

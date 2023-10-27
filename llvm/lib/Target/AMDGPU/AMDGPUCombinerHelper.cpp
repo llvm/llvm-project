@@ -9,6 +9,7 @@
 #include "AMDGPUCombinerHelper.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
+#include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/Target/TargetMachine.h"
@@ -42,7 +43,7 @@ static bool fnegFoldsIntoMI(const MachineInstr &MI) {
   case AMDGPU::G_AMDGPU_FMAX_LEGACY:
     return true;
   case AMDGPU::G_INTRINSIC: {
-    unsigned IntrinsicID = MI.getIntrinsicID();
+    unsigned IntrinsicID = cast<GIntrinsic>(MI).getIntrinsicID();
     switch (IntrinsicID) {
     case Intrinsic::amdgcn_rcp:
     case Intrinsic::amdgcn_rcp_legacy:
@@ -66,8 +67,7 @@ static bool fnegFoldsIntoMI(const MachineInstr &MI) {
 LLVM_READONLY
 static bool opMustUseVOP3Encoding(const MachineInstr &MI,
                                   const MachineRegisterInfo &MRI) {
-  return MI.getNumOperands() >
-             (MI.getOpcode() == AMDGPU::G_INTRINSIC ? 4u : 3u) ||
+  return MI.getNumOperands() > (isa<GIntrinsic>(MI) ? 4u : 3u) ||
          MRI.getType(MI.getOperand(0).getReg()).getScalarSizeInBits() == 64;
 }
 
@@ -85,14 +85,16 @@ static bool hasSourceMods(const MachineInstr &MI) {
   case TargetOpcode::INLINEASM:
   case TargetOpcode::INLINEASM_BR:
   case AMDGPU::G_INTRINSIC_W_SIDE_EFFECTS:
+  case AMDGPU::G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS:
   case AMDGPU::G_BITCAST:
   case AMDGPU::G_ANYEXT:
   case AMDGPU::G_BUILD_VECTOR:
   case AMDGPU::G_BUILD_VECTOR_TRUNC:
   case AMDGPU::G_PHI:
     return false;
-  case AMDGPU::G_INTRINSIC: {
-    unsigned IntrinsicID = MI.getIntrinsicID();
+  case AMDGPU::G_INTRINSIC:
+  case AMDGPU::G_INTRINSIC_CONVERGENT: {
+    unsigned IntrinsicID = cast<GIntrinsic>(MI).getIntrinsicID();
     switch (IntrinsicID) {
     case Intrinsic::amdgcn_interp_p1:
     case Intrinsic::amdgcn_interp_p2:
@@ -227,8 +229,9 @@ bool AMDGPUCombinerHelper::matchFoldableFneg(MachineInstr &MI,
   case AMDGPU::G_FCANONICALIZE:
   case AMDGPU::G_AMDGPU_RCP_IFLAG:
     return true;
-  case AMDGPU::G_INTRINSIC: {
-    unsigned IntrinsicID = MatchInfo->getIntrinsicID();
+  case AMDGPU::G_INTRINSIC:
+  case AMDGPU::G_INTRINSIC_CONVERGENT: {
+    unsigned IntrinsicID = cast<GIntrinsic>(MatchInfo)->getIntrinsicID();
     switch (IntrinsicID) {
     case Intrinsic::amdgcn_rcp:
     case Intrinsic::amdgcn_rcp_legacy:
@@ -326,8 +329,9 @@ void AMDGPUCombinerHelper::applyFoldableFneg(MachineInstr &MI,
   case AMDGPU::G_FPTRUNC:
     NegateOperand(MatchInfo->getOperand(1));
     break;
-  case AMDGPU::G_INTRINSIC: {
-    unsigned IntrinsicID = MatchInfo->getIntrinsicID();
+  case AMDGPU::G_INTRINSIC:
+  case AMDGPU::G_INTRINSIC_CONVERGENT: {
+    unsigned IntrinsicID = cast<GIntrinsic>(MatchInfo)->getIntrinsicID();
     switch (IntrinsicID) {
     case Intrinsic::amdgcn_rcp:
     case Intrinsic::amdgcn_rcp_legacy:
@@ -378,5 +382,58 @@ void AMDGPUCombinerHelper::applyFoldableFneg(MachineInstr &MI,
     Builder.buildFNeg(MatchInfoDst, NegatedMatchInfo, MI.getFlags());
   }
 
+  MI.eraseFromParent();
+}
+
+// TODO: Should return converted value / extension source and avoid introducing
+// intermediate fptruncs in the apply function.
+static bool isFPExtFromF16OrConst(const MachineRegisterInfo &MRI,
+                                  Register Reg) {
+  const MachineInstr *Def = MRI.getVRegDef(Reg);
+  if (Def->getOpcode() == TargetOpcode::G_FPEXT) {
+    Register SrcReg = Def->getOperand(1).getReg();
+    return MRI.getType(SrcReg) == LLT::scalar(16);
+  }
+
+  if (Def->getOpcode() == TargetOpcode::G_FCONSTANT) {
+    APFloat Val = Def->getOperand(1).getFPImm()->getValueAPF();
+    bool LosesInfo = true;
+    Val.convert(APFloat::IEEEhalf(), APFloat::rmNearestTiesToEven, &LosesInfo);
+    return !LosesInfo;
+  }
+
+  return false;
+}
+
+bool AMDGPUCombinerHelper::matchExpandPromotedF16FMed3(MachineInstr &MI,
+                                                       Register Src0,
+                                                       Register Src1,
+                                                       Register Src2) {
+  assert(MI.getOpcode() == TargetOpcode::G_FPTRUNC);
+  Register SrcReg = MI.getOperand(1).getReg();
+  if (!MRI.hasOneNonDBGUse(SrcReg) || MRI.getType(SrcReg) != LLT::scalar(32))
+    return false;
+
+  return isFPExtFromF16OrConst(MRI, Src0) && isFPExtFromF16OrConst(MRI, Src1) &&
+         isFPExtFromF16OrConst(MRI, Src2);
+}
+
+void AMDGPUCombinerHelper::applyExpandPromotedF16FMed3(MachineInstr &MI,
+                                                       Register Src0,
+                                                       Register Src1,
+                                                       Register Src2) {
+  Builder.setInstrAndDebugLoc(MI);
+
+  // We expect fptrunc (fpext x) to fold out, and to constant fold any constant
+  // sources.
+  Src0 = Builder.buildFPTrunc(LLT::scalar(16), Src0).getReg(0);
+  Src1 = Builder.buildFPTrunc(LLT::scalar(16), Src1).getReg(0);
+  Src2 = Builder.buildFPTrunc(LLT::scalar(16), Src2).getReg(0);
+
+  LLT Ty = MRI.getType(Src0);
+  auto A1 = Builder.buildFMinNumIEEE(Ty, Src0, Src1);
+  auto B1 = Builder.buildFMaxNumIEEE(Ty, Src0, Src1);
+  auto C1 = Builder.buildFMaxNumIEEE(Ty, A1, Src2);
+  Builder.buildFMinNumIEEE(MI.getOperand(0), B1, C1);
   MI.eraseFromParent();
 }

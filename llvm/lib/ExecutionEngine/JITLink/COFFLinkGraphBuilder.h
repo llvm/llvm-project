@@ -14,7 +14,6 @@
 #define LIB_EXECUTIONENGINE_JITLINK_COFFLINKGRAPHBUILDER_H
 
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
 #include "llvm/Object/COFF.h"
 
@@ -39,6 +38,7 @@ protected:
   using COFFSymbolIndex = int32_t;
 
   COFFLinkGraphBuilder(const object::COFFObjectFile &Obj, Triple TT,
+                       SubtargetFeatures Features,
                        LinkGraph::GetEdgeKindNameFunction GetEdgeKindName);
 
   LinkGraph &getGraph() const { return *G; }
@@ -161,7 +161,7 @@ private:
                                  const object::coff_section *Section);
   static bool isComdatSection(const object::coff_section *Section);
   static unsigned getPointerSize(const object::COFFObjectFile &Obj);
-  static support::endianness getEndianness(const object::COFFObjectFile &Obj);
+  static llvm::endianness getEndianness(const object::COFFObjectFile &Obj);
   static StringRef getDLLImportStubPrefix() { return "__imp_"; }
   static StringRef getDirectiveSectionName() { return ".drectve"; }
   StringRef getCOFFSectionName(COFFSectionIndex SectionIndex,
@@ -192,6 +192,10 @@ Error COFFLinkGraphBuilder::forEachRelocation(const object::SectionRef &RelSec,
   Expected<StringRef> Name = Obj.getSectionName(COFFRelSect);
   if (!Name)
     return Name.takeError();
+
+  // Skip the unhandled metadata sections.
+  if (*Name == ".voltbl")
+    return Error::success();
   LLVM_DEBUG(dbgs() << "  " << *Name << ":\n");
 
   // Lookup the link-graph node corresponding to the target section name.

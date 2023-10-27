@@ -58,6 +58,7 @@ import argparse
 import subprocess
 import pygraphviz
 
+
 def toposort(g):
     """Topologically sort a graph.
 
@@ -88,7 +89,8 @@ def toposort(g):
                 # If that counter reaches zero, w is ready to output.
                 ready.add(w)
 
-def ancestors(g, translate = lambda x: x):
+
+def ancestors(g, translate=lambda x: x):
     """Form the set of ancestors for each vertex of a graph.
 
     The input g is a pygraphviz graph object representing a DAG. The function
@@ -107,7 +109,7 @@ def ancestors(g, translate = lambda x: x):
         vm = translate(v)
 
         # Make up a[v], based on a[predecessors of v].
-        a[v] = {vm} # include v itself
+        a[v] = {vm}  # include v itself
         for w in g.in_neighbors(v):
             a[v].update(a[w])
 
@@ -115,14 +117,16 @@ def ancestors(g, translate = lambda x: x):
         # doesn't get the trivial dependency of v on itself.
         yield vm, a[v].difference({vm})
 
+
 def main():
     parser = argparse.ArgumentParser(
-        description='Find missing formal dependencies on generated include '
-        'files in a build.ninja file.')
-    parser.add_argument("-C", "--build-dir",
-                        help="Build directory (default cwd)")
-    parser.add_argument("-f", "--build-file",
-                        help="Build directory (default build.ninja)")
+        description="Find missing formal dependencies on generated include "
+        "files in a build.ninja file."
+    )
+    parser.add_argument("-C", "--build-dir", help="Build directory (default cwd)")
+    parser.add_argument(
+        "-f", "--build-file", help="Build directory (default build.ninja)"
+    )
     args = parser.parse_args()
 
     errs = 0
@@ -134,8 +138,9 @@ def main():
         ninja_prefix.extend(["-f", args.build_file])
 
     # Get the formal dependency graph and decode it using pygraphviz.
-    g = pygraphviz.AGraph(subprocess.check_output(
-        ninja_prefix + ["-t", "graph"]).decode("UTF-8"))
+    g = pygraphviz.AGraph(
+        subprocess.check_output(ninja_prefix + ["-t", "graph"]).decode("UTF-8")
+    )
 
     # Helper function to ask for the label of a vertex, which is where ninja's
     # Graphviz output keeps the actual file name of the target.
@@ -153,8 +158,11 @@ def main():
     # Fetch the cached dependency data and check it against our formal ancestry
     # data.
     currtarget = None
-    for line in (subprocess.check_output(ninja_prefix + ["-t", "deps"])
-                 .decode("UTF-8").splitlines()):
+    for line in (
+        subprocess.check_output(ninja_prefix + ["-t", "deps"])
+        .decode("UTF-8")
+        .splitlines()
+    ):
         # ninja -t deps output consists of stanzas of the following form,
         # separated by a blank line:
         #
@@ -176,10 +184,15 @@ def main():
             # cache is not cleared when build.ninja changes, so it can contain
             # stale data from targets that existed only in past builds in the
             # same directory.
-            if (dep in targets and currtarget in deps and
-                dep not in deps[currtarget]):
-                print("error:", currtarget, "requires", dep,
-                      "but has no dependency on it", file=sys.stderr)
+            if dep in targets and currtarget in deps and dep not in deps[currtarget]:
+                print(
+                    "error:",
+                    currtarget,
+                    "requires",
+                    dep,
+                    "but has no dependency on it",
+                    file=sys.stderr,
+                )
                 errs += 1
         elif ":" in line:
             currtarget = line.split(":", 1)[0]
@@ -187,5 +200,6 @@ def main():
     if errs:
         sys.exit("{:d} errors found".format(errs))
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

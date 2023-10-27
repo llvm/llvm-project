@@ -1,4 +1,6 @@
 # RUN: llc -O0 -run-pass=avr-expand-pseudo %s -o - | FileCheck %s
+# RUN: llc -O0 -run-pass=avr-expand-pseudo -mcpu=atxmega64a1 %s -o - \
+# RUN:     | FileCheck --check-prefix=XMEGA %s
 
 # This test checks the expansion of the 16-bit STSWRdK pseudo instruction.
 
@@ -17,9 +19,12 @@ body: |
     liveins: $r31r30
 
     ; CHECK-LABEL: test_stswkrr
+    ; CHECK:       STSKRr 2560, $r31
+    ; CHECK-NEXT:  STSKRr 2559, $r30
 
-    ; CHECK:      STSKRr 2560, $r31
-    ; CHECK-NEXT: STSKRr 2559, $r30
+    ; XMEGA-LABEL: test_stswkrr
+    ; XMEGA:       STSKRr 2559, $r30
+    ; XMEGA-NEXT:  STSKRr 2560, $r31
 
     STSWKRr 2559, $r31r30
 ...

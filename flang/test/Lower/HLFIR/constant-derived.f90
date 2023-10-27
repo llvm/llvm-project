@@ -1,5 +1,5 @@
 ! Test lowering of Constant<SomeDerived>.
-! RUN: bbc -hlfir -emit-fir -o - -I nowhere %s 2>&1 | FileCheck %s
+! RUN: bbc -emit-hlfir -o - -I nowhere %s 2>&1 | FileCheck %s
 
 subroutine test_constant_scalar()
   type myderived

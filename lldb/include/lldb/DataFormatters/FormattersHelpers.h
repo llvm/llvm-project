@@ -21,44 +21,42 @@
 namespace lldb_private {
 namespace formatters {
 void AddFormat(TypeCategoryImpl::SharedPointer category_sp, lldb::Format format,
-               ConstString type_name, TypeFormatImpl::Flags flags,
+               llvm::StringRef type_name, TypeFormatImpl::Flags flags,
                bool regex = false);
 
 void AddSummary(TypeCategoryImpl::SharedPointer category_sp,
-                lldb::TypeSummaryImplSP summary_sp, ConstString type_name,
+                lldb::TypeSummaryImplSP summary_sp, llvm::StringRef type_name,
                 bool regex = false);
 
 void AddStringSummary(TypeCategoryImpl::SharedPointer category_sp,
-                      const char *string, ConstString type_name,
+                      const char *string, llvm::StringRef type_name,
                       TypeSummaryImpl::Flags flags, bool regex = false);
 
 void AddOneLineSummary(TypeCategoryImpl::SharedPointer category_sp,
-                       ConstString type_name, TypeSummaryImpl::Flags flags,
+                       llvm::StringRef type_name, TypeSummaryImpl::Flags flags,
                        bool regex = false);
 
 /// Add a summary that is implemented by a C++ callback.
 void AddCXXSummary(TypeCategoryImpl::SharedPointer category_sp,
                    CXXFunctionSummaryFormat::Callback funct,
-                   const char *description, ConstString type_name,
+                   const char *description, llvm::StringRef type_name,
                    TypeSummaryImpl::Flags flags, bool regex = false);
 
 /// Add a synthetic that is implemented by a C++ callback.
 void AddCXXSynthetic(TypeCategoryImpl::SharedPointer category_sp,
                      CXXSyntheticChildren::CreateFrontEndCallback generator,
-                     const char *description, ConstString type_name,
+                     const char *description, llvm::StringRef type_name,
                      ScriptedSyntheticChildren::Flags flags,
                      bool regex = false);
 
 void AddFilter(TypeCategoryImpl::SharedPointer category_sp,
                std::vector<std::string> children, const char *description,
-               ConstString type_name, ScriptedSyntheticChildren::Flags flags,
-               bool regex = false);
+               llvm::StringRef type_name,
+               ScriptedSyntheticChildren::Flags flags, bool regex = false);
 
 size_t ExtractIndexFromString(const char *item_name);
 
 Address GetArrayAddressOrPointerValue(ValueObject &valobj);
-
-lldb::ValueObjectSP GetValueOfLibCXXCompressedPair(ValueObject &pair);
 
 time_t GetOSXEpoch();
 

@@ -13,7 +13,7 @@
 
 module __Fortran_type_info
 
-  use __Fortran_builtins, only: __builtin_c_ptr, __builtin_c_funptr
+  use, intrinsic :: __Fortran_builtins, only: __builtin_c_ptr, __builtin_c_funptr
 
   private
 
@@ -23,7 +23,7 @@ module __Fortran_type_info
     ! "TBP" bindings appear first.  Inherited bindings, with overrides already
     ! applied, appear in the initial entries in the same order as they
     ! appear in the parent type's bindings, if any.  They are followed
-    ! by new local bindings in alphabetic order of theing binding names.
+    ! by new local bindings in alphabetic order of their binding names.
     type(Binding), pointer, contiguous :: binding(:)
     character(len=:), pointer :: name
     integer(kind=int64) :: sizeInBytes
@@ -44,7 +44,7 @@ module __Fortran_type_info
     integer(1) :: hasParent
     integer(1) :: noInitializationNeeded ! 1 if no component w/ init
     integer(1) :: noDestructionNeeded ! 1 if no component w/ dealloc/final
-    integer(1) :: noFinalizationNeeded ! 1 if nothing finalizaable
+    integer(1) :: noFinalizationNeeded ! 1 if nothing finalizeable
     integer(1) :: __padding0(4)
   end type
 
@@ -108,7 +108,9 @@ module __Fortran_type_info
   type, bind(c) :: SpecialBinding
     integer(1) :: which ! SpecialBinding::Which
     integer(1) :: isArgDescriptorSet
-    integer(1) :: __padding0(6)
+    integer(1) :: isTypeBound
+    integer(1) :: isArgContiguousSet
+    integer(1) :: __padding0(4)
     type(__builtin_c_funptr) :: proc
   end type
 

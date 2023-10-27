@@ -176,7 +176,7 @@ protected:
 
     void SetProcessStopId(uint32_t stop_id);
 
-    bool operator==(const KextImageInfo &rhs);
+    bool operator==(const KextImageInfo &rhs) const;
 
     uint32_t GetAddressByteSize(); // as determined by Mach-O header
 

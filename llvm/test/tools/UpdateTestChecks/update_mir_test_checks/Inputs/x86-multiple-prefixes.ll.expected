@@ -22,6 +22,7 @@ define void @zero128() nounwind ssp {
   ; NOAVX-NEXT:   [[MOV64rm:%[0-9]+]]:gr64 = MOV64rm $rip, 1, $noreg, target-flags(x86-gotpcrel) @z, $noreg :: (load (s64) from got, align 16)
   ; NOAVX-NEXT:   MOVAPSmr killed [[MOV64rm]], 1, $noreg, 0, $noreg, killed [[V_SET0_]] :: (store (s128) into @z)
   ; NOAVX-NEXT:   RET 0
+  ;
   ; AVX-LABEL: name: zero128
   ; AVX: bb.0 (%ir-block.0):
   ; AVX-NEXT:   [[V_SET0_:%[0-9]+]]:vr128 = V_SET0

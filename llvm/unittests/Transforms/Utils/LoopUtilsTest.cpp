@@ -93,3 +93,51 @@ TEST(LoopUtils, DeleteDeadLoopNest) {
         EXPECT_EQ(BI->getSuccessor(0)->getName(), "for.end");
       });
 }
+
+TEST(LoopUtils, IsKnownPositiveInLoopTest) {
+  LLVMContext C;
+  std::unique_ptr<Module> M =
+      parseIR(C, "define void @foo(i32 %n, i1 %c) {\n"
+                 "entry:\n"
+                 "  %is.positive = icmp sgt i32 %n, 0\n"
+                 "  br i1 %is.positive, label %loop, label %exit\n"
+                 "loop:\n"
+                 "  br i1 %c, label %loop, label %exit\n"
+                 "exit:\n"
+                 "  ret void\n"
+                 "}\n");
+
+  run(*M, "foo",
+      [&](Function &F, DominatorTree &DT, ScalarEvolution &SE, LoopInfo &LI) {
+        assert(LI.begin() != LI.end() && "Expecting loops in function F");
+        Loop *L = *LI.begin();
+        assert(L && L->getName() == "loop" && "Expecting loop 'loop'");
+        auto *Arg = F.getArg(0);
+        auto *ArgSCEV = SE.getSCEV(Arg);
+        EXPECT_EQ(isKnownPositiveInLoop(ArgSCEV, L, SE), true);
+      });
+}
+
+TEST(LoopUtils, IsKnownNonPositiveInLoopTest) {
+  LLVMContext C;
+  std::unique_ptr<Module> M =
+      parseIR(C, "define void @foo(i32 %n, i1 %c) {\n"
+                 "entry:\n"
+                 "  %is.non.positive = icmp sle i32 %n, 0\n"
+                 "  br i1 %is.non.positive, label %loop, label %exit\n"
+                 "loop:\n"
+                 "  br i1 %c, label %loop, label %exit\n"
+                 "exit:\n"
+                 "  ret void\n"
+                 "}\n");
+
+  run(*M, "foo",
+      [&](Function &F, DominatorTree &DT, ScalarEvolution &SE, LoopInfo &LI) {
+        assert(LI.begin() != LI.end() && "Expecting loops in function F");
+        Loop *L = *LI.begin();
+        assert(L && L->getName() == "loop" && "Expecting loop 'loop'");
+        auto *Arg = F.getArg(0);
+        auto *ArgSCEV = SE.getSCEV(Arg);
+        EXPECT_EQ(isKnownNonPositiveInLoop(ArgSCEV, L, SE), true);
+      });
+}

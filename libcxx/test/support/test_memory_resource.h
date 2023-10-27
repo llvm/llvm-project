@@ -113,8 +113,8 @@ int TestResourceImp<Provider, N>::resource_destructed = 0;
 
 struct NullProvider {
     NullProvider() {}
-    void* allocate(size_t, size_t) { return nullptr; }
-    void deallocate(void*, size_t, size_t) {}
+    void* allocate(std::size_t, size_t) { return nullptr; }
+    void deallocate(void*, std::size_t, size_t) {}
     void reset() {}
 private:
     DISALLOW_COPY(NullProvider);
@@ -122,22 +122,22 @@ private:
 
 struct NewDeleteProvider {
     NewDeleteProvider() {}
-    void* allocate(size_t s, size_t) { return ::operator new(s); }
-    void deallocate(void* p, size_t, size_t) { ::operator delete(p); }
+    void* allocate(std::size_t s, size_t) { return ::operator new(s); }
+    void deallocate(void* p, std::size_t, size_t) { ::operator delete(p); }
     void reset() {}
 private:
     DISALLOW_COPY(NewDeleteProvider);
 };
 
-template <size_t Size = 4096 * 10> // 10 pages worth of memory.
+template <std::size_t Size = 4096 * 10> // 10 pages worth of memory.
 struct BufferProvider {
     char buffer[Size];
     void* next = &buffer;
-    size_t space = Size;
+    std::size_t space = Size;
 
     BufferProvider() {}
 
-    void* allocate(size_t s, size_t a) {
+    void* allocate(std::size_t s, size_t a) {
         void* ret = std::align(s, a, next, space);
         if (ret == nullptr) {
 #ifndef TEST_HAS_NO_EXCEPTIONS
@@ -150,7 +150,7 @@ struct BufferProvider {
         return ret;
     }
 
-    void deallocate(void*, size_t, size_t) {}
+    void deallocate(void*, std::size_t, size_t) {}
 
     void reset() {
         next = &buffer;

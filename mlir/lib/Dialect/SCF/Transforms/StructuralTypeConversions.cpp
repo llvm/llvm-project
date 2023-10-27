@@ -7,8 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/SCF/IR/SCF.h"
-#include "mlir/Dialect/SCF/Transforms/Passes.h"
-#include "mlir/Dialect/SCF/Transforms/Transforms.h"
+#include "mlir/Dialect/SCF/Transforms/Patterns.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include <optional>
 
@@ -127,7 +126,7 @@ public:
     // new op's regions doesn't remove the child ops from the worklist).
 
     // convertRegionTypes already takes care of 1:N conversion.
-    if (failed(rewriter.convertRegionTypes(&op.getLoopBody(), *typeConverter)))
+    if (failed(rewriter.convertRegionTypes(&op.getRegion(), *typeConverter)))
       return std::nullopt;
 
     // Unpacked the iteration arguments.
@@ -147,8 +146,8 @@ public:
     // We do not need the empty block created by rewriter.
     rewriter.eraseBlock(newOp.getBody(0));
     // Inline the type converted region from the original operation.
-    rewriter.inlineRegionBefore(op.getLoopBody(), newOp.getLoopBody(),
-                                newOp.getLoopBody().end());
+    rewriter.inlineRegionBefore(op.getRegion(), newOp.getRegion(),
+                                newOp.getRegion().end());
 
     return newOp;
   }
@@ -248,12 +247,15 @@ public:
 };
 } // namespace
 
-void mlir::scf::populateSCFStructuralTypeConversionsAndLegality(
-    TypeConverter &typeConverter, RewritePatternSet &patterns,
-    ConversionTarget &target) {
+void mlir::scf::populateSCFStructuralTypeConversions(
+    TypeConverter &typeConverter, RewritePatternSet &patterns) {
   patterns.add<ConvertForOpTypes, ConvertIfOpTypes, ConvertYieldOpTypes,
                ConvertWhileOpTypes, ConvertConditionOpTypes>(
       typeConverter, patterns.getContext());
+}
+
+void mlir::scf::populateSCFStructuralTypeConversionTarget(
+    const TypeConverter &typeConverter, ConversionTarget &target) {
   target.addDynamicallyLegalOp<ForOp, IfOp>([&](Operation *op) {
     return typeConverter.isLegal(op->getResultTypes());
   });
@@ -266,4 +268,11 @@ void mlir::scf::populateSCFStructuralTypeConversionsAndLegality(
   });
   target.addDynamicallyLegalOp<WhileOp, ConditionOp>(
       [&](Operation *op) { return typeConverter.isLegal(op); });
+}
+
+void mlir::scf::populateSCFStructuralTypeConversionsAndLegality(
+    TypeConverter &typeConverter, RewritePatternSet &patterns,
+    ConversionTarget &target) {
+  populateSCFStructuralTypeConversions(typeConverter, patterns);
+  populateSCFStructuralTypeConversionTarget(typeConverter, target);
 }

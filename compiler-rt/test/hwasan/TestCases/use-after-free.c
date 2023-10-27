@@ -5,8 +5,6 @@
 
 // RUN: %clang_hwasan -O0 -DISREAD=0 %s -o %t && not %run %t 2>&1 | FileCheck %s --check-prefixes=CHECK
 
-// REQUIRES: stable-runtime
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <sanitizer/hwasan_interface.h>
@@ -27,7 +25,7 @@ int main() {
   // of the fault.
   // CHECK: in main {{.*}}use-after-free.c:[[@LINE-6]]
   // Offset is 5 or 11 depending on left/right alignment.
-  // CHECK: is a small unallocated heap chunk; size: 32 offset: {{5|11}}
+  // CHECK: is a small unallocated heap chunk; size: {{16|32}} offset: {{5|11}}
   // CHECK: Cause: use-after-free
   // CHECK: is located 5 bytes inside a 10-byte region
   //
@@ -35,7 +33,7 @@ int main() {
   // CHECK: #0 {{.*}} in {{.*}}free{{.*}} {{.*}}hwasan_allocation_functions.cpp
   // CHECK: #1 {{.*}} in main {{.*}}use-after-free.c:[[@LINE-19]]
 
-  // CHECK: previously allocated here:
+  // CHECK: previously allocated by thread {{.*}} here:
   // CHECK: #0 {{.*}} in {{.*}}malloc{{.*}} {{.*}}hwasan_allocation_functions.cpp
   // CHECK: #1 {{.*}} in main {{.*}}use-after-free.c:[[@LINE-24]]
   // CHECK: Memory tags around the buggy address (one tag corresponds to 16 bytes):

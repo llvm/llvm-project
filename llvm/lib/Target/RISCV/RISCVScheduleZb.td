@@ -1,4 +1,4 @@
-//===-- RISCVScheduleB.td - RISCV Scheduling Definitions B -*- tablegen -*-===//
+//===- RISCVScheduleB.td - RISC-V Scheduling Definitions B -*- tablegen -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -30,8 +30,10 @@ def WriteORCB        : SchedWrite;
 def WriteCLMUL       : SchedWrite; // CLMUL/CLMULR/CLMULH
 
 // Zbs extension
-def WriteSingleBit   : SchedWrite; // BCLR/BSET/BINV/BEXT
-def WriteSingleBitImm: SchedWrite; // BCLRI/BSETI/BINVI/BEXTI
+def WriteSingleBit   : SchedWrite; // BCLR/BSET/BINV
+def WriteSingleBitImm: SchedWrite; // BCLRI/BSETI/BINVI
+def WriteBEXT : SchedWrite; // BEXT
+def WriteBEXTI : SchedWrite; // BEXTI
 
 // Zbkb extension
 def WriteBREV8       : SchedWrite; // brev8
@@ -132,6 +134,8 @@ multiclass UnsupportedSchedZbs {
 let Unsupported = true in {
 def : WriteRes<WriteSingleBit, []>;
 def : WriteRes<WriteSingleBitImm, []>;
+def : WriteRes<WriteBEXT, []>;
+def : WriteRes<WriteBEXTI, []>;
 
 def : ReadAdvance<ReadSingleBit, 0>;
 def : ReadAdvance<ReadSingleBitImm, 0>;

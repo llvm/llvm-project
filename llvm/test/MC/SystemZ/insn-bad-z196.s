@@ -16,23 +16,17 @@
 #CHECK: aghik	%r0, %r1, -32769
 #CHECK: error: invalid operand
 #CHECK: aghik	%r0, %r1, 32768
-#CHECK: error: invalid operand
-#CHECK: aghik	%r0, %r1, foo
 
 	aghik	%r0, %r1, -32769
 	aghik	%r0, %r1, 32768
-	aghik	%r0, %r1, foo
 
 #CHECK: error: invalid operand
 #CHECK: ahik	%r0, %r1, -32769
 #CHECK: error: invalid operand
 #CHECK: ahik	%r0, %r1, 32768
-#CHECK: error: invalid operand
-#CHECK: ahik	%r0, %r1, foo
 
 	ahik	%r0, %r1, -32769
 	ahik	%r0, %r1, 32768
-	ahik	%r0, %r1, foo
 
 #CHECK: error: invalid operand
 #CHECK: aih	%r0, (-1 << 31) - 1
@@ -1209,10 +1203,6 @@
 	risbgn	%r1, %r2, 0, 0, 0
 
 #CHECK: error: invalid operand
-#CHECK: risbhg	%r0,%r0,0,0,-1
-#CHECK: error: invalid operand
-#CHECK: risbhg	%r0,%r0,0,0,64
-#CHECK: error: invalid operand
 #CHECK: risbhg	%r0,%r0,0,-1,0
 #CHECK: error: invalid operand
 #CHECK: risbhg	%r0,%r0,0,256,0
@@ -1221,17 +1211,11 @@
 #CHECK: error: invalid operand
 #CHECK: risbhg	%r0,%r0,256,0,0
 
-	risbhg	%r0,%r0,0,0,-1
-	risbhg	%r0,%r0,0,0,64
 	risbhg	%r0,%r0,0,-1,0
 	risbhg	%r0,%r0,0,256,0
 	risbhg	%r0,%r0,-1,0,0
 	risbhg	%r0,%r0,256,0,0
 
-#CHECK: error: invalid operand
-#CHECK: risblg	%r0,%r0,0,0,-1
-#CHECK: error: invalid operand
-#CHECK: risblg	%r0,%r0,0,0,64
 #CHECK: error: invalid operand
 #CHECK: risblg	%r0,%r0,0,-1,0
 #CHECK: error: invalid operand
@@ -1241,8 +1225,6 @@
 #CHECK: error: invalid operand
 #CHECK: risblg	%r0,%r0,256,0,0
 
-	risblg	%r0,%r0,0,0,-1
-	risblg	%r0,%r0,0,0,64
 	risblg	%r0,%r0,0,-1,0
 	risblg	%r0,%r0,0,256,0
 	risblg	%r0,%r0,-1,0,0

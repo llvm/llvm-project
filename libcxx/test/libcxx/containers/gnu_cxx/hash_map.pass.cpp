@@ -6,12 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: modules-build
+// UNSUPPORTED: clang-modules-build
 
 // Prevent <ext/hash_map> from generating deprecated warnings for this test.
-#if defined(__DEPRECATED)
-#   undef __DEPRECATED
-#endif
+// ADDITIONAL_COMPILE_FLAGS: -Wno-deprecated
 
 #include <ext/hash_map>
 #include <cassert>

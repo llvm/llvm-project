@@ -7,6 +7,7 @@
 
 # RUN: yaml2obj --docnum=1 %s -o %t1
 # RUN: llvm-readelf --symbols --dyn-syms %t1 2>&1 | FileCheck %s --check-prefix=GNU
+# RUN: llvm-readelf --symbols --dyn-syms --extra-sym-info %t1 2>&1 | FileCheck %s --check-prefix=GNUX
 # RUN: llvm-readobj --symbols --dyn-syms %t1 2>&1 | FileCheck %s --check-prefix=LLVM
 
 # GNU:      Symbol table '.dynsym' contains 3 entries:
@@ -19,6 +20,17 @@
 # GNU-NEXT:      0: 00000000     0 NOTYPE  LOCAL  DEFAULT   UND
 # GNU-NEXT:      1: 00000000     0 NOTYPE  LOCAL  DEFAULT     2 sym1
 # GNU-NEXT:      2: 00000000     0 NOTYPE  LOCAL  DEFAULT     1 sym2
+
+# GNUX:      Symbol table '.dynsym' contains 3 entries:
+# GNUX-NEXT:    Num:    Value  Size Type    Bind   Vis+Other Ndx(SecName) Name [+ Version Info]
+# GNUX-NEXT:      0: 00000000     0 NOTYPE  LOCAL  DEFAULT   UND
+# GNUX-NEXT:      1: 00000000     0 NOTYPE  LOCAL  DEFAULT     3 (.section3) dynsym1
+# GNUX-NEXT:      2: 00000000     0 NOTYPE  LOCAL  DEFAULT     2 (.section2) dynsym2
+# GNUX:      Symbol table '.symtab' contains 3 entries:
+# GNUX-NEXT:    Num:    Value  Size Type    Bind   Vis+Other Ndx(SecName) Name [+ Version Info]
+# GNUX-NEXT:      0: 00000000     0 NOTYPE  LOCAL  DEFAULT   UND
+# GNUX-NEXT:      1: 00000000     0 NOTYPE  LOCAL  DEFAULT     2 (.section2) sym1
+# GNUX-NEXT:      2: 00000000     0 NOTYPE  LOCAL  DEFAULT     1 (.section1) sym2
 
 # LLVM:      Symbols [
 # LLVM-NEXT:   Symbol {

@@ -6,17 +6,20 @@
 ; ALL: s_mov_b32 s[[HI:[0-9]+]], 0xe80000
 
 ; Make sure we are handling hazards correctly.
-; SGPR: buffer_load_dword [[VHI:v[0-9]+]], off, s[{{[0-9]+:[0-9]+}}], 0 offset:4
+; SGPR: v_mov_b32_e32 v0, vcc_lo
+; SGPR-NEXT: s_or_saveexec_b64 [[EXEC_COPY:s\[[0-9]+:[0-9]+\]]], -1
+; SGPR-NEXT: buffer_load_dword [[VHI:v[0-9]+]], off, s[{{[0-9]+:[0-9]+}}], 0 offset:4 ; 4-byte Folded Reload
+; SGPR-NEXT: s_mov_b64 exec, [[EXEC_COPY]]
 ; SGPR-NEXT: s_waitcnt vmcnt(0)
 ; SGPR-NEXT: v_readlane_b32 s{{[0-9]+}}, [[VHI]], 0
 ; SGPR-NEXT: v_readlane_b32 s{{[0-9]+}}, [[VHI]], 1
 ; SGPR-NEXT: v_readlane_b32 s{{[0-9]+}}, [[VHI]], 2
 ; SGPR-NEXT: v_readlane_b32 s[[HI:[0-9]+]], [[VHI]], 3
-; SGPR-NEXT: buffer_load_dword [[VHI]], off, s[96:99], 0
-; SGPR-NEXT: s_waitcnt vmcnt(0)
-; SGPR-NEXT: s_mov_b64 exec, s[4:5]
-; SGPR-NEXT: s_nop 1
-; SGPR-NEXT: buffer_store_dword v0, off, s[0:3], 0
+; SGPR-NEXT: s_or_saveexec_b64 s[100:101], -1
+; SGPR-NEXT: s_mov_b64 exec, s[100:101]
+; SGPR-NEXT: s_nop 2
+; SGPR-NEXT: buffer_store_dword v0, off, s[{{[0-9]+}}:[[HI]]], 0
+; SGPR-NEXT: ; kill: killed $vgpr1
 
 ; ALL: s_endpgm
 define amdgpu_kernel void @test(ptr addrspace(1) %out, i32 %in) {

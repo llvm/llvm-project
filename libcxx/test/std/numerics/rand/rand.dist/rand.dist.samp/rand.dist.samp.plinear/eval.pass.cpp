@@ -47,11 +47,11 @@ test1()
     G g;
     double b[] = {10, 14, 16, 17};
     double p[] = {0, 1, 1, 0};
-    const size_t Np = sizeof(p) / sizeof(p[0]) - 1;
+    const std::size_t Np = sizeof(p) / sizeof(p[0]) - 1;
     D d(b, b+Np+1, p);
     const int N = 1000000;
     std::vector<D::result_type> u;
-    for (size_t i = 0; i < N; ++i)
+    for (std::size_t i = 0; i < N; ++i)
     {
         D::result_type v = d(g);
         assert(d.min() <= v && v < d.max());
@@ -65,16 +65,16 @@ test1()
     double c = std::numeric_limits<double>::quiet_NaN();
     std::vector<double> areas(Np);
     double S = 0;
-    for (size_t i = 0; i < areas.size(); ++i)
+    for (std::size_t i = 0; i < areas.size(); ++i)
     {
         areas[i] = (p[i]+p[i+1])*(b[i+1]-b[i])/2;
         S += areas[i];
     }
-    for (size_t i = 0; i < areas.size(); ++i)
+    for (std::size_t i = 0; i < areas.size(); ++i)
         areas[i] /= S;
-    for (size_t i = 0; i < Np+1; ++i)
+    for (std::size_t i = 0; i < Np+1; ++i)
         p[i] /= S;
-    for (size_t i = 0; i < N; ++i)
+    for (std::size_t i = 0; i < N; ++i)
     {
         int k = std::lower_bound(b, b+Np+1, u[i]) - b - 1;
         if (k != kp)
@@ -99,11 +99,11 @@ test2()
     G g;
     double b[] = {10, 14, 16, 17};
     double p[] = {0, 0, 1, 0};
-    const size_t Np = sizeof(p) / sizeof(p[0]) - 1;
+    const std::size_t Np = sizeof(p) / sizeof(p[0]) - 1;
     D d(b, b+Np+1, p);
     const int N = 1000000;
     std::vector<D::result_type> u;
-    for (size_t i = 0; i < N; ++i)
+    for (std::size_t i = 0; i < N; ++i)
     {
         D::result_type v = d(g);
         assert(d.min() <= v && v < d.max());
@@ -117,16 +117,16 @@ test2()
     double c = std::numeric_limits<double>::quiet_NaN();
     std::vector<double> areas(Np);
     double S = 0;
-    for (size_t i = 0; i < areas.size(); ++i)
+    for (std::size_t i = 0; i < areas.size(); ++i)
     {
         areas[i] = (p[i]+p[i+1])*(b[i+1]-b[i])/2;
         S += areas[i];
     }
-    for (size_t i = 0; i < areas.size(); ++i)
+    for (std::size_t i = 0; i < areas.size(); ++i)
         areas[i] /= S;
-    for (size_t i = 0; i < Np+1; ++i)
+    for (std::size_t i = 0; i < Np+1; ++i)
         p[i] /= S;
-    for (size_t i = 0; i < N; ++i)
+    for (std::size_t i = 0; i < N; ++i)
     {
         int k = std::lower_bound(b, b+Np+1, u[i]) - b - 1;
         if (k != kp)
@@ -151,11 +151,11 @@ test3()
     G g;
     double b[] = {10, 14, 16, 17};
     double p[] = {1, 0, 0, 0};
-    const size_t Np = sizeof(p) / sizeof(p[0]) - 1;
+    const std::size_t Np = sizeof(p) / sizeof(p[0]) - 1;
     D d(b, b+Np+1, p);
-    const size_t N = 1000000;
+    const std::size_t N = 1000000;
     std::vector<D::result_type> u;
-    for (size_t i = 0; i < N; ++i)
+    for (std::size_t i = 0; i < N; ++i)
     {
         D::result_type v = d(g);
         assert(d.min() <= v && v < d.max());
@@ -169,16 +169,16 @@ test3()
     double c = std::numeric_limits<double>::quiet_NaN();
     std::vector<double> areas(Np);
     double S = 0;
-    for (size_t i = 0; i < areas.size(); ++i)
+    for (std::size_t i = 0; i < areas.size(); ++i)
     {
         areas[i] = (p[i]+p[i+1])*(b[i+1]-b[i])/2;
         S += areas[i];
     }
-    for (size_t i = 0; i < areas.size(); ++i)
+    for (std::size_t i = 0; i < areas.size(); ++i)
         areas[i] /= S;
-    for (size_t i = 0; i < Np+1; ++i)
+    for (std::size_t i = 0; i < Np+1; ++i)
         p[i] /= S;
-    for (size_t i = 0; i < N; ++i)
+    for (std::size_t i = 0; i < N; ++i)
     {
         int k = std::lower_bound(b, b+Np+1, u[i]) - b - 1;
         if (k != kp)
@@ -203,11 +203,11 @@ test4()
     G g;
     double b[] = {10, 14, 16};
     double p[] = {0, 1, 0};
-    const size_t Np = sizeof(p) / sizeof(p[0]) - 1;
+    const std::size_t Np = sizeof(p) / sizeof(p[0]) - 1;
     D d(b, b+Np+1, p);
     const int N = 1000000;
     std::vector<D::result_type> u;
-    for (size_t i = 0; i < N; ++i)
+    for (std::size_t i = 0; i < N; ++i)
     {
         D::result_type v = d(g);
         assert(d.min() <= v && v < d.max());
@@ -221,16 +221,16 @@ test4()
     double c = std::numeric_limits<double>::quiet_NaN();
     std::vector<double> areas(Np);
     double S = 0;
-    for (size_t i = 0; i < areas.size(); ++i)
+    for (std::size_t i = 0; i < areas.size(); ++i)
     {
         areas[i] = (p[i]+p[i+1])*(b[i+1]-b[i])/2;
         S += areas[i];
     }
-    for (size_t i = 0; i < areas.size(); ++i)
+    for (std::size_t i = 0; i < areas.size(); ++i)
         areas[i] /= S;
-    for (size_t i = 0; i < Np+1; ++i)
+    for (std::size_t i = 0; i < Np+1; ++i)
         p[i] /= S;
-    for (size_t i = 0; i < N; ++i)
+    for (std::size_t i = 0; i < N; ++i)
     {
         int k = std::lower_bound(b, b+Np+1, u[i]) - b - 1;
         if (k != kp)
@@ -256,11 +256,11 @@ test5()
     G g;
     double b[] = {10, 14};
     double p[] = {1, 1};
-    const size_t Np = sizeof(p) / sizeof(p[0]) - 1;
+    const std::size_t Np = sizeof(p) / sizeof(p[0]) - 1;
     D d(b, b+Np+1, p);
     const int N = 1000000;
     std::vector<D::result_type> u;
-    for (size_t i = 0; i < N; ++i)
+    for (std::size_t i = 0; i < N; ++i)
     {
         D::result_type v = d(g);
         assert(d.min() <= v && v < d.max());
@@ -274,17 +274,17 @@ test5()
     double c = std::numeric_limits<double>::quiet_NaN();
     std::vector<double> areas(Np);
     double S = 0;
-    for (size_t i = 0; i < areas.size(); ++i)
+    for (std::size_t i = 0; i < areas.size(); ++i)
     {
         assert(i < Np);
         areas[i] = (p[i]+p[i+1])*(b[i+1]-b[i])/2;
         S += areas[i];
     }
-    for (size_t i = 0; i < areas.size(); ++i)
+    for (std::size_t i = 0; i < areas.size(); ++i)
         areas[i] /= S;
-    for (size_t i = 0; i < Np+1; ++i)
+    for (std::size_t i = 0; i < Np+1; ++i)
         p[i] /= S;
-    for (size_t i = 0; i < N; ++i)
+    for (std::size_t i = 0; i < N; ++i)
     {
         int k = std::lower_bound(b, b+Np+1, u[i]) - b - 1;
         if (k != kp)
@@ -310,11 +310,11 @@ test6()
     G g;
     double b[] = {10, 14, 16, 17};
     double p[] = {25, 62.5, 12.5, 0};
-    const size_t Np = sizeof(p) / sizeof(p[0]) - 1;
+    const std::size_t Np = sizeof(p) / sizeof(p[0]) - 1;
     D d(b, b+Np+1, p);
     const int N = 1000000;
     std::vector<D::result_type> u;
-    for (size_t i = 0; i < N; ++i)
+    for (std::size_t i = 0; i < N; ++i)
     {
         D::result_type v = d(g);
         assert(d.min() <= v && v < d.max());
@@ -328,16 +328,16 @@ test6()
     double c = std::numeric_limits<double>::quiet_NaN();
     std::vector<double> areas(Np);
     double S = 0;
-    for (size_t i = 0; i < areas.size(); ++i)
+    for (std::size_t i = 0; i < areas.size(); ++i)
     {
         areas[i] = (p[i]+p[i+1])*(b[i+1]-b[i])/2;
         S += areas[i];
     }
-    for (size_t i = 0; i < areas.size(); ++i)
+    for (std::size_t i = 0; i < areas.size(); ++i)
         areas[i] /= S;
-    for (size_t i = 0; i < Np+1; ++i)
+    for (std::size_t i = 0; i < Np+1; ++i)
         p[i] /= S;
-    for (size_t i = 0; i < N; ++i)
+    for (std::size_t i = 0; i < N; ++i)
     {
         int k = std::lower_bound(b, b+Np+1, u[i]) - b - 1;
         if (k != kp)

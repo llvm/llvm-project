@@ -161,7 +161,7 @@ public:
       uint32_t start_idx, const std::vector<uint32_t> &file_idx,
       const SourceLocationSpec &src_location_spec, LineEntry *line_entry_ptr);
 
-  size_t FineLineEntriesForFileIndex(uint32_t file_idx, bool append,
+  size_t FindLineEntriesForFileIndex(uint32_t file_idx, bool append,
                                      SymbolContextList &sc_list);
 
   /// Get the line entry from the line table at index \a idx.

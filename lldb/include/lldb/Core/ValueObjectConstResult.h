@@ -106,7 +106,7 @@ public:
 
   lldb::LanguageType GetPreferredDisplayLanguage() override;
 
-  lldb::ValueObjectSP Cast(const CompilerType &compiler_type) override;
+  lldb::ValueObjectSP DoCast(const CompilerType &compiler_type) override;
 
 protected:
   bool UpdateValue() override;

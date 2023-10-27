@@ -144,8 +144,8 @@ INITIALIZE_PASS(HexagonGenMux, "hexagon-gen-mux",
   "Hexagon generate mux instructions", false, false)
 
 void HexagonGenMux::getSubRegs(unsigned Reg, BitVector &SRs) const {
-  for (MCSubRegIterator I(Reg, HRI); I.isValid(); ++I)
-    SRs[*I] = true;
+  for (MCPhysReg I : HRI->subregs(Reg))
+    SRs[I] = true;
 }
 
 void HexagonGenMux::expandReg(unsigned Reg, BitVector &Set) const {
@@ -160,12 +160,10 @@ void HexagonGenMux::getDefsUses(const MachineInstr *MI, BitVector &Defs,
   // First, get the implicit defs and uses for this instruction.
   unsigned Opc = MI->getOpcode();
   const MCInstrDesc &D = HII->get(Opc);
-  if (const MCPhysReg *R = D.getImplicitDefs())
-    while (*R)
-      expandReg(*R++, Defs);
-  if (const MCPhysReg *R = D.getImplicitUses())
-    while (*R)
-      expandReg(*R++, Uses);
+  for (MCPhysReg R : D.implicit_defs())
+    expandReg(R, Defs);
+  for (MCPhysReg R : D.implicit_uses())
+    expandReg(R, Uses);
 
   // Look over all operands, and collect explicit defs and uses.
   for (const MachineOperand &MO : MI->operands()) {
@@ -350,9 +348,9 @@ bool HexagonGenMux::genMuxInBlock(MachineBasicBlock &B) {
 
   LivePhysRegs LPR(*HRI);
   LPR.addLiveOuts(B);
-  auto IsLive = [&LPR,this] (unsigned Reg) -> bool {
-    for (MCSubRegIterator S(Reg, HRI, true); S.isValid(); ++S)
-      if (LPR.contains(*S))
+  auto IsLive = [&LPR, this](unsigned Reg) -> bool {
+    for (MCPhysReg S : HRI->subregs_inclusive(Reg))
+      if (LPR.contains(S))
         return true;
     return false;
   };

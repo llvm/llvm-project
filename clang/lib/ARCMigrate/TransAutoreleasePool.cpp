@@ -417,11 +417,11 @@ private:
   Selector DrainSel;
 
   struct PoolVarInfo {
-    DeclStmt *Dcl;
+    DeclStmt *Dcl = nullptr;
     ExprSet Refs;
     SmallVector<PoolScope, 2> Scopes;
 
-    PoolVarInfo() : Dcl(nullptr) { }
+    PoolVarInfo() = default;
   };
 
   std::map<VarDecl *, PoolVarInfo> PoolVars;

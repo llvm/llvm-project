@@ -1,6 +1,6 @@
 ; RUN: llc %s -verify-machineinstrs -o - | FileCheck %s
 
-target triple = "aarch64-unknown-unknown-eabi"
+target triple = "aarch64"
 
 define i64 @test_tstart() #0 {
   %r = tail call i64 @llvm.aarch64.tstart()

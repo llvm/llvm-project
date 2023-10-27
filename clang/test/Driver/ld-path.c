@@ -24,20 +24,20 @@
 
 // GOLD: Inputs/basic_freebsd_tree/usr/bin/ld.gold"
 
-// RUN: env COMPILER_PATH= PATH=%S/Inputs/basic_freebsd_tree/usr/bin %clang %s -### --ld-path=not_exist \
+// RUN: not env COMPILER_PATH= PATH=%S/Inputs/basic_freebsd_tree/usr/bin %clang %s -### --ld-path=not_exist \
 // RUN:   --target=x86_64-unknown-freebsd --sysroot=%S/Inputs/basic_freebsd_tree 2>&1 | \
 // RUN:   FileCheck %s --check-prefix=NOT_EXIST
 
 // NOT_EXIST: error: invalid linker name in argument '--ld-path=not_exist'
 
-// RUN: %clang %s -### --ld-path= \
+// RUN: not %clang %s -### --ld-path= \
 // RUN:   --target=x86_64-unknown-freebsd --sysroot=%S/Inputs/basic_freebsd_tree 2>&1 | \
 // RUN:   FileCheck %s --check-prefix=EMPTY
 
 // EMPTY: error: invalid linker name in argument '--ld-path='
 
 /// If --ld-path= contains a slash, PATH is not consulted.
-// RUN: env COMPILER_PATH=%S/Inputs/basic_freebsd_tree/usr/bin %clang %s -### --ld-path=./ld.bfd \
+// RUN: env COMPILER_PATH=%S/Inputs/basic_freebsd_tree/usr/bin not %clang %s -### --ld-path=./ld.bfd \
 // RUN:   --target=x86_64-unknown-freebsd --sysroot=%S/Inputs/basic_freebsd_tree 2>&1 | \
 // RUN:   FileCheck %s --check-prefix=NO_BFD
 

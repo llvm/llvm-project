@@ -55,8 +55,8 @@ define i64 @test2_PR2274(i32 %x, i32 %v) nounwind {
 define i32 @PR30366(i1 %a) {
 ; CHECK-LABEL: @PR30366(
 ; CHECK-NEXT:    [[Z:%.*]] = zext i1 [[A:%.*]] to i32
-; CHECK-NEXT:    [[D1:%.*]] = lshr i32 [[Z]], zext (i16 ptrtoint (ptr @b to i16) to i32)
-; CHECK-NEXT:    ret i32 [[D1]]
+; CHECK-NEXT:    [[D:%.*]] = udiv i32 [[Z]], zext (i16 shl (i16 1, i16 ptrtoint (ptr @b to i16)) to i32)
+; CHECK-NEXT:    ret i32 [[D]]
 ;
   %z = zext i1 %a to i32
   %d = udiv i32 %z, zext (i16 shl (i16 1, i16 ptrtoint (ptr @b to i16)) to i32)
@@ -67,6 +67,7 @@ define i32 @PR30366(i1 %a) {
 ; https://bugs.chromium.org/p/oss-fuzz/issues/detail?id=4857
 define i177 @ossfuzz_4857(i177 %X, i177 %Y) {
 ; CHECK-LABEL: @ossfuzz_4857(
+; CHECK-NEXT:    store i1 poison, ptr undef, align 1
 ; CHECK-NEXT:    ret i177 0
 ;
   %B5 = udiv i177 %Y, -1

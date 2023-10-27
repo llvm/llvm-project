@@ -674,6 +674,11 @@ bool DWARFCallFrameInfo::FDEToUnwindPlan(dw_offset_t dwarf_offset,
               unwind_plan.GetRowAtIndex(0)->GetRegisterInfo(reg_num,
                                                             reg_location))
             row->SetRegisterInfo(reg_num, reg_location);
+          else {
+            // If the register was not set in the first row, remove the
+            // register info to keep the unmodified value from the caller.
+            row->RemoveRegisterInfo(reg_num);
+          }
           break;
         }
         }

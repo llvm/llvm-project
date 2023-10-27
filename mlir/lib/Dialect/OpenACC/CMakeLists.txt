@@ -6,8 +6,15 @@ add_mlir_dialect_library(MLIROpenACCDialect
 
   DEPENDS
   MLIROpenACCOpsIncGen
+  MLIROpenACCEnumsIncGen
+  MLIROpenACCAttributesIncGen
+  MLIROpenACCOpsInterfacesIncGen
+  MLIROpenACCTypeInterfacesIncGen
 
   LINK_LIBS PUBLIC
   MLIRIR
+  MLIRLLVMDialect
+  MLIRMemRefDialect
+  MLIROpenACCMPCommon
   )
 

@@ -196,9 +196,9 @@ define dso_local i32 @copy_noalias_negative_stride(ptr noalias nocapture %arg, p
 ; CHECK-NEXT:    [[I:%.*]] = icmp sgt i32 [[ARG2:%.*]], -1
 ; CHECK-NEXT:    br i1 [[I]], label [[BB3:%.*]], label [[BB5:%.*]]
 ; CHECK:       bb3:
-; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[ARG2]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw nsw i64 [[TMP0]], 12
-; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw i64 [[TMP1]], 12
+; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[ARG2]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[TMP0]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = mul nuw nsw i64 [[TMP1]], 12
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[ARG:%.*]], ptr align 4 [[ARG1:%.*]], i64 [[TMP2]], i1 false)
 ; CHECK-NEXT:    br label [[BB6:%.*]]
 ; CHECK:       bb4:

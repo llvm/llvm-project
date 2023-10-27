@@ -23,7 +23,6 @@
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/MC/SubtargetFeature.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/IRObjectFile.h"
 #include "llvm/Passes/OptimizationLevel.h"
@@ -36,6 +35,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
+#include "llvm/TargetParser/SubtargetFeature.h"
 
 #include <mutex>
 #include <shared_mutex>
@@ -58,14 +58,12 @@ std::shared_mutex BitcodeImageMapMutex;
 std::once_flag InitFlag;
 
 void init(Triple TT) {
-  bool JITTargetInitialized = false;
 #ifdef LIBOMPTARGET_JIT_NVPTX
   if (TT.isNVPTX()) {
     LLVMInitializeNVPTXTargetInfo();
     LLVMInitializeNVPTXTarget();
     LLVMInitializeNVPTXTargetMC();
     LLVMInitializeNVPTXAsmPrinter();
-    JITTargetInitialized = true;
   }
 #endif
 #ifdef LIBOMPTARGET_JIT_AMDGPU
@@ -74,49 +72,8 @@ void init(Triple TT) {
     LLVMInitializeAMDGPUTarget();
     LLVMInitializeAMDGPUTargetMC();
     LLVMInitializeAMDGPUAsmPrinter();
-    JITTargetInitialized = true;
   }
 #endif
-  if (!JITTargetInitialized)
-    return;
-
-  // Initialize passes
-  PassRegistry &Registry = *PassRegistry::getPassRegistry();
-  initializeCore(Registry);
-  initializeScalarOpts(Registry);
-  initializeVectorization(Registry);
-  initializeIPO(Registry);
-  initializeAnalysis(Registry);
-  initializeTransformUtils(Registry);
-  initializeInstCombine(Registry);
-  initializeTarget(Registry);
-
-  initializeExpandLargeDivRemLegacyPassPass(Registry);
-  initializeExpandLargeFpConvertLegacyPassPass(Registry);
-  initializeExpandMemCmpPassPass(Registry);
-  initializeScalarizeMaskedMemIntrinLegacyPassPass(Registry);
-  initializeSelectOptimizePass(Registry);
-  initializeCodeGenPreparePass(Registry);
-  initializeAtomicExpandPass(Registry);
-  initializeRewriteSymbolsLegacyPassPass(Registry);
-  initializeWinEHPreparePass(Registry);
-  initializeDwarfEHPrepareLegacyPassPass(Registry);
-  initializeSafeStackLegacyPassPass(Registry);
-  initializeSjLjEHPreparePass(Registry);
-  initializePreISelIntrinsicLoweringLegacyPassPass(Registry);
-  initializeGlobalMergePass(Registry);
-  initializeIndirectBrExpandPassPass(Registry);
-  initializeInterleavedLoadCombinePass(Registry);
-  initializeInterleavedAccessPass(Registry);
-  initializeUnreachableBlockElimLegacyPassPass(Registry);
-  initializeExpandReductionsPass(Registry);
-  initializeExpandVectorPredicationPass(Registry);
-  initializeWasmEHPreparePass(Registry);
-  initializeWriteBitcodePassPass(Registry);
-  initializeHardwareLoopsPass(Registry);
-  initializeTypePromotionLegacyPass(Registry);
-  initializeReplaceWithVeclibLegacyPass(Registry);
-  initializeJMCInstrumenterPass(Registry);
 }
 
 Expected<std::unique_ptr<Module>>
@@ -138,20 +95,6 @@ createModuleFromImage(const __tgt_device_image &Image, LLVMContext &Context) {
   return createModuleFromMemoryBuffer(MB, Context);
 }
 
-CodeGenOpt::Level getCGOptLevel(unsigned OptLevel) {
-  switch (OptLevel) {
-  case 0:
-    return CodeGenOpt::None;
-  case 1:
-    return CodeGenOpt::Less;
-  case 2:
-    return CodeGenOpt::Default;
-  case 3:
-    return CodeGenOpt::Aggressive;
-  }
-  llvm_unreachable("Invalid optimization level");
-}
-
 OptimizationLevel getOptLevel(unsigned OptLevel) {
   switch (OptLevel) {
   case 0:
@@ -169,7 +112,10 @@ OptimizationLevel getOptLevel(unsigned OptLevel) {
 Expected<std::unique_ptr<TargetMachine>>
 createTargetMachine(Module &M, std::string CPU, unsigned OptLevel) {
   Triple TT(M.getTargetTriple());
-  CodeGenOpt::Level CGOptLevel = getCGOptLevel(OptLevel);
+  std::optional<CodeGenOptLevel> CGOptLevelOrNone =
+      CodeGenOpt::getLevel(OptLevel);
+  assert(CGOptLevelOrNone && "Invalid optimization level");
+  CodeGenOptLevel CGOptLevel = *CGOptLevelOrNone;
 
   std::string Msg;
   const Target *T = TargetRegistry::lookupTarget(M.getTargetTriple(), Msg);
@@ -225,11 +171,7 @@ void JITEngine::opt(TargetMachine *TM, TargetLibraryInfoImpl *TLII, Module &M,
   PB.registerLoopAnalyses(LAM);
   PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
 
-  if (OptLevel)
-    MPM.addPass(PB.buildPerModuleDefaultPipeline(getOptLevel(OptLevel)));
-  else
-    MPM.addPass(PB.buildO0DefaultPipeline(getOptLevel(OptLevel)));
-
+  MPM.addPass(PB.buildPerModuleDefaultPipeline(getOptLevel(OptLevel)));
   MPM.run(M, MAM);
 }
 
@@ -240,7 +182,8 @@ void JITEngine::codegen(TargetMachine *TM, TargetLibraryInfoImpl *TLII,
   MachineModuleInfoWrapperPass *MMIWP = new MachineModuleInfoWrapperPass(
       reinterpret_cast<LLVMTargetMachine *>(TM));
   TM->addPassesToEmitFile(PM, OS, nullptr,
-                          TT.isNVPTX() ? CGFT_AssemblyFile : CGFT_ObjectFile,
+                          TT.isNVPTX() ? CodeGenFileType::AssemblyFile
+                                       : CodeGenFileType::ObjectFile,
                           /* DisableVerify */ false, MMIWP);
 
   PM.run(M);
@@ -363,8 +306,8 @@ JITEngine::compile(const __tgt_device_image &Image,
 
   auto &ImageMB = CUI.JITImages.back();
 
-  JITedImage->ImageStart = (void *)ImageMB->getBufferStart();
-  JITedImage->ImageEnd = (void *)ImageMB->getBufferEnd();
+  JITedImage->ImageStart = const_cast<char *>(ImageMB->getBufferStart());
+  JITedImage->ImageEnd = const_cast<char *>(ImageMB->getBufferEnd());
 
   return JITedImage;
 }
@@ -415,6 +358,8 @@ bool JITEngine::checkBitcodeImage(const __tgt_device_image &Image) {
   auto ActualTriple = FOrErr->TheReader.getTargetTriple();
   auto BitcodeTA = Triple(ActualTriple).getArch();
   BitcodeImageMap[Image.ImageStart] = BitcodeTA;
+
+  DP("Is%s IR Image\n", BitcodeTA == TT.getArch() ? " " : " NOT");
 
   return BitcodeTA == TT.getArch();
 }

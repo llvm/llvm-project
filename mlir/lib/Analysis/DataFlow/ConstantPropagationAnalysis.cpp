@@ -89,14 +89,14 @@ void SparseConstantPropagation::visitOperation(
 
     // Merge in the result of the fold, either a constant or a value.
     OpFoldResult foldResult = std::get<1>(it);
-    if (Attribute attr = foldResult.dyn_cast<Attribute>()) {
+    if (Attribute attr = llvm::dyn_cast_if_present<Attribute>(foldResult)) {
       LLVM_DEBUG(llvm::dbgs() << "Folded to constant: " << attr << "\n");
       propagateIfChanged(lattice,
                          lattice->join(ConstantValue(attr, op->getDialect())));
     } else {
       LLVM_DEBUG(llvm::dbgs()
                  << "Folded to value: " << foldResult.get<Value>() << "\n");
-      AbstractSparseDataFlowAnalysis::join(
+      AbstractSparseForwardDataFlowAnalysis::join(
           lattice, *getLatticeElement(foldResult.get<Value>()));
     }
   }

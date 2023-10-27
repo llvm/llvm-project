@@ -119,6 +119,14 @@ __isl_give isl_space *isl_space_range_factor_domain(
 	__isl_take isl_space *space);
 __isl_give isl_space *isl_space_range_factor_range(
 	__isl_take isl_space *space);
+__isl_give isl_space *isl_space_domain_wrapped_domain(
+	__isl_take isl_space *space);
+__isl_give isl_space *isl_space_domain_wrapped_range(
+	__isl_take isl_space *space);
+__isl_give isl_space *isl_space_range_wrapped_domain(
+	__isl_take isl_space *space);
+__isl_give isl_space *isl_space_range_wrapped_range(
+	__isl_take isl_space *space);
 __isl_export
 __isl_give isl_space *isl_space_map_from_set(__isl_take isl_space *space);
 __isl_give isl_space *isl_space_map_from_domain_and_range(
@@ -205,6 +213,9 @@ __isl_give isl_space *isl_space_flatten_domain(__isl_take isl_space *space);
 __isl_export
 __isl_give isl_space *isl_space_flatten_range(__isl_take isl_space *space);
 
+__isl_constructor
+__isl_give isl_space *isl_space_read_from_str(isl_ctx *ctx,
+	const char *str);
 __isl_give char *isl_space_to_str(__isl_keep isl_space *space);
 __isl_give isl_printer *isl_printer_print_space(__isl_take isl_printer *p,
 	__isl_keep isl_space *space);

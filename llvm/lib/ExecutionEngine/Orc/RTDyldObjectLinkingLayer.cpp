@@ -38,7 +38,8 @@ public:
 
           LookupResult Result;
           for (auto &KV : *InternedResult)
-            Result[*KV.first] = std::move(KV.second);
+            Result[*KV.first] = {KV.second.getAddress().getValue(),
+                                 KV.second.getFlags()};
           OnResolved(Result);
         };
 
@@ -232,7 +233,7 @@ Error RTDyldObjectLinkingLayer::onObjLoad(
   if (auto *COFFObj = dyn_cast<object::COFFObjectFile>(&Obj)) {
     auto &ES = getExecutionSession();
 
-    // For all resolved symbols that are not already in the responsibilty set:
+    // For all resolved symbols that are not already in the responsibility set:
     // check whether the symbol is in a comdat section and if so mark it as
     // weak.
     for (auto &Sym : COFFObj->symbols()) {
@@ -258,6 +259,46 @@ Error RTDyldObjectLinkingLayer::onObjLoad(
       auto &COFFSec = *COFFObj->getCOFFSection(**Sec);
       if (COFFSec.Characteristics & COFF::IMAGE_SCN_LNK_COMDAT)
         I->second.setFlags(I->second.getFlags() | JITSymbolFlags::Weak);
+    }
+
+    // Handle any aliases.
+    for (auto &Sym : COFFObj->symbols()) {
+      uint32_t SymFlags = cantFail(Sym.getFlags());
+      if (SymFlags & object::BasicSymbolRef::SF_Undefined)
+        continue;
+      auto Name = Sym.getName();
+      if (!Name)
+        return Name.takeError();
+      auto I = Resolved.find(*Name);
+
+      // Skip already-resolved symbols, and symbols that we're not responsible
+      // for.
+      if (I != Resolved.end() || !R.getSymbols().count(ES.intern(*Name)))
+        continue;
+
+      // Skip anything other than weak externals.
+      auto COFFSym = COFFObj->getCOFFSymbol(Sym);
+      if (!COFFSym.isWeakExternal())
+        continue;
+      auto *WeakExternal = COFFSym.getAux<object::coff_aux_weak_external>();
+      if (WeakExternal->Characteristics != COFF::IMAGE_WEAK_EXTERN_SEARCH_ALIAS)
+        continue;
+
+      // We found an alias. Reuse the resolution of the alias target for the
+      // alias itself.
+      Expected<object::COFFSymbolRef> TargetSymbol =
+          COFFObj->getSymbol(WeakExternal->TagIndex);
+      if (!TargetSymbol)
+        return TargetSymbol.takeError();
+      Expected<StringRef> TargetName = COFFObj->getSymbolName(*TargetSymbol);
+      if (!TargetName)
+        return TargetName.takeError();
+      auto J = Resolved.find(*TargetName);
+      if (J == Resolved.end())
+        return make_error<StringError>("Could alias target " + *TargetName +
+                                           " not resolved",
+                                       inconvertibleErrorCode());
+      Resolved[*Name] = J->second;
     }
   }
 
@@ -286,7 +327,7 @@ Error RTDyldObjectLinkingLayer::onObjLoad(
     } else if (AutoClaimObjectSymbols)
       ExtraSymbolsToClaim[InternedName] = Flags;
 
-    Symbols[InternedName] = JITEvaluatedSymbol(KV.second.getAddress(), Flags);
+    Symbols[InternedName] = {ExecutorAddr(KV.second.getAddress()), Flags};
   }
 
   if (!ExtraSymbolsToClaim.empty()) {

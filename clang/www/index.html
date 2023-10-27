@@ -3,7 +3,7 @@
 <!-- Material used from: HTML 4.01 specs: http://www.w3.org/TR/html401/ -->
 <html>
 <head>
-  <META http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
+  <META http-equiv="Content-Type" content="text/html; charset=utf-8">
   <title>Clang C Language Family Frontend for LLVM</title>
   <link type="text/css" rel="stylesheet" href="menu.css">
   <link type="text/css" rel="stylesheet" href="content.css">
@@ -33,7 +33,7 @@
   <ul>
   <li>Fast compiles and low memory use</li>
   <li>Expressive diagnostics (<a href="diagnostics.html">examples</a>)</li>
-  <li>GCC compatibility</li>
+  <li>GCC & MSVC compatibility</li>
   </ul>
 
   <p><b><a href="features.html#applications">Utility and
@@ -44,7 +44,9 @@
   <li>Support diverse clients (refactoring, static analysis, code generation,
    etc.)</li>
   <li>Allow tight integration with IDEs</li>
-  <li>Use the LLVM 'Apache 2' License</li>
+  <li>Use the LLVM 'Apache 2'
+    <a href="https://github.com/llvm/llvm-project/blob/main/LICENSE.TXT">License</a>
+  </li>
   </ul>
 
   <p><b><a href="features.html#design">Internal Design and
@@ -80,12 +82,13 @@
 
   <p>Clang is considered to
    be a production quality C, Objective-C, C++ and Objective-C++ compiler when
-   targeting X86-32, X86-64, and ARM (other targets may have caveats, but are
-   usually easy to fix). As example, Clang is used in production to build
-   performance-critical software like Chrome or Firefox.<br />  If you are looking
-   for source analysis or source-to-source transformation tools, Clang is probably
-   a great solution for you.  Clang supports C++11, C++14 and C++17, please see
-   the <a href="cxx_status.html">C++ status</a> page for more information.</p>
+   targeting any target supported by LLVM. As example, Clang is used in
+   production to build performance-critical software like Chrome or Firefox.
+   <br />  If you are looking for source analysis or source-to-source
+   transformation tools, Clang is probably a great solution for you. Please see
+   the <a href="cxx_status.html">C++ status</a> page or the
+   <a href="c_status.html">C status</a> page for more information about what
+   standard modes and features are supported.</p>
 
   <!--=====================================================================-->
   <h2>Get it and get involved!</h2>

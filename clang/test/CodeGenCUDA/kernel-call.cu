@@ -2,6 +2,9 @@
 // RUN: | FileCheck %s --check-prefixes=CUDA-OLD,CHECK
 // RUN: %clang_cc1 -target-sdk-version=9.2  -emit-llvm %s -o - \
 // RUN: | FileCheck %s --check-prefixes=CUDA-NEW,CHECK
+// RUN: %clang_cc1 -target-sdk-version=9.2  -emit-llvm %s -o - \
+// RUN:   -fgpu-default-stream=per-thread -DCUDA_API_PER_THREAD_DEFAULT_STREAM \
+// RUN: | FileCheck %s --check-prefixes=CUDA-PTH,CHECK
 // RUN: %clang_cc1 -x hip -emit-llvm %s -o - \
 // RUN: | FileCheck %s --check-prefixes=HIP-OLD,CHECK
 // RUN: %clang_cc1 -fhip-new-launch-api -x hip -emit-llvm %s -o - \
@@ -25,6 +28,7 @@
 // CUDA-OLD: call{{.*}}cudaLaunch
 // CUDA-NEW: call{{.*}}__cudaPopCallConfiguration
 // CUDA-NEW: call{{.*}}cudaLaunchKernel
+// CUDA-PTH: call{{.*}}cudaLaunchKernel_ptsz
 __global__ void g1(int x) {}
 
 // CHECK-LABEL: define{{.*}}main

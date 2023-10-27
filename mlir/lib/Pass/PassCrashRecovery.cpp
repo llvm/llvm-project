@@ -158,8 +158,8 @@ void RecoveryReproducerContext::crashHandler(void *) {
 
     // Emit an error using information only available within the context.
     emitError(context->preCrashOperation->getLoc())
-        << "A failure has been detected while processing the MLIR module:"
-        << description;
+        << "A signal was caught while processing the MLIR module:"
+        << description << "; marking pass as failed";
   }
 }
 

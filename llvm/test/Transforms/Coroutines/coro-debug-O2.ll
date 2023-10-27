@@ -1,10 +1,10 @@
-; RUN: opt -opaque-pointers=0 < %s -passes='module(coro-early),cgscc(coro-split<reuse-storage>),function(sroa)' -S | FileCheck %s
+; RUN: opt < %s -passes='module(coro-early),cgscc(coro-split<reuse-storage>),function(sroa)' -S | FileCheck %s
 
 ; Checks whether the dbg.declare for `__promise` remains valid under O2.
 
 ; CHECK-LABEL: define internal fastcc void @f.resume({{.*}})
 ; CHECK:       entry.resume:
-; CHECK:        call void @llvm.dbg.declare(metadata %f.Frame* %FramePtr, metadata ![[PROMISEVAR_RESUME:[0-9]+]], metadata !DIExpression(
+; CHECK:        call void @llvm.dbg.declare(metadata ptr %begin, metadata ![[PROMISEVAR_RESUME:[0-9]+]], metadata !DIExpression(
 ;
 ; CHECK: ![[PROMISEVAR_RESUME]] = !DILocalVariable(name: "__promise"
 %promise_type = type { i32, i32, double }
@@ -12,31 +12,29 @@
 define void @f() presplitcoroutine !dbg !8  {
 entry:
     %__promise = alloca %promise_type, align 8
-    %0 = bitcast %promise_type* %__promise to i8*
-    %id = call token @llvm.coro.id(i32 16, i8* %0, i8* null, i8* null)
+    %id = call token @llvm.coro.id(i32 16, ptr %__promise, ptr null, ptr null)
     %alloc = call i1 @llvm.coro.alloc(token %id)
     br i1 %alloc, label %coro.alloc, label %coro.init
 
 coro.alloc:                                       ; preds = %entry
     %size = call i64 @llvm.coro.size.i64()
-    %memory = call i8* @new(i64 %size)
+    %memory = call ptr @new(i64 %size)
     br label %coro.init
 
 coro.init:                                        ; preds = %coro.alloc, %entry
-    %phi.entry.alloc = phi i8* [ null, %entry ], [ %memory, %coro.alloc ]
-    %begin = call i8* @llvm.coro.begin(token %id, i8* %phi.entry.alloc)
-    call void @llvm.dbg.declare(metadata %promise_type* %__promise, metadata !6, metadata !DIExpression()), !dbg !18
-    %i.i = getelementptr inbounds %promise_type, %promise_type* %__promise, i64 0, i32 0
-    store i32 1, i32* %i.i, align 8
-    %j.i = getelementptr inbounds %promise_type, %promise_type* %__promise, i64 0, i32 1
-    store i32 2, i32* %j.i, align 4
-    %k.i = getelementptr inbounds %promise_type, %promise_type* %__promise, i64 0, i32 2
-    store double 3.000000e+00, double* %k.i, align 8
+    %phi.entry.alloc = phi ptr [ null, %entry ], [ %memory, %coro.alloc ]
+    %begin = call ptr @llvm.coro.begin(token %id, ptr %phi.entry.alloc)
+    call void @llvm.dbg.declare(metadata ptr %__promise, metadata !6, metadata !DIExpression()), !dbg !18
+    store i32 1, ptr %__promise, align 8
+    %j.i = getelementptr inbounds %promise_type, ptr %__promise, i64 0, i32 1
+    store i32 2, ptr %j.i, align 4
+    %k.i = getelementptr inbounds %promise_type, ptr %__promise, i64 0, i32 2
+    store double 3.000000e+00, ptr %k.i, align 8
     %ready = call i1 @await_ready()
     br i1 %ready, label %init.ready, label %init.suspend
 
 init.suspend:                                     ; preds = %coro.init
-    %save = call token @llvm.coro.save(i8* null)
+    %save = call token @llvm.coro.save(ptr null)
     call void @await_suspend()
     %suspend = call i8 @llvm.coro.suspend(token %save, i1 false)
     switch i8 %suspend, label %coro.ret [
@@ -53,8 +51,8 @@ init.ready:                                       ; preds = %init.suspend, %coro
     br i1 %ready.again, label %await.ready, label %await.suspend
 
 await.suspend:                                    ; preds = %init.ready
-    %save.again = call token @llvm.coro.save(i8* null)
-    %from.address = call i8* @from_address(i8* %begin)
+    %save.again = call token @llvm.coro.save(ptr null)
+    %from.address = call ptr @from_address(ptr %begin)
     call void @await_suspend()
     %suspend.again = call i8 @llvm.coro.suspend(token %save.again, i1 false)
     switch i8 %suspend.again, label %coro.ret [
@@ -76,8 +74,8 @@ coro.final:                                       ; preds = %await.ready
     br i1 %coro.final.await_ready, label %final.ready, label %final.suspend
 
 final.suspend:                                    ; preds = %coro.final
-    %final.suspend.coro.save = call token @llvm.coro.save(i8* null)
-    %final.suspend.from_address = call i8* @from_address(i8* %begin)
+    %final.suspend.coro.save = call token @llvm.coro.save(ptr null)
+    %final.suspend.from_address = call ptr @from_address(ptr %begin)
     call void @await_suspend()
     %final.suspend.coro.suspend = call i8 @llvm.coro.suspend(token %final.suspend.coro.save, i1 true)
     switch i8 %final.suspend.coro.suspend, label %coro.ret [
@@ -94,12 +92,12 @@ final.ready:                                      ; preds = %final.suspend, %cor
 
 cleanup:                                          ; preds = %final.ready, %final.cleanup, %await.cleanup, %init.cleanup
     %cleanup.dest.slot.0 = phi i32 [ 0, %final.ready ], [ 2, %final.cleanup ], [ 2, %await.cleanup ], [ 2, %init.cleanup ]
-    %free.memory = call i8* @llvm.coro.free(token %id, i8* %begin)
-    %free = icmp ne i8* %free.memory, null
+    %free.memory = call ptr @llvm.coro.free(token %id, ptr %begin)
+    %free = icmp ne ptr %free.memory, null
     br i1 %free, label %coro.free, label %after.coro.free
 
 coro.free:                                        ; preds = %cleanup
-    call void @delete(i8* %free.memory)
+    call void @delete(ptr %free.memory)
     br label %after.coro.free
 
 after.coro.free:                                  ; preds = %coro.free, %cleanup
@@ -112,7 +110,7 @@ cleanup.cont:                                     ; preds = %after.coro.free
     br label %coro.ret
 
 coro.ret:                                         ; preds = %cleanup.cont, %after.coro.free, %final.suspend, %await.suspend, %init.suspend
-    %end = call i1 @llvm.coro.end(i8* null, i1 false)
+    %end = call i1 @llvm.coro.end(ptr null, i1 false, token none)
     ret void
 
 unreachable:                                      ; preds = %after.coro.free
@@ -121,22 +119,22 @@ unreachable:                                      ; preds = %after.coro.free
 }
 
 declare void @llvm.dbg.declare(metadata, metadata, metadata)
-declare token @llvm.coro.id(i32, i8* readnone, i8* nocapture readonly, i8*)
+declare token @llvm.coro.id(i32, ptr readnone, ptr nocapture readonly, ptr)
 declare i1 @llvm.coro.alloc(token)
 declare i64 @llvm.coro.size.i64()
-declare token @llvm.coro.save(i8*)
-declare i8* @llvm.coro.begin(token, i8* writeonly)
+declare token @llvm.coro.save(ptr)
+declare ptr @llvm.coro.begin(token, ptr writeonly)
 declare i8 @llvm.coro.suspend(token, i1)
-declare i8* @llvm.coro.free(token, i8* nocapture readonly)
-declare i1 @llvm.coro.end(i8*, i1)
+declare ptr @llvm.coro.free(token, ptr nocapture readonly)
+declare i1 @llvm.coro.end(ptr, i1, token)
 
-declare i8* @new(i64)
-declare void @delete(i8*)
+declare ptr @new(i64)
+declare void @delete(ptr)
 declare i1 @await_ready()
 declare void @await_suspend()
 declare void @await_resume()
 declare void @print(i32)
-declare i8* @from_address(i8*)
+declare ptr @from_address(ptr)
 declare void @return_void()
 declare void @final_suspend()
 

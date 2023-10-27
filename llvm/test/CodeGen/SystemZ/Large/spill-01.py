@@ -23,21 +23,21 @@ from __future__ import print_function
 
 count = 500
 
-print('declare void @foo()')
-print('')
-print('define void @f1(i64 *%base0, i64 *%base1) {')
+print("declare void @foo()")
+print("")
+print("define void @f1(i64 *%base0, i64 *%base1) {")
 
 for i in range(count):
-    print('  %%ptr%d = getelementptr i64, i64 *%%base%d, i64 %d' % (i, i % 2, i / 2))
-    print('  %%val%d = load i64 , i64 *%%ptr%d' % (i, i))
-    print('')
+    print("  %%ptr%d = getelementptr i64, i64 *%%base%d, i64 %d" % (i, i % 2, i / 2))
+    print("  %%val%d = load i64 , i64 *%%ptr%d" % (i, i))
+    print("")
 
-print('  call void @foo()')
-print('')
+print("  call void @foo()")
+print("")
 
 for i in range(count):
-    print('  store i64 %%val%d, i64 *%%ptr%d' % (i, i))
+    print("  store i64 %%val%d, i64 *%%ptr%d" % (i, i))
 
-print('')
-print('  ret void')
-print('}')
+print("")
+print("  ret void")
+print("}")

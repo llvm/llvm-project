@@ -682,6 +682,15 @@ classTemplateSpecializationDecl()
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Decl.html">Decl</a>&gt;</td><td class="name" onclick="toggle('conceptDecl0')"><a name="conceptDecl0Anchor">conceptDecl</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ConceptDecl.html">ConceptDecl</a>&gt;...</td></tr>
+<tr><td colspan="4" class="doc" id="conceptDecl0"><pre>Matches concept declarations.
+
+Example matches integral
+  template&lt;typename T&gt;
+  concept integral = std::is_integral_v&lt;T&gt;;
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Decl.html">Decl</a>&gt;</td><td class="name" onclick="toggle('cxxConstructorDecl0')"><a name="cxxConstructorDecl0Anchor">cxxConstructorDecl</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXConstructorDecl.html">CXXConstructorDecl</a>&gt;...</td></tr>
 <tr><td colspan="4" class="doc" id="cxxConstructorDecl0"><pre>Matches C++ constructor declarations.
 
@@ -1257,6 +1266,43 @@ addrLabelExpr()
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt;</td><td class="name" onclick="toggle('arrayInitIndexExpr0')"><a name="arrayInitIndexExpr0Anchor">arrayInitIndexExpr</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ArrayInitIndexExpr.html">ArrayInitIndexExpr</a>&gt;...</td></tr>
+<tr><td colspan="4" class="doc" id="arrayInitIndexExpr0"><pre>The arrayInitIndexExpr consists of two subexpressions: a common expression
+(the source array) that is evaluated once up-front, and a per-element initializer
+that runs once for each array element. Within the per-element initializer,
+the current index may be obtained via an ArrayInitIndexExpr.
+
+Given
+  void testStructBinding() {
+    int a[2] = {1, 2};
+    auto [x, y] = a;
+  }
+arrayInitIndexExpr() matches the array index that implicitly iterates
+over the array `a` to copy each element to the anonymous array
+that backs the structured binding `[x, y]` elements of which are
+referred to by their aliases `x` and `y`.
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt;</td><td class="name" onclick="toggle('arrayInitLoopExpr0')"><a name="arrayInitLoopExpr0Anchor">arrayInitLoopExpr</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ArrayInitLoopExpr.html">ArrayInitLoopExpr</a>&gt;...</td></tr>
+<tr><td colspan="4" class="doc" id="arrayInitLoopExpr0"><pre>Matches a loop initializing the elements of an array in a number of contexts:
+ * in the implicit copy/move constructor for a class with an array member
+ * when a lambda-expression captures an array by value
+ * when a decomposition declaration decomposes an array
+
+Given
+  void testLambdaCapture() {
+    int a[10];
+    auto Lam1 = [a]() {
+      return;
+    };
+  }
+arrayInitLoopExpr() matches the implicit loop that initializes each element of
+the implicit array field inside the lambda object, that represents the array `a`
+captured by value.
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt;</td><td class="name" onclick="toggle('arraySubscriptExpr0')"><a name="arraySubscriptExpr0Anchor">arraySubscriptExpr</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ArraySubscriptExpr.html">ArraySubscriptExpr</a>&gt;...</td></tr>
 <tr><td colspan="4" class="doc" id="arraySubscriptExpr0"><pre>Matches array subscript expressions.
 
@@ -1445,6 +1491,11 @@ continueStmt()
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt;</td><td class="name" onclick="toggle('convertVectorExpr0')"><a name="convertVectorExpr0Anchor">convertVectorExpr</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ConvertVectorExpr.html">ConvertVectorExpr</a>&gt;...</td></tr>
+<tr><td colspan="4" class="doc" id="convertVectorExpr0"><pre>Matches builtin function __builtin_convertvector.
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt;</td><td class="name" onclick="toggle('coreturnStmt0')"><a name="coreturnStmt0Anchor">coreturnStmt</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CoreturnStmt.html">CoreturnStmt</a>&gt;...</td></tr>
 <tr><td colspan="4" class="doc" id="coreturnStmt0"><pre>Matches co_return statements.
 
@@ -1452,6 +1503,16 @@ Given
   while (true) { co_return; }
 coreturnStmt()
   matches 'co_return'
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt;</td><td class="name" onclick="toggle('coroutineBodyStmt0')"><a name="coroutineBodyStmt0Anchor">coroutineBodyStmt</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CoroutineBodyStmt.html">CoroutineBodyStmt</a>&gt;...</td></tr>
+<tr><td colspan="4" class="doc" id="coroutineBodyStmt0"><pre>Matches coroutine body statements.
+
+coroutineBodyStmt() matches the coroutine below
+  generator&lt;int&gt; gen() {
+    co_return;
+  }
 </pre></td></tr>
 
 
@@ -2470,8 +2531,22 @@ Given
   class array {
     T data[Size];
   };
-dependentSizedArrayType
+dependentSizedArrayType()
   matches "T data[Size]"
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Type.html">Type</a>&gt;</td><td class="name" onclick="toggle('dependentSizedExtVectorType0')"><a name="dependentSizedExtVectorType0Anchor">dependentSizedExtVectorType</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1DependentSizedExtVectorType.html">DependentSizedExtVectorType</a>&gt;...</td></tr>
+<tr><td colspan="4" class="doc" id="dependentSizedExtVectorType0"><pre>Matches C++ extended vector type where either the type or size is
+dependent.
+
+Given
+  template&lt;typename T, int Size&gt;
+  class vector {
+    typedef T __attribute__((ext_vector_type(Size))) type;
+  };
+dependentSizedExtVectorType()
+  matches "T __attribute__((ext_vector_type(Size)))"
 </pre></td></tr>
 
 
@@ -2571,6 +2646,18 @@ Given:
 
 lValueReferenceType() matches the types of b, d, and e. e is
 matched since the type is deduced as int&amp; by reference collapsing rules.
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Type.html">Type</a>&gt;</td><td class="name" onclick="toggle('macroQualifiedType0')"><a name="macroQualifiedType0Anchor">macroQualifiedType</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1MacroQualifiedType.html">MacroQualifiedType</a>&gt;...</td></tr>
+<tr><td colspan="4" class="doc" id="macroQualifiedType0"><pre>Matches qualified types when the qualifier is applied via a macro.
+
+Given
+  #define CDECL __attribute__((cdecl))
+  typedef void (CDECL *X)();
+  typedef void (__attribute__((cdecl)) *Y)();
+macroQualifiedType()
+  matches the type of the typedef declaration of X but not Y.
 </pre></td></tr>
 
 
@@ -3033,6 +3120,19 @@ Given
     // ...
   }
 cxxCatchStmt(isCatchAll()) matches catch(...) but not catch(int).
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXConstructExpr.html">CXXConstructExpr</a>&gt;</td><td class="name" onclick="toggle('argumentCountAtLeast1')"><a name="argumentCountAtLeast1Anchor">argumentCountAtLeast</a></td><td>unsigned N</td></tr>
+<tr><td colspan="4" class="doc" id="argumentCountAtLeast1"><pre>Checks that a call expression or a constructor call expression has at least
+the specified number of arguments (including absent default arguments).
+
+Example matches f(0, 0) and g(0, 0, 0)
+(matcher = callExpr(argumentCountAtLeast(2)))
+  void f(int x, int y);
+  void g(int x, int y, int z);
+  f(0, 0);
+  g(0, 0, 0);
 </pre></td></tr>
 
 
@@ -3693,6 +3793,19 @@ Example 2: matches s1 &lt; s2
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXUnresolvedConstructExpr.html">CXXUnresolvedConstructExpr</a>&gt;</td><td class="name" onclick="toggle('argumentCountAtLeast2')"><a name="argumentCountAtLeast2Anchor">argumentCountAtLeast</a></td><td>unsigned N</td></tr>
+<tr><td colspan="4" class="doc" id="argumentCountAtLeast2"><pre>Checks that a call expression or a constructor call expression has at least
+the specified number of arguments (including absent default arguments).
+
+Example matches f(0, 0) and g(0, 0, 0)
+(matcher = callExpr(argumentCountAtLeast(2)))
+  void f(int x, int y);
+  void g(int x, int y, int z);
+  f(0, 0);
+  g(0, 0, 0);
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXUnresolvedConstructExpr.html">CXXUnresolvedConstructExpr</a>&gt;</td><td class="name" onclick="toggle('argumentCountIs2')"><a name="argumentCountIs2Anchor">argumentCountIs</a></td><td>unsigned N</td></tr>
 <tr><td colspan="4" class="doc" id="argumentCountIs2"><pre>Checks that a call expression or a constructor call expression has
 a specific number of arguments (including absent default arguments).
@@ -3700,6 +3813,19 @@ a specific number of arguments (including absent default arguments).
 Example matches f(0, 0) (matcher = callExpr(argumentCountIs(2)))
   void f(int x, int y);
   f(0, 0);
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CallExpr.html">CallExpr</a>&gt;</td><td class="name" onclick="toggle('argumentCountAtLeast0')"><a name="argumentCountAtLeast0Anchor">argumentCountAtLeast</a></td><td>unsigned N</td></tr>
+<tr><td colspan="4" class="doc" id="argumentCountAtLeast0"><pre>Checks that a call expression or a constructor call expression has at least
+the specified number of arguments (including absent default arguments).
+
+Example matches f(0, 0) and g(0, 0, 0)
+(matcher = callExpr(argumentCountAtLeast(2)))
+  void f(int x, int y);
+  void g(int x, int y, int z);
+  f(0, 0);
+  g(0, 0, 0);
 </pre></td></tr>
 
 
@@ -4857,6 +4983,19 @@ Given
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ObjCInterfaceDecl.html">ObjCInterfaceDecl</a>&gt;</td><td class="name" onclick="toggle('isSameOrDerivedFrom3')"><a name="isSameOrDerivedFrom3Anchor">isSameOrDerivedFrom</a></td><td>std::string BaseName</td></tr>
 <tr><td colspan="4" class="doc" id="isSameOrDerivedFrom3"><pre>Overloaded method as shortcut for
 isSameOrDerivedFrom(hasName(...)).
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ObjCMessageExpr.html">ObjCMessageExpr</a>&gt;</td><td class="name" onclick="toggle('argumentCountAtLeast3')"><a name="argumentCountAtLeast3Anchor">argumentCountAtLeast</a></td><td>unsigned N</td></tr>
+<tr><td colspan="4" class="doc" id="argumentCountAtLeast3"><pre>Checks that a call expression or a constructor call expression has at least
+the specified number of arguments (including absent default arguments).
+
+Example matches f(0, 0) and g(0, 0, 0)
+(matcher = callExpr(argumentCountAtLeast(2)))
+  void f(int x, int y);
+  void g(int x, int y, int z);
+  f(0, 0);
+  g(0, 0, 0);
 </pre></td></tr>
 
 
@@ -6747,9 +6886,10 @@ memberExpr(hasObjectExpression(hasType(pointsTo(
 
 
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXForRangeStmt.html">CXXForRangeStmt</a>&gt;</td><td class="name" onclick="toggle('hasBody3')"><a name="hasBody3Anchor">hasBody</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt; InnerMatcher</td></tr>
-<tr><td colspan="4" class="doc" id="hasBody3"><pre>Matches a 'for', 'while', 'do' statement or a function definition that has
-a given body. Note that in case of functions this matcher only matches the
-definition itself and not the other declarations of the same function.
+<tr><td colspan="4" class="doc" id="hasBody3"><pre>Matches a 'for', 'while', 'while' statement or a function or coroutine
+definition that has a given body. Note that in case of functions or
+coroutines this matcher only matches the definition itself and not the
+other declarations of the same function or coroutine.
 
 Given
   for (;;) {}
@@ -7634,6 +7774,30 @@ with compoundStmt()
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CoroutineBodyStmt.html">CoroutineBodyStmt</a>&gt;</td><td class="name" onclick="toggle('hasBody5')"><a name="hasBody5Anchor">hasBody</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt; InnerMatcher</td></tr>
+<tr><td colspan="4" class="doc" id="hasBody5"><pre>Matches a 'for', 'while', 'while' statement or a function or coroutine
+definition that has a given body. Note that in case of functions or
+coroutines this matcher only matches the definition itself and not the
+other declarations of the same function or coroutine.
+
+Given
+  for (;;) {}
+forStmt(hasBody(compoundStmt()))
+  matches 'for (;;) {}'
+with compoundStmt()
+  matching '{}'
+
+Given
+  void f();
+  void f() {}
+functionDecl(hasBody(compoundStmt()))
+  matches 'void f() {}'
+with compoundStmt()
+  matching '{}'
+  but does not match 'void f();'
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1DecayedType.html">DecayedType</a>&gt;</td><td class="name" onclick="toggle('hasDecayedType0')"><a name="hasDecayedType0Anchor">hasDecayedType</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1QualType.html">QualType</a>&gt; InnerType</td></tr>
 <tr><td colspan="4" class="doc" id="hasDecayedType0"><pre>Matches the decayed type, whoes decayed type matches InnerMatcher
 </pre></td></tr>
@@ -7842,9 +8006,10 @@ matches the decomposition decl with 'f' bound to "fBinding".
 
 
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1DoStmt.html">DoStmt</a>&gt;</td><td class="name" onclick="toggle('hasBody0')"><a name="hasBody0Anchor">hasBody</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt; InnerMatcher</td></tr>
-<tr><td colspan="4" class="doc" id="hasBody0"><pre>Matches a 'for', 'while', 'do' statement or a function definition that has
-a given body. Note that in case of functions this matcher only matches the
-definition itself and not the other declarations of the same function.
+<tr><td colspan="4" class="doc" id="hasBody0"><pre>Matches a 'for', 'while', 'while' statement or a function or coroutine
+definition that has a given body. Note that in case of functions or
+coroutines this matcher only matches the definition itself and not the
+other declarations of the same function or coroutine.
 
 Given
   for (;;) {}
@@ -8178,9 +8343,10 @@ fieldDecl(hasInClassInitializer(anything()))
 
 
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ForStmt.html">ForStmt</a>&gt;</td><td class="name" onclick="toggle('hasBody1')"><a name="hasBody1Anchor">hasBody</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt; InnerMatcher</td></tr>
-<tr><td colspan="4" class="doc" id="hasBody1"><pre>Matches a 'for', 'while', 'do' statement or a function definition that has
-a given body. Note that in case of functions this matcher only matches the
-definition itself and not the other declarations of the same function.
+<tr><td colspan="4" class="doc" id="hasBody1"><pre>Matches a 'for', 'while', 'while' statement or a function or coroutine
+definition that has a given body. Note that in case of functions or
+coroutines this matcher only matches the definition itself and not the
+other declarations of the same function or coroutine.
 
 Given
   for (;;) {}
@@ -8372,9 +8538,10 @@ functionDecl(hasAnyTemplateArgument(refersToType(asString("int"))))
 
 
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1FunctionDecl.html">FunctionDecl</a>&gt;</td><td class="name" onclick="toggle('hasBody4')"><a name="hasBody4Anchor">hasBody</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt; InnerMatcher</td></tr>
-<tr><td colspan="4" class="doc" id="hasBody4"><pre>Matches a 'for', 'while', 'do' statement or a function definition that has
-a given body. Note that in case of functions this matcher only matches the
-definition itself and not the other declarations of the same function.
+<tr><td colspan="4" class="doc" id="hasBody4"><pre>Matches a 'for', 'while', 'while' statement or a function or coroutine
+definition that has a given body. Note that in case of functions or
+coroutines this matcher only matches the definition itself and not the
+other declarations of the same function or coroutine.
 
 Given
   for (;;) {}
@@ -10034,9 +10201,10 @@ variableArrayType(hasSizeExpr(ignoringImpCasts(declRefExpr(to(
 
 
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1WhileStmt.html">WhileStmt</a>&gt;</td><td class="name" onclick="toggle('hasBody2')"><a name="hasBody2Anchor">hasBody</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt; InnerMatcher</td></tr>
-<tr><td colspan="4" class="doc" id="hasBody2"><pre>Matches a 'for', 'while', 'do' statement or a function definition that has
-a given body. Note that in case of functions this matcher only matches the
-definition itself and not the other declarations of the same function.
+<tr><td colspan="4" class="doc" id="hasBody2"><pre>Matches a 'for', 'while', 'while' statement or a function or coroutine
+definition that has a given body. Note that in case of functions or
+coroutines this matcher only matches the definition itself and not the
+other declarations of the same function or coroutine.
 
 Given
   for (;;) {}

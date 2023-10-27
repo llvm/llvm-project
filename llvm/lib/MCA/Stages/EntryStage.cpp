@@ -67,7 +67,7 @@ llvm::Error EntryStage::cycleResume() {
 
 llvm::Error EntryStage::cycleEnd() {
   // Find the first instruction which hasn't been retired.
-  auto Range = make_range(&Instructions[NumRetired], Instructions.end());
+  auto Range = drop_begin(Instructions, NumRetired);
   auto It = find_if(Range, [](const std::unique_ptr<Instruction> &I) {
     return !I->isRetired();
   });

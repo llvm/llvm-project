@@ -1,12 +1,13 @@
 ! This test checks lowering of OpenACC init directive.
 
 ! RUN: bbc -fopenacc -emit-fir %s -o - | FileCheck %s
+! RUN: bbc -fopenacc -emit-hlfir %s -o - | FileCheck %s
 
 subroutine acc_init
   logical :: ifCondition = .TRUE.
 
   !$acc init
-!CHECK: acc.init{{$}}
+!CHECK: acc.init{{ *}}{{$}}
 
   !$acc init if(.true.)
 !CHECK: [[IF1:%.*]] = arith.constant true

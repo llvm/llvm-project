@@ -47,11 +47,17 @@ static void print_usage(void) {
   fprintf(
       stderr,
       "    Read lines of name, rpn from stdin - print generated module\n\n");
+  fprintf(stderr, "  * --get-di-tag\n");
+  fprintf(stderr, "    Run test for getting MDNode dwarf tag\n");
+  fprintf(stderr, "  * --di-type-get-name\n");
+  fprintf(stderr, "    Run test for getting MDNode type name\n");
+  fprintf(stderr, "  * --replace-md-operand\n");
+  fprintf(stderr, "    Run test for replacing MDNode operands\n");
+  fprintf(stderr, "  * --is-a-value-as-metadata\n");
+  fprintf(stderr,
+          "    Run test for checking if LLVMValueRef is a ValueAsMetadata\n");
   fprintf(stderr, "  * --echo\n");
   fprintf(stderr, "    Read bitcode file from stdin - print it back out\n\n");
-  fprintf(stderr, "  * --echo --opaque-pointers\n");
-  fprintf(stderr, "    Read bitcode file from stdin - print it back out in "
-                  "opaque pointer mode\n\n");
   fprintf(stderr, "  * --test-diagnostic-handler\n");
   fprintf(stderr,
           "    Read bitcode file from stdin with a diagnostic handler set\n\n");
@@ -61,10 +67,6 @@ static void print_usage(void) {
 }
 
 int main(int argc, char **argv) {
-  LLVMPassRegistryRef pr = LLVMGetGlobalPassRegistry();
-
-  LLVMInitializeCore(pr);
-
   if (argc == 2 && !strcmp(argv[1], "--lazy-new-module-dump")) {
     return llvm_module_dump(true, true);
   } else if (argc == 2 && !strcmp(argv[1], "--new-module-dump")) {
@@ -91,6 +93,14 @@ int main(int argc, char **argv) {
     return llvm_add_named_metadata_operand();
   } else if (argc == 2 && !strcmp(argv[1], "--set-metadata")) {
     return llvm_set_metadata();
+  } else if (argc == 2 && !strcmp(argv[1], "--get-di-tag")) {
+    return llvm_get_di_tag();
+  } else if (argc == 2 && !strcmp(argv[1], "--di-type-get-name")) {
+    return llvm_di_type_get_name();
+  } else if (argc == 2 && !strcmp(argv[1], "--replace-md-operand")) {
+    return llvm_replace_md_operand();
+  } else if (argc == 2 && !strcmp(argv[1], "--is-a-value-as-metadata")) {
+    return llvm_is_a_value_as_metadata();
   } else if (argc == 2 && !strcmp(argv[1], "--test-function-attributes")) {
     return llvm_test_function_attributes();
   } else if (argc == 2 && !strcmp(argv[1], "--test-callsite-attributes")) {

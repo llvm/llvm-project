@@ -222,7 +222,7 @@ let TargetPrefix = "s390" in {
   def int_s390_etnd : ClangBuiltin<"__builtin_tx_nesting_depth">,
                       Intrinsic<[llvm_i32_ty], [], [IntrNoMem]>;
 
-  def int_s390_ntstg : Intrinsic<[], [llvm_i64_ty, llvm_ptr64_ty],
+  def int_s390_ntstg : Intrinsic<[], [llvm_i64_ty, llvm_ptr_ty],
                                  [IntrArgMemOnly, IntrWriteMem]>;
 
   def int_s390_ppa_txassist : ClangBuiltin<"__builtin_tx_assist">,

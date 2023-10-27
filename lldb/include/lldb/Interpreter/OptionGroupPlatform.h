@@ -47,22 +47,24 @@ public:
       m_platform_name.clear();
   }
 
-  ConstString GetSDKRootDirectory() const { return m_sdk_sysroot; }
+  const std::string &GetSDKRootDirectory() const { return m_sdk_sysroot; }
 
-  void SetSDKRootDirectory(ConstString sdk_root_directory) {
-    m_sdk_sysroot = sdk_root_directory;
+  void SetSDKRootDirectory(std::string sdk_root_directory) {
+    m_sdk_sysroot = std::move(sdk_root_directory);
   }
 
-  ConstString GetSDKBuild() const { return m_sdk_build; }
+  const std::string &GetSDKBuild() const { return m_sdk_build; }
 
-  void SetSDKBuild(ConstString sdk_build) { m_sdk_build = sdk_build; }
+  void SetSDKBuild(std::string sdk_build) {
+    m_sdk_build = std::move(sdk_build);
+  }
 
   bool PlatformMatches(const lldb::PlatformSP &platform_sp) const;
 
 protected:
   std::string m_platform_name;
-  ConstString m_sdk_sysroot;
-  ConstString m_sdk_build;
+  std::string m_sdk_sysroot;
+  std::string m_sdk_build;
   llvm::VersionTuple m_os_version;
   bool m_include_platform_option;
 };

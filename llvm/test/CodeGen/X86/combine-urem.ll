@@ -254,7 +254,7 @@ define <4 x i32> @combine_vec_urem_by_pow2d(<4 x i32> %x, <4 x i32> %y) {
 ; AVX1-LABEL: combine_vec_urem_by_pow2d:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vpsrldq {{.*#+}} xmm2 = xmm1[12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm3 = [2147483648,2147483648,2147483648,2147483648]
+; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm3 = [2147483648,2147483648,2147483648,2147483648]
 ; AVX1-NEXT:    vpsrld %xmm2, %xmm3, %xmm2
 ; AVX1-NEXT:    vpsrlq $32, %xmm1, %xmm4
 ; AVX1-NEXT:    vpsrld %xmm4, %xmm3, %xmm4
@@ -385,7 +385,7 @@ define <4 x i32> @combine_vec_urem_by_lshr_pow2a(<4 x i32> %x, <4 x i32> %y) {
 ; AVX1-LABEL: combine_vec_urem_by_lshr_pow2a:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vpsrldq {{.*#+}} xmm2 = xmm1[12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
-; AVX1-NEXT:    vmovdqa {{.*#+}} xmm3 = [4,4,4,4]
+; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm3 = [4,4,4,4]
 ; AVX1-NEXT:    vpsrld %xmm2, %xmm3, %xmm2
 ; AVX1-NEXT:    vpsrlq $32, %xmm1, %xmm4
 ; AVX1-NEXT:    vpsrld %xmm4, %xmm3, %xmm4

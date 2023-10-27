@@ -1,8 +1,8 @@
 set(LLVM_LINK_COMPONENTS
   BinaryFormat
+  JITLink
   MC
   Object
-  RuntimeDyld
   Support
   )
 

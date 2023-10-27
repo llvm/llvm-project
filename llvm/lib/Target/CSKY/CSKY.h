@@ -23,7 +23,7 @@ class FunctionPass;
 class PassRegistry;
 
 FunctionPass *createCSKYISelDag(CSKYTargetMachine &TM,
-                                CodeGenOpt::Level OptLevel);
+                                CodeGenOptLevel OptLevel);
 FunctionPass *createCSKYConstantIslandPass();
 
 void initializeCSKYConstantIslandsPass(PassRegistry &);

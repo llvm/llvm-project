@@ -17,6 +17,29 @@
 // SKIPPED: .. {{.*test2.h}}
 // SKIPPED: .. {{.*test2.h}}
 
+// RUN: %clang_cc1 -isystem %S -isystem %S/Inputs/SystemHeaderPrefix \
+// RUN:     -E -H -fshow-skipped-includes -sys-header-deps -o /dev/null %s 2> %t.stderr
+// RUN: FileCheck --check-prefix=SKIPPED-SYS < %t.stderr %s
+
+// SKIPPED-SYS: . {{.*noline.h}}
+// SKIPPED-SYS: . {{.*test.h}}
+// SKIPPED-SYS: .. {{.*test2.h}}
+// SKIPPED-SYS: .. {{.*test2.h}}
+
+// RUN: %clang_cc1 -I%S -isystem %S/Inputs/SystemHeaderPrefix -include Inputs/test.h \
+// RUN:     -E -H -fshow-skipped-includes -o /dev/null %s 2> %t.stderr
+// RUN: FileCheck --check-prefix=SKIPPED-PREDEFINES < %t.stderr %s
+
+// The skipped include of test2.h from the -include test.h shouldn't be printed.
+// SKIPPED-PREDEFINES-NOT: {{.*test2.h}}
+// SKIPPED-PREDEFINES:     . {{.*test.h}}
+
+// RUN: %clang_cc1 -isystem %S -isystem %S/Inputs/SystemHeaderPrefix \
+// RUN:     -E -H -fshow-skipped-includes -o /dev/null %s 2> %t.stderr
+// RUN: FileCheck --check-prefix=SKIPPED-NO-SYS --allow-empty < %t.stderr %s
+
+// SKIPPED-NO-SYS-NOT: .
+
 // RUN: %clang_cc1 -I%S -include Inputs/test3.h -isystem %S/Inputs/SystemHeaderPrefix \
 // RUN:     -E -H -sys-header-deps -o /dev/null %s 2> %t.stderr
 // RUN: FileCheck --check-prefix SYSHEADERS < %t.stderr %s
@@ -58,4 +81,4 @@
 // MS-IGNORELIST-NOT: Note
 
 #include <noline.h>
-#include "Inputs/test.h"
+#include <Inputs/test.h>

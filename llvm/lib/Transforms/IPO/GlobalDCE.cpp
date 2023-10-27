@@ -21,8 +21,6 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/Utils/CtorUtils.h"
@@ -41,47 +39,6 @@ STATISTIC(NumFunctions, "Number of functions removed");
 STATISTIC(NumIFuncs,    "Number of indirect functions removed");
 STATISTIC(NumVariables, "Number of global variables removed");
 STATISTIC(NumVFuncs,    "Number of virtual functions removed");
-
-namespace {
-  class GlobalDCELegacyPass : public ModulePass {
-  public:
-    static char ID; // Pass identification, replacement for typeid
-    GlobalDCELegacyPass() : ModulePass(ID) {
-      initializeGlobalDCELegacyPassPass(*PassRegistry::getPassRegistry());
-    }
-
-    // run - Do the GlobalDCE pass on the specified module, optionally updating
-    // the specified callgraph to reflect the changes.
-    //
-    bool runOnModule(Module &M) override {
-      if (skipModule(M))
-        return false;
-
-      // We need a minimally functional dummy module analysis manager. It needs
-      // to at least know about the possibility of proxying a function analysis
-      // manager.
-      FunctionAnalysisManager DummyFAM;
-      ModuleAnalysisManager DummyMAM;
-      DummyMAM.registerPass(
-          [&] { return FunctionAnalysisManagerModuleProxy(DummyFAM); });
-
-      auto PA = Impl.run(M, DummyMAM);
-      return !PA.areAllPreserved();
-    }
-
-  private:
-    GlobalDCEPass Impl;
-  };
-}
-
-char GlobalDCELegacyPass::ID = 0;
-INITIALIZE_PASS(GlobalDCELegacyPass, "globaldce",
-                "Dead Global Elimination", false, false)
-
-// Public interface to the GlobalDCEPass.
-ModulePass *llvm::createGlobalDCEPass() {
-  return new GlobalDCELegacyPass();
-}
 
 /// Returns true if F is effectively empty.
 static bool isEmptyFunction(Function *F) {
@@ -163,12 +120,6 @@ void GlobalDCEPass::ScanVTables(Module &M) {
   SmallVector<MDNode *, 2> Types;
   LLVM_DEBUG(dbgs() << "Building type info -> vtable map\n");
 
-  auto *LTOPostLinkMD =
-      cast_or_null<ConstantAsMetadata>(M.getModuleFlag("LTOPostLink"));
-  bool LTOPostLink =
-      LTOPostLinkMD &&
-      (cast<ConstantInt>(LTOPostLinkMD->getValue())->getZExtValue() != 0);
-
   for (GlobalVariable &GV : M.globals()) {
     Types.clear();
     GV.getMetadata(LLVMContext::MD_type, Types);
@@ -195,7 +146,7 @@ void GlobalDCEPass::ScanVTables(Module &M) {
     if (auto GO = dyn_cast<GlobalObject>(&GV)) {
       GlobalObject::VCallVisibility TypeVis = GO->getVCallVisibility();
       if (TypeVis == GlobalObject::VCallVisibilityTranslationUnit ||
-          (LTOPostLink &&
+          (InLTOPostLink &&
            TypeVis == GlobalObject::VCallVisibilityLinkageUnit)) {
         LLVM_DEBUG(dbgs() << GV.getName() << " is safe for VFE\n");
         VFESafeVTables.insert(&GV);
@@ -236,29 +187,36 @@ void GlobalDCEPass::ScanTypeCheckedLoadIntrinsics(Module &M) {
   LLVM_DEBUG(dbgs() << "Scanning type.checked.load intrinsics\n");
   Function *TypeCheckedLoadFunc =
       M.getFunction(Intrinsic::getName(Intrinsic::type_checked_load));
+  Function *TypeCheckedLoadRelativeFunc =
+      M.getFunction(Intrinsic::getName(Intrinsic::type_checked_load_relative));
 
-  if (!TypeCheckedLoadFunc)
-    return;
+  auto scan = [&](Function *CheckedLoadFunc) {
+    if (!CheckedLoadFunc)
+      return;
 
-  for (auto *U : TypeCheckedLoadFunc->users()) {
-    auto CI = dyn_cast<CallInst>(U);
-    if (!CI)
-      continue;
+    for (auto *U : CheckedLoadFunc->users()) {
+      auto CI = dyn_cast<CallInst>(U);
+      if (!CI)
+        continue;
 
-    auto *Offset = dyn_cast<ConstantInt>(CI->getArgOperand(1));
-    Value *TypeIdValue = CI->getArgOperand(2);
-    auto *TypeId = cast<MetadataAsValue>(TypeIdValue)->getMetadata();
+      auto *Offset = dyn_cast<ConstantInt>(CI->getArgOperand(1));
+      Value *TypeIdValue = CI->getArgOperand(2);
+      auto *TypeId = cast<MetadataAsValue>(TypeIdValue)->getMetadata();
 
-    if (Offset) {
-      ScanVTableLoad(CI->getFunction(), TypeId, Offset->getZExtValue());
-    } else {
-      // type.checked.load with a non-constant offset, so assume every entry in
-      // every matching vtable is used.
-      for (const auto &VTableInfo : TypeIdMap[TypeId]) {
-        VFESafeVTables.erase(VTableInfo.first);
+      if (Offset) {
+        ScanVTableLoad(CI->getFunction(), TypeId, Offset->getZExtValue());
+      } else {
+        // type.checked.load with a non-constant offset, so assume every entry
+        // in every matching vtable is used.
+        for (const auto &VTableInfo : TypeIdMap[TypeId]) {
+          VFESafeVTables.erase(VTableInfo.first);
+        }
       }
     }
-  }
+  };
+
+  scan(TypeCheckedLoadFunc);
+  scan(TypeCheckedLoadRelativeFunc);
 }
 
 void GlobalDCEPass::AddVirtualFunctionDependencies(Module &M) {
@@ -271,7 +229,7 @@ void GlobalDCEPass::AddVirtualFunctionDependencies(Module &M) {
   // Don't attempt VFE in that case.
   auto *Val = mdconst::dyn_extract_or_null<ConstantInt>(
       M.getModuleFlag("Virtual Function Elim"));
-  if (!Val || Val->getZExtValue() == 0)
+  if (!Val || Val->isZero())
     return;
 
   ScanVTables(M);
@@ -457,4 +415,12 @@ PreservedAnalyses GlobalDCEPass::run(Module &M, ModuleAnalysisManager &MAM) {
   if (Changed)
     return PreservedAnalyses::none();
   return PreservedAnalyses::all();
+}
+
+void GlobalDCEPass::printPipeline(
+    raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
+  static_cast<PassInfoMixin<GlobalDCEPass> *>(this)->printPipeline(
+      OS, MapClassName2PassName);
+  if (InLTOPostLink)
+    OS << "<vfe-linkage-unit-visibility>";
 }

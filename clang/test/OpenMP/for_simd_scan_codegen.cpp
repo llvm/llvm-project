@@ -17,7 +17,7 @@ void bar();
 void baz(int n) {
   static float a[10];
   static double b;
-  // CHECK: call ptr @llvm.stacksave()
+  // CHECK: call ptr @llvm.stacksave.p0()
   // CHECK: [[A_BUF_SIZE:%.+]] = mul nuw i64 10, [[NUM_ELEMS:%[^,]+]]
 
   // float a_buffer[10][n];
@@ -28,7 +28,7 @@ void baz(int n) {
 #pragma omp for simd reduction(inscan, +:a[:n], b)
   for (int i = 0; i < 10; ++i) {
     // CHECK: call void @__kmpc_for_static_init_4(
-    // CHECK: call ptr @llvm.stacksave()
+    // CHECK: call ptr @llvm.stacksave.p0()
     // CHECK: store float 0.000000e+00, ptr %
     // CHECK: store double 0.000000e+00, ptr [[B_PRIV_ADDR:%.+]],
     // CHECK: br label %[[DISPATCH:[^,]+]]
@@ -53,7 +53,7 @@ void baz(int n) {
     // CHECK: [[DISPATCH]]:
     // CHECK: br label %[[INPUT_PHASE]]
     // CHECK: [[LOOP_CONTINUE]]:
-    // CHECK: call void @llvm.stackrestore(ptr %
+    // CHECK: call void @llvm.stackrestore.p0(ptr %
     // CHECK: call void @__kmpc_for_static_fini(
     // CHECK: call void @__kmpc_barrier(
     foo();
@@ -116,7 +116,7 @@ void baz(int n) {
     // CHECK: [[OUTER_EXIT]]:
     bar();
     // CHECK: call void @__kmpc_for_static_init_4(
-    // CHECK: call ptr @llvm.stacksave()
+    // CHECK: call ptr @llvm.stacksave.p0()
     // CHECK: store float 0.000000e+00, ptr %
     // CHECK: store double 0.000000e+00, ptr [[B_PRIV_ADDR:%.+]],
     // CHECK: br label %[[DISPATCH:[^,]+]]
@@ -148,13 +148,13 @@ void baz(int n) {
     // CHECK: br label %[[EXIT_INSCAN]]
 
     // CHECK: [[LOOP_CONTINUE]]:
-    // CHECK: call void @llvm.stackrestore(ptr %
+    // CHECK: call void @llvm.stackrestore.p0(ptr %
     // CHECK: call void @__kmpc_for_static_fini(
-    // CHECK: call void @llvm.stackrestore(ptr
+    // CHECK: call void @llvm.stackrestore.p0(ptr
     // CHECK: call void @__kmpc_barrier(
   }
 
-  // CHECK: call ptr @llvm.stacksave()
+  // CHECK: call ptr @llvm.stacksave.p0()
   // CHECK: [[A_BUF_SIZE:%.+]] = mul nuw i64 10, [[NUM_ELEMS:%[^,]+]]
 
   // float a_buffer[10][n];
@@ -165,7 +165,7 @@ void baz(int n) {
 #pragma omp for simd reduction(inscan, +:a[:n], b)
   for (int i = 0; i < 10; ++i) {
     // CHECK: call void @__kmpc_for_static_init_4(
-    // CHECK: call ptr @llvm.stacksave()
+    // CHECK: call ptr @llvm.stacksave.p0()
     // CHECK: store float 0.000000e+00, ptr %
     // CHECK: store double 0.000000e+00, ptr [[B_PRIV_ADDR:%.+]],
     // CHECK: br label %[[DISPATCH:[^,]+]]
@@ -198,7 +198,7 @@ void baz(int n) {
     // CHECK: br label %[[EXIT_INSCAN]]
 
     // CHECK: [[LOOP_CONTINUE]]:
-    // CHECK: call void @llvm.stackrestore(ptr %
+    // CHECK: call void @llvm.stackrestore.p0(ptr %
     // CHECK: call void @__kmpc_for_static_fini(
     // CHECK: call void @__kmpc_barrier(
     foo();
@@ -261,7 +261,7 @@ void baz(int n) {
     // CHECK: [[OUTER_EXIT]]:
     bar();
     // CHECK: call void @__kmpc_for_static_init_4(
-    // CHECK: call ptr @llvm.stacksave()
+    // CHECK: call ptr @llvm.stacksave.p0()
     // CHECK: store float 0.000000e+00, ptr %
     // CHECK: store double 0.000000e+00, ptr [[B_PRIV_ADDR:%.+]],
     // CHECK: br label %[[DISPATCH:[^,]+]]
@@ -292,9 +292,9 @@ void baz(int n) {
     // CHECK: br label %[[SCAN_PHASE]]
 
     // CHECK: [[LOOP_CONTINUE]]:
-    // CHECK: call void @llvm.stackrestore(ptr %
+    // CHECK: call void @llvm.stackrestore.p0(ptr %
     // CHECK: call void @__kmpc_for_static_fini(
-    // CHECK: call void @llvm.stackrestore(ptr
+    // CHECK: call void @llvm.stackrestore.p0(ptr
     // CHECK: call void @__kmpc_barrier(
   }
 }

@@ -11,7 +11,6 @@
 #include "flang/Common/template.h"
 #include "flang/Parser/parse-tree-visitor.h"
 #include "flang/Semantics/semantics.h"
-#include <cctype>
 #include <cstdarg>
 #include <type_traits>
 
@@ -240,8 +239,9 @@ public:
     auto targetFlags{ConstructBranchTargetFlags(statement)};
     if constexpr (common::HasMember<A, LabeledConstructStmts>) {
       AddTargetLabelDefinition(label.value(), targetFlags, ParentScope());
-    } else if constexpr (std::is_same_v<A, parser::EndSelectStmt>) {
-      // the label on an END SELECT is not in the last case
+    } else if constexpr (std::is_same_v<A, parser::EndIfStmt> ||
+        std::is_same_v<A, parser::EndSelectStmt>) {
+      // the label on an END IF/SELECT is not in the last part/case
       AddTargetLabelDefinition(label.value(), targetFlags, ParentScope(), true);
     } else if constexpr (common::HasMember<A, LabeledConstructEndStmts>) {
       constexpr bool isExecutableConstructEndStmt{true};
@@ -280,11 +280,16 @@ public:
   bool Pre(const parser::IfConstruct &ifConstruct) {
     return PushConstructName(ifConstruct);
   }
+  void Post(const parser::IfThenStmt &) { PushScope(); }
   bool Pre(const parser::IfConstruct::ElseIfBlock &) {
     return SwitchToNewScope();
   }
   bool Pre(const parser::IfConstruct::ElseBlock &) {
     return SwitchToNewScope();
+  }
+  bool Pre(const parser::EndIfStmt &) {
+    PopScope();
+    return true;
   }
   bool Pre(const parser::CaseConstruct &caseConstruct) {
     return PushConstructName(caseConstruct);
@@ -926,7 +931,7 @@ parser::CharBlock SkipLabel(const parser::CharBlock &position) {
     std::size_t i{1l};
     for (; (i < maxPosition) && parser::IsDecimalDigit(position[i]); ++i) {
     }
-    for (; (i < maxPosition) && std::isspace(position[i]); ++i) {
+    for (; (i < maxPosition) && parser::IsWhiteSpace(position[i]); ++i) {
     }
     return parser::CharBlock{position.begin() + i, position.end()};
   }
@@ -962,8 +967,7 @@ void CheckLabelDoConstraints(const SourceStmtList &dos,
                        TargetStatementEnum::CompatibleDo)) ||
         (doTarget.isExecutableConstructEndStmt &&
             ParentScope(scopes, doTarget.proxyForScope) == scope)) {
-      if (context.warnOnNonstandardUsage() ||
-          context.ShouldWarn(
+      if (context.ShouldWarn(
               common::LanguageFeature::OldLabelDoEndStatements)) {
         context
             .Say(position,
@@ -1010,14 +1014,17 @@ void CheckScopeConstraints(const SourceStmtList &stmts,
       }
       bool isFatal{false};
       ProxyForScope fromScope{scope};
-      for (ProxyForScope toScope{target.proxyForScope}; fromScope != toScope;
+      for (ProxyForScope toScope{target.proxyForScope}; HasScope(toScope);
            toScope = scopes[toScope].parent) {
+        while (scopes[fromScope].depth > scopes[toScope].depth) {
+          fromScope = scopes[fromScope].parent;
+        }
+        if (toScope == fromScope) {
+          break;
+        }
         if (scopes[toScope].isExteriorGotoFatal) {
           isFatal = true;
           break;
-        }
-        if (scopes[toScope].depth == scopes[fromScope].depth) {
-          fromScope = scopes[fromScope].parent;
         }
       }
       context.Say(position,

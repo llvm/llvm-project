@@ -21,14 +21,19 @@ static_library("Basic") {
   configs += [ "//llvm/utils/gn/build:clang_code" ]
   public_deps = [
     # public_dep because public header Version.h includes generated Version.inc.
+    "//clang/include/clang/Basic:AttrLeftSideCanPrintList",
+    "//clang/include/clang/Basic:AttrLeftSideMustPrintList",
     "//clang/include/clang/Basic:AttrList",
     "//clang/include/clang/Basic:AttrSubMatchRulesList",
+    "//clang/include/clang/Basic:AttrTokenKinds",
     "//clang/include/clang/Basic:DiagnosticGroups",
     "//clang/include/clang/Basic:arm_cde_builtins",
     "//clang/include/clang/Basic:arm_mve_builtins",
+    "//clang/include/clang/Basic:arm_sme_builtins",
     "//clang/include/clang/Basic:arm_sve_builtins",
     "//clang/include/clang/Basic:arm_sve_typeflags",
     "//clang/include/clang/Basic:diags_tablegen",
+    "//clang/include/clang/Basic:riscv_sifive_vector_builtins",
     "//clang/include/clang/Basic:riscv_vector_builtins",
     "//clang/include/clang/Basic:version",
 
@@ -49,6 +54,7 @@ static_library("Basic") {
     "//clang/include/clang/Sema:AttrParsedAttrKinds",
     "//clang/include/clang/Sema:AttrSpellingListIndex",
     "//llvm/include/llvm/Config:llvm-config",
+    "//llvm/lib/Option",
     "//llvm/lib/Support",
     "//llvm/lib/TargetParser",
   ]
@@ -78,6 +84,7 @@ static_library("Basic") {
     "OpenCLOptions.cpp",
     "OpenMPKinds.cpp",
     "OperatorPrecedence.cpp",
+    "ParsedAttrInfo.cpp",
     "ProfileList.cpp",
     "SanitizerSpecialCaseList.cpp",
     "Sanitizers.cpp",

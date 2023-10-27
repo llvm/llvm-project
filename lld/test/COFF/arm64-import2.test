@@ -18,7 +18,7 @@
 # AFTER:  140001000:      94000004        bl      0x140001010
 # AFTER:  140001004:      94000006        bl      0x14000101c
 # AFTER:  140001008:      d65f03c0        ret
-# AFTER:  14000100c:      ccccccff        <unknown>
+# AFTER:  14000100c:      000000ff
 # AFTER:  140001010:      b0000010        adrp    x16, 0x140002000
 # AFTER:  140001014:      f9403210        ldr     x16, [x16, #96]
 # AFTER:  140001018:      d61f0200        br      x16

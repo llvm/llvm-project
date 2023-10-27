@@ -13,10 +13,11 @@
 #ifndef LLVM_CLANG_LIB_BASIC_TARGETS_SPIR_H
 #define LLVM_CLANG_LIB_BASIC_TARGETS_SPIR_H
 
+#include "Targets.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/TargetParser/Triple.h"
 #include <optional>
 
 namespace clang {
@@ -45,6 +46,9 @@ static const unsigned SPIRDefIsPrivMap[] = {
     0, // ptr32_uptr
     0, // ptr64
     0, // hlsl_groupshared
+    // Wasm address space values for this target are dummy values,
+    // as it is only enabled for Wasm targets.
+    20, // wasm_funcref
 };
 
 // Used by both the SPIR and SPIR-V targets.
@@ -75,19 +79,20 @@ static const unsigned SPIRDefIsGenMap[] = {
     0, // ptr32_uptr
     0, // ptr64
     0, // hlsl_groupshared
+    // Wasm address space values for this target are dummy values,
+    // as it is only enabled for Wasm targets.
+    20, // wasm_funcref
 };
 
 // Base class for SPIR and SPIR-V target info.
 class LLVM_LIBRARY_VISIBILITY BaseSPIRTargetInfo : public TargetInfo {
+  std::unique_ptr<TargetInfo> HostTarget;
+
 protected:
-  BaseSPIRTargetInfo(const llvm::Triple &Triple, const TargetOptions &)
+  BaseSPIRTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
       : TargetInfo(Triple) {
     assert((Triple.isSPIR() || Triple.isSPIRV()) &&
            "Invalid architecture for SPIR or SPIR-V.");
-    assert(getTriple().getOS() == llvm::Triple::UnknownOS &&
-           "SPIR(-V) target must use unknown OS");
-    assert(getTriple().getEnvironment() == llvm::Triple::UnknownEnvironment &&
-           "SPIR(-V) target must use unknown environment type");
     TLSSupported = false;
     VLASupported = false;
     LongWidth = LongAlign = 64;
@@ -98,6 +103,52 @@ protected:
     // Define available target features
     // These must be defined in sorted order!
     NoAsmVariants = true;
+
+    llvm::Triple HostTriple(Opts.HostTriple);
+    if (!HostTriple.isSPIR() && !HostTriple.isSPIRV() &&
+        HostTriple.getArch() != llvm::Triple::UnknownArch) {
+      HostTarget = AllocateTarget(llvm::Triple(Opts.HostTriple), Opts);
+
+      // Copy properties from host target.
+      BoolWidth = HostTarget->getBoolWidth();
+      BoolAlign = HostTarget->getBoolAlign();
+      IntWidth = HostTarget->getIntWidth();
+      IntAlign = HostTarget->getIntAlign();
+      HalfWidth = HostTarget->getHalfWidth();
+      HalfAlign = HostTarget->getHalfAlign();
+      FloatWidth = HostTarget->getFloatWidth();
+      FloatAlign = HostTarget->getFloatAlign();
+      DoubleWidth = HostTarget->getDoubleWidth();
+      DoubleAlign = HostTarget->getDoubleAlign();
+      LongWidth = HostTarget->getLongWidth();
+      LongAlign = HostTarget->getLongAlign();
+      LongLongWidth = HostTarget->getLongLongWidth();
+      LongLongAlign = HostTarget->getLongLongAlign();
+      MinGlobalAlign = HostTarget->getMinGlobalAlign(/* TypeSize = */ 0);
+      NewAlign = HostTarget->getNewAlign();
+      DefaultAlignForAttributeAligned =
+          HostTarget->getDefaultAlignForAttributeAligned();
+      IntMaxType = HostTarget->getIntMaxType();
+      WCharType = HostTarget->getWCharType();
+      WIntType = HostTarget->getWIntType();
+      Char16Type = HostTarget->getChar16Type();
+      Char32Type = HostTarget->getChar32Type();
+      Int64Type = HostTarget->getInt64Type();
+      SigAtomicType = HostTarget->getSigAtomicType();
+      ProcessIDType = HostTarget->getProcessIDType();
+
+      UseBitFieldTypeAlignment = HostTarget->useBitFieldTypeAlignment();
+      UseZeroLengthBitfieldAlignment =
+          HostTarget->useZeroLengthBitfieldAlignment();
+      UseExplicitBitFieldAlignment = HostTarget->useExplicitBitFieldAlignment();
+      ZeroLengthBitfieldBoundary = HostTarget->getZeroLengthBitfieldBoundary();
+
+      // This is a bit of a lie, but it controls __GCC_ATOMIC_XXX_LOCK_FREE, and
+      // we need those macros to be identical on host and device, because (among
+      // other things) they affect which standard library classes are defined,
+      // and we need all classes to be defined on both the host and device.
+      MaxAtomicInlineWidth = HostTarget->getMaxAtomicInlineWidth();
+    }
   }
 
 public:
@@ -109,7 +160,7 @@ public:
     return std::nullopt;
   }
 
-  const char *getClobbers() const override { return ""; }
+  std::string_view getClobbers() const override { return ""; }
 
   ArrayRef<const char *> getGCCRegNames() const override {
     return std::nullopt;
@@ -191,6 +242,8 @@ public:
   bool hasFeature(StringRef Feature) const override {
     return Feature == "spir";
   }
+
+  bool checkArithmeticFenceSupported() const override { return true; }
 };
 
 class LLVM_LIBRARY_VISIBILITY SPIR32TargetInfo : public SPIRTargetInfo {
@@ -227,31 +280,53 @@ public:
                         MacroBuilder &Builder) const override;
 };
 
-class LLVM_LIBRARY_VISIBILITY SPIRVTargetInfo : public BaseSPIRTargetInfo {
+class LLVM_LIBRARY_VISIBILITY BaseSPIRVTargetInfo : public BaseSPIRTargetInfo {
 public:
-  SPIRVTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
+  BaseSPIRVTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
       : BaseSPIRTargetInfo(Triple, Opts) {
     assert(Triple.isSPIRV() && "Invalid architecture for SPIR-V.");
-    assert(getTriple().getOS() == llvm::Triple::UnknownOS &&
-           "SPIR-V target must use unknown OS");
-    assert(getTriple().getEnvironment() == llvm::Triple::UnknownEnvironment &&
-           "SPIR-V target must use unknown environment type");
   }
-
-  void getTargetDefines(const LangOptions &Opts,
-                        MacroBuilder &Builder) const override;
 
   bool hasFeature(StringRef Feature) const override {
     return Feature == "spirv";
   }
+
+  void getTargetDefines(const LangOptions &Opts,
+                        MacroBuilder &Builder) const override;
 };
 
-class LLVM_LIBRARY_VISIBILITY SPIRV32TargetInfo : public SPIRVTargetInfo {
+class LLVM_LIBRARY_VISIBILITY SPIRVTargetInfo : public BaseSPIRVTargetInfo {
+public:
+  SPIRVTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
+      : BaseSPIRVTargetInfo(Triple, Opts) {
+    assert(Triple.getArch() == llvm::Triple::spirv &&
+           "Invalid architecture for Logical SPIR-V.");
+    assert(Triple.getOS() == llvm::Triple::ShaderModel &&
+           "Logical SPIR-V requires a valid ShaderModel.");
+    assert(Triple.getEnvironment() >= llvm::Triple::Pixel &&
+           Triple.getEnvironment() <= llvm::Triple::Amplification &&
+           "Logical SPIR-V environment must be a valid shader stage.");
+
+    // SPIR-V IDs are represented with a single 32-bit word.
+    SizeType = TargetInfo::UnsignedInt;
+    resetDataLayout("e-i64:64-v16:16-v24:32-v32:32-v48:64-"
+                    "v96:128-v192:256-v256:256-v512:512-v1024:1024");
+  }
+
+  void getTargetDefines(const LangOptions &Opts,
+                        MacroBuilder &Builder) const override;
+};
+
+class LLVM_LIBRARY_VISIBILITY SPIRV32TargetInfo : public BaseSPIRVTargetInfo {
 public:
   SPIRV32TargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
-      : SPIRVTargetInfo(Triple, Opts) {
+      : BaseSPIRVTargetInfo(Triple, Opts) {
     assert(Triple.getArch() == llvm::Triple::spirv32 &&
            "Invalid architecture for 32-bit SPIR-V.");
+    assert(getTriple().getOS() == llvm::Triple::UnknownOS &&
+           "32-bit SPIR-V target must use unknown OS");
+    assert(getTriple().getEnvironment() == llvm::Triple::UnknownEnvironment &&
+           "32-bit SPIR-V target must use unknown environment type");
     PointerWidth = PointerAlign = 32;
     SizeType = TargetInfo::UnsignedInt;
     PtrDiffType = IntPtrType = TargetInfo::SignedInt;
@@ -263,12 +338,16 @@ public:
                         MacroBuilder &Builder) const override;
 };
 
-class LLVM_LIBRARY_VISIBILITY SPIRV64TargetInfo : public SPIRVTargetInfo {
+class LLVM_LIBRARY_VISIBILITY SPIRV64TargetInfo : public BaseSPIRVTargetInfo {
 public:
   SPIRV64TargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
-      : SPIRVTargetInfo(Triple, Opts) {
+      : BaseSPIRVTargetInfo(Triple, Opts) {
     assert(Triple.getArch() == llvm::Triple::spirv64 &&
            "Invalid architecture for 64-bit SPIR-V.");
+    assert(getTriple().getOS() == llvm::Triple::UnknownOS &&
+           "64-bit SPIR-V target must use unknown OS");
+    assert(getTriple().getEnvironment() == llvm::Triple::UnknownEnvironment &&
+           "64-bit SPIR-V target must use unknown environment type");
     PointerWidth = PointerAlign = 64;
     SizeType = TargetInfo::UnsignedLong;
     PtrDiffType = IntPtrType = TargetInfo::SignedLong;

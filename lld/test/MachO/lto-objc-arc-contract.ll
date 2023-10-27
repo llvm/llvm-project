@@ -5,11 +5,11 @@
 ;; which doesn't know how to handle it.
 
 ; RUN: llvm-as %s -o %t.o
-; RUN: %lld -dylib -lSystem %t.o -o %t --no-lto-legacy-pass-manager
+; RUN: %lld -dylib -lSystem %t.o -o %t
 ; RUN: llvm-objdump -d %t | FileCheck %s
 
 ; RUN: opt -module-summary %s -o %t.o
-; RUN: %lld -dylib -lSystem %t.o -o %t --no-lto-legacy-pass-manager
+; RUN: %lld -dylib -lSystem %t.o -o %t
 ; RUN: llvm-objdump -d %t | FileCheck %s
 
 ; CHECK:      <_foo>:

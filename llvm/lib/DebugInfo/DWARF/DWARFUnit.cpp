@@ -176,7 +176,7 @@ DWARFUnitVector::getUnitForIndexEntry(const DWARFUnitIndex::Entry &E) {
 
   auto U = Parser(Offset, DW_SECT_INFO, nullptr, &E);
   if (!U)
-    U = nullptr;
+    return nullptr;
 
   auto *NewCU = U.get();
   this->insert(CU, std::move(U));
@@ -784,7 +784,7 @@ void DWARFUnit::updateVariableDieMap(DWARFDie Die) {
 
   for (const DWARFLocationExpression &Location : *Locations) {
     uint8_t AddressSize = getAddressByteSize();
-    DataExtractor Data(Location.Expr, /*IsLittleEndian=*/true, AddressSize);
+    DataExtractor Data(Location.Expr, isLittleEndian(), AddressSize);
     DWARFExpression Expr(Data, AddressSize);
     auto It = Expr.begin();
     if (It == Expr.end())
@@ -828,7 +828,7 @@ void DWARFUnit::updateVariableDieMap(DWARFDie Die) {
   // no type), then we use a size of one to still allow symbolization of the
   // exact address.
   uint64_t GVSize = 1;
-  if (DWARFDie BaseType = Die.getAttributeValueAsReferencedDie(DW_AT_type))
+  if (Die.getAttributeValueAsReferencedDie(DW_AT_type))
     if (std::optional<uint64_t> Size = Die.getTypeSize(getAddressByteSize()))
       GVSize = *Size;
 
@@ -1040,8 +1040,16 @@ DWARFUnit::getLastChildEntry(const DWARFDebugInfoEntry *Die) const {
 }
 
 const DWARFAbbreviationDeclarationSet *DWARFUnit::getAbbreviations() const {
-  if (!Abbrevs)
-    Abbrevs = Abbrev->getAbbreviationDeclarationSet(getAbbreviationsOffset());
+  if (!Abbrevs) {
+    Expected<const DWARFAbbreviationDeclarationSet *> AbbrevsOrError =
+        Abbrev->getAbbreviationDeclarationSet(getAbbreviationsOffset());
+    if (!AbbrevsOrError) {
+      // FIXME: We should propagate this error upwards.
+      consumeError(AbbrevsOrError.takeError());
+      return nullptr;
+    }
+    Abbrevs = *AbbrevsOrError;
+  }
   return Abbrevs;
 }
 
@@ -1049,7 +1057,7 @@ std::optional<object::SectionedAddress> DWARFUnit::getBaseAddress() {
   if (BaseAddr)
     return BaseAddr;
 
-  DWARFDie UnitDie = getUnitDIE();
+  DWARFDie UnitDie = (SU ? SU : this)->getUnitDIE();
   std::optional<DWARFFormValue> PC =
       UnitDie.find({DW_AT_low_pc, DW_AT_entry_pc});
   BaseAddr = toSectionedAddress(PC);

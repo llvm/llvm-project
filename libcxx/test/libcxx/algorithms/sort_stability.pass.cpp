@@ -34,7 +34,8 @@ std::vector<EqualType> deterministic() {
   for (int i = 0; i < kSize; ++i) {
     v[i].value = kSize / 2 - i * (i % 2 ? -1 : 1);
   }
-  std::__sort(v.begin(), v.end(), std::less<EqualType>());
+  std::less<EqualType> comp;
+  std::__sort_dispatch<std::_ClassicAlgPolicy>(v.begin(), v.end(), comp);
   return v;
 }
 

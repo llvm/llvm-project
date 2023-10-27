@@ -14,6 +14,7 @@
 #include "clang/Lex/HeaderSearch.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include "gtest/gtest.h"
@@ -98,6 +99,7 @@ TEST_F(ModuleCacheTest, CachedModuleNewPath) {
       CompilerInstance::createDiagnostics(new DiagnosticOptions());
   CreateInvocationOptions CIOpts;
   CIOpts.Diags = Diags;
+  CIOpts.VFS = llvm::vfs::createPhysicalFileSystem();
 
   // First run should pass with no errors
   const char *Args[] = {"clang",        "-fmodules",          "-Fframeworks",
@@ -147,6 +149,7 @@ TEST_F(ModuleCacheTest, CachedModuleNewPathAllowErrors) {
       CompilerInstance::createDiagnostics(new DiagnosticOptions());
   CreateInvocationOptions CIOpts;
   CIOpts.Diags = Diags;
+  CIOpts.VFS = llvm::vfs::createPhysicalFileSystem();
 
   // First run should pass with no errors
   const char *Args[] = {"clang",        "-fmodules",          "-Fframeworks",

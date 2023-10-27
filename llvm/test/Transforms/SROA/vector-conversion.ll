@@ -7,11 +7,11 @@ define <4 x i64> @vector_ptrtoint({<2 x ptr>, <2 x ptr>} %x) {
 ; CHECK-LABEL: @vector_ptrtoint(
 ; CHECK-NEXT:    [[X_FCA_0_EXTRACT:%.*]] = extractvalue { <2 x ptr>, <2 x ptr> } [[X:%.*]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint <2 x ptr> [[X_FCA_0_EXTRACT]] to <2 x i64>
-; CHECK-NEXT:    [[A_SROA_0_0_VEC_EXPAND:%.*]] = shufflevector <2 x i64> [[TMP1]], <2 x i64> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+; CHECK-NEXT:    [[A_SROA_0_0_VEC_EXPAND:%.*]] = shufflevector <2 x i64> [[TMP1]], <2 x i64> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[A_SROA_0_0_VECBLEND:%.*]] = select <4 x i1> <i1 true, i1 true, i1 false, i1 false>, <4 x i64> [[A_SROA_0_0_VEC_EXPAND]], <4 x i64> undef
 ; CHECK-NEXT:    [[X_FCA_1_EXTRACT:%.*]] = extractvalue { <2 x ptr>, <2 x ptr> } [[X]], 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = ptrtoint <2 x ptr> [[X_FCA_1_EXTRACT]] to <2 x i64>
-; CHECK-NEXT:    [[A_SROA_0_16_VEC_EXPAND:%.*]] = shufflevector <2 x i64> [[TMP2]], <2 x i64> poison, <4 x i32> <i32 undef, i32 undef, i32 0, i32 1>
+; CHECK-NEXT:    [[A_SROA_0_16_VEC_EXPAND:%.*]] = shufflevector <2 x i64> [[TMP2]], <2 x i64> poison, <4 x i32> <i32 poison, i32 poison, i32 0, i32 1>
 ; CHECK-NEXT:    [[A_SROA_0_16_VECBLEND:%.*]] = select <4 x i1> <i1 false, i1 false, i1 true, i1 true>, <4 x i64> [[A_SROA_0_16_VEC_EXPAND]], <4 x i64> [[A_SROA_0_0_VECBLEND]]
 ; CHECK-NEXT:    ret <4 x i64> [[A_SROA_0_16_VECBLEND]]
 ;
@@ -28,11 +28,11 @@ define <4 x ptr> @vector_inttoptr({<2 x i64>, <2 x i64>} %x) {
 ; CHECK-LABEL: @vector_inttoptr(
 ; CHECK-NEXT:    [[X_FCA_0_EXTRACT:%.*]] = extractvalue { <2 x i64>, <2 x i64> } [[X:%.*]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = inttoptr <2 x i64> [[X_FCA_0_EXTRACT]] to <2 x ptr>
-; CHECK-NEXT:    [[A_SROA_0_0_VEC_EXPAND:%.*]] = shufflevector <2 x ptr> [[TMP1]], <2 x ptr> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+; CHECK-NEXT:    [[A_SROA_0_0_VEC_EXPAND:%.*]] = shufflevector <2 x ptr> [[TMP1]], <2 x ptr> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[A_SROA_0_0_VECBLEND:%.*]] = select <4 x i1> <i1 true, i1 true, i1 false, i1 false>, <4 x ptr> [[A_SROA_0_0_VEC_EXPAND]], <4 x ptr> undef
 ; CHECK-NEXT:    [[X_FCA_1_EXTRACT:%.*]] = extractvalue { <2 x i64>, <2 x i64> } [[X]], 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = inttoptr <2 x i64> [[X_FCA_1_EXTRACT]] to <2 x ptr>
-; CHECK-NEXT:    [[A_SROA_0_16_VEC_EXPAND:%.*]] = shufflevector <2 x ptr> [[TMP2]], <2 x ptr> poison, <4 x i32> <i32 undef, i32 undef, i32 0, i32 1>
+; CHECK-NEXT:    [[A_SROA_0_16_VEC_EXPAND:%.*]] = shufflevector <2 x ptr> [[TMP2]], <2 x ptr> poison, <4 x i32> <i32 poison, i32 poison, i32 0, i32 1>
 ; CHECK-NEXT:    [[A_SROA_0_16_VECBLEND:%.*]] = select <4 x i1> <i1 false, i1 false, i1 true, i1 true>, <4 x ptr> [[A_SROA_0_16_VEC_EXPAND]], <4 x ptr> [[A_SROA_0_0_VECBLEND]]
 ; CHECK-NEXT:    ret <4 x ptr> [[A_SROA_0_16_VECBLEND]]
 ;

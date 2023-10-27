@@ -6,7 +6,7 @@ define <8 x float> @test_unpacklo_hadd_v8f32(<8 x float> %0, <8 x float> %1, <8 
 ; CHECK-LABEL: test_unpacklo_hadd_v8f32:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vhaddps %ymm2, %ymm0, %ymm0
-; CHECK-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[0,2,1,3,4,6,5,7]
+; CHECK-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,2,1,3,4,6,5,7]
 ; CHECK-NEXT:    ret{{[l|q]}}
   %5 = tail call <8 x float> @llvm.x86.avx.hadd.ps.256(<8 x float> %0, <8 x float> %1) #4
   %6 = tail call <8 x float> @llvm.x86.avx.hadd.ps.256(<8 x float> %2, <8 x float> %3) #4
@@ -18,7 +18,7 @@ define <8 x float> @test_unpackhi_hadd_v8f32(<8 x float> %0, <8 x float> %1, <8 
 ; CHECK-LABEL: test_unpackhi_hadd_v8f32:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vhaddps %ymm3, %ymm1, %ymm0
-; CHECK-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[0,2,1,3,4,6,5,7]
+; CHECK-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,2,1,3,4,6,5,7]
 ; CHECK-NEXT:    ret{{[l|q]}}
   %5 = tail call <8 x float> @llvm.x86.avx.hadd.ps.256(<8 x float> %0, <8 x float> %1) #4
   %6 = tail call <8 x float> @llvm.x86.avx.hadd.ps.256(<8 x float> %2, <8 x float> %3) #4
@@ -30,7 +30,7 @@ define <8 x float> @test_unpacklo_hsub_v8f32(<8 x float> %0, <8 x float> %1, <8 
 ; CHECK-LABEL: test_unpacklo_hsub_v8f32:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vhsubps %ymm2, %ymm0, %ymm0
-; CHECK-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[0,2,1,3,4,6,5,7]
+; CHECK-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,2,1,3,4,6,5,7]
 ; CHECK-NEXT:    ret{{[l|q]}}
   %5 = tail call <8 x float> @llvm.x86.avx.hsub.ps.256(<8 x float> %0, <8 x float> %1) #4
   %6 = tail call <8 x float> @llvm.x86.avx.hsub.ps.256(<8 x float> %2, <8 x float> %3) #4
@@ -42,7 +42,7 @@ define <8 x float> @test_unpackhi_hsub_v8f32(<8 x float> %0, <8 x float> %1, <8 
 ; CHECK-LABEL: test_unpackhi_hsub_v8f32:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vhsubps %ymm3, %ymm1, %ymm0
-; CHECK-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[0,2,1,3,4,6,5,7]
+; CHECK-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,2,1,3,4,6,5,7]
 ; CHECK-NEXT:    ret{{[l|q]}}
   %5 = tail call <8 x float> @llvm.x86.avx.hsub.ps.256(<8 x float> %0, <8 x float> %1) #4
   %6 = tail call <8 x float> @llvm.x86.avx.hsub.ps.256(<8 x float> %2, <8 x float> %3) #4

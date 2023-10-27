@@ -13,6 +13,6 @@
 
 exception Error of string
 
-(** [link_modules' dst src] links [src] into [dst], raising [Error]
+(** [link_modules dst src] links [src] into [dst], raising [Error]
     if the linking fails. The src module is destroyed. *)
-val link_modules' : Llvm.llmodule -> Llvm.llmodule -> unit
+val link_modules : Llvm.llmodule -> Llvm.llmodule -> unit

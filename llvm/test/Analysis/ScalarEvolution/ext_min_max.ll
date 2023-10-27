@@ -9,7 +9,7 @@ define i1 @test_umin(i32 %x, i32 %y) {
 ; CHECK-NEXT:    %umin_x_y = select i1 %cmp_x_y, i32 %x, i32 %y
 ; CHECK-NEXT:    --> (%x umin %y) U: full-set S: full-set
 ; CHECK-NEXT:    %zext_umin_x_y = zext i32 %umin_x_y to i64
-; CHECK-NEXT:    --> (zext i32 (%x umin %y) to i64) U: [0,4294967296) S: [0,4294967296)
+; CHECK-NEXT:    --> ((zext i32 %x to i64) umin (zext i32 %y to i64)) U: [0,4294967296) S: [0,4294967296)
 ; CHECK-NEXT:    %zext_x = zext i32 %x to i64
 ; CHECK-NEXT:    --> (zext i32 %x to i64) U: [0,4294967296) S: [0,4294967296)
 ; CHECK-NEXT:    %zext_y = zext i32 %y to i64
@@ -39,7 +39,7 @@ define i1 @test_umax(i32 %x, i32 %y) {
 ; CHECK-NEXT:    %umax_x_y = select i1 %cmp_x_y, i32 %y, i32 %x
 ; CHECK-NEXT:    --> (%x umax %y) U: full-set S: full-set
 ; CHECK-NEXT:    %zext_umax_x_y = zext i32 %umax_x_y to i64
-; CHECK-NEXT:    --> (zext i32 (%x umax %y) to i64) U: [0,4294967296) S: [0,4294967296)
+; CHECK-NEXT:    --> ((zext i32 %x to i64) umax (zext i32 %y to i64)) U: [0,4294967296) S: [0,4294967296)
 ; CHECK-NEXT:    %zext_x = zext i32 %x to i64
 ; CHECK-NEXT:    --> (zext i32 %x to i64) U: [0,4294967296) S: [0,4294967296)
 ; CHECK-NEXT:    %zext_y = zext i32 %y to i64
@@ -69,7 +69,7 @@ define i1 @test_smin(i32 %x, i32 %y) {
 ; CHECK-NEXT:    %smin_x_y = select i1 %cmp_x_y, i32 %x, i32 %y
 ; CHECK-NEXT:    --> (%x smin %y) U: full-set S: full-set
 ; CHECK-NEXT:    %sext_smin_x_y = sext i32 %smin_x_y to i64
-; CHECK-NEXT:    --> (sext i32 (%x smin %y) to i64) U: [-2147483648,2147483648) S: [-2147483648,2147483648)
+; CHECK-NEXT:    --> ((sext i32 %x to i64) smin (sext i32 %y to i64)) U: [-2147483648,2147483648) S: [-2147483648,2147483648)
 ; CHECK-NEXT:    %sext_x = sext i32 %x to i64
 ; CHECK-NEXT:    --> (sext i32 %x to i64) U: [-2147483648,2147483648) S: [-2147483648,2147483648)
 ; CHECK-NEXT:    %sext_y = sext i32 %y to i64
@@ -99,7 +99,7 @@ define i1 @test_smax(i32 %x, i32 %y) {
 ; CHECK-NEXT:    %smax_x_y = select i1 %cmp_x_y, i32 %y, i32 %x
 ; CHECK-NEXT:    --> (%x smax %y) U: full-set S: full-set
 ; CHECK-NEXT:    %sext_smax_x_y = sext i32 %smax_x_y to i64
-; CHECK-NEXT:    --> (sext i32 (%x smax %y) to i64) U: [-2147483648,2147483648) S: [-2147483648,2147483648)
+; CHECK-NEXT:    --> ((sext i32 %x to i64) smax (sext i32 %y to i64)) U: [-2147483648,2147483648) S: [-2147483648,2147483648)
 ; CHECK-NEXT:    %sext_x = sext i32 %x to i64
 ; CHECK-NEXT:    --> (sext i32 %x to i64) U: [-2147483648,2147483648) S: [-2147483648,2147483648)
 ; CHECK-NEXT:    %sext_y = sext i32 %y to i64
@@ -129,7 +129,7 @@ define i1 @test_umin_seq(i1 %x, i1 %y) {
 ; CHECK-NEXT:    %x_umin_seq_y = select i1 %x, i1 %y, i1 false
 ; CHECK-NEXT:    --> (%x umin_seq %y) U: full-set S: full-set
 ; CHECK-NEXT:    %zext_x_umin_seq_y = zext i1 %x_umin_seq_y to i64
-; CHECK-NEXT:    --> (zext i1 (%x umin_seq %y) to i64) U: [0,2) S: [0,2)
+; CHECK-NEXT:    --> ((zext i1 %x to i64) umin_seq (zext i1 %y to i64)) U: [0,2) S: [0,2)
 ; CHECK-NEXT:    %zext_x = zext i1 %x to i64
 ; CHECK-NEXT:    --> (zext i1 %x to i64) U: [0,2) S: [0,2)
 ; CHECK-NEXT:    %zext_y = zext i1 %y to i64

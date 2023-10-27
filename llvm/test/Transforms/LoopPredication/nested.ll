@@ -20,12 +20,13 @@ define i32 @signed_loop_0_to_n_nested_0_to_l_inner_index_check(ptr %array, i32 %
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp sle i32 [[L]], [[LENGTH:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 0, [[LENGTH]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i1 [[TMP1]], [[TMP0]]
+; CHECK-NEXT:    [[TMP3:%.*]] = freeze i1 [[TMP2]]
 ; CHECK-NEXT:    br label [[INNER_LOOP:%.*]]
 ; CHECK:       inner.loop:
 ; CHECK-NEXT:    [[INNER_LOOP_ACC:%.*]] = phi i32 [ [[INNER_LOOP_ACC_NEXT:%.*]], [[INNER_LOOP]] ], [ [[OUTER_LOOP_ACC]], [[INNER_LOOP_PREHEADER]] ]
 ; CHECK-NEXT:    [[J:%.*]] = phi i32 [ [[J_NEXT:%.*]], [[INNER_LOOP]] ], [ 0, [[INNER_LOOP_PREHEADER]] ]
 ; CHECK-NEXT:    [[WITHIN_BOUNDS:%.*]] = icmp ult i32 [[J]], [[LENGTH]]
-; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[TMP2]], i32 9) [ "deopt"() ]
+; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[TMP3]], i32 9) [ "deopt"() ]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[WITHIN_BOUNDS]])
 ; CHECK-NEXT:    [[J_I64:%.*]] = zext i32 [[J]] to i64
 ; CHECK-NEXT:    [[ARRAY_J_PTR:%.*]] = getelementptr inbounds i32, ptr [[ARRAY:%.*]], i64 [[J_I64]]
@@ -101,6 +102,7 @@ define i32 @signed_loop_0_to_n_nested_0_to_l_outer_index_check(ptr %array, i32 %
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp sle i32 [[N]], [[LENGTH:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 0, [[LENGTH]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i1 [[TMP1]], [[TMP0]]
+; CHECK-NEXT:    [[TMP3:%.*]] = freeze i1 [[TMP2]]
 ; CHECK-NEXT:    br label [[OUTER_LOOP:%.*]]
 ; CHECK:       outer.loop:
 ; CHECK-NEXT:    [[OUTER_LOOP_ACC:%.*]] = phi i32 [ [[OUTER_LOOP_ACC_NEXT:%.*]], [[OUTER_LOOP_INC:%.*]] ], [ 0, [[OUTER_LOOP_PREHEADER]] ]
@@ -113,7 +115,7 @@ define i32 @signed_loop_0_to_n_nested_0_to_l_outer_index_check(ptr %array, i32 %
 ; CHECK-NEXT:    [[INNER_LOOP_ACC:%.*]] = phi i32 [ [[INNER_LOOP_ACC_NEXT:%.*]], [[INNER_LOOP]] ], [ [[OUTER_LOOP_ACC]], [[INNER_LOOP_PREHEADER]] ]
 ; CHECK-NEXT:    [[J:%.*]] = phi i32 [ [[J_NEXT:%.*]], [[INNER_LOOP]] ], [ 0, [[INNER_LOOP_PREHEADER]] ]
 ; CHECK-NEXT:    [[WITHIN_BOUNDS:%.*]] = icmp ult i32 [[I]], [[LENGTH]]
-; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[TMP2]], i32 9) [ "deopt"() ]
+; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[TMP3]], i32 9) [ "deopt"() ]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[WITHIN_BOUNDS]])
 ; CHECK-NEXT:    [[I_I64:%.*]] = zext i32 [[I]] to i64
 ; CHECK-NEXT:    [[ARRAY_I_PTR:%.*]] = getelementptr inbounds i32, ptr [[ARRAY:%.*]], i64 [[I_I64]]
@@ -187,9 +189,6 @@ define i32 @signed_loop_0_to_n_nested_i_to_l_inner_index_check(ptr %array, i32 %
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp sle i32 [[N:%.*]], 0
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[EXIT:%.*]], label [[OUTER_LOOP_PREHEADER:%.*]]
 ; CHECK:       outer.loop.preheader:
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp sle i32 [[N]], [[LENGTH:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 0, [[LENGTH]]
-; CHECK-NEXT:    [[TMP2:%.*]] = and i1 [[TMP1]], [[TMP0]]
 ; CHECK-NEXT:    br label [[OUTER_LOOP:%.*]]
 ; CHECK:       outer.loop:
 ; CHECK-NEXT:    [[OUTER_LOOP_ACC:%.*]] = phi i32 [ [[OUTER_LOOP_ACC_NEXT:%.*]], [[OUTER_LOOP_INC:%.*]] ], [ 0, [[OUTER_LOOP_PREHEADER]] ]
@@ -197,17 +196,16 @@ define i32 @signed_loop_0_to_n_nested_i_to_l_inner_index_check(ptr %array, i32 %
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp sle i32 [[L:%.*]], 0
 ; CHECK-NEXT:    br i1 [[TMP6]], label [[OUTER_LOOP_INC]], label [[INNER_LOOP_PREHEADER:%.*]]
 ; CHECK:       inner.loop.preheader:
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp sle i32 [[L]], [[LENGTH]]
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ult i32 [[I]], [[LENGTH]]
-; CHECK-NEXT:    [[TMP5:%.*]] = and i1 [[TMP4]], [[TMP3]]
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp sle i32 [[L]], [[LENGTH:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[I]], [[LENGTH]]
+; CHECK-NEXT:    [[TMP2:%.*]] = and i1 [[TMP1]], [[TMP0]]
+; CHECK-NEXT:    [[TMP3:%.*]] = freeze i1 [[TMP2]]
 ; CHECK-NEXT:    br label [[INNER_LOOP:%.*]]
 ; CHECK:       inner.loop:
 ; CHECK-NEXT:    [[INNER_LOOP_ACC:%.*]] = phi i32 [ [[INNER_LOOP_ACC_NEXT:%.*]], [[INNER_LOOP]] ], [ [[OUTER_LOOP_ACC]], [[INNER_LOOP_PREHEADER]] ]
 ; CHECK-NEXT:    [[J:%.*]] = phi i32 [ [[J_NEXT:%.*]], [[INNER_LOOP]] ], [ [[I]], [[INNER_LOOP_PREHEADER]] ]
 ; CHECK-NEXT:    [[WITHIN_BOUNDS:%.*]] = icmp ult i32 [[J]], [[LENGTH]]
-; CHECK-NEXT:    [[TMP6:%.*]] = and i1 [[TMP3]], [[TMP2]]
-; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[TMP6]], i32 9) [ "deopt"() ]
-; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP5]])
+; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[TMP3]], i32 9) [ "deopt"() ]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[WITHIN_BOUNDS]])
 ; CHECK-NEXT:    [[J_I64:%.*]] = zext i32 [[J]] to i64
 ; CHECK-NEXT:    [[ARRAY_J_PTR:%.*]] = getelementptr inbounds i32, ptr [[ARRAY:%.*]], i64 [[J_I64]]

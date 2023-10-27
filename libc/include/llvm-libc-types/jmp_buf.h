@@ -19,6 +19,19 @@ typedef struct {
   __UINT64_TYPE__ r15;
   __UINTPTR_TYPE__ rsp;
   __UINTPTR_TYPE__ rip;
+#elif defined(__riscv)
+  /* Program counter.  */
+  long int __pc;
+  /* Callee-saved registers.  */
+  long int __regs[12];
+  /* Stack pointer.  */
+  long int __sp;
+  /* Callee-saved floating point registers.  */
+#if __riscv_float_abi_double
+  double __fpregs[12];
+#elif defined(__riscv_float_abi_single)
+#error "__jmp_buf not available for your target architecture."
+#endif
 #else
 #error "__jmp_buf not available for your target architecture."
 #endif

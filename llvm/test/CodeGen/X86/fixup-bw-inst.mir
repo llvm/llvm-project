@@ -139,7 +139,8 @@ name:            test5
 alignment:       16
 tracksRegLiveness: true
 liveins:
-  - { reg: '$ch', reg: '$bl' }
+  - { reg: '$ch' }
+  - { reg: '$bl' }
 body:             |
   bb.0:
     liveins: $ch, $bl

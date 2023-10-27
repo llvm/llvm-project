@@ -1,6 +1,5 @@
 // RUN: %clang_cc1 -fblocks -fobjc-gc -triple x86_64-apple-darwin -fobjc-runtime=macosx-fragile-10.5 -print-ivar-layout -emit-llvm -o /dev/null %s > %t-64.layout
 // RUN: FileCheck -check-prefix CHECK-LP64 --input-file=%t-64.layout %s
-// rdar://12752901
 
 struct S {
     int i1;
@@ -137,7 +136,6 @@ void Test5(void) {
   c();
 }
 
-// rdar: //8417746
 void CFRelease(id);
 void notifyBlock(id dependentBlock) {
  id singleObservationToken;
@@ -165,7 +163,6 @@ void test_empty_block(void) {
  wrapperBlock();
 }
 
-// rdar://16111839
 typedef union { char ch[8];  } SS;
 typedef struct { SS s[4]; } CS;
 void test_union_in_layout(void) {

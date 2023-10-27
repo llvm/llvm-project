@@ -14,11 +14,10 @@
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
-#include "mlir/Dialect/Vector/Utils/VectorUtils.h"
 #include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
-#include <optional>
+#include "mlir/Transforms/DialectConversion.h"
 
 namespace mlir {
 #define GEN_PASS_DEF_CONVERTMATHTOLIBM
@@ -52,8 +51,8 @@ struct ScalarOpToLibmCall : public OpRewritePattern<Op> {
 public:
   using OpRewritePattern<Op>::OpRewritePattern;
   ScalarOpToLibmCall<Op>(MLIRContext *context, StringRef floatFunc,
-                         StringRef doubleFunc, PatternBenefit benefit)
-      : OpRewritePattern<Op>(context, benefit), floatFunc(floatFunc),
+                         StringRef doubleFunc)
+      : OpRewritePattern<Op>(context), floatFunc(floatFunc),
         doubleFunc(doubleFunc){};
 
   LogicalResult matchAndRewrite(Op op, PatternRewriter &rewriter) const final;
@@ -61,6 +60,14 @@ public:
 private:
   std::string floatFunc, doubleFunc;
 };
+
+template <typename OpTy>
+void populatePatternsForOp(RewritePatternSet &patterns, MLIRContext *ctx,
+                           StringRef floatFunc, StringRef doubleFunc) {
+  patterns.add<VecOpToScalarOp<OpTy>, PromoteOpToF32<OpTy>>(ctx);
+  patterns.add<ScalarOpToLibmCall<OpTy>>(ctx, floatFunc, doubleFunc);
+}
+
 } // namespace
 
 template <typename Op>
@@ -68,7 +75,7 @@ LogicalResult
 VecOpToScalarOp<Op>::matchAndRewrite(Op op, PatternRewriter &rewriter) const {
   auto opType = op.getType();
   auto loc = op.getLoc();
-  auto vecType = opType.template dyn_cast<VectorType>();
+  auto vecType = dyn_cast<VectorType>(opType);
 
   if (!vecType)
     return failure();
@@ -82,7 +89,7 @@ VecOpToScalarOp<Op>::matchAndRewrite(Op op, PatternRewriter &rewriter) const {
                vecType, FloatAttr::get(vecType.getElementType(), 0.0)));
   SmallVector<int64_t> strides = computeStrides(shape);
   for (auto linearIndex = 0; linearIndex < numElements; ++linearIndex) {
-    SmallVector<int64_t> positions = delinearize(strides, linearIndex);
+    SmallVector<int64_t> positions = delinearize(linearIndex, strides);
     SmallVector<Value> operands;
     for (auto input : op->getOperands())
       operands.push_back(
@@ -100,7 +107,7 @@ template <typename Op>
 LogicalResult
 PromoteOpToF32<Op>::matchAndRewrite(Op op, PatternRewriter &rewriter) const {
   auto opType = op.getType();
-  if (!opType.template isa<Float16Type, BFloat16Type>())
+  if (!isa<Float16Type, BFloat16Type>(opType))
     return failure();
 
   auto loc = op.getLoc();
@@ -120,7 +127,7 @@ ScalarOpToLibmCall<Op>::matchAndRewrite(Op op,
                                         PatternRewriter &rewriter) const {
   auto module = SymbolTable::getNearestSymbolTable(op);
   auto type = op.getType();
-  if (!type.template isa<Float32Type, Float64Type>())
+  if (!isa<Float32Type, Float64Type>(type))
     return failure();
 
   auto name = type.getIntOrFloatBitWidth() == 64 ? doubleFunc : floatFunc;
@@ -152,53 +159,25 @@ ScalarOpToLibmCall<Op>::matchAndRewrite(Op op,
   return success();
 }
 
-void mlir::populateMathToLibmConversionPatterns(
-    RewritePatternSet &patterns, PatternBenefit benefit,
-    std::optional<PatternBenefit> log1pBenefit) {
-  patterns.add<VecOpToScalarOp<math::Atan2Op>, VecOpToScalarOp<math::CbrtOp>,
-               VecOpToScalarOp<math::ExpM1Op>, VecOpToScalarOp<math::TanhOp>,
-               VecOpToScalarOp<math::CosOp>, VecOpToScalarOp<math::SinOp>,
-               VecOpToScalarOp<math::ErfOp>, VecOpToScalarOp<math::RoundEvenOp>,
-               VecOpToScalarOp<math::RoundOp>, VecOpToScalarOp<math::AtanOp>,
-               VecOpToScalarOp<math::TanOp>, VecOpToScalarOp<math::TruncOp>>(
-      patterns.getContext(), benefit);
-  patterns.add<PromoteOpToF32<math::Atan2Op>, PromoteOpToF32<math::CbrtOp>,
-               PromoteOpToF32<math::ExpM1Op>, PromoteOpToF32<math::TanhOp>,
-               PromoteOpToF32<math::CosOp>, PromoteOpToF32<math::SinOp>,
-               PromoteOpToF32<math::ErfOp>, PromoteOpToF32<math::RoundEvenOp>,
-               PromoteOpToF32<math::RoundOp>, PromoteOpToF32<math::AtanOp>,
-               PromoteOpToF32<math::TanOp>, PromoteOpToF32<math::TruncOp>>(
-      patterns.getContext(), benefit);
-  patterns.add<ScalarOpToLibmCall<math::AtanOp>>(patterns.getContext(), "atanf",
-                                                 "atan", benefit);
-  patterns.add<ScalarOpToLibmCall<math::Atan2Op>>(patterns.getContext(),
-                                                  "atan2f", "atan2", benefit);
-  patterns.add<ScalarOpToLibmCall<math::CbrtOp>>(patterns.getContext(), "cbrtf",
-                                                 "cbrt", benefit);
-  patterns.add<ScalarOpToLibmCall<math::ErfOp>>(patterns.getContext(), "erff",
-                                                "erf", benefit);
-  patterns.add<ScalarOpToLibmCall<math::ExpM1Op>>(patterns.getContext(),
-                                                  "expm1f", "expm1", benefit);
-  patterns.add<ScalarOpToLibmCall<math::TanOp>>(patterns.getContext(), "tanf",
-                                                "tan", benefit);
-  patterns.add<ScalarOpToLibmCall<math::TanhOp>>(patterns.getContext(), "tanhf",
-                                                 "tanh", benefit);
-  patterns.add<ScalarOpToLibmCall<math::RoundEvenOp>>(
-      patterns.getContext(), "roundevenf", "roundeven", benefit);
-  patterns.add<ScalarOpToLibmCall<math::RoundOp>>(patterns.getContext(),
-                                                  "roundf", "round", benefit);
-  patterns.add<ScalarOpToLibmCall<math::CosOp>>(patterns.getContext(), "cosf",
-                                                "cos", benefit);
-  patterns.add<ScalarOpToLibmCall<math::SinOp>>(patterns.getContext(), "sinf",
-                                                "sin", benefit);
-  patterns.add<ScalarOpToLibmCall<math::Log1pOp>>(
-      patterns.getContext(), "log1pf", "log1p", log1pBenefit.value_or(benefit));
-  patterns.add<ScalarOpToLibmCall<math::FloorOp>>(patterns.getContext(),
-                                                  "floorf", "floor", benefit);
-  patterns.add<ScalarOpToLibmCall<math::CeilOp>>(patterns.getContext(), "ceilf",
-                                                 "ceil", benefit);
-  patterns.add<ScalarOpToLibmCall<math::TruncOp>>(patterns.getContext(),
-                                                  "truncf", "trunc", benefit);
+void mlir::populateMathToLibmConversionPatterns(RewritePatternSet &patterns) {
+  MLIRContext *ctx = patterns.getContext();
+
+  populatePatternsForOp<math::Atan2Op>(patterns, ctx, "atan2f", "atan2");
+  populatePatternsForOp<math::AtanOp>(patterns, ctx, "atanf", "atan");
+  populatePatternsForOp<math::CbrtOp>(patterns, ctx, "cbrtf", "cbrt");
+  populatePatternsForOp<math::CeilOp>(patterns, ctx, "ceilf", "ceil");
+  populatePatternsForOp<math::CosOp>(patterns, ctx, "cosf", "cos");
+  populatePatternsForOp<math::ErfOp>(patterns, ctx, "erff", "erf");
+  populatePatternsForOp<math::ExpM1Op>(patterns, ctx, "expm1f", "expm1");
+  populatePatternsForOp<math::FloorOp>(patterns, ctx, "floorf", "floor");
+  populatePatternsForOp<math::Log1pOp>(patterns, ctx, "log1pf", "log1p");
+  populatePatternsForOp<math::RoundEvenOp>(patterns, ctx, "roundevenf",
+                                           "roundeven");
+  populatePatternsForOp<math::RoundOp>(patterns, ctx, "roundf", "round");
+  populatePatternsForOp<math::SinOp>(patterns, ctx, "sinf", "sin");
+  populatePatternsForOp<math::TanOp>(patterns, ctx, "tanf", "tan");
+  populatePatternsForOp<math::TanhOp>(patterns, ctx, "tanhf", "tanh");
+  populatePatternsForOp<math::TruncOp>(patterns, ctx, "truncf", "trunc");
 }
 
 namespace {
@@ -212,7 +191,7 @@ void ConvertMathToLibmPass::runOnOperation() {
   auto module = getOperation();
 
   RewritePatternSet patterns(&getContext());
-  populateMathToLibmConversionPatterns(patterns, /*benefit=*/1);
+  populateMathToLibmConversionPatterns(patterns);
 
   ConversionTarget target(getContext());
   target.addLegalDialect<arith::ArithDialect, BuiltinDialect, func::FuncDialect,

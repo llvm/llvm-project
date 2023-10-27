@@ -64,6 +64,16 @@ public:
   /// exceeds that of some disjunct, an assert failure will occur.
   void setSpace(const PresburgerSpace &oSpace);
 
+  void insertVarInPlace(VarKind kind, unsigned pos, unsigned num = 1);
+
+  /// Converts variables of the specified kind in the column range [srcPos,
+  /// srcPos + num) to variables of the specified kind at position dstPos. The
+  /// ranges are relative to the kind of variable.
+  ///
+  /// srcKind and dstKind must be different.
+  void convertVarKind(VarKind srcKind, unsigned srcPos, unsigned num,
+                      VarKind dstKind, unsigned dstPos);
+
   /// Return a reference to the list of disjuncts.
   ArrayRef<IntegerRelation> getAllDisjuncts() const;
 
@@ -82,6 +92,54 @@ public:
 
   /// Return the intersection of this set and the given set.
   PresburgerRelation intersect(const PresburgerRelation &set) const;
+
+  /// Return the range intersection of the given `set` with `this` relation.
+  ///
+  /// Formally, let the relation `this` be R: A -> B and `set` is C, then this
+  /// operation returns A -> (B intersection C).
+  PresburgerRelation intersectRange(const PresburgerSet &set) const;
+
+  /// Return the domain intersection of the given `set` with `this` relation.
+  ///
+  /// Formally, let the relation `this` be R: A -> B and `set` is C, then this
+  /// operation returns (A intersection C) -> B.
+  PresburgerRelation intersectDomain(const PresburgerSet &set) const;
+
+  /// Return a set corresponding to the domain of the relation.
+  PresburgerSet getDomainSet() const;
+  /// Return a set corresponding to the range of the relation.
+  PresburgerSet getRangeSet() const;
+
+  /// Invert the relation, i.e. swap its domain and range.
+  ///
+  /// Formally, if `this`: A -> B then `inverse` updates `this` in-place to
+  /// `this`: B -> A.
+  void inverse();
+
+  /// Compose `this` relation with the given relation `rel` in-place.
+  ///
+  /// Formally, if `this`: A -> B, and `rel`: B -> C, then this function updates
+  /// `this` to `result`: A -> C where a point (a, c) belongs to `result`
+  /// iff there exists b such that (a, b) is in `this` and, (b, c) is in rel.
+  void compose(const PresburgerRelation &rel);
+
+  /// Apply the domain of given relation `rel` to `this` relation.
+  ///
+  /// Formally, R1.applyDomain(R2) = R2.inverse().compose(R1).
+  void applyDomain(const PresburgerRelation &rel);
+
+  /// Same as compose, provided for uniformity with applyDomain.
+  void applyRange(const PresburgerRelation &rel);
+
+  /// Compute the symbolic integer lexmin of the relation, i.e. for every
+  /// assignment of the symbols and domain the lexicographically minimum value
+  /// attained by the range.
+  SymbolicLexOpt findSymbolicIntegerLexMin() const;
+
+  /// Compute the symbolic integer lexmax of the relation, i.e. for every
+  /// assignment of the symbols and domain the lexicographically maximum value
+  /// attained by the range.
+  SymbolicLexOpt findSymbolicIntegerLexMax() const;
 
   /// Return true if the set contains the given point, and false otherwise.
   bool containsPoint(ArrayRef<MPInt> point) const;
@@ -109,6 +167,23 @@ public:
   /// Return true if all the sets in the union are known to be integer empty
   /// false otherwise.
   bool isIntegerEmpty() const;
+
+  /// Return true if there is no disjunct, false otherwise.
+  bool isPlainEmpty() const;
+
+  /// Return true if the set is known to have one unconstrained disjunct, false
+  /// otherwise.
+  bool isPlainUniverse() const;
+
+  /// Perform a quick equality check on `this` and `other`. The relations are
+  /// equal if the check return true, but may or may not be equal if the check
+  /// returns false. This is doing by directly comparing whether each internal
+  /// disjunct is the same.
+  bool isPlainEqual(const PresburgerRelation &set) const;
+
+  /// Return true if the set is consist of a single disjunct, without any local
+  /// variables, false otherwise.
+  bool isConvexNoLocals() const;
 
   /// Find an integer sample from the given set. This should not be called if
   /// any of the disjuncts in the union are unbounded.

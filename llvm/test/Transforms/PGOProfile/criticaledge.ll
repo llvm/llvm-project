@@ -11,7 +11,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; GEN: $__llvm_profile_raw_version = comdat any
 ; GEN: @__llvm_profile_raw_version = hidden constant i64 {{[0-9]+}}, comdat
 ; GEN: @__profn_test_criticalEdge = private constant [17 x i8] c"test_criticalEdge"
-; GEN: @__profn__stdin__bar = private constant [11 x i8] c"<stdin>:bar"
+; GEN: @__profn__stdin__bar = private constant [11 x i8] c"<stdin>;bar"
 
 define i32 @test_criticalEdge(i32 %i, i32 %j) {
 entry:

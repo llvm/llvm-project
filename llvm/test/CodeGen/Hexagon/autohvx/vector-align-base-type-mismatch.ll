@@ -3,7 +3,9 @@
 ; The getelementptr's based on %a2, but with different base types caused
 ; a problem in vector alignment code.
 ; For now check that none of the vector loads are aligned.
-; CHECK-NOT: = vmem(
+
+; Update: this should work now, so check for the presence of aligned loads.
+; CHECK: = vmem(
 
 define void @f0(ptr noalias nocapture align 64 %a0, ptr noalias nocapture readonly align 64 %a1, ptr noalias nocapture readonly align 64 %a2) #0 {
 b0:

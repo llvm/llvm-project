@@ -15,11 +15,12 @@
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/FPUtil/nearest_integer.h"
 #include "src/__support/common.h"
-#include "src/__support/cpu_features.h"
+#include "src/__support/macros/optimization.h"            // LIBC_UNLIKELY
+#include "src/__support/macros/properties/cpu_features.h" // LIBC_TARGET_CPU_HAS_FMA
 
 #include <errno.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 // Exceptional cases for tanf.
 constexpr size_t N_EXCEPTS = 6;
@@ -47,12 +48,12 @@ LLVM_LIBC_FUNCTION(float, tanf, (float x)) {
   uint32_t x_abs = xbits.uintval() & 0x7fff'ffffU;
 
   // |x| < pi/32
-  if (unlikely(x_abs <= 0x3dc9'0fdbU)) {
+  if (LIBC_UNLIKELY(x_abs <= 0x3dc9'0fdbU)) {
     double xd = static_cast<double>(x);
 
     // |x| < 0x1.0p-12f
-    if (unlikely(x_abs < 0x3980'0000U)) {
-      if (unlikely(x_abs == 0U)) {
+    if (LIBC_UNLIKELY(x_abs < 0x3980'0000U)) {
+      if (LIBC_UNLIKELY(x_abs == 0U)) {
         // For signed zeros.
         return x;
       }
@@ -74,11 +75,11 @@ LLVM_LIBC_FUNCTION(float, tanf, (float x)) {
       // |x| < 2^-125. For targets without FMA instructions, we simply use
       // double for intermediate results as it is more efficient than using an
       // emulated version of FMA.
-#if defined(LIBC_TARGET_HAS_FMA)
+#if defined(LIBC_TARGET_CPU_HAS_FMA)
       return fputil::multiply_add(x, 0x1.0p-25f, x);
 #else
       return static_cast<float>(fputil::multiply_add(xd, 0x1.0p-25, xd));
-#endif // LIBC_TARGET_HAS_FMA
+#endif // LIBC_TARGET_CPU_HAS_FMA
     }
 
     // |x| < pi/32
@@ -89,31 +90,35 @@ LLVM_LIBC_FUNCTION(float, tanf, (float x)) {
     double result =
         fputil::polyeval(xsq, 1.0, 0x1.555555553d022p-2, 0x1.111111ce442c1p-3,
                          0x1.ba180a6bbdecdp-5, 0x1.69c0a88a0b71fp-6);
-    return xd * result;
+    return static_cast<float>(xd * result);
   }
 
   // Check for exceptional values
-  if (unlikely(x_abs == 0x3f8a1f62U)) {
+  if (LIBC_UNLIKELY(x_abs == 0x3f8a1f62U)) {
     // |x| = 0x1.143ec4p0
     float sign = x_sign ? -1.0f : 1.0f;
 
-    return fputil::multiply_add(sign, 0x1.ddf9f4p0f, sign * 0x1.1p-24f);
+    // volatile is used to prevent compiler (gcc) from optimizing the
+    // computation, making the results incorrect in different rounding modes.
+    volatile float tmp = 0x1.ddf9f4p0f;
+    tmp = fputil::multiply_add(sign, tmp, sign * 0x1.1p-24f);
+
+    return tmp;
   }
 
   // |x| > 0x1.ada6a8p+27f
-  if (unlikely(x_abs > 0x4d56'd354U)) {
+  if (LIBC_UNLIKELY(x_abs > 0x4d56'd354U)) {
     // Inf or NaN
-    if (unlikely(x_abs >= 0x7f80'0000U)) {
+    if (LIBC_UNLIKELY(x_abs >= 0x7f80'0000U)) {
       if (x_abs == 0x7f80'0000U) {
-        errno = EDOM;
-        fputil::set_except(FE_INVALID);
+        fputil::set_errno_if_required(EDOM);
+        fputil::raise_except_if_required(FE_INVALID);
       }
-      return x +
-             FPBits::build_nan(1 << (fputil::MantissaWidth<float>::VALUE - 1));
+      return x + FPBits::build_quiet_nan(0);
     }
     // Other large exceptional values
     if (auto r = TANF_EXCEPTS.lookup_odd(x_abs, x_sign);
-        unlikely(r.has_value()))
+        LIBC_UNLIKELY(r.has_value()))
       return r.value();
   }
 
@@ -129,8 +134,9 @@ LLVM_LIBC_FUNCTION(float, tanf, (float x)) {
   // tan(x) = sin(x) / cos(x)
   //        = (sin_y * cos_k + cos_y * sin_k) / (cos_y * cos_k - sin_y * sin_k)
   using fputil::multiply_add;
-  return multiply_add(sin_y, cos_k, multiply_add(cosm1_y, sin_k, sin_k)) /
-         multiply_add(sin_y, -sin_k, multiply_add(cosm1_y, cos_k, cos_k));
+  return static_cast<float>(
+      multiply_add(sin_y, cos_k, multiply_add(cosm1_y, sin_k, sin_k)) /
+      multiply_add(sin_y, -sin_k, multiply_add(cosm1_y, cos_k, cos_k)));
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE

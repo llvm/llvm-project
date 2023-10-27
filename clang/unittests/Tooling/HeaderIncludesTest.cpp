@@ -143,6 +143,19 @@ TEST_F(HeaderIncludesTest, InsertAfterMainHeader) {
   EXPECT_NE(Expected, insert(Code, "<a>")) << "Not main header";
 }
 
+TEST_F(HeaderIncludesTest, InsertMainHeader) {
+  Style = format::getGoogleStyle(format::FormatStyle::LanguageKind::LK_Cpp)
+              .IncludeStyle;
+  FileName = "fix.cpp";
+  EXPECT_EQ(R"cpp(#include "fix.h"
+#include "a.h")cpp", insert("#include \"a.h\"", "\"fix.h\""));
+
+  // Respect the original main-file header.
+  EXPECT_EQ(R"cpp(#include "z/fix.h"
+#include "a/fix.h"
+)cpp", insert("#include \"z/fix.h\"", "\"a/fix.h\""));
+}
+
 TEST_F(HeaderIncludesTest, InsertBeforeSystemHeaderLLVM) {
   std::string Code = "#include <memory>\n"
                      "\n"

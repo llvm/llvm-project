@@ -2,7 +2,7 @@ RUN: mkdir -p %t.d
 RUN: cd %t.d
 
 # Test with exceptions disabled.
-RUN: %clangxx --coverage -o %t %S/Inputs/instrprof-gcov-exceptions.cpp -fno-exceptions
+RUN: %clangxx --coverage -o %t %S/Inputs/instrprof-gcov-exceptions.cpp -fno-exceptions -dumpdir ./
 RUN: test -f instrprof-gcov-exceptions.gcno
 
 RUN: rm -f instrprof-gcov-exceptions.gcda
@@ -11,7 +11,7 @@ RUN: llvm-cov gcov instrprof-gcov-exceptions.gcda
 RUN: FileCheck --match-full-lines --strict-whitespace --input-file instrprof-gcov-exceptions.cpp.gcov %S/Inputs/instrprof-gcov-exceptions.cpp.gcov
 
 # Test with exceptions enabled, the result in terms of line counts should be the same.
-RUN: %clangxx --coverage -o %t %S/Inputs/instrprof-gcov-exceptions.cpp
+RUN: %clangxx --coverage -o %t %S/Inputs/instrprof-gcov-exceptions.cpp -dumpdir ./
 RUN: test -f instrprof-gcov-exceptions.gcno
 
 RUN: rm -f instrprof-gcov-exceptions.gcda

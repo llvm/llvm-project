@@ -1,5 +1,6 @@
 ; RUN: llc -relocation-model=pic -mattr=+mutable-globals -filetype=obj %s -o %t.o
-; RUN: wasm-ld --no-gc-sections --experimental-pic -pie -o %t.wasm %t.o
+; RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-emscripten -filetype=obj %S/Inputs/internal_func.s -o %t.internal_func.o
+; RUN: wasm-ld --no-gc-sections --experimental-pic -pie -o %t.wasm %t.o %t.internal_func.o
 ; RUN: obj2yaml %t.wasm | FileCheck %s
 ; RUN: llvm-objdump --disassemble-symbols=__wasm_call_ctors,__wasm_apply_data_relocs --no-show-raw-insn --no-leading-addr %t.wasm | FileCheck %s --check-prefixes DISASSEM
 
@@ -27,19 +28,31 @@ entry:
   ret ptr @data_addr_external
 }
 
+define default ptr @get_internal_func1_address() {
+entry:
+  ret ptr @internal_func1
+}
+
+define default ptr @get_internal_func2_address() {
+entry:
+  ret ptr @internal_func2
+}
+
 define void @_start() {
   call void @external_func()
   ret void
 }
 
 declare void @external_func()
+declare ptr @internal_func1()
+declare ptr @internal_func2()
 
 ; CHECK:      Sections:
 ; CHECK-NEXT:   - Type:            CUSTOM
 ; CHECK-NEXT:     Name:            dylink.0
 ; CHECK-NEXT:     MemorySize:      16
 ; CHECK-NEXT:     MemoryAlignment: 2
-; CHECK-NEXT:     TableSize:       1
+; CHECK-NEXT:     TableSize:       3
 ; CHECK-NEXT:     TableAlignment:  0
 ; CHECK-NEXT:     Needed:          []
 
@@ -52,7 +65,7 @@ declare void @external_func()
 ; CHECK-NEXT:          Index:           0
 ; CHECK-NEXT:          ElemType:        FUNCREF
 ; CHECK-NEXT:          Limits:
-; CHECK-NEXT:            Minimum:         0x1
+; CHECK-NEXT:            Minimum:         0x3
 ; CHECK-NEXT:       - Module:          env
 ; CHECK-NEXT:         Field:           __stack_pointer
 ; CHECK-NEXT:         Kind:            GLOBAL
@@ -88,7 +101,15 @@ declare void @external_func()
 ; CHECK-NEXT:       - Index:           5
 ; CHECK-NEXT:         Name:            get_data_address
 ; CHECK-NEXT:       - Index:           6
+; CHECK-NEXT:         Name:            get_internal_func1_address
+; CHECK-NEXT:       - Index:           7
+; CHECK-NEXT:         Name:            get_internal_func2_address
+; CHECK-NEXT:       - Index:           8
 ; CHECK-NEXT:         Name:            _start
+; CHECK-NEXT:       - Index:           9
+; CHECK-NEXT:         Name:            internal_func1
+; CHECK-NEXT:       - Index:           10
+; CHECK-NEXT:         Name:            internal_func2
 ; CHECK-NEXT:     GlobalNames:
 
 ; DISASSEM-LABEL:  <__wasm_call_ctors>:
@@ -104,7 +125,8 @@ declare void @external_func()
 ; to be mutable.
 
 ; RUN: llc -relocation-model=pic -mattr=+extended-const,+mutable-globals,+atomics,+bulk-memory -filetype=obj %s -o %t.extended.o
-; RUN: wasm-ld --no-gc-sections --allow-undefined --experimental-pic -pie -o %t.extended.wasm %t.extended.o
+; RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-emscripten -filetype=obj %S/Inputs/internal_func.s -o %t.internal_func.extended.o
+; RUN: wasm-ld --no-gc-sections --experimental-pic -pie -o %t.extended.wasm %t.extended.o %t.internal_func.extended.o
 ; RUN: obj2yaml %t.extended.wasm | FileCheck %s --check-prefix=EXTENDED-CONST
 
 ; EXTENDED-CONST-NOT: __wasm_apply_global_relocs
@@ -131,6 +153,20 @@ declare void @external_func()
 ; This instruction sequence decodes to:
 ; (global.get[0x23] 0x1 i32.const[0x41] 0x0C i32.add[0x6A] end[0x0b])
 ; EXTENDED-CONST-NEXT:          Body:            2301410C6A0B
+; EXTENDED-CONST-NEXT:      - Index:           7
+; EXTENDED-CONST-NEXT:        Type:            I32
+; EXTENDED-CONST-NEXT:        Mutable:         false
+; EXTENDED-CONST-NEXT:        InitExpr:
+; EXTENDED-CONST-NEXT:          Opcode:        GLOBAL_GET
+; EXTENDED-CONST-NEXT:          Index:         2
+; EXTENDED-CONST-NEXT:      - Index:           8
+; EXTENDED-CONST-NEXT:        Type:            I32
+; EXTENDED-CONST-NEXT:        Mutable:         false
+; EXTENDED-CONST-NEXT:        InitExpr:
+; EXTENDED-CONST-NEXT:          Extended:        true
+; This instruction sequence decodes to:
+; (global.get[0x23] 0x2 i32.const[0x41] 0x1 i32.add[0x6A] end[0x0b])
+; EXTENDED-CONST-NEXT:          Body:            230241016A0B
 
 ;  EXTENDED-CONST-NOT:  - Type:            START
 
@@ -148,7 +184,8 @@ declare void @external_func()
 ; function.
 
 ; RUN: llc -relocation-model=pic -mattr=+mutable-globals,+atomics,+bulk-memory -filetype=obj %s -o %t.shmem.o
-; RUN: wasm-ld --no-gc-sections --shared-memory --allow-undefined --experimental-pic -pie -o %t.shmem.wasm %t.shmem.o
+; RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-emscripten -filetype=obj %S/Inputs/internal_func.s -o %t.internal_func.shmem.o
+; RUN: wasm-ld --no-gc-sections --shared-memory --experimental-pic -pie -o %t.shmem.wasm %t.shmem.o %t.internal_func.shmem.o
 ; RUN: obj2yaml %t.shmem.wasm | FileCheck %s --check-prefix=SHMEM
 ; RUN: llvm-objdump --disassemble-symbols=__wasm_start --no-show-raw-insn --no-leading-addr %t.shmem.wasm | FileCheck %s --check-prefix DISASSEM-SHMEM
 
@@ -181,4 +218,8 @@ declare void @external_func()
 ; SHMEM-NEXT:      - Index:           8
 ; SHMEM-NEXT:        Name:            get_data_address
 ; SHMEM-NEXT:      - Index:           9
+; SHMEM-NEXT:        Name:            get_internal_func1_address
+; SHMEM-NEXT:      - Index:           10
+; SHMEM-NEXT:        Name:            get_internal_func2_address
+; SHMEM-NEXT:      - Index:           11
 ; SHMEM-NEXT:        Name:            _start

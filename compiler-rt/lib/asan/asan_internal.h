@@ -105,8 +105,8 @@ void AsanApplyToGlobals(globals_op_fptr op, const void *needle);
 
 void AsanOnDeadlySignal(int, void *siginfo, void *context);
 
+void SignContextStack(void *context);
 void ReadContextStack(void *context, uptr *stack, uptr *ssize);
-void ResetContextStack(void *context);
 void StopInitOrderChecking();
 
 // Wrapper for TLS/TSD.

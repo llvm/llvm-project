@@ -12,16 +12,11 @@
 // disable them for now until their behavior can be designed better later.
 // See https://reviews.llvm.org/D84049 for details.
 
-// UNSUPPORTED: apple-clang-14
-
 // UNSUPPORTED: c++03
 
 #include <atomic>
 
-int main(int, char**)
-{
-  // expected-error@atomic:*1 {{_Atomic cannot be applied to integer type '_BitInt(32)'}}
+void f() {
+  // expected-error@*:*1 {{_Atomic cannot be applied to integer type '_BitInt(32)'}}
   std::atomic<_BitInt(32)> x(42);
-
-  return 0;
 }

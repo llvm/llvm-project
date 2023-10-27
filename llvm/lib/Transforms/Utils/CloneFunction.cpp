@@ -470,9 +470,8 @@ void PruningFunctionCloner::CloneBlock(
 
   // Nope, clone it now.
   BasicBlock *NewBB;
-  BBEntry = NewBB = BasicBlock::Create(BB->getContext());
-  if (BB->hasName())
-    NewBB->setName(BB->getName() + NameSuffix);
+  Twine NewName(BB->hasName() ? Twine(BB->getName()) + NameSuffix : "");
+  BBEntry = NewBB = BasicBlock::Create(BB->getContext(), NewName, NewFunc);
 
   // It is only legal to clone a function if a block address within that
   // function is never referenced outside of the function.  Given that, we
@@ -498,6 +497,7 @@ void PruningFunctionCloner::CloneBlock(
        ++II) {
 
     Instruction *NewInst = cloneInstruction(II);
+    NewInst->insertInto(NewBB, NewBB->end());
 
     if (HostFuncIsStrictFP) {
       // All function calls in the inlined function must get 'strictfp'
@@ -526,7 +526,7 @@ void PruningFunctionCloner::CloneBlock(
 
         if (!NewInst->mayHaveSideEffects()) {
           VMap[&*II] = V;
-          NewInst->deleteValue();
+          NewInst->eraseFromParent();
           continue;
         }
       }
@@ -535,7 +535,6 @@ void PruningFunctionCloner::CloneBlock(
     if (II->hasName())
       NewInst->setName(II->getName() + NameSuffix);
     VMap[&*II] = NewInst; // Add instruction map to value.
-    NewInst->insertInto(NewBB, NewBB->end());
     if (isa<CallInst>(II) && !II->isDebugOrPseudoInst()) {
       hasCalls = true;
       hasMemProfMetadata |= II->hasMetadata(LLVMContext::MD_memprof);
@@ -683,8 +682,8 @@ void llvm::CloneAndPruneIntoFromInst(Function *NewFunc, const Function *OldFunc,
     if (!NewBB)
       continue; // Dead block.
 
-    // Add the new block to the new function.
-    NewFunc->insert(NewFunc->end(), NewBB);
+    // Move the new block to preserve the order in the original function.
+    NewBB->moveBefore(NewFunc->end());
 
     // Handle PHI nodes specially, as we have to remove references to dead
     // blocks.
@@ -937,8 +936,8 @@ void llvm::CloneAndPruneFunctionInto(
 }
 
 /// Remaps instructions in \p Blocks using the mapping in \p VMap.
-void llvm::remapInstructionsInBlocks(
-    const SmallVectorImpl<BasicBlock *> &Blocks, ValueToValueMapTy &VMap) {
+void llvm::remapInstructionsInBlocks(ArrayRef<BasicBlock *> Blocks,
+                                     ValueToValueMapTy &VMap) {
   // Rewrite the code to refer to itself.
   for (auto *BB : Blocks)
     for (auto &Inst : *BB)

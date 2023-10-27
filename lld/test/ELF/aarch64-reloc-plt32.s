@@ -24,10 +24,10 @@
 // BE-NEXT: 202158 7fffffff 80000000 ffdfdfa0
 
 // RUN: not ld.lld -z max-page-size=4096 %t.o %t255.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=OVERFLOW1
-// OVERFLOW1: relocation R_AARCH64_PLT32 out of range: -2147483649 is not in [-2147483648, 2147483647]; references foo
+// OVERFLOW1: relocation R_AARCH64_PLT32 out of range: -2147483649 is not in [-2147483648, 2147483647]; references 'foo'
 
 // RUN: not ld.lld -z max-page-size=4096 %t.o %t257.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=OVERFLOW2
-// OVERFLOW2: relocation R_AARCH64_PLT32 out of range: 2147483648 is not in [-2147483648, 2147483647]; references foo
+// OVERFLOW2: relocation R_AARCH64_PLT32 out of range: 2147483648 is not in [-2147483648, 2147483647]; references 'foo'
 
   .globl _start
   _start:

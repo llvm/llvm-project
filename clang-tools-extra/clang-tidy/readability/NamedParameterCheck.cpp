@@ -28,7 +28,7 @@ void NamedParameterCheck::check(const MatchFinder::MatchResult &Result) {
   // overriden method.
   const FunctionDecl *Definition = nullptr;
   if ((!Function->isDefined(Definition) || Function->isDefaulted() ||
-       Function->isDeleted()) &&
+       Definition->isDefaulted() || Function->isDeleted()) &&
       (!isa<CXXMethodDecl>(Function) ||
        cast<CXXMethodDecl>(Function)->size_overridden_methods() == 0))
     return;

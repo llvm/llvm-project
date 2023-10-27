@@ -46,7 +46,7 @@ public:
   bool IsAggregateValue() const override { return true; }
 
   lldb::OptionValueSP GetSubValue(const ExecutionContext *exe_ctx,
-                                  llvm::StringRef name, bool will_modify,
+                                  llvm::StringRef name,
                                   Status &error) const override;
 
   // Subclass specific functions

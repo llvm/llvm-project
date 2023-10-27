@@ -57,7 +57,7 @@ struct ForLoopLoweringPattern : public OpRewritePattern<ForOp> {
     // arguments to the 'after' region.
     auto *beforeBlock = rewriter.createBlock(
         &whileOp.getBefore(), whileOp.getBefore().begin(), lcvTypes, lcvLocs);
-    rewriter.setInsertionPointToStart(&whileOp.getBefore().front());
+    rewriter.setInsertionPointToStart(whileOp.getBeforeBody());
     auto cmpOp = rewriter.create<arith::CmpIOp>(
         whileOp.getLoc(), arith::CmpIPredicate::slt,
         beforeBlock->getArgument(0), forOp.getUpperBound());
@@ -78,7 +78,8 @@ struct ForLoopLoweringPattern : public OpRewritePattern<ForOp> {
     // Rewrite uses of the for-loop block arguments to the new while-loop
     // "after" arguments
     for (const auto &barg : enumerate(forOp.getBody(0)->getArguments()))
-      barg.value().replaceAllUsesWith(afterBlock->getArgument(barg.index()));
+      rewriter.replaceAllUsesWith(barg.value(),
+                                  afterBlock->getArgument(barg.index()));
 
     // Inline for-loop body operations into 'after' region.
     for (auto &arg : llvm::make_early_inc_range(*forOp.getBody()))
@@ -88,7 +89,8 @@ struct ForLoopLoweringPattern : public OpRewritePattern<ForOp> {
     for (auto yieldOp : afterBlock->getOps<scf::YieldOp>()) {
       SmallVector<Value> yieldOperands = yieldOp.getOperands();
       yieldOperands.insert(yieldOperands.begin(), ivIncOp.getResult());
-      yieldOp->setOperands(yieldOperands);
+      rewriter.updateRootInPlace(
+          yieldOp, [&]() { yieldOp->setOperands(yieldOperands); });
     }
 
     // We cannot do a direct replacement of the forOp since the while op returns
@@ -96,7 +98,8 @@ struct ForLoopLoweringPattern : public OpRewritePattern<ForOp> {
     // carried in the set of iterargs). Instead, rewrite uses of the forOp
     // results.
     for (const auto &arg : llvm::enumerate(forOp.getResults()))
-      arg.value().replaceAllUsesWith(whileOp.getResult(arg.index() + 1));
+      rewriter.replaceAllUsesWith(arg.value(),
+                                  whileOp.getResult(arg.index() + 1));
 
     rewriter.eraseOp(forOp);
     return success();

@@ -12,7 +12,6 @@ void functionBeforeImports(void);
 @class NSString;
 
 //===---
-// rdar://14258334
 // Check that we attach comments to properties correctly.
 //===---
 
@@ -33,7 +32,6 @@ void functionBeforeImports(void);
 @end
 
 //===---
-// rdar://14348912
 // Check that we attach comments to enums declared using the NS_ENUM macro.
 //===---
 
@@ -48,16 +46,30 @@ typedef NS_ENUM(int, An_NS_ENUM_isdoxy1) { Red, Green, Blue };
 // attach unrelated comments in the following cases where tag decls are
 // embedded in declarators.
 
-#define DECLARE_FUNCTION() \
+#define DECLARE_FUNCTIONS(suffix) \
+    /** functionFromMacro IS_DOXYGEN_SINGLE */ \
     void functionFromMacro(void) { \
+      typedef struct Struct_notdoxy Struct_notdoxy; \
+    } \
+    /** functionFromMacroWithSuffix IS_DOXYGEN_SINGLE */ \
+    void functionFromMacro##suffix(void) { \
       typedef struct Struct_notdoxy Struct_notdoxy; \
     }
 
 /// IS_DOXYGEN_NOT_ATTACHED
-DECLARE_FUNCTION()
+DECLARE_FUNCTIONS(WithSuffix)
 
 /// typedef_isdoxy1 IS_DOXYGEN_SINGLE
 typedef struct Struct_notdoxy *typedef_isdoxy1;
+
+#define DECLARE_ENUMS(name) \
+  /** enumFromMacro IS_DOXYGEN_SINGLE */ \
+  enum enumFromMacro { A }; \
+  /** namedEnumFromMacro IS_DOXYGEN_SINGLE */ \
+  enum name { B };
+
+/// IS_DOXYGEN_NOT_ATTACHED
+DECLARE_ENUMS(namedEnumFromMacro)
 
 #endif
 
@@ -110,16 +122,19 @@ typedef struct Struct_notdoxy *typedef_isdoxy1;
 // CHECK-DAG: DocCommentsB.h:2:6: FunctionDecl=functionFromDocCommentsB1:{{.*}} BriefComment=[Comment for 'functionFromDocCommentsB1'.]
 // CHECK-DAG: DocCommentsB.h:7:6: FunctionDecl=functionFromDocCommentsB2:{{.*}} BriefComment=[Comment for 'functionFromDocCommentsB2'.]
 // CHECK-DAG: DocCommentsC.h:2:6: FunctionDecl=functionFromDocCommentsC:{{.*}} BriefComment=[Comment for 'functionFromDocCommentsC'.]
-// CHECK: annotate-comments-objc.m:23:50: ObjCPropertyDecl=property1_isdoxy1:{{.*}} property1_isdoxy1 IS_DOXYGEN_SINGLE
-// CHECK: annotate-comments-objc.m:24:50: ObjCPropertyDecl=property1_isdoxy2:{{.*}} property1_isdoxy2 IS_DOXYGEN_SINGLE
-// CHECK: annotate-comments-objc.m:25:50: ObjCPropertyDecl=property1_isdoxy3:{{.*}} property1_isdoxy3 IS_DOXYGEN_SINGLE
-// CHECK: annotate-comments-objc.m:26:50: ObjCPropertyDecl=property1_isdoxy4:{{.*}} property1_isdoxy4 IS_DOXYGEN_SINGLE
-// CHECK: annotate-comments-objc.m:29:9: ObjCInstanceMethodDecl=method1_isdoxy1:{{.*}} method1_isdoxy1 IS_DOXYGEN_SINGLE
-// CHECK: annotate-comments-objc.m:30:9: ObjCInstanceMethodDecl=method1_isdoxy2:{{.*}} method1_isdoxy2 IS_DOXYGEN_SINGLE
-// CHECK: annotate-comments-objc.m:31:9: ObjCInstanceMethodDecl=method1_isdoxy3:{{.*}} method1_isdoxy3 IS_DOXYGEN_SINGLE
-// CHECK: annotate-comments-objc.m:32:9: ObjCInstanceMethodDecl=method1_isdoxy4:{{.*}} method1_isdoxy4 IS_DOXYGEN_SINGLE
-// CHECK: annotate-comments-objc.m:43:22: EnumDecl=An_NS_ENUM_isdoxy1:{{.*}} An_NS_ENUM_isdoxy1 IS_DOXYGEN_SINGLE
-// CHECK: annotate-comments-objc.m:43:22: TypedefDecl=An_NS_ENUM_isdoxy1:{{.*}} An_NS_ENUM_isdoxy1 IS_DOXYGEN_SINGLE
-// CHECK: annotate-comments-objc.m:43:22: EnumDecl=An_NS_ENUM_isdoxy1:{{.*}} An_NS_ENUM_isdoxy1 IS_DOXYGEN_SINGLE
-// CHECK: annotate-comments-objc.m:60:32: TypedefDecl=typedef_isdoxy1:{{.*}} typedef_isdoxy1 IS_DOXYGEN_SINGLE
-
+// CHECK: annotate-comments-objc.m:22:50: ObjCPropertyDecl=property1_isdoxy1:{{.*}} property1_isdoxy1 IS_DOXYGEN_SINGLE
+// CHECK: annotate-comments-objc.m:23:50: ObjCPropertyDecl=property1_isdoxy2:{{.*}} property1_isdoxy2 IS_DOXYGEN_SINGLE
+// CHECK: annotate-comments-objc.m:24:50: ObjCPropertyDecl=property1_isdoxy3:{{.*}} property1_isdoxy3 IS_DOXYGEN_SINGLE
+// CHECK: annotate-comments-objc.m:25:50: ObjCPropertyDecl=property1_isdoxy4:{{.*}} property1_isdoxy4 IS_DOXYGEN_SINGLE
+// CHECK: annotate-comments-objc.m:28:9: ObjCInstanceMethodDecl=method1_isdoxy1:{{.*}} method1_isdoxy1 IS_DOXYGEN_SINGLE
+// CHECK: annotate-comments-objc.m:29:9: ObjCInstanceMethodDecl=method1_isdoxy2:{{.*}} method1_isdoxy2 IS_DOXYGEN_SINGLE
+// CHECK: annotate-comments-objc.m:30:9: ObjCInstanceMethodDecl=method1_isdoxy3:{{.*}} method1_isdoxy3 IS_DOXYGEN_SINGLE
+// CHECK: annotate-comments-objc.m:31:9: ObjCInstanceMethodDecl=method1_isdoxy4:{{.*}} method1_isdoxy4 IS_DOXYGEN_SINGLE
+// CHECK: annotate-comments-objc.m:41:22: EnumDecl=An_NS_ENUM_isdoxy1:{{.*}} An_NS_ENUM_isdoxy1 IS_DOXYGEN_SINGLE
+// CHECK: annotate-comments-objc.m:41:22: TypedefDecl=An_NS_ENUM_isdoxy1:{{.*}} An_NS_ENUM_isdoxy1 IS_DOXYGEN_SINGLE
+// CHECK: annotate-comments-objc.m:41:22: EnumDecl=An_NS_ENUM_isdoxy1:{{.*}} An_NS_ENUM_isdoxy1 IS_DOXYGEN_SINGLE
+// CHECK: annotate-comments-objc.m:60:1: FunctionDecl=functionFromMacro:{{.*}} BriefComment=[functionFromMacro IS_DOXYGEN_SINGLE]
+// CHECK: annotate-comments-objc.m:60:1: FunctionDecl=functionFromMacroWithSuffix:{{.*}} BriefComment=[functionFromMacroWithSuffix IS_DOXYGEN_SINGLE]
+// CHECK: annotate-comments-objc.m:63:32: TypedefDecl=typedef_isdoxy1:{{.*}} typedef_isdoxy1 IS_DOXYGEN_SINGLE
+// CHECK: annotate-comments-objc.m:72:1: EnumDecl=enumFromMacro:{{.*}} BriefComment=[enumFromMacro IS_DOXYGEN_SINGLE]
+// CHECK: annotate-comments-objc.m:72:15: EnumDecl=namedEnumFromMacro:{{.*}} BriefComment=[namedEnumFromMacro IS_DOXYGEN_SINGLE]

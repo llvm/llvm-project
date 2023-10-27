@@ -147,7 +147,7 @@ struct alignas(8) GlobalValueSummaryInfo {
     StringRef Name;
   } U;
 
-  GlobalValueSummaryInfo(bool HaveGVs) : U(HaveGVs) {}
+  inline GlobalValueSummaryInfo(bool HaveGVs);
 
   /// List of global value summary structures for a particular value held
   /// in the GlobalValueMap. Requires a vector in the case of multiple
@@ -315,12 +315,39 @@ struct CallsiteInfo {
         StackIdIndices(std::move(StackIdIndices)) {}
 };
 
+inline raw_ostream &operator<<(raw_ostream &OS, const CallsiteInfo &SNI) {
+  OS << "Callee: " << SNI.Callee;
+  bool First = true;
+  OS << " Clones: ";
+  for (auto V : SNI.Clones) {
+    if (!First)
+      OS << ", ";
+    First = false;
+    OS << V;
+  }
+  First = true;
+  OS << " StackIds: ";
+  for (auto Id : SNI.StackIdIndices) {
+    if (!First)
+      OS << ", ";
+    First = false;
+    OS << Id;
+  }
+  return OS;
+}
+
 // Allocation type assigned to an allocation reached by a given context.
-// More can be added but initially this is just noncold and cold.
+// More can be added, now this is cold, notcold and hot.
 // Values should be powers of two so that they can be ORed, in particular to
 // track allocations that have different behavior with different calling
 // contexts.
-enum class AllocationType : uint8_t { None = 0, NotCold = 1, Cold = 2 };
+enum class AllocationType : uint8_t {
+  None = 0,
+  NotCold = 1,
+  Cold = 2,
+  Hot = 4,
+  All = 7 // This should always be set to the OR of all values.
+};
 
 /// Summary of a single MIB in a memprof metadata on allocations.
 struct MIBInfo {
@@ -336,6 +363,19 @@ struct MIBInfo {
   MIBInfo(AllocationType AllocType, SmallVector<unsigned> StackIdIndices)
       : AllocType(AllocType), StackIdIndices(std::move(StackIdIndices)) {}
 };
+
+inline raw_ostream &operator<<(raw_ostream &OS, const MIBInfo &MIB) {
+  OS << "AllocType " << (unsigned)MIB.AllocType;
+  bool First = true;
+  OS << " StackIds: ";
+  for (auto Id : MIB.StackIdIndices) {
+    if (!First)
+      OS << ", ";
+    First = false;
+    OS << Id;
+  }
+  return OS;
+}
 
 /// Summary of memprof metadata on allocations.
 struct AllocInfo {
@@ -358,6 +398,22 @@ struct AllocInfo {
   AllocInfo(SmallVector<uint8_t> Versions, std::vector<MIBInfo> MIBs)
       : Versions(std::move(Versions)), MIBs(std::move(MIBs)) {}
 };
+
+inline raw_ostream &operator<<(raw_ostream &OS, const AllocInfo &AE) {
+  bool First = true;
+  OS << "Versions: ";
+  for (auto V : AE.Versions) {
+    if (!First)
+      OS << ", ";
+    First = false;
+    OS << (unsigned)V;
+  }
+  OS << " MIB:\n";
+  for (auto &M : AE.MIBs) {
+    OS << "\t\t" << M << "\n";
+  }
+  return OS;
+}
 
 /// Function and variable summary information to aid decisions and
 /// implementation of importing.
@@ -518,6 +574,8 @@ public:
 
   friend class ModuleSummaryIndex;
 };
+
+GlobalValueSummaryInfo::GlobalValueSummaryInfo(bool HaveGVs) : U(HaveGVs) {}
 
 /// Alias summary information.
 class AliasSummary : public GlobalValueSummary {
@@ -938,10 +996,20 @@ public:
     return {};
   }
 
+  CallsitesTy &mutableCallsites() {
+    assert(Callsites);
+    return *Callsites;
+  }
+
   ArrayRef<AllocInfo> allocs() const {
     if (Allocs)
       return *Allocs;
     return {};
+  }
+
+  AllocsTy &mutableAllocs() {
+    assert(Allocs);
+    return *Allocs;
   }
 
   friend struct GraphTraits<ValueInfo>;
@@ -1157,10 +1225,9 @@ using ModuleHash = std::array<uint32_t, 5>;
 using const_gvsummary_iterator = GlobalValueSummaryMapTy::const_iterator;
 using gvsummary_iterator = GlobalValueSummaryMapTy::iterator;
 
-/// String table to hold/own module path strings, which additionally holds the
-/// module ID assigned to each module during the plugin step, as well as a hash
+/// String table to hold/own module path strings, as well as a hash
 /// of the module. The StringMap makes a copy of and owns inserted strings.
-using ModulePathStringTableTy = StringMap<std::pair<uint64_t, ModuleHash>>;
+using ModulePathStringTableTy = StringMap<ModuleHash>;
 
 /// Map of global value GUID to its summary, used to identify values defined in
 /// a particular module, and provide efficient access to their summary.
@@ -1240,6 +1307,9 @@ private:
   /// Indicates that summary-based synthetic entry count propagation has run
   bool HasSyntheticEntryCounts = false;
 
+  /// Indicates that we linked with allocator supporting hot/cold new operators.
+  bool WithSupportsHotColdNew = false;
+
   /// Indicates that distributed backend should skip compilation of the
   /// module. Flag is suppose to be set by distributed ThinLTO indexing
   /// when it detected that the module is not needed during the final
@@ -1255,6 +1325,9 @@ private:
 
   // True if the index was created for a module compiled with -fsplit-lto-unit.
   bool EnableSplitLTOUnit;
+
+  // True if the index was created for a module compiled with -funified-lto
+  bool UnifiedLTO;
 
   // True if some of the modules were compiled with -fsplit-lto-unit and
   // some were not. Set when the combined index is created during the thin link.
@@ -1273,6 +1346,11 @@ private:
 
   // The total number of basic blocks in the module in the per-module summary or
   // the total number of basic blocks in the LTO unit in the combined index.
+  // FIXME: Putting this in the distributed ThinLTO index files breaks LTO
+  // backend caching on any BB change to any linked file. It is currently not
+  // used except in the case of a SamplePGO partial profile, and should be
+  // reevaluated/redesigned to allow more effective incremental builds in that
+  // case.
   uint64_t BlockCount;
 
   // List of unique stack ids (hashes). We use a 4B index of the id in the
@@ -1296,9 +1374,10 @@ private:
 
 public:
   // See HaveGVs variable comment.
-  ModuleSummaryIndex(bool HaveGVs, bool EnableSplitLTOUnit = false)
-      : HaveGVs(HaveGVs), EnableSplitLTOUnit(EnableSplitLTOUnit), Saver(Alloc),
-        BlockCount(0) {}
+  ModuleSummaryIndex(bool HaveGVs, bool EnableSplitLTOUnit = false,
+                     bool UnifiedLTO = false)
+      : HaveGVs(HaveGVs), EnableSplitLTOUnit(EnableSplitLTOUnit),
+        UnifiedLTO(UnifiedLTO), Saver(Alloc), BlockCount(0) {}
 
   // Current version for the module summary in bitcode files.
   // The BitcodeSummaryVersion should be bumped whenever we introduce changes
@@ -1443,6 +1522,9 @@ public:
   bool hasSyntheticEntryCounts() const { return HasSyntheticEntryCounts; }
   void setHasSyntheticEntryCounts() { HasSyntheticEntryCounts = true; }
 
+  bool withSupportsHotColdNew() const { return WithSupportsHotColdNew; }
+  void setWithSupportsHotColdNew() { WithSupportsHotColdNew = true; }
+
   bool skipModuleByDistributedBackend() const {
     return SkipModuleByDistributedBackend;
   }
@@ -1452,6 +1534,9 @@ public:
 
   bool enableSplitLTOUnit() const { return EnableSplitLTOUnit; }
   void setEnableSplitLTOUnit() { EnableSplitLTOUnit = true; }
+
+  bool hasUnifiedLTO() const { return UnifiedLTO; }
+  void setUnifiedLTO() { UnifiedLTO = true; }
 
   bool partiallySplitLTOUnits() const { return PartiallySplitLTOUnits; }
   void setPartiallySplitLTOUnits() { PartiallySplitLTOUnits = true; }
@@ -1588,25 +1673,18 @@ public:
                                             bool PerModuleIndex = true) const;
 
   /// Table of modules, containing module hash and id.
-  const StringMap<std::pair<uint64_t, ModuleHash>> &modulePaths() const {
+  const StringMap<ModuleHash> &modulePaths() const {
     return ModulePathStringTable;
   }
 
   /// Table of modules, containing hash and id.
-  StringMap<std::pair<uint64_t, ModuleHash>> &modulePaths() {
-    return ModulePathStringTable;
-  }
-
-  /// Get the module ID recorded for the given module path.
-  uint64_t getModuleId(const StringRef ModPath) const {
-    return ModulePathStringTable.lookup(ModPath).first;
-  }
+  StringMap<ModuleHash> &modulePaths() { return ModulePathStringTable; }
 
   /// Get the module SHA1 hash recorded for the given module path.
   const ModuleHash &getModuleHash(const StringRef ModPath) const {
     auto It = ModulePathStringTable.find(ModPath);
     assert(It != ModulePathStringTable.end() && "Module not registered");
-    return It->second.second;
+    return It->second;
   }
 
   /// Convenience method for creating a promoted global name
@@ -1637,13 +1715,19 @@ public:
 
   /// Add a new module with the given \p Hash, mapped to the given \p
   /// ModID, and return a reference to the module.
-  ModuleInfo *addModule(StringRef ModPath, uint64_t ModId,
-                        ModuleHash Hash = ModuleHash{{0}}) {
-    return &*ModulePathStringTable.insert({ModPath, {ModId, Hash}}).first;
+  ModuleInfo *addModule(StringRef ModPath, ModuleHash Hash = ModuleHash{{0}}) {
+    return &*ModulePathStringTable.insert({ModPath, Hash}).first;
   }
 
   /// Return module entry for module with the given \p ModPath.
   ModuleInfo *getModule(StringRef ModPath) {
+    auto It = ModulePathStringTable.find(ModPath);
+    assert(It != ModulePathStringTable.end() && "Module not registered");
+    return &*It;
+  }
+
+  /// Return module entry for module with the given \p ModPath.
+  const ModuleInfo *getModule(StringRef ModPath) const {
     auto It = ModulePathStringTable.find(ModPath);
     assert(It != ModulePathStringTable.end() && "Module not registered");
     return &*It;
@@ -1745,7 +1829,7 @@ public:
   void propagateAttributes(const DenseSet<GlobalValue::GUID> &PreservedSymbols);
 
   /// Checks if we can import global variable from another module.
-  bool canImportGlobalVar(GlobalValueSummary *S, bool AnalyzeRefs) const;
+  bool canImportGlobalVar(const GlobalValueSummary *S, bool AnalyzeRefs) const;
 };
 
 /// GraphTraits definition to build SCC for the index

@@ -156,9 +156,8 @@ ProgramState::invalidateRegions(RegionList Regions,
                              const CallEvent *Call,
                              RegionAndSymbolInvalidationTraits *ITraits) const {
   SmallVector<SVal, 8> Values;
-  for (RegionList::const_iterator I = Regions.begin(),
-                                  End = Regions.end(); I != End; ++I)
-    Values.push_back(loc::MemRegionVal(*I));
+  for (const MemRegion *Reg : Regions)
+    Values.push_back(loc::MemRegionVal(Reg));
 
   return invalidateRegionsImpl(Values, E, Count, LCtx, CausedByPointerEscape,
                                IS, ITraits, Call);
@@ -424,7 +423,7 @@ ProgramStateRef ProgramStateManager::getPersistentState(ProgramState &State) {
     freeStates.pop_back();
   }
   else {
-    newState = (ProgramState*) Alloc.Allocate<ProgramState>();
+    newState = Alloc.Allocate<ProgramState>();
   }
   new (newState) ProgramState(State);
   StateSet.InsertNode(newState, InsertPos);
@@ -556,22 +555,20 @@ bool ScanReachableSymbols::scan(nonloc::LazyCompoundVal val) {
 }
 
 bool ScanReachableSymbols::scan(nonloc::CompoundVal val) {
-  for (nonloc::CompoundVal::iterator I=val.begin(), E=val.end(); I!=E; ++I)
-    if (!scan(*I))
+  for (SVal V : val)
+    if (!scan(V))
       return false;
 
   return true;
 }
 
 bool ScanReachableSymbols::scan(const SymExpr *sym) {
-  for (SymExpr::symbol_iterator SI = sym->symbol_begin(),
-                                SE = sym->symbol_end();
-       SI != SE; ++SI) {
-    bool wasVisited = !visited.insert(*SI).second;
+  for (SymbolRef SubSym : sym->symbols()) {
+    bool wasVisited = !visited.insert(SubSym).second;
     if (wasVisited)
       continue;
 
-    if (!visitor.VisitSymbol(*SI))
+    if (!visitor.VisitSymbol(SubSym))
       return false;
   }
 
@@ -630,10 +627,8 @@ bool ScanReachableSymbols::scan(const MemRegion *R) {
 
   // Regions captured by a block are also implicitly reachable.
   if (const BlockDataRegion *BDR = dyn_cast<BlockDataRegion>(R)) {
-    BlockDataRegion::referenced_vars_iterator I = BDR->referenced_vars_begin(),
-                                              E = BDR->referenced_vars_end();
-    for ( ; I != E; ++I) {
-      if (!scan(I.getCapturedRegion()))
+    for (auto Var : BDR->referenced_vars()) {
+      if (!scan(Var.getCapturedRegion()))
         return false;
     }
   }

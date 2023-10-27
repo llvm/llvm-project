@@ -18,9 +18,9 @@
 
 // Check consecutive equal values in an unordered_multiset iterator
 template <typename Iter>
-void CheckConsecutiveValues(Iter pos, Iter end, typename Iter::value_type value, size_t count)
+void CheckConsecutiveValues(Iter pos, Iter end, typename Iter::value_type value, std::size_t count)
 {
-    for ( size_t i = 0; i < count; ++i )
+    for ( std::size_t i = 0; i < count; ++i )
     {
         assert(pos != end);
         assert(*pos == value);

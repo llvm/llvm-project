@@ -80,6 +80,30 @@ bool IntegerRelation::isEqual(const IntegerRelation &other) const {
   return PresburgerRelation(*this).isEqual(PresburgerRelation(other));
 }
 
+bool IntegerRelation::isPlainEqual(const IntegerRelation &other) const {
+  if (!space.isEqual(other.getSpace()))
+    return false;
+  if (getNumEqualities() != other.getNumEqualities())
+    return false;
+  if (getNumInequalities() != other.getNumInequalities())
+    return false;
+
+  unsigned cols = getNumCols();
+  for (unsigned i = 0, eqs = getNumEqualities(); i < eqs; ++i) {
+    for (unsigned j = 0; j < cols; ++j) {
+      if (atEq(i, j) != other.atEq(i, j))
+        return false;
+    }
+  }
+  for (unsigned i = 0, ineqs = getNumInequalities(); i < ineqs; ++i) {
+    for (unsigned j = 0; j < cols; ++j) {
+      if (atIneq(i, j) != other.atIneq(i, j))
+        return false;
+    }
+  }
+  return true;
+}
+
 bool IntegerRelation::isSubsetOf(const IntegerRelation &other) const {
   assert(space.isCompatible(other.getSpace()) && "Spaces must be compatible.");
   return PresburgerRelation(*this).isSubsetOf(PresburgerRelation(other));
@@ -172,7 +196,7 @@ PresburgerRelation IntegerRelation::computeReprWithOnlyDivLocals() const {
     return PresburgerRelation(*this);
 
   // Move all the non-div locals to the end, as the current API to
-  // SymbolicLexMin requires these to form a contiguous range.
+  // SymbolicLexOpt requires these to form a contiguous range.
   //
   // Take a copy so we can perform mutations.
   IntegerRelation copy = *this;
@@ -211,13 +235,13 @@ PresburgerRelation IntegerRelation::computeReprWithOnlyDivLocals() const {
   // exists, which is the union of the domain of the returned lexmin function
   // and the returned set of assignments to the "symbols" that makes the lexmin
   // unbounded.
-  SymbolicLexMin lexminResult =
+  SymbolicLexOpt lexminResult =
       SymbolicLexSimplex(copy, /*symbolOffset*/ 0,
                          IntegerPolyhedron(PresburgerSpace::getSetSpace(
                              /*numDims=*/copy.getNumVars() - numNonDivLocals)))
           .computeSymbolicIntegerLexMin();
   PresburgerRelation result =
-      lexminResult.lexmin.getDomain().unionSet(lexminResult.unboundedDomain);
+      lexminResult.lexopt.getDomain().unionSet(lexminResult.unboundedDomain);
 
   // The result set might lie in the wrong space -- all its ids are dims.
   // Set it to the desired space and return.
@@ -227,7 +251,7 @@ PresburgerRelation IntegerRelation::computeReprWithOnlyDivLocals() const {
   return result;
 }
 
-SymbolicLexMin IntegerRelation::findSymbolicIntegerLexMin() const {
+SymbolicLexOpt IntegerRelation::findSymbolicIntegerLexMin() const {
   // Symbol and Domain vars will be used as symbols for symbolic lexmin.
   // In other words, for every value of the symbols and domain, return the
   // lexmin value of the (range, locals).
@@ -239,7 +263,7 @@ SymbolicLexMin IntegerRelation::findSymbolicIntegerLexMin() const {
   // Compute the symbolic lexmin of the dims and locals, with the symbols being
   // the actual symbols of this set.
   // The resultant space of lexmin is the space of the relation itself.
-  SymbolicLexMin result =
+  SymbolicLexOpt result =
       SymbolicLexSimplex(*this,
                          IntegerPolyhedron(PresburgerSpace::getSetSpace(
                              /*numDims=*/getNumDomainVars(),
@@ -249,9 +273,47 @@ SymbolicLexMin IntegerRelation::findSymbolicIntegerLexMin() const {
 
   // We want to return only the lexmin over the dims, so strip the locals from
   // the computed lexmin.
-  result.lexmin.removeOutputs(result.lexmin.getNumOutputs() - getNumLocalVars(),
-                              result.lexmin.getNumOutputs());
+  result.lexopt.removeOutputs(result.lexopt.getNumOutputs() - getNumLocalVars(),
+                              result.lexopt.getNumOutputs());
   return result;
+}
+
+/// findSymbolicIntegerLexMax is implemented using findSymbolicIntegerLexMin as
+/// follows:
+/// 1. A new relation is created which is `this` relation with the sign of
+/// each dimension variable in range flipped;
+/// 2. findSymbolicIntegerLexMin is called on the range negated relation to
+/// compute the negated lexmax of `this` relation;
+/// 3. The sign of the negated lexmax is flipped and returned.
+SymbolicLexOpt IntegerRelation::findSymbolicIntegerLexMax() const {
+  IntegerRelation flippedRel = *this;
+  // Flip range sign by flipping the sign of range variables in all constraints.
+  for (unsigned j = getNumDomainVars(),
+                b = getNumDomainVars() + getNumRangeVars();
+       j < b; j++) {
+    for (unsigned i = 0, a = getNumEqualities(); i < a; i++)
+      flippedRel.atEq(i, j) = -1 * atEq(i, j);
+    for (unsigned i = 0, a = getNumInequalities(); i < a; i++)
+      flippedRel.atIneq(i, j) = -1 * atIneq(i, j);
+  }
+  // Compute negated lexmax by computing lexmin.
+  SymbolicLexOpt flippedSymbolicIntegerLexMax =
+                     flippedRel.findSymbolicIntegerLexMin(),
+                 symbolicIntegerLexMax(
+                     flippedSymbolicIntegerLexMax.lexopt.getSpace());
+  // Get lexmax by flipping range sign in the PWMA constraints.
+  for (auto &flippedPiece :
+       flippedSymbolicIntegerLexMax.lexopt.getAllPieces()) {
+    IntMatrix mat = flippedPiece.output.getOutputMatrix();
+    for (unsigned i = 0, e = mat.getNumRows(); i < e; i++)
+      mat.negateRow(i);
+    MultiAffineFunction maf(flippedPiece.output.getSpace(), mat);
+    PWMAFunction::Piece piece = {flippedPiece.domain, maf};
+    symbolicIntegerLexMax.lexopt.addPiece(piece);
+  }
+  symbolicIntegerLexMax.unboundedDomain =
+      flippedSymbolicIntegerLexMax.unboundedDomain;
+  return symbolicIntegerLexMax;
 }
 
 PresburgerRelation
@@ -676,7 +738,7 @@ bool IntegerRelation::isEmptyByGCDTest() const {
 //
 // It is sufficient to check the perpendiculars of the constraints, as the set
 // of perpendiculars which are bounded must span all bounded directions.
-Matrix IntegerRelation::getBoundedDirections() const {
+IntMatrix IntegerRelation::getBoundedDirections() const {
   // Note that it is necessary to add the equalities too (which the constructor
   // does) even though we don't need to check if they are bounded; whether an
   // inequality is bounded or not depends on what other constraints, including
@@ -697,7 +759,7 @@ Matrix IntegerRelation::getBoundedDirections() const {
   // The direction vector is given by the coefficients and does not include the
   // constant term, so the matrix has one fewer column.
   unsigned dirsNumCols = getNumCols() - 1;
-  Matrix dirs(boundedIneqs.size() + getNumEqualities(), dirsNumCols);
+  IntMatrix dirs(boundedIneqs.size() + getNumEqualities(), dirsNumCols);
 
   // Copy the bounded inequalities.
   unsigned row = 0;
@@ -783,7 +845,7 @@ IntegerRelation::findIntegerSample() const {
   // m is a matrix containing, in each row, a vector in which S is
   // bounded, such that the linear span of all these dimensions contains all
   // bounded dimensions in S.
-  Matrix m = getBoundedDirections();
+  IntMatrix m = getBoundedDirections();
   // In column echelon form, each row of m occupies only the first rank(m)
   // columns and has zeros on the other columns. The transform T that brings S
   // to column echelon form is unimodular as well, so this is a suitable
@@ -2246,14 +2308,16 @@ void IntegerRelation::print(raw_ostream &os) const {
   assert(hasConsistentState());
   printSpace(os);
   for (unsigned i = 0, e = getNumEqualities(); i < e; ++i) {
+    os << " ";
     for (unsigned j = 0, f = getNumCols(); j < f; ++j) {
-      os << atEq(i, j) << " ";
+      os << atEq(i, j) << "\t";
     }
     os << "= 0\n";
   }
   for (unsigned i = 0, e = getNumInequalities(); i < e; ++i) {
+    os << " ";
     for (unsigned j = 0, f = getNumCols(); j < f; ++j) {
-      os << atIneq(i, j) << " ";
+      os << atIneq(i, j) << "\t";
     }
     os << ">= 0\n";
   }

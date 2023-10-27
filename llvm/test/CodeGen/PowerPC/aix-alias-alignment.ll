@@ -62,8 +62,8 @@ define void @foo(i32 %a1, i32 %a2, i32 %a3) {
 
 ; SYM:      SYMBOL TABLE:
 ; SYM-NEXT: 00000000      df *DEBUG*	00000000 <stdin>
-; SYM-NEXT: 00000000 l       .text	00000029 .text
-; SYM-NEXT: 00000000 g     F .text (csect: .text) 	00000000 .foo
+; SYM-NEXT: 00000000 l       .text	00000029 
+; SYM-NEXT: 00000000 g     F .text (csect: ) 	00000000 .foo
 ; SYM-NEXT: 0000002c l       .data	00000008 .data
 ; SYM-NEXT: 0000002c g     O .data (csect: .data) 	00000000 _MergedGlobals
 ; SYM-NEXT: 0000002c g     O .data (csect: .data) 	00000000 var1

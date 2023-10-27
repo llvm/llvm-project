@@ -109,3 +109,212 @@ b:
 }
 
 declare half @llvm.fptrunc.round.f16.f32(float, metadata)
+
+; CHECK-LABEL: @ifThen_vector_reduce_fadd(
+; CHECK: %reduce = call float @llvm.vector.reduce.fadd.v2f32(float %x, <2 x float> %y)
+; CHECK-NEXT: br i1 true
+define void @ifThen_vector_reduce_fadd(float %x, <2 x float> %y) {
+  br i1 true, label %a, label %b
+
+a:
+  %reduce = call float @llvm.vector.reduce.fadd.v2f32(float %x, <2 x float> %y)
+  br label %b
+
+b:
+  ret void
+}
+
+declare float @llvm.vector.reduce.fadd.v2f32(float, <2 x float>)
+
+; CHECK-LABEL: @ifThen_vector_reduce_fmul(
+; CHECK: %reduce = call float @llvm.vector.reduce.fmul.v2f32(float %x, <2 x float> %y)
+; CHECK-NEXT: br i1 true
+define void @ifThen_vector_reduce_fmul(float %x, <2 x float> %y) {
+  br i1 true, label %a, label %b
+
+a:
+  %reduce = call float @llvm.vector.reduce.fmul.v2f32(float %x, <2 x float> %y)
+  br label %b
+
+b:
+  ret void
+}
+
+declare float @llvm.vector.reduce.fmul.v2f32(float, <2 x float>)
+
+; CHECK-LABEL: @ifThen_vector_reduce_add(
+; CHECK: %reduce = call i32 @llvm.vector.reduce.add.v2i32(<2 x i32> %x)
+; CHECK-NEXT: br i1 true
+define void @ifThen_vector_reduce_add(<2 x i32> %x) {
+  br i1 true, label %a, label %b
+
+a:
+  %reduce = call i32 @llvm.vector.reduce.add.v2i32(<2 x i32> %x)
+  br label %b
+
+b:
+  ret void
+}
+
+declare i32 @llvm.vector.reduce.add.v2i32(<2 x i32>)
+
+; CHECK-LABEL: @ifThen_vector_reduce_mul(
+; CHECK: %reduce = call i32 @llvm.vector.reduce.mul.v2i32(<2 x i32> %x)
+; CHECK-NEXT: br i1 true
+define void @ifThen_vector_reduce_mul(<2 x i32> %x) {
+  br i1 true, label %a, label %b
+
+a:
+  %reduce = call i32 @llvm.vector.reduce.mul.v2i32(<2 x i32> %x)
+  br label %b
+
+b:
+  ret void
+}
+
+declare i32 @llvm.vector.reduce.mul.v2i32(<2 x i32>)
+
+
+; CHECK-LABEL: @ifThen_vector_reduce_and(
+; CHECK: %reduce = call i32 @llvm.vector.reduce.and.v2i32(<2 x i32> %x)
+; CHECK-NEXT: br i1 true
+define void @ifThen_vector_reduce_and(<2 x i32> %x) {
+  br i1 true, label %a, label %b
+
+a:
+  %reduce = call i32 @llvm.vector.reduce.and.v2i32(<2 x i32> %x)
+  br label %b
+
+b:
+  ret void
+}
+
+declare i32 @llvm.vector.reduce.and.v2i32(<2 x i32>)
+
+; CHECK-LABEL: @ifThen_vector_reduce_or(
+; CHECK: %reduce = call i32 @llvm.vector.reduce.or.v2i32(<2 x i32> %x)
+; CHECK-NEXT: br i1 true
+define void @ifThen_vector_reduce_or(<2 x i32> %x) {
+  br i1 true, label %a, label %b
+
+a:
+  %reduce = call i32 @llvm.vector.reduce.or.v2i32(<2 x i32> %x)
+  br label %b
+
+b:
+  ret void
+}
+
+declare i32 @llvm.vector.reduce.or.v2i32(<2 x i32>)
+
+; CHECK-LABEL: @ifThen_vector_reduce_xor(
+; CHECK: %reduce = call i32 @llvm.vector.reduce.xor.v2i32(<2 x i32> %x)
+; CHECK-NEXT: br i1 true
+define void @ifThen_vector_reduce_xor(<2 x i32> %x) {
+  br i1 true, label %a, label %b
+
+a:
+  %reduce = call i32 @llvm.vector.reduce.xor.v2i32(<2 x i32> %x)
+  br label %b
+
+b:
+  ret void
+}
+
+declare i32 @llvm.vector.reduce.xor.v2i32(<2 x i32>)
+
+; CHECK-LABEL: @ifThen_vector_reduce_smax(
+; CHECK: %reduce = call i32 @llvm.vector.reduce.smax.v2i32(<2 x i32> %x)
+; CHECK-NEXT: br i1 true
+define void @ifThen_vector_reduce_smax(<2 x i32> %x) {
+  br i1 true, label %a, label %b
+
+a:
+  %reduce = call i32 @llvm.vector.reduce.smax.v2i32(<2 x i32> %x)
+  br label %b
+
+b:
+  ret void
+}
+
+declare i32 @llvm.vector.reduce.smax.v2i32(<2 x i32>)
+
+; CHECK-LABEL: @ifThen_vector_reduce_umax(
+; CHECK: %reduce = call i32 @llvm.vector.reduce.umax.v2i32(<2 x i32> %x)
+; CHECK-NEXT: br i1 true
+define void @ifThen_vector_reduce_umax(<2 x i32> %x) {
+  br i1 true, label %a, label %b
+
+a:
+  %reduce = call i32 @llvm.vector.reduce.umax.v2i32(<2 x i32> %x)
+  br label %b
+
+b:
+  ret void
+}
+
+declare i32 @llvm.vector.reduce.umax.v2i32(<2 x i32>)
+
+; CHECK-LABEL: @ifThen_vector_reduce_umin(
+; CHECK: %reduce = call i32 @llvm.vector.reduce.umin.v2i32(<2 x i32> %x)
+; CHECK-NEXT: br i1 true
+define void @ifThen_vector_reduce_umin(<2 x i32> %x) {
+  br i1 true, label %a, label %b
+
+a:
+  %reduce = call i32 @llvm.vector.reduce.umin.v2i32(<2 x i32> %x)
+  br label %b
+
+b:
+  ret void
+}
+
+declare i32 @llvm.vector.reduce.umin.v2i32(<2 x i32>)
+
+; CHECK-LABEL: @ifThen_vector_reduce_fmax(
+; CHECK: %reduce = call float @llvm.vector.reduce.fmax.v2f32(<2 x float> %x)
+; CHECK-NEXT: br i1 true
+define void @ifThen_vector_reduce_fmax(<2 x float> %x) {
+  br i1 true, label %a, label %b
+
+a:
+  %reduce = call float @llvm.vector.reduce.fmax.v2f32(<2 x float> %x)
+  br label %b
+
+b:
+  ret void
+}
+
+declare float @llvm.vector.reduce.fmax.v2f32(<2 x float>)
+
+; CHECK-LABEL: @ifThen_vector_reduce_fmin(
+; CHECK: %reduce = call float @llvm.vector.reduce.fmin.v2f32(<2 x float> %x)
+; CHECK-NEXT: br i1 true
+define void @ifThen_vector_reduce_fmin(<2 x float> %x) {
+  br i1 true, label %a, label %b
+
+a:
+  %reduce = call float @llvm.vector.reduce.fmin.v2f32(<2 x float> %x)
+  br label %b
+
+b:
+  ret void
+}
+
+declare float @llvm.vector.reduce.fmin.v2f32(<2 x float>)
+
+; CHECK-LABEL: @ifThen_ldexp(
+; CHECK: %ldexp = call float @llvm.ldexp.f32.i32(float %x, i32 %y)
+; CHECK-NEXT: br i1 true
+define void @ifThen_ldexp(float %x, i32 %y) {
+  br i1 true, label %a, label %b
+
+a:
+  %ldexp = call float @llvm.ldexp.f32.i32(float %x, i32 %y)
+  br label %b
+
+b:
+  ret void
+}
+
+declare float @llvm.ldexp.f32.i32(float, i32)

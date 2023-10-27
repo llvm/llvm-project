@@ -40,6 +40,8 @@ public:
     static bool dtor_called;
     Y() = default;
     Y(int) { TEST_THROW(6);}
+    Y(const Y&) = default;
+    Y& operator=(const Y&) = default;
     ~Y() {dtor_called = true;}
 };
 

@@ -34,7 +34,7 @@ body:             |
     $x0 = ORRXrs $xzr, $x1, 0
     $x1 = ORRXrs $xzr, $x2, 0
     BL @baz, implicit-def dead $lr, implicit $sp, implicit $x8, implicit $x0, implicit $x1, implicit $x3, implicit $x4, implicit-def $sp, implicit-def $x5, implicit-def $x6, implicit-def $x7, implicit-def $x8,  implicit-def $x9, implicit-def $x10,  implicit-def $x11, implicit-def $x12, implicit-def $x13,  implicit-def $x14, implicit-def $x15, implicit-def $x18
-    BRK 1
+    HINT 0
 ...
 ---
 name:            stack_2
@@ -56,7 +56,7 @@ body:             |
     $x0 = ORRXrs $xzr, $x1, 0
     $x1 = ORRXrs $xzr, $x2, 0
     BL @baz, implicit-def dead $lr, implicit $sp, implicit $x8, implicit $x0, implicit $x1, implicit $x3, implicit $x4, implicit-def $sp, implicit-def $x5, implicit-def $x6, implicit-def $x7, implicit-def $x8,  implicit-def $x9, implicit-def $x10,  implicit-def $x11, implicit-def $x12, implicit-def $x13,  implicit-def $x14, implicit-def $x15, implicit-def $x18
-    BRK 1
+    HINT 0
 ...
 ---
 name:            baz

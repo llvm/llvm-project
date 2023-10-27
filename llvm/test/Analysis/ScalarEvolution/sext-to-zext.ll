@@ -11,9 +11,9 @@ define void @f(i1 %c) {
 ; CHECK-NEXT:    %iv = phi i32 [ %start, %entry ], [ %iv.dec, %loop ]
 ; CHECK-NEXT:    --> {%start,+,%step}<nsw><%loop> U: [0,101) S: [0,101) Exits: ((99 * %step)<nsw> + %start) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.tc = phi i32 [ 0, %entry ], [ %iv.tc.inc, %loop ]
-; CHECK-NEXT:    --> {0,+,1}<%loop> U: [0,100) S: [0,100) Exits: 99 LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,100) S: [0,100) Exits: 99 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.tc.inc = add i32 %iv.tc, 1
-; CHECK-NEXT:    --> {1,+,1}<%loop> U: [1,101) S: [1,101) Exits: 100 LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,101) S: [1,101) Exits: 100 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.dec = add nsw i32 %iv, %step
 ; CHECK-NEXT:    --> {(%step + %start),+,%step}<nw><%loop> U: [-200,201) S: [-200,201) Exits: ((100 * %step)<nsw> + %start) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.sext = sext i32 %iv to i64

@@ -140,3 +140,35 @@ entry:
   %2 = select i1 %s, i32 %0, i32 %1
   ret i32 %2
 }
+
+define i32 @may_including_undef(i1 %c.1, i1 %c.2) {
+; CHECK-LABEL: define i32 @may_including_undef
+; CHECK-SAME: (i1 [[C_1:%.*]], i1 [[C_2:%.*]]) {
+; CHECK-NEXT:    br i1 [[C_1]], label [[TRUE_1:%.*]], label [[FALSE:%.*]]
+; CHECK:       true.1:
+; CHECK-NEXT:    br i1 [[C_2]], label [[TRUE_2:%.*]], label [[EXIT:%.*]]
+; CHECK:       true.2:
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       false:
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[P:%.*]] = phi i32 [ 2, [[TRUE_1]] ], [ 4, [[TRUE_2]] ], [ undef, [[FALSE]] ]
+; CHECK-NEXT:    [[R:%.*]] = ashr i32 [[P]], 1
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  br i1 %c.1, label %true.1, label %false
+
+true.1:
+  br i1 %c.2, label %true.2, label %exit
+
+true.2:
+  br label %exit
+
+false:
+  br label %exit
+
+exit:
+  %p = phi i32 [ 2, %true.1 ], [ 4, %true.2], [ undef, %false ]
+  %r = ashr i32 %p, 1
+  ret i32 %r
+}

@@ -19,71 +19,62 @@ using namespace mlir::python::adaptors;
 static void populateDialectSparseTensorSubmodule(const py::module &m) {
   py::enum_<MlirSparseTensorDimLevelType>(m, "DimLevelType", py::module_local())
       .value("dense", MLIR_SPARSE_TENSOR_DIM_LEVEL_DENSE)
+      .value("compressed24", MLIR_SPARSE_TENSOR_DIM_LEVEL_TWO_OUT_OF_FOUR)
       .value("compressed", MLIR_SPARSE_TENSOR_DIM_LEVEL_COMPRESSED)
-      .value("compressed-nu", MLIR_SPARSE_TENSOR_DIM_LEVEL_COMPRESSED_NU)
-      .value("compressed-no", MLIR_SPARSE_TENSOR_DIM_LEVEL_COMPRESSED_NO)
-      .value("compressed-nu-no", MLIR_SPARSE_TENSOR_DIM_LEVEL_COMPRESSED_NU_NO)
+      .value("compressed_nu", MLIR_SPARSE_TENSOR_DIM_LEVEL_COMPRESSED_NU)
+      .value("compressed_no", MLIR_SPARSE_TENSOR_DIM_LEVEL_COMPRESSED_NO)
+      .value("compressed_nu_no", MLIR_SPARSE_TENSOR_DIM_LEVEL_COMPRESSED_NU_NO)
       .value("singleton", MLIR_SPARSE_TENSOR_DIM_LEVEL_SINGLETON)
-      .value("singleton-nu", MLIR_SPARSE_TENSOR_DIM_LEVEL_SINGLETON_NU)
-      .value("singleton-no", MLIR_SPARSE_TENSOR_DIM_LEVEL_SINGLETON_NO)
-      .value("singleton-nu-no", MLIR_SPARSE_TENSOR_DIM_LEVEL_SINGLETON_NU_NO);
+      .value("singleton_nu", MLIR_SPARSE_TENSOR_DIM_LEVEL_SINGLETON_NU)
+      .value("singleton_no", MLIR_SPARSE_TENSOR_DIM_LEVEL_SINGLETON_NO)
+      .value("singleton_nu_no", MLIR_SPARSE_TENSOR_DIM_LEVEL_SINGLETON_NU_NO)
+      .value("loose_compressed", MLIR_SPARSE_TENSOR_DIM_LEVEL_LOOSE_COMPRESSED)
+      .value("loose_compressed_nu",
+             MLIR_SPARSE_TENSOR_DIM_LEVEL_LOOSE_COMPRESSED_NU)
+      .value("loose_compressed_no",
+             MLIR_SPARSE_TENSOR_DIM_LEVEL_LOOSE_COMPRESSED_NO)
+      .value("loose_compressed_nu_no",
+             MLIR_SPARSE_TENSOR_DIM_LEVEL_LOOSE_COMPRESSED_NU_NO);
 
   mlir_attribute_subclass(m, "EncodingAttr",
                           mlirAttributeIsASparseTensorEncodingAttr)
       .def_classmethod(
           "get",
-          [](py::object cls,
-             std::vector<MlirSparseTensorDimLevelType> dimLevelTypes,
-             std::optional<MlirAffineMap> dimOrdering,
-             std::optional<MlirAffineMap> higherOrdering, int pointerBitWidth,
-             int indexBitWidth, MlirContext context) {
+          [](py::object cls, std::vector<MlirSparseTensorDimLevelType> lvlTypes,
+             std::optional<MlirAffineMap> dimToLvl, int posWidth, int crdWidth,
+             MlirContext context) {
+            // TODO: provide dimToLvl
             return cls(mlirSparseTensorEncodingAttrGet(
-                context, dimLevelTypes.size(), dimLevelTypes.data(),
-                dimOrdering ? *dimOrdering : MlirAffineMap{nullptr},
-                higherOrdering ? *higherOrdering : MlirAffineMap{nullptr},
-                pointerBitWidth, indexBitWidth));
+                context, lvlTypes.size(), lvlTypes.data(),
+                dimToLvl ? *dimToLvl : MlirAffineMap{nullptr}, posWidth,
+                crdWidth));
           },
-          py::arg("cls"), py::arg("dim_level_types"), py::arg("dim_ordering"),
-          py::arg("higher_ordering"), py::arg("pointer_bit_width"),
-          py::arg("index_bit_width"), py::arg("context") = py::none(),
+          py::arg("cls"), py::arg("lvl_types"), py::arg("dim_to_lvl"),
+          py::arg("pos_width"), py::arg("crd_width"),
+          py::arg("context") = py::none(),
           "Gets a sparse_tensor.encoding from parameters.")
       .def_property_readonly(
-          "dim_level_types",
+          "lvl_types",
           [](MlirAttribute self) {
+            const int lvlRank = mlirSparseTensorEncodingGetLvlRank(self);
             std::vector<MlirSparseTensorDimLevelType> ret;
-            for (int i = 0,
-                     e = mlirSparseTensorEncodingGetNumDimLevelTypes(self);
-                 i < e; ++i)
-              ret.push_back(
-                  mlirSparseTensorEncodingAttrGetDimLevelType(self, i));
+            ret.reserve(lvlRank);
+            for (int l = 0; l < lvlRank; ++l)
+              ret.push_back(mlirSparseTensorEncodingAttrGetLvlType(self, l));
             return ret;
           })
       .def_property_readonly(
-          "dim_ordering",
+          "dim_to_lvl",
           [](MlirAttribute self) -> std::optional<MlirAffineMap> {
-            MlirAffineMap ret =
-                mlirSparseTensorEncodingAttrGetDimOrdering(self);
+            MlirAffineMap ret = mlirSparseTensorEncodingAttrGetDimToLvl(self);
             if (mlirAffineMapIsNull(ret))
               return {};
             return ret;
           })
-      .def_property_readonly(
-          "higher_ordering",
-          [](MlirAttribute self) -> std::optional<MlirAffineMap> {
-            MlirAffineMap ret =
-                mlirSparseTensorEncodingAttrGetHigherOrdering(self);
-            if (mlirAffineMapIsNull(ret))
-              return {};
-            return ret;
-          })
-      .def_property_readonly(
-          "pointer_bit_width",
-          [](MlirAttribute self) {
-            return mlirSparseTensorEncodingAttrGetPointerBitWidth(self);
-          })
-      .def_property_readonly("index_bit_width", [](MlirAttribute self) {
-        return mlirSparseTensorEncodingAttrGetIndexBitWidth(self);
-      });
+      .def_property_readonly("pos_width",
+                             mlirSparseTensorEncodingAttrGetPosWidth)
+      .def_property_readonly("crd_width",
+                             mlirSparseTensorEncodingAttrGetCrdWidth);
 }
 
 PYBIND11_MODULE(_mlirDialectsSparseTensor, m) {

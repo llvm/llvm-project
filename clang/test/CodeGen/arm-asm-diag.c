@@ -1,7 +1,6 @@
 // REQUIRES: arm-registered-target
 // RUN: not %clang_cc1 -triple armv7 -target-feature +neon %s -S -o /dev/null 2>&1 | FileCheck %s
 
-// rdar://13446483
 typedef __attribute__((neon_vector_type(2))) long long int64x2_t;
 typedef struct int64x2x4_t {
   int64x2_t val[4];

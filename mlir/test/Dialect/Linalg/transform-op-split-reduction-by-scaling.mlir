@@ -19,8 +19,9 @@ func.func @matmul_split(%A : tensor<?x256xf32>, %B: tensor<256x32xf32>, %C: tens
 }
 
 transform.sequence failures(propagate) {
-^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1
+^bb1(%arg1: !transform.any_op):
+  %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
   %1:4 = transform.structured.split_reduction %0
     { split_factor = 4, insert_split_dimension = 2, use_scaling_algorithm, use_alloc}
+    : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op, !transform.any_op)
 }

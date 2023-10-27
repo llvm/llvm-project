@@ -1,0 +1,33 @@
+# RUN: not --crash llc -march=amdgcn -mcpu=gfx1100 -run-pass=machineverifier -o /dev/null %s 2>&1 | FileCheck -check-prefix=GFX11-ERR %s
+
+---
+name: image_verify
+body:             |
+  bb.0:
+    liveins: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, $sgpr8_sgpr9_sgpr10_sgpr11, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9
+
+    ; GFX11-ERR: *** Bad machine code: Operand has incorrect register class. ***
+    ; GFX11-ERR: - instruction: renamable $vgpr10 = IMAGE_SAMPLE_D_V1_V9_nsa_gfx11 renamable $vgpr1, renamable $vgpr0, renamable $vgpr2, renamable $vgpr3, renamable $vgpr4_vgpr5_vgpr6_vgpr7, renamable $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, renamable $sgpr8_sgpr9_sgpr10_sgpr11, 1, 2, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 7)
+    ; GFX11-ERR: *** Bad machine code: Illegal physical register for instruction ***
+    ; GFX11-ERR: - instruction: renamable $vgpr10 = IMAGE_SAMPLE_D_V1_V9_nsa_gfx11 renamable $vgpr1, renamable $vgpr0, renamable $vgpr2, renamable $vgpr3, renamable $vgpr4_vgpr5_vgpr6_vgpr7, renamable $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, renamable $sgpr8_sgpr9_sgpr10_sgpr11, 1, 2, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 7)
+    ; GFX11-ERR: - operand 5:   renamable $vgpr4_vgpr5_vgpr6_vgpr7
+    ; GFX11-ERR: $vgpr4_vgpr5_vgpr6_vgpr7 is not a VReg_160 register.
+
+    renamable $vgpr10 = IMAGE_SAMPLE_D_V1_V9_nsa_gfx11 renamable $vgpr1, renamable $vgpr0, renamable $vgpr2, renamable $vgpr3, renamable $vgpr4_vgpr5_vgpr6_vgpr7, renamable $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, renamable $sgpr8_sgpr9_sgpr10_sgpr11, 1, 2, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 7)
+
+    ; GFX11-ERR: *** Bad machine code: Operand has incorrect register class. ***
+    ; GFX11-ERR: - instruction: renamable $vgpr11 = IMAGE_SAMPLE_D_V1_V9_nsa_gfx11 renamable $vgpr1, renamable $vgpr0, renamable $vgpr2, renamable $vgpr3, renamable $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9, renamable $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, renamable $sgpr8_sgpr9_sgpr10_sgpr11, 1, 2, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 7)
+    ; GFX11-ERR: *** Bad machine code: Illegal physical register for instruction ***
+    ; GFX11-ERR: - instruction: renamable $vgpr11 = IMAGE_SAMPLE_D_V1_V9_nsa_gfx11 renamable $vgpr1, renamable $vgpr0, renamable $vgpr2, renamable $vgpr3, renamable $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9, renamable $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, renamable $sgpr8_sgpr9_sgpr10_sgpr11, 1, 2, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 7)
+    ; GFX11-ERR: - operand 5:   renamable $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9
+    ; GFX11-ERR: $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9 is not a VReg_160 register.
+
+    renamable $vgpr11 = IMAGE_SAMPLE_D_V1_V9_nsa_gfx11 renamable $vgpr1, renamable $vgpr0, renamable $vgpr2, renamable $vgpr3, renamable $vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9, renamable $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, renamable $sgpr8_sgpr9_sgpr10_sgpr11, 1, 2, 0, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s128), addrspace 7)
+
+    ; GFX11-ERR: *** Bad machine code: Image instruction returns too many registers for dst register class ***
+    ; GFX11-ERR: - instruction: renamable $vgpr12 = IMAGE_SAMPLE_V1_V1_gfx11 renamable $vgpr0, renamable $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, renamable $sgpr8_sgpr9_sgpr10_sgpr11, 7, 0, 0, 0, 0, 0, 0, 0, -1, implicit $exec :: (dereferenceable load (s128), addrspace 7)
+
+    renamable $vgpr12 = IMAGE_SAMPLE_V1_V1_gfx11 renamable $vgpr0, renamable $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, renamable $sgpr8_sgpr9_sgpr10_sgpr11, 7, 0, 0, 0, 0, 0, 0, 0, -1, implicit $exec :: (dereferenceable load (s128), addrspace 7)
+...
+
+# GFX11-ERR-NOT: *** Bad machine code

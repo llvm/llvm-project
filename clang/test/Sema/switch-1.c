@@ -2,8 +2,6 @@
 // RUN: %clang_cc1 -x c++ -fsyntax-only -verify -triple x86_64-apple-darwin10 %s
 // RUN: %clang_cc1 -x c++ -fsyntax-only -verify -triple x86_64-apple-darwin10 -std=c++98 %s
 // RUN: %clang_cc1 -x c++ -fsyntax-only -verify -triple x86_64-apple-darwin10 -std=c++11 %s
-// rdar://11577384
-// rdar://13423975
 
 int f(int i) {
   switch (i) {
@@ -53,7 +51,6 @@ int f(int i) {
 			     // expected-warning {{left operand of comma operator has no effect}}
 }
 
-// rdar://18405357
 unsigned long long l = 65536 * 65536; // expected-warning {{overflow in expression; result is 0 with type 'int'}}
 unsigned long long l2 = 65536 * (unsigned)65536;
 unsigned long long l3 = 65536 * 65536ULL;

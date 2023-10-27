@@ -9,10 +9,9 @@
 ; "op7" is a call to "callee" function.
 ; CHECK-NEXT:    <PERMODULE {{.*}} op7=3 op8=[[ALIASID:[0-9]+]]/>
 ; "another_caller" has only references but no calls.
-; CHECK-NEXT:    <PERMODULE {{.*}} op4=3 {{.*}} op9={{[0-9]+}}/>
+; CHECK-NEXT:    <PERMODULE {{.*}}/>
 ; CHECK-NEXT:    <PERMODULE {{.*}} op0=[[ALIASEEID:[0-9]+]]
 ; CHECK-NEXT:    <ALIAS {{.*}} op0=[[ALIASID]] {{.*}} op2=[[ALIASEEID]]/>
-; CHECK-NEXT:    <BLOCK_COUNT op0=3/>
 ; CHECK-NEXT:  </GLOBALVAL_SUMMARY_BLOCK>
 
 ; ModuleID = 'thinlto-function-summary-callgraph-cast.ll'
@@ -27,7 +26,7 @@ define void @caller() {
 
 define void @another_caller() {
     ; Test calls that aren't handled either as direct or indirect.
-    call void select (i1 icmp eq (ptr @global, ptr null), ptr @f, ptr @g)()
+    call void getelementptr (i8, ptr @f, i64 ptrtoint (ptr @g to i64))()
     ret void
 }
 

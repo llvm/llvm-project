@@ -1,6 +1,5 @@
 // RUN: %clang_cc1 -x objective-c++ -fblocks -fms-extensions -rewrite-objc -fobjc-runtime=macosx-fragile-10.5 %s -o %t-rw.cpp
 // RUN: FileCheck  -check-prefix CHECK-LP --input-file=%t-rw.cpp %s
-// rdar://9846759
 
 typedef void (^dispatch_block_t)(void);
 

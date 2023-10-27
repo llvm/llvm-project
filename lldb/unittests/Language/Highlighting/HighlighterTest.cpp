@@ -160,7 +160,7 @@ TEST_F(HighlighterTest, Colons) {
   HighlightStyle s;
   s.colon.Set("<c>", "</c>");
 
-  EXPECT_EQ("foo<c>:</c><c>:</c>bar<c>:</c>", highlightC("foo::bar:", s));
+  EXPECT_EQ("foo<c>::</c>bar<c>:</c>", highlightC("foo::bar:", s));
 }
 
 TEST_F(HighlighterTest, ClangBraces) {

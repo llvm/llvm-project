@@ -3,7 +3,7 @@
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 
 // CHECK-LABEL: define{{.*}} void @test_half_builtins
-void test_half_builtins(half h0, half h1, half h2) {
+void test_half_builtins(half h0, half h1, half h2, int i0) {
   volatile half res;
 
   // CHECK: call half @llvm.copysign.f16(half %h0, half %h1)
@@ -23,6 +23,9 @@ void test_half_builtins(half h0, half h1, half h2) {
 
   // CHECK: call half @llvm.exp2.f16(half %h0)
   res = __builtin_exp2f16(h0);
+
+  // CHECK: call half @llvm.exp10.f16(half %h0)
+  res = __builtin_exp10f16(h0);
 
   // CHECK: call half @llvm.floor.f16(half %h0)
   res = __builtin_floorf16(h0);
@@ -68,4 +71,7 @@ void test_half_builtins(half h0, half h1, half h2) {
 
   // CHECK: call half @llvm.canonicalize.f16(half %h0)
   res = __builtin_canonicalizef16(h0);
+
+  // CHECK: call half @llvm.ldexp.f16.i32(half %h0, i32 %i0)
+  res = __builtin_ldexpf16(h0, i0);
 }

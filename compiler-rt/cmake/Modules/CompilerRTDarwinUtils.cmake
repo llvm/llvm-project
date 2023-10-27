@@ -147,6 +147,11 @@ function(darwin_test_archs os valid_archs)
     list(REMOVE_ITEM archs "i386")
   endif()
 
+  if(${os} MATCHES "^ios$")
+    message(STATUS "Disabling sanitizers armv7* slice for ios")
+    list(FILTER archs EXCLUDE REGEX "armv7.*")
+  endif()
+
   set(working_archs)
   foreach(arch ${archs})
    

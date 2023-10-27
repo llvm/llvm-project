@@ -13,6 +13,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Config/config.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Endian.h"
@@ -22,6 +23,7 @@
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Signals.h"
 #include <cctype>
+#include <cerrno>
 
 #if !defined(_MSC_VER) && !defined(__MINGW32__)
 #include <unistd.h>
@@ -1202,17 +1204,9 @@ Error readNativeFileToEOF(file_t FileHandle, SmallVectorImpl<char> &Buffer,
 #include "Windows/Path.inc"
 #endif
 
-bool IsLLVMDriver = false;
-
 namespace llvm {
 namespace sys {
 namespace fs {
-
-std::string getMainExecutable(const char *Argv0, void *MainAddr) {
-  if (IsLLVMDriver)
-    return sys::path::stem(Argv0).str();
-  return getMainExecutableImpl(Argv0, MainAddr);
-}
 
 TempFile::TempFile(StringRef Name, int FD)
     : TmpName(std::string(Name)), FD(FD) {}

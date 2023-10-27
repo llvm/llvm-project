@@ -567,26 +567,21 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
     // Check for direct ivars access which helps us with implicit access to
     // ivars using "this" or "self".
     GetSymbolContext(eSymbolContextFunction | eSymbolContextBlock);
-    lldb::LanguageType method_language = eLanguageTypeUnknown;
-    bool is_instance_method = false;
-    ConstString method_object_name;
-    if (m_sc.GetFunctionMethodInfo(method_language, is_instance_method,
-                                   method_object_name)) {
-      if (is_instance_method && method_object_name) {
-        var_sp = variable_list->FindVariable(method_object_name);
-        if (var_sp) {
-          separator_idx = 0;
-          if (Type *var_type = var_sp->GetType())
-            if (auto compiler_type = var_type->GetForwardCompilerType())
-              if (!compiler_type.IsPointerType())
-                var_expr_storage = ".";
+    llvm::StringRef instance_var_name = m_sc.GetInstanceVariableName();
+    if (!instance_var_name.empty()) {
+      var_sp = variable_list->FindVariable(ConstString(instance_var_name));
+      if (var_sp) {
+        separator_idx = 0;
+        if (Type *var_type = var_sp->GetType())
+          if (auto compiler_type = var_type->GetForwardCompilerType())
+            if (!compiler_type.IsPointerType())
+              var_expr_storage = ".";
 
-          if (var_expr_storage.empty())
-            var_expr_storage = "->";
-          var_expr_storage += var_expr;
-          var_expr = var_expr_storage;
-          synthetically_added_instance_object = true;
-        }
+        if (var_expr_storage.empty())
+          var_expr_storage = "->";
+        var_expr_storage += var_expr;
+        var_expr = var_expr_storage;
+        synthetically_added_instance_object = true;
       }
     }
   }
@@ -609,7 +604,7 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
       valobj_sp = GetValueObjectForFrameVariable(variable_sp, use_dynamic);
       if (!valobj_sp)
         return valobj_sp;
-      valobj_sp = valobj_sp->GetChildMemberWithName(name_const_string, true);
+      valobj_sp = valobj_sp->GetChildMemberWithName(name_const_string);
       if (valobj_sp)
         break;
     }
@@ -710,13 +705,13 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
           return ValueObjectSP();
         }
       }
-      child_valobj_sp = valobj_sp->GetChildMemberWithName(child_name, true);
+      child_valobj_sp = valobj_sp->GetChildMemberWithName(child_name);
       if (!child_valobj_sp) {
         if (!no_synth_child) {
           child_valobj_sp = valobj_sp->GetSyntheticValue();
           if (child_valobj_sp)
             child_valobj_sp =
-                child_valobj_sp->GetChildMemberWithName(child_name, true);
+                child_valobj_sp->GetChildMemberWithName(child_name);
         }
 
         if (no_synth_child || !child_valobj_sp) {
@@ -819,7 +814,7 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
           // extract bit low out of it. reading array item low would be done by
           // saying arr[low], without a deref * sign
           Status error;
-          ValueObjectSP temp(valobj_sp->GetChildAtIndex(0, true));
+          ValueObjectSP temp(valobj_sp->GetChildAtIndex(0));
           if (error.Fail()) {
             valobj_sp->GetExpressionPath(var_expr_path_strm);
             error.SetErrorStringWithFormat(
@@ -873,7 +868,7 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
                   valobj_sp->GetTypeName().AsCString("<invalid type>"),
                   var_expr_path_strm.GetData());
             } else {
-              child_valobj_sp = synthetic->GetChildAtIndex(child_index, true);
+              child_valobj_sp = synthetic->GetChildAtIndex(child_index);
               if (!child_valobj_sp) {
                 valobj_sp->GetExpressionPath(var_expr_path_strm);
                 error.SetErrorStringWithFormat(
@@ -899,7 +894,7 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
                        nullptr, nullptr, &is_incomplete_array)) {
           // Pass false to dynamic_value here so we can tell the difference
           // between no dynamic value and no member of this type...
-          child_valobj_sp = valobj_sp->GetChildAtIndex(child_index, true);
+          child_valobj_sp = valobj_sp->GetChildAtIndex(child_index);
           if (!child_valobj_sp && (is_incomplete_array || !no_synth_child))
             child_valobj_sp =
                 valobj_sp->GetSyntheticArrayMember(child_index, true);
@@ -945,7 +940,7 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
                 valobj_sp->GetTypeName().AsCString("<invalid type>"),
                 var_expr_path_strm.GetData());
           } else {
-            child_valobj_sp = synthetic->GetChildAtIndex(child_index, true);
+            child_valobj_sp = synthetic->GetChildAtIndex(child_index);
             if (!child_valobj_sp) {
               valobj_sp->GetExpressionPath(var_expr_path_strm);
               error.SetErrorStringWithFormat(
@@ -1017,7 +1012,7 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
         // extract bits low thru high out of it. reading array items low thru
         // high would be done by saying arr[low-high], without a deref * sign
         Status error;
-        ValueObjectSP temp(valobj_sp->GetChildAtIndex(0, true));
+        ValueObjectSP temp(valobj_sp->GetChildAtIndex(0));
         if (error.Fail()) {
           valobj_sp->GetExpressionPath(var_expr_path_strm);
           error.SetErrorStringWithFormat(
@@ -1365,7 +1360,7 @@ lldb::ValueObjectSP StackFrame::GuessValueForAddress(lldb::addr_t addr) {
             target_sp->GetScratchTypeSystemForLanguage(eLanguageTypeC);
         if (auto err = c_type_system_or_err.takeError()) {
           LLDB_LOG_ERROR(GetLog(LLDBLog::Thread), std::move(err),
-                         "Unable to guess value for given address");
+                         "Unable to guess value for given address: {0}");
           return ValueObjectSP();
         } else {
           auto ts = *c_type_system_or_err;
@@ -1405,8 +1400,7 @@ ValueObjectSP GetValueForOffset(StackFrame &frame, ValueObjectSP &parent,
   }
 
   for (int ci = 0, ce = parent->GetNumChildren(); ci != ce; ++ci) {
-    const bool can_create = true;
-    ValueObjectSP child_sp = parent->GetChildAtIndex(ci, can_create);
+    ValueObjectSP child_sp = parent->GetChildAtIndex(ci);
 
     if (!child_sp) {
       return ValueObjectSP();

@@ -31,39 +31,37 @@ void to_cf(id obj) {
   CFTypeRef cf3 = (__bridge CFTypeRef)CreateSomething();
   CFStringRef cf4 = (__bridge CFStringRef)CreateNSString();
 
-  // rdar://problem/9629566 - temporary workaround
   CFTypeRef cf5 = (__bridge_retain CFTypeRef)CreateSomething(); // expected-error {{unknown cast annotation __bridge_retain; did you mean __bridge_retained?}}
-  // CHECK: fix-it:"{{.*}}":{35:20-35:35}:"__bridge_retained"
+  // CHECK: fix-it:"{{.*}}":{34:20-34:35}:"__bridge_retained"
 }
 
 CFTypeRef fixits(void) {
   id obj1 = (id)CFCreateSomething(); // expected-error{{cast of C pointer type 'CFTypeRef' (aka 'const void *') to Objective-C pointer type 'id' requires a bridged cast}} \
   // expected-note{{use __bridge to convert directly (no change in ownership)}} expected-note{{use CFBridgingRelease call to transfer ownership of a +1 'CFTypeRef' (aka 'const void *') into ARC}}
-  // CHECK: fix-it:"{{.*}}":{40:17-40:17}:"CFBridgingRelease("
-  // CHECK: fix-it:"{{.*}}":{40:36-40:36}:")"
+  // CHECK: fix-it:"{{.*}}":{39:17-39:17}:"CFBridgingRelease("
+  // CHECK: fix-it:"{{.*}}":{39:36-39:36}:")"
 
   CFTypeRef cf1 = (CFTypeRef)CreateSomething(); // expected-error{{cast of Objective-C pointer type 'id' to C pointer type 'CFTypeRef' (aka 'const void *') requires a bridged cast}} \
   // expected-note{{use __bridge to convert directly (no change in ownership)}} \
   // expected-note{{use CFBridgingRetain call to make an ARC object available as a +1 'CFTypeRef' (aka 'const void *')}}
-  // CHECK: fix-it:"{{.*}}":{45:30-45:30}:"CFBridgingRetain("
-  // CHECK: fix-it:"{{.*}}":{45:47-45:47}:")"
+  // CHECK: fix-it:"{{.*}}":{44:30-44:30}:"CFBridgingRetain("
+  // CHECK: fix-it:"{{.*}}":{44:47-44:47}:")"
 
   return (obj1); // expected-error{{implicit conversion of Objective-C pointer type 'id' to C pointer type 'CFTypeRef' (aka 'const void *') requires a bridged cast}} \
   // expected-note{{use __bridge to convert directly (no change in ownership)}} \
   // expected-note{{use CFBridgingRetain call to make an ARC object available as a +1 'CFTypeRef' (aka 'const void *')}}
-  // CHECK: fix-it:"{{.*}}":{51:10-51:10}:"(__bridge CFTypeRef)"
-  // CHECK: fix-it:"{{.*}}":{51:10-51:10}:"CFBridgingRetain"
+  // CHECK: fix-it:"{{.*}}":{50:10-50:10}:"(__bridge CFTypeRef)"
+  // CHECK: fix-it:"{{.*}}":{50:10-50:10}:"CFBridgingRetain"
 }
 
 CFTypeRef fixitsWithSpace(id obj) {
   return(obj); // expected-error{{implicit conversion of Objective-C pointer type 'id' to C pointer type 'CFTypeRef' (aka 'const void *') requires a bridged cast}} \
   // expected-note{{use __bridge to convert directly (no change in ownership)}} \
   // expected-note{{use CFBridgingRetain call to make an ARC object available as a +1 'CFTypeRef' (aka 'const void *')}}
-  // CHECK: fix-it:"{{.*}}":{59:9-59:9}:"(__bridge CFTypeRef)"
-  // CHECK: fix-it:"{{.*}}":{59:9-59:9}:" CFBridgingRetain"
+  // CHECK: fix-it:"{{.*}}":{58:9-58:9}:"(__bridge CFTypeRef)"
+  // CHECK: fix-it:"{{.*}}":{58:9-58:9}:" CFBridgingRetain"
 }
 
-// rdar://problem/20107345
 typedef const struct __attribute__((objc_bridge(id))) __CFAnnotatedObject *CFAnnotatedObjectRef;
 CFAnnotatedObjectRef CFGetAnnotated(void);
 
@@ -81,7 +79,6 @@ void testObjCBridgeId(void) {
   ref = (__bridge_retained CFAnnotatedObjectRef) CreateNSString();
 }
 
-// rdar://20113785
 typedef const struct __attribute__((objc_bridge(UIFont))) __CTFont * CTFontRef;
 
 id testObjCBridgeUnknownTypeToId(CTFontRef font) {

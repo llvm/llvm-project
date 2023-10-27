@@ -320,13 +320,12 @@ define void @test_shr1(i1 %cond, ptr %ptr1, ptr %ptr2, <8 x float> %fvec1, <8 x 
 ; X86-64-NEXT:    testb $1, %dil
 ; X86-64-NEXT:    je .LBB6_2
 ; X86-64-NEXT:  # %bb.1: # %if
-; X86-64-NEXT:    movzbl (%rsi), %eax
-; X86-64-NEXT:    shrb %al
+; X86-64-NEXT:    kmovb (%rsi), %k0
+; X86-64-NEXT:    kshiftrb $1, %k0, %k1
 ; X86-64-NEXT:    jmp .LBB6_3
 ; X86-64-NEXT:  .LBB6_2: # %else
-; X86-64-NEXT:    movzbl (%rdx), %eax
+; X86-64-NEXT:    kmovb (%rdx), %k1
 ; X86-64-NEXT:  .LBB6_3: # %exit
-; X86-64-NEXT:    kmovd %eax, %k1
 ; X86-64-NEXT:    vmovaps %zmm0, %zmm1 {%k1}
 ; X86-64-NEXT:    vmovaps %ymm1, (%rcx)
 ; X86-64-NEXT:    vzeroupper
@@ -341,14 +340,13 @@ define void @test_shr1(i1 %cond, ptr %ptr1, ptr %ptr2, <8 x float> %fvec1, <8 x 
 ; X86-32-NEXT:    je .LBB6_2
 ; X86-32-NEXT:  # %bb.1: # %if
 ; X86-32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-32-NEXT:    movzbl (%ecx), %ecx
-; X86-32-NEXT:    shrb %cl
+; X86-32-NEXT:    kmovb (%ecx), %k0
+; X86-32-NEXT:    kshiftrb $1, %k0, %k1
 ; X86-32-NEXT:    jmp .LBB6_3
 ; X86-32-NEXT:  .LBB6_2: # %else
 ; X86-32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-32-NEXT:    movzbl (%ecx), %ecx
+; X86-32-NEXT:    kmovb (%ecx), %k1
 ; X86-32-NEXT:  .LBB6_3: # %exit
-; X86-32-NEXT:    kmovd %ecx, %k1
 ; X86-32-NEXT:    vmovaps %zmm0, %zmm1 {%k1}
 ; X86-32-NEXT:    vmovaps %ymm1, (%eax)
 ; X86-32-NEXT:    vzeroupper

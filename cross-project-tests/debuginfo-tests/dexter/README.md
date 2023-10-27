@@ -33,13 +33,15 @@ DExTer is current compatible with 'clang' and 'clang-cl' compiler drivers.  The 
 
 ## Running a test case
 
-The following DExTer commands build the test.cpp from the tests/nostdlib/fibonacci directory and quietly runs it on the Visual Studio debugger, reporting the debug experience heuristic.  The first command builds with no optimizations (/Od) and scores 1.0000.  The second command builds with optimizations (/Ox) and scores 0.2832 which suggests a worse debugging experience.
+The following commands build fibonacci.cpp from the tests/nostdlib directory and run it in LLDB, reporting the debug experience heuristic. The first pair of commands build with no optimizations (-O0) and score 1.0000.  The second pair of commands build with optimizations (-O2) and score 0.2832 which suggests a worse debugging experience.
 
-    dexter.py test --builder clang-cl_vs2015 --debugger vs2017 --cflags="/Od /Zi" --ldflags="/Zi" -- tests/nostdlib/fibonacci
-    fibonacci = (1.0000)
+    clang -O0 -g tests/nostdlib/fibonacci.cpp -o tests/nostdlib/fibonacci/test
+    dexter.py test --binary tests/nostdlib/fibonacci/test --debugger lldb -- tests/nostdlib/fibonacci/test.cpp
+    test.cpp = (1.0000)
 
-    dexter.py test --builder clang-cl_vs2015 --debugger vs2017 --cflags="/Ox /Zi" --ldflags="/Zi" -- tests/nostdlib/fibonacci
-    fibonacci = (0.2832)
+    clang -O2 -g tests/nostdlib/fibonacci/test.cpp -o tests/nostdlib/fibonacci/test
+    dexter.py test --binary tests/nostdlib/fibonacci/test --debugger lldb -- tests/nostdlib/fibonacci/test.cpp
+    test.cpp = (0.2832)
 
 ## An example test case
 
@@ -107,9 +109,9 @@ to step into a file outside of the test directory.
 
 ## Detailed DExTer reports
 
-Running the command below launches the tests/nostdlib/fibonacci test case in DExTer, using clang-cl as the compiler, Visual Studio 2017 as the debugger, and producing a detailed report:
+Running the command below launches the tests/nostdlib/fibonacci test case in DExTer, using LLDB as the debugger and producing a detailed report:
 
-    $ dexter.py test --builder clang-cl_vs2015 --debugger vs2017 --cflags="/Ox /Zi" --ldflags="/Zi" -v -- tests/nostdlib/fibonacci
+    $ dexter.py test --vs-solution clang-cl_vs2015 --debugger vs2017 --cflags="/Ox /Zi" --ldflags="/Zi" -v -- tests/nostdlib/fibonacci
 
 The detailed report is enabled by `-v` and shows a breakdown of the information from each debugger step. For example:
 
@@ -255,50 +257,4 @@ shows that for `first` the expected values 0, 1, 2 and 3 were seen, 5 was not.  
 
 ## Writing new test cases
 
-Each test requires a `test.cfg` file.  Currently the contents of this file are not read, but its presence is used to determine the root directory of a test. In the future, configuration variables for the test such as supported language modes may be stored in this file. Use the various [commands](Commands.md) to encode debugging expectations.
-
-## Additional tools
-
-For clang-based compilers, the `clang-opt-bisect` tool can be used to get a breakdown of which LLVM passes may be contributing to debugging experience issues.  For example:
-
-    $ dexter.py clang-opt-bisect tests/nostdlib/fibonacci --builder clang-cl --debugger vs2017 --cflags="/Ox /Zi" --ldflags="/Zi"
-
-    pass 1/211 =  (1.0000)  (0.0000) [Simplify the CFG on function (?Fibonacci@@YAXHAEAH@Z)]
-    pass 2/211 =  (0.7611) (-0.2389) [SROA on function (?Fibonacci@@YAXHAEAH@Z)]
-    pass 3/211 =  (0.7611)  (0.0000) [Early CSE on function (?Fibonacci@@YAXHAEAH@Z)]
-    pass 4/211 =  (0.7611)  (0.0000) [Simplify the CFG on function (main)]
-    pass 5/211 =  (0.7611)  (0.0000) [SROA on function (main)]
-    pass 6/211 =  (0.7611)  (0.0000) [Early CSE on function (main)]
-    pass 7/211 =  (0.7611)  (0.0000) [Infer set function attributes on module (c:\dexter\tests\fibonacci\test.cpp)]
-    pass 8/211 =  (0.7611)  (0.0000) [Interprocedural Sparse Conditional Constant Propagation on module (c:\dexter\tests\fibonacci\test.cpp)]
-    pass 9/211 =  (0.7611)  (0.0000) [Called Value Propagation on module (c:\dexter\tests\fibonacci\test.cpp)]
-    pass 10/211 =  (0.7611)  (0.0000) [Global Variable Optimizer on module (c:\dexter\tests\fibonacci\test.cpp)]
-    pass 11/211 =  (0.7611)  (0.0000) [Promote Memory to Register on function (?Fibonacci@@YAXHAEAH@Z)]
-    pass 12/211 =  (0.7611)  (0.0000) [Promote Memory to Register on function (main)]
-    pass 13/211 =  (0.7611)  (0.0000) [Dead Argument Elimination on module (c:\dexter\tests\fibonacci\test.cpp)]
-    pass 14/211 =  (0.7611)  (0.0000) [Combine redundant instructions on function (?Fibonacci@@YAXHAEAH@Z)]
-    pass 15/211 =  (0.7611)  (0.0000) [Simplify the CFG on function (?Fibonacci@@YAXHAEAH@Z)]a
-    pass 16/211 =  (0.7345) (-0.0265) [Combine redundant instructions on function (main)]
-    pass 17/211 =  (0.7345)  (0.0000) [Simplify the CFG on function (main)]
-    pass 18/211 =  (0.7345)  (0.0000) [Remove unused exception handling info on SCC (?Fibonacci@@YAXHAEAH@Z)]
-    pass 19/211 =  (0.7345)  (0.0000) [Function Integration/Inlining on SCC (?Fibonacci@@YAXHAEAH@Z)]
-    pass 20/211 =  (0.7345)  (0.0000) [Deduce function attributes on SCC (?Fibonacci@@YAXHAEAH@Z)]
-    pass 21/211 =  (0.7345)  (0.0000) [SROA on function (?Fibonacci@@YAXHAEAH@Z)]
-    pass 22/211 =  (0.7345)  (0.0000) [Early CSE w/ MemorySSA on function (?Fibonacci@@YAXHAEAH@Z)]
-    pass 23/211 =  (0.7345)  (0.0000) [Speculatively execute instructions if target has divergent branches on function (?Fibonacci@@YAXHAEAH@Z)]
-    pass 24/211 =  (0.7345)  (0.0000) [Jump Threading on function (?Fibonacci@@YAXHAEAH@Z)]
-    pass 25/211 =  (0.7345)  (0.0000) [Value Propagation on function (?Fibonacci@@YAXHAEAH@Z)]
-    pass 26/211 =  (0.7345)  (0.0000) [Simplify the CFG on function (?Fibonacci@@YAXHAEAH@Z)]
-    pass 27/211 =  (0.7345)  (0.0000) [Combine redundant instructions on function (?Fibonacci@@YAXHAEAH@Z)]
-    pass 28/211 =  (0.7345)  (0.0000) [Tail Call Elimination on function (?Fibonacci@@YAXHAEAH@Z)]
-    pass 29/211 =  (0.7345)  (0.0000) [Simplify the CFG on function (?Fibonacci@@YAXHAEAH@Z)]
-    pass 30/211 =  (0.7345)  (0.0000) [Reassociate expressions on function (?Fibonacci@@YAXHAEAH@Z)]
-    pass 31/211 =  (0.8673)  (0.1327) [Rotate Loops on loop]
-    pass 32/211 =  (0.5575) (-0.3097) [Loop Invariant Code Motion on loop]
-    pass 33/211 =  (0.5575)  (0.0000) [Unswitch loops on loop]
-    pass 34/211 =  (0.5575)  (0.0000) [Simplify the CFG on function (?Fibonacci@@YAXHAEAH@Z)]
-    pass 35/211 =  (0.5575)  (0.0000) [Combine redundant instructions on function (?Fibonacci@@YAXHAEAH@Z)]
-    pass 36/211 =  (0.5575)  (0.0000) [Induction Variable Simplification on loop]
-    pass 37/211 =  (0.5575)  (0.0000) [Recognize loop idioms on loop]
-    <output-snipped>
-
+Each test can be either embedded within the source file using comments or included as a separate file with the .dex extension. Dexter does not include support for building test cases, although if a Visual Studio Solution (.sln) is used as the test file, VS will build the program as part of launching a debugger session if it has not already been built.

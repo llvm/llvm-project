@@ -6,9 +6,7 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-has-no-incomplete-format
-// TODO FMT Fix this test using GCC, it currently times out.
-// UNSUPPORTED: gcc-12
+// UNSUPPORTED: GCC-ALWAYS_INLINE-FIXME
 
 // <format>
 
@@ -62,11 +60,11 @@ constexpr void test(const Data& data) {
   for (const auto& d : data) {
     assert(d.code_points.size() == d.breaks.size());
 
-    std::__unicode::__extended_grapheme_cluster_view view{d.input.data(), d.input.data() + d.input.size()};
-    for (size_t i = 0; i < d.breaks.size(); ++i) {
+    std::__unicode::__extended_grapheme_cluster_view view{d.input.begin(), d.input.end()};
+    for (std::size_t i = 0; i < d.breaks.size(); ++i) {
       auto r = view.__consume();
       assert(r.__code_point_ == d.code_points[i]);
-      assert(r.__last_ == d.input.data() + d.breaks[i]);
+      assert(r.__last_ == d.input.begin() + d.breaks[i]);
     }
   }
 }

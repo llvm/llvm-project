@@ -465,6 +465,55 @@ TEST_F(SortImportsTestJS, ImportEqAliases) {
              "console.log(Z);\n");
 }
 
+TEST_F(SortImportsTestJS, ImportExportType) {
+  verifySort("import type {sym} from 'a';\n"
+             "import {type sym} from 'b';\n"
+             "import {sym} from 'c';\n"
+             "import type sym from 'd';\n"
+             "import type * as sym from 'e';\n"
+             "\n"
+             "let x = 1;",
+             "import {sym} from 'c';\n"
+             "import type {sym} from 'a';\n"
+             "import type * as sym from 'e';\n"
+             "import type sym from 'd';\n"
+             "import {type sym} from 'b';\n"
+             "let x = 1;");
+
+  // Symbols within import statement
+  verifySort("import {type sym1, type sym2 as a, sym3} from 'b';\n",
+             "import {type sym2 as a, type sym1, sym3} from 'b';\n");
+
+  // Merging
+  verifySort("import {X, type Z} from 'a';\n"
+             "import type {Y} from 'a';\n"
+             "\n"
+             "X + Y + Z;\n",
+             "import {X} from 'a';\n"
+             "import {type Z} from 'a';\n"
+             "import type {Y} from 'a';\n"
+             "\n"
+             "X + Y + Z;\n");
+
+  // Merging: empty imports
+  verifySort("import type {A} from 'foo';\n", "import type {} from 'foo';\n"
+                                              "import type {A} from 'foo';");
+
+  // Merging: exports
+  verifySort("export {A, type B} from 'foo';\n",
+             "export {A} from 'foo';\n"
+             "export   {type B} from 'foo';");
+
+  // `export type X = Y;` should terminate import sorting. The following export
+  // statements should therefore not merge.
+  verifySort("export type A = B;\n"
+             "export {X};\n"
+             "export {Y};\n",
+             "export type A = B;\n"
+             "export {X};\n"
+             "export {Y};\n");
+}
+
 } // end namespace
 } // end namespace format
 } // end namespace clang

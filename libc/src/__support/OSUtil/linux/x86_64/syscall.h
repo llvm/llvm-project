@@ -6,16 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_OSUTIL_LINUX_X86_64_SYSCALL_H
-#define LLVM_LIBC_SRC_SUPPORT_OSUTIL_LINUX_X86_64_SYSCALL_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_OSUTIL_LINUX_X86_64_SYSCALL_H
+#define LLVM_LIBC_SRC___SUPPORT_OSUTIL_LINUX_X86_64_SYSCALL_H
 
 #include "src/__support/common.h"
 
 #define SYSCALL_CLOBBER_LIST "rcx", "r11", "memory"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
-__attribute__((always_inline)) inline long syscall_impl(long __number) {
+LIBC_INLINE long syscall_impl(long __number) {
   long retcode;
   LIBC_INLINE_ASM("syscall"
                   : "=a"(retcode)
@@ -24,8 +24,7 @@ __attribute__((always_inline)) inline long syscall_impl(long __number) {
   return retcode;
 }
 
-__attribute__((always_inline)) inline long syscall_impl(long __number,
-                                                        long __arg1) {
+LIBC_INLINE long syscall_impl(long __number, long __arg1) {
   long retcode;
   LIBC_INLINE_ASM("syscall"
                   : "=a"(retcode)
@@ -34,8 +33,7 @@ __attribute__((always_inline)) inline long syscall_impl(long __number,
   return retcode;
 }
 
-__attribute__((always_inline)) inline long
-syscall_impl(long __number, long __arg1, long __arg2) {
+LIBC_INLINE long syscall_impl(long __number, long __arg1, long __arg2) {
   long retcode;
   LIBC_INLINE_ASM("syscall"
                   : "=a"(retcode)
@@ -44,8 +42,8 @@ syscall_impl(long __number, long __arg1, long __arg2) {
   return retcode;
 }
 
-__attribute__((always_inline)) inline long
-syscall_impl(long __number, long __arg1, long __arg2, long __arg3) {
+LIBC_INLINE long syscall_impl(long __number, long __arg1, long __arg2,
+                              long __arg3) {
   long retcode;
   LIBC_INLINE_ASM("syscall"
                   : "=a"(retcode)
@@ -54,9 +52,8 @@ syscall_impl(long __number, long __arg1, long __arg2, long __arg3) {
   return retcode;
 }
 
-__attribute__((always_inline)) inline long
-syscall_impl(long __number, long __arg1, long __arg2, long __arg3,
-             long __arg4) {
+LIBC_INLINE long syscall_impl(long __number, long __arg1, long __arg2,
+                              long __arg3, long __arg4) {
   long retcode;
   register long r10 __asm__("r10") = __arg4;
   LIBC_INLINE_ASM("syscall"
@@ -67,9 +64,8 @@ syscall_impl(long __number, long __arg1, long __arg2, long __arg3,
   return retcode;
 }
 
-__attribute__((always_inline)) inline long
-syscall_impl(long __number, long __arg1, long __arg2, long __arg3, long __arg4,
-             long __arg5) {
+LIBC_INLINE long syscall_impl(long __number, long __arg1, long __arg2,
+                              long __arg3, long __arg4, long __arg5) {
   long retcode;
   register long r10 __asm__("r10") = __arg4;
   register long r8 __asm__("r8") = __arg5;
@@ -81,9 +77,9 @@ syscall_impl(long __number, long __arg1, long __arg2, long __arg3, long __arg4,
   return retcode;
 }
 
-__attribute__((always_inline)) inline long
-syscall_impl(long __number, long __arg1, long __arg2, long __arg3, long __arg4,
-             long __arg5, long __arg6) {
+LIBC_INLINE long syscall_impl(long __number, long __arg1, long __arg2,
+                              long __arg3, long __arg4, long __arg5,
+                              long __arg6) {
   long retcode;
   register long r10 __asm__("r10") = __arg4;
   register long r8 __asm__("r8") = __arg5;
@@ -97,6 +93,6 @@ syscall_impl(long __number, long __arg1, long __arg2, long __arg3, long __arg4,
 }
 
 #undef SYSCALL_CLOBBER_LIST
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_SRC_SUPPORT_OSUTIL_LINUX_X86_64_SYSCALL_H
+#endif // LLVM_LIBC_SRC___SUPPORT_OSUTIL_LINUX_X86_64_SYSCALL_H

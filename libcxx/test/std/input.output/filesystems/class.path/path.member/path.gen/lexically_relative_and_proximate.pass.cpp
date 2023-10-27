@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03
+// UNSUPPORTED: availability-filesystem-missing
 
 // <filesystem>
 
@@ -16,13 +17,13 @@
 // path lexically_proximate(const path& p) const;
 
 #include "filesystem_include.h"
-#include <cstdio>
 #include <string>
 
-#include "test_macros.h"
+#include "../../path_helper.h"
+#include "assert_macros.h"
+#include "concat_macros.h"
 #include "count_new.h"
-#include "filesystem_test_helper.h"
-
+#include "test_macros.h"
 
 int main(int, char**) {
   // clang-format off
@@ -58,35 +59,40 @@ int main(int, char**) {
       {"a/b", "c/d", "../../a/b"}
   };
   // clang-format on
-  int ID = 0;
-  bool Failed = false;
   for (auto& TC : TestCases) {
-    ++ID;
     const fs::path p(TC.input);
     const fs::path output = p.lexically_relative(TC.base);
     fs::path expect(TC.expect);
     expect.make_preferred();
-    auto ReportErr = [&](const char* Testing, fs::path const& Output,
-                                              fs::path const& Expected) {
-      Failed = true;
-      std::fprintf(stderr, "TEST CASE #%d FAILED:\n"
-                  "  Testing: %s\n"
-                  "  Input: '%s'\n"
-                  "  Base: '%s'\n"
-                  "  Expected: '%s'\n"
-                  "  Output: '%s'\n",
-        ID, Testing, TC.input.c_str(), TC.base.c_str(),
-        Expected.string().c_str(), Output.string().c_str());
-    };
-    if (!PathEq(output, expect))
-      ReportErr("path::lexically_relative", output, expect);
+
+    // clang-format off
+    TEST_REQUIRE(
+        PathEq(output, expect),
+        TEST_WRITE_CONCATENATED(
+            "path::lexically_relative test case failed",
+            "\nInput: ", TC.input,
+            "\nBase: ", TC.base,
+            "\nExpected: ", expect,
+            "\nOutput: ", output));
+    // clang-format on
+
     const fs::path proximate_output = p.lexically_proximate(TC.base);
     // [path.gen] lexically_proximate
     // Returns: If the value of lexically_relative(base) is not an empty path,
     // return it. Otherwise return *this.
     const fs::path proximate_expect = expect.empty() ? p : expect;
-    if (!PathEq(proximate_output, proximate_expect))
-      ReportErr("path::lexically_proximate", proximate_output, proximate_expect);
+
+    // clang-format off
+    TEST_REQUIRE(
+        PathEq(proximate_output, proximate_expect),
+        TEST_WRITE_CONCATENATED(
+            "path::lexically_proximate test case failed",
+            "\nInput: ", TC.input,
+            "\nBase: ", TC.base,
+            "\nExpected: ", proximate_expect,
+            "\nOutput: ", proximate_output));
+    // clang-format on
   }
-  return Failed;
+
+  return 0;
 }

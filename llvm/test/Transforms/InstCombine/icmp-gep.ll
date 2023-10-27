@@ -8,8 +8,7 @@ declare void @use(ptr)
 
 define i1 @eq_base(ptr %x, i64 %y) {
 ; CHECK-LABEL: @eq_base(
-; CHECK-NEXT:    [[G:%.*]] = getelementptr i8, ptr [[X:%.*]], i64 [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq ptr [[G]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i64 [[Y:%.*]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %g = getelementptr i8, ptr %x, i64 %y
@@ -20,8 +19,7 @@ define i1 @eq_base(ptr %x, i64 %y) {
 define i1 @ne_base_commute(i64 %y) {
 ; CHECK-LABEL: @ne_base_commute(
 ; CHECK-NEXT:    [[X:%.*]] = call ptr @getptr()
-; CHECK-NEXT:    [[G:%.*]] = getelementptr i8, ptr [[X]], i64 [[Y:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ne ptr [[X]], [[G]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i64 [[Y:%.*]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %x = call ptr @getptr() ; thwart complexity-based canonicalization
@@ -176,8 +174,8 @@ define i1 @eq_base_inbounds_commute_use(i64 %y) {
 
 define i1 @eq_bitcast_base(ptr %p, i64 %x) {
 ; CHECK-LABEL: @eq_bitcast_base(
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr [2 x i8], ptr [[P:%.*]], i64 [[X:%.*]], i64 0
-; CHECK-NEXT:    [[R:%.*]] = icmp eq ptr [[GEP]], [[P]]
+; CHECK-NEXT:    [[GEP_IDX_MASK:%.*]] = and i64 [[X:%.*]], 9223372036854775807
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i64 [[GEP_IDX_MASK]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %gep = getelementptr [2 x i8], ptr %p, i64 %x, i64 0
@@ -286,6 +284,31 @@ define i1 @test60(ptr %foo, i64 %i, i64 %j) {
   ret i1 %cmp
 }
 
+define i1 @test_gep_ult_no_inbounds(ptr %foo, i64 %i, i64 %j) {
+; CHECK-LABEL: @test_gep_ult_no_inbounds(
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i32, ptr [[FOO:%.*]], i64 [[I:%.*]]
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i8, ptr [[FOO]], i64 [[J:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult ptr [[GEP1]], [[GEP2]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %gep1 = getelementptr i32, ptr %foo, i64 %i
+  %gep2 = getelementptr i8, ptr %foo, i64 %j
+  %cmp = icmp ult ptr %gep1, %gep2
+  ret i1 %cmp
+}
+
+define i1 @test_gep_eq_no_inbounds(ptr %foo, i64 %i, i64 %j) {
+; CHECK-LABEL: @test_gep_eq_no_inbounds(
+; CHECK-NEXT:    [[GEP1_IDX:%.*]] = shl i64 [[I:%.*]], 2
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[GEP1_IDX]], [[J:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %gep1 = getelementptr i32, ptr %foo, i64 %i
+  %gep2 = getelementptr i8, ptr %foo, i64 %j
+  %cmp = icmp eq ptr %gep1, %gep2
+  ret i1 %cmp
+}
+
 define i1 @test60_as1(ptr addrspace(1) %foo, i64 %i, i64 %j) {
 ; CHECK-LABEL: @test60_as1(
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[I:%.*]] to i16
@@ -305,8 +328,8 @@ define i1 @test60_as1(ptr addrspace(1) %foo, i64 %i, i64 %j) {
 define i1 @test60_addrspacecast(ptr %foo, i64 %i, i64 %j) {
 ; CHECK-LABEL: @test60_addrspacecast(
 ; CHECK-NEXT:    [[GEP1_IDX:%.*]] = shl nsw i64 [[I:%.*]], 2
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i64 [[GEP1_IDX]], [[J:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[GEP1_IDX]], [[J:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %bit = addrspacecast ptr %foo to ptr addrspace(3)
   %gep1 = getelementptr inbounds i32, ptr addrspace(3) %bit, i64 %i
@@ -320,8 +343,8 @@ define i1 @test60_addrspacecast_smaller(ptr %foo, i16 %i, i64 %j) {
 ; CHECK-LABEL: @test60_addrspacecast_smaller(
 ; CHECK-NEXT:    [[GEP1_IDX:%.*]] = shl nsw i16 [[I:%.*]], 2
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[J:%.*]] to i16
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt i16 [[GEP1_IDX]], [[TMP1]]
-; CHECK-NEXT:    ret i1 [[TMP2]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i16 [[GEP1_IDX]], [[TMP1]]
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %bit = addrspacecast ptr %foo to ptr addrspace(1)
   %gep1 = getelementptr inbounds i32, ptr addrspace(1) %bit, i16 %i
@@ -335,8 +358,8 @@ define i1 @test60_addrspacecast_larger(ptr addrspace(1) %foo, i32 %i, i16 %j) {
 ; CHECK-LABEL: @test60_addrspacecast_larger(
 ; CHECK-NEXT:    [[I_TR:%.*]] = trunc i32 [[I:%.*]] to i16
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl i16 [[I_TR]], 2
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt i16 [[TMP1]], [[J:%.*]]
-; CHECK-NEXT:    ret i1 [[TMP2]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i16 [[TMP1]], [[J:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %bit = addrspacecast ptr addrspace(1) %foo to ptr addrspace(2)
   %gep1 = getelementptr inbounds i32, ptr addrspace(2) %bit, i32 %i

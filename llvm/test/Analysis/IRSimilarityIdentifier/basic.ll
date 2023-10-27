@@ -4,7 +4,59 @@
 ; This is a simple test to make sure the IRSimilarityIdentifier and
 ; IRSimilarityPrinterPass is working.
 
-; CHECK: 4 candidates of length 2.  Found in:
+; CHECK: 4 candidates of length 6.  Found in: 
+; CHECK-NEXT:  Function: turtle, Basic Block: (unnamed)
+; CHECK-NEXT:    Start Instruction:   store i32 1, ptr %1, align 4
+; CHECK-NEXT:      End Instruction:   store i32 6, ptr %6, align 4
+; CHECK-NEXT:  Function: cat, Basic Block: entry
+; CHECK-NEXT:    Start Instruction:   store i32 6, ptr %0, align 4
+; CHECK-NEXT:      End Instruction:   store i32 5, ptr %5, align 4
+; CHECK-NEXT:  Function: fish, Basic Block: entry
+; CHECK-NEXT:    Start Instruction:   store i32 6, ptr %0, align 4
+; CHECK-NEXT:      End Instruction:   store i32 5, ptr %5, align 4
+; CHECK-NEXT:  Function: dog, Basic Block: entry
+; CHECK-NEXT:    Start Instruction:   store i32 6, ptr %0, align 4
+; CHECK-NEXT:      End Instruction:   store i32 5, ptr %5, align 4
+; CHECK-NEXT:4 candidates of length 5.  Found in: 
+; CHECK-NEXT:  Function: turtle, Basic Block: (unnamed)
+; CHECK-NEXT:    Start Instruction:   store i32 2, ptr %2, align 4
+; CHECK-NEXT:      End Instruction:   store i32 6, ptr %6, align 4
+; CHECK-NEXT:  Function: cat, Basic Block: entry
+; CHECK-NEXT:    Start Instruction:   store i32 1, ptr %1, align 4
+; CHECK-NEXT:      End Instruction:   store i32 5, ptr %5, align 4
+; CHECK-NEXT:  Function: fish, Basic Block: entry
+; CHECK-NEXT:    Start Instruction:   store i32 1, ptr %1, align 4
+; CHECK-NEXT:      End Instruction:   store i32 5, ptr %5, align 4
+; CHECK-NEXT:  Function: dog, Basic Block: entry
+; CHECK-NEXT:    Start Instruction:   store i32 1, ptr %1, align 4
+; CHECK-NEXT:      End Instruction:   store i32 5, ptr %5, align 4
+; CHECK-NEXT:4 candidates of length 4.  Found in: 
+; CHECK-NEXT:  Function: turtle, Basic Block: (unnamed)
+; CHECK-NEXT:    Start Instruction:   store i32 3, ptr %3, align 4
+; CHECK-NEXT:      End Instruction:   store i32 6, ptr %6, align 4
+; CHECK-NEXT:  Function: cat, Basic Block: entry
+; CHECK-NEXT:    Start Instruction:   store i32 2, ptr %2, align 4
+; CHECK-NEXT:      End Instruction:   store i32 5, ptr %5, align 4
+; CHECK-NEXT:  Function: fish, Basic Block: entry
+; CHECK-NEXT:    Start Instruction:   store i32 2, ptr %2, align 4
+; CHECK-NEXT:      End Instruction:   store i32 5, ptr %5, align 4
+; CHECK-NEXT:  Function: dog, Basic Block: entry
+; CHECK-NEXT:    Start Instruction:   store i32 2, ptr %2, align 4
+; CHECK-NEXT:      End Instruction:   store i32 5, ptr %5, align 4
+; CHECK-NEXT:4 candidates of length 3.  Found in: 
+; CHECK-NEXT:  Function: turtle, Basic Block: (unnamed)
+; CHECK-NEXT:    Start Instruction:   store i32 4, ptr %4, align 4
+; CHECK-NEXT:      End Instruction:   store i32 6, ptr %6, align 4
+; CHECK-NEXT:  Function: cat, Basic Block: entry
+; CHECK-NEXT:    Start Instruction:   store i32 3, ptr %3, align 4
+; CHECK-NEXT:      End Instruction:   store i32 5, ptr %5, align 4
+; CHECK-NEXT:  Function: fish, Basic Block: entry
+; CHECK-NEXT:    Start Instruction:   store i32 3, ptr %3, align 4
+; CHECK-NEXT:      End Instruction:   store i32 5, ptr %5, align 4
+; CHECK-NEXT:  Function: dog, Basic Block: entry
+; CHECK-NEXT:    Start Instruction:   store i32 3, ptr %3, align 4
+; CHECK-NEXT:      End Instruction:   store i32 5, ptr %5, align 4
+; CHECK-NEXT:4 candidates of length 2.  Found in: 
 ; CHECK-NEXT:  Function: turtle, Basic Block: (unnamed)
 ; CHECK-NEXT:    Start Instruction:   store i32 5, ptr %5, align 4
 ; CHECK-NEXT:      End Instruction:   store i32 6, ptr %6, align 4
@@ -16,58 +68,6 @@
 ; CHECK-NEXT:      End Instruction:   store i32 5, ptr %5, align 4
 ; CHECK-NEXT:  Function: dog, Basic Block: entry
 ; CHECK-NEXT:    Start Instruction:   store i32 4, ptr %4, align 4
-; CHECK-NEXT:      End Instruction:   store i32 5, ptr %5, align 4
-; CHECK-NEXT:4 candidates of length 3.  Found in:
-; CHECK-NEXT:  Function: turtle, Basic Block: (unnamed)
-; CHECK-NEXT:    Start Instruction:   store i32 4, ptr %4, align 4
-; CHECK-NEXT:      End Instruction:   store i32 6, ptr %6, align 4
-; CHECK-NEXT:  Function: cat, Basic Block: entry
-; CHECK-NEXT:    Start Instruction:   store i32 3, ptr %3, align 4
-; CHECK-NEXT:      End Instruction:   store i32 5, ptr %5, align 4
-; CHECK-NEXT:  Function: fish, Basic Block: entry
-; CHECK-NEXT:    Start Instruction:   store i32 3, ptr %3, align 4
-; CHECK-NEXT:      End Instruction:   store i32 5, ptr %5, align 4
-; CHECK-NEXT:  Function: dog, Basic Block: entry
-; CHECK-NEXT:    Start Instruction:   store i32 3, ptr %3, align 4
-; CHECK-NEXT:      End Instruction:   store i32 5, ptr %5, align 4
-; CHECK-NEXT:4 candidates of length 4.  Found in:
-; CHECK-NEXT:  Function: turtle, Basic Block: (unnamed)
-; CHECK-NEXT:    Start Instruction:   store i32 3, ptr %3, align 4
-; CHECK-NEXT:      End Instruction:   store i32 6, ptr %6, align 4
-; CHECK-NEXT:  Function: cat, Basic Block: entry
-; CHECK-NEXT:    Start Instruction:   store i32 2, ptr %2, align 4
-; CHECK-NEXT:      End Instruction:   store i32 5, ptr %5, align 4
-; CHECK-NEXT:  Function: fish, Basic Block: entry
-; CHECK-NEXT:    Start Instruction:   store i32 2, ptr %2, align 4
-; CHECK-NEXT:      End Instruction:   store i32 5, ptr %5, align 4
-; CHECK-NEXT:  Function: dog, Basic Block: entry
-; CHECK-NEXT:    Start Instruction:   store i32 2, ptr %2, align 4
-; CHECK-NEXT:      End Instruction:   store i32 5, ptr %5, align 4
-; CHECK-NEXT:4 candidates of length 5.  Found in:
-; CHECK-NEXT:  Function: turtle, Basic Block: (unnamed)
-; CHECK-NEXT:    Start Instruction:   store i32 2, ptr %2, align 4
-; CHECK-NEXT:      End Instruction:   store i32 6, ptr %6, align 4
-; CHECK-NEXT:  Function: cat, Basic Block: entry
-; CHECK-NEXT:    Start Instruction:   store i32 1, ptr %1, align 4
-; CHECK-NEXT:      End Instruction:   store i32 5, ptr %5, align 4
-; CHECK-NEXT:  Function: fish, Basic Block: entry
-; CHECK-NEXT:    Start Instruction:   store i32 1, ptr %1, align 4
-; CHECK-NEXT:      End Instruction:   store i32 5, ptr %5, align 4
-; CHECK-NEXT:  Function: dog, Basic Block: entry
-; CHECK-NEXT:    Start Instruction:   store i32 1, ptr %1, align 4
-; CHECK-NEXT:      End Instruction:   store i32 5, ptr %5, align 4
-; CHECK-NEXT:4 candidates of length 6.  Found in:
-; CHECK-NEXT:  Function: turtle, Basic Block: (unnamed)
-; CHECK-NEXT:    Start Instruction:   store i32 1, ptr %1, align 4
-; CHECK-NEXT:      End Instruction:   store i32 6, ptr %6, align 4
-; CHECK-NEXT:  Function: cat, Basic Block: entry
-; CHECK-NEXT:    Start Instruction:   store i32 6, ptr %0, align 4
-; CHECK-NEXT:      End Instruction:   store i32 5, ptr %5, align 4
-; CHECK-NEXT:  Function: fish, Basic Block: entry
-; CHECK-NEXT:    Start Instruction:   store i32 6, ptr %0, align 4
-; CHECK-NEXT:      End Instruction:   store i32 5, ptr %5, align 4
-; CHECK-NEXT:  Function: dog, Basic Block: entry
-; CHECK-NEXT:    Start Instruction:   store i32 6, ptr %0, align 4
 ; CHECK-NEXT:      End Instruction:   store i32 5, ptr %5, align 4
 
 define linkonce_odr void @fish() {
@@ -136,3 +136,5 @@ entry:
   store i32 5, ptr %5, align 4
   ret void
 }
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; CHECK: {{.*}}

@@ -57,13 +57,13 @@ void ReportShapeFnPass::runOnOperation() {
 
   // Lookup shape function library.
   SmallVector<shape::FunctionLibraryOp, 4> libraries;
-  auto attr = module->getAttr("shape.lib");
+  auto attr = module->getDiscardableAttr("shape.lib");
   if (attr) {
     auto lookup = [&](Attribute attr) {
       return cast<shape::FunctionLibraryOp>(
-          SymbolTable::lookupSymbolIn(module, attr.cast<SymbolRefAttr>()));
+          SymbolTable::lookupSymbolIn(module, cast<SymbolRefAttr>(attr)));
     };
-    if (auto arrayAttr = attr.dyn_cast<ArrayAttr>()) {
+    if (auto arrayAttr = dyn_cast<ArrayAttr>(attr)) {
       libraries.reserve(arrayAttr.size());
       for (auto attr : arrayAttr)
         libraries.push_back(lookup(attr));

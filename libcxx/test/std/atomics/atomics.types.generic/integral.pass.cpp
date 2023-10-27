@@ -84,8 +84,9 @@
 // };
 
 #include <atomic>
-#include <new>
 #include <cassert>
+#include <cstdint>
+#include <new>
 
 #include <cmpxchg_loop.h>
 

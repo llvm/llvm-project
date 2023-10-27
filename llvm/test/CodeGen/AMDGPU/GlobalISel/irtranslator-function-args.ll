@@ -97,8 +97,8 @@ define void @i1_arg_i1_use(i1 %arg) #0 {
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[XOR:%[0-9]+]]:_(s1) = G_XOR [[TRUNC]], [[C]]
-  ; CHECK-NEXT:   [[INT:%[0-9]+]]:_(s1), [[INT1:%[0-9]+]]:_(s64) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.if), [[XOR]](s1)
-  ; CHECK-NEXT:   G_BRCOND [[INT]](s1), %bb.2
+  ; CHECK-NEXT:   [[INTRINSIC_CONVERGENT_W_SIDE_EFFECTS:%[0-9]+]]:_(s1), [[INTRINSIC_CONVERGENT_W_SIDE_EFFECTS1:%[0-9]+]]:_(s64) = G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.if), [[XOR]](s1)
+  ; CHECK-NEXT:   G_BRCOND [[INTRINSIC_CONVERGENT_W_SIDE_EFFECTS]](s1), %bb.2
   ; CHECK-NEXT:   G_BR %bb.3
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.bb1:
@@ -108,7 +108,7 @@ define void @i1_arg_i1_use(i1 %arg) #0 {
   ; CHECK-NEXT:   G_BR %bb.3
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3.bb2:
-  ; CHECK-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), [[INT1]](s64)
+  ; CHECK-NEXT:   G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), [[INTRINSIC_CONVERGENT_W_SIDE_EFFECTS1]](s64)
   ; CHECK-NEXT:   SI_RETURN
 bb:
   br i1 %arg, label %bb2, label %bb1

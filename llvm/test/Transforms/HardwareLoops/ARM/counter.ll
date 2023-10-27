@@ -1,4 +1,4 @@
-; RUN: opt -mtriple=thumbv8.1m.main-none-none-eabi -hardware-loops %s -o - | FileCheck %s
+; RUN: opt -mtriple=thumbv8.1m.main-none-none-eabi -passes=hardware-loops %s -o - | FileCheck %s
 
 @g = common local_unnamed_addr global ptr null, align 4
 

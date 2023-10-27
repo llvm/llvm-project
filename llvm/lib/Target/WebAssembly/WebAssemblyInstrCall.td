@@ -73,7 +73,7 @@ defm RET_CALL :
     "return_call    \t$callee", "return_call\t$callee", 0x12>,
   Requires<[HasTailCall]>;
 
-let isReturn = 1 in
+let isReturn = 1, isTerminator = 1, hasCtrlDep = 1, isBarrier = 1 in
 defm RET_CALL_INDIRECT :
   I<(outs), (ins TypeIndex:$type, table32_op:$table, variable_ops),
     (outs), (ins TypeIndex:$type, table32_op:$table), [],

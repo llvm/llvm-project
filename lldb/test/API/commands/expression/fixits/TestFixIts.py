@@ -9,7 +9,6 @@ from lldbsuite.test import lldbutil
 
 
 class ExprCommandWithFixits(TestBase):
-
     def test_with_dummy_target(self):
         """Test calling expressions in the dummy target with errors that can be fixed by the FixIts."""
 
@@ -17,16 +16,22 @@ class ExprCommandWithFixits(TestBase):
         self.runCmd("settings set target.auto-apply-fixits true")
 
         ret_val = lldb.SBCommandReturnObject()
-        result = self.dbg.GetCommandInterpreter().HandleCommand("expression ((1 << 16) - 1))", ret_val)
-        self.assertEqual(result, lldb.eReturnStatusSuccessFinishResult, ret_val.GetError())
-        self.assertIn("Fix-it applied", ret_val.GetError())
+        result = self.dbg.GetCommandInterpreter().HandleCommand(
+            "expression ((1 << 16) - 1))", ret_val
+        )
+        self.assertEqual(
+            result, lldb.eReturnStatusSuccessFinishResult, ret_val.GetError()
+        )
+        self.assertIn(
+            "Evaluated this expression after applying Fix-It(s):", ret_val.GetError()
+        )
 
     def test_with_target(self):
         """Test calling expressions with errors that can be fixed by the FixIts."""
         self.build()
-        (target, process, self.thread, bkpt) = lldbutil.run_to_source_breakpoint(self,
-                                        'Stop here to evaluate expressions',
-                                         lldb.SBFileSpec("main.cpp"))
+        (target, process, self.thread, bkpt) = lldbutil.run_to_source_breakpoint(
+            self, "Stop here to evaluate expressions", lldb.SBFileSpec("main.cpp")
+        )
 
         options = lldb.SBExpressionOptions()
         options.SetAutoApplyFixIts(True)
@@ -62,7 +67,7 @@ class ExprCommandWithFixits(TestBase):
 
         # Try a Fix-It that is stored in the 'note:' diagnostic of an error.
         # The Fix-It here is adding parantheses around the ToStr parameters.
-        fixit_in_note_expr ="#define ToStr(x) #x\nToStr(0 {, })"
+        fixit_in_note_expr = "#define ToStr(x) #x\nToStr(0 {, })"
         value = frame.EvaluateExpression(fixit_in_note_expr, options)
         self.assertTrue(value.IsValid())
         self.assertSuccess(value.GetError())
@@ -75,37 +80,42 @@ class ExprCommandWithFixits(TestBase):
         self.assertTrue(value.GetError().Fail())
         error_string = value.GetError().GetCString()
         self.assertTrue(
-            error_string.find("fixed expression suggested:") != -1,
-            "Fix was suggested")
+            error_string.find("fixed expression suggested:") != -1, "Fix was suggested"
+        )
         self.assertTrue(
-            error_string.find("my_pointer->second.a") != -1,
-            "Fix was right")
+            error_string.find("my_pointer->second.a") != -1, "Fix was right"
+        )
 
     def test_with_target_error_applies_fixit(self):
-        """ Check that applying a Fix-it which fails to execute correctly still 
-         prints that the Fix-it was applied. """
+        """Check that applying a Fix-it which fails to execute correctly still
+        prints that the Fix-it was applied."""
         self.build()
-        (target, process, self.thread, bkpt) = lldbutil.run_to_source_breakpoint(self,
-                                        'Stop here to evaluate expressions',
-                                         lldb.SBFileSpec("main.cpp"))
+        (target, process, self.thread, bkpt) = lldbutil.run_to_source_breakpoint(
+            self, "Stop here to evaluate expressions", lldb.SBFileSpec("main.cpp")
+        )
         # Enable fix-its as they were intentionally disabled by TestBase.setUp.
         self.runCmd("settings set target.auto-apply-fixits true")
         ret_val = lldb.SBCommandReturnObject()
-        result = self.dbg.GetCommandInterpreter().HandleCommand("expression null_pointer.first", ret_val)
+        result = self.dbg.GetCommandInterpreter().HandleCommand(
+            "expression null_pointer.first", ret_val
+        )
         self.assertEqual(result, lldb.eReturnStatusFailed, ret_val.GetError())
 
-        self.assertIn("Fix-it applied, fixed expression was:", ret_val.GetError())
+        self.assertIn(
+            "Evaluated this expression after applying Fix-It(s):", ret_val.GetError()
+        )
         self.assertIn("null_pointer->first", ret_val.GetError())
 
     # The final function call runs into SIGILL on aarch64-linux.
-    @expectedFailureAll(archs=["aarch64"], oslist=["freebsd", "linux"],
-                        bugnumber="llvm.org/pr49407")
+    @expectedFailureAll(
+        archs=["aarch64"], oslist=["freebsd", "linux"], bugnumber="llvm.org/pr49407"
+    )
     def test_with_multiple_retries(self):
         """Test calling expressions with errors that can be fixed by the FixIts."""
         self.build()
-        (target, process, self.thread, bkpt) = lldbutil.run_to_source_breakpoint(self,
-                                        'Stop here to evaluate expressions',
-                                         lldb.SBFileSpec("main.cpp"))
+        (target, process, self.thread, bkpt) = lldbutil.run_to_source_breakpoint(
+            self, "Stop here to evaluate expressions", lldb.SBFileSpec("main.cpp")
+        )
 
         # Test repeatedly applying Fix-Its to expressions and reparsing them.
         multiple_runs_options = lldb.SBExpressionOptions()
@@ -148,9 +158,7 @@ class ExprCommandWithFixits(TestBase):
         multiple_runs_options.SetRetriesWithFixIts(0)
         value = frame.EvaluateExpression(two_runs_expr, multiple_runs_options)
         errmsg = value.GetError().GetCString()
-        self.assertIn("expression failed to parse", errmsg)
-        self.assertIn("using declaration resolved to type without 'typename'",
-                      errmsg)
+        self.assertIn("using declaration resolved to type without 'typename'", errmsg)
         self.assertIn("fixed expression suggested:", errmsg)
         self.assertIn("using typename T::TypeDef", errmsg)
         # The second Fix-It shouldn't be suggested here as Clang should have
@@ -161,7 +169,6 @@ class ExprCommandWithFixits(TestBase):
         multiple_runs_options.SetRetriesWithFixIts(1)
         value = frame.EvaluateExpression(two_runs_expr, multiple_runs_options)
         errmsg = value.GetError().GetCString()
-        self.assertIn("expression failed to parse", errmsg)
         self.assertIn("fixed expression suggested:", errmsg)
         # Both our fixed expressions should be in the suggested expression.
         self.assertIn("using typename T::TypeDef", errmsg)

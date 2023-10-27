@@ -39,6 +39,16 @@ module call_dispatch
     procedure(nopass_defferred), deferred, nopass :: nopassd
   end type
 
+  type :: node
+    type(node_ptr), pointer :: n(:)
+  end type
+  type :: use_node
+    type(node) :: n
+  end type
+  type :: node_ptr
+    type(node_ptr), pointer :: n
+  end type
+
   contains
 
 ! ------------------------------------------------------------------------------
@@ -172,7 +182,7 @@ module call_dispatch
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.class<!fir.heap<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>> {fir.bindc_name = "p"}) {
 ! CHECK: %[[LOAD:.*]] = fir.load %[[ARG0]] : !fir.ref<!fir.class<!fir.heap<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>>
 ! CHECK: %[[REBOX:.*]] = fir.rebox %[[LOAD]] : (!fir.class<!fir.heap<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>) -> !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>
-! CHECK: fir.dispatch "tbp_pass"(%[[REBOX]] : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) (%1 : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) {pass_arg_pos = 0 : i32}
+! CHECK: fir.dispatch "tbp_pass"(%[[LOAD]] : !fir.class<!fir.heap<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>) (%1 : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) {pass_arg_pos = 0 : i32}
 
     subroutine check_dispatch_scalar_pointer(p)
       class(p1), pointer :: p
@@ -183,7 +193,7 @@ module call_dispatch
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.class<!fir.ptr<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>> {fir.bindc_name = "p"}) {
 ! CHECK: %[[LOAD:.*]] = fir.load %[[ARG0]] : !fir.ref<!fir.class<!fir.ptr<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>>
 ! CHECK: %[[REBOX:.*]] = fir.rebox %[[LOAD]] : (!fir.class<!fir.ptr<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>) -> !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>
-! CHECK: fir.dispatch "tbp_pass"(%[[REBOX]] : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) (%1 : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) {pass_arg_pos = 0 : i32}
+! CHECK: fir.dispatch "tbp_pass"(%[[LOAD]] : !fir.class<!fir.ptr<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>>) (%1 : !fir.class<!fir.type<_QMcall_dispatchTp1{a:i32,b:i32}>>) {pass_arg_pos = 0 : i32}
 
     subroutine check_dispatch_static_array(p, t)
       class(p1) :: p(10)
@@ -340,5 +350,9 @@ module call_dispatch
 ! CHECK: fir.call @_QMcall_dispatchPtbp_pass
 ! CHECK: fir.call @_QMcall_dispatchPtbp_pass_arg0
 ! CHECK: fir.call @_QMcall_dispatchPtbp_pass_arg1
+
+  subroutine use_node_test(n)
+    type(use_node) :: n
+  end subroutine
 
 end module

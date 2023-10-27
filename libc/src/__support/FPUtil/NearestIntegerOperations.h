@@ -6,19 +6,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_FPUTIL_NEAREST_INTEGER_OPERATIONS_H
-#define LLVM_LIBC_SRC_SUPPORT_FPUTIL_NEAREST_INTEGER_OPERATIONS_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_NEARESTINTEGEROPERATIONS_H
+#define LLVM_LIBC_SRC___SUPPORT_FPUTIL_NEARESTINTEGEROPERATIONS_H
 
 #include "FEnvImpl.h"
 #include "FPBits.h"
+#include "rounding_mode.h"
 
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/common.h"
 
-#include <errno.h>
 #include <math.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace fputil {
 
 template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
@@ -134,7 +134,8 @@ LIBC_INLINE T round(T x) {
   }
 
   uint32_t trim_size = MantissaWidth<T>::VALUE - exponent;
-  bool half_bit_set = bits.get_mantissa() & (UIntType(1) << (trim_size - 1));
+  bool half_bit_set =
+      bool(bits.get_mantissa() & (UIntType(1) << (trim_size - 1)));
   bits.set_mantissa((bits.get_mantissa() >> trim_size) << trim_size);
   T trunc_value = T(bits);
 
@@ -162,7 +163,7 @@ LIBC_INLINE T round_using_current_rounding_mode(T x) {
 
   bool is_neg = bits.get_sign();
   int exponent = bits.get_exponent();
-  int rounding_mode = get_round();
+  int rounding_mode = quick_get_round();
 
   // If the exponent is greater than the most negative mantissa
   // exponent, then x is already an integer.
@@ -238,10 +239,8 @@ LIBC_INLINE I rounded_float_to_signed_integer(F x) {
   constexpr I INTEGER_MAX = -(INTEGER_MIN + 1);
   FPBits<F> bits(x);
   auto set_domain_error_and_raise_invalid = []() {
-    if (math_errhandling & MATH_ERRNO)
-      errno = EDOM;
-    if (math_errhandling & MATH_ERREXCEPT)
-      raise_except(FE_INVALID);
+    set_errno_if_required(EDOM);
+    raise_except_if_required(FE_INVALID);
   };
 
   if (bits.is_inf_or_nan()) {
@@ -264,9 +263,9 @@ LIBC_INLINE I rounded_float_to_signed_integer(F x) {
   }
 
   // For all other cases, if `x` can fit in the integer type `I`,
-  // we just return `x`. Implicit conversion will convert the
-  // floating point value to the exact integer value.
-  return x;
+  // we just return `x`. static_cast will convert the floating
+  // point value to the exact integer value.
+  return static_cast<I>(x);
 }
 
 } // namespace internal
@@ -287,6 +286,6 @@ LIBC_INLINE I round_to_signed_integer_using_current_rounding_mode(F x) {
 }
 
 } // namespace fputil
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_SRC_SUPPORT_FPUTIL_NEAREST_INTEGER_OPERATIONS_H
+#endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_NEARESTINTEGEROPERATIONS_H

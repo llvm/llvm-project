@@ -21,6 +21,7 @@
 
 #include "llvm/MC/MCExpr.h"
 #include "llvm/Support/DataTypes.h"
+#include "llvm/Support/Endian.h"
 #include "llvm/Support/ErrorHandling.h"
 
 #define GET_INSTRINFO_MI_OPS_INFO
@@ -46,6 +47,50 @@ enum { MemDisp = 0, MemBase = 1, MemIndex = 2, MemOuter = 3 };
 /// ([bd,PC],Xn,od)
 /// ([bd,PC,Xn],od)
 enum { PCRelDisp = 0, PCRelIndex = 1, PCRelOuter = 2 };
+
+enum class MemAddrModeKind : unsigned {
+  j = 1, // (An)
+  o,     // (An)+
+  e,     // -(An)
+  p,     // (d,An)
+  f,     // (d,An,Xn.L)
+  F,     // (d,An,Xn.W)
+  g,     // (d,An,Xn.L,SCALE)
+  G,     // (d,An,Xn.W,SCALE)
+  u,     // ([bd,An],Xn.L,SCALE,od)
+  U,     // ([bd,An],Xn.W,SCALE,od)
+  v,     // ([bd,An,Xn.L,SCALE],od)
+  V,     // ([bd,An,Xn.W,SCALE],od)
+  b,     // abs.L
+  B,     // abs.W
+  q,     // (d,PC)
+  k,     // (d,PC,Xn.L)
+  K,     // (d,PC,Xn.W)
+  l,     // (d,PC,Xn.L,SCALE)
+  L,     // (d,PC,Xn.W,SCALE)
+  x,     // ([bd,PC],Xn.L,SCALE,od)
+  X,     // ([bd,PC],Xn.W,SCALE,od)
+  y,     // ([bd,PC,Xn.L,SCALE],od)
+  Y      // ([bd,PC,Xn.W,SCALE],od)
+};
+
+// On a LE host:
+// MSB                   LSB    MSB                   LSB
+// | 0x12 0x34 | 0xAB 0xCD | -> | 0xAB 0xCD | 0x12 0x34 |
+// (On a BE host nothing changes)
+template <typename value_t> value_t swapWord(value_t Val) {
+  const unsigned NumWords = sizeof(Val) / 2;
+  if (NumWords <= 1)
+    return Val;
+  Val = support::endian::byte_swap(Val, llvm::endianness::big);
+  value_t NewVal = 0;
+  for (unsigned i = 0U; i != NumWords; ++i) {
+    uint16_t Part = (Val >> (i * 16)) & 0xFFFF;
+    Part = support::endian::byte_swap(Part, llvm::endianness::big);
+    NewVal |= (Part << (i * 16));
+  }
+  return NewVal;
+}
 } // namespace M68k
 
 namespace M68kBeads {
@@ -112,6 +157,37 @@ enum TOF {
   ///
   ///    name@PLT
   MO_PLT,
+
+  /// On a symbol operand, this indicates that the immediate is the offset to
+  /// the slot in GOT which stores the information for accessing the TLS
+  /// variable. This is used when operating in Global Dynamic mode.
+  ///    name@TLSGD
+  MO_TLSGD,
+
+  /// On a symbol operand, this indicates that the immediate is the offset to
+  /// variable within the thread local storage when operating in Local Dynamic
+  /// mode.
+  ///    name@TLSLD
+  MO_TLSLD,
+
+  /// On a symbol operand, this indicates that the immediate is the offset to
+  /// the slot in GOT which stores the information for accessing the TLS
+  /// variable. This is used when operating in Local Dynamic mode.
+  ///    name@TLSLDM
+  MO_TLSLDM,
+
+  /// On a symbol operand, this indicates that the immediate is the offset to
+  /// the variable within the thread local storage when operating in Initial
+  /// Exec mode.
+  ///    name@TLSIE
+  MO_TLSIE,
+
+  /// On a symbol operand, this indicates that the immediate is the offset to
+  /// the variable within in the thread local storage when operating in Local
+  /// Exec mode.
+  ///    name@TLSLE
+  MO_TLSLE,
+
 }; // enum TOF
 
 /// Return true if the specified TargetFlag operand is a reference to a stub

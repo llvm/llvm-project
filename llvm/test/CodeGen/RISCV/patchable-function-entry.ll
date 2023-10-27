@@ -49,10 +49,10 @@ define void @f5() "patchable-function-entry"="5" comdat {
 ;; "patchable-function-prefix" emits data before the function entry label.
 define void @f3_2() "patchable-function-entry"="1" "patchable-function-prefix"="2" {
 ; CHECK-LABEL: .type f3_2,@function
-; CHECK-NEXT:  .Ltmp0: # @f3_2
+; CHECK-NEXT:  .Ltmp0:
 ; NORVC-COUNT-2: addi zero, zero, 0
 ; RVC-COUNT-2:   c.nop
-; CHECK-NEXT:  f3_2:
+; CHECK-NEXT:  f3_2:  # @f3_2
 ; CHECK:       # %bb.0:
 ; NORVC-NEXT:    addi zero, zero, 0
 ; NORVC-NEXT:    addi sp, sp, -16

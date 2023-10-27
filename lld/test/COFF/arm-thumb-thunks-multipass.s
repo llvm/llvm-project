@@ -67,4 +67,4 @@ far_func\i:
 // FUNC01-THUNKS: 40500a:       f2c0 0c10       movt    r12, #16
 // FUNC01-THUNKS: 40500e:       44e7            add     pc, r12
 // The instruction below is padding from the .balign
-// FUNC01-THUNKS: 405010:       cccc            ldm     r4!, {r2, r3, r6, r7}
+// FUNC01-THUNKS: 405010:       0000            movs    r0, r0

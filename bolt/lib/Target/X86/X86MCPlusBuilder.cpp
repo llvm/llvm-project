@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/X86BaseInfo.h"
-#include "MCTargetDesc/X86InstrRelaxTables.h"
+#include "MCTargetDesc/X86EncodingOptimization.h"
 #include "MCTargetDesc/X86MCTargetDesc.h"
 #include "X86MCSymbolizer.h"
 #include "bolt/Core/MCPlus.h"
@@ -50,21 +50,6 @@ static cl::opt<bool> X86StripRedundantAddressSize(
 
 namespace {
 
-unsigned getShortBranchOpcode(unsigned Opcode) {
-  switch (Opcode) {
-  default:
-    return Opcode;
-  case X86::JMP_2: return X86::JMP_1;
-  case X86::JMP_4: return X86::JMP_1;
-  case X86::JCC_2: return X86::JCC_1;
-  case X86::JCC_4: return X86::JCC_1;
-  }
-}
-
-unsigned getShortArithOpcode(unsigned Opcode) {
-  return X86::getShortOpcodeArith(Opcode);
-}
-
 bool isMOVSX64rm32(const MCInst &Inst) {
   return Inst.getOpcode() == X86::MOVSX64rm32;
 }
@@ -76,6 +61,25 @@ bool isADDri(const MCInst &Inst) {
          Inst.getOpcode() == X86::ADD64ri8;
 }
 
+// Create instruction to increment contents of target by 1
+static InstructionListType createIncMemory(const MCSymbol *Target,
+                                           MCContext *Ctx) {
+  InstructionListType Insts;
+  Insts.emplace_back();
+  Insts.back().setOpcode(X86::LOCK_INC64m);
+  Insts.back().clear();
+  Insts.back().addOperand(MCOperand::createReg(X86::RIP));        // BaseReg
+  Insts.back().addOperand(MCOperand::createImm(1));               // ScaleAmt
+  Insts.back().addOperand(MCOperand::createReg(X86::NoRegister)); // IndexReg
+
+  Insts.back().addOperand(MCOperand::createExpr(
+      MCSymbolRefExpr::create(Target, MCSymbolRefExpr::VK_None,
+                              *Ctx))); // Displacement
+  Insts.back().addOperand(
+      MCOperand::createReg(X86::NoRegister)); // AddrSegmentReg
+  return Insts;
+}
+
 #define GET_INSTRINFO_OPERAND_TYPES_ENUM
 #define GET_INSTRINFO_OPERAND_TYPE
 #define GET_INSTRINFO_MEM_OPERAND_SIZE
@@ -83,13 +87,12 @@ bool isADDri(const MCInst &Inst) {
 
 class X86MCPlusBuilder : public MCPlusBuilder {
 public:
-  X86MCPlusBuilder(const MCInstrAnalysis *Analysis, const MCInstrInfo *Info,
-                   const MCRegisterInfo *RegInfo)
-      : MCPlusBuilder(Analysis, Info, RegInfo) {}
+  using MCPlusBuilder::MCPlusBuilder;
 
   std::unique_ptr<MCSymbolizer>
-  createTargetSymbolizer(BinaryFunction &Function) const override {
-    return std::make_unique<X86MCSymbolizer>(Function);
+  createTargetSymbolizer(BinaryFunction &Function,
+                         bool CreateNewSymbols) const override {
+    return std::make_unique<X86MCSymbolizer>(Function, CreateNewSymbols);
   }
 
   bool isBranch(const MCInst &Inst) const override {
@@ -281,7 +284,7 @@ public:
     case X86::PUSHFS16:
     case X86::PUSHGS16:
     case X86::PUSHSS16:
-    case X86::PUSHi16:
+    case X86::PUSH16i:
       return 2;
     case X86::PUSH32i8:
     case X86::PUSH32r:
@@ -295,7 +298,7 @@ public:
     case X86::PUSHFS32:
     case X86::PUSHGS32:
     case X86::PUSHSS32:
-    case X86::PUSHi32:
+    case X86::PUSH32i:
       return 4;
     case X86::PUSH64i32:
     case X86::PUSH64i8:
@@ -332,8 +335,8 @@ public:
     return false;
   }
 
-  bool isUnsupportedBranch(unsigned Opcode) const override {
-    switch (Opcode) {
+  bool isUnsupportedBranch(const MCInst &Inst) const override {
+    switch (Inst.getOpcode()) {
     default:
       return false;
     case X86::LOOP:
@@ -345,7 +348,7 @@ public:
     }
   }
 
-  bool isLoad(const MCInst &Inst) const override {
+  bool mayLoad(const MCInst &Inst) const override {
     if (isPop(Inst))
       return true;
 
@@ -358,7 +361,7 @@ public:
     return MCII.mayLoad();
   }
 
-  bool isStore(const MCInst &Inst) const override {
+  bool mayStore(const MCInst &Inst) const override {
     if (isPush(Inst))
       return true;
 
@@ -388,7 +391,31 @@ public:
     return (Desc.TSFlags & X86II::OpPrefixMask) == X86II::PD;
   }
 
-  unsigned getTrapFillValue() const override { return 0xCC; }
+  bool shouldRecordCodeRelocation(uint64_t RelType) const override {
+    switch (RelType) {
+    case ELF::R_X86_64_8:
+    case ELF::R_X86_64_16:
+    case ELF::R_X86_64_32:
+    case ELF::R_X86_64_32S:
+    case ELF::R_X86_64_64:
+    case ELF::R_X86_64_PC8:
+    case ELF::R_X86_64_PC32:
+    case ELF::R_X86_64_PC64:
+    case ELF::R_X86_64_GOTPC64:
+    case ELF::R_X86_64_GOTPCRELX:
+    case ELF::R_X86_64_REX_GOTPCRELX:
+      return true;
+    case ELF::R_X86_64_PLT32:
+    case ELF::R_X86_64_GOTPCREL:
+    case ELF::R_X86_64_TPOFF32:
+    case ELF::R_X86_64_GOTTPOFF:
+      return false;
+    default:
+      llvm_unreachable("Unexpected x86 relocation type in code");
+    }
+  }
+
+  StringRef getTrapFillValue() const override { return StringRef("\314", 1); }
 
   struct IndJmpMatcherFrag1 : MCInstMatcher {
     std::unique_ptr<MCInstMatcher> Base;
@@ -672,20 +699,15 @@ public:
     return X86::isMacroFused(CmpKind, BranchKind);
   }
 
-  bool
-  evaluateX86MemoryOperand(const MCInst &Inst, unsigned *BaseRegNum,
-                           int64_t *ScaleImm, unsigned *IndexRegNum,
-                           int64_t *DispImm, unsigned *SegmentRegNum,
-                           const MCExpr **DispExpr = nullptr) const override {
-    assert(BaseRegNum && ScaleImm && IndexRegNum && SegmentRegNum &&
-           "one of the input pointers is null");
+  std::optional<X86MemOperand>
+  evaluateX86MemoryOperand(const MCInst &Inst) const override {
     int MemOpNo = getMemoryOperandNo(Inst);
     if (MemOpNo < 0)
-      return false;
+      return std::nullopt;
     unsigned MemOpOffset = static_cast<unsigned>(MemOpNo);
 
     if (MemOpOffset + X86::AddrSegmentReg >= MCPlus::getNumPrimeOperands(Inst))
-      return false;
+      return std::nullopt;
 
     const MCOperand &Base = Inst.getOperand(MemOpOffset + X86::AddrBaseReg);
     const MCOperand &Scale = Inst.getOperand(MemOpOffset + X86::AddrScaleAmt);
@@ -697,47 +719,33 @@ public:
     // Make sure it is a well-formed memory operand.
     if (!Base.isReg() || !Scale.isImm() || !Index.isReg() ||
         (!Disp.isImm() && !Disp.isExpr()) || !Segment.isReg())
-      return false;
+      return std::nullopt;
 
-    *BaseRegNum = Base.getReg();
-    *ScaleImm = Scale.getImm();
-    *IndexRegNum = Index.getReg();
-    if (Disp.isImm()) {
-      assert(DispImm && "DispImm needs to be set");
-      *DispImm = Disp.getImm();
-      if (DispExpr)
-        *DispExpr = nullptr;
-    } else {
-      assert(DispExpr && "DispExpr needs to be set");
-      *DispExpr = Disp.getExpr();
-      if (DispImm)
-        *DispImm = 0;
-    }
-    *SegmentRegNum = Segment.getReg();
-    return true;
+    X86MemOperand MO;
+    MO.BaseRegNum = Base.getReg();
+    MO.ScaleImm = Scale.getImm();
+    MO.IndexRegNum = Index.getReg();
+    MO.DispImm = Disp.isImm() ? Disp.getImm() : 0;
+    MO.DispExpr = Disp.isExpr() ? Disp.getExpr() : nullptr;
+    MO.SegRegNum = Segment.getReg();
+    return MO;
   }
 
   bool evaluateMemOperandTarget(const MCInst &Inst, uint64_t &Target,
                                 uint64_t Address,
                                 uint64_t Size) const override {
-    unsigned      BaseRegNum;
-    int64_t       ScaleValue;
-    unsigned      IndexRegNum;
-    int64_t       DispValue;
-    unsigned      SegRegNum;
-    const MCExpr *DispExpr = nullptr;
-    if (!evaluateX86MemoryOperand(Inst, &BaseRegNum, &ScaleValue, &IndexRegNum,
-                                  &DispValue, &SegRegNum, &DispExpr))
+    std::optional<X86MemOperand> MO = evaluateX86MemoryOperand(Inst);
+    if (!MO)
       return false;
 
     // Make sure it's a well-formed addressing we can statically evaluate.
-    if ((BaseRegNum != X86::RIP && BaseRegNum != X86::NoRegister) ||
-        IndexRegNum != X86::NoRegister || SegRegNum != X86::NoRegister ||
-        DispExpr)
+    if ((MO->BaseRegNum != X86::RIP && MO->BaseRegNum != X86::NoRegister) ||
+        MO->IndexRegNum != X86::NoRegister ||
+        MO->SegRegNum != X86::NoRegister || MO->DispExpr)
       return false;
 
-    Target = DispValue;
-    if (BaseRegNum == X86::RIP) {
+    Target = MO->DispImm;
+    if (MO->BaseRegNum == X86::RIP) {
       assert(Size != 0 && "instruction size required in order to statically "
                           "evaluate RIP-relative address");
       Target += Address + Size;
@@ -863,108 +871,9 @@ public:
   }
 
   MCPhysReg getAliasSized(MCPhysReg Reg, uint8_t Size) const override {
-    switch (Reg) {
-    case X86::RAX: case X86::EAX: case X86::AX: case X86::AL: case X86::AH:
-      switch (Size) {
-      case 8: return X86::RAX;       case 4: return X86::EAX;
-      case 2: return X86::AX;        case 1: return X86::AL;
-      default: llvm_unreachable("Unexpected size");
-      }
-    case X86::RBX: case X86::EBX: case X86::BX: case X86::BL: case X86::BH:
-      switch (Size) {
-      case 8: return X86::RBX;       case 4: return X86::EBX;
-      case 2: return X86::BX;        case 1: return X86::BL;
-      default: llvm_unreachable("Unexpected size");
-      }
-    case X86::RDX: case X86::EDX: case X86::DX: case X86::DL: case X86::DH:
-      switch (Size) {
-      case 8: return X86::RDX;       case 4: return X86::EDX;
-      case 2: return X86::DX;        case 1: return X86::DL;
-      default: llvm_unreachable("Unexpected size");
-      }
-    case X86::RDI: case X86::EDI: case X86::DI: case X86::DIL:
-      switch (Size) {
-      case 8: return X86::RDI;       case 4: return X86::EDI;
-      case 2: return X86::DI;        case 1: return X86::DIL;
-      default: llvm_unreachable("Unexpected size");
-      }
-    case X86::RSI: case X86::ESI: case X86::SI: case X86::SIL:
-      switch (Size) {
-      case 8: return X86::RSI;       case 4: return X86::ESI;
-      case 2: return X86::SI;        case 1: return X86::SIL;
-      default: llvm_unreachable("Unexpected size");
-      }
-    case X86::RCX: case X86::ECX: case X86::CX: case X86::CL: case X86::CH:
-      switch (Size) {
-      case 8: return X86::RCX;       case 4: return X86::ECX;
-      case 2: return X86::CX;        case 1: return X86::CL;
-      default: llvm_unreachable("Unexpected size");
-      }
-    case X86::RSP: case X86::ESP: case X86::SP: case X86::SPL:
-      switch (Size) {
-      case 8: return X86::RSP;       case 4: return X86::ESP;
-      case 2: return X86::SP;        case 1: return X86::SPL;
-      default: llvm_unreachable("Unexpected size");
-      }
-    case X86::RBP: case X86::EBP: case X86::BP: case X86::BPL:
-      switch (Size) {
-      case 8: return X86::RBP;       case 4: return X86::EBP;
-      case 2: return X86::BP;        case 1: return X86::BPL;
-      default: llvm_unreachable("Unexpected size");
-      }
-  case X86::R8: case X86::R8D: case X86::R8W: case X86::R8B:
-      switch (Size) {
-      case 8: return X86::R8;        case 4: return X86::R8D;
-      case 2: return X86::R8W;       case 1: return X86::R8B;
-      default: llvm_unreachable("Unexpected size");
-      }
-    case X86::R9: case X86::R9D: case X86::R9W: case X86::R9B:
-      switch (Size) {
-      case 8: return X86::R9;        case 4: return X86::R9D;
-      case 2: return X86::R9W;       case 1: return X86::R9B;
-      default: llvm_unreachable("Unexpected size");
-      }
-    case X86::R10: case X86::R10D: case X86::R10W: case X86::R10B:
-      switch (Size) {
-      case 8: return X86::R10;        case 4: return X86::R10D;
-      case 2: return X86::R10W;       case 1: return X86::R10B;
-      default: llvm_unreachable("Unexpected size");
-      }
-    case X86::R11: case X86::R11D: case X86::R11W: case X86::R11B:
-      switch (Size) {
-      case 8: return X86::R11;        case 4: return X86::R11D;
-      case 2: return X86::R11W;       case 1: return X86::R11B;
-      default: llvm_unreachable("Unexpected size");
-      }
-    case X86::R12: case X86::R12D: case X86::R12W: case X86::R12B:
-      switch (Size) {
-      case 8: return X86::R12;        case 4: return X86::R12D;
-      case 2: return X86::R12W;       case 1: return X86::R12B;
-      default: llvm_unreachable("Unexpected size");
-      }
-    case X86::R13: case X86::R13D: case X86::R13W: case X86::R13B:
-      switch (Size) {
-      case 8: return X86::R13;        case 4: return X86::R13D;
-      case 2: return X86::R13W;       case 1: return X86::R13B;
-      default: llvm_unreachable("Unexpected size");
-      }
-    case X86::R14: case X86::R14D: case X86::R14W: case X86::R14B:
-      switch (Size) {
-      case 8: return X86::R14;        case 4: return X86::R14D;
-      case 2: return X86::R14W;       case 1: return X86::R14B;
-      default: llvm_unreachable("Unexpected size");
-      }
-    case X86::R15: case X86::R15D: case X86::R15W: case X86::R15B:
-      switch (Size) {
-      case 8: return X86::R15;        case 4: return X86::R15D;
-      case 2: return X86::R15W;       case 1: return X86::R15B;
-      default: llvm_unreachable("Unexpected size");
-      }
-    default:
-      dbgs() << Reg << " (get alias sized)\n";
-      llvm_unreachable("Unexpected reg number");
-      break;
-    }
+    Reg = getX86SubSuperRegister(Reg, Size * 8);
+    assert((Reg != X86::NoRegister) && "Invalid register");
+    return Reg;
   }
 
   bool isUpper8BitReg(MCPhysReg Reg) const override {
@@ -1113,21 +1022,15 @@ public:
     case X86::MOV32mi: I = {4, false, true, false, true}; break;
     } // end switch (Inst.getOpcode())
 
-    unsigned BaseRegNum;
-    int64_t ScaleValue;
-    unsigned IndexRegNum;
-    int64_t DispValue;
-    unsigned SegRegNum;
-    const MCExpr *DispExpr;
-    if (!evaluateX86MemoryOperand(Inst, &BaseRegNum, &ScaleValue, &IndexRegNum,
-                                  &DispValue, &SegRegNum, &DispExpr)) {
+    std::optional<X86MemOperand> MO = evaluateX86MemoryOperand(Inst);
+    if (!MO) {
       LLVM_DEBUG(dbgs() << "Evaluate failed on ");
       LLVM_DEBUG(Inst.dump());
       return false;
     }
 
     // Make sure it's a stack access
-    if (BaseRegNum != X86::RBP && BaseRegNum != X86::RSP)
+    if (MO->BaseRegNum != X86::RBP && MO->BaseRegNum != X86::RSP)
       return false;
 
     IsLoad = I.IsLoad;
@@ -1135,9 +1038,10 @@ public:
     IsStoreFromReg = I.StoreFromReg;
     Size = I.DataSize;
     IsSimple = I.Simple;
-    StackPtrReg = BaseRegNum;
-    StackOffset = DispValue;
-    IsIndexed = IndexRegNum != X86::NoRegister || SegRegNum != X86::NoRegister;
+    StackPtrReg = MO->BaseRegNum;
+    StackOffset = MO->DispImm;
+    IsIndexed =
+        MO->IndexRegNum != X86::NoRegister || MO->SegRegNum != X86::NoRegister;
 
     if (!I.Simple)
       return true;
@@ -1189,19 +1093,13 @@ public:
     case X86::MOV32mi: I = {4, false, false}; break;
     } // end switch (Inst.getOpcode())
 
-    unsigned BaseRegNum;
-    int64_t ScaleValue;
-    unsigned IndexRegNum;
-    int64_t DispValue;
-    unsigned SegRegNum;
-    const MCExpr *DispExpr;
-    if (!evaluateX86MemoryOperand(Inst, &BaseRegNum, &ScaleValue, &IndexRegNum,
-                                  &DispValue, &SegRegNum, &DispExpr)) {
+    std::optional<X86MemOperand> MO = evaluateX86MemoryOperand(Inst);
+    if (!MO) {
       llvm_unreachable("Evaluate failed");
       return;
     }
     // Make sure it's a stack access
-    if (BaseRegNum != X86::RBP && BaseRegNum != X86::RSP) {
+    if (MO->BaseRegNum != X86::RBP && MO->BaseRegNum != X86::RSP) {
       llvm_unreachable("Not a stack access");
       return;
     }
@@ -1265,13 +1163,9 @@ public:
       break;
     }
 
-    const MCInstrDesc &MCII = Info->get(Inst.getOpcode());
-    for (int I = 0, E = MCII.getNumDefs(); I != E; ++I) {
-      const MCOperand &Operand = Inst.getOperand(I);
-      if (Operand.isReg() && Operand.getReg() == X86::RSP)
-        return true;
-    }
-    return false;
+    return any_of(defOperands(Inst), [](const MCOperand &Op) {
+      return Op.isReg() && Op.getReg() == X86::RSP;
+    });
   }
 
   bool
@@ -1321,23 +1215,17 @@ public:
       break;
 
     case X86::LEA64r: {
-      unsigned BaseRegNum;
-      int64_t ScaleValue;
-      unsigned IndexRegNum;
-      int64_t DispValue;
-      unsigned SegRegNum;
-      const MCExpr *DispExpr = nullptr;
-      if (!evaluateX86MemoryOperand(Inst, &BaseRegNum, &ScaleValue,
-                                    &IndexRegNum, &DispValue, &SegRegNum,
-                                    &DispExpr))
+      std::optional<X86MemOperand> MO = evaluateX86MemoryOperand(Inst);
+      if (!MO)
         return false;
 
-      if (BaseRegNum == X86::NoRegister || IndexRegNum != X86::NoRegister ||
-          SegRegNum != X86::NoRegister || DispExpr)
+      if (MO->BaseRegNum == X86::NoRegister ||
+          MO->IndexRegNum != X86::NoRegister ||
+          MO->SegRegNum != X86::NoRegister || MO->DispExpr)
         return false;
 
-      if (ErrorOr<int64_t> InputVal = getOperandVal(BaseRegNum))
-        Output = *InputVal + DispValue;
+      if (ErrorOr<int64_t> InputVal = getOperandVal(MO->BaseRegNum))
+        Output = *InputVal + MO->DispImm;
       else
         return false;
 
@@ -1410,19 +1298,11 @@ public:
 
     // If potential leak, check if it is not just writing to itself/sp/bp
     if (DoesLeak) {
-      for (int I = 0, E = NumDefs; I != E; ++I) {
-        const MCOperand &Operand = Inst.getOperand(I);
-        if (HasFramePointer && Operand.isReg() &&
-            SPBPAliases[Operand.getReg()]) {
-          DoesLeak = false;
-          break;
-        }
-        if (!HasFramePointer && Operand.isReg() &&
-            SPAliases[Operand.getReg()]) {
-          DoesLeak = false;
-          break;
-        }
-      }
+      DoesLeak = !any_of(defOperands(Inst), [&](const MCOperand &Operand) {
+        assert(Operand.isReg());
+        MCPhysReg Reg = Operand.getReg();
+        return HasFramePointer ? SPBPAliases[Reg] : SPAliases[Reg];
+      });
     }
     return DoesLeak;
   }
@@ -1681,7 +1561,7 @@ public:
   bool requiresAlignedAddress(const MCInst &Inst) const override {
     const MCInstrDesc &Desc = Info->get(Inst.getOpcode());
     for (unsigned int I = 0; I < Desc.getNumOperands(); ++I) {
-      const MCOperandInfo &Op = Desc.OpInfo[I];
+      const MCOperandInfo &Op = Desc.operands()[I];
       if (Op.OperandType != MCOI::OPERAND_REGISTER)
         continue;
       if (Op.RegClass == X86::VR128RegClassID)
@@ -1849,7 +1729,7 @@ public:
       }
     } else {
       // If it's arithmetic instruction check if signed operand fits in 1 byte.
-      const unsigned ShortOpcode = getShortArithOpcode(OldOpcode);
+      const unsigned ShortOpcode = X86::getOpcodeForShortImmediateForm(OldOpcode);
       if (ShortOpcode != OldOpcode &&
           Inst.getOperand(MCPlus::getNumPrimeOperands(Inst) - 1).isImm()) {
         int64_t Imm =
@@ -1874,7 +1754,7 @@ public:
     // - Non-stack loads are prohibited (generally unsafe)
     // - Stack loads are OK if AllowStackMemOp is true
     // - Stack loads with RBP are OK if AllowBasePtrStackMemOp is true
-    if (isLoad(Inst)) {
+    if (mayLoad(Inst)) {
       // If stack memory operands are not allowed, no loads are allowed
       if (!AllowStackMemOp)
         return false;
@@ -1998,8 +1878,7 @@ public:
       }
 
       // Handle conditional branches and ignore indirect branches
-      if (!isUnsupportedBranch(I->getOpcode()) &&
-          getCondCode(*I) == X86::COND_INVALID) {
+      if (!isUnsupportedBranch(*I) && getCondCode(*I) == X86::COND_INVALID) {
         // Indirect branch
         return false;
       }
@@ -2087,17 +1966,12 @@ public:
         }
 
         // Verify operands for MOV.
-        unsigned  BaseRegNum;
-        int64_t   ScaleValue;
-        unsigned  IndexRegNum;
-        int64_t   DispValue;
-        unsigned  SegRegNum;
-        if (!evaluateX86MemoryOperand(Instr, &BaseRegNum, &ScaleValue,
-                                      &IndexRegNum, &DispValue, &SegRegNum))
+        std::optional<X86MemOperand> MO = evaluateX86MemoryOperand(Instr);
+        if (!MO)
           break;
-        if (BaseRegNum != R1 || ScaleValue != 4 ||
-            IndexRegNum == X86::NoRegister || DispValue != 0 ||
-            SegRegNum != X86::NoRegister)
+        if (MO->BaseRegNum != R1 || MO->ScaleImm != 4 ||
+            MO->IndexRegNum == X86::NoRegister || MO->DispImm != 0 ||
+            MO->SegRegNum != X86::NoRegister)
           break;
         MovInstr = &Instr;
       } else {
@@ -2113,19 +1987,12 @@ public:
         }
 
         // Verify operands for LEA.
-        unsigned      BaseRegNum;
-        int64_t       ScaleValue;
-        unsigned      IndexRegNum;
-        const MCExpr *DispExpr = nullptr;
-        int64_t       DispValue;
-        unsigned      SegRegNum;
-        if (!evaluateX86MemoryOperand(Instr, &BaseRegNum, &ScaleValue,
-                                      &IndexRegNum, &DispValue, &SegRegNum,
-                                      &DispExpr))
+        std::optional<X86MemOperand> MO = evaluateX86MemoryOperand(Instr);
+        if (!MO)
           break;
-        if (BaseRegNum != RegInfo->getProgramCounter() ||
-            IndexRegNum != X86::NoRegister || SegRegNum != X86::NoRegister ||
-            DispExpr == nullptr)
+        if (MO->BaseRegNum != RegInfo->getProgramCounter() ||
+            MO->IndexRegNum != X86::NoRegister ||
+            MO->SegRegNum != X86::NoRegister || MO->DispExpr == nullptr)
           break;
         MemLocInstr = &Instr;
         break;
@@ -2223,36 +2090,31 @@ public:
     const MCRegister RIPRegister = RegInfo->getProgramCounter();
 
     // Analyze the memory location.
-    unsigned BaseRegNum, IndexRegNum, SegRegNum;
-    int64_t ScaleValue, DispValue;
-    const MCExpr *DispExpr;
-
-    if (!evaluateX86MemoryOperand(*MemLocInstr, &BaseRegNum, &ScaleValue,
-                                  &IndexRegNum, &DispValue, &SegRegNum,
-                                  &DispExpr))
+    std::optional<X86MemOperand> MO = evaluateX86MemoryOperand(*MemLocInstr);
+    if (!MO)
       return IndirectBranchType::UNKNOWN;
 
-    BaseRegNumOut = BaseRegNum;
-    IndexRegNumOut = IndexRegNum;
-    DispValueOut = DispValue;
-    DispExprOut = DispExpr;
+    BaseRegNumOut = MO->BaseRegNum;
+    IndexRegNumOut = MO->IndexRegNum;
+    DispValueOut = MO->DispImm;
+    DispExprOut = MO->DispExpr;
 
-    if ((BaseRegNum != X86::NoRegister && BaseRegNum != RIPRegister) ||
-        SegRegNum != X86::NoRegister)
+    if ((MO->BaseRegNum != X86::NoRegister && MO->BaseRegNum != RIPRegister) ||
+        MO->SegRegNum != X86::NoRegister)
       return IndirectBranchType::UNKNOWN;
 
     if (MemLocInstr == &Instruction &&
-        (!ScaleValue || IndexRegNum == X86::NoRegister)) {
+        (!MO->ScaleImm || MO->IndexRegNum == X86::NoRegister)) {
       MemLocInstrOut = MemLocInstr;
       return IndirectBranchType::POSSIBLE_FIXED_BRANCH;
     }
 
     if (Type == IndirectBranchType::POSSIBLE_PIC_JUMP_TABLE &&
-        (ScaleValue != 1 || BaseRegNum != RIPRegister))
+        (MO->ScaleImm != 1 || MO->BaseRegNum != RIPRegister))
       return IndirectBranchType::UNKNOWN;
 
     if (Type != IndirectBranchType::POSSIBLE_PIC_JUMP_TABLE &&
-        ScaleValue != PtrSize)
+        MO->ScaleImm != PtrSize)
       return IndirectBranchType::UNKNOWN;
 
     MemLocInstrOut = MemLocInstr;
@@ -2296,20 +2158,15 @@ public:
     MCInst &CallInst = *Itr++;
     assert(isIndirectBranch(CallInst) || isCall(CallInst));
 
-    unsigned BaseReg, IndexReg, SegmentReg;
-    int64_t Scale, Disp;
-    const MCExpr *DispExpr;
-
     // The call can just be jmp offset(reg)
-    if (evaluateX86MemoryOperand(CallInst, &BaseReg, &Scale, &IndexReg, &Disp,
-                                 &SegmentReg, &DispExpr)) {
-      if (!DispExpr && BaseReg != X86::RIP && BaseReg != X86::RBP &&
-          BaseReg != X86::NoRegister) {
-        MethodRegNum = BaseReg;
-        if (Scale == 1 && IndexReg == X86::NoRegister &&
-            SegmentReg == X86::NoRegister) {
+    if (std::optional<X86MemOperand> MO = evaluateX86MemoryOperand(CallInst)) {
+      if (!MO->DispExpr && MO->BaseRegNum != X86::RIP &&
+          MO->BaseRegNum != X86::RBP && MO->BaseRegNum != X86::NoRegister) {
+        MethodRegNum = MO->BaseRegNum;
+        if (MO->ScaleImm == 1 && MO->IndexRegNum == X86::NoRegister &&
+            MO->SegRegNum == X86::NoRegister) {
           VtableRegNum = MethodRegNum;
-          MethodOffset = Disp;
+          MethodOffset = MO->DispImm;
           MethodFetchInsns.push_back(&CallInst);
           return true;
         }
@@ -2332,15 +2189,17 @@ public:
       MCInst &CurInst = *Itr++;
       const MCInstrDesc &Desc = Info->get(CurInst.getOpcode());
       if (Desc.hasDefOfPhysReg(CurInst, MethodRegNum, *RegInfo)) {
-        if (isLoad(CurInst) &&
-            evaluateX86MemoryOperand(CurInst, &BaseReg, &Scale, &IndexReg,
-                                     &Disp, &SegmentReg, &DispExpr)) {
-          if (!DispExpr && Scale == 1 && BaseReg != X86::RIP &&
-              BaseReg != X86::RBP && BaseReg != X86::NoRegister &&
-              IndexReg == X86::NoRegister && SegmentReg == X86::NoRegister &&
-              BaseReg != X86::RIP) {
-            VtableRegNum = BaseReg;
-            MethodOffset = Disp;
+        if (!mayLoad(CurInst))
+          return false;
+        if (std::optional<X86MemOperand> MO =
+                evaluateX86MemoryOperand(CurInst)) {
+          if (!MO->DispExpr && MO->ScaleImm == 1 &&
+              MO->BaseRegNum != X86::RIP && MO->BaseRegNum != X86::RBP &&
+              MO->BaseRegNum != X86::NoRegister &&
+              MO->IndexRegNum == X86::NoRegister &&
+              MO->SegRegNum == X86::NoRegister && MO->BaseRegNum != X86::RIP) {
+            VtableRegNum = MO->BaseRegNum;
+            MethodOffset = MO->DispImm;
             MethodFetchInsns.push_back(&CurInst);
             if (MethodOffset != 0)
               return true;
@@ -2468,28 +2327,15 @@ public:
     return true;
   }
 
-  void createLoadImmediate(MCInst &Inst, const MCPhysReg Dest,
-                           uint32_t Imm) const override {
-    Inst.setOpcode(X86::MOV64ri32);
-    Inst.clear();
-    Inst.addOperand(MCOperand::createReg(Dest));
-    Inst.addOperand(MCOperand::createImm(Imm));
-  }
-
-  bool createIncMemory(MCInst &Inst, const MCSymbol *Target,
-                       MCContext *Ctx) const override {
-
-    Inst.setOpcode(X86::LOCK_INC64m);
-    Inst.clear();
-    Inst.addOperand(MCOperand::createReg(X86::RIP));        // BaseReg
-    Inst.addOperand(MCOperand::createImm(1));               // ScaleAmt
-    Inst.addOperand(MCOperand::createReg(X86::NoRegister)); // IndexReg
-
-    Inst.addOperand(MCOperand::createExpr(
-        MCSymbolRefExpr::create(Target, MCSymbolRefExpr::VK_None,
-                                *Ctx)));                    // Displacement
-    Inst.addOperand(MCOperand::createReg(X86::NoRegister)); // AddrSegmentReg
-    return true;
+  InstructionListType createLoadImmediate(const MCPhysReg Dest,
+                                          uint64_t Imm) const override {
+    InstructionListType Insts;
+    Insts.emplace_back();
+    Insts.back().setOpcode(X86::MOV64ri32);
+    Insts.back().clear();
+    Insts.back().addOperand(MCOperand::createReg(Dest));
+    Insts.back().addOperand(MCOperand::createImm(Imm));
+    return Insts;
   }
 
   bool createIJmp32Frag(SmallVectorImpl<MCInst> &Insts,
@@ -2617,30 +2463,9 @@ public:
       }
     }
 
-    // Extract a symbol and an addend out of the fixup value expression.
-    //
-    // Only the following limited expression types are supported:
-    //   Symbol + Addend
-    //   Symbol
-    uint64_t Addend = 0;
-    MCSymbol *Symbol = nullptr;
-    const MCExpr *ValueExpr = Fixup.getValue();
-    if (ValueExpr->getKind() == MCExpr::Binary) {
-      const auto *BinaryExpr = cast<MCBinaryExpr>(ValueExpr);
-      assert(BinaryExpr->getOpcode() == MCBinaryExpr::Add &&
-             "unexpected binary expression");
-      const MCExpr *LHS = BinaryExpr->getLHS();
-      assert(LHS->getKind() == MCExpr::SymbolRef && "unexpected LHS");
-      Symbol = const_cast<MCSymbol *>(this->getTargetSymbol(LHS));
-      const MCExpr *RHS = BinaryExpr->getRHS();
-      assert(RHS->getKind() == MCExpr::Constant && "unexpected RHS");
-      Addend = cast<MCConstantExpr>(RHS)->getValue();
-    } else {
-      assert(ValueExpr->getKind() == MCExpr::SymbolRef && "unexpected value");
-      Symbol = const_cast<MCSymbol *>(this->getTargetSymbol(ValueExpr));
-    }
+    auto [RelSymbol, RelAddend] = extractFixupExpr(Fixup);
 
-    return Relocation({RelOffset, Symbol, RelType, Addend, 0});
+    return Relocation({RelOffset, RelSymbol, RelType, RelAddend, 0});
   }
 
   bool replaceImmWithSymbolRef(MCInst &Inst, const MCSymbol *Symbol,
@@ -2703,8 +2528,8 @@ public:
     default: {
       switch (getPushSize(Inst)) {
 
-      case 2: I = {2, false, {{CHECK8, X86::PUSH16i8}, {NOCHECK, X86::PUSHi16}}}; break;
-      case 4: I = {4, false, {{CHECK8, X86::PUSH32i8}, {NOCHECK, X86::PUSHi32}}}; break;
+      case 2: I = {2, false, {{CHECK8, X86::PUSH16i8}, {NOCHECK, X86::PUSH16i}}}; break;
+      case 4: I = {4, false, {{CHECK8, X86::PUSH32i8}, {NOCHECK, X86::PUSH32i}}}; break;
       case 8: I = {8, false, {{CHECK8, X86::PUSH64i8},
                               {CHECK32, X86::PUSH64i32},
                               {NOCHECK, Inst.getOpcode()}}}; break;
@@ -2999,6 +2824,21 @@ public:
 
   MCPhysReg getX86R11() const override { return X86::R11; }
 
+  unsigned getShortBranchOpcode(unsigned Opcode) const override {
+    switch (Opcode) {
+    default:
+      return Opcode;
+    case X86::JMP_2:
+      return X86::JMP_1;
+    case X86::JMP_4:
+      return X86::JMP_1;
+    case X86::JCC_2:
+      return X86::JCC_1;
+    case X86::JCC_4:
+      return X86::JCC_1;
+    }
+  }
+
   MCPhysReg getIntArgRegister(unsigned ArgNo) const override {
     // FIXME: this should depend on the calling convention.
     switch (ArgNo) {
@@ -3185,11 +3025,12 @@ public:
     Inst.clear();
   }
 
-  void createInstrIncMemory(InstructionListType &Instrs, const MCSymbol *Target,
-                            MCContext *Ctx, bool IsLeaf) const override {
+  InstructionListType
+  createInstrIncMemory(const MCSymbol *Target, MCContext *Ctx, bool IsLeaf,
+                       unsigned CodePointerSize) const override {
+    InstructionListType Instrs(IsLeaf ? 13 : 11);
     unsigned int I = 0;
 
-    Instrs.resize(IsLeaf ? 13 : 11);
     // Don't clobber application red zone (ABI dependent)
     if (IsLeaf)
       createStackPointerIncrement(Instrs[I++], 128,
@@ -3206,7 +3047,10 @@ public:
     createClearRegWithNoEFlagsUpdate(Instrs[I++], X86::RAX, 8);
     createX86SaveOVFlagToRegister(Instrs[I++], X86::AL);
     // LOCK INC
-    createIncMemory(Instrs[I++], Target, Ctx);
+    InstructionListType IncMem = createIncMemory(Target, Ctx);
+    assert(IncMem.size() == 1 && "Invalid IncMem size");
+    std::copy(IncMem.begin(), IncMem.end(), Instrs.begin() + I);
+    I += IncMem.size();
     // POPF
     createAddRegImm(Instrs[I++], X86::AL, 127, 1);
     createPopRegister(Instrs[I++], X86::RAX, 8);
@@ -3216,6 +3060,7 @@ public:
     if (IsLeaf)
       createStackPointerDecrement(Instrs[I], 128,
                                   /*NoFlagsClobber=*/true);
+    return Instrs;
   }
 
   void createSwap(MCInst &Inst, MCPhysReg Source, MCPhysReg MemBaseReg,
@@ -3240,25 +3085,16 @@ public:
     Inst.addOperand(MCOperand::createReg(X86::NoRegister)); // AddrSegmentReg
   }
 
-  InstructionListType createInstrumentedIndirectCall(const MCInst &CallInst,
-                                                     bool TailCall,
+  InstructionListType createInstrumentedIndirectCall(MCInst &&CallInst,
                                                      MCSymbol *HandlerFuncAddr,
                                                      int CallSiteID,
                                                      MCContext *Ctx) override {
     // Check if the target address expression used in the original indirect call
     // uses the stack pointer, which we are going to clobber.
     static BitVector SPAliases(getAliases(X86::RSP));
-    bool UsesSP = false;
-    // Skip defs.
-    for (unsigned I = Info->get(CallInst.getOpcode()).getNumDefs(),
-                  E = MCPlus::getNumPrimeOperands(CallInst);
-         I != E; ++I) {
-      const MCOperand &Operand = CallInst.getOperand(I);
-      if (Operand.isReg() && SPAliases[Operand.getReg()]) {
-        UsesSP = true;
-        break;
-      }
-    }
+    bool UsesSP = any_of(useOperands(CallInst), [&](const MCOperand &Op) {
+      return Op.isReg() && SPAliases[Op.getReg()];
+    });
 
     InstructionListType Insts;
     MCPhysReg TempReg = getIntArgRegister(0);
@@ -3288,18 +3124,17 @@ public:
     }
     Insts.emplace_back();
     createPushRegister(Insts.back(), TempReg, 8);
-    Insts.emplace_back();
-    createLoadImmediate(Insts.back(), TempReg, CallSiteID);
+    InstructionListType LoadImm = createLoadImmediate(TempReg, CallSiteID);
+    Insts.insert(Insts.end(), LoadImm.begin(), LoadImm.end());
     Insts.emplace_back();
     createPushRegister(Insts.back(), TempReg, 8);
-    Insts.emplace_back();
-    createDirectCall(Insts.back(), HandlerFuncAddr, Ctx,
-                     /*TailCall=*/TailCall);
-    // Carry over metadata
-    for (int I = MCPlus::getNumPrimeOperands(CallInst),
-             E = CallInst.getNumOperands();
-         I != E; ++I)
-      Insts.back().addOperand(CallInst.getOperand(I));
+
+    MCInst &NewCallInst = Insts.emplace_back();
+    createDirectCall(NewCallInst, HandlerFuncAddr, Ctx, isTailCall(CallInst));
+
+    // Carry over metadata including tail call marker if present.
+    stripAnnotations(NewCallInst);
+    moveAnnotations(std::move(CallInst), NewCallInst);
 
     return Insts;
   }
@@ -3400,7 +3235,7 @@ public:
   }
 
   InstructionListType createSymbolTrampoline(const MCSymbol *TgtSym,
-                                             MCContext *Ctx) const override {
+                                             MCContext *Ctx) override {
     InstructionListType Insts(1);
     createUncondBranch(Insts[0], TgtSym, Ctx);
     return Insts;
@@ -3742,8 +3577,9 @@ namespace bolt {
 
 MCPlusBuilder *createX86MCPlusBuilder(const MCInstrAnalysis *Analysis,
                                       const MCInstrInfo *Info,
-                                      const MCRegisterInfo *RegInfo) {
-  return new X86MCPlusBuilder(Analysis, Info, RegInfo);
+                                      const MCRegisterInfo *RegInfo,
+                                      const MCSubtargetInfo *STI) {
+  return new X86MCPlusBuilder(Analysis, Info, RegInfo, STI);
 }
 
 } // namespace bolt

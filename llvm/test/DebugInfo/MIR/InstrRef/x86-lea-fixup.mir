@@ -49,9 +49,9 @@ body:             |
   
     renamable $edi = KILL $edi, implicit-def $rdi
     renamable $ecx = nsw LEA64_32r renamable $rdi, 8, renamable $rdi, 42, $noreg, debug-instr-number 1
-    ; HASWELL: ADD32ri8 {{.*}} debug-instr-number 3
+    ; HASWELL: ADD32ri {{.*}} debug-instr-number 3
     renamable $eax = nsw LEA64_32r killed renamable $rdi, 4, renamable $rdi, 2, $noreg, debug-instr-number 2
-    ; HASWELL: ADD32ri8 {{.*}} debug-instr-number 4
+    ; HASWELL: ADD32ri {{.*}} debug-instr-number 4
     renamable $eax = nsw IMUL32rr killed renamable $eax, killed renamable $ecx, implicit-def dead $eflags
     RET64 $eax
 

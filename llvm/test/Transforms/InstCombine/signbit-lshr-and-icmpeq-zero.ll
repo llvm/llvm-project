@@ -200,8 +200,8 @@ define i1 @scalar_i32_signbit_lshr_and_eq_X_is_constant1(i32 %y) {
 
 define i1 @scalar_i32_signbit_lshr_and_eq_X_is_constant2(i32 %y) {
 ; CHECK-LABEL: @scalar_i32_signbit_lshr_and_eq_X_is_constant2(
-; CHECK-NEXT:    [[R:%.*]] = icmp ne i32 [[Y:%.*]], 31
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i32 [[Y:%.*]], 31
+; CHECK-NEXT:    ret i1 [[TMP1]]
 ;
   %lshr = lshr i32 2147483648, %y
   %and = and i32 %lshr, 1

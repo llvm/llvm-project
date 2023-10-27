@@ -37,7 +37,8 @@ class AddressSanitizerPass : public PassInfoMixin<AddressSanitizerPass> {
 public:
   AddressSanitizerPass(const AddressSanitizerOptions &Options,
                        bool UseGlobalGC = true, bool UseOdrIndicator = true,
-                       AsanDtorKind DestructorKind = AsanDtorKind::Global);
+                       AsanDtorKind DestructorKind = AsanDtorKind::Global,
+                       AsanCtorKind ConstructorKind = AsanCtorKind::Global);
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
   void printPipeline(raw_ostream &OS,
                      function_ref<StringRef(StringRef)> MapClassName2PassName);
@@ -48,6 +49,7 @@ private:
   bool UseGlobalGC;
   bool UseOdrIndicator;
   AsanDtorKind DestructorKind;
+  AsanCtorKind ConstructorKind;
 };
 
 struct ASanAccessInfo {

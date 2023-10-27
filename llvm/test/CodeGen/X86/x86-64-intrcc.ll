@@ -174,5 +174,22 @@ entry:
   ret void
 }
 
+define x86_intrcc void @test_stack_allocation(ptr byval(%struct.interrupt_frame) %frame, i64 %err) #1 {
+  ; CHECK-LABEL: test_stack_allocation:
+  ; CHECK: # %bb.0: # %entry
+
+  ;; Ensure that STACKALLOC_W_PROBING isn't emitted.
+  ; CHECK-NOT: # fixed size alloca with probing
+  ;; Ensure that stack space is allocated.
+  ; CHECK: subq    $280, %rsp
+entry:
+  %some_allocation = alloca i64
+  ;; Call a un-inlineable function to ensure the allocation isn't put in the red zone.
+  call void @external_function(ptr %some_allocation)
+  ret void
+}
+
+declare void @external_function(ptr)
 
 attributes #0 = { nounwind "frame-pointer"="all" }
+attributes #1 = { nounwind "probe-stack"="inline-asm" }

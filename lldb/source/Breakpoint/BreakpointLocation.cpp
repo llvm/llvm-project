@@ -204,7 +204,7 @@ bool BreakpointLocation::IsCallbackSynchronous() {
 void BreakpointLocation::SetCallback(BreakpointHitCallback callback,
                                      void *baton, bool is_synchronous) {
   // The default "Baton" class will keep a copy of "baton" and won't free or
-  // delete it when it goes goes out of scope.
+  // delete it when it goes out of scope.
   GetLocationOptions().SetCallback(
       callback, std::make_shared<UntypedBaton>(baton), is_synchronous);
   SendBreakpointLocationChangedEvent(eBreakpointEventTypeCommandChanged);
@@ -290,7 +290,7 @@ bool BreakpointLocation::ConditionSaysStop(ExecutionContext &exe_ctx,
   options.SetUnwindOnError(true);
   options.SetIgnoreBreakpoints(true);
   options.SetTryAllThreads(true);
-  options.SetResultIsInternal(
+  options.SetSuppressPersistentResult(
       true); // Don't generate a user variable for condition expressions.
 
   Status expr_error;

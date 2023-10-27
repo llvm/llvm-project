@@ -7,8 +7,8 @@
 // RUN: %llvm_xray convert --symbolize --output-format=yaml -instr_map=%t.exe %t/*
 // RUN: %llvm_xray convert --symbolize --output-format=yaml -instr_map=%t.exe %t/* | \
 // RUN:   FileCheck %s --check-prefix TRACE
-// FIXME: Make llvm-xray work on non-x86_64 as well.
-// REQUIRES: x86_64-target-arch
+
+// REQUIRES: target={{(aarch64|loongarch64|x86_64)-.*}}
 // REQUIRES: built-in-llvm-tree
 
 #include "xray/xray_log_interface.h"

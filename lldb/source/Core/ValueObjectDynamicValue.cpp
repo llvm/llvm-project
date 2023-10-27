@@ -149,7 +149,18 @@ bool ValueObjectDynamicValue::UpdateValue() {
   if (known_type != lldb::eLanguageTypeUnknown &&
       known_type != lldb::eLanguageTypeC) {
     runtime = process->GetLanguageRuntime(known_type);
-    if (runtime)
+    if (auto *preferred_runtime =
+            runtime->GetPreferredLanguageRuntime(*m_parent)) {
+      // Try the preferred runtime first.
+      found_dynamic_type = preferred_runtime->GetDynamicTypeAndAddress(
+          *m_parent, m_use_dynamic, class_type_or_name, dynamic_address,
+          value_type);
+      if (found_dynamic_type)
+        // Set the operative `runtime` for later use in this function.
+        runtime = preferred_runtime;
+    }
+    if (!found_dynamic_type)
+      // Fallback to the runtime for `known_type`.
       found_dynamic_type = runtime->GetDynamicTypeAndAddress(
           *m_parent, m_use_dynamic, class_type_or_name, dynamic_address,
           value_type);
@@ -187,17 +198,19 @@ bool ValueObjectDynamicValue::UpdateValue() {
     m_type_impl.Clear();
   }
 
-  // If we don't have a dynamic type, then make ourselves just a echo of our
-  // parent. Or we could return false, and make ourselves an echo of our
-  // parent?
+  // If we don't have a dynamic type, set ourselves to be invalid and return
+  // false.  We used to try to produce a dynamic ValueObject that behaved "like"
+  // its parent, but that failed for ValueObjectConstResult, which is too 
+  // complex a beast to try to emulate.  If we return an invalid ValueObject,
+  // clients will end up getting the static value instead, which behaves
+  // correctly.
   if (!found_dynamic_type) {
     if (m_dynamic_type_info)
       SetValueDidChange(true);
     ClearDynamicTypeInformation();
     m_dynamic_type_info.Clear();
-    m_value = m_parent->GetValue();
-    m_error = m_value.GetValueAsData(&exe_ctx, m_data, GetModule().get());
-    return m_error.Success();
+    m_error.SetErrorString("no dynamic type found");
+    return false;
   }
 
   Value old_value(m_value);

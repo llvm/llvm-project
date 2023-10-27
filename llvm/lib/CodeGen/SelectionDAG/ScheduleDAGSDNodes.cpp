@@ -464,7 +464,7 @@ void ScheduleDAGSDNodes::AddSchedEdges() {
     // Find all predecessors and successors of the group.
     for (SDNode *N = SU.getNode(); N; N = N->getGluedNode()) {
       if (N->isMachineOpcode() &&
-          TII->get(N->getMachineOpcode()).getImplicitDefs()) {
+          !TII->get(N->getMachineOpcode()).implicit_defs().empty()) {
         SU.hasPhysRegClobbers = true;
         unsigned NumUsed = InstrEmitter::CountResults(N);
         while (NumUsed != 0 && !N->hasAnyUseOfValue(NumUsed - 1))
@@ -667,7 +667,7 @@ void ScheduleDAGSDNodes::computeOperandLatency(SDNode *Def, SDNode *Use,
       // This copy is a liveout value. It is likely coalesced, so reduce the
       // latency so not to penalize the def.
       // FIXME: need target specific adjustment here?
-      Latency = (Latency > 1) ? Latency - 1 : 1;
+      Latency = Latency - 1;
   }
   if (Latency >= 0)
     dep.setLatency(Latency);

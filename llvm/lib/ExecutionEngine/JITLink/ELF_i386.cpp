@@ -30,7 +30,8 @@ Error buildTables_ELF_i386(LinkGraph &G) {
   LLVM_DEBUG(dbgs() << "Visiting edges in graph:\n");
 
   i386::GOTTableManager GOT;
-  visitExistingEdges(G, GOT);
+  i386::PLTTableManager PLT(GOT);
+  visitExistingEdges(G, GOT, PLT);
   return Error::success();
 }
 } // namespace
@@ -130,6 +131,8 @@ private:
       return EdgeKind_i386::Delta32;
     case ELF::R_386_GOTOFF:
       return EdgeKind_i386::Delta32FromGOT;
+    case ELF::R_386_PLT32:
+      return EdgeKind_i386::BranchPCRel32;
     }
 
     return make_error<JITLinkError>("Unsupported i386 relocation:" +
@@ -207,9 +210,9 @@ private:
 
 public:
   ELFLinkGraphBuilder_i386(StringRef FileName, const object::ELFFile<ELFT> &Obj,
-                           const Triple T)
-      : ELFLinkGraphBuilder<ELFT>(Obj, std::move(T), FileName,
-                                  i386::getEdgeKindName) {}
+                           Triple TT, SubtargetFeatures Features)
+      : ELFLinkGraphBuilder<ELFT>(Obj, std::move(TT), std::move(Features),
+                                  FileName, i386::getEdgeKindName) {}
 };
 
 Expected<std::unique_ptr<LinkGraph>>
@@ -223,13 +226,17 @@ createLinkGraphFromELFObject_i386(MemoryBufferRef ObjectBuffer) {
   if (!ELFObj)
     return ELFObj.takeError();
 
+  auto Features = (*ELFObj)->getFeatures();
+  if (!Features)
+    return Features.takeError();
+
   assert((*ELFObj)->getArch() == Triple::x86 &&
          "Only i386 (little endian) is supported for now");
 
   auto &ELFObjFile = cast<object::ELFObjectFile<object::ELF32LE>>(**ELFObj);
-  return ELFLinkGraphBuilder_i386<object::ELF32LE>((*ELFObj)->getFileName(),
-                                                   ELFObjFile.getELFFile(),
-                                                   (*ELFObj)->makeTriple())
+  return ELFLinkGraphBuilder_i386<object::ELF32LE>(
+             (*ELFObj)->getFileName(), ELFObjFile.getELFFile(),
+             (*ELFObj)->makeTriple(), std::move(*Features))
       .buildGraph();
 }
 
@@ -243,8 +250,11 @@ void link_ELF_i386(std::unique_ptr<LinkGraph> G,
     else
       Config.PrePrunePasses.push_back(markAllSymbolsLive);
 
-    // Add an in-place GOT build pass.
+    // Add an in-place GOT and PLT build pass.
     Config.PostPrunePasses.push_back(buildTables_ELF_i386);
+
+    // Add GOT/Stubs optimizer pass.
+    Config.PreFixupPasses.push_back(i386::optimizeGOTAndStubAccesses);
   }
   if (auto Err = Ctx->modifyPassConfig(*G, Config))
     return Ctx->notifyFailed(std::move(Err));

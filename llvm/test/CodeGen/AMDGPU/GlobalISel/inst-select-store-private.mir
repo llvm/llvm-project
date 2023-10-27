@@ -750,7 +750,10 @@ body: |
     ; GFX11-NEXT: {{  $}}
     ; GFX11-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX11-NEXT: [[V_LSHRREV_B32_e64_:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_e64 5, $sgpr32, implicit $exec
-    ; GFX11-NEXT: SCRATCH_STORE_DWORD [[COPY]], [[V_LSHRREV_B32_e64_]], 4095, 0, implicit $exec, implicit $flat_scr :: (store (s32), addrspace 5)
+    ; GFX11-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 4095
+    ; GFX11-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_]]
+    ; GFX11-NEXT: [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[V_LSHRREV_B32_e64_]], [[COPY1]], 0, implicit $exec
+    ; GFX11-NEXT: SCRATCH_STORE_DWORD [[COPY]], [[V_ADD_U32_e64_]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32), addrspace 5)
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(p5) = G_AMDGPU_WAVE_ADDRESS $sgpr32
     %2:sgpr(s32) = G_CONSTANT i32 4095
@@ -778,22 +781,22 @@ body: |
     ; GFX6: liveins: $vgpr0, $vgpr1
     ; GFX6-NEXT: {{  $}}
     ; GFX6-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX6-NEXT: [[V_LSHRREV_B32_e64_:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_e64 6, $sgpr32, implicit $exec
-    ; GFX6-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 4095, implicit $exec
-    ; GFX6-NEXT: %3:vgpr_32, dead %4:sreg_64_xexec = V_ADD_CO_U32_e64 [[V_LSHRREV_B32_e64_]], [[V_MOV_B32_e32_]], 0, implicit $exec
-    ; GFX6-NEXT: BUFFER_STORE_DWORD_OFFEN [[COPY]], %3, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec :: (store (s32), addrspace 5)
+    ; GFX6-NEXT: BUFFER_STORE_DWORD_OFFSET [[COPY]], $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 4095, 0, 0, implicit $exec :: (store (s32), addrspace 5)
+    ;
     ; GFX9-LABEL: name: function_store_private_s32_to_4_wave_address_offset_4095
     ; GFX9: liveins: $vgpr0, $vgpr1
     ; GFX9-NEXT: {{  $}}
     ; GFX9-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX9-NEXT: [[V_LSHRREV_B32_e64_:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_e64 6, $sgpr32, implicit $exec
-    ; GFX9-NEXT: BUFFER_STORE_DWORD_OFFEN [[COPY]], [[V_LSHRREV_B32_e64_]], $sgpr0_sgpr1_sgpr2_sgpr3, 0, 4095, 0, 0, implicit $exec :: (store (s32), addrspace 5)
+    ; GFX9-NEXT: BUFFER_STORE_DWORD_OFFSET [[COPY]], $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 4095, 0, 0, implicit $exec :: (store (s32), addrspace 5)
+    ;
     ; GFX11-LABEL: name: function_store_private_s32_to_4_wave_address_offset_4095
     ; GFX11: liveins: $vgpr0, $vgpr1
     ; GFX11-NEXT: {{  $}}
     ; GFX11-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX11-NEXT: [[V_LSHRREV_B32_e64_:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_e64 5, $sgpr32, implicit $exec
-    ; GFX11-NEXT: SCRATCH_STORE_DWORD [[COPY]], [[V_LSHRREV_B32_e64_]], 4095, 0, implicit $exec, implicit $flat_scr :: (store (s32), addrspace 5)
+    ; GFX11-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 4095, implicit $exec
+    ; GFX11-NEXT: [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[V_LSHRREV_B32_e64_]], [[V_MOV_B32_e32_]], 0, implicit $exec
+    ; GFX11-NEXT: SCRATCH_STORE_DWORD [[COPY]], [[V_ADD_U32_e64_]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32), addrspace 5)
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(p5) = G_AMDGPU_WAVE_ADDRESS $sgpr32
     %2:vgpr(s32) = G_CONSTANT i32 4095
@@ -823,8 +826,9 @@ body: |
     ; GFX6-NEXT: [[V_LSHRREV_B32_e64_:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_e64 6, $sgpr32, implicit $exec
     ; GFX6-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 4096
     ; GFX6-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_]]
-    ; GFX6-NEXT: %4:vgpr_32, dead %5:sreg_64_xexec = V_ADD_CO_U32_e64 [[V_LSHRREV_B32_e64_]], [[COPY1]], 0, implicit $exec
-    ; GFX6-NEXT: BUFFER_STORE_DWORD_OFFEN [[COPY]], %4, $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec :: (store (s32), addrspace 5)
+    ; GFX6-NEXT: [[V_ADD_CO_U32_e64_:%[0-9]+]]:vgpr_32, dead [[V_ADD_CO_U32_e64_1:%[0-9]+]]:sreg_64_xexec = V_ADD_CO_U32_e64 [[V_LSHRREV_B32_e64_]], [[COPY1]], 0, implicit $exec
+    ; GFX6-NEXT: BUFFER_STORE_DWORD_OFFEN [[COPY]], [[V_ADD_CO_U32_e64_]], $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec :: (store (s32), addrspace 5)
+    ;
     ; GFX9-LABEL: name: function_store_private_s32_to_4_wave_address_offset_copy_constant_4096
     ; GFX9: liveins: $vgpr0, $vgpr1
     ; GFX9-NEXT: {{  $}}

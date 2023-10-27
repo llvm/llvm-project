@@ -10,9 +10,16 @@ from itertools import chain
 import os
 import time
 
-from dex.debugger.DebuggerControllers.DebuggerControllerBase import DebuggerControllerBase
-from dex.debugger.DebuggerControllers.ControllerHelpers import in_source_file, update_step_watches
+from dex.debugger.DebuggerControllers.DebuggerControllerBase import (
+    DebuggerControllerBase,
+)
+from dex.debugger.DebuggerControllers.ControllerHelpers import (
+    in_source_file,
+    update_step_watches,
+)
 from dex.utils.Exceptions import DebuggerException, LoadDebuggerException
+from dex.utils.Timeout import Timeout
+
 
 class EarlyExitCondition(object):
     def __init__(self, on_line, hit_count, expression, values):
@@ -20,6 +27,7 @@ class EarlyExitCondition(object):
         self.hit_count = hit_count
         self.expression = expression
         self.values = values
+
 
 class DefaultController(DebuggerControllerBase):
     def __init__(self, context, step_collection):
@@ -30,24 +38,26 @@ class DefaultController(DebuggerControllerBase):
 
     def _break_point_all_lines(self):
         for s in self.context.options.source_files:
-            with open(s, 'r') as fp:
+            with open(s, "r") as fp:
                 num_lines = len(fp.readlines())
             for line in range(1, num_lines + 1):
                 try:
-                   self.debugger.add_breakpoint(s, line)
+                    self.debugger.add_breakpoint(s, line)
                 except DebuggerException:
-                   raise LoadDebuggerException(DebuggerException.msg)
+                    raise LoadDebuggerException(DebuggerException.msg)
 
     def _get_early_exit_conditions(self):
         commands = self.step_collection.commands
         early_exit_conditions = []
-        if 'DexFinishTest' in commands:
-            finish_commands = commands['DexFinishTest']
+        if "DexFinishTest" in commands:
+            finish_commands = commands["DexFinishTest"]
             for fc in finish_commands:
-                condition = EarlyExitCondition(on_line=fc.on_line,
-                                               hit_count=fc.hit_count,
-                                               expression=fc.expression,
-                                               values=fc.values)
+                condition = EarlyExitCondition(
+                    on_line=fc.on_line,
+                    hit_count=fc.hit_count,
+                    expression=fc.expression,
+                    values=fc.values,
+                )
                 early_exit_conditions.append(condition)
         return early_exit_conditions
 
@@ -60,8 +70,10 @@ class DefaultController(DebuggerControllerBase):
                     # Conditional Controller, check equality in the debugger
                     # rather than in python (as the two can differ).
                     for value in condition.values:
-                        expr_val = self.debugger.evaluate_expression(f'({condition.expression}) == ({value})')
-                        if expr_val.value == 'true':
+                        expr_val = self.debugger.evaluate_expression(
+                            f"({condition.expression}) == ({value})"
+                        )
+                        if expr_val.value == "true":
                             exit_condition_hit = True
                             break
                 if exit_condition_hit:
@@ -71,31 +83,48 @@ class DefaultController(DebuggerControllerBase):
                         condition.hit_count -= 1
         return False
 
-
     def _run_debugger_custom(self, cmdline):
         self.step_collection.debugger = self.debugger.debugger_info
         self._break_point_all_lines()
         self.debugger.launch(cmdline)
-
         for command_obj in chain.from_iterable(self.step_collection.commands.values()):
             self.watches.update(command_obj.get_watches())
         early_exit_conditions = self._get_early_exit_conditions()
-
+        timed_out = False
+        total_timeout = Timeout(self.context.options.timeout_total)
         max_steps = self.context.options.max_steps
         for _ in range(max_steps):
-            while self.debugger.is_running:
-                pass
+            breakpoint_timeout = Timeout(self.context.options.timeout_breakpoint)
+            while self.debugger.is_running and not timed_out:
+                # Check to see whether we've timed out while we're waiting.
+                if total_timeout.timed_out():
+                    self.context.logger.error(
+                        "Debugger session has been "
+                        f"running for {total_timeout.elapsed}s, timeout reached!"
+                    )
+                    timed_out = True
+                if breakpoint_timeout.timed_out():
+                    self.context.logger.error(
+                        f"Debugger session has not "
+                        f"hit a breakpoint for {breakpoint_timeout.elapsed}s, timeout "
+                        "reached!"
+                    )
+                    timed_out = True
 
-            if self.debugger.is_finished:
+            if timed_out or self.debugger.is_finished:
                 break
 
             self.step_index += 1
             step_info = self.debugger.get_step_info(self.watches, self.step_index)
 
             if step_info.current_frame:
-                update_step_watches(step_info, self.watches, self.step_collection.commands)
+                update_step_watches(
+                    step_info, self.watches, self.step_collection.commands
+                )
                 self.step_collection.new_step(self.context, step_info)
-                if self._should_exit(early_exit_conditions, step_info.current_frame.loc.lineno):
+                if self._should_exit(
+                    early_exit_conditions, step_info.current_frame.loc.lineno
+                ):
                     break
 
             if in_source_file(self.source_files, step_info):
@@ -106,4 +135,5 @@ class DefaultController(DebuggerControllerBase):
             time.sleep(self.context.options.pause_between_steps)
         else:
             raise DebuggerException(
-                'maximum number of steps reached ({})'.format(max_steps))
+                "maximum number of steps reached ({})".format(max_steps)
+            )

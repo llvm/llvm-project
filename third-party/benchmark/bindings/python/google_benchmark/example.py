@@ -38,6 +38,7 @@ def sum_million(state):
     while state:
         sum(range(1_000_000))
 
+
 @benchmark.register
 def pause_timing(state):
     """Pause timing every iteration."""

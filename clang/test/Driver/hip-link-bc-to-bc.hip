@@ -6,15 +6,15 @@
 // RUN: touch %t/bundle2.bc
 
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu --offload-arch=gfx906 --hip-link \
-// RUN:   -emit-llvm -fgpu-rdc --cuda-device-only \
+// RUN:   -nogpulib -nogpuinc -emit-llvm -fgpu-rdc --cuda-device-only \
 // RUN:   %t/bundle1.bc %t/bundle2.bc \
 // RUN:   2>&1 | FileCheck -check-prefix=BITCODE %s
 
 // BITCODE: "{{.*}}clang-offload-bundler" "-type=bc" "-targets=host-x86_64-unknown-linux-gnu,hip-amdgcn-amd-amdhsa-gfx906" "-input={{.*}}bundle1.bc" "-output=[[B1HOST:.*\.bc]]" "-output=[[B1DEV1:.*\.bc]]" "-unbundle" "-allow-missing-bundles"
-// BITCODE: "{{.*}}clang{{.*}}" "-o" "[[B1DEV2:.*bundle1-gfx906.bc]]" "-x" "ir" "[[B1DEV1]]"
+// BITCODE: "{{.*}}clang{{.*}}" "-o" "[[B1DEV2:.*bundle1-gfx906-.*\.bc]]" "-x" "ir" "[[B1DEV1]]"
 
 // BITCODE: "{{.*}}clang-offload-bundler" "-type=bc" "-targets=host-x86_64-unknown-linux-gnu,hip-amdgcn-amd-amdhsa-gfx906" "-input={{.*}}bundle2.bc" "-output=[[B2HOST:.*\.bc]]" "-output=[[B2DEV1:.*\.bc]]" "-unbundle" "-allow-missing-bundles"
-// BITCODE: "{{.*}}clang{{.*}}" "-o" "[[B2DEV2:.*bundle2-gfx906.bc]]" "-x" "ir" "[[B2DEV1]]"
+// BITCODE: "{{.*}}clang{{.*}}" "-o" "[[B2DEV2:.*bundle2-gfx906-.*\.bc]]" "-x" "ir" "[[B2DEV1]]"
 
 // BITCODE: "{{.*}}llvm-link" "-o" "bundle1-hip-amdgcn-amd-amdhsa-gfx906.bc" "[[B1DEV2]]" "[[B2DEV2]]"
 
@@ -23,7 +23,7 @@
 // RUN: touch %t/bundle.bc
 
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu --offload-arch=gfx906 --hip-link \
-// RUN:   -emit-llvm -fgpu-rdc --cuda-device-only \
+// RUN:   -nogpulib -nogpuinc -emit-llvm -fgpu-rdc --cuda-device-only \
 // RUN:   %t/bundle.bc -L%t -lhipbundle \
 // RUN:   2>&1 | FileCheck -check-prefix=ARCHIVE %s
 

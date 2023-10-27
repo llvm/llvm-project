@@ -11,9 +11,7 @@
 
 #include "../ClangTidyCheck.h"
 
-namespace clang {
-namespace tidy {
-namespace modernize {
+namespace clang::tidy::modernize {
 
 /// This check finds macro expansions of ``DISALLOW_COPY_AND_ASSIGN(Type)`` and
 /// replaces them with a deleted copy constructor and a deleted assignment
@@ -55,8 +53,6 @@ private:
   const StringRef MacroName;
 };
 
-} // namespace modernize
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::modernize
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_REPLACEDISALLOWCOPYANDASSIGNMACROCHECK_H

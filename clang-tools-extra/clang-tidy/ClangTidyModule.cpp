@@ -46,8 +46,6 @@ ClangTidyCheckFactories::createChecksForLanguage(
   return Checks;
 }
 
-ClangTidyOptions ClangTidyModule::getModuleOptions() {
-  return ClangTidyOptions();
-}
+ClangTidyOptions ClangTidyModule::getModuleOptions() { return {}; }
 
 } // namespace clang::tidy

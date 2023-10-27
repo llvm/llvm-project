@@ -3,7 +3,7 @@
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/csspgo-use-preinliner.prof -pass-remarks=inline -sample-profile-prioritized-inline -profile-sample-accurate -sample-profile-use-preinliner=0 -S 2>&1 | FileCheck %s --check-prefix=DEFAULT
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/csspgo-use-preinliner.prof -pass-remarks=inline -sample-profile-prioritized-inline -profile-sample-accurate -sample-profile-use-preinliner=1 -S 2>&1 | FileCheck %s --check-prefix=PREINLINE
 
-; RUN: llvm-profdata merge --sample --text --gen-cs-nested-profile -generate-merged-base-profiles=0 %S/Inputs/csspgo-use-preinliner.prof -o %t.prof
+; RUN: llvm-profdata merge --sample --text --convert-sample-profile-layout=nest  -generate-merged-base-profiles=0 %S/Inputs/csspgo-use-preinliner.prof -o %t.prof
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%t.prof -pass-remarks=inline -sample-profile-prioritized-inline -profile-sample-accurate -sample-profile-use-preinliner=0 -S 2>&1 | FileCheck %s --check-prefix=DEFAULT
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%t.prof -pass-remarks=inline -sample-profile-prioritized-inline -profile-sample-accurate -sample-profile-use-preinliner=1 -S 2>&1 | FileCheck %s --check-prefix=PREINLINE
 

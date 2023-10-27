@@ -39,19 +39,19 @@ define i64 @two_chain_same_offset_succ_i32(ptr %p, i32 %offset, i32 %base1, i64 
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cmplwi r6, 0
 ; CHECK-NEXT:    cmpwi cr1, r6, 0
-; CHECK-NEXT:    stw r30, -8(r1) # 4-byte Folded Spill
-; CHECK-NEXT:    stw r31, -4(r1) # 4-byte Folded Spill
 ; CHECK-NEXT:    crandc 4*cr5+lt, 4*cr1+lt, eq
 ; CHECK-NEXT:    cmpwi cr1, r7, 0
-; CHECK-NEXT:    bc 12, 4*cr5+lt, L..BB0_5
+; CHECK-NEXT:    bc 12, 4*cr5+lt, L..BB0_6
 ; CHECK-NEXT:  # %bb.1: # %entry
 ; CHECK-NEXT:    crand 4*cr5+lt, eq, 4*cr1+eq
-; CHECK-NEXT:    bc 12, 4*cr5+lt, L..BB0_5
+; CHECK-NEXT:    bc 12, 4*cr5+lt, L..BB0_6
 ; CHECK-NEXT:  # %bb.2: # %for.body.preheader
 ; CHECK-NEXT:    slwi r8, r4, 1
 ; CHECK-NEXT:    li r10, 0
 ; CHECK-NEXT:    li r11, 0
+; CHECK-NEXT:    stw r30, -8(r1) # 4-byte Folded Spill
 ; CHECK-NEXT:    add r8, r4, r8
+; CHECK-NEXT:    stw r31, -4(r1) # 4-byte Folded Spill
 ; CHECK-NEXT:    add r9, r5, r8
 ; CHECK-NEXT:    add r5, r5, r4
 ; CHECK-NEXT:    add r8, r3, r5
@@ -83,14 +83,14 @@ define i64 @two_chain_same_offset_succ_i32(ptr %p, i32 %offset, i32 %base1, i64 
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    crand 4*cr5+lt, eq, 4*cr1+lt
 ; CHECK-NEXT:    bc 12, 4*cr5+lt, L..BB0_3
-; CHECK-NEXT:    b L..BB0_6
-; CHECK-NEXT:  L..BB0_5:
-; CHECK-NEXT:    li r3, 0
-; CHECK-NEXT:    li r5, 0
-; CHECK-NEXT:  L..BB0_6: # %for.cond.cleanup
+; CHECK-NEXT:  # %bb.5:
 ; CHECK-NEXT:    lwz r31, -4(r1) # 4-byte Folded Reload
 ; CHECK-NEXT:    lwz r30, -8(r1) # 4-byte Folded Reload
 ; CHECK-NEXT:    mr r4, r5
+; CHECK-NEXT:    blr
+; CHECK-NEXT:  L..BB0_6:
+; CHECK-NEXT:    li r3, 0
+; CHECK-NEXT:    li r4, 0
 ; CHECK-NEXT:    blr
 entry:
   %add = add nsw i32 %base1, %offset

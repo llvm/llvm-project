@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -std=c++2a -DEXPORT %s -verify
 // RUN: %clang_cc1 -std=c++2a -DEXPORT %s -emit-module-interface -o %t.pcm
-// RUN: %clang_cc1 -std=c++2a -UEXPORT %s -verify -fmodule-file=%t.pcm
+// RUN: %clang_cc1 -std=c++2a -UEXPORT %s -verify -fmodule-file=M=%t.pcm
 
 #ifdef EXPORT
 // expected-no-diagnostics

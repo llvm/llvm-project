@@ -3,10 +3,10 @@
 // RUN: %clang -x c   -fsanitize=alignment -fopenmp-simd -O2 %s -o %t && %run %t 2>&1 | FileCheck %s --implicit-check-not=" assumption " --implicit-check-not="note:" --implicit-check-not="runtime error:"
 // RUN: %clang -x c   -fsanitize=alignment -fopenmp-simd -O3 %s -o %t && %run %t 2>&1 | FileCheck %s --implicit-check-not=" assumption " --implicit-check-not="note:" --implicit-check-not="runtime error:"
 
-// RUN: %clang -x c++ -fsanitize=alignment -fopenmp-simd -O0 %s -o %t && %run %t 2>&1 | FileCheck %s --implicit-check-not=" assumption " --implicit-check-not="note:" --implicit-check-not="runtime error:"
-// RUN: %clang -x c++ -fsanitize=alignment -fopenmp-simd -O1 %s -o %t && %run %t 2>&1 | FileCheck %s --implicit-check-not=" assumption " --implicit-check-not="note:" --implicit-check-not="runtime error:"
-// RUN: %clang -x c++ -fsanitize=alignment -fopenmp-simd -O2 %s -o %t && %run %t 2>&1 | FileCheck %s --implicit-check-not=" assumption " --implicit-check-not="note:" --implicit-check-not="runtime error:"
-// RUN: %clang -x c++ -fsanitize=alignment -fopenmp-simd -O3 %s -o %t && %run %t 2>&1 | FileCheck %s --implicit-check-not=" assumption " --implicit-check-not="note:" --implicit-check-not="runtime error:"
+// RUN: %clangxx -x c++ -fsanitize=alignment -fopenmp-simd -O0 %s -o %t && %run %t 2>&1 | FileCheck %s --implicit-check-not=" assumption " --implicit-check-not="note:" --implicit-check-not="runtime error:"
+// RUN: %clangxx -x c++ -fsanitize=alignment -fopenmp-simd -O1 %s -o %t && %run %t 2>&1 | FileCheck %s --implicit-check-not=" assumption " --implicit-check-not="note:" --implicit-check-not="runtime error:"
+// RUN: %clangxx -x c++ -fsanitize=alignment -fopenmp-simd -O2 %s -o %t && %run %t 2>&1 | FileCheck %s --implicit-check-not=" assumption " --implicit-check-not="note:" --implicit-check-not="runtime error:"
+// RUN: %clangxx -x c++ -fsanitize=alignment -fopenmp-simd -O3 %s -o %t && %run %t 2>&1 | FileCheck %s --implicit-check-not=" assumption " --implicit-check-not="note:" --implicit-check-not="runtime error:"
 
 #include <stdlib.h>
 

@@ -8,6 +8,7 @@
 
 #include "lldb/Core/SourceLocationSpec.h"
 #include "lldb/Utility/StreamString.h"
+#include "llvm/ADT/StringExtras.h"
 #include <optional>
 
 using namespace lldb;

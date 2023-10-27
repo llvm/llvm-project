@@ -318,15 +318,15 @@ bool DOTGraphTraits<DOTFuncInfo *>::isNodeHidden(const BasicBlock *Node,
                                                  const DOTFuncInfo *CFGInfo) {
   if (HideColdPaths.getNumOccurrences() > 0)
     if (auto *BFI = CFGInfo->getBFI()) {
-      uint64_t NodeFreq = BFI->getBlockFreq(Node).getFrequency();
-      uint64_t EntryFreq = BFI->getEntryFreq();
+      BlockFrequency NodeFreq = BFI->getBlockFreq(Node);
+      BlockFrequency EntryFreq = BFI->getEntryFreq();
       // Hide blocks with relative frequency below HideColdPaths threshold.
-      if ((double)NodeFreq / EntryFreq < HideColdPaths)
+      if ((double)NodeFreq.getFrequency() / EntryFreq.getFrequency() <
+          HideColdPaths)
         return true;
     }
   if (HideUnreachablePaths || HideDeoptimizePaths) {
-    if (isOnDeoptOrUnreachablePath.find(Node) == 
-        isOnDeoptOrUnreachablePath.end())
+    if (!isOnDeoptOrUnreachablePath.contains(Node))
       computeDeoptOrUnreachablePaths(Node->getParent());
     return isOnDeoptOrUnreachablePath[Node];
   }

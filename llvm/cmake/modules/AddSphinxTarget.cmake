@@ -68,8 +68,7 @@ function (add_sphinx_target builder project)
   # but we should only add this path once
   get_property(_CURRENT_MAKE_CLEAN_FILES
                DIRECTORY PROPERTY ADDITIONAL_MAKE_CLEAN_FILES)
-  list(FIND _CURRENT_MAKE_CLEAN_FILES "${SPHINX_DOC_TREE_DIR}" _INDEX)
-  if (_INDEX EQUAL -1)
+  if (NOT "${SPHINX_DOC_TREE_DIR}" IN_LIST _CURRENT_MAKE_CLEAN_FILES)
     set_property(DIRECTORY APPEND PROPERTY
                  ADDITIONAL_MAKE_CLEAN_FILES
                  "${SPHINX_DOC_TREE_DIR}")

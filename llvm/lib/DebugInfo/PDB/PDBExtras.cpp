@@ -232,6 +232,8 @@ raw_ostream &llvm::pdb::operator<<(raw_ostream &OS, const PDB_Lang &Lang) {
     CASE_OUTPUT_ENUM_CLASS_NAME(PDB_Lang, D, OS)
     CASE_OUTPUT_ENUM_CLASS_NAME(PDB_Lang, Swift, OS)
     CASE_OUTPUT_ENUM_CLASS_NAME(PDB_Lang, Rust, OS)
+    CASE_OUTPUT_ENUM_CLASS_NAME(PDB_Lang, ObjC, OS)
+    CASE_OUTPUT_ENUM_CLASS_STR(PDB_Lang, ObjCpp, "ObjC++", OS)
   }
   return OS;
 }

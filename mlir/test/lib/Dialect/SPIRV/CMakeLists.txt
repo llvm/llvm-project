@@ -11,7 +11,7 @@ add_mlir_library(MLIRSPIRVTestPasses
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/IR
 
   LINK_LIBS PUBLIC
-  MLIRGPUOps
+  MLIRGPUDialect
   MLIRIR
   MLIRPass
   MLIRSPIRVDialect

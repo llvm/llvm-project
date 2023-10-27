@@ -59,7 +59,7 @@ start:
   %dummy1 = alloca [22 x i64], align 8
   %dummy2 = alloca [22 x i64], align 8
 
-  %data = alloca <2 x i64>, align 8
+  %data = alloca <2 x i64>, align 16
 
   br label %fake-loop
 

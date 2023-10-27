@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
+// UNSUPPORTED: !c++experimental
 
 // constexpr sentinel(sentinel<!Const> s);
 //             requires Const && convertible_to<sentinel_t<V>, sentinel_t<Base>>;

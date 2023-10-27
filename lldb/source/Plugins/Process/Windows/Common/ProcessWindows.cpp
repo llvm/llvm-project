@@ -835,15 +835,8 @@ void ProcessWindows::OnDebuggerError(const Status &error, uint32_t type) {
   }
 }
 
-Status ProcessWindows::GetWatchpointSupportInfo(uint32_t &num) {
-  num = RegisterContextWindows::GetNumHardwareBreakpointSlots();
-  return {};
-}
-
-Status ProcessWindows::GetWatchpointSupportInfo(uint32_t &num, bool &after) {
-  num = RegisterContextWindows::GetNumHardwareBreakpointSlots();
-  after = RegisterContextWindows::DoHardwareBreakpointsTriggerAfter();
-  return {};
+std::optional<uint32_t> ProcessWindows::GetWatchpointSlotCount() {
+  return RegisterContextWindows::GetNumHardwareBreakpointSlots();
 }
 
 Status ProcessWindows::EnableWatchpoint(Watchpoint *wp, bool notify) {

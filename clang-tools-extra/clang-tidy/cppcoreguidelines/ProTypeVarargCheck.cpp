@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ProTypeVarargCheck.h"
+#include "../utils/Matchers.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
@@ -23,36 +24,36 @@ const internal::VariadicDynCastAllOfMatcher<Stmt, VAArgExpr> VAArgExpr;
 
 static constexpr StringRef AllowedVariadics[] = {
     // clang-format off
-    "__builtin_isgreater", 
-    "__builtin_isgreaterequal", 
+    "__builtin_isgreater",
+    "__builtin_isgreaterequal",
     "__builtin_isless",
-    "__builtin_islessequal", 
-    "__builtin_islessgreater", 
+    "__builtin_islessequal",
+    "__builtin_islessgreater",
     "__builtin_isunordered",
-    "__builtin_fpclassify", 
-    "__builtin_isfinite", 
+    "__builtin_fpclassify",
+    "__builtin_isfinite",
     "__builtin_isinf",
-    "__builtin_isinf_sign", 
-    "__builtin_isnan", 
+    "__builtin_isinf_sign",
+    "__builtin_isnan",
     "__builtin_isnormal",
-    "__builtin_signbit", 
-    "__builtin_constant_p", 
+    "__builtin_signbit",
+    "__builtin_constant_p",
     "__builtin_classify_type",
     "__builtin_va_start",
-    "__builtin_assume_aligned", // Documented as variadic to support default 
+    "__builtin_assume_aligned", // Documented as variadic to support default
                                 // parameters.
     "__builtin_prefetch",       // Documented as variadic to support default
                                 // parameters.
     "__builtin_shufflevector",  // Documented as variadic but with a defined
                                 // number of args based on vector size.
-    "__builtin_convertvector", 
+    "__builtin_convertvector",
     "__builtin_call_with_static_chain",
-    "__builtin_annotation", 
-    "__builtin_add_overflow", 
+    "__builtin_annotation",
+    "__builtin_add_overflow",
     "__builtin_sub_overflow",
-    "__builtin_mul_overflow", 
+    "__builtin_mul_overflow",
     "__builtin_preserve_access_index",
-    "__builtin_nontemporal_store", 
+    "__builtin_nontemporal_store",
     "__builtin_nontemporal_load",
     "__builtin_ms_va_start",
     // clang-format on
@@ -133,7 +134,9 @@ void ProTypeVarargCheck::registerMatchers(MatchFinder *Finder) {
 
   Finder->addMatcher(
       callExpr(callee(functionDecl(isVariadic(),
-                                   unless(hasAnyName(AllowedVariadics)))))
+                                   unless(hasAnyName(AllowedVariadics)))),
+               unless(hasAncestor(expr(matchers::hasUnevaluatedContext()))),
+               unless(hasAncestor(typeLoc())))
           .bind("callvararg"),
       this);
 

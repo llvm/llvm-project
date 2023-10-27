@@ -15,7 +15,6 @@
 // LLDB Python header must be included first
 #include "lldb-python.h"
 
-#include "SWIGPythonBridge.h"
 #include "ScriptInterpreterPythonImpl.h"
 #include "ScriptedPythonInterface.h"
 #include <optional>
@@ -47,7 +46,7 @@ template <>
 Status ScriptedPythonInterface::ExtractValueFromPythonObject<Status>(
     python::PythonObject &p, Status &error) {
   if (lldb::SBError *sb_error = reinterpret_cast<lldb::SBError *>(
-          LLDBSWIGPython_CastPyObjectToSBError(p.get())))
+          python::LLDBSWIGPython_CastPyObjectToSBError(p.get())))
     return m_interpreter.GetStatusFromSBError(*sb_error);
   else
     error.SetErrorString("Couldn't cast lldb::SBError to lldb::Status.");
@@ -60,7 +59,7 @@ lldb::DataExtractorSP
 ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::DataExtractorSP>(
     python::PythonObject &p, Status &error) {
   lldb::SBData *sb_data = reinterpret_cast<lldb::SBData *>(
-      LLDBSWIGPython_CastPyObjectToSBData(p.get()));
+      python::LLDBSWIGPython_CastPyObjectToSBData(p.get()));
 
   if (!sb_data) {
     error.SetErrorString(
@@ -72,13 +71,59 @@ ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::DataExtractorSP>(
 }
 
 template <>
+lldb::BreakpointSP
+ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::BreakpointSP>(
+    python::PythonObject &p, Status &error) {
+  lldb::SBBreakpoint *sb_breakpoint = reinterpret_cast<lldb::SBBreakpoint *>(
+      python::LLDBSWIGPython_CastPyObjectToSBBreakpoint(p.get()));
+
+  if (!sb_breakpoint) {
+    error.SetErrorString(
+        "Couldn't cast lldb::SBBreakpoint to lldb::BreakpointSP.");
+    return nullptr;
+  }
+
+  return m_interpreter.GetOpaqueTypeFromSBBreakpoint(*sb_breakpoint);
+}
+
+template <>
+lldb::ProcessAttachInfoSP ScriptedPythonInterface::ExtractValueFromPythonObject<
+    lldb::ProcessAttachInfoSP>(python::PythonObject &p, Status &error) {
+  lldb::SBAttachInfo *sb_attach_info = reinterpret_cast<lldb::SBAttachInfo *>(
+      python::LLDBSWIGPython_CastPyObjectToSBAttachInfo(p.get()));
+
+  if (!sb_attach_info) {
+    error.SetErrorString(
+        "Couldn't cast lldb::SBAttachInfo to lldb::ProcessAttachInfoSP.");
+    return nullptr;
+  }
+
+  return m_interpreter.GetOpaqueTypeFromSBAttachInfo(*sb_attach_info);
+}
+
+template <>
+lldb::ProcessLaunchInfoSP ScriptedPythonInterface::ExtractValueFromPythonObject<
+    lldb::ProcessLaunchInfoSP>(python::PythonObject &p, Status &error) {
+  lldb::SBLaunchInfo *sb_launch_info = reinterpret_cast<lldb::SBLaunchInfo *>(
+      python::LLDBSWIGPython_CastPyObjectToSBLaunchInfo(p.get()));
+
+  if (!sb_launch_info) {
+    error.SetErrorString(
+        "Couldn't cast lldb::SBLaunchInfo to lldb::ProcessLaunchInfoSP.");
+    return nullptr;
+  }
+
+  return m_interpreter.GetOpaqueTypeFromSBLaunchInfo(*sb_launch_info);
+}
+
+template <>
 std::optional<MemoryRegionInfo>
 ScriptedPythonInterface::ExtractValueFromPythonObject<
     std::optional<MemoryRegionInfo>>(python::PythonObject &p, Status &error) {
 
   lldb::SBMemoryRegionInfo *sb_mem_reg_info =
       reinterpret_cast<lldb::SBMemoryRegionInfo *>(
-          LLDBSWIGPython_CastPyObjectToSBMemoryRegionInfo(p.get()));
+          python::LLDBSWIGPython_CastPyObjectToSBMemoryRegionInfo(p.get()));
 
   if (!sb_mem_reg_info) {
     error.SetErrorString(

@@ -19,7 +19,7 @@ define weak void @weak() {
 
 define internal void @internal1() {
 ; CHECK-LABEL: define {{[^@]+}}@internal1
-; CHECK-SAME: () #[[ATTR0]] {
+; CHECK-SAME: () #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr @G1, align 8
 ; CHECK-NEXT:    store i32 0, ptr [[TMP1]], align 4
 ; CHECK-NEXT:    ret void
@@ -31,7 +31,7 @@ define internal void @internal1() {
 
 define amdgpu_kernel void @kernel1() #0 {
 ; CHECK-LABEL: define {{[^@]+}}@kernel1
-; CHECK-SAME: () #[[ATTR1:[0-9]+]] {
+; CHECK-SAME: () #[[ATTR2:[0-9]+]] {
 ; CHECK-NEXT:    call void @weak()
 ; CHECK-NEXT:    ret void
 ;
@@ -43,7 +43,7 @@ define amdgpu_kernel void @kernel1() #0 {
 
 define internal void @internal3() {
 ; CHECK-LABEL: define {{[^@]+}}@internal3
-; CHECK-SAME: () #[[ATTR1]] {
+; CHECK-SAME: () #[[ATTR3:[0-9]+]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr @G2, align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[TMP2]], label [[TMP3:%.*]], label [[TMP4:%.*]]
@@ -67,7 +67,7 @@ define internal void @internal3() {
 
 define internal void @internal4() {
 ; CHECK-LABEL: define {{[^@]+}}@internal4
-; CHECK-SAME: () #[[ATTR1]] {
+; CHECK-SAME: () #[[ATTR3]] {
 ; CHECK-NEXT:    store i32 1, ptr @G2, align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -77,7 +77,7 @@ define internal void @internal4() {
 
 define internal void @internal2() {
 ; CHECK-LABEL: define {{[^@]+}}@internal2
-; CHECK-SAME: () #[[ATTR1]] {
+; CHECK-SAME: () #[[ATTR3]] {
 ; CHECK-NEXT:    call void @internal3()
 ; CHECK-NEXT:    ret void
 ;
@@ -87,7 +87,7 @@ define internal void @internal2() {
 
 define amdgpu_kernel void @kernel2() #0 {
 ; CHECK-LABEL: define {{[^@]+}}@kernel2
-; CHECK-SAME: () #[[ATTR1]] {
+; CHECK-SAME: () #[[ATTR3]] {
 ; CHECK-NEXT:    call void @internal2()
 ; CHECK-NEXT:    ret void
 ;
@@ -97,6 +97,8 @@ define amdgpu_kernel void @kernel2() #0 {
 
 attributes #0 = { "uniform-work-group-size"="true" }
 ;.
-; CHECK: attributes #[[ATTR0]] = { "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "uniform-work-group-size"="false" }
-; CHECK: attributes #[[ATTR1]] = { "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "uniform-work-group-size"="true" }
+; CHECK: attributes #[[ATTR0]] = { "amdgpu-waves-per-eu"="4,10" "uniform-work-group-size"="false" }
+; CHECK: attributes #[[ATTR1]] = { "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "amdgpu-waves-per-eu"="4,10" "uniform-work-group-size"="false" }
+; CHECK: attributes #[[ATTR2]] = { "uniform-work-group-size"="true" }
+; CHECK: attributes #[[ATTR3]] = { "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "amdgpu-waves-per-eu"="4,10" "uniform-work-group-size"="true" }
 ;.

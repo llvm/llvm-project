@@ -1100,6 +1100,109 @@ entry:
   ret i1 %cmp
 }
 
+; ============================================================================ ;
+; dynamic mode tests
+; ============================================================================ ;
+
+define float @test_float_fadd_dynamic_ieee() #9 {
+; CHECK-LABEL: @test_float_fadd_dynamic_ieee(
+; CHECK-NEXT:    [[RESULT:%.*]] = fadd float 0xB810000000000000, 0x3800000000000000
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = fadd float 0xB810000000000000, 0x3800000000000000
+  ret float %result
+}
+
+define float @test_float_fadd_ieee_dynamic() #10 {
+; CHECK-LABEL: @test_float_fadd_ieee_dynamic(
+; CHECK-NEXT:    [[RESULT:%.*]] = fadd float 0xB810000000000000, 0x3800000000000000
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = fadd float 0xB810000000000000, 0x3800000000000000
+  ret float %result
+}
+
+define float @test_float_fadd_dynamic_dynamic() #11 {
+; CHECK-LABEL: @test_float_fadd_dynamic_dynamic(
+; CHECK-NEXT:    [[RESULT:%.*]] = fadd float 0xB810000000000000, 0x3800000000000000
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = fadd float 0xB810000000000000, 0x3800000000000000
+  ret float %result
+}
+
+; Check for failed to fold on each operand
+define float @test_float_fadd_dynamic_dynamic_commute() #11 {
+; CHECK-LABEL: @test_float_fadd_dynamic_dynamic_commute(
+; CHECK-NEXT:    [[RESULT:%.*]] = fadd float 0x3800000000000000, 0xB810000000000000
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = fadd float 0x3800000000000000, 0xB810000000000000
+  ret float %result
+}
+
+define i1 @fcmp_double_dynamic_ieee() #9 {
+; CHECK-LABEL: @fcmp_double_dynamic_ieee(
+; CHECK-NEXT:    ret i1 true
+;
+  %cmp = fcmp une double 0x0008000000000000, 0x0
+  ret i1 %cmp
+}
+
+define i1 @fcmp_double_ieee_dynamic() #10 {
+; CHECK-LABEL: @fcmp_double_ieee_dynamic(
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp une double 0x8000000000000, 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %cmp = fcmp une double 0x0008000000000000, 0x0
+  ret i1 %cmp
+}
+
+define i1 @fcmp_double_dynamic_dynamic() #11 {
+; CHECK-LABEL: @fcmp_double_dynamic_dynamic(
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp une double 0x8000000000000, 0.000000e+00
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %cmp = fcmp une double 0x0008000000000000, 0x0
+  ret i1 %cmp
+}
+
+define i1 @fcmp_double_dynamic_dynamic_commute() #11 {
+; CHECK-LABEL: @fcmp_double_dynamic_dynamic_commute(
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp une double 0.000000e+00, 0x8000000000000
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %cmp = fcmp une double 0x0, 0x0008000000000000
+  ret i1 %cmp
+}
+
+; Output doesn't matter.
+define i1 @fcmp_double_dynamic_psz() #12 {
+; CHECK-LABEL: @fcmp_double_dynamic_psz(
+; CHECK-NEXT:    ret i1 false
+;
+  %cmp = fcmp une double 0x0008000000000000, 0x0
+  ret i1 %cmp
+}
+
+; Non-denormal values should fold
+define float @test_float_fadd_dynamic_dynamic_normals() #11 {
+; CHECK-LABEL: @test_float_fadd_dynamic_dynamic_normals(
+; CHECK-NEXT:    ret float 3.000000e+00
+;
+  %result = fadd float 1.0, 2.0
+  ret float %result
+}
+
+; Non-denormal values should fold
+define i1 @fcmp_double_dynamic_dynamic_normals() #11 {
+; CHECK-LABEL: @fcmp_double_dynamic_dynamic_normals(
+; CHECK-NEXT:    ret i1 true
+;
+  %cmp = fcmp une double 1.0, 2.0
+  ret i1 %cmp
+}
+
 attributes #0 = { nounwind "denormal-fp-math"="ieee,ieee" }
 attributes #1 = { nounwind "denormal-fp-math"="positive-zero,ieee" }
 attributes #2 = { nounwind "denormal-fp-math"="preserve-sign,ieee" }
@@ -1109,3 +1212,7 @@ attributes #5 = { nounwind "denormal-fp-math"="ieee,ieee" "denormal-fp-math-f32"
 attributes #6 = { nounwind "denormal-fp-math"="positive-zero,positive-zero" }
 attributes #7 = { nounwind "denormal-fp-math"="preserve-sign,preserve-sign" }
 attributes #8 = { nounwind "denormal-fp-math"="ieee,ieee" "denormal-fp-math-f32"="positive-zero,positive-zero" }
+attributes #9 = { nounwind "denormal-fp-math"="dynamic,ieee" }
+attributes #10 = { nounwind "denormal-fp-math"="ieee,dynamic" }
+attributes #11 = { nounwind "denormal-fp-math"="dynamic,dynamic" }
+attributes #12 = { nounwind "denormal-fp-math"="dynamic,preserve-sign" }

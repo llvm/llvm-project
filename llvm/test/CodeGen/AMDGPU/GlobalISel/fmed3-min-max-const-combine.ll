@@ -6,7 +6,6 @@ define float @test_min_max_ValK0_K1_f32(float %a) #0 {
 ; GFX10-LABEL: test_min_max_ValK0_K1_f32:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_med3_f32 v0, v0, 2.0, 4.0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -24,7 +23,6 @@ define float @test_min_max_K0Val_K1_f32(float %a) #1 {
 ; GFX10-LABEL: test_min_max_K0Val_K1_f32:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_med3_f32 v0, v0, 2.0, 4.0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -44,7 +42,6 @@ define half @test_min_K1max_ValK0_f16(half %a) #0 {
 ; GFX10-LABEL: test_min_K1max_ValK0_f16:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_max_f16_e32 v0, v0, v0
 ; GFX10-NEXT:    v_med3_f16 v0, v0, 2.0, 4.0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
@@ -65,7 +62,6 @@ define half @test_min_K1max_K0Val_f16(half %a) #1 {
 ; GFX10-LABEL: test_min_K1max_K0Val_f16:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_med3_f16 v0, v0, 2.0, 4.0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -85,7 +81,6 @@ define float @test_max_min_ValK1_K0_f32(float %a) #0 {
 ; GFX10-LABEL: test_max_min_ValK1_K0_f32:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_med3_f32 v0, v0, 2.0, 4.0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -103,7 +98,6 @@ define float @test_max_min_K1Val_K0_f32(float %a) #1 {
 ; GFX10-LABEL: test_max_min_K1Val_K0_f32:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_med3_f32 v0, v0, 2.0, 4.0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -121,7 +115,6 @@ define half @test_max_K0min_ValK1_f16(half %a) #0 {
 ; GFX10-LABEL: test_max_K0min_ValK1_f16:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_med3_f16 v0, v0, 2.0, 4.0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -140,7 +133,6 @@ define half @test_max_K0min_K1Val_f16(half %a) #1 {
 ; GFX10-LABEL: test_max_K0min_K1Val_f16:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_med3_f16 v0, v0, 2.0, 4.0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -161,7 +153,6 @@ define float @test_min_max_global_nnan(float %a) #2 {
 ; GFX10-LABEL: test_min_max_global_nnan:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_med3_f32 v0, v0, 2.0, 4.0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -179,7 +170,6 @@ define float @test_max_min_global_nnan(float %a) #2 {
 ; GFX10-LABEL: test_max_min_global_nnan:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_med3_f32 v0, v0, 2.0, 4.0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -202,7 +192,6 @@ define float @test_min_max_K0_gt_K1(float %a) #0 {
 ; GFX10-LABEL: test_min_max_K0_gt_K1:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_max_f32_e32 v0, 4.0, v0
 ; GFX10-NEXT:    v_min_f32_e32 v0, 2.0, v0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
@@ -223,7 +212,6 @@ define float @test_max_min_K0_gt_K1(float %a) #0 {
 ; GFX10-LABEL: test_max_min_K0_gt_K1:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_min_f32_e32 v0, 2.0, v0
 ; GFX10-NEXT:    v_max_f32_e32 v0, 4.0, v0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
@@ -244,7 +232,6 @@ define float @test_min_max_non_inline_const(float %a) #0 {
 ; GFX10-LABEL: test_min_max_non_inline_const:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_max_f32_e32 v0, 2.0, v0
 ; GFX10-NEXT:    v_min_f32_e32 v0, 0x41000000, v0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
@@ -266,7 +253,6 @@ define double @test_min_max_f64(double %a) #0 {
 ; GFX10-LABEL: test_min_max_f64:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_max_f64 v[0:1], v[0:1], 2.0
 ; GFX10-NEXT:    v_min_f64 v[0:1], v[0:1], 4.0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
@@ -286,7 +272,6 @@ define <2 x half> @test_min_max_v2f16(<2 x half> %a) #0 {
 ; GFX10-LABEL: test_min_max_v2f16:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_pk_max_f16 v0, v0, 2.0 op_sel_hi:[1,0]
 ; GFX10-NEXT:    v_pk_min_f16 v0, v0, 4.0 op_sel_hi:[1,0]
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
@@ -297,11 +282,10 @@ define <2 x half> @test_min_max_v2f16(<2 x half> %a) #0 {
 ; GFX8-NEXT:    v_mov_b32_e32 v2, 0x4000
 ; GFX8-NEXT:    v_max_f16_e32 v1, 2.0, v0
 ; GFX8-NEXT:    v_max_f16_sdwa v0, v0, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
-; GFX8-NEXT:    v_min_f16_e32 v0, 4.0, v0
-; GFX8-NEXT:    v_mov_b32_e32 v2, 16
+; GFX8-NEXT:    v_mov_b32_e32 v2, 0x4400
 ; GFX8-NEXT:    v_min_f16_e32 v1, 4.0, v1
-; GFX8-NEXT:    v_lshlrev_b32_sdwa v0, v2, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
-; GFX8-NEXT:    v_or_b32_sdwa v0, v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; GFX8-NEXT:    v_min_f16_sdwa v0, v0, v2 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:DWORD
+; GFX8-NEXT:    v_or_b32_e32 v0, v1, v0
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
   %maxnum = call nnan <2 x half> @llvm.maxnum.v2f16(<2 x half> %a, <2 x half> <half 2.0, half 2.0>)
   %fmed = call nnan <2 x half> @llvm.minnum.v2f16(<2 x half> %maxnum, <2 x half> <half 4.0, half 4.0>)
@@ -315,7 +299,6 @@ define float @test_min_max_maybe_NaN_input_ieee_false(float %a) #1 {
 ; GFX10-LABEL: test_min_max_maybe_NaN_input_ieee_false:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_max_f32_e32 v0, 2.0, v0
 ; GFX10-NEXT:    v_min_f32_e32 v0, 4.0, v0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
@@ -337,7 +320,6 @@ define float @test_max_min_maybe_NaN_input_ieee_false(float %a) #1 {
 ; GFX10-LABEL: test_max_min_maybe_NaN_input_ieee_false:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_min_f32_e32 v0, 4.0, v0
 ; GFX10-NEXT:    v_max_f32_e32 v0, 2.0, v0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
@@ -358,7 +340,6 @@ define float @test_max_min_maybe_NaN_input_ieee_true(float %a) #0 {
 ; GFX10-LABEL: test_max_min_maybe_NaN_input_ieee_true:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_max_f32_e32 v0, v0, v0
 ; GFX10-NEXT:    v_min_f32_e32 v0, 4.0, v0
 ; GFX10-NEXT:    v_max_f32_e32 v0, 2.0, v0

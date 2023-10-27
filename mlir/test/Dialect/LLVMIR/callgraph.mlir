@@ -58,33 +58,32 @@ module attributes {"test.name" = "Invoke call"} {
   // CHECK-DAG: -- Call-Edge : <Unknown-Callee-Node>
 
   // CHECK: -- SCCs --
-  llvm.mlir.global external constant @_ZTIi() : !llvm.ptr<i8>
+  llvm.mlir.global external constant @_ZTIi() : !llvm.ptr
   llvm.func @foo(%arg0: i32) -> !llvm.struct<(i32, f64, i32)>
-  llvm.func @bar(!llvm.ptr<i8>, !llvm.ptr<i8>, !llvm.ptr<i8>)
+  llvm.func @bar(!llvm.ptr, !llvm.ptr, !llvm.ptr)
   llvm.func @__gxx_personality_v0(...) -> i32
 
   llvm.func @invokeLandingpad() -> i32 attributes { personality = @__gxx_personality_v0 } {
     %0 = llvm.mlir.constant(0 : i32) : i32
     %1 = llvm.mlir.constant(3 : i32) : i32
     %2 = llvm.mlir.constant("\01") : !llvm.array<1 x i8>
-    %3 = llvm.mlir.null : !llvm.ptr<ptr<i8>>
-    %4 = llvm.mlir.null : !llvm.ptr<i8>
-    %5 = llvm.mlir.addressof @_ZTIi : !llvm.ptr<ptr<i8>>
-    %6 = llvm.bitcast %5 : !llvm.ptr<ptr<i8>> to !llvm.ptr<i8>
-    %7 = llvm.mlir.constant(1 : i32) : i32
-    %8 = llvm.alloca %7 x i8 : (i32) -> !llvm.ptr<i8>
-    %9 = llvm.invoke @foo(%7) to ^bb2 unwind ^bb1 : (i32) -> !llvm.struct<(i32, f64, i32)>
+    %3 = llvm.mlir.zero : !llvm.ptr
+    %4 = llvm.mlir.zero : !llvm.ptr
+    %5 = llvm.mlir.addressof @_ZTIi : !llvm.ptr
+    %6 = llvm.mlir.constant(1 : i32) : i32
+    %7 = llvm.alloca %6 x i8 : (i32) -> !llvm.ptr
+    %8 = llvm.invoke @foo(%6) to ^bb2 unwind ^bb1 : (i32) -> !llvm.struct<(i32, f64, i32)>
 
   ^bb1:
-    %10 = llvm.landingpad cleanup (catch %3 : !llvm.ptr<ptr<i8>>) (catch %6 : !llvm.ptr<i8>) (filter %2 : !llvm.array<1 x i8>) : !llvm.struct<(ptr<i8>, i32)>
-    %11 = llvm.intr.eh.typeid.for %6 : i32
-    llvm.resume %10 : !llvm.struct<(ptr<i8>, i32)>
+    %10 = llvm.landingpad cleanup (catch %3 : !llvm.ptr) (catch %5 : !llvm.ptr) (filter %2 : !llvm.array<1 x i8>) : !llvm.struct<(ptr, i32)>
+    %11 = llvm.intr.eh.typeid.for %5 : (!llvm.ptr) -> i32
+    llvm.resume %10 : !llvm.struct<(ptr, i32)>
 
   ^bb2:
-    llvm.return %7 : i32
+    llvm.return %6 : i32
 
   ^bb3:
-    llvm.invoke @bar(%8, %6, %4) to ^bb2 unwind ^bb1 : (!llvm.ptr<i8>, !llvm.ptr<i8>, !llvm.ptr<i8>) -> ()
+    llvm.invoke @bar(%7, %5, %4) to ^bb2 unwind ^bb1 : (!llvm.ptr, !llvm.ptr, !llvm.ptr) -> ()
 
   ^bb4:
     llvm.return %0 : i32

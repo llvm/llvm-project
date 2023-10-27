@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -std=c++14 -Wno-unused-value -fsyntax-only -verify -verify=expected-cxx14 -fblocks %s
-// RUN: %clang_cc1 -std=c++17 -Wno-unused-value -fsyntax-only -verify -fblocks %s
+// RUN: %clang_cc1 -std=c++17 -Wno-unused-value -verify -ast-dump -fblocks %s | FileCheck %s
 
 namespace std { class type_info; };
 
@@ -260,10 +260,11 @@ namespace VariadicPackExpansion {
     f([&ts] { return (int)f(ts...); } ()...); // \
     // expected-error 2{{'ts' cannot be implicitly captured}} \
     // expected-note 2{{lambda expression begins here}} \
-    // expected-note 4 {{capture 'ts' by}}
+    // expected-note 4 {{capture 'ts' by}} \
+    // expected-note 2 {{while substituting into a lambda}}
   }
   template void nested2(int); // ok
-  template void nested2(int, int); // expected-note {{in instantiation of}}
+  template void nested2(int, int); // expected-note 2 {{in instantiation of}}
 }
 
 namespace PR13860 {
@@ -383,7 +384,7 @@ namespace PR18128 {
 namespace PR18473 {
   template<typename T> void f() {
     T t(0);
-    (void) [=]{ int n = t; }; // expected-error {{deleted}}
+    (void) [=]{ int n = t; }; // expected-error {{deleted}} expected-note {{while substituting into a lambda}}
   }
 
   template void f<int>();
@@ -466,7 +467,7 @@ namespace error_in_transform_prototype {
   void f(T t) {
     // expected-error@+2 {{type 'int' cannot be used prior to '::' because it has no members}}
     // expected-error@+1 {{no member named 'ns' in 'error_in_transform_prototype::S'}}
-    auto x = [](typename T::ns::type &k) {};
+    auto x = [](typename T::ns::type &k) {}; // expected-note 2 {{while substituting into a lambda}}
   }
   class S {};
   void foo() {
@@ -514,7 +515,6 @@ int main() {
 A<int> a;
 }
 
-// rdar://22032373
 namespace rdar22032373 {
 void foo() {
   auto blk = [](bool b) {
@@ -665,3 +665,61 @@ void Test() {
                     // expected-note@-2 2 {{default capture by}}
 }
 };
+
+namespace GH60518 {
+// Lambdas should not try to capture
+// function parameters that are used in enable_if
+struct StringLiteral {
+template <int N>
+StringLiteral(const char (&array)[N])
+    __attribute__((enable_if(__builtin_strlen(array) == 2,
+                              "invalid string literal")));
+};
+
+namespace cpp_attribute {
+struct StringLiteral {
+template <int N>
+StringLiteral(const char (&array)[N]) [[clang::annotate_type("test", array)]];
+};
+}
+
+void Func1() {
+  [[maybe_unused]] auto y = [&](decltype(StringLiteral("xx"))) {};
+  [[maybe_unused]] auto z = [&](decltype(cpp_attribute::StringLiteral("xx"))) {};
+}
+
+}
+
+#if __cplusplus > 201402L
+namespace GH60936 {
+struct S {
+  int i;
+  // `&i` in default initializer causes implicit `this` access.
+  int *p = &i;
+};
+
+static_assert([]() constexpr {
+  S r = S{2};
+  return r.p != nullptr;
+}());
+} // namespace GH60936
+#endif
+
+// Call operator attributes refering to a variable should
+// be properly handled after D124351
+constexpr int i = 2;
+void foo() {
+  (void)[=][[gnu::aligned(i)]] () {}; // expected-warning{{C++23 extension}}
+  // CHECK: AlignedAttr
+  // CHECK-NEXT: ConstantExpr
+  // CHECK-NEXT: value: Int 2
+}
+
+void GH48527() {
+  auto a = []()__attribute__((b(({ return 0; })))){}; // expected-warning {{unknown attribute 'b' ignored}}
+}
+
+void GH67492() {
+  constexpr auto test = 42;
+  auto lambda = (test, []() noexcept(true) {});
+}

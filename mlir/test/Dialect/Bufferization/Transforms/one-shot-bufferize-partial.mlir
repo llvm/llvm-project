@@ -1,15 +1,15 @@
-// RUN: mlir-opt %s -allow-unregistered-dialect -one-shot-bufferize="allow-return-allocs allow-unknown-ops" -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -allow-unregistered-dialect -one-shot-bufferize="allow-unknown-ops" -split-input-file | FileCheck %s
 
 // Test bufferization using memref types that have no layout map.
-// RUN: mlir-opt %s -allow-unregistered-dialect -one-shot-bufferize="allow-return-allocs allow-unknown-ops unknown-type-conversion=identity-layout-map" -split-input-file | FileCheck %s --check-prefix=CHECK-NO-LAYOUT-MAP
+// RUN: mlir-opt %s -allow-unregistered-dialect -one-shot-bufferize="allow-unknown-ops unknown-type-conversion=identity-layout-map" -split-input-file | FileCheck %s --check-prefix=CHECK-NO-LAYOUT-MAP
 
 // Run fuzzer with different seeds.
-// RUN: mlir-opt %s -allow-unregistered-dialect -one-shot-bufferize="allow-return-allocs test-analysis-only analysis-fuzzer-seed=23" -split-input-file -o /dev/null
-// RUN: mlir-opt %s -allow-unregistered-dialect -one-shot-bufferize="allow-return-allocs test-analysis-only analysis-fuzzer-seed=59" -split-input-file -o /dev/null
-// RUN: mlir-opt %s -allow-unregistered-dialect -one-shot-bufferize="allow-return-allocs test-analysis-only analysis-fuzzer-seed=91" -split-input-file -o /dev/null
+// RUN: mlir-opt %s -allow-unregistered-dialect -one-shot-bufferize="test-analysis-only analysis-fuzzer-seed=23" -split-input-file -o /dev/null
+// RUN: mlir-opt %s -allow-unregistered-dialect -one-shot-bufferize="test-analysis-only analysis-fuzzer-seed=59" -split-input-file -o /dev/null
+// RUN: mlir-opt %s -allow-unregistered-dialect -one-shot-bufferize="test-analysis-only analysis-fuzzer-seed=91" -split-input-file -o /dev/null
 
-// RUN: mlir-opt %s -allow-unregistered-dialect -one-shot-bufferize="dialect-filter=tensor,bufferization allow-unknown-ops allow-return-allocs" -canonicalize -split-input-file | FileCheck %s --check-prefix=CHECK-TENSOR
-// RUN: mlir-opt %s -allow-unregistered-dialect -one-shot-bufferize="dialect-filter=scf,bufferization allow-unknown-ops allow-return-allocs" -canonicalize -split-input-file | FileCheck %s --check-prefix=CHECK-SCF
+// RUN: mlir-opt %s -allow-unregistered-dialect -one-shot-bufferize="dialect-filter=tensor,bufferization allow-unknown-ops" -canonicalize -split-input-file | FileCheck %s --check-prefix=CHECK-TENSOR
+// RUN: mlir-opt %s -allow-unregistered-dialect -one-shot-bufferize="dialect-filter=scf,bufferization allow-unknown-ops" -canonicalize -split-input-file | FileCheck %s --check-prefix=CHECK-SCF
 
 // CHECK-LABEL: func @use_of_unknown_op_1(
 //  CHECK-SAME:     %[[t1:.*]]: tensor<?xf32>
@@ -100,11 +100,14 @@ func.func @use_of_bufferizable_op_in_unbufferizable_op(
     %t1: tensor<?xf32>, %o: index, %s: index) -> (tensor<?xf32>, tensor<?xf32>) {
   // CHECK: %[[m1:.*]] = bufferization.to_memref %[[t1]]
   // CHECK: %[[subview:.*]] = memref.subview %[[m1]]
+  // The op must alloc because "test.dummy" may bufferize to a memory write.
+  // CHECK: %[[alloc:.*]] = memref.alloc
+  // CHECK: memref.copy %[[subview]], %[[alloc]]
   %0 = tensor.extract_slice %t1[%o][%s][1] : tensor<?xf32> to tensor<?xf32>
-  // CHECK: %[[subview_tensor:.*]] = bufferization.to_tensor %[[subview]]
-  // CHECK: %[[dummy:.*]] = "test.dummy_op"(%[[subview_tensor]])
+  // CHECK: %[[alloc_tensor:.*]] = bufferization.to_tensor %[[alloc]]
+  // CHECK: %[[dummy:.*]] = "test.dummy_op"(%[[alloc_tensor]])
   %1 = "test.dummy_op"(%0) : (tensor<?xf32>) -> tensor<?xf32>
-  // CHECK: return %[[subview_tensor]], %[[dummy]]
+  // CHECK: return %[[alloc_tensor]], %[[dummy]]
   return %0, %1 : tensor<?xf32>, tensor<?xf32>
 }
 
@@ -152,8 +155,6 @@ func.func @unknown_op_may_read(%v: vector<5xf32>)
   // CHECK: %[[dummy:.*]] = "test.dummy_op"(%[[filled_tensor]])
   %2 = "test.dummy_op"(%filled) : (tensor<10xf32>) -> (tensor<10xf32>)
 
-  // CHECK-DAG: memref.dealloc %[[alloc]]
-  // CHECK-DAG: memref.dealloc %[[m1]]
   // CHECK: return %[[alloc_tensor]], %[[dummy]]
   return %1, %2 : tensor<10xf32>, tensor<10xf32>
 }
@@ -169,7 +170,7 @@ func.func @unknown_op_not_writable(
   %0 = "test.dummy_op"(%t1) : (tensor<?xf32>) -> (tensor<?xf32>)
 
   // The result of an unknown op is not writable. Always generate a copy.
-  // CHECK: %[[dim:.*]] = tensor.dim %[[dummy]]
+  // CHECK: %[[dim:.*]] = memref.dim %[[dummy_memref]]
   // CHECK: %[[alloc:.*]] = memref.alloc(%[[dim]])
   // CHECK: memref.copy %[[dummy_memref]], %[[alloc]]
   // CHECK: vector.transfer_write %{{.*}}, %[[alloc]]

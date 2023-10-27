@@ -13,16 +13,16 @@ define i8 @f(ptr %0, ptr %1) {
 ; CHECK-32-NEXT:    i32.const 0
 ; CHECK-32-NEXT:    i32.store16 0
 ; CHECK-32-NEXT:    local.get 1
-; CHECK-32-NEXT:    local.get 0
-; CHECK-32-NEXT:    i8x16.splat
-; CHECK-32-NEXT:    v128.store16_lane 0, 0
-; CHECK-32-NEXT:    v128.const 0, 0
-; CHECK-32-NEXT:    i32x4.extract_lane 0
+; CHECK-32-NEXT:    i32.const 5
+; CHECK-32-NEXT:    i32.store8 2
+; CHECK-32-NEXT:    local.get 1
+; CHECK-32-NEXT:    i32.const 769
+; CHECK-32-NEXT:    i32.store16 0
+; CHECK-32-NEXT:    i32.const 1
 ; CHECK-32-NEXT:    # fallthrough-return
 ;
 ; CHECK-64-LABEL: f:
 ; CHECK-64:         .functype f (i64, i64) -> (i32)
-; CHECK-64-NEXT:    .local i32
 ; CHECK-64-NEXT:  # %bb.0: # %BB
 ; CHECK-64-NEXT:    local.get 0
 ; CHECK-64-NEXT:    i32.const 0
@@ -31,12 +31,12 @@ define i8 @f(ptr %0, ptr %1) {
 ; CHECK-64-NEXT:    i32.const 0
 ; CHECK-64-NEXT:    i32.store16 0
 ; CHECK-64-NEXT:    local.get 1
-; CHECK-64-NEXT:    local.get 2
-; CHECK-64-NEXT:    i8x16.splat
-; CHECK-64-NEXT:    v128.store16_lane 0, 0
-; CHECK-64-NEXT:    drop
-; CHECK-64-NEXT:    v128.const 0, 0
-; CHECK-64-NEXT:    i32x4.extract_lane 0
+; CHECK-64-NEXT:    i32.const 5
+; CHECK-64-NEXT:    i32.store8 2
+; CHECK-64-NEXT:    local.get 1
+; CHECK-64-NEXT:    i32.const 769
+; CHECK-64-NEXT:    i32.store16 0
+; CHECK-64-NEXT:    i32.const 1
 ; CHECK-64-NEXT:    # fallthrough-return
 BB:
   store <3 x i8> zeroinitializer, ptr %0

@@ -14,7 +14,7 @@
 #include "TestAliasAnalysis.h"
 #include "mlir/Analysis/AliasAnalysis.h"
 #include "mlir/Analysis/AliasAnalysis/LocalAliasAnalysis.h"
-#include "mlir/IR/FunctionInterfaces.h"
+#include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Pass/Pass.h"
 
 using namespace mlir;
@@ -24,7 +24,7 @@ static void printAliasOperand(Operation *op) {
   llvm::errs() << op->getAttrOfType<StringAttr>("test.ptr").getValue();
 }
 static void printAliasOperand(Value value) {
-  if (BlockArgument arg = value.dyn_cast<BlockArgument>()) {
+  if (BlockArgument arg = dyn_cast<BlockArgument>(value)) {
     Region *region = arg.getParentRegion();
     unsigned parentBlockNumber =
         std::distance(region->begin(), arg.getOwner()->getIterator());
@@ -37,7 +37,7 @@ static void printAliasOperand(Value value) {
     llvm::errs() << "#" << arg.getArgNumber();
     return;
   }
-  OpResult result = value.cast<OpResult>();
+  OpResult result = cast<OpResult>(value);
   printAliasOperand(result.getOwner());
   llvm::errs() << "#" << result.getResultNumber();
 }
@@ -61,12 +61,12 @@ void printModRefResult(ModRefResult result, Operation *op, Value location) {
 
 void TestAliasAnalysisBase::runAliasAnalysisOnOperation(
     Operation *op, AliasAnalysis &aliasAnalysis) {
-  llvm::errs() << "Testing : " << op->getAttr("sym_name") << "\n";
+  llvm::errs() << "Testing : " << *op->getInherentAttr("sym_name") << "\n";
 
   // Collect all of the values to check for aliasing behavior.
   SmallVector<Value, 32> valsToCheck;
   op->walk([&](Operation *op) {
-    if (!op->getAttr("test.ptr"))
+    if (!op->getDiscardableAttr("test.ptr"))
       return;
     valsToCheck.append(op->result_begin(), op->result_end());
     for (Region &region : op->getRegions())
@@ -82,12 +82,12 @@ void TestAliasAnalysisBase::runAliasAnalysisOnOperation(
 
 void TestAliasAnalysisModRefBase::runAliasAnalysisOnOperation(
     Operation *op, AliasAnalysis &aliasAnalysis) {
-  llvm::errs() << "Testing : " << op->getAttr("sym_name") << "\n";
+  llvm::errs() << "Testing : " << *op->getInherentAttr("sym_name") << "\n";
 
   // Collect all of the values to check for aliasing behavior.
   SmallVector<Value, 32> valsToCheck;
   op->walk([&](Operation *op) {
-    if (!op->getAttr("test.ptr"))
+    if (!op->getDiscardableAttr("test.ptr"))
       return;
     valsToCheck.append(op->result_begin(), op->result_end());
     for (Region &region : op->getRegions())
@@ -98,7 +98,7 @@ void TestAliasAnalysisModRefBase::runAliasAnalysisOnOperation(
   // Check for aliasing behavior between each of the values.
   for (auto &it : valsToCheck) {
     op->walk([&](Operation *op) {
-      if (!op->getAttr("test.ptr"))
+      if (!op->getDiscardableAttr("test.ptr"))
         return;
       printModRefResult(aliasAnalysis.getModRef(op, it), op, it);
     });
@@ -156,7 +156,7 @@ struct TestAliasAnalysisModRefPass
 
 /// Check if value is function argument.
 static bool isFuncArg(Value val) {
-  auto blockArg = val.dyn_cast<BlockArgument>();
+  auto blockArg = dyn_cast<BlockArgument>(val);
   if (!blockArg)
     return false;
 
@@ -166,7 +166,7 @@ static bool isFuncArg(Value val) {
 
 /// Check if value has "restrict" attribute. Value must be a function argument.
 static bool isRestrict(Value val) {
-  auto blockArg = val.cast<BlockArgument>();
+  auto blockArg = cast<BlockArgument>(val);
   auto func =
       mlir::cast<FunctionOpInterface>(blockArg.getOwner()->getParentOp());
   return !!func.getArgAttr(blockArg.getArgNumber(),

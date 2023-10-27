@@ -2,7 +2,7 @@
 // handle complex block graphs by skipping zero count cycles.
 //
 // RUN: mkdir -p %t.dir && cd %t.dir
-// RUN: %clang --coverage %s -o %t
+// RUN: %clang --coverage %s -o %t -dumpdir ./
 // RUN: rm -f gcov-complex-line.gcda && %run %t
 // RUN: llvm-cov gcov -t gcov-complex-line.c | FileCheck %s
 

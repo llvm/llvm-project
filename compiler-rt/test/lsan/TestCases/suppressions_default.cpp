@@ -24,4 +24,4 @@ int main() {
 }
 // CHECK: Suppressions used:
 // CHECK: 1 666 *LSanTestLeakingFunc*
-// CHECK: SUMMARY: {{(Leak|Address)}}Sanitizer: 1337 byte(s) leaked in 1 allocation(s)
+// CHECK: SUMMARY: {{.*}}Sanitizer: 1337 byte(s) leaked in 1 allocation(s)

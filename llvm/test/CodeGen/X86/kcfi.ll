@@ -1,6 +1,6 @@
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu -verify-machineinstrs < %s | FileCheck %s --check-prefix=ASM
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu -verify-machineinstrs -stop-after=finalize-isel < %s | FileCheck %s --check-prefixes=MIR,ISEL
-; RUN: llc -mtriple=x86_64-unknown-linux-gnu -verify-machineinstrs -stop-after=x86-kcfi < %s | FileCheck %s --check-prefixes=MIR,KCFI
+; RUN: llc -mtriple=x86_64-unknown-linux-gnu -verify-machineinstrs -stop-after=kcfi < %s | FileCheck %s --check-prefixes=MIR,KCFI
 
 ; ASM:       .p2align 4, 0x90
 ; ASM:       .type __cfi_f1,@function

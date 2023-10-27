@@ -37,7 +37,9 @@ public:
   Expected<uint32_t> getSymbolFlags(DataRefImpl Symb) const override;
   basic_symbol_iterator symbol_begin() const override;
   basic_symbol_iterator symbol_end() const override;
-
+  bool is64Bit() const override {
+    return Triple(getTargetTriple()).isArch64Bit();
+  }
   StringRef getTargetTriple() const;
 
   static bool classof(const Binary *v) {

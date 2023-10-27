@@ -1,6 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin10 -emit-llvm -debug-info-kind=limited %s -o %t
 // RUN: grep DW_TAG_member %t | count 5
-// rdar://8493239
 
 @class NSString;
 

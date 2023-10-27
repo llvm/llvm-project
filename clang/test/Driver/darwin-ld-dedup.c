@@ -1,5 +1,3 @@
-// REQUIRES: system-darwin
-
 // -no_deduplicate is only present from ld64 version 262 and later.
 // RUN: %clang -target x86_64-apple-darwin10 -### %s \
 // RUN:   -mlinker-version=261 -O0 2>&1 | FileCheck -check-prefix=LINK_DEDUP %s

@@ -12,3 +12,7 @@ beautification by scripts. The fields are: name (N), email (E), web-address
 N: Steve Scalpone
 E: sscalpone@nvidia.com
 D: Anything not covered by others
+
+N: Andrzej Warzynski
+E: andrzej.warzynski@arm.com
+D: Driver

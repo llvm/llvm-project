@@ -19,9 +19,6 @@
 
 namespace mlir {
 namespace quant {
-
-class QuantizedIntegerType;
-
 namespace detail {
 
 struct QuantizedTypeStorage;

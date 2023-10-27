@@ -124,11 +124,11 @@ private:
   SparseBitVector<> PHIJoins;
 
 private:   // Intermediate data structures
-  MachineFunction *MF;
+  MachineFunction *MF = nullptr;
 
-  MachineRegisterInfo* MRI;
+  MachineRegisterInfo *MRI = nullptr;
 
-  const TargetRegisterInfo *TRI;
+  const TargetRegisterInfo *TRI = nullptr;
 
   // PhysRegInfo - Keep track of which instruction was the last def of a
   // physical register. This is a purely local property, because all physical
@@ -181,10 +181,6 @@ private:   // Intermediate data structures
 public:
 
   bool runOnMachineFunction(MachineFunction &MF) override;
-
-  /// RegisterDefIsDead - Return true if the specified instruction defines the
-  /// specified register, but that definition is dead.
-  bool RegisterDefIsDead(MachineInstr &MI, Register Reg) const;
 
   //===--------------------------------------------------------------------===//
   //  API to update live variable information

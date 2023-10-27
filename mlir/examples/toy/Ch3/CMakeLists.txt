@@ -27,6 +27,7 @@ include_directories(${CMAKE_CURRENT_BINARY_DIR}/include/)
 target_link_libraries(toyc-ch3
   PRIVATE
     MLIRAnalysis
+    MLIRFunctionInterfaces
     MLIRIR
     MLIRParser
     MLIRPass

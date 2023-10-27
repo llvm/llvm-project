@@ -34,6 +34,7 @@ public:
   RelExpr getRelExpr(RelType type, const Symbol &s,
                      const uint8_t *loc) const override;
   RelType getDynRel(RelType type) const override;
+  int64_t getImplicitAddend(const uint8_t *buf, RelType type) const override;
 };
 } // namespace
 
@@ -181,6 +182,20 @@ RelType AMDGPU::getDynRel(RelType type) const {
   if (type == R_AMDGPU_ABS64)
     return type;
   return R_AMDGPU_NONE;
+}
+
+int64_t AMDGPU::getImplicitAddend(const uint8_t *buf, RelType type) const {
+  switch (type) {
+  case R_AMDGPU_NONE:
+    return 0;
+  case R_AMDGPU_ABS64:
+  case R_AMDGPU_RELATIVE64:
+    return read64(buf);
+  default:
+    internalLinkerError(getErrorLocation(buf),
+                        "cannot read addend for relocation " + toString(type));
+    return 0;
+  }
 }
 
 TargetInfo *elf::getAMDGPUTargetInfo() {

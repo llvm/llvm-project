@@ -82,15 +82,6 @@ define half @v_fneg_amdgcn_sin_f16(half %a) #0 {
 ; --------------------------------------------------------------------------------
 
 define { float, float } @v_fneg_interp_p1_f16(float %a, float %b) #0 {
-; SI-LABEL: v_fneg_interp_p1_f16:
-; SI:       ; %bb.0:
-; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-NEXT:    v_mul_f16_e64 v1, v0, -v1
-; SI-NEXT:    s_mov_b32 m0, 0
-; SI-NEXT:    v_interp_p1_f16 v0, v1, attr0.x
-; SI-NEXT:    v_interp_p1_f16 v1, v1, attr0.y
-; SI-NEXT:    s_setpc_b64 s[30:31]
-;
 ; GCN-LABEL: v_fneg_interp_p1_f16:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -110,17 +101,6 @@ define { float, float } @v_fneg_interp_p1_f16(float %a, float %b) #0 {
 }
 
 define { half, half } @v_fneg_interp_p2_f16(float %a, float %b) #0 {
-; SI-LABEL: v_fneg_interp_p2_f16:
-; SI:       ; %bb.0:
-; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-NEXT:    v_mul_f16_e64 v2, v0, -v1
-; SI-NEXT:    v_mov_b32_e32 v1, 4.0
-; SI-NEXT:    v_mov_b32_e32 v0, 4.0
-; SI-NEXT:    s_mov_b32 m0, 0
-; SI-NEXT:    v_interp_p2_f16 v0, v2, attr0.x
-; SI-NEXT:    v_interp_p2_f16 v1, v2, attr0.y
-; SI-NEXT:    s_setpc_b64 s[30:31]
-;
 ; GCN-LABEL: v_fneg_interp_p2_f16:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)

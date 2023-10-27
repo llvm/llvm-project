@@ -219,7 +219,6 @@ define i1 @test_shl_const_nuw_unsigned_10(i8 %start, i8 %high) {
 ; CHECK-NEXT:    [[C_0:%.*]] = icmp ult i8 [[START]], [[START_SHL_5]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C_0]])
 ; CHECK-NEXT:    [[START_SHL_3:%.*]] = shl nuw i8 [[START]], 3
-; CHECK-NEXT:    [[T_1:%.*]] = icmp ule i8 [[START_SHL_3]], [[START_SHL_5]]
 ; CHECK-NEXT:    ret i1 true
 ;
 entry:
@@ -239,7 +238,6 @@ define i1 @test_shl_const_nuw_unsigned_11(i8 %start, i8 %high) {
 ; CHECK-NEXT:    [[C_0:%.*]] = icmp ult i8 [[START]], [[START_SHL_5]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C_0]])
 ; CHECK-NEXT:    [[START_SHL_3:%.*]] = shl nuw i8 [[START]], 3
-; CHECK-NEXT:    [[C_1:%.*]] = icmp ule i8 [[START_SHL_5]], [[START_SHL_3]]
 ; CHECK-NEXT:    ret i1 false
 ;
 entry:
@@ -259,7 +257,6 @@ define i1 @test_shl_const_nuw_unsigned_12(i8 %start) {
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ult i8 [[START]], [[START_SHL_3]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[C_1]])
 ; CHECK-NEXT:    [[START_SHL_5:%.*]] = shl nuw i8 [[START]], 5
-; CHECK-NEXT:    [[T_1:%.*]] = icmp ule i8 [[START_SHL_3]], [[START_SHL_5]]
 ; CHECK-NEXT:    ret i1 true
 ;
 entry:
@@ -1222,4 +1219,69 @@ entry:
   %start.add.2.13 = add i8 %start.add.2, 13
   %f.1 = icmp ule i8 %start.add.2.13, %start.shl.4
   ret i1 %f.1
+}
+
+define i1 @shl_overflow(i64 %start) {
+; CHECK-LABEL: @shl_overflow(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[PRE_COND:%.*]] = icmp ugt i64 [[START:%.*]], 0
+; CHECK-NEXT:    br i1 [[PRE_COND]], label [[MAIN:%.*]], label [[EXIT:%.*]]
+; CHECK:       main:
+; CHECK-NEXT:    [[TMP0:%.*]] = shl nuw nsw i64 [[START]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp uge i64 [[TMP0]], [[START]]
+; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %pre.cond = icmp ugt i64 %start, 0
+  br i1 %pre.cond, label %main, label %exit
+
+main:
+  %0 = shl nuw nsw i64 %start, -1
+  %1 = icmp uge i64 %0, %start
+  ret i1 %1
+
+exit:
+  ret i1 0
+}
+
+
+define i1 @shl_overflow_2() {
+; CHECK-LABEL: @shl_overflow_2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SHL_UB:%.*]] = shl nuw nsw i256 0, 64
+; CHECK-NEXT:    [[SHL_CMP:%.*]] = icmp uge i256 [[SHL_UB]], 0
+; CHECK-NEXT:    ret i1 [[SHL_CMP]]
+;
+entry:
+  %shl.ub = shl nuw nsw i256 0, 64
+  %shl.cmp = icmp uge i256 %shl.ub, 0
+  ret i1 %shl.cmp
+}
+
+define i1 @shl_overflow_3() {
+; CHECK-LABEL: @shl_overflow_3(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SHL_UB:%.*]] = shl nuw nsw i256 0, 65
+; CHECK-NEXT:    [[SHL_CMP:%.*]] = icmp uge i256 [[SHL_UB]], 0
+; CHECK-NEXT:    ret i1 [[SHL_CMP]]
+;
+entry:
+  %shl.ub = shl nuw nsw i256 0, 65
+  %shl.cmp = icmp uge i256 %shl.ub, 0
+  ret i1 %shl.cmp
+}
+
+define i1 @shl_55() {
+; CHECK-LABEL: @shl_55(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SHL_UB:%.*]] = shl nuw nsw i256 1, 55
+; CHECK-NEXT:    [[SHL_CMP:%.*]] = icmp uge i256 [[SHL_UB]], 1
+; CHECK-NEXT:    ret i1 [[SHL_CMP]]
+;
+entry:
+  %shl.ub = shl nuw nsw i256 1, 55
+  %shl.cmp = icmp uge i256 %shl.ub, 1
+  ret i1 %shl.cmp
 }

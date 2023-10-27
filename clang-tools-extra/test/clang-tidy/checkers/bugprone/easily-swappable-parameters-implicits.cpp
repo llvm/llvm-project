@@ -1,13 +1,13 @@
-// RUN: %check_clang_tidy -std=c++17 %s bugprone-easily-swappable-parameters %t \
-// RUN:   -config='{CheckOptions: [ \
-// RUN:     {key: bugprone-easily-swappable-parameters.MinimumLength, value: 2}, \
-// RUN:     {key: bugprone-easily-swappable-parameters.IgnoredParameterNames, value: ""}, \
-// RUN:     {key: bugprone-easily-swappable-parameters.IgnoredParameterTypeSuffixes, value: ""}, \
-// RUN:     {key: bugprone-easily-swappable-parameters.QualifiersMix, value: 0}, \
-// RUN:     {key: bugprone-easily-swappable-parameters.ModelImplicitConversions, value: 1}, \
-// RUN:     {key: bugprone-easily-swappable-parameters.SuppressParametersUsedTogether, value: 0}, \
-// RUN:     {key: bugprone-easily-swappable-parameters.NamePrefixSuffixSilenceDissimilarityTreshold, value: 0} \
-// RUN:  ]}' --
+// RUN: %check_clang_tidy -std=c++17-or-later %s bugprone-easily-swappable-parameters %t \
+// RUN:   -config='{CheckOptions: { \
+// RUN:     bugprone-easily-swappable-parameters.MinimumLength: 2, \
+// RUN:     bugprone-easily-swappable-parameters.IgnoredParameterNames: "", \
+// RUN:     bugprone-easily-swappable-parameters.IgnoredParameterTypeSuffixes: "", \
+// RUN:     bugprone-easily-swappable-parameters.QualifiersMix: 0, \
+// RUN:     bugprone-easily-swappable-parameters.ModelImplicitConversions: 1, \
+// RUN:     bugprone-easily-swappable-parameters.SuppressParametersUsedTogether: 0, \
+// RUN:     bugprone-easily-swappable-parameters.NamePrefixSuffixSilenceDissimilarityTreshold: 0 \
+// RUN:  }}' --
 
 void implicitDoesntBreakOtherStuff(int A, int B) {}
 // CHECK-MESSAGES: :[[@LINE-1]]:36: warning: 2 adjacent parameters of 'implicitDoesntBreakOtherStuff' of similar type ('int') are easily swapped by mistake [bugprone-easily-swappable-parameters]

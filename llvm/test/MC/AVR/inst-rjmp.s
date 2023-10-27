@@ -37,13 +37,13 @@ x:
 ; CHECK: rjmp    x                       ; encoding: [A,0b1100AAAA]
 ; CHECK:                                 ;   fixup A - offset: 0, value: x, kind: fixup_13_pcrel
 
-; INST: rjmp	.+0
-; INST: rjmp	.+0
-; INST: rjmp	.+0
-; INST: rjmp	.+0
-; INST: rjmp	.+0
-; INST: rjmp	.+0
-; INST: rjmp	.+0
-; INST: rjmp	.+0
-; INST: rjmp	.+0
-; INST: rjmp	.+30
+; INST: 01 c0      rjmp  .+2
+; INST: ff cf      rjmp  .-2
+; INST: 00 c0      rjmp  .+0
+; INST: 04 c0      rjmp  .+8
+; INST: 00 c0      rjmp  .+0
+; INST: 00 c0      rjmp  .+0
+; INST: fe cf      rjmp  .-4
+; INST: fd cf      rjmp  .-6
+; INST: 00 c0      rjmp  .+0
+; INST: 0f c0      rjmp  .+30

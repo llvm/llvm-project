@@ -11,6 +11,19 @@
 
 include "mlir/Pass/PassBase.td"
 
+def LLVMAddComdats : Pass<"llvm-add-comdats", "::mlir::ModuleOp"> {
+  let summary = "Add comdats to linkonce and linkonce_odr functions";
+  let description = [{
+    Add an any COMDAT to every linkonce and linkonce_odr function.
+    This is necessary on Windows to link these functions as the system
+    linker won't link weak symbols without a COMDAT. It also provides better
+    behavior than standard weak symbols on ELF-based platforms.
+    This pass will still add COMDATs on platforms that do not support them,
+    for example macOS, so should only be run when the target platform supports
+    COMDATs.
+  }];
+}
+
 def LLVMLegalizeForExport : Pass<"llvm-legalize-for-export"> {
   let summary = "Legalize LLVM dialect to be convertible to LLVM IR";
   let constructor = "::mlir::LLVM::createLegalizeForExportPass()";
@@ -30,9 +43,42 @@ def LLVMRequestCWrappers
   let constructor = "::mlir::LLVM::createRequestCWrappersPass()";
 }
 
+def LLVMTypeConsistency
+    : Pass<"llvm-type-consistency", "::mlir::LLVM::LLVMFuncOp"> {
+  let summary = "Rewrites to improve type consistency";
+  let description = [{
+    Set of rewrites to improve the coherency of types within an LLVM dialect
+    program. This will adjust operations operating on pointers so they interpret
+    their associated pointee type as consistently as possible.
+  }];
+  let constructor = "::mlir::LLVM::createTypeConsistencyPass()";
+
+  let options = [
+    Option<"maxVectorSplitSize", "max-vector-split-size", "unsigned",
+           /*default=*/"512",
+           "Maximum size in bits of a vector value in a load or store operation"
+           " operating on multiple elements that should still be split">,
+  ];
+}
+
 def NVVMOptimizeForTarget : Pass<"llvm-optimize-for-nvvm-target"> {
   let summary = "Optimize NVVM IR";
   let constructor = "::mlir::NVVM::createOptimizeForTargetPass()";
+}
+
+def DIScopeForLLVMFuncOp : Pass<"ensure-debug-info-scope-on-llvm-func", "LLVM::LLVMFuncOp"> {
+  let summary = "Materialize LLVM debug info subprogram attribute on every LLVMFuncOp";
+  let description = [{
+    Having a debug info subprogram attribute on a function is required for
+    emitting line tables from MLIR FileLocCol locations.
+
+    This is not intended to be a proper replacement for frontends to emit
+    complete debug informations, however it is a convenient way to get line
+    tables for debugging purposes. This allow to step trough in a debugger
+    line-by-line or get a backtrace with line numbers.
+  }];
+
+  let constructor = "mlir::LLVM::createDIScopeForLLVMFuncOpPass()";
 }
 
 #endif // MLIR_DIALECT_LLVMIR_TRANSFORMS_PASSES

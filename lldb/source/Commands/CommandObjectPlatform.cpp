@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CommandObjectPlatform.h"
+#include "CommandOptionsProcessAttach.h"
 #include "CommandOptionsProcessLaunch.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
@@ -18,10 +19,13 @@
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Interpreter/OptionGroupFile.h"
 #include "lldb/Interpreter/OptionGroupPlatform.h"
+#include "lldb/Interpreter/OptionGroupPythonClassWithDict.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Platform.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/Args.h"
+#include "lldb/Utility/ScriptedMetadata.h"
+#include "lldb/Utility/State.h"
 
 #include "llvm/ADT/SmallString.h"
 
@@ -158,8 +162,8 @@ public:
   ~CommandObjectPlatformSelect() override = default;
 
   void HandleCompletion(CompletionRequest &request) override {
-    CommandCompletions::PlatformPluginNames(GetCommandInterpreter(), request,
-                                            nullptr);
+    lldb_private::CommandCompletions::PlatformPluginNames(
+        GetCommandInterpreter(), request, nullptr);
   }
 
   Options *GetOptions() override { return &m_option_group; }
@@ -382,8 +386,7 @@ public:
                             "Set settings for the current target's platform.",
                             "platform settings", 0),
         m_option_working_dir(LLDB_OPT_SET_1, false, "working-dir", 'w',
-                             CommandCompletions::eRemoteDiskDirectoryCompletion,
-                             eArgTypePath,
+                             lldb::eRemoteDiskDirectoryCompletion, eArgTypePath,
                              "The working directory for the platform.") {
     m_options.Append(&m_option_working_dir, LLDB_OPT_SET_ALL, LLDB_OPT_SET_1);
   }
@@ -481,9 +484,9 @@ public:
   HandleArgumentCompletion(CompletionRequest &request,
                            OptionElementVector &opt_element_vector) override {
     if (request.GetCursorIndex() == 0)
-      CommandCompletions::InvokeCommonCompletionCallbacks(
-          GetCommandInterpreter(),
-          CommandCompletions::eRemoteDiskFileCompletion, request, nullptr);
+      lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
+          GetCommandInterpreter(), lldb::eRemoteDiskFileCompletion, request,
+          nullptr);
   }
 
   bool DoExecute(Args &args, CommandReturnObject &result) override {
@@ -828,13 +831,12 @@ public:
   HandleArgumentCompletion(CompletionRequest &request,
                            OptionElementVector &opt_element_vector) override {
     if (request.GetCursorIndex() == 0)
-      CommandCompletions::InvokeCommonCompletionCallbacks(
-          GetCommandInterpreter(),
-          CommandCompletions::eRemoteDiskFileCompletion, request, nullptr);
+      lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
+          GetCommandInterpreter(), lldb::eRemoteDiskFileCompletion, request,
+          nullptr);
     else if (request.GetCursorIndex() == 1)
-      CommandCompletions::InvokeCommonCompletionCallbacks(
-          GetCommandInterpreter(), CommandCompletions::eDiskFileCompletion,
-          request, nullptr);
+      lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
+          GetCommandInterpreter(), lldb::eDiskFileCompletion, request, nullptr);
   }
 
   bool DoExecute(Args &args, CommandReturnObject &result) override {
@@ -904,9 +906,9 @@ public:
     if (request.GetCursorIndex() != 0)
       return;
 
-    CommandCompletions::InvokeCommonCompletionCallbacks(
-        GetCommandInterpreter(), CommandCompletions::eRemoteDiskFileCompletion,
-        request, nullptr);
+    lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
+        GetCommandInterpreter(), lldb::eRemoteDiskFileCompletion, request,
+        nullptr);
   }
 
   bool DoExecute(Args &args, CommandReturnObject &result) override {
@@ -975,9 +977,9 @@ public:
     if (request.GetCursorIndex() != 0)
       return;
 
-    CommandCompletions::InvokeCommonCompletionCallbacks(
-        GetCommandInterpreter(), CommandCompletions::eRemoteDiskFileCompletion,
-        request, nullptr);
+    lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
+        GetCommandInterpreter(), lldb::eRemoteDiskFileCompletion, request,
+        nullptr);
   }
 
   bool DoExecute(Args &args, CommandReturnObject &result) override {
@@ -1045,9 +1047,9 @@ public:
     if (request.GetCursorIndex() != 0)
       return;
 
-    CommandCompletions::InvokeCommonCompletionCallbacks(
-        GetCommandInterpreter(), CommandCompletions::eRemoteDiskFileCompletion,
-        request, nullptr);
+    lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
+        GetCommandInterpreter(), lldb::eRemoteDiskFileCompletion, request,
+        nullptr);
   }
 
   bool DoExecute(Args &args, CommandReturnObject &result) override {
@@ -1104,13 +1106,12 @@ public:
   HandleArgumentCompletion(CompletionRequest &request,
                            OptionElementVector &opt_element_vector) override {
     if (request.GetCursorIndex() == 0)
-      CommandCompletions::InvokeCommonCompletionCallbacks(
-          GetCommandInterpreter(), CommandCompletions::eDiskFileCompletion,
-          request, nullptr);
+      lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
+          GetCommandInterpreter(), lldb::eDiskFileCompletion, request, nullptr);
     else if (request.GetCursorIndex() == 1)
-      CommandCompletions::InvokeCommonCompletionCallbacks(
-          GetCommandInterpreter(),
-          CommandCompletions::eRemoteDiskFileCompletion, request, nullptr);
+      lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
+          GetCommandInterpreter(), lldb::eRemoteDiskFileCompletion, request,
+          nullptr);
   }
 
   bool DoExecute(Args &args, CommandReturnObject &result) override {
@@ -1144,8 +1145,11 @@ public:
       : CommandObjectParsed(interpreter, "platform process launch",
                             "Launch a new process on a remote platform.",
                             "platform process launch program",
-                            eCommandRequiresTarget | eCommandTryTargetAPILock) {
+                            eCommandRequiresTarget | eCommandTryTargetAPILock),
+        m_class_options("scripted process", true, 'C', 'k', 'v', 0) {
     m_all_options.Append(&m_options);
+    m_all_options.Append(&m_class_options, LLDB_OPT_SET_1 | LLDB_OPT_SET_2,
+                         LLDB_OPT_SET_ALL);
     m_all_options.Finalize();
     CommandArgumentData run_arg_arg{eArgTypeRunArgs, eArgRepeatStar};
     m_arguments.push_back({run_arg_arg});
@@ -1180,6 +1184,14 @@ protected:
         m_options.launch_info.GetArchitecture() = exe_module->GetArchitecture();
       }
 
+      if (!m_class_options.GetName().empty()) {
+        m_options.launch_info.SetProcessPluginName("ScriptedProcess");
+        ScriptedMetadataSP metadata_sp = std::make_shared<ScriptedMetadata>(
+            m_class_options.GetName(), m_class_options.GetStructuredData());
+        m_options.launch_info.SetScriptedMetadata(metadata_sp);
+        target->SetProcessLaunchInfo(m_options.launch_info);
+      }
+
       if (argc > 0) {
         if (m_options.launch_info.GetExecutableFile()) {
           // We already have an executable file, so we will use this and all
@@ -1196,20 +1208,72 @@ protected:
       if (m_options.launch_info.GetExecutableFile()) {
         Debugger &debugger = GetDebugger();
 
-        if (argc == 0)
-          target->GetRunArguments(m_options.launch_info.GetArguments());
+        if (argc == 0) {
+          // If no arguments were given to the command, use target.run-args.
+          Args target_run_args;
+          target->GetRunArguments(target_run_args);
+          m_options.launch_info.GetArguments().AppendArguments(target_run_args);
+        }
 
         ProcessSP process_sp(platform_sp->DebugProcess(
             m_options.launch_info, debugger, *target, error));
+
+        if (!process_sp && error.Success()) {
+          result.AppendError("failed to launch or debug process");
+          return false;
+        } else if (!error.Success()) {
+          result.AppendError(error.AsCString());
+          return false;
+        }
+
+        const bool synchronous_execution =
+            debugger.GetCommandInterpreter().GetSynchronous();
+        auto launch_info = m_options.launch_info;
+        bool rebroadcast_first_stop =
+            !synchronous_execution &&
+            launch_info.GetFlags().Test(eLaunchFlagStopAtEntry);
+
+        EventSP first_stop_event_sp;
+        StateType state = process_sp->WaitForProcessToStop(
+            std::nullopt, &first_stop_event_sp, rebroadcast_first_stop,
+            launch_info.GetHijackListener());
+        process_sp->RestoreProcessEvents();
+
+        if (rebroadcast_first_stop) {
+          assert(first_stop_event_sp);
+          process_sp->BroadcastEvent(first_stop_event_sp);
+          return true;
+        }
+
+        switch (state) {
+        case eStateStopped: {
+          if (launch_info.GetFlags().Test(eLaunchFlagStopAtEntry))
+            break;
+          if (synchronous_execution) {
+            // Now we have handled the stop-from-attach, and we are just
+            // switching to a synchronous resume.  So we should switch to the
+            // SyncResume hijacker.
+            process_sp->ResumeSynchronous(&result.GetOutputStream());
+          } else {
+            error = process_sp->Resume();
+            if (!error.Success()) {
+              result.AppendErrorWithFormat(
+                  "process resume at entry point failed: %s",
+                  error.AsCString());
+            }
+          }
+        } break;
+        default:
+          result.AppendErrorWithFormat(
+              "initial process state wasn't stopped: %s",
+              StateAsCString(state));
+          break;
+        }
+
         if (process_sp && process_sp->IsAlive()) {
           result.SetStatus(eReturnStatusSuccessFinishNoResult);
           return true;
         }
-
-        if (error.Success())
-          result.AppendError("process launch failed");
-        else
-          result.AppendError(error.AsCString());
       } else {
         result.AppendError("'platform process launch' uses the current target "
                            "file and arguments, or the executable and its "
@@ -1223,6 +1287,7 @@ protected:
   }
 
   CommandOptionsProcessLaunch m_options;
+  OptionGroupPythonClassWithDict m_class_options;
   OptionGroupOptions m_all_options;
 };
 
@@ -1508,9 +1573,8 @@ public:
   void
   HandleArgumentCompletion(CompletionRequest &request,
                            OptionElementVector &opt_element_vector) override {
-    CommandCompletions::InvokeCommonCompletionCallbacks(
-        GetCommandInterpreter(), CommandCompletions::eProcessIDCompletion,
-        request, nullptr);
+    lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
+        GetCommandInterpreter(), lldb::eProcessIDCompletion, request, nullptr);
   }
 
 protected:
@@ -1572,71 +1636,16 @@ protected:
 
 class CommandObjectPlatformProcessAttach : public CommandObjectParsed {
 public:
-  class CommandOptions : public Options {
-  public:
-    CommandOptions() {
-      // Keep default values of all options in one place: OptionParsingStarting
-      // ()
-      OptionParsingStarting(nullptr);
-    }
-
-    ~CommandOptions() override = default;
-
-    Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
-                          ExecutionContext *execution_context) override {
-      Status error;
-      char short_option = (char)m_getopt_table[option_idx].val;
-      switch (short_option) {
-      case 'p': {
-        lldb::pid_t pid = LLDB_INVALID_PROCESS_ID;
-        if (option_arg.getAsInteger(0, pid)) {
-          error.SetErrorStringWithFormat("invalid process ID '%s'",
-                                         option_arg.str().c_str());
-        } else {
-          attach_info.SetProcessID(pid);
-        }
-      } break;
-
-      case 'P':
-        attach_info.SetProcessPluginName(option_arg);
-        break;
-
-      case 'n':
-        attach_info.GetExecutableFile().SetFile(option_arg,
-                                                FileSpec::Style::native);
-        break;
-
-      case 'w':
-        attach_info.SetWaitForLaunch(true);
-        break;
-
-      default:
-        llvm_unreachable("Unimplemented option");
-      }
-      return error;
-    }
-
-    void OptionParsingStarting(ExecutionContext *execution_context) override {
-      attach_info.Clear();
-    }
-
-    llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::ArrayRef(g_platform_process_attach_options);
-    }
-
-    // Options table: Required for subclasses of Options.
-
-    static OptionDefinition g_option_table[];
-
-    // Instance variables to hold the values for command options.
-
-    ProcessAttachInfo attach_info;
-  };
-
   CommandObjectPlatformProcessAttach(CommandInterpreter &interpreter)
       : CommandObjectParsed(interpreter, "platform process attach",
                             "Attach to a process.",
-                            "platform process attach <cmd-options>") {}
+                            "platform process attach <cmd-options>"),
+        m_class_options("scripted process", true, 'C', 'k', 'v', 0) {
+    m_all_options.Append(&m_options);
+    m_all_options.Append(&m_class_options, LLDB_OPT_SET_1 | LLDB_OPT_SET_2,
+                         LLDB_OPT_SET_ALL);
+    m_all_options.Finalize();
+  }
 
   ~CommandObjectPlatformProcessAttach() override = default;
 
@@ -1644,6 +1653,14 @@ public:
     PlatformSP platform_sp(
         GetDebugger().GetPlatformList().GetSelectedPlatform());
     if (platform_sp) {
+
+      if (!m_class_options.GetName().empty()) {
+        m_options.attach_info.SetProcessPluginName("ScriptedProcess");
+        ScriptedMetadataSP metadata_sp = std::make_shared<ScriptedMetadata>(
+            m_class_options.GetName(), m_class_options.GetStructuredData());
+        m_options.attach_info.SetScriptedMetadata(metadata_sp);
+      }
+
       Status err;
       ProcessSP remote_process_sp = platform_sp->Attach(
           m_options.attach_info, GetDebugger(), nullptr, err);
@@ -1659,10 +1676,12 @@ public:
     return result.Succeeded();
   }
 
-  Options *GetOptions() override { return &m_options; }
+  Options *GetOptions() override { return &m_all_options; }
 
 protected:
-  CommandOptions m_options;
+  CommandOptionsProcessAttach m_options;
+  OptionGroupPythonClassWithDict m_class_options;
+  OptionGroupOptions m_all_options;
 };
 
 class CommandObjectPlatformProcess : public CommandObjectMultiword {
@@ -1864,9 +1883,8 @@ public:
                            OptionElementVector &opt_element_vector) override {
     if (request.GetCursorIndex())
       return;
-    CommandCompletions::InvokeCommonCompletionCallbacks(
-        GetCommandInterpreter(), CommandCompletions::eDiskFileCompletion,
-        request, nullptr);
+    lldb_private::CommandCompletions::InvokeCommonCompletionCallbacks(
+        GetCommandInterpreter(), lldb::eDiskFileCompletion, request, nullptr);
   }
 
   bool DoExecute(Args &args, CommandReturnObject &result) override {

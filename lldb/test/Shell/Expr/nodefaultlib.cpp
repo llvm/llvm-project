@@ -7,10 +7,10 @@
 // XFAIL: system-netbsd || system-freebsd || system-darwin
 
 // RUN: %build %s --nodefaultlib -o %t
-// RUN: %lldb %t -o "b main" -o run -o "p call_me(5, 6)" -o exit \
+// RUN: %lldb %t -o "b main" -o run -o "expression call_me(5, 6)" -o exit \
 // RUN:   | FileCheck %s
 
-// CHECK: p call_me(5, 6)
+// CHECK: expression call_me(5, 6)
 // CHECK: (int) $0 = 30
 
 int call_me(int x, long y) { return x * y; }

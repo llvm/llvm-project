@@ -34,7 +34,7 @@ struct TestElementsAttrInterface
   void runOnOperation() override {
     getOperation().walk([&](Operation *op) {
       for (NamedAttribute attr : op->getAttrs()) {
-        auto elementsAttr = attr.getValue().dyn_cast<ElementsAttr>();
+        auto elementsAttr = dyn_cast<ElementsAttr>(attr.getValue());
         if (!elementsAttr)
           continue;
         testElementsAttrIteration<int64_t>(op, elementsAttr, "int64_t");

@@ -11,9 +11,7 @@
 
 #include "../ClangTidyCheck.h"
 
-namespace clang {
-namespace tidy {
-namespace altera {
+namespace clang::tidy::altera {
 
 /// Detects OpenCL kernel functions that call a barrier but do not call an
 /// ID-function function. These functions will be treated as single work-item
@@ -33,8 +31,6 @@ public:
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
 };
 
-} // namespace altera
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::altera
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_ALTERA_SINGLE_WORK_ITEM_BARRIER_H

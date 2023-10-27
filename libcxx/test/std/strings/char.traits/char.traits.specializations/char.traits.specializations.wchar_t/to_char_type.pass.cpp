@@ -19,11 +19,10 @@
 
 #include "test_macros.h"
 
-int main(int, char**)
-{
-    assert(std::char_traits<wchar_t>::to_char_type(L'a') == L'a');
-    assert(std::char_traits<wchar_t>::to_char_type(L'A') == L'A');
-    assert(std::char_traits<wchar_t>::to_char_type(0) == 0);
+int main(int, char**) {
+  assert(std::char_traits<wchar_t>::to_char_type(L'a') == L'a');
+  assert(std::char_traits<wchar_t>::to_char_type(L'A') == L'A');
+  assert(std::char_traits<wchar_t>::to_char_type(0) == 0);
 
   return 0;
 }

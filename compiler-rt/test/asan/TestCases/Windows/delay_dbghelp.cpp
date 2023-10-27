@@ -1,5 +1,5 @@
 // Build an executable with ASan, then extract the DLLs that it depends on.
-// RUN: %clang_cl_asan %s -Fe%t.exe
+// RUN: %clang_cl_asan %s %Fe%t.exe
 // RUN: llvm-readobj --coff-imports %t.exe | grep Name: | sed -e 's/ *Name: *//' > %t
 //
 // Make sure the binary doesn't depend on dbghelp directly.

@@ -6,9 +6,20 @@ RUN: mkdir -p %t
 
 RUN: llvm-mc -triple=x86_64-pc-windows-msvc -filetype=obj -o %t/foo.o %S/Inputs/a.s
 RUN: llvm-mc -triple=x86_64-pc-windows-msvc -filetype=obj -o %t/bar.o %S/Inputs/b.s
-RUN: llvm-lib -out:%t/foo.lib %t/foo.o %t/foo.o %t/bar.o
+RUN: llvm-mc -triple=x86_64-pc-windows-msvc -filetype=obj -o %t/abc.o %S/Inputs/abc.s
+RUN: llvm-lib -out:%t/foo.lib %t/foo.o %t/foo.o %t/abc.o %t/bar.o  %t/foo.o %t/foo.o
 
 RUN: llvm-ar t %t/foo.lib | FileCheck %s
-CHECK: foo.o
-CHECK-NOT: foo.o
 CHECK: bar.o
+CHECK-NEXT: abc.o
+CHECK-NEXT: foo.o
+CHECK-NOT: foo.o
+
+# Check that symbol map contains sorted, de-duplicated symbols.
+RUN: cd %t && llvm-lib -out:foo.lib foo.o foo.o abc.o bar.o  foo.o foo.o
+RUN: llvm-nm --print-armap %t/foo.lib | FileCheck %s --check-prefix=DUP
+# DUP: Archive map
+# DUP-NEXT: a in abc.o
+# DUP-NEXT: b in bar.o
+# DUP-NEXT: c in abc.o
+# DUP-EMPTY

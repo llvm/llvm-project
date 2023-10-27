@@ -18,7 +18,9 @@
 #include "llvm/ExecutionEngine/Orc/COFFPlatform.h"
 #include "llvm/ExecutionEngine/Orc/COFFVCRuntimeSupport.h"
 #include "llvm/ExecutionEngine/Orc/DebugObjectManagerPlugin.h"
-#include "llvm/ExecutionEngine/Orc/DebuggerSupportPlugin.h"
+#include "llvm/ExecutionEngine/Orc/Debugging/DebugInfoSupport.h"
+#include "llvm/ExecutionEngine/Orc/Debugging/DebuggerSupportPlugin.h"
+#include "llvm/ExecutionEngine/Orc/Debugging/PerfSupportPlugin.h"
 #include "llvm/ExecutionEngine/Orc/ELFNixPlatform.h"
 #include "llvm/ExecutionEngine/Orc/EPCDebugObjectRegistrar.h"
 #include "llvm/ExecutionEngine/Orc/EPCDynamicLibrarySearchGenerator.h"
@@ -30,6 +32,7 @@
 #include "llvm/ExecutionEngine/Orc/ObjectFileInterface.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/JITLoaderGDB.h"
+#include "llvm/ExecutionEngine/Orc/TargetProcess/JITLoaderPerf.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/RegisterEHFrames.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
@@ -140,6 +143,11 @@ static cl::opt<bool>
                     cl::desc("Enable debugger suppport (default = !-noexec)"),
                     cl::init(true), cl::Hidden, cl::cat(JITLinkCategory));
 
+static cl::opt<bool> PerfSupport("perf-support",
+                                 cl::desc("Enable perf profiling support"),
+                                 cl::init(false), cl::Hidden,
+                                 cl::cat(JITLinkCategory));
+
 static cl::opt<bool>
     NoProcessSymbols("no-process-syms",
                      cl::desc("Do not resolve to llvm-jitlink process symbols"),
@@ -151,7 +159,8 @@ static cl::list<std::string> AbsoluteDefs(
     cl::cat(JITLinkCategory));
 
 static cl::list<std::string>
-    Aliases("alias", cl::desc("Inject symbol aliases (syntax: <name>=<addr>)"),
+    Aliases("alias",
+            cl::desc("Inject symbol aliases (syntax: <alias-name>=<aliasee>)"),
             cl::cat(JITLinkCategory));
 
 static cl::list<std::string> TestHarnesses("harness", cl::Positional,
@@ -174,15 +183,11 @@ static cl::opt<bool> ShowAddrs(
     cl::desc("Print registered symbol, section, got and stub addresses"),
     cl::init(false), cl::cat(JITLinkCategory));
 
-static cl::opt<bool> ShowLinkGraph(
-    "show-graph",
-    cl::desc("Print the link graph after fixups have been applied"),
-    cl::init(false), cl::cat(JITLinkCategory));
-
-static cl::opt<bool> ShowSizes(
-    "show-sizes",
-    cl::desc("Show sizes pre- and post-dead stripping, and allocations"),
-    cl::init(false), cl::cat(JITLinkCategory));
+static cl::opt<std::string> ShowLinkGraphs(
+    "show-graphs",
+    cl::desc("Takes a posix regex and prints the link graphs of all files "
+             "matching that regex after fixups have been applied"),
+    cl::Optional, cl::cat(JITLinkCategory));
 
 static cl::opt<bool> ShowTimes("show-times",
                                cl::desc("Show times for llvm-jitlink phases"),
@@ -246,10 +251,14 @@ static cl::opt<bool> UseSharedMemory(
 static ExitOnError ExitOnErr;
 
 static LLVM_ATTRIBUTE_USED void linkComponents() {
-  errs() << (void *)&llvm_orc_registerEHFrameSectionWrapper
-         << (void *)&llvm_orc_deregisterEHFrameSectionWrapper
-         << (void *)&llvm_orc_registerJITLoaderGDBWrapper
-         << (void *)&llvm_orc_registerJITLoaderGDBAllocAction;
+  errs() << "Linking in runtime functions\n"
+         << (void *)&llvm_orc_registerEHFrameSectionWrapper << '\n'
+         << (void *)&llvm_orc_deregisterEHFrameSectionWrapper << '\n'
+         << (void *)&llvm_orc_registerJITLoaderGDBWrapper << '\n'
+         << (void *)&llvm_orc_registerJITLoaderGDBAllocAction << '\n'
+         << (void *)&llvm_orc_registerJITLoaderPerfStart << '\n'
+         << (void *)&llvm_orc_registerJITLoaderPerfEnd << '\n'
+         << (void *)&llvm_orc_registerJITLoaderPerfImpl << '\n';
 }
 
 static bool UseTestResultOverride = false;
@@ -386,13 +395,6 @@ static Error applyHarnessPromotions(Session &S, LinkGraph &G) {
   return Error::success();
 }
 
-static uint64_t computeTotalBlockSizes(LinkGraph &G) {
-  uint64_t TotalSize = 0;
-  for (auto *B : G.blocks())
-    TotalSize += B->getSize();
-  return TotalSize;
-}
-
 static void dumpSectionContents(raw_ostream &OS, LinkGraph &G) {
   constexpr orc::ExecutorAddrDiff DumpWidth = 16;
   static_assert(isPowerOf2_64(DumpWidth), "DumpWidth must be a power of two");
@@ -506,12 +508,13 @@ public:
   }
 
   void initialize(AllocInfo &AI, OnInitializedFunction OnInitialized) override {
-    // Slide mapping based on delta and make all segments read-writable.
-    auto FixedAI = AI;
+    // Slide mapping based on delta, make all segments read-writable, and
+    // discard allocation actions.
+    auto FixedAI = std::move(AI);
     FixedAI.MappingBase -= DeltaAddr;
     for (auto &Seg : FixedAI.Segments)
-      Seg.AG = AllocGroup(MemProt::Read | MemProt::Write,
-                          Seg.AG.getMemDeallocPolicy());
+      Seg.AG = {MemProt::Read | MemProt::Write, Seg.AG.getMemLifetime()};
+    FixedAI.Actions.clear();
     InProcessMemoryMapper::initialize(
         FixedAI, [this, OnInitialized = std::move(OnInitialized)](
                      Expected<ExecutorAddr> Result) mutable {
@@ -551,12 +554,12 @@ Expected<uint64_t> getSlabAllocSize(StringRef SizeString) {
 
   uint64_t Units = 1024;
 
-  if (SizeString.endswith_insensitive("kb"))
+  if (SizeString.ends_with_insensitive("kb"))
     SizeString = SizeString.drop_back(2).rtrim();
-  else if (SizeString.endswith_insensitive("mb")) {
+  else if (SizeString.ends_with_insensitive("mb")) {
     Units = 1024 * 1024;
     SizeString = SizeString.drop_back(2).rtrim();
-  } else if (SizeString.endswith_insensitive("gb")) {
+  } else if (SizeString.ends_with_insensitive("gb")) {
     Units = 1024 * 1024 * 1024;
     SizeString = SizeString.drop_back(2).rtrim();
   }
@@ -885,12 +888,13 @@ public:
                       const SymbolLookupSet &LookupSet) override {
     SymbolMap PhonySymbols;
     for (auto &KV : LookupSet)
-      PhonySymbols[KV.first] = JITEvaluatedSymbol(0, JITSymbolFlags::Exported);
+      PhonySymbols[KV.first] = {ExecutorAddr(), JITSymbolFlags::Exported};
     return JD.define(absoluteSymbols(std::move(PhonySymbols)));
   }
 };
 
-Expected<std::unique_ptr<Session>> Session::Create(Triple TT) {
+Expected<std::unique_ptr<Session>> Session::Create(Triple TT,
+                                                   SubtargetFeatures Features) {
 
   std::unique_ptr<ExecutorProcessControl> EPC;
   if (OutOfProcessExecutor.getNumOccurrences()) {
@@ -920,6 +924,7 @@ Expected<std::unique_ptr<Session>> Session::Create(Triple TT) {
   std::unique_ptr<Session> S(new Session(std::move(EPC), Err));
   if (Err)
     return std::move(Err);
+  S->Features = std::move(Features);
   return std::move(S);
 }
 
@@ -973,18 +978,24 @@ Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
     auto &TestResultJD = ES.createBareJITDylib("<TestResultJD>");
     ExitOnErr(TestResultJD.define(absoluteSymbols(
         {{ES.intern("llvm_jitlink_setTestResultOverride"),
-          {pointerToJITTargetAddress(llvm_jitlink_setTestResultOverride),
+          {ExecutorAddr::fromPtr(llvm_jitlink_setTestResultOverride),
            JITSymbolFlags::Exported}}})));
     MainJD->addToLinkOrder(TestResultJD);
   }
 
   ExitOnErr(loadDylibs(*this));
 
-  auto &TT = ES.getExecutorProcessControl().getTargetTriple();
+  auto &TT = ES.getTargetTriple();
 
   if (DebuggerSupport && TT.isOSBinFormatMachO())
     ObjLayer.addPlugin(ExitOnErr(
         GDBJITDebugInfoRegistrationPlugin::Create(this->ES, *MainJD, TT)));
+
+  if (PerfSupport && TT.isOSBinFormatELF()) {
+    ObjLayer.addPlugin(ExitOnErr(DebugInfoPreservationPlugin::Create()));
+    ObjLayer.addPlugin(ExitOnErr(PerfSupportPlugin::Create(
+        this->ES.getExecutorProcessControl(), *MainJD, true, true)));
+  }
 
   // Set up the platform.
   if (TT.isOSBinFormatMachO() && !OrcRuntime.empty()) {
@@ -1005,7 +1016,7 @@ Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
     }
   } else if (TT.isOSBinFormatCOFF() && !OrcRuntime.empty()) {
     auto LoadDynLibrary = [&, this](JITDylib &JD, StringRef DLLName) -> Error {
-      if (!DLLName.endswith_insensitive(".dll"))
+      if (!DLLName.ends_with_insensitive(".dll"))
         return make_error<StringError>("DLLName not ending with .dll",
                                        inconvertibleErrorCode());
       return loadAndLinkDynamicLibrary(JD, DLLName);
@@ -1024,7 +1035,7 @@ Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
           ES, ExitOnErr(EPCEHFrameRegistrar::Create(this->ES))));
     if (DebuggerSupport)
       ObjLayer.addPlugin(std::make_unique<DebugObjectManagerPlugin>(
-          ES, ExitOnErr(createJITLoaderGDBRegistrar(this->ES))));
+          ES, ExitOnErr(createJITLoaderGDBRegistrar(this->ES)), true, true));
   }
 
   ObjLayer.addPlugin(std::make_unique<JITLinkSessionPlugin>(*this));
@@ -1060,6 +1071,9 @@ Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
   // external.
   for (auto &DefName : HarnessDefinitions)
     HarnessExternals.erase(DefName.getKey());
+
+  if (!ShowLinkGraphs.empty())
+    ShowGraphsRegex = Regex(ShowLinkGraphs);
 }
 
 void Session::dumpSessionInfo(raw_ostream &OS) {
@@ -1070,14 +1084,13 @@ void Session::modifyPassConfig(const Triple &TT,
                                PassConfiguration &PassConfig) {
   if (!CheckFiles.empty())
     PassConfig.PostFixupPasses.push_back([this](LinkGraph &G) {
-      auto &EPC = ES.getExecutorProcessControl();
-      if (EPC.getTargetTriple().getObjectFormat() == Triple::ELF)
+      if (ES.getTargetTriple().getObjectFormat() == Triple::ELF)
         return registerELFGraphInfo(*this, G);
 
-      if (EPC.getTargetTriple().getObjectFormat() == Triple::MachO)
+      if (ES.getTargetTriple().getObjectFormat() == Triple::MachO)
         return registerMachOGraphInfo(*this, G);
 
-      if (EPC.getTargetTriple().getObjectFormat() == Triple::COFF)
+      if (ES.getTargetTriple().getObjectFormat() == Triple::COFF)
         return registerCOFFGraphInfo(*this, G);
 
       return make_error<StringError>("Unsupported object format for GOT/stub "
@@ -1085,26 +1098,19 @@ void Session::modifyPassConfig(const Triple &TT,
                                      inconvertibleErrorCode());
     });
 
-  if (ShowLinkGraph)
-    PassConfig.PostFixupPasses.push_back([](LinkGraph &G) -> Error {
-      outs() << "Link graph \"" << G.getName() << "\" post-fixup:\n";
-      G.dump(outs());
+  if (ShowGraphsRegex)
+    PassConfig.PostFixupPasses.push_back([this](LinkGraph &G) -> Error {
+      // Print graph if ShowLinkGraphs is specified-but-empty, or if
+      // it contains the given graph.
+      if (ShowGraphsRegex->match(G.getName())) {
+        outs() << "Link graph \"" << G.getName() << "\" post-fixup:\n";
+        G.dump(outs());
+      }
       return Error::success();
     });
 
   PassConfig.PrePrunePasses.push_back(
       [this](LinkGraph &G) { return applyHarnessPromotions(*this, G); });
-
-  if (ShowSizes) {
-    PassConfig.PrePrunePasses.push_back([this](LinkGraph &G) -> Error {
-      SizeBeforePruning += computeTotalBlockSizes(G);
-      return Error::success();
-    });
-    PassConfig.PostFixupPasses.push_back([this](LinkGraph &G) -> Error {
-      SizeAfterFixups += computeTotalBlockSizes(G);
-      return Error::success();
-    });
-  }
 
   if (ShowRelocatedSectionContents)
     PassConfig.PostFixupPasses.push_back([](LinkGraph &G) -> Error {
@@ -1214,8 +1220,8 @@ Session::findSymbolInfo(StringRef SymbolName, Twine ErrorMsgStem) {
 
 } // end namespace llvm
 
-static Triple getFirstFileTriple() {
-  static Triple FirstTT = []() {
+static std::pair<Triple, SubtargetFeatures> getFirstFileTripleAndFeatures() {
+  static std::pair<Triple, SubtargetFeatures> FirstTTAndFeatures = []() {
     assert(!InputFiles.empty() && "InputFiles can not be empty");
     for (auto InputFile : InputFiles) {
       auto ObjBuffer = ExitOnErr(getFile(InputFile));
@@ -1232,16 +1238,19 @@ static Triple getFirstFileTriple() {
           TT.setObjectFormat(Triple::COFF);
           TT.setOS(Triple::OSType::Win32);
         }
-        return TT;
+        SubtargetFeatures Features;
+        if (auto ObjFeatures = Obj->getFeatures())
+          Features = std::move(*ObjFeatures);
+        return std::make_pair(TT, Features);
       }
       default:
         break;
       }
     }
-    return Triple();
+    return std::make_pair(Triple(), SubtargetFeatures());
   }();
 
-  return FirstTT;
+  return FirstTTAndFeatures;
 }
 
 static Error sanitizeArguments(const Triple &TT, const char *ArgV0) {
@@ -1392,12 +1401,13 @@ static Error addAbsoluteSymbols(Session &S,
                                          "\" in absolute symbol definition \"" +
                                          AbsDefStmt + "\"",
                                      inconvertibleErrorCode());
-    JITEvaluatedSymbol AbsDef(Addr, JITSymbolFlags::Exported);
+    ExecutorSymbolDef AbsDef(ExecutorAddr(Addr), JITSymbolFlags::Exported);
     if (auto Err = JD.define(absoluteSymbols({{S.ES.intern(Name), AbsDef}})))
       return Err;
 
     // Register the absolute symbol with the session symbol infos.
-    S.SymbolInfos[Name] = {ArrayRef<char>(), Addr};
+    S.SymbolInfos[Name] = {ArrayRef<char>(), Addr,
+                           AbsDef.getFlags().getTargetFlags()};
   }
 
   return Error::success();
@@ -1495,7 +1505,7 @@ getObjectFileInterfaceHidden(ExecutionSession &ES, MemoryBufferRef ObjBuffer) {
 static SmallVector<StringRef, 5> getSearchPathsFromEnvVar(Session &S) {
   // FIXME: Handle EPC environment.
   SmallVector<StringRef, 5> PathVec;
-  auto TT = S.ES.getExecutorProcessControl().getTargetTriple();
+  auto TT = S.ES.getTargetTriple();
   if (TT.isOSBinFormatCOFF())
     StringRef(getenv("PATH")).split(PathVec, ";");
   else if (TT.isOSBinFormatELF())
@@ -1630,8 +1640,7 @@ static Error addLibraries(Session &S,
       break;
     }
     auto G = StaticLibraryDefinitionGenerator::Load(
-        S.ObjLayer, Path, S.ES.getExecutorProcessControl().getTargetTriple(),
-        std::move(GetObjFileInterface));
+        S.ObjLayer, Path, std::move(GetObjFileInterface));
     if (!G)
       return G.takeError();
 
@@ -1640,7 +1649,7 @@ static Error addLibraries(Session &S,
     for (auto FileName : (*G)->getImportedDynamicLibraries()) {
       LibraryLoad NewLL;
       auto FileNameRef = StringRef(FileName);
-      if (!FileNameRef.endswith_insensitive(".dll"))
+      if (!FileNameRef.ends_with_insensitive(".dll"))
         return make_error<StringError>(
             "COFF Imported library not ending with dll extension?",
             inconvertibleErrorCode());
@@ -1800,7 +1809,9 @@ struct TargetInfo {
 };
 } // anonymous namespace
 
-static TargetInfo getTargetInfo(const Triple &TT) {
+static TargetInfo
+getTargetInfo(const Triple &TT,
+              const SubtargetFeatures &TF = SubtargetFeatures()) {
   auto TripleName = TT.str();
   std::string ErrorStr;
   const Target *TheTarget = TargetRegistry::lookupTarget(TripleName, ErrorStr);
@@ -1810,7 +1821,7 @@ static TargetInfo getTargetInfo(const Triple &TT) {
                                       inconvertibleErrorCode()));
 
   std::unique_ptr<MCSubtargetInfo> STI(
-      TheTarget->createMCSubtargetInfo(TripleName, "", ""));
+      TheTarget->createMCSubtargetInfo(TripleName, "", TF.getString()));
   if (!STI)
     ExitOnErr(
         make_error<StringError>("Unable to create subtarget for " + TripleName,
@@ -1864,16 +1875,11 @@ static TargetInfo getTargetInfo(const Triple &TT) {
           std::move(MAI), std::move(Ctx), std::move(Disassembler),
           std::move(MII), std::move(MIA), std::move(InstPrinter)};
 }
-
-static Error runChecks(Session &S) {
-  const auto &TT = S.ES.getExecutorProcessControl().getTargetTriple();
-
+static Error runChecks(Session &S, Triple TT, SubtargetFeatures Features) {
   if (CheckFiles.empty())
     return Error::success();
 
   LLVM_DEBUG(dbgs() << "Running checks...\n");
-
-  auto TI = getTargetInfo(TT);
 
   auto IsSymbolValid = [&S](StringRef Symbol) {
     return S.isSymbolRegistered(Symbol);
@@ -1897,8 +1903,9 @@ static Error runChecks(Session &S) {
 
   RuntimeDyldChecker Checker(
       IsSymbolValid, GetSymbolInfo, GetSectionInfo, GetStubInfo, GetGOTInfo,
-      TT.isLittleEndian() ? support::little : support::big,
-      TI.Disassembler.get(), TI.InstPrinter.get(), dbgs());
+      S.ES.getTargetTriple().isLittleEndian() ? llvm::endianness::little
+                                              : llvm::endianness::big,
+      TT, StringRef(), Features, dbgs());
 
   std::string CheckLineStart = "# " + CheckName + ":";
   for (auto &CheckFile : CheckFiles) {
@@ -1921,33 +1928,19 @@ static Error addSelfRelocations(LinkGraph &G) {
   return Error::success();
 }
 
-static void dumpSessionStats(Session &S) {
-  if (!ShowSizes)
-    return;
-  if (!OrcRuntime.empty())
-    outs() << "Note: Session stats include runtime and entry point lookup, but "
-              "not JITDylib initialization/deinitialization.\n";
-  if (ShowSizes)
-    outs() << "  Total size of all blocks before pruning: "
-           << S.SizeBeforePruning
-           << "\n  Total size of all blocks after fixups: " << S.SizeAfterFixups
-           << "\n";
-}
-
-static Expected<JITEvaluatedSymbol> getMainEntryPoint(Session &S) {
+static Expected<ExecutorSymbolDef> getMainEntryPoint(Session &S) {
   return S.ES.lookup(S.JDSearchOrder, S.ES.intern(EntryPointName));
 }
 
-static Expected<JITEvaluatedSymbol> getOrcRuntimeEntryPoint(Session &S) {
+static Expected<ExecutorSymbolDef> getOrcRuntimeEntryPoint(Session &S) {
   std::string RuntimeEntryPoint = "__orc_rt_run_program_wrapper";
-  const auto &TT = S.ES.getExecutorProcessControl().getTargetTriple();
-  if (TT.getObjectFormat() == Triple::MachO)
+  if (S.ES.getTargetTriple().getObjectFormat() == Triple::MachO)
     RuntimeEntryPoint = '_' + RuntimeEntryPoint;
   return S.ES.lookup(S.JDSearchOrder, S.ES.intern(RuntimeEntryPoint));
 }
 
-static Expected<JITEvaluatedSymbol> getEntryPoint(Session &S) {
-  JITEvaluatedSymbol EntryPoint;
+static Expected<ExecutorSymbolDef> getEntryPoint(Session &S) {
+  ExecutorSymbolDef EntryPoint;
 
   // Find the entry-point function unconditionally, since we want to force
   // it to be materialized to collect stats.
@@ -1978,8 +1971,7 @@ static Expected<JITEvaluatedSymbol> getEntryPoint(Session &S) {
 
 static Expected<int> runWithRuntime(Session &S, ExecutorAddr EntryPointAddr) {
   StringRef DemangledEntryPoint = EntryPointName;
-  const auto &TT = S.ES.getExecutorProcessControl().getTargetTriple();
-  if (TT.getObjectFormat() == Triple::MachO &&
+  if (S.ES.getTargetTriple().getObjectFormat() == Triple::MachO &&
       DemangledEntryPoint.front() == '_')
     DemangledEntryPoint = DemangledEntryPoint.drop_front();
   using llvm::orc::shared::SPSString;
@@ -2022,9 +2014,12 @@ int main(int argc, char *argv[]) {
   std::unique_ptr<JITLinkTimers> Timers =
       ShowTimes ? std::make_unique<JITLinkTimers>() : nullptr;
 
-  ExitOnErr(sanitizeArguments(getFirstFileTriple(), argv[0]));
+  auto [TT, Features] = getFirstFileTripleAndFeatures();
+  ExitOnErr(sanitizeArguments(TT, argv[0]));
 
-  auto S = ExitOnErr(Session::Create(getFirstFileTriple()));
+  auto S = ExitOnErr(Session::Create(TT, Features));
+
+  enableStatistics(*S, !OrcRuntime.empty());
 
   {
     TimeRegion TR(Timers ? &Timers->LoadObjectsTimer : nullptr);
@@ -2037,9 +2032,9 @@ int main(int argc, char *argv[]) {
   if (ShowInitialExecutionSessionState)
     S->ES.dump(outs());
 
-  Expected<JITEvaluatedSymbol> EntryPoint(nullptr);
+  Expected<ExecutorSymbolDef> EntryPoint((ExecutorSymbolDef()));
   {
-    ExpectedAsOutParameter<JITEvaluatedSymbol> _(&EntryPoint);
+    ExpectedAsOutParameter<ExecutorSymbolDef> _(&EntryPoint);
     TimeRegion TR(Timers ? &Timers->LinkTimer : nullptr);
     EntryPoint = getEntryPoint(*S);
   }
@@ -2051,8 +2046,6 @@ int main(int argc, char *argv[]) {
   if (ShowAddrs)
     S->dumpSessionInfo(outs());
 
-  dumpSessionStats(*S);
-
   if (!EntryPoint) {
     if (Timers)
       Timers->JITLinkTG.printAll(errs());
@@ -2060,13 +2053,10 @@ int main(int argc, char *argv[]) {
     exit(1);
   }
 
-  ExitOnErr(runChecks(*S));
-
-  if (NoExec)
-    return 0;
+  ExitOnErr(runChecks(*S, std::move(TT), std::move(Features)));
 
   int Result = 0;
-  {
+  if (!NoExec) {
     LLVM_DEBUG(dbgs() << "Running \"" << EntryPointName << "\"...\n");
     TimeRegion TR(Timers ? &Timers->RunTimer : nullptr);
     if (!OrcRuntime.empty())

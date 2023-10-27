@@ -3,7 +3,6 @@ Test the printing of anonymous and named namespace variables.
 """
 
 
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -11,55 +10,60 @@ from lldbsuite.test import lldbutil
 
 
 class NamespaceLookupTestCase(TestBase):
-
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
         # Break inside different scopes and evaluate value
-        self.line_break_global_scope = line_number(
-            'ns.cpp', '// BP_global_scope')
-        self.line_break_file_scope = line_number('ns2.cpp', '// BP_file_scope')
-        self.line_break_ns_scope = line_number('ns2.cpp', '// BP_ns_scope')
+        self.line_break_global_scope = line_number("ns.cpp", "// BP_global_scope")
+        self.line_break_file_scope = line_number("ns2.cpp", "// BP_file_scope")
+        self.line_break_ns_scope = line_number("ns2.cpp", "// BP_ns_scope")
         self.line_break_nested_ns_scope = line_number(
-            'ns2.cpp', '// BP_nested_ns_scope')
+            "ns2.cpp", "// BP_nested_ns_scope"
+        )
         self.line_break_nested_ns_scope_after_using = line_number(
-            'ns2.cpp', '// BP_nested_ns_scope_after_using')
+            "ns2.cpp", "// BP_nested_ns_scope_after_using"
+        )
         self.line_break_before_using_directive = line_number(
-            'ns3.cpp', '// BP_before_using_directive')
+            "ns3.cpp", "// BP_before_using_directive"
+        )
         self.line_break_after_using_directive = line_number(
-            'ns3.cpp', '// BP_after_using_directive')
+            "ns3.cpp", "// BP_after_using_directive"
+        )
 
     def runToBkpt(self, command):
         self.runCmd(command, RUN_SUCCEEDED)
         # The stop reason of the thread should be breakpoint.
-        self.expect("thread list", STOPPED_DUE_TO_BREAKPOINT,
-                    substrs=['stopped',
-                             'stop reason = breakpoint'])
+        self.expect(
+            "thread list",
+            STOPPED_DUE_TO_BREAKPOINT,
+            substrs=["stopped", "stop reason = breakpoint"],
+        )
 
-    @skipIfWindows # This is flakey on Windows: llvm.org/pr38373
+    @skipIfWindows  # This is flakey on Windows: llvm.org/pr38373
     @expectedFailure("CU-local objects incorrectly scoped")
     def test_scope_lookup_with_run_command_globals(self):
         """Test scope lookup of functions in lldb."""
         self.build()
 
         lldbutil.run_to_source_breakpoint(
-                self,
-                self.line_break_global_scope,
-                lldb.SBFileSpec("ns.cpp"))
+            self, self.line_break_global_scope, lldb.SBFileSpec("ns.cpp")
+        )
 
         lldbutil.run_break_set_by_file_and_line(
             self,
             "ns3.cpp",
             self.line_break_before_using_directive,
             num_expected_locations=1,
-            loc_exact=False)
+            loc_exact=False,
+        )
 
         lldbutil.run_break_set_by_file_and_line(
             self,
             "ns3.cpp",
             self.line_break_after_using_directive,
             num_expected_locations=1,
-            loc_exact=False)
+            loc_exact=False,
+        )
 
         # Run to BP_global_scope at file scope
         self.runToBkpt("run")
@@ -92,7 +96,7 @@ class NamespaceLookupTestCase(TestBase):
         # Evaluate ::func() - should call ::func()
         self.expect_expr("::func()", result_type="int", result_value="1")
 
-    @skipIfWindows # This is flakey on Windows: llvm.org/pr38373
+    @skipIfWindows  # This is flakey on Windows: llvm.org/pr38373
     def test_scope_lookup_with_run_command(self):
         """Test scope lookup of functions in lldb."""
         self.build()
@@ -103,43 +107,50 @@ class NamespaceLookupTestCase(TestBase):
             "ns.cpp",
             self.line_break_global_scope,
             num_expected_locations=1,
-            loc_exact=False)
+            loc_exact=False,
+        )
         lldbutil.run_break_set_by_file_and_line(
             self,
             "ns2.cpp",
             self.line_break_ns_scope,
             num_expected_locations=1,
-            loc_exact=False)
+            loc_exact=False,
+        )
         lldbutil.run_break_set_by_file_and_line(
             self,
             "ns2.cpp",
             self.line_break_nested_ns_scope,
             num_expected_locations=1,
-            loc_exact=False)
+            loc_exact=False,
+        )
         lldbutil.run_break_set_by_file_and_line(
             self,
             "ns2.cpp",
             self.line_break_nested_ns_scope_after_using,
             num_expected_locations=1,
-            loc_exact=False)
+            loc_exact=False,
+        )
         lldbutil.run_break_set_by_file_and_line(
             self,
             "ns2.cpp",
             self.line_break_file_scope,
             num_expected_locations=1,
-            loc_exact=False)
+            loc_exact=False,
+        )
         lldbutil.run_break_set_by_file_and_line(
             self,
             "ns3.cpp",
             self.line_break_before_using_directive,
             num_expected_locations=1,
-            loc_exact=False)
+            loc_exact=False,
+        )
         lldbutil.run_break_set_by_file_and_line(
             self,
             "ns3.cpp",
             self.line_break_after_using_directive,
             num_expected_locations=1,
-            loc_exact=False)
+            loc_exact=False,
+        )
 
         # Run to BP_global_scope at global scope
         self.runToBkpt("run")
@@ -153,7 +164,10 @@ class NamespaceLookupTestCase(TestBase):
 
         # Continue to BP_file_scope at file scope
         self.runToBkpt("continue")
-        self.expect_expr("func()", result_type="int", result_value="2")
+        # FIXME: In DWARF 5 with dsyms, the ordering of functions is slightly
+        # different, which also hits the same issues mentioned previously.
+        if configuration.dwarf_version <= 4 or self.getDebugInfo() == "dwarf":
+            self.expect_expr("func()", result_type="int", result_value="2")
 
         # Continue to BP_ns_scope at ns scope
         self.runToBkpt("continue")
@@ -207,13 +221,15 @@ class NamespaceLookupTestCase(TestBase):
             "ns.cpp",
             self.line_break_global_scope,
             num_expected_locations=1,
-            loc_exact=False)
+            loc_exact=False,
+        )
         lldbutil.run_break_set_by_file_and_line(
             self,
             "ns2.cpp",
             self.line_break_ns_scope,
             num_expected_locations=1,
-            loc_exact=False)
+            loc_exact=False,
+        )
 
         # Run to BP_global_scope at global scope
         self.runToBkpt("run")
@@ -235,10 +251,7 @@ class NamespaceLookupTestCase(TestBase):
 
     # NOTE: this test may fail on older systems that don't emit import
     # entries in DWARF - may need to add checks for compiler versions here.
-    @skipIf(
-        compiler="gcc",
-        oslist=["linux"],
-        debug_info=["dwo"])  # Skip to avoid crash
+    @skipIf(compiler="gcc", oslist=["linux"], debug_info=["dwo"])  # Skip to avoid crash
     def test_scope_after_using_directive_lookup_with_run_command(self):
         """Test scope lookup after using directive in lldb."""
         self.build()
@@ -249,7 +262,8 @@ class NamespaceLookupTestCase(TestBase):
             "ns3.cpp",
             self.line_break_after_using_directive,
             num_expected_locations=1,
-            loc_exact=False)
+            loc_exact=False,
+        )
 
         # Run to BP_after_using_directive at global scope after using
         # declaration
@@ -257,8 +271,7 @@ class NamespaceLookupTestCase(TestBase):
         # Evaluate func2() - should call A::func2()
         self.expect_expr("func2()", result_type="int", result_value="3")
 
-    @expectedFailure(
-        "lldb scope lookup after using declaration bugs")
+    @expectedFailure("lldb scope lookup after using declaration bugs")
     # NOTE: this test may fail on older systems that don't emit import
     # emtries in DWARF - may need to add checks for compiler versions here.
     def test_scope_after_using_declaration_lookup_with_run_command(self):
@@ -271,7 +284,8 @@ class NamespaceLookupTestCase(TestBase):
             "ns2.cpp",
             self.line_break_nested_ns_scope_after_using,
             num_expected_locations=1,
-            loc_exact=False)
+            loc_exact=False,
+        )
 
         # Run to BP_nested_ns_scope_after_using at nested ns scope after using
         # declaration
@@ -290,7 +304,8 @@ class NamespaceLookupTestCase(TestBase):
             "ns3.cpp",
             self.line_break_after_using_directive,
             num_expected_locations=1,
-            loc_exact=False)
+            loc_exact=False,
+        )
 
         # Run to BP_after_using_directive at global scope after using
         # declaration
@@ -310,7 +325,8 @@ class NamespaceLookupTestCase(TestBase):
             "ns2.cpp",
             self.line_break_nested_ns_scope,
             num_expected_locations=1,
-            loc_exact=False)
+            loc_exact=False,
+        )
 
         # Run to BP_nested_ns_scope at nested ns scope
         self.runToBkpt("run")

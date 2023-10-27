@@ -77,3 +77,11 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], [SPV_KHR_storag
 }
 }
 
+// -----
+
+// No spir-v modules to combine.
+module {
+  func.func @foo(%arg0: i32) -> i32 {
+    return %arg0 : i32
+  }
+}

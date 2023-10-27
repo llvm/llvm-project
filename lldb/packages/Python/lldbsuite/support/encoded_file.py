@@ -19,24 +19,22 @@ def _encoded_write(old_write, encoding):
             s = s.decode(encoding, "replace")
         # Filter unreadable characters, Python 3 is stricter than python 2 about them.
         import re
-        s = re.sub(r'[^\x00-\x7f]',r' ',s)
+
+        s = re.sub(r"[^\x00-\x7f]", r" ", s)
         return old_write(s)
+
     return impl
 
-'''
+
+"""
 Create a Text I/O file object that can be written to with either unicode strings
 or byte strings.
-'''
+"""
 
 
 def open(
-        file,
-        encoding,
-        mode='r',
-        buffering=-1,
-        errors=None,
-        newline=None,
-        closefd=True):
+    file, encoding, mode="r", buffering=-1, errors=None, newline=None, closefd=True
+):
     wrapped_file = io.open(
         file,
         mode=mode,
@@ -44,7 +42,8 @@ def open(
         encoding=encoding,
         errors=errors,
         newline=newline,
-        closefd=closefd)
-    new_write = _encoded_write(getattr(wrapped_file, 'write'), encoding)
-    setattr(wrapped_file, 'write', new_write)
+        closefd=closefd,
+    )
+    new_write = _encoded_write(getattr(wrapped_file, "write"), encoding)
+    setattr(wrapped_file, "write", new_write)
     return wrapped_file

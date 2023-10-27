@@ -90,7 +90,7 @@ enum RemapFlags {
 
   /// Instruct the remapper to reuse and mutate distinct metadata (remapping
   /// them in place) instead of cloning remapped copies. This flag has no
-  /// effect when when RF_NoModuleLevelChanges, since that implies an identity
+  /// effect when RF_NoModuleLevelChanges, since that implies an identity
   /// mapping.
   RF_ReuseAndMutateDistinctMDs = 4,
 
@@ -112,8 +112,9 @@ inline RemapFlags operator|(RemapFlags LHS, RemapFlags RHS) {
 /// There are a number of top-level entry points:
 /// - \a mapValue() (and \a mapConstant());
 /// - \a mapMetadata() (and \a mapMDNode());
-/// - \a remapInstruction(); and
-/// - \a remapFunction().
+/// - \a remapInstruction();
+/// - \a remapFunction(); and
+/// - \a remapGlobalObjectMetadata().
 ///
 /// The \a ValueMaterializer can be used as a callback, but cannot invoke any
 /// of these top-level functions recursively.  Instead, callbacks should use
@@ -175,6 +176,7 @@ public:
 
   void remapInstruction(Instruction &I);
   void remapFunction(Function &F);
+  void remapGlobalObjectMetadata(GlobalObject &GO);
 
   void scheduleMapGlobalInitializer(GlobalVariable &GV, Constant &Init,
                                     unsigned MappingContextID = 0);

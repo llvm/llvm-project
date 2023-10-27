@@ -26,7 +26,7 @@ using namespace ento;
 namespace {
 class ReturnPointerRangeChecker :
     public Checker< check::PreStmt<ReturnStmt> > {
-  mutable std::unique_ptr<BuiltinBug> BT;
+  mutable std::unique_ptr<BugType> BT;
 
 public:
     void checkPreStmt(const ReturnStmt *RS, CheckerContext &C) const;
@@ -39,6 +39,10 @@ void ReturnPointerRangeChecker::checkPreStmt(const ReturnStmt *RS,
 
   const Expr *RetE = RS->getRetValue();
   if (!RetE)
+    return;
+
+  // Skip "body farmed" functions.
+  if (RetE->getSourceRange().isInvalid())
     return;
 
   SVal V = C.getSVal(RetE);
@@ -75,14 +79,13 @@ void ReturnPointerRangeChecker::checkPreStmt(const ReturnStmt *RS,
     // FIXME: This bug correspond to CWE-466.  Eventually we should have bug
     // types explicitly reference such exploit categories (when applicable).
     if (!BT)
-      BT.reset(new BuiltinBug(
-          this, "Buffer overflow",
-          "Returned pointer value points outside the original object "
-          "(potential buffer overflow)"));
+      BT.reset(new BugType(this, "Buffer overflow"));
+    constexpr llvm::StringLiteral Msg =
+        "Returned pointer value points outside the original object "
+        "(potential buffer overflow)";
 
     // Generate a report for this bug.
-    auto Report =
-        std::make_unique<PathSensitiveBugReport>(*BT, BT->getDescription(), N);
+    auto Report = std::make_unique<PathSensitiveBugReport>(*BT, Msg, N);
     Report->addRange(RetE->getSourceRange());
 
     const auto ConcreteElementCount = ElementCount.getAs<nonloc::ConcreteInt>();

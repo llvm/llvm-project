@@ -236,7 +236,6 @@ define amdgpu_kernel void @image_bvh_intersect_ray_nsa_reassign(ptr %p_node_ptr,
 ; GFX11-NEXT:    image_bvh_intersect_ray v[0:3], [v9, v10, v[6:8], v[3:5], v[0:2]], s[4:7]
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    flat_store_b128 v[0:1], v[0:3]
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 main_body:
   %lid = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -326,7 +325,6 @@ define amdgpu_kernel void @image_bvh_intersect_ray_a16_nsa_reassign(ptr %p_node_
 ; GFX11-NEXT:    image_bvh_intersect_ray v[0:3], [v6, v7, v[3:5], v[0:2]], s[4:7] a16
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    flat_store_b128 v[0:1], v[0:3]
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 main_body:
   %lid = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -422,7 +420,6 @@ define amdgpu_kernel void @image_bvh64_intersect_ray_nsa_reassign(ptr %p_ray, <4
 ; GFX11-NEXT:    image_bvh64_intersect_ray v[0:3], [v[9:10], v11, v[6:8], v[3:5], v[0:2]], s[0:3]
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    flat_store_b128 v[0:1], v[0:3]
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 main_body:
   %lid = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -508,7 +505,6 @@ define amdgpu_kernel void @image_bvh64_intersect_ray_a16_nsa_reassign(ptr %p_ray
 ; GFX11-NEXT:    image_bvh64_intersect_ray v[0:3], [v[6:7], v8, v[3:5], v[0:2]], s[0:3] a16
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    flat_store_b128 v[0:1], v[0:3]
-; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 main_body:
   %lid = tail call i32 @llvm.amdgcn.workitem.id.x()

@@ -30,6 +30,12 @@ namespace clang {
       /// The alignment of the record.
       uint64_t Align;
 
+      /// The offsets of non-virtual base classes in the record.
+      SmallVector<CharUnits, 8> BaseOffsets;
+
+      /// The offsets of virtual base classes in the record.
+      SmallVector<CharUnits, 8> VBaseOffsets;
+
       /// The offsets of the fields, in source order.
       SmallVector<uint64_t, 8> FieldOffsets;
     };

@@ -261,7 +261,7 @@ private:
 using UnsignedInt128 = Int128<false>;
 using SignedInt128 = Int128<true>;
 
-#if !AVOID_NATIVE_UINT128_t && (defined __GNUC__ || defined __clang__) && \
+#if !AVOID_NATIVE_UINT128_T && (defined __GNUC__ || defined __clang__) && \
     defined __SIZEOF_INT128__
 using uint128_t = __uint128_t;
 using int128_t = __int128_t;

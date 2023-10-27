@@ -239,6 +239,228 @@ static bool trySequenceOfOnes(uint64_t UImm,
   return true;
 }
 
+static uint64_t GetRunOfOnesStartingAt(uint64_t V, uint64_t StartPosition) {
+  uint64_t NumOnes = llvm::countr_one(V >> StartPosition);
+
+  uint64_t UnshiftedOnes;
+  if (NumOnes == 64) {
+    UnshiftedOnes = ~0ULL;
+  } else {
+    UnshiftedOnes = (1ULL << NumOnes) - 1;
+  }
+  return UnshiftedOnes << StartPosition;
+}
+
+static uint64_t MaximallyReplicateSubImmediate(uint64_t V, uint64_t Subset) {
+  uint64_t Result = Subset;
+
+  // 64, 32, 16, 8, 4, 2
+  for (uint64_t i = 0; i < 6; ++i) {
+    uint64_t Rotation = 1ULL << (6 - i);
+    uint64_t Closure = Result | llvm::rotl<uint64_t>(Result, Rotation);
+    if (Closure != (Closure & V)) {
+      break;
+    }
+    Result = Closure;
+  }
+
+  return Result;
+}
+
+// Find the logical immediate that covers the most bits in RemainingBits,
+// allowing for additional bits to be set that were set in OriginalBits.
+static uint64_t maximalLogicalImmWithin(uint64_t RemainingBits,
+                                        uint64_t OriginalBits) {
+  // Find the first set bit.
+  uint32_t Position = llvm::countr_zero(RemainingBits);
+
+  // Get the first run of set bits.
+  uint64_t FirstRun = GetRunOfOnesStartingAt(OriginalBits, Position);
+
+  // Replicate the run as many times as possible, as long as the bits are set in
+  // RemainingBits.
+  uint64_t MaximalImm = MaximallyReplicateSubImmediate(OriginalBits, FirstRun);
+
+  return MaximalImm;
+}
+
+static std::optional<std::pair<uint64_t, uint64_t>>
+decomposeIntoOrrOfLogicalImmediates(uint64_t UImm) {
+  if (UImm == 0 || ~UImm == 0)
+    return std::nullopt;
+
+  // Make sure we don't have a run of ones split around the rotation boundary.
+  uint32_t InitialTrailingOnes = llvm::countr_one(UImm);
+  uint64_t RotatedBits = llvm::rotr<uint64_t>(UImm, InitialTrailingOnes);
+
+  // Find the largest logical immediate that fits within the full immediate.
+  uint64_t MaximalImm1 = maximalLogicalImmWithin(RotatedBits, RotatedBits);
+
+  // Remove all bits that are set by this mask.
+  uint64_t RemainingBits = RotatedBits & ~MaximalImm1;
+
+  // Find the largest logical immediate covering the remaining bits, allowing
+  // for additional bits to be set that were also set in the original immediate.
+  uint64_t MaximalImm2 = maximalLogicalImmWithin(RemainingBits, RotatedBits);
+
+  // If any bits still haven't been covered, then give up.
+  if (RemainingBits & ~MaximalImm2)
+    return std::nullopt;
+
+  // Make sure to un-rotate the immediates.
+  return std::make_pair(rotl(MaximalImm1, InitialTrailingOnes),
+                        rotl(MaximalImm2, InitialTrailingOnes));
+}
+
+// Attempt to expand an immediate as the ORR of a pair of logical immediates.
+static bool tryOrrOfLogicalImmediates(uint64_t UImm,
+                                      SmallVectorImpl<ImmInsnModel> &Insn) {
+  auto MaybeDecomposition = decomposeIntoOrrOfLogicalImmediates(UImm);
+  if (MaybeDecomposition == std::nullopt)
+    return false;
+  uint64_t Imm1 = MaybeDecomposition->first;
+  uint64_t Imm2 = MaybeDecomposition->second;
+
+  uint64_t Encoding1, Encoding2;
+  bool Imm1Success = AArch64_AM::processLogicalImmediate(Imm1, 64, Encoding1);
+  bool Imm2Success = AArch64_AM::processLogicalImmediate(Imm2, 64, Encoding2);
+
+  if (Imm1Success && Imm2Success) {
+    // Create the ORR-immediate instructions.
+    Insn.push_back({AArch64::ORRXri, 0, Encoding1});
+    Insn.push_back({AArch64::ORRXri, 1, Encoding2});
+    return true;
+  }
+
+  return false;
+}
+
+// Attempt to expand an immediate as the AND of a pair of logical immediates.
+// This is done by applying DeMorgan's law, under which logical immediates
+// are closed.
+static bool tryAndOfLogicalImmediates(uint64_t UImm,
+                                      SmallVectorImpl<ImmInsnModel> &Insn) {
+  // Apply DeMorgan's law to turn this into an ORR problem.
+  auto MaybeDecomposition = decomposeIntoOrrOfLogicalImmediates(~UImm);
+  if (MaybeDecomposition == std::nullopt)
+    return false;
+  uint64_t Imm1 = MaybeDecomposition->first;
+  uint64_t Imm2 = MaybeDecomposition->second;
+
+  uint64_t Encoding1, Encoding2;
+  bool Imm1Success = AArch64_AM::processLogicalImmediate(~Imm1, 64, Encoding1);
+  bool Imm2Success = AArch64_AM::processLogicalImmediate(~Imm2, 64, Encoding2);
+
+  if (Imm1Success && Imm2Success) {
+    // Materialize Imm1, the LHS of the AND
+    Insn.push_back({AArch64::ORRXri, 0, Encoding1});
+    // AND Imm1 with Imm2
+    Insn.push_back({AArch64::ANDXri, 1, Encoding2});
+    return true;
+  }
+
+  return false;
+}
+
+// Check whether the constant can be represented by exclusive-or of two 64-bit
+// logical immediates. If so, materialize it with an ORR instruction followed
+// by an EOR instruction.
+//
+// This encoding allows all remaining repeated byte patterns, and many repeated
+// 16-bit values, to be encoded without needing four instructions. It can also
+// represent some irregular bitmasks (although those would mostly only need
+// three instructions otherwise).
+static bool tryEorOfLogicalImmediates(uint64_t Imm,
+                                      SmallVectorImpl<ImmInsnModel> &Insn) {
+  // Determine the larger repetition size of the two possible logical
+  // immediates, by finding the repetition size of Imm.
+  unsigned BigSize = 64;
+
+  do {
+    BigSize /= 2;
+    uint64_t Mask = (1ULL << BigSize) - 1;
+
+    if ((Imm & Mask) != ((Imm >> BigSize) & Mask)) {
+      BigSize *= 2;
+      break;
+    }
+  } while (BigSize > 2);
+
+  uint64_t BigMask = ((uint64_t)-1LL) >> (64 - BigSize);
+
+  // Find the last bit of each run of ones, circularly. For runs which wrap
+  // around from bit 0 to bit 63, this is the bit before the most-significant
+  // zero, otherwise it is the least-significant bit in the run of ones.
+  uint64_t RunStarts = Imm & ~rotl<uint64_t>(Imm, 1);
+
+  // Find the smaller repetition size of the two possible logical immediates by
+  // counting the number of runs of one-bits within the BigSize-bit value. Both
+  // sizes may be the same. The EOR may add one or subtract one from the
+  // power-of-two count that can be represented by a logical immediate, or it
+  // may be left unchanged.
+  int RunsPerBigChunk = popcount(RunStarts & BigMask);
+
+  static const int8_t BigToSmallSizeTable[32] = {
+      -1, -1, 0,  1,  2,  2,  -1, 3,  3,  3,  -1, -1, -1, -1, -1, 4,
+      4,  4,  -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 5,
+  };
+
+  int BigToSmallShift = BigToSmallSizeTable[RunsPerBigChunk];
+
+  // Early-exit if the big chunk couldn't be a power-of-two number of runs
+  // EORed with another single run.
+  if (BigToSmallShift == -1)
+    return false;
+
+  unsigned SmallSize = BigSize >> BigToSmallShift;
+
+  // 64-bit values with a bit set every (1 << index) bits.
+  static const uint64_t RepeatedOnesTable[] = {
+      0xffffffffffffffff, 0x5555555555555555, 0x1111111111111111,
+      0x0101010101010101, 0x0001000100010001, 0x0000000100000001,
+      0x0000000000000001,
+  };
+
+  // This RepeatedOnesTable lookup is a faster implementation of the division
+  // 0xffffffffffffffff / ((1 << SmallSize) - 1), and can be thought of as
+  // dividing the 64-bit value into fields of width SmallSize, and placing a
+  // one in the least significant bit of each field.
+  uint64_t SmallOnes = RepeatedOnesTable[countr_zero(SmallSize)];
+
+  // Now we try to find the number of ones in each of the smaller repetitions,
+  // by looking at runs of ones in Imm. This can take three attempts, as the
+  // EOR may have changed the length of the first two runs we find.
+
+  // Rotate a run of ones so we can count the number of trailing set bits.
+  int Rotation = countr_zero(RunStarts);
+  uint64_t RotatedImm = rotr<uint64_t>(Imm, Rotation);
+  for (int Attempt = 0; Attempt < 3; ++Attempt) {
+    unsigned RunLength = countr_one(RotatedImm);
+
+    // Construct candidate values BigImm and SmallImm, such that if these two
+    // values are encodable, we have a solution. (SmallImm is constructed to be
+    // encodable, but this isn't guaranteed when RunLength >= SmallSize)
+    uint64_t SmallImm =
+        rotl<uint64_t>((SmallOnes << RunLength) - SmallOnes, Rotation);
+    uint64_t BigImm = Imm ^ SmallImm;
+
+    uint64_t BigEncoding = 0;
+    uint64_t SmallEncoding = 0;
+    if (AArch64_AM::processLogicalImmediate(BigImm, 64, BigEncoding) &&
+        AArch64_AM::processLogicalImmediate(SmallImm, 64, SmallEncoding)) {
+      Insn.push_back({AArch64::ORRXri, 0, SmallEncoding});
+      Insn.push_back({AArch64::EORXri, 1, BigEncoding});
+      return true;
+    }
+
+    // Rotate to the next run of ones
+    Rotation += countr_zero(rotr<uint64_t>(RunStarts, Rotation) & ~1);
+    RotatedImm = rotr<uint64_t>(Imm, Rotation);
+  }
+
+  return false;
+}
+
 /// \brief Expand a MOVi32imm or MOVi64imm pseudo instruction to a
 /// MOVZ or MOVN of width BitSize followed by up to 3 MOVK instructions.
 static inline void expandMOVImmSimple(uint64_t Imm, unsigned BitSize,
@@ -268,8 +490,8 @@ static inline void expandMOVImmSimple(uint64_t Imm, unsigned BitSize,
   unsigned Shift = 0;     // LSL amount for high bits with MOVZ/MOVN
   unsigned LastShift = 0; // LSL amount for last MOVK
   if (Imm != 0) {
-    unsigned LZ = countLeadingZeros(Imm);
-    unsigned TZ = countTrailingZeros(Imm);
+    unsigned LZ = llvm::countl_zero(Imm);
+    unsigned TZ = llvm::countr_zero(Imm);
     Shift = (TZ / 16) * 16;
     LastShift = ((63 - LZ) / 16) * 16;
   }
@@ -371,6 +593,18 @@ void AArch64_IMM::expandMOVImm(uint64_t Imm, unsigned BitSize,
       return;
     }
   }
+
+  // Attempt to use a sequence of two ORR-immediate instructions.
+  if (tryOrrOfLogicalImmediates(Imm, Insn))
+    return;
+
+  // Attempt to use a sequence of ORR-immediate followed by AND-immediate.
+  if (tryAndOfLogicalImmediates(Imm, Insn))
+    return;
+
+  // Attempt to use a sequence of ORR-immediate followed by EOR-immediate.
+  if (tryEorOfLogicalImmediates(UImm, Insn))
+    return;
 
   // FIXME: Add more two-instruction sequences.
 

@@ -9,7 +9,7 @@
 // RUN:    FileCheck %s --check-prefix NOINSTR
 // RUN: %llvm_xray extract -symbolize %t | \
 // RUN:    FileCheck %s --check-prefix ALWAYSINSTR
-// REQUIRES: x86_64-target-arch
+
 // REQUIRES: built-in-llvm-tree
 
 // NOINSTR-NOT: {{.*__xray_NeverInstrumented.*}}

@@ -24,6 +24,7 @@ set(ALL_ORC_ASM_SOURCES
   macho_tlv.arm64.S
   elfnix_tls.x86-64.S
   elfnix_tls.aarch64.S
+  elfnix_tls.ppc64.S
   )
 
 # Common implementation headers will go here.
@@ -83,7 +84,7 @@ if (TARGET cxx-headers OR HAVE_LIBCXX)
 endif()
 
 if (APPLE)
-  add_asm_sources(ORC_ASM_SOURCES
+  set(ORC_ASM_SOURCES
     macho_tlv.x86-64.S
     macho_tlv.arm64.S
     )
@@ -131,7 +132,7 @@ else() # not Apple
       )
 
     if (MSVC)
-      set(ORC_CFLAGS "${ORC_CFLAGS} /MD")
+      set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDLL")
     endif()
   else()
     set(ORC_BUILD_TYPE STATIC)
@@ -146,9 +147,10 @@ else() # not Apple
       elfnix_platform.cpp
       )
 
-    add_asm_sources(ORC_ASM_SOURCES
+    set(ORC_ASM_SOURCES
       elfnix_tls.x86-64.S
       elfnix_tls.aarch64.S
+      elfnix_tls.ppc64.S
       )
   endif()
 

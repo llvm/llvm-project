@@ -562,7 +562,6 @@ namespace test16 {
   // expected-error{{exception object of type 'A' has private destructor}}
 }
 
-// rdar://problem/8146294
 namespace test17 {
   class A {
     template <typename T> class Inner { }; // expected-note {{declared private here}}

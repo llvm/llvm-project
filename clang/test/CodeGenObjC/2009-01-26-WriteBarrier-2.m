@@ -1,7 +1,6 @@
 // RUN: %clang_cc1 -fblocks -emit-llvm %s -fobjc-gc -o - | FileCheck %s
 
 // CHECK: objc_assign_strongCast
-// rdar://5541393
 
 typedef __SIZE_TYPE__ size_t;
 void * malloc(size_t size);

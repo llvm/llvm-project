@@ -56,11 +56,11 @@ subroutine s6_c1107(x, y)
 end
 
 subroutine s7_c1107
- integer x
+ integer x, arr(1)
  inc(x) = x + 1
   block
-    !ERROR: STATEMENT FUNCTION statement is not allowed in a BLOCK construct
+    !ERROR: A statement function definition may not appear in a BLOCK construct
     dec(x) = x - 1
+    arr(x) = x - 1 ! ok
   end block
 end
-

@@ -72,7 +72,7 @@ HANDLE_TARGET_OPCODE(SUBREG_TO_REG)
 /// virtual registers have been created for all the instructions, and it's
 /// only needed in cases where the register classes implied by the
 /// instructions are insufficient. It is emitted as a COPY MachineInstr.
-  HANDLE_TARGET_OPCODE(COPY_TO_REGCLASS)
+HANDLE_TARGET_OPCODE(COPY_TO_REGCLASS)
 
 /// DBG_VALUE - a mapping of the llvm.dbg.value intrinsic
 HANDLE_TARGET_OPCODE(DBG_VALUE)
@@ -103,11 +103,11 @@ HANDLE_TARGET_OPCODE(DBG_LABEL)
 /// e.g. v1027 = REG_SEQUENCE v1024, 3, v1025, 4, v1026, 5
 /// After register coalescing references of v1024 should be replace with
 /// v1027:3, v1025 with v1027:4, etc.
-  HANDLE_TARGET_OPCODE(REG_SEQUENCE)
+HANDLE_TARGET_OPCODE(REG_SEQUENCE)
 
 /// COPY - Target-independent register copy. This instruction can also be
 /// used to copy between subregisters of virtual registers.
-  HANDLE_TARGET_OPCODE(COPY)
+HANDLE_TARGET_OPCODE(COPY)
 
 /// BUNDLE - This instruction represents an instruction bundle. Instructions
 /// which immediately follow a BUNDLE instruction which are marked with
@@ -226,6 +226,10 @@ HANDLE_TARGET_OPCODE(ICALL_BRANCH_FUNNEL)
 // barrier, but does not correspond to any generated instruction.
 HANDLE_TARGET_OPCODE(MEMBARRIER)
 
+// Provides information about what jump table the following indirect branch is
+// using.
+HANDLE_TARGET_OPCODE(JUMP_TABLE_DEBUG_INFO)
+
 /// The following generic opcodes are not supposed to appear after ISel.
 /// This is something we might want to relax, but for now, this is convenient
 /// to produce diagnostics.
@@ -290,6 +294,10 @@ HANDLE_TARGET_OPCODE(G_FRAME_INDEX)
 /// Generic reference to global value.
 HANDLE_TARGET_OPCODE(G_GLOBAL_VALUE)
 
+/// Generic instruction to materialize the address of an object in the constant
+/// pool.
+HANDLE_TARGET_OPCODE(G_CONSTANT_POOL)
+
 /// Generic instruction to extract blocks of bits from the register given
 /// (typically a sub-register COPY after instruction selection).
 HANDLE_TARGET_OPCODE(G_EXTRACT)
@@ -327,6 +335,9 @@ HANDLE_TARGET_OPCODE(G_BITCAST)
 
 /// Generic freeze.
 HANDLE_TARGET_OPCODE(G_FREEZE)
+
+/// Constant folding barrier.
+HANDLE_TARGET_OPCODE(G_CONSTANT_FOLD_BARRIER)
 
 // INTRINSIC fptrunc_round intrinsic.
 HANDLE_TARGET_OPCODE(G_INTRINSIC_FPTRUNC_ROUND)
@@ -392,12 +403,14 @@ HANDLE_TARGET_OPCODE(G_ATOMICRMW_FADD)
 HANDLE_TARGET_OPCODE(G_ATOMICRMW_FSUB)
 HANDLE_TARGET_OPCODE(G_ATOMICRMW_FMAX)
 HANDLE_TARGET_OPCODE(G_ATOMICRMW_FMIN)
+HANDLE_TARGET_OPCODE(G_ATOMICRMW_UINC_WRAP)
+HANDLE_TARGET_OPCODE(G_ATOMICRMW_UDEC_WRAP)
 
 // Marker for start of Generic AtomicRMW opcodes
 HANDLE_TARGET_OPCODE_MARKER(GENERIC_ATOMICRMW_OP_START, G_ATOMICRMW_XCHG)
 
 // Marker for end of Generic AtomicRMW opcodes
-HANDLE_TARGET_OPCODE_MARKER(GENERIC_ATOMICRMW_OP_END, G_ATOMICRMW_FMIN)
+HANDLE_TARGET_OPCODE_MARKER(GENERIC_ATOMICRMW_OP_END, G_ATOMICRMW_UDEC_WRAP)
 
 // Generic atomic fence
 HANDLE_TARGET_OPCODE(G_FENCE)
@@ -416,6 +429,12 @@ HANDLE_TARGET_OPCODE(G_INTRINSIC)
 
 /// Generic intrinsic use (with side effects).
 HANDLE_TARGET_OPCODE(G_INTRINSIC_W_SIDE_EFFECTS)
+
+/// Generic intrinsic use (without side effects).
+HANDLE_TARGET_OPCODE(G_INTRINSIC_CONVERGENT)
+
+/// Generic intrinsic use (with side effects).
+HANDLE_TARGET_OPCODE(G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS)
 
 /// Generic extension allowing rubbish in high bits.
 HANDLE_TARGET_OPCODE(G_ANYEXT)
@@ -598,6 +617,9 @@ HANDLE_TARGET_OPCODE(G_FEXP)
 /// Generic base-2 exponential of a value.
 HANDLE_TARGET_OPCODE(G_FEXP2)
 
+/// Generic base-10 exponential of a value.
+HANDLE_TARGET_OPCODE(G_FEXP10)
+
 /// Floating point base-e logarithm of a value.
 HANDLE_TARGET_OPCODE(G_FLOG)
 
@@ -606,6 +628,12 @@ HANDLE_TARGET_OPCODE(G_FLOG2)
 
 /// Floating point base-10 logarithm of a value.
 HANDLE_TARGET_OPCODE(G_FLOG10)
+
+/// Floating point x * 2^n
+HANDLE_TARGET_OPCODE(G_FLDEXP)
+
+/// Floating point extract fraction and exponent.
+HANDLE_TARGET_OPCODE(G_FFREXP)
 
 /// Generic FP negation.
 HANDLE_TARGET_OPCODE(G_FNEG)
@@ -654,6 +682,11 @@ HANDLE_TARGET_OPCODE(G_FMAXNUM_IEEE)
 /// FP min/max matching IEEE-754 2018 draft semantics.
 HANDLE_TARGET_OPCODE(G_FMINIMUM)
 HANDLE_TARGET_OPCODE(G_FMAXIMUM)
+
+/// Access to FP environment.
+HANDLE_TARGET_OPCODE(G_GET_FPMODE)
+HANDLE_TARGET_OPCODE(G_SET_FPMODE)
+HANDLE_TARGET_OPCODE(G_RESET_FPMODE)
 
 /// Generic pointer offset
 HANDLE_TARGET_OPCODE(G_PTR_ADD)
@@ -748,6 +781,12 @@ HANDLE_TARGET_OPCODE(G_JUMP_TABLE)
 /// Generic dynamic stack allocation.
 HANDLE_TARGET_OPCODE(G_DYN_STACKALLOC)
 
+/// Generic stack pointer save.
+HANDLE_TARGET_OPCODE(G_STACKSAVE)
+
+/// Generic stack pointer restore.
+HANDLE_TARGET_OPCODE(G_STACKRESTORE)
+
 /// Strict floating point instructions.
 HANDLE_TARGET_OPCODE(G_STRICT_FADD)
 HANDLE_TARGET_OPCODE(G_STRICT_FSUB)
@@ -756,6 +795,7 @@ HANDLE_TARGET_OPCODE(G_STRICT_FDIV)
 HANDLE_TARGET_OPCODE(G_STRICT_FREM)
 HANDLE_TARGET_OPCODE(G_STRICT_FMA)
 HANDLE_TARGET_OPCODE(G_STRICT_FSQRT)
+HANDLE_TARGET_OPCODE(G_STRICT_FLDEXP)
 
 /// read_register intrinsic
 HANDLE_TARGET_OPCODE(G_READ_REGISTER)
@@ -783,6 +823,8 @@ HANDLE_TARGET_OPCODE(G_VECREDUCE_FADD)
 HANDLE_TARGET_OPCODE(G_VECREDUCE_FMUL)
 HANDLE_TARGET_OPCODE(G_VECREDUCE_FMAX)
 HANDLE_TARGET_OPCODE(G_VECREDUCE_FMIN)
+HANDLE_TARGET_OPCODE(G_VECREDUCE_FMAXIMUM)
+HANDLE_TARGET_OPCODE(G_VECREDUCE_FMINIMUM)
 HANDLE_TARGET_OPCODE(G_VECREDUCE_ADD)
 HANDLE_TARGET_OPCODE(G_VECREDUCE_MUL)
 HANDLE_TARGET_OPCODE(G_VECREDUCE_AND)

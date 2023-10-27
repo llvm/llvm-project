@@ -1,3 +1,9 @@
+if (APPLE AND LLVM_ENABLE_LOCAL_SUBMODULE_VISIBILITY)
+  # Work around an issue with the Python headers, which have a modular include
+  # inside an extern "C" block.
+  remove_module_flags()
+endif()
+
 if(NOT LLDB_PYTHON_RELATIVE_PATH)
   message(FATAL_ERROR "LLDB_PYTHON_RELATIVE_PATH is not set.")
 endif()

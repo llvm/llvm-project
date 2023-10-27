@@ -213,8 +213,8 @@ define <16 x i8> @sel_shift_bool_v16i8(<16 x i1> %t) {
 define <8 x i16> @sel_shift_bool_v8i16(<8 x i1> %t) {
 ; ANY-LABEL: sel_shift_bool_v8i16:
 ; ANY:       # %bb.0:
-; ANY-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; ANY-NEXT:    psllw $7, %xmm0
+; ANY-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; ANY-NEXT:    retq
   %shl= select <8 x i1> %t, <8 x i16> <i16 128, i16 128, i16 128, i16 128, i16 128, i16 128, i16 128, i16 128>, <8 x i16> zeroinitializer
   ret <8 x i16> %shl
@@ -223,8 +223,8 @@ define <8 x i16> @sel_shift_bool_v8i16(<8 x i1> %t) {
 define <4 x i32> @sel_shift_bool_v4i32(<4 x i1> %t) {
 ; ANY-LABEL: sel_shift_bool_v4i32:
 ; ANY:       # %bb.0:
-; ANY-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; ANY-NEXT:    pslld $6, %xmm0
+; ANY-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; ANY-NEXT:    retq
   %shl = select <4 x i1> %t, <4 x i32> <i32 64, i32 64, i32 64, i32 64>, <4 x i32> zeroinitializer
   ret <4 x i32> %shl
@@ -233,8 +233,8 @@ define <4 x i32> @sel_shift_bool_v4i32(<4 x i1> %t) {
 define <2 x i64> @sel_shift_bool_v2i64(<2 x i1> %t) {
 ; ANY-LABEL: sel_shift_bool_v2i64:
 ; ANY:       # %bb.0:
-; ANY-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; ANY-NEXT:    psllq $16, %xmm0
+; ANY-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; ANY-NEXT:    retq
   %shl = select <2 x i1> %t, <2 x i64> <i64 65536, i64 65536>, <2 x i64> zeroinitializer
   ret <2 x i64> %shl

@@ -5,6 +5,12 @@
 ; RUN: llc < %s -mtriple=riscv64 -mattr=+d \
 ; RUN:   -mattr=+zfhmin -verify-machineinstrs -target-abi lp64d | \
 ; RUN:   FileCheck -check-prefix=CHECKIZFHMIN %s
+; RUN: llc < %s -mtriple=riscv64 -mattr=+zhinxmin \
+; RUN:   -verify-machineinstrs -target-abi lp64 | \
+; RUN:   FileCheck -check-prefix=CHECKIZHINXMIN %s
+; RUN: llc < %s -mtriple=riscv64 -mattr=+zdinx \
+; RUN:   -mattr=+zhinxmin -verify-machineinstrs -target-abi lp64 | \
+; RUN:   FileCheck -check-prefix=CHECKIZHINXMIN %s
 
 ; These intrinsics require half and i64 to be legal types.
 
@@ -13,9 +19,15 @@ declare i64 @llvm.llrint.i64.f16(half)
 define i64 @llrint_f16(half %a) nounwind {
 ; CHECKIZFHMIN-LABEL: llrint_f16:
 ; CHECKIZFHMIN:       # %bb.0:
-; CHECKIZFHMIN-NEXT:    fcvt.s.h ft0, fa0
-; CHECKIZFHMIN-NEXT:    fcvt.l.s a0, ft0
+; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa0
+; CHECKIZFHMIN-NEXT:    fcvt.l.s a0, fa5
 ; CHECKIZFHMIN-NEXT:    ret
+;
+; CHECKIZHINXMIN-LABEL: llrint_f16:
+; CHECKIZHINXMIN:       # %bb.0:
+; CHECKIZHINXMIN-NEXT:    fcvt.s.h a0, a0
+; CHECKIZHINXMIN-NEXT:    fcvt.l.s a0, a0
+; CHECKIZHINXMIN-NEXT:    ret
   %1 = call i64 @llvm.llrint.i64.f16(half %a)
   ret i64 %1
 }
@@ -25,9 +37,15 @@ declare i64 @llvm.llround.i64.f16(half)
 define i64 @llround_f16(half %a) nounwind {
 ; CHECKIZFHMIN-LABEL: llround_f16:
 ; CHECKIZFHMIN:       # %bb.0:
-; CHECKIZFHMIN-NEXT:    fcvt.s.h ft0, fa0
-; CHECKIZFHMIN-NEXT:    fcvt.l.s a0, ft0, rmm
+; CHECKIZFHMIN-NEXT:    fcvt.s.h fa5, fa0
+; CHECKIZFHMIN-NEXT:    fcvt.l.s a0, fa5, rmm
 ; CHECKIZFHMIN-NEXT:    ret
+;
+; CHECKIZHINXMIN-LABEL: llround_f16:
+; CHECKIZHINXMIN:       # %bb.0:
+; CHECKIZHINXMIN-NEXT:    fcvt.s.h a0, a0
+; CHECKIZHINXMIN-NEXT:    fcvt.l.s a0, a0, rmm
+; CHECKIZHINXMIN-NEXT:    ret
   %1 = call i64 @llvm.llround.i64.f16(half %a)
   ret i64 %1
 }

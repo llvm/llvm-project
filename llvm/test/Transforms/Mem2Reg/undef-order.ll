@@ -45,7 +45,7 @@ define i32 @foo() {
 ; CHECK:       Block16:
 ; CHECK-NEXT:    br label [[JOIN]]
 ; CHECK:       Join:
-; CHECK-NEXT:    [[VAL_0:%.*]] = phi i32 [ 1, [[STORE1]] ], [ 2, [[STORE2]] ], [ undef, [[BLOCK1:%.*]] ], [ undef, [[BLOCK2:%.*]] ], [ undef, [[BLOCK3:%.*]] ], [ undef, [[BLOCK4:%.*]] ], [ undef, [[BLOCK5:%.*]] ], [ undef, [[BLOCK6:%.*]] ], [ undef, [[BLOCK7:%.*]] ], [ undef, [[BLOCK8:%.*]] ], [ undef, [[BLOCK9:%.*]] ], [ undef, [[BLOCK10:%.*]] ], [ undef, [[BLOCK11:%.*]] ], [ undef, [[BLOCK12:%.*]] ], [ undef, [[BLOCK13:%.*]] ], [ undef, [[BLOCK14:%.*]] ], [ undef, [[BLOCK15:%.*]] ], [ undef, [[BLOCK16:%.*]] ]
+; CHECK-NEXT:    [[VAL_0:%.*]] = phi i32 [ 1, [[STORE1]] ], [ 2, [[STORE2]] ], [ poison, [[BLOCK1:%.*]] ], [ poison, [[BLOCK2:%.*]] ], [ poison, [[BLOCK3:%.*]] ], [ poison, [[BLOCK4:%.*]] ], [ poison, [[BLOCK5:%.*]] ], [ poison, [[BLOCK6:%.*]] ], [ poison, [[BLOCK7:%.*]] ], [ poison, [[BLOCK8:%.*]] ], [ poison, [[BLOCK9:%.*]] ], [ poison, [[BLOCK10:%.*]] ], [ poison, [[BLOCK11:%.*]] ], [ poison, [[BLOCK12:%.*]] ], [ poison, [[BLOCK13:%.*]] ], [ poison, [[BLOCK14:%.*]] ], [ poison, [[BLOCK15:%.*]] ], [ poison, [[BLOCK16:%.*]] ]
 ; CHECK-NEXT:    ret i32 [[VAL_0]]
 ;
 Entry:

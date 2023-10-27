@@ -1,9 +1,6 @@
 Frame and Thread Format
 =======================
 
-.. contents::
-   :local:
-
 LLDB has a facility to allow users to define the format of the information that
 generates the descriptions for threads and stack frames. Typically when your
 program stops at a breakpoint you will get two lines that describes why your

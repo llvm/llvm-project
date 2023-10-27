@@ -80,7 +80,7 @@ llvm_expand_pseudo_components(LLVM_DYLIB_COMPONENTS_expanded "${LLVM_DYLIB_COMPO
 configure_file(${BUILDVARIABLES_SRCPATH} ${BUILDVARIABLES_OBJPATH} @ONLY)
 
 # Set build-time environment(s).
-add_definitions(-DCMAKE_CFG_INTDIR="${CMAKE_CFG_INTDIR}")
+add_compile_definitions(CMAKE_CFG_INTDIR="${CMAKE_CFG_INTDIR}")
 
 if(LLVM_ENABLE_MODULES)
   target_compile_options(llvm-config PUBLIC

@@ -15,8 +15,8 @@
 #define LLVM_LIB_TARGET_MIPS_MCTARGETDESC_MIPSASMBACKEND_H
 
 #include "MCTargetDesc/MipsFixupKinds.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/MC/MCAsmBackend.h"
+#include "llvm/TargetParser/Triple.h"
 
 namespace llvm {
 
@@ -32,7 +32,8 @@ class MipsAsmBackend : public MCAsmBackend {
 public:
   MipsAsmBackend(const Target &T, const MCRegisterInfo &MRI, const Triple &TT,
                  StringRef CPU, bool N32)
-      : MCAsmBackend(TT.isLittleEndian() ? support::little : support::big),
+      : MCAsmBackend(TT.isLittleEndian() ? llvm::endianness::little
+                                         : llvm::endianness::big),
         TheTriple(TT), IsN32(N32) {}
 
   std::unique_ptr<MCObjectTargetWriter>

@@ -15,12 +15,13 @@
 
 // template<class _URNG> result_type operator()(_URNG& g);
 
-#include <random>
 #include <cassert>
 #include <climits>
 #include <cstddef>
+#include <cstdint>
 #include <limits>
 #include <numeric>
+#include <random>
 #include <vector>
 
 #include "test_macros.h"
@@ -123,8 +124,8 @@ int main(int, char**)
     test_statistics<short, std::minstd_rand0>(SHRT_MIN, SHRT_MAX);
 
 #if defined(_LIBCPP_VERSION) // extension
-    test_statistics<int8_t, std::minstd_rand0>();
-    test_statistics<uint8_t, std::minstd_rand0>();
+    test_statistics<std::int8_t, std::minstd_rand0>();
+    test_statistics<std::uint8_t, std::minstd_rand0>();
 
 #if !defined(TEST_HAS_NO_INT128) && !defined(TEST_BUGGY_I128_FP)
     test_statistics<__int128_t, std::minstd_rand0>();

@@ -20,6 +20,7 @@ add_llvm_component_library(LLVMLTO
   BitReader
   BitWriter
   CodeGen
+  CodeGenTypes
   Core
   Extensions
   IPO
@@ -37,4 +38,4 @@ add_llvm_component_library(LLVMLTO
   TargetParser
   TransformUtils
   YkPasses
-)
+  )

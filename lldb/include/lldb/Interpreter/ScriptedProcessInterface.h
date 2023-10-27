@@ -28,13 +28,15 @@ public:
     return {};
   }
 
+  virtual StructuredData::DictionarySP GetCapabilities() { return {}; }
+
+  virtual Status Attach(const ProcessAttachInfo &attach_info) {
+    return Status("ScriptedProcess did not attach");
+  }
+
   virtual Status Launch() { return Status("ScriptedProcess did not launch"); }
 
   virtual Status Resume() { return Status("ScriptedProcess did not resume"); }
-
-  virtual bool ShouldStop() { return true; }
-
-  virtual Status Stop() { return Status("ScriptedProcess did not stop"); }
 
   virtual std::optional<MemoryRegionInfo>
   GetMemoryRegionContainingAddress(lldb::addr_t address, Status &error) {
@@ -44,11 +46,8 @@ public:
 
   virtual StructuredData::DictionarySP GetThreadsInfo() { return {}; }
 
-  virtual StructuredData::DictionarySP GetThreadWithID(lldb::tid_t tid) {
-    return {};
-  }
-
-  virtual StructuredData::DictionarySP GetRegistersForThread(lldb::tid_t tid) {
+  virtual bool CreateBreakpoint(lldb::addr_t addr, Status &error) {
+    error.SetErrorString("ScriptedProcess don't support creating breakpoints.");
     return {};
   }
 
@@ -56,6 +55,12 @@ public:
   ReadMemoryAtAddress(lldb::addr_t address, size_t size, Status &error) {
     return {};
   }
+
+  virtual lldb::offset_t WriteMemoryAtAddress(lldb::addr_t addr,
+                                              lldb::DataExtractorSP data_sp,
+                                              Status &error) {
+    return LLDB_INVALID_OFFSET;
+  };
 
   virtual StructuredData::ArraySP GetLoadedImages() { return {}; }
 

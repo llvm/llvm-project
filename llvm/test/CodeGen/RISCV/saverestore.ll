@@ -299,7 +299,7 @@ define void @alloca(i32 %n) nounwind {
 ; Check that functions with interrupt attribute do not use save/restore code
 
 declare i32 @foo(...)
-define void @interrupt() nounwind "interrupt"="user" {
+define void @interrupt() nounwind "interrupt"="supervisor" {
 ; RV32I-LABEL: interrupt:
 ; RV32I-NOT:     call t0, __riscv_save
 ; RV32I-NOT:     tail __riscv_restore

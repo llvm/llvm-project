@@ -7,6 +7,9 @@
 #if !__has_extension(gnu_asm_goto_with_outputs)
 #error Extension 'gnu_asm_goto_with_outputs' should be available by default
 #endif
+#if !__has_extension(gnu_asm_goto_with_outputs_full)
+#error Extension 'gnu_asm_goto_with_outputs_full' should be available by default
+#endif
 
 int a, b, c, d, e, f, g, h, i, j, k, l;
 

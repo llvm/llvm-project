@@ -14,9 +14,10 @@
 // ADDITIONAL_COMPILE_FLAGS: -Wno-exceptions
 
 // The fix for PR17222 made it in the dylib for macOS 10.10
-// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.9
+// XFAIL: stdlib=apple-libc++ && target={{.+}}-apple-macosx10.9
 
 #include <cassert>
+#include <stdint.h>
 
 #if __cplusplus < 201103L
 #define DISABLE_NULLPTR_TESTS
@@ -136,7 +137,7 @@ void test7 ()
         assert(false);
     }
     catch (base2 *p) {
-        assert ((unsigned long)p == 12+sizeof(base1));
+        assert ((uintptr_t)p == 12+sizeof(base1));
     }
     catch (...)
     {

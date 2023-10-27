@@ -21,6 +21,7 @@
 ; DEFAULT-NEXT: Virtual Register Map
 ; DEFAULT-NEXT: Live Register Matrix
 ; DEFAULT-NEXT: Greedy Register Allocator
+; DEFAULT-NEXT: SI Lower WWM Copies
 ; DEFAULT-NEXT: GCN NSA Reassign
 ; DEFAULT-NEXT: Virtual Register Rewriter
 ; DEFAULT-NEXT: Stack Slot Coloring
@@ -28,6 +29,7 @@
 ; O0: Fast Register Allocator
 ; O0-NEXT: SI lower SGPR spill instructions
 ; O0-NEXT: Fast Register Allocator
+; O0-NEXT: SI Lower WWM Copies
 ; O0-NEXT: SI Fix VGPR copies
 
 
@@ -49,6 +51,7 @@
 ; BASIC-DEFAULT-NEXT: Lazy Machine Block Frequency Analysis
 ; BASIC-DEFAULT-NEXT: Machine Optimization Remark Emitter
 ; BASIC-DEFAULT-NEXT: Greedy Register Allocator
+; BASIC-DEFAULT-NEXT: SI Lower WWM Copies
 ; BASIC-DEFAULT-NEXT: GCN NSA Reassign
 ; BASIC-DEFAULT-NEXT: Virtual Register Rewriter
 ; BASIC-DEFAULT-NEXT: Stack Slot Coloring
@@ -61,6 +64,7 @@
 ; DEFAULT-BASIC-NEXT: Virtual Register Map
 ; DEFAULT-BASIC-NEXT: Live Register Matrix
 ; DEFAULT-BASIC-NEXT: Basic Register Allocator
+; DEFAULT-BASIC-NEXT: SI Lower WWM Copies
 ; DEFAULT-BASIC-NEXT: GCN NSA Reassign
 ; DEFAULT-BASIC-NEXT: Virtual Register Rewriter
 ; DEFAULT-BASIC-NEXT: Stack Slot Coloring
@@ -79,6 +83,7 @@
 ; BASIC-BASIC-NEXT: Virtual Register Map
 ; BASIC-BASIC-NEXT: Live Register Matrix
 ; BASIC-BASIC-NEXT: Basic Register Allocator
+; BASIC-BASIC-NEXT: SI Lower WWM Copies
 ; BASIC-BASIC-NEXT: GCN NSA Reassign
 ; BASIC-BASIC-NEXT: Virtual Register Rewriter
 ; BASIC-BASIC-NEXT: Stack Slot Coloring

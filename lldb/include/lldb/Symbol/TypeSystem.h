@@ -28,11 +28,17 @@
 #include "lldb/Symbol/CompilerDeclContext.h"
 #include "lldb/lldb-private.h"
 
-class DWARFDIE;
-class DWARFASTParser;
 class PDBASTParser;
 
 namespace lldb_private {
+
+namespace plugin {
+namespace dwarf {
+class DWARFDIE;
+class DWARFASTParser;
+} // namespace dwarf
+} // namespace plugin
+
 namespace npdb {
   class PdbAstBuilder;
 } // namespace npdb
@@ -77,6 +83,7 @@ class TypeSystem : public PluginInterface,
                    public std::enable_shared_from_this<TypeSystem> {
 public:
   // Constructors and Destructors
+  TypeSystem();
   ~TypeSystem() override;
 
   // LLVM RTTI support
@@ -92,7 +99,8 @@ public:
   /// removing all the TypeSystems from the TypeSystemMap.
   virtual void Finalize() {}
 
-  virtual DWARFASTParser *GetDWARFParser() { return nullptr; }
+  virtual plugin::dwarf::DWARFASTParser *GetDWARFParser() { return nullptr; }
+
   virtual PDBASTParser *GetPDBParser() { return nullptr; }
   virtual npdb::PdbAstBuilder *GetNativePDBParser() { return nullptr; }
 
@@ -127,12 +135,16 @@ public:
   virtual ConstString
   DeclContextGetScopeQualifiedName(void *opaque_decl_ctx) = 0;
 
-  virtual bool DeclContextIsClassMethod(
-      void *opaque_decl_ctx, lldb::LanguageType *language_ptr,
-      bool *is_instance_method_ptr, ConstString *language_object_name_ptr) = 0;
+  virtual bool DeclContextIsClassMethod(void *opaque_decl_ctx) = 0;
 
   virtual bool DeclContextIsContainedInLookup(void *opaque_decl_ctx,
                                               void *other_opaque_decl_ctx) = 0;
+
+  virtual lldb::LanguageType DeclContextGetLanguage(void *opaque_decl_ctx) = 0;
+
+  /// Returns the direct parent context of specified type
+  virtual CompilerDeclContext
+  GetCompilerDeclContextForType(const CompilerType &type);
 
   // Tests
 #ifndef NDEBUG
@@ -168,6 +180,9 @@ public:
                              const size_t index) = 0;
 
   virtual bool IsFunctionPointerType(lldb::opaque_compiler_type_t type) = 0;
+
+  virtual bool
+  IsMemberFunctionPointerType(lldb::opaque_compiler_type_t type) = 0;
 
   virtual bool IsBlockPointerType(lldb::opaque_compiler_type_t type,
                                   CompilerType *function_pointer_type_ptr) = 0;
@@ -344,7 +359,7 @@ public:
   // Lookup a child given a name. This function will match base class names and
   // member member names in "clang_type" only, not descendants.
   virtual uint32_t GetIndexOfChildWithName(lldb::opaque_compiler_type_t type,
-                                           const char *name,
+                                           llvm::StringRef name,
                                            bool omit_empty_base_classes) = 0;
 
   // Lookup a child member given a name. This function will match member names
@@ -353,10 +368,9 @@ public:
   // TODO: Return all matches for a given name by returning a
   // vector<vector<uint32_t>>
   // so we catch all names that match a given child name, not just the first.
-  virtual size_t
-  GetIndexOfChildMemberWithName(lldb::opaque_compiler_type_t type,
-                                const char *name, bool omit_empty_base_classes,
-                                std::vector<uint32_t> &child_indexes) = 0;
+  virtual size_t GetIndexOfChildMemberWithName(
+      lldb::opaque_compiler_type_t type, llvm::StringRef name,
+      bool omit_empty_base_classes, std::vector<uint32_t> &child_indexes) = 0;
 
   virtual bool IsTemplateType(lldb::opaque_compiler_type_t type);
 
@@ -381,15 +395,7 @@ public:
   dump(lldb::opaque_compiler_type_t type) const = 0;
 #endif
 
-  virtual void DumpValue(lldb::opaque_compiler_type_t type,
-                         ExecutionContext *exe_ctx, Stream *s,
-                         lldb::Format format, const DataExtractor &data,
-                         lldb::offset_t data_offset, size_t data_byte_size,
-                         uint32_t bitfield_bit_size,
-                         uint32_t bitfield_bit_offset, bool show_types,
-                         bool show_summary, bool verbose, uint32_t depth) = 0;
-
-  virtual bool DumpTypeValue(lldb::opaque_compiler_type_t type, Stream *s,
+  virtual bool DumpTypeValue(lldb::opaque_compiler_type_t type, Stream &s,
                              lldb::Format format, const DataExtractor &data,
                              lldb::offset_t data_offset, size_t data_byte_size,
                              uint32_t bitfield_bit_size,
@@ -406,7 +412,7 @@ public:
   /// source-like representation of the type, whereas eDescriptionLevelVerbose
   /// does a dump of the underlying AST if applicable.
   virtual void DumpTypeDescription(
-      lldb::opaque_compiler_type_t type, Stream *s,
+      lldb::opaque_compiler_type_t type, Stream &s,
       lldb::DescriptionLevel level = lldb::eDescriptionLevelFull) = 0;
 
   /// Dump a textual representation of the internal TypeSystem state to the
@@ -415,15 +421,8 @@ public:
   /// This should not modify the state of the TypeSystem if possible.
   virtual void Dump(llvm::raw_ostream &output) = 0;
 
-  // TODO: These methods appear unused. Should they be removed?
-
+  /// This is used by swift.
   virtual bool IsRuntimeGeneratedType(lldb::opaque_compiler_type_t type) = 0;
-
-  virtual void DumpSummary(lldb::opaque_compiler_type_t type,
-                           ExecutionContext *exe_ctx, Stream *s,
-                           const DataExtractor &data,
-                           lldb::offset_t data_offset,
-                           size_t data_byte_size) = 0;
 
   // TODO: Determine if these methods should move to TypeSystemClang.
 
@@ -431,9 +430,6 @@ public:
                                         CompilerType *pointee_type) = 0;
 
   virtual unsigned GetTypeQualifiers(lldb::opaque_compiler_type_t type) = 0;
-
-  virtual bool IsCStringType(lldb::opaque_compiler_type_t type,
-                             uint32_t &length) = 0;
 
   virtual std::optional<size_t>
   GetTypeBitAlign(lldb::opaque_compiler_type_t type,
@@ -578,6 +574,6 @@ private:
       std::optional<CreateCallback> create_callback = std::nullopt);
   };
 
-} // namespace lldb_private
+  } // namespace lldb_private
 
 #endif // LLDB_SYMBOL_TYPESYSTEM_H

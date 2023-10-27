@@ -128,8 +128,8 @@ BitVector MachineFrameInfo::getPristineRegs(const MachineFunction &MF) const {
 
   // Saved CSRs are not pristine.
   for (const auto &I : getCalleeSavedInfo())
-    for (MCSubRegIterator S(I.getReg(), TRI, true); S.isValid(); ++S)
-      BV.reset(*S);
+    for (MCPhysReg S : TRI->subregs_inclusive(I.getReg()))
+      BV.reset(S);
 
   return BV;
 }

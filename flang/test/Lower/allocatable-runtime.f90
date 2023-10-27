@@ -77,14 +77,14 @@ subroutine char_deferred(n)
   allocate(character(10):: scalar, array(30))
   ! CHECK-DAG: %[[sBoxCast1:.*]] = fir.convert %[[sBoxAddr]] : (!fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>) -> !fir.ref<!fir.box<none>>
   ! CHECK-DAG: %[[ten1:.*]] = fir.convert %c10{{.*}} : (i32) -> i64
-  ! CHECK: fir.call @{{.*}}AllocatableInitCharacter(%[[sBoxCast1]], %[[ten1]], %c1{{.*}}, %c0{{.*}}, %c0{{.*}})
+  ! CHECK: fir.call @{{.*}}AllocatableInitCharacterForAllocate(%[[sBoxCast1]], %[[ten1]], %c1{{.*}}, %c0{{.*}}, %c0{{.*}})
   ! CHECK-NOT: AllocatableSetBounds
   ! CHECK: %[[sBoxCast2:.*]] = fir.convert %[[sBoxAddr]] : (!fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>) -> !fir.ref<!fir.box<none>>
   ! CHECK: fir.call @{{.*}}AllocatableAllocate(%[[sBoxCast2]]
 
   ! CHECK-DAG: %[[aBoxCast1:.*]] = fir.convert %[[aBoxAddr]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>>) -> !fir.ref<!fir.box<none>>
   ! CHECK-DAG: %[[ten2:.*]] = fir.convert %c10{{.*}} : (i32) -> i64
-  ! CHECK: fir.call @{{.*}}AllocatableInitCharacter(%[[aBoxCast1]], %[[ten2]], %c1{{.*}}, %c1{{.*}}, %c0{{.*}})
+  ! CHECK: fir.call @{{.*}}AllocatableInitCharacterForAllocate(%[[aBoxCast1]], %[[ten2]], %c1{{.*}}, %c1{{.*}}, %c0{{.*}})
   ! CHECK: %[[aBoxCast2:.*]] = fir.convert %[[aBoxAddr]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>>) -> !fir.ref<!fir.box<none>>
   ! CHECK: fir.call @{{.*}}AllocatableSetBounds(%[[aBoxCast2]]
   ! CHECK: %[[aBoxCast3:.*]] = fir.convert %[[aBoxAddr]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>>) -> !fir.ref<!fir.box<none>>
@@ -101,10 +101,10 @@ subroutine char_deferred(n)
   ! CHECK: %[[n:.*]] = fir.load %arg0 : !fir.ref<i32>
   ! CHECK-DAG: %[[ncast1:.*]] = fir.convert %[[n]] : (i32) -> i64
   ! CHECK-DAG: %[[sBoxCast4:.*]] = fir.convert %[[sBoxAddr]] : (!fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>) -> !fir.ref<!fir.box<none>>
-  ! CHECK: fir.call @{{.*}}AllocatableInitCharacter(%[[sBoxCast4]], %[[ncast1]], %c1{{.*}}, %c0{{.*}}, %c0{{.*}})
+  ! CHECK: fir.call @{{.*}}AllocatableInitCharacterForAllocate(%[[sBoxCast4]], %[[ncast1]], %c1{{.*}}, %c0{{.*}}, %c0{{.*}})
   ! CHECK-DAG: %[[ncast2:.*]] = fir.convert %[[n]] : (i32) -> i64
   ! CHECK-DAG: %[[aBoxCast5:.*]] = fir.convert %[[aBoxAddr]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>>) -> !fir.ref<!fir.box<none>>
-  ! CHECK: fir.call @{{.*}}AllocatableInitCharacter(%[[aBoxCast5]], %[[ncast2]], %c1{{.*}}, %c1{{.*}}, %c0{{.*}})
+  ! CHECK: fir.call @{{.*}}AllocatableInitCharacterForAllocate(%[[aBoxCast5]], %[[ncast2]], %c1{{.*}}, %c1{{.*}}, %c0{{.*}})
 end subroutine
 
 ! CHECK-LABEL: _QPchar_explicit_cst(
@@ -175,8 +175,9 @@ end subroutine
 ! CHECK: %[[A:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>> {bindc_name = "a", uniq_name = "_QFmold_allocationEa"}
 ! CHECK: %[[M:.*]] = fir.alloca !fir.array<10xi32> {bindc_name = "m", uniq_name = "_QFmold_allocationEm"}
 ! CHECK: %[[EMBOX_M:.*]] = fir.embox %[[M]](%{{.*}}) : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<10xi32>>
+! CHECK: %[[RANK:.*]] = arith.constant 1 : i32
 ! CHECK: %[[A_BOX_NONE:.*]] = fir.convert %[[A]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK: %[[M_BOX_NONE:.*]] = fir.convert %[[EMBOX_M]] : (!fir.box<!fir.array<10xi32>>) -> !fir.box<none>
-! CHECK: %{{.*}} = fir.call @_FortranAAllocatableApplyMold(%[[A_BOX_NONE]], %[[M_BOX_NONE]]) {{.*}} : (!fir.ref<!fir.box<none>>, !fir.box<none>) -> none
+! CHECK: %{{.*}} = fir.call @_FortranAAllocatableApplyMold(%[[A_BOX_NONE]], %[[M_BOX_NONE]], %[[RANK]]) {{.*}} : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32) -> none
 ! CHECK: %[[A_BOX_NONE:.*]] = fir.convert %[[A]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK: %{{.*}} = fir.call @_FortranAAllocatableAllocate(%[[A_BOX_NONE]], %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) {{.*}} : (!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32

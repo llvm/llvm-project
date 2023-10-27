@@ -120,7 +120,7 @@ program test_co_min
   !ERROR: 'errmsg=' argument has unacceptable rank 1
   call co_min(d, errmsg=character_array)
 
-  !ERROR: too many actual arguments for intrinsic 'co_min'
+  !ERROR: actual argument #5 without a keyword may not follow an actual argument with a keyword
   call co_min(r, result_image=1, stat=status, errmsg=message, 3.4)
 
   !ERROR: unknown keyword argument to intrinsic 'co_min'

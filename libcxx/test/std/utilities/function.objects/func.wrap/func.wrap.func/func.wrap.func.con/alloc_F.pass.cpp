@@ -33,6 +33,12 @@ struct LValueCallable {
 };
 #endif
 
+template <class T>
+struct non_default_test_allocator : test_allocator<T> {
+  non_default_test_allocator() = delete;
+  using test_allocator<T>::test_allocator;
+};
+
 test_allocator_statistics alloc_stats;
 
 class DummyClass {};

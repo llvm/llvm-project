@@ -10,12 +10,13 @@
 #include "llvm/Demangle/Utility.h"
 #include "gtest/gtest.h"
 #include <string>
+#include <string_view>
 
 using namespace llvm;
 using llvm::itanium_demangle::OutputBuffer;
 
 static std::string toString(OutputBuffer &OB) {
-  StringView SV = OB;
+  std::string_view SV = OB;
   return {SV.begin(), SV.end()};
 }
 

@@ -13,7 +13,7 @@
 // (basically the same as manual "double-double").
 
 #include "reduction-templates.h"
-#include "flang/Runtime/float128.h"
+#include "flang/Common/float128.h"
 #include "flang/Runtime/reduction.h"
 #include <cfloat>
 #include <cinttypes>

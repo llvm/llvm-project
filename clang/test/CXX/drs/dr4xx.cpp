@@ -3,7 +3,7 @@
 // RUN: env ASAN_OPTIONS=detect_stack_use_after_return=0 %clang_cc1 -std=c++14 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: env ASAN_OPTIONS=detect_stack_use_after_return=0 %clang_cc1 -std=c++17 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: env ASAN_OPTIONS=detect_stack_use_after_return=0 %clang_cc1 -std=c++20 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: env ASAN_OPTIONS=detect_stack_use_after_return=0 %clang_cc1 -std=c++2b %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: env ASAN_OPTIONS=detect_stack_use_after_return=0 %clang_cc1 -std=c++23 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
 
 // FIXME: __SIZE_TYPE__ expands to 'long long' on some targets.
 __extension__ typedef __SIZE_TYPE__ size_t;
@@ -124,6 +124,7 @@ namespace dr406 { // dr406: yes
 }
 
 namespace dr407 { // dr407: 3.8
+                  // NB: reused by dr1894 and dr2199
   struct S;
   typedef struct S S;
   void f() {
@@ -301,8 +302,9 @@ namespace dr417 { // dr417: no
     struct F;
     struct H;
   }
+  // FIXME: This is ill-formed.
   using N::D;
-  struct dr417::D {}; // expected-error {{forward declaration of struct cannot}} expected-warning {{extra qualification}}
+  struct dr417::D {}; // expected-warning {{extra qualification}}
   using namespace N;
   struct dr417::E {}; // expected-warning {{extra qualification}} expected-error {{no struct named 'E'}}
   struct N::F {};
@@ -686,9 +688,9 @@ namespace dr447 { // dr447: yes
     U<__builtin_offsetof(A, n)>::type a;
     U<__builtin_offsetof(T, n)>::type b; // expected-error +{{}} expected-warning 0+{{}}
     // as an extension, we allow the member-designator to include array indices
-    g(__builtin_offsetof(A, a[0])).h<int>(); // expected-error {{using an array subscript expression within '__builtin_offsetof' is a Clang extension}}
-    g(__builtin_offsetof(A, a[N])).h<int>(); // expected-error {{using an array subscript expression within '__builtin_offsetof' is a Clang extension}}
-    U<__builtin_offsetof(A, a[0])>::type c; // expected-error {{using an array subscript expression within '__builtin_offsetof' is a Clang extension}}
+    g(__builtin_offsetof(A, a[0])).h<int>();
+    g(__builtin_offsetof(A, a[N])).h<int>();
+    U<__builtin_offsetof(A, a[0])>::type c;
     U<__builtin_offsetof(A, a[N])>::type d; // expected-error +{{}} expected-warning 0+{{}}
   }
 }

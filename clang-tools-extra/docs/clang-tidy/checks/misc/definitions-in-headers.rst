@@ -27,6 +27,7 @@ from multiple translation units.
    const int c = 1;
    const char* const str2 = "foo";
    constexpr int k = 1;
+   namespace { int x = 1; }
 
    // Warning: function definition.
    int g() {
@@ -92,6 +93,10 @@ Options
 
 .. option:: HeaderFileExtensions
 
+   Note: this option is deprecated, it will be removed in :program:`clang-tidy`
+   version 19. Please use the global configuration option
+   `HeaderFileExtensions`.
+
    A comma-separated list of filename extensions of header files (the filename
    extensions should not include "." prefix). Default is "h,hh,hpp,hxx".
    For header files without an extension, use an empty string (if there are no
@@ -99,6 +104,10 @@ Options
    "h,hh,hpp,hxx," (note the trailing comma).
 
 .. option:: UseHeaderFileExtension
+
+   Note: this option is deprecated, it will be removed in :program:`clang-tidy`
+   version 19. The check will unconditionally use the global option
+   `HeaderFileExtensions`.
 
    When `true`, the check will use the file extension to distinguish header
    files. Default is `true`.

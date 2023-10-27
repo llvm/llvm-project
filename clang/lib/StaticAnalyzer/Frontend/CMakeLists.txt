@@ -26,4 +26,5 @@ add_clang_library(clangStaticAnalyzerFrontend
 
   DEPENDS
   omp_gen
+  ClangDriverOptions
   )

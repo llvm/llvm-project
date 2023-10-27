@@ -1,4 +1,4 @@
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
+! RUN: bbc --use-desc-for-alloc=false -emit-fir %s -o - | FileCheck %s
 ! UNSUPPORTED: system-windows
 
 ! CHECK-LABEL: func @_QPido1

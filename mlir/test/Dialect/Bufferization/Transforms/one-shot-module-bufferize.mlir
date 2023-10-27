@@ -1,16 +1,16 @@
 // Note: Default is function-boundary-type-conversion=infer-layout-map
-// RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries=1 allow-return-allocs" -drop-equivalent-buffer-results -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries=1" -canonicalize -drop-equivalent-buffer-results -split-input-file | FileCheck %s
 
 // Run fuzzer with different seeds.
-// RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries=1 allow-return-allocs test-analysis-only analysis-fuzzer-seed=23" -split-input-file -o /dev/null
-// RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries=1 allow-return-allocs test-analysis-only analysis-fuzzer-seed=59" -split-input-file -o /dev/null
-// RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries=1 allow-return-allocs test-analysis-only analysis-fuzzer-seed=91" -split-input-file -o /dev/null
+// RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries=1 test-analysis-only analysis-fuzzer-seed=23" -split-input-file -o /dev/null
+// RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries=1 test-analysis-only analysis-fuzzer-seed=59" -split-input-file -o /dev/null
+// RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries=1 test-analysis-only analysis-fuzzer-seed=91" -split-input-file -o /dev/null
 
 // Test bufferization using memref types that have no layout map.
-// RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries=1 allow-return-allocs unknown-type-conversion=identity-layout-map function-boundary-type-conversion=identity-layout-map" -split-input-file | FileCheck %s --check-prefix=CHECK-NO-LAYOUT-MAP
+// RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries=1 unknown-type-conversion=identity-layout-map function-boundary-type-conversion=identity-layout-map" -split-input-file | FileCheck %s --check-prefix=CHECK-NO-LAYOUT-MAP
 
 // Test bufferization using memref types that have fully dynamic layout maps.
-// RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries=1 allow-return-allocs function-boundary-type-conversion=fully-dynamic-layout-map" -split-input-file | FileCheck %s --check-prefix=CHECK-FULLY-DYNAMIC-LAYOUT-MAP
+// RUN: mlir-opt %s -one-shot-bufferize="bufferize-function-boundaries=1 function-boundary-type-conversion=fully-dynamic-layout-map" -split-input-file | FileCheck %s --check-prefix=CHECK-FULLY-DYNAMIC-LAYOUT-MAP
 
 
 // Bufferization of bodiless function with no tensor return value.
@@ -101,7 +101,6 @@ func.func private @private_func(tensor<?xf32>) -> (f32)
 //   CHECK-DAG: memref.copy %[[t]], %[[alloc]]
 //   CHECK-DAG: %[[casted:.*]] = memref.cast %[[alloc]]
 //       CHECK: call @private_func(%[[casted]])
-//       CHECK: memref.dealloc %[[alloc]]
 func.func @main(%t: tensor<?xf32> {bufferization.writable = false}) -> (f32) {
   %0 = call @private_func(%t) : (tensor<?xf32>) -> (f32)
   return %0 : f32
@@ -229,7 +228,6 @@ func.func @f2(%t: tensor<?xf32>) -> (f32) {
 //   CHECK-DAG: memref.copy %[[t3]], %[[alloc]]
 //   CHECK-DAG: %[[casted:.*]] = memref.cast %[[alloc]]
 //       CHECK: call @f2(%[[casted]])
-//       CHECK: memref.dealloc %[[alloc]]
 func.func @main(%t: tensor<?xf32> {bufferization.writable = false}) -> (f32) {
   %0 = call @f2(%t) : (tensor<?xf32>) -> (f32)
   return %0 : f32
@@ -256,7 +254,6 @@ func.func @does_not_read(%t: tensor<?xf32>) -> tensor<?xf32> {
 //   CHECK-NOT:   copy
 //       CHECK:   call @does_not_read(%[[casted]])
 //       CHECK:   %[[r:.*]] = memref.load %[[casted]]
-//       CHECK:   memref.dealloc %[[alloc]]
 func.func @main(%t: tensor<?xf32> {bufferization.writable = false}) -> f32 {
   %0 = call @does_not_read(%t) : (tensor<?xf32>) -> (tensor<?xf32>)
   %idx = arith.constant 4 : index
@@ -283,7 +280,6 @@ func.func @main() {
 //      CHECK:   call @some_external_func(%[[B]]) : (memref<4xi32, strided<[?], offset: ?>>) -> ()
   call @some_external_func(%A) : (tensor<4xi32>) -> ()
 
-//      CHECK: memref.dealloc %[[alloc]]
   return
 }
 
@@ -312,7 +308,6 @@ func.func @main() {
     scf.yield
   }
 
-//      CHECK:   memref.dealloc %[[alloc]]
   return
 }
 
@@ -463,9 +458,6 @@ func.func @main() {
   // CHECK-NEXT:   call @printMemrefF32(%[[dC]]) : (memref<*xf32>) -> ()
   call @printMemrefF32(%res2) : (tensor<*xf32>) -> ()
 
-  // CHECK-DAG:   memref.dealloc %[[A]] : memref<64xf32>
-  // CHECK-DAG:   memref.dealloc %[[B]] : memref<64xf32>
-  // CHECK-DAG:   memref.dealloc %[[C]] : memref<f32>
   // CHECK-NEXT:   return
   return
 }
@@ -580,7 +572,6 @@ func.func @equivalent_func_arg_2(%t0: tensor<?xf32> {bufferization.writable = tr
     // CHECK-DAG: %[[casted:.*]] = memref.cast %[[alloc]]
     // CHECK-DAG: memref.copy %[[arg0]], %[[alloc]]
     // CHECK: call @inner_func_2(%[[casted]])
-    // CHECK: memref.dealloc %[[alloc]]
     // CHECK-NOT: scf.yield
     %3 = func.call @inner_func_2(%t1) : (tensor<?xf32>) -> tensor<?xf32>
     scf.yield %t1 : tensor<?xf32>
@@ -606,4 +597,89 @@ func.func @transfer_read(
 
 //       CHECK: return %[[RES]] : vector<4xf32>
   return %0 : vector<4xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @main(
+func.func @main() {
+  // CHECK: %[[const:.*]] = memref.get_global
+  %t = arith.constant dense<[1.0, 2.0, 3.0]> : tensor<3xf32>
+  // CHECK: %[[alloc:.*]] = memref.alloc
+  // CHECK: memref.copy %[[const]], %[[alloc]]
+  // CHECK: %[[casted:.*]] = memref.cast %[[alloc]] : memref<3xf32> to memref<*xf32>
+  %unranked = tensor.cast %t : tensor<3xf32> to tensor<*xf32>
+  // CHECK: call @maybe_writing_func(%[[casted]])
+  func.call @maybe_writing_func(%unranked) : (tensor<*xf32>) -> ()
+  return
+}
+
+// This function may write to buffer(%ptr).
+func.func private @maybe_writing_func(%ptr : tensor<*xf32>)
+
+// -----
+
+// Test if other callables are left intact and don't cause trouble.
+
+llvm.func @llvm_func()
+
+func.func @call_llvm_func() {
+  llvm.call @llvm_func() : () -> ()
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func @to_memref_op_unsupported(
+//  CHECK-SAME:     %[[arg0:.*]]: memref<?xf32,
+func.func @to_memref_op_unsupported(
+    %t1: tensor<?xf32> {bufferization.writable = true}, %idx1: index,
+    %idx2: index, %idx3: index, %v1: vector<5xf32>) -> (vector<5xf32>) {
+
+  // Insert a copy because we cannot analyze what happens with the result of a
+  // to_memref op.
+  // CHECK: %[[alloc:.*]] = memref.alloc
+  // CHECK: memref.copy %[[arg0]], %[[alloc]]
+  %0 = bufferization.to_memref %t1 : memref<?xf32>
+  // CHECK: "test.foo"(%[[alloc]])
+  "test.foo"(%0) : (memref<?xf32>) -> ()
+
+  // CHECK: vector.transfer_read %[[arg0]]
+  %cst = arith.constant 0.0 : f32
+  %r1 = vector.transfer_read %t1[%idx3], %cst : tensor<?xf32>, vector<5xf32>
+
+  return %r1 : vector<5xf32>
+}
+
+// -----
+
+// Note: The cf.br canonicalizes away, so there's nothing to check here. There
+// is a detailed test in ControlFlow/bufferize.mlir.
+
+// CHECK-LABEL: func @br_in_func(
+func.func @br_in_func(%t: tensor<5xf32>) -> tensor<5xf32> {
+  cf.br ^bb1(%t : tensor<5xf32>)
+^bb1(%arg1 : tensor<5xf32>):
+  func.return %arg1 : tensor<5xf32>
+}
+
+// -----
+
+// Cyclic call graphs with tensors are not supported by One-Shot Bufferize.
+// However, if a function signature does not have any tensor arguments or
+// results, calls to that function are not seen as an "edge" in the fuction
+// call graph.
+
+// CHECK-LABEL: func.func @foo(%{{.*}}: memref<5xf32>) -> memref<5xf32>
+func.func @foo(%m: memref<5xf32>) -> memref<5xf32> {
+  %0 = tensor.empty() : tensor<5xf32>
+  %1 = func.call @bar(%0, %m)
+      : (tensor<5xf32>, memref<5xf32>) -> (memref<5xf32>)
+  return %1 : memref<5xf32>
+}
+
+// CHECK: func.func @bar(%{{.*}}: memref<5xf32, strided<[?], offset: ?>>, %arg1: memref<5xf32>) -> memref<5xf32>
+func.func @bar(%t: tensor<5xf32>, %m: memref<5xf32>) -> memref<5xf32> {
+  %0 = func.call @foo(%m) : (memref<5xf32>) -> (memref<5xf32>)
+  return %0 : memref<5xf32>
 }

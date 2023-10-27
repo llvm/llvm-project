@@ -1,6 +1,6 @@
 // RUN:  %clang -### -target powerpc-unknown-aix -S %s 2>&1 | FileCheck %s
 // RUN:  %clang -### -target powerpc64-unknown-aix -S %s 2>&1 | FileCheck %s
-// RUN:  %clang -### -target powerpc-unknown-aix -mabi=quadword-atomics -S \
+// RUN:  not %clang -### --target=powerpc-unknown-aix -mabi=quadword-atomics -S \
 // RUN:    %s 2>&1 | FileCheck --check-prefix=CHECK-UNSUPPORTED-TARGET %s
 // RUN:  %clang -### -target powerpc64-unknown-aix -mabi=quadword-atomics -S \
 // RUN:    %s 2>&1 | FileCheck %s --check-prefix=CHECK-QUADWORD-ATOMICS

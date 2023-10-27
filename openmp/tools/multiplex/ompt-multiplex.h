@@ -33,6 +33,27 @@ static ompt_get_task_info_t ompt_multiplex_get_task_info;
 static ompt_get_thread_data_t ompt_multiplex_get_thread_data;
 static ompt_get_parallel_info_t ompt_multiplex_get_parallel_info;
 
+// If OMPT_MULTIPLEX_TOOL_NAME is defined, use the tool name as prefix
+// contains name of the environment var in which the tool path is specified
+// for TOOL_LIBRARIES and VERBOSE_INIT variables. Only overwrite, if
+// they are not explicitly defined.
+#ifdef OMPT_MULTIPLEX_TOOL_NAME
+#ifndef CLIENT_TOOL_LIBRARIES_VAR
+#define CLIENT_TOOL_LIBRARIES_VAR OMPT_MULTIPLEX_TOOL_NAME "_TOOL_LIBRARIES"
+#endif
+#ifndef CLIENT_TOOL_VERBOSE_INIT_VAR
+#define CLIENT_TOOL_VERBOSE_INIT_VAR                                           \
+  OMPT_MULTIPLEX_TOOL_NAME "_TOOL_VERBOSE_INIT"
+#endif
+#endif
+
+// If CLIENT_TOOL_VERBOSE_INIT_VAR is still not defined, use the OMPT
+// env var.
+#ifndef CLIENT_TOOL_VERBOSE_INIT_VAR
+#warning CLIENT_TOOL_VERBOSE_INIT_VAR redefined to OMP_TOOL_VERBOSE_INIT
+#define CLIENT_TOOL_VERBOSE_INIT_VAR "OMP_TOOL_VERBOSE_INIT"
+#endif
+
 // contains name of the environment var in which the tool path is specified
 #ifndef CLIENT_TOOL_LIBRARIES_VAR
 #error CLIENT_TOOL_LIBRARIES_VAR should be defined before including of ompt-multiplex.h
@@ -55,6 +76,47 @@ static ompt_get_parallel_info_t ompt_multiplex_get_parallel_info;
 
 #define OMPT_API_ROUTINE static
 
+#ifndef OMPT_STR_MATCH
+#define OMPT_STR_MATCH(haystack, needle) (!strcasecmp(haystack, needle))
+#endif
+
+// prints for an enabled OMP_TOOL_VERBOSE_INIT.
+// In the future a prefix could be added in the first define, the second define
+// omits the prefix to allow for continued lines. Example: "PREFIX: Start
+// tool... Success." instead of "PREFIX: Start tool... PREFIX: Success."
+#define OMPT_VERBOSE_INIT_PRINT(...)                                           \
+  if (verbose_init)                                                            \
+  fprintf(verbose_file, __VA_ARGS__)
+#define OMPT_VERBOSE_INIT_CONTINUED_PRINT(...)                                 \
+  if (verbose_init)                                                            \
+  fprintf(verbose_file, __VA_ARGS__)
+
+static FILE *verbose_file;
+static int verbose_init;
+
+void setup_verbose_init() {
+  const char *ompt_env_verbose_init = getenv(CLIENT_TOOL_VERBOSE_INIT_VAR);
+  // possible options: disabled | stdout | stderr | <filename>
+  // if set, not empty and not disabled -> prepare for logging
+  if (ompt_env_verbose_init && strcmp(ompt_env_verbose_init, "") &&
+      !OMPT_STR_MATCH(ompt_env_verbose_init, "disabled")) {
+    verbose_init = 1;
+    if (OMPT_STR_MATCH(ompt_env_verbose_init, "STDERR"))
+      verbose_file = stderr;
+    else if (OMPT_STR_MATCH(ompt_env_verbose_init, "STDOUT"))
+      verbose_file = stdout;
+    else if (!OMPT_STR_MATCH(ompt_env_verbose_init,
+                             getenv("OMP_TOOL_VERBOSE_INIT")))
+      verbose_file = fopen(ompt_env_verbose_init, "w");
+    else {
+      verbose_init = 0;
+      printf("Multiplex: Can not open file defined in OMP_TOOL_VERBOSE_INIT "
+             "twice.");
+    }
+  } else
+    verbose_init = 0;
+}
+
 #define OMPT_LOAD_CLIENT_FOREACH_OMPT_EVENT(macro)                             \
   macro(callback_thread_begin, ompt_callback_thread_begin_t, 1);               \
   macro(callback_thread_end, ompt_callback_thread_end_t, 2);                   \
@@ -76,7 +138,7 @@ static ompt_get_parallel_info_t ompt_multiplex_get_parallel_info;
   macro(callback_dependences, ompt_callback_dependences_t, 18);                \
   macro(callback_task_dependence, ompt_callback_task_dependence_t, 19);        \
   macro(callback_work, ompt_callback_work_t, 20);                              \
-  macro(callback_master, ompt_callback_master_t, 21);                          \
+  macro(callback_masked, ompt_callback_masked_t, 21);                          \
   macro(callback_target_map, ompt_callback_target_map_t, 22);                  \
   macro(callback_sync_region, ompt_callback_sync_region_t, 23);                \
   macro(callback_lock_init, ompt_callback_mutex_acquire_t, 24);                \
@@ -105,8 +167,8 @@ typedef struct ompt_multiplex_callback_implementation_status_s {
 #undef ompt_event_macro
 } ompt_multiplex_callback_implementation_status_t;
 
-ompt_start_tool_result_t *ompt_multiplex_own_fns;
-ompt_start_tool_result_t *ompt_multiplex_client_fns;
+ompt_start_tool_result_t *ompt_multiplex_own_fns = NULL;
+ompt_start_tool_result_t *ompt_multiplex_client_fns = NULL;
 ompt_function_lookup_t ompt_multiplex_lookup_function;
 ompt_multiplex_callbacks_t ompt_multiplex_own_callbacks,
     ompt_multiplex_client_callbacks;
@@ -142,6 +204,8 @@ static void ompt_multiplex_free_data_pair(ompt_data_t *data_pointer) {
 static ompt_data_t *ompt_multiplex_get_own_ompt_data(ompt_data_t *data) {
   if (!data)
     return NULL;
+  if (!data->ptr)
+    return NULL;
   ompt_multiplex_data_pair_t *data_pair =
       (ompt_multiplex_data_pair_t *)data->ptr;
   return &(data_pair->own_data);
@@ -149,6 +213,8 @@ static ompt_data_t *ompt_multiplex_get_own_ompt_data(ompt_data_t *data) {
 
 static ompt_data_t *ompt_multiplex_get_client_ompt_data(ompt_data_t *data) {
   if (!data)
+    return NULL;
+  if (!data->ptr)
     return NULL;
   ompt_multiplex_data_pair_t *data_pair =
       (ompt_multiplex_data_pair_t *)data->ptr;
@@ -431,17 +497,17 @@ static void ompt_multiplex_callback_work(ompt_work_t wstype,
   }
 }
 
-static void ompt_multiplex_callback_master(ompt_scope_endpoint_t endpoint,
+static void ompt_multiplex_callback_masked(ompt_scope_endpoint_t endpoint,
                                            ompt_data_t *parallel_data,
                                            ompt_data_t *task_data,
                                            const void *codeptr_ra) {
-  if (ompt_multiplex_own_callbacks.ompt_callback_master) {
-    ompt_multiplex_own_callbacks.ompt_callback_master(
+  if (ompt_multiplex_own_callbacks.ompt_callback_masked) {
+    ompt_multiplex_own_callbacks.ompt_callback_masked(
         endpoint, ompt_multiplex_get_own_parallel_data(parallel_data),
         ompt_multiplex_get_own_task_data(task_data), codeptr_ra);
   }
-  if (ompt_multiplex_client_callbacks.ompt_callback_master) {
-    ompt_multiplex_client_callbacks.ompt_callback_master(
+  if (ompt_multiplex_client_callbacks.ompt_callback_masked) {
+    ompt_multiplex_client_callbacks.ompt_callback_masked(
         endpoint, ompt_multiplex_get_client_parallel_data(parallel_data),
         ompt_multiplex_get_client_task_data(task_data), codeptr_ra);
   }
@@ -1038,19 +1104,25 @@ void ompt_multiplex_finalize(ompt_data_t *fns) {
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+// forward declaration because of name shifting from ompt_start_tool
+// to ompt_multiplex_own_start_tool below
 ompt_start_tool_result_t *
 ompt_multiplex_own_start_tool(unsigned int omp_version,
                               const char *runtime_version);
 
 ompt_start_tool_result_t *ompt_start_tool(unsigned int omp_version,
                                           const char *runtime_version) {
+  setup_verbose_init();
+  OMPT_VERBOSE_INIT_PRINT(
+      "----- START LOGGING OF CLIENT TOOL REGISTRATION -----\n");
   // try loading client tool
-  ompt_multiplex_client_fns = NULL;
-  ompt_start_tool_result_t *(*client_start_tool)(unsigned int, const char *) =
-      NULL;
-
+  OMPT_VERBOSE_INIT_PRINT("Search for " CLIENT_TOOL_LIBRARIES_VAR
+                          " env var... ");
   const char *tool_libs = getenv(CLIENT_TOOL_LIBRARIES_VAR);
   if (tool_libs) {
+    OMPT_VERBOSE_INIT_CONTINUED_PRINT("Sucess.\n");
+    OMPT_VERBOSE_INIT_PRINT(CLIENT_TOOL_LIBRARIES_VAR " = %s\n", tool_libs);
     // copy environement variable
     char *tool_libs_buffer = strdup(tool_libs);
     if (!tool_libs_buffer) {
@@ -1059,14 +1131,24 @@ ompt_start_tool_result_t *ompt_start_tool(unsigned int omp_version,
     }
 
     int progress = 0;
+    // Reset dl-error
+    dlerror();
     while (progress < strlen(tool_libs)) {
+      ompt_multiplex_client_fns = NULL;
+      ompt_start_tool_result_t *(*client_start_tool)(unsigned int,
+                                                     const char *) = NULL;
+      OMPT_VERBOSE_INIT_PRINT(
+          "Look for candidates within " CLIENT_TOOL_LIBRARIES_VAR "...\n");
       int tmp_progress = progress;
       while (tmp_progress < strlen(tool_libs) &&
              tool_libs_buffer[tmp_progress] != ':')
         tmp_progress++;
       if (tmp_progress < strlen(tool_libs))
         tool_libs_buffer[tmp_progress] = 0;
-      void *h = dlopen(tool_libs_buffer + progress, RTLD_LAZY);
+      OMPT_VERBOSE_INIT_PRINT("Try out one candidate...\n");
+      char *fname = tool_libs_buffer + progress;
+      OMPT_VERBOSE_INIT_PRINT("Opening %s... ", fname);
+      void *h = dlopen(fname, RTLD_LAZY);
       if (h) {
         client_start_tool =
             (ompt_start_tool_result_t * (*)(unsigned int, const char *))
@@ -1074,9 +1156,18 @@ ompt_start_tool_result_t *ompt_start_tool(unsigned int omp_version,
         if (client_start_tool &&
             (ompt_multiplex_client_fns =
                  (*client_start_tool)(omp_version, runtime_version))) {
+          OMPT_VERBOSE_INIT_CONTINUED_PRINT("Sucess.\n");
+          OMPT_VERBOSE_INIT_PRINT(
+              "Tool was started and is using the OMPT interface.\n");
           break;
+        } else {
+          OMPT_VERBOSE_INIT_CONTINUED_PRINT(
+              "Failed: client_start_tool = %p, ompt_multiplex_client_fns = %p, "
+              "%s\n",
+              client_start_tool, ompt_multiplex_client_fns, dlerror());
         }
       } else {
+        OMPT_VERBOSE_INIT_CONTINUED_PRINT("Failed: %s\n", dlerror());
         printf("Loading %s from %s failed with: %s\n",
                tool_libs_buffer + progress, CLIENT_TOOL_LIBRARIES_VAR,
                dlerror());
@@ -1084,14 +1175,26 @@ ompt_start_tool_result_t *ompt_start_tool(unsigned int omp_version,
       progress = tmp_progress + 1;
     }
     free(tool_libs_buffer);
+    OMPT_VERBOSE_INIT_PRINT(
+        "----- END LOGGING OF CLIENT TOOL REGISTRATION -----\n");
   }
   // load own tool
+  OMPT_VERBOSE_INIT_PRINT(
+      "----- START LOGGING OF OWN TOOL REGISTRATION -----\n");
   ompt_multiplex_own_fns =
       ompt_multiplex_own_start_tool(omp_version, runtime_version);
-
+  OMPT_VERBOSE_INIT_PRINT("ompt_multiplex_own_fns = %p\n",
+                          ompt_multiplex_own_fns);
+  OMPT_VERBOSE_INIT_PRINT("----- END LOGGING OF OWN TOOL REGISTRATION -----\n");
   // return multiplexed versions
   static ompt_start_tool_result_t ompt_start_tool_result = {
       &ompt_multiplex_initialize, &ompt_multiplex_finalize, {0}};
+  if (verbose_init && verbose_file != stderr && verbose_file != stdout)
+    fclose(verbose_file);
+  if (!ompt_multiplex_client_fns)
+    return ompt_multiplex_own_fns;
+  if (!ompt_multiplex_own_fns)
+    return ompt_multiplex_client_fns;
   return &ompt_start_tool_result;
 }
 #ifdef __cplusplus

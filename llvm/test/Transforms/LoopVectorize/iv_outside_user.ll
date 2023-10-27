@@ -1,5 +1,5 @@
-; RUN: opt -opaque-pointers=0 -S -passes=loop-vectorize -force-vector-interleave=1 -force-vector-width=2 < %s | FileCheck --check-prefixes=CHECK,VEC %s
-; RUN: opt -opaque-pointers=0 -S -passes=loop-vectorize -force-vector-interleave=2 -force-vector-width=1 < %s | FileCheck --check-prefixes=CHECK %s
+; RUN: opt -S -passes=loop-vectorize -force-vector-interleave=1 -force-vector-width=2 < %s | FileCheck --check-prefixes=CHECK,VEC %s
+; RUN: opt -S -passes=loop-vectorize -force-vector-interleave=2 -force-vector-width=1 < %s | FileCheck --check-prefixes=CHECK %s
 
 ; CHECK-LABEL: @postinc
 ; CHECK-LABEL: scalar.ph:
@@ -63,50 +63,51 @@ for.end:
 
 ; CHECK-LABEL: @geppre
 ; CHECK-LABEL: middle.block:
-; CHECK: %ind.escape = getelementptr i32, i32* %ptr, i64 124
+; CHECK: %ind.escape = getelementptr i8, ptr %ptr, i64 496
 ; CHECK-LABEL: for.end:
-; CHECK: %[[RET:.*]] = phi i32* [ {{.*}}, %for.body ], [ %ind.escape, %middle.block ]
-; CHECK: ret i32* %[[RET]]
-define i32* @geppre(i32* %ptr) {
+; CHECK: %[[RET:.*]] = phi ptr [ {{.*}}, %for.body ], [ %ind.escape, %middle.block ]
+; CHECK: ret ptr %[[RET]]
+define ptr @geppre(ptr %ptr) {
 entry:
   br label %for.body
 
 for.body:
   %inc.phi = phi i32 [ 0, %entry ], [ %inc, %for.body ]
-  %ptr.phi = phi i32* [ %ptr, %entry ], [ %inc.ptr, %for.body ]
+  %ptr.phi = phi ptr [ %ptr, %entry ], [ %inc.ptr, %for.body ]
   %inc = add nsw i32 %inc.phi, 1
-  %inc.ptr = getelementptr i32, i32* %ptr.phi, i32 4
+  %inc.ptr = getelementptr i32, ptr %ptr.phi, i32 4
   %cmp = icmp eq i32 %inc, 32
   br i1 %cmp, label %for.end, label %for.body
 
 for.end:
-  ret i32* %ptr.phi
+  ret ptr %ptr.phi
 }
 
 ; CHECK-LABEL: @both
 ; CHECK-LABEL: middle.block:
 ; CHECK: %[[END:.*]] = sub i64 %n.vec, 1
-; CHECK: %ind.escape = getelementptr i32, i32* %base, i64 %[[END]]
+; CHECK: %[[END_OFFSET:.*]] = mul i64 %[[END]], 4
+; CHECK: %ind.escape = getelementptr i8, ptr %base, i64 %[[END_OFFSET]]
 ; CHECK-LABEL: for.end:
-; CHECK: %[[RET:.*]] = phi i32* [ %inc.lag1, %for.body ], [ %ind.escape, %middle.block ]
-; CHECK: ret i32* %[[RET]]
+; CHECK: %[[RET:.*]] = phi ptr [ %inc.lag1, %for.body ], [ %ind.escape, %middle.block ]
+; CHECK: ret ptr %[[RET]]
 
-define i32* @both(i32 %k)  {
+define ptr @both(i32 %k)  {
 entry:
-  %base = getelementptr inbounds i32, i32* undef, i64 1
+  %base = getelementptr inbounds i32, ptr undef, i64 1
   br label %for.body
 
 for.body:
   %inc.phi = phi i32 [ 0, %entry ], [ %inc, %for.body ]
-  %inc.lag1 = phi i32* [ %base, %entry ], [ %tmp, %for.body]
-  %inc.lag2 = phi i32* [ undef, %entry ], [ %inc.lag1, %for.body]
-  %tmp = getelementptr inbounds i32, i32* %inc.lag1, i64 1
+  %inc.lag1 = phi ptr [ %base, %entry ], [ %tmp, %for.body]
+  %inc.lag2 = phi ptr [ undef, %entry ], [ %inc.lag1, %for.body]
+  %tmp = getelementptr inbounds i32, ptr %inc.lag1, i64 1
   %inc = add nsw i32 %inc.phi, 1
   %cmp = icmp eq i32 %inc, %k
   br i1 %cmp, label %for.end, label %for.body
 
 for.end:
-  ret i32* %inc.lag1
+  ret ptr %inc.lag1
 }
 
 ; CHECK-LABEL: @multiphi
@@ -115,9 +116,9 @@ for.end:
 ; CHECK-LABEL: for.end:
 ; CHECK: %phi = phi i32 [ {{.*}}, %for.body ], [ %n.vec, %middle.block ]
 ; CHECK: %phi2 = phi i32 [ {{.*}}, %for.body ], [ %n.vec, %middle.block ]
-; CHECK: store i32 %phi2, i32* %p
+; CHECK: store i32 %phi2, ptr %p
 ; CHECK: ret i32 %phi
-define i32 @multiphi(i32 %k, i32* %p)  {
+define i32 @multiphi(i32 %k, ptr %p)  {
 entry:
   br label %for.body
 
@@ -130,7 +131,7 @@ for.body:
 for.end:
   %phi = phi i32 [ %inc, %for.body ]
   %phi2 = phi i32 [ %inc, %for.body ]
-  store i32 %phi2, i32* %p
+  store i32 %phi2, ptr %p
   ret i32 %phi
 }
 
@@ -148,7 +149,7 @@ BB0:
   br label %BB1
 
 BB1:
-  %tmp00 = load i32, i32* undef, align 16
+  %tmp00 = load i32, ptr undef, align 16
   %tmp01 = sub i32 %tmp00, undef
   %tmp02 = icmp slt i32 %tmp01, 1
   %tmp03 = select i1 %tmp02, i32 1, i32 %tmp01
@@ -182,15 +183,15 @@ BB4:
 ; CHECK-LABEL: exit:
 ; CHECK-NEXT:    %iv.lcssa = phi i64 [ %iv, %loop ], [ 1001, %middle.block ]
 ;
-define i64 @iv_scalar_steps_and_outside_users(i64* %ptr) {
+define i64 @iv_scalar_steps_and_outside_users(ptr %ptr) {
 entry:
   br label %loop
 
 loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
   %iv.next = add nuw i64 %iv, 1
-  %gep.ptr = getelementptr inbounds i64, i64* %ptr, i64 %iv
-  store i64 %iv, i64* %gep.ptr
+  %gep.ptr = getelementptr inbounds i64, ptr %ptr, i64 %iv
+  store i64 %iv, ptr %gep.ptr
   %exitcond = icmp ugt i64 %iv, 1000
   br i1 %exitcond, label %exit, label %loop
 
@@ -201,7 +202,7 @@ exit:
 
 
 ; %iv.2 is dead in the vector loop and only used outside the loop.
-define i32 @iv_2_dead_in_loop_only_used_outside(i64* %ptr) {
+define i32 @iv_2_dead_in_loop_only_used_outside(ptr %ptr) {
 ; CHECK-LABEL: @iv_2_dead_in_loop_only_used_outside
 ; CHECK-LABEL: vector.body:
 ; CHECK-NEXT:   [[INDEX:%.+]] = phi i64 [ 0, %vector.ph ], [ [[INDEX_NEXT:%.+]], %vector.body ]
@@ -223,8 +224,8 @@ loop:
   %iv.2 = phi i32 [ 0, %entry ], [ %iv.2.next, %loop ]
   %iv.next = add nuw i64 %iv, 1
   %iv.2.next = add nuw i32 %iv.2, 2
-  %gep.ptr = getelementptr inbounds i64, i64* %ptr, i64 %iv
-  store i64 %iv, i64* %gep.ptr
+  %gep.ptr = getelementptr inbounds i64, ptr %ptr, i64 %iv
+  store i64 %iv, ptr %gep.ptr
   %exitcond = icmp ugt i64 %iv, 1000
   br i1 %exitcond, label %exit, label %loop
 

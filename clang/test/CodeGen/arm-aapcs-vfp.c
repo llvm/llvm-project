@@ -26,7 +26,7 @@ struct homogeneous_struct {
   float f4;
 };
 // CHECK: define{{.*}} arm_aapcs_vfpcc %struct.homogeneous_struct @test_struct(%struct.homogeneous_struct %{{.*}})
-// CHECK64: define{{.*}} %struct.homogeneous_struct @test_struct([4 x float] %{{.*}})
+// CHECK64: define{{.*}} %struct.homogeneous_struct @test_struct([4 x float] alignstack(8) %{{.*}})
 extern struct homogeneous_struct struct_callee(struct homogeneous_struct);
 struct homogeneous_struct test_struct(struct homogeneous_struct arg) {
   return struct_callee(arg);
@@ -41,7 +41,7 @@ struct nested_array {
   double d[4];
 };
 // CHECK: define{{.*}} arm_aapcs_vfpcc void @test_array(%struct.nested_array %{{.*}})
-// CHECK64: define{{.*}} void @test_array([4 x double] %{{.*}})
+// CHECK64: define{{.*}} void @test_array([4 x double] alignstack(8) %{{.*}})
 extern void array_callee(struct nested_array);
 void test_array(struct nested_array arg) {
   array_callee(arg);
@@ -49,7 +49,7 @@ void test_array(struct nested_array arg) {
 
 extern void complex_callee(__complex__ double);
 // CHECK: define{{.*}} arm_aapcs_vfpcc void @test_complex({ double, double } noundef %{{.*}})
-// CHECK64: define{{.*}} void @test_complex([2 x double] noundef %cd.coerce)
+// CHECK64: define{{.*}} void @test_complex([2 x double] noundef alignstack(8) %cd.coerce)
 void test_complex(__complex__ double cd) {
   complex_callee(cd);
 }
@@ -95,7 +95,7 @@ void test_hetero(struct heterogeneous_struct arg) {
 
 // Neon multi-vector types are homogeneous aggregates.
 // CHECK: define{{.*}} arm_aapcs_vfpcc <16 x i8> @f0(%struct.int8x16x4_t %{{.*}})
-// CHECK64: define{{.*}} <16 x i8> @f0([4 x <16 x i8>] %{{.*}})
+// CHECK64: define{{.*}} <16 x i8> @f0([4 x <16 x i8>] alignstack(16) %{{.*}})
 int8x16_t f0(int8x16x4_t v4) {
   return vaddq_s8(v4.val[0], v4.val[3]);
 }
@@ -109,7 +109,7 @@ struct neon_struct {
   int16x4_t v4;
 };
 // CHECK: define{{.*}} arm_aapcs_vfpcc void @test_neon(%struct.neon_struct %{{.*}})
-// CHECK64: define{{.*}} void @test_neon([4 x <8 x i8>] %{{.*}})
+// CHECK64: define{{.*}} void @test_neon([4 x <8 x i8>] alignstack(8) %{{.*}})
 extern void neon_callee(struct neon_struct);
 void test_neon(struct neon_struct arg) {
   neon_callee(arg);

@@ -2767,7 +2767,7 @@ define i1 @lshrult_03_00_exact(i4 %x) {
 
 define i1 @lshrult_03_01_exact(i4 %x) {
 ; CHECK-LABEL: @lshrult_03_01_exact(
-; CHECK-NEXT:    [[C:%.*]] = icmp ne i4 [[X:%.*]], -8
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i4 [[X:%.*]], 0
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %s = lshr exact i4 %x, 3

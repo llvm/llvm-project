@@ -1,18 +1,18 @@
-; RUN: llc -march=riscv32 --code-model=small  < %s \
+; RUN: llc -mtriple=riscv32 --code-model=small  < %s \
 ; RUN:     | FileCheck %s
-; RUN: llc -march=riscv32 --code-model=medium < %s \
+; RUN: llc -mtriple=riscv32 --code-model=medium < %s \
 ; RUN:     | FileCheck %s
-; RUN: llc -march=riscv32 --code-model=small  -relocation-model=pic < %s \
+; RUN: llc -mtriple=riscv32 --code-model=small  -relocation-model=pic < %s \
 ; RUN:     | FileCheck %s
-; RUN: llc -march=riscv32 --code-model=medium -relocation-model=pic < %s \
+; RUN: llc -mtriple=riscv32 --code-model=medium -relocation-model=pic < %s \
 ; RUN:     | FileCheck %s
-; RUN: llc -march=riscv64 --code-model=small  < %s \
+; RUN: llc -mtriple=riscv64 --code-model=small  < %s \
 ; RUN:     | FileCheck %s
-; RUN: llc -march=riscv64 --code-model=medium < %s \
+; RUN: llc -mtriple=riscv64 --code-model=medium < %s \
 ; RUN:     | FileCheck %s
-; RUN: llc -march=riscv64 --code-model=small  -relocation-model=pic < %s \
+; RUN: llc -mtriple=riscv64 --code-model=small  -relocation-model=pic < %s \
 ; RUN:     | FileCheck %s
-; RUN: llc -march=riscv64 --code-model=medium -relocation-model=pic < %s \
+; RUN: llc -mtriple=riscv64 --code-model=medium -relocation-model=pic < %s \
 ; RUN:     | FileCheck %s
 
 declare void @throw_exception()

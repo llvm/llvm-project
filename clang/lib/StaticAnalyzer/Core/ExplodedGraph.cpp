@@ -233,8 +233,7 @@ void ExplodedNode::NodeGroup::addNode(ExplodedNode *N, ExplodedGraph &G) {
     ExplodedNode *Old = Storage.get<ExplodedNode *>();
 
     BumpVectorContext &Ctx = G.getNodeAllocator();
-    V = G.getAllocator().Allocate<ExplodedNodeVector>();
-    new (V) ExplodedNodeVector(Ctx, 4);
+    V = new (G.getAllocator()) ExplodedNodeVector(Ctx, 4);
     V->push_back(Old, Ctx);
 
     Storage = V;
@@ -408,7 +407,7 @@ ExplodedNode *ExplodedGraph::getNode(const ProgramPoint &L,
     }
     else {
       // Allocate a new node.
-      V = (NodeTy*) getAllocator().Allocate<NodeTy>();
+      V = getAllocator().Allocate<NodeTy>();
     }
 
     ++NumNodes;
@@ -432,7 +431,7 @@ ExplodedNode *ExplodedGraph::createUncachedNode(const ProgramPoint &L,
                                                 ProgramStateRef State,
                                                 int64_t Id,
                                                 bool IsSink) {
-  NodeTy *V = (NodeTy *) getAllocator().Allocate<NodeTy>();
+  NodeTy *V = getAllocator().Allocate<NodeTy>();
   new (V) NodeTy(L, State, Id, IsSink);
   return V;
 }
@@ -488,7 +487,7 @@ ExplodedGraph::trim(ArrayRef<const NodeTy *> Sinks,
     const ExplodedNode *N = WL2.pop_back_val();
 
     // Skip this node if we have already processed it.
-    if (Pass2.find(N) != Pass2.end())
+    if (Pass2.contains(N))
       continue;
 
     // Create the corresponding node in the new graph and record the mapping
@@ -509,9 +508,8 @@ ExplodedGraph::trim(ArrayRef<const NodeTy *> Sinks,
 
     // Walk through the predecessors of 'N' and hook up their corresponding
     // nodes in the new graph (if any) to the freshly created node.
-    for (ExplodedNode::pred_iterator I = N->Preds.begin(), E = N->Preds.end();
-         I != E; ++I) {
-      Pass2Ty::iterator PI = Pass2.find(*I);
+    for (const ExplodedNode *Pred : N->Preds) {
+      Pass2Ty::iterator PI = Pass2.find(Pred);
       if (PI == Pass2.end())
         continue;
 
@@ -522,17 +520,16 @@ ExplodedGraph::trim(ArrayRef<const NodeTy *> Sinks,
     // been created, we should hook them up as successors.  Otherwise, enqueue
     // the new nodes from the original graph that should have nodes created
     // in the new graph.
-    for (ExplodedNode::succ_iterator I = N->Succs.begin(), E = N->Succs.end();
-         I != E; ++I) {
-      Pass2Ty::iterator PI = Pass2.find(*I);
+    for (const ExplodedNode *Succ : N->Succs) {
+      Pass2Ty::iterator PI = Pass2.find(Succ);
       if (PI != Pass2.end()) {
         const_cast<ExplodedNode *>(PI->second)->addPredecessor(NewN, *G);
         continue;
       }
 
       // Enqueue nodes to the worklist that were marked during pass 1.
-      if (Pass1.count(*I))
-        WL2.push_back(*I);
+      if (Pass1.count(Succ))
+        WL2.push_back(Succ);
     }
   }
 

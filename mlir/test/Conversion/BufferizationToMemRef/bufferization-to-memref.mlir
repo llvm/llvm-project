@@ -66,3 +66,20 @@ func.func @conversion_with_invalid_layout_map(%arg0 : memref<?xf32, strided<[10]
   memref.dealloc %arg0 : memref<?xf32, strided<[10], offset: ?>>
   return %1 : memref<?xf32, strided<[10], offset: ?>>
 }
+
+// -----
+// Test: check that the dealloc lowering pattern is registered.
+
+// CHECK-NOT: func @deallocHelper
+// CHECK-LABEL: func @conversion_dealloc_simple
+// CHECK-SAME: [[ARG0:%.+]]: memref<2xf32>
+// CHECK-SAME: [[ARG1:%.+]]: i1
+func.func @conversion_dealloc_simple(%arg0: memref<2xf32>, %arg1: i1) {
+  bufferization.dealloc (%arg0 : memref<2xf32>) if (%arg1)
+  return
+}
+
+//      CHECk: scf.if [[ARG1]] {
+// CHECk-NEXT:   memref.dealloc [[ARG0]] : memref<2xf32>
+// CHECk-NEXT: }
+// CHECk-NEXT: return

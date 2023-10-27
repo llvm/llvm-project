@@ -1,8 +1,10 @@
 # RUN: rm -rf %t && mkdir -p %t
 # RUN: llvm-mc -triple=riscv64 -filetype=obj -o %t/riscv64_reloc_add.o %s
 # RUN: llvm-mc -triple=riscv32 -filetype=obj -o %t/riscv32_reloc_add.o %s
-# RUN: llvm-jitlink -noexec -check %s %t/riscv64_reloc_add.o
-# RUN: llvm-jitlink -noexec -check %s %t/riscv32_reloc_add.o
+# RUN: llvm-jitlink -noexec -check %s %t/riscv64_reloc_add.o \
+# RUN:     -slab-allocate=1Mb -slab-address=0x1000 -slab-page-size=0x1000
+# RUN: llvm-jitlink -noexec -check %s %t/riscv32_reloc_add.o \
+# RUN:     -slab-allocate=1Mb -slab-address=0x1000 -slab-page-size=0x1000
 
 # jitlink-check: *{8}(named_data) = 0x8
 # jitlink-check: *{4}(named_data+8) = 0x8

@@ -3,8 +3,12 @@
 //
 // At one time, a bug sometimes reversed the signedness.
 
-// RUN: %libomp-compile -fopenmp-version=51
+// RUN: %libomp-compile
 // RUN: %libomp-run | FileCheck %s
+
+// This test uses -fopenmp-version, which is not a compiler flag that GCC
+// supports.
+// UNSUPPORTED: gcc
 
 // High parallelism increases our chances of detecting a lack of atomicity.
 #define NUM_THREADS_TRY 256

@@ -1,5 +1,5 @@
 // REQUIRES: aarch64-registered-target
-// RUN: %clang_cc1 -triple aarch64-unknown-unknown-eabi -emit-llvm  -target-cpu generic -target-feature +v8.5a %s -o - \
+// RUN: %clang_cc1 -triple aarch64 -emit-llvm  -target-cpu generic -target-feature +v8.5a %s -o - \
 // RUN:                               | FileCheck %s --check-prefix=CHECK
 
 __attribute__ ((target("branch-protection=none")))

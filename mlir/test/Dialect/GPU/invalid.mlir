@@ -4,7 +4,7 @@ func.func @not_enough_sizes(%sz : index) {
   // expected-error@+1 {{expected 6 or more operands, but found 5}}
   "gpu.launch"(%sz, %sz, %sz, %sz, %sz) ({
     gpu.return
-  }) {operand_segment_sizes = array<i32: 0, 1, 1, 1, 1, 1, 1, 0>} : (index, index, index, index, index) -> ()
+  }) {operandSegmentSizes = array<i32: 0, 1, 1, 1, 1, 1, 1, 0>} : (index, index, index, index, index) -> ()
   return
 }
 
@@ -16,7 +16,7 @@ func.func @no_region_attrs(%sz : index) {
   ^bb1(%bx: index, %by: index, %bz: index,
        %tx: index, %ty: index, %tz: index):
     gpu.terminator
-  }) {operand_segment_sizes = array<i32: 0, 1, 1, 1, 1, 1, 1, 0>} : (index, index, index, index, index, index) -> ()
+  }) {operandSegmentSizes = array<i32: 0, 1, 1, 1, 1, 1, 1, 0>} : (index, index, index, index, index, index) -> ()
   return
 }
 
@@ -38,7 +38,7 @@ func.func @launch_requires_gpu_return(%sz : index) {
 func.func @launch_func_too_few_operands(%sz : index) {
   // expected-error@+1 {{expected 6 or more operands}}
   "gpu.launch_func"(%sz, %sz, %sz, %sz, %sz)
-      {operand_segment_sizes = array<i32: 0, 1, 1, 1, 1, 1, 0, 0>}
+      {operandSegmentSizes = array<i32: 0, 1, 1, 1, 1, 1, 0, 0>}
       : (index, index, index, index, index) -> ()
   return
 }
@@ -57,7 +57,7 @@ module attributes {gpu.container_module} {
   func.func @launch_func_missing_callee_attribute(%sz : index) {
     // expected-error@+1 {{'gpu.launch_func' op requires attribute 'kernel'}}
     "gpu.launch_func"(%sz, %sz, %sz, %sz, %sz, %sz)
-        {operand_segment_sizes = array<i32: 0, 1, 1, 1, 1, 1, 1, 0, 0>}
+        {operandSegmentSizes = array<i32: 0, 1, 1, 1, 1, 1, 1, 0, 0, 0>}
         : (index, index, index, index, index, index) -> ()
     return
   }
@@ -77,7 +77,7 @@ module attributes {gpu.container_module} {
 
 module attributes {gpu.container_module} {
   func.func @launch_func_undefined_module(%sz : index) {
-    // expected-error@+1 {{kernel module 'kernels' is undefined}}
+    // expected-error@+1 {{kernel container 'kernels' is undefined}}
     gpu.launch_func @kernels::@kernel_1 blocks in (%sz, %sz, %sz) threads in (%sz, %sz, %sz)
     return
   }
@@ -318,7 +318,7 @@ func.func @shuffle_mismatching_type(%arg0 : f32, %arg1 : i32, %arg2 : i32) {
 // -----
 
 func.func @shuffle_unsupported_type(%arg0 : index, %arg1 : i32, %arg2 : i32) {
-  // expected-error@+1 {{operand #0 must be i32 or f32}}
+  // expected-error@+1 {{operand #0 must be i32, i64, f32 or f64}}
   %shfl, %pred = gpu.shuffle xor %arg0, %arg1, %arg2 : index
   return
 }
@@ -485,8 +485,8 @@ func.func @mmamatrix_operand_type(){
 func.func @mmamatrix_invalid_element_type(){
     %wg = memref.alloca() {alignment = 32} : memref<32x32xf16, 3>
     %i = arith.constant 16 : index
-    // expected-error @+1 {{MMAMatrixType elements must be F16 or F32}}
-    %0 = gpu.subgroup_mma_load_matrix %wg[%i, %i] {leadDimension = 32 : index} : memref<32x32xf16, 3> -> !gpu.mma_matrix<16x16xi32, "AOp">
+    // expected-error @+1 {{MMAMatrixType elements must be SI8, UI8, I32, F16, or F32}}
+    %0 = gpu.subgroup_mma_load_matrix %wg[%i, %i] {leadDimension = 32 : index} : memref<32x32xf16, 3> -> !gpu.mma_matrix<16x16xbf16, "AOp">
     return
 }
 
@@ -505,7 +505,7 @@ func.func @mmaLoadOp_identity_layout(){
 // -----
 
 func.func @mma_invalid_memref_type(%src: memref<32x4xvector<4x8xf32>>, %i: index) {
-    // expected-error @+1 {{operand #0 must be memref of 16-bit float or 32-bit float or vector of 16-bit float or 32-bit float values of ranks 1 values}}
+    // expected-error @+1 {{operand #0 must be memref of 8-bit signless integer or 32-bit signless integer or 16-bit float or 32-bit float or vector of 8-bit signless integer or 32-bit signless integer or 16-bit float or 32-bit float values of ranks 1 values}}
     %0 = gpu.subgroup_mma_load_matrix %src[%i, %i] {leadDimension = 4 : index} : memref<32x4xvector<4x8xf32>> -> !gpu.mma_matrix<16x16xf16, "AOp">
     return
 }
@@ -609,4 +609,34 @@ module attributes {gpu.container_module} {
       gpu.return
     }
   }
+}
+
+// -----
+
+module {
+  // expected-error @+1 {{'gpu.module' op attribute 'targets' failed to satisfy constraint: array of GPU target attributes with at least 1 elements}}
+  gpu.module @gpu_funcs [] {
+  }
+}
+
+// -----
+
+module {
+  // expected-error @+1 {{'gpu.module' op attribute 'targets' failed to satisfy constraint: array of GPU target attributes with at least 1 elements}}
+  gpu.module @gpu_funcs [1] {
+  }
+}
+
+// -----
+
+module {
+  // expected-error @+1 {{'gpu.binary' op attribute 'objects' failed to satisfy constraint: an array of GPU object attributes with at least 1 elements}}
+  gpu.binary @binary []
+}
+
+// -----
+
+module {
+  // expected-error @+1 {{'gpu.binary' op attribute 'offloadingHandler' failed to satisfy constraint: any attribute with the `OffloadingTranslationAttrTrait` trait.}}
+  gpu.binary @binary <1> [#gpu.object<#nvvm.target, "">]
 }

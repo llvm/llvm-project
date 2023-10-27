@@ -46,7 +46,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 
 // [iterator.concept.readable]
 template<class _In>
@@ -293,7 +293,15 @@ concept indirectly_copyable_storable =
 // Note: indirectly_swappable is located in iter_swap.h to prevent a dependency cycle
 // (both iter_swap and indirectly_swappable require indirectly_readable).
 
-#endif // _LIBCPP_STD_VER > 17
+#endif // _LIBCPP_STD_VER >= 20
+
+template <class _Tp>
+using __has_random_access_iterator_category_or_concept
+#if _LIBCPP_STD_VER >= 20
+  = integral_constant<bool, random_access_iterator<_Tp>>;
+#else   // _LIBCPP_STD_VER < 20
+  = __has_random_access_iterator_category<_Tp>;
+#endif  // _LIBCPP_STD_VER
 
 _LIBCPP_END_NAMESPACE_STD
 

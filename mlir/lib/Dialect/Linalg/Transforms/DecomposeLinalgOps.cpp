@@ -111,8 +111,8 @@ static SmallVector<OpFoldResult> getGenericOpLoopRange(OpBuilder &b,
       cast<LinalgOp>(op.getOperation()).createFlatListOfOperandDims(b, loc);
   AffineMap map = op.getShapesToLoopsMap();
   IRRewriter rewriter(b);
-  return makeComposedFoldedMultiResultAffineApply(rewriter, loc, map,
-                                                  allShapesSizes);
+  return affine::makeComposedFoldedMultiResultAffineApply(rewriter, loc, map,
+                                                          allShapesSizes);
 }
 
 /// Helper method to permute the list of `values` based on the `map`.
@@ -132,12 +132,12 @@ SmallVector<OpFoldResult> permuteValues(ArrayRef<OpFoldResult> values,
 static Value getZero(OpBuilder &b, Location loc, Type elementType) {
   assert(elementType.isIntOrIndexOrFloat() &&
          "expected scalar type while computing zero value");
-  if (elementType.isa<IntegerType>())
+  if (isa<IntegerType>(elementType))
     return b.create<arith::ConstantIntOp>(loc, 0, elementType);
   if (elementType.isIndex())
     return b.create<arith::ConstantIndexOp>(loc, 0);
   // Assume float.
-  auto floatType = elementType.cast<FloatType>();
+  auto floatType = cast<FloatType>(elementType);
   return b.create<arith::ConstantFloatOp>(
       loc, APFloat::getZero(floatType.getFloatSemantics()), floatType);
 }
@@ -179,7 +179,7 @@ DecomposeLinalgOp::createPeeledGenericOp(GenericOp genericOp,
     if (resultNumber) {
       newInitValues.push_back(
           genericOp.getDpsInitOperand(*resultNumber)->get());
-      OpResult result = genericOp.getResult(*resultNumber).cast<OpResult>();
+      OpResult result = cast<OpResult>(genericOp.getResult(*resultNumber));
       newResultTypes.push_back(result.getType());
       peeledGenericOpIndexingMaps.push_back(
           genericOp.getIndexingMapMatchingResult(result));
@@ -231,12 +231,12 @@ DecomposeLinalgOp::createResidualGenericOp(GenericOp genericOp,
       }));
   for (auto resultNum :
        llvm::seq<unsigned>(origNumResults, peeledGenericOpNumResults)) {
-    OpResult result = peeledGenericOp.getResult(resultNum).cast<OpResult>();
+    OpResult result = cast<OpResult>(peeledGenericOp.getResult(resultNum));
     indexingMaps.push_back(
         peeledGenericOp.getIndexingMapMatchingResult(result));
   }
-  for (OpOperand *outOperand : genericOp.getDpsInitOperands())
-    indexingMaps.push_back(genericOp.getMatchingIndexingMap(outOperand));
+  for (OpOperand &outOperand : genericOp.getDpsInitsMutable())
+    indexingMaps.push_back(genericOp.getMatchingIndexingMap(&outOperand));
 
   auto indexingMapAttr = rewriter.getAffineMapArrayAttr(indexingMaps);
   return rewriter.create<GenericOp>(
@@ -263,8 +263,8 @@ DecomposeLinalgOp::matchAndRewrite(GenericOp genericOp,
         genericOp, "only operations with tensor semantics are handled");
   }
 
-  if (llvm::any_of(genericOp.getDpsInitOperands(), [&](OpOperand *outOperand) {
-        return !genericOp.getMatchingIndexingMap(outOperand).isPermutation();
+  if (llvm::any_of(genericOp.getDpsInitsMutable(), [&](OpOperand &outOperand) {
+        return !genericOp.getMatchingIndexingMap(&outOperand).isPermutation();
       })) {
     return rewriter.notifyMatchFailure(
         genericOp, "unhandled decomposition of generic op with out operand not "
@@ -329,15 +329,15 @@ DecomposeLinalgOp::matchAndRewrite(GenericOp genericOp,
        llvm::enumerate(genericOp.getBody()->getArguments())) {
     Value residualOpReplacementArg =
         residualGenericOpBody->getArgument(inputBlockArg.index());
-    inputBlockArg.value().replaceUsesWithIf(
-        residualOpReplacementArg, [&](OpOperand &use) {
+    rewriter.replaceUsesWithIf(
+        inputBlockArg.value(), residualOpReplacementArg, [&](OpOperand &use) {
           return use.getOwner()->getBlock() == residualGenericOpBody;
         });
 
     Value peeledOpReplacementArg =
         peeledGenericOpBody->getArgument(inputBlockArg.index());
-    inputBlockArg.value().replaceUsesWithIf(
-        peeledOpReplacementArg, [&](OpOperand &use) {
+    rewriter.replaceUsesWithIf(
+        inputBlockArg.value(), peeledOpReplacementArg, [&](OpOperand &use) {
           return use.getOwner()->getBlock() == peeledGenericOpBody;
         });
   }
@@ -348,7 +348,7 @@ DecomposeLinalgOp::matchAndRewrite(GenericOp genericOp,
   /// the peeled operation.
   SmallVector<Value> replacements;
   for (const auto &yieldValue : llvm::enumerate(yieldOp->getOperands())) {
-    OpResult opr = yieldValue.value().dyn_cast<OpResult>();
+    OpResult opr = dyn_cast<OpResult>(yieldValue.value());
     if (!opr || opr.getOwner() != peeledScalarOperation)
       replacements.push_back(residualGenericOp.getResult(yieldValue.index()));
     else

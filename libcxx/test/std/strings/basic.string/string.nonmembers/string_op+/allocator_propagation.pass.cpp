@@ -196,9 +196,9 @@ int main(int, char**) {
 #endif
 #if TEST_STD_VER > 17
   static_assert(test<char>());
-#ifndef TEST_HAS_NO_WIDE_CHARACTERS
+#  ifndef TEST_HAS_NO_WIDE_CHARACTERS
   static_assert(test<wchar_t>());
-#endif
+#  endif
 #endif
 
   return 0;

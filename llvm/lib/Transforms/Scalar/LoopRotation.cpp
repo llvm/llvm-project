@@ -43,6 +43,21 @@ LoopRotatePass::LoopRotatePass(bool EnableHeaderDuplication, bool PrepareForLTO)
     : EnableHeaderDuplication(EnableHeaderDuplication),
       PrepareForLTO(PrepareForLTO) {}
 
+void LoopRotatePass::printPipeline(
+    raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
+  static_cast<PassInfoMixin<LoopRotatePass> *>(this)->printPipeline(
+      OS, MapClassName2PassName);
+  OS << "<";
+  if (!EnableHeaderDuplication)
+    OS << "no-";
+  OS << "header-duplication;";
+
+  if (!PrepareForLTO)
+    OS << "no-";
+  OS << "prepare-for-lto";
+  OS << ">";
+}
+
 PreservedAnalyses LoopRotatePass::run(Loop &L, LoopAnalysisManager &AM,
                                       LoopStandardAnalysisResults &AR,
                                       LPMUpdater &) {

@@ -37,16 +37,14 @@ define internal void @outlined1() {
 ; CHECK-LABEL: define {{[^@]+}}@outlined1
 ; CHECK-SAME: () #[[ATTR1]] {
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[I:%.*]] = icmp sle i32 1, 0
-; CHECK-NEXT:    br i1 [[I]], label [[BB1:%.*]], label [[BB2:%.*]]
+; CHECK-NEXT:    br label [[BB2:%.*]]
 ; CHECK:       common.ret:
 ; CHECK-NEXT:    ret void
 ; CHECK:       bb1:
-; CHECK-NEXT:    call void @func() #[[ATTR1]]
-; CHECK-NEXT:    br label [[COMMON_RET:%.*]]
+; CHECK-NEXT:    unreachable
 ; CHECK:       bb2:
 ; CHECK-NEXT:    call void @__kmpc_free_shared(ptr null, i64 0) #[[ATTR0]]
-; CHECK-NEXT:    br label [[COMMON_RET]]
+; CHECK-NEXT:    br label [[COMMON_RET:%.*]]
 ;
 bb:
   %i = icmp sle i32 1, 0

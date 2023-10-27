@@ -36,6 +36,12 @@ mlir::func::FuncOp getLlvmMemset(FirOpBuilder &builder);
 /// Get the C standard library `realloc` function.
 mlir::func::FuncOp getRealloc(FirOpBuilder &builder);
 
+/// Get the `llvm.get.rounding` intrinsic.
+mlir::func::FuncOp getLlvmGetRounding(FirOpBuilder &builder);
+
+/// Get the `llvm.set.rounding` intrinsic.
+mlir::func::FuncOp getLlvmSetRounding(FirOpBuilder &builder);
+
 /// Get the `llvm.stacksave` intrinsic.
 mlir::func::FuncOp getLlvmStackSave(FirOpBuilder &builder);
 

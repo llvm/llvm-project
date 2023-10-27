@@ -1,6 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 
-// rdar://problem/8540720
 namespace test0 {
   void foo() {
     void bar();

@@ -70,6 +70,8 @@ bool IoStatementBase::Inquire(InquiryKeywordHash, std::int64_t &) {
   return false;
 }
 
+std::int64_t IoStatementBase::InquirePos() { return 0; }
+
 void IoStatementBase::BadInquiryKeywordHashCrash(InquiryKeywordHash inquiry) {
   char buffer[16];
   const char *decode{InquiryKeywordHashDecode(buffer, sizeof buffer, inquiry)};
@@ -137,6 +139,11 @@ void InternalIoStatementState<DIR>::HandleRelativePosition(std::int64_t n) {
   return unit_.HandleRelativePosition(n);
 }
 
+template <Direction DIR>
+std::int64_t InternalIoStatementState<DIR>::InquirePos() {
+  return unit_.InquirePos();
+}
+
 template <Direction DIR, typename CHAR>
 InternalFormattedIoStatementState<DIR, CHAR>::InternalFormattedIoStatementState(
     Buffer buffer, std::size_t length, const CharType *format,
@@ -186,7 +193,12 @@ ExternalIoStatementBase::ExternalIoStatementBase(
     ExternalFileUnit &unit, const char *sourceFile, int sourceLine)
     : IoStatementBase{sourceFile, sourceLine}, unit_{unit} {}
 
-MutableModes &ExternalIoStatementBase::mutableModes() { return unit_.modes; }
+MutableModes &ExternalIoStatementBase::mutableModes() {
+  if (const ChildIo * child{unit_.GetChildIo()}) {
+    return child->parent().mutableModes();
+  }
+  return unit_.modes;
+}
 
 ConnectionState &ExternalIoStatementBase::GetConnectionState() { return unit_; }
 
@@ -199,6 +211,10 @@ int ExternalIoStatementBase::EndIoStatement() {
 
 void ExternalIoStatementBase::SetAsynchronous() {
   asynchronousID_ = unit().GetAsynchronousId(*this);
+}
+
+std::int64_t ExternalIoStatementBase::InquirePos() {
+  return unit_.InquirePos();
 }
 
 void OpenStatementState::set_path(const char *path, std::size_t length) {
@@ -223,6 +239,12 @@ void OpenStatementState::CompleteOperation() {
     } else if (*status_ == OpenStatus::Scratch && path_.get()) {
       SignalError("FILE= may not appear on OPEN with STATUS='SCRATCH'");
     }
+  }
+  // F'2023 12.5.6.13 - NEWUNIT= requires either FILE= or STATUS='SCRATCH'
+  if (isNewUnit_ && !path_.get() &&
+      status_.value_or(OpenStatus::Unknown) != OpenStatus::Scratch) {
+    SignalError(IostatBadNewUnit);
+    status_ = OpenStatus::Scratch; // error recovery
   }
   if (path_.get() || wasExtant_ ||
       (status_ && *status_ == OpenStatus::Scratch)) {
@@ -319,8 +341,8 @@ void ExternalIoStatementState<DIR>::CompleteOperation() {
   } else { // output
     if (mutableModes().nonAdvancing) {
       // Make effects of positioning past the last Emit() visible with blanks.
-      std::int64_t n{unit().positionInRecord - unit().furthestPositionInRecord};
-      while (n-- > 0 && unit().Emit(" ", 1, 1, *this)) {
+      if (unit().positionInRecord > unit().furthestPositionInRecord) {
+        unit().Emit("", 0, 1, *this); // Emit() will pad
       }
       unit().leftTabLimit = unit().positionInRecord;
     } else {
@@ -573,7 +595,7 @@ std::optional<char32_t> IoStatementState::NextInField(
       GotChar(byteCount);
       return next;
     }
-    if (CheckForEndOfRecord()) { // do padding
+    if (CheckForEndOfRecord(0)) { // do padding
       --*remaining;
       return std::optional<char32_t>{' '};
     }
@@ -581,11 +603,13 @@ std::optional<char32_t> IoStatementState::NextInField(
   return std::nullopt;
 }
 
-bool IoStatementState::CheckForEndOfRecord() {
+bool IoStatementState::CheckForEndOfRecord(std::size_t afterReading) {
   const ConnectionState &connection{GetConnectionState()};
   if (!connection.IsAtEOF()) {
     if (auto length{connection.EffectiveRecordLength()}) {
-      if (connection.positionInRecord >= *length) {
+      if (connection.positionInRecord +
+              static_cast<std::int64_t>(afterReading) >=
+          *length) {
         IoErrorHandler &handler{GetIoErrorHandler()};
         const auto &modes{mutableModes()};
         if (modes.nonAdvancing) {
@@ -628,6 +652,10 @@ bool IoStatementState::Inquire(
 bool IoStatementState::Inquire(InquiryKeywordHash inquiry, std::int64_t &n) {
   return common::visit(
       [&](auto &x) { return x.get().Inquire(inquiry, n); }, u_);
+}
+
+std::int64_t IoStatementState::InquirePos() {
+  return common::visit([&](auto &x) { return x.get().InquirePos(); }, u_);
 }
 
 void IoStatementState::GotChar(int n) {
@@ -818,10 +846,6 @@ ExternalFileUnit *ChildIoStatementState<DIR>::GetExternalFileUnit() const {
   return child_.parent().GetExternalFileUnit();
 }
 
-template <Direction DIR> void ChildIoStatementState<DIR>::CompleteOperation() {
-  IoStatementBase::CompleteOperation();
-}
-
 template <Direction DIR> int ChildIoStatementState<DIR>::EndIoStatement() {
   CompleteOperation();
   auto result{IoStatementBase::EndIoStatement()};
@@ -874,8 +898,8 @@ int ChildFormattedIoStatementState<DIR, CHAR>::EndIoStatement() {
 }
 
 template <Direction DIR, typename CHAR>
-bool ChildFormattedIoStatementState<DIR, CHAR>::AdvanceRecord(int) {
-  return false; // no can do in a child I/O
+bool ChildFormattedIoStatementState<DIR, CHAR>::AdvanceRecord(int n) {
+  return this->child().parent().AdvanceRecord(n);
 }
 
 template <Direction DIR>
@@ -981,8 +1005,8 @@ bool InquireUnitState::Inquire(
   case HashInquiryKeyword("BLANK"):
     str = !unit().IsConnected() || unit().isUnformatted.value_or(true)
         ? "UNDEFINED"
-        : unit().modes.editingFlags & blankZero ? "ZERO"
-                                                : "NULL";
+        : mutableModes().editingFlags & blankZero ? "ZERO"
+                                                  : "NULL";
     break;
   case HashInquiryKeyword("CARRIAGECONTROL"):
     str = "LIST";
@@ -993,14 +1017,14 @@ bool InquireUnitState::Inquire(
   case HashInquiryKeyword("DECIMAL"):
     str = !unit().IsConnected() || unit().isUnformatted.value_or(true)
         ? "UNDEFINED"
-        : unit().modes.editingFlags & decimalComma ? "COMMA"
-                                                   : "POINT";
+        : mutableModes().editingFlags & decimalComma ? "COMMA"
+                                                     : "POINT";
     break;
   case HashInquiryKeyword("DELIM"):
     if (!unit().IsConnected() || unit().isUnformatted.value_or(true)) {
       str = "UNDEFINED";
     } else {
-      switch (unit().modes.delim) {
+      switch (mutableModes().delim) {
       case '\'':
         str = "APOSTROPHE";
         break;
@@ -1046,8 +1070,8 @@ bool InquireUnitState::Inquire(
   case HashInquiryKeyword("PAD"):
     str = !unit().IsConnected() || unit().isUnformatted.value_or(true)
         ? "UNDEFINED"
-        : unit().modes.pad ? "YES"
-                           : "NO";
+        : mutableModes().pad ? "YES"
+                             : "NO";
     break;
   case HashInquiryKeyword("POSITION"):
     if (!unit().IsConnected() || unit().access == Access::Direct) {
@@ -1078,7 +1102,7 @@ bool InquireUnitState::Inquire(
     if (!unit().IsConnected() || unit().isUnformatted.value_or(true)) {
       str = "UNDEFINED";
     } else {
-      switch (unit().modes.round) {
+      switch (mutableModes().round) {
       case decimal::FortranRounding::RoundNearest:
         str = "NEAREST";
         break;
@@ -1107,8 +1131,8 @@ bool InquireUnitState::Inquire(
   case HashInquiryKeyword("SIGN"):
     str = !unit().IsConnected() || unit().isUnformatted.value_or(true)
         ? "UNDEFINED"
-        : unit().modes.editingFlags & signPlus ? "PLUS"
-                                               : "SUPPRESS";
+        : mutableModes().editingFlags & signPlus ? "PLUS"
+                                                 : "SUPPRESS";
     break;
   case HashInquiryKeyword("STREAM"):
     str = !unit().IsConnected()           ? "UNKNOWN"
@@ -1247,7 +1271,7 @@ bool InquireNoUnitState::Inquire(
 bool InquireNoUnitState::Inquire(InquiryKeywordHash inquiry, bool &result) {
   switch (inquiry) {
   case HashInquiryKeyword("EXIST"):
-    result = true;
+    result = badUnitNumber() >= 0;
     return true;
   case HashInquiryKeyword("NAMED"):
   case HashInquiryKeyword("OPENED"):
@@ -1323,13 +1347,16 @@ bool InquireUnconnectedFileState::Inquire(
     str = "UNKNONN";
     break;
   case HashInquiryKeyword("READ"):
-    str = MayRead(path_.get()) ? "YES" : "NO";
+    str =
+        IsExtant(path_.get()) ? MayRead(path_.get()) ? "YES" : "NO" : "UNKNOWN";
     break;
   case HashInquiryKeyword("READWRITE"):
-    str = MayReadAndWrite(path_.get()) ? "YES" : "NO";
+    str = IsExtant(path_.get()) ? MayReadAndWrite(path_.get()) ? "YES" : "NO"
+                                : "UNKNOWN";
     break;
   case HashInquiryKeyword("WRITE"):
-    str = MayWrite(path_.get()) ? "YES" : "NO";
+    str = IsExtant(path_.get()) ? MayWrite(path_.get()) ? "YES" : "NO"
+                                : "UNKNOWN";
     break;
   case HashInquiryKeyword("NAME"):
     str = path_.get();

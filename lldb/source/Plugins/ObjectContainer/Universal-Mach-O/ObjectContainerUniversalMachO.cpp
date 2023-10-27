@@ -57,7 +57,8 @@ ObjectContainer *ObjectContainerUniversalMachO::CreateInstance(
 bool ObjectContainerUniversalMachO::MagicBytesMatch(const DataExtractor &data) {
   lldb::offset_t offset = 0;
   uint32_t magic = data.GetU32(&offset);
-  return magic == FAT_MAGIC || magic == FAT_CIGAM;
+  return magic == FAT_MAGIC || magic == FAT_CIGAM || magic == FAT_MAGIC_64 ||
+         magic == FAT_CIGAM_64;
 }
 
 ObjectContainerUniversalMachO::ObjectContainerUniversalMachO(
@@ -82,38 +83,51 @@ bool ObjectContainerUniversalMachO::ParseHeader() {
 
 bool ObjectContainerUniversalMachO::ParseHeader(
     lldb_private::DataExtractor &data, llvm::MachO::fat_header &header,
-    std::vector<llvm::MachO::fat_arch> &fat_archs) {
-  bool success = false;
+    std::vector<FatArch> &fat_archs) {
   // Store the file offset for this universal file as we could have a universal
   // .o file in a BSD archive, or be contained in another kind of object.
-  // Universal mach-o files always have their headers in big endian.
   lldb::offset_t offset = 0;
   data.SetByteOrder(eByteOrderBig);
   header.magic = data.GetU32(&offset);
   fat_archs.clear();
 
-  if (header.magic == FAT_MAGIC) {
-
-    data.SetAddressByteSize(4);
+  // Universal mach-o files always have their headers in big endian.
+  if (header.magic == FAT_MAGIC || header.magic == FAT_MAGIC_64) {
+    const bool is_fat64 = header.magic == FAT_MAGIC_64;
+    data.SetAddressByteSize(is_fat64 ? 8 : 4);
 
     header.nfat_arch = data.GetU32(&offset);
 
     // Now we should have enough data for all of the fat headers, so lets index
     // them so we know how many architectures that this universal binary
     // contains.
-    uint32_t arch_idx = 0;
-    for (arch_idx = 0; arch_idx < header.nfat_arch; ++arch_idx) {
+    for (uint32_t arch_idx = 0; arch_idx < header.nfat_arch; ++arch_idx) {
       if (data.ValidOffsetForDataOfSize(offset, sizeof(fat_arch))) {
-        fat_arch arch;
-        if (data.GetU32(&offset, &arch, sizeof(fat_arch) / sizeof(uint32_t)))
-          fat_archs.push_back(arch);
+        if (is_fat64) {
+          fat_arch_64 arch;
+          arch.cputype = data.GetU32(&offset);
+          arch.cpusubtype = data.GetU32(&offset);
+          arch.offset = data.GetU64(&offset);
+          arch.size = data.GetU64(&offset);
+          arch.align = data.GetU32(&offset);
+          arch.reserved = data.GetU32(&offset);
+          fat_archs.emplace_back(arch);
+        } else {
+          fat_arch arch;
+          arch.cputype = data.GetU32(&offset);
+          arch.cpusubtype = data.GetU32(&offset);
+          arch.offset = data.GetU32(&offset);
+          arch.size = data.GetU32(&offset);
+          arch.align = data.GetU32(&offset);
+          fat_archs.emplace_back(arch);
+        }
       }
     }
-    success = true;
-  } else {
-    memset(&header, 0, sizeof(header));
+    return true;
   }
-  return success;
+
+  memset(&header, 0, sizeof(header));
+  return true;
 }
 
 size_t ObjectContainerUniversalMachO::GetNumArchitectures() const {
@@ -123,8 +137,8 @@ size_t ObjectContainerUniversalMachO::GetNumArchitectures() const {
 bool ObjectContainerUniversalMachO::GetArchitectureAtIndex(
     uint32_t idx, ArchSpec &arch) const {
   if (idx < m_header.nfat_arch) {
-    arch.SetArchitecture(eArchTypeMachO, m_fat_archs[idx].cputype,
-                         m_fat_archs[idx].cpusubtype);
+    arch.SetArchitecture(eArchTypeMachO, m_fat_archs[idx].GetCPUType(),
+                         m_fat_archs[idx].GetCPUSubType());
     return true;
   }
   return false;
@@ -166,8 +180,8 @@ ObjectContainerUniversalMachO::GetObjectFile(const FileSpec *file) {
       DataBufferSP data_sp;
       lldb::offset_t data_offset = 0;
       return ObjectFile::FindPlugin(
-          module_sp, file, m_offset + m_fat_archs[arch_idx].offset,
-          m_fat_archs[arch_idx].size, data_sp, data_offset);
+          module_sp, file, m_offset + m_fat_archs[arch_idx].GetOffset(),
+          m_fat_archs[arch_idx].GetSize(), data_sp, data_offset);
     }
   }
   return ObjectFileSP();
@@ -184,11 +198,12 @@ size_t ObjectContainerUniversalMachO::GetModuleSpecifications(
 
   if (ObjectContainerUniversalMachO::MagicBytesMatch(data)) {
     llvm::MachO::fat_header header;
-    std::vector<llvm::MachO::fat_arch> fat_archs;
+    std::vector<FatArch> fat_archs;
     if (ParseHeader(data, header, fat_archs)) {
-      for (const llvm::MachO::fat_arch &fat_arch : fat_archs) {
-        const lldb::offset_t slice_file_offset = fat_arch.offset + file_offset;
-        if (fat_arch.offset < file_size && file_size > slice_file_offset) {
+      for (const FatArch &fat_arch : fat_archs) {
+        const lldb::offset_t slice_file_offset =
+            fat_arch.GetOffset() + file_offset;
+        if (fat_arch.GetOffset() < file_size && file_size > slice_file_offset) {
           ObjectFile::GetModuleSpecifications(
               file, slice_file_offset, file_size - slice_file_offset, specs);
         }

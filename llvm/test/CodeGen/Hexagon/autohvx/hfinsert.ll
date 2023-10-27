@@ -9,7 +9,7 @@ define ptr @fred(ptr %v0) local_unnamed_addr #0 {
 b0:
   %v1 = load <64 x half>, ptr %v0, align 2
   %v2 = insertelement <64 x half> %v1, half 0xH4170, i32 17
-  store <64 x half> %v2, ptr %v0, align 2
+  store volatile <64 x half> %v2, ptr %v0, align 2
   ret ptr %v0
 }
 

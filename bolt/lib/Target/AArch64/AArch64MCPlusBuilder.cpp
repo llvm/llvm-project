@@ -11,11 +11,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/AArch64AddressingModes.h"
+#include "MCTargetDesc/AArch64FixupKinds.h"
 #include "MCTargetDesc/AArch64MCExpr.h"
 #include "MCTargetDesc/AArch64MCTargetDesc.h"
 #include "Utils/AArch64BaseInfo.h"
 #include "bolt/Core/MCPlusBuilder.h"
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCFixupKindInfo.h"
+#include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/Debug.h"
@@ -28,11 +32,103 @@ using namespace bolt;
 
 namespace {
 
+static void getSystemFlag(MCInst &Inst, MCPhysReg RegName) {
+  Inst.setOpcode(AArch64::MRS);
+  Inst.clear();
+  Inst.addOperand(MCOperand::createReg(RegName));
+  Inst.addOperand(MCOperand::createImm(AArch64SysReg::NZCV));
+}
+
+static void setSystemFlag(MCInst &Inst, MCPhysReg RegName) {
+  Inst.setOpcode(AArch64::MSR);
+  Inst.clear();
+  Inst.addOperand(MCOperand::createImm(AArch64SysReg::NZCV));
+  Inst.addOperand(MCOperand::createReg(RegName));
+}
+
+static void createPushRegisters(MCInst &Inst, MCPhysReg Reg1, MCPhysReg Reg2) {
+  Inst.clear();
+  unsigned NewOpcode = AArch64::STPXpre;
+  Inst.setOpcode(NewOpcode);
+  Inst.addOperand(MCOperand::createReg(AArch64::SP));
+  Inst.addOperand(MCOperand::createReg(Reg1));
+  Inst.addOperand(MCOperand::createReg(Reg2));
+  Inst.addOperand(MCOperand::createReg(AArch64::SP));
+  Inst.addOperand(MCOperand::createImm(-2));
+}
+
+static void createPopRegisters(MCInst &Inst, MCPhysReg Reg1, MCPhysReg Reg2) {
+  Inst.clear();
+  unsigned NewOpcode = AArch64::LDPXpost;
+  Inst.setOpcode(NewOpcode);
+  Inst.addOperand(MCOperand::createReg(AArch64::SP));
+  Inst.addOperand(MCOperand::createReg(Reg1));
+  Inst.addOperand(MCOperand::createReg(Reg2));
+  Inst.addOperand(MCOperand::createReg(AArch64::SP));
+  Inst.addOperand(MCOperand::createImm(2));
+}
+
+static void loadReg(MCInst &Inst, MCPhysReg To, MCPhysReg From) {
+  Inst.setOpcode(AArch64::LDRXui);
+  Inst.clear();
+  if (From == AArch64::SP) {
+    Inst.setOpcode(AArch64::LDRXpost);
+    Inst.addOperand(MCOperand::createReg(From));
+    Inst.addOperand(MCOperand::createReg(To));
+    Inst.addOperand(MCOperand::createReg(From));
+    Inst.addOperand(MCOperand::createImm(16));
+  } else {
+    Inst.addOperand(MCOperand::createReg(To));
+    Inst.addOperand(MCOperand::createReg(From));
+    Inst.addOperand(MCOperand::createImm(0));
+  }
+}
+
+static void storeReg(MCInst &Inst, MCPhysReg From, MCPhysReg To) {
+  Inst.setOpcode(AArch64::STRXui);
+  Inst.clear();
+  if (To == AArch64::SP) {
+    Inst.setOpcode(AArch64::STRXpre);
+    Inst.addOperand(MCOperand::createReg(To));
+    Inst.addOperand(MCOperand::createReg(From));
+    Inst.addOperand(MCOperand::createReg(To));
+    Inst.addOperand(MCOperand::createImm(-16));
+  } else {
+    Inst.addOperand(MCOperand::createReg(From));
+    Inst.addOperand(MCOperand::createReg(To));
+    Inst.addOperand(MCOperand::createImm(0));
+  }
+}
+
+static void atomicAdd(MCInst &Inst, MCPhysReg RegTo, MCPhysReg RegCnt) {
+  // NOTE: Supports only ARM with LSE extension
+  Inst.setOpcode(AArch64::LDADDX);
+  Inst.clear();
+  Inst.addOperand(MCOperand::createReg(AArch64::XZR));
+  Inst.addOperand(MCOperand::createReg(RegCnt));
+  Inst.addOperand(MCOperand::createReg(RegTo));
+}
+
+static void createMovz(MCInst &Inst, MCPhysReg Reg, uint64_t Imm) {
+  assert(Imm <= UINT16_MAX && "Invalid Imm size");
+  Inst.clear();
+  Inst.setOpcode(AArch64::MOVZXi);
+  Inst.addOperand(MCOperand::createReg(Reg));
+  Inst.addOperand(MCOperand::createImm(Imm & 0xFFFF));
+  Inst.addOperand(MCOperand::createImm(0));
+}
+
+static InstructionListType createIncMemory(MCPhysReg RegTo, MCPhysReg RegTmp) {
+  InstructionListType Insts;
+  Insts.emplace_back();
+  createMovz(Insts.back(), RegTmp, 1);
+  Insts.emplace_back();
+  atomicAdd(Insts.back(), RegTo, RegTmp);
+  return Insts;
+}
 class AArch64MCPlusBuilder : public MCPlusBuilder {
 public:
-  AArch64MCPlusBuilder(const MCInstrAnalysis *Analysis, const MCInstrInfo *Info,
-                       const MCRegisterInfo *RegInfo)
-      : MCPlusBuilder(Analysis, Info, RegInfo) {}
+  using MCPlusBuilder::MCPlusBuilder;
 
   bool equals(const MCTargetExpr &A, const MCTargetExpr &B,
               CompFuncTy Comp) const override {
@@ -44,8 +140,6 @@ public:
     return MCPlusBuilder::equals(*AArch64ExprA.getSubExpr(),
                                  *AArch64ExprB.getSubExpr(), Comp);
   }
-
-  bool hasEVEXEncoding(const MCInst &) const override { return false; }
 
   bool isMacroOpFusionPair(ArrayRef<MCInst> Insts) const override {
     return false;
@@ -172,17 +266,42 @@ public:
             Inst.getOpcode() == AArch64::LDRXui);
   }
 
-  bool isLoad(const MCInst &Inst) const override {
+  bool mayLoad(const MCInst &Inst) const override {
     return isLDRB(Inst) || isLDRH(Inst) || isLDRW(Inst) || isLDRX(Inst);
   }
 
+  bool isAArch64Exclusive(const MCInst &Inst) const override {
+    return (Inst.getOpcode() == AArch64::LDXPX ||
+            Inst.getOpcode() == AArch64::LDXPW ||
+            Inst.getOpcode() == AArch64::LDXRX ||
+            Inst.getOpcode() == AArch64::LDXRW ||
+            Inst.getOpcode() == AArch64::LDXRH ||
+            Inst.getOpcode() == AArch64::LDXRB ||
+            Inst.getOpcode() == AArch64::STXPX ||
+            Inst.getOpcode() == AArch64::STXPW ||
+            Inst.getOpcode() == AArch64::STXRX ||
+            Inst.getOpcode() == AArch64::STXRW ||
+            Inst.getOpcode() == AArch64::STXRH ||
+            Inst.getOpcode() == AArch64::STXRB ||
+            Inst.getOpcode() == AArch64::LDAXPX ||
+            Inst.getOpcode() == AArch64::LDAXPW ||
+            Inst.getOpcode() == AArch64::LDAXRX ||
+            Inst.getOpcode() == AArch64::LDAXRW ||
+            Inst.getOpcode() == AArch64::LDAXRH ||
+            Inst.getOpcode() == AArch64::LDAXRB ||
+            Inst.getOpcode() == AArch64::STLXPX ||
+            Inst.getOpcode() == AArch64::STLXPW ||
+            Inst.getOpcode() == AArch64::STLXRX ||
+            Inst.getOpcode() == AArch64::STLXRW ||
+            Inst.getOpcode() == AArch64::STLXRH ||
+            Inst.getOpcode() == AArch64::STLXRB ||
+            Inst.getOpcode() == AArch64::CLREX);
+  }
+
   bool isLoadFromStack(const MCInst &Inst) const {
-    if (!isLoad(Inst))
+    if (!mayLoad(Inst))
       return false;
-    const MCInstrDesc &InstInfo = Info->get(Inst.getOpcode());
-    unsigned NumDefs = InstInfo.getNumDefs();
-    for (unsigned I = NumDefs, E = InstInfo.getNumOperands(); I < E; ++I) {
-      const MCOperand &Operand = Inst.getOperand(I);
+    for (const MCOperand &Operand : useOperands(Inst)) {
       if (!Operand.isReg())
         continue;
       unsigned Reg = Operand.getReg();
@@ -210,6 +329,40 @@ public:
     return Inst.getOpcode() == AArch64::BLR;
   }
 
+  MCPhysReg getSpRegister(int Size) const {
+    switch (Size) {
+    case 4:
+      return AArch64::WSP;
+    case 8:
+      return AArch64::SP;
+    default:
+      llvm_unreachable("Unexpected size");
+    }
+  }
+
+  MCPhysReg getIntArgRegister(unsigned ArgNo) const override {
+    switch (ArgNo) {
+    case 0:
+      return AArch64::X0;
+    case 1:
+      return AArch64::X1;
+    case 2:
+      return AArch64::X2;
+    case 3:
+      return AArch64::X3;
+    case 4:
+      return AArch64::X4;
+    case 5:
+      return AArch64::X5;
+    case 6:
+      return AArch64::X6;
+    case 7:
+      return AArch64::X7;
+    default:
+      return getNoRegister();
+    }
+  }
+
   bool hasPCRelOperand(const MCInst &Inst) const override {
     // ADRP is blacklisted and is an exception. Even though it has a
     // PC-relative operand, this operand is not a complete symbol reference
@@ -223,7 +376,7 @@ public:
     // Look for literal addressing mode (see C1-143 ARM DDI 0487B.a)
     const MCInstrDesc &MCII = Info->get(Inst.getOpcode());
     for (unsigned I = 0, E = MCII.getNumOperands(); I != E; ++I)
-      if (MCII.OpInfo[I].OperandType == MCOI::OPERAND_PCREL)
+      if (MCII.operands()[I].OperandType == MCOI::OPERAND_PCREL)
         return true;
 
     return false;
@@ -257,7 +410,7 @@ public:
     // Literal addressing mode
     const MCInstrDesc &MCII = Info->get(Inst.getOpcode());
     for (unsigned I = 0, E = MCII.getNumOperands(); I != E; ++I) {
-      if (MCII.OpInfo[I].OperandType != MCOI::OPERAND_PCREL)
+      if (MCII.operands()[I].OperandType != MCOI::OPERAND_PCREL)
         continue;
 
       if (!Inst.getOperand(I).isImm()) {
@@ -267,7 +420,7 @@ public:
         return true;
       }
 
-      DispImm = Inst.getOperand(I).getImm() << 2;
+      DispImm = Inst.getOperand(I).getImm() * 4;
       return true;
     }
     return false;
@@ -302,7 +455,7 @@ public:
     }
     const MCInstrDesc &MCII = Info->get(Inst.getOpcode());
     for (unsigned I = 0, E = MCII.getNumOperands(); I != E; ++I) {
-      if (MCII.OpInfo[I].OperandType == MCOI::OPERAND_PCREL)
+      if (MCII.operands()[I].OperandType == MCOI::OPERAND_PCREL)
         break;
       ++OI;
     }
@@ -314,6 +467,22 @@ public:
     MCInst::iterator OI = getMemOperandDisp(Inst);
     *OI = Operand;
     return true;
+  }
+
+  void getCalleeSavedRegs(BitVector &Regs) const override {
+    Regs |= getAliases(AArch64::X18);
+    Regs |= getAliases(AArch64::X19);
+    Regs |= getAliases(AArch64::X20);
+    Regs |= getAliases(AArch64::X21);
+    Regs |= getAliases(AArch64::X22);
+    Regs |= getAliases(AArch64::X23);
+    Regs |= getAliases(AArch64::X24);
+    Regs |= getAliases(AArch64::X25);
+    Regs |= getAliases(AArch64::X26);
+    Regs |= getAliases(AArch64::X27);
+    Regs |= getAliases(AArch64::X28);
+    Regs |= getAliases(AArch64::LR);
+    Regs |= getAliases(AArch64::FP);
   }
 
   const MCExpr *getTargetExprFor(MCInst &Inst, const MCExpr *Expr,
@@ -553,7 +722,7 @@ public:
     PCRelBase = DefBaseAddr;
     // Match LOAD to load the jump table (relative) target
     const MCInst *DefLoad = UsesAdd[2];
-    assert(isLoad(*DefLoad) &&
+    assert(mayLoad(*DefLoad) &&
            "Failed to match indirect branch load pattern! (1)");
     assert((ScaleValue != 1LL || isLDRB(*DefLoad)) &&
            "Failed to match indirect branch load pattern! (2)");
@@ -821,14 +990,25 @@ public:
 
   int getUncondBranchEncodingSize() const override { return 28; }
 
+  InstructionListType createCmpJE(MCPhysReg RegNo, int64_t Imm,
+                                  const MCSymbol *Target,
+                                  MCContext *Ctx) const override {
+    InstructionListType Code;
+    Code.emplace_back(MCInstBuilder(AArch64::SUBSXri)
+                          .addReg(RegNo)
+                          .addReg(RegNo)
+                          .addImm(Imm)
+                          .addImm(0));
+    Code.emplace_back(MCInstBuilder(AArch64::Bcc)
+                          .addImm(Imm)
+                          .addExpr(MCSymbolRefExpr::create(
+                              Target, MCSymbolRefExpr::VK_None, *Ctx)));
+    return Code;
+  }
+
   bool createTailCall(MCInst &Inst, const MCSymbol *Target,
                       MCContext *Ctx) override {
-    Inst.setOpcode(AArch64::B);
-    Inst.addOperand(MCOperand::createExpr(getTargetExprFor(
-        Inst, MCSymbolRefExpr::create(Target, MCSymbolRefExpr::VK_None, *Ctx),
-        *Ctx, 0)));
-    setTailCall(Inst);
-    return true;
+    return createDirectCall(Inst, Target, Ctx, /*IsTailCall*/ true);
   }
 
   void createLongTailCall(InstructionListType &Seq, const MCSymbol *Target,
@@ -875,7 +1055,19 @@ public:
     return true;
   }
 
-  bool isStore(const MCInst &Inst) const override { return false; }
+  bool mayStore(const MCInst &Inst) const override { return false; }
+
+  bool createDirectCall(MCInst &Inst, const MCSymbol *Target, MCContext *Ctx,
+                        bool IsTailCall) override {
+    Inst.setOpcode(IsTailCall ? AArch64::B : AArch64::BL);
+    Inst.clear();
+    Inst.addOperand(MCOperand::createExpr(getTargetExprFor(
+        Inst, MCSymbolRefExpr::create(Target, MCSymbolRefExpr::VK_None, *Ctx),
+        *Ctx, 0)));
+    if (IsTailCall)
+      convertJmpToTailCall(Inst);
+    return true;
+  }
 
   bool analyzeBranch(InstructionIterator Begin, InstructionIterator End,
                      const MCSymbol *&TBB, const MCSymbol *&FBB,
@@ -1091,19 +1283,297 @@ public:
     return true;
   }
 
-  bool isMoveMem2Reg(const MCInst &Inst) const override { return false; }
+  bool shouldRecordCodeRelocation(uint64_t RelType) const override {
+    switch (RelType) {
+    case ELF::R_AARCH64_ABS64:
+    case ELF::R_AARCH64_ABS32:
+    case ELF::R_AARCH64_ABS16:
+    case ELF::R_AARCH64_ADD_ABS_LO12_NC:
+    case ELF::R_AARCH64_ADR_GOT_PAGE:
+    case ELF::R_AARCH64_ADR_PREL_LO21:
+    case ELF::R_AARCH64_ADR_PREL_PG_HI21:
+    case ELF::R_AARCH64_ADR_PREL_PG_HI21_NC:
+    case ELF::R_AARCH64_LD64_GOT_LO12_NC:
+    case ELF::R_AARCH64_LDST8_ABS_LO12_NC:
+    case ELF::R_AARCH64_LDST16_ABS_LO12_NC:
+    case ELF::R_AARCH64_LDST32_ABS_LO12_NC:
+    case ELF::R_AARCH64_LDST64_ABS_LO12_NC:
+    case ELF::R_AARCH64_LDST128_ABS_LO12_NC:
+    case ELF::R_AARCH64_TLSDESC_ADD_LO12:
+    case ELF::R_AARCH64_TLSDESC_ADR_PAGE21:
+    case ELF::R_AARCH64_TLSDESC_ADR_PREL21:
+    case ELF::R_AARCH64_TLSDESC_LD64_LO12:
+    case ELF::R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21:
+    case ELF::R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC:
+    case ELF::R_AARCH64_MOVW_UABS_G0:
+    case ELF::R_AARCH64_MOVW_UABS_G0_NC:
+    case ELF::R_AARCH64_MOVW_UABS_G1:
+    case ELF::R_AARCH64_MOVW_UABS_G1_NC:
+    case ELF::R_AARCH64_MOVW_UABS_G2:
+    case ELF::R_AARCH64_MOVW_UABS_G2_NC:
+    case ELF::R_AARCH64_MOVW_UABS_G3:
+    case ELF::R_AARCH64_PREL16:
+    case ELF::R_AARCH64_PREL32:
+    case ELF::R_AARCH64_PREL64:
+      return true;
+    case ELF::R_AARCH64_CALL26:
+    case ELF::R_AARCH64_JUMP26:
+    case ELF::R_AARCH64_TSTBR14:
+    case ELF::R_AARCH64_CONDBR19:
+    case ELF::R_AARCH64_TLSDESC_CALL:
+    case ELF::R_AARCH64_TLSLE_ADD_TPREL_HI12:
+    case ELF::R_AARCH64_TLSLE_ADD_TPREL_LO12_NC:
+      return false;
+    default:
+      llvm_unreachable("Unexpected AArch64 relocation type in code");
+    }
+  }
 
-  bool isLeave(const MCInst &Inst) const override { return false; }
-
-  bool isPop(const MCInst &Inst) const override { return false; }
-
-  bool isPrefix(const MCInst &Inst) const override { return false; }
+  StringRef getTrapFillValue() const override {
+    return StringRef("\0\0\0\0", 4);
+  }
 
   bool createReturn(MCInst &Inst) const override {
     Inst.setOpcode(AArch64::RET);
     Inst.clear();
     Inst.addOperand(MCOperand::createReg(AArch64::LR));
     return true;
+  }
+
+  bool createStackPointerIncrement(
+      MCInst &Inst, int Size,
+      bool NoFlagsClobber = false /*unused for AArch64*/) const override {
+    Inst.setOpcode(AArch64::SUBXri);
+    Inst.clear();
+    Inst.addOperand(MCOperand::createReg(AArch64::SP));
+    Inst.addOperand(MCOperand::createReg(AArch64::SP));
+    Inst.addOperand(MCOperand::createImm(Size));
+    Inst.addOperand(MCOperand::createImm(0));
+    return true;
+  }
+
+  bool createStackPointerDecrement(
+      MCInst &Inst, int Size,
+      bool NoFlagsClobber = false /*unused for AArch64*/) const override {
+    Inst.setOpcode(AArch64::ADDXri);
+    Inst.clear();
+    Inst.addOperand(MCOperand::createReg(AArch64::SP));
+    Inst.addOperand(MCOperand::createReg(AArch64::SP));
+    Inst.addOperand(MCOperand::createImm(Size));
+    Inst.addOperand(MCOperand::createImm(0));
+    return true;
+  }
+
+  void createIndirectBranch(MCInst &Inst, MCPhysReg MemBaseReg,
+                            int64_t Disp) const {
+    Inst.setOpcode(AArch64::BR);
+    Inst.addOperand(MCOperand::createReg(MemBaseReg));
+  }
+
+  InstructionListType createInstrumentedIndCallHandlerExitBB() const override {
+    InstructionListType Insts(5);
+    // Code sequence for instrumented indirect call handler:
+    //   msr  nzcv, x1
+    //   ldp  x0, x1, [sp], #16
+    //   ldr  x16, [sp], #16
+    //   ldp  x0, x1, [sp], #16
+    //   br   x16
+    setSystemFlag(Insts[0], AArch64::X1);
+    createPopRegisters(Insts[1], AArch64::X0, AArch64::X1);
+    // Here we load address of the next function which should be called in the
+    // original binary to X16 register. Writing to X16 is permitted without
+    // needing to restore.
+    loadReg(Insts[2], AArch64::X16, AArch64::SP);
+    createPopRegisters(Insts[3], AArch64::X0, AArch64::X1);
+    createIndirectBranch(Insts[4], AArch64::X16, 0);
+    return Insts;
+  }
+
+  InstructionListType
+  createInstrumentedIndTailCallHandlerExitBB() const override {
+    return createInstrumentedIndCallHandlerExitBB();
+  }
+
+  InstructionListType createGetter(MCContext *Ctx, const char *name) const {
+    InstructionListType Insts(4);
+    MCSymbol *Locs = Ctx->getOrCreateSymbol(name);
+    InstructionListType Addr = materializeAddress(Locs, Ctx, AArch64::X0);
+    std::copy(Addr.begin(), Addr.end(), Insts.begin());
+    assert(Addr.size() == 2 && "Invalid Addr size");
+    loadReg(Insts[2], AArch64::X0, AArch64::X0);
+    createReturn(Insts[3]);
+    return Insts;
+  }
+
+  InstructionListType createNumCountersGetter(MCContext *Ctx) const override {
+    return createGetter(Ctx, "__bolt_num_counters");
+  }
+
+  InstructionListType
+  createInstrLocationsGetter(MCContext *Ctx) const override {
+    return createGetter(Ctx, "__bolt_instr_locations");
+  }
+
+  InstructionListType createInstrTablesGetter(MCContext *Ctx) const override {
+    return createGetter(Ctx, "__bolt_instr_tables");
+  }
+
+  InstructionListType createInstrNumFuncsGetter(MCContext *Ctx) const override {
+    return createGetter(Ctx, "__bolt_instr_num_funcs");
+  }
+
+  void convertIndirectCallToLoad(MCInst &Inst, MCPhysReg Reg) override {
+    bool IsTailCall = isTailCall(Inst);
+    if (IsTailCall)
+      removeAnnotation(Inst, MCPlus::MCAnnotation::kTailCall);
+    if (Inst.getOpcode() == AArch64::BR || Inst.getOpcode() == AArch64::BLR) {
+      Inst.setOpcode(AArch64::ORRXrs);
+      Inst.insert(Inst.begin(), MCOperand::createReg(Reg));
+      Inst.insert(Inst.begin() + 1, MCOperand::createReg(AArch64::XZR));
+      Inst.insert(Inst.begin() + 3, MCOperand::createImm(0));
+      return;
+    }
+    llvm_unreachable("not implemented");
+  }
+
+  InstructionListType createLoadImmediate(const MCPhysReg Dest,
+                                          uint64_t Imm) const override {
+    InstructionListType Insts(4);
+    int Shift = 48;
+    for (int I = 0; I < 4; I++, Shift -= 16) {
+      Insts[I].setOpcode(AArch64::MOVKXi);
+      Insts[I].addOperand(MCOperand::createReg(Dest));
+      Insts[I].addOperand(MCOperand::createReg(Dest));
+      Insts[I].addOperand(MCOperand::createImm((Imm >> Shift) & 0xFFFF));
+      Insts[I].addOperand(MCOperand::createImm(Shift));
+    }
+    return Insts;
+  }
+
+  void createIndirectCallInst(MCInst &Inst, bool IsTailCall,
+                              MCPhysReg Reg) const {
+    Inst.clear();
+    Inst.setOpcode(IsTailCall ? AArch64::BR : AArch64::BLR);
+    Inst.addOperand(MCOperand::createReg(Reg));
+  }
+
+  InstructionListType createInstrumentedIndirectCall(MCInst &&CallInst,
+                                                     MCSymbol *HandlerFuncAddr,
+                                                     int CallSiteID,
+                                                     MCContext *Ctx) override {
+    InstructionListType Insts;
+    // Code sequence used to enter indirect call instrumentation helper:
+    //   stp x0, x1, [sp, #-16]! createPushRegisters
+    //   mov target x0  convertIndirectCallToLoad -> orr x0 target xzr
+    //   mov x1 CallSiteID createLoadImmediate ->
+    //   movk    x1, #0x0, lsl #48
+    //   movk    x1, #0x0, lsl #32
+    //   movk    x1, #0x0, lsl #16
+    //   movk    x1, #0x0
+    //   stp x0, x1, [sp, #-16]!
+    //   bl *HandlerFuncAddr createIndirectCall ->
+    //   adr x0 *HandlerFuncAddr -> adrp + add
+    //   blr x0
+    Insts.emplace_back();
+    createPushRegisters(Insts.back(), AArch64::X0, AArch64::X1);
+    Insts.emplace_back(CallInst);
+    convertIndirectCallToLoad(Insts.back(), AArch64::X0);
+    InstructionListType LoadImm =
+        createLoadImmediate(getIntArgRegister(1), CallSiteID);
+    Insts.insert(Insts.end(), LoadImm.begin(), LoadImm.end());
+    Insts.emplace_back();
+    createPushRegisters(Insts.back(), AArch64::X0, AArch64::X1);
+    Insts.resize(Insts.size() + 2);
+    InstructionListType Addr =
+        materializeAddress(HandlerFuncAddr, Ctx, AArch64::X0);
+    assert(Addr.size() == 2 && "Invalid Addr size");
+    std::copy(Addr.begin(), Addr.end(), Insts.end() - Addr.size());
+    Insts.emplace_back();
+    createIndirectCallInst(Insts.back(), isTailCall(CallInst), AArch64::X0);
+
+    // Carry over metadata including tail call marker if present.
+    stripAnnotations(Insts.back());
+    moveAnnotations(std::move(CallInst), Insts.back());
+
+    return Insts;
+  }
+
+  InstructionListType
+  createInstrumentedIndCallHandlerEntryBB(const MCSymbol *InstrTrampoline,
+                                          const MCSymbol *IndCallHandler,
+                                          MCContext *Ctx) override {
+    // Code sequence used to check whether InstrTampoline was initialized
+    // and call it if so, returns via IndCallHandler
+    //   stp     x0, x1, [sp, #-16]!
+    //   mrs     x1, nzcv
+    //   adr     x0, InstrTrampoline -> adrp + add
+    //   ldr     x0, [x0]
+    //   subs    x0, x0, #0x0
+    //   b.eq    IndCallHandler
+    //   str     x30, [sp, #-16]!
+    //   blr     x0
+    //   ldr     x30, [sp], #16
+    //   b       IndCallHandler
+    InstructionListType Insts;
+    Insts.emplace_back();
+    createPushRegisters(Insts.back(), AArch64::X0, AArch64::X1);
+    Insts.emplace_back();
+    getSystemFlag(Insts.back(), getIntArgRegister(1));
+    Insts.emplace_back();
+    Insts.emplace_back();
+    InstructionListType Addr =
+        materializeAddress(InstrTrampoline, Ctx, AArch64::X0);
+    std::copy(Addr.begin(), Addr.end(), Insts.end() - Addr.size());
+    assert(Addr.size() == 2 && "Invalid Addr size");
+    Insts.emplace_back();
+    loadReg(Insts.back(), AArch64::X0, AArch64::X0);
+    InstructionListType cmpJmp =
+        createCmpJE(AArch64::X0, 0, IndCallHandler, Ctx);
+    Insts.insert(Insts.end(), cmpJmp.begin(), cmpJmp.end());
+    Insts.emplace_back();
+    storeReg(Insts.back(), AArch64::LR, AArch64::SP);
+    Insts.emplace_back();
+    Insts.back().setOpcode(AArch64::BLR);
+    Insts.back().addOperand(MCOperand::createReg(AArch64::X0));
+    Insts.emplace_back();
+    loadReg(Insts.back(), AArch64::LR, AArch64::SP);
+    Insts.emplace_back();
+    createDirectCall(Insts.back(), IndCallHandler, Ctx, /*IsTailCall*/ true);
+    return Insts;
+  }
+
+  InstructionListType
+  createInstrIncMemory(const MCSymbol *Target, MCContext *Ctx, bool IsLeaf,
+                       unsigned CodePointerSize) const override {
+    unsigned int I = 0;
+    InstructionListType Instrs(IsLeaf ? 12 : 10);
+
+    if (IsLeaf)
+      createStackPointerIncrement(Instrs[I++], 128);
+    createPushRegisters(Instrs[I++], AArch64::X0, AArch64::X1);
+    getSystemFlag(Instrs[I++], AArch64::X1);
+    InstructionListType Addr = materializeAddress(Target, Ctx, AArch64::X0);
+    assert(Addr.size() == 2 && "Invalid Addr size");
+    std::copy(Addr.begin(), Addr.end(), Instrs.begin() + I);
+    I += Addr.size();
+    storeReg(Instrs[I++], AArch64::X2, AArch64::SP);
+    InstructionListType Insts = createIncMemory(AArch64::X0, AArch64::X2);
+    assert(Insts.size() == 2 && "Invalid Insts size");
+    std::copy(Insts.begin(), Insts.end(), Instrs.begin() + I);
+    I += Insts.size();
+    loadReg(Instrs[I++], AArch64::X2, AArch64::SP);
+    setSystemFlag(Instrs[I++], AArch64::X1);
+    createPopRegisters(Instrs[I++], AArch64::X0, AArch64::X1);
+    if (IsLeaf)
+      createStackPointerDecrement(Instrs[I++], 128);
+    return Instrs;
+  }
+
+  std::vector<MCInst> createSymbolTrampoline(const MCSymbol *TgtSym,
+                                             MCContext *Ctx) override {
+    std::vector<MCInst> Insts;
+    createShortJmp(Insts, TgtSym, Ctx, /*IsTailCall*/ true);
+    return Insts;
   }
 
   InstructionListType materializeAddress(const MCSymbol *Target, MCContext *Ctx,
@@ -1127,6 +1597,52 @@ public:
                           ELF::R_AARCH64_ADD_ABS_LO12_NC);
     return Insts;
   }
+
+  std::optional<Relocation>
+  createRelocation(const MCFixup &Fixup,
+                   const MCAsmBackend &MAB) const override {
+    const MCFixupKindInfo &FKI = MAB.getFixupKindInfo(Fixup.getKind());
+
+    assert(FKI.TargetOffset == 0 && "0-bit relocation offset expected");
+    const uint64_t RelOffset = Fixup.getOffset();
+
+    uint64_t RelType;
+    if (Fixup.getKind() == MCFixupKind(AArch64::fixup_aarch64_pcrel_call26))
+      RelType = ELF::R_AARCH64_CALL26;
+    else if (FKI.Flags & MCFixupKindInfo::FKF_IsPCRel) {
+      switch (FKI.TargetSize) {
+      default:
+        return std::nullopt;
+      case 16:
+        RelType = ELF::R_AARCH64_PREL16;
+        break;
+      case 32:
+        RelType = ELF::R_AARCH64_PREL32;
+        break;
+      case 64:
+        RelType = ELF::R_AARCH64_PREL64;
+        break;
+      }
+    } else {
+      switch (FKI.TargetSize) {
+      default:
+        return std::nullopt;
+      case 16:
+        RelType = ELF::R_AARCH64_ABS16;
+        break;
+      case 32:
+        RelType = ELF::R_AARCH64_ABS32;
+        break;
+      case 64:
+        RelType = ELF::R_AARCH64_ABS64;
+        break;
+      }
+    }
+
+    auto [RelSymbol, RelAddend] = extractFixupExpr(Fixup);
+
+    return Relocation({RelOffset, RelSymbol, RelType, RelAddend, 0});
+  }
 };
 
 } // end anonymous namespace
@@ -1136,8 +1652,9 @@ namespace bolt {
 
 MCPlusBuilder *createAArch64MCPlusBuilder(const MCInstrAnalysis *Analysis,
                                           const MCInstrInfo *Info,
-                                          const MCRegisterInfo *RegInfo) {
-  return new AArch64MCPlusBuilder(Analysis, Info, RegInfo);
+                                          const MCRegisterInfo *RegInfo,
+                                          const MCSubtargetInfo *STI) {
+  return new AArch64MCPlusBuilder(Analysis, Info, RegInfo, STI);
 }
 
 } // namespace bolt

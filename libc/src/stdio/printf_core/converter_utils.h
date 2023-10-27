@@ -10,15 +10,16 @@
 #define LLVM_LIBC_SRC_STDIO_PRINTF_CORE_CONVERTER_UTILS_H
 
 #include "src/__support/CPP/limits.h"
+#include "src/__support/common.h"
 #include "src/stdio/printf_core/core_structs.h"
 
 #include <inttypes.h>
 #include <stddef.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 namespace printf_core {
 
-inline uintmax_t apply_length_modifier(uintmax_t num, LengthModifier lm) {
+LIBC_INLINE uintmax_t apply_length_modifier(uintmax_t num, LengthModifier lm) {
   switch (lm) {
   case LengthModifier::none:
     return num & cpp::numeric_limits<unsigned int>::max();
@@ -52,6 +53,6 @@ inline uintmax_t apply_length_modifier(uintmax_t num, LengthModifier lm) {
   }
 
 } // namespace printf_core
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STDIO_PRINTF_CORE_CONVERTER_UTILS_H

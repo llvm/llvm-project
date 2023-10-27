@@ -31,6 +31,7 @@ config.clang_examples = @CLANG_BUILD_EXAMPLES@
 config.enable_shared = @ENABLE_SHARED@
 config.enable_backtrace = @ENABLE_BACKTRACES@
 config.enable_threads = @LLVM_ENABLE_THREADS@
+config.reverse_iteration = @LLVM_ENABLE_REVERSE_ITERATION@
 config.host_arch = "@HOST_ARCH@"
 config.python_executable = "@Python3_EXECUTABLE@"
 config.use_z3_solver = lit_config.params.get('USE_Z3_SOLVER', "@USE_Z3_SOLVER@")

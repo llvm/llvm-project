@@ -21,7 +21,7 @@ using namespace clang::targets;
 
 static constexpr Builtin::Info BuiltinInfo[] = {
 #define BUILTIN(ID, TYPE, ATTRS)                                               \
-  {#ID, TYPE, ATTRS, nullptr, ALL_LANGUAGES, nullptr},
+  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
 #include "clang/Basic/BuiltinsBPF.def"
 };
 
@@ -32,7 +32,7 @@ void BPFTargetInfo::getTargetDefines(const LangOptions &Opts,
 }
 
 static constexpr llvm::StringLiteral ValidCPUNames[] = {"generic", "v1", "v2",
-                                                        "v3", "probe"};
+                                                        "v3", "v4", "probe"};
 
 bool BPFTargetInfo::isValidCPUName(StringRef Name) const {
   return llvm::is_contained(ValidCPUNames, Name);

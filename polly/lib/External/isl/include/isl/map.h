@@ -354,6 +354,12 @@ __isl_export
 __isl_give isl_map *isl_map_intersect_range_factor_range(
 	__isl_take isl_map *map, __isl_take isl_map *factor);
 __isl_export
+__isl_give isl_map *isl_map_intersect_domain_wrapped_domain(
+	__isl_take isl_map *map, __isl_take isl_set *domain);
+__isl_export
+__isl_give isl_map *isl_map_intersect_range_wrapped_domain(
+	__isl_take isl_map *map, __isl_take isl_set *domain);
+__isl_export
 __isl_give isl_map *isl_map_apply_domain(
 		__isl_take isl_map *map1,
 		__isl_take isl_map *map2);
@@ -479,6 +485,12 @@ __isl_give isl_map *isl_map_move_dims(__isl_take isl_map *map,
 __isl_give isl_basic_map *isl_basic_map_project_out(
 		__isl_take isl_basic_map *bmap,
 		enum isl_dim_type type, unsigned first, unsigned n);
+__isl_overload
+__isl_give isl_map *isl_map_project_out_param_id(__isl_take isl_map *map,
+	__isl_take isl_id *id);
+__isl_overload
+__isl_give isl_map *isl_map_project_out_param_id_list(__isl_take isl_map *map,
+	__isl_take isl_id_list *list);
 __isl_give isl_map *isl_map_project_out(__isl_take isl_map *map,
 		enum isl_dim_type type, unsigned first, unsigned n);
 __isl_export
@@ -676,6 +688,7 @@ __isl_give isl_map *isl_map_gist_domain(__isl_take isl_map *map,
 	__isl_take isl_set *context);
 __isl_give isl_map *isl_map_gist_range(__isl_take isl_map *map,
 	__isl_take isl_set *context);
+__isl_export
 __isl_give isl_map *isl_map_gist_params(__isl_take isl_map *map,
 	__isl_take isl_set *context);
 __isl_give isl_map *isl_map_gist_basic_map(__isl_take isl_map *map,
@@ -706,6 +719,7 @@ isl_stat isl_map_foreach_basic_map(__isl_keep isl_map *map,
 __isl_give isl_basic_map_list *isl_map_get_basic_map_list(
 	__isl_keep isl_map *map);
 
+__isl_overload
 __isl_give isl_map *isl_map_fixed_power_val(__isl_take isl_map *map,
 	__isl_take isl_val *exp);
 __isl_give isl_map *isl_map_power(__isl_take isl_map *map, isl_bool *exact);

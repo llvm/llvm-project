@@ -8,19 +8,12 @@
 //
 // This file contains method definitions for `SparseTensorNNZ`.
 //
-// This file is part of the lightweight runtime support library for sparse
-// tensor manipulations.  The functionality of the support library is meant
-// to simplify benchmarking, testing, and debugging MLIR code operating on
-// sparse tensors.  However, the provided functionality is **not** part of
-// core MLIR itself.
-//
 //===----------------------------------------------------------------------===//
 
 #include "mlir/ExecutionEngine/SparseTensor/Storage.h"
 
 using namespace mlir::sparse_tensor;
 
-//===----------------------------------------------------------------------===//
 SparseTensorNNZ::SparseTensorNNZ(const std::vector<uint64_t> &lvlSizes,
                                  const std::vector<DimLevelType> &lvlTypes)
     : lvlSizes(lvlSizes), lvlTypes(lvlTypes), nnz(getLvlRank()) {
@@ -53,26 +46,26 @@ SparseTensorNNZ::SparseTensorNNZ(const std::vector<uint64_t> &lvlSizes,
   }
 }
 
-void SparseTensorNNZ::forallIndices(uint64_t stopLvl,
-                                    SparseTensorNNZ::NNZConsumer yield) const {
+void SparseTensorNNZ::forallCoords(uint64_t stopLvl,
+                                   SparseTensorNNZ::NNZConsumer yield) const {
   assert(stopLvl < getLvlRank() && "Level out of bounds");
   assert(isCompressedDLT(lvlTypes[stopLvl]) &&
          "Cannot look up non-compressed levels");
-  forallIndices(yield, stopLvl, 0, 0);
+  forallCoords(yield, stopLvl, 0, 0);
 }
 
-void SparseTensorNNZ::add(const std::vector<uint64_t> &lvlInd) {
+void SparseTensorNNZ::add(const std::vector<uint64_t> &lvlCoords) {
   uint64_t parentPos = 0;
   for (uint64_t l = 0, lvlrank = getLvlRank(); l < lvlrank; ++l) {
     if (isCompressedDLT(lvlTypes[l]))
       nnz[l][parentPos]++;
-    parentPos = parentPos * lvlSizes[l] + lvlInd[l];
+    parentPos = parentPos * lvlSizes[l] + lvlCoords[l];
   }
 }
 
-void SparseTensorNNZ::forallIndices(SparseTensorNNZ::NNZConsumer yield,
-                                    uint64_t stopLvl, uint64_t parentPos,
-                                    uint64_t l) const {
+void SparseTensorNNZ::forallCoords(SparseTensorNNZ::NNZConsumer yield,
+                                   uint64_t stopLvl, uint64_t parentPos,
+                                   uint64_t l) const {
   assert(l <= stopLvl);
   if (l == stopLvl) {
     assert(parentPos < nnz[l].size() && "Cursor is out of range");
@@ -81,6 +74,6 @@ void SparseTensorNNZ::forallIndices(SparseTensorNNZ::NNZConsumer yield,
     const uint64_t sz = lvlSizes[l];
     const uint64_t pstart = parentPos * sz;
     for (uint64_t i = 0; i < sz; ++i)
-      forallIndices(yield, stopLvl, pstart + i, l + 1);
+      forallCoords(yield, stopLvl, pstart + i, l + 1);
   }
 }

@@ -121,6 +121,20 @@ AddressType Value::GetValueAddressType() const {
   return eAddressTypeInvalid;
 }
 
+Value::ValueType Value::GetValueTypeFromAddressType(AddressType address_type) {
+  switch (address_type) {
+    case eAddressTypeFile:
+      return Value::ValueType::FileAddress;
+    case eAddressTypeLoad:
+      return Value::ValueType::LoadAddress;
+    case eAddressTypeHost:
+      return Value::ValueType::HostAddress;
+    case eAddressTypeInvalid:
+      return Value::ValueType::Invalid;
+  }
+  llvm_unreachable("Unexpected address type!");
+}
+
 RegisterInfo *Value::GetRegisterInfo() const {
   if (m_context_type == ContextType::RegisterInfo)
     return static_cast<RegisterInfo *>(m_context);
@@ -558,7 +572,7 @@ Status Value::GetValueAsData(ExecutionContext *exe_ctx, DataExtractor &data,
   return error;
 }
 
-Scalar &Value::ResolveValue(ExecutionContext *exe_ctx) {
+Scalar &Value::ResolveValue(ExecutionContext *exe_ctx, Module *module) {
   const CompilerType &compiler_type = GetCompilerType();
   if (compiler_type.IsValid()) {
     switch (m_value_type) {
@@ -573,7 +587,7 @@ Scalar &Value::ResolveValue(ExecutionContext *exe_ctx) {
     {
       DataExtractor data;
       lldb::addr_t addr = m_value.ULongLong(LLDB_INVALID_ADDRESS);
-      Status error(GetValueAsData(exe_ctx, data, nullptr));
+      Status error(GetValueAsData(exe_ctx, data, module));
       if (error.Success()) {
         Scalar scalar;
         if (compiler_type.GetValueAsScalar(

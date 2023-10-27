@@ -1,4 +1,8 @@
 // REQUIRES: lld-available
+
+// FIXME: Investigate and fix.
+// XFAIL: powerpc64-target-arch
+
 /// Test ld with GC.
 
 // RUN: %clang_pgogen -o %t -O3 %S/Inputs/instrprof-value-merge.c -no-pie -fuse-ld=lld -ffunction-sections -fdata-sections -Wl,--gc-sections -z start-stop-gc

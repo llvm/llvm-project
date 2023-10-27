@@ -113,6 +113,8 @@ __isl_give isl_pw_aff *isl_pw_aff_reset_domain_space(
 __isl_give isl_pw_aff *isl_pw_aff_add_disjoint(
 	__isl_take isl_pw_aff *pwaff1, __isl_take isl_pw_aff *pwaff2);
 
+__isl_keep isl_aff *isl_pw_aff_peek_base_at(__isl_keep isl_pw_aff *pa, int pos);
+
 __isl_give isl_pw_aff *isl_pw_aff_domain_factor_domain(
 	__isl_take isl_pw_aff *pa);
 
@@ -156,6 +158,9 @@ __isl_give isl_multi_aff *isl_multi_aff_from_aff_mat(
 #define EL isl_pw_multi_aff
 
 #include <isl_list_templ.h>
+
+__isl_keep isl_multi_aff *isl_pw_multi_aff_peek_base_at(
+	__isl_keep isl_pw_multi_aff *pma, int pos);
 
 __isl_give isl_pw_multi_aff *isl_pw_multi_aff_move_dims(
 	__isl_take isl_pw_multi_aff *pma,

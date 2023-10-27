@@ -1,6 +1,6 @@
 ; RUN: llvm-as -o - %s | llvm-dis -o - | FileCheck %s
-; CHECK: DIImportedEntity(tag: DW_TAG_imported_module, scope: !2, entity: !11, file: !3, line: 2)
-; CHECK: DIModule(scope: !2, name: "external_module", isDecl: true)
+; CHECK: DIImportedEntity(tag: DW_TAG_imported_module, scope: !2, entity: ![[MOD:[0-9]+]], file: !3, line: 2)
+; CHECK: ![[MOD]] = !DIModule(scope: !2, name: "external_module", isDecl: true)
 
 ; ModuleID = 'em.f90'
 source_filename = "em.f90"

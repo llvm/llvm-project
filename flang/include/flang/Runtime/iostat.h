@@ -82,6 +82,9 @@ enum Iostat {
   IostatBadBackspaceUnit,
   IostatBadUnitNumber,
   IostatBadFlushUnit,
+  IostatBadOpOnChildUnit,
+  IostatBadNewUnit,
+  IostatBadListDirectedInputSeparator,
 };
 
 const char *IostatErrorString(int);

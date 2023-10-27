@@ -36,6 +36,20 @@ Pattern TestExternalCall => replace root: Op with TestRewrite(root);
 
 // -----
 
+// CHECK: pdl.pattern @TestExternalNegatedCall
+// CHECK: %[[ROOT:.*]] = operation
+// CHECK: apply_native_constraint  "TestConstraint"(%[[ROOT]] : !pdl.operation) {isNegated = true}
+// CHECK: rewrite %[[ROOT]]
+// CHECK: erase %[[ROOT]]
+Constraint TestConstraint(op: Op);
+Pattern TestExternalNegatedCall {
+    let root = op : Op;
+    not TestConstraint(root);
+    erase root;
+}
+
+// -----
+
 //===----------------------------------------------------------------------===//
 // MemberAccessExpr
 //===----------------------------------------------------------------------===//

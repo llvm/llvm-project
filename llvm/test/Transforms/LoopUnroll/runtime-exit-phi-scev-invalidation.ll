@@ -27,54 +27,40 @@ define void @pr56282() {
 ; CHECK:       inner.1.header:
 ; CHECK-NEXT:    [[INNER_1_IV:%.*]] = phi i64 [ 0, [[OUTER_HEADER_NEW]] ], [ [[INNER_1_IV_NEXT_7:%.*]], [[INNER_1_LATCH_7:%.*]] ]
 ; CHECK-NEXT:    [[NITER:%.*]] = phi i64 [ 0, [[OUTER_HEADER_NEW]] ], [ [[NITER_NEXT_7:%.*]], [[INNER_1_LATCH_7]] ]
-; CHECK-NEXT:    [[INNER_1_IV_NEXT:%.*]] = add nuw nsw i64 [[INNER_1_IV]], 1
 ; CHECK-NEXT:    [[V:%.*]] = call i32 @get()
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ugt i32 [[V]], 0
 ; CHECK-NEXT:    br i1 [[C_1]], label [[INNER_1_LATCH:%.*]], label [[EXIT_DEOPT_LOOPEXIT:%.*]]
 ; CHECK:       inner.1.latch:
-; CHECK-NEXT:    [[NITER_NEXT:%.*]] = add nuw nsw i64 [[NITER]], 1
-; CHECK-NEXT:    [[INNER_1_IV_NEXT_1:%.*]] = add nuw nsw i64 [[INNER_1_IV_NEXT]], 1
 ; CHECK-NEXT:    [[V_1:%.*]] = call i32 @get()
 ; CHECK-NEXT:    [[C_1_1:%.*]] = icmp ugt i32 [[V_1]], 0
 ; CHECK-NEXT:    br i1 [[C_1_1]], label [[INNER_1_LATCH_1:%.*]], label [[EXIT_DEOPT_LOOPEXIT]]
 ; CHECK:       inner.1.latch.1:
-; CHECK-NEXT:    [[NITER_NEXT_1:%.*]] = add nuw nsw i64 [[NITER_NEXT]], 1
-; CHECK-NEXT:    [[INNER_1_IV_NEXT_2:%.*]] = add nuw nsw i64 [[INNER_1_IV_NEXT_1]], 1
 ; CHECK-NEXT:    [[V_2:%.*]] = call i32 @get()
 ; CHECK-NEXT:    [[C_1_2:%.*]] = icmp ugt i32 [[V_2]], 0
 ; CHECK-NEXT:    br i1 [[C_1_2]], label [[INNER_1_LATCH_2:%.*]], label [[EXIT_DEOPT_LOOPEXIT]]
 ; CHECK:       inner.1.latch.2:
-; CHECK-NEXT:    [[NITER_NEXT_2:%.*]] = add nuw nsw i64 [[NITER_NEXT_1]], 1
-; CHECK-NEXT:    [[INNER_1_IV_NEXT_3:%.*]] = add nuw nsw i64 [[INNER_1_IV_NEXT_2]], 1
 ; CHECK-NEXT:    [[V_3:%.*]] = call i32 @get()
 ; CHECK-NEXT:    [[C_1_3:%.*]] = icmp ugt i32 [[V_3]], 0
 ; CHECK-NEXT:    br i1 [[C_1_3]], label [[INNER_1_LATCH_3:%.*]], label [[EXIT_DEOPT_LOOPEXIT]]
 ; CHECK:       inner.1.latch.3:
-; CHECK-NEXT:    [[NITER_NEXT_3:%.*]] = add nuw nsw i64 [[NITER_NEXT_2]], 1
-; CHECK-NEXT:    [[INNER_1_IV_NEXT_4:%.*]] = add nuw nsw i64 [[INNER_1_IV_NEXT_3]], 1
 ; CHECK-NEXT:    [[V_4:%.*]] = call i32 @get()
 ; CHECK-NEXT:    [[C_1_4:%.*]] = icmp ugt i32 [[V_4]], 0
 ; CHECK-NEXT:    br i1 [[C_1_4]], label [[INNER_1_LATCH_4:%.*]], label [[EXIT_DEOPT_LOOPEXIT]]
 ; CHECK:       inner.1.latch.4:
-; CHECK-NEXT:    [[NITER_NEXT_4:%.*]] = add nuw nsw i64 [[NITER_NEXT_3]], 1
-; CHECK-NEXT:    [[INNER_1_IV_NEXT_5:%.*]] = add nuw nsw i64 [[INNER_1_IV_NEXT_4]], 1
 ; CHECK-NEXT:    [[V_5:%.*]] = call i32 @get()
 ; CHECK-NEXT:    [[C_1_5:%.*]] = icmp ugt i32 [[V_5]], 0
 ; CHECK-NEXT:    br i1 [[C_1_5]], label [[INNER_1_LATCH_5:%.*]], label [[EXIT_DEOPT_LOOPEXIT]]
 ; CHECK:       inner.1.latch.5:
-; CHECK-NEXT:    [[NITER_NEXT_5:%.*]] = add nuw nsw i64 [[NITER_NEXT_4]], 1
-; CHECK-NEXT:    [[INNER_1_IV_NEXT_6:%.*]] = add nuw nsw i64 [[INNER_1_IV_NEXT_5]], 1
 ; CHECK-NEXT:    [[V_6:%.*]] = call i32 @get()
 ; CHECK-NEXT:    [[C_1_6:%.*]] = icmp ugt i32 [[V_6]], 0
 ; CHECK-NEXT:    br i1 [[C_1_6]], label [[INNER_1_LATCH_6:%.*]], label [[EXIT_DEOPT_LOOPEXIT]]
 ; CHECK:       inner.1.latch.6:
-; CHECK-NEXT:    [[NITER_NEXT_6:%.*]] = add nuw nsw i64 [[NITER_NEXT_5]], 1
-; CHECK-NEXT:    [[INNER_1_IV_NEXT_7]] = add nuw nsw i64 [[INNER_1_IV_NEXT_6]], 1
+; CHECK-NEXT:    [[INNER_1_IV_NEXT_7]] = add nuw nsw i64 [[INNER_1_IV]], 8
 ; CHECK-NEXT:    [[V_7:%.*]] = call i32 @get()
 ; CHECK-NEXT:    [[C_1_7:%.*]] = icmp ugt i32 [[V_7]], 0
 ; CHECK-NEXT:    br i1 [[C_1_7]], label [[INNER_1_LATCH_7]], label [[EXIT_DEOPT_LOOPEXIT]]
 ; CHECK:       inner.1.latch.7:
-; CHECK-NEXT:    [[NITER_NEXT_7]] = add i64 [[NITER_NEXT_6]], 1
+; CHECK-NEXT:    [[NITER_NEXT_7]] = add i64 [[NITER]], 8
 ; CHECK-NEXT:    [[NITER_NCMP_7:%.*]] = icmp ne i64 [[NITER_NEXT_7]], [[UNROLL_ITER]]
 ; CHECK-NEXT:    br i1 [[NITER_NCMP_7]], label [[INNER_1_HEADER]], label [[OUTER_MIDDLE_UNR_LCSSA_LOOPEXIT:%.*]]
 ; CHECK:       outer.middle.unr-lcssa.loopexit:
@@ -110,7 +96,7 @@ define void @pr56282() {
 ; CHECK:       inner.2.preheader:
 ; CHECK-NEXT:    br label [[INNER_2]]
 ; CHECK:       inner.2:
-; CHECK-NEXT:    [[OUTER_IV_NEXT]] = add nuw nsw i64 [[OUTER_IV]], 1
+; CHECK-NEXT:    [[OUTER_IV_NEXT]] = add i64 [[OUTER_IV]], 1
 ; CHECK-NEXT:    br label [[OUTER_HEADER]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -179,7 +165,7 @@ define void @pr56286(i64 %x, ptr %src, ptr %dst, ptr %ptr.src) !prof !0 {
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[TMP2]], -1
 ; CHECK-NEXT:    [[XTRAITER:%.*]] = and i64 [[TMP2]], 7
 ; CHECK-NEXT:    [[LCMP_MOD:%.*]] = icmp ne i64 [[XTRAITER]], 0
-; CHECK-NEXT:    br i1 [[LCMP_MOD]], label [[INNER_1_HEADER_PROL_PREHEADER:%.*]], label [[INNER_1_HEADER_PROL_LOOPEXIT:%.*]]
+; CHECK-NEXT:    br i1 [[LCMP_MOD]], label [[INNER_1_HEADER_PROL_PREHEADER:%.*]], label [[INNER_1_HEADER_PROL_LOOPEXIT:%.*]], !prof [[PROF3:![0-9]+]]
 ; CHECK:       inner.1.header.prol.preheader:
 ; CHECK-NEXT:    br label [[INNER_1_HEADER_PROL:%.*]]
 ; CHECK:       inner.1.header.prol:
@@ -194,7 +180,7 @@ define void @pr56286(i64 %x, ptr %src, ptr %dst, ptr %ptr.src) !prof !0 {
 ; CHECK-NEXT:    [[CMP_2_PROL:%.*]] = icmp sgt i64 [[INNER_1_IV_PROL]], 0
 ; CHECK-NEXT:    [[PROL_ITER_NEXT]] = add i64 [[PROL_ITER]], 1
 ; CHECK-NEXT:    [[PROL_ITER_CMP:%.*]] = icmp ne i64 [[PROL_ITER_NEXT]], [[XTRAITER]]
-; CHECK-NEXT:    br i1 [[PROL_ITER_CMP]], label [[INNER_1_HEADER_PROL]], label [[INNER_1_HEADER_PROL_LOOPEXIT_UNR_LCSSA:%.*]], !prof [[PROF3:![0-9]+]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK-NEXT:    br i1 [[PROL_ITER_CMP]], label [[INNER_1_HEADER_PROL]], label [[INNER_1_HEADER_PROL_LOOPEXIT_UNR_LCSSA:%.*]], !prof [[PROF4:![0-9]+]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       inner.1.header.prol.loopexit.unr-lcssa:
 ; CHECK-NEXT:    [[L_1_LCSSA_UNR_PH:%.*]] = phi i32 [ [[L_1_PROL]], [[INNER_1_LATCH_PROL]] ]
 ; CHECK-NEXT:    [[INNER_1_IV_UNR_PH:%.*]] = phi i64 [ [[INNER_1_IV_NEXT_PROL]], [[INNER_1_LATCH_PROL]] ]
@@ -203,7 +189,7 @@ define void @pr56286(i64 %x, ptr %src, ptr %dst, ptr %ptr.src) !prof !0 {
 ; CHECK-NEXT:    [[L_1_LCSSA_UNR:%.*]] = phi i32 [ undef, [[OUTER_HEADER]] ], [ [[L_1_LCSSA_UNR_PH]], [[INNER_1_HEADER_PROL_LOOPEXIT_UNR_LCSSA]] ]
 ; CHECK-NEXT:    [[INNER_1_IV_UNR:%.*]] = phi i64 [ [[X]], [[OUTER_HEADER]] ], [ [[INNER_1_IV_UNR_PH]], [[INNER_1_HEADER_PROL_LOOPEXIT_UNR_LCSSA]] ]
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp ult i64 [[TMP3]], 7
-; CHECK-NEXT:    br i1 [[TMP4]], label [[OUTER_MIDDLE:%.*]], label [[OUTER_HEADER_NEW:%.*]]
+; CHECK-NEXT:    br i1 [[TMP4]], label [[OUTER_MIDDLE:%.*]], label [[OUTER_HEADER_NEW:%.*]], !prof [[PROF3]]
 ; CHECK:       outer.header.new:
 ; CHECK-NEXT:    br label [[INNER_1_HEADER:%.*]]
 ; CHECK:       inner.1.header:
@@ -213,51 +199,41 @@ define void @pr56286(i64 %x, ptr %src, ptr %dst, ptr %ptr.src) !prof !0 {
 ; CHECK:       inner.1.latch:
 ; CHECK-NEXT:    [[L_1:%.*]] = load i32, ptr [[SRC]], align 4
 ; CHECK-NEXT:    store i32 [[L_1]], ptr [[DST]], align 8
-; CHECK-NEXT:    [[INNER_1_IV_NEXT:%.*]] = add i64 [[INNER_1_IV]], 1
-; CHECK-NEXT:    [[CMP_1_1:%.*]] = icmp sgt i32 [[OUTER_P]], 0
-; CHECK-NEXT:    br i1 [[CMP_1_1]], label [[EXIT_DEOPT_LOOPEXIT]], label [[INNER_1_LATCH_1:%.*]]
+; CHECK-NEXT:    br i1 false, label [[EXIT_DEOPT_LOOPEXIT]], label [[INNER_1_LATCH_1:%.*]]
 ; CHECK:       inner.1.latch.1:
 ; CHECK-NEXT:    [[L_1_1:%.*]] = load i32, ptr [[SRC]], align 4
 ; CHECK-NEXT:    store i32 [[L_1_1]], ptr [[DST]], align 8
-; CHECK-NEXT:    [[INNER_1_IV_NEXT_1:%.*]] = add i64 [[INNER_1_IV_NEXT]], 1
 ; CHECK-NEXT:    [[CMP_1_2:%.*]] = icmp sgt i32 [[OUTER_P]], 0
 ; CHECK-NEXT:    br i1 [[CMP_1_2]], label [[EXIT_DEOPT_LOOPEXIT]], label [[INNER_1_LATCH_2:%.*]]
 ; CHECK:       inner.1.latch.2:
 ; CHECK-NEXT:    [[L_1_2:%.*]] = load i32, ptr [[SRC]], align 4
 ; CHECK-NEXT:    store i32 [[L_1_2]], ptr [[DST]], align 8
-; CHECK-NEXT:    [[INNER_1_IV_NEXT_2:%.*]] = add i64 [[INNER_1_IV_NEXT_1]], 1
-; CHECK-NEXT:    [[CMP_1_3:%.*]] = icmp sgt i32 [[OUTER_P]], 0
-; CHECK-NEXT:    br i1 [[CMP_1_3]], label [[EXIT_DEOPT_LOOPEXIT]], label [[INNER_1_LATCH_3:%.*]]
+; CHECK-NEXT:    br i1 false, label [[EXIT_DEOPT_LOOPEXIT]], label [[INNER_1_LATCH_3:%.*]]
 ; CHECK:       inner.1.latch.3:
 ; CHECK-NEXT:    [[L_1_3:%.*]] = load i32, ptr [[SRC]], align 4
 ; CHECK-NEXT:    store i32 [[L_1_3]], ptr [[DST]], align 8
-; CHECK-NEXT:    [[INNER_1_IV_NEXT_3:%.*]] = add i64 [[INNER_1_IV_NEXT_2]], 1
 ; CHECK-NEXT:    [[CMP_1_4:%.*]] = icmp sgt i32 [[OUTER_P]], 0
 ; CHECK-NEXT:    br i1 [[CMP_1_4]], label [[EXIT_DEOPT_LOOPEXIT]], label [[INNER_1_LATCH_4:%.*]]
 ; CHECK:       inner.1.latch.4:
 ; CHECK-NEXT:    [[L_1_4:%.*]] = load i32, ptr [[SRC]], align 4
 ; CHECK-NEXT:    store i32 [[L_1_4]], ptr [[DST]], align 8
-; CHECK-NEXT:    [[INNER_1_IV_NEXT_4:%.*]] = add i64 [[INNER_1_IV_NEXT_3]], 1
-; CHECK-NEXT:    [[CMP_1_5:%.*]] = icmp sgt i32 [[OUTER_P]], 0
-; CHECK-NEXT:    br i1 [[CMP_1_5]], label [[EXIT_DEOPT_LOOPEXIT]], label [[INNER_1_LATCH_5:%.*]]
+; CHECK-NEXT:    br i1 false, label [[EXIT_DEOPT_LOOPEXIT]], label [[INNER_1_LATCH_5:%.*]]
 ; CHECK:       inner.1.latch.5:
 ; CHECK-NEXT:    [[L_1_5:%.*]] = load i32, ptr [[SRC]], align 4
 ; CHECK-NEXT:    store i32 [[L_1_5]], ptr [[DST]], align 8
-; CHECK-NEXT:    [[INNER_1_IV_NEXT_5:%.*]] = add i64 [[INNER_1_IV_NEXT_4]], 1
 ; CHECK-NEXT:    [[CMP_1_6:%.*]] = icmp sgt i32 [[OUTER_P]], 0
 ; CHECK-NEXT:    br i1 [[CMP_1_6]], label [[EXIT_DEOPT_LOOPEXIT]], label [[INNER_1_LATCH_6:%.*]]
 ; CHECK:       inner.1.latch.6:
 ; CHECK-NEXT:    [[L_1_6:%.*]] = load i32, ptr [[SRC]], align 4
 ; CHECK-NEXT:    store i32 [[L_1_6]], ptr [[DST]], align 8
-; CHECK-NEXT:    [[INNER_1_IV_NEXT_6:%.*]] = add i64 [[INNER_1_IV_NEXT_5]], 1
-; CHECK-NEXT:    [[CMP_1_7:%.*]] = icmp sgt i32 [[OUTER_P]], 0
-; CHECK-NEXT:    br i1 [[CMP_1_7]], label [[EXIT_DEOPT_LOOPEXIT]], label [[INNER_1_LATCH_7]]
+; CHECK-NEXT:    [[INNER_1_IV_NEXT_6:%.*]] = add i64 [[INNER_1_IV]], 7
+; CHECK-NEXT:    br i1 false, label [[EXIT_DEOPT_LOOPEXIT]], label [[INNER_1_LATCH_7]]
 ; CHECK:       inner.1.latch.7:
 ; CHECK-NEXT:    [[L_1_7:%.*]] = load i32, ptr [[SRC]], align 4
 ; CHECK-NEXT:    store i32 [[L_1_7]], ptr [[DST]], align 8
-; CHECK-NEXT:    [[INNER_1_IV_NEXT_7]] = add i64 [[INNER_1_IV_NEXT_6]], 1
+; CHECK-NEXT:    [[INNER_1_IV_NEXT_7]] = add i64 [[INNER_1_IV]], 8
 ; CHECK-NEXT:    [[CMP_2_7:%.*]] = icmp sgt i64 [[INNER_1_IV_NEXT_6]], 0
-; CHECK-NEXT:    br i1 [[CMP_2_7]], label [[OUTER_MIDDLE_UNR_LCSSA:%.*]], label [[INNER_1_HEADER]], !prof [[PROF5:![0-9]+]]
+; CHECK-NEXT:    br i1 [[CMP_2_7]], label [[OUTER_MIDDLE_UNR_LCSSA:%.*]], label [[INNER_1_HEADER]], !prof [[PROF6:![0-9]+]]
 ; CHECK:       outer.middle.unr-lcssa:
 ; CHECK-NEXT:    [[L_1_LCSSA_PH:%.*]] = phi i32 [ [[L_1_7]], [[INNER_1_LATCH_7]] ]
 ; CHECK-NEXT:    br label [[OUTER_MIDDLE]]
@@ -273,7 +249,6 @@ define void @pr56286(i64 %x, ptr %src, ptr %dst, ptr %ptr.src) !prof !0 {
 ; CHECK-NEXT:    [[ADD_1:%.*]] = add i32 [[INNER_2_IV]], [[L_2]]
 ; CHECK-NEXT:    [[TMP281:%.*]] = call i32 @use.2(ptr [[TMP27]], i32 [[ADD_1]])
 ; CHECK-NEXT:    [[TMP31:%.*]] = shl nuw nsw i32 [[TMP15]], 16
-; CHECK-NEXT:    [[TMP32:%.*]] = add nuw i32 [[TMP31]], 262144
 ; CHECK-NEXT:    call void @bar()
 ; CHECK-NEXT:    call void @bar()
 ; CHECK-NEXT:    call void @bar()
@@ -283,11 +258,11 @@ define void @pr56286(i64 %x, ptr %src, ptr %dst, ptr %ptr.src) !prof !0 {
 ; CHECK-NEXT:    call void @bar()
 ; CHECK-NEXT:    call void @bar()
 ; CHECK-NEXT:    [[L_2_1:%.*]] = load i32, ptr [[SRC]], align 8
-; CHECK-NEXT:    [[INNER_2_IV_NEXT_1:%.*]] = add i32 [[INNER_2_IV_NEXT]], 1
+; CHECK-NEXT:    [[INNER_2_IV_NEXT_1:%.*]] = add i32 [[INNER_2_IV]], 2
 ; CHECK-NEXT:    [[TMP27_1:%.*]] = load ptr, ptr [[PTR_SRC]], align 8
 ; CHECK-NEXT:    [[ADD_1_1:%.*]] = add i32 [[INNER_2_IV_NEXT]], [[L_2_1]]
 ; CHECK-NEXT:    [[TMP281_1:%.*]] = call i32 @use.2(ptr [[TMP27_1]], i32 [[ADD_1_1]])
-; CHECK-NEXT:    [[TMP32_1:%.*]] = add nuw i32 [[TMP32]], 262144
+; CHECK-NEXT:    [[TMP32_1:%.*]] = add nuw i32 [[TMP31]], 524288
 ; CHECK-NEXT:    call void @bar()
 ; CHECK-NEXT:    call void @bar()
 ; CHECK-NEXT:    call void @bar()
@@ -297,11 +272,11 @@ define void @pr56286(i64 %x, ptr %src, ptr %dst, ptr %ptr.src) !prof !0 {
 ; CHECK-NEXT:    call void @bar()
 ; CHECK-NEXT:    call void @bar()
 ; CHECK-NEXT:    [[L_2_2:%.*]] = load i32, ptr [[SRC]], align 8
-; CHECK-NEXT:    [[INNER_2_IV_NEXT_2]] = add i32 [[INNER_2_IV_NEXT_1]], 1
+; CHECK-NEXT:    [[INNER_2_IV_NEXT_2]] = add i32 [[INNER_2_IV]], 3
 ; CHECK-NEXT:    [[TMP27_2:%.*]] = load ptr, ptr [[PTR_SRC]], align 8
 ; CHECK-NEXT:    [[ADD_1_2:%.*]] = add i32 [[INNER_2_IV_NEXT_1]], [[L_2_2]]
 ; CHECK-NEXT:    [[TMP281_2:%.*]] = call i32 @use.2(ptr [[TMP27_2]], i32 [[ADD_1_2]])
-; CHECK-NEXT:    [[TMP32_2:%.*]] = add nuw i32 [[TMP32_1]], 262144
+; CHECK-NEXT:    [[TMP32_2:%.*]] = add nuw i32 [[TMP31]], 786432
 ; CHECK-NEXT:    [[TMP33_2]] = ashr exact i32 [[TMP32_2]], 16
 ; CHECK-NEXT:    call void @bar()
 ; CHECK-NEXT:    call void @bar()

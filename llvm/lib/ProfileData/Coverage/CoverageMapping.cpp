@@ -15,8 +15,11 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallBitVector.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Object/BuildID.h"
 #include "llvm/ProfileData/Coverage/CoverageMappingReader.h"
 #include "llvm/ProfileData/InstrProfReader.h"
 #include "llvm/Support/Debug.h"
@@ -24,6 +27,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
@@ -163,43 +167,115 @@ void CounterMappingContext::dump(const Counter &C, raw_ostream &OS) const {
 }
 
 Expected<int64_t> CounterMappingContext::evaluate(const Counter &C) const {
-  switch (C.getKind()) {
-  case Counter::Zero:
-    return 0;
-  case Counter::CounterValueReference:
-    if (C.getCounterID() >= CounterValues.size())
-      return errorCodeToError(errc::argument_out_of_domain);
-    return CounterValues[C.getCounterID()];
-  case Counter::Expression: {
-    if (C.getExpressionID() >= Expressions.size())
-      return errorCodeToError(errc::argument_out_of_domain);
-    const auto &E = Expressions[C.getExpressionID()];
-    Expected<int64_t> LHS = evaluate(E.LHS);
-    if (!LHS)
-      return LHS;
-    Expected<int64_t> RHS = evaluate(E.RHS);
-    if (!RHS)
-      return RHS;
-    return E.Kind == CounterExpression::Subtract ? *LHS - *RHS : *LHS + *RHS;
+  struct StackElem {
+    Counter ICounter;
+    int64_t LHS = 0;
+    enum {
+      KNeverVisited = 0,
+      KVisitedOnce = 1,
+      KVisitedTwice = 2,
+    } VisitCount = KNeverVisited;
+  };
+
+  std::stack<StackElem> CounterStack;
+  CounterStack.push({C});
+
+  int64_t LastPoppedValue;
+
+  while (!CounterStack.empty()) {
+    StackElem &Current = CounterStack.top();
+
+    switch (Current.ICounter.getKind()) {
+    case Counter::Zero:
+      LastPoppedValue = 0;
+      CounterStack.pop();
+      break;
+    case Counter::CounterValueReference:
+      if (Current.ICounter.getCounterID() >= CounterValues.size())
+        return errorCodeToError(errc::argument_out_of_domain);
+      LastPoppedValue = CounterValues[Current.ICounter.getCounterID()];
+      CounterStack.pop();
+      break;
+    case Counter::Expression: {
+      if (Current.ICounter.getExpressionID() >= Expressions.size())
+        return errorCodeToError(errc::argument_out_of_domain);
+      const auto &E = Expressions[Current.ICounter.getExpressionID()];
+      if (Current.VisitCount == StackElem::KNeverVisited) {
+        CounterStack.push(StackElem{E.LHS});
+        Current.VisitCount = StackElem::KVisitedOnce;
+      } else if (Current.VisitCount == StackElem::KVisitedOnce) {
+        Current.LHS = LastPoppedValue;
+        CounterStack.push(StackElem{E.RHS});
+        Current.VisitCount = StackElem::KVisitedTwice;
+      } else {
+        int64_t LHS = Current.LHS;
+        int64_t RHS = LastPoppedValue;
+        LastPoppedValue =
+            E.Kind == CounterExpression::Subtract ? LHS - RHS : LHS + RHS;
+        CounterStack.pop();
+      }
+      break;
+    }
+    }
   }
-  }
-  llvm_unreachable("Unhandled CounterKind");
+
+  return LastPoppedValue;
 }
 
 unsigned CounterMappingContext::getMaxCounterID(const Counter &C) const {
-  switch (C.getKind()) {
-  case Counter::Zero:
-    return 0;
-  case Counter::CounterValueReference:
-    return C.getCounterID();
-  case Counter::Expression: {
-    if (C.getExpressionID() >= Expressions.size())
-      return 0;
-    const auto &E = Expressions[C.getExpressionID()];
-    return std::max(getMaxCounterID(E.LHS), getMaxCounterID(E.RHS));
+  struct StackElem {
+    Counter ICounter;
+    int64_t LHS = 0;
+    enum {
+      KNeverVisited = 0,
+      KVisitedOnce = 1,
+      KVisitedTwice = 2,
+    } VisitCount = KNeverVisited;
+  };
+
+  std::stack<StackElem> CounterStack;
+  CounterStack.push({C});
+
+  int64_t LastPoppedValue;
+
+  while (!CounterStack.empty()) {
+    StackElem &Current = CounterStack.top();
+
+    switch (Current.ICounter.getKind()) {
+    case Counter::Zero:
+      LastPoppedValue = 0;
+      CounterStack.pop();
+      break;
+    case Counter::CounterValueReference:
+      LastPoppedValue = Current.ICounter.getCounterID();
+      CounterStack.pop();
+      break;
+    case Counter::Expression: {
+      if (Current.ICounter.getExpressionID() >= Expressions.size()) {
+        LastPoppedValue = 0;
+        CounterStack.pop();
+      } else {
+        const auto &E = Expressions[Current.ICounter.getExpressionID()];
+        if (Current.VisitCount == StackElem::KNeverVisited) {
+          CounterStack.push(StackElem{E.LHS});
+          Current.VisitCount = StackElem::KVisitedOnce;
+        } else if (Current.VisitCount == StackElem::KVisitedOnce) {
+          Current.LHS = LastPoppedValue;
+          CounterStack.push(StackElem{E.RHS});
+          Current.VisitCount = StackElem::KVisitedTwice;
+        } else {
+          int64_t LHS = Current.LHS;
+          int64_t RHS = LastPoppedValue;
+          LastPoppedValue = std::max(LHS, RHS);
+          CounterStack.pop();
+        }
+      }
+      break;
+    }
+    }
   }
-  }
-  llvm_unreachable("Unhandled CounterKind");
+
+  return LastPoppedValue;
 }
 
 void FunctionRecordIterator::skipOtherFiles() {
@@ -233,7 +309,8 @@ Error CoverageMapping::loadFunctionRecord(
     IndexedInstrProfReader &ProfileReader) {
   StringRef OrigFuncName = Record.FunctionName;
   if (OrigFuncName.empty())
-    return make_error<CoverageMapError>(coveragemap_error::malformed);
+    return make_error<CoverageMapError>(coveragemap_error::malformed,
+                                        "record function name is empty");
 
   if (Record.Filenames.empty())
     OrigFuncName = getFuncNameWithoutPrefix(OrigFuncName);
@@ -245,7 +322,7 @@ Error CoverageMapping::loadFunctionRecord(
   std::vector<uint64_t> Counts;
   if (Error E = ProfileReader.getFunctionCounts(Record.FunctionName,
                                                 Record.FunctionHash, Counts)) {
-    instrprof_error IPE = InstrProfError::take(std::move(E));
+    instrprof_error IPE = std::get<0>(InstrProfError::take(std::move(E)));
     if (IPE == instrprof_error::hash_mismatch) {
       FuncHashMismatches.emplace_back(std::string(Record.FunctionName),
                                       Record.FunctionHash);
@@ -338,50 +415,112 @@ static Error handleMaybeNoDataFoundError(Error E) {
       std::move(E), [](const CoverageMapError &CME) {
         if (CME.get() == coveragemap_error::no_data_found)
           return static_cast<Error>(Error::success());
-        return make_error<CoverageMapError>(CME.get());
+        return make_error<CoverageMapError>(CME.get(), CME.getMessage());
       });
 }
 
-Expected<std::unique_ptr<CoverageMapping>>
-CoverageMapping::load(ArrayRef<StringRef> ObjectFilenames,
-                      StringRef ProfileFilename, ArrayRef<StringRef> Arches,
-                      StringRef CompilationDir) {
-  auto ProfileReaderOrErr = IndexedInstrProfReader::create(ProfileFilename);
+Error CoverageMapping::loadFromFile(
+    StringRef Filename, StringRef Arch, StringRef CompilationDir,
+    IndexedInstrProfReader &ProfileReader, CoverageMapping &Coverage,
+    bool &DataFound, SmallVectorImpl<object::BuildID> *FoundBinaryIDs) {
+  auto CovMappingBufOrErr = MemoryBuffer::getFileOrSTDIN(
+      Filename, /*IsText=*/false, /*RequiresNullTerminator=*/false);
+  if (std::error_code EC = CovMappingBufOrErr.getError())
+    return createFileError(Filename, errorCodeToError(EC));
+  MemoryBufferRef CovMappingBufRef =
+      CovMappingBufOrErr.get()->getMemBufferRef();
+  SmallVector<std::unique_ptr<MemoryBuffer>, 4> Buffers;
+
+  SmallVector<object::BuildIDRef> BinaryIDs;
+  auto CoverageReadersOrErr = BinaryCoverageReader::create(
+      CovMappingBufRef, Arch, Buffers, CompilationDir,
+      FoundBinaryIDs ? &BinaryIDs : nullptr);
+  if (Error E = CoverageReadersOrErr.takeError()) {
+    E = handleMaybeNoDataFoundError(std::move(E));
+    if (E)
+      return createFileError(Filename, std::move(E));
+    return E;
+  }
+
+  SmallVector<std::unique_ptr<CoverageMappingReader>, 4> Readers;
+  for (auto &Reader : CoverageReadersOrErr.get())
+    Readers.push_back(std::move(Reader));
+  if (FoundBinaryIDs && !Readers.empty()) {
+    llvm::append_range(*FoundBinaryIDs,
+                       llvm::map_range(BinaryIDs, [](object::BuildIDRef BID) {
+                         return object::BuildID(BID);
+                       }));
+  }
+  DataFound |= !Readers.empty();
+  if (Error E = loadFromReaders(Readers, ProfileReader, Coverage))
+    return createFileError(Filename, std::move(E));
+  return Error::success();
+}
+
+Expected<std::unique_ptr<CoverageMapping>> CoverageMapping::load(
+    ArrayRef<StringRef> ObjectFilenames, StringRef ProfileFilename,
+    vfs::FileSystem &FS, ArrayRef<StringRef> Arches, StringRef CompilationDir,
+    const object::BuildIDFetcher *BIDFetcher, bool CheckBinaryIDs) {
+  auto ProfileReaderOrErr = IndexedInstrProfReader::create(ProfileFilename, FS);
   if (Error E = ProfileReaderOrErr.takeError())
     return createFileError(ProfileFilename, std::move(E));
   auto ProfileReader = std::move(ProfileReaderOrErr.get());
   auto Coverage = std::unique_ptr<CoverageMapping>(new CoverageMapping());
   bool DataFound = false;
 
+  auto GetArch = [&](size_t Idx) {
+    if (Arches.empty())
+      return StringRef();
+    if (Arches.size() == 1)
+      return Arches.front();
+    return Arches[Idx];
+  };
+
+  SmallVector<object::BuildID> FoundBinaryIDs;
   for (const auto &File : llvm::enumerate(ObjectFilenames)) {
-    auto CovMappingBufOrErr = MemoryBuffer::getFileOrSTDIN(
-        File.value(), /*IsText=*/false, /*RequiresNullTerminator=*/false);
-    if (std::error_code EC = CovMappingBufOrErr.getError())
-      return createFileError(File.value(), errorCodeToError(EC));
-    StringRef Arch = Arches.empty() ? StringRef() : Arches[File.index()];
-    MemoryBufferRef CovMappingBufRef =
-        CovMappingBufOrErr.get()->getMemBufferRef();
-    SmallVector<std::unique_ptr<MemoryBuffer>, 4> Buffers;
-    auto CoverageReadersOrErr = BinaryCoverageReader::create(
-        CovMappingBufRef, Arch, Buffers, CompilationDir);
-    if (Error E = CoverageReadersOrErr.takeError()) {
-      E = handleMaybeNoDataFoundError(std::move(E));
-      if (E)
-        return createFileError(File.value(), std::move(E));
-      // E == success (originally a no_data_found error).
-      continue;
+    if (Error E =
+            loadFromFile(File.value(), GetArch(File.index()), CompilationDir,
+                         *ProfileReader, *Coverage, DataFound, &FoundBinaryIDs))
+      return std::move(E);
+  }
+
+  if (BIDFetcher) {
+    std::vector<object::BuildID> ProfileBinaryIDs;
+    if (Error E = ProfileReader->readBinaryIds(ProfileBinaryIDs))
+      return createFileError(ProfileFilename, std::move(E));
+
+    SmallVector<object::BuildIDRef> BinaryIDsToFetch;
+    if (!ProfileBinaryIDs.empty()) {
+      const auto &Compare = [](object::BuildIDRef A, object::BuildIDRef B) {
+        return std::lexicographical_compare(A.begin(), A.end(), B.begin(),
+                                            B.end());
+      };
+      llvm::sort(FoundBinaryIDs, Compare);
+      std::set_difference(
+          ProfileBinaryIDs.begin(), ProfileBinaryIDs.end(),
+          FoundBinaryIDs.begin(), FoundBinaryIDs.end(),
+          std::inserter(BinaryIDsToFetch, BinaryIDsToFetch.end()), Compare);
     }
 
-    SmallVector<std::unique_ptr<CoverageMappingReader>, 4> Readers;
-    for (auto &Reader : CoverageReadersOrErr.get())
-      Readers.push_back(std::move(Reader));
-    DataFound |= !Readers.empty();
-    if (Error E = loadFromReaders(Readers, *ProfileReader, *Coverage))
-      return createFileError(File.value(), std::move(E));
+    for (object::BuildIDRef BinaryID : BinaryIDsToFetch) {
+      std::optional<std::string> PathOpt = BIDFetcher->fetch(BinaryID);
+      if (PathOpt) {
+        std::string Path = std::move(*PathOpt);
+        StringRef Arch = Arches.size() == 1 ? Arches.front() : StringRef();
+        if (Error E = loadFromFile(Path, Arch, CompilationDir, *ProfileReader,
+                                  *Coverage, DataFound))
+          return std::move(E);
+      } else if (CheckBinaryIDs) {
+        return createFileError(
+            ProfileFilename,
+            createStringError(errc::no_such_file_or_directory,
+                              "Missing binary ID: " +
+                                  llvm::toHex(BinaryID, /*LowerCase=*/true)));
+      }
+    }
   }
-  // If no readers were created, either no objects were provided or none of them
-  // had coverage data. Return an error in the latter case.
-  if (!DataFound && !ObjectFilenames.empty())
+
+  if (!DataFound)
     return createFileError(
         join(ObjectFilenames.begin(), ObjectFilenames.end(), ", "),
         make_error<CoverageMapError>(coveragemap_error::no_data_found));
@@ -859,26 +998,43 @@ LineCoverageIterator &LineCoverageIterator::operator++() {
   return *this;
 }
 
-static std::string getCoverageMapErrString(coveragemap_error Err) {
+static std::string getCoverageMapErrString(coveragemap_error Err,
+                                           const std::string &ErrMsg = "") {
+  std::string Msg;
+  raw_string_ostream OS(Msg);
+
   switch (Err) {
   case coveragemap_error::success:
-    return "Success";
+    OS << "success";
+    break;
   case coveragemap_error::eof:
-    return "End of File";
+    OS << "end of File";
+    break;
   case coveragemap_error::no_data_found:
-    return "No coverage data found";
+    OS << "no coverage data found";
+    break;
   case coveragemap_error::unsupported_version:
-    return "Unsupported coverage format version";
+    OS << "unsupported coverage format version";
+    break;
   case coveragemap_error::truncated:
-    return "Truncated coverage data";
+    OS << "truncated coverage data";
+    break;
   case coveragemap_error::malformed:
-    return "Malformed coverage data";
+    OS << "malformed coverage data";
+    break;
   case coveragemap_error::decompression_failed:
-    return "Failed to decompress coverage data (zlib)";
+    OS << "failed to decompress coverage data (zlib)";
+    break;
   case coveragemap_error::invalid_or_missing_arch_specifier:
-    return "`-arch` specifier is invalid or missing for universal binary";
+    OS << "`-arch` specifier is invalid or missing for universal binary";
+    break;
   }
-  llvm_unreachable("A value of coveragemap_error has no message.");
+
+  // If optional error message is not empty, append it to the message.
+  if (!ErrMsg.empty())
+    OS << ": " << ErrMsg;
+
+  return Msg;
 }
 
 namespace {
@@ -896,7 +1052,7 @@ class CoverageMappingErrorCategoryType : public std::error_category {
 } // end anonymous namespace
 
 std::string CoverageMapError::message() const {
-  return getCoverageMapErrString(Err);
+  return getCoverageMapErrString(Err, Msg);
 }
 
 const std::error_category &llvm::coverage::coveragemap_category() {

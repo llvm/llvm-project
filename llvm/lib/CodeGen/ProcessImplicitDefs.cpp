@@ -27,9 +27,9 @@ namespace {
 /// Process IMPLICIT_DEF instructions and make sure there is one implicit_def
 /// for each use. Add isUndef marker to implicit_def defs and their uses.
 class ProcessImplicitDefs : public MachineFunctionPass {
-  const TargetInstrInfo *TII;
-  const TargetRegisterInfo *TRI;
-  MachineRegisterInfo *MRI;
+  const TargetInstrInfo *TII = nullptr;
+  const TargetRegisterInfo *TRI = nullptr;
+  MachineRegisterInfo *MRI = nullptr;
 
   SmallSetVector<MachineInstr*, 16> WorkList;
 
@@ -72,8 +72,8 @@ bool ProcessImplicitDefs::canTurnIntoImplicitDef(MachineInstr *MI) {
       !MI->isRegSequence() &&
       !MI->isPHI())
     return false;
-  for (const MachineOperand &MO : MI->operands())
-    if (MO.isReg() && MO.isUse() && MO.readsReg())
+  for (const MachineOperand &MO : MI->all_uses())
+    if (MO.readsReg())
       return false;
   return true;
 }

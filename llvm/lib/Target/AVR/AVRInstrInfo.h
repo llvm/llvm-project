@@ -23,6 +23,8 @@
 
 namespace llvm {
 
+class AVRSubtarget;
+
 namespace AVRCC {
 
 /// AVR specific condition codes.
@@ -63,7 +65,7 @@ enum TOF {
 /// Utilities related to the AVR instruction set.
 class AVRInstrInfo : public AVRGenInstrInfo {
 public:
-  explicit AVRInstrInfo();
+  explicit AVRInstrInfo(AVRSubtarget &STI);
 
   const AVRRegisterInfo &getRegisterInfo() const { return RI; }
   const MCInstrDesc &getBrCond(AVRCC::CondCodes CC) const;
@@ -116,6 +118,9 @@ public:
 
 private:
   const AVRRegisterInfo RI;
+
+protected:
+  const AVRSubtarget &STI;
 };
 
 } // end namespace llvm

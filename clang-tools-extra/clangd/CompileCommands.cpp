@@ -14,6 +14,7 @@
 #include "clang/Driver/Options.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Tooling/CompilationDatabase.h"
+#include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -27,6 +28,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
+#include "llvm/TargetParser/Host.h"
 #include <iterator>
 #include <optional>
 #include <string>
@@ -185,6 +187,12 @@ static std::string resolveDriver(llvm::StringRef Driver, bool FollowSymlink,
 
 } // namespace
 
+CommandMangler::CommandMangler() {
+  Tokenizer = llvm::Triple(llvm::sys::getProcessTriple()).isOSWindows()
+                  ? llvm::cl::TokenizeWindowsCommandLine
+                  : llvm::cl::TokenizeGNUCommandLine;
+}
+
 CommandMangler CommandMangler::detect() {
   CommandMangler Result;
   Result.ClangPath = detectClangPath();
@@ -201,9 +209,18 @@ void CommandMangler::operator()(tooling::CompileCommand &Command,
   trace::Span S("AdjustCompileFlags");
   // Most of the modifications below assumes the Cmd starts with a driver name.
   // We might consider injecting a generic driver name like "cc" or "c++", but
-  // a Cmd missing the driver is probably rare enough in practice and errnous.
+  // a Cmd missing the driver is probably rare enough in practice and erroneous.
   if (Cmd.empty())
     return;
+
+  // FS used for expanding response files.
+  // FIXME: ExpandResponseFiles appears not to provide the usual
+  // thread-safety guarantees, as the access to FS is not locked!
+  // For now, use the real FS, which is known to be threadsafe (if we don't
+  // use/change working directory, which ExpandResponseFiles doesn't).
+  auto FS = llvm::vfs::getRealFileSystem();
+  tooling::addExpandedResponseFiles(Cmd, Command.Directory, Tokenizer, *FS);
+
   auto &OptTable = clang::driver::getDriverOptTable();
   // OriginalArgs needs to outlive ArgList.
   llvm::SmallVector<const char *, 16> OriginalArgs;
@@ -212,7 +229,7 @@ void CommandMangler::operator()(tooling::CompileCommand &Command,
     OriginalArgs.push_back(S.c_str());
   bool IsCLMode = driver::IsClangCL(driver::getDriverMode(
       OriginalArgs[0], llvm::ArrayRef(OriginalArgs).slice(1)));
-  // ParseArgs propagates missig arg/opt counts on error, but preserves
+  // ParseArgs propagates missing arg/opt counts on error, but preserves
   // everything it could parse in ArgList. So we just ignore those counts.
   unsigned IgnoredCount;
   // Drop the executable name, as ParseArgs doesn't expect it. This means
@@ -220,14 +237,8 @@ void CommandMangler::operator()(tooling::CompileCommand &Command,
   llvm::opt::InputArgList ArgList;
   ArgList = OptTable.ParseArgs(
       llvm::ArrayRef(OriginalArgs).drop_front(), IgnoredCount, IgnoredCount,
-      /*FlagsToInclude=*/
-      IsCLMode ? (driver::options::CLOption | driver::options::CoreOption |
-                  driver::options::CLDXCOption)
-               : /*everything*/ 0,
-      /*FlagsToExclude=*/driver::options::NoDriverOption |
-          (IsCLMode
-               ? 0
-               : (driver::options::CLOption | driver::options::CLDXCOption)));
+      llvm::opt::Visibility(IsCLMode ? driver::options::CLOption
+                                     : driver::options::ClangOption));
 
   llvm::SmallVector<unsigned, 1> IndicesToDrop;
   // Having multiple architecture options (e.g. when building fat binaries)
@@ -279,10 +290,10 @@ void CommandMangler::operator()(tooling::CompileCommand &Command,
     Cmd.resize(DashDashIndex);
   }
   llvm::sort(IndicesToDrop);
-  llvm::for_each(llvm::reverse(IndicesToDrop),
-                 // +1 to account for the executable name in Cmd[0] that
-                 // doesn't exist in ArgList.
-                 [&Cmd](unsigned Idx) { Cmd.erase(Cmd.begin() + Idx + 1); });
+  for (unsigned Idx : llvm::reverse(IndicesToDrop))
+    // +1 to account for the executable name in Cmd[0] that
+    // doesn't exist in ArgList.
+    Cmd.erase(Cmd.begin() + Idx + 1);
   // All the inputs are stripped, append the name for the requested file. Rest
   // of the modifications should respect `--`.
   Cmd.push_back("--");
@@ -307,11 +318,15 @@ void CommandMangler::operator()(tooling::CompileCommand &Command,
   //    necessary for the system include extractor to identify the file type
   //  - AFTER applying CompileFlags.Edits, because the name of the compiler
   //    that needs to be invoked may come from the CompileFlags->Compiler key
+  //  - BEFORE addTargetAndModeForProgramName(), because gcc doesn't support
+  //    the target flag that might be added.
   //  - BEFORE resolveDriver() because that can mess up the driver path,
   //    e.g. changing gcc to /path/to/clang/bin/gcc
   if (SystemIncludeExtractor) {
     SystemIncludeExtractor(Command, File);
   }
+
+  tooling::addTargetAndModeForProgramName(Cmd, Cmd.front());
 
   // Check whether the flag exists, either as -flag or -flag=*
   auto Has = [&](llvm::StringRef Flag) {
@@ -401,9 +416,9 @@ enum DriverMode : unsigned char {
 DriverMode getDriverMode(const std::vector<std::string> &Args) {
   DriverMode Mode = DM_GCC;
   llvm::StringRef Argv0 = Args.front();
-  if (Argv0.endswith_insensitive(".exe"))
+  if (Argv0.ends_with_insensitive(".exe"))
     Argv0 = Argv0.drop_back(strlen(".exe"));
-  if (Argv0.endswith_insensitive("cl"))
+  if (Argv0.ends_with_insensitive("cl"))
     Mode = DM_CL;
   for (const llvm::StringRef Arg : Args) {
     if (Arg == "--driver-mode=cl") {
@@ -420,23 +435,13 @@ DriverMode getDriverMode(const std::vector<std::string> &Args) {
 
 // Returns the set of DriverModes where an option may be used.
 unsigned char getModes(const llvm::opt::Option &Opt) {
-  // Why is this so complicated?!
-  // Reference is clang::driver::Driver::getIncludeExcludeOptionFlagMasks()
   unsigned char Result = DM_None;
-  if (Opt.hasFlag(driver::options::CC1Option))
+  if (Opt.hasVisibilityFlag(driver::options::ClangOption))
+    Result |= DM_GCC;
+  if (Opt.hasVisibilityFlag(driver::options::CC1Option))
     Result |= DM_CC1;
-  if (!Opt.hasFlag(driver::options::NoDriverOption)) {
-    if (Opt.hasFlag(driver::options::CLOption)) {
-      Result |= DM_CL;
-    } else if (Opt.hasFlag(driver::options::CLDXCOption)) {
-      Result |= DM_CL;
-    } else {
-      Result |= DM_GCC;
-      if (Opt.hasFlag(driver::options::CoreOption)) {
-        Result |= DM_CL;
-      }
-    }
-  }
+  if (Opt.hasVisibilityFlag(driver::options::CLOption))
+    Result |= DM_CL;
   return Result;
 }
 
@@ -472,8 +477,8 @@ llvm::ArrayRef<ArgStripper::Rule> ArgStripper::rulesFor(llvm::StringRef Arg) {
   static constexpr llvm::StringLiteral NAME##_init[] = VALUE;                  \
   static constexpr llvm::ArrayRef<llvm::StringLiteral> NAME(                   \
       NAME##_init, std::size(NAME##_init) - 1);
-#define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
-               HELP, METAVAR, VALUES)                                          \
+#define OPTION(PREFIX, PREFIXED_NAME, ID, KIND, GROUP, ALIAS, ALIASARGS,       \
+               FLAGS, VISIBILITY, PARAM, HELP, METAVAR, VALUES)                \
   Prefixes[DriverID::OPT_##ID] = PREFIX;
 #include "clang/Driver/Options.inc"
 #undef OPTION
@@ -484,8 +489,8 @@ llvm::ArrayRef<ArgStripper::Rule> ArgStripper::rulesFor(llvm::StringRef Arg) {
       DriverID AliasID;
       const void *AliasArgs;
     } AliasTable[] = {
-#define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
-               HELP, METAVAR, VALUES)                                          \
+#define OPTION(PREFIX, PREFIXED_NAME, ID, KIND, GROUP, ALIAS, ALIASARGS,       \
+               FLAGS, VISIBILITY, PARAM, HELP, METAVAR, VALUES)                \
   {DriverID::OPT_##ID, DriverID::OPT_##ALIAS, ALIASARGS},
 #include "clang/Driver/Options.inc"
 #undef OPTION

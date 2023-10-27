@@ -79,8 +79,8 @@ bb:
 ; GCN-LABEL: {{^}}test_mfma_f32_16x16x1f32:
 ; GCN-DAG:           v_mov_b32_e32 [[TWO:v[0-9]+]], 2.0
 ; GCN-DAG:           v_mov_b32_e32 [[ONE:v[0-9]+]], 1.0
-; GCN:               s_load_dwordx16
-; GFX908-COUNT-16:   v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
+; GCN-DAG:           s_load_dwordx16
+; GFX908-DAG-COUNT-16: v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
 ; GFX90A_40-COUNT-16:v_accvgpr_write_b32 a{{[0-9]+}}, s{{[0-9]+}}
 ; GFX908_A:          v_mfma_f32_16x16x1f32 a[{{[0-9]+:[0-9]+}}], [[ONE]], [[TWO]], a[{{[0-9]+:[0-9]+}}] cbsz:1 abid:2 blgp:3
 ; GFX940:            v_mfma_f32_16x16x1_4b_f32 a[{{[0-9]+:[0-9]+}}], [[ONE]], [[TWO]], a[{{[0-9]+:[0-9]+}}] cbsz:1 abid:2 blgp:3
@@ -119,8 +119,8 @@ bb:
 ; GCN-LABEL: {{^}}test_mfma_f32_32x32x2f32:
 ; GCN-DAG:           v_mov_b32_e32 [[TWO:v[0-9]+]], 2.0
 ; GCN-DAG:           v_mov_b32_e32 [[ONE:v[0-9]+]], 1.0
-; GCN:               s_load_dwordx16
-; GFX908-COUNT-16:   v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
+; GCN-DAG:           s_load_dwordx16
+; GFX908-DAG-COUNT-16: v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
 ; GFX90A_40-COUNT-16:v_accvgpr_write_b32 a{{[0-9]+}}, s{{[0-9]+}}
 ; GFX908_A:          v_mfma_f32_32x32x2f32 a[{{[0-9]+:[0-9]+}}], [[ONE]], [[TWO]], a[{{[0-9]+:[0-9]+}}] cbsz:1 abid:2 blgp:3
 ; GFX940:            v_mfma_f32_32x32x2_f32 a[{{[0-9]+:[0-9]+}}], [[ONE]], [[TWO]], a[{{[0-9]+:[0-9]+}}] cbsz:1 abid:2 blgp:3
@@ -321,8 +321,8 @@ bb:
 ; GCN-LABEL: {{^}}test_mfma_i32_16x16x4i8:
 ; GCN-DAG:           v_mov_b32_e32 [[TWO:v[0-9]+]], 2
 ; GCN-DAG:           v_mov_b32_e32 [[ONE:v[0-9]+]], 1
-; GCN:               s_load_dwordx16
-; GFX908-COUNT-16:   v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
+; GCN-DAG:           s_load_dwordx16
+; GFX908-DAG-COUNT-16: v_accvgpr_write_b32 a{{[0-9]+}}, v{{[0-9]+}}
 ; GFX90A_40-COUNT-16:v_accvgpr_write_b32 a{{[0-9]+}}, s{{[0-9]+}}
 ; GFX908_A:          v_mfma_i32_16x16x4i8 a[{{[0-9]+:[0-9]+}}], [[ONE]], [[TWO]], a[{{[0-9]+:[0-9]+}}] cbsz:1 abid:2 blgp:3
 ; GFX940:            v_mfma_i32_16x16x4_4b_i8 a[{{[0-9]+:[0-9]+}}], [[ONE]], [[TWO]], a[{{[0-9]+:[0-9]+}}] cbsz:1 abid:2 blgp:3

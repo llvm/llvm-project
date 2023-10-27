@@ -431,7 +431,10 @@ bool CrashRecoveryContext::RunSafely(function_ref<void()> Fn) {
 
 [[noreturn]] void CrashRecoveryContext::HandleExit(int RetCode) {
 #if defined(_WIN32)
-  // SEH and VEH
+  // Since the exception code is actually of NTSTATUS type, we use the
+  // Microsoft-recommended 0xE prefix, to signify that this is a user error.
+  // This value is a combination of the customer field (bit 29) and severity
+  // field (bits 30-31) in the NTSTATUS specification.
   ::RaiseException(0xE0000000 | RetCode, 0, 0, NULL);
 #else
   // On Unix we don't need to raise an exception, we go directly to
@@ -445,10 +448,10 @@ bool CrashRecoveryContext::RunSafely(function_ref<void()> Fn) {
 
 bool CrashRecoveryContext::isCrash(int RetCode) {
 #if defined(_WIN32)
-  // On Windows, the high bits are reserved for kernel return codes. Values
-  // starting with 0x80000000 are reserved for "warnings"; values of 0xC0000000
-  // and up are for "errors". In practice, both are interpreted as a
-  // non-continuable signal.
+  // On Windows, the code is interpreted as NTSTATUS. The two high bits
+  // represent the severity. Values starting with 0x80000000 are reserved for
+  // "warnings"; values of 0xC0000000 and up are for "errors". In practice, both
+  // are interpreted as a non-continuable signal.
   unsigned Code = ((unsigned)RetCode & 0xF0000000) >> 28;
   if (Code != 0xC && Code != 8)
     return false;

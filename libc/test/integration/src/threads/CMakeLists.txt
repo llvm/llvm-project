@@ -6,8 +6,6 @@ add_integration_test(
     libc-threads-integration-tests
   SRCS
     mtx_test.cpp
-  STARTUP
-    libc.startup.linux.crt1
   DEPENDS
     libc.include.threads
     libc.src.errno.errno
@@ -25,8 +23,6 @@ add_integration_test(
     libc-threads-integration-tests
   SRCS
     thrd_equal_test.cpp
-  STARTUP
-    libc.startup.linux.crt1
   DEPENDS
     libc.include.threads
     libc.src.threads.mtx_destroy
@@ -45,8 +41,6 @@ add_integration_test(
     libc-threads-integration-tests
   SRCS
     thrd_test.cpp
-  STARTUP
-    libc.startup.linux.crt1
   DEPENDS
     libc.include.threads
     libc.src.errno.errno
@@ -60,8 +54,6 @@ add_integration_test(
     libc-threads-integration-tests
   SRCS
     thrd_exit_test.cpp
-  STARTUP
-    libc.startup.linux.crt1
   DEPENDS
     libc.include.threads
     libc.src.threads.thrd_create
@@ -75,8 +67,6 @@ add_integration_test(
     libc-threads-integration-tests
   SRCS
     tss_test.cpp
-  STARTUP
-    libc.startup.linux.crt1
   DEPENDS
     libc.include.threads
     libc.src.threads.thrd_create
@@ -94,8 +84,6 @@ add_integration_test(
     libc-threads-integration-tests
   SRCS
     call_once_test.cpp
-  STARTUP
-    libc.startup.linux.crt1
   DEPENDS
     libc.include.threads
     libc.src.threads.call_once
@@ -114,8 +102,6 @@ add_integration_test(
     libc-threads-integration-tests
   SRCS
     cnd_test.cpp
-  STARTUP
-    libc.startup.linux.crt1
   DEPENDS
     libc.include.threads
     libc.src.threads.cnd_init

@@ -49,6 +49,6 @@ struct LinalgBufferizePass
 };
 } // namespace
 
-std::unique_ptr<OperationPass<func::FuncOp>> mlir::createLinalgBufferizePass() {
+std::unique_ptr<Pass> mlir::createLinalgBufferizePass() {
   return std::make_unique<LinalgBufferizePass>();
 }

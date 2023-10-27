@@ -3,8 +3,6 @@
 // bionic/netdb.cpp is not implemented.
 // UNSUPPORTED: android
 
-// REQUIRES: linux || freebsd
-
 #include <inttypes.h>
 #include <netdb.h>
 #include <stdint.h>
@@ -23,6 +21,11 @@ void test1() {
   assert(ntp && ntp->n_name);
   assert(ntp->n_addrtype == 2);
   assert(ntp->n_net == 127);
+  char **aliases = ntp->n_aliases;
+  while (aliases) {
+    printf("%s\n", *aliases);
+    aliases++;
+  }
   endnetent();
 }
 
@@ -31,6 +34,11 @@ void test2() {
   assert(ntp && ntp->n_name);
   assert(ntp->n_addrtype == 2);
   assert(ntp->n_net == 127);
+  char **aliases = ntp->n_aliases;
+  while (aliases) {
+    printf("%s\n", *aliases);
+    aliases++;
+  }
   endnetent();
 }
 
@@ -41,6 +49,11 @@ void test3() {
   assert(ntp && ntp->n_name);
   assert(ntp->n_addrtype == 2);
   assert(ntp->n_net == 127);
+  char **aliases = ntp->n_aliases;
+  while (aliases) {
+    printf("%s\n", *aliases);
+    aliases++;
+  }
   endnetent();
 }
 

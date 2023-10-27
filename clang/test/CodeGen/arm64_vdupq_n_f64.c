@@ -27,8 +27,6 @@ float32x4_t test_vdupq_n_f32(float32_t w) {
 }
 
 // vdupq_lane_f64 -> dup.2d v0, v0[0]
-// this was in <rdar://problem/11778405>, but had already been implemented,
-// test anyway
 // CHECK-LABEL: define{{.*}} <2 x double> @test_vdupq_lane_f64(<1 x double> noundef %V) #0 {
 // CHECK:   [[TMP0:%.*]] = bitcast <1 x double> %V to <8 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <1 x double>
@@ -39,7 +37,6 @@ float64x2_t test_vdupq_lane_f64(float64x1_t V) {
 }
 
 // vmovq_n_f64 -> dup Vd.2d,X0
-// this wasn't in <rdar://problem/11778405>, but it was between the vdups
 // CHECK-LABEL: define{{.*}} <2 x double> @test_vmovq_n_f64(double noundef %w) #0 {
 // CHECK:   [[VECINIT_I:%.*]] = insertelement <2 x double> undef, double %w, i32 0
 // CHECK:   [[VECINIT1_I:%.*]] = insertelement <2 x double> [[VECINIT_I]], double %w, i32 1

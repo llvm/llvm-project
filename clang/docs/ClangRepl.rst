@@ -16,22 +16,6 @@ analysis framework `ROOT <https://root.cern/>`_. Clang-Repl allows to move parts
 of Cling upstream, making them useful and available to a broader audience.
 
 
-
-Clang-Repl Usage
-================
-
-
-.. code-block:: text
-
-  clang-repl> #include <iostream>
-  clang-repl> int f() { std::cout << "Hello Interpreted World!\n"; return 0; }
-  clang-repl> auto r = f();
-  // Prints Hello Interpreted World!
-
-Note that the implementation is not complete and highly experimental. We do
-not yet support statements on the global scope, for example.
-
-
 Clang-Repl Basic Data Flow
 ==========================
 
@@ -63,14 +47,171 @@ Clang-Repl data flow can be divided into roughly 8 phases:
 
 8. The machine code is then executed.
 
+Build Instructions:
+===================
 
-Just like Clang, Clang-Repl can be integrated in existing applications as a
-library (via using the clangInterpreter library). This turning your C++ compiler
-into a service which incrementally can consume and execute code. The
-**Compiler as A Service** (**CaaS**) concept helps supporting move advanced use
-cases such as template instantiations on demand and automatic language
-interoperability. It also helps static languages such as C/C++ become apt for
-data science.
+
+.. code-block:: console
+
+   $ cd llvm-project
+   $ mkdir build
+   $ cd build
+   $ cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo -DLLVM_ENABLE_PROJECTS=clang -G "Unix Makefiles" ../llvm
+
+**Note here**, above RelWithDebInfo - Debug / Release
+
+.. code-block:: console
+
+   cmake --build . --target clang clang-repl -j n
+      OR
+   cmake --build . --target clang clang-repl
+
+**Clang-repl** is built under llvm-project/build/bin. Proceed into the directory **llvm-project/build/bin**
+
+.. code-block:: console
+
+   ./clang-repl
+   clang-repl>
+
+
+Clang-Repl Usage
+================
+
+**Clang-Repl** is an interactive C++ interpreter that allows for incremental
+compilation. It supports interactive programming for C++ in a
+read-evaluate-print-loop (REPL) style. It uses Clang as a library to compile the
+high level programming language into LLVM IR. Then the LLVM IR is executed by
+the LLVM just-in-time (JIT) infrastructure.
+
+
+Basic:
+======
+
+.. code-block:: text
+
+  clang-repl> #include <iostream>
+  clang-repl> int f() { std::cout << "Hello Interpreted World!\n"; return 0; }
+  clang-repl> auto r = f();
+   // Prints Hello Interpreted World!
+
+.. code-block:: text
+
+   clang-repl> #include<iostream>
+   clang-repl> using namespace std;
+   clang-repl> std::cout << "Welcome to CLANG-REPL" << std::endl;
+   Welcome to CLANG-REPL
+   // Prints Welcome to CLANG-REPL
+
+
+Function Definitions and Calls:
+===============================
+
+.. code-block:: text
+
+   clang-repl> #include <iostream>
+   clang-repl> int sum(int a, int b){ return a+b; };
+   clang-repl> int c = sum(9,10);
+   clang-repl> std::cout << c << std::endl;
+   19
+   clang-repl>
+
+Iterative Structures:
+=====================
+
+.. code-block:: text
+
+   clang-repl> #include <iostream>
+   clang-repl> for (int i = 0;i < 3;i++){ std::cout << i << std::endl;}
+   0
+   1
+   2
+   clang-repl> while(i < 7){ i++; std::cout << i << std::endl;}
+   4
+   5
+   6
+   7
+
+Classes and Structures:
+=======================
+
+.. code-block:: text
+
+   clang-repl> #include <iostream>
+   clang-repl> class Rectangle {int width, height; public: void set_values (int,int);\
+   clang-repl... int area() {return width*height;}};
+   clang-repl>  void Rectangle::set_values (int x, int y) { width = x;height = y;}
+   clang-repl> int main () { Rectangle rect;rect.set_values (3,4);\
+   clang-repl... std::cout << "area: " << rect.area() << std::endl;\
+   clang-repl... return 0;}
+   clang-repl> main();
+   area: 12
+   clang-repl>
+   // Note: This '\' can be used for continuation of the statements in the next line
+
+Lamdas:
+=======
+
+.. code-block:: text
+
+   clang-repl> #include <iostream>
+   clang-repl> using namespace std;
+   clang-repl> auto welcome = []()  { std::cout << "Welcome to REPL" << std::endl;};
+   clang-repl> welcome();
+   Welcome to REPL
+
+Using Dynamic Library:
+======================
+
+.. code-block:: text
+
+   clang-repl> %lib print.so
+   clang-repl> #include"print.hpp"
+   clang-repl> print(9);
+   9
+
+**Generation of dynamic library**
+
+.. code-block:: text
+
+   // print.cpp
+   #include <iostream>
+   #include "print.hpp"
+
+   void print(int a)
+   {
+      std::cout << a << std::endl;
+   }
+
+   // print.hpp
+   void print (int a);
+
+   // Commands
+   clang++-17  -c -o print.o print.cpp
+   clang-17 -shared print.o -o print.so
+
+Comments:
+=========
+
+.. code-block:: text
+
+   clang-repl> // Comments in Clang-Repl
+   clang-repl> /* Comments in Clang-Repl */
+
+
+Closure or Termination:
+=======================
+
+.. code-block:: text
+
+   clang-repl>%quit
+
+
+Just like Clang, Clang-Repl can be integrated in existing applications as a library
+(using the clangInterpreter library). This turns your C++ compiler into a service that
+can incrementally consume and execute code. The **Compiler as A Service** (**CaaS**)
+concept helps support advanced use cases such as template instantiations on demand and
+automatic language interoperability. It also helps static languages such as C/C++ become
+apt for data science.
 
 
 Related Reading

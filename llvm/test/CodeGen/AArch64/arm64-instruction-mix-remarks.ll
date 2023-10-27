@@ -36,9 +36,9 @@ define i32 @foo(ptr %ptr, i32 %x, i64 %y) !dbg !3 {
 ; CHECK-NEXT:    b.eq LBB0_2
 ; CHECK-NEXT:  ; %bb.1: ; %else
 ; CHECK-NEXT:    mul w9, w0, w1
-; CHECK-NEXT:    mov w10, #10
 ; CHECK-NEXT:    mul w0, w9, w1
-; CHECK-NEXT:    str w10, [x8]
+; CHECK-NEXT:    mov w9, #10 ; =0xa
+; CHECK-NEXT:    str w9, [x8]
 ; CHECK-NEXT:  LBB0_2: ; %common.ret
 ; CHECK-NEXT:    ; kill: def $w0 killed $w0 killed $x0
 ; CHECK-NEXT:    ret

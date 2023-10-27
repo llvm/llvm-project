@@ -4,11 +4,13 @@
 define arm_aapcs_vfpcc void @test32(ptr noalias nocapture readonly %x, ptr noalias nocapture readonly %y, ptr nocapture %z, i32 %n) {
 ; CHECK-LABEL: test32:
 ; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    cmp r3, #1
+; CHECK-NEXT:    it lt
+; CHECK-NEXT:    bxlt lr
+; CHECK-NEXT:  .LBB0_1: @ %vector.body.preheader
 ; CHECK-NEXT:    .save {r4, r5, r7, lr}
 ; CHECK-NEXT:    push {r4, r5, r7, lr}
-; CHECK-NEXT:    cmp r3, #1
-; CHECK-NEXT:    blt .LBB0_2
-; CHECK-NEXT:  .LBB0_1: @ %vector.body
+; CHECK-NEXT:  .LBB0_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrw.u32 q0, [r0], #16
 ; CHECK-NEXT:    vldrw.u32 q1, [r1], #16
@@ -26,9 +28,10 @@ define arm_aapcs_vfpcc void @test32(ptr noalias nocapture readonly %x, ptr noali
 ; CHECK-NEXT:    lsrl r4, r5, #31
 ; CHECK-NEXT:    vmov q2[3], q2[1], r4, r12
 ; CHECK-NEXT:    vstrb.8 q2, [r2], #16
-; CHECK-NEXT:    bne .LBB0_1
-; CHECK-NEXT:  .LBB0_2: @ %for.cond.cleanup
-; CHECK-NEXT:    pop {r4, r5, r7, pc}
+; CHECK-NEXT:    bne .LBB0_2
+; CHECK-NEXT:  @ %bb.3:
+; CHECK-NEXT:    pop.w {r4, r5, r7, lr}
+; CHECK-NEXT:    bx lr
 entry:
   %0 = and i32 %n, 3
   %cmp = icmp eq i32 %0, 0

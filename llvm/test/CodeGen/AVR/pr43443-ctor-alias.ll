@@ -30,8 +30,8 @@ define void @_ZN3fooC2Ev(%struct.foo* dereferenceable(1) %this) {
 ; CHECK-NEXT:    out 62, r29
 ; CHECK-NEXT:    out 63, r0
 ; CHECK-NEXT:    out 61, r28
-; CHECK-NEXT:    std Y+1, r24
 ; CHECK-NEXT:    std Y+2, r25
+; CHECK-NEXT:    std Y+1, r24
 ; CHECK-NEXT:    adiw r28, 2
 ; CHECK-NEXT:    in r0, 63
 ; CHECK-NEXT:    cli

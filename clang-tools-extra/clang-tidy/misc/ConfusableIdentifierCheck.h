@@ -11,10 +11,9 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_CONFUSABLE_IDENTIFIER_CHECK_H
 
 #include "../ClangTidyCheck.h"
+#include <unordered_map>
 
-namespace clang {
-namespace tidy {
-namespace misc {
+namespace clang::tidy::misc {
 
 /// Finds symbol which have confusable identifiers, i.e. identifiers that look
 /// the same visually but have a different Unicode representation.
@@ -27,14 +26,30 @@ public:
 
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
+  void onEndOfTranslationUnit() override;
+  std::optional<TraversalKind> getCheckTraversalKind() const override {
+    return TK_IgnoreUnlessSpelledInSource;
+  }
+
+  struct ContextInfo {
+    const DeclContext *PrimaryContext;
+    const DeclContext *NonTransparentContext;
+    llvm::SmallVector<const DeclContext *> PrimaryContexts;
+    llvm::SmallVector<const CXXRecordDecl *> Bases;
+  };
 
 private:
-  std::string skeleton(StringRef);
-  llvm::StringMap<llvm::SmallVector<const NamedDecl *>> Mapper;
+  struct Entry {
+    const NamedDecl *Declaration;
+    const ContextInfo *Info;
+  };
+
+  const ContextInfo *getContextInfo(const DeclContext *DC);
+
+  llvm::StringMap<llvm::SmallVector<Entry>> Mapper;
+  std::unordered_map<const DeclContext *, ContextInfo> ContextInfos;
 };
 
-} // namespace misc
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::misc
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MISC_CONFUSABLE_IDENTIFIER_CHECK_H

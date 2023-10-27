@@ -31,7 +31,7 @@ define i1 @test_relocate(ptr addrspace(1) %a) gc "statepoint-example" {
 ; CHECK-PREG-LABEL: name:            test_relocate
 ; CHECK-PREG:    renamable $rbx = COPY $rdi
 ; CHECK-PREG:    renamable $rbx = STATEPOINT 0, 0, 0, @return_i1, 2, 0, 2, 0, 2, 0, 2, 1, killed renamable $rbx(tied-def 0), 3, 2, 0, 2, 1, 0, 0, 3, csr_64, implicit-def $rsp, implicit-def $ssp, implicit-def $al
-; CHECK-PREG:    renamable $bpl = COPY killed $al
+; CHECK-PREG:    renamable $bpl = COPY $al
 ; CHECK-PREG:    $rdi = COPY killed renamable $rbx
 ; CHECK-PREG:    CALL64pcrel32 @consume, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit-def $rsp, implicit-def $ssp
 

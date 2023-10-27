@@ -1,3 +1,4 @@
+// RUN: export LSAN_OPTIONS=detect_leaks=0
 // RUN: rm -rf %t
 // RUN: mkdir %t
 // RUN: env CINDEXTEST_INVOCATION_EMISSION_PATH=%t not c-index-test -test-load-source all %s

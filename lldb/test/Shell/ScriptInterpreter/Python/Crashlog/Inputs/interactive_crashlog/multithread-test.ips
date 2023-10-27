@@ -279,7 +279,7 @@
           "sourceFile": "thread",
           "sourceLine": 298,
           "symbol": "void* std::__1::__thread_proxy<std::__1::tuple<std::__1::unique_ptr<std::__1::__thread_struct, std::__1::default_delete<std::__1::__thread_struct> >, void (*)(int&), std::__1::reference_wrapper<int> > >(void*)",
-          "symbolLocation": 84
+          "symbolLocation": null
         },
         {
           "imageIndex": 1,
@@ -478,6 +478,15 @@
       "source" : "A",
       "base" : 0,
       "uuid" : "00000000-0000-0000-0000-000000000000"
+    },
+    {
+      "arch": "arm64",
+      "base": 12345,
+      "name": "bogus.dylib",
+      "path": "/usr/lib/system/bogus.dylib",
+      "size": 1000,
+      "source": "P",
+      "uuid": "11111111-2222-3333-4444-555555555555"
     }
   ],
   "userID": 501,

@@ -10,7 +10,7 @@ void test(void) {
   struct one x3 = {5, {1, 2, 3}}; // expected-error{{initialization of flexible array member is not allowed}}
   struct one x3a = { 5 };
   struct one x3b = { .a = 5 };
-  struct one x3c = { 5, {} }; // expected-warning{{use of GNU empty initializer extension}} \
+  struct one x3c = { 5, {} }; // expected-warning{{use of an empty initializer is a C23 extension}} \
   // expected-warning{{flexible array initialization is a GNU extension}} \
   // expected-warning{{zero size arrays are an extension}}
 }
@@ -24,13 +24,13 @@ struct bar { struct foo z; }; // expected-warning {{'z' may not be nested in a s
 struct foo a = { 1, { 2, 3, 4 } };        // expected-warning{{flexible array initialization is a GNU extension}}
 struct bar b = { { 1, { 2, 3, 4 } } };    // expected-error{{initialization of flexible array member is not allowed}}
 struct bar c = { { 1, { } } };            // // expected-warning{{flexible array initialization is a GNU extension}} \
-              // expected-warning{{use of GNU empty initializer extension}} \
+              // expected-warning{{use of an empty initializer is a C23 extension}} \
               // expected-warning{{zero size arrays are an extension}}
 struct foo d[1] = { { 1, { 2, 3, 4 } } };  // expected-warning{{'struct foo' may not be used as an array element due to flexible array member}} \
               // expected-error{{initialization of flexible array member is not allowed}}
 
 struct foo desig_foo = { .y = {2, 3, 4} }; // expected-warning{{flexible array initialization is a GNU extension}}
-struct bar desig_bar = { .z.y = { } }; // expected-warning{{use of GNU empty initializer extension}} \
+struct bar desig_bar = { .z.y = { } }; // expected-warning{{use of an empty initializer is a C23 extension}} \
   // expected-warning{{zero size arrays are an extension}} \
   // expected-warning{{flexible array initialization is a GNU extension}}
 struct bar desig_bar2 = { .z.y = { 2, 3, 4} }; // expected-error{{initialization of flexible array member is not allowed}}

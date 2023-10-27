@@ -187,12 +187,21 @@ template<class Callable, class ...Args>
 */
 
 #include <__assert> // all public C++ headers provide the assertion handler
+#include <__chrono/steady_clock.h>
+#include <__chrono/time_point.h>
+#include <__condition_variable/condition_variable.h>
 #include <__config>
 #include <__memory/shared_ptr.h>
-#include <__mutex_base>
+#include <__mutex/lock_guard.h>
+#include <__mutex/mutex.h>
+#include <__mutex/once_flag.h>
+#include <__mutex/tag_types.h>
+#include <__mutex/unique_lock.h>
+#include <__thread/id.h>
 #include <__threading_support>
 #include <__utility/forward.h>
 #include <cstdint>
+#include <limits>
 #ifndef _LIBCPP_CXX03_LANG
 # include <tuple>
 #endif
@@ -210,7 +219,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 #ifndef _LIBCPP_HAS_NO_THREADS
 
-class _LIBCPP_TYPE_VIS recursive_mutex
+class _LIBCPP_EXPORTED_FROM_ABI recursive_mutex
 {
     __libcpp_recursive_mutex_t __m_;
 
@@ -231,7 +240,7 @@ public:
     native_handle_type native_handle() {return &__m_;}
 };
 
-class _LIBCPP_TYPE_VIS timed_mutex
+class _LIBCPP_EXPORTED_FROM_ABI timed_mutex
 {
     mutex              __m_;
     condition_variable __cv_;
@@ -262,9 +271,9 @@ timed_mutex::try_lock_until(const chrono::time_point<_Clock, _Duration>& __t)
 {
     using namespace chrono;
     unique_lock<mutex> __lk(__m_);
-    bool no_timeout = _Clock::now() < __t;
-    while (no_timeout && __locked_)
-        no_timeout = __cv_.wait_until(__lk, __t) == cv_status::no_timeout;
+    bool __no_timeout = _Clock::now() < __t;
+    while (__no_timeout && __locked_)
+        __no_timeout = __cv_.wait_until(__lk, __t) == cv_status::no_timeout;
     if (!__locked_)
     {
         __locked_ = true;
@@ -273,7 +282,7 @@ timed_mutex::try_lock_until(const chrono::time_point<_Clock, _Duration>& __t)
     return false;
 }
 
-class _LIBCPP_TYPE_VIS recursive_timed_mutex
+class _LIBCPP_EXPORTED_FROM_ABI recursive_timed_mutex
 {
     mutex              __m_;
     condition_variable __cv_;
@@ -304,7 +313,7 @@ recursive_timed_mutex::try_lock_until(const chrono::time_point<_Clock, _Duration
 {
     using namespace chrono;
     __thread_id __id = this_thread::get_id();
-    unique_lock<mutex> lk(__m_);
+    unique_lock<mutex> __lk(__m_);
     if (__id == __id_)
     {
         if (__count_ == numeric_limits<size_t>::max())
@@ -312,9 +321,9 @@ recursive_timed_mutex::try_lock_until(const chrono::time_point<_Clock, _Duration
         ++__count_;
         return true;
     }
-    bool no_timeout = _Clock::now() < __t;
-    while (no_timeout && __count_ != 0)
-        no_timeout = __cv_.wait_until(lk, __t) == cv_status::no_timeout;
+    bool __no_timeout = _Clock::now() < __t;
+    while (__no_timeout && __count_ != 0)
+        __no_timeout = __cv_.wait_until(__lk, __t) == cv_status::no_timeout;
     if (__count_ == 0)
     {
         __count_ = 1;
@@ -328,7 +337,7 @@ template <class _L0, class _L1>
 _LIBCPP_HIDE_FROM_ABI int
 try_lock(_L0& __l0, _L1& __l1)
 {
-    unique_lock<_L0> __u0(__l0, try_to_lock);
+    unique_lock<_L0> __u0(__l0, try_to_lock_t());
     if (__u0.owns_lock())
     {
         if (__l1.try_lock())
@@ -467,7 +476,7 @@ void __unlock(_L0& __l0, _L1& __l1, _L2& __l2, _L3&... __l3) {
 
 #endif // _LIBCPP_CXX03_LANG
 
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
 template <class ..._Mutexes>
 class _LIBCPP_TEMPLATE_VIS scoped_lock;
 
@@ -544,169 +553,25 @@ private:
 };
 _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(scoped_lock);
 
-#endif // _LIBCPP_STD_VER > 14
+#endif // _LIBCPP_STD_VER >= 17
 #endif // !_LIBCPP_HAS_NO_THREADS
-
-struct _LIBCPP_TEMPLATE_VIS once_flag;
-
-#ifndef _LIBCPP_CXX03_LANG
-
-template<class _Callable, class... _Args>
-_LIBCPP_INLINE_VISIBILITY
-void call_once(once_flag&, _Callable&&, _Args&&...);
-
-#else  // _LIBCPP_CXX03_LANG
-
-template<class _Callable>
-_LIBCPP_INLINE_VISIBILITY
-void call_once(once_flag&, _Callable&);
-
-template<class _Callable>
-_LIBCPP_INLINE_VISIBILITY
-void call_once(once_flag&, const _Callable&);
-
-#endif // _LIBCPP_CXX03_LANG
-
-struct _LIBCPP_TEMPLATE_VIS once_flag
-{
-    _LIBCPP_INLINE_VISIBILITY
-    _LIBCPP_CONSTEXPR
-        once_flag() _NOEXCEPT : __state_(0) {}
-    once_flag(const once_flag&) = delete;
-    once_flag& operator=(const once_flag&) = delete;
-
-#if defined(_LIBCPP_ABI_MICROSOFT)
-   typedef uintptr_t _State_type;
-#else
-   typedef unsigned long _State_type;
-#endif
-
-private:
-    _State_type __state_;
-
-#ifndef _LIBCPP_CXX03_LANG
-    template<class _Callable, class... _Args>
-    friend
-    void call_once(once_flag&, _Callable&&, _Args&&...);
-#else  // _LIBCPP_CXX03_LANG
-    template<class _Callable>
-    friend
-    void call_once(once_flag&, _Callable&);
-
-    template<class _Callable>
-    friend
-    void call_once(once_flag&, const _Callable&);
-#endif // _LIBCPP_CXX03_LANG
-};
-
-#ifndef _LIBCPP_CXX03_LANG
-
-template <class _Fp>
-class __call_once_param
-{
-    _Fp& __f_;
-public:
-    _LIBCPP_INLINE_VISIBILITY
-    explicit __call_once_param(_Fp& __f) : __f_(__f) {}
-
-    _LIBCPP_INLINE_VISIBILITY
-    void operator()()
-    {
-        typedef typename __make_tuple_indices<tuple_size<_Fp>::value, 1>::type _Index;
-        __execute(_Index());
-    }
-
-private:
-    template <size_t ..._Indices>
-    _LIBCPP_INLINE_VISIBILITY
-    void __execute(__tuple_indices<_Indices...>)
-    {
-        _VSTD::__invoke(_VSTD::get<0>(_VSTD::move(__f_)), _VSTD::get<_Indices>(_VSTD::move(__f_))...);
-    }
-};
-
-#else
-
-template <class _Fp>
-class __call_once_param
-{
-    _Fp& __f_;
-public:
-    _LIBCPP_INLINE_VISIBILITY
-    explicit __call_once_param(_Fp& __f) : __f_(__f) {}
-
-    _LIBCPP_INLINE_VISIBILITY
-    void operator()()
-    {
-        __f_();
-    }
-};
-
-#endif
-
-template <class _Fp>
-void _LIBCPP_INLINE_VISIBILITY
-__call_once_proxy(void* __vp)
-{
-    __call_once_param<_Fp>* __p = static_cast<__call_once_param<_Fp>*>(__vp);
-    (*__p)();
-}
-
-_LIBCPP_FUNC_VIS void __call_once(volatile once_flag::_State_type&, void*,
-                                  void (*)(void*));
-
-#ifndef _LIBCPP_CXX03_LANG
-
-template<class _Callable, class... _Args>
-inline _LIBCPP_INLINE_VISIBILITY
-void
-call_once(once_flag& __flag, _Callable&& __func, _Args&&... __args)
-{
-    if (__libcpp_acquire_load(&__flag.__state_) != ~once_flag::_State_type(0))
-    {
-        typedef tuple<_Callable&&, _Args&&...> _Gp;
-        _Gp __f(_VSTD::forward<_Callable>(__func), _VSTD::forward<_Args>(__args)...);
-        __call_once_param<_Gp> __p(__f);
-        std::__call_once(__flag.__state_, &__p, &__call_once_proxy<_Gp>);
-    }
-}
-
-#else  // _LIBCPP_CXX03_LANG
-
-template<class _Callable>
-inline _LIBCPP_INLINE_VISIBILITY
-void
-call_once(once_flag& __flag, _Callable& __func)
-{
-    if (__libcpp_acquire_load(&__flag.__state_) != ~once_flag::_State_type(0))
-    {
-        __call_once_param<_Callable> __p(__func);
-        std::__call_once(__flag.__state_, &__p, &__call_once_proxy<_Callable>);
-    }
-}
-
-template<class _Callable>
-inline _LIBCPP_INLINE_VISIBILITY
-void
-call_once(once_flag& __flag, const _Callable& __func)
-{
-    if (__libcpp_acquire_load(&__flag.__state_) != ~once_flag::_State_type(0))
-    {
-        __call_once_param<const _Callable> __p(__func);
-        std::__call_once(__flag.__state_, &__p, &__call_once_proxy<const _Callable>);
-    }
-}
-
-#endif // _LIBCPP_CXX03_LANG
 
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#  include <atomic>
 #  include <concepts>
-#  include <functional>
+#  include <cstdlib>
+#  include <cstring>
+#  include <ctime>
+#  include <initializer_list>
+#  include <new>
+#  include <stdexcept>
+#  include <system_error>
 #  include <type_traits>
+#  include <typeinfo>
 #endif
 
 #endif // _LIBCPP_MUTEX

@@ -110,25 +110,25 @@ enum EdgeKind_riscv : Edge::Kind {
   /// 8 bits label addition
   ///
   /// Fixup expression
-  ///   Fixup <- (Target - *{1}Fixup + Addend)
+  ///   Fixup <- (Target + *{1}Fixup + Addend)
   R_RISCV_ADD8,
 
   /// 16 bits label addition
   ///
   /// Fixup expression
-  ///   Fixup <- (Target - *{2}Fixup + Addend)
+  ///   Fixup <- (Target + *{2}Fixup + Addend)
   R_RISCV_ADD16,
 
   /// 32 bits label addition
   ///
   /// Fixup expression:
-  ///   Fixup <- (Target - *{4}Fixup + Addend)
+  ///   Fixup <- (Target + *{4}Fixup + Addend)
   R_RISCV_ADD32,
 
   /// 64 bits label addition
   ///
   /// Fixup expression:
-  ///   Fixup <- (Target - *{8}Fixup + Addend)
+  ///   Fixup <- (Target + *{8}Fixup + Addend)
   R_RISCV_ADD64,
 
   /// 8 bits label subtraction
@@ -202,6 +202,18 @@ enum EdgeKind_riscv : Edge::Kind {
   /// Fixup expression:
   ///   Fixup <- (Target - Fixup + Addend)
   R_RISCV_32_PCREL,
+
+  /// An auipc/jalr pair eligible for linker relaxation.
+  ///
+  /// Linker relaxation will replace this with R_RISCV_RVC_JUMP or R_RISCV_JAL
+  /// if it succeeds, or with R_RISCV_CALL_PLT if it fails.
+  CallRelaxable,
+
+  /// Alignment requirement used by linker relaxation.
+  ///
+  /// Linker relaxation will use this to ensure all code sequences are properly
+  /// aligned and then remove these edges from the graph.
+  AlignRelaxable,
 };
 
 /// Returns a string name for the given riscv edge. For debugging purposes

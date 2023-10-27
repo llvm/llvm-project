@@ -24,7 +24,7 @@
 #ifndef TEST_HAS_NO_EXCEPTIONS
 namespace std {
 template <> struct hash<::MakeEmptyT> {
-  size_t operator()(const ::MakeEmptyT &) const {
+  std::size_t operator()(const ::MakeEmptyT &) const {
     assert(false);
     return 0;
   }
@@ -127,7 +127,7 @@ namespace std {
 
 template <>
 struct hash<B> {
-  size_t operator()(B const&) const {
+  std::size_t operator()(B const&) const {
     return 0;
   }
 };

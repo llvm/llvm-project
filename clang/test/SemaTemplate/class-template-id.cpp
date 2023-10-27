@@ -50,6 +50,5 @@ template<typename T> struct Foo { }; // precxx17-note {{template is declared her
 void f(void) { Foo bar; } // precxx17-error {{use of class template 'Foo' requires template arguments}} \
                              cxx17-error {{no viable constructor or deduction guide for deduction of template arguments of 'Foo'}}
 
-// rdar://problem/8254267
 template <typename T> class Party;
 template <> class Party<T> { friend struct Party<>; }; // expected-error {{use of undeclared identifier 'T'}}

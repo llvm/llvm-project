@@ -445,6 +445,14 @@ inline cst_pred_ty<is_any_apint> m_AnyIntegralConstant() {
   return cst_pred_ty<is_any_apint>();
 }
 
+struct is_shifted_mask {
+  bool isValue(const APInt &C) { return C.isShiftedMask(); }
+};
+
+inline cst_pred_ty<is_shifted_mask> m_ShiftedMask() {
+  return cst_pred_ty<is_shifted_mask>();
+}
+
 struct is_all_ones {
   bool isValue(const APInt &C) { return C.isAllOnes(); }
 };
@@ -964,11 +972,6 @@ struct BinaryOp_match {
              (Commutable && L.match(I->getOperand(1)) &&
               R.match(I->getOperand(0)));
     }
-    if (auto *CE = dyn_cast<ConstantExpr>(V))
-      return CE->getOpcode() == Opc &&
-             ((L.match(CE->getOperand(0)) && R.match(CE->getOperand(1))) ||
-              (Commutable && L.match(CE->getOperand(1)) &&
-               R.match(CE->getOperand(0))));
     return false;
   }
 
@@ -1250,9 +1253,6 @@ struct BinOpPred_match : Predicate {
     if (auto *I = dyn_cast<Instruction>(V))
       return this->isOpType(I->getOpcode()) && L.match(I->getOperand(0)) &&
              R.match(I->getOperand(1));
-    if (auto *CE = dyn_cast<ConstantExpr>(V))
-      return this->isOpType(CE->getOpcode()) && L.match(CE->getOperand(0)) &&
-             R.match(CE->getOperand(1));
     return false;
   }
 };
@@ -1536,7 +1536,7 @@ struct m_SplatOrUndefMask {
   int &SplatIndex;
   m_SplatOrUndefMask(int &SplatIndex) : SplatIndex(SplatIndex) {}
   bool match(ArrayRef<int> Mask) {
-    auto First = find_if(Mask, [](int Elem) { return Elem != -1; });
+    const auto *First = find_if(Mask, [](int Elem) { return Elem != -1; });
     if (First == Mask.end())
       return false;
     SplatIndex = *First;
@@ -1588,6 +1588,23 @@ template <typename Op_t, unsigned Opcode> struct CastClass_match {
   }
 };
 
+template <typename Op_t> struct PtrToIntSameSize_match {
+  const DataLayout &DL;
+  Op_t Op;
+
+  PtrToIntSameSize_match(const DataLayout &DL, const Op_t &OpMatch)
+      : DL(DL), Op(OpMatch) {}
+
+  template <typename OpTy> bool match(OpTy *V) {
+    if (auto *O = dyn_cast<Operator>(V))
+      return O->getOpcode() == Instruction::PtrToInt &&
+             DL.getTypeSizeInBits(O->getType()) ==
+                 DL.getTypeSizeInBits(O->getOperand(0)->getType()) &&
+             Op.match(O->getOperand(0));
+    return false;
+  }
+};
+
 /// Matches BitCast.
 template <typename OpTy>
 inline CastClass_match<OpTy, Instruction::BitCast> m_BitCast(const OpTy &Op) {
@@ -1598,6 +1615,12 @@ inline CastClass_match<OpTy, Instruction::BitCast> m_BitCast(const OpTy &Op) {
 template <typename OpTy>
 inline CastClass_match<OpTy, Instruction::PtrToInt> m_PtrToInt(const OpTy &Op) {
   return CastClass_match<OpTy, Instruction::PtrToInt>(Op);
+}
+
+template <typename OpTy>
+inline PtrToIntSameSize_match<OpTy> m_PtrToIntSameSize(const DataLayout &DL,
+                                                       const OpTy &Op) {
+  return PtrToIntSameSize_match<OpTy>(DL, Op);
 }
 
 /// Matches IntToPtr.
@@ -2364,6 +2387,14 @@ m_c_MaxOrMin(const LHS &L, const RHS &R) {
                      m_CombineOr(m_c_UMax(L, R), m_c_UMin(L, R)));
 }
 
+template <Intrinsic::ID IntrID, typename T0, typename T1>
+inline match_combine_or<typename m_Intrinsic_Ty<T0, T1>::Ty,
+                        typename m_Intrinsic_Ty<T1, T0>::Ty>
+m_c_Intrinsic(const T0 &Op0, const T1 &Op1) {
+  return m_CombineOr(m_Intrinsic<IntrID>(Op0, Op1),
+                     m_Intrinsic<IntrID>(Op1, Op0));
+}
+
 /// Matches FAdd with LHS and RHS in either order.
 template <typename LHS, typename RHS>
 inline BinaryOp_match<LHS, RHS, Instruction::FAdd, true>
@@ -2476,9 +2507,6 @@ inline InsertValue_match<Ind, Val_t, Elt_t> m_InsertValue(const Val_t &Val,
 ///  `ptrtoint(gep <vscale x 1 x i8>, <vscale x 1 x i8>* null, i32 1>`
 /// under the right conditions determined by DataLayout.
 struct VScaleVal_match {
-  const DataLayout &DL;
-  VScaleVal_match(const DataLayout &DL) : DL(DL) {}
-
   template <typename ITy> bool match(ITy *V) {
     if (m_Intrinsic<Intrinsic::vscale>().match(V))
       return true;
@@ -2486,11 +2514,12 @@ struct VScaleVal_match {
     Value *Ptr;
     if (m_PtrToInt(m_Value(Ptr)).match(V)) {
       if (auto *GEP = dyn_cast<GEPOperator>(Ptr)) {
-        auto *DerefTy = GEP->getSourceElementType();
-        if (GEP->getNumIndices() == 1 && isa<ScalableVectorType>(DerefTy) &&
+        auto *DerefTy =
+            dyn_cast<ScalableVectorType>(GEP->getSourceElementType());
+        if (GEP->getNumIndices() == 1 && DerefTy &&
+            DerefTy->getElementType()->isIntegerTy(8) &&
             m_Zero().match(GEP->getPointerOperand()) &&
-            m_SpecificInt(1).match(GEP->idx_begin()->get()) &&
-            DL.getTypeAllocSizeInBits(DerefTy).getKnownMinValue() == 8)
+            m_SpecificInt(1).match(GEP->idx_begin()->get()))
           return true;
       }
     }
@@ -2499,8 +2528,8 @@ struct VScaleVal_match {
   }
 };
 
-inline VScaleVal_match m_VScale(const DataLayout &DL) {
-  return VScaleVal_match(DL);
+inline VScaleVal_match m_VScale() {
+  return VScaleVal_match();
 }
 
 template <typename LHS, typename RHS, unsigned Opcode, bool Commutable = false>

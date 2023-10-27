@@ -134,14 +134,14 @@ namespace partial_full_mix {
   template<typename ...T> struct tuple {};
   template<typename ...T> struct A {
     template<typename ...U> static pair<tuple<T...>, tuple<U...>> f(pair<T, U> ...p);
-    // expected-note@-1 {{[with U = <char, double, long>]: pack expansion contains parameter packs 'T' and 'U' that have different lengths (2 vs. 3)}}
+    // expected-note@-1 {{[with U = <char, double, long>]: pack expansion contains parameter pack 'U' that has a different length (2 vs. 3) from outer parameter packs}}
     // expected-note@-2 {{[with U = <char, double, void>]: pack expansion contains parameter pack 'U' that has a different length (at least 3 vs. 2) from outer parameter packs}}
 
     template<typename ...U> static pair<tuple<T...>, tuple<U...>> g(pair<T, U> ...p, ...);
-    // expected-note@-1 {{[with U = <char, double, long>]: pack expansion contains parameter packs 'T' and 'U' that have different lengths (2 vs. 3)}}
+    // expected-note@-1 {{[with U = <char, double, long>]: pack expansion contains parameter pack 'U' that has a different length (2 vs. 3) from outer parameter packs}}
 
     template<typename ...U> static tuple<U...> h(tuple<pair<T, U>..., pair<int, int>>);
-    // expected-note@-1 {{[with U = <int[2]>]: pack expansion contains parameter packs 'T' and 'U' that have different lengths (2 vs. 1)}}
+    // expected-note@-1 {{[with U = <int[2]>]: pack expansion contains parameter pack 'U' that has a different length (2 vs. 1) from outer parameter packs}}
   };
 
   pair<tuple<int, float>, tuple<char, double>> k1 = A<int, float>().f<char>(pair<int, char>(), pair<float, double>());

@@ -1,5 +1,3 @@
-from __future__ import absolute_import
-
 # System modules
 import os
 import sys
@@ -10,34 +8,46 @@ from .lldbtest import *
 from . import lldbutil
 from lldbsuite.test.decorators import *
 
+
 @skipIfRemote
 @skipIfWindows  # llvm.org/pr22274: need a pexpect replacement for windows
 class PExpectTest(TestBase):
-
     NO_DEBUG_INFO_TESTCASE = True
     PROMPT = "(lldb) "
 
     def expect_prompt(self):
         self.child.expect_exact(self.PROMPT)
 
-    def launch(self, executable=None, extra_args=None, timeout=60,
-               dimensions=None, run_under=None, post_spawn=None,
-               use_colors=False):
-        logfile = getattr(sys.stdout, 'buffer',
-                            sys.stdout) if self.TraceOn() else None
+    def launch(
+        self,
+        executable=None,
+        extra_args=None,
+        timeout=60,
+        dimensions=None,
+        run_under=None,
+        post_spawn=None,
+        encoding=None,
+        use_colors=False,
+    ):
+        # Using a log file is incompatible with using utf-8 as the encoding.
+        logfile = (
+            getattr(sys.stdout, "buffer", sys.stdout)
+            if (self.TraceOn() and not encoding)
+            else None
+        )
 
         args = []
         if run_under is not None:
             args += run_under
-        args += [lldbtest_config.lldbExec, '--no-lldbinit']
+        args += [lldbtest_config.lldbExec, "--no-lldbinit"]
         if not use_colors:
-            args.append('--no-use-colors')
+            args.append("--no-use-colors")
         for cmd in self.setUpCommands():
             if "use-color false" in cmd and use_colors:
                 continue
-            args += ['-O', cmd]
+            args += ["-O", cmd]
         if executable is not None:
-            args += ['--file', executable]
+            args += ["--file", executable]
         if extra_args is not None:
             args.extend(extra_args)
 
@@ -46,11 +56,18 @@ class PExpectTest(TestBase):
         env["HOME"] = self.getBuildDir()
 
         import pexpect
+
         self.child = pexpect.spawn(
-                args[0], args=args[1:], logfile=logfile,
-                timeout=timeout, dimensions=dimensions, env=env)
-        self.child.ptyproc.delayafterclose = timeout/10
-        self.child.ptyproc.delayafterterminate = timeout/10
+            args[0],
+            args=args[1:],
+            logfile=logfile,
+            timeout=timeout,
+            dimensions=dimensions,
+            env=env,
+            encoding=encoding,
+        )
+        self.child.ptyproc.delayafterclose = timeout / 10
+        self.child.ptyproc.delayafterterminate = timeout / 10
 
         if post_spawn is not None:
             post_spawn()
@@ -66,11 +83,10 @@ class PExpectTest(TestBase):
             self.expect_prompt()
 
     def expect(self, cmd, substrs=None):
-        self.assertNotIn('\n', cmd)
+        self.assertNotIn("\n", cmd)
         # If 'substrs' is a string then this code would just check that every
         # character of the string is in the output.
-        assert not isinstance(substrs, str), \
-            "substrs must be a collection of strings"
+        assert not isinstance(substrs, str), "substrs must be a collection of strings"
 
         self.child.sendline(cmd)
         if substrs is not None:

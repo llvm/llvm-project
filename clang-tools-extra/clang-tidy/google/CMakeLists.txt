@@ -29,6 +29,7 @@ add_clang_library(clangTidyGoogleModule
 
   DEPENDS
   omp_gen
+  ClangDriverOptions
   )
 
 clang_target_link_libraries(clangTidyGoogleModule

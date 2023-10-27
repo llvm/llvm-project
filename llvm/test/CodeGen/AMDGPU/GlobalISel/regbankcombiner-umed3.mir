@@ -304,7 +304,7 @@ body: |
     ; CHECK-NEXT: [[C1:%[0-9]+]]:sgpr(s32) = G_CONSTANT i32 17
     ; CHECK-NEXT: [[UMIN:%[0-9]+]]:sgpr(s32) = G_UMIN [[UMAX]], [[C1]]
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY [[UMIN]](s32)
-    ; CHECK-NEXT: [[INT:%[0-9]+]]:sgpr(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.readfirstlane), [[COPY1]](s32)
+    ; CHECK-NEXT: [[INT:%[0-9]+]]:sgpr(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[COPY1]](s32)
     ; CHECK-NEXT: $sgpr0 = COPY [[INT]](s32)
     ; CHECK-NEXT: SI_RETURN_TO_EPILOG implicit $sgpr0
     %0:sgpr(s32) = COPY $sgpr2
@@ -313,7 +313,7 @@ body: |
     %5:sgpr(s32) = G_CONSTANT i32 17
     %6:sgpr(s32) = G_UMIN %4, %5
     %8:vgpr(s32) = COPY %6(s32)
-    %7:sgpr(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.readfirstlane), %8(s32)
+    %7:sgpr(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), %8(s32)
     $sgpr0 = COPY %7(s32)
     SI_RETURN_TO_EPILOG implicit $sgpr0
 

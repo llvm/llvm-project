@@ -80,7 +80,7 @@ static cl::opt<SortField> AccountSortOutput(
     "sort", cl::desc("sort output by this field"), cl::value_desc("field"),
     cl::sub(Account), cl::init(SortField::FUNCID),
     cl::values(clEnumValN(SortField::FUNCID, "funcid", "function id"),
-               clEnumValN(SortField::COUNT, "count", "funciton call counts"),
+               clEnumValN(SortField::COUNT, "count", "function call counts"),
                clEnumValN(SortField::MIN, "min", "minimum function durations"),
                clEnumValN(SortField::MED, "med", "median function durations"),
                clEnumValN(SortField::PCT90, "90p", "90th percentile durations"),

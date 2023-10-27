@@ -1,0 +1,82 @@
+# RUN: llc %s --start-after=livedebugvalues --filetype=obj -o - \
+# RUN:     | llvm-dwarfdump - --name=test-var -o - | FileCheck %s
+
+# Test that when an entry value expression appears in a DBG_VALUE_LIST, we are
+# able to produce a valid entry value location in DWARF.
+
+# CHECK: DW_OP_entry_value(DW_OP_reg14 R14), DW_OP_plus_uconst 0x10, DW_OP_plus_uconst 0x10, DW_OP_deref
+
+--- |
+  source_filename = "test.ll"
+  target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
+  target triple = "x86_64-apple-macosx12.1.0"
+
+  declare void @llvm.dbg.value(metadata, metadata, metadata)
+
+  define swifttailcc void @blah(ptr swiftasync %0) !dbg !15 {
+    %use = getelementptr i8, ptr %0, i64 9
+    call void @llvm.dbg.value(metadata ptr %0, metadata !18, metadata !DIExpression(DW_OP_LLVM_entry_value, 1, DW_OP_plus_uconst, 16, DW_OP_plus_uconst, 16, DW_OP_deref, DW_OP_deref)), !dbg !22
+    %use1 = load i32, ptr null, align 4, !dbg !27
+    %use2 = sext i32 %use1 to i64
+    %use3 = getelementptr i8, ptr null, i64 %use2
+    store ptr %use3, ptr %0, align 8
+    ret void
+  }
+
+  !llvm.module.flags = !{!0}
+  !llvm.dbg.cu = !{!1}
+
+  !0 = !{i32 2, !"Debug Info Version", i32 3}
+  !1 = distinct !DICompileUnit(language: DW_LANG_Swift, file: !2, producer: "blah", isOptimized: true, flags: "blah", runtimeVersion: 5, emissionKind: FullDebug, globals: !3, imports: !9, sysroot: "blah", sdk: "blah")
+  !2 = !DIFile(filename: "blah", directory: "blah")
+  !3 = !{!4, !10}
+  !4 = !DIGlobalVariableExpression(var: !5, expr: !DIExpression())
+  !5 = distinct !DIGlobalVariable(name: "blah", linkageName: "blah", scope: !6, file: !2, line: 49, type: !7, isLocal: true, isDefinition: true)
+  !6 = !DIModule(scope: null, name: "blah", includePath: "blah")
+  !7 = !DIDerivedType(tag: DW_TAG_const_type, baseType: !8)
+  !8 = !DICompositeType(tag: DW_TAG_structure_type, name: "blah", scope: !6, file: !2, size: 64, elements: !9, runtimeLang: DW_LANG_Swift, identifier: "blah")
+  !9 = !{}
+  !10 = !DIGlobalVariableExpression(var: !11, expr: !DIExpression())
+  !11 = distinct !DIGlobalVariable(name: "blah", linkageName: "blah", scope: !6, file: !2, line: 44, type: !12, isLocal: false, isDefinition: true)
+  !12 = !DIDerivedType(tag: DW_TAG_const_type, baseType: !13)
+  !13 = !DICompositeType(tag: DW_TAG_structure_type, name: "blah", scope: !14, file: !2, size: 64, elements: !9, runtimeLang: DW_LANG_Swift, identifier: "blah")
+  !14 = !DIModule(scope: null, name: "blah", configMacros: "blah", includePath: "blah")
+  !15 = distinct !DISubprogram(name: "blah", linkageName: "blah", scope: !16, file: !2, line: 115, type: !17, scopeLine: 117, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !1, retainedNodes: !9, thrownTypes: !9)
+  !16 = !DICompositeType(tag: DW_TAG_structure_type, name: "blah", scope: !6, file: !2, elements: !9, runtimeLang: DW_LANG_Swift, identifier: "blah")
+  !17 = !DISubroutineType(types: !9)
+  !18 = !DILocalVariable(name: "test-var", arg: 1, scope: !19, file: !2, line: 95, type: !21, flags: DIFlagArtificial)
+  !19 = distinct !DISubprogram(name: "blah", linkageName: "blah", scope: !16, file: !2, line: 95, type: !20, scopeLine: 95, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !1, retainedNodes: !9)
+  !20 = distinct !DISubroutineType(types: !9)
+  !21 = !DIDerivedType(tag: DW_TAG_const_type, baseType: !16)
+  !22 = !DILocation(line: 95, column: 9, scope: !19, inlinedAt: !23)
+  !23 = distinct !DILocation(line: 0, scope: !24, inlinedAt: !25)
+  !24 = distinct !DISubprogram(name: "blah", linkageName: "blah", scope: !16, file: !2, type: !20, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !1)
+  !25 = distinct !DILocation(line: 121, column: 36, scope: !26)
+  !26 = distinct !DILexicalBlock(scope: !15, file: !2, line: 116, column: 7)
+  !27 = !DILocation(line: 0, scope: !28, inlinedAt: !23)
+  !28 = !DILexicalBlockFile(scope: !19, file: !2, discriminator: 0)
+
+...
+---
+name:            blah
+alignment:       16
+tracksRegLiveness: true
+debugInstrRef:   true
+tracksDebugUserValues: true
+registers:       []
+liveins:
+  - { reg: '$r14', virtual-reg: '' }
+frameInfo:
+  maxAlignment:    1
+body:             |
+  bb.0 (%ir-block.1):
+    liveins: $r14
+
+    DBG_PHI $r14, 1
+    DBG_INSTR_REF !18, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_entry_value, 1, DW_OP_plus_uconst, 16, DW_OP_plus_uconst, 16, DW_OP_deref, DW_OP_deref), dbg-instr-ref(1, 0), debug-location !22
+    DBG_VALUE_LIST !18, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_entry_value, 1, DW_OP_plus_uconst, 16, DW_OP_plus_uconst, 16, DW_OP_deref, DW_OP_deref), $r14, debug-location !DILocation(line: 0, scope: !19, inlinedAt: !23)
+    renamable $rax = MOVSX64rm32 $noreg, 1, $noreg, 0, $noreg, debug-location !27 :: (load (s32) from `ptr null`)
+    MOV64mr killed renamable $r14, 1, $noreg, 0, $noreg, killed renamable $rax :: (store (s64) into %ir.0)
+    RETI64 8
+
+...

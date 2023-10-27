@@ -10,14 +10,14 @@ func.func @bar() {
 }
 
 transform.sequence failures(propagate) {
-^bb1(%arg1: !pdl.operation):
-  %match_name = transform.structured.match ops{["arith.constant"]} in %arg1
-  transform.test_print_remark_at_operand %match_name, "matched op name" : !pdl.operation
-  transform.test_consume_operand %match_name
+^bb1(%arg1: !transform.any_op):
+  %match_name = transform.structured.match ops{["arith.constant"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+  transform.test_print_remark_at_operand %match_name, "matched op name" : !transform.any_op
+  transform.test_consume_operand %match_name : !transform.any_op
 
-  %match_attr = transform.structured.match ops{["arith.constant"]} attributes{my_attr} in %arg1
-  transform.test_print_remark_at_operand %match_attr, "matched attr name" : !pdl.operation
-  transform.test_consume_operand %match_attr
+  %match_attr = transform.structured.match ops{["arith.constant"]} attributes{my_attr} in %arg1 : (!transform.any_op) -> !transform.any_op
+  transform.test_print_remark_at_operand %match_attr, "matched attr name" : !transform.any_op
+  transform.test_consume_operand %match_attr : !transform.any_op
 }
 
 // -----
@@ -30,11 +30,29 @@ func.func @by_type() {
 }
 
 transform.sequence failures(propagate) {
-^bb1(%arg1: !pdl.operation):
+^bb1(%arg1: !transform.any_op):
   %match_name = transform.structured.match
-    ops{["arith.constant"]} filter_result_type = f32 in %arg1
-  transform.test_print_remark_at_operand %match_name, "matched op name" : !pdl.operation
-  transform.test_consume_operand %match_name
+    ops{["arith.constant"]} filter_result_type = f32 in %arg1 : (!transform.any_op) -> !transform.any_op
+  transform.test_print_remark_at_operand %match_name, "matched op name" : !transform.any_op
+  transform.test_consume_operand %match_name : !transform.any_op
+}
+
+// -----
+
+func.func @foo(%a: tensor<4x4xf32>, %b: tensor<4x4xf32>, %c: tensor<4x4xf32>) {
+  %c0 = arith.constant 0.0 : f32
+  // expected-remark @below {{tileable}}
+  %r = linalg.fill ins(%c0 : f32) outs(%c : tensor<4x4xf32>) -> tensor<4x4xf32>
+  // expected-remark @below {{tileable}}
+  linalg.matmul ins(%a, %b : tensor<4x4xf32>, tensor<4x4xf32>) outs(%r : tensor<4x4xf32>) -> tensor<4x4xf32>
+  return
+}
+
+transform.sequence failures(propagate) {
+^bb0(%arg0: !transform.any_op):
+  %matched = transform.structured.match interface{TilingInterface} in %arg0 : (!transform.any_op) -> !transform.any_op
+  transform.test_print_remark_at_operand %matched, "tileable" : !transform.any_op
+  transform.yield
 }
 
 // -----
@@ -56,23 +74,52 @@ func.func @match_complex_attribute(%arg0: tensor<12x128x32xf32>)
 }
 
 transform.sequence failures(propagate) {
-^bb1(%arg1: !pdl.operation):
+^bb1(%arg1: !transform.any_op):
   %match_attr = transform.structured.match
       ops{["linalg.generic"]}
       attributes{iterator_types = [
         #linalg.iterator_type<parallel>,
         #linalg.iterator_type<parallel>,
         #linalg.iterator_type<parallel>]}
-      in %arg1
-  transform.test_print_remark_at_operand %match_attr, "matched complex attr" : !pdl.operation
-  transform.test_consume_operand %match_attr
+      in %arg1 : (!transform.any_op) -> !transform.any_op
+  transform.test_print_remark_at_operand %match_attr, "matched complex attr" : !transform.any_op
+  transform.test_consume_operand %match_attr : !transform.any_op
 
   %no_match = transform.structured.match
       attributes{iterator_types = [
         #linalg.iterator_type<parallel>,
         #linalg.iterator_type<parallel>,
         #linalg.iterator_type<reduction>]}
-      in %arg1
+      in %arg1 : (!transform.any_op) -> !transform.any_op
 // expected-remark @below {{0}}
-  transform.test_print_number_of_associated_payload_ir_ops %no_match
+  transform.test_print_number_of_associated_payload_ir_ops %no_match : !transform.any_op
+}
+
+// -----
+
+func.func private @callee()
+
+func.func @foo(%lb: index, %ub: index, %step: index) {
+  // expected-remark @below {{loop-like}}
+  scf.for %i = %lb to %ub step %step {
+    func.call @callee() : () -> ()
+    scf.yield
+  }
+  // expected-remark @below {{loop-like}}
+  scf.parallel (%i) = (%lb) to (%ub) step (%step) {
+    func.call @callee() : () -> ()
+    scf.yield
+  }
+  // expected-remark @below {{loop-like}}
+  scf.forall (%i) in (%ub) {
+    func.call @callee() : () -> ()
+  }
+  return
+}
+
+transform.sequence failures(propagate) {
+^bb0(%arg0: !transform.any_op):
+  %matched = transform.structured.match interface{LoopLikeInterface} in %arg0 : (!transform.any_op) -> !transform.any_op
+  transform.test_print_remark_at_operand %matched, "loop-like" : !transform.any_op
+  transform.yield
 }

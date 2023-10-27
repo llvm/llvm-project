@@ -41,29 +41,29 @@ void foo(void) {
 // CHECK-COUNT-6: ...) @__kmpc_fork_call(
 // CHECK: ret void
 
-// CHECK: define internal void @.omp_outlined.(
+// CHECK: define internal void @foo.omp_outlined(
 // CHECK: @bar
 // CHECK: ret void
 
-// CHECK: define internal void @.omp_outlined..1(
+// CHECK: define internal void @foo.omp_outlined.1(
 // CHECK: @bar
 // CHECK: ret void
 
-// CHECK: define internal void @.omp_outlined..2(
+// CHECK: define internal void @foo.omp_outlined.2(
 // CHECK: @bar
 // CHECK: ret void
 
-// CHECK: define internal void @.omp_outlined..3(
+// CHECK: define internal void @foo.omp_outlined.3(
 // NO-CHECK: call void @__kmpc_for_static_init
 // NO-CHECK: call void @__kmpc_for_static_fini
 // CHECK: ret void
 
-// CHECK: define internal void @.omp_outlined..4(
+// CHECK: define internal void @foo.omp_outlined.4(
 // CHECK: call void @__kmpc_for_static_init
 // CHECK: call void @__kmpc_for_static_fini
 // CHECK: ret void
 
-// CHECK: define internal void @.omp_outlined..5(
+// CHECK: define internal void @foo.omp_outlined.5(
 // NO-CHECK: call void @__kmpc_for_static_init
 // NO-CHECK: call void @__kmpc_for_static_fini
 // CHECK: ret void

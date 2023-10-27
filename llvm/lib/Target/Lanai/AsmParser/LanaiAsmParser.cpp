@@ -62,15 +62,12 @@ class LanaiAsmParser : public MCTargetAsmParser {
 
   bool parsePrePost(StringRef Type, int *OffsetValue);
 
-  bool ParseDirective(AsmToken DirectiveID) override;
-
   bool ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
                         SMLoc NameLoc, OperandVector &Operands) override;
 
-  bool parseRegister(MCRegister &RegNum, SMLoc &StartLoc,
-                     SMLoc &EndLoc) override;
-  OperandMatchResultTy tryParseRegister(MCRegister &RegNo, SMLoc &StartLoc,
-                                        SMLoc &EndLoc) override;
+  bool parseRegister(MCRegister &Reg, SMLoc &StartLoc, SMLoc &EndLoc) override;
+  ParseStatus tryParseRegister(MCRegister &Reg, SMLoc &StartLoc,
+                               SMLoc &EndLoc) override;
 
   bool MatchAndEmitInstruction(SMLoc IdLoc, unsigned &Opcode,
                                OperandVector &Operands, MCStreamer &Out,
@@ -81,10 +78,9 @@ class LanaiAsmParser : public MCTargetAsmParser {
 #define GET_ASSEMBLER_HEADER
 #include "LanaiGenAsmMatcher.inc"
 
-  OperandMatchResultTy parseOperand(OperandVector *Operands,
-                                    StringRef Mnemonic);
+  ParseStatus parseOperand(OperandVector *Operands, StringRef Mnemonic);
 
-  OperandMatchResultTy parseMemoryOperand(OperandVector &Operands);
+  ParseStatus parseMemoryOperand(OperandVector &Operands);
 
 public:
   LanaiAsmParser(const MCSubtargetInfo &STI, MCAsmParser &Parser,
@@ -649,8 +645,6 @@ public:
 
 } // end anonymous namespace
 
-bool LanaiAsmParser::ParseDirective(AsmToken /*DirectiveId*/) { return true; }
-
 bool LanaiAsmParser::MatchAndEmitInstruction(SMLoc IdLoc, unsigned &Opcode,
                                              OperandVector &Operands,
                                              MCStreamer &Out,
@@ -729,17 +723,16 @@ bool LanaiAsmParser::parseRegister(MCRegister &RegNum, SMLoc &StartLoc,
   return (Op == nullptr);
 }
 
-OperandMatchResultTy LanaiAsmParser::tryParseRegister(MCRegister &RegNum,
-                                                      SMLoc &StartLoc,
-                                                      SMLoc &EndLoc) {
+ParseStatus LanaiAsmParser::tryParseRegister(MCRegister &Reg, SMLoc &StartLoc,
+                                             SMLoc &EndLoc) {
   const AsmToken &Tok = getParser().getTok();
   StartLoc = Tok.getLoc();
   EndLoc = Tok.getEndLoc();
   std::unique_ptr<LanaiOperand> Op = parseRegister(/*RestoreOnFailure=*/true);
   if (Op == nullptr)
-    return MatchOperand_NoMatch;
-  RegNum = Op->getReg();
-  return MatchOperand_Success;
+    return ParseStatus::NoMatch;
+  Reg = Op->getReg();
+  return ParseStatus::Success;
 }
 
 std::unique_ptr<LanaiOperand> LanaiAsmParser::parseIdentifier() {
@@ -889,8 +882,7 @@ bool shouldBeSls(const LanaiOperand &Op) {
 }
 
 // Matches memory operand. Returns true if error encountered.
-OperandMatchResultTy
-LanaiAsmParser::parseMemoryOperand(OperandVector &Operands) {
+ParseStatus LanaiAsmParser::parseMemoryOperand(OperandVector &Operands) {
   // Try to match a memory operand.
   // The memory operands are of the form:
   //  (1)  Register|Immediate|'' '[' '*'? Register '*'? ']' or
@@ -920,13 +912,13 @@ LanaiAsmParser::parseMemoryOperand(OperandVector &Operands) {
   // Only continue if next token is '['
   if (Lexer.isNot(AsmToken::LBrac)) {
     if (!Op)
-      return MatchOperand_NoMatch;
+      return ParseStatus::NoMatch;
 
     // The start of this custom parsing overlaps with register/immediate so
     // consider this as a successful match of an operand of that type as the
     // token stream can't be rewound to allow them to match separately.
     Operands.push_back(std::move(Op));
-    return MatchOperand_Success;
+    return ParseStatus::Success;
   }
 
   Parser.Lex(); // Eat the '['.
@@ -948,22 +940,19 @@ LanaiAsmParser::parseMemoryOperand(OperandVector &Operands) {
         if (shouldBeSls(*Op)) {
           Operands.push_back(LanaiOperand::MorphToMemImm(std::move(Op)));
         } else {
-          if (!Op->isLoImm16Signed()) {
-            Error(Parser.getTok().getLoc(),
-                  "Memory address is not word "
-                  "aligned and larger than class RM can handle");
-            return MatchOperand_ParseFail;
-          }
+          if (!Op->isLoImm16Signed())
+            return Error(Parser.getTok().getLoc(),
+                         "Memory address is not word aligned and larger than "
+                         "class RM can handle");
           Operands.push_back(LanaiOperand::MorphToMemRegImm(
               Lanai::R0, std::move(Op), LPAC::ADD));
         }
-        return MatchOperand_Success;
+        return ParseStatus::Success;
       }
     }
 
-    Error(Parser.getTok().getLoc(),
-          "Unknown operand, expected register or immediate");
-    return MatchOperand_ParseFail;
+    return Error(Parser.getTok().getLoc(),
+                 "Unknown operand, expected register or immediate");
   }
   BaseReg = Op->getReg();
 
@@ -983,20 +972,16 @@ LanaiAsmParser::parseMemoryOperand(OperandVector &Operands) {
       Offset = LanaiOperand::createImm(OffsetConstExpr, Start, End);
     }
   } else {
-    if (Offset || OffsetValue != 0) {
-      Error(Parser.getTok().getLoc(), "Expected ']'");
-      return MatchOperand_ParseFail;
-    }
+    if (Offset || OffsetValue != 0)
+      return Error(Parser.getTok().getLoc(), "Expected ']'");
 
     // Parse operator
     AluOp = parseAluOperator(PreOp, PostOp);
 
     // Second form requires offset register
     Offset = parseRegister();
-    if (!BaseReg || Lexer.isNot(AsmToken::RBrac)) {
-      Error(Parser.getTok().getLoc(), "Expected ']'");
-      return MatchOperand_ParseFail;
-    }
+    if (!BaseReg || Lexer.isNot(AsmToken::RBrac))
+      return Error(Parser.getTok().getLoc(), "Expected ']'");
     Parser.Lex(); // Eat the ']'.
   }
 
@@ -1005,33 +990,31 @@ LanaiAsmParser::parseMemoryOperand(OperandVector &Operands) {
   AluOp = AluWithPrePost(AluOp, PreOp, PostOp);
 
   // Ensure immediate offset is not too large
-  if (Offset->isImm() && !Offset->isLoImm16Signed()) {
-    Error(Parser.getTok().getLoc(),
-          "Memory address is not word "
-          "aligned and larger than class RM can handle");
-    return MatchOperand_ParseFail;
-  }
+  if (Offset->isImm() && !Offset->isLoImm16Signed())
+    return Error(Parser.getTok().getLoc(),
+                 "Memory address is not word aligned and larger than class RM "
+                 "can handle");
 
   Operands.push_back(
       Offset->isImm()
           ? LanaiOperand::MorphToMemRegImm(BaseReg, std::move(Offset), AluOp)
           : LanaiOperand::MorphToMemRegReg(BaseReg, std::move(Offset), AluOp));
 
-  return MatchOperand_Success;
+  return ParseStatus::Success;
 }
 
 // Looks at a token type and creates the relevant operand from this
 // information, adding to operands.
 // If operand was parsed, returns false, else true.
-OperandMatchResultTy
-LanaiAsmParser::parseOperand(OperandVector *Operands, StringRef Mnemonic) {
+ParseStatus LanaiAsmParser::parseOperand(OperandVector *Operands,
+                                         StringRef Mnemonic) {
   // Check if the current operand has a custom associated parser, if so, try to
   // custom parse the operand, or fallback to the general approach.
-  OperandMatchResultTy Result = MatchOperandParserImpl(*Operands, Mnemonic);
+  ParseStatus Result = MatchOperandParserImpl(*Operands, Mnemonic);
 
-  if (Result == MatchOperand_Success)
+  if (Result.isSuccess())
     return Result;
-  if (Result == MatchOperand_ParseFail) {
+  if (Result.isFailure()) {
     Parser.eatToEndOfStatement();
     return Result;
   }
@@ -1047,13 +1030,13 @@ LanaiAsmParser::parseOperand(OperandVector *Operands, StringRef Mnemonic) {
   if (!Op) {
     Error(Parser.getTok().getLoc(), "Unknown operand");
     Parser.eatToEndOfStatement();
-    return MatchOperand_ParseFail;
+    return ParseStatus::Failure;
   }
 
   // Push back parsed operand into list of operands
   Operands->push_back(std::move(Op));
 
-  return MatchOperand_Success;
+  return ParseStatus::Success;
 }
 
 // Split the mnemonic into ASM operand, conditional code and instruction
@@ -1193,7 +1176,7 @@ bool LanaiAsmParser::ParseInstruction(ParseInstructionInfo & /*Info*/,
     return false;
 
   // Parse first operand
-  if (parseOperand(&Operands, Mnemonic) != MatchOperand_Success)
+  if (!parseOperand(&Operands, Mnemonic).isSuccess())
     return true;
 
   // If it is a st instruction with one 1 operand then it is a "store true".
@@ -1223,7 +1206,7 @@ bool LanaiAsmParser::ParseInstruction(ParseInstructionInfo & /*Info*/,
     Lex();
 
     // Parse next operand
-    if (parseOperand(&Operands, Mnemonic) != MatchOperand_Success)
+    if (!parseOperand(&Operands, Mnemonic).isSuccess())
       return true;
   }
 

@@ -17,8 +17,9 @@
 #include <unordered_map>
 
 #include "Debug.h"
-#include "DeviceEnvironment.h"
+#include "Environment.h"
 #include "GlobalHandler.h"
+#include "OmptCallback.h"
 #include "PluginInterface.h"
 #include "omptarget.h"
 
@@ -49,14 +50,27 @@ using llvm::sys::DynamicLibrary;
 
 /// Class implementing kernel functionalities for GenELF64.
 struct GenELF64KernelTy : public GenericKernelTy {
-  /// Construct the kernel with a name, execution mode and a function.
-  GenELF64KernelTy(const char *Name, OMPTgtExecModeFlags ExecutionMode,
-                   void (*Func)(void))
-      : GenericKernelTy(Name, ExecutionMode), Func(Func) {}
+  /// Construct the kernel with a name and an execution mode.
+  GenELF64KernelTy(const char *Name, OMPTgtExecModeFlags ExecMode)
+      : GenericKernelTy(Name, ExecMode), Func(nullptr) {}
 
   /// Initialize the kernel.
-  Error initImpl(GenericDeviceTy &GenericDevice,
-                 DeviceImageTy &Image) override {
+  Error initImpl(GenericDeviceTy &Device, DeviceImageTy &Image) override {
+    // Functions have zero size.
+    GlobalTy Global(getName(), 0);
+
+    // Get the metadata (address) of the kernel function.
+    GenericGlobalHandlerTy &GHandler = Plugin::get().getGlobalHandler();
+    if (auto Err = GHandler.getGlobalMetadataFromDevice(Device, Image, Global))
+      return Err;
+
+    // Check that the function pointer is valid.
+    if (!Global.getPtr())
+      return Plugin::error("Invalid function for kernel %s", getName());
+
+    // Save the function pointer.
+    Func = (void (*)())Global.getPtr();
+
     // Set the maximum number of threads to a single.
     MaxNumThreads = 1;
     return Plugin::success();
@@ -83,10 +97,6 @@ struct GenELF64KernelTy : public GenericKernelTy {
 
     return Plugin::success();
   }
-
-  /// Get the default number of blocks and threads for the kernel.
-  uint32_t getDefaultNumBlocks(GenericDeviceTy &) const override { return 1; }
-  uint32_t getDefaultNumThreads(GenericDeviceTy &) const override { return 1; }
 
 private:
   /// The kernel function to execute.
@@ -122,24 +132,22 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
   /// Deinitialize the device, which is a no-op
   Error deinitImpl() override { return Plugin::success(); }
 
+  /// See GenericDeviceTy::getComputeUnitKind().
+  std::string getComputeUnitKind() const override { return "generic-64bit"; }
+
   /// Construct the kernel for a specific image on the device.
-  Expected<GenericKernelTy *>
-  constructKernelEntry(const __tgt_offload_entry &KernelEntry,
-                       DeviceImageTy &Image) override {
-    GlobalTy Func(KernelEntry);
-
-    // Get the metadata (address) of the kernel function.
-    GenericGlobalHandlerTy &GHandler = Plugin::get().getGlobalHandler();
-    if (auto Err = GHandler.getGlobalMetadataFromDevice(*this, Image, Func))
-      return std::move(Err);
-
-    // Allocate and create the kernel.
+  Expected<GenericKernelTy &>
+  constructKernel(const __tgt_offload_entry &KernelEntry,
+                  OMPTgtExecModeFlags ExecMode) override {
+    // Allocate and construct the kernel.
     GenELF64KernelTy *GenELF64Kernel =
         Plugin::get().allocate<GenELF64KernelTy>();
-    new (GenELF64Kernel) GenELF64KernelTy(
-        KernelEntry.name, OMP_TGT_EXEC_MODE_GENERIC, (void (*)())Func.getPtr());
+    if (!GenELF64Kernel)
+      return Plugin::error("Failed to allocate memory for GenELF64 kernel");
 
-    return GenELF64Kernel;
+    new (GenELF64Kernel) GenELF64KernelTy(KernelEntry.name, ExecMode);
+
+    return *GenELF64Kernel;
   }
 
   /// Set the current context to this device, which is a no-op.
@@ -215,6 +223,22 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
     return OFFLOAD_SUCCESS;
   }
 
+  /// This plugin does nothing to lock buffers. Do not return an error, just
+  /// return the same pointer as the device pointer.
+  Expected<void *> dataLockImpl(void *HstPtr, int64_t Size) override {
+    return HstPtr;
+  }
+
+  /// Nothing to do when unlocking the buffer.
+  Error dataUnlockImpl(void *HstPtr) override { return Plugin::success(); }
+
+  /// Indicate that the buffer is not pinned.
+  Expected<bool> isPinnedPtrImpl(void *HstPtr, void *&BaseHstPtr,
+                                 void *&BaseDevAccessiblePtr,
+                                 size_t &BaseSize) const override {
+    return false;
+  }
+
   /// Submit data to the device (host to device transfer).
   Error dataSubmitImpl(void *TgtPtr, const void *HstPtr, int64_t Size,
                        AsyncInfoWrapperTy &AsyncInfoWrapper) override {
@@ -278,8 +302,8 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
   Error syncEventImpl(void *EventPtr) override { return Plugin::success(); }
 
   /// Print information about the device.
-  Error printInfoImpl() override {
-    printf("    This is a generic-elf-64bit device\n");
+  Error obtainInfoImpl(InfoQueueTy &Info) override {
+    Info.add("Device Type", "Generic-elf-64bit");
     return Plugin::success();
   }
 
@@ -300,12 +324,20 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
   }
   Error setDeviceHeapSize(uint64_t Value) override { return Plugin::success(); }
 
+protected:
+  /// Retrieve the execution mode for kernels. All kernels use the generic mode.
+  Expected<OMPTgtExecModeFlags>
+  getExecutionModeForKernel(StringRef Name, DeviceImageTy &Image) override {
+    return OMP_TGT_EXEC_MODE_GENERIC;
+  }
+
 private:
   /// Grid values for Generic ELF64 plugins.
   static constexpr GV GenELF64GridValues = {
       1, // GV_Slot_Size
       1, // GV_Warp_Size
       1, // GV_Max_Teams
+      1, // GV_Default_Num_Teams
       1, // GV_SimpleBufferSize
       1, // GV_Max_WG_Size
       1, // GV_Default_WG_Size
@@ -347,7 +379,13 @@ struct GenELF64PluginTy final : public GenericPluginTy {
   GenELF64PluginTy(GenELF64PluginTy &&) = delete;
 
   /// Initialize the plugin and return the number of devices.
-  Expected<int32_t> initImpl() override { return NUM_DEVICES; }
+  Expected<int32_t> initImpl() override {
+#ifdef OMPT_SUPPORT
+    ompt::connectLibrary();
+#endif
+
+    return NUM_DEVICES;
+  }
 
   /// Deinitialize the plugin.
   Error deinitImpl() override { return Plugin::success(); }

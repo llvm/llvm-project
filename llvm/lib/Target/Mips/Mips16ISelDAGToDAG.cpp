@@ -47,16 +47,16 @@ Mips16DAGToDAGISel::selectMULT(SDNode *N, unsigned Opc, const SDLoc &DL, EVT Ty,
   SDNode *Lo = nullptr, *Hi = nullptr;
   SDNode *Mul = CurDAG->getMachineNode(Opc, DL, MVT::Glue, N->getOperand(0),
                                        N->getOperand(1));
-  SDValue InFlag = SDValue(Mul, 0);
+  SDValue InGlue = SDValue(Mul, 0);
 
   if (HasLo) {
     unsigned Opcode = Mips::Mflo16;
-    Lo = CurDAG->getMachineNode(Opcode, DL, Ty, MVT::Glue, InFlag);
-    InFlag = SDValue(Lo, 1);
+    Lo = CurDAG->getMachineNode(Opcode, DL, Ty, MVT::Glue, InGlue);
+    InGlue = SDValue(Lo, 1);
   }
   if (HasHi) {
     unsigned Opcode = Mips::Mfhi16;
-    Hi = CurDAG->getMachineNode(Opcode, DL, Ty, InFlag);
+    Hi = CurDAG->getMachineNode(Opcode, DL, Ty, InGlue);
   }
   return std::make_pair(Lo, Hi);
 }
@@ -220,6 +220,6 @@ bool Mips16DAGToDAGISel::trySelect(SDNode *Node) {
 }
 
 FunctionPass *llvm::createMips16ISelDag(MipsTargetMachine &TM,
-                                        CodeGenOpt::Level OptLevel) {
+                                        CodeGenOptLevel OptLevel) {
   return new Mips16DAGToDAGISel(TM, OptLevel);
 }

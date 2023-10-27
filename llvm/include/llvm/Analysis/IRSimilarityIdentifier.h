@@ -127,7 +127,7 @@ struct IRInstructionData
 
   /// This is only relevant if we are wrapping a CmpInst where we needed to
   /// change the predicate of a compare instruction from a greater than form
-  /// to a less than form.  It is None otherwise.
+  /// to a less than form.  It is std::nullopt otherwise.
   std::optional<CmpInst::Predicate> RevisedPredicate;
 
   /// This is only relevant if we are wrapping a CallInst. If we are requiring
@@ -225,6 +225,11 @@ struct IRInstructionData
   /// in the module.
   void
   setPHIPredecessors(DenseMap<BasicBlock *, unsigned> &BasicBlockToInteger);
+
+  /// Get the BasicBlock based operands for PHINodes and BranchInsts.
+  ///
+  /// \returns A list of relevant BasicBlocks.
+  ArrayRef<Value *> getBlockOperVals();
 
   /// Hashes \p Value based on its opcode, types, and operand types.
   /// Two IRInstructionData instances produce the same hash when they perform
@@ -763,6 +768,24 @@ public:
   static bool compareCommutativeOperandMapping(OperandMapping A,
                                                OperandMapping B);
 
+  /// Compare the GVN of the assignment value in corresponding instructions in
+  /// IRSimilarityCandidates \p A and \p B and check that there exists a mapping
+  /// between the values and replaces the mapping with a one-to-one value if
+  /// needed.
+  ///
+  /// \param InstValA - The assignment GVN from the first IRSimilarityCandidate.
+  /// \param InstValB - The assignment GVN from the second
+  /// IRSimilarityCandidate.
+  /// \param [in,out] ValueNumberMappingA - A mapping of value numbers from 
+  /// candidate \p A to candidate \B.
+  /// \param [in,out] ValueNumberMappingB - A mapping of value numbers from 
+  /// candidate \p B to candidate \A.
+  /// \returns true if the IRSimilarityCandidates assignments are compatible.
+  static bool compareAssignmentMapping(
+      const unsigned InstValA, const unsigned &InstValB,
+      DenseMap<unsigned, DenseSet<unsigned>> &ValueNumberMappingA,
+      DenseMap<unsigned, DenseSet<unsigned>> &ValueNumberMappingB);
+
   /// Compare the relative locations in \p A and \p B and check that the
   /// distances match if both locations are contained in the region, and that
   /// the branches both point outside the region if they do not.
@@ -827,6 +850,49 @@ public:
       IRSimilarityCandidate &SourceCand,
       DenseMap<unsigned, DenseSet<unsigned>> &ToSourceMapping,
       DenseMap<unsigned, DenseSet<unsigned>> &FromSourceMapping);
+  
+  /// Create a mapping for the value numbering of the calling
+  /// IRSimilarityCandidate, to a different separate set of numbers, based on
+  /// the canonical ordering in \p SourceCand. These are defined based on the
+  /// found mappings in \p ToSourceMapping and \p FromSourceMapping.  Both of
+  /// these relationships should have the same information, just in opposite
+  /// directions.  Uses the \p OneToOne mapping from target candidate to \p
+  /// SourceCand GVNs to determine the mapping first for values with multiple
+  /// mappings.  This mapping is created by the ordering of operands in the
+  /// instruction they are first seen in the candidates.
+  ///
+  /// \param [in, out] SourceCand - The IRSimilarityCandidate to create a
+  /// canonical numbering from.
+  /// \param [in,out] OneToOne - A mapping of value numbers from candidate
+  /// \p A to candidate \B using the structure of the original instructions.
+  /// \param ToSourceMapping - The mapping of value numbers from this candidate
+  /// to \p SourceCand.
+  /// \param FromSourceMapping - The mapping of value numbers from \p SoureCand
+  /// to this candidate.
+  void createCanonicalRelationFrom(
+      IRSimilarityCandidate &SourceCand,
+      DenseMap<unsigned, unsigned> &OneToOne,
+      DenseMap<unsigned, DenseSet<unsigned>> &ToSourceMapping,
+      DenseMap<unsigned, DenseSet<unsigned>> &FromSourceMapping);
+  
+  /// Create a mapping for the value numbering of the calling
+  /// IRSimilarityCandidate, to a different separate set of numbers, based on
+  /// the canonical ordering in \p SourceCand. These are defined based on the
+  /// canonical mapping defined between \p SoureCandLarge and
+  /// \p TargetCandLarge.  These IRSimilarityCandidates are already structurally
+  /// similar, and fully encapsulate the IRSimilarityCandidates in question.
+  /// These are used as a "bridge" from the \p SourceCand to the target.
+  ///
+  /// \param [in, out] SourceCand - The IRSimilarityCandidate to create a
+  /// canonical numbering from.
+  /// \param SoureCandLarge - The IRSimilarityCandidate fully containing
+  /// \p SourceCand.
+  /// \param TargetCandLarge -  The IRSimilarityCandidate fully containing
+  /// this Candidate.
+  void createCanonicalRelationFrom(
+      IRSimilarityCandidate &SourceCand,
+      IRSimilarityCandidate &SourceCandLarge,
+      IRSimilarityCandidate &TargetCandLarge);
 
   /// \param [in,out] BBSet - The set to track the basic blocks.
   void getBasicBlocks(DenseSet<BasicBlock *> &BBSet) const {

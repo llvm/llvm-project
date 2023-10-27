@@ -1,0 +1,12 @@
+; RUN: rm -rf %t
+; RUN: mkdir %t
+; RUN: cd %t
+; RUN: llvm-mc -dwarf-version=4 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf4-df-basic.s \
+; RUN: -split-dwarf-file=main.dwo -o main.o
+; RUN: %clang %cflags -gdwarf-4 -gsplit-dwarf=split main.o -o main.exe
+; RUN: llvm-bolt main.exe -o main.exe.bolt --update-debug-sections -v 1 &> log
+; RUN: cat log | FileCheck %s -check-prefix=BOLT-LOG-CHECK
+
+; Test check we don't print out a warning in -v 1 when Unit DIE doesn't have low_pc/high_pc
+
+; BOLT-LOG-CHECK-NOT: BOLT-ERROR: cannot update ranges for DIE in Unit offset

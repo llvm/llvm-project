@@ -46,16 +46,17 @@ using namespace mlir;
 
 namespace {
 
-class AffineLoadConversion : public OpConversionPattern<mlir::AffineLoadOp> {
+class AffineLoadConversion
+    : public OpConversionPattern<mlir::affine::AffineLoadOp> {
 public:
-  using OpConversionPattern<mlir::AffineLoadOp>::OpConversionPattern;
+  using OpConversionPattern<mlir::affine::AffineLoadOp>::OpConversionPattern;
 
   LogicalResult
-  matchAndRewrite(mlir::AffineLoadOp op, OpAdaptor adaptor,
+  matchAndRewrite(mlir::affine::AffineLoadOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     SmallVector<Value> indices(adaptor.getIndices());
-    auto maybeExpandedMap =
-        expandAffineMap(rewriter, op.getLoc(), op.getAffineMap(), indices);
+    auto maybeExpandedMap = affine::expandAffineMap(rewriter, op.getLoc(),
+                                                    op.getAffineMap(), indices);
     if (!maybeExpandedMap)
       return failure();
 
@@ -68,16 +69,17 @@ public:
   }
 };
 
-class AffineStoreConversion : public OpConversionPattern<mlir::AffineStoreOp> {
+class AffineStoreConversion
+    : public OpConversionPattern<mlir::affine::AffineStoreOp> {
 public:
-  using OpConversionPattern<mlir::AffineStoreOp>::OpConversionPattern;
+  using OpConversionPattern<mlir::affine::AffineStoreOp>::OpConversionPattern;
 
   LogicalResult
-  matchAndRewrite(mlir::AffineStoreOp op, OpAdaptor adaptor,
+  matchAndRewrite(mlir::affine::AffineStoreOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     SmallVector<Value> indices(op.getIndices());
-    auto maybeExpandedMap =
-        expandAffineMap(rewriter, op.getLoc(), op.getAffineMap(), indices);
+    auto maybeExpandedMap = affine::expandAffineMap(rewriter, op.getLoc(),
+                                                    op.getAffineMap(), indices);
     if (!maybeExpandedMap)
       return failure();
 

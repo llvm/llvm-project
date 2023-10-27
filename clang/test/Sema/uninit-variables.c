@@ -532,3 +532,22 @@ void test_analyzer_noreturn_2(int y) {
   }
   ++x; // no-warning
 }
+
+// Do not diagnose (functionally) empty structures as being uninitalized
+// variables; see GH26842
+struct empty {};
+struct full_of_empty {
+  int : 0;
+  int : 12;
+  struct empty e;
+};
+
+struct empty empty_test_1(void) {
+  struct empty e;
+  return e; // no-warning
+}
+
+struct full_of_empty empty_test_2(void) {
+  struct full_of_empty e;
+  return e; // no-warning
+}

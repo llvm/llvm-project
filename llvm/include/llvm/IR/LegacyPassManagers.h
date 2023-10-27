@@ -422,8 +422,8 @@ protected:
   SmallVector<Pass *, 16> PassVector;
 
   // Collection of Analysis provided by Parent pass manager and
-  // used by current pass manager. At at time there can not be more
-  // then PMT_Last active pass mangers.
+  // used by current pass manager. At any time there can not be more
+  // then PMT_Last active pass managers.
   DenseMap<AnalysisID, Pass *> *InheritedAnalysis[PMT_Last];
 
   /// isPassDebuggingExecutionsOrMore - Return true if -debug-pass=Executions

@@ -187,6 +187,31 @@ func.func @extract_construct(%val1: vector<2xf32>, %val2: vector<2xf32>) -> (vec
 
 // -----
 
+ // CHECK-LABEL: fold_composite_op
+ //  CHECK-SAME: (%[[COMP:.+]]: !spirv.struct<(f32, f32)>, %[[VAL1:.+]]: f32, %[[VAL2:.+]]: f32)
+  func.func @fold_composite_op(%composite: !spirv.struct<(f32, f32)>, %val1: f32, %val2: f32) -> f32 {
+    %insert = spirv.CompositeInsert %val1, %composite[0 : i32] : f32 into !spirv.struct<(f32, f32)>
+    %1 = spirv.CompositeInsert %val2, %insert[1 : i32] : f32 into !spirv.struct<(f32, f32)>
+    %2 = spirv.CompositeExtract %1[0 : i32] : !spirv.struct<(f32, f32)>
+    // CHECK-NEXT: return  %[[VAL1]]
+    return %2 : f32
+  }
+
+// -----
+
+ // CHECK-LABEL: fold_composite_op
+ //  CHECK-SAME: (%[[VAL1:.+]]: f32, %[[VAL2:.+]]: f32, %[[VAL3:.+]]: f32)
+  func.func @fold_composite_op(%val1: f32, %val2: f32, %val3: f32) -> f32 {
+    %composite = spirv.CompositeConstruct %val1, %val1, %val1 : (f32, f32, f32) -> !spirv.struct<(f32, f32, f32)>
+    %insert = spirv.CompositeInsert %val2, %composite[1 : i32] : f32 into !spirv.struct<(f32, f32, f32)>
+    %1 = spirv.CompositeInsert %val3, %insert[2 : i32] : f32 into !spirv.struct<(f32, f32, f32)>
+    %2 = spirv.CompositeExtract %1[0 : i32] : !spirv.struct<(f32, f32, f32)>
+    // CHECK-NEXT: return  %[[VAL1]]
+    return %2 : f32
+  }
+
+// -----
+
 // Not yet implemented case
 
 // CHECK-LABEL: extract_construct
@@ -298,6 +323,15 @@ func.func @const_fold_vector_iadd() -> vector<3xi32> {
   // CHECK: spirv.Constant dense<[39, -70, 155]>
   %0 = spirv.IAdd %vc1, %vc2 : vector<3xi32>
   return %0: vector<3xi32>
+}
+
+// CHECK-LABEL: @iadd_poison
+//       CHECK:   %[[P:.*]] = ub.poison : i32
+//       CHECK:   return %[[P]]
+func.func @iadd_poison(%arg0: i32) -> i32 {
+  %0 = ub.poison : i32
+  %1 = spirv.IAdd %arg0, %0 : i32
+  return %1: i32
 }
 
 // -----
@@ -424,6 +458,71 @@ func.func @const_fold_vector_isub() -> vector<3xi32> {
   // CHECK: spirv.Constant dense<[45, -40, 99]>
   %0 = spirv.ISub %vc1, %vc2 : vector<3xi32>
   return %0: vector<3xi32>
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.UMod
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @umod_fold
+// CHECK-SAME: (%[[ARG:.*]]: i32)
+func.func @umod_fold(%arg0: i32) -> (i32, i32) {
+  // CHECK: %[[CONST4:.*]] = spirv.Constant 4
+  // CHECK: %[[CONST32:.*]] = spirv.Constant 32
+  %const1 = spirv.Constant 32 : i32
+  %0 = spirv.UMod %arg0, %const1 : i32
+  %const2 = spirv.Constant 4 : i32
+  %1 = spirv.UMod %0, %const2 : i32
+  // CHECK: %[[UMOD0:.*]] = spirv.UMod %[[ARG]], %[[CONST32]]
+  // CHECK: %[[UMOD1:.*]] = spirv.UMod %[[ARG]], %[[CONST4]]
+  // CHECK: return %[[UMOD0]], %[[UMOD1]]
+  return %0, %1: i32, i32
+}
+
+// CHECK-LABEL: @umod_fail_vector_fold
+// CHECK-SAME: (%[[ARG:.*]]: vector<4xi32>)
+func.func @umod_fail_vector_fold(%arg0: vector<4xi32>) -> (vector<4xi32>, vector<4xi32>) {
+  // CHECK: %[[CONST4:.*]] = spirv.Constant dense<4> : vector<4xi32>
+  // CHECK: %[[CONST32:.*]] = spirv.Constant dense<32> : vector<4xi32>
+  %const1 = spirv.Constant dense<32> : vector<4xi32>
+  %0 = spirv.UMod %arg0, %const1 : vector<4xi32>
+  // CHECK: %[[UMOD0:.*]] = spirv.UMod %[[ARG]], %[[CONST32]]
+  %const2 = spirv.Constant dense<4> : vector<4xi32>
+  %1 = spirv.UMod %0, %const2 : vector<4xi32>
+  // CHECK: %[[UMOD1:.*]] = spirv.UMod %[[UMOD0]], %[[CONST4]]
+  // CHECK: return %[[UMOD0]], %[[UMOD1]]
+  return %0, %1: vector<4xi32>, vector<4xi32>
+} 
+
+// CHECK-LABEL: @umod_fold_same_divisor
+// CHECK-SAME: (%[[ARG:.*]]: i32)
+func.func @umod_fold_same_divisor(%arg0: i32) -> (i32, i32) {
+  // CHECK: %[[CONST1:.*]] = spirv.Constant 32
+  %const1 = spirv.Constant 32 : i32
+  %0 = spirv.UMod %arg0, %const1 : i32
+  %const2 = spirv.Constant 32 : i32
+  %1 = spirv.UMod %0, %const2 : i32
+  // CHECK: %[[UMOD0:.*]] = spirv.UMod %[[ARG]], %[[CONST1]]
+  // CHECK: %[[UMOD1:.*]] = spirv.UMod %[[ARG]], %[[CONST1]]
+  // CHECK: return %[[UMOD0]], %[[UMOD1]]
+  return %0, %1: i32, i32
+}
+
+// CHECK-LABEL: @umod_fail_fold
+// CHECK-SAME: (%[[ARG:.*]]: i32)
+func.func @umod_fail_fold(%arg0: i32) -> (i32, i32) {
+  // CHECK: %[[CONST5:.*]] = spirv.Constant 5
+  // CHECK: %[[CONST32:.*]] = spirv.Constant 32
+  %const1 = spirv.Constant 32 : i32
+  %0 = spirv.UMod %arg0, %const1 : i32
+  // CHECK: %[[UMOD0:.*]] = spirv.UMod %[[ARG]], %[[CONST32]]
+  %const2 = spirv.Constant 5 : i32
+  %1 = spirv.UMod %0, %const2 : i32
+  // CHECK: %[[UMOD1:.*]] = spirv.UMod %[[UMOD0]], %[[CONST5]]
+  // CHECK: return %[[UMOD0]], %[[UMOD1]]
+  return %0, %1: i32, i32
 }
 
 // -----

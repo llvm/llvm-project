@@ -13,6 +13,7 @@
 #include "llvm/Transforms/IPO/SampleProfileProbe.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
+#include "llvm/Analysis/EHUtils.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
@@ -32,7 +33,7 @@
 #include <vector>
 
 using namespace llvm;
-#define DEBUG_TYPE "sample-profile-probe"
+#define DEBUG_TYPE "pseudo-probe"
 
 STATISTIC(ArtificialDbgLine,
           "Number of probes that have an artificial debug line");
@@ -55,11 +56,7 @@ static uint64_t getCallStackHash(const DILocation *DIL) {
   while (InlinedAt) {
     Hash ^= MD5Hash(std::to_string(InlinedAt->getLine()));
     Hash ^= MD5Hash(std::to_string(InlinedAt->getColumn()));
-    const DISubprogram *SP = InlinedAt->getScope()->getSubprogram();
-    // Use linkage name for C++ if possible.
-    auto Name = SP->getLinkageName();
-    if (Name.empty())
-      Name = SP->getName();
+    auto Name = InlinedAt->getSubprogramLinkageName();
     Hash ^= MD5Hash(Name);
     InlinedAt = InlinedAt->getInlinedAt();
   }
@@ -98,13 +95,13 @@ void PseudoProbeVerifier::runAfterPass(StringRef PassID, Any IR) {
   std::string Banner =
       "\n*** Pseudo Probe Verification After " + PassID.str() + " ***\n";
   dbgs() << Banner;
-  if (const auto **M = any_cast<const Module *>(&IR))
+  if (const auto **M = llvm::any_cast<const Module *>(&IR))
     runAfterPass(*M);
-  else if (const auto **F = any_cast<const Function *>(&IR))
+  else if (const auto **F = llvm::any_cast<const Function *>(&IR))
     runAfterPass(*F);
-  else if (const auto **C = any_cast<const LazyCallGraph::SCC *>(&IR))
+  else if (const auto **C = llvm::any_cast<const LazyCallGraph::SCC *>(&IR))
     runAfterPass(*C);
-  else if (const auto **L = any_cast<const Loop *>(&IR))
+  else if (const auto **L = llvm::any_cast<const Loop *>(&IR))
     runAfterPass(*L);
   else
     llvm_unreachable("Unknown IR unit");
@@ -169,47 +166,6 @@ void PseudoProbeVerifier::verifyProbeFactors(
   }
 }
 
-PseudoProbeManager::PseudoProbeManager(const Module &M) {
-  if (NamedMDNode *FuncInfo = M.getNamedMetadata(PseudoProbeDescMetadataName)) {
-    for (const auto *Operand : FuncInfo->operands()) {
-      const auto *MD = cast<MDNode>(Operand);
-      auto GUID =
-          mdconst::dyn_extract<ConstantInt>(MD->getOperand(0))->getZExtValue();
-      auto Hash =
-          mdconst::dyn_extract<ConstantInt>(MD->getOperand(1))->getZExtValue();
-      GUIDToProbeDescMap.try_emplace(GUID, PseudoProbeDescriptor(GUID, Hash));
-    }
-  }
-}
-
-const PseudoProbeDescriptor *
-PseudoProbeManager::getDesc(const Function &F) const {
-  auto I = GUIDToProbeDescMap.find(
-      Function::getGUID(FunctionSamples::getCanonicalFnName(F)));
-  return I == GUIDToProbeDescMap.end() ? nullptr : &I->second;
-}
-
-bool PseudoProbeManager::moduleIsProbed(const Module &M) const {
-  return M.getNamedMetadata(PseudoProbeDescMetadataName);
-}
-
-bool PseudoProbeManager::profileIsValid(const Function &F,
-                                        const FunctionSamples &Samples) const {
-  const auto *Desc = getDesc(F);
-  if (!Desc) {
-    LLVM_DEBUG(dbgs() << "Probe descriptor missing for Function " << F.getName()
-                      << "\n");
-    return false;
-  } else {
-    if (Desc->getFunctionHash() != Samples.getFunctionHash()) {
-      LLVM_DEBUG(dbgs() << "Hash mismatch for Function " << F.getName()
-                        << "\n");
-      return false;
-    }
-  }
-  return true;
-}
-
 SampleProfileProber::SampleProfileProber(Function &Func,
                                          const std::string &CurModuleUniqueId)
     : F(&Func), CurModuleUniqueId(CurModuleUniqueId) {
@@ -253,8 +209,14 @@ void SampleProfileProber::computeCFGHash() {
 }
 
 void SampleProfileProber::computeProbeIdForBlocks() {
+  DenseSet<BasicBlock *> KnownColdBlocks;
+  computeEHOnlyBlocks(*F, KnownColdBlocks);
+  // Insert pseudo probe to non-cold blocks only. This will reduce IR size as
+  // well as the binary size while retaining the profile quality.
   for (auto &BB : *F) {
-    BlockProbeIds[&BB] = ++LastProbeId;
+    ++LastProbeId;
+    if (!KnownColdBlocks.contains(&BB))
+      BlockProbeIds[&BB] = LastProbeId;
   }
 }
 
@@ -283,9 +245,16 @@ uint32_t SampleProfileProber::getCallsiteId(const Instruction *Call) const {
 void SampleProfileProber::instrumentOneFunc(Function &F, TargetMachine *TM) {
   Module *M = F.getParent();
   MDBuilder MDB(F.getContext());
-  // Compute a GUID without considering the function's linkage type. This is
-  // fine since function name is the only key in the profile database.
-  uint64_t Guid = Function::getGUID(F.getName());
+  // Since the GUID from probe desc and inline stack are computed seperately, we
+  // need to make sure their names are consistent, so here also use the name
+  // from debug info.
+  StringRef FName = F.getName();
+  if (auto *SP = F.getSubprogram()) {
+    FName = SP->getLinkageName();
+    if (FName.empty())
+      FName = SP->getName();
+  }
+  uint64_t Guid = Function::getGUID(FName);
 
   // Assign an artificial debug line to a probe that doesn't come with a real
   // line. A probe not having a debug line will get an incomplete inline
@@ -339,6 +308,14 @@ void SampleProfileProber::instrumentOneFunc(Function &F, TargetMachine *TM) {
                      Builder.getInt64(PseudoProbeFullDistributionFactor)};
     auto *Probe = Builder.CreateCall(ProbeFn, Args);
     AssignDebugLoc(Probe);
+    // Reset the dwarf discriminator if the debug location comes with any. The
+    // discriminator field may be used by FS-AFDO later in the pipeline.
+    if (auto DIL = Probe->getDebugLoc()) {
+      if (DIL->getDiscriminator()) {
+        DIL = DIL->cloneWithDiscriminator(0);
+        Probe->setDebugLoc(DIL);
+      }
+    }
   }
 
   // Probe both direct calls and indirect calls. Direct calls are probed so that
@@ -351,12 +328,13 @@ void SampleProfileProber::instrumentOneFunc(Function &F, TargetMachine *TM) {
                         ? (uint32_t)PseudoProbeType::DirectCall
                         : (uint32_t)PseudoProbeType::IndirectCall;
     AssignDebugLoc(Call);
-    // Levarge the 32-bit discriminator field of debug data to store the ID and
-    // type of a callsite probe. This gets rid of the dependency on plumbing a
-    // customized metadata through the codegen pipeline.
-    uint32_t V = PseudoProbeDwarfDiscriminator::packProbeData(
-        Index, Type, 0, PseudoProbeDwarfDiscriminator::FullDistributionFactor);
     if (auto DIL = Call->getDebugLoc()) {
+      // Levarge the 32-bit discriminator field of debug data to store the ID
+      // and type of a callsite probe. This gets rid of the dependency on
+      // plumbing a customized metadata through the codegen pipeline.
+      uint32_t V = PseudoProbeDwarfDiscriminator::packProbeData(
+          Index, Type, 0,
+          PseudoProbeDwarfDiscriminator::FullDistributionFactor);
       DIL = DIL->cloneWithDiscriminator(V);
       Call->setDebugLoc(DIL);
     }
@@ -368,28 +346,10 @@ void SampleProfileProber::instrumentOneFunc(Function &F, TargetMachine *TM) {
   // - FunctionHash.
   // - FunctionName
   auto Hash = getFunctionHash();
-  auto *MD = MDB.createPseudoProbeDesc(Guid, Hash, &F);
+  auto *MD = MDB.createPseudoProbeDesc(Guid, Hash, FName);
   auto *NMD = M->getNamedMetadata(PseudoProbeDescMetadataName);
   assert(NMD && "llvm.pseudo_probe_desc should be pre-created");
   NMD->addOperand(MD);
-
-  // Preserve a comdat group to hold all probes materialized later. This
-  // allows that when the function is considered dead and removed, the
-  // materialized probes are disposed too.
-  // Imported functions are defined in another module. They do not need
-  // the following handling since same care will be taken for them in their
-  // original module. The pseudo probes inserted into an imported functions
-  // above will naturally not be emitted since the imported function is free
-  // from object emission. However they will be emitted together with the
-  // inliner functions that the imported function is inlined into. We are not
-  // creating a comdat group for an import function since it's useless anyway.
-  if (!F.isDeclarationForLinker()) {
-    if (TM) {
-      auto Triple = TM->getTargetTriple();
-      if (Triple.supportsCOMDAT() && TM->getFunctionSections())
-        getOrCreateFunctionComdat(F, Triple);
-    }
-  }
 }
 
 PreservedAnalyses SampleProfileProbePass::run(Module &M,

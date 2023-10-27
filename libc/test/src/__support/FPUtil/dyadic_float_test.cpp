@@ -8,13 +8,13 @@
 
 #include "src/__support/FPUtil/dyadic_float.h"
 #include "src/__support/UInt.h"
+#include "test/UnitTest/FPMatcher.h"
+#include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
-#include "utils/UnitTest/FPMatcher.h"
-#include "utils/UnitTest/Test.h"
 
-using Float128 = __llvm_libc::fputil::DyadicFloat<128>;
-using Float192 = __llvm_libc::fputil::DyadicFloat<192>;
-using Float256 = __llvm_libc::fputil::DyadicFloat<256>;
+using Float128 = LIBC_NAMESPACE::fputil::DyadicFloat<128>;
+using Float192 = LIBC_NAMESPACE::fputil::DyadicFloat<192>;
+using Float256 = LIBC_NAMESPACE::fputil::DyadicFloat<256>;
 
 TEST(LlvmLibcDyadicFloatTest, BasicConversions) {
   Float128 x(/*sign*/ false, /*exponent*/ 0,

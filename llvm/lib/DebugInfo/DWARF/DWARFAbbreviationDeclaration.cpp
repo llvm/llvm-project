@@ -34,22 +34,32 @@ DWARFAbbreviationDeclaration::DWARFAbbreviationDeclaration() {
   clear();
 }
 
-bool
-DWARFAbbreviationDeclaration::extract(DataExtractor Data,
-                                      uint64_t* OffsetPtr) {
+llvm::Expected<DWARFAbbreviationDeclaration::ExtractState>
+DWARFAbbreviationDeclaration::extract(DataExtractor Data, uint64_t *OffsetPtr) {
   clear();
   const uint64_t Offset = *OffsetPtr;
-  Code = Data.getULEB128(OffsetPtr);
-  if (Code == 0) {
-    return false;
-  }
+  Error Err = Error::success();
+  Code = Data.getULEB128(OffsetPtr, &Err);
+  if (Err)
+    return std::move(Err);
+
+  if (Code == 0)
+    return ExtractState::Complete;
+
   CodeByteSize = *OffsetPtr - Offset;
-  Tag = static_cast<llvm::dwarf::Tag>(Data.getULEB128(OffsetPtr));
+  Tag = static_cast<llvm::dwarf::Tag>(Data.getULEB128(OffsetPtr, &Err));
+  if (Err)
+    return std::move(Err);
+
   if (Tag == DW_TAG_null) {
     clear();
-    return false;
+    return make_error<llvm::object::GenericBinaryError>(
+        "abbreviation declaration requires a non-null tag");
   }
-  uint8_t ChildrenByte = Data.getU8(OffsetPtr);
+  uint8_t ChildrenByte = Data.getU8(OffsetPtr, &Err);
+  if (Err)
+    return std::move(Err);
+
   HasChildren = (ChildrenByte == DW_CHILDREN_yes);
   // Assign a value to our optional FixedAttributeSize member variable. If
   // this member variable still has a value after the while loop below, then
@@ -57,70 +67,82 @@ DWARFAbbreviationDeclaration::extract(DataExtractor Data,
   FixedAttributeSize = FixedSizeInfo();
 
   // Read all of the abbreviation attributes and forms.
-  while (true) {
-    auto A = static_cast<Attribute>(Data.getULEB128(OffsetPtr));
-    auto F = static_cast<Form>(Data.getULEB128(OffsetPtr));
-    if (A && F) {
-      bool IsImplicitConst = (F == DW_FORM_implicit_const);
-      if (IsImplicitConst) {
-        int64_t V = Data.getSLEB128(OffsetPtr);
-        AttributeSpecs.push_back(AttributeSpec(A, F, V));
-        continue;
-      }
-      std::optional<uint8_t> ByteSize;
-      // If this abbrevation still has a fixed byte size, then update the
-      // FixedAttributeSize as needed.
-      switch (F) {
-      case DW_FORM_addr:
-        if (FixedAttributeSize)
-          ++FixedAttributeSize->NumAddrs;
-        break;
+  while (Data.isValidOffset(*OffsetPtr)) {
+    auto A = static_cast<Attribute>(Data.getULEB128(OffsetPtr, &Err));
+    if (Err)
+      return std::move(Err);
 
-      case DW_FORM_ref_addr:
-        if (FixedAttributeSize)
-          ++FixedAttributeSize->NumRefAddrs;
-        break;
+    auto F = static_cast<Form>(Data.getULEB128(OffsetPtr, &Err));
+    if (Err)
+      return std::move(Err);
 
-      case DW_FORM_strp:
-      case DW_FORM_GNU_ref_alt:
-      case DW_FORM_GNU_strp_alt:
-      case DW_FORM_line_strp:
-      case DW_FORM_sec_offset:
-      case DW_FORM_strp_sup:
-        if (FixedAttributeSize)
-          ++FixedAttributeSize->NumDwarfOffsets;
-        break;
+    // We successfully reached the end of this abbreviation declaration
+    // since both attribute and form are zero. There may be more abbreviation
+    // declarations afterwards.
+    if (!A && !F)
+      return ExtractState::MoreItems;
 
-      default:
-        // The form has a byte size that doesn't depend on Params.
-        // If it's a fixed size, keep track of it.
-        if ((ByteSize = dwarf::getFixedFormByteSize(F, dwarf::FormParams()))) {
-          if (FixedAttributeSize)
-            FixedAttributeSize->NumBytes += *ByteSize;
-          break;
-        }
-        // Indicate we no longer have a fixed byte size for this
-        // abbreviation by clearing the FixedAttributeSize optional value
-        // so it doesn't have a value.
-        FixedAttributeSize.reset();
-        break;
-      }
-      // Record this attribute and its fixed size if it has one.
-      AttributeSpecs.push_back(AttributeSpec(A, F, ByteSize));
-    } else if (A == 0 && F == 0) {
-      // We successfully reached the end of this abbreviation declaration
-      // since both attribute and form are zero.
-      break;
-    } else {
+    if (!A || !F) {
       // Attribute and form pairs must either both be non-zero, in which case
       // they are added to the abbreviation declaration, or both be zero to
       // terminate the abbrevation declaration. In this case only one was
       // zero which is an error.
       clear();
-      return false;
+      return make_error<llvm::object::GenericBinaryError>(
+          "malformed abbreviation declaration attribute. Either the attribute "
+          "or the form is zero while the other is not");
     }
+
+    bool IsImplicitConst = (F == DW_FORM_implicit_const);
+    if (IsImplicitConst) {
+      int64_t V = Data.getSLEB128(OffsetPtr);
+      AttributeSpecs.push_back(AttributeSpec(A, F, V));
+      continue;
+    }
+    std::optional<uint8_t> ByteSize;
+    // If this abbrevation still has a fixed byte size, then update the
+    // FixedAttributeSize as needed.
+    switch (F) {
+    case DW_FORM_addr:
+      if (FixedAttributeSize)
+        ++FixedAttributeSize->NumAddrs;
+      break;
+
+    case DW_FORM_ref_addr:
+      if (FixedAttributeSize)
+        ++FixedAttributeSize->NumRefAddrs;
+      break;
+
+    case DW_FORM_strp:
+    case DW_FORM_GNU_ref_alt:
+    case DW_FORM_GNU_strp_alt:
+    case DW_FORM_line_strp:
+    case DW_FORM_sec_offset:
+    case DW_FORM_strp_sup:
+      if (FixedAttributeSize)
+        ++FixedAttributeSize->NumDwarfOffsets;
+      break;
+
+    default:
+      // The form has a byte size that doesn't depend on Params.
+      // If it's a fixed size, keep track of it.
+      if ((ByteSize = dwarf::getFixedFormByteSize(F, dwarf::FormParams()))) {
+        if (FixedAttributeSize)
+          FixedAttributeSize->NumBytes += *ByteSize;
+        break;
+      }
+      // Indicate we no longer have a fixed byte size for this
+      // abbreviation by clearing the FixedAttributeSize optional value
+      // so it doesn't have a value.
+      FixedAttributeSize.reset();
+      break;
+    }
+    // Record this attribute and its fixed size if it has one.
+    AttributeSpecs.push_back(AttributeSpec(A, F, ByteSize));
   }
-  return true;
+  return make_error<llvm::object::GenericBinaryError>(
+      "abbreviation declaration attribute list was not terminated with a null "
+      "entry");
 }
 
 void DWARFAbbreviationDeclaration::dump(raw_ostream &OS) const {

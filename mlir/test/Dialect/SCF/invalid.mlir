@@ -1,7 +1,7 @@
 // RUN: mlir-opt -allow-unregistered-dialect %s -split-input-file -verify-diagnostics
 
 func.func @loop_for_lb(%arg0: f32, %arg1: index) {
-  // expected-error@+1 {{operand #0 must be index}}
+  // expected-error@+1 {{operand #0 must be signless integer or index}}
   "scf.for"(%arg0, %arg1, %arg1) ({}) : (f32, index, index) -> ()
   return
 }
@@ -9,7 +9,7 @@ func.func @loop_for_lb(%arg0: f32, %arg1: index) {
 // -----
 
 func.func @loop_for_ub(%arg0: f32, %arg1: index) {
-  // expected-error@+1 {{operand #1 must be index}}
+  // expected-error@+1 {{operand #1 must be signless integer or index}}
   "scf.for"(%arg1, %arg0, %arg1) ({}) : (index, f32, index) -> ()
   return
 }
@@ -17,8 +17,16 @@ func.func @loop_for_ub(%arg0: f32, %arg1: index) {
 // -----
 
 func.func @loop_for_step(%arg0: f32, %arg1: index) {
-  // expected-error@+1 {{operand #2 must be index}}
+  // expected-error@+1 {{operand #2 must be signless integer or index}}
   "scf.for"(%arg1, %arg1, %arg0) ({}) : (index, index, f32) -> ()
+  return
+}
+
+// -----
+
+func.func @loop_for_mismatch(%arg0: i32, %arg1: index) {
+  // expected-error@+1 {{all of {lowerBound, upperBound, step} have same type}}
+  "scf.for"(%arg1, %arg0, %arg1) ({}) : (index, i32, index) -> ()
   return
 }
 
@@ -63,13 +71,52 @@ func.func @loop_for_single_block(%arg0: index) {
 // -----
 
 func.func @loop_for_single_index_argument(%arg0: index) {
-  // expected-error@+1 {{op expected body first argument to be an index argument for the induction variable}}
+  // expected-error@+1 {{expected induction variable to be same type as bounds}}
   "scf.for"(%arg0, %arg0, %arg0) (
     {
     ^bb0(%i0 : f32):
       scf.yield
     }
   ) : (index, index, index) -> ()
+  return
+}
+
+// -----
+
+func.func @not_enough_loop_results(%arg0: index, %init: f32) {
+  // expected-error @below{{mismatch in number of loop-carried values and defined values}}
+  "scf.for"(%arg0, %arg0, %arg0, %init) (
+    {
+    ^bb0(%i0 : index, %iter: f32):
+      scf.yield %iter : f32
+    }
+  ) : (index, index, index, f32) -> ()
+  return
+}
+
+// -----
+
+func.func @too_many_iter_args(%arg0: index, %init: f32) {
+  // expected-error @below{{different number of inits and region iter_args: 1 != 2}}
+  %x = "scf.for"(%arg0, %arg0, %arg0, %init) (
+    {
+    ^bb0(%i0 : index, %iter: f32, %iter2: f32):
+      scf.yield %iter, %iter : f32, f32
+    }
+  ) : (index, index, index, f32) -> (f32)
+  return
+}
+
+// -----
+
+func.func @too_few_yielded_values(%arg0: index, %init: f32) {
+  // expected-error @below{{different number of region iter_args and yielded values: 2 != 1}}
+  %x, %x2 = "scf.for"(%arg0, %arg0, %arg0, %init, %init) (
+    {
+    ^bb0(%i0 : index, %iter: f32, %iter2: f32):
+      scf.yield %iter : f32
+    }
+  ) : (index, index, index, f32, f32) -> (f32, f32)
   return
 }
 
@@ -131,7 +178,7 @@ func.func @parallel_body_arguments_wrong_type(
   "scf.parallel"(%arg0, %arg1, %arg2) ({
     ^bb0(%i0: f32):
       scf.yield
-  }) {operand_segment_sizes = array<i32: 1, 1, 1, 0>}: (index, index, index) -> ()
+  }) {operandSegmentSizes = array<i32: 1, 1, 1, 0>}: (index, index, index) -> ()
   return
 }
 
@@ -143,7 +190,7 @@ func.func @parallel_body_wrong_number_of_arguments(
   "scf.parallel"(%arg0, %arg1, %arg2) ({
     ^bb0(%i0: index, %i1: index):
       scf.yield
-  }) {operand_segment_sizes = array<i32: 1, 1, 1, 0>}: (index, index, index) -> ()
+  }) {operandSegmentSizes = array<i32: 1, 1, 1, 0>}: (index, index, index) -> ()
   return
 }
 
@@ -401,7 +448,8 @@ func.func @std_for_operands_mismatch_3(%arg0 : index, %arg1 : index, %arg2 : ind
 func.func @std_for_operands_mismatch_4(%arg0 : index, %arg1 : index, %arg2 : index) {
   %s0 = arith.constant 0.0 : f32
   %t0 = arith.constant 1.0 : f32
-  // expected-error @+1 {{along control flow edge from Region #0 to Region #0: source type #1 'i32' should match input type #1 'f32'}}
+  // expected-error @below {{1-th region iter_arg and 1-th yielded value have different type: 'f32' != 'i32'}}
+  // expected-error @below {{along control flow edge from Region #0 to Region #0: source type #1 'i32' should match input type #1 'f32'}}
   %result1:2 = scf.for %i0 = %arg0 to %arg1 step %arg2
                     iter_args(%si = %s0, %ti = %t0) -> (f32, f32) {
     %sn = arith.addf %si, %si : f32
@@ -410,7 +458,6 @@ func.func @std_for_operands_mismatch_4(%arg0 : index, %arg1 : index, %arg2 : ind
   }
   return
 }
-
 
 // -----
 
@@ -470,11 +517,25 @@ func.func @while_empty_region() {
 // -----
 
 func.func @while_empty_block() {
-  // expected-error@+1 {{expects the 'before' region to terminate with 'scf.condition'}}
+  // expected-error @below {{expects a non-empty block}}
   scf.while : () -> () {
-   ^bb0:
+  ^bb0:
   } do {
-   ^bb0:
+  ^bb0:
+  }
+}
+
+// -----
+
+func.func @while_invalid_terminator() {
+  // expected-error @below {{expects the 'before' region to terminate with 'scf.condition'}}
+  scf.while : () -> () {
+  ^bb0:
+    // expected-note @below{{terminator here}}
+    "test.foo"() : () -> ()
+  } do {
+  ^bb0:
+    "test.bar"() : () -> ()
   }
 }
 
@@ -548,9 +609,9 @@ func.func @wrong_num_results(%in: tensor<100xf32>, %out: tensor<100xf32>) {
   %num_threads = arith.constant 100 : index
 
   // expected-error @+1 {{1 operands present, but expected 2}}
-  %result:2 = scf.foreach_thread (%thread_idx) in (%num_threads) shared_outs(%o = %out) -> (tensor<100xf32>, tensor<100xf32>) {
+  %result:2 = scf.forall (%thread_idx) in (%num_threads) shared_outs(%o = %out) -> (tensor<100xf32>, tensor<100xf32>) {
       %1 = tensor.extract_slice %in[%thread_idx][1][1] : tensor<100xf32> to tensor<1xf32>
-      scf.foreach_thread.perform_concurrently {
+      scf.forall.in_parallel {
         tensor.parallel_insert_slice %1 into %o[%thread_idx][1][1] :
           tensor<1xf32> into tensor<100xf32>
       }
@@ -564,9 +625,9 @@ func.func @invalid_insert_dest(%in: tensor<100xf32>, %out: tensor<100xf32>) {
   %c1 = arith.constant 1 : index
   %num_threads = arith.constant 100 : index
 
-  %result = scf.foreach_thread (%thread_idx) in (%num_threads) shared_outs(%o = %out) -> (tensor<100xf32>) {
+  %result = scf.forall (%thread_idx) in (%num_threads) shared_outs(%o = %out) -> (tensor<100xf32>) {
       %1 = tensor.extract_slice %in[%thread_idx][1][1] : tensor<100xf32> to tensor<1xf32>
-      scf.foreach_thread.perform_concurrently {
+      scf.forall.in_parallel {
         // expected-error @+1 {{may only insert into an output block argument}}
         tensor.parallel_insert_slice %1 into %out[%thread_idx][1][1] :
           tensor<1xf32> into tensor<100xf32>
@@ -581,10 +642,10 @@ func.func @wrong_terminator_op(%in: tensor<100xf32>, %out: tensor<100xf32>) {
   %c1 = arith.constant 1 : index
   %num_threads = arith.constant 100 : index
 
-  %result = scf.foreach_thread (%thread_idx) in (%num_threads) shared_outs(%o = %out) -> (tensor<100xf32>) {
+  %result = scf.forall (%thread_idx) in (%num_threads) shared_outs(%o = %out) -> (tensor<100xf32>) {
       %1 = tensor.extract_slice %in[%thread_idx][1][1] : tensor<100xf32> to tensor<1xf32>
       // expected-error @+1 {{expected only tensor.parallel_insert_slice ops}}
-      scf.foreach_thread.perform_concurrently {
+      scf.forall.in_parallel {
         tensor.parallel_insert_slice %1 into %o[%thread_idx][1][1] :
           tensor<1xf32> into tensor<100xf32>
         %0 = arith.constant 1: index
@@ -598,8 +659,8 @@ func.func @wrong_terminator_op(%in: tensor<100xf32>, %out: tensor<100xf32>) {
 func.func @mismatched_mapping(%x: memref<2 x 32 x f32>, %y: memref<2 x 32 x f32>, %t: memref<32 x f32>, %alpha : f32, %stream : !gpu.async.token) -> memref<2 x 32 x f32> {
   %one = arith.constant 1 : index
   %c65535 = arith.constant 65535 : index
-  // expected-error @below {{'scf.foreach_thread' op mapping attribute size must match op rank}}
-  scf.foreach_thread (%i, %j) in (%c65535, %c65535) {
+  // expected-error @below {{'scf.forall' op mapping attribute size must match op rank}}
+  scf.forall (%i, %j) in (%c65535, %c65535) {
       %4 = memref.load %x[%i, %j] : memref<2 x 32 x f32>
       %5 = memref.load %y[%i, %j] : memref<2 x 32 x f32>
       %6 = math.fma %alpha, %4, %5 : f32
@@ -681,7 +742,7 @@ func.func @parallel_missing_terminator(%0 : index) {
   ^bb0(%arg1: index):
     // expected-note @below {{terminator here}}
     %2 = "arith.constant"() {value = 1.000000e+00 : f32} : () -> f32
-  }) {operand_segment_sizes = array<i32: 1, 1, 1, 0>} : (index, index, index) -> ()
+  }) {operandSegmentSizes = array<i32: 1, 1, 1, 0>} : (index, index, index) -> ()
   return
 }
 

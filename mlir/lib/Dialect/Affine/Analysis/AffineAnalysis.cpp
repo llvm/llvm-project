@@ -31,6 +31,7 @@
 #define DEBUG_TYPE "affine-analysis"
 
 using namespace mlir;
+using namespace affine;
 using namespace presburger;
 
 /// Get the value that is being reduced by `pos`-th reduction in the loop if
@@ -59,8 +60,10 @@ static Value getSupportedReduction(AffineForOp forOp, unsigned pos,
           .Case([](arith::AndIOp) { return arith::AtomicRMWKind::andi; })
           .Case([](arith::OrIOp) { return arith::AtomicRMWKind::ori; })
           .Case([](arith::MulIOp) { return arith::AtomicRMWKind::muli; })
-          .Case([](arith::MinFOp) { return arith::AtomicRMWKind::minf; })
-          .Case([](arith::MaxFOp) { return arith::AtomicRMWKind::maxf; })
+          .Case(
+              [](arith::MinimumFOp) { return arith::AtomicRMWKind::minimumf; })
+          .Case(
+              [](arith::MaximumFOp) { return arith::AtomicRMWKind::maximumf; })
           .Case([](arith::MinSIOp) { return arith::AtomicRMWKind::mins; })
           .Case([](arith::MaxSIOp) { return arith::AtomicRMWKind::maxs; })
           .Case([](arith::MinUIOp) { return arith::AtomicRMWKind::minu; })
@@ -78,7 +81,7 @@ static Value getSupportedReduction(AffineForOp forOp, unsigned pos,
 }
 
 /// Populate `supportedReductions` with descriptors of the supported reductions.
-void mlir::getSupportedReductions(
+void mlir::affine::getSupportedReductions(
     AffineForOp forOp, SmallVectorImpl<LoopReduction> &supportedReductions) {
   unsigned numIterArgs = forOp.getNumIterOperands();
   if (numIterArgs == 0)
@@ -94,8 +97,8 @@ void mlir::getSupportedReductions(
 /// Returns true if `forOp' is a parallel loop. If `parallelReductions` is
 /// provided, populates it with descriptors of the parallelizable reductions and
 /// treats them as not preventing parallelization.
-bool mlir::isLoopParallel(AffineForOp forOp,
-                          SmallVectorImpl<LoopReduction> *parallelReductions) {
+bool mlir::affine::isLoopParallel(
+    AffineForOp forOp, SmallVectorImpl<LoopReduction> *parallelReductions) {
   unsigned numIterArgs = forOp.getNumIterOperands();
 
   // Loop is not parallel if it has SSA loop-carried dependences and reduction
@@ -132,10 +135,10 @@ static bool isLocallyDefined(Value v, Operation *enclosingOp) {
   return viewOp && isLocallyDefined(viewOp.getViewSource(), enclosingOp);
 }
 
-bool mlir::isLoopMemoryParallel(AffineForOp forOp) {
+bool mlir::affine::isLoopMemoryParallel(AffineForOp forOp) {
   // Any memref-typed iteration arguments are treated as serializing.
   if (llvm::any_of(forOp.getResultTypes(),
-                   [](Type type) { return type.isa<BaseMemRefType>(); }))
+                   [](Type type) { return isa<BaseMemRefType>(type); }))
     return false;
 
   // Collect all load and store ops in loop nest rooted at 'forOp'.
@@ -172,10 +175,8 @@ bool mlir::isLoopMemoryParallel(AffineForOp forOp) {
     MemRefAccess srcAccess(srcOp);
     for (auto *dstOp : loadAndStoreOps) {
       MemRefAccess dstAccess(dstOp);
-      FlatAffineValueConstraints dependenceConstraints;
-      DependenceResult result = checkMemrefAccessDependence(
-          srcAccess, dstAccess, depth, &dependenceConstraints,
-          /*dependenceComponents=*/nullptr);
+      DependenceResult result =
+          checkMemrefAccessDependence(srcAccess, dstAccess, depth);
       if (result.value != DependenceResult::NoDependence)
         return false;
     }
@@ -188,7 +189,7 @@ bool mlir::isLoopMemoryParallel(AffineForOp forOp) {
 /// and ending at operands which are not defined by AffineApplyOps.
 // TODO: Add a method to AffineApplyOp which forward substitutes the
 // AffineApplyOp into any user AffineApplyOps.
-void mlir::getReachableAffineApplyOps(
+void mlir::affine::getReachableAffineApplyOps(
     ArrayRef<Value> operands, SmallVectorImpl<Operation *> &affineApplyOps) {
   struct State {
     // The ssa value for this node in the DFS traversal.
@@ -238,8 +239,8 @@ void mlir::getReachableAffineApplyOps(
 // FlatAffineValueConstraints. (For eg., by using iv - lb % step = 0 and/or by
 // introducing a method in FlatAffineValueConstraints
 // setExprStride(ArrayRef<int64_t> expr, int64_t stride)
-LogicalResult mlir::getIndexSet(MutableArrayRef<Operation *> ops,
-                                FlatAffineValueConstraints *domain) {
+LogicalResult mlir::affine::getIndexSet(MutableArrayRef<Operation *> ops,
+                                        FlatAffineValueConstraints *domain) {
   SmallVector<Value, 4> indices;
   SmallVector<Operation *, 8> loopOps;
   size_t numDims = 0;
@@ -260,7 +261,8 @@ LogicalResult mlir::getIndexSet(MutableArrayRef<Operation *> ops,
   }
   extractInductionVars(loopOps, indices);
   // Reset while associating Values in 'indices' to the domain.
-  domain->reset(numDims, /*numSymbols=*/0, /*numLocals=*/0, indices);
+  *domain = FlatAffineValueConstraints(numDims, /*numSymbols=*/0,
+                                       /*numLocals=*/0, indices);
   for (Operation *op : ops) {
     // Add constraints from forOp's bounds.
     if (AffineForOp forOp = dyn_cast<AffineForOp>(op)) {
@@ -285,14 +287,6 @@ static LogicalResult getOpIndexSet(Operation *op,
   SmallVector<Operation *, 4> ops;
   getEnclosingAffineOps(*op, &ops);
   return getIndexSet(ops, indexSet);
-}
-
-/// Returns true if `val` is an induction of an affine.parallel op.
-static bool isAffineParallelInductionVar(Value val) {
-  auto ivArg = val.dyn_cast<BlockArgument>();
-  if (!ivArg)
-    return false;
-  return isa<AffineParallelOp>(ivArg.getOwner()->getParentOp());
 }
 
 // Returns the number of outer loop common to 'src/dstDomain'.
@@ -322,9 +316,10 @@ getNumCommonLoops(const FlatAffineValueConstraints &srcDomain,
 }
 
 /// Returns the closest surrounding block common to `opA` and `opB`. `opA` and
-/// `opB` should be in the same affine scope and thus such a block is guaranteed
-/// to exist.
-static Block *getCommonBlock(Operation *opA, Operation *opB) {
+/// `opB` should be in the same affine scope. Returns nullptr if such a block
+/// does not exist (when the two ops are in different blocks of an op starting
+/// an `AffineScope`).
+static Block *getCommonBlockInAffineScope(Operation *opA, Operation *opB) {
   // Get the chain of ancestor blocks for the given `MemRefAccess` instance. The
   // chain extends up to and includnig an op that starts an affine scope.
   auto getChainOfAncestorBlocks =
@@ -342,7 +337,7 @@ static Block *getCommonBlock(Operation *opA, Operation *opB) {
         ancestorBlocks.push_back(currBlock);
       };
 
-  // Find the closest common block including those in AffineIf.
+  // Find the closest common block.
   SmallVector<Block *, 4> srcAncestorBlocks, dstAncestorBlocks;
   getChainOfAncestorBlocks(opA, srcAncestorBlocks);
   getChainOfAncestorBlocks(opB, dstAncestorBlocks);
@@ -352,28 +347,31 @@ static Block *getCommonBlock(Operation *opA, Operation *opB) {
        i >= 0 && j >= 0 && srcAncestorBlocks[i] == dstAncestorBlocks[j];
        i--, j--)
     commonBlock = srcAncestorBlocks[i];
-  // This is guaranteed since both ops are from the same affine scope.
-  assert(commonBlock && "ops expected to have a common surrounding block");
+
   return commonBlock;
 }
 
 /// Returns true if the ancestor operation of 'srcAccess' appears before the
 /// ancestor operation of 'dstAccess' in their common ancestral block. The
 /// operations for `srcAccess` and `dstAccess` are expected to be in the same
-/// affine scope.
+/// affine scope and have a common surrounding block within it.
 static bool srcAppearsBeforeDstInAncestralBlock(const MemRefAccess &srcAccess,
                                                 const MemRefAccess &dstAccess) {
   // Get Block common to 'srcAccess.opInst' and 'dstAccess.opInst'.
-  auto *commonBlock = getCommonBlock(srcAccess.opInst, dstAccess.opInst);
+  Block *commonBlock =
+      getCommonBlockInAffineScope(srcAccess.opInst, dstAccess.opInst);
+  assert(commonBlock &&
+         "ops expected to have a common surrounding block in affine scope");
+
   // Check the dominance relationship between the respective ancestors of the
   // src and dst in the Block of the innermost among the common loops.
-  auto *srcInst = commonBlock->findAncestorOpInBlock(*srcAccess.opInst);
-  assert(srcInst && "src access op must lie in common block");
-  auto *dstInst = commonBlock->findAncestorOpInBlock(*dstAccess.opInst);
-  assert(dstInst && "dest access op must lie in common block");
+  Operation *srcOp = commonBlock->findAncestorOpInBlock(*srcAccess.opInst);
+  assert(srcOp && "src access op must lie in common block");
+  Operation *dstOp = commonBlock->findAncestorOpInBlock(*dstAccess.opInst);
+  assert(dstOp && "dest access op must lie in common block");
 
-  // Determine whether dstInst comes after srcInst.
-  return srcInst->isBeforeInBlock(dstInst);
+  // Determine whether dstOp comes after srcOp.
+  return srcOp->isBeforeInBlock(dstOp);
 }
 
 // Adds ordering constraints to 'dependenceDomain' based on number of loops
@@ -450,12 +448,10 @@ static void computeDirectionVector(
   dependenceComponents->resize(numCommonLoops);
   for (unsigned j = 0; j < numCommonLoops; ++j) {
     (*dependenceComponents)[j].op = commonLoops[j].getOperation();
-    auto lbConst =
-        dependenceDomain->getConstantBound64(IntegerPolyhedron::LB, j);
+    auto lbConst = dependenceDomain->getConstantBound64(BoundType::LB, j);
     (*dependenceComponents)[j].lb =
         lbConst.value_or(std::numeric_limits<int64_t>::min());
-    auto ubConst =
-        dependenceDomain->getConstantBound64(IntegerPolyhedron::UB, j);
+    auto ubConst = dependenceDomain->getConstantBound64(BoundType::UB, j);
     (*dependenceComponents)[j].ub =
         ubConst.value_or(std::numeric_limits<int64_t>::max());
   }
@@ -601,14 +597,14 @@ void MemRefAccess::getAccessMap(AffineValueMap *accessMap) const {
 //
 //
 // TODO: Support AffineExprs mod/floordiv/ceildiv.
-DependenceResult mlir::checkMemrefAccessDependence(
+DependenceResult mlir::affine::checkMemrefAccessDependence(
     const MemRefAccess &srcAccess, const MemRefAccess &dstAccess,
     unsigned loopDepth, FlatAffineValueConstraints *dependenceConstraints,
     SmallVector<DependenceComponent, 2> *dependenceComponents, bool allowRAR) {
   LLVM_DEBUG(llvm::dbgs() << "Checking for dependence at depth: "
                           << Twine(loopDepth) << " between:\n";);
-  LLVM_DEBUG(srcAccess.opInst->dump(););
-  LLVM_DEBUG(dstAccess.opInst->dump(););
+  LLVM_DEBUG(srcAccess.opInst->dump());
+  LLVM_DEBUG(dstAccess.opInst->dump());
 
   // Return 'NoDependence' if these accesses do not access the same memref.
   if (srcAccess.memref != dstAccess.memref)
@@ -620,8 +616,11 @@ DependenceResult mlir::checkMemrefAccessDependence(
       !isa<AffineWriteOpInterface>(dstAccess.opInst))
     return DependenceResult::NoDependence;
 
-  // We can't analyze further if the ops lie in different affine scopes.
+  // We can't analyze further if the ops lie in different affine scopes or have
+  // no common block in an affine scope.
   if (getAffineScope(srcAccess.opInst) != getAffineScope(dstAccess.opInst))
+    return DependenceResult::Failure;
+  if (!getCommonBlockInAffineScope(srcAccess.opInst, dstAccess.opInst))
     return DependenceResult::Failure;
 
   // Create access relation from each MemRefAccess.
@@ -637,8 +636,8 @@ DependenceResult mlir::checkMemrefAccessDependence(
   // Return 'NoDependence' if loopDepth > numCommonLoops and if the ancestor
   // operation of 'srcAccess' does not properly dominate the ancestor
   // operation of 'dstAccess' in the same common operation block.
-  // Note: this check is skipped if 'allowRAR' is true, because because RAR
-  // deps can exist irrespective of lexicographic ordering b/w src and dst.
+  // Note: this check is skipped if 'allowRAR' is true, because RAR deps
+  // can exist irrespective of lexicographic ordering b/w src and dst.
   unsigned numCommonLoops = getNumCommonLoops(srcDomain, dstDomain);
   assert(loopDepth <= numCommonLoops + 1);
   if (!allowRAR && loopDepth > numCommonLoops &&
@@ -652,29 +651,30 @@ DependenceResult mlir::checkMemrefAccessDependence(
   // memory locations.
   dstRel.inverse();
   dstRel.compose(srcRel);
-  *dependenceConstraints = dstRel;
 
   // Add 'src' happens before 'dst' ordering constraints.
-  addOrderingConstraints(srcDomain, dstDomain, loopDepth,
-                         dependenceConstraints);
+  addOrderingConstraints(srcDomain, dstDomain, loopDepth, &dstRel);
 
   // Return 'NoDependence' if the solution space is empty: no dependence.
-  if (dependenceConstraints->isEmpty())
+  if (dstRel.isEmpty())
     return DependenceResult::NoDependence;
 
   // Compute dependence direction vector and return true.
   if (dependenceComponents != nullptr)
-    computeDirectionVector(srcDomain, dstDomain, loopDepth,
-                           dependenceConstraints, dependenceComponents);
+    computeDirectionVector(srcDomain, dstDomain, loopDepth, &dstRel,
+                           dependenceComponents);
 
   LLVM_DEBUG(llvm::dbgs() << "Dependence polyhedron:\n");
-  LLVM_DEBUG(dependenceConstraints->dump());
+  LLVM_DEBUG(dstRel.dump());
+
+  if (dependenceConstraints)
+    *dependenceConstraints = dstRel;
   return DependenceResult::HasDependence;
 }
 
 /// Gathers dependence components for dependences between all ops in loop nest
 /// rooted at 'forOp' at loop depths in range [1, maxLoopDepth].
-void mlir::getDependenceComponents(
+void mlir::affine::getDependenceComponents(
     AffineForOp forOp, unsigned maxLoopDepth,
     std::vector<SmallVector<DependenceComponent, 2>> *depCompsVec) {
   // Collect all load and store ops in loop nest rooted at 'forOp'.
@@ -693,12 +693,12 @@ void mlir::getDependenceComponents(
         auto *dstOp = loadAndStoreOps[j];
         MemRefAccess dstAccess(dstOp);
 
-        FlatAffineValueConstraints dependenceConstraints;
         SmallVector<DependenceComponent, 2> depComps;
         // TODO: Explore whether it would be profitable to pre-compute and store
         // deps instead of repeatedly checking.
         DependenceResult result = checkMemrefAccessDependence(
-            srcAccess, dstAccess, d, &dependenceConstraints, &depComps);
+            srcAccess, dstAccess, d, /*dependenceConstraints=*/nullptr,
+            &depComps);
         if (hasDependence(result))
           depCompsVec->push_back(depComps);
       }

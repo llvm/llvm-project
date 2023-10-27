@@ -5,15 +5,17 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#ifndef LLVM_LIBC_SRC_SUPPORT_CPP_SPAN_H
-#define LLVM_LIBC_SRC_SUPPORT_CPP_SPAN_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_CPP_SPAN_H
+#define LLVM_LIBC_SRC___SUPPORT_CPP_SPAN_H
 
 #include <stddef.h> // For size_t
 
 #include "array.h"       // For array
 #include "type_traits.h" // For remove_cv_t, enable_if_t, is_same_v, is_const_v
 
-namespace __llvm_libc::cpp {
+#include "src/__support/macros/attributes.h"
+
+namespace LIBC_NAMESPACE::cpp {
 
 // A trimmed down implementation of std::span.
 // Missing features:
@@ -25,12 +27,12 @@ namespace __llvm_libc::cpp {
 // - No reverse iterators
 template <typename T> class span {
   template <typename U>
-  inline static constexpr bool is_const_view_v =
+  LIBC_INLINE_VAR static constexpr bool is_const_view_v =
       !cpp::is_const_v<U> && cpp::is_const_v<T> &&
       cpp::is_same_v<U, remove_cv_t<T>>;
 
   template <typename U>
-  inline static constexpr bool is_compatible_v =
+  LIBC_INLINE_VAR static constexpr bool is_compatible_v =
       cpp::is_same_v<U, T> || is_const_view_v<U>;
 
 public:
@@ -44,63 +46,69 @@ public:
   using const_reference = const T &;
   using iterator = T *;
 
-  static constexpr size_type dynamic_extent = -1;
+  LIBC_INLINE_VAR static constexpr size_type dynamic_extent = -1;
 
-  constexpr span() : span_data(nullptr), span_size(0) {}
+  LIBC_INLINE constexpr span() : span_data(nullptr), span_size(0) {}
 
-  constexpr span(pointer first, size_type count)
+  LIBC_INLINE constexpr span(pointer first, size_type count)
       : span_data(first), span_size(count) {}
 
-  constexpr span(pointer first, pointer end)
+  LIBC_INLINE constexpr span(pointer first, pointer end)
       : span_data(first), span_size(end - first) {}
 
   template <typename U, size_t N,
             cpp::enable_if_t<is_compatible_v<U>, bool> = true>
-  constexpr span(U (&arr)[N]) : span_data(arr), span_size(N) {}
+  LIBC_INLINE constexpr span(U (&arr)[N]) : span_data(arr), span_size(N) {}
 
   template <typename U, size_t N,
             cpp::enable_if_t<is_compatible_v<U>, bool> = true>
-  constexpr span(array<U, N> &arr)
+  LIBC_INLINE constexpr span(array<U, N> &arr)
       : span_data(arr.data()), span_size(arr.size()) {}
 
   template <typename U, cpp::enable_if_t<is_compatible_v<U>, bool> = true>
-  constexpr span(span<U> &s) : span_data(s.data()), span_size(s.size()) {}
+  LIBC_INLINE constexpr span(span<U> &s)
+      : span_data(s.data()), span_size(s.size()) {}
 
   template <typename U, cpp::enable_if_t<is_compatible_v<U>, bool> = true>
-  constexpr span &operator=(span<U> &s) {
+  LIBC_INLINE constexpr span &operator=(span<U> &s) {
     span_data = s.data();
     span_size = s.size();
     return *this;
   }
 
-  ~span() = default;
-  constexpr reference operator[](size_type index) const {
+  LIBC_INLINE ~span() = default;
+
+  LIBC_INLINE constexpr reference operator[](size_type index) const {
     return data()[index];
   }
-  constexpr iterator begin() const { return data(); }
-  constexpr iterator end() const { return data() + size(); }
-  constexpr reference front() const { return (*this)[0]; }
-  constexpr reference back() const { return (*this)[size() - 1]; }
-  constexpr pointer data() const { return span_data; }
-  constexpr size_type size() const { return span_size; }
-  constexpr size_type size_bytes() const { return sizeof(T) * size(); }
-  constexpr bool empty() const { return size() == 0; }
 
-  constexpr span<element_type> subspan(size_type offset,
-                                       size_type count = dynamic_extent) const {
+  LIBC_INLINE constexpr iterator begin() const { return data(); }
+  LIBC_INLINE constexpr iterator end() const { return data() + size(); }
+  LIBC_INLINE constexpr reference front() const { return (*this)[0]; }
+  LIBC_INLINE constexpr reference back() const { return (*this)[size() - 1]; }
+  LIBC_INLINE constexpr pointer data() const { return span_data; }
+  LIBC_INLINE constexpr size_type size() const { return span_size; }
+  LIBC_INLINE constexpr size_type size_bytes() const {
+    return sizeof(T) * size();
+  }
+  LIBC_INLINE constexpr bool empty() const { return size() == 0; }
+
+  LIBC_INLINE constexpr span<element_type>
+  subspan(size_type offset, size_type count = dynamic_extent) const {
     return span<element_type>(data() + offset, count_to_size(offset, count));
   }
 
-  constexpr span<element_type> first(size_type count) const {
+  LIBC_INLINE constexpr span<element_type> first(size_type count) const {
     return subspan(0, count);
   }
 
-  constexpr span<element_type> last(size_type count) const {
+  LIBC_INLINE constexpr span<element_type> last(size_type count) const {
     return span<element_type>(data() + (size() - count), count);
   }
 
 private:
-  constexpr size_type count_to_size(size_type offset, size_type count) const {
+  LIBC_INLINE constexpr size_type count_to_size(size_type offset,
+                                                size_type count) const {
     if (count == dynamic_extent) {
       return size() - offset;
     }
@@ -111,6 +119,6 @@ private:
   size_t span_size;
 };
 
-} // namespace __llvm_libc::cpp
+} // namespace LIBC_NAMESPACE::cpp
 
-#endif /* LLVM_LIBC_SRC_SUPPORT_CPP_SPAN_H */
+#endif // LLVM_LIBC_SRC___SUPPORT_CPP_SPAN_H

@@ -490,7 +490,8 @@ define i1 @or(i32 %x) {
 define i1 @or_constexp(i32 %x) {
 ; CHECK-LABEL: @or_constexp(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[O:%.*]] = or i32 [[X:%.*]], and (i32 ptrtoint (ptr @GV to i32), i32 32)
+; CHECK-NEXT:    [[TMP0:%.*]] = and i32 ptrtoint (ptr @GV to i32), 32
+; CHECK-NEXT:    [[O:%.*]] = or i32 [[X:%.*]], [[TMP0]]
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[O]], 0
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
@@ -729,10 +730,7 @@ define i1 @select5(i32 %x) {
 
 define i1 @select6(i32 %x) {
 ; CHECK-LABEL: @select6(
-; CHECK-NEXT:    [[C:%.*]] = icmp sgt i32 [[X:%.*]], 0
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[C]], i32 [[X]], i32 4
-; CHECK-NEXT:    [[C2:%.*]] = icmp eq i32 [[S]], 0
-; CHECK-NEXT:    ret i1 [[C2]]
+; CHECK-NEXT:    ret i1 false
 ;
   %c = icmp sgt i32 %x, 0
   %s = select i1 %c, i32 %x, i32 4
@@ -1921,6 +1919,332 @@ define i1 @tautological8(i32 %A, i32 %B) {
   ret i1 %D
 }
 
+define i1 @tautological9(i32 %A) {
+; CHECK-LABEL: @tautological9(
+; CHECK-NEXT:    ret i1 false
+;
+  %C1 = and i32 %A, 1
+  %C2 = and i32 %A, 3
+  %D = icmp ugt i32 %C1, %C2
+  ret i1 %D
+}
+
+define <2 x i1> @tautological9_vec(<2 x i32> %A) {
+; CHECK-LABEL: @tautological9_vec(
+; CHECK-NEXT:    ret <2 x i1> zeroinitializer
+;
+  %C1 = and <2 x i32> %A, <i32 1, i32 1>
+  %C2 = and <2 x i32> %A, <i32 3, i32 3>
+  %D = icmp ugt <2 x i32> %C1, %C2
+  ret <2 x i1> %D
+}
+
+define i1 @tautological10(i32 %A) {
+; CHECK-LABEL: @tautological10(
+; CHECK-NEXT:    ret i1 true
+;
+  %C1 = and i32 %A, 1
+  %C2 = and i32 %A, 3
+  %D = icmp ule i32 %C1, %C2
+  ret i1 %D
+}
+
+define i1 @tautological11(i32 %A) {
+; CHECK-LABEL: @tautological11(
+; CHECK-NEXT:    ret i1 true
+;
+  %C1 = or i32 %A, 1
+  %C2 = or i32 %A, 3
+  %D = icmp ule i32 %C1, %C2
+  ret i1 %D
+}
+
+define i1 @tautological12(i32 %A) {
+; CHECK-LABEL: @tautological12(
+; CHECK-NEXT:    ret i1 false
+;
+  %C1 = or i32 %A, 1
+  %C2 = or i32 %A, 3
+  %D = icmp ugt i32 %C1, %C2
+  ret i1 %D
+}
+
+define i1 @tautological13(i32 %A) {
+; CHECK-LABEL: @tautological13(
+; CHECK-NEXT:    ret i1 false
+;
+  %C1 = or i32 %A, 1
+  %C2 = or i32 %A, 3
+  %D = icmp ult i32 %C2, %C1
+  ret i1 %D
+}
+
+define i1 @tautological14(i32 %A) {
+; CHECK-LABEL: @tautological14(
+; CHECK-NEXT:    ret i1 true
+;
+  %C1 = or i32 %A, 1
+  %C2 = or i32 %A, 3
+  %D = icmp uge i32 %C2, %C1
+  ret i1 %D
+}
+
+define i1 @tautological15(i32 %A) {
+; CHECK-LABEL: @tautological15(
+; CHECK-NEXT:    ret i1 true
+;
+  %C1 = and i32 %A, 1
+  %C2 = and i32 %A, 3
+  %D = icmp uge i32 %C2, %C1
+  ret i1 %D
+}
+
+define i1 @tautological16(i32 %A) {
+; CHECK-LABEL: @tautological16(
+; CHECK-NEXT:    ret i1 false
+;
+  %C1 = and i32 %A, 1
+  %C2 = and i32 %A, 3
+  %D = icmp ult i32 %C2, %C1
+  ret i1 %D
+}
+
+define i1 @tautological9_negative(i32 %A) {
+; CHECK-LABEL: @tautological9_negative(
+; CHECK-NEXT:    [[C1:%.*]] = and i32 [[A:%.*]], 1
+; CHECK-NEXT:    [[C2:%.*]] = and i32 [[A]], 2
+; CHECK-NEXT:    [[D:%.*]] = icmp ugt i32 [[C1]], [[C2]]
+; CHECK-NEXT:    ret i1 [[D]]
+;
+  %C1 = and i32 %A, 1
+  %C2 = and i32 %A, 2
+  %D = icmp ugt i32 %C1, %C2
+  ret i1 %D
+}
+
+define i1 @tautological10_negative(i32 %A) {
+; CHECK-LABEL: @tautological10_negative(
+; CHECK-NEXT:    [[C1:%.*]] = and i32 [[A:%.*]], 1
+; CHECK-NEXT:    [[C2:%.*]] = and i32 [[A]], 2
+; CHECK-NEXT:    [[D:%.*]] = icmp ule i32 [[C1]], [[C2]]
+; CHECK-NEXT:    ret i1 [[D]]
+;
+  %C1 = and i32 %A, 1
+  %C2 = and i32 %A, 2
+  %D = icmp ule i32 %C1, %C2
+  ret i1 %D
+}
+
+define i1 @tautological11_negative(i32 %A) {
+; CHECK-LABEL: @tautological11_negative(
+; CHECK-NEXT:    [[C1:%.*]] = or i32 [[A:%.*]], 1
+; CHECK-NEXT:    [[C2:%.*]] = or i32 [[A]], 2
+; CHECK-NEXT:    [[D:%.*]] = icmp ule i32 [[C1]], [[C2]]
+; CHECK-NEXT:    ret i1 [[D]]
+;
+  %C1 = or i32 %A, 1
+  %C2 = or i32 %A, 2
+  %D = icmp ule i32 %C1, %C2
+  ret i1 %D
+}
+
+define i1 @tautological12_negative(i32 %A) {
+; CHECK-LABEL: @tautological12_negative(
+; CHECK-NEXT:    [[C1:%.*]] = or i32 [[A:%.*]], 1
+; CHECK-NEXT:    [[C2:%.*]] = or i32 [[A]], 2
+; CHECK-NEXT:    [[D:%.*]] = icmp ugt i32 [[C1]], [[C2]]
+; CHECK-NEXT:    ret i1 [[D]]
+;
+  %C1 = or i32 %A, 1
+  %C2 = or i32 %A, 2
+  %D = icmp ugt i32 %C1, %C2
+  ret i1 %D
+}
+
+define i1 @tautological13_negative(i32 %A) {
+; CHECK-LABEL: @tautological13_negative(
+; CHECK-NEXT:    [[C1:%.*]] = or i32 [[A:%.*]], 1
+; CHECK-NEXT:    [[C2:%.*]] = or i32 [[A]], 2
+; CHECK-NEXT:    [[D:%.*]] = icmp ult i32 [[C2]], [[C1]]
+; CHECK-NEXT:    ret i1 [[D]]
+;
+  %C1 = or i32 %A, 1
+  %C2 = or i32 %A, 2
+  %D = icmp ult i32 %C2, %C1
+  ret i1 %D
+}
+
+define i1 @tautological14_negative(i32 %A) {
+; CHECK-LABEL: @tautological14_negative(
+; CHECK-NEXT:    [[C1:%.*]] = or i32 [[A:%.*]], 1
+; CHECK-NEXT:    [[C2:%.*]] = or i32 [[A]], 2
+; CHECK-NEXT:    [[D:%.*]] = icmp uge i32 [[C2]], [[C1]]
+; CHECK-NEXT:    ret i1 [[D]]
+;
+  %C1 = or i32 %A, 1
+  %C2 = or i32 %A, 2
+  %D = icmp uge i32 %C2, %C1
+  ret i1 %D
+}
+
+define i1 @tautological15_negative(i32 %A) {
+; CHECK-LABEL: @tautological15_negative(
+; CHECK-NEXT:    [[C1:%.*]] = and i32 [[A:%.*]], 1
+; CHECK-NEXT:    [[C2:%.*]] = and i32 [[A]], 2
+; CHECK-NEXT:    [[D:%.*]] = icmp uge i32 [[C2]], [[C1]]
+; CHECK-NEXT:    ret i1 [[D]]
+;
+  %C1 = and i32 %A, 1
+  %C2 = and i32 %A, 2
+  %D = icmp uge i32 %C2, %C1
+  ret i1 %D
+}
+
+define i1 @tautological16_negative(i32 %A) {
+; CHECK-LABEL: @tautological16_negative(
+; CHECK-NEXT:    [[C1:%.*]] = and i32 [[A:%.*]], 1
+; CHECK-NEXT:    [[C2:%.*]] = and i32 [[A]], 2
+; CHECK-NEXT:    [[D:%.*]] = icmp ult i32 [[C2]], [[C1]]
+; CHECK-NEXT:    ret i1 [[D]]
+;
+  %C1 = and i32 %A, 1
+  %C2 = and i32 %A, 2
+  %D = icmp ult i32 %C2, %C1
+  ret i1 %D
+}
+
+define i1 @tautological17_subset1(i32 %A) {
+; CHECK-LABEL: @tautological17_subset1(
+; CHECK-NEXT:    ret i1 false
+;
+  %C1 = and i32 %A, 1
+  %C2 = and i32 %A, 3
+  %D = icmp sgt i32 %C1, %C2
+  ret i1 %D
+}
+
+define i1 @tautological17_subset2(i32 %A) {
+; CHECK-LABEL: @tautological17_subset2(
+; CHECK-NEXT:    ret i1 false
+;
+  %C1 = and i32 %A, -4
+  %C2 = and i32 %A, -3
+  %D = icmp sgt i32 %C1, %C2
+  ret i1 %D
+}
+
+define i1 @tautological17_negative(i32 %A) {
+; CHECK-LABEL: @tautological17_negative(
+; CHECK-NEXT:    [[C1:%.*]] = and i32 [[A:%.*]], 1
+; CHECK-NEXT:    [[C2:%.*]] = and i32 [[A]], -3
+; CHECK-NEXT:    [[D:%.*]] = icmp sgt i32 [[C1]], [[C2]]
+; CHECK-NEXT:    ret i1 [[D]]
+;
+  %C1 = and i32 %A, 1
+  %C2 = and i32 %A, -3
+  %D = icmp sgt i32 %C1, %C2
+  ret i1 %D
+}
+
+define i1 @tautological18_subset1(i32 %A) {
+; CHECK-LABEL: @tautological18_subset1(
+; CHECK-NEXT:    ret i1 true
+;
+  %C1 = and i32 %A, 1
+  %C2 = and i32 %A, 3
+  %D = icmp sle i32 %C1, %C2
+  ret i1 %D
+}
+
+define i1 @tautological18_subset2(i32 %A) {
+; CHECK-LABEL: @tautological18_subset2(
+; CHECK-NEXT:    ret i1 true
+;
+  %C1 = and i32 %A, -4
+  %C2 = and i32 %A, -3
+  %D = icmp sle i32 %C1, %C2
+  ret i1 %D
+}
+
+define i1 @tautological18_negative(i32 %A) {
+; CHECK-LABEL: @tautological18_negative(
+; CHECK-NEXT:    [[C1:%.*]] = and i32 [[A:%.*]], 1
+; CHECK-NEXT:    [[C2:%.*]] = and i32 [[A]], -3
+; CHECK-NEXT:    [[D:%.*]] = icmp sle i32 [[C1]], [[C2]]
+; CHECK-NEXT:    ret i1 [[D]]
+;
+  %C1 = and i32 %A, 1
+  %C2 = and i32 %A, -3
+  %D = icmp sle i32 %C1, %C2
+  ret i1 %D
+}
+
+define i1 @tautological19_subset1(i32 %A) {
+; CHECK-LABEL: @tautological19_subset1(
+; CHECK-NEXT:    ret i1 false
+;
+  %C1 = or i32 %A, 1
+  %C2 = or i32 %A, 3
+  %D = icmp sgt i32 %C1, %C2
+  ret i1 %D
+}
+
+define i1 @tautological19_subset2(i32 %A) {
+; CHECK-LABEL: @tautological19_subset2(
+; CHECK-NEXT:    ret i1 false
+;
+  %C1 = and i32 %A, -4
+  %C2 = and i32 %A, -3
+  %D = icmp sgt i32 %C1, %C2
+  ret i1 %D
+}
+
+define i1 @tautological19_negative(i32 %A) {
+; CHECK-LABEL: @tautological19_negative(
+; CHECK-NEXT:    [[C1:%.*]] = and i32 [[A:%.*]], 1
+; CHECK-NEXT:    [[C2:%.*]] = and i32 [[A]], -3
+; CHECK-NEXT:    [[D:%.*]] = icmp sgt i32 [[C1]], [[C2]]
+; CHECK-NEXT:    ret i1 [[D]]
+;
+  %C1 = and i32 %A, 1
+  %C2 = and i32 %A, -3
+  %D = icmp sgt i32 %C1, %C2
+  ret i1 %D
+}
+
+define i1 @tautological20_subset1(i32 %A) {
+; CHECK-LABEL: @tautological20_subset1(
+; CHECK-NEXT:    ret i1 true
+;
+  %C1 = and i32 %A, 1
+  %C2 = and i32 %A, 3
+  %D = icmp sle i32 %C1, %C2
+  ret i1 %D
+}
+
+define i1 @tautological20_subset2(i32 %A) {
+; CHECK-LABEL: @tautological20_subset2(
+; CHECK-NEXT:    ret i1 true
+;
+  %C1 = and i32 %A, -4
+  %C2 = and i32 %A, -3
+  %D = icmp sle i32 %C1, %C2
+  ret i1 %D
+}
+
+define i1 @tautological20_negative(i32 %A) {
+; CHECK-LABEL: @tautological20_negative(
+; CHECK-NEXT:    [[C1:%.*]] = and i32 [[A:%.*]], 1
+; CHECK-NEXT:    [[C2:%.*]] = and i32 [[A]], -3
+; CHECK-NEXT:    [[D:%.*]] = icmp sle i32 [[C1]], [[C2]]
+; CHECK-NEXT:    ret i1 [[D]]
+;
+  %C1 = and i32 %A, 1
+  %C2 = and i32 %A, -3
+  %D = icmp sle i32 %C1, %C2
+  ret i1 %D
+}
+
 declare void @helper_i1(i1)
 ; Series of tests for icmp s[lt|ge] (or A, B), A and icmp s[gt|le] A, (or A, B)
 define void @icmp_slt_sge_or(i32 %Ax, i32 %Bx) {
@@ -2784,7 +3108,7 @@ define i1 @globals_inequal() {
 ; TODO: Never equal
 define i1 @globals_offset_inequal() {
 ; CHECK-LABEL: @globals_offset_inequal(
-; CHECK-NEXT:    ret i1 icmp ne (ptr getelementptr inbounds (i8, ptr @A, i32 1), ptr getelementptr inbounds (i8, ptr @B, i32 1))
+; CHECK-NEXT:    ret i1 icmp ne (ptr getelementptr (i8, ptr @A, i32 1), ptr getelementptr (i8, ptr @B, i32 1))
 ;
   %a.off = getelementptr i8, ptr @A, i32 1
   %b.off = getelementptr i8, ptr @B, i32 1
@@ -2811,6 +3135,161 @@ define i1 @neg_global_alias() {
   %res = icmp ne ptr @A, @A.alias
   ret i1 %res
 }
+
+
+define i1 @icmp_lshr_known_non_zero_ult_true(i8 %x) {
+; CHECK-LABEL: @icmp_lshr_known_non_zero_ult_true(
+; CHECK-NEXT:    ret i1 true
+;
+  %or = or i8 %x, 1
+  %x1 = shl nuw i8 %or, 1
+  %x2 = shl nuw i8 %or, 2
+  %cmp = icmp ult i8 %x1, %x2
+  ret i1 %cmp
+}
+
+define i1 @icmp_lshr_known_non_zero_ult_false(i8 %x) {
+; CHECK-LABEL: @icmp_lshr_known_non_zero_ult_false(
+; CHECK-NEXT:    ret i1 false
+;
+  %or = or i8 %x, 1
+  %x1 = shl nuw i8 %or, 1
+  %x2 = shl nuw i8 %or, 2
+  %cmp = icmp ugt i8 %x1, %x2
+  ret i1 %cmp
+}
+
+define i1 @icmp_lshr_known_non_zero_slt_true(i8 %x) {
+; CHECK-LABEL: @icmp_lshr_known_non_zero_slt_true(
+; CHECK-NEXT:    ret i1 true
+;
+  %or = or i8 %x, 1
+  %x1 = shl nuw nsw i8 %or, 1
+  %x2 = shl nuw nsw i8 %or, 2
+  %cmp = icmp slt i8 %x1, %x2
+  ret i1 %cmp
+}
+
+define i1 @icmp_lshr_known_non_zero_slt_false(i8 %x) {
+; CHECK-LABEL: @icmp_lshr_known_non_zero_slt_false(
+; CHECK-NEXT:    ret i1 false
+;
+  %or = or i8 %x, 1
+  %x1 = shl nuw nsw i8 %or, 2
+  %x2 = shl nuw nsw i8 %or, 1
+  %cmp = icmp slt i8 %x1, %x2
+  ret i1 %cmp
+}
+
+define i1 @neg_icmp_lshr_known_non_zero_slt_no_nsw(i8 %x) {
+; CHECK-LABEL: @neg_icmp_lshr_known_non_zero_slt_no_nsw(
+; CHECK-NEXT:    [[OR:%.*]] = or i8 [[X:%.*]], 1
+; CHECK-NEXT:    [[X1:%.*]] = shl nuw i8 [[OR]], 1
+; CHECK-NEXT:    [[X2:%.*]] = shl nuw i8 [[OR]], 2
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[X1]], [[X2]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %or = or i8 %x, 1
+  %x1 = shl nuw i8 %or, 1
+  %x2 = shl nuw i8 %or, 2
+  %cmp = icmp slt i8 %x1, %x2
+  ret i1 %cmp
+}
+
+define i1 @neg_icmp_lshr_known_non_zero_ult_no_nuw(i8 %x) {
+; CHECK-LABEL: @neg_icmp_lshr_known_non_zero_ult_no_nuw(
+; CHECK-NEXT:    [[OR:%.*]] = or i8 [[X:%.*]], 1
+; CHECK-NEXT:    [[X1:%.*]] = shl i8 [[OR]], 1
+; CHECK-NEXT:    [[X2:%.*]] = shl i8 [[OR]], 2
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[X1]], [[X2]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %or = or i8 %x, 1
+  %x1 = shl i8 %or, 1
+  %x2 = shl i8 %or, 2
+  %cmp = icmp ult i8 %x1, %x2
+  ret i1 %cmp
+}
+
+define i1 @neg_icmp_lshr_known_non_zero_slt_no_nuw(i8 %x) {
+; CHECK-LABEL: @neg_icmp_lshr_known_non_zero_slt_no_nuw(
+; CHECK-NEXT:    [[OR:%.*]] = or i8 [[X:%.*]], 1
+; CHECK-NEXT:    [[X1:%.*]] = shl nsw i8 [[OR]], 1
+; CHECK-NEXT:    [[X2:%.*]] = shl nsw i8 [[OR]], 2
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[X1]], [[X2]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %or = or i8 %x, 1
+  %x1 = shl nsw i8 %or, 1
+  %x2 = shl nsw i8 %or, 2
+  %cmp = icmp slt i8 %x1, %x2
+  ret i1 %cmp
+}
+
+define i1 @neg_icmp_lshr_unknown_value(i8 %x) {
+; CHECK-LABEL: @neg_icmp_lshr_unknown_value(
+; CHECK-NEXT:    [[X1:%.*]] = shl nuw i8 [[X:%.*]], 2
+; CHECK-NEXT:    [[X2:%.*]] = shl nuw i8 [[X]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[X1]], [[X2]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %x1 = shl nuw i8 %x, 2
+  %x2 = shl nuw i8 %x, 1
+  %cmp = icmp ugt i8 %x1, %x2
+  ret i1 %cmp
+}
+
+define i1 @neg_icmp_lshr_unknown_shift(i8 %x, i8 %C1) {
+; CHECK-LABEL: @neg_icmp_lshr_unknown_shift(
+; CHECK-NEXT:    [[OR:%.*]] = or i8 [[X:%.*]], 1
+; CHECK-NEXT:    [[X1:%.*]] = shl nuw i8 [[OR]], 2
+; CHECK-NEXT:    [[X2:%.*]] = shl nuw i8 [[OR]], [[C1:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[X1]], [[X2]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %or = or i8 %x, 1
+  %x1 = shl nuw i8 %or, 2
+  %x2 = shl nuw i8 %or, %C1
+  %cmp = icmp ugt i8 %x1, %x2
+  ret i1 %cmp
+}
+
+define i1 @neg_icmp_lshr_different_shift_values(i8 %x, i8 %y) {
+; CHECK-LABEL: @neg_icmp_lshr_different_shift_values(
+; CHECK-NEXT:    [[X1:%.*]] = shl nuw nsw i8 [[X:%.*]], 1
+; CHECK-NEXT:    [[X2:%.*]] = shl nuw nsw i8 [[Y:%.*]], 2
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[X1]], [[X2]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %x1 = shl nuw nsw i8 %x, 1
+  %x2 = shl nuw nsw i8 %y, 2
+  %cmp = icmp ult i8 %x1, %x2
+  ret i1 %cmp
+}
+
+define i1 @icmp_ult_vscale_true(i8 %x, i8 %y) {
+; CHECK-LABEL: @icmp_ult_vscale_true(
+; CHECK-NEXT:    ret i1 true
+;
+  %vscale = call i64 @llvm.vscale.i64()
+  %x1 = shl nuw nsw i64 %vscale, 1
+  %x2 = shl nuw nsw i64 %vscale, 2
+  %cmp = icmp ult i64 %x1, %x2
+  ret i1 %cmp
+}
+
+define i1 @icmp_ult_vscale_false(i8 %x, i8 %y) {
+; CHECK-LABEL: @icmp_ult_vscale_false(
+; CHECK-NEXT:    ret i1 false
+;
+  %vscale = call i64 @llvm.vscale.i64()
+  %x1 = shl nuw nsw i64 %vscale, 1
+  %x2 = shl nuw nsw i64 %vscale, 2
+  %cmp = icmp ugt i64 %x1, %x2
+  ret i1 %cmp
+}
+
+declare i64 @llvm.vscale.i64()
 
 ; TODO: Add coverage for global aliases, link once, etc..
 

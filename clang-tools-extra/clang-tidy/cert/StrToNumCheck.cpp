@@ -61,7 +61,7 @@ ConversionKind classifyFormatString(StringRef Fmt, const LangOptions &LO,
   // specifiers, but that is acceptable behavior.
 
   class Handler : public analyze_format_string::FormatStringHandler {
-    ConversionKind CK;
+    ConversionKind CK = ConversionKind::None;
 
     bool HandleScanfSpecifier(const analyze_scanf::ScanfSpecifier &FS,
                               const char *StartSpecifier,
@@ -117,7 +117,7 @@ ConversionKind classifyFormatString(StringRef Fmt, const LangOptions &LO,
     }
 
   public:
-    Handler() : CK(ConversionKind::None) {}
+    Handler() = default;
 
     ConversionKind get() const { return CK; }
   };
@@ -178,7 +178,7 @@ StringRef classifyReplacement(ConversionKind K) {
 void StrToNumCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *Call = Result.Nodes.getNodeAs<CallExpr>("expr");
   const FunctionDecl *FuncDecl = nullptr;
-  ConversionKind Conversion;
+  ConversionKind Conversion = ConversionKind::None;
 
   if (const auto *ConverterFunc =
           Result.Nodes.getNodeAs<FunctionDecl>("converter")) {

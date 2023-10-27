@@ -55,6 +55,8 @@ public:
     interval_.ExtendToCover(that.interval_);
   }
 
+  // Returns the block's first non-blank character, if it has
+  // one; otherwise ' '.
   char FirstNonBlank() const {
     for (char ch : *this) {
       if (ch != ' ' && ch != '\t') {
@@ -62,6 +64,34 @@ public:
       }
     }
     return ' '; // non no-blank character
+  }
+
+  // Returns the block's only non-blank character, if it has
+  // exactly one non-blank character; otherwise ' '.
+  char OnlyNonBlank() const {
+    char result{' '};
+    for (char ch : *this) {
+      if (ch != ' ' && ch != '\t') {
+        if (result == ' ') {
+          result = ch;
+        } else {
+          return ' ';
+        }
+      }
+    }
+    return result;
+  }
+
+  std::size_t CountLeadingBlanks() const {
+    std::size_t n{size()};
+    std::size_t j{0};
+    for (; j < n; ++j) {
+      char ch{(*this)[j]};
+      if (ch != ' ' && ch != '\t') {
+        break;
+      }
+    }
+    return j;
   }
 
   bool IsBlank() const { return FirstNonBlank() == ' '; }

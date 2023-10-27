@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -no-opaque-pointers %s --std=c++11 -triple nvptx-unknown-unknown -fcuda-is-device \
+// RUN: %clang_cc1 %s --std=c++11 -triple nvptx-unknown-unknown -fcuda-is-device \
 // RUN:   -emit-llvm -o - | FileCheck %s --check-prefixes=COMMON,DEVICE
-// RUN: %clang_cc1 -no-opaque-pointers %s --std=c++11 -triple nvptx-unknown-unknown \
+// RUN: %clang_cc1 %s --std=c++11 -triple nvptx-unknown-unknown \
 // RUN:   -emit-llvm -o - | FileCheck %s --check-prefixes=COMMON,HOST
-// RUN: %clang_cc1 -no-opaque-pointers %s --std=c++17 -triple nvptx-unknown-unknown -fcuda-is-device \
+// RUN: %clang_cc1 %s --std=c++17 -triple nvptx-unknown-unknown -fcuda-is-device \
 // RUN:   -emit-llvm -o - | FileCheck %s --check-prefixes=COMMON,DEVICE
-// RUN: %clang_cc1 -no-opaque-pointers %s --std=c++17 -triple nvptx-unknown-unknown \
+// RUN: %clang_cc1 %s --std=c++17 -triple nvptx-unknown-unknown \
 // RUN:   -emit-llvm -o - | FileCheck %s --check-prefixes=COMMON,HOST
 
 #include "Inputs/cuda.h"
@@ -83,28 +83,28 @@ __host__ __device__ void tests_hd(void *t) {
   // COMMON: call void @_ZN4H1D1dlEPv
   test_hd<H1D1>(t);
   // COMMON-LABEL: define linkonce_odr void @_Z7test_hdI4H1D2EvPv
-  // DEVICE: call void @_ZN4H1D2dlEPvj(i8* noundef {{.*}}, i32 noundef 1)
-  // HOST:   call void @_ZN4H1D2dlEPv(i8* noundef {{.*}})
+  // DEVICE: call void @_ZN4H1D2dlEPvj(ptr noundef {{.*}}, i32 noundef 1)
+  // HOST:   call void @_ZN4H1D2dlEPv(ptr noundef {{.*}})
   test_hd<H1D2>(t);
   // COMMON-LABEL: define linkonce_odr void @_Z7test_hdI4H2D1EvPv
-  // DEVICE: call void @_ZN4H2D1dlEPv(i8* {{.*}})
-  // HOST:   call void @_ZN4H2D1dlEPvj(i8* noundef %3, i32 noundef 1)
+  // DEVICE: call void @_ZN4H2D1dlEPv(ptr {{.*}})
+  // HOST:   call void @_ZN4H2D1dlEPvj(ptr noundef {{.*}}, i32 noundef 1)
   test_hd<H2D1>(t);
   // COMMON-LABEL: define linkonce_odr void @_Z7test_hdI4H2D2EvPv
-  // COMMON: call void @_ZN4H2D2dlEPvj(i8* noundef {{.*}}, i32 noundef 1)
+  // COMMON: call void @_ZN4H2D2dlEPvj(ptr noundef {{.*}}, i32 noundef 1)
   test_hd<H2D2>(t);
   // COMMON-LABEL: define linkonce_odr void @_Z7test_hdI6H1D1D2EvPv
-  // COMMON: call void @_ZN6H1D1D2dlEPv(i8* noundef %3)
+  // COMMON: call void @_ZN6H1D1D2dlEPv(ptr noundef {{.*}})
   test_hd<H1D1D2>(t);
   // COMMON-LABEL: define linkonce_odr void @_Z7test_hdI6H1H2D1EvPv
-  // COMMON: call void @_ZN6H1H2D1dlEPv(i8* {{.*}})
+  // COMMON: call void @_ZN6H1H2D1dlEPv(ptr {{.*}})
   test_hd<H1H2D1>(t);
   // COMMON-LABEL: define linkonce_odr void @_Z7test_hdI6H1H2D2EvPv
-  // DEVICE: call void @_ZN6H1H2D2dlEPvj(i8* noundef {{.*}}, i32 noundef 1)
-  // HOST:   call void @_ZN6H1H2D2dlEPv(i8* noundef {{.*}})
+  // DEVICE: call void @_ZN6H1H2D2dlEPvj(ptr noundef {{.*}}, i32 noundef 1)
+  // HOST:   call void @_ZN6H1H2D2dlEPv(ptr noundef {{.*}})
   test_hd<H1H2D2>(t);
   // COMMON-LABEL: define linkonce_odr void @_Z7test_hdI8H1H2D1D2EvPv
-  // COMMON: call void @_ZN8H1H2D1D2dlEPv(i8* {{.*}})
+  // COMMON: call void @_ZN8H1H2D1D2dlEPv(ptr {{.*}})
   test_hd<H1H2D1D2>(t);
 }
 
@@ -113,39 +113,39 @@ __host__ __device__ void tests_hd(void *t) {
 
 // Make sure we've picked deallocator for the correct side of compilation.
 
-// COMMON-LABEL: define  linkonce_odr void @_ZN4H1D1dlEPv(i8* noundef %0)
+// COMMON-LABEL: define  linkonce_odr void @_ZN4H1D1dlEPv(ptr noundef %0)
 // DEVICE: call void @dev_fn()
 // HOST:   call void @host_fn()
 
-// DEVICE-LABEL: define  linkonce_odr void @_ZN4H1D2dlEPvj(i8* noundef %0, i32 noundef %1)
+// DEVICE-LABEL: define  linkonce_odr void @_ZN4H1D2dlEPvj(ptr noundef %0, i32 noundef %1)
 // DEVICE: call void @dev_fn()
-// HOST-LABEL: define linkonce_odr void @_ZN4H1D2dlEPv(i8* noundef %0)
+// HOST-LABEL: define linkonce_odr void @_ZN4H1D2dlEPv(ptr noundef %0)
 // HOST: call void @host_fn()
 
-// DEVICE-LABEL: define  linkonce_odr void @_ZN4H2D1dlEPv(i8* noundef %0)
+// DEVICE-LABEL: define  linkonce_odr void @_ZN4H2D1dlEPv(ptr noundef %0)
 // DEVICE: call void @dev_fn()
-// HOST-LABEL:  define linkonce_odr void @_ZN4H2D1dlEPvj(i8* noundef %0, i32 noundef %1)
+// HOST-LABEL:  define linkonce_odr void @_ZN4H2D1dlEPvj(ptr noundef %0, i32 noundef %1)
 // HOST: call void @host_fn()
 
-// COMMON-LABEL: define  linkonce_odr void @_ZN4H2D2dlEPvj(i8* noundef %0, i32 noundef %1)
-// DEVICE: call void @dev_fn()
-// HOST: call void @host_fn()
-
-// COMMON-LABEL: define  linkonce_odr void @_ZN6H1D1D2dlEPv(i8* noundef %0)
+// COMMON-LABEL: define  linkonce_odr void @_ZN4H2D2dlEPvj(ptr noundef %0, i32 noundef %1)
 // DEVICE: call void @dev_fn()
 // HOST: call void @host_fn()
 
-// COMMON-LABEL: define  linkonce_odr void @_ZN6H1H2D1dlEPv(i8* noundef %0)
+// COMMON-LABEL: define  linkonce_odr void @_ZN6H1D1D2dlEPv(ptr noundef %0)
 // DEVICE: call void @dev_fn()
 // HOST: call void @host_fn()
 
-// DEVICE-LABEL: define  linkonce_odr void @_ZN6H1H2D2dlEPvj(i8* noundef %0, i32 noundef %1)
-// DEVICE: call void @dev_fn()
-// HOST-LABEL: define linkonce_odr void @_ZN6H1H2D2dlEPv(i8* noundef %0)
-// HOST: call void @host_fn()
-
-// COMMON-LABEL: define  linkonce_odr void @_ZN8H1H2D1D2dlEPv(i8* noundef %0)
+// COMMON-LABEL: define  linkonce_odr void @_ZN6H1H2D1dlEPv(ptr noundef %0)
 // DEVICE: call void @dev_fn()
 // HOST: call void @host_fn()
 
-// DEVICE: !0 = !{void (i32)* @_Z1fIiEvT_, !"kernel", i32 1}
+// DEVICE-LABEL: define  linkonce_odr void @_ZN6H1H2D2dlEPvj(ptr noundef %0, i32 noundef %1)
+// DEVICE: call void @dev_fn()
+// HOST-LABEL: define linkonce_odr void @_ZN6H1H2D2dlEPv(ptr noundef %0)
+// HOST: call void @host_fn()
+
+// COMMON-LABEL: define  linkonce_odr void @_ZN8H1H2D1D2dlEPv(ptr noundef %0)
+// DEVICE: call void @dev_fn()
+// HOST: call void @host_fn()
+
+// DEVICE: !0 = !{ptr @_Z1fIiEvT_, !"kernel", i32 1}

@@ -8,9 +8,9 @@
 
 #include "src/__support/CPP/array.h"
 #include "src/string/memory_utils/utils.h"
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 TEST(LlvmLibcUtilsTest, IsPowerOfTwoOrZero) {
   static const cpp::array<bool, 65> kExpectedValues{
@@ -45,7 +45,7 @@ TEST(LlvmLibcUtilsTest, Log2) {
       6                                               // 64
   };
   for (size_t i = 0; i < kExpectedValues.size(); ++i)
-    EXPECT_EQ(log2(i), kExpectedValues[i]);
+    EXPECT_EQ(log2s(i), kExpectedValues[i]);
 }
 
 TEST(LlvmLibcUtilsTest, LEPowerOf2) {
@@ -144,4 +144,57 @@ TEST(LlvmLibcUtilsTest, Align2) {
   }
 }
 
-} // namespace __llvm_libc
+TEST(LlvmLibcUtilsTest, DisjointBuffers) {
+  char buf[3];
+  const char *const a = buf + 0;
+  const char *const b = buf + 1;
+  EXPECT_TRUE(is_disjoint(a, b, 0));
+  EXPECT_TRUE(is_disjoint(a, b, 1));
+  EXPECT_FALSE(is_disjoint(a, b, 2));
+
+  EXPECT_TRUE(is_disjoint(b, a, 0));
+  EXPECT_TRUE(is_disjoint(b, a, 1));
+  EXPECT_FALSE(is_disjoint(b, a, 2));
+}
+
+TEST(LlvmLibcUtilsTest, LoadStoreAligned) {
+  const uint64_t init = 0xDEAD'C0DE'BEEF'F00D;
+  CPtr const src = reinterpret_cast<CPtr>(&init);
+  uint64_t store;
+  Ptr const dst = reinterpret_cast<Ptr>(&store);
+
+  using LoadFun = uint64_t (*)(CPtr);
+  using StoreFun = void (*)(uint64_t, Ptr);
+
+  {
+    LoadFun ld = load_aligned<uint64_t, uint64_t>;
+    StoreFun st = store_aligned<uint64_t, uint64_t>;
+    const uint64_t loaded = ld(src);
+    EXPECT_EQ(init, loaded);
+    store = 0;
+    st(init, dst);
+    EXPECT_EQ(init, store);
+  }
+
+  {
+    LoadFun ld = load_aligned<uint64_t, uint32_t, uint32_t>;
+    StoreFun st = store_aligned<uint64_t, uint32_t, uint32_t>;
+    const uint64_t loaded = ld(src);
+    EXPECT_EQ(init, loaded);
+    store = 0;
+    st(init, dst);
+    EXPECT_EQ(init, store);
+  }
+
+  {
+    LoadFun ld = load_aligned<uint64_t, uint32_t, uint16_t, uint8_t, uint8_t>;
+    StoreFun st = store_aligned<uint64_t, uint32_t, uint16_t, uint8_t, uint8_t>;
+    const uint64_t loaded = ld(src);
+    EXPECT_EQ(init, loaded);
+    store = 0;
+    st(init, dst);
+    EXPECT_EQ(init, store);
+  }
+}
+
+} // namespace LIBC_NAMESPACE

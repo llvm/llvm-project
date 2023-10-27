@@ -11,8 +11,8 @@
 
 #include "../utils/RenamerClangTidyCheck.h"
 #include <optional>
-namespace clang {
-namespace tidy {
+#include <string>
+namespace clang::tidy {
 namespace readability {
 
 enum StyleKind : int;
@@ -44,7 +44,8 @@ public:
     CT_UpperCase,
     CT_CamelCase,
     CT_CamelSnakeCase,
-    CT_CamelSnakeBack
+    CT_CamelSnakeBack,
+    CT_LeadingUpperSnakeCase
   };
 
   enum HungarianPrefixType {
@@ -55,10 +56,10 @@ public:
   };
 
   struct HungarianNotationOption {
-    HungarianNotationOption() : HPType(HungarianPrefixType::HPT_Off) {}
+    HungarianNotationOption() = default;
 
     std::optional<CaseType> Case;
-    HungarianPrefixType HPType;
+    HungarianPrefixType HPType = HungarianPrefixType::HPT_Off;
     llvm::StringMap<std::string> General;
     llvm::StringMap<std::string> CString;
     llvm::StringMap<std::string> PrimitiveType;
@@ -69,8 +70,8 @@ public:
   struct NamingStyle {
     NamingStyle() = default;
 
-    NamingStyle(std::optional<CaseType> Case, const std::string &Prefix,
-                const std::string &Suffix, const std::string &IgnoredRegexpStr,
+    NamingStyle(std::optional<CaseType> Case, StringRef Prefix,
+                StringRef Suffix, StringRef IgnoredRegexpStr,
                 HungarianPrefixType HPType);
     NamingStyle(const NamingStyle &O) = delete;
     NamingStyle &operator=(NamingStyle &&O) = default;
@@ -92,6 +93,11 @@ public:
     bool checkOptionValid(int StyleKindIndex) const;
     bool isOptionEnabled(StringRef OptionKey,
                          const llvm::StringMap<std::string> &StrMap) const;
+
+    size_t getAsteriskCount(const std::string &TypeName) const;
+    size_t getAsteriskCount(const std::string &TypeName,
+                            const NamedDecl *ND) const;
+
     void loadDefaultConfig(
         IdentifierNamingCheck::HungarianNotationOption &HNOption) const;
     void loadFileConfig(
@@ -198,7 +204,6 @@ private:
   mutable llvm::StringMap<FileStyle> NamingStylesCache;
   FileStyle *MainFileStyle;
   ClangTidyContext *Context;
-  const StringRef CheckName;
   const bool GetConfigPerFile;
   const bool IgnoreFailedSplit;
   HungarianNotation HungarianNotation;
@@ -211,7 +216,6 @@ struct OptionEnumMapping<readability::IdentifierNamingCheck::CaseType> {
       std::pair<readability::IdentifierNamingCheck::CaseType, StringRef>>
   getEnumMapping();
 };
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_IDENTIFIERNAMINGCHECK_H

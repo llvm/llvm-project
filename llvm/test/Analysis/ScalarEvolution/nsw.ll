@@ -174,9 +174,9 @@ define i32 @PR12375(ptr readnone %arg) {
 ; CHECK-NEXT:    %tmp2 = phi ptr [ %arg, %bb ], [ %tmp5, %bb1 ]
 ; CHECK-NEXT:    --> {%arg,+,4}<nuw><%bb1> U: full-set S: full-set Exits: (4 + %arg)<nuw> LoopDispositions: { %bb1: Computable }
 ; CHECK-NEXT:    %tmp3 = phi i32 [ 0, %bb ], [ %tmp4, %bb1 ]
-; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%bb1> U: [0,-2147483648) S: [0,-2147483648) Exits: 1 LoopDispositions: { %bb1: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%bb1> U: [0,2) S: [0,2) Exits: 1 LoopDispositions: { %bb1: Computable }
 ; CHECK-NEXT:    %tmp4 = add nsw i32 %tmp3, 1
-; CHECK-NEXT:    --> {1,+,1}<nuw><%bb1> U: [1,0) S: [1,0) Exits: 2 LoopDispositions: { %bb1: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%bb1> U: [1,3) S: [1,3) Exits: 2 LoopDispositions: { %bb1: Computable }
 ; CHECK-NEXT:    %tmp5 = getelementptr inbounds i32, ptr %tmp2, i64 1
 ; CHECK-NEXT:    --> {(4 + %arg)<nuw>,+,4}<nuw><%bb1> U: [4,0) S: [4,0) Exits: (8 + %arg)<nuw> LoopDispositions: { %bb1: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @PR12375
@@ -276,22 +276,22 @@ define void @test4(i32 %arg) {
 ; CHECK-LABEL: 'test4'
 ; CHECK-NEXT:  Classifying expressions for: @test4
 ; CHECK-NEXT:    %array = alloca [10 x i32], align 4
-; CHECK-NEXT:    --> %array U: [0,-3) S: [-9223372036854775808,9223372036854775805)
+; CHECK-NEXT:    --> %array U: [4,-43) S: [-9223372036854775808,9223372036854775805)
 ; CHECK-NEXT:    %index = phi i32 [ %inc5, %for.body ], [ %arg, %entry ]
 ; CHECK-NEXT:    --> {%arg,+,1}<nsw><%for.body> U: full-set S: full-set Exits: (-1 + (10 smax (1 + %arg)<nsw>))<nsw> LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:    %sub = add nsw i32 %index, -2
 ; CHECK-NEXT:    --> {(-2 + %arg)<nsw>,+,1}<nsw><%for.body> U: full-set S: full-set Exits: (-3 + (10 smax (1 + %arg)<nsw>))<nsw> LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:    %idxprom = sext i32 %sub to i64
-; CHECK-NEXT:    --> {(-2 + (sext i32 %arg to i64))<nsw>,+,1}<nsw><%for.body> U: [-2147483650,4294967304) S: [-2147483650,4294967304) Exits: (-2 + (zext i32 (-1 + (-1 * %arg) + (10 smax (1 + %arg)<nsw>)) to i64) + (sext i32 %arg to i64)) LoopDispositions: { %for.body: Computable }
+; CHECK-NEXT:    --> {(-2 + (sext i32 %arg to i64))<nsw>,+,1}<nsw><%for.body> U: [-2147483650,4294967303) S: [-2147483650,4294967303) Exits: (-2 + (zext i32 (-1 + (-1 * %arg) + (10 smax (1 + %arg)<nsw>)) to i64) + (sext i32 %arg to i64)) LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:    %arrayidx = getelementptr inbounds [10 x i32], ptr %array, i64 0, i64 %idxprom
 ; CHECK-NEXT:    --> {(-8 + (4 * (sext i32 %arg to i64))<nsw> + %array),+,4}<nw><%for.body> U: [0,-3) S: [-9223372036854775808,9223372036854775805) Exits: (-8 + (4 * (zext i32 (-1 + (-1 * %arg) + (10 smax (1 + %arg)<nsw>)) to i64))<nuw><nsw> + (4 * (sext i32 %arg to i64))<nsw> + %array) LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:    %data = load i32, ptr %arrayidx, align 4
 ; CHECK-NEXT:    --> %data U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %for.body: Variant }
 ; CHECK-NEXT:    %inc5 = add nsw i32 %index, 1
-; CHECK-NEXT:    --> {(1 + %arg)<nsw>,+,1}<nsw><%for.body> U: full-set S: full-set Exits: (10 smax (1 + %arg)<nsw>) LoopDispositions: { %for.body: Computable }
+; CHECK-NEXT:    --> {(1 + %arg)<nsw>,+,1}<nsw><%for.body> U: [-2147483647,-2147483648) S: [-2147483647,-2147483648) Exits: (10 smax (1 + %arg)<nsw>) LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @test4
 ; CHECK-NEXT:  Loop %for.body: backedge-taken count is (-1 + (-1 * %arg) + (10 smax (1 + %arg)<nsw>))
-; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is -2147483638
+; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is -2147483639
 ; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is (-1 + (-1 * %arg) + (10 smax (1 + %arg)<nsw>))
 ; CHECK-NEXT:  Loop %for.body: Predicated backedge-taken count is (-1 + (-1 * %arg) + (10 smax (1 + %arg)<nsw>))
 ; CHECK-NEXT:   Predicates:
@@ -322,7 +322,7 @@ define void @bad_postinc_nsw_a(i32 %n) {
 ; CHECK-NEXT:    %iv = phi i32 [ 0, %entry ], [ %iv.inc, %loop ]
 ; CHECK-NEXT:    --> {0,+,7}<nuw><nsw><%loop> U: [0,-2147483648) S: [0,-2147483648) Exits: (7 * ((((-1 * (1 umin %n))<nuw><nsw> + %n) /u 7) + (1 umin %n))) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.inc = add nsw i32 %iv, 7
-; CHECK-NEXT:    --> {7,+,7}<nuw><%loop> U: [7,0) S: [7,0) Exits: (7 + (7 * ((((-1 * (1 umin %n))<nuw><nsw> + %n) /u 7) + (1 umin %n)))) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {7,+,7}<nuw><%loop> U: [7,-3) S: [7,0) Exits: (7 + (7 * ((((-1 * (1 umin %n))<nuw><nsw> + %n) /u 7) + (1 umin %n)))) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @bad_postinc_nsw_a
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is ((((-1 * (1 umin %n))<nuw><nsw> + %n) /u 7) + (1 umin %n))
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 613566756
@@ -438,6 +438,40 @@ loop:
 return:
   ret void
 }
+
+; {-128,+,-128} should not be <nsw>.
+define void @pr66066() {
+; CHECK-LABEL: 'pr66066'
+; CHECK-NEXT:  Classifying expressions for: @pr66066
+; CHECK-NEXT:    %iv = phi i8 [ 1, %entry ], [ %iv.dec, %loop ]
+; CHECK-NEXT:    --> {1,+,-1}<nsw><%loop> U: [0,2) S: [0,2) Exits: 0 LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %iv.dec = add i8 %iv, -1
+; CHECK-NEXT:    --> {0,+,-1}<nsw><%loop> U: [-1,1) S: [-1,1) Exits: -1 LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %shl = shl i8 %iv, 7
+; CHECK-NEXT:    --> {-128,+,-128}<%loop> U: [0,-127) S: [-128,1) Exits: 0 LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @pr66066
+; CHECK-NEXT:  Loop %loop: backedge-taken count is 1
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 1
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 1
+; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is 1
+; CHECK-NEXT:   Predicates:
+; CHECK:       Loop %loop: Trip multiple is 2
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i8 [ 1, %entry ], [ %iv.dec, %loop ]
+  %iv.dec = add i8 %iv, -1
+  %shl = shl i8 %iv, 7
+  %cmp1 = icmp eq i8 %shl, 0
+  br i1 %cmp1, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+declare void @print(i32)
 
 declare void @foo(i32)
 

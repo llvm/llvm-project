@@ -6,21 +6,23 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_SUPPORT_INTEGER_UTILS_H
-#define LLVM_LIBC_SRC_SUPPORT_INTEGER_UTILS_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_INTEGER_UTILS_H
+#define LLVM_LIBC_SRC___SUPPORT_INTEGER_UTILS_H
 
-#include "CPP/type_traits.h"
+#include "src/__support/CPP/type_traits.h"
+#include "src/__support/common.h"
+
 #include "builtin_wrappers.h"
 #include "number_pair.h"
 
 #include <stdint.h>
 
-namespace __llvm_libc {
+namespace LIBC_NAMESPACE {
 
 template <typename T> NumberPair<T> full_mul(T a, T b);
 
 template <>
-inline NumberPair<uint32_t> full_mul<uint32_t>(uint32_t a, uint32_t b) {
+LIBC_INLINE NumberPair<uint32_t> full_mul<uint32_t>(uint32_t a, uint32_t b) {
   uint64_t prod = uint64_t(a) * uint64_t(b);
   NumberPair<uint32_t> result;
   result.lo = uint32_t(prod);
@@ -29,7 +31,7 @@ inline NumberPair<uint32_t> full_mul<uint32_t>(uint32_t a, uint32_t b) {
 }
 
 template <>
-inline NumberPair<uint64_t> full_mul<uint64_t>(uint64_t a, uint64_t b) {
+LIBC_INLINE NumberPair<uint64_t> full_mul<uint64_t>(uint64_t a, uint64_t b) {
 #ifdef __SIZEOF_INT128__
   __uint128_t prod = __uint128_t(a) * __uint128_t(b);
   NumberPair<uint64_t> result;
@@ -58,6 +60,6 @@ inline NumberPair<uint64_t> full_mul<uint64_t>(uint64_t a, uint64_t b) {
 #endif // __SIZEOF_INT128__
 }
 
-} // namespace __llvm_libc
+} // namespace LIBC_NAMESPACE
 
-#endif // LLVM_LIBC_SRC_SUPPORT_INTEGER_UTILS_H
+#endif // LLVM_LIBC_SRC___SUPPORT_INTEGER_UTILS_H

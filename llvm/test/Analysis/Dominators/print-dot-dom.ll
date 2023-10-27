@@ -1,3 +1,6 @@
+; RUN: rm -rf %t
+; RUN: mkdir %t
+; RUN: cd %t
 ; RUN: opt %s -passes=dot-dom -disable-output
 ; RUN: FileCheck %s -input-file=dom.test1.dot -check-prefix=TEST1
 ; RUN: FileCheck %s -input-file=dom.test2.dot -check-prefix=TEST2

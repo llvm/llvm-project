@@ -10,8 +10,8 @@ declare void @llvm.assume(i1)
 ; Basic pattern
 define i8 @t0(i8 %x) {
 ; CHECK-LABEL: @t0(
-; CHECK-NEXT:    [[X_BIASED1:%.*]] = add i8 [[X:%.*]], 15
-; CHECK-NEXT:    [[X_ROUNDEDUP:%.*]] = and i8 [[X_BIASED1]], -16
+; CHECK-NEXT:    [[X_BIASED:%.*]] = add i8 [[X:%.*]], 15
+; CHECK-NEXT:    [[X_ROUNDEDUP:%.*]] = and i8 [[X_BIASED]], -16
 ; CHECK-NEXT:    ret i8 [[X_ROUNDEDUP]]
 ;
   %x.lowbits = and i8 %x, 15
@@ -25,8 +25,8 @@ define i8 @t0(i8 %x) {
 ; Another alignment is fine
 define i8 @t1(i8 %x) {
 ; CHECK-LABEL: @t1(
-; CHECK-NEXT:    [[X_BIASED1:%.*]] = add i8 [[X:%.*]], 31
-; CHECK-NEXT:    [[X_ROUNDEDUP:%.*]] = and i8 [[X_BIASED1]], -32
+; CHECK-NEXT:    [[X_BIASED:%.*]] = add i8 [[X:%.*]], 31
+; CHECK-NEXT:    [[X_ROUNDEDUP:%.*]] = and i8 [[X_BIASED]], -32
 ; CHECK-NEXT:    ret i8 [[X_ROUNDEDUP]]
 ;
   %x.lowbits = and i8 %x, 31
@@ -58,8 +58,8 @@ define i8 @t3_commutative(i8 %x) {
 ; CHECK-NEXT:    [[X_LOWBITS:%.*]] = and i8 [[X:%.*]], 15
 ; CHECK-NEXT:    [[X_LOWBITS_ARE_NOT_ZERO:%.*]] = icmp ne i8 [[X_LOWBITS]], 0
 ; CHECK-NEXT:    call void @use.i1(i1 [[X_LOWBITS_ARE_NOT_ZERO]])
-; CHECK-NEXT:    [[X_BIASED1:%.*]] = add i8 [[X]], 15
-; CHECK-NEXT:    [[X_ROUNDEDUP:%.*]] = and i8 [[X_BIASED1]], -16
+; CHECK-NEXT:    [[X_BIASED:%.*]] = add i8 [[X]], 15
+; CHECK-NEXT:    [[X_ROUNDEDUP:%.*]] = and i8 [[X_BIASED]], -16
 ; CHECK-NEXT:    ret i8 [[X_ROUNDEDUP]]
 ;
   %x.lowbits = and i8 %x, 15
@@ -74,8 +74,8 @@ define i8 @t3_commutative(i8 %x) {
 ; Basic splat vector test
 define <2 x i8> @t4_splat(<2 x i8> %x) {
 ; CHECK-LABEL: @t4_splat(
-; CHECK-NEXT:    [[X_BIASED1:%.*]] = add <2 x i8> [[X:%.*]], <i8 15, i8 15>
-; CHECK-NEXT:    [[X_ROUNDEDUP:%.*]] = and <2 x i8> [[X_BIASED1]], <i8 -16, i8 -16>
+; CHECK-NEXT:    [[X_BIASED:%.*]] = add <2 x i8> [[X:%.*]], <i8 15, i8 15>
+; CHECK-NEXT:    [[X_ROUNDEDUP:%.*]] = and <2 x i8> [[X_BIASED]], <i8 -16, i8 -16>
 ; CHECK-NEXT:    ret <2 x i8> [[X_ROUNDEDUP]]
 ;
   %x.lowbits = and <2 x i8> %x, <i8 15, i8 15>
@@ -115,8 +115,8 @@ define <2 x i8> @t5_splat_undef_0b0010(<2 x i8> %x) {
 }
 define <2 x i8> @t5_splat_undef_0b0100(<2 x i8> %x) {
 ; CHECK-LABEL: @t5_splat_undef_0b0100(
-; CHECK-NEXT:    [[X_BIASED1:%.*]] = add <2 x i8> [[X:%.*]], <i8 15, i8 15>
-; CHECK-NEXT:    [[X_ROUNDEDUP:%.*]] = and <2 x i8> [[X_BIASED1]], <i8 -16, i8 -16>
+; CHECK-NEXT:    [[X_BIASED:%.*]] = add <2 x i8> [[X:%.*]], <i8 15, i8 15>
+; CHECK-NEXT:    [[X_ROUNDEDUP:%.*]] = and <2 x i8> [[X_BIASED]], <i8 -16, i8 -16>
 ; CHECK-NEXT:    ret <2 x i8> [[X_ROUNDEDUP]]
 ;
   %x.lowbits = and <2 x i8> %x, <i8 15, i8 15>
@@ -128,8 +128,8 @@ define <2 x i8> @t5_splat_undef_0b0100(<2 x i8> %x) {
 }
 define <2 x i8> @t5_splat_undef_0b1000(<2 x i8> %x) {
 ; CHECK-LABEL: @t5_splat_undef_0b1000(
-; CHECK-NEXT:    [[X_BIASED1:%.*]] = add <2 x i8> [[X:%.*]], <i8 15, i8 15>
-; CHECK-NEXT:    [[X_ROUNDEDUP:%.*]] = and <2 x i8> [[X_BIASED1]], <i8 -16, i8 -16>
+; CHECK-NEXT:    [[X_BIASED:%.*]] = add <2 x i8> [[X:%.*]], <i8 15, i8 15>
+; CHECK-NEXT:    [[X_ROUNDEDUP:%.*]] = and <2 x i8> [[X_BIASED]], <i8 -16, i8 -16>
 ; CHECK-NEXT:    ret <2 x i8> [[X_ROUNDEDUP]]
 ;
   %x.lowbits = and <2 x i8> %x, <i8 15, i8 undef>

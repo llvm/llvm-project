@@ -7,10 +7,12 @@ body:             |
     liveins: $s0
 
     ; CHECK-LABEL: name: fptrunc_s16_s32
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $s0
-    ; CHECK: [[FPTRUNC:%[0-9]+]]:_(s16) = G_FPTRUNC [[COPY]](s32)
-    ; CHECK: $h0 = COPY [[FPTRUNC]](s16)
-    ; CHECK: RET_ReallyLR implicit $h0
+    ; CHECK: liveins: $s0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $s0
+    ; CHECK-NEXT: [[FPTRUNC:%[0-9]+]]:_(s16) = G_FPTRUNC [[COPY]](s32)
+    ; CHECK-NEXT: $h0 = COPY [[FPTRUNC]](s16)
+    ; CHECK-NEXT: RET_ReallyLR implicit $h0
     %0:_(s32) = COPY $s0
     %1:_(s16) = G_FPTRUNC %0
     $h0 = COPY %1(s16)
@@ -23,10 +25,12 @@ body:             |
     liveins: $d0
 
     ; CHECK-LABEL: name: fptrunc_s16_s64
-    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $d0
-    ; CHECK: [[FPTRUNC:%[0-9]+]]:_(s16) = G_FPTRUNC [[COPY]](s64)
-    ; CHECK: $h0 = COPY [[FPTRUNC]](s16)
-    ; CHECK: RET_ReallyLR implicit $h0
+    ; CHECK: liveins: $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $d0
+    ; CHECK-NEXT: [[FPTRUNC:%[0-9]+]]:_(s16) = G_FPTRUNC [[COPY]](s64)
+    ; CHECK-NEXT: $h0 = COPY [[FPTRUNC]](s16)
+    ; CHECK-NEXT: RET_ReallyLR implicit $h0
     %0:_(s64) = COPY $d0
     %1:_(s16) = G_FPTRUNC %0
     $h0 = COPY %1(s16)
@@ -39,10 +43,12 @@ body:             |
     liveins: $d0
 
     ; CHECK-LABEL: name: fptrunc_s32_s64
-    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $d0
-    ; CHECK: [[FPTRUNC:%[0-9]+]]:_(s32) = G_FPTRUNC [[COPY]](s64)
-    ; CHECK: $s0 = COPY [[FPTRUNC]](s32)
-    ; CHECK: RET_ReallyLR implicit $s0
+    ; CHECK: liveins: $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $d0
+    ; CHECK-NEXT: [[FPTRUNC:%[0-9]+]]:_(s32) = G_FPTRUNC [[COPY]](s64)
+    ; CHECK-NEXT: $s0 = COPY [[FPTRUNC]](s32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $s0
     %0:_(s64) = COPY $d0
     %1:_(s32) = G_FPTRUNC %0
     $s0 = COPY %1(s32)
@@ -55,10 +61,12 @@ body:             |
     liveins: $q0
 
     ; CHECK-LABEL: name: fptrunc_v4s16_v4s32
-    ; CHECK: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
-    ; CHECK: [[FPTRUNC:%[0-9]+]]:_(<4 x s16>) = G_FPTRUNC [[COPY]](<4 x s32>)
-    ; CHECK: $d0 = COPY [[FPTRUNC]](<4 x s16>)
-    ; CHECK: RET_ReallyLR implicit $d0
+    ; CHECK: liveins: $q0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
+    ; CHECK-NEXT: [[FPTRUNC:%[0-9]+]]:_(<4 x s16>) = G_FPTRUNC [[COPY]](<4 x s32>)
+    ; CHECK-NEXT: $d0 = COPY [[FPTRUNC]](<4 x s16>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $d0
     %0:_(<4 x s32>) = COPY $q0
     %1:_(<4 x s16>) = G_FPTRUNC %0
     $d0 = COPY %1(<4 x s16>)
@@ -71,10 +79,16 @@ body:             |
     liveins: $d0
 
     ; CHECK-LABEL: name: fptrunc_v2s16_v2s32
-    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $d0
-    ; CHECK: [[FPTRUNC:%[0-9]+]]:_(<2 x s16>) = G_FPTRUNC [[COPY]](<2 x s32>)
-    ; CHECK: $s0 = COPY [[FPTRUNC]](<2 x s16>)
-    ; CHECK: RET_ReallyLR implicit $s0
+    ; CHECK: liveins: $d0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $d0
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<2 x s32>)
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[UV]](s32), [[UV1]](s32), [[DEF]](s32), [[DEF]](s32)
+    ; CHECK-NEXT: [[FPTRUNC:%[0-9]+]]:_(<4 x s16>) = G_FPTRUNC [[BUILD_VECTOR]](<4 x s32>)
+    ; CHECK-NEXT: [[UV2:%[0-9]+]]:_(<2 x s16>), [[UV3:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[FPTRUNC]](<4 x s16>)
+    ; CHECK-NEXT: $s0 = COPY [[UV2]](<2 x s16>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $s0
     %0:_(<2 x s32>) = COPY $d0
     %1:_(<2 x s16>) = G_FPTRUNC %0
     $s0 = COPY %1(<2 x s16>)
@@ -87,11 +101,11 @@ body:             |
 
     ; CHECK-LABEL: name: fptrunc_v4s32_v4s64
     ; CHECK: [[DEF:%[0-9]+]]:_(<2 x s64>) = G_IMPLICIT_DEF
-    ; CHECK: [[FPTRUNC:%[0-9]+]]:_(<2 x s32>) = G_FPTRUNC [[DEF]](<2 x s64>)
-    ; CHECK: [[FPTRUNC1:%[0-9]+]]:_(<2 x s32>) = G_FPTRUNC [[DEF]](<2 x s64>)
-    ; CHECK: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s32>) = G_CONCAT_VECTORS [[FPTRUNC]](<2 x s32>), [[FPTRUNC1]](<2 x s32>)
-    ; CHECK: $q0 = COPY [[CONCAT_VECTORS]](<4 x s32>)
-    ; CHECK: RET_ReallyLR implicit $q0
+    ; CHECK-NEXT: [[FPTRUNC:%[0-9]+]]:_(<2 x s32>) = G_FPTRUNC [[DEF]](<2 x s64>)
+    ; CHECK-NEXT: [[FPTRUNC1:%[0-9]+]]:_(<2 x s32>) = G_FPTRUNC [[DEF]](<2 x s64>)
+    ; CHECK-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s32>) = G_CONCAT_VECTORS [[FPTRUNC]](<2 x s32>), [[FPTRUNC1]](<2 x s32>)
+    ; CHECK-NEXT: $q0 = COPY [[CONCAT_VECTORS]](<4 x s32>)
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %0:_(<4 x s64>) = G_IMPLICIT_DEF
     %1:_(<4 x s32>) = G_FPTRUNC %0
     $q0 = COPY %1(<4 x s32>)
@@ -105,23 +119,25 @@ body:             |
     liveins: $x0, $q0, $q1, $q2, $q3, $x0
 
     ; CHECK-LABEL: name: fptrunc_v8s32_v8s64
-    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
-    ; CHECK: [[COPY1:%[0-9]+]]:_(<2 x s64>) = COPY $q1
-    ; CHECK: [[COPY2:%[0-9]+]]:_(<2 x s64>) = COPY $q2
-    ; CHECK: [[COPY3:%[0-9]+]]:_(<2 x s64>) = COPY $q3
-    ; CHECK: [[COPY4:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK: [[FPTRUNC:%[0-9]+]]:_(<2 x s32>) = G_FPTRUNC [[COPY]](<2 x s64>)
-    ; CHECK: [[FPTRUNC1:%[0-9]+]]:_(<2 x s32>) = G_FPTRUNC [[COPY1]](<2 x s64>)
-    ; CHECK: [[FPTRUNC2:%[0-9]+]]:_(<2 x s32>) = G_FPTRUNC [[COPY2]](<2 x s64>)
-    ; CHECK: [[FPTRUNC3:%[0-9]+]]:_(<2 x s32>) = G_FPTRUNC [[COPY3]](<2 x s64>)
-    ; CHECK: [[COPY5:%[0-9]+]]:_(p0) = COPY $x0
-    ; CHECK: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s32>) = G_CONCAT_VECTORS [[FPTRUNC]](<2 x s32>), [[FPTRUNC1]](<2 x s32>)
-    ; CHECK: [[CONCAT_VECTORS1:%[0-9]+]]:_(<4 x s32>) = G_CONCAT_VECTORS [[FPTRUNC2]](<2 x s32>), [[FPTRUNC3]](<2 x s32>)
-    ; CHECK: G_STORE [[CONCAT_VECTORS]](<4 x s32>), [[COPY5]](p0) :: (store (<4 x s32>), align 32)
-    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
-    ; CHECK: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY5]], [[C]](s64)
-    ; CHECK: G_STORE [[CONCAT_VECTORS1]](<4 x s32>), [[PTR_ADD]](p0) :: (store (<4 x s32>) into unknown-address + 16)
-    ; CHECK: RET_ReallyLR
+    ; CHECK: liveins: $x0, $q0, $q1, $q2, $q3, $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s64>) = COPY $q1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(<2 x s64>) = COPY $q2
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(<2 x s64>) = COPY $q3
+    ; CHECK-NEXT: [[COPY4:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK-NEXT: [[FPTRUNC:%[0-9]+]]:_(<2 x s32>) = G_FPTRUNC [[COPY]](<2 x s64>)
+    ; CHECK-NEXT: [[FPTRUNC1:%[0-9]+]]:_(<2 x s32>) = G_FPTRUNC [[COPY1]](<2 x s64>)
+    ; CHECK-NEXT: [[FPTRUNC2:%[0-9]+]]:_(<2 x s32>) = G_FPTRUNC [[COPY2]](<2 x s64>)
+    ; CHECK-NEXT: [[FPTRUNC3:%[0-9]+]]:_(<2 x s32>) = G_FPTRUNC [[COPY3]](<2 x s64>)
+    ; CHECK-NEXT: [[COPY5:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s32>) = G_CONCAT_VECTORS [[FPTRUNC]](<2 x s32>), [[FPTRUNC1]](<2 x s32>)
+    ; CHECK-NEXT: [[CONCAT_VECTORS1:%[0-9]+]]:_(<4 x s32>) = G_CONCAT_VECTORS [[FPTRUNC2]](<2 x s32>), [[FPTRUNC3]](<2 x s32>)
+    ; CHECK-NEXT: G_STORE [[CONCAT_VECTORS]](<4 x s32>), [[COPY5]](p0) :: (store (<4 x s32>), align 32)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
+    ; CHECK-NEXT: [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY5]], [[C]](s64)
+    ; CHECK-NEXT: G_STORE [[CONCAT_VECTORS1]](<4 x s32>), [[PTR_ADD]](p0) :: (store (<4 x s32>) into unknown-address + 16)
+    ; CHECK-NEXT: RET_ReallyLR
     %2:_(<2 x s64>) = COPY $q0
     %3:_(<2 x s64>) = COPY $q1
     %4:_(<2 x s64>) = COPY $q2

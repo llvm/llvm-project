@@ -15,6 +15,7 @@ unittest("ClangDriverTests") {
     "DXCModeTest.cpp",
     "DistroTest.cpp",
     "ModuleCacheTest.cpp",
+    "MultilibBuilderTest.cpp",
     "MultilibTest.cpp",
     "SanitizerArgsTest.cpp",
     "ToolChainTest.cpp",

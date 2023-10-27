@@ -63,11 +63,11 @@
 # RUN:   FileCheck %s --check-prefix=DUPLICATE-INPUT -DFILEA=%basename_t.tmp-input1.o \
 # RUN:   -DPATHA=%t-input1.o -DFILEB=%basename_t.tmp-x86_64.bc -DPATHB=%t-x86_64.bc -DPATHCORRECT=%t.correct.ar
 
-# DUPLICATE-INPUT:     warning: file '[[FILEA]]' was specified multiple times.
-# DUPLICATE-INPUT-DAG: [[PATHA]]
-# DUPLICATE-INPUT-DAG: [[PATHCORRECT]]
-# DUPLICATE-INPUT:     file '[[FILEB]]' was specified multiple times.
+# DUPLICATE-INPUT:     warning: file '[[FILEB]]' was specified multiple times.
 # DUPLICATE-INPUT-DAG: [[PATHB]]
+# DUPLICATE-INPUT-DAG: [[PATHCORRECT]]
+# DUPLICATE-INPUT:     file '[[FILEA]]' was specified multiple times.
+# DUPLICATE-INPUT-DAG: [[PATHA]]
 # DUPLICATE-INPUT-DAG: [[PATHCORRECT]]
 
 ## Cannot read archive:

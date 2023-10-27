@@ -1075,3 +1075,77 @@ csrrs t2, 0x31E, zero
 csrrs t1, mstateen3h, zero
 # uimm12
 csrrs t2, 0x31F, zero
+
+#########################################
+# Advanced Interrupt Architecture (Smaia and Ssaia)
+#########################################
+
+# midelegh
+# name
+# CHECK-INST: csrrs t1, midelegh, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x30,0x31]
+# CHECK-INST-ALIAS: csrr t1, midelegh
+# uimm12
+# CHECK-INST: csrrs t2, midelegh, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x30,0x31]
+# CHECK-INST-ALIAS: csrr t2, midelegh
+# name
+csrrs t1, midelegh, zero
+# uimm12
+csrrs t2, 0x313, zero
+
+# mieh
+# name
+# CHECK-INST: csrrs t1, mieh, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x40,0x31]
+# CHECK-INST-ALIAS: csrr t1, mieh
+# uimm12
+# CHECK-INST: csrrs t2, mieh, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x40,0x31]
+# CHECK-INST-ALIAS: csrr t2, mieh
+# name
+csrrs t1, mieh, zero
+# uimm12
+csrrs t2, 0x314, zero
+
+# mvienh
+# name
+# CHECK-INST: csrrs t1, mvienh, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x80,0x31]
+# CHECK-INST-ALIAS: csrr t1, mvienh
+# uimm12
+# CHECK-INST: csrrs t2, mvienh, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x80,0x31]
+# CHECK-INST-ALIAS: csrr t2, mvienh
+# name
+csrrs t1, mvienh, zero
+# uimm12
+csrrs t2, 0x318, zero
+
+# mviph
+# name
+# CHECK-INST: csrrs t1, mviph, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x90,0x31]
+# CHECK-INST-ALIAS: csrr t1, mviph
+# uimm12
+# CHECK-INST: csrrs t2, mviph, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x90,0x31]
+# CHECK-INST-ALIAS: csrr t2, mviph
+# name
+csrrs t1, mviph, zero
+# uimm12
+csrrs t2, 0x319, zero
+
+# miph
+# name
+# CHECK-INST: csrrs t1, miph, zero
+# CHECK-ENC: encoding: [0x73,0x23,0x40,0x35]
+# CHECK-INST-ALIAS: csrr t1, miph
+# uimm12
+# CHECK-INST: csrrs t2, miph, zero
+# CHECK-ENC: encoding: [0xf3,0x23,0x40,0x35]
+# CHECK-INST-ALIAS: csrr t2, miph
+# name
+csrrs t1, miph, zero
+# uimm12
+csrrs t2, 0x354, zero

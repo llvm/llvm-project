@@ -48,11 +48,10 @@ define <8 x i16> @not_not_trunc_concat_multiple_uses(<4 x i32> %x, <4 x i32> %y)
 ; CHECK-NEXT:    xtn v1.4h, v1.4s
 ; CHECK-NEXT:    mvn v0.8b, v0.8b
 ; CHECK-NEXT:    mvn v1.8b, v1.8b
-; CHECK-NEXT:    mov v2.16b, v0.16b
-; CHECK-NEXT:    add v0.4h, v0.4h, v1.4h
-; CHECK-NEXT:    mov v2.d[1], v1.d[0]
-; CHECK-NEXT:    mov v0.d[1], v0.d[0]
-; CHECK-NEXT:    add v0.8h, v2.8h, v0.8h
+; CHECK-NEXT:    add v2.4h, v0.4h, v1.4h
+; CHECK-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-NEXT:    mov v2.d[1], v2.d[0]
+; CHECK-NEXT:    add v0.8h, v0.8h, v2.8h
 ; CHECK-NEXT:    ret
   %notx = xor <4 x i32> %x, <i32 -1, i32 -1, i32 -1, i32 -1>
   %trnx = trunc <4 x i32> %notx to <4 x i16>

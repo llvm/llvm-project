@@ -213,6 +213,38 @@ static Type *getArgType(const Function &F, unsigned ArgIdx) {
              : StructType::create(F.getContext(), KernelArgTypeStr);
 }
 
+static bool isEntryPoint(const Function &F) {
+  // OpenCL handling: any function with the SPIR_KERNEL
+  // calling convention will be a potential entry point.
+  if (F.getCallingConv() == CallingConv::SPIR_KERNEL)
+    return true;
+
+  // HLSL handling: special attribute are emitted from the
+  // front-end.
+  if (F.getFnAttribute("hlsl.shader").isValid())
+    return true;
+
+  return false;
+}
+
+static SPIRV::ExecutionModel::ExecutionModel
+getExecutionModel(const SPIRVSubtarget &STI, const Function &F) {
+  if (STI.isOpenCLEnv())
+    return SPIRV::ExecutionModel::Kernel;
+
+  auto attribute = F.getFnAttribute("hlsl.shader");
+  if (!attribute.isValid()) {
+    report_fatal_error(
+        "This entry point lacks mandatory hlsl.shader attribute.");
+  }
+
+  const auto value = attribute.getValueAsString();
+  if (value == "compute")
+    return SPIRV::ExecutionModel::GLCompute;
+
+  report_fatal_error("This HLSL entry point is not supported by this backend.");
+}
+
 bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
                                              const Function &F,
                                              ArrayRef<ArrayRef<Register>> VRegs,
@@ -336,9 +368,11 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
     buildOpName(FuncVReg, F.getName(), MIRBuilder);
 
   // Handle entry points and function linkage.
-  if (F.getCallingConv() == CallingConv::SPIR_KERNEL) {
+  if (isEntryPoint(F)) {
+    const auto &STI = MIRBuilder.getMF().getSubtarget<SPIRVSubtarget>();
+    auto executionModel = getExecutionModel(STI, F);
     auto MIB = MIRBuilder.buildInstr(SPIRV::OpEntryPoint)
-                   .addImm(static_cast<uint32_t>(SPIRV::ExecutionModel::Kernel))
+                   .addImm(static_cast<uint32_t>(executionModel))
                    .addUse(FuncVReg);
     addStringImm(F.getName(), MIB);
   } else if (F.getLinkage() == GlobalValue::LinkageTypes::ExternalLinkage ||
@@ -374,6 +408,7 @@ bool SPIRVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
     FTy = getOriginalFunctionType(*CF);
   }
 
+  MachineRegisterInfo *MRI = MIRBuilder.getMRI();
   Register ResVReg =
       Info.OrigRet.Regs.empty() ? Register(0) : Info.OrigRet.Regs[0];
   std::string FuncName = Info.Callee.getGlobal()->getName().str();
@@ -410,8 +445,9 @@ bool SPIRVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
     for (const Argument &Arg : CF->args()) {
       if (MIRBuilder.getDataLayout().getTypeStoreSize(Arg.getType()).isZero())
         continue; // Don't handle zero sized types.
-      ToInsert.push_back(
-          {MIRBuilder.getMRI()->createGenericVirtualRegister(LLT::scalar(32))});
+      Register Reg = MRI->createGenericVirtualRegister(LLT::scalar(32));
+      MRI->setRegClass(Reg, &SPIRV::IDRegClass);
+      ToInsert.push_back({Reg});
       VRegArgs.push_back(ToInsert.back());
     }
     // TODO: Reuse FunctionLoweringInfo

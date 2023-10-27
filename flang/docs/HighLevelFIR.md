@@ -119,7 +119,7 @@ its first operand to return an HLFIR variable compatible type.
 The fir.declare op is the only operation described by this change that will be
 added to FIR. The rational for this is that it is intended to survive until
 LLVM dialect codegeneration so that debug info generation can use them and
-alias information can take advantage of them even on FIR. 
+alias information can take advantage of them even on FIR.
 
 Note that Fortran variables are not necessarily named objects, they can also be
 the result of function references returning POINTERs. hlfir.declare will also
@@ -496,6 +496,8 @@ The attributes can be:
     analysis pass).
 -   unordered : mark that an assignment can happen in any element order (not
     true if there is an impure elemental function being called).
+-   temporary_lhs: mark that the left hand side of the assignment is
+    a compiler generated temporary.
 
 This will replace the current array_load/array_access/array_merge semantics.
 Instead, a more generic alias analysis will be performed on the LHS and RHS to
@@ -652,7 +654,6 @@ Syntax:
 %element = hlfir.apply %array_expr %i, %j: (hlfir.expr<?x?xi32>) -> i32
 ```
 
-
 #### Introducing operations for transformational intrinsic functions
 
 Motivation: Represent transformational intrinsics functions at a high-level so
@@ -700,6 +701,39 @@ call will probably be used since there is little point to keep them high level:
   expressions)
 - selected_char_kind, selected_int_kind, selected_real_kind that returns scalar
   integers
+
+#### Introducing operations for composed intrinsic functions
+
+Motivation: optimize commonly composed intrinsic functions (e.g.
+MATMUL(TRANSPOSE(a), b)). This optimization is implemented in Classic Flang.
+
+An operation and runtime function will be added for each commonly used
+composition of intrinsic functions. The operation will be the canonical way to
+write this chained operation (the MLIR canonicalization pass will rewrite the
+operations for the composed intrinsics into this one operation).
+
+These new operations will be treated as though they were standard
+transformational intrinsic functions.
+
+The composed intrinsic operation will return a hlfir.expr<T>. The arguments
+may be hlfir.expr<T>, boxed arrays, simple scalar types (e.g. i32, f32), or
+variables.
+
+To keep things simple, these operations will only match one form of the composed
+intrinsic functions: therefore there will be no optional arguments.
+
+Syntax:
+```
+%res = hlfir."intrinsic_name" %expr_or_var, ...
+```
+
+The composed intrinsic operation will be lowered to a `fir.call` to the newly
+added runtime implementation of the operation.
+
+These operations should not be added where the only improvement is to avoid
+creating a temporary intermediate buffer which would otherwise be removed by
+intelligent bufferization of a hlfir.expr. Similarly, these should not replace
+profitable uses of hlfir.elemental.
 
 #### Introducing operations for character operations and elemental intrinsic functions
 
@@ -987,7 +1021,7 @@ end subroutine
 
 Lowering output:
 
-```HLFIR
+```
 func.func @_QPfoo(%arg0: !fir.box<!fir.array<?xf32>>, %arg1: !fir.box<!fir.array<?xf32>>) {
   %a = hlfir.declare %arg0 {fir.def = "_QPfooEa"} : !fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>
   %b = hlfir.declare %arg1 {fir.def = "_QPfooEb"} : !fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>
@@ -1073,7 +1107,7 @@ end subroutine
 
 Lowering output:
 
-```HLFIR
+```
 func.func @_QPfoo(%arg0: !fir.box<!fir.array<?xf32>>, %arg1: !fir.box<!fir.array<?xf32>>, %arg2: !fir.box<!fir.ptr<!fir.array<?xf32>>>, %arg3: !fir.ref<!fir.array<100xf32>>) {
   %a = hlfir.declare %arg0 {fir.def = "_QPfooEa"} {fir.target} : !fir.box<!fir.array<?xf32>, !fir.box<!fir.array<?xf32>
   %b =  hlfir.declare %arg1 {fir.def = "_QPfooEb"} : !fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>
@@ -1111,7 +1145,7 @@ Step 1: hlfir.elemental inlining: inline the first hlfir.elemental into the
 second one at the hlfir.apply.
 
 
-```HLFIR
+```
 func.func @_QPfoo(%arg0: !fir.box<!fir.array<?xf32>>, %arg1: !fir.box<!fir.array<?xf32>>, %arg2: !fir.box<!fir.ptr<!fir.array<?xf32>>>, %arg3: !fir.ref<!fir.array<100xf32>>) {
   %a = hlfir.declare %arg0 {fir.def = "_QPfooEa"} {fir.target} : !fir.box<!fir.array<?xf32>, !fir.box<!fir.array<?xf32>
   %b =  hlfir.declare %arg1 {fir.def = "_QPfooEb"} : !fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>
@@ -1156,7 +1190,7 @@ Note that the alias analysis could have already occurred without inlining the
 %add hlfir.elemental.
 
 
-```HLFIR
+```
 func.func @_QPfoo(%arg0: !fir.box<!fir.array<?xf32>>, %arg1: !fir.box<!fir.array<?xf32>>, %arg2: !fir.box<!fir.ptr<!fir.array<?xf32>>>, %arg3: !fir.ref<!fir.array<100xf32>>) {
   %a = hlfir.declare %arg0 {fir.def = "_QPfooEa"} {fir.target} : !fir.box<!fir.array<?xf32>, !fir.box<!fir.array<?xf32>
   %b =  hlfir.declare %arg1 {fir.def = "_QPfooEb"} : !fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>
@@ -1195,7 +1229,7 @@ func.func @_QPfoo(%arg0: !fir.box<!fir.array<?xf32>>, %arg1: !fir.box<!fir.array
 Step 4: Lower assignments to regular loops since they have the no_overlap
 attribute, and inline the hlfir.elemental into the first loop nest.
 
-```HLFIR
+```
 func.func @_QPfoo(%arg0: !fir.box<!fir.array<?xf32>>, %arg1: !fir.box<!fir.array<?xf32>>, %arg2: !fir.box<!fir.ptr<!fir.array<?xf32>>>, %arg3: !fir.ref<!fir.array<100xf32>>) {
   %a = hlfir.declare %arg0 {fir.def = "_QPfooEa"} {fir.target} : !fir.box<!fir.array<?xf32>, !fir.box<!fir.array<?xf32>
   %b =  hlfir.declare %arg1 {fir.def = "_QPfooEb"} : !fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>
@@ -1241,7 +1275,7 @@ Step 5 (may also occur earlier or several times): shape propagation.
     conformance checks can be added for %a, %b and %p.
 -   %temp is small, and its fir.allocmem can be promoted to a stack allocation
 
-```HLFIR
+```
 func.func @_QPfoo(%arg0: !fir.box<!fir.array<?xf32>>, %arg1: !fir.box<!fir.array<?xf32>>, %arg2: !fir.box<!fir.ptr<!fir.array<?xf32>>>, %arg3: !fir.ref<!fir.array<100xf32>>) {
   // .....
   %cshape = fir.shape %c100
@@ -1332,7 +1366,7 @@ the MLIR infrastructure experience that was gained.
 
 ## Using symbols for HLFIR variables
 
-### Using attributes as pseudo variable symbols 
+### Using attributes as pseudo variable symbols
 
 Instead of restricting the memory types an HLFIR variable can have, it was
 force the defining operation of HLFIR variable SSA values to always be

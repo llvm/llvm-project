@@ -224,6 +224,8 @@ void PostfixExpressions(S a, S *p, U<int> *r) {
   p->::S::~S();
   // CHECK: CXXMemberCallExpr 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:14> 'void'
   // CHECK-NEXT: MemberExpr 0x{{[^ ]*}} <col:3, col:12> '<bound member function type>' ->~S 0x{{[^ ]*}}
+  // CHECK-NEXT: NestedNameSpecifier TypeSpec 'S'
+  // CHECK-NEXT: NestedNameSpecifier Global
   // CHECK-NEXT: ImplicitCastExpr
   // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:3> 'S *' lvalue ParmVar 0x{{[^ ]*}} 'p' 'S *'
 
@@ -231,6 +233,7 @@ void PostfixExpressions(S a, S *p, U<int> *r) {
   r->template U<int>::~U();
   // CHECK: CXXMemberCallExpr 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:26> 'void'
   // CHECK-NEXT: MemberExpr 0x{{[^ ]*}} <col:3, col:24> '<bound member function type>' ->~U 0x{{[^ ]*}}
+  // CHECK-NEXT: NestedNameSpecifier TypeSpecWithTemplate 'U<int>':'U<int>'
   // CHECK-NEXT: ImplicitCastExpr
   // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:3> 'U<int> *' lvalue ParmVar 0x{{[^ ]*}} 'r' 'U<int> *'
 
@@ -464,7 +467,7 @@ void PrimaryExpressions(Ts... a) {
   // CHECK-NEXT: CXXMethodDecl 0x{{[^ ]*}} <col:8, col:19> col:3 constexpr operator() 'auto () const' inline
   // CHECK-NEXT: CompoundStmt
   // CHECK-NEXT: CXXConversionDecl 0x{{[^ ]*}} <col:3, col:19> col:3 implicit constexpr operator auto (*)() 'auto (*() const noexcept)()' inline
-  // CHECK-NEXT: CXXMethodDecl 0x{{[^ ]*}} <col:3, col:19> col:3 implicit __invoke 'auto ()' static inline
+  // CHECK-NEXT: CXXMethodDecl 0x{{[^ ]*}} <col:3, col:19> col:3 implicit constexpr __invoke 'auto ()' static inline
   // CHECK-NEXT: CompoundStmt 0x{{[^ ]*}} <col:18, col:19>
 
   []() mutable {};

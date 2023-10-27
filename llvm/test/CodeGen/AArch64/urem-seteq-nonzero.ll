@@ -4,8 +4,8 @@
 define i1 @t32_3_1(i32 %X) nounwind {
 ; CHECK-LABEL: t32_3_1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #43691
-; CHECK-NEXT:    mov w9, #1431655765
+; CHECK-NEXT:    mov w8, #43691 // =0xaaab
+; CHECK-NEXT:    mov w9, #1431655765 // =0x55555555
 ; CHECK-NEXT:    movk w8, #43690, lsl #16
 ; CHECK-NEXT:    madd w8, w0, w8, w9
 ; CHECK-NEXT:    cmp w8, w9
@@ -19,11 +19,11 @@ define i1 @t32_3_1(i32 %X) nounwind {
 define i1 @t32_3_2(i32 %X) nounwind {
 ; CHECK-LABEL: t32_3_2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #43691
-; CHECK-NEXT:    mov w9, #-1431655766
+; CHECK-NEXT:    mov w8, #43691 // =0xaaab
+; CHECK-NEXT:    mov w9, #-1431655766 // =0xaaaaaaaa
 ; CHECK-NEXT:    movk w8, #43690, lsl #16
 ; CHECK-NEXT:    madd w8, w0, w8, w9
-; CHECK-NEXT:    mov w9, #1431655765
+; CHECK-NEXT:    mov w9, #1431655765 // =0x55555555
 ; CHECK-NEXT:    cmp w8, w9
 ; CHECK-NEXT:    cset w0, lo
 ; CHECK-NEXT:    ret
@@ -36,8 +36,8 @@ define i1 @t32_3_2(i32 %X) nounwind {
 define i1 @t32_5_1(i32 %X) nounwind {
 ; CHECK-LABEL: t32_5_1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #52429
-; CHECK-NEXT:    mov w9, #858993459
+; CHECK-NEXT:    mov w8, #52429 // =0xcccd
+; CHECK-NEXT:    mov w9, #858993459 // =0x33333333
 ; CHECK-NEXT:    movk w8, #52428, lsl #16
 ; CHECK-NEXT:    madd w8, w0, w8, w9
 ; CHECK-NEXT:    cmp w8, w9
@@ -51,11 +51,11 @@ define i1 @t32_5_1(i32 %X) nounwind {
 define i1 @t32_5_2(i32 %X) nounwind {
 ; CHECK-LABEL: t32_5_2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #52429
-; CHECK-NEXT:    mov w9, #1717986918
+; CHECK-NEXT:    mov w8, #52429 // =0xcccd
+; CHECK-NEXT:    mov w9, #1717986918 // =0x66666666
 ; CHECK-NEXT:    movk w8, #52428, lsl #16
 ; CHECK-NEXT:    madd w8, w0, w8, w9
-; CHECK-NEXT:    mov w9, #858993459
+; CHECK-NEXT:    mov w9, #858993459 // =0x33333333
 ; CHECK-NEXT:    cmp w8, w9
 ; CHECK-NEXT:    cset w0, lo
 ; CHECK-NEXT:    ret
@@ -67,11 +67,11 @@ define i1 @t32_5_2(i32 %X) nounwind {
 define i1 @t32_5_3(i32 %X) nounwind {
 ; CHECK-LABEL: t32_5_3:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #52429
-; CHECK-NEXT:    mov w9, #-1717986919
+; CHECK-NEXT:    mov w8, #52429 // =0xcccd
+; CHECK-NEXT:    mov w9, #-1717986919 // =0x99999999
 ; CHECK-NEXT:    movk w8, #52428, lsl #16
 ; CHECK-NEXT:    madd w8, w0, w8, w9
-; CHECK-NEXT:    mov w9, #858993459
+; CHECK-NEXT:    mov w9, #858993459 // =0x33333333
 ; CHECK-NEXT:    cmp w8, w9
 ; CHECK-NEXT:    cset w0, lo
 ; CHECK-NEXT:    ret
@@ -83,11 +83,11 @@ define i1 @t32_5_3(i32 %X) nounwind {
 define i1 @t32_5_4(i32 %X) nounwind {
 ; CHECK-LABEL: t32_5_4:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #52429
-; CHECK-NEXT:    mov w9, #-858993460
+; CHECK-NEXT:    mov w8, #52429 // =0xcccd
+; CHECK-NEXT:    mov w9, #-858993460 // =0xcccccccc
 ; CHECK-NEXT:    movk w8, #52428, lsl #16
 ; CHECK-NEXT:    madd w8, w0, w8, w9
-; CHECK-NEXT:    mov w9, #858993459
+; CHECK-NEXT:    mov w9, #858993459 // =0x33333333
 ; CHECK-NEXT:    cmp w8, w9
 ; CHECK-NEXT:    cset w0, lo
 ; CHECK-NEXT:    ret
@@ -100,11 +100,11 @@ define i1 @t32_5_4(i32 %X) nounwind {
 define i1 @t32_6_1(i32 %X) nounwind {
 ; CHECK-LABEL: t32_6_1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #43691
-; CHECK-NEXT:    mov w9, #1431655765
+; CHECK-NEXT:    mov w8, #43691 // =0xaaab
+; CHECK-NEXT:    mov w9, #1431655765 // =0x55555555
 ; CHECK-NEXT:    movk w8, #43690, lsl #16
 ; CHECK-NEXT:    madd w8, w0, w8, w9
-; CHECK-NEXT:    mov w9, #43691
+; CHECK-NEXT:    mov w9, #43691 // =0xaaab
 ; CHECK-NEXT:    movk w9, #10922, lsl #16
 ; CHECK-NEXT:    ror w8, w8, #1
 ; CHECK-NEXT:    cmp w8, w9
@@ -118,11 +118,11 @@ define i1 @t32_6_1(i32 %X) nounwind {
 define i1 @t32_6_2(i32 %X) nounwind {
 ; CHECK-LABEL: t32_6_2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #43691
-; CHECK-NEXT:    mov w9, #-1431655766
+; CHECK-NEXT:    mov w8, #43691 // =0xaaab
+; CHECK-NEXT:    mov w9, #-1431655766 // =0xaaaaaaaa
 ; CHECK-NEXT:    movk w8, #43690, lsl #16
 ; CHECK-NEXT:    madd w8, w0, w8, w9
-; CHECK-NEXT:    mov w9, #43691
+; CHECK-NEXT:    mov w9, #43691 // =0xaaab
 ; CHECK-NEXT:    movk w9, #10922, lsl #16
 ; CHECK-NEXT:    ror w8, w8, #1
 ; CHECK-NEXT:    cmp w8, w9
@@ -136,11 +136,11 @@ define i1 @t32_6_2(i32 %X) nounwind {
 define i1 @t32_6_3(i32 %X) nounwind {
 ; CHECK-LABEL: t32_6_3:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #43691
-; CHECK-NEXT:    mov w9, #-1
+; CHECK-NEXT:    mov w8, #43691 // =0xaaab
+; CHECK-NEXT:    mov w9, #-1 // =0xffffffff
 ; CHECK-NEXT:    movk w8, #43690, lsl #16
 ; CHECK-NEXT:    madd w8, w0, w8, w9
-; CHECK-NEXT:    mov w9, #43691
+; CHECK-NEXT:    mov w9, #43691 // =0xaaab
 ; CHECK-NEXT:    movk w9, #10922, lsl #16
 ; CHECK-NEXT:    ror w8, w8, #1
 ; CHECK-NEXT:    cmp w8, w9
@@ -154,11 +154,11 @@ define i1 @t32_6_3(i32 %X) nounwind {
 define i1 @t32_6_4(i32 %X) nounwind {
 ; CHECK-LABEL: t32_6_4:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #43691
+; CHECK-NEXT:    mov w8, #43691 // =0xaaab
 ; CHECK-NEXT:    sub w9, w0, #4
 ; CHECK-NEXT:    movk w8, #43690, lsl #16
 ; CHECK-NEXT:    mul w8, w9, w8
-; CHECK-NEXT:    mov w9, #43690
+; CHECK-NEXT:    mov w9, #43690 // =0xaaaa
 ; CHECK-NEXT:    movk w9, #10922, lsl #16
 ; CHECK-NEXT:    ror w8, w8, #1
 ; CHECK-NEXT:    cmp w8, w9
@@ -172,11 +172,11 @@ define i1 @t32_6_4(i32 %X) nounwind {
 define i1 @t32_6_5(i32 %X) nounwind {
 ; CHECK-LABEL: t32_6_5:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #43691
+; CHECK-NEXT:    mov w8, #43691 // =0xaaab
 ; CHECK-NEXT:    sub w9, w0, #5
 ; CHECK-NEXT:    movk w8, #43690, lsl #16
 ; CHECK-NEXT:    mul w8, w9, w8
-; CHECK-NEXT:    mov w9, #43690
+; CHECK-NEXT:    mov w9, #43690 // =0xaaaa
 ; CHECK-NEXT:    movk w9, #10922, lsl #16
 ; CHECK-NEXT:    ror w8, w8, #1
 ; CHECK-NEXT:    cmp w8, w9
@@ -193,10 +193,10 @@ define i1 @t32_6_5(i32 %X) nounwind {
 define i1 @t16_3_2(i16 %X) nounwind {
 ; CHECK-LABEL: t16_3_2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #-21845
-; CHECK-NEXT:    mov w9, #-21846
+; CHECK-NEXT:    mov w8, #-21845 // =0xffffaaab
+; CHECK-NEXT:    mov w9, #-21846 // =0xffffaaaa
 ; CHECK-NEXT:    madd w8, w0, w8, w9
-; CHECK-NEXT:    mov w9, #21845
+; CHECK-NEXT:    mov w9, #21845 // =0x5555
 ; CHECK-NEXT:    cmp w9, w8, uxth
 ; CHECK-NEXT:    cset w0, hi
 ; CHECK-NEXT:    ret
@@ -208,8 +208,8 @@ define i1 @t16_3_2(i16 %X) nounwind {
 define i1 @t8_3_2(i8 %X) nounwind {
 ; CHECK-LABEL: t8_3_2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #-85
-; CHECK-NEXT:    mov w9, #-86
+; CHECK-NEXT:    mov w8, #-85 // =0xffffffab
+; CHECK-NEXT:    mov w9, #-86 // =0xffffffaa
 ; CHECK-NEXT:    madd w8, w0, w8, w9
 ; CHECK-NEXT:    and w8, w8, #0xff
 ; CHECK-NEXT:    cmp w8, #85
@@ -223,11 +223,11 @@ define i1 @t8_3_2(i8 %X) nounwind {
 define i1 @t64_3_2(i64 %X) nounwind {
 ; CHECK-LABEL: t64_3_2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #-6148914691236517206
-; CHECK-NEXT:    mov x9, #-6148914691236517206
+; CHECK-NEXT:    mov x8, #-6148914691236517206 // =0xaaaaaaaaaaaaaaaa
+; CHECK-NEXT:    mov x9, #-6148914691236517206 // =0xaaaaaaaaaaaaaaaa
 ; CHECK-NEXT:    movk x8, #43691
 ; CHECK-NEXT:    madd x8, x0, x8, x9
-; CHECK-NEXT:    mov x9, #6148914691236517205
+; CHECK-NEXT:    mov x9, #6148914691236517205 // =0x5555555555555555
 ; CHECK-NEXT:    cmp x8, x9
 ; CHECK-NEXT:    cset w0, lo
 ; CHECK-NEXT:    ret

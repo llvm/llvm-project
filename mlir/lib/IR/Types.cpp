@@ -13,86 +13,116 @@ using namespace mlir;
 using namespace mlir::detail;
 
 //===----------------------------------------------------------------------===//
+// AbstractType
+//===----------------------------------------------------------------------===//
+
+void AbstractType::walkImmediateSubElements(
+    Type type, function_ref<void(Attribute)> walkAttrsFn,
+    function_ref<void(Type)> walkTypesFn) const {
+  walkImmediateSubElementsFn(type, walkAttrsFn, walkTypesFn);
+}
+
+Type AbstractType::replaceImmediateSubElements(Type type,
+                                               ArrayRef<Attribute> replAttrs,
+                                               ArrayRef<Type> replTypes) const {
+  return replaceImmediateSubElementsFn(type, replAttrs, replTypes);
+}
+
+//===----------------------------------------------------------------------===//
 // Type
 //===----------------------------------------------------------------------===//
 
 MLIRContext *Type::getContext() const { return getDialect().getContext(); }
 
-bool Type::isFloat8E5M2() const { return isa<Float8E5M2Type>(); }
-bool Type::isFloat8E4M3FN() const { return isa<Float8E4M3FNType>(); }
-bool Type::isBF16() const { return isa<BFloat16Type>(); }
-bool Type::isF16() const { return isa<Float16Type>(); }
-bool Type::isF32() const { return isa<Float32Type>(); }
-bool Type::isF64() const { return isa<Float64Type>(); }
-bool Type::isF80() const { return isa<Float80Type>(); }
-bool Type::isF128() const { return isa<Float128Type>(); }
+bool Type::isFloat8E5M2() const { return llvm::isa<Float8E5M2Type>(*this); }
+bool Type::isFloat8E4M3FN() const { return llvm::isa<Float8E4M3FNType>(*this); }
+bool Type::isFloat8E5M2FNUZ() const {
+  return llvm::isa<Float8E5M2FNUZType>(*this);
+}
+bool Type::isFloat8E4M3FNUZ() const {
+  return llvm::isa<Float8E4M3FNUZType>(*this);
+}
+bool Type::isFloat8E4M3B11FNUZ() const {
+  return llvm::isa<Float8E4M3B11FNUZType>(*this);
+}
+bool Type::isBF16() const { return llvm::isa<BFloat16Type>(*this); }
+bool Type::isF16() const { return llvm::isa<Float16Type>(*this); }
+bool Type::isTF32() const { return llvm::isa<FloatTF32Type>(*this); }
+bool Type::isF32() const { return llvm::isa<Float32Type>(*this); }
+bool Type::isF64() const { return llvm::isa<Float64Type>(*this); }
+bool Type::isF80() const { return llvm::isa<Float80Type>(*this); }
+bool Type::isF128() const { return llvm::isa<Float128Type>(*this); }
 
-bool Type::isIndex() const { return isa<IndexType>(); }
+bool Type::isIndex() const { return llvm::isa<IndexType>(*this); }
 
 /// Return true if this is an integer type with the specified width.
 bool Type::isInteger(unsigned width) const {
-  if (auto intTy = dyn_cast<IntegerType>())
+  if (auto intTy = llvm::dyn_cast<IntegerType>(*this))
     return intTy.getWidth() == width;
   return false;
 }
 
 bool Type::isSignlessInteger() const {
-  if (auto intTy = dyn_cast<IntegerType>())
+  if (auto intTy = llvm::dyn_cast<IntegerType>(*this))
     return intTy.isSignless();
   return false;
 }
 
 bool Type::isSignlessInteger(unsigned width) const {
-  if (auto intTy = dyn_cast<IntegerType>())
+  if (auto intTy = llvm::dyn_cast<IntegerType>(*this))
     return intTy.isSignless() && intTy.getWidth() == width;
   return false;
 }
 
 bool Type::isSignedInteger() const {
-  if (auto intTy = dyn_cast<IntegerType>())
+  if (auto intTy = llvm::dyn_cast<IntegerType>(*this))
     return intTy.isSigned();
   return false;
 }
 
 bool Type::isSignedInteger(unsigned width) const {
-  if (auto intTy = dyn_cast<IntegerType>())
+  if (auto intTy = llvm::dyn_cast<IntegerType>(*this))
     return intTy.isSigned() && intTy.getWidth() == width;
   return false;
 }
 
 bool Type::isUnsignedInteger() const {
-  if (auto intTy = dyn_cast<IntegerType>())
+  if (auto intTy = llvm::dyn_cast<IntegerType>(*this))
     return intTy.isUnsigned();
   return false;
 }
 
 bool Type::isUnsignedInteger(unsigned width) const {
-  if (auto intTy = dyn_cast<IntegerType>())
+  if (auto intTy = llvm::dyn_cast<IntegerType>(*this))
     return intTy.isUnsigned() && intTy.getWidth() == width;
   return false;
 }
 
 bool Type::isSignlessIntOrIndex() const {
-  return isSignlessInteger() || isa<IndexType>();
+  return isSignlessInteger() || llvm::isa<IndexType>(*this);
 }
 
 bool Type::isSignlessIntOrIndexOrFloat() const {
-  return isSignlessInteger() || isa<IndexType, FloatType>();
+  return isSignlessInteger() || llvm::isa<IndexType, FloatType>(*this);
 }
 
 bool Type::isSignlessIntOrFloat() const {
-  return isSignlessInteger() || isa<FloatType>();
+  return isSignlessInteger() || llvm::isa<FloatType>(*this);
 }
 
-bool Type::isIntOrIndex() const { return isa<IntegerType>() || isIndex(); }
+bool Type::isIntOrIndex() const {
+  return llvm::isa<IntegerType>(*this) || isIndex();
+}
 
-bool Type::isIntOrFloat() const { return isa<IntegerType, FloatType>(); }
+bool Type::isIntOrFloat() const {
+  return llvm::isa<IntegerType, FloatType>(*this);
+}
 
 bool Type::isIntOrIndexOrFloat() const { return isIntOrFloat() || isIndex(); }
 
 unsigned Type::getIntOrFloatBitWidth() const {
   assert(isIntOrFloat() && "only integers and floats have a bitwidth");
-  if (auto intType = dyn_cast<IntegerType>())
+  if (auto intType = llvm::dyn_cast<IntegerType>(*this))
     return intType.getWidth();
-  return cast<FloatType>().getWidth();
+  return llvm::cast<FloatType>(*this).getWidth();
 }

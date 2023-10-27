@@ -84,6 +84,27 @@ std::string TypeFilterImpl::GetDescription() {
   return std::string(sstr.GetString());
 }
 
+SyntheticChildren::SyntheticChildren(const Flags &flags) : m_flags(flags) {}
+
+SyntheticChildren::~SyntheticChildren() = default;
+
+CXXSyntheticChildren::CXXSyntheticChildren(
+    const SyntheticChildren::Flags &flags, const char *description,
+    CreateFrontEndCallback callback)
+    : SyntheticChildren(flags), m_create_callback(std::move(callback)),
+      m_description(description ? description : "") {}
+
+CXXSyntheticChildren::~CXXSyntheticChildren() = default;
+
+bool SyntheticChildren::IsScripted() { return false; }
+
+std::string SyntheticChildren::GetDescription() { return ""; }
+
+SyntheticChildrenFrontEnd::AutoPointer
+SyntheticChildren::GetFrontEnd(ValueObject &backend) {
+  return nullptr;
+}
+
 std::string CXXSyntheticChildren::GetDescription() {
   StreamString sstr;
   sstr.Printf("%s%s%s %s", Cascades() ? "" : " (not cascading)",

@@ -594,18 +594,9 @@ protected:
       return false;
     }
 
-    ABISP abi;
-    if (Process *proc = m_exe_ctx.GetProcessPtr())
-      abi = proc->GetABI();
-
-    if (abi)
-      addr = abi->FixDataAddress(addr);
-
     if (argc == 2) {
       lldb::addr_t end_addr = OptionArgParser::ToAddress(
           &m_exe_ctx, command[1].ref(), LLDB_INVALID_ADDRESS, nullptr);
-      if (end_addr != LLDB_INVALID_ADDRESS && abi)
-        end_addr = abi->FixDataAddress(end_addr);
 
       if (end_addr == LLDB_INVALID_ADDRESS) {
         result.AppendError("invalid end address expression.");
@@ -1045,12 +1036,6 @@ protected:
       return false;
     }
 
-    ABISP abi = m_exe_ctx.GetProcessPtr()->GetABI();
-    if (abi) {
-      low_addr = abi->FixDataAddress(low_addr);
-      high_addr = abi->FixDataAddress(high_addr);
-    }
-
     if (high_addr <= low_addr) {
       result.AppendError(
           "starting address must be smaller than ending address");
@@ -1062,7 +1047,8 @@ protected:
     DataBufferHeap buffer;
 
     if (m_memory_options.m_string.OptionWasSet()) {
-      llvm::StringRef str = m_memory_options.m_string.GetStringValue();
+      llvm::StringRef str =
+          m_memory_options.m_string.GetValueAs<llvm::StringRef>().value_or("");
       if (str.empty()) {
         result.AppendError("search string must have non-zero length.");
         return false;
@@ -1073,7 +1059,9 @@ protected:
       ValueObjectSP result_sp;
       if ((eExpressionCompleted ==
            process->GetTarget().EvaluateExpression(
-               m_memory_options.m_expr.GetStringValue(), frame, result_sp)) &&
+               m_memory_options.m_expr.GetValueAs<llvm::StringRef>().value_or(
+                   ""),
+               frame, result_sp)) &&
           result_sp) {
         uint64_t value = result_sp->GetValueAsUnsigned(0);
         std::optional<uint64_t> size =
@@ -1783,7 +1771,6 @@ protected:
       }
 
       auto load_addr_str = command[0].ref();
-      // Non-address bits in this will be handled later by GetMemoryRegion
       load_addr = OptionArgParser::ToAddress(&m_exe_ctx, load_addr_str,
                                              LLDB_INVALID_ADDRESS, &error);
       if (error.Fail() || load_addr == LLDB_INVALID_ADDRESS) {
@@ -1808,7 +1795,7 @@ protected:
       return false;
     }
 
-    // Is is important that we track the address used to request the region as
+    // It is important that we track the address used to request the region as
     // this will give the correct section name in the case that regions overlap.
     // On Windows we get mutliple regions that start at the same place but are
     // different sizes and refer to different sections.

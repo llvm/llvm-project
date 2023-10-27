@@ -132,11 +132,11 @@ namespace {
     llvm::StringRef GroupName;
     std::vector<const Record*> DiagsInGroup;
     std::vector<std::string> SubGroups;
-    unsigned IDNo;
+    unsigned IDNo = 0;
 
     llvm::SmallVector<const Record *, 1> Defs;
 
-    GroupInfo() : IDNo(0) {}
+    GroupInfo() = default;
   };
 } // end anonymous namespace.
 
@@ -653,6 +653,14 @@ private:
           Root(O.Root) {
       O.Root = nullptr;
     }
+    // The move assignment operator is defined as deleted pending further
+    // motivation.
+    DiagText &operator=(DiagText &&) = delete;
+
+    // The copy constrcutor and copy assignment operator is defined as deleted
+    // pending further motivation.
+    DiagText(const DiagText &) = delete;
+    DiagText &operator=(const DiagText &) = delete;
 
     ~DiagText() {
       for (Piece *P : AllocatedPieces)

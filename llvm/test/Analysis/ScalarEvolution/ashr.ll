@@ -51,7 +51,7 @@ define i32 @t4(i32 %x, i32 %y) {
 ; CHECK-LABEL: 't4'
 ; CHECK-NEXT:  Classifying expressions for: @t4
 ; CHECK-NEXT:    %i0 = ashr exact i32 %x, 32
-; CHECK-NEXT:    --> %i0 U: full-set S: full-set
+; CHECK-NEXT:    --> %i0 U: [0,1) S: [0,1)
 ; CHECK-NEXT:  Determining loop execution counts for: @t4
 ;
   %i0 = ashr exact i32 %x, 32

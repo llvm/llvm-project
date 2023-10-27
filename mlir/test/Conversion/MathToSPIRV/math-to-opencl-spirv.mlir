@@ -99,6 +99,13 @@ func.func @float32_ternary_vector(%a: vector<4xf32>, %b: vector<4xf32>,
   return
 }
 
+// CHECK-LABEL: @int_unary
+func.func @int_unary(%arg0: i32) {
+  // CHECK: spirv.CL.s_abs %{{.*}}
+  %0 = math.absi %arg0 : i32
+  return
+}
+
 } // end module
 
 // -----
