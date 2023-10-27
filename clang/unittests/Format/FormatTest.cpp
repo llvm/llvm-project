@@ -24227,9 +24227,10 @@ TEST_F(FormatTest, IgnorePPDefinitions) {
   verifyNoChange("#define A   b", Style);
   verifyNoChange("#define A  (  args   )", Style);
   verifyNoChange("#define A  (  args   )  =  func  (  args  )", Style);
-  verifyNoChange("#define TEXT Text . With periods.", Style);
   verifyNoChange("#define TEXT \\\nLine  number  one .  \\\nNumber  two .",
                  Style);
+  verifyNoChange("#define A x:", Style);
+  verifyNoChange("#define A a. b", Style);
 
   // TODO
   // verifyNoChange("/* comment */ #define A  (  args   )", Style);

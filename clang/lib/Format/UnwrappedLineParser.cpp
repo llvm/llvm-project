@@ -1138,6 +1138,14 @@ void UnwrappedLineParser::parsePPDefine() {
     return;
   }
 
+  if (Style.IgnorePPDefinitions) {
+    do {
+      nextToken();
+    } while (!eof());
+    addUnwrappedLine();
+    return;
+  }
+
   if (IncludeGuard == IG_IfNdefed &&
       IncludeGuardToken->TokenText == FormatTok->TokenText) {
     IncludeGuard = IG_Defined;
