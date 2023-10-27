@@ -160,6 +160,8 @@ class CGDebugInfo {
       NamespaceAliasCache;
   llvm::DenseMap<const Decl *, llvm::TypedTrackingMDRef<llvm::DIDerivedType>>
       StaticDataMemberCache;
+  /// Keeps track of static data members for which we should emit a definition.
+  std::vector<const VarDecl *> StaticDataMemberDefinitionsToEmit;
 
   using ParamDecl2StmtTy = llvm::DenseMap<const ParmVarDecl *, const Stmt *>;
   using Param2DILocTy =
@@ -525,6 +527,9 @@ public:
 
   /// Emit a constant global variable's debug info.
   void EmitGlobalVariable(const ValueDecl *VD, const APValue &Init);
+
+  /// Emit debug-info for a variable with a constant initializer.
+  void EmitGlobalVariable(const VarDecl *VD);
 
   /// Emit information about an external variable.
   void EmitExternalVariable(llvm::GlobalVariable *GV, const VarDecl *Decl);
