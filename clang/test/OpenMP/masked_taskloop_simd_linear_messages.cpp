@@ -131,11 +131,11 @@ template<class I, class C> int foomain(I argc, C **argv) {
   for (int k = 0; k < argc; ++k) ++k;
   #pragma omp masked taskloop simd linear (val // expected-error {{use of undeclared identifier 'val'}} expected-error {{expected ')'}} expected-note {{to match this '('}}
   for (int k = 0; k < argc; ++k) ++k;
-  #pragma omp masked taskloop simd linear (uval( // expected-error {{expected expression}} expected-error 2 {{expected ')'}} expected-note 2 {{to match this '('}}
+  #pragma omp masked taskloop simd linear (uval( // expected-error {{expected expression}} expected-error 2 {{expected ')'}} expected-note 2 {{to match this '('}} omp52-error {{old syntax 'linear-modifier(list)' on 'linear' clause was deprecated, use new syntax 'linear(list: [linear-modifier,] step(step-size))'}}
   for (int k = 0; k < argc; ++k) ++k;
-  #pragma omp masked taskloop simd linear (ref() // expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}}
+  #pragma omp masked taskloop simd linear (ref() // expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}} omp52-error {{old syntax 'linear-modifier(list)' on 'linear' clause was deprecated, use new syntax 'linear(list: [linear-modifier,] step(step-size))'}}
   for (int k = 0; k < argc; ++k) ++k;
-  #pragma omp masked taskloop simd linear (foo() // expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}}
+  #pragma omp masked taskloop simd linear (foo() // expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}} omp52-error {{old syntax 'linear-modifier(list)' on 'linear' clause was deprecated, use new syntax 'linear(list: [linear-modifier,] step(step-size))'}}
   for (int k = 0; k < argc; ++k) ++k;
   #pragma omp masked taskloop simd linear () // expected-error {{expected expression}}
   for (int k = 0; k < argc; ++k) ++k;
@@ -143,7 +143,7 @@ template<class I, class C> int foomain(I argc, C **argv) {
   for (int k = 0; k < argc; ++k) ++k;
   #pragma omp masked taskloop simd linear (val argc // expected-error {{use of undeclared identifier 'val'}} expected-error {{expected ')'}} expected-note {{to match this '('}}
   for (int k = 0; k < argc; ++k) ++k;
-  #pragma omp masked taskloop simd linear (val(argc, // expected-error {{expected expression}} expected-error 2 {{expected ')'}} expected-note 2 {{to match this '('}}
+  #pragma omp masked taskloop simd linear (val(argc, // expected-error {{expected expression}} expected-error 2 {{expected ')'}} expected-note 2 {{to match this '('}} omp52-error {{old syntax 'linear-modifier(list)' on 'linear' clause was deprecated, use new syntax 'linear(list: [linear-modifier,] step(step-size))'}}
   for (int k = 0; k < argc; ++k) ++k;
   #pragma omp masked taskloop simd linear (argc > 0 ? argv[1] : argv[2]) // expected-error {{expected variable name}}
   for (int k = 0; k < argc; ++k) ++k;
@@ -164,11 +164,11 @@ template<class I, class C> int foomain(I argc, C **argv) {
   for (int k = 0; k < argc; ++k) ++k;
   #pragma omp masked taskloop simd linear (argv[1]) // expected-error {{expected variable name}}
   for (int k = 0; k < argc; ++k) ++k;
-  #pragma omp masked taskloop simd linear(ref(e, g)) // expected-error 2 {{variable of non-reference type 'int' can be used only with 'val' modifier, but used with 'ref'}}
+  #pragma omp masked taskloop simd linear(ref(e, g)) // expected-error 2 {{variable of non-reference type 'int' can be used only with 'val' modifier, but used with 'ref'}} omp52-error {{old syntax 'linear-modifier(list)' on 'linear' clause was deprecated, use new syntax 'linear(list: [linear-modifier,] step(step-size))'}}
   for (int k = 0; k < argc; ++k) ++k;
   #pragma omp masked taskloop simd linear(h, z) // expected-error {{threadprivate or thread local variable cannot be linear}}
   for (int k = 0; k < argc; ++k) ++k;
-  #pragma omp masked taskloop simd linear(uval(i)) // expected-error {{variable of non-reference type 'int' can be used only with 'val' modifier, but used with 'uval'}}
+  #pragma omp masked taskloop simd linear(uval(i)) // expected-error {{variable of non-reference type 'int' can be used only with 'val' modifier, but used with 'uval'}} omp52 {{old syntax 'linear-modifier(list)' on 'linear' clause was deprecated, use new syntax 'linear(list: [linear-modifier,] step(step-size))'}} omp52-error {{old syntax 'linear-modifier(list)' on 'linear' clause was deprecated, use new syntax 'linear(list: [linear-modifier,] step(step-size))'}}
   for (int k = 0; k < argc; ++k) ++k;
   #pragma omp parallel
   {
@@ -177,9 +177,9 @@ template<class I, class C> int foomain(I argc, C **argv) {
     #pragma omp masked taskloop simd allocate(omp_thread_mem_alloc: v) linear(v:i) // expected-warning {{allocator with the 'thread' trait access has unspecified behavior on 'masked taskloop simd' directive}}
     for (int k = 0; k < argc; ++k) { i = k; v += i; }
   }
-  #pragma omp masked taskloop simd linear(ref(j))
+  #pragma omp masked taskloop simd linear(ref(j)) // omp52-error {{old syntax 'linear-modifier(list)' on 'linear' clause was deprecated, use new syntax 'linear(list: [linear-modifier,] step(step-size))'}}
   for (int k = 0; k < argc; ++k) ++k;
-  #pragma omp masked taskloop simd linear(uval(j))
+  #pragma omp masked taskloop simd linear(uval(j)) // omp52-error {{old syntax 'linear-modifier(list)' on 'linear' clause was deprecated, use new syntax 'linear(list: [linear-modifier,] step(step-size))'}}
   for (int k = 0; k < argc; ++k) ++k;
   int v = 0;
   #pragma omp masked taskloop simd linear(v:j)
@@ -201,13 +201,13 @@ void linear_modifiers(int argc) {
   int &f = argc;
   #pragma omp masked taskloop simd linear(f)
   for (int k = 0; k < argc; ++k) ++k;
-  #pragma omp masked taskloop simd linear(val(f))
+  #pragma omp masked taskloop simd linear(val(f)) // omp52-error {{old syntax 'linear-modifier(list)' on 'linear' clause was deprecated, use new syntax 'linear(list: [linear-modifier,] step(step-size))'}}
   for (int k = 0; k < argc; ++k) ++k;
-  #pragma omp masked taskloop simd linear(uval(f))
+  #pragma omp masked taskloop simd linear(uval(f)) // omp52-error {{old syntax 'linear-modifier(list)' on 'linear' clause was deprecated, use new syntax 'linear(list: [linear-modifier,] step(step-size))'}}
   for (int k = 0; k < argc; ++k) ++k;
-  #pragma omp masked taskloop simd linear(ref(f))
+  #pragma omp masked taskloop simd linear(ref(f)) // omp52-error {{old syntax 'linear-modifier(list)' on 'linear' clause was deprecated, use new syntax 'linear(list: [linear-modifier,] step(step-size))'}}
   for (int k = 0; k < argc; ++k) ++k;
-  #pragma omp masked taskloop simd linear(foo(f)) // expected-error {{expected one of 'ref', val' or 'uval' modifiers}}
+  #pragma omp masked taskloop simd linear(foo(f)) // expected-error {{expected one of 'ref', val' or 'uval' modifiers}} omp52-error {{old syntax 'linear-modifier(list)' on 'linear' clause was deprecated, use new syntax 'linear(list: [linear-modifier,] step(step-size))'}}
   for (int k = 0; k < argc; ++k) ++k;
 }
 
@@ -233,9 +233,9 @@ int main(int argc, char **argv) {
   for (int k = 0; k < argc; ++k) ++k;
   #pragma omp masked taskloop simd linear (val // expected-error {{use of undeclared identifier 'val'}} expected-error {{expected ')'}} expected-note {{to match this '('}}
   for (int k = 0; k < argc; ++k) ++k;
-  #pragma omp masked taskloop simd linear (ref()) // expected-error {{expected expression}}
+  #pragma omp masked taskloop simd linear (ref()) // expected-error {{expected expression}} omp52-error {{old syntax 'linear-modifier(list)' on 'linear' clause was deprecated, use new syntax 'linear(list: [linear-modifier,] step(step-size))'}}
   for (int k = 0; k < argc; ++k) ++k;
-  #pragma omp masked taskloop simd linear (foo()) // expected-error {{expected expression}}
+  #pragma omp masked taskloop simd linear (foo()) // expected-error {{expected expression}} omp52-error {{old syntax 'linear-modifier(list)' on 'linear' clause was deprecated, use new syntax 'linear(list: [linear-modifier,] step(step-size))'}}
   for (int k = 0; k < argc; ++k) ++k;
   #pragma omp masked taskloop simd linear (argc // expected-error {{expected ')'}} expected-note {{to match this '('}}
   for (int k = 0; k < argc; ++k) ++k;
@@ -253,6 +253,7 @@ int main(int argc, char **argv) {
   for (int k = 0; k < argc; ++k) ++k;
   #pragma omp masked taskloop simd linear (argv[1]) // expected-error {{expected variable name}}
   for (int k = 0; k < argc; ++k) ++k;
+  // omp52-error@+3 {{old syntax 'linear-modifier(list)' on 'linear' clause was deprecated, use new syntax 'linear(list: [linear-modifier,] step(step-size))'}}
   // expected-error@+2 {{argument of a linear clause should be of integral or pointer type, not 'S4'}}
   // expected-error@+1 {{argument of a linear clause should be of integral or pointer type, not 'S5'}}
   #pragma omp masked taskloop simd linear(val(e, g))
@@ -262,12 +263,12 @@ int main(int argc, char **argv) {
   #pragma omp parallel
   {
     int i;
-    #pragma omp masked taskloop simd linear(val(i))
+    #pragma omp masked taskloop simd linear(val(i)) // omp52-error {{old syntax 'linear-modifier(list)' on 'linear' clause was deprecated, use new syntax 'linear(list: [linear-modifier,] step(step-size))'}}
     for (int k = 0; k < argc; ++k) ++k;
 #ifdef OMP52
     #pragma omp masked taskloop simd linear(i : uval, step(4)) // expected-error {{variable of non-reference type 'int' can be used only with 'val' modifier, but used with 'uval'}}
 #else
-    #pragma omp masked taskloop simd linear(uval(i) : 4) // expected-error {{variable of non-reference type 'int' can be used only with 'val' modifier, but used with 'uval'}}
+    #pragma omp masked taskloop simd linear(uval(i) : 4) // expected-error {{variable of non-reference type 'int' can be used only with 'val' modifier, but used with 'uval'}} omp52-error {{old syntax 'linear-modifier(list)' on 'linear' clause was deprecated, use new syntax 'linear(list: [linear-modifier,] step(step-size))'}}
 #endif
     for (int k = 0; k < argc; ++k) { ++k; i += 4; }
   }

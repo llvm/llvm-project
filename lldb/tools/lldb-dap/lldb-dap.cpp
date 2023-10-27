@@ -651,6 +651,8 @@ void request_attach(const llvm::json::Object &request) {
       GetBoolean(arguments, "enableAutoVariableSummaries", false);
   g_dap.enable_synthetic_child_debugging =
       GetBoolean(arguments, "enableSyntheticChildDebugging", false);
+  g_dap.command_escape_prefix =
+      GetString(arguments, "commandEscapePrefix", "`");
 
   // This is a hack for loading DWARF in .o files on Mac where the .o files
   // in the debug map of the main executable have relative paths which require
@@ -1801,6 +1803,8 @@ void request_launch(const llvm::json::Object &request) {
       GetBoolean(arguments, "enableAutoVariableSummaries", false);
   g_dap.enable_synthetic_child_debugging =
       GetBoolean(arguments, "enableSyntheticChildDebugging", false);
+  g_dap.command_escape_prefix =
+      GetString(arguments, "commandEscapePrefix", "`");
 
   // This is a hack for loading DWARF in .o files on Mac where the .o files
   // in the debug map of the main executable have relative paths which require

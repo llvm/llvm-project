@@ -1621,6 +1621,7 @@ def Tosa_SliceOp : Tosa_InferShapedTypeOp<"slice"> {
 
   let hasCanonicalizer = 1;
   let hasFolder = 1;
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//

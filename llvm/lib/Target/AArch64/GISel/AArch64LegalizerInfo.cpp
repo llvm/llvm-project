@@ -459,7 +459,24 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .legalIf(IndexedLoadBasicPred)
       .unsupported();
   getActionDefinitionsBuilder({G_INDEXED_SEXTLOAD, G_INDEXED_ZEXTLOAD})
-      .unsupported(); // TODO: implement
+      .unsupportedIf(
+          atomicOrderingAtLeastOrStrongerThan(0, AtomicOrdering::Unordered))
+      .legalIf(all(typeInSet(0, {s16, s32, s64}),
+                   LegalityPredicate([=](const LegalityQuery &Q) {
+                     LLT LdTy = Q.Types[0];
+                     LLT PtrTy = Q.Types[1];
+                     LLT MemTy = Q.MMODescrs[0].MemoryTy;
+                     if (PtrTy != p0)
+                       return false;
+                     if (LdTy == s16)
+                       return MemTy == s8;
+                     if (LdTy == s32)
+                       return MemTy == s8 || MemTy == s16;
+                     if (LdTy == s64)
+                       return MemTy == s8 || MemTy == s16 || MemTy == s32;
+                     return false;
+                   })))
+      .unsupported();
 
   // Constants
   getActionDefinitionsBuilder(G_CONSTANT)
@@ -1330,6 +1347,30 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     MIB.buildExtOrTrunc(IsSigned ? TargetOpcode::G_SEXT : TargetOpcode::G_ZEXT,
                         OldDst, NewDst);
 
+    return true;
+  }
+  case Intrinsic::aarch64_neon_smax:
+  case Intrinsic::aarch64_neon_smin:
+  case Intrinsic::aarch64_neon_umax:
+  case Intrinsic::aarch64_neon_umin:
+  case Intrinsic::aarch64_neon_fmax:
+  case Intrinsic::aarch64_neon_fmin: {
+    MachineIRBuilder MIB(MI);
+    if (IntrinsicID == Intrinsic::aarch64_neon_smax)
+      MIB.buildSMax(MI.getOperand(0), MI.getOperand(2), MI.getOperand(3));
+    else if (IntrinsicID == Intrinsic::aarch64_neon_smin)
+      MIB.buildSMin(MI.getOperand(0), MI.getOperand(2), MI.getOperand(3));
+    else if (IntrinsicID == Intrinsic::aarch64_neon_umax)
+      MIB.buildUMax(MI.getOperand(0), MI.getOperand(2), MI.getOperand(3));
+    else if (IntrinsicID == Intrinsic::aarch64_neon_umin)
+      MIB.buildUMin(MI.getOperand(0), MI.getOperand(2), MI.getOperand(3));
+    else if (IntrinsicID == Intrinsic::aarch64_neon_fmax)
+      MIB.buildInstr(TargetOpcode::G_FMAXIMUM, {MI.getOperand(0)},
+                     {MI.getOperand(2), MI.getOperand(3)});
+    else if (IntrinsicID == Intrinsic::aarch64_neon_fmin)
+      MIB.buildInstr(TargetOpcode::G_FMINIMUM, {MI.getOperand(0)},
+                     {MI.getOperand(2), MI.getOperand(3)});
+    MI.eraseFromParent();
     return true;
   }
   case Intrinsic::experimental_vector_reverse:

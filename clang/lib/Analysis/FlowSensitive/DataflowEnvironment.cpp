@@ -929,12 +929,16 @@ StorageLocation &Environment::createObjectInternal(const ValueDecl *D,
   return Loc;
 }
 
-void Environment::addToFlowCondition(const Formula &Val) {
-  DACtx->addFlowConditionConstraint(FlowConditionToken, Val);
+void Environment::assume(const Formula &F) {
+  DACtx->addFlowConditionConstraint(FlowConditionToken, F);
 }
 
-bool Environment::flowConditionImplies(const Formula &Val) const {
-  return DACtx->flowConditionImplies(FlowConditionToken, Val);
+bool Environment::proves(const Formula &F) const {
+  return DACtx->flowConditionImplies(FlowConditionToken, F);
+}
+
+bool Environment::allows(const Formula &F) const {
+  return DACtx->flowConditionAllows(FlowConditionToken, F);
 }
 
 void Environment::dump(raw_ostream &OS) const {

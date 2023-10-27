@@ -246,6 +246,67 @@ def EmitC_DivOp : EmitC_BinaryOp<"div", []> {
   let results = (outs FloatIntegerIndexOrOpaqueType);
 }
 
+def EmitC_ForOp : EmitC_Op<"for",
+      [AllTypesMatch<["lowerBound", "upperBound", "step"]>,
+       SingleBlockImplicitTerminator<"emitc::YieldOp">,
+       RecursiveMemoryEffects]> {
+  let summary = "for operation";
+  let description = [{
+    The `emitc.for` operation represents a C loop of the following form:
+
+    ```c++
+    for (T i = lb; i < ub; i += step) { /* ... */ } // where T is typeof(lb)
+    ```
+
+    The operation takes 3 SSA values as operands that represent the lower bound,
+    upper bound and step respectively, and defines an SSA value for its
+    induction variable. It has one region capturing the loop body. The induction
+    variable is represented as an argument of this region. This SSA value is a
+    signless integer or index. The step is a value of same type.
+
+    This operation has no result. The body region must contain exactly one block
+    that terminates with `emitc.yield`. Calling ForOp::build will create such a
+    region and insert the terminator implicitly if none is defined, so will the
+    parsing even in cases when it is absent from the custom format. For example:
+
+    ```mlir
+    // Index case.
+    emitc.for %iv = %lb to %ub step %step {
+      ... // body
+    }
+    ...
+    // Integer case.
+    emitc.for %iv_32 = %lb_32 to %ub_32 step %step_32 : i32 {
+      ... // body
+    }
+    ```
+  }];
+  let arguments = (ins IntegerIndexOrOpaqueType:$lowerBound,
+                       IntegerIndexOrOpaqueType:$upperBound,
+                       IntegerIndexOrOpaqueType:$step);
+  let results = (outs);
+  let regions = (region SizedRegion<1>:$region);
+
+  let skipDefaultBuilders = 1;
+  let builders = [
+    OpBuilder<(ins "Value":$lowerBound, "Value":$upperBound, "Value":$step,
+      CArg<"function_ref<void(OpBuilder &, Location, Value)>", "nullptr">)>
+  ];
+
+  let extraClassDeclaration = [{
+    using BodyBuilderFn =
+        function_ref<void(OpBuilder &, Location, Value)>;
+    Value getInductionVar() { return getBody()->getArgument(0); }
+    void setLowerBound(Value bound) { getOperation()->setOperand(0, bound); }
+    void setUpperBound(Value bound) { getOperation()->setOperand(1, bound); }
+    void setStep(Value step) { getOperation()->setOperand(2, step); }
+  }];
+
+  let hasCanonicalizer = 1;
+  let hasCustomAssemblyFormat = 1;
+  let hasRegionVerifier = 1;
+}
+
 def EmitC_IncludeOp
     : EmitC_Op<"include", [HasParent<"ModuleOp">]> {
   let summary = "Include operation";
@@ -430,7 +491,8 @@ def EmitC_AssignOp : EmitC_Op<"assign", []> {
   let assemblyFormat = "$value `:` type($value) `to` $var `:` type($var) attr-dict";
 }
 
-def EmitC_YieldOp : EmitC_Op<"yield", [Pure, Terminator, ParentOneOf<["IfOp"]>]> {
+def EmitC_YieldOp : EmitC_Op<"yield",
+      [Pure, Terminator, ParentOneOf<["IfOp", "ForOp"]>]> {
   let summary = "block termination operation";
   let description = [{
     "yield" terminates blocks within EmitC control-flow operations. Since

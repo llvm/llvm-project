@@ -168,7 +168,16 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
     return this->emitCastPointerIntegral(T, CE);
   }
 
-  case CK_ArrayToPointerDecay:
+  case CK_ArrayToPointerDecay: {
+    if (!this->visit(SubExpr))
+      return false;
+    if (!this->emitArrayDecay(CE))
+      return false;
+    if (DiscardResult)
+      return this->emitPopPtr(CE);
+    return true;
+  }
+
   case CK_AtomicToNonAtomic:
   case CK_ConstructorConversion:
   case CK_FunctionToPointerDecay:
@@ -504,6 +513,9 @@ bool ByteCodeExprGen<Emitter>::VisitImplicitValueInitExpr(const ImplicitValueIni
 
   if (QT->isRecordType())
     return false;
+
+  if (QT->isIncompleteArrayType())
+    return true;
 
   if (QT->isArrayType()) {
     const ArrayType *AT = QT->getAsArrayTypeUnsafe();
@@ -2720,19 +2732,28 @@ bool ByteCodeExprGen<Emitter>::emitRecordDestruction(const Descriptor *Desc) {
   // Arrays.
   if (Desc->isArray()) {
     const Descriptor *ElemDesc = Desc->ElemDesc;
-    const Record *ElemRecord = ElemDesc->ElemRecord;
-    assert(ElemRecord); // This is not a primitive array.
+    assert(ElemDesc);
 
-    if (const CXXDestructorDecl *Dtor = ElemRecord->getDestructor();
-        Dtor && !Dtor->isTrivial()) {
-      for (ssize_t I = Desc->getNumElems() - 1; I >= 0; --I) {
-        if (!this->emitConstUint64(I, SourceInfo{}))
-          return false;
-        if (!this->emitArrayElemPtrUint64(SourceInfo{}))
-          return false;
-        if (!this->emitRecordDestruction(Desc->ElemDesc))
-          return false;
-      }
+    // Don't need to do anything for these.
+    if (ElemDesc->isPrimitiveArray())
+      return this->emitPopPtr(SourceInfo{});
+
+    // If this is an array of record types, check if we need
+    // to call the element destructors at all. If not, try
+    // to save the work.
+    if (const Record *ElemRecord = ElemDesc->ElemRecord) {
+      if (const CXXDestructorDecl *Dtor = ElemRecord->getDestructor();
+          !Dtor || Dtor->isTrivial())
+        return this->emitPopPtr(SourceInfo{});
+    }
+
+    for (ssize_t I = Desc->getNumElems() - 1; I >= 0; --I) {
+      if (!this->emitConstUint64(I, SourceInfo{}))
+        return false;
+      if (!this->emitArrayElemPtrUint64(SourceInfo{}))
+        return false;
+      if (!this->emitRecordDestruction(ElemDesc))
+        return false;
     }
     return this->emitPopPtr(SourceInfo{});
   }

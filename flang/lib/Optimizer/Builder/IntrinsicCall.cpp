@@ -1343,6 +1343,12 @@ static bool isIntrinsicModuleProcedure(llvm::StringRef name) {
          name.startswith("ieee_") || name.startswith("__ppc_");
 }
 
+static bool isCoarrayIntrinsic(llvm::StringRef name) {
+  return name.startswith("atomic_") || name.startswith("co_") ||
+         name.contains("image") || name.endswith("cobound") ||
+         name.equals("team_number");
+}
+
 /// Return the generic name of an intrinsic module procedure specific name.
 /// Remove any "__builtin_" prefix, and any specific suffix of the form
 /// {_[ail]?[0-9]+}*, such as _1 or _a4.
@@ -1363,6 +1369,8 @@ llvm::StringRef genericName(llvm::StringRef specificName) {
 void crashOnMissingIntrinsic(mlir::Location loc, llvm::StringRef name) {
   if (isIntrinsicModuleProcedure(name))
     TODO(loc, "intrinsic module procedure: " + llvm::Twine(name));
+  else if (isCoarrayIntrinsic(name))
+    TODO(loc, "coarray: intrinsic " + llvm::Twine(name));
   else
     TODO(loc, "intrinsic: " + llvm::Twine(name));
 }

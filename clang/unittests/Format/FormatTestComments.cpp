@@ -182,7 +182,7 @@ TEST_F(FormatTestComments, UnderstandsSingleLineComments) {
                    "int   a;     // This is unrelated"));
   EXPECT_EQ("class C {\n"
             "  void f() { // This does something ..\n"
-            "  }          // awesome..\n"
+            "  } // awesome..\n"
             "\n"
             "  int a; // This is unrelated\n"
             "};",
@@ -3102,7 +3102,8 @@ TEST_F(FormatTestComments, DontAlignNamespaceComments) {
   StringRef Input = "namespace A {\n"
                     "  TESTSUITE(B) {\n"
                     "    namespace C {\n"
-                    "      namespace D {} // namespace D\n"
+                    "      namespace D { //\n"
+                    "      } // namespace D\n"
                     "      std::string Foo = Bar; // Comment\n"
                     "      std::string BazString = Baz;   // C2\n"
                     "    }          // namespace C\n"
@@ -3114,7 +3115,8 @@ TEST_F(FormatTestComments, DontAlignNamespaceComments) {
   verifyFormat("namespace A {\n"
                "  TESTSUITE(B) {\n"
                "    namespace C {\n"
-               "      namespace D {} // namespace D\n"
+               "      namespace D { //\n"
+               "      } // namespace D\n"
                "      std::string Foo = Bar;       // Comment\n"
                "      std::string BazString = Baz; // C2\n"
                "    } // namespace C\n"
@@ -3126,7 +3128,8 @@ TEST_F(FormatTestComments, DontAlignNamespaceComments) {
   verifyFormat("namespace A {\n"
                "  TESTSUITE(B) {\n"
                "    namespace C {\n"
-               "      namespace D {} // namespace D\n"
+               "      namespace D { //\n"
+               "      } // namespace D\n"
                "      std::string Foo = Bar; // Comment\n"
                "      std::string BazString = Baz; // C2\n"
                "    } // namespace C\n"
@@ -3138,7 +3141,8 @@ TEST_F(FormatTestComments, DontAlignNamespaceComments) {
   verifyFormat("namespace A {\n"
                "  TESTSUITE(B) {\n"
                "    namespace C {\n"
-               "      namespace D {} // namespace D\n"
+               "      namespace D { //\n"
+               "      } // namespace D\n"
                "      std::string Foo = Bar; // Comment\n"
                "      std::string BazString = Baz;   // C2\n"
                "    }          // namespace C\n"
@@ -3151,7 +3155,8 @@ TEST_F(FormatTestComments, DontAlignNamespaceComments) {
   verifyFormat("namespace A {\n"
                "  TESTSUITE(B) {\n"
                "    namespace C {\n"
-               "      namespace D {} // namespace D\n"
+               "      namespace D { //\n"
+               "      } // namespace D\n"
                "      std::string Foo = Bar;       // Comment\n"
                "      std::string BazString = Baz; // C2\n"
                "    } // namespace C\n"
@@ -3163,7 +3168,8 @@ TEST_F(FormatTestComments, DontAlignNamespaceComments) {
   verifyFormat("namespace A {\n"
                "  TESTSUITE(B) {\n"
                "    namespace C {\n"
-               "      namespace D {} // namespace D\n"
+               "      namespace D { //\n"
+               "      } // namespace D\n"
                "      std::string Foo = Bar; // Comment\n"
                "      std::string BazString = Baz; // C2\n"
                "    } // namespace C\n"
@@ -3175,7 +3181,8 @@ TEST_F(FormatTestComments, DontAlignNamespaceComments) {
   verifyFormat("namespace A {\n"
                "  TESTSUITE(B) {\n"
                "    namespace C {\n"
-               "      namespace D {} // namespace D\n"
+               "      namespace D { //\n"
+               "      } // namespace D\n"
                "      std::string Foo = Bar; // Comment\n"
                "      std::string BazString = Baz;   // C2\n"
                "    }          // namespace C\n"
@@ -3191,18 +3198,165 @@ TEST_F(FormatTestComments, DontAlignNamespaceComments) {
           "}\n"
           "// Comment";
 
-#if 0
-  // FIXME: The following comment is aligned with the namespace comment.
   verifyFormat("namespace A {\n"
                "  int Foo;\n"
                "  int Bar;\n"
                "} // namespace A\n"
-               " // Comment",
+               "// Comment",
                Input, Style);
-#endif
 
   Style.FixNamespaceComments = false;
   verifyFormat(Input, Style);
+}
+
+TEST_F(FormatTestComments, DontAlignOverScope) {
+  verifyFormat("if (foo) {\n"
+               "  int aLongVariable; // with comment\n"
+               "  int f;             // aligned\n"
+               "} // not aligned\n"
+               "int bar;    // new align\n"
+               "int foobar; // group");
+
+  verifyFormat("if (foo) {\n"
+               "  // something\n"
+               "} else {\n"
+               "  int aLongVariable; // with comment\n"
+               "  int f;             // aligned\n"
+               "} // not aligned\n"
+               "int bar;    // new align\n"
+               "int foobar; // group");
+
+  verifyFormat("if (foo) {\n"
+               "  // something\n"
+               "} else if (foo) {\n"
+               "  int aLongVariable; // with comment\n"
+               "  int f;             // aligned\n"
+               "} // not aligned\n"
+               "int bar;    // new align\n"
+               "int foobar; // group");
+
+  verifyFormat("while (foo) {\n"
+               "  int aLongVariable; // with comment\n"
+               "  int f;             // aligned\n"
+               "} // not aligned\n"
+               "int bar;    // new align\n"
+               "int foobar; // group");
+
+  verifyFormat("for (;;) {\n"
+               "  int aLongVariable; // with comment\n"
+               "  int f;             // aligned\n"
+               "} // not aligned\n"
+               "int bar;    // new align\n"
+               "int foobar; // group");
+
+  verifyFormat("do {\n"
+               "  int aLongVariable; // with comment\n"
+               "  int f;             // aligned\n"
+               "} while (foo); // not aligned\n"
+               "int bar;    // new align\n"
+               "int foobar; // group");
+
+  verifyFormat("do\n"
+               "  int aLongVariable; // with comment\n"
+               "while (foo); // not aigned\n"
+               "int bar;    // new align\n"
+               "int foobar; // group");
+
+  verifyFormat("do\n"
+               "  int aLongVariable; // with comment\n"
+               "/**/ while (foo); // not aigned\n"
+               "int bar;    // new align\n"
+               "int foobar; // group");
+
+  verifyFormat("switch (foo) {\n"
+               "case 7: {\n"
+               "  int aLongVariable; // with comment\n"
+               "  int f;             // aligned\n"
+               "} // case not aligned\n"
+               "} // switch also not aligned\n"
+               "int bar;    // new align\n"
+               "int foobar; // group");
+
+  verifyFormat("switch (foo) {\n"
+               "default: {\n"
+               "  int aLongVariable; // with comment\n"
+               "  int f;             // aligned\n"
+               "} // case not aligned\n"
+               "} // switch also not aligned\n"
+               "int bar;    // new align\n"
+               "int foobar; // group");
+
+  verifyFormat("class C {\n"
+               "  int aLongVariable; // with comment\n"
+               "  int f;             // aligned\n"
+               "}; // not aligned\n"
+               "int bar;    // new align\n"
+               "int foobar; // group");
+
+  verifyFormat("struct S {\n"
+               "  int aLongVariable; // with comment\n"
+               "  int f;             // aligned\n"
+               "}; // not aligned\n"
+               "int bar;    // new align\n"
+               "int foobar; // group");
+
+  verifyFormat("union U {\n"
+               "  int aLongVariable; // with comment\n"
+               "  int f;             // aligned\n"
+               "}; // not aligned\n"
+               "int bar;    // new align\n"
+               "int foobar; // group");
+
+  verifyFormat("enum E {\n"
+               "  aLongVariable, // with comment\n"
+               "  f              // aligned\n"
+               "}; // not aligned\n"
+               "int bar;    // new align\n"
+               "int foobar; // group");
+
+  verifyFormat("void foo() {\n"
+               "  {\n"
+               "    int aLongVariable; // with comment\n"
+               "    int f;             // aligned\n"
+               "  } // not aligned\n"
+               "  int bar;    // new align\n"
+               "  int foobar; // group\n"
+               "}");
+
+  verifyFormat("auto longLambda = [] { // comment\n"
+               "  int aLongVariable;   // with comment\n"
+               "  int f;               // aligned\n"
+               "}; // not aligned\n"
+               "int bar;                             // new align\n"
+               "int foobar;                          // group\n"
+               "auto shortLambda = [] { return 5; }; // aligned");
+
+  verifyFormat("auto longLambdaResult = [] { // comment\n"
+               "  int aLongVariable;         // with comment\n"
+               "  int f;                     // aligned\n"
+               "}(); // not aligned\n"
+               "int bar;                               // new align\n"
+               "int foobar;                            // group\n"
+               "auto shortLambda = [] { return 5; }(); // aligned");
+
+  verifyFormat(
+      "auto longLambdaResult = [](auto I, auto J) { // comment\n"
+      "  int aLongVariable;                         // with comment\n"
+      "  int f;                                     // aligned\n"
+      "}(\"Input\", 5); // not aligned\n"
+      "int bar;                                                 // new align\n"
+      "int foobar;                                              // group\n"
+      "auto shortL = [](auto I, auto J) { return 5; }(\"In\", 5); // aligned");
+
+  verifyFormat("enum E1 { V1, V2 };                    // Aligned\n"
+               "enum E2 { LongerNames, InThis, Enum }; // Comments");
+
+  verifyFormat("class C {\n"
+               "  int aLongVariable; // with comment\n"
+               "  int f;             // aligned\n"
+               "} /* middle comment */; // not aligned\n"
+               "int bar;    // new align\n"
+               "int foobar; // group");
 }
 
 TEST_F(FormatTestComments, AlignsBlockCommentDecorations) {

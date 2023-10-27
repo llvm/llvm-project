@@ -1676,7 +1676,7 @@ LiveIntervals::repairIntervalsInRange(MachineBasicBlock *MBB,
         if (!hasInterval(Reg)) {
           createAndComputeVirtRegInterval(Reg);
           // Don't bother to repair a freshly calculated live interval.
-          erase_value(RegsToRepair, Reg);
+          llvm::erase(RegsToRepair, Reg);
         }
       }
     }

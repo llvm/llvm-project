@@ -336,7 +336,7 @@ static void genDeclareDataOperandOperationsWithModifier(
 template <typename EntryOp, typename ExitOp>
 static void genDataExitOperations(fir::FirOpBuilder &builder,
                                   llvm::SmallVector<mlir::Value> operands,
-                                  bool structured, bool implicit) {
+                                  bool structured) {
   for (mlir::Value operand : operands) {
     auto entryOp = mlir::dyn_cast_or_null<EntryOp>(operand.getDefiningOp());
     assert(entryOp && "data entry op expected");
@@ -346,7 +346,7 @@ static void genDataExitOperations(fir::FirOpBuilder &builder,
       varPtr = entryOp.getVarPtr();
     builder.create<ExitOp>(entryOp.getLoc(), entryOp.getAccPtr(), varPtr,
                            entryOp.getBounds(), entryOp.getDataClause(),
-                           structured, implicit,
+                           structured, entryOp.getImplicit(),
                            builder.getStringAttr(*entryOp.getName()));
   }
 }
@@ -1872,9 +1872,24 @@ createComputeOp(Fortran::lower::AbstractConverter &converter,
     } else if (const auto *reductionClause =
                    std::get_if<Fortran::parser::AccClause::Reduction>(
                        &clause.u)) {
-      if (!outerCombined)
+      // A reduction clause on a combined construct is treated as if it appeared
+      // on the loop construct. So don't generate a reduction clause when it is
+      // combined - delay it to the loop. However, a reduction clause on a
+      // combined construct implies a copy clause so issue an implicit copy
+      // instead.
+      if (!outerCombined) {
         genReductions(reductionClause->v, converter, semanticsContext, stmtCtx,
                       reductionOperands, reductionRecipes);
+      } else {
+        auto crtDataStart = dataClauseOperands.size();
+        genDataOperandOperations<mlir::acc::CopyinOp>(
+            std::get<Fortran::parser::AccObjectList>(reductionClause->v.t),
+            converter, semanticsContext, stmtCtx, dataClauseOperands,
+            mlir::acc::DataClause::acc_reduction,
+            /*structured=*/true, /*implicit=*/true);
+        copyEntryOperands.append(dataClauseOperands.begin() + crtDataStart,
+                                 dataClauseOperands.end());
+      }
     } else if (const auto *defaultClause =
                    std::get_if<Fortran::parser::AccClause::Default>(
                        &clause.u)) {
@@ -1944,13 +1959,13 @@ createComputeOp(Fortran::lower::AbstractConverter &converter,
 
   // Create the exit operations after the region.
   genDataExitOperations<mlir::acc::CopyinOp, mlir::acc::CopyoutOp>(
-      builder, copyEntryOperands, /*structured=*/true, /*implicit=*/false);
+      builder, copyEntryOperands, /*structured=*/true);
   genDataExitOperations<mlir::acc::CreateOp, mlir::acc::CopyoutOp>(
-      builder, copyoutEntryOperands, /*structured=*/true, /*implicit=*/false);
+      builder, copyoutEntryOperands, /*structured=*/true);
   genDataExitOperations<mlir::acc::AttachOp, mlir::acc::DetachOp>(
-      builder, attachEntryOperands, /*structured=*/true, /*implicit=*/false);
+      builder, attachEntryOperands, /*structured=*/true);
   genDataExitOperations<mlir::acc::CreateOp, mlir::acc::DeleteOp>(
-      builder, createEntryOperands, /*structured=*/true, /*implicit=*/false);
+      builder, createEntryOperands, /*structured=*/true);
 
   builder.restoreInsertionPoint(insPt);
   return computeOp;
@@ -2099,13 +2114,13 @@ static void genACCDataOp(Fortran::lower::AbstractConverter &converter,
 
   // Create the exit operations after the region.
   genDataExitOperations<mlir::acc::CopyinOp, mlir::acc::CopyoutOp>(
-      builder, copyEntryOperands, /*structured=*/true, /*implicit=*/false);
+      builder, copyEntryOperands, /*structured=*/true);
   genDataExitOperations<mlir::acc::CreateOp, mlir::acc::CopyoutOp>(
-      builder, copyoutEntryOperands, /*structured=*/true, /*implicit=*/false);
+      builder, copyoutEntryOperands, /*structured=*/true);
   genDataExitOperations<mlir::acc::AttachOp, mlir::acc::DetachOp>(
-      builder, attachEntryOperands, /*structured=*/true, /*implicit=*/false);
+      builder, attachEntryOperands, /*structured=*/true);
   genDataExitOperations<mlir::acc::CreateOp, mlir::acc::DeleteOp>(
-      builder, createEntryOperands, /*structured=*/true, /*implicit=*/false);
+      builder, createEntryOperands, /*structured=*/true);
 
   builder.restoreInsertionPoint(insPt);
 }
@@ -2415,11 +2430,11 @@ genACCExitDataOp(Fortran::lower::AbstractConverter &converter,
     exitDataOp.setFinalizeAttr(builder.getUnitAttr());
 
   genDataExitOperations<mlir::acc::GetDevicePtrOp, mlir::acc::CopyoutOp>(
-      builder, copyoutOperands, /*structured=*/false, /*implicit=*/false);
+      builder, copyoutOperands, /*structured=*/false);
   genDataExitOperations<mlir::acc::GetDevicePtrOp, mlir::acc::DeleteOp>(
-      builder, deleteOperands, /*structured=*/false, /*implicit=*/false);
+      builder, deleteOperands, /*structured=*/false);
   genDataExitOperations<mlir::acc::GetDevicePtrOp, mlir::acc::DetachOp>(
-      builder, detachOperands, /*structured=*/false, /*implicit=*/false);
+      builder, detachOperands, /*structured=*/false);
 }
 
 template <typename Op>
@@ -2594,7 +2609,7 @@ genACCUpdateOp(Fortran::lower::AbstractConverter &converter,
       builder, currentLocation, operands, operandSegments);
 
   genDataExitOperations<mlir::acc::GetDevicePtrOp, mlir::acc::UpdateHostOp>(
-      builder, updateHostOperands, /*structured=*/false, /*implicit=*/false);
+      builder, updateHostOperands, /*structured=*/false);
 
   if (addAsyncAttr)
     updateOp.setAsyncAttr(builder.getUnitAttr());
@@ -3054,17 +3069,14 @@ genDeclareInFunction(Fortran::lower::AbstractConverter &converter,
       builder.setInsertionPointAfter(declareOp);
     }
     genDataExitOperations<mlir::acc::CreateOp, mlir::acc::DeleteOp>(
-        builder, createEntryOperands, /*structured=*/true,
-        /*implicit=*/false);
+        builder, createEntryOperands, /*structured=*/true);
     genDataExitOperations<mlir::acc::DeclareDeviceResidentOp,
                           mlir::acc::DeleteOp>(
-        builder, deviceResidentEntryOperands, /*structured=*/true,
-        /*implicit=*/false);
+        builder, deviceResidentEntryOperands, /*structured=*/true);
     genDataExitOperations<mlir::acc::CopyinOp, mlir::acc::CopyoutOp>(
-        builder, copyEntryOperands, /*structured=*/true, /*implicit=*/false);
+        builder, copyEntryOperands, /*structured=*/true);
     genDataExitOperations<mlir::acc::CreateOp, mlir::acc::CopyoutOp>(
-        builder, copyoutEntryOperands, /*structured=*/true,
-        /*implicit=*/false);
+        builder, copyoutEntryOperands, /*structured=*/true);
   });
 }
 

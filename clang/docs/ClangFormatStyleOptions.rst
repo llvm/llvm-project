@@ -980,6 +980,10 @@ the configuration (without a prefix: ``Auto``).
 **AlignTrailingComments** (``TrailingCommentsAlignmentStyle``) :versionbadge:`clang-format 3.7` :ref:`¶ <AlignTrailingComments>`
   Control of trailing comments.
 
+  The alignment stops at closing braces after a line break, and only
+  followed by other closing braces, a (``do-``) ``while``, a lambda call, or
+  a semicolon.
+
 
   .. note::
 
@@ -1210,6 +1214,27 @@ the configuration (without a prefix: ``Auto``).
                                             case 2:
                                               return;
                                             }
+
+.. _AllowShortCompoundRequirementOnASingleLine:
+
+**AllowShortCompoundRequirementOnASingleLine** (``Boolean``) :versionbadge:`clang-format 18` :ref:`¶ <AllowShortCompoundRequirementOnASingleLine>`
+  Allow short compound requirement on a single line.
+
+  .. code-block:: c++
+
+    true:
+    template <typename T>
+    concept c = requires(T x) {
+      { x + 1 } -> std::same_as<int>;
+    };
+
+    false:
+    template <typename T>
+    concept c = requires(T x) {
+      {
+        x + 1
+      } -> std::same_as<int>;
+    };
 
 .. _AllowShortEnumsOnASingleLine:
 

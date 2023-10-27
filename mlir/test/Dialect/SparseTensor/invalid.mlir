@@ -544,6 +544,57 @@ func.func @invalid_unary_wrong_yield(%arg0: f64) -> f64 {
 
 // -----
 
+
+#SparseVector = #sparse_tensor.encoding<{ map = (d0) -> (d0 : compressed) }>
+
+#trait = {
+  indexing_maps = [ affine_map<(i) -> (i)>, affine_map<(i) -> (i)> ],
+  iterator_types = ["parallel"]
+}
+
+func.func @invalid_absent_value(%arg0 : tensor<100xf64, #SparseVector>) -> tensor<100xf64, #SparseVector> {
+  %C = tensor.empty() : tensor<100xf64, #SparseVector>
+  %0 = linalg.generic #trait
+    ins(%arg0: tensor<100xf64, #SparseVector>)
+    outs(%C: tensor<100xf64, #SparseVector>) {
+     ^bb0(%a: f64, %c: f64) :
+        // expected-error@+1 {{absent region cannot yield linalg argument}}
+        %result = sparse_tensor.unary %a : f64 to f64
+           present={}
+           absent={ sparse_tensor.yield %a : f64 }
+        linalg.yield %result : f64
+    } -> tensor<100xf64, #SparseVector>
+  return %0 : tensor<100xf64, #SparseVector>
+}
+
+// -----
+
+#SparseVector = #sparse_tensor.encoding<{ map = (d0) -> (d0 : compressed) }>
+
+#trait = {
+  indexing_maps = [ affine_map<(i) -> (i)>, affine_map<(i) -> (i)> ],
+  iterator_types = ["parallel"]
+}
+
+func.func @invalid_absent_computation(%arg0 : tensor<100xf64, #SparseVector>) -> tensor<100xf64, #SparseVector> {
+  %f0 = arith.constant 0.0 : f64
+  %C = tensor.empty() : tensor<100xf64, #SparseVector>
+  %0 = linalg.generic #trait
+    ins(%arg0: tensor<100xf64, #SparseVector>)
+    outs(%C: tensor<100xf64, #SparseVector>) {
+     ^bb0(%a: f64, %c: f64) :
+        %v = arith.addf %a, %f0 : f64
+        // expected-error@+1 {{absent region cannot yield locally computed value}}
+        %result = sparse_tensor.unary %a : f64 to f64
+           present={}
+           absent={ sparse_tensor.yield %v : f64 }
+        linalg.yield %result : f64
+    } -> tensor<100xf64, #SparseVector>
+  return %0 : tensor<100xf64, #SparseVector>
+}
+
+// -----
+
 func.func @invalid_reduce_num_args_mismatch(%arg0: f64, %arg1: f64) -> f64 {
   %cf1 = arith.constant 1.0 : f64
   // expected-error@+1 {{reduce region must have exactly 2 arguments}}
@@ -912,4 +963,67 @@ func.func @sparse_lvl(%t : tensor<?x?xi32, #BSR>) -> index {
   // expected-error@+1 {{Level index exceeds the rank of the input sparse tensor}}
   %l0 = sparse_tensor.lvl %t, %lvl : tensor<?x?xi32, #BSR>
   return  %l0 : index
+}
+
+// -----
+
+#BSR = #sparse_tensor.encoding<{
+  map = ( i, j ) -> ( i floordiv 2 : dense,
+                      j floordiv 3 : compressed,
+                      i mod 2      : dense,
+                      j mod 3      : dense
+  )
+}>
+
+#DSDC = #sparse_tensor.encoding<{
+  map = (i, j, k, l) -> (i: dense, j: compressed, k: dense, l: compressed)
+}>
+
+func.func @sparse_reinterpret_map(%t0 : tensor<6x12xi32, #BSR>) -> tensor<3x4x2x3xf32, #DSDC> {
+  // expected-error@+1 {{Level type mismatch between source/dest tensors}}
+  %t1 = sparse_tensor.reinterpret_map %t0 : tensor<6x12xi32, #BSR>
+                                         to tensor<3x4x2x3xf32, #DSDC>
+  return %t1 : tensor<3x4x2x3xf32, #DSDC>
+}
+
+// -----
+
+#BSR = #sparse_tensor.encoding<{
+  map = ( i, j ) -> ( i floordiv 2 : dense,
+                      j floordiv 3 : compressed,
+                      i mod 2      : dense,
+                      j mod 3      : dense
+  )
+}>
+
+#DSDD = #sparse_tensor.encoding<{
+  map = (i, j, k, l) -> (i: dense, j: compressed, k: dense, l: dense)
+}>
+
+func.func @sparse_reinterpret_map(%t0 : tensor<6x12xi32, #BSR>) -> tensor<3x4x2x3xf32, #DSDD> {
+  // expected-error@+1 {{Element type mismatch between source/dest tensors}}
+  %t1 = sparse_tensor.reinterpret_map %t0 : tensor<6x12xi32, #BSR>
+                                         to tensor<3x4x2x3xf32, #DSDD>
+  return %t1 : tensor<3x4x2x3xf32, #DSDD>
+}
+
+// -----
+
+#BSR = #sparse_tensor.encoding<{
+  map = ( i, j ) -> ( i floordiv 2 : dense,
+                      j floordiv 3 : compressed,
+                      i mod 2      : dense,
+                      j mod 3      : dense
+  )
+}>
+
+#DSDD = #sparse_tensor.encoding<{
+  map = (i, j, k, l) -> (i: dense, j: compressed, k: dense, l: dense)
+}>
+
+func.func @sparse_reinterpret_map(%t0 : tensor<6x12xi32, #BSR>) -> tensor<3x4x2x4xi32, #DSDD> {
+  // expected-error@+1 {{Level size mismatch between source/dest tensors}}
+  %t1 = sparse_tensor.reinterpret_map %t0 : tensor<6x12xi32, #BSR>
+                                         to tensor<3x4x2x4xi32, #DSDD>
+  return %t1 : tensor<3x4x2x4xi32, #DSDD>
 }

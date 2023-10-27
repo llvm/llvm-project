@@ -303,3 +303,21 @@ func.func @test_variable_write_shape(%arg0: tensor<1x4x8xi32>) -> () {
   tosa.variable.write @stored_var, %arg0 : tensor<1x4x8xi32>
   return
 }
+
+// -----
+
+func.func @test_slice_invalid_start() {
+  %0 = tensor.empty() : tensor<4x31x31xf32>
+  // expected-error@+1 {{'tosa.slice' op length of start attribute is not equal rank of input shape}}
+  %1 = tosa.slice %0 {size = array<i64: 1, 1, 1>, start = array<i64: 1, 1>} : (tensor<4x31x31xf32>) -> tensor<*xf32>
+  return
+}
+
+// -----
+
+func.func @test_slice_invalid_size() {
+  %0 = tensor.empty() : tensor<4x31x31xf32>
+  // expected-error@+1 {{'tosa.slice' op length of size attribute is not equal rank of input shape}}
+  %1 = tosa.slice %0 {size = array<i64: 1>, start = array<i64: 1, 1, 1>} : (tensor<4x31x31xf32>) -> tensor<*xf32>
+  return
+}
