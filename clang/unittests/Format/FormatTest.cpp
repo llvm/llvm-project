@@ -26179,7 +26179,6 @@ TEST_F(FormatTest, RemoveSemicolon) {
 
 TEST_F(FormatTest, BreakAfterAttributes) {
   FormatStyle Style = getLLVMStyle();
-  EXPECT_EQ(Style.BreakAfterAttributes, FormatStyle::ABS_Leave);
 
   constexpr StringRef Code("[[nodiscard]] inline int f(int &i);\n"
                            "[[foo([[]])]] [[nodiscard]]\n"
@@ -26193,6 +26192,8 @@ TEST_F(FormatTest, BreakAfterAttributes) {
                            "  i = 0;\n"
                            "  return 1;\n"
                            "}");
+
+  EXPECT_EQ(Style.BreakAfterAttributes, FormatStyle::ABS_Leave);
   verifyNoChange(Code, Style);
 
   Style.BreakAfterAttributes = FormatStyle::ABS_Never;
