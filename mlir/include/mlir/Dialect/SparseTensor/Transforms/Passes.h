@@ -48,6 +48,14 @@ enum class GPUDataTransferStrategy { kRegularDMA, kZeroCopy, kPinnedDMA };
 #include "mlir/Dialect/SparseTensor/Transforms/Passes.h.inc"
 
 //===----------------------------------------------------------------------===//
+// The SparseReinterpretMap pass.
+//===----------------------------------------------------------------------===//
+
+void populateSparseReinterpretMap(RewritePatternSet &patterns);
+
+std::unique_ptr<Pass> createSparseReinterpretMapPass();
+
+//===----------------------------------------------------------------------===//
 // The PreSparsificationRewriting pass.
 //===----------------------------------------------------------------------===//
 
