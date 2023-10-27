@@ -6,6 +6,8 @@ import os
 import sys
 import tempfile
 
+sys.path.append("/usr/local/google/home/peiming/projects/llvm-project/build-static/tools/mlir/python_packages/mlir_core")
+
 from mlir import ir
 from mlir import runtime as rt
 from mlir.dialects import builtin
@@ -29,14 +31,14 @@ func.func @main(%p : !llvm.ptr<i8>) -> () attributes {{ llvm.emit_c_interface }}
 """
 
 
-def expected():
+def expected(id_map):
     """Returns expected contents of output.
 
     Regardless of the dimension ordering, compression, and bitwidths that are
     used in the sparse tensor, the output is always lexicographically sorted
     by natural index order.
     """
-    return f"""; extended FROSTT format
+    return f"""# extended FROSTT format
 2 5
 10 10
 1 1 1
@@ -44,6 +46,14 @@ def expected():
 2 2 2
 5 5 5
 10 1 4
+""" if id_map else f"""# extended FROSTT format
+2 5
+10 10
+1 1 1
+10 1 4
+2 2 2
+5 5 5
+1 10 3
 """
 
 
@@ -51,7 +61,6 @@ def build_compile_and_run_output(attr: st.EncodingAttr, compiler, expected):
     # Build and Compile.
     module = ir.Module.parse(boilerplate(attr))
     engine = compiler.compile_and_jit(module)
-
     # Invoke the kernel and compare output.
     with tempfile.TemporaryDirectory() as test_dir:
         out = os.path.join(test_dir, "out.tns")
@@ -83,8 +92,8 @@ def main():
             [st.DimLevelType.compressed, st.DimLevelType.compressed],
         ]
         orderings = [
-            ir.AffineMap.get_permutation([0, 1]),
-            ir.AffineMap.get_permutation([1, 0]),
+            (ir.AffineMap.get_permutation([0, 1]), True),
+            (ir.AffineMap.get_permutation([1, 0]), False),
         ]
         bitwidths = [8, 16, 32, 64]
         compiler = sparse_compiler.SparseCompiler(
@@ -94,9 +103,9 @@ def main():
             for ordering in orderings:
                 for bwidth in bitwidths:
                     attr = st.EncodingAttr.get(
-                        level, ordering, ordering, bwidth, bwidth
+                        level, ordering[0], ordering[0], bwidth, bwidth
                     )
-                    build_compile_and_run_output(attr, compiler, expected())
+                    build_compile_and_run_output(attr, compiler, expected(ordering[1]))
                     count = count + 1
 
         # Now do the same for BSR.
