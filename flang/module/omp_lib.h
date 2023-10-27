@@ -90,7 +90,7 @@
     omp_atv_blocked = 17, &
     omp_atv_interleaved = 18
 
-  type :: omp_alloctrait
+  type, bind(c) :: omp_alloctrait
     integer(kind=omp_alloctrait_key_kind) :: key, value
   end type omp_alloctrait
 
