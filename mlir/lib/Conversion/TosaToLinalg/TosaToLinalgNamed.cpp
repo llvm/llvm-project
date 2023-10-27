@@ -1007,17 +1007,15 @@ public:
 } // namespace
 
 void mlir::tosa::populateTosaToLinalgNamedConversionPatterns(
-    RewritePatternSet *patterns, Conv2DKernelLayout conv2DKernelLayout) {
-  if (conv2DKernelLayout == Conv2DKernelLayout::FHWC) {
-    patterns->add<ConvConverter<tosa::Conv2DOp, linalg::Conv2DNhwcFhwcOp,
-                                linalg::Conv2DNhwcFhwcQOp>>(
-        patterns->getContext());
-  } else if (conv2DKernelLayout == Conv2DKernelLayout::HWCF) {
+    RewritePatternSet *patterns, const TosaToLinalgNamedOptions &options) {
+  if (options.preferConv2DKernelLayoutHWCF) {
     patterns->add<ConvConverter<tosa::Conv2DOp, linalg::Conv2DNhwcHwcfOp,
                                 linalg::Conv2DNhwcHwcfQOp>>(
         patterns->getContext());
   } else {
-    assert(false);
+    patterns->add<ConvConverter<tosa::Conv2DOp, linalg::Conv2DNhwcFhwcOp,
+                                linalg::Conv2DNhwcFhwcQOp>>(
+        patterns->getContext());
   }
   patterns->add<
       // clang-format off

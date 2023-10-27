@@ -64,11 +64,9 @@ public:
     target.markUnknownOpDynamicallyLegal([](Operation *) { return true; });
 
     FunctionOpInterface func = getOperation();
-    tosa::Conv2DKernelLayout conv2DKernelLayout =
-        preferConv2DKernelLayoutHWCF ? tosa::Conv2DKernelLayout::HWCF
-                                     : tosa::Conv2DKernelLayout::FHWC;
-    tosa::populateTosaToLinalgNamedConversionPatterns(&patterns,
-                                                      conv2DKernelLayout);
+    TosaToLinalgNamedOptions options;
+    options.preferConv2DKernelLayoutHWCF = preferConv2DKernelLayoutHWCF;
+    tosa::populateTosaToLinalgNamedConversionPatterns(&patterns, options);
     if (failed(applyFullConversion(func, target, std::move(patterns))))
       signalPassFailure();
   }
