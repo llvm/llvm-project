@@ -68,8 +68,13 @@ func.func @dot_product_i32() {
   // on the vector length, so we are unable to verify it.
   %dp1 = vector.contract #dotp_trait %vector_a, %vector_b, %acc
     : vector<[4]xi32>, vector<[4]xi32> into i32
-  // DP: {{[0-9]*}}
-  vector.print %dp1 : i32
+  // Dot product should be (123 * 314) * 4 * vscale, so ...
+  %vscale = vector.vscale
+  %vscale_i32 = arith.index_cast %vscale : index to i32
+  %dp1_divvl = arith.divui %dp1, %vscale_i32 : i32
+  // ... %dp/%vscale = 123 * 314 * 4 = 154488
+  // DP: 154488
+  vector.print %dp1_divvl : i32
 
   // The result of this dot-product should be 0.
   %dp2 = vector.contract #dotp_trait %vector_a, %vector_c, %acc
