@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=riscv64 -global-isel -mattr=+d -target-abi=lp64 \
 ; RUN:   -verify-machineinstrs < %s | FileCheck -check-prefix=RV32I %s
 
-; Test copying between FPR32 and GPR on RV32.
+; Test copying between FPR64 and GPR on RV64.
 ; FIXME: This test should be replaced with a more general calling convention
 ; test once we have more FP implemented.
 
