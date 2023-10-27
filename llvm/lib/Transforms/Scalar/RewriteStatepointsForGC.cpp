@@ -1044,7 +1044,7 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache,
     // while the select itself is a scalar type. Note that the IE and EE
     // instruction check is not fully subsumed by the vector<->scalar check at
     // the end, this is due to the BDV algorithm being ignorant of BDV types at
-    // this junction
+    // this junction.
     if (!areBothVectorOrScalar(BaseValue, I))
       return true;
     return false;
