@@ -162,6 +162,8 @@ def HasSME2p1        : Predicate<"Subtarget->hasSME2p1()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSME2p1), "sme2p1">;
 def HasFPMR          : Predicate<"Subtarget->hasFPMR()">,
                                  AssemblerPredicateWithAll<(all_of FeatureFPMR), "fpmr">;
+def HasFP8           : Predicate<"Subtarget->hasFP8()">,
+                                 AssemblerPredicateWithAll<(all_of FeatureFP8), "fp8">;
 
 // A subset of SVE(2) instructions are legal in Streaming SVE execution mode,
 // they should be enabled if either has been specified.
@@ -173,6 +175,10 @@ def HasSVE2orSME
     : Predicate<"Subtarget->hasSVE2() || Subtarget->hasSME()">,
                 AssemblerPredicateWithAll<(any_of FeatureSVE2, FeatureSME),
                 "sve2 or sme">;
+def HasSVE2orSME2
+    : Predicate<"Subtarget->hasSVE2() || Subtarget->hasSME2()">,
+                AssemblerPredicateWithAll<(any_of FeatureSVE2, FeatureSME2),
+                "sve2 or sme2">;
 def HasSVE2p1_or_HasSME
     : Predicate<"Subtarget->hasSVE2p1() || Subtarget->hasSME()">,
                  AssemblerPredicateWithAll<(any_of FeatureSME, FeatureSVE2p1), "sme or sve2p1">;
@@ -9249,6 +9255,15 @@ let Predicates = [HasD128] in {
   }
 }
 
+let Predicates = [HasFP8] in {
+  defm F1CVTL  : SIMDMixedTwoVectorFP8<0b00, "f1cvtl">;
+  defm F2CVTL  : SIMDMixedTwoVectorFP8<0b01, "f2cvtl">;
+  defm BF1CVTL : SIMDMixedTwoVectorFP8<0b10, "bf1cvtl">;
+  defm BF2CVTL : SIMDMixedTwoVectorFP8<0b11, "bf2cvtl">;
+  defm FCVTN_F16_F8 : SIMDThreeSameSizeVectorCvt<"fcvtn">;
+  defm FCVTN_F32_F8 : SIMDThreeVectorCvt<"fcvtn">;
+  defm FSCALE : SIMDThreeSameVectorFP<0b1, 0b1, 0b111, "fscale", null_frag>;
+} // End let Predicates = [HasFP8]
 
 include "AArch64InstrAtomics.td"
 include "AArch64SVEInstrInfo.td"
