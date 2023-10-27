@@ -49,11 +49,14 @@ struct SparseReinterpretMap
     : public impl::SparseReinterpretMapBase<SparseReinterpretMap> {
   SparseReinterpretMap() = default;
   SparseReinterpretMap(const SparseReinterpretMap &pass) = default;
+  SparseReinterpretMap(const SparseReinterpretMapOptions &options) {
+    scope = options.scope;
+  }
 
   void runOnOperation() override {
     auto *ctx = &getContext();
     RewritePatternSet patterns(ctx);
-    populateSparseReinterpretMap(patterns);
+    populateSparseReinterpretMap(patterns, scope);
     (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
   }
 };
@@ -370,6 +373,13 @@ struct StorageSpecifierToLLVMPass
 
 std::unique_ptr<Pass> mlir::createSparseReinterpretMapPass() {
   return std::make_unique<SparseReinterpretMap>();
+}
+
+std::unique_ptr<Pass>
+mlir::createSparseReinterpretMapPass(ReinterpretMapScope scope) {
+  SparseReinterpretMapOptions options;
+  options.scope = scope;
+  return std::make_unique<SparseReinterpretMap>(options);
 }
 
 std::unique_ptr<Pass> mlir::createPreSparsificationRewritePass() {
