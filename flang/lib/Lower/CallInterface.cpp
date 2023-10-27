@@ -1002,10 +1002,14 @@ private:
       addPassedArg(PassEntityBy::MutableBox, entity, characteristics);
     } else if (dummyRequiresBox(obj, isBindC)) {
       // Pass as fir.box or fir.class
-      if (isValueAttr)
-        TODO(loc, "assumed shape dummy argument with VALUE attribute");
-      addFirOperand(boxType, nextPassedArgPosition(), Property::Box, attrs);
-      addPassedArg(PassEntityBy::Box, entity, characteristics);
+      Property prop = Property::Box;
+      PassEntityBy passBy = PassEntityBy::Box;
+      if (isValueAttr) {
+        passBy = PassEntityBy::BaseAddressValueAttribute;
+        prop = Property::Value;
+      }
+      addFirOperand(boxType, nextPassedArgPosition(), prop, attrs);
+      addPassedArg(passBy, entity, characteristics);
     } else if (dynamicType.category() ==
                Fortran::common::TypeCategory::Character) {
       // Pass as fir.box_char
