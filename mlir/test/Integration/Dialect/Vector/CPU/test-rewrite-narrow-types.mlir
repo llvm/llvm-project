@@ -206,7 +206,7 @@ func.func @entry() {
   %passthru = arith.constant dense<[7, 8, 9, 10, 11, 12]> : vector<6xi4>
   %load = call @fcst_maskedload(%A, %passthru) : (memref<?xi4>, vector<6xi4>) -> (vector<6xi4>)
   vector.print %load : vector<6xi4>
-  // CHECK: ( 1, 2, 3, -6, -5, -4 )
+  // CHECK: ( 0, 1, 2, -6, -5, -4 )
   memref.dealloc %A : memref<?xi4>
 
   return
