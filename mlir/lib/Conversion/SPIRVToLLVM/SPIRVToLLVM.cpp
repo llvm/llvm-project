@@ -208,7 +208,7 @@ convertStructTypeWithOffset(spirv::StructType type,
     return std::nullopt;
 
   SmallVector<Type> elementsVector;
-  if (converter.convertTypes(type.getElementTypes(), elementsVector).failed())
+  if (failed(converter.convertTypes(type.getElementTypes(), elementsVector)))
     return std::nullopt;
   return LLVM::LLVMStructType::getLiteral(type.getContext(), elementsVector,
                                           /*isPacked=*/false);
@@ -218,7 +218,7 @@ convertStructTypeWithOffset(spirv::StructType type,
 static std::optional<Type>
 convertStructTypePacked(spirv::StructType type, LLVMTypeConverter &converter) {
   SmallVector<Type> elementsVector;
-  if (converter.convertTypes(type.getElementTypes(), elementsVector).failed())
+  if (failed(converter.convertTypes(type.getElementTypes(), elementsVector)))
     return std::nullopt;
   return LLVM::LLVMStructType::getLiteral(type.getContext(), elementsVector,
                                           /*isPacked=*/true);
