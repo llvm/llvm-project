@@ -529,6 +529,8 @@ Bug Fixes in This Version
   ``thread_local`` instead of ``_Thread_local``.
   Fixes (`#70068 <https://github.com/llvm/llvm-project/issues/70068>`_) and
   (`#69167 <https://github.com/llvm/llvm-project/issues/69167>`_)
+- Fix crash in evaluating invalid lambda expression which forget capture this.
+  Fixes (`#67687 <https://github.com/llvm/llvm-project/issues/67687>`_)
 - Fix crash from constexpr evaluator evaluating uninitialized arrays as rvalue.
   Fixes (`#67317 <https://github.com/llvm/llvm-project/issues/67317>`_)
 
