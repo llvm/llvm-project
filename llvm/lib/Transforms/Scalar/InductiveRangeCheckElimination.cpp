@@ -616,6 +616,7 @@ struct LoopStructure {
   Value *LoopExitAt = nullptr;
   bool IndVarIncreasing = false;
   bool IsSignedPredicate = true;
+  IntegerType *ExitCountTy = nullptr;
 
   LoopStructure() = default;
 
@@ -633,6 +634,7 @@ struct LoopStructure {
     Result.LoopExitAt = Map(LoopExitAt);
     Result.IndVarIncreasing = IndVarIncreasing;
     Result.IsSignedPredicate = IsSignedPredicate;
+    Result.ExitCountTy = ExitCountTy;
     return Result;
   }
 
@@ -756,7 +758,6 @@ class LoopConstrainer {
   // Information about the original loop we started out with.
   Loop &OriginalLoop;
 
-  const IntegerType *ExitCountTy = nullptr;
   BasicBlock *OriginalPreheader = nullptr;
 
   // The preheader of the main loop.  This may or may not be different from
@@ -1191,6 +1192,7 @@ LoopStructure::parseLoopStructure(ScalarEvolution &SE, Loop &L,
   Result.IndVarIncreasing = IsIncreasing;
   Result.LoopExitAt = RightValue;
   Result.IsSignedPredicate = IsSignedPredicate;
+  Result.ExitCountTy = cast<IntegerType>(MaxBETakenCount->getType());
 
   FailureReason = nullptr;
 
@@ -1208,9 +1210,9 @@ std::optional<LoopConstrainer::SubRanges>
 LoopConstrainer::calculateSubRanges(bool IsSignedPredicate) const {
   auto *RTy = cast<IntegerType>(Range.getType());
   // We only support wide range checks and narrow latches.
-  if (!AllowNarrowLatchCondition && RTy != ExitCountTy)
+  if (!AllowNarrowLatchCondition && RTy != MainLoopStructure.ExitCountTy)
     return std::nullopt;
-  if (RTy->getBitWidth() < ExitCountTy->getBitWidth())
+  if (RTy->getBitWidth() < MainLoopStructure.ExitCountTy->getBitWidth())
     return std::nullopt;
 
   LoopConstrainer::SubRanges Result;
@@ -1543,13 +1545,8 @@ Loop *LoopConstrainer::createClonedLoopStructure(Loop *Original, Loop *Parent,
 }
 
 bool LoopConstrainer::run() {
-  BasicBlock *Preheader = nullptr;
-  const SCEV *MaxBETakenCount =
-      getNarrowestLatchMaxTakenCountEstimate(SE, OriginalLoop);
-  Preheader = OriginalLoop.getLoopPreheader();
-  assert(!isa<SCEVCouldNotCompute>(MaxBETakenCount) && Preheader != nullptr &&
-         "preconditions!");
-  ExitCountTy = cast<IntegerType>(MaxBETakenCount->getType());
+  BasicBlock *Preheader = OriginalLoop.getLoopPreheader();
+  assert(Preheader != nullptr && "precondition!");
 
   OriginalPreheader = Preheader;
   MainLoopPreheader = Preheader;
