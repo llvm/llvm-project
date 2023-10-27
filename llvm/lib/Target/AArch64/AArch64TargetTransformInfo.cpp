@@ -2961,7 +2961,6 @@ AArch64TTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
   // they may wake up the FP unit, which raises the power consumption.  Perhaps
   // they could be used with no holds barred (-O3).
   Options.LoadSizes = {8, 4, 2, 1};
-  Options.AllowedTailExpansions = {3, 5, 6};
   return Options;
 }
 
