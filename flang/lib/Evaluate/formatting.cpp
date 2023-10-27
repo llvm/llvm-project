@@ -132,6 +132,11 @@ llvm::raw_ostream &ActualArgument::AsFortran(llvm::raw_ostream &o) const {
   if (keyword_) {
     o << keyword_->ToString() << '=';
   }
+  if (isPercentVal()) {
+    o << "%VAL(";
+  } else if (isPercentRef()) {
+    o << "%REF(";
+  }
   common::visit(
       common::visitors{
           [&](const common::CopyableIndirection<Expr<SomeType>> &expr) {
@@ -141,6 +146,9 @@ llvm::raw_ostream &ActualArgument::AsFortran(llvm::raw_ostream &o) const {
           [&](const common::Label &label) { o << '*' << label; },
       },
       u_);
+  if (isPercentVal() || isPercentRef()) {
+    o << ')';
+  }
   return o;
 }
 

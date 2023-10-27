@@ -844,11 +844,40 @@ private:
     return {};
   }
 
+  mlir::Type
+  getRefType(Fortran::evaluate::DynamicType dynamicType,
+             const Fortran::evaluate::characteristics::DummyDataObject &obj) {
+    mlir::Type type = translateDynamicType(dynamicType);
+    fir::SequenceType::Shape bounds = getBounds(obj.type.shape());
+    if (!bounds.empty())
+      type = fir::SequenceType::get(bounds, type);
+    return fir::ReferenceType::get(type);
+  }
+
   void handleImplicitDummy(
       const DummyCharacteristics *characteristics,
       const Fortran::evaluate::characteristics::DummyDataObject &obj,
       const FortranEntity &entity) {
     Fortran::evaluate::DynamicType dynamicType = obj.type.type();
+    if constexpr (std::is_same_v<FortranEntity,
+                                 const Fortran::evaluate::ActualArgument *>) {
+      if (entity) {
+        if (entity->isPercentVal()) {
+          mlir::Type type = translateDynamicType(dynamicType);
+          addFirOperand(type, nextPassedArgPosition(), Property::Value,
+                        dummyNameAttr(entity));
+          addPassedArg(PassEntityBy::Value, entity, characteristics);
+          return;
+        }
+        if (entity->isPercentRef()) {
+          mlir::Type refType = getRefType(dynamicType, obj);
+          addFirOperand(refType, nextPassedArgPosition(), Property::BaseAddress,
+                        dummyNameAttr(entity));
+          addPassedArg(PassEntityBy::BaseAddress, entity, characteristics);
+          return;
+        }
+      }
+    }
     if (dynamicType.category() == Fortran::common::TypeCategory::Character) {
       mlir::Type boxCharTy =
           fir::BoxCharType::get(&mlirContext, dynamicType.kind());
@@ -857,11 +886,7 @@ private:
       addPassedArg(PassEntityBy::BoxChar, entity, characteristics);
     } else {
       // non-PDT derived type allowed in implicit interface.
-      mlir::Type type = translateDynamicType(dynamicType);
-      fir::SequenceType::Shape bounds = getBounds(obj.type.shape());
-      if (!bounds.empty())
-        type = fir::SequenceType::get(bounds, type);
-      mlir::Type refType = fir::ReferenceType::get(type);
+      mlir::Type refType = getRefType(dynamicType, obj);
       addFirOperand(refType, nextPassedArgPosition(), Property::BaseAddress,
                     dummyNameAttr(entity));
       addPassedArg(PassEntityBy::BaseAddress, entity, characteristics);

@@ -175,6 +175,7 @@ private:
   MaybeExpr TryDefinedOp(std::vector<const char *>, parser::MessageFixedText);
   MaybeExpr TryBoundOp(const Symbol &, int passIndex);
   std::optional<ActualArgument> AnalyzeExpr(const parser::Expr &);
+  std::optional<ActualArgument> AnalyzeVariable(const parser::Variable &);
   MaybeExpr AnalyzeExprOrWholeAssumedSizeArray(const parser::Expr &);
   bool AreConformable() const;
   const Symbol *FindBoundOp(parser::CharBlock, int passIndex,
@@ -3894,13 +3895,14 @@ MaybeExpr ExpressionAnalyzer::AnalyzeComplex(
       std::move(im), GetDefaultKind(TypeCategory::Real)));
 }
 
-void ArgumentAnalyzer::Analyze(const parser::Variable &x) {
+std::optional<ActualArgument> ArgumentAnalyzer::AnalyzeVariable(
+    const parser::Variable &x) {
   source_.ExtendToCover(x.GetSource());
   if (MaybeExpr expr{context_.Analyze(x)}) {
     if (!IsConstantExpr(*expr)) {
-      actuals_.emplace_back(std::move(*expr));
-      SetArgSourceLocation(actuals_.back(), x.GetSource());
-      return;
+      ActualArgument actual{std::move(*expr)};
+      SetArgSourceLocation(actual, x.GetSource());
+      return actual;
     }
     const Symbol *symbol{GetLastSymbol(*expr)};
     if (!symbol) {
@@ -3923,32 +3925,50 @@ void ArgumentAnalyzer::Analyze(const parser::Variable &x) {
     }
   }
   fatalErrors_ = true;
+  return std::nullopt;
+}
+
+void ArgumentAnalyzer::Analyze(const parser::Variable &x) {
+  if (auto actual = AnalyzeVariable(x)) {
+    actuals_.emplace_back(std::move(actual));
+  }
 }
 
 void ArgumentAnalyzer::Analyze(
     const parser::ActualArgSpec &arg, bool isSubroutine) {
   // TODO: C1534: Don't allow a "restricted" specific intrinsic to be passed.
   std::optional<ActualArgument> actual;
-  common::visit(common::visitors{
-                    [&](const common::Indirection<parser::Expr> &x) {
-                      actual = AnalyzeExpr(x.value());
-                      SetArgSourceLocation(actual, x.value().source);
-                    },
-                    [&](const parser::AltReturnSpec &label) {
-                      if (!isSubroutine) {
-                        context_.Say(
-                            "alternate return specification may not appear on"
-                            " function reference"_err_en_US);
-                      }
-                      actual = ActualArgument(label.v);
-                    },
-                    [&](const parser::ActualArg::PercentRef &) {
-                      context_.Say("%REF() intrinsic for arguments"_todo_en_US);
-                    },
-                    [&](const parser::ActualArg::PercentVal &) {
-                      context_.Say("%VAL() intrinsic for arguments"_todo_en_US);
-                    },
-                },
+  common::visit(
+      common::visitors{
+          [&](const common::Indirection<parser::Expr> &x) {
+            actual = AnalyzeExpr(x.value());
+          },
+          [&](const parser::AltReturnSpec &label) {
+            if (!isSubroutine) {
+              context_.Say("alternate return specification may not appear on"
+                           " function reference"_err_en_US);
+            }
+            actual = ActualArgument(label.v);
+          },
+          [&](const parser::ActualArg::PercentRef &percentRef) {
+            actual = AnalyzeVariable(percentRef.v);
+            if (actual.has_value()) {
+              actual->set_isPercentRef();
+            }
+          },
+          [&](const parser::ActualArg::PercentVal &percentVal) {
+            actual = AnalyzeExpr(percentVal.v);
+            if (actual.has_value()) {
+              actual->set_isPercentVal();
+              std::optional<DynamicType> type{actual->GetType()};
+              if (!type || !type->IsLengthlessIntrinsicType() ||
+                  actual->Rank() != 0) {
+                context_.SayAt(percentVal.v,
+                    "%VAL argument must be a scalar numerical or logical expression"_err_en_US);
+              }
+            }
+          },
+      },
       std::get<parser::ActualArg>(arg.t).u);
   if (actual) {
     if (const auto &argKW{std::get<std::optional<parser::Keyword>>(arg.t)}) {
