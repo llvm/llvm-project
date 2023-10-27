@@ -1249,6 +1249,8 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache,
 
 #ifndef NDEBUG
   VerifyStates();
+  // get the data layout to compare the sizes of base/derived pointer values 
+  auto &DL = cast<llvm::Instruction>(Def)->getModule()->getDataLayout();
 #endif
 
   // Cache all of our results so we can cheaply reuse them
@@ -1258,6 +1260,8 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache,
     auto *BDV = Pair.first;
     Value *Base = Pair.second.getBaseValue();
     assert(BDV && Base);
+    // the assumption is that whenever we have a derived ptr(s), their base ptr(s) must be of the same size, not necessarily the same type
+    assert(DL.getTypeAllocSize(BDV->getType()) == DL.getTypeAllocSize(Base->getType()) && "Derived and base values should have same size");
     // Only values that do not have known bases or those that have differing
     // type (scalar versus vector) from a possible known base should be in the
     // lattice.
