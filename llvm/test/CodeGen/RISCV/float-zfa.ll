@@ -106,6 +106,15 @@ define float @loadfpimm12() {
   ret float -2.0
 }
 
+; Ensure fli isn't incorrecty used for negative min normal value.
+define float @loadfpimm13() {
+; CHECK-LABEL: loadfpimm13:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    fli.s fa0, min
+; CHECK-NEXT:    ret
+  ret float 0xb810000000000000
+}
+
 declare float @llvm.minimum.f32(float, float)
 
 define float @fminm_s(float %a, float %b) nounwind {
