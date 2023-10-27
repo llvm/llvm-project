@@ -6,7 +6,7 @@
 // only the non-reduction dimension can be scalable (*). For Matmul operations
 // that is set to be the N dimension (i.e. rows of the output matrix), which
 // matches how matrix multiplication are normally implemented for e.g. 
-// Arm's SVE. However, making the M dimension scalable (i.e. columns of the
+// Arm SVE. However, making the M dimension scalable (i.e. columns of the
 // output matrix) should work as well.
 //
 // (*) The conversion tested in this file unrolls along the reduction
