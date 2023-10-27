@@ -107,7 +107,7 @@ def _site_initialize():
                 logger.debug(
                     "Registering translations from initializer %r", init_module
                 )
-                init_module.register_translations(self)
+                init_module.register_llvm_translations(self)
 
     ir.Context = Context
 
