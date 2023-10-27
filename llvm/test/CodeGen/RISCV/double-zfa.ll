@@ -156,7 +156,8 @@ define double @loadfpimm17() {
 define double @loadfpimm18() {
 ; CHECK-LABEL: loadfpimm18:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fli.d fa0, min
+; CHECK-NEXT:    lui a0, %hi(.LCPI16_0)
+; CHECK-NEXT:    fld fa0, %lo(.LCPI16_0)(a0)
 ; CHECK-NEXT:    ret
   ret double 0x8010000000000000
 }
