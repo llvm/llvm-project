@@ -1,3 +1,15 @@
+//===-- LLDBMemoryReader.cpp ----------------------------------------------===//
+//
+// This source file is part of the Swift.org open source project
+//
+// Copyright (c) 2014 - 2020 Apple Inc. and the Swift project authors
+// Licensed under Apache License v2.0 with Runtime Library Exception
+//
+// See https://swift.org/LICENSE.txt for license information
+// See https://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
+//
+//===----------------------------------------------------------------------===//
+
 #include "LLDBMemoryReader.h"
 #include "lldb/Core/Address.h"
 #include "lldb/Core/Section.h"
@@ -475,8 +487,8 @@ LLDBMemoryReader::addModuleToAddressMap(ModuleSP module,
   auto last_section =
       section_list->GetSectionAtIndex(section_list->GetSize() - 1);
 
-  // The total size is the last section's file address plus size, subtracting the 
-  // first section's file address.
+  // The total size is the last section's file address plus size, subtracting
+  // the first section's file address.
   auto start_file_address = first_section->GetFileAddress();
   uint64_t end_file_address =
       last_section->GetFileAddress() + last_section->GetByteSize();
@@ -551,7 +563,7 @@ LLDBMemoryReader::getFileAddressAndModuleForTaggedAddress(
     // when constructing the range to module map.
     file_address = tagged_address - std::prev(pair_iterator)->first;
 
-  // We also need to add the module's file address, since we subtract it when 
+  // We also need to add the module's file address, since we subtract it when
   // building the range to module map.
   file_address += section_list->GetSectionAtIndex(0)->GetFileAddress();
   return {{file_address, module}};
