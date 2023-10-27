@@ -38,6 +38,7 @@ module attributes {gpu.container_module} {
     # CHECK-LABEL:gpu.binary @kernel_module1
     # CHECK:[#gpu.object<#rocdl.target<chip = "gfx90a">, offload = "{{.*}}">]
 
+
 # CHECK-LABEL: testGPUToASMBin
 @run
 def testGPUToASMBin():
@@ -57,8 +58,7 @@ module attributes {gpu.container_module} {
         )
     pm = PassManager("any")
     pm.add("gpu-module-to-binary{format=isa}")
-    pm.run(module.operation) 
+    pm.run(module.operation)
     print(module)
     # CHECK-LABEL:gpu.binary @kernel_module2
     # CHECK:[#gpu.object<#rocdl.target<flags = {fast}>, assembly = "{{.*}}">, #gpu.object<#rocdl.target, assembly = "{{.*}}">]
-

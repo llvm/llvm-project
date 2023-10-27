@@ -104,7 +104,9 @@ def _site_initialize():
             # behavior. See: https://github.com/llvm/llvm-project/issues/56037
             self.load_all_available_dialects()
             if init_module:
-                logger.debug("Registering translations from initializer %r", init_module)
+                logger.debug(
+                    "Registering translations from initializer %r", init_module
+                )
                 init_module.register_translations(self)
 
     ir.Context = Context
