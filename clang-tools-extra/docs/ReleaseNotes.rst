@@ -107,6 +107,9 @@ Code actions
   access specifiers (e.g., ``public``, ``protected``), creating new access
   specifier blocks if necessary.
 
+- The abbreviate function template tweak was introduced.
+  It allows converting function templates to their abbreviated form using auto parameters.
+
 Signature help
 ^^^^^^^^^^^^^^
 
