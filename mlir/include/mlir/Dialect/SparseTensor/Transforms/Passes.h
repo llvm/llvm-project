@@ -40,11 +40,11 @@ enum class SparseParallelizationStrategy {
   kAnyStorageAnyLoop
 };
 
-/// Define a scope for reinterpret map pass.
+/// Defines a scope for reinterpret map pass.
 enum class ReinterpretMapScope {
-  kAll,           // reinterpret all applicable operations.
-  kGenericOnly,   // reinterpret only linalg.generic.
-  kExceptGeneric, // reinterpret operation other than linalg.generic (e.g.,
+  kAll,           // reinterprets all applicable operations
+  kGenericOnly,   // reinterprets only linalg.generic
+  kExceptGeneric, // reinterprets operation other than linalg.generic (e.g.,
                   // foreach)
 };
 
