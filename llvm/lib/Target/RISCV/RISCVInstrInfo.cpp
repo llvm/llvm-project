@@ -471,6 +471,34 @@ void RISCVInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     return;
   }
 
+  if (STI.getXLen() == 32 && RISCV::FPR32RegClass.contains(DstReg) &&
+      RISCV::GPRRegClass.contains(SrcReg)) {
+    BuildMI(MBB, MBBI, DL, get(RISCV::FMV_W_X), DstReg)
+      .addReg(SrcReg, getKillRegState(KillSrc));
+    return;
+  }
+
+  if (STI.getXLen() == 32 && RISCV::GPRRegClass.contains(DstReg) &&
+      RISCV::FPR32RegClass.contains(SrcReg)) {
+    BuildMI(MBB, MBBI, DL, get(RISCV::FMV_X_W), DstReg)
+      .addReg(SrcReg, getKillRegState(KillSrc));
+    return;
+  }
+
+  if (STI.getXLen() == 64 && RISCV::FPR64RegClass.contains(DstReg) &&
+      RISCV::GPRRegClass.contains(SrcReg)) {
+    BuildMI(MBB, MBBI, DL, get(RISCV::FMV_D_X), DstReg)
+      .addReg(SrcReg, getKillRegState(KillSrc));
+    return;
+  }
+
+  if (STI.getXLen() == 64 && RISCV::GPRRegClass.contains(DstReg) &&
+      RISCV::FPR64RegClass.contains(SrcReg)) {
+    BuildMI(MBB, MBBI, DL, get(RISCV::FMV_X_D), DstReg)
+      .addReg(SrcReg, getKillRegState(KillSrc));
+    return;
+  }
+
   // VR->VR copies.
   if (RISCV::VRRegClass.contains(DstReg, SrcReg)) {
     copyPhysRegVector(MBB, MBBI, DL, DstReg, SrcReg, KillSrc, RISCV::VMV1R_V);
