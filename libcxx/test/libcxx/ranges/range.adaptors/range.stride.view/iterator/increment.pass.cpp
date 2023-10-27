@@ -16,13 +16,11 @@
 // Call ....
 
 #include "check_assertion.h"
-#include "../../test/std/ranges/range.adaptors/range.stride.view/test.h"
 #include <ranges>
 
 void cannot_increment_at_the_end_iterator() {
   int range[]   = {1, 2, 3};
-  auto iv       = InputView(range, range + 3);
-  auto striv    = std::ranges::views::stride(iv, 3);
+  auto striv    = std::ranges::views::stride(range, 3);
   auto striv_it = striv.begin();
   striv_it++;
   TEST_LIBCPP_ASSERT_FAILURE(striv_it++, "Cannot increment an iterator already at the end.");
