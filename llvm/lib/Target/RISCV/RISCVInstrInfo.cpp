@@ -330,13 +330,8 @@ void RISCVInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     return;
   }
 
-  // FPR->FPR copies and VR->VR copies.
-  unsigned Opc;
-  bool IsScalableVector = true;
-  unsigned NF = 1;
-  RISCVII::VLMUL LMul = RISCVII::LMUL_1;
-  unsigned SubRegIdx = RISCV::sub_vrm1_0;
   if (RISCV::FPR16RegClass.contains(DstReg, SrcReg)) {
+    unsigned Opc;
     if (STI.hasStdExtZfh()) {
       Opc = RISCV::FSGNJ_H;
     } else {
@@ -350,14 +345,32 @@ void RISCVInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                         &RISCV::FPR32RegClass);
       Opc = RISCV::FSGNJ_S;
     }
-    IsScalableVector = false;
-  } else if (RISCV::FPR32RegClass.contains(DstReg, SrcReg)) {
-    Opc = RISCV::FSGNJ_S;
-    IsScalableVector = false;
-  } else if (RISCV::FPR64RegClass.contains(DstReg, SrcReg)) {
-    Opc = RISCV::FSGNJ_D;
-    IsScalableVector = false;
-  } else if (RISCV::VRRegClass.contains(DstReg, SrcReg)) {
+    BuildMI(MBB, MBBI, DL, get(Opc), DstReg)
+        .addReg(SrcReg, getKillRegState(KillSrc))
+        .addReg(SrcReg, getKillRegState(KillSrc));
+    return;
+  }
+
+  if (RISCV::FPR32RegClass.contains(DstReg, SrcReg)) {
+    BuildMI(MBB, MBBI, DL, get(RISCV::FSGNJ_S), DstReg)
+        .addReg(SrcReg, getKillRegState(KillSrc))
+        .addReg(SrcReg, getKillRegState(KillSrc));
+    return;
+  }
+
+  if (RISCV::FPR64RegClass.contains(DstReg, SrcReg)) {
+    BuildMI(MBB, MBBI, DL, get(RISCV::FSGNJ_D), DstReg)
+        .addReg(SrcReg, getKillRegState(KillSrc))
+        .addReg(SrcReg, getKillRegState(KillSrc));
+    return;
+  }
+
+  // VR->VR copies.
+  unsigned Opc;
+  unsigned NF = 1;
+  RISCVII::VLMUL LMul = RISCVII::LMUL_1;
+  unsigned SubRegIdx = RISCV::sub_vrm1_0;
+  if (RISCV::VRRegClass.contains(DstReg, SrcReg)) {
     Opc = RISCV::VMV1R_V;
     LMul = RISCVII::LMUL_1;
   } else if (RISCV::VRM2RegClass.contains(DstReg, SrcReg)) {
@@ -428,97 +441,90 @@ void RISCVInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     llvm_unreachable("Impossible reg-to-reg copy");
   }
 
-  if (IsScalableVector) {
-    bool UseVMV_V_V = false;
-    bool UseVMV_V_I = false;
-    MachineBasicBlock::const_iterator DefMBBI;
-    if (isConvertibleToVMV_V_V(STI, MBB, MBBI, DefMBBI, LMul)) {
-      UseVMV_V_V = true;
-      // We only need to handle LMUL = 1/2/4/8 here because we only define
-      // vector register classes for LMUL = 1/2/4/8.
-      unsigned VIOpc;
-      switch (LMul) {
-      default:
-        llvm_unreachable("Impossible LMUL for vector register copy.");
-      case RISCVII::LMUL_1:
-        Opc = RISCV::PseudoVMV_V_V_M1;
-        VIOpc = RISCV::PseudoVMV_V_I_M1;
-        break;
-      case RISCVII::LMUL_2:
-        Opc = RISCV::PseudoVMV_V_V_M2;
-        VIOpc = RISCV::PseudoVMV_V_I_M2;
-        break;
-      case RISCVII::LMUL_4:
-        Opc = RISCV::PseudoVMV_V_V_M4;
-        VIOpc = RISCV::PseudoVMV_V_I_M4;
-        break;
-      case RISCVII::LMUL_8:
-        Opc = RISCV::PseudoVMV_V_V_M8;
-        VIOpc = RISCV::PseudoVMV_V_I_M8;
-        break;
-      }
-
-      if (DefMBBI->getOpcode() == VIOpc) {
-        UseVMV_V_I = true;
-        Opc = VIOpc;
-      }
+  bool UseVMV_V_V = false;
+  bool UseVMV_V_I = false;
+  MachineBasicBlock::const_iterator DefMBBI;
+  if (isConvertibleToVMV_V_V(STI, MBB, MBBI, DefMBBI, LMul)) {
+    UseVMV_V_V = true;
+    // We only need to handle LMUL = 1/2/4/8 here because we only define
+    // vector register classes for LMUL = 1/2/4/8.
+    unsigned VIOpc;
+    switch (LMul) {
+    default:
+      llvm_unreachable("Impossible LMUL for vector register copy.");
+    case RISCVII::LMUL_1:
+      Opc = RISCV::PseudoVMV_V_V_M1;
+      VIOpc = RISCV::PseudoVMV_V_I_M1;
+      break;
+    case RISCVII::LMUL_2:
+      Opc = RISCV::PseudoVMV_V_V_M2;
+      VIOpc = RISCV::PseudoVMV_V_I_M2;
+      break;
+    case RISCVII::LMUL_4:
+      Opc = RISCV::PseudoVMV_V_V_M4;
+      VIOpc = RISCV::PseudoVMV_V_I_M4;
+      break;
+    case RISCVII::LMUL_8:
+      Opc = RISCV::PseudoVMV_V_V_M8;
+      VIOpc = RISCV::PseudoVMV_V_I_M8;
+      break;
     }
 
-    if (NF == 1) {
-      auto MIB = BuildMI(MBB, MBBI, DL, get(Opc), DstReg);
+    if (DefMBBI->getOpcode() == VIOpc) {
+      UseVMV_V_I = true;
+      Opc = VIOpc;
+    }
+  }
+
+  if (NF == 1) {
+    auto MIB = BuildMI(MBB, MBBI, DL, get(Opc), DstReg);
+    if (UseVMV_V_V)
+      MIB.addReg(DstReg, RegState::Undef);
+    if (UseVMV_V_I)
+      MIB = MIB.add(DefMBBI->getOperand(2));
+    else
+      MIB = MIB.addReg(SrcReg, getKillRegState(KillSrc));
+    if (UseVMV_V_V) {
+      const MCInstrDesc &Desc = DefMBBI->getDesc();
+      MIB.add(DefMBBI->getOperand(RISCVII::getVLOpNum(Desc)));  // AVL
+      MIB.add(DefMBBI->getOperand(RISCVII::getSEWOpNum(Desc))); // SEW
+      MIB.addImm(0);                                            // tu, mu
+      MIB.addReg(RISCV::VL, RegState::Implicit);
+      MIB.addReg(RISCV::VTYPE, RegState::Implicit);
+    }
+  } else {
+    int I = 0, End = NF, Incr = 1;
+    unsigned SrcEncoding = TRI->getEncodingValue(SrcReg);
+    unsigned DstEncoding = TRI->getEncodingValue(DstReg);
+    unsigned LMulVal;
+    bool Fractional;
+    std::tie(LMulVal, Fractional) = RISCVVType::decodeVLMUL(LMul);
+    assert(!Fractional && "It is impossible be fractional lmul here.");
+    if (forwardCopyWillClobberTuple(DstEncoding, SrcEncoding, NF * LMulVal)) {
+      I = NF - 1;
+      End = -1;
+      Incr = -1;
+    }
+
+    for (; I != End; I += Incr) {
+      auto MIB = BuildMI(MBB, MBBI, DL, get(Opc),
+                         TRI->getSubReg(DstReg, SubRegIdx + I));
       if (UseVMV_V_V)
-        MIB.addReg(DstReg, RegState::Undef);
+        MIB.addReg(TRI->getSubReg(DstReg, SubRegIdx + I), RegState::Undef);
       if (UseVMV_V_I)
         MIB = MIB.add(DefMBBI->getOperand(2));
       else
-        MIB = MIB.addReg(SrcReg, getKillRegState(KillSrc));
+        MIB = MIB.addReg(TRI->getSubReg(SrcReg, SubRegIdx + I),
+                         getKillRegState(KillSrc));
       if (UseVMV_V_V) {
         const MCInstrDesc &Desc = DefMBBI->getDesc();
         MIB.add(DefMBBI->getOperand(RISCVII::getVLOpNum(Desc))); // AVL
         MIB.add(DefMBBI->getOperand(RISCVII::getSEWOpNum(Desc))); // SEW
-        MIB.addImm(0); // tu, mu
+        MIB.addImm(0);                                            // tu, mu
         MIB.addReg(RISCV::VL, RegState::Implicit);
         MIB.addReg(RISCV::VTYPE, RegState::Implicit);
       }
-    } else {
-      int I = 0, End = NF, Incr = 1;
-      unsigned SrcEncoding = TRI->getEncodingValue(SrcReg);
-      unsigned DstEncoding = TRI->getEncodingValue(DstReg);
-      unsigned LMulVal;
-      bool Fractional;
-      std::tie(LMulVal, Fractional) = RISCVVType::decodeVLMUL(LMul);
-      assert(!Fractional && "It is impossible be fractional lmul here.");
-      if (forwardCopyWillClobberTuple(DstEncoding, SrcEncoding, NF * LMulVal)) {
-        I = NF - 1;
-        End = -1;
-        Incr = -1;
-      }
-
-      for (; I != End; I += Incr) {
-        auto MIB = BuildMI(MBB, MBBI, DL, get(Opc),
-                           TRI->getSubReg(DstReg, SubRegIdx + I));
-        if (UseVMV_V_V)
-          MIB.addReg(TRI->getSubReg(DstReg, SubRegIdx + I),
-                     RegState::Undef);
-        if (UseVMV_V_I)
-          MIB = MIB.add(DefMBBI->getOperand(2));
-        else
-          MIB = MIB.addReg(TRI->getSubReg(SrcReg, SubRegIdx + I),
-                           getKillRegState(KillSrc));
-        if (UseVMV_V_V) {
-          const MCInstrDesc &Desc = DefMBBI->getDesc();
-          MIB.add(DefMBBI->getOperand(RISCVII::getVLOpNum(Desc))); // AVL
-          MIB.add(DefMBBI->getOperand(RISCVII::getSEWOpNum(Desc))); // SEW
-          MIB.addImm(0);  // tu, mu
-          MIB.addReg(RISCV::VL, RegState::Implicit);
-          MIB.addReg(RISCV::VTYPE, RegState::Implicit);
-        }
-      }
     }
-  } else {
-    BuildMI(MBB, MBBI, DL, get(Opc), DstReg)
-        .addReg(SrcReg, getKillRegState(KillSrc))
-        .addReg(SrcReg, getKillRegState(KillSrc));
   }
 }
 
