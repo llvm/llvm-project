@@ -18,14 +18,6 @@ define amdgpu_kernel void @v_input_output_i8() {
   ret void
 }
 
-; GCN: error: couldn't allocate output register for constraint 's'
-; GCN: error: couldn't allocate input reg for constraint 's'
-define amdgpu_kernel void @s_input_output_v32f16() {
-  %v = tail call <32 x half> asm sideeffect "s_mov_b32 $0, -1", "=s"()
-  tail call void asm sideeffect "; use $0", "s"(<32 x half> %v)
-  ret void
-}
-
 ; SICI: error: couldn't allocate output register for constraint 's'
 ; SICI: error: couldn't allocate input reg for constraint 's'
 ; VI-NOT: error
