@@ -556,7 +556,7 @@ llvm::Function *CGNVCUDARuntime::makeRegisterGlobalsFn() {
     llvm::Constant *NullPtr = llvm::ConstantPointerNull::get(VoidPtrTy);
     llvm::Value *Args[] = {
         &GpuBinaryHandlePtr,
-        Builder.CreateBitCast(KernelHandles[I.Kernel->getName()], VoidPtrTy),
+        KernelHandles[I.Kernel->getName()],
         KernelName,
         KernelName,
         llvm::ConstantInt::get(IntTy, -1),
@@ -631,8 +631,8 @@ llvm::Function *CGNVCUDARuntime::makeRegisterGlobalsFn() {
         replaceManagedVar(Var, ManagedVar);
         llvm::Value *Args[] = {
             &GpuBinaryHandlePtr,
-            Builder.CreateBitCast(ManagedVar, VoidPtrTy),
-            Builder.CreateBitCast(Var, VoidPtrTy),
+            ManagedVar,
+            Var,
             VarName,
             llvm::ConstantInt::get(VarSizeTy, VarSize),
             llvm::ConstantInt::get(IntTy, Var->getAlignment())};
@@ -641,7 +641,7 @@ llvm::Function *CGNVCUDARuntime::makeRegisterGlobalsFn() {
       } else {
         llvm::Value *Args[] = {
             &GpuBinaryHandlePtr,
-            Builder.CreateBitCast(Var, VoidPtrTy),
+            Var,
             VarName,
             VarName,
             llvm::ConstantInt::get(IntTy, Info.Flags.isExtern()),
@@ -655,15 +655,15 @@ llvm::Function *CGNVCUDARuntime::makeRegisterGlobalsFn() {
     case DeviceVarFlags::Surface:
       Builder.CreateCall(
           RegisterSurf,
-          {&GpuBinaryHandlePtr, Builder.CreateBitCast(Var, VoidPtrTy), VarName,
-           VarName, llvm::ConstantInt::get(IntTy, Info.Flags.getSurfTexType()),
+          {&GpuBinaryHandlePtr, Var, VarName, VarName,
+           llvm::ConstantInt::get(IntTy, Info.Flags.getSurfTexType()),
            llvm::ConstantInt::get(IntTy, Info.Flags.isExtern())});
       break;
     case DeviceVarFlags::Texture:
       Builder.CreateCall(
           RegisterTex,
-          {&GpuBinaryHandlePtr, Builder.CreateBitCast(Var, VoidPtrTy), VarName,
-           VarName, llvm::ConstantInt::get(IntTy, Info.Flags.getSurfTexType()),
+          {&GpuBinaryHandlePtr, Var, VarName, VarName,
+           llvm::ConstantInt::get(IntTy, Info.Flags.getSurfTexType()),
            llvm::ConstantInt::get(IntTy, Info.Flags.isNormalized()),
            llvm::ConstantInt::get(IntTy, Info.Flags.isExtern())});
       break;
@@ -860,9 +860,8 @@ llvm::Function *CGNVCUDARuntime::makeModuleCtorFunction() {
     {
       CtorBuilder.SetInsertPoint(IfBlock);
       // GpuBinaryHandle = __hipRegisterFatBinary(&FatbinWrapper);
-      llvm::CallInst *RegisterFatbinCall = CtorBuilder.CreateCall(
-          RegisterFatbinFunc,
-          CtorBuilder.CreateBitCast(FatbinWrapper, VoidPtrTy));
+      llvm::CallInst *RegisterFatbinCall =
+          CtorBuilder.CreateCall(RegisterFatbinFunc, FatbinWrapper);
       CtorBuilder.CreateStore(RegisterFatbinCall, GpuBinaryAddr);
       CtorBuilder.CreateBr(ExitBlock);
     }
@@ -878,9 +877,8 @@ llvm::Function *CGNVCUDARuntime::makeModuleCtorFunction() {
     // Register binary with CUDA runtime. This is substantially different in
     // default mode vs. separate compilation!
     // GpuBinaryHandle = __cudaRegisterFatBinary(&FatbinWrapper);
-    llvm::CallInst *RegisterFatbinCall = CtorBuilder.CreateCall(
-        RegisterFatbinFunc,
-        CtorBuilder.CreateBitCast(FatbinWrapper, VoidPtrTy));
+    llvm::CallInst *RegisterFatbinCall =
+        CtorBuilder.CreateCall(RegisterFatbinFunc, FatbinWrapper);
     GpuBinaryHandle = new llvm::GlobalVariable(
         TheModule, VoidPtrPtrTy, false, llvm::GlobalValue::InternalLinkage,
         llvm::ConstantPointerNull::get(VoidPtrPtrTy), "__cuda_gpubin_handle");
@@ -921,9 +919,7 @@ llvm::Function *CGNVCUDARuntime::makeModuleCtorFunction() {
         getRegisterLinkedBinaryFnTy(), RegisterLinkedBinaryName);
 
     assert(RegisterGlobalsFunc && "Expecting at least dummy function!");
-    llvm::Value *Args[] = {RegisterGlobalsFunc,
-                           CtorBuilder.CreateBitCast(FatbinWrapper, VoidPtrTy),
-                           ModuleIDConstant,
+    llvm::Value *Args[] = {RegisterGlobalsFunc, FatbinWrapper, ModuleIDConstant,
                            makeDummyFunction(getCallbackFnTy())};
     CtorBuilder.CreateCall(RegisterLinkedBinaryFunc, Args);
   }
