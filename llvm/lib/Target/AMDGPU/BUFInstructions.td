@@ -1668,16 +1668,16 @@ multiclass SIBufferAtomicCmpSwapPat<ValueType vt, ValueType data_vt, string Inst
       (timm:$cachepolicy));
     defvar SrcRC = getVregSrcForVT<vt>.ret;
     defvar DataRC = getVregSrcForVT<data_vt>.ret;
-    defvar SubLo = sub0;
-    defvar SubHi = sub1;
+    defvar SubLo = !if(!eq(vt, i32), sub0, sub0_sub1);
+    defvar SubHi = !if(!eq(vt, i32), sub1, sub2_sub3);
 
     defvar OffsetResDag = (!cast<MUBUF_Pseudo>(Inst # "_OFFSET" # InstSuffix)
       (REG_SEQUENCE DataRC, SrcRC:$data, SubLo, SrcRC:$cmp, SubHi),
       SReg_128:$rsrc, SCSrc_b32:$soffset, timm:$offset, CachePolicy);
     def : GCNPat<
-      (Op
+      (vt (Op
           vt:$data, vt:$cmp, v4i32:$rsrc, 0, 0, i32:$soffset,
-          timm:$offset, timm:$cachepolicy, 0),
+          timm:$offset, timm:$cachepolicy, 0)),
       !if(!eq(RtnMode, "ret"),
         (EXTRACT_SUBREG OffsetResDag, SubLo),
         OffsetResDag)
@@ -1688,10 +1688,10 @@ multiclass SIBufferAtomicCmpSwapPat<ValueType vt, ValueType data_vt, string Inst
       VGPR_32:$vindex, SReg_128:$rsrc, SCSrc_b32:$soffset, timm:$offset,
       CachePolicy);
     def : GCNPat<
-      (Op
+      (vt (Op
           vt:$data, vt:$cmp, v4i32:$rsrc, i32:$vindex,
           0, i32:$soffset, timm:$offset,
-          timm:$cachepolicy, timm),
+          timm:$cachepolicy, timm)),
       !if(!eq(RtnMode, "ret"),
         (EXTRACT_SUBREG IdxenResDag, SubLo),
         IdxenResDag)
@@ -1702,10 +1702,10 @@ multiclass SIBufferAtomicCmpSwapPat<ValueType vt, ValueType data_vt, string Inst
       VGPR_32:$voffset, SReg_128:$rsrc, SCSrc_b32:$soffset, timm:$offset,
       CachePolicy);
     def : GCNPat<
-      (Op
+      (vt (Op
           vt:$data, vt:$cmp, v4i32:$rsrc, 0,
           i32:$voffset, i32:$soffset, timm:$offset,
-          timm:$cachepolicy, 0),
+          timm:$cachepolicy, 0)),
       !if(!eq(RtnMode, "ret"),
         (EXTRACT_SUBREG OffenResDag, SubLo),
         OffenResDag)
@@ -1716,10 +1716,10 @@ multiclass SIBufferAtomicCmpSwapPat<ValueType vt, ValueType data_vt, string Inst
       (REG_SEQUENCE VReg_64, VGPR_32:$vindex, sub0, VGPR_32:$voffset, sub1),
       SReg_128:$rsrc, SCSrc_b32:$soffset, timm:$offset, CachePolicy);
     def : GCNPat<
-      (Op
+      (vt (Op
           vt:$data, vt:$cmp, v4i32:$rsrc, i32:$vindex,
           i32:$voffset, i32:$soffset, timm:$offset,
-          timm:$cachepolicy, timm),
+          timm:$cachepolicy, timm)),
       !if(!eq(RtnMode, "ret"),
         (EXTRACT_SUBREG BothenResDag, SubLo),
         BothenResDag)
@@ -1728,6 +1728,7 @@ multiclass SIBufferAtomicCmpSwapPat<ValueType vt, ValueType data_vt, string Inst
 }
 
 defm : SIBufferAtomicCmpSwapPat<i32, v2i32, "BUFFER_ATOMIC_CMPSWAP">;
+defm : SIBufferAtomicCmpSwapPat<i64, v2i64, "BUFFER_ATOMIC_CMPSWAP_X2">;
 
 class MUBUFLoad_PatternADDR64 <MUBUF_Pseudo Instr_ADDR64, ValueType vt,
                               PatFrag constant_ld> : GCNPat <
