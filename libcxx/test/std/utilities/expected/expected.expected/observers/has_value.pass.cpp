@@ -70,7 +70,7 @@ constexpr bool test() {
     const std::expected<TailClobberer<0>, bool> e = {};
     // clang-cl does not support [[no_unique_address]] yet.
 #if !(defined(TEST_COMPILER_CLANG) && defined(_MSC_VER))
-    static_assert(sizeof(TailClobberer<0>) == sizeof(e));
+    LIBCPP_STATIC_ASSERT(sizeof(TailClobberer<0>) == sizeof(e));
 #endif
     assert(e.has_value());
   }
