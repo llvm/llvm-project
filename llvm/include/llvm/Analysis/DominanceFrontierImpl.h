@@ -49,7 +49,7 @@ template <class BlockT, bool IsPostDom>
 void DominanceFrontierBase<BlockT, IsPostDom>::removeBlock(BlockT *BB) {
   assert(find(BB) != end() && "Block is not in DominanceFrontier!");
   for (iterator I = begin(), E = end(); I != E; ++I)
-    I->second.erase(BB);
+    I->second.remove(BB);
   Frontiers.erase(BB);
 }
 
@@ -65,7 +65,7 @@ void DominanceFrontierBase<BlockT, IsPostDom>::removeFromFrontier(
     iterator I, BlockT *Node) {
   assert(I != end() && "BB is not in DominanceFrontier!");
   assert(I->second.count(Node) && "Node is not in DominanceFrontier of BB");
-  I->second.erase(Node);
+  I->second.remove(Node);
 }
 
 template <class BlockT, bool IsPostDom>
@@ -133,7 +133,7 @@ void DominanceFrontierBase<BlockT, IsPostDom>::print(raw_ostream &OS) const {
       OS << " <<exit node>>";
     OS << " is:\t";
 
-    const std::set<BlockT *> &BBs = I->second;
+    const SetVector<BlockT *> &BBs = I->second;
 
     for (const BlockT *BB : BBs) {
       OS << ' ';
