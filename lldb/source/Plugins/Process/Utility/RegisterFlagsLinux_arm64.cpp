@@ -83,8 +83,12 @@ void LinuxArm64RegisterFlags::UpdateRegisterInfo(const RegisterInfo *reg_info,
   // one if it has already been found. Each time we find one, we erase it from
   // this list.
   std::vector<std::pair<const char *, const RegisterFlags *>> search_registers;
-  for (const auto &reg : m_registers)
-    search_registers.push_back({reg.m_name, &reg.m_flags});
+  for (const auto &reg : m_registers) {
+    // It is possible that a register is all extension dependent fields, and
+    // none of them are present.
+    if (reg.m_flags.GetFields().size())
+      search_registers.push_back({reg.m_name, &reg.m_flags});
+  }
 
   uint32_t idx = 0;
   for (; idx < num_regs && search_registers.size(); ++idx, ++reg_info) {
