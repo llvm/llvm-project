@@ -638,8 +638,8 @@ struct LoopStructure {
     return Result;
   }
 
-  static std::optional<LoopStructure> parseLoopStructure(ScalarEvolution &,
-                                                         Loop &, const char *&);
+  static std::optional<LoopStructure>
+  parseLoopStructure(ScalarEvolution &, Loop &, bool, const char *&);
 };
 
 /// This class is used to constrain loops to run within a given iteration space.
@@ -894,6 +894,7 @@ static const SCEV *getNarrowestLatchMaxTakenCountEstimate(ScalarEvolution &SE,
 
 std::optional<LoopStructure>
 LoopStructure::parseLoopStructure(ScalarEvolution &SE, Loop &L,
+                                  bool AllowUnsignedLatchCond,
                                   const char *&FailureReason) {
   if (!L.isLoopSimplifyForm()) {
     FailureReason = "loop not in LoopSimplify form";
@@ -1077,7 +1078,7 @@ LoopStructure::parseLoopStructure(ScalarEvolution &SE, Loop &L,
     }
 
     IsSignedPredicate = ICmpInst::isSigned(Pred);
-    if (!IsSignedPredicate && !AllowUnsignedLatchCondition) {
+    if (!IsSignedPredicate && !AllowUnsignedLatchCond) {
       FailureReason = "unsigned latch conditions are explicitly prohibited";
       return std::nullopt;
     }
@@ -1142,7 +1143,7 @@ LoopStructure::parseLoopStructure(ScalarEvolution &SE, Loop &L,
     IsSignedPredicate =
         Pred == ICmpInst::ICMP_SLT || Pred == ICmpInst::ICMP_SGT;
 
-    if (!IsSignedPredicate && !AllowUnsignedLatchCondition) {
+    if (!IsSignedPredicate && !AllowUnsignedLatchCond) {
       FailureReason = "unsigned latch conditions are explicitly prohibited";
       return std::nullopt;
     }
@@ -2106,7 +2107,8 @@ bool InductiveRangeCheckElimination::run(
 
   const char *FailureReason = nullptr;
   std::optional<LoopStructure> MaybeLoopStructure =
-      LoopStructure::parseLoopStructure(SE, *L, FailureReason);
+      LoopStructure::parseLoopStructure(SE, *L, AllowUnsignedLatchCondition,
+                                        FailureReason);
   if (!MaybeLoopStructure) {
     LLVM_DEBUG(dbgs() << "irce: could not parse loop structure: "
                       << FailureReason << "\n";);
