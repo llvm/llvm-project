@@ -142,6 +142,18 @@ struct NotSimpleViewIterEnd : InputIterBase<NotSimpleViewIterEnd> {
 };
 
 template <bool Convertible>
+struct NotSimpleViewConstIterEnd : InputIterBase<NotSimpleViewConstIterEnd<Convertible>> {
+  constexpr NotSimpleViewConstIterEnd()                                 = default;
+  constexpr NotSimpleViewConstIterEnd(const NotSimpleViewConstIterEnd&) = default;
+  constexpr NotSimpleViewConstIterEnd(const NotSimpleViewIterEnd&)
+    requires Convertible
+  {}
+  constexpr NotSimpleViewConstIterEnd(NotSimpleViewConstIterEnd&&)                 = default;
+  constexpr NotSimpleViewConstIterEnd& operator=(NotSimpleViewConstIterEnd&&)      = default;
+  constexpr NotSimpleViewConstIterEnd& operator=(const NotSimpleViewConstIterEnd&) = default;
+};
+
+template <bool Convertible>
 struct NotSimpleViewConstIter : InputIterBase<NotSimpleViewConstIter<Convertible>> {
   constexpr NotSimpleViewConstIter()                              = default;
   constexpr NotSimpleViewConstIter(const NotSimpleViewConstIter&) = default;
@@ -168,6 +180,15 @@ constexpr bool operator==(const NotSimpleViewIterEnd&, const NotSimpleViewConstI
 constexpr bool operator==(const NotSimpleViewIter&, const NotSimpleViewIterEnd&) { return true; }
 constexpr bool operator==(const NotSimpleViewIterEnd&, const NotSimpleViewIter&) { return true; }
 
+template <bool Convertible>
+constexpr bool operator==(const NotSimpleViewConstIter<false>&, const NotSimpleViewConstIterEnd<Convertible>&) {
+  return true;
+}
+template <bool Convertible>
+constexpr bool operator==(const NotSimpleViewConstIterEnd<Convertible>&, const NotSimpleViewConstIter<false>&) {
+  return true;
+}
+
 template <bool Convertible = false>
 struct NotSimpleViewDifferentBegin : std::ranges::view_base {
   constexpr NotSimpleViewConstIter<Convertible> begin() const { return {}; }
@@ -180,6 +201,19 @@ template <>
 inline constexpr bool std::ranges::enable_borrowed_range<NotSimpleViewDifferentBegin<true>> = true;
 template <>
 inline constexpr bool std::ranges::enable_borrowed_range<NotSimpleViewDifferentBegin<false>> = true;
+
+template <bool Convertible = false>
+struct NotSimpleViewDifferentEnd : std::ranges::view_base {
+  constexpr NotSimpleViewConstIter<false> begin() const { return {}; }
+  constexpr NotSimpleViewConstIter<false> begin() { return {}; }
+  constexpr NotSimpleViewConstIterEnd<Convertible> end() const { return {}; }
+  constexpr NotSimpleViewIterEnd end() { return {}; }
+};
+
+template <>
+inline constexpr bool std::ranges::enable_borrowed_range<NotSimpleViewDifferentEnd<true>> = true;
+template <>
+inline constexpr bool std::ranges::enable_borrowed_range<NotSimpleViewDifferentEnd<false>> = true;
 
 /*
  * XXXArrayView classes for use throughout the stride view tests.
