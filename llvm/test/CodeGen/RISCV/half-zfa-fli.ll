@@ -211,3 +211,20 @@ define half @loadfpimm14() {
 ; ZFHMIN-NEXT:    ret
   ret half -2.0
 }
+
+; Ensure fli isn't incorrecty used for negative min normal value.
+define half @loadfpimm15() {
+; CHECK-LABEL: loadfpimm15:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a0, %hi(.LCPI14_0)
+; CHECK-NEXT:    flh fa0, %lo(.LCPI14_0)(a0)
+; CHECK-NEXT:    ret
+;
+; ZFHMIN-LABEL: loadfpimm15:
+; ZFHMIN:       # %bb.0:
+; ZFHMIN-NEXT:    lui a0, %hi(.LCPI14_0)
+; ZFHMIN-NEXT:    flh fa0, %lo(.LCPI14_0)(a0)
+; ZFHMIN-NEXT:    ret
+  ret half 0xH8400
+}
+

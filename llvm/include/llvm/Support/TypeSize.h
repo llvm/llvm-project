@@ -319,12 +319,6 @@ public:
   constexpr TypeSize(ScalarTy Quantity, bool Scalable)
       : FixedOrScalableQuantity(Quantity, Scalable) {}
 
-  static constexpr TypeSize getFixed(ScalarTy ExactSize) {
-    return TypeSize(ExactSize, false);
-  }
-  static constexpr TypeSize getScalable(ScalarTy MinimumSize) {
-    return TypeSize(MinimumSize, true);
-  }
   static constexpr TypeSize get(ScalarTy Quantity, bool Scalable) {
     return TypeSize(Quantity, Scalable);
   }
