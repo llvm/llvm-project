@@ -66,25 +66,51 @@ constexpr bool iterator_default_constructible() {
 
 constexpr bool non_const_iterator_copy_ctor() {
   {
-    // Instantiate a stride view over a non-simple view whose const/non-const iterators are not-convertible.
+    // Instantiate a stride view over a non-simple view whose const/non-const begin iterators are not-convertible.
     using NotSimpleStrideView          = std::ranges::stride_view<NotSimpleViewDifferentBegin<false>>;
     using NotSimpleStrideViewIter      = std::ranges::iterator_t<NotSimpleStrideView>;
     using NotSimpleStrideViewConstIter = std::ranges::iterator_t<const NotSimpleStrideView>;
 
     // It should not be possible to construct a stride view iterator from a non-const stride view iterator
-    // when the strided-over type has inconvertible iterator types.
+    // when the strided-over type has inconvertible begin iterator types.
     static_assert(!std::ranges::__simple_view<NotSimpleStrideView>);
     static_assert(!std::convertible_to<NotSimpleStrideViewIter, NotSimpleStrideViewConstIter>);
     static_assert(!std::is_constructible_v<NotSimpleStrideViewConstIter, NotSimpleStrideViewIter>);
   }
   {
-    // Instantiate a stride view over a non-simple view whose const/non-const iterators are convertible.
+    // Instantiate a stride view over a non-simple view whose const/non-const begin iterators are convertible.
     using NotSimpleStrideView          = std::ranges::stride_view<NotSimpleViewDifferentBegin<true>>;
     using NotSimpleStrideViewIter      = std::ranges::iterator_t<NotSimpleStrideView>;
     using NotSimpleStrideViewConstIter = std::ranges::iterator_t<const NotSimpleStrideView>;
 
     // It should be possible to construct a stride view iterator from a non-const stride view iterator
-    // when the strided-over type has convertible iterator types.
+    // when the strided-over type has convertible begin iterator types.
+    static_assert(!std::ranges::__simple_view<NotSimpleStrideView>);
+    static_assert(std::convertible_to<NotSimpleStrideViewIter, NotSimpleStrideViewConstIter>);
+    static_assert(std::is_constructible_v<NotSimpleStrideViewConstIter, NotSimpleStrideViewIter>);
+  }
+
+  {
+    // Instantiate a stride view over a non-simple view whose const/non-const end iterators are not convertible.
+    using NotSimpleStrideView          = std::ranges::stride_view<NotSimpleViewDifferentEnd<false>>;
+    using NotSimpleStrideViewIter      = std::ranges::iterator_t<NotSimpleStrideView>;
+    using NotSimpleStrideViewConstIter = std::ranges::iterator_t<const NotSimpleStrideView>;
+
+    // It should not be possible to construct a stride view iterator from a non-const stride view iterator
+    // when the strided-over type has inconvertible end iterator types.
+    static_assert(!std::ranges::__simple_view<NotSimpleStrideView>);
+    static_assert(!std::convertible_to<NotSimpleStrideViewIter, NotSimpleStrideViewConstIter>);
+    static_assert(!std::is_constructible_v<NotSimpleStrideViewConstIter, NotSimpleStrideViewIter>);
+  }
+
+  {
+    // Instantiate a stride view over a non-simple view whose const/non-const end iterators are convertible.
+    using NotSimpleStrideView          = std::ranges::stride_view<NotSimpleViewDifferentEnd<true>>;
+    using NotSimpleStrideViewIter      = std::ranges::iterator_t<NotSimpleStrideView>;
+    using NotSimpleStrideViewConstIter = std::ranges::iterator_t<const NotSimpleStrideView>;
+
+    // It should not be possible to construct a stride view iterator from a non-const stride view iterator
+    // when the strided-over type has inconvertible end iterator types.
     static_assert(!std::ranges::__simple_view<NotSimpleStrideView>);
     static_assert(std::convertible_to<NotSimpleStrideViewIter, NotSimpleStrideViewConstIter>);
     static_assert(std::is_constructible_v<NotSimpleStrideViewConstIter, NotSimpleStrideViewIter>);
