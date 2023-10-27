@@ -291,11 +291,13 @@
 
 #if !(defined(_MSC_VER) || defined(__SCE__)) || __has_feature(modules) ||      \
     defined(__RDPID__)
-/// Returns the value of the IA32_TSC_AUX MSR (0xc0000103).
+/// Reads the value of the IA32_TSC_AUX MSR (0xc0000103).
 ///
 /// \headerfile <immintrin.h>
 ///
 /// This intrinsic corresponds to the <c> RDPID </c> instruction.
+///
+/// \returns The 32-bit contents of the MSR.
 static __inline__ unsigned int __attribute__((__always_inline__, __nodebug__, __target__("rdpid")))
 _rdpid_u32(void) {
   return __builtin_ia32_rdpid();
