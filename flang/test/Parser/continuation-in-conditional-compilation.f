@@ -4,9 +4,9 @@
       k01=1+
 !$   &  1
 
-! CHECK: !$omp parallel
-!$omp para
-!$omp+llel
+! CHECK: !$omp parallel private(k01)
+!$omp parallel
+!$omp+ private(k01)
 !$omp end parallel
 
 ! CHECK-NOT: comment
