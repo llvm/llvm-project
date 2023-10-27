@@ -3936,9 +3936,7 @@ void ArgumentAnalyzer::Analyze(
             if (actual.has_value()) {
               actual->set_isPercentVal();
               std::optional<DynamicType> type{actual->GetType()};
-              if (!type ||
-                  !(common::IsNumericTypeCategory(type->category()) ||
-                      type->category() == common::TypeCategory::Logical) ||
+              if (!type || !type->IsLengthlessIntrinsicType() ||
                   actual->Rank() != 0) {
                 context_.SayAt(percentVal.v,
                     "%VAL argument must be a scalar numerical or logical expression"_err_en_US);
