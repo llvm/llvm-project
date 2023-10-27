@@ -1126,6 +1126,12 @@ def TosaToLinalgNamed
     Linalg named operations.
   }];
 
+  let options = [
+      Option<"preferConv2DKernelLayoutHWCF", "prefer-conv2d-kernel-layout-hwcf",
+           "bool", /*default=*/"false",
+           "Prefer generating linalg.conv_2d_nhwc_hwcf over linalg.conv_2d_nhwc_fhwc">
+  ];
+
   let constructor = "tosa::createTosaToLinalgNamed()";
 }
 

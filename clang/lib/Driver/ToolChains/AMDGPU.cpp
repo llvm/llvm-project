@@ -1013,7 +1013,8 @@ RocmInstallationDetector::getCommonBitcodeLibs(
   // offload-arch-specific bitcode files as is done for FORTRAN. Currently,
   // libomptarget-<offload-arch>.bc files is built by compiling headers with
   // __BUILD_MATH_BUILTINS_LIB__ turning static libm functions to extern.
-  AddBCLib(getOCKLPath());
+  if (!isOpenMP)
+    AddBCLib(getOCKLPath());
   AddBCLib(getDenormalsAreZeroPath(DAZ));
   AddBCLib(getUnsafeMathPath(UnsafeMathOpt || FastRelaxedMath));
   AddBCLib(getFiniteOnlyPath(FiniteOnly || FastRelaxedMath));

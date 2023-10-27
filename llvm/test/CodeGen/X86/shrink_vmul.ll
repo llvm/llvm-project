@@ -2045,29 +2045,29 @@ define void @PR34947(<9 x i16>* %p0, <9 x i32>* %p1) nounwind {
 ; X86-SSE-NEXT:    movdqa (%eax), %xmm3
 ; X86-SSE-NEXT:    movdqa (%ecx), %xmm0
 ; X86-SSE-NEXT:    movdqa 16(%ecx), %xmm1
-; X86-SSE-NEXT:    pxor %xmm4, %xmm4
+; X86-SSE-NEXT:    pxor %xmm5, %xmm5
 ; X86-SSE-NEXT:    movdqa %xmm3, %xmm2
 ; X86-SSE-NEXT:    pextrw $7, %xmm3, %eax
 ; X86-SSE-NEXT:    pextrw $4, %xmm3, %edi
 ; X86-SSE-NEXT:    pextrw $0, %xmm3, %ebp
 ; X86-SSE-NEXT:    pextrw $1, %xmm3, %esi
 ; X86-SSE-NEXT:    pextrw $3, %xmm3, %ebx
-; X86-SSE-NEXT:    movdqa %xmm3, %xmm5
-; X86-SSE-NEXT:    punpcklwd {{.*#+}} xmm5 = xmm5[0],xmm4[0],xmm5[1],xmm4[1],xmm5[2],xmm4[2],xmm5[3],xmm4[3]
-; X86-SSE-NEXT:    punpckhwd {{.*#+}} xmm2 = xmm2[4],xmm4[4],xmm2[5],xmm4[5],xmm2[6],xmm4[6],xmm2[7],xmm4[7]
+; X86-SSE-NEXT:    movdqa %xmm3, %xmm4
+; X86-SSE-NEXT:    punpcklwd {{.*#+}} xmm4 = xmm4[0],xmm5[0],xmm4[1],xmm5[1],xmm4[2],xmm5[2],xmm4[3],xmm5[3]
+; X86-SSE-NEXT:    punpckhwd {{.*#+}} xmm2 = xmm2[4],xmm5[4],xmm2[5],xmm5[5],xmm2[6],xmm5[6],xmm2[7],xmm5[7]
 ; X86-SSE-NEXT:    pshufd {{.*#+}} xmm3 = xmm1[3,3,3,3]
 ; X86-SSE-NEXT:    movd %xmm3, %ecx
 ; X86-SSE-NEXT:    xorl %edx, %edx
 ; X86-SSE-NEXT:    divl %ecx
 ; X86-SSE-NEXT:    movd %edx, %xmm3
-; X86-SSE-NEXT:    pshufd {{.*#+}} xmm4 = xmm2[2,3,2,3]
-; X86-SSE-NEXT:    movd %xmm4, %eax
-; X86-SSE-NEXT:    pshufd {{.*#+}} xmm4 = xmm1[2,3,2,3]
-; X86-SSE-NEXT:    movd %xmm4, %ecx
+; X86-SSE-NEXT:    pshufd {{.*#+}} xmm5 = xmm2[2,3,2,3]
+; X86-SSE-NEXT:    movd %xmm5, %eax
+; X86-SSE-NEXT:    pshufd {{.*#+}} xmm5 = xmm1[2,3,2,3]
+; X86-SSE-NEXT:    movd %xmm5, %ecx
 ; X86-SSE-NEXT:    xorl %edx, %edx
 ; X86-SSE-NEXT:    divl %ecx
-; X86-SSE-NEXT:    movd %edx, %xmm4
-; X86-SSE-NEXT:    punpckldq {{.*#+}} xmm4 = xmm4[0],xmm3[0],xmm4[1],xmm3[1]
+; X86-SSE-NEXT:    movd %edx, %xmm5
+; X86-SSE-NEXT:    punpckldq {{.*#+}} xmm5 = xmm5[0],xmm3[0],xmm5[1],xmm3[1]
 ; X86-SSE-NEXT:    movl %edi, %eax
 ; X86-SSE-NEXT:    xorl %edx, %edx
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %edi
@@ -2081,7 +2081,7 @@ define void @PR34947(<9 x i16>* %p0, <9 x i32>* %p1) nounwind {
 ; X86-SSE-NEXT:    divl %ecx
 ; X86-SSE-NEXT:    movd %edx, %xmm1
 ; X86-SSE-NEXT:    punpckldq {{.*#+}} xmm3 = xmm3[0],xmm1[0],xmm3[1],xmm1[1]
-; X86-SSE-NEXT:    punpcklqdq {{.*#+}} xmm3 = xmm3[0],xmm4[0]
+; X86-SSE-NEXT:    punpcklqdq {{.*#+}} xmm3 = xmm3[0],xmm5[0]
 ; X86-SSE-NEXT:    movl %ebp, %eax
 ; X86-SSE-NEXT:    xorl %edx, %edx
 ; X86-SSE-NEXT:    divl (%edi)
@@ -2099,7 +2099,7 @@ define void @PR34947(<9 x i16>* %p0, <9 x i32>* %p1) nounwind {
 ; X86-SSE-NEXT:    xorl %edx, %edx
 ; X86-SSE-NEXT:    divl %ecx
 ; X86-SSE-NEXT:    movd %edx, %xmm2
-; X86-SSE-NEXT:    pshufd {{.*#+}} xmm4 = xmm5[2,3,2,3]
+; X86-SSE-NEXT:    pshufd {{.*#+}} xmm4 = xmm4[2,3,2,3]
 ; X86-SSE-NEXT:    movd %xmm4, %eax
 ; X86-SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
 ; X86-SSE-NEXT:    movd %xmm0, %ecx
@@ -2266,29 +2266,29 @@ define void @PR34947(<9 x i16>* %p0, <9 x i32>* %p1) nounwind {
 ; X64-SSE-NEXT:    movdqa (%rdi), %xmm3
 ; X64-SSE-NEXT:    movdqa (%rsi), %xmm0
 ; X64-SSE-NEXT:    movdqa 16(%rsi), %xmm1
-; X64-SSE-NEXT:    pxor %xmm4, %xmm4
+; X64-SSE-NEXT:    pxor %xmm5, %xmm5
 ; X64-SSE-NEXT:    movdqa %xmm3, %xmm2
 ; X64-SSE-NEXT:    pextrw $7, %xmm3, %eax
 ; X64-SSE-NEXT:    pextrw $4, %xmm3, %r8d
 ; X64-SSE-NEXT:    pextrw $0, %xmm3, %r10d
 ; X64-SSE-NEXT:    pextrw $1, %xmm3, %edi
 ; X64-SSE-NEXT:    pextrw $3, %xmm3, %r9d
-; X64-SSE-NEXT:    movdqa %xmm3, %xmm5
-; X64-SSE-NEXT:    punpcklwd {{.*#+}} xmm5 = xmm5[0],xmm4[0],xmm5[1],xmm4[1],xmm5[2],xmm4[2],xmm5[3],xmm4[3]
-; X64-SSE-NEXT:    punpckhwd {{.*#+}} xmm2 = xmm2[4],xmm4[4],xmm2[5],xmm4[5],xmm2[6],xmm4[6],xmm2[7],xmm4[7]
+; X64-SSE-NEXT:    movdqa %xmm3, %xmm4
+; X64-SSE-NEXT:    punpcklwd {{.*#+}} xmm4 = xmm4[0],xmm5[0],xmm4[1],xmm5[1],xmm4[2],xmm5[2],xmm4[3],xmm5[3]
+; X64-SSE-NEXT:    punpckhwd {{.*#+}} xmm2 = xmm2[4],xmm5[4],xmm2[5],xmm5[5],xmm2[6],xmm5[6],xmm2[7],xmm5[7]
 ; X64-SSE-NEXT:    pshufd {{.*#+}} xmm3 = xmm1[3,3,3,3]
 ; X64-SSE-NEXT:    movd %xmm3, %r11d
 ; X64-SSE-NEXT:    xorl %edx, %edx
 ; X64-SSE-NEXT:    divl %r11d
 ; X64-SSE-NEXT:    movd %edx, %xmm3
-; X64-SSE-NEXT:    pshufd {{.*#+}} xmm4 = xmm2[2,3,2,3]
-; X64-SSE-NEXT:    movd %xmm4, %eax
-; X64-SSE-NEXT:    pshufd {{.*#+}} xmm4 = xmm1[2,3,2,3]
-; X64-SSE-NEXT:    movd %xmm4, %r11d
+; X64-SSE-NEXT:    pshufd {{.*#+}} xmm5 = xmm2[2,3,2,3]
+; X64-SSE-NEXT:    movd %xmm5, %eax
+; X64-SSE-NEXT:    pshufd {{.*#+}} xmm5 = xmm1[2,3,2,3]
+; X64-SSE-NEXT:    movd %xmm5, %r11d
 ; X64-SSE-NEXT:    xorl %edx, %edx
 ; X64-SSE-NEXT:    divl %r11d
-; X64-SSE-NEXT:    movd %edx, %xmm4
-; X64-SSE-NEXT:    punpckldq {{.*#+}} xmm4 = xmm4[0],xmm3[0],xmm4[1],xmm3[1]
+; X64-SSE-NEXT:    movd %edx, %xmm5
+; X64-SSE-NEXT:    punpckldq {{.*#+}} xmm5 = xmm5[0],xmm3[0],xmm5[1],xmm3[1]
 ; X64-SSE-NEXT:    movl %r8d, %eax
 ; X64-SSE-NEXT:    xorl %edx, %edx
 ; X64-SSE-NEXT:    divl 16(%rsi)
@@ -2301,7 +2301,7 @@ define void @PR34947(<9 x i16>* %p0, <9 x i32>* %p1) nounwind {
 ; X64-SSE-NEXT:    divl %r8d
 ; X64-SSE-NEXT:    movd %edx, %xmm1
 ; X64-SSE-NEXT:    punpckldq {{.*#+}} xmm3 = xmm3[0],xmm1[0],xmm3[1],xmm1[1]
-; X64-SSE-NEXT:    punpcklqdq {{.*#+}} xmm3 = xmm3[0],xmm4[0]
+; X64-SSE-NEXT:    punpcklqdq {{.*#+}} xmm3 = xmm3[0],xmm5[0]
 ; X64-SSE-NEXT:    movl %r10d, %eax
 ; X64-SSE-NEXT:    xorl %edx, %edx
 ; X64-SSE-NEXT:    divl (%rsi)
@@ -2319,7 +2319,7 @@ define void @PR34947(<9 x i16>* %p0, <9 x i32>* %p1) nounwind {
 ; X64-SSE-NEXT:    xorl %edx, %edx
 ; X64-SSE-NEXT:    divl %edi
 ; X64-SSE-NEXT:    movd %edx, %xmm2
-; X64-SSE-NEXT:    pshufd {{.*#+}} xmm4 = xmm5[2,3,2,3]
+; X64-SSE-NEXT:    pshufd {{.*#+}} xmm4 = xmm4[2,3,2,3]
 ; X64-SSE-NEXT:    movd %xmm4, %eax
 ; X64-SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
 ; X64-SSE-NEXT:    movd %xmm0, %edi

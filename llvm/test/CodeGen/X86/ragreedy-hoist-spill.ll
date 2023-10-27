@@ -81,8 +81,8 @@ define i8* @SyFgets(i8* %line, i64 %length, i64 %fid) {
 ; CHECK-NEXT:    imulq $1040, %rdx, %rax ## imm = 0x410
 ; CHECK-NEXT:    movq _syBuf@GOTPCREL(%rip), %rcx
 ; CHECK-NEXT:    leaq 8(%rcx,%rax), %rdx
-; CHECK-NEXT:    movl $1, %r13d
 ; CHECK-NEXT:    movq _syCTRO@GOTPCREL(%rip), %rax
+; CHECK-NEXT:    movl $1, %r13d
 ; CHECK-NEXT:    movb $1, %cl
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  LBB0_9: ## %do.body
