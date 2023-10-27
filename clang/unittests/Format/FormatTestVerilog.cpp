@@ -229,12 +229,12 @@ TEST_F(FormatTestVerilog, Case) {
                "  16'd1: fork\n"
                "    result = 10'b1011111111;\n"
                "  join\n"
-               "endcase\n");
+               "endcase");
   verifyFormat("case (data)\n"
                "  16'd1: fork : x\n"
                "    result = 10'b1011111111;\n"
                "  join : x\n"
-               "endcase\n");
+               "endcase");
   // Test default.
   verifyFormat("case (data)\n"
                "  default\n"
@@ -300,17 +300,17 @@ TEST_F(FormatTestVerilog, Case) {
   verifyFormat("case ('{x : x, default : 9})\n"
                "endcase",
                Style);
-  verifyFormat("x = '{x : x, default : 9};\n", Style);
+  verifyFormat("x = '{x : x, default : 9};", Style);
   verifyFormat("default:\n"
-               "  x = '{x : x, default : 9};\n",
+               "  x = '{x : x, default : 9};",
                Style);
   Style.SpacesInContainerLiterals = false;
   verifyFormat("case ('{x: x, default: 9})\n"
                "endcase",
                Style);
-  verifyFormat("x = '{x: x, default: 9};\n", Style);
+  verifyFormat("x = '{x: x, default: 9};", Style);
   verifyFormat("default:\n"
-               "  x = '{x: x, default: 9};\n",
+               "  x = '{x: x, default: 9};",
                Style);
   // When the line following the case label needs to be broken, the continuation
   // should be indented correctly.
@@ -657,7 +657,7 @@ TEST_F(FormatTestVerilog, Hierarchy) {
                "    implements x, x, x;\n"
                "  generate\n"
                "  endgenerate\n"
-               "endclass : x\n");
+               "endclass : x");
   verifyFormat("function automatic logic [1 : 0] x\n"
                "    (input x);\n"
                "  generate\n"
