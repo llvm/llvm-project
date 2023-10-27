@@ -382,6 +382,14 @@ namespace PR18128 {
   };
 }
 
+namespace gh67687 {
+struct S {
+  int n;
+  int a = (4, []() { return n; }());  // expected-error {{'this' cannot be implicitly captured in this context}} \
+                                      // expected-note {{explicitly capture 'this'}}
+};
+}
+
 namespace PR18473 {
   template<typename T> void f() {
     T t(0);
