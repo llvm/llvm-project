@@ -98,12 +98,12 @@ def main():
             options="", opt_level=2, shared_libs=[support_lib]
         )
         for level in levels:
-            for ordering in orderings:
+            for (ordering, id_map) in orderings:
                 for bwidth in bitwidths:
                     attr = st.EncodingAttr.get(
-                        level, ordering[0], ordering[0], bwidth, bwidth
+                        level, ordering, ordering, bwidth, bwidth
                     )
-                    build_compile_and_run_output(attr, compiler, expected(ordering[1]))
+                    build_compile_and_run_output(attr, compiler, expected(id_map))
                     count = count + 1
 
         # Now do the same for BSR.
