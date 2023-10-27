@@ -7,20 +7,27 @@
 //===----------------------------------------------------------------------===//
 
 #include "UseStdNumbersCheck.h"
+#include "../ClangTidyDiagnosticConsumer.h"
+#include "../utils/TransformerClangTidyCheck.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/Type.h"
+#include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/ASTMatchers/ASTMatchersInternal.h"
 #include "clang/ASTMatchers/ASTMatchersMacros.h"
+#include "clang/Basic/LLVM.h"
 #include "clang/Tooling/Transformer/RewriteRule.h"
 #include "clang/Tooling/Transformer/Stencil.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/MathExtras.h"
 #include <cstdint>
+#include <cstdlib>
 #include <string>
+#include <utility>
 
 namespace {
 using namespace clang::ast_matchers;
