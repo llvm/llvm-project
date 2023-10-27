@@ -31,11 +31,11 @@ class Type;
 /// An analysis for type-inference for VPValues.
 /// It infers the scalar type for a given VPValue by bottom-up traversing
 /// through defining recipes until root nodes with known types are reached (e.g.
-/// live-ins or memory recipes). The types are then propagated top down through
+/// live-ins or load recipes). The types are then propagated top down through
 /// operations.
-/// Note that the analysis caches the infered types. A new analysis object must
+/// Note that the analysis caches the inferred types. A new analysis object must
 /// be constructed once a VPlan has been modified in a way that invalidates any
-/// of the previously infered types.
+/// of the previously inferred types.
 class VPTypeAnalysis {
   DenseMap<const VPValue *, Type *> CachedTypes;
   LLVMContext &Ctx;

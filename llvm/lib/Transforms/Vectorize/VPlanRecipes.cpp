@@ -747,7 +747,7 @@ void VPWidenRecipe::execute(VPTransformState &State) {
   for (unsigned Part = 0; Part < State.UF; ++Part) {
     assert(VectorType::get(A.inferScalarType(getVPSingleValue()), State.VF) ==
                State.get(this, Part)->getType() &&
-           "infered type and type from generated instructions do not match");
+           "inferred type and type from generated instructions do not match");
   }
 #endif
 }

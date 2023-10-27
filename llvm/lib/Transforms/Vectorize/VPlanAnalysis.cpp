@@ -80,7 +80,7 @@ Type *VPTypeAnalysis::inferScalarType(const VPWidenRecipe *R) {
     break;
   }
 
-  // Type inferrence not implemented for opcode.
+  // Type inference not implemented for opcode.
   LLVM_DEBUG(dbgs() << "LV: Found unhandled opcode: "
                     << Instruction::getOpcodeName(Opcode));
   llvm_unreachable("Unhandled opcode!");
@@ -194,8 +194,7 @@ Type *VPTypeAnalysis::inferScalarType(const VPValue *V) {
               })
           .Case<VPDerivedIVRecipe>([this](const VPDerivedIVRecipe *R) {
             // VPDerivedIV may truncate the IV to a specified scalar type or use
-            // the
-            // type of the first operand (the step).
+            // the type of the first operand (the start).
             Type *T = R->getScalarType();
             return T ? T : inferScalarType(R->getOperand(0));
           })
