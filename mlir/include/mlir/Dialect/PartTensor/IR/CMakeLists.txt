@@ -1,7 +1,7 @@
 add_mlir_dialect(PartTensorOps part_tensor)
 set(LLVM_TARGET_DEFINITIONS PartTensorAttrDefs.td)
-mlir_tablegen(PartTensorAttrDefs.h.inc -gen-attrdef-decls)
-mlir_tablegen(PartTensorAttrDefs.cpp.inc -gen-attrdef-defs)
+mlir_tablegen(PartTensorAttrDefs.h.inc -gen-attrdef-decls --attrdefs-dialect=part_tensor )
+mlir_tablegen(PartTensorAttrDefs.cpp.inc -gen-attrdef-defs --attrdefs-dialect=part_tensor )
 add_public_tablegen_target(MLIRPartTensorOpsAttributesIncGen)
 add_public_tablegen_target(MLIRPartTensorAttrDefsIncGen)
 

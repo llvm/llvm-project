@@ -12,6 +12,7 @@
 include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/EnumAttr.td"
 include "mlir/Dialect/PartTensor/IR/PartTensorBase.td"
+include "mlir/Dialect/SparseTensor/IR/SparseTensorAttrDefs.td"
 include "mlir/IR/TensorEncoding.td"
 
 // All of the partition tensor attributes will extend this class.
@@ -23,8 +24,12 @@ class PartTensor_Attr<string name, list<Trait> traits = []>
 def PartTensorEncodingAttr : PartTensor_Attr<"PartTensorEncoding", []> {
   let mnemonic = "encoding";
   let description = [{ an attribute to show if there is partition or not }];
-  let parameters = (ins "unsigned" : $partConst);
-  let assemblyFormat = "`<` `{` `partConst` `=` $partConst `}` `>`";
+  let parameters = (
+      ins
+      "int64_t" : $partConst,
+      SparseTensorEncodingAttr: $sparseAttributes
+  );
+  let assemblyFormat = "`<` `{` `partConst` `=` $partConst `,` `sparseAttributes` `=` $sparseAttributes `}` `>`";
 }
 
 #endif // PARTTENSOR_ATTRDEFS

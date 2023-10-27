@@ -9,6 +9,7 @@
 #ifndef MLIR_DIALECT_PARTITION_IR_PARTITION_H
 #define MLIR_DIALECT_PARTITION_IR_PARTITION_H
 
+#include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Dialect.h"

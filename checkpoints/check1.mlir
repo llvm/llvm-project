@@ -1,5 +1,9 @@
+#SortedCOO = #sparse_tensor.encoding<{
+  lvlTypes = [ "compressed-nu", "singleton" ]
+}>
 #partEncoding = #part_tensor.encoding<{
-  partConst = 1
+  partConst = 1,
+  sparseAttributes = #SortedCOO
 }>
 #relu_memory_access_map = {
   indexing_maps = [
