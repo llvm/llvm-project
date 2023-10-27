@@ -6,13 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-// This test verifies that `_LIBCPP_ENABLE_HARDENED_MODE` and `_LIBCPP_ENABLE_SAFE_MODE` are mutually exclusive.
+// This test verifies that setting the hardening mode to a value that's not part of the predefined constants triggers
+// a compile-time error.
 
-// REQUIRES: libcpp-hardening-mode=unchecked
 // Modules build produces a different error ("Could not build module 'std'").
 // UNSUPPORTED: clang-modules-build
-// ADDITIONAL_COMPILE_FLAGS: -Wno-macro-redefined -D_LIBCPP_ENABLE_HARDENED_MODE=1 -D_LIBCPP_ENABLE_SAFE_MODE=1
+// ADDITIONAL_COMPILE_FLAGS: -Wno-macro-redefined -D_LIBCPP_HARDENING_MODE=42
 
 #include <cassert>
 
-// expected-error@*:*  {{Only one of _LIBCPP_ENABLE_HARDENED_MODE, _LIBCPP_ENABLE_SAFE_MODE and _LIBCPP_ENABLE_DEBUG_MODE can be enabled.}}
+// expected-error@*:*  {{_LIBCPP_HARDENING_MODE must be set to one of the following values: _LIBCPP_HARDENING_MODE_UNCHECKED, _LIBCPP_HARDENING_MODE_HARDENED, _LIBCPP_HARDENING_MODE_DEBUG_LITE, _LIBCPP_HARDENING_MODE_DEBUG}}

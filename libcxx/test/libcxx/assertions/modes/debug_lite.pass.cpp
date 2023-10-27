@@ -6,15 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-// This test ensures that we can enable the debug mode on a per-TU basis.
+// This test ensures that assertions trigger without the user having to do anything when the debug-lite mode has been
+// enabled by default.
 
-// Other hardening modes would additionally trigger the error that they are mutually exclusive.
-// REQUIRES: libcpp-hardening-mode=unchecked
-// `check_assertion.h` is only available starting from C++11 and requires Unix headers.
-// UNSUPPORTED: c++03, !has-unix-headers
-// The ability to set a custom abort message is required to compare the assertion message.
+// REQUIRES: libcpp-hardening-mode=debug_lite
+// `check_assertion.h` is only available starting from C++11.
+// UNSUPPORTED: c++03
+// `check_assertion.h` requires Unix headers.
+// REQUIRES: has-unix-headers
 // XFAIL: availability-verbose_abort-missing
-// ADDITIONAL_COMPILE_FLAGS: -Wno-macro-redefined -D_LIBCPP_ENABLE_DEBUG_MODE=1
 
 #include <cassert>
 #include "check_assertion.h"

@@ -7,21 +7,20 @@
 //===----------------------------------------------------------------------===//
 
 // TODO(hardening): remove in LLVM 20.
-// This test ensures that enabling assertions now enables the safe mode.
+// This test ensures that enabling assertions now enables the debug-lite mode.
 
-// Other hardening modes would additionally trigger the error that they are mutually exclusive.
-// REQUIRES: libcpp-hardening-mode=unchecked
 // `check_assertion.h` is only available starting from C++11 and requires Unix headers.
 // UNSUPPORTED: c++03, !has-unix-headers
 // The ability to set a custom abort message is required to compare the assertion message.
 // XFAIL: availability-verbose_abort-missing
-// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ENABLE_ASSERTIONS=1
+// ADDITIONAL_COMPILE_FLAGS: -Wno-macro-redefined -D_LIBCPP_ENABLE_ASSERTIONS=1
 
 #include <cassert>
 #include "check_assertion.h"
 
 int main(int, char**) {
-  static_assert(_LIBCPP_ENABLE_SAFE_MODE == 1, "Safe mode should be implicitly enabled");
+  static_assert(_LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_DEBUG_LITE,
+      "Debug-lite mode should be implicitly enabled");
 
   _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(true, "Should not fire");
   TEST_LIBCPP_ASSERT_FAILURE([] {

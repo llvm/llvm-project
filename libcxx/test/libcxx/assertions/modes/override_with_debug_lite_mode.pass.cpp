@@ -6,26 +6,25 @@
 //
 //===----------------------------------------------------------------------===//
 
-// This test ensures that we can enable the safe mode on a per-TU basis.
+// This test ensures that we can override any hardening mode with the debug-lite mode on a per-TU basis.
 
-// Other hardening modes would additionally trigger the error that they are mutually exclusive.
-// REQUIRES: libcpp-hardening-mode=unchecked
 // `check_assertion.h` is only available starting from C++11.
 // UNSUPPORTED: c++03
 // `check_assertion.h` requires Unix headers.
 // REQUIRES: has-unix-headers
 // The ability to set a custom abort message is required to compare the assertion message.
 // XFAIL: availability-verbose_abort-missing
-// ADDITIONAL_COMPILE_FLAGS: -Wno-macro-redefined -D_LIBCPP_ENABLE_SAFE_MODE=1
+// ADDITIONAL_COMPILE_FLAGS: -Wno-macro-redefined -D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_DEBUG_LITE
 
 #include <cassert>
 #include "check_assertion.h"
 
 int main(int, char**) {
-  _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(true, "Should not fire");
+  _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(true, "Should not fire");
   TEST_LIBCPP_ASSERT_FAILURE([] {
-    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(false, "Should fire");
-  }(), "Should fire");
+    _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(false, "Debug-lite-mode assertions should fire");
+  }(), "Debug-lite-mode assertions should fire");
+  _LIBCPP_ASSERT_INTERNAL(false, "Debug-mode assertions should not fire");
 
   return 0;
 }
