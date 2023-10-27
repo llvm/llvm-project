@@ -19,6 +19,8 @@
 // RUN: rm fdr-logging-test-*
 // RUN: rm fdr-unwrite-test-*
 // UNSUPPORTED: target=powerpc64le-{{.*}}
+/// TODO: FDR logging arg1 handler(__xray_ArgLoggerEntry) hasn't implemented yet on LoongArch
+// UNSUPPORTED: target=loongarch64{{.*}}
 // REQUIRES: built-in-llvm-tree
 
 #include "xray/xray_log_interface.h"
