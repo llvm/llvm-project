@@ -1083,6 +1083,31 @@ rvalue_iterator(T*) -> rvalue_iterator<T>;
 
 static_assert(std::random_access_iterator<rvalue_iterator<int*>>);
 
+// The ProxyDiffTBase allows us to conditionally specify Proxy<T>::difference_type
+// which we need in certain situations. For example when we want
+// std::weakly_incrementable<Proxy<T>> to be true.
+template <class T>
+struct ProxyDiffTBase {};
+
+template <class T>
+    requires requires { std::iter_difference_t<T>{}; }
+struct ProxyDiffTBase<T> {
+    using difference_type = std::iter_difference_t<T>;
+};
+
+// These concepts allow us to conditionally add the pre-/postfix operators
+// when T also supports those member functions. Like ProxyDiffTBase, this 
+// is necessary when we want std::weakly_incrementable<Proxy<T>> to be true.
+template <class T>
+concept HasPreIncrementOp = requires(T const& obj) {
+    ++obj;
+};
+
+template <class T>
+concept HasPostIncrementOp = requires(T const& obj) {
+    obj++;
+};
+
 // Proxy
 // ======================================================================
 // Proxy that can wrap a value or a reference. It simulates C++23's tuple
@@ -1093,6 +1118,7 @@ static_assert(std::random_access_iterator<rvalue_iterator<int*>>);
 // This class is useful for testing that if algorithms support proxy iterator
 // properly, i.e. calling ranges::iter_swap and ranges::iter_move instead of
 // plain swap and std::move.
+
 template <class T>
 struct Proxy;
 
@@ -1103,7 +1129,7 @@ template <class T>
 inline constexpr bool IsProxy<Proxy<T>> = true;
 
 template <class T>
-struct Proxy {
+struct Proxy : ProxyDiffTBase<T> {
   T data;
 
   constexpr T& getData() & { return data; }
@@ -1149,9 +1175,11 @@ struct Proxy {
   // Calling swap(Proxy<T>{}, Proxy<T>{}) would fail (pass prvalues)
 
   // Compare operators are defined for the convenience of the tests
-  friend constexpr bool operator==(const Proxy&, const Proxy&)
+  friend constexpr bool operator==(const Proxy& lhs, const Proxy& rhs)
     requires (std::equality_comparable<T> && !std::is_reference_v<T>)
-  = default;
+  {
+    return lhs.data == rhs.data;
+  };
 
   // Helps compare e.g. `Proxy<int>` and `Proxy<int&>`. Note that the default equality comparison operator is deleted
   // when `T` is a reference type.
@@ -1161,9 +1189,11 @@ struct Proxy {
     return lhs.data == rhs.data;
   }
 
-  friend constexpr auto operator<=>(const Proxy&, const Proxy&)
+  friend constexpr auto operator<=>(const Proxy& lhs, const Proxy& rhs)
     requires (std::three_way_comparable<T> && !std::is_reference_v<T>)
-  = default;
+  {
+    return lhs.data <=> rhs.data;
+  };
 
   // Helps compare e.g. `Proxy<int>` and `Proxy<int&>`. Note that the default 3-way comparison operator is deleted when
   // `T` is a reference type.
@@ -1171,6 +1201,22 @@ struct Proxy {
   friend constexpr auto operator<=>(const Proxy& lhs, const Proxy<U>& rhs)
     requires std::three_way_comparable_with<std::decay_t<T>, std::decay_t<U>> {
     return lhs.data <=> rhs.data;
+  }
+
+  // Needed to allow certain types to be weakly_incremental
+  constexpr Proxy& operator++()
+      requires(HasPreIncrementOp<T>)
+  {
+      ++data;
+      return *this;
+  }
+
+  constexpr Proxy operator++(int)
+      requires(HasPostIncrementOp<T>)
+  {
+      Proxy tmp = *this;
+      operator++();
+      return tmp;
   }
 };
 
