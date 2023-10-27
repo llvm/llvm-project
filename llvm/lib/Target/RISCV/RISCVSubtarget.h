@@ -46,10 +46,7 @@ struct RISCVTuneInfo {
 
 class RISCVSubtarget : public RISCVGenSubtargetInfo {
 public:
-  enum RISCVProcFamilyEnum : uint8_t {
-    Others,
-    SiFive7,
-  };
+  enum RISCVProcFamilyEnum : uint8_t { Others, SiFive7, VentanaVeyron };
 
 private:
   virtual void anchor();
