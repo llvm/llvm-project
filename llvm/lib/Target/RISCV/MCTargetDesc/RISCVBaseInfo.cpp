@@ -206,12 +206,14 @@ unsigned RISCVVType::getSEWLMULRatio(unsigned SEW, RISCVII::VLMUL VLMul) {
   return (SEW * 8) / LMul;
 }
 
-RISCVII::VLMUL RISCVVType::getSameRatioLMUL(unsigned SEW, RISCVII::VLMUL VLMUL,
-                                            unsigned EEW) {
+std::optional<RISCVII::VLMUL>
+RISCVVType::getSameRatioLMUL(unsigned SEW, RISCVII::VLMUL VLMUL, unsigned EEW) {
   unsigned Ratio = RISCVVType::getSEWLMULRatio(SEW, VLMUL);
   unsigned EMULFixedPoint = (EEW * 8) / Ratio;
   bool Fractional = EMULFixedPoint < 8;
   unsigned EMUL = Fractional ? 8 / EMULFixedPoint : EMULFixedPoint / 8;
+  if (!isValidLMUL(EMUL, Fractional))
+    return std::nullopt;
   return RISCVVType::encodeLMUL(EMUL, Fractional);
 }
 

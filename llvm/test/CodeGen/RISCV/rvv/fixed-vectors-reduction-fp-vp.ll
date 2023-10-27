@@ -185,7 +185,7 @@ define float @vpreduce_fadd_v64f32(float %s, <64 x float> %v, <64 x i1> %m, i32 
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    li a1, 32
 ; CHECK-NEXT:  .LBB8_2:
-; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
+; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; CHECK-NEXT:    vfmv.s.f v25, fa0
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
 ; CHECK-NEXT:    vfredusum.vs v25, v8, v25, v0.t
@@ -213,7 +213,7 @@ define float @vpreduce_ord_fadd_v64f32(float %s, <64 x float> %v, <64 x i1> %m, 
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    li a1, 32
 ; CHECK-NEXT:  .LBB9_2:
-; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
+; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; CHECK-NEXT:    vfmv.s.f v25, fa0
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
 ; CHECK-NEXT:    vfredosum.vs v25, v8, v25, v0.t
