@@ -79,7 +79,8 @@ RegisterContextCorePOSIX_arm64::RegisterContextCorePOSIX_arm64(
     std::optional<uint64_t> auxv_at_hwcap2 =
         aux_vec.GetAuxValue(AuxVector::AUXV_AT_HWCAP2);
 
-    m_linux_register_flags.DetectFields(auxv_at_hwcap, auxv_at_hwcap2);
+    m_linux_register_flags.DetectFields(auxv_at_hwcap.value_or(0),
+                                        auxv_at_hwcap2.value_or(0));
     m_linux_register_flags.UpdateRegisterInfo(GetRegisterInfo(),
                                               GetRegisterCount());
   }

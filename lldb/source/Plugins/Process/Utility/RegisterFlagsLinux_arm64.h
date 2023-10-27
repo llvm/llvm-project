@@ -11,7 +11,6 @@
 
 #include "lldb/Target/RegisterFlags.h"
 #include <functional>
-#include <optional>
 
 namespace lldb_private {
 
@@ -38,9 +37,9 @@ public:
   /// For the registers listed in this class, detect which fields are
   /// present. Must be called before UpdateRegisterInfos.
   /// If called more than once, fields will be redetected each time from
-  /// scratch.
-  void DetectFields(std::optional<uint64_t> hwcap,
-                    std::optional<uint64_t> hwcap2);
+  /// scratch. If you do not have access to hwcap, just pass 0 for each one, you
+  /// will only get unconditional fields.
+  void DetectFields(uint64_t hwcap, uint64_t hwcap2);
 
   /// Add the field information of any registers named in this class,
   /// to the relevant RegisterInfo instances. Note that this will be done
@@ -53,11 +52,9 @@ public:
 
 private:
   using Fields = std::vector<RegisterFlags::Field>;
-  using DetectorFn =
-      std::function<Fields(std::optional<uint64_t>, std::optional<uint64_t>)>;
+  using DetectorFn = std::function<Fields(uint64_t, uint64_t)>;
 
-  static Fields DetectCPSRFields(std::optional<uint64_t> hwcap,
-                                 std::optional<uint64_t> hwcap2);
+  static Fields DetectCPSRFields(uint64_t hwcap, uint64_t hwcap2);
 
   struct RegisterEntry {
     RegisterEntry(const char *name, unsigned size, DetectorFn detector)

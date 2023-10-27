@@ -130,7 +130,8 @@ NativeRegisterContextLinux::CreateHostNativeRegisterContextLinux(
 
     std::lock_guard<std::mutex> lock(g_register_flags_mutex);
     if (!g_register_flags.HasDetected())
-      g_register_flags.DetectFields(auxv_at_hwcap, auxv_at_hwcap2);
+      g_register_flags.DetectFields(auxv_at_hwcap.value_or(0),
+                                    auxv_at_hwcap2.value_or(0));
 
     auto register_info_up =
         std::make_unique<RegisterInfoPOSIX_arm64>(target_arch, opt_regsets);

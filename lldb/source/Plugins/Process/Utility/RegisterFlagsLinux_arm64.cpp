@@ -21,8 +21,7 @@
 using namespace lldb_private;
 
 LinuxArm64RegisterFlags::Fields
-LinuxArm64RegisterFlags::DetectCPSRFields(std::optional<uint64_t> hwcap,
-                                          std::optional<uint64_t> hwcap2) {
+LinuxArm64RegisterFlags::DetectCPSRFields(uint64_t hwcap, uint64_t hwcap2) {
   // The fields here are a combination of the Arm manual's SPSR_EL1,
   // plus a few changes where Linux has decided not to make use of them at all,
   // or at least not from userspace.
@@ -33,9 +32,9 @@ LinuxArm64RegisterFlags::DetectCPSRFields(std::optional<uint64_t> hwcap,
       // Bits 27-26 reserved.
   };
 
-  if (hwcap2 && (*hwcap2 & HWCAP2_MTE))
+  if (hwcap2 & HWCAP2_MTE)
     cpsr_fields.push_back({"TCO", 25});
-  if (hwcap && (*hwcap & HWCAP_DIT))
+  if (hwcap & HWCAP_DIT)
     cpsr_fields.push_back({"DIT", 24});
 
   // UAO and PAN are bits 23 and 22 and have no meaning for userspace so
@@ -47,9 +46,9 @@ LinuxArm64RegisterFlags::DetectCPSRFields(std::optional<uint64_t> hwcap,
 
   // Bit 13, ALLINT, requires FEAT_NMI that isn't relevant to userspace, and we
   // can't detect either, don't show this field.
-  if (hwcap && (*hwcap & HWCAP_SSBS))
+  if (hwcap & HWCAP_SSBS)
     cpsr_fields.push_back({"SSBS", 12});
-  if (hwcap2 && (*hwcap2 & HWCAP2_BTI))
+  if (hwcap2 & HWCAP2_BTI)
     cpsr_fields.push_back({"BTYPE", 10, 11});
 
   cpsr_fields.push_back({"D", 9});
@@ -67,8 +66,7 @@ LinuxArm64RegisterFlags::DetectCPSRFields(std::optional<uint64_t> hwcap,
   return cpsr_fields;
 }
 
-void LinuxArm64RegisterFlags::DetectFields(std::optional<uint64_t> hwcap,
-                                           std::optional<uint64_t> hwcap2) {
+void LinuxArm64RegisterFlags::DetectFields(uint64_t hwcap, uint64_t hwcap2) {
   for (auto &reg : m_registers)
     reg.m_flags.SetFields(reg.m_detector(hwcap, hwcap2));
   m_has_detected = true;
