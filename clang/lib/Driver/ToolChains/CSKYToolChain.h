@@ -44,7 +44,7 @@ private:
 
 namespace tools {
 namespace CSKY {
-class LLVM_LIBRARY_VISIBILITY Linker : public Tool {
+class LLVM_LIBRARY_VISIBILITY Linker final : public Tool {
 public:
   Linker(const ToolChain &TC) : Tool("CSKY::Linker", "ld", TC) {}
   bool hasIntegratedCPP() const override { return false; }
