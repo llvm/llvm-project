@@ -522,7 +522,7 @@ bool RISCVInstructionSelector::selectGlobalValue(
       // sym), which expands to (ld (addi (auipc %got_pcrel_hi(sym))
       // %pcrel_lo(auipc))).
       MachineFunction &MF = *MI.getParent()->getParent();
-      MachineMemOperand *MemOp = MF->getMachineMemOperand(
+      MachineMemOperand *MemOp = MF.getMachineMemOperand(
           MachinePointerInfo::getGOT(MF),
           MachineMemOperand::MOLoad | MachineMemOperand::MODereferenceable |
               MachineMemOperand::MOInvariant,
