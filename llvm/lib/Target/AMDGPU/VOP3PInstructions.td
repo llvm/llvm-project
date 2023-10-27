@@ -1105,6 +1105,7 @@ multiclass VOP3P_Real_SMFMAC<bits<7> op, string alias> {
   def : MnemonicAlias<alias, !cast<VOP3_Pseudo>(NAME#"_e64").Mnemonic>;
 }
 
+let SubtargetPredicate = isGFX8GFX9 in {
 defm V_PK_MAD_I16 : VOP3P_Real_vi <0x00>;
 defm V_PK_MUL_LO_U16 : VOP3P_Real_vi <0x01>;
 defm V_PK_ADD_I16 : VOP3P_Real_vi <0x02>;
@@ -1125,7 +1126,7 @@ defm V_PK_ADD_F16 : VOP3P_Real_vi <0x0f>;
 defm V_PK_MUL_F16 : VOP3P_Real_vi <0x10>;
 defm V_PK_MIN_F16 : VOP3P_Real_vi <0x11>;
 defm V_PK_MAX_F16 : VOP3P_Real_vi <0x12>;
-
+} // End SubtargetPredicate = isGFX8GFX9
 
 let SubtargetPredicate = HasMadMixInsts in {
 defm V_MAD_MIX_F32 : VOP3P_Real_vi <0x20>;
