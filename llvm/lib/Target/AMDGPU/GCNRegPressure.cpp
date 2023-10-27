@@ -147,8 +147,6 @@ bool GCNRegPressure::less(const GCNSubtarget &ST,
                           O.getVGPRNum(ST.hasGFX90AInsts()));
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-LLVM_DUMP_METHOD
 Printable llvm::print(const GCNRegPressure &RP, const GCNSubtarget *ST) {
   return Printable([&RP, ST](raw_ostream &OS) {
     OS << "VGPRs: " << RP.Value[GCNRegPressure::VGPR32] << ' '
@@ -167,7 +165,6 @@ Printable llvm::print(const GCNRegPressure &RP, const GCNSubtarget *ST) {
     OS << '\n';
   });
 }
-#endif
 
 static LaneBitmask getDefRegMask(const MachineOperand &MO,
                                  const MachineRegisterInfo &MRI) {
@@ -287,7 +284,6 @@ void GCNUpwardRPTracker::reset(const MachineRegisterInfo &MRI_,
   LiveRegs = LiveRegs_;
   MaxPressure = CurPressure = getRegPressure(MRI_, LiveRegs_);
 }
-
 
 void GCNUpwardRPTracker::recede(const MachineInstr &MI) {
   assert(MRI && "call reset first");
@@ -438,12 +434,9 @@ bool GCNDownwardRPTracker::advance(MachineBasicBlock::const_iterator Begin,
   return advance(End);
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-LLVM_DUMP_METHOD
 Printable llvm::reportMismatch(const GCNRPTracker::LiveRegSet &LISLR,
                                const GCNRPTracker::LiveRegSet &TrackedLR,
-                               const TargetRegisterInfo *TRI,
-                               StringRef Pfx) {
+                               const TargetRegisterInfo *TRI, StringRef Pfx) {
   return Printable([&LISLR, &TrackedLR, TRI, Pfx](raw_ostream &OS) {
     for (auto const &P : TrackedLR) {
       auto I = LISLR.find(P.first);
@@ -488,7 +481,6 @@ bool GCNUpwardRPTracker::isValid() const {
   return true;
 }
 
-LLVM_DUMP_METHOD
 Printable llvm::print(const GCNRPTracker::LiveRegSet &LiveRegs,
                       const MachineRegisterInfo &MRI) {
   return Printable([&LiveRegs, &MRI](raw_ostream &OS) {
@@ -504,10 +496,7 @@ Printable llvm::print(const GCNRPTracker::LiveRegSet &LiveRegs,
   });
 }
 
-LLVM_DUMP_METHOD
 void GCNRegPressure::dump() const { dbgs() << print(*this); }
-
-#endif
 
 static cl::opt<bool> UseDownwardTracker(
     "amdgpu-print-rp-downward",
@@ -542,9 +531,9 @@ bool GCNRegPressurePrinter::runOnMachineFunction(MachineFunction &MF) {
                                     const GCNRPTracker::LiveRegSet &LISLR) {
     if (LISLR != TrackedLR) {
       OS << PFX "  mis LIS: " << llvm::print(LISLR, MRI)
-          << reportMismatch(LISLR, TrackedLR, TRI, PFX "    ");
+         << reportMismatch(LISLR, TrackedLR, TRI, PFX "    ");
     }
-  };  
+  };
 
   // Register pressure before and at an instruction (in program order).
   SmallVector<std::pair<GCNRegPressure, GCNRegPressure>, 16> RP;

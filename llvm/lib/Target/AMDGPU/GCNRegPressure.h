@@ -142,8 +142,7 @@ public:
   }
 };
 
-GCNRPTracker::LiveRegSet getLiveRegs(SlotIndex SI,
-                                     const LiveIntervals &LIS,
+GCNRPTracker::LiveRegSet getLiveRegs(SlotIndex SI, const LiveIntervals &LIS,
                                      const MachineRegisterInfo &MRI);
 
 class GCNUpwardRPTracker : public GCNRPTracker {
@@ -288,8 +287,7 @@ Printable print(const GCNRPTracker::LiveRegSet &LiveRegs,
 
 Printable reportMismatch(const GCNRPTracker::LiveRegSet &LISLR,
                          const GCNRPTracker::LiveRegSet &TrackedL,
-                         const TargetRegisterInfo *TRI,
-                         StringRef Pfx = "  ");
+                         const TargetRegisterInfo *TRI, StringRef Pfx = "  ");
 
 struct GCNRegPressurePrinter : public MachineFunctionPass {
   static char ID;
