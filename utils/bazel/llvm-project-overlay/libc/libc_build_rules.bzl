@@ -7,7 +7,6 @@
 load("@bazel_skylib//lib:selects.bzl", "selects")
 load(":platforms.bzl", "PLATFORM_CPU_ARM64", "PLATFORM_CPU_X86_64")
 
-LIBC_ROOT_TARGET = ":libc_root"
 INTERNAL_SUFFIX = ".__internal__"
 
 def _libc_library(name, copts = None, **kwargs):
@@ -40,7 +39,6 @@ def libc_function(
         name,
         srcs,
         weak = False,
-        deps = None,
         copts = None,
         local_defines = None,
         **kwargs):
@@ -64,11 +62,9 @@ def libc_function(
                      its deps.
       **kwargs: Other attributes relevant for a cc_library. For example, deps.
     """
-    deps = deps or []
 
     # We use the explicit equals pattern here because append and += mutate the
     # original list, where this creates a new list and stores it in deps.
-    deps = deps + [LIBC_ROOT_TARGET]
     copts = copts or []
     copts = copts + ["-O3", "-fno-builtin", "-fno-lax-vector-conversions"]
 
@@ -78,7 +74,6 @@ def libc_function(
     native.cc_library(
         name = name + INTERNAL_SUFFIX,
         srcs = srcs,
-        deps = deps,
         copts = copts,
         linkstatic = 1,
         **kwargs
@@ -94,7 +89,6 @@ def libc_function(
     _libc_library(
         name = name,
         srcs = srcs,
-        deps = deps,
         copts = copts,
         local_defines = local_defines,
         **kwargs
