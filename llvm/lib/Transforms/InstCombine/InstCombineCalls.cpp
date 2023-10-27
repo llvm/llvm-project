@@ -1978,6 +1978,27 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
           *II, Builder.CreateIntrinsic(InnerPtr->getType(), Intrinsic::ptrmask,
                                        {InnerPtr, NewMask}));
     }
+    bool Changed = false;
+    // See if we can deduce non-null.
+    if (!CI.hasRetAttr(Attribute::NonNull) &&
+        (Known.isNonZero() ||
+         isKnownNonZero(II, DL, /*Depth*/ 0, &AC, II, &DT))) {
+      CI.addRetAttr(Attribute::NonNull);
+      Changed = true;
+    }
+
+    unsigned NewAlignmentLog =
+        std::min(Value::MaxAlignmentExponent,
+                 std::min(BitWidth - 1, Known.countMinTrailingZeros()));
+    // Known bits will capture if we had alignment information associated with
+    // the pointer argument.
+    if (NewAlignmentLog > Log2(CI.getRetAlign().valueOrOne())) {
+      CI.addRetAttr(Attribute::getWithAlignment(
+          CI.getContext(), Align(uint64_t(1) << NewAlignmentLog)));
+      Changed = true;
+    }
+    if (Changed)
+      return &CI;
     break;
   }
   case Intrinsic::uadd_with_overflow:
