@@ -25,6 +25,7 @@ add_clang_unittest(ToolingTests
   QualTypeNamesTest.cpp
   RangeSelectorTest.cpp
   RecursiveASTVisitorTests/Attr.cpp
+  RecursiveASTVisitorTests/BitfieldInitializer.cpp
   RecursiveASTVisitorTests/CallbacksLeaf.cpp
   RecursiveASTVisitorTests/CallbacksUnaryOperator.cpp
   RecursiveASTVisitorTests/CallbacksBinaryOperator.cpp

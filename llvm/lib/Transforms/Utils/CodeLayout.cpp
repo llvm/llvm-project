@@ -115,11 +115,11 @@ static cl::opt<double> MaxMergeDensityRatio(
     "ext-tsp-max-merge-density-ratio", cl::ReallyHidden, cl::init(100),
     cl::desc("The maximum ratio between densities of two chains for merging"));
 
-// Algorithm-specific options for CDS.
-static cl::opt<unsigned> CacheEntries("cds-cache-entries", cl::ReallyHidden,
+// Algorithm-specific options for CDSort.
+static cl::opt<unsigned> CacheEntries("cdsort-cache-entries", cl::ReallyHidden,
                                       cl::desc("The size of the cache"));
 
-static cl::opt<unsigned> CacheSize("cds-cache-size", cl::ReallyHidden,
+static cl::opt<unsigned> CacheSize("cdsort-cache-size", cl::ReallyHidden,
                                    cl::desc("The size of a line in the cache"));
 
 static cl::opt<unsigned>
@@ -127,11 +127,11 @@ static cl::opt<unsigned>
                    cl::desc("The maximum size of a chain to create"));
 
 static cl::opt<double> DistancePower(
-    "cds-distance-power", cl::ReallyHidden,
+    "cdsort-distance-power", cl::ReallyHidden,
     cl::desc("The power exponent for the distance-based locality"));
 
 static cl::opt<double> FrequencyScale(
-    "cds-frequency-scale", cl::ReallyHidden,
+    "cdsort-frequency-scale", cl::ReallyHidden,
     cl::desc("The scale factor for the frequency-based locality"));
 
 namespace {
@@ -1028,8 +1028,8 @@ private:
   std::vector<ChainT *> HotChains;
 };
 
-/// The implementation of the Cache-Directed Sort (CDS) algorithm for ordering
-/// functions represented by a call graph.
+/// The implementation of the Cache-Directed Sort (CDSort) algorithm for
+/// ordering functions represented by a call graph.
 class CDSortImpl {
 public:
   CDSortImpl(const CDSortConfig &Config, ArrayRef<uint64_t> NodeSizes,
