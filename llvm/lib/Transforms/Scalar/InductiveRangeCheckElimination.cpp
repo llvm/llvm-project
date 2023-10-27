@@ -651,6 +651,20 @@ struct LoopStructure {
 /// which the induction variable is < Begin, and the post loop runs any
 /// iterations in which the induction variable is >= End.
 class LoopConstrainer {
+public:
+  // Calculated subranges we restrict the iteration space of the main loop to.
+  // See the implementation of `calculateSubRanges' for more details on how
+  // these fields are computed.  `LowLimit` is std::nullopt if there is no
+  // restriction on low end of the restricted iteration space of the main loop.
+  // `HighLimit` is std::nullopt if there is no restriction on high end of the
+  // restricted iteration space of the main loop.
+
+  struct SubRanges {
+    std::optional<const SCEV *> LowLimit;
+    std::optional<const SCEV *> HighLimit;
+  };
+
+private:
   // The representation of a clone of the original loop we started out with.
   struct ClonedLoop {
     // The cloned blocks
@@ -673,23 +687,6 @@ class LoopConstrainer {
 
     RewrittenRangeInfo() = default;
   };
-
-  // Calculated subranges we restrict the iteration space of the main loop to.
-  // See the implementation of `calculateSubRanges' for more details on how
-  // these fields are computed.  `LowLimit` is std::nullopt if there is no
-  // restriction on low end of the restricted iteration space of the main loop.
-  // `HighLimit` is std::nullopt if there is no restriction on high end of the
-  // restricted iteration space of the main loop.
-
-  struct SubRanges {
-    std::optional<const SCEV *> LowLimit;
-    std::optional<const SCEV *> HighLimit;
-  };
-
-  // Compute a safe set of limits for the main loop to run in -- effectively the
-  // intersection of `Range' and the iteration space of the original loop.
-  // Return std::nullopt if unable to compute the set of subranges.
-  std::optional<SubRanges> calculateSubRanges(bool IsSignedPredicate) const;
 
   // Clone `OriginalLoop' and return the result in CLResult.  The IR after
   // running `cloneLoop' is well formed except for the PHI nodes in CLResult --
@@ -771,14 +768,16 @@ class LoopConstrainer {
   // for a definition)
   LoopStructure MainLoopStructure;
 
+  SubRanges SR;
+
 public:
   LoopConstrainer(Loop &L, LoopInfo &LI,
                   function_ref<void(Loop *, bool)> LPMAddNewLoop,
                   const LoopStructure &LS, ScalarEvolution &SE,
-                  DominatorTree &DT, InductiveRangeCheck::Range R)
+                  DominatorTree &DT, InductiveRangeCheck::Range R, SubRanges SR)
       : F(*L.getHeader()->getParent()), Ctx(L.getHeader()->getContext()),
         SE(SE), DT(DT), LI(LI), LPMAddNewLoop(LPMAddNewLoop), OriginalLoop(L),
-        Range(R), MainLoopStructure(LS) {}
+        Range(R), MainLoopStructure(LS), SR(SR) {}
 
   // Entry point for the algorithm.  Returns true on success.
   bool run();
@@ -1207,8 +1206,13 @@ static const SCEV *NoopOrExtend(const SCEV *S, Type *Ty, ScalarEvolution &SE,
   return Signed ? SE.getNoopOrSignExtend(S, Ty) : SE.getNoopOrZeroExtend(S, Ty);
 }
 
-std::optional<LoopConstrainer::SubRanges>
-LoopConstrainer::calculateSubRanges(bool IsSignedPredicate) const {
+// Compute a safe set of limits for the main loop to run in -- effectively the
+// intersection of `Range' and the iteration space of the original loop.
+// Return std::nullopt if unable to compute the set of subranges.
+static std::optional<LoopConstrainer::SubRanges>
+calculateSubRanges(ScalarEvolution &SE, const Loop &L,
+                   InductiveRangeCheck::Range &Range,
+                   const LoopStructure &MainLoopStructure) {
   auto *RTy = cast<IntegerType>(Range.getType());
   // We only support wide range checks and narrow latches.
   if (!AllowNarrowLatchCondition && RTy != MainLoopStructure.ExitCountTy)
@@ -1218,6 +1222,7 @@ LoopConstrainer::calculateSubRanges(bool IsSignedPredicate) const {
 
   LoopConstrainer::SubRanges Result;
 
+  bool IsSignedPredicate = MainLoopStructure.IsSignedPredicate;
   // I think we can be more aggressive here and make this nuw / nsw if the
   // addition that feeds into the icmp for the latch's terminating branch is nuw
   // / nsw.  In any case, a wrapping 2's complement addition is safe.
@@ -1261,7 +1266,7 @@ LoopConstrainer::calculateSubRanges(bool IsSignedPredicate) const {
     GreatestSeen = Start;
   }
 
-  auto Clamp = [this, Smallest, Greatest, IsSignedPredicate](const SCEV *S) {
+  auto Clamp = [&SE, Smallest, Greatest, IsSignedPredicate](const SCEV *S) {
     return IsSignedPredicate
                ? SE.getSMaxExpr(Smallest, SE.getSMinExpr(Greatest, S))
                : SE.getUMaxExpr(Smallest, SE.getUMinExpr(Greatest, S));
@@ -1551,15 +1556,7 @@ bool LoopConstrainer::run() {
 
   OriginalPreheader = Preheader;
   MainLoopPreheader = Preheader;
-
   bool IsSignedPredicate = MainLoopStructure.IsSignedPredicate;
-  std::optional<SubRanges> MaybeSR = calculateSubRanges(IsSignedPredicate);
-  if (!MaybeSR) {
-    LLVM_DEBUG(dbgs() << "irce: could not compute subranges\n");
-    return false;
-  }
-
-  SubRanges SR = *MaybeSR;
   bool Increasing = MainLoopStructure.IndVarIncreasing;
   IntegerType *IVTy =
       cast<IntegerType>(Range.getBegin()->getType());
@@ -2147,7 +2144,15 @@ bool InductiveRangeCheckElimination::run(
   if (!SafeIterRange)
     return Changed;
 
-  LoopConstrainer LC(*L, LI, LPMAddNewLoop, LS, SE, DT, *SafeIterRange);
+  std::optional<LoopConstrainer::SubRanges> MaybeSR =
+      calculateSubRanges(SE, *L, *SafeIterRange, LS);
+  if (!MaybeSR) {
+    LLVM_DEBUG(dbgs() << "irce: could not compute subranges\n");
+    return false;
+  }
+
+  LoopConstrainer LC(*L, LI, LPMAddNewLoop, LS, SE, DT, *SafeIterRange,
+                     *MaybeSR);
 
   if (LC.run()) {
     Changed = true;
