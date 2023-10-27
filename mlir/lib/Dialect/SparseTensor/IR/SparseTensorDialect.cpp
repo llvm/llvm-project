@@ -291,7 +291,7 @@ SparseTensorEncodingAttr
 SparseTensorEncodingAttr::withDimToLvl(AffineMap dimToLvl) const {
   assert(getImpl() && "Uninitialized SparseTensorEncodingAttr");
   return SparseTensorEncodingAttr::get(getContext(), getLvlTypes(), dimToLvl,
-                                       getLvlToDim(), getPosWidth(),
+                                       AffineMap(), getPosWidth(),
                                        getCrdWidth());
 }
 
@@ -410,6 +410,66 @@ std::optional<uint64_t>
 SparseTensorEncodingAttr::getStaticLvlSliceStride(Level lvl) const {
   // FIXME: `toOrigDim` is deprecated.
   return getStaticDimSliceStride(toOrigDim(*this, lvl));
+}
+
+SmallVector<int64_t>
+SparseTensorEncodingAttr::tranlateShape(ArrayRef<int64_t> srcShape,
+                                        CrdTransDirectionKind dir) const {
+  if (isIdentity())
+    return SmallVector<int64_t>(srcShape);
+
+  SmallVector<int64_t> ret;
+  unsigned rank =
+      dir == CrdTransDirectionKind::dim2lvl ? getLvlRank() : getDimRank();
+  ret.reserve(rank);
+
+  if (isPermutation()) {
+    for (unsigned r = 0; r < rank; r++) {
+      unsigned trans = dir == CrdTransDirectionKind::dim2lvl
+                           ? toOrigDim(*this, r)
+                           : toStoredDim(*this, r);
+      ret.push_back(srcShape[trans]);
+    }
+    return ret;
+  }
+
+  // Handle non-permutation maps.
+  AffineMap transMap =
+      dir == CrdTransDirectionKind::dim2lvl ? getDimToLvl() : getLvlToDim();
+
+  SmallVector<AffineExpr> dimRep;
+  dimRep.reserve(srcShape.size());
+  for (int64_t sz : srcShape) {
+    if (!ShapedType::isDynamic(sz)) {
+      // Push back the max coordinate for the given dimension/level size.
+      dimRep.push_back(getAffineConstantExpr(sz - 1, getContext()));
+    } else {
+      // A dynamic size, use a AffineDimExpr to symbolize the value.
+      dimRep.push_back(getAffineDimExpr(dimRep.size(), getContext()));
+    }
+  };
+
+  for (AffineExpr exp : transMap.getResults()) {
+    // Do constant propagation on the affine map.
+    AffineExpr evalExp =
+        simplifyAffineExpr(exp.replaceDims(dimRep), srcShape.size(), 0);
+    if (auto c = evalExp.dyn_cast<AffineConstantExpr>()) {
+      ret.push_back(c.getValue() + 1);
+    } else {
+      if (auto mod = evalExp.dyn_cast<AffineBinaryOpExpr>();
+          mod && mod.getKind() == AffineExprKind::Mod) {
+        // We can still infer a static bound for expressions in form
+        // "d % constant" since d % constant \in [0, constant).
+        if (auto bound = mod.getRHS().dyn_cast<AffineConstantExpr>()) {
+          ret.push_back(bound.getValue());
+          continue;
+        }
+      }
+      ret.push_back(ShapedType::kDynamic);
+    }
+  }
+  assert(ret.size() == rank);
+  return ret;
 }
 
 ValueRange
@@ -1283,6 +1343,64 @@ OpFoldResult LvlOp::fold(FoldAdaptor adaptor) {
   if (!ShapedType::isDynamic(dim))
     return getIndexAttr(shape[dim]);
 
+  return {};
+}
+
+void ReinterpretMapOp::build(OpBuilder &odsBuilder, OperationState &odsState,
+                             SparseTensorEncodingAttr dstEnc, Value source) {
+  auto srcStt = getSparseTensorType(source);
+  SmallVector<int64_t> srcLvlShape = srcStt.getLvlShape();
+  SmallVector<int64_t> dstDimShape =
+      dstEnc.tranlateShape(srcLvlShape, CrdTransDirectionKind::lvl2dim);
+  auto dstTp =
+      RankedTensorType::get(dstDimShape, srcStt.getElementType(), dstEnc);
+  return build(odsBuilder, odsState, dstTp, source);
+}
+
+LogicalResult ReinterpretMapOp::verify() {
+  auto srcStt = getSparseTensorType(getSource());
+  auto dstStt = getSparseTensorType(getDest());
+  ArrayRef<DimLevelType> srcLvlTps = srcStt.getLvlTypes();
+  ArrayRef<DimLevelType> dstLvlTps = dstStt.getLvlTypes();
+
+  if (srcLvlTps.size() != dstLvlTps.size())
+    return emitError("Level rank mismatch between source/dest tensors");
+
+  for (auto [srcLvlTp, dstLvlTp] : llvm::zip(srcLvlTps, dstLvlTps))
+    if (srcLvlTp != dstLvlTp)
+      return emitError("Level type mismatch between source/dest tensors");
+
+  if (srcStt.getPosWidth() != dstStt.getPosWidth() ||
+      srcStt.getCrdWidth() != dstStt.getCrdWidth()) {
+    return emitError("Crd/Pos width mismatch between source/dest tensors");
+  }
+
+  if (srcStt.getElementType() != dstStt.getElementType())
+    return emitError("Element type mismatch between source/dest tensors");
+
+  SmallVector<DynSize> srcLvlShape = srcStt.getLvlShape();
+  SmallVector<DynSize> dstLvlShape = dstStt.getLvlShape();
+  for (auto [srcLvlSz, dstLvlSz] : llvm::zip(srcLvlShape, dstLvlShape)) {
+    if (srcLvlSz != dstLvlSz) {
+      // Should we allow one side to be dynamic size, e.g., <?x?> should be
+      // compatible to <3x4>? For now, we require all the level sizes to be
+      // *exactly* matched for simplicity.
+      return emitError("Level size mismatch between source/dest tensors");
+    }
+  }
+
+  return success();
+}
+
+OpFoldResult ReinterpretMapOp::fold(FoldAdaptor adaptor) {
+  if (getSource().getType() == getDest().getType())
+    return getSource();
+
+  if (auto def = getSource().getDefiningOp<ReinterpretMapOp>()) {
+    // A -> B, B -> A ==> A
+    if (def.getSource().getType() == getDest().getType())
+      return def.getSource();
+  }
   return {};
 }
 

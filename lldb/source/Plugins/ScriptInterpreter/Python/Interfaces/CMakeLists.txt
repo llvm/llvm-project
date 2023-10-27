@@ -20,6 +20,7 @@ if (LLDB_ENABLE_LIBEDIT)
 endif()
 
 add_lldb_library(lldbPluginScriptInterpreterPythonInterfaces
+  OperatingSystemPythonInterface.cpp
   ScriptedPythonInterface.cpp
   ScriptedProcessPythonInterface.cpp
   ScriptedThreadPythonInterface.cpp
