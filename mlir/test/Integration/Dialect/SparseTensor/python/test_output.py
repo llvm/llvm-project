@@ -32,7 +32,7 @@ func.func @main(%p : !llvm.ptr<i8>) -> () attributes {{ llvm.emit_c_interface }}
 def expected(id_map):
     """Returns expected contents of output.
 
-    output appears as dimension coordinates but lexicographically
+    Output appears as dimension coordinates but lexicographically
     sorted by level coordinates.
     """
     return (
