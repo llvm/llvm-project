@@ -119,7 +119,7 @@ jobs:
         if: steps.docs-changed-subprojects.outputs.libc_any_changed == 'true'
         run: |
           cmake -B libc-build -GNinja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_RUNTIMES="libc" -DLLVM_ENABLE_SPHINX=ON ./runtimes
-          TZ=UTC ninja -C docs-libc-html
+          TZ=UTC ninja -C libc-build docs-libc-html
       - name: Build LLD docs
         if: steps.docs-changed-subprojects.outputs.lld_any_changed == 'true'
         run: |

@@ -384,8 +384,8 @@ bool RISCVInstructionSelector::replacePtrWithInt(MachineOperand &Op,
   Register PtrReg = Op.getReg();
   assert(MRI.getType(PtrReg).isPointer() && "Operand is not a pointer!");
 
-  const LLT XLenLLT = LLT::scalar(STI.getXLen());
-  auto PtrToInt = MIB.buildPtrToInt(XLenLLT, PtrReg);
+  const LLT sXLen = LLT::scalar(STI.getXLen());
+  auto PtrToInt = MIB.buildPtrToInt(sXLen, PtrReg);
   MRI.setRegBank(PtrToInt.getReg(0), RBI.getRegBank(RISCV::GPRRegBankID));
   Op.setReg(PtrToInt.getReg(0));
   return select(*PtrToInt);
@@ -397,11 +397,11 @@ void RISCVInstructionSelector::preISelLower(MachineInstr &MI,
   switch (MI.getOpcode()) {
   case TargetOpcode::G_PTR_ADD: {
     Register DstReg = MI.getOperand(0).getReg();
-    const LLT XLenLLT = LLT::scalar(STI.getXLen());
+    const LLT sXLen = LLT::scalar(STI.getXLen());
 
     replacePtrWithInt(MI.getOperand(1), MIB, MRI);
     MI.setDesc(TII.get(TargetOpcode::G_ADD));
-    MRI.setType(DstReg, XLenLLT);
+    MRI.setType(DstReg, sXLen);
     break;
   }
   }

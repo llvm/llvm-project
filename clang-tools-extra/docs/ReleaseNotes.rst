@@ -232,6 +232,12 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/undefined-memory-manipulation>` check to support
   fixed-size arrays of non-trivial types.
 
+- Improved :doc:`bugprone-unused-return-value
+  <clang-tidy/checks/bugprone/unused-return-value>` check diagnostic message,
+  added support for detection of unused results when cast to non-``void`` type.
+  Casting to ``void`` no longer suppresses issues by default, control this
+  behavior with the new `AllowCastToVoid` option.
+
 - Improved :doc:`cppcoreguidelines-avoid-non-const-global-variables
   <clang-tidy/checks/cppcoreguidelines/avoid-non-const-global-variables>` check
   to ignore ``static`` variables declared within the scope of
@@ -250,7 +256,8 @@ Changes in existing checks
 
 - Improved :doc:`cppcoreguidelines-prefer-member-initializer
   <clang-tidy/checks/cppcoreguidelines/prefer-member-initializer>` check to
-  ignore delegate constructors.
+  ignore delegate constructors and ignore re-assignment for reference or when
+  initialization depend on field that is initialized before.
 
 - Improved :doc:`cppcoreguidelines-pro-bounds-array-to-pointer-decay
   <clang-tidy/checks/cppcoreguidelines/pro-bounds-array-to-pointer-decay>` check
@@ -268,6 +275,11 @@ Changes in existing checks
 - Improved :doc:`cppcoreguidelines-pro-type-member-init
   <clang-tidy/checks/cppcoreguidelines/pro-type-member-init>` check to ignore
   dependent delegate constructors.
+
+- Improved :doc:`cppcoreguidelines-pro-type-static-cast-downcast
+  <clang-tidy/checks/cppcoreguidelines/pro-type-static-cast-downcast>` check to
+  disregard casts on non-polymorphic types when the `StrictMode` option is set
+  to `false`.
 
 - Improved :doc:`cppcoreguidelines-pro-type-vararg
   <clang-tidy/checks/cppcoreguidelines/pro-type-vararg>` check to ignore

@@ -692,13 +692,18 @@ void TextNodeDumper::dumpBareType(QualType T, bool Desugar) {
   ColorScope Color(OS, ShowColors, TypeColor);
 
   SplitQualType T_split = T.split();
-  OS << "'" << QualType::getAsString(T_split, PrintPolicy) << "'";
+  std::string T_str = QualType::getAsString(T_split, PrintPolicy);
+  OS << "'" << T_str << "'";
 
   if (Desugar && !T.isNull()) {
-    // If the type is sugared, also dump a (shallow) desugared type.
+    // If the type is sugared, also dump a (shallow) desugared type when
+    // it is visibly different.
     SplitQualType D_split = T.getSplitDesugaredType();
-    if (T_split != D_split)
-      OS << ":'" << QualType::getAsString(D_split, PrintPolicy) << "'";
+    if (T_split != D_split) {
+      std::string D_str = QualType::getAsString(D_split, PrintPolicy);
+      if (T_str != D_str)
+        OS << ":'" << QualType::getAsString(D_split, PrintPolicy) << "'";
+    }
   }
 }
 
