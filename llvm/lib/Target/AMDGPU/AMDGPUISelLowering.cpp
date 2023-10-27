@@ -2283,7 +2283,7 @@ SDValue AMDGPUTargetLowering::LowerFREM(SDValue Op, SelectionDAG &DAG) const {
   SDValue Neg = DAG.getNode(ISD::FNEG, SL, VT, Trunc, Flags);
   // TODO: For f32 use FMAD instead if !hasFastFMA32?
   SDValue FMA = DAG.getNode(ISD::FMA, SL, VT, Neg, Y, X, Flags);
-  return NSZ ? FMA : DAG.getNode(ISD::FCOPYSIGN , SL, VT, FMA, X);
+  return NSZ ? FMA : DAG.getNode(ISD::FCOPYSIGN, SL, VT, FMA, X);
 }
 
 SDValue AMDGPUTargetLowering::LowerFCEIL(SDValue Op, SelectionDAG &DAG) const {

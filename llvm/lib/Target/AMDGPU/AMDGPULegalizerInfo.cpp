@@ -2343,7 +2343,7 @@ bool AMDGPULegalizerInfo::legalizeFceil(
 
 static bool allowNoSignedZeros(const MachineFunction &MF, unsigned Flags) {
   return (Flags & MachineInstr::FmNsz) ||
-      MF.getTarget().Options.NoSignedZerosFPMath;
+         MF.getTarget().Options.NoSignedZerosFPMath;
 }
 
 // Legalize frem(x, y) -> copysign(x - y * trunc(x / y), x)
