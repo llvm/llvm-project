@@ -6,8 +6,14 @@ Johannes: breakage
 Revert "[OpenMP] Basic BumpAllocator for (AMD)GPUs (#69806) "
   breaks omptests flang-272343 flang-272343-3 flang-305553
 
+Johannes: breakage
+  [OpenMP][FIX] Move workaround code to avoid races 
+   see smoke-fails, smoke-limbo, smoke, examples
+
 Revert: waiting on pip install myst-parser 
  b6ff03206 "[Documentation] Replace recommonmark by myst-parser
 
+Revert: breaks qmcpack ISEL
+ "[X86][EVEX512] Restrict attaching EVEX512 for default CPU only, NFCI (#65920)"
 
-Revert "[OpenMP] Patch for Support to loop bind clause : Checking Parent 
+
