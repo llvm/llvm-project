@@ -4349,7 +4349,8 @@ static bool SimplifyCondBranchToCondBranch(BranchInst *PBI, BranchInst *BI,
 
   // If predecessor's branch probability to BB is too low don't merge branches.
   SmallVector<uint32_t, 2> PredWeights;
-  if (extractBranchWeights(*PBI, PredWeights) &&
+  if (!PBI->getMetadata(LLVMContext::MD_unpredictable) &&
+      extractBranchWeights(*PBI, PredWeights) &&
       (PredWeights[0] + PredWeights[1]) != 0) {
 
     BranchProbability CommonDestProb = BranchProbability::getBranchProbability(
