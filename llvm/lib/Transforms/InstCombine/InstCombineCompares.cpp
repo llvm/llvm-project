@@ -5875,25 +5875,6 @@ static Instruction *processUMulZExtIdiom(ICmpInst &I, Value *MulVal,
 
   // Recognize patterns
   switch (I.getPredicate()) {
-  case ICmpInst::ICMP_EQ:
-  case ICmpInst::ICMP_NE:
-    // Recognize pattern:
-    //   mulval = mul(zext A, zext B)
-    //   cmp eq/neq mulval, and(mulval, mask), mask selects low MulWidth bits.
-    ConstantInt *CI;
-    Value *ValToMask;
-    if (match(OtherVal, m_And(m_Value(ValToMask), m_ConstantInt(CI)))) {
-      if (ValToMask != MulVal)
-        return nullptr;
-      const APInt &CVal = CI->getValue() + 1;
-      if (CVal.isPowerOf2()) {
-        unsigned MaskWidth = CVal.logBase2();
-        if (MaskWidth == MulWidth)
-          break; // Recognized
-      }
-    }
-    return nullptr;
-
   case ICmpInst::ICMP_UGT:
     // Recognize pattern:
     //   mulval = mul(zext A, zext B)
@@ -5969,11 +5950,6 @@ static Instruction *processUMulZExtIdiom(ICmpInst &I, Value *MulVal,
   // depending on predicate.
   bool Inverse = false;
   switch (I.getPredicate()) {
-  case ICmpInst::ICMP_NE:
-    break;
-  case ICmpInst::ICMP_EQ:
-    Inverse = true;
-    break;
   case ICmpInst::ICMP_UGT:
     if (I.getOperand(0) == MulVal)
       break;
