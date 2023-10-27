@@ -1497,7 +1497,7 @@ static bool valueCoversEntireFragment(Type *ValTy, DbgVariableIntrinsic *DII) {
   const DataLayout &DL = DII->getModule()->getDataLayout();
   TypeSize ValueSize = DL.getTypeAllocSizeInBits(ValTy);
   if (std::optional<uint64_t> FragmentSize = DII->getFragmentSizeInBits())
-    return TypeSize::isKnownGE(ValueSize, TypeSize::getFixed(*FragmentSize));
+    return TypeSize::isKnownGE(ValueSize, TypeSize::Fixed(*FragmentSize));
 
   // We can't always calculate the size of the DI variable (e.g. if it is a
   // VLA). Try to use the size of the alloca that the dbg intrinsic describes
