@@ -129,7 +129,7 @@ static cl::opt<bool>
     PrintScaledBoundaryRangeChecks("irce-print-scaled-boundary-range-checks",
                                    cl::Hidden, cl::init(false));
 
-static const char *ClonedLoopTag = "irce.loop.clone";
+static const char *ClonedLoopTag = "loop_constrainer.loop.clone";
 
 #define DEBUG_TYPE "irce"
 
