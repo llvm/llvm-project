@@ -138,8 +138,8 @@ MaxVectorRegSizeOption("slp-max-reg-size", cl::init(128), cl::Hidden,
     cl::desc("Attempt to vectorize for this register size in bits"));
 
 static cl::opt<unsigned>
-MaxVFOption("slp-max-vf", cl::init(0), cl::Hidden,
-    cl::desc("Maximum SLP vectorization factor (0=unlimited)"));
+    MaxVFOption("slp-max-vf", cl::init(192), cl::Hidden,
+                cl::desc("Maximum SLP vectorization factor (0=unlimited)"));
 
 /// Limits the size of scheduling regions in a block.
 /// It avoid long compile times for _very_ large blocks where vector
@@ -4135,7 +4135,7 @@ static bool areTwoInsertFromSameBuildVector(
   // Go through the vector operand of insertelement instructions trying to find
   // either VU as the original vector for IE2 or V as the original vector for
   // IE1.
-  SmallSet<int, 8> ReusedIdx;
+  SmallDenseSet<int, 8> ReusedIdx;
   bool IsReusedIdx = false;
   do {
     if (IE2 == VU && !IE1)
