@@ -22,8 +22,8 @@ define i32 @prolog_spill(i32 %arg0, i32 %arg1, i32 %arg2) {
   ; REGALLOC-NEXT:   renamable $sgpr6_sgpr7 = COPY $exec, implicit-def $exec
   ; REGALLOC-NEXT:   renamable $sgpr4_sgpr5 = S_AND_B64 renamable $sgpr6_sgpr7, killed renamable $sgpr4_sgpr5, implicit-def dead $scc
   ; REGALLOC-NEXT:   renamable $sgpr6_sgpr7 = S_XOR_B64 renamable $sgpr4_sgpr5, killed renamable $sgpr6_sgpr7, implicit-def dead $scc
-  ; REGALLOC-NEXT:   renamable $vgpr0 = V_WRITELANE_B32 killed $sgpr6, 0, $vgpr0, implicit-def $sgpr6_sgpr7, implicit $sgpr6_sgpr7
-  ; REGALLOC-NEXT:   renamable $vgpr0 = V_WRITELANE_B32 killed $sgpr7, 1, $vgpr0, implicit killed $sgpr6_sgpr7
+  ; REGALLOC-NEXT:   renamable $vgpr0 = SI_SPILL_S32_TO_VGPR killed $sgpr6, 0, $vgpr0, implicit-def $sgpr6_sgpr7, implicit $sgpr6_sgpr7
+  ; REGALLOC-NEXT:   renamable $vgpr0 = SI_SPILL_S32_TO_VGPR killed $sgpr7, 1, $vgpr0, implicit killed $sgpr6_sgpr7
   ; REGALLOC-NEXT:   SI_SPILL_WWM_V32_SAVE killed $vgpr0, %stack.2, $sgpr32, 0, implicit $exec :: (store (s32) into %stack.2, addrspace 5)
   ; REGALLOC-NEXT:   $exec = S_MOV_B64_term killed renamable $sgpr4_sgpr5
   ; REGALLOC-NEXT:   S_CBRANCH_EXECZ %bb.1, implicit $exec
@@ -34,13 +34,13 @@ define i32 @prolog_spill(i32 %arg0, i32 %arg1, i32 %arg2) {
   ; REGALLOC-NEXT: {{  $}}
   ; REGALLOC-NEXT:   $vgpr0 = SI_SPILL_WWM_V32_RESTORE %stack.2, $sgpr32, 0, implicit $exec :: (load (s32) from %stack.2, addrspace 5)
   ; REGALLOC-NEXT:   $vgpr1 = SI_SPILL_V32_RESTORE %stack.3, $sgpr32, 0, implicit $exec :: (load (s32) from %stack.3, addrspace 5)
-  ; REGALLOC-NEXT:   $sgpr4 = V_READLANE_B32 $vgpr0, 0, implicit-def $sgpr4_sgpr5
-  ; REGALLOC-NEXT:   $sgpr5 = V_READLANE_B32 $vgpr0, 1
+  ; REGALLOC-NEXT:   $sgpr4 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 0, implicit-def $sgpr4_sgpr5
+  ; REGALLOC-NEXT:   $sgpr5 = SI_RESTORE_S32_FROM_VGPR $vgpr0, 1
   ; REGALLOC-NEXT:   renamable $sgpr4_sgpr5 = S_OR_SAVEEXEC_B64 killed renamable $sgpr4_sgpr5, implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; REGALLOC-NEXT:   SI_SPILL_V32_SAVE killed $vgpr1, %stack.6, $sgpr32, 0, implicit $exec :: (store (s32) into %stack.6, addrspace 5)
   ; REGALLOC-NEXT:   renamable $sgpr4_sgpr5 = S_AND_B64 $exec, killed renamable $sgpr4_sgpr5, implicit-def dead $scc
-  ; REGALLOC-NEXT:   renamable $vgpr0 = V_WRITELANE_B32 killed $sgpr4, 2, $vgpr0, implicit-def $sgpr4_sgpr5, implicit $sgpr4_sgpr5
-  ; REGALLOC-NEXT:   renamable $vgpr0 = V_WRITELANE_B32 $sgpr5, 3, $vgpr0, implicit $sgpr4_sgpr5
+  ; REGALLOC-NEXT:   renamable $vgpr0 = SI_SPILL_S32_TO_VGPR killed $sgpr4, 2, $vgpr0, implicit-def $sgpr4_sgpr5, implicit $sgpr4_sgpr5
+  ; REGALLOC-NEXT:   renamable $vgpr0 = SI_SPILL_S32_TO_VGPR $sgpr5, 3, $vgpr0, implicit $sgpr4_sgpr5
   ; REGALLOC-NEXT:   SI_SPILL_WWM_V32_SAVE killed $vgpr0, %stack.2, $sgpr32, 0, implicit $exec :: (store (s32) into %stack.2, addrspace 5)
   ; REGALLOC-NEXT:   $exec = S_XOR_B64_term $exec, killed renamable $sgpr4_sgpr5, implicit-def dead $scc
   ; REGALLOC-NEXT:   S_CBRANCH_EXECZ %bb.4, implicit $exec
@@ -67,8 +67,8 @@ define i32 @prolog_spill(i32 %arg0, i32 %arg1, i32 %arg2) {
   ; REGALLOC-NEXT: bb.4.bb.3:
   ; REGALLOC-NEXT:   $vgpr1 = SI_SPILL_WWM_V32_RESTORE %stack.2, $sgpr32, 0, implicit $exec :: (load (s32) from %stack.2, addrspace 5)
   ; REGALLOC-NEXT:   $vgpr0 = SI_SPILL_V32_RESTORE %stack.6, $sgpr32, 0, implicit $exec :: (load (s32) from %stack.6, addrspace 5)
-  ; REGALLOC-NEXT:   $sgpr4 = V_READLANE_B32 $vgpr1, 2, implicit-def $sgpr4_sgpr5
-  ; REGALLOC-NEXT:   $sgpr5 = V_READLANE_B32 $vgpr1, 3
+  ; REGALLOC-NEXT:   $sgpr4 = SI_RESTORE_S32_FROM_VGPR $vgpr1, 2, implicit-def $sgpr4_sgpr5
+  ; REGALLOC-NEXT:   $sgpr5 = SI_RESTORE_S32_FROM_VGPR $vgpr1, 3
   ; REGALLOC-NEXT:   $exec = S_OR_B64 $exec, killed renamable $sgpr4_sgpr5, implicit-def dead $scc
   ; REGALLOC-NEXT:   renamable $sgpr4 = S_MOV_B32 5
   ; REGALLOC-NEXT:   renamable $vgpr0 = V_MUL_LO_U32_e64 killed $vgpr0, killed $sgpr4, implicit $exec

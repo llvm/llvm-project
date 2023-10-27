@@ -827,7 +827,7 @@ static Type *getTypeForVPValue(VPValue *VPV) {
   if (auto *VPC = dyn_cast<VPWidenCastRecipe>(VPV))
     return VPC->getResultType();
   auto *UV = VPV->getUnderlyingValue();
-  return UV->getType();
+  return UV ? UV->getType() : nullptr;
 }
 
 /// Try to simplify recipe \p R.
@@ -848,7 +848,8 @@ static void simplifyRecipe(VPRecipeBase &R) {
       break;
     VPValue *A = Zext->getOperand(0);
     VPValue *Trunc = R.getVPSingleValue();
-    if (getTypeForVPValue(Trunc) == getTypeForVPValue(A))
+    Type *TruncToTy = getTypeForVPValue(Trunc);
+    if (TruncToTy && TruncToTy == getTypeForVPValue(A))
       Trunc->replaceAllUsesWith(A);
     break;
   }
