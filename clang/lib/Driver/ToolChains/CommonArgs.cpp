@@ -2129,7 +2129,7 @@ static bool SDLSearch(const Driver &D, const llvm::opt::ArgList &DriverArgs,
 /// the library paths. If so, add a new command to clang-offload-bundler to
 /// unbundle this archive and create a temporary device specific archive. Name
 /// of this SDL is passed to the llvm-link tool.
-static bool GetSDLFromOffloadArchive(
+static void GetSDLFromOffloadArchive(
     Compilation &C, const Driver &D, const Tool &T, const JobAction &JA,
     const InputInfoList &Inputs, const llvm::opt::ArgList &DriverArgs,
     llvm::opt::ArgStringList &CC1Args,
@@ -2138,7 +2138,7 @@ static bool GetSDLFromOffloadArchive(
 
   // We don't support bitcode archive bundles for nvptx
   if (isBitCodeSDL && Arch.contains("nvptx"))
-    return false;
+    return;
 
   bool FoundAOB = false;
   std::string ArchiveOfBundles;
@@ -2174,12 +2174,12 @@ static bool GetSDLFromOffloadArchive(
   }
 
   if (!FoundAOB)
-    return false;
+    return;
 
   llvm::file_magic Magic;
   auto EC = llvm::identify_magic(ArchiveOfBundles, Magic);
   if (EC || Magic != llvm::file_magic::archive)
-    return false;
+    return;
 
   StringRef Prefix = isBitCodeSDL ? "libbc-" : "lib";
   std::string OutputLib =
@@ -2234,7 +2234,7 @@ static bool GetSDLFromOffloadArchive(
 
   CC1Args.push_back(DriverArgs.MakeArgString(OutputLib));
 
-  return true;
+  return;
 }
 
 // Wrapper function used by driver for adding SDLs during link phase.
