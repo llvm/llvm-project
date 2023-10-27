@@ -19,4 +19,5 @@ namespace {
 
 } // namespace
 
-void mlir::populateSparseReinterpretMap(RewritePatternSet &patterns) {}
+void mlir::populateSparseReinterpretMap(RewritePatternSet &patterns,
+                                        ReinterpretMapScope scope) {}
