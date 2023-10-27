@@ -801,12 +801,12 @@ static bool isSafeDecreasingBound(const SCEV *Start,
 
   assert(SE.isKnownNegative(Step) && "expecting negative step");
 
-  LLVM_DEBUG(dbgs() << "irce: isSafeDecreasingBound with:\n");
-  LLVM_DEBUG(dbgs() << "irce: Start: " << *Start << "\n");
-  LLVM_DEBUG(dbgs() << "irce: Step: " << *Step << "\n");
-  LLVM_DEBUG(dbgs() << "irce: BoundSCEV: " << *BoundSCEV << "\n");
-  LLVM_DEBUG(dbgs() << "irce: Pred: " << Pred << "\n");
-  LLVM_DEBUG(dbgs() << "irce: LatchExitBrIdx: " << LatchBrExitIdx << "\n");
+  LLVM_DEBUG(dbgs() << "isSafeDecreasingBound with:\n");
+  LLVM_DEBUG(dbgs() << "Start: " << *Start << "\n");
+  LLVM_DEBUG(dbgs() << "Step: " << *Step << "\n");
+  LLVM_DEBUG(dbgs() << "BoundSCEV: " << *BoundSCEV << "\n");
+  LLVM_DEBUG(dbgs() << "Pred: " << Pred << "\n");
+  LLVM_DEBUG(dbgs() << "LatchExitBrIdx: " << LatchBrExitIdx << "\n");
 
   bool IsSigned = ICmpInst::isSigned(Pred);
   // The predicate that we need to check that the induction variable lies
@@ -848,12 +848,12 @@ static bool isSafeIncreasingBound(const SCEV *Start,
   if (!SE.isAvailableAtLoopEntry(BoundSCEV, L))
     return false;
 
-  LLVM_DEBUG(dbgs() << "irce: isSafeIncreasingBound with:\n");
-  LLVM_DEBUG(dbgs() << "irce: Start: " << *Start << "\n");
-  LLVM_DEBUG(dbgs() << "irce: Step: " << *Step << "\n");
-  LLVM_DEBUG(dbgs() << "irce: BoundSCEV: " << *BoundSCEV << "\n");
-  LLVM_DEBUG(dbgs() << "irce: Pred: " << Pred << "\n");
-  LLVM_DEBUG(dbgs() << "irce: LatchExitBrIdx: " << LatchBrExitIdx << "\n");
+  LLVM_DEBUG(dbgs() << "isSafeIncreasingBound with:\n");
+  LLVM_DEBUG(dbgs() << "Start: " << *Start << "\n");
+  LLVM_DEBUG(dbgs() << "Step: " << *Step << "\n");
+  LLVM_DEBUG(dbgs() << "BoundSCEV: " << *BoundSCEV << "\n");
+  LLVM_DEBUG(dbgs() << "Pred: " << Pred << "\n");
+  LLVM_DEBUG(dbgs() << "LatchExitBrIdx: " << LatchBrExitIdx << "\n");
 
   bool IsSigned = ICmpInst::isSigned(Pred);
   // The predicate that we need to check that the induction variable lies
@@ -1168,7 +1168,7 @@ LoopStructure::parseLoopStructure(ScalarEvolution &SE, Loop &L,
 
   assert(!L.contains(LatchExit) && "expected an exit block!");
   const DataLayout &DL = Preheader->getModule()->getDataLayout();
-  SCEVExpander Expander(SE, DL, "irce");
+  SCEVExpander Expander(SE, DL, "loop-constrainer");
   Instruction *Ins = Preheader->getTerminator();
 
   if (FixedRightSCEV)
@@ -1559,7 +1559,7 @@ bool LoopConstrainer::run() {
   bool Increasing = MainLoopStructure.IndVarIncreasing;
   IntegerType *IVTy = cast<IntegerType>(RangeTy);
 
-  SCEVExpander Expander(SE, F.getParent()->getDataLayout(), "irce");
+  SCEVExpander Expander(SE, F.getParent()->getDataLayout(), "loop-constrainer");
   Instruction *InsertPt = OriginalPreheader->getTerminator();
 
   // It would have been better to make `PreLoop' and `PostLoop'
@@ -1585,14 +1585,14 @@ bool LoopConstrainer::run() {
                                IsSignedPredicate))
       ExitPreLoopAtSCEV = SE.getAddExpr(*SR.HighLimit, MinusOneS);
     else {
-      LLVM_DEBUG(dbgs() << "irce: could not prove no-overflow when computing "
+      LLVM_DEBUG(dbgs() << "could not prove no-overflow when computing "
                         << "preloop exit limit.  HighLimit = "
                         << *(*SR.HighLimit) << "\n");
       return false;
     }
 
     if (!Expander.isSafeToExpandAt(ExitPreLoopAtSCEV, InsertPt)) {
-      LLVM_DEBUG(dbgs() << "irce: could not prove that it is safe to expand the"
+      LLVM_DEBUG(dbgs() << "could not prove that it is safe to expand the"
                         << " preloop exit limit " << *ExitPreLoopAtSCEV
                         << " at block " << InsertPt->getParent()->getName()
                         << "\n");
@@ -1612,14 +1612,14 @@ bool LoopConstrainer::run() {
                                IsSignedPredicate))
       ExitMainLoopAtSCEV = SE.getAddExpr(*SR.LowLimit, MinusOneS);
     else {
-      LLVM_DEBUG(dbgs() << "irce: could not prove no-overflow when computing "
+      LLVM_DEBUG(dbgs() << "could not prove no-overflow when computing "
                         << "mainloop exit limit.  LowLimit = "
                         << *(*SR.LowLimit) << "\n");
       return false;
     }
 
     if (!Expander.isSafeToExpandAt(ExitMainLoopAtSCEV, InsertPt)) {
-      LLVM_DEBUG(dbgs() << "irce: could not prove that it is safe to expand the"
+      LLVM_DEBUG(dbgs() << "could not prove that it is safe to expand the"
                         << " main loop exit limit " << *ExitMainLoopAtSCEV
                         << " at block " << InsertPt->getParent()->getName()
                         << "\n");
