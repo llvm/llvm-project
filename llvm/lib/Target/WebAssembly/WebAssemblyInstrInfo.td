@@ -74,6 +74,10 @@ def HasMultiMemory :
     Predicate<"Subtarget->hasMultiMemory()">,
     AssemblerPredicate<(all_of FeatureMultiMemory), "multimemory">;
 
+def HasMemtag :
+    Predicate<"Subtarget->hasMemtag()">,
+    AssemblerPredicate<(all_of FeatureMemtag), "memtag">;
+
 //===----------------------------------------------------------------------===//
 // WebAssembly-specific DAG Node Types.
 //===----------------------------------------------------------------------===//

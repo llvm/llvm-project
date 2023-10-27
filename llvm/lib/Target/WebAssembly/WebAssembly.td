@@ -75,6 +75,10 @@ def FeatureMultiMemory :
       SubtargetFeature<"multimemory", "HasMultiMemory", "true",
                        "Enable multiple memories">;
 
+def FeatureMemtag :
+      SubtargetFeature<"memtag", "HasMemtag", "true",
+                       "Enable memory tagging">;
+
 //===----------------------------------------------------------------------===//
 // Architectures.
 //===----------------------------------------------------------------------===//
