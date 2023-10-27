@@ -2199,7 +2199,7 @@ void PPCAIXAsmPrinter::emitLinkage(const GlobalValue *GV,
   }
 
   // Do not emit _$TLSML symbol.
-  if (GVSym->getName() == "_Renamed..5f24__TLSML[UA]")
+  if (GVSym->getName() == "_Renamed..5f24__TLSML[TC]")
     return;
 
   OutStreamer->emitXCOFFSymbolLinkageWithVisibility(GVSym, LinkageAttr,

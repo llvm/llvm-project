@@ -666,14 +666,6 @@ void XCOFFObjectWriter::recordRelocation(MCAssembler &Asm,
                                          uint64_t &FixedValue) {
   auto getIndex = [this](const MCSymbol *Sym,
                          const MCSectionXCOFF *ContainingCsect) {
-    // Fixup relocation flag for AIX TLS local-dynamic mode.
-    if (Sym->getName() == "_Renamed..5f24__TLSML[UA]") {
-      for (auto Iter : SymbolIndexMap)
-        if (Iter.first->getName() == "_Renamed..5f24__TLSML[TC]")
-          return Iter.second;
-      llvm_unreachable("For AIX TLS local-dynamic mode: "
-                       "_Renamed..5f24__TLSML[TC] not found.");
-    }
     // If we could not find the symbol directly in SymbolIndexMap, this symbol
     // could either be a temporary symbol or an undefined symbol. In this case,
     // we would need to have the relocation reference its csect instead.
