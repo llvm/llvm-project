@@ -61,38 +61,23 @@ AST_MATCHER_P(FieldDecl, indexNotLessThan, unsigned, Index) {
   return Node.getFieldIndex() >= Index;
 }
 
-enum class AssignedLevel { None, Assigned, UnsafetyAssigned };
+enum class AssignedLevel {
+  // Field is not assigned.
+  None,
+  // Field is assigned.
+  Default,
+  // Assignment of field has side effect:
+  // - assign to reference.
+  // FIXME: support other side effect.
+  HasSideEffect,
+  // Assignment of field has data dependence.
+  HasDependence,
+};
 
 } // namespace
 
-// Checks if Field is initialised using a field that will be initialised after
-// it.
-// TODO: Probably should guard against function calls that could have side
-// effects or if they do reference another field that's initialized before this
-// field, but is modified before the assignment.
-static AssignedLevel isSafeAssignment(const FieldDecl *Field, const Expr *Init,
-                                      const CXXConstructorDecl *Context,
-                                      AssignedLevel HistoryLevel) {
-  if (HistoryLevel == AssignedLevel::UnsafetyAssigned)
-    return AssignedLevel::UnsafetyAssigned;
-  if (Field->getType()->isReferenceType() &&
-      HistoryLevel == AssignedLevel::Assigned)
-    // assign to reference type twice cannot be simplified to once.
-    return AssignedLevel::UnsafetyAssigned;
-
-  auto MemberMatcher =
-      memberExpr(hasObjectExpression(cxxThisExpr()),
-                 member(fieldDecl(indexNotLessThan(Field->getFieldIndex()))));
-  auto DeclMatcher = declRefExpr(
-      to(varDecl(unless(parmVarDecl()), hasDeclContext(equalsNode(Context)))));
-
-  return match(expr(anyOf(MemberMatcher, DeclMatcher,
-                          hasDescendant(MemberMatcher),
-                          hasDescendant(DeclMatcher))),
-               *Init, Field->getASTContext())
-                 .empty()
-             ? AssignedLevel::Assigned
-             : AssignedLevel::UnsafetyAssigned;
+static bool canAdvanceAssignment(AssignedLevel Level) {
+  return Level == AssignedLevel::None || Level == AssignedLevel::Default;
 }
 
 static std::pair<const FieldDecl *, const Expr *>
@@ -170,9 +155,46 @@ void PreferMemberInitializerCheck::check(
 
   std::map<const FieldDecl *, AssignedLevel> AssignedFields{};
 
+  // Checks if Field is initialised using a field that will be initialised after
+  // it.
+  // TODO: Probably should guard against function calls that could have side
+  // effects or if they do reference another field that's initialized before
+  // this field, but is modified before the assignment.
+  auto UpdateAssignmentLevel = [Ctor, &AssignedFields](const FieldDecl *Field,
+                                                       const Expr *Init) {
+    auto It = AssignedFields.find(Field);
+    if (It == AssignedFields.end())
+      It = AssignedFields.insert_or_assign(Field, AssignedLevel::None).first;
+
+    if (!canAdvanceAssignment(It->second))
+      // fast path for already decided field.
+      return;
+
+    if (Field->getType().getCanonicalType()->isReferenceType()) {
+      // assign to reference type twice cannot be simplified to once.
+      It->second = AssignedLevel::HasSideEffect;
+      return;
+    }
+
+    auto MemberMatcher =
+        memberExpr(hasObjectExpression(cxxThisExpr()),
+                   member(fieldDecl(indexNotLessThan(Field->getFieldIndex()))));
+    auto DeclMatcher = declRefExpr(
+        to(varDecl(unless(parmVarDecl()), hasDeclContext(equalsNode(Ctor)))));
+    const bool HasDependence = !match(expr(anyOf(MemberMatcher, DeclMatcher,
+                                                 hasDescendant(MemberMatcher),
+                                                 hasDescendant(DeclMatcher))),
+                                      *Init, Field->getASTContext())
+                                    .empty();
+    if (HasDependence) {
+      It->second = AssignedLevel::HasDependence;
+      return;
+    }
+  };
+
   for (const CXXCtorInitializer *Init : Ctor->inits())
     if (FieldDecl *Field = Init->getMember())
-      AssignedFields.insert({Field, AssignedLevel::Assigned});
+      UpdateAssignmentLevel(Field, Init->getInit());
 
   for (const Stmt *S : Body->body()) {
     if (S->getBeginLoc().isMacroID()) {
@@ -198,13 +220,8 @@ void PreferMemberInitializerCheck::check(
     std::tie(Field, InitValue) = isAssignmentToMemberOf(Class, S, Ctor);
     if (!Field)
       continue;
-    const auto It = AssignedFields.find(Field);
-    AssignedLevel Level = AssignedLevel::None;
-    if (It != AssignedFields.end())
-      Level = It->second;
-    Level = isSafeAssignment(Field, InitValue, Ctor, Level);
-    AssignedFields.insert_or_assign(Field, Level);
-    if (Level == AssignedLevel::UnsafetyAssigned)
+    UpdateAssignmentLevel(Field, InitValue);
+    if (!canAdvanceAssignment(AssignedFields[Field]))
       continue;
     const bool IsInDefaultMemberInitializer =
         IsUseDefaultMemberInitEnabled && getLangOpts().CPlusPlus11 &&
