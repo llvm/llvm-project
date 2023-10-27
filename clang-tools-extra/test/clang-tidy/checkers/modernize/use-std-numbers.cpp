@@ -82,6 +82,10 @@ void foo(){
     // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: prefer std::numbers math constant [modernize-use-std-numbers]
     // CHECK-FIXES: std::numbers::sqrt2_v<float>;
 
+    sink(MY_PI);
+    // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: prefer std::numbers math constant [modernize-use-std-numbers]
+    // CHECK-FIXES: sink(std::numbers::pi);
+
     constexpr static auto One = 1;
     constexpr static auto Two = 2;
 
