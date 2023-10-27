@@ -40,7 +40,7 @@ void my_construct ( void *) {
 //  std::printf ( "Constructing %lx\n", (unsigned long) p );
 }
 
-void my_destruct  ( void *) {
+void my_des`truct  ( void *) {
 //  std::printf ( "Destructing  %lx\n", (unsigned long) p );
 }
 
