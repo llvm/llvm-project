@@ -110,7 +110,8 @@ define float @loadfpimm12() {
 define float @loadfpimm13() {
 ; CHECK-LABEL: loadfpimm13:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    fli.s fa0, min
+; CHECK-NEXT:    lui a0, 526336
+; CHECK-NEXT:    fmv.w.x fa0, a0
 ; CHECK-NEXT:    ret
   ret float 0xb810000000000000
 }
