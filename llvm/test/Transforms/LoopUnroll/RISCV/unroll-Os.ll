@@ -8,13 +8,13 @@ define void @foo(ptr %array, i32 %x) #0 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[ARRAY]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    store i32 [[X]], ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], 4
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY]]
-; CHECK:       for.cond.cleanup:
+; CHECK-NEXT:    store i32 [[X]], ptr [[ARRAY]], align 4
+; CHECK-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds i32, ptr [[ARRAY]], i64 1
+; CHECK-NEXT:    store i32 [[X]], ptr [[ARRAYIDX_1]], align 4
+; CHECK-NEXT:    [[ARRAYIDX_2:%.*]] = getelementptr inbounds i32, ptr [[ARRAY]], i64 2
+; CHECK-NEXT:    store i32 [[X]], ptr [[ARRAYIDX_2]], align 4
+; CHECK-NEXT:    [[ARRAYIDX_3:%.*]] = getelementptr inbounds i32, ptr [[ARRAY]], i64 3
+; CHECK-NEXT:    store i32 [[X]], ptr [[ARRAYIDX_3]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
