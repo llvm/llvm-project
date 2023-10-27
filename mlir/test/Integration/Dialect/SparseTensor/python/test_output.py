@@ -32,9 +32,8 @@ func.func @main(%p : !llvm.ptr<i8>) -> () attributes {{ llvm.emit_c_interface }}
 def expected(id_map):
     """Returns expected contents of output.
 
-    Regardless of the dimension ordering, compression, and bitwidths that are
-    used in the sparse tensor, the output is always lexicographically sorted
-    by natural index order.
+    output appears as dimension coordinates but lexicographically
+    sorted by level coordinates.
     """
     return f"""# extended FROSTT format
 2 5
