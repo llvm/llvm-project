@@ -761,8 +761,8 @@ private:
   // `OriginalPreheader'.
   BasicBlock *MainLoopPreheader = nullptr;
 
-  // The range we need to run the main loop in.
-  InductiveRangeCheck::Range Range;
+  // Type of the range we need to run the main loop in.
+  Type *RangeTy;
 
   // The structure of the main loop (see comment at the beginning of this class
   // for a definition)
@@ -774,10 +774,10 @@ public:
   LoopConstrainer(Loop &L, LoopInfo &LI,
                   function_ref<void(Loop *, bool)> LPMAddNewLoop,
                   const LoopStructure &LS, ScalarEvolution &SE,
-                  DominatorTree &DT, InductiveRangeCheck::Range R, SubRanges SR)
+                  DominatorTree &DT, Type *T, SubRanges SR)
       : F(*L.getHeader()->getParent()), Ctx(L.getHeader()->getContext()),
         SE(SE), DT(DT), LI(LI), LPMAddNewLoop(LPMAddNewLoop), OriginalLoop(L),
-        Range(R), MainLoopStructure(LS), SR(SR) {}
+        RangeTy(T), MainLoopStructure(LS), SR(SR) {}
 
   // Entry point for the algorithm.  Returns true on success.
   bool run();
@@ -1429,7 +1429,6 @@ LoopConstrainer::RewrittenRangeInfo LoopConstrainer::changeIterationSpaceEnd(
   bool IsSignedPredicate = LS.IsSignedPredicate;
 
   IRBuilder<> B(PreheaderJump);
-  auto *RangeTy = Range.getBegin()->getType();
   auto NoopOrExt = [&](Value *V) {
     if (V->getType() == RangeTy)
       return V;
@@ -1558,8 +1557,7 @@ bool LoopConstrainer::run() {
   MainLoopPreheader = Preheader;
   bool IsSignedPredicate = MainLoopStructure.IsSignedPredicate;
   bool Increasing = MainLoopStructure.IndVarIncreasing;
-  IntegerType *IVTy =
-      cast<IntegerType>(Range.getBegin()->getType());
+  IntegerType *IVTy = cast<IntegerType>(RangeTy);
 
   SCEVExpander Expander(SE, F.getParent()->getDataLayout(), "irce");
   Instruction *InsertPt = OriginalPreheader->getTerminator();
@@ -2151,8 +2149,8 @@ bool InductiveRangeCheckElimination::run(
     return false;
   }
 
-  LoopConstrainer LC(*L, LI, LPMAddNewLoop, LS, SE, DT, *SafeIterRange,
-                     *MaybeSR);
+  LoopConstrainer LC(*L, LI, LPMAddNewLoop, LS, SE, DT,
+                     SafeIterRange->getBegin()->getType(), *MaybeSR);
 
   if (LC.run()) {
     Changed = true;
