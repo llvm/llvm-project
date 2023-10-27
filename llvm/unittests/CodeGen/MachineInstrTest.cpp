@@ -544,6 +544,12 @@ TEST(MachineInstrTest, SpliceOperands) {
   EXPECT_TRUE(MI->getOperand(2).isTied());
   EXPECT_EQ(MI->findTiedOperandIdx(0), 2U);
   EXPECT_EQ(MI->findTiedOperandIdx(2), 0U);
+
+  // bad inputs
+  EXPECT_EQ(MI->getNumOperands(), 10U);
+  MI->insert(nullptr, { MachineOperand::CreateImm(666) });
+  MI->insert(MI->operands_begin(), {});
+  EXPECT_EQ(MI->getNumOperands(), 10U);
 }
 
 } // end namespace

@@ -2477,10 +2477,7 @@ MachineInstr::getFirst5RegLLTs() const {
 }
 
 void MachineInstr::insert(mop_iterator It, ArrayRef<MachineOperand> Ops) {
-  assert(isVariadic() && "can only modify variadic instructions");
-  assert(It->getParent() == this && "iterator points to operand of other inst");
-
-  if (Ops.empty())
+  if (!It || Ops.empty())
     return;
 
   // Do one pass to untie operands.
@@ -2494,6 +2491,7 @@ void MachineInstr::insert(mop_iterator It, ArrayRef<MachineOperand> Ops) {
     }
   }
 
+  assert(It->getParent() == this && "iterator points to operand of other inst");
   const unsigned OpIdx = getOperandNo(It);
   const unsigned NumOperands = getNumOperands();
   const unsigned OpsToMove = NumOperands - OpIdx;
