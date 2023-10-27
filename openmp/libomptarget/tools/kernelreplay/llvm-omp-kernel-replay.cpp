@@ -85,8 +85,7 @@ int main(int argc, char **argv) {
   auto *TgtArgOffsetsArray =
       JsonKernelInfo->getAsObject()->getArray("ArgOffsets");
   for (auto It : *TgtArgOffsetsArray)
-    TgtArgOffsets.push_back(
-        reinterpret_cast<ptrdiff_t>(It.getAsInteger().value()));
+    TgtArgOffsets.push_back(static_cast<ptrdiff_t>(It.getAsInteger().value()));
 
   __tgt_offload_entry KernelEntry = {nullptr, nullptr, 0, 0, 0};
   std::string KernelEntryName = KernelFunc.value().str();

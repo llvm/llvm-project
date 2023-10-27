@@ -2996,12 +2996,16 @@ static unsigned getSVEGatherScatterOverhead(unsigned Opcode) {
 InstructionCost AArch64TTIImpl::getGatherScatterOpCost(
     unsigned Opcode, Type *DataTy, const Value *Ptr, bool VariableMask,
     Align Alignment, TTI::TargetCostKind CostKind, const Instruction *I) {
-  if (useNeonVector(DataTy))
+  if (useNeonVector(DataTy) || !isLegalMaskedGatherScatter(DataTy))
     return BaseT::getGatherScatterOpCost(Opcode, DataTy, Ptr, VariableMask,
                                          Alignment, CostKind, I);
   auto *VT = cast<VectorType>(DataTy);
   auto LT = getTypeLegalizationCost(DataTy);
   if (!LT.first.isValid())
+    return InstructionCost::getInvalid();
+
+  if (!LT.second.isVector() ||
+      !isElementTypeLegalForScalableVector(VT->getElementType()))
     return InstructionCost::getInvalid();
 
   // The code-generator is currently not able to handle scalable vectors
