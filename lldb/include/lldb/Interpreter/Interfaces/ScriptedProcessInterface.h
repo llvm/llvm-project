@@ -12,7 +12,6 @@
 #include "ScriptedInterface.h"
 #include "lldb/Core/StructuredDataImpl.h"
 #include "lldb/Target/MemoryRegionInfo.h"
-#include "lldb/Utility/UnimplementedError.h"
 
 #include "lldb/lldb-private.h"
 

@@ -23,8 +23,7 @@ public:
   CreatePluginObject(llvm::StringRef class_name, ExecutionContext &exe_ctx,
                      StructuredData::DictionarySP args_sp,
                      StructuredData::Generic *script_obj = nullptr) {
-    llvm_unreachable(
-        "Cannot create an instance of the ScriptedPlatformInterface!");
+    return {llvm::make_error<UnimplementedError>()};
   }
 
   virtual StructuredData::DictionarySP ListProcesses() { return {}; }
