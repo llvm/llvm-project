@@ -858,7 +858,8 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     if (Flag == PPCII::MO_TLSGD_FLAG || Flag == PPCII::MO_GOT_TLSGD_PCREL_FLAG)
       return MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSGD;
     if (MO.getTargetFlags() & PPCII::MO_TLSLD_FLAG) {
-      if (IsAIX && MO.isGlobal() && MO.getGlobal()->getName() == "_$TLSML")
+      if (IsAIX && MO.isGlobal() && MO.getGlobal()->hasName() &&
+          MO.getGlobal()->getName() == "_$TLSML")
         // FIXME: Due to the size limit of MachineOperand::SubReg_TargetFlags,
         // hacked this flag which should have been named MO_TLSLDM_FLAG: on AIX
         // the ML relocation type is only valid for a reference to a TOC symbol
