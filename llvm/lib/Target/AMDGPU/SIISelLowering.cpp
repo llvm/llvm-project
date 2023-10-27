@@ -3418,7 +3418,7 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
     if (!IsTailCall &&
         ((CLI.CB && CLI.CB->isMustTailCall()) || IsChainCallConv)) {
       report_fatal_error("failed to perform tail call elimination on a call "
-                         "site marked musttail or to llvm.amdgcn.cs.chain");
+                         "site marked musttail or on llvm.amdgcn.cs.chain");
     }
 
     bool TailCallOpt = MF.getTarget().Options.GuaranteedTailCallOpt;
@@ -3608,13 +3608,6 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   auto *TRI = static_cast<const SIRegisterInfo *>(Subtarget->getRegisterInfo());
 
-  if (IsChainCallConv) {
-    // Set EXEC right before the call.
-    MCRegister ExecReg = TRI->getExec();
-    Chain = DAG.getCopyToReg(Chain, DL, ExecReg, RequestedExec.Node, InGlue);
-    InGlue = Chain.getValue(1);
-  }
-
   std::vector<SDValue> Ops;
   Ops.push_back(Chain);
   Ops.push_back(Callee);
@@ -3632,6 +3625,10 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
     // this information must travel along with the operation for eventual
     // consumption by emitEpilogue.
     Ops.push_back(DAG.getTargetConstant(FPDiff, DL, MVT::i32));
+  }
+
+  if (IsChainCallConv) {
+    Ops.push_back(RequestedExec.Node);
   }
 
   // Add argument registers to the end of the list so that they are known live
@@ -3656,8 +3653,17 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
   // actual call instruction.
   if (IsTailCall) {
     MFI.setHasTailCall();
-    unsigned OPC = CallConv == CallingConv::AMDGPU_Gfx ?
-                   AMDGPUISD::TC_RETURN_GFX : AMDGPUISD::TC_RETURN;
+    unsigned OPC = AMDGPUISD::TC_RETURN;
+    switch (CallConv) {
+    case CallingConv::AMDGPU_Gfx:
+      OPC = AMDGPUISD::TC_RETURN_GFX;
+      break;
+    case CallingConv::AMDGPU_CS_Chain:
+    case CallingConv::AMDGPU_CS_ChainPreserve:
+      OPC = AMDGPUISD::TC_RETURN_CHAIN;
+      break;
+    }
+
     return DAG.getNode(OPC, DL, NodeTys, Ops);
   }
 

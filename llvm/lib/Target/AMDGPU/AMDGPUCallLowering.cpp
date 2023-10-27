@@ -957,13 +957,17 @@ getAssignFnsForCC(CallingConv::ID CC, const SITargetLowering &TLI) {
 }
 
 static unsigned getCallOpcode(const MachineFunction &CallerF, bool IsIndirect,
-                              bool IsTailCall, CallingConv::ID CC) {
+                              bool IsTailCall, bool isWave32,
+                              CallingConv::ID CC) {
   // For calls to amdgpu_cs_chain functions, the address is known to be uniform.
   assert((AMDGPU::isChainCC(CC) || !IsIndirect || !IsTailCall) &&
          "Indirect calls can't be tail calls, "
          "because the address can be divergent");
   if (!IsTailCall)
     return AMDGPU::G_SI_CALL;
+
+  if (AMDGPU::isChainCC(CC))
+    return isWave32 ? AMDGPU::SI_CS_CHAIN_TC_W32 : AMDGPU::SI_CS_CHAIN_TC_W64;
 
   return CC == CallingConv::AMDGPU_Gfx ? AMDGPU::SI_TCRETURN_GFX :
                                          AMDGPU::SI_TCRETURN;
@@ -1197,7 +1201,8 @@ bool AMDGPUCallLowering::lowerTailCall(
   if (!IsSibCall)
     CallSeqStart = MIRBuilder.buildInstr(AMDGPU::ADJCALLSTACKUP);
 
-  unsigned Opc = getCallOpcode(MF, Info.Callee.isReg(), true, CalleeCC);
+  unsigned Opc =
+      getCallOpcode(MF, Info.Callee.isReg(), true, ST.isWave32(), CalleeCC);
   auto MIB = MIRBuilder.buildInstrNoInsert(Opc);
   if (!addCallTargetOperands(MIB, MIRBuilder, Info))
     return false;
@@ -1206,8 +1211,27 @@ bool AMDGPUCallLowering::lowerTailCall(
   // be 0.
   MIB.addImm(0);
 
-  // Tell the call which registers are clobbered.
+  // If this is a chain call, we need to pass in the EXEC mask.
   const SIRegisterInfo *TRI = ST.getRegisterInfo();
+  if (AMDGPU::isChainCC(Info.CallConv)) {
+    ArgInfo ExecArg = Info.OrigArgs[1];
+    assert(ExecArg.Regs.size() == 1 && "Too many regs for EXEC");
+
+    if (!ExecArg.Ty->isIntegerTy(ST.getWavefrontSize()))
+      return false;
+
+    if (auto CI = dyn_cast<ConstantInt>(ExecArg.OrigValue)) {
+      MIB.addImm(CI->getSExtValue());
+    } else {
+      MIB.addReg(ExecArg.Regs[0]);
+      unsigned Idx = MIB->getNumOperands() - 1;
+      MIB->getOperand(Idx).setReg(constrainOperandRegClass(
+          MF, *TRI, MRI, *ST.getInstrInfo(), *ST.getRegBankInfo(), *MIB,
+          MIB->getDesc(), MIB->getOperand(Idx), Idx));
+    }
+  }
+
+  // Tell the call which registers are clobbered.
   const uint32_t *Mask = TRI->getCallPreservedMask(MF, CalleeCC);
   MIB.addRegMask(Mask);
 
@@ -1291,23 +1315,6 @@ bool AMDGPUCallLowering::lowerTailCall(
     // parameters so that when SP is reset, they will be in the correct
     // location.
     MIRBuilder.buildInstr(AMDGPU::ADJCALLSTACKDOWN).addImm(NumBytes).addImm(0);
-  }
-
-  // If this is a chain call, we need to set EXEC right before the call.
-  if (AMDGPU::isChainCC(Info.CallConv)) {
-    ArgInfo ExecArg = Info.OrigArgs[1];
-    assert(ExecArg.Regs.size() == 1 && "Too many regs for EXEC");
-
-    if (!ExecArg.Ty->isIntegerTy(ST.getWavefrontSize()))
-      return false;
-
-    unsigned MovOpc = ST.isWave32() ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64;
-    MCRegister Exec = TRI->getExec();
-    auto SetExec =
-        MIRBuilder.buildInstr(MovOpc).addDef(Exec).addReg(ExecArg.Regs[0]);
-    SetExec->getOperand(1).setReg(constrainOperandRegClass(
-        MF, *TRI, MRI, *ST.getInstrInfo(), *ST.getRegBankInfo(), *SetExec,
-        SetExec->getDesc(), SetExec->getOperand(1), 1));
   }
 
   // Now we can add the actual call instruction to the correct basic block.
@@ -1432,7 +1439,8 @@ bool AMDGPUCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
 
   // Create a temporarily-floating call instruction so we can add the implicit
   // uses of arg registers.
-  unsigned Opc = getCallOpcode(MF, Info.Callee.isReg(), false, Info.CallConv);
+  unsigned Opc = getCallOpcode(MF, Info.Callee.isReg(), false, ST.isWave32(),
+                               Info.CallConv);
 
   auto MIB = MIRBuilder.buildInstrNoInsert(Opc);
   MIB.addDef(TRI->getReturnAddressReg(MF));

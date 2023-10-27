@@ -7440,10 +7440,11 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     SDValue Callee = getValue(I.getOperand(0));
 
     // We only have 2 actual args: one for the SGPRs and one for the VGPRs.
+    // We'll also tack the value of the EXEC mask at the end.
     TargetLowering::ArgListTy Args;
-    Args.reserve(2);
+    Args.reserve(3);
 
-    for (unsigned Idx : {2, 3}) {
+    for (unsigned Idx : {2, 3, 1}) {
       TargetLowering::ArgListEntry Arg;
       Arg.Node = getValue(I.getOperand(Idx));
       Arg.Ty = I.getOperand(Idx)->getType();
@@ -7453,13 +7454,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
 
     assert(Args[0].IsInReg && "SGPR args should be marked inreg");
     assert(!Args[1].IsInReg && "VGPR args should not be marked inreg");
-
-    // We're also going to pass the EXEC mask as the last argument.
-    TargetLowering::ArgListEntry Arg;
-    Arg.Node = getValue(I.getOperand(1));
-    Arg.Ty = I.getOperand(1)->getType();
-    Arg.IsInReg = true;
-    Args.push_back(Arg);
+    Args[2].IsInReg = true; // EXEC should be inreg
 
     TargetLowering::CallLoweringInfo CLI(DAG);
     CLI.setDebugLoc(getCurSDLoc())
