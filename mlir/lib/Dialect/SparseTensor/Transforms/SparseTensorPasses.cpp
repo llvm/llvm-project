@@ -22,6 +22,7 @@
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 namespace mlir {
+#define GEN_PASS_DEF_SPARSEREINTERPRETMAP
 #define GEN_PASS_DEF_PRESPARSIFICATIONREWRITE
 #define GEN_PASS_DEF_SPARSIFICATIONPASS
 #define GEN_PASS_DEF_POSTSPARSIFICATIONREWRITE
@@ -44,9 +45,21 @@ namespace {
 // Passes implementation.
 //===----------------------------------------------------------------------===//
 
+struct SparseReinterpretMap
+    : public impl::SparseReinterpretMapBase<SparseReinterpretMap> {
+  SparseReinterpretMap() = default;
+  SparseReinterpretMap(const SparseReinterpretMap &pass) = default;
+
+  void runOnOperation() override {
+    auto *ctx = &getContext();
+    RewritePatternSet patterns(ctx);
+    populateSparseReinterpretMap(patterns);
+    (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
+  }
+};
+
 struct PreSparsificationRewritePass
     : public impl::PreSparsificationRewriteBase<PreSparsificationRewritePass> {
-
   PreSparsificationRewritePass() = default;
   PreSparsificationRewritePass(const PreSparsificationRewritePass &pass) =
       default;
@@ -61,7 +74,6 @@ struct PreSparsificationRewritePass
 
 struct SparsificationPass
     : public impl::SparsificationPassBase<SparsificationPass> {
-
   SparsificationPass() = default;
   SparsificationPass(const SparsificationPass &pass) = default;
   SparsificationPass(const SparsificationOptions &options) {
@@ -108,7 +120,6 @@ struct StageSparseOperationsPass
 struct PostSparsificationRewritePass
     : public impl::PostSparsificationRewriteBase<
           PostSparsificationRewritePass> {
-
   PostSparsificationRewritePass() = default;
   PostSparsificationRewritePass(const PostSparsificationRewritePass &pass) =
       default;
@@ -129,7 +140,6 @@ struct PostSparsificationRewritePass
 
 struct SparseTensorConversionPass
     : public impl::SparseTensorConversionPassBase<SparseTensorConversionPass> {
-
   SparseTensorConversionPass() = default;
   SparseTensorConversionPass(const SparseTensorConversionPass &pass) = default;
 
@@ -200,7 +210,6 @@ struct SparseTensorConversionPass
 
 struct SparseTensorCodegenPass
     : public impl::SparseTensorCodegenBase<SparseTensorCodegenPass> {
-
   SparseTensorCodegenPass() = default;
   SparseTensorCodegenPass(const SparseTensorCodegenPass &pass) = default;
   SparseTensorCodegenPass(bool createDeallocs, bool enableInit) {
@@ -266,7 +275,6 @@ struct SparseTensorCodegenPass
 
 struct SparseBufferRewritePass
     : public impl::SparseBufferRewriteBase<SparseBufferRewritePass> {
-
   SparseBufferRewritePass() = default;
   SparseBufferRewritePass(const SparseBufferRewritePass &pass) = default;
   SparseBufferRewritePass(bool enableInit) {
@@ -283,7 +291,6 @@ struct SparseBufferRewritePass
 
 struct SparseVectorizationPass
     : public impl::SparseVectorizationBase<SparseVectorizationPass> {
-
   SparseVectorizationPass() = default;
   SparseVectorizationPass(const SparseVectorizationPass &pass) = default;
   SparseVectorizationPass(unsigned vl, bool vla, bool sidx32) {
@@ -306,7 +313,6 @@ struct SparseVectorizationPass
 
 struct SparseGPUCodegenPass
     : public impl::SparseGPUCodegenBase<SparseGPUCodegenPass> {
-
   SparseGPUCodegenPass() = default;
   SparseGPUCodegenPass(const SparseGPUCodegenPass &pass) = default;
   SparseGPUCodegenPass(unsigned nT) { numThreads = nT; }
@@ -321,7 +327,6 @@ struct SparseGPUCodegenPass
 
 struct StorageSpecifierToLLVMPass
     : public impl::StorageSpecifierToLLVMBase<StorageSpecifierToLLVMPass> {
-
   StorageSpecifierToLLVMPass() = default;
 
   void runOnOperation() override {
@@ -362,6 +367,10 @@ struct StorageSpecifierToLLVMPass
 //===----------------------------------------------------------------------===//
 // Pass creation methods.
 //===----------------------------------------------------------------------===//
+
+std::unique_ptr<Pass> mlir::createSparseReinterpretMapPass() {
+  return std::make_unique<SparseReinterpretMap>();
+}
 
 std::unique_ptr<Pass> mlir::createPreSparsificationRewritePass() {
   return std::make_unique<PreSparsificationRewritePass>();
