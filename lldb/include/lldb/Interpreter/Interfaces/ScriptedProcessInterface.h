@@ -12,6 +12,7 @@
 #include "ScriptedInterface.h"
 #include "lldb/Core/StructuredDataImpl.h"
 #include "lldb/Target/MemoryRegionInfo.h"
+#include "lldb/Utility/UnimplementedError.h"
 
 #include "lldb/lldb-private.h"
 
@@ -25,8 +26,7 @@ public:
   CreatePluginObject(llvm::StringRef class_name, ExecutionContext &exe_ctx,
                      StructuredData::DictionarySP args_sp,
                      StructuredData::Generic *script_obj = nullptr) {
-    llvm_unreachable(
-        "Cannot create an instance of the ScriptedProcessInterface!");
+    return {llvm::make_error<UnimplementedError>()};
   }
 
   virtual StructuredData::DictionarySP GetCapabilities() { return {}; }
