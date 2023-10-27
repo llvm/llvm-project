@@ -270,13 +270,6 @@ static Value genValuesCall(OpBuilder &builder, Location loc, ShapedType tp,
       .getResult(0);
 }
 
-/// Generates a call to release/delete a `SparseTensorCOO`.
-static void genDelCOOCall(OpBuilder &builder, Location loc, Type elemTp,
-                          Value coo) {
-  SmallString<21> name{"delSparseTensorCOO", primaryTypeFunctionSuffix(elemTp)};
-  createFuncCall(builder, loc, name, {}, coo, EmitCInterface::Off);
-}
-
 //===----------------------------------------------------------------------===//
 // Conversion rules.
 //===----------------------------------------------------------------------===//
