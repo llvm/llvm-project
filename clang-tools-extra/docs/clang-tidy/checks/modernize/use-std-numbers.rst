@@ -9,6 +9,7 @@ Does not match the use of variables with that value, and instead,
 offers a replacement at the definition of those variables.
 
 .. code-block:: c++
+
     double sqrt(double);
     double log(double);
     void sink(auto&&) {}
