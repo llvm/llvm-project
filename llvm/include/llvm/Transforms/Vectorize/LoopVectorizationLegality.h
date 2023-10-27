@@ -382,7 +382,7 @@ public:
 
   /// Returns true if there is at least one function call in the loop which
   /// has a vectorized variant available.
-  bool hasVectorVariants() const { return VecVariantsFound; }
+  bool hasVectorCallVariants() const { return VecCallVariantsFound; }
 
   unsigned getNumStores() const { return LAI->getNumStores(); }
   unsigned getNumLoads() const { return LAI->getNumLoads(); }
@@ -547,7 +547,7 @@ private:
   /// vectorized variant, record that fact so that LoopVectorize can
   /// (potentially) make a better decision on the maximum VF and enable
   /// the use of those function variants.
-  bool VecVariantsFound = false;
+  bool VecCallVariantsFound = false;
 };
 
 } // namespace llvm
