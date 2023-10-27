@@ -4071,21 +4071,18 @@ OpenMPIRBuilder::createTargetInit(const LocationDescription &Loc, bool IsSPMD) {
   uint32_t SrcLocStrSize;
   Constant *SrcLocStr = getOrCreateSrcLocStr(Loc, SrcLocStrSize);
   Constant *Ident = getOrCreateIdent(SrcLocStr, SrcLocStrSize);
-  Constant *IsSPMDVal = ConstantInt::getSigned(
-      Int8, IsSPMD ? OMP_TGT_EXEC_MODE_SPMD : OMP_TGT_EXEC_MODE_GENERIC);
-  Constant *UseGenericStateMachineVal = ConstantInt::getSigned(Int8, !IsSPMD);
-  Constant *MayUseNestedParallelismVal = ConstantInt::getSigned(Int8, true);
-  Constant *DebugIndentionLevelVal = ConstantInt::getSigned(Int16, 0);
-
-  Function *Kernel = Builder.GetInsertBlock()->getParent();
-  auto [MinThreadsVal, MaxThreadsVal] = readThreadBoundsForKernel(*Kernel);
-  auto [MinTeamsVal, MaxTeamsVal] = readTeamBoundsForKernel(*Kernel);
-  Constant *MinThreads = ConstantInt::getSigned(Int32, MinThreadsVal);
-  Constant *MaxThreads = ConstantInt::getSigned(Int32, MaxThreadsVal);
-  Constant *MinTeams = ConstantInt::getSigned(Int32, MinTeamsVal);
-  Constant *MaxTeams = ConstantInt::getSigned(Int32, MaxTeamsVal);
+  ConstantInt *IsSPMDVal = ConstantInt::getSigned(
+      IntegerType::getInt8Ty(Int8->getContext()),
+      IsSPMD ? OMP_TGT_EXEC_MODE_SPMD : OMP_TGT_EXEC_MODE_GENERIC);
+  ConstantInt *UseGenericStateMachineVal = ConstantInt::getSigned(
+      IntegerType::getInt8Ty(Int8->getContext()), !IsSPMD);
+  ConstantInt *MayUseNestedParallelismVal =
+      ConstantInt::getSigned(IntegerType::getInt8Ty(Int8->getContext()), true);
+  ConstantInt *DebugIndentionLevelVal =
+      ConstantInt::getSigned(IntegerType::getInt16Ty(Int8->getContext()), 0);
 
   // We need to strip the debug prefix to get the correct kernel name.
+  Function *Kernel = Builder.GetInsertBlock()->getParent();
   StringRef KernelName = Kernel->getName();
   const std::string DebugPrefix = "_debug__";
   if (KernelName.ends_with(DebugPrefix))
@@ -4116,10 +4113,6 @@ OpenMPIRBuilder::createTargetInit(const LocationDescription &Loc, bool IsSPMD) {
                                     UseGenericStateMachineVal,
                                     MayUseNestedParallelismVal,
                                     IsSPMDVal,
-                                    MinThreads,
-                                    MaxThreads,
-                                    MinTeams,
-                                    MaxTeams,
                                 });
   Constant *KernelEnvironmentInitializer = ConstantStruct::get(
       KernelEnvironment, {
