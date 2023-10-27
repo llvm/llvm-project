@@ -292,6 +292,11 @@ enum {
   /// - Opcode - The new opcode to use
   GIR_BuildMI,
 
+  /// Builds a constant and stores its result in a TempReg.
+  /// - TempRegID - Temp Register to define.
+  /// - Imm - The immediate to add
+  GIR_BuildConstant,
+
   /// Copy an operand to the specified instruction
   /// - NewInsnID - Instruction ID to modify
   /// - OldInsnID - Instruction ID to copy from

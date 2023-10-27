@@ -39,7 +39,11 @@ template <> struct ilist_alloc_traits<Instruction> {
 };
 
 class Instruction : public User,
-                    public ilist_node_with_parent<Instruction, BasicBlock> {
+                    public ilist_node_with_parent<Instruction, BasicBlock,
+                                                  ilist_iterator_bits<true>> {
+public:
+  using InstListType = SymbolTableList<Instruction, ilist_iterator_bits<true>>;
+private:
   BasicBlock *Parent;
   DebugLoc DbgLoc;                         // 'dbg' Metadata cache.
 
@@ -118,12 +122,12 @@ public:
   /// This method unlinks 'this' from the containing basic block and deletes it.
   ///
   /// \returns an iterator pointing to the element after the erased one
-  SymbolTableList<Instruction>::iterator eraseFromParent();
+  InstListType::iterator eraseFromParent();
 
   /// Insert an unlinked instruction into a basic block immediately before
   /// the specified instruction.
   void insertBefore(Instruction *InsertPos);
-  void insertBefore(SymbolTableList<Instruction>::iterator InsertPos) {
+  void insertBefore(InstListType::iterator InsertPos) {
     insertBefore(&*InsertPos);
   }
 
@@ -133,11 +137,10 @@ public:
 
   /// Inserts an unlinked instruction into \p ParentBB at position \p It and
   /// returns the iterator of the inserted instruction.
-  SymbolTableList<Instruction>::iterator
-  insertInto(BasicBlock *ParentBB, SymbolTableList<Instruction>::iterator It);
+  InstListType::iterator insertInto(BasicBlock *ParentBB,
+                                    InstListType::iterator It);
 
-  void insertBefore(BasicBlock &BB,
-                    SymbolTableList<Instruction>::iterator InsertPos) {
+  void insertBefore(BasicBlock &BB, InstListType::iterator InsertPos) {
     insertInto(&BB, InsertPos);
   }
 
@@ -157,10 +160,10 @@ public:
   /// Unlink this instruction and insert into BB before I.
   ///
   /// \pre I is a valid iterator into BB.
-  void moveBefore(BasicBlock &BB, SymbolTableList<Instruction>::iterator I);
+  void moveBefore(BasicBlock &BB, InstListType::iterator I);
 
   /// (See other overload for moveBeforePreserving).
-  void moveBeforePreserving(BasicBlock &BB, SymbolTableList<Instruction>::iterator I) {
+  void moveBeforePreserving(BasicBlock &BB, InstListType::iterator I) {
     moveBefore(BB, I);
   }
 
@@ -902,7 +905,7 @@ public:
   };
 
 private:
-  friend class SymbolTableListTraits<Instruction>;
+  friend class SymbolTableListTraits<Instruction, ilist_iterator_bits<true>>;
   friend class BasicBlock; // For renumbering.
 
   // Shadow Value::setValueSubclassData with a private forwarding method so that

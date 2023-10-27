@@ -17,7 +17,7 @@ namespace clang {
 namespace driver {
 namespace tools {
 
-/// solaris -- Directly call Solaris assembler and linker
+/// Directly call Solaris assembler and linker
 namespace solaris {
 class LLVM_LIBRARY_VISIBILITY Assembler : public gnutools::Assembler {
 public:

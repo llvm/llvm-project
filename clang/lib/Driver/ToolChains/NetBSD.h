@@ -17,7 +17,7 @@ namespace clang {
 namespace driver {
 namespace tools {
 
-/// netbsd -- Directly call GNU Binutils assembler and linker
+/// Directly call GNU Binutils assembler and linker
 namespace netbsd {
 class LLVM_LIBRARY_VISIBILITY Assembler : public Tool {
 public:

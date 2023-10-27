@@ -130,15 +130,15 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
       }]
     >,
     InterfaceMethod<[{
-        Return the "init" operands that are used as initialization values for
-        the region "iter_args" of this loop.
+        Return the mutable "init" operands that are used as initialization
+        values for the region "iter_args" of this loop.
       }],
-      /*retTy=*/"::mlir::OperandRange",
-      /*methodName=*/"getInits",
+      /*retTy=*/"::llvm::MutableArrayRef<::mlir::OpOperand>",
+      /*methodName=*/"getInitsMutable",
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        return ::mlir::OperandRange($_op->operand_end(), $_op->operand_end());
+        return {};
       }]
     >,
     InterfaceMethod<[{
@@ -155,14 +155,15 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
       }]
     >,
     InterfaceMethod<[{
-        Return the values that are yielded to the next iteration.
+        Return the mutable operand range of values that are yielded to the next
+        iteration by the loop terminator.
       }],
-      /*retTy=*/"::mlir::ValueRange",
-      /*methodName=*/"getYieldedValues",
+      /*retTy=*/"::llvm::MutableArrayRef<::mlir::OpOperand>",
+      /*methodName=*/"getYieldedValuesMutable",
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        return ::mlir::ValueRange();
+        return {};
       }]
     >,
     InterfaceMethod<[{
@@ -215,6 +216,29 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
             return SmallVector<Value>(newBBArgs);
           });
     }
+
+    /// Return the values that are yielded to the next iteration.
+    ::mlir::ValueRange getYieldedValues() {
+      auto mutableValues = $_op.getYieldedValuesMutable();
+      if (mutableValues.empty())
+        return {};
+      Operation *yieldOp = mutableValues.begin()->getOwner();
+      unsigned firstOperandIndex = mutableValues.begin()->getOperandNumber();
+      return OperandRange(
+          yieldOp->operand_begin() + firstOperandIndex,
+          yieldOp->operand_begin() + firstOperandIndex + mutableValues.size());
+    }
+
+    /// Return the "init" operands that are used as initialization values for
+    /// the region "iter_args" of this loop.
+    ::mlir::OperandRange getInits() {
+      auto initsMutable = $_op.getInitsMutable();
+      if (initsMutable.empty())
+        return ::mlir::OperandRange($_op->operand_end(), $_op->operand_end());
+      unsigned firstOperandIndex = initsMutable.begin()->getOperandNumber();
+      return OperandRange(
+          $_op->operand_begin() + firstOperandIndex,
+          $_op->operand_begin() + firstOperandIndex + initsMutable.size());    }
   }];
 
   let verifyWithRegions = 1;

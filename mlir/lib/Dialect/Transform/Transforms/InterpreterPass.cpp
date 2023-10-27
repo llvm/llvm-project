@@ -19,33 +19,69 @@ namespace transform {
 } // namespace transform
 } // namespace mlir
 
+/// Returns the payload operation to be used as payload root:
+///   - the operation nested under `passRoot` that has the given tag attribute,
+///     must be unique;
+///   - the `passRoot` itself if the tag is empty.
+static Operation *findPayloadRoot(Operation *passRoot, StringRef tag) {
+  // Fast return.
+  if (tag.empty())
+    return passRoot;
+
+  // Walk to do a lookup.
+  Operation *target = nullptr;
+  auto tagAttrName = StringAttr::get(
+      passRoot->getContext(), transform::TransformDialect::kTargetTagAttrName);
+  WalkResult walkResult = passRoot->walk([&](Operation *op) {
+    auto attr = op->getAttrOfType<StringAttr>(tagAttrName);
+    if (!attr || attr.getValue() != tag)
+      return WalkResult::advance();
+
+    if (!target) {
+      target = op;
+      return WalkResult::advance();
+    }
+
+    InFlightDiagnostic diag = op->emitError()
+                              << "repeated operation with the target tag '"
+                              << tag << "'";
+    diag.attachNote(target->getLoc()) << "previously seen operation";
+    return WalkResult::interrupt();
+  });
+
+  return walkResult.wasInterrupted() ? nullptr : target;
+}
+
 namespace {
 class InterpreterPass
     : public transform::impl::InterpreterPassBase<InterpreterPass> {
 public:
   using Base::Base;
 
-  LogicalResult initialize(MLIRContext *context) override {
-    // TODO: investigate using a resource blob if some ownership mode allows it.
-    transformModule = transform::detail::getPreloadedTransformModule(context);
-    return success();
-  }
-
   void runOnOperation() override {
-    if (failed(transform::applyTransformNamedSequence(
-            getOperation(), transformModule,
-            options.enableExpensiveChecks(true), entryPoint)))
+    MLIRContext *context = &getContext();
+    ModuleOp transformModule =
+        transform::detail::getPreloadedTransformModule(context);
+    Operation *payloadRoot =
+        findPayloadRoot(getOperation(), debugPayloadRootTag);
+    Operation *transformEntryPoint = transform::detail::findTransformEntryPoint(
+        getOperation(), transformModule, entryPoint);
+    if (!transformEntryPoint) {
+      getOperation()->emitError()
+          << "could not find transform entry point: " << entryPoint
+          << " in either payload or transform module";
       return signalPassFailure();
+    }
+
+    if (failed(transform::applyTransformNamedSequence(
+            payloadRoot, transformEntryPoint, transformModule,
+            options.enableExpensiveChecks(!disableExpensiveChecks)))) {
+      return signalPassFailure();
+    }
   }
 
 private:
   /// Transform interpreter options.
   transform::TransformOptions options;
-
-  /// The separate transform module to be used for transformations, shared
-  /// across multiple instances of the pass if it is applied in parallel to
-  /// avoid potentially expensive cloning. MUST NOT be modified after the pass
-  /// has been initialized.
-  ModuleOp transformModule;
 };
 } // namespace

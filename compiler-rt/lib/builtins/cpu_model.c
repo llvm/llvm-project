@@ -79,6 +79,7 @@ enum ProcessorTypes {
   ZHAOXIN_FAM7H,
   INTEL_SIERRAFOREST,
   INTEL_GRANDRIDGE,
+  INTEL_CLEARWATERFOREST,
   CPU_TYPE_MAX
 };
 
@@ -116,6 +117,7 @@ enum ProcessorSubtypes {
   INTEL_COREI7_GRANITERAPIDS_D,
   INTEL_COREI7_ARROWLAKE,
   INTEL_COREI7_ARROWLAKE_S,
+  INTEL_COREI7_PANTHERLAKE,
   CPU_SUBTYPE_MAX
 };
 
@@ -492,6 +494,13 @@ getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
       *Subtype = INTEL_COREI7_ARROWLAKE_S;
       break;
 
+    // Pantherlake:
+    case 0xcc:
+      CPU = "pantherlake";
+      *Type = INTEL_COREI7;
+      *Subtype = INTEL_COREI7_PANTHERLAKE;
+      break;
+
     // Icelake Xeon:
     case 0x6a:
     case 0x6c:
@@ -570,6 +579,13 @@ getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
     case 0xb6:
       CPU = "grandridge";
       *Type = INTEL_GRANDRIDGE;
+      break;
+
+    // Clearwaterforest:
+    case 0xdd:
+      CPU = "clearwaterforest";
+      *Type = INTEL_COREI7;
+      *Subtype = INTEL_CLEARWATERFOREST;
       break;
 
     case 0x57:

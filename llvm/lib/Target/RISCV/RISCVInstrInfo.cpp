@@ -300,14 +300,23 @@ void RISCVInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                  MCRegister SrcReg, bool KillSrc) const {
   const TargetRegisterInfo *TRI = STI.getRegisterInfo();
 
-  if (RISCV::GPRPF64RegClass.contains(DstReg))
-    DstReg = TRI->getSubReg(DstReg, RISCV::sub_32);
-  if (RISCV::GPRPF64RegClass.contains(SrcReg))
-    SrcReg = TRI->getSubReg(SrcReg, RISCV::sub_32);
-
   if (RISCV::GPRRegClass.contains(DstReg, SrcReg)) {
     BuildMI(MBB, MBBI, DL, get(RISCV::ADDI), DstReg)
         .addReg(SrcReg, getKillRegState(KillSrc))
+        .addImm(0);
+    return;
+  }
+
+  if (RISCV::GPRPF64RegClass.contains(DstReg, SrcReg)) {
+    // Emit an ADDI for both parts of GPRPF64.
+    BuildMI(MBB, MBBI, DL, get(RISCV::ADDI),
+            TRI->getSubReg(DstReg, RISCV::sub_32))
+        .addReg(TRI->getSubReg(SrcReg, RISCV::sub_32), getKillRegState(KillSrc))
+        .addImm(0);
+    BuildMI(MBB, MBBI, DL, get(RISCV::ADDI),
+            TRI->getSubReg(DstReg, RISCV::sub_32_hi))
+        .addReg(TRI->getSubReg(SrcReg, RISCV::sub_32_hi),
+                getKillRegState(KillSrc))
         .addImm(0);
     return;
   }
@@ -689,8 +698,7 @@ MachineInstr *RISCVInstrInfo::foldMemoryOperandImpl(
   if (MF.getDataLayout().isBigEndian())
     return nullptr;
 
-  // Fold load from stack followed by sext.w into lw.
-  // TODO: Fold with sext.b, sext.h, zext.b, zext.h, zext.w?
+  // Fold load from stack followed by sext.b/sext.h/sext.w/zext.b/zext.h/zext.w.
   if (Ops.size() != 1 || Ops[0] != 1)
    return nullptr;
 
@@ -2684,6 +2692,7 @@ MachineInstr *RISCVInstrInfo::convertToThreeAddress(MachineInstr &MI,
               .add(MI.getOperand(3))
               .add(MI.getOperand(4))
               .add(MI.getOperand(5));
+    break;
   }
   }
   MIB.copyImplicitOps(MI);

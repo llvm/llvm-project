@@ -843,6 +843,11 @@ struct CUDADeviceTy : public GenericDeviceTy {
     return Plugin::success();
   }
 
+  virtual bool shouldSetupDeviceMemoryPool() const override {
+    /// We use the CUDA malloc for now.
+    return false;
+  }
+
   /// Getters and setters for stack and heap sizes.
   Error getDeviceStackSize(uint64_t &Value) override {
     return getCtxLimit(CU_LIMIT_STACK_SIZE, Value);

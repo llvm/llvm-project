@@ -98,7 +98,9 @@ void Value::AppendBytes(const void *bytes, int len) {
 }
 
 void Value::Dump(Stream *strm) {
-  m_value.GetValue(strm, true);
+  if (!strm)
+    return;
+  m_value.GetValue(*strm, true);
   strm->Printf(", value_type = %s, context = %p, context_type = %s",
                Value::GetValueTypeAsCString(m_value_type), m_context,
                Value::GetContextTypeAsCString(m_context_type));

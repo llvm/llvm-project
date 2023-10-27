@@ -1,4 +1,4 @@
-// RUN: mlir-opt  -test-transform-dialect-interpreter -canonicalize --split-input-file --allow-unregistered-dialect %s | FileCheck %s
+// RUN: mlir-opt  -transform-interpreter -canonicalize --split-input-file --allow-unregistered-dialect %s | FileCheck %s
 
 // CHECK-LABEL: func @hoist_vector_transfer_pairs(
 //  CHECK-SAME:   %[[MEMREF0:[a-zA-Z0-9]*]]: memref<?x?xf32>,
@@ -74,12 +74,14 @@ func.func @hoist_vector_transfer_pairs(
   return
 }
 
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["func.func"]} in %arg1
-    : (!transform.any_op) -> !transform.any_op
-  transform.structured.hoist_redundant_vector_transfers %0
-    : (!transform.any_op) -> !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["func.func"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    transform.structured.hoist_redundant_vector_transfers %0
+      : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
 }
 
 // -----
@@ -163,12 +165,14 @@ func.func @hoist_vector_transfer_pairs_disjoint(
   return
 }
 
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["func.func"]} in %arg1
-    : (!transform.any_op) -> !transform.any_op
-  transform.structured.hoist_redundant_vector_transfers %0
-    : (!transform.any_op) -> !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["func.func"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    transform.structured.hoist_redundant_vector_transfers %0
+      : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
 }
 
 // -----
@@ -208,12 +212,14 @@ func.func @hoist_vector_transfer_pairs_in_affine_loops(%memref0: memref<64x64xi3
   return
 }
 
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["func.func"]} in %arg1
-    : (!transform.any_op) -> !transform.any_op
-  transform.structured.hoist_redundant_vector_transfers %0
-    : (!transform.any_op) -> !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["func.func"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    transform.structured.hoist_redundant_vector_transfers %0
+      : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
 }
 
 // -----
@@ -297,12 +303,14 @@ func.func @hoist_vector_transfer_pairs_tensor(
         tensor<?x?xf32>, tensor<?x?xf32>
 }
 
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["func.func"]} in %arg1
-    : (!transform.any_op) -> !transform.any_op
-  transform.structured.hoist_redundant_tensor_subsets %0
-    : (!transform.any_op) -> ()
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["func.func"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    transform.structured.hoist_redundant_tensor_subsets %0
+      : (!transform.any_op) -> ()
+    transform.yield
+  }
 }
 
 // -----
@@ -392,12 +400,14 @@ func.func @hoist_vector_transfer_pairs_disjoint_tensor(
   return %0#0,  %0#1, %0#2, %0#3 : tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>
 }
 
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["func.func"]} in %arg1
-    : (!transform.any_op) -> !transform.any_op
-  transform.structured.hoist_redundant_tensor_subsets %0
-    : (!transform.any_op) -> ()
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["func.func"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    transform.structured.hoist_redundant_tensor_subsets %0
+      : (!transform.any_op) -> ()
+    transform.yield
+  }
 }
 
 // -----
@@ -509,12 +519,14 @@ func.func @hoist_vector_transfer_pairs_tensor_and_slices(
   return %0#0, %0#1, %0#2 : tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>
 }
 
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["func.func"]} in %arg1
-    : (!transform.any_op) -> !transform.any_op
-  transform.structured.hoist_redundant_tensor_subsets %0
-    : (!transform.any_op) -> ()
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["func.func"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    transform.structured.hoist_redundant_tensor_subsets %0
+      : (!transform.any_op) -> ()
+    transform.yield
+  }
 }
 
 // -----
@@ -556,12 +568,14 @@ func.func @hoist_vector_transfer_write_pairs_disjoint_tensor(
   return %1 : tensor<?x?xf32>
 }
 
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["func.func"]} in %arg1
-    : (!transform.any_op) -> !transform.any_op
-  transform.structured.hoist_redundant_tensor_subsets %0
-    : (!transform.any_op) -> ()
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["func.func"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    transform.structured.hoist_redundant_tensor_subsets %0
+      : (!transform.any_op) -> ()
+    transform.yield
+  }
 }
 
 // -----
@@ -669,12 +683,14 @@ func.func @hoist_vector_transfer_pairs_tensor_and_slices_static_large_tensor(
   return %0#0, %0#1, %0#2 : tensor<100x100xf32>, tensor<200x200xf32>, tensor<300x300xf32>
 }
 
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["func.func"]} in %arg1
-    : (!transform.any_op) -> !transform.any_op
-  transform.structured.hoist_redundant_tensor_subsets %0
-    : (!transform.any_op) -> ()
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["func.func"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    transform.structured.hoist_redundant_tensor_subsets %0
+      : (!transform.any_op) -> ()
+    transform.yield
+  }
 }
 
 // -----
@@ -715,12 +731,14 @@ func.func @hoist_vector_transfer_read() {
   return
 }
 
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["func.func"]} in %arg1
-    : (!transform.any_op) -> !transform.any_op
-  transform.structured.hoist_redundant_vector_transfers %0
-    : (!transform.any_op) -> !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["func.func"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    transform.structured.hoist_redundant_vector_transfers %0
+      : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
 }
 
 // -----
@@ -749,12 +767,14 @@ func.func @non_matching_transfers(%m: memref<6x1x7x32xf32>) {
   return
 }
 
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["func.func"]} in %arg1
-    : (!transform.any_op) -> !transform.any_op
-  transform.structured.hoist_redundant_vector_transfers %0
-    : (!transform.any_op) -> !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["func.func"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    transform.structured.hoist_redundant_vector_transfers %0
+      : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
 }
 
 // -----
@@ -786,12 +806,14 @@ func.func @no_hoisting_collapse_shape(%in_0: memref<1x20x1xi32>, %1: memref<9x1x
   return
 }
 
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["func.func"]} in %arg1
-    : (!transform.any_op) -> !transform.any_op
-  transform.structured.hoist_redundant_vector_transfers %0
-    : (!transform.any_op) -> !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["func.func"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    transform.structured.hoist_redundant_vector_transfers %0
+      : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
 }
 
 // -----
@@ -820,12 +842,14 @@ func.func @no_hoisting_collapse_shape_2(%vec: vector<1x12x1xi32>) {
   return
 }
 
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["func.func"]} in %arg1
-    : (!transform.any_op) -> !transform.any_op
-  transform.structured.hoist_redundant_vector_transfers %0
-    : (!transform.any_op) -> !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["func.func"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    transform.structured.hoist_redundant_vector_transfers %0
+      : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
 }
 
 // -----
@@ -865,12 +889,14 @@ func.func @no_hoisting_write_to_memref(%rhs: i32, %arg1: vector<1xi32>) {
   return
 }
 
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["func.func"]} in %arg1
-    : (!transform.any_op) -> !transform.any_op
-  transform.structured.hoist_redundant_vector_transfers %0
-    : (!transform.any_op) -> !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["func.func"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    transform.structured.hoist_redundant_vector_transfers %0
+      : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
 }
 
 // -----
@@ -919,12 +945,14 @@ func.func @hoist_vector_transfer_pairs_disjoint_dynamic(
   return
 }
 
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["func.func"]} in %arg1
-    : (!transform.any_op) -> !transform.any_op
-  transform.structured.hoist_redundant_vector_transfers %0
-    : (!transform.any_op) -> !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["func.func"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    transform.structured.hoist_redundant_vector_transfers %0
+      : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
 }
 
 // -----
@@ -955,12 +983,14 @@ func.func @hoist_vector_transfer_pairs_overlapping_dynamic(
   return
 }
 
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["func.func"]} in %arg1
-    : (!transform.any_op) -> !transform.any_op
-  transform.structured.hoist_redundant_vector_transfers %0
-    : (!transform.any_op) -> !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["func.func"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    transform.structured.hoist_redundant_vector_transfers %0
+      : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
 }
 
 // -----
@@ -997,10 +1027,12 @@ func.func @hoist_vector_transfer_pairs_disjoint_dynamic(
   return
 }
 
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["func.func"]} in %arg1
-    : (!transform.any_op) -> !transform.any_op
-  transform.structured.hoist_redundant_vector_transfers %0
-    : (!transform.any_op) -> !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["func.func"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    transform.structured.hoist_redundant_vector_transfers %0
+      : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
 }

@@ -1469,9 +1469,10 @@ void AsmPrinter::emitStackUsage(const MachineFunction &MF) {
     }
   }
 
-  *StackUsageStream << MF.getFunction().getParent()->getName();
   if (const DISubprogram *DSP = MF.getFunction().getSubprogram())
-    *StackUsageStream << ':' << DSP->getLine();
+    *StackUsageStream << DSP->getFilename() << ':' << DSP->getLine();
+  else
+    *StackUsageStream << MF.getFunction().getParent()->getName();
 
   *StackUsageStream << ':' << MF.getName() << '\t' << StackSize << '\t';
   if (FrameInfo.hasVarSizedObjects())
@@ -1524,7 +1525,7 @@ void AsmPrinter::emitPCSections(const MachineFunction &MF) {
         const size_t OptStart = SecWithOpt.find('!'); // likely npos
         const StringRef Sec = SecWithOpt.substr(0, OptStart);
         const StringRef Opts = SecWithOpt.substr(OptStart); // likely empty
-        ConstULEB128 = Opts.find('C') != StringRef::npos;
+        ConstULEB128 = Opts.contains('C');
 #ifndef NDEBUG
         for (char O : Opts)
           assert((O == '!' || O == 'C') && "Invalid !pcsections options");

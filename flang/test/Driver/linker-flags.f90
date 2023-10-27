@@ -2,15 +2,16 @@
 ! invocation. These libraries are added on top of other standard runtime
 ! libraries that the Clang driver will include.
 
-! RUN: %flang -### -target ppc64le-linux-gnu %S/Inputs/hello.f90 2>&1 | FileCheck %s --check-prefixes=CHECK,GNU
-! RUN: %flang -### -target aarch64-apple-darwin %S/Inputs/hello.f90 2>&1 | FileCheck %s --check-prefixes=CHECK,DARWIN
-! RUN: %flang -### -target x86_64-windows-gnu %S/Inputs/hello.f90 2>&1 | FileCheck %s --check-prefixes=CHECK,MINGW
+! RUN: %flang -### --target=ppc64le-linux-gnu %S/Inputs/hello.f90 2>&1 | FileCheck %s --check-prefixes=CHECK,UNIX
+! RUN: %flang -### --target=aarch64-apple-darwin %S/Inputs/hello.f90 2>&1 | FileCheck %s --check-prefixes=CHECK,DARWIN
+! RUN: %flang -### --target=sparc-sun-solaris2.11 %S/Inputs/hello.f90 2>&1 | FileCheck %s --check-prefixes=CHECK,UNIX
+! RUN: %flang -### --target=x86_64-windows-gnu %S/Inputs/hello.f90 2>&1 | FileCheck %s --check-prefixes=CHECK,MINGW
 
 ! NOTE: Clang's driver library, clangDriver, usually adds 'libcmt' and
 !       'oldnames' on Windows, but they are not needed when compiling
 !       Fortran code and they might bring in additional dependencies.
 !       Make sure they're not added.
-! RUN: %flang -### -target aarch64-windows-msvc -fuse-ld= %S/Inputs/hello.f90 2>&1 | FileCheck %s --check-prefixes=CHECK,MSVC --implicit-check-not libcmt --implicit-check-not oldnames
+! RUN: %flang -### --target=aarch64-windows-msvc -fuse-ld= %S/Inputs/hello.f90 2>&1 | FileCheck %s --check-prefixes=CHECK,MSVC --implicit-check-not libcmt --implicit-check-not oldnames
 
 ! Compiler invocation to generate the object file
 ! CHECK-LABEL: {{.*}} "-emit-obj"
@@ -21,12 +22,9 @@
 !       run on any other platform, such as Windows that use a .exe
 !       suffix. Clang's driver will try to resolve the path to the ld
 !       executable and may find the GNU linker from MinGW or Cygwin.
-! GNU-LABEL:  "{{.*}}ld{{(\.exe)?}}"
-! GNU-SAME: "[[object_file]]"
-! GNU-SAME: -lFortran_main
-! GNU-SAME: -lFortranRuntime
-! GNU-SAME: -lFortranDecimal
-! GNU-SAME: -lm
+! UNIX-LABEL:  "{{.*}}ld{{(\.exe)?}}"
+! UNIX-SAME: "[[object_file]]"
+! UNIX-SAME: "-lFortran_main" "-lFortranRuntime" "-lFortranDecimal" "-lm"
 
 ! DARWIN-LABEL:  "{{.*}}ld{{(\.exe)?}}"
 ! DARWIN-SAME: "[[object_file]]"

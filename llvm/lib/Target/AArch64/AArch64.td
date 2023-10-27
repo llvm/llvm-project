@@ -127,6 +127,12 @@ def FeatureCCPP : SubtargetFeature<"ccpp", "HasCCPP",
 def FeatureSVE : SubtargetFeature<"sve", "HasSVE", "true",
   "Enable Scalable Vector Extension (SVE) instructions (FEAT_SVE)", [FeatureFullFP16]>;
 
+def FeatureFPMR : SubtargetFeature<"fpmr", "HasFPMR", "true",
+  "Enable FPMR Register (FEAT_FPMR)">;
+
+def FeatureFP8 : SubtargetFeature<"fp8", "HasFP8", "true",
+  "Enable FP8 instructions (FEAT_FP8)">;
+
 // This flag is currently still labeled as Experimental, but when fully
 // implemented this should tell the compiler to use the zeroing pseudos to
 // benefit from the reverse instructions (e.g. SUB vs SUBR) if the inactive

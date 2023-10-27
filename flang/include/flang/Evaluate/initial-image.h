@@ -22,7 +22,7 @@ namespace Fortran::evaluate {
 
 class InitialImage {
 public:
-  enum Result { Ok, NotAConstant, OutOfRange, SizeMismatch };
+  enum Result { Ok, NotAConstant, OutOfRange, SizeMismatch, LengthMismatch };
 
   explicit InitialImage(std::size_t bytes) : data_(bytes) {}
   InitialImage(InitialImage &&that) = default;
@@ -72,7 +72,7 @@ public:
           auto scalar{x.At(at)}; // this is a std string; size() in chars
           auto scalarBytes{scalar.size() * KIND};
           if (scalarBytes != elementBytes) {
-            result = SizeMismatch;
+            result = LengthMismatch;
           }
           // Blank padding when short
           for (; scalarBytes < elementBytes; scalarBytes += KIND) {

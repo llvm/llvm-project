@@ -60,8 +60,7 @@ llvm::object::computeSymbolSizes(const ObjectFile &O) {
   }
 
   if (const auto *E = dyn_cast<XCOFFObjectFile>(&O)) {
-    auto Syms = E->symbols();
-    for (XCOFFSymbolRef Sym : Syms)
+    for (XCOFFSymbolRef Sym : E->symbols())
       Ret.push_back({Sym, Sym.getSize()});
     return Ret;
   }

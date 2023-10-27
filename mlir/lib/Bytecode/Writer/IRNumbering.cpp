@@ -557,7 +557,7 @@ struct NumberingResourceBuilder : public AsmResourceBuilder {
   void numberEntry(StringRef key) {
     // TODO: We could pre-number resource key strings here as well.
 
-    auto it = dialect->resourceMap.find(key);
+    auto *it = dialect->resourceMap.find(key);
     if (it != dialect->resourceMap.end()) {
       it->second->number = nextResourceID++;
       it->second->isDeclaration = false;

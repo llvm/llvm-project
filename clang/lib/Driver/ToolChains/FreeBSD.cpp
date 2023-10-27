@@ -88,8 +88,6 @@ void freebsd::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-meabi=5");
     break;
   }
-  case llvm::Triple::sparc:
-  case llvm::Triple::sparcel:
   case llvm::Triple::sparcv9: {
     std::string CPU = getCPUName(D, Args, getToolChain().getTriple());
     CmdArgs.push_back(
@@ -131,8 +129,7 @@ void freebsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                    const InputInfoList &Inputs,
                                    const ArgList &Args,
                                    const char *LinkingOutput) const {
-  const toolchains::FreeBSD &ToolChain =
-      static_cast<const toolchains::FreeBSD &>(getToolChain());
+  const auto &ToolChain = static_cast<const FreeBSD &>(getToolChain());
   const Driver &D = ToolChain.getDriver();
   const llvm::Triple::ArchType Arch = ToolChain.getArch();
   const bool IsPIE =
@@ -167,7 +164,7 @@ void freebsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back("/libexec/ld-elf.so.1");
     }
     const llvm::Triple &T = ToolChain.getTriple();
-    if (Arch == llvm::Triple::arm || Arch == llvm::Triple::sparc || T.isX86())
+    if (Arch == llvm::Triple::arm || T.isX86())
       CmdArgs.push_back("--hash-style=both");
     CmdArgs.push_back("--enable-new-dtags");
   }
