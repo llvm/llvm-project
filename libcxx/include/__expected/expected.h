@@ -402,7 +402,7 @@ public:
     }
     std::construct_at(std::addressof(__union_.__val_), std::forward<_Args>(__args)...);
     __has_val_ = true;
-    return *std::addressof(__union_.__val_);
+    return __union_.__val_;
   }
 
   template <class _Up, class... _Args>
@@ -415,7 +415,7 @@ public:
     }
     std::construct_at(std::addressof(__union_.__val_), __il, std::forward<_Args>(__args)...);
     __has_val_ = true;
-    return *std::addressof(__union_.__val_);
+    return __union_.__val_;
   }
 
 
