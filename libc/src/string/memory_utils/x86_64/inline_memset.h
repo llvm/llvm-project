@@ -28,7 +28,8 @@ LIBC_INLINE_VAR constexpr bool kUseSoftwarePrefetching =
 // prefetch for write
 static inline void PrefetchW(CPtr dst) { __builtin_prefetch(dst, 1, 3); }
 
-[[maybe_unused]] LIBC_INLINE static void inline_memset_x86_sw_prefetching(Ptr dst, uint8_t value, size_t count) {
+[[maybe_unused]] LIBC_INLINE static void
+inline_memset_x86_sw_prefetching(Ptr dst, uint8_t value, size_t count) {
   PrefetchW(dst + kCachelineSize);
   if (count <= 128)
     return generic::Memset<uint512_t>::head_tail(dst, value, count);
@@ -38,9 +39,9 @@ static inline void PrefetchW(CPtr dst) { __builtin_prefetch(dst, 1, 3); }
   align_to_next_boundary<32>(dst, count);
   if (count <= 192) {
     return Memset<uint256_t>::loop_and_tail(dst, value, count);
-  }
-  else {
-    return Memset<uint256_t>::loop_and_tail_prefetch<320, 128>(dst, value, count);
+  } else {
+    return Memset<uint256_t>::loop_and_tail_prefetch<320, 128>(dst, value,
+                                                               count);
   }
 }
 
@@ -89,7 +90,7 @@ inline_memset_x86(Ptr dst, uint8_t value, size_t count) {
   generic::Memset<uint256_t>::block(dst, value);
   align_to_next_boundary<32>(dst, count);
   else {
-    return Memset<uint256_t>::loop_and_tail(dst, value, count); 
+    return Memset<uint256_t>::loop_and_tail(dst, value, count);
   }
 }
 } // namespace LIBC_NAMESPACE
