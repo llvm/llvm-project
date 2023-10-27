@@ -249,10 +249,6 @@ protected:
     return Parser->GetKind() == Kind::DWARFASTParserClang;
   }
 
-  static bool classof(const DWARFASTParser *Parser) {
-    return Parser->GetKind() == Kind::DWARFASTParserClang;
-  }
-
 private:
   struct FieldInfo {
     uint64_t bit_size = 0;
