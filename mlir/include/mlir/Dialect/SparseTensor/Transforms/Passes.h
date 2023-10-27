@@ -40,6 +40,14 @@ enum class SparseParallelizationStrategy {
   kAnyStorageAnyLoop
 };
 
+/// Define a scope for reinterpret map pass.
+enum class ReinterpretMapScope {
+  kAll,           // reinterpret all applicable operations.
+  kGenericOnly,   // reinterpret only linalg.generic.
+  kExceptGeneric, // reinterpret operation other than linalg.generic (e.g.,
+                  // foreach)
+};
+
 /// Defines data movement strategy between host and device for GPU.
 // TODO : Zero copy is disabled due to correctness bugs (tracker #64316)
 enum class GPUDataTransferStrategy { kRegularDMA, kZeroCopy, kPinnedDMA };
@@ -51,9 +59,11 @@ enum class GPUDataTransferStrategy { kRegularDMA, kZeroCopy, kPinnedDMA };
 // The SparseReinterpretMap pass.
 //===----------------------------------------------------------------------===//
 
-void populateSparseReinterpretMap(RewritePatternSet &patterns);
+void populateSparseReinterpretMap(RewritePatternSet &patterns,
+                                  ReinterpretMapScope scope);
 
 std::unique_ptr<Pass> createSparseReinterpretMapPass();
+std::unique_ptr<Pass> createSparseReinterpretMapPass(ReinterpretMapScope scope);
 
 //===----------------------------------------------------------------------===//
 // The PreSparsificationRewriting pass.
