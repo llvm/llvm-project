@@ -31,15 +31,7 @@ constexpr void test_containers() {
     OutContainer out(4);
 
     std::same_as<std::ranges::in_out_result<InIter, OutIter>> auto ret =
-        std::ranges::copy(in.begin(), in.end(), out.begin());
-    assert(std::ranges::equal(in, out));
-    assert(ret.in == in.end());
-    assert(ret.out == out.end());
-  }
-  {
-    InContainer in{1, 2, 3, 4};
-    OutContainer out(4);
-    std::same_as<std::ranges::in_out_result<InIter, OutIter>> auto ret = std::ranges::copy(in, out.begin());
+        std::ranges::copy_n(in.begin(), in.size(), out.begin());
     assert(std::ranges::equal(in, out));
     assert(ret.in == in.end());
     assert(ret.out == out.end());
@@ -58,7 +50,9 @@ constexpr void test_join_view() {
     std::vector<std::ranges::subrange<Iter, Sent>> subrange_vector(range.begin(), range.end());
     std::array<int, 0> arr;
 
-    std::ranges::copy(subrange_vector | std::views::join, arr.begin());
+    std::ranges::copy_n((subrange_vector | std::views::join).begin(),
+                        std::ranges::distance(subrange_vector | std::views::join),
+                        arr.begin());
     assert(std::ranges::equal(arr, std::array<int, 0>{}));
   }
   { // segmented -> contiguous
@@ -67,7 +61,9 @@ constexpr void test_join_view() {
     std::vector<std::ranges::subrange<Iter, Sent>> subrange_vector(range.begin(), range.end());
     std::array<int, 10> arr;
 
-    std::ranges::copy(subrange_vector | std::views::join, arr.begin());
+    std::ranges::copy_n((subrange_vector | std::views::join).begin(),
+                        std::ranges::distance(subrange_vector | std::views::join),
+                        arr.begin());
     assert(std::ranges::equal(arr, std::array{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}));
   }
   { // contiguous -> segmented
@@ -76,7 +72,7 @@ constexpr void test_join_view() {
     std::vector<std::ranges::subrange<Iter, Sent>> subrange_vector(range.begin(), range.end());
     std::array arr = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
 
-    std::ranges::copy(arr, (subrange_vector | std::views::join).begin());
+    std::ranges::copy_n(arr.begin(), arr.size(), (subrange_vector | std::views::join).begin());
     assert(std::ranges::equal(subrange_vector | std::views::join, std::array{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}));
   }
   { // segmented -> segmented
@@ -87,7 +83,9 @@ constexpr void test_join_view() {
     auto range2                              = to_vectors | to_subranges;
     std::vector<std::ranges::subrange<Iter, Sent>> to_subrange_vector(range2.begin(), range2.end());
 
-    std::ranges::copy(subrange_vector | std::views::join, (to_subrange_vector | std::views::join).begin());
+    std::ranges::copy_n((subrange_vector | std::views::join).begin(),
+                        std::ranges::distance(subrange_vector | std::views::join),
+                        (to_subrange_vector | std::views::join).begin());
     assert(std::ranges::equal(to_subrange_vector | std::views::join, std::array{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}));
   }
 }
@@ -95,6 +93,7 @@ constexpr void test_join_view() {
 constexpr bool test_constexpr() {
   test_containers<std::vector<int>, std::vector<int>>();
 
+  // TODO: this should be cpp20_input_iterator_list, not forward_iterator_list
   types::for_each(types::forward_iterator_list<int*>{}, []<class Iter> {
     test_join_view<Iter, Iter>();
     test_join_view<Iter, sentinel_wrapper<Iter>>();
