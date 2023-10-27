@@ -685,6 +685,25 @@ struct FormatStyle {
   /// \version 3.6
   bool AllowShortCaseLabelsOnASingleLine;
 
+  /// Allow short compound requirement on a single line.
+  /// \code
+  ///   true:
+  ///   template <typename T>
+  ///   concept c = requires(T x) {
+  ///     { x + 1 } -> std::same_as<int>;
+  ///   };
+  ///
+  ///   false:
+  ///   template <typename T>
+  ///   concept c = requires(T x) {
+  ///     {
+  ///       x + 1
+  ///     } -> std::same_as<int>;
+  ///   };
+  /// \endcode
+  /// \version 16
+  bool AllowShortCompoundRequirementOnASingleLine;
+
   /// Allow short enums on a single line.
   /// \code
   ///   true:
@@ -4650,6 +4669,8 @@ struct FormatStyle {
            AllowShortBlocksOnASingleLine == R.AllowShortBlocksOnASingleLine &&
            AllowShortCaseLabelsOnASingleLine ==
                R.AllowShortCaseLabelsOnASingleLine &&
+           AllowShortCompoundRequirementOnASingleLine ==
+               R.AllowShortCompoundRequirementOnASingleLine &&
            AllowShortEnumsOnASingleLine == R.AllowShortEnumsOnASingleLine &&
            AllowShortFunctionsOnASingleLine ==
                R.AllowShortFunctionsOnASingleLine &&
