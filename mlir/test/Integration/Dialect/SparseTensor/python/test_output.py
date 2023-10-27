@@ -6,8 +6,6 @@ import os
 import sys
 import tempfile
 
-sys.path.append("/usr/local/google/home/peiming/projects/llvm-project/build-static/tools/mlir/python_packages/mlir_core")
-
 from mlir import ir
 from mlir import runtime as rt
 from mlir.dialects import builtin
