@@ -46,6 +46,11 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
   default:
     break;
   }
+  // Type inference not implemented for opcode.
+  LLVM_DEBUG({
+    dbgs() << "LV: Found unhandled opcode for: ";
+    R->getVPSingleValue()->dump();
+  });
   llvm_unreachable("Unhandled opcode!");
 }
 
@@ -87,8 +92,10 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPWidenRecipe *R) {
   }
 
   // Type inference not implemented for opcode.
-  LLVM_DEBUG(dbgs() << "LV: Found unhandled opcode: "
-                    << Instruction::getOpcodeName(Opcode));
+  LLVM_DEBUG({
+    dbgs() << "LV: Found unhandled opcode for: ";
+    R->getVPSingleValue()->dump();
+  });
   llvm_unreachable("Unhandled opcode!");
 }
 
@@ -177,8 +184,12 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPReplicateRecipe *R) {
   default:
     break;
   }
-
-  llvm_unreachable("Unhandled instruction");
+  // Type inference not implemented for opcode.
+  LLVM_DEBUG({
+    dbgs() << "LV: Found unhandled opcode for: ";
+    R->getVPSingleValue()->dump();
+  });
+  llvm_unreachable("Unhandled opcode");
 }
 
 Type *VPTypeAnalysis::inferScalarType(const VPValue *V) {
@@ -195,6 +206,8 @@ Type *VPTypeAnalysis::inferScalarType(const VPValue *V) {
               [this](const auto *R) {
                 // Handle header phi recipes, except VPWienIntOrFpInduction
                 // which needs special handling due it being possibly truncated.
+                // TODO: consider inferring/caching type of siblings, e.g.,
+                // backedge value, here and in cases below.
                 return inferScalarType(R->getStartValue());
               })
           .Case<VPWidenIntOrFpInductionRecipe, VPDerivedIVRecipe>(

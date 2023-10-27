@@ -2708,8 +2708,7 @@ void InnerLoopVectorizer::scalarizeInstruction(const Instruction *Instr,
 #if !defined(NDEBUG)
     // Verify that VPlan type inference results agree with the type of the
     // generated values.
-    VPTypeAnalysis A(State.Builder.GetInsertBlock()->getContext());
-    assert(A.inferScalarType(RepRecipe) == Cloned->getType() &&
+    assert(State.TypeAnalysis.inferScalarType(RepRecipe) == Cloned->getType() &&
            "inferred type and type from generated instructions do not match");
 #endif
   }
@@ -7698,7 +7697,8 @@ SCEV2ValueTy LoopVectorizationPlanner::executePlan(
     VPlanTransforms::optimizeForVFAndUF(BestVPlan, BestVF, BestUF, PSE);
 
   // Perform the actual loop transformation.
-  VPTransformState State{BestVF, BestUF, LI, DT, ILV.Builder, &ILV, &BestVPlan};
+  VPTransformState State(BestVF, BestUF, LI, DT, ILV.Builder, &ILV, &BestVPlan,
+                         OrigLoop->getHeader()->getContext());
 
   // 0. Generate SCEV-dependent code into the preheader, including TripCount,
   // before making any changes to the CFG.
