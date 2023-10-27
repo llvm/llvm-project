@@ -198,5 +198,5 @@ attributes #0 = { norecurse nounwind ssp uwtable "disable-tail-calls"="false" "l
 !55 = distinct !{!55, !43}
 !56 = !{!"function_entry_count", i64 3}
 !57 = !{!"function_entry_count", i64 50}
-!58 = !{!"branch_weights", i32 99, i32 1}
+!58 = !{!"branch_weights", i32 10000, i32 1}
 !59 = !{!"branch_weights", i32 1, i32 99}
