@@ -346,50 +346,28 @@ class VString<int nf, bit signed> {
 }
 
 
-class FixedVString<int fixed_lmul, int num, bit signed> {
-  string V = "(LFixedLog2LMUL:" # fixed_lmul # ")" # !if(signed, "v", "Uv");
-  string S = !cond(!eq(num, 1): V,
-                   !eq(num, 2): V # V,
-                   !eq(num, 4): V # V # V # V,
-                   !eq(num, 8): V # V # V # V # V # V # V # V,
-                   true: "");
-}
-
-// This function is used in RVVNonTupleVCreateBuiltin to determine how many
-// variable we need to assemble the bigger LMUL value.
-// X = 2^{pow_x - pow_y}, with value range of pow_x, pow_y = [0, 3], pow_x > pow_y
-class GetPowDiff<int pow_x, int pow_y> {
-  int X = !cond(!eq(pow_x, 1): 2,
-                !eq(pow_x, 2):
-                  !cond(!eq(pow_y, 0): 4,
-                        !eq(pow_y, 1): 2,
-                        true: 0),
-                !eq(pow_x, 3):
-                  !cond(!eq(pow_y, 0): 8,
-                        !eq(pow_y, 1): 4,
-                        !eq(pow_y, 2): 2,
-                        true: 0),
-                true: 0);
+class FixedVString<int fixed_lmul, int num, string vec> {
+  string V = "(LFixedLog2LMUL:" # fixed_lmul # ")" # vec;
+  string S = !interleave(!listsplat(V, num), "");
 }
 
 multiclass RVVNonTupleVCreateBuiltin<int dst_lmul, list<int> src_lmul_list> {
-  defvar dst_v = FixedVString<dst_lmul, 1, /*signed=*/true>.V;
-  defvar dst_uv = FixedVString<dst_lmul, 1, /*signed=*/false>.V;
+  defvar dst_v = FixedVString<dst_lmul, 1, "v">.V;
+  defvar dst_uv = FixedVString<dst_lmul, 1, "Uv">.V;
   foreach src_lmul = src_lmul_list in {
-    defvar num = GetPowDiff<dst_lmul, src_lmul>.X;
+    defvar num = !shl(1, !sub(dst_lmul, src_lmul));
 
-    defvar src_v = FixedVString<src_lmul, num, /*signed=*/true>.V;
-    defvar src_s = FixedVString<src_lmul, num, /*signed=*/true>.S;
-
+    defvar src_v = FixedVString<src_lmul, num, "v">.V;
+    defvar src_s = FixedVString<src_lmul, num, "v">.S;
     def vcreate # src_v # dst_v : RVVBuiltin<src_v # dst_v,
-                                              dst_v # src_s,
-                                              "csilxfd", dst_v>;
+                                             dst_v # src_s,
+                                             "csilxfd", dst_v>;
 
-    defvar src_uv = FixedVString<src_lmul, num, /*signed=*/false>.V;
-    defvar src_us = FixedVString<src_lmul, num, /*signed=*/false>.S;
+    defvar src_uv = FixedVString<src_lmul, num, "Uv">.V;
+    defvar src_us = FixedVString<src_lmul, num, "Uv">.S;
     def vcreate_u # src_uv # dst_uv : RVVBuiltin<src_uv # dst_uv,
-                                                  dst_uv # src_us,
-                                                  "csil", dst_uv>;
+                                                 dst_uv # src_us,
+                                                 "csil", dst_uv>;
   }
 }
 
