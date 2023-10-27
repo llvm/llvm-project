@@ -44,8 +44,7 @@ enum class SparseParallelizationStrategy {
 enum class ReinterpretMapScope {
   kAll,           // reinterprets all applicable operations
   kGenericOnly,   // reinterprets only linalg.generic
-  kExceptGeneric, // reinterprets operation other than linalg.generic (e.g.,
-                  // foreach)
+  kExceptGeneric, // reinterprets operation other than linalg.generic
 };
 
 /// Defines data movement strategy between host and device for GPU.
