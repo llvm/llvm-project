@@ -22,11 +22,6 @@ template<typename T>
 void sink(T&&) { }
 
 #define MY_PI 3.1415926
-// CHECK-MESSAGES: :[[@LINE-1]]:15: warning: prefer std::numbers math constant [modernize-use-std-numbers]
-// CHECK-FIXES: #define MY_PI std::numbers::pi
-#define MY_PI2 static_cast<float>(3.1415926)
-// CHECK-MESSAGES: :[[@LINE-1]]:35: warning: prefer std::numbers math constant [modernize-use-std-numbers]
-// CHECK-FIXES: #define MY_PI2 static_cast<float>(std::numbers::pi)
 
 #define INV_SQRT3 1 / bar::sqrt(3)
 
@@ -44,7 +39,9 @@ void foo(){
     // CHECK-FIXES: static constexpr double Phi = std::numbers::phi;
 
     static constexpr double PiCopy = Pi;
-    static constexpr double PiDefine = MY_PI;
+    static constexpr double PiDefineFromMacro = MY_PI;
+    // CHECK-MESSAGES: :[[@LINE-1]]:49: warning: prefer std::numbers math constant [modernize-use-std-numbers]
+    // CHECK-FIXES: static constexpr double PiDefineFromMacro = std::numbers::pi;
 
     // not close enough to match value (DiffThreshold)
     static constexpr double Pi2 = 3.14;
@@ -171,8 +168,8 @@ void foo(){
 
     sink(1 / bar::sqrt(MY_PI));
     // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: prefer std::numbers math constant [modernize-use-std-numbers]
+    // CHECK-MESSAGES: :[[@LINE-2]]:24: warning: prefer std::numbers math constant [modernize-use-std-numbers]
     // CHECK-FIXES: sink(std::numbers::inv_sqrtpi);
-
 
     log(2);
     // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: prefer std::numbers math constant [modernize-use-std-numbers]
@@ -189,6 +186,10 @@ void foo(){
     sink(1 / bar::sqrt(3));
     // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: prefer std::numbers math constant [modernize-use-std-numbers]
     // CHECK-MESSAGES: :[[@LINE-2]]:14: warning: prefer std::numbers math constant [modernize-use-std-numbers]
+    // CHECK-FIXES: sink(std::numbers::inv_sqrt3);
+
+    sink(INV_SQRT3);
+    // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: prefer std::numbers math constant [modernize-use-std-numbers]
     // CHECK-FIXES: sink(std::numbers::inv_sqrt3);
 
     bar::sqrt(3);
@@ -229,7 +230,9 @@ void baz(){
     // CHECK-FIXES: static constexpr T Phi = std::numbers::phi;
 
     static constexpr T PiCopy = Pi;
-    static constexpr T PiDefine = MY_PI;
+    static constexpr T PiDefineFromMacro = MY_PI;
+    // CHECK-MESSAGES: :[[@LINE-1]]:44: warning: prefer std::numbers math constant [modernize-use-std-numbers]
+    // CHECK-FIXES: static constexpr T PiDefineFromMacro = std::numbers::pi;
 
     // not close enough to match value (DiffThreshold)
     static constexpr T Pi2 = 3.14;
@@ -324,6 +327,7 @@ void baz(){
 
     sink(1 / bar::sqrt(MY_PI));
     // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: prefer std::numbers math constant [modernize-use-std-numbers]
+    // CHECK-MESSAGES: :[[@LINE-2]]:24: warning: prefer std::numbers math constant [modernize-use-std-numbers]
     // CHECK-FIXES: sink(std::numbers::inv_sqrtpi);
 
 

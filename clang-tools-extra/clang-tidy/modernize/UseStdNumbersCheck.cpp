@@ -14,12 +14,6 @@
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/ASTMatchers/ASTMatchersInternal.h"
 #include "clang/ASTMatchers/ASTMatchersMacros.h"
-#include "clang/Basic/Diagnostic.h"
-#include "clang/Basic/SourceLocation.h"
-#include "clang/Basic/TokenKinds.h"
-#include "clang/Lex/PPCallbacks.h"
-#include "clang/Lex/Preprocessor.h"
-#include "clang/Lex/Token.h"
 #include "clang/Tooling/Transformer/RewriteRule.h"
 #include "clang/Tooling/Transformer/Stencil.h"
 #include "llvm/ADT/StringRef.h"
@@ -46,16 +40,6 @@ constexpr auto DiffThreshold = 0.001;
 AST_MATCHER_P(clang::FloatingLiteral, near, double, Value) {
   return std::abs(Node.getValue().convertToDouble() - Value) < DiffThreshold;
 }
-
-// We don't want to match uses of macros, such as
-//
-// auto PiHalved = MY_PI / 2;
-//
-// because a project might use defines for math constants.
-// Instead, the macro definition is matched and the value is exchanged there.
-// Hinting at replacing macro definitions with language constructs is done in
-// another check.
-AST_MATCHER(clang::Expr, isMacro) { return Node.getBeginLoc().isMacroID(); }
 
 AST_MATCHER_P(clang::QualType, hasCanonicalTypeUnqualified,
               Matcher<clang::QualType>, InnerMatcher) {
@@ -266,94 +250,6 @@ RewriteRuleWith<std::string> makeRewriteRule() {
       makeRule(matchPhi(), "phi"),
   });
 }
-
-class MathConstantMacroCallback : public clang::PPCallbacks {
-public:
-  explicit MathConstantMacroCallback(
-      clang::tidy::modernize::UseStdNumbersCheck *Check)
-      : Check{Check} {};
-
-  void MacroDefined(const clang::Token & /*MacroNameTok*/,
-                    const clang::MacroDirective *MD) override {
-    for (const auto &Tok : MD->getDefinition().getMacroInfo()->tokens()) {
-      if (!Tok.is(clang::tok::numeric_constant)) {
-        continue;
-      }
-
-      const auto Definition =
-          llvm::StringRef{Tok.getLiteralData(), Tok.getLength()};
-      double Value{};
-      Definition.getAsDouble(Value);
-
-      const auto IsNear = [](const auto Lhs, const auto Rhs) {
-        return std::abs(Lhs - Rhs) < DiffThreshold;
-      };
-
-      if (IsNear(Value, llvm::numbers::log2e)) {
-        reportDiag(Tok, "std::numbers::log2e");
-        return;
-      }
-      if (IsNear(Value, llvm::numbers::log10e)) {
-        reportDiag(Tok, "std::numbers::log10e");
-        return;
-      }
-      if (IsNear(Value, llvm::numbers::e)) {
-        reportDiag(Tok, "std::numbers::e");
-        return;
-      }
-      if (IsNear(Value, llvm::numbers::egamma)) {
-        reportDiag(Tok, "std::numbers::egamma");
-        return;
-      }
-      if (IsNear(Value, llvm::numbers::inv_sqrtpi)) {
-        reportDiag(Tok, "std::numbers::inv_sqrtpi");
-        return;
-      }
-      if (IsNear(Value, llvm::numbers::inv_pi)) {
-        reportDiag(Tok, "std::numbers::inv_pi");
-        return;
-      }
-      if (IsNear(Value, llvm::numbers::pi)) {
-        reportDiag(Tok, "std::numbers::pi");
-        return;
-      }
-      if (IsNear(Value, llvm::numbers::ln2)) {
-        reportDiag(Tok, "std::numbers::ln2");
-        return;
-      }
-      if (IsNear(Value, llvm::numbers::ln10)) {
-        reportDiag(Tok, "std::numbers::ln10");
-        return;
-      }
-      if (IsNear(Value, llvm::numbers::sqrt2)) {
-        reportDiag(Tok, "std::numbers::sqrt2");
-        return;
-      }
-      if (IsNear(Value, llvm::numbers::inv_sqrt3)) {
-        reportDiag(Tok, "std::numbers::inv_sqrt3");
-        return;
-      }
-      if (IsNear(Value, llvm::numbers::sqrt3)) {
-        reportDiag(Tok, "std::numbers::sqrt3");
-        return;
-      }
-      if (IsNear(Value, llvm::numbers::phi)) {
-        reportDiag(Tok, "std::numbers::phi");
-        return;
-      }
-    }
-  }
-
-private:
-  void reportDiag(const clang::Token &Tok, const llvm::StringRef Constant) {
-    Check->diag(Tok.getLocation(), "prefer std::numbers math constant")
-        << clang::FixItHint::CreateReplacement(
-               clang::SourceRange(Tok.getLocation(), Tok.getLastLoc()),
-               Constant);
-  }
-
-  clang::tidy::modernize::UseStdNumbersCheck *Check{};
-};
 } // namespace
 
 namespace clang::tidy::modernize {
@@ -361,13 +257,5 @@ UseStdNumbersCheck::UseStdNumbersCheck(const StringRef Name,
                                        ClangTidyContext *const Context)
     : TransformerClangTidyCheck(Name, Context) {
   setRule(makeRewriteRule());
-}
-
-void UseStdNumbersCheck::registerPPCallbacks(const SourceManager &SM,
-                                             Preprocessor *PP,
-                                             Preprocessor *ModuleExpanderPP) {
-  utils::TransformerClangTidyCheck::registerPPCallbacks(SM, PP,
-                                                        ModuleExpanderPP);
-  PP->addPPCallbacks(std::make_unique<MathConstantMacroCallback>(this));
 }
 } // namespace clang::tidy::modernize

@@ -5,14 +5,15 @@ modernize-use-std-numbers
 
 Finds constants and function calls to math functions that can be replaced
 with c++20's mathematical constants from the ``numbers`` header and offers fix-it hints.
-Does not match the use of variables or macros with that value, and instead, offers a replacement
-at the definition of said variables and macros.
+Does not match the use of variables with that value, and instead,
+offers a replacement at the definition of those variables.
 
 .. code-block:: c++
     double sqrt(double);
     double log(double);
+    void sink(auto&&) {}
 
-    #define MY_PI 3.1415926  // #define MY_PI std::numbers::pi
+    #define MY_PI 3.1415926
 
     void foo() {
         const double Pi = 3.141592653589;  // const double Pi = std::numbers::pi
@@ -22,4 +23,5 @@ at the definition of said variables and macros.
         log2(exp(1));     // std::numbers::log2e;
         log2(Euler);      // std::numbers::log2e;
         1 / sqrt(MY_PI);  // std::numbers::inv_sqrtpi;
+        sink(MY_PI);      // sink(std::numbers::pi);
     }

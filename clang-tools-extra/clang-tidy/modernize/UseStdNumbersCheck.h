@@ -16,8 +16,8 @@ namespace clang::tidy::modernize {
 /// Finds constants and function calls to math functions that can be replaced
 /// with c++20's mathematical constants from the ``numbers`` header and
 /// offers fix-it hints.
-/// Does not match the use of variables or macros with that value, and instead,
-/// offers a replacement at the definition of said variables and macros.
+/// Does not match the use of variables with that value, and instead,
+/// offers a replacement at the definition of those variables.
 ///
 /// For the user-facing documentation see:
 /// http://clang.llvm.org/extra/clang-tidy/checks/modernize/use-std-numbers.html
@@ -28,9 +28,6 @@ public:
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
     return LangOpts.CPlusPlus20;
   }
-
-  void registerPPCallbacks(const SourceManager &SM, Preprocessor *PP,
-                           Preprocessor *ModuleExpanderPP) override;
 };
 
 } // namespace clang::tidy::modernize
