@@ -120,8 +120,8 @@ enum class RuntimeKind { Swift, ObjC };
 
 /// Detect a statically linked Swift runtime by looking for a well-known symbol.
 static bool IsStaticSwiftRuntime(Module &image) {
-  static ConstString swift_release_dealloc_sym("_swift_release_dealloc");
-  return image.FindFirstSymbolWithNameAndType(swift_release_dealloc_sym);
+  static ConstString swift_reflection_version_sym("swift_release");
+  return image.FindFirstSymbolWithNameAndType(swift_reflection_version_sym);
 }
 
 /// \return the Swift or Objective-C runtime found in the loaded images.
