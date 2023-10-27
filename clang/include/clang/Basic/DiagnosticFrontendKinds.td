@@ -330,8 +330,13 @@ def warn_alias_with_section : Warning<
   "as the %select{aliasee|resolver}2">,
   InGroup<IgnoredAttributes>;
 
-def error_bounds_safety_lang_not_supported : Error<
+let CategoryName = "Bounds Safety Issue" in {
+def err_bounds_safety_lang_not_supported : Error<
   "bounds safety is only supported for C">;
+def warn_bounds_safety_asm_ignored : Warning<
+  "'-fbounds-safety' is ignored for assembly">,
+  InGroup<IgnoredBoundsSafety>;
+} // end of bounds safety issue category
 
 let CategoryName = "Instrumentation Issue" in {
 def warn_profile_data_out_of_date : Warning<

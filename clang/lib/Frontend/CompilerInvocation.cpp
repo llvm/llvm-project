@@ -3618,20 +3618,27 @@ void CompilerInvocationBase::GenerateLangArgs(const LangOptions &Opts,
     GenerateArg(Consumer, OPT_frandomize_layout_seed_EQ, Opts.RandstructSeed);
 }
 
-static bool SupportsBoundsSafety(Language Lang) {
+static void CheckBoundsSafetyLang(InputKind IK, DiagnosticsEngine &Diags) {
   // Currently, bounds safety is only supported for C. However, it's also
   // possible to pass assembly files and LLVM IR through Clang, and
   // those should be trivially supported. This is especially important because
   // some build systems, like xcbuild and somewhat clumsy Makefiles, will pass
   // C_FLAGS to Clang while building assembly files.
-  switch (Lang) {
-  case Language::Unknown:
+  switch (IK.getLanguage()) {
   case Language::Asm:
+    Diags.Report(diag::warn_bounds_safety_asm_ignored);
+    break;
+
+  case Language::Unknown:
   case Language::LLVM_IR:
+    llvm_unreachable("Unexpected file format");
+
   case Language::C:
-    return true;
+    break;
+
   default:
-    return false;
+    Diags.Report(diag::err_bounds_safety_lang_not_supported);
+    break;
   }
 }
 
@@ -3852,11 +3859,8 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
   Opts.Trigraphs =
       Args.hasFlag(OPT_ftrigraphs, OPT_fno_trigraphs, Opts.Trigraphs);
 
-  Opts.BoundsSafety = Args.hasFlag(OPT_fbounds_safety, OPT_fno_bounds_safety,
-                                   /*Default*/ Opts.BoundsSafety);
-
-  if (Opts.BoundsSafety && !SupportsBoundsSafety(IK.getLanguage()))
-    Diags.Report(diag::error_bounds_safety_lang_not_supported);
+  if (Opts.BoundsSafety)
+    CheckBoundsSafetyLang(IK, Diags);
 
   Opts.Blocks = Args.hasArg(OPT_fblocks) || (Opts.OpenCL
     && Opts.OpenCLVersion == 200);

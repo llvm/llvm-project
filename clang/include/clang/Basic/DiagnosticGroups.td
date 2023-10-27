@@ -1412,6 +1412,9 @@ def FunctionMultiVersioning
 
 def NoDeref : DiagGroup<"noderef">;
 
+// Bounds safety specific warnings
+def IgnoredBoundsSafety : DiagGroup<"ignored-bounds-safety">;
+
 // A group for cross translation unit static analysis related warnings.
 def CrossTU : DiagGroup<"ctu">;
 
