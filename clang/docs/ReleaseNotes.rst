@@ -211,6 +211,10 @@ New Compiler Flags
   the preprocessed text to the output. This can greatly reduce the size of the
   preprocessed output, which can be helpful when trying to reduce a test case.
 
+* ``-fcx-limited-range`` states that range reduction is disabled for complex
+  division. No checks for ``NaN + I*NaN`` is performed for the result of complex
+  multiplication or division.
+
 Deprecated Compiler Flags
 -------------------------
 
