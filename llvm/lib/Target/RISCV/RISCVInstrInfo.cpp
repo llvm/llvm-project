@@ -689,8 +689,7 @@ MachineInstr *RISCVInstrInfo::foldMemoryOperandImpl(
   if (MF.getDataLayout().isBigEndian())
     return nullptr;
 
-  // Fold load from stack followed by sext.w into lw.
-  // TODO: Fold with sext.b, sext.h, zext.b, zext.h, zext.w?
+  // Fold load from stack followed by sext.b/sext.h/sext.w/zext.b/zext.h/zext.w.
   if (Ops.size() != 1 || Ops[0] != 1)
    return nullptr;
 
