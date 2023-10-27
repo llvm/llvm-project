@@ -53,17 +53,22 @@ public:
 
 private:
   using Fields = std::vector<RegisterFlags::Field>;
+  using DetectorFn =
+      std::function<Fields(std::optional<uint64_t>, std::optional<uint64_t>)>;
 
   static Fields DetectCPSRFields(std::optional<uint64_t> hwcap,
                                  std::optional<uint64_t> hwcap2);
 
   struct RegisterEntry {
+    RegisterEntry(const char *name, unsigned size, DetectorFn detector)
+        : m_name(name), m_flags(std::string(name) + "_flags", size, {{"", 0}}),
+          m_detector(detector) {}
+
     const char *m_name;
     RegisterFlags m_flags;
-    std::function<Fields(std::optional<uint64_t>, std::optional<uint64_t>)>
-        m_detector;
+    DetectorFn m_detector;
   } m_registers[1] = {
-      {"cpsr", {"cpsr_flags", 4, {{"replace_me", 0, 0}}}, DetectCPSRFields},
+      RegisterEntry("cpsr", 4, DetectCPSRFields),
   };
 
   // Becomes true once field detection has been run for all registers.
