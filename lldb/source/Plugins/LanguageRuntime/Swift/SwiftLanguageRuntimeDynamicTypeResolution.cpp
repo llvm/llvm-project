@@ -2069,6 +2069,10 @@ bool SwiftLanguageRuntimeImpl::GetDynamicTypeAndAddress_IndirectEnumCase(
   if (box_location == LLDB_INVALID_ADDRESS)
     return false;
 
+  ABISP abi_sp = m_process.GetABI();
+  if (abi_sp)
+    box_location = abi_sp->FixCodeAddress(box_location);
+
   box_location = MaskMaybeBridgedPointer(m_process, box_location);
   lldb::addr_t box_value = box_addr + in_value.GetByteOffset();
   Flags type_info(child_type.GetTypeInfo());
