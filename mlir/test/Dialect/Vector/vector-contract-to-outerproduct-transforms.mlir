@@ -406,17 +406,17 @@ func.func @matmul_4_scalable(%arg0: vector<[2]x1xf32>, %arg1: vector<1x3xf32>, %
   iterator_types = ["parallel", "parallel", "reduction"]
 }
 
-#matvec_accesses_0 = [
+#matvec_accesses_1 = [
   affine_map<(m, k) -> (m, k)>,
   affine_map<(m, k) -> (k)>,
   affine_map<(m, k) -> (m)>
 ]
-#matvec_trait_0 = {
-  indexing_maps = #matvec_accesses_0,
+#matvec_trait_1 = {
+  indexing_maps = #matvec_accesses_1,
   iterator_types = ["parallel", "reduction"]
 }
 
-// CHECK-LABEL:   func.func @masked_extract_contract2(
+// CHECK-LABEL:   func.func @masked_matvec_mk_k_m(
 // CHECK-SAME:      %{{.*}}: vector<2x3xf32>,
 // CHECK-SAME:      %{{.*}}: vector<3xf32>,
 // CHECK-SAME:      %{{.*}}: vector<2xf32>,
@@ -431,17 +431,17 @@ func.func @matmul_4_scalable(%arg0: vector<[2]x1xf32>, %arg1: vector<1x3xf32>, %
 // CHECK:           %[[MASK2:.*]] = vector.extract %[[T_MASK]][2] : vector<2xi1> from vector<3x2xi1>
 // CHECK:           vector.mask %[[MASK2]] { vector.outerproduct {{.*}} {kind = #vector.kind<add>} : vector<2xf32>, f32 } : vector<2xi1> -> vector<2xf32>
 
-func.func @masked_extract_contract2(%arg0: vector<2x3xf32>,
-                                    %arg1: vector<3xf32>,
-                                    %arg2: vector<2xf32>,
-                                    %m: vector<2x3xi1>) -> vector<2xf32> {
-  %0 = vector.mask %m { vector.contract #matvec_trait_0 %arg0, %arg1, %arg2
+func.func @masked_matvec_mk_k_m(%arg0: vector<2x3xf32>,
+                                %arg1: vector<3xf32>,
+                                %arg2: vector<2xf32>,
+                                %m: vector<2x3xi1>) -> vector<2xf32> {
+  %0 = vector.mask %m { vector.contract #matvec_trait_1 %arg0, %arg1, %arg2
           : vector<2x3xf32>, vector<3xf32> into vector<2xf32> } : vector<2x3xi1> -> vector<2xf32>
   return %0 : vector<2xf32>
 }
 
 
-// CHECK-LABEL:   func.func @masked_extract_contract2_scalable_parallel_dim(
+// CHECK-LABEL:   func.func @masked_matvec_mk_k_m_scalable_parallel_dim(
 // CHECK-SAME:      %{{.*}}: vector<[2]x3xf32>,
 // CHECK-SAME:      %{{.*}}: vector<3xf32>,
 // CHECK-SAME:      %{{.*}}: vector<[2]xf32>,
@@ -455,55 +455,13 @@ func.func @masked_extract_contract2(%arg0: vector<2x3xf32>,
 
 // CHECK:           %[[MASK2:.*]] = vector.extract %[[T_MASK]][2] : vector<[2]xi1> from vector<3x[2]xi1>
 // CHECK:           vector.mask %[[MASK2]] { vector.outerproduct {{.*}} {kind = #vector.kind<add>} : vector<[2]xf32>, f32 } : vector<[2]xi1> -> vector<[2]xf32>
-func.func @masked_extract_contract2_scalable_parallel_dim(%arg0: vector<[2]x3xf32>,
-                                    %arg1: vector<3xf32>,
-                                    %arg2: vector<[2]xf32>,
-                                    %m: vector<[2]x3xi1>) -> vector<[2]xf32> {
-  %0 = vector.mask %m { vector.contract #matvec_trait_0 %arg0, %arg1, %arg2
+func.func @masked_matvec_mk_k_m_scalable_parallel_dim(%arg0: vector<[2]x3xf32>,
+                                                      %arg1: vector<3xf32>,
+                                                      %arg2: vector<[2]xf32>,
+                                                      %m: vector<[2]x3xi1>) -> vector<[2]xf32> {
+  %0 = vector.mask %m { vector.contract #matvec_trait_1 %arg0, %arg1, %arg2
           : vector<[2]x3xf32>, vector<3xf32> into vector<[2]xf32> } : vector<[2]x3xi1> -> vector<[2]xf32>
   return %0 : vector<[2]xf32>
-}
-
-#matvec_accesses_1 = [
-  affine_map<(m, k) -> (m, k)>,
-  affine_map<(m, k) -> (k)>,
-  affine_map<(m, k) -> (m)>
-]
-#matvec_trait_1 = {
-  indexing_maps = #matvec_accesses_1,
-  iterator_types = ["parallel", "reduction"]
-}
-
-// CHECK-LABEL: @masked_matvec_mk_k_m
-// CHECK-SAME:  %[[MAT:.+]]: vector<4x2xf32>
-// CHECK-SAME:  %[[VEC:.+]]: vector<2xf32>
-// CHECK-SAME:  %[[INIT:.+]]: vector<4xf32>
-// CHECK-SAME:  %[[MASK:.+]]: vector<4x2xi1>
-func.func @masked_matvec_mk_k_m(%arg0: vector<4x2xf32>, %arg1: vector<2xf32>, %arg2: vector<4xf32>, %mask: vector<4x2xi1>) -> vector<4xf32> {
-  // CHECK:         vector.transpose %[[MASK]]
-  // CHECK:         vector.transpose %[[MAT]]
-  // CHECK-COUNT-2: vector.mask %{{.*}} { vector.outerproduct %{{.*}}, %{{.*}}, %{{.*}} {kind = #vector.kind<add>} : vector<4xf32>, f32 }
-  %res = vector.mask %mask {
-    vector.contract #matvec_trait_1 %arg0, %arg1, %arg2
-      : vector<4x2xf32>, vector<2xf32>, vector<4xf32> into vector<4xf32>
-  } : vector<4x2xi1> -> vector<4xf32>
-  return %res : vector<4xf32>
-}
-
-// CHECK-LABEL: @masked_matvec_mk_k_m_scalable_parallel_dim
-// CHECK-SAME:  %[[MAT:.+]]: vector<[4]x2xf32>
-// CHECK-SAME:  %[[VEC:.+]]: vector<2xf32>
-// CHECK-SAME:  %[[INIT:.+]]: vector<[4]xf32>
-// CHECK-SAME:  %[[MASK:.+]]: vector<[4]x2xi1>
-func.func @masked_matvec_mk_k_m_scalable_parallel_dim(%arg0: vector<[4]x2xf32>, %arg1: vector<2xf32>, %arg2: vector<[4]xf32>, %mask: vector<[4]x2xi1>) -> vector<[4]xf32> {
-  // CHECK:         vector.transpose %[[MASK]]
-  // CHECK:         vector.transpose %[[MAT]]
-  // CHECK-COUNT-2: vector.mask %{{.*}} { vector.outerproduct %{{.*}}, %{{.*}}, %{{.*}} {kind = #vector.kind<add>} : vector<[4]xf32>, f32 }
-  %res = vector.mask %mask {
-    vector.contract #matvec_trait_1 %arg0, %arg1, %arg2
-      : vector<[4]x2xf32>, vector<2xf32>, vector<[4]xf32> into vector<[4]xf32>
-  } : vector<[4]x2xi1> -> vector<[4]xf32>
-  return %res : vector<[4]xf32>
 }
 
 #matvec_accesses_2 = [
