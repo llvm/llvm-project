@@ -2571,7 +2571,7 @@ bool AMDGPUInstructionSelector::selectG_CONSTANT(MachineInstr &I) const {
   if (DstRB->getID() == AMDGPU::VCCRegBankID) {
     Opcode = STI.isWave32() ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64;
   } else if (Size == 64 &&
-              AMDGPU::isValid32BitLiteral(I.getOperand(1).getImm(), IsFP)) {
+             AMDGPU::isValid32BitLiteral(I.getOperand(1).getImm(), IsFP)) {
     Opcode = IsSgpr ? AMDGPU::S_MOV_B64_IMM_PSEUDO : AMDGPU::V_MOV_B64_PSEUDO;
     I.setDesc(TII.get(Opcode));
     I.addImplicitDefUseOperands(*MF);
