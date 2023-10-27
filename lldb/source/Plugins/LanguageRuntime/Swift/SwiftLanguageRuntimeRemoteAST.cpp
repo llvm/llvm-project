@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "ReflectionContextInterface.h"
 #include "SwiftLanguageRuntimeImpl.h"
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Utility/LLDBLog.h"
