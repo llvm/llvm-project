@@ -179,10 +179,9 @@ bool ApplyCloning(MachineFunction &MF,
       // to that of PrevBB and CloneBB.
       PrevBB->ReplaceUsesOfBlockWith(OrigBB, CloneBB);
 
-      // CloneBB has a single predecessor. Therefore, its livein is the liveout
-      // of the predecessor block.
-      for (auto &LiveOut : PrevBB->liveouts())
-        CloneBB->addLiveIn(LiveOut);
+      // Copy the livein set.
+      for (auto &LiveIn : OrigBB->liveins())
+        CloneBB->addLiveIn(LiveIn);
 
       PrevBB = CloneBB;
     }
