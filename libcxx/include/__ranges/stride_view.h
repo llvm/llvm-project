@@ -12,12 +12,21 @@
 
 #include <__config>
 
+#include <__compare/three_way_comparable.h>
+#include <__concepts/convertible_to.h>
+#include <__concepts/derived_from.h>
+#include <__concepts/equality_comparable.h>
 #include <__functional/bind_back.h>
+#include <__iterator/concepts.h>
 #include <__iterator/default_sentinel.h>
 #include <__iterator/distance.h>
+#include <__iterator/iter_move.h>
 #include <__iterator/iter_swap.h>
+#include <__iterator/iterator_traits.h>
+#include <__ranges/access.h>
 #include <__ranges/all.h>
 #include <__ranges/concepts.h>
+#include <__ranges/range_adaptor.h>
 #include <__ranges/view_interface.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
