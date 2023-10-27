@@ -58,7 +58,7 @@ struct TestFn {
       static_assert(noexcept(std::atomic_notify_all(&a)), "");
 
       std::atomic<bool> is_ready[2] = {false, false};
-      auto f = [&](int index) {
+      auto f                        = [&](int index) {
         assert(std::atomic_load(&a) == T(2));
         is_ready[index].store(true);
 
