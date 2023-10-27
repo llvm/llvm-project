@@ -214,7 +214,7 @@ static std::optional<TypeSize> getPointerSize(const Value *V,
   Opts.NullIsUnknownSize = NullPointerIsDefined(F);
 
   if (getObjectSize(V, Size, DL, &TLI, Opts))
-    return TypeSize::getFixed(Size);
+    return TypeSize::Fixed(Size);
   return std::nullopt;
 }
 
