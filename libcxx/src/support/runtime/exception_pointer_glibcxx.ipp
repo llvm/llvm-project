@@ -37,7 +37,7 @@ struct exception_ptr
     void* __ptr_;
 
 #  if defined(_LIBCPP_EXCEPTION_PTR_DIRECT_INIT)
-    exception_ptr(void*) noexcept;
+    explicit exception_ptr(void*) noexcept;
 #  endif
     exception_ptr(const exception_ptr&) noexcept;
     exception_ptr& operator=(const exception_ptr&) noexcept;

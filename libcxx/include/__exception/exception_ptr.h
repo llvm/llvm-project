@@ -13,6 +13,7 @@
 #include <__exception/operations.h>
 #include <__memory/addressof.h>
 #include <__type_traits/decay.h>
+#include <__utility/unreachable.h>
 #include <cstddef>
 #include <cstdlib>
 #include <new>
@@ -79,6 +80,7 @@ _LIBCPP_HIDE_FROM_ABI exception_ptr make_exception_ptr(_Ep __e) _NOEXCEPT {
     } catch (...) {
       return current_exception();
     }
+    __libcpp_unreachable();
   }
 
   try {
