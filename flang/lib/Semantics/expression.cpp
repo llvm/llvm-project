@@ -1857,6 +1857,23 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::ArrayConstructor &array) {
   return acContext.ToExpr();
 }
 
+// Check if implicit conversion of expr to the symbol type is legal (if needed),
+// and make it explicit if requested.
+static MaybeExpr implicitConvertTo(const semantics::Symbol &sym,
+    Expr<SomeType> &&expr, bool keepConvertImplicit) {
+  if (!keepConvertImplicit) {
+    return ConvertToType(sym, std::move(expr));
+  } else {
+    // Test if a convert could be inserted, but do not make it explicit to
+    // preserve the information that expr is a variable.
+    if (ConvertToType(sym, common::Clone(expr))) {
+      return MaybeExpr{std::move(expr)};
+    }
+  }
+  // Illegal implicit convert.
+  return std::nullopt;
+}
+
 MaybeExpr ExpressionAnalyzer::Analyze(
     const parser::StructureConstructor &structure) {
   auto &parsedType{std::get<parser::DerivedTypeSpec>(structure.t)};
@@ -2061,7 +2078,15 @@ MaybeExpr ExpressionAnalyzer::Analyze(
                 visible->name(), symbol->name(), pointer->name());
           }
         }
-        if (MaybeExpr converted{ConvertToType(*symbol, std::move(*value))}) {
+        // Make implicit conversion explicit to allow folding of the structure
+        // constructors and help semantic checking, unless the component is
+        // allocatable, in which case the value could be an unallocated
+        // allocatable (see Fortran 2018 7.5.10 point 7). The explicit
+        // convert would cause a segfault. Lowering will deal with
+        // conditionally converting and preserving the lower bounds in this
+        // case.
+        if (MaybeExpr converted{implicitConvertTo(
+                *symbol, std::move(*value), IsAllocatable(*symbol))}) {
           if (auto componentShape{GetShape(GetFoldingContext(), *symbol)}) {
             if (auto valueShape{GetShape(GetFoldingContext(), *converted)}) {
               if (GetRank(*componentShape) == 0 && GetRank(*valueShape) > 0) {
@@ -4180,7 +4205,12 @@ std::optional<ProcedureRef> ArgumentAnalyzer::TryDefinedAssignment() {
   Tristate isDefined{
       semantics::IsDefinedAssignment(lhsType, lhsRank, rhsType, rhsRank)};
   if (isDefined == Tristate::No) {
-    if (lhsType && rhsType) {
+    // Make implicit conversion explicit, unless it is an assignment to a whole
+    // allocatable (the explicit conversion would prevent the propagation of the
+    // right hand side if it is a variable). Lowering will deal with the
+    // conversion in this case.
+    if (lhsType && rhsType &&
+        (!IsAllocatableDesignator(lhs) || context_.inWhereBody())) {
       AddAssignmentConversion(*lhsType, *rhsType);
     }
     if (!fatalErrors_) {
