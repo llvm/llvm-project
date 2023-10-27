@@ -875,6 +875,28 @@ defm SI_SPILL_S384 : SI_SPILL_SGPR <SReg_384>;
 defm SI_SPILL_S512 : SI_SPILL_SGPR <SReg_512>;
 defm SI_SPILL_S1024 : SI_SPILL_SGPR <SReg_1024>;
 
+let SGPRSpill = 1, VALU = 1, isConvergent = 1 in {
+def SI_SPILL_S32_TO_VGPR : PseudoInstSI <(outs VGPR_32:$vdst),
+  (ins SReg_32:$src0, i32imm:$src1, VGPR_32:$vdst_in)> {
+  let Size = 4;
+  let FixedSize = 1;
+  let IsNeverUniform = 1;
+  let hasSideEffects = 0;
+  let mayLoad = 0;
+  let mayStore = 0;
+  let Constraints = "$vdst = $vdst_in";
+}
+
+def SI_RESTORE_S32_FROM_VGPR : PseudoInstSI <(outs SReg_32:$sdst),
+  (ins VGPR_32:$src0, i32imm:$src1)> {
+  let Size = 4;
+  let FixedSize = 1;
+  let hasSideEffects = 0;
+  let mayLoad = 0;
+  let mayStore = 0;
+}
+} // End SGPRSpill = 1, VALU = 1, isConvergent = 1
+
 // VGPR or AGPR spill instructions. In case of AGPR spilling a temp register
 // needs to be used and an extra instruction to move between VGPR and AGPR.
 // UsesTmp adds to the total size of an expanded spill in this case.
