@@ -328,10 +328,6 @@ public:
     return TypeSize(MinimumSize, true);
   }
 
-  constexpr ScalarTy getFixedSize() const { return getFixedValue(); }
-  
-  constexpr ScalarTy getKnownMinSize() const { return getKnownMinValue(); }
-
   // All code for this class below this point is needed because of the
   // temporary implicit conversion to uint64_t. The operator overloads are
   // needed because otherwise the conversion of the parent class
