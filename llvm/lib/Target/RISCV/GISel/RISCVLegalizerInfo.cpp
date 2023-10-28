@@ -119,7 +119,9 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST) {
                                      {XLenLLT, p0, s16, 16}});
   if (XLen == 64)
     ExtLoadActions.legalForTypesWithMemDesc({{XLenLLT, p0, s32, 32}});
-  ExtLoadActions.lower();
+  ExtLoadActions
+    .clampScalar(0, s32, XLenLLT)
+    .lower();
 
   getActionDefinitionsBuilder(G_PTR_ADD)
       .legalFor({{p0, XLenLLT}});
