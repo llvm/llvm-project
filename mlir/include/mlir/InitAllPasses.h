@@ -28,6 +28,7 @@
 #include "mlir/Dialect/Math/Transforms/Passes.h"
 #include "mlir/Dialect/MemRef/Transforms/Passes.h"
 #include "mlir/Dialect/NVGPU/Transforms/Passes.h"
+#include "mlir/Dialect/PartTensor/Pipelines/Passes.h"
 #include "mlir/Dialect/SCF/Transforms/Passes.h"
 #include "mlir/Dialect/SPIRV/Transforms/Passes.h"
 #include "mlir/Dialect/Shape/Transforms/Passes.h"
@@ -83,6 +84,7 @@ inline void registerAllPasses() {
   arm_sme::registerArmSMEPasses();
 
   // Dialect pipelines
+  part_tensor::registerPartTensorPipelines();
   sparse_tensor::registerSparseTensorPipelines();
   sparse_tensor::registerSparseTensorKokkosPipelines();
 }
