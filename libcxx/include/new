@@ -248,10 +248,17 @@ _LIBCPP_OVERRIDABLE_FUNC_VIS _LIBCPP_AVAILABILITY_SIZED_NEW_DELETE void  operato
 #endif
 #endif
 
+#ifndef _LIBCPP_PLACEMENT_NEW_DEFINED
+#define _LIBCPP_PLACEMENT_NEW_DEFINED
 _LIBCPP_NODISCARD_AFTER_CXX17 inline _LIBCPP_INLINE_VISIBILITY void* operator new  (std::size_t, void* __p) _NOEXCEPT {return __p;}
-_LIBCPP_NODISCARD_AFTER_CXX17 inline _LIBCPP_INLINE_VISIBILITY void* operator new[](std::size_t, void* __p) _NOEXCEPT {return __p;}
 inline _LIBCPP_INLINE_VISIBILITY void  operator delete  (void*, void*) _NOEXCEPT {}
+#endif
+
+#ifndef _LIBCPP_PLACEMENT_ARRAY_NEW_DEFINED
+#define _LIBCPP_PLACEMENT_ARRAY_NEW_DEFINED
+_LIBCPP_NODISCARD_AFTER_CXX17 inline _LIBCPP_INLINE_VISIBILITY void* operator new[](std::size_t, void* __p) _NOEXCEPT {return __p;}
 inline _LIBCPP_INLINE_VISIBILITY void  operator delete[](void*, void*) _NOEXCEPT {}
+#endif
 
 #endif // !_LIBCPP_ABI_VCRUNTIME
 
