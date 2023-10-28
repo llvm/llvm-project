@@ -86,20 +86,15 @@ void GPUToSPIRVPass::runOnOperation() {
   for (Operation *gpuModule : gpuModules) {
     mlir::spirv::TargetEnvAttr targetAttr =
         spirv::lookupTargetEnvOrDefault(gpuModule);
-    std::unique_ptr<ConversionTarget> target =
-        SPIRVConversionTarget::get(targetAttr);
-
-    SPIRVConversionOptions options;
-    options.use64bitIndex = this->use64bitIndex;
-    SPIRVTypeConverter typeConverter(targetAttr, options);
-    const spirv::TargetEnv &targetEnv = typeConverter.getTargetEnv();
-    FailureOr<spirv::MemoryModel> memoryModel =
-        spirv::getMemoryModel(targetEnv);
-    if (failed(memoryModel))
-      return signalPassFailure();
 
     // Map MemRef memory space to SPIR-V storage class first if requested.
     if (mapMemorySpace) {
+      spirv::TargetEnv targetEnv(targetAttr);
+      FailureOr<spirv::MemoryModel> memoryModel =
+          spirv::getMemoryModel(targetEnv);
+      if (failed(memoryModel))
+        return signalPassFailure();
+
       std::unique_ptr<ConversionTarget> target =
           spirv::getMemorySpaceToStorageClassTarget(*context);
       spirv::MemorySpaceToStorageClassMap memorySpaceMap =
@@ -115,6 +110,12 @@ void GPUToSPIRVPass::runOnOperation() {
         return signalPassFailure();
     }
 
+    std::unique_ptr<ConversionTarget> target =
+        SPIRVConversionTarget::get(targetAttr);
+
+    SPIRVConversionOptions options;
+    options.use64bitIndex = this->use64bitIndex;
+    SPIRVTypeConverter typeConverter(targetAttr, options);
     populateMMAToSPIRVCoopMatrixTypeConversion(typeConverter,
                                                this->useCoopMatrixNV);
 
