@@ -382,7 +382,8 @@ Changes in existing checks
   using pointer to member function. Additionally, the check no longer emits
   a diagnostic when a variable that is not type-dependent is an operand of a
   type-dependent binary operator. Improved performance of the check through
-  optimizations.
+  optimizations. The check no longer emits a diagnostic for
+  variables used as the initializer of C++17 fold expressions.
 
 - Improved :doc:`misc-include-cleaner
   <clang-tidy/checks/misc/include-cleaner>` check by adding option
@@ -502,7 +503,7 @@ Changes in existing checks
   <clang-tidy/checks/readability/implicit-bool-conversion>` check to take
   do-while loops into account for the `AllowIntegerConditions` and
   `AllowPointerConditions` options. It also now provides more consistent
-  suggestions when parentheses are added to the return value or expressions. 
+  suggestions when parentheses are added to the return value or expressions.
   It also ignores false-positives for comparison containing bool bitfield.
 
 - Improved :doc:`readability-misleading-indentation

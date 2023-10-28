@@ -30,3 +30,20 @@ namespace gh57297{
 struct Stream { };
 template <typename T> void f() { T t; Stream x; x << t; }
 } // namespace gh57297
+
+namespace gh70323{
+// A fold expression may contain the checked variable as it's initializer.
+// We don't know if the operator modifies that variable because the
+// operator is type dependent due to the parameter pack.
+
+struct Stream {};
+template <typename T>
+Stream& operator<<(Stream&, T);
+template <typename... Args>
+void concatenate(Args... args)
+{
+    Stream stream;
+    (stream << ... << args);
+    (args << ... << stream);
+}
+} // namespace gh70323

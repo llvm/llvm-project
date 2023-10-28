@@ -359,6 +359,21 @@ TEST(ExprMutationAnalyzerTest, DependentOperatorWithNonDependentOperand) {
   EXPECT_THAT(mutatedBy(Results, AST.get()), ElementsAre("x << t"));
 }
 
+TEST(ExprMutationAnalyzerTest, FoldExpression) {
+  // gh70323
+  // A fold expression may contain `Exp` as it's initializer.
+  // We don't know if the operator modifies `Exp` because the
+  // operator is type dependent due to the parameter pack.
+  const auto AST = buildASTFromCode(
+      "struct Stream {};"
+      "template <typename T> Stream& operator<<(Stream&, T); "
+      "template <typename... Args> void concatenate(Args... args) "
+      "{ Stream x; (x << ... << args); }");
+  const auto Results =
+      match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+  EXPECT_THAT(mutatedBy(Results, AST.get()), ElementsAre("(x << ... << args)"));
+}
+
 // Section: expression as call argument
 
 TEST(ExprMutationAnalyzerTest, ByValueArgument) {
