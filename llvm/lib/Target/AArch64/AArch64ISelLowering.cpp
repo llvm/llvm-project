@@ -2726,15 +2726,8 @@ AArch64TargetLowering::EmitDynamicProbedAlloc(MachineInstr &MI,
   const AArch64InstrInfo &TII =
       *MF.getSubtarget<AArch64Subtarget>().getInstrInfo();
   Register TargetReg = MI.getOperand(0).getReg();
-  MachineBasicBlock::iterator NextInst =
-      TII.insertStackProbingLoop(MBBI, AArch64::SP, TargetReg);
+  MachineBasicBlock::iterator NextInst = TII.probedStackAlloc(MBBI, TargetReg);
 
-  // MOV SP, TargetReg
-  BuildMI(*NextInst->getParent(), std::next(NextInst), DL,
-          TII.get(AArch64::ADDXri), AArch64::SP)
-      .addReg(TargetReg)
-      .addImm(0)
-      .addImm(AArch64_AM::getShifterImm(AArch64_AM::LSL, 0));
   MI.eraseFromParent();
   return NextInst->getParent();
 }
