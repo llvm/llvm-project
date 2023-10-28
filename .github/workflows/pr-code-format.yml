@@ -7,16 +7,23 @@ jobs:
   code_formatter:
     runs-on: ubuntu-latest
     steps:
-      - name: Fetch LLVM sources
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: ${{ github.event.pull_request.commits }}
-
+      # Get changed files before checking out the repository to force the action
+      # to analyze the diff from the Github API rather than looking at the
+      # shallow clone and erroring out, which is significantly more prone to
+      # failure.
       - name: Get changed files
         id: changed-files
         uses: tj-actions/changed-files@v39
         with:
           separator: ","
+
+      - name: Calculate number of commits to fetch (PR)
+        run: echo "PR_FETCH_DEPTH=$(( ${{ github.event.pull_request.commits }} + 1 ))" >> "${GITHUB_ENV}"
+
+      - name: Fetch LLVM sources
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: ${{ env.PR_FETCH_DEPTH }}
 
       - name: "Listed files"
         run: |
