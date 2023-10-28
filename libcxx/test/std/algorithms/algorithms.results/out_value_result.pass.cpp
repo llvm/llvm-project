@@ -122,7 +122,7 @@ constexpr bool test() {
   }
   {
     // Check aggregate initiazliation
-    out_value_result res = {1, 2};
+    out_value_result<int, int> res = {1, 2};
     assert(res.out == 1);
     assert(res.value == 2);
   }
