@@ -35,20 +35,6 @@ namespace dataflow {
 static constexpr int MaxCompositeValueDepth = 3;
 static constexpr int MaxCompositeValueSize = 1000;
 
-/// Returns whether all declarations that `DeclToLoc1` and `DeclToLoc2` have in
-/// common map to the same storage location in both maps.
-bool declToLocConsistent(
-    const llvm::DenseMap<const ValueDecl *, StorageLocation *> &DeclToLoc1,
-    const llvm::DenseMap<const ValueDecl *, StorageLocation *> &DeclToLoc2) {
-  for (auto &Entry : DeclToLoc1) {
-    auto It = DeclToLoc2.find(Entry.first);
-    if (It != DeclToLoc2.end() && Entry.second != It->second)
-      return false;
-  }
-
-  return true;
-}
-
 /// Returns a map consisting of key-value entries that are present in both maps.
 template <typename K, typename V>
 llvm::DenseMap<K, V> intersectDenseMaps(const llvm::DenseMap<K, V> &Map1,
@@ -662,7 +648,6 @@ Environment Environment::join(const Environment &EnvA, const Environment &EnvB,
   else
     JoinedEnv.ReturnLoc = nullptr;
 
-  assert(declToLocConsistent(EnvA.DeclToLoc, EnvB.DeclToLoc));
   JoinedEnv.DeclToLoc = intersectDenseMaps(EnvA.DeclToLoc, EnvB.DeclToLoc);
 
   JoinedEnv.ExprToLoc = intersectDenseMaps(EnvA.ExprToLoc, EnvB.ExprToLoc);
@@ -714,10 +699,7 @@ StorageLocation *Environment::getStorageLocation(const ValueDecl &D) const {
   return Loc;
 }
 
-void Environment::removeDecl(const ValueDecl &D) {
-  assert(DeclToLoc.contains(&D));
-  DeclToLoc.erase(&D);
-}
+void Environment::removeDecl(const ValueDecl &D) { DeclToLoc.erase(&D); }
 
 void Environment::setStorageLocation(const Expr &E, StorageLocation &Loc) {
   // `DeclRefExpr`s to builtin function types aren't glvalues, for some reason,
@@ -947,12 +929,16 @@ StorageLocation &Environment::createObjectInternal(const ValueDecl *D,
   return Loc;
 }
 
-void Environment::addToFlowCondition(const Formula &Val) {
-  DACtx->addFlowConditionConstraint(FlowConditionToken, Val);
+void Environment::assume(const Formula &F) {
+  DACtx->addFlowConditionConstraint(FlowConditionToken, F);
 }
 
-bool Environment::flowConditionImplies(const Formula &Val) const {
-  return DACtx->flowConditionImplies(FlowConditionToken, Val);
+bool Environment::proves(const Formula &F) const {
+  return DACtx->flowConditionImplies(FlowConditionToken, F);
+}
+
+bool Environment::allows(const Formula &F) const {
+  return DACtx->flowConditionAllows(FlowConditionToken, F);
 }
 
 void Environment::dump(raw_ostream &OS) const {

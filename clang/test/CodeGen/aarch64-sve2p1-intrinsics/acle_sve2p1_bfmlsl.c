@@ -24,7 +24,7 @@
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x float> @llvm.aarch64.sve.bfmlslb(<vscale x 4 x float> [[ZDA:%.*]], <vscale x 8 x bfloat> [[ZN:%.*]], <vscale x 8 x bfloat> [[ZM:%.*]])
 // CHECK-NEXT:    ret <vscale x 4 x float> [[TMP0]]
 //
-// CPP-CHECK-LABEL: @_Z12test_bfmlslbu13__SVFloat32_tu14__SVBFloat16_tu14__SVBFloat16_t(
+// CPP-CHECK-LABEL: @_Z12test_bfmlslbu13__SVFloat32_tu14__SVBfloat16_tS0_(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x float> @llvm.aarch64.sve.bfmlslb(<vscale x 4 x float> [[ZDA:%.*]], <vscale x 8 x bfloat> [[ZN:%.*]], <vscale x 8 x bfloat> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 4 x float> [[TMP0]]
@@ -40,7 +40,7 @@ svfloat32_t test_bfmlslb(svfloat32_t zda, svbfloat16_t zn, svbfloat16_t zm)
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x float> @llvm.aarch64.sve.bfmlslb.lane(<vscale x 4 x float> [[ZDA:%.*]], <vscale x 8 x bfloat> [[ZN:%.*]], <vscale x 8 x bfloat> [[ZM:%.*]], i32 7)
 // CHECK-NEXT:    ret <vscale x 4 x float> [[TMP0]]
 //
-// CPP-CHECK-LABEL: @_Z17test_bfmlslb_laneu13__SVFloat32_tu14__SVBFloat16_tu14__SVBFloat16_t(
+// CPP-CHECK-LABEL: @_Z17test_bfmlslb_laneu13__SVFloat32_tu14__SVBfloat16_tS0_(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x float> @llvm.aarch64.sve.bfmlslb.lane(<vscale x 4 x float> [[ZDA:%.*]], <vscale x 8 x bfloat> [[ZN:%.*]], <vscale x 8 x bfloat> [[ZM:%.*]], i32 7)
 // CPP-CHECK-NEXT:    ret <vscale x 4 x float> [[TMP0]]
@@ -58,7 +58,7 @@ svfloat32_t test_bfmlslb_lane(svfloat32_t zda, svbfloat16_t zn, svbfloat16_t zm)
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x float> @llvm.aarch64.sve.bfmlslt(<vscale x 4 x float> [[ZDA:%.*]], <vscale x 8 x bfloat> [[ZN:%.*]], <vscale x 8 x bfloat> [[ZM:%.*]])
 // CHECK-NEXT:    ret <vscale x 4 x float> [[TMP0]]
 //
-// CPP-CHECK-LABEL: @_Z12test_bfmlsltu13__SVFloat32_tu14__SVBFloat16_tu14__SVBFloat16_t(
+// CPP-CHECK-LABEL: @_Z12test_bfmlsltu13__SVFloat32_tu14__SVBfloat16_tS0_(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x float> @llvm.aarch64.sve.bfmlslt(<vscale x 4 x float> [[ZDA:%.*]], <vscale x 8 x bfloat> [[ZN:%.*]], <vscale x 8 x bfloat> [[ZM:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 4 x float> [[TMP0]]
@@ -74,7 +74,7 @@ svfloat32_t test_bfmlslt(svfloat32_t zda, svbfloat16_t zn, svbfloat16_t zm)
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x float> @llvm.aarch64.sve.bfmlslt.lane(<vscale x 4 x float> [[ZDA:%.*]], <vscale x 8 x bfloat> [[ZN:%.*]], <vscale x 8 x bfloat> [[ZM:%.*]], i32 7)
 // CHECK-NEXT:    ret <vscale x 4 x float> [[TMP0]]
 //
-// CPP-CHECK-LABEL: @_Z17test_bfmlslt_laneu13__SVFloat32_tu14__SVBFloat16_tu14__SVBFloat16_t(
+// CPP-CHECK-LABEL: @_Z17test_bfmlslt_laneu13__SVFloat32_tu14__SVBfloat16_tS0_(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x float> @llvm.aarch64.sve.bfmlslt.lane(<vscale x 4 x float> [[ZDA:%.*]], <vscale x 8 x bfloat> [[ZN:%.*]], <vscale x 8 x bfloat> [[ZM:%.*]], i32 7)
 // CPP-CHECK-NEXT:    ret <vscale x 4 x float> [[TMP0]]

@@ -316,6 +316,7 @@ public:
                          globalOmpRequiresSymbol = b.symTab.symbol();
                      },
                      [&](Fortran::lower::pft::CompilerDirectiveUnit &d) {},
+                     [&](Fortran::lower::pft::OpenACCDirectiveUnit &d) {},
                  },
                  u);
     }
@@ -328,6 +329,14 @@ public:
               [&](Fortran::lower::pft::ModuleLikeUnit &m) { lowerMod(m); },
               [&](Fortran::lower::pft::BlockDataUnit &b) {},
               [&](Fortran::lower::pft::CompilerDirectiveUnit &d) {},
+              [&](Fortran::lower::pft::OpenACCDirectiveUnit &d) {
+                builder = new fir::FirOpBuilder(bridge.getModule(),
+                                                bridge.getKindMap());
+                Fortran::lower::genOpenACCRoutineConstruct(
+                    *this, bridge.getSemanticsContext(), bridge.getModule(),
+                    d.routine, accRoutineInfos);
+                builder = nullptr;
+              },
           },
           u);
     }
@@ -502,6 +511,15 @@ public:
   void bindSymbol(Fortran::lower::SymbolRef sym,
                   const fir::ExtendedValue &exval) override final {
     addSymbol(sym, exval, /*forced=*/true);
+  }
+
+  void
+  overrideExprValues(const Fortran::lower::ExprToValueMap *map) override final {
+    exprValueOverrides = map;
+  }
+
+  const Fortran::lower::ExprToValueMap *getExprOverrides() override final {
+    return exprValueOverrides;
   }
 
   bool lookupLabelSet(Fortran::lower::SymbolRef sym,
@@ -2362,6 +2380,10 @@ private:
       genFIR(e);
   }
 
+  void genFIR(const Fortran::parser::OpenACCRoutineConstruct &acc) {
+    // Handled by genFIR(const Fortran::parser::OpenACCDeclarativeConstruct &)
+  }
+
   void genFIR(const Fortran::parser::OpenMPConstruct &omp) {
     mlir::OpBuilder::InsertPoint insertPt = builder->saveInsertionPoint();
     localSymbols.pushScope();
@@ -3350,47 +3372,25 @@ private:
     }
   }
 
-  /// Given converted LHS and RHS of the assignment, generate
-  /// explicit type conversion for implicit Logical<->Integer
-  /// conversion. Return Value representing the converted RHS,
-  /// if the implicit Logical<->Integer is detected, otherwise,
-  /// return nullptr. The caller is responsible for inserting
-  /// DestroyOp in case the returned value has hlfir::ExprType.
-  mlir::Value
-  genImplicitLogicalConvert(const Fortran::evaluate::Assignment &assign,
-                            hlfir::Entity rhs,
-                            Fortran::lower::StatementContext &stmtCtx) {
-    mlir::Type fromTy = rhs.getFortranElementType();
-    if (!fromTy.isa<mlir::IntegerType, fir::LogicalType>())
-      return nullptr;
-
-    mlir::Type toTy = hlfir::getFortranElementType(genType(assign.lhs));
-    if (fromTy == toTy)
-      return nullptr;
-    if (!toTy.isa<mlir::IntegerType, fir::LogicalType>())
-      return nullptr;
-
+  /// Given converted LHS and RHS of the assignment, materialize any
+  /// implicit conversion of the RHS to the LHS type. The front-end
+  /// usually already makes those explicit, except for non-standard
+  /// LOGICAL <-> INTEGER, or if the LHS is a whole allocatable
+  /// (making the conversion explicit in the front-end would prevent
+  /// propagation of the LHS lower bound in the reallocation).
+  /// If array temporaries or values are created, the cleanups are
+  /// added in the statement context.
+  hlfir::Entity genImplicitConvert(const Fortran::evaluate::Assignment &assign,
+                                   hlfir::Entity rhs, bool preserveLowerBounds,
+                                   Fortran::lower::StatementContext &stmtCtx) {
     mlir::Location loc = toLocation();
     auto &builder = getFirOpBuilder();
-    if (assign.rhs.Rank() == 0)
-      return builder.createConvert(loc, toTy, rhs);
-
-    mlir::Value shape = hlfir::genShape(loc, builder, rhs);
-    auto genKernel =
-        [&rhs, &toTy](mlir::Location loc, fir::FirOpBuilder &builder,
-                      mlir::ValueRange oneBasedIndices) -> hlfir::Entity {
-      auto elementPtr = hlfir::getElementAt(loc, builder, rhs, oneBasedIndices);
-      auto val = hlfir::loadTrivialScalar(loc, builder, elementPtr);
-      return hlfir::EntityWithAttributes{builder.createConvert(loc, toTy, val)};
-    };
-    mlir::Value convertedRhs = hlfir::genElementalOp(
-        loc, builder, toTy, shape, /*typeParams=*/{}, genKernel,
-        /*isUnordered=*/true);
-    fir::FirOpBuilder *bldr = &builder;
-    stmtCtx.attachCleanup([loc, bldr, convertedRhs]() {
-      bldr->create<hlfir::DestroyOp>(loc, convertedRhs);
-    });
-    return convertedRhs;
+    mlir::Type toType = genType(assign.lhs);
+    auto valueAndPair = hlfir::genTypeAndKindConvert(loc, builder, rhs, toType,
+                                                     preserveLowerBounds);
+    if (valueAndPair.second)
+      stmtCtx.attachCleanup(*valueAndPair.second);
+    return hlfir::Entity{valueAndPair.first};
   }
 
   static void
@@ -3454,14 +3454,17 @@ private:
       // loops early if possible. This also dereferences pointer and
       // allocatable RHS: the target is being assigned from.
       rhs = hlfir::loadTrivialScalar(loc, builder, rhs);
-      // In intrinsic assignments, Logical<->Integer assignments are allowed as
-      // an extension, but there is no explicit Convert expression for the RHS.
-      // Recognize the type mismatch here and insert explicit scalar convert or
-      // ElementalOp for array assignment.
+      // In intrinsic assignments, the LHS type may not match the RHS type, in
+      // which case an implicit conversion of the LHS must be done. The
+      // front-end usually makes it explicit, unless it cannot (whole
+      // allocatable LHS or Logical<->Integer assignment extension). Recognize
+      // any type mismatches here and insert explicit scalar convert or
+      // ElementalOp for array assignment. Preserve the RHS lower bounds on the
+      // converted entity in case of assignment to whole allocatables so to
+      // propagate the lower bounds to the LHS in case of reallocation.
       if (!userDefinedAssignment)
-        if (mlir::Value conversion =
-                genImplicitLogicalConvert(assign, rhs, stmtCtx))
-          rhs = hlfir::Entity{conversion};
+        rhs = genImplicitConvert(assign, rhs, isWholeAllocatableAssignment,
+                                 stmtCtx);
       return rhs;
     };
 
@@ -4890,6 +4893,8 @@ private:
   /// Whether an OpenMP target region or declare target function/subroutine
   /// intended for device offloading has been detected
   bool ompDeviceCodeFound = false;
+
+  const Fortran::lower::ExprToValueMap *exprValueOverrides{nullptr};
 };
 
 } // namespace

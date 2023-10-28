@@ -663,6 +663,14 @@ RISCVRegisterInfo::getLargestLegalSuperClass(const TargetRegisterClass *RC,
                                              const MachineFunction &) const {
   if (RC == &RISCV::VMV0RegClass)
     return &RISCV::VRRegClass;
+  if (RC == &RISCV::VRNoV0RegClass)
+    return &RISCV::VRRegClass;
+  if (RC == &RISCV::VRM2NoV0RegClass)
+    return &RISCV::VRM2RegClass;
+  if (RC == &RISCV::VRM4NoV0RegClass)
+    return &RISCV::VRM4RegClass;
+  if (RC == &RISCV::VRM8NoV0RegClass)
+    return &RISCV::VRM8RegClass;
   return RC;
 }
 

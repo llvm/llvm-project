@@ -2889,6 +2889,10 @@ static bool isTypeSubstitutable(Qualifiers Quals, const Type *Ty,
     return true;
   if (Ty->isOpenCLSpecificType())
     return true;
+  // From Clang 18.0 we correctly treat SVE types as substitution candidates.
+  if (Ty->isSVESizelessBuiltinType() &&
+      Ctx.getLangOpts().getClangABICompat() > LangOptions::ClangABI::Ver17)
+    return true;
   if (Ty->isBuiltinType())
     return false;
   // Through to Clang 6.0, we accidentally treated undeduced auto types as
@@ -3046,21 +3050,12 @@ void CXXNameMangler::mangleType(const BuiltinType *T) {
   // UNSUPPORTED:    ::= De # IEEE 754r decimal floating point (128 bits)
   // UNSUPPORTED:    ::= Df # IEEE 754r decimal floating point (32 bits)
   //                 ::= Dh # IEEE 754r half-precision floating point (16 bits)
-  //                 ::= DF <number> _ # ISO/IEC TS 18661 binary floating point type _FloatN (N bits);
+  //                 ::= DF <number> _ # ISO/IEC TS 18661 binary floating point
+  //                 type _FloatN (N bits);
   //                 ::= Di # char32_t
   //                 ::= Ds # char16_t
   //                 ::= Dn # std::nullptr_t (i.e., decltype(nullptr))
-  //                 ::= [DS] DA  # N1169 fixed-point [_Sat] T _Accum
-  //                 ::= [DS] DR  # N1169 fixed-point [_Sat] T _Fract
   //                 ::= u <source-name>    # vendor extended type
-  //
-  //  <fixed-point-size>
-  //                 ::= s # short
-  //                 ::= t # unsigned short
-  //                 ::= i # plain
-  //                 ::= j # unsigned
-  //                 ::= l # long
-  //                 ::= m # unsigned long
   std::string type_name;
   // Normalize integer types as vendor extended types:
   // u<length>i<type size>
@@ -3205,77 +3200,30 @@ void CXXNameMangler::mangleType(const BuiltinType *T) {
     Out << "DF16_";
     break;
   case BuiltinType::ShortAccum:
-    Out << "DAs";
-    break;
   case BuiltinType::Accum:
-    Out << "DAi";
-    break;
   case BuiltinType::LongAccum:
-    Out << "DAl";
-    break;
   case BuiltinType::UShortAccum:
-    Out << "DAt";
-    break;
   case BuiltinType::UAccum:
-    Out << "DAj";
-    break;
   case BuiltinType::ULongAccum:
-    Out << "DAm";
-    break;
   case BuiltinType::ShortFract:
-    Out << "DRs";
-    break;
   case BuiltinType::Fract:
-    Out << "DRi";
-    break;
   case BuiltinType::LongFract:
-    Out << "DRl";
-    break;
   case BuiltinType::UShortFract:
-    Out << "DRt";
-    break;
   case BuiltinType::UFract:
-    Out << "DRj";
-    break;
   case BuiltinType::ULongFract:
-    Out << "DRm";
-    break;
   case BuiltinType::SatShortAccum:
-    Out << "DSDAs";
-    break;
   case BuiltinType::SatAccum:
-    Out << "DSDAi";
-    break;
   case BuiltinType::SatLongAccum:
-    Out << "DSDAl";
-    break;
   case BuiltinType::SatUShortAccum:
-    Out << "DSDAt";
-    break;
   case BuiltinType::SatUAccum:
-    Out << "DSDAj";
-    break;
   case BuiltinType::SatULongAccum:
-    Out << "DSDAm";
-    break;
   case BuiltinType::SatShortFract:
-    Out << "DSDRs";
-    break;
   case BuiltinType::SatFract:
-    Out << "DSDRi";
-    break;
   case BuiltinType::SatLongFract:
-    Out << "DSDRl";
-    break;
   case BuiltinType::SatUShortFract:
-    Out << "DSDRt";
-    break;
   case BuiltinType::SatUFract:
-    Out << "DSDRj";
-    break;
   case BuiltinType::SatULongFract:
-    Out << "DSDRm";
-    break;
+    llvm_unreachable("Fixed point types are disabled for c++");
   case BuiltinType::Half:
     Out << "Dh";
     break;
@@ -3372,9 +3320,16 @@ void CXXNameMangler::mangleType(const BuiltinType *T) {
 #define SVE_VECTOR_TYPE(InternalName, MangledName, Id, SingletonId, NumEls,    \
                         ElBits, IsSigned, IsFP, IsBF)                          \
   case BuiltinType::Id:                                                        \
-    type_name = MangledName;                                                   \
-    Out << (type_name == InternalName ? "u" : "") << type_name.size()          \
-        << type_name;                                                          \
+    if (T->getKind() == BuiltinType::SveBFloat16 &&                            \
+        isCompatibleWith(LangOptions::ClangABI::Ver17)) {                      \
+      /* Prior to Clang 18.0 we used this incorrect mangled name */            \
+      type_name = "__SVBFloat16_t";                                            \
+      Out << "u" << type_name.size() << type_name;                             \
+    } else {                                                                   \
+      type_name = MangledName;                                                 \
+      Out << (type_name == InternalName ? "u" : "") << type_name.size()        \
+          << type_name;                                                        \
+    }                                                                          \
     break;
 #define SVE_PREDICATE_TYPE(InternalName, MangledName, Id, SingletonId, NumEls) \
   case BuiltinType::Id:                                                        \

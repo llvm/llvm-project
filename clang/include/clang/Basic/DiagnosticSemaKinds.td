@@ -166,6 +166,8 @@ def ext_vla_folded_to_constant : ExtWarn<
   InGroup<GNUFoldingConstant>;
 def err_vla_unsupported : Error<
   "variable length arrays are not supported for %select{the current target|'%1'}0">;
+def err_vla_in_coroutine_unsupported : Error<
+  "variable length arrays in a coroutine are not supported">;
 def note_vla_unsupported : Note<
   "variable length arrays are not supported for the current target">;
 
@@ -3165,6 +3167,9 @@ def err_invalid_branch_protection_spec : Error<
   "invalid or misplaced branch protection specification '%0'">;
 def warn_unsupported_branch_protection_spec : Warning<
   "unsupported branch protection specification '%0'">, InGroup<BranchProtection>;
+def warn_attribute_underlying_type_mismatch : Warning<
+  "underlying type %0 of enumeration %1 doesn't match bit-field type %2">,
+  InGroup<BitFieldType>;
 
 def warn_unsupported_target_attribute
     : Warning<"%select{unsupported|duplicate|unknown}0%select{| CPU|"
@@ -6191,9 +6196,6 @@ def warn_signed_bitfield_enum_conversion : Warning<
   "signed bit-field %0 needs an extra bit to represent the largest positive "
   "enumerators of %1">,
   InGroup<BitFieldEnumConversion>, DefaultIgnore;
-def warn_bitfield_too_small_for_integral_type : Warning<
-  "conversion from %2 (%3 bits) to bit-field %0 (%1 bits) may change value">,
-  InGroup<BitFieldConversion>, DefaultIgnore;
 def note_change_bitfield_sign : Note<
   "consider making the bitfield type %select{unsigned|signed}0">;
 
@@ -11028,6 +11030,8 @@ def err_omp_wrong_linear_modifier : Error<
   "expected %select{'val' modifier|one of 'ref', val' or 'uval' modifiers}0">;
 def err_omp_wrong_linear_modifier_non_reference : Error<
   "variable of non-reference type %0 can be used only with 'val' modifier, but used with '%1'">;
+def err_omp_step_simple_modifier_exclusive : Error<
+  "step simple modifier is exclusive and can't be use with 'val', 'uval' or 'ref' modifier">;
 def err_omp_wrong_simdlen_safelen_values : Error<
   "the value of 'simdlen' parameter must be less than or equal to the value of the 'safelen' parameter">;
 def err_omp_wrong_if_directive_name_modifier : Error<

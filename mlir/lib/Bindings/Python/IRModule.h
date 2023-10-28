@@ -37,6 +37,7 @@ class PyMlirContext;
 class DefaultingPyMlirContext;
 class PyModule;
 class PyOperation;
+class PyOperationBase;
 class PyType;
 class PySymbolTable;
 class PyValue;
@@ -209,10 +210,15 @@ public:
   /// place.
   size_t clearLiveOperations();
 
-  /// Sets an operation invalid. This is useful for when some non-bindings
-  /// code destroys the operation and the bindings need to made aware. For
-  /// example, in the case when pass manager is run.
-  void setOperationInvalid(MlirOperation op);
+  /// Removes an operation from the live operations map and sets it invalid.
+  /// This is useful for when some non-bindings code destroys the operation and
+  /// the bindings need to made aware. For example, in the case when pass
+  /// manager is run.
+  void clearOperation(MlirOperation op);
+
+  /// Clears all operations nested inside the given op using
+  /// `clearOperation(MlirOperation)`.
+  void clearOperationsInside(PyOperationBase &op);
 
   /// Gets the count of live modules associated with this context.
   /// Used for testing.

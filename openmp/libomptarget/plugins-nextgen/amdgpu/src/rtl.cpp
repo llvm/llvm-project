@@ -1331,6 +1331,42 @@ public:
     return Plugin::check(Status, "Error in hsa_amd_memory_async_copy: %s");
   }
 
+  // AMDGPUDeviceTy is incomplete here, passing the underlying agent instead
+  Error pushMemoryCopyD2DAsync(void *Dst, hsa_agent_t DstAgent, const void *Src,
+                               hsa_agent_t SrcAgent, uint64_t CopySize) {
+    AMDGPUSignalTy *OutputSignal;
+    if (auto Err = SignalManager.getResources(/*Num=*/1, &OutputSignal))
+      return Err;
+    OutputSignal->reset();
+    OutputSignal->increaseUseCount();
+
+    std::lock_guard<std::mutex> Lock(Mutex);
+
+    // Consume stream slot and compute dependencies.
+    auto [Curr, InputSignal] = consume(OutputSignal);
+
+    // Avoid defining the input dependency if already satisfied.
+    if (InputSignal && !InputSignal->load())
+      InputSignal = nullptr;
+
+    // The agents need to have access to the corresponding memory
+    // This is presently only true if the pointers were originally
+    // allocated by this runtime or the caller made the appropriate
+    // access calls.
+
+    hsa_status_t Status;
+    if (InputSignal && InputSignal->load()) {
+      hsa_signal_t InputSignalRaw = InputSignal->get();
+      Status =
+          hsa_amd_memory_async_copy(Dst, DstAgent, Src, SrcAgent, CopySize, 1,
+                                    &InputSignalRaw, OutputSignal->get());
+    } else
+      Status = hsa_amd_memory_async_copy(Dst, DstAgent, Src, SrcAgent, CopySize,
+                                         0, nullptr, OutputSignal->get());
+
+    return Plugin::check(Status, "Error in D2D hsa_amd_memory_async_copy: %s");
+  }
+
   /// Synchronize with the stream. The current thread waits until all operations
   /// are finalized and it performs the pending post actions (i.e., releasing
   /// intermediate buffers).
@@ -2250,14 +2286,20 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
                                           PinnedMemoryManager);
   }
 
-  /// Exchange data between two devices within the plugin. This function is not
-  /// supported in this plugin.
+  /// Exchange data between two devices within the plugin.
   Error dataExchangeImpl(const void *SrcPtr, GenericDeviceTy &DstGenericDevice,
                          void *DstPtr, int64_t Size,
                          AsyncInfoWrapperTy &AsyncInfoWrapper) override {
-    // This function should never be called because the function
-    // AMDGPUPluginTy::isDataExchangable() returns false.
-    return Plugin::error("dataExchangeImpl not supported");
+    AMDGPUDeviceTy &DstDevice = static_cast<AMDGPUDeviceTy &>(DstGenericDevice);
+
+    AMDGPUStreamTy *Stream = nullptr;
+    if (auto Err = getStream(AsyncInfoWrapper, Stream))
+      return Err;
+    if (Size <= 0)
+      return Plugin::success();
+
+    return Stream->pushMemoryCopyD2DAsync(DstPtr, DstDevice.getAgent(), SrcPtr,
+                                          getAgent(), (uint64_t)Size);
   }
 
   /// Initialize the async info for interoperability purposes.
@@ -2897,9 +2939,8 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
     return true;
   }
 
-  /// This plugin does not support exchanging data between two devices.
   bool isDataExchangable(int32_t SrcDeviceId, int32_t DstDeviceId) override {
-    return false;
+    return true;
   }
 
   /// Get the host device instance.
@@ -3174,8 +3215,10 @@ void *AMDGPUDeviceTy::allocate(size_t Size, void *, TargetAllocTy Kind) {
     return nullptr;
   }
 
-  if (Alloc && (Kind == TARGET_ALLOC_HOST || Kind == TARGET_ALLOC_SHARED)) {
+  if (Alloc) {
     auto &KernelAgents = Plugin::get<AMDGPUPluginTy>().getKernelAgents();
+    // Inherently necessary for host or shared allocations
+    // Also enabled for device memory to allow device to device memcpy
 
     // Enable all kernel agents to access the buffer.
     if (auto Err = MemoryPool->enableAccess(Alloc, Size, KernelAgents)) {

@@ -4002,3 +4002,30 @@ defm UZPQ1_ZZZ : sve2p1_permute_vec_elems_q<0b010, "uzpq1">;
 defm UZPQ2_ZZZ : sve2p1_permute_vec_elems_q<0b011, "uzpq2">;
 defm TBLQ_ZZZ  : sve2p1_tblq<"tblq">;
 } // End HasSVE2p1_or_HasSME2p1
+
+//===----------------------------------------------------------------------===//
+// SVE2 FP8 instructions
+//===----------------------------------------------------------------------===//
+let Predicates = [HasSVE2orSME2, HasFP8] in {
+// FP8 upconvert
+defm F1CVT_ZZ     : sve2_fp8_cvt_single<0b0, 0b00, "f1cvt">;
+defm F2CVT_ZZ     : sve2_fp8_cvt_single<0b0, 0b01, "f2cvt">;
+defm BF1CVT_ZZ    : sve2_fp8_cvt_single<0b0, 0b10, "bf1cvt">;
+defm BF2CVT_ZZ    : sve2_fp8_cvt_single<0b0, 0b11, "bf2cvt">;
+defm F1CVTLT_ZZ   : sve2_fp8_cvt_single<0b1, 0b00, "f1cvtlt">;
+defm F2CVTLT_ZZ   : sve2_fp8_cvt_single<0b1, 0b01, "f2cvtlt">;
+defm BF1CVTLT_ZZ  : sve2_fp8_cvt_single<0b1, 0b10, "bf1cvtlt">;
+defm BF2CVTLT_ZZ  : sve2_fp8_cvt_single<0b1, 0b11, "bf2cvtlt">;
+
+// FP8 downconvert
+defm FCVTN_Z2Z_HtoB  : sve2_fp8_down_cvt_single<0b00, "fcvtn", ZZ_h_mul_r>;
+defm FCVTNB_Z2Z_StoB : sve2_fp8_down_cvt_single<0b01, "fcvtnb", ZZ_s_mul_r>;
+defm BFCVTN_Z2Z_HtoB : sve2_fp8_down_cvt_single<0b10, "bfcvtn", ZZ_h_mul_r>;
+defm FCVTNT_Z2Z_StoB : sve2_fp8_down_cvt_single<0b11, "fcvtnt", ZZ_s_mul_r>;
+} // End HasSVE2orSME2, HasFP8
+
+let Predicates = [HasSVE2orSME2, HasFAMINMAX] in {
+// FP8 Arithmetic - Predicated Group
+defm FAMIN_ZPmZ : sve_fp_2op_p_zds<0b1111, "famin", "", null_frag, DestructiveOther>;
+defm FAMAX_ZPmZ : sve_fp_2op_p_zds<0b1110, "famax", "", null_frag, DestructiveOther>;
+} // End HasSVE2orSME2, HasFAMINMAX

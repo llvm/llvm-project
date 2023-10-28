@@ -212,6 +212,30 @@ bool AArch64TTIImpl::areInlineCompatible(const Function *Caller,
   return (CallerBits & CalleeBits) == CalleeBits;
 }
 
+bool AArch64TTIImpl::areTypesABICompatible(
+    const Function *Caller, const Function *Callee,
+    const ArrayRef<Type *> &Types) const {
+  if (!BaseT::areTypesABICompatible(Caller, Callee, Types))
+    return false;
+
+  // We need to ensure that argument promotion does not attempt to promote
+  // pointers to fixed-length vector types larger than 128 bits like
+  // <8 x float> (and pointers to aggregate types which have such fixed-length
+  // vector type members) into the values of the pointees. Such vector types
+  // are used for SVE VLS but there is no ABI for SVE VLS arguments and the
+  // backend cannot lower such value arguments. The 128-bit fixed-length SVE
+  // types can be safely treated as 128-bit NEON types and they cannot be
+  // distinguished in IR.
+  if (ST->useSVEForFixedLengthVectors() && llvm::any_of(Types, [](Type *Ty) {
+        auto FVTy = dyn_cast<FixedVectorType>(Ty);
+        return FVTy &&
+               FVTy->getScalarSizeInBits() * FVTy->getNumElements() > 128;
+      }))
+    return false;
+
+  return true;
+}
+
 bool AArch64TTIImpl::shouldMaximizeVectorBandwidth(
     TargetTransformInfo::RegisterKind K) const {
   assert(K != TargetTransformInfo::RGK_Scalar);
@@ -1937,21 +1961,20 @@ TypeSize
 AArch64TTIImpl::getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
   switch (K) {
   case TargetTransformInfo::RGK_Scalar:
-    return TypeSize::getFixed(64);
+    return TypeSize::Fixed(64);
   case TargetTransformInfo::RGK_FixedWidthVector:
     if (!ST->isNeonAvailable() && !EnableFixedwidthAutovecInStreamingMode)
-      return TypeSize::getFixed(0);
+      return TypeSize::Fixed(0);
 
     if (ST->hasSVE())
-      return TypeSize::getFixed(
-          std::max(ST->getMinSVEVectorSizeInBits(), 128u));
+      return TypeSize::Fixed(std::max(ST->getMinSVEVectorSizeInBits(), 128u));
 
-    return TypeSize::getFixed(ST->hasNEON() ? 128 : 0);
+    return TypeSize::Fixed(ST->hasNEON() ? 128 : 0);
   case TargetTransformInfo::RGK_ScalableVector:
     if (!ST->isSVEAvailable() && !EnableScalableAutovecInStreamingMode)
-      return TypeSize::getScalable(0);
+      return TypeSize::Scalable(0);
 
-    return TypeSize::getScalable(ST->hasSVE() ? 128 : 0);
+    return TypeSize::Scalable(ST->hasSVE() ? 128 : 0);
   }
   llvm_unreachable("Unsupported register kind");
 }
@@ -2973,12 +2996,16 @@ static unsigned getSVEGatherScatterOverhead(unsigned Opcode) {
 InstructionCost AArch64TTIImpl::getGatherScatterOpCost(
     unsigned Opcode, Type *DataTy, const Value *Ptr, bool VariableMask,
     Align Alignment, TTI::TargetCostKind CostKind, const Instruction *I) {
-  if (useNeonVector(DataTy))
+  if (useNeonVector(DataTy) || !isLegalMaskedGatherScatter(DataTy))
     return BaseT::getGatherScatterOpCost(Opcode, DataTy, Ptr, VariableMask,
                                          Alignment, CostKind, I);
   auto *VT = cast<VectorType>(DataTy);
   auto LT = getTypeLegalizationCost(DataTy);
   if (!LT.first.isValid())
+    return InstructionCost::getInvalid();
+
+  if (!LT.second.isVector() ||
+      !isElementTypeLegalForScalableVector(VT->getElementType()))
     return InstructionCost::getInvalid();
 
   // The code-generator is currently not able to handle scalable vectors

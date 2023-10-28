@@ -11,6 +11,38 @@
 
 include "mlir/Pass/PassBase.td"
 
+def SparseReinterpretMap : Pass<"sparse-reinterpret-map", "ModuleOp"> {
+  let summary = "Reinterprets sparse tensor type mappings";
+  let description = [{
+    A pass that reinterprets the mappings in all sparse tensor types in a
+    way that enables subsequent sparsification. This involves expressing all
+    `linalg.generic` operations in terms of level coordinates (rather than
+    the dimension coordinates of the input tensors) to align the iteration
+    space with the potentially remapped level space as well as resolving cycles
+    in the resulting iteration graphs with explicit sparse tensor conversions
+    where needed.
+  }];
+  let constructor = "mlir::createSparseReinterpretMapPass()";
+  let dependentDialects = [
+    "affine::AffineDialect",
+    "linalg::LinalgDialect",
+    "sparse_tensor::SparseTensorDialect",
+  ];
+  let options = [
+    Option<"scope", "scope", "mlir::ReinterpretMapScope",
+       "mlir::ReinterpretMapScope::kAll",
+       "Set the reiterpretation scope", [{llvm::cl::values(
+         clEnumValN(mlir::ReinterpretMapScope::kAll, "all",
+                    "Run on every applicable operations."),
+         clEnumValN(mlir::ReinterpretMapScope::kGenericOnly,
+                    "only-generic",
+                    "Run only on linalg.generic operations."),
+         clEnumValN(mlir::ReinterpretMapScope::kExceptGeneric,
+                    "except-generic",
+                    "Run on operations expect linalg.generic (e.g., foreach)"))}]>,
+  ];
+}
+
 def PreSparsificationRewrite : Pass<"pre-sparsification-rewrite", "ModuleOp"> {
   let summary = "Applies sparse tensor rewriting rules prior to sparsification";
   let description = [{

@@ -43,8 +43,8 @@ C/C++ Language Potentially Breaking Changes
 
 - The default extension name for PCH generation (``-c -xc-header`` and ``-c
   -xc++-header``) is now ``.pch`` instead of ``.gch``.
-- ``-include a.h`` probing ``a.h.gch`` is deprecated. Change the extension name
-  to ``.pch`` or use ``-include-pch a.h.gch``.
+- ``-include a.h`` probing ``a.h.gch`` will now ignore ``a.h.gch`` if it is not
+  a clang pch file or a directory containing any clang pch file.
 - Fixed a bug that caused ``__has_cpp_attribute`` and ``__has_c_attribute``
   return incorrect values for some C++-11-style attributes. Below is a complete
   list of behavior changes.
@@ -105,13 +105,35 @@ C++ Specific Potentially Breaking Changes
   error in the next Clang release.
 
 - The flag `-fdelayed-template-parsing` won't be enabled by default with C++20
-  when targetting MSVC to match the behavior of MSVC. 
+  when targetting MSVC to match the behavior of MSVC.
   (`MSVC Docs <https://learn.microsoft.com/en-us/cpp/build/reference/permissive-standards-conformance?view=msvc-170>`_)
 
 ABI Changes in This Version
 ---------------------------
 - Following the SystemV ABI for x86-64, ``__int128`` arguments will no longer
   be split between a register and a stack slot.
+
+AST Dumping Potentially Breaking Changes
+----------------------------------------
+- When dumping a sugared type, Clang will no longer print the desugared type if
+  its textual representation is the same as the sugared one. This applies to
+  both text dumps of the form ``'foo':'foo'`` which will now be dumped as just
+  ``'foo'``, and JSON dumps of the form:
+
+  .. code-block:: json
+
+    "type": {
+      "qualType": "foo",
+      "desugaredQualType": "foo"
+    }
+
+  which will now be dumped as just:
+
+  .. code-block:: json
+
+    "type": {
+      "qualType": "foo"
+    }
 
 What's New in Clang |release|?
 ==============================
@@ -185,7 +207,7 @@ C23 Feature Support
 - Clang now supports ``N3007 Type inference for object definitions``.
 
 - Clang now supports ``<stdckdint.h>`` which defines several macros for performing
-  checked integer arithmetic.
+  checked integer arithmetic. It is also exposed in pre-C23 modes.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
@@ -210,9 +232,6 @@ New Compiler Flags
   preserving ``#include`` directives for "system" headers instead of copying
   the preprocessed text to the output. This can greatly reduce the size of the
   preprocessed output, which can be helpful when trying to reduce a test case.
-
-* ``-Wbitfield-conversion`` was added to detect assignments of integral
-  types to a bitfield that may change the value.
 
 Deprecated Compiler Flags
 -------------------------
@@ -250,6 +269,24 @@ Attribute Changes in Clang
   automatic diagnostic to use parameters of types that the format style
   supports but that are never the result of default argument promotion, such as
   ``float``. (`#59824: <https://github.com/llvm/llvm-project/issues/59824>`_)
+
+- Clang now supports ``[[clang::preferred_type(type-name)]]`` as an attribute
+  which can be applied to a bit-field. This attribute helps to map a bit-field
+  back to a particular type that may be better-suited to representing the bit-
+  field but cannot be used for other reasons and will impact the debug
+  information generated for the bit-field. This is most useful when mapping a
+  bit-field of basic integer type back to a ``bool`` or an enumeration type,
+  e.g.,
+
+  .. code-block:: c++
+
+      enum E { Apple, Orange, Pear };
+      struct S {
+        [[clang::preferred_type(E)]] unsigned FruitKind : 2;
+      };
+
+  When viewing ``S::FruitKind`` in a debugger, it will behave as if the member
+  was declared as type ``E`` rather than ``unsigned``.
 
 Improvements to Clang's diagnostics
 -----------------------------------
@@ -333,6 +370,9 @@ Improvements to Clang's diagnostics
       |               ~~~~~~~~~^~~~~~~~
 - Clang now always diagnoses when using non-standard layout types in ``offsetof`` .
   (`#64619: <https://github.com/llvm/llvm-project/issues/64619>`_)
+- Clang now diagnoses redefined defaulted constructor when redefined
+  defaulted constructor with different exception specs.
+  (`#69094: <https://github.com/llvm/llvm-project/issues/69094>`_)
 - Clang now diagnoses use of variable-length arrays in C++ by default (and
   under ``-Wall`` in GNU++ mode). This is an extension supported by Clang and
   GCC, but is very easy to accidentally use without realizing it's a
@@ -363,6 +403,29 @@ Improvements to Clang's diagnostics
   C++ semantics, e.g. which function template is more specialized. This
   can sometimes lead to worse ordering.
 
+
+- When describing a warning/error in a function-style type conversion Clang underlines only until
+  the end of the expression we convert from. Now Clang underlines until the closing parenthesis.
+
+  Before:
+
+  .. code-block:: text
+
+    warning: cast from 'long (*)(const int &)' to 'decltype(fun_ptr)' (aka 'long (*)(int &)') converts to incompatible function type [-Wcast-function-type-strict]
+    24 | return decltype(fun_ptr)( f_ptr /*comment*/);
+       |        ^~~~~~~~~~~~~~~~~~~~~~~~
+
+  After:
+
+  .. code-block:: text
+
+    warning: cast from 'long (*)(const int &)' to 'decltype(fun_ptr)' (aka 'long (*)(int &)') converts to incompatible function type [-Wcast-function-type-strict]
+    24 | return decltype(fun_ptr)( f_ptr /*comment*/);
+       |        ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+- ``-Wzero-as-null-pointer-constant`` diagnostic is no longer emitted when using ``__null``
+  (or, more commonly, ``NULL`` when the platform defines it as ``__null``) to be more consistent
+  with GCC.
 
 Bug Fixes in This Version
 -------------------------
@@ -440,6 +503,10 @@ Bug Fixes in This Version
   cannot be used with ``Release`` mode builds. (`#68237 <https://github.com/llvm/llvm-project/issues/68237>`_).
 - Fix crash in evaluating ``constexpr`` value for invalid template function.
   Fixes (`#68542 <https://github.com/llvm/llvm-project/issues/68542>`_)
+- Clang will correctly evaluate ``noexcept`` expression for template functions
+  of template classes. Fixes
+  (`#68543 <https://github.com/llvm/llvm-project/issues/68543>`_,
+  `#42496 <https://github.com/llvm/llvm-project/issues/42496>`_)
 - Fixed an issue when a shift count larger than ``__INT64_MAX__``, in a right
   shift operation, could result in missing warnings about
   ``shift count >= width of type`` or internal compiler error.
@@ -450,11 +517,22 @@ Bug Fixes in This Version
 - Clang no longer permits using the `_BitInt` types as an underlying type for an
   enumeration as specified in the C23 Standard.
   Fixes (`#69619 <https://github.com/llvm/llvm-project/issues/69619>`_)
+- Fixed an issue when a shift count specified by a small constant ``_BitInt()``,
+  in a left shift operation, could result in a faulty warnings about
+  ``shift count >= width of type``.
 - Clang now accepts anonymous members initialized with designated initializers
   inside templates.
   Fixes (`#65143 <https://github.com/llvm/llvm-project/issues/65143>`_)
 - Fix crash in formatting the real/imaginary part of a complex lvalue.
   Fixes (`#69218 <https://github.com/llvm/llvm-project/issues/69218>`_)
+- No longer use C++ ``thread_local`` semantics in C23 when using
+  ``thread_local`` instead of ``_Thread_local``.
+  Fixes (`#70068 <https://github.com/llvm/llvm-project/issues/70068>`_) and
+  (`#69167 <https://github.com/llvm/llvm-project/issues/69167>`_)
+- Fix crash in evaluating invalid lambda expression which forget capture this.
+  Fixes (`#67687 <https://github.com/llvm/llvm-project/issues/67687>`_)
+- Fix crash from constexpr evaluator evaluating uninitialized arrays as rvalue.
+  Fixes (`#67317 <https://github.com/llvm/llvm-project/issues/67317>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -579,6 +657,19 @@ Bug Fixes to C++ Support
   declaration definition. Fixes:
   (`#61763 <https://github.com/llvm/llvm-project/issues/61763>`_)
 
+- Fix a bug where implicit deduction guides are not correctly generated for nested template
+  classes. Fixes:
+  (`#46200 <https://github.com/llvm/llvm-project/issues/46200>`_)
+  (`#57812 <https://github.com/llvm/llvm-project/issues/57812>`_)
+
+- Diagnose use of a variable-length array in a coroutine. The design of
+  coroutines is such that it is not possible to support VLA use. Fixes:
+  (`#65858 <https://github.com/llvm/llvm-project/issues/65858>`_)
+
+- Fix bug where we were overriding zero-initialization of class members when
+  default initializing a base class in a constant expression context. Fixes:
+  (`#69890 <https://github.com/llvm/llvm-project/issues/69890>`_)
+
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fixed an import failure of recursive friend class template.
@@ -589,6 +680,9 @@ Bug Fixes to AST Handling
   `Issue 64170 <https://github.com/llvm/llvm-project/issues/64170>`_
 - Fixed ``hasAnyBase`` not binding nodes in its submatcher.
   (`#65421 <https://github.com/llvm/llvm-project/issues/65421>`_)
+- Fixed a bug where RecursiveASTVisitor fails to visit the
+  initializer of a bitfield.
+  `Issue 64916 <https://github.com/llvm/llvm-project/issues/64916>`_
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -627,6 +721,11 @@ X86 Support
 
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
+
+- C++ function name mangling has been changed to align with the specification
+  (https://github.com/ARM-software/abi-aa/blob/main/aapcs64/aapcs64.rst).
+  This affects C++ functions with SVE ACLE parameters. Clang will use the old
+  manglings if ``-fclang-abi-compat=17`` or lower is  specified.
 
 Android Support
 ^^^^^^^^^^^^^^^
@@ -720,6 +819,7 @@ AST Matchers
 clang-format
 ------------
 - Add ``AllowBreakBeforeNoexceptSpecifier`` option.
+- Add ``AllowShortCompoundRequirementOnASingleLine`` option.
 
 libclang
 --------

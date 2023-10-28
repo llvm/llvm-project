@@ -12307,6 +12307,8 @@ public:
     bool IsMapTypeImplicit = false;
     SourceLocation ExtraModifierLoc;
     SourceLocation OmpAllMemoryLoc;
+    SourceLocation
+        StepModifierLoc; /// 'step' modifier location for linear clause
   };
 
   OMPClause *ActOnOpenMPVarListClause(OpenMPClauseKind Kind,
@@ -12371,11 +12373,11 @@ public:
       const DeclarationNameInfo &ReductionId,
       ArrayRef<Expr *> UnresolvedReductions = std::nullopt);
   /// Called on well-formed 'linear' clause.
-  OMPClause *
-  ActOnOpenMPLinearClause(ArrayRef<Expr *> VarList, Expr *Step,
-                          SourceLocation StartLoc, SourceLocation LParenLoc,
-                          OpenMPLinearClauseKind LinKind, SourceLocation LinLoc,
-                          SourceLocation ColonLoc, SourceLocation EndLoc);
+  OMPClause *ActOnOpenMPLinearClause(
+      ArrayRef<Expr *> VarList, Expr *Step, SourceLocation StartLoc,
+      SourceLocation LParenLoc, OpenMPLinearClauseKind LinKind,
+      SourceLocation LinLoc, SourceLocation ColonLoc,
+      SourceLocation StepModifierLoc, SourceLocation EndLoc);
   /// Called on well-formed 'aligned' clause.
   OMPClause *ActOnOpenMPAlignedClause(ArrayRef<Expr *> VarList,
                                       Expr *Alignment,

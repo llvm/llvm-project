@@ -76,6 +76,13 @@ private:
     return selectSHXADDOp(Root, ShAmt);
   }
 
+  ComplexRendererFns selectSHXADD_UWOp(MachineOperand &Root,
+                                       unsigned ShAmt) const;
+  template <unsigned ShAmt>
+  ComplexRendererFns selectSHXADD_UWOp(MachineOperand &Root) const {
+    return selectSHXADD_UWOp(Root, ShAmt);
+  }
+
   // Custom renderers for tablegen
   void renderNegImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
                     int OpIdx) const;
@@ -90,6 +97,9 @@ private:
   void getICMPOperandsForBranch(MachineInstr &MI, MachineIRBuilder &MIB,
                                 MachineRegisterInfo &MRI, RISCVCC::CondCode &CC,
                                 Register &LHS, Register &RHS) const;
+
+  void renderTrailingZeros(MachineInstrBuilder &MIB, const MachineInstr &MI,
+                           int OpIdx) const;
 
   const RISCVSubtarget &STI;
   const RISCVInstrInfo &TII;
@@ -240,6 +250,47 @@ RISCVInstructionSelector::selectSHXADDOp(MachineOperand &Root,
 }
 
 InstructionSelector::ComplexRendererFns
+RISCVInstructionSelector::selectSHXADD_UWOp(MachineOperand &Root,
+                                            unsigned ShAmt) const {
+  using namespace llvm::MIPatternMatch;
+  MachineFunction &MF = *Root.getParent()->getParent()->getParent();
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+
+  if (!Root.isReg())
+    return std::nullopt;
+  Register RootReg = Root.getReg();
+
+  // Given (and (shl x, c2), mask) in which mask is a shifted mask with
+  // 32 - ShAmt leading zeros and c2 trailing zeros. We can use SLLI by
+  // c2 - ShAmt followed by SHXADD_UW with ShAmt for x amount.
+  APInt Mask, C2;
+  Register RegX;
+  if (mi_match(
+          RootReg, MRI,
+          m_OneNonDBGUse(m_GAnd(m_OneNonDBGUse(m_GShl(m_Reg(RegX), m_ICst(C2))),
+                                m_ICst(Mask))))) {
+    Mask &= maskTrailingZeros<uint64_t>(C2.getLimitedValue());
+
+    if (Mask.isShiftedMask()) {
+      unsigned Leading = Mask.countl_zero();
+      unsigned Trailing = Mask.countr_zero();
+      if (Leading == 32 - ShAmt && C2 == Trailing && Trailing > ShAmt) {
+        Register DstReg =
+            MRI.createGenericVirtualRegister(MRI.getType(RootReg));
+        return {{[=](MachineInstrBuilder &MIB) {
+          MachineIRBuilder(*MIB.getInstr())
+              .buildInstr(RISCV::SLLI, {DstReg}, {RegX})
+              .addImm(C2.getLimitedValue() - ShAmt);
+          MIB.addReg(DstReg);
+        }}};
+      }
+    }
+  }
+
+  return std::nullopt;
+}
+
+InstructionSelector::ComplexRendererFns
 RISCVInstructionSelector::selectAddrRegImm(MachineOperand &Root) const {
   // TODO: Need to get the immediate from a G_PTR_ADD. Should this be done in
   // the combiner?
@@ -333,8 +384,8 @@ bool RISCVInstructionSelector::replacePtrWithInt(MachineOperand &Op,
   Register PtrReg = Op.getReg();
   assert(MRI.getType(PtrReg).isPointer() && "Operand is not a pointer!");
 
-  const LLT XLenLLT = LLT::scalar(STI.getXLen());
-  auto PtrToInt = MIB.buildPtrToInt(XLenLLT, PtrReg);
+  const LLT sXLen = LLT::scalar(STI.getXLen());
+  auto PtrToInt = MIB.buildPtrToInt(sXLen, PtrReg);
   MRI.setRegBank(PtrToInt.getReg(0), RBI.getRegBank(RISCV::GPRRegBankID));
   Op.setReg(PtrToInt.getReg(0));
   return select(*PtrToInt);
@@ -346,11 +397,11 @@ void RISCVInstructionSelector::preISelLower(MachineInstr &MI,
   switch (MI.getOpcode()) {
   case TargetOpcode::G_PTR_ADD: {
     Register DstReg = MI.getOperand(0).getReg();
-    const LLT XLenLLT = LLT::scalar(STI.getXLen());
+    const LLT sXLen = LLT::scalar(STI.getXLen());
 
     replacePtrWithInt(MI.getOperand(1), MIB, MRI);
     MI.setDesc(TII.get(TargetOpcode::G_ADD));
-    MRI.setType(DstReg, XLenLLT);
+    MRI.setType(DstReg, sXLen);
     break;
   }
   }
@@ -383,11 +434,27 @@ void RISCVInstructionSelector::renderImm(MachineInstrBuilder &MIB,
   MIB.addImm(CstVal);
 }
 
+void RISCVInstructionSelector::renderTrailingZeros(MachineInstrBuilder &MIB,
+                                                   const MachineInstr &MI,
+                                                   int OpIdx) const {
+  assert(MI.getOpcode() == TargetOpcode::G_CONSTANT && OpIdx == -1 &&
+         "Expected G_CONSTANT");
+  uint64_t C = MI.getOperand(1).getCImm()->getZExtValue();
+  MIB.addImm(llvm::countr_zero(C));
+}
+
 const TargetRegisterClass *RISCVInstructionSelector::getRegClassForTypeOnBank(
     LLT Ty, const RegisterBank &RB) const {
   if (RB.getID() == RISCV::GPRRegBankID) {
     if (Ty.getSizeInBits() <= 32 || (STI.is64Bit() && Ty.getSizeInBits() == 64))
       return &RISCV::GPRRegClass;
+  }
+
+  if (RB.getID() == RISCV::FPRRegBankID) {
+    if (Ty.getSizeInBits() == 32)
+      return &RISCV::FPR32RegClass;
+    if (Ty.getSizeInBits() == 64)
+      return &RISCV::FPR64RegClass;
   }
 
   // TODO: Non-GPR register classes.

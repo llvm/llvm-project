@@ -1161,3 +1161,119 @@ TEST(Local, CanReplaceOperandWithVariable) {
 
   BB0->dropAllReferences();
 }
+
+TEST(Local, ExpressionForConstant) {
+  LLVMContext Context;
+  Module M("test_module", Context);
+  DIBuilder DIB(M);
+  DIExpression *Expr = nullptr;
+
+  auto createExpression = [&](Constant *C, Type *Ty) -> DIExpression * {
+    EXPECT_NE(C, nullptr);
+    EXPECT_NE(Ty, nullptr);
+    EXPECT_EQ(C->getType(), Ty);
+    std::unique_ptr<GlobalVariable> GV = std::make_unique<GlobalVariable>(
+        Ty, false, GlobalValue::ExternalLinkage, C, "GV");
+    EXPECT_NE(GV, nullptr);
+
+    DIExpression *Expr = getExpressionForConstant(DIB, *GV->getInitializer(),
+                                                  *GV->getValueType());
+    if (Expr) {
+      EXPECT_EQ(Expr->getNumElements(), 3u);
+      EXPECT_EQ(Expr->getElement(0), dwarf::DW_OP_constu);
+      EXPECT_EQ(Expr->getElement(2), dwarf::DW_OP_stack_value);
+    }
+    return Expr;
+  };
+
+  // Integer.
+  IntegerType *Int1Ty = Type::getInt1Ty(Context);
+  Expr = createExpression(ConstantInt::getTrue(Context), Int1Ty);
+  EXPECT_NE(Expr, nullptr);
+  EXPECT_EQ(Expr->getElement(1), 18446744073709551615U);
+
+  Expr = createExpression(ConstantInt::getFalse(Context), Int1Ty);
+  EXPECT_NE(Expr, nullptr);
+  EXPECT_EQ(Expr->getElement(1), 0U);
+
+  IntegerType *Int8Ty = Type::getInt8Ty(Context);
+  Expr = createExpression(ConstantInt::get(Int8Ty, 100), Int8Ty);
+  EXPECT_NE(Expr, nullptr);
+  EXPECT_EQ(Expr->getElement(1), 100U);
+
+  IntegerType *Int16Ty = Type::getInt16Ty(Context);
+  Expr = createExpression(ConstantInt::getSigned(Int16Ty, -50), Int16Ty);
+  EXPECT_NE(Expr, nullptr);
+  EXPECT_EQ(Expr->getElement(1), -50ULL);
+
+  IntegerType *Int32Ty = Type::getInt32Ty(Context);
+  Expr = createExpression(ConstantInt::get(Int32Ty, 0x7FFFFFFF), Int32Ty);
+  EXPECT_NE(Expr, nullptr);
+  EXPECT_EQ(Expr->getElement(1), 0x7FFFFFFFU);
+
+  IntegerType *Int64Ty = Type::getInt64Ty(Context);
+  Expr =
+      createExpression(ConstantInt::get(Int64Ty, 0x7FFFFFFFFFFFFFFF), Int64Ty);
+  EXPECT_NE(Expr, nullptr);
+  EXPECT_EQ(Expr->getElement(1), 0x7FFFFFFFFFFFFFFFU);
+
+  IntegerType *Int128Ty = Type::getInt128Ty(Context);
+  Expr = createExpression(ConstantInt::get(Int128Ty, 0x7FFFFFFFFFFFFFFF),
+                          Int128Ty);
+  EXPECT_NE(Expr, nullptr);
+  EXPECT_EQ(Expr->getElement(1), 0x7FFFFFFFFFFFFFFFU);
+
+  GlobalVariable *String =
+      IRBuilder<>(Context).CreateGlobalString("hello", "hello", 0, &M);
+  Expr = createExpression(ConstantExpr::getPtrToInt(String, Int32Ty), Int32Ty);
+  EXPECT_EQ(Expr, nullptr);
+
+  // Float.
+  Type *FloatTy = Type::getFloatTy(Context);
+  Expr = createExpression(ConstantFP::get(FloatTy, 5.55), FloatTy);
+  EXPECT_NE(Expr, nullptr);
+  EXPECT_EQ(Expr->getElement(1), 1085381018U);
+
+  // Double.
+  Type *DoubleTy = Type::getDoubleTy(Context);
+  Expr = createExpression(ConstantFP::get(DoubleTy, -5.55), DoubleTy);
+  EXPECT_NE(Expr, nullptr);
+  EXPECT_EQ(Expr->getElement(1), 13841306799765140275U);
+
+  // Pointer.
+  PointerType *PtrTy = PointerType::get(Context, 0);
+  Expr = createExpression(ConstantPointerNull::get(PtrTy), PtrTy);
+  EXPECT_NE(Expr, nullptr);
+  EXPECT_EQ(Expr->getElement(1), 0U);
+
+  ConstantInt *K1 = ConstantInt::get(Type::getInt32Ty(Context), 1234);
+  Expr = createExpression(ConstantExpr::getIntToPtr(K1, PtrTy), PtrTy);
+  EXPECT_NE(Expr, nullptr);
+  EXPECT_EQ(Expr->getElement(1), 1234U);
+
+  ConstantInt *K2 = ConstantInt::get(Type::getInt64Ty(Context), 5678);
+  Expr = createExpression(ConstantExpr::getIntToPtr(K2, PtrTy), PtrTy);
+  EXPECT_NE(Expr, nullptr);
+  EXPECT_EQ(Expr->getElement(1), 5678U);
+
+  // Others.
+  Type *HalfTy = Type::getHalfTy(Context);
+  Expr = createExpression(ConstantFP::get(HalfTy, 32), HalfTy);
+  EXPECT_EQ(Expr, nullptr);
+
+  Type *BFloatTy = Type::getBFloatTy(Context);
+  Expr = createExpression(ConstantFP::get(BFloatTy, 32), BFloatTy);
+  EXPECT_EQ(Expr, nullptr);
+
+  Type *FP128Ty = Type::getFP128Ty(Context);
+  Expr = createExpression(ConstantFP::get(FP128Ty, 32), FP128Ty);
+  EXPECT_EQ(Expr, nullptr);
+
+  Type *X86_FP80Ty = Type::getX86_FP80Ty(Context);
+  Expr = createExpression(ConstantFP::get(X86_FP80Ty, 32), X86_FP80Ty);
+  EXPECT_EQ(Expr, nullptr);
+
+  Type *PPC_FP128Ty = Type::getPPC_FP128Ty(Context);
+  Expr = createExpression(ConstantFP::get(PPC_FP128Ty, 32), PPC_FP128Ty);
+  EXPECT_EQ(Expr, nullptr);
+}

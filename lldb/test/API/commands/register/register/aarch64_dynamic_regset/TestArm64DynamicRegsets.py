@@ -142,8 +142,8 @@ class RegisterCommandsTestCase(TestBase):
     def test_aarch64_dynamic_regset_config_sme(self):
         """Test AArch64 Dynamic Register sets configuration, but only SME
         registers."""
-        if not self.isAArch64SME():
-            self.skipTest("SME must be present.")
+        if not self.isAArch64SMEFA64():
+            self.skipTest("SME and the smefa64 extension must be present")
 
         register_sets = self.setup_register_config_test("sme")
 

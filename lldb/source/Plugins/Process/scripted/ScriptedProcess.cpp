@@ -108,9 +108,17 @@ ScriptedProcess::ScriptedProcess(lldb::TargetSP target_sp,
   ExecutionContext exe_ctx(target_sp, /*get_process=*/false);
 
   // Create process script object
-  StructuredData::GenericSP object_sp = GetInterface().CreatePluginObject(
+  auto obj_or_err = GetInterface().CreatePluginObject(
       m_scripted_metadata.GetClassName(), exe_ctx,
       m_scripted_metadata.GetArgsSP());
+
+  if (!obj_or_err) {
+    llvm::consumeError(obj_or_err.takeError());
+    error.SetErrorString("Failed to create script object.");
+    return;
+  }
+
+  StructuredData::GenericSP object_sp = *obj_or_err;
 
   if (!object_sp || !object_sp->IsValid()) {
     error.SetErrorStringWithFormat("ScriptedProcess::%s () - ERROR: %s",

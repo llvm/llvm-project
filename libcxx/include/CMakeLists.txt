@@ -96,6 +96,7 @@ set(files
   __algorithm/pstl_merge.h
   __algorithm/pstl_move.h
   __algorithm/pstl_replace.h
+  __algorithm/pstl_rotate_copy.h
   __algorithm/pstl_sort.h
   __algorithm/pstl_stable_sort.h
   __algorithm/pstl_transform.h
@@ -853,6 +854,7 @@ set(files
   __utility/piecewise_construct.h
   __utility/priority_tag.h
   __utility/rel_ops.h
+  __utility/small_buffer.h
   __utility/swap.h
   __utility/to_underlying.h
   __utility/unreachable.h
