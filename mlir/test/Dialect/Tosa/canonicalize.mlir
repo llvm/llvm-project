@@ -600,6 +600,6 @@ func.func nested @fold_reduce_rank_zero() {
   // CHECK-NOT: tosa.reverse
   %0 = tensor.empty() : tensor<i32>
   %1 = tosa.reduce_min %0 {axis = 0 : i32} : (tensor<i32>) -> tensor<i32>
-  %2 = tosa.reverse %0 {axis = 0 : i32} : (tensor<i32>) -> tensor<1x10xi32>
+  %2 = tosa.reverse %0 {axis = 0 : i32} : (tensor<i32>) -> tensor<i32>
   return
 }
