@@ -22,6 +22,8 @@
 
 using namespace llvm;
 
+#define DEBUG_TYPE "infer-alignment"
+
 static bool tryToImproveAlign(
     const DataLayout &DL, Instruction *I,
     function_ref<Align(Value *PtrOp, Align OldAlign, Align PrefAlign)> Fn) {
@@ -89,3 +91,41 @@ PreservedAnalyses InferAlignmentPass::run(Function &F,
   // Changes to alignment shouldn't invalidated analyses.
   return PreservedAnalyses::all();
 }
+
+class InferAligments : public FunctionPass {
+
+public:
+  static char ID;
+
+  InferAligments() : FunctionPass(ID) {
+    initializeInferAligmentsPass(*PassRegistry::getPassRegistry());
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
+    AU.addPreserved<DominatorTreeWrapperPass>();
+    AU.addRequired<AssumptionCacheTracker>();
+  }
+
+  bool runOnFunction(Function &F) override;
+};
+
+char InferAligments::ID = 0;
+
+INITIALIZE_PASS_BEGIN(InferAligments, DEBUG_TYPE, "Infer Alignments", false,
+                      false)
+INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
+INITIALIZE_PASS_END(InferAligments, DEBUG_TYPE, "Infer Alignments", false,
+                    false)
+
+bool InferAligments::runOnFunction(Function &F) {
+  if (skipFunction(F))
+    return false;
+
+  auto *DTWP = getAnalysisIfAvailable<DominatorTreeWrapperPass>();
+  DominatorTree *DT = DTWP ? &DTWP->getDomTree() : nullptr;
+  return inferAlignment(
+      F, getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F), *DT);
+}
+
+FunctionPass *llvm::createInferAlignmentsPass() { return new InferAligments(); }

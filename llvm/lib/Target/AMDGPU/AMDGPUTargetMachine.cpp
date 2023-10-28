@@ -58,6 +58,7 @@
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Scalar/GVN.h"
 #include "llvm/Transforms/Scalar/InferAddressSpaces.h"
+#include "llvm/Transforms/Scalar/InferAlignment.h"
 #include "llvm/Transforms/Utils.h"
 #include "llvm/Transforms/Utils/SimplifyLibCalls.h"
 #include "llvm/Transforms/Vectorize/LoadStoreVectorizer.h"
@@ -1022,8 +1023,12 @@ void AMDGPUPassConfig::addIRPasses() {
   if (TM.getOptLevel() > CodeGenOptLevel::None)
     addPass(createAMDGPUAttributorPass());
 
-  if (TM.getOptLevel() > CodeGenOptLevel::None)
+  // Alignment Inference may be blocked by addrpacecasts on pointer operands,
+  // so rerun after AddressSpaces have been inferred.
+  if (TM.getOptLevel() > CodeGenOptLevel::None) {
     addPass(createInferAddressSpacesPass());
+    addPass(createInferAlignmentsPass());
+  }
 
   // Run atomic optimizer before Atomic Expand
   if ((TM.getTargetTriple().getArch() == Triple::amdgcn) &&

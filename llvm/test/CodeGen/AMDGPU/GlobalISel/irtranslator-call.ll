@@ -1021,7 +1021,7 @@ define amdgpu_kernel void @test_call_external_void_func_v2i64() #0 {
   ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(p1) = G_CONSTANT i64 0
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(<2 x s64>) = G_LOAD [[C]](p1) :: ("amdgpu-noclobber" load (<2 x s64>) from `ptr addrspace(1) null`, addrspace 1)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(<2 x s64>) = G_LOAD [[C]](p1) :: ("amdgpu-noclobber" load (<2 x s64>) from `ptr addrspace(1) null`, align 4294967296, addrspace 1)
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_void_func_v2i64
   ; CHECK-NEXT:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -1390,7 +1390,7 @@ define amdgpu_kernel void @test_call_external_void_func_v2p0() #0 {
   ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(p1) = G_CONSTANT i64 0
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(<2 x p0>) = G_LOAD [[C]](p1) :: ("amdgpu-noclobber" load (<2 x p0>) from `ptr addrspace(1) null`, addrspace 1)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(<2 x p0>) = G_LOAD [[C]](p1) :: ("amdgpu-noclobber" load (<2 x p0>) from `ptr addrspace(1) null`, align 4294967296, addrspace 1)
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_void_func_v2p0
   ; CHECK-NEXT:   [[COPY10:%[0-9]+]]:_(p4) = COPY [[COPY8]]
@@ -1455,7 +1455,7 @@ define amdgpu_kernel void @test_call_external_void_func_v3i64() #0 {
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 8589934593
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s64) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[C1]](s64), [[DEF]](s64)
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(<2 x s64>) = G_LOAD [[C]](p1) :: ("amdgpu-noclobber" load (<2 x s64>) from `ptr addrspace(1) null`, addrspace 1)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(<2 x s64>) = G_LOAD [[C]](p1) :: ("amdgpu-noclobber" load (<2 x s64>) from `ptr addrspace(1) null`, align 4294967296, addrspace 1)
   ; CHECK-NEXT:   [[SHUF:%[0-9]+]]:_(<3 x s64>) = G_SHUFFLE_VECTOR [[LOAD]](<2 x s64>), [[BUILD_VECTOR]], shufflemask(0, 1, 2)
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_void_func_v3i64
@@ -1525,7 +1525,7 @@ define amdgpu_kernel void @test_call_external_void_func_v4i64() #0 {
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 8589934593
   ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 17179869187
   ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[C1]](s64), [[C2]](s64)
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(<2 x s64>) = G_LOAD [[C]](p1) :: ("amdgpu-noclobber" load (<2 x s64>) from `ptr addrspace(1) null`, addrspace 1)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(<2 x s64>) = G_LOAD [[C]](p1) :: ("amdgpu-noclobber" load (<2 x s64>) from `ptr addrspace(1) null`, align 4294967296, addrspace 1)
   ; CHECK-NEXT:   [[SHUF:%[0-9]+]]:_(<4 x s64>) = G_SHUFFLE_VECTOR [[LOAD]](<2 x s64>), [[BUILD_VECTOR]], shufflemask(0, 1, 2, 3)
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_void_func_v4i64
@@ -4056,7 +4056,7 @@ define amdgpu_kernel void @test_call_external_void_func_byval_struct_i8_i32() #0
   ; CHECK-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p5) = G_FRAME_INDEX %stack.0.val
   ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
   ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p5) = nuw G_PTR_ADD [[FRAME_INDEX]], [[C2]](s32)
-  ; CHECK-NEXT:   G_STORE [[C]](s8), [[FRAME_INDEX]](p5) :: (store (s8) into %ir.val, addrspace 5)
+  ; CHECK-NEXT:   G_STORE [[C]](s8), [[FRAME_INDEX]](p5) :: (store (s8) into %ir.val, align 4, addrspace 5)
   ; CHECK-NEXT:   G_STORE [[C1]](s32), [[PTR_ADD]](p5) :: (store (s32) into %ir.gep1, addrspace 5)
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_void_func_byval_struct_i8_i32

@@ -921,13 +921,13 @@ define fastcc void @sibling_call_fastcc_multi_byval(i32 %a, [64 x i32]) #1 {
   ; GCN-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; GCN-NEXT:   [[FRAME_INDEX34:%[0-9]+]]:_(p5) = G_FRAME_INDEX %stack.0.alloca0
   ; GCN-NEXT:   [[FRAME_INDEX35:%[0-9]+]]:_(p5) = G_FRAME_INDEX %stack.1.alloca1
-  ; GCN-NEXT:   G_STORE [[C]](s32), [[FRAME_INDEX34]](p5) :: (store (s32) into %ir.alloca0, addrspace 5)
+  ; GCN-NEXT:   G_STORE [[C]](s32), [[FRAME_INDEX34]](p5) :: (store (s32) into %ir.alloca0, align 16, addrspace 5)
   ; GCN-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
   ; GCN-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX34]], [[C2]](s32)
   ; GCN-NEXT:   G_STORE [[C]](s32), [[PTR_ADD]](p5) :: (store (s32) into %ir.alloca0 + 4, addrspace 5)
   ; GCN-NEXT:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
   ; GCN-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX34]], [[C3]](s32)
-  ; GCN-NEXT:   G_STORE [[C]](s32), [[PTR_ADD1]](p5) :: (store (s32) into %ir.alloca0 + 8, addrspace 5)
+  ; GCN-NEXT:   G_STORE [[C]](s32), [[PTR_ADD1]](p5) :: (store (s32) into %ir.alloca0 + 8, align 8, addrspace 5)
   ; GCN-NEXT:   G_STORE [[C1]](s64), [[FRAME_INDEX35]](p5) :: (store (s64) into %ir.alloca1, addrspace 5)
   ; GCN-NEXT:   [[PTR_ADD2:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX35]], [[C3]](s32)
   ; GCN-NEXT:   G_STORE [[C1]](s64), [[PTR_ADD2]](p5) :: (store (s64) into %ir.alloca1 + 8, addrspace 5)
@@ -1088,13 +1088,13 @@ define fastcc void @sibling_call_byval_and_stack_passed(i32 %stack.out.arg, [64 
   ; GCN-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 9
   ; GCN-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; GCN-NEXT:   [[FRAME_INDEX34:%[0-9]+]]:_(p5) = G_FRAME_INDEX %stack.0.alloca
-  ; GCN-NEXT:   G_STORE [[C]](s32), [[FRAME_INDEX34]](p5) :: (store (s32) into %ir.alloca, addrspace 5)
+  ; GCN-NEXT:   G_STORE [[C]](s32), [[FRAME_INDEX34]](p5) :: (store (s32) into %ir.alloca, align 16, addrspace 5)
   ; GCN-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
   ; GCN-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX34]], [[C2]](s32)
   ; GCN-NEXT:   G_STORE [[C]](s32), [[PTR_ADD]](p5) :: (store (s32) into %ir.alloca + 4, addrspace 5)
   ; GCN-NEXT:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
   ; GCN-NEXT:   [[PTR_ADD1:%[0-9]+]]:_(p5) = G_PTR_ADD [[FRAME_INDEX34]], [[C3]](s32)
-  ; GCN-NEXT:   G_STORE [[C]](s32), [[PTR_ADD1]](p5) :: (store (s32) into %ir.alloca + 8, addrspace 5)
+  ; GCN-NEXT:   G_STORE [[C]](s32), [[PTR_ADD1]](p5) :: (store (s32) into %ir.alloca + 8, align 8, addrspace 5)
   ; GCN-NEXT:   [[GV:%[0-9]+]]:ccr_sgpr_64(p0) = G_GLOBAL_VALUE @void_fastcc_byval_and_stack_passed
   ; GCN-NEXT:   [[COPY40:%[0-9]+]]:_(p4) = COPY [[COPY8]]
   ; GCN-NEXT:   [[COPY41:%[0-9]+]]:_(p4) = COPY [[COPY7]]

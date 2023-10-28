@@ -18,9 +18,13 @@
 
 namespace llvm {
 
+class FunctionPass;
+
 struct InferAlignmentPass : public PassInfoMixin<InferAlignmentPass> {
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
+
+FunctionPass *createInferAlignmentsPass();
 
 } // namespace llvm
 

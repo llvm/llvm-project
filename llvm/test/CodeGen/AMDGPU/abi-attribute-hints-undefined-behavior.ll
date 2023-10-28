@@ -207,22 +207,14 @@ define void @marked_func_use_other_sgpr(ptr addrspace(1) %ptr) #0 {
 ; FIXEDABI-LABEL: marked_func_use_other_sgpr:
 ; FIXEDABI:       ; %bb.0:
 ; FIXEDABI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; FIXEDABI-NEXT:    v_mov_b32_e32 v2, s6
-; FIXEDABI-NEXT:    v_mov_b32_e32 v3, s7
-; FIXEDABI-NEXT:    flat_load_ubyte v2, v[2:3] glc
-; FIXEDABI-NEXT:    s_waitcnt vmcnt(0)
-; FIXEDABI-NEXT:    v_mov_b32_e32 v2, s8
-; FIXEDABI-NEXT:    v_mov_b32_e32 v3, s9
-; FIXEDABI-NEXT:    flat_load_ubyte v2, v[2:3] glc
-; FIXEDABI-NEXT:    s_waitcnt vmcnt(0)
-; FIXEDABI-NEXT:    v_mov_b32_e32 v2, s4
-; FIXEDABI-NEXT:    v_mov_b32_e32 v3, s5
-; FIXEDABI-NEXT:    flat_load_ubyte v2, v[2:3] glc
-; FIXEDABI-NEXT:    s_waitcnt vmcnt(0)
+; FIXEDABI-NEXT:    s_load_dword s6, s[6:7], 0x0
+; FIXEDABI-NEXT:    s_waitcnt lgkmcnt(0)
+; FIXEDABI-NEXT:    s_load_dword s6, s[8:9], 0x0
+; FIXEDABI-NEXT:    s_load_dword s4, s[4:5], 0x0
 ; FIXEDABI-NEXT:    v_mov_b32_e32 v2, s10
 ; FIXEDABI-NEXT:    v_mov_b32_e32 v3, s11
 ; FIXEDABI-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
-; FIXEDABI-NEXT:    s_waitcnt vmcnt(0)
+; FIXEDABI-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; FIXEDABI-NEXT:    s_setpc_b64 s[30:31]
   %queue.ptr = call ptr addrspace(4) @llvm.amdgcn.queue.ptr()
   %implicitarg.ptr = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
@@ -238,15 +230,11 @@ define void @marked_func_use_other_sgpr(ptr addrspace(1) %ptr) #0 {
 define amdgpu_kernel void @marked_kernel_use_other_sgpr(ptr addrspace(1) %ptr) #0 {
 ; FIXEDABI-LABEL: marked_kernel_use_other_sgpr:
 ; FIXEDABI:       ; %bb.0:
-; FIXEDABI-NEXT:    s_add_u32 s0, s4, 8
-; FIXEDABI-NEXT:    flat_load_ubyte v0, v[0:1] glc
-; FIXEDABI-NEXT:    s_addc_u32 s1, s5, 0
-; FIXEDABI-NEXT:    s_waitcnt vmcnt(0)
-; FIXEDABI-NEXT:    v_mov_b32_e32 v0, s0
-; FIXEDABI-NEXT:    v_mov_b32_e32 v1, s1
-; FIXEDABI-NEXT:    flat_load_ubyte v0, v[0:1] glc
-; FIXEDABI-NEXT:    s_waitcnt vmcnt(0)
-; FIXEDABI-NEXT:    flat_load_ubyte v0, v[0:1] glc
+; FIXEDABI-NEXT:    s_load_dword s0, s[0:1], 0x0
+; FIXEDABI-NEXT:    s_waitcnt lgkmcnt(0)
+; FIXEDABI-NEXT:    s_load_dword s0, s[4:5], 0x8
+; FIXEDABI-NEXT:    s_waitcnt lgkmcnt(0)
+; FIXEDABI-NEXT:    s_load_dword s0, s[0:1], 0x0
 ; FIXEDABI-NEXT:    s_endpgm
   %queue.ptr = call ptr addrspace(4) @llvm.amdgcn.queue.ptr()
   %implicitarg.ptr = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
@@ -262,9 +250,8 @@ define amdgpu_kernel void @marked_kernel_use_other_sgpr(ptr addrspace(1) %ptr) #
 define amdgpu_kernel void @marked_kernel_nokernargs_implicitarg_ptr() #0 {
 ; FIXEDABI-LABEL: marked_kernel_nokernargs_implicitarg_ptr:
 ; FIXEDABI:       ; %bb.0:
-; FIXEDABI-NEXT:    v_mov_b32_e32 v0, 0
-; FIXEDABI-NEXT:    v_mov_b32_e32 v1, 0
-; FIXEDABI-NEXT:    flat_load_ubyte v0, v[0:1] glc
+; FIXEDABI-NEXT:    s_mov_b64 s[0:1], 0
+; FIXEDABI-NEXT:    s_load_dword s0, s[0:1], 0x0
 ; FIXEDABI-NEXT:    s_endpgm
   %implicitarg.ptr = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
   %implicitarg.load = load volatile i8, ptr addrspace(4) %implicitarg.ptr
