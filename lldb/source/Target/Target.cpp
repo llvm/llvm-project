@@ -1702,7 +1702,7 @@ void Target::ModulesDidLoad(ModuleList &module_list) {
   }
 }
 
-void Target::SymbolsDidLoad(ModuleList &module_list) {
+void Target::SymbolsDidLoad(ModuleList &module_list, uint32_t load_or_change_broadcast_bit) {
   if (m_valid && module_list.GetSize()) {
     if (m_process_sp) {
       for (LanguageRuntime *runtime : m_process_sp->GetLanguageRuntimes()) {
@@ -1712,7 +1712,7 @@ void Target::SymbolsDidLoad(ModuleList &module_list) {
 
     m_breakpoint_list.UpdateBreakpoints(module_list, true, false);
     m_internal_breakpoint_list.UpdateBreakpoints(module_list, true, false);
-    BroadcastEvent(eBroadcastBitSymbolsLoaded,
+    BroadcastEvent(load_or_change_broadcast_bit,
                    new TargetEventData(this->shared_from_this(), module_list));
   }
 }

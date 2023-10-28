@@ -4472,7 +4472,7 @@ protected:
           // currently loaded
           ModuleList module_list;
           module_list.Append(module_sp);
-          target->SymbolsDidLoad(module_list);
+          target->SymbolsDidLoad(module_list, Target::eBroadcastBitSymbolsLoaded);
 
           // Make sure we load any scripting resources that may be embedded
           // in the debug info files in case the platform supports that.
@@ -4764,6 +4764,10 @@ protected:
       if (process)
         process->Flush();
     }
+
+    if (result.Succeeded())
+      Debugger::ReportSymbolChange(module_spec);
+
     return result.Succeeded();
   }
 

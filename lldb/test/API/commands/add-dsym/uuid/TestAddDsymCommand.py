@@ -57,6 +57,44 @@ class AddDsymCommandCase(TestBase):
         self.exe_name = "a.out"
         self.do_add_dsym_with_dSYM_bundle(self.exe_name)
 
+    @no_debug_info_test
+    def test_report_symbol_load(self):
+        """Test that when adding a symbol file, the eBroadcastBitSymbolsLoaded event gets broadcasted."""
+        self.generate_main_cpp(version=1)
+        self.build(debug_info="dsym")
+
+        listener = lldb.SBListener("listener")
+        listener.StartListeningForEventClass(
+            self.dbg,
+            lldb.SBTarget.GetBroadcasterClassName(),
+            lldb.SBTarget.eBroadcastBitSymbolsLoaded,
+        )
+
+        # Add the dSYM
+        self.exe_name = "a.out"
+        self.do_add_dsym_with_success(self.exe_name)
+
+        # Get the next event
+        event = lldb.SBEvent()
+        listener.WaitForEvent(1, event)
+
+        # Check that the event is valid
+        self.assertTrue(event.IsValid(), "Got a valid eBroadcastBitSymbolsLoaded event.")
+
+        # Check that there were modules reported with the event
+        num_modules = lldb.SBTarget.GetNumModulesFromEvent(event)
+        self.assertTrue(
+            num_modules > 0, "At least one module was reported with the eBroadcastBitSymbolsLoaded event"
+        )
+
+        # Check that all modules are valid
+        for x in range(num_modules):
+            current_module = lldb.SBTarget.GetModuleAtIndexFromEvent(x, event)
+            self.assertTrue(
+                current_module.IsValid(),
+                "Module %s from event eBroadcastBitSymbolsLoaded is valid." % current_module.GetFileSpec().GetFilename()
+            )
+
     def generate_main_cpp(self, version=0):
         """Generate main.cpp from main.cpp.template."""
         temp = os.path.join(self.getSourceDir(), self.template)

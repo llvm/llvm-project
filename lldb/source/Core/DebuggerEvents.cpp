@@ -148,9 +148,12 @@ void SymbolChangeEventData::DoOnRemoval(Event *event_ptr) {
         if (!module_sp->GetSymbolFileFileSpec())
           module_sp->SetSymbolFileFileSpec(m_module_spec.GetSymbolFileSpec());
       }
+
+      // This method is only calling SymbolsDidLoad to indicate that the symbol
+      // file in question has changed, so indicate that to SymbolsDidLoad
       ModuleList module_list;
       module_list.Append(module_sp);
-      target_sp->SymbolsDidLoad(module_list);
+      target_sp->SymbolsDidLoad(module_list, Target::eBroadcastBitSymbolsChanged);
     }
   }
 }
