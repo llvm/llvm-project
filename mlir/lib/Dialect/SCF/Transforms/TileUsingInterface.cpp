@@ -529,7 +529,7 @@ getUntiledProducerFromSliceSource(OpOperand *source,
     scf::ForOp loop = *loopIt;
     if (iterArg.getOwner()->getParentOp() != loop)
       break;
-    source = &loop.getOpOperandForRegionIterArg(iterArg);
+    source = loop.getTiedLoopInit(iterArg);
     loopIt++;
   }
   if (loopIt == loops.rend())
