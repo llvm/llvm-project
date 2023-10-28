@@ -780,7 +780,7 @@ define i1 @ashr_ult_2(i4 %x) {
 define i1 @ashr_ult_2_multiuse(i4 %x, ptr %p) {
 ; CHECK-LABEL: @ashr_ult_2_multiuse(
 ; CHECK-NEXT:    [[S:%.*]] = ashr i4 [[X:%.*]], 1
-; CHECK-NEXT:    [[R:%.*]] = icmp ult i4 [[X]], 4
+; CHECK-NEXT:    [[R:%.*]] = icmp ult i4 [[S]], 2
 ; CHECK-NEXT:    store i4 [[S]], ptr [[P:%.*]], align 1
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
