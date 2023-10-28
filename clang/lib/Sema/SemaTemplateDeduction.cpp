@@ -3553,6 +3553,56 @@ static unsigned getPackIndexForParam(Sema &S,
   llvm_unreachable("parameter index would not be produced from template");
 }
 
+// if `Specialization` is a `CXXConstructorDecl` or `CXXConversionDecl`
+// we try to instantiate and update its explicit specifier after constraint
+// checking.
+static Sema::TemplateDeductionResult
+tryInstantiateExplicitSpecifier(Sema &S, FunctionDecl *Specialization,
+                                const MultiLevelTemplateArgumentList &SubstArgs,
+                                TemplateDeductionInfo &Info,
+                                FunctionTemplateDecl *FunctionTemplate,
+                                ArrayRef<TemplateArgument> DeducedArgs) {
+
+  const auto TryInstantiateExplicitSpecifierForSingleDecl =
+      [&](auto *ExplicitDecl) {
+        ExplicitSpecifier ExplicitSpecifier =
+            ExplicitDecl->getExplicitSpecifier();
+        Expr *const Expr = ExplicitSpecifier.getExpr();
+        if (!Expr) {
+          return Sema::TDK_Success;
+        }
+        if (!Expr->isValueDependent()) {
+          return Sema::TDK_Success;
+        }
+        // TemplateDeclInstantiator::InitFunctionInstantiation set the
+        // ActiveInstType to TemplateInstantiation, but we need
+        // to enable SFINAE when instantiating explicit specifier.
+        Sema::InstantiatingTemplate Inst(
+            S, Info.getLocation(), FunctionTemplate, DeducedArgs,
+            Sema::CodeSynthesisContext::DeducedTemplateArgumentSubstitution,
+            Info);
+        const auto Instantiated =
+            S.instantiateExplicitSpecifier(SubstArgs, ExplicitSpecifier);
+        if (Instantiated.isInvalid()) {
+          ExplicitDecl->setInvalidDecl(true);
+          return clang::Sema::TDK_SubstitutionFailure;
+        }
+        ExplicitDecl->setExplicitSpecifier(Instantiated);
+        return clang::Sema::TDK_Success;
+      };
+  Sema::TemplateDeductionResult DeductionResult = clang::Sema::TDK_Success;
+  if (CXXConstructorDecl *ConstructorDecl =
+          dyn_cast_or_null<CXXConstructorDecl>(Specialization)) {
+    DeductionResult =
+        TryInstantiateExplicitSpecifierForSingleDecl(ConstructorDecl);
+  } else if (CXXConversionDecl *ConversionDecl =
+                 dyn_cast_or_null<CXXConversionDecl>(Specialization)) {
+    DeductionResult =
+        TryInstantiateExplicitSpecifierForSingleDecl(ConversionDecl);
+  }
+  return DeductionResult;
+}
+
 /// Finish template argument deduction for a function template,
 /// checking the deduced template arguments for completeness and forming
 /// the function template specialization.
@@ -3680,6 +3730,15 @@ Sema::TemplateDeductionResult Sema::FinishTemplateArgumentDeduction(
                  TemplateArgumentList::CreateCopy(Context, CanonicalBuilder));
       return TDK_ConstraintsNotSatisfied;
     }
+  }
+
+  // We skipped the instantiation of the explicit-specifier during subst the
+  // decl before. Now, we try to instantiate it back if the Specialization is a
+  // constructor or a conversion.
+  if (TDK_Success !=
+      tryInstantiateExplicitSpecifier(*this, Specialization, SubstArgs, Info,
+                                      FunctionTemplate, DeducedArgs)) {
+    return TDK_SubstitutionFailure;
   }
 
   if (OriginalCallArgs) {

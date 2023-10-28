@@ -670,6 +670,10 @@ Bug Fixes to C++ Support
   default initializing a base class in a constant expression context. Fixes:
   (`#69890 <https://github.com/llvm/llvm-project/issues/69890>`_)
 
+- Clang now defers the instantiation of explicit specifier until constraint checking
+  completes (except deduction guides). Fixes:
+  (`#59827 <https://github.com/llvm/llvm-project/issues/59827>`_)
+
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fixed an import failure of recursive friend class template.
