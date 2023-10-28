@@ -1,4 +1,4 @@
-; RUN: opt < %s -force-vector-width=64 -O3 -S -pass-remarks=loop-vectorize 2>&1 | FileCheck %s
+; RUN: opt < %s -force-vector-width=64 -p loop-vectorize -S -pass-remarks=loop-vectorize 2>&1 | FileCheck %s
 
 target triple = "aarch64-linux-gnu"
 
@@ -28,7 +28,7 @@ for.end:
   ret void
 }
 
-; For a loop with known trip count of 129, when we force VF 64, it should use
+; TODO: For a loop with known trip count of 129, when we force VF 64, it should use
 ; IC 1, since there may be a remainder loop that needs to run after the vector loop.
 ; CHECK: remark: <unknown>:0:0: vectorized loop (vectorization width: 64, interleaved count: 2)
 define void @loop_with_tc_129(ptr %p, ptr %q) {
@@ -77,7 +77,7 @@ for.end:
   ret void
 }
 
-; For a loop with unknown trip count but a profile showing an approx TC estimate of 129, 
+; TODO: For a loop with unknown trip count but a profile showing an approx TC estimate of 129, 
 ; when we force VF 64, it should use IC 1, since chances are high that the remainder loop
 ; will need to run
 ; CHECK: remark: <unknown>:0:0: vectorized loop (vectorization width: 64, interleaved count: 2)
