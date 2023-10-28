@@ -619,7 +619,7 @@ public:
   }
 
   void setLastReferenceInCoroutineParamMoves(bool V = true) {
-    LastReferenceInCoroutineParamMoves = true;
+    LastReferenceInCoroutineParamMoves = V;
   }
 
   /// Whether this declaration was referenced. This should not be relied
