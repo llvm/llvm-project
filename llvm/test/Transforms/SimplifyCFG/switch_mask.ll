@@ -3,6 +3,8 @@
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
+declare i1 @foo()
+
 ; https://alive2.llvm.org/ce/z/tuxLhJ
 define i1 @switch_lookup_with_small_i1(i64 %x) {
 ; CHECK-LABEL: @switch_lookup_with_small_i1(
@@ -102,4 +104,72 @@ default:                                          ; preds = %entry
 lor.end:
   %0 = phi i8 [ 15, %sw.bb0 ], [ 6, %sw.bb1 ], [ 7, %sw.bb2 ], [ 0, %default ]
   ret i8 %0
+}
+
+; Negative test: The default branch is unreachable, also it has no result.
+define i1 @switch_lookup_with_small_i1_default_unreachable(i32 %x) {
+; CHECK-LABEL: @switch_lookup_with_small_i1_default_unreachable(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 15
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %and = and i32 %x, 15
+  switch i32 %and, label %default [
+  i32 4, label %phi.end
+  i32 2, label %phi.end
+  i32 10, label %phi.end
+  i32 9, label %phi.end
+  i32 1, label %sw.bb1.i
+  i32 3, label %sw.bb1.i
+  i32 5, label %sw.bb1.i
+  i32 0, label %sw.bb1.i
+  i32 6, label %sw.bb1.i
+  i32 7, label %sw.bb1.i
+  i32 8, label %sw.bb1.i
+  ]
+
+sw.bb1.i:                                     ; preds = %entry, %entry, %entry, %entry, %entry, %entry, %entry
+  br label %phi.end
+
+default:                                      ; preds = %entry
+  unreachable
+
+phi.end: ; preds = %sw.bb1.i, %entry, %entry, %entry, %entry
+  %retval = phi i1 [ false, %sw.bb1.i ], [ false, %entry ], [ false, %entry ], [ false, %entry ], [ false, %entry ]
+  ret i1 %retval
+}
+
+; Negative test: The result in default reachable, but its value is not const.
+define i1 @switch_lookup_with_small_i1_default_nonconst(i64 %x) {
+; CHECK-LABEL: @switch_lookup_with_small_i1_default_nonconst(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[AND:%.*]] = and i64 [[X:%.*]], 15
+; CHECK-NEXT:    switch i64 [[AND]], label [[DEFAULT:%.*]] [
+; CHECK-NEXT:    i64 10, label [[LOR_END:%.*]]
+; CHECK-NEXT:    i64 1, label [[LOR_END]]
+; CHECK-NEXT:    i64 2, label [[LOR_END]]
+; CHECK-NEXT:    ]
+; CHECK:       default:
+; CHECK-NEXT:    [[CALL:%.*]] = tail call i1 @foo()
+; CHECK-NEXT:    br label [[LOR_END]]
+; CHECK:       lor.end:
+; CHECK-NEXT:    [[TMP0:%.*]] = phi i1 [ true, [[ENTRY:%.*]] ], [ [[CALL]], [[DEFAULT]] ], [ true, [[ENTRY]] ], [ true, [[ENTRY]] ]
+; CHECK-NEXT:    ret i1 [[TMP0]]
+;
+entry:
+  %and = and i64 %x, 15
+  switch i64 %and, label %default [
+  i64 10, label %lor.end
+  i64 1, label %lor.end
+  i64 2, label %lor.end
+  ]
+
+default:                                          ; preds = %entry
+  %call = tail call i1 @foo()
+  br label %lor.end
+
+lor.end:                                          ; preds = %entry, %entry, %entry, %default
+  %0 = phi i1 [ true, %entry ], [ %call, %default ], [ true, %entry ], [ true, %entry ]
+  ret i1 %0
 }

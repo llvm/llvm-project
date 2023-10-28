@@ -6631,7 +6631,9 @@ static bool SwitchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
   BranchInst *RangeCheckBranch = nullptr;
 
   // Grow the table to cover all possible index values to avoid the range check.
-  if (UseSwitchConditionAsTableIndex) {
+  // It will use the default result to fill in the table hole later, so make
+  // sure it exist.
+  if (UseSwitchConditionAsTableIndex && HasDefaultResults) {
     ConstantRange CR = computeConstantRange(TableIndex, /* ForSigned */ false);
     // Grow the table shouldn't have any size impact by checking
     // WouldFitInRegister.
@@ -6641,7 +6643,7 @@ static bool SwitchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
           return SwitchLookupTable::WouldFitInRegister(
               DL, CR.getUpper().getLimitedValue(), KV.second /* ResultType */);
         })) {
-      // The default branch is unreachable when we enlarge the lookup table.
+      // The default branch is unreachable after we enlarge the lookup table.
       // Adjust DefaultIsReachable to reuse code path.
       TableSize = CR.getUpper().getZExtValue();
       DefaultIsReachable = false;
