@@ -318,7 +318,7 @@ void netbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     // Additional linker set-up and flags for Fortran. This is required in order
     // to generate executables. As Fortran runtime depends on the C runtime,
     // these dependencies need to be listed before the C runtime below (i.e.
-    // AddRuntTimeLibs).
+    // AddRunTimeLibs).
     if (D.IsFlangMode()) {
       addFortranRuntimeLibraryPath(ToolChain, Args, CmdArgs);
       addFortranRuntimeLibs(ToolChain, CmdArgs);
