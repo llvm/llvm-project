@@ -308,6 +308,11 @@ Changes in existing checks
   <clang-tidy/checks/misc/const-correctness>` check to avoid false positive when
   using pointer to member function.
 
+- Improved :doc:`misc-const-correctness
+  <clang-tidy/checks/misc/const-correctness>` check to not warn on uses in
+  type-dependent binary operators, when the variable that is being
+  looked at, is not the dependent operand.
+
 - Improved :doc:`misc-include-cleaner
   <clang-tidy/checks/misc/include-cleaner>` check by adding option
   `DeduplicateFindings` to output one finding per symbol occurrence, avoid

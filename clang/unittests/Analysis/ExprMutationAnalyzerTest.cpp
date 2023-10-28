@@ -343,6 +343,17 @@ TEST(ExprMutationAnalyzerTest, UnresolvedOperator) {
   EXPECT_TRUE(isMutated(Results, AST.get()));
 }
 
+TEST(ExprMutationAnalyzerTest, DependentOperatorWithNonDependentOperand) {
+  // gh57297
+  // Explicitly not declaring a (templated) stream operator
+  // so the `<<` is a `binaryOperator` with a dependent type.
+  const auto AST = buildASTFromCode("struct Stream {}; template <typename T> "
+                                    "void f() { T t; Stream x; x << t;}");
+  const auto Results =
+      match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
+  EXPECT_THAT(mutatedBy(Results, AST.get()), ElementsAre("x << t"));
+}
+
 // Section: expression as call argument
 
 TEST(ExprMutationAnalyzerTest, ByValueArgument) {
