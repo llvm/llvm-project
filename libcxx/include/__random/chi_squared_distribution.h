@@ -11,6 +11,7 @@
 
 #include <__config>
 #include <__random/gamma_distribution.h>
+#include <__random/is_valid.h>
 #include <iosfwd>
 #include <limits>
 
@@ -26,6 +27,9 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template<class _RealType = double>
 class _LIBCPP_TEMPLATE_VIS chi_squared_distribution
 {
+  static_assert(__libcpp_random_is_valid_realtype<_RealType>::value,
+                "RealType must be a supported floating-point type");
+
 public:
     // types
     typedef _RealType result_type;
