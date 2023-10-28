@@ -878,19 +878,6 @@ data_type InstrProfLookupTrait::ReadData(StringRef K, const unsigned char *D,
   return DataBuffer;
 }
 
-InstrProfVTableLookupTrait::hash_value_type
-InstrProfVTableLookupTrait::ComputeHash(StringRef K) {
-  return IndexedInstrProf::ComputeHash(HashType, K);
-}
-
-InstrProfVTableLookupTrait::data_type
-InstrProfVTableLookupTrait::ReadData(StringRef K, const unsigned char *D,
-                                     offset_type N) {
-  char v =
-      support::endian::readNext<char, support::little, support::unaligned>(D);
-  return v;
-}
-
 template <typename HashTableImpl>
 Error InstrProfReaderIndex<HashTableImpl>::getRecords(
     StringRef FuncName, ArrayRef<NamedInstrProfRecord> &Data) {
@@ -1220,17 +1207,15 @@ Error IndexedInstrProfReader::readHeader() {
 
   if (GET_VERSION(Header->formatVersion()) >= 11) {
     uint64_t VTableNamesOffset =
-        endian::byte_swap<uint64_t, little>(Header->VTableNamesOffset);
+        endian::byte_swap<uint64_t, llvm::endianness::little>(
+            Header->VTableNamesOffset);
     const unsigned char *Ptr = Start + VTableNamesOffset;
 
-    const uint64_t HashTableMetadataOffset =
-        support::endian::readNext<uint64_t, little, unaligned>(Ptr);
+    CompressedVTableNamesLen =
+        support::endian::readNext<uint64_t, llvm::endianness::little,
+                                  unaligned>(Ptr);
 
-    VirtualTableIndex.reset(VirtualTableNamesHashTable::Create(
-        /*Bucket=*/Start + HashTableMetadataOffset,
-        /*Payload=*/Ptr,
-        /*Base=*/Start,
-        InstrProfVTableLookupTrait(HashType, Header->formatVersion())));
+    VTableNamePtr = (const char *)Ptr;
   }
 
   if (GET_VERSION(Header->formatVersion()) >= 10 &&
@@ -1293,7 +1278,15 @@ InstrProfSymtab &IndexedInstrProfReader::getSymtab() {
     return *Symtab;
 
   std::unique_ptr<InstrProfSymtab> NewSymtab = std::make_unique<InstrProfSymtab>();
-  if (Error E = Index->populateSymtab(*NewSymtab, VirtualTableIndex.get())) {
+
+  if (Error E = NewSymtab->initVTableNamesFromCompressedStrings(
+          StringRef(VTableNamePtr, CompressedVTableNamesLen))) {
+    auto [ErrCode, Msg] = InstrProfError::take(std::move(E));
+    consumeError(error(ErrCode, Msg));
+  }
+
+  // finalizeSymtab is called inside populateSymtab.
+  if (Error E = Index->populateSymtab(*NewSymtab)) {
     auto [ErrCode, Msg] = InstrProfError::take(std::move(E));
     consumeError(error(ErrCode, Msg));
   }

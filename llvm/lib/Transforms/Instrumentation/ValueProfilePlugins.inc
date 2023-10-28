@@ -103,9 +103,13 @@ public:
     std::vector<Instruction *> Result = findVTableAddrs(F);
     for (Instruction* I : Result) {
       Instruction* InsertPt = I->getNextNonDebugInstruction();
-      while(InsertPt && dyn_cast<PHINode>(InsertPt))
+      // When finding an insertion point, keep PHI, landing pad and catch pad before vp intrinsics.
+      while(InsertPt && (dyn_cast<PHINode>(InsertPt) || dyn_cast<LandingPadInst>(InsertPt) || dyn_cast<CatchPadInst>(InsertPt)))
         InsertPt = InsertPt->getNextNonDebugInstruction();
-      assert(InsertPt);
+      // FIXME: Set InsertPt to the end of basic block if
+      // InsertPt is the last instruction.
+      if (InsertPt == nullptr)
+        continue;
 
       Instruction *AnnotatedInst = I;
       Candidates.emplace_back(CandidateInfo{I, InsertPt, AnnotatedInst});

@@ -19,6 +19,7 @@
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/ProfileData/MemProf.h"
 #include "llvm/ProfileData/ProfileCommon.h"
+#include "llvm/Support/Compression.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/Error.h"
@@ -168,47 +169,6 @@ public:
       VDataPtr->swapBytesFromHost(ValueProfDataEndianness);
       Out.write((const char *)VDataPtr.get(), S);
     }
-  }
-};
-
-class InstrProfRecordVTableTrait {
-public:
-  using key_type = StringRef;
-  using key_type_ref = StringRef;
-
-  using data_type = char;
-  using data_type_ref = char;
-
-  using hash_value_type = uint64_t;
-  using offset_type = uint64_t;
-
-  InstrProfRecordVTableTrait() = default;
-
-  static hash_value_type ComputeHash(key_type_ref K) {
-    return IndexedInstrProf::ComputeHash(K);
-  }
-
-  static std::pair<offset_type, offset_type>
-  EmitKeyDataLength(raw_ostream &Out, key_type_ref K, data_type_ref V) {
-    using namespace support;
-
-    endian::Writer LE(Out, little);
-
-    offset_type N = K.size();
-    LE.write<offset_type>(N);
-
-    offset_type M = 1;
-    LE.write<offset_type>(M);
-
-    return std::make_pair(N, M);
-  }
-
-  void EmitKey(raw_ostream &Out, key_type_ref K, offset_type N) {
-    Out.write(K.data(), N);
-  }
-
-  void EmitData(raw_ostream &Out, key_type_ref, data_type_ref V, offset_type) {
-    Out.write(&V, 1);
   }
 };
 
@@ -639,29 +599,36 @@ Error InstrProfWriter::writeImpl(ProfOStream &OS) {
   if (IndexedInstrProf::ProfVersion::CurrentVersion >= 11) {
     VTableNamesSectionStart = OS.tell();
 
-    // Reserve space for vtable records offset.
-    OS.write(0ULL);
+    std::string CompressedVTableNames;
 
-    OnDiskChainedHashTableGenerator<llvm::InstrProfRecordVTableTrait>
-        VTableNamesGenerator;
-    for (const auto &kv : VTableNames) {
-      // Use a char '0' as value placeholder, only keys (vtable names)
-      // are used.
-      // FIXME: It might make sense to have a OnDiskChainedHashSetGenerator if
-      // there are more use cases. Use a hash table for now, with one unused
-      // 'char' per entry.
-      VTableNamesGenerator.insert(kv.getKey(), '0');
+    std::vector<std::string> VTableNameStrs;
+    for (const auto &VTableName : VTableNames.keys()) {
+      VTableNameStrs.push_back(VTableName.str());
     }
 
-    auto VTableNamesWriter =
-        std::make_unique<llvm::InstrProfRecordVTableTrait>();
+    if (!VTableNameStrs.empty()) {
+      if (Error E = collectGlobalObjectNameStrings(
+              VTableNameStrs, compression::zlib::isAvailable(),
+              CompressedVTableNames))
+        return E;
+    }
 
-    uint64_t VTableNamesTableOffset =
-        VTableNamesGenerator.Emit(OS.OS, *VTableNamesWriter);
+    uint64_t CompressedStringLen = CompressedVTableNames.length();
 
-    PatchItem PatchItems[] = {
-        {VTableNamesSectionStart, &VTableNamesTableOffset, 1}};
-    OS.patch(PatchItems, 1);
+    // Record the length of compressed string.
+    OS.write(CompressedStringLen);
+
+    // Write the chars in compressed strings.
+    for (auto &c : CompressedVTableNames)
+      OS.writeByte(static_cast<uint8_t>(c));
+
+    // Pad up to a multiple of 8.
+    // InstrProfReader could read bytes according to 'CompressedStringLen'.
+    uint64_t PaddedLength = alignTo(CompressedStringLen, 8);
+
+    for (uint64_t K = CompressedStringLen; K < PaddedLength; K++) {
+      OS.writeByte(0);
+    }
   }
 
   uint64_t TemporalProfTracesSectionStart = 0;

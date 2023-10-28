@@ -25,66 +25,44 @@ struct PGOIndirectCallVisitor : public InstVisitor<PGOIndirectCallVisitor> {
     kVTableVal = 1,
   };
   std::vector<CallBase *> IndirectCalls;
-  SetVector<Instruction *, std::vector<Instruction *>> VTableAddrs;
+  std::vector<Instruction *> ProfiledAddresses;
   PGOIndirectCallVisitor(InstructionType Type) : Type(Type) {}
 
   void visitCallBase(CallBase &Call) {
-    const CallInst *CI = dyn_cast<CallInst>(&Call);
-    if (Type == InstructionType::kVTableVal && CI && CI->getCalledFunction()) {
-      switch (CI->getCalledFunction()->getIntrinsicID()) {
-      case Intrinsic::type_test:
-      case Intrinsic::public_type_test:
-      case Intrinsic::type_checked_load_relative:
-      case Intrinsic::type_checked_load: {
-        Value *VTablePtr = CI->getArgOperand(0)->stripPointerCasts();
-
-        if (PtrTestedByTypeIntrinsics.count(VTablePtr) == 0) {
-          Instruction *I = dyn_cast_or_null<Instruction>(VTablePtr);
-          // This is the first type intrinsic where VTablePtr is used.
-          // Assert that the VTablePtr is not found as a type profiling
-          // candidate yet. Note nullptr won't be inserted into VTableAddrs in
-          // the first place, so this assertion works even if 'VTablePtr' is not
-          // an instruction.
-          assert(VTableAddrs.count(I) == 0 &&
-                 "Expect type intrinsic to record VTablePtr before virtual "
-                 "functions are loaded to find vtables that should be "
-                 "instrumented");
-
-          PtrTestedByTypeIntrinsics.insert(VTablePtr);
-        }
-      } break;
-      }
-    }
     if (Call.isIndirectCall()) {
       IndirectCalls.push_back(&Call);
-      if (Type == InstructionType::kVTableVal) {
-        // Note without -fstrict-vtable-pointers, vtable pointers of the same
-        // objects are loaded multiple times, and current implementation
-        // instruments each load once.
-        // FIXME: For more efficient instrumentation, analyze load invariant
-        // vtable values (e.g., from the same pointer in C++) and instrument
-        // them once.
-        LoadInst *LI = dyn_cast<LoadInst>(Call.getCalledOperand());
-        if (LI != nullptr) {
-          Value *MaybeVTablePtr =
-              LI->getPointerOperand()->stripInBoundsConstantOffsets();
-          Instruction *VTableInstr = dyn_cast<Instruction>(MaybeVTablePtr);
-          // If not used by any type intrinsic, this is not a vtable.
-          // Inst visitor should see the very first type intrinsic using a
-          // vtable before the very first virtual function load from this
-          // vtable. This condition is asserted above.
-          if (VTableInstr && PtrTestedByTypeIntrinsics.count(MaybeVTablePtr)) {
-            VTableAddrs.insert(VTableInstr);
-          }
+
+      if (Type != InstructionType::kVTableVal)
+        return;
+
+      LoadInst *LI = dyn_cast<LoadInst>(Call.getCalledOperand());
+      // The code pattern to look for
+      //
+      // %vtable = load ptr, ptr %b
+      // %vfn = getelementptr inbounds ptr, ptr %vtable, i64 1
+      // %2 = load ptr, ptr %vfn
+      // %call = tail call i32 %2(ptr %b)
+      //
+      // %vtable is the vtable address value to profile, and
+      // %2 is the indirect call target address to profile.
+      if (LI != nullptr) {
+        Value *Ptr = LI->getPointerOperand();
+        Value *VTablePtr = Ptr->stripInBoundsConstantOffsets();
+        // This is a heuristic to find address feeding instructions.
+        // FIXME: Add support in the frontend so LLVM type intrinsics are
+        // emitted without LTO. This way, added intrinsics could filter
+        // non-vtable instructions and reduce instrumentation overhead.
+        // Note a profiled address will be dropped if it's not within
+        // the address range of vtable objects, so there are no correctness
+        // or performance issues at profile use time.
+        if (VTablePtr != nullptr && isa<Instruction>(VTablePtr)) {
+          ProfiledAddresses.push_back(cast<Instruction>(VTablePtr));
         }
       }
     }
   }
 
 private:
-  // Keeps track of the pointers that are tested by llvm type intrinsics for
-  // look up.
-  SmallPtrSet<Value *, 4> PtrTestedByTypeIntrinsics;
   InstructionType Type;
 };
 
@@ -99,7 +77,7 @@ inline std::vector<Instruction *> findVTableAddrs(Function &F) {
   PGOIndirectCallVisitor ICV(
       PGOIndirectCallVisitor::InstructionType::kVTableVal);
   ICV.visit(F);
-  return ICV.VTableAddrs.takeVector();
+  return ICV.ProfiledAddresses;
 }
 
 } // namespace llvm

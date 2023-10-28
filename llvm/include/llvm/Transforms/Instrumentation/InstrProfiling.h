@@ -67,7 +67,7 @@ private:
   std::vector<GlobalVariable *> ReferencedNames;
   // The list of virtual table variables of which the VTableProfData is
   // collected.
-  std::vector<GlobalVariable *> ReferencedVTableNames;
+  std::vector<GlobalVariable *> ReferencedVTables;
   GlobalVariable *NamesVar;
   size_t NamesSize;
 

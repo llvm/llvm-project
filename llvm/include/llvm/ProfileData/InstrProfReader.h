@@ -472,46 +472,6 @@ enum class HashT : uint32_t;
 
 } // end namespace IndexedInstrProf
 
-class InstrProfVTableLookupTrait {
-  char val;
-  IndexedInstrProf::HashT HashType;
-  unsigned FormatVersion;
-
-public:
-  InstrProfVTableLookupTrait(IndexedInstrProf::HashT HashType,
-                             unsigned FormatVersion)
-      : HashType(HashType), FormatVersion(FormatVersion) {}
-
-  using data_type = char;
-
-  using internal_key_type = StringRef;
-  using external_key_type = StringRef;
-
-  using hash_value_type = uint64_t;
-  using offset_type = uint64_t;
-
-  static bool EqualKey(StringRef A, StringRef B) { return A == B; }
-  static StringRef GetInternalKey(StringRef K) { return K; }
-  static StringRef GetExternalKey(StringRef K) { return K; }
-
-  hash_value_type ComputeHash(StringRef K);
-
-  static std::pair<offset_type, offset_type>
-  ReadKeyDataLength(const unsigned char *&D) {
-    using namespace support;
-
-    offset_type KeyLen = endian::readNext<offset_type, little, unaligned>(D);
-    offset_type DataLen = endian::readNext<offset_type, little, unaligned>(D);
-    return std::make_pair(KeyLen, DataLen);
-  }
-
-  StringRef ReadKey(const unsigned char *D, offset_type N) {
-    return StringRef((const char *)D, N);
-  }
-
-  data_type ReadData(StringRef K, const unsigned char *D, offset_type N);
-};
-
 /// Trait for lookups into the on-disk hash table for the binary instrprof
 /// format.
 class InstrProfLookupTrait {
@@ -565,9 +525,6 @@ public:
   }
 };
 
-using VirtualTableNamesHashTable =
-    OnDiskIterableChainedHashTable<InstrProfVTableLookupTrait>;
-
 struct InstrProfReaderIndexBase {
   virtual ~InstrProfReaderIndexBase() = default;
 
@@ -590,10 +547,7 @@ struct InstrProfReaderIndexBase {
   virtual bool hasMemoryProfile() const = 0;
   virtual bool hasTemporalProfile() const = 0;
   virtual InstrProfKind getProfileKind() const = 0;
-  // The pointer VirtualTableIndex is not owned.
-  virtual Error
-  populateSymtab(InstrProfSymtab &,
-                 VirtualTableNamesHashTable *VirtualTableIndex) = 0;
+  virtual Error populateSymtab(InstrProfSymtab &) = 0;
 };
 
 using OnDiskHashTableImplV3 =
@@ -668,10 +622,13 @@ public:
 
   InstrProfKind getProfileKind() const override;
 
-  Error populateSymtab(InstrProfSymtab &Symtab,
-                       VirtualTableNamesHashTable *VirtualTableIndex) override {
-    if (VirtualTableIndex != nullptr)
-      return Symtab.create(HashTable->keys(), VirtualTableIndex->keys());
+  Error populateSymtab(InstrProfSymtab &Symtab) override {
+    // FIXME: the create method calls 'finalizeSymtab' and sorts a bunch of
+    // arrays/maps. Since there are other data sources other than 'HashTable' to
+    // populate a symtab, it might make sense to have something like this
+    // 1. Let each data source populate Symtab and init the arrays/maps without
+    // calling 'finalizeSymtab'
+    // 2. Call 'finalizeSymtab' once to get all arrays/maps sorted if needed.
     return Symtab.create(HashTable->keys());
   }
 };
@@ -706,8 +663,17 @@ private:
   std::unique_ptr<MemProfRecordHashTable> MemProfRecordTable;
   /// MemProf frame profile data on-disk indexed via frame id.
   std::unique_ptr<MemProfFrameHashTable> MemProfFrameTable;
-  /// Virtual table profile data indexed .
-  std::unique_ptr<VirtualTableNamesHashTable> VirtualTableIndex = nullptr;
+  /// The reader itself doesn't decompress vtable names.
+  /// A compiler that reads indexed profiles could construct
+  /// symtab from module IR so it doesn't need the decompressed
+  /// names.
+  /// When a symtab is constructed (from llvm-profdata),
+  /// the symtab decompress the list of names based on
+  /// `VTableNamePtr` and `CompressedVTableNamesLen`.
+  /// Points to the beginning of compressed vtable names.
+  const char *VTableNamePtr = nullptr;
+  /// The length of compressed vtable names.
+  uint64_t CompressedVTableNamesLen = 0;
   /// Total size of binary ids.
   uint64_t BinaryIdsSize{0};
   /// Start address of binary id length and data pairs.

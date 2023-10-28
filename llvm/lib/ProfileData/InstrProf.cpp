@@ -216,7 +216,7 @@ cl::opt<bool> DoInstrProfNameCompression(
     cl::desc("Enable name/filename string compression"), cl::init(true));
 
 cl::opt<bool> EnableVTableValueProfiling(
-    "enable-vtable-value-profiling", cl::init(true),
+    "enable-vtable-value-profiling", cl::init(false),
     cl::desc("If true, the virtual table address will be instrumented to know "
              "the types of a C++ pointer. The information could be used in "
              "indirect-call-promotion to do selective vtable-based comparison "
@@ -340,8 +340,8 @@ static std::string getIRPGOObjectName(const GlobalObject &GO, bool InLTO,
   }
 
   // In LTO mode (when InLTO is true), first check if there is a meta data.
-  if (auto IRPGOFuncName = lookupPGONameFromMetadata(PGONameMetadata))
-    return *IRPGOFuncName;
+  if (auto IRPGOName = lookupPGONameFromMetadata(PGONameMetadata))
+    return *IRPGOName;
 
   // If there is no meta data, the function must be a global before the value
   // profile annotation pass. Its current linkage may be internal if it is
@@ -355,24 +355,36 @@ std::string getIRPGOFuncName(const Function &F, bool InLTO) {
   return getIRPGOObjectName(F, InLTO, getPGOFuncNameMetadata(F));
 }
 
-// This is similar to `getIRPGOFuncName` except that this function calls
-// 'getPGOFuncName' to get a name and `getIRPGOFuncName` calls
-// 'getIRPGONameForGlobalObject'. See the difference between two callees in the
-// comments of `getIRPGONameForGlobalObject`.
-std::string getPGOFuncName(const Function &F, bool InLTO, uint64_t Version) {
+static std::string getPGOObjectName(const GlobalObject &GO, bool InLTO,
+                                    MDNode *PGONameMetadata) {
   if (!InLTO) {
-    auto FileName = getStrippedSourceFileName(F);
-    return getPGOFuncName(F.getName(), F.getLinkage(), FileName, Version);
+    auto FileName = getStrippedSourceFileName(GO);
+    return getPGOFuncName(GO.getName(), GO.getLinkage(), FileName);
   }
 
   // In LTO mode (when InLTO is true), first check if there is a meta data.
-  if (auto PGOFuncName = lookupPGONameFromMetadata(getPGOFuncNameMetadata(F)))
-    return *PGOFuncName;
+  if (auto PGOName = lookupPGONameFromMetadata(PGONameMetadata))
+    return *PGOName;
 
   // If there is no meta data, the function must be a global before the value
   // profile annotation pass. Its current linkage may be internal if it is
   // internalized in LTO mode.
-  return getPGOFuncName(F.getName(), GlobalValue::ExternalLinkage, "");
+  return getPGOFuncName(GO.getName(), GlobalValue::ExternalLinkage, "");
+}
+
+// This is similar to `getIRPGOFuncName` except that this function calls
+// 'getPGOObjectcName' to get a name and `getIRPGOFuncName` calls
+// 'getIRPGONameForGlobalObject'. See the difference between two callees in the
+// comments of `getIRPGONameForGlobalObject`.
+std::string getPGOFuncName(const Function &F, bool InLTO, uint64_t Version) {
+  return getPGOObjectName(F, InLTO, getPGOFuncNameMetadata(F));
+}
+
+std::string getPGOName(const GlobalVariable &V, bool InLTO) {
+  // PGONameMetadata should be set by compiler at profile use time
+  // and read by symtab creation to look up symbols corresponding to
+  // a MD5 hash.
+  return getPGOObjectName(V, InLTO, nullptr /* PGONameMetadata */);
 }
 
 // See getIRPGOFuncName() for a discription of the format.
@@ -601,9 +613,9 @@ Error collectVTableStrings(ArrayRef<GlobalVariable *> VTables,
                            std::string &Result, bool doCompression) {
   std::vector<std::string> VTableNameStrs;
   for (auto *VTable : VTables) {
-    VTableNameStrs.push_back(std::string(VTable->getName()));
+    VTableNameStrs.push_back(getPGOName(*VTable));
   }
-  return collectPGOFuncNameStrings(
+  return collectGlobalObjectNameStrings(
       VTableNameStrs, compression::zlib::isAvailable() && doCompression,
       Result);
 }
@@ -642,7 +654,8 @@ instrprof_error decodeAndSplitStrings(
   return instrprof_error::success;
 }
 
-Error readPGOFuncNameStrings(StringRef NameStrings, InstrProfSymtab &Symtab) {
+Error readPGOFuncNameStrings(StringRef NameStrings,
+                             std::function<Error(StringRef)> NameCallback) {
   const uint8_t *P = NameStrings.bytes_begin();
   const uint8_t *EndP = NameStrings.bytes_end();
   while (P < EndP) {
@@ -663,43 +676,12 @@ Error readPGOFuncNameStrings(StringRef NameStrings, InstrProfSymtab &Symtab) {
 
     NameStrings.split(Names, getInstrProfNameSeparator());
     for (StringRef &Name : Names) {
-      if (Error E = Symtab.addFuncName(Name))
+      if (Error E = NameCallback(Name))
         return E;
     }
 
     P += Dist;
     // Skip padding?
-    while (P < EndP && *P == 0)
-      P++;
-  }
-  return Error::success();
-}
-
-Error readVTableNames(StringRef NameStrings, InstrProfSymtab &Symtab) {
-  const uint8_t *P = NameStrings.bytes_begin();
-  const uint8_t *EndP = NameStrings.bytes_end();
-  while (P < EndP) {
-    // Now parse the name strings.
-    uint32_t Dist = 0;
-    StringRef NameStrings;
-    SmallVector<uint8_t, 128> UncompressedNameStrings;
-    SmallVector<StringRef, 0> Names;
-    bool isCompressed = false;
-    instrprof_error E = decodeAndSplitStrings(P, UncompressedNameStrings,
-                                              NameStrings, Dist, isCompressed);
-    if (E != instrprof_error::success)
-      return make_error<InstrProfError>(E);
-
-    if (isCompressed) {
-      NameStrings = toStringRef(UncompressedNameStrings);
-    }
-    NameStrings.split(Names, getInstrProfNameSeparator());
-    for (StringRef &Name : Names) {
-      if (Error E = Symtab.addVTableName(Name))
-        return E;
-    }
-
-    P += Dist;
     while (P < EndP && *P == 0)
       P++;
   }

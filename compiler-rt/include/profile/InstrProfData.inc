@@ -101,7 +101,7 @@ INSTR_PROF_DATA(const uint16_t, Int16ArrayTy, NumValueSites[IPVK_Last+1], \
 #define INSTR_PROF_VTABLE_DATA_DEFINED
 #endif
 INSTR_PROF_VTABLE_DATA(const uint64_t, llvm::Type::getInt64Ty(Ctx), VTableNameHash, \
-                      ConstantInt::get(llvm::Type::getInt64Ty(Ctx), IndexedInstrProf::ComputeHash(VTableName)))
+                      ConstantInt::get(llvm::Type::getInt64Ty(Ctx), IndexedInstrProf::ComputeHash(PGOVTableName)))
 INSTR_PROF_VTABLE_DATA(const IntPtrT, llvm::Type::getInt8PtrTy(Ctx), VTablePointer, VTableAddr)
 INSTR_PROF_VTABLE_DATA(const uint32_t, llvm::Type::getInt32Ty(Ctx), VTableSize, \
                       ConstantInt::get(llvm::Type::getInt32Ty(Ctx), VTableSizeVal))

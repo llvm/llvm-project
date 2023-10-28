@@ -47,14 +47,9 @@ uint64_t __llvm_profile_get_size_for_buffer(void) {
   const char *CountersEnd = __llvm_profile_end_counters();
   const char *NamesBegin = __llvm_profile_begin_names();
   const char *NamesEnd = __llvm_profile_end_names();
-  const VTableProfData *VTableBegin = __llvm_profile_begin_vtables();
-  const VTableProfData *VTableEnd = __llvm_profile_end_vtables();
-  const char *VNamesBegin = __llvm_profile_begin_vtabnames();
-  const char *VNamesEnd = __llvm_profile_end_vtabnames();
 
   return __llvm_profile_get_size_for_buffer_internal(
-      DataBegin, DataEnd, CountersBegin, CountersEnd, NamesBegin, NamesEnd,
-      VTableBegin, VTableEnd, VNamesBegin, VNamesEnd);
+      DataBegin, DataEnd, CountersBegin, CountersEnd, NamesBegin, NamesEnd);
 }
 
 COMPILER_RT_VISIBILITY
@@ -132,8 +127,11 @@ void __llvm_profile_get_padding_sizes_for_counters(
     *PaddingBytesAfterCounters =
         __llvm_profile_get_num_padding_bytes(CountersSize);
     *PaddingBytesAfterNames = __llvm_profile_get_num_padding_bytes(NamesSize);
-    *PaddingBytesAfterVTable = __llvm_profile_get_num_padding_bytes(VTableSize);
-    *PaddingBytesAfterVName = __llvm_profile_get_num_padding_bytes(VNameSize);
+    if (PaddingBytesAfterVTable != NULL)
+      *PaddingBytesAfterVTable =
+          __llvm_profile_get_num_padding_bytes(VTableSize);
+    if (PaddingBytesAfterVName != NULL)
+      *PaddingBytesAfterVName = __llvm_profile_get_num_padding_bytes(VNameSize);
     return;
   }
 
@@ -150,41 +148,36 @@ void __llvm_profile_get_padding_sizes_for_counters(
   *PaddingBytesAfterNames = calculateBytesNeededToPageAlign(NamesSize);
   // Set these two variables to zero to avoid uninitialized variables
   // even if VTableSize and VNameSize are asserted to be zero.
-  *PaddingBytesAfterVTable = 0;
-  *PaddingBytesAfterVName = 0;
+  if (PaddingBytesAfterVTable != NULL)
+    *PaddingBytesAfterVTable = 0;
+  if (PaddingBytesAfterVName != NULL)
+    *PaddingBytesAfterVName = 0;
 }
 
 COMPILER_RT_VISIBILITY
 uint64_t __llvm_profile_get_size_for_buffer_internal(
     const __llvm_profile_data *DataBegin, const __llvm_profile_data *DataEnd,
     const char *CountersBegin, const char *CountersEnd, const char *NamesBegin,
-    const char *NamesEnd, const VTableProfData *VTableBegin,
-    const VTableProfData *VTableEnd, const char *VNamesBegin,
-    const char *VNamesEnd) {
+    const char *NamesEnd) {
   /* Match logic in __llvm_profile_write_buffer(). */
   const uint64_t NamesSize = (NamesEnd - NamesBegin) * sizeof(char);
   uint64_t DataSize = __llvm_profile_get_data_size(DataBegin, DataEnd);
   uint64_t CountersSize =
       __llvm_profile_get_counters_size(CountersBegin, CountersEnd);
-  uint64_t VTableSize =
-      __llvm_profile_get_vtable_section_size(VTableBegin, VTableEnd);
-  uint64_t VNameSize = (VNamesEnd - VNamesBegin) * sizeof(char);
 
   /* Determine how much padding is needed before/after the counters and after
    * the names. */
   uint64_t PaddingBytesBeforeCounters, PaddingBytesAfterCounters,
-      PaddingBytesAfterNames, PaddingBytesAfterVTable, PaddingBytesAfterVNames;
+      PaddingBytesAfterNames;
   __llvm_profile_get_padding_sizes_for_counters(
-      DataSize, CountersSize, NamesSize, VTableSize, VNameSize,
+      DataSize, CountersSize, NamesSize, 0 /* VTableSize */, 0 /* VNameSize */,
       &PaddingBytesBeforeCounters, &PaddingBytesAfterCounters,
-      &PaddingBytesAfterNames, &PaddingBytesAfterVTable,
-      &PaddingBytesAfterVNames);
+      &PaddingBytesAfterNames, NULL /* PaddingBytesAfterVTable */,
+      NULL /* PaddingBytesAfterVNames */);
 
   return sizeof(__llvm_profile_header) + __llvm_write_binary_ids(NULL) +
          DataSize + PaddingBytesBeforeCounters + CountersSize +
-         PaddingBytesAfterCounters + NamesSize + PaddingBytesAfterNames +
-         VTableSize + PaddingBytesAfterVTable + VNameSize +
-         PaddingBytesAfterVNames;
+         PaddingBytesAfterCounters + NamesSize + PaddingBytesAfterNames;
 }
 
 COMPILER_RT_VISIBILITY

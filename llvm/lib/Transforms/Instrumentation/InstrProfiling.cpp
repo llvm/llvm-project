@@ -1035,6 +1035,7 @@ void InstrProfiling::getOrCreateVTableProfData(GlobalVariable *GV) {
   // Used by INSTR_PROF_VTABLE_DATA MACRO
   Constant *VTableAddr = getVTableAddrForProfData(GV);
   StringRef VTableName = GV->getName();
+  StringRef PGOVTableName = getPGOName(*GV);
   // Record the length of the vtable. This is needed since vtable pointers
   // loaded from C++ objects might be from the middle of a vtable definition.
   uint32_t VTableSizeVal =
@@ -1087,7 +1088,7 @@ void InstrProfiling::getOrCreateVTableProfData(GlobalVariable *GV) {
 
   VTableDataMap[GV] = Data;
 
-  ReferencedVTableNames.push_back(GV);
+  ReferencedVTables.push_back(GV);
 
   // VTable <Hash, Addr> is used by runtime but not referenced by other
   // sections. Conservatively mark it linker retained.
@@ -1382,14 +1383,13 @@ void InstrProfiling::emitNameData() {
 }
 
 void InstrProfiling::emitVTableNames() {
-  if (!EnableVTableValueProfiling || ReferencedVTableNames.empty())
+  if (!EnableVTableValueProfiling || ReferencedVTables.empty())
     return;
 
-  // Collect VTable
+  // Collect the PGO names of referenced vtables and compress them.
   std::string CompressedVTableNames;
-  if (Error E =
-          collectVTableStrings(ReferencedVTableNames, CompressedVTableNames,
-                               DoInstrProfNameCompression)) {
+  if (Error E = collectVTableStrings(ReferencedVTables, CompressedVTableNames,
+                                     DoInstrProfNameCompression)) {
     report_fatal_error(Twine(toString(std::move(E))), false);
   }
 

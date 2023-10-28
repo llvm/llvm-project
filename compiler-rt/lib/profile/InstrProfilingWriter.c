@@ -283,7 +283,7 @@ lprofWriteDataImpl(ProfDataWriter *Writer, const __llvm_profile_data *DataBegin,
       __llvm_profile_get_num_vtable(VTableBegin, VTableEnd);
   const uint64_t VTableSectionSize =
       __llvm_profile_get_vtable_section_size(VTableBegin, VTableEnd);
-  // Note vtable profiling is not supported when DebugInfoCorrelate is true.
+  // Value profiling is not supported when DebugInfoCorrelate is true.
   const uint64_t VNamesSize = DebugInfoCorrelate ? 0 : VNamesEnd - VNamesBegin;
 
   /* Create the header. */

@@ -250,10 +250,10 @@ Error collectVTableStrings(ArrayRef<GlobalVariable *> VTables,
 
 /// \c NameStrings is a string composed of one of more sub-strings encoded in
 /// the format described above. The substrings are separated by 0 or more zero
-/// bytes. This method decodes the string and populates the \c Symtab.
-Error readPGOFuncNameStrings(StringRef NameStrings, InstrProfSymtab &Symtab);
-
-Error readVTableNames(StringRef NameStrings, InstrProfSymtab &Symtab);
+/// bytes. This method decodes the string and calls `NameCallback` for each
+/// substring.
+Error readPGOFuncNameStrings(StringRef NameStrings,
+                             std::function<Error(StringRef)> NameCallback);
 
 /// Check if INSTR_PROF_RAW_VERSION_VAR is defined. This global is only being
 /// set in IR PGO compilation.
@@ -296,6 +296,8 @@ inline StringRef getPGOFuncNameMetadataName() { return "PGOFuncName"; }
 
 /// Return the PGOFuncName meta data associated with a function.
 MDNode *getPGOFuncNameMetadata(const Function &F);
+
+std::string getPGOName(const GlobalVariable &V, bool InLTO = false);
 
 /// Create the PGOFuncName meta data if PGOFuncName is different from
 /// function's raw name. This should only apply to internal linkage functions
@@ -502,6 +504,9 @@ public:
 
   inline Error create(StringRef FuncNameStrings, StringRef VTableNameStrings);
 
+  inline Error
+  initVTableNamesFromCompressedStrings(StringRef CompressedVTableNames);
+
   /// A wrapper interface to populate the PGO symtab with functions
   /// decls from module \c M. This interface is used by transformation
   /// passes such as indirect function call promotion. Variable \c InLTO
@@ -519,39 +524,33 @@ public:
   Error create(const FuncNameIterRange &FuncIterRange,
                const VTableNameIterRange &VTableIterRange);
 
-  /// Update the symtab by adding \p FuncName to the table. This interface
-  /// is used by the raw and text profile readers.
-  Error addFuncName(StringRef FuncName) {
-    if (FuncName.empty())
+  Error addSymbolName(StringRef SymbolName) {
+    if (SymbolName.empty())
       return make_error<InstrProfError>(instrprof_error::malformed,
-                                        "function name is empty");
-    auto Ins = NameTab.insert(FuncName);
+                                        "symbol name is empty");
+
+    // Insert into NameTab so that MD5NameMap (a vector that will be sorted)
+    // won't have duplicated entries in the first place.
+    auto Ins = NameTab.insert(SymbolName);
     if (Ins.second) {
       MD5NameMap.push_back(std::make_pair(
-          IndexedInstrProf::ComputeHash(FuncName), Ins.first->getKey()));
+          IndexedInstrProf::ComputeHash(SymbolName), Ins.first->getKey()));
       Sorted = false;
     }
     return Error::success();
   }
 
+  /// The method name is kept since there are many callers.
+  // It just forwards to 'addSymbolName'.
+  Error addFuncName(StringRef FuncName) { return addSymbolName(FuncName); }
+
   Error addVTableName(StringRef VTableName) {
-    if (VTableName.empty())
-      return make_error<InstrProfError>(instrprof_error::malformed,
-                                        "invalid input: VTableName is empty");
-    // Insert into NameTab so that MD5NameMap (a vector that is going to be
-    // sorted) won't have duplicated entries in the first place.
-    auto Ins = NameTab.insert(VTableName);
+    if (Error E = addSymbolName(VTableName))
+      return E;
 
     // Record VTableName. InstrProfWriter uses this map. The comment around
     // class member explains why.
     VTableNames.insert(VTableName);
-
-    // If this is newly added, update MD5NameMap.
-    if (Ins.second) {
-      MD5NameMap.push_back(std::make_pair(
-          IndexedInstrProf::ComputeHash(VTableName), Ins.first->getKey()));
-      Sorted = false;
-    }
     return Error::success();
   }
 
@@ -613,18 +612,31 @@ Error InstrProfSymtab::create(StringRef D, uint64_t BaseAddr) {
   return Error::success();
 }
 
+// FIXME: Move 'InstrProfSymtab::create' definition into cpp,
+// and move 'readPGOFuncNameStrings' inside cpp.
 Error InstrProfSymtab::create(StringRef NameStrings) {
-  return readPGOFuncNameStrings(NameStrings, *this);
+  return readPGOFuncNameStrings(
+      NameStrings,
+      std::bind(&InstrProfSymtab::addFuncName, this, std::placeholders::_1));
 }
 
 Error InstrProfSymtab::create(StringRef FuncNameStrings,
                               StringRef VTableNameStrings) {
-  if (Error E = readPGOFuncNameStrings(FuncNameStrings, *this))
+  if (Error E = readPGOFuncNameStrings(FuncNameStrings,
+                                       std::bind(&InstrProfSymtab::addFuncName,
+                                                 this, std::placeholders::_1)))
     return E;
 
-  // FIXME: Add test coverage that this returns success when VTableNameStrings
-  // is empty.
-  return readVTableNames(VTableNameStrings, *this);
+  return readPGOFuncNameStrings(
+      VTableNameStrings,
+      std::bind(&InstrProfSymtab::addVTableName, this, std::placeholders::_1));
+}
+
+Error InstrProfSymtab::initVTableNamesFromCompressedStrings(
+    StringRef CompressedVTableStrings) {
+  return readPGOFuncNameStrings(
+      CompressedVTableStrings,
+      std::bind(&InstrProfSymtab::addVTableName, this, std::placeholders::_1));
 }
 
 template <typename NameIterRange>

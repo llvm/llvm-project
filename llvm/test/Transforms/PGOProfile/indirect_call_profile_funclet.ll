@@ -45,8 +45,6 @@ catch.dispatch:                                   ; preds = %entry
 catch:                                            ; preds = %catch.dispatch
   %tmp1 = catchpad within %tmp [ptr null, i32 64, ptr null]
   %vtable = load ptr, ptr %b, align 8
-  %0 = tail call i1 @llvm.type.test(ptr %vtable, metadata !"_ZTS4base")
-  tail call void @llvm.assume(i1 %0)
   %tmp3 = load ptr, ptr %vtable, align 8
   call void %tmp3(ptr %b) [ "funclet"(token %tmp1) ]
   catchret from %tmp1 to label %try.cont
@@ -56,15 +54,12 @@ try.cont:                                         ; preds = %catch, %entry
 }
 
 ; GEN: catch:
-; GEN: call void @llvm.instrprof.value.profile({{.*}} i32 2, i32 0)
-; GEN: call void @llvm.instrprof.value.profile({{.*}} i32 0, i32 0)
+; GEN: call void @llvm.instrprof.value.profile(
 ; GEN-SAME: [ "funclet"(token %tmp1) ]
 
 ; LOWER: catch:
-; LOWER: call void @__llvm_profile_instrument_target({{.*}} i32 0)
+; LOWER: call void @__llvm_profile_instrument_target(
 ; LOWER-SAME: [ "funclet"(token %tmp1) ]
 
 declare dso_local void @"?may_throw@@YAXH@Z"(i32)
 declare dso_local i32 @__CxxFrameHandler3(...)
-declare i1 @llvm.type.test(ptr, metadata)
-declare void @llvm.assume(i1 noundef)

@@ -98,6 +98,25 @@ static uintptr_t signextIfWin64(void *V) {
 #endif
 }
 
+static uint64_t
+getDistanceFromCounterToValueProf(const __llvm_profile_header *const Header) {
+  // Skip names section, vtable profile data section and vtable names section
+  // for runtime profile merge. To merge runtime addresses from multiple
+  // profiles, the same instrumented binary should run with ASLR disabled -> in
+  // this set-up these three sections remain unchanged.
+  const uint64_t VTableSectionSize =
+      Header->NumVTables * sizeof(VTableProfData);
+  const uint64_t PaddingBytesAfterVTableSection =
+      __llvm_profile_get_num_padding_bytes(VTableSectionSize);
+  const uint64_t VNamesSize = Header->VNamesSize;
+  const uint64_t PaddingBytesAfterVNamesSize =
+      __llvm_profile_get_num_padding_bytes(VNamesSize);
+  return Header->NamesSize +
+         __llvm_profile_get_num_padding_bytes(Header->NamesSize) +
+         VTableSectionSize + PaddingBytesAfterVTableSection + VNamesSize +
+         PaddingBytesAfterVNamesSize;
+}
+
 COMPILER_RT_VISIBILITY
 int __llvm_profile_merge_from_buffer(const char *ProfileData,
                                      uint64_t ProfileSize) {
@@ -125,26 +144,8 @@ int __llvm_profile_merge_from_buffer(const char *ProfileData,
                    Header->NumCounters * __llvm_profile_counter_entry_size();
   SrcNameStart = SrcCountersEnd;
 
-  // Skip vtable profile data section and vtable names sections for runtime
-  // profile merge. To merge runtime addresses from multiple profiles, the
-  // same instrumented binary should run with ASLR disabled -> in this set-up
-  // these two sections remain unchanged.
-  uint64_t VTableSectionSize = Header->NumVTables * sizeof(VTableProfData);
-  uint64_t PaddingBytesAfterVTableSection =
-      __llvm_profile_get_num_padding_bytes(VTableSectionSize);
-  uint64_t VNamesSize = Header->VNamesSize;
-  uint64_t PaddingBytesAfterVNamesSize =
-      __llvm_profile_get_num_padding_bytes(VNamesSize);
-
-  uint64_t VTableProfDataOffset =
-      SrcNameStart + Header->NamesSize +
-      __llvm_profile_get_num_padding_bytes(Header->NamesSize);
-
-  uint64_t VTableNamesOffset =
-      VTableProfDataOffset + VTableSectionSize + PaddingBytesAfterVTableSection;
-
   SrcValueProfDataStart =
-      VTableNamesOffset + VNamesSize + PaddingBytesAfterVNamesSize;
+      SrcNameStart + getDistanceFromCounterToValueProf(Header);
   if (SrcNameStart < SrcCountersStart)
     return 1;
 
