@@ -56,33 +56,23 @@ void GPUToSPIRVPass::runOnOperation() {
   SmallVector<Operation *, 1> gpuModules;
   OpBuilder builder(context);
 
-  auto getTargetEnvFromGPUModuleOp = [*this](gpu::GPUModuleOp moduleOp) {
+  auto targetEnvSupportsKernelCapability = [](gpu::GPUModuleOp moduleOp) {
     Operation *gpuModule = moduleOp.getOperation();
     auto targetAttr = spirv::lookupTargetEnvOrDefault(gpuModule);
-    std::unique_ptr<ConversionTarget> target =
-        SPIRVConversionTarget::get(targetAttr);
-
-    SPIRVConversionOptions options;
-    options.use64bitIndex = this->use64bitIndex;
-    SPIRVTypeConverter typeConverter(targetAttr, options);
-    const spirv::TargetEnv &targetEnv = typeConverter.getTargetEnv();
-    return targetEnv;
+    spirv::TargetEnv targetEnv(targetAttr);
+    return targetEnv.allows(spirv::Capability::Kernel);
   };
 
   module.walk([&](gpu::GPUModuleOp moduleOp) {
     // Clone each GPU kernel module for conversion, given that the GPU
     // launch op still needs the original GPU kernel module.
-    // SPIRV module insertion point by is after original GPU module.
-    // This works fine for Vulkan shader that has a dedicated runner.
-    // But OpenCL kernel needs SPIRV module placed inside original GPU module as
-    // OpenCL uses GPU compilation pipeline.
-    const mlir::spirv::TargetEnv &targetEnv =
-        getTargetEnvFromGPUModuleOp(moduleOp);
-    FailureOr<spirv::MemoryModel> memoryModel =
-        spirv::getMemoryModel(targetEnv);
-    if (failed(memoryModel))
-      return signalPassFailure();
-    if (memoryModel == spirv::MemoryModel::OpenCL) {
+    // For Vulkan Shader capabilities, we insert the newly converted SPIR-V
+    // module right after the original GPU module, as that's the expectation of
+    // the in-tree Vulkan runner.
+    // For OpenCL Kernel capabilities, we insert the newly converted SPIR-V
+    // module inside the original GPU module, as that's the expectaion of the
+    // normal GPU compilation pipeline.
+    if (targetEnvSupportsKernelCapability(moduleOp)) {
       builder.setInsertionPoint(moduleOp.getBody(),
                                 moduleOp.getBody()->begin());
     } else {
@@ -148,17 +138,11 @@ void GPUToSPIRVPass::runOnOperation() {
       return signalPassFailure();
   }
 
-  // In case of OpenCL, gpu.func in original gpu.module needs to replaced with
-  // an empty func.func with same arguments as gpu.func. And it also needs
-  // gpu.kernel attribute set.
+  // For OpenCL, the gpu.func op in the original gpu.module op needs to be
+  // replaced with an empty func.func op with the same arguments as the gpu.func
+  // op. The func.func op needs gpu.kernel attribute set.
   module.walk([&](gpu::GPUModuleOp moduleOp) {
-    const mlir::spirv::TargetEnv &targetEnv =
-        getTargetEnvFromGPUModuleOp(moduleOp);
-    FailureOr<spirv::MemoryModel> memoryModel =
-        spirv::getMemoryModel(targetEnv);
-    if (failed(memoryModel))
-      return signalPassFailure();
-    if (memoryModel == spirv::MemoryModel::OpenCL) {
+    if (targetEnvSupportsKernelCapability(moduleOp)) {
       moduleOp.walk([&](gpu::GPUFuncOp funcOp) {
         builder.setInsertionPoint(funcOp);
         auto newFuncOp = builder.create<func::FuncOp>(
