@@ -232,7 +232,7 @@ function(compileDeviceRTLLibrary target_cpu target_name target_triple)
 
   set(target_feature "")
   if("${target_triple}" STREQUAL "nvptx64-nvidia-cuda")
-    set(target_feature "feature=+ptx61")
+    set(target_feature "feature=+ptx63")
   endif()
 
   # Package the bitcode in the bitcode and embed it in an ELF for the static library
