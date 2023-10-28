@@ -94,3 +94,27 @@ void testOverwrite(void) {
   FILE *fp = fopen("myfile.txt", "w");
   fp = 0;
 } // expected-warning {{Opened file is never closed; potential resource leak}}
+
+void testTmpfileNotClose(void) {
+  FILE *fp = tmpfile();
+  fputs("abc", fp);
+  return; // expected-warning {{Opened file is never closed; potential resource leak}}
+}
+
+void testTmpfileClose(void) {
+  FILE *fp = tmpfile();
+  fclose(fp);
+  return; // no warning
+}
+
+void testTmpfileEscaped(void) {
+  FILE *fp = tmpfile();
+  myfclose(fp);
+  return; // no warning
+}
+
+void testTmpfileNotEscaped(void) {
+  FILE *fp = tmpfile();
+  passConstPointer(fp);
+  return; // expected-warning {{Opened file is never closed; potential resource leak}}
+}
