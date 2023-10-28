@@ -17,3 +17,19 @@ define double @fadd(double %x, double %y) {
   %a = fadd double %x, %y
   ret double %a
 }
+
+; Test copying between FPR32 and GPR on RV64.
+; FIXME: This test should be replaced with a more general calling convention
+; test once we have more FP implemented.
+
+define float @fadd_f32(float %x, float %y) {
+; RV32I-LABEL: fadd:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    fmv.d.x fa5, a0
+; RV32I-NEXT:    fmv.d.x fa4, a1
+; RV32I-NEXT:    fadd.d fa5, fa5, fa4
+; RV32I-NEXT:    fmv.x.d a0, fa5
+; RV32I-NEXT:    ret
+  %a = fadd float %x, %y
+  ret float %a
+}

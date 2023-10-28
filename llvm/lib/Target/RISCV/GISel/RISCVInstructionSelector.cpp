@@ -468,8 +468,10 @@ bool RISCVInstructionSelector::selectCopy(MachineInstr &MI,
   if (DstReg.isPhysical())
     return true;
 
-  const TargetRegisterClass *DstRC = getRegClassForTypeOnBank(
-      MRI.getType(DstReg), *RBI.getRegBank(DstReg, MRI, TRI));
+  const RegisterBank &DstRegBank = *RBI.getRegBank(DstReg, MRI, TRI);
+
+  const TargetRegisterClass *DstRC =
+      getRegClassForTypeOnBank(MRI.getType(DstReg), DstRegBank);
   assert(DstRC &&
          "Register class not available for LLT, register bank combination");
 
@@ -480,6 +482,31 @@ bool RISCVInstructionSelector::selectCopy(MachineInstr &MI,
     LLVM_DEBUG(dbgs() << "Failed to constrain " << TII.getName(MI.getOpcode())
                       << " operand\n");
     return false;
+  }
+
+  // RV64 requires special handling for copies between GPR and FPR32.
+  // copyPhysReg considers GPR to be 64 bits.
+  // FIXME: Should we remove the XLen check from copyPhysReg?
+  if (MI.isCopy() && Subtarget->is64Bit()) {
+    Register SrcReg = MI.getOperand(1).getReg();
+    const RegisterBank &SrcRegBank = *RBI.getRegBank(SrcReg, MRI, TRI);
+
+    unsigned DstSize = RBI.getSizeInBits(DstReg, MRI, TRI);
+    unsigned SrcSize = RBI.getSizeInBits(SrcReg, MRI, TRI);
+
+    if (DstSize == 32 && SrcSize == 32 &&
+        SrcRegBank.getID() == RISCV::GPRRegBankID &&
+        DstRegBank.getID() == RISCV::FPRRegBankID) {
+      MI.setDesc(TII.get(RISCV::FMV_W_X));
+      return true;
+    }
+
+    if (DstSize == 32 && SrcSize == 32 &&
+        SrcRegBank.getID() == RISCV::FPRRegBankID &&
+        DstRegBank.getID() == RISCV::GPRRegBankID) {
+      MI.setDesc(TII.get(RISCV::FMV_X_W));
+      return true;
+    }
   }
 
   MI.setDesc(TII.get(RISCV::COPY));
