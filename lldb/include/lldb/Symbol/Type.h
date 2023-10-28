@@ -34,7 +34,7 @@ struct CompilerContext {
   }
   bool operator!=(const CompilerContext &rhs) const { return !(*this == rhs); }
 
-  void Dump() const;
+  void Dump(Stream &s) const;
 
   CompilerContextKind kind;
   ConstString name;

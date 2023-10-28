@@ -307,7 +307,7 @@ computeBlockInputState(const CFGBlock &Block, AnalysisContext &AC) {
       auto &StmtToBlock = AC.CFCtx.getStmtToBlock();
       auto StmtBlock = StmtToBlock.find(Block.getTerminatorStmt());
       assert(StmtBlock != StmtToBlock.end());
-      llvm::erase_value(Preds, StmtBlock->getSecond());
+      llvm::erase(Preds, StmtBlock->getSecond());
     }
   }
 

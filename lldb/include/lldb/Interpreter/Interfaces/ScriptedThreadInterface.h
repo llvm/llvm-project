@@ -20,11 +20,12 @@
 namespace lldb_private {
 class ScriptedThreadInterface : virtual public ScriptedInterface {
 public:
-  StructuredData::GenericSP
+  virtual llvm::Expected<StructuredData::GenericSP>
   CreatePluginObject(llvm::StringRef class_name, ExecutionContext &exe_ctx,
                      StructuredData::DictionarySP args_sp,
-                     StructuredData::Generic *script_obj = nullptr) override {
-    return {};
+                     StructuredData::Generic *script_obj = nullptr) {
+    llvm_unreachable(
+        "Cannot create an instance of the ScriptedThreadInterface!");
   }
 
   virtual lldb::tid_t GetThreadID() { return LLDB_INVALID_THREAD_ID; }

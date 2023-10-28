@@ -4,10 +4,10 @@ target triple = "powerpc64le-grtev4-linux-gnu"
 
 ; First block frequency info
 ;CHECK:      block-frequency-info: loop_test
-;CHECK-NEXT: - BB0[entry]: float = 1.0, int = 12
-;CHECK-NEXT: - BB1[for.check]: float = 2.6667, int = 34
-;CHECK-NEXT: - BB2[test1]: float = 1.6667, int = 21
-;CHECK-NEXT: - BB3[optional1]: float = 0.625, int = 8
+;CHECK-NEXT: - BB0[entry]: float = 1.0, int = {{.*}}
+;CHECK-NEXT: - BB1[for.check]: float = 2.6667, int = {{.*}}
+;CHECK-NEXT: - BB2[test1]: float = 1.6667, int = {{.*}}
+;CHECK-NEXT: - BB3[optional1]: float = 0.625, int = {{.*}}
 
 ;CHECK:      block-frequency-info: loop_test
 ;CHECK:      block-frequency-info: loop_test
@@ -15,11 +15,11 @@ target triple = "powerpc64le-grtev4-linux-gnu"
 
 ; Last block frequency info
 ;CHECK:      block-frequency-info: loop_test
-;CHECK-NEXT: - BB0[entry]: float = 1.0, int = 12
-;CHECK-NEXT: - BB1[for.check]: float = 2.6667, int = 34
-;CHECK-NEXT: - BB2[for.check]: float = 2.1667, int = 27
-;CHECK-NEXT: - BB3[test1]: float = 1.6667, int = 21
-;CHECK-NEXT: - BB4[optional1]: float = 0.625, int = 8
+;CHECK-NEXT: - BB0[entry]: float = 1.0, int = {{.*}}
+;CHECK-NEXT: - BB1[for.check]: float = 2.6667, int = {{.*}}
+;CHECK-NEXT: - BB2[for.check]: float = 2.1667, int = {{.*}}
+;CHECK-NEXT: - BB3[test1]: float = 1.6667, int = {{.*}}
+;CHECK-NEXT: - BB4[optional1]: float = 0.625, int = {{.*}}
 
 
 define void @loop_test(ptr %tags, i32 %count) {

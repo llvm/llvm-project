@@ -1,4 +1,4 @@
-// RUN: mlir-opt -test-transform-dialect-interpreter -split-input-file -verify-diagnostics -allow-unregistered-dialect %s | FileCheck %s
+// RUN: mlir-opt -transform-interpreter -split-input-file -verify-diagnostics -allow-unregistered-dialect %s | FileCheck %s
 
 #map = affine_map<(d0, d1) -> (d0, d1)>
 #map1 = affine_map<(d0, d1) -> (d0)>
@@ -15,10 +15,10 @@
 //   CHECK-SAME:   %[[T1:.+]]: tensor<3xf16>
 func.func @reduction_2d_static(%t0: tensor<3x7xf16>, %t1: tensor<3xf16>) -> tensor<3xf16> {
   //      CHECK:  %[[EMPTY:.*]] = tensor.empty() : tensor<3x2x4xf16>
-  //      CHECK: %[[PACKED:.*]] = tensor.pack %[[T0]] padding_value(%{{.*}} : f16) 
+  //      CHECK: %[[PACKED:.*]] = tensor.pack %[[T0]] padding_value(%{{.*}} : f16)
   // CHECK-SAME:   inner_dims_pos = [1] inner_tiles = [4] into %[[EMPTY]] : tensor<3x7xf16> -> tensor<3x2x4xf16>
   //  CHECK-NOT: tensor.pack
-  //      CHECK: linalg.generic 
+  //      CHECK: linalg.generic
   // CHECK-SAME:   indexing_maps = [#[[$PACKED_MAP_0]], #[[$PACKED_MAP_1]]]
   // CHECK-SAME:   iterator_types = ["parallel", "reduction", "reduction"]
   // CHECK-SAME:   ins(%{{.*}} : tensor<3x2x4xf16>)
@@ -33,11 +33,13 @@ func.func @reduction_2d_static(%t0: tensor<3x7xf16>, %t1: tensor<3xf16>) -> tens
   return %2 : tensor<3xf16>
 }
 
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  transform.structured.pack %0 packed_sizes = [0, 4]
-      : (!transform.any_op) -> (!transform.op<"linalg.generic">)
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.structured.pack %0 packed_sizes = [0, 4]
+        : (!transform.any_op) -> (!transform.op<"linalg.generic">)
+        transform.yield
+  }
 }
 
 // -----
@@ -57,10 +59,10 @@ transform.sequence failures(propagate) {
 //   CHECK-SAME:   %[[T1:.+]]: tensor<3xf16>
 func.func @col_reduction_2d_static(%t0: tensor<7x3xf16>, %t1: tensor<3xf16>) -> tensor<3xf16> {
   //      CHECK:  %[[EMPTY:.*]] = tensor.empty() : tensor<3x2x4xf16>
-  //      CHECK: %[[PACKED:.*]] = tensor.pack %[[T0]] padding_value(%{{.*}} : f16) 
+  //      CHECK: %[[PACKED:.*]] = tensor.pack %[[T0]] padding_value(%{{.*}} : f16)
   // CHECK-SAME:   outer_dims_perm = [1, 0] inner_dims_pos = [0] inner_tiles = [4] into %[[EMPTY]] : tensor<7x3xf16> -> tensor<3x2x4xf16>
   //  CHECK-NOT: tensor.pack
-  //      CHECK: linalg.generic 
+  //      CHECK: linalg.generic
   // CHECK-SAME:   indexing_maps = [#[[$PACKED_MAP_0]], #[[$PACKED_MAP_1]]]
   // CHECK-SAME:   iterator_types = ["reduction", "parallel", "reduction"]
   // CHECK-SAME:   ins(%{{.*}} : tensor<3x2x4xf16>)
@@ -75,18 +77,20 @@ func.func @col_reduction_2d_static(%t0: tensor<7x3xf16>, %t1: tensor<3xf16>) -> 
   return %2 : tensor<3xf16>
 }
 
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  %1 = transform.structured.pack %0 packed_sizes = [4, 0]
-      : (!transform.any_op) -> (!transform.op<"linalg.generic">)
-  %pack = transform.get_producer_of_operand %1[0] 
-    : (!transform.op<"linalg.generic">) -> (!transform.op<"tensor.pack">)
-  %2, %pack_2, %empty_unpack_2 = 
-    transform.structured.pack_transpose %pack with_compute_op(%1) 
-    outer_perm = [1, 0]
-     : (!transform.op<"tensor.pack">, !transform.op<"linalg.generic">) 
-    -> (!transform.op<"linalg.generic">, !transform.op<"tensor.pack">, !transform.any_op)
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1 = transform.structured.pack %0 packed_sizes = [4, 0]
+        : (!transform.any_op) -> (!transform.op<"linalg.generic">)
+    %pack = transform.get_producer_of_operand %1[0]
+      : (!transform.op<"linalg.generic">) -> (!transform.op<"tensor.pack">)
+    %2, %pack_2, %empty_unpack_2 =
+      transform.structured.pack_transpose %pack with_compute_op(%1)
+      outer_perm = [1, 0]
+       : (!transform.op<"tensor.pack">, !transform.op<"linalg.generic">)
+      -> (!transform.op<"linalg.generic">, !transform.op<"tensor.pack">, !transform.any_op)
+      transform.yield
+  }
 }
 
 // -----
@@ -112,10 +116,10 @@ func.func @reduction_2d_dynamic(%t0: tensor<?x?xf16>, %t1: tensor<?xf16>) -> ten
   //  CHECK-DAG:     %[[D1:.*]] = tensor.dim %[[T0]], %[[C1]] : tensor<?x?xf16>
   //      CHECK:   %[[D1B4:.*]] = affine.apply #[[$DIV4]]()[%[[D1]]]
   //      CHECK:  %[[EMPTY:.*]] = tensor.empty(%[[D0]], %[[D1B4]]) : tensor<?x?x4xf16>
-  //      CHECK: %[[PACKED:.*]] = tensor.pack %[[T0]] padding_value(%{{.*}} : f16) 
+  //      CHECK: %[[PACKED:.*]] = tensor.pack %[[T0]] padding_value(%{{.*}} : f16)
   // CHECK-SAME:   inner_dims_pos = [1] inner_tiles = [4] into %[[EMPTY]] : tensor<?x?xf16> -> tensor<?x?x4xf16>
   //  CHECK-NOT: tensor.pack
-  //      CHECK: linalg.generic 
+  //      CHECK: linalg.generic
   // CHECK-SAME:   indexing_maps = [#[[$PACKED_MAP_0]], #[[$PACKED_MAP_1]]]
   // CHECK-SAME:   iterator_types = ["parallel", "reduction", "reduction"]
   // CHECK-SAME:   ins(%{{.*}} : tensor<?x?x4xf16>)
@@ -130,11 +134,13 @@ func.func @reduction_2d_dynamic(%t0: tensor<?x?xf16>, %t1: tensor<?xf16>) -> ten
   return %2 : tensor<?xf16>
 }
 
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  transform.structured.pack %0 packed_sizes = [0, 4]
-      : (!transform.any_op) -> (!transform.op<"linalg.generic">)
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.structured.pack %0 packed_sizes = [0, 4]
+        : (!transform.any_op) -> (!transform.op<"linalg.generic">)
+        transform.yield
+  }
 }
 
 
@@ -156,12 +162,12 @@ transform.sequence failures(propagate) {
 //   CHECK-SAME:   %[[T0:.+]]: tensor<?x?xf16>,
 //   CHECK-SAME:   %[[T1:.+]]: tensor<?xf16>
 func.func @reduction_2d_dynamic(%t0: tensor<?x?xf16>, %t1: tensor<?xf16>) -> tensor<?xf16> {
-  //      CHECK: %[[PACKED_0:.*]] = tensor.pack %[[T0]] padding_value(%{{.*}} : f16) 
+  //      CHECK: %[[PACKED_0:.*]] = tensor.pack %[[T0]] padding_value(%{{.*}} : f16)
   // CHECK-SAME:   inner_dims_pos = [0, 1] inner_tiles = [3, 4] into %{{.*}} : tensor<?x?xf16> -> tensor<?x?x3x4xf16>
-  //      CHECK: %[[PACKED_1:.*]] = tensor.pack %[[T1]] padding_value(%{{.*}} : f16) 
+  //      CHECK: %[[PACKED_1:.*]] = tensor.pack %[[T1]] padding_value(%{{.*}} : f16)
   // CHECK-SAME:   inner_dims_pos = [0] inner_tiles = [3] into %{{.*}} : tensor<?xf16> -> tensor<?x3xf16>
   //  CHECK-NOT: tensor.pack
-  //      CHECK: linalg.generic 
+  //      CHECK: linalg.generic
   // CHECK-SAME:   indexing_maps = [#[[$PACKED_MAP_0]], #[[$PACKED_MAP_1]]]
   // CHECK-SAME:   iterator_types = ["parallel", "reduction", "parallel", "reduction"]
   // CHECK-SAME:   ins(%{{.*}} : tensor<?x?x3x4xf16>)
@@ -176,11 +182,13 @@ func.func @reduction_2d_dynamic(%t0: tensor<?x?xf16>, %t1: tensor<?xf16>) -> ten
   return %2 : tensor<?xf16>
 }
 
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  transform.structured.pack %0 packed_sizes = [3, 4]
-      : (!transform.any_op) -> (!transform.op<"linalg.generic">)
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.structured.pack %0 packed_sizes = [3, 4]
+        : (!transform.any_op) -> (!transform.op<"linalg.generic">)
+        transform.yield
+  }
 }
 
 // -----
@@ -207,7 +215,7 @@ func.func @matmul(%A: tensor<?x?xf32>, %B: tensor<?x?xf32>, %C: tensor<?x?xf32>)
   // CHECK-SAME:   : tensor<?x?xf32> -> tensor<?x?x3x2xf32>
 
   //      CHECK: linalg.generic {indexing_maps = [#[[$PACKED_MAP_0]], #[[$PACKED_MAP_1]], #[[$PACKED_MAP_2]]]
-  // CHECK-SAME:     iterator_types = ["parallel", "parallel", "reduction", "parallel", "parallel", "reduction"]} 
+  // CHECK-SAME:     iterator_types = ["parallel", "parallel", "reduction", "parallel", "parallel", "reduction"]}
   // CHECK-SAME:  ins(%{{.*}} : tensor<?x?x2x4xf32>, tensor<?x?x3x4xf32>)
   // CHECK-SAME: outs(%{{.*}} : tensor<?x?x3x2xf32>)
   %0 = linalg.matmul  ins(%A, %B: tensor<?x?xf32>, tensor<?x?xf32>)
@@ -219,20 +227,22 @@ func.func @matmul(%A: tensor<?x?xf32>, %B: tensor<?x?xf32>, %C: tensor<?x?xf32>)
   return %0 : tensor<?x?xf32>
 }
 
-transform.sequence failures(propagate) {
-  ^bb0(%arg1: !transform.any_op):
-    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    //                                            M  N  K
-    %1 = transform.structured.pack %0 packed_sizes = [2, 3, 4]
-      : (!transform.any_op) -> (!transform.op<"linalg.generic">)
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+      %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+      //                                            M  N  K
+      %1 = transform.structured.pack %0 packed_sizes = [2, 3, 4]
+        : (!transform.any_op) -> (!transform.op<"linalg.generic">)
 
-    %unpack = transform.get_consumers_of_result %1[0] 
-      : (!transform.op<"linalg.generic">) -> (!transform.op<"tensor.unpack">)
-    %2, %pack_2, %unpack_2 = 
-      transform.structured.pack_transpose %unpack with_compute_op(%1) 
-      outer_perm = [1, 0] inner_perm = [1, 0]
-      : (!transform.op<"tensor.unpack">, !transform.op<"linalg.generic">) 
-      -> (!transform.op<"linalg.generic">, !transform.op<"tensor.pack">, !transform.op<"tensor.unpack">)
+      %unpack = transform.get_consumers_of_result %1[0]
+        : (!transform.op<"linalg.generic">) -> (!transform.op<"tensor.unpack">)
+      %2, %pack_2, %unpack_2 =
+        transform.structured.pack_transpose %unpack with_compute_op(%1)
+        outer_perm = [1, 0] inner_perm = [1, 0]
+        : (!transform.op<"tensor.unpack">, !transform.op<"linalg.generic">)
+        -> (!transform.op<"linalg.generic">, !transform.op<"tensor.pack">, !transform.op<"tensor.unpack">)
+        transform.yield
+  }
 }
 
 // -----
@@ -256,7 +266,7 @@ func.func @conv_2d_nchw_fchw(%i: tensor<14x512x28x28xf32>, %f: tensor<1024x512x1
   //      CHECK: %[[PACK_INPUT:.*]] = tensor.pack %{{.*}} inner_dims_pos = [1] inner_tiles = [4]
   // CHECK-SAME:   : tensor<14x1024x28x28xf32> -> tensor<14x256x28x28x4xf32>
   //      CHECK: linalg.generic {indexing_maps = [#[[$PACKED_MAP_0]], #[[$PACKED_MAP_1]], #[[$PACKED_MAP_2]]]
-  // CHECK-SAME:     iterator_types = ["parallel", "parallel", "parallel", "parallel", "reduction", "reduction", "reduction", "parallel", "reduction"]} 
+  // CHECK-SAME:     iterator_types = ["parallel", "parallel", "parallel", "parallel", "reduction", "reduction", "reduction", "parallel", "reduction"]}
   // CHECK-SAME:  ins(%{{.*}} : tensor<14x64x28x28x8xf32>, tensor<256x64x1x1x4x8xf32>)
   // CHECK-SAME: outs(%{{.*}} : tensor<14x256x28x28x4xf32>)
   %0 = linalg.conv_2d_nchw_fchw ins(%i, %f: tensor<14x512x28x28xf32>, tensor<1024x512x1x1xf32>)
@@ -267,12 +277,14 @@ func.func @conv_2d_nchw_fchw(%i: tensor<14x512x28x28xf32>, %f: tensor<1024x512x1
   return %0: tensor<14x1024x28x28xf32>
 }
 
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %0 = transform.structured.match interface{LinalgOp} in %arg1 : (!transform.any_op) -> !transform.any_op
-  //                                            N  F  H  W  C KH KW
-  %1 = transform.structured.pack %0 packed_sizes = [0, 4, 0, 0, 8, 0, 0]
-      : (!transform.any_op) -> (!transform.op<"linalg.generic">)
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match interface{LinalgOp} in %arg1 : (!transform.any_op) -> !transform.any_op
+    //                                            N  F  H  W  C KH KW
+    %1 = transform.structured.pack %0 packed_sizes = [0, 4, 0, 0, 8, 0, 0]
+        : (!transform.any_op) -> (!transform.op<"linalg.generic">)
+        transform.yield
+  }
 }
 
 // -----
@@ -287,7 +299,7 @@ transform.sequence failures(propagate) {
 //  CHECK-SAME:   %[[FILTER:.+]]: tensor<1x?x?x?xf32>
 //  CHECK-SAME:   %[[INIT:.+]]: tensor<?x1x?x?xf32>
 func.func @conv_2d_nhwc_hwcf(%input: tensor<?x1x?x?xf32>, %filter: tensor<1x?x?x?xf32>, %init: tensor<?x1x?x?xf32>) -> tensor<?x1x?x?xf32> {
-  
+
   //      CHECK: %[[PACK_INPUT:.*]] = tensor.pack %{{.*}} inner_dims_pos = [3] inner_tiles = [6]
   // CHECK-SAME:   : tensor<?x1x?x?xf32> -> tensor<?x1x?x?x6xf32>
   //      CHECK: %[[PACK_FILTER:.*]] = tensor.pack %{{.*}} inner_dims_pos = [3, 2] inner_tiles = [4, 6]
@@ -296,24 +308,26 @@ func.func @conv_2d_nhwc_hwcf(%input: tensor<?x1x?x?xf32>, %filter: tensor<1x?x?x
   // CHECK-SAME:   : tensor<?x1x?x?xf32> -> tensor<?x1x?x?x4xf32>
 
   //      CHECK: linalg.generic {indexing_maps = [#[[$PACKED_MAP_0]], #[[$PACKED_MAP_1]], #[[$PACKED_MAP_2]]]
-  // CHECK-SAME:     iterator_types = ["parallel", "parallel", "parallel", "parallel", "reduction", "reduction", "reduction", "parallel", "reduction"]} 
+  // CHECK-SAME:     iterator_types = ["parallel", "parallel", "parallel", "parallel", "reduction", "reduction", "reduction", "parallel", "reduction"]}
   // CHECK-SAME:  ins(%{{.*}} : tensor<?x1x?x?x6xf32>, tensor<1x?x?x?x4x6xf32>)
   // CHECK-SAME: outs(%{{.*}} : tensor<?x1x?x?x4xf32>)
   %0 = linalg.conv_2d_nhwc_hwcf
      ins (%input, %filter: tensor<?x1x?x?xf32>, tensor<1x?x?x?xf32>)
     outs (%init: tensor<?x1x?x?xf32>) -> tensor<?x1x?x?xf32>
-  
+
   //      CHECK: tensor.unpack %{{.*}} inner_dims_pos = [3] inner_tiles = [4]
   // CHECK-SAME:   : tensor<?x1x?x?x4xf32> -> tensor<?x1x?x?xf32>
   return %0 : tensor<?x1x?x?xf32>
 }
 
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %0 = transform.structured.match interface{LinalgOp} in %arg1 : (!transform.any_op) -> !transform.any_op
-  //                                            N  H  W  F KH KW  C
-  %1 = transform.structured.pack %0 packed_sizes = [0, 0, 0, 4, 0, 0, 6]
-      : (!transform.any_op) -> (!transform.op<"linalg.generic">)
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match interface{LinalgOp} in %arg1 : (!transform.any_op) -> !transform.any_op
+    //                                            N  H  W  F KH KW  C
+    %1 = transform.structured.pack %0 packed_sizes = [0, 0, 0, 4, 0, 0, 6]
+        : (!transform.any_op) -> (!transform.op<"linalg.generic">)
+        transform.yield
+  }
 }
 
 // -----
@@ -342,7 +356,7 @@ func.func @matmul_dynamic_pack_size(%A: tensor<?x?xf32>, %B: tensor<?x?xf32>, %C
   //      CHECK: %[[PACK_C:.*]] = tensor.pack %[[C]] {{.*}} inner_dims_pos = [1] inner_tiles = [%[[TS]]]
   // CHECK-SAME:   : tensor<?x?xf32> -> tensor<?x?x?xf32>
   //      CHECK: linalg.generic {indexing_maps = [#[[$PACKED_MAP_0]], #[[$PACKED_MAP_1]], #[[$PACKED_MAP_2]]]
-  // CHECK-SAME:     iterator_types = ["parallel", "parallel", "reduction", "parallel", "reduction"]} 
+  // CHECK-SAME:     iterator_types = ["parallel", "parallel", "reduction", "parallel", "reduction"]}
   // CHECK-SAME:  ins(%{{.*}} : tensor<?x?x?xf32>, tensor<?x?x?x?xf32>)
   // CHECK-SAME: outs(%{{.*}} : tensor<?x?x?xf32>)
   %0 = linalg.matmul  ins(%A, %B: tensor<?x?xf32>, tensor<?x?xf32>)
@@ -354,12 +368,14 @@ func.func @matmul_dynamic_pack_size(%A: tensor<?x?xf32>, %B: tensor<?x?xf32>, %C
   return %0 : tensor<?x?xf32>
 }
 
-transform.sequence failures(propagate) {
-  ^bb0(%arg1: !transform.any_op):
-    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %sz = transform.structured.match ops{["some_tile_size"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %1 = transform.structured.pack %0 packed_sizes = [0, %sz : !transform.any_op, %sz : !transform.any_op] 
-      : (!transform.any_op) -> (!transform.op<"linalg.generic">)
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+      %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+      %sz = transform.structured.match ops{["some_tile_size"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+      %1 = transform.structured.pack %0 packed_sizes = [0, %sz : !transform.any_op, %sz : !transform.any_op]
+        : (!transform.any_op) -> (!transform.op<"linalg.generic">)
+        transform.yield
+  }
 }
 
 // -----
@@ -371,13 +387,15 @@ func.func @conv_cant_pack(%i: tensor<14x512x28x28xf32>, %f: tensor<1024x512x1x1x
   return %0: tensor<14x1024x28x28xf32>
 }
 
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %0 = transform.structured.match interface{LinalgOp} in %arg1 : (!transform.any_op) -> !transform.any_op
-  //                                                N  F  H  W  C KH KW
-  // expected-error @below {{data tiling failed}}
-  %1 = transform.structured.pack %0 packed_sizes = [0, 0, 4, 0, 0, 0, 0]
-      : (!transform.any_op) -> (!transform.op<"linalg.generic">)
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match interface{LinalgOp} in %arg1 : (!transform.any_op) -> !transform.any_op
+    //                                                N  F  H  W  C KH KW
+    // expected-error @below {{data tiling failed}}
+    %1 = transform.structured.pack %0 packed_sizes = [0, 0, 4, 0, 0, 0, 0]
+        : (!transform.any_op) -> (!transform.op<"linalg.generic">)
+        transform.yield
+  }
 }
 
 // -----
@@ -393,12 +411,14 @@ func.func @matmul(%A: tensor<?x?xf32>, %B: tensor<?x?xf32>, %C: tensor<?x?xf32>)
   return %0, %1 : tensor<?x?xf32>, tensor<?x?xf32>
 }
 
-transform.sequence failures(propagate) {
-  ^bb0(%arg1: !transform.any_op):
-    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    // expected-error @below {{requires target to map to exactly 1 LinalgOp (got 2)}}
-    %1 = transform.structured.pack %0 packed_sizes = [2, 3, 4] 
-      : (!transform.any_op) -> (!transform.op<"linalg.generic">)
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+      %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+      // expected-error @below {{requires target to map to exactly 1 LinalgOp (got 2)}}
+      %1 = transform.structured.pack %0 packed_sizes = [2, 3, 4]
+        : (!transform.any_op) -> (!transform.op<"linalg.generic">)
+        transform.yield
+  }
 }
 
 
@@ -412,12 +432,14 @@ func.func @matmul(%A: tensor<?x?xf32>, %B: tensor<?x?xf32>, %C: tensor<?x?xf32>)
   return %0 : tensor<?x?xf32>
 }
 
-transform.sequence failures(propagate) {
-  ^bb0(%arg1: !transform.any_op):
-    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    // expected-error @below {{requires number of packed sizes match the number of loops (2 vs 3)}}
-    %1 = transform.structured.pack %0 packed_sizes = [2, 3] 
-      : (!transform.any_op) -> (!transform.op<"linalg.generic">)
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+      %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+      // expected-error @below {{requires number of packed sizes match the number of loops (2 vs 3)}}
+      %1 = transform.structured.pack %0 packed_sizes = [2, 3]
+        : (!transform.any_op) -> (!transform.op<"linalg.generic">)
+        transform.yield
+  }
 }
 
 // -----
@@ -429,15 +451,17 @@ func.func @no_single_packing_op(%source: tensor<128x256xf32>, %dest: tensor<4x16
   return
 }
 
-transform.sequence failures(propagate) {
-  ^bb0(%arg1: !transform.any_op):
-    %0 = transform.structured.match ops{["tensor.pack"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %1 = transform.structured.match ops{["tensor.unpack"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-      // expected-error @below {{requires target to map to exactly 1 packing op and 1 packed op (got 2 and 1)}}
-    transform.structured.pack_transpose %0 with_compute_op(%1) 
-    inner_perm = [0]
-      : (!transform.any_op, !transform.any_op) 
-      -> (!transform.any_op, !transform.any_op, !transform.any_op)
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+      %0 = transform.structured.match ops{["tensor.pack"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+      %1 = transform.structured.match ops{["tensor.unpack"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+        // expected-error @below {{requires target to map to exactly 1 packing op and 1 packed op (got 2 and 1)}}
+      transform.structured.pack_transpose %0 with_compute_op(%1)
+      inner_perm = [0]
+        : (!transform.any_op, !transform.any_op)
+        -> (!transform.any_op, !transform.any_op, !transform.any_op)
+        transform.yield
+  }
 }
 
 // -----
@@ -448,15 +472,17 @@ func.func @no_single_pack_unpack(%source: tensor<128x256xf32>, %dest: tensor<4x1
   return
 }
 
-transform.sequence failures(propagate) {
-  ^bb0(%arg1: !transform.any_op):
-    %0 = transform.structured.match ops{["arith.constant"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %1 = transform.structured.match ops{["tensor.empty"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-      // expected-error @below {{requires target to map to a tensor.pack or tensor.unpack}}
-    transform.structured.pack_transpose %0 with_compute_op(%1) 
-    inner_perm = [0]
-      : (!transform.any_op, !transform.any_op) 
-      -> (!transform.any_op, !transform.any_op, !transform.any_op)
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+      %0 = transform.structured.match ops{["arith.constant"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+      %1 = transform.structured.match ops{["tensor.empty"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+        // expected-error @below {{requires target to map to a tensor.pack or tensor.unpack}}
+      transform.structured.pack_transpose %0 with_compute_op(%1)
+      inner_perm = [0]
+        : (!transform.any_op, !transform.any_op)
+        -> (!transform.any_op, !transform.any_op, !transform.any_op)
+        transform.yield
+  }
 }
 
 // -----
@@ -467,15 +493,17 @@ func.func @no_linalg_target(%source: tensor<128x256xf32>, %dest: tensor<4x16x32x
   return
 }
 
-transform.sequence failures(propagate) {
-  ^bb0(%arg1: !transform.any_op):
-    %0 = transform.structured.match ops{["tensor.pack"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %1 = transform.structured.match ops{["arith.constant"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-      // expected-error @below {{requires a LinalgOp target}}
-    transform.structured.pack_transpose %0 with_compute_op(%1) 
-    inner_perm = [0]
-      : (!transform.any_op, !transform.any_op) 
-      -> (!transform.any_op, !transform.any_op, !transform.any_op)
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+      %0 = transform.structured.match ops{["tensor.pack"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+      %1 = transform.structured.match ops{["arith.constant"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+        // expected-error @below {{requires a LinalgOp target}}
+      transform.structured.pack_transpose %0 with_compute_op(%1)
+      inner_perm = [0]
+        : (!transform.any_op, !transform.any_op)
+        -> (!transform.any_op, !transform.any_op, !transform.any_op)
+        transform.yield
+  }
 }
 
 // -----
@@ -488,15 +516,17 @@ func.func @no_single_use_by_linalg(%source: tensor<128x256xf32>, %dest: tensor<4
   return
 }
 
-transform.sequence failures(propagate) {
-  ^bb0(%arg1: !transform.any_op):
-    %0 = transform.structured.match ops{["tensor.pack"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %1 = transform.structured.match ops{["linalg.fill"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-      // expected-error @below {{not a single use by the LinalgOp target}}
-    transform.structured.pack_transpose %0 with_compute_op(%1) 
-    inner_perm = [0]
-      : (!transform.any_op, !transform.any_op) 
-      -> (!transform.any_op, !transform.any_op, !transform.any_op)
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+      %0 = transform.structured.match ops{["tensor.pack"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+      %1 = transform.structured.match ops{["linalg.fill"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+        // expected-error @below {{not a single use by the LinalgOp target}}
+      transform.structured.pack_transpose %0 with_compute_op(%1)
+      inner_perm = [0]
+        : (!transform.any_op, !transform.any_op)
+        -> (!transform.any_op, !transform.any_op, !transform.any_op)
+        transform.yield
+  }
 }
 
 // -----
@@ -510,15 +540,17 @@ func.func @not_produced_by_linalg(%source: tensor<128x256xf32>, %dest: tensor<4x
   return
 }
 
-transform.sequence failures(propagate) {
-  ^bb0(%arg1: !transform.any_op):
-    %0 = transform.structured.match ops{["tensor.unpack"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %1 = transform.structured.match ops{["linalg.fill"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-      // expected-error @below {{not produced by the LinalgOp target}}
-    transform.structured.pack_transpose %0 with_compute_op(%1) 
-    inner_perm = [0]
-      : (!transform.any_op, !transform.any_op) 
-      -> (!transform.any_op, !transform.any_op, !transform.any_op)
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+      %0 = transform.structured.match ops{["tensor.unpack"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+      %1 = transform.structured.match ops{["linalg.fill"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+        // expected-error @below {{not produced by the LinalgOp target}}
+      transform.structured.pack_transpose %0 with_compute_op(%1)
+      inner_perm = [0]
+        : (!transform.any_op, !transform.any_op)
+        -> (!transform.any_op, !transform.any_op, !transform.any_op)
+        transform.yield
+  }
 }
 
 // -----
@@ -531,15 +563,17 @@ func.func @no_matching_pack(%source: tensor<16xf32>) {
   return
 }
 
-transform.sequence failures(propagate) {
-  ^bb0(%arg1: !transform.any_op):
-    %0 = transform.structured.match ops{["tensor.unpack"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %1 = transform.structured.match ops{["linalg.fill"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-      // expected-error @below {{could not find matching pack op}}
-    transform.structured.pack_transpose %0 with_compute_op(%1) 
-    inner_perm = [0]
-      : (!transform.any_op, !transform.any_op) 
-      -> (!transform.any_op, !transform.any_op, !transform.any_op)
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+      %0 = transform.structured.match ops{["tensor.unpack"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+      %1 = transform.structured.match ops{["linalg.fill"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+        // expected-error @below {{could not find matching pack op}}
+      transform.structured.pack_transpose %0 with_compute_op(%1)
+      inner_perm = [0]
+        : (!transform.any_op, !transform.any_op)
+        -> (!transform.any_op, !transform.any_op, !transform.any_op)
+        transform.yield
+  }
 }
 
 // -----
@@ -552,20 +586,22 @@ func.func @invalid_outer_perm(%A: tensor<?x?xf32>, %B: tensor<?x?xf32>, %C: tens
   return %0 : tensor<?x?xf32>
 }
 
-transform.sequence failures(propagate) {
-  ^bb0(%arg1: !transform.any_op):
-    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %1 = transform.structured.pack %0 packed_sizes = [2, 3, 4]
-      : (!transform.any_op) -> (!transform.op<"linalg.generic">)
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+      %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+      %1 = transform.structured.pack %0 packed_sizes = [2, 3, 4]
+        : (!transform.any_op) -> (!transform.op<"linalg.generic">)
 
-    %unpack = transform.get_consumers_of_result %1[0] 
-      : (!transform.op<"linalg.generic">) -> (!transform.op<"tensor.unpack">)
-    %2, %pack_2, %unpack_2 = 
-      // expected-error @below {{invalid outer_perm}}
-      transform.structured.pack_transpose %unpack with_compute_op(%1) 
-      outer_perm = [1]
-      : (!transform.op<"tensor.unpack">, !transform.op<"linalg.generic">) 
-      -> (!transform.op<"linalg.generic">, !transform.op<"tensor.pack">, !transform.op<"tensor.unpack">)
+      %unpack = transform.get_consumers_of_result %1[0]
+        : (!transform.op<"linalg.generic">) -> (!transform.op<"tensor.unpack">)
+      %2, %pack_2, %unpack_2 =
+        // expected-error @below {{invalid outer_perm}}
+        transform.structured.pack_transpose %unpack with_compute_op(%1)
+        outer_perm = [1]
+        : (!transform.op<"tensor.unpack">, !transform.op<"linalg.generic">)
+        -> (!transform.op<"linalg.generic">, !transform.op<"tensor.pack">, !transform.op<"tensor.unpack">)
+        transform.yield
+  }
 }
 
 // -----
@@ -578,20 +614,22 @@ func.func @invalid_inner_perm(%A: tensor<?x?xf32>, %B: tensor<?x?xf32>, %C: tens
   return %0 : tensor<?x?xf32>
 }
 
-transform.sequence failures(propagate) {
-  ^bb0(%arg1: !transform.any_op):
-    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %1 = transform.structured.pack %0 packed_sizes = [2, 3, 4]
-      : (!transform.any_op) -> (!transform.op<"linalg.generic">)
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+      %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+      %1 = transform.structured.pack %0 packed_sizes = [2, 3, 4]
+        : (!transform.any_op) -> (!transform.op<"linalg.generic">)
 
-    %unpack = transform.get_consumers_of_result %1[0] 
-      : (!transform.op<"linalg.generic">) -> (!transform.op<"tensor.unpack">)
-    %2, %pack_2, %unpack_2 = 
-      // expected-error @below {{invalid inner_perm}}
-      transform.structured.pack_transpose %unpack with_compute_op(%1) 
-      inner_perm = [1]
-      : (!transform.op<"tensor.unpack">, !transform.op<"linalg.generic">) 
-      -> (!transform.op<"linalg.generic">, !transform.op<"tensor.pack">, !transform.op<"tensor.unpack">)
+      %unpack = transform.get_consumers_of_result %1[0]
+        : (!transform.op<"linalg.generic">) -> (!transform.op<"tensor.unpack">)
+      %2, %pack_2, %unpack_2 =
+        // expected-error @below {{invalid inner_perm}}
+        transform.structured.pack_transpose %unpack with_compute_op(%1)
+        inner_perm = [1]
+        : (!transform.op<"tensor.unpack">, !transform.op<"linalg.generic">)
+        -> (!transform.op<"linalg.generic">, !transform.op<"tensor.pack">, !transform.op<"tensor.unpack">)
+        transform.yield
+  }
 }
 
 // -----
@@ -605,24 +643,26 @@ func.func @no_padding_on_packs(%A: tensor<32x32xf32>, %B: tensor<32x32xf32>, %C:
 }
 
 // CHECK-LABEL: no_padding_on_packs
-// CHECK: tensor.pack %{{.+}} inner_dims_pos = [0, 1] inner_tiles = [4, 8] 
+// CHECK: tensor.pack %{{.+}} inner_dims_pos = [0, 1] inner_tiles = [4, 8]
 // CHECK-SAME:  into %{{.+}} : tensor<32x32xf32> -> tensor<8x4x4x8xf32>
-// CHECK: tensor.pack %{{.+}} outer_dims_perm = [1, 0] 
-// CHECK-SAME:  inner_dims_pos = [0, 1] inner_tiles = [8, 8] 
+// CHECK: tensor.pack %{{.+}} outer_dims_perm = [1, 0]
+// CHECK-SAME:  inner_dims_pos = [0, 1] inner_tiles = [8, 8]
 // CHECK-SAME:  into %{{.+}} : tensor<32x32xf32> -> tensor<4x4x8x8xf32>
-// CHECK: tensor.pack %{{.+}} inner_dims_pos = [0, 1] inner_tiles = [4, 8] 
+// CHECK: tensor.pack %{{.+}} inner_dims_pos = [0, 1] inner_tiles = [4, 8]
 // CHECK-SAME:  into %{{.+}} : tensor<32x32xf32> -> tensor<8x4x4x8xf32>
 
-transform.sequence failures(propagate) {
-  ^bb0(%arg1: !transform.any_op):
-    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %1 = transform.structured.pack %0 packed_sizes = [4, 8, 8]
-      : (!transform.any_op) -> (!transform.op<"linalg.generic">)
-    %pack = transform.get_producer_of_operand %1[1]
-    : (!transform.op<"linalg.generic">) -> (!transform.op<"tensor.pack">)
-    %2, %pack_2, %empty_unpack_2 =
-    transform.structured.pack_transpose %pack with_compute_op(%1)
-    outer_perm = [1, 0] inner_perm = [1, 0]
-     : (!transform.op<"tensor.pack">, !transform.op<"linalg.generic">)
-    -> (!transform.op<"linalg.generic">, !transform.op<"tensor.pack">, !transform.any_op) 
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+      %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+      %1 = transform.structured.pack %0 packed_sizes = [4, 8, 8]
+        : (!transform.any_op) -> (!transform.op<"linalg.generic">)
+      %pack = transform.get_producer_of_operand %1[1]
+      : (!transform.op<"linalg.generic">) -> (!transform.op<"tensor.pack">)
+      %2, %pack_2, %empty_unpack_2 =
+      transform.structured.pack_transpose %pack with_compute_op(%1)
+      outer_perm = [1, 0] inner_perm = [1, 0]
+       : (!transform.op<"tensor.pack">, !transform.op<"linalg.generic">)
+      -> (!transform.op<"linalg.generic">, !transform.op<"tensor.pack">, !transform.any_op)
+      transform.yield
+  }
 }

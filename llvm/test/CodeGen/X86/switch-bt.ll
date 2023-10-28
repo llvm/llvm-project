@@ -167,17 +167,17 @@ define void @test4(i32 %x, ptr %y) {
 ; CHECK-NEXT:  .LBB3_9: # %sw.bb
 ; CHECK-NEXT:    movl $1, (%rsi)
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB3_10: # %sw.bb1
-; CHECK-NEXT:    movl $2, (%rsi)
-; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .LBB3_11: # %sw.bb3
 ; CHECK-NEXT:    movl $4, (%rsi)
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB3_12: # %sw.bb4
-; CHECK-NEXT:    movl $5, (%rsi)
-; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .LBB3_13: # %sw.default
 ; CHECK-NEXT:    movl $7, (%rsi)
+; CHECK-NEXT:    retq
+; CHECK-NEXT:  .LBB3_10: # %sw.bb1
+; CHECK-NEXT:    movl $2, (%rsi)
+; CHECK-NEXT:    retq
+; CHECK-NEXT:  .LBB3_12: # %sw.bb4
+; CHECK-NEXT:    movl $5, (%rsi)
 ; CHECK-NEXT:    retq
 
 entry:

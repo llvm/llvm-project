@@ -783,6 +783,11 @@ void GDBRemoteRegisterContext::AArch64Reconfigure() {
   std::optional<uint64_t> svg_reg_value;
   const RegisterInfo *svg_reg_info = m_reg_info_sp->GetRegisterInfo("svg");
   if (svg_reg_info) {
+    // When vg is written it is automatically made invalid. Writing vg will also
+    // change svg if we're in streaming mode but it will not be made invalid
+    // so do this manually so the following read gets the latest svg value.
+    SetRegisterIsValid(svg_reg_info, false);
+
     uint32_t svg_reg_num = svg_reg_info->kinds[eRegisterKindLLDB];
     uint64_t reg_value = ReadRegisterAsUnsigned(svg_reg_num, fail_value);
     if (reg_value != fail_value && reg_value <= 32)

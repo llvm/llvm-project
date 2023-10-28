@@ -4165,15 +4165,20 @@ void BinaryFunction::updateOutputValues(const BOLTLinker &Linker) {
       // Injected functions likely will fail lookup, as they have no
       // input range. Just assign the BB the output address of the
       // function.
-      auto MaybeBBAddress =
-          BC.getIOAddressMap().lookup(BB->getInputOffset() + getAddress());
+      auto MaybeBBAddress = BC.getIOAddressMap().lookup(BB->getLabel());
       const uint64_t BBAddress = MaybeBBAddress  ? *MaybeBBAddress
                                  : BB->isSplit() ? FF.getAddress()
                                                  : getOutputAddress();
       BB->setOutputStartAddress(BBAddress);
 
-      if (PrevBB)
+      if (PrevBB) {
+        assert(PrevBB->getOutputAddressRange().first <= BBAddress &&
+               "Bad output address for basic block.");
+        assert((PrevBB->getOutputAddressRange().first != BBAddress ||
+                !hasInstructions() || PrevBB->empty()) &&
+               "Bad output address for basic block.");
         PrevBB->setOutputEndAddress(BBAddress);
+      }
       PrevBB = BB;
     }
 

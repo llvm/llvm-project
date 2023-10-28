@@ -900,11 +900,7 @@ CGOpenMPRuntimeGPU::CGOpenMPRuntimeGPU(CodeGenModule &CGM)
 void CGOpenMPRuntimeGPU::emitProcBindClause(CodeGenFunction &CGF,
                                               ProcBindKind ProcBind,
                                               SourceLocation Loc) {
-  // Do nothing in case of SPMD mode and L0 parallel.
-  if (getExecutionMode() == CGOpenMPRuntimeGPU::EM_SPMD)
-    return;
-
-  CGOpenMPRuntime::emitProcBindClause(CGF, ProcBind, Loc);
+  // Nothing to do.
 }
 
 void CGOpenMPRuntimeGPU::emitNumThreadsClause(CodeGenFunction &CGF,
@@ -1046,10 +1042,8 @@ llvm::Function *CGOpenMPRuntimeGPU::emitTeamsOutlinedFunction(
 }
 
 void CGOpenMPRuntimeGPU::emitGenericVarsProlog(CodeGenFunction &CGF,
-                                                 SourceLocation Loc,
-                                                 bool WithSPMDCheck) {
-  if (getDataSharingMode() != CGOpenMPRuntimeGPU::DS_Generic &&
-      getExecutionMode() != CGOpenMPRuntimeGPU::EM_SPMD)
+                                               SourceLocation Loc) {
+  if (getDataSharingMode() != CGOpenMPRuntimeGPU::DS_Generic)
     return;
 
   CGBuilderTy &Bld = CGF.Builder;
@@ -1158,10 +1152,8 @@ void CGOpenMPRuntimeGPU::getKmpcFreeShared(
                       {AddrSizePair.first, AddrSizePair.second});
 }
 
-void CGOpenMPRuntimeGPU::emitGenericVarsEpilog(CodeGenFunction &CGF,
-                                                 bool WithSPMDCheck) {
-  if (getDataSharingMode() != CGOpenMPRuntimeGPU::DS_Generic &&
-      getExecutionMode() != CGOpenMPRuntimeGPU::EM_SPMD)
+void CGOpenMPRuntimeGPU::emitGenericVarsEpilog(CodeGenFunction &CGF) {
+  if (getDataSharingMode() != CGOpenMPRuntimeGPU::DS_Generic)
     return;
 
   const auto I = FunctionGlobalizedDecls.find(CGF.CurFn);
@@ -3350,13 +3342,13 @@ void CGOpenMPRuntimeGPU::emitFunctionProlog(CodeGenFunction &CGF,
     Data.insert(std::make_pair(VD, MappedVarData()));
   }
   if (!NeedToDelayGlobalization) {
-    emitGenericVarsProlog(CGF, D->getBeginLoc(), /*WithSPMDCheck=*/true);
+    emitGenericVarsProlog(CGF, D->getBeginLoc());
     struct GlobalizationScope final : EHScopeStack::Cleanup {
       GlobalizationScope() = default;
 
       void Emit(CodeGenFunction &CGF, Flags flags) override {
         static_cast<CGOpenMPRuntimeGPU &>(CGF.CGM.getOpenMPRuntime())
-            .emitGenericVarsEpilog(CGF, /*WithSPMDCheck=*/true);
+            .emitGenericVarsEpilog(CGF);
       }
     };
     CGF.EHStack.pushCleanup<GlobalizationScope>(NormalAndEHCleanup);

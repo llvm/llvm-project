@@ -230,16 +230,9 @@ def SimmShiftRightBy3XForm : SDNodeXForm<imm, [{
                                    N->getValueType(0));
 }]>;
 
-// Pattern to exclude simm12 immediates from matching.
-// Note: this will be removed once the GISel complex patterns for
-// SHXADD_UW is landed.
-def non_imm12 : PatLeaf<(XLenVT GPR:$a), [{
-  auto *C = dyn_cast<ConstantSDNode>(N);
-  return !C || !isInt<12>(C->getSExtValue());
-}]>;
-
+// Pattern to exclude simm12 immediates from matching, namely `non_imm12`.
 // GISel currently doesn't support PatFrag for leaf nodes, so `non_imm12`
-// cannot be directly supported in GISel. To reuse patterns between the two
+// cannot be implemented in that way. To reuse patterns between the two
 // ISels, we instead create PatFrag on operators that use `non_imm12`.
 class binop_with_non_imm12<SDPatternOperator binop>
   : PatFrag<(ops node:$x, node:$y), (binop node:$x, node:$y), [{
@@ -264,12 +257,11 @@ class binop_with_non_imm12<SDPatternOperator binop>
 def add_non_imm12       : binop_with_non_imm12<add>;
 def or_is_add_non_imm12 : binop_with_non_imm12<or_is_add>;
 
-def Shifted32OnesMask : PatLeaf<(imm), [{
-  uint64_t Imm = N->getZExtValue();
-  if (!isShiftedMask_64(Imm))
+def Shifted32OnesMask : IntImmLeaf<XLenVT, [{
+  if (!Imm.isShiftedMask())
     return false;
 
-  unsigned TrailingZeros = llvm::countr_zero(Imm);
+  unsigned TrailingZeros = Imm.countr_zero();
   return TrailingZeros > 0 && TrailingZeros < 32 &&
          Imm == UINT64_C(0xFFFFFFFF) << TrailingZeros;
 }], TrailingZeros>;
@@ -776,12 +768,11 @@ def : Pat<(i64 (add_non_imm12 (and (shl GPR:$rs1, (i64 3)), 0x7FFFFFFFF), (XLenV
           (SH3ADD_UW GPR:$rs1, GPR:$rs2)>;
 
 // More complex cases use a ComplexPattern.
-def : Pat<(i64 (add sh1add_uw_op:$rs1, non_imm12:$rs2)),
-          (SH1ADD_UW sh1add_uw_op:$rs1, GPR:$rs2)>;
-def : Pat<(i64 (add sh2add_uw_op:$rs1, non_imm12:$rs2)),
-          (SH2ADD_UW sh2add_uw_op:$rs1, GPR:$rs2)>;
-def : Pat<(i64 (add sh3add_uw_op:$rs1, non_imm12:$rs2)),
-          (SH3ADD_UW sh3add_uw_op:$rs1, GPR:$rs2)>;
+foreach i = {1,2,3} in {
+  defvar pat = !cast<ComplexPattern>("sh"#i#"add_uw_op");
+  def : Pat<(i64 (add_non_imm12 pat:$rs1, (XLenVT GPR:$rs2))),
+            (!cast<Instruction>("SH"#i#"ADD_UW") pat:$rs1, GPR:$rs2)>;
+}
 
 def : Pat<(i64 (add_non_imm12 (and GPR:$rs1, 0xFFFFFFFE), (XLenVT GPR:$rs2))),
           (SH1ADD (SRLIW GPR:$rs1, 1), GPR:$rs2)>;

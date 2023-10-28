@@ -40,7 +40,7 @@ T tmain(T argc, T *argv) {
   {always++;i++;}
 #pragma omp target map(close,alloc: i)
   foo();
-#pragma omp target map(close from: i)
+#pragma omp target map(close, from: i)
   foo();
 #pragma omp target map(close)
   {close++;}
@@ -393,7 +393,7 @@ T tmain(T argc, T *argv) {
   foo();
 #pragma omp target map(always,alloc: i)
   foo();
-#pragma omp target map(always from: i)
+#pragma omp target map(always, from: i)
   foo();
 #pragma omp target map(always)
   {always++;}
@@ -401,7 +401,7 @@ T tmain(T argc, T *argv) {
   {always++;i++;}
 #pragma omp target map(close,alloc: i)
   foo();
-#pragma omp target map(close from: i)
+#pragma omp target map(close, from: i)
   foo();
 #pragma omp target map(close)
   {close++;}
@@ -857,7 +857,7 @@ int main (int argc, char **argv) {
   foo();
 // OMP5-NEXT: foo();
 
-#pragma omp target map(always from: i)
+#pragma omp target map(always, from: i)
 // OMP5-NEXT: #pragma omp target map(always,from: i)
   foo();
 // OMP5-NEXT: foo();
@@ -882,7 +882,7 @@ int main (int argc, char **argv) {
   foo();
 // OMP5-NEXT: foo();
 
-#pragma omp target map(close from: i)
+#pragma omp target map(close, from: i)
 // OMP5-NEXT: #pragma omp target map(close,from: i)
   foo();
 // OMP5-NEXT: foo();
