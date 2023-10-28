@@ -27,6 +27,8 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template<class _RealType = double>
 class _LIBCPP_TEMPLATE_VIS uniform_real_distribution
 {
+  static_assert(std::is_floating_type<_RealType>::value, "result_type must be of type floating point");
+
 public:
     // types
     typedef _RealType result_type;
