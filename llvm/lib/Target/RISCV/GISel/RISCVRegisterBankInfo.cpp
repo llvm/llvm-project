@@ -178,11 +178,30 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case TargetOpcode::G_FADD:
   case TargetOpcode::G_FSUB:
   case TargetOpcode::G_FMUL:
-  case TargetOpcode::G_FDIV: {
+  case TargetOpcode::G_FDIV:
+  case TargetOpcode::G_FNEG:
+  case TargetOpcode::G_FABS:
+  case TargetOpcode::G_FSQRT:
+  case TargetOpcode::G_FMAXNUM:
+  case TargetOpcode::G_FMINNUM: {
     LLT Ty = MRI.getType(MI.getOperand(0).getReg());
     OperandsMapping = Ty.getSizeInBits() == 64
                           ? &RISCV::ValueMappings[RISCV::FPR64Idx]
                           : &RISCV::ValueMappings[RISCV::FPR32Idx];
+    break;
+  }
+  case TargetOpcode::G_FMA: {
+    LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+    OperandsMapping =
+        Ty.getSizeInBits() == 64
+            ? getOperandsMapping({&RISCV::ValueMappings[RISCV::FPR64Idx],
+                                  &RISCV::ValueMappings[RISCV::FPR64Idx],
+                                  &RISCV::ValueMappings[RISCV::FPR64Idx],
+                                  &RISCV::ValueMappings[RISCV::FPR64Idx]})
+            : getOperandsMapping({&RISCV::ValueMappings[RISCV::FPR32Idx],
+                                  &RISCV::ValueMappings[RISCV::FPR32Idx],
+                                  &RISCV::ValueMappings[RISCV::FPR32Idx],
+                                  &RISCV::ValueMappings[RISCV::FPR32Idx]});
     break;
   }
   default:
