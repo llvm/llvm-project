@@ -110,13 +110,13 @@ As an example, consider the following op: `%0 = tensor.insert %cst into
 %t[%idx] : tensor<?xf32>`
 
 `%t` is the destination in this example. When choosing a buffer for the result
-`%0`, One-Shot Bufferize considers only two options:
+`%0`, denoted as `buffer(%0)`, One-Shot Bufferize considers only two options:
 
-1.  buffer(`%0`) = buffer(`%t`).
-2.  buffer(`%0`) is a newly allocated buffer.
+1.  `buffer(%0) = buffer(%t)`, or
+2.  `buffer(%0)` is a newly allocated buffer.
 
 There may be other buffers in the same function that could potentially be used
-for buffer(`%0`), but those are not considered by One-Shot Bufferize to keep the
+for `buffer(%0)`, but those are not considered by One-Shot Bufferize to keep the
 bufferization simple. One-Shot Bufferize could be extended to consider such
 buffers in the future to achieve a better quality of bufferization.
 
@@ -131,10 +131,10 @@ memory allocation. E.g.:
 } : tensor<?xf32>
 ```
 
-The result of `tensor.generate` does not have a "destination", so bufferization
-allocates a new buffer. This could be avoided by choosing an op such as
-`linalg.generic`, which can express the same computation with a destination
-("out") tensor:
+The result of `tensor.generate` does not have a destination operand, so
+bufferization allocates a new buffer. This could be avoided by choosing an
+op such as `linalg.generic`, which can express the same computation with a
+destination operand, as specified behind outputs (`outs`):
 
 ```mlir
 #map = affine_map<(i) -> (i)>
@@ -165,7 +165,7 @@ such as a subsequent read of `%s`).
 
 RaW conflicts are detected with an analysis of SSA use-def chains (details
 later). One-Shot Bufferize works best if there is a single SSA use-def chain,
-where the result of a tensor op is the "destination" operand of the next tensor
+where the result of a tensor op is the destination operand of the next tensor
 ops, e.g.:
 
 ```mlir
@@ -263,7 +263,7 @@ must be inserted due to a RaW conflict. E.g.:
 }
 ```
 
-In the above example, a buffer copy of buffer(`%another_tensor`) (with `%cst`
+In the above example, a buffer copy of `buffer(%another_tensor)` (with `%cst`
 inserted) is yielded from the "then" branch.
 
 Note: Buffer allocations that are returned from a function are not deallocated.
