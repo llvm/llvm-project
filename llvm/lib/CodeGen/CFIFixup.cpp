@@ -99,20 +99,16 @@ static bool containsEpilogue(const MachineBasicBlock &MBB) {
 
 static MachineBasicBlock *
 findPrologueEnd(MachineFunction &MF, MachineBasicBlock::iterator &PrologueEnd) {
-  MachineBasicBlock *PrologueBlock = nullptr;
   for (auto It = po_begin(&MF.front()), End = po_end(&MF.front()); It != End;
        ++It) {
     MachineBasicBlock *MBB = *It;
-    llvm::for_each(MBB->instrs(), [&](MachineInstr &MI) {
-      if (isPrologueCFIInstruction(MI)) {
-        PrologueBlock = MBB;
-        PrologueEnd = std::next(MI.getIterator());
-      }
-    });
-    if (PrologueBlock)
-      return PrologueBlock;
+    for (MachineInstr &MI : reverse(MBB->instrs())) {
+      if (!isPrologueCFIInstruction(MI))
+        continue;
+      PrologueEnd = std::next(MI.getIterator());
+      return MBB;
+    }
   }
-
   return nullptr;
 }
 
