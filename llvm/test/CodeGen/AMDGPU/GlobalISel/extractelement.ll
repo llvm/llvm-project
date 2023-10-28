@@ -4865,6 +4865,7 @@ define i32 @v_extract_v64i32_37(ptr addrspace(1) %ptr) {
 ; MOVREL-LABEL: v_extract_v64i32_37:
 ; MOVREL:       ; %bb.0:
 ; MOVREL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; MOVREL-NEXT:    v_mov_b32_e32 v0, 0x90
 ; MOVREL-NEXT:    v_add_u32_e32 v0, vcc, 0x90, v0
 ; MOVREL-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; MOVREL-NEXT:    flat_load_dwordx4 v[4:7], v[0:1]

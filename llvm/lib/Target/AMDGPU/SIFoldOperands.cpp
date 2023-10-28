@@ -198,9 +198,8 @@ FunctionPass *llvm::createSIFoldOperandsPass() {
 
 bool SIFoldOperands::updateOperand(FoldCandidate &Fold) const {
   MachineInstr *MI = Fold.UseMI;
-  MachineOperand &Old = MI->getOperand(Fold.UseOpNo);
-  assert(Old.isReg());
-
+  MachineOperand *Old = &MI->getOperand(Fold.UseOpNo);
+  assert(Old->isReg());
 
   const uint64_t TSFlags = MI->getDesc().TSFlags;
   if (Fold.isImm()) {
@@ -211,7 +210,7 @@ bool SIFoldOperands::updateOperand(FoldCandidate &Fold) const {
       // Set op_sel/op_sel_hi on this operand or bail out if op_sel is
       // already set.
       unsigned Opcode = MI->getOpcode();
-      int OpNo = MI->getOperandNo(&Old);
+      int OpNo = MI->getOperandNo(Old);
       int ModIdx = -1;
       if (OpNo == AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::src0))
         ModIdx = AMDGPU::OpName::src0_modifiers;
@@ -236,11 +235,11 @@ bool SIFoldOperands::updateOperand(FoldCandidate &Fold) const {
             if (!(Fold.ImmToFold & 0xffff)) {
               Mod.setImm(Mod.getImm() | SISrcMods::OP_SEL_0);
               Mod.setImm(Mod.getImm() & ~SISrcMods::OP_SEL_1);
-              Old.ChangeToImmediate((Fold.ImmToFold >> 16) & 0xffff);
+              Old->ChangeToImmediate((Fold.ImmToFold >> 16) & 0xffff);
               return true;
             }
             Mod.setImm(Mod.getImm() & ~SISrcMods::OP_SEL_1);
-            Old.ChangeToImmediate(Fold.ImmToFold & 0xffff);
+            Old->ChangeToImmediate(Fold.ImmToFold & 0xffff);
             return true;
           }
           break;
@@ -251,7 +250,9 @@ bool SIFoldOperands::updateOperand(FoldCandidate &Fold) const {
     }
   }
 
-  if ((Fold.isImm() || Fold.isFI() || Fold.isGlobal()) && Fold.needsShrink()) {
+  if (Fold.needsShrink()) {
+    assert((Fold.isImm() || Fold.isFI() || Fold.isGlobal()) && "not handled");
+
     MachineBasicBlock *MBB = MI->getParent();
     auto Liveness = MBB->computeRegisterLiveness(TRI, AMDGPU::VCC, MI, 16);
     if (Liveness != MachineBasicBlock::LQR_Dead) {
@@ -290,37 +291,40 @@ bool SIFoldOperands::updateOperand(FoldCandidate &Fold) const {
 
     if (Fold.Commuted)
       TII->commuteInstruction(*Inst32, false);
-    return true;
+
+    Fold.UseMI = Inst32;
+    Fold.UseOpNo = AMDGPU::getNamedOperandIdx(Fold.UseMI->getOpcode(),
+                                              AMDGPU::OpName::src0);
+    MI = Fold.UseMI;
+    Old = &MI->getOperand(Fold.UseOpNo);
   }
 
-  assert(!Fold.needsShrink() && "not handled");
-
   if (Fold.isImm()) {
-    if (Old.isTied()) {
+    if (Old->isTied()) {
       int NewMFMAOpc = AMDGPU::getMFMAEarlyClobberOp(MI->getOpcode());
       if (NewMFMAOpc == -1)
         return false;
       MI->setDesc(TII->get(NewMFMAOpc));
       MI->untieRegOperand(0);
     }
-    Old.ChangeToImmediate(Fold.ImmToFold);
+    Old->ChangeToImmediate(Fold.ImmToFold);
     return true;
   }
 
   if (Fold.isGlobal()) {
-    Old.ChangeToGA(Fold.OpToFold->getGlobal(), Fold.OpToFold->getOffset(),
-                   Fold.OpToFold->getTargetFlags());
+    Old->ChangeToGA(Fold.OpToFold->getGlobal(), Fold.OpToFold->getOffset(),
+                    Fold.OpToFold->getTargetFlags());
     return true;
   }
 
   if (Fold.isFI()) {
-    Old.ChangeToFrameIndex(Fold.FrameIndexToFold);
+    Old->ChangeToFrameIndex(Fold.FrameIndexToFold);
     return true;
   }
 
   MachineOperand *New = Fold.OpToFold;
-  Old.substVirtReg(New->getReg(), New->getSubReg(), *TRI);
-  Old.setIsUndef(New->isUndef());
+  Old->substVirtReg(New->getReg(), New->getSubReg(), *TRI);
+  Old->setIsUndef(New->isUndef());
   return true;
 }
 

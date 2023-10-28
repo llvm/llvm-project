@@ -1583,8 +1583,7 @@ define i64 @v_test_srem_k_num_i64(i64 %x) {
 ; GCN-IR-NEXT:    v_add_i32_e32 v2, vcc, 32, v2
 ; GCN-IR-NEXT:    v_ffbh_u32_e32 v3, v1
 ; GCN-IR-NEXT:    v_min_u32_e32 v6, v2, v3
-; GCN-IR-NEXT:    s_movk_i32 s6, 0xffc5
-; GCN-IR-NEXT:    v_add_i32_e32 v3, vcc, s6, v6
+; GCN-IR-NEXT:    v_add_i32_e32 v3, vcc, 0xffffffc5, v6
 ; GCN-IR-NEXT:    v_addc_u32_e64 v4, s[6:7], 0, -1, vcc
 ; GCN-IR-NEXT:    v_cmp_eq_u64_e64 s[4:5], 0, v[0:1]
 ; GCN-IR-NEXT:    v_cmp_lt_u64_e32 vcc, 63, v[3:4]
@@ -1774,8 +1773,7 @@ define i64 @v_test_srem_pow2_k_num_i64(i64 %x) {
 ; GCN-IR-NEXT:    v_add_i32_e32 v2, vcc, 32, v2
 ; GCN-IR-NEXT:    v_ffbh_u32_e32 v3, v1
 ; GCN-IR-NEXT:    v_min_u32_e32 v6, v2, v3
-; GCN-IR-NEXT:    s_movk_i32 s6, 0xffd0
-; GCN-IR-NEXT:    v_add_i32_e32 v3, vcc, s6, v6
+; GCN-IR-NEXT:    v_add_i32_e32 v3, vcc, 0xffffffd0, v6
 ; GCN-IR-NEXT:    v_addc_u32_e64 v4, s[6:7], 0, -1, vcc
 ; GCN-IR-NEXT:    v_cmp_eq_u64_e64 s[4:5], 0, v[0:1]
 ; GCN-IR-NEXT:    v_cmp_lt_u64_e32 vcc, 63, v[3:4]
@@ -1914,13 +1912,12 @@ define i64 @v_test_srem_pow2_k_den_i64(i64 %x) {
 ; GCN-IR-NEXT:    s_mov_b64 s[10:11], 0
 ; GCN-IR-NEXT:    v_mov_b32_e32 v13, 0
 ; GCN-IR-NEXT:    v_mov_b32_e32 v7, 0
-; GCN-IR-NEXT:    s_movk_i32 s12, 0x7fff
 ; GCN-IR-NEXT:  .LBB13_3: ; %udiv-do-while
 ; GCN-IR-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN-IR-NEXT:    v_lshl_b64 v[10:11], v[10:11], 1
 ; GCN-IR-NEXT:    v_lshrrev_b32_e32 v6, 31, v5
 ; GCN-IR-NEXT:    v_or_b32_e32 v10, v10, v6
-; GCN-IR-NEXT:    v_sub_i32_e32 v6, vcc, s12, v10
+; GCN-IR-NEXT:    v_sub_i32_e32 v6, vcc, 0x7fff, v10
 ; GCN-IR-NEXT:    v_lshl_b64 v[4:5], v[4:5], 1
 ; GCN-IR-NEXT:    v_subb_u32_e32 v6, vcc, 0, v11, vcc
 ; GCN-IR-NEXT:    v_add_i32_e32 v8, vcc, 1, v8

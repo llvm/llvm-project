@@ -101,7 +101,7 @@ define amdgpu_ps float @add_shl_vgpr_const(i32 %a, i32 %b) {
 define amdgpu_ps float @add_shl_vgpr_const_inline_const(i32 %a) {
 ; VI-LABEL: add_shl_vgpr_const_inline_const:
 ; VI:       ; %bb.0:
-; VI-NEXT:    v_lshlrev_b32_e32 v0, 9, v0
+; VI-NEXT:    v_mov_b32_e32 v0, 0x7e800
 ; VI-NEXT:    v_add_u32_e32 v0, vcc, 0x7e800, v0
 ; VI-NEXT:    ; return to shader part epilog
 ;
@@ -124,7 +124,7 @@ define amdgpu_ps float @add_shl_vgpr_const_inline_const(i32 %a) {
 define amdgpu_ps float @add_shl_vgpr_inline_const_x2(i32 %a) {
 ; VI-LABEL: add_shl_vgpr_inline_const_x2:
 ; VI:       ; %bb.0:
-; VI-NEXT:    v_lshlrev_b32_e32 v0, 9, v0
+; VI-NEXT:    v_mov_b32_e32 v0, 0x600
 ; VI-NEXT:    v_add_u32_e32 v0, vcc, 0x600, v0
 ; VI-NEXT:    ; return to shader part epilog
 ;
