@@ -567,7 +567,9 @@ void MachineBasicBlock::printName(raw_ostream &os, unsigned printNameFlags,
     }
     if (getBBID().has_value()) {
       os << (hasAttributes ? ", " : " (");
-      os << "bb_id " << *getBBID();
+      os << "bb_id " << getBBID()->BaseID;
+      if (getBBID()->CloneID != 0)
+        os << " " << getBBID()->CloneID;
       hasAttributes = true;
     }
     if (CallFrameSize != 0) {
@@ -886,7 +888,7 @@ void MachineBasicBlock::replaceSuccessor(MachineBasicBlock *Old,
   removeSuccessor(OldI);
 }
 
-void MachineBasicBlock::copySuccessor(MachineBasicBlock *Orig,
+void MachineBasicBlock::copySuccessor(const MachineBasicBlock *Orig,
                                       succ_iterator I) {
   if (!Orig->Probs.empty())
     addSuccessor(*I, Orig->getSuccProbability(I));
