@@ -84,7 +84,7 @@ void GPUToSPIRVPass::runOnOperation() {
   // Run conversion for each module independently as they can have different
   // TargetEnv attributes.
   for (Operation *gpuModule : gpuModules) {
-    mlir::spirv::TargetEnvAttr targetAttr =
+    spirv::TargetEnvAttr targetAttr =
         spirv::lookupTargetEnvOrDefault(gpuModule);
 
     // Map MemRef memory space to SPIR-V storage class first if requested.
