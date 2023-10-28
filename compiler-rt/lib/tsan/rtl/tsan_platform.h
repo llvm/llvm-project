@@ -46,7 +46,7 @@ enum {
 
 /*
 C/C++ on linux/x86_64 and freebsd/x86_64
-0000 0000 1000 - 0200 0000 0000: main binary and/or MAP_32BIT mappings (2TB)
+0000 0000 1000 - 0400 0000 0000: main binary and/or MAP_32BIT mappings (4TB)
 0200 0000 0000 - 1000 0000 0000: -
 1000 0000 0000 - 3000 0000 0000: shadow (32TB)
 3000 0000 0000 - 3800 0000 0000: metainfo (memory blocks and sync objects; 8TB)
@@ -77,7 +77,7 @@ struct Mapping48AddressSpace {
   static const uptr kHeapMemBeg = 0x7a0000000000ull;
   static const uptr kHeapMemEnd = 0x7b0000000000ull;
   static const uptr kLoAppMemBeg   = 0x000000001000ull;
-  static const uptr kLoAppMemEnd = 0x020000000000ull;
+  static const uptr kLoAppMemEnd = 0x040000000000ull;
   static const uptr kMidAppMemBeg  = 0x550000000000ull;
   static const uptr kMidAppMemEnd = 0x5a0000000000ull;
   static const uptr kHiAppMemBeg = 0x7c0000000000ull;
