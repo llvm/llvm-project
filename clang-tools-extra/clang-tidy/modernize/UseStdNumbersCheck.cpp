@@ -179,9 +179,9 @@ auto matchPhi() {
   return expr(anyOf(PhiFormula, matchFloatLiteralNear(llvm::numbers::phi)));
 }
 
-EditGenerator
-chainedIfBound(ASTEdit DefaultEdit,
-               llvm::SmallVector<std::pair<StringRef, ASTEdit>, 2> Edits) {
+EditGenerator applyRuleForBoundOrDefault(
+    ASTEdit DefaultEdit,
+    llvm::SmallVector<std::pair<StringRef, ASTEdit>, 2> Edits) {
   return [Edits = std::move(Edits), DefaultEdit = std::move(DefaultEdit)](
              const MatchFinder::MatchResult &Result) {
     auto &Map = Result.Nodes.getMap();
@@ -204,7 +204,7 @@ RewriteRuleWith<std::string> makeRule(const Matcher<clang::Stmt> Matcher,
   const auto LongDoubleEdit =
       changeTo(cat("std::numbers::", Constant, "_v<long double>"));
 
-  const auto EditRules = chainedIfBound(
+  const auto EditRules = applyRuleForBoundOrDefault(
       DefaultEdit, {{"float", FloatEdit}, {"long double", LongDoubleEdit}});
 
   return makeRule(
