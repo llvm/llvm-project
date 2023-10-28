@@ -683,9 +683,6 @@ Bug Fixes to AST Handling
 - Fixed a bug where RecursiveASTVisitor fails to visit the
   initializer of a bitfield.
   `Issue 64916 <https://github.com/llvm/llvm-project/issues/64916>`_
-- Fixed a bug where ``ExprMutationAnalyzer`` did not find a potential mutation
-  for uses in type-dependent binary operators, when the variable that is being
-  looked at, is not the dependent operand.
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^
