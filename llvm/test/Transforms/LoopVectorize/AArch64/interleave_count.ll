@@ -1,4 +1,4 @@
-; RUN: opt < %s -force-vector-width=64 -O3 -S -pass-remarks=loop-vectorize 2>&1 | FileCheck %s
+; RUN: opt < %s -force-vector-width=64 -p loop-vectorize -S -pass-remarks=loop-vectorize 2>&1 | FileCheck %s
 
 target triple = "aarch64-linux-gnu"
 
