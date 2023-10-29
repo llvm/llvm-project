@@ -21,6 +21,7 @@ on:
       - 'libcxx/docs/**'
       - 'libc/docs/**'
       - 'lld/docs/**'
+      - 'openmp/docs/**'
   pull_request:
     paths:
       - 'llvm/docs/**'
@@ -31,6 +32,7 @@ on:
       - 'libcxx/docs/**'
       - 'libc/docs/**'
       - 'lld/docs/**'
+      - 'openmp/docs/**'
 
 jobs:
   check-docs-build:
@@ -67,6 +69,8 @@ jobs:
               - 'libc/docs/**'
             lld:
               - 'lld/docs/**'
+            openmp:
+              - 'openmp/docs/**'
       - name: Fetch LLVM sources (PR)
         if: ${{ github.event_name == 'pull_request' }}
         uses: actions/checkout@v4
@@ -125,4 +129,9 @@ jobs:
         run: |
           cmake -B lld-build -GNinja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_PROJECTS="lld" -DLLVM_ENABLE_SPHINX=ON ./llvm
           TZ=UTC ninja -C lld-build docs-lld-html
+      - name: Build OpenMP docs
+        if: steps.docs-changed-subprojects.outputs.openmp_any_changed == 'true'
+        run: |
+          cmake -B openmp-build -GNinja -DCMAKE_BUILD_TYPE=Release -DLLVM_ENABLE_PROJECTS="clang;openmp" -DLLVM_ENABLE_SPHINX=ON ./llvm
+          TZ=UTC ninja -C openmp-build docs-openmp-html
 
