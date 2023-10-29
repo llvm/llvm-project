@@ -1,6 +1,6 @@
-; RUN: opt < %s -passes='asan-pipeline' -S -mtriple=aarch64-linux-gnu | FileCheck --check-prefix=CHECK-AARCH64LE %s
- 
-; RUN: opt < %s -passes='asan-pipeline' -S -mtriple=aarch64_be-linux-gnu | FileCheck --check-prefix=CHECK-AARCH64BE %s
+; RUN: opt < %s -passes=asan -S -mtriple=aarch64-linux-gnu | FileCheck --check-prefix=CHECK-AARCH64LE %s
+; RUN: opt < %s -passes=asan -S -mtriple=aarch64_be-linux-gnu | FileCheck --check-prefix=CHECK-AARCH64BE %s
+; REQUIRES: aarch64-registered-target
  
 define i32 @read_4_bytes(i32* %a) sanitize_address {
 entry:
