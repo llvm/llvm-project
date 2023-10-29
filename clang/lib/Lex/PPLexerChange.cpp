@@ -452,7 +452,7 @@ bool Preprocessor::HandleEndOfFile(Token &Result, bool isEndOfMacro) {
       CurLexer.reset();
 
       CurPPLexer = nullptr;
-      recomputeCurLexerCallback();
+      recomputeCurLexerKind();
       return true;
     }
 

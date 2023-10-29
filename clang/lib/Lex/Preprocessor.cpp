@@ -380,7 +380,7 @@ StringRef Preprocessor::getLastMacroWithSpelling(
   return BestSpelling;
 }
 
-void Preprocessor::recomputeCurLexerCallback() {
+void Preprocessor::recomputeCurLexerKind() {
   if (CurLexer)
     CurLexerCallback = CurLexer->isDependencyDirectivesLexer()
                            ? CLK_DependencyDirectivesLexer
@@ -1134,7 +1134,7 @@ void Preprocessor::CollectPpImportSuffix(SmallVectorImpl<Token> &Toks) {
 /// We respond to a pp-import by importing macros from the named module.
 bool Preprocessor::LexAfterModuleImport(Token &Result) {
   // Figure out what kind of lexer we actually have.
-  recomputeCurLexerCallback();
+  recomputeCurLexerKind();
 
   // Lex the next token. The header-name lexing rules are used at the start of
   // a pp-import.

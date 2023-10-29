@@ -1909,7 +1909,7 @@ public:
 
   /// Recompute the current lexer kind based on the CurLexer/
   /// CurTokenLexer pointers.
-  void recomputeCurLexerCallback();
+ void recomputeCurLexerKind();
 
   /// Returns true if incremental processing is enabled
   bool isIncrementalProcessingEnabled() const { return IncrementalProcessing; }

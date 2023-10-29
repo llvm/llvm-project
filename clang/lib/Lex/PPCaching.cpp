@@ -42,7 +42,7 @@ void Preprocessor::Backtrack() {
          && "EnableBacktrackAtThisPos was not called!");
   CachedLexPos = BacktrackPositions.back();
   BacktrackPositions.pop_back();
-  recomputeCurLexerCallback();
+  recomputeCurLexerKind();
 }
 
 void Preprocessor::CachingLex(Token &Result) {
