@@ -128,8 +128,7 @@ body:            |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY $x11
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr = COPY $x12
-    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:gpr = COPY $x0
-    ; CHECK-NEXT: [[Select_GPR_Using_CC_GPR:%[0-9]+]]:gpr = Select_GPR_Using_CC_GPR [[COPY2]], [[COPY3]], 3, [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: [[Select_GPR_Using_CC_GPR:%[0-9]+]]:gpr = Select_GPR_Using_CC_GPR [[COPY2]], $x0, 3, [[COPY]], [[COPY1]]
     ; CHECK-NEXT: $x10 = COPY [[Select_GPR_Using_CC_GPR]]
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(s64) = COPY $x10
@@ -159,8 +158,7 @@ body:            |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY $x11
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr = COPY $x12
-    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:gpr = COPY $x0
-    ; CHECK-NEXT: [[Select_GPR_Using_CC_GPR:%[0-9]+]]:gpr = Select_GPR_Using_CC_GPR [[COPY3]], [[COPY2]], 3, [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: [[Select_GPR_Using_CC_GPR:%[0-9]+]]:gpr = Select_GPR_Using_CC_GPR $x0, [[COPY2]], 3, [[COPY]], [[COPY1]]
     ; CHECK-NEXT: $x10 = COPY [[Select_GPR_Using_CC_GPR]]
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gprb(s64) = COPY $x10

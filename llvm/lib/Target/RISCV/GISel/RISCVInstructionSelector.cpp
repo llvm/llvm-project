@@ -91,13 +91,6 @@ private:
   void renderImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
                  int OpIdx) const;
 
-  /// Sets CC, LHS, and RHS so that they form an equivelent G_ICMP (ICMPCC, LHS,
-  /// RHS) to that of MI, but whose condition code matches one of the
-  /// comparisons supported directly by branches in the RISC-V ISA.
-  void getICMPOperandsForBranch(MachineInstr &MI, MachineIRBuilder &MIB,
-                                MachineRegisterInfo &MRI, RISCVCC::CondCode &CC,
-                                Register &LHS, Register &RHS) const;
-
   void renderTrailingZeros(MachineInstrBuilder &MIB, const MachineInstr &MI,
                            int OpIdx) const;
 
@@ -594,9 +587,10 @@ static RISCVCC::CondCode getRISCVCCFromICMP(CmpInst::Predicate CC) {
   }
 }
 
-void RISCVInstructionSelector::getICMPOperandsForBranch(
-    MachineInstr &MI, MachineIRBuilder &MIB, MachineRegisterInfo &MRI,
-    RISCVCC::CondCode &CC, Register &LHS, Register &RHS) const {
+static void getICMPOperandsForBranch(MachineInstr &MI, MachineIRBuilder &MIB,
+                                     MachineRegisterInfo &MRI,
+                                     RISCVCC::CondCode &CC, Register &LHS,
+                                     Register &RHS) {
   assert(MI.getOpcode() == TargetOpcode::G_ICMP);
   CmpInst::Predicate ICMPCC =
       static_cast<CmpInst::Predicate>(MI.getOperand(1).getPredicate());
@@ -609,21 +603,17 @@ void RISCVInstructionSelector::getICMPOperandsForBranch(
     case CmpInst::Predicate::ICMP_SGT:
       // Convert X > -1 to X >= 0
       if (*Constant == -1) {
-        MachineInstr *Zero = MIB.buildConstant(MRI.getType(RHS), 0);
-        selectConstant(*Zero, MIB, MRI);
         CC = RISCVCC::COND_GE;
-        RHS = Zero->getOperand(0).getReg();
+        RHS = RISCV::X0;
         return;
       }
       break;
     case CmpInst::Predicate::ICMP_SLT:
       // Convert X < 1 to 0 >= X
       if (*Constant == 1) {
-        MachineInstr *Zero = MIB.buildConstant(MRI.getType(RHS), 0);
-        selectConstant(*Zero, MIB, MRI);
         CC = RISCVCC::COND_GE;
         RHS = LHS;
-        LHS = Zero->getOperand(0).getReg();
+        LHS = RISCV::X0;
         return;
       }
       break;
