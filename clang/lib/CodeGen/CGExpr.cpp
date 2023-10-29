@@ -944,14 +944,10 @@ static llvm::Value *getArrayIndexingBound(CodeGenFunction &CGF,
       // Ignore pass_object_size here. It's not applicable on decayed pointers.
     }
 
-    if (FieldDecl *FD = CGF.FindCountedByField(Base, StrictFlexArraysLevel)) {
-      const auto *ME = dyn_cast<MemberExpr>(CE->getSubExpr());
+    if (const ValueDecl *VD = CGF.FindCountedByField(Base)) {
       IndexedType = Base->getType();
-      return CGF
-          .EmitAnyExprToTemp(MemberExpr::CreateImplicit(
-              CGF.getContext(), const_cast<Expr *>(ME->getBase()),
-              ME->isArrow(), FD, FD->getType(), VK_LValue, OK_Ordinary))
-          .getScalarVal();
+      Expr *E = CGF.BuildCountedByFieldExpr(const_cast<Expr *>(Base), VD);
+      return CGF.EmitAnyExprToTemp(E).getScalarVal();
     }
   }
 
@@ -966,9 +962,68 @@ static llvm::Value *getArrayIndexingBound(CodeGenFunction &CGF,
   return nullptr;
 }
 
-FieldDecl *CodeGenFunction::FindCountedByField(
-    const Expr *Base,
-    LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel) {
+Expr *CodeGenFunction::BuildCountedByFieldExpr(Expr *Base,
+                                               const ValueDecl *CountedByVD) {
+  // Find the outer struct expr (i.e. p in p->a.b.c.d).
+  Base = Base->IgnoreImpCasts();
+  Base = Base->IgnoreParenNoopCasts(getContext());
+
+  // Work our way up the expression until we reach the DeclRefExpr.
+  while (!isa<DeclRefExpr>(Base))
+    if (auto *ME = dyn_cast<MemberExpr>(Base->IgnoreImpCasts())) {
+      Base = ME->getBase()->IgnoreImpCasts();
+      Base = Base->IgnoreParenNoopCasts(getContext());
+    }
+
+  // Add back an implicit cast to create the required pr-value.
+  Base = ImplicitCastExpr::Create(
+      getContext(), Base->getType(), CK_LValueToRValue, Base,
+      nullptr, VK_PRValue, FPOptionsOverride());
+
+  Expr *CountedByExpr = Base;
+
+  if (const auto *IFD = dyn_cast<IndirectFieldDecl>(CountedByVD)) {
+    // The counted_by field is inside an anonymous struct / union. The
+    // IndirectFieldDecl has the correct order of FieldDecls to build this
+    // easily. (Yay!)
+    for (NamedDecl *ND : IFD->chain()) {
+      ValueDecl *VD = cast<ValueDecl>(ND);
+      CountedByExpr = MemberExpr::CreateImplicit(
+          getContext(), CountedByExpr,
+          CountedByExpr->getType()->isPointerType(), VD, VD->getType(),
+          VK_LValue, OK_Ordinary);
+    }
+  } else {
+    CountedByExpr = MemberExpr::CreateImplicit(
+        getContext(), CountedByExpr,
+        CountedByExpr->getType()->isPointerType(),
+        const_cast<ValueDecl *>(CountedByVD), CountedByVD->getType(),
+        VK_LValue, OK_Ordinary);
+  }
+
+  return CountedByExpr;
+}
+
+const ValueDecl *CodeGenFunction::FindFlexibleArrayMemberField(
+    ASTContext &Ctx, const RecordDecl *RD) {
+  LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel =
+      getLangOpts().getStrictFlexArraysLevel();
+
+  for (const Decl *D : RD->decls()) {
+    if (const ValueDecl *VD = dyn_cast<ValueDecl>(D);
+        VD && Decl::isFlexibleArrayMemberLike(Ctx, VD, VD->getType(),
+                                              StrictFlexArraysLevel, true))
+      return VD;
+
+    if (const auto *Record = dyn_cast<RecordDecl>(D))
+      if (const ValueDecl *VD = FindFlexibleArrayMemberField(Ctx, Record))
+        return VD;
+  }
+
+  return nullptr;
+}
+
+const ValueDecl *CodeGenFunction::FindCountedByField(const Expr *Base) {
   const ValueDecl *VD = nullptr;
 
   Base = Base->IgnoreParenImpCasts();
@@ -984,12 +1039,14 @@ FieldDecl *CodeGenFunction::FindCountedByField(
       Ty = Ty->getPointeeType();
 
     if (const auto *RD = Ty->getAsRecordDecl())
-      VD = RD->getLastField();
+      VD = FindFlexibleArrayMemberField(getContext(), RD);
   } else if (const auto *CE = dyn_cast<CastExpr>(Base)) {
     if (const auto *ME = dyn_cast<MemberExpr>(CE->getSubExpr()))
       VD = dyn_cast<ValueDecl>(ME->getMemberDecl());
   }
 
+  LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel =
+      getLangOpts().getStrictFlexArraysLevel();
   const auto *FD = dyn_cast_if_present<FieldDecl>(VD);
   if (!FD || !FD->getParent() ||
       !Decl::isFlexibleArrayMemberLike(getContext(), FD, FD->getType(),
@@ -1000,12 +1057,14 @@ FieldDecl *CodeGenFunction::FindCountedByField(
   if (!CBA)
     return nullptr;
 
-  StringRef FieldName = CBA->getCountedByField()->getName();
-  auto It =
-      llvm::find_if(FD->getParent()->fields(), [&](const FieldDecl *Field) {
-        return FieldName == Field->getName();
-      });
-  return It != FD->getParent()->field_end() ? *It : nullptr;
+  const RecordDecl *RD = FD->getDeclContext()->getOuterLexicalRecordContext();
+  DeclarationName DName(CBA->getCountedByField());
+  DeclContext::lookup_result Lookup = RD->lookup(DName);
+
+  if (Lookup.empty())
+    return nullptr;
+
+  return dyn_cast<ValueDecl>(Lookup.front());
 }
 
 void CodeGenFunction::EmitBoundsCheck(const Expr *E, const Expr *Base,

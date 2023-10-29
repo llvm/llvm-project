@@ -859,53 +859,60 @@ CodeGenFunction::emitBuiltinObjectSize(const Expr *E, unsigned Type,
   }
 
   if (IsDynamic) {
-    LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel =
-        getLangOpts().getStrictFlexArraysLevel();
-    const Expr *Base = E->IgnoreParenImpCasts();
+    // The code generated here calculates the size of a struct with a flexible
+    // array member that uses the counted_by attribute. There are two instances
+    // we handle:
+    //
+    //       struct s {
+    //         unsigned long flags;
+    //         int count;
+    //         int array[] __attribute__((counted_by(count)));
+    //       }
+    //
+    //   1) bdos of the flexible array itself:
+    //
+    //     __builtin_dynamic_object_size(p->array, 1) ==
+    //         p->count * sizeof(*p->array)
+    //
+    //   2) bdos of the whole struct, including the flexible array:
+    //
+    //     __builtin_dynamic_object_size(p, 1) ==
+    //        sizeof(*p) + p->count * sizeof(*p->array)
+    //
+    if (const ValueDecl *CountedByFD = FindCountedByField(E)) {
+      // Find the flexible array member.
+      const RecordDecl *OuterRD =
+        CountedByFD->getDeclContext()->getOuterLexicalRecordContext();
+      const ValueDecl *FAM = FindFlexibleArrayMemberField(getContext(),
+                                                          OuterRD);
 
-    if (FieldDecl *FD = FindCountedByField(Base, StrictFlexArraysLevel)) {
-      const auto *ME = dyn_cast<MemberExpr>(Base);
-      llvm::Value *ObjectSize = nullptr;
-
-      if (!ME) {
-        const auto *DRE = dyn_cast<DeclRefExpr>(Base);
-        ValueDecl *VD = nullptr;
-
-        ObjectSize = ConstantInt::get(
-            ResType,
-            getContext().getTypeSize(DRE->getType()->getPointeeType()) / 8,
-            true);
-
-        if (auto *RD = DRE->getType()->getPointeeType()->getAsRecordDecl())
-          VD = RD->getLastField();
-
-        Expr *ICE = ImplicitCastExpr::Create(
-            getContext(), DRE->getType(), CK_LValueToRValue,
-            const_cast<Expr *>(cast<Expr>(DRE)), nullptr, VK_PRValue,
-            FPOptionsOverride());
-        ME = MemberExpr::CreateImplicit(getContext(), ICE, true, VD,
-                                        VD->getType(), VK_LValue, OK_Ordinary);
-      }
-
-      // At this point, we know that \p ME is a flexible array member.
-      const auto *ArrayTy = getContext().getAsArrayType(ME->getType());
+      // Get the size of the flexible array member's base type.
+      const auto *ArrayTy = getContext().getAsArrayType(FAM->getType());
       unsigned Size = getContext().getTypeSize(ArrayTy->getElementType());
 
-      llvm::Value *CountField =
-          EmitAnyExprToTemp(MemberExpr::CreateImplicit(
-                                getContext(), const_cast<Expr *>(ME->getBase()),
-                                ME->isArrow(), FD, FD->getType(), VK_LValue,
-                                OK_Ordinary))
-              .getScalarVal();
+      // Find the outer struct expr (i.e. p in p->a.b.c.d).
+      Expr *CountedByExpr = BuildCountedByFieldExpr(const_cast<Expr *>(E),
+                                                    CountedByFD);
 
-      llvm::Value *Mul = Builder.CreateMul(
-          CountField, llvm::ConstantInt::get(CountField->getType(), Size / 8));
-      Mul = Builder.CreateZExtOrTrunc(Mul, ResType);
+      llvm::Value *CountedByInstr =
+        EmitAnyExprToTemp(CountedByExpr).getScalarVal();
 
-      if (ObjectSize)
-        return Builder.CreateAdd(ObjectSize, Mul);
+      llvm::Constant *ArraySize =
+        llvm::ConstantInt::get(CountedByInstr->getType(), Size / 8);
 
-      return Mul;
+      llvm::Value *ObjectSize = Builder.CreateMul(CountedByInstr, ArraySize);
+      ObjectSize = Builder.CreateZExtOrTrunc(ObjectSize, ResType);
+
+      if (const auto *DRE = dyn_cast<DeclRefExpr>(E->IgnoreImpCasts())) {
+        // The whole struct is specificed in the __bdos.
+        QualType StructTy = DRE->getType()->getPointeeType();
+        llvm::Value *StructSize = ConstantInt::get(
+            ResType, getContext().getTypeSize(StructTy) / 8, true);
+        ObjectSize = Builder.CreateAdd(StructSize, ObjectSize);
+      }
+
+      // PULL THE STRING!!
+      return ObjectSize;
     }
   }
 
