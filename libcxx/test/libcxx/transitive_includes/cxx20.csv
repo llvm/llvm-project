@@ -110,6 +110,7 @@ charconv iosfwd
 charconv limits
 charconv new
 charconv type_traits
+charconv version
 chrono array
 chrono bit
 chrono charconv

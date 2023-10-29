@@ -2476,6 +2476,7 @@ _LIBCPP_END_NAMESPACE_STD
 #  include <atomic>
 #  include <cstdlib>
 #  include <exception>
+#  include <iosfwd>
 #  include <system_error>
 #endif
 
