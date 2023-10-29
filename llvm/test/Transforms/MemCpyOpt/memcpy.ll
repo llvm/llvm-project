@@ -393,6 +393,7 @@ declare void @f1(ptr nocapture sret(%struct.big))
 declare void @f2(ptr)
 
 declare void @f(ptr)
+declare void @f_byval(ptr byval(i32))
 declare void @f_full_readonly(ptr nocapture noalias readonly)
 
 define void @immut_param(ptr align 4 noalias %val) {
@@ -709,6 +710,21 @@ define void @immut_param_noalias_metadata(ptr align 4 byval(i32) %ptr) {
   ret void
 }
 
+define void @byval_param_noalias_metadata(ptr align 4 byval(i32) %ptr) {
+; CHECK-LABEL: @byval_param_noalias_metadata(
+; CHECK-NEXT:    call void @f_byval(ptr byval(i32) align 4 [[PTR:%.*]]), !alias.scope !3
+; CHECK-NEXT:    ret void
+;
+  %tmp = alloca i32, align 4
+  store i32 1, ptr %ptr, !noalias !5
+  call void @llvm.memcpy.p0.p0.i64(ptr align 4 %tmp, ptr align 4 %ptr, i64 4, i1 false)
+  call void @f_byval(ptr align 4 byval(i32) %tmp), !alias.scope !5
+  ret void
+}
+
 !0 = !{!0}
 !1 = !{!1, !0}
 !2 = !{!1}
+!3 = !{!3}
+!4 = !{!4, !3}
+!5 = !{!4}
