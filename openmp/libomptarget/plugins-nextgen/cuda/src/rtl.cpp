@@ -79,8 +79,7 @@ private:
 /// generic kernel class.
 struct CUDAKernelTy : public GenericKernelTy {
   /// Create a CUDA kernel with a name and an execution mode.
-  CUDAKernelTy(const char *Name, OMPTgtExecModeFlags ExecMode)
-      : GenericKernelTy(Name, ExecMode), Func(nullptr) {}
+  CUDAKernelTy(const char *Name) : GenericKernelTy(Name), Func(nullptr) {}
 
   /// Initialize the CUDA kernel.
   Error initImpl(GenericDeviceTy &GenericDevice,
@@ -356,14 +355,13 @@ struct CUDADeviceTy : public GenericDeviceTy {
 
   /// Allocate and construct a CUDA kernel.
   Expected<GenericKernelTy &>
-  constructKernel(const __tgt_offload_entry &KernelEntry,
-                  OMPTgtExecModeFlags ExecMode) override {
+  constructKernel(const __tgt_offload_entry &KernelEntry) override {
     // Allocate and construct the CUDA kernel.
     CUDAKernelTy *CUDAKernel = Plugin::get().allocate<CUDAKernelTy>();
     if (!CUDAKernel)
       return Plugin::error("Failed to allocate memory for CUDA kernel");
 
-    new (CUDAKernel) CUDAKernelTy(KernelEntry.name, ExecMode);
+    new (CUDAKernel) CUDAKernelTy(KernelEntry.name);
 
     return *CUDAKernel;
   }

@@ -339,9 +339,33 @@ Error GenericKernelTy::init(GenericDeviceTy &GenericDevice,
 
   ImagePtr = &Image;
 
-  PreferredNumThreads = GenericDevice.getDefaultNumThreads();
+  // Retrieve kernel environment object for the kernel.
+  GlobalTy KernelEnv(std::string(Name) + "_kernel_environment",
+                     sizeof(KernelEnvironment), &KernelEnvironment);
+  GenericGlobalHandlerTy &GHandler = Plugin::get().getGlobalHandler();
+  if (auto Err =
+          GHandler.readGlobalFromImage(GenericDevice, *ImagePtr, KernelEnv)) {
+    [[maybe_unused]] std::string ErrStr = toString(std::move(Err));
+    DP("Failed to read kernel environment for '%s': %s\n"
+       "Using default SPMD (2) execution mode\n",
+       Name, ErrStr.data());
+    KernelEnvironment.Configuration.ExecMode = OMP_TGT_EXEC_MODE_SPMD;
+    KernelEnvironment.Configuration.MayUseNestedParallelism = /*Unknown=*/2;
+    KernelEnvironment.Configuration.UseGenericStateMachine = /*Unknown=*/2;
+  }
 
-  MaxNumThreads = GenericDevice.getThreadLimit();
+  // Max = Config.Max > 0 ? min(Config.Max, Device.Max) : Device.Max;
+  MaxNumThreads = KernelEnvironment.Configuration.MaxThreads > 0
+                      ? std::min(KernelEnvironment.Configuration.MaxThreads,
+                                 int32_t(GenericDevice.getThreadLimit()))
+                      : GenericDevice.getThreadLimit();
+
+  // Pref = Config.Pref > 0 ? max(Config.Pref, Device.Pref) : Device.Pref;
+  PreferredNumThreads =
+      KernelEnvironment.Configuration.MinThreads > 0
+          ? std::max(KernelEnvironment.Configuration.MinThreads,
+                     int32_t(GenericDevice.getDefaultNumThreads()))
+          : GenericDevice.getDefaultNumThreads();
 
   return initImpl(GenericDevice, Image);
 }
@@ -890,13 +914,8 @@ Error GenericDeviceTy::registerKernelOffloadEntry(
     __tgt_offload_entry &DeviceEntry) {
   DeviceEntry = KernelEntry;
 
-  // Retrieve the execution mode.
-  auto ExecModeOrErr = getExecutionModeForKernel(KernelEntry.name, Image);
-  if (!ExecModeOrErr)
-    return ExecModeOrErr.takeError();
-
   // Create a kernel object.
-  auto KernelOrErr = constructKernel(KernelEntry, *ExecModeOrErr);
+  auto KernelOrErr = constructKernel(KernelEntry);
   if (!KernelOrErr)
     return KernelOrErr.takeError();
 
@@ -912,45 +931,6 @@ Error GenericDeviceTy::registerKernelOffloadEntry(
   Image.getOffloadEntryTable().addEntry(DeviceEntry);
 
   return Plugin::success();
-}
-
-Expected<KernelEnvironmentTy>
-GenericDeviceTy::getKernelEnvironmentForKernel(StringRef Name,
-                                               DeviceImageTy &Image) {
-  // Create a metadata object for the kernel environment object.
-  StaticGlobalTy<KernelEnvironmentTy> KernelEnv(Name.data(),
-                                                "_kernel_environment");
-
-  // Retrieve kernel environment object for the kernel.
-  GenericGlobalHandlerTy &GHandler = Plugin::get().getGlobalHandler();
-  if (auto Err = GHandler.readGlobalFromImage(*this, Image, KernelEnv))
-    return std::move(Err);
-
-  return KernelEnv.getValue();
-}
-
-Expected<OMPTgtExecModeFlags>
-GenericDeviceTy::getExecutionModeForKernel(StringRef Name,
-                                           DeviceImageTy &Image) {
-  auto KernelEnvOrError = getKernelEnvironmentForKernel(Name, Image);
-  if (!KernelEnvOrError) {
-    [[maybe_unused]] std::string ErrStr =
-        toString(KernelEnvOrError.takeError());
-    DP("Failed to read kernel environment for '%s': %s\n"
-       "Using default SPMD (2) execution mode\n",
-       Name.data(), ErrStr.data());
-    return OMP_TGT_EXEC_MODE_SPMD;
-  }
-
-  auto &KernelEnv = *KernelEnvOrError;
-  auto ExecMode = KernelEnv.Configuration.ExecMode;
-
-  // Check that the retrieved execution mode is valid.
-  if (!GenericKernelTy::isValidExecutionMode(ExecMode))
-    return Plugin::error("Invalid execution mode %d for '%s'", ExecMode,
-                         Name.data());
-
-  return ExecMode;
 }
 
 Error PinnedAllocationMapTy::insertEntry(void *HstPtr, void *DevAccessiblePtr,

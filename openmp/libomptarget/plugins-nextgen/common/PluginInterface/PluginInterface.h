@@ -255,9 +255,8 @@ public:
 /// implement the necessary virtual function members.
 struct GenericKernelTy {
   /// Construct a kernel with a name and a execution mode.
-  GenericKernelTy(const char *Name, OMPTgtExecModeFlags ExecutionMode)
-      : Name(Name), ExecutionMode(ExecutionMode), PreferredNumThreads(0),
-        MaxNumThreads(0) {}
+  GenericKernelTy(const char *Name)
+      : Name(Name), PreferredNumThreads(0), MaxNumThreads(0) {}
 
   virtual ~GenericKernelTy() {}
 
@@ -285,6 +284,11 @@ struct GenericKernelTy {
     return *ImagePtr;
   }
 
+  /// Return the kernel environment object for kernel \p Name.
+  const KernelEnvironmentTy &getKernelEnvironmentForKernel() {
+    return KernelEnvironment;
+  }
+
   /// Indicate whether an execution mode is valid.
   static bool isValidExecutionMode(OMPTgtExecModeFlags ExecutionMode) {
     switch (ExecutionMode) {
@@ -299,7 +303,7 @@ struct GenericKernelTy {
 protected:
   /// Get the execution mode name of the kernel.
   const char *getExecutionModeName() const {
-    switch (ExecutionMode) {
+    switch (KernelEnvironment.Configuration.ExecMode) {
     case OMP_TGT_EXEC_MODE_SPMD:
       return "SPMD";
     case OMP_TGT_EXEC_MODE_GENERIC:
@@ -343,18 +347,19 @@ private:
 
   /// Indicate if the kernel works in Generic SPMD, Generic or SPMD mode.
   bool isGenericSPMDMode() const {
-    return ExecutionMode == OMP_TGT_EXEC_MODE_GENERIC_SPMD;
+    return KernelEnvironment.Configuration.ExecMode ==
+           OMP_TGT_EXEC_MODE_GENERIC_SPMD;
   }
   bool isGenericMode() const {
-    return ExecutionMode == OMP_TGT_EXEC_MODE_GENERIC;
+    return KernelEnvironment.Configuration.ExecMode ==
+           OMP_TGT_EXEC_MODE_GENERIC;
   }
-  bool isSPMDMode() const { return ExecutionMode == OMP_TGT_EXEC_MODE_SPMD; }
+  bool isSPMDMode() const {
+    return KernelEnvironment.Configuration.ExecMode == OMP_TGT_EXEC_MODE_SPMD;
+  }
 
   /// The kernel name.
   const char *Name;
-
-  /// The execution flags of the kernel.
-  OMPTgtExecModeFlags ExecutionMode;
 
   /// The image that contains this kernel.
   DeviceImageTy *ImagePtr = nullptr;
@@ -365,6 +370,9 @@ protected:
 
   /// The maximum number of threads which the kernel could leverage.
   uint32_t MaxNumThreads;
+
+  /// The kernel environment, including execution flags.
+  KernelEnvironmentTy KernelEnvironment;
 };
 
 /// Class representing a map of host pinned allocations. We track these pinned
@@ -819,8 +827,7 @@ private:
 
   /// Allocate and construct a kernel object.
   virtual Expected<GenericKernelTy &>
-  constructKernel(const __tgt_offload_entry &KernelEntry,
-                  OMPTgtExecModeFlags ExecMode) = 0;
+  constructKernel(const __tgt_offload_entry &KernelEntry) = 0;
 
   /// Get and set the stack size and heap size for the device. If not used, the
   /// plugin can implement the setters as no-op and setting the output
@@ -864,10 +871,6 @@ private:
       UInt32Envar("LIBOMPTARGET_MIN_THREADS_FOR_LOW_TRIP_COUNT", 32);
 
 protected:
-  /// Return the execution mode used for kernel \p Name.
-  virtual Expected<OMPTgtExecModeFlags>
-  getExecutionModeForKernel(StringRef Name, DeviceImageTy &Image);
-
   /// Environment variables defined by the LLVM OpenMP implementation
   /// regarding the initial number of streams and events.
   UInt32Envar OMPX_InitialNumStreams;
@@ -916,10 +919,6 @@ protected:
 #endif
 
 private:
-  /// Return the kernel environment object for kernel \p Name.
-  Expected<KernelEnvironmentTy>
-  getKernelEnvironmentForKernel(StringRef Name, DeviceImageTy &Image);
-
   DeviceMemoryPoolTy DeviceMemoryPool = {nullptr, 0};
   DeviceMemoryPoolTrackingTy DeviceMemoryPoolTracking = {0, 0, ~0U, 0};
 };

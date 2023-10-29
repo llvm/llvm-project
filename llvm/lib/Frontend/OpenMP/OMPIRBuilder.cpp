@@ -4093,8 +4093,8 @@ OpenMPIRBuilder::createTargetInit(const LocationDescription &Loc, bool IsSPMD,
 
   Function *Kernel = Builder.GetInsertBlock()->getParent();
 
-  /// Manifest the launch configuration in the metadata matching the kernel
-  /// environment.
+  // Manifest the launch configuration in the metadata matching the kernel
+  // environment.
   if (MinTeamsVal > 1 || MaxTeamsVal > 0)
     writeTeamsForKernel(T, *Kernel, MinTeamsVal, MaxTeamsVal);
 
