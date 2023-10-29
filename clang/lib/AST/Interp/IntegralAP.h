@@ -124,7 +124,7 @@ public:
   bool isNegative() const { return !V.isNonNegative(); }
   bool isMin() const { return V.isMinValue(); }
   bool isMax() const { return V.isMaxValue(); }
-  static bool isSigned() { return Signed; }
+  static constexpr bool isSigned() { return Signed; }
   bool isMinusOne() const { return Signed && V == -1; }
 
   unsigned countLeadingZeros() const { return V.countl_zero(); }
