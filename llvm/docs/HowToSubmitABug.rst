@@ -183,9 +183,7 @@ Using the specified flags will generate four intermediate bytecode files:
 
 Execute one of the following commands to identify the source of the problem:
 
-#. ``opt "-passes=lto<O3>" a.out.0.0.preopt.bc``
 #. ``opt "-passes=lto<O3>" a.out.0.2.internalize.bc``
-#. ``opt "-passes=lto<O3>" a.out.0.4.opt.bc``
 #. ``llc a.out.0.5.precodegen.bc``
 
 If one of these do crash, you should be able to reduce
@@ -204,8 +202,7 @@ Example of reduce.sh Script
    #!/usr/bin/env bash
 
    $HOME/llvm/llvm-project/build/bin/opt "-passes=lto<O3>" $1 -o temp.bc  2>&1 | tee err.log
-   grep "It->second == &Insn" err.log
-   exit $?
+   grep -q "It->second == &Insn" err.log
 
 Here we have grepped the failed assert message.
 
