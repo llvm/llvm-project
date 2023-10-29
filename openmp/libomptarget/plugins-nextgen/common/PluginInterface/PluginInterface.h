@@ -655,6 +655,21 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   Error queryAsync(__tgt_async_info *AsyncInfo);
   virtual Error queryAsyncImpl(__tgt_async_info &AsyncInfo) = 0;
 
+  /// Check whether the architecture supports VA management
+  virtual bool supportVAManagement() const { return false; }
+
+  /// Get the total device memory size
+  virtual Error getDeviceMemorySize(uint64_t &DSize);
+
+  /// Allocates \p RSize bytes (rounded up to page size) and hints the driver to
+  /// map it to \p VAddr. The obtained address is stored in \p Addr. At return
+  /// \p RSize contains the actual size which can be equal or larger than the
+  /// requested size.
+  virtual Error memoryVAMap(void **Addr, void *VAddr, size_t *RSize);
+
+  /// De-allocates device memory and unmaps the virtual address \p VAddr
+  virtual Error memoryVAUnMap(void *VAddr, size_t Size);
+
   /// Allocate data on the device or involving the device.
   Expected<void *> dataAlloc(int64_t Size, void *HostPtr, TargetAllocTy Kind);
 
