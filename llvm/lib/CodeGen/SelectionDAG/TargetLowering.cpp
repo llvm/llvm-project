@@ -1834,8 +1834,7 @@ bool TargetLowering::SimplifyDemandedBits(
           // that the upper bits of the shift result are known to be zero,
           // which is equivalent to the narrow shift being NUW.
           if (bool IsNUW = (Known.countMinLeadingZeros() >= HalfWidth)) {
-            unsigned NumSignBits = TLO.DAG.ComputeNumSignBits(Op0, Depth + 1);
-            bool IsNSW = NumSignBits > (ShAmt + HalfWidth);
+            bool IsNSW = Known.countMinSignBits() > HalfWidth;
             SDNodeFlags Flags;
             Flags.setNoSignedWrap(IsNSW);
             Flags.setNoUnsignedWrap(IsNUW);
