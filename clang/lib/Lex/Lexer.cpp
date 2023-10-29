@@ -2020,15 +2020,14 @@ bool Lexer::LexNumericConstant(Token &Result, const char *CurPtr) {
 
   // If we have a digit separator, continue.
   if (C == '\'' && (LangOpts.CPlusPlus14 || LangOpts.C23)) {
-    auto NextCharAndSize = getCharAndSizeNoWarn(CurPtr + Size, LangOpts);
-    char Next = NextCharAndSize.Char;
+    auto [Next, NextSize] = getCharAndSizeNoWarn(CurPtr + Size, LangOpts);
     if (isAsciiIdentifierContinue(Next)) {
       if (!isLexingRawMode())
         Diag(CurPtr, LangOpts.CPlusPlus
                          ? diag::warn_cxx11_compat_digit_separator
                          : diag::warn_c23_compat_digit_separator);
       CurPtr = ConsumeChar(CurPtr, Size, Result);
-      CurPtr = ConsumeChar(CurPtr, NextCharAndSize.Size, Result);
+      CurPtr = ConsumeChar(CurPtr, NextSize, Result);
       return LexNumericConstant(Result, CurPtr);
     }
   }
@@ -2093,9 +2092,8 @@ const char *Lexer::LexUDSuffix(Token &Result, const char *CurPtr,
       unsigned Consumed = Size;
       unsigned Chars = 1;
       while (true) {
-        auto NextCharAndSize =
+        auto [Next, NextSize] =
             getCharAndSizeNoWarn(CurPtr + Consumed, LangOpts);
-        char Next = NextCharAndSize.Char;
         if (!isAsciiIdentifierContinue(Next)) {
           // End of suffix. Check whether this is on the allowed list.
           const StringRef CompleteSuffix(Buffer, Chars);
@@ -2109,7 +2107,7 @@ const char *Lexer::LexUDSuffix(Token &Result, const char *CurPtr,
           break;
 
         Buffer[Chars++] = Next;
-        Consumed += NextCharAndSize.Size;
+        Consumed += NextSize;
       }
     }
 

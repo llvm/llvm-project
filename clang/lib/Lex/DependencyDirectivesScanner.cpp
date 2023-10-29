@@ -565,9 +565,9 @@ Scanner::cleanStringIfNeeded(const dependency_directives_scan::Token &Tok) {
   const char *BufPtr = Input.begin() + Tok.Offset;
   const char *AfterIdent = Input.begin() + Tok.getEnd();
   while (BufPtr < AfterIdent) {
-    auto CharAndSize = Lexer::getCharAndSizeNoWarn(BufPtr, LangOpts);
-    Spelling[SpellingLength++] = CharAndSize.Char;
-    BufPtr += CharAndSize.Size;
+    auto [Char, Size] = Lexer::getCharAndSizeNoWarn(BufPtr, LangOpts);
+    Spelling[SpellingLength++] = Char;
+    BufPtr += Size;
   }
 
   return SplitIds.try_emplace(StringRef(Spelling.begin(), SpellingLength), 0)
