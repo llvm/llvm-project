@@ -337,8 +337,8 @@ Changes in existing checks
   <clang-tidy/checks/readability/braces-around-statements>` check to
   ignore false-positive for ``if constexpr`` in lambda expression.
 
-- Improved :doc:`readability-const-params-in-decls
-  <clang-tidy/checks/readability/const-params-in-decls>` diagnositics to
+- Improved :doc:`readability-avoid-const-params-in-decls
+  <clang-tidy/checks/readability/avoid-const-params-in-decls>` diagnositics to
   highlight the const location
 
 - Improved :doc:`readability-container-size-empty
