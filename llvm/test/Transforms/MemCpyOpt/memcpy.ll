@@ -712,7 +712,8 @@ define void @immut_param_noalias_metadata(ptr align 4 byval(i32) %ptr) {
 
 define void @byval_param_noalias_metadata(ptr align 4 byval(i32) %ptr) {
 ; CHECK-LABEL: @byval_param_noalias_metadata(
-; CHECK-NEXT:    call void @f_byval(ptr byval(i32) align 4 [[PTR:%.*]]), !alias.scope !3
+; CHECK-NEXT:    store i32 1, ptr [[PTR:%.*]], align 4, !noalias !3
+; CHECK-NEXT:    call void @f_byval(ptr byval(i32) align 4 [[PTR]])
 ; CHECK-NEXT:    ret void
 ;
   %tmp = alloca i32, align 4
