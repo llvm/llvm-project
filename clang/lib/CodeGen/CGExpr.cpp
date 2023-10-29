@@ -976,9 +976,9 @@ Expr *CodeGenFunction::BuildCountedByFieldExpr(Expr *Base,
     }
 
   // Add back an implicit cast to create the required pr-value.
-  Base = ImplicitCastExpr::Create(
-      getContext(), Base->getType(), CK_LValueToRValue, Base,
-      nullptr, VK_PRValue, FPOptionsOverride());
+  Base =
+      ImplicitCastExpr::Create(getContext(), Base->getType(), CK_LValueToRValue,
+                               Base, nullptr, VK_PRValue, FPOptionsOverride());
 
   Expr *CountedByExpr = Base;
 
@@ -988,24 +988,24 @@ Expr *CodeGenFunction::BuildCountedByFieldExpr(Expr *Base,
     // easily. (Yay!)
     for (NamedDecl *ND : IFD->chain()) {
       ValueDecl *VD = cast<ValueDecl>(ND);
-      CountedByExpr = MemberExpr::CreateImplicit(
-          getContext(), CountedByExpr,
-          CountedByExpr->getType()->isPointerType(), VD, VD->getType(),
-          VK_LValue, OK_Ordinary);
+      CountedByExpr =
+          MemberExpr::CreateImplicit(getContext(), CountedByExpr,
+                                     CountedByExpr->getType()->isPointerType(),
+                                     VD, VD->getType(), VK_LValue, OK_Ordinary);
     }
   } else {
     CountedByExpr = MemberExpr::CreateImplicit(
-        getContext(), CountedByExpr,
-        CountedByExpr->getType()->isPointerType(),
-        const_cast<ValueDecl *>(CountedByVD), CountedByVD->getType(),
-        VK_LValue, OK_Ordinary);
+        getContext(), CountedByExpr, CountedByExpr->getType()->isPointerType(),
+        const_cast<ValueDecl *>(CountedByVD), CountedByVD->getType(), VK_LValue,
+        OK_Ordinary);
   }
 
   return CountedByExpr;
 }
 
-const ValueDecl *CodeGenFunction::FindFlexibleArrayMemberField(
-    ASTContext &Ctx, const RecordDecl *RD) {
+const ValueDecl *
+CodeGenFunction::FindFlexibleArrayMemberField(ASTContext &Ctx,
+                                              const RecordDecl *RD) {
   LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel =
       getLangOpts().getStrictFlexArraysLevel();
 

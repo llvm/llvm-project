@@ -882,23 +882,23 @@ CodeGenFunction::emitBuiltinObjectSize(const Expr *E, unsigned Type,
     if (const ValueDecl *CountedByFD = FindCountedByField(E)) {
       // Find the flexible array member.
       const RecordDecl *OuterRD =
-        CountedByFD->getDeclContext()->getOuterLexicalRecordContext();
-      const ValueDecl *FAM = FindFlexibleArrayMemberField(getContext(),
-                                                          OuterRD);
+          CountedByFD->getDeclContext()->getOuterLexicalRecordContext();
+      const ValueDecl *FAM =
+          FindFlexibleArrayMemberField(getContext(), OuterRD);
 
       // Get the size of the flexible array member's base type.
       const auto *ArrayTy = getContext().getAsArrayType(FAM->getType());
       unsigned Size = getContext().getTypeSize(ArrayTy->getElementType());
 
       // Find the outer struct expr (i.e. p in p->a.b.c.d).
-      Expr *CountedByExpr = BuildCountedByFieldExpr(const_cast<Expr *>(E),
-                                                    CountedByFD);
+      Expr *CountedByExpr =
+          BuildCountedByFieldExpr(const_cast<Expr *>(E), CountedByFD);
 
       llvm::Value *CountedByInstr =
-        EmitAnyExprToTemp(CountedByExpr).getScalarVal();
+          EmitAnyExprToTemp(CountedByExpr).getScalarVal();
 
       llvm::Constant *ArraySize =
-        llvm::ConstantInt::get(CountedByInstr->getType(), Size / 8);
+          llvm::ConstantInt::get(CountedByInstr->getType(), Size / 8);
 
       llvm::Value *ObjectSize = Builder.CreateMul(CountedByInstr, ArraySize);
       ObjectSize = Builder.CreateZExtOrTrunc(ObjectSize, ResType);
