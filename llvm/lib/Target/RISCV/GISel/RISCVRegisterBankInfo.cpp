@@ -232,6 +232,18 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
         getOperandsMapping({getFPValueMapping(Ty.getSizeInBits()), nullptr});
     break;
   }
+  case TargetOpcode::G_FCMP: {
+    LLT Ty = MRI.getType(MI.getOperand(2).getReg());
+
+    unsigned Size = Ty.getSizeInBits();
+    assert((Size == 32 || Size == 64) && "Unsupported size for G_FCMP");
+
+    auto *FPRValueMapping = Size == 32 ? &RISCV::ValueMappings[RISCV::FPR32Idx]
+                                       : &RISCV::ValueMappings[RISCV::FPR64Idx];
+    OperandsMapping = getOperandsMapping(
+        {GPRValueMapping, nullptr, FPRValueMapping, FPRValueMapping});
+    break;
+  }
   default:
     return getInvalidInstructionMapping();
   }
