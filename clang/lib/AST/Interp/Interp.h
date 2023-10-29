@@ -1453,7 +1453,7 @@ bool OffsetHelper(InterpState &S, CodePtr OpPC, const T &Offset,
       DiagInvalidOffset();
   }
 
-  if (Invalid && !Ptr.isDummy())
+  if (Invalid && !Ptr.isDummy() && S.getLangOpts().CPlusPlus)
     return false;
 
   // Offset is valid - compute it on unsigned.
@@ -1531,7 +1531,7 @@ inline bool SubPtr(InterpState &S, CodePtr OpPC) {
   const Pointer &LHS = S.Stk.pop<Pointer>();
   const Pointer &RHS = S.Stk.pop<Pointer>();
 
-  if (!Pointer::hasSameArray(LHS, RHS)) {
+  if (!Pointer::hasSameBase(LHS, RHS) && S.getLangOpts().CPlusPlus) {
     // TODO: Diagnose.
     return false;
   }

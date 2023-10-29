@@ -7,6 +7,7 @@
 #define INT_MAX __INT_MAX__
 
 typedef __INTPTR_TYPE__ intptr_t;
+typedef __PTRDIFF_TYPE__ ptrdiff_t;
 
 
 static_assert(true, "");
@@ -198,6 +199,20 @@ namespace PointerComparison {
                                  // ref-note {{comparison between '&s.b' and 'nullptr' has unspecified value}}
 
   constexpr bool v7 = qv <= (void*)&s.b; // ok
+
+  constexpr ptrdiff_t m = &m - &m;
+  static_assert(m == 0, "");
+
+  constexpr ptrdiff_t m2 = (&m2 + 1) - (&m2 + 1);
+  static_assert(m2 == 0, "");
+
+  constexpr long m3 = (&m3 + 1) - (&m3);
+  static_assert(m3 == 1, "");
+
+  constexpr long m4 = &m4 + 2 - &m4; // ref-error {{must be initialized by a constant expression}} \
+                                     // ref-note {{cannot refer to element 2 of non-array object}} \
+                                     // expected-error {{must be initialized by a constant expression}} \
+                                     // expected-note {{cannot refer to element 2 of non-array object}}
 }
 
 namespace SizeOf {
