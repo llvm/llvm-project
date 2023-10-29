@@ -1864,6 +1864,7 @@ bool MemCpyOptPass::processByValArgument(CallBase &CB, unsigned ArgNo) {
                     << "  " << CB << "\n");
 
   // Otherwise we're good!  Update the byval argument.
+  combineAAMetadata(&CB, MDep);
   CB.setArgOperand(ArgNo, MDep->getSource());
   ++NumMemCpyInstr;
   return true;
