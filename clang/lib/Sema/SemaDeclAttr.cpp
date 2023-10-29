@@ -2084,7 +2084,7 @@ static void handleRestrictAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   // FIXME: GCC uses [[malloc(my_func)]] to specify a deallocator for the
   // returned pointer, but this isn't currently supported in LLVM
   // see https://github.com/llvm/llvm-project/issues/51607
-  S.Diag(AL.getLoc(), diag::warn_multiarg_malloc_attribute_ignored);
+  S.Diag(AL.getLoc(), diag::warn_attribute_form_ignored) << AL;
 }
 
 static void handleCPUSpecificAttr(Sema &S, Decl *D, const ParsedAttr &AL) {

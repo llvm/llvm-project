@@ -3028,6 +3028,10 @@ def warn_auto_var_is_id : Warning<
   InGroup<DiagGroup<"auto-var-id">>;
 
 // Attributes
+def warn_attribute_form_ignored : Warning<
+  "%0 attribute ignored because Clang does not yet support this attribute signature">,
+  InGroup<IgnoredAttributes>;
+
 def warn_attribute_ignored_no_calls_in_stmt: Warning<
   "%0 attribute is ignored because there exists no call expression inside the "
   "statement">,
