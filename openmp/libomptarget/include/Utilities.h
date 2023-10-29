@@ -253,6 +253,11 @@ template <typename Ty> Ty *alignPtr(Ty *Ptr, int64_t Alignment) {
   return std::align(Alignment, sizeof(char), Ptr, Space);
 }
 
+/// Round up \p V to a \p Boundary.
+template <typename Ty> inline Ty roundUp(Ty V, Ty Boundary) {
+  return (V + Boundary - 1) / Boundary * Boundary;
+}
+
 } // namespace target
 } // namespace omp
 } // namespace llvm

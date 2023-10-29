@@ -827,14 +827,13 @@ postProcessingTargetDataEnd(DeviceTy *Device,
     // remaining shadow pointer entries for this struct.
     const bool HasFrom = ArgType & OMP_TGT_MAPTYPE_FROM;
     if (HasFrom) {
-      Entry->foreachShadowPointerInfo(
-          [&](const ShadowPtrInfoTy &ShadowPtr) {
-            *ShadowPtr.HstPtrAddr = ShadowPtr.HstPtrVal;
-            DP("Restoring original host pointer value " DPxMOD " for host "
-               "pointer " DPxMOD "\n",
-               DPxPTR(ShadowPtr.HstPtrVal), DPxPTR(ShadowPtr.HstPtrAddr));
-            return OFFLOAD_SUCCESS;
-          });
+      Entry->foreachShadowPointerInfo([&](const ShadowPtrInfoTy &ShadowPtr) {
+        *ShadowPtr.HstPtrAddr = ShadowPtr.HstPtrVal;
+        DP("Restoring original host pointer value " DPxMOD " for host "
+           "pointer " DPxMOD "\n",
+           DPxPTR(ShadowPtr.HstPtrVal), DPxPTR(ShadowPtr.HstPtrAddr));
+        return OFFLOAD_SUCCESS;
+      });
     }
 
     // Give up the lock as we either don't need it anymore (e.g., done with
@@ -1713,9 +1712,9 @@ int target(ident_t *Loc, DeviceTy &Device, void *HostPtr,
 /// Enables the record replay mechanism by pre-allocating MemorySize
 /// and informing the record-replayer of whether to store the output
 /// in some file.
-int target_activate_rr(DeviceTy &Device, uint64_t MemorySize, bool isRecord,
-                       bool SaveOutput) {
-  return Device.RTL->activate_record_replay(Device.DeviceID, MemorySize,
+int target_activate_rr(DeviceTy &Device, uint64_t MemorySize, void *VAddr,
+                       bool isRecord, bool SaveOutput) {
+  return Device.RTL->activate_record_replay(Device.DeviceID, MemorySize, VAddr,
                                             isRecord, SaveOutput);
 }
 

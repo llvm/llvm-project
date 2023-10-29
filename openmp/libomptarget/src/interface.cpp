@@ -346,7 +346,8 @@ EXTERN int __tgt_target_kernel(ident_t *Loc, int64_t DeviceId, int32_t NumTeams,
 /// /param SaveOutput Store the device memory after kernel
 ///                   execution on persistent storage
 EXTERN int __tgt_activate_record_replay(int64_t DeviceId, uint64_t MemorySize,
-                                        bool IsRecord, bool SaveOutput) {
+                                        void *VAddr, bool IsRecord,
+                                        bool SaveOutput) {
   if (!deviceIsReady(DeviceId)) {
     DP("Device %" PRId64 " is not ready\n", DeviceId);
     return OMP_TGT_FAIL;
@@ -354,7 +355,7 @@ EXTERN int __tgt_activate_record_replay(int64_t DeviceId, uint64_t MemorySize,
 
   DeviceTy &Device = *PM->Devices[DeviceId];
   [[maybe_unused]] int Rc =
-      target_activate_rr(Device, MemorySize, IsRecord, SaveOutput);
+      target_activate_rr(Device, MemorySize, VAddr, IsRecord, SaveOutput);
   assert(Rc == OFFLOAD_SUCCESS &&
          "__tgt_activate_record_replay unexpected failure!");
   return OMP_TGT_SUCCESS;
