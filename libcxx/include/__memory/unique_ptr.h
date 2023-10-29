@@ -22,6 +22,7 @@
 #include <__type_traits/add_lvalue_reference.h>
 #include <__type_traits/common_type.h>
 #include <__type_traits/dependent_type.h>
+#include <__type_traits/enable_if.h>
 #include <__type_traits/integral_constant.h>
 #include <__type_traits/is_array.h>
 #include <__type_traits/is_assignable.h>
@@ -38,7 +39,6 @@
 #include <__type_traits/type_identity.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
-#include <cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

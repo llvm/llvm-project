@@ -16,7 +16,6 @@
 #include <__type_traits/is_reference.h>
 #include <__utility/move.h>
 #include <__utility/swap.h>
-#include <cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

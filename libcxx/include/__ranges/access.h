@@ -21,7 +21,6 @@
 #include <__type_traits/remove_reference.h>
 #include <__utility/auto_cast.h>
 #include <__utility/declval.h>
-#include <cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

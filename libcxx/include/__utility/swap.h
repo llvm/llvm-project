@@ -10,6 +10,7 @@
 #define _LIBCPP___UTILITY_SWAP_H
 
 #include <__config>
+#include <__type_traits/enable_if.h>
 #include <__type_traits/is_move_assignable.h>
 #include <__type_traits/is_move_constructible.h>
 #include <__type_traits/is_nothrow_move_assignable.h>
@@ -17,7 +18,6 @@
 #include <__type_traits/is_swappable.h>
 #include <__utility/declval.h>
 #include <__utility/move.h>
-#include <cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

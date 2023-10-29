@@ -11,7 +11,6 @@
 
 #include <__config>
 #include <__type_traits/conditional.h>
-#include <cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

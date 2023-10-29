@@ -535,9 +535,11 @@ namespace std
 #include <__type_traits/unwrap_ref.h>
 #include <__type_traits/void_t.h>
 #include <__utility/declval.h>
-#include <cstddef>
-#include <cstdint>
 #include <version>
+
+#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#  include <cstddef>
+#endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

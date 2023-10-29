@@ -25,7 +25,6 @@
 #include <__type_traits/is_volatile.h>
 #include <__utility/move.h>
 #include <__utility/pair.h>
-#include <cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

@@ -22,7 +22,6 @@
 #include <__type_traits/decay.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
-#include <cstddef>
 #include <span>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

@@ -35,6 +35,7 @@
 #include <__type_traits/conditional.h>
 #include <__type_traits/conjunction.h>
 #include <__type_traits/disjunction.h>
+#include <__type_traits/enable_if.h>
 #include <__type_traits/is_array.h>
 #include <__type_traits/is_bounded_array.h>
 #include <__type_traits/is_convertible.h>
@@ -50,7 +51,6 @@
 #include <__utility/move.h>
 #include <__utility/swap.h>
 #include <__verbose_abort>
-#include <cstddef>
 #include <new>
 #include <typeinfo>
 #if !defined(_LIBCPP_HAS_NO_ATOMIC_HEADER)

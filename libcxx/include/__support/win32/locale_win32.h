@@ -11,7 +11,6 @@
 #define _LIBCPP___SUPPORT_WIN32_LOCALE_WIN32_H
 
 #include <__config>
-#include <cstddef>
 #include <locale.h> // _locale_t
 #include <stdio.h>
 #include <string>

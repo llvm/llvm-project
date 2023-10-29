@@ -827,8 +827,6 @@ typedef __char32_t char32_t;
 #  define _LIBCPP_END_NAMESPACE_STD }}
 #  define _VSTD std
 
-_LIBCPP_BEGIN_NAMESPACE_STD _LIBCPP_END_NAMESPACE_STD
-
 #  if _LIBCPP_STD_VER >= 17
 #    define _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM                                                                         \
        _LIBCPP_BEGIN_NAMESPACE_STD inline namespace __fs { namespace filesystem {
@@ -1499,6 +1497,13 @@ __sanitizer_verify_double_ended_contiguous_container(const void*, const void*, c
 #  endif // (defined(_OPENMP) && _OPENMP >= 201307)
 
 #  define _PSTL_USE_NONTEMPORAL_STORES_IF_ALLOWED
+
+// define a few very widely used type aliases
+_LIBCPP_BEGIN_NAMESPACE_STD
+using size_t    = __SIZE_TYPE__;
+using ptrdiff_t = __PTRDIFF_TYPE__;
+using nullptr_t = decltype(nullptr);
+_LIBCPP_END_NAMESPACE_STD
 
 #endif // __cplusplus
 

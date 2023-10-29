@@ -29,7 +29,6 @@
 #include <__utility/swap.h>
 #include <array>
 #include <cinttypes>
-#include <cstddef>
 #include <limits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

@@ -10,7 +10,6 @@
 #define _LIBCPP___MEMORY_RESOURCE_POOL_OPTIONS_H
 
 #include <__config>
-#include <cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

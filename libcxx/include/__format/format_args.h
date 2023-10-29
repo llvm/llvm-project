@@ -15,7 +15,6 @@
 #include <__format/format_arg.h>
 #include <__format/format_arg_store.h>
 #include <__format/format_fwd.h>
-#include <cstddef>
 #include <cstdint>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

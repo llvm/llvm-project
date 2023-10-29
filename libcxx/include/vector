@@ -3434,6 +3434,7 @@ _LIBCPP_POP_MACROS
 #  include <algorithm>
 #  include <atomic>
 #  include <concepts>
+#  include <cstddef>
 #  include <cstdlib>
 #  include <type_traits>
 #  include <typeinfo>

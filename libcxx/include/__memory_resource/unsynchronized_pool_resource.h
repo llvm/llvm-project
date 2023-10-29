@@ -13,7 +13,6 @@
 #include <__config>
 #include <__memory_resource/memory_resource.h>
 #include <__memory_resource/pool_options.h>
-#include <cstddef>
 #include <cstdint>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

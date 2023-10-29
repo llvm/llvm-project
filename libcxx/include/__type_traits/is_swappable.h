@@ -22,7 +22,6 @@
 #include <__type_traits/is_void.h>
 #include <__type_traits/nat.h>
 #include <__utility/declval.h>
-#include <cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

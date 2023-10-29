@@ -56,6 +56,7 @@ struct suspend_always;
 #endif
 
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#  include <cstddef>
 #  include <iosfwd>
 #  include <type_traits>
 #endif

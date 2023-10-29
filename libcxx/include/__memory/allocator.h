@@ -19,7 +19,6 @@
 #include <__type_traits/is_void.h>
 #include <__type_traits/is_volatile.h>
 #include <__utility/forward.h>
-#include <cstddef>
 #include <new>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

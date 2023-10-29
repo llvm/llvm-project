@@ -12,7 +12,6 @@
 #include <__config>
 #include <__exception/operations.h>
 #include <__memory/addressof.h>
-#include <cstddef>
 #include <cstdlib>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

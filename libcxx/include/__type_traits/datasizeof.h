@@ -12,7 +12,6 @@
 #include <__config>
 #include <__type_traits/is_class.h>
 #include <__type_traits/is_final.h>
-#include <cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -51,7 +50,7 @@ struct __libcpp_datasizeof {
   // the use as an extension.
   _LIBCPP_DIAGNOSTIC_PUSH
   _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Winvalid-offsetof")
-  static const size_t value = offsetof(_FirstPaddingByte<>, __first_padding_byte_);
+  static const size_t value = __builtin_offsetof(_FirstPaddingByte<>, __first_padding_byte_);
   _LIBCPP_DIAGNOSTIC_POP
 };
 

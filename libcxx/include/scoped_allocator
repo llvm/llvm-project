@@ -707,6 +707,7 @@ _LIBCPP_POP_MACROS
 #  include <atomic>
 #  include <climits>
 #  include <concepts>
+#  include <cstddef>
 #  include <cstring>
 #  include <ctime>
 #  include <iterator>

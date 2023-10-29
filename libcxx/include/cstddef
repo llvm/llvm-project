@@ -56,9 +56,7 @@ Types:
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-using ::nullptr_t;
-using ::ptrdiff_t _LIBCPP_USING_IF_EXISTS;
-using ::size_t _LIBCPP_USING_IF_EXISTS;
+// nullptr_t, ptrdiff_t and size_t are always provided by <__config>
 
 #if !defined(_LIBCPP_CXX03_LANG)
 using ::max_align_t _LIBCPP_USING_IF_EXISTS;

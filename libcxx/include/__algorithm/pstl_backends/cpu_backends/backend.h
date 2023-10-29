@@ -10,7 +10,6 @@
 #define _LIBCPP___ALGORITHM_PSTL_BACKENDS_CPU_BACKEND_BACKEND_H
 
 #include <__config>
-#include <cstddef>
 
 #if defined(_LIBCPP_PSTL_CPU_BACKEND_SERIAL)
 #  include <__algorithm/pstl_backends/cpu_backends/serial.h>

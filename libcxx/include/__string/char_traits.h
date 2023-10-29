@@ -20,7 +20,6 @@
 #include <__iterator/iterator_traits.h>
 #include <__string/constexpr_c_functions.h>
 #include <__type_traits/is_constant_evaluated.h>
-#include <cstddef>
 #include <cstdint>
 #include <cstdio>
 #include <iosfwd>

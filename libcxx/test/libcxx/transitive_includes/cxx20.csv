@@ -230,9 +230,7 @@ exception cstddef
 exception cstdlib
 exception type_traits
 exception version
-execution cstddef
 execution version
-expected cstddef
 expected initializer_list
 expected new
 expected version
@@ -535,7 +533,6 @@ map version
 mdspan array
 mdspan cinttypes
 mdspan concepts
-mdspan cstddef
 mdspan limits
 mdspan span
 mdspan version
@@ -813,7 +810,6 @@ stdexcept cstdlib
 stdexcept exception
 stdexcept iosfwd
 stop_token atomic
-stop_token cstddef
 stop_token cstdint
 stop_token cstring
 stop_token ctime

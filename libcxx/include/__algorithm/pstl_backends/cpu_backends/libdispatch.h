@@ -27,7 +27,6 @@
 #include <__utility/exception_guard.h>
 #include <__utility/move.h>
 #include <__utility/pair.h>
-#include <cstddef>
 #include <new>
 #include <optional>
 

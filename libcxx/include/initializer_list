@@ -44,7 +44,6 @@ template<class E> const E* end(initializer_list<E> il) noexcept; // constexpr in
 
 #include <__assert> // all public C++ headers provide the assertion handler
 #include <__config>
-#include <cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -114,5 +113,9 @@ end(initializer_list<_Ep> __il) _NOEXCEPT
 #endif // !defined(_LIBCPP_CXX03_LANG)
 
 } // namespace std
+
+#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#  include <cstddef>
+#endif
 
 #endif // _LIBCPP_INITIALIZER_LIST

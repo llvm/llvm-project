@@ -32,7 +32,6 @@
 #include <__type_traits/type_identity.h>
 #include <__utility/declval.h>
 #include <__utility/forward.h>
-#include <cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

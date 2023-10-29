@@ -13,7 +13,6 @@
 #include <__config>
 #include <__type_traits/common_type.h>
 #include <__type_traits/make_signed.h>
-#include <cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

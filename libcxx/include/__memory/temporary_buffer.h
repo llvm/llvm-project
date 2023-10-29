@@ -13,7 +13,6 @@
 #include <__config>
 #include <__type_traits/alignment_of.h>
 #include <__utility/pair.h>
-#include <cstddef>
 #include <new>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

@@ -15,7 +15,6 @@
 #include <__random/log2.h>
 #include <__type_traits/conditional.h>
 #include <__type_traits/make_unsigned.h>
-#include <cstddef>
 #include <cstdint>
 #include <iosfwd>
 #include <limits>

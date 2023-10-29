@@ -21,7 +21,6 @@
 #include <__type_traits/is_void.h>
 #include <__type_traits/make_unsigned.h>
 #include <__type_traits/remove_pointer.h>
-#include <cstddef>
 #include <limits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

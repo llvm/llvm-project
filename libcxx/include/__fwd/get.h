@@ -16,7 +16,6 @@
 #include <__fwd/subrange.h>
 #include <__fwd/tuple.h>
 #include <__tuple/tuple_element.h>
-#include <cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

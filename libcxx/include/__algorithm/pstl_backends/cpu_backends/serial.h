@@ -13,7 +13,6 @@
 #include <__config>
 #include <__utility/empty.h>
 #include <__utility/move.h>
-#include <cstddef>
 #include <optional>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

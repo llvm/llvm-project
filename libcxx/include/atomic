@@ -551,6 +551,7 @@ template <class T>
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
 #  include <cmath>
 #  include <compare>
+#  include <cstddef>
 #  include <cstring>
 #  include <type_traits>
 #endif

@@ -21,6 +21,7 @@
 #include <__config>
 #include <__type_traits/common_type.h>
 #include <__type_traits/is_convertible.h>
+#include <__type_traits/is_integral.h>
 #include <__type_traits/is_nothrow_constructible.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/make_unsigned.h>
@@ -29,7 +30,6 @@
 #include <array>
 #include <cinttypes>
 #include <concepts>
-#include <cstddef>
 #include <limits>
 #include <span>
 

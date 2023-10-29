@@ -22,7 +22,6 @@
 #include <string>
 
 // Some platforms require more includes than others. Keep the includes on all plaforms for now.
-#include <cstddef>
 #include <cstring>
 
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS

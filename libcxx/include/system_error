@@ -163,6 +163,7 @@ template <> struct hash<std::error_condition>;
 #endif
 
 #if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#  include <cstddef>
 #  include <cstdint>
 #  include <cstring>
 #  include <limits>

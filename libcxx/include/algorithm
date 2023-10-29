@@ -1973,6 +1973,7 @@ template <class BidirectionalIterator, class Compare>
 #  include <atomic>
 #  include <bit>
 #  include <concepts>
+#  include <cstddef>
 #  include <cstdlib>
 #  include <cstring>
 #  include <iterator>
