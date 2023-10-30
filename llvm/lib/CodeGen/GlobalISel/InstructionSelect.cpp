@@ -90,6 +90,7 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
 
   const TargetPassConfig &TPC = getAnalysis<TargetPassConfig>();
   InstructionSelector *ISel = MF.getSubtarget().getInstructionSelector();
+  ISel->setTargetPassConfig(&TPC);
 
   CodeGenOptLevel OldOptLevel = OptLevel;
   auto RestoreOptLevel = make_scope_exit([=]() { OptLevel = OldOptLevel; });
@@ -109,6 +110,7 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
 
   // An optimization remark emitter. Used to report failures.
   MachineOptimizationRemarkEmitter MORE(MF, /*MBFI=*/nullptr);
+  ISel->setRemarkEmitter(&MORE);
 
   // FIXME: There are many other MF/MFI fields we need to initialize.
 
