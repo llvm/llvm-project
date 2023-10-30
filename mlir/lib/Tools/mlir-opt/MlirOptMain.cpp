@@ -551,7 +551,7 @@ LogicalResult mlir::MlirOptMain(int argc, char **argv,
 LogicalResult mlir::MlirOptMain(int argc, char **argv, llvm::StringRef toolName,
                                 DialectRegistry &registry) {
 
-  // Register dialects and parse command line options.
+  // Register and parse command line options.
   std::string inputFilename, outputFilename;
   std::tie(inputFilename, outputFilename) =
       registerAndParseCLIOptions(argc, argv, toolName, registry);
