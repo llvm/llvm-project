@@ -575,23 +575,19 @@ public:
   /// sequence.
   static bool isNewLineEscaped(const char *BufferStart, const char *Str);
 
-  /// Represents a char and the number of bytes parsed to produce it.
-  struct SizedChar {
-    char Char;
-    unsigned Size;
-  };
-
   /// getCharAndSizeNoWarn - Like the getCharAndSize method, but does not ever
   /// emit a warning.
-  static inline SizedChar getCharAndSizeNoWarn(const char *Ptr,
-                                               const LangOptions &LangOpts) {
+  static inline char getCharAndSizeNoWarn(const char *Ptr, unsigned &Size,
+                                          const LangOptions &LangOpts) {
     // If this is not a trigraph and not a UCN or escaped newline, return
     // quickly.
     if (isObviouslySimpleCharacter(Ptr[0])) {
-      return {*Ptr, 1u};
+      Size = 1;
+      return *Ptr;
     }
 
-    return getCharAndSizeSlowNoWarn(Ptr, LangOpts);
+    Size = 0;
+    return getCharAndSizeSlowNoWarn(Ptr, Size, LangOpts);
   }
 
   /// Returns the leading whitespace for line that corresponds to the given
@@ -669,7 +665,8 @@ private:
     // quickly.
     if (isObviouslySimpleCharacter(Ptr[0])) return *Ptr++;
 
-    auto [C, Size] = getCharAndSizeSlow(Ptr, &Tok);
+    unsigned Size = 0;
+    char C = getCharAndSizeSlow(Ptr, Size, &Tok);
     Ptr += Size;
     return C;
   }
@@ -685,7 +682,9 @@ private:
 
     // Otherwise, re-lex the character with a current token, allowing
     // diagnostics to be emitted and flags to be set.
-    return Ptr + getCharAndSizeSlow(Ptr, &Tok).Size;
+    Size = 0;
+    getCharAndSizeSlow(Ptr, Size, &Tok);
+    return Ptr+Size;
   }
 
   /// getCharAndSize - Peek a single 'character' from the specified buffer,
@@ -700,14 +699,14 @@ private:
       return *Ptr;
     }
 
-    auto CharAndSize = getCharAndSizeSlow(Ptr);
-    Size = CharAndSize.Size;
-    return CharAndSize.Char;
+    Size = 0;
+    return getCharAndSizeSlow(Ptr, Size);
   }
 
   /// getCharAndSizeSlow - Handle the slow/uncommon case of the getCharAndSize
   /// method.
-  SizedChar getCharAndSizeSlow(const char *Ptr, Token *Tok = nullptr);
+  char getCharAndSizeSlow(const char *Ptr, unsigned &Size,
+                          Token *Tok = nullptr);
 
   /// getEscapedNewLineSize - Return the size of the specified escaped newline,
   /// or 0 if it is not an escaped newline. P[-1] is known to be a "\" on entry
@@ -721,8 +720,8 @@ private:
 
   /// getCharAndSizeSlowNoWarn - Same as getCharAndSizeSlow, but never emits a
   /// diagnostic.
-  static SizedChar getCharAndSizeSlowNoWarn(const char *Ptr,
-                                            const LangOptions &LangOpts);
+  static char getCharAndSizeSlowNoWarn(const char *Ptr, unsigned &Size,
+                                       const LangOptions &LangOpts);
 
   //===--------------------------------------------------------------------===//
   // Other lexer functions.

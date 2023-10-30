@@ -287,9 +287,9 @@ static size_t getSpellingSlow(const Token &Tok, const char *BufPtr,
   if (tok::isStringLiteral(Tok.getKind())) {
     // Munch the encoding-prefix and opening double-quote.
     while (BufPtr < BufEnd) {
-      auto CharAndSize = Lexer::getCharAndSizeNoWarn(BufPtr, LangOpts);
-      Spelling[Length++] = CharAndSize.Char;
-      BufPtr += CharAndSize.Size;
+      unsigned Size;
+      Spelling[Length++] = Lexer::getCharAndSizeNoWarn(BufPtr, Size, LangOpts);
+      BufPtr += Size;
 
       if (Spelling[Length - 1] == '"')
         break;
@@ -316,9 +316,9 @@ static size_t getSpellingSlow(const Token &Tok, const char *BufPtr,
   }
 
   while (BufPtr < BufEnd) {
-    auto CharAndSize = Lexer::getCharAndSizeNoWarn(BufPtr, LangOpts);
-    Spelling[Length++] = CharAndSize.Char;
-    BufPtr += CharAndSize.Size;
+    unsigned Size;
+    Spelling[Length++] = Lexer::getCharAndSizeNoWarn(BufPtr, Size, LangOpts);
+    BufPtr += Size;
   }
 
   assert(Length < Tok.getLength() &&
@@ -772,9 +772,10 @@ unsigned Lexer::getTokenPrefixLength(SourceLocation TokStart, unsigned CharNo,
   // If we have a character that may be a trigraph or escaped newline, use a
   // lexer to parse it correctly.
   for (; CharNo; --CharNo) {
-    auto CharAndSize = Lexer::getCharAndSizeNoWarn(TokPtr, LangOpts);
-    TokPtr += CharAndSize.Size;
-    PhysOffset += CharAndSize.Size;
+    unsigned Size;
+    Lexer::getCharAndSizeNoWarn(TokPtr, Size, LangOpts);
+    TokPtr += Size;
+    PhysOffset += Size;
   }
 
   // Final detail: if we end up on an escaped newline, we want to return the
@@ -1356,16 +1357,15 @@ SourceLocation Lexer::findLocationAfterToken(
 ///
 /// NOTE: When this method is updated, getCharAndSizeSlowNoWarn (below) should
 /// be updated to match.
-Lexer::SizedChar Lexer::getCharAndSizeSlow(const char *Ptr, Token *Tok) {
-  unsigned Size = 0;
+char Lexer::getCharAndSizeSlow(const char *Ptr, unsigned &Size,
+                               Token *Tok) {
   // If we have a slash, look for an escaped newline.
   if (Ptr[0] == '\\') {
     ++Size;
     ++Ptr;
 Slash:
     // Common case, backslash-char where the char is not whitespace.
-    if (!isWhitespace(Ptr[0]))
-      return {'\\', Size};
+    if (!isWhitespace(Ptr[0])) return '\\';
 
     // See if we have optional whitespace characters between the slash and
     // newline.
@@ -1382,13 +1382,11 @@ Slash:
       Ptr  += EscapedNewLineSize;
 
       // Use slow version to accumulate a correct size field.
-      auto CharAndSize = getCharAndSizeSlow(Ptr, Tok);
-      CharAndSize.Size += Size;
-      return CharAndSize;
+      return getCharAndSizeSlow(Ptr, Size, Tok);
     }
 
     // Otherwise, this is not an escaped newline, just return the slash.
-    return {'\\', Size};
+    return '\\';
   }
 
   // If this is a trigraph, process it.
@@ -1403,12 +1401,13 @@ Slash:
       Ptr += 3;
       Size += 3;
       if (C == '\\') goto Slash;
-      return {C, Size};
+      return C;
     }
   }
 
   // If this is neither, return a single character.
-  return {*Ptr, Size + 1u};
+  ++Size;
+  return *Ptr;
 }
 
 /// getCharAndSizeSlowNoWarn - Handle the slow/uncommon case of the
@@ -1417,18 +1416,15 @@ Slash:
 ///
 /// NOTE: When this method is updated, getCharAndSizeSlow (above) should
 /// be updated to match.
-Lexer::SizedChar Lexer::getCharAndSizeSlowNoWarn(const char *Ptr,
-                                                 const LangOptions &LangOpts) {
-
-  unsigned Size = 0;
+char Lexer::getCharAndSizeSlowNoWarn(const char *Ptr, unsigned &Size,
+                                     const LangOptions &LangOpts) {
   // If we have a slash, look for an escaped newline.
   if (Ptr[0] == '\\') {
     ++Size;
     ++Ptr;
 Slash:
     // Common case, backslash-char where the char is not whitespace.
-    if (!isWhitespace(Ptr[0]))
-      return {'\\', Size};
+    if (!isWhitespace(Ptr[0])) return '\\';
 
     // See if we have optional whitespace characters followed by a newline.
     if (unsigned EscapedNewLineSize = getEscapedNewLineSize(Ptr)) {
@@ -1437,13 +1433,11 @@ Slash:
       Ptr  += EscapedNewLineSize;
 
       // Use slow version to accumulate a correct size field.
-      auto CharAndSize = getCharAndSizeSlowNoWarn(Ptr, LangOpts);
-      CharAndSize.Size += Size;
-      return CharAndSize;
+      return getCharAndSizeSlowNoWarn(Ptr, Size, LangOpts);
     }
 
     // Otherwise, this is not an escaped newline, just return the slash.
-    return {'\\', Size};
+    return '\\';
   }
 
   // If this is a trigraph, process it.
@@ -1454,12 +1448,13 @@ Slash:
       Ptr += 3;
       Size += 3;
       if (C == '\\') goto Slash;
-      return {C, Size};
+      return C;
     }
   }
 
   // If this is neither, return a single character.
-  return {*Ptr, Size + 1u};
+  ++Size;
+  return *Ptr;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1969,14 +1964,11 @@ bool Lexer::LexIdentifierContinue(Token &Result, const char *CurPtr) {
 /// isHexaLiteral - Return true if Start points to a hex constant.
 /// in microsoft mode (where this is supposed to be several different tokens).
 bool Lexer::isHexaLiteral(const char *Start, const LangOptions &LangOpts) {
-  auto CharAndSize1 = Lexer::getCharAndSizeNoWarn(Start, LangOpts);
-  char C1 = CharAndSize1.Char;
+  unsigned Size;
+  char C1 = Lexer::getCharAndSizeNoWarn(Start, Size, LangOpts);
   if (C1 != '0')
     return false;
-
-  auto CharAndSize2 =
-      Lexer::getCharAndSizeNoWarn(Start + CharAndSize1.Size, LangOpts);
-  char C2 = CharAndSize2.Char;
+  char C2 = Lexer::getCharAndSizeNoWarn(Start + Size, Size, LangOpts);
   return (C2 == 'x' || C2 == 'X');
 }
 
@@ -2020,7 +2012,8 @@ bool Lexer::LexNumericConstant(Token &Result, const char *CurPtr) {
 
   // If we have a digit separator, continue.
   if (C == '\'' && (LangOpts.CPlusPlus14 || LangOpts.C23)) {
-    auto [Next, NextSize] = getCharAndSizeNoWarn(CurPtr + Size, LangOpts);
+    unsigned NextSize;
+    char Next = getCharAndSizeNoWarn(CurPtr + Size, NextSize, LangOpts);
     if (isAsciiIdentifierContinue(Next)) {
       if (!isLexingRawMode())
         Diag(CurPtr, LangOpts.CPlusPlus
@@ -2092,8 +2085,8 @@ const char *Lexer::LexUDSuffix(Token &Result, const char *CurPtr,
       unsigned Consumed = Size;
       unsigned Chars = 1;
       while (true) {
-        auto [Next, NextSize] =
-            getCharAndSizeNoWarn(CurPtr + Consumed, LangOpts);
+        unsigned NextSize;
+        char Next = getCharAndSizeNoWarn(CurPtr + Consumed, NextSize, LangOpts);
         if (!isAsciiIdentifierContinue(Next)) {
           // End of suffix. Check whether this is on the allowed list.
           const StringRef CompleteSuffix(Buffer, Chars);
