@@ -193,7 +193,7 @@ define void @PR36225(i32 %a, i32 %b, i1 %c1, i3 %v1, i3 %v2) {
 ; CHECK-NEXT:    ]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    [[H:%.*]] = phi i8 [ [[SPEC_SELECT]], [[FOR_BODY3_US]] ], [ [[SPEC_SELECT]], [[FOR_BODY3_US]] ], [ 0, [[FOR_BODY3]] ], [ 0, [[FOR_BODY3]] ]
-; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[H]] to i32
+; CHECK-NEXT:    [[CONV:%.*]] = zext nneg i8 [[H]] to i32
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[CONV]], [[A:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[EXIT]], label [[EXIT2:%.*]]
 ; CHECK:       exit2:
@@ -224,7 +224,7 @@ define void @PR36225(i32 %a, i32 %b, i1 %c1, i3 %v1, i3 %v2) {
 ; DBGINFO:       for.end:
 ; DBGINFO-NEXT:    [[H:%.*]] = phi i8 [ [[SPEC_SELECT]], [[FOR_BODY3_US]] ], [ [[SPEC_SELECT]], [[FOR_BODY3_US]] ], [ 0, [[FOR_BODY3]] ], [ 0, [[FOR_BODY3]] ], !dbg [[DBG100:![0-9]+]]
 ; DBGINFO-NEXT:    call void @llvm.dbg.value(metadata i8 [[H]], metadata [[META91:![0-9]+]], metadata !DIExpression()), !dbg [[DBG100]]
-; DBGINFO-NEXT:    [[CONV:%.*]] = zext i8 [[H]] to i32, !dbg [[DBG101:![0-9]+]]
+; DBGINFO-NEXT:    [[CONV:%.*]] = zext nneg i8 [[H]] to i32, !dbg [[DBG101:![0-9]+]]
 ; DBGINFO-NEXT:    call void @llvm.dbg.value(metadata i32 [[CONV]], metadata [[META92:![0-9]+]], metadata !DIExpression()), !dbg [[DBG101]]
 ; DBGINFO-NEXT:    [[CMP:%.*]] = icmp slt i32 [[CONV]], [[A:%.*]], !dbg [[DBG102:![0-9]+]]
 ; DBGINFO-NEXT:    call void @llvm.dbg.value(metadata i1 [[CMP]], metadata [[META93:![0-9]+]], metadata !DIExpression()), !dbg [[DBG102]]
