@@ -72,7 +72,7 @@ struct InlineDescriptor {
   /// Flag indicating if the field is mutable (if in a record).
   unsigned IsFieldMutable : 1;
 
-  Descriptor *Desc;
+  const Descriptor *Desc;
 };
 
 /// Describes a memory block created by an allocation site.
@@ -102,7 +102,7 @@ public:
   /// Pointer to the record, if block contains records.
   Record *const ElemRecord = nullptr;
   /// Descriptor of the array element.
-  Descriptor *const ElemDesc = nullptr;
+  const Descriptor *const ElemDesc = nullptr;
   /// Flag indicating if the block is mutable.
   const bool IsConst = false;
   /// Flag indicating if a field is mutable.
@@ -129,7 +129,7 @@ public:
   Descriptor(const DeclTy &D, PrimType Type, bool IsTemporary, UnknownSize);
 
   /// Allocates a descriptor for an array of composites.
-  Descriptor(const DeclTy &D, Descriptor *Elem, MetadataSize MD,
+  Descriptor(const DeclTy &D, const Descriptor *Elem, MetadataSize MD,
              unsigned NumElems, bool IsConst, bool IsTemporary, bool IsMutable);
 
   /// Allocates a descriptor for an array of composites of unknown size.
