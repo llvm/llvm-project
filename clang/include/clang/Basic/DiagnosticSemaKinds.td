@@ -3167,9 +3167,6 @@ def err_invalid_branch_protection_spec : Error<
   "invalid or misplaced branch protection specification '%0'">;
 def warn_unsupported_branch_protection_spec : Warning<
   "unsupported branch protection specification '%0'">, InGroup<BranchProtection>;
-def warn_attribute_underlying_type_mismatch : Warning<
-  "underlying type %0 of enumeration %1 doesn't match bit-field type %2">,
-  InGroup<BitFieldType>;
 
 def warn_unsupported_target_attribute
     : Warning<"%select{unsupported|duplicate|unknown}0%select{| CPU|"
