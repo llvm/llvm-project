@@ -117,8 +117,8 @@ class MemCmpExpansion {
     Value *Lhs = nullptr;
     Value *Rhs = nullptr;
   };
-  LoadPair getLoadPair(Type *LoadSizeType, Type *BSwapSizeType,
-                       Type *CmpSizeType, unsigned OffsetBytes);
+  LoadPair getLoadPair(Type *LoadSizeType, bool NeedsBSwap, Type *CmpSizeType,
+                       unsigned OffsetBytes);
 
   static LoadEntryVector
   computeGreedyLoadSequence(uint64_t Size, llvm::ArrayRef<unsigned> LoadSizes,
@@ -127,11 +127,6 @@ class MemCmpExpansion {
   computeOverlappingLoadSequence(uint64_t Size, unsigned MaxLoadSize,
                                  unsigned MaxNumLoads,
                                  unsigned &NumLoadsNonOneByte);
-
-  static void optimiseLoadSequence(
-      LoadEntryVector &LoadSequence,
-      const TargetTransformInfo::MemCmpExpansionOptions &Options,
-      bool IsUsedForZeroCmp);
 
 public:
   MemCmpExpansion(CallInst *CI, uint64_t Size,
@@ -215,37 +210,6 @@ MemCmpExpansion::computeOverlappingLoadSequence(uint64_t Size,
   return LoadSequence;
 }
 
-void MemCmpExpansion::optimiseLoadSequence(
-    LoadEntryVector &LoadSequence,
-    const TargetTransformInfo::MemCmpExpansionOptions &Options,
-    bool IsUsedForZeroCmp) {
-  // This part of code attempts to optimize the LoadSequence by merging allowed
-  // subsequences into single loads of allowed sizes from
-  // `MemCmpExpansionOptions::AllowedTailExpansions`. If it is for zero
-  // comparison or if no allowed tail expansions are specified, we exit early.
-  if (IsUsedForZeroCmp || Options.AllowedTailExpansions.empty())
-    return;
-
-  while (LoadSequence.size() >= 2) {
-    auto Last = LoadSequence[LoadSequence.size() - 1];
-    auto PreLast = LoadSequence[LoadSequence.size() - 2];
-
-    // Exit the loop if the two sequences are not contiguous
-    if (PreLast.Offset + PreLast.LoadSize != Last.Offset)
-      break;
-
-    auto LoadSize = Last.LoadSize + PreLast.LoadSize;
-    if (find(Options.AllowedTailExpansions, LoadSize) ==
-        Options.AllowedTailExpansions.end())
-      break;
-
-    // Remove the last two sequences and replace with the combined sequence
-    LoadSequence.pop_back();
-    LoadSequence.pop_back();
-    LoadSequence.emplace_back(PreLast.Offset, LoadSize);
-  }
-}
-
 // Initialize the basic block structure required for expansion of memcmp call
 // with given maximum load size and memcmp size parameter.
 // This structure includes:
@@ -291,7 +255,6 @@ MemCmpExpansion::MemCmpExpansion(
     }
   }
   assert(LoadSequence.size() <= Options.MaxNumLoads && "broken invariant");
-  optimiseLoadSequence(LoadSequence, Options, IsUsedForZeroCmp);
 }
 
 unsigned MemCmpExpansion::getNumBlocks() {
@@ -315,7 +278,7 @@ void MemCmpExpansion::createResultBlock() {
 }
 
 MemCmpExpansion::LoadPair MemCmpExpansion::getLoadPair(Type *LoadSizeType,
-                                                       Type *BSwapSizeType,
+                                                       bool NeedsBSwap,
                                                        Type *CmpSizeType,
                                                        unsigned OffsetBytes) {
   // Get the memory source at offset `OffsetBytes`.
@@ -344,22 +307,16 @@ MemCmpExpansion::LoadPair MemCmpExpansion::getLoadPair(Type *LoadSizeType,
   if (!Rhs)
     Rhs = Builder.CreateAlignedLoad(LoadSizeType, RhsSource, RhsAlign);
 
-  // Zero extend if Byte Swap intrinsic has different type
-  if (BSwapSizeType && LoadSizeType != BSwapSizeType) {
-    Lhs = Builder.CreateZExt(Lhs, BSwapSizeType);
-    Rhs = Builder.CreateZExt(Rhs, BSwapSizeType);
-  }
-
   // Swap bytes if required.
-  if (BSwapSizeType) {
-    Function *Bswap = Intrinsic::getDeclaration(
-        CI->getModule(), Intrinsic::bswap, BSwapSizeType);
+  if (NeedsBSwap) {
+    Function *Bswap = Intrinsic::getDeclaration(CI->getModule(),
+                                                Intrinsic::bswap, LoadSizeType);
     Lhs = Builder.CreateCall(Bswap, Lhs);
     Rhs = Builder.CreateCall(Bswap, Rhs);
   }
 
   // Zero extend if required.
-  if (CmpSizeType != nullptr && CmpSizeType != Lhs->getType()) {
+  if (CmpSizeType != nullptr && CmpSizeType != LoadSizeType) {
     Lhs = Builder.CreateZExt(Lhs, CmpSizeType);
     Rhs = Builder.CreateZExt(Rhs, CmpSizeType);
   }
@@ -375,7 +332,7 @@ void MemCmpExpansion::emitLoadCompareByteBlock(unsigned BlockIndex,
   BasicBlock *BB = LoadCmpBlocks[BlockIndex];
   Builder.SetInsertPoint(BB);
   const LoadPair Loads =
-      getLoadPair(Type::getInt8Ty(CI->getContext()), nullptr,
+      getLoadPair(Type::getInt8Ty(CI->getContext()), /*NeedsBSwap=*/false,
                   Type::getInt32Ty(CI->getContext()), OffsetBytes);
   Value *Diff = Builder.CreateSub(Loads.Lhs, Loads.Rhs);
 
@@ -428,12 +385,11 @@ Value *MemCmpExpansion::getCompareLoadPairs(unsigned BlockIndex,
   IntegerType *const MaxLoadType =
       NumLoads == 1 ? nullptr
                     : IntegerType::get(CI->getContext(), MaxLoadSize * 8);
-
   for (unsigned i = 0; i < NumLoads; ++i, ++LoadIndex) {
     const LoadEntry &CurLoadEntry = LoadSequence[LoadIndex];
     const LoadPair Loads = getLoadPair(
-        IntegerType::get(CI->getContext(), CurLoadEntry.LoadSize * 8), nullptr,
-        MaxLoadType, CurLoadEntry.Offset);
+        IntegerType::get(CI->getContext(), CurLoadEntry.LoadSize * 8),
+        /*NeedsBSwap=*/false, MaxLoadType, CurLoadEntry.Offset);
 
     if (NumLoads != 1) {
       // If we have multiple loads per block, we need to generate a composite
@@ -519,20 +475,14 @@ void MemCmpExpansion::emitLoadCompareBlock(unsigned BlockIndex) {
 
   Type *LoadSizeType =
       IntegerType::get(CI->getContext(), CurLoadEntry.LoadSize * 8);
-  Type *BSwapSizeType =
-      DL.isLittleEndian()
-          ? IntegerType::get(CI->getContext(),
-                             PowerOf2Ceil(CurLoadEntry.LoadSize * 8))
-          : nullptr;
-  Type *MaxLoadType = IntegerType::get(
-      CI->getContext(),
-      std::max(MaxLoadSize, (unsigned)PowerOf2Ceil(CurLoadEntry.LoadSize)) * 8);
+  Type *MaxLoadType = IntegerType::get(CI->getContext(), MaxLoadSize * 8);
   assert(CurLoadEntry.LoadSize <= MaxLoadSize && "Unexpected load type");
 
   Builder.SetInsertPoint(LoadCmpBlocks[BlockIndex]);
 
-  const LoadPair Loads = getLoadPair(LoadSizeType, BSwapSizeType, MaxLoadType,
-                                     CurLoadEntry.Offset);
+  const LoadPair Loads =
+      getLoadPair(LoadSizeType, /*NeedsBSwap=*/DL.isLittleEndian(), MaxLoadType,
+                  CurLoadEntry.Offset);
 
   // Add the loaded values to the phi nodes for calculating memcmp result only
   // if result is not used in a zero equality.
@@ -637,24 +587,19 @@ Value *MemCmpExpansion::getMemCmpEqZeroOneBlock() {
 /// A memcmp expansion that only has one block of load and compare can bypass
 /// the compare, branch, and phi IR that is required in the general case.
 Value *MemCmpExpansion::getMemCmpOneBlock() {
-  bool NeedsBSwap = DL.isLittleEndian() && Size != 1;
   Type *LoadSizeType = IntegerType::get(CI->getContext(), Size * 8);
-  Type *BSwapSizeType =
-      NeedsBSwap ? IntegerType::get(CI->getContext(), PowerOf2Ceil(Size * 8))
-                 : nullptr;
-  Type *MaxLoadType =
-      IntegerType::get(CI->getContext(),
-                       std::max(MaxLoadSize, (unsigned)PowerOf2Ceil(Size)) * 8);
+  bool NeedsBSwap = DL.isLittleEndian() && Size != 1;
 
   // The i8 and i16 cases don't need compares. We zext the loaded values and
   // subtract them to get the suitable negative, zero, or positive i32 result.
   if (Size < 4) {
-    const LoadPair Loads = getLoadPair(LoadSizeType, BSwapSizeType,
-                                       Builder.getInt32Ty(), /*Offset*/ 0);
+    const LoadPair Loads =
+        getLoadPair(LoadSizeType, NeedsBSwap, Builder.getInt32Ty(),
+                    /*Offset*/ 0);
     return Builder.CreateSub(Loads.Lhs, Loads.Rhs);
   }
 
-  const LoadPair Loads = getLoadPair(LoadSizeType, BSwapSizeType, MaxLoadType,
+  const LoadPair Loads = getLoadPair(LoadSizeType, NeedsBSwap, LoadSizeType,
                                      /*Offset*/ 0);
   // The result of memcmp is negative, zero, or positive, so produce that by
   // subtracting 2 extended compare bits: sub (ugt, ult).
