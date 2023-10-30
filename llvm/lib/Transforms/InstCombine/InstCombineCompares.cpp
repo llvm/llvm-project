@@ -846,17 +846,6 @@ Instruction *InstCombinerImpl::foldGEPICmp(GEPOperator *GEPLHS, Value *RHS,
       return transformToIndexedCompare(GEPLHS, RHS, Cond, DL, *this);
     }
 
-    // If one of the GEPs has all zero indices, recurse.
-    // FIXME: Handle vector of pointers.
-    if (!GEPLHS->getType()->isVectorTy() && GEPLHS->hasAllZeroIndices())
-      return foldGEPICmp(GEPRHS, GEPLHS->getOperand(0),
-                         ICmpInst::getSwappedPredicate(Cond), I);
-
-    // If the other GEP has all zero indices, recurse.
-    // FIXME: Handle vector of pointers.
-    if (!GEPRHS->getType()->isVectorTy() && GEPRHS->hasAllZeroIndices())
-      return foldGEPICmp(GEPLHS, GEPRHS->getOperand(0), Cond, I);
-
     bool GEPsInBounds = GEPLHS->isInBounds() && GEPRHS->isInBounds();
     if (GEPLHS->getNumOperands() == GEPRHS->getNumOperands() &&
         GEPLHS->getSourceElementType() == GEPRHS->getSourceElementType()) {
