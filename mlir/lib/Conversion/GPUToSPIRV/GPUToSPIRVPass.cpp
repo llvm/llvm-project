@@ -89,16 +89,11 @@ void GPUToSPIRVPass::runOnOperation() {
 
     // Map MemRef memory space to SPIR-V storage class first if requested.
     if (mapMemorySpace) {
-      spirv::TargetEnv targetEnv(targetAttr);
-      FailureOr<spirv::MemoryModel> memoryModel =
-          spirv::getMemoryModel(targetEnv);
-      if (failed(memoryModel))
-        return signalPassFailure();
-
       std::unique_ptr<ConversionTarget> target =
           spirv::getMemorySpaceToStorageClassTarget(*context);
       spirv::MemorySpaceToStorageClassMap memorySpaceMap =
-          (memoryModel == spirv::MemoryModel::OpenCL)
+          targetEnvSupportsKernelCapability(
+              dyn_cast<gpu::GPUModuleOp>(gpuModule))
               ? spirv::mapMemorySpaceToOpenCLStorageClass
               : spirv::mapMemorySpaceToVulkanStorageClass;
       spirv::MemorySpaceToStorageClassConverter converter(memorySpaceMap);
