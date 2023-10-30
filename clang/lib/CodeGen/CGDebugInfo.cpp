@@ -5920,26 +5920,27 @@ llvm::DINode::DIFlags CGDebugInfo::getCallSiteRelatedAttrs() const {
 }
 
 llvm::DIExpression *
-CGDebugInfo::createConstantValueExpression(clang::ValueDecl const *VD,
+CGDebugInfo::createConstantValueExpression(const clang::ValueDecl *VD,
                                            const APValue &Val) {
-  llvm::DIExpression *ValExpr = nullptr;
-  if (CGM.getContext().getTypeSize(VD->getType()) <= 64) {
-    // FIXME: Add a representation for integer constants wider than 64 bits.
-    if (Val.isInt()) {
-      const llvm::APSInt &ValInt = Val.getInt();
-      std::optional<uint64_t> ValIntOpt;
-      if (ValInt.isUnsigned())
-        ValIntOpt = ValInt.tryZExtValue();
-      else if (auto tmp = ValInt.trySExtValue(); tmp.has_value())
-        // Transform a signed optional to unsigned optional. When cpp 23 comes,
-        // use std::optional::transform
-        ValIntOpt = (uint64_t)tmp.value();
-      if (ValIntOpt)
-        ValExpr = DBuilder.createConstantValueExpression(ValIntOpt.value());
-    } else if (Val.isFloat())
-      ValExpr = DBuilder.createConstantValueExpression(
-          Val.getFloat().bitcastToAPInt().getZExtValue());
-  }
+  // FIXME: Add a representation for integer constants wider than 64 bits.
+  if (CGM.getContext().getTypeSize(VD->getType()) > 64)
+    return nullptr;
 
-  return ValExpr;
+  if (Val.isInt()) {
+    const llvm::APSInt &ValInt = Val.getInt();
+    std::optional<uint64_t> ValIntOpt;
+    if (ValInt.isUnsigned())
+      ValIntOpt = ValInt.tryZExtValue();
+    else if (auto tmp = ValInt.trySExtValue(); tmp.has_value())
+      // Transform a signed optional to unsigned optional. When cpp 23 comes,
+      // use std::optional::transform
+      ValIntOpt = (uint64_t)tmp.value();
+
+    if (ValIntOpt)
+      return DBuilder.createConstantValueExpression(ValIntOpt.value());
+  } else if (Val.isFloat())
+    return DBuilder.createConstantValueExpression(
+        Val.getFloat().bitcastToAPInt().getZExtValue());
+
+  return nullptr;
 }
