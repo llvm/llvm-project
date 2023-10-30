@@ -1807,11 +1807,12 @@ protected:
     /// Actually an ArrayType::ArraySizeModifier.
     unsigned SizeModifier : 3;
   };
+  enum { NumArrayTypeBits = NumTypeBits + 6 };
 
   class ConstantArrayTypeBitfields {
     friend class ConstantArrayType;
 
-    unsigned : NumTypeBits + 3 + 3;
+    unsigned : NumArrayTypeBits;
 
     /// Whether we have a stored size expression.
     unsigned HasStoredSizeExpr : 1;
@@ -1924,7 +1925,7 @@ protected:
     unsigned Keyword : 8;
   };
 
-  enum { NumTypeWithKeywordBits = 8 };
+  enum { NumTypeWithKeywordBits = NumTypeBits + 8 };
 
   class ElaboratedTypeBitfields {
     friend class ElaboratedType;
@@ -2057,7 +2058,6 @@ protected:
   class DependentTemplateSpecializationTypeBitfields {
     friend class DependentTemplateSpecializationType;
 
-    unsigned : NumTypeBits;
     unsigned : NumTypeWithKeywordBits;
 
     /// The number of template arguments named in this class template
