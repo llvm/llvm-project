@@ -1994,6 +1994,14 @@ def HasAddMinMaxInsts :
   Predicate<"Subtarget->hasAddMinMaxInsts()">,
   AssemblerPredicate<(any_of FeatureGFX12_10Insts)>;
 
+def HasPkAddMinMaxInsts :
+  Predicate<"Subtarget->hasPkAddMinMaxInsts()">,
+  AssemblerPredicate<(any_of FeatureGFX12_10Insts)>;
+
+def HasPkMinMax3Insts :
+  Predicate<"Subtarget->hasPkMinMax3Insts()">,
+  AssemblerPredicate<(any_of FeatureGFX12_10Insts)>;
+
 def HasImageInsts : Predicate<"Subtarget->hasImageInsts()">,
   AssemblerPredicate<(all_of FeatureImageInsts)>;
 

@@ -296,6 +296,25 @@ defm V_FMA_MIXHI_F16 : VOP3_VOP3PInst<"v_fma_mixhi_f16", VOP3P_Mix_Profile<VOP_F
 defm : MadFmaMixPats<fma, V_FMA_MIX_F32, V_FMA_MIXLO_F16, V_FMA_MIXHI_F16>;
 }
 
+def PK_ADD_MINMAX_Profile : VOP3P_Profile<VOP_V2I16_V2I16_V2I16_V2I16, VOP3_PACKED> {
+  let HasModifiers = 0;
+}
+
+let isCommutable = 1, isReMaterializable = 1 in {
+let SubtargetPredicate = HasPkAddMinMaxInsts in {
+defm V_PK_ADD_MAX_I16 : VOP3PInst<"v_pk_add_max_i16", PK_ADD_MINMAX_Profile>;
+defm V_PK_ADD_MAX_U16 : VOP3PInst<"v_pk_add_max_u16", PK_ADD_MINMAX_Profile>;
+defm V_PK_ADD_MIN_I16 : VOP3PInst<"v_pk_add_min_i16", PK_ADD_MINMAX_Profile>;
+defm V_PK_ADD_MIN_U16 : VOP3PInst<"v_pk_add_min_u16", PK_ADD_MINMAX_Profile>;
+}
+let SubtargetPredicate = HasPkMinMax3Insts in {
+defm V_PK_MAX3_I16 : VOP3PInst<"v_pk_max3_i16", PK_ADD_MINMAX_Profile>;
+defm V_PK_MAX3_U16 : VOP3PInst<"v_pk_max3_u16", PK_ADD_MINMAX_Profile>;
+defm V_PK_MIN3_I16 : VOP3PInst<"v_pk_min3_i16", PK_ADD_MINMAX_Profile>;
+defm V_PK_MIN3_U16 : VOP3PInst<"v_pk_min3_u16", PK_ADD_MINMAX_Profile>;
+}
+} // End isCommutable = 1, isReMaterializable = 1
+
 // Defines patterns that extract signed 4bit from each Idx[0].
 foreach Idx = [[0,28],[4,24],[8,20],[12,16],[16,12],[20,8],[24,4]] in
   def ExtractSigned4bit_#Idx[0] : PatFrag<(ops node:$src),
@@ -1540,6 +1559,8 @@ multiclass VOP3P_Realtriple<GFXGen Gen, bits<7> op, string backing_ps_name = NAM
 
 multiclass VOP3P_Real_gfx12<bits<7> op> : VOP3P_Real_Base<GFX12Gen, op>;
 
+multiclass VOP3P_Real_gfx1210<bits<7> op> : VOP3P_Real_Base<GFX12_10Gen, op>;
+
 multiclass VOP3P_Real_with_name_gfx12<bits<7> op,
                           string backing_ps_name = NAME,
                           string asmName = !cast<VOP3P_Pseudo>(NAME).Mnemonic> :
@@ -1559,6 +1580,15 @@ defm V_DOT4_F32_BF8_BF8 : VOP3P_Realtriple<GFX12Gen, 0x27>;
 defm V_PK_FMA_F32 : VOP3P_Real_gfx12<0x1f>;
 defm V_PK_MUL_F32 : VOP3P_Real_gfx12<0x28>;
 defm V_PK_ADD_F32 : VOP3P_Real_gfx12<0x29>;
+
+defm V_PK_ADD_MAX_I16 : VOP3P_Real_gfx1210<0x14>;
+defm V_PK_ADD_MAX_U16 : VOP3P_Real_gfx1210<0x15>;
+defm V_PK_ADD_MIN_I16 : VOP3P_Real_gfx1210<0x2d>;
+defm V_PK_ADD_MIN_U16 : VOP3P_Real_gfx1210<0x2e>;
+defm V_PK_MAX3_I16    : VOP3P_Real_gfx1210<0x2f>;
+defm V_PK_MAX3_U16    : VOP3P_Real_gfx1210<0x30>;
+defm V_PK_MIN3_I16    : VOP3P_Real_gfx1210<0x31>;
+defm V_PK_MIN3_U16    : VOP3P_Real_gfx1210<0x32>;
 
 //===----------------------------------------------------------------------===//
 // GFX11
