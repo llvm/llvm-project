@@ -9,7 +9,7 @@
 #include <unistd.h>
 
 __attribute__((no_sanitize("hwaddress")))
-int ForceCalInterceptor(void *p, const void *a, size_t size) {
+int ForceCallInterceptor(void *p, const void *a, size_t size) {
   return memcmp(p, a, size);
 }
 
@@ -20,7 +20,7 @@ int main(int argc, char **argv) {
   char *p = (char *)malloc(size);
   memcpy(p, a, size);
   free(p);
-  return ForceCalInterceptor(p, a, size);
+  return ForceCallInterceptor(p, a, size);
   // CHECK: HWAddressSanitizer: tag-mismatch on address
   // CHECK: READ of size 4
   // CHECK: #{{[[:digit:]]+}} 0x{{[[:xdigit:]]+}} in main {{.*}}memcmp.cpp:[[@LINE-3]]

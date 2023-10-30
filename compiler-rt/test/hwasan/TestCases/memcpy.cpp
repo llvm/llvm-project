@@ -13,7 +13,6 @@ int ForceCallInterceptor(void *p, const void *a, size_t size) {
   return memcpy(p, a, size) == nullptr;
 }
 
-
 int main(int argc, char **argv) {
   __hwasan_enable_allocator_tagging();
   char a[] = {static_cast<char>(argc), 2, 3, 4};
