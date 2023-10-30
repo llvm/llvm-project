@@ -264,15 +264,19 @@ write_basic_package_version_file("${AMD_COMGR_VERSION_PATH}"
   VERSION "${amd_comgr_VERSION}"
   COMPATIBILITY SameMajorVersion)
 
-install(TARGETS amd_comgr
-  EXPORT amd_comgr_export
-  COMPONENT amd-comgr
-  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-  ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
-install(TARGETS amd_comgr
-  COMPONENT asan
-  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
+if(ENABLE_ASAN_PACKAGING)
+  install(TARGETS amd_comgr
+    EXPORT amd_comgr_export
+    COMPONENT asan
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
+else()
+  install(TARGETS amd_comgr
+    EXPORT amd_comgr_export
+    COMPONENT amd-comgr
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
+endif()
 
 install(FILES
   "${CMAKE_CURRENT_BINARY_DIR}/include/amd_comgr.h"
@@ -299,16 +303,19 @@ if(FILE_REORG_BACKWARD_COMPATIBILITY)
   include(comgr-backward-compat.cmake)
 endif()
 
-install(FILES
-  "README.md"
-  "LICENSE.txt"
-  "NOTICES.txt"
-  COMPONENT amd-comgr
-  DESTINATION ${CMAKE_INSTALL_DOCDIR})
-install(FILES
-  "LICENSE.txt"
-  COMPONENT asan
-  DESTINATION ${CMAKE_INSTALL_DOCDIR}-asan)
+if(ENABLE_ASAN_PACKAGING)
+  install(FILES
+    "LICENSE.txt"
+    COMPONENT asan
+    DESTINATION ${CMAKE_INSTALL_DOCDIR}-asan)
+else()
+  install(FILES
+    "README.md"
+    "LICENSE.txt"
+    "NOTICES.txt"
+    COMPONENT amd-comgr
+    DESTINATION ${CMAKE_INSTALL_DOCDIR})
+endif()
 
 # Generate the install-tree package.
 set(AMD_COMGR_PREFIX_CODE "
