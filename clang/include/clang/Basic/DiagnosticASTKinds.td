@@ -69,7 +69,7 @@ def note_consteval_address_accessible : Note<
   "%select{pointer|reference}0 to a consteval declaration "
   "is not a constant expression">;
 def note_constexpr_uninitialized : Note<
-  "subobject %0 is not initialized">;
+  "subobject %select{of type |}0%1 is not initialized">;
 def note_constexpr_uninitialized_base : Note<
   "constructor of base class %0 is not called">;
 def note_constexpr_static_local : Note<
@@ -394,6 +394,8 @@ def note_constexpr_unsupported_layout : Note<
   "type %0 has unexpected layout">;
 def note_constexpr_unsupported_flexible_array : Note<
   "flexible array initialization is not yet supported">;
+def note_constexpr_non_const_vectorelements : Note<
+  "cannot determine number of elements for sizeless vectors in a constant expression">;
 def err_experimental_clang_interp_failed : Error<
   "the experimental clang interpreter failed to evaluate an expression">;
 

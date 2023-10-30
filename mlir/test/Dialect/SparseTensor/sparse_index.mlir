@@ -21,13 +21,13 @@
 // CHECK-SAME:      %[[VAL_0:.*]]: tensor<?x?xi64, #sparse_tensor.encoding
 // CHECK-DAG:       %[[VAL_1:.*]] = arith.constant 0 : index
 // CHECK-DAG:       %[[VAL_2:.*]] = arith.constant 1 : index
-// CHECK-DAG:       %[[VAL_3:.*]] = tensor.dim %[[VAL_0]], %[[VAL_1]] : tensor<?x?xi64, #sparse_tensor.encoding
-// CHECK-DAG:       %[[VAL_4:.*]] = tensor.dim %[[VAL_0]], %[[VAL_1]] : tensor<?x?xi64, #sparse_tensor.encoding
+// CHECK-DAG:       %[[VAL_3:.*]] = sparse_tensor.lvl %[[VAL_0]], %[[VAL_1]] : tensor<?x?xi64, #sparse_tensor.encoding
+// CHECK-DAG:       %[[VAL_4:.*]] = sparse_tensor.lvl %[[VAL_0]], %[[VAL_1]] : tensor<?x?xi64, #sparse_tensor.encoding
 // CHECK-DAG:       %[[VAL_5:.*]] = tensor.empty(%[[VAL_3]], %[[VAL_4]]) : tensor<?x?xi64, #sparse_tensor.encoding
 // CHECK-DAG:       %[[VAL_6:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<?x?xi64, #sparse_tensor.encoding
-// CHECK-DAG:       %[[VAL_7:.*]] = tensor.dim %[[VAL_0]], %[[VAL_1]] : tensor<?x?xi64, #sparse_tensor.encoding
-// CHECK-DAG:       %[[VAL_8:.*]] = tensor.dim %[[VAL_0]], %[[VAL_2]] : tensor<?x?xi64, #sparse_tensor.encoding
-// CHECK-DAG:       %[[VAL_24:.*]] = tensor.dim %[[VAL_5]], %[[VAL_2]] : tensor<?x?xi64, #sparse_tensor.encoding
+// CHECK-DAG:       %[[VAL_7:.*]] = sparse_tensor.lvl %[[VAL_0]], %[[VAL_1]] : tensor<?x?xi64, #sparse_tensor.encoding
+// CHECK-DAG:       %[[VAL_8:.*]] = sparse_tensor.lvl %[[VAL_0]], %[[VAL_2]] : tensor<?x?xi64, #sparse_tensor.encoding
+// CHECK-DAG:       %[[VAL_24:.*]] = sparse_tensor.lvl %[[VAL_5]], %[[VAL_2]] : tensor<?x?xi64, #sparse_tensor.encoding
 // CHECK-DAG:       %[[VAL_9:.*]] = sparse_tensor.values %[[VAL_5]] : tensor<?x?xi64, #sparse_tensor.encoding
 // CHECK:           scf.for %[[VAL_10:.*]] = %[[VAL_1]] to %[[VAL_7]] step %[[VAL_2]] {
 // CHECK:             scf.for %[[VAL_11:.*]] = %[[VAL_1]] to %[[VAL_8]] step %[[VAL_2]] {
@@ -50,8 +50,8 @@ func.func @dense_index(%arga: tensor<?x?xi64, #DenseMatrix>)
                       -> tensor<?x?xi64, #DenseMatrix> {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 0 : index
-  %0 = tensor.dim %arga, %c0 : tensor<?x?xi64, #DenseMatrix>
-  %1 = tensor.dim %arga, %c1 : tensor<?x?xi64, #DenseMatrix>
+  %0 = sparse_tensor.lvl %arga, %c0 : tensor<?x?xi64, #DenseMatrix>
+  %1 = sparse_tensor.lvl %arga, %c1 : tensor<?x?xi64, #DenseMatrix>
   %init = tensor.empty(%0, %1) : tensor<?x?xi64, #DenseMatrix>
   %r = linalg.generic #trait
       ins(%arga: tensor<?x?xi64, #DenseMatrix>)
@@ -73,8 +73,8 @@ func.func @dense_index(%arga: tensor<?x?xi64, #DenseMatrix>)
 // CHECK-SAME:      %[[VAL_0:.*]]: tensor<?x?xi64, #sparse_tensor.encoding
 // CHECK-DAG:       %[[VAL_1:.*]] = arith.constant 0 : index
 // CHECK-DAG:       %[[VAL_2:.*]] = arith.constant 1 : index
-// CHECK-DAG:       %[[VAL_3:.*]] = tensor.dim %[[VAL_0]], %[[VAL_1]] : tensor<?x?xi64, #sparse_tensor.encoding
-// CHECK-DAG:       %[[VAL_4:.*]] = tensor.dim %[[VAL_0]], %[[VAL_1]] : tensor<?x?xi64, #sparse_tensor.encoding
+// CHECK-DAG:       %[[VAL_3:.*]] = sparse_tensor.lvl %[[VAL_0]], %[[VAL_1]] : tensor<?x?xi64, #sparse_tensor.encoding
+// CHECK-DAG:       %[[VAL_4:.*]] = sparse_tensor.lvl %[[VAL_0]], %[[VAL_1]] : tensor<?x?xi64, #sparse_tensor.encoding
 // CHECK-DAG:       %[[VAL_5:.*]] = tensor.empty(%[[VAL_3]], %[[VAL_4]]) : tensor<?x?xi64, #sparse_tensor.encoding
 // CHECK-DAG:       %[[VAL_6:.*]] = sparse_tensor.positions %[[VAL_0]] {level = 0 : index} : tensor<?x?xi64, #sparse_tensor.encoding
 // CHECK-DAG:       %[[VAL_7:.*]] = sparse_tensor.coordinates %[[VAL_0]] {level = 0 : index} : tensor<?x?xi64, #sparse_tensor.encoding
@@ -107,8 +107,8 @@ func.func @sparse_index(%arga: tensor<?x?xi64, #SparseMatrix>)
                        -> tensor<?x?xi64, #SparseMatrix> {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 0 : index
-  %0 = tensor.dim %arga, %c0 : tensor<?x?xi64, #SparseMatrix>
-  %1 = tensor.dim %arga, %c1 : tensor<?x?xi64, #SparseMatrix>
+  %0 = sparse_tensor.lvl %arga, %c0 : tensor<?x?xi64, #SparseMatrix>
+  %1 = sparse_tensor.lvl %arga, %c1 : tensor<?x?xi64, #SparseMatrix>
   %init = tensor.empty(%0, %1) : tensor<?x?xi64, #SparseMatrix>
   %r = linalg.generic #trait
       ins(%arga: tensor<?x?xi64, #SparseMatrix>)
@@ -124,4 +124,3 @@ func.func @sparse_index(%arga: tensor<?x?xi64, #SparseMatrix>)
   } -> tensor<?x?xi64, #SparseMatrix>
   return %r : tensor<?x?xi64, #SparseMatrix>
 }
-

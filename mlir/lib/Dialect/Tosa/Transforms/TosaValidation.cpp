@@ -15,7 +15,6 @@
 #include "mlir/Dialect/Tosa/Transforms/PassesEnums.cpp.inc"
 
 #include <string>
-#include <unordered_map>
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
@@ -156,6 +155,10 @@ private:
   bool levelCheckRank(Operation *op, const Value &v,
                       const std::string &checkDesc) {
     if (ShapedType type = dyn_cast<ShapedType>(v.getType())) {
+      if (!type.hasRank()) {
+        op->emitOpError() << "failed level check: unranked tensor";
+        return false;
+      }
       if (type.getRank() > tosaLevel.MAX_RANK) {
         op->emitOpError() << "failed level check: " << checkDesc;
         return false;

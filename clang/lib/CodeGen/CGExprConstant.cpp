@@ -1775,9 +1775,10 @@ llvm::Constant *ConstantEmitter::tryEmitPrivate(const Expr *E,
                                                 QualType destType) {
   assert(!destType->isVoidType() && "can't emit a void constant");
 
-  if (llvm::Constant *C =
-          ConstExprEmitter(*this).Visit(const_cast<Expr *>(E), destType))
-    return C;
+  if (!destType->isReferenceType())
+    if (llvm::Constant *C =
+            ConstExprEmitter(*this).Visit(const_cast<Expr *>(E), destType))
+      return C;
 
   Expr::EvalResult Result;
 

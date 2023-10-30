@@ -7197,6 +7197,12 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     llvm_unreachable("instrprof failed to lower a timestamp");
   case Intrinsic::instrprof_value_profile:
     llvm_unreachable("instrprof failed to lower a value profiling call");
+  case Intrinsic::instrprof_mcdc_parameters:
+    llvm_unreachable("instrprof failed to lower mcdc parameters");
+  case Intrinsic::instrprof_mcdc_tvbitmap_update:
+    llvm_unreachable("instrprof failed to lower an mcdc tvbitmap update");
+  case Intrinsic::instrprof_mcdc_condbitmap_update:
+    llvm_unreachable("instrprof failed to lower an mcdc condbitmap update");
   case Intrinsic::localescape: {
     MachineFunction &MF = DAG.getMachineFunction();
     const TargetInstrInfo *TII = DAG.getSubtarget().getInstrInfo();
@@ -7426,11 +7432,12 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
   }
   case Intrinsic::ptrmask: {
     SDValue Ptr = getValue(I.getOperand(0));
-    SDValue Const = getValue(I.getOperand(1));
+    SDValue Mask = getValue(I.getOperand(1));
 
     EVT PtrVT = Ptr.getValueType();
-    setValue(&I, DAG.getNode(ISD::AND, sdl, PtrVT, Ptr,
-                             DAG.getZExtOrTrunc(Const, sdl, PtrVT)));
+    assert(PtrVT == Mask.getValueType() &&
+           "Pointers with different index type are not supported by SDAG");
+    setValue(&I, DAG.getNode(ISD::AND, sdl, PtrVT, Ptr, Mask));
     return;
   }
   case Intrinsic::threadlocal_address: {

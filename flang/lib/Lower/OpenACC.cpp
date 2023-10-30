@@ -37,6 +37,7 @@ static unsigned routineCounter = 0;
 static constexpr llvm::StringRef accRoutinePrefix = "acc_routine_";
 static constexpr llvm::StringRef accPrivateInitName = "acc.private.init";
 static constexpr llvm::StringRef accReductionInitName = "acc.reduction.init";
+static constexpr llvm::StringRef accFirDescriptorPostfix = "_desc";
 
 static mlir::Location
 genOperandLocation(Fortran::lower::AbstractConverter &converter,
@@ -138,27 +139,31 @@ static void createDeclareAllocFuncWithArg(mlir::OpBuilder &modBuilder,
   auto registerFuncOp = createDeclareFunc(
       modBuilder, builder, loc, registerFuncName.str(), {descTy}, {loc});
 
+  llvm::SmallVector<mlir::Value> bounds;
+  std::stringstream asFortranDesc;
+  asFortranDesc << asFortran.str() << accFirDescriptorPostfix.str();
+
+  // Updating descriptor must occur before the mapping of the data so that
+  // attached data pointer is not overwritten.
+  mlir::acc::UpdateDeviceOp updateDeviceOp =
+      createDataEntryOp<mlir::acc::UpdateDeviceOp>(
+          builder, loc, registerFuncOp.getArgument(0), asFortranDesc, bounds,
+          /*structured=*/false, /*implicit=*/true,
+          mlir::acc::DataClause::acc_update_device, descTy);
+  llvm::SmallVector<int32_t> operandSegments{0, 0, 0, 0, 0, 1};
+  llvm::SmallVector<mlir::Value> operands{updateDeviceOp.getResult()};
+  createSimpleOp<mlir::acc::UpdateOp>(builder, loc, operands, operandSegments);
+
   mlir::Value desc =
       builder.create<fir::LoadOp>(loc, registerFuncOp.getArgument(0));
   fir::BoxAddrOp boxAddrOp = builder.create<fir::BoxAddrOp>(loc, desc);
   addDeclareAttr(builder, boxAddrOp.getOperation(), clause);
-
-  llvm::SmallVector<mlir::Value> bounds;
   EntryOp entryOp = createDataEntryOp<EntryOp>(
       builder, loc, boxAddrOp.getResult(), asFortran, bounds,
       /*structured=*/false, /*implicit=*/false, clause, boxAddrOp.getType());
   builder.create<mlir::acc::DeclareEnterOp>(
       loc, mlir::ValueRange(entryOp.getAccPtr()));
 
-  asFortran << "_desc";
-  mlir::acc::UpdateDeviceOp updateDeviceOp =
-      createDataEntryOp<mlir::acc::UpdateDeviceOp>(
-          builder, loc, registerFuncOp.getArgument(0), asFortran, bounds,
-          /*structured=*/false, /*implicit=*/true,
-          mlir::acc::DataClause::acc_update_device, descTy);
-  llvm::SmallVector<int32_t> operandSegments{0, 0, 0, 0, 0, 1};
-  llvm::SmallVector<mlir::Value> operands{updateDeviceOp.getResult()};
-  createSimpleOp<mlir::acc::UpdateOp>(builder, loc, operands, operandSegments);
   modBuilder.setInsertionPointAfter(registerFuncOp);
   builder.restoreInsertionPoint(crtInsPt);
 }
@@ -208,7 +213,7 @@ static void createDeclareDeallocFuncWithArg(
   auto postDeallocOp = createDeclareFunc(
       modBuilder, builder, loc, postDeallocFuncName.str(), {descTy}, {loc});
   loadOp = builder.create<fir::LoadOp>(loc, postDeallocOp.getArgument(0));
-  asFortran << "_desc";
+  asFortran << accFirDescriptorPostfix.str();
   mlir::acc::UpdateDeviceOp updateDeviceOp =
       createDataEntryOp<mlir::acc::UpdateDeviceOp>(
           builder, loc, loadOp, asFortran, bounds,
@@ -331,7 +336,7 @@ static void genDeclareDataOperandOperationsWithModifier(
 template <typename EntryOp, typename ExitOp>
 static void genDataExitOperations(fir::FirOpBuilder &builder,
                                   llvm::SmallVector<mlir::Value> operands,
-                                  bool structured, bool implicit) {
+                                  bool structured) {
   for (mlir::Value operand : operands) {
     auto entryOp = mlir::dyn_cast_or_null<EntryOp>(operand.getDefiningOp());
     assert(entryOp && "data entry op expected");
@@ -341,7 +346,7 @@ static void genDataExitOperations(fir::FirOpBuilder &builder,
       varPtr = entryOp.getVarPtr();
     builder.create<ExitOp>(entryOp.getLoc(), entryOp.getAccPtr(), varPtr,
                            entryOp.getBounds(), entryOp.getDataClause(),
-                           structured, implicit,
+                           structured, entryOp.getImplicit(),
                            builder.getStringAttr(*entryOp.getName()));
   }
 }
@@ -1867,9 +1872,24 @@ createComputeOp(Fortran::lower::AbstractConverter &converter,
     } else if (const auto *reductionClause =
                    std::get_if<Fortran::parser::AccClause::Reduction>(
                        &clause.u)) {
-      if (!outerCombined)
+      // A reduction clause on a combined construct is treated as if it appeared
+      // on the loop construct. So don't generate a reduction clause when it is
+      // combined - delay it to the loop. However, a reduction clause on a
+      // combined construct implies a copy clause so issue an implicit copy
+      // instead.
+      if (!outerCombined) {
         genReductions(reductionClause->v, converter, semanticsContext, stmtCtx,
                       reductionOperands, reductionRecipes);
+      } else {
+        auto crtDataStart = dataClauseOperands.size();
+        genDataOperandOperations<mlir::acc::CopyinOp>(
+            std::get<Fortran::parser::AccObjectList>(reductionClause->v.t),
+            converter, semanticsContext, stmtCtx, dataClauseOperands,
+            mlir::acc::DataClause::acc_reduction,
+            /*structured=*/true, /*implicit=*/true);
+        copyEntryOperands.append(dataClauseOperands.begin() + crtDataStart,
+                                 dataClauseOperands.end());
+      }
     } else if (const auto *defaultClause =
                    std::get_if<Fortran::parser::AccClause::Default>(
                        &clause.u)) {
@@ -1939,13 +1959,13 @@ createComputeOp(Fortran::lower::AbstractConverter &converter,
 
   // Create the exit operations after the region.
   genDataExitOperations<mlir::acc::CopyinOp, mlir::acc::CopyoutOp>(
-      builder, copyEntryOperands, /*structured=*/true, /*implicit=*/false);
+      builder, copyEntryOperands, /*structured=*/true);
   genDataExitOperations<mlir::acc::CreateOp, mlir::acc::CopyoutOp>(
-      builder, copyoutEntryOperands, /*structured=*/true, /*implicit=*/false);
+      builder, copyoutEntryOperands, /*structured=*/true);
   genDataExitOperations<mlir::acc::AttachOp, mlir::acc::DetachOp>(
-      builder, attachEntryOperands, /*structured=*/true, /*implicit=*/false);
+      builder, attachEntryOperands, /*structured=*/true);
   genDataExitOperations<mlir::acc::CreateOp, mlir::acc::DeleteOp>(
-      builder, createEntryOperands, /*structured=*/true, /*implicit=*/false);
+      builder, createEntryOperands, /*structured=*/true);
 
   builder.restoreInsertionPoint(insPt);
   return computeOp;
@@ -2094,13 +2114,13 @@ static void genACCDataOp(Fortran::lower::AbstractConverter &converter,
 
   // Create the exit operations after the region.
   genDataExitOperations<mlir::acc::CopyinOp, mlir::acc::CopyoutOp>(
-      builder, copyEntryOperands, /*structured=*/true, /*implicit=*/false);
+      builder, copyEntryOperands, /*structured=*/true);
   genDataExitOperations<mlir::acc::CreateOp, mlir::acc::CopyoutOp>(
-      builder, copyoutEntryOperands, /*structured=*/true, /*implicit=*/false);
+      builder, copyoutEntryOperands, /*structured=*/true);
   genDataExitOperations<mlir::acc::AttachOp, mlir::acc::DetachOp>(
-      builder, attachEntryOperands, /*structured=*/true, /*implicit=*/false);
+      builder, attachEntryOperands, /*structured=*/true);
   genDataExitOperations<mlir::acc::CreateOp, mlir::acc::DeleteOp>(
-      builder, createEntryOperands, /*structured=*/true, /*implicit=*/false);
+      builder, createEntryOperands, /*structured=*/true);
 
   builder.restoreInsertionPoint(insPt);
 }
@@ -2410,11 +2430,11 @@ genACCExitDataOp(Fortran::lower::AbstractConverter &converter,
     exitDataOp.setFinalizeAttr(builder.getUnitAttr());
 
   genDataExitOperations<mlir::acc::GetDevicePtrOp, mlir::acc::CopyoutOp>(
-      builder, copyoutOperands, /*structured=*/false, /*implicit=*/false);
+      builder, copyoutOperands, /*structured=*/false);
   genDataExitOperations<mlir::acc::GetDevicePtrOp, mlir::acc::DeleteOp>(
-      builder, deleteOperands, /*structured=*/false, /*implicit=*/false);
+      builder, deleteOperands, /*structured=*/false);
   genDataExitOperations<mlir::acc::GetDevicePtrOp, mlir::acc::DetachOp>(
-      builder, detachOperands, /*structured=*/false, /*implicit=*/false);
+      builder, detachOperands, /*structured=*/false);
 }
 
 template <typename Op>
@@ -2589,7 +2609,7 @@ genACCUpdateOp(Fortran::lower::AbstractConverter &converter,
       builder, currentLocation, operands, operandSegments);
 
   genDataExitOperations<mlir::acc::GetDevicePtrOp, mlir::acc::UpdateHostOp>(
-      builder, updateHostOperands, /*structured=*/false, /*implicit=*/false);
+      builder, updateHostOperands, /*structured=*/false);
 
   if (addAsyncAttr)
     updateOp.setAsyncAttr(builder.getUnitAttr());
@@ -2753,28 +2773,33 @@ static void createDeclareAllocFunc(mlir::OpBuilder &modBuilder,
 
   fir::AddrOfOp addrOp = builder.create<fir::AddrOfOp>(
       loc, fir::ReferenceType::get(globalOp.getType()), globalOp.getSymbol());
-  auto loadOp = builder.create<fir::LoadOp>(loc, addrOp.getResult());
-  fir::BoxAddrOp boxAddrOp = builder.create<fir::BoxAddrOp>(loc, loadOp);
-  addDeclareAttr(builder, boxAddrOp.getOperation(), clause);
 
   std::stringstream asFortran;
   asFortran << Fortran::lower::mangle::demangleName(globalOp.getSymName());
+  std::stringstream asFortranDesc;
+  asFortranDesc << asFortran.str() << accFirDescriptorPostfix.str();
   llvm::SmallVector<mlir::Value> bounds;
+
+  // Updating descriptor must occur before the mapping of the data so that
+  // attached data pointer is not overwritten.
+  mlir::acc::UpdateDeviceOp updateDeviceOp =
+      createDataEntryOp<mlir::acc::UpdateDeviceOp>(
+          builder, loc, addrOp, asFortranDesc, bounds,
+          /*structured=*/false, /*implicit=*/true,
+          mlir::acc::DataClause::acc_update_device, addrOp.getType());
+  llvm::SmallVector<int32_t> operandSegments{0, 0, 0, 0, 0, 1};
+  llvm::SmallVector<mlir::Value> operands{updateDeviceOp.getResult()};
+  createSimpleOp<mlir::acc::UpdateOp>(builder, loc, operands, operandSegments);
+
+  auto loadOp = builder.create<fir::LoadOp>(loc, addrOp.getResult());
+  fir::BoxAddrOp boxAddrOp = builder.create<fir::BoxAddrOp>(loc, loadOp);
+  addDeclareAttr(builder, boxAddrOp.getOperation(), clause);
   EntryOp entryOp = createDataEntryOp<EntryOp>(
       builder, loc, boxAddrOp.getResult(), asFortran, bounds,
       /*structured=*/false, /*implicit=*/false, clause, boxAddrOp.getType());
   builder.create<mlir::acc::DeclareEnterOp>(
       loc, mlir::ValueRange(entryOp.getAccPtr()));
 
-  asFortran << "_desc";
-  mlir::acc::UpdateDeviceOp updateDeviceOp =
-      createDataEntryOp<mlir::acc::UpdateDeviceOp>(
-          builder, loc, addrOp, asFortran, bounds,
-          /*structured=*/false, /*implicit=*/true,
-          mlir::acc::DataClause::acc_update_device, addrOp.getType());
-  llvm::SmallVector<int32_t> operandSegments{0, 0, 0, 0, 0, 1};
-  llvm::SmallVector<mlir::Value> operands{updateDeviceOp.getResult()};
-  createSimpleOp<mlir::acc::UpdateOp>(builder, loc, operands, operandSegments);
   modBuilder.setInsertionPointAfter(registerFuncOp);
 }
 
@@ -2832,7 +2857,7 @@ static void createDeclareDeallocFunc(mlir::OpBuilder &modBuilder,
 
   addrOp = builder.create<fir::AddrOfOp>(
       loc, fir::ReferenceType::get(globalOp.getType()), globalOp.getSymbol());
-  asFortran << "_desc";
+  asFortran << accFirDescriptorPostfix.str();
   mlir::acc::UpdateDeviceOp updateDeviceOp =
       createDataEntryOp<mlir::acc::UpdateDeviceOp>(
           builder, loc, addrOp, asFortran, bounds,
@@ -3044,17 +3069,14 @@ genDeclareInFunction(Fortran::lower::AbstractConverter &converter,
       builder.setInsertionPointAfter(declareOp);
     }
     genDataExitOperations<mlir::acc::CreateOp, mlir::acc::DeleteOp>(
-        builder, createEntryOperands, /*structured=*/true,
-        /*implicit=*/false);
+        builder, createEntryOperands, /*structured=*/true);
     genDataExitOperations<mlir::acc::DeclareDeviceResidentOp,
                           mlir::acc::DeleteOp>(
-        builder, deviceResidentEntryOperands, /*structured=*/true,
-        /*implicit=*/false);
+        builder, deviceResidentEntryOperands, /*structured=*/true);
     genDataExitOperations<mlir::acc::CopyinOp, mlir::acc::CopyoutOp>(
-        builder, copyEntryOperands, /*structured=*/true, /*implicit=*/false);
+        builder, copyEntryOperands, /*structured=*/true);
     genDataExitOperations<mlir::acc::CreateOp, mlir::acc::CopyoutOp>(
-        builder, copyoutEntryOperands, /*structured=*/true,
-        /*implicit=*/false);
+        builder, copyoutEntryOperands, /*structured=*/true);
   });
 }
 
@@ -3143,29 +3165,26 @@ static void attachRoutineInfo(mlir::func::FuncOp func,
       mlir::acc::RoutineInfoAttr::get(func.getContext(), routines));
 }
 
-static void
-genACC(Fortran::lower::AbstractConverter &converter,
-       Fortran::semantics::SemanticsContext &semanticsContext,
-       const Fortran::parser::OpenACCRoutineConstruct &routineConstruct,
-       Fortran::lower::AccRoutineInfoMappingList &accRoutineInfos) {
+void Fortran::lower::genOpenACCRoutineConstruct(
+    Fortran::lower::AbstractConverter &converter,
+    Fortran::semantics::SemanticsContext &semanticsContext, mlir::ModuleOp &mod,
+    const Fortran::parser::OpenACCRoutineConstruct &routineConstruct,
+    Fortran::lower::AccRoutineInfoMappingList &accRoutineInfos) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   mlir::Location loc = converter.genLocation(routineConstruct.source);
   std::optional<Fortran::parser::Name> name =
       std::get<std::optional<Fortran::parser::Name>>(routineConstruct.t);
   const auto &clauses =
       std::get<Fortran::parser::AccClauseList>(routineConstruct.t);
-
-  mlir::ModuleOp mod = builder.getModule();
   mlir::func::FuncOp funcOp;
   std::string funcName;
   if (name) {
     funcName = converter.mangleName(*name->symbol);
-    funcOp = builder.getNamedFunction(funcName);
+    funcOp = builder.getNamedFunction(mod, funcName);
   } else {
     funcOp = builder.getFunction();
     funcName = funcOp.getName();
   }
-
   bool hasSeq = false, hasGang = false, hasWorker = false, hasVector = false,
        hasNohost = false;
   std::optional<std::string> bindName = std::nullopt;
@@ -3358,6 +3377,9 @@ void Fortran::lower::genOpenACCConstruct(
           [&](const Fortran::parser::OpenACCAtomicConstruct &atomicConstruct) {
             genACC(converter, eval, atomicConstruct);
           },
+          [&](const Fortran::parser::OpenACCEndConstruct &) {
+            // No op
+          },
       },
       accConstruct.u);
 }
@@ -3378,8 +3400,11 @@ void Fortran::lower::genOpenACCDeclarativeConstruct(
           },
           [&](const Fortran::parser::OpenACCRoutineConstruct
                   &routineConstruct) {
-            genACC(converter, semanticsContext, routineConstruct,
-                   accRoutineInfos);
+            fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+            mlir::ModuleOp mod = builder.getModule();
+            Fortran::lower::genOpenACCRoutineConstruct(
+                converter, semanticsContext, mod, routineConstruct,
+                accRoutineInfos);
           },
       },
       accDeclConstruct.u);

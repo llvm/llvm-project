@@ -1992,9 +1992,9 @@ defm : PseudoBinPat<"atomic_load_xor_32", PseudoAtomicLoadXor32>;
 /// Intrinsics
 
 def : Pat<(int_loongarch_cacop_d timm:$op, i64:$rj, timm:$imm12),
-          (CACOP uimm5:$op, GPR:$rj, simm12:$imm12)>;
+          (CACOP timm:$op, GPR:$rj, timm:$imm12)>;
 def : Pat<(int_loongarch_cacop_w i32:$op, i32:$rj, i32:$imm12),
-          (CACOP uimm5:$op, GPR:$rj, simm12:$imm12)>;
+          (CACOP timm:$op, GPR:$rj, timm:$imm12)>;
 def : Pat<(loongarch_dbar uimm15:$imm15), (DBAR uimm15:$imm15)>;
 def : Pat<(loongarch_ibar uimm15:$imm15), (IBAR uimm15:$imm15)>;
 def : Pat<(loongarch_break uimm15:$imm15), (BREAK uimm15:$imm15)>;
@@ -2158,9 +2158,9 @@ def : Pat<(int_loongarch_asrtle_d GPR:$rj, GPR:$rk),
 def : Pat<(int_loongarch_asrtgt_d GPR:$rj, GPR:$rk),
           (ASRTGT_D GPR:$rj, GPR:$rk)>;
 def : Pat<(int_loongarch_lddir_d GPR:$rj, timm:$imm8),
-          (LDDIR GPR:$rj, uimm8:$imm8)>;
+          (LDDIR GPR:$rj, timm:$imm8)>;
 def : Pat<(int_loongarch_ldpte_d GPR:$rj, timm:$imm8),
-          (LDPTE GPR:$rj, uimm8:$imm8)>;
+          (LDPTE GPR:$rj, timm:$imm8)>;
 } // Predicates = [IsLA64]
 
 //===----------------------------------------------------------------------===//

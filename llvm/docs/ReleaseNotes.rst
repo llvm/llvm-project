@@ -205,6 +205,14 @@ Changes to LLDB
   for formatters to quickly find directly nested type when it's known
   where to search for it, avoiding more expensive global search via
   ``SBTarget::FindFirstType``.
+* ``lldb-vscode`` was renamed to ``lldb-dap`` and and its installation
+  instructions have been updated to reflect this. The underlying functionality
+  remains unchanged.
+* The ``mte_ctrl`` register can now be read from AArch64 Linux core files.
+
+* LLDB now supports debugging the Scalable Matrix Extension (SME) on AArch64
+  Linux for both running processes and core files. For details refer to the
+  `AArch64 Linux documentation <https://lldb.llvm.org/use/aarch64-linux.html>`_.
 
 Changes to Sanitizers
 ---------------------

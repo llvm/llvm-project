@@ -173,6 +173,8 @@ public:
   /// Checks if the function is defined.
   bool isDefined() const { return Defined; }
 
+  bool isVariadic() const { return Variadic; }
+
   unsigned getBuiltinID() const { return F->getBuiltinID(); }
 
   bool isBuiltin() const { return F->getBuiltinID() != 0; }
@@ -251,6 +253,7 @@ private:
   /// If we've already compiled the function's body.
   bool HasBody = false;
   bool Defined = false;
+  bool Variadic = false;
 
 public:
   /// Dumps the disassembled bytecode to \c llvm::errs().

@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s --sparse-tensor-conversion --canonicalize --cse | FileCheck %s
+// RUN: mlir-opt %s --post-sparsification-rewrite --sparse-tensor-conversion --canonicalize --cse | FileCheck %s
 
 #SparseVector = #sparse_tensor.encoding<{
   map = (d0) -> (d0 : compressed)
@@ -38,7 +38,7 @@ func.func @sparse_nop(%arg0: tensor<?xf64, #SparseVector>) -> tensor<?xf64, #Spa
 // CHECK-LABEL: func @sparse_dim1d(
 //  CHECK-SAME: %[[A:.*]]: !llvm.ptr<i8>)
 //       CHECK: %[[C:.*]] = arith.constant 0 : index
-//       CHECK: %[[D:.*]] = call @sparseDimSize(%[[A]], %[[C]])
+//       CHECK: %[[D:.*]] = call @sparseLvlSize(%[[A]], %[[C]])
 //       CHECK: return %[[D]] : index
 func.func @sparse_dim1d(%arg0: tensor<?xf64, #SparseVector>) -> index {
   %c = arith.constant 0 : index
@@ -51,8 +51,8 @@ func.func @sparse_dim1d(%arg0: tensor<?xf64, #SparseVector>) -> index {
 // dimension 1 is stored as level 2).
 // CHECK-LABEL: func @sparse_dim3d(
 //  CHECK-SAME: %[[A:.*]]: !llvm.ptr<i8>)
-//       CHECK: %[[C:.*]] = arith.constant 1 : index
-//       CHECK: %[[D:.*]] = call @sparseDimSize(%[[A]], %[[C]])
+//       CHECK: %[[C:.*]] = arith.constant 2 : index
+//       CHECK: %[[D:.*]] = call @sparseLvlSize(%[[A]], %[[C]])
 //       CHECK: return %[[D]] : index
 func.func @sparse_dim3d(%arg0: tensor<?x?x?xf64, #SparseTensor>) -> index {
   %c = arith.constant 1 : index
@@ -396,34 +396,6 @@ func.func @sparse_compression(%tensor: tensor<8x8xf64, #CSR>,
   %0 = sparse_tensor.compress %values, %filled, %added, %count into %tensor[%i]
     : memref<?xf64>, memref<?xi1>, memref<?xindex>, tensor<8x8xf64, #CSR>
   return %0 : tensor<8x8xf64, #CSR>
-}
-
-// CHECK-LABEL: func @sparse_out1(
-//  CHECK-SAME: %[[A:.*]]: !llvm.ptr<i8>,
-//  CHECK-SAME: %[[B:.*]]: !llvm.ptr<i8>)
-//  CHECK-DAG:  %[[ToCOO:.*]] = arith.constant 5 : i32
-//  CHECK-DAG:  %[[Sort:.*]] = arith.constant false
-//       CHECK: %[[COO:.*]] = call @newSparseTensor(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %[[ToCOO]], %[[A]])
-//       CHECK: call @outSparseTensorF64(%[[COO]], %[[B]], %[[Sort]]) : (!llvm.ptr<i8>, !llvm.ptr<i8>, i1) -> ()
-//       CHECK: call @delSparseTensorCOOF64(%[[COO]])
-//       CHECK: return
-func.func @sparse_out1(%arg0: tensor<?x?xf64, #CSR>, %arg1: !llvm.ptr<i8>) {
-  sparse_tensor.out %arg0, %arg1 : tensor<?x?xf64, #CSR>, !llvm.ptr<i8>
-  return
-}
-
-// CHECK-LABEL: func @sparse_out2(
-//  CHECK-SAME: %[[A:.*]]: !llvm.ptr<i8>,
-//  CHECK-SAME: %[[B:.*]]: !llvm.ptr<i8>)
-//  CHECK-DAG:  %[[ToCOO:.*]] = arith.constant 5 : i32
-//  CHECK-DAG:  %[[Sort:.*]] = arith.constant true
-//       CHECK: %[[COO:.*]] = call @newSparseTensor(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %[[ToCOO]], %[[A]])
-//       CHECK: call @outSparseTensorF32(%[[COO]], %[[B]], %[[Sort]]) : (!llvm.ptr<i8>, !llvm.ptr<i8>, i1) -> ()
-//       CHECK: call @delSparseTensorCOOF32(%[[COO]])
-//       CHECK: return
-func.func @sparse_out2(%arg0: tensor<?x?x?xf32, #SparseTensor>, %arg1: !llvm.ptr<i8>) {
-  sparse_tensor.out %arg0, %arg1 : tensor<?x?x?xf32, #SparseTensor>, !llvm.ptr<i8>
-  return
 }
 
 // CHECK-LABEL: func @sparse_and_dense_init(

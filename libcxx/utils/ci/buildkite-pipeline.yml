@@ -30,31 +30,10 @@ env:
     GCC_STABLE_VERSION: "13"
 steps:
   #
-  # Light pre-commit tests for things like forgetting to update generated files.
-  #
-  - label: "Documentation"
-    command: "libcxx/utils/ci/run-buildbot documentation"
-    artifact_paths:
-      - "**/test-results.xml"
-    env:
-        CC: "clang-${LLVM_HEAD_VERSION}"
-        CXX: "clang++-${LLVM_HEAD_VERSION}"
-    agents:
-      queue: "libcxx-builders"
-      os: "linux"
-    retry:
-      automatic:
-        - exit_status: -1  # Agent was lost
-          limit: 2
-    timeout_in_minutes: 120
-
-  #
   # General testing with the default configuration, under all the supported
   # Standard modes, with Clang and GCC. This catches most issues upfront.
   # The goal of this step is to catch most issues while being very fast.
   #
-  - wait
-
   - label: "GCC ${GCC_STABLE_VERSION} / C++latest"
     command: "libcxx/utils/ci/run-buildbot generic-gcc"
     artifact_paths:
@@ -1115,4 +1094,36 @@ steps:
         automatic:
           - exit_status: -1  # Agent was lost
             limit: 2
+      timeout_in_minutes: 120
+
+  - group: ":android: Android"
+    steps:
+    - label: "Android 5.0, x86 NDK"
+      command: "libcxx/utils/ci/run-buildbot android-ndk-21-def-x86"
+      artifact_paths:
+        - "**/test-results.xml"
+        - "**/*.abilist"
+      agents:
+        queue: "libcxx-builders"
+        os: "android"
+      retry:
+        automatic:
+          - exit_status: -1  # Agent was lost
+            limit: 2
+      soft_fail: true
+      timeout_in_minutes: 120
+
+    - label: "Android 13, x86_64 NDK"
+      command: "libcxx/utils/ci/run-buildbot android-ndk-33-goog-x86_64"
+      artifact_paths:
+        - "**/test-results.xml"
+        - "**/*.abilist"
+      agents:
+        queue: "libcxx-builders"
+        os: "android"
+      retry:
+        automatic:
+          - exit_status: -1  # Agent was lost
+            limit: 2
+      soft_fail: true
       timeout_in_minutes: 120

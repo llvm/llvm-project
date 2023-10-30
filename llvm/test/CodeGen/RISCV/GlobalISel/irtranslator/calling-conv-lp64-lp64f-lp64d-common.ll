@@ -212,35 +212,6 @@ define i64 @caller_small_struct_ret() nounwind {
   ret i64 %5
 }
 
-; Check return of >2x xlen scalars
-
-define i256 @callee_large_scalar_ret() nounwind {
-  ; RV64I-LABEL: name: callee_large_scalar_ret
-  ; RV64I: bb.1 (%ir-block.0):
-  ; RV64I-NEXT:   [[C:%[0-9]+]]:_(s256) = G_CONSTANT i256 -123456789
-  ; RV64I-NEXT:   [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64), [[UV2:%[0-9]+]]:_(s64), [[UV3:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[C]](s256)
-  ; RV64I-NEXT:   $x10 = COPY [[UV]](s64)
-  ; RV64I-NEXT:   $x10 = COPY [[UV1]](s64)
-  ; RV64I-NEXT:   $x10 = COPY [[UV2]](s64)
-  ; RV64I-NEXT:   $x10 = COPY [[UV3]](s64)
-  ; RV64I-NEXT:   PseudoRET implicit $x10, implicit $x10, implicit $x10, implicit $x10
-  ret i256 -123456789
-}
-
-define void @caller_large_scalar_ret() nounwind {
-  ; RV64I-LABEL: name: caller_large_scalar_ret
-  ; RV64I: bb.1 (%ir-block.0):
-  ; RV64I-NEXT:   PseudoCALL target-flags(riscv-call) @callee_large_scalar_ret, implicit-def $x1, implicit-def $x10, implicit-def $x10, implicit-def $x10, implicit-def $x10
-  ; RV64I-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
-  ; RV64I-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY $x10
-  ; RV64I-NEXT:   [[COPY2:%[0-9]+]]:_(s64) = COPY $x10
-  ; RV64I-NEXT:   [[COPY3:%[0-9]+]]:_(s64) = COPY $x10
-  ; RV64I-NEXT:   [[MV:%[0-9]+]]:_(s256) = G_MERGE_VALUES [[COPY]](s64), [[COPY1]](s64), [[COPY2]](s64), [[COPY3]](s64)
-  ; RV64I-NEXT:   PseudoRET
-  %1 = call i256 @callee_large_scalar_ret()
-  ret void
-}
-
 ; Check return of >2x xlen structs
 
 %struct.large = type { i64, i64, i64, i64 }

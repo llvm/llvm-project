@@ -457,10 +457,11 @@ bool DataInitializationCompiler<DSV>::InitElement(
             folded.AsFortran(), DescribeElement());
       } else if (status == evaluate::InitialImage::OutOfRange) {
         OutOfRangeError();
-      } else if (status == evaluate::InitialImage::SizeMismatch) {
+      } else if (status == evaluate::InitialImage::LengthMismatch) {
         exprAnalyzer_.Say(
             "DATA statement value '%s' for '%s' has the wrong length"_warn_en_US,
             folded.AsFortran(), DescribeElement());
+        return true;
       } else {
         CHECK(exprAnalyzer_.context().AnyFatalError());
       }
@@ -773,8 +774,7 @@ static bool CombineEquivalencedInitialization(
     return false;
   }
   // If the items are in static storage, save the final initialization.
-  if (std::find_if(associated.begin(), associated.end(),
-          [](SymbolRef ref) { return IsSaved(*ref); }) != associated.end()) {
+  if (llvm::any_of(associated, [](SymbolRef ref) { return IsSaved(*ref); })) {
     // Create a compiler array temp that overlaps all the items.
     SourceName name{exprAnalyzer.context().GetTempName(scope)};
     auto emplaced{

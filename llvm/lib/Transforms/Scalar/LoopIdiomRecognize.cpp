@@ -948,9 +948,13 @@ mayLoopAccessLocation(Value *Ptr, ModRefInfo Access, Loop *L,
   // to be exactly the size of the memset, which is (BECount+1)*StoreSize
   const SCEVConstant *BECst = dyn_cast<SCEVConstant>(BECount);
   const SCEVConstant *ConstSize = dyn_cast<SCEVConstant>(StoreSizeSCEV);
-  if (BECst && ConstSize)
-    AccessSize = LocationSize::precise((BECst->getValue()->getZExtValue() + 1) *
-                                       ConstSize->getValue()->getZExtValue());
+  if (BECst && ConstSize) {
+    std::optional<uint64_t> BEInt = BECst->getAPInt().tryZExtValue();
+    std::optional<uint64_t> SizeInt = ConstSize->getAPInt().tryZExtValue();
+    // FIXME: Should this check for overflow?
+    if (BEInt && SizeInt)
+      AccessSize = LocationSize::precise((*BEInt + 1) * *SizeInt);
+  }
 
   // TODO: For this to be really effective, we have to dive into the pointer
   // operand in the store.  Store to &A[i] of 100 will always return may alias

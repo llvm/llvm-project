@@ -96,9 +96,9 @@ void PyGlobals::registerDialectImpl(const std::string &dialectNamespace,
 }
 
 void PyGlobals::registerOperationImpl(const std::string &operationName,
-                                      py::object pyClass) {
+                                      py::object pyClass, bool replace) {
   py::object &found = operationClassMap[operationName];
-  if (found) {
+  if (found && !replace) {
     throw std::runtime_error((llvm::Twine("Operation '") + operationName +
                               "' is already registered.")
                                  .str());

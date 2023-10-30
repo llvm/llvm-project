@@ -393,3 +393,57 @@ define i1 @inv_select_v_sle_nonneg(i8 %v, i8 %C, i8 %y) {
   %r = icmp eq i8 %s, 0
   ret i1 %r
 }
+
+; Check udiv/sdiv occuring before icmp.
+define i64 @incorrect_safe_div_1(i64 %n, i64 %d) {
+; CHECK-LABEL: @incorrect_safe_div_1(
+; CHECK-NEXT:    [[TMP1:%.*]] = udiv i64 [[N:%.*]], [[D:%.*]]
+; CHECK-NEXT:    ret i64 [[TMP1]]
+;
+  %1 = udiv i64 %n, %d
+  %2 = icmp eq i64 %d, 0
+  %3 = select i1 %2, i64 -1, i64 %1
+  ret i64 %3
+}
+
+; Check icmp occuring before udiv/sdiv.
+define i64 @incorrect_safe_div_2(i64 %n, i64 %d) {
+; CHECK-LABEL: @incorrect_safe_div_2(
+; CHECK-NEXT:    [[TMP1:%.*]] = sdiv i64 [[N:%.*]], [[D:%.*]]
+; CHECK-NEXT:    ret i64 [[TMP1]]
+;
+  %1 = icmp eq i64 %d, 0
+  %2 = sdiv i64 %n, %d
+  %3 = select i1 %1, i64 -1, i64 %2
+  ret i64 %3
+}
+
+define i64 @incorrect_safe_div_call_1(i64 %n, i64 %d) {
+; CHECK-LABEL: @incorrect_safe_div_call_1(
+; CHECK-NEXT:    [[TMP1:%.*]] = sdiv i64 [[N:%.*]], [[D:%.*]]
+; CHECK-NEXT:    tail call void @use(i64 [[D]])
+; CHECK-NEXT:    ret i64 [[TMP1]]
+;
+  %1 = sdiv i64 %n, %d
+  tail call void @use(i64 %d)
+  %2 = icmp eq i64 %d, 0
+  %3 = select i1 %2, i64 -1, i64 %1
+  ret i64 %3
+}
+
+define i64 @incorrect_safe_div_call_2(i64 %n, i64 %d) {
+; CHECK-LABEL: @incorrect_safe_div_call_2(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[D:%.*]], 0
+; CHECK-NEXT:    tail call void @use(i64 [[D]])
+; CHECK-NEXT:    [[TMP2:%.*]] = udiv i64 [[N:%.*]], [[D]]
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP1]], i64 -1, i64 [[TMP2]]
+; CHECK-NEXT:    ret i64 [[TMP3]]
+;
+  %1 = icmp eq i64 %d, 0
+  tail call void @use(i64 %d)
+  %2 = udiv i64 %n, %d
+  %3 = select i1 %1, i64 -1, i64 %2
+  ret i64 %3
+}
+
+declare void @use(i64)

@@ -78,7 +78,8 @@ struct RISCVOutgoingValueHandler : public CallLowering::OutgoingValueHandler {
   }
 
   void assignValueToAddress(Register ValVReg, Register Addr, LLT MemTy,
-                            MachinePointerInfo &MPO, CCValAssign &VA) override {
+                            const MachinePointerInfo &MPO,
+                            const CCValAssign &VA) override {
     MachineFunction &MF = MIRBuilder.getMF();
     uint64_t LocMemOffset = VA.getLocMemOffset();
 
@@ -92,10 +93,59 @@ struct RISCVOutgoingValueHandler : public CallLowering::OutgoingValueHandler {
   }
 
   void assignValueToReg(Register ValVReg, Register PhysReg,
-                        CCValAssign VA) override {
+                        const CCValAssign &VA) override {
+    // If we're passing an f32 value into an i64, anyextend before copying.
+    if (VA.getLocVT() == MVT::i64 && VA.getValVT() == MVT::f32)
+      ValVReg = MIRBuilder.buildAnyExt(LLT::scalar(64), ValVReg).getReg(0);
+
     Register ExtReg = extendRegister(ValVReg, VA);
     MIRBuilder.buildCopy(PhysReg, ExtReg);
     MIB.addUse(PhysReg, RegState::Implicit);
+  }
+
+  unsigned assignCustomValue(CallLowering::ArgInfo &Arg,
+                             ArrayRef<CCValAssign> VAs,
+                             std::function<void()> *Thunk) override {
+    assert(VAs.size() >= 2 && "Expected at least 2 VAs.");
+    const CCValAssign &VALo = VAs[0];
+    const CCValAssign &VAHi = VAs[1];
+
+    assert(VAHi.needsCustom() && "Value doesn't need custom handling");
+    assert(VALo.getValNo() == VAHi.getValNo() &&
+           "Values belong to different arguments");
+
+    assert(VALo.getLocVT() == MVT::i32 && VAHi.getLocVT() == MVT::i32 &&
+           VALo.getValVT() == MVT::f64 && VAHi.getValVT() == MVT::f64 &&
+           "unexpected custom value");
+
+    Register NewRegs[] = {MRI.createGenericVirtualRegister(LLT::scalar(32)),
+                          MRI.createGenericVirtualRegister(LLT::scalar(32))};
+    MIRBuilder.buildUnmerge(NewRegs, Arg.Regs[0]);
+
+    if (VAHi.isMemLoc()) {
+      LLT MemTy(VAHi.getLocVT());
+
+      MachinePointerInfo MPO;
+      Register StackAddr = getStackAddress(
+          MemTy.getSizeInBytes(), VAHi.getLocMemOffset(), MPO, Arg.Flags[0]);
+
+      assignValueToAddress(NewRegs[1], StackAddr, MemTy, MPO,
+                           const_cast<CCValAssign &>(VAHi));
+    }
+
+    auto assignFunc = [=]() {
+      assignValueToReg(NewRegs[0], VALo.getLocReg(), VALo);
+      if (VAHi.isRegLoc())
+        assignValueToReg(NewRegs[1], VAHi.getLocReg(), VAHi);
+    };
+
+    if (Thunk) {
+      *Thunk = assignFunc;
+      return 1;
+    }
+
+    assignFunc();
+    return 1;
   }
 
 private:
@@ -155,7 +205,8 @@ struct RISCVIncomingValueHandler : public CallLowering::IncomingValueHandler {
   }
 
   void assignValueToAddress(Register ValVReg, Register Addr, LLT MemTy,
-                            MachinePointerInfo &MPO, CCValAssign &VA) override {
+                            const MachinePointerInfo &MPO,
+                            const CCValAssign &VA) override {
     MachineFunction &MF = MIRBuilder.getMF();
     auto MMO = MF.getMachineMemOperand(MPO, MachineMemOperand::MOLoad, MemTy,
                                        inferAlignFromPtrInfo(MF, MPO));
@@ -163,14 +214,66 @@ struct RISCVIncomingValueHandler : public CallLowering::IncomingValueHandler {
   }
 
   void assignValueToReg(Register ValVReg, Register PhysReg,
-                        CCValAssign VA) override {
-    // Copy argument received in physical register to desired VReg.
-    MIRBuilder.getMBB().addLiveIn(PhysReg);
-    MIRBuilder.buildCopy(ValVReg, PhysReg);
+                        const CCValAssign &VA) override {
+    markPhysRegUsed(PhysReg);
+    IncomingValueHandler::assignValueToReg(ValVReg, PhysReg, VA);
   }
+
+  unsigned assignCustomValue(CallLowering::ArgInfo &Arg,
+                             ArrayRef<CCValAssign> VAs,
+                             std::function<void()> *Thunk) override {
+    assert(VAs.size() >= 2 && "Expected at least 2 VAs.");
+    const CCValAssign &VALo = VAs[0];
+    const CCValAssign &VAHi = VAs[1];
+
+    assert(VAHi.needsCustom() && "Value doesn't need custom handling");
+    assert(VALo.getValNo() == VAHi.getValNo() &&
+           "Values belong to different arguments");
+
+    assert(VALo.getLocVT() == MVT::i32 && VAHi.getLocVT() == MVT::i32 &&
+           VALo.getValVT() == MVT::f64 && VAHi.getValVT() == MVT::f64 &&
+           "unexpected custom value");
+
+    Register NewRegs[] = {MRI.createGenericVirtualRegister(LLT::scalar(32)),
+                          MRI.createGenericVirtualRegister(LLT::scalar(32))};
+
+    if (VAHi.isMemLoc()) {
+      LLT MemTy(VAHi.getLocVT());
+
+      MachinePointerInfo MPO;
+      Register StackAddr = getStackAddress(
+          MemTy.getSizeInBytes(), VAHi.getLocMemOffset(), MPO, Arg.Flags[0]);
+
+      assignValueToAddress(NewRegs[1], StackAddr, MemTy, MPO,
+                           const_cast<CCValAssign &>(VAHi));
+    }
+
+    assignValueToReg(NewRegs[0], VALo.getLocReg(), VALo);
+    if (VAHi.isRegLoc())
+      assignValueToReg(NewRegs[1], VAHi.getLocReg(), VAHi);
+
+    MIRBuilder.buildMergeLikeInstr(Arg.Regs[0], NewRegs);
+
+    return 1;
+  }
+
+  /// How the physical register gets marked varies between formal
+  /// parameters (it's a basic-block live-in), and a call instruction
+  /// (it's an implicit-def of the BL).
+  virtual void markPhysRegUsed(MCRegister PhysReg) = 0;
 
 private:
   const RISCVSubtarget &Subtarget;
+};
+
+struct RISCVFormalArgHandler : public RISCVIncomingValueHandler {
+  RISCVFormalArgHandler(MachineIRBuilder &B, MachineRegisterInfo &MRI)
+      : RISCVIncomingValueHandler(B, MRI) {}
+
+  void markPhysRegUsed(MCRegister PhysReg) override {
+    MIRBuilder.getMRI()->addLiveIn(PhysReg);
+    MIRBuilder.getMBB().addLiveIn(PhysReg);
+  }
 };
 
 struct RISCVCallReturnHandler : public RISCVIncomingValueHandler {
@@ -178,20 +281,55 @@ struct RISCVCallReturnHandler : public RISCVIncomingValueHandler {
                          MachineInstrBuilder &MIB)
       : RISCVIncomingValueHandler(B, MRI), MIB(MIB) {}
 
-  MachineInstrBuilder MIB;
-
-  void assignValueToReg(Register ValVReg, Register PhysReg,
-                        CCValAssign VA) override {
-    // Copy argument received in physical register to desired VReg.
+  void markPhysRegUsed(MCRegister PhysReg) override {
     MIB.addDef(PhysReg, RegState::Implicit);
-    MIRBuilder.buildCopy(ValVReg, PhysReg);
   }
+
+  MachineInstrBuilder MIB;
 };
 
 } // namespace
 
 RISCVCallLowering::RISCVCallLowering(const RISCVTargetLowering &TLI)
     : CallLowering(&TLI) {}
+
+// TODO: Support all argument types.
+static bool isSupportedArgumentType(Type *T, const RISCVSubtarget &Subtarget) {
+  // TODO: Integers larger than 2*XLen are passed indirectly which is not
+  // supported yet.
+  if (T->isIntegerTy())
+    return T->getIntegerBitWidth() <= Subtarget.getXLen() * 2;
+  if (T->isFloatTy() || T->isDoubleTy())
+    return true;
+  if (T->isPointerTy())
+    return true;
+  return false;
+}
+
+// TODO: Only integer, pointer and aggregate types are supported now.
+static bool isSupportedReturnType(Type *T, const RISCVSubtarget &Subtarget) {
+  // TODO: Integers larger than 2*XLen are passed indirectly which is not
+  // supported yet.
+  if (T->isIntegerTy())
+    return T->getIntegerBitWidth() <= Subtarget.getXLen() * 2;
+  if (T->isFloatTy() || T->isDoubleTy())
+    return true;
+  if (T->isPointerTy())
+    return true;
+
+  if (T->isArrayTy())
+    return isSupportedReturnType(T->getArrayElementType(), Subtarget);
+
+  if (T->isStructTy()) {
+    auto StructT = cast<StructType>(T);
+    for (unsigned i = 0, e = StructT->getNumElements(); i != e; ++i)
+      if (!isSupportedReturnType(StructT->getElementType(i), Subtarget))
+        return false;
+    return true;
+  }
+
+  return false;
+}
 
 bool RISCVCallLowering::lowerReturnVal(MachineIRBuilder &MIRBuilder,
                                        const Value *Val,
@@ -200,8 +338,9 @@ bool RISCVCallLowering::lowerReturnVal(MachineIRBuilder &MIRBuilder,
   if (!Val)
     return true;
 
-  // TODO: Only integer, pointer and aggregate types are supported now.
-  if (!Val->getType()->isIntOrPtrTy() && !Val->getType()->isAggregateType())
+  const RISCVSubtarget &Subtarget =
+      MIRBuilder.getMF().getSubtarget<RISCVSubtarget>();
+  if (!isSupportedReturnType(Val->getType(), Subtarget))
     return false;
 
   MachineFunction &MF = MIRBuilder.getMF();
@@ -248,13 +387,11 @@ bool RISCVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
   if (F.isVarArg())
     return false;
 
-  // TODO: Support all argument types.
+  const RISCVSubtarget &Subtarget =
+      MIRBuilder.getMF().getSubtarget<RISCVSubtarget>();
   for (auto &Arg : F.args()) {
-    if (Arg.getType()->isIntegerTy())
-      continue;
-    if (Arg.getType()->isPointerTy())
-      continue;
-    return false;
+    if (!isSupportedArgumentType(Arg.getType(), Subtarget))
+      return false;
   }
 
   MachineFunction &MF = MIRBuilder.getMF();
@@ -279,7 +416,7 @@ bool RISCVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
   RISCVIncomingValueAssigner Assigner(
       CC == CallingConv::Fast ? RISCV::CC_RISCV_FastCC : RISCV::CC_RISCV,
       /*IsRet=*/false);
-  RISCVIncomingValueHandler Handler(MIRBuilder, MF.getRegInfo());
+  RISCVFormalArgHandler Handler(MIRBuilder, MF.getRegInfo());
 
   return determineAndHandleAssignments(Handler, Assigner, SplitArgInfos,
                                        MIRBuilder, CC, F.isVarArg());
@@ -292,15 +429,11 @@ bool RISCVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   const Function &F = MF.getFunction();
   CallingConv::ID CC = F.getCallingConv();
 
-  // TODO: Support all argument types.
+  const RISCVSubtarget &Subtarget =
+      MIRBuilder.getMF().getSubtarget<RISCVSubtarget>();
   for (auto &AInfo : Info.OrigArgs) {
-    if (AInfo.Ty->isIntegerTy())
-      continue;
-    if (AInfo.Ty->isPointerTy())
-      continue;
-    if (AInfo.Ty->isFloatingPointTy())
-      continue;
-    return false;
+    if (!isSupportedArgumentType(AInfo.Ty, Subtarget))
+      return false;
   }
 
   SmallVector<ArgInfo, 32> SplitArgInfos;
@@ -337,8 +470,7 @@ bool RISCVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   if (Info.OrigRet.Ty->isVoidTy())
     return true;
 
-  // TODO: Only integer, pointer and aggregate types are supported now.
-  if (!Info.OrigRet.Ty->isIntOrPtrTy() && !Info.OrigRet.Ty->isAggregateType())
+  if (!isSupportedReturnType(Info.OrigRet.Ty, Subtarget))
     return false;
 
   SmallVector<ArgInfo, 4> SplitRetInfos;

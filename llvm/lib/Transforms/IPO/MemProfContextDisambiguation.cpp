@@ -793,11 +793,10 @@ CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::ContextNode::
 template <typename DerivedCCG, typename FuncTy, typename CallTy>
 void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::ContextNode::
     eraseCalleeEdge(const ContextEdge *Edge) {
-  auto EI =
-      std::find_if(CalleeEdges.begin(), CalleeEdges.end(),
-                   [Edge](const std::shared_ptr<ContextEdge> &CalleeEdge) {
-                     return CalleeEdge.get() == Edge;
-                   });
+  auto EI = llvm::find_if(
+      CalleeEdges, [Edge](const std::shared_ptr<ContextEdge> &CalleeEdge) {
+        return CalleeEdge.get() == Edge;
+      });
   assert(EI != CalleeEdges.end());
   CalleeEdges.erase(EI);
 }
@@ -805,11 +804,10 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::ContextNode::
 template <typename DerivedCCG, typename FuncTy, typename CallTy>
 void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::ContextNode::
     eraseCallerEdge(const ContextEdge *Edge) {
-  auto EI =
-      std::find_if(CallerEdges.begin(), CallerEdges.end(),
-                   [Edge](const std::shared_ptr<ContextEdge> &CallerEdge) {
-                     return CallerEdge.get() == Edge;
-                   });
+  auto EI = llvm::find_if(
+      CallerEdges, [Edge](const std::shared_ptr<ContextEdge> &CallerEdge) {
+        return CallerEdge.get() == Edge;
+      });
   assert(EI != CallerEdges.end());
   CallerEdges.erase(EI);
 }
@@ -2095,8 +2093,7 @@ void CallsiteContextGraph<DerivedCCG, FuncTy, CallTy>::identifyClones(
     for (auto &Edge : CallerEdges) {
       // Skip any that have been removed by an earlier recursive call.
       if (Edge->Callee == nullptr && Edge->Caller == nullptr) {
-        assert(!std::count(Node->CallerEdges.begin(), Node->CallerEdges.end(),
-                           Edge));
+        assert(!llvm::count(Node->CallerEdges, Edge));
         continue;
       }
       // Ignore any caller we previously visited via another edge.

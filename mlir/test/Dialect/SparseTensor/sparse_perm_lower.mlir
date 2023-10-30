@@ -21,9 +21,9 @@
 // CHECK-HIR-DAG:       %[[VAL_2:.*]] = arith.constant 1 : index
 // CHECK-HIR-DAG:       %[[VAL_3:.*]] = arith.constant 0 : index
 // CHECK-HIR-DAG:       %[[VAL_4:.*]] = arith.constant 2 : index
-// CHECK-HIR-DAG:       %[[VAL_5:.*]] = tensor.dim %[[VAL_0]], %[[VAL_4]] : tensor<?x?x?xf32, #sparse_tensor.encoding<{{{.*}}}>>
-// CHECK-HIR-DAG:       %[[VAL_6:.*]] = tensor.dim %[[VAL_0]], %[[VAL_3]] : tensor<?x?x?xf32, #sparse_tensor.encoding<{{{.*}}}>>
-// CHECK-HIR-DAG:       %[[VAL_7:.*]] = tensor.dim %[[VAL_0]], %[[VAL_2]] : tensor<?x?x?xf32, #sparse_tensor.encoding<{{{.*}}}>>
+// CHECK-HIR-DAG:       %[[VAL_5:.*]] = sparse_tensor.lvl %[[VAL_0]], %[[VAL_3]] : tensor<?x?x?xf32, #sparse_tensor.encoding<{{{.*}}}>>
+// CHECK-HIR-DAG:       %[[VAL_6:.*]] = sparse_tensor.lvl %[[VAL_0]], %[[VAL_2]] : tensor<?x?x?xf32, #sparse_tensor.encoding<{{{.*}}}>>
+// CHECK-HIR-DAG:       %[[VAL_7:.*]] = sparse_tensor.lvl %[[VAL_0]], %[[VAL_4]] : tensor<?x?x?xf32, #sparse_tensor.encoding<{{{.*}}}>>
 // CHECK-HIR-DAG:       %[[VAL_8:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<?x?x?xf32, #sparse_tensor.encoding<{{{.*}}}>>
 // CHECK-HIR-DAG:       %[[VAL_10:.*]] = bufferization.to_memref %[[VAL_1]] : memref<f32>
 // CHECK-HIR:           %[[VAL_11:.*]] = tensor.extract %[[VAL_1]][] : tensor<f32>
@@ -53,18 +53,18 @@
 // CHECK-MIR-DAG:       %[[I0:.*]] = arith.constant 0 : index
 // CHECK-MIR-DAG:       %[[I1:.*]] = arith.constant 1 : index
 // CHECK-MIR-DAG:       %[[I2:.*]] = arith.constant 2 : index
-// CHECK-MIR-DAG:       %[[DimSize0:.*]] = call @sparseDimSize(%[[ARGA]], %[[I0]])
-// CHECK-MIR-DAG:       %[[DimSize1:.*]] = call @sparseDimSize(%[[ARGA]], %[[I1]])
-// CHECK-MIR-DAG:       %[[DimSize2:.*]] = call @sparseDimSize(%[[ARGA]], %[[I2]])
+// CHECK-MIR-DAG:       %[[DimSize0:.*]] = call @sparseLvlSize(%[[ARGA]], %[[I0]])
+// CHECK-MIR-DAG:       %[[DimSize1:.*]] = call @sparseLvlSize(%[[ARGA]], %[[I1]])
+// CHECK-MIR-DAG:       %[[DimSize2:.*]] = call @sparseLvlSize(%[[ARGA]], %[[I2]])
 // CHECK-MIR-DAG:       %[[VAL_8:.*]] = call @sparseValuesF32(%[[ARGA]]) : (!llvm.ptr<i8>) -> memref<?xf32>
 // CHECK-MIR-DAG:       %[[VAL_10:.*]] = bufferization.to_memref %[[ARGX]] : memref<f32>
 // CHECK-MIR:           %[[VAL_11:.*]] = tensor.extract %[[ARGX]][] : tensor<f32>
-// CHECK-MIR:           %[[VAL_12:.*]] = scf.for %[[D2:.*]] = %[[I0]] to %[[DimSize2]] step %[[I1]] iter_args(%[[VAL_14:.*]] = %[[VAL_11]]) -> (f32) {
-// CHECK-MIR:             %[[VAL_15:.*]] = scf.for %[[D0:.*]] = %[[I0]] to %[[DimSize0]] step %[[I1]] iter_args(%[[VAL_17:.*]] = %[[VAL_14]]) -> (f32) {
-// CHECK-MIR:               %[[VAL_18:.*]] = arith.muli %[[DimSize0]], %[[D2]] : index
+// CHECK-MIR:           %[[VAL_12:.*]] = scf.for %[[D2:.*]] = %[[I0]] to %[[DimSize0]] step %[[I1]] iter_args(%[[VAL_14:.*]] = %[[VAL_11]]) -> (f32) {
+// CHECK-MIR:             %[[VAL_15:.*]] = scf.for %[[D0:.*]] = %[[I0]] to %[[DimSize1]] step %[[I1]] iter_args(%[[VAL_17:.*]] = %[[VAL_14]]) -> (f32) {
+// CHECK-MIR:               %[[VAL_18:.*]] = arith.muli %[[DimSize1]], %[[D2]] : index
 // CHECK-MIR:               %[[VAL_19:.*]] = arith.addi %[[VAL_18]], %[[D0]] : index
-// CHECK-MIR:               %[[VAL_20:.*]] = scf.for %[[D1:.*]] = %[[I0]] to %[[DimSize1]] step %[[I1]] iter_args(%[[VAL_22:.*]] = %[[VAL_17]]) -> (f32) {
-// CHECK-MIR:                 %[[VAL_23:.*]] = arith.muli %[[DimSize1]], %[[VAL_19]] : index
+// CHECK-MIR:               %[[VAL_20:.*]] = scf.for %[[D1:.*]] = %[[I0]] to %[[DimSize2]] step %[[I1]] iter_args(%[[VAL_22:.*]] = %[[VAL_17]]) -> (f32) {
+// CHECK-MIR:                 %[[VAL_23:.*]] = arith.muli %[[DimSize2]], %[[VAL_19]] : index
 // CHECK-MIR:                 %[[VAL_24:.*]] = arith.addi %[[VAL_23]], %[[D1]] : index
 // CHECK-MIR:                 %[[VAL_25:.*]] = memref.load %[[VAL_8]]{{\[}}%[[VAL_24]]] : memref<?xf32>
 // CHECK-MIR:                 %[[VAL_26:.*]] = arith.addf %[[VAL_22]], %[[VAL_25]] : f32
