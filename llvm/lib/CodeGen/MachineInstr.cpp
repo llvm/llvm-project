@@ -2481,7 +2481,7 @@ void MachineInstr::insert(mop_iterator It, ArrayRef<MachineOperand> Ops) {
     return;
 
   // Do one pass to untie operands.
-  DenseMap<unsigned, unsigned> TiedOpIndices;
+  SmallDenseMap<unsigned, unsigned> TiedOpIndices;
   for (const MachineOperand &MO : operands()) {
     if (MO.isReg() && MO.isTied()) {
       unsigned OpNo = getOperandNo(&MO);
