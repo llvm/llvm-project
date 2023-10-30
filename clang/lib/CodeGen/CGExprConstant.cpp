@@ -2152,6 +2152,9 @@ llvm::Constant *ConstantEmitter::tryEmitPrivate(const APValue &Value,
         Inits[I] = llvm::ConstantInt::get(CGM.getLLVMContext(), Elt.getInt());
       else if (Elt.isFloat())
         Inits[I] = llvm::ConstantFP::get(CGM.getLLVMContext(), Elt.getFloat());
+      else if (Elt.isIndeterminate())
+        Inits[I] = llvm::UndefValue::get(CGM.getTypes().ConvertType(
+            DestType->castAs<VectorType>()->getElementType()));
       else
         llvm_unreachable("unsupported vector element type");
     }
