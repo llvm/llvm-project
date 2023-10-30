@@ -48,7 +48,7 @@ def _libc_library(name, hidden, copts = [], deps = [], **kwargs):
 # Any library which does not define a public function should be listed with
 # libc_support_library.
 def libc_support_library(name, **kwargs):
-    _libc_library(name = name, hidden = True, **kwargs)
+    _libc_library(name = name, hidden = False, **kwargs)
 
 def libc_function(
         name,
