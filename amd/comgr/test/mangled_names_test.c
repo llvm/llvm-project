@@ -180,7 +180,7 @@ int main(int argc, char *argv[]) {
     exit(1);
   }
 
-  const char *bcNames[] = {"llvm.amdgcn.abi.version", "source1", "source2"};
+  const char *bcNames[] = {"__oclc_ABI_version", "source1", "source2"};
 
   for (size_t I = 0; I < numNames; ++I) {
     size_t Size;

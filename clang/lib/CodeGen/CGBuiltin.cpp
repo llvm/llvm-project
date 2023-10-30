@@ -17470,11 +17470,11 @@ Value *EmitAMDGPUImplicitArgPtr(CodeGenFunction &CGF) {
 /// Emit code based on Code Object ABI version.
 /// COV_4    : Emit code to use dispatch ptr
 /// COV_5    : Emit code to use implicitarg ptr
-/// COV_NONE : Emit code to load a global variable "llvm.amdgcn.abi.version"
+/// COV_NONE : Emit code to load a global variable "__oclc_ABI_version"
 ///            and use its value for COV_4 or COV_5 approach. It is used for
 ///            compiling device libraries in an ABI-agnostic way.
 ///
-/// Note: "llvm.amdgcn.abi.version" is supposed to be emitted and intialized by
+/// Note: "__oclc_ABI_version" is supposed to be emitted and intialized by
 ///       clang during compilation of user code.
 Value *EmitAMDGPUWorkGroupSize(CodeGenFunction &CGF, unsigned Index) {
   llvm::LoadInst *LD;
@@ -17487,7 +17487,7 @@ Value *EmitAMDGPUWorkGroupSize(CodeGenFunction &CGF, unsigned Index) {
         CGF.getContext().getLangOpts().OpenCL ? LangAS::opencl_global
                                               : LangAS::Default;
     auto *ABIVersionC = CGF.CGM.GetOrCreateLLVMGlobal(
-        "llvm.amdgcn.abi.version", CGF.Int32Ty, AddrSpace, nullptr);
+        "__oclc_ABI_version", CGF.Int32Ty, AddrSpace, nullptr);
 
     // This load will be eliminated by the IPSCCP because it is constant
     // weak_odr without externally_initialized. Either changing it to weak or

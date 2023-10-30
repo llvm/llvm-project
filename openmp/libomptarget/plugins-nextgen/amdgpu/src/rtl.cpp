@@ -4119,9 +4119,9 @@ Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
 
   if (getImplicitArgsSize() == sizeof(utils::AMDGPUImplicitArgsTy)) {
     DP("Setting fields of ImplicitArgs for COV5\n");
-
-    // ImplArgs->BlockCountZ , ImplArgs->BlockCountZ actually 0?
     ImplArgs->BlockCountX = NumBlocks;
+    ImplArgs->BlockCountY = 1;
+    ImplArgs->BlockCountZ = 1;
     ImplArgs->GroupSizeX = NumThreads;
     ImplArgs->GroupSizeY = 1;
     ImplArgs->GroupSizeZ = 1;

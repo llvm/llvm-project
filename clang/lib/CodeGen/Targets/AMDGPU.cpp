@@ -362,8 +362,8 @@ void AMDGPUTargetCodeGenInfo::setFunctionDeclAttributes(
 /// AMDGPU ROCm device libraries.
 void AMDGPUTargetCodeGenInfo::emitTargetGlobals(
     CodeGen::CodeGenModule &CGM) const {
-  StringRef Name = "llvm.amdgcn.abi.version";
-  if (CGM.getModule().getNamedGlobal(Name))
+  StringRef Name = "__oclc_ABI_version";
+  if (CGM.getModule().getNamedGlobal(Name) || CGM.getTarget().getTargetOpts().CodeObjectVersion == clang::TargetOptions::COV_None)
     return;
 
   auto *Type = llvm::IntegerType::getIntNTy(CGM.getModule().getContext(), 32);

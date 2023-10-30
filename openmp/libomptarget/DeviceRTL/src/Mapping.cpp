@@ -87,10 +87,6 @@ uint32_t getKernelSize() { return __builtin_amdgcn_grid_size_x(); }
 
 uint32_t getBlockId() { return __builtin_amdgcn_workgroup_id_x(); }
 
-uint32_t getNumberOfBlocks() {
-    return external_get_num_groups(0);
-}
-
 uint32_t getThreadIdInBlock(int32_t Dim) {
   switch (Dim) {
   case 0:

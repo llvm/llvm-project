@@ -61,13 +61,9 @@ namespace {
 // global_allocate uses ockl_dm_alloc to manage a global memory heap
 __attribute__((noinline)) extern "C" uint64_t __ockl_dm_alloc(uint64_t bufsz);
 __attribute__((noinline)) extern "C" void __ockl_dm_dealloc(uint64_t ptr);
-extern "C" size_t __ockl_get_local_size(uint32_t dim);
-extern "C" size_t __ockl_get_num_groups(uint32_t dim);
 
 extern "C" {
 #ifdef __AMDGPU__
-size_t external_get_local_size(uint32_t dim) { return __ockl_get_local_size(dim);}
-size_t external_get_num_groups(uint32_t dim) { return __ockl_get_num_groups(dim);}
 [[gnu::weak]] void *malloc(uint64_t Size) { return allocator::alloc(Size); }
 [[gnu::weak]] void free(void *Ptr) { allocator::free(Ptr); }
 
@@ -90,6 +86,7 @@ void internal_free(void *Ptr) { __ockl_dm_dealloc((uint64_t)Ptr); }
 }
 #pragma omp end declare variant
 ///}
+
 /// NVPTX implementations of internal mallocs
 ///
 ///{
