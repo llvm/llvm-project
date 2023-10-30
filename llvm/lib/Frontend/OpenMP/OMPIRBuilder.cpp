@@ -86,19 +86,6 @@ static bool isConflictIP(IRBuilder<>::InsertPoint IP1,
   return IP1.getBlock() == IP2.getBlock() && IP1.getPoint() == IP2.getPoint();
 }
 
-static const omp::GV &getGridValue(const Triple &T, Function *Kernel) {
-  if (T.isAMDGPU()) {
-    StringRef Features =
-        Kernel->getFnAttribute("target-features").getValueAsString();
-    if (Features.count("+wavefrontsize64"))
-      return omp::getAMDGPUGridValues<64>();
-    return omp::getAMDGPUGridValues<32>();
-  }
-  if (T.isNVPTX())
-    return omp::NVPTXGridValues;
-  llvm_unreachable("No grid value available for this architecture!");
-}
-
 static bool isValidWorkshareLoopScheduleType(OMPScheduleType SchedType) {
   // Valid ordered/unordered and base algorithm combinations.
   switch (SchedType & ~OMPScheduleType::MonotonicityMask) {
@@ -157,6 +144,19 @@ static bool isValidWorkshareLoopScheduleType(OMPScheduleType SchedType) {
   return true;
 }
 #endif
+
+static const omp::GV &getGridValue(const Triple &T, Function *Kernel) {
+  if (T.isAMDGPU()) {
+    StringRef Features =
+        Kernel->getFnAttribute("target-features").getValueAsString();
+    if (Features.count("+wavefrontsize64"))
+      return omp::getAMDGPUGridValues<64>();
+    return omp::getAMDGPUGridValues<32>();
+  }
+  if (T.isNVPTX())
+    return omp::NVPTXGridValues;
+  llvm_unreachable("No grid value available for this architecture!");
+}
 
 /// Determine which scheduling algorithm to use, determined from schedule clause
 /// arguments.
