@@ -1102,3 +1102,36 @@ namespace DelegatingConstructors {
   static_assert(d4.a == 10, "");
   static_assert(d4.b == 12, "");
 }
+
+namespace AccessOnNullptr {
+  struct F {
+    int a;
+  };
+
+  constexpr int a() { // expected-error {{never produces a constant expression}} \
+                      // ref-error {{never produces a constant expression}}
+    F *f = nullptr;
+
+    f->a = 0; // expected-note 2{{cannot access field of null pointer}} \
+              // ref-note 2{{cannot access field of null pointer}}
+    return f->a;
+  }
+  static_assert(a() == 0, ""); // expected-error {{not an integral constant expression}} \
+                               // expected-note {{in call to 'a()'}} \
+                               // ref-error {{not an integral constant expression}} \
+                               // ref-note {{in call to 'a()'}}
+
+  constexpr int a2() { // expected-error {{never produces a constant expression}} \
+                      // ref-error {{never produces a constant expression}}
+    F *f = nullptr;
+
+
+    const int *a = &(f->a); // expected-note 2{{cannot access field of null pointer}} \
+                            // ref-note 2{{cannot access field of null pointer}}
+    return f->a;
+  }
+  static_assert(a2() == 0, ""); // expected-error {{not an integral constant expression}} \
+                               // expected-note {{in call to 'a2()'}} \
+                               // ref-error {{not an integral constant expression}} \
+                               // ref-note {{in call to 'a2()'}}
+}
