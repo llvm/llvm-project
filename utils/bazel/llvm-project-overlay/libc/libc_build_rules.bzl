@@ -13,7 +13,7 @@ def libc_internal_target(name):
     return name + ".__internal__"
 
 def libc_common_copts():
-    root_label = Label("//libc")
+    root_label = Label(":libc")
     libc_include_path = paths.join(root_label.workspace_root, root_label.package)
     return [
         "-I" + libc_include_path,
