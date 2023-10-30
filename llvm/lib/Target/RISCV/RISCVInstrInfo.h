@@ -97,7 +97,8 @@ public:
   // Materializes the given integer Val into DstReg.
   void movImm(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
               const DebugLoc &DL, Register DstReg, uint64_t Val,
-              MachineInstr::MIFlag Flag = MachineInstr::NoFlags) const;
+              MachineInstr::MIFlag Flag = MachineInstr::NoFlags,
+              bool DstRenamable = false, bool DstIsDead = false) const;
 
   unsigned getInstSizeInBytes(const MachineInstr &MI) const override;
 

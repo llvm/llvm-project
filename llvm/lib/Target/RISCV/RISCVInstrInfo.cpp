@@ -776,7 +776,8 @@ MachineInstr *RISCVInstrInfo::foldMemoryOperandImpl(
 void RISCVInstrInfo::movImm(MachineBasicBlock &MBB,
                             MachineBasicBlock::iterator MBBI,
                             const DebugLoc &DL, Register DstReg, uint64_t Val,
-                            MachineInstr::MIFlag Flag) const {
+                            MachineInstr::MIFlag Flag, bool DstRenamable,
+                            bool DstIsDead) const {
   Register SrcReg = RISCV::X0;
 
   if (!STI.is64Bit() && !isInt<32>(Val))
@@ -786,28 +787,39 @@ void RISCVInstrInfo::movImm(MachineBasicBlock &MBB,
       RISCVMatInt::generateInstSeq(Val, STI.getFeatureBits());
   assert(!Seq.empty());
 
+  bool SrcRenamable = false;
+  unsigned Num = 0;
+
   for (const RISCVMatInt::Inst &Inst : Seq) {
-    unsigned SrcRegState = getKillRegState(SrcReg != RISCV::X0);
+    bool LastItem = ++Num == Seq.size();
+    unsigned DstRegState = getDeadRegState(DstIsDead && LastItem) |
+                           getRenamableRegState(DstRenamable);
+    unsigned SrcRegState = getKillRegState(SrcReg != RISCV::X0) |
+                           getRenamableRegState(SrcRenamable);
     switch (Inst.getOpndKind()) {
     case RISCVMatInt::Imm:
-      BuildMI(MBB, MBBI, DL, get(Inst.getOpcode()), DstReg)
+      BuildMI(MBB, MBBI, DL, get(Inst.getOpcode()))
+          .addReg(DstReg, RegState::Define | DstRegState)
           .addImm(Inst.getImm())
           .setMIFlag(Flag);
       break;
     case RISCVMatInt::RegX0:
-      BuildMI(MBB, MBBI, DL, get(Inst.getOpcode()), DstReg)
+      BuildMI(MBB, MBBI, DL, get(Inst.getOpcode()))
+          .addReg(DstReg, RegState::Define | DstRegState)
           .addReg(SrcReg, SrcRegState)
           .addReg(RISCV::X0)
           .setMIFlag(Flag);
       break;
     case RISCVMatInt::RegReg:
-      BuildMI(MBB, MBBI, DL, get(Inst.getOpcode()), DstReg)
+      BuildMI(MBB, MBBI, DL, get(Inst.getOpcode()))
+          .addReg(DstReg, RegState::Define | DstRegState)
           .addReg(SrcReg, SrcRegState)
           .addReg(SrcReg, SrcRegState)
           .setMIFlag(Flag);
       break;
     case RISCVMatInt::RegImm:
-      BuildMI(MBB, MBBI, DL, get(Inst.getOpcode()), DstReg)
+      BuildMI(MBB, MBBI, DL, get(Inst.getOpcode()))
+          .addReg(DstReg, RegState::Define | DstRegState)
           .addReg(SrcReg, SrcRegState)
           .addImm(Inst.getImm())
           .setMIFlag(Flag);
@@ -816,6 +828,7 @@ void RISCVInstrInfo::movImm(MachineBasicBlock &MBB,
 
     // Only the first instruction has X0 as its source.
     SrcReg = DstReg;
+    SrcRenamable = DstRenamable;
   }
 }
 
