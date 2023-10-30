@@ -204,12 +204,12 @@ void M68kMCCodeEmitter::encodeInstruction(const MCInst &MI,
                                           SmallVectorImpl<MCFixup> &Fixups,
                                           const MCSubtargetInfo &STI) const {
   LLVM_DEBUG(dbgs() << "EncodeInstruction: " << MCII.getName(MI.getOpcode())
-                    << "(" << Opcode << ")\n");
+                    << "(" << MI.getOpcode() << ")\n");
   (void)MCII;
 
   // Try using the new method first.
   APInt EncodedInst(16, 0U);
-  APInt Scratch(16, 0U);
+  APInt Scratch(64, 0U); // One APInt word is enough.
   getBinaryCodeForInstr(MI, Fixups, EncodedInst, Scratch, STI);
 
   ArrayRef<uint64_t> Data(EncodedInst.getRawData(), EncodedInst.getNumWords());

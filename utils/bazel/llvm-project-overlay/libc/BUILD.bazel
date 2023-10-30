@@ -170,6 +170,7 @@ libc_support_library(
         ":__support_cpp_type_traits",
         ":__support_macros_attributes",
         ":__support_macros_config",
+        ":__support_macros_sanitizer",
         ":libc_root",
     ],
 )

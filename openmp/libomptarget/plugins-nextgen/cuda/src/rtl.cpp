@@ -79,8 +79,7 @@ private:
 /// generic kernel class.
 struct CUDAKernelTy : public GenericKernelTy {
   /// Create a CUDA kernel with a name and an execution mode.
-  CUDAKernelTy(const char *Name, OMPTgtExecModeFlags ExecMode)
-      : GenericKernelTy(Name, ExecMode), Func(nullptr) {}
+  CUDAKernelTy(const char *Name) : GenericKernelTy(Name), Func(nullptr) {}
 
   /// Initialize the CUDA kernel.
   Error initImpl(GenericDeviceTy &GenericDevice,
@@ -356,14 +355,13 @@ struct CUDADeviceTy : public GenericDeviceTy {
 
   /// Allocate and construct a CUDA kernel.
   Expected<GenericKernelTy &>
-  constructKernel(const __tgt_offload_entry &KernelEntry,
-                  OMPTgtExecModeFlags ExecMode) override {
+  constructKernel(const __tgt_offload_entry &KernelEntry) override {
     // Allocate and construct the CUDA kernel.
     CUDAKernelTy *CUDAKernel = Plugin::get().allocate<CUDAKernelTy>();
     if (!CUDAKernel)
       return Plugin::error("Failed to allocate memory for CUDA kernel");
 
-    new (CUDAKernel) CUDAKernelTy(KernelEntry.name, ExecMode);
+    new (CUDAKernel) CUDAKernelTy(KernelEntry.name);
 
     return *CUDAKernel;
   }
@@ -517,6 +515,116 @@ struct CUDADeviceTy : public GenericDeviceTy {
       return Err;
 
     return Plugin::check(Res, "Error in cuStreamSynchronize: %s");
+  }
+
+  /// CUDA support VA management
+  bool supportVAManagement() const override { return true; }
+
+  /// Allocates \p RSize bytes (rounded up to page size) and hints the cuda
+  /// driver to map it to \p VAddr. The obtained address is stored in \p Addr.
+  /// At return \p RSize contains the actual size
+  Error memoryVAMap(void **Addr, void *VAddr, size_t *RSize) override {
+    CUdeviceptr DVAddr = reinterpret_cast<CUdeviceptr>(VAddr);
+    auto IHandle = DeviceMMaps.find(DVAddr);
+    size_t Size = *RSize;
+
+    if (Size == 0)
+      return Plugin::error("Memory Map Size must be larger than 0");
+
+    // Check if we have already mapped this address
+    if (IHandle != DeviceMMaps.end())
+      return Plugin::error("Address already memory mapped");
+
+    CUmemAllocationProp Prop = {};
+    size_t Granularity = 0;
+
+    size_t Free, Total;
+    CUresult Res = cuMemGetInfo(&Free, &Total);
+    if (auto Err = Plugin::check(Res, "Error in cuMemGetInfo: %s"))
+      return Err;
+
+    if (Size >= Free) {
+      *Addr = nullptr;
+      return Plugin::error(
+          "Canot map memory size larger than the available device memory");
+    }
+
+    // currently NVidia only supports pinned device types
+    Prop.type = CU_MEM_ALLOCATION_TYPE_PINNED;
+    Prop.location.type = CU_MEM_LOCATION_TYPE_DEVICE;
+
+    Prop.location.id = DeviceId;
+    cuMemGetAllocationGranularity(&Granularity, &Prop,
+                                  CU_MEM_ALLOC_GRANULARITY_MINIMUM);
+    if (auto Err =
+            Plugin::check(Res, "Error in cuMemGetAllocationGranularity: %s"))
+      return Err;
+
+    if (Granularity == 0)
+      return Plugin::error("Wrong device Page size");
+
+    // Ceil to page size.
+    Size = roundUp(Size, Granularity);
+
+    // Create a handler of our allocation
+    CUmemGenericAllocationHandle AHandle;
+    Res = cuMemCreate(&AHandle, Size, &Prop, 0);
+    if (auto Err = Plugin::check(Res, "Error in cuMemCreate: %s"))
+      return Err;
+
+    CUdeviceptr DevPtr = 0;
+    Res = cuMemAddressReserve(&DevPtr, Size, 0, DVAddr, 0);
+    if (auto Err = Plugin::check(Res, "Error in cuMemAddressReserve: %s"))
+      return Err;
+
+    Res = cuMemMap(DevPtr, Size, 0, AHandle, 0);
+    if (auto Err = Plugin::check(Res, "Error in cuMemMap: %s"))
+      return Err;
+
+    CUmemAccessDesc ADesc = {};
+    ADesc.location.type = CU_MEM_LOCATION_TYPE_DEVICE;
+    ADesc.location.id = DeviceId;
+    ADesc.flags = CU_MEM_ACCESS_FLAGS_PROT_READWRITE;
+
+    // Sets address
+    Res = cuMemSetAccess(DevPtr, Size, &ADesc, 1);
+    if (auto Err = Plugin::check(Res, "Error in cuMemSetAccess: %s"))
+      return Err;
+
+    *Addr = reinterpret_cast<void *>(DevPtr);
+    *RSize = Size;
+    DeviceMMaps.insert({DevPtr, AHandle});
+    return Plugin::success();
+  }
+
+  /// De-allocates device memory and Unmaps the Virtual Addr
+  Error memoryVAUnMap(void *VAddr, size_t Size) override {
+    CUdeviceptr DVAddr = reinterpret_cast<CUdeviceptr>(VAddr);
+    auto IHandle = DeviceMMaps.find(DVAddr);
+    // Mapping does not exist
+    if (IHandle == DeviceMMaps.end()) {
+      return Plugin::error("Addr is not MemoryMapped");
+    }
+
+    if (IHandle == DeviceMMaps.end())
+      return Plugin::error("Addr is not MemoryMapped");
+
+    CUmemGenericAllocationHandle &AllocHandle = IHandle->second;
+
+    CUresult Res = cuMemUnmap(DVAddr, Size);
+    if (auto Err = Plugin::check(Res, "Error in cuMemUnmap: %s"))
+      return Err;
+
+    Res = cuMemRelease(AllocHandle);
+    if (auto Err = Plugin::check(Res, "Error in cuMemRelease: %s"))
+      return Err;
+
+    Res = cuMemAddressFree(DVAddr, Size);
+    if (auto Err = Plugin::check(Res, "Error in cuMemAddressFree: %s"))
+      return Err;
+
+    DeviceMMaps.erase(IHandle);
+    return Plugin::success();
   }
 
   /// Query for the completion of the pending operations on the async info.
@@ -843,6 +951,11 @@ struct CUDADeviceTy : public GenericDeviceTy {
     return Plugin::success();
   }
 
+  virtual bool shouldSetupDeviceMemoryPool() const override {
+    /// We use the CUDA malloc for now.
+    return false;
+  }
+
   /// Getters and setters for stack and heap sizes.
   Error getDeviceStackSize(uint64_t &Value) override {
     return getCtxLimit(CU_LIMIT_STACK_SIZE, Value);
@@ -855,6 +968,10 @@ struct CUDADeviceTy : public GenericDeviceTy {
   }
   Error setDeviceHeapSize(uint64_t Value) override {
     return setCtxLimit(CU_LIMIT_MALLOC_HEAP_SIZE, Value);
+  }
+  Error getDeviceMemorySize(uint64_t &Value) override {
+    CUresult Res = cuDeviceTotalMem(&Value, Device);
+    return Plugin::check(Res, "Error in getDeviceMemorySize %s");
   }
 
   /// CUDA-specific functions for getting and setting context limits.
@@ -903,6 +1020,9 @@ private:
 
   /// The CUDA device handler.
   CUdevice Device = CU_DEVICE_INVALID;
+
+  /// The memory mapped addresses and their handles
+  std::unordered_map<CUdeviceptr, CUmemGenericAllocationHandle> DeviceMMaps;
 
   /// The compute capability of the corresponding CUDA device.
   struct ComputeCapabilityTy {

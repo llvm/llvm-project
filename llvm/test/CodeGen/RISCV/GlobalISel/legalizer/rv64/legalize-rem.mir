@@ -332,13 +332,13 @@ body:             |
     ; CHECK-M-LABEL: name: urem_i8
     ; CHECK-M: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; CHECK-M-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
-    ; CHECK-M-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 255
-    ; CHECK-M-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY]], [[C]]
-    ; CHECK-M-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[AND]](s64)
-    ; CHECK-M-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 255
-    ; CHECK-M-NEXT: [[AND1:%[0-9]+]]:_(s64) = G_AND [[COPY1]], [[C1]]
-    ; CHECK-M-NEXT: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[AND1]](s64)
-    ; CHECK-M-NEXT: [[UREM:%[0-9]+]]:_(s32) = G_UREM [[TRUNC]], [[TRUNC1]]
+    ; CHECK-M-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
+    ; CHECK-M-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
+    ; CHECK-M-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[TRUNC]], [[C]]
+    ; CHECK-M-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
+    ; CHECK-M-NEXT: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[COPY1]](s64)
+    ; CHECK-M-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[TRUNC1]], [[C1]]
+    ; CHECK-M-NEXT: [[UREM:%[0-9]+]]:_(s32) = G_UREM [[AND]], [[AND1]]
     ; CHECK-M-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[UREM]](s32)
     ; CHECK-M-NEXT: $x10 = COPY [[ANYEXT]](s64)
     ; CHECK-M-NEXT: PseudoRET implicit $x10
@@ -373,13 +373,13 @@ body:             |
     ; CHECK-M-LABEL: name: urem_i15
     ; CHECK-M: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; CHECK-M-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
-    ; CHECK-M-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 32767
-    ; CHECK-M-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY]], [[C]]
-    ; CHECK-M-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[AND]](s64)
-    ; CHECK-M-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 32767
-    ; CHECK-M-NEXT: [[AND1:%[0-9]+]]:_(s64) = G_AND [[COPY1]], [[C1]]
-    ; CHECK-M-NEXT: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[AND1]](s64)
-    ; CHECK-M-NEXT: [[UREM:%[0-9]+]]:_(s32) = G_UREM [[TRUNC]], [[TRUNC1]]
+    ; CHECK-M-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 32767
+    ; CHECK-M-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
+    ; CHECK-M-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[TRUNC]], [[C]]
+    ; CHECK-M-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 32767
+    ; CHECK-M-NEXT: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[COPY1]](s64)
+    ; CHECK-M-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[TRUNC1]], [[C1]]
+    ; CHECK-M-NEXT: [[UREM:%[0-9]+]]:_(s32) = G_UREM [[AND]], [[AND1]]
     ; CHECK-M-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[UREM]](s32)
     ; CHECK-M-NEXT: $x10 = COPY [[ANYEXT]](s64)
     ; CHECK-M-NEXT: PseudoRET implicit $x10
@@ -414,13 +414,13 @@ body:             |
     ; CHECK-M-LABEL: name: urem_i16
     ; CHECK-M: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
     ; CHECK-M-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
-    ; CHECK-M-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 65535
-    ; CHECK-M-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY]], [[C]]
-    ; CHECK-M-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[AND]](s64)
-    ; CHECK-M-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 65535
-    ; CHECK-M-NEXT: [[AND1:%[0-9]+]]:_(s64) = G_AND [[COPY1]], [[C1]]
-    ; CHECK-M-NEXT: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[AND1]](s64)
-    ; CHECK-M-NEXT: [[UREM:%[0-9]+]]:_(s32) = G_UREM [[TRUNC]], [[TRUNC1]]
+    ; CHECK-M-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
+    ; CHECK-M-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
+    ; CHECK-M-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[TRUNC]], [[C]]
+    ; CHECK-M-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
+    ; CHECK-M-NEXT: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[COPY1]](s64)
+    ; CHECK-M-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[TRUNC1]], [[C1]]
+    ; CHECK-M-NEXT: [[UREM:%[0-9]+]]:_(s32) = G_UREM [[AND]], [[AND1]]
     ; CHECK-M-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[UREM]](s32)
     ; CHECK-M-NEXT: $x10 = COPY [[ANYEXT]](s64)
     ; CHECK-M-NEXT: PseudoRET implicit $x10

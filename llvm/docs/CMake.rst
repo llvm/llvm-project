@@ -428,6 +428,9 @@ enabled sub-projects. Nearly all of these variable names begin with
   $CMAKE_INSTALL_PREFIX/Toolchains containing an xctoolchain directory which can
   be used to override the default system tools.
 
+**LLVM_<target>_LINKER_FLAGS**:STRING
+  Defines the set of linker flags that should be applied to a <target>.
+
 **LLVM_DEFAULT_TARGET_TRIPLE**:STRING
   LLVM target to use for code generation when no target is explicitly specified.
   It defaults to "host", meaning that it shall pick the architecture
@@ -751,6 +754,19 @@ enabled sub-projects. Nearly all of these variable names begin with
 
 **LLVM_PARALLEL_LINK_JOBS**:STRING
   Define the maximum number of concurrent link jobs.
+
+**LLVM_RAM_PER_COMPILE_JOB**:STRING
+  Calculates the amount of Ninja compile jobs according to available resources.
+  Value has to be in MB, overwrites LLVM_PARALLEL_COMPILE_JOBS. Compile jobs 
+  will be between one and amount of logical cores.
+
+**LLVM_RAM_PER_LINK_JOB**:STRING
+  Calculates the amount of Ninja link jobs according to available resources.
+  Value has to be in MB, overwrites LLVM_PARALLEL_LINK_JOBS. Link jobs will 
+  be between one and amount of logical cores. Link jobs will not run 
+  exclusively therefore you should add an offset of one or two compile jobs 
+  to be sure its not terminated in your memory restricted environment. On ELF
+  platforms also consider ``LLVM_USE_SPLIT_DWARF`` in Debug build.
 
 **LLVM_PROFDATA_FILE**:PATH
   Path to a profdata file to pass into clang's -fprofile-instr-use flag. This

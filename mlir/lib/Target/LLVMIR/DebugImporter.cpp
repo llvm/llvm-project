@@ -24,13 +24,17 @@ using namespace mlir::LLVM;
 using namespace mlir::LLVM::detail;
 
 Location DebugImporter::translateFuncLocation(llvm::Function *func) {
-  if (!func->getSubprogram())
+  llvm::DISubprogram *subprogram = func->getSubprogram();
+  if (!subprogram)
     return UnknownLoc::get(context);
 
   // Add a fused location to link the subprogram information.
-  StringAttr name = StringAttr::get(context, func->getSubprogram()->getName());
+  StringAttr funcName = StringAttr::get(context, subprogram->getName());
+  StringAttr fileName = StringAttr::get(context, subprogram->getFilename());
   return FusedLocWith<DISubprogramAttr>::get(
-      {NameLoc::get(name)}, translate(func->getSubprogram()), context);
+      {NameLoc::get(funcName),
+       FileLineColLoc::get(fileName, subprogram->getLine(), /*column=*/0)},
+      translate(subprogram), context);
 }
 
 //===----------------------------------------------------------------------===//

@@ -1365,12 +1365,6 @@ public:
            getOpcode() == TargetOpcode::INLINEASM_BR;
   }
 
-  /// FIXME: Seems like a layering violation that the AsmDialect, which is X86
-  /// specific, be attached to a generic MachineInstr.
-  bool isMSInlineAsm() const {
-    return isInlineAsm() && getInlineAsmDialect() == InlineAsm::AD_Intel;
-  }
-
   bool isStackAligningInlineAsm() const;
   InlineAsm::AsmDialect getInlineAsmDialect() const;
 
@@ -1820,7 +1814,7 @@ public:
 
   /// Replace the instruction descriptor (thus opcode) of
   /// the current instruction with a new one.
-  void setDesc(const MCInstrDesc &TID) { MCID = &TID; }
+  void setDesc(const MCInstrDesc &TID);
 
   /// Replace current source information with new such.
   /// Avoid using this, the constructor argument is preferable.

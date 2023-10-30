@@ -18,7 +18,7 @@
 @property(nullable) __SVFloat32_t f32; // expected-error {{cannot be applied to non-pointer type}}
 @property(nullable) __SVFloat64_t f64; // expected-error {{cannot be applied to non-pointer type}}
 
-@property(nullable) __SVBFloat16_t bf16; // expected-error {{cannot be applied to non-pointer type}}
+@property(nullable) __SVBfloat16_t bf16; // expected-error {{cannot be applied to non-pointer type}}
 
 @property(nullable) __SVBool_t b8; // expected-error {{cannot be applied to non-pointer type}}
 @end

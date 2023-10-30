@@ -1047,14 +1047,9 @@ defm BUFFER_ATOMIC_DEC_X2 : MUBUF_Pseudo_Atomics <
 >;
 
 let SubtargetPredicate = HasGFX10_BEncoding in {
-  defm BUFFER_ATOMIC_CSUB : MUBUF_Pseudo_Atomics_RTN <
+  defm BUFFER_ATOMIC_CSUB : MUBUF_Pseudo_Atomics <
     "buffer_atomic_csub", VGPR_32, i32, int_amdgcn_global_atomic_csub
   >;
-
-  let OtherPredicates = [HasAtomicCSubNoRtnInsts] in
-    defm BUFFER_ATOMIC_CSUB : MUBUF_Pseudo_Atomics_NO_RTN <
-      "buffer_atomic_csub", VGPR_32, i32
-    >;
 }
 
 let SubtargetPredicate = isGFX8GFX9 in {

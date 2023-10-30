@@ -10078,3 +10078,46 @@ multiclass sve2p1_tblq<string mnemonic> {
   def _S : sve2p1_permute_vec_elems_q<0b10, 0b110, mnemonic, ZPR32, Z_s>;
   def _D : sve2p1_permute_vec_elems_q<0b11, 0b110, mnemonic, ZPR64, Z_d>;
 }
+
+//===----------------------------------------------------------------------===//
+// SVE2 FP8 Instructions
+//===----------------------------------------------------------------------===//
+
+// FP8 upconvert
+class sve2_fp8_cvt_single<bit L, bits<2> opc, string mnemonic,
+                          ZPRRegOp dst_ty, ZPRRegOp src_ty>
+    : I<(outs dst_ty:$Zd), (ins src_ty:$Zn),
+      mnemonic, "\t$Zd, $Zn",
+      "", []>, Sched<[]>{
+  bits<5> Zd;
+  bits<5> Zn;
+  let Inst{31-17} = 0b011001010000100;
+  let Inst{16}    = L;
+  let Inst{15-12} = 0b0011;
+  let Inst{11-10} = opc;
+  let Inst{9-5}   = Zn;
+  let Inst{4-0}   = Zd;
+}
+
+multiclass sve2_fp8_cvt_single<bit L, bits<2> opc, string mnemonic> {
+  def _BtoH : sve2_fp8_cvt_single<L, opc, mnemonic, ZPR16, ZPR8>;
+}
+
+// FP8 downconvert
+class sve2_fp8_down_cvt_single<bits<2> opc, string mnemonic,
+                              ZPRRegOp dst_ty, RegisterOperand src_ty>
+    : I<(outs dst_ty:$Zd), (ins src_ty:$Zn),
+      mnemonic, "\t$Zd, $Zn",
+      "", []>, Sched<[]>{
+  bits<5> Zd;
+  bits<4> Zn;
+  let Inst{31-12} = 0b01100101000010100011;
+  let Inst{11-10} = opc;
+  let Inst{9-6} = Zn;
+  let Inst{5} = 0b0;
+  let Inst{4-0} = Zd;
+}
+
+multiclass sve2_fp8_down_cvt_single<bits<2> opc, string mnemonic, RegisterOperand src> {
+  def NAME : sve2_fp8_down_cvt_single<opc, mnemonic, ZPR8, src>;
+}
