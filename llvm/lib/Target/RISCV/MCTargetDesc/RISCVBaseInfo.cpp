@@ -251,7 +251,7 @@ int RISCVLoadFPImm::getLoadFPImm(APFloat FPImm) {
          "Unexpected semantics");
 
   // Handle the minimum normalized value which is different for each type.
-  if (FPImm.isSmallestNormalized())
+  if (FPImm.isSmallestNormalized() && !FPImm.isNegative())
     return 1;
 
   // Convert to single precision to use its lookup table.
