@@ -232,9 +232,11 @@ using PassPipelineFn = llvm::function_ref<LogicalResult(PassManager &pm)>;
 /// Register all dialects and parse command line options.
 /// - toolName is used for the header displayed by `--help`.
 /// - registry should contain all the dialects that can be parsed in the source.
+/// - return std::pair<std::string, std::string> for
+///   inputFilename and outputFilename command line option values.
 std::pair<std::string, std::string>
-registrationAndParseCLIOptions(int argc, char **argv, llvm::StringRef toolName,
-                               DialectRegistry &registry);
+registerAndParseCLIOptions(int argc, char **argv, llvm::StringRef toolName,
+                           DialectRegistry &registry);
 
 /// Perform the core processing behind `mlir-opt`.
 /// - outputStream is the stream where the resulting IR is printed.

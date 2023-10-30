@@ -447,9 +447,9 @@ static LogicalResult processBuffer(raw_ostream &os,
 }
 
 std::pair<std::string, std::string>
-mlir::registrationAndParseCLIOptions(int argc, char **argv,
-                                     llvm::StringRef toolName,
-                                     DialectRegistry &registry) {
+mlir::registerAndParseCLIOptions(int argc, char **argv,
+                                 llvm::StringRef toolName,
+                                 DialectRegistry &registry) {
   static cl::opt<std::string> inputFilename(
       cl::Positional, cl::desc("<input file>"), cl::init("-"));
 
@@ -554,7 +554,7 @@ LogicalResult mlir::MlirOptMain(int argc, char **argv, llvm::StringRef toolName,
   // Register dialects and parse command line options.
   std::string inputFilename, outputFilename;
   std::tie(inputFilename, outputFilename) =
-      registrationAndParseCLIOptions(argc, argv, toolName, registry);
+      registerAndParseCLIOptions(argc, argv, toolName, registry);
 
   return MlirOptMain(argc, argv, inputFilename, outputFilename, registry);
 }
