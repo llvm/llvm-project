@@ -461,13 +461,11 @@ static llvm::Expected<std::string> GetXcodeSDK(XcodeSDK sdk) {
     // Invoke xcrun with the shlib dir.
     if (FileSpec fspec = HostInfo::GetShlibDir()) {
       if (FileSystem::Instance().Exists(fspec)) {
-        std::string contents_dir =
-            XcodeSDK::FindXcodeContentsDirectoryInPath(fspec.GetPath());
-        llvm::StringRef shlib_developer_dir =
-            llvm::sys::path::parent_path(contents_dir);
-        if (!shlib_developer_dir.empty()) {
-          auto sdk =
-              xcrun(sdk_name, show_sdk_path, std::move(shlib_developer_dir));
+        llvm::SmallString<0> shlib_developer_dir(
+            XcodeSDK::FindXcodeContentsDirectoryInPath(fspec.GetPath()));
+        llvm::sys::path::append(shlib_developer_dir, "Developer");
+        if (FileSystem::Instance().Exists(shlib_developer_dir)) {
+          auto sdk = xcrun(sdk_name, show_sdk_path, shlib_developer_dir);
           if (!sdk)
             return sdk.takeError();
           if (!sdk->empty())

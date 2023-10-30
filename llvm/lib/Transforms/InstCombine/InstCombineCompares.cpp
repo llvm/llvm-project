@@ -846,17 +846,6 @@ Instruction *InstCombinerImpl::foldGEPICmp(GEPOperator *GEPLHS, Value *RHS,
       return transformToIndexedCompare(GEPLHS, RHS, Cond, DL, *this);
     }
 
-    // If one of the GEPs has all zero indices, recurse.
-    // FIXME: Handle vector of pointers.
-    if (!GEPLHS->getType()->isVectorTy() && GEPLHS->hasAllZeroIndices())
-      return foldGEPICmp(GEPRHS, GEPLHS->getOperand(0),
-                         ICmpInst::getSwappedPredicate(Cond), I);
-
-    // If the other GEP has all zero indices, recurse.
-    // FIXME: Handle vector of pointers.
-    if (!GEPRHS->getType()->isVectorTy() && GEPRHS->hasAllZeroIndices())
-      return foldGEPICmp(GEPLHS, GEPRHS->getOperand(0), Cond, I);
-
     bool GEPsInBounds = GEPLHS->isInBounds() && GEPRHS->isInBounds();
     if (GEPLHS->getNumOperands() == GEPRHS->getNumOperands() &&
         GEPLHS->getSourceElementType() == GEPRHS->getSourceElementType()) {
@@ -2451,7 +2440,7 @@ Instruction *InstCombinerImpl::foldICmpShrConstant(ICmpInst &Cmp,
   // constant-value-based preconditions in the folds below, then we could assert
   // those conditions rather than checking them. This is difficult because of
   // undef/poison (PR34838).
-  if (IsAShr) {
+  if (IsAShr && Shr->hasOneUse()) {
     if (IsExact || Pred == CmpInst::ICMP_SLT || Pred == CmpInst::ICMP_ULT) {
       // When ShAmtC can be shifted losslessly:
       // icmp PRED (ashr exact X, ShAmtC), C --> icmp PRED X, (C << ShAmtC)
@@ -2491,7 +2480,7 @@ Instruction *InstCombinerImpl::foldICmpShrConstant(ICmpInst &Cmp,
                             ConstantInt::getAllOnesValue(ShrTy));
       }
     }
-  } else {
+  } else if (!IsAShr) {
     if (Pred == CmpInst::ICMP_ULT || (Pred == CmpInst::ICMP_UGT && IsExact)) {
       // icmp ult (lshr X, ShAmtC), C --> icmp ult X, (C << ShAmtC)
       // icmp ugt (lshr exact X, ShAmtC), C --> icmp ugt X, (C << ShAmtC)

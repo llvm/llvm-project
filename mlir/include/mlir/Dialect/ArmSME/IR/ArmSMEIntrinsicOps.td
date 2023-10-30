@@ -86,7 +86,7 @@ class ArmSME_IntrStoreOp<string mnemonic>
     : ArmSME_IntrOp<mnemonic>,
       Arguments<(ins Arg<LDSTPredicate, "Vector predicate">:$predicate,
                  Arg<LLVM_AnyPointer, "Store address", [MemWrite]>:$store_address,
-                 Arg<I32, "Virtual tile ID">:$tild_id,
+                 Arg<I32, "Virtual tile ID">:$tile_id,
                  Arg<I32, "Tile slice">:$tile_slice_index)>;
 
 def LLVM_aarch64_sme_st1b_horiz : ArmSME_IntrStoreOp<"st1b.horiz">;
