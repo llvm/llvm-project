@@ -15,6 +15,7 @@
 #include "llvm/ObjCopy/CommonConfig.h"
 #include "llvm/ObjCopy/ConfigManager.h"
 #include "llvm/ObjCopy/MachO/MachOConfig.h"
+#include "llvm/ObjCopy/ObjCopy.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/CRC.h"
@@ -749,12 +750,12 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
                                A->getValue());
     uint8_t ByteVal = Val.get();
     if (ByteVal != Val.get())
-      llvm::errs() << "warning: truncating gap-fill from 0x"
-                   << llvm::utohexstr(Val.get(), true) << " to 0x"
-                   << llvm::utohexstr(ByteVal, true) << '\n';
+      if (Error E = reportWarning(llvm::createStringError(
+              std::errc::value_too_large,
+              "truncating gap-fill from 0x%x to 0x%x", Val.get(), ByteVal)))
+        return std::move(E);
     Config.GapFill = ByteVal;
-  } else
-    Config.GapFill = 0; // The value of zero is equivalent to no fill.
+  }
 
   if (const auto *A = InputArgs.getLastArg(OBJCOPY_pad_to)) {
     if (Config.OutputFormat != FileFormat::Binary)
@@ -766,8 +767,7 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
       return createStringError(Addr.getError(), "--pad-to: bad number: %s",
                                A->getValue());
     Config.PadTo = *Addr;
-  } else
-    Config.PadTo = 0;
+  }
 
   for (auto *Arg : InputArgs.filtered(OBJCOPY_redefine_symbol)) {
     if (!StringRef(Arg->getValue()).contains('='))

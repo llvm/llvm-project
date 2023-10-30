@@ -2635,30 +2635,30 @@ template <class ELFT> Error ELFWriter<ELFT>::finalize() {
 }
 
 Error BinaryWriter::write() {
-  SmallVector<const SectionBase *, 30> LoadableSections;
+  SmallVector<const SectionBase *, 30> BitsSections;
   for (const SectionBase &Sec : Obj.allocSections()) {
     if (Sec.Type != SHT_NOBITS)
-      LoadableSections.push_back(&Sec);
+      BitsSections.push_back(&Sec);
   }
 
-  if (LoadableSections.empty())
+  if (BitsSections.empty())
     return Error::success();
 
-  llvm::stable_sort(LoadableSections,
+  llvm::stable_sort(BitsSections,
                     [](const SectionBase *LHS, const SectionBase *RHS) {
                       return LHS->Offset < RHS->Offset;
                     });
 
-  assert(LoadableSections.front()->Offset == 0);
+  assert(BitsSections.front()->Offset == 0);
 
-  for (size_t i = 0; i != LoadableSections.size(); ++i) {
-    const SectionBase &Sec = *LoadableSections[i];
+  for (size_t i = 0; i != BitsSections.size(); ++i) {
+    const SectionBase &Sec = *BitsSections[i];
     if (Error Err = Sec.accept(*SecWriter))
       return Err;
     if (GapFill == 0)
       continue;
-    uint64_t PadOffset = (i < LoadableSections.size() - 1)
-                             ? LoadableSections[i + 1]->Offset
+    uint64_t PadOffset = (i < BitsSections.size() - 1)
+                             ? BitsSections[i + 1]->Offset
                              : Buf->getBufferSize();
     assert(PadOffset <= Buf->getBufferSize());
     assert(Sec.Offset + Sec.Size <= PadOffset);
