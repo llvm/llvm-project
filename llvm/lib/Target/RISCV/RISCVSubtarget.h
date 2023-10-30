@@ -50,7 +50,7 @@ public:
   enum RISCVProcFamilyEnum : uint8_t {
     Others,
     SiFive7,
-    VentanaVeyron
+    VentanaVeyron,
   };
   // clang-format on
 private:
