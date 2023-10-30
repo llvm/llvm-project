@@ -13,6 +13,13 @@
 
 #include "lldb/API/SBDefines.h"
 
+namespace lldb_private {
+class ScriptInterpreter;
+namespace python {
+class SWIGBridge;
+}
+} // namespace lldb_private
+
 namespace lldb {
 
 class LLDB_API SBStream {
@@ -100,6 +107,8 @@ protected:
   friend class SBTypeMember;
   friend class SBValue;
   friend class SBWatchpoint;
+
+  friend class lldb_private::ScriptInterpreter;
 
   lldb_private::Stream *operator->();
 

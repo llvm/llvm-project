@@ -224,11 +224,23 @@ protected:
     return python::SWIGBridge::ToSWIGWrapper(arg);
   }
 
+  python::PythonObject Transform(lldb::ThreadPlanSP arg) {
+    return python::SWIGBridge::ToSWIGWrapper(arg);
+  }
+
   python::PythonObject Transform(lldb::ProcessAttachInfoSP arg) {
     return python::SWIGBridge::ToSWIGWrapper(arg);
   }
 
   python::PythonObject Transform(lldb::ProcessLaunchInfoSP arg) {
+    return python::SWIGBridge::ToSWIGWrapper(arg);
+  }
+
+  python::PythonObject Transform(Event *arg) {
+    return python::SWIGBridge::ToSWIGWrapper(arg);
+  }
+
+  python::PythonObject Transform(Stream *arg) {
     return python::SWIGBridge::ToSWIGWrapper(arg);
   }
 
@@ -327,6 +339,14 @@ ScriptedPythonInterface::ExtractValueFromPythonObject<
 
 template <>
 Status ScriptedPythonInterface::ExtractValueFromPythonObject<Status>(
+    python::PythonObject &p, Status &error);
+
+template <>
+Event *ScriptedPythonInterface::ExtractValueFromPythonObject<Event *>(
+    python::PythonObject &p, Status &error);
+
+template <>
+Stream *ScriptedPythonInterface::ExtractValueFromPythonObject<Stream *>(
     python::PythonObject &p, Status &error);
 
 template <>
