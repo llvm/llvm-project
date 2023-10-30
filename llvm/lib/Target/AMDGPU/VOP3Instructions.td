@@ -654,6 +654,13 @@ let SubtargetPredicate = isGFX12Plus, ReadsModeReg = 0 in {
   defm V_MAXIMUM3_F16 : VOP3Inst <"v_maximum3_f16", VOP3_Profile<VOP_F16_F16_F16_F16, VOP3_OPSEL>, AMDGPUfmaximum3>;
 } // End SubtargetPredicate = isGFX12Plus, ReadsModeReg = 0
 
+let SubtargetPredicate = HasAddMinMaxInsts, isCommutable = 1, isReMaterializable = 1 in {
+  defm V_ADD_MAX_I32 : VOP3Inst <"v_add_max_i32", VOP_I32_I32_I32_I32>;
+  defm V_ADD_MAX_U32 : VOP3Inst <"v_add_max_u32", VOP_I32_I32_I32_I32>;
+  defm V_ADD_MIN_I32 : VOP3Inst <"v_add_min_i32", VOP_I32_I32_I32_I32>;
+  defm V_ADD_MIN_U32 : VOP3Inst <"v_add_min_u32", VOP_I32_I32_I32_I32>;
+}
+
 defm V_ADD_I16 : VOP3Inst <"v_add_i16", VOP3_Profile<VOP_I16_I16_I16, VOP3_OPSEL>>;
 defm V_SUB_I16 : VOP3Inst <"v_sub_i16", VOP3_Profile<VOP_I16_I16_I16, VOP3_OPSEL>>;
 
@@ -1152,6 +1159,10 @@ defm V_MIN_U64 : VOP3Only_Realtriple_gfx1210<0x318>;
 defm V_MAX_U64 : VOP3Only_Realtriple_gfx1210<0x319>;
 defm V_MIN_I64 : VOP3Only_Realtriple_gfx1210<0x31a>;
 defm V_MAX_I64 : VOP3Only_Realtriple_gfx1210<0x31b>;
+defm V_ADD_MAX_I32 : VOP3Only_Realtriple_gfx1210<0x25e>;
+defm V_ADD_MAX_U32 : VOP3Only_Realtriple_gfx1210<0x25f>;
+defm V_ADD_MIN_I32 : VOP3Only_Realtriple_gfx1210<0x260>;
+defm V_ADD_MIN_U32 : VOP3Only_Realtriple_gfx1210<0x261>;
 
 //===----------------------------------------------------------------------===//
 // GFX11, GFX12

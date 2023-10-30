@@ -1317,6 +1317,9 @@ public:
   // \returns true if the target has V_{MIN|MAX}_{I|U}64 instructions.
   bool hasIntMinMax64() const { return GFX12_10Insts; }
 
+  // \returns true if the target has V_ADD_{MIN|MAX}_{I|U}32 instructions.
+  bool HasAddMinMaxInsts() const { return GFX12_10Insts; }
+
   // \returns true if FP8/BF8 VOP1 form of conversion to F32 is unreliable.
   bool hasCvtFP8VOP1Bug() const { return true; }
 
