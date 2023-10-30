@@ -251,6 +251,15 @@ public:
                                        CrdTransDirectionKind::dim2lvl);
   }
 
+  RankedTensorType getDemappedType() const {
+    auto lvlShape = getLvlShape();
+    return RankedTensorType::get(
+        lvlShape, rtp.getElementType(),
+        SparseTensorEncodingAttr::get(rtp.getContext(), getLvlTypes(),
+                                      AffineMap(), AffineMap(), getPosWidth(),
+                                      getCrdWidth(), enc.getDimSlices()));
+  }
+
   /// Safely looks up the requested dimension-DynSize.  If you intend
   /// to check the result with `ShapedType::isDynamic`, then see the
   /// `getStaticDimSize` method instead.
