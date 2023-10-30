@@ -8,8 +8,8 @@
 #include <string.h>
 #include <unistd.h>
 
-__attribute__((no_sanitize("hwaddress")))
-int ForceCallInterceptor(void *p, const void *a, size_t size) {
+__attribute__((no_sanitize("hwaddress"))) int
+ForceCallInterceptor(void *p, const void *a, size_t size) {
   return memcmp(p, a, size);
 }
 

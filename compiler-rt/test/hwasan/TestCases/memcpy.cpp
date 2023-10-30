@@ -8,8 +8,8 @@
 #include <string.h>
 #include <unistd.h>
 
-__attribute__((no_sanitize("hwaddress")))
-int ForceCallInterceptor(void *p, const void *a, size_t size) {
+__attribute__((no_sanitize("hwaddress"))) int
+ForceCallInterceptor(void *p, const void *a, size_t size) {
   return memcpy(p, a, size) == nullptr;
 }
 
@@ -29,4 +29,3 @@ int main(int argc, char **argv) {
   // CHECK: previously allocated by thread
   // CHECK: #{{[[:digit:]]+}} 0x{{[[:xdigit:]]+}} in main {{.*}}memcpy.cpp:[[@LINE-10]]
 }
-
