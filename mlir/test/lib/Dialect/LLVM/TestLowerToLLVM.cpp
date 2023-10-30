@@ -79,8 +79,7 @@ void buildTestLowerToLLVM(OpPassManager &pm,
   pm.addPass(createFinalizeMemRefToLLVMConversionPass(
       enableOpaquePointers(FinalizeMemRefToLLVMConversionPassOptions{})));
   // Convert Func to LLVM (always needed).
-  pm.addPass(createConvertFuncToLLVMPass(
-      enableOpaquePointers(ConvertFuncToLLVMPassOptions{})));
+  pm.addPass(createConvertFuncToLLVMPass(ConvertFuncToLLVMPassOptions{}));
   // Convert Index to LLVM (always needed).
   pm.addPass(createConvertIndexToLLVMPass());
   // Convert remaining unrealized_casts (always needed).
