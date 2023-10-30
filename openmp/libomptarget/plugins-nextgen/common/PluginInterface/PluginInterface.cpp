@@ -83,7 +83,7 @@ private:
     return Plugin::success();
   }
 
-  void dumpDeviceMemory(StringRef Filename) {
+  void dumpDeviceMemory(StringRef Filename, bool saveDiff) {
     ErrorOr<std::unique_ptr<WritableMemoryBuffer>> DeviceMemoryMB =
         WritableMemoryBuffer::getNewUninitMemBuffer(MemorySize);
     if (!DeviceMemoryMB)
@@ -93,15 +93,58 @@ private:
                                     MemoryStart, MemorySize, nullptr);
     if (Err)
       report_fatal_error("Error retrieving data for target pointer");
-
-    StringRef DeviceMemory(DeviceMemoryMB.get()->getBufferStart(), MemorySize);
-    std::error_code EC;
-    raw_fd_ostream OS(Filename, EC);
-    if (EC)
+    
+    std::error_code EC; 
+    raw_fd_ostream OS(Filename, EC); 
+    if(EC)
       report_fatal_error("Error dumping memory to file " + Filename + " :" +
                          EC.message());
-    OS << DeviceMemory;
-    OS.close();
+    
+    if (saveDiff){
+      //Get the pre-record memory filename  
+      SmallString<128> InputFilename = {Filename.split('.').first, ".memory"};
+      //read the pre-record memorydump
+      auto InputFileBuffer = MemoryBuffer::getFileOrSTDIN(InputFilename); 
+      if(std::error_code EC = InputFileBuffer.getError())
+        report_fatal_error("Error reading pre-record device memory");
+      
+      StringRef InputBufferContents = (*InputFileBuffer)->getBuffer(); 
+      if(InputBufferContents.size() != MemorySize) 
+        report_fatal_error("Error: Pre-record device memory size mismatch");
+      
+      //get current memory contents
+      StringRef DeviceMemoryContents(DeviceMemoryMB.get()->getBuffer().data(),
+                                     DeviceMemoryMB.get()->getBuffer().size());
+      
+      //compare pre-record memorydump to current contents
+      size_t i = 0;
+      while(i < MemorySize){
+        //if mismatch found, create a new diff line
+        //current format - location, size, differences ...
+        if(InputBufferContents[i] != DeviceMemoryContents[i]){
+          OS << i << " "; //marks the start offset
+          SmallVector<uint8_t, 128> modified; 
+          modified.push_back(DeviceMemoryContents[i]);
+          size_t j = 1;
+          //loop until next match is found
+          while(InputBufferContents[i+j] != DeviceMemoryContents[i+j]){
+            modified.push_back(DeviceMemoryContents[i+j]);
+            j++;
+          }
+          OS << j << " "; //marks the length of the mismatching sequence
+          for(const auto &value : modified)
+            OS << value << " ";
+          OS << "\n"; 
+          i+=j+1; 
+        }
+        else i++; 
+      }
+    }
+    else {
+      StringRef DeviceMemory(DeviceMemoryMB.get()->getBufferStart(), MemorySize);
+      OS << DeviceMemory;
+    }
+    OS.close();  
   }
 
 public:
@@ -209,7 +252,7 @@ public:
     JsonKernelInfo["ArgOffsets"] = json::Value(std::move(JsonArgOffsets));
 
     SmallString<128> MemoryFilename = {Name, ".memory"};
-    dumpDeviceMemory(MemoryFilename);
+    dumpDeviceMemory(MemoryFilename, false);
 
     SmallString<128> GlobalsFilename = {Name, ".globals"};
     dumpGlobals(GlobalsFilename, Image);
@@ -227,7 +270,7 @@ public:
   void saveKernelOutputInfo(const char *Name) {
     SmallString<128> OutputFilename = {
         Name, (isRecording() ? ".original.output" : ".replay.output")};
-    dumpDeviceMemory(OutputFilename);
+    dumpDeviceMemory(OutputFilename, true);
   }
 
   void *alloc(uint64_t Size) {
@@ -1307,7 +1350,7 @@ Error GenericDeviceTy::launchKernel(void *EntryPtr, void **ArgPtrs,
         GenericKernel.getName(), GenericKernel.getImage(), ArgPtrs, ArgOffsets,
         KernelArgs.NumArgs, KernelArgs.NumTeams[0], KernelArgs.ThreadLimit[0],
         KernelArgs.Tripcount);
-
+	
   if (RecordReplay.isRecording())
     RecordReplay.saveImage(GenericKernel.getName(), GenericKernel.getImage());
 
