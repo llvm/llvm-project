@@ -3,6 +3,7 @@
 // RUN: %clangxx_hwasan -O2 %s -o %t && not %run %t 2>&1 | FileCheck %s
 // RUN: %clangxx_hwasan -O3 %s -o %t && not %run %t 2>&1 | FileCheck %s
 
+#include <assert.h>
 #include <sanitizer/hwasan_interface.h>
 #include <stdlib.h>
 #include <string.h>
@@ -10,8 +11,7 @@
 
 __attribute__((no_sanitize("hwaddress"))) void
 ForceCallInterceptor(void *p, const void *a, size_t size) {
-  if (memcmp(p, a, size) != 0)
-    __builtin_trap();
+  assert(memcmp(p, a, size) == 0);
 }
 
 int main(int argc, char **argv) {
