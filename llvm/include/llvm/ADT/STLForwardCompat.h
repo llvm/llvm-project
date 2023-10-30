@@ -60,11 +60,12 @@ auto transformOptional(std::optional<T> &&O, const Function &F)
   return std::nullopt;
 }
 
-/// Returns underlying integer value of an enum. Backport of C++23 std::to_underlying.
+/// Returns underlying integer value of an enum. Backport of C++23
+/// std::to_underlying.
 template <typename Enum>
-[[nodiscard]] constexpr typename std::underlying_type_t<Enum>
+[[nodiscard]] constexpr std::underlying_type_t<Enum>
 to_underlying(Enum E) {
-  return static_cast<typename std::underlying_type_t<Enum>>(E);
+  return static_cast<std::underlying_type_t<Enum>>(E);
 }
 
 } // namespace llvm
