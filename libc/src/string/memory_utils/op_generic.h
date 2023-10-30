@@ -48,6 +48,13 @@ using generic_v256 = uint8_t __attribute__((__vector_size__(32)));
 using generic_v512 = uint8_t __attribute__((__vector_size__(64)));
 } // namespace LIBC_NAMESPACE
 
+namespace sw_prefetch {
+  // Size of a cacheline for software prefetching
+static constexpr size_t kCachelineSize = 64;
+  // prefetch for write
+static inline void PrefetchW(CPtr dst) { __builtin_prefetch(dst, 1, 3); }
+}
+
 namespace LIBC_NAMESPACE::generic {
 
 // We accept three types of values as elements for generic operations:
@@ -86,9 +93,6 @@ template <class T> struct array_size {};
 template <class T, size_t N>
 struct array_size<cpp::array<T, N>> : cpp::integral_constant<size_t, N> {};
 template <typename T> constexpr size_t array_size_v = array_size<T>::value;
-
-// Size of a cacheline for software prefetching
-static constexpr size_t kCachelineSize = 64;
 
 // Generic operations for the above type categories.
 
@@ -167,12 +171,9 @@ template <typename T> struct Memset {
     tail(dst, value, count);
   }
 
-  template <size_t prefetch_distance, size_t prefetch_degree>
+  template <size_t prefetch_distance, size_t prefetch_degree, size_t offset>
   LIBC_INLINE static void loop_and_tail_prefetch(Ptr dst, uint8_t value,
                                                  size_t count) {
-    Memset<64>::block(dst, value);
-    Memset<32>::block(dst + 64, value);
-    size_t offset = 96;
     while (offset + prefetch_degree + SIZE <= count) {
       for (size_t i = 0; i < prefetch_degree / kCachelineSize; ++i)
         PrefetchW(dst + offset + prefetch_distance + kCachelineSize * i);

@@ -17,33 +17,11 @@
 
 namespace LIBC_NAMESPACE {
 namespace x86 {
-LIBC_INLINE_VAR constexpr bool kUseSoftwarePrefetching =
+LIBC_INLINE_VAR constexpr bool kUseSoftwarePrefetchingMemset =
     LLVM_LIBC_IS_DEFINED(LIBC_COPT_MEMSET_X86_USE_SOFTWARE_PREFETCHING);
 
 } // namespace x86
 
-// prefetch for write
-static inline void PrefetchW(CPtr dst) { __builtin_prefetch(dst, 1, 3); }
-
-[[maybe_unused]] LIBC_INLINE static void
-inline_memset_x86_sw_prefetching(Ptr dst, uint8_t value, size_t count) {
-  PrefetchW(dst + generic::kCachelineSize);
-  if (count <= 128)
-    return generic::Memset<uint512_t>::head_tail(dst, value, count);
-  PrefetchW(dst + generic::kCachelineSize * 2);
-  // Aligned loop
-  generic::Memset<uint256_t>::block(dst, value);
-  align_to_next_boundary<32>(dst, count);
-  if (count <= 192) {
-    return Memset<uint256_t>::loop_and_tail(dst, value, count);
-  } else {
-    return Memset<uint256_t>::loop_and_tail_prefetch<320, 128>(dst, value,
-                                                               count);
-  }
-}
-
-[[maybe_unused]] LIBC_INLINE static void
-inline_memset_x86(Ptr dst, uint8_t value, size_t count) {
 #if defined(__AVX512F__)
   using uint128_t = generic_v128;
   using uint256_t = generic_v256;
@@ -62,6 +40,28 @@ inline_memset_x86(Ptr dst, uint8_t value, size_t count) {
   using uint512_t = cpp::array<uint64_t, 8>;
 #endif
 
+[[maybe_unused]] LIBC_INLINE static void
+inline_memset_x86_sw_prefetching(Ptr dst, uint8_t value, size_t count) {
+  sw_prefetch::PrefetchW(dst + generic::kCachelineSize);
+  if (count <= 128)
+    return generic::Memset<uint512_t>::head_tail(dst, value, count);
+  sw_prefetch::PrefetchW(dst + generic::kCachelineSize * 2);
+  // Aligned loop
+  generic::Memset<uint256_t>::block(dst, value);
+  align_to_next_boundary<32>(dst, count);
+  if (count <= 192) {
+    return Memset<uint256_t>::loop_and_tail(dst, value, count);
+  } else {
+    // Warm up memset
+    generic::Memset<uint256_t>::block(dst, value);
+    generic::Memset<uint128_t>::block(dst + 64, value);
+    return generic::Memset<uint256_t>::loop_and_tail_prefetch<320, 128, 96>(dst, value,
+                                                               count);
+  }
+}
+
+[[maybe_unused]] LIBC_INLINE static void
+inline_memset_x86(Ptr dst, uint8_t value, size_t count) {
   if (count == 0)
     return;
   if (count == 1)
@@ -78,7 +78,7 @@ inline_memset_x86(Ptr dst, uint8_t value, size_t count) {
     return generic::Memset<uint128_t>::head_tail(dst, value, count);
   if (count <= 64)
     return generic::Memset<uint256_t>::head_tail(dst, value, count);
-  if constexpr (x86::kUseSoftwarePrefetching) {
+  if constexpr (x86::kUseSoftwarePrefetchingMemset) {
     return inline_memset_x86_sw_prefetching(dst, value, count);
   }
   if (count <= 128)
@@ -87,7 +87,7 @@ inline_memset_x86(Ptr dst, uint8_t value, size_t count) {
   generic::Memset<uint256_t>::block(dst, value);
   align_to_next_boundary<32>(dst, count);
   else {
-    return Memset<uint256_t>::loop_and_tail(dst, value, count);
+    return generic::Memset<uint256_t>::loop_and_tail(dst, value, count);
   }
 }
 } // namespace LIBC_NAMESPACE
