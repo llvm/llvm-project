@@ -637,7 +637,8 @@ public:
   /// Otherwise, return nullptr.
   const Expr *getNumTeamsExprForTargetDirective(CodeGenFunction &CGF,
                                                 const OMPExecutableDirective &D,
-                                                int32_t &DefaultVal);
+                                                int32_t &MinTeamsVal,
+                                                int32_t &MaxTeamsVal);
   llvm::Value *emitNumTeamsForTargetDirective(CodeGenFunction &CGF,
                                               const OMPExecutableDirective &D);
 
