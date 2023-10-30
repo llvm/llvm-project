@@ -31,13 +31,6 @@ namespace clang {
 class FileEntry;
 
 namespace api_notes {
-enum class ActionType {
-  None,
-  YAMLToBinary,
-  BinaryToYAML,
-  Dump,
-};
-
 /// Converts API notes from YAML format to binary format.
 bool compileAPINotes(llvm::StringRef yamlInput, const FileEntry *sourceFile,
                      llvm::raw_ostream &os,
