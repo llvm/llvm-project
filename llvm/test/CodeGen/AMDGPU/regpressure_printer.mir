@@ -40,6 +40,103 @@ body:             |
   bb.2:
     S_NOP 0, implicit %0, implicit %1
 ...
+---
+name:  live_through_test
+tracksRegLiveness: true
+body:             |
+  ; RPU-LABEL: name: live_through_test
+  ; RPU: bb.0:
+  ; RPU-NEXT:   Live-in:
+  ; RPU-NEXT:   SGPR  VGPR
+  ; RPU-NEXT:   0     0
+  ; RPU-NEXT:   3     0      %0:sgpr_128 = IMPLICIT_DEF
+  ; RPU-NEXT:   3     0
+  ; RPU-NEXT:   Live-out: %0:00000000000000F3
+  ; RPU-NEXT:   Live-thr:
+  ; RPU-NEXT: bb.1:
+  ; RPU-NEXT:   Live-in:  %0:00000000000000F3
+  ; RPU-NEXT:   SGPR  VGPR
+  ; RPU-NEXT:   3     0
+  ; RPU-NEXT:   3     0      S_NOP 0, implicit %0.sub0:sgpr_128
+  ; RPU-NEXT:   2     0
+  ; RPU-NEXT:   3     0      %0.sub0:sgpr_128 = IMPLICIT_DEF
+  ; RPU-NEXT:   3     0
+  ; RPU-NEXT:   3     0      %0.sub1:sgpr_128 = IMPLICIT_DEF
+  ; RPU-NEXT:   3     0
+  ; RPU-NEXT:   3     0      S_NOP 0, implicit %0.sub2:sgpr_128
+  ; RPU-NEXT:   2     0
+  ; RPU-NEXT:   3     0      %0.sub2:sgpr_128 = IMPLICIT_DEF
+  ; RPU-NEXT:   3     0
+  ; RPU-NEXT:   3     0      S_NOP 0, implicit %0.sub2:sgpr_128
+  ; RPU-NEXT:   2     0
+  ; RPU-NEXT:   2     0      S_NOP 0, implicit %0.sub3:sgpr_128
+  ; RPU-NEXT:   2     0
+  ; RPU-NEXT:   Live-out: %0:00000000000000C3
+  ; RPU-NEXT:   Live-thr: %0:00000000000000C0
+  ; RPU-NEXT: bb.2:
+  ; RPU-NEXT:   Live-in:  %0:00000000000000C3
+  ; RPU-NEXT:   SGPR  VGPR
+  ; RPU-NEXT:   2     0
+  ; RPU-NEXT:   2     0      S_NOP 0, implicit %0.sub3:sgpr_128, implicit %0.sub0:sgpr_128
+  ; RPU-NEXT:   0     0
+  ; RPU-NEXT:   Live-out:
+  ; RPU-NEXT:   Live-thr:
+  ;
+  ; RPD-LABEL: name: live_through_test
+  ; RPD: bb.0:
+  ; RPD-NEXT:   Live-in:
+  ; RPD-NEXT:   SGPR  VGPR
+  ; RPD-NEXT:   0     0
+  ; RPD-NEXT:   4     0      %0:sgpr_128 = IMPLICIT_DEF
+  ; RPD-NEXT:   3     0
+  ; RPD-NEXT:   Live-out: %0:00000000000000F3
+  ; RPD-NEXT:   Live-thr:
+  ; RPD-NEXT: bb.1:
+  ; RPD-NEXT:   Live-in:  %0:00000000000000F3
+  ; RPD-NEXT:   SGPR  VGPR
+  ; RPD-NEXT:   3     0
+  ; RPD-NEXT:   3     0      S_NOP 0, implicit %0.sub0:sgpr_128
+  ; RPD-NEXT:   2     0
+  ; RPD-NEXT:   3     0      %0.sub0:sgpr_128 = IMPLICIT_DEF
+  ; RPD-NEXT:   3     0
+  ; RPD-NEXT:   4     0      %0.sub1:sgpr_128 = IMPLICIT_DEF
+  ; RPD-NEXT:   3     0
+  ; RPD-NEXT:   3     0      S_NOP 0, implicit %0.sub2:sgpr_128
+  ; RPD-NEXT:   2     0
+  ; RPD-NEXT:   3     0      %0.sub2:sgpr_128 = IMPLICIT_DEF
+  ; RPD-NEXT:   3     0
+  ; RPD-NEXT:   3     0      S_NOP 0, implicit %0.sub2:sgpr_128
+  ; RPD-NEXT:   2     0
+  ; RPD-NEXT:   2     0      S_NOP 0, implicit %0.sub3:sgpr_128
+  ; RPD-NEXT:   2     0
+  ; RPD-NEXT:   Live-out: %0:00000000000000C3
+  ; RPD-NEXT:   Live-thr: %0:00000000000000C0
+  ; RPD-NEXT: bb.2:
+  ; RPD-NEXT:   Live-in:  %0:00000000000000C3
+  ; RPD-NEXT:   SGPR  VGPR
+  ; RPD-NEXT:   2     0
+  ; RPD-NEXT:   2     0      S_NOP 0, implicit %0.sub3:sgpr_128, implicit %0.sub0:sgpr_128
+  ; RPD-NEXT:   0     0
+  ; RPD-NEXT:   Live-out:
+  ; RPD-NEXT:   Live-thr:
+  bb.0:
+    %0:sgpr_128 = IMPLICIT_DEF
+  bb.1:
+
+    S_NOP 0, implicit %0.sub0 ; kill sub0
+    %0.sub0 = IMPLICIT_DEF ; redef sub0
+
+    %0.sub1:sgpr_128 = IMPLICIT_DEF ; redef sub1
+
+    S_NOP 0, implicit %0.sub2 ; kill sub2
+    %0.sub2:sgpr_128 = IMPLICIT_DEF ; redef sub2
+    S_NOP 0, implicit %0.sub2 ; kill sub2
+
+    S_NOP 0, implicit %0.sub3 ; use sub3, live-through
+
+  bb.2:
+    S_NOP 0, implicit %0.sub3, implicit %0.sub0
+...
 
 # This testcase shows the problem with LiveIntervals: it doesn't create
 # subranges for undefined but used subregisters. Upward tracker is able to see

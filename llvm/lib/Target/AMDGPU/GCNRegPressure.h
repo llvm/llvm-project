@@ -277,9 +277,6 @@ GCNRegPressure getRegPressure(const MachineRegisterInfo &MRI,
 bool isEqual(const GCNRPTracker::LiveRegSet &S1,
              const GCNRPTracker::LiveRegSet &S2);
 
-GCNRPTracker::LiveRegSet getIntersection(const GCNRPTracker::LiveRegSet &LR1,
-                                         const GCNRPTracker::LiveRegSet &LR2);
-
 Printable print(const GCNRegPressure &RP, const GCNSubtarget *ST = nullptr);
 
 Printable print(const GCNRPTracker::LiveRegSet &LiveRegs,
