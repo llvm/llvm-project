@@ -1,5 +1,5 @@
-// RUN: mlir-opt -convert-spirv-to-llvm='use-opaque-pointers=1' -verify-diagnostics %s | FileCheck %s --check-prefixes=CHECK-UNKNOWN,CHECK-ALL
-// RUN: mlir-opt -convert-spirv-to-llvm='use-opaque-pointers=1 client-api=OpenCL' -verify-diagnostics %s | FileCheck %s --check-prefixes=CHECK-OPENCL,CHECK-ALL
+// RUN: mlir-opt -convert-spirv-to-llvm -verify-diagnostics %s | FileCheck %s --check-prefixes=CHECK-UNKNOWN,CHECK-ALL
+// RUN: mlir-opt -convert-spirv-to-llvm='client-api=OpenCL' -verify-diagnostics %s | FileCheck %s --check-prefixes=CHECK-OPENCL,CHECK-ALL
 
 // CHECK-OPENCL:         llvm.func @pointerUniformConstant(!llvm.ptr<2>)
 // CHECK-UNKNOWN:        llvm.func @pointerUniformConstant(!llvm.ptr)

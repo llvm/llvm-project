@@ -1376,8 +1376,8 @@ public:
     if (!dstType)
       return failure();
 
-    if (typeConverter.useOpaquePointers() &&
-        isa<LLVM::LLVMPointerType>(dstType)) {
+    // LLVM's opaque pointers do not require bitcasts.
+    if (isa<LLVM::LLVMPointerType>(dstType)) {
       rewriter.replaceOp(bitcastOp, adaptor.getOperand());
       return success();
     }
