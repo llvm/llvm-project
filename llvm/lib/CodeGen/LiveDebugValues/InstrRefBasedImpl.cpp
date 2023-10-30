@@ -1420,7 +1420,6 @@ bool InstrRefBasedLDV::transferDebugValue(const MachineInstr &MI) {
 
   // MLocTracker needs to know that this register is read, even if it's only
   // read by a debug inst.
-  bool convertToSwiftAsyncEntryValue = false;
   for (const MachineOperand &MO : MI.debug_operands())
     if (MO.isReg() && MO.getReg() != 0) {
       ValueIDNum RegId = MTracker->readReg(MO.getReg());
@@ -1438,17 +1437,9 @@ bool InstrRefBasedLDV::transferDebugValue(const MachineInstr &MI) {
         if (!Expr || !Expr->isEntryValue()) {
           if (TTracker)
             TTracker->recoverAsEntryValue(V, Properties, RegId);
-          else
-            convertToSwiftAsyncEntryValue = true;
         }
       }
     }
-
-  if (convertToSwiftAsyncEntryValue && Expr && !MI.isDebugValueList()) {
-    const_cast<MachineInstr *>(&MI)->getOperand(3).setMetadata(
-        DIExpression::prepend(Expr, DIExpression::EntryValue));
-    Properties.DIExpr = MI.getDebugExpression();
-  }
   // END SWIFT
 
   // If we're preparing for the second analysis (variables), the machine value
