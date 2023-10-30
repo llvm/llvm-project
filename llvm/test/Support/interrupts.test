@@ -30,13 +30,10 @@ def run_wrapper():
     if os.name == 'nt':
         startupinfo = subprocess.STARTUPINFO()
         startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-        proc = subprocess.Popen(args,
-                                stderr=sys.stderr,
-                                startupinfo=startupinfo,
-                                creationflags=subprocess.CREATE_NEW_CONSOLE)
+        subprocess.run(args, stderr=sys.stderr, startupinfo=startupinfo,
+                       creationflags=subprocess.CREATE_NEW_CONSOLE)
     else:
-        proc = subprocess.Popen(args, stderr=sys.stderr)
-        proc.wait()
+        subprocess.run(args, stderr=sys.stderr)
 
 if sys.argv[1] == 'wrapper':
     run_wrapper()
