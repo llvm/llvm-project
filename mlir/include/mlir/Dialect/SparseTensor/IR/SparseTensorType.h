@@ -253,11 +253,8 @@ public:
 
   RankedTensorType getDemappedType() const {
     auto lvlShape = getLvlShape();
-    return RankedTensorType::get(
-        lvlShape, rtp.getElementType(),
-        SparseTensorEncodingAttr::get(rtp.getContext(), getLvlTypes(),
-                                      AffineMap(), AffineMap(), getPosWidth(),
-                                      getCrdWidth(), enc.getDimSlices()));
+    return RankedTensorType::get(lvlShape, rtp.getElementType(),
+                                 enc.withoutDimToLvl());
   }
 
   /// Safely looks up the requested dimension-DynSize.  If you intend
