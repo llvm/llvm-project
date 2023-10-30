@@ -60,6 +60,13 @@ auto transformOptional(std::optional<T> &&O, const Function &F)
   return std::nullopt;
 }
 
+/// Backport of C++23 std::to_underlying.
+template <typename Enum>
+[[nodiscard]] constexpr typename std::underlying_type_t<Enum>
+to_underlying(Enum E) {
+  return static_cast<typename std::underlying_type_t<Enum>>(E);
+}
+
 } // namespace llvm
 
 #endif // LLVM_ADT_STLFORWARDCOMPAT_H
