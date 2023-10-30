@@ -200,9 +200,9 @@ static bool isSMEABIRoutineCall(const CallInst &CI) {
                   .Default(false);
 }
 
-/// Returns true if the function has explicit operations that can only be lowered
-/// using incompatible instructions for the selected mode.
-/// This also returns true if the function F may use or modify ZA state.
+/// Returns true if the function has explicit operations that can only be
+/// lowered using incompatible instructions for the selected mode. This also
+/// returns true if the function F may use or modify ZA state.
 static bool hasPossibleIncompatibleOps(const Function *F) {
   for (const BasicBlock &BB : *F) {
     for (const Instruction &I : BB) {

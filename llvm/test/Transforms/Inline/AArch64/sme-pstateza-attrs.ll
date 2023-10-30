@@ -84,8 +84,8 @@ entry:
 ; [x] Z -> N
 ; [ ] Z -> S
 ; [ ] Z -> Z
-define void @new_za_caller_nonza_callee_dont_inline() "aarch64_pstate_za_new" {
-; CHECK-LABEL: define void @new_za_caller_nonza_callee_dont_inline
+define void @new_za_caller_nonza_callee_inline() "aarch64_pstate_za_new" {
+; CHECK-LABEL: define void @new_za_caller_nonza_callee_inline
 ; CHECK-SAME: () #[[ATTR2]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    call void @inlined_body()
@@ -129,8 +129,8 @@ entry:
 ; [x] Z -> N
 ; [ ] Z -> S
 ; [ ] Z -> Z
-define void @shared_za_caller_nonza_callee_dont_inline() "aarch64_pstate_za_shared" {
-; CHECK-LABEL: define void @shared_za_caller_nonza_callee_dont_inline
+define void @shared_za_caller_nonza_callee_inline() "aarch64_pstate_za_shared" {
+; CHECK-LABEL: define void @shared_za_caller_nonza_callee_inline
 ; CHECK-SAME: () #[[ATTR1]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    call void @inlined_body()
