@@ -512,7 +512,7 @@ static void *__kmp_launch_worker(void *thr) {
 #endif /* KMP_BLOCK_SIGNALS */
 
 #if KMP_OS_LINUX || KMP_OS_DRAGONFLY || KMP_OS_FREEBSD || KMP_OS_NETBSD ||     \
-    KMP_OS_OPENBSD
+    KMP_OS_OPENBSD || KMP_OS_HURD
   if (__kmp_stkoffset > 0 && gtid > 0) {
     padding = KMP_ALLOCA(gtid * __kmp_stkoffset);
     (void)padding;
