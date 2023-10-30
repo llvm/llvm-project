@@ -426,17 +426,15 @@ void PHIElimination::LowerPHINode(MachineBasicBlock &MBB,
         continue;
       }
 
+      // Destination copies are not inserted in the same order as the PHI nodes
+      // they replace. Hence the start of the live range may need to be adjusted
+      // to match the actual slot index of the copy.
       if (DestSegment->start > NewStart) {
-        // With a single PHI removed from block the index of the copy may be
-        // lower than the original PHI. Extend live range backward to cover
-        // the copy.
         VNInfo *VNI = LR->getVNInfoAt(DestSegment->start);
         assert(VNI && "value should be defined for known segment");
         LR->addSegment(
             LiveInterval::Segment(NewStart, DestSegment->start, VNI));
       } else if (DestSegment->start < NewStart) {
-        // Otherwise, remove the region from the beginning of MBB to the copy
-        // instruction from DestReg's live interval.
         assert(DestSegment->start >= MBBStartIndex);
         assert(DestSegment->end >= DestCopyIndex.getRegSlot());
         LR->removeSegment(DestSegment->start, NewStart);

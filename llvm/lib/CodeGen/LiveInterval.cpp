@@ -563,9 +563,6 @@ VNInfo *LiveRange::extendInBlock(SlotIndex StartIdx, SlotIndex Kill) {
   return CalcLiveRangeUtilVector(this).extendInBlock(StartIdx, Kill);
 }
 
-/// Remove the specified interval from this live range.
-/// Does nothing if interval is not part of this live range.
-/// Note that the interval must be within a single Segment in its entirety.
 void LiveRange::removeSegment(SlotIndex Start, SlotIndex End,
                               bool RemoveDeadValNo) {
   // Find the Segment containing this span.
