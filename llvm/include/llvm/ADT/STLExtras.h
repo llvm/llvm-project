@@ -1537,7 +1537,8 @@ constexpr decltype(auto) makeVisitor(CallableTs &&...Callables) {
 
 /// Backport of C++23 std::to_underlying.
 template <typename Enum>
-[[nodiscard]] constexpr typename std::underlying_type_t<Enum> to_underlying(Enum E) {
+[[nodiscard]] constexpr typename std::underlying_type_t<Enum>
+to_underlying(Enum E) {
   return static_cast<typename std::underlying_type_t<Enum>>(E);
 }
 
