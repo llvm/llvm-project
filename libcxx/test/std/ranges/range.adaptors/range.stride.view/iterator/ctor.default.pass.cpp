@@ -90,7 +90,7 @@ constexpr bool operator==(const NotSimpleViewConstIterEnd<Convertible, Copyable>
  *
  * So, let's create two different classes where that is the case so that we can test
  * for those conditions individually. We parameterize with a template to decide
- * whether to 
+ * whether to
  * 1. enable converting constructors between the non-const and the const version.
  * That feature is important for testing the stride_view::__iterator<true> converting
  * constructor from a stride_view::_iterator<false> iterator.
