@@ -1200,15 +1200,11 @@ InstrProfiling::getOrCreateRegionCounters(InstrProfCntrInstBase *Inc) {
   // the corresponding profile section.
   auto *CounterPtr = setupProfileSection(Inc, IPSK_cnts);
   PD.RegionCounters = CounterPtr;
-<<<<<<< HEAD
 
   if (DebugInfoCorrelate ||
       ProfileCorrelate == InstrProfCorrelator::DEBUG_INFO) {
     LLVMContext &Ctx = M->getContext();
     Function *Fn = Inc->getParent()->getParent();
-=======
-  if (EnableDebugCorrelate) {
->>>>>>> 39cb3204ad4e (Move options to TargetLoweringObjectFileImpl.cpp)
     if (auto *SP = Fn->getSubprogram()) {
       DIBuilder DB(*M, true, SP->getUnit());
       Metadata *FunctionNameAnnotation[] = {
@@ -1249,8 +1245,7 @@ void InstrProfiling::createDataVariable(InstrProfCntrInstBase *Inc,
                                         InstrProfMCDCBitmapParameters *Params) {
   // When debug information is correlated to profile data, a data variable
   // is not needed.
-  if (DebugInfoCorrelate ||
-      ProfileCorrelate == InstrProfCorrelator::DEBUG_INFO)
+  if (DebugInfoCorrelate || ProfileCorrelate == InstrProfCorrelator::DEBUG_INFO)
     return;
 
   GlobalVariable *NamePtr = Inc->getName();
