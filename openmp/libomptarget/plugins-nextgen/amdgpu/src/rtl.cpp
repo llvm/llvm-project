@@ -3781,6 +3781,13 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
     }
   }
 
+  void checkInvalidImage(__tgt_image_info *Info,
+                              __tgt_device_image *TgtImage) override final {
+
+    utils::checkImageCompatibilityWithSystemXnackMode(TgtImage,
+                                                      IsXnackEnabled());
+  }
+
   /// Check whether the image is compatible with an AMDGPU device.
   Expected<bool>
   isImageCompatible(__tgt_image_info *Info,
@@ -3811,11 +3818,6 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
       if (utils::isImageCompatibleWithEnv(Info, Target))
         return true;
     }
-
-    // Check if the system's XNACK mode matches the one required by the
-    // image. Print a warning if not.
-    utils::checkImageCompatibilityWithSystemXnackMode(TgtImage,
-                                                      IsXnackEnabled());
 
     return false;
   }

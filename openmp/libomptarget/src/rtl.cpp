@@ -166,6 +166,10 @@ bool RTLsTy::attemptLoadRTL(const std::string &RTLName, RTLInfoTy &RTL) {
   if (!(*((void **)&RTL.is_valid_binary) =
             DynLibrary->getAddressOfSymbol("__tgt_rtl_is_valid_binary")))
     ValidPlugin = false;
+  if (!(*((void **)&RTL.exists_valid_binary_for_RTL) =
+            DynLibrary->getAddressOfSymbol(
+                "__tgt_rtl_exists_valid_binary_for_RTL")))
+    ValidPlugin = false;
   if (!(*((void **)&RTL.number_of_devices) =
             DynLibrary->getAddressOfSymbol("__tgt_rtl_number_of_devices")))
     ValidPlugin = false;
@@ -511,71 +515,75 @@ void RTLsTy::registerLib(__tgt_bin_desc *Desc) {
   PM->RTLsMtx.lock();
 
   // Extract the exectuable image and extra information if availible.
-  for (int32_t i = 0; i < Desc->NumDeviceImages; ++i)
+  std::list<std::pair<__tgt_device_image, __tgt_image_info> *> RemainingImages;
+
+  for (int32_t i = 0; i < Desc->NumDeviceImages; ++i) {
     PM->Images.emplace_back(getExecutableImage(&Desc->DeviceImages[i]),
                             getImageInfo(&Desc->DeviceImages[i]));
+    RemainingImages.push_back(&PM->Images.back());
+  }
 
-  for (auto &ImageAndInfo : PM->Images) {
-    // Obtain the image and information that was previously extracted.
-    __tgt_device_image *Img = &ImageAndInfo.first;
-    __tgt_image_info *Info = &ImageAndInfo.second;
-
+  // Scan the RTLs that have associated images until we find one that supports
+  // the current image.
+  for (auto &R : AllRTLs) {
     RTLInfoTy *FoundRTL = nullptr;
 
-    // Scan the RTLs that have associated images until we find one that supports
-    // the current image.
-    for (auto &R : AllRTLs) {
+    std::list<std::pair<__tgt_device_image, __tgt_image_info> *>
+        AvailableImages;
 
-      if (R.is_valid_binary_info) {
-        if (!R.is_valid_binary_info(Img, Info)) {
-          DP("Image " DPxMOD " is NOT compatible with RTL %s!\n",
-             DPxPTR(Img->ImageStart), R.RTLName.c_str());
-          continue;
-        }
-      } else if (!R.is_valid_binary(Img)) {
-        DP("Image " DPxMOD " is NOT compatible with RTL %s!\n",
+    if (R.exists_valid_binary_for_RTL(&RemainingImages, &AvailableImages)) {
+      // Obtain the image and information that was previously extracted.
+      for (auto AvailImage : AvailableImages) {
+        __tgt_device_image *Img = &AvailImage->first;
+
+        DP("Image " DPxMOD " is compatible with RTL %s!\n",
            DPxPTR(Img->ImageStart), R.RTLName.c_str());
-        continue;
-      }
 
-      DP("Image " DPxMOD " is compatible with RTL %s!\n",
-         DPxPTR(Img->ImageStart), R.RTLName.c_str());
+        initRTLonce(R);
 
-      initRTLonce(R);
+        // Initialize (if necessary) translation table for this library.
+        PM->TrlTblMtx.lock();
+        if (!PM->HostEntriesBeginToTransTable.count(Desc->HostEntriesBegin)) {
+          PM->HostEntriesBeginRegistrationOrder.push_back(
+              Desc->HostEntriesBegin);
+          TranslationTable &TransTable =
+              (PM->HostEntriesBeginToTransTable)[Desc->HostEntriesBegin];
+          TransTable.HostTable.EntriesBegin = Desc->HostEntriesBegin;
+          TransTable.HostTable.EntriesEnd = Desc->HostEntriesEnd;
+        }
 
-      // Initialize (if necessary) translation table for this library.
-      PM->TrlTblMtx.lock();
-      if (!PM->HostEntriesBeginToTransTable.count(Desc->HostEntriesBegin)) {
-        PM->HostEntriesBeginRegistrationOrder.push_back(Desc->HostEntriesBegin);
+        // Retrieve translation table for this library.
         TranslationTable &TransTable =
             (PM->HostEntriesBeginToTransTable)[Desc->HostEntriesBegin];
-        TransTable.HostTable.EntriesBegin = Desc->HostEntriesBegin;
-        TransTable.HostTable.EntriesEnd = Desc->HostEntriesEnd;
+
+        DP("Registering image " DPxMOD " with RTL %s!\n",
+           DPxPTR(Img->ImageStart), R.RTLName.c_str());
+        registerImageIntoTranslationTable(TransTable, R, Img);
+        R.UsedImages.insert(Img);
+
+        PM->TrlTblMtx.unlock();
+        FoundRTL = &R;
+
+        // Load ctors/dtors for static objects
+        registerGlobalCtorsDtorsForImage(Desc, Img, FoundRTL);
       }
 
-      // Retrieve translation table for this library.
-      TranslationTable &TransTable =
-          (PM->HostEntriesBeginToTransTable)[Desc->HostEntriesBegin];
-
-      DP("Registering image " DPxMOD " with RTL %s!\n", DPxPTR(Img->ImageStart),
-         R.RTLName.c_str());
-      registerImageIntoTranslationTable(TransTable, R, Img);
-      R.UsedImages.insert(Img);
-
-      PM->TrlTblMtx.unlock();
-      FoundRTL = &R;
-
-      // Load ctors/dtors for static objects
-      registerGlobalCtorsDtorsForImage(Desc, Img, FoundRTL);
-
-      // if an RTL was found we are done - proceed to register the next image
-      break;
+      if (RemainingImages.empty())
+        break;
     }
 
-    if (!FoundRTL) {
-      DP("No RTL found for image " DPxMOD "!\n", DPxPTR(Img->ImageStart));
-    }
+#ifdef OMPTARGET_DEBUG
+    for (auto Img : RemainingImages)
+      DP("Image " DPxMOD " is NOT compatible with RTL %s!\n",
+         DPxPTR(Img->first.ImageStart), R.RTLName.c_str());
+#endif
   }
+
+#ifdef OMPTARGET_DEBUG
+  for (auto Img : RemainingImages)
+    DP("No RTL found for image " DPxMOD "!\n", DPxPTR(Img->first.ImageStart));
+#endif
+
   PM->RTLsMtx.unlock();
 
   DP("Done registering entries!\n");

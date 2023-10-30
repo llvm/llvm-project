@@ -175,12 +175,11 @@ extractXnackModeFromBinary(const __tgt_device_image *TgtImage) {
     return XnackBuildMode::XNACK_ANY;
   case ELF::EF_AMDGPU_FEATURE_XNACK_OFF_V4:
     return XnackBuildMode::XNACK_MINUS;
-  case ELF::EF_AMDGPU_FEATURE_XNACK_UNSUPPORTED_V4:
-    return XnackBuildMode::XNACK_UNSUPPORTED;
   default:
-    FAILURE_MESSAGE("Unknown XNACK flag!\n");
+    DP("XNACK is unsupported or unknown XNACK flag. Found XNACK flag %u!\n",
+       XnackFlags);
   }
-  return XNACK_MINUS;
+  return XnackBuildMode::XNACK_UNSUPPORTED;
 }
 
 bool IsXnackEnabledViaKernelParam() {
@@ -211,14 +210,19 @@ bool IsXnackEnabledViaKernelParam() {
   return false;
 }
 
-void checkImageCompatibilityWithSystemXnackMode(__tgt_device_image *TgtImage,
-                                                bool IsXnackEnabled) {
+void checkImageCompatibilityWithSystemXnackMode(
+    const __tgt_device_image *TgtImage, bool IsXnackEnabled) {
   XnackBuildMode ImageXnackMode = utils::extractXnackModeFromBinary(TgtImage);
-  if ((IsXnackEnabled && !ImageXnackMode)) {
+
+  if (ImageXnackMode == XnackBuildMode::XNACK_UNSUPPORTED)
+    return;
+
+  if (IsXnackEnabled && (ImageXnackMode == XnackBuildMode::XNACK_MINUS)) {
     FAILURE_MESSAGE(
         "Image is not compatible with current XNACK mode! XNACK is enabled "
         "on the system but image was compiled with xnack-.\n");
-  } else if (!IsXnackEnabled && (ImageXnackMode == 1)) {
+  } else if (!IsXnackEnabled &&
+             (ImageXnackMode == XnackBuildMode::XNACK_PLUS)) {
     FAILURE_MESSAGE("Image is not compatible with current XNACK mode! "
                     "XNACK is disabled on the system. However, the image "
                     "requires xnack+.\n");

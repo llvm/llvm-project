@@ -1141,6 +1141,12 @@ struct GenericPluginTy {
   isImageCompatible(__tgt_image_info *Info,
                     __tgt_device_image *TgtImage) const = 0;
 
+  /// Method allows to check why the method isImageCompatibelCheck returned
+  /// 'false' for a specific target image. The method is called from inside
+  /// __tgt_rtl_exists_valid_binary_for_RTL.
+  virtual void checkInvalidImage(__tgt_image_info *Info,
+                                 __tgt_device_image *TgtImage) {}
+
   /// Indicate whether the plugin supports empty images.
   virtual bool supportsEmptyImages() const { return false; }
 
