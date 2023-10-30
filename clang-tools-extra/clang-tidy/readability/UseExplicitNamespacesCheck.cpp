@@ -327,8 +327,8 @@ getDeclContextVector(const DeclContext *context) {
       break;
     case Decl::Namespace:
       namespacesStarted = true;
-      [[fallthrough]] default
-          : if (namespacesStarted && kind != Decl::Namespace) {
+    [[fallthrough]] default:
+      if (namespacesStarted && kind != Decl::Namespace) {
         std::cout << "processing namepsace vector after namespace "
                      "we have "
                   << context->getDeclKindName() << std::endl;
