@@ -40,56 +40,56 @@ LIBC_INLINE_VAR constexpr bool kUseSoftwarePrefetchingMemset =
   using uint512_t = cpp::array<uint64_t, 8>;
 #endif
 
-[[maybe_unused]] LIBC_INLINE static void
-inline_memset_x86_sw_prefetching(Ptr dst, uint8_t value, size_t count) {
-  sw_prefetch::PrefetchW(dst + generic::kCachelineSize);
-  if (count <= 128)
-    return generic::Memset<uint512_t>::head_tail(dst, value, count);
-  sw_prefetch::PrefetchW(dst + generic::kCachelineSize * 2);
-  // Aligned loop
-  generic::Memset<uint256_t>::block(dst, value);
-  align_to_next_boundary<32>(dst, count);
-  if (count <= 192) {
-    return Memset<uint256_t>::loop_and_tail(dst, value, count);
-  } else {
-    // Warm up memset
+  [[maybe_unused]] LIBC_INLINE static void
+  inline_memset_x86_sw_prefetching(Ptr dst, uint8_t value, size_t count) {
+    sw_prefetch::PrefetchW(dst + generic::kCachelineSize);
+    if (count <= 128)
+      return generic::Memset<uint512_t>::head_tail(dst, value, count);
+    sw_prefetch::PrefetchW(dst + generic::kCachelineSize * 2);
+    // Aligned loop
     generic::Memset<uint256_t>::block(dst, value);
-    generic::Memset<uint128_t>::block(dst + 64, value);
-    return generic::Memset<uint256_t>::loop_and_tail_prefetch<320, 128, 96>(dst, value,
-                                                               count);
+    align_to_next_boundary<32>(dst, count);
+    if (count <= 192) {
+      return Memset<uint256_t>::loop_and_tail(dst, value, count);
+    } else {
+      // Warm up memset
+      generic::Memset<uint256_t>::block(dst, value);
+      generic::Memset<uint128_t>::block(dst + 64, value);
+      return generic::Memset<uint256_t>::loop_and_tail_prefetch<320, 128, 96>(
+          dst, value, count);
+    }
   }
-}
 
-[[maybe_unused]] LIBC_INLINE static void
-inline_memset_x86(Ptr dst, uint8_t value, size_t count) {
-  if (count == 0)
-    return;
-  if (count == 1)
-    return generic::Memset<uint8_t>::block(dst, value);
-  if (count == 2)
-    return generic::Memset<uint16_t>::block(dst, value);
-  if (count == 3)
-    return generic::MemsetSequence<uint16_t, uint8_t>::block(dst, value);
-  if (count <= 8)
-    return generic::Memset<uint32_t>::head_tail(dst, value, count);
-  if (count <= 16)
-    return generic::Memset<uint64_t>::head_tail(dst, value, count);
-  if (count <= 32)
-    return generic::Memset<uint128_t>::head_tail(dst, value, count);
-  if (count <= 64)
-    return generic::Memset<uint256_t>::head_tail(dst, value, count);
-  if constexpr (x86::kUseSoftwarePrefetchingMemset) {
-    return inline_memset_x86_sw_prefetching(dst, value, count);
+  [[maybe_unused]] LIBC_INLINE static void
+  inline_memset_x86(Ptr dst, uint8_t value, size_t count) {
+    if (count == 0)
+      return;
+    if (count == 1)
+      return generic::Memset<uint8_t>::block(dst, value);
+    if (count == 2)
+      return generic::Memset<uint16_t>::block(dst, value);
+    if (count == 3)
+      return generic::MemsetSequence<uint16_t, uint8_t>::block(dst, value);
+    if (count <= 8)
+      return generic::Memset<uint32_t>::head_tail(dst, value, count);
+    if (count <= 16)
+      return generic::Memset<uint64_t>::head_tail(dst, value, count);
+    if (count <= 32)
+      return generic::Memset<uint128_t>::head_tail(dst, value, count);
+    if (count <= 64)
+      return generic::Memset<uint256_t>::head_tail(dst, value, count);
+    if constexpr (x86::kUseSoftwarePrefetchingMemset) {
+      return inline_memset_x86_sw_prefetching(dst, value, count);
+    }
+    if (count <= 128)
+      return generic::Memset<uint512_t>::head_tail(dst, value, count);
+    // Aligned loop
+    generic::Memset<uint256_t>::block(dst, value);
+    align_to_next_boundary<32>(dst, count);
+    else {
+      return generic::Memset<uint256_t>::loop_and_tail(dst, value, count);
+    }
   }
-  if (count <= 128)
-    return generic::Memset<uint512_t>::head_tail(dst, value, count);
-  // Aligned loop
-  generic::Memset<uint256_t>::block(dst, value);
-  align_to_next_boundary<32>(dst, count);
-  else {
-    return generic::Memset<uint256_t>::loop_and_tail(dst, value, count);
-  }
-}
 } // namespace LIBC_NAMESPACE
 
 #endif // LLVM_LIBC_SRC_STRING_MEMORY_UTILS_X86_64_INLINE_MEMSET_H
