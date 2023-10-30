@@ -62,38 +62,32 @@ bool RISCVCodeGenPrepare::visitZExtInst(ZExtInst &ZExt) {
   if (!ST->is64Bit())
     return false;
 
+  if (ZExt.hasNonNeg())
+    return false;
+
   Value *Src = ZExt.getOperand(0);
 
   // We only care about ZExt from i32 to i64.
   if (!ZExt.getType()->isIntegerTy(64) || !Src->getType()->isIntegerTy(32))
     return false;
 
-  // Look for an opportunity to replace (i64 (zext (i32 X))) with a sext if we
-  // can determine that the sign bit of X is zero via a dominating condition.
-  // This often occurs with widened induction variables.
+  // Look for an opportunity to infer nneg on a zext if we can determine that
+  // the sign bit of X is zero via a dominating condition. This often occurs
+  // with widened induction variables.
   if (isImpliedByDomCondition(ICmpInst::ICMP_SGE, Src,
                               Constant::getNullValue(Src->getType()), &ZExt,
                               *DL).value_or(false)) {
-    auto *SExt = new SExtInst(Src, ZExt.getType(), "", &ZExt);
-    SExt->takeName(&ZExt);
-    SExt->setDebugLoc(ZExt.getDebugLoc());
-
-    ZExt.replaceAllUsesWith(SExt);
-    ZExt.eraseFromParent();
+    ZExt.setNonNeg(true);
     ++NumZExtToSExt;
     return true;
   }
 
-  // Convert (zext (abs(i32 X, i1 1))) -> (sext (abs(i32 X, i1 1))). If abs of
+  // Convert (zext (abs(i32 X, i1 1))) -> (zext nneg (abs(i32 X, i1 1))). If abs of
   // INT_MIN is poison, the sign bit is zero.
+  // TODO: Move this to instcombine now that we have zext nneg in IR.
   using namespace PatternMatch;
   if (match(Src, m_Intrinsic<Intrinsic::abs>(m_Value(), m_One()))) {
-    auto *SExt = new SExtInst(Src, ZExt.getType(), "", &ZExt);
-    SExt->takeName(&ZExt);
-    SExt->setDebugLoc(ZExt.getDebugLoc());
-
-    ZExt.replaceAllUsesWith(SExt);
-    ZExt.eraseFromParent();
+    ZExt.setNonNeg(true);
     ++NumZExtToSExt;
     return true;
   }
@@ -102,9 +96,8 @@ bool RISCVCodeGenPrepare::visitZExtInst(ZExtInst &ZExt) {
 }
 
 // Try to optimize (i64 (and (zext/sext (i32 X), C1))) if C1 has bit 31 set,
-// but bits 63:32 are zero. If we can prove that bit 31 of X is 0, we can fill
-// the upper 32 bits with ones. A separate transform will turn (zext X) into
-// (sext X) for the same condition.
+// but bits 63:32 are zero. If we know that bit 31 of X is 0, we can fill
+// the upper 32 bits with ones.
 bool RISCVCodeGenPrepare::visitAnd(BinaryOperator &BO) {
   if (!ST->is64Bit())
     return false;
@@ -112,9 +105,17 @@ bool RISCVCodeGenPrepare::visitAnd(BinaryOperator &BO) {
   if (!BO.getType()->isIntegerTy(64))
     return false;
 
-  // Left hand side should be sext or zext.
+  auto canBeSignExtend = [](Instruction *I) {
+    if (isa<SExtInst>(I))
+      return true;
+    if (isa<ZExtInst>(I))
+      return I->hasNonNeg();
+    return false;
+  };
+
+  // Left hand side should be a sext or zext nneg.
   Instruction *LHS = dyn_cast<Instruction>(BO.getOperand(0));
-  if (!LHS || (!isa<SExtInst>(LHS) && !isa<ZExtInst>(LHS)))
+  if (!LHS || !canBeSignExtend(LHS))
     return false;
 
   Value *LHSSrc = LHS->getOperand(0);
@@ -133,13 +134,6 @@ bool RISCVCodeGenPrepare::visitAnd(BinaryOperator &BO) {
   // into simm12 by sign extending bit 31. This will allow use of ANDI.
   // TODO: Is worth making simm32?
   if (!isUInt<32>(C) || isInt<12>(C) || !isInt<12>(SignExtend64<32>(C)))
-    return false;
-
-  // If we can determine the sign bit of the input is 0, we can replace the
-  // And mask constant.
-  if (!isImpliedByDomCondition(ICmpInst::ICMP_SGE, LHSSrc,
-                               Constant::getNullValue(LHSSrc->getType()),
-                               LHS, *DL).value_or(false))
     return false;
 
   // Sign extend the constant and replace the And operand.
