@@ -538,7 +538,7 @@ TEST(MachineInstrTest, SpliceOperands) {
   EXPECT_TRUE(MI->getOperand(1).isTied());
   EXPECT_EQ(MI->findTiedOperandIdx(0), 1U);
   EXPECT_EQ(MI->findTiedOperandIdx(1), 0U);
-  MI->insert(&MI->getOperand(1), { MachineOperand::CreateImm(7) });
+  MI->insert(&MI->getOperand(1), {MachineOperand::CreateImm(7)});
   EXPECT_TRUE(MI->getOperand(0).isTied());
   EXPECT_TRUE(MI->getOperand(1).isImm());
   EXPECT_TRUE(MI->getOperand(2).isTied());
