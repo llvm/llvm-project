@@ -26,6 +26,7 @@
 
 #include "MoveOnly.h"
 #include "test_macros.h"
+#include "../../types.h"
 
 // Test Constraints:
 static_assert(std::is_constructible_v<std::expected<int, int>, std::unexpect_t>);
@@ -54,24 +55,24 @@ struct CopyOnly {
   friend constexpr bool operator==(const CopyOnly& mi, int ii) { return mi.i == ii; }
 };
 
-template <class T>
+template <class T, class V = int>
 constexpr void testInt() {
-  std::expected<int, T> e(std::unexpect, 5);
+  std::expected<V, T> e(std::unexpect, 5);
   assert(!e.has_value());
   assert(e.error() == 5);
 }
 
-template <class T>
+template <class T, class V = int>
 constexpr void testLValue() {
   T t(5);
-  std::expected<int, T> e(std::unexpect, t);
+  std::expected<V, T> e(std::unexpect, t);
   assert(!e.has_value());
   assert(e.error() == 5);
 }
 
-template <class T>
+template <class T, class V = int>
 constexpr void testRValue() {
-  std::expected<int, T> e(std::unexpect, T(5));
+  std::expected<V, T> e(std::unexpect, T(5));
   assert(!e.has_value());
   assert(e.error() == 5);
 }
@@ -80,10 +81,13 @@ constexpr bool test() {
   testInt<int>();
   testInt<CopyOnly>();
   testInt<MoveOnly>();
+  testInt<TailClobberer<1>, bool>();
   testLValue<int>();
   testLValue<CopyOnly>();
+  testLValue<TailClobberer<1>, bool>();
   testRValue<int>();
   testRValue<MoveOnly>();
+  testRValue<TailClobberer<1>, bool>();
 
   // no arg
   {
@@ -111,8 +115,6 @@ constexpr bool test() {
 
 void testException() {
 #ifndef TEST_HAS_NO_EXCEPTIONS
-  struct Except {};
-
   struct Throwing {
     Throwing(int) { throw Except{}; };
   };
