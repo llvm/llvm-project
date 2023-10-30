@@ -20,8 +20,7 @@ define void @store_atomic_i8_aligned_monotonic(i8 %value, ptr %ptr) {
 
 define void @store_atomic_i8_aligned_release(i8 %value, ptr %ptr) {
 ; CHECK-LABEL: store_atomic_i8_aligned_release:
-; CHECK:    add x8, x1, #4
-; CHECK:    stlrb w0, [x8]
+; CHECK:    stlurb w0, [x1, #4]
     %gep = getelementptr inbounds i8, ptr %ptr, i32 4
     store atomic i8 %value, ptr %gep release, align 1
     ret void
@@ -29,8 +28,7 @@ define void @store_atomic_i8_aligned_release(i8 %value, ptr %ptr) {
 
 define void @store_atomic_i8_aligned_seq_cst(i8 %value, ptr %ptr) {
 ; CHECK-LABEL: store_atomic_i8_aligned_seq_cst:
-; CHECK:    add x8, x1, #4
-; CHECK:    stlrb w0, [x8]
+; CHECK:    stlurb w0, [x1, #4]
     %gep = getelementptr inbounds i8, ptr %ptr, i32 4
     store atomic i8 %value, ptr %gep seq_cst, align 1
     ret void
@@ -54,8 +52,7 @@ define void @store_atomic_i16_aligned_monotonic(i16 %value, ptr %ptr) {
 
 define void @store_atomic_i16_aligned_release(i16 %value, ptr %ptr) {
 ; CHECK-LABEL: store_atomic_i16_aligned_release:
-; CHECK:    add x8, x1, #8
-; CHECK:    stlrh w0, [x8]
+; CHECK:    stlurh w0, [x1, #8]
     %gep = getelementptr inbounds i16, ptr %ptr, i32 4
     store atomic i16 %value, ptr %gep release, align 2
     ret void
@@ -63,8 +60,7 @@ define void @store_atomic_i16_aligned_release(i16 %value, ptr %ptr) {
 
 define void @store_atomic_i16_aligned_seq_cst(i16 %value, ptr %ptr) {
 ; CHECK-LABEL: store_atomic_i16_aligned_seq_cst:
-; CHECK:    add x8, x1, #8
-; CHECK:    stlrh w0, [x8]
+; CHECK:    stlurh w0, [x1, #8]
     %gep = getelementptr inbounds i16, ptr %ptr, i32 4
     store atomic i16 %value, ptr %gep seq_cst, align 2
     ret void
@@ -88,8 +84,7 @@ define void @store_atomic_i32_aligned_monotonic(i32 %value, ptr %ptr) {
 
 define void @store_atomic_i32_aligned_release(i32 %value, ptr %ptr) {
 ; CHECK-LABEL: store_atomic_i32_aligned_release:
-; CHECK:    add x8, x1, #16
-; CHECK:    stlr w0, [x8]
+; CHECK:    stlur w0, [x1, #16]
     %gep = getelementptr inbounds i32, ptr %ptr, i32 4
     store atomic i32 %value, ptr %gep release, align 4
     ret void
@@ -97,8 +92,7 @@ define void @store_atomic_i32_aligned_release(i32 %value, ptr %ptr) {
 
 define void @store_atomic_i32_aligned_seq_cst(i32 %value, ptr %ptr) {
 ; CHECK-LABEL: store_atomic_i32_aligned_seq_cst:
-; CHECK:    add x8, x1, #16
-; CHECK:    stlr w0, [x8]
+; CHECK:    stlur w0, [x1, #16]
     %gep = getelementptr inbounds i32, ptr %ptr, i32 4
     store atomic i32 %value, ptr %gep seq_cst, align 4
     ret void
@@ -122,8 +116,7 @@ define void @store_atomic_i64_aligned_monotonic(i64 %value, ptr %ptr) {
 
 define void @store_atomic_i64_aligned_release(i64 %value, ptr %ptr) {
 ; CHECK-LABEL: store_atomic_i64_aligned_release:
-; CHECK:    add x8, x1, #32
-; CHECK:    stlr x0, [x8]
+; CHECK:    stlur x0, [x1, #32]
     %gep = getelementptr inbounds i64, ptr %ptr, i32 4
     store atomic i64 %value, ptr %gep release, align 8
     ret void
@@ -131,8 +124,7 @@ define void @store_atomic_i64_aligned_release(i64 %value, ptr %ptr) {
 
 define void @store_atomic_i64_aligned_seq_cst(i64 %value, ptr %ptr) {
 ; CHECK-LABEL: store_atomic_i64_aligned_seq_cst:
-; CHECK:    add x8, x1, #32
-; CHECK:    stlr x0, [x8]
+; CHECK:    stlur x0, [x1, #32]
     %gep = getelementptr inbounds i64, ptr %ptr, i32 4
     store atomic i64 %value, ptr %gep seq_cst, align 8
     ret void
@@ -191,8 +183,7 @@ define void @store_atomic_i8_unaligned_monotonic(i8 %value, ptr %ptr) {
 
 define void @store_atomic_i8_unaligned_release(i8 %value, ptr %ptr) {
 ; CHECK-LABEL: store_atomic_i8_unaligned_release:
-; CHECK:    add x8, x1, #4
-; CHECK:    stlrb w0, [x8]
+; CHECK:    stlurb w0, [x1, #4]
     %gep = getelementptr inbounds i8, ptr %ptr, i32 4
     store atomic i8 %value, ptr %gep release, align 1
     ret void
@@ -200,8 +191,7 @@ define void @store_atomic_i8_unaligned_release(i8 %value, ptr %ptr) {
 
 define void @store_atomic_i8_unaligned_seq_cst(i8 %value, ptr %ptr) {
 ; CHECK-LABEL: store_atomic_i8_unaligned_seq_cst:
-; CHECK:    add x8, x1, #4
-; CHECK:    stlrb w0, [x8]
+; CHECK:    stlurb w0, [x1, #4]
     %gep = getelementptr inbounds i8, ptr %ptr, i32 4
     store atomic i8 %value, ptr %gep seq_cst, align 1
     ret void
