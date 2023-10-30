@@ -3306,25 +3306,29 @@ static void
 genACC(Fortran::lower::AbstractConverter &converter,
        Fortran::lower::pft::Evaluation &eval,
        const Fortran::parser::OpenACCAtomicConstruct &atomicConstruct) {
+
+  mlir::Location loc = converter.genLocation(atomicConstruct.source);
   std::visit(
       Fortran::common::visitors{
           [&](const Fortran::parser::AccAtomicRead &atomicRead) {
             Fortran::lower::genOmpAccAtomicRead<Fortran::parser::AccAtomicRead,
-                                                void>(converter, atomicRead);
+                                                void>(converter, atomicRead,
+                                                      loc);
           },
           [&](const Fortran::parser::AccAtomicWrite &atomicWrite) {
             Fortran::lower::genOmpAccAtomicWrite<
-                Fortran::parser::AccAtomicWrite, void>(converter, atomicWrite);
+                Fortran::parser::AccAtomicWrite, void>(converter, atomicWrite,
+                                                       loc);
           },
           [&](const Fortran::parser::AccAtomicUpdate &atomicUpdate) {
             Fortran::lower::genOmpAccAtomicUpdate<
-                Fortran::parser::AccAtomicUpdate, void>(converter,
-                                                        atomicUpdate);
+                Fortran::parser::AccAtomicUpdate, void>(converter, atomicUpdate,
+                                                        loc);
           },
           [&](const Fortran::parser::AccAtomicCapture &atomicCapture) {
             Fortran::lower::genOmpAccAtomicCapture<
                 Fortran::parser::AccAtomicCapture, void>(converter,
-                                                         atomicCapture);
+                                                         atomicCapture, loc);
           },
       },
       atomicConstruct.u);
