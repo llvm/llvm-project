@@ -94,7 +94,7 @@ PYBIND11_MODULE(_mlir, m) {
       "typeid"_a, "type_caster"_a, "replace"_a = false,
       "Register a type caster for casting MLIR types to custom user types.");
   m.def(
-      "register_value_caster",
+      MLIR_PYTHON_CAPI_VALUE_CASTER_REGISTER_ATTR,
       [](MlirTypeID mlirTypeID, bool replace) -> py::cpp_function {
         return py::cpp_function(
             [mlirTypeID, replace](py::object valueCaster) -> py::object {

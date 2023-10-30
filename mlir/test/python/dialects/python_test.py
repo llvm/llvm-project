@@ -425,6 +425,12 @@ def testTensorValue():
             # And it should be equal to the in-tree concrete type
             assert test.TestIntegerRankedTensorType.static_typeid == t.type.typeid
 
+            d = tensor.EmptyOp([1, 2, 3], IntegerType.get_signless(5)).result
+            # CHECK: Value(%{{.*}} = tensor.empty() : tensor<1x2x3xi5>)
+            print(d)
+            # CHECK: <importlib._bootstrap.TestTensorValue object at
+            print(repr(d))
+
 
 # CHECK-LABEL: TEST: inferReturnTypeComponents
 @run

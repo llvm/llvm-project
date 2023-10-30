@@ -39,7 +39,7 @@ def testFastMathFlags():
 # CHECK-LABEL: TEST: testArithValue
 @run
 def testArithValue():
-    def _binary_op(lhs, rhs, op: str):
+    def _binary_op(lhs, rhs, op: str) -> "ArithValue":
         op = op.capitalize()
         if arith._is_float_type(lhs.type):
             op += "F"
@@ -71,7 +71,6 @@ def testArithValue():
         f16_t = F16Type.get()
         f32_t = F32Type.get()
         f64_t = F64Type.get()
-        i32 = IntegerType.get_signless(32)
 
         with InsertionPoint(module.body):
             a = arith.constant(value=FloatAttr.get(f16_t, 42.42))

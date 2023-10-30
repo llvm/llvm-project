@@ -1913,10 +1913,10 @@ pybind11::object PyValue::maybeDownCast() {
          "mlirTypeID was expected to be non-null.");
   std::optional<pybind11::function> valueCaster =
       PyGlobals::get().lookupValueCaster(mlirTypeID, mlirTypeGetDialect(type));
-  py::object this_ = py::cast(this, py::return_value_policy::move);
+  py::object thisObj = py::cast(this, py::return_value_policy::move);
   if (!valueCaster)
-    return this_;
-  return valueCaster.value()(this_);
+    return thisObj;
+  return valueCaster.value()(thisObj);
 }
 
 PyValue PyValue::createFromCapsule(pybind11::object capsule) {
@@ -2930,9 +2930,9 @@ void mlir::python::populateIRCore(py::module &m) {
                    "single result)")
                       .str());
             }
-            PyOpResult result = PyOpResult(
-                operation.getRef(), mlirOperationGetResult(operation, 0));
-            return result.maybeDownCast();
+            return PyOpResult(operation.getRef(),
+                              mlirOperationGetResult(operation, 0))
+                .maybeDownCast();
           },
           "Shortcut to get an op result if it has only one (throws an error "
           "otherwise).")

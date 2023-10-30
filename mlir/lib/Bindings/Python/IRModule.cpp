@@ -93,7 +93,8 @@ void PyGlobals::registerValueCaster(MlirTypeID mlirTypeID,
                                     bool replace) {
   pybind11::object &found = valueCasterMap[mlirTypeID];
   if (found && !found.is_none() && !replace)
-    throw std::runtime_error("Value caster is already registered");
+    throw std::runtime_error("Value caster is already registered: " +
+                             py::repr(found).cast<std::string>());
   found = std::move(valueCaster);
   const auto foundIt = valueCasterMapCache.find(mlirTypeID);
   if (foundIt != valueCasterMapCache.end() && !foundIt->second.is_none()) {

@@ -3,6 +3,7 @@
 import gc
 from mlir.ir import *
 from mlir.dialects import func
+from mlir.dialects._ods_common import SubClassValueT
 
 
 def run(f):
@@ -297,7 +298,7 @@ def testValueCasters():
             return super().__str__().replace(Value.__name__, NOPBlockArg.__name__)
 
     @register_value_caster(IntegerType.static_typeid)
-    def cast_int(v):
+    def cast_int(v) -> SubClassValueT:
         print("in caster", v.__class__.__name__)
         if isinstance(v, OpResult):
             return NOPResult(v)
@@ -318,7 +319,10 @@ def testValueCasters():
             print("result", values[0].result_number, values[0])
             # CHECK: in caster OpResult
             # CHECK: result 1 NOPResult(%0:2 = "custom.op1"() : () -> (i32, i32))
-            print("result", values[1].result_number, values[0])
+            print("result", values[1].result_number, values[1])
+
+            # CHECK: results slice 0 NOPResult(%0:2 = "custom.op1"() : () -> (i32, i32))
+            print("results slice", values[:1][0].result_number, values[:1][0])
 
             value0, value1 = values
             # CHECK: in caster OpResult
@@ -326,7 +330,7 @@ def testValueCasters():
             print("result", value0.result_number, values[0])
             # CHECK: in caster OpResult
             # CHECK: result 1 NOPResult(%0:2 = "custom.op1"() : () -> (i32, i32))
-            print("result", value1.result_number, values[0])
+            print("result", value1.result_number, values[1])
 
             op1 = Operation.create("custom.op2", operands=[value0, value1])
             # CHECK: "custom.op2"(%0#0, %0#1) : (i32, i32) -> ()
@@ -348,8 +352,25 @@ def testValueCasters():
                 # CHECK: as func arg 1 NOPBlockArg
                 print("as func arg", arg1.arg_number, arg1.__class__.__name__)
 
+            # CHECK: args slice 0 NOPBlockArg(<block argument> of type 'i32' at index: 0)
+            print(
+                "args slice",
+                reduction.func_op.arguments[:1][0].arg_number,
+                reduction.func_op.arguments[:1][0],
+            )
+
+    try:
+
+        @register_value_caster(IntegerType.static_typeid)
+        def dont_cast_int_shouldnt_register(v):
+            ...
+
+    except RuntimeError as e:
+        # CHECK: Value caster is already registered: <function testValueCasters.<locals>.cast_int at
+        print(e)
+
     @register_value_caster(IntegerType.static_typeid, replace=True)
-    def dont_cast_int(v):
+    def dont_cast_int(v) -> Value:
         print("don't cast", v.result_number, v)
         return v
 
