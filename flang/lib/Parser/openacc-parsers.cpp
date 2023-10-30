@@ -53,9 +53,15 @@ TYPE_PARSER(construct<AccSizeExpr>(scalarIntExpr) ||
     construct<AccSizeExpr>("*" >> construct<std::optional<ScalarIntExpr>>()))
 TYPE_PARSER(construct<AccSizeExprList>(nonemptyList(Parser<AccSizeExpr>{})))
 
-TYPE_PARSER(construct<AccDeviceTypeExpr>(scalarIntExpr) ||
-    construct<AccDeviceTypeExpr>(
-        "*" >> construct<std::optional<ScalarIntExpr>>()))
+TYPE_PARSER(sourced(construct<AccDeviceTypeExpr>(
+    first("*" >> pure(AccDeviceTypeExpr::Device::Star),
+        "DEFAULT" >> pure(AccDeviceTypeExpr::Device::Default),
+        "NVIDIA" >> pure(AccDeviceTypeExpr::Device::Nvidia),
+        "ACC_DEVICE_NVIDIA" >> pure(AccDeviceTypeExpr::Device::Nvidia),
+        "RADEON" >> pure(AccDeviceTypeExpr::Device::Radeon),
+        "HOST" >> pure(AccDeviceTypeExpr::Device::Host),
+        "MULTICORE" >> pure(AccDeviceTypeExpr::Device::Multicore)))))
+
 TYPE_PARSER(
     construct<AccDeviceTypeExprList>(nonemptyList(Parser<AccDeviceTypeExpr>{})))
 

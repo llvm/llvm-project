@@ -4061,9 +4061,9 @@ struct AccWaitArgument {
 };
 
 struct AccDeviceTypeExpr {
-  TUPLE_CLASS_BOILERPLATE(AccDeviceTypeExpr);
+  ENUM_CLASS(Device, Star, Default, Nvidia, Radeon, Host, Multicore)
+  WRAPPER_CLASS_BOILERPLATE(AccDeviceTypeExpr, Device);
   CharBlock source;
-  std::tuple<std::optional<ScalarIntExpr>> t; // if null then *
 };
 
 struct AccDeviceTypeExprList {

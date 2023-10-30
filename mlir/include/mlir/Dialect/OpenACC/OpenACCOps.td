@@ -155,6 +155,30 @@ def DeclareActionAttr : OpenACC_Attr<"DeclareAction", "declare_action"> {
   let assemblyFormat = "`<` struct(params) `>`";
 }
 
+// Device type enumeration.
+def OpenACC_DeviceTypeStar      : I32EnumAttrCase<"Star", 0, "*">;
+def OpenACC_DeviceTypeDefault   : I32EnumAttrCase<"Default", 1, "default">;
+def OpenACC_DeviceTypeHost      : I32EnumAttrCase<"Host", 2, "host">;
+def OpenACC_DeviceTypeMulticore : I32EnumAttrCase<"Multicore", 3, "multicore">;
+def OpenACC_DeviceTypeNvidia    : I32EnumAttrCase<"Nvidia", 4, "nvidia">;
+def OpenACC_DeviceTypeRadeon    : I32EnumAttrCase<"Radeon", 5, "radeon">;
+
+
+def OpenACC_DeviceType : I32EnumAttr<"DeviceType",
+    "built-in device type supported by OpenACC",
+    [OpenACC_DeviceTypeStar, OpenACC_DeviceTypeDefault,
+     OpenACC_DeviceTypeHost, OpenACC_DeviceTypeMulticore,
+     OpenACC_DeviceTypeNvidia, OpenACC_DeviceTypeRadeon
+    ]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::acc";
+}
+def OpenACC_DeviceTypeAttr : EnumAttr<OpenACC_Dialect,
+                                      OpenACC_DeviceType,
+                                      "device_type"> {
+  let assemblyFormat = [{ ```<` $value `>` }];
+}
+
 // Used for data specification in data clauses (2.7.1).
 // Either (or both) extent and upperbound must be specified.
 def OpenACC_DataBoundsOp : OpenACC_Op<"bounds",
@@ -1624,14 +1648,12 @@ def OpenACC_InitOp : OpenACC_Op<"init", [AttrSizedOperandSegments]> {
     ```
   }];
 
-  let arguments = (ins Variadic<AnyInteger>:$deviceTypeOperands,
+  let arguments = (ins OptionalAttr<TypedArrayAttrBase<OpenACC_DeviceTypeAttr, "Device type attributes">>:$device_types,
                        Optional<IntOrIndex>:$deviceNumOperand,
                        Optional<I1>:$ifCond);
 
   let assemblyFormat = [{
-    oilist(
-        `device_type` `(` $deviceTypeOperands `:` type($deviceTypeOperands) `)`
-      | `device_num` `(` $deviceNumOperand `:` type($deviceNumOperand) `)`
+    oilist(`device_num` `(` $deviceNumOperand `:` type($deviceNumOperand) `)`
       | `if` `(` $ifCond `)`
     ) attr-dict-with-keyword
   }];
@@ -1657,13 +1679,12 @@ def OpenACC_ShutdownOp : OpenACC_Op<"shutdown", [AttrSizedOperandSegments]> {
     ```
   }];
 
-  let arguments = (ins Variadic<AnyInteger>:$deviceTypeOperands,
+  let arguments = (ins OptionalAttr<TypedArrayAttrBase<OpenACC_DeviceTypeAttr, "Device type attributes">>:$device_types,
                        Optional<IntOrIndex>:$deviceNumOperand,
                        Optional<I1>:$ifCond);
 
   let assemblyFormat = [{
-    oilist(`device_type` `(` $deviceTypeOperands `:` type($deviceTypeOperands) `)`
-    |`device_num` `(` $deviceNumOperand `:` type($deviceNumOperand) `)`
+    oilist(`device_num` `(` $deviceNumOperand `:` type($deviceNumOperand) `)`
     |`if` `(` $ifCond `)`
     ) attr-dict-with-keyword
   }];
@@ -1687,15 +1708,13 @@ def OpenACC_SetOp : OpenACC_Op<"set", [AttrSizedOperandSegments]> {
     ```
   }];
 
-  let arguments = (ins Optional<IntOrIndex>:$deviceType,
+  let arguments = (ins OptionalAttr<OpenACC_DeviceTypeAttr>:$device_type,
                        Optional<IntOrIndex>:$defaultAsync,
                        Optional<IntOrIndex>:$deviceNum,
                        Optional<I1>:$ifCond);
 
   let assemblyFormat = [{
-    oilist(
-      `device_type` `(` $deviceType `:` type($deviceType) `)`
-    | `default_async` `(` $defaultAsync `:` type($defaultAsync) `)`
+    oilist(`default_async` `(` $defaultAsync `:` type($defaultAsync) `)`
     | `device_num` `(` $deviceNum `:` type($deviceNum) `)`
     | `if` `(` $ifCond `)`
     ) attr-dict-with-keyword
@@ -1729,7 +1748,7 @@ def OpenACC_UpdateOp : OpenACC_Op<"update", [AttrSizedOperandSegments]> {
                        Variadic<IntOrIndex>:$waitOperands,
                        UnitAttr:$async,
                        UnitAttr:$wait,
-                       Variadic<IntOrIndex>:$deviceTypeOperands,
+                       OptionalAttr<TypedArrayAttrBase<OpenACC_DeviceTypeAttr, "Device type attributes">>:$device_types,
                        Variadic<OpenACC_PointerLikeTypeInterface>:$dataClauseOperands,
                        UnitAttr:$ifPresent);
 
@@ -1746,8 +1765,6 @@ def OpenACC_UpdateOp : OpenACC_Op<"update", [AttrSizedOperandSegments]> {
         `if` `(` $ifCond `)`
       | `async` `(` $asyncOperand `:` type($asyncOperand) `)`
       | `wait_devnum` `(` $waitDevnum `:` type($waitDevnum) `)`
-      | `device_type` `(` $deviceTypeOperands `:`
-          type($deviceTypeOperands) `)`
       | `wait` `(` $waitOperands `:` type($waitOperands) `)`
       | `dataOperands` `(` $dataClauseOperands `:` type($dataClauseOperands) `)`
     )
