@@ -65,7 +65,7 @@ struct _LIBCPP_TEMPLATE_VIS range_formatter {
 
     // The n field overrides a possible m type, therefore delay applying the
     // effect of n until the type has been procesed.
-    __parse_type(__begin, __end);
+    bool __has_m_specifier = __parse_type(__begin, __end);
     if (__parser_.__clear_brackets_)
       set_brackets({}, {});
     if (__begin == __end) [[unlikely]]
@@ -86,6 +86,14 @@ struct _LIBCPP_TEMPLATE_VIS range_formatter {
 
     __ctx.advance_to(__begin);
     __begin = __underlying_.parse(__ctx);
+
+    // Add "m" specifier semantics if there are no underlying specifier
+    if (!__has_range_underlying_spec && __has_m_specifier) {
+        if constexpr (__fmt_pair_like<_Tp>) { // should always be true
+            __underlying_.set_brackets({}, {});
+            __underlying_.set_separator(_LIBCPP_STATICALLY_WIDEN(_CharT, ": "));
+        }
+    }
 
     // This test should not be required if __has_range_underlying_spec is false.
     // However this test makes sure the underlying formatter left the parser in
@@ -210,15 +218,14 @@ struct _LIBCPP_TEMPLATE_VIS range_formatter {
 
 private:
   template <contiguous_iterator _Iterator>
-  _LIBCPP_HIDE_FROM_ABI constexpr void __parse_type(_Iterator& __begin, _Iterator __end) {
+  _LIBCPP_HIDE_FROM_ABI constexpr bool __parse_type(_Iterator& __begin, _Iterator __end) {
     switch (*__begin) {
     case _CharT('m'):
       if constexpr (__fmt_pair_like<_Tp>) {
         set_brackets(_LIBCPP_STATICALLY_WIDEN(_CharT, "{"), _LIBCPP_STATICALLY_WIDEN(_CharT, "}"));
         set_separator(_LIBCPP_STATICALLY_WIDEN(_CharT, ", "));
-        __underlying_.set_brackets({}, {});
-        __underlying_.set_separator(_LIBCPP_STATICALLY_WIDEN(_CharT, ": "));
         ++__begin;
+        return true;
       } else
         std::__throw_format_error("Type m requires a pair or a tuple with two elements");
       break;
@@ -241,6 +248,7 @@ private:
       } else
         std::__throw_format_error("Type ?s requires character type as formatting argument");
     }
+    return false;
   }
 
   template <class _ParseContext>

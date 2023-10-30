@@ -983,10 +983,10 @@ void test_pair_tuple(TestFunction check, ExceptionTest check_exception, auto&& i
 
   // *** n
   check(SV("__(1, 'a'), (42, '*')___"), SV("{:_^24n}"), input);
-  check(SV("__(1, 'a'), (42, '*')___"), SV("{:_^24nm}"), input); // m should have no effect
+  check(SV("____1: 'a', 42: '*'_____"), SV("{:_^24nm}"), input);
 
   // *** type ***
-  check(SV("__{(1, 'a'), (42, '*')}___"), SV("{:_^26m}"), input);
+  check(SV("____{1: 'a', 42: '*'}_____"), SV("{:_^26m}"), input);
   check_exception("Type s requires character type as formatting argument", SV("{:s}"), input);
   check_exception("Type ?s requires character type as formatting argument", SV("{:?s}"), input);
   for (std::basic_string_view<CharT> fmt : fmt_invalid_types<CharT>("s"))
