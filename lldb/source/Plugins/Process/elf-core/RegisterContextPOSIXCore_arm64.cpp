@@ -75,7 +75,7 @@ RegisterContextCorePOSIX_arm64::RegisterContextCorePOSIX_arm64(
       m_register_info_up->GetTargetArchitecture().GetTriple();
   m_fpr_data = getRegset(notes, target_triple, FPR_Desc);
 
-  if (m_register_info_up->IsSSVEEnabled()) {
+  if (m_register_info_up->IsSSVEPresent()) {
     m_sve_data = getRegset(notes, target_triple, AARCH64_SSVE_Desc);
     lldb::offset_t flags_offset = 12;
     uint16_t flags = m_sve_data.GetU32(&flags_offset);
@@ -83,19 +83,19 @@ RegisterContextCorePOSIX_arm64::RegisterContextCorePOSIX_arm64(
       m_sve_state = SVEState::Streaming;
   }
 
-  if (m_sve_state != SVEState::Streaming && m_register_info_up->IsSVEEnabled())
+  if (m_sve_state != SVEState::Streaming && m_register_info_up->IsSVEPresent())
     m_sve_data = getRegset(notes, target_triple, AARCH64_SVE_Desc);
 
-  if (m_register_info_up->IsPAuthEnabled())
+  if (m_register_info_up->IsPAuthPresent())
     m_pac_data = getRegset(notes, target_triple, AARCH64_PAC_Desc);
 
-  if (m_register_info_up->IsTLSEnabled())
+  if (m_register_info_up->IsTLSPresent())
     m_tls_data = getRegset(notes, target_triple, AARCH64_TLS_Desc);
 
-  if (m_register_info_up->IsZAEnabled())
+  if (m_register_info_up->IsZAPresent())
     m_za_data = getRegset(notes, target_triple, AARCH64_ZA_Desc);
 
-  if (m_register_info_up->IsMTEEnabled())
+  if (m_register_info_up->IsMTEPresent())
     m_mte_data = getRegset(notes, target_triple, AARCH64_MTE_Desc);
 
   ConfigureRegisterContext();
