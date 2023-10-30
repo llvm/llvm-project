@@ -13,6 +13,7 @@
 
 #include "mlir/IR/OpImplementation.h"
 #include "llvm/ADT/EnumeratedArray.h"
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/StringMap.h"
 
@@ -31,13 +32,13 @@ namespace ir_detail {
 enum class VarKind { Symbol = 1, Dimension = 0, Level = 2 };
 
 [[nodiscard]] constexpr bool isWF(VarKind vk) {
-  const auto vk_ = to_underlying(vk);
+  const auto vk_ = llvm::to_underlying(vk);
   return 0 <= vk_ && vk_ <= 2;
 }
 
 /// Swaps `Dimension` and `Level`, but leaves `Symbol` the same.
 constexpr VarKind flipVarKind(VarKind vk) {
-  return VarKind{2 - to_underlying(vk)};
+  return VarKind{2 - llvm::to_underlying(vk)};
 }
 static_assert(flipVarKind(VarKind::Symbol) == VarKind::Symbol &&
               flipVarKind(VarKind::Dimension) == VarKind::Level &&
@@ -49,7 +50,7 @@ constexpr char toChar(VarKind vk) {
   // in the range [-44..126] (where that lower bound is under worst-case
   // rearranging of the expression); and `int_fast8_t` is the fastest type
   // which can support that range without over-/underflow.
-  const auto vk_ = static_cast<int_fast8_t>(to_underlying(vk));
+  const auto vk_ = static_cast<int_fast8_t>(llvm::to_underlying(vk));
   return static_cast<char>(100 + vk_ * (26 - vk_ * 11));
 }
 static_assert(toChar(VarKind::Symbol) == 's' &&
@@ -100,7 +101,7 @@ protected:
   public:
     constexpr Impl(VarKind vk, Num n)
         : data((static_cast<Storage>(n) << 2) |
-               static_cast<Storage>(to_underlying(vk))) {
+               static_cast<Storage>(llvm::to_underlying(vk))) {
       assert(isWF(vk) && "unknown VarKind");
       assert(isWF_Num(n) && "Var::Num is too large");
     }
@@ -215,7 +216,7 @@ class Ranks final {
 
   static constexpr unsigned to_index(VarKind vk) {
     assert(isWF(vk) && "unknown VarKind");
-    return static_cast<unsigned>(to_underlying(vk));
+    return static_cast<unsigned>(llvm::to_underlying(vk));
   }
 
 public:
@@ -349,7 +350,7 @@ public:
   /// to live too long.
   VarInfo const &access(VarInfo::ID id) const {
     // `SmallVector::operator[]` already asserts the index is in-bounds.
-    return vars[to_underlying(id)];
+    return vars[llvm::to_underlying(id)];
   }
   VarInfo const *access(std::optional<VarInfo::ID> oid) const {
     return oid ? &access(*oid) : nullptr;
