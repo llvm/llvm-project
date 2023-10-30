@@ -216,6 +216,8 @@ private:
       if constexpr (__fmt_pair_like<_Tp>) {
         set_brackets(_LIBCPP_STATICALLY_WIDEN(_CharT, "{"), _LIBCPP_STATICALLY_WIDEN(_CharT, "}"));
         set_separator(_LIBCPP_STATICALLY_WIDEN(_CharT, ", "));
+        __underlying_.set_brackets({}, {});
+        __underlying_.set_separator(_LIBCPP_STATICALLY_WIDEN(_CharT, ": "));
         ++__begin;
       } else
         std::__throw_format_error("Type m requires a pair or a tuple with two elements");
