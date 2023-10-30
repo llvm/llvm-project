@@ -16,6 +16,7 @@ define double @fadd_f64(double %x, double %y) {
 ; RV64I-NEXT:    ret
   %a = fadd double %x, %y
   ret double %a
+}
 
 ; Test copying between FPR32 and GPR on RV64.
 ; FIXME: This test should be replaced with a more general calling convention
