@@ -965,42 +965,36 @@ static llvm::Value *getArrayIndexingBound(CodeGenFunction &CGF,
 Expr *CodeGenFunction::BuildCountedByFieldExpr(Expr *Base,
                                                const ValueDecl *CountedByVD) {
   // Find the outer struct expr (i.e. p in p->a.b.c.d).
-  Base = Base->IgnoreImpCasts();
-  Base = Base->IgnoreParenNoopCasts(getContext());
+  Base = Base->IgnoreParenImpCasts();
 
   // Work our way up the expression until we reach the DeclRefExpr.
   while (!isa<DeclRefExpr>(Base))
-    if (auto *ME = dyn_cast<MemberExpr>(Base->IgnoreImpCasts())) {
-      Base = ME->getBase()->IgnoreImpCasts();
-      Base = Base->IgnoreParenNoopCasts(getContext());
-    }
+    if (auto *ME = dyn_cast<MemberExpr>(Base))
+      Base = ME->getBase()->IgnoreParenImpCasts();
 
   // Add back an implicit cast to create the required pr-value.
   Base =
       ImplicitCastExpr::Create(getContext(), Base->getType(), CK_LValueToRValue,
                                Base, nullptr, VK_PRValue, FPOptionsOverride());
 
-  Expr *CountedByExpr = Base;
-
   if (const auto *IFD = dyn_cast<IndirectFieldDecl>(CountedByVD)) {
     // The counted_by field is inside an anonymous struct / union. The
     // IndirectFieldDecl has the correct order of FieldDecls to build this
     // easily. (Yay!)
     for (NamedDecl *ND : IFD->chain()) {
-      ValueDecl *VD = cast<ValueDecl>(ND);
-      CountedByExpr =
-          MemberExpr::CreateImplicit(getContext(), CountedByExpr,
-                                     CountedByExpr->getType()->isPointerType(),
-                                     VD, VD->getType(), VK_LValue, OK_Ordinary);
+      auto *VD = cast<ValueDecl>(ND);
+      Base = MemberExpr::CreateImplicit(getContext(), Base,
+                                        Base->getType()->isPointerType(), VD,
+                                        VD->getType(), VK_LValue, OK_Ordinary);
     }
   } else {
-    CountedByExpr = MemberExpr::CreateImplicit(
-        getContext(), CountedByExpr, CountedByExpr->getType()->isPointerType(),
+    Base = MemberExpr::CreateImplicit(
+        getContext(), Base, Base->getType()->isPointerType(),
         const_cast<ValueDecl *>(CountedByVD), CountedByVD->getType(), VK_LValue,
         OK_Ordinary);
   }
 
-  return CountedByExpr;
+  return Base;
 }
 
 const ValueDecl *
@@ -1010,7 +1004,7 @@ CodeGenFunction::FindFlexibleArrayMemberField(ASTContext &Ctx,
       getLangOpts().getStrictFlexArraysLevel();
 
   for (const Decl *D : RD->decls()) {
-    if (const ValueDecl *VD = dyn_cast<ValueDecl>(D);
+    if (const auto *VD = dyn_cast<ValueDecl>(D);
         VD && Decl::isFlexibleArrayMemberLike(Ctx, VD, VD->getType(),
                                               StrictFlexArraysLevel, true))
       return VD;
