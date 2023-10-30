@@ -56,7 +56,7 @@ public:
 void mlir::spirv::registerSPIRVTargetInterfaceExternalModels(
     DialectRegistry &registry) {
   registry.addExtension(+[](MLIRContext *ctx, spirv::SPIRVDialect *dialect) {
-    spirv::SPIRVTargetAttr::attachInterface<SPIRVTargetAttrImpl>(*ctx);
+    spirv::TargetEnvAttr::attachInterface<SPIRVTargetAttrImpl>(*ctx);
   });
 }
 
@@ -106,7 +106,7 @@ Attribute
 SPIRVTargetAttrImpl::createObject(Attribute attribute,
                                   const SmallVector<char, 0> &object,
                                   const gpu::TargetOptions &options) const {
-  auto target = cast<SPIRVTargetAttr>(attribute);
+  auto target = cast<TargetEnvAttr>(attribute);
   gpu::CompilationTarget format = options.getCompilationTarget();
   DictionaryAttr objectProps;
   Builder builder(attribute.getContext());

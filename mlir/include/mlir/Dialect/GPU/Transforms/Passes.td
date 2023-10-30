@@ -201,7 +201,7 @@ def GpuSPIRVAttachTarget: Pass<"spirv-attach-target", ""> {
     gpu.module @spirv_module_1 {...}
     // mlir-opt --spirv-attach-target="module=spirv.* ver=v1.0 caps=Kernel" in1.mlir
     gpu.module @nvvm_module_1 {...}
-    gpu.module @spirv_module_1 [#spirv.target<vce = #spirv.vce<v1.0, [Kernel], []>, resource_limits = <>>] {...}
+    gpu.module @spirv_module_1 [#spirv.target<#spirv.vce<v1.0, [Kernel], []>, #spirv.resource_limits<>>] {...}
     ```
   }];
   let options = [

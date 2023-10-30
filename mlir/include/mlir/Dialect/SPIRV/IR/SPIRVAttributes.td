@@ -166,35 +166,4 @@ def SPIRV_ResourceLimitsAttr : SPIRV_Attr<"ResourceLimits", "resource_limits"> {
   let assemblyFormat = "`<` struct(params) `>`";
 }
 
-//===----------------------------------------------------------------------===//
-// SPIRV target attribute.
-//===----------------------------------------------------------------------===//
-
-def SPIRV_TargetAttr : SPIRV_Attr<"SPIRVTarget", "target"> {
-  let description = [{
-    GPU target attribute for controlling compilation of SPIRV targets.
-  }];
-  let parameters = (ins
-    "mlir::spirv::VerCapExtAttr":$vce,
-    "mlir::spirv::ResourceLimitsAttr":$resource_limits,
-    DefaultValuedParameter<
-      "mlir::spirv::ClientAPI",
-      "mlir::spirv::ClientAPI::Unknown"
-    >:$client_api,
-    DefaultValuedParameter<
-      "mlir::spirv::Vendor",
-      "mlir::spirv::Vendor::Unknown"
-    >:$vendor_id,
-    DefaultValuedParameter<
-      "mlir::spirv::DeviceType",
-      "mlir::spirv::DeviceType::Unknown"
-    >:$device_type,
-    DefaultValuedParameter<
-      "uint32_t",
-      "mlir::spirv::TargetEnvAttr::kUnknownDeviceID"
-    >:$device_id
-  );
-  let assemblyFormat = "`<` struct(params) `>`";
-}
-
 #endif // MLIR_DIALECT_SPIRV_IR_TARGET_AND_ABI

@@ -68,7 +68,7 @@ void SPIRVAttachTarget::runOnOperation() {
   }
   ArrayRef<Extension> exts(extensions);
   VerCapExtAttr vce = VerCapExtAttr::get(version, caps, exts, &getContext());
-  auto target = builder.getAttr<SPIRVTargetAttr>(
+  auto target = TargetEnvAttr::get(
       vce, getDefaultResourceLimits(&getContext()),
       symbolizeClientAPI(clientApi).value(),
       symbolizeVendor(deviceVendor).value(),
