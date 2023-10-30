@@ -220,9 +220,11 @@ public:
   unsigned ModulesValidateDiagnosticOptions : 1;
 
   /// Whether to entirely skip writing diagnostic options.
+  /// Primarily used to speed up deserialization during dependency scanning.
   unsigned ModulesSkipDiagnosticOptions : 1;
 
   /// Whether to entirely skip writing header search paths.
+  /// Primarily used to speed up deserialization during dependency scanning.
   unsigned ModulesSkipHeaderSearchPaths : 1;
 
   unsigned ModulesHashContent : 1;
