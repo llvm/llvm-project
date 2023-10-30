@@ -17,7 +17,6 @@ on:
 jobs:
   automate-prs-labels:
     permissions:
-      contents: read
       pull-requests: write
     runs-on: ubuntu-latest
     # Ignore PRs with more than 10 commits.  Pull requests with a lot of
