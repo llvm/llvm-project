@@ -67,7 +67,7 @@ define i32 @getelementptr_4x32(ptr nocapture readonly %g, i32 %n, i32 %x, i32 %y
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x i32> [[TMP3]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP5:%.*]] = add nsw <2 x i32> [[TMP4]], [[TMP0]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x i32> [[TMP5]], i64 0
-; CHECK-NEXT:    [[TMP7:%.*]] = zext i32 [[TMP6]] to i64
+; CHECK-NEXT:    [[TMP7:%.*]] = zext nneg i32 [[TMP6]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[G:%.*]], i64 [[TMP7]]
 ; CHECK-NEXT:    [[T6:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[ADD1:%.*]] = add nsw i32 [[T6]], [[SUM_032]]
@@ -159,12 +159,12 @@ define i32 @getelementptr_2x32(ptr nocapture readonly %g, i32 %n, i32 %x, i32 %y
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i32 [ 0, [[FOR_BODY_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[SUM_032:%.*]] = phi i32 [ 0, [[FOR_BODY_PREHEADER]] ], [ [[ADD16]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[T4:%.*]] = shl nuw nsw i32 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[T4]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = zext nneg i32 [[T4]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[G:%.*]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[T6:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[ADD1:%.*]] = add nsw i32 [[T6]], [[SUM_032]]
 ; CHECK-NEXT:    [[T7:%.*]] = or i32 [[T4]], 1
-; CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[T7]] to i64
+; CHECK-NEXT:    [[TMP3:%.*]] = zext nneg i32 [[T7]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds i32, ptr [[G]], i64 [[TMP3]]
 ; CHECK-NEXT:    [[T8:%.*]] = load i32, ptr [[ARRAYIDX5]], align 4
 ; CHECK-NEXT:    [[ADD6:%.*]] = add nsw i32 [[ADD1]], [[T8]]
