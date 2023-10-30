@@ -7580,8 +7580,8 @@ public:
     auto *MaskVecTy =
         FixedVectorType::get(E1.Scalars.front()->getType(), Mask.size());
     unsigned NumParts = TTI.getNumberOfParts(MaskVecTy);
-    assert(NumParts > 0 && NumParts < Mask.size() &&
-           "Expected positive number of registers.");
+    if (NumParts == 0 || NumParts >= Mask.size())
+      NumParts = 1;
     unsigned SliceSize = Mask.size() / NumParts;
     const auto *It =
         find_if(Mask, [](int Idx) { return Idx != PoisonMaskElem; });
@@ -7598,8 +7598,8 @@ public:
     auto *MaskVecTy =
         FixedVectorType::get(E1.Scalars.front()->getType(), Mask.size());
     unsigned NumParts = TTI.getNumberOfParts(MaskVecTy);
-    assert(NumParts > 0 && NumParts < Mask.size() &&
-           "Expected positive number of registers.");
+    if (NumParts == 0 || NumParts >= Mask.size())
+      NumParts = 1;
     unsigned SliceSize = Mask.size() / NumParts;
     const auto *It =
         find_if(Mask, [](int Idx) { return Idx != PoisonMaskElem; });
