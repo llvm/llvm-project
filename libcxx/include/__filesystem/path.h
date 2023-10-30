@@ -107,7 +107,6 @@ struct __is_pathable_string<
     _Void<typename __can_convert_char<_ECharT>::__char_type> >
     : public __can_convert_char<_ECharT> {
   using _Str = basic_string<_ECharT, _Traits, _Alloc>;
-  using _Base = __can_convert_char<_ECharT>;
 
   _LIBCPP_HIDE_FROM_ABI
   static _ECharT const* __range_begin(_Str const& __s) { return __s.data(); }
@@ -129,7 +128,6 @@ struct __is_pathable_string<
     _Void<typename __can_convert_char<_ECharT>::__char_type> >
     : public __can_convert_char<_ECharT> {
   using _Str = basic_string_view<_ECharT, _Traits>;
-  using _Base = __can_convert_char<_ECharT>;
 
   _LIBCPP_HIDE_FROM_ABI
   static _ECharT const* __range_begin(_Str const& __s) { return __s.data(); }
@@ -155,8 +153,6 @@ struct __is_pathable_char_array : false_type {};
 template <class _Source, class _ECharT, class _UPtr>
 struct __is_pathable_char_array<_Source, _ECharT*, _UPtr, true>
     : __can_convert_char<__remove_const_t<_ECharT> > {
-  using _Base = __can_convert_char<__remove_const_t<_ECharT> >;
-
   _LIBCPP_HIDE_FROM_ABI
   static _ECharT const* __range_begin(const _ECharT* __b) { return __b; }
 
@@ -185,7 +181,6 @@ struct __is_pathable_iter<
         typename iterator_traits<_Iter>::value_type>::__char_type> >
     : __can_convert_char<typename iterator_traits<_Iter>::value_type> {
   using _ECharT = typename iterator_traits<_Iter>::value_type;
-  using _Base = __can_convert_char<_ECharT>;
 
   _LIBCPP_HIDE_FROM_ABI
   static _Iter __range_begin(_Iter __b) { return __b; }
