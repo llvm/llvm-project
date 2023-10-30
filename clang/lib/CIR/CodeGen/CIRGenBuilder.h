@@ -557,7 +557,9 @@ public:
     llvm_unreachable("negation for the given type is NYI");
   }
 
-  mlir::Value createFPExt(mlir::Value v, mlir::Type destType) {
+  // TODO: split this to createFPExt/createFPTrunc when we have dedicated cast
+  // operations.
+  mlir::Value createFloatingCast(mlir::Value v, mlir::Type destType) {
     if (getIsFPConstrained())
       llvm_unreachable("constrainedfp NYI");
 

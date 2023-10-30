@@ -17,7 +17,7 @@ unsigned char cxxstaticcast_0(unsigned int x) {
 // CHECK:  }
 
 
-int cStyleCasts_0(unsigned x1, int x2, float x3, short x4) {
+int cStyleCasts_0(unsigned x1, int x2, float x3, short x4, double x5) {
 // CHECK: cir.func @_{{.*}}cStyleCasts_0{{.*}}
 
   char a = (char)x1; // truncate
@@ -68,10 +68,13 @@ int cStyleCasts_0(unsigned x1, int x2, float x3, short x4) {
   unsigned fptoui = (unsigned)x3; // Floating point to unsigned integer
   // CHECK: %{{.+}} = cir.cast(float_to_int, %{{[0-9]+}} : f32), !u32i
 
-  bool x5 = (bool)x1; // No checking, because this isn't a cast.
+  bool ib = (bool)x1; // No checking, because this isn't a cast.
 
-  int bi = (int)x5; // bool to int
+  int bi = (int)ib; // bool to int
   // CHECK: %{{[0-9]+}} = cir.cast(bool_to_int, %{{[0-9]+}} : !cir.bool), !s32i
+
+  float dptofp = (float)x5;
+  // CHECK: %{{.+}} = cir.cast(floating, %{{[0-9]+}} : f64), f32
 
   return 0;
 }
