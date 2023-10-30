@@ -19,7 +19,7 @@
 
 // RUN: %clang_cc1 -triple s390x-ibm-zos -xc++ -S -o - %s | FileCheck %s --check-prefix CHECK-CXX
 // CHECK-CXX:        [[PPA2:(.L)|(@@)PPA2]]:
-// CHECK-CXX-NEXT:   .byte      3{{[[:space:]]*}}.byte 1
+// CHECK-CXX-NEXT:   .byte      3{{[[:space:]]*}}.byte 231
 // CHECK-CXX-NEXT:   .byte      34{{$}}
 // CHECK-CXX-NEXT:   .byte      {{4}}
 // CHECK-CXX-NEXT:   .long      {{(CELQSTRT)}}-[[PPA2]]
