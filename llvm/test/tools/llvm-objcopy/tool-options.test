@@ -1,0 +1,4 @@
+## An error must be reported if a required argument value is missing.
+# RUN: not llvm-objcopy --only-section 2>&1 | FileCheck --check-prefix=CHECK-NO-VALUE %s
+# RUN: not llvm-objcopy -O 2>&1 | FileCheck --check-prefix=CHECK-NO-VALUE %s
+# CHECK-NO-VALUE: error: argument to '{{.*}}' is missing
