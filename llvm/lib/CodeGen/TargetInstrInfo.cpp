@@ -1639,6 +1639,10 @@ std::string TargetInstrInfo::createMIROperandComment(
   if (F.isUseOperandTiedToDef(TiedTo))
     OS << " tiedto:$" << TiedTo;
 
+  if ((F.isRegDefKind() || F.isRegDefEarlyClobberKind() || F.isRegUseKind()) &&
+      F.getRegMayBeSpilled())
+    OS << " spillable";
+
   return OS.str();
 }
 

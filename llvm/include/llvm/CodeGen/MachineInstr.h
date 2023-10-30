@@ -1364,6 +1364,9 @@ public:
     return getOpcode() == TargetOpcode::INLINEASM ||
            getOpcode() == TargetOpcode::INLINEASM_BR;
   }
+  /// Returns true if the memory operand can be folded. Does so by checking the
+  /// InlineAsm::Flag immediate operand at OpId - 1.
+  bool mayFoldInlineAsmMemOp(unsigned OpId) const;
 
   bool isStackAligningInlineAsm() const;
   InlineAsm::AsmDialect getInlineAsmDialect() const;
