@@ -188,7 +188,7 @@ struct TailClobbererNonTrivialMove : TailClobberer<Constant> {
   using TailClobberer<Constant>::TailClobberer;
   constexpr TailClobbererNonTrivialMove(TailClobbererNonTrivialMove&&) noexcept(Noexcept) : TailClobberer<Constant>() {
 #ifndef TEST_HAS_NO_EXCEPTIONS
-    if (ThrowOnMove)
+    if (!Noexcept && ThrowOnMove)
       throw Except{};
 #endif
   }
