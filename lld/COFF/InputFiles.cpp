@@ -1090,6 +1090,7 @@ MachineTypes BitcodeFile::getMachineType() {
   case Triple::x86:
     return I386;
   case Triple::arm:
+  case Triple::thumb:
     return ARMNT;
   case Triple::aarch64:
     return ARM64;
