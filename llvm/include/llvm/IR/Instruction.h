@@ -304,12 +304,10 @@ public:
   /// If the metadata is not found then return null.
   MDNode *getMetadata(unsigned KindID) const {
     // Handle 'dbg' as a special case since it is not stored in the hash table.
-    if (KindID == LLVMContext::MD_dbg) {
+    if (KindID == LLVMContext::MD_dbg)
       return DbgLoc.getAsMDNode();
-    }
-    if (hasMetadataOtherThanDebugLoc()) {
+    if (hasMetadataOtherThanDebugLoc())
       return getMetadataImpl(KindID);
-    }
     return nullptr;
   }
 

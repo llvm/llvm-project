@@ -1466,12 +1466,10 @@ void Instruction::setMetadata(StringRef Kind, MDNode *Node) {
 MDNode *Instruction::getMetadataImpl(StringRef Kind) const {
   const LLVMContext &Ctx = getContext();
   unsigned KindID = Ctx.getMDKindID(Kind);
-  if (KindID == LLVMContext::MD_dbg) {
+  if (KindID == LLVMContext::MD_dbg)
     return DbgLoc.getAsMDNode();
-  }
-  if (hasMetadataOtherThanDebugLoc()) {
+  if (hasMetadataOtherThanDebugLoc())
     return getValueMetadata(*this, KindID, Ctx);
-  }
   return nullptr;
 }
 
