@@ -913,7 +913,6 @@ struct ConcatenateRewriter : public OpRewritePattern<ConcatenateOp> {
 
     const Location loc = op.getLoc();
     const auto dstTp = getSparseTensorType(op);
-    const Dimension dimRank = dstTp.getDimRank();
     const Dimension conDim = op.getDimension();
     SmallVector<Value> sizes;
     concatSizesFromInputs(rewriter, sizes, loc, dstTp, op.getInputs(), conDim);
