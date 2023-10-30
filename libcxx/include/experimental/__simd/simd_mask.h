@@ -43,6 +43,14 @@ public:
   // broadcast constructor
   _LIBCPP_HIDE_FROM_ABI explicit simd_mask(value_type __v) noexcept : __s_(_Impl::__broadcast(__v)) {}
 
+  // implicit type conversion constructor
+  template <class _Up, enable_if_t<!is_same_v<_Up, _Tp> && is_same_v<abi_type, simd_abi::fixed_size<size()>>, int> = 0>
+  _LIBCPP_HIDE_FROM_ABI simd_mask(const simd_mask<_Up, simd_abi::fixed_size<size()>>& __v) noexcept {
+    for (size_t __i = 0; __i < size(); __i++) {
+      (*this)[__i] = __v[__i];
+    }
+  }
+
   // scalar access [simd.mask.subscr]
   _LIBCPP_HIDE_FROM_ABI reference operator[](size_t __i) noexcept { return reference(__s_, __i); }
   _LIBCPP_HIDE_FROM_ABI value_type operator[](size_t __i) const noexcept { return __s_.__get(__i); }
