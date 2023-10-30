@@ -14,7 +14,7 @@ module openacc_declare_validity
 
   !$acc declare create(aa, bb)
 
-  !ERROR: 'aa' in the CREATE clause is already present in another clause in this module
+  !WARNING: 'aa' in the CREATE clause is already present in the same clause in this module
   !$acc declare create(aa)
 
   !$acc declare link(ab)
