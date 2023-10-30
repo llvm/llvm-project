@@ -248,9 +248,8 @@ hsa_status_t launch_kernel(hsa_agent_t dev_agent, hsa_executable_t executable,
       (HSA_PACKET_TYPE_KERNEL_DISPATCH << HSA_PACKET_HEADER_TYPE) |
       (HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_SCACQUIRE_FENCE_SCOPE) |
       (HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_SCRELEASE_FENCE_SCOPE);
-  uint32_t header_word =
-      header | (setup << 16u) __atomic_store_n((uint32_t *)&packet->header,
-                                               header_word, __ATOMIC_RELEASE);
+  uint32_t header_word = header | (setup << 16u);
+  __atomic_store_n((uint32_t *)&packet->header, header_word, __ATOMIC_RELEASE);
   hsa_signal_store_relaxed(queue->doorbell_signal, packet_id);
 
   // Wait until the kernel has completed execution on the device. Periodically
