@@ -985,7 +985,7 @@ void CodeGenModule::Release() {
                               uint32_t(CLANG_VERSION_PATCHLEVEL));
 
     // Record the language because we need it for the PPA2.
-    const char *lang_str = languageToString(
+    StringRef lang_str = languageToString(
         LangStandard::getLangStandardForKind(LangOpts.LangStd).Language);
     getModule().addModuleFlag(llvm::Module::Error, "zos_cu_language",
                               llvm::MDString::get(VMContext, lang_str));
