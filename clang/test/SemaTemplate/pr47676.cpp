@@ -34,5 +34,5 @@ void g(void) {
 
 //      CHECK: |       `-CStyleCastExpr {{.*}} '__vector int' <VectorSplat>
 // CHECK-NEXT: |         `-ImplicitCastExpr {{.*}} 'int' <FloatingToIntegral>
-// CHECK-NEXT: |           `-ImplicitCastExpr {{.*}}:'double' <LValueToRValue>
+// CHECK-NEXT: |           `-ImplicitCastExpr {{.*}}'double' <LValueToRValue>
 }
