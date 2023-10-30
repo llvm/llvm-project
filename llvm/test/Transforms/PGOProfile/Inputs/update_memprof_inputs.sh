@@ -82,6 +82,10 @@ COMMON_FLAGS="-fuse-ld=lld -Wl,--no-rosegment -gmlt -fdebug-info-for-profiling -
 ${CLANG} ${COMMON_FLAGS} -fmemory-profile ${OUTDIR}/memprof.cc -o ${OUTDIR}/memprof.exe
 env MEMPROF_OPTIONS=log_path=stdout ${OUTDIR}/memprof.exe > ${OUTDIR}/memprof.memprofraw
 
+# Generate another profile without any column numbers.
+${CLANG} ${COMMON_FLAGS} -gno-column-info -fmemory-profile ${OUTDIR}/memprof.cc -o ${OUTDIR}/memprof.nocolinfo.exe
+env MEMPROF_OPTIONS=log_path=stdout ${OUTDIR}/memprof.nocolinfo.exe > ${OUTDIR}/memprof.nocolinfo.memprofraw
+
 ${CLANG} ${COMMON_FLAGS} -fprofile-generate=. \
   ${OUTDIR}/memprof.cc -o ${OUTDIR}/pgo.exe
 env LLVM_PROFILE_FILE=${OUTDIR}/memprof_pgo.profraw ${OUTDIR}/pgo.exe
