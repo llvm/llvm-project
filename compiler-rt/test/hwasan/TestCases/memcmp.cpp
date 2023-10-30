@@ -8,9 +8,10 @@
 #include <string.h>
 #include <unistd.h>
 
-__attribute__((no_sanitize("hwaddress"))) int
+__attribute__((no_sanitize("hwaddress"))) void
 ForceCallInterceptor(void *p, const void *a, size_t size) {
-  return memcmp(p, a, size);
+  if (memcmp(p, a, size) != 0)
+    __builtin_trap();
 }
 
 int main(int argc, char **argv) {
@@ -20,13 +21,14 @@ int main(int argc, char **argv) {
   char *p = (char *)malloc(size);
   memcpy(p, a, size);
   free(p);
-  return ForceCallInterceptor(p, a, size);
+  ForceCallInterceptor(p, a, size);
+  return 0;
   // CHECK: HWAddressSanitizer: tag-mismatch on address
   // CHECK: READ of size 4
-  // CHECK: #{{[[:digit:]]+}} 0x{{[[:xdigit:]]+}} in main {{.*}}memcmp.cpp:[[@LINE-3]]
+  // CHECK: #{{[[:digit:]]+}} 0x{{[[:xdigit:]]+}} in main {{.*}}memcmp.cpp:[[@LINE-4]]
   // CHECK: Cause: use-after-free
   // CHECK: freed by thread
-  // CHECK: #{{[[:digit:]]+}} 0x{{[[:xdigit:]]+}} in main {{.*}}memcmp.cpp:[[@LINE-7]]
+  // CHECK: #{{[[:digit:]]+}} 0x{{[[:xdigit:]]+}} in main {{.*}}memcmp.cpp:[[@LINE-8]]
   // CHECK: previously allocated by thread
-  // CHECK: #{{[[:digit:]]+}} 0x{{[[:xdigit:]]+}} in main {{.*}}memcmp.cpp:[[@LINE-11]]
+  // CHECK: #{{[[:digit:]]+}} 0x{{[[:xdigit:]]+}} in main {{.*}}memcmp.cpp:[[@LINE-12]]
 }

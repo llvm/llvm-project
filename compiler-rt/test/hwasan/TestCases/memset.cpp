@@ -8,9 +8,9 @@
 #include <string.h>
 #include <unistd.h>
 
-__attribute__((no_sanitize("hwaddress"))) int
+__attribute__((no_sanitize("hwaddress"))) void
 ForceCallInterceptor(void *p, int c, size_t size) {
-  return memset(p, c, size) == nullptr;
+  memset(p, c, size) == nullptr;
 }
 
 int main(int argc, char **argv) {
@@ -19,13 +19,14 @@ int main(int argc, char **argv) {
   int size = sizeof(a);
   char *volatile p = (char *)malloc(size);
   free(p);
-  return ForceCallInterceptor(p, 0, size);
+  ForceCallInterceptor(p, 0, size);
+  return 0;
   // CHECK: HWAddressSanitizer: tag-mismatch on address
   // CHECK: WRITE of size 4
-  // CHECK: #{{[[:digit:]]+}} 0x{{[[:xdigit:]]+}} in main {{.*}}memset.cpp:[[@LINE-3]]
+  // CHECK: #{{[[:digit:]]+}} 0x{{[[:xdigit:]]+}} in main {{.*}}memset.cpp:[[@LINE-4]]
   // CHECK: Cause: use-after-free
   // CHECK: freed by thread
-  // CHECK: #{{[[:digit:]]+}} 0x{{[[:xdigit:]]+}} in main {{.*}}memset.cpp:[[@LINE-7]]
+  // CHECK: #{{[[:digit:]]+}} 0x{{[[:xdigit:]]+}} in main {{.*}}memset.cpp:[[@LINE-8]]
   // CHECK: previously allocated by thread
-  // CHECK: #{{[[:digit:]]+}} 0x{{[[:xdigit:]]+}} in main {{.*}}memset.cpp:[[@LINE-10]]
+  // CHECK: #{{[[:digit:]]+}} 0x{{[[:xdigit:]]+}} in main {{.*}}memset.cpp:[[@LINE-11]]
 }
