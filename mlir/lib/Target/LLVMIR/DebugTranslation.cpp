@@ -301,6 +301,7 @@ llvm::DILocation *DebugTranslation::translateLoc(Location loc,
     llvmLoc = translateLoc(callLoc.getCallee(), scope, callerLoc);
 
   } else if (auto fileLoc = dyn_cast<FileLineColLoc>(loc)) {
+    // A scope of a DILocation cannot be null.
     if (!scope)
       return nullptr;
     llvmLoc =
