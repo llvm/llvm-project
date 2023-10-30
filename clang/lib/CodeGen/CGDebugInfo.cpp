@@ -5901,7 +5901,7 @@ void CGDebugInfo::finalize() {
   }
 
   for (auto const *VD : StaticDataMemberDefinitionsToEmit) {
-    assert (VD->isStaticDataMember());
+    assert(VD->isStaticDataMember());
 
     if (auto It = DeclCache.find(VD); It != DeclCache.end())
       continue;
