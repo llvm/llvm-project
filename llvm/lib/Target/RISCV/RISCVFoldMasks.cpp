@@ -130,8 +130,9 @@ bool RISCVFoldMasks::convertVMergeToVMv(MachineInstr &MI, MachineInstr *V0Def) {
     return false;
 
   MI.setDesc(TII->get(NewOpc));
-  MI.removeOperand(2); // False operand
-  MI.removeOperand(3); // Mask operand
+  MI.removeOperand(1);  // Merge operand
+  MI.tieOperands(0, 1); // Tie false to dest
+  MI.removeOperand(3);  // Mask operand
   MI.addOperand(
       MachineOperand::CreateImm(RISCVII::TAIL_UNDISTURBED_MASK_UNDISTURBED));
 
