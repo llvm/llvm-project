@@ -5,7 +5,7 @@
 	.type	_Z3foov,@function
 _Z3foov:                                # @_Z3foov
 .Lfunc_begin0:
-	.file	0 "/home/ayermolo/local/tasks/T138552329/typeDedupSmall" "helper.cpp" md5 0x305ec66c221c583021f8375b300e2591
+	.file	0 "/typeDedupSmall" "helper.cpp" md5 0x305ec66c221c583021f8375b300e2591
 	.loc	0 2 0                           # helper.cpp:2:0
 	.cfi_startproc
 # %bb.0:                                # %entry
@@ -254,7 +254,7 @@ _Z3foov:                                # @_Z3foov
 .Linfo_string1:
 	.asciz	"helper.cpp"                    # string offset=105
 .Linfo_string2:
-	.asciz	"/home/ayermolo/local/tasks/T138552329/typeDedupSmall" # string offset=116
+	.asciz	"/typeDedupSmall" # string offset=116
 .Linfo_string3:
 	.asciz	"foo"                           # string offset=169
 .Linfo_string4:

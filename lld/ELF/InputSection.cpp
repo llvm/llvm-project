@@ -947,7 +947,7 @@ void InputSection::relocateNonAlloc(uint8_t *buf, ArrayRef<RelTy> rels) {
       //
       // TODO To reduce disruption, we use 0 instead of -1 as the tombstone
       // value. Enable -1 in a future release.
-      auto *ds = dyn_cast<Defined>(&sym);
+
       if (isDebugNames && dyn_cast<Undefined>(&sym)) {
         uint64_t maxVal = 0;
         switch (type) {
@@ -963,6 +963,7 @@ void InputSection::relocateNonAlloc(uint8_t *buf, ArrayRef<RelTy> rels) {
         target.relocateNoSym(bufLoc, type, SignExtend64<bits>(maxVal));
         continue;
       }
+      auto *ds = dyn_cast<Defined>(&sym);
       if (!sym.getOutputSection() || (ds && ds->folded && !isDebugLine)) {
         // If -z dead-reloc-in-nonalloc= is specified, respect it.
         const uint64_t value = tombstone ? SignExtend64<bits>(*tombstone)

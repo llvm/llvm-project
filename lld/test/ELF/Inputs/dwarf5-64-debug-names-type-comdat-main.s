@@ -5,7 +5,7 @@
 	.type	main,@function
 main:                                   # @main
 .Lfunc_begin0:
-	.file	0 "/home/ayermolo/local/tasks/T138552329/typeDedupSmall" "main.cpp" md5 0x6e787b94dac2f817bb35cfde8006dc82
+	.file	0 "/typeDedupSmall" "main.cpp" md5 0x6e787b94dac2f817bb35cfde8006dc82
 	.loc	0 2 0                           # main.cpp:2:0
 	.cfi_startproc
 # %bb.0:                                # %entry
@@ -252,7 +252,7 @@ main:                                   # @main
 .Linfo_string1:
 	.asciz	"main.cpp"                      # string offset=105
 .Linfo_string2:
-	.asciz	"/home/ayermolo/local/tasks/T138552329/typeDedupSmall" # string offset=114
+	.asciz	"/typeDedupSmall" # string offset=114
 .Linfo_string3:
 	.asciz	"main"                          # string offset=167
 .Linfo_string4:
