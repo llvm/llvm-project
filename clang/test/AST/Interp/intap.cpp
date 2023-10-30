@@ -27,6 +27,9 @@ static_assert(BitIntZero2 == 0, "");
 constexpr unsigned _BitInt(1) UBitIntZero1{};
 static_assert(UBitIntZero1 == 0, "");
 
+constexpr unsigned _BitInt(2) BI1 = 3u;
+static_assert(BI1 == 3, "");
+
 
 #ifdef __SIZEOF_INT128__
 namespace i128 {
