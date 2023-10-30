@@ -2682,13 +2682,16 @@ MCSection *TargetLoweringObjectFileXCOFF::getSectionForTOCEntry(
   // the chance of needing -bbigtoc is decreased. Also, the toc-entry for
   // EH info is never referenced directly using instructions so it can be
   // allocated with TE storage-mapping class.
+  // The "_$TLSML" symbol for TLS local-dynamic mode requires XMC_TC.
   return getContext().getXCOFFSection(
       cast<MCSymbolXCOFF>(Sym)->getSymbolTableName(), SectionKind::getData(),
-      XCOFF::CsectProperties((TM.getCodeModel() == CodeModel::Large ||
-                              cast<MCSymbolXCOFF>(Sym)->isEHInfo())
-                                 ? XCOFF::XMC_TE
-                                 : XCOFF::XMC_TC,
-                             XCOFF::XTY_SD));
+      XCOFF::CsectProperties(
+          ((TM.getCodeModel() == CodeModel::Large &&
+            cast<MCSymbolXCOFF>(Sym)->getSymbolTableName() != "_$TLSML") ||
+           cast<MCSymbolXCOFF>(Sym)->isEHInfo())
+              ? XCOFF::XMC_TE
+              : XCOFF::XMC_TC,
+          XCOFF::XTY_SD));
 }
 
 MCSection *TargetLoweringObjectFileXCOFF::getSectionForLSDA(

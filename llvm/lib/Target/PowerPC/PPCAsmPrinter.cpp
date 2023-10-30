@@ -2879,15 +2879,6 @@ void PPCAIXAsmPrinter::emitEndOfAsmFile(Module &M) {
       MCSymbol *S = OutContext.getOrCreateSymbol(Name);
       TCEntry = cast<MCSectionXCOFF>(
           getObjFileLowering().getSectionForTOCEntry(S, TM));
-    } else if (I.first.second ==
-               MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSML) {
-      // AIX assembler expects the TC storage-mapping class for the "_$TLSML"
-      // symbol.
-      MCSection *MCSect = getObjFileLowering().getContext().getXCOFFSection(
-          cast<MCSymbolXCOFF>(I.first.first)->getSymbolTableName(),
-          SectionKind::getData(),
-          XCOFF::CsectProperties(XCOFF::XMC_TC, XCOFF::XTY_SD));
-      TCEntry = cast<MCSectionXCOFF>(MCSect);
     } else {
       TCEntry = cast<MCSectionXCOFF>(
           getObjFileLowering().getSectionForTOCEntry(I.first.first, TM));
