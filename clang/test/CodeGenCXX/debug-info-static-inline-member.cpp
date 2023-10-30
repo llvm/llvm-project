@@ -14,6 +14,7 @@ struct Foo {
     static constexpr float cexpr_float = 2.0 + 1.0;
     static constexpr Enum cexpr_enum = Enum::VAL;
     static constexpr Empty cexpr_empty{};
+    static inline    Enum inline_enum = Enum::VAL;
 
     template<typename T>
     static constexpr T cexpr_template{};
@@ -55,6 +56,9 @@ int main() {
 // CHECK:      ![[EMPTY_DECL:[0-9]+]] = !DIDerivedType(tag: DW_TAG_member, name: "cexpr_empty",
 // CHECK-SAME:                          flags: DIFlagStaticMember)
 
+// CHECK:      ![[IENUM_DECL:[0-9]+]] = !DIDerivedType(tag: DW_TAG_member, name: "inline_enum",
+// CHECK-SAME:                          flags: DIFlagStaticMember, extraData: i32 -1)
+
 // CHECK:      ![[TEMPLATE_DECL:[0-9]+]] = !DIDerivedType(tag: DW_TAG_member, name: "cexpr_template",
 // CHECK-SAME:                             flags: DIFlagStaticMember, extraData: i16 0)
 
@@ -73,6 +77,10 @@ int main() {
 // CHECK:      !DIGlobalVariableExpression(var: ![[ENUM_VAR:[0-9]+]], expr: !DIExpression(DW_OP_constu, {{.*}}, DW_OP_stack_value))
 // CHECK:      ![[ENUM_VAR]] = distinct !DIGlobalVariable(name: "cexpr_enum", linkageName:
 // CHECK-SAME:                 isLocal: true, isDefinition: true, declaration: ![[ENUM_DECL]])
+
+// CHECK:      !DIGlobalVariableExpression(var: ![[IENUM_VAR:[0-9]+]], expr: !DIExpression(DW_OP_constu, {{.*}}, DW_OP_stack_value))
+// CHECK:      ![[IENUM_VAR]] = distinct !DIGlobalVariable(name: "inline_enum", linkageName:
+// CHECK-SAME:                  isLocal: true, isDefinition: true, declaration: ![[IENUM_DECL]])
 
 // CHECK:      !DIGlobalVariableExpression(var: ![[TEMPLATE_VAR:[0-9]+]], expr: !DIExpression(DW_OP_constu, 0, DW_OP_stack_value))
 // CHECK:      ![[TEMPLATE_VAR]] = distinct !DIGlobalVariable(name: "cexpr_template", linkageName:
