@@ -1852,7 +1852,6 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
   SmallVector<Value> mapOperands;
   SmallVector<Value> useDevPtrOperands;
   SmallVector<Value> useDevAddrOperands;
-  ArrayAttr mapTypes;
   llvm::omp::RuntimeFunction RTLFn;
   DataLayout DL = DataLayout(op->getParentOfType<ModuleOp>());
 
