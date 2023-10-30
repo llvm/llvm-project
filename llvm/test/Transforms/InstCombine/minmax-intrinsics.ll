@@ -217,7 +217,7 @@ define i8 @umin_zext_uses(i5 %x, i5 %y) {
 define i8 @smax_sext_constant(i5 %x) {
 ; CHECK-LABEL: @smax_sext_constant(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i5 @llvm.smax.i5(i5 [[X:%.*]], i5 7)
-; CHECK-NEXT:    [[M:%.*]] = zext i5 [[TMP1]] to i8
+; CHECK-NEXT:    [[M:%.*]] = zext nneg i5 [[TMP1]] to i8
 ; CHECK-NEXT:    ret i8 [[M]]
 ;
   %e = sext i5 %x to i8
@@ -322,7 +322,7 @@ define i8 @umax_zext_constant_big(i5 %x) {
 define i8 @umin_sext_constant(i5 %x) {
 ; CHECK-LABEL: @umin_sext_constant(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i5 @llvm.umin.i5(i5 [[X:%.*]], i5 7)
-; CHECK-NEXT:    [[M:%.*]] = zext i5 [[TMP1]] to i8
+; CHECK-NEXT:    [[M:%.*]] = zext nneg i5 [[TMP1]] to i8
 ; CHECK-NEXT:    ret i8 [[M]]
 ;
   %e = sext i5 %x to i8

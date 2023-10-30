@@ -289,7 +289,7 @@ define i1 @zext_sext_eq_known_nonneg(i8 %x, i8 %y) {
 define i1 @zext_sext_sle_known_nonneg_op0_narrow(i8 %x, i16 %y) {
 ; CHECK-LABEL: @zext_sext_sle_known_nonneg_op0_narrow(
 ; CHECK-NEXT:    [[N:%.*]] = and i8 [[X:%.*]], 12
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i8 [[N]] to i16
+; CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i8 [[N]] to i16
 ; CHECK-NEXT:    [[C:%.*]] = icmp sle i16 [[TMP1]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
@@ -370,7 +370,7 @@ define <2 x i1> @sext_zext_sge_known_nonneg_op0_narrow(<2 x i5> %x, <2 x i8> %y)
 define i1 @sext_zext_uge_known_nonneg_op0_wide(i16 %x, i8 %y) {
 ; CHECK-LABEL: @sext_zext_uge_known_nonneg_op0_wide(
 ; CHECK-NEXT:    [[N:%.*]] = and i8 [[Y:%.*]], 12
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i8 [[N]] to i16
+; CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i8 [[N]] to i16
 ; CHECK-NEXT:    [[C:%.*]] = icmp ule i16 [[TMP1]], [[X:%.*]]
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
