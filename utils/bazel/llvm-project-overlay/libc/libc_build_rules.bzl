@@ -12,19 +12,11 @@ load(":platforms.bzl", "PLATFORM_CPU_ARM64", "PLATFORM_CPU_X86_64")
 def libc_internal_target(name):
     return name + ".__internal__"
 
-def _package_path(label):
-    """Returns the path to the package of 'label'.
-
-    Args:
-      label: label. The label to return the package path of.
-
-    For example, package_path("@foo//bar:BUILD") returns 'external/foo/bar'.
-    """
-    return paths.join(Label(label).workspace_root, Label(label).package)
-
 def libc_common_copts():
+    root_label = Label("//libc")
+    libc_include_path = paths.join(root_label.workspace_root, root_label.package)
     return [
-        "-I" + _package_path("@llvm-project//libc"),
+        "-I" + libc_include_path,
         "-DLIBC_NAMESPACE=" + LIBC_NAMESPACE,
     ]
 
