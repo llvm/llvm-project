@@ -25,6 +25,15 @@ static void BM_Istream_numbers(benchmark::State& state) {
   while (state.KeepRunning())
     benchmark::DoNotOptimize(i += istream_numbers());
 }
+BENCHMARK(BM_Istream_numbers)->RangeMultiplier(2)->Range(1024, 4096)->UseRealTime()->Threads(1)->ThreadPerCpu();
 
-BENCHMARK(BM_Istream_numbers)->RangeMultiplier(2)->Range(1024, 4096);
+static void BM_Ostream_number(benchmark::State& state) {
+  while (state.KeepRunning()) {
+    std::ostringstream ss;
+    ss << 0;
+    benchmark::DoNotOptimize(ss.str().c_str());
+  }
+}
+BENCHMARK(BM_Ostream_number)->UseRealTime()->Threads(1)->ThreadPerCpu();
+
 BENCHMARK_MAIN();

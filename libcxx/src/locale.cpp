@@ -154,7 +154,6 @@ public:
     const locale::facet* use_facet(long id) const;
 
     static const locale& make_classic();
-    static       locale& make_global();
 private:
     void install(facet* f, long id);
     template <class F> void install(F* f) {install(f, f->id.__get());}
@@ -537,6 +536,8 @@ locale::__imp::use_facet(long id) const
 
 // locale
 
+locale::__imp* locale::__classic_;
+
 const locale&
 locale::__imp::make_classic()
 {
@@ -544,6 +545,16 @@ locale::__imp::make_classic()
     static aligned_storage<sizeof(locale)>::type buf;
     locale* c = reinterpret_cast<locale*>(&buf);
     c->__locale_ = &make<__imp>(1u);
+    // We don't do reference counting on the classic locale.
+    // It's never destroyed anyway, but atomic reference counting may be very
+    // expensive in parallel applications. The classic locale is used by default
+    // in all streams. Note: if a new global locale is installed, then we lose
+    // the benefit of no reference counting. Potentially we can omit reference
+    // counting on all locales that are ever installed as global (leak them).
+    // Programs are not expected to install unbounded number of unique global
+    // locales, and global locale cannot be installed if any threads are running
+    // so real programs shouldn't install them at all.
+    c->__classic_ = c->__locale_;
     return *c;
 }
 
@@ -554,78 +565,58 @@ locale::classic()
     return c;
 }
 
-locale&
-locale::__imp::make_global()
+locale::__imp*
+locale::__make_global()
 {
     // only one thread can get in here and it only gets in once
-    static aligned_storage<sizeof(locale)>::type buf;
-    auto *obj = ::new (&buf) locale(locale::classic());
-    return *obj;
-}
-
-locale&
-locale::__global()
-{
-    static locale& g = __imp::make_global();
-    return g;
-}
-
-locale::locale() noexcept
-    : __locale_(__global().__locale_)
-{
-    __locale_->__add_shared();
-}
-
-locale::locale(const locale& l) noexcept
-    : __locale_(l.__locale_)
-{
-    __locale_->__add_shared();
-}
-
-locale::~locale()
-{
-    __locale_->__release_shared();
+    return classic().__locale_;
 }
 
 const locale&
 locale::operator=(const locale& other) noexcept
 {
-    other.__locale_->__add_shared();
-    __locale_->__release_shared();
+    __maybe_acquire(other.__locale_);
+    __maybe_release(__locale_);
     __locale_ = other.__locale_;
     return *this;
 }
 
 locale::locale(const char* name)
-    : __locale_(name ? new __imp(name)
-                     : (__throw_runtime_error("locale constructed with null"), nullptr))
+    : __locale_(__do_acquire(name ? new __imp(name)
+                     : (__throw_runtime_error("locale constructed with null"), nullptr)))
 {
-    __locale_->__add_shared();
 }
 
 locale::locale(const string& name)
-    : __locale_(new __imp(name))
+    : __locale_(__do_acquire(new __imp(name)))
 {
-    __locale_->__add_shared();
 }
 
 locale::locale(const locale& other, const char* name, category c)
-    : __locale_(name ? new __imp(*other.__locale_, name, c)
-                     : (__throw_runtime_error("locale constructed with null"), nullptr))
+    : __locale_(__do_acquire(name ? new __imp(*other.__locale_, name, c)
+                     : (__throw_runtime_error("locale constructed with null"), nullptr)))
 {
-    __locale_->__add_shared();
 }
 
 locale::locale(const locale& other, const string& name, category c)
-    : __locale_(new __imp(*other.__locale_, name, c))
+    : __locale_(__do_acquire(new __imp(*other.__locale_, name, c)))
 {
-    __locale_->__add_shared();
 }
 
 locale::locale(const locale& other, const locale& one, category c)
-    : __locale_(new __imp(*other.__locale_, *one.__locale_, c))
+    : __locale_(__do_acquire(new __imp(*other.__locale_, *one.__locale_, c)))
 {
-    __locale_->__add_shared();
+}
+
+locale::__imp* locale::__do_acquire(__imp* __i)
+{
+    __i->__add_shared();
+    return __i;
+}
+
+void locale::__do_release(__imp* __i)
+{
+    __i->__release_shared();
 }
 
 string
@@ -641,17 +632,17 @@ locale::__install_ctor(const locale& other, facet* f, long id)
         __locale_ = new __imp(*other.__locale_, f, id);
     else
         __locale_ = other.__locale_;
-    __locale_->__add_shared();
+    __maybe_acquire(__locale_);
 }
 
 locale
 locale::global(const locale& loc)
 {
-    locale& g = __global();
-    locale r = g;
-    g = loc;
-    if (g.name() != "*")
-        setlocale(LC_ALL, g.name().c_str());
+    __imp*& g = __global();
+    locale r = loc;
+    swap(g, r.__locale_);
+    if (g->name() != "*")
+        setlocale(LC_ALL, g->name().c_str());
     return r;
 }
 

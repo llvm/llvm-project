@@ -126,15 +126,55 @@ public:
 private:
     class __imp;
     __imp* __locale_;
+    static __imp* __classic_;
 
     void __install_ctor(const locale&, facet*, long);
-    static locale& __global();
+    static __imp*& __global();
+    static __imp* __make_global();
+    static __imp* __maybe_acquire(__imp* __i);
+    static __imp* __do_acquire(__imp* __i);
+    static void __maybe_release(__imp* __i);
+    static void __do_release(__imp* __i);
     bool has_facet(id&) const;
     const facet* use_facet(id&) const;
 
     template <class _Facet> friend bool has_facet(const locale&)  _NOEXCEPT;
     template <class _Facet> friend const _Facet& use_facet(const locale&);
 };
+
+inline locale::locale() _NOEXCEPT
+    : __locale_(__maybe_acquire(__global()))
+{
+}
+
+inline locale::locale(const locale& l) _NOEXCEPT
+    : __locale_(__maybe_acquire(l.__locale_))
+{
+}
+
+inline locale::~locale()
+{
+    __maybe_release(__locale_);
+}
+
+inline locale::__imp*& locale::__global()
+{
+    static __imp* __g = __make_global();
+    return __g;
+}
+
+inline locale::__imp* locale::__maybe_acquire(__imp* __i)
+{
+    if (__i != __classic_)
+        __do_acquire(__i);
+    return __i;
+}
+
+inline void locale::__maybe_release(__imp* __i)
+{
+    if (__i != __classic_)
+        __do_release(__i);
+}
 
 class _LIBCPP_EXPORTED_FROM_ABI locale::facet
     : public __shared_count
