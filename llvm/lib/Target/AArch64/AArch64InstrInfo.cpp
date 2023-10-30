@@ -4441,9 +4441,9 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 
     if (PPRSrcReg != PPRDestReg) {
       auto NewMI = BuildMI(MBB, I, DL, get(AArch64::ORR_PPzPP), PPRDestReg)
-          .addReg(PPRSrcReg) // Pg
-          .addReg(PPRSrcReg)
-          .addReg(PPRSrcReg, getKillRegState(KillSrc));
+                       .addReg(PPRSrcReg) // Pg
+                       .addReg(PPRSrcReg)
+                       .addReg(PPRSrcReg, getKillRegState(KillSrc));
       if (DestIsPNR)
         NewMI.addDef(DestReg, RegState::Implicit);
     }
