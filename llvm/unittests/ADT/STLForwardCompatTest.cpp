@@ -125,7 +125,8 @@ TEST(TransformTest, ToUnderlying) {
   static_assert(llvm::to_underlying(B1) == -1);
 
   enum E2 : unsigned char { A2 = 0, B2 };
-  static_assert(std::is_same_v<unsigned char, decltype(llvm::to_underlying(A2))>);
+  static_assert(
+      std::is_same_v<unsigned char, decltype(llvm::to_underlying(A2))>);
   static_assert(llvm::to_underlying(A2) == 0);
   static_assert(llvm::to_underlying(B2) == 1);
 
