@@ -131,10 +131,9 @@ void mlir::configureGpuToGENXConversionLegality(ConversionTarget &target) {
   target.addLegalDialect<::mlir::GENX::GENXDialect>();
   target.addIllegalDialect<gpu::GPUDialect>();
   // TODO: Do we have equivalent operation in GENX ?
-  // target.addIllegalOp<LLVM::CosOp, LLVM::ExpOp, LLVM::Exp2Op, LLVM::FAbsOp,
-  //                      LLVM::FCeilOp, LLVM::FFloorOp, LLVM::LogOp,
-  //                      LLVM::Log10Op, LLVM::Log2Op, LLVM::PowOp, LLVM::SinOp,
-  //                      LLVM::SqrtOp>();
+  target.addIllegalOp<LLVM::CosOp, LLVM::ExpOp, LLVM::Exp2Op, LLVM::FAbsOp,
+                      LLVM::FCeilOp, LLVM::FFloorOp, LLVM::LogOp, LLVM::Log10Op,
+                      LLVM::Log2Op, LLVM::PowOp, LLVM::SinOp, LLVM::SqrtOp>();
 
   // TODO: Remove once we support replacing non-root ops.
   target.addLegalOp<gpu::YieldOp, gpu::GPUModuleOp, gpu::ModuleEndOp>();
@@ -167,6 +166,24 @@ void mlir::populateGpuToGENXConversionPatterns(LLVMTypeConverter &converter,
       /*workgroupAddrSpace=*/GENX::GENXMemorySpace::kWorkgroup,
       StringAttr::get(&converter.getContext(),
                       GENX::GENXDialect::getKernelFuncAttrName()));
+
+  const llvm::StringRef prefix("__builtin_spirv_OpenCL_");
+
+  populateOpPatterns<math::AbsFOp>(converter, patterns,
+                                   (prefix + "fabs_f32").str(),
+                                   (prefix + "fabs_f64").str());
+  populateOpPatterns<math::ExpOp>(converter, patterns,
+                                  (prefix + "exp_f32").str(),
+                                  (prefix + "exp_f64").str());
+  populateOpPatterns<math::LogOp>(converter, patterns,
+                                  (prefix + "log_f32").str(),
+                                  (prefix + "log_f64").str());
+  populateOpPatterns<math::CosOp>(converter, patterns,
+                                  (prefix + "cos_f32").str(),
+                                  (prefix + "cos_f32").str());
+  populateOpPatterns<math::SinOp>(converter, patterns,
+                                  (prefix + "sin_f32").str(),
+                                  (prefix + "sin_f32").str());
 }
 
 std::unique_ptr<OperationPass<gpu::GPUModuleOp>>
