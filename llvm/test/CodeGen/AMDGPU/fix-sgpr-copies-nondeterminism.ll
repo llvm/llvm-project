@@ -8,25 +8,25 @@ define amdgpu_gs void @f(i32 inreg %arg, i32 %arg1, i32 %arg2) {
 ; CHECK-NEXT:    s_mov_b32 s0, 0
 ; CHECK-NEXT:    s_cbranch_scc1 .LBB0_2
 ; CHECK-NEXT:  ; %bb.1: ; %bb3
-; CHECK-NEXT:    v_mov_b32_e32 v4, v1
+; CHECK-NEXT:    v_mov_b32_e32 v5, v0
 ; CHECK-NEXT:    s_branch .LBB0_3
 ; CHECK-NEXT:  .LBB0_2:
-; CHECK-NEXT:    v_mov_b32_e32 v0, 1
-; CHECK-NEXT:    v_mov_b32_e32 v4, 0
-; CHECK-NEXT:  .LBB0_3: ; %bb4
+; CHECK-NEXT:    v_mov_b32_e32 v5, 1
 ; CHECK-NEXT:    v_mov_b32_e32 v1, 0
+; CHECK-NEXT:  .LBB0_3: ; %bb4
+; CHECK-NEXT:    v_mov_b32_e32 v6, 0
 ; CHECK-NEXT:    s_mov_b32 s1, s0
 ; CHECK-NEXT:    s_mov_b32 s2, s0
 ; CHECK-NEXT:    s_mov_b32 s3, s0
 ; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; CHECK-NEXT:    v_mov_b32_e32 v2, v1
-; CHECK-NEXT:    v_mov_b32_e32 v3, v1
-; CHECK-NEXT:    v_mov_b32_e32 v5, v1
-; CHECK-NEXT:    v_mov_b32_e32 v6, v1
-; CHECK-NEXT:    v_mov_b32_e32 v7, v1
+; CHECK-NEXT:    v_mov_b32_e32 v7, v6
+; CHECK-NEXT:    v_mov_b32_e32 v8, v6
+; CHECK-NEXT:    v_mov_b32_e32 v2, v6
+; CHECK-NEXT:    v_mov_b32_e32 v3, v6
+; CHECK-NEXT:    v_mov_b32_e32 v4, v6
 ; CHECK-NEXT:    s_clause 0x1
-; CHECK-NEXT:    buffer_store_b128 v[0:3], v1, s[0:3], 0 idxen
-; CHECK-NEXT:    buffer_store_b128 v[4:7], v1, s[0:3], 0 idxen
+; CHECK-NEXT:    buffer_store_b128 v[5:8], v6, s[0:3], 0 idxen
+; CHECK-NEXT:    buffer_store_b128 v[1:4], v6, s[0:3], 0 idxen
 ; CHECK-NEXT:    s_nop 0
 ; CHECK-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; CHECK-NEXT:    s_endpgm
