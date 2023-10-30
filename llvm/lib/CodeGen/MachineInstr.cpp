@@ -2492,9 +2492,9 @@ void MachineInstr::insert(mop_iterator It, ArrayRef<MachineOperand> Ops) {
   }
 
   assert(It->getParent() == this && "iterator points to operand of other inst");
-  const unsigned OpIdx = getOperandNo(It);
-  const unsigned NumOperands = getNumOperands();
-  const unsigned OpsToMove = NumOperands - OpIdx;
+  unsigned OpIdx = getOperandNo(It);
+  unsigned NumOperands = getNumOperands();
+  unsigned OpsToMove = NumOperands - OpIdx;
 
   SmallVector<MachineOperand> MovingOps;
   MovingOps.reserve(OpsToMove);
