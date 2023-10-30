@@ -42,7 +42,7 @@ def SubsetInsertionOpInterface : OpInterface<"SubsetInsertionOpInterface"> {
     Note: This interface currently assumes that a subset op inserts a single
     tensor (source) into a destination tensor at a single subset.
   }];
-  let cppNamespace = "::mlir::bufferization";
+  let cppNamespace = "::mlir";
   let methods = [
       InterfaceMethod<
         /*desc=*/[{
@@ -61,7 +61,7 @@ def SubsetInsertionOpInterface : OpInterface<"SubsetInsertionOpInterface"> {
         /*args=*/(ins),
         /*methodBody=*/"",
         /*defaultImplementation=*/[{
-          return ::mlir::bufferization::detail::defaultGetDestinationOperand(
+          return ::mlir::detail::defaultGetDestinationOperand(
               $_op.getOperation());
         }]
       >,
@@ -144,7 +144,7 @@ def SubsetInsertionOpInterface : OpInterface<"SubsetInsertionOpInterface"> {
     /// Note: This function is useful outside of bufferization, where no tensor
     /// equivalence information is available.
     bool isSameSubset(OpResult candidate) {
-      auto subsetOp = cast<::mlir::bufferization::SubsetInsertionOpInterface>(
+      auto subsetOp = cast<::mlir::SubsetInsertionOpInterface>(
           getOperation());
       return subsetOp.isEquivalentSubset(
           candidate, [](Value v1, Value v2) { return v1 == v2; });
