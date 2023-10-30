@@ -531,8 +531,16 @@ TEST(MachineInstrTest, SpliceOperands) {
   EXPECT_EQ(MI->getOperand(8).getImm(), MachineOperand::CreateImm(4).getImm());
 
   // test tied operands
-  MI->getOperand(0).ChangeToRegister(1, /*isDef=*/true);
-  MI->getOperand(1).ChangeToRegister(2, /*isDef=*/false);
+  MCRegisterClass MRC{0, 0, 0, 0, 0, 0, 0, 0, /*Allocatable=*/true};
+  TargetRegisterClass RC{&MRC, 0, 0, {}, 0, 0, 0, 0, 0, 0, 0};
+  // MachineRegisterInfo will be very upset if these registers aren't
+  // allocatable.
+  assert(RC.isAllocatable() && "unusable TargetRegisterClass");
+  MachineRegisterInfo &MRI = MF->getRegInfo();
+  Register A = MRI.createVirtualRegister(&RC);
+  Register B = MRI.createVirtualRegister(&RC);
+  MI->getOperand(0).ChangeToRegister(A, /*isDef=*/true);
+  MI->getOperand(1).ChangeToRegister(B, /*isDef=*/false);
   MI->tieOperands(0, 1);
   EXPECT_TRUE(MI->getOperand(0).isTied());
   EXPECT_TRUE(MI->getOperand(1).isTied());
@@ -544,6 +552,8 @@ TEST(MachineInstrTest, SpliceOperands) {
   EXPECT_TRUE(MI->getOperand(2).isTied());
   EXPECT_EQ(MI->findTiedOperandIdx(0), 2U);
   EXPECT_EQ(MI->findTiedOperandIdx(2), 0U);
+  EXPECT_EQ(MI->getOperand(0).getReg(), A);
+  EXPECT_EQ(MI->getOperand(2).getReg(), B);
 
   // bad inputs
   EXPECT_EQ(MI->getNumOperands(), 10U);
