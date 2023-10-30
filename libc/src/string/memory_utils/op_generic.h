@@ -178,8 +178,8 @@ template <typename T> struct Memset {
 
     while (prefetch_offset + prefetch_degree + SIZE <= count) {
       for (size_t i = 0; i < prefetch_degree / sw_prefetch::kCachelineSize; ++i)
-        PrefetchW(dst + prefetch_offset + prefetch_distance +
-                  sw_prefetch::kCachelineSize * i);
+        sw_prefetch::PrefetchW(dst + prefetch_offset + prefetch_distance +
+                               sw_prefetch::kCachelineSize * i);
       for (size_t i = 0; i < prefetch_degree;
            i += SIZE, prefetch_offset += SIZE)
         block(dst + prefetch_offset, value);

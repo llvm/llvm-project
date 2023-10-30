@@ -86,9 +86,7 @@ LIBC_INLINE_VAR constexpr bool kUseSoftwarePrefetchingMemset =
     // Aligned loop
     generic::Memset<uint256_t>::block(dst, value);
     align_to_next_boundary<32>(dst, count);
-    else {
-      return generic::Memset<uint256_t>::loop_and_tail(dst, value, count);
-    }
+    return generic::Memset<uint256_t>::loop_and_tail(dst, value, count);
   }
 } // namespace LIBC_NAMESPACE
 
