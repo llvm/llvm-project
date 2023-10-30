@@ -3103,3 +3103,11 @@ RISCV::getVectorLowDemandedScalarBits(uint16_t Opcode, unsigned Log2SEW) {
     return 1U << Log2SEW;
   }
 }
+
+unsigned RISCV::getRVVMCOpcode(unsigned RVVPseudoOpcode) {
+  const RISCVVPseudosTable::PseudoInfo *RVV =
+      RISCVVPseudosTable::getPseudoInfo(RVVPseudoOpcode);
+  if (!RVV)
+    return 0;
+  return RVV->BaseInstr;
+}
