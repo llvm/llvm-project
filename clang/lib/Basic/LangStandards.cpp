@@ -10,7 +10,6 @@
 #include "clang/Config/config.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/FormatVariadic.h"
 #include "llvm/TargetParser/Triple.h"
 using namespace clang;
 
