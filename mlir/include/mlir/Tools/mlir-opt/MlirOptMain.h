@@ -229,7 +229,7 @@ protected:
 /// the loaded IR.
 using PassPipelineFn = llvm::function_ref<LogicalResult(PassManager &pm)>;
 
-/// Register all dialects and parse command line options.
+/// Register and parse command line options.
 /// - toolName is used for the header displayed by `--help`.
 /// - registry should contain all the dialects that can be parsed in the source.
 /// - return std::pair<std::string, std::string> for
