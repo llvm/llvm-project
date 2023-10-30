@@ -56,11 +56,9 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<LiveIntervals>();
-    AU.addPreserved<LiveIntervals>();
     AU.addRequired<VirtRegMap>();
     AU.addRequired<LiveRegMatrix>();
-    AU.addPreserved<SlotIndexes>();
-    AU.setPreservesCFG();
+    AU.setPreservesAll();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
