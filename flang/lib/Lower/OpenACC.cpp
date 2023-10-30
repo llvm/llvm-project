@@ -150,7 +150,7 @@ static void createDeclareAllocFuncWithArg(mlir::OpBuilder &modBuilder,
           builder, loc, registerFuncOp.getArgument(0), asFortranDesc, bounds,
           /*structured=*/false, /*implicit=*/true,
           mlir::acc::DataClause::acc_update_device, descTy);
-  llvm::SmallVector<int32_t> operandSegments{0, 0, 0, 0, 0, 1};
+  llvm::SmallVector<int32_t> operandSegments{0, 0, 0, 0, 1};
   llvm::SmallVector<mlir::Value> operands{updateDeviceOp.getResult()};
   createSimpleOp<mlir::acc::UpdateOp>(builder, loc, operands, operandSegments);
 
@@ -219,7 +219,7 @@ static void createDeclareDeallocFuncWithArg(
           builder, loc, loadOp, asFortran, bounds,
           /*structured=*/false, /*implicit=*/true,
           mlir::acc::DataClause::acc_update_device, loadOp.getType());
-  llvm::SmallVector<int32_t> operandSegments{0, 0, 0, 0, 0, 1};
+  llvm::SmallVector<int32_t> operandSegments{0, 0, 0, 0, 1};
   llvm::SmallVector<mlir::Value> operands{updateDeviceOp.getResult()};
   createSimpleOp<mlir::acc::UpdateOp>(builder, loc, operands, operandSegments);
   modBuilder.setInsertionPointAfter(postDeallocOp);
@@ -1416,27 +1416,35 @@ static void genAsyncClause(Fortran::lower::AbstractConverter &converter,
   }
 }
 
-static void genDeviceTypeClause(
-    Fortran::lower::AbstractConverter &converter, mlir::Location clauseLocation,
+static mlir::acc::DeviceType
+getDeviceType(Fortran::parser::AccDeviceTypeExpr::Device device) {
+  switch (device) {
+  case Fortran::parser::AccDeviceTypeExpr::Device::Star:
+    return mlir::acc::DeviceType::Star;
+  case Fortran::parser::AccDeviceTypeExpr::Device::Default:
+    return mlir::acc::DeviceType::Default;
+  case Fortran::parser::AccDeviceTypeExpr::Device::Nvidia:
+    return mlir::acc::DeviceType::Nvidia;
+  case Fortran::parser::AccDeviceTypeExpr::Device::Radeon:
+    return mlir::acc::DeviceType::Radeon;
+  case Fortran::parser::AccDeviceTypeExpr::Device::Host:
+    return mlir::acc::DeviceType::Host;
+  case Fortran::parser::AccDeviceTypeExpr::Device::Multicore:
+    return mlir::acc::DeviceType::Multicore;
+  }
+  return mlir::acc::DeviceType::Default;
+}
+
+static void gatherDeviceTypeAttrs(
+    fir::FirOpBuilder &builder, mlir::Location clauseLocation,
     const Fortran::parser::AccClause::DeviceType *deviceTypeClause,
-    llvm::SmallVectorImpl<mlir::Value> &operands,
+    llvm::SmallVector<mlir::Attribute> &deviceTypes,
     Fortran::lower::StatementContext &stmtCtx) {
   const Fortran::parser::AccDeviceTypeExprList &deviceTypeExprList =
       deviceTypeClause->v;
-  for (const auto &deviceTypeExpr : deviceTypeExprList.v) {
-    const auto &expr = std::get<std::optional<Fortran::parser::ScalarIntExpr>>(
-        deviceTypeExpr.t);
-    if (expr) {
-      operands.push_back(fir::getBase(converter.genExprValue(
-          *Fortran::semantics::GetExpr(expr), stmtCtx, &clauseLocation)));
-    } else {
-      // * was passed as value and will be represented as a special constant.
-      fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
-      mlir::Value star = firOpBuilder.createIntegerConstant(
-          clauseLocation, firOpBuilder.getIndexType(), starCst);
-      operands.push_back(star);
-    }
-  }
+  for (const auto &deviceTypeExpr : deviceTypeExprList.v)
+    deviceTypes.push_back(mlir::acc::DeviceTypeAttr::get(
+        builder.getContext(), getDeviceType(deviceTypeExpr.v)));
 }
 
 static void genIfClause(Fortran::lower::AbstractConverter &converter,
@@ -2443,10 +2451,10 @@ genACCInitShutdownOp(Fortran::lower::AbstractConverter &converter,
                      mlir::Location currentLocation,
                      const Fortran::parser::AccClauseList &accClauseList) {
   mlir::Value ifCond, deviceNum;
-  llvm::SmallVector<mlir::Value> deviceTypeOperands;
 
-  fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   Fortran::lower::StatementContext stmtCtx;
+  llvm::SmallVector<mlir::Attribute> deviceTypes;
 
   // Lower clauses values mapped to operands.
   // Keep track of each group of operands separately as clauses can appear
@@ -2464,19 +2472,23 @@ genACCInitShutdownOp(Fortran::lower::AbstractConverter &converter,
     } else if (const auto *deviceTypeClause =
                    std::get_if<Fortran::parser::AccClause::DeviceType>(
                        &clause.u)) {
-      genDeviceTypeClause(converter, clauseLocation, deviceTypeClause,
-                          deviceTypeOperands, stmtCtx);
+      gatherDeviceTypeAttrs(builder, clauseLocation, deviceTypeClause,
+                            deviceTypes, stmtCtx);
     }
   }
 
   // Prepare the operand segment size attribute and the operands value range.
   llvm::SmallVector<mlir::Value, 6> operands;
-  llvm::SmallVector<int32_t, 3> operandSegments;
-  addOperands(operands, operandSegments, deviceTypeOperands);
+  llvm::SmallVector<int32_t, 2> operandSegments;
+
   addOperand(operands, operandSegments, deviceNum);
   addOperand(operands, operandSegments, ifCond);
 
-  createSimpleOp<Op>(firOpBuilder, currentLocation, operands, operandSegments);
+  Op op =
+      createSimpleOp<Op>(builder, currentLocation, operands, operandSegments);
+  if (!deviceTypes.empty())
+    op.setDeviceTypesAttr(
+        mlir::ArrayAttr::get(builder.getContext(), deviceTypes));
 }
 
 void genACCSetOp(Fortran::lower::AbstractConverter &converter,
@@ -2485,8 +2497,9 @@ void genACCSetOp(Fortran::lower::AbstractConverter &converter,
   mlir::Value ifCond, deviceNum, defaultAsync;
   llvm::SmallVector<mlir::Value> deviceTypeOperands;
 
-  fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   Fortran::lower::StatementContext stmtCtx;
+  llvm::SmallVector<mlir::Attribute> deviceTypes;
 
   // Lower clauses values mapped to operands.
   // Keep track of each group of operands separately as clauses can appear
@@ -2509,21 +2522,24 @@ void genACCSetOp(Fortran::lower::AbstractConverter &converter,
     } else if (const auto *deviceTypeClause =
                    std::get_if<Fortran::parser::AccClause::DeviceType>(
                        &clause.u)) {
-      genDeviceTypeClause(converter, clauseLocation, deviceTypeClause,
-                          deviceTypeOperands, stmtCtx);
+      gatherDeviceTypeAttrs(builder, clauseLocation, deviceTypeClause,
+                            deviceTypes, stmtCtx);
     }
   }
 
   // Prepare the operand segment size attribute and the operands value range.
   llvm::SmallVector<mlir::Value> operands;
-  llvm::SmallVector<int32_t, 4> operandSegments;
-  addOperands(operands, operandSegments, deviceTypeOperands);
+  llvm::SmallVector<int32_t, 3> operandSegments;
   addOperand(operands, operandSegments, defaultAsync);
   addOperand(operands, operandSegments, deviceNum);
   addOperand(operands, operandSegments, ifCond);
 
-  createSimpleOp<mlir::acc::SetOp>(firOpBuilder, currentLocation, operands,
-                                   operandSegments);
+  auto op = createSimpleOp<mlir::acc::SetOp>(builder, currentLocation, operands,
+                                             operandSegments);
+  if (!deviceTypes.empty()) {
+    assert(deviceTypes.size() == 1 && "expect only one value for acc.set");
+    op.setDeviceTypeAttr(mlir::cast<mlir::acc::DeviceTypeAttr>(deviceTypes[0]));
+  }
 }
 
 static void
@@ -2535,6 +2551,7 @@ genACCUpdateOp(Fortran::lower::AbstractConverter &converter,
   mlir::Value ifCond, async, waitDevnum;
   llvm::SmallVector<mlir::Value> dataClauseOperands, updateHostOperands,
       waitOperands, deviceTypeOperands;
+  llvm::SmallVector<mlir::Attribute> deviceTypes;
 
   // Async and wait clause have optional values but can be present with
   // no value as well. When there is no value, the op has an attribute to
@@ -2563,8 +2580,8 @@ genACCUpdateOp(Fortran::lower::AbstractConverter &converter,
     } else if (const auto *deviceTypeClause =
                    std::get_if<Fortran::parser::AccClause::DeviceType>(
                        &clause.u)) {
-      genDeviceTypeClause(converter, clauseLocation, deviceTypeClause,
-                          deviceTypeOperands, stmtCtx);
+      gatherDeviceTypeAttrs(builder, clauseLocation, deviceTypeClause,
+                            deviceTypes, stmtCtx);
     } else if (const auto *hostClause =
                    std::get_if<Fortran::parser::AccClause::Host>(&clause.u)) {
       genDataOperandOperations<mlir::acc::GetDevicePtrOp>(
@@ -2602,11 +2619,13 @@ genACCUpdateOp(Fortran::lower::AbstractConverter &converter,
   addOperand(operands, operandSegments, async);
   addOperand(operands, operandSegments, waitDevnum);
   addOperands(operands, operandSegments, waitOperands);
-  addOperands(operands, operandSegments, deviceTypeOperands);
   addOperands(operands, operandSegments, dataClauseOperands);
 
   mlir::acc::UpdateOp updateOp = createSimpleOp<mlir::acc::UpdateOp>(
       builder, currentLocation, operands, operandSegments);
+  if (!deviceTypes.empty())
+    updateOp.setDeviceTypesAttr(
+        mlir::ArrayAttr::get(builder.getContext(), deviceTypes));
 
   genDataExitOperations<mlir::acc::GetDevicePtrOp, mlir::acc::UpdateHostOp>(
       builder, updateHostOperands, /*structured=*/false);
@@ -2787,7 +2806,7 @@ static void createDeclareAllocFunc(mlir::OpBuilder &modBuilder,
           builder, loc, addrOp, asFortranDesc, bounds,
           /*structured=*/false, /*implicit=*/true,
           mlir::acc::DataClause::acc_update_device, addrOp.getType());
-  llvm::SmallVector<int32_t> operandSegments{0, 0, 0, 0, 0, 1};
+  llvm::SmallVector<int32_t> operandSegments{0, 0, 0, 0, 1};
   llvm::SmallVector<mlir::Value> operands{updateDeviceOp.getResult()};
   createSimpleOp<mlir::acc::UpdateOp>(builder, loc, operands, operandSegments);
 
@@ -2863,7 +2882,7 @@ static void createDeclareDeallocFunc(mlir::OpBuilder &modBuilder,
           builder, loc, addrOp, asFortran, bounds,
           /*structured=*/false, /*implicit=*/true,
           mlir::acc::DataClause::acc_update_device, addrOp.getType());
-  llvm::SmallVector<int32_t> operandSegments{0, 0, 0, 0, 0, 1};
+  llvm::SmallVector<int32_t> operandSegments{0, 0, 0, 0, 1};
   llvm::SmallVector<mlir::Value> operands{updateDeviceOp.getResult()};
   createSimpleOp<mlir::acc::UpdateOp>(builder, loc, operands, operandSegments);
   modBuilder.setInsertionPointAfter(postDeallocOp);
@@ -3287,25 +3306,29 @@ static void
 genACC(Fortran::lower::AbstractConverter &converter,
        Fortran::lower::pft::Evaluation &eval,
        const Fortran::parser::OpenACCAtomicConstruct &atomicConstruct) {
+
+  mlir::Location loc = converter.genLocation(atomicConstruct.source);
   std::visit(
       Fortran::common::visitors{
           [&](const Fortran::parser::AccAtomicRead &atomicRead) {
             Fortran::lower::genOmpAccAtomicRead<Fortran::parser::AccAtomicRead,
-                                                void>(converter, atomicRead);
+                                                void>(converter, atomicRead,
+                                                      loc);
           },
           [&](const Fortran::parser::AccAtomicWrite &atomicWrite) {
             Fortran::lower::genOmpAccAtomicWrite<
-                Fortran::parser::AccAtomicWrite, void>(converter, atomicWrite);
+                Fortran::parser::AccAtomicWrite, void>(converter, atomicWrite,
+                                                       loc);
           },
           [&](const Fortran::parser::AccAtomicUpdate &atomicUpdate) {
             Fortran::lower::genOmpAccAtomicUpdate<
-                Fortran::parser::AccAtomicUpdate, void>(converter,
-                                                        atomicUpdate);
+                Fortran::parser::AccAtomicUpdate, void>(converter, atomicUpdate,
+                                                        loc);
           },
           [&](const Fortran::parser::AccAtomicCapture &atomicCapture) {
             Fortran::lower::genOmpAccAtomicCapture<
                 Fortran::parser::AccAtomicCapture, void>(converter,
-                                                         atomicCapture);
+                                                         atomicCapture, loc);
           },
       },
       atomicConstruct.u);

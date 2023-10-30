@@ -178,6 +178,12 @@ void MachineFunction::handleRemoval(MachineInstr &MI) {
     TheDelegate->MF_HandleRemoval(MI);
 }
 
+void MachineFunction::handleChangeDesc(MachineInstr &MI,
+                                       const MCInstrDesc &TID) {
+  if (TheDelegate)
+    TheDelegate->MF_HandleChangeDesc(MI, TID);
+}
+
 void MachineFunction::init() {
   // Assume the function starts in SSA form with correct liveness.
   Properties.set(MachineFunctionProperties::Property::IsSSA);
@@ -451,16 +457,17 @@ void MachineFunction::deleteMachineInstr(MachineInstr *MI) {
 /// Allocate a new MachineBasicBlock. Use this instead of
 /// `new MachineBasicBlock'.
 MachineBasicBlock *
-MachineFunction::CreateMachineBasicBlock(const BasicBlock *bb) {
+MachineFunction::CreateMachineBasicBlock(const BasicBlock *BB,
+                                         std::optional<UniqueBBID> BBID) {
   MachineBasicBlock *MBB =
       new (BasicBlockRecycler.Allocate<MachineBasicBlock>(Allocator))
-          MachineBasicBlock(*this, bb);
+          MachineBasicBlock(*this, BB);
   // Set BBID for `-basic-block=sections=labels` and
   // `-basic-block-sections=list` to allow robust mapping of profiles to basic
   // blocks.
   if (Target.getBBSectionsType() == BasicBlockSection::Labels ||
       Target.getBBSectionsType() == BasicBlockSection::List)
-    MBB->setBBID(NextBBID++);
+    MBB->setBBID(BBID.has_value() ? *BBID : UniqueBBID{NextBBID++, 0});
   return MBB;
 }
 

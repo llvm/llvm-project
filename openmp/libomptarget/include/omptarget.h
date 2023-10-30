@@ -439,7 +439,7 @@ void __tgt_set_info_flag(uint32_t);
 int __tgt_print_device_info(int64_t DeviceId);
 
 int __tgt_activate_record_replay(int64_t DeviceId, uint64_t MemorySize,
-                                 bool IsRecord, bool SaveOutput);
+                                 void *VAddr, bool IsRecord, bool SaveOutput);
 
 #ifdef __cplusplus
 }

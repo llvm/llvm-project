@@ -320,6 +320,11 @@ lldb_private::python::SWIGBridge::ToSWIGWrapper(lldb::ExecutionContextRefSP) {
 }
 
 python::PythonObject
-lldb_private::python::SWIGBridge::ToSWIGWrapper(const StructuredDataImpl &) {
+lldb_private::python::SWIGBridge::ToSWIGWrapper(lldb::ProcessSP) {
+  return python::PythonObject();
+}
+
+python::PythonObject lldb_private::python::SWIGBridge::ToSWIGWrapper(
+    const lldb_private::StructuredDataImpl &) {
   return python::PythonObject();
 }

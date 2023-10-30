@@ -878,3 +878,10 @@ defm FSCALE_4Z4Z  : sme2_fp_sve_destructive_vector_vg4_multi<"fscale",  0b001100
 
 } // [HasSME2, HasFP8]
 
+let Predicates = [HasSME2, HasFAMINMAX] in {
+defm FAMAX_2Z2Z : sme2_fp_sve_destructive_vector_vg2_multi<"famax", 0b0010100>;
+defm FAMIN_2Z2Z : sme2_fp_sve_destructive_vector_vg2_multi<"famin", 0b0010101>;
+
+defm FAMAX_4Z4Z : sme2_fp_sve_destructive_vector_vg4_multi<"famax", 0b0010100>;
+defm FAMIN_4Z4Z : sme2_fp_sve_destructive_vector_vg4_multi<"famin", 0b0010101>;
+} //[HasSME2, HasFAMINMAX]
