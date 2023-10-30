@@ -114,17 +114,23 @@ void populateStageSparseOperationsPatterns(RewritePatternSet &patterns);
 std::unique_ptr<Pass> createStageSparseOperationsPass();
 
 //===----------------------------------------------------------------------===//
-// The PostSparsificationRewriting pass.
+// The LowerSparseOpsToForeach pass.
 //===----------------------------------------------------------------------===//
 
-void populatePostSparsificationRewriting(RewritePatternSet &patterns,
-                                         bool enableRT, bool enableForeach,
-                                         bool enableConvert);
+void populateLowerSparseOpsToForeachPatterns(RewritePatternSet &patterns,
+                                             bool enableRT, bool enableConvert);
 
-std::unique_ptr<Pass> createPostSparsificationRewritePass();
-std::unique_ptr<Pass>
-createPostSparsificationRewritePass(bool enableRT, bool enableForeach = true,
-                                    bool enableConvert = true);
+std::unique_ptr<Pass> createLowerSparseOpsToForeachPass();
+std::unique_ptr<Pass> createLowerSparseOpsToForeachPass(bool enableRT,
+                                                        bool enableConvert);
+
+//===----------------------------------------------------------------------===//
+// The LowerForeachToSCF pass.
+//===----------------------------------------------------------------------===//
+
+void populateLowerForeachToSCFPatterns(RewritePatternSet &patterns);
+
+std::unique_ptr<Pass> createLowerForeachToSCFPass();
 
 //===----------------------------------------------------------------------===//
 // The SparseTensorConversion pass.
