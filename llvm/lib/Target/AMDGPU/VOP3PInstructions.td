@@ -871,29 +871,16 @@ multiclass WMMAInst<string Suffix, string Instr, VOPProfile P, SDPatternOperator
   defvar WMMAConstraints3Addr = "@earlyclobber $vdst";
 
   defvar WMMAProfile = VOPProfileWMMA<P, Suffix, _Src01RC64, Type.hasClamp, Type.hasOpsel>;
-  if !eq(Suffix, "_w32") then {
-    let Mnemonic = Instr, mayRaiseFPException = 0, ReadsModeReg = 0 in {
-      let Constraints = WMMAConstraints2Addr, isConvertibleToThreeAddress = 1 in {
-        def _twoaddr_w32 : VOP3P_Pseudo<Instr # Suffix, WMMAProfile>;
-      }
-      let Constraints = WMMAConstraints3Addr, SchedRW = [Write32Bit, Write32Bit] in {
-        def _threeaddr_w32 : VOP3P_Pseudo<Instr # Suffix, WMMAProfile>;
-      }
+  let Mnemonic = Instr, mayRaiseFPException = 0, ReadsModeReg = 0 in {
+    let Constraints = WMMAConstraints2Addr, isConvertibleToThreeAddress = 1 in {
+      def _twoaddr # Suffix : VOP3P_Pseudo<Instr # Suffix, WMMAProfile>;
     }
-    def : WMMAOpcodeMapping<!cast<Instruction>(NAME # _twoaddr_w32),
-                            !cast<Instruction>(NAME # _threeaddr_w32)>;
-  } else if !eq(Suffix, "_w64") then {
-    let Mnemonic = Instr, mayRaiseFPException = 0, ReadsModeReg = 0 in {
-      let Constraints = WMMAConstraints2Addr, isConvertibleToThreeAddress = 1 in {
-        def _twoaddr_w64 : VOP3P_Pseudo<Instr # Suffix, WMMAProfile>;
-      }
-      let Constraints = WMMAConstraints3Addr, SchedRW = [Write32Bit, Write32Bit] in {
-        def _threeaddr_w64 : VOP3P_Pseudo<Instr # Suffix, WMMAProfile>;
-      }
+    let Constraints = WMMAConstraints3Addr, SchedRW = [Write32Bit, Write32Bit] in {
+      def _threeaddr # Suffix : VOP3P_Pseudo<Instr # Suffix, WMMAProfile>;
     }
-    def : WMMAOpcodeMapping<!cast<Instruction>(NAME # _twoaddr_w64),
-                            !cast<Instruction>(NAME # _threeaddr_w64)>;
   }
+  def : WMMAOpcodeMapping<!cast<Instruction>(NAME # _twoaddr # Suffix),
+                          !cast<Instruction>(NAME # _threeaddr # Suffix)>;
 
   if !eq(Type, WMMAOpSel) then {
     def : WMMAOpSelPat<!cast<Instruction>(NAME # _twoaddr # Suffix), node, P>;
