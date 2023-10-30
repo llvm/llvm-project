@@ -75,10 +75,14 @@ multiclass LMULWriteResMXVariant<string name, SchedPredicateBase Pred,
   defvar nameMX = name # "_" # mx;
 
   // Define the different behaviors
-  def NAME # nameMX # "_Pred" : SchedWriteRes<resources>
-  { let Latency = predLat; let ReleaseAtCycles = predCycles; }
-  def NAME # nameMX # "_NoPred" : SchedWriteRes<resources>
-  { let Latency = noPredLat; let ReleaseAtCycles = noPredCycles; }
+  def NAME # nameMX # "_Pred" : SchedWriteRes<resources> {
+    let Latency = predLat;
+    let ReleaseAtCycles = predCycles;
+  }
+  def NAME # nameMX # "_NoPred" : SchedWriteRes<resources> {
+    let Latency = noPredLat;
+    let ReleaseAtCycles = noPredCycles;
+  }
 
   // Tie behavior to predicate
   def NAME # nameMX # "_Variant" : SchedWriteVariant<[
