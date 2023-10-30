@@ -471,3 +471,79 @@ for.body:
 for.end:
   ret void
 }
+
+; The edge from entry to block2 is a critical edge. The vxrm write in block2
+; is redundant when coming from block1, but is needed when coming from entry.
+; FIXME: We could remove the write from the end of block1 without splitting the
+; critical edge.
+define <vscale x 1 x i8> @test12(i1 %c1, <vscale x 1 x i8> %0, <vscale x 1 x i8> %1, iXLen %vl) {
+; CHECK-LABEL: test12:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    csrwi vxrm, 0
+; CHECK-NEXT:    andi a0, a0, 1
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf8, ta, ma
+; CHECK-NEXT:    vaadd.vv v9, v8, v9
+; CHECK-NEXT:    beqz a0, .LBB11_2
+; CHECK-NEXT:  # %bb.1: # %block1
+; CHECK-NEXT:    csrwi vxrm, 1
+; CHECK-NEXT:    vaadd.vv v9, v8, v9
+; CHECK-NEXT:    csrwi vxrm, 2
+; CHECK-NEXT:  .LBB11_2: # %block2
+; CHECK-NEXT:    csrwi vxrm, 2
+; CHECK-NEXT:    vaadd.vv v8, v8, v9
+; CHECK-NEXT:    ret
+entry:
+  %a = call <vscale x 1 x i8> @llvm.riscv.vaadd.nxv1i8.nxv1i8(<vscale x 1 x i8> undef, <vscale x 1 x i8> %0, <vscale x 1 x i8> %1, iXLen 0, iXLen %vl)
+  br i1 %c1, label %block1, label %block2
+
+block1:
+  %b = call <vscale x 1 x i8> @llvm.riscv.vaadd.nxv1i8.nxv1i8(<vscale x 1 x i8> undef, <vscale x 1 x i8> %0, <vscale x 1 x i8> %a, iXLen 1, iXLen %vl)
+  br label %block2
+
+block2:
+  %c = phi <vscale x 1 x i8> [ %a, %entry ], [ %b, %block1]
+  %d = call <vscale x 1 x i8> @llvm.riscv.vaadd.nxv1i8.nxv1i8(<vscale x 1 x i8> undef, <vscale x 1 x i8> %0, <vscale x 1 x i8> %c, iXLen 2, iXLen %vl)
+  ret <vscale x 1 x i8> %d
+}
+
+; Similar to test12, but introduces a second critical edge from block1 to
+; block3. Now the write to vxrm at the end of block1, can't be removed because
+; it is needed by block3.
+define <vscale x 1 x i8> @test13(i1 %c1, i1 %c2, i1 %c3, <vscale x 1 x i8> %0, <vscale x 1 x i8> %1, iXLen %vl) {
+; CHECK-LABEL: test13:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    csrwi vxrm, 0
+; CHECK-NEXT:    andi a0, a0, 1
+; CHECK-NEXT:    vsetvli zero, a3, e8, mf8, ta, ma
+; CHECK-NEXT:    vaadd.vv v10, v8, v9
+; CHECK-NEXT:    beqz a0, .LBB12_2
+; CHECK-NEXT:  # %bb.1: # %block1
+; CHECK-NEXT:    csrwi vxrm, 1
+; CHECK-NEXT:    vaadd.vv v10, v8, v10
+; CHECK-NEXT:    andi a1, a1, 1
+; CHECK-NEXT:    csrwi vxrm, 2
+; CHECK-NEXT:    beqz a1, .LBB12_3
+; CHECK-NEXT:  .LBB12_2: # %block2
+; CHECK-NEXT:    csrwi vxrm, 2
+; CHECK-NEXT:    vaadd.vv v8, v8, v10
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB12_3: # %block3
+; CHECK-NEXT:    vaadd.vv v8, v9, v10
+; CHECK-NEXT:    ret
+entry:
+  %a = call <vscale x 1 x i8> @llvm.riscv.vaadd.nxv1i8.nxv1i8(<vscale x 1 x i8> undef, <vscale x 1 x i8> %0, <vscale x 1 x i8> %1, iXLen 0, iXLen %vl)
+  br i1 %c1, label %block1, label %block2
+
+block1:
+  %b = call <vscale x 1 x i8> @llvm.riscv.vaadd.nxv1i8.nxv1i8(<vscale x 1 x i8> undef, <vscale x 1 x i8> %0, <vscale x 1 x i8> %a, iXLen 1, iXLen %vl)
+  br i1 %c2, label %block2, label %block3
+
+block2:
+  %c = phi <vscale x 1 x i8> [ %a, %entry ], [ %b, %block1]
+  %d = call <vscale x 1 x i8> @llvm.riscv.vaadd.nxv1i8.nxv1i8(<vscale x 1 x i8> undef, <vscale x 1 x i8> %0, <vscale x 1 x i8> %c, iXLen 2, iXLen %vl)
+  ret <vscale x 1 x i8> %d
+
+block3:
+  %e = call <vscale x 1 x i8> @llvm.riscv.vaadd.nxv1i8.nxv1i8(<vscale x 1 x i8> undef, <vscale x 1 x i8> %1, <vscale x 1 x i8> %b, iXLen 2, iXLen %vl)
+  ret <vscale x 1 x i8> %e
+}
