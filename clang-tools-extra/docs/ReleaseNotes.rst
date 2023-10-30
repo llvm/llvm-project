@@ -200,7 +200,8 @@ New checks
 - New :doc:`readability-use-explicit-namespaces
   <clang-tidy/checks/readability/use-explicit-namespaces>` check.
 
-  FIXME: add release notes.
+  Detect and fix references to members of namespaces where the namespace is
+  not explicity specified in the reference.
 
 New check aliases
 ^^^^^^^^^^^^^^^^^

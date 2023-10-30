@@ -1,14 +1,22 @@
 // RUN: %check_clang_tidy %s readability-use-explicit-namespaces %t
 
-// FIXME: Add something that triggers the check here.
-void f();
-// CHECK-MESSAGES: :[[@LINE-1]]:6: warning: function 'f' is insufficiently awesome [readability-use-explicit-namespaces]
+namespace foo
+{
+void doSomething()
+{
+}
+}
 
-// FIXME: Verify the applied fix.
-//   * Make the CHECK patterns specific enough and try to make verified lines
-//     unique to avoid incorrect matches.
-//   * Use {{}} for regular expressions.
-// CHECK-FIXES: {{^}}void awesome_f();{{$}}
+void test1()
+{
+        foo::doSomething();
+}
 
-// FIXME: Add something that doesn't trigger the check here.
-void awesome_f2();
+using namespace foo;
+
+void test2()
+{
+	// CHECK-MESSAGES: :[[@LINE+1]]:2: warning: Missing namespace qualifiers foo::
+        doSomething();
+}
+
