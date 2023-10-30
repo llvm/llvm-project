@@ -3573,8 +3573,8 @@ resolveExplicitSpecifier(Sema &S, FunctionDecl *Specialization,
         : cast<CXXConversionDecl>(D)->setExplicitSpecifier(ES);
   };
 
-  ExplicitSpecifier ExplicitSpecifier = GetExplicitSpecifier(Specialization);
-  Expr *const Expr = ExplicitSpecifier.getExpr();
+  ExplicitSpecifier ES = GetExplicitSpecifier(Specialization);
+  Expr *const Expr = ES.getExpr();
   if (!Expr) {
     return Sema::TDK_Success;
   }
@@ -3587,8 +3587,7 @@ resolveExplicitSpecifier(Sema &S, FunctionDecl *Specialization,
   Sema::InstantiatingTemplate Inst(
       S, Info.getLocation(), FunctionTemplate, DeducedArgs,
       Sema::CodeSynthesisContext::DeducedTemplateArgumentSubstitution, Info);
-  const auto Instantiated =
-      S.instantiateExplicitSpecifier(SubstArgs, ExplicitSpecifier);
+  const auto Instantiated = S.instantiateExplicitSpecifier(SubstArgs, ES);
   if (Instantiated.isInvalid()) {
     Specialization->setInvalidDecl(true);
     return clang::Sema::TDK_SubstitutionFailure;
