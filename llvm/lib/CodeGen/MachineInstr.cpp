@@ -2477,7 +2477,8 @@ MachineInstr::getFirst5RegLLTs() const {
 }
 
 void MachineInstr::insert(mop_iterator It, ArrayRef<MachineOperand> Ops) {
-  if (!It || Ops.empty())
+  assert(It != nullptr && "invalid iterator");
+  if (Ops.empty())
     return;
 
   // Do one pass to untie operands.

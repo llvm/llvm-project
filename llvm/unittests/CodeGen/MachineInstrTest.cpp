@@ -547,7 +547,6 @@ TEST(MachineInstrTest, SpliceOperands) {
 
   // bad inputs
   EXPECT_EQ(MI->getNumOperands(), 10U);
-  MI->insert(nullptr, { MachineOperand::CreateImm(666) });
   MI->insert(MI->operands_begin(), {});
   EXPECT_EQ(MI->getNumOperands(), 10U);
 }
