@@ -183,6 +183,8 @@ private:
 // Python 3.13. It has been returning `true` always since Python 3.7.
 #if (PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION < 9) || (PY_MAJOR_VERSION < 3)
     if (PyEval_ThreadsInitialized()) {
+#else
+    if (true) {
 #endif
       Log *log = GetLog(LLDBLog::Script);
 
@@ -199,6 +201,8 @@ private:
 
     // InitThreads acquires the GIL if it hasn't been called before.
     PyEval_InitThreads();
+#else
+    }
 #endif
   }
 
