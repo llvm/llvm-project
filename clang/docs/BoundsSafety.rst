@@ -1,0 +1,480 @@
+==============================================
+-fbounds-safety: Enforcing bounds safety for C
+==============================================
+
+.. contents::
+   :local:
+
+Overview
+========
+
+-fbounds-safety is a C extension to enforce bounds safety to prevent out-of-bounds (OOB) memory accesses, which remain a major source of security vulnerabilities in C. -fbounds-safety aims to eliminate this class of bugs by turning OOB accesses into deterministic traps.
+
+The -fbounds-safety extension offers bounds annotations that programmers can use to attach bounds to pointers. For example, programmers can add the __counted_by(N) annotation to parameter ptr, indicating that the pointer has N valid elements:
+
+.. code-block:: c
+
+   void foo(int *__counted_by(N) ptr, size_t N);
+
+Using this bounds information, the compiler inserts bounds checks on every pointer dereference, ensuring that the program does not access memory outside the specified bounds. The compiler requires programmers to provide enough bounds information so that the accesses can be checked at either run time or compile time — and it rejects code if it cannot.
+
+The most important contribution of “-fbounds-safety” is how it reduces the programmer’s annotation burden by reconciling bounds annotations at ABI boundaries with the use of implicit wide pointers (a.k.a. “fat” pointers) that carry bounds information on local variables without the need for annotations. We designed this model so that it preserves ABI compatibility with C while minimizing adoption effort.
+
+The -fbounds-safety extension has been adopted on millions of lines of production C code and proven to work in a consumer operating system setting. The extension was designed to enable incremental adoption — a key requirement in real-world settings where modifying an entire project and its dependencies all at once is often not possible. It also addresses multiple of other practical challenges that have made existing approaches to safer C dialects difficult to adopt, offering these properties that make it widely adoptable in practice:
+
+* It is designed to preserve the Application Binary Interface (ABI)
+* It interoperates well with plain C code
+* It can be adopted partially and incrementally while still providing safety benefits
+* It is syntactically and semantically compatible with C
+* Consequently, source code that adopts the extension can continue to be compiled by toolchains that do not support the extension.
+* It has a relatively low adoption cost
+* It can be implemented on top of Clang
+
+
+Programming Model
+========================
+
+Overview
+-------------------------
+
+-fbounds-safety ensures that pointers are not used to access memory beyond their bounds by performing bounds checking. If a bounds check fails, the program will deterministically trap before out-of-bounds memory is accessed.
+
+In our model, every pointer has an explicit or implicit bounds attribute that determines its bounds and ensures guaranteed bounds checking. Consider the example below where the __counted_by(count) annotation indicates that parameter ppoints to a buffer of int s containing count elements. An off-by-one error is present in the loop condition, leading to p[i]being out-of-bounds access during the loop’s final iteration. The compiler inserts a bounds check before p is dereferenced to ensure that the access remains within the specified bounds.
+
+.. code-block:: c
+
+   void fill_array_with_indices(int *__counted_by(count) p, unsigned count) {  
+   // off-by-one error (i < count)  
+      for (unsigned i = 0; i <= count; ++i) {  
+         // bounds check inserted:  
+         //   if (i >= count) trap();  
+         p[i] = i;  
+      }      
+   }
+
+A bounds annotation defines an invariant for the pointer type, and the model ensures that this invariant remains true. In the example below, pointer p annotated with __counted_by(count) must always point to a memory buffer containing at least count elements of the pointee type. Increasing the value of count , like in the example below, would violate this invariant and permit out-of-bounds access to the pointer. To avoid this, the compiler emits either a compile-time error or a run-time trap. Section “Maintaining correctness of bounds annotations”) provides more details about the programming model.
+
+.. code-block:: c
+
+   void foo(int *__counted_by(count) p, size_t count) {  
+      count++; // violates the invariant of __counted_by   
+   }
+
+The requirement to annotate all pointers with explicit bounds information could present a significant adoption burden. To tackle this issue, the model incorporates the concept of a “wide pointer” (a.k.a. fat pointer) – a larger pointer that carries bounds information alongside the pointer value. Utilizing wide pointers can potentially reduce the adoption burden, as it contains bounds information internally and eliminates the need for explicit bounds annotations. However, wide pointers differ from standard C pointers in their data layout, which may result in incompatibilities with the application binary interface (ABI). Breaking the ABI complicates interoperability with external code that has not adopted the same programming model.
+
+-fbounds-safety harmonizes the wide pointer and the bounds annotation approaches to reduce the adoption burden while maintaining the ABI. In this model, local variables of pointer type are implicitly treated as wide pointers, allowing them to carry bounds information without requiring explicit bounds annotations. This approach does not impact the ABI, as local variables are hidden from the ABI. Pointers associated with any other variables are treated as single object pointers (i.e., __single ), ensuring that they always have the tightest bounds by default and offering a strong bounds safety guarantee.
+
+By implementing default bounds annotations based on ABI visibility, a considerable portion of C code can operate without modifications within this programming model, reducing the adoption burden.
+
+The rest of the section will discuss individual bounds annotations and the programming model in more detail.
+
+Annotation for pointers to a single object
+------------------------------------------
+
+The C language allows pointer arithmetic on arbitrary pointers and this has been a source of many bounds safety issues. In practice, many pointers are merely pointing to a single object and incrementing or decrementing such a pointer immediately makes the pointer go out-of-bounds. To prevent this unsafety, -fbounds-safety provides the annotation __single that causes pointer arithmetic on annotated pointers to be a compile time error.
+
+* __single : indicates that the pointer is either pointing to a single object or null. Hence, pointers with __single do not permit pointer arithmetic nor being subscripted with a non-zero index. Dereferencing a __single pointer is allowed but it requires a null check. Upper and lower bounds checks are not required because the __single pointer should point to a valid object unless it’s null.
+
+We use __single as the default annotation for ABI-visible pointers. This gives strong security guarantees in that these pointers cannot be incremented or decremented unless they have an explicit, overriding bounds annotation that can be used to verify the safety of the operation. The compiler issues an error when a __single pointer is utilized for pointer arithmetic or array access, as these operations would immediately cause the pointer to exceed its bounds. Consequently, this prompts programmers to provide sufficient bounds information to pointers. In the following example, the pointer on parameter p is single-by-default, and is employed for array access. As a result, the compiler generates an error suggesting to add __counted_by to the pointer.
+
+.. code-block:: c
+
+   void fill_array_with_indices(int *p, unsigned count) {  
+      for (unsigned i = 0; i < count; ++i) {  
+         p[i] = i; // error  
+      }      
+   }
+
+
+External bounds annotations
+---------------------------
+
+“External” bounds annotations provide a way to express a relationship between a pointer variable and another variable (or expression) containing the bounds information of the pointer. In the following example, __counted_by(count)annotation expresses the bounds of parameter p using another parameter count. This model works naturally with many C interfaces and structs because the bounds of a pointer is often available adjacent to the pointer itself, e.g., at another parameter of the same function prototype, or at another field of the same struct declaration.
+
+.. code-block:: c
+
+   void fill_array_with_indices(int *__counted_by(count) p, size_t count) {  
+      // off-by-one error   
+      for (size_t i = 0; i <= count; ++i)  
+         p[i] = i;  
+   }
+
+External bounds annotations include __counted_by, __sized_by, and __ended_by. These annotations do not change the pointer representation, meaning they do not have ABI implications.
+
+* __counted_by(N) : The pointer points to memory that contains N elements of pointee type. N is an expression of integer type which can be a simple reference to declaration, a constant including calls to constant functions, or an arithmetic expression that does not have side effect. The annotation cannot apply to pointers to incomplete types or types without size such as ``void *``.
+* __sized_by(N) : The pointer points to memory that contains N bytes. Just like the argument of __counted_by, N is an expression of integer type which can be a constant, a simple reference to a declaration, or an arithmetic expression that does not have side effects. This is mainly used for pointers to incomplete types or types without size such as ``void *``.
+* __ended_by(P) : The pointer has the upper bound of value P, which is one past the last element of the pointer. In other words, this annotation describes a range that starts with the pointer that has this annotation and ends with Pwhich is the argument of the annotation. P itself may be annotated with __ended_by(Q). In this case, the end of the range extends to the pointer Q.
+
+Accessing a pointer outside the specified bounds causes a run-time trap or a compile-time error. Also, the model maintains correctness of bounds annotations when the pointer and/or the related value containing the bounds information are updated or passed as arguments. This is done by compile-time restrictions or run-time checks (see Section “Maintaining correctness of bounds annotations” for more detail). For instance, initializing buf with null while assigning non-zero value to count, as shown in the following example, would violate the __counted_by annotation because a null pointer does not point to any valid memory location. To avoid this, the compiler produces either a compile-time error or run-time trap.
+
+.. code-block:: c
+
+   void null_with_count_10(int *__counted_by(count) buf, unsigned count) {  
+   buf = 0;  
+   count = 10; // This is not allowed as it creates a null pointer with non-zero length  
+   }
+
+However, there are use cases where a pointer is either a null pointer or is pointing to memory of the specified size. To support this idiom, -fbounds-safety provides _or_null variants, __counted_by_or_null(N), __sized_by_or_null(N), and __ended_by_or_null(P). Accessing a pointer with any of these bounds annotations will require an extra null check to avoid a null pointer dereference.
+
+Internal bounds annotations
+---------------------------
+
+A wide pointer (sometimes known as a “fat” pointer) is a pointer that carries additional bounds information internally (as part of its data). The bounds require additional storage space making wide pointers larger than normal pointers, hence the name “wide pointer”. The memory layout of a wide pointer is equivalent to a struct with the pointer, upper bound, and (optionally) lower bound as its fields as shown below.
+
+.. code-block:: c
+
+   struct wide_pointer_datalayout {  
+      void* pointer; // Address used for dereferences and pointer arithmetic  
+      void* upper_bound; // Points one past the highest address that can be accessed  
+      void* lower_bound; // (Optional) Points to lowest address that can be accessed  
+   };
+
+Even with this representational change, wide pointers act syntactically as normal pointers to allow standard pointer operations, such as pointer dereference (``*p``), array subscript (``p[i]``), member access (``p->``), and pointer arithmetic, with some restrictions on bounds-unsafe uses.
+
+-fbounds-safety has a set of “internal” bounds annotations to turn pointers into wide pointers. These are __bidi_indexable and __indexable. When a pointer has either of these annotations, the compiler changes the pointer to the corresponding wide pointer. This means these annotations will break the ABI and will not be compatible with plain C, and thus they should generally not be used in ABI surfaces.
+
+* __bidi_indexable : A pointer with this annotation becomes a wide pointer to carry the upper bound and the lower bound, the layout of which is equivalent to ``struct { T *ptr; T *upper_bound; T *lower_bound; };``. As the name indicates, pointers with this annotation are “bidirectionally indexable”, meaning that they can be indexed with either a negative or a positive offset and the pointers can be incremented or decremented using pointer arithmetic. A __bidi_indexable pointer is allowed to hold an out-of-bounds pointer value. While creating an OOB pointer is undefined behavior in C, -fbounds-safety makes it well-defined behavior. That is, pointer arithmetic overflow with __bidi_indexable is defined as equivalent of two’s complement integer computation, and at the LLVM IR level this means getelementptr won’t get inbounds keyword. Accessing memory using the OOB pointer is prevented via a run-time bounds check.
+* __indexable : A pointer with this annotation becomes a wide pointer carrying the upper bound (but no explicit lower bound), the layout of which is equivalent to ``struct { T *ptr; T *upper_bound; };``. Since __indexablepointers do not have a separate lower bound, the pointer value itself acts as the lower bound. An __indexablepointer can only be incremented or indexed in the positive direction. Decrementing it with a known negative index triggers a compile-time error. Otherwise, the compiler inserts a run-time check to ensure pointer arithmetic doesn’t make the pointer smaller than the original __indexable pointer (Note that __indexable doesn’t have a lower bound so the pointer value is effectively the lower bound). As pointer arithmetic overflow will make the pointer smaller than the original pointer, it will cause a trap at runtime. Similar to __bidi_indexable, an __indexablepointer is allowed to have a pointer value above the upper bound and creating such a pointer is well-defined behavior. Dereferencing such a pointer, however, will cause a run-time trap.
+* __bidi_indexable offers the best flexibility out of all the pointer annotations in this model, as __bidi_indexablepointers can be used for any pointer operation. However, this comes with the largest code size and memory cost out of the available pointer annotations in this model. In some cases, use of the __bidi_indexable annotation may be duplicating bounds information that exists elsewhere in the program. In such cases, using external bounds annotations may be a better choice.
+
+__bidi_indexable is the default annotation for non-ABI visible pointers, such as local pointer variables — that is, if the programmer does not specify another bounds annotation, a local pointer variable is implicitly __bidi_indexable. Since __bidi_indexable pointers automatically carry bounds information and have no restrictions on kinds of pointer operations that can be used with these pointers, most code inside a function works as is without modification. In the example below, ``int *buf`` doesn’t require manual annotation as it’s implicitly ``int *__bidi_indexable buf``, carrying the bounds information passed from the return value of malloc, which is necessary to insert bounds checking for ``buf[i]``.
+
+.. code-block:: c
+
+   void *__sized_by(size) malloc(size_t size);
+      int *__counted_by(n) get_array_with_0_to_n_1(size_t n) {  
+      int *buf = malloc(sizeof(int) * n);  
+         for (size_t i = 0; i < n; ++i)  
+            buf[i] = i;  
+      return buf;  
+   }
+
+Annotations for sentinel-delimited arrays
+-----------------------------------------
+
+A C string is an array of characters. The null terminator — the first null character (‘\0’) element in the array — marks the end of the string. -fbounds-safety provides __null_terminated to annotate C strings and the generalized form __terminated_by(T) to annotate pointers and arrays with an end marked by a sentinel value. The model prevents dereferencing a __terminated_by pointer beyond its end. Calculating the location of the end (i.e., the address of the sentinel value), requires reading the entire array in memory and would have some performance costs. To avoid an unintended performance hit, the model puts some restrictions on how these pointers can be used. __terminated_bypointers cannot be indexed and can only be incremented by one at a time. To allow these operations, the pointers must be explicitly converted to __indexable pointers using the intrinsic function __unsafe_terminated_by_to_indexable(P, T) (or __unsafe_null_terminated_to_indexable(P)) which converts the __terminated_by pointer P to an __indexable pointer.
+
+* __null_terminated : The pointer or array is terminated by NULL or 0. Modifying the terminator or incrementing the pointer beyond it is prevented at run time.
+* __terminated_by(T) : The pointer or array is terminated by T which is a constant expression. Accessing or incrementing the pointer beyond the terminator is not allowed. This is a generalization of __null_terminatedwhich is defined as __terminated_by(0).
+
+Annotation for interoperating with bounds-unsafe code
+-----------------------------------------------------
+
+* __unsafe_indexable : A pointer with this annotation behaves the same as a plain C pointer. That is, the pointer does not have any bounds information and pointer operations are not checked.
+* __unsafe_indexable can be used to mark pointers from system headers or pointers from code that has not adopted -fbounds safety. This enables interoperation between code using -fbounds-safety and code that does not.
+
+ABI visibility and default annotations
+--------------------------------------
+
+Requiring -fbounds-safety adopters to add bounds annotations to all pointers in the codebase would be a significant adoption burden. To avoid this and to secure all pointers by default, -fbounds-safety applies default bounds annotations to pointer types.
+
+Default annotations apply to pointer types of declarations
+
+-fbounds-safety applies default bounds annotations to pointer types used in declarations. The default annotations are determined by the ABI visibility of the pointer. A pointer type is ABI-visible if changing its size or representation affects the ABI. For instance, changing the size of a type used in a function parameter will affect the ABI and thus pointers used in function parameters are ABI-visible pointers. On the other hand, changing the types of local variables won’t have such ABI implications. Hence, -fbounds-safety considers the outermost pointer types of local variables as non-ABI visible. The rest of the pointers such as nested pointer types, pointer types of global variables, struct fields, and function prototypes are considered ABI-visible.
+
+All ABI-visible pointers are treated as __single by default unless annotated otherwise. This default both preserves ABI and makes these pointers safe by default. This behavior can be controlled with pragma to set the default annotation for ABI-visible pointers to be either __single, __bidi_indexable, __indexable, or __unsafe_indexable. For instance, __ptrcheck_abi_assume_unsafe_indexable() will make all ABI-visible pointers be __unsafe_indexable.
+Non-ABI visible pointers — the outermost pointer types of local variables — are __bidi_indexable by default, so that these pointers have the bounds information necessary to perform bounds checks without the need for a manual annotation.
+All const char pointers are __null_terminated by default.
+In system headers, the default pointer attribute for ABI-visible pointers is set to __unsafe_indexable by default.
+
+ABI implications of default bounds annotations
+----------------------------------------------
+
+Although modifying types of a local variable doesn’t impact the ABI, taking the address of such a modified type could create a pointer type that has an ABI mismatch. Looking at the following example, ``int *local`` is implicitly ``int *__bidi_indexable`` and thus the type of ``&local`` is a pointer to ``int *__bidi_indexable``. On the other hand, in ``void foo(int **)``, the parameter type is a pointer to ``int *__single`` (i.e., ``void foo(int *__single *__single)``) (or a pointer to ``int *__unsafe_indexable`` if it’s from a system header). The compiler reports an error for casts between pointers whose elements have incompatible pointer attributes. This way, -fbounds-safety prevents pointers that are implicitly __bidi_indexable from silently escaping thereby breaking the ABI.
+
+.. code-block:: c
+
+   void foo(int **);
+
+   void bar(void) {
+   int *local = 0;
+   foo(&local); // error: passing 'int *__bidi_indexable*__bidi_indexable' to parameter of incompatible nested pointer type 'int *__single*__single'
+   }
+
+Default pointer types in ``sizeof()``
+-------------------------------------
+
+A pointer type in ``sizeof()`` does not have an implicit bounds annotation. When a bounds attribute is not specified, the evaluated pointer type is treated identically to a plain C pointer type. Therefore, ``sizeof(int*)`` remains the same with or without -fbounds-safety. That said, programmers can explicitly add attribute to the types, e.g., ``sizeof(int *__bidi_indexable)``, in which case the sizeof evaluates to the size of type ``int *__bidi_indexable`` (the value equivalent to ``3 * sizeof(int*)``).
+
+Default pointer types used in C-style casts
+-------------------------------------------
+
+
+A pointer type used in a C-style cast (e.g., ``(int *)src``) inherits the same pointer attribute in the type of src. For instance, if the type of src is ``T *__single`` (with ``T`` being an arbitrary C type), ``(int *)src`` will be ``int *__single``. The reasoning behind this behavior is so that a C-style cast doesn’t introduce any unexpected side effects caused by an implicit cast of bounds attribute.
+
+Pointer casts can have explicit bounds annotations. For instance, ``(int *__bidi_indexable)src`` casts to ``int *__bidi_indexable`` as long as src has a bounds annotation that can implicitly convert to __bidi_indexable. If src has type ``int *__single``, it can implicitly convert to ``int *__bidi_indexable`` which then will have the upper bound pointing to one past the first element. However, if src has type ``int *__unsafe_indexable``, the explicit cast ``(int *__bidi_indexable)src`` will cause an error because __unsafe_indexable cannot cast to __bidi_indexable as __unsafe_indexable doesn’t have bounds information. ``Section “Cast rules"`` describes in more detail what kinds of casts are allowed between pointers with different bounds annotations.
+
+Default pointer types in typedef
+--------------------------------
+
+Pointer types in typedefs do not have implicit default bounds annotations. Instead, the bounds annotation is determined when the typedef is used. The following example shows that no pointer annotation is specified in the typedef pint_twhile each instance of typedef'ed pointer gets its bounds annotation based on the context in which the type is used.
+
+.. code-block:: c
+
+   typedef int * pint_t; // int *  
+   
+   pint_t glob; // int *__single glob;  
+      
+   void foo(void) {  
+   pint_t local; // int *__bidi_indexable local;  
+   } 
+
+Pointer types in a typedef can still have explicit annotations, e.g., ``typedef int *__single``, in which case the bounds annotation __single will apply to every use of the typedef.
+
+Array to pointer promotion
+--------------------------
+
+In C, when an array is referenced, it is automatically promoted (or “decayed”) to a pointer to its first element (e.g., ``&arr[0]``). Similarly, in -fbounds-safety, arrays are also promoted to pointers, but with the addition of an implicit bounds annotation. Arrays on function parameters are promoted to corresponding __counted_by pointers. Consequently, incomplete arrays (or arrays without size) will cause a compiler error unless it has __counted_by annotation in its bracket. All other arrays are promoted to __bidi_indexable pointers, with the equivalent of ``&arr[0]`` serving as the lower bound and ``&arr[array_size]`` (or one past the last element) serving as the upper bound. This way, all array accesses are subject to bounds checking, just as their corresponding pointers are.
+
+Maintaining correctness of bounds annotations
+
+-fbounds-safety maintains correctness of bounds annotations by performing additional checks when a pointer object and/or its related value containing the bounds information is updated.
+
+For example, __single expresses an invariant that the pointer must either point to a single valid object or be a null pointer. To maintain this invariant, the compiler inserts checks when initializing a __single pointer, as shown in the following example:
+
+.. code-block:: c
+
+   void foo(void *__sized_by(size) vp, size_t size) {  
+      // Inserted check: if ((int*)upper_bound(vp) - (int*)vp < sizeof(int) && !!vp) trap();  
+      int *__single ip = (int *)vp;  
+   }
+
+Additionally, an explicit bounds annotation such as ``int *__counted_by(count) buf`` defines a relationship between two variables, ``buf`` and ``count``: namely, that ``buf`` has ``count`` number of elements available. This relationship must hold even after any of these related variables are updated. To this end, the compiler inserts additional checks to ensure the new bufhas at least as many elements as the new count indicates. Furthermore, the model requires that assignments to buf and count must be side by side, with no side effects between them. This prevents buf and count from temporarily falling out of sync due to updates happening at a distance.
+
+The example below shows a function ``alloc_buf`` that initializes a struct that members that use the __counted_by attribute. The compiler allows these assignments because ``sbuf->buf`` and ``sbuf->count`` are updated side by side without any side effects in between the assignments.
+
+.. code-block:: c
+
+   typedef struct {  
+   int *__counted_by(count) buf;  
+   size_t count;  
+   } sized_buf_t;  
+   
+   void alloc_buf(sized_buf_t *sbuf, sized_t nelems) {  
+   sbuf->buf = (int *)malloc(sizeof(int) * nelems);  
+   sbuf->count = nelems;  
+   }
+
+Cast rules
+----------
+
+-fbounds-safety does not enforce overall type safety and bounds invariants can still be violated by incorrect casts in some cases. That said, -fbounds-safety prevents type conversions that change bounds attributes in a way to violate the bounds invariant of the destination’s pointer annotation. Type conversions that change bounds attributes may be allowed if it does not violate the invariant of the destination or that can be verified at run time. Here are some of the important cast rules.
+
+Two pointers that have different bounds annotations on their nested pointer types are incompatible and cannot implicitly cast to each other. For example, ``T *__single *__single`` cannot be converted to ``T *__bidi_indexable *__single``. Such a conversion between incompatible nested bounds annotations can be allowed using an explicit cast (e.g., C-style cast).
+Hereafter, the rules only apply to the top pointer types.
+__unsafe_indexable cannot be converted to any other safe pointer types (__single, __bidi_indexable, __counted_by, etc) using a cast.
+The extension provides builtins to force this conversion, ``__unsafe_forge_bidi_indexable(type, pointer, char_count)`` to convert pointer to a __bidi_indexable pointer of type with ``char_count`` bytes available and ``__unsafe_forge_single(type, pointer)`` to convert pointer to a single pointer of type type.
+The following examples show the usage of these functions. Function example_forge_bidi gets an external buffer from an unsafe library by calling ``get_buf()`` which returns ``void *__unsafe_indexable.`` Under the type rules, this cannot be directly assigned to ``void *buf`` (implicitly ``void *__bidi_indexable``). Thus, ``__unsafe_forge_bidi_indexable`` is used to manually create a __bidi_indexable from the unsafe buffer.
+
+.. code-block:: c
+
+   // unsafe_library.h  
+   void *__unsafe_indexable get_buf(void);  
+   size_t get_buf_size(void);
+
+   // my_source1.c (enables -fbounds-safety)  
+   #include "unsafe_library.h"  
+   void example_forge_bidi(void) {  
+   void *buf = __unsafe_forge_bidi_indexable(void *, get_buf(), get_buf_size());  
+   // ...  
+   }  
+
+   // my_source2.c (enables -fbounds-safety)  
+   #include <stdio.h>  
+   void example_forge_single(void) {  
+   FILE *fp = __unsafe_forge_single(FILE *, fopen("mypath", "rb"));  
+   // ...  
+   }
+ 
+* Function example_forge_single takes a file handle by calling fopen defined in system header stdio.h. Assuming stdio.h did not adopt -fbounds-safety, the return type of fopen would implicitly be ``FILE *__unsafe_indexable`` and thus it cannot be directly assigned to ``FILE *fp`` in the bounds-safe source. To allow this operation, ``__unsafe_forge_single`` is used to create a __single from the return value of fopen.
+* Similar to __unsafe_indexable, any non-pointer type (e.g., int) cannot be converted to any safe pointer type. ``__unsafe_forge_single`` or ``__unsafe_forge_bidi_indexable`` must be used to force the conversion.
+* Any safe pointer types can cast to __unsafe_indexable because it doesn’t have any invariant to maintain.
+* __single casts to __bidi_indexable if the pointee type has a known size. After the conversion, the resulting __bidi_indexable has the size of a single object of the pointee type of __single. __single cannot cast to __bidi_indexable if the pointee type is incomplete or sizeless. For example, ``void *__single`` cannot convert to ``void *__bidi_indexable`` because void is an incomplete type and thus the compiler cannot correctly determine the upper bound of a single void pointer.
+* Similarly, __single can cast to __indexable if the pointee type has a known size. The resulting __indexable has the size of a single object of the pointee type.
+* __single casts to __counted_by(E) only if E is 0 or 1.
+* __single can cast to __single including when they have different pointee types as long as it is allowed in the underlying C standard. -fbounds-safety doesn’t guarantee type safety.
+* __bidi_indexable and __indexable can cast to __single. The compiler may insert run-time checks to ensure the pointer has at least a single element or is a null pointer.
+* __bidi_indexable casts to __indexable if the pointer does not have an underflow. The compiler may insert run-time checks to ensure the pointer is not below the lower bound.
+* __indexable casts to __bidi_indexable. The resulting __bidi_indexable gets the lower bound same as the pointer value.
+* A type conversion may involve both a bitcast and a bounds annotation cast. For example, casting from ``int *__bidi_indexable`` to ``char *__single`` involve a bitcast (``int *`` to ``char *``) and a bounds annotation cast (__bidi_indexable to __single). In this case, the compiler performs the bitcast and then converts the bounds annotation. This means, ``int *__bidi_indexable`` will be converted to ``char *__bidi_indexable`` and then to ``char *__single``.
+* __terminated_by(T) cannot cast to any safe pointer type without the same __terminated_by(T) attribute. To perform the cast, programmers can use an intrinsic function such as __unsafe_terminated_by_to_indexable(P)to force the conversion.
+* __terminated_by(T) can cast to __unsafe_indexable.
+* Any type without __terminated_by(T) cannot cast to __terminated_by(T) without explicitly using an intrinsic function to allow it.
+  + ``__unsafe_terminated_by_from_indexable(T, PTR [, PTR_TO_TERM])`` casts any safe pointer PTR to a __terminated_by(T) pointer. PTR_TO_TERM is an optional argument where the programmer can provide the exact location of the terminator. With this argument, the function can skip reading the entire array in order to locate the end of the pointer (or the upper bound). Providing an incorrect PTR_TO_TERM causes a run-time trap.
+  + ``__unsafe_forge_terminated_by(T, P, E)`` creates T __terminated_by(E) pointer given any pointer P. Tmust be a pointer type.
+
+Portability with toolchains that do not support the extension
+-------------------------------------------------------------
+
+The language model is designed so that it doesn’t alter the semantics of the original C program, other than introducing deterministic traps where otherwise the behavior is undefined and/or unsafe. The model has this property that when the extension is disabled, annotations compile to empty macros, thus the same source code compiles as a normal C program without any bounds annotations. The annotations used in this document are macro-defined as type attributes. This simplifies adoption both in Clang and other toolchains by not introducing any new keywords or altering the grammar. Toolchains not supporting this extension can simply macro-define the annotations to empty. For example, the toolchain not supporting this extension may not have a header defining __counted_by, so the code using __counted_by must define it as nothing or include a header that has the define.
+
+.. code-block:: c
+
+   #if defined(__has_feature) && __has_feature(bounds_safety)  
+   #define __counted_by(T) __attribute__((__counted_by__(T)))  
+   // ... other bounds annotations
+   #else
+   #define __counted_by(T) // defined as nothing  
+   // ... other bounds annotations  
+   #endif  
+   
+   // expands to `void foo(int * ptr, size_t count);`  
+   // when extension is not enabled or not available  
+   void foo(int *__counted_by(count) ptr, size_t count); 
+
+C++ support
+-----------
+
+C++ has multiple options to write code in a bounds-safe manner, such as following the bounds-safety core guidelines and/or using hardened libc++ along with the C++ Safe Buffer model 33. However, these techniques may require ABI changes. When the ABI of an existing program needs to be preserved, -fbounds-safety offers a potential solution. While our initial effort for the language specification and upstreaming will focus on the model for the C language, we believe the general approach would be applicable for C++ and would benefit it.
+
+Language specification
+----------------------
+
+This document discusses only the key features of -fbounds-safety. We expect to provide a more detailed specification in the future.
+
+Other potential applications of bounds attributes
+-------------------------------------------------
+
+The bounds annotations provided by the -fbounds-safety programming model have potential use cases beyond the language extension itself. For example, static and dynamic analysis tools could use the bounds information to improve diagnostics for out-of-bounds accesses, even if -fbounds-safety is not used. The bounds annotations could be used to improve C interoperability with bounds-safe languages, providing a better mapping to bounds-safe types in the safe language interface. The bounds annotations can also serve as documentation specifying the relationship between declarations.
+
+Implementation
+==============
+
+External bounds annotations
+---------------------------
+
+We implemented the bounds annotations as C type attributes appertain to pointer types. If an attribute is added to the position of a declaration attribute, e.g., ``int *ptr __counted_by(size)``, the attribute will appertain to the outermost pointer type of the declaration (``int *``).
+
+New sugar types
+---------------
+
+An external bounds annotation creates a type sugar of the underlying pointer types. For instance, we introduced a new sugar type, DynamicBoundsPointerType to represent __counted_by or __sized_by. Using AttributedType would not be sufficient because the type needs to hold the count or size expression as well as some metadata necessary for analysis, while this type may be implemented through inheritance from AttributedType. Treating the annotations as type sugars means two types with incompatible external bounds annotations may be considered canonically the same types. This is sometimes necessary, for example, to make the __counted_by and friends not participate in function overloading. However, this design requires a separate logic to walk through the entire type hierarchy to check type compatibility of bounds annotations.
+
+Late parsing for C
+------------------
+
+A bounds annotation such as __counted_by(count) can be added to type of a struct field declaration where count is another field of the same struct declared later. Similarly, the annotation may apply to type of a function parameter declaration which precedes the parameter count in the same function. This means parsing the argument of bounds annotations must be done after the parser has the whole context of a struct or a function declaration. Clang has late parsing logic for C++ declaration attributes that require late parsing, while the C declaration attributes and C/C++ type attributes do not have the same logic. This requires introducing late parsing logic for C/C++ type attributes.
+
+Internal bounds annotations
+---------------------------
+
+__indexable and __bidi_indexable alter pointer representations to be equivalent to a struct with the pointer and the corresponding bounds fields. Despite this difference in their representations, they are still pointers in terms of types of operations that are allowed and their semantics. For instance, a pointer dereference on a __bidi_indexable pointer will return the dereferenced value same as plain C pointers, modulo the extra bounds checks being performed before dereferencing the wide pointer. This means mapping the wide pointers to struct types with equivalent layout won’t be sufficient. To represent the wide pointers in Clang AST, we add an extra field in the PointerType class to indicate the internal bounds of the pointer. This ensures pointers of different representations are mapped to different canonical types while they are still treated as pointers.
+
+In LLVM IR, wide pointers will be emitted as structs of equivalent representations. Clang CodeGen will handle them as Aggregate in TypeEvaluationKind (TEK). AggExprEmitter was extended to handle pointer operations returning wide pointers. Alternatively, a new TEK and an expression emitter dedicated to wide pointers could be introduced.
+
+Default bounds annotations
+--------------------------
+
+The model may implicitly add __bidi_indexable or __single depending on the context of the declaration that has the pointer type. __bidi_indexable implicitly adds to local variables, while __single implicitly adds to pointer types specifying struct fields, function parameters, or global variables. This means the parser may first create the pointer type without any default pointer attribute and then recreate the type once the parser has the declaration context and determined the default attribute accordingly. This also requires the parser to reset the type of the declaration with the newly created type with the right default attribute.
+
+Promotion expression
+--------------------
+
+We introduced a new expression to represent the conversion from a pointer with an external bounds annotation, such as __counted_by, to __bidi_indexable. This type of conversion cannot be handled by normal CastExprs because it requires an extra subexpression(s) to provide the bounds information necessary to create a wide pointer.
+
+Bounds check expression
+-----------------------
+
+Bounds checks are part of semantics defined in the -fbounds-safety language model. Hence, exposing the bounds checks and other semantic actions in the AST is desirable. A new expression for bounds checks has been added to the AST. The bounds check expression has a BoundsCheckKind to indicate the kind of checks and has the additional sub-expressions that are necessary to perform the check according to the kind.
+
+Paired assignment check
+-----------------------
+
+-fbounds-safety enforces that variables or fields related with the same external bounds annotation (e.g., buf and countrelated with __counted_by in the example below) must be updated side by side within the same basic block and without side effect in between.
+
+.. code-block:: c
+
+   typedef struct {  
+      int *__counted_by(count) buf;  
+      size_t count;  
+   } sized_buf_t;  
+         
+   void alloc_buf(sized_buf_t *sbuf, sized_t nelems) {  
+      sbuf->buf = (int *)malloc(sizeof(int) * nelems);  
+      sbuf->count = nelems;  
+   }
+
+To implement this rule, the compiler requires a linear representation of statements to understand the ordering and the adjacency between the two or more assignments. The Clang CFG is used to implement this analysis as Clang CFG provides a linear view of statements within each CFGBlock (Clang CFGBlock represents a single basic block in a source-level CFG).
+
+Bounds check optimizations
+--------------------------
+
+In -fbounds-safety, the Clang frontend emits run-time checks for every memory dereference if the type system or analyses in the frontend couldn’t verify its bounds safety. The implementation relies on LLVM optimizations to remove redundant run-time checks. Using this optimization strategy, if the original source code already has bounds checks, the fewer additional checks -fbounds-safety will introduce. The LLVM ConstraintElimination pass is design to remove provable redundant checks (please check Florian Hahn’s presentation in 2021 LLVM Dev Meeting 8 and the implementation 4 to learn more). In the following example, -fbounds-safety implicitly adds the redundant bounds checks that the optimizer can remove:
+
+.. code-block:: c
+
+   void fill_array_with_indices(int *__counted_by(count) p, size_t count) {  
+      for (size_t i = 0; i < count; ++i) {  
+         if (p + i < p || p + i + 1 > p + count) trap(); // implicit bounds checks  
+         p[i] = i;  
+      }  
+   } 
+
+ConstraintElimination collects the following facts and determines if the bounds checks can be safely removed:
+
+* Inside the for-loop, 0 <= i < count, hence 1 <= i + 1 <= count.
+* Pointer arithmetic p + count in the if-condition doesn’t wrap.
+* -fbounds safety treats pointer arithmetic overflow as deterministically two’s complement computation, not an undefined behavior. Therefore, getelementptr does not typically have inbounds keyword. However, the compiler does emit inbounds for p + count in this case because __counted_by(count) has the invariant that p has at least as many as elements as count. Using this information, ConstraintElimination is able to determine p + count doesn’t wrap.
+* Accordingly, p + i and p + i + 1 also don’t wrap.
+* Therefore, p <= p + i and p + i + 1 <= p + count.
+* The if-condition simplifies to false and becomes dead code that the subsequent optimization passes can remove.
+
+OptRemarks can be utilized to provide insights into performance tuning. It has the capability to report on checks that it cannot eliminate, possibly with reasons, allowing programmers to adjust their code to unlock further optimizations.
+
+Debugging
+---------
+
+Internal bounds annotations
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Internal bounds annotations change a pointer into a wide pointer. The debugger needs to understand that wide pointers are essentially pointers with a struct layout. To handle this, a wide pointer is described as a record type in the debug info. The type name has a special name prefix (e.g., __bounds_safety$bidi_indexable) which can be recognized by a debug info consumer to provide support that goes beyond showing the internal structure of the wide pointer. There are no DWARF extensions needed to support wide pointers. In our implementation, LLDB recognized wide pointer types by name and reconstructs them as wide pointer Clang AST types for use in the expression evaluator.
+
+External bounds annotations
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Similar to internal bounds annotations, external bound annotations are described as a typedef to their underlying pointer type in the debug info, and the bounds are encoded as strings in the typedef’s name (e.g., __bounds_safety$counted_by:N).
+
+Recognizing -fbounds-safety traps
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Clang emits debug info for -fbounds-safety traps as inlined functions, where the function name encodes the error message. LLDB implements a frame recognizer to surface a human-readable error cause to the end user. A debug info consumer that is unaware of this sees an inlined function whose name encodes an error message (e.g., : __bounds_safety$Bounds check failed ).
+
+Expression Parsing
+^^^^^^^^^^^^^^^^^^
+
+In our implementation, LLDB’s expression evaluator does not enable the -fbounds-safety language option because it’s currently unable to fully reconstruct the pointers with external bounds annotations, and also because the evaluator operates in C++ mode, utilizing C++ reference types, while -fbounds-safety does not currently support C++. This means LLDB’s expression evaluator can only evaluate a subset of the -fbounds-safety language model. Specifically, it’s capable of evaluating the wide pointers that already exist in the source code. All other expressions are evaluated according to C/C++ semantics.
+
+Upstreaming plan
+----------------
+
+Gradual updates with experimental flag
+
+The upstreaming will take place as a series of smaller PRs and we will guard our implementation with an experimental flag -fbounds-safety-experimental until the usable model is fully upstreamed. Once the model is ready for use, we will expose the flag -fbounds-safety.
+
+Possible patch sets
+-------------------
+
+* External bounds annotations and the (late) parsing logic
+* Internal bounds annotations (wide pointers) and their parsing logic
+* Clang code generation for wide pointers with debug information
+* Pointer cast semantics involving bounds annotations (this could be divided into multiple sub-PRs)
+* CFG analysis for pairs of related pointer and count assignments and the likes
+* Bounds check expressions in AST and the Clang code generation (this could also be divided into multiple sub-PRs)
+
+Limitations
+===========
+
+-fbounds-safety aims to bring the bounds safety guarantee to the C language, and it does not guarantee other types of memory safety properties. Consequently, it may not prevent some of the secondary bounds safety violations caused by other types of safety violations such as type confusion. For instance, -fbounds-safety does not perform type-safety checks on conversions between __single pointers of different pointee types (e.g., ``char *__single`` → ``void *__single`` → ``int *__single``) beyond what the foundation languages (C/C++) already offer.
+
+-fbounds-safety heavily relies on run-time checks to keep the bounds safety and the soundness of the type system. This may incur significant code size overhead in unoptimized builds and leaving some of the adoption mistakes to be caught only at run time. This is not a fundamental limitation, however, because incrementally adding necessary static analysis will allow us to catch issues early on and remove unnecessary bounds checks in unoptimized builds.
+
+Comparison to Checked C
+=======================
+
+Checked C  is a bounds-safety dialect for C invented by Microsoft. Similar to -fbounds-safety, Checked C prevents buffer overruns and out-of-bounds memory accesses using static and dynamic checks. It provides bounds annotations for the programmers to annotate pointers and arrays without ABI implications.
+
+The adoption of the Checked C programming model presents several practical challenges. Most pointers need to be modified to provide explicit bounds information and/or to utilize the new safe pointer type constructs offered by Checked C. While the adoption burden can be alleviated by using adoption tooling, it still requires non-negligible diffs from the original C code. In contrast, -fbounds-safety minimizes the need for extensive code modifications by employing wide pointers and implementing a policy for applying default annotations.
+
+Checked C introduced new safe pointer types and bounds annotation syntax incompatible with standard C. This makes it difficult to work with other toolchains that do not support the model. -fbounds-safety, on the other hand, uses C type attributes to implement bounds annotations to make it compatible with C and portable with other toolchains (see Section "Portability with toolchains that do not support the extension”).
+
+Checked C heavily relies on static analysis to verify soundness of bounds annotations and rejects code by default if the static analysis cannot. This model potentially requires lots of code adjustments from programmers, e.g., to mark them as an unchecked region, when the static analysis implementation is imperfect. Whereas, -fbounds-safety offloads more of the verifications to run-time checks and relies on the LLVM ConstraintElimination pass to optimize redundant run-time checks. This may result in significant code size overhead in unoptimized builds. This could be addressed by adding some static analysis support to determine checks that can be safely skipped.
