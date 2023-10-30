@@ -106,9 +106,8 @@ struct AsyncAPI {
   }
 
   static FunctionType getValueStorageFunctionType(MLIRContext *ctx) {
-    auto value = opaquePointerType(ctx);
-    auto storage = opaquePointerType(ctx);
-    return FunctionType::get(ctx, {value}, {storage});
+    auto ptrType = opaquePointerType(ctx);
+    return FunctionType::get(ctx, {ptrType}, {ptrType});
   }
 
   static FunctionType emplaceTokenFunctionType(MLIRContext *ctx) {
@@ -159,9 +158,8 @@ struct AsyncAPI {
   }
 
   static FunctionType executeFunctionType(MLIRContext *ctx) {
-    auto hdl = opaquePointerType(ctx);
-    Type resume = AsyncAPI::opaquePointerType(ctx);
-    return FunctionType::get(ctx, {hdl, resume}, {});
+    auto ptrType = opaquePointerType(ctx);
+    return FunctionType::get(ctx, {ptrType, ptrType}, {});
   }
 
   static FunctionType addTokenToGroupFunctionType(MLIRContext *ctx) {
@@ -171,22 +169,18 @@ struct AsyncAPI {
   }
 
   static FunctionType awaitTokenAndExecuteFunctionType(MLIRContext *ctx) {
-    auto hdl = opaquePointerType(ctx);
-    Type resume = AsyncAPI::opaquePointerType(ctx);
-    return FunctionType::get(ctx, {TokenType::get(ctx), hdl, resume}, {});
+    auto ptrType = opaquePointerType(ctx);
+    return FunctionType::get(ctx, {TokenType::get(ctx), ptrType, ptrType}, {});
   }
 
   static FunctionType awaitValueAndExecuteFunctionType(MLIRContext *ctx) {
-    auto value = opaquePointerType(ctx);
-    auto hdl = opaquePointerType(ctx);
-    Type resume = AsyncAPI::opaquePointerType(ctx);
-    return FunctionType::get(ctx, {value, hdl, resume}, {});
+    auto ptrType = opaquePointerType(ctx);
+    return FunctionType::get(ctx, {ptrType, ptrType, ptrType}, {});
   }
 
   static FunctionType awaitAllAndExecuteFunctionType(MLIRContext *ctx) {
-    auto hdl = opaquePointerType(ctx);
-    Type resume = AsyncAPI::opaquePointerType(ctx);
-    return FunctionType::get(ctx, {GroupType::get(ctx), hdl, resume}, {});
+    auto ptrType = opaquePointerType(ctx);
+    return FunctionType::get(ctx, {GroupType::get(ctx), ptrType, ptrType}, {});
   }
 
   static FunctionType getNumWorkerThreads(MLIRContext *ctx) {
