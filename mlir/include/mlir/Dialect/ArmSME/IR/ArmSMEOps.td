@@ -233,21 +233,23 @@ def ZeroOp : ArmSME_Op<"zero", [Pure]> {
 
 def TileLoadOp : ArmSME_Op<"tile_load", [
   AttrSizedOperandSegments,
-  TypesMatchWith<
-    "padding type matches element type of result (if present)",
+  OptionalTypesMatchWith<
+    "padding type matches element type of result",
     "result", "padding",
-    "::llvm::cast<VectorType>($_self).getElementType()",
-    "!getPadding() || std::equal_to<>()"
+    "::llvm::cast<VectorType>($_self).getElementType()"
   >,
-  TypesMatchWith<
-    "mask has i1 element type and same shape as result (if present)",
+  OptionalTypesMatchWith<
+    "mask has i1 element type and same shape as result",
     "result", "mask",
     "VectorType("
       "VectorType::Builder("
         "::llvm::cast<mlir::VectorType>($_self)"
-      ").setElementType(IntegerType::get($_self.getContext(), 1)))",
-    "!getMask() || std::equal_to<>()"
-  >
+      ").setElementType(IntegerType::get($_self.getContext(), 1)))"
+  >,
+  PredOpTrait<
+    "both `padding` and `mask` should be provided or neither",
+    CPred<"bool(getPadding()) == bool(getMask())">
+  >,
 ]> {
   let summary = "Tile load operation";
   let description = [{

@@ -141,3 +141,12 @@ func.func @arm_sme_tile_load__bad_mask_type(%src : memref<?x?xf64>, %pad : f64, 
   %tile = arm_sme.tile_load %src[%c0, %c0], %pad, %mask : memref<?x?xf64>, vector<[2]x[2]xf64>
   return
 }
+
+// -----
+
+func.func @arm_sme_tile_load__pad_but_no_mask(%src : memref<?x?xf64>, %pad : f64) {
+  %c0 = arith.constant 0 : index
+  // expected-error@+1 {{op failed to verify that both `padding` and `mask` should be provided or neither}}
+  %tile = arm_sme.tile_load %src[%c0, %c0], %pad, : memref<?x?xf64>, vector<[2]x[2]xf64>
+  return
+}
