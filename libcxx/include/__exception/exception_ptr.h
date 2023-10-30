@@ -36,7 +36,7 @@ class _LIBCPP_EXPORTED_FROM_ABI exception_ptr {
     static_cast<_Ep*>(__x)->~_Ep();
   }
 
-  static void* __init_native_exception(size_t, std::type_info*, void (_LIBCXX_DTOR_FUNC*)(void*)) _NOEXCEPT;
+  static void* __init_native_exception(size_t, std::type_info*, void(_LIBCXX_DTOR_FUNC*)(void*)) _NOEXCEPT;
   static void __free_native_exception(void*) _NOEXCEPT;
   static exception_ptr __from_native_exception_pointer(void*) _NOEXCEPT;
 
