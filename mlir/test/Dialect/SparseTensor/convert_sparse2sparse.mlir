@@ -66,11 +66,11 @@ func.func @sparse_convert(%arg0: tensor<?xf32, #SparseVector64>) -> tensor<?xf32
 
 // CHECK-LABEL:   func.func @sparse_convert_permuted
 // CHECK:           sparse_tensor.foreach
-// CHECK:             sparse_tensor.insert
+// CHECK:             tensor.insert
 // CHECK:           sparse_tensor.load
 // CHECK:           sparse_tensor.reorder_coo
 // CHECK:           sparse_tensor.foreach
-// CHECK:             sparse_tensor.insert
+// CHECK:             tensor.insert
 // CHECK:           sparse_tensor.load
 // CHECK:           return
 func.func @sparse_convert_permuted(%arg0: tensor<?x?x?xf32, #SortedCOO3D>) -> tensor<?x?x?xf32, #TsssPermuted> {
@@ -80,7 +80,7 @@ func.func @sparse_convert_permuted(%arg0: tensor<?x?x?xf32, #SortedCOO3D>) -> te
 
 // CHECK-LABEL:   func.func @sparse_convert_slice
 // CHECK:           sparse_tensor.foreach
-// CHECK:             sparse_tensor.insert
+// CHECK:             tensor.insert
 // CHECK:           sparse_tensor.load
 // CHECK-NOT:       sparse_tensor.reorder_coo
 // CHECK:           return

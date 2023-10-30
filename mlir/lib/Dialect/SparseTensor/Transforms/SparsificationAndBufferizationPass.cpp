@@ -143,7 +143,9 @@ public:
       pm.addNestedPass<func::FuncOp>(createStageSparseOperationsPass());
       pm.addPass(createLowerSparseOpsToForeachPass(enableRuntimeLibrary,
                                                    /*enableConvert=*/true));
-      // TODO: DemapPass here!
+      // Handle dim-to-lvl maps on operations other than linalg.generic.
+      pm.addPass(
+          createSparseReinterpretMapPass(ReinterpretMapScope::kExceptGeneric));
       pm.addNestedPass<func::FuncOp>(createLowerForeachToSCFPass());
       if (vectorLength > 0) {
         pm.addPass(mlir::createLoopInvariantCodeMotionPass());
