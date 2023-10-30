@@ -1166,6 +1166,8 @@ bool InferAddressSpacesImpl::rewriteWithNewAddressSpaces(
   }
 
   SmallVector<Instruction *, 16> DeadInstructions;
+  ValueToValueMapTy VMap;
+  ValueMapper VMapper(VMap, RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
 
   // Replaces the uses of the old address expressions with the new ones.
   for (const WeakTrackingVH &WVH : Postorder) {
@@ -1184,7 +1186,18 @@ bool InferAddressSpacesImpl::rewriteWithNewAddressSpaces(
       if (C != Replace) {
         LLVM_DEBUG(dbgs() << "Inserting replacement const cast: " << Replace
                           << ": " << *Replace << '\n');
-        C->replaceAllUsesWith(Replace);
+        VMap[C] = Replace;
+        for (User *U : make_early_inc_range(C->users())) {
+          for (auto It = df_begin(U), E = df_end(U); It != E;) {
+            if (auto *I = dyn_cast<Instruction>(*It)) {
+              if (I->getFunction() == F)
+                VMapper.remapInstruction(*I);
+              It.skipChildren();
+              continue;
+            }
+            ++It;
+          }
+        }
         V = Replace;
       }
     }
@@ -1210,6 +1223,11 @@ bool InferAddressSpacesImpl::rewriteWithNewAddressSpaces(
       // Skip if the current user is the new value itself.
       if (CurUser == NewV)
         continue;
+
+      if (auto *CurUserI = dyn_cast<Instruction>(CurUser);
+          CurUserI && CurUserI->getFunction() != F)
+        continue;
+
       // Handle more complex cases like intrinsic that need to be remangled.
       if (auto *MI = dyn_cast<MemIntrinsic>(CurUser)) {
         if (!MI->isVolatile() && handleMemIntrinsicPtrUse(MI, V, NewV))
