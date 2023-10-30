@@ -5,7 +5,6 @@ set(LLVM_LINK_COMPONENTS
 
 add_clang_library(clangAPINotes
   APINotesManager.cpp
-  APINotesWriter.cpp
   APINotesReader.cpp
   APINotesTypes.cpp
   APINotesWriter.cpp
