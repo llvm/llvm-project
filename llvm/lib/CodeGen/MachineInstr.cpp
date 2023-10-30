@@ -2476,9 +2476,11 @@ MachineInstr::getFirst5RegLLTs() const {
       Reg4, getRegInfo()->getType(Reg4));
 }
 
-void MachineInstr::insert(mop_iterator It, ArrayRef<MachineOperand> Ops) {
-  assert(It != nullptr && "invalid iterator");
-  assert(It->getParent() == this && "iterator points to operand of other inst");
+void MachineInstr::insert(mop_iterator InsertBefore,
+                          ArrayRef<MachineOperand> Ops) {
+  assert(InsertBefore != nullptr && "invalid iterator");
+  assert(InsertBefore->getParent() == this &&
+         "iterator points to operand of other inst");
   if (Ops.empty())
     return;
 
@@ -2493,7 +2495,7 @@ void MachineInstr::insert(mop_iterator It, ArrayRef<MachineOperand> Ops) {
     }
   }
 
-  unsigned OpIdx = getOperandNo(It);
+  unsigned OpIdx = getOperandNo(InsertBefore);
   unsigned NumOperands = getNumOperands();
   unsigned OpsToMove = NumOperands - OpIdx;
 
