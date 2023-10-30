@@ -179,18 +179,27 @@ private:
       return;
 #endif
 
+// `PyEval_ThreadsInitialized` was deprecated in Python 3.9 and removed in
+// Python 3.13. It has been returning `true` always since Python 3.7.
+#if (PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION < 9) || (PY_MAJOR_VERSION < 3)
     if (PyEval_ThreadsInitialized()) {
+#endif
       Log *log = GetLog(LLDBLog::Script);
 
       m_was_already_initialized = true;
       m_gil_state = PyGILState_Ensure();
       LLDB_LOGV(log, "Ensured PyGILState. Previous state = {0}locked\n",
                 m_gil_state == PyGILState_UNLOCKED ? "un" : "");
+
+// `PyEval_InitThreads` was deprecated in Python 3.9 and removed in
+// Python 3.13.
+#if (PY_MAJOR_VERSION == 3 && PY_MINOR_VERSION < 9) || (PY_MAJOR_VERSION < 3)
       return;
     }
 
     // InitThreads acquires the GIL if it hasn't been called before.
     PyEval_InitThreads();
+#endif
   }
 
   PyGILState_STATE m_gil_state = PyGILState_UNLOCKED;
