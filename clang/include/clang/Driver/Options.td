@@ -4480,14 +4480,6 @@ def msave_restore : Flag<["-"], "msave-restore">, Group<m_riscv_Features_Group>,
 def mno_save_restore : Flag<["-"], "mno-save-restore">, Group<m_riscv_Features_Group>,
   HelpText<"Disable using library calls for save and restore">;
 } // let Flags = [TargetSpecific]
-def mcmodel_EQ_medlow : Flag<["-"], "mcmodel=medlow">, Group<m_Group>,
-  Visibility<[ClangOption, CC1Option]>,
-  Alias<mcmodel_EQ>, AliasArgs<["small"]>,
-  HelpText<"Equivalent to -mcmodel=small, compatible with RISC-V gcc.">;
-def mcmodel_EQ_medany : Flag<["-"], "mcmodel=medany">, Group<m_Group>,
-  Visibility<[ClangOption, CC1Option]>,
-  Alias<mcmodel_EQ>, AliasArgs<["medium"]>,
-  HelpText<"Equivalent to -mcmodel=medium, compatible with RISC-V gcc.">;
 let Flags = [TargetSpecific] in {
 def menable_experimental_extensions : Flag<["-"], "menable-experimental-extensions">, Group<m_Group>,
   HelpText<"Enable use of experimental RISC-V extensions.">;

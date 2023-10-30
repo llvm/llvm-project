@@ -2,6 +2,7 @@
 ;
 ; RUN: opt < %s -mtriple=avr-linux -passes=instcombine -S | FileCheck %s --check-prefix=AVR
 ; RUN: opt < %s -mtriple=msp430-freebsd -passes=instcombine -S | FileCheck %s --check-prefix=MSP430
+; REQUIRES: avr-registered-target,msp430-registered-target
 ;
 ; Test that the puts to putchar transformation works correctly even for
 ; targets with 16-bit int.
