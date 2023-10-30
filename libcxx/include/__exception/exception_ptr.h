@@ -32,11 +32,11 @@ class _LIBCPP_EXPORTED_FROM_ABI exception_ptr {
 
 #  if defined(_LIBCPP_EXCEPTION_PTR_DIRECT_INIT)
   template <class _Ep>
-  _LIBCPP_HIDE_FROM_ABI static inline void __dest_thunk(void* __x) {
+  _LIBCPP_HIDE_FROM_ABI _LIBCXX_DTOR_FUNC static inline void __dest_thunk(void* __x) {
     static_cast<_Ep*>(__x)->~_Ep();
   }
 
-  static void* __init_native_exception(size_t, std::type_info*, void (*)(void*)) _NOEXCEPT;
+  static void* __init_native_exception(size_t, std::type_info*, void (_LIBCXX_DTOR_FUNC*)(void*)) _NOEXCEPT;
   static void __free_native_exception(void*) _NOEXCEPT;
   static exception_ptr __from_native_exception_pointer(void*) _NOEXCEPT;
 
