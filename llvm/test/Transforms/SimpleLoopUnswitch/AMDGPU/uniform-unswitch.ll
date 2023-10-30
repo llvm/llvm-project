@@ -19,8 +19,8 @@
 ; SHOULDBE-NEXT: br i1
 
 define amdgpu_kernel void @uniform_unswitch(ptr nocapture %out, i32 %n, i32 %x) {
-; CHECK-LABEL: define amdgpu_kernel void @uniform_unswitch
-; CHECK-SAME: (ptr nocapture writeonly [[OUT:%.*]], i32 [[N:%.*]], i32 [[X:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; CHECK-LABEL: define amdgpu_kernel void @uniform_unswitch(
+; CHECK-SAME: ptr nocapture writeonly [[OUT:%.*]], i32 [[N:%.*]], i32 [[X:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[OUT_GLOBAL:%.*]] = addrspacecast ptr [[OUT]] to ptr addrspace(1)
 ; CHECK-NEXT:    [[CMP6:%.*]] = icmp sgt i32 [[N]], 0
