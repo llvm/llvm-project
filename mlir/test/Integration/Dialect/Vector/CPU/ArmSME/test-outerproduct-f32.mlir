@@ -3,22 +3,24 @@
 // DEFINE:   -enable-arm-streaming="mode=locally enable-za" \
 // DEFINE:   -convert-vector-to-arm-sme -convert-arm-sme-to-scf \
 // DEFINE:   -convert-vector-to-llvm="enable-arm-sme" -cse -canonicalize \
-// DEFINE:   -allocate-arm-sme-tiles -test-lower-to-llvm
-// DEFINE: %{run} = %mcr_aarch64_cmd \
+// DEFINE:   -allocate-arm-sme-tiles -test-lower-to-llvm -o %t
+// DEFINE: %{run} = %mcr_aarch64_cmd %t \
 // DEFINE:   -march=aarch64 -mattr=+sve,+sme \
 // DEFINE:   -e %{entry_point} -entry-point-result=void \
 // DEFINE:   -shared-libs=%mlir_runner_utils,%mlir_c_runner_utils
 
-// RUN: %{compile} | %{run} | FileCheck %s --check-prefix=WITHOUT-ACC
+// RUN: %{compile}
+
+// RUN: %{run} | FileCheck %s --check-prefix=WITHOUT-ACC
 
 // REDEFINE: %{entry_point} = test_outerproduct_with_accumulator_4x4xf32
-// RUN: %{compile} | %{run} | FileCheck %s --check-prefix=WITH-ACC
+// RUN: %{run} | FileCheck %s --check-prefix=WITH-ACC
 
 // REDEFINE: %{entry_point} = test_masked_outerproduct_no_accumulator_4x4xf32
-// RUN: %{compile} | %{run} | FileCheck %s --check-prefix=WITH-MASK
+// RUN: %{run} | FileCheck %s --check-prefix=WITH-MASK
 
 // REDEFINE: %{entry_point} = test_masked_outerproduct_with_accumulator_4x4xf32
-// RUN: %{compile} | %{run} | FileCheck %s --check-prefix=WITH-MASK-AND-ACC
+// RUN: %{run} | FileCheck %s --check-prefix=WITH-MASK-AND-ACC
 
 func.func @test_outerproduct_no_accumulator_4x4xf32() {
   %c0 = arith.constant 0 : index
