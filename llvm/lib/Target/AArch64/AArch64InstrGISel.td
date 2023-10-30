@@ -270,6 +270,8 @@ def : GINodeEquiv<G_BSP, AArch64bsp>;
 def : GINodeEquiv<G_UMULL, AArch64umull>;
 def : GINodeEquiv<G_SMULL, AArch64smull>;
 
+def : GINodeEquiv<G_VECREDUCE_ADD, vecreduce_add>;
+
 def : GINodeEquiv<G_EXTRACT_VECTOR_ELT, vector_extract>;
 
 def : GINodeEquiv<G_PREFETCH, AArch64Prefetch>;
