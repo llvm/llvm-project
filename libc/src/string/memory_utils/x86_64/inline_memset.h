@@ -52,10 +52,7 @@ LIBC_INLINE_VAR constexpr bool kUseSoftwarePrefetchingMemset =
     if (count <= 192) {
       return generic::Memset<uint256_t>::loop_and_tail(dst, value, count);
     } else {
-      // Warm up memset
-      generic::Memset<uint256_t>::block(dst, value);
-      generic::Memset<uint128_t>::block(dst + 64, value);
-      return generic::Memset<uint256_t>::loop_and_tail_prefetch<320, 128, 96>(
+      return generic::Memset<uint256_t>::loop_and_tail_prefetch<320, 128>(
           dst, value, count);
     }
   }

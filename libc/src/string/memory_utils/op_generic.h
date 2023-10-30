@@ -171,22 +171,22 @@ template <typename T> struct Memset {
     tail(dst, value, count);
   }
 
-  template <size_t prefetch_distance, size_t prefetch_degree, size_t offset>
+  template <size_t prefetch_distance, size_t prefetch_degree>
   LIBC_INLINE static void loop_and_tail_prefetch(Ptr dst, uint8_t value,
                                                  size_t count) {
-    size_t prefetch_offset = offset;
+    size_t offset = 0;
 
-    while (prefetch_offset + prefetch_degree + SIZE <= count) {
+    while (offset + prefetch_degree + SIZE <= count) {
       for (size_t i = 0; i < prefetch_degree / sw_prefetch::kCachelineSize; ++i)
-        sw_prefetch::PrefetchW(dst + prefetch_offset + prefetch_distance +
+        sw_prefetch::PrefetchW(dst + offset + prefetch_distance +
                                sw_prefetch::kCachelineSize * i);
       for (size_t i = 0; i < prefetch_degree;
-           i += SIZE, prefetch_offset += SIZE)
-        block(dst + prefetch_offset, value);
+           i += SIZE, offset += SIZE)
+        block(dst + offset, value);
     }
-    while (prefetch_offset + SIZE < count) {
-      block(dst + prefetch_offset, value);
-      prefetch_offset += SIZE;
+    while (offset + SIZE < count) {
+      block(dst + offset, value);
+      offset += SIZE;
     }
     tail(dst, value, count);
   }
