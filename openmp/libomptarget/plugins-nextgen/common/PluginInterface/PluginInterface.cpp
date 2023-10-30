@@ -118,7 +118,7 @@ private:
 
     return Plugin::success();
   }
-  
+
   Error preallocateDeviceMemory(uint64_t DeviceMemorySize, void *ReqVAddr) {
     if (Device->supportVAManagement())
       return preAllocateVAMemory(DeviceMemorySize, ReqVAddr);
@@ -299,7 +299,7 @@ public:
     JsonKernelInfo["ArgOffsets"] = json::Value(std::move(JsonArgOffsets));
 
     SmallString<128> MemoryFilename = {Name, ".memory"};
-    dumpDeviceMemory(MemoryFilename, /*saveDiff*/false);
+    dumpDeviceMemory(MemoryFilename, /*saveDiff*/ false);
 
     SmallString<128> GlobalsFilename = {Name, ".globals"};
     dumpGlobals(GlobalsFilename, Image);
@@ -317,7 +317,7 @@ public:
   void saveKernelOutputInfo(const char *Name) {
     SmallString<128> OutputFilename = {
         Name, (isRecording() ? ".original.output" : ".replay.output")};
-    dumpDeviceMemory(OutputFilename, /*saveDiff*/true);
+    dumpDeviceMemory(OutputFilename, /*saveDiff*/ true);
   }
 
   void *alloc(uint64_t Size) {
