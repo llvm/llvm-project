@@ -205,3 +205,30 @@ llvm.func @func_with_inlined_dbg_value(%arg0: i32) -> (i32) {
 // CHECK-DAG: ![[VAR_LOC0]] = !DILocalVariable(name: "a", scope: ![[OUTER_FUNC]], file: ![[FILE]]
 // CHECK-DAG: ![[VAR_LOC1]] = !DILocalVariable(name: "b", scope: ![[LEXICAL_BLOCK_FILE]], file: ![[FILE]]
 // CHECK-DAG  ![[LABEL]] = !DILabel(scope: ![[LEXICAL_BLOCK_FILE]], name: "label", file: ![[FILE]], line: 42)
+
+// -----
+
+#di_basic_type = #llvm.di_basic_type<tag = DW_TAG_base_type, name = "int", sizeInBits = 32, encoding = DW_ATE_signed>
+#di_file = #llvm.di_file<"foo.mlir" in "/test/">
+#di_compile_unit = #llvm.di_compile_unit<
+  sourceLanguage = DW_LANG_C, file = #di_file, producer = "MLIR",
+  isOptimized = true, emissionKind = Full
+>
+#di_subprogram = #llvm.di_subprogram<
+  compileUnit = #di_compile_unit, scope = #di_file, name = "func",
+  file = #di_file, subprogramFlags = Definition>
+#di_local_variable = #llvm.di_local_variable<scope = #di_subprogram, name = "a", file = #di_file, type = #di_basic_type>
+
+#loc = loc("foo.mlir":0:0)
+
+// CHECK-LABEL: define void @func_without_subprogram(
+// CHECK-SAME: i32 %[[ARG:.*]])
+llvm.func @func_without_subprogram(%0 : i32) {
+  // CHECK: call void @llvm.dbg.value(metadata i32 %[[ARG]], metadata ![[VAR_LOC:[0-9]+]], metadata !DIExpression()), !dbg ![[DBG_LOC0:.*]]
+  llvm.intr.dbg.value #di_local_variable = %0 : i32 loc(fused<#di_subprogram>[#loc])
+  llvm.return
+}
+
+// CHECK: ![[FILE:.*]] = !DIFile(filename: "foo.mlir", directory: "/test/")
+// CHECK-DAG: ![[FUNC:.*]] = distinct !DISubprogram(name: "func", scope: ![[FILE]]
+// CHECK-DAG: ![[VAR_LOC]] = !DILocalVariable(name: "a", scope: ![[FUNC]], file: ![[FILE]]
