@@ -5723,7 +5723,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (Arg *A = Args.getLastArg(options::OPT_mcmodel_EQ)) {
     StringRef CM = A->getValue();
     bool Ok = false;
-    if (Triple.isOSAIX() && CM == "medium") {
+    if (Triple.isOSAIX() && (CM == "medium" || CM == "large")) {
       CM = "large";
       Ok = true;
     }
