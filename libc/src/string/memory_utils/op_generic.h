@@ -87,6 +87,9 @@ template <class T, size_t N>
 struct array_size<cpp::array<T, N>> : cpp::integral_constant<size_t, N> {};
 template <typename T> constexpr size_t array_size_v = array_size<T>::value;
 
+// Size of a cacheline for software prefetching
+static constexpr size_t kCachelineSize = 64;
+
 // Generic operations for the above type categories.
 
 template <typename T> T load(CPtr src) {
@@ -167,18 +170,18 @@ template <typename T> struct Memset {
   template <size_t prefetch_distance, size_t prefetch_degree>
   LIBC_INLINE static void loop_and_tail_prefetch(Ptr dst, uint8_t value,
                                                  size_t count) {
-    Memset<uint512_t>::block(dst, value);
-    Memset<uint256_t>::block(dst + 64, value);
+    Memset<64>::block(dst, value);
+    Memset<32>::block(dst + 64, value);
     size_t offset = 96;
-    while (offset + prefetch_degree + kSize <= count) {
+    while (offset + prefetch_degree + SIZE <= count) {
       for (size_t i = 0; i < prefetch_degree / kCachelineSize; ++i)
         PrefetchW(dst + offset + prefetch_distance + kCachelineSize * i);
-      for (size_t i = 0; i < prefetch_degree; i += kSize, offset += kSize)
+      for (size_t i = 0; i < prefetch_degree; i += SIZE, offset += SIZE)
         block(dst + offset, value);
     }
-    while (offset + kSize < count) {
+    while (offset + SIZE < count) {
       block(dst + offset, value);
-      offset += kSize;
+      offset += SIZE;
     }
     tail(dst, value, count);
   }
