@@ -1332,4 +1332,26 @@ struct Bar {};
 static_assert(is_incomplete_v<Foo>, "Foo is incomplete");
 static_assert(!is_incomplete_v<Bar>, "Bar is defined");
 
+TEST(STLExtrasTest, ToUnderlying) {
+  enum E {
+    A1 = 0, B1 = -1
+  };
+  static_assert(to_underlying(A1) == 0);
+  static_assert(to_underlying(B1) == -1);
+
+  enum E2 : unsigned char {
+    A2 = 0, B2
+  };
+  static_assert(std::is_same_v<unsigned char, decltype(to_underlying(A2))>);
+  static_assert(to_underlying(A2) == 0);
+  static_assert(to_underlying(B2) == 1);
+
+  enum class E3 {
+    A3 = -1, B3
+  };
+  static_assert(std::is_same_v<int, decltype(to_underlying(E3::A3))>);
+  static_assert(to_underlying(E3::A3) == -1);
+  static_assert(to_underlying(E3::B3) == 0);
+}
+
 } // namespace
