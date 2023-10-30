@@ -501,8 +501,7 @@ define i64 @zext_nneg_i32_to_i64(i32 %a) nounwind {
 ;
 ; RV64-LABEL: zext_nneg_i32_to_i64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    slli a0, a0, 32
-; RV64-NEXT:    srli a0, a0, 32
+; RV64-NEXT:    sext.w a0, a0
 ; RV64-NEXT:    ret
   %1 = zext nneg i32 %a to i64
   ret i64 %1

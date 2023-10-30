@@ -3524,8 +3524,20 @@ void SelectionDAGBuilder::visitZExt(const User &I) {
   // ZExt cannot be a no-op cast because sizeof(src) < sizeof(dest).
   // ZExt also can't be a cast to bool for same reason. So, nothing much to do
   SDValue N = getValue(I.getOperand(0));
-  EVT DestVT = DAG.getTargetLoweringInfo().getValueType(DAG.getDataLayout(),
-                                                        I.getType());
+  auto &TLI = DAG.getTargetLoweringInfo();
+  EVT DestVT = TLI.getValueType(DAG.getDataLayout(), I.getType());
+
+  // Since we don't yet have a representation of zext nneg in SDAG or MI,
+  // eagerly use the information to canonicalize towards sign_extend if
+  // that is the target's preference.  TODO: Add nneg support to the
+  // SDAG and MI representations.
+  if (auto *PNI = dyn_cast<PossiblyNonNegInst>(&I);
+      PNI && PNI->hasNonNeg() &&
+      TLI.isSExtCheaperThanZExt(N.getValueType(), DestVT)) {
+    setValue(&I, DAG.getNode(ISD::SIGN_EXTEND, getCurSDLoc(), DestVT, N));
+    return;
+  }
+
   setValue(&I, DAG.getNode(ISD::ZERO_EXTEND, getCurSDLoc(), DestVT, N));
 }
 
