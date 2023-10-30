@@ -1,4 +1,4 @@
-; RUN: opt -S -enable-merge-func2 -passes=mergefunc-ignoring-const %s -o - | FileCheck %s
+; RUN: opt -S -enable-aggressive-mergefunc-ignoringconst -passes=mergefunc-ignoring-const %s -o - | FileCheck %s
 
 %4 = type opaque
 %10 = type opaque

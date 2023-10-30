@@ -54,7 +54,7 @@ int FunctionComparatorIgnoringConst::cmpBasicBlocksIgnoringConsts(
         // When a set for (instruction, operand) index pairs is given, we only
         // ignore constants located at such indices. Otherwise, we precisely
         // compare the operands.
-        if (InstOpndIndex && !InstOpndIndex->count(std::make_pair(index, i))) {
+        if (InstOpndIndex && !InstOpndIndex->count(std::make_pair(Index, i))) {
           Value *OpL = InstL->getOperand(i);
           Value *OpR = InstR->getOperand(i);
           if (int Res = cmpValues(OpL, OpR))
@@ -67,7 +67,7 @@ int FunctionComparatorIgnoringConst::cmpBasicBlocksIgnoringConsts(
                         InstR->getOperand(i)->getType()) == 0);
       }
     }
-    ++index;
+    ++Index;
     ++InstL, ++InstR;
   } while (InstL != InstLE && InstR != InstRE);
 
@@ -82,7 +82,7 @@ int FunctionComparatorIgnoringConst::cmpBasicBlocksIgnoringConsts(
 int FunctionComparatorIgnoringConst::compareIgnoringConsts(
     const std::set<std::pair<int, int>> *InstOpndIndex) {
   beginCompare();
-  index = 0;
+  Index = 0;
 
   if (int Res = compareSignature())
     return Res;

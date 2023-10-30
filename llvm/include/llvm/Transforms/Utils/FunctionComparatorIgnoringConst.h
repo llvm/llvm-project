@@ -28,7 +28,7 @@
 namespace llvm {
 
 /// FunctionComparatorIgnoringConst - Compares two functions to determine
-/// whether or not they will generate machine code with the same behavior.
+/// whether or not they match when certain constants are ignored.
 class FunctionComparatorIgnoringConst : public FunctionComparator {
 public:
   FunctionComparatorIgnoringConst(const Function *F1, const Function *F2,
@@ -50,8 +50,8 @@ public:
   }
 
 private:
-  // Scratch index for instruction in order during cmpOperandsIgnoringConsts.
-  int index = 0;
+  /// Scratch index for instruction in order during cmpOperandsIgnoringConsts.
+  int Index = 0;
 };
 
 } // end namespace llvm

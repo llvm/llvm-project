@@ -20,22 +20,18 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/IPO/MergeFunctionsIgnoringConst.h"
-// #include "llvm/Transforms/Utils/GlobalMergeFunctions.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
-#include "llvm/ADT/Statistic.h"
-#include "llvm/Transforms/Utils/FunctionComparatorIgnoringConst.h"
-// #include "llvm/ADT/Triple.h"
-#include "llvm/Analysis/ObjCARCUtil.h"
 #include "llvm/ADT/StableHashing.h"
+#include "llvm/ADT/Statistic.h"
+#include "llvm/Analysis/ObjCARCUtil.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfoMetadata.h"
-// #include "llvm/IR/GlobalPtrAuthInfo.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Instructions.h"
@@ -53,6 +49,7 @@
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO.h"
+#include "llvm/Transforms/Utils/FunctionComparatorIgnoringConst.h"
 #include <vector>
 
 using namespace llvm;
@@ -62,9 +59,9 @@ using namespace llvm;
 STATISTIC(NumFunctionsMergedIgnoringConst, "Number of functions merged");
 STATISTIC(NumThunksWrittenIgnoringConst, "Number of thunks generated");
 
-static cl::opt<bool>
-    EnableMergeFunc2("enable-merge-func2", cl::init(false), cl::Hidden,
-                     cl::desc("Enable more aggressive function merger"));
+static cl::opt<bool> EnableAggressiveMergeFunc(
+    "enable-aggressive-mergefunc-ignoringconst", cl::init(false), cl::Hidden,
+    cl::desc("Enable more aggressive function merger"));
 
 static cl::opt<unsigned> NumFunctionsIgnoringConstForSanityCheck(
     "mergefunc-ignoringconst-sanity",
@@ -122,19 +119,19 @@ bool isEligibleInstrunctionForConstantSharing(const Instruction *I) {
   case Instruction::Call:
     return true;
   default: {
-    if (EnableMergeFunc2 && I->getOpcode() == Instruction::Invoke)
+    if (EnableAggressiveMergeFunc && I->getOpcode() == Instruction::Invoke)
       return true;
     return false;
   }
   }
 }
 
-/// Returns true if the \opIdx operand of \p CI is the callee operand.
-static bool isCalleeOperand(const CallBase *CI, unsigned opIdx) {
-  return &CI->getCalledOperandUse() == &CI->getOperandUse(opIdx);
+/// Returns true if the \OpIdx operand of \p CI is the callee operand.
+static bool isCalleeOperand(const CallBase *CI, unsigned OpIdx) {
+  return &CI->getCalledOperandUse() == &CI->getOperandUse(OpIdx);
 }
 
-static bool canParameterizeCallOperand(const CallBase *CI, unsigned opIdx) {
+static bool canParameterizeCallOperand(const CallBase *CI, unsigned OpIdx) {
   if (CI->isInlineAsm())
     return false;
   Function *Callee = CI->getCalledOperand()
@@ -148,7 +145,7 @@ static bool canParameterizeCallOperand(const CallBase *CI, unsigned opIdx) {
     if (Callee->getName().startswith("objc_msgSend$"))
       return false;
   }
-  if (isCalleeOperand(CI, opIdx) &&
+  if (isCalleeOperand(CI, OpIdx) &&
       CI->getOperandBundle(LLVMContext::OB_ptrauth).has_value()) {
     // The operand is the callee and it has already been signed. Ignore this
     // because we cannot add another ptrauth bundle to the call instruction.
@@ -182,11 +179,12 @@ namespace {
 /// parameter. The original functions are replaced by thunks which call the
 /// merged function with the specific argument constants.
 ///
-class MergeFuncIgnoringConstImpl { // : public ModulePass {
+class MergeFuncIgnoringConstImpl {
 public:
-  MergeFuncIgnoringConstImpl(bool ptrAuthEnabled, unsigned ptrAuthKey, std::string suffix)
-      : FnTree(FunctionNodeCmp(&GlobalNumbers)), ptrAuthOptionsSet(true),
-        ptrAuthEnabled(ptrAuthEnabled), ptrAuthKey(ptrAuthKey), mergeFuncSuffix(suffix) {}
+  MergeFuncIgnoringConstImpl(bool PtrAuthEnabled, unsigned PtrAuthKey,
+                             std::string Suffix)
+      : FnTree(FunctionNodeCmp(&GlobalNumbers)), PtrAuthEnabled(PtrAuthEnabled),
+        PtrAuthKey(PtrAuthKey), MergeFuncSuffix(Suffix) {}
 
   bool runImpl(Module &M);
 
@@ -234,8 +232,8 @@ private:
   ///
   struct FunctionEntry {
     FunctionEntry(Function *F, FnTreeType::iterator I)
-        : F(F), Next(nullptr), numUnhandledCallees(0), TreeIter(I),
-          isMerged(false) {}
+        : F(F), Next(nullptr), NumUnhandledCallees(0), TreeIter(I),
+          IsMerged(false) {}
 
     /// Back-link to the function.
     AssertingVH<Function> F;
@@ -248,14 +246,14 @@ private:
     /// This is only valid in the first entry of an equivalence class. The
     /// counts of all functions in an equivalence class are accumulated in the
     /// first entry.
-    int numUnhandledCallees;
+    int NumUnhandledCallees;
 
     /// The iterator of the function's equivalence class in the FnTree.
     /// It's FnTree.end() if the function is not in an equivalence class.
     FnTreeType::iterator TreeIter;
 
     /// True if this function is already a thunk, calling the merged function.
-    bool isMerged;
+    bool IsMerged;
   };
 
   /// Describes an operator of a specific instruction.
@@ -319,23 +317,23 @@ private:
     /// All uses of the parameter in the merged function.
     SmallVector<OpLocation, 16> Uses;
 
-    /// The discriminator for pointer signing.
+    /// The Discriminator for pointer signing.
     /// Only not null if needsPointerSigning is true.
-    ConstantInt *discriminator = nullptr;
+    ConstantInt *Discriminator = nullptr;
 
     /// True if the value is a callee function, which needs to be signed if
     /// passed as a parameter.
-    bool needsPointerSigning = false;
+    bool NeedsPointerSigning = false;
 
     /// Checks if this parameter can be used to describe an operand in all
     /// functions of the equivalence class. Returns true if all values match
     /// the specific instruction operands in all functions.
     bool matches(const FunctionInfos &FInfos, unsigned OpIdx,
-                 bool ptrAuthEnabled) const {
+                 bool PtrAuthEnabled) const {
       unsigned NumFuncs = FInfos.size();
       assert(Values.size() == NumFuncs);
-      if (ptrAuthEnabled &&
-          needsPointerSigning != FInfos[0].needsPointerSigning(OpIdx)) {
+      if (PtrAuthEnabled &&
+          NeedsPointerSigning != FInfos[0].needsPointerSigning(OpIdx)) {
         return false;
       }
       for (unsigned Idx = 0; Idx < NumFuncs; ++Idx) {
@@ -347,10 +345,10 @@ private:
       return true;
     }
 
-    /// Computes the discriminator for pointer signing.
+    /// Computes the Discriminator for pointer signing.
     void computeDiscriminator(LLVMContext &Context) {
-      assert(needsPointerSigning);
-      assert(!discriminator);
+      assert(NeedsPointerSigning);
+      assert(!Discriminator);
 
       /// Get a hash from the concatenated function names.
       /// The hash is deterministic, because the order of values depends on the
@@ -365,13 +363,13 @@ private:
       }
       uint64_t rawHash = stable_hash_combine_string(concatenatedCalleeNames);
       IntegerType *discrTy = Type::getInt64Ty(Context);
-      discriminator = ConstantInt::get(discrTy, (rawHash % 0xFFFF) + 1);
+      Discriminator = ConstantInt::get(discrTy, (rawHash % 0xFFFF) + 1);
     }
   };
 
   using ParamInfos = SmallVector<ParamInfo, 16>;
 
-  Module *module = nullptr;
+  Module *CurrentModule = nullptr;
 
   GlobalNumberState GlobalNumbers;
 
@@ -385,21 +383,18 @@ private:
 
   ValueMap<Function *, FunctionEntry *> FuncEntries;
 
-  // Maps a function-pointer / discriminator pair to a corresponding global in
+  // Maps a function-pointer / Discriminator pair to a corresponding global in
   // the llvm.ptrauth section.
   // This map is used as a cache to not create ptrauth globals twice.
-  DenseMap<std::pair<Constant *, ConstantInt *>, Constant *> ptrAuthGlobals;
-
-  /// If true, ptrAuthEnabled and ptrAuthKey are valid.
-  bool ptrAuthOptionsSet = false;
+  DenseMap<std::pair<Constant *, ConstantInt *>, Constant *> PtrAuthGlobals;
 
   /// True if the architecture has pointer authentication enabled.
-  bool ptrAuthEnabled = false;
+  bool PtrAuthEnabled = false;
 
   /// The key for pointer authentication.
-  unsigned ptrAuthKey = 0;
+  unsigned PtrAuthKey = 0;
 
-  std::string mergeFuncSuffix = ".Tm";
+  std::string MergeFuncSuffix = ".Tm";
 
   FunctionEntry *getEntry(Function *F) const { return FuncEntries.lookup(F); }
 
@@ -408,7 +403,7 @@ private:
       return true;
     }
     assert(!FE->Next);
-    assert(FE->numUnhandledCallees == 0);
+    assert(FE->NumUnhandledCallees == 0);
     return false;
   }
 
@@ -416,7 +411,7 @@ private:
   /// Returns true, if sanity check has been passed, and false if failed.
   bool doSanityCheck(std::vector<WeakTrackingVH> &Worklist);
 
-  /// Updates the numUnhandledCallees of all user functions of the equivalence
+  /// Updates the NumUnhandledCallees of all user functions of the equivalence
   /// class containing \p FE by \p Delta.
   void updateUnhandledCalleeCount(FunctionEntry *FE, int Delta);
 
@@ -435,7 +430,7 @@ private:
                          ParamInfos &Params, unsigned maxParams);
 
   void replaceCallWithAddedPtrAuth(CallInst *origCall, Value *newCallee,
-                                   ConstantInt *discriminator);
+                                   ConstantInt *Discriminator);
 
   void mergeWithParams(const FunctionInfos &FInfos, ParamInfos &Params);
   static void dumpMergeInfo(const FunctionInfos &FInfos, unsigned);
@@ -447,30 +442,25 @@ private:
 
   bool isPtrAuthEnabled() const {
     // TODO: fix pointer authentication
-    // assert(ptrAuthOptionsSet);
-    return ptrAuthEnabled;
+    return PtrAuthEnabled;
   }
 
   ConstantInt *getPtrAuthKey() {
     // TODO: fix pointer authentication
-    // assert(isPtrAuthEnabled());
-    return ConstantInt::get(Type::getInt32Ty(module->getContext()), ptrAuthKey);
+    return ConstantInt::get(Type::getInt32Ty(CurrentModule->getContext()),
+                            PtrAuthKey);
   }
 
   /// Returns the value of function \p FuncIdx, and signes it if required.
   Constant *getSignedValue(const ParamInfo &PI, unsigned FuncIdx) {
     Constant *value = PI.Values[FuncIdx];
-    if (!PI.needsPointerSigning)
+    if (!PI.NeedsPointerSigning)
       return value;
 
-    auto lookupKey = std::make_pair(value, PI.discriminator);
-    Constant *&ptrAuthGlobal = ptrAuthGlobals[lookupKey];
+    auto lookupKey = std::make_pair(value, PI.Discriminator);
+    Constant *&ptrAuthGlobal = PtrAuthGlobals[lookupKey];
     if (!ptrAuthGlobal) {
-#if 0
-      ptrAuthGlobal = GlobalPtrAuthInfo::create(
-          *module, value, getPtrAuthKey(),
-          ConstantInt::get(PI.discriminator->getType(), 0), PI.discriminator);
-#endif
+      // TODO: fix pointer authentication
     }
     return ptrAuthGlobal;
   }
@@ -664,19 +654,9 @@ bool MergeFuncIgnoringConstImpl::runImpl(Module &M) {
   if (IgnoringConstMergeThreshold == 0)
     return false;
 
-  module = &M;
+  CurrentModule = &M;
 
-#if 0
   // TODO: fix pointer authentication
-  if (!ptrAuthOptionsSet) {
-    // If invoked from IRGen in the compiler, those options are already set.
-    // If invoked from swift-llvm-opt, derive the options from the target triple.
-    Triple triple(M.getTargetTriple());
-    ptrAuthEnabled = (triple.getSubArch() == Triple::AArch64SubArch_arm64e);
-    ptrAuthKey = (unsigned)clang::PointerAuthSchema::ARM8_3Key::ASIA;
-    ptrAuthOptionsSet = true;
-  }
-#endif
 
   bool Changed = false;
 
@@ -769,14 +749,14 @@ bool MergeFuncIgnoringConstImpl::runImpl(Module &M) {
     // Check if there are any leaf functions at all.
     bool LeafFound = false;
     for (FunctionEntry *ToMerge : FuncsToMerge) {
-      if (ToMerge->numUnhandledCallees == 0)
+      if (ToMerge->NumUnhandledCallees == 0)
         LeafFound = true;
     }
     for (FunctionEntry *ToMerge : FuncsToMerge) {
       if (isInEquivalenceClass(ToMerge)) {
         // Only merge leaf functions (or all functions if all functions are in
         // a call cycle).
-        if (ToMerge->numUnhandledCallees == 0 || !LeafFound) {
+        if (ToMerge->NumUnhandledCallees == 0 || !LeafFound) {
           updateUnhandledCalleeCount(ToMerge, -1);
           Changed |= tryMergeEquivalenceClass(ToMerge);
         } else {
@@ -791,7 +771,7 @@ bool MergeFuncIgnoringConstImpl::runImpl(Module &M) {
   FnTree.clear();
   GlobalNumbers.clear();
   FuncEntries.clear();
-  ptrAuthGlobals.clear();
+  PtrAuthGlobals.clear();
 
   return Changed;
 }
@@ -806,7 +786,7 @@ void MergeFuncIgnoringConstImpl::updateUnhandledCalleeCount(FunctionEntry *FE,
         if (CallerFE && CallerFE->TreeIter != FnTree.end()) {
           // Accumulate the count in the first entry of the equivalence class.
           FunctionEntry *Head = CallerFE->TreeIter->First;
-          Head->numUnhandledCallees += Delta;
+          Head->NumUnhandledCallees += Delta;
         }
       }
     }
@@ -821,7 +801,7 @@ bool MergeFuncIgnoringConstImpl::tryMergeEquivalenceClass(
   FunctionEntry *FE = FirstInClass;
   do {
     FInfos.push_back(FunctionInfo(FE->F));
-    FE->isMerged = true;
+    FE->IsMerged = true;
     FE = FE->Next;
   } while (FE);
   assert(FInfos.size() >= 2);
@@ -951,7 +931,8 @@ bool MergeFuncIgnoringConstImpl::constsDiffer(const FunctionInfos &FInfos,
     if (auto *C = dyn_cast<Constant>(Op)) {
       if (!CommonConst) {
         CommonConst = C;
-      } else if (EnableMergeFunc2 && isa<ConstantPointerNull>(CommonConst) &&
+      } else if (EnableAggressiveMergeFunc &&
+                 isa<ConstantPointerNull>(CommonConst) &&
                  isa<ConstantPointerNull>(C)) {
         // if both are null pointer, and if they are different constants
         // due to type, still treat them as the same.
@@ -997,7 +978,7 @@ bool MergeFuncIgnoringConstImpl::tryMapToParameter(FunctionInfos &FInfos,
         FI.NumParamsNeeded += 1;
     }
     if (isPtrAuthEnabled())
-      Matching->needsPointerSigning = FInfos[0].needsPointerSigning(OpIdx);
+      Matching->NeedsPointerSigning = FInfos[0].needsPointerSigning(OpIdx);
   }
   /// Remember where the parameter is needed when we build our merged function.
   Matching->Uses.push_back({FInfos[0].CurrentInst, OpIdx});
@@ -1005,13 +986,13 @@ bool MergeFuncIgnoringConstImpl::tryMapToParameter(FunctionInfos &FInfos,
 }
 
 /// Copy \p origCall with a \p newCalle and add a ptrauth bundle with \p
-/// discriminator.
+/// Discriminator.
 void MergeFuncIgnoringConstImpl::replaceCallWithAddedPtrAuth(
-    CallInst *origCall, Value *newCallee, ConstantInt *discriminator) {
+    CallInst *origCall, Value *newCallee, ConstantInt *Discriminator) {
   SmallVector<llvm::OperandBundleDef, 4> bundles;
   origCall->getOperandBundlesAsDefs(bundles);
   ConstantInt *key = getPtrAuthKey();
-  llvm::Value *bundleArgs[] = {key, discriminator};
+  llvm::Value *bundleArgs[] = {key, Discriminator};
   bundles.emplace_back("ptrauth", bundleArgs);
 
   SmallVector<llvm::Value *, 4> copiedArgs;
@@ -1079,7 +1060,7 @@ void MergeFuncIgnoringConstImpl::mergeWithParams(const FunctionInfos &FInfos,
 
   // Create the new function.
   Function *NewFunction = Function::Create(funcType, FirstF->getLinkage(),
-                                           FirstF->getName() + mergeFuncSuffix);
+                                           FirstF->getName() + MergeFuncSuffix);
   if (auto *SP = FirstF->getSubprogram())
     NewFunction->setSubprogram(SP);
   NewFunction->copyAttributesFrom(FirstF);
@@ -1116,7 +1097,7 @@ void MergeFuncIgnoringConstImpl::mergeWithParams(const FunctionInfos &FInfos,
     const ParamInfo &PI = Params[paramIdx];
     Argument *NewArg = NewFunction->getArg(numOrigArgs + paramIdx);
 
-    if (!PI.needsPointerSigning) {
+    if (!PI.NeedsPointerSigning) {
       for (const OpLocation &OL : PI.Uses) {
         OL.I->setOperand(OL.OpIndex, NewArg);
       }
@@ -1135,12 +1116,12 @@ void MergeFuncIgnoringConstImpl::mergeWithParams(const FunctionInfos &FInfos,
   // be replaced.
   for (unsigned paramIdx = 0; paramIdx < Params.size(); ++paramIdx) {
     ParamInfo &PI = Params[paramIdx];
-    if (PI.needsPointerSigning) {
+    if (PI.NeedsPointerSigning) {
       PI.computeDiscriminator(NewFunction->getContext());
       for (const OpLocation &OL : PI.Uses) {
         auto *origCall = cast<CallInst>(OL.I);
         Argument *newCallee = NewFunction->getArg(numOrigArgs + paramIdx);
-        replaceCallWithAddedPtrAuth(origCall, newCallee, PI.discriminator);
+        replaceCallWithAddedPtrAuth(origCall, newCallee, PI.Discriminator);
       }
     }
   }
@@ -1177,14 +1158,14 @@ void MergeFuncIgnoringConstImpl::removeEquivalenceClassFromTree(
 
   FnTreeType::iterator Iter = FE->TreeIter;
   FunctionEntry *Unlink = Iter->First;
-  Unlink->numUnhandledCallees = 0;
+  Unlink->NumUnhandledCallees = 0;
   while (Unlink) {
     LLVM_DEBUG(dbgs() << "    remove from tree: " << Unlink->F->getName()
                       << '\n');
-    if (!Unlink->isMerged)
+    if (!Unlink->IsMerged)
       Deferred.emplace_back(Unlink->F);
     Unlink->TreeIter = FnTree.end();
-    assert(Unlink->numUnhandledCallees == 0);
+    assert(Unlink->NumUnhandledCallees == 0);
     FunctionEntry *NextEntry = Unlink->Next;
     Unlink->Next = nullptr;
     Unlink = NextEntry;
@@ -1203,10 +1184,10 @@ Value *createCast(IRBuilder<> &Builder, Value *V, Type *DestTy) {
     Value *Result = UndefValue::get(DestTy);
     for (unsigned int I = 0, E = SrcTy->getStructNumElements(); I < E; ++I) {
       Value *Element =
-          createCast(Builder, Builder.CreateExtractValue(V, makeArrayRef(I)),
+          createCast(Builder, Builder.CreateExtractValue(V, ArrayRef(I)),
                      DestTy->getStructElementType(I));
 
-      Result = Builder.CreateInsertValue(Result, Element, makeArrayRef(I));
+      Result = Builder.CreateInsertValue(Result, Element, ArrayRef(I));
     }
     return Result;
   }
@@ -1219,10 +1200,10 @@ Value *createCast(IRBuilder<> &Builder, Value *V, Type *DestTy) {
       Value *Result = UndefValue::get(DestTy);
       for (unsigned int I = 0, E = SrcAT->getNumElements(); I < E; ++I) {
         Value *Element =
-            createCast(Builder, Builder.CreateExtractValue(V, makeArrayRef(I)),
+            createCast(Builder, Builder.CreateExtractValue(V, ArrayRef(I)),
                        DestAT->getElementType());
 
-        Result = Builder.CreateInsertValue(Result, Element, makeArrayRef(I));
+        Result = Builder.CreateInsertValue(Result, Element, ArrayRef(I));
       }
       return Result;
     }
@@ -1410,7 +1391,8 @@ bool MergeFuncIgnoringConstImpl::replaceDirectCallers(Function *Old,
 
 PreservedAnalyses MergeFuncIgnoringConstPass::run(Module &M,
                                                   ModuleAnalysisManager &MAM) {
-  if (MergeFuncIgnoringConstImpl(ptrAuthEnabled, ptrAuthKey, mergeFuncSuffix).runImpl(M))
+  if (MergeFuncIgnoringConstImpl(PtrAuthEnabled, PtrAuthKey, MergeFuncSuffix)
+          .runImpl(M))
     return PreservedAnalyses::none();
   return PreservedAnalyses::all();
 }
