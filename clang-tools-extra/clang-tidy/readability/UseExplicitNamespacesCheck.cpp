@@ -25,17 +25,20 @@ bool isTransparentNamespace(const NamespaceDecl *decl) {
   return decl->isInline() || decl->isAnonymousNamespace();
 }
 
-std::string getIdentifierString(const IdentifierInfo *identifier) {
-  return (identifier) ? identifier->getNameStart() : "(nullptr)";
+StringRef getIdentifierString(const IdentifierInfo *identifier) {
+  return identifier ? identifier->getName() : "(nullptr)";
 }
 
-std::string getMatchContext(const char *match, const DynTypedNode &node) {
-  std::stringstream out;
-  out << match << "(" << node.getNodeKind().asStringRef().str() << ")";
+StringRef getMatchContext(StringRef match, const DynTypedNode &node) {
+  llvm::SmallString<128> out;
+  out.append(match);
+  out.append("(");
+  out.append(node.getNodeKind().asStringRef());
+  out.append(")");
   return out.str();
 }
 
-std::string trueFalseString(bool value) { return value ? "true" : "false"; }
+StringRef trueFalseString(bool value) { return value ? "true" : "false"; }
 
 UseExplicitNamespacesCheck::UseExplicitNamespacesCheck(
     StringRef Name, ClangTidyContext *Context)
@@ -134,7 +137,7 @@ IdentifierInfo *UseExplicitNamespacesCheck::getTypeNestedNameIdentfierRecursive(
     auto templateDecl = type->castAs<TemplateSpecializationType>()
                             ->getTemplateName()
                             .getAsTemplateDecl();
-    return (templateDecl) ? templateDecl->getIdentifier() : nullptr;
+    return templateDecl ? templateDecl->getIdentifier() : nullptr;
   }
   case Type::Typedef:
     nestedTypeInfo += " Typedef";
@@ -263,24 +266,24 @@ std::string makeNestedNameSpecifierLocString(
     UseExplicitNamespacesCheck *thisCheck,
     std::vector<QualifierScopeIdentifier> &qualifierVector) {
   std::ostringstream out;
-  std::for_each(qualifierVector.begin(), qualifierVector.end(),
-                [&out, thisCheck](const QualifierScopeIdentifier &qualifier) {
-                  auto specifier =
-                      qualifier.getNestedName().getNestedNameSpecifier();
-                  auto kind = specifier->getKind();
-                  out << "\t\t" << getNestNamespaceSpecifierKindString(kind)
-                      << " " << getIdentifierString(qualifier.getIdentifier());
-                  if (kind == NestedNameSpecifier::TypeSpec) {
-                    std::string info;
-                    thisCheck->getTypeNestedNameIdentfierRecursive(
-                        specifier->getAsType(), info);
-                    out << " - type info" << info;
-                  }
-                  if (qualifier.getBlocksChange()) {
-                    out << " (blocks change)";
-                  }
-                  out << "\n";
-                });
+  std::for_each(
+      qualifierVector.begin(), qualifierVector.end(),
+      [&out, thisCheck](const QualifierScopeIdentifier &qualifier) {
+        auto specifier = qualifier.getNestedName().getNestedNameSpecifier();
+        auto kind = specifier->getKind();
+        out << "\t\t" << getNestNamespaceSpecifierKindString(kind) << " "
+            << getIdentifierString(qualifier.getIdentifier()).str();
+        if (kind == NestedNameSpecifier::TypeSpec) {
+          std::string info;
+          thisCheck->getTypeNestedNameIdentfierRecursive(specifier->getAsType(),
+                                                         info);
+          out << " - type info" << info;
+        }
+        if (qualifier.getBlocksChange()) {
+          out << " (blocks change)";
+        }
+        out << "\n";
+      });
   return out.str();
 }
 
@@ -327,7 +330,8 @@ getDeclContextVector(const DeclContext *context) {
       break;
     case Decl::Namespace:
       namespacesStarted = true;
-    [[fallthrough]] default:
+      [[fallthrough]];
+    default:
       if (namespacesStarted && kind != Decl::Namespace) {
         std::cout << "processing namepsace vector after namespace "
                      "we have "
@@ -344,7 +348,7 @@ const DeclContext *findDeclContextRecursive(ParentMapContext &parentMapContext,
                                             const DynTypedNode &node) {
   auto decl = node.get<Decl>();
   const DeclContext *nodeAsContext =
-      (decl) ? dyn_cast<DeclContext>(decl) : nullptr;
+      decl ? dyn_cast<DeclContext>(decl) : nullptr;
   if (nodeAsContext) {
     switch (nodeAsContext->getDeclKind()) {
     case Decl::TranslationUnit:
@@ -495,7 +499,8 @@ void UseExplicitNamespacesCheck::processTransform(
                makeDeclContextVectorString(targetContextVector) +
                "\texplicit context\n" +
                makeNestedNameSpecifierLocString(this, explicitQualifierVector) +
-               "\tusing shadow\n\t\t" + trueFalseString(usingShadow) + "\n";
+               "\tusing shadow\n\t\t" + trueFalseString(usingShadow).str() +
+               "\n";
   }
   if (!matchesNamespaceLimits(targetContextVector)) {
     if (diagnosticLevel >= 2) {
@@ -540,7 +545,7 @@ void UseExplicitNamespacesCheck::processTransform(
           if (diagnosticLevel >= 2) {
             std::stringstream out;
             out << "failed to find context " << context->getDeclKindName()
-                << " named " << getIdentifierString(contextId)
+                << " named " << getIdentifierString(contextId).str()
                 << " target decl kind is " << target->getDeclKindName() << "\n";
             diagOut(sourcePosition, out.str() + infoDump);
           }
@@ -789,7 +794,7 @@ void UseExplicitNamespacesCheck::check(const MatchFinder::MatchResult &Result) {
     auto matchedNode = DynTypedNode::create(*expressionRef);
     auto currentContext = findDeclContextRecursive(
         Result.Context->getParentMapContext(), matchedNode);
-    auto matchContext = getMatchContext("DeclRefExpr", matchedNode);
+    auto matchContext = getMatchContext("DeclRefExpr", matchedNode).str();
     auto foundDecl = expressionRef->getFoundDecl();
     auto foundDeclName = foundDecl->getNameAsString();
     bool notOperator = foundDeclName.size() <= 8 ||
@@ -811,29 +816,30 @@ void UseExplicitNamespacesCheck::check(const MatchFinder::MatchResult &Result) {
     auto currentContext = findDeclContextRecursive(
         Result.Context->getParentMapContext(), matchedNode);
     processTypePieces(newExpr->getAllocatedTypeSourceInfo(), currentContext,
-                      getMatchContext("CXXNewExpr", matchedNode));
+                      getMatchContext("CXXNewExpr", matchedNode).str());
   } else if (auto tempObjectExpr =
                  Result.Nodes.getNodeAs<CXXTemporaryObjectExpr>(
                      "CXXTemporaryObjectExpr")) {
     auto matchedNode = DynTypedNode::create(*tempObjectExpr);
     auto currentContext = findDeclContextRecursive(
         Result.Context->getParentMapContext(), matchedNode);
-    processTypePieces(tempObjectExpr->getTypeSourceInfo(), currentContext,
-                      getMatchContext("CXXTemporaryObjectExpr", matchedNode));
+    processTypePieces(
+        tempObjectExpr->getTypeSourceInfo(), currentContext,
+        getMatchContext("CXXTemporaryObjectExpr", matchedNode).str());
   } else if (auto declaratorDecl =
                  Result.Nodes.getNodeAs<DeclaratorDecl>("DeclaratorDecl")) {
     auto matchedNode = DynTypedNode::create(*declaratorDecl);
     auto currentContext = findDeclContextRecursive(
         Result.Context->getParentMapContext(), matchedNode);
     processTypePieces(declaratorDecl->getTypeSourceInfo(), currentContext,
-                      getMatchContext("DeclaratorDecl", matchedNode));
+                      getMatchContext("DeclaratorDecl", matchedNode).str());
   } else if (auto typedefNameDecl =
                  Result.Nodes.getNodeAs<TypedefNameDecl>("TypedefNameDecl")) {
     auto matchedNode = DynTypedNode::create(*typedefNameDecl);
     auto currentContext = findDeclContextRecursive(
         Result.Context->getParentMapContext(), matchedNode);
     processTypePieces(typedefNameDecl->getTypeSourceInfo(), currentContext,
-                      getMatchContext("TypedefNameDecl", matchedNode));
+                      getMatchContext("TypedefNameDecl", matchedNode).str());
   }
 }
 
