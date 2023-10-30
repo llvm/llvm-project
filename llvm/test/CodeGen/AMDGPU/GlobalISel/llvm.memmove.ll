@@ -12,11 +12,12 @@ define amdgpu_cs void @memmove_p1i8(ptr addrspace(1) %dst, ptr addrspace(1) %src
 ; LOOP-NEXT:    s_xor_b64 s[4:5], exec, s[0:1]
 ; LOOP-NEXT:    s_cbranch_execz .LBB0_3
 ; LOOP-NEXT:  ; %bb.1: ; %copy_forward
-; LOOP-NEXT:    s_mov_b64 s[0:1], 0
+; LOOP-NEXT:    s_mov_b64 s[6:7], 0
 ; LOOP-NEXT:    s_mov_b32 s2, 0
 ; LOOP-NEXT:    s_mov_b32 s3, 0xf000
-; LOOP-NEXT:    v_mov_b32_e32 v5, s1
-; LOOP-NEXT:    v_mov_b32_e32 v4, s0
+; LOOP-NEXT:    s_mov_b64 s[0:1], 0
+; LOOP-NEXT:    v_mov_b32_e32 v4, s6
+; LOOP-NEXT:    v_mov_b32_e32 v5, s7
 ; LOOP-NEXT:  .LBB0_2: ; %copy_forward_loop
 ; LOOP-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; LOOP-NEXT:    v_add_i32_e32 v6, vcc, v2, v4
