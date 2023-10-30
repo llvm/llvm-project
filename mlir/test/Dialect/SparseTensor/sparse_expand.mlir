@@ -4,7 +4,8 @@
 // RUN:   FileCheck %s --check-prefix=CHECK-SPARSE
 // RUN: mlir-opt %s --linalg-generalize-named-ops \
 // RUN:             --linalg-fuse-elementwise-ops \
-// RUN:             --sparsification --post-sparsification-rewrite \
+// RUN:             --sparsification --lower-sparse-ops-to-foreach \
+// RUN:             --lower-sparse-foreach-to-scf \
 // RUN:             --sparse-tensor-conversion --cse | \
 // RUN:   FileCheck %s --check-prefix=CHECK-CONVERT
 

@@ -167,13 +167,12 @@ def StageSparseOperations : Pass<"stage-sparse-ops", "func::FuncOp"> {
   ];
 }
 
-def PostSparsificationRewrite : Pass<"post-sparsification-rewrite", "ModuleOp"> {
+def LowerSparseOpsToForeach : Pass<"lower-sparse-ops-to-foreach", "ModuleOp"> {
   let summary = "Applies sparse tensor rewriting rules after sparsification";
   let description = [{
-    A pass that applies rewriting rules to sparse tensor operations after
-    running the actual sparsification pass.
+    A pass that lowers high-level sparse operations to sparse_tensor.foreach.
   }];
-  let constructor = "mlir::createPostSparsificationRewritePass()";
+  let constructor = "mlir::createLowerSparseOpsToForeachPass()";
   let dependentDialects = [
     "affine::AffineDialect",
     "arith::ArithDialect",
@@ -186,12 +185,24 @@ def PostSparsificationRewrite : Pass<"post-sparsification-rewrite", "ModuleOp"> 
   let options = [
     Option<"enableRuntimeLibrary", "enable-runtime-library", "bool",
            "true", "Enable runtime library for manipulating sparse tensors">,
-    Option<"enableForeach", "enable-foreach", "bool",
-           "true", "Enable rewriting rules for the foreach operator">,
     Option<"enableConvert", "enable-convert", "bool",
            "true", "Enable rewriting rules for the convert operator">,
   ];
 }
+
+def LowerForeachToSCF : Pass<"lower-sparse-foreach-to-scf", "func::FuncOp"> {
+  let summary = "Decompose a complex sparse operation into multiple stages";
+  let description = [{
+    A pass that lowers sparse_tensor.foreach operation to scf dialect.
+  }];
+  let constructor = "mlir::createLowerForeachToSCFPass()";
+  let dependentDialects = [
+    "memref::MemRefDialect",
+    "scf::SCFDialect",
+    "sparse_tensor::SparseTensorDialect",
+  ];
+}
+
 
 def SparseTensorConversionPass : Pass<"sparse-tensor-conversion", "ModuleOp"> {
   let summary = "Convert sparse tensors and primitives to library calls";

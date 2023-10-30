@@ -1303,10 +1303,9 @@ void mlir::populatePreSparsificationRewriting(RewritePatternSet &patterns) {
                GenSemiRingReduction, GenSemiRingSelect>(patterns.getContext());
 }
 
-void mlir::populatePostSparsificationRewriting(RewritePatternSet &patterns,
-                                               bool enableRT,
-                                               bool enableForeach,
-                                               bool enableConvert) {
+void mlir::populateLowerSparseOpsToForeachPatterns(RewritePatternSet &patterns,
+                                                   bool enableRT,
+                                                   bool enableConvert) {
   patterns.add<ConcatenateRewriter, CrdTranslateRewriter,
                ReshapeRewriter<tensor::ExpandShapeOp>,
                ReshapeRewriter<tensor::CollapseShapeOp>,
@@ -1314,10 +1313,13 @@ void mlir::populatePostSparsificationRewriting(RewritePatternSet &patterns,
                Sparse2SparseReshapeRewriter<tensor::CollapseShapeOp>,
                SparseTensorDimOpRewriter, TensorReshapeRewriter, OutRewriter>(
       patterns.getContext());
-  if (enableForeach)
-    patterns.add<ForeachRewriter>(patterns.getContext());
+
   if (enableConvert)
     patterns.add<DirectConvertRewriter>(patterns.getContext());
   if (!enableRT)
     patterns.add<NewRewriter>(patterns.getContext());
+}
+
+void mlir::populateLowerForeachToSCFPatterns(RewritePatternSet &patterns) {
+  patterns.add<ForeachRewriter>(patterns.getContext());
 }
