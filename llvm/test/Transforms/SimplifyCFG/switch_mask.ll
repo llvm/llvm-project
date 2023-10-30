@@ -8,13 +8,11 @@ define i1 @switch_lookup_with_small_i1(i64 %x) {
 ; CHECK-LABEL: @switch_lookup_with_small_i1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[AND:%.*]] = and i64 [[X:%.*]], 15
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult i64 [[AND]], 11
-; CHECK-NEXT:    [[SWITCH_CAST:%.*]] = trunc i64 [[AND]] to i11
-; CHECK-NEXT:    [[SWITCH_SHIFTAMT:%.*]] = mul nuw nsw i11 [[SWITCH_CAST]], 1
-; CHECK-NEXT:    [[SWITCH_DOWNSHIFT:%.*]] = lshr i11 -1018, [[SWITCH_SHIFTAMT]]
-; CHECK-NEXT:    [[SWITCH_MASKED:%.*]] = trunc i11 [[SWITCH_DOWNSHIFT]] to i1
-; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[TMP0]], i1 [[SWITCH_MASKED]], i1 false
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[SWITCH_CAST:%.*]] = trunc i64 [[AND]] to i16
+; CHECK-NEXT:    [[SWITCH_SHIFTAMT:%.*]] = mul nuw nsw i16 [[SWITCH_CAST]], 1
+; CHECK-NEXT:    [[SWITCH_DOWNSHIFT:%.*]] = lshr i16 1030, [[SWITCH_SHIFTAMT]]
+; CHECK-NEXT:    [[SWITCH_MASKED:%.*]] = trunc i16 [[SWITCH_DOWNSHIFT]] to i1
+; CHECK-NEXT:    ret i1 [[SWITCH_MASKED]]
 ;
 entry:
   %and = and i64 %x, 15
@@ -37,13 +35,11 @@ define i8 @switch_lookup_with_small_i8(i64 %x) {
 ; CHECK-LABEL: @switch_lookup_with_small_i8(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[REM:%.*]] = urem i64 [[X:%.*]], 5
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult i64 [[REM]], 3
-; CHECK-NEXT:    [[SWITCH_CAST:%.*]] = trunc i64 [[REM]] to i24
-; CHECK-NEXT:    [[SWITCH_SHIFTAMT:%.*]] = mul nuw nsw i24 [[SWITCH_CAST]], 8
-; CHECK-NEXT:    [[SWITCH_DOWNSHIFT:%.*]] = lshr i24 460303, [[SWITCH_SHIFTAMT]]
-; CHECK-NEXT:    [[SWITCH_MASKED:%.*]] = trunc i24 [[SWITCH_DOWNSHIFT]] to i8
-; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[TMP0]], i8 [[SWITCH_MASKED]], i8 0
-; CHECK-NEXT:    ret i8 [[TMP1]]
+; CHECK-NEXT:    [[SWITCH_CAST:%.*]] = trunc i64 [[REM]] to i40
+; CHECK-NEXT:    [[SWITCH_SHIFTAMT:%.*]] = mul nuw nsw i40 [[SWITCH_CAST]], 8
+; CHECK-NEXT:    [[SWITCH_DOWNSHIFT:%.*]] = lshr i40 460303, [[SWITCH_SHIFTAMT]]
+; CHECK-NEXT:    [[SWITCH_MASKED:%.*]] = trunc i40 [[SWITCH_DOWNSHIFT]] to i8
+; CHECK-NEXT:    ret i8 [[SWITCH_MASKED]]
 ;
 entry:
   %rem = urem i64 %x, 5
