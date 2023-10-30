@@ -297,10 +297,9 @@ define void @addrspacecast_requires_queue_ptr(ptr addrspace(5) %ptr.private, ptr
 ; FIXEDABI-GISEL-LABEL: addrspacecast_requires_queue_ptr:
 ; FIXEDABI-GISEL:       ; %bb.0:
 ; FIXEDABI-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; FIXEDABI-GISEL-NEXT:    s_movk_i32 s4, 0xc0
-; FIXEDABI-GISEL-NEXT:    s_mov_b32 s5, 0
+; FIXEDABI-GISEL-NEXT:    s_mov_b64 s[4:5], 0xc0
 ; FIXEDABI-GISEL-NEXT:    s_load_dword s6, s[4:5], 0x0
-; FIXEDABI-GISEL-NEXT:    s_movk_i32 s4, 0xc4
+; FIXEDABI-GISEL-NEXT:    s_mov_b64 s[4:5], 0xc4
 ; FIXEDABI-GISEL-NEXT:    s_load_dword s4, s[4:5], 0x0
 ; FIXEDABI-GISEL-NEXT:    v_cmp_ne_u32_e32 vcc, -1, v0
 ; FIXEDABI-GISEL-NEXT:    v_cndmask_b32_e32 v2, 0, v0, vcc

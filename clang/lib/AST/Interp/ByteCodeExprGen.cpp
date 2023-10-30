@@ -1314,9 +1314,7 @@ bool ByteCodeExprGen<Emitter>::VisitMaterializeTemporaryExpr(
 template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitCXXBindTemporaryExpr(
     const CXXBindTemporaryExpr *E) {
-  if (Initializing)
-    return this->visitInitializer(E->getSubExpr());
-  return this->visit(E->getSubExpr());
+  return this->delegate(E->getSubExpr());
 }
 
 template <class Emitter>
