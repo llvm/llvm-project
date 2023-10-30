@@ -89,10 +89,10 @@ struct _LIBCPP_TEMPLATE_VIS range_formatter {
 
     // Add "m" specifier semantics if there are no underlying specifier
     if (!__has_range_underlying_spec && __has_m_specifier) {
-        if constexpr (__fmt_pair_like<_Tp>) { // should always be true
-            __underlying_.set_brackets({}, {});
-            __underlying_.set_separator(_LIBCPP_STATICALLY_WIDEN(_CharT, ": "));
-        }
+      if constexpr (__fmt_pair_like<_Tp>) { // should always be true
+        __underlying_.set_brackets({}, {});
+        __underlying_.set_separator(_LIBCPP_STATICALLY_WIDEN(_CharT, ": "));
+      }
     }
 
     // This test should not be required if __has_range_underlying_spec is false.
