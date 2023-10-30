@@ -1043,8 +1043,9 @@ splitReductionByScaling(RewriterBase &b, LinalgOp op,
 /// range of the specified indexing map.
 bool isDimSequencePreserved(AffineMap map, ReassociationIndicesRef dimSequence);
 /// Return `true` if all sequences of dimensions specified in `dimSequences` are
-/// contiguous in all the ranges of the `maps`.
-bool areDimSequencesPreserved(ArrayRef<AffineMap> maps,
+/// contiguous in all the ranges of the indexing maps of the `op`.
+template <typename LinalgType>
+bool areDimSequencesPreserved(LinalgType op,
                               ArrayRef<ReassociationIndices> dimSequences);
 
 /// Collapses dimensions of linalg.generic/linalg.copy operation. A precondition

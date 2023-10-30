@@ -131,6 +131,17 @@ public:
   /// affine map (d0, ..., dn) -> (dp, ..., dn) on the most minor dimensions.
   bool isMinorIdentity() const;
 
+  /// Returns true if this affine map is a canonicalized identity.
+  /// Otherwise return false.
+  /// A canonicalized identity affine map corresponds to an identity
+  /// affine function on the dimensional identifiers. which may
+  /// include zero constant expressions in the affine map results.
+  /// These zero constants should be corresponded to dimesnions with
+  /// value 1.
+  /// Example: affine_map<(d0, d1, d2, d3, d4) -> (0, d1, d2, d3, d4)>
+  /// is considered a canonicalized identity if `shape[0] == 1`.
+  bool isCanonicalizedIdentity(ArrayRef<int64_t> shape) const;
+
   /// Returns true if this affine map is a minor identity up to broadcasted
   /// dimensions which are indicated by value 0 in the result. If
   /// `broadcastedDims` is not null, it will be populated with the indices of

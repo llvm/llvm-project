@@ -153,3 +153,35 @@ func.func private @memref_linalg_copy(%arg0: memref<1x24x32x8xf32, 1>, %arg1: me
   linalg.copy ins(%arg0: memref<1x24x32x8xf32, 1>) outs(%arg1: memref<1x24x32x8xf32, 1>)
   return
 }
+
+// -----
+
+// CHECK-LABEL:   func.func @collapse_canonicalized_identity(
+// CHECK-SAME:                                 %[[VAL_0:.*]]: tensor<2x2x1x4096xf32>,
+// CHECK-SAME:                                 %[[VAL_1:.*]]: tensor<2x2x1x4096xf32>) -> tensor<2x2x1x4096xf32> {
+// CHECK:           %[[VAL_2:.*]] = tensor.collapse_shape %[[VAL_0]] {{\[\[}}0], [1], [2, 3]] : tensor<2x2x1x4096xf32> into tensor<2x2x4096xf32>
+// CHECK:           %[[VAL_3:.*]] = tensor.collapse_shape %[[VAL_1]] {{\[\[}}0], [1], [2, 3]] : tensor<2x2x1x4096xf32> into tensor<2x2x4096xf32>
+// CHECK:           %[[VAL_4:.*]] = linalg.generic {indexing_maps = [#map, #map], iterator_types = ["parallel", "parallel", "parallel"]} ins(%[[VAL_2]] : tensor<2x2x4096xf32>) outs(%[[VAL_3]] : tensor<2x2x4096xf32>) {
+// CHECK:           ^bb0(%[[VAL_5:.*]]: f32, %[[VAL_6:.*]]: f32):
+// CHECK:             %[[VAL_7:.*]] = arith.addf %[[VAL_5]], %[[VAL_6]] : f32
+// CHECK:             linalg.yield %[[VAL_7]] : f32
+// CHECK:           } -> tensor<2x2x4096xf32>
+// CHECK:           %[[VAL_8:.*]] = tensor.expand_shape %[[VAL_9:.*]] {{\[\[}}0], [1], [2, 3]] : tensor<2x2x4096xf32> into tensor<2x2x1x4096xf32>
+// CHECK:           return %[[VAL_8]] : tensor<2x2x1x4096xf32>
+// CHECK:         }
+
+
+func.func @collapse_canonicalized_identity(
+    %arg0: tensor<2x2x1x4096xf32>, %arg1: tensor<2x2x1x4096xf32>) -> tensor<2x2x1x4096xf32> {
+  %0 = linalg.generic {
+    indexing_maps = [
+        affine_map<(d0, d1, d2, d3) -> (d0, d1, 0, d3)>,
+        affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>],
+  iterator_types = ["parallel", "parallel", "parallel", "parallel"]}
+  ins(%arg0 : tensor<2x2x1x4096xf32>) outs(%arg1 : tensor<2x2x1x4096xf32>) {
+  ^bb0(%arg3: f32, %arg4: f32):
+    %1 = arith.addf %arg3, %arg4 : f32
+    linalg.yield %1 : f32
+  } -> tensor<2x2x1x4096xf32>
+  return %0 : tensor<2x2x1x4096xf32>
+}

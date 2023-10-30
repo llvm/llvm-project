@@ -1054,12 +1054,14 @@ bool mlir::linalg::isDimSequencePreserved(AffineMap indexingMap,
   // 3. No element of sequence found. Return true.
   return true;
 }
-
+template <typename LinalgType>
 bool mlir::linalg::areDimSequencesPreserved(
-    ArrayRef<AffineMap> maps, ArrayRef<ReassociationIndices> dimSequences) {
-  return llvm::all_of(maps, [&](AffineMap map) {
+    LinalgType op, ArrayRef<ReassociationIndices> dimSequences) {
+  return llvm::all_of(op->getOpOperands(), [&](OpOperand &opOperand) {
     return llvm::all_of(dimSequences, [&](ReassociationIndicesRef dimSequence) {
-      return isDimSequencePreserved(map, dimSequence);
+      return op.isCanonicalizedIdentityMap(&opOperand) ||
+             isDimSequencePreserved(op.getMatchingIndexingMap(&opOperand),
+                                    dimSequence);
     });
   });
 }
@@ -1320,17 +1322,31 @@ getCollapsedOpIteratorTypes(ArrayRef<utils::IteratorType> iteratorTypes,
 
 /// Compute the indexing map in the collapsed op that corresponds to the given
 /// `indexingMap` of the original operation.
+template <typename LinalgType>
 static AffineMap
-getCollapsedOpIndexingMap(AffineMap indexingMap,
+getCollapsedOpIndexingMap(LinalgType op, OpOperand &opOperand,
                           const CollapsingInfo &collapsingInfo) {
+  auto indexingMap = op.getMatchingIndexingMap(&opOperand);
   MLIRContext *context = indexingMap.getContext();
-  assert(indexingMap.isProjectedPermutation() &&
-         "expected indexing map to be projected permutation");
+  assert((op.isCanonicalizedIdentityMap(&opOperand) ||
+          indexingMap.isProjectedPermutation()) &&
+         "expected indexing map to be projected permutation or canonicalized "
+         "identity");
   SmallVector<AffineExpr> resultExprs;
   auto origOpToCollapsedOpMapping =
       collapsingInfo.getOrigOpToCollapsedOpMapping();
-  for (auto expr : indexingMap.getResults()) {
-    unsigned dim = expr.cast<AffineDimExpr>().getPosition();
+  unsigned dim;
+  for (auto pair : llvm::enumerate(indexingMap.getResults())) {
+    AffineExpr expr = pair.value();
+    auto constExprt = expr.dyn_cast<AffineConstantExpr>();
+    if (constExprt) {
+      assert(!constExprt.getValue() &&
+             "expected zero constants in canonicalized identity");
+      dim = pair.index();
+    } else {
+      dim = expr.cast<AffineDimExpr>().getPosition();
+    }
+
     // If the dim is not the first of the collapsed dim, do nothing.
     if (origOpToCollapsedOpMapping[dim].second != 0)
       continue;
@@ -1354,9 +1370,17 @@ getOperandReassociation(AffineMap indexingMap,
       collapsingInfo.getOrigOpToCollapsedOpMapping();
   auto collapsedOpToOrigOpMapping =
       collapsingInfo.getCollapsedOpToOrigOpMapping();
+  unsigned dim;
   while (counter < indexingMap.getNumResults()) {
-    unsigned dim =
-        indexingMap.getResult(counter).cast<AffineDimExpr>().getPosition();
+    AffineExpr expr = indexingMap.getResult(counter);
+    auto constExprt = expr.dyn_cast<AffineConstantExpr>();
+    if (constExprt) {
+      assert(!constExprt.getValue() &&
+             "expected zero constants in canonicalized identity");
+      dim = counter;
+    } else {
+      dim = expr.cast<AffineDimExpr>().getPosition();
+    }
     // This is the start of a collapsed dimensions of the iteration that
     // is gauranteed to be preserved in the indexing map. The number of folded
     // dims is obtained from the collapsed op to original op mapping.
@@ -1480,10 +1504,11 @@ Operation *createCollapsedOp(LinalgType op,
       getCollapsedOpIteratorTypes(op.getIteratorTypesArray(), collapsingInfo);
 
   // Get the indexing maps.
-  auto indexingMaps =
-      llvm::map_to_vector(op.getIndexingMapsArray(), [&](AffineMap map) {
-        return getCollapsedOpIndexingMap(map, collapsingInfo);
-      });
+  auto indexingMaps = llvm::to_vector(
+      llvm::map_range(op->getOpOperands(), [&](OpOperand &opOperand) {
+        return getCollapsedOpIndexingMap<LinalgType>(op, opOperand,
+                                                     collapsingInfo);
+      }));
 
   Operation *collapsedOp = rewriter.create<linalg::GenericOp>(
       loc, resultTypes, inputOperands, outputOperands, indexingMaps,
@@ -1659,8 +1684,7 @@ public:
       return failure();
 
     // Check if the specified list of dimensions to collapse is a valid list.
-    if (!areDimSequencesPreserved(op.getIndexingMapsArray(),
-                                  collapsableIterationDims)) {
+    if (!areDimSequencesPreserved<LinalgType>(op, collapsableIterationDims)) {
       return rewriter.notifyMatchFailure(
           op, "specified dimensions cannot be collapsed");
     }

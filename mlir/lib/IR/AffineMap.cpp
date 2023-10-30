@@ -133,6 +133,23 @@ bool AffineMap::isMinorIdentity() const {
              getMinorIdentityMap(getNumDims(), getNumResults(), getContext());
 }
 
+bool AffineMap::isCanonicalizedIdentity(ArrayRef<int64_t> shape) const {
+  if (getNumDims() != getNumResults())
+    return false;
+  if (getNumDims() != shape.size())
+    return false;
+  for (auto [index, result] : llvm::enumerate(getResults())) {
+    auto constExpr = result.dyn_cast<AffineConstantExpr>();
+    if (constExpr && !constExpr.getValue() && shape[index] == 1)
+      continue;
+
+    auto expr = result.dyn_cast<AffineDimExpr>();
+    if (!expr || expr.getPosition() != index)
+      return false;
+  }
+  return true;
+}
+
 /// Returns true if this affine map is a minor identity up to broadcasted
 /// dimensions which are indicated by value 0 in the result.
 bool AffineMap::isMinorIdentityWithBroadcasting(

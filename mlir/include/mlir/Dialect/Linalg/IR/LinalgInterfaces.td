@@ -668,6 +668,35 @@ def LinalgStructuredInterface
         return;
       }]
     >,
+    InterfaceMethod<
+      /*desc=*/[{
+        Returns true if the indexing map which matches the OpOperand
+        is considered as a canonicalized identity.
+      }],
+      /*retTy=*/"bool",
+      /*methodName=*/"isCanonicalizedIdentityMap",
+      /*args=*/(ins "OpOperand*": $opOperand),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+          auto indexingMap = $_op.getMatchingIndexingMap(opOperand);
+          return indexingMap.isCanonicalizedIdentity(getShape(opOperand));
+      }]
+    >,
+    InterfaceMethod<
+      /*desc=*/[{
+        Returns true if all of the indexing maps of the specefic linalg operation
+        are considered as canonicalized identity.
+      }],
+      /*retTy=*/"bool",
+      /*methodName=*/"hasOnlyCanonicalizedIdentityMaps",
+      /*args=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+          return llvm::all_of(this->getOperation()->getOpOperands(),[&](OpOperand &opOperand){
+            return $_op.isCanonicalizedIdentityMap(&opOperand);
+          });
+      }]
+    >,
     //===------------------------------------------------------------------===//
     // Linalg generalization hooks.
     //===------------------------------------------------------------------===//
