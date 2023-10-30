@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+u!/usr/bin/env bash
 #===-- test-release.sh - Test the LLVM release candidates ------------------===#
 #
 # Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -417,6 +417,10 @@ function configure_llvmCore() {
     # building itself and any selected runtimes in the second phase.
     if [ "$Phase" -lt "2" ]; then
       runtime_list=""
+      # compiler-rt built-ins needed on AIX to have a functional Phase 1 clang.
+      if [ "$System" = "AIX" ]; then
+        runtime_list="compiler-rt"
+      fi  
     else
       runtime_list="$runtimes"
     fi
