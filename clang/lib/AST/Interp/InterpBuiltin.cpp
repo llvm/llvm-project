@@ -152,6 +152,9 @@ static bool interp__builtin_strlen(InterpState &S, CodePtr OpPC,
   if (!CheckLive(S, OpPC, StrPtr, AK_Read))
     return false;
 
+  if (!CheckDummy(S, OpPC, StrPtr))
+    return false;
+
   assert(StrPtr.getFieldDesc()->isPrimitiveArray());
 
   size_t Len = 0;
