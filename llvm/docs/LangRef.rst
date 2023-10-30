@@ -11233,6 +11233,10 @@ Overview:
 
 The '``zext``' instruction zero extends its operand to type ``ty2``.
 
+The ``nneg`` (non-negative) flag, if present, specifies that the operand is
+non-negative. This property may be used by optimization passes to later
+convert the ``zext`` into a ``sext``.
+
 Arguments:
 """"""""""
 
@@ -11249,6 +11253,9 @@ until it reaches the size of the destination type, ``ty2``.
 
 When zero extending from i1, the result will always be either 0 or 1.
 
+If the ``nneg`` flag is set, and the ``zext`` argument is negative, the result
+is a poison value.
+
 Example:
 """"""""
 
@@ -11257,6 +11264,9 @@ Example:
       %X = zext i32 257 to i64              ; yields i64:257
       %Y = zext i1 true to i32              ; yields i32:1
       %Z = zext <2 x i16> <i16 8, i16 7> to <2 x i32> ; yields <i32 8, i32 7>
+
+      %a = zext nneg i8 127 to i16 ; yields i16 127
+      %b = zext nneg i8 -1 to i16  ; yields i16 poison
 
 .. _i_sext:
 
