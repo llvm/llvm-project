@@ -293,7 +293,7 @@ const semantics::DerivedTypeSpec *GetParentTypeSpec(
 }
 
 // Compares two derived type representations to see whether they both
-// represent the "same type" in the sense of section 7.5.2.4.
+// represent the "same type" in the sense of section F'2023 7.5.2.4.
 using SetOfDerivedTypePairs =
     std::set<std::pair<const semantics::DerivedTypeSpec *,
         const semantics::DerivedTypeSpec *>>;
@@ -511,6 +511,19 @@ bool AreSameDerivedType(
     const semantics::DerivedTypeSpec &x, const semantics::DerivedTypeSpec &y) {
   SetOfDerivedTypePairs inProgress;
   return AreSameDerivedType(x, y, false, false, inProgress);
+}
+
+bool AreSameDerivedType(
+    const semantics::DerivedTypeSpec *x, const semantics::DerivedTypeSpec *y) {
+  return x == y || (x && y && AreSameDerivedType(*x, *y));
+}
+
+bool DynamicType::IsEquivalentTo(const DynamicType &that) const {
+  return category_ == that.category_ && kind_ == that.kind_ &&
+      PointeeComparison(charLengthParamValue_, that.charLengthParamValue_) &&
+      knownLength().has_value() == that.knownLength().has_value() &&
+      (!knownLength() || *knownLength() == *that.knownLength()) &&
+      AreSameDerivedType(derived_, that.derived_);
 }
 
 static bool AreCompatibleDerivedTypes(const semantics::DerivedTypeSpec *x,

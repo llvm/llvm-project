@@ -74,7 +74,7 @@ module m2
   end interface
  contains
   integer module function f1(x)
-    !ERROR: Dummy argument 'x' has type INTEGER(4); the corresponding argument in the interface body has type REAL(4)
+    !ERROR: Dummy argument 'x' has type INTEGER(4); the corresponding argument in the interface body has distinct type REAL(4)
     integer, intent(in) :: x
     f1 = x
   end function
