@@ -7397,9 +7397,6 @@ AArch64InstructionSelector::selectAddrModeUnscaled(MachineOperand &Root,
     return std::nullopt;
   RHSC = RHSOp1.getCImm()->getSExtValue();
 
-  // If the offset is valid as a scaled immediate, don't match here.
-  if ((RHSC & (Size - 1)) == 0 && RHSC >= 0 && RHSC < (0x1000 << Log2_32(Size)))
-    return std::nullopt;
   if (RHSC >= -256 && RHSC < 256) {
     MachineOperand &Base = RootDef->getOperand(1);
     return {{

@@ -94,7 +94,7 @@ def HasTLB_RMI          : Predicate<"Subtarget->hasTLB_RMI()">,
 def HasFlagM         : Predicate<"Subtarget->hasFlagM()">,
                        AssemblerPredicateWithAll<(all_of FeatureFlagM), "flagm">;
 
-def HasRCPC_IMMO      : Predicate<"Subtarget->hasRCPCImm()">,
+def HasRCPC_IMMO      : Predicate<"Subtarget->hasRCPC_IMMO()">,
                        AssemblerPredicateWithAll<(all_of FeatureRCPC_IMMO), "rcpc-immo">;
 
 def HasFPARMv8       : Predicate<"Subtarget->hasFPARMv8()">,

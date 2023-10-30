@@ -36,8 +36,7 @@ define i8 @load_atomic_i8_aligned_monotonic_const(ptr readonly %ptr) {
 
 define i8 @load_atomic_i8_aligned_acquire(ptr %ptr) {
 ; CHECK-LABEL: load_atomic_i8_aligned_acquire:
-; CHECK:    add x8, x0, #4
-; CHECK:    ldaprb w0, [x8]
+; CHECK:    ldapurb w0, [x0, #4]
     %gep = getelementptr inbounds i8, ptr %ptr, i32 4
     %r = load atomic i8, ptr %gep acquire, align 1
     ret i8 %r
@@ -45,8 +44,7 @@ define i8 @load_atomic_i8_aligned_acquire(ptr %ptr) {
 
 define i8 @load_atomic_i8_aligned_acquire_const(ptr readonly %ptr) {
 ; CHECK-LABEL: load_atomic_i8_aligned_acquire_const:
-; CHECK:    add x8, x0, #4
-; CHECK:    ldaprb w0, [x8]
+; CHECK:    ldapurb w0, [x0, #4]
     %gep = getelementptr inbounds i8, ptr %ptr, i32 4
     %r = load atomic i8, ptr %gep acquire, align 1
     ret i8 %r
@@ -104,8 +102,7 @@ define i16 @load_atomic_i16_aligned_monotonic_const(ptr readonly %ptr) {
 
 define i16 @load_atomic_i16_aligned_acquire(ptr %ptr) {
 ; CHECK-LABEL: load_atomic_i16_aligned_acquire:
-; CHECK:    add x8, x0, #8
-; CHECK:    ldaprh w0, [x8]
+; CHECK:    ldapurh w0, [x0, #8]
     %gep = getelementptr inbounds i16, ptr %ptr, i32 4
     %r = load atomic i16, ptr %gep acquire, align 2
     ret i16 %r
@@ -113,8 +110,7 @@ define i16 @load_atomic_i16_aligned_acquire(ptr %ptr) {
 
 define i16 @load_atomic_i16_aligned_acquire_const(ptr readonly %ptr) {
 ; CHECK-LABEL: load_atomic_i16_aligned_acquire_const:
-; CHECK:    add x8, x0, #8
-; CHECK:    ldaprh w0, [x8]
+; CHECK:    ldapurh w0, [x0, #8]
     %gep = getelementptr inbounds i16, ptr %ptr, i32 4
     %r = load atomic i16, ptr %gep acquire, align 2
     ret i16 %r
@@ -172,8 +168,7 @@ define i32 @load_atomic_i32_aligned_monotonic_const(ptr readonly %ptr) {
 
 define i32 @load_atomic_i32_aligned_acquire(ptr %ptr) {
 ; CHECK-LABEL: load_atomic_i32_aligned_acquire:
-; CHECK:    add x8, x0, #16
-; CHECK:    ldapr w0, [x8]
+; CHECK:    ldapur w0, [x0, #16]
     %gep = getelementptr inbounds i32, ptr %ptr, i32 4
     %r = load atomic i32, ptr %gep acquire, align 4
     ret i32 %r
@@ -181,8 +176,7 @@ define i32 @load_atomic_i32_aligned_acquire(ptr %ptr) {
 
 define i32 @load_atomic_i32_aligned_acquire_const(ptr readonly %ptr) {
 ; CHECK-LABEL: load_atomic_i32_aligned_acquire_const:
-; CHECK:    add x8, x0, #16
-; CHECK:    ldapr w0, [x8]
+; CHECK:    ldapur w0, [x0, #16]
     %gep = getelementptr inbounds i32, ptr %ptr, i32 4
     %r = load atomic i32, ptr %gep acquire, align 4
     ret i32 %r
@@ -240,8 +234,7 @@ define i64 @load_atomic_i64_aligned_monotonic_const(ptr readonly %ptr) {
 
 define i64 @load_atomic_i64_aligned_acquire(ptr %ptr) {
 ; CHECK-LABEL: load_atomic_i64_aligned_acquire:
-; CHECK:    add x8, x0, #32
-; CHECK:    ldapr x0, [x8]
+; CHECK:    ldapur x0, [x0, #32]
     %gep = getelementptr inbounds i64, ptr %ptr, i32 4
     %r = load atomic i64, ptr %gep acquire, align 8
     ret i64 %r
@@ -249,8 +242,7 @@ define i64 @load_atomic_i64_aligned_acquire(ptr %ptr) {
 
 define i64 @load_atomic_i64_aligned_acquire_const(ptr readonly %ptr) {
 ; CHECK-LABEL: load_atomic_i64_aligned_acquire_const:
-; CHECK:    add x8, x0, #32
-; CHECK:    ldapr x0, [x8]
+; CHECK:    ldapur x0, [x0, #32]
     %gep = getelementptr inbounds i64, ptr %ptr, i32 4
     %r = load atomic i64, ptr %gep acquire, align 8
     ret i64 %r
@@ -376,8 +368,7 @@ define i8 @load_atomic_i8_unaligned_monotonic_const(ptr readonly %ptr) {
 
 define i8 @load_atomic_i8_unaligned_acquire(ptr %ptr) {
 ; CHECK-LABEL: load_atomic_i8_unaligned_acquire:
-; CHECK:    add x8, x0, #4
-; CHECK:    ldaprb w0, [x8]
+; CHECK:    ldapurb w0, [x0, #4]
     %gep = getelementptr inbounds i8, ptr %ptr, i32 4
     %r = load atomic i8, ptr %gep acquire, align 1
     ret i8 %r
@@ -385,8 +376,7 @@ define i8 @load_atomic_i8_unaligned_acquire(ptr %ptr) {
 
 define i8 @load_atomic_i8_unaligned_acquire_const(ptr readonly %ptr) {
 ; CHECK-LABEL: load_atomic_i8_unaligned_acquire_const:
-; CHECK:    add x8, x0, #4
-; CHECK:    ldaprb w0, [x8]
+; CHECK:    ldapurb w0, [x0, #4]
     %gep = getelementptr inbounds i8, ptr %ptr, i32 4
     %r = load atomic i8, ptr %gep acquire, align 1
     ret i8 %r
