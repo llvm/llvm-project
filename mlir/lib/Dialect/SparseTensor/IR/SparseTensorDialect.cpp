@@ -291,7 +291,7 @@ SparseTensorEncodingAttr
 SparseTensorEncodingAttr::withDimToLvl(AffineMap dimToLvl) const {
   assert(getImpl() && "Uninitialized SparseTensorEncodingAttr");
   return SparseTensorEncodingAttr::get(getContext(), getLvlTypes(), dimToLvl,
-                                       getLvlToDim(), getPosWidth(),
+                                       AffineMap(), getPosWidth(),
                                        getCrdWidth());
 }
 
