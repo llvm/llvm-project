@@ -429,7 +429,7 @@ struct TransposeOpToArmSMELowering
 
 /// Conversion pattern for vector.outerproduct.
 ///
-/// If the vector.outerproduct is masked (and the mask from a
+/// If the vector.outerproduct is masked (and the mask is from a
 /// vector.create_mask), then the mask is decomposed into two 1-D masks for the
 /// operands.
 ///

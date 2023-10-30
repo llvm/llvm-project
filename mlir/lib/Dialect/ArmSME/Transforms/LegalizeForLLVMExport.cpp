@@ -460,11 +460,11 @@ struct MoveTileSliceToVectorArmSMELowering
   }
 };
 
-/// Lower `vector.outerproduct` to SME MOPA intrinsics.
+/// Lower `arm_sme.outerproduct` to SME MOPA intrinsics.
 ///
 /// Example:
 ///
-///   %0 = vector.outerproduct %lhs, %rhs, %acc {kind = #vector.kind<add>}
+///   %0 = arm_sme.outerproduct %lhs, %rhs acc(%acc)
 ///     : vector<[4]xf32>, vector<[4]xf32>
 ///
 /// is converted to:
@@ -474,7 +474,7 @@ struct MoveTileSliceToVectorArmSMELowering
 ///        vector<[4]xf32>) -> ()
 ///
 /// Currently only supports FMOPA and BFMOPA (non-widening).
-struct OuterProductToArmSMELowering
+struct OuterProductOpConversion
     : public ConvertOpToLLVMPattern<arm_sme::OuterProductOp> {
   using ConvertOpToLLVMPattern<arm_sme::OuterProductOp>::ConvertOpToLLVMPattern;
 
@@ -725,6 +725,6 @@ void mlir::populateArmSMELegalizeForLLVMExportPatterns(
   patterns.add<
       LoadTileSliceToArmSMELowering, MoveTileSliceToVectorArmSMELowering,
       MoveVectorToTileSliceToArmSMELowering, StoreTileSliceToArmSMELowering,
-      OuterProductToArmSMELowering, ZeroOpConversion,
-      VectorExtractToArmSMELowering, VectorInsertToArmSMELowering>(converter);
+      OuterProductOpConversion, ZeroOpConversion, VectorExtractToArmSMELowering,
+      VectorInsertToArmSMELowering>(converter);
 }
