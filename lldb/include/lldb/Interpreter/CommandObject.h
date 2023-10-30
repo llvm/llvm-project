@@ -224,7 +224,10 @@ public:
   void GetFormattedCommandArguments(Stream &str,
                                     uint32_t opt_set_mask = LLDB_OPT_SET_ALL);
 
-  bool IsPairType(ArgumentRepetitionType arg_repeat_type);
+  static bool IsPairType(ArgumentRepetitionType arg_repeat_type);
+
+  static std::optional<ArgumentRepetitionType> 
+    ArgRepetitionFromString(llvm::StringRef string);
 
   bool ParseOptions(Args &args, CommandReturnObject &result);
 

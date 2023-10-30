@@ -831,6 +831,37 @@ bool lldb_private::python::SWIGBridge::LLDBSwigPythonCallCommandObject(
   return true;
 }
 
+bool lldb_private::python::SWIGBridge::LLDBSwigPythonCallParsedCommandObject(
+    PyObject *implementor, lldb::DebuggerSP debugger, lldb_private::StructuredDataImpl &args_impl,
+    lldb_private::CommandReturnObject &cmd_retobj,
+    lldb::ExecutionContextRefSP exe_ctx_ref_sp) {
+
+  PyErr_Cleaner py_err_cleaner(true);
+
+  PythonObject self(PyRefType::Borrowed, implementor);
+  auto pfunc = self.ResolveName<PythonCallable>("__call__");
+
+  if (!pfunc.IsAllocated())
+    return false;
+
+  auto cmd_retobj_arg = SWIGBridge::ToSWIGWrapper(cmd_retobj);
+
+  // FIXME:
+  // I wanted to do something like:
+  // size_t num_elem = args.size();
+  // PythonList my_list(num_elem);
+  // for (const char *elem : args)
+  //   my_list.append(PythonString(elem);
+  //
+  // and then pass my_list to the pfunc, but that crashes somewhere
+  // deep in Python for reasons that aren't clear to me.
+  
+  pfunc(SWIGBridge::ToSWIGWrapper(std::move(debugger)), SWIGBridge::ToSWIGWrapper(args_impl),
+        SWIGBridge::ToSWIGWrapper(exe_ctx_ref_sp), cmd_retobj_arg.obj());
+
+  return true;
+}
+
 PythonObject lldb_private::python::SWIGBridge::LLDBSWIGPythonCreateOSPlugin(
     const char *python_class_name, const char *session_dictionary_name,
     const lldb::ProcessSP &process_sp) {

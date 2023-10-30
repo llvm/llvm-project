@@ -447,6 +447,22 @@ bool CommandObject::IsPairType(ArgumentRepetitionType arg_repeat_type) {
          (arg_repeat_type == eArgRepeatPairRangeOptional);
 }
 
+std::optional<ArgumentRepetitionType> 
+CommandObject::ArgRepetitionFromString(llvm::StringRef string) {
+  if (string == "plain") return eArgRepeatPlain ;   
+  if (string ==  "optional") return eArgRepeatOptional;
+  if (string ==  "plus") return eArgRepeatPlus;
+  if (string ==  "star") return eArgRepeatStar; 
+  if (string ==  "range") return eArgRepeatRange;
+  if (string ==  "pair-plain") return eArgRepeatPairPlain;
+  if (string ==  "pair-optional") return eArgRepeatPairOptional;
+  if (string ==  "pair-plus") return eArgRepeatPairPlus;
+  if (string ==  "pair-star") return eArgRepeatPairStar;
+  if (string ==  "pair-range") return eArgRepeatPairRange;
+  if (string ==  "pair-range-optional") return eArgRepeatPairRangeOptional;
+  return {};
+}
+
 static CommandObject::CommandArgumentEntry
 OptSetFiltered(uint32_t opt_set_mask,
                CommandObject::CommandArgumentEntry &cmd_arg_entry) {
