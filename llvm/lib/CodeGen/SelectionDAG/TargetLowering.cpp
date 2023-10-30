@@ -2419,7 +2419,7 @@ bool TargetLowering::SimplifyDemandedBits(
     Known = Known.sext(BitWidth);
 
     // If the sign bit is known zero, convert this to a zero extend.
-    if (Known.isNonNegative()) {
+    if (Known.isNonNegative() && !isSExtCheaperThanZExt(SrcVT, VT)) {
       unsigned Opc =
           IsVecInReg ? ISD::ZERO_EXTEND_VECTOR_INREG : ISD::ZERO_EXTEND;
       if (!TLO.LegalOperations() || isOperationLegal(Opc, VT))

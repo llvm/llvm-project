@@ -13481,7 +13481,8 @@ SDValue DAGCombiner::visitSIGN_EXTEND(SDNode *N) {
   if (SDValue V = foldSextSetcc(N))
     return V;
 
-  // fold (sext x) -> (zext x) if the sign bit is known zero.
+  // fold (sext x) -> (zext x) if the sign bit is known zero, and that
+  // is what the target prefers.
   if (!TLI.isSExtCheaperThanZExt(N0.getValueType(), VT) &&
       (!LegalOperations || TLI.isOperationLegal(ISD::ZERO_EXTEND, VT)) &&
       DAG.SignBitIsZero(N0))
@@ -13824,6 +13825,14 @@ SDValue DAGCombiner::visitZERO_EXTEND(SDNode *N) {
             cast<CondCodeSDNode>(N0.getOperand(2))->get(), true))
       return DAG.getNode(ISD::ZERO_EXTEND, DL, VT, SCC);
   }
+
+  // fold (zext x) -> (sext x) if the sign bit is known zero, and
+  // that is what the target prefers.
+  if (TLI.isSExtCheaperThanZExt(N0.getValueType(), VT) &&
+      (!LegalOperations || TLI.isOperationLegal(ISD::SIGN_EXTEND, VT)) &&
+      DAG.SignBitIsZero(N0))
+    return DAG.getNode(ISD::SIGN_EXTEND, DL, VT, N0);
+
 
   // (zext (shl (zext x), cst)) -> (shl (zext x), cst)
   if ((N0.getOpcode() == ISD::SHL || N0.getOpcode() == ISD::SRL) &&
