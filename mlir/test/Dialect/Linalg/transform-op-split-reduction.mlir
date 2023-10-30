@@ -176,7 +176,7 @@ func.func @generic_split_3d_ninf(%input: tensor<32x2xf32>, %input_2: tensor<5x32
 //  CHECK-DAG: #[[$MAP3:.*]] = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
 //  CHECK-DAG: #[[$MAP4:.*]] = affine_map<(d0, d1, d2) -> (d0, d1)>
 // CHECK-LABEL:  func @generic_split_3d_ninf
-//  CHECK-DAG: %[[ID:.*]] = arith.constant -1.401300e-45 : f32
+//  CHECK-DAG: %[[ID:.*]] = arith.constant -3.40282347E+38 : f32
 //  CHECK-DAG: %[[I1:.*]] = tensor.expand_shape %{{.*}}[0, 1], [2]] : tensor<32x2xf32> into tensor<4x8x2xf32>
 //  CHECK-DAG: %[[I2:.*]] = tensor.expand_shape %{{.*}}[0], [1, 2]] : tensor<5x32xf32> into tensor<5x4x8xf32>
 //  CHECK-DAG: %[[INI:.*]] = tensor.empty() : tensor<5x2x4xf32>

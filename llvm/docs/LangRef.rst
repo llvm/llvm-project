@@ -2883,7 +2883,8 @@ as follows:
     This specifies the *size* of a pointer and its ``<abi>`` and
     ``<pref>``\erred alignments for address space ``n``. ``<pref>`` is optional
     and defaults to ``<abi>``. The fourth parameter ``<idx>`` is the size of the
-    index that used for address calculation. If not
+    index that used for address calculation, which must be less than or equal
+    to the pointer size. If not
     specified, the default index size is equal to the pointer size. All sizes
     are in bits. The address space, ``n``, is optional, and if not specified,
     denotes the default address space 0. The value of ``n`` must be
@@ -11030,6 +11031,24 @@ for the given testcase is equivalent to:
       ret ptr %t5
     }
 
+The indices are first converted to offsets in the pointer's index type. If the
+currently indexed type is a struct type, the struct offset corresponding to the
+index is sign-extended or truncated to the pointer index type. Otherwise, the
+index itself is sign-extended or truncated, and then multiplied by the type
+allocation size (that is, the size rounded up to the ABI alignment) of the
+currently indexed type.
+
+The offsets are then added to the low bits of the base address up to the index
+type width, with silently-wrapping two's complement arithmetic. If the pointer
+size is larger than the index size, this means that the bits outside the index
+type width will not be affected.
+
+The result value of the ``getelementptr`` may be outside the object pointed
+to by the base pointer. The result value may not necessarily be used to access
+memory though, even if it happens to point into allocated storage. See the
+:ref:`Pointer Aliasing Rules <pointeraliasing>` section for more
+information.
+
 If the ``inbounds`` keyword is present, the result value of a
 ``getelementptr`` with any non-zero indices is a
 :ref:`poison value <poisonvalues>` if one of the following rules is violated:
@@ -11060,16 +11079,6 @@ address space is the null pointer itself.
 These rules are based on the assumption that no allocated object may cross
 the unsigned address space boundary, and no allocated object may be larger
 than half the pointer index type space.
-
-If the ``inbounds`` keyword is not present, the offsets are added to the
-base address with silently-wrapping two's complement arithmetic. If the
-offsets have a different width from the pointer's index type, they are
-sign-extended or truncated to the width of the pointer's index type. The result
-value of the ``getelementptr`` may be outside the object pointed to by the base
-pointer. The result value may not necessarily be used to access memory
-though, even if it happens to point into allocated storage. See the
-:ref:`Pointer Aliasing Rules <pointeraliasing>` section for more
-information.
 
 If the ``inrange`` keyword is present before any index, loading from or
 storing to any pointer derived from the ``getelementptr`` has undefined
@@ -11220,6 +11229,10 @@ Overview:
 
 The '``zext``' instruction zero extends its operand to type ``ty2``.
 
+The ``nneg`` (non-negative) flag, if present, specifies that the operand is
+non-negative. This property may be used by optimization passes to later
+convert the ``zext`` into a ``sext``.
+
 Arguments:
 """"""""""
 
@@ -11236,6 +11249,9 @@ until it reaches the size of the destination type, ``ty2``.
 
 When zero extending from i1, the result will always be either 0 or 1.
 
+If the ``nneg`` flag is set, and the ``zext`` argument is negative, the result
+is a poison value.
+
 Example:
 """"""""
 
@@ -11244,6 +11260,9 @@ Example:
       %X = zext i32 257 to i64              ; yields i64:257
       %Y = zext i1 true to i32              ; yields i32:1
       %Z = zext <2 x i16> <i16 8, i16 7> to <2 x i32> ; yields <i32 8, i32 7>
+
+      %a = zext nneg i8 127 to i16 ; yields i16 127
+      %b = zext nneg i8 -1 to i16  ; yields i16 poison
 
 .. _i_sext:
 
@@ -11323,7 +11342,10 @@ environment <floatenv>`.
 NaN values follow the usual :ref:`NaN behaviors <floatnan>`, except that _if_ a
 NaN payload is propagated from the input ("Quieting NaN propagation" or
 "Unchanged NaN propagation" cases), then the low order bits of the NaN payload
-which cannot fit in the resulting type are discarded.
+which cannot fit in the resulting type are discarded. Note that if discarding
+the low order bits leads to an all-0 payload, this cannot be represented as a
+signaling NaN (it would represent an infinity instead), so in that case
+"Unchanged NaN propagation" is not possible.
 
 Example:
 """"""""
@@ -13931,6 +13953,144 @@ should be inserted for value profiling of target expressions. ``-instrprof``
 pass will generate the appropriate data structures and replace the
 ``llvm.instrprof.value.profile`` intrinsic with the call to the profile
 runtime library with proper arguments.
+
+'``llvm.instrprof.mcdc.parameters``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare void @llvm.instrprof.mcdc.parameters(ptr <name>, i64 <hash>,
+                                                   i32 <bitmap-bytes>)
+
+Overview:
+"""""""""
+
+The '``llvm.instrprof.mcdc.parameters``' intrinsic is used to initiate MC/DC
+code coverage instrumentation for a function.
+
+Arguments:
+""""""""""
+
+The first argument is a pointer to a global variable containing the
+name of the entity being instrumented. This should generally be the
+(mangled) function name for a set of counters.
+
+The second argument is a hash value that can be used by the consumer
+of the profile data to detect changes to the instrumented source.
+
+The third argument is the number of bitmap bytes required by the function to
+record the number of test vectors executed for each boolean expression.
+
+Semantics:
+""""""""""
+
+This intrinsic represents basic MC/DC parameters initiating one or more MC/DC
+instrumentation sequences in a function. It will cause the ``-instrprof`` pass
+to generate the appropriate data structures and the code to instrument MC/DC
+test vectors in a format that can be written out by a compiler runtime and
+consumed via the ``llvm-profdata`` tool.
+
+'``llvm.instrprof.mcdc.condbitmap.update``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare void @llvm.instrprof.mcdc.condbitmap.update(ptr <name>, i64 <hash>,
+                                                          i32 <condition-id>,
+                                                          ptr <mcdc-temp-addr>,
+                                                          i1 <bool-value>)
+
+Overview:
+"""""""""
+
+The '``llvm.instrprof.mcdc.condbitmap.update``' intrinsic is used to track
+MC/DC condition evaluation for each condition in a boolean expression.
+
+Arguments:
+""""""""""
+
+The first argument is a pointer to a global variable containing the
+name of the entity being instrumented. This should generally be the
+(mangled) function name for a set of counters.
+
+The second argument is a hash value that can be used by the consumer
+of the profile data to detect changes to the instrumented source.
+
+The third argument is an ID of a condition to track. This value is used as a
+bit index into the condition bitmap.
+
+The fourth argument is the address of the condition bitmap.
+
+The fifth argument is the boolean value representing the evaluation of the
+condition (true or false)
+
+Semantics:
+""""""""""
+
+This intrinsic represents the update of a condition bitmap that is local to a
+function and will cause the ``-instrprof`` pass to generate the code to
+instrument the control flow around each condition in a boolean expression. The
+ID of each condition corresponds to a bit index in the condition bitmap which
+is set based on the evaluation of the condition.
+
+'``llvm.instrprof.mcdc.tvbitmap.update``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare void @llvm.instrprof.mcdc.tvbitmap.update(ptr <name>, i64 <hash>,
+                                                        i32 <bitmap-bytes>)
+                                                        i32 <bitmap-index>,
+                                                        ptr <mcdc-temp-addr>)
+
+Overview:
+"""""""""
+
+The '``llvm.instrprof.mcdc.tvbitmap.update``' intrinsic is used to track MC/DC
+test vector execution after each boolean expression has been fully executed.
+The overall value of the condition bitmap, after it has been successively
+updated using the '``llvm.instrprof.mcdc.condbitmap.update``' intrinsic with
+the true or false evaluation of each condition, uniquely identifies an executed
+MC/DC test vector and is used as a bit index into the global test vector
+bitmap.
+
+Arguments:
+""""""""""
+
+The first argument is a pointer to a global variable containing the
+name of the entity being instrumented. This should generally be the
+(mangled) function name for a set of counters.
+
+The second argument is a hash value that can be used by the consumer
+of the profile data to detect changes to the instrumented source.
+
+The third argument is the number of bitmap bytes required by the function to
+record the number of test vectors executed for each boolean expression.
+
+The fourth argument is the byte index into the global test vector bitmap
+corresponding to the function.
+
+The fifth argument is the address of the condition bitmap, which contains a
+value representing an executed MC/DC test vector. It is loaded and used as the
+bit index of the test vector bitmap.
+
+Semantics:
+""""""""""
+
+This intrinsic represents the final operation of an MC/DC instrumentation
+sequence and will cause the ``-instrprof`` pass to generate the code to
+instrument an update of a function's global test vector bitmap to indicate that
+a test vector has been executed. The global test vector bitmap can be consumed
+by the ``llvm-profdata`` and ``llvm-cov`` tools.
 
 '``llvm.thread.pointer``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

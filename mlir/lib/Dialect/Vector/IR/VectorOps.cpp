@@ -3067,9 +3067,12 @@ LogicalResult OuterProductOp::verify() {
       return emitOpError("expected #1 operand dim to match result dim #1");
     if (vRHS.getDimSize(0) != vRES.getDimSize(1))
       return emitOpError("expected #2 operand dim to match result dim #2");
-    if (vRHS.isScalable() != vLHS.isScalable())
-      return emitOpError("expected either all or none of vector operands #1 "
-                         "and #2 to be scalable");
+    if (vLHS.isScalable() && !vRHS.isScalable()) {
+      // This restriction reflects what's currently supported in terms of
+      // scalable vectors. However, we could relax this if there's a use case.
+      return emitOpError(
+          "expected either both or only #2 operand dim to be scalable");
+    }
   } else {
     // An AXPY operation.
     if (vRES.getRank() != 1)
@@ -4001,35 +4004,36 @@ struct TransferReadAfterWriteToBroadcast
     auto defWrite = readOp.getSource().getDefiningOp<vector::TransferWriteOp>();
     if (!defWrite)
       return failure();
-
-    SmallVector<int64_t> readDims = readOp.getTransferChunkAccessed();
-    Value vec;
-    if (readOp.getIndices() == defWrite.getIndices() &&
-        readOp.getMask() == defWrite.getMask()) {
-      SmallVector<int64_t> writeDims = defWrite.getTransferChunkAccessed();
-      // TODO: If the writeDim is a superset of the read dims we could do an
-      // extract_strided_slice.
-      if (writeDims == readDims)
-        vec = defWrite.getVector();
-    }
+    // TODO: If the written transfer chunk is a superset of the read transfer
+    // chunk we could do an extract_strided_slice.
+    if (readOp.getTransferChunkAccessed() !=
+        defWrite.getTransferChunkAccessed())
+      return failure();
+    // TODO: Support cases where a dim is explicitly written but implicitly
+    // read (i.e., a unit dim that is rank reduced).
+    if (getUnusedDimsBitVector({readOp.getPermutationMap()}) !=
+        getUnusedDimsBitVector({defWrite.getPermutationMap()}))
+      return failure();
+    if (readOp.getIndices() != defWrite.getIndices() ||
+        readOp.getMask() != defWrite.getMask())
+      return failure();
+    Value vec = defWrite.getVector();
     // TODO: loop through the chain of transfer_write if we can prove that they
     // don't overlap with the transfer_read. This requires improving
     // `isDisjointTransferIndices` helper.
-    if (!vec)
-      return failure();
-    SmallVector<unsigned> permutation;
     AffineMap readMap = compressUnusedDims(readOp.getPermutationMap());
     AffineMap writeMap = compressUnusedDims(defWrite.getPermutationMap());
     AffineMap map = readMap.compose(writeMap);
     if (map.getNumResults() == 0)
       return failure();
-    // Calculate the permuation to apply to go from the vector stored to the
+    // Calculate the permutation to apply to go from the vector stored to the
     // vector read.
+    SmallVector<unsigned> permutation;
     if (!map.isPermutationOfMinorIdentityWithBroadcasting(permutation))
       return failure();
 
     Location loc = readOp.getLoc();
-    // Calculate the broadcast shape by applying the reverse permuation to the
+    // Calculate the broadcast shape by applying the reverse permutation to the
     // final shape we want.
     ArrayRef<int64_t> destShape = readOp.getVectorType().getShape();
     SmallVector<int64_t> broadcastShape(destShape.size());

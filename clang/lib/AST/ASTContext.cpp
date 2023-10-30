@@ -112,10 +112,10 @@ enum FloatingRank {
   Ibm128Rank
 };
 
-/// \returns location that is relevant when searching for Doc comments related
-/// to \p D.
-static SourceLocation getDeclLocForCommentSearch(const Decl *D,
-                                                 SourceManager &SourceMgr) {
+/// \returns The locations that are relevant when searching for Doc comments
+/// related to \p D.
+static SmallVector<SourceLocation, 2>
+getDeclLocsForCommentSearch(const Decl *D, SourceManager &SourceMgr) {
   assert(D);
 
   // User can not attach documentation to implicit declarations.
@@ -167,115 +167,48 @@ static SourceLocation getDeclLocForCommentSearch(const Decl *D,
       isa<TemplateTemplateParmDecl>(D))
     return {};
 
+  SmallVector<SourceLocation, 2> Locations;
   // Find declaration location.
   // For Objective-C declarations we generally don't expect to have multiple
   // declarators, thus use declaration starting location as the "declaration
   // location".
   // For all other declarations multiple declarators are used quite frequently,
   // so we use the location of the identifier as the "declaration location".
+  SourceLocation BaseLocation;
   if (isa<ObjCMethodDecl>(D) || isa<ObjCContainerDecl>(D) ||
-      isa<ObjCPropertyDecl>(D) ||
-      isa<RedeclarableTemplateDecl>(D) ||
+      isa<ObjCPropertyDecl>(D) || isa<RedeclarableTemplateDecl>(D) ||
       isa<ClassTemplateSpecializationDecl>(D) ||
       // Allow association with Y across {} in `typedef struct X {} Y`.
       isa<TypedefDecl>(D))
-    return D->getBeginLoc();
+    BaseLocation = D->getBeginLoc();
+  else
+    BaseLocation = D->getLocation();
 
-  const SourceLocation DeclLoc = D->getLocation();
-  if (DeclLoc.isMacroID()) {
-    // There are (at least) three types of macros we care about here.
-    //
-    // 1. Macros that are used in the definition of a type outside the macro,
-    //    with a comment attached at the macro call site.
-    //    ```
-    //    #define MAKE_NAME(Foo) Name##Foo
-    //
-    //    /// Comment is here, where we use the macro.
-    //    struct MAKE_NAME(Foo) {
-    //        int a;
-    //        int b;
-    //    };
-    //    ```
-    // 2. Macros that define whole things along with the comment.
-    //    ```
-    //    #define MAKE_METHOD(name) \
-    //      /** Comment is here, inside the macro. */ \
-    //      void name() {}
-    //
-    //    struct S {
-    //      MAKE_METHOD(f)
-    //    }
-    //    ```
-    // 3. Macros that both declare a type and name a decl outside the macro.
-    //    ```
-    //    /// Comment is here, where we use the macro.
-    //    typedef NS_ENUM(NSInteger, Size) {
-    //        SizeWidth,
-    //        SizeHeight
-    //    };
-    //    ```
-    //    In this case NS_ENUM declares am enum type, and uses the same name for
-    //    the typedef declaration that appears outside the macro. The comment
-    //    here should be applied to both declarations inside and outside the
-    //    macro.
-    //
-    // We have found a Decl name that comes from inside a macro, but
-    // Decl::getLocation() returns the place where the macro is being called.
-    // If the declaration (and not just the name) resides inside the macro,
-    // then we want to map Decl::getLocation() into the macro to where the
-    // declaration and its attached comment (if any) were written.
-    //
-    // This mapping into the macro is done by mapping the location to its
-    // spelling location, however even if the declaration is inside a macro,
-    // the name's spelling can come from a macro argument (case 2 above). In
-    // this case mapping the location to the spelling location finds the
-    // argument's position (at `f` in MAKE_METHOD(`f`) above), which is not
-    // where the declaration and its comment are located.
-    //
-    // To avoid this issue, we make use of Decl::getBeginLocation() instead.
-    // While the declaration's position is where the name is written, the
-    // comment is always attached to the begining of the declaration, not to
-    // the name.
-    //
-    // In the first case, the begin location of the decl is outside the macro,
-    // at the location of `typedef`. This is where the comment is found as
-    // well. The begin location is not inside a macro, so it's spelling
-    // location is the same.
-    //
-    // In the second case, the begin location of the decl is the call to the
-    // macro, at `MAKE_METHOD`. However its spelling location is inside the
-    // the macro at the location of `void`. This is where the comment is found
-    // again.
-    //
-    // In the third case, there's no correct single behaviour. We want to use
-    // the comment outside the macro for the definition that's inside the macro.
-    // There is also a definition outside the macro, and we want the comment to
-    // apply to both. The cases we care about here is NS_ENUM() and
-    // NS_OPTIONS(). In general, if an enum is defined inside a macro, we should
-    // try to find the comment there.
+  if (!D->getLocation().isMacroID()) {
+    Locations.emplace_back(BaseLocation);
+  } else {
+    const auto *DeclCtx = D->getDeclContext();
 
-    // This is handling case 3 for NS_ENUM() and NS_OPTIONS(), which define
-    // enum types inside the macro.
-    if (isa<EnumDecl>(D)) {
-      SourceLocation MacroCallLoc = SourceMgr.getExpansionLoc(DeclLoc);
-      if (auto BufferRef =
-              SourceMgr.getBufferOrNone(SourceMgr.getFileID(MacroCallLoc));
-          BufferRef.has_value()) {
-        llvm::StringRef buffer = BufferRef->getBuffer().substr(
-            SourceMgr.getFileOffset(MacroCallLoc));
-        if (buffer.starts_with("NS_ENUM(") ||
-            buffer.starts_with("NS_OPTIONS(")) {
-          // We want to use the comment on the call to NS_ENUM and NS_OPTIONS
-          // macros for the types defined inside the macros, which is at the
-          // expansion location.
-          return MacroCallLoc;
-        }
-      }
+    // When encountering definitions generated from a macro (that are not
+    // contained by another declaration in the macro) we need to try and find
+    // the comment at the location of the expansion but if there is no comment
+    // there we should retry to see if there is a comment inside the macro as
+    // well. To this end we return first BaseLocation to first look at the
+    // expansion site, the second value is the spelling location of the
+    // beginning of the declaration defined inside the macro.
+    if (!(DeclCtx &&
+          Decl::castFromDeclContext(DeclCtx)->getLocation().isMacroID())) {
+      Locations.emplace_back(SourceMgr.getExpansionLoc(BaseLocation));
     }
-    return SourceMgr.getSpellingLoc(D->getBeginLoc());
+
+    // We use Decl::getBeginLoc() and not just BaseLocation here to ensure that
+    // we don't refer to the macro argument location at the expansion site (this
+    // can happen if the name's spelling is provided via macro argument), and
+    // always to the declaration itself.
+    Locations.emplace_back(SourceMgr.getSpellingLoc(D->getBeginLoc()));
   }
 
-  return DeclLoc;
+  return Locations;
 }
 
 RawComment *ASTContext::getRawCommentForDeclNoCacheImpl(
@@ -357,30 +290,36 @@ RawComment *ASTContext::getRawCommentForDeclNoCacheImpl(
 }
 
 RawComment *ASTContext::getRawCommentForDeclNoCache(const Decl *D) const {
-  const SourceLocation DeclLoc = getDeclLocForCommentSearch(D, SourceMgr);
+  const auto DeclLocs = getDeclLocsForCommentSearch(D, SourceMgr);
 
-  // If the declaration doesn't map directly to a location in a file, we
-  // can't find the comment.
-  if (DeclLoc.isInvalid() || !DeclLoc.isFileID())
-    return nullptr;
+  for (const auto DeclLoc : DeclLocs) {
+    // If the declaration doesn't map directly to a location in a file, we
+    // can't find the comment.
+    if (DeclLoc.isInvalid() || !DeclLoc.isFileID())
+      continue;
 
-  if (ExternalSource && !CommentsLoaded) {
-    ExternalSource->ReadComments();
-    CommentsLoaded = true;
+    if (ExternalSource && !CommentsLoaded) {
+      ExternalSource->ReadComments();
+      CommentsLoaded = true;
+    }
+
+    if (Comments.empty())
+      continue;
+
+    const FileID File = SourceMgr.getDecomposedLoc(DeclLoc).first;
+    if (!File.isValid())
+      continue;
+
+    const auto CommentsInThisFile = Comments.getCommentsInFile(File);
+    if (!CommentsInThisFile || CommentsInThisFile->empty())
+      continue;
+
+    if (RawComment *Comment =
+            getRawCommentForDeclNoCacheImpl(D, DeclLoc, *CommentsInThisFile))
+      return Comment;
   }
 
-  if (Comments.empty())
-    return nullptr;
-
-  const FileID File = SourceMgr.getDecomposedLoc(DeclLoc).first;
-  if (!File.isValid()) {
-    return nullptr;
-  }
-  const auto CommentsInThisFile = Comments.getCommentsInFile(File);
-  if (!CommentsInThisFile || CommentsInThisFile->empty())
-    return nullptr;
-
-  return getRawCommentForDeclNoCacheImpl(D, DeclLoc, *CommentsInThisFile);
+  return nullptr;
 }
 
 void ASTContext::addComment(const RawComment &RC) {
@@ -584,7 +523,6 @@ void ASTContext::attachCommentsToJustParsedDecls(ArrayRef<Decl *> Decls,
   // declaration, but also comments that *follow* the declaration -- thanks to
   // the lookahead in the lexer: we've consumed the semicolon and looked
   // ahead through comments.
-
   for (const Decl *D : Decls) {
     assert(D);
     if (D->isInvalidDecl())
@@ -592,19 +530,22 @@ void ASTContext::attachCommentsToJustParsedDecls(ArrayRef<Decl *> Decls,
 
     D = &adjustDeclToTemplate(*D);
 
-    const SourceLocation DeclLoc = getDeclLocForCommentSearch(D, SourceMgr);
-
-    if (DeclLoc.isInvalid() || !DeclLoc.isFileID())
-      continue;
-
     if (DeclRawComments.count(D) > 0)
       continue;
 
-    if (RawComment *const DocComment =
-            getRawCommentForDeclNoCacheImpl(D, DeclLoc, *CommentsInThisFile)) {
-      cacheRawCommentForDecl(*D, *DocComment);
-      comments::FullComment *FC = DocComment->parse(*this, PP, D);
-      ParsedComments[D->getCanonicalDecl()] = FC;
+    const auto DeclLocs = getDeclLocsForCommentSearch(D, SourceMgr);
+
+    for (const auto DeclLoc : DeclLocs) {
+      if (DeclLoc.isInvalid() || !DeclLoc.isFileID())
+        continue;
+
+      if (RawComment *const DocComment = getRawCommentForDeclNoCacheImpl(
+              D, DeclLoc, *CommentsInThisFile)) {
+        cacheRawCommentForDecl(*D, *DocComment);
+        comments::FullComment *FC = DocComment->parse(*this, PP, D);
+        ParsedComments[D->getCanonicalDecl()] = FC;
+        break;
+      }
     }
   }
 }
@@ -9622,9 +9563,7 @@ bool ASTContext::areLaxCompatibleRVVTypes(QualType FirstType,
       return false;
 
     const auto *VecTy = SecondType->getAs<VectorType>();
-    if (VecTy &&
-        (VecTy->getVectorKind() == VectorType::RVVFixedLengthDataVector ||
-         VecTy->getVectorKind() == VectorType::GenericVector)) {
+    if (VecTy && VecTy->getVectorKind() == VectorType::GenericVector) {
       const LangOptions::LaxVectorConversionKind LVCKind =
           getLangOpts().getLaxVectorConversions();
 

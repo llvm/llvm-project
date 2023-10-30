@@ -3297,21 +3297,22 @@ unsigned X86TargetLowering::preferedOpcodeForCmpEqPiecesOfOperand(
       // If the current setup has imm64 mask, then inverse will have
       // at least imm32 mask (or be zext i32 -> i64).
       if (VT == MVT::i64)
-        return AndMask->getSignificantBits() > 32 ? ISD::SRL : ShiftOpc;
+        return AndMask->getSignificantBits() > 32 ? (unsigned)ISD::SRL
+                                                  : ShiftOpc;
 
       // We can only benefit if req at least 7-bit for the mask. We
       // don't want to replace shl of 1,2,3 as they can be implemented
       // with lea/add.
-      return ShiftOrRotateAmt.uge(7) ? ISD::SRL : ShiftOpc;
+      return ShiftOrRotateAmt.uge(7) ? (unsigned)ISD::SRL : ShiftOpc;
     }
 
     if (VT == MVT::i64)
       // Keep exactly 32-bit imm64, this is zext i32 -> i64 which is
       // extremely efficient.
-      return AndMask->getSignificantBits() > 33 ? ISD::SHL : ShiftOpc;
+      return AndMask->getSignificantBits() > 33 ? (unsigned)ISD::SHL : ShiftOpc;
 
     // Keep small shifts as shl so we can generate add/lea.
-    return ShiftOrRotateAmt.ult(7) ? ISD::SHL : ShiftOpc;
+    return ShiftOrRotateAmt.ult(7) ? (unsigned)ISD::SHL : ShiftOpc;
   }
 
   // We prefer rotate for vectors of if we won't get a zext mask with SRL
@@ -15292,6 +15293,12 @@ static SDValue lowerShuffleAsRepeatedMaskAndLanePermute(
       for (int i = 0; i != NumElts; i += NumBroadcastElts)
         for (int j = 0; j != NumBroadcastElts; ++j)
           BroadcastMask[i + j] = j;
+
+      // Avoid returning the same shuffle operation. For example,
+      // v8i32 = vector_shuffle<0,1,0,1,0,1,0,1> t5, undef:v8i32
+      if (BroadcastMask == Mask)
+        return SDValue();
+
       return DAG.getVectorShuffle(VT, DL, RepeatShuf, DAG.getUNDEF(VT),
                                   BroadcastMask);
     }

@@ -1732,7 +1732,7 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
       AArch64::AEK_RCPC3,   AArch64::AEK_THE,       AArch64::AEK_D128,
       AArch64::AEK_LSE128,  AArch64::AEK_SPECRES2,  AArch64::AEK_RASv2,
       AArch64::AEK_ITE,     AArch64::AEK_GCS,       AArch64::AEK_FPMR,
-  };
+      AArch64::AEK_FP8,     AArch64::AEK_FAMINMAX};
 
   std::vector<StringRef> Features;
 
@@ -1805,6 +1805,8 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
   EXPECT_TRUE(llvm::is_contained(Features, "+ite"));
   EXPECT_TRUE(llvm::is_contained(Features, "+gcs"));
   EXPECT_TRUE(llvm::is_contained(Features, "+fpmr"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+fp8"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+faminmax"));
 
   // Assuming we listed every extension above, this should produce the same
   // result. (note that AEK_NONE doesn't have a name so it won't be in the
@@ -1929,6 +1931,8 @@ TEST(TargetParserTest, AArch64ArchExtFeature) {
       {"rasv2", "norasv2", "+rasv2", "-rasv2"},
       {"gcs", "nogcs", "+gcs", "-gcs"},
       {"fpmr", "nofpmr", "+fpmr", "-fpmr"},
+      {"fp8", "nofp8", "+fp8", "-fp8"},
+      {"faminmax", "nofaminmax", "+faminmax", "-faminmax"},
   };
 
   for (unsigned i = 0; i < std::size(ArchExt); i++) {

@@ -113,6 +113,28 @@ ABI Changes in This Version
 - Following the SystemV ABI for x86-64, ``__int128`` arguments will no longer
   be split between a register and a stack slot.
 
+AST Dumping Potentially Breaking Changes
+----------------------------------------
+- When dumping a sugared type, Clang will no longer print the desugared type if
+  its textual representation is the same as the sugared one. This applies to
+  both text dumps of the form ``'foo':'foo'`` which will now be dumped as just
+  ``'foo'``, and JSON dumps of the form:
+
+  .. code-block:: json
+
+    "type": {
+      "qualType": "foo",
+      "desugaredQualType": "foo"
+    }
+
+  which will now be dumped as just:
+
+  .. code-block:: json
+
+    "type": {
+      "qualType": "foo"
+    }
+
 What's New in Clang |release|?
 ==============================
 Some of the major new features and improvements to Clang are listed
@@ -507,6 +529,10 @@ Bug Fixes in This Version
   ``thread_local`` instead of ``_Thread_local``.
   Fixes (`#70068 <https://github.com/llvm/llvm-project/issues/70068>`_) and
   (`#69167 <https://github.com/llvm/llvm-project/issues/69167>`_)
+- Fix crash in evaluating invalid lambda expression which forget capture this.
+  Fixes (`#67687 <https://github.com/llvm/llvm-project/issues/67687>`_)
+- Fix crash from constexpr evaluator evaluating uninitialized arrays as rvalue.
+  Fixes (`#67317 <https://github.com/llvm/llvm-project/issues/67317>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -636,6 +662,10 @@ Bug Fixes to C++ Support
   (`#46200 <https://github.com/llvm/llvm-project/issues/46200>`_)
   (`#57812 <https://github.com/llvm/llvm-project/issues/57812>`_)
 
+- Diagnose use of a variable-length array in a coroutine. The design of
+  coroutines is such that it is not possible to support VLA use. Fixes:
+  (`#65858 <https://github.com/llvm/llvm-project/issues/65858>`_)
+
 - Fix bug where we were overriding zero-initialization of class members when
   default initializing a base class in a constant expression context. Fixes:
   (`#69890 <https://github.com/llvm/llvm-project/issues/69890>`_)
@@ -650,6 +680,9 @@ Bug Fixes to AST Handling
   `Issue 64170 <https://github.com/llvm/llvm-project/issues/64170>`_
 - Fixed ``hasAnyBase`` not binding nodes in its submatcher.
   (`#65421 <https://github.com/llvm/llvm-project/issues/65421>`_)
+- Fixed a bug where RecursiveASTVisitor fails to visit the
+  initializer of a bitfield.
+  `Issue 64916 <https://github.com/llvm/llvm-project/issues/64916>`_
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -787,6 +820,7 @@ clang-format
 ------------
 - Add ``AllowBreakBeforeNoexceptSpecifier`` option.
 - Add ``AllowShortCompoundRequirementOnASingleLine`` option.
+- Change ``BreakAfterAttributes`` from ``Never`` to ``Leave`` in LLVM style.
 
 libclang
 --------

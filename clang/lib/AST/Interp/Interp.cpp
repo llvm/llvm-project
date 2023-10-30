@@ -215,6 +215,10 @@ bool CheckLive(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   return true;
 }
 
+bool CheckDummy(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
+  return !Ptr.isZero() && !Ptr.isDummy();
+}
+
 bool CheckNull(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                CheckSubobjectKind CSK) {
   if (!Ptr.isZero())
@@ -297,6 +301,8 @@ bool CheckInitialized(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
 }
 
 bool CheckLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
+  if (!CheckDummy(S, OpPC, Ptr))
+    return false;
   if (!CheckLive(S, OpPC, Ptr, AK_Read))
     return false;
   if (!CheckExtern(S, OpPC, Ptr))
@@ -433,7 +439,8 @@ bool CheckPure(InterpState &S, CodePtr OpPC, const CXXMethodDecl *MD) {
 static void DiagnoseUninitializedSubobject(InterpState &S, const SourceInfo &SI,
                                            const FieldDecl *SubObjDecl) {
   assert(SubObjDecl && "Subobject declaration does not exist");
-  S.FFDiag(SI, diag::note_constexpr_uninitialized) << SubObjDecl;
+  S.FFDiag(SI, diag::note_constexpr_uninitialized)
+      << /*(name)*/ 1 << SubObjDecl;
   S.Note(SubObjDecl->getLocation(),
          diag::note_constexpr_subobject_declared_here);
 }
@@ -483,6 +490,8 @@ static bool CheckFieldsInitialized(InterpState &S, CodePtr OpPC,
 
     if (FieldType->isRecordType()) {
       Result &= CheckFieldsInitialized(S, OpPC, FieldPtr, FieldPtr.getRecord());
+    } else if (FieldType->isIncompleteArrayType()) {
+      // Nothing to do here.
     } else if (FieldType->isArrayType()) {
       const auto *CAT =
           cast<ConstantArrayType>(FieldType->getAsArrayTypeUnsafe());

@@ -29,6 +29,12 @@ using namespace llvm;
 #define DEBUG_TYPE "riscv-isel"
 #define PASS_NAME "RISC-V DAG->DAG Pattern Instruction Selection"
 
+static cl::opt<bool> UsePseudoMovImm(
+    "riscv-use-rematerializable-movimm", cl::Hidden,
+    cl::desc("Use a rematerializable pseudoinstruction for 2 instruction "
+             "constant materialization"),
+    cl::init(false));
+
 namespace llvm::RISCV {
 #define GET_RISCVVSSEGTable_IMPL
 #define GET_RISCVVLSEGTable_IMPL
@@ -194,6 +200,13 @@ static SDValue selectImm(SelectionDAG *CurDAG, const SDLoc &DL, const MVT VT,
                          int64_t Imm, const RISCVSubtarget &Subtarget) {
   RISCVMatInt::InstSeq Seq =
       RISCVMatInt::generateInstSeq(Imm, Subtarget.getFeatureBits());
+
+  // Use a rematerializable pseudo instruction for short sequences if enabled.
+  if (Seq.size() == 2 && UsePseudoMovImm)
+    return SDValue(
+        CurDAG->getMachineNode(RISCV::PseudoMovImm, DL, VT,
+                               CurDAG->getTargetConstant(Imm, DL, VT)),
+        0);
 
   // See if we can create this constant as (ADD (SLLI X, C), X) where X is at
   // worst an LUI+ADDIW. This will require an extra register, but avoids a
@@ -2828,10 +2841,9 @@ bool RISCVDAGToDAGISel::selectSHXADD_UWOp(SDValue N, unsigned ShAmt,
 static bool vectorPseudoHasAllNBitUsers(SDNode *User, unsigned UserOpNo,
                                         unsigned Bits,
                                         const TargetInstrInfo *TII) {
-  const RISCVVPseudosTable::PseudoInfo *PseudoInfo =
-      RISCVVPseudosTable::getPseudoInfo(User->getMachineOpcode());
+  unsigned MCOpcode = RISCV::getRVVMCOpcode(User->getMachineOpcode());
 
-  if (!PseudoInfo)
+  if (!MCOpcode)
     return false;
 
   const MCInstrDesc &MCID = TII->get(User->getMachineOpcode());
@@ -2852,7 +2864,7 @@ static bool vectorPseudoHasAllNBitUsers(SDNode *User, unsigned UserOpNo,
     return false;
 
   auto NumDemandedBits =
-      RISCV::getVectorLowDemandedScalarBits(PseudoInfo->BaseInstr, Log2SEW);
+      RISCV::getVectorLowDemandedScalarBits(MCOpcode, Log2SEW);
   return NumDemandedBits && Bits >= *NumDemandedBits;
 }
 
@@ -3391,21 +3403,11 @@ bool RISCVDAGToDAGISel::doPeepholeMaskedRVV(MachineSDNode *N) {
 }
 
 static bool IsVMerge(SDNode *N) {
-  unsigned Opc = N->getMachineOpcode();
-  return Opc == RISCV::PseudoVMERGE_VVM_MF8 ||
-         Opc == RISCV::PseudoVMERGE_VVM_MF4 ||
-         Opc == RISCV::PseudoVMERGE_VVM_MF2 ||
-         Opc == RISCV::PseudoVMERGE_VVM_M1 ||
-         Opc == RISCV::PseudoVMERGE_VVM_M2 ||
-         Opc == RISCV::PseudoVMERGE_VVM_M4 || Opc == RISCV::PseudoVMERGE_VVM_M8;
+  return RISCV::getRVVMCOpcode(N->getMachineOpcode()) == RISCV::VMERGE_VVM;
 }
 
 static bool IsVMv(SDNode *N) {
-  unsigned Opc = N->getMachineOpcode();
-  return Opc == RISCV::PseudoVMV_V_V_MF8 || Opc == RISCV::PseudoVMV_V_V_MF4 ||
-         Opc == RISCV::PseudoVMV_V_V_MF2 || Opc == RISCV::PseudoVMV_V_V_M1 ||
-         Opc == RISCV::PseudoVMV_V_V_M2 || Opc == RISCV::PseudoVMV_V_V_M4 ||
-         Opc == RISCV::PseudoVMV_V_V_M8;
+  return RISCV::getRVVMCOpcode(N->getMachineOpcode()) == RISCV::VMV_V_V;
 }
 
 static unsigned GetVMSetForLMul(RISCVII::VLMUL LMUL) {
@@ -3683,40 +3685,6 @@ bool RISCVDAGToDAGISel::performCombineVMergeAndVOps(SDNode *N) {
   return true;
 }
 
-// Transform (VMERGE_VVM_<LMUL> false, false, true, allones, vl, sew) to
-// (VMV_V_V_<LMUL> false, true, vl, sew). It may decrease uses of VMSET.
-bool RISCVDAGToDAGISel::performVMergeToVMv(SDNode *N) {
-#define CASE_VMERGE_TO_VMV(lmul)                                               \
-  case RISCV::PseudoVMERGE_VVM_##lmul:                                    \
-    NewOpc = RISCV::PseudoVMV_V_V_##lmul;                                 \
-    break;
-  unsigned NewOpc;
-  switch (N->getMachineOpcode()) {
-  default:
-    llvm_unreachable("Expected VMERGE_VVM_<LMUL> instruction.");
-  CASE_VMERGE_TO_VMV(MF8)
-  CASE_VMERGE_TO_VMV(MF4)
-  CASE_VMERGE_TO_VMV(MF2)
-  CASE_VMERGE_TO_VMV(M1)
-  CASE_VMERGE_TO_VMV(M2)
-  CASE_VMERGE_TO_VMV(M4)
-  CASE_VMERGE_TO_VMV(M8)
-  }
-
-  if (!usesAllOnesMask(N, /* MaskOpIdx */ 3))
-    return false;
-
-  SDLoc DL(N);
-  SDValue PolicyOp =
-    CurDAG->getTargetConstant(/*TUMU*/ 0, DL, Subtarget->getXLenVT());
-  SDNode *Result = CurDAG->getMachineNode(
-      NewOpc, DL, N->getValueType(0),
-      {N->getOperand(1), N->getOperand(2), N->getOperand(4), N->getOperand(5),
-       PolicyOp});
-  ReplaceUses(N, Result);
-  return true;
-}
-
 bool RISCVDAGToDAGISel::doPeepholeMergeVVMFold() {
   bool MadeChange = false;
   SelectionDAG::allnodes_iterator Position = CurDAG->allnodes_end();
@@ -3728,8 +3696,6 @@ bool RISCVDAGToDAGISel::doPeepholeMergeVVMFold() {
 
     if (IsVMerge(N) || IsVMv(N))
       MadeChange |= performCombineVMergeAndVOps(N);
-    if (IsVMerge(N) && N->getOperand(0) == N->getOperand(1))
-      MadeChange |= performVMergeToVMv(N);
   }
   return MadeChange;
 }

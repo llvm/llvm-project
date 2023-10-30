@@ -3639,6 +3639,8 @@ static const struct Extension {
     {"ssbs", {AArch64::FeatureSSBS}},
     {"tme", {AArch64::FeatureTME}},
     {"fpmr", {AArch64::FeatureFPMR}},
+    {"fp8", {AArch64::FeatureFP8}},
+    {"faminmax", {AArch64::FeatureFAMINMAX}},
 };
 
 static void setRequiredFeatureString(FeatureBitset FBS, std::string &Str) {

@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s --post-sparsification-rewrite --sparse-tensor-conversion --canonicalize --cse | FileCheck %s
+// RUN: mlir-opt %s --lower-sparse-ops-to-foreach --lower-sparse-foreach-to-scf --sparse-tensor-conversion --canonicalize --cse | FileCheck %s
 
 #SparseVector = #sparse_tensor.encoding<{
   map = (d0) -> (d0 : compressed)
@@ -396,34 +396,6 @@ func.func @sparse_compression(%tensor: tensor<8x8xf64, #CSR>,
   %0 = sparse_tensor.compress %values, %filled, %added, %count into %tensor[%i]
     : memref<?xf64>, memref<?xi1>, memref<?xindex>, tensor<8x8xf64, #CSR>
   return %0 : tensor<8x8xf64, #CSR>
-}
-
-// CHECK-LABEL: func @sparse_out1(
-//  CHECK-SAME: %[[A:.*]]: !llvm.ptr<i8>,
-//  CHECK-SAME: %[[B:.*]]: !llvm.ptr<i8>)
-//  CHECK-DAG:  %[[ToCOO:.*]] = arith.constant 5 : i32
-//  CHECK-DAG:  %[[Sort:.*]] = arith.constant false
-//       CHECK: %[[COO:.*]] = call @newSparseTensor(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %[[ToCOO]], %[[A]])
-//       CHECK: call @outSparseTensorF64(%[[COO]], %[[B]], %[[Sort]]) : (!llvm.ptr<i8>, !llvm.ptr<i8>, i1) -> ()
-//       CHECK: call @delSparseTensorCOOF64(%[[COO]])
-//       CHECK: return
-func.func @sparse_out1(%arg0: tensor<?x?xf64, #CSR>, %arg1: !llvm.ptr<i8>) {
-  sparse_tensor.out %arg0, %arg1 : tensor<?x?xf64, #CSR>, !llvm.ptr<i8>
-  return
-}
-
-// CHECK-LABEL: func @sparse_out2(
-//  CHECK-SAME: %[[A:.*]]: !llvm.ptr<i8>,
-//  CHECK-SAME: %[[B:.*]]: !llvm.ptr<i8>)
-//  CHECK-DAG:  %[[ToCOO:.*]] = arith.constant 5 : i32
-//  CHECK-DAG:  %[[Sort:.*]] = arith.constant true
-//       CHECK: %[[COO:.*]] = call @newSparseTensor(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %[[ToCOO]], %[[A]])
-//       CHECK: call @outSparseTensorF32(%[[COO]], %[[B]], %[[Sort]]) : (!llvm.ptr<i8>, !llvm.ptr<i8>, i1) -> ()
-//       CHECK: call @delSparseTensorCOOF32(%[[COO]])
-//       CHECK: return
-func.func @sparse_out2(%arg0: tensor<?x?x?xf32, #SparseTensor>, %arg1: !llvm.ptr<i8>) {
-  sparse_tensor.out %arg0, %arg1 : tensor<?x?x?xf32, #SparseTensor>, !llvm.ptr<i8>
-  return
 }
 
 // CHECK-LABEL: func @sparse_and_dense_init(
