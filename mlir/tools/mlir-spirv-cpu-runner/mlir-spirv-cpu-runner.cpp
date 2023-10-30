@@ -94,8 +94,8 @@ static LogicalResult runMLIRPasses(Operation *module,
   nestedPM.addPass(spirv::createSPIRVUpdateVCEPass());
   passManager.addPass(createLowerHostCodeToLLVMPass(
       enableOpaquePointers(LowerHostCodeToLLVMPassOptions{})));
-  passManager.addPass(createConvertSPIRVToLLVMPass(
-      enableOpaquePointers(ConvertSPIRVToLLVMPassOptions{})));
+  passManager.addPass(
+      createConvertSPIRVToLLVMPass(ConvertSPIRVToLLVMPassOptions{}));
   return passManager.run(module);
 }
 
