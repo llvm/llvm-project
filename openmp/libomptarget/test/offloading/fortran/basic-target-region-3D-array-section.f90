@@ -14,6 +14,7 @@ program main
     integer :: inArray(3,3,3)
     integer :: outArray(3,3,3)
     integer :: i, j, k 
+    integer :: j2 = 3, k2 = 3
 
     do i = 1, 3
       do j = 1, 3
@@ -24,11 +25,16 @@ program main
        end do
     end do
 
-!$omp target map(tofrom:inArray(1:3, 1:3, 2:2), outArray(1:3, 1:3, 1:3), j, k)
-    do j = 1, 3
-      do k = 1, 3
+j = 1
+k = 1 
+!$omp target map(tofrom:inArray(1:3, 1:3, 2:2), outArray(1:3, 1:3, 1:3), j, k, j2, k2)
+    do while (j <= j2)
+      k = 1
+      do while (k <= k2)
         outArray(k, j, 2) = inArray(k, j, 2)
+        k = k + 1
       end do
+      j = j + 1
     end do
 !$omp end target
 
