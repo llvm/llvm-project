@@ -3032,7 +3032,8 @@ public:
   const ValueDecl *FindCountedByField(const Expr *Base);
 
   /// Build an expression accessing the "counted_by" field.
-  Expr *BuildCountedByFieldExpr(Expr *Base, const ValueDecl *CountedByVD);
+  const Expr *BuildCountedByFieldExpr(const Expr *Base,
+                                      const ValueDecl *CountedByVD);
 
   llvm::Value *EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
                                        bool isInc, bool isPre);

@@ -887,8 +887,7 @@ CodeGenFunction::emitBuiltinObjectSize(const Expr *E, unsigned Type,
           FindFlexibleArrayMemberField(getContext(), OuterRD);
 
       // Find the outer struct expr (i.e. p in p->a.b.c.d).
-      Expr *CountedByExpr =
-          BuildCountedByFieldExpr(const_cast<Expr *>(E), CountedByFD);
+      const Expr *CountedByExpr = BuildCountedByFieldExpr(E, CountedByFD);
 
       // Load the counted_by field.
       llvm::Value *CountedByInstr =

@@ -946,7 +946,7 @@ static llvm::Value *getArrayIndexingBound(CodeGenFunction &CGF,
 
     if (const ValueDecl *VD = CGF.FindCountedByField(Base)) {
       IndexedType = Base->getType();
-      Expr *E = CGF.BuildCountedByFieldExpr(const_cast<Expr *>(Base), VD);
+      const Expr *E = CGF.BuildCountedByFieldExpr(Base, VD);
       return CGF.EmitAnyExprToTemp(E).getScalarVal();
     }
   }
@@ -962,20 +962,21 @@ static llvm::Value *getArrayIndexingBound(CodeGenFunction &CGF,
   return nullptr;
 }
 
-Expr *CodeGenFunction::BuildCountedByFieldExpr(Expr *Base,
-                                               const ValueDecl *CountedByVD) {
+const Expr *
+CodeGenFunction::BuildCountedByFieldExpr(const Expr *Base,
+                                         const ValueDecl *CountedByVD) {
   // Find the outer struct expr (i.e. p in p->a.b.c.d).
-  Base = Base->IgnoreParenImpCasts();
+  Expr *CountedByExpr = const_cast<Expr *>(Base)->IgnoreParenImpCasts();
 
   // Work our way up the expression until we reach the DeclRefExpr.
-  while (!isa<DeclRefExpr>(Base))
-    if (auto *ME = dyn_cast<MemberExpr>(Base))
-      Base = ME->getBase()->IgnoreParenImpCasts();
+  while (!isa<DeclRefExpr>(CountedByExpr))
+    if (const auto *ME = dyn_cast<MemberExpr>(CountedByExpr))
+      CountedByExpr = ME->getBase()->IgnoreParenImpCasts();
 
   // Add back an implicit cast to create the required pr-value.
-  Base =
-      ImplicitCastExpr::Create(getContext(), Base->getType(), CK_LValueToRValue,
-                               Base, nullptr, VK_PRValue, FPOptionsOverride());
+  CountedByExpr = ImplicitCastExpr::Create(
+      getContext(), CountedByExpr->getType(), CK_LValueToRValue, CountedByExpr,
+      nullptr, VK_PRValue, FPOptionsOverride());
 
   if (const auto *IFD = dyn_cast<IndirectFieldDecl>(CountedByVD)) {
     // The counted_by field is inside an anonymous struct / union. The
@@ -983,18 +984,20 @@ Expr *CodeGenFunction::BuildCountedByFieldExpr(Expr *Base,
     // easily. (Yay!)
     for (NamedDecl *ND : IFD->chain()) {
       auto *VD = cast<ValueDecl>(ND);
-      Base = MemberExpr::CreateImplicit(getContext(), Base,
-                                        Base->getType()->isPointerType(), VD,
-                                        VD->getType(), VK_LValue, OK_Ordinary);
+      CountedByExpr =
+          MemberExpr::CreateImplicit(getContext(), CountedByExpr,
+                                     CountedByExpr->getType()->isPointerType(),
+                                     VD, VD->getType(), VK_LValue, OK_Ordinary);
     }
   } else {
-    Base = MemberExpr::CreateImplicit(
-        getContext(), Base, Base->getType()->isPointerType(),
+    CountedByExpr = MemberExpr::CreateImplicit(
+        getContext(), const_cast<Expr *>(CountedByExpr),
+        CountedByExpr->getType()->isPointerType(),
         const_cast<ValueDecl *>(CountedByVD), CountedByVD->getType(), VK_LValue,
         OK_Ordinary);
   }
 
-  return Base;
+  return CountedByExpr;
 }
 
 const ValueDecl *
