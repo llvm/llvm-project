@@ -10271,11 +10271,11 @@ RISCVTargetLowering::lowerVPReverseExperimental(SDValue Op,
     SDValue SplatOne = DAG.getNode(RISCVISD::VMV_V_X_VL, DL, IndicesVT,
                                    DAG.getUNDEF(IndicesVT),
                                    DAG.getConstant(1, DL, XLenVT), EVL);
-    SDValue VMV0 = DAG.getNode(RISCVISD::VMV_V_X_VL, DL, IndicesVT,
-                               DAG.getUNDEF(IndicesVT),
-                               DAG.getConstant(0, DL, XLenVT), EVL);
-    Op1 = DAG.getNode(RISCVISD::VSELECT_VL, DL, IndicesVT, Op1, SplatOne, VMV0,
-                      EVL);
+    SDValue SplatZero = DAG.getNode(RISCVISD::VMV_V_X_VL, DL, IndicesVT,
+                                    DAG.getUNDEF(IndicesVT),
+                                    DAG.getConstant(0, DL, XLenVT), EVL);
+    Op1 = DAG.getNode(RISCVISD::VSELECT_VL, DL, IndicesVT, Op1, SplatOne,
+                      SplatZero, EVL);
   }
 
   unsigned EltSize = GatherVT.getScalarSizeInBits();
@@ -10299,10 +10299,8 @@ RISCVTargetLowering::lowerVPReverseExperimental(SDValue Op,
     // Swap the halves and concatenate them.
     // Slide the concatenated result by (VLMax - VL).
     if (MinSize == (8 * RISCV::RVVBitsPerBlock)) {
-      EVT LoVT, HiVT;
-      std::tie(LoVT, HiVT) = DAG.GetSplitDestVTs(GatherVT);
-      SDValue Lo, Hi;
-      std::tie(Lo, Hi) = DAG.SplitVector(Op1, DL);
+      auto [LoVT, HiVT] = DAG.GetSplitDestVTs(GatherVT);
+      auto [Lo, Hi] = DAG.SplitVector(Op1, DL);
 
       SDValue LoRev = DAG.getNode(ISD::VECTOR_REVERSE, DL, LoVT, Lo);
       SDValue HiRev = DAG.getNode(ISD::VECTOR_REVERSE, DL, HiVT, Hi);
