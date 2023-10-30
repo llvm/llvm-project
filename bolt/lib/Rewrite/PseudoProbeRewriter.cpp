@@ -248,7 +248,8 @@ void PseudoProbeRewriter::encodePseudoProbes() {
   auto EmitInt = [&](uint64_t Value, uint32_t Size) {
     const bool IsLittleEndian = BC.AsmInfo->isLittleEndian();
     uint64_t Swapped = support::endian::byte_swap(
-        Value, IsLittleEndian ? support::little : support::big);
+        Value,
+        IsLittleEndian ? llvm::endianness::little : llvm::endianness::big);
     unsigned Index = IsLittleEndian ? 0 : 8 - Size;
     auto Entry = StringRef(reinterpret_cast<char *>(&Swapped) + Index, Size);
     Contents.append(Entry.begin(), Entry.end());

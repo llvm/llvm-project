@@ -3118,6 +3118,9 @@ DiagnosedSilenceableFailure transform::ConvertConv2DToImg2ColOp::applyToOne(
           .Case([&](linalg::Conv2DNhwcHwcfOp op) {
             return rewriteInIm2Col(rewriter, op);
           })
+          .Case([&](linalg::Conv2DNhwcFhwcOp op) {
+            return rewriteInIm2Col(rewriter, op);
+          })
           .Case([&](linalg::DepthwiseConv2DNhwcHwcOp op) {
             return rewriteInIm2Col(rewriter, op);
           })

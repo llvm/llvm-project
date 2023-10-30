@@ -22,6 +22,7 @@
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 namespace mlir {
+#define GEN_PASS_DEF_SPARSEREINTERPRETMAP
 #define GEN_PASS_DEF_PRESPARSIFICATIONREWRITE
 #define GEN_PASS_DEF_SPARSIFICATIONPASS
 #define GEN_PASS_DEF_POSTSPARSIFICATIONREWRITE
@@ -44,9 +45,24 @@ namespace {
 // Passes implementation.
 //===----------------------------------------------------------------------===//
 
+struct SparseReinterpretMap
+    : public impl::SparseReinterpretMapBase<SparseReinterpretMap> {
+  SparseReinterpretMap() = default;
+  SparseReinterpretMap(const SparseReinterpretMap &pass) = default;
+  SparseReinterpretMap(const SparseReinterpretMapOptions &options) {
+    scope = options.scope;
+  }
+
+  void runOnOperation() override {
+    auto *ctx = &getContext();
+    RewritePatternSet patterns(ctx);
+    populateSparseReinterpretMap(patterns, scope);
+    (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
+  }
+};
+
 struct PreSparsificationRewritePass
     : public impl::PreSparsificationRewriteBase<PreSparsificationRewritePass> {
-
   PreSparsificationRewritePass() = default;
   PreSparsificationRewritePass(const PreSparsificationRewritePass &pass) =
       default;
@@ -61,7 +77,6 @@ struct PreSparsificationRewritePass
 
 struct SparsificationPass
     : public impl::SparsificationPassBase<SparsificationPass> {
-
   SparsificationPass() = default;
   SparsificationPass(const SparsificationPass &pass) = default;
   SparsificationPass(const SparsificationOptions &options) {
@@ -108,7 +123,6 @@ struct StageSparseOperationsPass
 struct PostSparsificationRewritePass
     : public impl::PostSparsificationRewriteBase<
           PostSparsificationRewritePass> {
-
   PostSparsificationRewritePass() = default;
   PostSparsificationRewritePass(const PostSparsificationRewritePass &pass) =
       default;
@@ -129,12 +143,8 @@ struct PostSparsificationRewritePass
 
 struct SparseTensorConversionPass
     : public impl::SparseTensorConversionPassBase<SparseTensorConversionPass> {
-
   SparseTensorConversionPass() = default;
   SparseTensorConversionPass(const SparseTensorConversionPass &pass) = default;
-  SparseTensorConversionPass(const SparseTensorConversionOptions &options) {
-    sparseToSparse = static_cast<int32_t>(options.sparseToSparseStrategy);
-  }
 
   void runOnOperation() override {
     auto *ctx = &getContext();
@@ -187,16 +197,14 @@ struct SparseTensorConversionPass
     target.addLegalDialect<
         arith::ArithDialect, bufferization::BufferizationDialect,
         LLVM::LLVMDialect, memref::MemRefDialect, scf::SCFDialect>();
-    // Translate strategy flags to strategy options.
-    SparseTensorConversionOptions options(
-        sparseToSparseConversionStrategy(sparseToSparse));
+
     // Populate with rules and apply rewriting rules.
     populateFunctionOpInterfaceTypeConversionPattern<func::FuncOp>(patterns,
                                                                    converter);
     populateCallOpTypeConversionPattern(patterns, converter);
     scf::populateSCFStructuralTypeConversionsAndLegality(converter, patterns,
                                                          target);
-    populateSparseTensorConversionPatterns(converter, patterns, options);
+    populateSparseTensorConversionPatterns(converter, patterns);
     if (failed(applyPartialConversion(getOperation(), target,
                                       std::move(patterns))))
       signalPassFailure();
@@ -205,7 +213,6 @@ struct SparseTensorConversionPass
 
 struct SparseTensorCodegenPass
     : public impl::SparseTensorCodegenBase<SparseTensorCodegenPass> {
-
   SparseTensorCodegenPass() = default;
   SparseTensorCodegenPass(const SparseTensorCodegenPass &pass) = default;
   SparseTensorCodegenPass(bool createDeallocs, bool enableInit) {
@@ -271,7 +278,6 @@ struct SparseTensorCodegenPass
 
 struct SparseBufferRewritePass
     : public impl::SparseBufferRewriteBase<SparseBufferRewritePass> {
-
   SparseBufferRewritePass() = default;
   SparseBufferRewritePass(const SparseBufferRewritePass &pass) = default;
   SparseBufferRewritePass(bool enableInit) {
@@ -288,7 +294,6 @@ struct SparseBufferRewritePass
 
 struct SparseVectorizationPass
     : public impl::SparseVectorizationBase<SparseVectorizationPass> {
-
   SparseVectorizationPass() = default;
   SparseVectorizationPass(const SparseVectorizationPass &pass) = default;
   SparseVectorizationPass(unsigned vl, bool vla, bool sidx32) {
@@ -311,7 +316,6 @@ struct SparseVectorizationPass
 
 struct SparseGPUCodegenPass
     : public impl::SparseGPUCodegenBase<SparseGPUCodegenPass> {
-
   SparseGPUCodegenPass() = default;
   SparseGPUCodegenPass(const SparseGPUCodegenPass &pass) = default;
   SparseGPUCodegenPass(unsigned nT) { numThreads = nT; }
@@ -326,7 +330,6 @@ struct SparseGPUCodegenPass
 
 struct StorageSpecifierToLLVMPass
     : public impl::StorageSpecifierToLLVMBase<StorageSpecifierToLLVMPass> {
-
   StorageSpecifierToLLVMPass() = default;
 
   void runOnOperation() override {
@@ -365,24 +368,19 @@ struct StorageSpecifierToLLVMPass
 } // namespace
 
 //===----------------------------------------------------------------------===//
-// Strategy flag methods.
-//===----------------------------------------------------------------------===//
-
-SparseToSparseConversionStrategy
-mlir::sparseToSparseConversionStrategy(int32_t flag) {
-  switch (flag) {
-  default:
-    return SparseToSparseConversionStrategy::kAuto;
-  case 1:
-    return SparseToSparseConversionStrategy::kViaCOO;
-  case 2:
-    return SparseToSparseConversionStrategy::kDirect;
-  }
-}
-
-//===----------------------------------------------------------------------===//
 // Pass creation methods.
 //===----------------------------------------------------------------------===//
+
+std::unique_ptr<Pass> mlir::createSparseReinterpretMapPass() {
+  return std::make_unique<SparseReinterpretMap>();
+}
+
+std::unique_ptr<Pass>
+mlir::createSparseReinterpretMapPass(ReinterpretMapScope scope) {
+  SparseReinterpretMapOptions options;
+  options.scope = scope;
+  return std::make_unique<SparseReinterpretMap>(options);
+}
 
 std::unique_ptr<Pass> mlir::createPreSparsificationRewritePass() {
   return std::make_unique<PreSparsificationRewritePass>();
@@ -414,11 +412,6 @@ mlir::createPostSparsificationRewritePass(bool enableRT, bool enableForeach,
 
 std::unique_ptr<Pass> mlir::createSparseTensorConversionPass() {
   return std::make_unique<SparseTensorConversionPass>();
-}
-
-std::unique_ptr<Pass> mlir::createSparseTensorConversionPass(
-    const SparseTensorConversionOptions &options) {
-  return std::make_unique<SparseTensorConversionPass>(options);
 }
 
 std::unique_ptr<Pass> mlir::createSparseTensorCodegenPass() {

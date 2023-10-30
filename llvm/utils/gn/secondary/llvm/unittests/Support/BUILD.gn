@@ -93,6 +93,7 @@ unittest("SupportTests") {
     "TypeNameTest.cpp",
     "TypeSizeTest.cpp",
     "TypeTraitsTest.cpp",
+    "UTCTimeTest.cpp",
     "UnicodeTest.cpp",
     "VersionTupleTest.cpp",
     "VirtualFileSystemTest.cpp",

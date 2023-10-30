@@ -3050,9 +3050,8 @@ M68kTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
 
 /// Determines whether the callee is required to pop its own arguments.
 /// Callee pop is necessary to support tail calls.
-bool M68k::isCalleePop(CallingConv::ID CallingConv, bool IsVarArg,
-                       bool GuaranteeTCO) {
-  return false;
+bool M68k::isCalleePop(CallingConv::ID CC, bool IsVarArg, bool GuaranteeTCO) {
+  return CC == CallingConv::M68k_RTD && !IsVarArg;
 }
 
 // Return true if it is OK for this CMOV pseudo-opcode to be cascaded

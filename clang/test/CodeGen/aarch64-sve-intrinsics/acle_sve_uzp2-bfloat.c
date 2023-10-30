@@ -20,7 +20,7 @@
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.uzp2.nxv8bf16(<vscale x 8 x bfloat> [[OP1:%.*]], <vscale x 8 x bfloat> [[OP2:%.*]])
 // CHECK-NEXT:    ret <vscale x 8 x bfloat> [[TMP0]]
 //
-// CPP-CHECK-LABEL: @_Z16test_svuzp2_bf16u14__SVBFloat16_tu14__SVBFloat16_t(
+// CPP-CHECK-LABEL: @_Z16test_svuzp2_bf16u14__SVBfloat16_tS_(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.uzp2.nxv8bf16(<vscale x 8 x bfloat> [[OP1:%.*]], <vscale x 8 x bfloat> [[OP2:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 8 x bfloat> [[TMP0]]

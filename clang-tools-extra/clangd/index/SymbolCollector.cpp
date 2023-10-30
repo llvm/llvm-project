@@ -893,7 +893,7 @@ void SymbolCollector::finish() {
     const Symbol *S = Symbols.find(SID);
     if (!S)
       continue;
-    assert(IncludeFiles.find(SID) != IncludeFiles.end());
+    assert(IncludeFiles.contains(SID));
 
     const auto FID = IncludeFiles.at(SID);
     // Determine if the FID is #include'd or #import'ed.

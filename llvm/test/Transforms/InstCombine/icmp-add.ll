@@ -515,6 +515,19 @@ bb:
   ret i1 %t
 }
 
+define <2 x i1> @cvt_icmp_2_sext_plus_zext_ne_vec(<2 x i1> %arg, <2 x i1> %arg1) {
+; CHECK-LABEL: @cvt_icmp_2_sext_plus_zext_ne_vec(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+;
+bb:
+  %i = sext <2 x i1> %arg to <2 x i32>
+  %i2 = zext <2 x i1> %arg1 to <2 x i32>
+  %i3 = add nsw <2 x i32> %i, %i2
+  %i4 = icmp ne <2 x i32> %i3, <i32 2, i32 2>
+  ret <2 x i1> %i4
+}
+
 ; test if zext i1 X + sext i1 Y converted to sext i1 X + zext i1 Y
 ; and then processed
 
@@ -529,6 +542,19 @@ bb:
   %i3 = add i32 %i, %i2
   %t = icmp eq i32 %i3, -2
   ret i1 %t
+}
+
+define <2 x i1> @cvt_icmp_neg_2_zext_plus_sext_eq_vec(<2 x i1> %arg, <2 x i1> %arg1) {
+; CHECK-LABEL: @cvt_icmp_neg_2_zext_plus_sext_eq_vec(
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    ret <2 x i1> zeroinitializer
+;
+bb:
+  %i = zext <2 x i1> %arg to <2 x i32>
+  %i2 = sext <2 x i1> %arg1 to <2 x i32>
+  %i3 = add nsw <2 x i32> %i2, %i
+  %i4 = icmp eq <2 x i32> %i3, <i32 2, i32 2>
+  ret <2 x i1> %i4
 }
 
 define i1 @cvt_icmp_neg_1_zext_plus_sext_eq(i1 %arg, i1 %arg1) {

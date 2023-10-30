@@ -5,7 +5,7 @@
 # RUN: echo "B C 50" >> %t.call_graph
 # RUN: echo "C D 40" >> %t.call_graph
 # RUN: echo "D B 10" >> %t.call_graph
-# RUN: ld.lld -e A %t --call-graph-ordering-file %t.call_graph -o %t2 --print-symbol-order=%t3
+# RUN: ld.lld -e A %t --call-graph-ordering-file %t.call_graph -o %t2 --call-graph-profile-sort=hfsort --print-symbol-order=%t3
 # RUN: FileCheck %s --input-file %t3
 
 # CHECK: B
@@ -32,6 +32,3 @@ C:
 .globl  D
 D:
  nop
-
-
-

@@ -370,8 +370,9 @@ static llvm::Error handleObjectFile(ObjectFile &Obj,
     return Err;
 
   // Save the GSYM file to disk.
-  support::endianness Endian =
-      Obj.makeTriple().isLittleEndian() ? support::little : support::big;
+  llvm::endianness Endian = Obj.makeTriple().isLittleEndian()
+                                ? llvm::endianness::little
+                                : llvm::endianness::big;
 
   std::optional<uint64_t> OptSegmentSize;
   if (SegmentSize > 0)

@@ -47,12 +47,12 @@ public:
       // Our MD5 implementation returns the result in little endian, so the low
       // word is first.
       using namespace support;
-      return endian::read<uint64_t, little, unaligned>(data());
+      return endian::read<uint64_t, llvm::endianness::little>(data());
     }
 
     uint64_t high() const {
       using namespace support;
-      return endian::read<uint64_t, little, unaligned>(data() + 8);
+      return endian::read<uint64_t, llvm::endianness::little>(data() + 8);
     }
     std::pair<uint64_t, uint64_t> words() const {
       using namespace support;

@@ -1517,7 +1517,7 @@ def UImm3s8Operand : UImmScaledMemoryIndexed<3, 8>;
 
 def uimm3s8 : Operand<i64>, ImmLeaf<i64,
 [{ return Imm >= 0 && Imm <= 56 && ((Imm % 8) == 0); }], UImmS8XForm> {
-  let PrintMethod = "printVectorIndex<8>";
+  let PrintMethod = "printMatrixIndex<8>";
   let ParserMatchClass = UImm3s8Operand;
 }
 
@@ -6011,11 +6011,11 @@ multiclass SIMDLogicalThreeVectorTied<bit U, bits<2> size,
 
 // ARMv8.2-A Dot Product Instructions (Vector): These instructions extract
 // bytes from S-sized elements.
-class BaseSIMDThreeSameVectorDot<bit Q, bit U, bit Mixed, string asm, string kind1,
-                                 string kind2, RegisterOperand RegType,
+class BaseSIMDThreeSameVectorDot<bit Q, bit U, bits<2> sz, bits<4> opc, string asm,
+                                 string kind1, string kind2, RegisterOperand RegType,
                                  ValueType AccumType, ValueType InputType,
                                  SDPatternOperator OpNode> :
-        BaseSIMDThreeSameVectorTied<Q, U, 0b100, {0b1001, Mixed}, RegType, asm, kind1,
+        BaseSIMDThreeSameVectorTied<Q, U, {sz, 0b0}, {0b1, opc}, RegType, asm, kind1,
         [(set (AccumType RegType:$dst),
               (OpNode (AccumType RegType:$Rd),
                       (InputType RegType:$Rn),
@@ -6024,9 +6024,9 @@ class BaseSIMDThreeSameVectorDot<bit Q, bit U, bit Mixed, string asm, string kin
 }
 
 multiclass SIMDThreeSameVectorDot<bit U, bit Mixed, string asm, SDPatternOperator OpNode> {
-  def v8i8  : BaseSIMDThreeSameVectorDot<0, U, Mixed, asm, ".2s", ".8b", V64,
+  def v8i8  : BaseSIMDThreeSameVectorDot<0, U, 0b10, {0b001, Mixed}, asm, ".2s", ".8b", V64,
                                          v2i32, v8i8, OpNode>;
-  def v16i8 : BaseSIMDThreeSameVectorDot<1, U, Mixed, asm, ".4s", ".16b", V128,
+  def v16i8 : BaseSIMDThreeSameVectorDot<1, U, 0b10, {0b001, Mixed}, asm, ".4s", ".16b", V128,
                                          v4i32, v16i8, OpNode>;
 }
 
@@ -6055,6 +6055,49 @@ multiclass SIMDThreeSameVectorFML<bit U, bit b13, bits<3> size, string asm,
                                          v4f32, v8f16, OpNode>;
 }
 
+
+// FP8 assembly/disassembly classes
+
+//----------------------------------------------------------------------------
+// FP8 Advanced SIMD three-register extension
+//----------------------------------------------------------------------------
+class BaseSIMDThreeVectors<bit Q, bit U, bits<2> size, bits<4> op,
+                           RegisterOperand regtype1,
+                           RegisterOperand regtype2, string asm,
+                           string kind1, string kind2>
+  : I<(outs regtype1:$Rd), (ins regtype2:$Rn, regtype2:$Rm), asm,
+      "\t$Rd" # kind1 # ", $Rn" # kind2 # ", $Rm" # kind2, "", []>, Sched<[]> {
+  bits<5> Rd;
+  bits<5> Rn;
+  bits<5> Rm;
+  let Inst{31}    = 0;
+  let Inst{30}    = Q;
+  let Inst{29}    = U;
+  let Inst{28-24} = 0b01110;
+  let Inst{23-22} = size;
+  let Inst{21}    = 0b0;
+  let Inst{20-16} = Rm;
+  let Inst{15}    = 0b1;
+  let Inst{14-11} = op;
+  let Inst{10}    = 0b1;
+  let Inst{9-5}   = Rn;
+  let Inst{4-0}   = Rd;
+}
+
+
+// FCVTN (FP16 to FP8)
+multiclass SIMDThreeSameSizeVectorCvt<string asm> {
+   def v8f8 : BaseSIMDThreeVectors<0b0, 0b0, 0b01, 0b1110, V64, V64, asm, ".8b",".4h">;
+   def v16f8 : BaseSIMDThreeVectors<0b1, 0b0, 0b01, 0b1110,  V128, V128, asm, ".16b", ".8h">;
+}
+
+// TODO : Create v16f8 value type
+// FCVTN, FCVTN2 (FP32 to FP8)
+multiclass SIMDThreeVectorCvt<string asm> {
+   def v8f8 : BaseSIMDThreeVectors<0b0, 0b0, 0b00, 0b1110, V64, V128, asm, ".8b", ".4s">;
+   def 2v16f8 : BaseSIMDThreeSameVectorDot<0b1, 0b0, 0b00, 0b1110, asm#2, ".16b", ".4s",
+                                           V128, v16i8, v4f32, null_frag>;
+}
 
 //----------------------------------------------------------------------------
 // AdvSIMD two register vector instructions.
@@ -6477,6 +6520,16 @@ multiclass SIMDMixedTwoVector<bit U, bits<5> opc, string asm,
   def : Pat<(concat_vectors (v2i32 V64:$Rd), (OpNode (v2i64 V128:$Rn))),
             (!cast<Instruction>(NAME # "v4i32")
                 (INSERT_SUBREG (IMPLICIT_DEF), V64:$Rd, dsub), V128:$Rn)>;
+}
+
+//----------------------------------------------------------------------------
+// FP8 Advanced SIMD two-register miscellaneous
+//----------------------------------------------------------------------------
+multiclass SIMDMixedTwoVectorFP8<bits<2>sz, string asm> {
+  def v8f16 : BaseSIMDMixedTwoVector<0b0, 0b1, sz, 0b10111, V64, V128,
+                                     asm, ".8h", ".8b", []>;
+  def 2v8f16 : BaseSIMDMixedTwoVector<0b1, 0b1, sz, 0b10111, V128, V128,
+                                     asm#2, ".8h", ".16b", []>;
 }
 
 class BaseSIMDCmpTwoVector<bit Q, bit U, bits<2> size, bits<2> size2,
@@ -8482,12 +8535,12 @@ class SIMDThreeSameVectorMatMul<bit B, bit U, string asm, SDPatternOperator OpNo
 
 //----------------------------------------------------------------------------
 // ARMv8.2-A Dot Product Instructions (Indexed)
-class BaseSIMDThreeSameVectorDotIndex<bit Q, bit U, bit Mixed, bits<2> size, string asm,
+class BaseSIMDThreeSameVectorIndexS<bit Q, bit U, bits<2> size, bits<4> opc, string asm,
                                       string dst_kind, string lhs_kind, string rhs_kind,
                                       RegisterOperand RegType,
                                       ValueType AccumType, ValueType InputType,
                                       SDPatternOperator OpNode> :
-        BaseSIMDIndexedTied<Q, U, 0b0, size, {0b111, Mixed}, RegType, RegType, V128,
+        BaseSIMDIndexedTied<Q, U, 0b0, size, opc, RegType, RegType, V128,
                             VectorIndexS, asm, "", dst_kind, lhs_kind, rhs_kind,
         [(set (AccumType RegType:$dst),
               (AccumType (OpNode (AccumType RegType:$Rd),
@@ -8502,20 +8555,20 @@ class BaseSIMDThreeSameVectorDotIndex<bit Q, bit U, bit Mixed, bits<2> size, str
 
 multiclass SIMDThreeSameVectorDotIndex<bit U, bit Mixed, bits<2> size, string asm,
                                        SDPatternOperator OpNode> {
-  def v8i8  : BaseSIMDThreeSameVectorDotIndex<0, U, Mixed, size, asm, ".2s", ".8b", ".4b",
+  def v8i8  : BaseSIMDThreeSameVectorIndexS<0, U, size, {0b111, Mixed}, asm, ".2s", ".8b", ".4b",
                                               V64, v2i32, v8i8, OpNode>;
-  def v16i8 : BaseSIMDThreeSameVectorDotIndex<1, U, Mixed, size, asm, ".4s", ".16b", ".4b",
+  def v16i8 : BaseSIMDThreeSameVectorIndexS<1, U, size, {0b111, Mixed}, asm, ".4s", ".16b", ".4b",
                                               V128, v4i32, v16i8, OpNode>;
 }
 
 // ARMv8.2-A Fused Multiply Add-Long Instructions (Indexed)
 let mayRaiseFPException = 1, Uses = [FPCR] in
-class BaseSIMDThreeSameVectorFMLIndex<bit Q, bit U, bits<4> opc, string asm,
+class BaseSIMDThreeSameVectorIndexH<bit Q, bit U, bits<2> sz, bits<4> opc, string asm,
                                       string dst_kind, string lhs_kind,
                                       string rhs_kind, RegisterOperand RegType,
-                                      ValueType AccumType, ValueType InputType,
-                                      SDPatternOperator OpNode> :
-        BaseSIMDIndexedTied<Q, U, 0, 0b10, opc, RegType, RegType, V128_lo,
+                                      RegisterOperand RegType_lo, ValueType AccumType,
+                                      ValueType InputType, SDPatternOperator OpNode> :
+        BaseSIMDIndexedTied<Q, U, 0, sz, opc, RegType, RegType, RegType_lo,
                             VectorIndexH, asm, "", dst_kind, lhs_kind, rhs_kind,
           [(set (AccumType RegType:$dst),
                 (AccumType (OpNode (AccumType RegType:$Rd),
@@ -8531,10 +8584,10 @@ class BaseSIMDThreeSameVectorFMLIndex<bit Q, bit U, bits<4> opc, string asm,
 
 multiclass SIMDThreeSameVectorFMLIndex<bit U, bits<4> opc, string asm,
                                        SDPatternOperator OpNode> {
-  def v4f16 : BaseSIMDThreeSameVectorFMLIndex<0, U, opc, asm, ".2s", ".2h", ".h",
-                                              V64, v2f32, v4f16, OpNode>;
-  def v8f16 : BaseSIMDThreeSameVectorFMLIndex<1, U, opc, asm, ".4s", ".4h", ".h",
-                                              V128, v4f32, v8f16, OpNode>;
+  def v4f16 : BaseSIMDThreeSameVectorIndexH<0, U, 0b10, opc, asm, ".2s", ".2h", ".h",
+                                              V64, V128_lo, v2f32, v4f16, OpNode>;
+  def v8f16 : BaseSIMDThreeSameVectorIndexH<1, U, 0b10, opc, asm, ".4s", ".4h", ".h",
+                                              V128, V128_lo, v4f32, v8f16, OpNode>;
 }
 
 multiclass SIMDFPIndexed<bit U, bits<4> opc, string asm,

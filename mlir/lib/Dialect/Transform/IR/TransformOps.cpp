@@ -850,8 +850,9 @@ transform::ForeachMatchOp::apply(transform::TransformRewriter &rewriter,
 
   for (Operation *root : state.getPayloadOps(getRoot())) {
     WalkResult walkResult = root->walk([&](Operation *op) {
-      // Skip over the root op itself so we don't invalidate it.
-      if (op == root)
+      // If getRestrictRoot is not present, skip over the root op itself so we
+      // don't invalidate it.
+      if (!getRestrictRoot() && op == root)
         return WalkResult::advance();
 
       DEBUG_MATCHER({
@@ -1556,10 +1557,10 @@ DiagnosedSilenceableFailure transform::MatchOperationEmptyOp::matchOperation(
     ::std::optional<::mlir::Operation *> maybeCurrent,
     transform::TransformResults &results, transform::TransformState &state) {
   if (!maybeCurrent.has_value()) {
-    DBGS_MATCHER() << "MatchOperationEmptyOp success\n";
+    DEBUG_MATCHER({ DBGS_MATCHER() << "MatchOperationEmptyOp success\n"; });
     return DiagnosedSilenceableFailure::success();
   }
-  DBGS_MATCHER() << "MatchOperationEmptyOp failure\n";
+  DEBUG_MATCHER({ DBGS_MATCHER() << "MatchOperationEmptyOp failure\n"; });
   return emitSilenceableError() << "operation is not empty";
 }
 
@@ -1761,8 +1762,20 @@ DiagnosedSilenceableFailure
 transform::NamedSequenceOp::apply(transform::TransformRewriter &rewriter,
                                   transform::TransformResults &results,
                                   transform::TransformState &state) {
-  // Nothing to do here.
-  return DiagnosedSilenceableFailure::success();
+  if (isExternal())
+    return emitDefiniteFailure() << "unresolved external named sequence";
+
+  // Map the entry block argument to the list of operations.
+  // Note: this is the same implementation as PossibleTopLevelTransformOp but
+  // without attaching the interface / trait since that is tailored to a
+  // dangling top-level op that does not get "called".
+  auto scope = state.make_region_scope(getBody());
+  if (failed(detail::mapPossibleTopLevelTransformOpBlockArguments(
+          state, this->getOperation(), getBody())))
+    return DiagnosedSilenceableFailure::definiteFailure();
+
+  return applySequenceBlock(getBody().front(),
+                            FailurePropagationMode::Propagate, state, results);
 }
 
 void transform::NamedSequenceOp::getEffects(
@@ -1915,6 +1928,49 @@ LogicalResult transform::NamedSequenceOp::verify() {
   return verifyNamedSequenceOp(*this, /*emitWarnings=*/true).checkAndReport();
 }
 
+template <typename FnTy>
+static void buildSequenceBody(OpBuilder &builder, OperationState &state,
+                              Type bbArgType, TypeRange extraBindingTypes,
+                              FnTy bodyBuilder) {
+  SmallVector<Type> types;
+  types.reserve(1 + extraBindingTypes.size());
+  types.push_back(bbArgType);
+  llvm::append_range(types, extraBindingTypes);
+
+  OpBuilder::InsertionGuard guard(builder);
+  Region *region = state.regions.back().get();
+  Block *bodyBlock =
+      builder.createBlock(region, region->begin(), types,
+                          SmallVector<Location>(types.size(), state.location));
+
+  // Populate body.
+  builder.setInsertionPointToStart(bodyBlock);
+  if constexpr (llvm::function_traits<FnTy>::num_args == 3) {
+    bodyBuilder(builder, state.location, bodyBlock->getArgument(0));
+  } else {
+    bodyBuilder(builder, state.location, bodyBlock->getArgument(0),
+                bodyBlock->getArguments().drop_front());
+  }
+}
+
+void transform::NamedSequenceOp::build(OpBuilder &builder,
+                                       OperationState &state, StringRef symName,
+                                       Type rootType, TypeRange resultTypes,
+                                       SequenceBodyBuilderFn bodyBuilder,
+                                       ArrayRef<NamedAttribute> attrs,
+                                       ArrayRef<DictionaryAttr> argAttrs) {
+  state.addAttribute(SymbolTable::getSymbolAttrName(),
+                     builder.getStringAttr(symName));
+  state.addAttribute(getFunctionTypeAttrName(state.name),
+                     TypeAttr::get(FunctionType::get(builder.getContext(),
+                                                     rootType, resultTypes)));
+  state.attributes.append(attrs.begin(), attrs.end());
+  state.addRegion();
+
+  buildSequenceBody(builder, state, rootType,
+                    /*extraBindingTypes=*/TypeRange(), bodyBuilder);
+}
+
 //===----------------------------------------------------------------------===//
 // SelectOp
 //===----------------------------------------------------------------------===//
@@ -1996,7 +2052,7 @@ void transform::SplitHandleOp::getEffects(
 
 LogicalResult transform::SplitHandleOp::verify() {
   if (getOverflowResult().has_value() &&
-      !(*getOverflowResult() >= 0 && *getOverflowResult() < getNumResults()))
+      !(*getOverflowResult() < getNumResults()))
     return emitOpError("overflow_result is not a valid result index");
   return success();
 }
@@ -2250,31 +2306,6 @@ void transform::SequenceOp::getRegionInvocationBounds(
     ArrayRef<Attribute> operands, SmallVectorImpl<InvocationBounds> &bounds) {
   (void)operands;
   bounds.emplace_back(1, 1);
-}
-
-template <typename FnTy>
-static void buildSequenceBody(OpBuilder &builder, OperationState &state,
-                              Type bbArgType, TypeRange extraBindingTypes,
-                              FnTy bodyBuilder) {
-  SmallVector<Type> types;
-  types.reserve(1 + extraBindingTypes.size());
-  types.push_back(bbArgType);
-  llvm::append_range(types, extraBindingTypes);
-
-  OpBuilder::InsertionGuard guard(builder);
-  Region *region = state.regions.back().get();
-  Block *bodyBlock =
-      builder.createBlock(region, region->begin(), types,
-                          SmallVector<Location>(types.size(), state.location));
-
-  // Populate body.
-  builder.setInsertionPointToStart(bodyBlock);
-  if constexpr (llvm::function_traits<FnTy>::num_args == 3) {
-    bodyBuilder(builder, state.location, bodyBlock->getArgument(0));
-  } else {
-    bodyBuilder(builder, state.location, bodyBlock->getArgument(0),
-                bodyBlock->getArguments().drop_front());
-  }
 }
 
 void transform::SequenceOp::build(OpBuilder &builder, OperationState &state,

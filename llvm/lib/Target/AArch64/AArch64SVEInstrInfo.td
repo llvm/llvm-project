@@ -2204,8 +2204,8 @@ let Predicates = [HasSVEorSME] in {
 } // End HasSVEorSME
 
 let Predicates = [HasBF16, HasSVEorSME] in {
-  defm BFDOT_ZZZ    : sve_float_dot<0b1, "bfdot", nxv8bf16, int_aarch64_sve_bfdot>;
-  defm BFDOT_ZZI    : sve_float_dot_indexed<0b1, "bfdot", nxv8bf16, int_aarch64_sve_bfdot_lane_v2>;
+  defm BFDOT_ZZZ    : sve_float_dot<0b1, 0b0, ZPR32, ZPR16, "bfdot", nxv8bf16, int_aarch64_sve_bfdot>;
+  defm BFDOT_ZZI    : sve_float_dot_indexed<0b1, 0b00, ZPR16, ZPR3b16, "bfdot", nxv8bf16, int_aarch64_sve_bfdot_lane_v2>;
 } // End HasBF16, HasSVEorSME
 
 let Predicates = [HasBF16, HasSVE] in {
@@ -3753,12 +3753,14 @@ defm PSEL_PPPRI : sve2_int_perm_sel_p<"psel", int_aarch64_sve_psel>;
 
 let Predicates = [HasSVE2p1_or_HasSME2] in {
 defm FCLAMP_ZZZ : sve2p1_fclamp<"fclamp", int_aarch64_sve_fclamp>;
-defm FDOT_ZZZ_S  : sve_float_dot<0b0, "fdot", nxv8f16, int_aarch64_sve_fdot_x2>;
-defm FDOT_ZZZI_S : sve_float_dot_indexed<0b0, "fdot", nxv8f16, int_aarch64_sve_fdot_lane_x2>;
-def BFMLSLB_ZZZ_S : sve2_fp_mla_long<0b110, "bfmlslb">;
-def BFMLSLT_ZZZ_S : sve2_fp_mla_long<0b111, "bfmlslt">;
-def BFMLSLB_ZZZI_S : sve2_fp_mla_long_by_indexed_elem<0b110, "bfmlslb">;
-def BFMLSLT_ZZZI_S : sve2_fp_mla_long_by_indexed_elem<0b111, "bfmlslt">;
+
+defm FDOT_ZZZ_S  : sve_float_dot<0b0, 0b0, ZPR32, ZPR16, "fdot", nxv8f16, int_aarch64_sve_fdot_x2>;
+defm FDOT_ZZZI_S : sve_float_dot_indexed<0b0, 0b00, ZPR16, ZPR3b16, "fdot", nxv8f16, int_aarch64_sve_fdot_lane_x2>;
+
+defm BFMLSLB_ZZZ_S : sve2_fp_mla_long<0b110, "bfmlslb", nxv4f32, nxv8bf16, int_aarch64_sve_bfmlslb>;
+defm BFMLSLT_ZZZ_S : sve2_fp_mla_long<0b111, "bfmlslt", nxv4f32, nxv8bf16, int_aarch64_sve_bfmlslt>;
+defm BFMLSLB_ZZZI_S : sve2_fp_mla_long_by_indexed_elem<0b110, "bfmlslb", nxv4f32, nxv8bf16, int_aarch64_sve_bfmlslb_lane>;
+defm BFMLSLT_ZZZI_S : sve2_fp_mla_long_by_indexed_elem<0b111, "bfmlslt", nxv4f32, nxv8bf16, int_aarch64_sve_bfmlslt_lane>;
 
 defm SDOT_ZZZ_HtoS  : sve2p1_two_way_dot_vv<"sdot", 0b0, int_aarch64_sve_sdot_x2>;
 defm UDOT_ZZZ_HtoS  : sve2p1_two_way_dot_vv<"udot", 0b1, int_aarch64_sve_udot_x2>;
@@ -4000,3 +4002,30 @@ defm UZPQ1_ZZZ : sve2p1_permute_vec_elems_q<0b010, "uzpq1">;
 defm UZPQ2_ZZZ : sve2p1_permute_vec_elems_q<0b011, "uzpq2">;
 defm TBLQ_ZZZ  : sve2p1_tblq<"tblq">;
 } // End HasSVE2p1_or_HasSME2p1
+
+//===----------------------------------------------------------------------===//
+// SVE2 FP8 instructions
+//===----------------------------------------------------------------------===//
+let Predicates = [HasSVE2orSME2, HasFP8] in {
+// FP8 upconvert
+defm F1CVT_ZZ     : sve2_fp8_cvt_single<0b0, 0b00, "f1cvt">;
+defm F2CVT_ZZ     : sve2_fp8_cvt_single<0b0, 0b01, "f2cvt">;
+defm BF1CVT_ZZ    : sve2_fp8_cvt_single<0b0, 0b10, "bf1cvt">;
+defm BF2CVT_ZZ    : sve2_fp8_cvt_single<0b0, 0b11, "bf2cvt">;
+defm F1CVTLT_ZZ   : sve2_fp8_cvt_single<0b1, 0b00, "f1cvtlt">;
+defm F2CVTLT_ZZ   : sve2_fp8_cvt_single<0b1, 0b01, "f2cvtlt">;
+defm BF1CVTLT_ZZ  : sve2_fp8_cvt_single<0b1, 0b10, "bf1cvtlt">;
+defm BF2CVTLT_ZZ  : sve2_fp8_cvt_single<0b1, 0b11, "bf2cvtlt">;
+
+// FP8 downconvert
+defm FCVTN_Z2Z_HtoB  : sve2_fp8_down_cvt_single<0b00, "fcvtn", ZZ_h_mul_r>;
+defm FCVTNB_Z2Z_StoB : sve2_fp8_down_cvt_single<0b01, "fcvtnb", ZZ_s_mul_r>;
+defm BFCVTN_Z2Z_HtoB : sve2_fp8_down_cvt_single<0b10, "bfcvtn", ZZ_h_mul_r>;
+defm FCVTNT_Z2Z_StoB : sve2_fp8_down_cvt_single<0b11, "fcvtnt", ZZ_s_mul_r>;
+} // End HasSVE2orSME2, HasFP8
+
+let Predicates = [HasSVE2orSME2, HasFAMINMAX] in {
+// FP8 Arithmetic - Predicated Group
+defm FAMIN_ZPmZ : sve_fp_2op_p_zds<0b1111, "famin", "", null_frag, DestructiveOther>;
+defm FAMAX_ZPmZ : sve_fp_2op_p_zds<0b1110, "famax", "", null_frag, DestructiveOther>;
+} // End HasSVE2orSME2, HasFAMINMAX

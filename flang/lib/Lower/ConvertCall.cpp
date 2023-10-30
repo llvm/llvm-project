@@ -392,9 +392,14 @@ fir::ExtendedValue Fortran::lower::genCallOpAndResult(
     fir::DispatchOp dispatch;
     if (std::optional<unsigned> passArg = caller.getPassArgIndex()) {
       // PASS, PASS(arg-name)
+      // Note that caller.getInputs is used instead of operands to get the
+      // passed object because interface mismatch issues may have inserted a
+      // cast to the operand with a different declared type, which would break
+      // later type bound call resolution in the FIR to FIR pass.
       dispatch = builder.create<fir::DispatchOp>(
           loc, funcType.getResults(), builder.getStringAttr(procName),
-          operands[*passArg], operands, builder.getI32IntegerAttr(*passArg));
+          caller.getInputs()[*passArg], operands,
+          builder.getI32IntegerAttr(*passArg));
     } else {
       // NOPASS
       const Fortran::evaluate::Component *component =
@@ -2117,7 +2122,12 @@ genProcedureRef(CallContext &callContext) {
   mlir::Location loc = callContext.loc;
   if (auto *intrinsic = callContext.procRef.proc().GetSpecificIntrinsic())
     return genIntrinsicRef(intrinsic, callContext);
-  if (Fortran::lower::isIntrinsicModuleProcRef(callContext.procRef))
+  // If it is an intrinsic module procedure reference - then treat as
+  // intrinsic unless it is bind(c) (since implementation is external from
+  // module).
+  if (Fortran::lower::isIntrinsicModuleProcRef(callContext.procRef) &&
+      !Fortran::semantics::IsBindCProcedure(
+          *callContext.procRef.proc().GetSymbol()))
     return genIntrinsicRef(nullptr, callContext);
 
   if (callContext.isStatementFunctionCall())
@@ -2222,8 +2232,7 @@ bool Fortran::lower::isIntrinsicModuleProcRef(
     return false;
   const Fortran::semantics::Symbol *module =
       symbol->GetUltimate().owner().GetSymbol();
-  return module && module->attrs().test(Fortran::semantics::Attr::INTRINSIC) &&
-         module->name().ToString().find("omp_lib") == std::string::npos;
+  return module && module->attrs().test(Fortran::semantics::Attr::INTRINSIC);
 }
 
 std::optional<hlfir::EntityWithAttributes> Fortran::lower::convertCallToHLFIR(

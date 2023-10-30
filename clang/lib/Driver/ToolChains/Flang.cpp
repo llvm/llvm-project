@@ -31,7 +31,7 @@ static void addDashXForInput(const ArgList &Args, const InputInfo &Input,
 
 void Flang::addFortranDialectOptions(const ArgList &Args,
                                      ArgStringList &CmdArgs) const {
-  Args.AddAllArgs(CmdArgs, {options::OPT_ffixed_form,
+  Args.addAllArgs(CmdArgs, {options::OPT_ffixed_form,
                             options::OPT_ffree_form,
                             options::OPT_ffixed_line_length_EQ,
                             options::OPT_fopenmp,
@@ -56,7 +56,7 @@ void Flang::addFortranDialectOptions(const ArgList &Args,
 
 void Flang::addPreprocessingOptions(const ArgList &Args,
                                     ArgStringList &CmdArgs) const {
-  Args.AddAllArgs(CmdArgs,
+  Args.addAllArgs(CmdArgs,
                   {options::OPT_P, options::OPT_D, options::OPT_U,
                    options::OPT_I, options::OPT_cpp, options::OPT_nocpp});
 }
@@ -111,7 +111,7 @@ static bool shouldLoopVersion(const ArgList &Args) {
 }
 
 void Flang::addOtherOptions(const ArgList &Args, ArgStringList &CmdArgs) const {
-  Args.AddAllArgs(CmdArgs,
+  Args.addAllArgs(CmdArgs,
                   {options::OPT_module_dir, options::OPT_fdebug_module_writer,
                    options::OPT_fintrinsic_modules_path, options::OPT_pedantic,
                    options::OPT_std_EQ, options::OPT_W_Joined,
@@ -142,10 +142,12 @@ void Flang::addCodegenOptions(const ArgList &Args,
   if (shouldLoopVersion(Args))
     CmdArgs.push_back("-fversion-loops-for-stride");
 
-  Args.AddAllArgs(CmdArgs, {options::OPT_flang_experimental_hlfir,
+  Args.addAllArgs(CmdArgs, {options::OPT_flang_experimental_hlfir,
                             options::OPT_flang_experimental_polymorphism,
                             options::OPT_fno_ppc_native_vec_elem_order,
-                            options::OPT_fppc_native_vec_elem_order});
+                            options::OPT_fppc_native_vec_elem_order,
+                            options::OPT_falias_analysis,
+                            options::OPT_fno_alias_analysis});
 }
 
 void Flang::addPicOptions(const ArgList &Args, ArgStringList &CmdArgs) const {

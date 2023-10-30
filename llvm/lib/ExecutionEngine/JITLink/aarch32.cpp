@@ -305,7 +305,7 @@ void writeImmediate(WritableArmRelocation &R, uint32_t Imm) {
 }
 
 Expected<int64_t> readAddendData(LinkGraph &G, Block &B, const Edge &E) {
-  support::endianness Endian = G.getEndianness();
+  llvm::endianness Endian = G.getEndianness();
 
   Edge::Kind Kind = E.getKind();
   const char *BlockWorkingMem = B.getContent().data();
@@ -405,10 +405,10 @@ Error applyFixupData(LinkGraph &G, Block &B, const Edge &E) {
   auto Write32 = [FixupPtr, Endian = G.getEndianness()](int64_t Value) {
     assert(isInt<32>(Value) && "Must be in signed 32-bit range");
     uint32_t Imm = static_cast<int32_t>(Value);
-    if (LLVM_LIKELY(Endian == little))
-      endian::write32<little>(FixupPtr, Imm);
+    if (LLVM_LIKELY(Endian == llvm::endianness::little))
+      endian::write32<llvm::endianness::little>(FixupPtr, Imm);
     else
-      endian::write32<big>(FixupPtr, Imm);
+      endian::write32<llvm::endianness::big>(FixupPtr, Imm);
   };
 
   Edge::Kind Kind = E.getKind();

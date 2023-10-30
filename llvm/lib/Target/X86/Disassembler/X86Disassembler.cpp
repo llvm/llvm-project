@@ -156,6 +156,9 @@ static InstrUID decode(OpcodeType type, InstructionContext insnContext,
   case MAP6:
     dec = &MAP6_SYM.opcodeDecisions[insnContext].modRMDecisions[opcode];
     break;
+  case MAP7:
+    dec = &MAP7_SYM.opcodeDecisions[insnContext].modRMDecisions[opcode];
+    break;
   }
 
   switch (dec->modrm_type) {
@@ -194,7 +197,7 @@ template <typename T> static bool consume(InternalInstruction *insn, T &ptr) {
   uint64_t offset = insn->readerCursor - insn->startLocation;
   if (offset + sizeof(T) > r.size())
     return true;
-  ptr = support::endian::read<T>(&r[offset], support::little);
+  ptr = support::endian::read<T>(&r[offset], llvm::endianness::little);
   insn->readerCursor += sizeof(T);
   return false;
 }
@@ -918,6 +921,9 @@ static bool readOpcode(struct InternalInstruction *insn) {
     case VEX_LOB_MAP6:
       insn->opcodeType = MAP6;
       return consume(insn, insn->opcode);
+    case VEX_LOB_MAP7:
+      insn->opcodeType = MAP7;
+      return consume(insn, insn->opcode);
     }
   } else if (insn->vectorExtensionType == TYPE_VEX_2B) {
     insn->opcodeType = TWOBYTE;
@@ -1058,6 +1064,9 @@ static int getInstructionIDWithAttrMask(uint16_t *instructionID,
     break;
   case MAP6:
     decision = &MAP6_SYM;
+    break;
+  case MAP7:
+    decision = &MAP7_SYM;
     break;
   }
 

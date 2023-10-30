@@ -212,6 +212,7 @@ private:
   void locateImportTables();
   void createExportTable();
   void mergeSections();
+  void sortECChunks();
   void removeUnusedSections();
   void assignAddresses();
   bool isInRange(uint16_t relType, uint64_t s, uint64_t p, int margin);
@@ -676,6 +677,7 @@ void Writer::run() {
     createMiscChunks();
     createExportTable();
     mergeSections();
+    sortECChunks();
     removeUnusedSections();
     finalizeAddresses();
     removeEmptySections();
@@ -1377,6 +1379,21 @@ void Writer::mergeSections() {
   }
 }
 
+// EC targets may have chunks of various architectures mixed together at this
+// point. Group code chunks of the same architecture together by sorting chunks
+// by their EC range type.
+void Writer::sortECChunks() {
+  if (!isArm64EC(ctx.config.machine))
+    return;
+
+  for (OutputSection *sec : ctx.outputSections) {
+    if (sec->isCodeSection())
+      llvm::stable_sort(sec->chunks, [=](const Chunk *a, const Chunk *b) {
+        return a->getArm64ECRangeType() < b->getArm64ECRangeType();
+      });
+  }
+}
+
 // Visits all sections to assign incremental, non-overlapping RVAs and
 // file offsets.
 void Writer::assignAddresses() {
@@ -1403,11 +1420,7 @@ void Writer::assignAddresses() {
 
     // If /FUNCTIONPADMIN is used, functions are padded in order to create a
     // hotpatchable image.
-    const bool isCodeSection =
-        (sec->header.Characteristics & IMAGE_SCN_CNT_CODE) &&
-        (sec->header.Characteristics & IMAGE_SCN_MEM_READ) &&
-        (sec->header.Characteristics & IMAGE_SCN_MEM_EXECUTE);
-    uint32_t padding = isCodeSection ? config->functionPadMin : 0;
+    uint32_t padding = sec->isCodeSection() ? config->functionPadMin : 0;
 
     for (Chunk *c : sec->chunks) {
       if (padding && c->isHotPatchable())

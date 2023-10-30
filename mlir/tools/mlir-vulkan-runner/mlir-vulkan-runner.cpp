@@ -70,25 +70,17 @@ static LogicalResult runMLIRPasses(Operation *op,
   if (options.spirvWebGPUPrepare)
     modulePM.addPass(spirv::createSPIRVWebGPUPreparePass());
 
-  auto enableOpaquePointers = [](auto passOption) {
-    passOption.useOpaquePointers = true;
-    return passOption;
-  };
-
   passManager.addPass(createConvertGpuLaunchFuncToVulkanLaunchFuncPass());
-  passManager.addPass(createFinalizeMemRefToLLVMConversionPass(
-      enableOpaquePointers(FinalizeMemRefToLLVMConversionPassOptions{})));
-  passManager.addPass(createConvertVectorToLLVMPass(
-      enableOpaquePointers(ConvertVectorToLLVMPassOptions{})));
+  passManager.addPass(createFinalizeMemRefToLLVMConversionPass());
+  passManager.addPass(createConvertVectorToLLVMPass());
   passManager.nest<func::FuncOp>().addPass(LLVM::createRequestCWrappersPass());
   ConvertFuncToLLVMPassOptions funcToLLVMOptions{};
   funcToLLVMOptions.indexBitwidth =
       DataLayout(module).getTypeSizeInBits(IndexType::get(module.getContext()));
   passManager.addPass(
-      createConvertFuncToLLVMPass(enableOpaquePointers(funcToLLVMOptions)));
+      createConvertFuncToLLVMPass(funcToLLVMOptions));
   passManager.addPass(createReconcileUnrealizedCastsPass());
-  passManager.addPass(createConvertVulkanLaunchFuncToVulkanCallsPass(
-      enableOpaquePointers(ConvertVulkanLaunchFuncToVulkanCallsPassOptions{})));
+  passManager.addPass(createConvertVulkanLaunchFuncToVulkanCallsPass());
 
   return passManager.run(module);
 }

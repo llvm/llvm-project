@@ -67,7 +67,7 @@ namespace {
 ///
 /// is converted to:
 ///
-///   arm_sme.tile_load ... <vertical>
+///   arm_sme.tile_load ... layout<vertical>
 struct TransferReadPermutationToArmSMELowering
     : public OpRewritePattern<vector::TransferReadOp> {
   using OpRewritePattern<vector::TransferReadOp>::OpRewritePattern;
@@ -368,8 +368,8 @@ struct SplatOpToArmSMELowering : public OpRewritePattern<vector::SplatOp> {
 ///   %alloca = memref.alloca(%svl_s, %svl_s) : memref<?x?xi32>
 ///   %arm_sme.tile_store %src, <hor>, %alloca[%c0, %c0]
 ///     : memref<?x?xi32>, vector<[4]x[4]xi32>
-///   %transposed_src = arm_sme.tile_load %alloca[%c0, %c0], <vertical>
-///     : memref<?x?xi32>, vector<[4]x[4]xi32>
+///   %transposed_src = arm_sme.tile_load %alloca[%c0, %c0]
+///     layout<vertical> : memref<?x?xi32>, vector<[4]x[4]xi32>
 ///
 /// NOTE: Tranposing via memory is obviously expensive, the current intention
 /// is to avoid the transpose if possible, this is therefore intended as a

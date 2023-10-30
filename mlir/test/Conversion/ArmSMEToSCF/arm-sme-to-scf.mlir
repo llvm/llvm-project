@@ -21,10 +21,10 @@ func.func @arm_sme_tile_load_hor(%src : memref<?x?xi32>) {
 // -----
 
 // CHECK-LABEL: @arm_sme_tile_load_ver
-// CHECK: arm_sme.load_tile_slice {{.*}} <vertical>
+// CHECK: arm_sme.load_tile_slice {{.*}} layout<vertical>
 func.func @arm_sme_tile_load_ver(%src : memref<?x?xi32>) {
   %c0 = arith.constant 0 : index
-  %tile = arm_sme.tile_load %src[%c0, %c0], <vertical> : memref<?x?xi32>, vector<[4]x[4]xi32>
+  %tile = arm_sme.tile_load %src[%c0, %c0] layout<vertical> : memref<?x?xi32>, vector<[4]x[4]xi32>
   return
 }
 
@@ -50,10 +50,10 @@ func.func @arm_sme_tile_store_hor(%tile : vector<[4]x[4]xi32>, %dest : memref<?x
 // -----
 
 // CHECK-LABEL: @arm_sme_tile_store_ver
-// CHECK: arm_sme.store_tile_slice {{.*}} <vertical>
+// CHECK: arm_sme.store_tile_slice {{.*}} layout<vertical>
 func.func @arm_sme_tile_store_ver(%tile : vector<[4]x[4]xi32>, %dest : memref<?x?xi32>) {
   %c0 = arith.constant 0 : index
-  arm_sme.tile_store %tile, %dest[%c0, %c0], <vertical> : memref<?x?xi32>, vector<[4]x[4]xi32>
+  arm_sme.tile_store %tile, %dest[%c0, %c0] layout<vertical> : memref<?x?xi32>, vector<[4]x[4]xi32>
   return
 }
 

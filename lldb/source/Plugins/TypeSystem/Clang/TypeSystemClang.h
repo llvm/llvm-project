@@ -219,6 +219,9 @@ public:
 
   static clang::DeclContext *GetDeclContextForType(const CompilerType &type);
 
+  CompilerDeclContext
+  GetCompilerDeclContextForType(const CompilerType &type) override;
+
   uint32_t GetPointerByteSize() override;
 
   clang::TranslationUnitDecl *GetTranslationUnitDecl() {
@@ -514,7 +517,7 @@ public:
                                               size_t bit_size);
 
   // TypeSystem methods
-  DWARFASTParser *GetDWARFParser() override;
+  plugin::dwarf::DWARFASTParser *GetDWARFParser() override;
   PDBASTParser *GetPDBParser() override;
   npdb::PdbAstBuilder *GetNativePDBParser() override;
 
@@ -632,8 +635,7 @@ public:
 
   bool IsConst(lldb::opaque_compiler_type_t type) override;
 
-  bool IsCStringType(lldb::opaque_compiler_type_t type,
-                     uint32_t &length) override;
+  bool IsCStringType(lldb::opaque_compiler_type_t type, uint32_t &length);
 
   static bool IsCXXClassType(const CompilerType &type);
 
@@ -1029,22 +1031,11 @@ public:
   ///       The name of the symbol to dump, if it is empty dump all the symbols
   void DumpFromSymbolFile(Stream &s, llvm::StringRef symbol_name);
 
-  void DumpValue(lldb::opaque_compiler_type_t type, ExecutionContext *exe_ctx,
-                 Stream &s, lldb::Format format, const DataExtractor &data,
-                 lldb::offset_t data_offset, size_t data_byte_size,
-                 uint32_t bitfield_bit_size, uint32_t bitfield_bit_offset,
-                 bool show_types, bool show_summary, bool verbose,
-                 uint32_t depth) override;
-
   bool DumpTypeValue(lldb::opaque_compiler_type_t type, Stream &s,
                      lldb::Format format, const DataExtractor &data,
                      lldb::offset_t data_offset, size_t data_byte_size,
                      uint32_t bitfield_bit_size, uint32_t bitfield_bit_offset,
                      ExecutionContextScope *exe_scope) override;
-
-  void DumpSummary(lldb::opaque_compiler_type_t type, ExecutionContext *exe_ctx,
-                   Stream &s, const DataExtractor &data,
-                   lldb::offset_t data_offset, size_t data_byte_size) override;
 
   void DumpTypeDescription(
       lldb::opaque_compiler_type_t type,

@@ -2,6 +2,7 @@
 ; RUN: opt < %s -passes=instcombine -S | FileCheck %s
 
 declare void @use(i8)
+declare void @use32(i32)
 
 declare i8 @llvm.umin.i8(i8, i8)
 declare i8 @llvm.umax.i8(i8, i8)
@@ -1024,4 +1025,272 @@ define i8 @udiv_shl_no_overflow(i8 %x, i8 %y) {
   %min = call i8 @llvm.umax.i8(i8 %shl, i8 1)
   %mul = udiv i8 %x, %min
   ret i8 %mul
+}
+
+; (X<<Y) / (X<<Z) -> 1 << Y >> Z
+
+define i32 @sdiv_shl_pair_const(i32 %a) {
+; CHECK-LABEL: @sdiv_shl_pair_const(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret i32 2
+;
+entry:
+  %lhs = shl nsw i32 %a, 2
+  %rhs = shl nsw i32 %a, 1
+  %div = sdiv i32 %lhs, %rhs
+  ret i32 %div
+}
+
+define i32 @udiv_shl_pair_const(i32 %a) {
+; CHECK-LABEL: @udiv_shl_pair_const(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret i32 2
+;
+entry:
+  %lhs = shl nuw i32 %a, 2
+  %rhs = shl nuw i32 %a, 1
+  %div = udiv i32 %lhs, %rhs
+  ret i32 %div
+}
+
+define i32 @sdiv_shl_pair1(i32 %a, i32 %x, i32 %y) {
+; CHECK-LABEL: @sdiv_shl_pair1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SHL_DIVIDEND:%.*]] = shl nuw nsw i32 1, [[X:%.*]]
+; CHECK-NEXT:    [[DIV:%.*]] = lshr i32 [[SHL_DIVIDEND]], [[Y:%.*]]
+; CHECK-NEXT:    ret i32 [[DIV]]
+;
+entry:
+  %lhs = shl nsw i32 %a, %x
+  %rhs = shl nuw nsw i32 %a, %y
+  %div = sdiv i32 %lhs, %rhs
+  ret i32 %div
+}
+
+define i32 @sdiv_shl_pair2(i32 %a, i32 %x, i32 %y) {
+; CHECK-LABEL: @sdiv_shl_pair2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SHL_DIVIDEND:%.*]] = shl nuw nsw i32 1, [[X:%.*]]
+; CHECK-NEXT:    [[DIV:%.*]] = lshr i32 [[SHL_DIVIDEND]], [[Y:%.*]]
+; CHECK-NEXT:    ret i32 [[DIV]]
+;
+entry:
+  %lhs = shl nuw nsw i32 %a, %x
+  %rhs = shl nsw i32 %a, %y
+  %div = sdiv i32 %lhs, %rhs
+  ret i32 %div
+}
+
+define i32 @sdiv_shl_pair3(i32 %a, i32 %x, i32 %y) {
+; CHECK-LABEL: @sdiv_shl_pair3(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SHL_DIVIDEND:%.*]] = shl nuw i32 1, [[X:%.*]]
+; CHECK-NEXT:    [[DIV:%.*]] = lshr i32 [[SHL_DIVIDEND]], [[Y:%.*]]
+; CHECK-NEXT:    ret i32 [[DIV]]
+;
+entry:
+  %lhs = shl nsw i32 %a, %x
+  %rhs = shl nsw i32 %a, %y
+  %div = sdiv i32 %lhs, %rhs
+  ret i32 %div
+}
+
+define i32 @sdiv_shl_no_pair_fail(i32 %a, i32 %b, i32 %x, i32 %y) {
+; CHECK-LABEL: @sdiv_shl_no_pair_fail(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[LHS:%.*]] = shl nuw nsw i32 [[A:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[RHS:%.*]] = shl nuw i32 [[B:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 [[LHS]], [[RHS]]
+; CHECK-NEXT:    ret i32 [[DIV]]
+;
+entry:
+  %lhs = shl nuw nsw i32 %a, %x
+  %rhs = shl nuw i32 %b, %y
+  %div = sdiv i32 %lhs, %rhs
+  ret i32 %div
+}
+
+define i32 @udiv_shl_pair1(i32 %a, i32 %x, i32 %y) {
+; CHECK-LABEL: @udiv_shl_pair1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SHL_DIVIDEND:%.*]] = shl nuw i32 1, [[X:%.*]]
+; CHECK-NEXT:    [[DIV:%.*]] = lshr i32 [[SHL_DIVIDEND]], [[Y:%.*]]
+; CHECK-NEXT:    ret i32 [[DIV]]
+;
+entry:
+  %lhs = shl nuw i32 %a, %x
+  %rhs = shl nuw i32 %a, %y
+  %div = udiv i32 %lhs, %rhs
+  ret i32 %div
+}
+
+define i32 @udiv_shl_pair2(i32 %a, i32 %x, i32 %y) {
+; CHECK-LABEL: @udiv_shl_pair2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SHL_DIVIDEND:%.*]] = shl nuw nsw i32 1, [[X:%.*]]
+; CHECK-NEXT:    [[DIV:%.*]] = lshr i32 [[SHL_DIVIDEND]], [[Y:%.*]]
+; CHECK-NEXT:    ret i32 [[DIV]]
+;
+entry:
+  %lhs = shl nuw nsw i32 %a, %x
+  %rhs = shl nuw i32 %a, %y
+  %div = udiv i32 %lhs, %rhs
+  ret i32 %div
+}
+
+define i32 @udiv_shl_pair3(i32 %a, i32 %x, i32 %y) {
+; CHECK-LABEL: @udiv_shl_pair3(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SHL_DIVIDEND:%.*]] = shl nuw i32 1, [[X:%.*]]
+; CHECK-NEXT:    [[DIV:%.*]] = lshr i32 [[SHL_DIVIDEND]], [[Y:%.*]]
+; CHECK-NEXT:    ret i32 [[DIV]]
+;
+entry:
+  %lhs = shl nuw i32 %a, %x
+  %rhs = shl nuw nsw i32 %a, %y
+  %div = udiv i32 %lhs, %rhs
+  ret i32 %div
+}
+
+define i32 @sdiv_shl_pair_overflow_fail1(i32 %a, i32 %x, i32 %y) {
+; CHECK-LABEL: @sdiv_shl_pair_overflow_fail1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[LHS:%.*]] = shl i32 [[A:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[RHS:%.*]] = shl nsw i32 [[A]], [[Y:%.*]]
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 [[LHS]], [[RHS]]
+; CHECK-NEXT:    ret i32 [[DIV]]
+;
+entry:
+  %lhs = shl i32 %a, %x
+  %rhs = shl nsw i32 %a, %y
+  %div = sdiv i32 %lhs, %rhs
+  ret i32 %div
+}
+
+define i32 @sdiv_shl_pair_overflow_fail2(i32 %a, i32 %x, i32 %y) {
+; CHECK-LABEL: @sdiv_shl_pair_overflow_fail2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[LHS:%.*]] = shl nsw i32 [[A:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[RHS:%.*]] = shl nuw i32 [[A]], [[Y:%.*]]
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 [[LHS]], [[RHS]]
+; CHECK-NEXT:    ret i32 [[DIV]]
+;
+entry:
+  %lhs = shl nsw i32 %a, %x
+  %rhs = shl nuw i32 %a, %y
+  %div = sdiv i32 %lhs, %rhs
+  ret i32 %div
+}
+
+define i32 @udiv_shl_pair_overflow_fail1(i32 %a, i32 %x, i32 %y) {
+; CHECK-LABEL: @udiv_shl_pair_overflow_fail1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[LHS:%.*]] = shl nsw i32 [[A:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[RHS:%.*]] = shl nuw i32 [[A]], [[Y:%.*]]
+; CHECK-NEXT:    [[DIV:%.*]] = udiv i32 [[LHS]], [[RHS]]
+; CHECK-NEXT:    ret i32 [[DIV]]
+;
+entry:
+  %lhs = shl nsw i32 %a, %x
+  %rhs = shl nuw i32 %a, %y
+  %div = udiv i32 %lhs, %rhs
+  ret i32 %div
+}
+
+define i32 @udiv_shl_pair_overflow_fail2(i32 %a, i32 %x, i32 %y) {
+; CHECK-LABEL: @udiv_shl_pair_overflow_fail2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[LHS:%.*]] = shl nsw i32 [[A:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[RHS:%.*]] = shl i32 [[A]], [[Y:%.*]]
+; CHECK-NEXT:    [[DIV:%.*]] = udiv i32 [[LHS]], [[RHS]]
+; CHECK-NEXT:    ret i32 [[DIV]]
+;
+entry:
+  %lhs = shl nsw i32 %a, %x
+  %rhs = shl i32 %a, %y
+  %div = udiv i32 %lhs, %rhs
+  ret i32 %div
+}
+
+define i32 @udiv_shl_pair_overflow_fail3(i32 %a, i32 %x, i32 %y) {
+; CHECK-LABEL: @udiv_shl_pair_overflow_fail3(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[LHS:%.*]] = shl nuw nsw i32 [[A:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[RHS:%.*]] = shl i32 [[A]], [[Y:%.*]]
+; CHECK-NEXT:    [[DIV:%.*]] = udiv i32 [[LHS]], [[RHS]]
+; CHECK-NEXT:    ret i32 [[DIV]]
+;
+entry:
+  %lhs = shl nuw nsw i32 %a, %x
+  %rhs = shl i32 %a, %y
+  %div = udiv i32 %lhs, %rhs
+  ret i32 %div
+}
+
+define i32 @sdiv_shl_pair_multiuse1(i32 %a, i32 %x, i32 %y) {
+; CHECK-LABEL: @sdiv_shl_pair_multiuse1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[LHS:%.*]] = shl nuw nsw i32 [[A:%.*]], [[X:%.*]]
+; CHECK-NEXT:    call void @use32(i32 [[LHS]])
+; CHECK-NEXT:    [[SHL_DIVIDEND:%.*]] = shl nuw nsw i32 1, [[X]]
+; CHECK-NEXT:    [[DIV:%.*]] = lshr i32 [[SHL_DIVIDEND]], [[Y:%.*]]
+; CHECK-NEXT:    ret i32 [[DIV]]
+;
+entry:
+  %lhs = shl nuw nsw i32 %a, %x
+  call void @use32(i32 %lhs)
+  %rhs = shl nsw i32 %a, %y
+  %div = sdiv i32 %lhs, %rhs
+  ret i32 %div
+}
+
+define i32 @sdiv_shl_pair_multiuse2(i32 %a, i32 %x, i32 %y) {
+; CHECK-LABEL: @sdiv_shl_pair_multiuse2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[RHS:%.*]] = shl nsw i32 [[A:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    call void @use32(i32 [[RHS]])
+; CHECK-NEXT:    [[SHL_DIVIDEND:%.*]] = shl nuw nsw i32 1, [[X:%.*]]
+; CHECK-NEXT:    [[DIV:%.*]] = lshr i32 [[SHL_DIVIDEND]], [[Y]]
+; CHECK-NEXT:    ret i32 [[DIV]]
+;
+entry:
+  %lhs = shl nuw nsw i32 %a, %x
+  %rhs = shl nsw i32 %a, %y
+  call void @use32(i32 %rhs)
+  %div = sdiv i32 %lhs, %rhs
+  ret i32 %div
+}
+
+define i32 @sdiv_shl_pair_multiuse3(i32 %a, i32 %x, i32 %y) {
+; CHECK-LABEL: @sdiv_shl_pair_multiuse3(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[LHS:%.*]] = shl nuw nsw i32 [[A:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[RHS:%.*]] = shl nsw i32 [[A]], [[Y:%.*]]
+; CHECK-NEXT:    call void @use32(i32 [[LHS]])
+; CHECK-NEXT:    call void @use32(i32 [[RHS]])
+; CHECK-NEXT:    [[SHL_DIVIDEND:%.*]] = shl nuw nsw i32 1, [[X]]
+; CHECK-NEXT:    [[DIV:%.*]] = lshr i32 [[SHL_DIVIDEND]], [[Y]]
+; CHECK-NEXT:    ret i32 [[DIV]]
+;
+entry:
+  %lhs = shl nuw nsw i32 %a, %x
+  %rhs = shl nsw i32 %a, %y
+  call void @use32(i32 %lhs)
+  call void @use32(i32 %rhs)
+  %div = sdiv i32 %lhs, %rhs
+  ret i32 %div
+}
+
+@a = external global i32
+define i32 @pr69291() {
+; CHECK-LABEL: @pr69291(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret i32 1
+;
+entry:
+  %conv = load i32, ptr @a, align 1
+  %add = shl nuw nsw i32 %conv, 1
+  %add2 = shl nuw nsw i32 %conv, 1
+  %div = sdiv i32 %add, %add2
+  ret i32 %div
 }

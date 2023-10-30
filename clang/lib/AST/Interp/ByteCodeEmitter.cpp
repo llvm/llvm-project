@@ -149,7 +149,7 @@ void ByteCodeEmitter::emitLabel(LabelTy Label) {
       void *Location = Code.data() + Reloc - align(sizeof(int32_t));
       assert(aligned(Location));
       const int32_t Offset = Target - static_cast<int64_t>(Reloc);
-      endian::write<int32_t, endianness::native, 1>(Location, Offset);
+      endian::write<int32_t, llvm::endianness::native>(Location, Offset);
     }
     LabelRelocs.erase(It);
   }

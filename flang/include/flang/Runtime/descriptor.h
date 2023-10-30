@@ -390,14 +390,21 @@ public:
     if (leadingDimensions > raw_.rank) {
       leadingDimensions = raw_.rank;
     }
+    bool stridesAreContiguous{true};
     for (int j{0}; j < leadingDimensions; ++j) {
       const Dimension &dim{GetDimension(j)};
-      if (bytes != dim.ByteStride()) {
-        return false;
-      }
+      stridesAreContiguous &=
+          (bytes == dim.ByteStride()) || (dim.Extent() == 1);
       bytes *= dim.Extent();
     }
-    return true;
+    // One and zero element arrays are contiguous even if the descriptor
+    // byte strides are not perfect multiples.
+    // Arrays with more than 2 elements may also be contiguous even if a
+    // byte stride in one dimension is not a perfect multiple, as long as
+    // this is the last dimension, or if the dimension has one extent and
+    // the following dimension have either one extents or contiguous byte
+    // strides.
+    return stridesAreContiguous || bytes == 0;
   }
 
   // Establishes a pointer to a section or element.
@@ -405,6 +412,8 @@ public:
       const SubscriptValue *lower = nullptr,
       const SubscriptValue *upper = nullptr,
       const SubscriptValue *stride = nullptr);
+
+  RT_API_ATTRS void ApplyMold(const Descriptor &, int rank);
 
   RT_API_ATTRS void Check() const;
 

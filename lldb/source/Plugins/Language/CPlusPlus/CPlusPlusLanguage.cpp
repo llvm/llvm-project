@@ -979,6 +979,57 @@ static void LoadLibCxxFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {
                   "std::unordered_map iterator synthetic children",
                   "^std::__[[:alnum:]]+::__hash_map_(const_)?iterator<.+>$",
                   stl_synth_flags, true);
+  // Chrono duration typedefs
+  cpp_category_sp->AddTypeSummary(
+      "^std::__[[:alnum:]]+::chrono::nanoseconds", eFormatterMatchRegex,
+      TypeSummaryImplSP(new StringSummaryFormat(
+          eTypeOptionHideChildren | eTypeOptionHideValue, "${var.__rep_} ns")));
+  cpp_category_sp->AddTypeSummary(
+      "^std::__[[:alnum:]]+::chrono::microseconds", eFormatterMatchRegex,
+      TypeSummaryImplSP(new StringSummaryFormat(
+          eTypeOptionHideChildren | eTypeOptionHideValue, "${var.__rep_} µs")));
+  cpp_category_sp->AddTypeSummary(
+      "^std::__[[:alnum:]]+::chrono::milliseconds", eFormatterMatchRegex,
+      TypeSummaryImplSP(new StringSummaryFormat(
+          eTypeOptionHideChildren | eTypeOptionHideValue, "${var.__rep_} ms")));
+  cpp_category_sp->AddTypeSummary(
+      "^std::__[[:alnum:]]+::chrono::seconds", eFormatterMatchRegex,
+      TypeSummaryImplSP(new StringSummaryFormat(
+          eTypeOptionHideChildren | eTypeOptionHideValue, "${var.__rep_} s")));
+  cpp_category_sp->AddTypeSummary(
+      "^std::__[[:alnum:]]+::chrono::minutes", eFormatterMatchRegex,
+      TypeSummaryImplSP(new StringSummaryFormat(eTypeOptionHideChildren |
+                                                    eTypeOptionHideValue,
+                                                "${var.__rep_} min")));
+  cpp_category_sp->AddTypeSummary(
+      "^std::__[[:alnum:]]+::chrono::hours", eFormatterMatchRegex,
+      TypeSummaryImplSP(new StringSummaryFormat(
+          eTypeOptionHideChildren | eTypeOptionHideValue, "${var.__rep_} h")));
+
+  cpp_category_sp->AddTypeSummary(
+      "^std::__[[:alnum:]]+::chrono::days", eFormatterMatchRegex,
+      TypeSummaryImplSP(new StringSummaryFormat(eTypeOptionHideChildren |
+                                                    eTypeOptionHideValue,
+                                                "${var.__rep_} days")));
+  cpp_category_sp->AddTypeSummary(
+      "^std::__[[:alnum:]]+::chrono::weeks", eFormatterMatchRegex,
+      TypeSummaryImplSP(new StringSummaryFormat(eTypeOptionHideChildren |
+                                                    eTypeOptionHideValue,
+                                                "${var.__rep_} weeks")));
+  cpp_category_sp->AddTypeSummary(
+      "^std::__[[:alnum:]]+::chrono::months", eFormatterMatchRegex,
+      TypeSummaryImplSP(new StringSummaryFormat(eTypeOptionHideChildren |
+                                                    eTypeOptionHideValue,
+                                                "${var.__rep_} months")));
+  cpp_category_sp->AddTypeSummary(
+      "^std::__[[:alnum:]]+::chrono::years", eFormatterMatchRegex,
+      TypeSummaryImplSP(new StringSummaryFormat(eTypeOptionHideChildren |
+                                                    eTypeOptionHideValue,
+                                                "${var.__rep_} years")));
+  cpp_category_sp->AddTypeSummary(
+      "^std::__[[:alnum:]]+::chrono::seconds", eFormatterMatchRegex,
+      TypeSummaryImplSP(new StringSummaryFormat(
+          eTypeOptionHideChildren | eTypeOptionHideValue, "${var.__rep_} s")));
 }
 
 static void LoadLibStdcppFormatters(lldb::TypeCategoryImplSP cpp_category_sp) {

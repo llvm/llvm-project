@@ -4042,7 +4042,7 @@ void Parser::ParseDeclarationSpecifiers(
         if (isKnownToBeTypeSpecifier(GetLookAheadToken(1))) {
           isInvalid = DS.SetStorageClassSpec(Actions, DeclSpec::SCS_auto, Loc,
                                              PrevSpec, DiagID, Policy);
-          if (!isInvalid)
+          if (!isInvalid && !getLangOpts().C23)
             Diag(Tok, diag::ext_auto_storage_class)
               << FixItHint::CreateRemoval(DS.getStorageClassSpecLoc());
         } else
@@ -4076,8 +4076,15 @@ void Parser::ParseDeclarationSpecifiers(
     case tok::kw_thread_local:
       if (getLangOpts().C23)
         Diag(Tok, diag::warn_c23_compat_keyword) << Tok.getName();
-      isInvalid = DS.SetStorageClassSpecThread(DeclSpec::TSCS_thread_local, Loc,
-                                               PrevSpec, DiagID);
+      // We map thread_local to _Thread_local in C23 mode so it retains the C
+      // semantics rather than getting the C++ semantics.
+      // FIXME: diagnostics will show _Thread_local when the user wrote
+      // thread_local in source in C23 mode; we need some general way to
+      // identify which way the user spelled the keyword in source.
+      isInvalid = DS.SetStorageClassSpecThread(
+          getLangOpts().C23 ? DeclSpec::TSCS__Thread_local
+                            : DeclSpec::TSCS_thread_local,
+          Loc, PrevSpec, DiagID);
       isStorageClass = true;
       break;
     case tok::kw__Thread_local:

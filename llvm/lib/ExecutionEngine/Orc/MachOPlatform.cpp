@@ -64,14 +64,14 @@ namespace {
 std::unique_ptr<jitlink::LinkGraph> createPlatformGraph(MachOPlatform &MOP,
                                                         std::string Name) {
   unsigned PointerSize;
-  support::endianness Endianness;
+  llvm::endianness Endianness;
   const auto &TT = MOP.getExecutionSession().getTargetTriple();
 
   switch (TT.getArch()) {
   case Triple::aarch64:
   case Triple::x86_64:
     PointerSize = 8;
-    Endianness = support::endianness::little;
+    Endianness = llvm::endianness::little;
     break;
   default:
     llvm_unreachable("Unrecognized architecture");

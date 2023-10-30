@@ -1299,8 +1299,9 @@ static bool checkTupleLikeDecomposition(Sema &S,
       //   in the associated namespaces.
       Expr *Get = UnresolvedLookupExpr::Create(
           S.Context, nullptr, NestedNameSpecifierLoc(), SourceLocation(),
-          DeclarationNameInfo(GetDN, Loc), /*RequiresADL*/true, &Args,
-          UnresolvedSetIterator(), UnresolvedSetIterator());
+          DeclarationNameInfo(GetDN, Loc), /*RequiresADL*/ true, &Args,
+          UnresolvedSetIterator(), UnresolvedSetIterator(),
+          /*KnownDependent=*/false);
 
       Expr *Arg = E.get();
       E = S.BuildCallExpr(nullptr, Get, Loc, Arg, Loc);
@@ -2456,7 +2457,8 @@ static bool CheckConstexprFunctionBody(Sema &SemaRef, const FunctionDecl *Dcl,
       !Expr::isPotentialConstantExpr(Dcl, Diags)) {
     SemaRef.Diag(Dcl->getLocation(),
                  diag::ext_constexpr_function_never_constant_expr)
-        << isa<CXXConstructorDecl>(Dcl) << Dcl->isConsteval();
+        << isa<CXXConstructorDecl>(Dcl) << Dcl->isConsteval()
+        << Dcl->getNameInfo().getSourceRange();
     for (size_t I = 0, N = Diags.size(); I != N; ++I)
       SemaRef.Diag(Diags[I].first, Diags[I].second);
     // Don't return false here: we allow this for compatibility in
@@ -7746,6 +7748,24 @@ bool Sema::CheckExplicitlyDefaultedSpecialMember(CXXMethodDecl *MD,
         HadError = true;
       }
     }
+    // [C++23][dcl.fct.def.default]/p2.2
+    // if F2 has an implicit object parameter of type “reference to C”,
+    // F1 may be an explicit object member function whose explicit object
+    // parameter is of (possibly different) type “reference to C”,
+    // in which case the type of F1 would differ from the type of F2
+    // in that the type of F1 has an additional parameter;
+    if (!Context.hasSameType(
+            ThisType.getNonReferenceType().getUnqualifiedType(),
+            Context.getRecordType(RD))) {
+      if (DeleteOnTypeMismatch)
+        ShouldDeleteForTypeMismatch = true;
+      else {
+        Diag(MD->getLocation(),
+             diag::err_defaulted_special_member_explicit_object_mismatch)
+            << (CSM == CXXMoveAssignment) << RD << MD->getSourceRange();
+        HadError = true;
+      }
+    }
   }
 
   // Check for parameter type matching.
@@ -11351,12 +11371,14 @@ void Sema::CheckExplicitObjectMemberFunction(Declarator &D,
     Diag(ExplicitObjectParam->getBeginLoc(),
          diag::err_explicit_object_parameter_nonmember)
         << D.getSourceRange() << /*static=*/0 << IsLambda;
+    D.setInvalidType();
   }
 
   if (D.getDeclSpec().isVirtualSpecified()) {
     Diag(ExplicitObjectParam->getBeginLoc(),
          diag::err_explicit_object_parameter_nonmember)
         << D.getSourceRange() << /*virtual=*/1 << IsLambda;
+    D.setInvalidType();
   }
 
   if (IsLambda && FTI.hasMutableQualifier()) {
@@ -11372,16 +11394,19 @@ void Sema::CheckExplicitObjectMemberFunction(Declarator &D,
     Diag(ExplicitObjectParam->getLocation(),
          diag::err_explicit_object_parameter_nonmember)
         << D.getSourceRange() << /*non-member=*/2 << IsLambda;
+    D.setInvalidType();
     return;
   }
 
   // CWG2674: constructors and destructors cannot have explicit parameters.
   if (Name.getNameKind() == DeclarationName::CXXConstructorName ||
-      Name.getNameKind() == DeclarationName::CXXDestructorName)
+      Name.getNameKind() == DeclarationName::CXXDestructorName) {
     Diag(ExplicitObjectParam->getBeginLoc(),
          diag::err_explicit_object_parameter_constructor)
         << (Name.getNameKind() == DeclarationName::CXXDestructorName)
         << D.getSourceRange();
+    D.setInvalidType();
+  }
 }
 
 namespace {

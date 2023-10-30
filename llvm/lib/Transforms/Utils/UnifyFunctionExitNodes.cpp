@@ -39,8 +39,6 @@ void UnifyFunctionExitNodesLegacyPass::getAnalysisUsage(
     AnalysisUsage &AU) const {
   // We preserve the non-critical-edgeness property
   AU.addPreservedID(BreakCriticalEdgesID);
-  // This is a cluster of orthogonal Transforms
-  AU.addPreservedID(LowerSwitchID);
 }
 
 namespace {

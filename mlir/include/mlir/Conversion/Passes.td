@@ -388,8 +388,8 @@ def ConvertFuncToLLVMPass : Pass<"convert-func-to-llvm", "ModuleOp"> {
     already present in the IR will be kept as is.
 
     An LLVM datalayout string can be attached as an attribute to the module on
-    which the pass anchors. Such an attribute is attached by calling the 
-    set-module-datalayout pass. If present, an llvm::DataLayout object is 
+    which the pass anchors. Such an attribute is attached by calling the
+    set-module-datalayout pass. If present, an llvm::DataLayout object is
     created from this attribute and used in the conversion to LLVM.
 
     #### Output IR
@@ -645,6 +645,28 @@ def ConvertIndexToLLVMPass : Pass<"convert-index-to-llvm"> {
 }
 
 //===----------------------------------------------------------------------===//
+// ConvertIndexToSPIRVPass
+//===----------------------------------------------------------------------===//
+
+def ConvertIndexToSPIRVPass : Pass<"convert-index-to-spirv"> {
+  let summary = "Lower the `index` dialect to the `spirv` dialect.";
+  let description = [{
+    This pass lowers Index dialect operations to SPIR-V dialect operations.
+    Operation conversions are 1-to-1 except for the exotic divides: `ceildivs`,
+    `ceildivu`, and `floordivs`. The index bitwidth will be 32 or 64 as
+    specified by use-64bit-index.
+  }];
+
+  let dependentDialects = ["::mlir::spirv::SPIRVDialect"];
+
+  let options = [
+    Option<"use64bitIndex", "use-64bit-index",
+           "bool", /*default=*/"false",
+           "Use 64-bit integers to convert index types">
+  ];
+}
+
+//===----------------------------------------------------------------------===//
 // LinalgToStandard
 //===----------------------------------------------------------------------===//
 
@@ -792,14 +814,14 @@ def ConvertMemRefToSPIRV : Pass<"convert-memref-to-spirv"> {
 //===----------------------------------------------------------------------===//
 
 def ConvertNVVMToLLVMPass : Pass<"convert-nvvm-to-llvm"> {
-  let summary = "Convert NVVM dialect to LLVM dialect";
+  let summary = "Convert NVVM to PTX with Inline Assembly in LLVM dialect";
   let description = [{
-    This pass generates inline assembly for the NVVM ops which is not 
-    implemented in LLVM core.
+    This pass generates PTX instructions using inline assembly for NVVM
+    operations implements `BasicPtxBuilderInterface`.
   }];
   let dependentDialects = [
     "NVVM::NVVMDialect",
-  ];  
+  ];
 }
 
 //===----------------------------------------------------------------------===//
@@ -997,9 +1019,6 @@ def ConvertSPIRVToLLVMPass : Pass<"convert-spirv-to-llvm", "ModuleOp"> {
   let dependentDialects = ["LLVM::LLVMDialect"];
 
   let options = [
-    Option<"useOpaquePointers", "use-opaque-pointers", "bool",
-                 /*default=*/"true", "Generate LLVM IR using opaque pointers "
-                 "instead of typed pointers">,
     Option<"clientAPI", "client-api", "::mlir::spirv::ClientAPI",
 	   /*default=*/"::mlir::spirv::ClientAPI::Unknown",
 	   "Derive StorageClass to address space mapping from the client API",
@@ -1082,6 +1101,14 @@ def TosaToLinalg
   }];
 
   let constructor = "tosa::createTosaToLinalg()";
+  let options = [
+    Option<"disableTosaDecompositions", "disable-tosa-decompositions",
+           "bool", /*default=*/"false",
+           "Disable tosa decompositions pass">,
+    Option<"aggressiveReduceConstant", "aggressive-reduce-constant",
+           "bool", /*default=*/"false",
+           "Always perform the reduce constant optimization">
+  ];
 }
 
 //===----------------------------------------------------------------------===//
@@ -1095,6 +1122,12 @@ def TosaToLinalgNamed
     Pass that converts TOSA operations to the equivalent operations using the
     Linalg named operations.
   }];
+
+  let options = [
+      Option<"preferConv2DKernelLayoutHWCF", "prefer-conv2d-kernel-layout-hwcf",
+           "bool", /*default=*/"false",
+           "Prefer generating linalg.conv_2d_nhwc_hwcf over linalg.conv_2d_nhwc_fhwc">
+  ];
 
   let constructor = "tosa::createTosaToLinalgNamed()";
 }

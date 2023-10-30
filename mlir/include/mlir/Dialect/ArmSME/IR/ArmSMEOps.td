@@ -27,7 +27,7 @@ include "mlir/Interfaces/InferTypeOpInterface.td"
 
 class SMETileType<Type datatype, list<int> dims, string description>
   : ShapedContainerType<[datatype],
-      And<[IsVectorOfRankPred<[2]>, allDimsScalableVectorTypePred,
+      And<[IsVectorOfRankPred<[2]>, IsVectorTypeWithAllDimsScalablePred,
            IsVectorOfShape<dims>]>,
   description>;
 
@@ -76,6 +76,7 @@ def TileSliceLayout : I32EnumAttr<"TileSliceLayout", "Layout of a tile slice", [
 def ArmSME_TileSliceLayoutAttr : EnumAttr<ArmSME_Dialect, TileSliceLayout,
                                           "layout"> {
   let assemblyFormat = "`<` $value `>`";
+  let defaultValue = "TileSliceLayout::Horizontal";
 }
 
 //===----------------------------------------------------------------------===//
@@ -230,7 +231,26 @@ def ZeroOp : ArmSME_Op<"zero", [Pure]> {
   let assemblyFormat = "attr-dict `:` type($res)";
 }
 
-def TileLoadOp : ArmSME_Op<"tile_load"> {
+def TileLoadOp : ArmSME_Op<"tile_load", [
+  AttrSizedOperandSegments,
+  OptionalTypesMatchWith<
+    "padding type matches element type of result",
+    "result", "padding",
+    "::llvm::cast<VectorType>($_self).getElementType()"
+  >,
+  OptionalTypesMatchWith<
+    "mask has i1 element type and same shape as result",
+    "result", "mask",
+    "VectorType("
+      "VectorType::Builder("
+        "::llvm::cast<mlir::VectorType>($_self)"
+      ").setElementType(IntegerType::get($_self.getContext(), 1)))"
+  >,
+  PredOpTrait<
+    "both `padding` and `mask` should be provided or neither",
+    CPred<"bool(getPadding()) == bool(getMask())">
+  >,
+]> {
   let summary = "Tile load operation";
   let description = [{
     Loads a 2D SME "virtual tile" from memory defined by a base and indices,
@@ -241,6 +261,16 @@ def TileLoadOp : ArmSME_Op<"tile_load"> {
     dimensions, since the operation is scalable, and the element type must be a
     scalar that matches the element type of the result.
 
+    An optional SSA value `padding` of the same elemental type as the MemRef is
+    provided to specify a fallback value in the case of masking.
+
+    An optional SSA value `mask` may be specified to mask out elements read
+    from the MemRef. The `mask` type is an `i1` vector with a shape that
+    matches how elements are read from the MemRef. Elements whose corresponding
+    mask element is `0` are masked out and replaced with `padding`.
+
+    If either `padding` or `mask` are specified, both must be specified.
+
     Example 1: Load an 8-bit element ZA tile with horizontal layout (default) from memory (ZA0.B).
     ```mlir
     %tile = arm_sme.tile_load %base[%c0, %c0] : memref<?x?xi8>, vector<[16]x[16]xi8>
@@ -248,19 +278,24 @@ def TileLoadOp : ArmSME_Op<"tile_load"> {
 
     Example 2: Load a FP 32-bit element ZA tile with vertical layout from memory.
     ```mlir
-    %tile = arm_sme.tile_load %base[%c0, %c0], <vertical> : memref<?x?xf32>, vector<[4]x[4]xf32>
+    %tile = arm_sme.tile_load %base[%c0, %c0] layout<vertical> : memref<?x?xf32>, vector<[4]x[4]xf32>
     ```
 
     Example 3: Load a 128-bit element ZA tile with horizontal layout (default) from memory.
     ```mlir
-    %tile = arm_sme.tile_load %base[%c0, %c0], <horizontal> : memref<?x?xi128>, vector<[1]x[1]xi128>
+    %tile = arm_sme.tile_load %base[%c0, %c0] layout<horizontal> : memref<?x?xi128>, vector<[1]x[1]xi128>
+    ```
+
+    Example 4: Masked load of int 32-bit element ZA tile with horizontal layout (default) from memory.
+    ```mlir
+    %tile = arm_sme.tile_load %base[%c0, %c0], %pad, %mask : memref<?x?xf32>, vector<[4]x[4]xf32>
     ```
   }];
   let arguments = (ins
     Arg<AnyMemRef, "the reference to load from", [MemRead]>:$base,
     Variadic<Index>:$indices,
-    DefaultValuedAttr<ArmSME_TileSliceLayoutAttr,
-                      "::mlir::arm_sme::TileSliceLayout::Horizontal">:$layout
+    Optional<AnyType>:$padding, Optional<AnyVector>:$mask,
+    ArmSME_TileSliceLayoutAttr:$layout
   );
   let results = (outs SMETile:$result);
 
@@ -273,9 +308,20 @@ def TileLoadOp : ArmSME_Op<"tile_load"> {
     }
   }];
 
+  let builders = [
+    OpBuilder<(ins "VectorType":$resultType, "Value":$base,
+                   "ValueRange":$indices, "TileSliceLayout":$layout), [{
+      build($_builder, $_state, resultType, base, indices, {}, {}, layout);
+    }]>,
+    OpBuilder<(ins "VectorType":$resultType, "Value":$base,
+                   "ValueRange":$indices), [{
+      build($_builder, $_state, resultType, base, indices, {}, {}, {});
+    }]>,
+  ];
+
   let assemblyFormat =
-    "$base `[` $indices `]` (`,` $layout^)? attr-dict "
-      "`:` type($base) `,` type($result)";
+    "$base `[` $indices `]` (`,` $padding `,` $mask^)? (`layout` `` $layout^)?"
+      "attr-dict `:` type($base) `,` type($result)";
 }
 
 def TileStoreOp : ArmSME_Op<"tile_store"> {
@@ -296,19 +342,17 @@ def TileStoreOp : ArmSME_Op<"tile_store"> {
 
     Example 2: Store a FP 32-bit element ZA tile with vertical layout to memory.
     ```mlir
-    arm_sme.tile_store %tile, %base[%c0, %c0], <vertical> : vector<[4]x[4]xf32>, memref<?x?xf32>
+    arm_sme.tile_store %tile, %base[%c0, %c0] layout<vertical> : vector<[4]x[4]xf32>, memref<?x?xf32>
     ```
 
     Example 3: Store a 128-bit element ZA tile with horizontal (default) layout to memory.
     ```mlir
-    arm_sme.tile_store %tile, %base[%c0, %c0], <horizontal> : vector<[1]x[1]xi128>, memref<?x?xi128>
+    arm_sme.tile_store %tile, %base[%c0, %c0] layout<horizontal> : vector<[1]x[1]xi128>, memref<?x?xi128>
     ```
   }];
   let arguments = (ins SMETile:$valueToStore,
     Arg<AnyMemRef, "the reference to store to", [MemWrite]>:$base,
-    Variadic<Index>:$indices,
-    DefaultValuedAttr<ArmSME_TileSliceLayoutAttr,
-                      "::mlir::arm_sme::TileSliceLayout::Horizontal">:$layout
+    Variadic<Index>:$indices, ArmSME_TileSliceLayoutAttr:$layout
   );
   let extraClassDeclaration = [{
     MemRefType getMemRefType() {
@@ -320,7 +364,7 @@ def TileStoreOp : ArmSME_Op<"tile_store"> {
   }];
 
   let assemblyFormat =
-    "$valueToStore `,` $base `[` $indices `]` (`,` $layout^)? attr-dict "
+    "$valueToStore `,` $base `[` $indices `]` (`layout` `` $layout^)? attr-dict "
       "`:` type($base) `,` type($valueToStore)";
 }
 
@@ -348,19 +392,18 @@ def LoadTileSliceOp : ArmSME_Op<"load_tile_slice", [
 
     Example 2: Load a vector<[4]xf32> tile slice from memory into tile vertically at given index.
     ```mlir
-    %tile_update = arm_sme.load_tile_slice %base[%c0], %tile, %tile_slice_index, <vertical> : memref<?x?xf32>, vector<[4]x[4]xf32>
+    %tile_update = arm_sme.load_tile_slice %base[%c0], %tile, %tile_slice_index layout<vertical> : memref<?x?xf32>, vector<[4]x[4]xf32>
     ```
 
     Example 3: Load a vector<[1]xi128> tile slice from memory into tile vertically at given index.
     ```mlir
-    %tile_update = arm_sme.load_tile_slice %base[%c0], %tile, %tile_slice_index, <vertical> : memref<?x?xi128>, vector<[1]x[1]xi128>
+    %tile_update = arm_sme.load_tile_slice %base[%c0], %tile, %tile_slice_index layout<vertical> : memref<?x?xi128>, vector<[1]x[1]xi128>
     ```
   }];
   let arguments = (ins
     Arg<AnyMemRef, "the reference to load from">:$base,
     SMETile:$tile, Variadic<Index>:$indices, Index:$tile_slice_index,
-    DefaultValuedAttr<ArmSME_TileSliceLayoutAttr,
-                      "::mlir::arm_sme::TileSliceLayout::Horizontal">:$layout
+    ArmSME_TileSliceLayoutAttr:$layout
   );
   let results = (outs SMETile:$result);
 
@@ -374,7 +417,7 @@ def LoadTileSliceOp : ArmSME_Op<"load_tile_slice", [
   }];
 
   let assemblyFormat = [{
-    $base `[` $indices `]` `,` $tile `,` $tile_slice_index (`,` $layout^)?
+    $base `[` $indices `]` `,` $tile `,` $tile_slice_index (`layout` `` $layout^)?
       attr-dict `:` type($base) `,` type($result)
   }];
 }
@@ -401,19 +444,17 @@ def StoreTileSliceOp : ArmSME_Op<"store_tile_slice"> {
 
     Example 2: Store vector<[4]xf32> vertical tile slice from tile at given index to memory.
     ```mlir
-    arm_sme.store_tile_slice %tile, %tile_slice_index, %base[%c0], <vertical> : vector<[4]x[4]xf32>, memref<?x?xf32>
+    arm_sme.store_tile_slice %tile, %tile_slice_index, %base[%c0] layout<vertical> : vector<[4]x[4]xf32>, memref<?x?xf32>
     ```
 
     Example 3: Store a vector<[1]xi128> vertical tile slice from tile at given index to memory.
     ```mlir
-    arm_sme.store_tile_slice %tile, %tile_slice_index, %base[%c0], <vertical> : vector<[1]x[1]xi128>, memref<?x?xi128>
+    arm_sme.store_tile_slice %tile, %tile_slice_index, %base[%c0] layout<vertical> : vector<[1]x[1]xi128>, memref<?x?xi128>
     ```
   }];
   let arguments = (ins SMETile:$tile, Index:$tile_slice_index,
     Arg<AnyMemRef, "the reference to store to", [MemWrite]>:$base,
-    Variadic<Index>:$indices,
-    DefaultValuedAttr<ArmSME_TileSliceLayoutAttr,
-                      "::mlir::arm_sme::TileSliceLayout::Horizontal">:$layout
+    Variadic<Index>:$indices, ArmSME_TileSliceLayoutAttr:$layout
   );
   let extraClassDeclaration = [{
     MemRefType getMemRefType() {
@@ -425,7 +466,7 @@ def StoreTileSliceOp : ArmSME_Op<"store_tile_slice"> {
   }];
 
   let assemblyFormat = [{
-    $tile `,` $tile_slice_index `,` $base `[` $indices `]` (`,` $layout^)?
+    $tile `,` $tile_slice_index `,` $base `[` $indices `]` (`layout` `` $layout^)?
       attr-dict `:` type($base) `,` type($tile)
   }];
 }
@@ -446,21 +487,24 @@ def MoveVectorToTileSliceOp : ArmSME_Op<"move_vector_to_tile_slice", [
     of a 2-D scalable vector tile at the given index. The type of the 1-D
     scalable vector to be moved must match the type of the tile slice. A tile
     slice is a 1-D vector of horizontally or vertically contiguous elements
-    within a ZA tile. Horizontal tile slices are currently assumed when
-    lowering to intrinsics. The updated tile is returned as the result.
+    within a ZA tile. The updated tile is returned as the result.
 
-    Example 1: Move a vector<[16]xi8> into tile at given index.
+    An optional tile slice layout attribute specifies whether the tile slice is
+    horizontal (default) or vertical.
+
+    Example 1: Move a vector<[16]xi8> into tile horizontally (default) at given index.
     ```mlir
     %tile_update = arm_sme.move_vector_to_tile_slice %vector, %tile, %tile_slice_index : vector<[16]xi8> into vector<[16]x[16]xi8>
     ```
 
-    Example 2: Move a vector<[2]xf64> into tile at given index.
+    Example 2: Move a vector<[2]xf64> into tile vertically at given index.
     ```mlir
-    %tile_update = arm_sme.move_vector_to_tile_slice %vector, %tile, %tile_slice_index : vector<[2]xf64> into vector<[2]x[2]xf64>
+    %tile_update = arm_sme.move_vector_to_tile_slice %vector, %tile, %tile_slice_index layout<vertical> : vector<[2]xf64> into vector<[2]x[2]xf64>
     ```
   }];
   let arguments = (ins
-      SVEVector:$vector, SMETile:$tile, Index:$tile_slice_index);
+      SVEVector:$vector, SMETile:$tile, Index:$tile_slice_index,
+      ArmSME_TileSliceLayoutAttr:$layout);
   let results = (outs SMETile:$result);
 
   let extraClassDeclaration = [{
@@ -470,7 +514,7 @@ def MoveVectorToTileSliceOp : ArmSME_Op<"move_vector_to_tile_slice", [
   }];
 
   let assemblyFormat = [{
-    $vector `,` $tile `,` $tile_slice_index
+    $vector `,` $tile `,` $tile_slice_index (`layout` `` $layout^)?
       attr-dict `:` type($vector) `into` type($result)
   }];
 }
@@ -485,21 +529,26 @@ def MoveTileSliceToVectorOp : ArmSME_Op<"move_tile_slice_to_vector", [Pure,
   let description = [{
     The tile slice to vector operation extracts a 1-D scalable slice from a 2-D
     scalable tile at the given index. A tile slice is a 1-D vector of
-    horizontally or vertically contiguous elements within a ZA tile. Horizontal
-    tile slices are currently assumed when lowering to intrinsics.
+    horizontally or vertically contiguous elements within a ZA tile.
 
-    Example 1: Extract `vector<[16]xi8>` from tile at the given index.
+    An optional tile slice layout attribute specifies whether the tile slice is
+    horizontal (default) or vertical.
+
+    Example 1: Extract `vector<[16]xi8>` from tile horizontally at the given index.
     ```mlir
     %slice = arm_sme.move_tile_slice_to_vector %tile[%tile_slice_index] : vector<[16]xi8> from vector<[16]x[16]xi8>
     ```
 
-    Example 2: Extract `vector<[2]xf64>` from tile at the given index.
+    Example 2: Extract `vector<[2]xf64>` from tile vertically at the given index.
     ```mlir
-    %slice = arm_sme.move_tile_slice_to_vector %tile[%tile_slice_index] : vector<[2]xf64> from vector<[2]x[2]xf64>
+    %slice = arm_sme.move_tile_slice_to_vector %tile[%tile_slice_index] layout<vertical> : vector<[2]xf64> from vector<[2]x[2]xf64>
     ```
   }];
 
-  let arguments = (ins SMETile:$tile, Index:$tile_slice_index);
+  let arguments = (ins
+    SMETile:$tile, Index:$tile_slice_index,
+    ArmSME_TileSliceLayoutAttr:$layout
+  );
   let results = (outs SVEVector:$result);
 
   let extraClassDeclaration = [{
@@ -507,7 +556,7 @@ def MoveTileSliceToVectorOp : ArmSME_Op<"move_tile_slice_to_vector", [Pure,
   }];
 
   let assemblyFormat = [{
-      $tile `[` $tile_slice_index `]` attr-dict
+      $tile `[` $tile_slice_index `]` (`layout` `` $layout^)? attr-dict
       `:` type($result) `from` type($tile)
   }];
 }

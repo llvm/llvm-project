@@ -16,10 +16,12 @@
 
 include "mlir/Dialect/Arith/IR/ArithBase.td"
 include "mlir/Dialect/Arith/IR/ArithOpsInterfaces.td"
+include "mlir/Dialect/LLVMIR/LLVMAttrDefs.td"
 include "flang/Optimizer/Dialect/FIRDialect.td"
 include "flang/Optimizer/Dialect/FIRTypes.td"
 include "flang/Optimizer/Dialect/FIRAttr.td"
 include "flang/Optimizer/Dialect/FortranVariableInterface.td"
+include "flang/Optimizer/Dialect/FirAliasTagOpInterface.td"
 include "mlir/IR/BuiltinAttributes.td"
 
 // Base class for FIR operations.
@@ -258,7 +260,7 @@ def fir_FreeMemOp : fir_Op<"freemem", [MemoryEffects<[MemFree]>]> {
   let assemblyFormat = "$heapref attr-dict `:` qualified(type($heapref))";
 }
 
-def fir_LoadOp : fir_OneResultOp<"load", []> {
+def fir_LoadOp : fir_OneResultOp<"load", [FirAliasTagOpInterface]> {
   let summary = "load a value from a memory reference";
   let description = [{
     Load a value from a memory reference into an ssa-value (virtual register).
@@ -274,9 +276,11 @@ def fir_LoadOp : fir_OneResultOp<"load", []> {
     or null.
   }];
 
-  let arguments = (ins Arg<AnyReferenceLike, "", [MemRead]>:$memref);
+  let arguments = (ins Arg<AnyReferenceLike, "", [MemRead]>:$memref,
+                  OptionalAttr<LLVM_TBAATagArrayAttr>:$tbaa);
 
-  let builders = [OpBuilder<(ins "mlir::Value":$refVal)>];
+  let builders = [OpBuilder<(ins "mlir::Value":$refVal)>,
+                  OpBuilder<(ins "mlir::Type":$resTy, "mlir::Value":$refVal)>];
 
   let hasCustomAssemblyFormat = 1;
 
@@ -285,7 +289,7 @@ def fir_LoadOp : fir_OneResultOp<"load", []> {
   }];
 }
 
-def fir_StoreOp : fir_Op<"store", []> {
+def fir_StoreOp : fir_Op<"store", [FirAliasTagOpInterface]> {
   let summary = "store an SSA-value to a memory location";
 
   let description = [{
@@ -305,7 +309,10 @@ def fir_StoreOp : fir_Op<"store", []> {
   }];
 
   let arguments = (ins AnyType:$value,
-                   Arg<AnyReferenceLike, "", [MemWrite]>:$memref);
+                   Arg<AnyReferenceLike, "", [MemWrite]>:$memref,
+                   OptionalAttr<LLVM_TBAATagArrayAttr>:$tbaa);
+
+  let builders = [OpBuilder<(ins "mlir::Value":$value, "mlir::Value":$memref)>];
 
   let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
@@ -2056,7 +2063,8 @@ class region_Op<string mnemonic, list<Trait> traits = []> :
 }
 
 def fir_DoLoopOp : region_Op<"do_loop",
-    [DeclareOpInterfaceMethods<LoopLikeOpInterface>]> {
+    [DeclareOpInterfaceMethods<LoopLikeOpInterface,
+        ["getYieldedValuesMutable"]>]> {
   let summary = "generalized loop operation";
   let description = [{
     Generalized high-level looping construct. This operation is similar to
@@ -2111,6 +2119,10 @@ def fir_DoLoopOp : region_Op<"do_loop",
     }
     mlir::Operation::operand_range getIterOperands() {
       return getOperands().drop_front(getNumControlOperands());
+    }
+    llvm::MutableArrayRef<mlir::OpOperand> getInitsMutable() {
+      return
+          getOperation()->getOpOperands().drop_front(getNumControlOperands());
     }
 
     void setLowerBound(mlir::Value bound) { (*this)->setOperand(0, bound); }
@@ -2198,7 +2210,8 @@ def fir_IfOp : region_Op<"if", [DeclareOpInterfaceMethods<RegionBranchOpInterfac
 }
 
 def fir_IterWhileOp : region_Op<"iterate_while",
-    [DeclareOpInterfaceMethods<LoopLikeOpInterface>]> {
+    [DeclareOpInterfaceMethods<LoopLikeOpInterface,
+        ["getYieldedValuesMutable"]>]> {
   let summary = "DO loop with early exit condition";
   let description = [{
     This single-entry, single-exit looping construct is useful for lowering
@@ -2262,6 +2275,10 @@ def fir_IterWhileOp : region_Op<"iterate_while",
     }
     mlir::Operation::operand_range getIterOperands() {
       return getOperands().drop_front(getNumControlOperands());
+    }
+    llvm::MutableArrayRef<mlir::OpOperand> getInitsMutable() {
+      return
+          getOperation()->getOpOperands().drop_front(getNumControlOperands());
     }
 
     void setLowerBound(mlir::Value bound) { (*this)->setOperand(0, bound); }

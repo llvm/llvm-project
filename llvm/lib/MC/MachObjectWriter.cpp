@@ -630,7 +630,7 @@ void MachObjectWriter::computeSymbolTable(
       // Set the Index and the IsExtern bit.
       unsigned Index = Rel.Sym->getIndex();
       assert(isInt<24>(Index));
-      if (W.Endian == support::little)
+      if (W.Endian == llvm::endianness::little)
         Rel.MRE.r_word1 = (Rel.MRE.r_word1 & (~0U << 24)) | Index | (1 << 27);
       else
         Rel.MRE.r_word1 = (Rel.MRE.r_word1 & 0xff) | Index << 8 | (1 << 4);

@@ -10,7 +10,6 @@
 #define LLVM_SUPPORT_THREADSAFEALLOCATOR_H
 
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/Support/Allocator.h"
 #include <atomic>
 

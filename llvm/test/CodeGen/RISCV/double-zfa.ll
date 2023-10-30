@@ -152,6 +152,16 @@ define double @loadfpimm17() {
   ret double -2.0
 }
 
+; Ensure fli isn't incorrecty used for negative min normal value.
+define double @loadfpimm18() {
+; CHECK-LABEL: loadfpimm18:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a0, %hi(.LCPI16_0)
+; CHECK-NEXT:    fld fa0, %lo(.LCPI16_0)(a0)
+; CHECK-NEXT:    ret
+  ret double 0x8010000000000000
+}
+
 declare double @llvm.minimum.f64(double, double)
 
 define double @fminm_d(double %a, double %b) nounwind {

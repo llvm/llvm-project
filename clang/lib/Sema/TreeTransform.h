@@ -1908,16 +1908,14 @@ public:
   ///
   /// By default, performs semantic analysis to build the new OpenMP clause.
   /// Subclasses may override this routine to provide different behavior.
-  OMPClause *RebuildOMPLinearClause(ArrayRef<Expr *> VarList, Expr *Step,
-                                    SourceLocation StartLoc,
-                                    SourceLocation LParenLoc,
-                                    OpenMPLinearClauseKind Modifier,
-                                    SourceLocation ModifierLoc,
-                                    SourceLocation ColonLoc,
-                                    SourceLocation EndLoc) {
+  OMPClause *RebuildOMPLinearClause(
+      ArrayRef<Expr *> VarList, Expr *Step, SourceLocation StartLoc,
+      SourceLocation LParenLoc, OpenMPLinearClauseKind Modifier,
+      SourceLocation ModifierLoc, SourceLocation ColonLoc,
+      SourceLocation StepModifierLoc, SourceLocation EndLoc) {
     return getSema().ActOnOpenMPLinearClause(VarList, Step, StartLoc, LParenLoc,
                                              Modifier, ModifierLoc, ColonLoc,
-                                             EndLoc);
+                                             StepModifierLoc, EndLoc);
   }
 
   /// Build a new OpenMP 'aligned' clause.
@@ -10287,7 +10285,8 @@ TreeTransform<Derived>::TransformOMPLinearClause(OMPLinearClause *C) {
     return nullptr;
   return getDerived().RebuildOMPLinearClause(
       Vars, Step.get(), C->getBeginLoc(), C->getLParenLoc(), C->getModifier(),
-      C->getModifierLoc(), C->getColonLoc(), C->getEndLoc());
+      C->getModifierLoc(), C->getColonLoc(), C->getStepModifierLoc(),
+      C->getEndLoc());
 }
 
 template <typename Derived>
@@ -11783,8 +11782,6 @@ TreeTransform<Derived>::TransformDesignatedInitExpr(DesignatedInitExpr *E) {
   bool ExprChanged = false;
   for (const DesignatedInitExpr::Designator &D : E->designators()) {
     if (D.isFieldDesignator()) {
-      Desig.AddDesignator(Designator::CreateFieldDesignator(
-          D.getFieldName(), D.getDotLoc(), D.getFieldLoc()));
       if (D.getFieldDecl()) {
         FieldDecl *Field = cast_or_null<FieldDecl>(
             getDerived().TransformDecl(D.getFieldLoc(), D.getFieldDecl()));
@@ -11792,12 +11789,16 @@ TreeTransform<Derived>::TransformDesignatedInitExpr(DesignatedInitExpr *E) {
           // Rebuild the expression when the transformed FieldDecl is
           // different to the already assigned FieldDecl.
           ExprChanged = true;
+        if (Field->isAnonymousStructOrUnion())
+          continue;
       } else {
         // Ensure that the designator expression is rebuilt when there isn't
         // a resolved FieldDecl in the designator as we don't want to assign
         // a FieldDecl to a pattern designator that will be instantiated again.
         ExprChanged = true;
       }
+      Desig.AddDesignator(Designator::CreateFieldDesignator(
+          D.getFieldName(), D.getDotLoc(), D.getFieldLoc()));
       continue;
     }
 

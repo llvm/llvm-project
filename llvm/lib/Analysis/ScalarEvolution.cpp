@@ -5223,8 +5223,8 @@ static std::optional<BinaryOp> MatchBinaryOp(Value *V, const DataLayout &DL,
     // LLVM loves to convert `add` of operands with no common bits
     // into an `or`. But SCEV really doesn't deal with `or` that well,
     // so try extra hard to recognize this `or` as an `add`.
-    if (haveNoCommonBitsSet(Op->getOperand(0), Op->getOperand(1), DL, &AC, CxtI,
-                            &DT, /*UseInstrInfo=*/true))
+    if (haveNoCommonBitsSet(Op->getOperand(0), Op->getOperand(1),
+                            SimplifyQuery(DL, &DT, &AC, CxtI)))
       return BinaryOp(Instruction::Add, Op->getOperand(0), Op->getOperand(1),
                       /*IsNSW=*/true, /*IsNUW=*/true);
     return BinaryOp(Op);
@@ -13266,26 +13266,7 @@ void ScalarEvolution::SCEVCallbackVH::allUsesReplacedWith(Value *V) {
   // Forget all the expressions associated with users of the old value,
   // so that future queries will recompute the expressions using the new
   // value.
-  Value *Old = getValPtr();
-  SmallVector<User *, 16> Worklist(Old->users());
-  SmallPtrSet<User *, 8> Visited;
-  while (!Worklist.empty()) {
-    User *U = Worklist.pop_back_val();
-    // Deleting the Old value will cause this to dangle. Postpone
-    // that until everything else is done.
-    if (U == Old)
-      continue;
-    if (!Visited.insert(U).second)
-      continue;
-    if (PHINode *PN = dyn_cast<PHINode>(U))
-      SE->ConstantEvolutionLoopExitValue.erase(PN);
-    SE->eraseValueFromMap(U);
-    llvm::append_range(Worklist, U->users());
-  }
-  // Delete the Old value.
-  if (PHINode *PN = dyn_cast<PHINode>(Old))
-    SE->ConstantEvolutionLoopExitValue.erase(PN);
-  SE->eraseValueFromMap(Old);
+  SE->forgetValue(getValPtr());
   // this now dangles!
 }
 
@@ -13840,7 +13821,7 @@ void ScalarEvolution::forgetMemoizedResultsImpl(const SCEV *S) {
   if (ScopeIt != ValuesAtScopes.end()) {
     for (const auto &Pair : ScopeIt->second)
       if (!isa_and_nonnull<SCEVConstant>(Pair.second))
-        erase_value(ValuesAtScopesUsers[Pair.second],
+        llvm::erase(ValuesAtScopesUsers[Pair.second],
                     std::make_pair(Pair.first, S));
     ValuesAtScopes.erase(ScopeIt);
   }
@@ -13848,7 +13829,7 @@ void ScalarEvolution::forgetMemoizedResultsImpl(const SCEV *S) {
   auto ScopeUserIt = ValuesAtScopesUsers.find(S);
   if (ScopeUserIt != ValuesAtScopesUsers.end()) {
     for (const auto &Pair : ScopeUserIt->second)
-      erase_value(ValuesAtScopes[Pair.second], std::make_pair(Pair.first, S));
+      llvm::erase(ValuesAtScopes[Pair.second], std::make_pair(Pair.first, S));
     ValuesAtScopesUsers.erase(ScopeUserIt);
   }
 

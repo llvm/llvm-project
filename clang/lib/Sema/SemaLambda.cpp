@@ -393,8 +393,7 @@ void Sema::DiagnoseInvalidExplicitObjectParameterInLambda(
   CXXRecordDecl *RD = Method->getParent();
   if (Method->getType()->isDependentType())
     return;
-  if (RD->getLambdaCaptureDefault() == LambdaCaptureDefault::LCD_None &&
-      RD->capture_size() == 0)
+  if (RD->isCapturelessLambda())
     return;
   QualType ExplicitObjectParameterType = Method->getParamDecl(0)
                                              ->getType()

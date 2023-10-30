@@ -1277,7 +1277,8 @@ define i1 @shl_55() {
 ; CHECK-LABEL: @shl_55(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SHL_UB:%.*]] = shl nuw nsw i256 1, 55
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[SHL_CMP:%.*]] = icmp uge i256 [[SHL_UB]], 1
+; CHECK-NEXT:    ret i1 [[SHL_CMP]]
 ;
 entry:
   %shl.ub = shl nuw nsw i256 1, 55

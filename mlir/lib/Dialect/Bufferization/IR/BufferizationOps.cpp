@@ -537,12 +537,12 @@ LogicalResult DeallocTensorOp::bufferize(RewriterBase &rewriter,
 
 bool MaterializeInDestinationOp::bufferizesToMemoryRead(
     OpOperand &opOperand, const AnalysisState &state) {
-  return &opOperand == &getSourceMutable();
+  return opOperand == getSourceMutable();
 }
 
 bool MaterializeInDestinationOp::bufferizesToMemoryWrite(
     OpOperand &opOperand, const AnalysisState &state) {
-  if (&opOperand == &getDestMutable()) {
+  if (opOperand == getDestMutable()) {
     assert(isa<TensorType>(getDest().getType()) && "expected tensor type");
     return true;
   }
@@ -560,7 +560,7 @@ bool MaterializeInDestinationOp::mustBufferizeInPlace(
 AliasingValueList
 MaterializeInDestinationOp::getAliasingValues(OpOperand &opOperand,
                                               const AnalysisState &state) {
-  if (&opOperand == &getDestMutable()) {
+  if (opOperand == getDestMutable()) {
     assert(isa<TensorType>(getDest().getType()) && "expected tensor type");
     return {{getOperation()->getResult(0), BufferRelation::Equivalent}};
   }
@@ -613,11 +613,19 @@ Value MaterializeInDestinationOp::buildSubsetExtraction(OpBuilder &builder,
     return getDest();
   }
 
+  // The "restrict" attribute is transferred from this op to the newly created
+  // to_tensor op. If this op does not the "restrict" attribute, the subset
+  // extraction cannot be built because there is no guarantee that there is no
+  // pre-existing "restrict" to_tensor op with the same/an aliasing destination.
+  if (!getRestrict())
+    return {};
+
   // Build a bufferization.to_tensor op.
   assert(isa<BaseMemRefType>(getDest().getType()) && "expected memref type");
   assert(getRestrict() &&
          "expected that ops with memrefs dest have 'restrict'");
-  return builder.create<ToTensorOp>(loc, getDest(), getRestrict(),
+  setRestrict(false);
+  return builder.create<ToTensorOp>(loc, getDest(), /*restrict=*/true,
                                     getWritable());
 }
 
@@ -647,9 +655,8 @@ LogicalResult MaterializeInDestinationOp::verify() {
   if (isa<BaseMemRefType>(getDest().getType()) &&
       getOperation()->getNumResults() != 0)
     return emitOpError("memref 'dest' implies zero results");
-  if (getRestrict() != isa<BaseMemRefType>(getDest().getType()))
-    return emitOpError("'restrict' must be specified if and only if the "
-                       "destination is of memref type");
+  if (getRestrict() && !isa<BaseMemRefType>(getDest().getType()))
+    return emitOpError("'restrict' is valid only for memref destinations");
   if (getWritable() != isa<BaseMemRefType>(getDest().getType()))
     return emitOpError("'writable' must be specified if and only if the "
                        "destination is of memref type");

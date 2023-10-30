@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements a model runner using Tensorflow C APIs, allowing the
+// This file implements a model runner using TFLite, allowing the
 // loading of a model from a command line option.
 //
 //===----------------------------------------------------------------------===//

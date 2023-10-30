@@ -617,6 +617,15 @@ def VariadicRegionOp : TestOp<"variadic_region"> {
 // CHECK:   return _get_op_result_or_op_results(VariadicRegionOp(num_variadic=num_variadic, loc=loc, ip=ip))
 
 // CHECK: @_ods_cext.register_operation(_Dialect)
+// CHECK: class WithSpecialCharactersOp(_ods_ir.OpView):
+// CHECK-LABEL: OPERATION_NAME = "test.123with--special.characters"
+def WithSpecialCharactersOp : TestOp<"123with--special.characters"> {
+}
+
+// CHECK: def _123with__special_characters(*, loc=None, ip=None)
+// CHECK:   return _get_op_result_or_op_results(WithSpecialCharactersOp(loc=loc, ip=ip))
+
+// CHECK: @_ods_cext.register_operation(_Dialect)
 // CHECK: class WithSuccessorsOp(_ods_ir.OpView):
 // CHECK-LABEL: OPERATION_NAME = "test.with_successors"
 def WithSuccessorsOp : TestOp<"with_successors"> {

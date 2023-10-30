@@ -163,9 +163,9 @@ public:
                      GetSymbolInfoFunction GetSymbolInfo,
                      GetSectionInfoFunction GetSectionInfo,
                      GetStubInfoFunction GetStubInfo,
-                     GetGOTInfoFunction GetGOTInfo,
-                     support::endianness Endianness, Triple TT, StringRef CPU,
-                     SubtargetFeatures TF, raw_ostream &ErrStream);
+                     GetGOTInfoFunction GetGOTInfo, llvm::endianness Endianness,
+                     Triple TT, StringRef CPU, SubtargetFeatures TF,
+                     raw_ostream &ErrStream);
   ~RuntimeDyldChecker();
 
   /// Check a single expression against the attached RuntimeDyld
