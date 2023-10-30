@@ -46,6 +46,16 @@ static cl::opt<unsigned>
     NeonNonConstStrideOverhead("neon-nonconst-stride-overhead", cl::init(10),
                                cl::Hidden);
 
+static cl::opt<unsigned> CallPenaltyChangeSM(
+    "call-penalty-sm-change", cl::init(5), cl::Hidden,
+    cl::desc(
+        "Penalty of calling a function that requires a change to PSTATE.SM"));
+
+static cl::opt<unsigned> InlineCallPenaltyChangeSM(
+    "inline-call-penalty-sm-change", cl::init(10), cl::Hidden,
+    cl::desc(
+        "Penalty of inlining a call that requires a change to PSTATE.SM"));
+
 namespace {
 class TailFoldingOption {
   // These bitfields will only ever be set to something non-zero in operator=,
@@ -295,9 +305,9 @@ AArch64TTIImpl::getInlineCallPenalty(const Function *F, const CallBase &Call,
   SMEAttrs CalleeAttrs(Call);
   if (FAttrs.requiresSMChange(CalleeAttrs)) {
     if (F == Call.getCaller())                                // (1)
-      return 5 * DefaultCallPenalty;
+      return CallPenaltyChangeSM * DefaultCallPenalty;
     if (FAttrs.requiresSMChange(SMEAttrs(*Call.getCaller()))) // (2)
-      return 10 * DefaultCallPenalty;
+      return InlineCallPenaltyChangeSM * DefaultCallPenalty;
   }
 
   return DefaultCallPenalty;
