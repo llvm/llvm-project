@@ -91,7 +91,7 @@ constexpr bool test() {
     std::expected<void, Traced> e1(std::in_place);
     std::expected<void, Traced> e2(std::unexpect, s, 10);
 
-    e1.swap(e2);
+    swap(e1, e2);
 
     assert(!e1.has_value());
     assert(e1.error().data_ == 10);
@@ -107,7 +107,7 @@ constexpr bool test() {
     std::expected<void, Traced> e1(std::unexpect, s, 10);
     std::expected<void, Traced> e2(std::in_place);
 
-    e1.swap(e2);
+    swap(e1, e2);
 
     assert(e1.has_value());
     assert(!e2.has_value());

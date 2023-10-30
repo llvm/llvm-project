@@ -129,7 +129,7 @@ constexpr bool test() {
     std::expected<TrackedMove<true>, TrackedMove<false>> e1(std::in_place, 5);
     std::expected<TrackedMove<true>, TrackedMove<false>> e2(std::unexpect, 10);
 
-    e1.swap(e2);
+    swap(e1, e2);
 
     assert(!e1.has_value());
     assert(e1.error().i == 10);
