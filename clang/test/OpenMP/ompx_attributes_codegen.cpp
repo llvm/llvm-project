@@ -29,7 +29,6 @@ void func() {
 // AMD: attributes #4
 // AMD-SAME: "amdgpu-flat-work-group-size"="1,256"
 // AMD-SAME: "amdgpu-waves-per-eu"="3,7"
-// AMD-SAME: "omp_target_thread_limit"="17"
 
 // It is unclear if we should use the AMD annotations for other targets, we do for now.
 // NVIDIA: "omp_target_thread_limit"="20"
