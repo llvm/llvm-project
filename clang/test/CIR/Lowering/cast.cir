@@ -10,7 +10,7 @@
 !u64i = !cir.int<u, 64>
 
 module {
-  cir.func @cStyleCasts(%arg0: !u32i, %arg1: !s32i, %arg2: f32) -> !s32i {
+  cir.func @cStyleCasts(%arg0: !u32i, %arg1: !s32i, %arg2: f32, %arg3: f64) -> !s32i {
   // CHECK: llvm.func @cStyleCasts
     %0 = cir.alloca !u32i, cir.ptr <!u32i>, ["x1", init] {alignment = 4 : i64}
     %1 = cir.alloca !s32i, cir.ptr <!s32i>, ["x2", init] {alignment = 4 : i64}
@@ -74,6 +74,8 @@ module {
     %28 = cir.cast(float_to_int, %arg2 : f32), !u32i
     // CHECK: %{{.+}} = llvm.fptoui %{{.+}} : f32 to i32
     %18 = cir.const(#cir.int<0> : !s32i) : !s32i
+    // CHECK: %{{.+}} = llvm.fptrunc %{{.+}} : f64 to f32
+    %34 = cir.cast(floating, %arg3 : f64), f32
 
     cir.store %18, %2 : !s32i, cir.ptr <!s32i>
     %19 = cir.load %2 : cir.ptr <!s32i>, !s32i
