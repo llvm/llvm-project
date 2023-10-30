@@ -88,16 +88,6 @@ bool RISCVFoldMasks::isAllOnesMask(MachineInstr *MaskCopy) {
   }
 }
 
-static bool isVMerge(MachineInstr &MI) {
-  unsigned Opc = MI.getOpcode();
-  return Opc == RISCV::PseudoVMERGE_VVM_MF8 ||
-         Opc == RISCV::PseudoVMERGE_VVM_MF4 ||
-         Opc == RISCV::PseudoVMERGE_VVM_MF2 ||
-         Opc == RISCV::PseudoVMERGE_VVM_M1 ||
-         Opc == RISCV::PseudoVMERGE_VVM_M2 ||
-         Opc == RISCV::PseudoVMERGE_VVM_M4 || Opc == RISCV::PseudoVMERGE_VVM_M8;
-}
-
 // Transform (VMERGE_VVM_<LMUL> false, false, true, allones, vl, sew) to
 // (VMV_V_V_<LMUL> false, true, vl, sew). It may decrease uses of VMSET.
 bool RISCVFoldMasks::convertVMergeToVMv(MachineInstr &MI, MachineInstr *V0Def) {
@@ -169,7 +159,8 @@ bool RISCVFoldMasks::runOnMachineFunction(MachineFunction &MF) {
   for (MachineBasicBlock &MBB : MF) {
     CurrentV0Def = nullptr;
     for (MachineInstr &MI : MBB) {
-      if (isVMerge(MI))
+      unsigned BaseOpc = RISCV::getRVVMCOpcode(MI.getOpcode());
+      if (BaseOpc == RISCV::VMERGE_VVM)
         Changed |= convertVMergeToVMv(MI, CurrentV0Def);
 
       if (MI.definesRegister(RISCV::V0, TRI))
