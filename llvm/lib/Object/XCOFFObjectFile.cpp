@@ -1242,14 +1242,77 @@ Expected<bool> XCOFFSymbolRef::isFunction() const {
 
   const XCOFFCsectAuxRef CsectAuxRef = ExpCsectAuxEnt.get();
 
-  // A function definition should be a label definition.
-  // FIXME: This is not necessarily the case when -ffunction-sections is
-  // enabled.
-  if (!CsectAuxRef.isLabel())
-    return false;
-
   if (CsectAuxRef.getStorageMappingClass() != XCOFF::XMC_PR)
     return false;
+
+  // A function definition should not be a common type symbol or a external
+  // symbol.
+  if (CsectAuxRef.getSymbolType() == XCOFF::XTY_CM ||
+      CsectAuxRef.getSymbolType() == XCOFF::XTY_ER)
+    return false;
+
+  // If the next symbol is a XTY_LD type symbol with same address, this XTY_SD
+  // symbol is not a function. Otherwise this is a function symbol for
+  // -ffunction-sections.
+  if (CsectAuxRef.getSymbolType() == XCOFF::XTY_SD) {
+    // If this is a csect with size 0, it won't be a function definition.
+    // This is used to hack situation that llvm always generates below symbol
+    // for -ffunction-sections:
+    // m   0x00000000     .text     1  unamex                    **No Symbol**
+    // a4  0x00000000       0    0     SD       PR    0    0
+    if (getSize() == 0)
+      return false;
+
+    Expected<uint64_t> SymbolAddressOrErr = getAddress();
+    if (!SymbolAddressOrErr) {
+      // If there is no address for this symbol, won't be a function.
+      consumeError(SymbolAddressOrErr.takeError());
+      return false;
+    }
+
+    uint8_t NumberOfAuxEntries = getNumberOfAuxEntries();
+
+    // If this is the last main symbol table entry, there won't be XTY_LD type
+    // symbol below.
+    if (getEntryAddress() == getObject()->getSymbolEntryAddressByIndex(
+                                 getObject()->getNumberOfSymbolTableEntries() -
+                                 NumberOfAuxEntries - 1))
+      return true;
+
+    DataRefImpl Ref;
+    Ref.p = XCOFFObjectFile::getAdvancedSymbolEntryAddress(
+        getEntryAddress(), NumberOfAuxEntries + 1);
+    XCOFFSymbolRef NextSym = getObject()->toSymbolRef(Ref);
+    if (!NextSym.isCsectSymbol())
+      return true;
+
+    Expected<uint64_t> NextSymbolAddressOrErr = NextSym.getAddress();
+    if (!NextSymbolAddressOrErr) {
+      // If there is no address for next symbol, won't be same with the XTY_SD
+      // symbol's address.
+      consumeError(NextSymbolAddressOrErr.takeError());
+      return true;
+    }
+
+    if (SymbolAddressOrErr.get() != NextSymbolAddressOrErr.get())
+      return true;
+
+    // Check next symbol is XTY_LD. If so, this symbol is not a function.
+    Expected<XCOFFCsectAuxRef> NextCsectAuxEnt = NextSym.getXCOFFCsectAuxRef();
+    if (!NextCsectAuxEnt) {
+      // If the next symbol has no aux entries, won't be a XTY_LD symbol.
+      consumeError(NextCsectAuxEnt.takeError());
+      return true;
+    }
+
+    if (NextCsectAuxEnt.get().getSymbolType() == XCOFF::XTY_LD)
+      return false;
+
+    return true;
+  }
+
+  if (CsectAuxRef.getSymbolType() == XCOFF::XTY_LD)
+    return true;
 
   const int16_t SectNum = getSectionNumber();
   Expected<DataRefImpl> SI = getObject()->getSectionByNum(SectNum);
