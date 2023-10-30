@@ -212,6 +212,7 @@ protected:
                        I != IE; ++I)
                     if (LoadFromTocs.count(&*I)) {
                       if (I->getOperand(1).isGlobal() &&
+                          I->getOperand(1).getGlobal()->hasName() &&
                           I->getOperand(1).getGlobal()->getName() == "_$TLSML")
                         TLSMLIter = I;
                       else
