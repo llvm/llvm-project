@@ -1,4 +1,4 @@
-//===- Target.h - MLIR SPIRV target registration ----------------*- C++ -*-===//
+//===- Target.h - MLIR SPIR-V target registration ---------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This provides registration calls for attaching the SPIRV target interface.
+// This provides registration calls for attaching the SPIR-V target interface.
 //
 //===----------------------------------------------------------------------===//
 
@@ -17,12 +17,12 @@ namespace mlir {
 class DialectRegistry;
 class MLIRContext;
 namespace spirv {
-/// Registers the `TargetAttrInterface` for the `#spirv.target` attribute in the
-/// given registry.
+/// Registers the `TargetAttrInterface` for the `#spirv.target_env` attribute in
+/// the given registry.
 void registerSPIRVTargetInterfaceExternalModels(DialectRegistry &registry);
 
-/// Registers the `TargetAttrInterface` for the `#spirv.target` attribute in the
-/// registry associated with the given context.
+/// Registers the `TargetAttrInterface` for the `#spirv.target_env` attribute in
+/// the registry associated with the given context.
 void registerSPIRVTargetInterfaceExternalModels(MLIRContext &context);
 } // namespace spirv
 } // namespace mlir

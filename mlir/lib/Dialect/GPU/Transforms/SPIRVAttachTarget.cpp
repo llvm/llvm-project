@@ -1,4 +1,4 @@
-//===- SPIRVAttachTarget.cpp - Attach an SPIRV target ---------------------===//
+//===- SPIRVAttachTarget.cpp - Attach an SPIR-V target --------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements the `GpuSPIRVAttachTarget` pass, attaching
-// `#spirv.target` attributes to GPU modules.
+// This file implements the `GPUSPIRVAttachTarget` pass, attaching
+// `#spirv.target_env` attributes to GPU modules.
 //
 //===----------------------------------------------------------------------===//
 
@@ -45,50 +45,51 @@ struct SPIRVAttachTarget
 
 void SPIRVAttachTarget::runOnOperation() {
   OpBuilder builder(&getContext());
-  if (!symbolizeVersion(spirvVersion))
+  auto versionSymbol = symbolizeVersion(spirvVersion);
+  if (!versionSymbol)
     return signalPassFailure();
-  if (!symbolizeClientAPI(clientApi))
+  auto apiSymbol = symbolizeClientAPI(clientApi);
+  if (!apiSymbol)
     return signalPassFailure();
-  if (!symbolizeVendor(deviceVendor))
+  auto vendorSymbol = symbolizeVendor(deviceVendor);
+  if (!vendorSymbol)
     return signalPassFailure();
-  if (!symbolizeDeviceType(deviceType))
+  auto deviceTypeSymbol = symbolizeDeviceType(deviceType);
+  if (!deviceTypeSymbol)
     return signalPassFailure();
 
-  Version version = symbolizeVersion(spirvVersion).value();
+  Version version = versionSymbol.value();
   SmallVector<Capability, 4> capabilities;
   SmallVector<Extension, 8> extensions;
   for (auto cap : spirvCapabilities) {
-    if (symbolizeCapability(cap))
-      capabilities.push_back(symbolizeCapability(cap).value());
+    auto capSymbol = symbolizeCapability(cap);
+    if (capSymbol)
+      capabilities.push_back(capSymbol.value());
   }
   ArrayRef<Capability> caps(capabilities);
   for (auto ext : spirvExtensions) {
-    if (symbolizeCapability(ext))
-      extensions.push_back(symbolizeExtension(ext).value());
+    auto extSymbol = symbolizeExtension(ext);
+    if (extSymbol)
+      extensions.push_back(extSymbol.value());
   }
   ArrayRef<Extension> exts(extensions);
   VerCapExtAttr vce = VerCapExtAttr::get(version, caps, exts, &getContext());
-  auto target = TargetEnvAttr::get(
-      vce, getDefaultResourceLimits(&getContext()),
-      symbolizeClientAPI(clientApi).value(),
-      symbolizeVendor(deviceVendor).value(),
-      symbolizeDeviceType(deviceType).value(), deviceId);
+  auto target = TargetEnvAttr::get(vce, getDefaultResourceLimits(&getContext()),
+                                   apiSymbol.value(), vendorSymbol.value(),
+                                   deviceTypeSymbol.value(), deviceId);
   llvm::Regex matcher(moduleMatcher);
-  for (Region &region : getOperation()->getRegions())
-    for (Block &block : region.getBlocks())
-      for (auto module : block.getOps<gpu::GPUModuleOp>()) {
-        // Check if the name of the module matches.
-        if (!moduleMatcher.empty() && !matcher.match(module.getName()))
-          continue;
-        // Create the target array.
-        SmallVector<Attribute> targets;
-        if (std::optional<ArrayAttr> attrs = module.getTargets())
-          targets.append(attrs->getValue().begin(), attrs->getValue().end());
-        targets.push_back(target);
-        // Remove any duplicate targets.
-        targets.erase(std::unique(targets.begin(), targets.end()),
-                      targets.end());
-        // Update the target attribute array.
-        module.setTargetsAttr(builder.getArrayAttr(targets));
-      }
+  getOperation()->walk([&](gpu::GPUModuleOp gpuModule) {
+    // Check if the name of the module matches.
+    if (!moduleMatcher.empty() && !matcher.match(gpuModule.getName()))
+      return;
+    // Create the target array.
+    SmallVector<Attribute> targets;
+    if (std::optional<ArrayAttr> attrs = gpuModule.getTargets())
+      targets.append(attrs->getValue().begin(), attrs->getValue().end());
+    targets.push_back(target);
+    // Remove any duplicate targets.
+    targets.erase(std::unique(targets.begin(), targets.end()), targets.end());
+    // Update the target attribute array.
+    gpuModule.setTargetsAttr(builder.getArrayAttr(targets));
+  });
 }

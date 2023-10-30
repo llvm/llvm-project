@@ -1,4 +1,4 @@
-//===- Target.cpp - MLIR SPIRV target compilation ---------------*- C++ -*-===//
+//===- Target.cpp - MLIR SPIR-V target compilation --------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This files defines SPIRV target related functions including registration
-// calls for the `#spirv.target` compilation attribute.
+// This files defines SPIR-V target related functions including registration
+// calls for the `#spirv.target_env` compilation attribute.
 //
 //===----------------------------------------------------------------------===//
 
@@ -38,7 +38,7 @@ using namespace mlir;
 using namespace mlir::spirv;
 
 namespace {
-// Implementation of the `TargetAttrInterface` model.
+// SPIR-V implementation of the gpu:TargetAttrInterface.
 class SPIRVTargetAttrImpl
     : public gpu::TargetAttrInterface::FallbackModel<SPIRVTargetAttrImpl> {
 public:
@@ -52,7 +52,7 @@ public:
 };
 } // namespace
 
-// Register the SPIRV dialect, the SPIRV translation & the target interface.
+// Register the SPIR-V dialect, the SPIR-V translation & the target interface.
 void mlir::spirv::registerSPIRVTargetInterfaceExternalModels(
     DialectRegistry &registry) {
   registry.addExtension(+[](MLIRContext *ctx, spirv::SPIRVDialect *dialect) {
@@ -71,26 +71,24 @@ void mlir::spirv::registerSPIRVTargetInterfaceExternalModels(
 std::optional<SmallVector<char, 0>> SPIRVTargetAttrImpl::serializeToObject(
     Attribute attribute, Operation *module,
     const gpu::TargetOptions &options) const {
-  assert(module && "The module must be non null.");
   if (!module)
     return std::nullopt;
-  if (!mlir::isa<gpu::GPUModuleOp>(module)) {
-    module->emitError("Module must be a GPU module.");
-    return std::nullopt;
-  }
   auto gpuMod = dyn_cast<gpu::GPUModuleOp>(module);
-  auto spvMods = gpuMod.getOps<spirv::ModuleOp>();
-  // Empty spirv::ModuleOp
-  if (spvMods.empty()) {
+  if (!gpuMod) {
+    module->emitError("expected to be a gpu.module op");
     return std::nullopt;
   }
+  auto spvMods = gpuMod.getOps<spirv::ModuleOp>();
+  if (spvMods.empty())
+    return std::nullopt;
+
   auto spvMod = *spvMods.begin();
   llvm::SmallVector<uint32_t, 0> spvBinary;
 
   spvBinary.clear();
-  // serialize the spv module to spv binary
+  // Serialize the spirv.module op to SPIR-V blob.
   if (mlir::failed(spirv::serialize(spvMod, spvBinary))) {
-    spvMod.emitError() << "Failed to serialize SPIR-V module";
+    spvMod.emitError() << "failed to serialize SPIR-V module";
     return std::nullopt;
   }
 
@@ -106,7 +104,6 @@ Attribute
 SPIRVTargetAttrImpl::createObject(Attribute attribute,
                                   const SmallVector<char, 0> &object,
                                   const gpu::TargetOptions &options) const {
-  auto target = cast<TargetEnvAttr>(attribute);
   gpu::CompilationTarget format = options.getCompilationTarget();
   DictionaryAttr objectProps;
   Builder builder(attribute.getContext());
