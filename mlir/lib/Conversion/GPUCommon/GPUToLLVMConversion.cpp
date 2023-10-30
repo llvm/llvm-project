@@ -82,19 +82,12 @@ protected:
   MLIRContext *context = &this->getTypeConverter()->getContext();
 
   Type llvmVoidType = LLVM::LLVMVoidType::get(context);
-  LLVM::LLVMPointerType llvmPointerType =
-      this->getTypeConverter()->getPointerType(IntegerType::get(context, 8));
-  Type llvmPointerPointerType =
-      this->getTypeConverter()->getPointerType(llvmPointerType);
+  LLVM::LLVMPointerType llvmPointerType = LLVM::LLVMPointerType::get(context);
   Type llvmInt8Type = IntegerType::get(context, 8);
   Type llvmInt16Type = IntegerType::get(context, 16);
   Type llvmInt32Type = IntegerType::get(context, 32);
   Type llvmInt64Type = IntegerType::get(context, 64);
   Type llvmFloat32Type = Float32Type::get(context);
-  Type llvmInt8PointerType =
-      this->getTypeConverter()->getPointerType(llvmInt8Type);
-  Type llvmInt64PointerType =
-      this->getTypeConverter()->getPointerType(llvmInt64Type);
   Type llvmIntPtrType = IntegerType::get(
       context, this->getTypeConverter()->getPointerBitwidth(0));
 
@@ -115,18 +108,18 @@ protected:
       "mgpuLaunchKernel",
       llvmVoidType,
       {
-          llvmPointerType,        /* void* f */
-          llvmIntPtrType,         /* intptr_t gridXDim */
-          llvmIntPtrType,         /* intptr_t gridyDim */
-          llvmIntPtrType,         /* intptr_t gridZDim */
-          llvmIntPtrType,         /* intptr_t blockXDim */
-          llvmIntPtrType,         /* intptr_t blockYDim */
-          llvmIntPtrType,         /* intptr_t blockZDim */
-          llvmInt32Type,          /* unsigned int sharedMemBytes */
-          llvmPointerType,        /* void *hstream */
-          llvmPointerPointerType, /* void **kernelParams */
-          llvmPointerPointerType, /* void **extra */
-          llvmInt64Type           /* size_t paramsCount */
+          llvmPointerType, /* void* f */
+          llvmIntPtrType,  /* intptr_t gridXDim */
+          llvmIntPtrType,  /* intptr_t gridyDim */
+          llvmIntPtrType,  /* intptr_t gridZDim */
+          llvmIntPtrType,  /* intptr_t blockXDim */
+          llvmIntPtrType,  /* intptr_t blockYDim */
+          llvmIntPtrType,  /* intptr_t blockZDim */
+          llvmInt32Type,   /* unsigned int sharedMemBytes */
+          llvmPointerType, /* void *hstream */
+          llvmPointerType, /* void **kernelParams */
+          llvmPointerType, /* void **extra */
+          llvmInt64Type    /* size_t paramsCount */
       }};
   FunctionCallBuilder streamCreateCallBuilder = {
       "mgpuStreamCreate", llvmPointerType /* void *stream */, {}};
@@ -1027,20 +1020,20 @@ Value ConvertLaunchFuncOpToGpuRuntimeCallPattern::generateParamsArray(
   auto structType = LLVM::LLVMStructType::getNewIdentified(context, StringRef(),
                                                            argumentTypes);
   auto one = builder.create<LLVM::ConstantOp>(loc, llvmInt32Type, 1);
-  auto structPtr = builder.create<LLVM::AllocaOp>(
-      loc, getTypeConverter()->getPointerType(structType), structType, one,
-      /*alignment=*/0);
+  auto structPtr =
+      builder.create<LLVM::AllocaOp>(loc, llvmPointerType, structType, one,
+                                     /*alignment=*/0);
   auto arraySize =
       builder.create<LLVM::ConstantOp>(loc, llvmInt32Type, numArguments);
   auto arrayPtr = builder.create<LLVM::AllocaOp>(
-      loc, llvmPointerPointerType, llvmPointerType, arraySize, /*alignment=*/0);
+      loc, llvmPointerType, llvmPointerType, arraySize, /*alignment=*/0);
   for (const auto &en : llvm::enumerate(arguments)) {
-    Value fieldPtr = builder.create<LLVM::GEPOp>(
-        loc, getTypeConverter()->getPointerType(argumentTypes[en.index()]),
-        structType, structPtr, ArrayRef<LLVM::GEPArg>{0, en.index()});
+    Value fieldPtr =
+        builder.create<LLVM::GEPOp>(loc, llvmPointerType, structType, structPtr,
+                                    ArrayRef<LLVM::GEPArg>{0, en.index()});
     builder.create<LLVM::StoreOp>(loc, en.value(), fieldPtr);
     auto elementPtr = builder.create<LLVM::GEPOp>(
-        loc, llvmPointerPointerType, llvmPointerType, arrayPtr,
+        loc, llvmPointerType, llvmPointerType, arrayPtr,
         ArrayRef<LLVM::GEPArg>{en.index()});
     builder.create<LLVM::StoreOp>(loc, fieldPtr, elementPtr);
   }
@@ -1194,7 +1187,7 @@ LogicalResult ConvertLaunchFuncOpToGpuRuntimeCallPattern::matchAndRewrite(
           : adaptor.getAsyncDependencies().front();
   // Create array of pointers to kernel arguments.
   auto kernelParams = generateParamsArray(launchOp, adaptor, rewriter);
-  auto nullpointer = rewriter.create<LLVM::ZeroOp>(loc, llvmPointerPointerType);
+  auto nullpointer = rewriter.create<LLVM::ZeroOp>(loc, llvmPointerType);
   Value dynamicSharedMemorySize = launchOp.getDynamicSharedMemorySize()
                                       ? launchOp.getDynamicSharedMemorySize()
                                       : zero;
@@ -1230,8 +1223,8 @@ static Value bitAndAddrspaceCast(Location loc,
   if (destinationType.getAddressSpace() != sourceTy.getAddressSpace())
     sourcePtr = rewriter.create<LLVM::AddrSpaceCastOp>(
         loc,
-        typeConverter.getPointerType(sourceTy.getElementType(),
-                                     destinationType.getAddressSpace()),
+        LLVM::LLVMPointerType::get(rewriter.getContext(),
+                                   destinationType.getAddressSpace()),
         sourcePtr);
   return sourcePtr;
 }
@@ -1371,7 +1364,7 @@ LogicalResult ConvertCreateDnTensorOpToGpuRuntimeCallPattern::matchAndRewrite(
       auto handleSz = rewriter.create<LLVM::ConstantOp>(
           loc, getIndexType(), rewriter.getIndexAttr(11032));
       handle = rewriter.create<LLVM::AllocaOp>(
-          loc, llvmInt8PointerType, llvmInt8Type, handleSz, /*alignment=*/16);
+          loc, llvmPointerType, llvmInt8Type, handleSz, /*alignment=*/16);
       handle = rewriter.create<LLVM::BitcastOp>(loc, llvmPointerType, handle);
 
       createLtDnMatCallBuilder
@@ -1533,7 +1526,7 @@ LogicalResult ConvertCreate2To4SpMatOpToGpuRuntimeCallPattern::matchAndRewrite(
   auto handleSz = rewriter.create<LLVM::ConstantOp>(
       loc, getIndexType(), rewriter.getIndexAttr(44104));
   Value handle = rewriter.create<LLVM::AllocaOp>(
-      loc, llvmInt8PointerType, llvmInt8Type, handleSz, /*alignment=*/16);
+      loc, llvmPointerType, llvmInt8Type, handleSz, /*alignment=*/16);
   handle = rewriter.create<LLVM::BitcastOp>(loc, llvmPointerType, handle);
 
   create2To4SpMatCallBuilder
@@ -1623,7 +1616,7 @@ LogicalResult ConvertSpMMBufferSizeOpToGpuRuntimeCallPattern::matchAndRewrite(
     auto three = rewriter.create<LLVM::ConstantOp>(loc, getIndexType(),
                                                    rewriter.getIndexAttr(3));
     auto bufferSize = rewriter.create<LLVM::AllocaOp>(
-        loc, llvmInt64PointerType, llvmInt64Type, three, /*alignment=*/16);
+        loc, llvmPointerType, llvmPointerType, three, /*alignment=*/16);
     createCuSparseLtSpMMBufferSizeBuilder
         .create(loc, rewriter,
                 {bufferSize, modeA, modeB, adaptor.getSpmatA(),
@@ -1632,11 +1625,11 @@ LogicalResult ConvertSpMMBufferSizeOpToGpuRuntimeCallPattern::matchAndRewrite(
         .getResult();
 
     auto bufferSizePtr1 = rewriter.create<LLVM::GEPOp>(
-        loc, llvmInt64PointerType, llvmInt64PointerType, bufferSize,
+        loc, llvmPointerType, llvmPointerType, bufferSize,
         ValueRange{rewriter.create<LLVM::ConstantOp>(
             loc, getIndexType(), rewriter.getIndexAttr(1))});
     auto bufferSizePtr2 = rewriter.create<LLVM::GEPOp>(
-        loc, llvmInt64PointerType, llvmInt64PointerType, bufferSize,
+        loc, llvmPointerType, llvmPointerType, bufferSize,
         ValueRange{rewriter.create<LLVM::ConstantOp>(
             loc, getIndexType(), rewriter.getIndexAttr(2))});
     auto bufferSize0 =
@@ -1723,8 +1716,7 @@ LogicalResult ConvertSpMMOpToGpuRuntimeCallPattern::matchAndRewrite(
 template <typename T>
 static void addOpaquePointerConversion(LLVMTypeConverter &converter) {
   converter.addConversion([&converter](T) -> Type {
-    return converter.getPointerType(
-        IntegerType::get(&converter.getContext(), 8));
+    return LLVM::LLVMPointerType::get(&converter.getContext());
   });
 }
 
@@ -1852,18 +1844,18 @@ LogicalResult ConvertSpMatGetSizeOpToGpuRuntimeCallPattern::matchAndRewrite(
   auto three = rewriter.create<LLVM::ConstantOp>(loc, getIndexType(),
                                                  rewriter.getIndexAttr(3));
   auto buffer = rewriter.create<LLVM::AllocaOp>(
-      loc, llvmInt64PointerType, llvmInt64Type, three, /*alignment=*/16);
+      loc, llvmPointerType, llvmInt64Type, three, /*alignment=*/16);
 
   auto rowsPtr = rewriter.create<LLVM::GEPOp>(
-      loc, llvmInt64PointerType, llvmInt64PointerType, buffer,
+      loc, llvmPointerType, llvmPointerType, buffer,
       ValueRange{rewriter.create<LLVM::ConstantOp>(loc, getIndexType(),
                                                    rewriter.getIndexAttr(0))});
   auto colsPtr = rewriter.create<LLVM::GEPOp>(
-      loc, llvmInt64PointerType, llvmInt64PointerType, buffer,
+      loc, llvmPointerType, llvmPointerType, buffer,
       ValueRange{rewriter.create<LLVM::ConstantOp>(loc, getIndexType(),
                                                    rewriter.getIndexAttr(1))});
   auto nnzsPtr = rewriter.create<LLVM::GEPOp>(
-      loc, llvmInt64PointerType, llvmInt64PointerType, buffer,
+      loc, llvmPointerType, llvmPointerType, buffer,
       ValueRange{rewriter.create<LLVM::ConstantOp>(loc, getIndexType(),
                                                    rewriter.getIndexAttr(2))});
   createSpMatGetSizeBuilder.create(
