@@ -10,6 +10,9 @@ Johannes: breakage
   [OpenMP][FIX] Move workaround code to avoid races 
    see smoke-fails, smoke-limbo, smoke, examples
 
+Revert/defer 8f5a18b6e58 Perf/lexer faster slow get char and size (#70543)
+  to integrate into ASO
+
 Revert: waiting on pip install myst-parser 
  b6ff03206 "[Documentation] Replace recommonmark by myst-parser
 
