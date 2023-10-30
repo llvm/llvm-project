@@ -70,7 +70,7 @@ static_assert(!HasMemberSwap<MoveMayThrow, MoveMayThrow>);
 
 // Test noexcept
 template <class T, class E>
-concept MemberSwapNoexcept =
+concept MemberSwapNoexcept = //
     requires(std::expected<T, E> x, std::expected<T, E> y) {
       { x.swap(y) } noexcept;
     };

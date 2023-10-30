@@ -52,7 +52,7 @@ struct MoveMayThrow {
 };
 
 template <class E>
-concept MemberSwapNoexcept =
+concept MemberSwapNoexcept = //
     requires(std::expected<void, E> x, std::expected<void, E> y) {
       { x.swap(y) } noexcept;
     };
