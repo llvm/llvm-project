@@ -13,6 +13,7 @@
 #include <__algorithm/out_value_result.h>
 #include <__config>
 #include <__ranges/concepts.h>
+#include <__ranges/dangling.h>
 #include <__utility/as_const.h>
 #include <__utility/move.h>
 
