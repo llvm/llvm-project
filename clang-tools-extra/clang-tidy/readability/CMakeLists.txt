@@ -51,6 +51,7 @@ add_clang_library(clangTidyReadabilityModule
   UniqueptrDeleteReleaseCheck.cpp
   UppercaseLiteralSuffixCheck.cpp
   UseAnyOfAllOfCheck.cpp
+  UseExplicitNamespacesCheck.cpp
 
   LINK_LIBS
   clangTidy

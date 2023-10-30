@@ -197,6 +197,11 @@ New checks
   Detects C++ code where a reference variable is used to extend the lifetime
   of a temporary object that has just been constructed.
 
+- New :doc:`readability-use-explicit-namespaces
+  <clang-tidy/checks/readability/use-explicit-namespaces>` check.
+
+  FIXME: add release notes.
+
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
