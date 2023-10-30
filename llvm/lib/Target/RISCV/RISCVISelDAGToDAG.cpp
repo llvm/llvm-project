@@ -2841,10 +2841,9 @@ bool RISCVDAGToDAGISel::selectSHXADD_UWOp(SDValue N, unsigned ShAmt,
 static bool vectorPseudoHasAllNBitUsers(SDNode *User, unsigned UserOpNo,
                                         unsigned Bits,
                                         const TargetInstrInfo *TII) {
-  const RISCVVPseudosTable::PseudoInfo *PseudoInfo =
-      RISCVVPseudosTable::getPseudoInfo(User->getMachineOpcode());
+  unsigned MCOpcode = RISCV::getRVVMCOpcode(User->getMachineOpcode());
 
-  if (!PseudoInfo)
+  if (!MCOpcode)
     return false;
 
   const MCInstrDesc &MCID = TII->get(User->getMachineOpcode());
@@ -2865,7 +2864,7 @@ static bool vectorPseudoHasAllNBitUsers(SDNode *User, unsigned UserOpNo,
     return false;
 
   auto NumDemandedBits =
-      RISCV::getVectorLowDemandedScalarBits(PseudoInfo->BaseInstr, Log2SEW);
+      RISCV::getVectorLowDemandedScalarBits(MCOpcode, Log2SEW);
   return NumDemandedBits && Bits >= *NumDemandedBits;
 }
 
@@ -3404,21 +3403,11 @@ bool RISCVDAGToDAGISel::doPeepholeMaskedRVV(MachineSDNode *N) {
 }
 
 static bool IsVMerge(SDNode *N) {
-  unsigned Opc = N->getMachineOpcode();
-  return Opc == RISCV::PseudoVMERGE_VVM_MF8 ||
-         Opc == RISCV::PseudoVMERGE_VVM_MF4 ||
-         Opc == RISCV::PseudoVMERGE_VVM_MF2 ||
-         Opc == RISCV::PseudoVMERGE_VVM_M1 ||
-         Opc == RISCV::PseudoVMERGE_VVM_M2 ||
-         Opc == RISCV::PseudoVMERGE_VVM_M4 || Opc == RISCV::PseudoVMERGE_VVM_M8;
+  return RISCV::getRVVMCOpcode(N->getMachineOpcode()) == RISCV::VMERGE_VVM;
 }
 
 static bool IsVMv(SDNode *N) {
-  unsigned Opc = N->getMachineOpcode();
-  return Opc == RISCV::PseudoVMV_V_V_MF8 || Opc == RISCV::PseudoVMV_V_V_MF4 ||
-         Opc == RISCV::PseudoVMV_V_V_MF2 || Opc == RISCV::PseudoVMV_V_V_M1 ||
-         Opc == RISCV::PseudoVMV_V_V_M2 || Opc == RISCV::PseudoVMV_V_V_M4 ||
-         Opc == RISCV::PseudoVMV_V_V_M8;
+  return RISCV::getRVVMCOpcode(N->getMachineOpcode()) == RISCV::VMV_V_V;
 }
 
 static unsigned GetVMSetForLMul(RISCVII::VLMUL LMUL) {
