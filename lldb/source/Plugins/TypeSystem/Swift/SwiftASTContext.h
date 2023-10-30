@@ -528,7 +528,7 @@ public:
 
   bool IsFixedSize(CompilerType compiler_type);
 
-  DWARFASTParser *GetDWARFParser() override;
+  plugin::dwarf::DWARFASTParser *GetDWARFParser() override;
 
   // CompilerDecl functions
   ConstString DeclGetName(void *opaque_decl) override {

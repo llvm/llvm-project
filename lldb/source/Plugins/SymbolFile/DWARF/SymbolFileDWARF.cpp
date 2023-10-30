@@ -60,7 +60,6 @@
 #include "DWARFASTParser.h"
 #include "DWARFASTParserClang.h"
 #include "DWARFCompileUnit.h"
-#include "DWARFDebugAbbrev.h"
 #include "DWARFDebugAranges.h"
 #include "DWARFDebugInfo.h"
 #include "DWARFDebugMacro.h"
@@ -76,6 +75,7 @@
 #include "SymbolFileDWARFDwo.h"
 
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
+#include "llvm/DebugInfo/DWARF/DWARFDebugAbbrev.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatVariadic.h"
 
@@ -99,6 +99,7 @@
 using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::dwarf;
+using namespace lldb_private::plugin::dwarf;
 
 LLDB_PLUGIN_DEFINE(SymbolFileDWARF)
 
@@ -138,9 +139,8 @@ static PluginProperties &GetGlobalPluginProperties() {
 }
 
 static const llvm::DWARFDebugLine::LineTable *
-ParseLLVMLineTable(lldb_private::DWARFContext &context,
-                   llvm::DWARFDebugLine &line, dw_offset_t line_offset,
-                   dw_offset_t unit_offset) {
+ParseLLVMLineTable(DWARFContext &context, llvm::DWARFDebugLine &line,
+                   dw_offset_t line_offset, dw_offset_t unit_offset) {
   Log *log = GetLog(DWARFLog::DebugInfo);
 
   llvm::DWARFDataExtractor data = context.getOrLoadLineData().GetAsLLVMDWARF();
@@ -161,7 +161,7 @@ ParseLLVMLineTable(lldb_private::DWARFContext &context,
   return *line_table;
 }
 
-static bool ParseLLVMLineTablePrologue(lldb_private::DWARFContext &context,
+static bool ParseLLVMLineTablePrologue(DWARFContext &context,
                                        llvm::DWARFDebugLine::Prologue &prologue,
                                        dw_offset_t line_offset,
                                        dw_offset_t unit_offset) {
@@ -513,6 +513,21 @@ bool SymbolFileDWARF::SupportedVersion(uint16_t version) {
   return version >= 2 && version <= 5;
 }
 
+static std::set<dw_form_t>
+GetUnsupportedForms(llvm::DWARFDebugAbbrev *debug_abbrev) {
+  if (!debug_abbrev)
+    return {};
+
+  std::set<dw_form_t> unsupported_forms;
+  for (const auto &[_, decl_set] : *debug_abbrev)
+    for (const auto &decl : decl_set)
+      for (const auto &attr : decl.attributes())
+        if (!DWARFFormValue::FormIsSupported(attr.Form))
+          unsupported_forms.insert(attr.Form);
+
+  return unsupported_forms;
+}
+
 uint32_t SymbolFileDWARF::CalculateAbilities() {
   uint32_t abilities = 0;
   if (m_objfile_sp != nullptr) {
@@ -541,20 +556,16 @@ uint32_t SymbolFileDWARF::CalculateAbilities() {
       if (section)
         debug_abbrev_file_size = section->GetFileSize();
 
-      DWARFDebugAbbrev *abbrev = DebugAbbrev();
-      if (abbrev) {
-        std::set<dw_form_t> invalid_forms;
-        abbrev->GetUnsupportedForms(invalid_forms);
-        if (!invalid_forms.empty()) {
-          StreamString error;
-          error.Printf("unsupported DW_FORM value%s:",
-                       invalid_forms.size() > 1 ? "s" : "");
-          for (auto form : invalid_forms)
-            error.Printf(" %#x", form);
-          m_objfile_sp->GetModule()->ReportWarning(
-              "{0}", error.GetString().str().c_str());
-          return 0;
-        }
+      llvm::DWARFDebugAbbrev *abbrev = DebugAbbrev();
+      std::set<dw_form_t> unsupported_forms = GetUnsupportedForms(abbrev);
+      if (!unsupported_forms.empty()) {
+        StreamString error;
+        error.Printf("unsupported DW_FORM value%s:",
+                     unsupported_forms.size() > 1 ? "s" : "");
+        for (auto form : unsupported_forms)
+          error.Printf(" %#x", form);
+        m_objfile_sp->GetModule()->ReportWarning("{0}", error.GetString());
+        return 0;
       }
 
       section =
@@ -616,7 +627,7 @@ void SymbolFileDWARF::LoadSectionData(lldb::SectionType sect_type,
   m_objfile_sp->ReadSectionData(section_sp.get(), data);
 }
 
-DWARFDebugAbbrev *SymbolFileDWARF::DebugAbbrev() {
+llvm::DWARFDebugAbbrev *SymbolFileDWARF::DebugAbbrev() {
   if (m_abbr)
     return m_abbr.get();
 
@@ -624,8 +635,9 @@ DWARFDebugAbbrev *SymbolFileDWARF::DebugAbbrev() {
   if (debug_abbrev_data.GetByteSize() == 0)
     return nullptr;
 
-  auto abbr = std::make_unique<DWARFDebugAbbrev>();
-  llvm::Error error = abbr->parse(debug_abbrev_data);
+  auto abbr =
+      std::make_unique<llvm::DWARFDebugAbbrev>(debug_abbrev_data.GetAsLLVM());
+  llvm::Error error = abbr->parse();
   if (error) {
     Log *log = GetLog(DWARFLog::DebugInfo);
     LLDB_LOG_ERROR(log, std::move(error),
@@ -1454,10 +1466,15 @@ SymbolFileDWARF::GetDeclContextContainingUID(lldb::user_id_t type_uid) {
   return CompilerDeclContext();
 }
 
-void SymbolFileDWARF::GetDeclContextForUID(
-    llvm::SmallVectorImpl<CompilerContext> &context, lldb::user_id_t type_uid) {
+std::vector<CompilerContext>
+SymbolFileDWARF::GetCompilerContextForUID(lldb::user_id_t type_uid) {
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
+  // Anytime we have a lldb::user_id_t, we must get the DIE by calling
+  // SymbolFileDWARF::GetDIE(). See comments inside the
+  // SymbolFileDWARF::GetDIE() for details.
   if (DWARFDIE die = GetDIE(type_uid))
-    return die.GetDeclContext(context);
+    return die.GetDeclContext();
+  return {};
 }
 
 Type *SymbolFileDWARF::ResolveTypeUID(lldb::user_id_t type_uid) {
@@ -2354,7 +2371,7 @@ bool SymbolFileDWARF::DIEInDeclContext(const CompilerDeclContext &decl_ctx,
     // ...But if we are only checking root decl contexts, confirm that the
     // 'die' is a top-level context.
     if (only_root_namespaces)
-      return die.GetParent().Tag() == dwarf::DW_TAG_compile_unit;
+      return die.GetParent().Tag() == llvm::dwarf::DW_TAG_compile_unit;
 
     return true;
   }
@@ -2634,8 +2651,7 @@ void SymbolFileDWARF::FindTypes(
     if (!languages[GetLanguageFamily(*die.GetCU())])
       return true;
 
-    llvm::SmallVector<CompilerContext, 4> die_context;
-    die.GetDeclContext(die_context);
+    std::vector<CompilerContext> die_context = die.GetDeclContext();
     if (!contextMatches(die_context, pattern))
       return true;
 
