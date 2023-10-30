@@ -1,4 +1,8 @@
 name: "Labelling new pull requests"
+
+permissions:
+  contents: read
+
 on:
   # It's safe to use pull_request_target here, because we aren't checking out
   # code from the pull request branch.
