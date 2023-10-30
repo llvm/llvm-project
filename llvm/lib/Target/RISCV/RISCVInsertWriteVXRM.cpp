@@ -325,7 +325,7 @@ void RISCVInsertWriteVXRM::emitWriteVXRM(MachineBasicBlock &MBB) {
   // Insert VXRM write if anticipated and not available.
   if (BBInfo.AnticipatedIn.isStatic()) {
     bool NeedInsert = false;
-    // If there no predecessors and the value is anticipated, insert.
+    // If there are no predecessors and the value is anticipated, insert.
     if (MBB.pred_empty()) {
       NeedInsert = true;
     } else {
@@ -353,6 +353,9 @@ void RISCVInsertWriteVXRM::emitWriteVXRM(MachineBasicBlock &MBB) {
     }
 
     if (NeedInsert) {
+      LLVM_DEBUG(dbgs() << "Inserting at beginning of "
+                        << printMBBReference(MBB) << " changing to "
+                        << BBInfo.AnticipatedIn << "\n");
       BuildMI(MBB, MBB.getFirstNonPHI(), DebugLoc(),
               TII->get(RISCV::WriteVXRMImm))
           .addImm(BBInfo.AnticipatedIn.getVXRMImm());
