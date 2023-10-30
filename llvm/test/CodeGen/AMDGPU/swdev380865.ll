@@ -45,9 +45,9 @@ define amdgpu_kernel void @_Z6kernelILi4000ELi1EEvPd(ptr addrspace(1) %x.coerce)
 ; CHECK-NEXT:    v_add_f64 v[0:1], v[0:1], 0
 ; CHECK-NEXT:    s_mov_b32 s2, 0
 ; CHECK-NEXT:    s_mov_b32 s3, 0x40140000
-; CHECK-NEXT:    v_writelane_b32 v2, s6, 9
-; CHECK-NEXT:    v_writelane_b32 v2, s7, 10
-; CHECK-NEXT:    v_writelane_b32 v2, s0, 11
+; CHECK-NEXT:    v_writelane_b32 v2, s0, 9
+; CHECK-NEXT:    v_writelane_b32 v2, s6, 10
+; CHECK-NEXT:    v_writelane_b32 v2, s7, 11
 ; CHECK-NEXT:    v_readlane_b32 s6, v2, 1
 ; CHECK-NEXT:    v_readlane_b32 s7, v2, 2
 ; CHECK-NEXT:    v_add_f64 v[0:1], v[0:1], s[2:3]
@@ -55,8 +55,8 @@ define amdgpu_kernel void @_Z6kernelILi4000ELi1EEvPd(ptr addrspace(1) %x.coerce)
 ; CHECK-NEXT:    s_mov_b32 s0, s2
 ; CHECK-NEXT:    v_writelane_b32 v2, s6, 1
 ; CHECK-NEXT:    v_writelane_b32 v2, s7, 2
-; CHECK-NEXT:    v_readlane_b32 s6, v2, 9
-; CHECK-NEXT:    v_readlane_b32 s7, v2, 10
+; CHECK-NEXT:    v_readlane_b32 s6, v2, 10
+; CHECK-NEXT:    v_readlane_b32 s7, v2, 11
 ; CHECK-NEXT:    s_mov_b32 s6, s2
 ; CHECK-NEXT:    v_add_f64 v[0:1], v[0:1], s[0:1]
 ; CHECK-NEXT:    v_readlane_b32 s0, v2, 3
@@ -92,11 +92,11 @@ define amdgpu_kernel void @_Z6kernelILi4000ELi1EEvPd(ptr addrspace(1) %x.coerce)
 ; CHECK-NEXT:    s_mov_b32 s4, s0
 ; CHECK-NEXT:    v_writelane_b32 v2, s1, 8
 ; CHECK-NEXT:    v_readlane_b32 s0, v2, 0
-; CHECK-NEXT:    v_readlane_b32 s2, v2, 11
+; CHECK-NEXT:    v_readlane_b32 s2, v2, 9
 ; CHECK-NEXT:    s_add_i32 s2, s2, s0
-; CHECK-NEXT:    v_writelane_b32 v2, s2, 11
+; CHECK-NEXT:    v_writelane_b32 v2, s2, 9
 ; CHECK-NEXT:    v_add_f64 v[0:1], v[0:1], s[4:5]
-; CHECK-NEXT:    v_readlane_b32 s0, v2, 11
+; CHECK-NEXT:    v_readlane_b32 s0, v2, 9
 ; CHECK-NEXT:    s_cmpk_lt_i32 s0, 0xa00
 ; CHECK-NEXT:    s_cbranch_scc1 .LBB0_1
 ; CHECK-NEXT:  ; %bb.2: ; %for.cond.cleanup.loopexit

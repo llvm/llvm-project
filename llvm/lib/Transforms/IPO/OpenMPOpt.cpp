@@ -3739,14 +3739,16 @@ struct AAKernelInfoFunction : AAKernelInfo {
     else
       setExecModeOfKernelEnvironment(AssumedExecModeC);
 
+    const Triple T(Fn->getParent()->getTargetTriple());
     auto *Int32Ty = Type::getInt32Ty(Fn->getContext());
     auto [MinThreads, MaxThreads] =
-        OpenMPIRBuilder::readThreadBoundsForKernel(*Fn);
+        OpenMPIRBuilder::readThreadBoundsForKernel(T, *Fn);
     if (MinThreads)
       setMinThreadsOfKernelEnvironment(ConstantInt::get(Int32Ty, MinThreads));
     if (MaxThreads)
       setMaxThreadsOfKernelEnvironment(ConstantInt::get(Int32Ty, MaxThreads));
-    auto [MinTeams, MaxTeams] = OpenMPIRBuilder::readTeamBoundsForKernel(*Fn);
+    auto [MinTeams, MaxTeams] =
+        OpenMPIRBuilder::readTeamBoundsForKernel(T, *Fn);
     if (MinTeams)
       setMinTeamsOfKernelEnvironment(ConstantInt::get(Int32Ty, MinTeams));
     if (MaxTeams)

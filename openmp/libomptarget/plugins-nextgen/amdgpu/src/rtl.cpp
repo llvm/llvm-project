@@ -411,8 +411,7 @@ private:
 /// generic kernel class.
 struct AMDGPUKernelTy : public GenericKernelTy {
   /// Create an AMDGPU kernel with a name and an execution mode.
-  AMDGPUKernelTy(const char *Name, OMPTgtExecModeFlags ExecutionMode)
-      : GenericKernelTy(Name, ExecutionMode) {}
+  AMDGPUKernelTy(const char *Name) : GenericKernelTy(Name) {}
 
   /// Initialize the AMDGPU kernel.
   Error initImpl(GenericDeviceTy &Device, DeviceImageTy &Image) override {
@@ -1978,14 +1977,13 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 
   /// Allocate and construct an AMDGPU kernel.
   Expected<GenericKernelTy &>
-  constructKernel(const __tgt_offload_entry &KernelEntry,
-                  OMPTgtExecModeFlags ExecMode) override {
+  constructKernel(const __tgt_offload_entry &KernelEntry) override {
     // Allocate and construct the AMDGPU kernel.
     AMDGPUKernelTy *AMDGPUKernel = Plugin::get().allocate<AMDGPUKernelTy>();
     if (!AMDGPUKernel)
       return Plugin::error("Failed to allocate memory for AMDGPU kernel");
 
-    new (AMDGPUKernel) AMDGPUKernelTy(KernelEntry.name, ExecMode);
+    new (AMDGPUKernel) AMDGPUKernelTy(KernelEntry.name);
 
     return *AMDGPUKernel;
   }
@@ -2580,6 +2578,16 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
         return Err;
     DeviceMemoryPoolSize = Value;
     return Plugin::success();
+  }
+  Error getDeviceMemorySize(uint64_t &Value) override {
+    for (AMDGPUMemoryPoolTy *Pool : AllMemoryPools) {
+      if (Pool->isGlobal()) {
+        hsa_status_t Status =
+            Pool->getAttrRaw(HSA_AMD_MEMORY_POOL_INFO_SIZE, Value);
+        return Plugin::check(Status, "Error in getting device memory size: %s");
+      }
+    }
+    return Plugin::error("getDeviceMemorySize:: no global pool");
   }
 
   /// AMDGPU-specific function to get device attributes.
