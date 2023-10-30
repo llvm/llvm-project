@@ -411,10 +411,14 @@ void AccStructureChecker::CheckMultipleOccurrenceInDeclare(
                   } else {
                     context_.Say(GetContext().clauseSource,
                         "'%s' in the %s clause is already present in another "
-                        "clause in this module"_err_en_US,
+                        "%s clause in this module"_err_en_US,
                         name->symbol->name(),
                         parser::ToUpperCaseLetters(
-                            llvm::acc::getOpenACCClauseName(clause).str()));
+                            llvm::acc::getOpenACCClauseName(clause).str()),
+                        parser::ToUpperCaseLetters(
+                            llvm::acc::getOpenACCClauseName(
+                                declareSymbols[&name->symbol->GetUltimate()])
+                                .str()));
                   }
                 }
                 declareSymbols.insert({&name->symbol->GetUltimate(), clause});
