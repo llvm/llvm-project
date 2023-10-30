@@ -532,14 +532,14 @@ protected:
     return true;
   }
 
-  bool DoExecute(Args &command, CommandReturnObject &result) override {
+  void DoExecute(Args &command, CommandReturnObject &result) override {
     Target *target = m_exe_ctx.GetTargetPtr();
     if (target == nullptr) {
       target = GetDebugger().GetSelectedTarget().get();
       if (target == nullptr) {
         result.AppendError("invalid target, create a debug target using the "
                            "'target create' command.");
-        return false;
+        return;
       }
     }
 
@@ -562,11 +562,11 @@ protected:
       }
       if (!m_module_list.GetSize()) {
         result.AppendError("No modules match the input.");
-        return false;
+        return;
       }
     } else if (target->GetImages().GetSize() == 0) {
       result.AppendError("The target has no associated executable images.");
-      return false;
+      return;
     }
 
     // Check the arguments to see what lines we should dump.
@@ -595,7 +595,6 @@ protected:
       else
         result.SetStatus(eReturnStatusFailed);
     }
-    return result.Succeeded();
   }
 
   CommandOptions m_options;
@@ -910,7 +909,7 @@ protected:
     }
   }
 
-  bool DoExecute(Args &command, CommandReturnObject &result) override {
+  void DoExecute(Args &command, CommandReturnObject &result) override {
     Target *target = m_exe_ctx.GetTargetPtr();
 
     if (!m_options.symbol_name.empty()) {
@@ -939,7 +938,7 @@ protected:
       if (sc_list.GetSize() == 0) {
         result.AppendErrorWithFormat("Could not find function named: \"%s\".\n",
                                      m_options.symbol_name.c_str());
-        return false;
+        return;
       }
 
       std::set<SourceInfo> source_match_set;
@@ -958,7 +957,7 @@ protected:
         result.SetStatus(eReturnStatusSuccessFinishResult);
       else
         result.SetStatus(eReturnStatusFailed);
-      return result.Succeeded();
+      return;
     } else if (m_options.address != LLDB_INVALID_ADDRESS) {
       Address so_addr;
       StreamString error_strm;
@@ -987,7 +986,7 @@ protected:
               "no modules have source information for file address 0x%" PRIx64
               ".\n",
               m_options.address);
-          return false;
+          return;
         }
       } else {
         // The target has some things loaded, resolve this address to a compile
@@ -1009,7 +1008,7 @@ protected:
                                            "is no line table information "
                                            "available for this address.\n",
                                            error_strm.GetData());
-              return false;
+              return;
             }
           }
         }
@@ -1018,7 +1017,7 @@ protected:
           result.AppendErrorWithFormat(
               "no modules contain load address 0x%" PRIx64 ".\n",
               m_options.address);
-          return false;
+          return;
         }
       }
       for (const SymbolContext &sc : sc_list) {
@@ -1134,7 +1133,7 @@ protected:
       if (num_matches == 0) {
         result.AppendErrorWithFormat("Could not find source file \"%s\".\n",
                                      m_options.file_name.c_str());
-        return false;
+        return;
       }
 
       if (num_matches > 1) {
@@ -1155,7 +1154,7 @@ protected:
           result.AppendErrorWithFormat(
               "Multiple source files found matching: \"%s.\"\n",
               m_options.file_name.c_str());
-          return false;
+          return;
         }
       }
 
@@ -1184,11 +1183,9 @@ protected:
         } else {
           result.AppendErrorWithFormat("No comp unit found for: \"%s.\"\n",
                                        m_options.file_name.c_str());
-          return false;
         }
       }
     }
-    return result.Succeeded();
   }
 
   const SymbolContextList *GetBreakpointLocations() {
@@ -1213,7 +1210,7 @@ public:
   ~CommandObjectSourceCacheDump() override = default;
 
 protected:
-  bool DoExecute(Args &command, CommandReturnObject &result) override {
+  void DoExecute(Args &command, CommandReturnObject &result) override {
     // Dump the debugger source cache.
     result.GetOutputStream() << "Debugger Source File Cache\n";
     SourceManager::SourceFileCache &cache = GetDebugger().GetSourceFileCache();
@@ -1227,7 +1224,6 @@ protected:
     }
 
     result.SetStatus(eReturnStatusSuccessFinishResult);
-    return result.Succeeded();
   }
 };
 
@@ -1240,7 +1236,7 @@ public:
   ~CommandObjectSourceCacheClear() override = default;
 
 protected:
-  bool DoExecute(Args &command, CommandReturnObject &result) override {
+  void DoExecute(Args &command, CommandReturnObject &result) override {
     // Clear the debugger cache.
     SourceManager::SourceFileCache &cache = GetDebugger().GetSourceFileCache();
     cache.Clear();
@@ -1250,7 +1246,6 @@ protected:
       process_sp->GetSourceFileCache().Clear();
 
     result.SetStatus(eReturnStatusSuccessFinishNoResult);
-    return result.Succeeded();
   }
 };
 

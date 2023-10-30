@@ -437,7 +437,7 @@ CommandObjectDisassemble::GetRangesForSelectedMode(
   return CommandObjectDisassemble::GetPCRanges();
 }
 
-bool CommandObjectDisassemble::DoExecute(Args &command,
+void CommandObjectDisassemble::DoExecute(Args &command,
                                          CommandReturnObject &result) {
   Target *target = &GetSelectedTarget();
 
@@ -447,7 +447,7 @@ bool CommandObjectDisassemble::DoExecute(Args &command,
   if (!m_options.arch.IsValid()) {
     result.AppendError(
         "use the --arch option or set the target architecture to disassemble");
-    return false;
+    return;
   }
 
   const char *plugin_name = m_options.GetPluginName();
@@ -466,7 +466,7 @@ bool CommandObjectDisassemble::DoExecute(Args &command,
       result.AppendErrorWithFormat(
           "Unable to find Disassembler plug-in for the '%s' architecture.\n",
           m_options.arch.GetArchitectureName());
-    return false;
+    return;
   } else if (flavor_string != nullptr && !disassembler->FlavorValidForArchSpec(
                                              m_options.arch, flavor_string))
     result.AppendWarningWithFormat(
@@ -481,7 +481,7 @@ bool CommandObjectDisassemble::DoExecute(Args &command,
         GetCommandInterpreter().GetDebugger().GetTerminalWidth();
     GetOptions()->GenerateOptionUsage(result.GetErrorStream(), *this,
                                       terminal_width);
-    return false;
+    return;
   }
 
   if (m_options.show_mixed && m_options.num_lines_context == 0)
@@ -508,7 +508,7 @@ bool CommandObjectDisassemble::DoExecute(Args &command,
       GetRangesForSelectedMode(result);
   if (!ranges) {
     result.AppendError(toString(ranges.takeError()));
-    return result.Succeeded();
+    return;
   }
 
   bool print_sc_header = ranges->size() > 1;
@@ -541,6 +541,4 @@ bool CommandObjectDisassemble::DoExecute(Args &command,
     if (print_sc_header)
       result.GetOutputStream() << "\n";
   }
-
-  return result.Succeeded();
 }
