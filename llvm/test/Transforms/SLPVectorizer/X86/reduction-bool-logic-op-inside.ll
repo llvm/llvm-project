@@ -5,7 +5,7 @@ define i1 @test(i32 %x) {
 ; CHECK-LABEL: define i1 @test(
 ; CHECK-SAME: i32 [[X:%.*]]) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[X]], 1
-; CHECK-NEXT:    [[OP_RDX:%.*]] = or i1 poison, [[CMP]]
+; CHECK-NEXT:    [[OP_RDX:%.*]] = select i1 [[CMP]], i1 true, i1 poison
 ; CHECK-NEXT:    ret i1 [[OP_RDX]]
 ;
   %cmp = icmp sgt i32 %x, 1
