@@ -3538,8 +3538,10 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
   case AArch64::PRFUMi:
   case AArch64::LDURXi:
   case AArch64::LDURDi:
+  case AArch64::LDAPURXi:
   case AArch64::STURXi:
   case AArch64::STURDi:
+  case AArch64::STLURXi:
     Width = 8;
     Scale = TypeSize::Fixed(1);
     MinOffset = -256;
@@ -3548,8 +3550,10 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
   case AArch64::LDURWi:
   case AArch64::LDURSi:
   case AArch64::LDURSWi:
+  case AArch64::LDAPURSWi:
   case AArch64::STURWi:
   case AArch64::STURSi:
+  case AArch64::STLURWi:
     Width = 4;
     Scale = TypeSize::Fixed(1);
     MinOffset = -256;
@@ -3559,8 +3563,12 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
   case AArch64::LDURHHi:
   case AArch64::LDURSHXi:
   case AArch64::LDURSHWi:
+  case AArch64::LDAPURHi:
+  case AArch64::LDAPURSHWi:
+  case AArch64::LDAPURSHXi:
   case AArch64::STURHi:
   case AArch64::STURHHi:
+  case AArch64::STLURHi:
     Width = 2;
     Scale = TypeSize::Fixed(1);
     MinOffset = -256;
@@ -3570,8 +3578,12 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, TypeSize &Scale,
   case AArch64::LDURBBi:
   case AArch64::LDURSBXi:
   case AArch64::LDURSBWi:
+  case AArch64::LDAPURBi:
+  case AArch64::LDAPURSBWi:
+  case AArch64::LDAPURSBXi:
   case AArch64::STURBi:
   case AArch64::STURBBi:
+  case AArch64::STLURBi:
     Width = 1;
     Scale = TypeSize::Fixed(1);
     MinOffset = -256;
