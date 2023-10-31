@@ -67,17 +67,11 @@ using namespace llvm::object;
 // The name this program was invoked as.
 static StringRef ToolName;
 
-namespace llvm {
-namespace objcopy {
-
-ErrorSuccess reportWarning(Error E) {
+ErrorSuccess llvm::objcopy::reportWarning(Error E) {
   assert(E);
   WithColor::warning(errs(), ToolName) << toString(std::move(E)) << '\n';
   return Error::success();
 }
-
-} // namespace objcopy
-} // namespace llvm
 
 static Expected<DriverConfig> getDriverConfig(ArrayRef<const char *> Args) {
   StringRef Stem = sys::path::stem(ToolName);

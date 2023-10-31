@@ -163,7 +163,7 @@ Sections:
     EntSize:         0x0001
     Content:         4743433A
 
-## In this test, output sections are defined out of order in respect to their
+## In this test, output sections are defined out of order with respect to their
 ## load addresses. Verify that gaps are still correctly filled.
 
 # RUN: yaml2obj --docnum=2 %s -o %t
