@@ -6257,7 +6257,6 @@ libcxx/test/std/utilities/expected/expected.expected/observers/deref.pass.cpp
 libcxx/test/std/utilities/expected/expected.expected/observers/error.pass.cpp
 libcxx/test/std/utilities/expected/expected.expected/observers/has_value.pass.cpp
 libcxx/test/std/utilities/expected/expected.expected/observers/value.pass.cpp
-libcxx/test/std/utilities/expected/expected.expected/swap/member.swap.pass.cpp
 libcxx/test/std/utilities/expected/expected.unexpected/ctad.compile.pass.cpp
 libcxx/test/std/utilities/expected/expected.unexpected/ctor/ctor.inplace.pass.cpp
 libcxx/test/std/utilities/expected/expected.unexpected/ctor/ctor.move.pass.cpp
@@ -6277,7 +6276,6 @@ libcxx/test/std/utilities/expected/expected.void/observers/deref.pass.cpp
 libcxx/test/std/utilities/expected/expected.void/observers/error.pass.cpp
 libcxx/test/std/utilities/expected/expected.void/observers/has_value.pass.cpp
 libcxx/test/std/utilities/expected/expected.void/swap/free.swap.pass.cpp
-libcxx/test/std/utilities/expected/expected.void/swap/member.swap.pass.cpp
 libcxx/test/std/utilities/format/format.arguments/format.args/get.pass.cpp
 libcxx/test/std/utilities/format/format.arguments/format.args/types.compile.pass.cpp
 libcxx/test/std/utilities/format/format.arguments/format.arg/visit_format_arg.pass.cpp
