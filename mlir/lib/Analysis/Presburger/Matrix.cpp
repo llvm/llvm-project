@@ -549,3 +549,34 @@ Fraction FracMatrix::determinant(FracMatrix *inverse) const {
 
   return determinant;
 }
+
+Fraction dotProduct(MutableArrayRef<Fraction> a, MutableArrayRef<Fraction> b) {
+    assert(a.size() == b.size() && "Dot product of two unequal vectors!");
+    Fraction sum = 0;
+    for (unsigned i = 0; i < a.size(); i++)
+            sum += a[i] * b[i];
+    return sum;
+}
+
+FracMatrix FracMatrix::gramSchmidt() const {
+
+    // Create a copy of the argument to store
+    // the orthogonalised version.
+    FracMatrix orth(*this);
+    Fraction projectionScale;
+
+    // For each vector (row) in the matrix,
+    // subtract its unit projection along
+    // each of the previous vectors.
+    // This ensures that it has no component
+    // in the direction of any of the
+    // previous vectors.
+    for (unsigned i = 1; i < getNumRows(); i++) {
+        for (unsigned j = 0; j < i; j++) {
+            projectionScale = dotProduct(orth.getRow(i), orth.getRow(j)) /
+                              dotProduct(orth.getRow(j), orth.getRow(j));
+            orth.addToRow(j, i, -projectionScale);
+        }
+    }
+    return orth;
+}

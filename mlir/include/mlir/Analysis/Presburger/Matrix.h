@@ -265,6 +265,11 @@ public:
   // does not exist, which happens iff det = 0.
   // Assert-fails if the matrix is not square.
   Fraction determinant(FracMatrix *inverse = nullptr) const;
+
+  // Computes the Gram-Schmidt orthogonalisation
+  // of the matrix (cubic time).
+  FracMatrix gramSchmidt() const;
+
 };
 
 } // namespace presburger
