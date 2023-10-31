@@ -2673,9 +2673,8 @@ public:
                            const Function *Callee) const override {
     return Impl.areInlineCompatible(Caller, Callee);
   }
-  unsigned
-  getInlineCallPenalty(const Function *F, const CallBase &Call,
-                       unsigned DefaultCallPenalty) const override {
+  unsigned getInlineCallPenalty(const Function *F, const CallBase &Call,
+                                unsigned DefaultCallPenalty) const override {
     return Impl.getInlineCallPenalty(F, Call, DefaultCallPenalty);
   }
   bool areTypesABICompatible(const Function *Caller, const Function *Callee,

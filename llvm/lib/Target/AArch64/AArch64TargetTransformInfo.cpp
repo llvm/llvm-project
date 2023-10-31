@@ -53,8 +53,7 @@ static cl::opt<unsigned> CallPenaltyChangeSM(
 
 static cl::opt<unsigned> InlineCallPenaltyChangeSM(
     "inline-call-penalty-sm-change", cl::init(10), cl::Hidden,
-    cl::desc(
-        "Penalty of inlining a call that requires a change to PSTATE.SM"));
+    cl::desc("Penalty of inlining a call that requires a change to PSTATE.SM"));
 
 namespace {
 class TailFoldingOption {
@@ -304,7 +303,7 @@ AArch64TTIImpl::getInlineCallPenalty(const Function *F, const CallBase &Call,
   SMEAttrs FAttrs(*F);
   SMEAttrs CalleeAttrs(Call);
   if (FAttrs.requiresSMChange(CalleeAttrs)) {
-    if (F == Call.getCaller())                                // (1)
+    if (F == Call.getCaller()) // (1)
       return CallPenaltyChangeSM * DefaultCallPenalty;
     if (FAttrs.requiresSMChange(SMEAttrs(*Call.getCaller()))) // (2)
       return InlineCallPenaltyChangeSM * DefaultCallPenalty;

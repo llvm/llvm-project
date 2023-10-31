@@ -1133,9 +1133,10 @@ bool TargetTransformInfo::areInlineCompatible(const Function *Caller,
   return TTIImpl->areInlineCompatible(Caller, Callee);
 }
 
-unsigned TargetTransformInfo::getInlineCallPenalty(
-    const Function *F, const CallBase &Call,
-    unsigned DefaultCallPenalty) const {
+unsigned
+TargetTransformInfo::getInlineCallPenalty(const Function *F,
+                                          const CallBase &Call,
+                                          unsigned DefaultCallPenalty) const {
   return TTIImpl->getInlineCallPenalty(F, Call, DefaultCallPenalty);
 }
 
