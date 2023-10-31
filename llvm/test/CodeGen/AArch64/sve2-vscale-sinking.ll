@@ -107,6 +107,62 @@ for.cond.cleanup:
   ret void
 }
 
+define void @gep(i32 noundef %first, i32 noundef %N, ptr nocapture noundef writeonly %ptr, <vscale x 16 x i1> %pg, <vscale x 16 x i8> %val) #0 {
+; CHECK-LABEL: define void @gep
+; CHECK-SAME: (i32 noundef [[FIRST:%.*]], i32 noundef [[N:%.*]], ptr nocapture noundef writeonly [[PTR:%.*]], <vscale x 16 x i1> [[PG:%.*]], <vscale x 16 x i8> [[VAL:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i32 [ [[N]], [[ENTRY:%.*]] ], [ [[LSR_IV_NEXT:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[PTR_ADDR:%.*]] = phi ptr [ [[PTR]], [[ENTRY]] ], [ [[ADD_PTR_3:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    tail call void @llvm.masked.store.nxv16i8.p0(<vscale x 16 x i8> [[VAL]], ptr [[PTR_ADDR]], i32 1, <vscale x 16 x i1> [[PG]])
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 4
+; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, ptr [[PTR_ADDR]], i64 [[TMP1]]
+; CHECK-NEXT:    tail call void @llvm.masked.store.nxv16i8.p0(<vscale x 16 x i8> [[VAL]], ptr [[ADD_PTR]], i32 1, <vscale x 16 x i1> [[PG]])
+; CHECK-NEXT:    [[TMP2:%.*]] = tail call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP2]], 4
+; CHECK-NEXT:    [[ADD_PTR_1:%.*]] = getelementptr inbounds i8, ptr [[ADD_PTR]], i64 [[TMP3]]
+; CHECK-NEXT:    tail call void @llvm.masked.store.nxv16i8.p0(<vscale x 16 x i8> [[VAL]], ptr [[ADD_PTR_1]], i32 1, <vscale x 16 x i1> [[PG]])
+; CHECK-NEXT:    [[TMP4:%.*]] = tail call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP5:%.*]] = shl i64 [[TMP4]], 4
+; CHECK-NEXT:    [[ADD_PTR_2:%.*]] = getelementptr inbounds i8, ptr [[ADD_PTR_1]], i64 [[TMP5]]
+; CHECK-NEXT:    tail call void @llvm.masked.store.nxv16i8.p0(<vscale x 16 x i8> [[VAL]], ptr [[ADD_PTR_2]], i32 1, <vscale x 16 x i1> [[PG]])
+; CHECK-NEXT:    [[TMP6:%.*]] = tail call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP7:%.*]] = shl i64 [[TMP6]], 4
+; CHECK-NEXT:    [[ADD_PTR_3]] = getelementptr inbounds i8, ptr [[ADD_PTR_2]], i64 [[TMP7]]
+; CHECK-NEXT:    [[LSR_IV_NEXT]] = add i32 [[LSR_IV]], -4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[LSR_IV_NEXT]], 0
+; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_EXIT:%.*]], label [[FOR_BODY]]
+; CHECK:       for.exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %0 = tail call i64 @llvm.vscale.i64()
+  %1 = shl i64 %0, 4
+  br label %for.body
+
+for.body:                                         ; preds = %for.body, %for.body.lr.ph.new
+  %lsr.iv = phi i32 [ %N, %entry ], [ %lsr.iv.next, %for.body ]
+  %ptr.addr = phi ptr [ %ptr, %entry ], [ %add.ptr.3, %for.body ]
+  tail call void @llvm.masked.store.nxv16i8.p0(<vscale x 16 x i8> %val, ptr %ptr.addr, i32 1, <vscale x 16 x i1> %pg)
+  %add.ptr = getelementptr inbounds i8, ptr %ptr.addr, i64 %1
+  tail call void @llvm.masked.store.nxv16i8.p0(<vscale x 16 x i8> %val, ptr %add.ptr, i32 1, <vscale x 16 x i1> %pg)
+  %add.ptr.1 = getelementptr inbounds i8, ptr %add.ptr, i64 %1
+  tail call void @llvm.masked.store.nxv16i8.p0(<vscale x 16 x i8> %val, ptr %add.ptr.1, i32 1, <vscale x 16 x i1> %pg)
+  %add.ptr.2 = getelementptr inbounds i8, ptr %add.ptr.1, i64 %1
+  tail call void @llvm.masked.store.nxv16i8.p0(<vscale x 16 x i8> %val, ptr %add.ptr.2, i32 1, <vscale x 16 x i1> %pg)
+  %add.ptr.3 = getelementptr inbounds i8, ptr %add.ptr.2, i64 %1
+  %lsr.iv.next = add i32 %lsr.iv, -4
+  %cmp = icmp eq i32 %lsr.iv.next, 0
+  br i1 %cmp, label %for.exit, label %for.body
+
+for.exit:
+  ret void
+}
+
+declare void @llvm.masked.store.nxv16i8.p0(<vscale x 16 x i8>, ptr nocapture, i32 immarg, <vscale x 16 x i1>)
+
 declare i64 @llvm.vscale.i64()
 
 attributes #0 = { "target-features"="+sve2" }

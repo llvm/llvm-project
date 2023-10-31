@@ -14521,7 +14521,7 @@ static bool shouldSinkVectorOfPtrs(Value *Ptrs, SmallVectorImpl<Use *> &Ops) {
 }
 
 /// We want to sink following cases:
-/// (add|sub) A, ((mul|shl) vscale, imm); (add|sub) A, vscale
+/// (add|sub|gep) A, ((mul|shl) vscale, imm); (add|sub|gep) A, vscale
 static bool shouldSinkVScale(Value *Op, SmallVectorImpl<Use *> &Ops) {
   if (match(Op, m_VScale()))
     return true;
@@ -14649,29 +14649,28 @@ bool AArch64TargetLowering::shouldSinkOperands(
     }
   }
 
+  // Sink vscales close to uses for better isel
+  switch (I->getOpcode()) {
+  case Instruction::GetElementPtr:
+  case Instruction::Add:
+  case Instruction::Sub:
+    for (unsigned Op = 0; Op < I->getNumOperands(); ++Op) {
+      if (shouldSinkVScale(I->getOperand(Op), Ops)) {
+        Ops.push_back(&I->getOperandUse(Op));
+        return true;
+      }
+    }
+    break;
+  default:
+    break;
+  }
+
+  if (!I->getType()->isVectorTy())
+    return false;
+
   switch (I->getOpcode()) {
   case Instruction::Sub:
   case Instruction::Add: {
-    // If the subtarget wants to make use of sve inc* instructions, then sink
-    // vscale intrinsic (along with any shifts or multiplies) so that the
-    // appropriate folds can be made.
-    if (Subtarget->useScalarIncVL()) {
-      bool Sink = false;
-      if (shouldSinkVScale(I->getOperand(0), Ops)) {
-        Ops.push_back(&I->getOperandUse(0));
-        Sink = true;
-      }
-
-      if (shouldSinkVScale(I->getOperand(1), Ops)) {
-        Ops.push_back(&I->getOperandUse(1));
-        Sink = true;
-      }
-
-      if (Sink)
-        return true;
-    }
-    if (!I->getType()->isVectorTy())
-      return false;
     if (!areExtractExts(I->getOperand(0), I->getOperand(1)))
       return false;
 
@@ -14690,8 +14689,6 @@ bool AArch64TargetLowering::shouldSinkOperands(
     return true;
   }
   case Instruction::Or: {
-    if (!I->getType()->isVectorTy())
-      return false;
     // Pattern: Or(And(MaskValue, A), And(Not(MaskValue), B)) ->
     // bitselect(MaskValue, A, B) where Not(MaskValue) = Xor(MaskValue, -1)
     if (Subtarget->hasNEON()) {
@@ -14729,8 +14726,6 @@ bool AArch64TargetLowering::shouldSinkOperands(
     return false;
   }
   case Instruction::Mul: {
-    if (!I->getType()->isVectorTy())
-      return false;
     int NumZExts = 0, NumSExts = 0;
     for (auto &Op : I->operands()) {
       // Make sure we are not already sinking this operand
