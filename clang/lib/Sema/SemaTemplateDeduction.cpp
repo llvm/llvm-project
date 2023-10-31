@@ -3580,16 +3580,12 @@ static Sema::TemplateDeductionResult instantiateExplicitSpecifierDeferred(
   if (!Expr->isValueDependent()) {
     return Sema::TDK_Success;
   }
-  // The `InstantiatingTemplate` here is used to restore `ActiveInstType` to
-  // `DeducedTemplateArgumentSubstitution` because ActiveInstType was set to
-  // `TemplateInstantiation` in
-  // `TemplateDeclInstantiator::InitFunctionInstantiation`. The real depth of
-  // instantiation should be the same as the depth in
-  // `FinishTemplateArgumentDeduction`.
-  // So we don't check `InstantiatingTemplate::IsValid` here.
   Sema::InstantiatingTemplate Inst(
       S, Info.getLocation(), FunctionTemplate, DeducedArgs,
       Sema::CodeSynthesisContext::DeducedTemplateArgumentSubstitution, Info);
+  if (Inst.isInvalid()) {
+    return Sema::TDK_InstantiationDepth;
+  }
   Sema::SFINAETrap Trap(S);
   const auto Instantiated = S.instantiateExplicitSpecifier(SubstArgs, ES);
   if (Instantiated.isInvalid() || Trap.hasErrorOccurred()) {
