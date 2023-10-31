@@ -449,10 +449,7 @@ def GpuToLLVMConversionPass : Pass<"gpu-to-llvm", "ModuleOp"> {
     Option<"gpuBinaryAnnotation", "gpu-binary-annotation", "std::string",
                /*default=*/"gpu::getDefaultGpuBinaryAnnotation()",
                "Annotation attribute string for GPU binary"
-               >,
-    Option<"useOpaquePointers", "use-opaque-pointers", "bool",
-               /*default=*/"true", "Generate LLVM IR using opaque pointers "
-               "instead of typed pointers">,
+               >
   ];
 
   let dependentDialects = [
