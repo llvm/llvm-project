@@ -201,6 +201,7 @@ copy("Headers") {
     "iso646.h",
     "keylockerintrin.h",
     "larchintrin.h",
+    "lasxintrin.h",
     "limits.h",
     "llvm_libc_wrappers/assert.h",
     "llvm_libc_wrappers/ctype.h",
