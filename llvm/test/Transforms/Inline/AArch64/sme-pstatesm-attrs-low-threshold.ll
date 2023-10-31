@@ -7,6 +7,8 @@ target triple = "aarch64"
 
 declare void @streaming_compatible_f() "aarch64_pstate_sm_compatible"
 
+; Function @streaming_callee doesn't contain any operations that may use ZA
+; state and therefore can be legally inlined into a normal function.
 define void @streaming_callee() "aarch64_pstate_sm_enabled" {
 ; CHECK-LABEL: define void @streaming_callee
 ; CHECK-SAME: () #[[ATTR1:[0-9]+]] {
