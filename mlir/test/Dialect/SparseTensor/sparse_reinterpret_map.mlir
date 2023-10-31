@@ -18,7 +18,7 @@ func.func @sparse_nop(%arg0: tensor<?xf64, #SparseVector>) -> tensor<?xf64, #Spa
     affine_map<(i,j) -> (i,j)>   // X (out)
   ],
   iterator_types = ["parallel", "parallel"],
-  doc = "X(i,j) += A(j,i)"
+  doc = "X(i,j) *= A(i,j) * B(j,i)"
 }
 
 #BSR = #sparse_tensor.encoding<{   // 2x4 blocks
