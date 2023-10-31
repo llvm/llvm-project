@@ -83,7 +83,7 @@ constexpr bool operator==(const NotSimpleViewConstIterEnd<Convertible, Copyable>
   return true;
 }
 
-/* 
+/*
  * There are (at least) two ways that a view can be non-simple:
  * 1. The iterator type for const begin is different than the iterator type for begin
  * 2. The iterator type for const end is different that the iterator type for end
