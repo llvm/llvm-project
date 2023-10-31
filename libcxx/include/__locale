@@ -90,8 +90,8 @@ public:
         all = collate | ctype | monetary | numeric | time | messages;
 
     // construct/copy/destroy:
-    locale()  _NOEXCEPT;
-    locale(const locale&)  _NOEXCEPT;
+    _LIBCPP_HIDE_FROM_ABI locale()  _NOEXCEPT;
+    _LIBCPP_HIDE_FROM_ABI locale(const locale&)  _NOEXCEPT;
     explicit locale(const char*);
     explicit locale(const string&);
     locale(const locale&, const char*, category);
@@ -100,7 +100,7 @@ public:
         _LIBCPP_INLINE_VISIBILITY locale(const locale&, _Facet*);
     locale(const locale&, const locale&, category);
 
-    ~locale();
+    _LIBCPP_HIDE_FROM_ABI ~locale();
 
     const locale& operator=(const locale&)  _NOEXCEPT;
 
@@ -129,11 +129,11 @@ private:
     static __imp* __classic_;
 
     void __install_ctor(const locale&, facet*, long);
-    static __imp*& __global();
+    static _LIBCPP_HIDE_FROM_ABI __imp*& __global();
     static __imp* __make_global();
-    static __imp* __maybe_acquire(__imp* __i);
+    static _LIBCPP_HIDE_FROM_ABI __imp* __maybe_acquire(__imp* __i);
     static __imp* __do_acquire(__imp* __i);
-    static void __maybe_release(__imp* __i);
+    static _LIBCPP_HIDE_FROM_ABI void __maybe_release(__imp* __i);
     static void __do_release(__imp* __i);
     bool has_facet(id&) const;
     const facet* use_facet(id&) const;
