@@ -14,6 +14,7 @@
 
 #include "RISCVCallLowering.h"
 #include "RISCVISelLowering.h"
+#include "RISCVMachineFunctionInfo.h"
 #include "RISCVSubtarget.h"
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
@@ -185,6 +186,9 @@ public:
     const DataLayout &DL = MF.getDataLayout();
     const RISCVSubtarget &Subtarget = MF.getSubtarget<RISCVSubtarget>();
 
+    if (LocVT.isScalableVector())
+      MF.getInfo<RISCVMachineFunctionInfo>()->setIsVectorCall();
+
     if (RISCVAssignFn(DL, Subtarget.getTargetABI(), ValNo, ValVT, LocVT,
                       LocInfo, Flags, State, /*IsFixed=*/true, IsRet, Info.Ty,
                       *Subtarget.getTargetLowering(),
@@ -310,6 +314,9 @@ static bool isSupportedArgumentType(Type *T, const RISCVSubtarget &Subtarget) {
   if (T->isFloatTy() || T->isDoubleTy())
     return true;
   if (T->isPointerTy())
+    return true;
+  // TODO: Support fixed vector types.
+  if (T->isVectorTy() && T->isScalableTy() && Subtarget.hasVInstructions())
     return true;
   return false;
 }
