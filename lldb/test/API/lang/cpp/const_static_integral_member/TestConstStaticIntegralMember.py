@@ -142,7 +142,9 @@ class TestCase(TestBase):
 
         self.check_global_var("ClassWithConstexprs::member", "const int", "2")
         self.check_global_var("ClassWithConstexprs::enum_val", "Enum", "enum_case2")
-        self.check_global_var("ClassWithConstexprs::scoped_enum_val", "ScopedEnum", "scoped_enum_case2")
+        self.check_global_var(
+            "ClassWithConstexprs::scoped_enum_val", "ScopedEnum", "scoped_enum_case2"
+        )
 
     # With older versions of Clang, LLDB fails to evaluate classes with only
     # constexpr members when dsymutil is enabled
