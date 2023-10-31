@@ -341,6 +341,10 @@ template <typename T>
 inline SparseTensorType getSparseTensorType(T t) {
   return SparseTensorType(getRankedTensorType(t));
 }
+template <typename T>
+inline SparseTensorType getSparseTensorType(T t) {
+  return SparseTensorType(getRankedTensorType(t));
+}
 
 } // namespace sparse_tensor
 } // namespace mlir
