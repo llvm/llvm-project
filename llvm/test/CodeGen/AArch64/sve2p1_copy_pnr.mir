@@ -14,7 +14,7 @@ body:             |
   bb.0:
     ; CHECK-LABEL: name: pnr_to_ppr
     ; CHECK: renamable $pn8 = PTRUE_C_D
-    ; CHECK-NEXT: $p0 = ORR_PPzPP $p8, $p8, killed $p8, implicit-def $pn0
+    ; CHECK-NEXT: $p0 = ORR_PPzPP $p8, $p8, killed $p8
     ; CHECK-NEXT: RET_ReallyLR implicit killed $p0
     renamable $pn8 = PTRUE_C_D
     $p0 = COPY killed renamable $pn8
@@ -39,6 +39,27 @@ body:             |
     ; CHECK-NEXT: RET_ReallyLR implicit killed $pn0
     renamable $p8 = PTRUE_H 31
     $pn0 = COPY killed renamable $p8
+    RET_ReallyLR implicit killed $pn0
+
+...
+---
+name:            pnr_to_pnr
+alignment:       4
+tracksRegLiveness: true
+tracksDebugUserValues: true
+frameInfo:
+  maxAlignment:    1
+  maxCallFrameSize: 0
+machineFunctionInfo:
+  hasRedZone:      false
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: pnr_to_pnr
+    ; CHECK: renamable $pn8 = PTRUE_C_H
+    ; CHECK-NEXT: $p0 = ORR_PPzPP $p8, $p8, killed $p8, implicit-def $pn0
+    ; CHECK-NEXT: RET_ReallyLR implicit killed $pn0
+    renamable $pn8 = PTRUE_C_H
+    $pn0 = COPY killed renamable $pn8
     RET_ReallyLR implicit killed $pn0
 
 ...

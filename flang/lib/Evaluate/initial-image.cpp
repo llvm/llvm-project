@@ -119,9 +119,16 @@ public:
             for (std::size_t j{0}; j < elements; ++j, at += stride) {
               if (Result value{image_.AsConstantPointer(at)}) {
                 typedValue[j].emplace(component, std::move(*value));
+              } else {
+                typedValue[j].emplace(component, Expr<SomeType>{NullPointer{}});
               }
             }
-          } else if (!IsAllocatable(component)) {
+          } else if (IsAllocatable(component)) {
+            // Lowering needs an explicit NULL() for allocatables
+            for (std::size_t j{0}; j < elements; ++j, at += stride) {
+              typedValue[j].emplace(component, Expr<SomeType>{NullPointer{}});
+            }
+          } else {
             auto componentType{DynamicType::From(component)};
             CHECK(componentType.has_value());
             auto componentExtents{GetConstantExtents(context_, component)};

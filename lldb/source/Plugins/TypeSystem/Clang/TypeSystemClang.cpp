@@ -2294,12 +2294,13 @@ CompilerType TypeSystemClang::CreateArrayType(const CompilerType &element_type,
 
       llvm::APInt ap_element_count(64, element_count);
       if (element_count == 0) {
-        return GetType(ast.getIncompleteArrayType(
-            ClangUtil::GetQualType(element_type), clang::ArrayType::Normal, 0));
+        return GetType(
+            ast.getIncompleteArrayType(ClangUtil::GetQualType(element_type),
+                                       clang::ArraySizeModifier::Normal, 0));
       } else {
         return GetType(ast.getConstantArrayType(
             ClangUtil::GetQualType(element_type), ap_element_count, nullptr,
-            clang::ArrayType::Normal, 0));
+            clang::ArraySizeModifier::Normal, 0));
       }
     }
   }
@@ -4308,10 +4309,10 @@ CompilerType TypeSystemClang::GetArrayType(lldb::opaque_compiler_type_t type,
     if (size != 0)
       return GetType(ast_ctx.getConstantArrayType(
           qual_type, llvm::APInt(64, size), nullptr,
-          clang::ArrayType::ArraySizeModifier::Normal, 0));
+          clang::ArraySizeModifier::Normal, 0));
     else
       return GetType(ast_ctx.getIncompleteArrayType(
-          qual_type, clang::ArrayType::ArraySizeModifier::Normal, 0));
+          qual_type, clang::ArraySizeModifier::Normal, 0));
   }
 
   return CompilerType();
