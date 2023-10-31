@@ -23,8 +23,44 @@ namespace {
 //   (2) rewrite linalg.generic ops traits on level crds
 //   (3) compute topsort, and resolve cyles with sparse_tensor.convert ops
 
+// CRTP to help implementing a rewriter that demaps all its inputs and remaps
+// all its outputs.
+template <typename SubClass, typename SourceOp>
+struct DemapInsRemapOutsRewriter : public OpRewritePattern<SourceOp> {
+  using OpRewritePattern<SourceOp>::OpRewritePattern;
+  using OpAdaptor = typename SourceOp::Adaptor;
+
+  LogicalResult matchAndRewrite(SourceOp op,
+                                PatternRewriter &rewriter) const override {
+    if (!static_cast<const SubClass *>(this)->matchOp(op))
+      return failure();
+
+    Location loc = op.getLoc();
+    // Demaps non-trivial inputs.
+    SmallVector<Value> deMappedIns(op->getOperands());
+    for (Value &in : deMappedIns)
+      if (auto stt = tryGetSparseTensorType(in); stt && !stt->isIdentity())
+        in = rewriter.create<ReinterpretMapOp>(loc, stt->getDemappedType(), in);
+
+    // CRTP call.
+    OpAdaptor adaptor(deMappedIns);
+    ValueRange outs =
+        static_cast<const SubClass *>(this)->rewriteOp(op, adaptor, rewriter);
+    assert(outs.size() == op->getResults().size());
+
+    // Remap  outputs.
+    SmallVector<Value> reMappedOuts(outs);
+    for (auto [r, a] : llvm::zip(reMappedOuts, op->getResults()))
+      if (r.getType() != a.getType())
+        r = rewriter.create<ReinterpretMapOp>(loc, a.getType(), r);
+
+    rewriter.replaceOp(op, reMappedOuts);
+    return success();
+  }
+};
+
 //===----------------------------------------------------------------------===//
-// Reiterpret Map Rewriters for operations other than linalg.generics
+// Reinterpret Map Rewriters for operations other than linalg.generics
 //===----------------------------------------------------------------------===//
 
 struct CrdTranslateRewriter : public OpRewritePattern<CrdTranslateOp> {
@@ -34,6 +70,7 @@ struct CrdTranslateRewriter : public OpRewritePattern<CrdTranslateOp> {
     AffineMap map = op.getDirection() == CrdTransDirectionKind::dim2lvl
                         ? op.getEncoder().getDimToLvl()
                         : op.getEncoder().getLvlToDim();
+
     SmallVector<Value> outCrds;
     for (AffineExpr result : map.getResults()) {
       // TODO: we should probably expand the affine map to IR using our own
@@ -49,24 +86,23 @@ struct CrdTranslateRewriter : public OpRewritePattern<CrdTranslateOp> {
   }
 };
 
-struct TensorInsertRewriter : public OpRewritePattern<tensor::InsertOp> {
-  using OpRewritePattern::OpRewritePattern;
-  LogicalResult matchAndRewrite(tensor::InsertOp op,
-                                PatternRewriter &rewriter) const override {
+struct TensorInsertRewriter
+    : public DemapInsRemapOutsRewriter<TensorInsertRewriter, tensor::InsertOp> {
+  using DemapInsRemapOutsRewriter::DemapInsRemapOutsRewriter;
 
-    if (!op.getResult().getType().getEncoding())
-      return failure();
+  bool matchOp(tensor::InsertOp op) const {
+    return op.getResult().getType().getEncoding() != nullptr;
+  }
+
+  ValueRange rewriteOp(tensor::InsertOp op, OpAdaptor adaptor,
+                       PatternRewriter &rewriter) const {
     Location loc = op.getLoc();
     auto stt = getSparseTensorType(op.getResult());
     ValueRange lvlCrd = stt.translateCrds(rewriter, loc, op.getIndices(),
                                           CrdTransDirectionKind::dim2lvl);
-
-    Value t = rewriter.create<ReinterpretMapOp>(
-        loc, stt.getEncoding().withoutDimToLvl(), op.getDest());
-    t = rewriter.create<sparse_tensor::InsertOp>(loc, op.getScalar(), t,
-                                                 lvlCrd);
-    rewriter.replaceOpWithNewOp<ReinterpretMapOp>(op, op.getType(), t);
-    return success();
+    Operation *insertOp = rewriter.create<sparse_tensor::InsertOp>(
+        loc, op.getScalar(), adaptor.getDest(), lvlCrd);
+    return insertOp->getResults();
   }
 };
 

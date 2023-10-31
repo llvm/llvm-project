@@ -97,7 +97,7 @@ template <typename T>
 inline RankedTensorType getRankedTensorType(T &&t) {
   assert(static_cast<bool>(std::forward<T>(t)) &&
          "getRankedTensorType got null argument");
-  return cast<RankedTensorType>(std::forward<T>(t).getType());
+  return dyn_cast<RankedTensorType>(std::forward<T>(t).getType());
 }
 
 /// Convenience method to abbreviate casting `getType()`.
