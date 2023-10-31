@@ -27,11 +27,6 @@
 
 using namespace llvm;
 
-static cl::opt<bool>
-    HardwareShadowStack("riscv-hardware-shadow-stack", cl::init(false),
-                        cl::Hidden,
-                        cl::desc("Enable hardware shadow stack with Zicfiss."));
-
 static const Register AllPopRegs[] = {
     RISCV::X1,  RISCV::X8,  RISCV::X9,  RISCV::X18, RISCV::X19,
     RISCV::X20, RISCV::X21, RISCV::X22, RISCV::X23, RISCV::X24,
@@ -57,9 +52,8 @@ static void emitSCSPrologue(MachineFunction &MF, MachineBasicBlock &MBB,
     return;
 
   const RISCVInstrInfo *TII = STI.getInstrInfo();
-  if (HardwareShadowStack) {
-    if (!STI.hasFeature(RISCV::FeatureStdExtZicfiss))
-      report_fatal_error("Hardware shadow stack needs Zicfiss to be enabled");
+  if (!STI.hasForcedSWShadowStack() &&
+      STI.hasFeature(RISCV::FeatureStdExtZicfiss)) {
     BuildMI(MBB, MI, DL, TII->get(RISCV::SSPUSH)).addReg(RAReg);
     return;
   }
@@ -119,9 +113,8 @@ static void emitSCSEpilogue(MachineFunction &MF, MachineBasicBlock &MBB,
     return;
 
   const RISCVInstrInfo *TII = STI.getInstrInfo();
-  if (HardwareShadowStack) {
-    if (!STI.hasFeature(RISCV::FeatureStdExtZicfiss))
-      report_fatal_error("Hardware shadow stack needs Zicfiss to be enabled");
+  if (!STI.hasForcedSWShadowStack() &&
+      STI.hasFeature(RISCV::FeatureStdExtZicfiss)) {
     BuildMI(MBB, MI, DL, TII->get(RISCV::SSPOPCHK)).addReg(RAReg);
     return;
   }
