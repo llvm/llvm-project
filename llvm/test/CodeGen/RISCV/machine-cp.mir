@@ -48,7 +48,6 @@ body:             |
     ; RV32-NEXT: $v0 = COPY renamable $v8
     ; RV32-NEXT: renamable $v14m2 = PseudoVLE32_V_M2_MASK undef renamable $v14m2, renamable $x15, $v0, -1, 5 /* e32 */, 1 /* ta, mu */, implicit $vl, implicit $vtype
     ; RV32-NEXT: early-clobber renamable $v9 = PseudoVMSLE_VI_M2 killed renamable $v10m2, -1, -1, 5 /* e32 */, implicit $vl, implicit $vtype
-    ; RV32-NEXT: $v0 = COPY killed renamable $v8
     ; RV32-NEXT: PseudoVSE32_V_M2_MASK killed renamable $v14m2, renamable $x9, $v0, -1, 5 /* e32 */, implicit $vl, implicit $vtype
     ;
     ; RV64-LABEL: name: bar
@@ -57,7 +56,6 @@ body:             |
     ; RV64-NEXT: $v0 = COPY renamable $v8
     ; RV64-NEXT: renamable $v14m2 = PseudoVLE32_V_M2_MASK undef renamable $v14m2, renamable $x15, $v0, -1, 5 /* e32 */, 1 /* ta, mu */, implicit $vl, implicit $vtype
     ; RV64-NEXT: early-clobber renamable $v9 = PseudoVMSLE_VI_M2 killed renamable $v10m2, -1, -1, 5 /* e32 */, implicit $vl, implicit $vtype
-    ; RV64-NEXT: $v0 = COPY killed renamable $v8
     ; RV64-NEXT: PseudoVSE32_V_M2_MASK killed renamable $v14m2, renamable $x9, $v0, -1, 5 /* e32 */, implicit $vl, implicit $vtype
     $v0 = COPY killed renamable $v9; example.cpp:14:22
     $v0 = COPY renamable $v8; example.cpp:12:25

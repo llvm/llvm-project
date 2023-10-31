@@ -719,6 +719,7 @@ void MachineCopyPropagation::ForwardCopyPropagateBlock(MachineBasicBlock &MBB) {
   LLVM_DEBUG(dbgs() << "MCP: ForwardCopyPropagateBlock " << MBB.getName()
                     << "\n");
 
+  const MachineInstr *LastMI = nullptr;
   for (MachineInstr &MI : llvm::make_early_inc_range(MBB)) {
     // Analyze copies (which don't overlap themselves).
     std::optional<DestSourcePair> CopyOperands =
@@ -734,6 +735,27 @@ void MachineCopyPropagation::ForwardCopyPropagateBlock(MachineBasicBlock &MBB) {
 
         MCRegister Def = RegDef.asMCReg();
         MCRegister Src = RegSrc.asMCReg();
+
+        // Target may lost some opportunity to further remove the redundant
+        // copy instruction, consider the following sequence:
+        // L1: r0 = COPY r9     <- TrackMI
+        // L2: r0 = COPY r8     <- TrackMI
+        // L3: use r0           <- Remove L2 from MaybeDeadCopies
+        // L4: early-clobber r9 <- Invalid L2 from Tracker
+        // L5: r0 = COPY r8     <- Miss remove chance
+        // L6: use r0           <- Miss remove L5 chance
+        if (LastMI) {
+          std::optional<DestSourcePair> PrevCopyOperands =
+              isCopyInstr(*LastMI, *TII, UseCopyInstr);
+          if (PrevCopyOperands) {
+            Register PrevRegDef = PrevCopyOperands->Destination->getReg();
+            // We could remove the previous copy from tracker directly.
+            if (TRI->isSubRegisterEq(RegDef, PrevRegDef)) {
+              Tracker.invalidateRegister(PrevRegDef.asMCReg(), *TRI, *TII,
+                                         UseCopyInstr);
+            }
+          }
+        }
 
         // The two copies cancel out and the source of the first copy
         // hasn't been overridden, eliminate the second one. e.g.
@@ -795,6 +817,7 @@ void MachineCopyPropagation::ForwardCopyPropagateBlock(MachineBasicBlock &MBB) {
         }
 
         Tracker.trackCopy(&MI, *TRI, *TII, UseCopyInstr);
+        LastMI = &MI;
 
         continue;
       }
@@ -874,6 +897,8 @@ void MachineCopyPropagation::ForwardCopyPropagateBlock(MachineBasicBlock &MBB) {
     // Any previous copy definition or reading the Defs is no longer available.
     for (MCRegister Reg : Defs)
       Tracker.clobberRegister(Reg, *TRI, *TII, UseCopyInstr);
+
+    LastMI = &MI;
   }
 
   // If MBB doesn't have successors, delete the copies whose defs are not used.
