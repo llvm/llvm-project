@@ -3429,7 +3429,6 @@ SDValue PPCTargetLowering::LowerGlobalTLSAddressAIX(SDValue Op,
         dyn_cast_or_null<GlobalVariable>(M->getOrInsertGlobal(
             StringRef("_$TLSML"), PointerType::getUnqual(*DAG.getContext())));
     assert(TLSGV && "Not able to create GV for _$TLSML.");
-    // FIXME: create MO_TLSML_FLAG once #69695 committed.
     SDValue ModuleHandleTGA =
         DAG.getTargetGlobalAddress(TLSGV, dl, PtrVT, 0, PPCII::MO_TLSLD_FLAG);
     SDValue ModuleHandleTOC = getTOCEntry(DAG, dl, ModuleHandleTGA);

@@ -866,7 +866,6 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
         // from the symbol itself, and right now its only user is the symbol
         // "_$TLSML". The symbol name is used to decide that R_TLSML is
         // expected.
-        // FIX this once #69695 committed.
         return MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSML;
       if (IsAIX)
         return MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSLD;
