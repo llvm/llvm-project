@@ -109,6 +109,13 @@ Changes in existing checks
 Removed checks
 ^^^^^^^^^^^^^^
 
+Miscellaneous
+^^^^^^^^^^^^^
+
+- Fixed incorrect apply format in clang-apply-repalcements when no `--format`
+  option is specified. Now clang-apply-repalcements applies format only with
+  the option.
+
 Improvements to include-fixer
 -----------------------------
 
