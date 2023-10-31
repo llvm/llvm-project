@@ -495,6 +495,8 @@ protected:
     case eValueTypeRegisterSet:
     case eValueTypeConstResult:
     case eValueTypeVariableThreadLocal:
+    case eValueTypeVTable:
+    case eValueTypeVTableEntry:
       return false;
     }
   }
