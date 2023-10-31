@@ -19,6 +19,7 @@
 #include "mlir/Support/LLVM.h"
 #include "mlir/Target/LLVMIR/Dialect/OpenMPCommon.h"
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
+#include "mlir/Transforms/RegionUtils.h"
 
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
@@ -114,17 +115,13 @@ processOperands(llvm::IRBuilderBase &builder,
     llvm::Value *ptrBaseGEP = builder.CreateInBoundsGEP(
         arrI8PtrTy, mapperAllocas.ArgsBase,
         {builder.getInt32(0), builder.getInt32(index)});
-    llvm::Value *ptrBaseCast = builder.CreateBitCast(
-        ptrBaseGEP, dataPtrBase->getType()->getPointerTo());
-    builder.CreateStore(dataPtrBase, ptrBaseCast);
+    builder.CreateStore(dataPtrBase, ptrBaseGEP);
 
     // Store pointer extracted from operand into the i-th position of args.
     llvm::Value *ptrGEP = builder.CreateInBoundsGEP(
         arrI8PtrTy, mapperAllocas.Args,
         {builder.getInt32(0), builder.getInt32(index)});
-    llvm::Value *ptrCast =
-        builder.CreateBitCast(ptrGEP, dataPtr->getType()->getPointerTo());
-    builder.CreateStore(dataPtr, ptrCast);
+    builder.CreateStore(dataPtr, ptrGEP);
 
     // Store size extracted from operand into the i-th position of argSizes.
     llvm::Value *sizeGEP = builder.CreateInBoundsGEP(
@@ -395,8 +392,7 @@ static LogicalResult convertDataOp(acc::DataOp &op,
   llvm::BasicBlock *endDataBlock = llvm::BasicBlock::Create(
       ctx, "acc.end_data", builder.GetInsertBlock()->getParent());
 
-  SetVector<Block *> blocks =
-      LLVM::detail::getTopologicallySortedBlocks(op.getRegion());
+  SetVector<Block *> blocks = getTopologicallySortedBlocks(op.getRegion());
   for (Block *bb : blocks) {
     llvm::BasicBlock *llvmBB = moduleTranslation.lookupBlock(bb);
     if (bb->isEntryBlock()) {

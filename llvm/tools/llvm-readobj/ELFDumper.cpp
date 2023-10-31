@@ -363,7 +363,7 @@ protected:
   }
 
   void printAttributes(unsigned, std::unique_ptr<ELFAttributeParser>,
-                       support::endianness);
+                       llvm::endianness);
   void printMipsReginfo();
   void printMipsOptions();
 
@@ -2842,7 +2842,7 @@ template <class ELFT> void ELFDumper<ELFT>::printArchSpecificInfo() {
     if (Obj.isLE())
       printAttributes(ELF::SHT_ARM_ATTRIBUTES,
                       std::make_unique<ARMAttributeParser>(&W),
-                      support::little);
+                      llvm::endianness::little);
     else
       reportUniqueWarning("attribute printing not implemented for big-endian "
                           "ARM objects");
@@ -2851,7 +2851,7 @@ template <class ELFT> void ELFDumper<ELFT>::printArchSpecificInfo() {
     if (Obj.isLE())
       printAttributes(ELF::SHT_RISCV_ATTRIBUTES,
                       std::make_unique<RISCVAttributeParser>(&W),
-                      support::little);
+                      llvm::endianness::little);
     else
       reportUniqueWarning("attribute printing not implemented for big-endian "
                           "RISC-V objects");
@@ -2859,7 +2859,7 @@ template <class ELFT> void ELFDumper<ELFT>::printArchSpecificInfo() {
   case EM_MSP430:
     printAttributes(ELF::SHT_MSP430_ATTRIBUTES,
                     std::make_unique<MSP430AttributeParser>(&W),
-                    support::little);
+                    llvm::endianness::little);
     break;
   case EM_MIPS: {
     printMipsABIFlags();
@@ -2885,7 +2885,7 @@ template <class ELFT> void ELFDumper<ELFT>::printArchSpecificInfo() {
 template <class ELFT>
 void ELFDumper<ELFT>::printAttributes(
     unsigned AttrShType, std::unique_ptr<ELFAttributeParser> AttrParser,
-    support::endianness Endianness) {
+    llvm::endianness Endianness) {
   assert((AttrShType != ELF::SHT_NULL) && AttrParser &&
          "Incomplete ELF attribute implementation");
   DictScope BA(W, "BuildAttributes");
@@ -5565,7 +5565,7 @@ static AMDGPUNote getAMDGPUNote(uint32_t NoteType, ArrayRef<uint8_t> Desc) {
     // FIXME: Metadata Verifier only works with AMDHSA.
     //  This is an ugly workaround to avoid the verifier for other MD
     //  formats (e.g. amdpal)
-    if (MsgPackString.find("amdhsa.") != StringRef::npos) {
+    if (MsgPackString.contains("amdhsa.")) {
       AMDGPU::HSAMD::V3::MetadataVerifier Verifier(true);
       if (!Verifier.verify(MsgPackDoc.getRoot()))
         MetadataString = "Invalid AMDGPU Metadata\n";
@@ -5806,6 +5806,8 @@ const NoteType CoreNoteTypes[] = {
     {ELF::NT_ARM_SVE, "NT_ARM_SVE (AArch64 SVE registers)"},
     {ELF::NT_ARM_PAC_MASK,
      "NT_ARM_PAC_MASK (AArch64 Pointer Authentication code masks)"},
+    {ELF::NT_ARM_TAGGED_ADDR_CTRL,
+     "NT_ARM_TAGGED_ADDR_CTRL (AArch64 Tagged Address Control)"},
     {ELF::NT_ARM_SSVE, "NT_ARM_SSVE (AArch64 Streaming SVE registers)"},
     {ELF::NT_ARM_ZA, "NT_ARM_ZA (AArch64 SME ZA registers)"},
     {ELF::NT_ARM_ZT, "NT_ARM_ZT (AArch64 SME ZT registers)"},
@@ -6002,9 +6004,9 @@ template <class ELFT> void GNUELFDumper<ELFT>::printNotes() {
         return Error::success();
     } else if (Name == "CORE") {
       if (Type == ELF::NT_FILE) {
-        DataExtractor DescExtractor(Descriptor,
-                                    ELFT::TargetEndianness == support::little,
-                                    sizeof(Elf_Addr));
+        DataExtractor DescExtractor(
+            Descriptor, ELFT::TargetEndianness == llvm::endianness::little,
+            sizeof(Elf_Addr));
         if (Expected<CoreNote> NoteOrErr = readCoreNote(DescExtractor)) {
           printCoreNote<ELFT>(OS, *NoteOrErr);
           return Error::success();
@@ -7699,9 +7701,9 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printNotes() {
         return Error::success();
     } else if (Name == "CORE") {
       if (Type == ELF::NT_FILE) {
-        DataExtractor DescExtractor(Descriptor,
-                                    ELFT::TargetEndianness == support::little,
-                                    sizeof(Elf_Addr));
+        DataExtractor DescExtractor(
+            Descriptor, ELFT::TargetEndianness == llvm::endianness::little,
+            sizeof(Elf_Addr));
         if (Expected<CoreNote> N = readCoreNote(DescExtractor)) {
           printCoreNoteLLVMStyle(*N, W);
           return Error::success();

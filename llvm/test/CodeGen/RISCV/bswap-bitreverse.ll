@@ -497,7 +497,7 @@ define i32 @test_bitreverse_i32(i32 %a) nounwind {
 ; RV64ZBB-NEXT:    and a1, a1, a2
 ; RV64ZBB-NEXT:    srli a0, a0, 28
 ; RV64ZBB-NEXT:    lui a2, 986895
-; RV64ZBB-NEXT:    addiw a2, a2, 240
+; RV64ZBB-NEXT:    addi a2, a2, 240
 ; RV64ZBB-NEXT:    and a0, a0, a2
 ; RV64ZBB-NEXT:    sext.w a0, a0
 ; RV64ZBB-NEXT:    or a0, a1, a0

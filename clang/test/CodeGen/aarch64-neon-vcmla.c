@@ -167,10 +167,8 @@ float16x4_t test_vcmla_laneq_f16(float16x4_t acc, float16x4_t lhs, float16x8_t r
 }
 
 // CHECK-LABEL: @test_vcmlaq_lane_f16(
-// CHECK: [[CPLX:%.*]] = bitcast <4 x half> %rhs to <2 x i32>
-// CHECK: [[DUP:%.*]] = shufflevector <2 x i32> [[CPLX]], <2 x i32> undef, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
-// CHECK: [[DUP_FLT:%.*]] = bitcast <4 x i32> [[DUP]] to <8 x half>
-// CHECK: [[RES:%.*]] = tail call <8 x half> @llvm.aarch64.neon.vcmla.rot0.v8f16(<8 x half> %acc, <8 x half> %lhs, <8 x half> [[DUP_FLT]])
+// CHECK: [[DUP:%.*]] = shufflevector <4 x half> %rhs, <4 x half> poison, <8 x i32> <i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3> 
+// CHECK: [[RES:%.*]] = tail call <8 x half> @llvm.aarch64.neon.vcmla.rot0.v8f16(<8 x half> %acc, <8 x half> %lhs, <8 x half> [[DUP]])
 // CHECK: ret <8 x half> [[RES]]
 float16x8_t test_vcmlaq_lane_f16(float16x8_t acc, float16x8_t lhs, float16x4_t rhs) {
   return vcmlaq_lane_f16(acc, lhs, rhs, 1);
@@ -243,10 +241,8 @@ float16x4_t test_vcmla_rot90_laneq_f16(float16x4_t acc, float16x4_t lhs, float16
 }
 
 // CHECK-LABEL: @test_vcmlaq_rot90_lane_f16(
-// CHECK: [[CPLX:%.*]] = bitcast <4 x half> %rhs to <2 x i32>
-// CHECK: [[DUP:%.*]] = shufflevector <2 x i32> [[CPLX]], <2 x i32> undef, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
-// CHECK: [[DUP_FLT:%.*]] = bitcast <4 x i32> [[DUP]] to <8 x half>
-// CHECK: [[RES:%.*]] = tail call <8 x half> @llvm.aarch64.neon.vcmla.rot90.v8f16(<8 x half> %acc, <8 x half> %lhs, <8 x half> [[DUP_FLT]])
+// CHECK: [[DUP:%.*]] = shufflevector <4 x half> %rhs, <4 x half> poison, <8 x i32> <i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3>
+// CHECK: [[RES:%.*]] = tail call <8 x half> @llvm.aarch64.neon.vcmla.rot90.v8f16(<8 x half> %acc, <8 x half> %lhs, <8 x half> [[DUP]])
 // CHECK: ret <8 x half> [[RES]]
 float16x8_t test_vcmlaq_rot90_lane_f16(float16x8_t acc, float16x8_t lhs, float16x4_t rhs) {
   return vcmlaq_rot90_lane_f16(acc, lhs, rhs, 1);
@@ -319,10 +315,8 @@ float16x4_t test_vcmla_rot180_laneq_f16(float16x4_t acc, float16x4_t lhs, float1
 }
 
 // CHECK-LABEL: @test_vcmlaq_rot180_lane_f16(
-// CHECK: [[CPLX:%.*]] = bitcast <4 x half> %rhs to <2 x i32>
-// CHECK: [[DUP:%.*]] = shufflevector <2 x i32> [[CPLX]], <2 x i32> undef, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
-// CHECK: [[DUP_FLT:%.*]] = bitcast <4 x i32> [[DUP]] to <8 x half>
-// CHECK: [[RES:%.*]] = tail call <8 x half> @llvm.aarch64.neon.vcmla.rot180.v8f16(<8 x half> %acc, <8 x half> %lhs, <8 x half> [[DUP_FLT]])
+// CHECK: [[DUP:%.*]] = shufflevector <4 x half> %rhs, <4 x half> poison, <8 x i32> <i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3>
+// CHECK: [[RES:%.*]] = tail call <8 x half> @llvm.aarch64.neon.vcmla.rot180.v8f16(<8 x half> %acc, <8 x half> %lhs, <8 x half> [[DUP]])
 // CHECK: ret <8 x half> [[RES]]
 float16x8_t test_vcmlaq_rot180_lane_f16(float16x8_t acc, float16x8_t lhs, float16x4_t rhs) {
   return vcmlaq_rot180_lane_f16(acc, lhs, rhs, 1);
@@ -395,10 +389,8 @@ float16x4_t test_vcmla_rot270_laneq_f16(float16x4_t acc, float16x4_t lhs, float1
 }
 
 // CHECK-LABEL: @test_vcmlaq_rot270_lane_f16(
-// CHECK: [[CPLX:%.*]] = bitcast <4 x half> %rhs to <2 x i32>
-// CHECK: [[DUP:%.*]] = shufflevector <2 x i32> [[CPLX]], <2 x i32> undef, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
-// CHECK: [[DUP_FLT:%.*]] = bitcast <4 x i32> [[DUP]] to <8 x half>
-// CHECK: [[RES:%.*]] = tail call <8 x half> @llvm.aarch64.neon.vcmla.rot270.v8f16(<8 x half> %acc, <8 x half> %lhs, <8 x half> [[DUP_FLT]])
+// CHECK: [[DUP:%.*]] = shufflevector <4 x half> %rhs, <4 x half> poison, <8 x i32> <i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3>
+// CHECK: [[RES:%.*]] = tail call <8 x half> @llvm.aarch64.neon.vcmla.rot270.v8f16(<8 x half> %acc, <8 x half> %lhs, <8 x half> [[DUP]])
 // CHECK: ret <8 x half> [[RES]]
 float16x8_t test_vcmlaq_rot270_lane_f16(float16x8_t acc, float16x8_t lhs, float16x4_t rhs) {
   return vcmlaq_rot270_lane_f16(acc, lhs, rhs, 1);

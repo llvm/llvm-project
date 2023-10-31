@@ -1275,6 +1275,30 @@ void SystemZXPLINKFrameLowering::emitPrologue(MachineFunction &MF,
     for (MachineBasicBlock &B : llvm::drop_begin(MF))
       B.addLiveIn(Regs.getFramePointerRegister());
   }
+
+  // Save GPRs used for varargs, if any.
+  const TargetInstrInfo *TII = Subtarget.getInstrInfo();
+  bool IsVarArg = MF.getFunction().isVarArg();
+
+  if (IsVarArg) {
+    // FixedRegs is the number of used registers, accounting for shadow
+    // registers.
+    unsigned FixedRegs = ZFI->getVarArgsFirstGPR() + ZFI->getVarArgsFirstFPR();
+    auto &GPRs = SystemZ::XPLINK64ArgGPRs;
+    for (unsigned I = FixedRegs; I < SystemZ::XPLINK64NumArgGPRs; I++) {
+      uint64_t StartOffset = MFFrame.getOffsetAdjustment() +
+                             MFFrame.getStackSize() + Regs.getCallFrameSize() +
+                             getOffsetOfLocalArea() + I * 8;
+      unsigned Reg = GPRs[I];
+      BuildMI(MBB, MBBI, DL, TII->get(SystemZ::STG))
+          .addReg(Reg)
+          .addReg(Regs.getStackPointerRegister())
+          .addImm(StartOffset)
+          .addReg(0);
+      if (!MBB.isLiveIn(Reg))
+        MBB.addLiveIn(Reg);
+    }
+  }
 }
 
 void SystemZXPLINKFrameLowering::emitEpilogue(MachineFunction &MF,
@@ -1423,6 +1447,18 @@ void SystemZXPLINKFrameLowering::processFunctionBeforeFrameFinalized(
 
   // Setup stack frame offset
   MFFrame.setOffsetAdjustment(Regs.getStackPointerBias());
+
+  // Nothing to do for leaf functions.
+  uint64_t StackSize = MFFrame.estimateStackSize(MF);
+  if (StackSize == 0 && MFFrame.getCalleeSavedInfo().empty())
+    return;
+
+  // Although the XPLINK specifications for AMODE64 state that minimum size
+  // of the param area is minimum 32 bytes and no rounding is otherwise
+  // specified, we round this area in 64 bytes increments to be compatible
+  // with existing compilers.
+  MFFrame.setMaxCallFrameSize(
+      std::max(64U, (unsigned)alignTo(MFFrame.getMaxCallFrameSize(), 64)));
 }
 
 // Determines the size of the frame, and creates the deferred spill objects.

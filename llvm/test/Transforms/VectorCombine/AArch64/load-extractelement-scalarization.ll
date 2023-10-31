@@ -906,3 +906,24 @@ exit:
   %p = phi i8 [ 0, %entry ], [ %ext, %then ]
   ret i8 0
 }
+
+declare void @use(...)
+
+; Make sure we don't assert.
+define void @pr69820(ptr %p, i32 %arg) {
+; CHECK-LABEL: @pr69820(
+; CHECK-NEXT:    [[V:%.*]] = load <4 x float>, ptr [[P:%.*]], align 16
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[ARG:%.*]], 3
+; CHECK-NEXT:    [[EXT:%.*]] = extractelement <4 x float> [[V]], i32 [[AND]]
+; CHECK-NEXT:    call void @use(<4 x float> [[V]], float [[EXT]])
+; CHECK-NEXT:    ret void
+;
+  %v = load <4 x float>, ptr %p, align 16
+  %and = and i32 %arg, 3
+  %ext = extractelement <4 x float> %v, i32 %and
+  call void @use(<4 x float> %v, float %ext)
+  ret void
+
+; uselistorder directives
+  uselistorder <4 x float> %v, { 1, 0 }
+}

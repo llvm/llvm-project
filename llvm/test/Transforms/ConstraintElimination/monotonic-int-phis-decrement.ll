@@ -14,8 +14,7 @@ define void @add_rec_decreasing_cond_true_constant(i8 noundef %len) {
 ; CHECK-NEXT:    [[CMP2_NOT:%.*]] = icmp eq i8 [[K_0]], 0
 ; CHECK-NEXT:    br i1 [[CMP2_NOT]], label [[EXIT:%.*]], label [[LOOP_LATCH]]
 ; CHECK:       loop.latch:
-; CHECK-NEXT:    [[CMP_NOT_I:%.*]] = icmp ult i8 [[K_0]], 5
-; CHECK-NEXT:    call void @use(i1 [[CMP_NOT_I]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[K_DEC]] = add i8 [[K_0]], -1
 ; CHECK-NEXT:    br label [[LOOP_HEADER]]
 ; CHECK:       exit:
@@ -87,8 +86,7 @@ define void @add_rec_decreasing_cond_true_start_signed_positive(i8 noundef %star
 ; CHECK-NEXT:    [[CMP2_NOT:%.*]] = icmp eq i8 [[K_0]], 0
 ; CHECK-NEXT:    br i1 [[CMP2_NOT]], label [[EXIT:%.*]], label [[LOOP_LATCH]]
 ; CHECK:       loop.latch:
-; CHECK-NEXT:    [[CMP_NOT_I:%.*]] = icmp ult i8 [[K_0]], [[START]]
-; CHECK-NEXT:    call void @use(i1 [[CMP_NOT_I]])
+; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[K_DEC]] = add i8 [[K_0]], -1
 ; CHECK-NEXT:    br label [[LOOP_HEADER]]
 ; CHECK:       exit:

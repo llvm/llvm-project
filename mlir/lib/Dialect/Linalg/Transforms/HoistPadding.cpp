@@ -558,7 +558,7 @@ static FailureOr<PackingResult> buildPackingLoopNestImpl(
       break;
     if (forOp != outerLoop && !outerLoop->isAncestor(forOp))
       break;
-    OpOperand &operand = forOp.getOpOperandForRegionIterArg(bbArg);
+    OpOperand &operand = *forOp.getTiedLoopInit(bbArg);
     bvm.map(bbArg, operand.get());
     bbArg = dyn_cast<BlockArgument>(operand.get());
   }
@@ -811,8 +811,7 @@ padThroughLoopIterArg(RewriterBase &rewriter, Value paddedValueBeforeHoisting,
   rewriter.setInsertionPointAfter(hoistedPackedTensor.getDefiningOp());
 
   unsigned iterArgNumber = forOp.getResultForOpOperand(*pUse).getResultNumber();
-  auto yieldOp = cast<scf::YieldOp>(forOp.getBody(0)->getTerminator());
-  auto yieldingExtractSliceOp = yieldOp->getOperand(iterArgNumber)
+  auto yieldingExtractSliceOp = forOp.getYieldedValues()[iterArgNumber]
                                     .getDefiningOp<tensor::ExtractSliceOp>();
   if (!yieldingExtractSliceOp)
     return tensor::ExtractSliceOp();
@@ -826,7 +825,7 @@ padThroughLoopIterArg(RewriterBase &rewriter, Value paddedValueBeforeHoisting,
 
   SmallVector<Value> initArgs = forOp.getInitArgs();
   initArgs[iterArgNumber] = hoistedPackedTensor;
-  SmallVector<Value> yieldOperands = yieldOp.getOperands();
+  SmallVector<Value> yieldOperands = llvm::to_vector(forOp.getYieldedValues());
   yieldOperands[iterArgNumber] = yieldingExtractSliceOp.getSource();
 
   int64_t numOriginalForOpResults = initArgs.size();

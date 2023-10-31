@@ -362,17 +362,14 @@ getNonTbpDefinedIoTableAddr(Fortran::lower::AbstractConverter &converter,
                       Fortran::evaluate::ProcedureDesignator{*procSym}},
                   stmtCtx))));
         } else {
-          std::string procName = converter.mangleName(*procSym);
-          mlir::func::FuncOp procDef = builder.getNamedFunction(procName);
-          if (!procDef)
-            procDef = Fortran::lower::getOrDeclareFunction(
-                procName, Fortran::evaluate::ProcedureDesignator{*procSym},
-                converter);
-          insert(
-              builder.createConvert(loc, refTy,
-                                    builder.create<fir::AddrOfOp>(
-                                        loc, procDef.getFunctionType(),
-                                        builder.getSymbolRefAttr(procName))));
+          mlir::func::FuncOp procDef = Fortran::lower::getOrDeclareFunction(
+              Fortran::evaluate::ProcedureDesignator{*procSym}, converter);
+          mlir::SymbolRefAttr nameAttr =
+              builder.getSymbolRefAttr(procDef.getSymName());
+          insert(builder.createConvert(
+              loc, refTy,
+              builder.create<fir::AddrOfOp>(loc, procDef.getFunctionType(),
+                                            nameAttr)));
         }
       } else {
         insert(builder.createNullConstant(loc, refTy));

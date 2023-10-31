@@ -61,6 +61,7 @@ add_lldb_library(liblldb SHARED ${option_framework}
   SBPlatform.cpp
   SBProcess.cpp
   SBProcessInfo.cpp
+  SBProcessInfoList.cpp
   SBQueue.cpp
   SBQueueItem.cpp
   SBReproducer.cpp
@@ -177,11 +178,18 @@ if (NOT CMAKE_SYSTEM_NAME MATCHES "Windows")
     # from working on some systems but limits the liblldb size.
     MESSAGE("-- Symbols (liblldb): exporting all symbols from the lldb namespace")
     add_llvm_symbol_exports(liblldb ${CMAKE_CURRENT_SOURCE_DIR}/liblldb.exports)
-  else()
-    # Don't use an explicit export.  Instead, tell the linker to
-    # export all symbols.
+  elseif (NOT LLDB_EXPORT_ALL_SYMBOLS_EXPORTS_FILE)
+    # Don't use an explicit export. Instead, tell the linker to export all symbols.
     MESSAGE("-- Symbols (liblldb): exporting all symbols from the lldb and lldb_private namespaces")
+    MESSAGE(WARNING "Private LLDB symbols frequently change and no API stability is guaranteed. "
+                    "Only the SB API is guaranteed to be stable.")
     add_llvm_symbol_exports(liblldb ${CMAKE_CURRENT_SOURCE_DIR}/liblldb-private.exports)
+  else ()
+    MESSAGE("-- Symbols (liblldb): exporting all symbols specified in the exports "
+            " file '${LLDB_EXPORT_ALL_SYMBOLS_EXPORTS_FILE}'")
+    MESSAGE(WARNING "Private LLDB symbols frequently change and no API stability is guaranteed. "
+                    "Only the SB API is guaranteed to be stable.")
+    add_llvm_symbol_exports(liblldb "${LLDB_EXPORT_ALL_SYMBOLS_EXPORTS_FILE}")
   endif()
   set_target_properties(liblldb_exports PROPERTIES FOLDER "lldb misc")
 elseif (LLDB_EXPORT_ALL_SYMBOLS)

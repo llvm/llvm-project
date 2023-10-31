@@ -139,7 +139,7 @@ struct SectionDescriptor {
   friend OutputSections;
 
   SectionDescriptor(DebugSectionKind SectionKind, LinkingGlobalData &GlobalData,
-                    dwarf::FormParams Format, support::endianness Endianess)
+                    dwarf::FormParams Format, llvm::endianness Endianess)
       : OS(Contents), GlobalData(GlobalData), SectionKind(SectionKind),
         Format(Format), Endianess(Endianess) {
     ListDebugStrPatch.setAllocator(&GlobalData.getAllocator());
@@ -247,7 +247,7 @@ struct SectionDescriptor {
   const StringLiteral &getName() const { return getSectionName(SectionKind); }
 
   /// Returns endianess used by section.
-  support::endianness getEndianess() const { return Endianess; }
+  llvm::endianness getEndianess() const { return Endianess; }
 
   /// Returns FormParams used by section.
   dwarf::FormParams getFormParams() const { return Format; }
@@ -266,8 +266,7 @@ protected:
   void applySLEB128(uint64_t PatchOffset, uint64_t Val);
 
   /// Sets output format.
-  void setOutputFormat(dwarf::FormParams Format,
-                       support::endianness Endianess) {
+  void setOutputFormat(dwarf::FormParams Format, llvm::endianness Endianess) {
     this->Format = Format;
     this->Endianess = Endianess;
   }
@@ -288,7 +287,7 @@ protected:
 
   /// Output format.
   dwarf::FormParams Format = {4, 4, dwarf::DWARF32};
-  support::endianness Endianess = support::endianness::little;
+  llvm::endianness Endianess = llvm::endianness::little;
 };
 
 /// This class keeps contents and offsets to the debug sections. Any objects
@@ -299,8 +298,7 @@ public:
   OutputSections(LinkingGlobalData &GlobalData) : GlobalData(GlobalData) {}
 
   /// Sets output format for all keeping sections.
-  void setOutputFormat(dwarf::FormParams Format,
-                       support::endianness Endianness) {
+  void setOutputFormat(dwarf::FormParams Format, llvm::endianness Endianness) {
     this->Format = Format;
     this->Endianness = Endianness;
   }
@@ -400,7 +398,7 @@ public:
                     StringEntryToDwarfStringPoolEntryMap &DebugLineStrStrings);
 
   /// Endiannes for the sections.
-  support::endianness getEndianness() const { return Endianness; }
+  llvm::endianness getEndianness() const { return Endianness; }
 
   /// Return DWARF version.
   uint16_t getVersion() const { return Format.Version; }
@@ -432,7 +430,7 @@ protected:
   dwarf::FormParams Format = {4, 4, dwarf::DWARF32};
 
   /// Endiannes for sections.
-  support::endianness Endianness = support::endian::system_endianness();
+  llvm::endianness Endianness = llvm::endianness::native;
 
   /// All keeping sections.
   using SectionsSetTy = std::map<DebugSectionKind, SectionDescriptor>;

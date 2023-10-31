@@ -23,6 +23,7 @@
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Bitcode/BitcodeReader.h"
+#include "llvm/Frontend/Offloading/Utility.h"
 #include "llvm/Frontend/OpenMP/OMPGridValues.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
@@ -143,6 +144,19 @@ static bool isValidWorkshareLoopScheduleType(OMPScheduleType SchedType) {
   return true;
 }
 #endif
+
+static const omp::GV &getGridValue(const Triple &T, Function *Kernel) {
+  if (T.isAMDGPU()) {
+    StringRef Features =
+        Kernel->getFnAttribute("target-features").getValueAsString();
+    if (Features.count("+wavefrontsize64"))
+      return omp::getAMDGPUGridValues<64>();
+    return omp::getAMDGPUGridValues<32>();
+  }
+  if (T.isNVPTX())
+    return omp::NVPTXGridValues;
+  llvm_unreachable("No grid value available for this architecture!");
+}
 
 /// Determine which scheduling algorithm to use, determined from schedule clause
 /// arguments.
@@ -340,6 +354,42 @@ BasicBlock *llvm::splitBBWithSuffix(IRBuilderBase &Builder, bool CreateBranch,
   return splitBB(Builder, CreateBranch, Old->getName() + Suffix);
 }
 
+// This function creates a fake integer value and a fake use for the integer
+// value. It returns the fake value created. This is useful in modeling the
+// extra arguments to the outlined functions.
+Value *createFakeIntVal(IRBuilder<> &Builder,
+                        OpenMPIRBuilder::InsertPointTy OuterAllocaIP,
+                        std::stack<Instruction *> &ToBeDeleted,
+                        OpenMPIRBuilder::InsertPointTy InnerAllocaIP,
+                        const Twine &Name = "", bool AsPtr = true) {
+  Builder.restoreIP(OuterAllocaIP);
+  Instruction *FakeVal;
+  AllocaInst *FakeValAddr =
+      Builder.CreateAlloca(Builder.getInt32Ty(), nullptr, Name + ".addr");
+  ToBeDeleted.push(FakeValAddr);
+
+  if (AsPtr) {
+    FakeVal = FakeValAddr;
+  } else {
+    FakeVal =
+        Builder.CreateLoad(Builder.getInt32Ty(), FakeValAddr, Name + ".val");
+    ToBeDeleted.push(FakeVal);
+  }
+
+  // Generate a fake use of this value
+  Builder.restoreIP(InnerAllocaIP);
+  Instruction *UseFakeVal;
+  if (AsPtr) {
+    UseFakeVal =
+        Builder.CreateLoad(Builder.getInt32Ty(), FakeVal, Name + ".use");
+  } else {
+    UseFakeVal =
+        cast<BinaryOperator>(Builder.CreateAdd(FakeVal, Builder.getInt32(10)));
+  }
+  ToBeDeleted.push(UseFakeVal);
+  return FakeVal;
+}
+
 //===----------------------------------------------------------------------===//
 // OpenMPIRBuilderConfig
 //===----------------------------------------------------------------------===//
@@ -469,7 +519,6 @@ void OpenMPIRBuilder::getKernelArgsVector(TargetKernelArgs &KernelArgs,
 
 void OpenMPIRBuilder::addAttributes(omp::RuntimeFunction FnID, Function &Fn) {
   LLVMContext &Ctx = Fn.getContext();
-  Triple T(M.getTargetTriple());
 
   // Get the function's current attributes.
   auto Attrs = Fn.getAttributes();
@@ -920,44 +969,6 @@ OpenMPIRBuilder::createCancel(const LocationDescription &Loc,
   UI->eraseFromParent();
 
   return Builder.saveIP();
-}
-
-void OpenMPIRBuilder::emitOffloadingEntry(Constant *Addr, StringRef Name,
-                                          uint64_t Size, int32_t Flags,
-                                          StringRef SectionName) {
-  Type *Int8PtrTy = Type::getInt8PtrTy(M.getContext());
-  Type *Int32Ty = Type::getInt32Ty(M.getContext());
-  Type *SizeTy = M.getDataLayout().getIntPtrType(M.getContext());
-
-  Constant *AddrName = ConstantDataArray::getString(M.getContext(), Name);
-
-  // Create the constant string used to look up the symbol in the device.
-  auto *Str =
-      new llvm::GlobalVariable(M, AddrName->getType(), /*isConstant=*/true,
-                               llvm::GlobalValue::InternalLinkage, AddrName,
-                               ".omp_offloading.entry_name");
-  Str->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
-
-  // Construct the offloading entry.
-  Constant *EntryData[] = {
-      ConstantExpr::getPointerBitCastOrAddrSpaceCast(Addr, Int8PtrTy),
-      ConstantExpr::getPointerBitCastOrAddrSpaceCast(Str, Int8PtrTy),
-      ConstantInt::get(SizeTy, Size),
-      ConstantInt::get(Int32Ty, Flags),
-      ConstantInt::get(Int32Ty, 0),
-  };
-  Constant *EntryInitializer =
-      ConstantStruct::get(OpenMPIRBuilder::OffloadEntry, EntryData);
-
-  auto *Entry = new GlobalVariable(
-      M, OpenMPIRBuilder::OffloadEntry,
-      /* isConstant = */ true, GlobalValue::WeakAnyLinkage, EntryInitializer,
-      ".omp_offloading.entry." + Name, nullptr, GlobalValue::NotThreadLocal,
-      M.getDataLayout().getDefaultGlobalsAddressSpace());
-
-  // The entry has to be created in the section the linker expects it to be.
-  Entry->setSection(SectionName);
-  Entry->setAlignment(Align(1));
 }
 
 OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::emitTargetKernel(
@@ -1496,6 +1507,7 @@ OpenMPIRBuilder::createTask(const LocationDescription &Loc,
                             InsertPointTy AllocaIP, BodyGenCallbackTy BodyGenCB,
                             bool Tied, Value *Final, Value *IfCondition,
                             SmallVector<DependData> Dependencies) {
+
   if (!updateToLocation(Loc))
     return InsertPointTy();
 
@@ -1523,41 +1535,31 @@ OpenMPIRBuilder::createTask(const LocationDescription &Loc,
   BasicBlock *TaskAllocaBB =
       splitBB(Builder, /*CreateBranch=*/true, "task.alloca");
 
+  InsertPointTy TaskAllocaIP =
+      InsertPointTy(TaskAllocaBB, TaskAllocaBB->begin());
+  InsertPointTy TaskBodyIP = InsertPointTy(TaskBodyBB, TaskBodyBB->begin());
+  BodyGenCB(TaskAllocaIP, TaskBodyIP);
+
   OutlineInfo OI;
   OI.EntryBB = TaskAllocaBB;
   OI.OuterAllocaBB = AllocaIP.getBlock();
   OI.ExitBB = TaskExitBB;
-  OI.PostOutlineCB = [this, Ident, Tied, Final, IfCondition,
-                      Dependencies](Function &OutlinedFn) {
-    // The input IR here looks like the following-
-    // ```
-    // func @current_fn() {
-    //   outlined_fn(%args)
-    // }
-    // func @outlined_fn(%args) { ... }
-    // ```
-    //
-    // This is changed to the following-
-    //
-    // ```
-    // func @current_fn() {
-    //   runtime_call(..., wrapper_fn, ...)
-    // }
-    // func @wrapper_fn(..., %args) {
-    //   outlined_fn(%args)
-    // }
-    // func @outlined_fn(%args) { ... }
-    // ```
 
-    // The stale call instruction will be replaced with a new call instruction
-    // for runtime call with a wrapper function.
+  // Add the thread ID argument.
+  std::stack<Instruction *> ToBeDeleted;
+  OI.ExcludeArgsFromAggregate.push_back(createFakeIntVal(
+      Builder, AllocaIP, ToBeDeleted, TaskAllocaIP, "global.tid", false));
+
+  OI.PostOutlineCB = [this, Ident, Tied, Final, IfCondition, Dependencies,
+                      TaskAllocaBB, ToBeDeleted](Function &OutlinedFn) mutable {
+    // Replace the Stale CI by appropriate RTL function call.
     assert(OutlinedFn.getNumUses() == 1 &&
            "there must be a single user for the outlined function");
     CallInst *StaleCI = cast<CallInst>(OutlinedFn.user_back());
 
     // HasShareds is true if any variables are captured in the outlined region,
     // false otherwise.
-    bool HasShareds = StaleCI->arg_size() > 0;
+    bool HasShareds = StaleCI->arg_size() > 1;
     Builder.SetInsertPoint(StaleCI);
 
     // Gather the arguments for emitting the runtime call for
@@ -1595,7 +1597,7 @@ OpenMPIRBuilder::createTask(const LocationDescription &Loc,
     Value *SharedsSize = Builder.getInt64(0);
     if (HasShareds) {
       AllocaInst *ArgStructAlloca =
-          dyn_cast<AllocaInst>(StaleCI->getArgOperand(0));
+          dyn_cast<AllocaInst>(StaleCI->getArgOperand(1));
       assert(ArgStructAlloca &&
              "Unable to find the alloca instruction corresponding to arguments "
              "for extracted function");
@@ -1606,31 +1608,17 @@ OpenMPIRBuilder::createTask(const LocationDescription &Loc,
       SharedsSize =
           Builder.getInt64(M.getDataLayout().getTypeStoreSize(ArgStructType));
     }
-
-    // Argument - task_entry (the wrapper function)
-    // If the outlined function has some captured variables (i.e. HasShareds is
-    // true), then the wrapper function will have an additional argument (the
-    // struct containing captured variables). Otherwise, no such argument will
-    // be present.
-    SmallVector<Type *> WrapperArgTys{Builder.getInt32Ty()};
-    if (HasShareds)
-      WrapperArgTys.push_back(OutlinedFn.getArg(0)->getType());
-    FunctionCallee WrapperFuncVal = M.getOrInsertFunction(
-        (Twine(OutlinedFn.getName()) + ".wrapper").str(),
-        FunctionType::get(Builder.getInt32Ty(), WrapperArgTys, false));
-    Function *WrapperFunc = dyn_cast<Function>(WrapperFuncVal.getCallee());
-
     // Emit the @__kmpc_omp_task_alloc runtime call
     // The runtime call returns a pointer to an area where the task captured
     // variables must be copied before the task is run (TaskData)
     CallInst *TaskData = Builder.CreateCall(
         TaskAllocFn, {/*loc_ref=*/Ident, /*gtid=*/ThreadID, /*flags=*/Flags,
                       /*sizeof_task=*/TaskSize, /*sizeof_shared=*/SharedsSize,
-                      /*task_func=*/WrapperFunc});
+                      /*task_func=*/&OutlinedFn});
 
     // Copy the arguments for outlined function
     if (HasShareds) {
-      Value *Shareds = StaleCI->getArgOperand(0);
+      Value *Shareds = StaleCI->getArgOperand(1);
       Align Alignment = TaskData->getPointerAlignment(M.getDataLayout());
       Value *TaskShareds = Builder.CreateLoad(VoidPtr, TaskData);
       Builder.CreateMemCpy(TaskShareds, Alignment, Shareds, Alignment,
@@ -1689,7 +1677,7 @@ OpenMPIRBuilder::createTask(const LocationDescription &Loc,
     //    br label %exit
     //  else:
     //    call @__kmpc_omp_task_begin_if0(...)
-    //    call @wrapper_fn(...)
+    //    call @outlined_fn(...)
     //    call @__kmpc_omp_task_complete_if0(...)
     //    br label %exit
     //  exit:
@@ -1697,10 +1685,9 @@ OpenMPIRBuilder::createTask(const LocationDescription &Loc,
     if (IfCondition) {
       // `SplitBlockAndInsertIfThenElse` requires the block to have a
       // terminator.
-      BasicBlock *NewBasicBlock =
-          splitBB(Builder, /*CreateBranch=*/true, "if.end");
+      splitBB(Builder, /*CreateBranch=*/true, "if.end");
       Instruction *IfTerminator =
-          NewBasicBlock->getSinglePredecessor()->getTerminator();
+          Builder.GetInsertPoint()->getParent()->getTerminator();
       Instruction *ThenTI = IfTerminator, *ElseTI = nullptr;
       Builder.SetInsertPoint(IfTerminator);
       SplitBlockAndInsertIfThenElse(IfCondition, IfTerminator, &ThenTI,
@@ -1711,10 +1698,12 @@ OpenMPIRBuilder::createTask(const LocationDescription &Loc,
       Function *TaskCompleteFn =
           getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_omp_task_complete_if0);
       Builder.CreateCall(TaskBeginFn, {Ident, ThreadID, TaskData});
+      CallInst *CI = nullptr;
       if (HasShareds)
-        Builder.CreateCall(WrapperFunc, {ThreadID, TaskData});
+        CI = Builder.CreateCall(&OutlinedFn, {ThreadID, TaskData});
       else
-        Builder.CreateCall(WrapperFunc, {ThreadID});
+        CI = Builder.CreateCall(&OutlinedFn, {ThreadID});
+      CI->setDebugLoc(StaleCI->getDebugLoc());
       Builder.CreateCall(TaskCompleteFn, {Ident, ThreadID, TaskData});
       Builder.SetInsertPoint(ThenTI);
     }
@@ -1736,26 +1725,20 @@ OpenMPIRBuilder::createTask(const LocationDescription &Loc,
 
     StaleCI->eraseFromParent();
 
-    // Emit the body for wrapper function
-    BasicBlock *WrapperEntryBB =
-        BasicBlock::Create(M.getContext(), "", WrapperFunc);
-    Builder.SetInsertPoint(WrapperEntryBB);
+    Builder.SetInsertPoint(TaskAllocaBB, TaskAllocaBB->begin());
     if (HasShareds) {
-      llvm::Value *Shareds =
-          Builder.CreateLoad(VoidPtr, WrapperFunc->getArg(1));
-      Builder.CreateCall(&OutlinedFn, {Shareds});
-    } else {
-      Builder.CreateCall(&OutlinedFn);
+      LoadInst *Shareds = Builder.CreateLoad(VoidPtr, OutlinedFn.getArg(1));
+      OutlinedFn.getArg(1)->replaceUsesWithIf(
+          Shareds, [Shareds](Use &U) { return U.getUser() != Shareds; });
     }
-    Builder.CreateRet(Builder.getInt32(0));
+
+    while (!ToBeDeleted.empty()) {
+      ToBeDeleted.top()->eraseFromParent();
+      ToBeDeleted.pop();
+    }
   };
 
   addOutlineInfo(std::move(OI));
-
-  InsertPointTy TaskAllocaIP =
-      InsertPointTy(TaskAllocaBB, TaskAllocaBB->begin());
-  InsertPointTy TaskBodyIP = InsertPointTy(TaskBodyBB, TaskBodyBB->begin());
-  BodyGenCB(TaskAllocaIP, TaskBodyIP);
   Builder.SetInsertPoint(TaskExitBB, TaskExitBB->begin());
 
   return Builder.saveIP();
@@ -4093,25 +4076,42 @@ CallInst *OpenMPIRBuilder::createCachedThreadPrivate(
 }
 
 OpenMPIRBuilder::InsertPointTy
-OpenMPIRBuilder::createTargetInit(const LocationDescription &Loc, bool IsSPMD) {
+OpenMPIRBuilder::createTargetInit(const LocationDescription &Loc, bool IsSPMD,
+                                  int32_t MinThreadsVal, int32_t MaxThreadsVal,
+                                  int32_t MinTeamsVal, int32_t MaxTeamsVal) {
   if (!updateToLocation(Loc))
     return Loc.IP;
 
   uint32_t SrcLocStrSize;
   Constant *SrcLocStr = getOrCreateSrcLocStr(Loc, SrcLocStrSize);
   Constant *Ident = getOrCreateIdent(SrcLocStr, SrcLocStrSize);
-  ConstantInt *IsSPMDVal = ConstantInt::getSigned(
-      IntegerType::getInt8Ty(Int8->getContext()),
-      IsSPMD ? OMP_TGT_EXEC_MODE_SPMD : OMP_TGT_EXEC_MODE_GENERIC);
-  ConstantInt *UseGenericStateMachineVal = ConstantInt::getSigned(
-      IntegerType::getInt8Ty(Int8->getContext()), !IsSPMD);
-  ConstantInt *MayUseNestedParallelismVal =
-      ConstantInt::getSigned(IntegerType::getInt8Ty(Int8->getContext()), true);
-  ConstantInt *DebugIndentionLevelVal =
-      ConstantInt::getSigned(IntegerType::getInt16Ty(Int8->getContext()), 0);
+  Constant *IsSPMDVal = ConstantInt::getSigned(
+      Int8, IsSPMD ? OMP_TGT_EXEC_MODE_SPMD : OMP_TGT_EXEC_MODE_GENERIC);
+  Constant *UseGenericStateMachineVal = ConstantInt::getSigned(Int8, !IsSPMD);
+  Constant *MayUseNestedParallelismVal = ConstantInt::getSigned(Int8, true);
+  Constant *DebugIndentionLevelVal = ConstantInt::getSigned(Int16, 0);
+
+  Function *Kernel = Builder.GetInsertBlock()->getParent();
+
+  // Manifest the launch configuration in the metadata matching the kernel
+  // environment.
+  if (MinTeamsVal > 1 || MaxTeamsVal > 0)
+    writeTeamsForKernel(T, *Kernel, MinTeamsVal, MaxTeamsVal);
+
+  // For max values, < 0 means unset, == 0 means set but unknown.
+  if (MaxThreadsVal < 0)
+    MaxThreadsVal = std::max(
+        int32_t(getGridValue(T, Kernel).GV_Default_WG_Size), MinThreadsVal);
+
+  if (MaxThreadsVal > 0)
+    writeThreadBoundsForKernel(T, *Kernel, MinThreadsVal, MaxThreadsVal);
+
+  Constant *MinThreads = ConstantInt::getSigned(Int32, MinThreadsVal);
+  Constant *MaxThreads = ConstantInt::getSigned(Int32, MaxThreadsVal);
+  Constant *MinTeams = ConstantInt::getSigned(Int32, MinTeamsVal);
+  Constant *MaxTeams = ConstantInt::getSigned(Int32, MaxTeamsVal);
 
   // We need to strip the debug prefix to get the correct kernel name.
-  Function *Kernel = Builder.GetInsertBlock()->getParent();
   StringRef KernelName = Kernel->getName();
   const std::string DebugPrefix = "_debug__";
   if (KernelName.ends_with(DebugPrefix))
@@ -4142,6 +4142,10 @@ OpenMPIRBuilder::createTargetInit(const LocationDescription &Loc, bool IsSPMD) {
                                     UseGenericStateMachineVal,
                                     MayUseNestedParallelismVal,
                                     IsSPMDVal,
+                                    MinThreads,
+                                    MaxThreads,
+                                    MinTeams,
+                                    MaxTeams,
                                 });
   Constant *KernelEnvironmentInitializer = ConstantStruct::get(
       KernelEnvironment, {
@@ -4205,77 +4209,113 @@ void OpenMPIRBuilder::createTargetDeinit(const LocationDescription &Loc) {
   Builder.CreateCall(Fn, {});
 }
 
-static const omp::GV &getGridValue(Function *Kernel) {
-  if (Kernel->getCallingConv() == CallingConv::AMDGPU_KERNEL) {
-    StringRef Features =
-        Kernel->getFnAttribute("target-features").getValueAsString();
-    if (Features.count("+wavefrontsize64"))
-      return omp::getAMDGPUGridValues<64>();
-    return omp::getAMDGPUGridValues<32>();
+static MDNode *getNVPTXMDNode(Function &Kernel, StringRef Name) {
+  Module &M = *Kernel.getParent();
+  NamedMDNode *MD = M.getOrInsertNamedMetadata("nvvm.annotations");
+  for (auto *Op : MD->operands()) {
+    if (Op->getNumOperands() != 3)
+      continue;
+    auto *KernelOp = dyn_cast<ConstantAsMetadata>(Op->getOperand(0));
+    if (!KernelOp || KernelOp->getValue() != &Kernel)
+      continue;
+    auto *Prop = dyn_cast<MDString>(Op->getOperand(1));
+    if (!Prop || Prop->getString() != Name)
+      continue;
+    return Op;
   }
-  if (Triple(Kernel->getParent()->getTargetTriple()).isNVPTX())
+  return nullptr;
+}
 
-    return omp::NVPTXGridValues;
-  llvm_unreachable("No grid value available for this architecture!");
+static void updateNVPTXMetadata(Function &Kernel, StringRef Name, int32_t Value,
+                                bool Min) {
+  // Update the "maxntidx" metadata for NVIDIA, or add it.
+  MDNode *ExistingOp = getNVPTXMDNode(Kernel, Name);
+  if (ExistingOp) {
+    auto *OldVal = dyn_cast<ConstantAsMetadata>(ExistingOp->getOperand(2));
+    int32_t OldLimit = cast<ConstantInt>(OldVal->getValue())->getZExtValue();
+    ExistingOp->replaceOperandWith(
+        2, ConstantAsMetadata::get(ConstantInt::get(
+               OldVal->getValue()->getType(),
+               Min ? std::min(OldLimit, Value) : std::max(OldLimit, Value))));
+  } else {
+    LLVMContext &Ctx = Kernel.getContext();
+    Metadata *MDVals[] = {ConstantAsMetadata::get(&Kernel),
+                          MDString::get(Ctx, Name),
+                          ConstantAsMetadata::get(
+                              ConstantInt::get(Type::getInt32Ty(Ctx), Value))};
+    // Append metadata to nvvm.annotations
+    Module &M = *Kernel.getParent();
+    NamedMDNode *MD = M.getOrInsertNamedMetadata("nvvm.annotations");
+    MD->addOperand(MDNode::get(Ctx, MDVals));
+  }
+}
+
+std::pair<int32_t, int32_t>
+OpenMPIRBuilder::readThreadBoundsForKernel(const Triple &T, Function &Kernel) {
+  int32_t ThreadLimit =
+      Kernel.getFnAttributeAsParsedInteger("omp_target_thread_limit");
+
+  if (T.isAMDGPU()) {
+    const auto &Attr = Kernel.getFnAttribute("amdgpu-flat-work-group-size");
+    if (!Attr.isValid() || !Attr.isStringAttribute())
+      return {0, ThreadLimit};
+    auto [LBStr, UBStr] = Attr.getValueAsString().split(',');
+    int32_t LB, UB;
+    if (!llvm::to_integer(UBStr, UB, 10))
+      return {0, ThreadLimit};
+    UB = ThreadLimit ? std::min(ThreadLimit, UB) : UB;
+    if (!llvm::to_integer(LBStr, LB, 10))
+      return {0, UB};
+    return {LB, UB};
+  }
+
+  if (MDNode *ExistingOp = getNVPTXMDNode(Kernel, "maxntidx")) {
+    auto *OldVal = dyn_cast<ConstantAsMetadata>(ExistingOp->getOperand(2));
+    int32_t UB = cast<ConstantInt>(OldVal->getValue())->getZExtValue();
+    return {0, ThreadLimit ? std::min(ThreadLimit, UB) : UB};
+  }
+  return {0, ThreadLimit};
+}
+
+void OpenMPIRBuilder::writeThreadBoundsForKernel(const Triple &T,
+                                                 Function &Kernel, int32_t LB,
+                                                 int32_t UB) {
+  Kernel.addFnAttr("omp_target_thread_limit", std::to_string(UB));
+
+  if (T.isAMDGPU()) {
+    Kernel.addFnAttr("amdgpu-flat-work-group-size",
+                     llvm::utostr(LB) + "," + llvm::utostr(UB));
+    return;
+  }
+
+  updateNVPTXMetadata(Kernel, "maxntidx", UB, true);
+}
+
+std::pair<int32_t, int32_t>
+OpenMPIRBuilder::readTeamBoundsForKernel(const Triple &, Function &Kernel) {
+  // TODO: Read from backend annotations if available.
+  return {0, Kernel.getFnAttributeAsParsedInteger("omp_target_num_teams")};
+}
+
+void OpenMPIRBuilder::writeTeamsForKernel(const Triple &T, Function &Kernel,
+                                          int32_t LB, int32_t UB) {
+  if (T.isNVPTX()) {
+    if (UB > 0)
+      updateNVPTXMetadata(Kernel, "maxclusterrank", UB, true);
+    updateNVPTXMetadata(Kernel, "minctasm", LB, false);
+  }
+  Kernel.addFnAttr("omp_target_num_teams", std::to_string(LB));
 }
 
 void OpenMPIRBuilder::setOutlinedTargetRegionFunctionAttributes(
-    Function *OutlinedFn, int32_t NumTeams, int32_t NumThreads) {
+    Function *OutlinedFn) {
   if (Config.isTargetDevice()) {
     OutlinedFn->setLinkage(GlobalValue::WeakODRLinkage);
     // TODO: Determine if DSO local can be set to true.
     OutlinedFn->setDSOLocal(false);
     OutlinedFn->setVisibility(GlobalValue::ProtectedVisibility);
-    if (Triple(M.getTargetTriple()).isAMDGCN())
+    if (T.isAMDGCN())
       OutlinedFn->setCallingConv(CallingConv::AMDGPU_KERNEL);
-  }
-
-  if (NumTeams > 0)
-    OutlinedFn->addFnAttr("omp_target_num_teams", std::to_string(NumTeams));
-
-  if (NumThreads == -1 && Config.isGPU())
-    NumThreads = getGridValue(OutlinedFn).GV_Default_WG_Size;
-
-  if (NumThreads > 0) {
-    if (OutlinedFn->getCallingConv() == CallingConv::AMDGPU_KERNEL) {
-      OutlinedFn->addFnAttr("amdgpu-flat-work-group-size",
-                            "1," + llvm::utostr(NumThreads));
-    } else {
-      // Update the "maxntidx" metadata for NVIDIA, or add it.
-      NamedMDNode *MD = M.getOrInsertNamedMetadata("nvvm.annotations");
-      MDNode *ExistingOp = nullptr;
-      for (auto *Op : MD->operands()) {
-        if (Op->getNumOperands() != 3)
-          continue;
-        auto *Kernel = dyn_cast<ConstantAsMetadata>(Op->getOperand(0));
-        if (!Kernel || Kernel->getValue() != OutlinedFn)
-          continue;
-        auto *Prop = dyn_cast<MDString>(Op->getOperand(1));
-        if (!Prop || Prop->getString() != "maxntidx")
-          continue;
-        ExistingOp = Op;
-        break;
-      }
-      if (ExistingOp) {
-        auto *OldVal = dyn_cast<ConstantAsMetadata>(ExistingOp->getOperand(2));
-        int32_t OldLimit =
-            cast<ConstantInt>(OldVal->getValue())->getZExtValue();
-        ExistingOp->replaceOperandWith(
-            2, ConstantAsMetadata::get(
-                   ConstantInt::get(OldVal->getValue()->getType(),
-                                    std::min(OldLimit, NumThreads))));
-      } else {
-        LLVMContext &Ctx = M.getContext();
-        Metadata *MDVals[] = {ConstantAsMetadata::get(OutlinedFn),
-                              MDString::get(Ctx, "maxntidx"),
-                              ConstantAsMetadata::get(ConstantInt::get(
-                                  Type::getInt32Ty(Ctx), NumThreads))};
-        // Append metadata to nvvm.annotations
-        MD->addOperand(MDNode::get(Ctx, MDVals));
-      }
-    }
-    OutlinedFn->addFnAttr("omp_target_thread_limit",
-                          std::to_string(NumThreads));
   }
 }
 
@@ -4305,9 +4345,8 @@ Constant *OpenMPIRBuilder::createTargetRegionEntryAddr(Function *OutlinedFn,
 
 void OpenMPIRBuilder::emitTargetRegionFunction(
     TargetRegionEntryInfo &EntryInfo,
-    FunctionGenCallback &GenerateFunctionCallback, int32_t NumTeams,
-    int32_t NumThreads, bool IsOffloadEntry, Function *&OutlinedFn,
-    Constant *&OutlinedFnID) {
+    FunctionGenCallback &GenerateFunctionCallback, bool IsOffloadEntry,
+    Function *&OutlinedFn, Constant *&OutlinedFnID) {
 
   SmallString<64> EntryFnName;
   OffloadInfoManager.getTargetRegionEntryFnName(EntryFnName, EntryInfo);
@@ -4327,16 +4366,15 @@ void OpenMPIRBuilder::emitTargetRegionFunction(
           ? std::string(EntryFnName)
           : createPlatformSpecificName({EntryFnName, "region_id"});
 
-  OutlinedFnID = registerTargetRegionFunction(
-      EntryInfo, OutlinedFn, EntryFnName, EntryFnIDName, NumTeams, NumThreads);
+  OutlinedFnID = registerTargetRegionFunction(EntryInfo, OutlinedFn,
+                                              EntryFnName, EntryFnIDName);
 }
 
 Constant *OpenMPIRBuilder::registerTargetRegionFunction(
     TargetRegionEntryInfo &EntryInfo, Function *OutlinedFn,
-    StringRef EntryFnName, StringRef EntryFnIDName, int32_t NumTeams,
-    int32_t NumThreads) {
+    StringRef EntryFnName, StringRef EntryFnIDName) {
   if (OutlinedFn)
-    setOutlinedTargetRegionFunctionAttributes(OutlinedFn, NumTeams, NumThreads);
+    setOutlinedTargetRegionFunctionAttributes(OutlinedFn);
   auto OutlinedFnID = createOutlinedFunctionID(OutlinedFn, EntryFnIDName);
   auto EntryAddr = createTargetRegionEntryAddr(OutlinedFn, EntryFnName);
   OffloadInfoManager.registerTargetRegionEntryInfo(
@@ -4539,25 +4577,11 @@ FunctionCallee OpenMPIRBuilder::createDispatchFiniFunction(unsigned IVSize,
   return getOrCreateRuntimeFunction(M, Name);
 }
 
-// Copy input from pointer or i64 to the expected argument type.
-static Value *copyInput(IRBuilderBase &Builder, unsigned AddrSpace,
-                        Value *Input, Argument &Arg) {
-  auto Addr = Builder.CreateAlloca(Arg.getType()->isPointerTy()
-                                       ? Arg.getType()
-                                       : Type::getInt64Ty(Builder.getContext()),
-                                   AddrSpace);
-  auto AddrAscast =
-      Builder.CreatePointerBitCastOrAddrSpaceCast(Addr, Input->getType());
-  Builder.CreateStore(&Arg, AddrAscast);
-  auto Copy = Builder.CreateLoad(Arg.getType(), AddrAscast);
-
-  return Copy;
-}
-
-static Function *
-createOutlinedFunction(OpenMPIRBuilder &OMPBuilder, IRBuilderBase &Builder,
-                       StringRef FuncName, SmallVectorImpl<Value *> &Inputs,
-                       OpenMPIRBuilder::TargetBodyGenCallbackTy &CBFunc) {
+static Function *createOutlinedFunction(
+    OpenMPIRBuilder &OMPBuilder, IRBuilderBase &Builder, StringRef FuncName,
+    SmallVectorImpl<Value *> &Inputs,
+    OpenMPIRBuilder::TargetBodyGenCallbackTy &CBFunc,
+    OpenMPIRBuilder::TargetGenArgAccessorsCallbackTy &ArgAccessorFuncCB) {
   SmallVector<Type *> ParameterTypes;
   if (OMPBuilder.Config.isTargetDevice()) {
     // All parameters to target devices are passed as pointers
@@ -4597,18 +4621,20 @@ createOutlinedFunction(OpenMPIRBuilder &OMPBuilder, IRBuilderBase &Builder,
   // Insert return instruction.
   Builder.CreateRetVoid();
 
-  // Rewrite uses of input valus to parameters.
+  // New Alloca IP at entry point of created device function.
+  Builder.SetInsertPoint(EntryBB->getFirstNonPHI());
+  auto AllocaIP = Builder.saveIP();
+
   Builder.SetInsertPoint(UserCodeEntryBB->getFirstNonPHIOrDbg());
+
+  // Rewrite uses of input valus to parameters.
   for (auto InArg : zip(Inputs, Func->args())) {
     Value *Input = std::get<0>(InArg);
     Argument &Arg = std::get<1>(InArg);
+    Value *InputCopy = nullptr;
 
-    Value *InputCopy =
-        OMPBuilder.Config.isTargetDevice()
-            ? copyInput(Builder,
-                        OMPBuilder.M.getDataLayout().getAllocaAddrSpace(),
-                        Input, Arg)
-            : &Arg;
+    Builder.restoreIP(
+        ArgAccessorFuncCB(Arg, Input, InputCopy, AllocaIP, Builder.saveIP()));
 
     // Collect all the instructions
     for (User *User : make_early_inc_range(Input->users()))
@@ -4623,23 +4649,22 @@ createOutlinedFunction(OpenMPIRBuilder &OMPBuilder, IRBuilderBase &Builder,
   return Func;
 }
 
-static void
-emitTargetOutlinedFunction(OpenMPIRBuilder &OMPBuilder, IRBuilderBase &Builder,
-                           TargetRegionEntryInfo &EntryInfo,
-                           Function *&OutlinedFn, Constant *&OutlinedFnID,
-                           int32_t NumTeams, int32_t NumThreads,
-                           SmallVectorImpl<Value *> &Inputs,
-                           OpenMPIRBuilder::TargetBodyGenCallbackTy &CBFunc) {
+static void emitTargetOutlinedFunction(
+    OpenMPIRBuilder &OMPBuilder, IRBuilderBase &Builder,
+    TargetRegionEntryInfo &EntryInfo, Function *&OutlinedFn,
+    Constant *&OutlinedFnID, SmallVectorImpl<Value *> &Inputs,
+    OpenMPIRBuilder::TargetBodyGenCallbackTy &CBFunc,
+    OpenMPIRBuilder::TargetGenArgAccessorsCallbackTy &ArgAccessorFuncCB) {
 
   OpenMPIRBuilder::FunctionGenCallback &&GenerateOutlinedFunction =
-      [&OMPBuilder, &Builder, &Inputs, &CBFunc](StringRef EntryFnName) {
+      [&OMPBuilder, &Builder, &Inputs, &CBFunc,
+       &ArgAccessorFuncCB](StringRef EntryFnName) {
         return createOutlinedFunction(OMPBuilder, Builder, EntryFnName, Inputs,
-                                      CBFunc);
+                                      CBFunc, ArgAccessorFuncCB);
       };
 
-  OMPBuilder.emitTargetRegionFunction(EntryInfo, GenerateOutlinedFunction,
-                                      NumTeams, NumThreads, true, OutlinedFn,
-                                      OutlinedFnID);
+  OMPBuilder.emitTargetRegionFunction(EntryInfo, GenerateOutlinedFunction, true,
+                                      OutlinedFn, OutlinedFnID);
 }
 
 static void emitTargetCall(OpenMPIRBuilder &OMPBuilder, IRBuilderBase &Builder,
@@ -4698,7 +4723,9 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createTarget(
     const LocationDescription &Loc, InsertPointTy AllocaIP,
     InsertPointTy CodeGenIP, TargetRegionEntryInfo &EntryInfo, int32_t NumTeams,
     int32_t NumThreads, SmallVectorImpl<Value *> &Args,
-    GenMapInfoCallbackTy GenMapInfoCB, TargetBodyGenCallbackTy CBFunc) {
+    GenMapInfoCallbackTy GenMapInfoCB,
+    OpenMPIRBuilder::TargetBodyGenCallbackTy CBFunc,
+    OpenMPIRBuilder::TargetGenArgAccessorsCallbackTy ArgAccessorFuncCB) {
   if (!updateToLocation(Loc))
     return InsertPointTy();
 
@@ -4707,7 +4734,7 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createTarget(
   Function *OutlinedFn;
   Constant *OutlinedFnID;
   emitTargetOutlinedFunction(*this, Builder, EntryInfo, OutlinedFn,
-                             OutlinedFnID, NumTeams, NumThreads, Args, CBFunc);
+                             OutlinedFnID, Args, CBFunc, ArgAccessorFuncCB);
   if (!Config.isTargetDevice())
     emitTargetCall(*this, Builder, AllocaIP, OutlinedFn, OutlinedFnID, NumTeams,
                    NumThreads, Args, GenMapInfoCB);
@@ -5733,7 +5760,9 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createAtomicCompare(
 
 OpenMPIRBuilder::InsertPointTy
 OpenMPIRBuilder::createTeams(const LocationDescription &Loc,
-                             BodyGenCallbackTy BodyGenCB) {
+                             BodyGenCallbackTy BodyGenCB, Value *NumTeamsLower,
+                             Value *NumTeamsUpper, Value *ThreadLimit,
+                             Value *IfExpr) {
   if (!updateToLocation(Loc))
     return InsertPointTy();
 
@@ -5771,83 +5800,98 @@ OpenMPIRBuilder::createTeams(const LocationDescription &Loc,
   BasicBlock *AllocaBB =
       splitBB(Builder, /*CreateBranch=*/true, "teams.alloca");
 
+  // Push num_teams
+  if (NumTeamsLower || NumTeamsUpper || ThreadLimit || IfExpr) {
+    assert((NumTeamsLower == nullptr || NumTeamsUpper != nullptr) &&
+           "if lowerbound is non-null, then upperbound must also be non-null "
+           "for bounds on num_teams");
+
+    if (NumTeamsUpper == nullptr)
+      NumTeamsUpper = Builder.getInt32(0);
+
+    if (NumTeamsLower == nullptr)
+      NumTeamsLower = NumTeamsUpper;
+
+    if (IfExpr) {
+      assert(IfExpr->getType()->isIntegerTy() &&
+             "argument to if clause must be an integer value");
+
+      // upper = ifexpr ? upper : 1
+      if (IfExpr->getType() != Int1)
+        IfExpr = Builder.CreateICmpNE(IfExpr,
+                                      ConstantInt::get(IfExpr->getType(), 0));
+      NumTeamsUpper = Builder.CreateSelect(
+          IfExpr, NumTeamsUpper, Builder.getInt32(1), "numTeamsUpper");
+
+      // lower = ifexpr ? lower : 1
+      NumTeamsLower = Builder.CreateSelect(
+          IfExpr, NumTeamsLower, Builder.getInt32(1), "numTeamsLower");
+    }
+
+    if (ThreadLimit == nullptr)
+      ThreadLimit = Builder.getInt32(0);
+
+    Value *ThreadNum = getOrCreateThreadID(Ident);
+    Builder.CreateCall(
+        getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_push_num_teams_51),
+        {Ident, ThreadNum, NumTeamsLower, NumTeamsUpper, ThreadLimit});
+  }
+  // Generate the body of teams.
+  InsertPointTy AllocaIP(AllocaBB, AllocaBB->begin());
+  InsertPointTy CodeGenIP(BodyBB, BodyBB->begin());
+  BodyGenCB(AllocaIP, CodeGenIP);
+
   OutlineInfo OI;
   OI.EntryBB = AllocaBB;
   OI.ExitBB = ExitBB;
   OI.OuterAllocaBB = &OuterAllocaBB;
-  OI.PostOutlineCB = [this, Ident](Function &OutlinedFn) {
-    // The input IR here looks like the following-
-    // ```
-    // func @current_fn() {
-    //   outlined_fn(%args)
-    // }
-    // func @outlined_fn(%args) { ... }
-    // ```
-    //
-    // This is changed to the following-
-    //
-    // ```
-    // func @current_fn() {
-    //   runtime_call(..., wrapper_fn, ...)
-    // }
-    // func @wrapper_fn(..., %args) {
-    //   outlined_fn(%args)
-    // }
-    // func @outlined_fn(%args) { ... }
-    // ```
 
+  // Insert fake values for global tid and bound tid.
+  std::stack<Instruction *> ToBeDeleted;
+  InsertPointTy OuterAllocaIP(&OuterAllocaBB, OuterAllocaBB.begin());
+  OI.ExcludeArgsFromAggregate.push_back(createFakeIntVal(
+      Builder, OuterAllocaIP, ToBeDeleted, AllocaIP, "gid", true));
+  OI.ExcludeArgsFromAggregate.push_back(createFakeIntVal(
+      Builder, OuterAllocaIP, ToBeDeleted, AllocaIP, "tid", true));
+
+  OI.PostOutlineCB = [this, Ident, ToBeDeleted](Function &OutlinedFn) mutable {
     // The stale call instruction will be replaced with a new call instruction
-    // for runtime call with a wrapper function.
+    // for runtime call with the outlined function.
 
     assert(OutlinedFn.getNumUses() == 1 &&
            "there must be a single user for the outlined function");
     CallInst *StaleCI = cast<CallInst>(OutlinedFn.user_back());
+    ToBeDeleted.push(StaleCI);
 
-    // Create the wrapper function.
-    SmallVector<Type *> WrapperArgTys{Builder.getPtrTy(), Builder.getPtrTy()};
-    for (auto &Arg : OutlinedFn.args())
-      WrapperArgTys.push_back(Arg.getType());
-    FunctionCallee WrapperFuncVal = M.getOrInsertFunction(
-        (Twine(OutlinedFn.getName()) + ".teams").str(),
-        FunctionType::get(Builder.getVoidTy(), WrapperArgTys, false));
-    Function *WrapperFunc = dyn_cast<Function>(WrapperFuncVal.getCallee());
-    WrapperFunc->getArg(0)->setName("global_tid");
-    WrapperFunc->getArg(1)->setName("bound_tid");
-    if (WrapperFunc->arg_size() > 2)
-      WrapperFunc->getArg(2)->setName("data");
+    assert((OutlinedFn.arg_size() == 2 || OutlinedFn.arg_size() == 3) &&
+           "Outlined function must have two or three arguments only");
 
-    // Emit the body of the wrapper function - just a call to outlined function
-    // and return statement.
-    BasicBlock *WrapperEntryBB =
-        BasicBlock::Create(M.getContext(), "entrybb", WrapperFunc);
-    Builder.SetInsertPoint(WrapperEntryBB);
-    SmallVector<Value *> Args;
-    for (size_t ArgIndex = 2; ArgIndex < WrapperFunc->arg_size(); ArgIndex++)
-      Args.push_back(WrapperFunc->getArg(ArgIndex));
-    Builder.CreateCall(&OutlinedFn, Args);
-    Builder.CreateRetVoid();
+    bool HasShared = OutlinedFn.arg_size() == 3;
 
-    OutlinedFn.addFnAttr(Attribute::AttrKind::AlwaysInline);
+    OutlinedFn.getArg(0)->setName("global.tid.ptr");
+    OutlinedFn.getArg(1)->setName("bound.tid.ptr");
+    if (HasShared)
+      OutlinedFn.getArg(2)->setName("data");
 
     // Call to the runtime function for teams in the current function.
     assert(StaleCI && "Error while outlining - no CallInst user found for the "
                       "outlined function.");
     Builder.SetInsertPoint(StaleCI);
-    Args = {Ident, Builder.getInt32(StaleCI->arg_size()), WrapperFunc};
-    for (Use &Arg : StaleCI->args())
-      Args.push_back(Arg);
+    SmallVector<Value *> Args = {
+        Ident, Builder.getInt32(StaleCI->arg_size() - 2), &OutlinedFn};
+    if (HasShared)
+      Args.push_back(StaleCI->getArgOperand(2));
     Builder.CreateCall(getOrCreateRuntimeFunctionPtr(
                            omp::RuntimeFunction::OMPRTL___kmpc_fork_teams),
                        Args);
-    StaleCI->eraseFromParent();
+
+    while (!ToBeDeleted.empty()) {
+      ToBeDeleted.top()->eraseFromParent();
+      ToBeDeleted.pop();
+    }
   };
 
   addOutlineInfo(std::move(OI));
-
-  // Generate the body of teams.
-  InsertPointTy AllocaIP(AllocaBB, AllocaBB->begin());
-  InsertPointTy CodeGenIP(BodyBB, BodyBB->begin());
-  BodyGenCB(AllocaIP, CodeGenIP);
 
   Builder.SetInsertPoint(ExitBB, ExitBB->begin());
 
@@ -5911,7 +5955,9 @@ void OpenMPIRBuilder::createOffloadEntry(Constant *ID, Constant *Addr,
                                          GlobalValue::LinkageTypes,
                                          StringRef Name) {
   if (!Config.isGPU()) {
-    emitOffloadingEntry(ID, Name.empty() ? Addr->getName() : Name, Size, Flags);
+    llvm::offloading::emitOffloadingEntry(
+        M, ID, Name.empty() ? Addr->getName() : Name, Size, Flags,
+        "omp_offloading_entries");
     return;
   }
   // TODO: Add support for global variables on the device after declare target
@@ -5934,7 +5980,7 @@ void OpenMPIRBuilder::createOffloadEntry(Constant *ID, Constant *Addr,
 
   // Add a function attribute for the kernel.
   Fn->addFnAttr(Attribute::get(Ctx, "kernel"));
-  if (Triple(M.getTargetTriple()).isAMDGCN())
+  if (T.isAMDGCN())
     Fn->addFnAttr("uniform-work-group-size", "true");
   Fn->addFnAttr(Attribute::MustProgress);
 }
@@ -6124,6 +6170,42 @@ OpenMPIRBuilder::getTargetEntryUniqueInfo(FileIdentifierInfoCallbackTy CallBack,
 
   return TargetRegionEntryInfo(ParentName, ID.getDevice(), ID.getFile(),
                                std::get<1>(FileIDInfo));
+}
+
+unsigned OpenMPIRBuilder::getFlagMemberOffset() {
+  unsigned Offset = 0;
+  for (uint64_t Remain =
+           static_cast<std::underlying_type_t<omp::OpenMPOffloadMappingFlags>>(
+               omp::OpenMPOffloadMappingFlags::OMP_MAP_MEMBER_OF);
+       !(Remain & 1); Remain = Remain >> 1)
+    Offset++;
+  return Offset;
+}
+
+omp::OpenMPOffloadMappingFlags
+OpenMPIRBuilder::getMemberOfFlag(unsigned Position) {
+  // Rotate by getFlagMemberOffset() bits.
+  return static_cast<omp::OpenMPOffloadMappingFlags>(((uint64_t)Position + 1)
+                                                     << getFlagMemberOffset());
+}
+
+void OpenMPIRBuilder::setCorrectMemberOfFlag(
+    omp::OpenMPOffloadMappingFlags &Flags,
+    omp::OpenMPOffloadMappingFlags MemberOfFlag) {
+  // If the entry is PTR_AND_OBJ but has not been marked with the special
+  // placeholder value 0xFFFF in the MEMBER_OF field, then it should not be
+  // marked as MEMBER_OF.
+  if (static_cast<std::underlying_type_t<omp::OpenMPOffloadMappingFlags>>(
+          Flags & omp::OpenMPOffloadMappingFlags::OMP_MAP_PTR_AND_OBJ) &&
+      static_cast<std::underlying_type_t<omp::OpenMPOffloadMappingFlags>>(
+          (Flags & omp::OpenMPOffloadMappingFlags::OMP_MAP_MEMBER_OF) !=
+          omp::OpenMPOffloadMappingFlags::OMP_MAP_MEMBER_OF))
+    return;
+
+  // Reset the placeholder value to prepare the flag for the assignment of the
+  // proper MEMBER_OF value.
+  Flags &= ~omp::OpenMPOffloadMappingFlags::OMP_MAP_MEMBER_OF;
+  Flags |= MemberOfFlag;
 }
 
 Constant *OpenMPIRBuilder::getAddrOfDeclareTargetVar(

@@ -203,7 +203,7 @@ define amdgpu_kernel void @s_log_f32(ptr addrspace(1) %out, float %in) {
 ; GFX1100-SDAG-NEXT:    v_cmp_gt_f32_e64 vcc_lo, 0x7f800000, |v0|
 ; GFX1100-SDAG-NEXT:    v_fma_f32 v2, 0x3f317217, v0, -v1
 ; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1100-SDAG-NEXT:    v_fmac_f32_e32 v2, 0x3377d1cf, v0
+; GFX1100-SDAG-NEXT:    v_fmamk_f32 v2, v0, 0x3377d1cf, v2
 ; GFX1100-SDAG-NEXT:    v_dual_add_f32 v1, v1, v2 :: v_dual_mov_b32 v2, 0
 ; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX1100-SDAG-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc_lo
@@ -2269,7 +2269,7 @@ define float @v_log_f32(float %in) {
 ; GFX1100-SDAG-NEXT:    v_cmp_gt_f32_e64 s0, 0x7f800000, |v0|
 ; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1100-SDAG-NEXT:    v_fma_f32 v2, 0x3f317217, v0, -v1
-; GFX1100-SDAG-NEXT:    v_fmac_f32_e32 v2, 0x3377d1cf, v0
+; GFX1100-SDAG-NEXT:    v_fmamk_f32 v2, v0, 0x3377d1cf, v2
 ; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1100-SDAG-NEXT:    v_add_f32_e32 v1, v1, v2
 ; GFX1100-SDAG-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s0
@@ -2472,7 +2472,7 @@ define float @v_log_fabs_f32(float %in) {
 ; GFX1100-SDAG-NEXT:    v_cmp_gt_f32_e64 vcc_lo, 0x7f800000, |v0|
 ; GFX1100-SDAG-NEXT:    v_fma_f32 v2, 0x3f317217, v0, -v1
 ; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1100-SDAG-NEXT:    v_fmac_f32_e32 v2, 0x3377d1cf, v0
+; GFX1100-SDAG-NEXT:    v_fmamk_f32 v2, v0, 0x3377d1cf, v2
 ; GFX1100-SDAG-NEXT:    v_add_f32_e32 v1, v1, v2
 ; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX1100-SDAG-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc_lo
@@ -2675,7 +2675,7 @@ define float @v_log_fneg_fabs_f32(float %in) {
 ; GFX1100-SDAG-NEXT:    v_cmp_gt_f32_e64 vcc_lo, 0x7f800000, |v0|
 ; GFX1100-SDAG-NEXT:    v_fma_f32 v2, 0x3f317217, v0, -v1
 ; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1100-SDAG-NEXT:    v_fmac_f32_e32 v2, 0x3377d1cf, v0
+; GFX1100-SDAG-NEXT:    v_fmamk_f32 v2, v0, 0x3377d1cf, v2
 ; GFX1100-SDAG-NEXT:    v_add_f32_e32 v1, v1, v2
 ; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX1100-SDAG-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc_lo
@@ -2878,7 +2878,7 @@ define float @v_log_fneg_f32(float %in) {
 ; GFX1100-SDAG-NEXT:    v_cmp_gt_f32_e64 s0, 0x7f800000, |v0|
 ; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1100-SDAG-NEXT:    v_fma_f32 v2, 0x3f317217, v0, -v1
-; GFX1100-SDAG-NEXT:    v_fmac_f32_e32 v2, 0x3377d1cf, v0
+; GFX1100-SDAG-NEXT:    v_fmamk_f32 v2, v0, 0x3377d1cf, v2
 ; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1100-SDAG-NEXT:    v_add_f32_e32 v1, v1, v2
 ; GFX1100-SDAG-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s0
@@ -3015,9 +3015,7 @@ define float @v_log_f32_fast(float %in) {
 ; GFX1100-SDAG-NEXT:    v_mul_f32_e32 v0, v0, v2
 ; GFX1100-SDAG-NEXT:    v_log_f32_e32 v0, v0
 ; GFX1100-SDAG-NEXT:    s_waitcnt_depctr 0xfff
-; GFX1100-SDAG-NEXT:    v_fmac_f32_e32 v1, 0x3f317218, v0
-; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1100-SDAG-NEXT:    v_mov_b32_e32 v0, v1
+; GFX1100-SDAG-NEXT:    v_fmamk_f32 v0, v0, 0x3f317218, v1
 ; GFX1100-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1100-GISEL-LABEL: v_log_f32_fast:
@@ -3135,9 +3133,7 @@ define float @v_log_f32_unsafe_math_attr(float %in) "unsafe-fp-math"="true" {
 ; GFX1100-SDAG-NEXT:    v_mul_f32_e32 v0, v0, v2
 ; GFX1100-SDAG-NEXT:    v_log_f32_e32 v0, v0
 ; GFX1100-SDAG-NEXT:    s_waitcnt_depctr 0xfff
-; GFX1100-SDAG-NEXT:    v_fmac_f32_e32 v1, 0x3f317218, v0
-; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1100-SDAG-NEXT:    v_mov_b32_e32 v0, v1
+; GFX1100-SDAG-NEXT:    v_fmamk_f32 v0, v0, 0x3f317218, v1
 ; GFX1100-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1100-GISEL-LABEL: v_log_f32_unsafe_math_attr:
@@ -3255,9 +3251,7 @@ define float @v_log_f32_approx_fn_attr(float %in) "approx-func-fp-math"="true" {
 ; GFX1100-SDAG-NEXT:    v_mul_f32_e32 v0, v0, v2
 ; GFX1100-SDAG-NEXT:    v_log_f32_e32 v0, v0
 ; GFX1100-SDAG-NEXT:    s_waitcnt_depctr 0xfff
-; GFX1100-SDAG-NEXT:    v_fmac_f32_e32 v1, 0x3f317218, v0
-; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1100-SDAG-NEXT:    v_mov_b32_e32 v0, v1
+; GFX1100-SDAG-NEXT:    v_fmamk_f32 v0, v0, 0x3f317218, v1
 ; GFX1100-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1100-GISEL-LABEL: v_log_f32_approx_fn_attr:
@@ -3441,7 +3435,7 @@ define float @v_log_f32_ninf(float %in) {
 ; GFX1100-SDAG-NEXT:    v_cmp_gt_f32_e64 s0, 0x7f800000, |v0|
 ; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1100-SDAG-NEXT:    v_fma_f32 v2, 0x3f317217, v0, -v1
-; GFX1100-SDAG-NEXT:    v_fmac_f32_e32 v2, 0x3377d1cf, v0
+; GFX1100-SDAG-NEXT:    v_fmamk_f32 v2, v0, 0x3377d1cf, v2
 ; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1100-SDAG-NEXT:    v_add_f32_e32 v1, v1, v2
 ; GFX1100-SDAG-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s0
@@ -3577,9 +3571,7 @@ define float @v_log_f32_afn(float %in) {
 ; GFX1100-SDAG-NEXT:    v_mul_f32_e32 v0, v0, v2
 ; GFX1100-SDAG-NEXT:    v_log_f32_e32 v0, v0
 ; GFX1100-SDAG-NEXT:    s_waitcnt_depctr 0xfff
-; GFX1100-SDAG-NEXT:    v_fmac_f32_e32 v1, 0x3f317218, v0
-; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1100-SDAG-NEXT:    v_mov_b32_e32 v0, v1
+; GFX1100-SDAG-NEXT:    v_fmamk_f32 v0, v0, 0x3f317218, v1
 ; GFX1100-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1100-GISEL-LABEL: v_log_f32_afn:
@@ -3726,9 +3718,7 @@ define float @v_log_f32_afn_dynamic(float %in) #1 {
 ; GFX1100-SDAG-NEXT:    v_mul_f32_e32 v0, v0, v2
 ; GFX1100-SDAG-NEXT:    v_log_f32_e32 v0, v0
 ; GFX1100-SDAG-NEXT:    s_waitcnt_depctr 0xfff
-; GFX1100-SDAG-NEXT:    v_fmac_f32_e32 v1, 0x3f317218, v0
-; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1100-SDAG-NEXT:    v_mov_b32_e32 v0, v1
+; GFX1100-SDAG-NEXT:    v_fmamk_f32 v0, v0, 0x3f317218, v1
 ; GFX1100-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1100-GISEL-LABEL: v_log_f32_afn_dynamic:
@@ -3844,11 +3834,10 @@ define float @v_fabs_log_f32_afn(float %in) {
 ; GFX1100-SDAG-NEXT:    v_cndmask_b32_e64 v2, 1.0, 0x4f800000, s0
 ; GFX1100-SDAG-NEXT:    v_cndmask_b32_e64 v1, 0, 0xc1b17218, s0
 ; GFX1100-SDAG-NEXT:    v_mul_f32_e64 v0, |v0|, v2
-; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
+; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1100-SDAG-NEXT:    v_log_f32_e32 v0, v0
 ; GFX1100-SDAG-NEXT:    s_waitcnt_depctr 0xfff
-; GFX1100-SDAG-NEXT:    v_fmac_f32_e32 v1, 0x3f317218, v0
-; GFX1100-SDAG-NEXT:    v_mov_b32_e32 v0, v1
+; GFX1100-SDAG-NEXT:    v_fmamk_f32 v0, v0, 0x3f317218, v1
 ; GFX1100-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1100-GISEL-LABEL: v_fabs_log_f32_afn:
@@ -3982,7 +3971,7 @@ define float @v_log_f32_daz(float %in) #0 {
 ; GFX1100-SDAG-NEXT:    v_cmp_gt_f32_e64 vcc_lo, 0x7f800000, |v0|
 ; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1100-SDAG-NEXT:    v_fma_f32 v2, 0x3f317217, v0, -v1
-; GFX1100-SDAG-NEXT:    v_fmac_f32_e32 v2, 0x3377d1cf, v0
+; GFX1100-SDAG-NEXT:    v_fmamk_f32 v2, v0, 0x3377d1cf, v2
 ; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1100-SDAG-NEXT:    v_add_f32_e32 v1, v1, v2
 ; GFX1100-SDAG-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc_lo
@@ -4174,7 +4163,7 @@ define float @v_log_f32_nnan(float %in) {
 ; GFX1100-SDAG-NEXT:    v_cmp_gt_f32_e64 s0, 0x7f800000, |v0|
 ; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1100-SDAG-NEXT:    v_fma_f32 v2, 0x3f317217, v0, -v1
-; GFX1100-SDAG-NEXT:    v_fmac_f32_e32 v2, 0x3377d1cf, v0
+; GFX1100-SDAG-NEXT:    v_fmamk_f32 v2, v0, 0x3377d1cf, v2
 ; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1100-SDAG-NEXT:    v_add_f32_e32 v1, v1, v2
 ; GFX1100-SDAG-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s0
@@ -4324,7 +4313,7 @@ define float @v_log_f32_nnan_daz(float %in) #0 {
 ; GFX1100-SDAG-NEXT:    v_cmp_gt_f32_e64 vcc_lo, 0x7f800000, |v0|
 ; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1100-SDAG-NEXT:    v_fma_f32 v2, 0x3f317217, v0, -v1
-; GFX1100-SDAG-NEXT:    v_fmac_f32_e32 v2, 0x3377d1cf, v0
+; GFX1100-SDAG-NEXT:    v_fmamk_f32 v2, v0, 0x3377d1cf, v2
 ; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1100-SDAG-NEXT:    v_add_f32_e32 v1, v1, v2
 ; GFX1100-SDAG-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc_lo
@@ -4516,7 +4505,7 @@ define float @v_log_f32_nnan_dynamic(float %in) #1 {
 ; GFX1100-SDAG-NEXT:    v_cmp_gt_f32_e64 s0, 0x7f800000, |v0|
 ; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1100-SDAG-NEXT:    v_fma_f32 v2, 0x3f317217, v0, -v1
-; GFX1100-SDAG-NEXT:    v_fmac_f32_e32 v2, 0x3377d1cf, v0
+; GFX1100-SDAG-NEXT:    v_fmamk_f32 v2, v0, 0x3377d1cf, v2
 ; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1100-SDAG-NEXT:    v_add_f32_e32 v1, v1, v2
 ; GFX1100-SDAG-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s0
@@ -4666,7 +4655,7 @@ define float @v_log_f32_ninf_daz(float %in) #0 {
 ; GFX1100-SDAG-NEXT:    v_cmp_gt_f32_e64 vcc_lo, 0x7f800000, |v0|
 ; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1100-SDAG-NEXT:    v_fma_f32 v2, 0x3f317217, v0, -v1
-; GFX1100-SDAG-NEXT:    v_fmac_f32_e32 v2, 0x3377d1cf, v0
+; GFX1100-SDAG-NEXT:    v_fmamk_f32 v2, v0, 0x3377d1cf, v2
 ; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1100-SDAG-NEXT:    v_add_f32_e32 v1, v1, v2
 ; GFX1100-SDAG-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc_lo
@@ -4858,7 +4847,7 @@ define float @v_log_f32_ninf_dynamic(float %in) #1 {
 ; GFX1100-SDAG-NEXT:    v_cmp_gt_f32_e64 s0, 0x7f800000, |v0|
 ; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1100-SDAG-NEXT:    v_fma_f32 v2, 0x3f317217, v0, -v1
-; GFX1100-SDAG-NEXT:    v_fmac_f32_e32 v2, 0x3377d1cf, v0
+; GFX1100-SDAG-NEXT:    v_fmamk_f32 v2, v0, 0x3377d1cf, v2
 ; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1100-SDAG-NEXT:    v_add_f32_e32 v1, v1, v2
 ; GFX1100-SDAG-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s0
@@ -5041,9 +5030,9 @@ define float @v_log_f32_nnan_ninf(float %in) {
 ; GFX1100-SDAG-NEXT:    v_mul_f32_e32 v1, 0x3f317217, v0
 ; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1100-SDAG-NEXT:    v_fma_f32 v2, 0x3f317217, v0, -v1
-; GFX1100-SDAG-NEXT:    v_fmac_f32_e32 v2, 0x3377d1cf, v0
+; GFX1100-SDAG-NEXT:    v_fmamk_f32 v0, v0, 0x3377d1cf, v2
 ; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
-; GFX1100-SDAG-NEXT:    v_add_f32_e32 v0, v1, v2
+; GFX1100-SDAG-NEXT:    v_add_f32_e32 v0, v1, v0
 ; GFX1100-SDAG-NEXT:    v_cndmask_b32_e64 v1, 0, 0x41b17218, vcc_lo
 ; GFX1100-SDAG-NEXT:    v_sub_f32_e32 v0, v0, v1
 ; GFX1100-SDAG-NEXT:    s_setpc_b64 s[30:31]
@@ -5152,9 +5141,9 @@ define float @v_log_f32_nnan_ninf_daz(float %in) #0 {
 ; GFX1100-SDAG-NEXT:    v_mul_f32_e32 v1, 0x3f317217, v0
 ; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1100-SDAG-NEXT:    v_fma_f32 v2, 0x3f317217, v0, -v1
-; GFX1100-SDAG-NEXT:    v_fmac_f32_e32 v2, 0x3377d1cf, v0
+; GFX1100-SDAG-NEXT:    v_fmamk_f32 v0, v0, 0x3377d1cf, v2
 ; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1100-SDAG-NEXT:    v_add_f32_e32 v0, v1, v2
+; GFX1100-SDAG-NEXT:    v_add_f32_e32 v0, v1, v0
 ; GFX1100-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1100-GISEL-LABEL: v_log_f32_nnan_ninf_daz:
@@ -5322,9 +5311,9 @@ define float @v_log_f32_nnan_ninf_dynamic(float %in) #1 {
 ; GFX1100-SDAG-NEXT:    v_mul_f32_e32 v1, 0x3f317217, v0
 ; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1100-SDAG-NEXT:    v_fma_f32 v2, 0x3f317217, v0, -v1
-; GFX1100-SDAG-NEXT:    v_fmac_f32_e32 v2, 0x3377d1cf, v0
+; GFX1100-SDAG-NEXT:    v_fmamk_f32 v0, v0, 0x3377d1cf, v2
 ; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
-; GFX1100-SDAG-NEXT:    v_add_f32_e32 v0, v1, v2
+; GFX1100-SDAG-NEXT:    v_add_f32_e32 v0, v1, v0
 ; GFX1100-SDAG-NEXT:    v_cndmask_b32_e64 v1, 0, 0x41b17218, vcc_lo
 ; GFX1100-SDAG-NEXT:    v_sub_f32_e32 v0, v0, v1
 ; GFX1100-SDAG-NEXT:    s_setpc_b64 s[30:31]
@@ -5548,7 +5537,7 @@ define float @v_log_f32_dynamic_mode(float %in) #1 {
 ; GFX1100-SDAG-NEXT:    v_cmp_gt_f32_e64 s0, 0x7f800000, |v0|
 ; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1100-SDAG-NEXT:    v_fma_f32 v2, 0x3f317217, v0, -v1
-; GFX1100-SDAG-NEXT:    v_fmac_f32_e32 v2, 0x3377d1cf, v0
+; GFX1100-SDAG-NEXT:    v_fmamk_f32 v2, v0, 0x3377d1cf, v2
 ; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1100-SDAG-NEXT:    v_add_f32_e32 v1, v1, v2
 ; GFX1100-SDAG-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s0
@@ -5722,7 +5711,7 @@ define float @v_log_f32_undef() {
 ; GFX1100-SDAG-NEXT:    v_cmp_gt_f32_e64 vcc_lo, 0x7f800000, |v0|
 ; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1100-SDAG-NEXT:    v_fma_f32 v2, 0x3f317217, v0, -v1
-; GFX1100-SDAG-NEXT:    v_fmac_f32_e32 v2, 0x3377d1cf, v0
+; GFX1100-SDAG-NEXT:    v_fmamk_f32 v2, v0, 0x3377d1cf, v2
 ; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1100-SDAG-NEXT:    v_add_f32_e32 v1, v1, v2
 ; GFX1100-SDAG-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc_lo
@@ -5887,7 +5876,7 @@ define float @v_log_f32_0() {
 ; GFX1100-SDAG-NEXT:    v_cmp_gt_f32_e64 vcc_lo, 0x7f800000, |v0|
 ; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1100-SDAG-NEXT:    v_fma_f32 v2, 0x3f317217, v0, -v1
-; GFX1100-SDAG-NEXT:    v_fmac_f32_e32 v2, 0x3377d1cf, v0
+; GFX1100-SDAG-NEXT:    v_fmamk_f32 v2, v0, 0x3377d1cf, v2
 ; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1100-SDAG-NEXT:    v_add_f32_e32 v1, v1, v2
 ; GFX1100-SDAG-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc_lo
@@ -6041,7 +6030,7 @@ define float @v_log_f32_from_fpext_f16(i16 %src.i) {
 ; GFX1100-SDAG-NEXT:    v_cmp_gt_f32_e64 vcc_lo, 0x7f800000, |v0|
 ; GFX1100-SDAG-NEXT:    v_fma_f32 v2, 0x3f317217, v0, -v1
 ; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1100-SDAG-NEXT:    v_fmac_f32_e32 v2, 0x3377d1cf, v0
+; GFX1100-SDAG-NEXT:    v_fmamk_f32 v2, v0, 0x3377d1cf, v2
 ; GFX1100-SDAG-NEXT:    v_add_f32_e32 v1, v1, v2
 ; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1100-SDAG-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc_lo
@@ -6212,7 +6201,7 @@ define float @v_log_f32_from_fpext_math_f16(i16 %src0.i, i16 %src1.i) {
 ; GFX1100-SDAG-NEXT:    v_cmp_gt_f32_e64 vcc_lo, 0x7f800000, |v0|
 ; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1100-SDAG-NEXT:    v_fma_f32 v2, 0x3f317217, v0, -v1
-; GFX1100-SDAG-NEXT:    v_fmac_f32_e32 v2, 0x3377d1cf, v0
+; GFX1100-SDAG-NEXT:    v_fmamk_f32 v2, v0, 0x3377d1cf, v2
 ; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1100-SDAG-NEXT:    v_add_f32_e32 v1, v1, v2
 ; GFX1100-SDAG-NEXT:    v_cndmask_b32_e32 v0, v0, v1, vcc_lo
@@ -6390,7 +6379,7 @@ define float @v_log_f32_from_fpext_bf16(bfloat %src) {
 ; GFX1100-SDAG-NEXT:    v_cmp_gt_f32_e64 s0, 0x7f800000, |v0|
 ; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1100-SDAG-NEXT:    v_fma_f32 v2, 0x3f317217, v0, -v1
-; GFX1100-SDAG-NEXT:    v_fmac_f32_e32 v2, 0x3377d1cf, v0
+; GFX1100-SDAG-NEXT:    v_fmamk_f32 v2, v0, 0x3377d1cf, v2
 ; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1100-SDAG-NEXT:    v_add_f32_e32 v1, v1, v2
 ; GFX1100-SDAG-NEXT:    v_cndmask_b32_e64 v0, v0, v1, s0

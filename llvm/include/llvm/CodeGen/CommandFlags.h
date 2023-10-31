@@ -28,6 +28,7 @@ class Module;
 class AttrBuilder;
 class Function;
 class Triple;
+class TargetMachine;
 
 namespace codegen {
 
@@ -186,6 +187,14 @@ void setFunctionAttributes(StringRef CPU, StringRef Features, Module &M);
 /// Should value-tracking variable locations / instruction referencing be
 /// enabled by default for this triple?
 bool getDefaultValueTrackingVariableLocations(const llvm::Triple &T);
+
+/// Creates a TargetMachine instance with the options defined on the command
+/// line. This can be used for tools that do not need further customization of
+/// the TargetOptions.
+Expected<std::unique_ptr<TargetMachine>> createTargetMachineForTriple(
+    StringRef TargetTriple,
+    CodeGenOptLevel OptLevel = CodeGenOptLevel::Default);
+
 } // namespace codegen
 } // namespace llvm
 

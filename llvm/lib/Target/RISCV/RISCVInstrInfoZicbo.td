@@ -16,7 +16,7 @@
 //===----------------------------------------------------------------------===//
 
 // A 12-bit signed immediate where the least significant five bits are zero.
-def simm12_lsb00000 : Operand<XLenVT>,
+def simm12_lsb00000 : RISCVOp,
                       ImmLeaf<XLenVT, [{return isShiftedInt<7, 5>(Imm);}]> {
   let ParserMatchClass = SImmAsmOperand<12, "Lsb00000">;
   let EncoderMethod = "getImmOpValue";
@@ -28,7 +28,6 @@ def simm12_lsb00000 : Operand<XLenVT>,
     return MCOp.isBareSymbolRef();
   }];
   let OperandType = "OPERAND_SIMM12_LSB00000";
-  let OperandNamespace = "RISCVOp";
 }
 
 //===----------------------------------------------------------------------===//
@@ -74,12 +73,16 @@ def PREFETCH_W : Prefetch_ri<0b00011, "prefetch.w">, Sched<[]>;
 // Patterns
 //===----------------------------------------------------------------------===//
 
+def AddrRegImmLsb00000 : ComplexPattern<iPTR, 2, "SelectAddrRegImmLsb00000">;
+
 let Predicates = [HasStdExtZicbop] in {
-  // FIXME: Match address with offset
-  def : Pat<(prefetch GPR:$rs1, timm, timm, (i32 0)),
-            (PREFETCH_I GPR:$rs1, 0)>;
-  def : Pat<(prefetch GPR:$rs1, (i32 0), timm, (i32 1)),
-            (PREFETCH_R GPR:$rs1, 0)>;
-  def : Pat<(prefetch GPR:$rs1, (i32 1), timm, (i32 1)),
-            (PREFETCH_W GPR:$rs1, 0)>;
+  def : Pat<(prefetch (AddrRegImmLsb00000 (XLenVT GPR:$rs1), simm12_lsb00000:$imm12),
+                      timm, timm, (i32 0)),
+            (PREFETCH_I GPR:$rs1, simm12_lsb00000:$imm12)>;
+  def : Pat<(prefetch (AddrRegImmLsb00000 (XLenVT GPR:$rs1), simm12_lsb00000:$imm12),
+                      (i32 0), timm, (i32 1)),
+            (PREFETCH_R GPR:$rs1, simm12_lsb00000:$imm12)>;
+  def : Pat<(prefetch (AddrRegImmLsb00000 (XLenVT GPR:$rs1), simm12_lsb00000:$imm12),
+                      (i32 1), timm, (i32 1)),
+            (PREFETCH_W GPR:$rs1, simm12_lsb00000:$imm12)>;
 }

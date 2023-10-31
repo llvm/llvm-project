@@ -67,7 +67,7 @@ void IRSpeculationLayer::emit(std::unique_ptr<MaterializationResponsibility> R,
     auto SpeculatorVTy = StructType::create(MContext, "Class.Speculator");
     auto RuntimeCallTy = FunctionType::get(
         Type::getVoidTy(MContext),
-        {SpeculatorVTy->getPointerTo(), Type::getInt64Ty(MContext)}, false);
+        {PointerType::getUnqual(MContext), Type::getInt64Ty(MContext)}, false);
     auto RuntimeCall =
         Function::Create(RuntimeCallTy, Function::LinkageTypes::ExternalLinkage,
                          "__orc_speculate_for", &M);

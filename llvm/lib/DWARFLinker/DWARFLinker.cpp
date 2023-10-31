@@ -1026,6 +1026,15 @@ unsigned DWARFLinker::DIECloner::cloneStringAttribute(DIE &Die,
     StringEntry = DebugLineStrPool.getEntry(*String);
   } else {
     StringEntry = DebugStrPool.getEntry(*String);
+
+    if (AttrSpec.Attr == dwarf::DW_AT_APPLE_origin) {
+      Info.HasAppleOrigin = true;
+      if (std::optional<StringRef> FileName =
+              ObjFile.Addresses->getLibraryInstallName()) {
+        StringEntry = DebugStrPool.getEntry(*FileName);
+      }
+    }
+
     // Update attributes info.
     if (AttrSpec.Attr == dwarf::DW_AT_name)
       Info.Name = StringEntry;
@@ -1637,6 +1646,12 @@ shouldSkipAttribute(bool Update,
   }
 }
 
+struct AttributeLinkedOffsetFixup {
+  int64_t LinkedOffsetFixupVal;
+  uint64_t InputAttrStartOffset;
+  uint64_t InputAttrEndOffset;
+};
+
 DIE *DWARFLinker::DIECloner::cloneDIE(const DWARFDie &InputDIE,
                                       const DWARFFile &File, CompileUnit &Unit,
                                       int64_t PCOffset, uint32_t OutOffset,
@@ -1720,6 +1735,9 @@ DIE *DWARFLinker::DIECloner::cloneDIE(const DWARFDie &InputDIE,
       Flags |= TF_SkipPC;
   }
 
+  std::optional<StringRef> LibraryInstallName =
+      ObjFile.Addresses->getLibraryInstallName();
+  SmallVector<AttributeLinkedOffsetFixup> AttributesFixups;
   for (const auto &AttrSpec : Abbrev->attributes()) {
     if (shouldSkipAttribute(Update, AttrSpec, Flags & TF_SkipPC)) {
       DWARFFormValue::skipValue(AttrSpec.Form, Data, &Offset,
@@ -1727,17 +1745,41 @@ DIE *DWARFLinker::DIECloner::cloneDIE(const DWARFDie &InputDIE,
       continue;
     }
 
+    AttributeLinkedOffsetFixup CurAttrFixup;
+    CurAttrFixup.InputAttrStartOffset = InputDIE.getOffset() + Offset;
+    CurAttrFixup.LinkedOffsetFixupVal =
+        Unit.getStartOffset() + OutOffset - CurAttrFixup.InputAttrStartOffset;
+
     DWARFFormValue Val = AttrSpec.getFormValue();
     uint64_t AttrSize = Offset;
     Val.extractValue(Data, &Offset, U.getFormParams(), &U);
+    CurAttrFixup.InputAttrEndOffset = InputDIE.getOffset() + Offset;
     AttrSize = Offset - AttrSize;
 
-    OutOffset += cloneAttribute(*Die, InputDIE, File, Unit, Val, AttrSpec,
-                                AttrSize, AttrInfo, IsLittleEndian);
+    uint64_t FinalAttrSize =
+        cloneAttribute(*Die, InputDIE, File, Unit, Val, AttrSpec, AttrSize,
+                       AttrInfo, IsLittleEndian);
+    if (FinalAttrSize != 0 && ObjFile.Addresses->needToSaveValidRelocs())
+      AttributesFixups.push_back(CurAttrFixup);
+
+    OutOffset += FinalAttrSize;
+  }
+
+  uint16_t Tag = InputDIE.getTag();
+  // Add the DW_AT_APPLE_origin attribute to Compile Unit die if we have
+  // an install name and the DWARF doesn't have the attribute yet.
+  const bool NeedsAppleOrigin = (Tag == dwarf::DW_TAG_compile_unit) &&
+                                LibraryInstallName.has_value() &&
+                                !AttrInfo.HasAppleOrigin;
+  if (NeedsAppleOrigin) {
+    auto StringEntry = DebugStrPool.getEntry(LibraryInstallName.value());
+    Die->addValue(DIEAlloc, dwarf::Attribute(dwarf::DW_AT_APPLE_origin),
+                  dwarf::DW_FORM_strp, DIEInteger(StringEntry.getOffset()));
+    AttrInfo.Name = StringEntry;
+    OutOffset += 4;
   }
 
   // Look for accelerator entries.
-  uint16_t Tag = InputDIE.getTag();
   // FIXME: This is slightly wrong. An inline_subroutine without a
   // low_pc, but with AT_ranges might be interesting to get into the
   // accelerator tables too. For now stick with dsymutil's behavior.
@@ -1806,8 +1848,19 @@ DIE *DWARFLinker::DIECloner::cloneDIE(const DWARFDie &InputDIE,
   Linker.assignAbbrev(NewAbbrev);
   Die->setAbbrevNumber(NewAbbrev.getNumber());
 
+  uint64_t AbbrevNumberSize = getULEB128Size(Die->getAbbrevNumber());
+
   // Add the size of the abbreviation number to the output offset.
-  OutOffset += getULEB128Size(Die->getAbbrevNumber());
+  OutOffset += AbbrevNumberSize;
+
+  // Update fixups with the size of the abbreviation number
+  for (AttributeLinkedOffsetFixup &F : AttributesFixups)
+    F.LinkedOffsetFixupVal += AbbrevNumberSize;
+
+  for (AttributeLinkedOffsetFixup &F : AttributesFixups)
+    ObjFile.Addresses->updateAndSaveValidRelocs(
+        Unit.getOrigUnit().getVersion() >= 5, Unit.getOrigUnit().getOffset(),
+        F.LinkedOffsetFixupVal, F.InputAttrStartOffset, F.InputAttrEndOffset);
 
   if (!HasChildren) {
     // Update our size.
@@ -2682,12 +2735,12 @@ Error DWARFLinker::link() {
       continue;
     }
 
-    // In a first phase, just read in the debug info and load all clang modules.
+    // Clone all the clang modules with requires extracting the DIE units. We
+    // don't need the full debug info until the Analyze phase.
     OptContext.CompileUnits.reserve(
         OptContext.File.Dwarf->getNumCompileUnits());
-
     for (const auto &CU : OptContext.File.Dwarf->compile_units()) {
-      auto CUDie = CU->getUnitDIE(false);
+      auto CUDie = CU->getUnitDIE(/*ExtractUnitDIEOnly=*/true);
       if (Options.Verbose) {
         outs() << "Input compilation unit:";
         DIDumpOptions DumpOpts;
@@ -2728,9 +2781,9 @@ Error DWARFLinker::link() {
       return;
 
     for (const auto &CU : Context.File.Dwarf->compile_units()) {
-      // The !isClangModuleRef condition effectively skips over fully resolved
-      // skeleton units.
-      auto CUDie = CU->getUnitDIE();
+      // Previously we only extracted the unit DIEs. We need the full debug info
+      // now.
+      auto CUDie = CU->getUnitDIE(/*ExtractUnitDIEOnly=*/false);
       std::string PCMFile = getPCMFile(CUDie, Options.ObjectPrefixMap);
 
       if (!CUDie || LLVM_UNLIKELY(Options.Update) ||

@@ -18,8 +18,8 @@
 #include <__type_traits/is_execution_policy.h>
 #include <__type_traits/operation_traits.h>
 #include <__utility/move.h>
-#include <__utility/terminate_on_exception.h>
 #include <new>
+#include <optional>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -98,7 +98,7 @@ template <class _ExecutionPolicy,
           class _Tp,
           class _BinaryOperation1,
           class _BinaryOperation2>
-_LIBCPP_HIDE_FROM_ABI _Tp __pstl_transform_reduce(
+_LIBCPP_HIDE_FROM_ABI optional<_Tp> __pstl_transform_reduce(
     __cpu_backend_tag,
     _ForwardIterator1 __first1,
     _ForwardIterator1 __last1,
@@ -109,27 +109,25 @@ _LIBCPP_HIDE_FROM_ABI _Tp __pstl_transform_reduce(
   if constexpr (__is_parallel_execution_policy_v<_ExecutionPolicy> &&
                 __has_random_access_iterator_category_or_concept<_ForwardIterator1>::value &&
                 __has_random_access_iterator_category_or_concept<_ForwardIterator2>::value) {
-    return std::__terminate_on_exception([&] {
-      return __par_backend::__parallel_transform_reduce(
-          __first1,
-          std::move(__last1),
-          [__first1, __first2, __transform](_ForwardIterator1 __iter) {
-            return __transform(*__iter, *(__first2 + (__iter - __first1)));
-          },
-          std::move(__init),
-          std::move(__reduce),
-          [__first1, __first2, __reduce, __transform](
-              _ForwardIterator1 __brick_first, _ForwardIterator1 __brick_last, _Tp __brick_init) {
-            return std::__pstl_transform_reduce<__remove_parallel_policy_t<_ExecutionPolicy>>(
-                __cpu_backend_tag{},
-                __brick_first,
-                std::move(__brick_last),
-                __first2 + (__brick_first - __first1),
-                std::move(__brick_init),
-                std::move(__reduce),
-                std::move(__transform));
-          });
-    });
+    return __par_backend::__parallel_transform_reduce(
+        __first1,
+        std::move(__last1),
+        [__first1, __first2, __transform](_ForwardIterator1 __iter) {
+          return __transform(*__iter, *(__first2 + (__iter - __first1)));
+        },
+        std::move(__init),
+        std::move(__reduce),
+        [__first1, __first2, __reduce, __transform](
+            _ForwardIterator1 __brick_first, _ForwardIterator1 __brick_last, _Tp __brick_init) {
+          return *std::__pstl_transform_reduce<__remove_parallel_policy_t<_ExecutionPolicy>>(
+              __cpu_backend_tag{},
+              __brick_first,
+              std::move(__brick_last),
+              __first2 + (__brick_first - __first1),
+              std::move(__brick_init),
+              std::move(__reduce),
+              std::move(__transform));
+        });
   } else if constexpr (__is_unsequenced_execution_policy_v<_ExecutionPolicy> &&
                        __has_random_access_iterator_category_or_concept<_ForwardIterator1>::value &&
                        __has_random_access_iterator_category_or_concept<_ForwardIterator2>::value) {
@@ -149,7 +147,7 @@ _LIBCPP_HIDE_FROM_ABI _Tp __pstl_transform_reduce(
 }
 
 template <class _ExecutionPolicy, class _ForwardIterator, class _Tp, class _BinaryOperation, class _UnaryOperation>
-_LIBCPP_HIDE_FROM_ABI _Tp __pstl_transform_reduce(
+_LIBCPP_HIDE_FROM_ABI optional<_Tp> __pstl_transform_reduce(
     __cpu_backend_tag,
     _ForwardIterator __first,
     _ForwardIterator __last,
@@ -158,23 +156,23 @@ _LIBCPP_HIDE_FROM_ABI _Tp __pstl_transform_reduce(
     _UnaryOperation __transform) {
   if constexpr (__is_parallel_execution_policy_v<_ExecutionPolicy> &&
                 __has_random_access_iterator_category_or_concept<_ForwardIterator>::value) {
-    return std::__terminate_on_exception([&] {
-      return __par_backend::__parallel_transform_reduce(
-          std::move(__first),
-          std::move(__last),
-          [__transform](_ForwardIterator __iter) { return __transform(*__iter); },
-          std::move(__init),
-          __reduce,
-          [__transform, __reduce](auto __brick_first, auto __brick_last, _Tp __brick_init) {
-            return std::__pstl_transform_reduce<__remove_parallel_policy_t<_ExecutionPolicy>>(
-                __cpu_backend_tag{},
-                std::move(__brick_first),
-                std::move(__brick_last),
-                std::move(__brick_init),
-                std::move(__reduce),
-                std::move(__transform));
-          });
-    });
+    return __par_backend::__parallel_transform_reduce(
+        std::move(__first),
+        std::move(__last),
+        [__transform](_ForwardIterator __iter) { return __transform(*__iter); },
+        std::move(__init),
+        __reduce,
+        [__transform, __reduce](auto __brick_first, auto __brick_last, _Tp __brick_init) {
+          auto __res = std::__pstl_transform_reduce<__remove_parallel_policy_t<_ExecutionPolicy>>(
+              __cpu_backend_tag{},
+              std::move(__brick_first),
+              std::move(__brick_last),
+              std::move(__brick_init),
+              std::move(__reduce),
+              std::move(__transform));
+          _LIBCPP_ASSERT_INTERNAL(__res, "unseq/seq should never try to allocate!");
+          return *std::move(__res);
+        });
   } else if constexpr (__is_unsequenced_execution_policy_v<_ExecutionPolicy> &&
                        __has_random_access_iterator_category_or_concept<_ForwardIterator>::value) {
     return std::__simd_transform_reduce(

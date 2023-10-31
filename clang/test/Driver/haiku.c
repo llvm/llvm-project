@@ -56,6 +56,11 @@
 // CHECK-LD-X86_64-SAME: {{^}} "[[SYSROOT]]/boot/system/develop/tools/lib/gcc/x86_64-unknown-haiku/13.2.0/crtendS.o"
 // CHECK-LD-X86_64-SAME: {{^}} "[[SYSROOT]]/boot/system/develop/lib/crtn.o"
 
+// Check -rdynamic is a no-op
+// RUN: %clang -### -rdynamic %s 2>&1 --target=x86_64-unknown-haiku \
+// RUN:    | FileCheck --check-prefix=CHECK-RDYNAMIC %s
+// CHECK-RDYNAMIC-NOT: "-export-dynamic"
+
 // Check the right flags are present with -shared
 // RUN: %clang -### %s -shared 2>&1 --target=x86_64-unknown-haiku \
 // RUN:     --gcc-toolchain="" \
@@ -65,3 +70,8 @@
 // CHECK-X86_64-SHARED-SAME: "-isysroot" "[[SYSROOT:[^"]+]]"
 // CHECK-X86_64-SHARED: "{{.*}}ld{{(.exe)?}}"
 // CHECK-X86_64-SHARED-NOT: "[[SYSROOT]]/boot/system/develop/lib/start_dyn.o"
+
+// Check default ARM CPU, ARMv6
+// RUN: %clang -### %s 2>&1 --target=arm-unknown-haiku \
+// RUN:   | FileCheck --check-prefix=CHECK-ARM-CPU %s
+// CHECK-ARM-CPU: "-target-cpu" "arm1176jzf-s"

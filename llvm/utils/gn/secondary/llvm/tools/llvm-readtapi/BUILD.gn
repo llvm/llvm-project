@@ -1,3 +1,22 @@
+import("//llvm/tools/binutils_symlinks.gni")
+import("//llvm/utils/gn/build/symlink_or_copy.gni")
+
+if (llvm_install_binutils_symlinks) {
+  symlink_or_copy("readtapi") {
+    deps = [ ":llvm-readtapi" ]
+    source = "llvm-readtapi"
+    output = "$root_out_dir/bin/readtapi"
+  }
+}
+
+# //:llvm-readtapi depends on this symlink target, see comment in //BUILD.gn.
+group("symlinks") {
+  deps = [ ":llvm-readtapi" ]
+  if (llvm_install_binutils_symlinks) {
+    deps += [ ":readtapi" ]
+  }
+}
+
 executable("llvm-readtapi") {
   deps = [
     "//llvm/lib/Object",

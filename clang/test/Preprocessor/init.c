@@ -1454,6 +1454,13 @@
 // RUN: %clang_cc1 -triple lanai-unknown-unknown -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix LANAI %s
 // LANAI: #define __lanai__ 1
 //
+// RUN: %clang_cc1 -triple=aarch64-unknown-haiku -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix HAIKU %s
+// RUN: %clang_cc1 -triple=arm-unknown-haiku -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix HAIKU %s
+// RUN: %clang_cc1 -triple=riscv64-unknown-haiku -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix HAIKU %s
+// RUN: %clang_cc1 -triple=x86_64-unknown-haiku -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix HAIKU %s
+// RUN: %clang_cc1 -triple=i386-unknown-haiku -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix HAIKU %s
+// HAIKU: #define __HAIKU__ 1
+//
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=amd64-unknown-openbsd6.1 < /dev/null | FileCheck -match-full-lines -check-prefix OPENBSD %s
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=aarch64-unknown-openbsd6.1 < /dev/null | FileCheck -match-full-lines -check-prefix OPENBSD %s
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=arm-unknown-openbsd6.1-gnueabi < /dev/null | FileCheck -match-full-lines -check-prefix OPENBSD %s
@@ -1576,20 +1583,6 @@
 // EMSCRIPTEN-NEXT:#define __EMSCRIPTEN__ 1
 // WEBASSEMBLY-NEXT:#define __FINITE_MATH_ONLY__ 0
 // WEBASSEMBLY-NEXT:#define __FLOAT128__ 1
-// WEBASSEMBLY-NEXT:#define __FLT128_DECIMAL_DIG__ 36
-// WEBASSEMBLY-NEXT:#define __FLT128_DENORM_MIN__ 6.47517511943802511092443895822764655e-4966Q
-// WEBASSEMBLY-NEXT:#define __FLT128_DIG__ 33
-// WEBASSEMBLY-NEXT:#define __FLT128_EPSILON__ 1.92592994438723585305597794258492732e-34Q
-// WEBASSEMBLY-NEXT:#define __FLT128_HAS_DENORM__ 1
-// WEBASSEMBLY-NEXT:#define __FLT128_HAS_INFINITY__ 1
-// WEBASSEMBLY-NEXT:#define __FLT128_HAS_QUIET_NAN__ 1
-// WEBASSEMBLY-NEXT:#define __FLT128_MANT_DIG__ 113
-// WEBASSEMBLY-NEXT:#define __FLT128_MAX_10_EXP__ 4932
-// WEBASSEMBLY-NEXT:#define __FLT128_MAX_EXP__ 16384
-// WEBASSEMBLY-NEXT:#define __FLT128_MAX__ 1.18973149535723176508575932662800702e+4932Q
-// WEBASSEMBLY-NEXT:#define __FLT128_MIN_10_EXP__ (-4931)
-// WEBASSEMBLY-NEXT:#define __FLT128_MIN_EXP__ (-16381)
-// WEBASSEMBLY-NEXT:#define __FLT128_MIN__ 3.36210314311209350626267781732175260e-4932Q
 // WEBASSEMBLY-NOT:#define __FLT16_DECIMAL_DIG__
 // WEBASSEMBLY-NOT:#define __FLT16_DENORM_MIN__
 // WEBASSEMBLY-NOT:#define __FLT16_DIG__

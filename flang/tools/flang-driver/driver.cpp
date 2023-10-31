@@ -32,8 +32,6 @@
 #include "llvm/TargetParser/Host.h"
 #include <stdlib.h>
 
-using llvm::StringRef;
-
 // main frontend method. Lives inside fc1_main.cpp
 extern int fc1_main(llvm::ArrayRef<const char *> argv, const char *argv0);
 

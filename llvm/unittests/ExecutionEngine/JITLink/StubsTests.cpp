@@ -60,7 +60,7 @@ GenerateStub(LinkGraph &G, size_t PointerSize, Edge::Kind PointerEdgeKind) {
 TEST(StubsTest, StubsGeneration_x86_64) {
   const char PointerJumpStubContent[6] = {
       static_cast<char>(0xFFu), 0x25, 0x00, 0x00, 0x00, 0x00};
-  LinkGraph G("foo", Triple("x86_64-apple-darwin"), 8, support::little,
+  LinkGraph G("foo", Triple("x86_64-apple-darwin"), 8, llvm::endianness::little,
               getGenericEdgeKindName);
   auto [PointerSym, StubSym] = GenerateStub(G, 8U, x86_64::Pointer64);
 
@@ -80,7 +80,7 @@ TEST(StubsTest, StubsGeneration_aarch64) {
       0x10, 0x02, 0x40, (char)0xf9u, // LDR x16, [x16, <imm>@pageoff12]
       0x00, 0x02, 0x1f, (char)0xd6u  // BR  x16
   };
-  LinkGraph G("foo", Triple("aarch64-linux-gnu"), 8, support::little,
+  LinkGraph G("foo", Triple("aarch64-linux-gnu"), 8, llvm::endianness::little,
               getGenericEdgeKindName);
   auto [PointerSym, StubSym] = GenerateStub(G, 8U, aarch64::Pointer64);
 
@@ -100,8 +100,8 @@ TEST(StubsTest, StubsGeneration_aarch64) {
 TEST(StubsTest, StubsGeneration_i386) {
   const char PointerJumpStubContent[6] = {
       static_cast<char>(0xFFu), 0x25, 0x00, 0x00, 0x00, 0x00};
-  LinkGraph G("foo", Triple("i386-unknown-linux-gnu"), 4, support::little,
-              getGenericEdgeKindName);
+  LinkGraph G("foo", Triple("i386-unknown-linux-gnu"), 4,
+              llvm::endianness::little, getGenericEdgeKindName);
   auto [PointerSym, StubSym] = GenerateStub(G, 4U, i386::Pointer32);
 
   EXPECT_EQ(std::distance(StubSym.getBlock().edges().begin(),
@@ -129,7 +129,7 @@ TEST(StubsTest, StubsGeneration_loongarch32) {
       0x00,
       0x4c // jr $t8
   };
-  LinkGraph G("foo", Triple("loongarch32"), 4, support::little,
+  LinkGraph G("foo", Triple("loongarch32"), 4, llvm::endianness::little,
               getGenericEdgeKindName);
   auto [PointerSym, StubSym] = GenerateStub(G, 4U, loongarch::Pointer32);
 
@@ -161,7 +161,7 @@ TEST(StubsTest, StubsGeneration_loongarch64) {
       0x00,
       0x4c // jr $t8
   };
-  LinkGraph G("foo", Triple("loongarch64"), 8, support::little,
+  LinkGraph G("foo", Triple("loongarch64"), 8, llvm::endianness::little,
               getGenericEdgeKindName);
   auto [PointerSym, StubSym] = GenerateStub(G, 8U, loongarch::Pointer64);
 

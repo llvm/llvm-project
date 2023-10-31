@@ -79,6 +79,7 @@ enum ProcessorTypes {
   ZHAOXIN_FAM7H,
   INTEL_SIERRAFOREST,
   INTEL_GRANDRIDGE,
+  INTEL_CLEARWATERFOREST,
   CPU_TYPE_MAX
 };
 
@@ -116,6 +117,7 @@ enum ProcessorSubtypes {
   INTEL_COREI7_GRANITERAPIDS_D,
   INTEL_COREI7_ARROWLAKE,
   INTEL_COREI7_ARROWLAKE_S,
+  INTEL_COREI7_PANTHERLAKE,
   CPU_SUBTYPE_MAX
 };
 
@@ -492,6 +494,13 @@ getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
       *Subtype = INTEL_COREI7_ARROWLAKE_S;
       break;
 
+    // Pantherlake:
+    case 0xcc:
+      CPU = "pantherlake";
+      *Type = INTEL_COREI7;
+      *Subtype = INTEL_COREI7_PANTHERLAKE;
+      break;
+
     // Icelake Xeon:
     case 0x6a:
     case 0x6c:
@@ -570,6 +579,13 @@ getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
     case 0xb6:
       CPU = "grandridge";
       *Type = INTEL_GRANDRIDGE;
+      break;
+
+    // Clearwaterforest:
+    case 0xdd:
+      CPU = "clearwaterforest";
+      *Type = INTEL_COREI7;
+      *Subtype = INTEL_CLEARWATERFOREST;
       break;
 
     case 0x57:
@@ -1229,7 +1245,11 @@ enum CPUFeatures {
   FEAT_SME_F64,
   FEAT_SME_I64,
   FEAT_SME2,
-  FEAT_MAX
+  FEAT_RCPC3,
+  FEAT_MAX,
+  FEAT_EXT = 62, // Reserved to indicate presence of additional features field
+                 // in __aarch64_cpu_features
+  FEAT_INIT      // Used as flag of features initialization completion
 };
 
 // Architecture features used
@@ -1388,6 +1408,9 @@ static void __init_cpu_features_constructor(unsigned long hwcap,
     // ID_AA64ISAR1_EL1.LRCPC != 0b0000
     if (extractBits(ftr, 20, 4) != 0x0)
       setCPUFeature(FEAT_RCPC);
+    // ID_AA64ISAR1_EL1.LRCPC == 0b0011
+    if (extractBits(ftr, 20, 4) == 0x3)
+      setCPUFeature(FEAT_RCPC3);
     // ID_AA64ISAR1_EL1.SPECRES == 0b0001
     if (extractBits(ftr, 40, 4) == 0x2)
       setCPUFeature(FEAT_PREDRES);
@@ -1423,7 +1446,7 @@ static void __init_cpu_features_constructor(unsigned long hwcap,
     if (hwcap & HWCAP_SHA3)
       setCPUFeature(FEAT_SHA3);
   }
-  setCPUFeature(FEAT_MAX);
+  setCPUFeature(FEAT_INIT);
 }
 
 void __init_cpu_features_resolver(unsigned long hwcap,

@@ -69,8 +69,7 @@ protected:
   static void get(const uint8_t *Bytes, uint8_t ByteIndex, T &Value) {
     assert(ByteIndex + sizeof(T) <= GOFF::RecordLength &&
            "Byte index out of bounds!");
-    Value = support::endian::read<T, support::big, support::unaligned>(
-        &Bytes[ByteIndex]);
+    Value = support::endian::read<T, llvm::endianness::big>(&Bytes[ByteIndex]);
   }
 };
 

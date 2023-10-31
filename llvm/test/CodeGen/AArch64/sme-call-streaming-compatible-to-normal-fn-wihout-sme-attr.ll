@@ -17,12 +17,12 @@ define void @streaming_compatible() #0 {
 ; CHECK-NEXT:    stp x30, x19, [sp, #64] // 16-byte Folded Spill
 ; CHECK-NEXT:    bl __arm_sme_state
 ; CHECK-NEXT:    and x19, x0, #0x1
-; CHECK-NEXT:    tbz x19, #0, .LBB0_2
+; CHECK-NEXT:    tbz w19, #0, .LBB0_2
 ; CHECK-NEXT:  // %bb.1:
 ; CHECK-NEXT:    smstop sm
 ; CHECK-NEXT:  .LBB0_2:
 ; CHECK-NEXT:    bl non_streaming
-; CHECK-NEXT:    tbz x19, #0, .LBB0_4
+; CHECK-NEXT:    tbz w19, #0, .LBB0_4
 ; CHECK-NEXT:  // %bb.3:
 ; CHECK-NEXT:    smstart sm
 ; CHECK-NEXT:  .LBB0_4:

@@ -16,10 +16,10 @@ namespace clang {
 namespace driver {
 namespace tools {
 
-/// zos -- Directly call system default assembler and linker.
+/// Directly call system default assembler and linker.
 namespace zos {
 
-class LLVM_LIBRARY_VISIBILITY Assembler : public Tool {
+class LLVM_LIBRARY_VISIBILITY Assembler final : public Tool {
 public:
   Assembler(const ToolChain &TC) : Tool("zos::Assembler", "assembler", TC) {}
 
@@ -31,7 +31,7 @@ public:
                     const char *LinkingOutput) const override;
 };
 
-class LLVM_LIBRARY_VISIBILITY Linker : public Tool {
+class LLVM_LIBRARY_VISIBILITY Linker final : public Tool {
 public:
   Linker(const ToolChain &TC) : Tool("zos::Linker", "linker", TC) {}
 

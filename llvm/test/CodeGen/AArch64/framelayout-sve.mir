@@ -41,6 +41,7 @@
   define aarch64_sve_vector_pcs void @save_restore_sve_realign() uwtable { entry: unreachable }
   define aarch64_sve_vector_pcs void @frame_layout() uwtable { entry: unreachable }
   define void @fp_relative_index_with_float_save() uwtable { entry: unreachable }
+  define void @fp_relative_that_is_not_a_multiple_of_VLx16() uwtable { entry: unreachable }
 
 ...
 # +----------+
@@ -1285,5 +1286,26 @@ body:             |
 
     STR_ZXI $z0, %stack.0, 0
 
+    RET_ReallyLR
+---
+...
+# CHECK-LABEL: name: fp_relative_that_is_not_a_multiple_of_VLx16
+# CHECK:         - { id: 0, name: '', type: default, offset: -156, size: 156, alignment: 1,
+# CHECK-NEXT:        stack-id: scalable-vector
+# CHECK:         - { id: 1, name: '', type: variable-sized, offset: -32, alignment: 1,
+# CHECK-NEXT:        stack-id: default
+
+# CHECK:      $x8 = ADDPL_XXI $fp, -14
+# CHECK-NEXT: $z0 = LD1W_IMM killed renamable $p0, killed $x8, -8
+
+name:            fp_relative_that_is_not_a_multiple_of_VLx16
+stack:
+  - { id: 0, stack-id: scalable-vector, size: 156, alignment: 1 }
+  - { id: 1, stack-id: default, type: variable-sized, alignment: 1 }
+body:             |
+  bb.0.entry:
+    liveins: $p0
+
+    renamable $z0 = LD1W_IMM killed renamable $p0, %stack.0, 0
     RET_ReallyLR
 ---

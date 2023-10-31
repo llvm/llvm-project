@@ -303,7 +303,7 @@ define i64 @pack_i64_imm() {
 ; RV64ZBKB-LABEL: pack_i64_imm:
 ; RV64ZBKB:       # %bb.0:
 ; RV64ZBKB-NEXT:    lui a0, 65793
-; RV64ZBKB-NEXT:    addiw a0, a0, 16
+; RV64ZBKB-NEXT:    addi a0, a0, 16
 ; RV64ZBKB-NEXT:    pack a0, a0, a0
 ; RV64ZBKB-NEXT:    ret
   ret i64 1157442765409226768 ; 0x0101010101010101

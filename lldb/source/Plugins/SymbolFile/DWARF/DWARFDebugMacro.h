@@ -17,11 +17,11 @@
 #include "lldb/lldb-types.h"
 
 namespace lldb_private {
-
 class DWARFDataExtractor;
+}
 
-} // namespace lldb_private
-
+namespace lldb_private::plugin {
+namespace dwarf {
 class SymbolFileDWARF;
 
 class DWARFDebugMacroHeader {
@@ -33,15 +33,14 @@ public:
   };
 
   static DWARFDebugMacroHeader
-  ParseHeader(const lldb_private::DWARFDataExtractor &debug_macro_data,
+  ParseHeader(const DWARFDataExtractor &debug_macro_data,
               lldb::offset_t *offset);
 
   bool OffsetIs64Bit() const { return m_offset_is_64_bit; }
 
 private:
-  static void
-  SkipOperandTable(const lldb_private::DWARFDataExtractor &debug_macro_data,
-                   lldb::offset_t *offset);
+  static void SkipOperandTable(const DWARFDataExtractor &debug_macro_data,
+                               lldb::offset_t *offset);
 
   uint16_t m_version = 0;
   bool m_offset_is_64_bit = false;
@@ -50,12 +49,14 @@ private:
 
 class DWARFDebugMacroEntry {
 public:
-  static void
-  ReadMacroEntries(const lldb_private::DWARFDataExtractor &debug_macro_data,
-                   const lldb_private::DWARFDataExtractor &debug_str_data,
-                   const bool offset_is_64_bit, lldb::offset_t *sect_offset,
-                   SymbolFileDWARF *sym_file_dwarf,
-                   lldb_private::DebugMacrosSP &debug_macros_sp);
+  static void ReadMacroEntries(const DWARFDataExtractor &debug_macro_data,
+                               const DWARFDataExtractor &debug_str_data,
+                               const bool offset_is_64_bit,
+                               lldb::offset_t *sect_offset,
+                               SymbolFileDWARF *sym_file_dwarf,
+                               DebugMacrosSP &debug_macros_sp);
 };
+} // namespace dwarf
+} // namespace lldb_private::plugin
 
 #endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFDEBUGMACRO_H

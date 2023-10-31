@@ -178,17 +178,17 @@ X86TTIImpl::getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
   unsigned PreferVectorWidth = ST->getPreferVectorWidth();
   switch (K) {
   case TargetTransformInfo::RGK_Scalar:
-    return TypeSize::getFixed(ST->is64Bit() ? 64 : 32);
+    return TypeSize::Fixed(ST->is64Bit() ? 64 : 32);
   case TargetTransformInfo::RGK_FixedWidthVector:
-    if (ST->hasAVX512() && PreferVectorWidth >= 512)
-      return TypeSize::getFixed(512);
+    if (ST->hasAVX512() && ST->hasEVEX512() && PreferVectorWidth >= 512)
+      return TypeSize::Fixed(512);
     if (ST->hasAVX() && PreferVectorWidth >= 256)
-      return TypeSize::getFixed(256);
+      return TypeSize::Fixed(256);
     if (ST->hasSSE1() && PreferVectorWidth >= 128)
-      return TypeSize::getFixed(128);
-    return TypeSize::getFixed(0);
+      return TypeSize::Fixed(128);
+    return TypeSize::Fixed(0);
   case TargetTransformInfo::RGK_ScalableVector:
-    return TypeSize::getScalable(0);
+    return TypeSize::Scalable(0);
   }
 
   llvm_unreachable("Unsupported register kind");
@@ -1481,6 +1481,10 @@ InstructionCost X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
   if (Kind == TTI::SK_Broadcast)
     LT.first = 1;
 
+  // Treat <X x bfloat> shuffles as <X x half>.
+  if (LT.second.isVector() && LT.second.getScalarType() == MVT::bf16)
+    LT.second = LT.second.changeVectorElementType(MVT::f16);
+
   // Subvector extractions are free if they start at the beginning of a
   // vector and cheap if the subvectors are aligned.
   if (Kind == TTI::SK_ExtractSubvector && LT.second.isVector()) {
@@ -1596,7 +1600,6 @@ InstructionCost X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
             BaseTp->getElementType()->getPrimitiveSizeInBits() &&
         LegalVT.getVectorNumElements() <
             cast<FixedVectorType>(BaseTp)->getNumElements()) {
-
       unsigned VecTySize = DL.getTypeStoreSize(BaseTp);
       unsigned LegalVTSize = LegalVT.getStoreSize();
       // Number of source vectors after legalization:
@@ -1621,6 +1624,10 @@ InstructionCost X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
         // copy of the previous destination register (the cost is
         // TTI::TCC_Basic). If the source register is just reused, the cost for
         // this operation is 0.
+        NumOfDests =
+            getTypeLegalizationCost(
+                FixedVectorType::get(BaseTp->getElementType(), Mask.size()))
+                .first;
         unsigned E = *NumOfDests.getValue();
         unsigned NormalizedVF =
             LegalVT.getVectorNumElements() * std::max(NumOfSrcs, E);
@@ -1635,7 +1642,7 @@ InstructionCost X86TTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
             NormalizedMask, NumOfSrcRegs, NumOfDestRegs, NumOfDestRegs, []() {},
             [this, SingleOpTy, CostKind, &PrevSrcReg, &PrevRegMask,
              &Cost](ArrayRef<int> RegMask, unsigned SrcReg, unsigned DestReg) {
-              if (!ShuffleVectorInst::isIdentityMask(RegMask)) {
+              if (!ShuffleVectorInst::isIdentityMask(RegMask, RegMask.size())) {
                 // Check if the previous register can be just copied to the next
                 // one.
                 if (PrevRegMask.empty() || PrevSrcReg != SrcReg ||
@@ -6124,7 +6131,8 @@ X86TTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
     // Only enable vector loads for equality comparison. Right now the vector
     // version is not as fast for three way compare (see #33329).
     const unsigned PreferredWidth = ST->getPreferVectorWidth();
-    if (PreferredWidth >= 512 && ST->hasAVX512()) Options.LoadSizes.push_back(64);
+    if (PreferredWidth >= 512 && ST->hasAVX512() && ST->hasEVEX512())
+      Options.LoadSizes.push_back(64);
     if (PreferredWidth >= 256 && ST->hasAVX()) Options.LoadSizes.push_back(32);
     if (PreferredWidth >= 128 && ST->hasSSE2()) Options.LoadSizes.push_back(16);
   }

@@ -11,6 +11,7 @@
 #include "Symbols.h"
 #include "lld/Common/Timer.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/TimeProfiler.h"
 #include <vector>
 
 namespace lld::coff {
@@ -19,6 +20,7 @@ namespace lld::coff {
 // COMDAT chunks will be ignored by Writer, so they will be excluded
 // from the final output.
 void markLive(COFFLinkerContext &ctx) {
+  llvm::TimeTraceScope timeScope("Mark live");
   ScopedTimer t(ctx.gcTimer);
 
   // We build up a worklist of sections which have been marked as live. We only

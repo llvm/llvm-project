@@ -132,11 +132,11 @@ static DWARFDie GetParentDeclContextDIE(DWARFDie &Die) {
 static std::optional<uint32_t>
 getQualifiedNameIndex(DWARFDie &Die, uint64_t Language, GsymCreator &Gsym) {
   // If the dwarf has mangled name, use mangled name
-  if (auto LinkageName =
-          dwarf::toString(Die.findRecursively({dwarf::DW_AT_MIPS_linkage_name,
-                                               dwarf::DW_AT_linkage_name}),
-                          nullptr))
-    return Gsym.insertString(LinkageName, /* Copy */ false);
+  if (auto LinkageName = Die.getLinkageName()) {
+    // We have seen cases were linkage name is actually empty.
+    if (strlen(LinkageName) > 0)
+      return Gsym.insertString(LinkageName, /* Copy */ false);
+  }
 
   StringRef ShortName(Die.getName(DINameKind::ShortName));
   if (ShortName.empty())

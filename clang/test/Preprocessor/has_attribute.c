@@ -10,6 +10,11 @@ int always_inline();
 int __always_inline__();
 #endif
 
+// CHECK: warn_unused_result
+#if __has_attribute(warn_unused_result)
+int warn_unused_result();
+#endif
+
 // CHECK: no_dummy_attribute
 #if !__has_attribute(dummy_attribute)
 int no_dummy_attribute();

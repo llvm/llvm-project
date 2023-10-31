@@ -67,7 +67,7 @@ bool Replacement::isApplicable() const {
 
 bool Replacement::apply(Rewriter &Rewrite) const {
   SourceManager &SM = Rewrite.getSourceMgr();
-  auto Entry = SM.getFileManager().getFile(FilePath);
+  auto Entry = SM.getFileManager().getOptionalFileRef(FilePath);
   if (!Entry)
     return false;
 

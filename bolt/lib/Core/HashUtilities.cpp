@@ -155,10 +155,7 @@ std::string hashBlockLoose(BinaryContext &BC, const BinaryBasicBlock &BB) {
     }
 
     std::string Mnemonic = BC.InstPrinter->getMnemonic(&Inst).first;
-    Mnemonic.erase(
-        std::remove_if(Mnemonic.begin(), Mnemonic.end(),
-                       [](unsigned char ch) { return std::isspace(ch); }),
-        Mnemonic.end());
+    llvm::erase_if(Mnemonic, [](unsigned char ch) { return std::isspace(ch); });
     Opcodes.insert(Mnemonic);
   }
 

@@ -511,6 +511,12 @@ define void @f87() fn_ret_thunk_extern { ret void }
 ; CHECK: define void @f88() [[SKIPPROFILE:#[0-9]+]]
 define void @f88() skipprofile { ret void }
 
+define void @f89() optdebug
+; CHECK: define void @f89() [[OPTDEBUG:#[0-9]+]]
+{
+        ret void;
+}
+
 ; CHECK: attributes #0 = { noreturn }
 ; CHECK: attributes #1 = { nounwind }
 ; CHECK: attributes #2 = { memory(none) }
@@ -566,4 +572,5 @@ define void @f88() skipprofile { ret void }
 ; CHECK: attributes #52 = { nosanitize_bounds }
 ; CHECK: attributes [[FNRETTHUNKEXTERN]] = { fn_ret_thunk_extern }
 ; CHECK: attributes [[SKIPPROFILE]] = { skipprofile }
+; CHECK: attributes [[OPTDEBUG]] = { optdebug }
 ; CHECK: attributes #[[NOBUILTIN]] = { nobuiltin }

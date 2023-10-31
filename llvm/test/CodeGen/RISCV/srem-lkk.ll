@@ -198,7 +198,7 @@ define i32 @fold_srem_negative_even(i32 %x) nounwind {
 ; RV64IM-NEXT:    srai a1, a1, 40
 ; RV64IM-NEXT:    add a1, a1, a2
 ; RV64IM-NEXT:    lui a2, 1048570
-; RV64IM-NEXT:    addiw a2, a2, 1595
+; RV64IM-NEXT:    addi a2, a2, 1595
 ; RV64IM-NEXT:    mul a1, a1, a2
 ; RV64IM-NEXT:    subw a0, a0, a1
 ; RV64IM-NEXT:    ret

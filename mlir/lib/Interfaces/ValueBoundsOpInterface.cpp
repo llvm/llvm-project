@@ -484,25 +484,32 @@ FailureOr<int64_t> ValueBoundsConstraintSet::computeConstantBound(
   return failure();
 }
 
-FailureOr<bool>
-ValueBoundsConstraintSet::areEqual(Value value1, Value value2,
-                                   std::optional<int64_t> dim1,
-                                   std::optional<int64_t> dim2) {
+FailureOr<int64_t>
+ValueBoundsConstraintSet::computeConstantDelta(Value value1, Value value2,
+                                               std::optional<int64_t> dim1,
+                                               std::optional<int64_t> dim2) {
 #ifndef NDEBUG
   assertValidValueDim(value1, dim1);
   assertValidValueDim(value2, dim2);
 #endif // NDEBUG
 
-  // Subtract the two values/dimensions from each other. If the result is 0,
-  // both are equal.
   Builder b(value1.getContext());
   AffineMap map = AffineMap::get(/*dimCount=*/2, /*symbolCount=*/0,
                                  b.getAffineDimExpr(0) - b.getAffineDimExpr(1));
-  FailureOr<int64_t> bound = computeConstantBound(
-      presburger::BoundType::EQ, map, {{value1, dim1}, {value2, dim2}});
-  if (failed(bound))
+  return computeConstantBound(presburger::BoundType::EQ, map,
+                              {{value1, dim1}, {value2, dim2}});
+}
+
+FailureOr<bool>
+ValueBoundsConstraintSet::areEqual(Value value1, Value value2,
+                                   std::optional<int64_t> dim1,
+                                   std::optional<int64_t> dim2) {
+  // Subtract the two values/dimensions from each other. If the result is 0,
+  // both are equal.
+  FailureOr<int64_t> delta = computeConstantDelta(value1, value2, dim1, dim2);
+  if (failed(delta))
     return failure();
-  return *bound == 0;
+  return *delta == 0;
 }
 
 ValueBoundsConstraintSet::BoundBuilder &

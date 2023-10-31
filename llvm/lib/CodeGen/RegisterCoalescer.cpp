@@ -1415,6 +1415,9 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
   // from SUBREG_TO_REG, such as:
   // $edi = MOV32r0 implicit-def dead $eflags, implicit-def $rdi
   // undef %0.sub_32bit = MOV32r0 implicit-def dead $eflags, implicit-def %0
+  //
+  // The implicit-def of the super register may have been reduced to
+  // subregisters depending on the uses.
 
   bool NewMIDefinesFullReg = false;
 
@@ -1432,12 +1435,14 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
         assert(MO.isImplicit() && MO.getReg().isPhysical() &&
                (MO.isDead() ||
                 (DefSubIdx &&
-                 (TRI->getSubReg(MO.getReg(), DefSubIdx) ==
-                  MCRegister((unsigned)NewMI.getOperand(0).getReg())))));
+                 ((TRI->getSubReg(MO.getReg(), DefSubIdx) ==
+                   MCRegister((unsigned)NewMI.getOperand(0).getReg())) ||
+                  TRI->isSubRegisterEq(NewMI.getOperand(0).getReg(),
+                                       MO.getReg())))));
         NewMIImplDefs.push_back(MO.getReg().asMCReg());
       } else {
-        assert(MO.getReg() == NewMI.getOperand(0).getReg() &&
-               MO.getSubReg() == 0);
+        assert(MO.getReg() == NewMI.getOperand(0).getReg());
+
         // We're only expecting another def of the main output, so the range
         // should get updated with the regular output range.
         //
@@ -4166,14 +4171,6 @@ bool RegisterCoalescer::runOnMachineFunction(MachineFunction &fn) {
     JoinGlobalCopies = STI.enableJoinGlobalCopies();
   else
     JoinGlobalCopies = (EnableGlobalCopies == cl::BOU_TRUE);
-
-  // FIXME: MachineFunctionProperties cannot express the required pre-property
-  // no-SSA. When running a MIR testcase without any virtual register defs, the
-  // MIR parser assumes SSA. MachineFunctionPass::getClearedProperties is called
-  // after the pass is run, so the properties at this point say it's an SSA
-  // function.  Forcibly clear it here so -verify-coalescing doesn't complain
-  // after multiple virtual register defs are introduced.
-  MRI->leaveSSA();
 
   // If there are PHIs tracked by debug-info, they will need updating during
   // coalescing. Build an index of those PHIs to ease updating.

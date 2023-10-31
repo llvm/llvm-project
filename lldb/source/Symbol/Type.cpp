@@ -64,49 +64,49 @@ bool lldb_private::contextMatches(llvm::ArrayRef<CompilerContext> context_chain,
   return true;
 }
 
-void CompilerContext::Dump() const {
+void CompilerContext::Dump(Stream &s) const {
   switch (kind) {
   default:
-    printf("Invalid");
+    s << "Invalid";
     break;
   case CompilerContextKind::TranslationUnit:
-    printf("TranslationUnit");
+    s << "TranslationUnit";
     break;
   case CompilerContextKind::Module:
-    printf("Module");
+    s << "Module";
     break;
   case CompilerContextKind::Namespace:
-    printf("Namespace");
+    s << "Namespace";
     break;
   case CompilerContextKind::Class:
-    printf("Class");
+    s << "Class";
     break;
   case CompilerContextKind::Struct:
-    printf("Structure");
+    s << "Structure";
     break;
   case CompilerContextKind::Union:
-    printf("Union");
+    s << "Union";
     break;
   case CompilerContextKind::Function:
-    printf("Function");
+    s << "Function";
     break;
   case CompilerContextKind::Variable:
-    printf("Variable");
+    s << "Variable";
     break;
   case CompilerContextKind::Enum:
-    printf("Enumeration");
+    s << "Enumeration";
     break;
   case CompilerContextKind::Typedef:
-    printf("Typedef");
+    s << "Typedef";
     break;
   case CompilerContextKind::AnyModule:
-    printf("AnyModule");
+    s << "AnyModule";
     break;
   case CompilerContextKind::AnyType:
-    printf("AnyType");
+    s << "AnyType";
     break;
   }
-  printf("(\"%s\")\n", name.GetCString());
+  s << "(" << name << ")";
 }
 
 class TypeAppendVisitor {
@@ -312,30 +312,6 @@ ConstString Type::GetBaseName() {
 
 void Type::DumpTypeName(Stream *s) { GetName().Dump(s, "<invalid-type-name>"); }
 
-void Type::DumpValue(ExecutionContext *exe_ctx, Stream *s,
-                     const DataExtractor &data, uint32_t data_byte_offset,
-                     bool show_types, bool show_summary, bool verbose,
-                     lldb::Format format) {
-  if (ResolveCompilerType(ResolveState::Forward)) {
-    if (show_types) {
-      s->PutChar('(');
-      if (verbose)
-        s->Printf("Type{0x%8.8" PRIx64 "} ", GetID());
-      DumpTypeName(s);
-      s->PutCString(") ");
-    }
-
-    GetForwardCompilerType().DumpValue(
-        exe_ctx, s, format == lldb::eFormatDefault ? GetFormat() : format, data,
-        data_byte_offset,
-        GetByteSize(exe_ctx ? exe_ctx->GetBestExecutionContextScope() : nullptr)
-            .value_or(0),
-        0, // Bitfield bit size
-        0, // Bitfield bit offset
-        show_types, show_summary, verbose, 0);
-  }
-}
-
 Type *Type::GetEncodingType() {
   if (m_encoding_type == nullptr && m_encoding_uid != LLDB_INVALID_UID)
     m_encoding_type = m_symbol_file->ResolveTypeUID(m_encoding_uid);
@@ -414,24 +390,6 @@ lldb::Format Type::GetFormat() { return GetForwardCompilerType().GetFormat(); }
 lldb::Encoding Type::GetEncoding(uint64_t &count) {
   // Make sure we resolve our type if it already hasn't been.
   return GetForwardCompilerType().GetEncoding(count);
-}
-
-bool Type::DumpValueInMemory(ExecutionContext *exe_ctx, Stream *s,
-                             lldb::addr_t address, AddressType address_type,
-                             bool show_types, bool show_summary, bool verbose) {
-  if (address != LLDB_INVALID_ADDRESS) {
-    DataExtractor data;
-    Target *target = nullptr;
-    if (exe_ctx)
-      target = exe_ctx->GetTargetPtr();
-    if (target)
-      data.SetByteOrder(target->GetArchitecture().GetByteOrder());
-    if (ReadFromMemory(exe_ctx, address, address_type, data)) {
-      DumpValue(exe_ctx, s, data, 0, show_types, show_summary, verbose);
-      return true;
-    }
-  }
-  return false;
 }
 
 bool Type::ReadFromMemory(ExecutionContext *exe_ctx, lldb::addr_t addr,
@@ -790,6 +748,10 @@ void TypeAndOrName::SetName(const char *type_name_cstr) {
   m_type_name.SetCString(type_name_cstr);
 }
 
+void TypeAndOrName::SetName(llvm::StringRef type_name) {
+  m_type_name.SetString(type_name);
+}
+
 void TypeAndOrName::SetTypeSP(lldb::TypeSP type_sp) {
   if (type_sp) {
     m_compiler_type = type_sp->GetForwardCompilerType();
@@ -1080,6 +1042,23 @@ bool TypeImpl::GetDescription(lldb_private::Stream &strm,
     strm.PutCString("Invalid TypeImpl module for type has been deleted\n");
   }
   return true;
+}
+
+CompilerType TypeImpl::FindDirectNestedType(llvm::StringRef name) {
+  if (name.empty())
+    return CompilerType();
+  auto type_system = GetTypeSystem(/*prefer_dynamic*/ false);
+  auto *symbol_file = type_system->GetSymbolFile();
+  auto decl_context = type_system->GetCompilerDeclContextForType(m_static_type);
+  if (!decl_context.IsValid())
+    return CompilerType();
+  llvm::DenseSet<lldb_private::SymbolFile *> searched_symbol_files;
+  TypeMap search_result;
+  symbol_file->FindTypes(ConstString(name), decl_context, /*max_matches*/ 1,
+                         searched_symbol_files, search_result);
+  if (search_result.Empty())
+    return CompilerType();
+  return search_result.GetTypeAtIndex(0)->GetFullCompilerType();
 }
 
 bool TypeMemberFunctionImpl::IsValid() {

@@ -310,8 +310,7 @@ define amdgpu_ps i64 @s_csh_64_1(i64 inreg %a, i64 inreg %b) {
 ;
 ; GISEL-LABEL: s_csh_64_1:
 ; GISEL:       ; %bb.0:
-; GISEL-NEXT:    s_mov_b64 s[4:5], 0xff
-; GISEL-NEXT:    s_and_b64 s[2:3], s[2:3], s[4:5]
+; GISEL-NEXT:    s_and_b64 s[2:3], s[2:3], 0xff
 ; GISEL-NEXT:    s_lshl_b64 s[4:5], s[0:1], s2
 ; GISEL-NEXT:    s_lshr_b64 s[6:7], s[0:1], s2
 ; GISEL-NEXT:    s_ashr_i64 s[0:1], s[0:1], s2

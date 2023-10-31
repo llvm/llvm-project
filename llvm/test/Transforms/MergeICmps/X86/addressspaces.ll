@@ -11,7 +11,7 @@ define void @form_memcmp(ptr dereferenceable(16) %a, ptr dereferenceable(16) %b)
 ; CHECK-NEXT:    br label %"bb1+bb2"
 ; CHECK:       "bb1+bb2":
 ; CHECK-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(ptr [[A]], ptr [[B]], i64 16)
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[MEMCMP]], 0
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i32 [[MEMCMP]], 0
 ; CHECK-NEXT:    br label [[BB3:%.*]]
 ; CHECK:       bb3:
 ; CHECK-NEXT:    ret void
@@ -46,13 +46,13 @@ define void @no_memcmp(ptr addrspace(11) dereferenceable(16) %a, ptr addrspace(1
 ; CHECK-NEXT:    [[PTR_B1:%.*]] = getelementptr inbounds [2 x i64], ptr addrspace(11) [[B:%.*]], i64 0, i64 1
 ; CHECK-NEXT:    br label [[BB1:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[A0:%.*]] = load i64, ptr addrspace(11) [[A]], align 4
-; CHECK-NEXT:    [[B0:%.*]] = load i64, ptr addrspace(11) [[B]], align 4
+; CHECK-NEXT:    [[A0:%.*]] = load i64, ptr addrspace(11) [[A]], align 8
+; CHECK-NEXT:    [[B0:%.*]] = load i64, ptr addrspace(11) [[B]], align 8
 ; CHECK-NEXT:    [[COND0:%.*]] = icmp eq i64 [[A0]], [[B0]]
 ; CHECK-NEXT:    br i1 [[COND0]], label [[BB2:%.*]], label [[BB3:%.*]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[A1:%.*]] = load i64, ptr addrspace(11) [[PTR_A1]], align 4
-; CHECK-NEXT:    [[B1:%.*]] = load i64, ptr addrspace(11) [[PTR_B1]], align 4
+; CHECK-NEXT:    [[A1:%.*]] = load i64, ptr addrspace(11) [[PTR_A1]], align 8
+; CHECK-NEXT:    [[B1:%.*]] = load i64, ptr addrspace(11) [[PTR_B1]], align 8
 ; CHECK-NEXT:    [[COND1:%.*]] = icmp eq i64 [[A1]], [[B1]]
 ; CHECK-NEXT:    br label [[BB3]]
 ; CHECK:       bb3:

@@ -845,7 +845,7 @@ define {<8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>} @load_
 ; RV64-NEXT:    vl8r.v v24, (a1) # Unknown-size Folded Reload
 ; RV64-NEXT:    vrgatherei16.vv v8, v24, v16, v0.t
 ; RV64-NEXT:    lui a1, 16
-; RV64-NEXT:    addiw a1, a1, 7
+; RV64-NEXT:    addi a1, a1, 7
 ; RV64-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; RV64-NEXT:    vmv.v.x v12, a1
 ; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
@@ -917,7 +917,7 @@ define {<8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>} @load_
 ; RV64-NEXT:    vsetivli zero, 5, e64, m4, tu, ma
 ; RV64-NEXT:    vmv.v.v v4, v8
 ; RV64-NEXT:    lui a1, 112
-; RV64-NEXT:    addiw a1, a1, 1
+; RV64-NEXT:    addi a1, a1, 1
 ; RV64-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; RV64-NEXT:    vmv.v.x v12, a1
 ; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, mu

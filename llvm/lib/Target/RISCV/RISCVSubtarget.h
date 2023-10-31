@@ -46,11 +46,13 @@ struct RISCVTuneInfo {
 
 class RISCVSubtarget : public RISCVGenSubtargetInfo {
 public:
+  // clang-format off
   enum RISCVProcFamilyEnum : uint8_t {
     Others,
     SiFive7,
+    VentanaVeyron,
   };
-
+  // clang-format on
 private:
   virtual void anchor();
 
@@ -106,6 +108,10 @@ public:
     return &TSInfo;
   }
   bool enableMachineScheduler() const override { return true; }
+
+  bool enablePostRAScheduler() const override {
+    return getSchedModel().PostRAScheduler || UsePostRAScheduler;
+  }
 
   Align getPrefFunctionAlignment() const {
     return Align(TuneInfo->PrefFunctionAlignment);

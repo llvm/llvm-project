@@ -11,8 +11,8 @@
 int main(int argc, char **argv) {
   __hwasan_enable_allocator_tagging();
   char a[] = {static_cast<char>(argc), 2, 3, 4};
-  volatile int size = sizeof(a);
-  char *volatile p = (char *)malloc(size);
+  int size = sizeof(a);
+  char *p = (char *)malloc(size);
   memcpy(p, a, size);
   free(p);
   return memcmp(p, a, size);

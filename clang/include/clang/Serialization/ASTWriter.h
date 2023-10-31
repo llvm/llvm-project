@@ -613,7 +613,6 @@ public:
   /// the module but currently is merely a random 32-bit number.
   ASTFileSignature WriteAST(Sema &SemaRef, StringRef OutputFile,
                             Module *WritingModule, StringRef isysroot,
-                            bool hasErrors = false,
                             bool ShouldCacheASTInMemory = false);
 
   /// Emit a token.

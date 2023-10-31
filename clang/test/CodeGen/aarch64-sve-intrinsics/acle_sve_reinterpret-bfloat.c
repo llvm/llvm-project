@@ -21,7 +21,7 @@
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 8 x bfloat> [[OP:%.*]] to <vscale x 16 x i8>
 // CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
 //
-// CPP-CHECK-LABEL: @_Z26test_svreinterpret_s8_bf16u14__SVBFloat16_t(
+// CPP-CHECK-LABEL: @_Z26test_svreinterpret_s8_bf16u14__SVBfloat16_t(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 8 x bfloat> [[OP:%.*]] to <vscale x 16 x i8>
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
@@ -35,7 +35,7 @@ svint8_t test_svreinterpret_s8_bf16(svbfloat16_t op) {
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 8 x bfloat> [[OP:%.*]] to <vscale x 8 x i16>
 // CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
 //
-// CPP-CHECK-LABEL: @_Z27test_svreinterpret_s16_bf16u14__SVBFloat16_t(
+// CPP-CHECK-LABEL: @_Z27test_svreinterpret_s16_bf16u14__SVBfloat16_t(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 8 x bfloat> [[OP:%.*]] to <vscale x 8 x i16>
 // CPP-CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
@@ -49,7 +49,7 @@ svint16_t test_svreinterpret_s16_bf16(svbfloat16_t op) {
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 8 x bfloat> [[OP:%.*]] to <vscale x 4 x i32>
 // CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
-// CPP-CHECK-LABEL: @_Z27test_svreinterpret_s32_bf16u14__SVBFloat16_t(
+// CPP-CHECK-LABEL: @_Z27test_svreinterpret_s32_bf16u14__SVBfloat16_t(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 8 x bfloat> [[OP:%.*]] to <vscale x 4 x i32>
 // CPP-CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
@@ -62,7 +62,7 @@ svint32_t test_svreinterpret_s32_bf16(svbfloat16_t op) {
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 8 x bfloat> [[OP:%.*]] to <vscale x 2 x i64>
 // CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP0]]
 //
-// CPP-CHECK-LABEL: @_Z27test_svreinterpret_s64_bf16u14__SVBFloat16_t(
+// CPP-CHECK-LABEL: @_Z27test_svreinterpret_s64_bf16u14__SVBfloat16_t(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 8 x bfloat> [[OP:%.*]] to <vscale x 2 x i64>
 // CPP-CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP0]]
@@ -76,7 +76,7 @@ svint64_t test_svreinterpret_s64_bf16(svbfloat16_t op) {
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 8 x bfloat> [[OP:%.*]] to <vscale x 16 x i8>
 // CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
 //
-// CPP-CHECK-LABEL: @_Z26test_svreinterpret_u8_bf16u14__SVBFloat16_t(
+// CPP-CHECK-LABEL: @_Z26test_svreinterpret_u8_bf16u14__SVBfloat16_t(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 8 x bfloat> [[OP:%.*]] to <vscale x 16 x i8>
 // CPP-CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
@@ -90,7 +90,7 @@ svuint8_t test_svreinterpret_u8_bf16(svbfloat16_t op) {
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 8 x bfloat> [[OP:%.*]] to <vscale x 8 x i16>
 // CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
 //
-// CPP-CHECK-LABEL: @_Z27test_svreinterpret_u16_bf16u14__SVBFloat16_t(
+// CPP-CHECK-LABEL: @_Z27test_svreinterpret_u16_bf16u14__SVBfloat16_t(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 8 x bfloat> [[OP:%.*]] to <vscale x 8 x i16>
 // CPP-CHECK-NEXT:    ret <vscale x 8 x i16> [[TMP0]]
@@ -104,7 +104,7 @@ svuint16_t test_svreinterpret_u16_bf16(svbfloat16_t op) {
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 8 x bfloat> [[OP:%.*]] to <vscale x 4 x i32>
 // CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
 //
-// CPP-CHECK-LABEL: @_Z27test_svreinterpret_u32_bf16u14__SVBFloat16_t(
+// CPP-CHECK-LABEL: @_Z27test_svreinterpret_u32_bf16u14__SVBfloat16_t(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 8 x bfloat> [[OP:%.*]] to <vscale x 4 x i32>
 // CPP-CHECK-NEXT:    ret <vscale x 4 x i32> [[TMP0]]
@@ -118,7 +118,7 @@ svuint32_t test_svreinterpret_u32_bf16(svbfloat16_t op) {
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 8 x bfloat> [[OP:%.*]] to <vscale x 2 x i64>
 // CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP0]]
 //
-// CPP-CHECK-LABEL: @_Z27test_svreinterpret_u64_bf16u14__SVBFloat16_t(
+// CPP-CHECK-LABEL: @_Z27test_svreinterpret_u64_bf16u14__SVBfloat16_t(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 8 x bfloat> [[OP:%.*]] to <vscale x 2 x i64>
 // CPP-CHECK-NEXT:    ret <vscale x 2 x i64> [[TMP0]]
@@ -243,7 +243,7 @@ svbfloat16_t test_svreinterpret_bf16_u64(svuint64_t op) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    ret <vscale x 8 x bfloat> [[OP:%.*]]
 //
-// CPP-CHECK-LABEL: @_Z28test_svreinterpret_bf16_bf16u14__SVBFloat16_t(
+// CPP-CHECK-LABEL: @_Z28test_svreinterpret_bf16_bf16u14__SVBfloat16_t(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    ret <vscale x 8 x bfloat> [[OP:%.*]]
 //
@@ -298,7 +298,7 @@ svbfloat16_t test_svreinterpret_bf16_f64(svfloat64_t op) {
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 8 x bfloat> [[OP:%.*]] to <vscale x 4 x float>
 // CHECK-NEXT:    ret <vscale x 4 x float> [[TMP0]]
 //
-// CPP-CHECK-LABEL: @_Z27test_svreinterpret_f32_bf16u14__SVBFloat16_t(
+// CPP-CHECK-LABEL: @_Z27test_svreinterpret_f32_bf16u14__SVBfloat16_t(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 8 x bfloat> [[OP:%.*]] to <vscale x 4 x float>
 // CPP-CHECK-NEXT:    ret <vscale x 4 x float> [[TMP0]]
@@ -312,7 +312,7 @@ svfloat32_t test_svreinterpret_f32_bf16(svbfloat16_t op) {
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 8 x bfloat> [[OP:%.*]] to <vscale x 8 x half>
 // CHECK-NEXT:    ret <vscale x 8 x half> [[TMP0]]
 //
-// CPP-CHECK-LABEL: @_Z27test_svreinterpret_f16_bf16u14__SVBFloat16_t(
+// CPP-CHECK-LABEL: @_Z27test_svreinterpret_f16_bf16u14__SVBfloat16_t(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 8 x bfloat> [[OP:%.*]] to <vscale x 8 x half>
 // CPP-CHECK-NEXT:    ret <vscale x 8 x half> [[TMP0]]
@@ -326,7 +326,7 @@ svfloat16_t test_svreinterpret_f16_bf16(svbfloat16_t op) {
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 8 x bfloat> [[OP:%.*]] to <vscale x 2 x double>
 // CHECK-NEXT:    ret <vscale x 2 x double> [[TMP0]]
 //
-// CPP-CHECK-LABEL: @_Z27test_svreinterpret_f64_bf16u14__SVBFloat16_t(
+// CPP-CHECK-LABEL: @_Z27test_svreinterpret_f64_bf16u14__SVBfloat16_t(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = bitcast <vscale x 8 x bfloat> [[OP:%.*]] to <vscale x 2 x double>
 // CPP-CHECK-NEXT:    ret <vscale x 2 x double> [[TMP0]]

@@ -478,37 +478,4 @@ void __asan_stack_free_9(uptr ptr, uptr size) {
 void __asan_stack_free_10(uptr ptr, uptr size) {
   __asan_abi_stack_free_n(10, (void *)ptr, size);
 }
-
-// Functions concerning introspection (including lldb support)
-uptr __asan_get_alloc_stack(uptr addr, uptr *trace, uptr size, u32 *thread_id) {
-  return (uptr)__asan_abi_get_alloc_stack((void *)addr, (void **)trace,
-                                          (size_t)size, (int *)thread_id);
-}
-void __asan_report_error(uptr pc, uptr bp, uptr sp, uptr addr, int is_write,
-                         uptr access_size, u32 exp) {
-  __asan_abi_report_error((void *)pc, (void *)bp, (void *)sp, (void *)addr,
-                          (bool)is_write, (size_t)access_size, (int)exp);
-}
-void __asan_set_error_report_callback(void (*callback)(const char *)) {
-  __asan_abi_set_error_report_callback(callback);
-}
-void __asan_describe_address(uptr addr) {
-  __asan_abi_describe_address((void *)addr);
-}
-int __asan_report_present(void) { return __asan_abi_report_present(); }
-uptr __asan_get_report_pc(void) { return (uptr)__asan_abi_get_report_pc(); }
-uptr __asan_get_report_bp(void) { return (uptr)__asan_abi_get_report_bp(); }
-uptr __asan_get_report_sp(void) { return (uptr)__asan_abi_get_report_sp(); }
-uptr __asan_get_report_address(void) {
-  return (uptr)__asan_abi_get_report_address();
-}
-int __asan_get_report_access_type(void) {
-  return __asan_abi_get_report_access_type();
-}
-uptr __asan_get_report_access_size(void) {
-  return (uptr)__asan_abi_get_report_access_size();
-}
-const char *__asan_get_report_description(void) {
-  return __asan_abi_get_report_description();
-}
 }

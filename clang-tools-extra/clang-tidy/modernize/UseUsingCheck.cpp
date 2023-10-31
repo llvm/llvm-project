@@ -61,7 +61,8 @@ void UseUsingCheck::check(const MatchFinder::MatchResult &Result) {
     // before the typedef will be the nested one (PR#50990). Therefore, we also
     // keep track of the parent declaration, so that we can look up the last
     // TagDecl that is a sibling of the typedef in the AST.
-    LastTagDeclRanges[ParentDecl] = MatchedTagDecl->getSourceRange();
+    if (MatchedTagDecl->isThisDeclarationADefinition())
+      LastTagDeclRanges[ParentDecl] = MatchedTagDecl->getSourceRange();
     return;
   }
 

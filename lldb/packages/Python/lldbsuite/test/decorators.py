@@ -511,6 +511,10 @@ def expectedFailureNetBSD(bugnumber=None):
     return expectedFailureOS(["netbsd"], bugnumber)
 
 
+def expectedFailureWindows(bugnumber=None):
+    return expectedFailureOS(["windows"], bugnumber)
+
+
 # TODO: This decorator does not do anything. Remove it.
 def expectedFlakey(expected_fn, bugnumber=None):
     def expectedFailure_impl(func):

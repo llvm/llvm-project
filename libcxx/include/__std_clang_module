@@ -135,7 +135,6 @@
 #if !defined(_LIBCPP_HAS_NO_THREADS)
 #  include <latch>
 #endif
-#include <limits.h>
 #include <limits>
 #include <list>
 #if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
@@ -170,7 +169,6 @@
 #  include <semaphore>
 #endif
 #include <set>
-#include <setjmp.h>
 #if !defined(_LIBCPP_HAS_NO_THREADS)
 #  include <shared_mutex>
 #endif

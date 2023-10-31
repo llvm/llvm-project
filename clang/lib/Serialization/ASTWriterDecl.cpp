@@ -81,8 +81,6 @@ namespace clang {
     void VisitVarTemplateSpecializationDecl(VarTemplateSpecializationDecl *D);
     void VisitVarTemplatePartialSpecializationDecl(
         VarTemplatePartialSpecializationDecl *D);
-    void VisitClassScopeFunctionSpecializationDecl(
-                                       ClassScopeFunctionSpecializationDecl *D);
     void VisitTemplateTypeParmDecl(TemplateTypeParmDecl *D);
     void VisitValueDecl(ValueDecl *D);
     void VisitEnumConstantDecl(EnumConstantDecl *D);
@@ -433,7 +431,7 @@ void ASTDeclWriter::VisitTypeAliasDecl(TypeAliasDecl *D) {
 }
 
 void ASTDeclWriter::VisitTagDecl(TagDecl *D) {
-  static_assert(DeclContext::NumTagDeclBits == 10,
+  static_assert(DeclContext::NumTagDeclBits == 23,
                 "You need to update the serializer after you change the "
                 "TagDeclBits");
 
@@ -461,7 +459,7 @@ void ASTDeclWriter::VisitTagDecl(TagDecl *D) {
 }
 
 void ASTDeclWriter::VisitEnumDecl(EnumDecl *D) {
-  static_assert(DeclContext::NumEnumDeclBits == 20,
+  static_assert(DeclContext::NumEnumDeclBits == 43,
                 "You need to update the serializer after you change the "
                 "EnumDeclBits");
 
@@ -508,7 +506,7 @@ void ASTDeclWriter::VisitEnumDecl(EnumDecl *D) {
 }
 
 void ASTDeclWriter::VisitRecordDecl(RecordDecl *D) {
-  static_assert(DeclContext::NumRecordDeclBits == 41,
+  static_assert(DeclContext::NumRecordDeclBits == 64,
                 "You need to update the serializer after you change the "
                 "RecordDeclBits");
 
@@ -580,7 +578,7 @@ void ASTDeclWriter::VisitDeclaratorDecl(DeclaratorDecl *D) {
 }
 
 void ASTDeclWriter::VisitFunctionDecl(FunctionDecl *D) {
-  static_assert(DeclContext::NumFunctionDeclBits == 31,
+  static_assert(DeclContext::NumFunctionDeclBits == 44,
                 "You need to update the serializer after you change the "
                 "FunctionDeclBits");
 
@@ -617,15 +615,9 @@ void ASTDeclWriter::VisitFunctionDecl(FunctionDecl *D) {
 
     // Template args as written.
     Record.push_back(FTSInfo->TemplateArgumentsAsWritten != nullptr);
-    if (FTSInfo->TemplateArgumentsAsWritten) {
-      Record.push_back(FTSInfo->TemplateArgumentsAsWritten->NumTemplateArgs);
-      for (int i=0, e = FTSInfo->TemplateArgumentsAsWritten->NumTemplateArgs;
-             i!=e; ++i)
-        Record.AddTemplateArgumentLoc(
-            (*FTSInfo->TemplateArgumentsAsWritten)[i]);
-      Record.AddSourceLocation(FTSInfo->TemplateArgumentsAsWritten->LAngleLoc);
-      Record.AddSourceLocation(FTSInfo->TemplateArgumentsAsWritten->RAngleLoc);
-    }
+    if (FTSInfo->TemplateArgumentsAsWritten)
+      Record.AddASTTemplateArgumentListInfo(
+          FTSInfo->TemplateArgumentsAsWritten);
 
     Record.AddSourceLocation(FTSInfo->getPointOfInstantiation());
 
@@ -650,17 +642,16 @@ void ASTDeclWriter::VisitFunctionDecl(FunctionDecl *D) {
     DependentFunctionTemplateSpecializationInfo *
       DFTSInfo = D->getDependentSpecializationInfo();
 
-    // Templates.
-    Record.push_back(DFTSInfo->getNumTemplates());
-    for (int i=0, e = DFTSInfo->getNumTemplates(); i != e; ++i)
-      Record.AddDeclRef(DFTSInfo->getTemplate(i));
+    // Candidates.
+    Record.push_back(DFTSInfo->getCandidates().size());
+    for (FunctionTemplateDecl *FTD : DFTSInfo->getCandidates())
+      Record.AddDeclRef(FTD);
 
     // Templates args.
-    Record.push_back(DFTSInfo->getNumTemplateArgs());
-    for (int i=0, e = DFTSInfo->getNumTemplateArgs(); i != e; ++i)
-      Record.AddTemplateArgumentLoc(DFTSInfo->getTemplateArg(i));
-    Record.AddSourceLocation(DFTSInfo->getLAngleLoc());
-    Record.AddSourceLocation(DFTSInfo->getRAngleLoc());
+    Record.push_back(DFTSInfo->TemplateArgumentsAsWritten != nullptr);
+    if (DFTSInfo->TemplateArgumentsAsWritten)
+      Record.AddASTTemplateArgumentListInfo(
+          DFTSInfo->TemplateArgumentsAsWritten);
     break;
   }
   }
@@ -735,7 +726,7 @@ void ASTDeclWriter::VisitCXXDeductionGuideDecl(CXXDeductionGuideDecl *D) {
 }
 
 void ASTDeclWriter::VisitObjCMethodDecl(ObjCMethodDecl *D) {
-  static_assert(DeclContext::NumObjCMethodDeclBits == 24,
+  static_assert(DeclContext::NumObjCMethodDeclBits == 37,
                 "You need to update the serializer after you change the "
                 "ObjCMethodDeclBits");
 
@@ -797,7 +788,7 @@ void ASTDeclWriter::VisitObjCTypeParamDecl(ObjCTypeParamDecl *D) {
 }
 
 void ASTDeclWriter::VisitObjCContainerDecl(ObjCContainerDecl *D) {
-  static_assert(DeclContext::NumObjCContainerDeclBits == 51,
+  static_assert(DeclContext::NumObjCContainerDeclBits == 64,
                 "You need to update the serializer after you change the "
                 "ObjCContainerDeclBits");
 
@@ -1277,7 +1268,7 @@ void ASTDeclWriter::VisitCapturedDecl(CapturedDecl *CD) {
 }
 
 void ASTDeclWriter::VisitLinkageSpecDecl(LinkageSpecDecl *D) {
-  static_assert(DeclContext::NumLinkageSpecDeclBits == 4,
+  static_assert(DeclContext::NumLinkageSpecDeclBits == 17,
                 "You need to update the serializer after you change the"
                 "LinkageSpecDeclBits");
 
@@ -1488,7 +1479,7 @@ void ASTDeclWriter::VisitCXXMethodDecl(CXXMethodDecl *D) {
 }
 
 void ASTDeclWriter::VisitCXXConstructorDecl(CXXConstructorDecl *D) {
-  static_assert(DeclContext::NumCXXConstructorDeclBits == 20,
+  static_assert(DeclContext::NumCXXConstructorDeclBits == 64,
                 "You need to update the serializer after you change the "
                 "CXXConstructorDeclBits");
 
@@ -1739,17 +1730,6 @@ void ASTDeclWriter::VisitVarTemplatePartialSpecializationDecl(
   Code = serialization::DECL_VAR_TEMPLATE_PARTIAL_SPECIALIZATION;
 }
 
-void ASTDeclWriter::VisitClassScopeFunctionSpecializationDecl(
-                                    ClassScopeFunctionSpecializationDecl *D) {
-  VisitDecl(D);
-  Record.AddDeclRef(D->getSpecialization());
-  Record.push_back(D->hasExplicitTemplateArgs());
-  if (D->hasExplicitTemplateArgs())
-    Record.AddASTTemplateArgumentListInfo(D->getTemplateArgsAsWritten());
-  Code = serialization::DECL_CLASS_SCOPE_FUNCTION_SPECIALIZATION;
-}
-
-
 void ASTDeclWriter::VisitFunctionTemplateDecl(FunctionTemplateDecl *D) {
   VisitRedeclarableTemplateDecl(D);
 
@@ -1980,7 +1960,7 @@ void ASTDeclWriter::VisitOMPRequiresDecl(OMPRequiresDecl *D) {
 }
 
 void ASTDeclWriter::VisitOMPDeclareReductionDecl(OMPDeclareReductionDecl *D) {
-  static_assert(DeclContext::NumOMPDeclareReductionDeclBits == 2,
+  static_assert(DeclContext::NumOMPDeclareReductionDeclBits == 15,
                 "You need to update the serializer after you change the "
                 "NumOMPDeclareReductionDeclBits");
 

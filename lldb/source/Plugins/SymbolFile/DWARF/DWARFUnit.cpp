@@ -28,6 +28,7 @@
 using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::dwarf;
+using namespace lldb_private::plugin::dwarf;
 
 extern int g_verbose;
 
@@ -201,8 +202,8 @@ DWARFUnit::ScopedExtractDIEs::ScopedExtractDIEs(ScopedExtractDIEs &&rhs)
   rhs.m_cu = nullptr;
 }
 
-DWARFUnit::ScopedExtractDIEs &DWARFUnit::ScopedExtractDIEs::operator=(
-    DWARFUnit::ScopedExtractDIEs &&rhs) {
+DWARFUnit::ScopedExtractDIEs &
+DWARFUnit::ScopedExtractDIEs::operator=(DWARFUnit::ScopedExtractDIEs &&rhs) {
   m_cu = rhs.m_cu;
   rhs.m_cu = nullptr;
   m_clear_dies = rhs.m_clear_dies;
@@ -311,9 +312,9 @@ void DWARFUnit::ExtractDIEsRWLocked() {
   }
 
   if (!m_die_array.empty()) {
-    // The last die cannot have children (if it did, it wouldn't be the last one).
-    // This only makes a difference for malformed dwarf that does not have a
-    // terminating null die.
+    // The last die cannot have children (if it did, it wouldn't be the last
+    // one). This only makes a difference for malformed dwarf that does not have
+    // a terminating null die.
     m_die_array.back().SetHasChildren(false);
 
     if (m_first_die) {
@@ -720,7 +721,7 @@ void DWARFUnit::ParseProducerInfo() {
 
   llvm::SmallVector<llvm::StringRef, 3> matches;
   if (g_swiftlang_version_regex.Execute(producer, &matches)) {
-      m_producer_version.tryParse(matches[1]);
+    m_producer_version.tryParse(matches[1]);
     m_producer = eProducerSwift;
   } else if (producer.contains("clang")) {
     if (g_clang_version_regex.Execute(producer, &matches))
@@ -877,10 +878,37 @@ const DWARFDebugAranges &DWARFUnit::GetFunctionAranges() {
   return *m_func_aranges_up;
 }
 
+llvm::Error DWARFUnitHeader::ApplyIndexEntry(
+    const llvm::DWARFUnitIndex::Entry *index_entry) {
+  // We should only be calling this function when the index entry is not set and
+  // we have a valid one to set it to.
+  assert(index_entry);
+  assert(!m_index_entry);
+
+  if (m_abbr_offset)
+    return llvm::createStringError(
+        llvm::inconvertibleErrorCode(),
+        "Package unit with a non-zero abbreviation offset");
+
+  auto *unit_contrib = index_entry->getContribution();
+  if (!unit_contrib || unit_contrib->getLength32() != m_length + 4)
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "Inconsistent DWARF package unit index");
+
+  auto *abbr_entry = index_entry->getContribution(llvm::DW_SECT_ABBREV);
+  if (!abbr_entry)
+    return llvm::createStringError(
+        llvm::inconvertibleErrorCode(),
+        "DWARF package index missing abbreviation column");
+
+  m_abbr_offset = abbr_entry->getOffset();
+  m_index_entry = index_entry;
+  return llvm::Error::success();
+}
+
 llvm::Expected<DWARFUnitHeader>
 DWARFUnitHeader::extract(const DWARFDataExtractor &data,
-                         DIERef::Section section,
-                         lldb_private::DWARFContext &context,
+                         DIERef::Section section, DWARFContext &context,
                          lldb::offset_t *offset_ptr) {
   DWARFUnitHeader header;
   header.m_offset = *offset_ptr;
@@ -903,42 +931,6 @@ DWARFUnitHeader::extract(const DWARFDataExtractor &data,
   if (header.IsTypeUnit()) {
     header.m_type_hash = data.GetU64(offset_ptr);
     header.m_type_offset = data.GetDWARFOffset(offset_ptr);
-  }
-
-  if (context.isDwo()) {
-    const llvm::DWARFUnitIndex *Index;
-    if (header.IsTypeUnit()) {
-      Index = &context.GetAsLLVM().getTUIndex();
-      if (*Index)
-        header.m_index_entry = Index->getFromHash(header.m_type_hash);
-    } else {
-      Index = &context.GetAsLLVM().getCUIndex();
-      if (*Index && header.m_version >= 5 && header.m_dwo_id)
-        header.m_index_entry = Index->getFromHash(*header.m_dwo_id);
-    }
-    if (!header.m_index_entry)
-      header.m_index_entry = Index->getFromOffset(header.m_offset);
-  }
-
-  if (header.m_index_entry) {
-    if (header.m_abbr_offset) {
-      return llvm::createStringError(
-          llvm::inconvertibleErrorCode(),
-          "Package unit with a non-zero abbreviation offset");
-    }
-    auto *unit_contrib = header.m_index_entry->getContribution();
-    if (!unit_contrib || unit_contrib->getLength32() != header.m_length + 4) {
-      return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                     "Inconsistent DWARF package unit index");
-    }
-    auto *abbr_entry =
-        header.m_index_entry->getContribution(llvm::DW_SECT_ABBREV);
-    if (!abbr_entry) {
-      return llvm::createStringError(
-          llvm::inconvertibleErrorCode(),
-          "DWARF package index missing abbreviation column");
-    }
-    header.m_abbr_offset = abbr_entry->getOffset();
   }
 
   bool length_OK = data.ValidOffset(header.GetNextUnitOffset() - 1);
@@ -970,10 +962,29 @@ DWARFUnit::extract(SymbolFileDWARF &dwarf, user_id_t uid,
                    DIERef::Section section, lldb::offset_t *offset_ptr) {
   assert(debug_info.ValidOffset(*offset_ptr));
 
-  auto expected_header = DWARFUnitHeader::extract(
-      debug_info, section, dwarf.GetDWARFContext(), offset_ptr);
+  DWARFContext &context = dwarf.GetDWARFContext();
+  auto expected_header =
+      DWARFUnitHeader::extract(debug_info, section, context, offset_ptr);
   if (!expected_header)
     return expected_header.takeError();
+
+  if (context.isDwo()) {
+    const llvm::DWARFUnitIndex::Entry *entry = nullptr;
+    const llvm::DWARFUnitIndex &index = expected_header->IsTypeUnit()
+                                            ? context.GetAsLLVM().getTUIndex()
+                                            : context.GetAsLLVM().getCUIndex();
+    if (index) {
+      if (expected_header->IsTypeUnit())
+        entry = index.getFromHash(expected_header->GetTypeHash());
+      else if (auto dwo_id = expected_header->GetDWOId())
+        entry = index.getFromHash(*dwo_id);
+    }
+    if (!entry)
+      entry = index.getFromOffset(expected_header->GetOffset());
+    if (entry)
+      if (llvm::Error err = expected_header->ApplyIndexEntry(entry))
+        return std::move(err);
+  }
 
   const llvm::DWARFDebugAbbrev *abbr = dwarf.DebugAbbrev();
   if (!abbr)
@@ -1077,22 +1088,20 @@ DWARFUnit::FindRnglistFromOffset(dw_offset_t offset) {
   return ranges;
 }
 
-llvm::Expected<DWARFRangeList>
-DWARFUnit::FindRnglistFromIndex(uint32_t index) {
+llvm::Expected<DWARFRangeList> DWARFUnit::FindRnglistFromIndex(uint32_t index) {
   llvm::Expected<uint64_t> maybe_offset = GetRnglistOffset(index);
   if (!maybe_offset)
     return maybe_offset.takeError();
   return FindRnglistFromOffset(*maybe_offset);
 }
 
-
 bool DWARFUnit::HasAny(llvm::ArrayRef<dw_tag_t> tags) {
   ExtractUnitDIEIfNeeded();
   if (m_dwo)
     return m_dwo->HasAny(tags);
 
-  for (const auto &die: m_die_array) {
-    for (const auto tag: tags) {
+  for (const auto &die : m_die_array) {
+    for (const auto tag : tags) {
       if (tag == die.Tag())
         return true;
     }

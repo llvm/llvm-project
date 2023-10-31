@@ -160,6 +160,7 @@ protected:
   const MCInstrAnalysis *Analysis;
   const MCInstrInfo *Info;
   const MCRegisterInfo *RegInfo;
+  const MCSubtargetInfo *STI;
 
   /// Map annotation name into an annotation index.
   StringMap<uint64_t> AnnotationNameIndexMap;
@@ -331,8 +332,8 @@ public:
 
 public:
   MCPlusBuilder(const MCInstrAnalysis *Analysis, const MCInstrInfo *Info,
-                const MCRegisterInfo *RegInfo)
-      : Analysis(Analysis), Info(Info), RegInfo(RegInfo) {
+                const MCRegisterInfo *RegInfo, const MCSubtargetInfo *STI)
+      : Analysis(Analysis), Info(Info), RegInfo(RegInfo), STI(STI) {
     // Initialize the default annotation allocator with id 0
     AnnotationAllocators.emplace(0, AnnotationAllocator());
     MaxAllocatorId++;
@@ -1178,6 +1179,13 @@ public:
 
   /// Remove offset annotation.
   bool clearOffset(MCInst &Inst);
+
+  /// Return the label of \p Inst, if available.
+  std::optional<MCSymbol *> getLabel(const MCInst &Inst) const;
+
+  /// Set the label of \p Inst. This label will be emitted right before \p Inst
+  /// is emitted to MCStreamer.
+  bool setLabel(MCInst &Inst, MCSymbol *Label, AllocatorIdTy AllocatorId = 0);
 
   /// Return MCSymbol that represents a target of this instruction at a given
   /// operand number \p OpNum. If there's no symbol associated with
@@ -2069,6 +2077,12 @@ public:
     return BlocksVectorTy();
   }
 
+  virtual uint16_t getMinFunctionAlignment() const {
+    // We have to use at least 2-byte alignment for functions because of C++
+    // ABI.
+    return 2;
+  }
+
   // AliasMap caches a mapping of registers to the set of registers that
   // alias (are sub or superregs of itself, including itself).
   std::vector<BitVector> AliasMap;
@@ -2079,15 +2093,18 @@ public:
 
 MCPlusBuilder *createX86MCPlusBuilder(const MCInstrAnalysis *,
                                       const MCInstrInfo *,
-                                      const MCRegisterInfo *);
+                                      const MCRegisterInfo *,
+                                      const MCSubtargetInfo *);
 
 MCPlusBuilder *createAArch64MCPlusBuilder(const MCInstrAnalysis *,
                                           const MCInstrInfo *,
-                                          const MCRegisterInfo *);
+                                          const MCRegisterInfo *,
+                                          const MCSubtargetInfo *);
 
 MCPlusBuilder *createRISCVMCPlusBuilder(const MCInstrAnalysis *,
                                         const MCInstrInfo *,
-                                        const MCRegisterInfo *);
+                                        const MCRegisterInfo *,
+                                        const MCSubtargetInfo *);
 
 } // namespace bolt
 } // namespace llvm

@@ -252,6 +252,26 @@ def StackArrays : Pass<"stack-arrays", "mlir::ModuleOp"> {
   let constructor = "::fir::createStackArraysPass()";
 }
 
+def AddAliasTags : Pass<"fir-add-alias-tags", "mlir::ModuleOp"> {
+  let summary = "Add tbaa tags to operations that implement FirAliasAnalysisOpInterface";
+  let description = [{
+    TBAA (type based alias analysis) is one method to pass pointer alias information
+    from language frontends to LLVM. This pass uses fir::AliasAnalysis to add this
+    information to fir.load and fir.store operations.
+    Additional tags are added during codegen. See fir::TBAABuilder.
+    This needs to be a separate pass so that it happens before structured control
+    flow operations are lowered to branches and basic blocks (this makes tracing
+    the source of values much eaiser). The other TBAA tags need to be applied to
+    box loads and stores which are implicit in FIR and so cannot be annotated
+    until codegen.
+    TODO: this is currently a pass on mlir::ModuleOp to avoid parallelism. In
+    theory, each operation could be considered in prallel, so long as there
+    aren't races adding new tags to the mlir context.
+  }];
+  let dependentDialects = [ "fir::FIROpsDialect" ];
+  let constructor = "::fir::createAliasTagsPass()";
+}
+
 def SimplifyRegionLite : Pass<"simplify-region-lite", "mlir::ModuleOp"> {
   let summary = "Region simplification";
   let description = [{
@@ -324,6 +344,20 @@ def OMPFunctionFiltering : Pass<"omp-function-filtering"> {
   let dependentDialects = [
     "mlir::func::FuncDialect"
   ];
+}
+
+def VScaleAttr : Pass<"vscale-attr", "mlir::func::FuncOp"> {
+  let summary = "Add vscale_range attribute to functions";
+  let description = [{
+     Set an attribute for the vscale range on functions, to allow scalable
+     vector operations to be used on processors with variable vector length.
+  }];
+  let options = [
+    Option<"vscaleRange", "vscale-range",
+           "std::pair<unsigned, unsigned>", /*default=*/"std::pair<unsigned, unsigned>{}",
+           "vector scale range">,
+  ];
+  let constructor = "::fir::createVScaleAttrPass()";
 }
 
 #endif // FLANG_OPTIMIZER_TRANSFORMS_PASSES

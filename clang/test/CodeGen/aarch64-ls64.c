@@ -206,7 +206,7 @@ EXTERN_C void test_st64b(void)
 // CHECK-CXX-NEXT:    [[TMP14:%.*]] = load i64, ptr [[TMP13]], align 8
 // CHECK-CXX-NEXT:    [[TMP15:%.*]] = getelementptr i64, ptr [[AGG_TMP]], i32 7
 // CHECK-CXX-NEXT:    [[TMP16:%.*]] = load i64, ptr [[TMP15]], align 8
-// CHECK-CXX-NEXT:    [[TMP17:%.*]] = call i64 @llvm.aarch64.st64bv(ptr [[TMP1]], i64 [[TMP2]], i64 [[TMP4]], i64 [[TMP6]], i64 [[TMP8]], i64 [[TMP10]], i64 [[TMP12]], i64 [[TMP14]], i64 [[TMP16]])
+// CHECK-CXX-NEXT:    [[TMP17:%.*]] = call noundef i64 @llvm.aarch64.st64bv(ptr [[TMP1]], i64 [[TMP2]], i64 [[TMP4]], i64 [[TMP6]], i64 [[TMP8]], i64 [[TMP10]], i64 [[TMP12]], i64 [[TMP14]], i64 [[TMP16]])
 // CHECK-CXX-NEXT:    store i64 [[TMP17]], ptr @status, align 8
 // CHECK-CXX-NEXT:    ret void
 //
@@ -269,7 +269,7 @@ EXTERN_C void test_st64bv(void)
 // CHECK-CXX-NEXT:    [[TMP14:%.*]] = load i64, ptr [[TMP13]], align 8
 // CHECK-CXX-NEXT:    [[TMP15:%.*]] = getelementptr i64, ptr [[AGG_TMP]], i32 7
 // CHECK-CXX-NEXT:    [[TMP16:%.*]] = load i64, ptr [[TMP15]], align 8
-// CHECK-CXX-NEXT:    [[TMP17:%.*]] = call i64 @llvm.aarch64.st64bv0(ptr [[TMP1]], i64 [[TMP2]], i64 [[TMP4]], i64 [[TMP6]], i64 [[TMP8]], i64 [[TMP10]], i64 [[TMP12]], i64 [[TMP14]], i64 [[TMP16]])
+// CHECK-CXX-NEXT:    [[TMP17:%.*]] = call noundef i64 @llvm.aarch64.st64bv0(ptr [[TMP1]], i64 [[TMP2]], i64 [[TMP4]], i64 [[TMP6]], i64 [[TMP8]], i64 [[TMP10]], i64 [[TMP12]], i64 [[TMP14]], i64 [[TMP16]])
 // CHECK-CXX-NEXT:    store i64 [[TMP17]], ptr @status, align 8
 // CHECK-CXX-NEXT:    ret void
 //

@@ -1,5 +1,6 @@
 add_flang_library(FIRTransforms
   AbstractResult.cpp
+  AddAliasTags.cpp
   AffinePromotion.cpp
   AffineDemotion.cpp
   AnnotateConstant.cpp
@@ -19,6 +20,7 @@ add_flang_library(FIRTransforms
   OMPEarlyOutlining.cpp
   OMPFunctionFiltering.cpp
   OMPMarkDeclareTarget.cpp
+  VScaleAttr.cpp
 
   DEPENDS
   FIRDialect
@@ -26,6 +28,7 @@ add_flang_library(FIRTransforms
   HLFIROpsIncGen
 
   LINK_LIBS
+  FIRAnalysis
   FIRBuilder
   FIRCodeGen
   FIRDialect

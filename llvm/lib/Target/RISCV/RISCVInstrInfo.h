@@ -63,6 +63,10 @@ public:
   unsigned isStoreToStackSlot(const MachineInstr &MI, int &FrameIndex,
                               unsigned &MemBytes) const override;
 
+  void copyPhysRegVector(MachineBasicBlock &MBB,
+                         MachineBasicBlock::iterator MBBI, const DebugLoc &DL,
+                         MCRegister DstReg, MCRegister SrcReg, bool KillSrc,
+                         unsigned Opc, unsigned NF = 1) const;
   void copyPhysReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
                    const DebugLoc &DL, MCRegister DstReg, MCRegister SrcReg,
                    bool KillSrc) const override;
@@ -91,7 +95,8 @@ public:
   // Materializes the given integer Val into DstReg.
   void movImm(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
               const DebugLoc &DL, Register DstReg, uint64_t Val,
-              MachineInstr::MIFlag Flag = MachineInstr::NoFlags) const;
+              MachineInstr::MIFlag Flag = MachineInstr::NoFlags,
+              bool DstRenamable = false, bool DstIsDead = false) const;
 
   unsigned getInstSizeInBytes(const MachineInstr &MI) const override;
 
@@ -136,6 +141,13 @@ public:
 
   bool verifyInstruction(const MachineInstr &MI,
                          StringRef &ErrInfo) const override;
+
+  bool canFoldIntoAddrMode(const MachineInstr &MemI, Register Reg,
+                           const MachineInstr &AddrI,
+                           ExtAddrMode &AM) const override;
+
+  MachineInstr *emitLdStWithAddr(MachineInstr &MemI,
+                                 const ExtAddrMode &AM) const override;
 
   bool getMemOperandWithOffsetWidth(const MachineInstr &LdSt,
                                     const MachineOperand *&BaseOp,
@@ -264,6 +276,15 @@ int16_t getNamedOperandIdx(uint16_t Opcode, uint16_t NamedIndex);
 // Return true if both input instructions have equal rounding mode. If at least
 // one of the instructions does not have rounding mode, false will be returned.
 bool hasEqualFRM(const MachineInstr &MI1, const MachineInstr &MI2);
+
+// If \p Opcode is a .vx vector instruction, returns the lower number of bits
+// that are used from the scalar .x operand for a given \p Log2SEW. Otherwise
+// returns null.
+std::optional<unsigned> getVectorLowDemandedScalarBits(uint16_t Opcode,
+                                                       unsigned Log2SEW);
+
+// Returns the MC opcode of RVV pseudo instruction.
+unsigned getRVVMCOpcode(unsigned RVVPseudoOpcode);
 
 // Special immediate for AVL operand of V pseudo instructions to indicate VLMax.
 static constexpr int64_t VLMaxSentinel = -1LL;

@@ -510,8 +510,8 @@ static Module *prepareToBuildModule(CompilerInstance &CI,
   }
 
   // Check whether we can build this module at all.
-  if (Preprocessor::checkModuleIsAvailable(CI.getLangOpts(), CI.getTarget(),
-                                           CI.getDiagnostics(), M))
+  if (Preprocessor::checkModuleIsAvailable(CI.getLangOpts(), CI.getTarget(), *M,
+                                           CI.getDiagnostics()))
     return nullptr;
 
   // Inform the preprocessor that includes from within the input buffer should

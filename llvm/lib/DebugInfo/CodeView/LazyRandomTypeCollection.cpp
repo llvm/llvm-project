@@ -69,13 +69,13 @@ void LazyRandomTypeCollection::reset(BinaryStreamReader &Reader,
 }
 
 void LazyRandomTypeCollection::reset(StringRef Data, uint32_t RecordCountHint) {
-  BinaryStreamReader Reader(Data, support::little);
+  BinaryStreamReader Reader(Data, llvm::endianness::little);
   reset(Reader, RecordCountHint);
 }
 
 void LazyRandomTypeCollection::reset(ArrayRef<uint8_t> Data,
                                      uint32_t RecordCountHint) {
-  BinaryStreamReader Reader(Data, support::little);
+  BinaryStreamReader Reader(Data, llvm::endianness::little);
   reset(Reader, RecordCountHint);
 }
 

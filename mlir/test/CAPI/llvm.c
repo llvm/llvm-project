@@ -10,8 +10,8 @@
 // RUN: mlir-capi-llvm-test 2>&1 | FileCheck %s
 
 #include "mlir-c/Dialect/LLVM.h"
-#include "mlir-c/IR.h"
 #include "mlir-c/BuiltinTypes.h"
+#include "mlir-c/IR.h"
 
 #include <assert.h>
 #include <math.h>
@@ -26,17 +26,20 @@ static void testTypeCreation(MlirContext ctx) {
   MlirType i32 = mlirIntegerTypeGet(ctx, 32);
   MlirType i64 = mlirIntegerTypeGet(ctx, 64);
 
-  const char *i32p_text = "!llvm.ptr<i32>";
-  MlirType i32p = mlirLLVMPointerTypeGet(i32, 0);
-  MlirType i32p_ref = mlirTypeParseGet(ctx, mlirStringRefCreateFromCString(i32p_text));
-  // CHECK: !llvm.ptr<i32>: 1
-  fprintf(stderr, "%s: %d\n", i32p_text, mlirTypeEqual(i32p, i32p_ref));
+  const char *ptr_text = "!llvm.ptr";
+  MlirType ptr = mlirLLVMPointerTypeGet(ctx, 0);
+  MlirType ptr_ref =
+      mlirTypeParseGet(ctx, mlirStringRefCreateFromCString(ptr_text));
+  // CHECK: !llvm.ptr: 1
+  fprintf(stderr, "%s: %d\n", ptr_text, mlirTypeEqual(ptr, ptr_ref));
 
-  const char *i32p4_text = "!llvm.ptr<i32, 4>";
-  MlirType i32p4 = mlirLLVMPointerTypeGet(i32, 4);
-  MlirType i32p4_ref = mlirTypeParseGet(ctx, mlirStringRefCreateFromCString(i32p4_text));
-  // CHECK: !llvm.ptr<i32, 4>: 1
-  fprintf(stderr, "%s: %d\n", i32p4_text, mlirTypeEqual(i32p4, i32p4_ref));
+  const char *ptr_addr_text = "!llvm.ptr<42>";
+  MlirType ptr_addr = mlirLLVMPointerTypeGet(ctx, 42);
+  MlirType ptr_addr_ref =
+      mlirTypeParseGet(ctx, mlirStringRefCreateFromCString(ptr_addr_text));
+  // CHECK: !llvm.ptr<42>: 1
+  fprintf(stderr, "%s: %d\n", ptr_addr_text,
+          mlirTypeEqual(ptr_addr, ptr_addr_ref));
 
   const char *voidt_text = "!llvm.void";
   MlirType voidt = mlirLLVMVoidTypeGet(ctx);

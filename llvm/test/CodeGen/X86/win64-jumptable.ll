@@ -43,9 +43,9 @@ declare void @g(i32)
 ; CHECK: .seh_proc f
 ; CHECK: jmpq    *.LJTI0_0
 ; CHECK: .LBB0_{{.*}}: # %sw.bb
-; CHECK: .LBB0_{{.*}}: # %sw.bb1
 ; CHECK: .LBB0_{{.*}}: # %sw.bb2
 ; CHECK: .LBB0_{{.*}}: # %sw.bb3
+; CHECK: .LBB0_{{.*}}: # %sw.bb1
 ; CHECK: callq g
 ; CHECK: jmp g # TAILCALL
 ; CHECK: .section        .rdata,"dr"

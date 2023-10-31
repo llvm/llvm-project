@@ -3975,6 +3975,12 @@ void FunctionDecl::setDescribedFunctionTemplate(
   TemplateOrSpecialization = Template;
 }
 
+bool FunctionDecl::isFunctionTemplateSpecialization() const {
+  return TemplateOrSpecialization.is<FunctionTemplateSpecializationInfo *>() ||
+         TemplateOrSpecialization
+             .is<DependentFunctionTemplateSpecializationInfo *>();
+}
+
 void FunctionDecl::setInstantiatedFromDecl(FunctionDecl *FD) {
   assert(TemplateOrSpecialization.isNull() &&
          "Function is already a specialization");
@@ -4109,6 +4115,11 @@ FunctionDecl::getTemplateSpecializationArgsAsWritten() const {
             .dyn_cast<FunctionTemplateSpecializationInfo*>()) {
     return Info->TemplateArgumentsAsWritten;
   }
+  if (DependentFunctionTemplateSpecializationInfo *Info =
+          TemplateOrSpecialization
+              .dyn_cast<DependentFunctionTemplateSpecializationInfo *>()) {
+    return Info->TemplateArgumentsAsWritten;
+  }
   return nullptr;
 }
 
@@ -4137,10 +4148,9 @@ FunctionDecl::setFunctionTemplateSpecialization(ASTContext &C,
   Template->addSpecialization(Info, InsertPos);
 }
 
-void
-FunctionDecl::setDependentTemplateSpecialization(ASTContext &Context,
-                                    const UnresolvedSetImpl &Templates,
-                             const TemplateArgumentListInfo &TemplateArgs) {
+void FunctionDecl::setDependentTemplateSpecialization(
+    ASTContext &Context, const UnresolvedSetImpl &Templates,
+    const TemplateArgumentListInfo *TemplateArgs) {
   assert(TemplateOrSpecialization.isNull());
   DependentFunctionTemplateSpecializationInfo *Info =
       DependentFunctionTemplateSpecializationInfo::Create(Context, Templates,
@@ -4156,28 +4166,26 @@ FunctionDecl::getDependentSpecializationInfo() const {
 
 DependentFunctionTemplateSpecializationInfo *
 DependentFunctionTemplateSpecializationInfo::Create(
-    ASTContext &Context, const UnresolvedSetImpl &Ts,
-    const TemplateArgumentListInfo &TArgs) {
-  void *Buffer = Context.Allocate(
-      totalSizeToAlloc<TemplateArgumentLoc, FunctionTemplateDecl *>(
-          TArgs.size(), Ts.size()));
-  return new (Buffer) DependentFunctionTemplateSpecializationInfo(Ts, TArgs);
+    ASTContext &Context, const UnresolvedSetImpl &Candidates,
+    const TemplateArgumentListInfo *TArgs) {
+  const auto *TArgsWritten =
+      TArgs ? ASTTemplateArgumentListInfo::Create(Context, *TArgs) : nullptr;
+  return new (Context.Allocate(
+      totalSizeToAlloc<FunctionTemplateDecl *>(Candidates.size())))
+      DependentFunctionTemplateSpecializationInfo(Candidates, TArgsWritten);
 }
 
 DependentFunctionTemplateSpecializationInfo::
-DependentFunctionTemplateSpecializationInfo(const UnresolvedSetImpl &Ts,
-                                      const TemplateArgumentListInfo &TArgs)
-  : AngleLocs(TArgs.getLAngleLoc(), TArgs.getRAngleLoc()) {
-  NumTemplates = Ts.size();
-  NumArgs = TArgs.size();
-
-  FunctionTemplateDecl **TsArray = getTrailingObjects<FunctionTemplateDecl *>();
-  for (unsigned I = 0, E = Ts.size(); I != E; ++I)
-    TsArray[I] = cast<FunctionTemplateDecl>(Ts[I]->getUnderlyingDecl());
-
-  TemplateArgumentLoc *ArgsArray = getTrailingObjects<TemplateArgumentLoc>();
-  for (unsigned I = 0, E = TArgs.size(); I != E; ++I)
-    new (&ArgsArray[I]) TemplateArgumentLoc(TArgs[I]);
+    DependentFunctionTemplateSpecializationInfo(
+        const UnresolvedSetImpl &Candidates,
+        const ASTTemplateArgumentListInfo *TemplateArgsWritten)
+    : NumCandidates(Candidates.size()),
+      TemplateArgumentsAsWritten(TemplateArgsWritten) {
+  std::transform(Candidates.begin(), Candidates.end(),
+                 getTrailingObjects<FunctionTemplateDecl *>(),
+                 [](NamedDecl *ND) {
+                   return cast<FunctionTemplateDecl>(ND->getUnderlyingDecl());
+                 });
 }
 
 TemplateSpecializationKind FunctionDecl::getTemplateSpecializationKind() const {
@@ -4192,6 +4200,13 @@ TemplateSpecializationKind FunctionDecl::getTemplateSpecializationKind() const {
           TemplateOrSpecialization.dyn_cast<MemberSpecializationInfo *>())
     return MSInfo->getTemplateSpecializationKind();
 
+  // A dependent function template specialization is an explicit specialization,
+  // except when it's a friend declaration.
+  if (TemplateOrSpecialization
+          .is<DependentFunctionTemplateSpecializationInfo *>() &&
+      getFriendObjectKind() == FOK_None)
+    return TSK_ExplicitSpecialization;
+
   return TSK_Undeclared;
 }
 
@@ -4205,6 +4220,11 @@ FunctionDecl::getTemplateSpecializationKindForInstantiation() const {
   //   template<typename U> void f() {}
   //   template<> void f<int>() {}
   // };
+  //
+  // Within the templated CXXRecordDecl, A<T>::f<int> is a dependent function
+  // template specialization; both getTemplateSpecializationKind() and
+  // getTemplateSpecializationKindForInstantiation() will return
+  // TSK_ExplicitSpecialization.
   //
   // For A<int>::f<int>():
   // * getTemplateSpecializationKind() will return TSK_ExplicitSpecialization
@@ -4225,6 +4245,11 @@ FunctionDecl::getTemplateSpecializationKindForInstantiation() const {
   if (MemberSpecializationInfo *MSInfo =
           TemplateOrSpecialization.dyn_cast<MemberSpecializationInfo *>())
     return MSInfo->getTemplateSpecializationKind();
+
+  if (TemplateOrSpecialization
+          .is<DependentFunctionTemplateSpecializationInfo *>() &&
+      getFriendObjectKind() == FOK_None)
+    return TSK_ExplicitSpecialization;
 
   return TSK_Undeclared;
 }

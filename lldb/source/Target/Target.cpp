@@ -335,6 +335,45 @@ BreakpointSP Target::GetBreakpointByID(break_id_t break_id) {
   return bp_sp;
 }
 
+lldb::BreakpointSP
+lldb_private::Target::CreateBreakpointAtUserEntry(Status &error) {
+  ModuleSP main_module_sp = GetExecutableModule();
+  FileSpecList shared_lib_filter;
+  shared_lib_filter.Append(main_module_sp->GetFileSpec());
+  llvm::SetVector<std::string, std::vector<std::string>,
+                  std::unordered_set<std::string>>
+      entryPointNamesSet;
+  for (LanguageType lang_type : Language::GetSupportedLanguages()) {
+    Language *lang = Language::FindPlugin(lang_type);
+    if (!lang) {
+      error.SetErrorString("Language not found\n");
+      return lldb::BreakpointSP();
+    }
+    std::string entryPointName = lang->GetUserEntryPointName().str();
+    if (!entryPointName.empty())
+      entryPointNamesSet.insert(entryPointName);
+  }
+  if (entryPointNamesSet.empty()) {
+    error.SetErrorString("No entry point name found\n");
+    return lldb::BreakpointSP();
+  }
+  BreakpointSP bp_sp = CreateBreakpoint(
+      &shared_lib_filter,
+      /*containingSourceFiles=*/nullptr, entryPointNamesSet.takeVector(),
+      /*func_name_type_mask=*/eFunctionNameTypeFull,
+      /*language=*/eLanguageTypeUnknown,
+      /*offset=*/0,
+      /*skip_prologue=*/eLazyBoolNo,
+      /*internal=*/false,
+      /*hardware=*/false);
+  if (!bp_sp) {
+    error.SetErrorString("Breakpoint creation failed.\n");
+    return lldb::BreakpointSP();
+  }
+  bp_sp->SetOneShot(true);
+  return bp_sp;
+}
+
 BreakpointSP Target::CreateSourceRegexBreakpoint(
     const FileSpecList *containingModules,
     const FileSpecList *source_file_spec_list,
@@ -441,12 +480,12 @@ BreakpointSP Target::CreateBreakpoint(const Address &addr, bool internal,
 
 lldb::BreakpointSP
 Target::CreateAddressInModuleBreakpoint(lldb::addr_t file_addr, bool internal,
-                                        const FileSpec *file_spec,
+                                        const FileSpec &file_spec,
                                         bool request_hardware) {
   SearchFilterSP filter_sp(
       new SearchFilterForUnconstrainedSearches(shared_from_this()));
   BreakpointResolverSP resolver_sp(new BreakpointResolverAddress(
-      nullptr, file_addr, file_spec ? *file_spec : FileSpec()));
+      nullptr, file_addr, file_spec));
   return CreateBreakpoint(filter_sp, resolver_sp, internal, request_hardware,
                           false);
 }

@@ -85,6 +85,7 @@ def OneShotBufferizeOp
       DefaultValuedAttr<BoolAttr, "false">:$allow_return_allocs_from_loops,
       DefaultValuedAttr<BoolAttr, "false">:$allow_unknown_ops,
       DefaultValuedAttr<BoolAttr, "false">:$bufferize_function_boundaries,
+      DefaultValuedAttr<BoolAttr, "false">:$dump_alias_sets,
       DefaultValuedAttr<BoolAttr, "false">:$test_analysis_only,
       DefaultValuedAttr<BoolAttr, "false">:$print_conflicts,
       DefaultValuedAttr<StrAttr, "\"memref.copy\"">:$memcpy_op);

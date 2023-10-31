@@ -29,6 +29,12 @@ using namespace llvm;
 #define DEBUG_TYPE "riscv-isel"
 #define PASS_NAME "RISC-V DAG->DAG Pattern Instruction Selection"
 
+static cl::opt<bool> UsePseudoMovImm(
+    "riscv-use-rematerializable-movimm", cl::Hidden,
+    cl::desc("Use a rematerializable pseudoinstruction for 2 instruction "
+             "constant materialization"),
+    cl::init(false));
+
 namespace llvm::RISCV {
 #define GET_RISCVVSSEGTable_IMPL
 #define GET_RISCVVLSEGTable_IMPL
@@ -194,6 +200,13 @@ static SDValue selectImm(SelectionDAG *CurDAG, const SDLoc &DL, const MVT VT,
                          int64_t Imm, const RISCVSubtarget &Subtarget) {
   RISCVMatInt::InstSeq Seq =
       RISCVMatInt::generateInstSeq(Imm, Subtarget.getFeatureBits());
+
+  // Use a rematerializable pseudo instruction for short sequences if enabled.
+  if (Seq.size() == 2 && UsePseudoMovImm)
+    return SDValue(
+        CurDAG->getMachineNode(RISCV::PseudoMovImm, DL, VT,
+                               CurDAG->getTargetConstant(Imm, DL, VT)),
+        0);
 
   // See if we can create this constant as (ADD (SLLI X, C), X) where X is at
   // worst an LUI+ADDIW. This will require an extra register, but avoids a
@@ -1013,12 +1026,12 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     unsigned TrailingOnes = llvm::countr_one(Mask);
     if (ShAmt >= TrailingOnes)
       break;
-    // If the mask has 32 trailing ones, use SRLIW.
+    // If the mask has 32 trailing ones, use SRLI on RV32 or SRLIW on RV64.
     if (TrailingOnes == 32) {
-      SDNode *SRLIW =
-          CurDAG->getMachineNode(RISCV::SRLIW, DL, VT, N0->getOperand(0),
-                                 CurDAG->getTargetConstant(ShAmt, DL, VT));
-      ReplaceNode(Node, SRLIW);
+      SDNode *SRLI = CurDAG->getMachineNode(
+          Subtarget->is64Bit() ? RISCV::SRLIW : RISCV::SRLI, DL, VT,
+          N0->getOperand(0), CurDAG->getTargetConstant(ShAmt, DL, VT));
+      ReplaceNode(Node, SRLI);
       return;
     }
 
@@ -2229,7 +2242,8 @@ bool RISCVDAGToDAGISel::SelectFrameAddrRegImm(SDValue Addr, SDValue &Base,
 // Fold constant addresses.
 static bool selectConstantAddr(SelectionDAG *CurDAG, const SDLoc &DL,
                                const MVT VT, const RISCVSubtarget *Subtarget,
-                               SDValue Addr, SDValue &Base, SDValue &Offset) {
+                               SDValue Addr, SDValue &Base, SDValue &Offset,
+                               bool IsPrefetch = false) {
   if (!isa<ConstantSDNode>(Addr))
     return false;
 
@@ -2241,6 +2255,9 @@ static bool selectConstantAddr(SelectionDAG *CurDAG, const SDLoc &DL,
   int64_t Lo12 = SignExtend64<12>(CVal);
   int64_t Hi = (uint64_t)CVal - (uint64_t)Lo12;
   if (!Subtarget->is64Bit() || isInt<32>(Hi)) {
+    if (IsPrefetch && (Lo12 & 0b11111) != 0)
+      return false;
+
     if (Hi) {
       int64_t Hi20 = (Hi >> 12) & 0xfffff;
       Base = SDValue(
@@ -2263,6 +2280,8 @@ static bool selectConstantAddr(SelectionDAG *CurDAG, const SDLoc &DL,
   if (Seq.back().getOpcode() != RISCV::ADDI)
     return false;
   Lo12 = Seq.back().getImm();
+  if (IsPrefetch && (Lo12 & 0b11111) != 0)
+    return false;
 
   // Drop the last instruction.
   Seq.pop_back();
@@ -2436,6 +2455,72 @@ bool RISCVDAGToDAGISel::SelectAddrRegImm(SDValue Addr, SDValue &Base,
   }
 
   if (selectConstantAddr(CurDAG, DL, VT, Subtarget, Addr, Base, Offset))
+    return true;
+
+  Base = Addr;
+  Offset = CurDAG->getTargetConstant(0, DL, VT);
+  return true;
+}
+
+/// Similar to SelectAddrRegImm, except that the least significant 5 bits of
+/// Offset shoule be all zeros.
+bool RISCVDAGToDAGISel::SelectAddrRegImmLsb00000(SDValue Addr, SDValue &Base,
+                                                 SDValue &Offset) {
+  if (SelectAddrFrameIndex(Addr, Base, Offset))
+    return true;
+
+  SDLoc DL(Addr);
+  MVT VT = Addr.getSimpleValueType();
+
+  if (CurDAG->isBaseWithConstantOffset(Addr)) {
+    int64_t CVal = cast<ConstantSDNode>(Addr.getOperand(1))->getSExtValue();
+    if (isInt<12>(CVal)) {
+      Base = Addr.getOperand(0);
+
+      // Early-out if not a valid offset.
+      if ((CVal & 0b11111) != 0) {
+        Base = Addr;
+        Offset = CurDAG->getTargetConstant(0, DL, VT);
+        return true;
+      }
+
+      if (auto *FIN = dyn_cast<FrameIndexSDNode>(Base))
+        Base = CurDAG->getTargetFrameIndex(FIN->getIndex(), VT);
+      Offset = CurDAG->getTargetConstant(CVal, DL, VT);
+      return true;
+    }
+  }
+
+  // Handle ADD with large immediates.
+  if (Addr.getOpcode() == ISD::ADD && isa<ConstantSDNode>(Addr.getOperand(1))) {
+    int64_t CVal = cast<ConstantSDNode>(Addr.getOperand(1))->getSExtValue();
+    assert(!(isInt<12>(CVal) && isInt<12>(CVal)) &&
+           "simm12 not already handled?");
+
+    // Handle immediates in the range [-4096,-2049] or [2017, 4065]. We can save
+    // one instruction by folding adjustment (-2048 or 2016) into the address.
+    if ((-2049 >= CVal && CVal >= -4096) || (4065 >= CVal && CVal >= 2017)) {
+      int64_t Adj = CVal < 0 ? -2048 : 2016;
+      int64_t AdjustedOffset = CVal - Adj;
+      Base = SDValue(CurDAG->getMachineNode(
+                         RISCV::ADDI, DL, VT, Addr.getOperand(0),
+                         CurDAG->getTargetConstant(AdjustedOffset, DL, VT)),
+                     0);
+      Offset = CurDAG->getTargetConstant(Adj, DL, VT);
+      return true;
+    }
+
+    if (selectConstantAddr(CurDAG, DL, VT, Subtarget, Addr.getOperand(1), Base,
+                           Offset, true)) {
+      // Insert an ADD instruction with the materialized Hi52 bits.
+      Base = SDValue(
+          CurDAG->getMachineNode(RISCV::ADD, DL, VT, Addr.getOperand(0), Base),
+          0);
+      return true;
+    }
+  }
+
+  if (selectConstantAddr(CurDAG, DL, VT, Subtarget, Addr, Base, Offset, true))
     return true;
 
   Base = Addr;
@@ -2756,10 +2841,9 @@ bool RISCVDAGToDAGISel::selectSHXADD_UWOp(SDValue N, unsigned ShAmt,
 static bool vectorPseudoHasAllNBitUsers(SDNode *User, unsigned UserOpNo,
                                         unsigned Bits,
                                         const TargetInstrInfo *TII) {
-  const RISCVVPseudosTable::PseudoInfo *PseudoInfo =
-      RISCVVPseudosTable::getPseudoInfo(User->getMachineOpcode());
+  unsigned MCOpcode = RISCV::getRVVMCOpcode(User->getMachineOpcode());
 
-  if (!PseudoInfo)
+  if (!MCOpcode)
     return false;
 
   const MCInstrDesc &MCID = TII->get(User->getMachineOpcode());
@@ -2779,120 +2863,9 @@ static bool vectorPseudoHasAllNBitUsers(SDNode *User, unsigned UserOpNo,
   if (UserOpNo == VLIdx)
     return false;
 
-  // TODO: Handle Zvbb instructions
-  switch (PseudoInfo->BaseInstr) {
-  default:
-    return false;
-
-  // 11.6. Vector Single-Width Shift Instructions
-  case RISCV::VSLL_VX:
-  case RISCV::VSRL_VX:
-  case RISCV::VSRA_VX:
-  // 12.4. Vector Single-Width Scaling Shift Instructions
-  case RISCV::VSSRL_VX:
-  case RISCV::VSSRA_VX:
-    // Only the low lg2(SEW) bits of the shift-amount value are used.
-    if (Bits < Log2SEW)
-      return false;
-    break;
-
-  // 11.7 Vector Narrowing Integer Right Shift Instructions
-  case RISCV::VNSRL_WX:
-  case RISCV::VNSRA_WX:
-  // 12.5. Vector Narrowing Fixed-Point Clip Instructions
-  case RISCV::VNCLIPU_WX:
-  case RISCV::VNCLIP_WX:
-    // Only the low lg2(2*SEW) bits of the shift-amount value are used.
-    if (Bits < Log2SEW + 1)
-      return false;
-    break;
-
-  // 11.1. Vector Single-Width Integer Add and Subtract
-  case RISCV::VADD_VX:
-  case RISCV::VSUB_VX:
-  case RISCV::VRSUB_VX:
-  // 11.2. Vector Widening Integer Add/Subtract
-  case RISCV::VWADDU_VX:
-  case RISCV::VWSUBU_VX:
-  case RISCV::VWADD_VX:
-  case RISCV::VWSUB_VX:
-  case RISCV::VWADDU_WX:
-  case RISCV::VWSUBU_WX:
-  case RISCV::VWADD_WX:
-  case RISCV::VWSUB_WX:
-  // 11.4. Vector Integer Add-with-Carry / Subtract-with-Borrow Instructions
-  case RISCV::VADC_VXM:
-  case RISCV::VADC_VIM:
-  case RISCV::VMADC_VXM:
-  case RISCV::VMADC_VIM:
-  case RISCV::VMADC_VX:
-  case RISCV::VSBC_VXM:
-  case RISCV::VMSBC_VXM:
-  case RISCV::VMSBC_VX:
-  // 11.5 Vector Bitwise Logical Instructions
-  case RISCV::VAND_VX:
-  case RISCV::VOR_VX:
-  case RISCV::VXOR_VX:
-  // 11.8. Vector Integer Compare Instructions
-  case RISCV::VMSEQ_VX:
-  case RISCV::VMSNE_VX:
-  case RISCV::VMSLTU_VX:
-  case RISCV::VMSLT_VX:
-  case RISCV::VMSLEU_VX:
-  case RISCV::VMSLE_VX:
-  case RISCV::VMSGTU_VX:
-  case RISCV::VMSGT_VX:
-  // 11.9. Vector Integer Min/Max Instructions
-  case RISCV::VMINU_VX:
-  case RISCV::VMIN_VX:
-  case RISCV::VMAXU_VX:
-  case RISCV::VMAX_VX:
-  // 11.10. Vector Single-Width Integer Multiply Instructions
-  case RISCV::VMUL_VX:
-  case RISCV::VMULH_VX:
-  case RISCV::VMULHU_VX:
-  case RISCV::VMULHSU_VX:
-  // 11.11. Vector Integer Divide Instructions
-  case RISCV::VDIVU_VX:
-  case RISCV::VDIV_VX:
-  case RISCV::VREMU_VX:
-  case RISCV::VREM_VX:
-  // 11.12. Vector Widening Integer Multiply Instructions
-  case RISCV::VWMUL_VX:
-  case RISCV::VWMULU_VX:
-  case RISCV::VWMULSU_VX:
-  // 11.13. Vector Single-Width Integer Multiply-Add Instructions
-  case RISCV::VMACC_VX:
-  case RISCV::VNMSAC_VX:
-  case RISCV::VMADD_VX:
-  case RISCV::VNMSUB_VX:
-  // 11.14. Vector Widening Integer Multiply-Add Instructions
-  case RISCV::VWMACCU_VX:
-  case RISCV::VWMACC_VX:
-  case RISCV::VWMACCSU_VX:
-  case RISCV::VWMACCUS_VX:
-  // 11.15. Vector Integer Merge Instructions
-  case RISCV::VMERGE_VXM:
-  // 11.16. Vector Integer Move Instructions
-  case RISCV::VMV_V_X:
-  // 12.1. Vector Single-Width Saturating Add and Subtract
-  case RISCV::VSADDU_VX:
-  case RISCV::VSADD_VX:
-  case RISCV::VSSUBU_VX:
-  case RISCV::VSSUB_VX:
-  // 12.2. Vector Single-Width Averaging Add and Subtract
-  case RISCV::VAADDU_VX:
-  case RISCV::VAADD_VX:
-  case RISCV::VASUBU_VX:
-  case RISCV::VASUB_VX:
-  // 12.3. Vector Single-Width Fractional Multiply with Rounding and Saturation
-  case RISCV::VSMUL_VX:
-  // 16.1. Integer Scalar Move Instructions
-  case RISCV::VMV_S_X:
-    if (Bits < (1U << Log2SEW))
-      return false;
-  }
-  return true;
+  auto NumDemandedBits =
+      RISCV::getVectorLowDemandedScalarBits(MCOpcode, Log2SEW);
+  return NumDemandedBits && Bits >= *NumDemandedBits;
 }
 
 // Return true if all users of this SDNode* only consume the lower \p Bits.
@@ -2915,6 +2888,11 @@ bool RISCVDAGToDAGISel::hasAllNBitUsers(SDNode *Node, unsigned Bits,
          "Unexpected opcode");
 
   if (Depth >= SelectionDAG::MaxRecursionDepth)
+    return false;
+
+  // The PatFrags that call this may run before RISCVGenDAGISel.inc has checked
+  // the VT. Ensure the type is scalar to avoid wasting time on vectors.
+  if (Depth == 0 && !Node->getValueType(0).isScalarInteger())
     return false;
 
   for (auto UI = Node->use_begin(), UE = Node->use_end(); UI != UE; ++UI) {
@@ -3425,21 +3403,11 @@ bool RISCVDAGToDAGISel::doPeepholeMaskedRVV(MachineSDNode *N) {
 }
 
 static bool IsVMerge(SDNode *N) {
-  unsigned Opc = N->getMachineOpcode();
-  return Opc == RISCV::PseudoVMERGE_VVM_MF8 ||
-         Opc == RISCV::PseudoVMERGE_VVM_MF4 ||
-         Opc == RISCV::PseudoVMERGE_VVM_MF2 ||
-         Opc == RISCV::PseudoVMERGE_VVM_M1 ||
-         Opc == RISCV::PseudoVMERGE_VVM_M2 ||
-         Opc == RISCV::PseudoVMERGE_VVM_M4 || Opc == RISCV::PseudoVMERGE_VVM_M8;
+  return RISCV::getRVVMCOpcode(N->getMachineOpcode()) == RISCV::VMERGE_VVM;
 }
 
 static bool IsVMv(SDNode *N) {
-  unsigned Opc = N->getMachineOpcode();
-  return Opc == RISCV::PseudoVMV_V_V_MF8 || Opc == RISCV::PseudoVMV_V_V_MF4 ||
-         Opc == RISCV::PseudoVMV_V_V_MF2 || Opc == RISCV::PseudoVMV_V_V_M1 ||
-         Opc == RISCV::PseudoVMV_V_V_M2 || Opc == RISCV::PseudoVMV_V_V_M4 ||
-         Opc == RISCV::PseudoVMV_V_V_M8;
+  return RISCV::getRVVMCOpcode(N->getMachineOpcode()) == RISCV::VMV_V_V;
 }
 
 static unsigned GetVMSetForLMul(RISCVII::VLMUL LMUL) {
@@ -3717,40 +3685,6 @@ bool RISCVDAGToDAGISel::performCombineVMergeAndVOps(SDNode *N) {
   return true;
 }
 
-// Transform (VMERGE_VVM_<LMUL> false, false, true, allones, vl, sew) to
-// (VMV_V_V_<LMUL> false, true, vl, sew). It may decrease uses of VMSET.
-bool RISCVDAGToDAGISel::performVMergeToVMv(SDNode *N) {
-#define CASE_VMERGE_TO_VMV(lmul)                                               \
-  case RISCV::PseudoVMERGE_VVM_##lmul:                                    \
-    NewOpc = RISCV::PseudoVMV_V_V_##lmul;                                 \
-    break;
-  unsigned NewOpc;
-  switch (N->getMachineOpcode()) {
-  default:
-    llvm_unreachable("Expected VMERGE_VVM_<LMUL> instruction.");
-  CASE_VMERGE_TO_VMV(MF8)
-  CASE_VMERGE_TO_VMV(MF4)
-  CASE_VMERGE_TO_VMV(MF2)
-  CASE_VMERGE_TO_VMV(M1)
-  CASE_VMERGE_TO_VMV(M2)
-  CASE_VMERGE_TO_VMV(M4)
-  CASE_VMERGE_TO_VMV(M8)
-  }
-
-  if (!usesAllOnesMask(N, /* MaskOpIdx */ 3))
-    return false;
-
-  SDLoc DL(N);
-  SDValue PolicyOp =
-    CurDAG->getTargetConstant(/*TUMU*/ 0, DL, Subtarget->getXLenVT());
-  SDNode *Result = CurDAG->getMachineNode(
-      NewOpc, DL, N->getValueType(0),
-      {N->getOperand(1), N->getOperand(2), N->getOperand(4), N->getOperand(5),
-       PolicyOp});
-  ReplaceUses(N, Result);
-  return true;
-}
-
 bool RISCVDAGToDAGISel::doPeepholeMergeVVMFold() {
   bool MadeChange = false;
   SelectionDAG::allnodes_iterator Position = CurDAG->allnodes_end();
@@ -3762,8 +3696,6 @@ bool RISCVDAGToDAGISel::doPeepholeMergeVVMFold() {
 
     if (IsVMerge(N) || IsVMv(N))
       MadeChange |= performCombineVMergeAndVOps(N);
-    if (IsVMerge(N) && N->getOperand(0) == N->getOperand(1))
-      MadeChange |= performVMergeToVMv(N);
   }
   return MadeChange;
 }

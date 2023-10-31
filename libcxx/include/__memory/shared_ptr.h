@@ -14,9 +14,11 @@
 #include <__compare/compare_three_way.h>
 #include <__compare/ordering.h>
 #include <__config>
+#include <__exception/exception.h>
 #include <__functional/binary_function.h>
 #include <__functional/operations.h>
 #include <__functional/reference_wrapper.h>
+#include <__fwd/ostream.h>
 #include <__iterator/access.h>
 #include <__memory/addressof.h>
 #include <__memory/allocation_guard.h>
@@ -49,9 +51,7 @@
 #include <__utility/swap.h>
 #include <__verbose_abort>
 #include <cstddef>
-#include <iosfwd>
 #include <new>
-#include <stdexcept>
 #include <typeinfo>
 #if !defined(_LIBCPP_HAS_NO_ATOMIC_HEADER)
 #  include <__atomic/memory_order.h>
@@ -1137,7 +1137,8 @@ private:
         __alloc_.~_Alloc();
         size_t __size = __unbounded_array_control_block::__bytes_for(__count_);
         _AlignedStorage* __storage = reinterpret_cast<_AlignedStorage*>(this);
-        allocator_traits<_StorageAlloc>::deallocate(__tmp, _PointerTraits::pointer_to(*__storage), __size);
+        allocator_traits<_StorageAlloc>::deallocate(
+            __tmp, _PointerTraits::pointer_to(*__storage), __size / sizeof(_AlignedStorage));
     }
 
     _LIBCPP_NO_UNIQUE_ADDRESS _Alloc __alloc_;
@@ -1220,7 +1221,7 @@ private:
 
         _ControlBlockAlloc __tmp(__alloc_);
         __alloc_.~_Alloc();
-        allocator_traits<_ControlBlockAlloc>::deallocate(__tmp, _PointerTraits::pointer_to(*this), sizeof(*this));
+        allocator_traits<_ControlBlockAlloc>::deallocate(__tmp, _PointerTraits::pointer_to(*this), 1);
     }
 
     _LIBCPP_NO_UNIQUE_ADDRESS _Alloc __alloc_;

@@ -1358,6 +1358,8 @@ static AttrBuilder IdentifyValidUBGeneratingAttributes(CallBase &CB) {
     Valid.addDereferenceableOrNullAttr(DerefOrNullBytes);
   if (CB.hasRetAttr(Attribute::NoAlias))
     Valid.addAttribute(Attribute::NoAlias);
+  if (CB.hasRetAttr(Attribute::NoUndef))
+    Valid.addAttribute(Attribute::NoUndef);
   return Valid;
 }
 
@@ -1367,6 +1369,8 @@ static AttrBuilder IdentifyValidPoisonGeneratingAttributes(CallBase &CB) {
   AttrBuilder Valid(CB.getContext());
   if (CB.hasRetAttr(Attribute::NonNull))
     Valid.addAttribute(Attribute::NonNull);
+  if (CB.hasRetAttr(Attribute::Alignment))
+    Valid.addAlignmentAttr(CB.getRetAlign());
   return Valid;
 }
 
@@ -1417,6 +1421,11 @@ static void AddReturnAttributes(CallBase &CB, ValueToValueMapTy &VMap) {
     // existing attribute value (i.e. attributes such as dereferenceable,
     // dereferenceable_or_null etc). See AttrBuilder::merge for more details.
     AttributeList AL = NewRetVal->getAttributes();
+    if (ValidUB.getDereferenceableBytes() < AL.getRetDereferenceableBytes())
+      ValidUB.removeAttribute(Attribute::Dereferenceable);
+    if (ValidUB.getDereferenceableOrNullBytes() <
+        AL.getRetDereferenceableOrNullBytes())
+      ValidUB.removeAttribute(Attribute::DereferenceableOrNull);
     AttributeList NewAL = AL.addRetAttributes(Context, ValidUB);
     // Attributes that may generate poison returns are a bit tricky. If we
     // propagate them, other uses of the callsite might have their behavior
@@ -1450,6 +1459,8 @@ static void AddReturnAttributes(CallBase &CB, ValueToValueMapTy &VMap) {
     // any new poison at @use will trigger UB anyways.
     // In case 3, we can never propagate nonnull because it may create UB due to
     // the noundef on @bar.
+    if (ValidPG.getAlignment().valueOrOne() < AL.getRetAlignment().valueOrOne())
+      ValidPG.removeAttribute(Attribute::Alignment);
     if (ValidPG.hasAttributes()) {
       // Three checks.
       // If the callsite has `noundef`, then a poison due to violating the
@@ -1819,12 +1830,12 @@ static void updateCallerBFI(BasicBlock *CallSiteBlock,
       continue;
     auto *OrigBB = cast<BasicBlock>(Entry.first);
     auto *ClonedBB = cast<BasicBlock>(Entry.second);
-    uint64_t Freq = CalleeBFI->getBlockFreq(OrigBB).getFrequency();
+    BlockFrequency Freq = CalleeBFI->getBlockFreq(OrigBB);
     if (!ClonedBBs.insert(ClonedBB).second) {
       // Multiple blocks in the callee might get mapped to one cloned block in
       // the caller since we prune the callee as we clone it. When that happens,
       // we want to use the maximum among the original blocks' frequencies.
-      uint64_t NewFreq = CallerBFI->getBlockFreq(ClonedBB).getFrequency();
+      BlockFrequency NewFreq = CallerBFI->getBlockFreq(ClonedBB);
       if (NewFreq > Freq)
         Freq = NewFreq;
     }
@@ -1832,8 +1843,7 @@ static void updateCallerBFI(BasicBlock *CallSiteBlock,
   }
   BasicBlock *EntryClone = cast<BasicBlock>(VMap.lookup(&CalleeEntryBlock));
   CallerBFI->setBlockFreqAndScale(
-      EntryClone, CallerBFI->getBlockFreq(CallSiteBlock).getFrequency(),
-      ClonedBBs);
+      EntryClone, CallerBFI->getBlockFreq(CallSiteBlock), ClonedBBs);
 }
 
 /// Update the branch metadata for cloned call instructions.
@@ -2800,8 +2810,8 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
 
   if (IFI.CallerBFI) {
     // Copy original BB's block frequency to AfterCallBB
-    IFI.CallerBFI->setBlockFreq(
-        AfterCallBB, IFI.CallerBFI->getBlockFreq(OrigBB).getFrequency());
+    IFI.CallerBFI->setBlockFreq(AfterCallBB,
+                                IFI.CallerBFI->getBlockFreq(OrigBB));
   }
 
   // Change the branch that used to go to AfterCallBB to branch to the first

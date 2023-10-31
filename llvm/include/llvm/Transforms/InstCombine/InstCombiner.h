@@ -500,34 +500,43 @@ public:
   OverflowResult computeOverflowForUnsignedMul(const Value *LHS,
                                                const Value *RHS,
                                                const Instruction *CxtI) const {
-    return llvm::computeOverflowForUnsignedMul(LHS, RHS, DL, &AC, CxtI, &DT);
+    return llvm::computeOverflowForUnsignedMul(LHS, RHS,
+                                               SQ.getWithInstruction(CxtI));
   }
 
   OverflowResult computeOverflowForSignedMul(const Value *LHS, const Value *RHS,
                                              const Instruction *CxtI) const {
-    return llvm::computeOverflowForSignedMul(LHS, RHS, DL, &AC, CxtI, &DT);
+    return llvm::computeOverflowForSignedMul(LHS, RHS,
+                                             SQ.getWithInstruction(CxtI));
   }
 
-  OverflowResult computeOverflowForUnsignedAdd(const Value *LHS,
-                                               const Value *RHS,
-                                               const Instruction *CxtI) const {
-    return llvm::computeOverflowForUnsignedAdd(LHS, RHS, DL, &AC, CxtI, &DT);
+  OverflowResult
+  computeOverflowForUnsignedAdd(const WithCache<const Value *> &LHS,
+                                const WithCache<const Value *> &RHS,
+                                const Instruction *CxtI) const {
+    return llvm::computeOverflowForUnsignedAdd(LHS, RHS,
+                                               SQ.getWithInstruction(CxtI));
   }
 
-  OverflowResult computeOverflowForSignedAdd(const Value *LHS, const Value *RHS,
-                                             const Instruction *CxtI) const {
-    return llvm::computeOverflowForSignedAdd(LHS, RHS, DL, &AC, CxtI, &DT);
+  OverflowResult
+  computeOverflowForSignedAdd(const WithCache<const Value *> &LHS,
+                              const WithCache<const Value *> &RHS,
+                              const Instruction *CxtI) const {
+    return llvm::computeOverflowForSignedAdd(LHS, RHS,
+                                             SQ.getWithInstruction(CxtI));
   }
 
   OverflowResult computeOverflowForUnsignedSub(const Value *LHS,
                                                const Value *RHS,
                                                const Instruction *CxtI) const {
-    return llvm::computeOverflowForUnsignedSub(LHS, RHS, DL, &AC, CxtI, &DT);
+    return llvm::computeOverflowForUnsignedSub(LHS, RHS,
+                                               SQ.getWithInstruction(CxtI));
   }
 
   OverflowResult computeOverflowForSignedSub(const Value *LHS, const Value *RHS,
                                              const Instruction *CxtI) const {
-    return llvm::computeOverflowForSignedSub(LHS, RHS, DL, &AC, CxtI, &DT);
+    return llvm::computeOverflowForSignedSub(LHS, RHS,
+                                             SQ.getWithInstruction(CxtI));
   }
 
   virtual bool SimplifyDemandedBits(Instruction *I, unsigned OpNo,

@@ -18,6 +18,7 @@
 using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::dwarf;
+using namespace lldb_private::plugin::dwarf;
 
 namespace {
 static std::once_flag debugger_initialize_flag;

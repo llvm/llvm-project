@@ -25,7 +25,7 @@
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x half> @llvm.aarch64.sve.fclamp.nxv8f16(<vscale x 8 x half> [[OP1:%.*]], <vscale x 8 x half> [[OP2:%.*]], <vscale x 8 x half> [[OP3:%.*]])
 // CHECK-NEXT:    ret <vscale x 8 x half> [[TMP0]]
 //
-// CPP-CHECK-LABEL: @_Z16test_svclamp_f16u13__SVFloat16_tu13__SVFloat16_tu13__SVFloat16_t(
+// CPP-CHECK-LABEL: @_Z16test_svclamp_f16u13__SVFloat16_tS_S_(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x half> @llvm.aarch64.sve.fclamp.nxv8f16(<vscale x 8 x half> [[OP1:%.*]], <vscale x 8 x half> [[OP2:%.*]], <vscale x 8 x half> [[OP3:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 8 x half> [[TMP0]]
@@ -39,7 +39,7 @@ svfloat16_t test_svclamp_f16(svfloat16_t op1, svfloat16_t op2, svfloat16_t op3) 
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x float> @llvm.aarch64.sve.fclamp.nxv4f32(<vscale x 4 x float> [[OP1:%.*]], <vscale x 4 x float> [[OP2:%.*]], <vscale x 4 x float> [[OP3:%.*]])
 // CHECK-NEXT:    ret <vscale x 4 x float> [[TMP0]]
 //
-// CPP-CHECK-LABEL: @_Z16test_svclamp_f32u13__SVFloat32_tu13__SVFloat32_tu13__SVFloat32_t(
+// CPP-CHECK-LABEL: @_Z16test_svclamp_f32u13__SVFloat32_tS_S_(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x float> @llvm.aarch64.sve.fclamp.nxv4f32(<vscale x 4 x float> [[OP1:%.*]], <vscale x 4 x float> [[OP2:%.*]], <vscale x 4 x float> [[OP3:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 4 x float> [[TMP0]]
@@ -53,7 +53,7 @@ svfloat32_t test_svclamp_f32(svfloat32_t op1, svfloat32_t op2, svfloat32_t op3) 
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x double> @llvm.aarch64.sve.fclamp.nxv2f64(<vscale x 2 x double> [[OP1:%.*]], <vscale x 2 x double> [[OP2:%.*]], <vscale x 2 x double> [[OP3:%.*]])
 // CHECK-NEXT:    ret <vscale x 2 x double> [[TMP0]]
 //
-// CPP-CHECK-LABEL: @_Z16test_svclamp_f64u13__SVFloat64_tu13__SVFloat64_tu13__SVFloat64_t(
+// CPP-CHECK-LABEL: @_Z16test_svclamp_f64u13__SVFloat64_tS_S_(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x double> @llvm.aarch64.sve.fclamp.nxv2f64(<vscale x 2 x double> [[OP1:%.*]], <vscale x 2 x double> [[OP2:%.*]], <vscale x 2 x double> [[OP3:%.*]])
 // CPP-CHECK-NEXT:    ret <vscale x 2 x double> [[TMP0]]
