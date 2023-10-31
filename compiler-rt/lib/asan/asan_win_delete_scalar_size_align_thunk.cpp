@@ -31,16 +31,14 @@
 // +-----------------------+  +--------------------------+
 // clang-format on
 
-extern "C" void __cdecl __asan_delete_size_align(
-    __asan_win_new_delete_data* data, void* ptr, size_t size,
+extern "C" void __cdecl __asan_delete_size_align(void* ptr, size_t size,
     std::align_val_t align) noexcept;
 
 // Avoid tailcall optimization to preserve stack frame.
 #pragma optimize("", off)
 void operator delete(void* ptr, size_t size, std::align_val_t align) noexcept {
   if (__asan_InitDefine<op_delete_scalar_align>::defined) {
-    __asan_win_new_delete_data data{};
-    __asan_delete_size_align(&data, ptr, size, align);
+    __asan_delete_size_align(ptr, size, align);
   } else {
     operator delete(ptr, align);
   }

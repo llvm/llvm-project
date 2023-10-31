@@ -23,7 +23,7 @@
 // initializer to those TUs to mark whether that overload is included.
 //===----------------------------------------------------------------------===//
 
-#include "asan_win_thunk_common.h"
+#include <sanitizer_common/sanitizer_internal_defs.h>
 // Fake std::nothrow_t and std::align_val_t to avoid including <new>.
 namespace std {
 struct nothrow_t {};
@@ -35,7 +35,6 @@ void* operator new[](size_t, std::align_val_t);
 void operator delete(void* ptr, std::align_val_t align);
 void operator delete[](void* ptr, std::align_val_t align);
 
-using __asan_win_new_delete_data = __sanitizer::__asan_win_stack_data;
 
 ////////////////////////////////////
 // clang-format off

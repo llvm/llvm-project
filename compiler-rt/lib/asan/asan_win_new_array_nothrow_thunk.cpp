@@ -29,16 +29,14 @@
 //               +-----------------+
 // clang-format on
 
-extern "C" void* __cdecl __asan_new_array_nothrow(
-    __asan_win_new_delete_data* data, size_t size);
+extern "C" void* __cdecl __asan_new_array_nothrow(size_t size);
 
 // Avoid tailcall optimization to preserve stack frame.
 #pragma optimize("", off)
 void* operator new[](size_t size, std::nothrow_t const&) noexcept {
   if (__asan_InitDefine<op_new_scalar>::defined &&
       __asan_InitDefine<op_new_array>::defined) {
-    __asan_win_new_delete_data data{};
-    return __asan_new_array_nothrow(&data, size);
+    return __asan_new_array_nothrow(size);
   }
 
   try {

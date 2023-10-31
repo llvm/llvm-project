@@ -31,16 +31,14 @@
 // +-----------------+  +--------------------+
 // clang-format on
 
-extern "C" void __cdecl __asan_delete_array_size(
-    __asan_win_new_delete_data* data, void* ptr, size_t size);
+extern "C" void __cdecl __asan_delete_array_size(void* ptr, size_t size);
 
 // Avoid tailcall optimization to preserve stack frame.
 #pragma optimize("", off)
 void operator delete[](void* ptr, size_t size) noexcept {
   if (__asan_InitDefine<op_delete_scalar>::defined &&
       __asan_InitDefine<op_delete_array>::defined) {
-    __asan_win_new_delete_data data{};
-    __asan_delete_array_size(&data, ptr, size);
+    __asan_delete_array_size(ptr, size);
   } else {
     operator delete[](ptr);
   }

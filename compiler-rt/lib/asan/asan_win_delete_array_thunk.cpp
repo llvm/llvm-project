@@ -33,15 +33,13 @@
 
 __asan_InitDefine<op_delete_array> init_delete_array;
 
-extern "C" void __cdecl __asan_delete_array(__asan_win_new_delete_data* data,
-                                            void* ptr);
+extern "C" void __cdecl __asan_delete_array(void* ptr);
 
 // Avoid tailcall optimization to preserve stack frame.
 #pragma optimize("", off)
 void operator delete[](void* ptr) noexcept {
   if (__asan_InitDefine<op_delete_scalar>::defined) {
-    __asan_win_new_delete_data data{};
-    __asan_delete_array(&data, ptr);
+    __asan_delete_array(ptr);
   } else {
     operator delete(ptr);
   }

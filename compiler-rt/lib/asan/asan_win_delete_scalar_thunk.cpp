@@ -33,12 +33,10 @@
 
 __asan_InitDefine<op_delete_scalar> init_delete_scalar;
 
-extern "C" void __cdecl __asan_delete(__asan_win_new_delete_data* data,
-                                      void* ptr);
+extern "C" void __cdecl __asan_delete(void* ptr);
 
 // Avoid tailcall optimization to preserve stack frame.
 #pragma optimize("", off)
 void operator delete(void* ptr) noexcept {
-  __asan_win_new_delete_data data{};
-  __asan_delete(&data, ptr);
+  __asan_delete(ptr);
 }

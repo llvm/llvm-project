@@ -33,15 +33,13 @@
 
 __asan_InitDefine<op_delete_array_align> init_delete_array_align;
 
-extern "C" void __cdecl __asan_delete_array_align(
-    __asan_win_new_delete_data* data, void* ptr, std::align_val_t align);
+extern "C" void __cdecl __asan_delete_array_align(void* ptr, std::align_val_t align);
 
 // Avoid tailcall optimization to preserve stack frame.
 #pragma optimize("", off)
 void operator delete[](void* ptr, std::align_val_t align) noexcept {
   if (__asan_InitDefine<op_delete_scalar_align>::defined) {
-    __asan_win_new_delete_data data{};
-    __asan_delete_array_align(&data, ptr, align);
+    __asan_delete_array_align(ptr, align);
   } else {
     operator delete(ptr, align);
   }

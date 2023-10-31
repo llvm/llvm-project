@@ -31,12 +31,11 @@
 
 __asan_InitDefine<op_new_scalar> init_new_scalar;
 
-extern "C" void* __cdecl __asan_new(__asan_win_new_delete_data* data,
+extern "C" void* __cdecl __asan_new(
                                     size_t size);
 
 // Avoid tailcall optimization to preserve stack frame.
 #pragma optimize("", off)
 void* operator new(size_t size) {
-  __asan_win_new_delete_data data{};
-  return __asan_new(&data, size);
+  return __asan_new(size);
 }
