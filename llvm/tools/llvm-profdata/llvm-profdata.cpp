@@ -315,7 +315,7 @@ static void loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
 
   auto FS = vfs::getRealFileSystem();
   // TODO: This only saves the first non-fatal error from InstrProfReader, and
-  // then added to WriterContext::Errors. However, this is not extensiable, if
+  // then added to WriterContext::Errors. However, this is not extensible, if
   // we have more non-fatal errors from InstrProfReader in the future. How
   // should this interact with different -failure-mode?
   std::optional<std::pair<Error, std::string>> ReaderWarning;
