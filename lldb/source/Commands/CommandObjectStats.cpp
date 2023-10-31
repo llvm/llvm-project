@@ -26,15 +26,14 @@ public:
   ~CommandObjectStatsEnable() override = default;
 
 protected:
-  bool DoExecute(Args &command, CommandReturnObject &result) override {
+  void DoExecute(Args &command, CommandReturnObject &result) override {
     if (DebuggerStats::GetCollectingStats()) {
       result.AppendError("statistics already enabled");
-      return false;
+      return;
     }
 
     DebuggerStats::SetCollectingStats(true);
     result.SetStatus(eReturnStatusSuccessFinishResult);
-    return true;
   }
 };
 
@@ -48,15 +47,14 @@ public:
   ~CommandObjectStatsDisable() override = default;
 
 protected:
-  bool DoExecute(Args &command, CommandReturnObject &result) override {
+  void DoExecute(Args &command, CommandReturnObject &result) override {
     if (!DebuggerStats::GetCollectingStats()) {
       result.AppendError("need to enable statistics before disabling them");
-      return false;
+      return;
     }
 
     DebuggerStats::SetCollectingStats(false);
     result.SetStatus(eReturnStatusSuccessFinishResult);
-    return true;
   }
 };
 
@@ -105,7 +103,7 @@ public:
   Options *GetOptions() override { return &m_options; }
 
 protected:
-  bool DoExecute(Args &command, CommandReturnObject &result) override {
+  void DoExecute(Args &command, CommandReturnObject &result) override {
     Target *target = nullptr;
     if (!m_options.m_all_targets)
       target = m_exe_ctx.GetTargetPtr();
@@ -113,7 +111,6 @@ protected:
     result.AppendMessageWithFormatv(
         "{0:2}", DebuggerStats::ReportStatistics(GetDebugger(), target));
     result.SetStatus(eReturnStatusSuccessFinishResult);
-    return true;
   }
 
   CommandOptions m_options;

@@ -1576,11 +1576,12 @@ define i64 @v_urem_i64_pow2_shl_denom(i64 %x, i64 %y) {
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_mov_b32_e32 v3, v0
 ; CHECK-NEXT:    v_mov_b32_e32 v4, v1
-; CHECK-NEXT:    s_mov_b64 s[4:5], 0x1000
-; CHECK-NEXT:    v_mov_b32_e32 v0, 0
-; CHECK-NEXT:    v_lshl_b64 v[5:6], s[4:5], v2
-; CHECK-NEXT:    v_or_b32_e32 v1, v4, v6
-; CHECK-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[0:1]
+; CHECK-NEXT:    v_mov_b32_e32 v0, 0x1000
+; CHECK-NEXT:    v_mov_b32_e32 v1, 0
+; CHECK-NEXT:    v_mov_b32_e32 v7, 0
+; CHECK-NEXT:    v_lshl_b64 v[5:6], v[0:1], v2
+; CHECK-NEXT:    v_or_b32_e32 v8, v4, v6
+; CHECK-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[7:8]
 ; CHECK-NEXT:    v_cvt_f32_u32_e32 v2, v5
 ; CHECK-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; CHECK-NEXT:    s_and_saveexec_b64 s[4:5], vcc

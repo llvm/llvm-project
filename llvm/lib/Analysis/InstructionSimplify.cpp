@@ -2025,52 +2025,6 @@ static Value *simplifyAndOrOfCmps(const SimplifyQuery &Q, Value *Op0,
   return nullptr;
 }
 
-static Value *simplifyWithOpReplaced(Value *V, Value *Op, Value *RepOp,
-                                     const SimplifyQuery &Q,
-                                     bool AllowRefinement,
-                                     SmallVectorImpl<Instruction *> *DropFlags,
-                                     unsigned MaxRecurse);
-
-static Value *simplifyAndOrWithICmpEq(unsigned Opcode, Value *Op0, Value *Op1,
-                                      const SimplifyQuery &Q,
-                                      unsigned MaxRecurse) {
-  assert((Opcode == Instruction::And || Opcode == Instruction::Or) &&
-         "Must be and/or");
-  ICmpInst::Predicate Pred;
-  Value *A, *B;
-  if (!match(Op0, m_ICmp(Pred, m_Value(A), m_Value(B))) ||
-      !ICmpInst::isEquality(Pred) || !MaxRecurse--)
-    return nullptr;
-
-  auto Simplify = [&](Value *Res) -> Value * {
-    // and (icmp eq a, b), x implies (a==b) inside x.
-    // or (icmp ne a, b), x implies (a==b) inside x.
-    // If x simplifies to true/false, we can simplify the and/or.
-    if (Pred ==
-        (Opcode == Instruction::And ? ICmpInst::ICMP_EQ : ICmpInst::ICMP_NE))
-      return simplifyBinOp(Opcode, Op0, Res, Q, MaxRecurse);
-    // If we have and (icmp ne a, b), x and for a==b we can simplify x to false,
-    // then we can drop the icmp, as x will already be false in the case where
-    // the icmp is false. Similar for or and true.
-    if (Res == ConstantExpr::getBinOpAbsorber(Opcode, Res->getType()))
-      return Op1;
-    return nullptr;
-  };
-
-  // Increment MaxRecurse again, because simplifyWithOpReplaced() does its own
-  // decrement.
-  if (Value *Res =
-          simplifyWithOpReplaced(Op1, A, B, Q, /* AllowRefinement */ true,
-                                 /* DropFlags */ nullptr, MaxRecurse + 1))
-    return Simplify(Res);
-  if (Value *Res =
-          simplifyWithOpReplaced(Op1, B, A, Q, /* AllowRefinement */ true,
-                                 /* DropFlags */ nullptr, MaxRecurse + 1))
-    return Simplify(Res);
-
-  return nullptr;
-}
-
 /// Given a bitwise logic op, check if the operands are add/sub with a common
 /// source value and inverted constant (identity: C - X -> ~(X + ~C)).
 static Value *simplifyLogicOfAddSub(Value *Op0, Value *Op1,
@@ -2204,13 +2158,6 @@ static Value *simplifyAndInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
   if (match(Op1, m_Add(m_Specific(Op0), m_AllOnes())) &&
       isKnownToBeAPowerOfTwo(Op0, Q.DL, /*OrZero*/ true, 0, Q.AC, Q.CxtI, Q.DT))
     return Constant::getNullValue(Op0->getType());
-
-  if (Value *V =
-          simplifyAndOrWithICmpEq(Instruction::And, Op0, Op1, Q, MaxRecurse))
-    return V;
-  if (Value *V =
-          simplifyAndOrWithICmpEq(Instruction::And, Op1, Op0, Q, MaxRecurse))
-    return V;
 
   if (Value *V = simplifyAndOrOfCmps(Q, Op0, Op1, true))
     return V;
@@ -2487,13 +2434,6 @@ static Value *simplifyOrInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
             m_Intrinsic<Intrinsic::fshr>(m_Value(), m_Value(X), m_Value(Y))) &&
       match(Op0, m_LShr(m_Specific(X), m_Specific(Y))))
     return Op1;
-
-  if (Value *V =
-          simplifyAndOrWithICmpEq(Instruction::Or, Op0, Op1, Q, MaxRecurse))
-    return V;
-  if (Value *V =
-          simplifyAndOrWithICmpEq(Instruction::Or, Op1, Op0, Q, MaxRecurse))
-    return V;
 
   if (Value *V = simplifyAndOrOfCmps(Q, Op0, Op1, false))
     return V;
