@@ -4251,92 +4251,88 @@ uint64_t BinaryFunction::translateInputToOutputAddress(uint64_t Address) const {
                   BB->getOutputAddressRange().second);
 }
 
-DebugAddressRangesVector BinaryFunction::translateInputToOutputRanges(
-    const DWARFAddressRangesVector &InputRanges) const {
-  DebugAddressRangesVector OutputRanges;
+DebugAddressRangesVector
+BinaryFunction::translateInputToOutputRange(DebugAddressRange InRange) const {
+  DebugAddressRangesVector OutRanges;
 
+  // The function was removed from the output. Return an empty range.
   if (isFolded())
-    return OutputRanges;
+    return OutRanges;
 
-  // If the function hasn't changed return the same ranges.
+  // If the function hasn't changed return the same range.
   if (!isEmitted()) {
-    OutputRanges.resize(InputRanges.size());
-    llvm::transform(InputRanges, OutputRanges.begin(),
-                    [](const DWARFAddressRange &Range) {
-                      return DebugAddressRange(Range.LowPC, Range.HighPC);
-                    });
-    return OutputRanges;
+    OutRanges.emplace_back(InRange);
+    return OutRanges;
   }
 
-  // Even though we will merge ranges in a post-processing pass, we attempt to
-  // merge them in a main processing loop as it improves the processing time.
-  uint64_t PrevEndAddress = 0;
-  for (const DWARFAddressRange &Range : InputRanges) {
-    if (!containsAddress(Range.LowPC)) {
+  if (!containsAddress(InRange.LowPC))
+    return OutRanges;
+
+  // Special case of an empty range [X, X). Some tools expect X to be updated.
+  if (InRange.LowPC == InRange.HighPC) {
+    if (uint64_t NewPC = translateInputToOutputAddress(InRange.LowPC))
+      OutRanges.push_back(DebugAddressRange{NewPC, NewPC});
+    return OutRanges;
+  }
+
+  uint64_t InputOffset = InRange.LowPC - getAddress();
+  const uint64_t InputEndOffset =
+      std::min(InRange.HighPC - getAddress(), getSize());
+
+  auto BBI = llvm::upper_bound(BasicBlockOffsets,
+                               BasicBlockOffset(InputOffset, nullptr),
+                               CompareBasicBlockOffsets());
+  assert(BBI != BasicBlockOffsets.begin());
+
+  // Iterate over blocks in the input order using BasicBlockOffsets.
+  for (--BBI; InputOffset < InputEndOffset && BBI != BasicBlockOffsets.end();
+       InputOffset = BBI->second->getEndOffset(), ++BBI) {
+    const BinaryBasicBlock &BB = *BBI->second;
+    if (InputOffset < BB.getOffset() || InputOffset >= BB.getEndOffset()) {
       LLVM_DEBUG(
           dbgs() << "BOLT-DEBUG: invalid debug address range detected for "
-                 << *this << " : [0x" << Twine::utohexstr(Range.LowPC) << ", 0x"
-                 << Twine::utohexstr(Range.HighPC) << "]\n");
-      PrevEndAddress = 0;
+                 << *this << " : [0x" << Twine::utohexstr(InRange.LowPC)
+                 << ", 0x" << Twine::utohexstr(InRange.HighPC) << "]\n");
+      break;
+    }
+
+    // Skip the block if it wasn't emitted.
+    if (!BB.getOutputAddressRange().first)
       continue;
+
+    // Find output address for an instruction with an offset greater or equal
+    // to /p Offset. The output address should fall within the same basic
+    // block boundaries.
+    auto translateBlockOffset = [&](const uint64_t Offset) {
+      const uint64_t OutAddress = BB.getOutputAddressRange().first + Offset;
+      return OutAddress;
+    };
+
+    uint64_t OutLowPC = BB.getOutputAddressRange().first;
+    if (InputOffset > BB.getOffset())
+      OutLowPC = translateBlockOffset(InputOffset - BB.getOffset());
+
+    uint64_t OutHighPC = BB.getOutputAddressRange().second;
+    if (InputEndOffset < BB.getEndOffset()) {
+      assert(InputEndOffset >= BB.getOffset());
+      OutHighPC = translateBlockOffset(InputEndOffset - BB.getOffset());
     }
-    uint64_t InputOffset = Range.LowPC - getAddress();
-    const uint64_t InputEndOffset =
-        std::min(Range.HighPC - getAddress(), getSize());
 
-    auto BBI = llvm::upper_bound(BasicBlockOffsets,
-                                 BasicBlockOffset(InputOffset, nullptr),
-                                 CompareBasicBlockOffsets());
-    --BBI;
-    do {
-      const BinaryBasicBlock *BB = BBI->second;
-      if (InputOffset < BB->getOffset() || InputOffset >= BB->getEndOffset()) {
-        LLVM_DEBUG(
-            dbgs() << "BOLT-DEBUG: invalid debug address range detected for "
-                   << *this << " : [0x" << Twine::utohexstr(Range.LowPC)
-                   << ", 0x" << Twine::utohexstr(Range.HighPC) << "]\n");
-        PrevEndAddress = 0;
-        break;
-      }
-
-      // Skip the range if the block was deleted.
-      if (const uint64_t OutputStart = BB->getOutputAddressRange().first) {
-        const uint64_t StartAddress =
-            OutputStart + InputOffset - BB->getOffset();
-        uint64_t EndAddress = BB->getOutputAddressRange().second;
-        if (InputEndOffset < BB->getEndOffset())
-          EndAddress = StartAddress + InputEndOffset - InputOffset;
-
-        if (StartAddress == PrevEndAddress) {
-          OutputRanges.back().HighPC =
-              std::max(OutputRanges.back().HighPC, EndAddress);
-        } else {
-          OutputRanges.emplace_back(StartAddress,
-                                    std::max(StartAddress, EndAddress));
-        }
-        PrevEndAddress = OutputRanges.back().HighPC;
-      }
-
-      InputOffset = BB->getEndOffset();
-      ++BBI;
-    } while (InputOffset < InputEndOffset);
+    // Check if we can expand the last translated range.
+    if (!OutRanges.empty() && OutRanges.back().HighPC == OutLowPC)
+      OutRanges.back().HighPC = std::max(OutRanges.back().HighPC, OutHighPC);
+    else
+      OutRanges.emplace_back(OutLowPC, std::max(OutLowPC, OutHighPC));
   }
 
-  // Post-processing pass to sort and merge ranges.
-  llvm::sort(OutputRanges);
-  DebugAddressRangesVector MergedRanges;
-  PrevEndAddress = 0;
-  for (const DebugAddressRange &Range : OutputRanges) {
-    if (Range.LowPC <= PrevEndAddress) {
-      MergedRanges.back().HighPC =
-          std::max(MergedRanges.back().HighPC, Range.HighPC);
-    } else {
-      MergedRanges.emplace_back(Range.LowPC, Range.HighPC);
-    }
-    PrevEndAddress = MergedRanges.back().HighPC;
-  }
+  LLVM_DEBUG({
+    dbgs() << "BOLT-DEBUG: translated address range " << InRange << " -> ";
+    for (const DebugAddressRange &R : OutRanges)
+      dbgs() << R << ' ';
+    dbgs() << '\n';
+  });
 
-  return MergedRanges;
+  return OutRanges;
 }
 
 MCInst *BinaryFunction::getInstructionAtOffset(uint64_t Offset) {
@@ -4365,92 +4361,6 @@ MCInst *BinaryFunction::getInstructionAtOffset(uint64_t Offset) {
   } else {
     llvm_unreachable("invalid CFG state to use getInstructionAtOffset()");
   }
-}
-
-DebugLocationsVector BinaryFunction::translateInputToOutputLocationList(
-    const DebugLocationsVector &InputLL) const {
-  DebugLocationsVector OutputLL;
-
-  if (isFolded())
-    return OutputLL;
-
-  // If the function hasn't changed - there's nothing to update.
-  if (!isEmitted())
-    return InputLL;
-
-  uint64_t PrevEndAddress = 0;
-  SmallVectorImpl<uint8_t> *PrevExpr = nullptr;
-  for (const DebugLocationEntry &Entry : InputLL) {
-    const uint64_t Start = Entry.LowPC;
-    const uint64_t End = Entry.HighPC;
-    if (!containsAddress(Start)) {
-      LLVM_DEBUG(dbgs() << "BOLT-DEBUG: invalid debug address range detected "
-                           "for "
-                        << *this << " : [0x" << Twine::utohexstr(Start)
-                        << ", 0x" << Twine::utohexstr(End) << "]\n");
-      continue;
-    }
-    uint64_t InputOffset = Start - getAddress();
-    const uint64_t InputEndOffset = std::min(End - getAddress(), getSize());
-    auto BBI = llvm::upper_bound(BasicBlockOffsets,
-                                 BasicBlockOffset(InputOffset, nullptr),
-                                 CompareBasicBlockOffsets());
-    --BBI;
-    do {
-      const BinaryBasicBlock *BB = BBI->second;
-      if (InputOffset < BB->getOffset() || InputOffset >= BB->getEndOffset()) {
-        LLVM_DEBUG(dbgs() << "BOLT-DEBUG: invalid debug address range detected "
-                             "for "
-                          << *this << " : [0x" << Twine::utohexstr(Start)
-                          << ", 0x" << Twine::utohexstr(End) << "]\n");
-        PrevEndAddress = 0;
-        break;
-      }
-
-      // Skip the range if the block was deleted.
-      if (const uint64_t OutputStart = BB->getOutputAddressRange().first) {
-        const uint64_t StartAddress =
-            OutputStart + InputOffset - BB->getOffset();
-        uint64_t EndAddress = BB->getOutputAddressRange().second;
-        if (InputEndOffset < BB->getEndOffset())
-          EndAddress = StartAddress + InputEndOffset - InputOffset;
-
-        if (StartAddress == PrevEndAddress && Entry.Expr == *PrevExpr) {
-          OutputLL.back().HighPC = std::max(OutputLL.back().HighPC, EndAddress);
-        } else {
-          OutputLL.emplace_back(DebugLocationEntry{
-              StartAddress, std::max(StartAddress, EndAddress), Entry.Expr});
-        }
-        PrevEndAddress = OutputLL.back().HighPC;
-        PrevExpr = &OutputLL.back().Expr;
-      }
-
-      ++BBI;
-      InputOffset = BB->getEndOffset();
-    } while (InputOffset < InputEndOffset);
-  }
-
-  // Sort and merge adjacent entries with identical location.
-  llvm::stable_sort(
-      OutputLL, [](const DebugLocationEntry &A, const DebugLocationEntry &B) {
-        return A.LowPC < B.LowPC;
-      });
-  DebugLocationsVector MergedLL;
-  PrevEndAddress = 0;
-  PrevExpr = nullptr;
-  for (const DebugLocationEntry &Entry : OutputLL) {
-    if (Entry.LowPC <= PrevEndAddress && *PrevExpr == Entry.Expr) {
-      MergedLL.back().HighPC = std::max(Entry.HighPC, MergedLL.back().HighPC);
-    } else {
-      const uint64_t Begin = std::max(Entry.LowPC, PrevEndAddress);
-      const uint64_t End = std::max(Begin, Entry.HighPC);
-      MergedLL.emplace_back(DebugLocationEntry{Begin, End, Entry.Expr});
-    }
-    PrevEndAddress = MergedLL.back().HighPC;
-    PrevExpr = &MergedLL.back().Expr;
-  }
-
-  return MergedLL;
 }
 
 void BinaryFunction::printLoopInfo(raw_ostream &OS) const {
