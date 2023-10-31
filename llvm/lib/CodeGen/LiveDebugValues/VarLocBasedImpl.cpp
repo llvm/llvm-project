@@ -2293,40 +2293,11 @@ bool VarLocBasedLDV::ExtendRanges(MachineFunction &MF,
 
   // Only in the case of entry MBB collect DBG_VALUEs representing
   // function parameters in order to generate debug entry values for them.
-  SmallVector<MachineInstr *, 8> AsyncDbgValues;
   MachineBasicBlock &First_MBB = *(MF.begin());
-  // Use a cache so that we only hoist the first swift async context debug inst
-  // for a specific DBG_VALUE. Otherwise, we may hoist inappropriately over a
-  // llvm.dbg.value.
-  SmallDenseSet<DebugVariable, 8> SeenDebugVars;
   for (auto &MI : First_MBB) {
     collectRegDefs(MI, DefinedRegs, TRI);
-    if (MI.isDebugValue()) {
-      // In Swift async functions entry values are preferred, since they
-      // can be evaluated in both live frames and virtual backtraces.
-      if (SeenDebugVars
-              .insert(DebugVariable(MI.getDebugVariable(),
-                                    MI.getDebugExpression(),
-                                    MI.getDebugLoc()->getInlinedAt()))
-              .second &&
-          isSwiftAsyncContext(MI) && !MI.isDebugValueList()) {
-        // If our instruction is not an entry value yet, make it an entry value.
-        if (!MI.getDebugExpression()->isEntryValue()) {
-          MI.getOperand(3).setMetadata(DIExpression::prepend(
-              MI.getDebugExpression(), DIExpression::EntryValue));
-        }
-        AsyncDbgValues.push_back(&MI);
-      } else {
-        recordEntryValue(MI, DefinedRegs, OpenRanges, VarLocIDs);
-      }
-    }
-  }
-
-  if (AsyncDbgValues.size()) {
-    // Make sure the async entry values are at the very start.
-    auto InsertPt = First_MBB.getFirstNonDebugInstr();
-    for (auto *MI : llvm::reverse(AsyncDbgValues))
-      MI->moveBefore(&*InsertPt);
+    if (MI.isDebugValue())
+      recordEntryValue(MI, DefinedRegs, OpenRanges, VarLocIDs);
   }
 
   // Initialize per-block structures and scan for fragment overlaps.
