@@ -424,7 +424,7 @@ public:
     /// list.  This is set by the instruction selection framework, and consumed
     /// by the register allocator. While the register allocator is generally
     /// responsible for spilling registers, we need to be able to distinguish
-    /// between registers that the register allocator has permission to spill
+    /// between registers that the register allocator has permission to fold
     /// ("rm") vs ones it does not ("r"). This is because the inline asm may use
     /// instructions which don't support memory addressing modes for that
     /// operand.
