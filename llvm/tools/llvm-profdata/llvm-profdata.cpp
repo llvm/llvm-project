@@ -426,8 +426,9 @@ mergeInstrProfile(const WeightedFileVector &Inputs, StringRef DebugInfoFilename,
 
   std::unique_ptr<InstrProfCorrelator> Correlator;
   if (!DebugInfoFilename.empty()) {
-    if (auto Err =
-            InstrProfCorrelator::get(DebugInfoFilename).moveInto(Correlator))
+    if (auto Err = InstrProfCorrelator::get(DebugInfoFilename,
+                                            InstrProfCorrelator::DEBUG_INFO)
+                       .moveInto(Correlator))
       exitWithError(std::move(Err), DebugInfoFilename);
     if (auto Err = Correlator->correlateProfileData(MaxDbgCorrelationWarnings))
       exitWithError(std::move(Err), DebugInfoFilename);
@@ -2893,7 +2894,9 @@ static int showDebugInfoCorrelation(const std::string &Filename,
   if (SFormat == ShowFormat::Json)
     exitWithError("JSON output is not supported for debug info correlation");
   std::unique_ptr<InstrProfCorrelator> Correlator;
-  if (auto Err = InstrProfCorrelator::get(Filename).moveInto(Correlator))
+  if (auto Err =
+          InstrProfCorrelator::get(Filename, InstrProfCorrelator::DEBUG_INFO)
+              .moveInto(Correlator))
     exitWithError(std::move(Err), Filename);
   if (SFormat == ShowFormat::Yaml) {
     if (auto Err = Correlator->dumpYaml(MaxDbgCorrelationWarnings, OS))
