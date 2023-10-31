@@ -1232,10 +1232,10 @@ Parser::DeclGroupPtrTy Parser::ParseDeclarationOrFunctionDefinition(
     ParsingDeclSpec *DS, AccessSpecifier AS) {
   // Add an enclosing time trace scope for a bunch of small scopes with
   // "EvaluateAsConstExpr".
-  llvm::TimeTraceScope TimeScope(
-      "ParseDeclarationOrFunctionDefinition",
-      Tok.getLocation().printToString(
-          Actions.getASTContext().getSourceManager()));
+  llvm::TimeTraceScope TimeScope("ParseDeclarationOrFunctionDefinition", [&]() {
+    return Tok.getLocation().printToString(
+        Actions.getASTContext().getSourceManager());
+  });
 
   if (DS) {
     return ParseDeclOrFunctionDefInternal(Attrs, DeclSpecAttrs, *DS, AS);
@@ -1267,9 +1267,9 @@ Parser::DeclGroupPtrTy Parser::ParseDeclarationOrFunctionDefinition(
 Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
                                       const ParsedTemplateInfo &TemplateInfo,
                                       LateParsedAttrList *LateParsedAttrs) {
-  llvm::TimeTraceScope TimeScope(
-      "ParseFunctionDefinition",
-      Actions.GetNameForDeclarator(D).getName().getAsString());
+  llvm::TimeTraceScope TimeScope("ParseFunctionDefinition", [&]() {
+    return Actions.GetNameForDeclarator(D).getName().getAsString();
+  });
 
   // Poison SEH identifiers so they are flagged as illegal in function bodies.
   PoisonSEHIdentifiersRAIIObject PoisonSEHIdentifiers(*this, true);
