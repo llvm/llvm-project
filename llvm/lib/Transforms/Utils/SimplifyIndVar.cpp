@@ -539,7 +539,8 @@ bool SimplifyIndvar::eliminateTrunc(TruncInst *TI) {
   for (auto *ICI : ICmpUsers) {
     bool IsSwapped = L->isLoopInvariant(ICI->getOperand(0));
     auto *Op1 = IsSwapped ? ICI->getOperand(0) : ICI->getOperand(1);
-    Instruction *Ext = nullptr;
+    IRBuilder<> Builder(ICI);
+    Value *Ext = nullptr;
     // For signed/unsigned predicate, replace the old comparison with comparison
     // of immediate IV against sext/zext of the invariant argument. If we can
     // use either sext or zext (i.e. we are dealing with equality predicate),
@@ -550,18 +551,18 @@ bool SimplifyIndvar::eliminateTrunc(TruncInst *TI) {
     if (IsSwapped) Pred = ICmpInst::getSwappedPredicate(Pred);
     if (CanUseZExt(ICI)) {
       assert(DoesZExtCollapse && "Unprofitable zext?");
-      Ext = new ZExtInst(Op1, IVTy, "zext", ICI);
+      Ext = Builder.CreateZExt(Op1, IVTy, "zext");
       Pred = ICmpInst::getUnsignedPredicate(Pred);
     } else {
       assert(DoesSExtCollapse && "Unprofitable sext?");
-      Ext = new SExtInst(Op1, IVTy, "sext", ICI);
+      Ext = Builder.CreateSExt(Op1, IVTy, "sext");
       assert(Pred == ICmpInst::getSignedPredicate(Pred) && "Must be signed!");
     }
     bool Changed;
     L->makeLoopInvariant(Ext, Changed);
     (void)Changed;
-    ICmpInst *NewICI = new ICmpInst(ICI, Pred, IV, Ext);
-    ICI->replaceAllUsesWith(NewICI);
+    auto *NewCmp = Builder.CreateICmp(Pred, IV, Ext);
+    ICI->replaceAllUsesWith(NewCmp);
     DeadInsts.emplace_back(ICI);
   }
 
