@@ -1927,6 +1927,11 @@ def int_amdgcn_inverse_ballot :
   Intrinsic<[llvm_i1_ty], [llvm_anyint_ty],
             [IntrNoMem, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
 
+// Lowers to S_BITREPLICATE_B64_B32.
+// The argument must be uniform; otherwise, the result is undefined.
+def int_amdgcn_s_bitreplicate :
+  DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_i32_ty], [IntrNoMem, IntrConvergent]>;
+
 class AMDGPUWaveReduce<LLVMType data_ty = llvm_anyint_ty> : Intrinsic<
     [data_ty],
     [

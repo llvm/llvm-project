@@ -646,13 +646,13 @@ void JSONNodeDumper::VisitRValueReferenceType(const ReferenceType *RT) {
 
 void JSONNodeDumper::VisitArrayType(const ArrayType *AT) {
   switch (AT->getSizeModifier()) {
-  case ArrayType::Star:
+  case ArraySizeModifier::Star:
     JOS.attribute("sizeModifier", "*");
     break;
-  case ArrayType::Static:
+  case ArraySizeModifier::Static:
     JOS.attribute("sizeModifier", "static");
     break;
-  case ArrayType::Normal:
+  case ArraySizeModifier::Normal:
     break;
   }
 
@@ -677,30 +677,30 @@ void JSONNodeDumper::VisitDependentSizedExtVectorType(
 void JSONNodeDumper::VisitVectorType(const VectorType *VT) {
   JOS.attribute("numElements", VT->getNumElements());
   switch (VT->getVectorKind()) {
-  case VectorType::GenericVector:
+  case VectorKind::Generic:
     break;
-  case VectorType::AltiVecVector:
+  case VectorKind::AltiVecVector:
     JOS.attribute("vectorKind", "altivec");
     break;
-  case VectorType::AltiVecPixel:
+  case VectorKind::AltiVecPixel:
     JOS.attribute("vectorKind", "altivec pixel");
     break;
-  case VectorType::AltiVecBool:
+  case VectorKind::AltiVecBool:
     JOS.attribute("vectorKind", "altivec bool");
     break;
-  case VectorType::NeonVector:
+  case VectorKind::Neon:
     JOS.attribute("vectorKind", "neon");
     break;
-  case VectorType::NeonPolyVector:
+  case VectorKind::NeonPoly:
     JOS.attribute("vectorKind", "neon poly");
     break;
-  case VectorType::SveFixedLengthDataVector:
+  case VectorKind::SveFixedLengthData:
     JOS.attribute("vectorKind", "fixed-length sve data vector");
     break;
-  case VectorType::SveFixedLengthPredicateVector:
+  case VectorKind::SveFixedLengthPredicate:
     JOS.attribute("vectorKind", "fixed-length sve predicate vector");
     break;
-  case VectorType::RVVFixedLengthDataVector:
+  case VectorKind::RVVFixedLengthData:
     JOS.attribute("vectorKind", "fixed-length rvv data vector");
     break;
   }
