@@ -57,7 +57,6 @@
 #include "llvm/MC/MCValue.h"
 #include "llvm/MC/SectionKind.h"
 #include "llvm/ProfileData/InstrProf.h"
-#include "llvm/ProfileData/InstrProfCorrelator.h"
 #include "llvm/Support/Base64.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CodeGen.h"

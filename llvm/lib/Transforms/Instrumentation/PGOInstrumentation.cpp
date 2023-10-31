@@ -94,7 +94,6 @@
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/ProfileData/InstrProf.h"
-#include "llvm/ProfileData/InstrProfCorrelator.h"
 #include "llvm/ProfileData/InstrProfReader.h"
 #include "llvm/Support/BranchProbability.h"
 #include "llvm/Support/CRC.h"
