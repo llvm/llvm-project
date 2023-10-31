@@ -3241,8 +3241,13 @@ private:
       mlir::Location loc, const Fortran::evaluate::Assignment &assign,
       const Fortran::evaluate::Assignment::BoundsSpec &lbExprs) {
     Fortran::lower::StatementContext stmtCtx;
-    if (Fortran::evaluate::IsProcedure(assign.rhs))
-      TODO(loc, "procedure pointer assignment");
+
+    if (Fortran::evaluate::IsProcedure(assign.rhs)) {
+      auto lhs{fir::getBase(genExprAddr(assign.lhs, stmtCtx, &loc))};
+      auto rhs{fir::getBase(genExprAddr(assign.rhs, stmtCtx, &loc))};
+      builder->create<fir::StoreOp>(loc, rhs, lhs);
+      return;
+    }
 
     std::optional<Fortran::evaluate::DynamicType> lhsType =
         assign.lhs.GetType();

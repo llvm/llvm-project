@@ -165,8 +165,10 @@ fir::ExtendedValue Fortran::lower::genCallOpAndResult(
   // will be used only if there is no explicit length in the local interface).
   mlir::Value funcPointer;
   mlir::Value charFuncPointerLength;
+  bool isProcPtr = false;
   if (const Fortran::semantics::Symbol *sym =
           caller.getIfIndirectCallSymbol()) {
+    isProcPtr = Fortran::semantics::IsProcedurePointer(sym);
     funcPointer = fir::getBase(converter.getSymbolExtendedValue(*sym, &symMap));
     if (!funcPointer)
       fir::emitFatalError(loc, "failed to find indirect call symbol address");
@@ -325,10 +327,16 @@ fir::ExtendedValue Fortran::lower::genCallOpAndResult(
   // compatible interface in Fortran, but that have different signatures in
   // FIR.
   if (funcPointer) {
-    operands.push_back(
-        funcPointer.getType().isa<fir::BoxProcType>()
-            ? builder.create<fir::BoxAddrOp>(loc, funcType, funcPointer)
-            : builder.createConvert(loc, funcType, funcPointer));
+    if (isProcPtr) {
+      funcPointer = builder.create<fir::LoadOp>(loc, funcPointer);
+      auto boxProcTy{fir::BoxProcType::get(builder.getContext(), funcType)};
+      auto func{builder.createConvert(loc, boxProcTy, funcPointer)};
+      operands.push_back(builder.create<fir::BoxAddrOp>(loc, funcType, func));
+    } else
+      operands.push_back(
+          funcPointer.getType().isa<fir::BoxProcType>()
+              ? builder.create<fir::BoxAddrOp>(loc, funcType, funcPointer)
+              : builder.createConvert(loc, funcType, funcPointer));
   }
 
   // Deal with potential mismatches in arguments types. Passing an array to a

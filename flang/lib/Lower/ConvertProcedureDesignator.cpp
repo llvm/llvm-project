@@ -98,6 +98,10 @@ hlfir::EntityWithAttributes Fortran::lower::convertProcedureDesignatorToHLFIR(
     mlir::Location loc, Fortran::lower::AbstractConverter &converter,
     const Fortran::evaluate::ProcedureDesignator &proc,
     Fortran::lower::SymMap &symMap, Fortran::lower::StatementContext &stmtCtx) {
+  if (std::optional<fir::FortranVariableOpInterface> varDef =
+          symMap.lookupVariableDefinition(*proc.GetSymbol()))
+    return *varDef;
+
   fir::ExtendedValue procExv =
       convertProcedureDesignator(loc, converter, proc, symMap, stmtCtx);
   // Directly package the procedure address as a fir.boxproc or

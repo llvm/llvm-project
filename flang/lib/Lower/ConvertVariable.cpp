@@ -479,8 +479,20 @@ static fir::GlobalOp defineGlobal(Fortran::lower::AbstractConverter &converter,
   if (global && globalIsInitialized(global))
     return global;
 
-  if (Fortran::semantics::IsProcedurePointer(sym))
-    TODO(loc, "procedure pointer globals");
+  if (Fortran::semantics::IsProcedurePointer(sym)) {
+    auto boxProcTy{Fortran::lower::getUntypedBoxProcType(builder.getContext())};
+    global = builder.createGlobal(loc, boxProcTy, globalName, linkage,
+                                  mlir::Attribute{}, isConst, var.isTarget());
+    Fortran::lower::createGlobalInitialization(
+        builder, global, [&](fir::FirOpBuilder &builder) {
+          mlir::Value initVal{builder.create<fir::ZeroOp>(loc, symTy)};
+          auto emBoxVal{
+              builder.create<fir::EmboxProcOp>(loc, boxProcTy, initVal)};
+          builder.create<fir::HasValueOp>(loc, emBoxVal);
+        });
+    global.setVisibility(mlir::SymbolTable::Visibility::Public);
+    return global;
+  }
 
   // If this is an array, check to see if we can use a dense attribute
   // with a tensor mlir type. This optimization currently only supports
@@ -645,8 +657,19 @@ static mlir::Value createNewLocal(Fortran::lower::AbstractConverter &converter,
       var.getSymbol().GetUltimate();
   llvm::StringRef symNm = toStringRef(ultimateSymbol.name());
   bool isTarg = var.isTarget();
+
   // Let the builder do all the heavy lifting.
-  return builder.allocateLocal(loc, ty, nm, symNm, shape, lenParams, isTarg);
+  if (!Fortran::semantics::IsProcedurePointer(ultimateSymbol))
+    return builder.allocateLocal(loc, ty, nm, symNm, shape, lenParams, isTarg);
+
+  // Local procedure pointer.
+  auto boxProcTy{Fortran::lower::getUntypedBoxProcType(builder.getContext())};
+  auto res{builder.allocateLocal(loc, boxProcTy, nm, symNm, shape, lenParams,
+                                 isTarg)};
+  mlir::Value initVal{builder.create<fir::ZeroOp>(loc, ty)};
+  auto emBoxVal{builder.create<fir::EmboxProcOp>(loc, boxProcTy, initVal)};
+  builder.create<fir::StoreOp>(loc, emBoxVal, res);
+  return res;
 }
 
 /// Must \p var be default initialized at runtime when entering its scope.
@@ -1542,7 +1565,8 @@ static void genDeclareSymbol(Fortran::lower::AbstractConverter &converter,
   // is useful to maintain the address of the commonblock in an MLIR value and
   // query it. hlfir.declare need not be created for these.
   if (converter.getLoweringOptions().getLowerToHighLevelFIR() &&
-      !Fortran::semantics::IsProcedure(sym) &&
+      (!Fortran::semantics::IsProcedure(sym) ||
+       Fortran::semantics::IsPointer(sym)) &&
       !sym.detailsIf<Fortran::semantics::CommonBlockDetails>()) {
     bool isCrayPointee =
         sym.test(Fortran::semantics::Symbol::Flag::CrayPointee);
@@ -1687,6 +1711,16 @@ genAllocatableOrPointerDeclare(Fortran::lower::AbstractConverter &converter,
                    /*lbounds=*/std::nullopt, force);
 }
 
+/// Map a procedure pointer
+static void genProcPointer(Fortran::lower::AbstractConverter &converter,
+                           Fortran::lower::SymMap &symMap,
+                           const Fortran::semantics::Symbol &sym,
+                           mlir::Value addr, bool force = false) {
+  genDeclareSymbol(converter, symMap, sym, addr, mlir::Value{},
+                   /*shape=*/std::nullopt,
+                   /*lbounds=*/std::nullopt, force);
+}
+
 /// Map a symbol represented with a runtime descriptor to its FIR fir.box and
 /// evaluated specification expressions. Will optionally create fir.declare.
 static void genBoxDeclare(Fortran::lower::AbstractConverter &converter,
@@ -1738,8 +1772,20 @@ void Fortran::lower::mapSymbolAttributes(
 
       Fortran::lower::genDeclareSymbol(converter, symMap, sym, undefOp);
     }
-    if (Fortran::semantics::IsPointer(sym))
-      TODO(loc, "procedure pointers");
+
+    // Procedure pointer.
+    if (Fortran::semantics::IsPointer(sym)) {
+      // global
+      mlir::Value boxAlloc = preAlloc;
+      // dummy or passed result
+      if (!boxAlloc)
+        if (Fortran::lower::SymbolBox symbox = symMap.lookupSymbol(sym))
+          boxAlloc = symbox.getAddr();
+      // local
+      if (!boxAlloc)
+        boxAlloc = createNewLocal(converter, loc, var, preAlloc);
+      genProcPointer(converter, symMap, sym, boxAlloc, replace);
+    }
     return;
   }
 
