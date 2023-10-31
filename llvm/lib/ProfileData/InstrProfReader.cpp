@@ -563,9 +563,9 @@ Error RawInstrProfReader<IntPtrT>::readHeader(
                   "\nPLEASE update this tool to version in the raw profile, or "
                   "regenerate raw profile with expected version.")
                      .str());
-  if (useCorrelate() && !Correlator)
+  if (useDebugInfoCorrelate() && !Correlator)
     return error(instrprof_error::missing_debug_info_for_correlation);
-  if (!useCorrelate() && Correlator)
+  if (!useDebugInfoCorrelate() && Correlator)
     return error(instrprof_error::unexpected_debug_info_for_correlation);
 
   BinaryIdsSize = swap(Header.BinaryIdsSize);

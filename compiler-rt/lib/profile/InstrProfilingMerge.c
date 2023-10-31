@@ -69,9 +69,8 @@ int __llvm_profile_check_compatibility(const char *ProfileData,
       Header->NumBitmapBytes !=
           __llvm_profile_get_num_bitmap_bytes(__llvm_profile_begin_bitmap(),
                                               __llvm_profile_end_bitmap()) ||
-      Header->NamesSize !=
-          __llvm_profile_get_name_size(__llvm_profile_begin_names(),
-                                       __llvm_profile_end_names()) ||
+      Header->NamesSize != (uint64_t)(__llvm_profile_end_names() -
+                                      __llvm_profile_begin_names()) ||
       Header->ValueKindLast != IPVK_Last)
     return 1;
 
@@ -139,9 +138,9 @@ int __llvm_profile_merge_from_buffer(const char *ProfileData,
   if (SrcNameStart < SrcCountersStart || SrcNameStart < SrcBitmapStart)
     return 1;
 
-  // Merge counters by iterating the entire counter section when correlation is
-  // enabled.
-  if (hasCorrelation()) {
+  // Merge counters by iterating the entire counter section when debug info
+  // correlation is enabled.
+  if (__llvm_profile_get_version() & VARIANT_MASK_DBG_CORRELATE) {
     for (SrcCounter = SrcCountersStart,
         DstCounter = __llvm_profile_begin_counters();
          SrcCounter < SrcCountersEnd;) {
