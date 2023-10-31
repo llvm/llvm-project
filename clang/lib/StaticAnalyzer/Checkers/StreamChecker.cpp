@@ -241,7 +241,7 @@ private:
       {{{"fopen"}}, {nullptr, &StreamChecker::evalFopen, ArgNone}},
       {{{"freopen"}, 3},
        {&StreamChecker::preFreopen, &StreamChecker::evalFreopen, 2}},
-      {{{"tmpfile"}}, {nullptr, &StreamChecker::evalFopen, ArgNone}},
+      {{{"tmpfile"}, 0}, {nullptr, &StreamChecker::evalFopen, ArgNone}},
       {{{"fclose"}, 1},
        {&StreamChecker::preDefault, &StreamChecker::evalFclose, 0}},
       {{{"fread"}, 4},

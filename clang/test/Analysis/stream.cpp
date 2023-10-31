@@ -25,4 +25,4 @@ extern FILE *tmpfile(const char *path);
 
 void f3(void) {
   FILE *fp = tmpfile("file");
-} // expected-warning {{Opened stream never closed. Potential resource leak}}
+} // no-warning
