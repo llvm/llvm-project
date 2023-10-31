@@ -707,7 +707,10 @@ genBoundsOps(fir::FirOpBuilder &builder, mlir::Location loc,
           asFortran << lexpr->AsFortran();
         }
       } else {
-        lbound = defaultLb ? zero : baseLb;
+        // If the lower bound is not specified, then the section
+        // starts from offset 0 of the dimension.
+        // Note that the lowerbound in the BoundsOp is always 0-based.
+        lbound = zero;
       }
       asFortran << ':';
       const auto &upper{std::get<1>(triplet->t)};
