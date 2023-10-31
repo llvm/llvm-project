@@ -266,12 +266,12 @@ DeclarationFragments DeclarationFragmentsBuilder::getFragmentsForType(
     After.append("[", DeclarationFragments::FragmentKind::Text);
 
     switch (AT->getSizeModifier()) {
-    case ArrayType::Normal:
+    case ArraySizeModifier::Normal:
       break;
-    case ArrayType::Static:
+    case ArraySizeModifier::Static:
       Fragments.append("static", DeclarationFragments::FragmentKind::Keyword);
       break;
-    case ArrayType::Star:
+    case ArraySizeModifier::Star:
       Fragments.append("*", DeclarationFragments::FragmentKind::Text);
       break;
     }

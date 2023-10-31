@@ -1569,6 +1569,12 @@ enum class AutoTypeKeyword {
   GNUAutoType
 };
 
+/// Capture whether this is a normal array (e.g. int X[4])
+/// an array with a static size (e.g. int X[static 4]), or an array
+/// with a star size (e.g. int X[*]).
+/// 'static' is only allowed on function parameters.
+enum class ArraySizeModifier { Normal, Static, Star };
+
 /// The base class of the type hierarchy.
 ///
 /// A central concept with types is that each type always has a canonical
@@ -1660,7 +1666,7 @@ protected:
 
     /// Storage class qualifiers from declarations like
     /// 'int X[static restrict 4]'. For function parameters only.
-    /// Actually an ArrayType::ArraySizeModifier.
+    /// Actually an ArraySizeModifier.
     unsigned SizeModifier : 3;
   };
   enum { NumArrayTypeBits = NumTypeBits + 6 };
@@ -3086,15 +3092,6 @@ public:
 
 /// Represents an array type, per C99 6.7.5.2 - Array Declarators.
 class ArrayType : public Type, public llvm::FoldingSetNode {
-public:
-  /// Capture whether this is a normal array (e.g. int X[4])
-  /// an array with a static size (e.g. int X[static 4]), or an array
-  /// with a star size (e.g. int X[*]).
-  /// 'static' is only allowed on function parameters.
-  enum ArraySizeModifier {
-    Normal, Static, Star
-  };
-
 private:
   /// The element type of the array.
   QualType ElementType;
@@ -3218,7 +3215,7 @@ public:
   static void Profile(llvm::FoldingSetNodeID &ID, QualType ET,
                       ArraySizeModifier SizeMod, unsigned TypeQuals) {
     ID.AddPointer(ET.getAsOpaquePtr());
-    ID.AddInteger(SizeMod);
+    ID.AddInteger(llvm::to_underlying(SizeMod));
     ID.AddInteger(TypeQuals);
   }
 };
