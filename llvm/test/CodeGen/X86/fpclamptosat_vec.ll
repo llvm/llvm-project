@@ -1104,6 +1104,176 @@ entry:
   ret <8 x i16> %conv6
 }
 
+; i8 saturate
+
+define <2 x i8> @stest_f64i8(<2 x double> %x) {
+; CHECK-LABEL: stest_f64i8:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    cvttpd2dq %xmm0, %xmm0
+; CHECK-NEXT:    movdqa {{.*#+}} xmm1 = <127,127,u,u>
+; CHECK-NEXT:    movdqa %xmm1, %xmm2
+; CHECK-NEXT:    pcmpgtd %xmm0, %xmm2
+; CHECK-NEXT:    pand %xmm2, %xmm0
+; CHECK-NEXT:    pandn %xmm1, %xmm2
+; CHECK-NEXT:    por %xmm0, %xmm2
+; CHECK-NEXT:    movdqa {{.*#+}} xmm1 = <4294967168,4294967168,u,u>
+; CHECK-NEXT:    movdqa %xmm2, %xmm0
+; CHECK-NEXT:    pcmpgtd %xmm1, %xmm0
+; CHECK-NEXT:    pand %xmm0, %xmm2
+; CHECK-NEXT:    pandn %xmm1, %xmm0
+; CHECK-NEXT:    por %xmm2, %xmm0
+; CHECK-NEXT:    packssdw %xmm0, %xmm0
+; CHECK-NEXT:    packsswb %xmm0, %xmm0
+; CHECK-NEXT:    retq
+entry:
+  %conv = fptosi <2 x double> %x to <2 x i32>
+  %0 = icmp slt <2 x i32> %conv, <i32 127, i32 127>
+  %spec.store.select = select <2 x i1> %0, <2 x i32> %conv, <2 x i32> <i32 127, i32 127>
+  %1 = icmp sgt <2 x i32> %spec.store.select, <i32 -128, i32 -128>
+  %spec.store.select7 = select <2 x i1> %1, <2 x i32> %spec.store.select, <2 x i32> <i32 -128, i32 -128>
+  %conv6 = trunc <2 x i32> %spec.store.select7 to <2 x i8>
+  ret <2 x i8> %conv6
+}
+
+define <2 x i8> @utest_f64i8(<2 x double> %x) {
+; CHECK-LABEL: utest_f64i8:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    cvttpd2dq %xmm0, %xmm1
+; CHECK-NEXT:    movapd %xmm1, %xmm2
+; CHECK-NEXT:    psrad $31, %xmm2
+; CHECK-NEXT:    addpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    cvttpd2dq %xmm0, %xmm3
+; CHECK-NEXT:    andpd %xmm2, %xmm3
+; CHECK-NEXT:    orpd %xmm1, %xmm3
+; CHECK-NEXT:    movapd {{.*#+}} xmm0 = [2147483648,2147483648,2147483648,2147483648]
+; CHECK-NEXT:    xorpd %xmm3, %xmm0
+; CHECK-NEXT:    pcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    movdqa %xmm0, %xmm1
+; CHECK-NEXT:    pandn %xmm3, %xmm1
+; CHECK-NEXT:    psrld $24, %xmm0
+; CHECK-NEXT:    por %xmm1, %xmm0
+; CHECK-NEXT:    packuswb %xmm0, %xmm0
+; CHECK-NEXT:    packuswb %xmm0, %xmm0
+; CHECK-NEXT:    retq
+entry:
+  %conv = fptoui <2 x double> %x to <2 x i32>
+  %0 = icmp ult <2 x i32> %conv, <i32 255, i32 255>
+  %spec.store.select = select <2 x i1> %0, <2 x i32> %conv, <2 x i32> <i32 255, i32 255>
+  %conv6 = trunc <2 x i32> %spec.store.select to <2 x i8>
+  ret <2 x i8> %conv6
+}
+
+define <2 x i8> @ustest_f64i8(<2 x double> %x) {
+; CHECK-LABEL: ustest_f64i8:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    cvttpd2dq %xmm0, %xmm0
+; CHECK-NEXT:    movdqa {{.*#+}} xmm1 = <255,255,u,u>
+; CHECK-NEXT:    movdqa %xmm1, %xmm2
+; CHECK-NEXT:    pcmpgtd %xmm0, %xmm2
+; CHECK-NEXT:    pand %xmm2, %xmm0
+; CHECK-NEXT:    pandn %xmm1, %xmm2
+; CHECK-NEXT:    por %xmm0, %xmm2
+; CHECK-NEXT:    pxor %xmm1, %xmm1
+; CHECK-NEXT:    movdqa %xmm2, %xmm0
+; CHECK-NEXT:    pcmpgtd %xmm1, %xmm0
+; CHECK-NEXT:    pand %xmm2, %xmm0
+; CHECK-NEXT:    packuswb %xmm0, %xmm0
+; CHECK-NEXT:    packuswb %xmm0, %xmm0
+; CHECK-NEXT:    retq
+entry:
+  %conv = fptosi <2 x double> %x to <2 x i32>
+  %0 = icmp slt <2 x i32> %conv, <i32 255, i32 255>
+  %spec.store.select = select <2 x i1> %0, <2 x i32> %conv, <2 x i32> <i32 255, i32 255>
+  %1 = icmp sgt <2 x i32> %spec.store.select, zeroinitializer
+  %spec.store.select7 = select <2 x i1> %1, <2 x i32> %spec.store.select, <2 x i32> zeroinitializer
+  %conv6 = trunc <2 x i32> %spec.store.select7 to <2 x i8>
+  ret <2 x i8> %conv6
+}
+
+define <4 x i8> @stest_f32i8(<4 x float> %x) {
+; CHECK-LABEL: stest_f32i8:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    cvttps2dq %xmm0, %xmm0
+; CHECK-NEXT:    movdqa {{.*#+}} xmm1 = [127,127,127,127]
+; CHECK-NEXT:    movdqa %xmm1, %xmm2
+; CHECK-NEXT:    pcmpgtd %xmm0, %xmm2
+; CHECK-NEXT:    pand %xmm2, %xmm0
+; CHECK-NEXT:    pandn %xmm1, %xmm2
+; CHECK-NEXT:    por %xmm0, %xmm2
+; CHECK-NEXT:    movdqa {{.*#+}} xmm1 = [4294967168,4294967168,4294967168,4294967168]
+; CHECK-NEXT:    movdqa %xmm2, %xmm0
+; CHECK-NEXT:    pcmpgtd %xmm1, %xmm0
+; CHECK-NEXT:    pand %xmm0, %xmm2
+; CHECK-NEXT:    pandn %xmm1, %xmm0
+; CHECK-NEXT:    por %xmm2, %xmm0
+; CHECK-NEXT:    packssdw %xmm0, %xmm0
+; CHECK-NEXT:    packsswb %xmm0, %xmm0
+; CHECK-NEXT:    retq
+entry:
+  %conv = fptosi <4 x float> %x to <4 x i32>
+  %0 = icmp slt <4 x i32> %conv, <i32 127, i32 127, i32 127, i32 127>
+  %spec.store.select = select <4 x i1> %0, <4 x i32> %conv, <4 x i32> <i32 127, i32 127, i32 127, i32 127>
+  %1 = icmp sgt <4 x i32> %spec.store.select, <i32 -128, i32 -128, i32 -128, i32 -128>
+  %spec.store.select7 = select <4 x i1> %1, <4 x i32> %spec.store.select, <4 x i32> <i32 -128, i32 -128, i32 -128, i32 -128>
+  %conv6 = trunc <4 x i32> %spec.store.select7 to <4 x i8>
+  ret <4 x i8> %conv6
+}
+
+define <4 x i8> @utest_f32i8(<4 x float> %x) {
+; CHECK-LABEL: utest_f32i8:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    cvttps2dq %xmm0, %xmm1
+; CHECK-NEXT:    movdqa %xmm1, %xmm2
+; CHECK-NEXT:    psrad $31, %xmm2
+; CHECK-NEXT:    subps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    cvttps2dq %xmm0, %xmm3
+; CHECK-NEXT:    pand %xmm2, %xmm3
+; CHECK-NEXT:    por %xmm1, %xmm3
+; CHECK-NEXT:    movdqa {{.*#+}} xmm0 = [2147483648,2147483648,2147483648,2147483648]
+; CHECK-NEXT:    pxor %xmm3, %xmm0
+; CHECK-NEXT:    pcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    movdqa %xmm0, %xmm1
+; CHECK-NEXT:    pandn %xmm3, %xmm1
+; CHECK-NEXT:    psrld $24, %xmm0
+; CHECK-NEXT:    por %xmm1, %xmm0
+; CHECK-NEXT:    packuswb %xmm0, %xmm0
+; CHECK-NEXT:    packuswb %xmm0, %xmm0
+; CHECK-NEXT:    retq
+entry:
+  %conv = fptoui <4 x float> %x to <4 x i32>
+  %0 = icmp ult <4 x i32> %conv, <i32 255, i32 255, i32 255, i32 255>
+  %spec.store.select = select <4 x i1> %0, <4 x i32> %conv, <4 x i32> <i32 255, i32 255, i32 255, i32 255>
+  %conv6 = trunc <4 x i32> %spec.store.select to <4 x i8>
+  ret <4 x i8> %conv6
+}
+
+define <4 x i8> @ustest_f32i8(<4 x float> %x) {
+; CHECK-LABEL: ustest_f32i8:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    cvttps2dq %xmm0, %xmm0
+; CHECK-NEXT:    movdqa {{.*#+}} xmm1 = [255,255,255,255]
+; CHECK-NEXT:    movdqa %xmm1, %xmm2
+; CHECK-NEXT:    pcmpgtd %xmm0, %xmm2
+; CHECK-NEXT:    pand %xmm2, %xmm0
+; CHECK-NEXT:    pandn %xmm1, %xmm2
+; CHECK-NEXT:    por %xmm0, %xmm2
+; CHECK-NEXT:    pxor %xmm1, %xmm1
+; CHECK-NEXT:    movdqa %xmm2, %xmm0
+; CHECK-NEXT:    pcmpgtd %xmm1, %xmm0
+; CHECK-NEXT:    pand %xmm2, %xmm0
+; CHECK-NEXT:    packuswb %xmm0, %xmm0
+; CHECK-NEXT:    packuswb %xmm0, %xmm0
+; CHECK-NEXT:    retq
+entry:
+  %conv = fptosi <4 x float> %x to <4 x i32>
+  %0 = icmp slt <4 x i32> %conv, <i32 255, i32 255, i32 255, i32 255>
+  %spec.store.select = select <4 x i1> %0, <4 x i32> %conv, <4 x i32> <i32 255, i32 255, i32 255, i32 255>
+  %1 = icmp sgt <4 x i32> %spec.store.select, zeroinitializer
+  %spec.store.select7 = select <4 x i1> %1, <4 x i32> %spec.store.select, <4 x i32> zeroinitializer
+  %conv6 = trunc <4 x i32> %spec.store.select7 to <4 x i8>
+  ret <4 x i8> %conv6
+}
+
 ; i64 saturate
 
 define <2 x i64> @stest_f64i64(<2 x double> %x) {
