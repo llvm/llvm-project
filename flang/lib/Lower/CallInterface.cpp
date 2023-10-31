@@ -1002,12 +1002,15 @@ private:
       addPassedArg(PassEntityBy::MutableBox, entity, characteristics);
     } else if (dummyRequiresBox(obj, isBindC)) {
       // Pass as fir.box or fir.class
+      if (isValueAttr &&
+          !getConverter().getLoweringOptions().getLowerToHighLevelFIR())
+        TODO(loc, "assumed shape dummy argument with VALUE attribute");
       Property prop = Property::Box;
       PassEntityBy passBy = PassEntityBy::Box;
-      if (isValueAttr) {
+      /*if (isValueAttr) {
         passBy = PassEntityBy::BaseAddressValueAttribute;
         prop = Property::Value;
-      }
+      }*/
       addFirOperand(boxType, nextPassedArgPosition(), prop, attrs);
       addPassedArg(passBy, entity, characteristics);
     } else if (dynamicType.category() ==
