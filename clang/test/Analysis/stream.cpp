@@ -20,3 +20,9 @@ void f1() {
 void f2() {
   FILE *f = fopen("file", "r");
 } // expected-warning {{Opened stream never closed. Potential resource leak}}
+
+extern FILE *tmpfile(const char *path);
+
+void f3(void) {
+  FILE *fp = tmpfile("file");
+} // expected-warning {{Opened stream never closed. Potential resource leak}}
