@@ -682,8 +682,11 @@ VectorType *VectorType::get(Type *ElementType, ElementCount EC) {
 }
 
 bool VectorType::isValidElementType(Type *ElemTy) {
+  if(PointerType *PTy = dyn_cast<PointerType>(ElemTy))
+    return PTy->getAddressSpace() != 10 && PTy->getAddressSpace() != 20;
+
   return ElemTy->isIntegerTy() || ElemTy->isFloatingPointTy() ||
-         ElemTy->isPointerTy() || ElemTy->getTypeID() == TypedPointerTyID;
+         ElemTy->getTypeID() == TypedPointerTyID;
 }
 
 //===----------------------------------------------------------------------===//
