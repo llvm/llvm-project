@@ -983,6 +983,14 @@ void CodeGenModule::Release() {
                               uint32_t(CLANG_VERSION_MINOR));
     getModule().addModuleFlag(llvm::Module::Warning, "Product Patchlevel",
                               uint32_t(CLANG_VERSION_PATCHLEVEL));
+    std::string ProductId;
+#ifdef CLANG_VENDOR
+    ProductId = #CLANG_VENDOR;
+#else
+    ProductId = "clang";
+#endif
+    getModule().addModuleFlag(llvm::Module::Error, "Product Id",
+                              llvm::MDString::get(VMContext, ProductId));
 
     // Record the language because we need it for the PPA2.
     StringRef lang_str = languageToString(
@@ -990,24 +998,11 @@ void CodeGenModule::Release() {
     getModule().addModuleFlag(llvm::Module::Error, "zos_cu_language",
                               llvm::MDString::get(VMContext, lang_str));
 
-    std::string ProductId;
-#ifdef CLANG_VENDOR
-    ProductId = #CLANG_VENDOR;
-#else
-    ProductId = "clang";
-#endif
-
-    getModule().addModuleFlag(llvm::Module::Error, "Product Id",
-                              llvm::MDString::get(VMContext, ProductId));
-
-    getModule().addModuleFlag(llvm::Module::Error, "TranslationTime",
+    getModule().addModuleFlag(llvm::Module::Max, "TranslationTime",
                               static_cast<uint64_t>(std::time(nullptr)));
 
-    getModule().addModuleFlag(
-        llvm::Module::Error, "zos_le_char_mode",
-        llvm::MDString::get(VMContext, Context.getLangOpts().ASCIICharMode
-                                           ? "ascii"
-                                           : "ebcdic"));
+    getModule().addModuleFlag(llvm::Module::Error, "zos_le_char_mode",
+                              llvm::MDString::get(VMContext, "ascii"));
   }
 
   llvm::Triple::ArchType Arch = Context.getTargetInfo().getTriple().getArch();

@@ -1765,7 +1765,7 @@ void Clang::RenderTargetOptions(const llvm::Triple &EffectiveTriple,
     break;
 
   case llvm::Triple::systemz:
-    AddSystemZTargetArgs(EffectiveTriple, Args, CmdArgs);
+    AddSystemZTargetArgs(Args, CmdArgs);
     break;
 
   case llvm::Triple::x86:
@@ -2262,8 +2262,7 @@ void Clang::AddSparcTargetArgs(const ArgList &Args,
   }
 }
 
-void Clang::AddSystemZTargetArgs(const llvm::Triple &Triple,
-                                 const ArgList &Args,
+void Clang::AddSystemZTargetArgs(const ArgList &Args,
                                  ArgStringList &CmdArgs) const {
   if (const Arg *A = Args.getLastArg(options::OPT_mtune_EQ)) {
     CmdArgs.push_back("-tune-cpu");
