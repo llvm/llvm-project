@@ -898,8 +898,7 @@ CodeGenFunction::emitBuiltinObjectSize(const Expr *E, unsigned Type,
       CharUnits Size =
           getContext().getTypeSizeInChars(ArrayTy->getElementType());
       llvm::Constant *ArraySize =
-          llvm::ConstantInt::get(CountedByInstr->getType(),
-                                 Size.getQuantity());
+          llvm::ConstantInt::get(CountedByInstr->getType(), Size.getQuantity());
 
       llvm::Value *ObjectSize = Builder.CreateMul(CountedByInstr, ArraySize);
       ObjectSize = Builder.CreateZExtOrTrunc(ObjectSize, ResType);
