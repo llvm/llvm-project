@@ -174,8 +174,7 @@ template <typename T> struct Memset {
   template <size_t prefetch_distance, size_t prefetch_degree>
   LIBC_INLINE static void loop_and_tail_prefetch(Ptr dst, uint8_t value,
                                                  size_t count) {
-    size_t offset = 0;
-
+    size_t offset = 96;
     while (offset + prefetch_degree + SIZE <= count) {
       for (size_t i = 0; i < prefetch_degree / sw_prefetch::kCachelineSize; ++i)
         sw_prefetch::PrefetchW(dst + offset + prefetch_distance +

@@ -42,9 +42,11 @@ LIBC_INLINE_VAR constexpr bool kUseSoftwarePrefetchingMemset =
 
   [[maybe_unused]] LIBC_INLINE static void
   inline_memset_x86_sw_prefetching(Ptr dst, uint8_t value, size_t count) {
+    // Prefetch one cacheline
     sw_prefetch::PrefetchW(dst + sw_prefetch::kCachelineSize);
     if (count <= 128)
       return generic::Memset<uint512_t>::head_tail(dst, value, count);
+    // Prefetch the next cacheline
     sw_prefetch::PrefetchW(dst + sw_prefetch::kCachelineSize * 2);
     // Aligned loop
     generic::Memset<uint256_t>::block(dst, value);
@@ -52,6 +54,8 @@ LIBC_INLINE_VAR constexpr bool kUseSoftwarePrefetchingMemset =
     if (count <= 192) {
       return generic::Memset<uint256_t>::loop_and_tail(dst, value, count);
     } else {
+      generic::Memset<uint512_t>::block(dst, value);
+      generic::Memset<uint256_t>::block(dst + sizeof(uint512_t), value);
       return generic::Memset<uint256_t>::loop_and_tail_prefetch<320, 128>(
           dst, value, count);
     }
