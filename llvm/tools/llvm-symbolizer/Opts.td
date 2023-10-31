@@ -57,6 +57,8 @@ def relative_address : F<"relative-address", "Interpret addresses as addresses r
 def relativenames : F<"relativenames", "Strip the compilation directory from paths">;
 defm untag_addresses : B<"untag-addresses", "", "Remove memory tags from addresses before symbolization">;
 def use_dia: F<"dia", "Use the DIA library to access symbols (Windows only)">;
+defm use_symbol_table : B<"use-symbol-table", "Prefer function names stored in symbol table",
+                          "Don't prefer function names stored in symbol table">;
 def verbose : F<"verbose", "Print verbose line info">;
 def version : F<"version", "Display the version">;
 
