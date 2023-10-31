@@ -1,4 +1,4 @@
-# RUN: llc -simplify-mir -verify-machineinstrs -mtriple=powerpc64-ibm-aix-xcoff \
+# RUN: llc -simplify-mir -verify-machineinstrs -mtriple=powerpc64-unknown-unknown \
 # RUN:   %s -o - | FileCheck %s
 
 ---
