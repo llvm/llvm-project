@@ -322,6 +322,56 @@ static Attr *handleUnlikely(Sema &S, Stmt *St, const ParsedAttr &A,
   return ::new (S.Context) UnlikelyAttr(S.Context, A);
 }
 
+CodeAlignAttr *Sema::BuildCodeAlignAttr(const AttributeCommonInfo &CI,
+                                        Expr *E) {
+  if (!E->isValueDependent()) {
+    llvm::APSInt ArgVal;
+    ExprResult Res = VerifyIntegerConstantExpression(E, &ArgVal);
+    if (Res.isInvalid())
+      return nullptr;
+    E = Res.get();
+
+    // This attribute requires a strictly positive value.
+    if (ArgVal <= 0) {
+      Diag(E->getExprLoc(), diag::err_attribute_requires_positive_integer)
+          << CI << /*positive*/ 0;
+      return nullptr;
+    }
+
+    // This attribute requires a single constant power of two greater than zero.
+    if (!ArgVal.isPowerOf2()) {
+      Diag(E->getExprLoc(), diag::err_attribute_argument_not_power_of_two)
+          << CI;
+      return nullptr;
+    }
+  }
+
+  return new (Context) CodeAlignAttr(Context, CI, E);
+}
+
+static Attr *handleCodeAlignAttr(Sema &S, Stmt *St, const ParsedAttr &A) {
+
+  Expr *E = A.getArgAsExpr(0);
+  return S.BuildCodeAlignAttr(A, E);
+}
+
+// Emit duplicate error for [[clang::code_align()]] attribute.
+template <typename LoopAttrT>
+static void
+CheckForDuplicateLoopAttribute(Sema &S,
+                               const SmallVectorImpl<const Attr *> &Attrs) {
+  const LoopAttrT *LoopAttr = nullptr;
+
+  for (const auto *I : Attrs) {
+    if (LoopAttr && isa<LoopAttrT>(I)) {
+      // Cannot specify same type of attribute twice.
+      S.Diag(I->getLocation(), diag::err_loop_attr_duplication) << LoopAttr;
+    }
+    if (isa<LoopAttrT>(I))
+      LoopAttr = cast<LoopAttrT>(I);
+  }
+}
+
 #define WANT_STMT_MERGE_LOGIC
 #include "clang/Sema/AttrParsedAttrImpl.inc"
 #undef WANT_STMT_MERGE_LOGIC
@@ -523,6 +573,8 @@ static Attr *ProcessStmtAttribute(Sema &S, Stmt *St, const ParsedAttr &A,
     return handleLikely(S, St, A, Range);
   case ParsedAttr::AT_Unlikely:
     return handleUnlikely(S, St, A, Range);
+  case ParsedAttr::AT_CodeAlign:
+    return handleCodeAlignAttr(S, St, A);
   default:
     // N.B., ClangAttrEmitter.cpp emits a diagnostic helper that ensures a
     // declaration attribute is not written on a statement, but this code is
@@ -541,4 +593,5 @@ void Sema::ProcessStmtAttributes(Stmt *S, const ParsedAttributes &InAttrs,
   }
 
   CheckForIncompatibleAttributes(*this, OutAttrs);
+  CheckForDuplicateLoopAttribute<CodeAlignAttr>(*this, OutAttrs);
 }

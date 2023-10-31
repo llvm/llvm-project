@@ -440,6 +440,14 @@ MDNode *LoopInfo::createMetadata(
         Ctx, {MDString::get(Ctx, "llvm.loop.parallel_accesses"), AccGroup}));
   }
 
+  // Setting clang::code_align attribute.
+  if (Attrs.CodeAlign > 0) {
+    Metadata *Vals[] = {MDString::get(Ctx, "llvm.loop.align"),
+                        ConstantAsMetadata::get(ConstantInt::get(
+                            llvm::Type::getInt32Ty(Ctx), Attrs.CodeAlign))};
+    LoopProperties.push_back(MDNode::get(Ctx, Vals));
+  }
+
   LoopProperties.insert(LoopProperties.end(), AdditionalLoopProperties.begin(),
                         AdditionalLoopProperties.end());
   return createFullUnrollMetadata(Attrs, LoopProperties, HasUserTransforms);
@@ -453,7 +461,7 @@ LoopAttributes::LoopAttributes(bool IsParallel)
       VectorizeScalable(LoopAttributes::Unspecified), InterleaveCount(0),
       UnrollCount(0), UnrollAndJamCount(0),
       DistributeEnable(LoopAttributes::Unspecified), PipelineDisabled(false),
-      PipelineInitiationInterval(0), MustProgress(false) {}
+      PipelineInitiationInterval(0), CodeAlign(0), MustProgress(false) {}
 
 void LoopAttributes::clear() {
   IsParallel = false;
@@ -469,6 +477,7 @@ void LoopAttributes::clear() {
   DistributeEnable = LoopAttributes::Unspecified;
   PipelineDisabled = false;
   PipelineInitiationInterval = 0;
+  CodeAlign = 0;
   MustProgress = false;
 }
 
@@ -493,8 +502,8 @@ LoopInfo::LoopInfo(BasicBlock *Header, const LoopAttributes &Attrs,
       Attrs.VectorizeEnable == LoopAttributes::Unspecified &&
       Attrs.UnrollEnable == LoopAttributes::Unspecified &&
       Attrs.UnrollAndJamEnable == LoopAttributes::Unspecified &&
-      Attrs.DistributeEnable == LoopAttributes::Unspecified && !StartLoc &&
-      !EndLoc && !Attrs.MustProgress)
+      Attrs.DistributeEnable == LoopAttributes::Unspecified &&
+      Attrs.CodeAlign == 0 && !StartLoc && !EndLoc && !Attrs.MustProgress)
     return;
 
   TempLoopID = MDNode::getTemporary(Header->getContext(), std::nullopt);
@@ -785,6 +794,20 @@ void LoopInfoStack::push(BasicBlock *Header, clang::ASTContext &Ctx,
         break;
       }
       break;
+    }
+  }
+
+  // Translate 'loop attributes' arguments to equivalent Attr enums.
+  // It's being handled separately from LoopHintAttrs not to support
+  // legacy GNU attributes and pragma styles.
+  //
+  // For attribute code_align:
+  // n - 'llvm.loop.align i32 n' metadata will be emitted.
+  for (const auto *A : Attrs) {
+    if (const auto *CodeAlign = dyn_cast<CodeAlignAttr>(A)) {
+      const auto *CE = cast<ConstantExpr>(CodeAlign->getNExpr());
+      llvm::APSInt ArgVal = CE->getResultAsAPSInt();
+      setCodeAlign(ArgVal.getSExtValue());
     }
   }
 

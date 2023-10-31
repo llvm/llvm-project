@@ -10026,6 +10026,10 @@ def err_duplicate_case_differing_expr : Error<
 def warn_case_empty_range : Warning<"empty case range specified">;
 def warn_missing_case_for_condition :
   Warning<"no case matching constant switch condition '%0'">;
+def err_loop_attr_duplication : Error<
+  "duplicate loop attribute %0">;
+def err_attribute_argument_not_power_of_two : Error<
+  "%0 attribute argument must be a constant power of two greater than zero">;
 
 def warn_def_missing_case : Warning<"%plural{"
   "1:enumeration value %1 not explicitly handled in switch|"
