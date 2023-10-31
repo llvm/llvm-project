@@ -41,13 +41,8 @@ static AffineMap translateMap(OpBuilder &builder, SparseTensorType stt,
 // Generates a "de"mapping reinterpretation of the map.
 static Value genDemap(OpBuilder &builder, SparseTensorEncodingAttr enc,
                       Value val) {
-  unsigned lvlRank = enc.getLvlTypes().size();
-  AffineMap idMap =
-      AffineMap::getMultiDimIdentityMap(lvlRank, builder.getContext());
-  auto newEnc = SparseTensorEncodingAttr::get(
-      builder.getContext(), enc.getLvlTypes(), idMap, idMap, enc.getPosWidth(),
-      enc.getCrdWidth());
-  return builder.create<ReinterpretMapOp>(val.getLoc(), newEnc, val);
+   return builder.create<ReinterpretMapOp>(val.getLoc(), enc.withoutDimToLvl(),
+                                          val);
 }
 
 // Generates a "re"mapping reinterpretation of the map.
