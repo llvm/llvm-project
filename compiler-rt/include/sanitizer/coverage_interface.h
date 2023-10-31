@@ -27,7 +27,7 @@ void SANITIZER_CDECL __sanitizer_cov_reset(void);
 // Dump collected coverage info. Sorts pcs by module into individual .sancov
 // files.
 void SANITIZER_CDECL __sanitizer_dump_coverage(const uintptr_t *pcs,
-                                                 uintptr_t len);
+                                               uintptr_t len);
 
 #ifdef __cplusplus
 } // extern "C"

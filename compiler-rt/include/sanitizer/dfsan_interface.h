@@ -25,9 +25,8 @@ typedef uint8_t dfsan_label;
 typedef uint32_t dfsan_origin;
 
 /// Signature of the callback argument to dfsan_set_write_callback().
-typedef void (*SANITIZER_CDECL dfsan_write_callback_t)(int fd,
-                                                         const void *buf,
-                                                         size_t count);
+typedef void (*SANITIZER_CDECL dfsan_write_callback_t)(int fd, const void *buf,
+                                                       size_t count);
 
 /// Signature of the callback argument to dfsan_set_conditional_callback().
 typedef void (*SANITIZER_CDECL dfsan_conditional_callback_t)(
@@ -44,12 +43,12 @@ dfsan_label SANITIZER_CDECL dfsan_union(dfsan_label l1, dfsan_label l2);
 
 /// Sets the label for each address in [addr,addr+size) to \c label.
 void SANITIZER_CDECL dfsan_set_label(dfsan_label label, void *addr,
-                                       size_t size);
+                                     size_t size);
 
 /// Sets the label for each address in [addr,addr+size) to the union of the
 /// current label for that address and \c label.
 void SANITIZER_CDECL dfsan_add_label(dfsan_label label, void *addr,
-                                       size_t size);
+                                     size_t size);
 
 /// Retrieves the label associated with the given data.
 ///
@@ -70,8 +69,8 @@ dfsan_label SANITIZER_CDECL dfsan_read_label(const void *addr, size_t size);
 
 /// Return the origin associated with the first taint byte in the size bytes
 /// from the address addr.
-dfsan_origin SANITIZER_CDECL
-dfsan_read_origin_of_first_taint(const void *addr, size_t size);
+dfsan_origin SANITIZER_CDECL dfsan_read_origin_of_first_taint(const void *addr,
+                                                              size_t size);
 
 /// Returns whether the given label contains the label elem.
 int SANITIZER_CDECL dfsan_has_label(dfsan_label label, dfsan_label elem);
@@ -123,21 +122,21 @@ dfsan_label SANITIZER_CDECL dfsan_get_labels_in_signal_reaches_function();
 /// needs to see the parameters of the function and the labels.
 /// FIXME: implement more hooks.
 void SANITIZER_CDECL dfsan_weak_hook_memcmp(void *caller_pc, const void *s1,
-                                              const void *s2, size_t n,
-                                              dfsan_label s1_label,
-                                              dfsan_label s2_label,
-                                              dfsan_label n_label);
+                                            const void *s2, size_t n,
+                                            dfsan_label s1_label,
+                                            dfsan_label s2_label,
+                                            dfsan_label n_label);
 void SANITIZER_CDECL dfsan_weak_hook_strncmp(void *caller_pc, const char *s1,
-                                               const char *s2, size_t n,
-                                               dfsan_label s1_label,
-                                               dfsan_label s2_label,
-                                               dfsan_label n_label);
+                                             const char *s2, size_t n,
+                                             dfsan_label s1_label,
+                                             dfsan_label s2_label,
+                                             dfsan_label n_label);
 
 /// Prints the origin trace of the label at the address addr to stderr. It also
 /// prints description at the beginning of the trace. If origin tracking is not
 /// on, or the address is not labeled, it prints nothing.
 void SANITIZER_CDECL dfsan_print_origin_trace(const void *addr,
-                                                const char *description);
+                                              const char *description);
 /// As above, but use an origin id from dfsan_get_origin() instead of address.
 /// Does not include header line with taint label and address information.
 void SANITIZER_CDECL dfsan_print_origin_id_trace(dfsan_origin origin);
@@ -177,14 +176,14 @@ void SANITIZER_CDECL dfsan_print_origin_id_trace(dfsan_origin origin);
 /// (not including trailing null byte '\0'). Thus, the string is truncated iff
 /// return value is not less than \p out_buf_size.
 size_t SANITIZER_CDECL dfsan_sprint_origin_trace(const void *addr,
-                                                   const char *description,
-                                                   char *out_buf,
-                                                   size_t out_buf_size);
+                                                 const char *description,
+                                                 char *out_buf,
+                                                 size_t out_buf_size);
 /// As above, but use an origin id from dfsan_get_origin() instead of address.
 /// Does not include header line with taint label and address information.
 size_t SANITIZER_CDECL dfsan_sprint_origin_id_trace(dfsan_origin origin,
-                                                      char *out_buf,
-                                                      size_t out_buf_size);
+                                                    char *out_buf,
+                                                    size_t out_buf_size);
 
 /// Prints the stack trace leading to this call to a pre-allocated output
 /// buffer.
@@ -198,7 +197,7 @@ size_t SANITIZER_CDECL dfsan_sprint_origin_id_trace(dfsan_origin origin,
 /// (not including trailing null byte '\0'). Thus, the string is truncated iff
 /// return value is not less than \p out_buf_size.
 size_t SANITIZER_CDECL dfsan_sprint_stack_trace(char *out_buf,
-                                                  size_t out_buf_size);
+                                                size_t out_buf_size);
 
 /// Retrieves the very first origin associated with the data at the given
 /// address.

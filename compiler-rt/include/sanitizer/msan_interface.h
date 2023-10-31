@@ -20,7 +20,7 @@ extern "C" {
 #endif
 /* Set raw origin for the memory range. */
 void SANITIZER_CDECL __msan_set_origin(const volatile void *a, size_t size,
-                                         uint32_t origin);
+                                       uint32_t origin);
 
 /* Get raw origin for an address. */
 uint32_t SANITIZER_CDECL __msan_get_origin(const volatile void *a);
@@ -29,7 +29,7 @@ uint32_t SANITIZER_CDECL __msan_get_origin(const volatile void *a);
  * "descendant" here means they are part of the same chain, created with
  * __msan_chain_origin. */
 int SANITIZER_CDECL __msan_origin_is_descendant_or_same(uint32_t this_id,
-                                                          uint32_t prev_id);
+                                                        uint32_t prev_id);
 
 /* Returns non-zero if tracking origins. */
 int SANITIZER_CDECL __msan_get_track_origins(void);
@@ -55,17 +55,17 @@ void SANITIZER_CDECL __msan_poison(const volatile void *a, size_t size);
 /* Make memory region partially uninitialized (without changing its contents).
  */
 void SANITIZER_CDECL __msan_partial_poison(const volatile void *data,
-                                             void *shadow, size_t size);
+                                           void *shadow, size_t size);
 
 /* Returns the offset of the first (at least partially) poisoned byte in the
    memory range, or -1 if the whole range is good. */
 intptr_t SANITIZER_CDECL __msan_test_shadow(const volatile void *x,
-                                              size_t size);
+                                            size_t size);
 
 /* Checks that memory range is fully initialized, and reports an error if it
  * is not. */
 void SANITIZER_CDECL __msan_check_mem_is_initialized(const volatile void *x,
-                                                       size_t size);
+                                                     size_t size);
 
 /* For testing:
    __msan_set_expect_umr(1);
@@ -93,15 +93,14 @@ int SANITIZER_CDECL __msan_has_dynamic_component(void);
 /* Tell MSan about newly allocated memory (ex.: custom allocator).
    Memory will be marked uninitialized, with origin at the call site. */
 void SANITIZER_CDECL __msan_allocated_memory(const volatile void *data,
-                                               size_t size);
+                                             size_t size);
 
 /* Tell MSan about newly destroyed memory. Mark memory as uninitialized. */
 void SANITIZER_CDECL __sanitizer_dtor_callback(const volatile void *data,
-                                                 size_t size);
-void SANITIZER_CDECL
-__sanitizer_dtor_callback_fields(const volatile void *data, size_t size);
-void SANITIZER_CDECL
-__sanitizer_dtor_callback_vptr(const volatile void *data);
+                                               size_t size);
+void SANITIZER_CDECL __sanitizer_dtor_callback_fields(const volatile void *data,
+                                                      size_t size);
+void SANITIZER_CDECL __sanitizer_dtor_callback_vptr(const volatile void *data);
 
 /* This function may be optionally provided by user and should return
    a string containing Msan runtime options. See msan_flags.h for details. */
@@ -116,8 +115,7 @@ __msan_set_death_callback(void (*SANITIZER_CDECL callback)(void));
    actual application memory, it only updates shadow and origin for such
    copy. Source and destination regions can overlap. */
 void SANITIZER_CDECL __msan_copy_shadow(const volatile void *dst,
-                                          const volatile void *src,
-                                          size_t size);
+                                        const volatile void *src, size_t size);
 
 /* Disables uninitialized memory checks in interceptors. */
 void SANITIZER_CDECL __msan_scoped_disable_interceptor_checks(void);
@@ -126,10 +124,9 @@ void SANITIZER_CDECL __msan_scoped_disable_interceptor_checks(void);
    call to __msan_scoped_disable_interceptor_checks. */
 void SANITIZER_CDECL __msan_scoped_enable_interceptor_checks(void);
 
-void SANITIZER_CDECL __msan_start_switch_fiber(const void *bottom,
-                                                 size_t size);
+void SANITIZER_CDECL __msan_start_switch_fiber(const void *bottom, size_t size);
 void SANITIZER_CDECL __msan_finish_switch_fiber(const void **bottom_old,
-                                                  size_t *size_old);
+                                                size_t *size_old);
 
 #ifdef __cplusplus
 } // extern "C"

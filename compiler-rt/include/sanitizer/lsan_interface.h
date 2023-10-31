@@ -38,8 +38,7 @@ void SANITIZER_CDECL __lsan_ignore_object(const void *p);
 // - the implementation is not optimized for performance. This interface is
 // intended to be used for a small number of relatively static regions.
 void SANITIZER_CDECL __lsan_register_root_region(const void *p, size_t size);
-void SANITIZER_CDECL __lsan_unregister_root_region(const void *p,
-                                                     size_t size);
+void SANITIZER_CDECL __lsan_unregister_root_region(const void *p, size_t size);
 
 // Check for leaks now. This function behaves identically to the default
 // end-of-process leak check. In particular, it will terminate the process if

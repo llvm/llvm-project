@@ -67,7 +67,7 @@ size_t SANITIZER_CDECL __sanitizer_get_unmapped_bytes(void);
    __sanitizer_free_hook(ptr) is called immediately before
      deallocation of "ptr". */
 void SANITIZER_CDECL __sanitizer_malloc_hook(const volatile void *ptr,
-                                               size_t size);
+                                             size_t size);
 void SANITIZER_CDECL __sanitizer_free_hook(const volatile void *ptr);
 
 /* Installs a pair of hooks for malloc/free.

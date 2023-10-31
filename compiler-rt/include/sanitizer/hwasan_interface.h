@@ -38,11 +38,11 @@ void SANITIZER_CDECL __hwasan_disable_allocator_tagging(void);
 // Mark region of memory with the given tag. Both address and size need to be
 // 16-byte aligned.
 void SANITIZER_CDECL __hwasan_tag_memory(const volatile void *p,
-                                           unsigned char tag, size_t size);
+                                         unsigned char tag, size_t size);
 
 /// Set pointer tag. Previous tag is lost.
 void *SANITIZER_CDECL __hwasan_tag_pointer(const volatile void *p,
-                                             unsigned char tag);
+                                           unsigned char tag);
 
 // Set memory tag from the current SP address to the given address to zero.
 // This is meant to annotate longjmp and other non-local jumps.
@@ -65,8 +65,7 @@ void SANITIZER_CDECL __hwasan_thread_exit();
 
 // Print shadow and origin for the memory range to stderr in a human-readable
 // format.
-void SANITIZER_CDECL __hwasan_print_shadow(const volatile void *x,
-                                             size_t size);
+void SANITIZER_CDECL __hwasan_print_shadow(const volatile void *x, size_t size);
 
 // Print one-line report about the memory usage of the current process.
 void SANITIZER_CDECL __hwasan_print_memory_usage();
@@ -74,19 +73,18 @@ void SANITIZER_CDECL __hwasan_print_memory_usage();
 /* Returns the offset of the first byte in the memory range that can not be
  * accessed through the pointer in x, or -1 if the whole range is good. */
 intptr_t SANITIZER_CDECL __hwasan_test_shadow(const volatile void *x,
-                                                size_t size);
+                                              size_t size);
 
 /* Sets the callback function to be called during HWASan error reporting. */
 void SANITIZER_CDECL
 __hwasan_set_error_report_callback(void (*callback)(const char *));
 
-int SANITIZER_CDECL __sanitizer_posix_memalign(void **memptr,
-                                                 size_t alignment, size_t size);
+int SANITIZER_CDECL __sanitizer_posix_memalign(void **memptr, size_t alignment,
+                                               size_t size);
 void *SANITIZER_CDECL __sanitizer_memalign(size_t alignment, size_t size);
-void *SANITIZER_CDECL __sanitizer_aligned_alloc(size_t alignment,
-                                                  size_t size);
+void *SANITIZER_CDECL __sanitizer_aligned_alloc(size_t alignment, size_t size);
 void *SANITIZER_CDECL __sanitizer___libc_memalign(size_t alignment,
-                                                    size_t size);
+                                                  size_t size);
 void *SANITIZER_CDECL __sanitizer_valloc(size_t size);
 void *SANITIZER_CDECL __sanitizer_pvalloc(size_t size);
 void SANITIZER_CDECL __sanitizer_free(void *ptr);
@@ -98,7 +96,7 @@ void SANITIZER_CDECL __sanitizer_malloc_stats(void);
 void *SANITIZER_CDECL __sanitizer_calloc(size_t nmemb, size_t size);
 void *SANITIZER_CDECL __sanitizer_realloc(void *ptr, size_t size);
 void *SANITIZER_CDECL __sanitizer_reallocarray(void *ptr, size_t nmemb,
-                                                 size_t size);
+                                               size_t size);
 void *SANITIZER_CDECL __sanitizer_malloc(size_t size);
 #ifdef __cplusplus
 } // extern "C"

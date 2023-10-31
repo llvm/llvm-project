@@ -98,7 +98,7 @@ void SANITIZER_CDECL __tsan_mutex_pre_lock(void *addr, unsigned flags);
 //   - __tsan_mutex_recursive_lock
 //   - all mutex creation flags
 void SANITIZER_CDECL __tsan_mutex_post_lock(void *addr, unsigned flags,
-                                              int recursion);
+                                            int recursion);
 
 // Annotate start of unlock operation.
 // Supported flags:
@@ -139,12 +139,12 @@ void SANITIZER_CDECL __tsan_mutex_post_divert(void *addr, unsigned flags);
 //   - __tsan_external_assign_tag can optionally mark a heap object with a tag
 void *SANITIZER_CDECL __tsan_external_register_tag(const char *object_type);
 void SANITIZER_CDECL __tsan_external_register_header(void *tag,
-                                                       const char *header);
+                                                     const char *header);
 void SANITIZER_CDECL __tsan_external_assign_tag(void *addr, void *tag);
 void SANITIZER_CDECL __tsan_external_read(void *addr, void *caller_pc,
-                                            void *tag);
+                                          void *tag);
 void SANITIZER_CDECL __tsan_external_write(void *addr, void *caller_pc,
-                                             void *tag);
+                                           void *tag);
 
 // Fiber switching API.
 //   - TSAN context for fiber can be created by __tsan_create_fiber
@@ -215,8 +215,8 @@ int SANITIZER_CDECL __tsan_get_report_data(
 /// \param trace_size Size in bytes of the trace buffer.
 /// \returns Returns 1 if successful, 0 if not.
 int SANITIZER_CDECL __tsan_get_report_stack(void *report, unsigned long idx,
-                                              void **trace,
-                                              unsigned long trace_size);
+                                            void **trace,
+                                            unsigned long trace_size);
 
 /// Returns information about memory operations included in the report.
 ///
@@ -231,10 +231,9 @@ int SANITIZER_CDECL __tsan_get_report_stack(void *report, unsigned long idx,
 /// \param trace_size Size in bytes of the trace buffer.
 /// \returns Returns 1 if successful, 0 if not.
 int SANITIZER_CDECL __tsan_get_report_mop(void *report, unsigned long idx,
-                                            int *tid, void **addr, int *size,
-                                            int *write, int *atomic,
-                                            void **trace,
-                                            unsigned long trace_size);
+                                          int *tid, void **addr, int *size,
+                                          int *write, int *atomic, void **trace,
+                                          unsigned long trace_size);
 
 /// Returns information about locations included in the report.
 ///
@@ -251,11 +250,11 @@ int SANITIZER_CDECL __tsan_get_report_mop(void *report, unsigned long idx,
 /// \param trace_size Size in bytes of the trace buffer.
 /// \returns Returns 1 if successful, 0 if not.
 int SANITIZER_CDECL __tsan_get_report_loc(void *report, unsigned long idx,
-                                            const char **type, void **addr,
-                                            void **start, unsigned long *size,
-                                            int *tid, int *fd,
-                                            int *suppressable, void **trace,
-                                            unsigned long trace_size);
+                                          const char **type, void **addr,
+                                          void **start, unsigned long *size,
+                                          int *tid, int *fd, int *suppressable,
+                                          void **trace,
+                                          unsigned long trace_size);
 
 /// Returns information about mutexes included in the report.
 ///
@@ -268,9 +267,9 @@ int SANITIZER_CDECL __tsan_get_report_loc(void *report, unsigned long idx,
 /// \param trace_size Size in bytes of the trace buffer.
 /// \returns Returns 1 if successful, 0 if not.
 int SANITIZER_CDECL __tsan_get_report_mutex(void *report, unsigned long idx,
-                                              uint64_t *mutex_id, void **addr,
-                                              int *destroyed, void **trace,
-                                              unsigned long trace_size);
+                                            uint64_t *mutex_id, void **addr,
+                                            int *destroyed, void **trace,
+                                            unsigned long trace_size);
 
 /// Returns information about threads included in the report.
 ///
@@ -285,10 +284,10 @@ int SANITIZER_CDECL __tsan_get_report_mutex(void *report, unsigned long idx,
 /// \param trace_size Size in bytes of the trace buffer.
 /// \returns Returns 1 if successful, 0 if not.
 int SANITIZER_CDECL __tsan_get_report_thread(void *report, unsigned long idx,
-                                               int *tid, uint64_t *os_id,
-                                               int *running, const char **name,
-                                               int *parent_tid, void **trace,
-                                               unsigned long trace_size);
+                                             int *tid, uint64_t *os_id,
+                                             int *running, const char **name,
+                                             int *parent_tid, void **trace,
+                                             unsigned long trace_size);
 
 /// Returns information about unique thread IDs included in the report.
 ///
@@ -297,7 +296,7 @@ int SANITIZER_CDECL __tsan_get_report_thread(void *report, unsigned long idx,
 /// \param[out] tid Unique thread ID of the report.
 /// \returns Returns 1 if successful, 0 if not.
 int SANITIZER_CDECL __tsan_get_report_unique_tid(void *report,
-                                                   unsigned long idx, int *tid);
+                                                 unsigned long idx, int *tid);
 
 /// Returns the current report.
 ///

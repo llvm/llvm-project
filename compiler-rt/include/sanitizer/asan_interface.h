@@ -32,7 +32,7 @@ extern "C" {
 /// \param addr Start of memory region.
 /// \param size Size of memory region.
 void SANITIZER_CDECL __asan_poison_memory_region(void const volatile *addr,
-                                                   size_t size);
+                                                 size_t size);
 
 /// Marks a memory region (<c>[addr, addr+size)</c>) as addressable.
 ///
@@ -47,7 +47,7 @@ void SANITIZER_CDECL __asan_poison_memory_region(void const volatile *addr,
 /// \param addr Start of memory region.
 /// \param size Size of memory region.
 void SANITIZER_CDECL __asan_unpoison_memory_region(void const volatile *addr,
-                                                     size_t size);
+                                                   size_t size);
 
 // Macros provided for convenience.
 #if __has_feature(address_sanitizer) || defined(__SANITIZE_ADDRESS__)
@@ -193,9 +193,9 @@ const char *SANITIZER_CDECL __asan_get_report_description(void);
 ///
 /// \returns Returns the category of the given pointer as a constant string.
 const char *SANITIZER_CDECL __asan_locate_address(void *addr, char *name,
-                                                    size_t name_size,
-                                                    void **region_address,
-                                                    size_t *region_size);
+                                                  size_t name_size,
+                                                  void **region_address,
+                                                  size_t *region_size);
 
 /// Gets the allocation stack trace and thread ID for a heap address (useful
 /// for calling from the debugger).
@@ -210,7 +210,7 @@ const char *SANITIZER_CDECL __asan_locate_address(void *addr, char *name,
 ///
 /// \returns Returns the number of stored frames or 0 on error.
 size_t SANITIZER_CDECL __asan_get_alloc_stack(void *addr, void **trace,
-                                                size_t size, int *thread_id);
+                                              size_t size, int *thread_id);
 
 /// Gets the free stack trace and thread ID for a heap address (useful for
 /// calling from the debugger).
@@ -225,7 +225,7 @@ size_t SANITIZER_CDECL __asan_get_alloc_stack(void *addr, void **trace,
 ///
 /// \returns Returns the number of stored frames or 0 on error.
 size_t SANITIZER_CDECL __asan_get_free_stack(void *addr, void **trace,
-                                               size_t size, int *thread_id);
+                                             size_t size, int *thread_id);
 
 /// Gets the current shadow memory mapping (useful for calling from the
 /// debugger).
@@ -233,7 +233,7 @@ size_t SANITIZER_CDECL __asan_get_free_stack(void *addr, void **trace,
 /// \param[out] shadow_scale Shadow scale value.
 /// \param[out] shadow_offset Offset value.
 void SANITIZER_CDECL __asan_get_shadow_mapping(size_t *shadow_scale,
-                                                 size_t *shadow_offset);
+                                               size_t *shadow_offset);
 
 /// This is an internal function that is called to report an error. However,
 /// it is still a part of the interface because you might want to set a
@@ -246,8 +246,8 @@ void SANITIZER_CDECL __asan_get_shadow_mapping(size_t *shadow_scale,
 /// \param is_write True if the error is a write error; false otherwise.
 /// \param access_size Size of the memory access of the ASan error.
 void SANITIZER_CDECL __asan_report_error(void *pc, void *bp, void *sp,
-                                           void *addr, int is_write,
-                                           size_t access_size);
+                                         void *addr, int is_write,
+                                         size_t access_size);
 
 // Deprecated. Call __sanitizer_set_death_callback instead.
 void SANITIZER_CDECL __asan_set_death_callback(void (*callback)(void));
@@ -310,9 +310,8 @@ void *SANITIZER_CDECL __asan_get_current_fake_stack(void);
 /// \param[out] beg Beginning of fake frame.
 /// \param[out] end End of fake frame.
 /// \returns Stack address or NULL.
-void *SANITIZER_CDECL __asan_addr_is_in_fake_stack(void *fake_stack,
-                                                     void *addr, void **beg,
-                                                     void **end);
+void *SANITIZER_CDECL __asan_addr_is_in_fake_stack(void *fake_stack, void *addr,
+                                                   void **beg, void **end);
 
 /// Performs shadow memory cleanup of the current thread's stack before a
 /// function marked with the <c>[[noreturn]]</c> attribute is called.

@@ -25,7 +25,7 @@ extern "C" {
 /// \param addr Start of memory region.
 /// \param size Size of memory region.
 void SANITIZER_CDECL __memprof_record_access_range(void const volatile *addr,
-                                                     size_t size);
+                                                   size_t size);
 
 /// Records access to a memory address <c><i>addr</i></c>.
 ///

@@ -56,21 +56,21 @@ __tsan_atomic128 SANITIZER_CDECL __tsan_atomic128_load(
 #endif
 
 void SANITIZER_CDECL __tsan_atomic8_store(volatile __tsan_atomic8 *a,
-                                            __tsan_atomic8 v,
-                                            __tsan_memory_order mo);
+                                          __tsan_atomic8 v,
+                                          __tsan_memory_order mo);
 void SANITIZER_CDECL __tsan_atomic16_store(volatile __tsan_atomic16 *a,
-                                             __tsan_atomic16 v,
-                                             __tsan_memory_order mo);
+                                           __tsan_atomic16 v,
+                                           __tsan_memory_order mo);
 void SANITIZER_CDECL __tsan_atomic32_store(volatile __tsan_atomic32 *a,
-                                             __tsan_atomic32 v,
-                                             __tsan_memory_order mo);
+                                           __tsan_atomic32 v,
+                                           __tsan_memory_order mo);
 void SANITIZER_CDECL __tsan_atomic64_store(volatile __tsan_atomic64 *a,
-                                             __tsan_atomic64 v,
-                                             __tsan_memory_order mo);
+                                           __tsan_atomic64 v,
+                                           __tsan_memory_order mo);
 #if __TSAN_HAS_INT128
 void SANITIZER_CDECL __tsan_atomic128_store(volatile __tsan_atomic128 *a,
-                                              __tsan_atomic128 v,
-                                              __tsan_memory_order mo);
+                                            __tsan_atomic128 v,
+                                            __tsan_memory_order mo);
 #endif
 
 __tsan_atomic8 SANITIZER_CDECL __tsan_atomic8_exchange(

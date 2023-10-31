@@ -215,8 +215,8 @@ void SANITIZER_CDECL __sanitizer_annotate_double_ended_contiguous_container(
 /// \returns True if the contiguous container <c>[beg, end)</c> is properly
 ///  poisoned.
 int SANITIZER_CDECL __sanitizer_verify_contiguous_container(const void *beg,
-                                                              const void *mid,
-                                                              const void *end);
+                                                            const void *mid,
+                                                            const void *end);
 
 /// Returns true if the double ended contiguous
 /// container <c>[storage_beg, storage_end)</c> is properly poisoned.
@@ -286,13 +286,13 @@ void SANITIZER_CDECL __sanitizer_print_stack_trace(void);
 // The format syntax is described in
 // lib/sanitizer_common/sanitizer_stacktrace_printer.h.
 void SANITIZER_CDECL __sanitizer_symbolize_pc(void *pc, const char *fmt,
-                                                char *out_buf,
-                                                size_t out_buf_size);
+                                              char *out_buf,
+                                              size_t out_buf_size);
 // Same as __sanitizer_symbolize_pc, but for data section (i.e. globals).
 void SANITIZER_CDECL __sanitizer_symbolize_global(void *data_ptr,
-                                                    const char *fmt,
-                                                    char *out_buf,
-                                                    size_t out_buf_size);
+                                                  const char *fmt,
+                                                  char *out_buf,
+                                                  size_t out_buf_size);
 // Determine the return address.
 #if !defined(_MSC_VER) || defined(__clang__)
 #define __sanitizer_return_address()                                           \
@@ -325,9 +325,9 @@ void SANITIZER_CDECL __sanitizer_set_death_callback(void (*callback)(void));
 /// \param n Number of bytes to compare.
 /// \param result Value returned by the intercepted function.
 void SANITIZER_CDECL __sanitizer_weak_hook_memcmp(void *called_pc,
-                                                    const void *s1,
-                                                    const void *s2, size_t n,
-                                                    int result);
+                                                  const void *s1,
+                                                  const void *s2, size_t n,
+                                                  int result);
 
 /// Interceptor hook for <c>strncmp()</c>.
 ///
@@ -337,9 +337,9 @@ void SANITIZER_CDECL __sanitizer_weak_hook_memcmp(void *called_pc,
 /// \param n Number of bytes to compare.
 /// \param result Value returned by the intercepted function.
 void SANITIZER_CDECL __sanitizer_weak_hook_strncmp(void *called_pc,
-                                                     const char *s1,
-                                                     const char *s2, size_t n,
-                                                     int result);
+                                                   const char *s1,
+                                                   const char *s2, size_t n,
+                                                   int result);
 
 /// Interceptor hook for <c>strncasecmp()</c>.
 ///
@@ -349,9 +349,9 @@ void SANITIZER_CDECL __sanitizer_weak_hook_strncmp(void *called_pc,
 /// \param n Number of bytes to compare.
 /// \param result Value returned by the intercepted function.
 void SANITIZER_CDECL __sanitizer_weak_hook_strncasecmp(void *called_pc,
-                                                         const char *s1,
-                                                         const char *s2,
-                                                         size_t n, int result);
+                                                       const char *s1,
+                                                       const char *s2, size_t n,
+                                                       int result);
 
 /// Interceptor hook for <c>strcmp()</c>.
 ///
@@ -360,8 +360,8 @@ void SANITIZER_CDECL __sanitizer_weak_hook_strncasecmp(void *called_pc,
 /// \param s2 Pointer to block of memory.
 /// \param result Value returned by the intercepted function.
 void SANITIZER_CDECL __sanitizer_weak_hook_strcmp(void *called_pc,
-                                                    const char *s1,
-                                                    const char *s2, int result);
+                                                  const char *s1,
+                                                  const char *s2, int result);
 
 /// Interceptor hook for <c>strcasecmp()</c>.
 ///
@@ -370,9 +370,9 @@ void SANITIZER_CDECL __sanitizer_weak_hook_strcmp(void *called_pc,
 /// \param s2 Pointer to block of memory.
 /// \param result Value returned by the intercepted function.
 void SANITIZER_CDECL __sanitizer_weak_hook_strcasecmp(void *called_pc,
-                                                        const char *s1,
-                                                        const char *s2,
-                                                        int result);
+                                                      const char *s1,
+                                                      const char *s2,
+                                                      int result);
 
 /// Interceptor hook for <c>strstr()</c>.
 ///
@@ -381,19 +381,18 @@ void SANITIZER_CDECL __sanitizer_weak_hook_strcasecmp(void *called_pc,
 /// \param s2 Pointer to block of memory.
 /// \param result Value returned by the intercepted function.
 void SANITIZER_CDECL __sanitizer_weak_hook_strstr(void *called_pc,
-                                                    const char *s1,
-                                                    const char *s2,
-                                                    char *result);
+                                                  const char *s1,
+                                                  const char *s2, char *result);
 
 void SANITIZER_CDECL __sanitizer_weak_hook_strcasestr(void *called_pc,
-                                                        const char *s1,
-                                                        const char *s2,
-                                                        char *result);
+                                                      const char *s1,
+                                                      const char *s2,
+                                                      char *result);
 
 void SANITIZER_CDECL __sanitizer_weak_hook_memmem(void *called_pc,
-                                                    const void *s1, size_t len1,
-                                                    const void *s2, size_t len2,
-                                                    void *result);
+                                                  const void *s1, size_t len1,
+                                                  const void *s2, size_t len2,
+                                                  void *result);
 
 // Prints stack traces for all live heap allocations ordered by total
 // allocation size until top_percent of total live heap is shown. top_percent
@@ -431,8 +430,8 @@ void SANITIZER_CDECL __sanitizer_print_memory_profile(
 /// \param bottom Bottom address of stack.
 /// \param size Size of stack in bytes.
 void SANITIZER_CDECL __sanitizer_start_switch_fiber(void **fake_stack_save,
-                                                      const void *bottom,
-                                                      size_t size);
+                                                    const void *bottom,
+                                                    size_t size);
 
 /// Notify ASan that a fiber switch has completed (required only if
 /// implementing your own fiber library).
@@ -446,8 +445,8 @@ void SANITIZER_CDECL __sanitizer_start_switch_fiber(void **fake_stack_save,
 /// \param[out] bottom_old Bottom address of old stack.
 /// \param[out] size_old Size of old stack in bytes.
 void SANITIZER_CDECL __sanitizer_finish_switch_fiber(void *fake_stack_save,
-                                                       const void **bottom_old,
-                                                       size_t *size_old);
+                                                     const void **bottom_old,
+                                                     size_t *size_old);
 
 // Get full module name and calculate pc offset within it.
 // Returns 1 if pc belongs to some module, 0 if module was not found.
