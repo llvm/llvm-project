@@ -330,6 +330,13 @@ def : ThreeOp_v2i16_OpSelClampPats<add, smin, V_PK_ADD_MIN_I16>;
 def : ThreeOp_v2i16_OpSelClampPats<add, umin, V_PK_ADD_MIN_U16>;
 }
 
+let SubtargetPredicate = HasPkMinMax3Insts in {
+def : ThreeOp_v2i16_OpSelClampPats<smax, smax, V_PK_MAX3_I16>;
+def : ThreeOp_v2i16_OpSelClampPats<umax, umax, V_PK_MAX3_U16>;
+def : ThreeOp_v2i16_OpSelClampPats<smin, smin, V_PK_MIN3_I16>;
+def : ThreeOp_v2i16_OpSelClampPats<umin, umin, V_PK_MIN3_U16>;
+}
+
 // Defines patterns that extract signed 4bit from each Idx[0].
 foreach Idx = [[0,28],[4,24],[8,20],[12,16],[16,12],[20,8],[24,4]] in
   def ExtractSigned4bit_#Idx[0] : PatFrag<(ops node:$src),
