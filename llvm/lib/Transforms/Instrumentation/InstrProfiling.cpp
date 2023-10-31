@@ -60,10 +60,8 @@ using namespace llvm;
 #define DEBUG_TYPE "instrprof"
 
 namespace llvm {
-cl::opt<bool>
-    DebugInfoCorrelate("debug-info-correlate",
-                       cl::desc("Use debug info to correlate profiles."),
-                       cl::init(false));
+extern cl::opt<bool> DebugInfoCorrelate;
+extern cl::opt<InstrProfCorrelator::ProfCorrelatorKind> ProfileCorrelate;
 } // namespace llvm
 
 namespace {
@@ -650,7 +648,7 @@ void InstrProfiling::lowerValueProfileInst(InstrProfValueProfileInst *Ind) {
   // in lightweight mode. We need to move the value profile pointer to the
   // Counter struct to get this working.
   assert(
-      !DebugInfoCorrelate &&
+      (!DebugInfoCorrelate || ProfileCorrelate != InstrProfCorrelator::NONE) &&
       "Value profiling is not yet supported with lightweight instrumentation");
   GlobalVariable *Name = Ind->getName();
   auto It = ProfileDataMap.find(Name);
@@ -1078,10 +1076,11 @@ GlobalVariable *InstrProfiling::setupProfileSection(InstrProfInstBase *Inc,
   Function *Fn = Inc->getParent()->getParent();
   GlobalValue::LinkageTypes Linkage = NamePtr->getLinkage();
   GlobalValue::VisibilityTypes Visibility = NamePtr->getVisibility();
-
+  bool EnableDebugCorrelate =
+      DebugInfoCorrelate || ProfileCorrelate == InstrProfCorrelator::DEBUG_INFO;
   // Use internal rather than private linkage so the counter variable shows up
   // in the symbol table when using debug info for correlation.
-  if (DebugInfoCorrelate && TT.isOSBinFormatMachO() &&
+  if (EnableDebugCorrelate && TT.isOSBinFormatMachO() &&
       Linkage == GlobalValue::PrivateLinkage)
     Linkage = GlobalValue::InternalLinkage;
 
@@ -1202,7 +1201,8 @@ InstrProfiling::getOrCreateRegionCounters(InstrProfCntrInstBase *Inc) {
   auto *CounterPtr = setupProfileSection(Inc, IPSK_cnts);
   PD.RegionCounters = CounterPtr;
 
-  if (DebugInfoCorrelate) {
+  if (DebugInfoCorrelate ||
+      ProfileCorrelate == InstrProfCorrelator::DEBUG_INFO) {
     LLVMContext &Ctx = M->getContext();
     Function *Fn = Inc->getParent()->getParent();
     if (auto *SP = Fn->getSubprogram()) {
@@ -1245,7 +1245,7 @@ void InstrProfiling::createDataVariable(InstrProfCntrInstBase *Inc,
                                         InstrProfMCDCBitmapParameters *Params) {
   // When debug information is correlated to profile data, a data variable
   // is not needed.
-  if (DebugInfoCorrelate)
+  if (DebugInfoCorrelate || ProfileCorrelate == InstrProfCorrelator::DEBUG_INFO)
     return;
 
   GlobalVariable *NamePtr = Inc->getName();
