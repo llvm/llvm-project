@@ -3553,15 +3553,14 @@ static unsigned getPackIndexForParam(Sema &S,
   llvm_unreachable("parameter index would not be produced from template");
 }
 
-// if `Specialization` is a `CXXConstructorDecl` or `CXXConversionDecl`
-// we try to instantiate and update its explicit specifier after constraint
+// if `Specialization` is a `CXXConstructorDecl` or `CXXConversionDecl`,
+// we'll try to instantiate and update its explicit specifier after constraint
 // checking.
-static Sema::TemplateDeductionResult
-resolveExplicitSpecifier(Sema &S, FunctionDecl *Specialization,
-                         const MultiLevelTemplateArgumentList &SubstArgs,
-                         TemplateDeductionInfo &Info,
-                         FunctionTemplateDecl *FunctionTemplate,
-                         ArrayRef<TemplateArgument> DeducedArgs) {
+static Sema::TemplateDeductionResult instantiateExplicitSpecifierDeferred(
+    Sema &S, FunctionDecl *Specialization,
+    const MultiLevelTemplateArgumentList &SubstArgs,
+    TemplateDeductionInfo &Info, FunctionTemplateDecl *FunctionTemplate,
+    ArrayRef<TemplateArgument> DeducedArgs) {
   auto GetExplicitSpecifier = [](FunctionDecl *D) {
     return isa<CXXConstructorDecl>(D)
                ? cast<CXXConstructorDecl>(D)->getExplicitSpecifier()
@@ -3581,19 +3580,24 @@ resolveExplicitSpecifier(Sema &S, FunctionDecl *Specialization,
   if (!Expr->isValueDependent()) {
     return Sema::TDK_Success;
   }
-  // TemplateDeclInstantiator::InitFunctionInstantiation set the
-  // ActiveInstType to TemplateInstantiation, but we need
-  // to enable SFINAE when instantiating an explicit specifier.
+  // The `InstantiatingTemplate` here is used to restore `ActiveInstType` to
+  // `DeducedTemplateArgumentSubstitution` because ActiveInstType was set to
+  // `TemplateInstantiation` in
+  // `TemplateDeclInstantiator::InitFunctionInstantiation`. The real depth of
+  // instantiation should be the same as the depth in
+  // `FinishTemplateArgumentDeduction`.
+  // So we don't check `InstantiatingTemplate::IsValid` here.
   Sema::InstantiatingTemplate Inst(
       S, Info.getLocation(), FunctionTemplate, DeducedArgs,
       Sema::CodeSynthesisContext::DeducedTemplateArgumentSubstitution, Info);
+  Sema::SFINAETrap Trap(S);
   const auto Instantiated = S.instantiateExplicitSpecifier(SubstArgs, ES);
-  if (Instantiated.isInvalid()) {
+  if (Instantiated.isInvalid() || Trap.hasErrorOccurred()) {
     Specialization->setInvalidDecl(true);
-    return clang::Sema::TDK_SubstitutionFailure;
+    return Sema::TDK_SubstitutionFailure;
   }
   SetExplicitSpecifier(Specialization, Instantiated);
-  return clang::Sema::TDK_Success;
+  return Sema::TDK_Success;
 }
 
 /// Finish template argument deduction for a function template,
@@ -3725,13 +3729,13 @@ Sema::TemplateDeductionResult Sema::FinishTemplateArgumentDeduction(
     }
   }
 
-  // We skipped the instantiation of the explicit-specifier during subst the
-  // FD before. So we try to instantiate it back if the `Specialization` is a
-  // constructor or a conversion.
+  // We skipped the instantiation of the explicit-specifier during the
+  // substitution of `FD` before. So, we try to instantiate it back if
+  // `Specialization` is either a constructor or a conversion function.
   if (isa<CXXConstructorDecl, CXXConversionDecl>(Specialization)) {
-    if (TDK_Success !=
-        resolveExplicitSpecifier(*this, Specialization, SubstArgs, Info,
-                                 FunctionTemplate, DeducedArgs)) {
+    if (TDK_Success != instantiateExplicitSpecifierDeferred(
+                           *this, Specialization, SubstArgs, Info,
+                           FunctionTemplate, DeducedArgs)) {
       return TDK_SubstitutionFailure;
     }
   }
