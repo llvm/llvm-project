@@ -585,11 +585,38 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
                     void **ArgMappers, AsyncInfoTy &AsyncInfo,
                     bool FromMapper) {
   TIMESCOPE_WITH_IDENT(Loc);
+
+  // Initialize new map type with old type:
+  SmallVector<int64_t, 16> NewArgTypes(ArgTypes, ArgTypes + ArgNum);
+
+  // Try to prevent mapping a struct multiple times in the same construct.
+  // Mapping the struct more than once will potentially overwrite previously
+  // mapped information.
+  for (int32_t I = 0; I < ArgNum; ++I) {
+    if (NewArgTypes[I] < 0)
+      continue;
+    if ((NewArgTypes[I] & OMP_TGT_MAPTYPE_LITERAL) ||
+        (NewArgTypes[I] & OMP_TGT_MAPTYPE_PRIVATE))
+      continue;
+    for (int32_t J = I + 1; J < ArgNum; ++J) {
+      if (Args[I] == ArgsBase[I] && Args[I] == Args[J] &&
+          ArgsBase[I] == ArgsBase[J] && ArgSizes[I] == ArgSizes[J] &&
+          ArgSizes[I] > 0 && NewArgTypes[J] >= 0) {
+        NewArgTypes[I] |= ArgTypes[J];
+        NewArgTypes[J] = -1;
+      }
+    }
+  }
+
   // process each input.
   for (int32_t I = 0; I < ArgNum; ++I) {
+    int64_t ArgType = NewArgTypes[I];
+    if (ArgType < 0)
+      continue;
+
     // Ignore private variables and arrays - there is no mapping for them.
-    if ((ArgTypes[I] & OMP_TGT_MAPTYPE_LITERAL) ||
-        (ArgTypes[I] & OMP_TGT_MAPTYPE_PRIVATE))
+    if ((ArgType & OMP_TGT_MAPTYPE_LITERAL) ||
+        (ArgType & OMP_TGT_MAPTYPE_PRIVATE))
       continue;
 
     if (ArgMappers && ArgMappers[I]) {
@@ -600,7 +627,7 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
 
       map_var_info_t ArgName = (!ArgNames) ? nullptr : ArgNames[I];
       int Rc = targetDataMapper(Loc, Device, ArgsBase[I], Args[I], ArgSizes[I],
-                                ArgTypes[I], ArgName, ArgMappers[I], AsyncInfo,
+                                ArgType, ArgName, ArgMappers[I], AsyncInfo,
                                 targetDataBegin);
 
       if (Rc != OFFLOAD_SUCCESS) {
@@ -623,8 +650,8 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
     // is a combined entry.
     int64_t TgtPadding = 0;
     const int NextI = I + 1;
-    if (getParentIndex(ArgTypes[I]) < 0 && NextI < ArgNum &&
-        getParentIndex(ArgTypes[NextI]) == I) {
+    if (getParentIndex(ArgType) < 0 && NextI < ArgNum &&
+        NewArgTypes[NextI] >= 0 && getParentIndex(NewArgTypes[NextI]) == I) {
       int64_t Alignment = getPartialStructRequiredAlignment(HstPtrBase);
       TgtPadding = (int64_t)HstPtrBegin % Alignment;
       if (TgtPadding) {
@@ -638,23 +665,23 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
     void *PointerHstPtrBegin, *PointerTgtPtrBegin;
     TargetPointerResultTy PointerTpr;
     bool IsHostPtr = false;
-    bool IsImplicit = ArgTypes[I] & OMP_TGT_MAPTYPE_IMPLICIT;
+    bool IsImplicit = ArgType & OMP_TGT_MAPTYPE_IMPLICIT;
     // Force the creation of a device side copy of the data when:
     // a close map modifier was associated with a map that contained a to.
-    bool HasCloseModifier = ArgTypes[I] & OMP_TGT_MAPTYPE_CLOSE;
-    bool HasPresentModifier = ArgTypes[I] & OMP_TGT_MAPTYPE_PRESENT;
-    bool HasHoldModifier = ArgTypes[I] & OMP_TGT_MAPTYPE_OMPX_HOLD;
+    bool HasCloseModifier = ArgType & OMP_TGT_MAPTYPE_CLOSE;
+    bool HasPresentModifier = ArgType & OMP_TGT_MAPTYPE_PRESENT;
+    bool HasHoldModifier = ArgType & OMP_TGT_MAPTYPE_OMPX_HOLD;
     // UpdateRef is based on MEMBER_OF instead of TARGET_PARAM because if we
     // have reached this point via __tgt_target_data_begin and not __tgt_target
     // then no argument is marked as TARGET_PARAM ("omp target data map" is not
     // associated with a target region, so there are no target parameters). This
     // may be considered a hack, we could revise the scheme in the future.
     bool UpdateRef =
-        !(ArgTypes[I] & OMP_TGT_MAPTYPE_MEMBER_OF) && !(FromMapper && I == 0);
+        !(ArgType & OMP_TGT_MAPTYPE_MEMBER_OF) && !(FromMapper && I == 0);
 
     DeviceTy::HDTTMapAccessorTy HDTTMap =
         Device.HostDataToTargetMap.getExclusiveAccessor();
-    if (ArgTypes[I] & OMP_TGT_MAPTYPE_PTR_AND_OBJ) {
+    if (ArgType & OMP_TGT_MAPTYPE_PTR_AND_OBJ) {
       DP("Has a pointer entry: \n");
       // Base is address of pointer.
       //
@@ -696,8 +723,8 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
           (!FromMapper || I != 0); // subsequently update ref count of pointee
     }
 
-    const bool HasFlagTo = ArgTypes[I] & OMP_TGT_MAPTYPE_TO;
-    const bool HasFlagAlways = ArgTypes[I] & OMP_TGT_MAPTYPE_ALWAYS;
+    const bool HasFlagTo = ArgType & OMP_TGT_MAPTYPE_TO;
+    const bool HasFlagAlways = ArgType & OMP_TGT_MAPTYPE_ALWAYS;
     // Note that HDTTMap will be released in getTargetPointer.
     auto TPR = Device.getTargetPointer(
         HDTTMap, HstPtrBegin, HstPtrBase, TgtPadding, DataSize, HstPtrName,
@@ -717,14 +744,14 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
        " - is%s new\n",
        DataSize, DPxPTR(TgtPtrBegin), (TPR.Flags.IsNewEntry ? "" : " not"));
 
-    if (ArgTypes[I] & OMP_TGT_MAPTYPE_RETURN_PARAM) {
+    if (ArgType & OMP_TGT_MAPTYPE_RETURN_PARAM) {
       uintptr_t Delta = (uintptr_t)HstPtrBegin - (uintptr_t)HstPtrBase;
       void *TgtPtrBase = (void *)((uintptr_t)TgtPtrBegin - Delta);
       DP("Returning device pointer " DPxMOD "\n", DPxPTR(TgtPtrBase));
       ArgsBase[I] = TgtPtrBase;
     }
 
-    if (ArgTypes[I] & OMP_TGT_MAPTYPE_PTR_AND_OBJ && !IsHostPtr) {
+    if (ArgType & OMP_TGT_MAPTYPE_PTR_AND_OBJ && !IsHostPtr) {
 
       uint64_t Delta = (uint64_t)HstPtrBegin - (uint64_t)HstPtrBase;
       void *ExpectedTgtPtrBase = (void *)((uint64_t)TgtPtrBegin - Delta);
@@ -752,8 +779,8 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
     }
 
     // Check if variable can be used on the device:
-    bool IsStructMember = ArgTypes[I] & OMP_TGT_MAPTYPE_MEMBER_OF;
-    if (getInfoLevel() & OMP_INFOTYPE_EMPTY_MAPPING && ArgTypes[I] != 0 &&
+    bool IsStructMember = ArgType & OMP_TGT_MAPTYPE_MEMBER_OF;
+    if (getInfoLevel() & OMP_INFOTYPE_EMPTY_MAPPING && ArgType != 0 &&
         !IsStructMember && !IsImplicit && !TPR.isPresent() &&
         !TPR.isContained() && !TPR.isHostPointer())
       INFO(OMP_INFOTYPE_EMPTY_MAPPING, Device.DeviceID,
