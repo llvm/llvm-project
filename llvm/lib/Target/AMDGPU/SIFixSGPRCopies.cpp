@@ -1040,6 +1040,8 @@ void SIFixSGPRCopies::lowerVGPR2SGPRCopies(MachineFunction &MF) {
       }
       LLVM_DEBUG(dbgs() << "V2S copy " << *C.Copy
                         << " is being turned to VALU\n");
+      // TODO: MapVector::erase is inefficient. Do bulk removal with remove_if
+      // instead.
       V2SCopies.erase(C.ID);
       Copies.insert(C.Copy);
     }
