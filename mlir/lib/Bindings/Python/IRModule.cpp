@@ -82,6 +82,10 @@ void PyGlobals::registerTypeCaster(MlirTypeID mlirTypeID,
   if (found && !found.is_none() && !replace)
     throw std::runtime_error("Type caster is already registered");
   found = std::move(typeCaster);
+  const auto foundIt = typeCasterMapCache.find(mlirTypeID);
+  if (foundIt != typeCasterMapCache.end() && !foundIt->second.is_none()) {
+    typeCasterMapCache[mlirTypeID] = found;
+  }
 }
 
 void PyGlobals::registerDialectImpl(const std::string &dialectNamespace,
@@ -104,6 +108,10 @@ void PyGlobals::registerOperationImpl(const std::string &operationName,
                                  .str());
   }
   found = std::move(pyClass);
+  auto foundIt = operationClassMapCache.find(operationName);
+  if (foundIt != operationClassMapCache.end() && !foundIt->second.is_none()) {
+    operationClassMapCache[operationName] = found;
+  }
 }
 
 std::optional<py::function>
