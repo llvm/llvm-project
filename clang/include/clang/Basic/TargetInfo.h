@@ -1297,7 +1297,7 @@ public:
   }
 
   /// Determine whether this TargetInfo supports the given CPU name for
-  // tuning.
+  /// tuning.
   virtual bool isValidTuneCPUName(StringRef Name) const {
     return isValidCPUName(Name);
   }
