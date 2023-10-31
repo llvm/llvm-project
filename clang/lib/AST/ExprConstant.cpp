@@ -6776,8 +6776,8 @@ static bool HandleOperatorNewCall(EvalInfo &Info, const CallExpr *E,
     return false;
   }
 
-  QualType AllocType = Info.Ctx.getConstantArrayType(ElemType, Size, nullptr,
-                                                     ArrayType::Normal, 0);
+  QualType AllocType = Info.Ctx.getConstantArrayType(
+      ElemType, Size, nullptr, ArraySizeModifier::Normal, 0);
   APValue *Val = Info.createHeapAlloc(E, AllocType, Result);
   *Val = APValue(APValue::UninitArray(), 0, Size.getZExtValue());
   Result.addArray(Info, E, cast<ConstantArrayType>(AllocType));
@@ -9039,8 +9039,8 @@ public:
     QualType CharTy = Info.Ctx.CharTy.withConst();
     APInt Size(Info.Ctx.getTypeSize(Info.Ctx.getSizeType()),
                ResultStr.size() + 1);
-    QualType ArrayTy = Info.Ctx.getConstantArrayType(CharTy, Size, nullptr,
-                                                     ArrayType::Normal, 0);
+    QualType ArrayTy = Info.Ctx.getConstantArrayType(
+        CharTy, Size, nullptr, ArraySizeModifier::Normal, 0);
 
     StringLiteral *SL =
         StringLiteral::Create(Info.Ctx, ResultStr, StringLiteral::Ordinary,
@@ -9863,7 +9863,7 @@ bool PointerExprEvaluator::VisitCXXNewExpr(const CXXNewExpr *E) {
     }
 
     AllocType = Info.Ctx.getConstantArrayType(AllocType, ArrayBound, nullptr,
-                                              ArrayType::Normal, 0);
+                                              ArraySizeModifier::Normal, 0);
   } else {
     assert(!AllocType->isArrayType() &&
            "array allocation with non-array new");

@@ -2080,9 +2080,9 @@ public:
                             SourceLocation Loc, DeclarationName Entity);
   QualType BuildReferenceType(QualType T, bool LValueRef,
                               SourceLocation Loc, DeclarationName Entity);
-  QualType BuildArrayType(QualType T, ArrayType::ArraySizeModifier ASM,
-                          Expr *ArraySize, unsigned Quals,
-                          SourceRange Brackets, DeclarationName Entity);
+  QualType BuildArrayType(QualType T, ArraySizeModifier ASM, Expr *ArraySize,
+                          unsigned Quals, SourceRange Brackets,
+                          DeclarationName Entity);
   QualType BuildVectorType(QualType T, Expr *VecSize, SourceLocation AttrLoc);
   QualType BuildExtVectorType(QualType T, Expr *ArraySize,
                               SourceLocation AttrLoc);

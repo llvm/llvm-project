@@ -1569,6 +1569,38 @@ enum class AutoTypeKeyword {
   GNUAutoType
 };
 
+/// Capture whether this is a normal array (e.g. int X[4])
+/// an array with a static size (e.g. int X[static 4]), or an array
+/// with a star size (e.g. int X[*]).
+/// 'static' is only allowed on function parameters.
+enum class ArraySizeModifier { Normal, Static, Star };
+
+/// The elaboration keyword that precedes a qualified type name or
+/// introduces an elaborated-type-specifier.
+enum class ElaboratedTypeKeyword {
+  /// The "struct" keyword introduces the elaborated-type-specifier.
+  Struct,
+
+  /// The "__interface" keyword introduces the elaborated-type-specifier.
+  Interface,
+
+  /// The "union" keyword introduces the elaborated-type-specifier.
+  Union,
+
+  /// The "class" keyword introduces the elaborated-type-specifier.
+  Class,
+
+  /// The "enum" keyword introduces the elaborated-type-specifier.
+  Enum,
+
+  /// The "typename" keyword precedes the qualified type name, e.g.,
+  /// \c typename T::type.
+  Typename,
+
+  /// No keyword precedes the qualified type name.
+  None
+};
+
 /// The base class of the type hierarchy.
 ///
 /// A central concept with types is that each type always has a canonical
@@ -1660,7 +1692,7 @@ protected:
 
     /// Storage class qualifiers from declarations like
     /// 'int X[static restrict 4]'. For function parameters only.
-    /// Actually an ArrayType::ArraySizeModifier.
+    /// Actually an ArraySizeModifier.
     unsigned SizeModifier : 3;
   };
   enum { NumArrayTypeBits = NumTypeBits + 6 };
@@ -3086,15 +3118,6 @@ public:
 
 /// Represents an array type, per C99 6.7.5.2 - Array Declarators.
 class ArrayType : public Type, public llvm::FoldingSetNode {
-public:
-  /// Capture whether this is a normal array (e.g. int X[4])
-  /// an array with a static size (e.g. int X[static 4]), or an array
-  /// with a star size (e.g. int X[*]).
-  /// 'static' is only allowed on function parameters.
-  enum ArraySizeModifier {
-    Normal, Static, Star
-  };
-
 private:
   /// The element type of the array.
   QualType ElementType;
@@ -3218,7 +3241,7 @@ public:
   static void Profile(llvm::FoldingSetNodeID &ID, QualType ET,
                       ArraySizeModifier SizeMod, unsigned TypeQuals) {
     ID.AddPointer(ET.getAsOpaquePtr());
-    ID.AddInteger(SizeMod);
+    ID.AddInteger(llvm::to_underlying(SizeMod));
     ID.AddInteger(TypeQuals);
   }
 };
@@ -5662,32 +5685,6 @@ enum TagTypeKind {
   TTK_Enum
 };
 
-/// The elaboration keyword that precedes a qualified type name or
-/// introduces an elaborated-type-specifier.
-enum ElaboratedTypeKeyword {
-  /// The "struct" keyword introduces the elaborated-type-specifier.
-  ETK_Struct,
-
-  /// The "__interface" keyword introduces the elaborated-type-specifier.
-  ETK_Interface,
-
-  /// The "union" keyword introduces the elaborated-type-specifier.
-  ETK_Union,
-
-  /// The "class" keyword introduces the elaborated-type-specifier.
-  ETK_Class,
-
-  /// The "enum" keyword introduces the elaborated-type-specifier.
-  ETK_Enum,
-
-  /// The "typename" keyword precedes the qualified type name, e.g.,
-  /// \c typename T::type.
-  ETK_Typename,
-
-  /// No keyword precedes the qualified type name.
-  ETK_None
-};
-
 /// A helper class for Type nodes having an ElaboratedTypeKeyword.
 /// The keyword in stored in the free bits of the base class.
 /// Also provides a few static helpers for converting and printing
@@ -5697,7 +5694,7 @@ protected:
   TypeWithKeyword(ElaboratedTypeKeyword Keyword, TypeClass tc,
                   QualType Canonical, TypeDependence Dependence)
       : Type(tc, Canonical, Dependence) {
-    TypeWithKeywordBits.Keyword = Keyword;
+    TypeWithKeywordBits.Keyword = llvm::to_underlying(Keyword);
   }
 
 public:
@@ -5803,7 +5800,7 @@ public:
   static void Profile(llvm::FoldingSetNodeID &ID, ElaboratedTypeKeyword Keyword,
                       NestedNameSpecifier *NNS, QualType NamedType,
                       TagDecl *OwnedTagDecl) {
-    ID.AddInteger(Keyword);
+    ID.AddInteger(llvm::to_underlying(Keyword));
     ID.AddPointer(NNS);
     NamedType.Profile(ID);
     ID.AddPointer(OwnedTagDecl);
@@ -5862,7 +5859,7 @@ public:
 
   static void Profile(llvm::FoldingSetNodeID &ID, ElaboratedTypeKeyword Keyword,
                       NestedNameSpecifier *NNS, const IdentifierInfo *Name) {
-    ID.AddInteger(Keyword);
+    ID.AddInteger(llvm::to_underlying(Keyword));
     ID.AddPointer(NNS);
     ID.AddPointer(Name);
   }

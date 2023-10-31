@@ -179,8 +179,8 @@ static RecordDecl *buildRecordForGlobalizedVars(
       }
     } else {
       llvm::APInt ArraySize(32, BufSize);
-      Type = C.getConstantArrayType(Type, ArraySize, nullptr, ArrayType::Normal,
-                                    0);
+      Type = C.getConstantArrayType(Type, ArraySize, nullptr,
+                                    ArraySizeModifier::Normal, 0);
       Field = FieldDecl::Create(
           C, GlobalizedRD, Loc, Loc, VD->getIdentifier(), Type,
           C.getTrivialTypeSourceInfo(Type, SourceLocation()),
@@ -3129,9 +3129,9 @@ void CGOpenMPRuntimeGPU::emitReduction(
       ++Size;
   }
   llvm::APInt ArraySize(/*unsigned int numBits=*/32, Size);
-  QualType ReductionArrayTy =
-      C.getConstantArrayType(C.VoidPtrTy, ArraySize, nullptr, ArrayType::Normal,
-                             /*IndexTypeQuals=*/0);
+  QualType ReductionArrayTy = C.getConstantArrayType(
+      C.VoidPtrTy, ArraySize, nullptr, ArraySizeModifier::Normal,
+      /*IndexTypeQuals=*/0);
   Address ReductionList =
       CGF.CreateMemTemp(ReductionArrayTy, ".omp.reduction.red_list");
   auto IPriv = Privates.begin();

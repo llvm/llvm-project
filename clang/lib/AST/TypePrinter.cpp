@@ -529,7 +529,7 @@ void TypePrinter::printConstantArrayAfter(const ConstantArrayType *T,
     OS << ' ';
   }
 
-  if (T->getSizeModifier() == ArrayType::Static)
+  if (T->getSizeModifier() == ArraySizeModifier::Static)
     OS << "static ";
 
   OS << T->getSize().getZExtValue() << ']';
@@ -562,9 +562,9 @@ void TypePrinter::printVariableArrayAfter(const VariableArrayType *T,
     OS << ' ';
   }
 
-  if (T->getSizeModifier() == VariableArrayType::Static)
+  if (T->getSizeModifier() == ArraySizeModifier::Static)
     OS << "static ";
-  else if (T->getSizeModifier() == VariableArrayType::Star)
+  else if (T->getSizeModifier() == ArraySizeModifier::Star)
     OS << '*';
 
   if (T->getSizeExpr())
@@ -1597,7 +1597,7 @@ void TypePrinter::printElaboratedBefore(const ElaboratedType *T,
   if (!Policy.IncludeTagDefinition)
   {
     OS << TypeWithKeyword::getKeywordName(T->getKeyword());
-    if (T->getKeyword() != ETK_None)
+    if (T->getKeyword() != ElaboratedTypeKeyword::None)
       OS << " ";
     NestedNameSpecifier *Qualifier = T->getQualifier();
     if (Qualifier)
@@ -1641,7 +1641,7 @@ void TypePrinter::printParenAfter(const ParenType *T, raw_ostream &OS) {
 void TypePrinter::printDependentNameBefore(const DependentNameType *T,
                                            raw_ostream &OS) {
   OS << TypeWithKeyword::getKeywordName(T->getKeyword());
-  if (T->getKeyword() != ETK_None)
+  if (T->getKeyword() != ElaboratedTypeKeyword::None)
     OS << " ";
 
   T->getQualifier()->print(OS, Policy);
@@ -1658,7 +1658,7 @@ void TypePrinter::printDependentTemplateSpecializationBefore(
   IncludeStrongLifetimeRAII Strong(Policy);
 
   OS << TypeWithKeyword::getKeywordName(T->getKeyword());
-  if (T->getKeyword() != ETK_None)
+  if (T->getKeyword() != ElaboratedTypeKeyword::None)
     OS << " ";
 
   if (T->getQualifier())

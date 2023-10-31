@@ -5,38 +5,33 @@
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128-ni:1-p2:32:8:8:32-ni:2"
 target triple = "x86_64-unknown-linux-gnu"
 
-; FIXME: the returned value should be equal to
-;     zext (trunk (%phi-1) to i16) to i64
-;   or simply
+; The returned value should be equal to
 ;     zext (%phi-1) to i64
-; which means it should be equal to 1209. Currently, due to a bug in SCEV, it's
-; over 65534.
+; or simply 1209.
 define noundef i64 @test() {
 ; CHECK-LABEL: define noundef i64 @test() {
 ; CHECK-NEXT:  bb2:
 ; CHECK-NEXT:    br label [[BB3:%.*]]
 ; CHECK:       bb3:
-; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i64 [ [[LSR_IV_NEXT:%.*]], [[BB10:%.*]] ], [ 0, [[BB2:%.*]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[LSR_IV]], 65535
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[LSR_IV]], 65407
-; CHECK-NEXT:    [[ICMP5:%.*]] = icmp ult i64 [[TMP1]], -256
-; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP0]] to i32
-; CHECK-NEXT:    [[ICMP6:%.*]] = icmp ult i32 [[TMP2]], 128
+; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i32 [ [[LSR_IV_NEXT:%.*]], [[BB10:%.*]] ], [ -1, [[BB2:%.*]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[LSR_IV]], 65536
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[TMP0]], 65535
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i32 [[AND]] to i64
+; CHECK-NEXT:    [[ADD4:%.*]] = add nsw i64 [[ZEXT]], -128
+; CHECK-NEXT:    [[ICMP5:%.*]] = icmp ult i64 [[ADD4]], -256
+; CHECK-NEXT:    [[ICMP6:%.*]] = icmp ult i32 [[AND]], 128
 ; CHECK-NEXT:    [[OR:%.*]] = or i1 [[ICMP5]], [[ICMP6]]
 ; CHECK-NEXT:    br i1 [[OR]], label [[BB10]], label [[BB7:%.*]]
 ; CHECK:       bb7:
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[LSR_IV]] to i32
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[LSR_IV]], 1
 ; CHECK-NEXT:    call void @foo(i32 [[TMP1]])
 ; CHECK-NEXT:    unreachable
 ; CHECK:       bb10:
-; CHECK-NEXT:    [[LSR_IV_NEXT]] = add nuw nsw i64 [[LSR_IV]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[LSR_IV_NEXT]], -1
-; CHECK-NEXT:    [[TMP:%.*]] = trunc i64 [[TMP2]] to i32
-; CHECK-NEXT:    [[ICMP12:%.*]] = icmp ult i32 [[TMP]], 1210
+; CHECK-NEXT:    [[LSR_IV_NEXT]] = add nsw i32 [[LSR_IV]], 1
+; CHECK-NEXT:    [[ICMP12:%.*]] = icmp ult i32 [[LSR_IV_NEXT]], 1210
 ; CHECK-NEXT:    br i1 [[ICMP12]], label [[BB3]], label [[BB13:%.*]]
 ; CHECK:       bb13:
-; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[LSR_IV_NEXT]], 65534
-; CHECK-NEXT:    ret i64 [[TMP3]]
+; CHECK-NEXT:    ret i64 [[ZEXT]]
 ;
 bb2:
   br label %bb3

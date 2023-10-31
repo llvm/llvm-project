@@ -230,7 +230,7 @@ define void @promote_latch_condition_decrementing_loop_02(ptr %p, ptr %a) {
 ; CHECK-NEXT:    [[ZERO_CHECK:%.*]] = icmp eq i32 [[LEN]], 0
 ; CHECK-NEXT:    br i1 [[ZERO_CHECK]], label [[LOOPEXIT:%.*]], label [[PREHEADER:%.*]]
 ; CHECK:       preheader:
-; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[LEN]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = zext nneg i32 [[LEN]] to i64
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loopexit.loopexit:
 ; CHECK-NEXT:    br label [[LOOPEXIT]]
@@ -273,7 +273,7 @@ define void @promote_latch_condition_decrementing_loop_03(ptr %p, ptr %a) {
 ; CHECK-NEXT:    [[ZERO_CHECK:%.*]] = icmp eq i32 [[LEN]], 0
 ; CHECK-NEXT:    br i1 [[ZERO_CHECK]], label [[LOOPEXIT:%.*]], label [[PREHEADER:%.*]]
 ; CHECK:       preheader:
-; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[LEN]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = zext nneg i32 [[LEN]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = add nuw nsw i64 [[TMP0]], 1
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loopexit.loopexit:
