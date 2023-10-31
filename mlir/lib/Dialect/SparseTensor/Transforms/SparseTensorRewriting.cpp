@@ -846,11 +846,7 @@ struct TensorLike {
   }
 
   void insert(OpBuilder &builder, Location loc, Value v, ValueRange crds) {
-    // TODO: Unify these two.
-    if (isSparse())
-      val = builder.create<sparse_tensor::InsertOp>(loc, v, val, crds);
-    else
-      val = builder.create<tensor::InsertOp>(loc, v, val, crds);
+    val = builder.create<tensor::InsertOp>(loc, v, val, crds);
   }
 
   Value finalize(OpBuilder &builder, Location loc, RankedTensorType rtp) const {
@@ -864,28 +860,6 @@ struct TensorLike {
   }
 
   Value val;
-};
-
-struct CrdTranslateRewriter : public OpRewritePattern<CrdTranslateOp> {
-  using OpRewritePattern::OpRewritePattern;
-  LogicalResult matchAndRewrite(CrdTranslateOp op,
-                                PatternRewriter &rewriter) const override {
-    AffineMap map = op.getDirection() == CrdTransDirectionKind::dim2lvl
-                        ? op.getEncoder().getDimToLvl()
-                        : op.getEncoder().getLvlToDim();
-    SmallVector<Value> outCrds;
-    for (AffineExpr result : map.getResults()) {
-      // TODO: we should probably expand the affine map to IR using our own
-      // rules, since affine.apply assume signed value, while the cooridinates
-      // we provided must always be signless.
-      Value trans = rewriter.create<affine::AffineApplyOp>(
-          op.getLoc(), AffineMap::get(map.getNumDims(), 0, result),
-          op.getInCrds());
-      outCrds.push_back(trans);
-    }
-    rewriter.replaceOp(op, outCrds);
-    return success();
-  }
 };
 
 struct SparseTensorDimOpRewriter : public OpRewritePattern<tensor::DimOp> {
@@ -939,7 +913,6 @@ struct ConcatenateRewriter : public OpRewritePattern<ConcatenateOp> {
 
     const Location loc = op.getLoc();
     const auto dstTp = getSparseTensorType(op);
-    const Dimension dimRank = dstTp.getDimRank();
     const Dimension conDim = op.getDimension();
     SmallVector<Value> sizes;
     concatSizesFromInputs(rewriter, sizes, loc, dstTp, op.getInputs(), conDim);
@@ -969,15 +942,10 @@ struct ConcatenateRewriter : public OpRewritePattern<ConcatenateOp> {
           loc, input, iterArg,
           [&](OpBuilder &builder, Location loc, ValueRange dcvs, Value v,
               ValueRange reduc) {
-            SmallVector<Value> dstLcvs(dstTp.getLvlRank());
-            for (Dimension d = 0; d < dimRank; d++) {
-              Value crd = dcvs[d];
-              // Transforms coordinates for the concatenating dim.
-              if (d == conDim)
-                crd = builder.create<arith::AddIOp>(loc, crd, offset);
-              // FIXME: `toStoredDim` is deprecated
-              dstLcvs[toStoredDim(dstTp.getEncoding(), d)] = crd;
-            }
+            SmallVector<Value> offDimCrd(dcvs);
+            offDimCrd[conDim] =
+                builder.create<arith::AddIOp>(loc, offDimCrd[conDim], offset);
+
             // Enters foreach, updates the SSA chain.
             dstBuf.val = reduc.front();
             if (!dstTp.isAllDense()) {
@@ -988,14 +956,14 @@ struct ConcatenateRewriter : public OpRewritePattern<ConcatenateOp> {
               builder.create<scf::YieldOp>(loc, dstBuf.val);
 
               builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
-              dstBuf.insert(builder, loc, v, dstLcvs);
+              dstBuf.insert(builder, loc, v, offDimCrd);
               builder.create<scf::YieldOp>(loc, dstBuf.val);
 
               // Exits the ifOp, update the sparse tensor SSA value.
               builder.setInsertionPointAfter(ifOp);
               dstBuf.val = ifOp.getResult(0);
             } else {
-              dstBuf.insert(builder, loc, v, dstLcvs);
+              dstBuf.insert(builder, loc, v, offDimCrd);
             }
             builder.create<sparse_tensor::YieldOp>(loc, dstBuf.val);
           });
@@ -1064,10 +1032,6 @@ struct DirectConvertRewriter : public OpRewritePattern<ConvertOp> {
             ValueRange reduc) {
           // Enters the loop, update the SSA value for insertion chain.
           dstBuf.val = reduc.front();
-
-          ValueRange lcvs = dstStt.translateCrds(
-              builder, loc, dcvs, CrdTransDirectionKind::dim2lvl);
-
           if (!skipZeroCheck) {
             Value cond = genIsNonzero(builder, loc, v);
             auto ifOp = builder.create<scf::IfOp>(loc, reduc.getTypes(), cond,
@@ -1076,14 +1040,14 @@ struct DirectConvertRewriter : public OpRewritePattern<ConvertOp> {
             builder.create<scf::YieldOp>(loc, dstBuf.val);
 
             builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
-            dstBuf.insert(builder, loc, v, lcvs);
+            dstBuf.insert(builder, loc, v, dcvs);
             builder.create<scf::YieldOp>(loc, dstBuf.val);
 
             // Exits the ifOp, update the sparse tensor SSA value.
             builder.setInsertionPointAfter(ifOp);
             dstBuf.val = ifOp.getResult(0);
           } else {
-            dstBuf.insert(builder, loc, v, lcvs);
+            dstBuf.insert(builder, loc, v, dcvs);
           }
           builder.create<sparse_tensor::YieldOp>(loc, dstBuf.val);
         });
@@ -1306,8 +1270,7 @@ void mlir::populatePreSparsificationRewriting(RewritePatternSet &patterns) {
 void mlir::populateLowerSparseOpsToForeachPatterns(RewritePatternSet &patterns,
                                                    bool enableRT,
                                                    bool enableConvert) {
-  patterns.add<ConcatenateRewriter, CrdTranslateRewriter,
-               ReshapeRewriter<tensor::ExpandShapeOp>,
+  patterns.add<ConcatenateRewriter, ReshapeRewriter<tensor::ExpandShapeOp>,
                ReshapeRewriter<tensor::CollapseShapeOp>,
                Sparse2SparseReshapeRewriter<tensor::ExpandShapeOp>,
                Sparse2SparseReshapeRewriter<tensor::CollapseShapeOp>,

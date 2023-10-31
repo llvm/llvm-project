@@ -3354,10 +3354,9 @@ void SubprogramMatchHelper::CheckDummyDataObject(const Symbol &symbol1,
     const DummyDataObject &obj2) {
   if (!CheckSameIntent(symbol1, symbol2, obj1.intent, obj2.intent)) {
   } else if (!CheckSameAttrs(symbol1, symbol2, obj1.attrs, obj2.attrs)) {
-  } else if (obj1.type.type() != obj2.type.type()) {
+  } else if (!obj1.type.type().IsEquivalentTo(obj2.type.type())) {
     Say(symbol1, symbol2,
-        "Dummy argument '%s' has type %s; the corresponding argument in the"
-        " interface body has type %s"_err_en_US,
+        "Dummy argument '%s' has type %s; the corresponding argument in the interface body has distinct type %s"_err_en_US,
         obj1.type.type().AsFortran(), obj2.type.type().AsFortran());
   } else if (!ShapesAreCompatible(obj1, obj2)) {
     Say(symbol1, symbol2,

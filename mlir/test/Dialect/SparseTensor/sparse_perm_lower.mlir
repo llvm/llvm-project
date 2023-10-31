@@ -48,7 +48,7 @@
 // CHECK-HIR:         }
 //
 // CHECK-MIR-LABEL:   func @sparse_dynamic_dims(
-// CHECK-MIR-SAME:      %[[ARGA:.*]]: !llvm.ptr<i8>,
+// CHECK-MIR-SAME:      %[[ARGA:.*]]: !llvm.ptr,
 // CHECK-MIR-SAME:      %[[ARGX:.*]]: tensor<f32>) -> tensor<f32> {
 // CHECK-MIR-DAG:       %[[I0:.*]] = arith.constant 0 : index
 // CHECK-MIR-DAG:       %[[I1:.*]] = arith.constant 1 : index
@@ -56,7 +56,7 @@
 // CHECK-MIR-DAG:       %[[DimSize0:.*]] = call @sparseLvlSize(%[[ARGA]], %[[I0]])
 // CHECK-MIR-DAG:       %[[DimSize1:.*]] = call @sparseLvlSize(%[[ARGA]], %[[I1]])
 // CHECK-MIR-DAG:       %[[DimSize2:.*]] = call @sparseLvlSize(%[[ARGA]], %[[I2]])
-// CHECK-MIR-DAG:       %[[VAL_8:.*]] = call @sparseValuesF32(%[[ARGA]]) : (!llvm.ptr<i8>) -> memref<?xf32>
+// CHECK-MIR-DAG:       %[[VAL_8:.*]] = call @sparseValuesF32(%[[ARGA]]) : (!llvm.ptr) -> memref<?xf32>
 // CHECK-MIR-DAG:       %[[VAL_10:.*]] = bufferization.to_memref %[[ARGX]] : memref<f32>
 // CHECK-MIR:           %[[VAL_11:.*]] = tensor.extract %[[ARGX]][] : tensor<f32>
 // CHECK-MIR:           %[[VAL_12:.*]] = scf.for %[[D2:.*]] = %[[I0]] to %[[DimSize0]] step %[[I1]] iter_args(%[[VAL_14:.*]] = %[[VAL_11]]) -> (f32) {

@@ -191,11 +191,6 @@ def ConvertAsyncToLLVMPass : Pass<"convert-async-to-llvm", "ModuleOp"> {
     "LLVM::LLVMDialect",
     "func::FuncDialect",
   ];
-  let options = [
-    Option<"useOpaquePointers", "use-opaque-pointers", "bool",
-           /*default=*/"true", "Generate LLVM IR using opaque pointers "
-           "instead of typed pointers">,
-  ];
 }
 
 //===----------------------------------------------------------------------===//
@@ -298,10 +293,7 @@ def ConvertControlFlowToLLVMPass : Pass<"convert-cf-to-llvm", "ModuleOp"> {
   let options = [
     Option<"indexBitwidth", "index-bitwidth", "unsigned",
            /*default=kDeriveIndexBitwidthFromDataLayout*/"0",
-           "Bitwidth of the index type, 0 to use size of machine word">,
-    Option<"useOpaquePointers", "use-opaque-pointers", "bool",
-                   /*default=*/"true", "Generate LLVM IR using opaque pointers "
-                   "instead of typed pointers">,
+           "Bitwidth of the index type, 0 to use size of machine word">
   ];
 }
 
@@ -409,9 +401,6 @@ def ConvertFuncToLLVMPass : Pass<"convert-func-to-llvm", "ModuleOp"> {
     Option<"indexBitwidth", "index-bitwidth", "unsigned",
            /*default=kDeriveIndexBitwidthFromDataLayout*/"0",
            "Bitwidth of the index type, 0 to use size of machine word">,
-    Option<"useOpaquePointers", "use-opaque-pointers", "bool",
-                       /*default=*/"true", "Generate LLVM IR using opaque pointers "
-                       "instead of typed pointers">,
   ];
 }
 
