@@ -95,7 +95,7 @@ struct DimOfReifyRankedShapedTypeOpInterface : public OpRewritePattern<OpTy> {
       return failure();
     unsigned resultNumber = dimValue.getResultNumber();
     // Do not apply pattern if the IR is invalid (dim out of bounds).
-    if (*dimIndex >= reifiedResultShapes[resultNumber].size())
+    if ((size_t)(*dimIndex) >= reifiedResultShapes[resultNumber].size())
       return rewriter.notifyMatchFailure(dimOp, "dimension is out of bounds");
     Value replacement = getValueOrCreateConstantIndexOp(
         rewriter, dimOp.getLoc(), reifiedResultShapes[resultNumber][*dimIndex]);
