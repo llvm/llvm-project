@@ -72,6 +72,7 @@ add_lldb_library(lldbCore
   ValueObjectSyntheticFilter.cpp
   ValueObjectUpdater.cpp
   ValueObjectVariable.cpp
+  ValueObjectVTable.cpp
 
   DEPENDS
     clang-tablegen-targets
