@@ -5926,21 +5926,21 @@ CGDebugInfo::createConstantValueExpression(const clang::ValueDecl *VD,
   if (CGM.getContext().getTypeSize(VD->getType()) > 64)
     return nullptr;
 
-  if (Val.isInt()) {
-    const llvm::APSInt &ValInt = Val.getInt();
-    std::optional<uint64_t> ValIntOpt;
-    if (ValInt.isUnsigned())
-      ValIntOpt = ValInt.tryZExtValue();
-    else if (auto tmp = ValInt.trySExtValue(); tmp.has_value())
-      // Transform a signed optional to unsigned optional. When cpp 23 comes,
-      // use std::optional::transform
-      ValIntOpt = (uint64_t)tmp.value();
-
-    if (ValIntOpt)
-      return DBuilder.createConstantValueExpression(ValIntOpt.value());
-  } else if (Val.isFloat())
+  if (Val.isFloat())
     return DBuilder.createConstantValueExpression(
         Val.getFloat().bitcastToAPInt().getZExtValue());
+
+  llvm::APSInt const &ValInt = Val.getInt();
+  std::optional<uint64_t> ValIntOpt;
+  if (ValInt.isUnsigned())
+    ValIntOpt = ValInt.tryZExtValue();
+  else if (auto tmp = ValInt.trySExtValue())
+    // Transform a signed optional to unsigned optional. When cpp 23 comes,
+    // use std::optional::transform
+    ValIntOpt = static_cast<uint64_t>(*tmp);
+
+  if (ValIntOpt)
+    return DBuilder.createConstantValueExpression(ValIntOpt.value());
 
   return nullptr;
 }
