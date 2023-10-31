@@ -10255,17 +10255,7 @@ RISCVTargetLowering::lowerVPReverseExperimental(SDValue Op,
   // Check if we are working with mask vectors
   bool IsMaskVector = ContainerVT.getVectorElementType() == MVT::i1;
   if (IsMaskVector) {
-    switch(ContainerVT.getVectorElementCount().getKnownMinValue()) {
-    default: llvm_unreachable("Invalid factor size");
-    case 1: IndicesVT = MVT::i64; break;
-    case 2: IndicesVT = MVT::i32; break;
-    case 4: IndicesVT = MVT::i16; break;
-    case 8:
-    case 16:
-    case 32:
-    case 64: IndicesVT = MVT::i8; break;
-    }
-    GatherVT = IndicesVT = ContainerVT.changeVectorElementType(IndicesVT);
+    GatherVT = IndicesVT = ContainerVT.changeVectorElementType(MVT::i8);
 
     // Expand input operand
     SDValue SplatOne = DAG.getNode(RISCVISD::VMV_V_X_VL, DL, IndicesVT,
