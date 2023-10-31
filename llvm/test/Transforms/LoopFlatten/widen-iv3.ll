@@ -18,7 +18,7 @@ define i16 @foo() {
 ; CHECK-NEXT:    [[SUM_012:%.*]] = phi i16 [ 0, [[ENTRY]] ], [ [[ADD5_LCSSA:%.*]], [[FOR_COND_CLEANUP3]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = mul nsw i32 [[INDVAR2]], 16
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i16 [[I_013]], 16
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[MUL]] to i32
+; CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i16 [[MUL]] to i32
 ; CHECK-NEXT:    br label [[FOR_BODY4:%.*]]
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    [[ADD5_LCSSA_LCSSA:%.*]] = phi i16 [ [[ADD5_LCSSA]], [[FOR_COND_CLEANUP3]] ]
