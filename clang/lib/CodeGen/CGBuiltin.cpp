@@ -895,9 +895,11 @@ CodeGenFunction::emitBuiltinObjectSize(const Expr *E, unsigned Type,
 
       // Get the size of the flexible array member's base type.
       const auto *ArrayTy = getContext().getAsArrayType(FAM->getType());
-      unsigned Size = getContext().getTypeSize(ArrayTy->getElementType());
+      CharUnits Size =
+          getContext().getTypeSizeInChars(ArrayTy->getElementType());
       llvm::Constant *ArraySize =
-          llvm::ConstantInt::get(CountedByInstr->getType(), Size / 8);
+          llvm::ConstantInt::get(CountedByInstr->getType(),
+                                 Size.getQuantity());
 
       llvm::Value *ObjectSize = Builder.CreateMul(CountedByInstr, ArraySize);
       ObjectSize = Builder.CreateZExtOrTrunc(ObjectSize, ResType);
