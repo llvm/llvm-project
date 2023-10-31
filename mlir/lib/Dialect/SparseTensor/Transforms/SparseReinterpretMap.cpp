@@ -24,7 +24,7 @@ namespace {
 // Helper methods.
 //===----------------------------------------------------------------------===//
 
-// Translates a "simple" map according to an identify lvl-map.
+// Translates a "simple" map according to an identity lvl-map.
 static AffineMap translateMap(OpBuilder &builder, SparseTensorType stt,
                               AffineMap map) {
   unsigned lvlRank = stt.getLvlRank();
@@ -110,7 +110,7 @@ public:
     //
     // TODO: generalize this proof-of-concept algorithm, since the current
     //       implementation accepts only simple indexing maps, and one
-    //       non-permutation sparse tensor, which must have an identify
+    //       non-permutation sparse tensor, which must have an identity
     //       indexing map and be the output.
     //
     OpOperand *tx = nullptr;
