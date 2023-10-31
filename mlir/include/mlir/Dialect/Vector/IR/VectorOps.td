@@ -942,10 +942,7 @@ def Vector_OuterProductOp :
 
     An optional kind attribute may be specified to be: `add`/`mul`/`minsi`
     /`minui`/`maxsi`/`maxui`/`and`/`or`/`xor` for integers, and `add`/`mul`
-    /`minf`/`maxf`/`minimumf`/`maximumf` for floats.
-    The default is `add`, in which case the operation returns a fused
-    multiply-add. In other cases it returns a multiply followed by the
-    appropriate operation (for example, a compare and select for `maxf`).
+    /`minf`/`maxf`/`minimumf`/`maximumf` for floats. The default is `add`.
 
     Example:
 
