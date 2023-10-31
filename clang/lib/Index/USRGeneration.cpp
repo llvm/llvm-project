@@ -927,13 +927,13 @@ void USRGenerator::VisitType(QualType T) {
     if (const auto *const AT = dyn_cast<ArrayType>(T)) {
       Out << '{';
       switch (AT->getSizeModifier()) {
-      case ArrayType::Static:
+      case ArraySizeModifier::Static:
         Out << 's';
         break;
-      case ArrayType::Star:
+      case ArraySizeModifier::Star:
         Out << '*';
         break;
-      case ArrayType::Normal:
+      case ArraySizeModifier::Normal:
         Out << 'n';
         break;
       }

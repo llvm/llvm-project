@@ -1549,12 +1549,12 @@ void TextNodeDumper::VisitRValueReferenceType(const ReferenceType *T) {
 
 void TextNodeDumper::VisitArrayType(const ArrayType *T) {
   switch (T->getSizeModifier()) {
-  case ArrayType::Normal:
+  case ArraySizeModifier::Normal:
     break;
-  case ArrayType::Static:
+  case ArraySizeModifier::Static:
     OS << " static";
     break;
-  case ArrayType::Star:
+  case ArraySizeModifier::Star:
     OS << " *";
     break;
   }

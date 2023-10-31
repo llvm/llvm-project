@@ -646,13 +646,13 @@ void JSONNodeDumper::VisitRValueReferenceType(const ReferenceType *RT) {
 
 void JSONNodeDumper::VisitArrayType(const ArrayType *AT) {
   switch (AT->getSizeModifier()) {
-  case ArrayType::Star:
+  case ArraySizeModifier::Star:
     JOS.attribute("sizeModifier", "*");
     break;
-  case ArrayType::Static:
+  case ArraySizeModifier::Static:
     JOS.attribute("sizeModifier", "static");
     break;
-  case ArrayType::Normal:
+  case ArraySizeModifier::Normal:
     break;
   }
 

@@ -3389,7 +3389,7 @@ static bool EquivalentArrayTypes(QualType Old, QualType New,
     if (Ty->isIncompleteArrayType() || Ty->isPointerType())
       return true;
     if (const auto *VAT = Ctx.getAsVariableArrayType(Ty))
-      return VAT->getSizeModifier() == ArrayType::ArraySizeModifier::Star;
+      return VAT->getSizeModifier() == ArraySizeModifier::Star;
     return false;
   };
 
@@ -3401,8 +3401,8 @@ static bool EquivalentArrayTypes(QualType Old, QualType New,
   if (Old->isVariableArrayType() && New->isVariableArrayType()) {
     const auto *OldVAT = Ctx.getAsVariableArrayType(Old);
     const auto *NewVAT = Ctx.getAsVariableArrayType(New);
-    if ((OldVAT->getSizeModifier() == ArrayType::ArraySizeModifier::Star) ^
-        (NewVAT->getSizeModifier() == ArrayType::ArraySizeModifier::Star))
+    if ((OldVAT->getSizeModifier() == ArraySizeModifier::Star) ^
+        (NewVAT->getSizeModifier() == ArraySizeModifier::Star))
       return false;
     return true;
   }
@@ -6595,7 +6595,7 @@ static QualType TryToFixInvalidVariablyModifiedType(QualType T,
   }
 
   QualType FoldedArrayType = Context.getConstantArrayType(
-      ElemTy, Res, VLATy->getSizeExpr(), ArrayType::Normal, 0);
+      ElemTy, Res, VLATy->getSizeExpr(), ArraySizeModifier::Normal, 0);
   return Qs.apply(Context, FoldedArrayType);
 }
 
