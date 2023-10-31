@@ -794,7 +794,8 @@ void MachineLICMBase::HoistOutOfLoop(MachineDomTreeNode *HeaderN,
 
     for (auto *MBB : CurLoop->blocks()) {
       for (auto &MI : *MBB) {
-        if (MI.mayStore() || MI.isCall() || (MI.mayLoad() && MI.hasOrderedMemoryRef())) {
+        if (MI.mayStore() || MI.isCall() ||
+            (MI.mayLoad() && MI.hasOrderedMemoryRef())) {
           for (MachineLoop *L = MLI->getLoopFor(MI.getParent()); L != CurLoop;
                L = L->getParentLoop())
             AllowedToHoistLoads[L] = false;
@@ -813,19 +814,6 @@ void MachineLICMBase::HoistOutOfLoop(MachineDomTreeNode *HeaderN,
 
     // Process the block
     SpeculationState = SpeculateUnknown;
-
-    auto CanMoveLoad = [](MachineLoop *L) -> bool {
-      dbgs() << L << "\n";
-      for (auto *MBB : L->blocks()) {
-        for (auto &MI : *MBB) {
-          // Taken from MachineInstr::isSafeToMove
-          if (MI.mayStore() || MI.isCall() || (MI.mayLoad() && MI.hasOrderedMemoryRef()))
-            return false;
-        }
-      }
-      return true;
-    };
-
     bool SafeToMoveLoad = HoistConstLoads && AllowedToHoistLoads[CurLoop];
     for (MachineInstr &MI : llvm::make_early_inc_range(*MBB)) {
       unsigned HoistRes = HoistResult::NotHoisted;
