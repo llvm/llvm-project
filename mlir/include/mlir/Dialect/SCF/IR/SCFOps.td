@@ -269,28 +269,6 @@ def ForOp : SCF_Op<"for",
     /// Number of operands controlling the loop: lb, ub, step
     unsigned getNumControlOperands() { return 3; }
 
-    /// Get the OpResult that corresponds to an OpOperand.
-    /// Assert that opOperand is an iterArg.
-    /// This helper prevents internal op implementation detail leakage to
-    /// clients by hiding the operand / block argument mapping.
-    OpResult getResultForOpOperand(OpOperand &opOperand) {
-      assert(opOperand.getOperandNumber() >= getNumControlOperands() &&
-             "expected an iter args operand");
-      assert(opOperand.getOwner() == getOperation() &&
-             "opOperand does not belong to this scf::ForOp operation");
-      return getOperation()->getResult(
-        opOperand.getOperandNumber() - getNumControlOperands());
-    }
-    /// Get the OpOperand& that corresponds to an OpResultOpOperand.
-    /// This helper prevents internal op implementation detail leakage to
-    /// clients by hiding the operand / block argument mapping.
-    OpOperand &getOpOperandForResult(OpResult opResult) {
-      assert(opResult.getDefiningOp() == getOperation() &&
-             "opResult does not belong to the scf::ForOp operation");
-      return getOperation()->getOpOperand(
-        getNumControlOperands() + opResult.getResultNumber());
-    }
-
     /// Returns the step as an `APInt` if it is constant.
     std::optional<APInt> getConstantStep();
 
@@ -942,7 +920,7 @@ def WhileOp : SCF_Op<"while",
     [DeclareOpInterfaceMethods<RegionBranchOpInterface,
         ["getEntrySuccessorOperands"]>,
      DeclareOpInterfaceMethods<LoopLikeOpInterface,
-        ["getLoopResults", "getRegionIterArgs", "getYieldedValuesMutable"]>,
+        ["getRegionIterArgs", "getYieldedValuesMutable"]>,
      RecursiveMemoryEffects, SingleBlock]> {
   let summary = "a generic 'while' loop";
   let description = [{
@@ -1156,7 +1134,7 @@ def IndexSwitchOp : SCF_Op<"index_switch", [RecursiveMemoryEffects,
 //===----------------------------------------------------------------------===//
 
 def YieldOp : SCF_Op<"yield", [Pure, ReturnLike, Terminator,
-    ParentOneOf<["ExecuteRegionOp, ForOp", "IfOp", "IndexSwitchOp",
+    ParentOneOf<["ExecuteRegionOp", "ForOp", "IfOp", "IndexSwitchOp",
                  "ParallelOp", "WhileOp"]>]> {
   let summary = "loop yield and termination operation";
   let description = [{

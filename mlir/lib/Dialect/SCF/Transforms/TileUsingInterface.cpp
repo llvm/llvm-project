@@ -609,8 +609,7 @@ mlir::scf::tileAndFuseProducerOfSlice(RewriterBase &rewriter,
   if (destinationInitArg &&
       (*destinationInitArg)->getOwner() == outerMostLoop) {
     unsigned iterArgNumber =
-        outerMostLoop.getResultForOpOperand(**destinationInitArg)
-            .getResultNumber();
+        outerMostLoop.getTiedLoopResult(*destinationInitArg).getResultNumber();
     int64_t resultNumber = fusableProducer.getResultNumber();
     if (auto dstOp =
             dyn_cast<DestinationStyleOpInterface>(fusableProducer.getOwner())) {
