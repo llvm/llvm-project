@@ -35,6 +35,9 @@ module m1
       character(len=*) :: z
       character(len=*) :: w
     end
+    module subroutine s10(x, y, z, w)
+      real x(0:), y(:), z(0:*), w(*)
+    end
   end interface
 end
 
@@ -77,6 +80,9 @@ contains
     character(len=*) :: z
     !ERROR: Dummy argument 'w' has type CHARACTER(KIND=1,LEN=4_8); the corresponding argument in the interface body has distinct type CHARACTER(KIND=1,LEN=*)
     character(len=4) :: w
+  end
+  module subroutine s10(x, y, z, w)
+    real x(:), y(0:), z(*), w(0:*) ! all ok, lower bounds don't matter
   end
 end
 
