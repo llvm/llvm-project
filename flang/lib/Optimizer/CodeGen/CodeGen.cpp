@@ -45,6 +45,7 @@
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include <mlir/Dialect/LLVMIR/LLVMAttrs.h>
 
 namespace fir {
 #define GEN_PASS_DEF_FIRTOLLVMLOWERING
@@ -3497,14 +3498,20 @@ struct AbsentOpConversion : public FIROpConversion<fir::AbsentOp> {
 // Primitive operations on Complex types
 //
 
+template <typename OPTY>
+static inline mlir::LLVM::FastmathFlagsAttr getLLVMFMFAttr(OPTY op) {
+  return mlir::LLVM::FastmathFlagsAttr::get(
+      op.getContext(),
+      mlir::arith::convertArithFastMathFlagsToLLVM(op.getFastmath()));
+}
+
 /// Generate inline code for complex addition/subtraction
 template <typename LLVMOP, typename OPTY>
 static mlir::LLVM::InsertValueOp
 complexSum(OPTY sumop, mlir::ValueRange opnds,
            mlir::ConversionPatternRewriter &rewriter,
            const fir::LLVMTypeConverter &lowering) {
-  mlir::LLVM::FastmathFlags fastmathFlags =
-      mlir::arith::convertArithFastMathFlagsToLLVM(sumop.getFastmath());
+  mlir::LLVM::FastmathFlagsAttr fmf = getLLVMFMFAttr(sumop);
   mlir::Value a = opnds[0];
   mlir::Value b = opnds[1];
   auto loc = sumop.getLoc();
@@ -3514,10 +3521,8 @@ complexSum(OPTY sumop, mlir::ValueRange opnds,
   auto y0 = rewriter.create<mlir::LLVM::ExtractValueOp>(loc, a, 1);
   auto x1 = rewriter.create<mlir::LLVM::ExtractValueOp>(loc, b, 0);
   auto y1 = rewriter.create<mlir::LLVM::ExtractValueOp>(loc, b, 1);
-  auto rx = rewriter.create<LLVMOP>(loc, eleTy, x0, x1);
-  rx.setFastmathFlags(fastmathFlags);
-  auto ry = rewriter.create<LLVMOP>(loc, eleTy, y0, y1);
-  ry.setFastmathFlags(fastmathFlags);
+  auto rx = rewriter.create<LLVMOP>(loc, eleTy, x0, x1, fmf);
+  auto ry = rewriter.create<LLVMOP>(loc, eleTy, y0, y1, fmf);
   auto r0 = rewriter.create<mlir::LLVM::UndefOp>(loc, ty);
   auto r1 = rewriter.create<mlir::LLVM::InsertValueOp>(loc, r0, rx, 0);
   return rewriter.create<mlir::LLVM::InsertValueOp>(loc, r1, ry, 1);
@@ -3565,8 +3570,7 @@ struct MulcOpConversion : public FIROpConversion<fir::MulcOp> {
     // TODO: Can we use a call to __muldc3 ?
     // given: (x + iy) * (x' + iy')
     // result: (xx'-yy')+i(xy'+yx')
-    mlir::LLVM::FastmathFlags fastmathFlags =
-        mlir::arith::convertArithFastMathFlagsToLLVM(mulc.getFastmath());
+    mlir::LLVM::FastmathFlagsAttr fmf = getLLVMFMFAttr(mulc);
     mlir::Value a = adaptor.getOperands()[0];
     mlir::Value b = adaptor.getOperands()[1];
     auto loc = mulc.getLoc();
@@ -3576,18 +3580,12 @@ struct MulcOpConversion : public FIROpConversion<fir::MulcOp> {
     auto y0 = rewriter.create<mlir::LLVM::ExtractValueOp>(loc, a, 1);
     auto x1 = rewriter.create<mlir::LLVM::ExtractValueOp>(loc, b, 0);
     auto y1 = rewriter.create<mlir::LLVM::ExtractValueOp>(loc, b, 1);
-    auto xx = rewriter.create<mlir::LLVM::FMulOp>(loc, eleTy, x0, x1);
-    xx.setFastmathFlags(fastmathFlags);
-    auto yx = rewriter.create<mlir::LLVM::FMulOp>(loc, eleTy, y0, x1);
-    yx.setFastmathFlags(fastmathFlags);
-    auto xy = rewriter.create<mlir::LLVM::FMulOp>(loc, eleTy, x0, y1);
-    xy.setFastmathFlags(fastmathFlags);
-    auto ri = rewriter.create<mlir::LLVM::FAddOp>(loc, eleTy, xy, yx);
-    ri.setFastmathFlags(fastmathFlags);
-    auto yy = rewriter.create<mlir::LLVM::FMulOp>(loc, eleTy, y0, y1);
-    yy.setFastmathFlags(fastmathFlags);
-    auto rr = rewriter.create<mlir::LLVM::FSubOp>(loc, eleTy, xx, yy);
-    rr.setFastmathFlags(fastmathFlags);
+    auto xx = rewriter.create<mlir::LLVM::FMulOp>(loc, eleTy, x0, x1, fmf);
+    auto yx = rewriter.create<mlir::LLVM::FMulOp>(loc, eleTy, y0, x1, fmf);
+    auto xy = rewriter.create<mlir::LLVM::FMulOp>(loc, eleTy, x0, y1, fmf);
+    auto ri = rewriter.create<mlir::LLVM::FAddOp>(loc, eleTy, xy, yx, fmf);
+    auto yy = rewriter.create<mlir::LLVM::FMulOp>(loc, eleTy, y0, y1, fmf);
+    auto rr = rewriter.create<mlir::LLVM::FSubOp>(loc, eleTy, xx, yy, fmf);
     auto ra = rewriter.create<mlir::LLVM::UndefOp>(loc, ty);
     auto r1 = rewriter.create<mlir::LLVM::InsertValueOp>(loc, ra, rr, 0);
     auto r0 = rewriter.create<mlir::LLVM::InsertValueOp>(loc, r1, ri, 1);
@@ -3607,8 +3605,7 @@ struct DivcOpConversion : public FIROpConversion<fir::DivcOp> {
     // Just generate inline code for now.
     // given: (x + iy) / (x' + iy')
     // result: ((xx'+yy')/d) + i((yx'-xy')/d) where d = x'x' + y'y'
-    mlir::LLVM::FastmathFlags fastmathFlags =
-        mlir::arith::convertArithFastMathFlagsToLLVM(divc.getFastmath());
+    mlir::LLVM::FastmathFlagsAttr fmf = getLLVMFMFAttr(divc);
     mlir::Value a = adaptor.getOperands()[0];
     mlir::Value b = adaptor.getOperands()[1];
     auto loc = divc.getLoc();
@@ -3618,28 +3615,17 @@ struct DivcOpConversion : public FIROpConversion<fir::DivcOp> {
     auto y0 = rewriter.create<mlir::LLVM::ExtractValueOp>(loc, a, 1);
     auto x1 = rewriter.create<mlir::LLVM::ExtractValueOp>(loc, b, 0);
     auto y1 = rewriter.create<mlir::LLVM::ExtractValueOp>(loc, b, 1);
-    auto xx = rewriter.create<mlir::LLVM::FMulOp>(loc, eleTy, x0, x1);
-    xx.setFastmathFlags(fastmathFlags);
-    auto x1x1 = rewriter.create<mlir::LLVM::FMulOp>(loc, eleTy, x1, x1);
-    x1x1.setFastmathFlags(fastmathFlags);
-    auto yx = rewriter.create<mlir::LLVM::FMulOp>(loc, eleTy, y0, x1);
-    yx.setFastmathFlags(fastmathFlags);
-    auto xy = rewriter.create<mlir::LLVM::FMulOp>(loc, eleTy, x0, y1);
-    xy.setFastmathFlags(fastmathFlags);
-    auto yy = rewriter.create<mlir::LLVM::FMulOp>(loc, eleTy, y0, y1);
-    yy.setFastmathFlags(fastmathFlags);
-    auto y1y1 = rewriter.create<mlir::LLVM::FMulOp>(loc, eleTy, y1, y1);
-    y1y1.setFastmathFlags(fastmathFlags);
-    auto d = rewriter.create<mlir::LLVM::FAddOp>(loc, eleTy, x1x1, y1y1);
-    d.setFastmathFlags(fastmathFlags);
-    auto rrn = rewriter.create<mlir::LLVM::FAddOp>(loc, eleTy, xx, yy);
-    rrn.setFastmathFlags(fastmathFlags);
-    auto rin = rewriter.create<mlir::LLVM::FSubOp>(loc, eleTy, yx, xy);
-    rin.setFastmathFlags(fastmathFlags);
-    auto rr = rewriter.create<mlir::LLVM::FDivOp>(loc, eleTy, rrn, d);
-    rr.setFastmathFlags(fastmathFlags);
-    auto ri = rewriter.create<mlir::LLVM::FDivOp>(loc, eleTy, rin, d);
-    ri.setFastmathFlags(fastmathFlags);
+    auto xx = rewriter.create<mlir::LLVM::FMulOp>(loc, eleTy, x0, x1, fmf);
+    auto x1x1 = rewriter.create<mlir::LLVM::FMulOp>(loc, eleTy, x1, x1, fmf);
+    auto yx = rewriter.create<mlir::LLVM::FMulOp>(loc, eleTy, y0, x1, fmf);
+    auto xy = rewriter.create<mlir::LLVM::FMulOp>(loc, eleTy, x0, y1, fmf);
+    auto yy = rewriter.create<mlir::LLVM::FMulOp>(loc, eleTy, y0, y1, fmf);
+    auto y1y1 = rewriter.create<mlir::LLVM::FMulOp>(loc, eleTy, y1, y1, fmf);
+    auto d = rewriter.create<mlir::LLVM::FAddOp>(loc, eleTy, x1x1, y1y1, fmf);
+    auto rrn = rewriter.create<mlir::LLVM::FAddOp>(loc, eleTy, xx, yy, fmf);
+    auto rin = rewriter.create<mlir::LLVM::FSubOp>(loc, eleTy, yx, xy, fmf);
+    auto rr = rewriter.create<mlir::LLVM::FDivOp>(loc, eleTy, rrn, d, fmf);
+    auto ri = rewriter.create<mlir::LLVM::FDivOp>(loc, eleTy, rin, d, fmf);
     auto ra = rewriter.create<mlir::LLVM::UndefOp>(loc, ty);
     auto r1 = rewriter.create<mlir::LLVM::InsertValueOp>(loc, ra, rr, 0);
     auto r0 = rewriter.create<mlir::LLVM::InsertValueOp>(loc, r1, ri, 1);
