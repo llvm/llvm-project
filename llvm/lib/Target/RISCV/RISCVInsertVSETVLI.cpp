@@ -67,16 +67,8 @@ static bool isVLPreservingConfig(const MachineInstr &MI) {
   return RISCV::X0 == MI.getOperand(0).getReg();
 }
 
-static uint16_t getRVVMCOpcode(uint16_t RVVPseudoOpcode) {
-  const RISCVVPseudosTable::PseudoInfo *RVV =
-      RISCVVPseudosTable::getPseudoInfo(RVVPseudoOpcode);
-  if (!RVV)
-    return 0;
-  return RVV->BaseInstr;
-}
-
 static bool isFloatScalarMoveOrScalarSplatInstr(const MachineInstr &MI) {
-  switch (getRVVMCOpcode(MI.getOpcode())) {
+  switch (RISCV::getRVVMCOpcode(MI.getOpcode())) {
   default:
     return false;
   case RISCV::VFMV_S_F:
@@ -86,7 +78,7 @@ static bool isFloatScalarMoveOrScalarSplatInstr(const MachineInstr &MI) {
 }
 
 static bool isScalarExtractInstr(const MachineInstr &MI) {
-  switch (getRVVMCOpcode(MI.getOpcode())) {
+  switch (RISCV::getRVVMCOpcode(MI.getOpcode())) {
   default:
     return false;
   case RISCV::VMV_X_S:
@@ -96,7 +88,7 @@ static bool isScalarExtractInstr(const MachineInstr &MI) {
 }
 
 static bool isScalarInsertInstr(const MachineInstr &MI) {
-  switch (getRVVMCOpcode(MI.getOpcode())) {
+  switch (RISCV::getRVVMCOpcode(MI.getOpcode())) {
   default:
     return false;
   case RISCV::VMV_S_X:
@@ -106,7 +98,7 @@ static bool isScalarInsertInstr(const MachineInstr &MI) {
 }
 
 static bool isScalarSplatInstr(const MachineInstr &MI) {
-  switch (getRVVMCOpcode(MI.getOpcode())) {
+  switch (RISCV::getRVVMCOpcode(MI.getOpcode())) {
   default:
     return false;
   case RISCV::VMV_V_I:
@@ -117,7 +109,7 @@ static bool isScalarSplatInstr(const MachineInstr &MI) {
 }
 
 static bool isVSlideInstr(const MachineInstr &MI) {
-  switch (getRVVMCOpcode(MI.getOpcode())) {
+  switch (RISCV::getRVVMCOpcode(MI.getOpcode())) {
   default:
     return false;
   case RISCV::VSLIDEDOWN_VX:
@@ -131,7 +123,7 @@ static bool isVSlideInstr(const MachineInstr &MI) {
 /// Get the EEW for a load or store instruction.  Return std::nullopt if MI is
 /// not a load or store which ignores SEW.
 static std::optional<unsigned> getEEWForLoadStore(const MachineInstr &MI) {
-  switch (getRVVMCOpcode(MI.getOpcode())) {
+  switch (RISCV::getRVVMCOpcode(MI.getOpcode())) {
   default:
     return std::nullopt;
   case RISCV::VLE8_V:
