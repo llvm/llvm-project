@@ -9903,27 +9903,9 @@ void CodeGenFunction::GetAArch64SVEProcessedOperands(
 
   for (unsigned i = 0, e = E->getNumArgs(); i != e; i++) {
     bool IsICE = ICEArguments & (1 << i);
-    if (!IsTupleGetOrSet && !IsICE) {
-      Value *Arg = EmitScalarExpr(E->getArg(i));
-      if (auto *VTy = dyn_cast<ScalableVectorType>(Arg->getType())) {
-        unsigned MinElts = VTy->getMinNumElements();
-        bool IsPred = VTy->getElementType()->isIntegerTy(1);
-        unsigned N =
-            (MinElts * VTy->getScalarSizeInBits()) / (IsPred ? 16 : 128);
-        for (unsigned I = 0; I < N; ++I) {
-          Value *Idx = ConstantInt::get(CGM.Int64Ty, (I * MinElts) / N);
-          auto *NewVTy =
-              ScalableVectorType::get(VTy->getElementType(), MinElts / N);
-          if (N == 1 && VTy == NewVTy)
-            Ops.push_back(Arg);
-          else
-            Ops.push_back(Builder.CreateExtractVector(NewVTy, Arg, Idx));
-        }
-      } else
-        Ops.push_back(Arg);
-    } else if (!IsICE)
-      Ops.push_back(EmitScalarExpr(E->getArg(i)));
-    else {
+    Value *Arg = EmitScalarExpr(E->getArg(i));
+
+    if (IsICE) {
       // If this is required to be a constant, constant fold it so that we know
       // that the generated intrinsic gets a ConstantInt.
       std::optional<llvm::APSInt> Result =
@@ -9935,6 +9917,34 @@ void CodeGenFunction::GetAArch64SVEProcessedOperands(
       // immediate requires more than a handful of bits.
       *Result = Result->extOrTrunc(32);
       Ops.push_back(llvm::ConstantInt::get(getLLVMContext(), *Result));
+      continue;
+    }
+
+    if (IsTupleGetOrSet) {
+      Ops.push_back(EmitScalarExpr(E->getArg(i)));
+      continue;
+    }
+
+    if (!isa<ScalableVectorType>(Arg->getType())) {
+      Ops.push_back(Arg);
+      continue;
+    }
+
+    auto *VTy = cast<ScalableVectorType>(Arg->getType());
+    unsigned MinElts = VTy->getMinNumElements();
+    bool IsPred = VTy->getElementType()->isIntegerTy(1);
+    unsigned N = (MinElts * VTy->getScalarSizeInBits()) / (IsPred ? 16 : 128);
+
+    if (N == 1) {
+      Ops.push_back(Arg);
+      continue;
+    }
+
+    for (unsigned I = 0; I < N; ++I) {
+      Value *Idx = ConstantInt::get(CGM.Int64Ty, (I * MinElts) / N);
+      auto *NewVTy =
+          ScalableVectorType::get(VTy->getElementType(), MinElts / N);
+      Ops.push_back(Builder.CreateExtractVector(NewVTy, Arg, Idx));
     }
   }
 
