@@ -108,7 +108,7 @@ const char *SANITIZER_CDECL __msan_default_options(void);
 
 /* Deprecated. Call __sanitizer_set_death_callback instead. */
 void SANITIZER_CDECL
-__msan_set_death_callback(void (*SANITIZER_CDECL callback)(void));
+__msan_set_death_callback(void(SANITIZER_CDECL *callback)(void));
 
 /* Update shadow for the application copy of size bytes from src to dst.
    Src and dst are application addresses. This function does not copy the

@@ -25,16 +25,16 @@ typedef uint8_t dfsan_label;
 typedef uint32_t dfsan_origin;
 
 /// Signature of the callback argument to dfsan_set_write_callback().
-typedef void (*SANITIZER_CDECL dfsan_write_callback_t)(int fd, const void *buf,
-                                                       size_t count);
+typedef void(SANITIZER_CDECL *dfsan_write_callback_t)(int fd, const void *buf,
+                                                      size_t count);
 
 /// Signature of the callback argument to dfsan_set_conditional_callback().
-typedef void (*SANITIZER_CDECL dfsan_conditional_callback_t)(
+typedef void(SANITIZER_CDECL *dfsan_conditional_callback_t)(
     dfsan_label label, dfsan_origin origin);
 
 /// Signature of the callback argument to dfsan_set_reaches_function_callback().
 /// The description is intended to hold the name of the variable.
-typedef void (*SANITIZER_CDECL dfsan_reaches_function_callback_t)(
+typedef void(SANITIZER_CDECL *dfsan_reaches_function_callback_t)(
     dfsan_label label, dfsan_origin origin, const char *file, unsigned int line,
     const char *function);
 
