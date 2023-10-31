@@ -19,14 +19,13 @@ define amdgpu_cs void @test32_constant_all() {
 define amdgpu_cs void @test64_constant_all() {
 ; CHECK-LABEL: test64_constant_all:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_mov_b64 s[0:1], 0xfffff
+; CHECK-NEXT:    s_mov_b32 s0, 0
 ; CHECK-NEXT:    s_movk_i32 m0, 0x500
-; CHECK-NEXT:    s_mov_b32 s3, 1
-; CHECK-NEXT:    s_mov_b32 s2, s1
+; CHECK-NEXT:    s_mov_b32 s1, 1
 ; CHECK-NEXT:    s_mov_to_global_b64 s[12:13], 0
 ; CHECK-NEXT:    s_mov_to_global_b64 s[14:15], 1
-; CHECK-NEXT:    s_mov_to_global_b64 s[16:17], s[0:1]
-; CHECK-NEXT:    s_mov_to_global_b64 s[18:19], s[2:3]
+; CHECK-NEXT:    s_mov_to_global_b64 s[16:17], 0xfffff
+; CHECK-NEXT:    s_mov_to_global_b64 s[18:19], s[0:1]
 ; CHECK-NEXT:    s_endpgm
   call void @llvm.amdgcn.s.mov.to.global.i64(i16 12, i64 0, i32 1280)
   call void @llvm.amdgcn.s.mov.to.global.i64(i16 14, i64 1, i32 1280)

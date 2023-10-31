@@ -25,7 +25,8 @@ namespace mlir {
 #define GEN_PASS_DEF_SPARSEREINTERPRETMAP
 #define GEN_PASS_DEF_PRESPARSIFICATIONREWRITE
 #define GEN_PASS_DEF_SPARSIFICATIONPASS
-#define GEN_PASS_DEF_POSTSPARSIFICATIONREWRITE
+#define GEN_PASS_DEF_LOWERSPARSEOPSTOFOREACH
+#define GEN_PASS_DEF_LOWERFOREACHTOSCF
 #define GEN_PASS_DEF_SPARSETENSORCONVERSIONPASS
 #define GEN_PASS_DEF_SPARSETENSORCODEGEN
 #define GEN_PASS_DEF_SPARSEBUFFERREWRITE
@@ -49,11 +50,14 @@ struct SparseReinterpretMap
     : public impl::SparseReinterpretMapBase<SparseReinterpretMap> {
   SparseReinterpretMap() = default;
   SparseReinterpretMap(const SparseReinterpretMap &pass) = default;
+  SparseReinterpretMap(const SparseReinterpretMapOptions &options) {
+    scope = options.scope;
+  }
 
   void runOnOperation() override {
     auto *ctx = &getContext();
     RewritePatternSet patterns(ctx);
-    populateSparseReinterpretMap(patterns);
+    populateSparseReinterpretMap(patterns, scope);
     (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
   }
 };
@@ -117,23 +121,34 @@ struct StageSparseOperationsPass
   }
 };
 
-struct PostSparsificationRewritePass
-    : public impl::PostSparsificationRewriteBase<
-          PostSparsificationRewritePass> {
-  PostSparsificationRewritePass() = default;
-  PostSparsificationRewritePass(const PostSparsificationRewritePass &pass) =
+struct LowerSparseOpsToForeachPass
+    : public impl::LowerSparseOpsToForeachBase<LowerSparseOpsToForeachPass> {
+  LowerSparseOpsToForeachPass() = default;
+  LowerSparseOpsToForeachPass(const LowerSparseOpsToForeachPass &pass) =
       default;
-  PostSparsificationRewritePass(bool enableRT, bool foreach, bool convert) {
+  LowerSparseOpsToForeachPass(bool enableRT, bool convert) {
     enableRuntimeLibrary = enableRT;
-    enableForeach = foreach;
     enableConvert = convert;
   }
 
   void runOnOperation() override {
     auto *ctx = &getContext();
     RewritePatternSet patterns(ctx);
-    populatePostSparsificationRewriting(patterns, enableRuntimeLibrary,
-                                        enableForeach, enableConvert);
+    populateLowerSparseOpsToForeachPatterns(patterns, enableRuntimeLibrary,
+                                            enableConvert);
+    (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
+  }
+};
+
+struct LowerForeachToSCFPass
+    : public impl::LowerForeachToSCFBase<LowerForeachToSCFPass> {
+  LowerForeachToSCFPass() = default;
+  LowerForeachToSCFPass(const LowerForeachToSCFPass &pass) = default;
+
+  void runOnOperation() override {
+    auto *ctx = &getContext();
+    RewritePatternSet patterns(ctx);
+    populateLowerForeachToSCFPatterns(patterns);
     (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
   }
 };
@@ -372,6 +387,13 @@ std::unique_ptr<Pass> mlir::createSparseReinterpretMapPass() {
   return std::make_unique<SparseReinterpretMap>();
 }
 
+std::unique_ptr<Pass>
+mlir::createSparseReinterpretMapPass(ReinterpretMapScope scope) {
+  SparseReinterpretMapOptions options;
+  options.scope = scope;
+  return std::make_unique<SparseReinterpretMap>(options);
+}
+
 std::unique_ptr<Pass> mlir::createPreSparsificationRewritePass() {
   return std::make_unique<PreSparsificationRewritePass>();
 }
@@ -389,15 +411,17 @@ std::unique_ptr<Pass> mlir::createStageSparseOperationsPass() {
   return std::make_unique<StageSparseOperationsPass>();
 }
 
-std::unique_ptr<Pass> mlir::createPostSparsificationRewritePass() {
-  return std::make_unique<PostSparsificationRewritePass>();
+std::unique_ptr<Pass> mlir::createLowerSparseOpsToForeachPass() {
+  return std::make_unique<LowerSparseOpsToForeachPass>();
 }
 
 std::unique_ptr<Pass>
-mlir::createPostSparsificationRewritePass(bool enableRT, bool enableForeach,
-                                          bool enableConvert) {
-  return std::make_unique<PostSparsificationRewritePass>(
-      enableRT, enableForeach, enableConvert);
+mlir::createLowerSparseOpsToForeachPass(bool enableRT, bool enableConvert) {
+  return std::make_unique<LowerSparseOpsToForeachPass>(enableRT, enableConvert);
+}
+
+std::unique_ptr<Pass> mlir::createLowerForeachToSCFPass() {
+  return std::make_unique<LowerForeachToSCFPass>();
 }
 
 std::unique_ptr<Pass> mlir::createSparseTensorConversionPass() {

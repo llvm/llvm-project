@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s --post-sparsification-rewrite="enable-runtime-library=false enable-foreach=true" --canonicalize | FileCheck %s
+// RUN: mlir-opt %s --lower-sparse-foreach-to-scf --canonicalize | FileCheck %s
 
 // CHECK-LABEL: func.func @sparse_foreach_constant
 // CHECK-DAG:   %[[C1:.*]] = arith.constant 1 : index

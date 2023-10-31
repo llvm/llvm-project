@@ -84,10 +84,9 @@ FunctionPass *llvm::createRISCVOptWInstrsPass() {
 static bool vectorPseudoHasAllNBitUsers(const MachineOperand &UserOp,
                                         unsigned Bits) {
   const MachineInstr &MI = *UserOp.getParent();
-  const RISCVVPseudosTable::PseudoInfo *PseudoInfo =
-      RISCVVPseudosTable::getPseudoInfo(MI.getOpcode());
+  unsigned MCOpcode = RISCV::getRVVMCOpcode(MI.getOpcode());
 
-  if (!PseudoInfo)
+  if (!MCOpcode)
     return false;
 
   const MCInstrDesc &MCID = MI.getDesc();
@@ -101,7 +100,7 @@ static bool vectorPseudoHasAllNBitUsers(const MachineOperand &UserOp,
     return false;
 
   auto NumDemandedBits =
-      RISCV::getVectorLowDemandedScalarBits(PseudoInfo->BaseInstr, Log2SEW);
+      RISCV::getVectorLowDemandedScalarBits(MCOpcode, Log2SEW);
   return NumDemandedBits && Bits >= *NumDemandedBits;
 }
 

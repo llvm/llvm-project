@@ -206,9 +206,7 @@ define amdgpu_cs void @test_sink_smem_offset_40000000(ptr addrspace(4) inreg %pt
 ;
 ; GFX12-LABEL: test_sink_smem_offset_40000000:
 ; GFX12:       ; %bb.0: ; %entry
-; GFX12-NEXT:    s_mov_b64 s[4:5], 0x2625a00
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], s[4:5]
+; GFX12-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 0x2625a00
 ; GFX12-NEXT:  .LBB3_1: ; %loop
 ; GFX12-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX12-NEXT:    s_wait_kmcnt 0x0

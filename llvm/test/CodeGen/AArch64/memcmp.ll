@@ -160,6 +160,9 @@ define i32 @length3(ptr %X, ptr %Y) nounwind {
 ; CHECK-NEXT:    orr w9, w11, w10, lsl #16
 ; CHECK-NEXT:    rev w8, w8
 ; CHECK-NEXT:    rev w9, w9
+; CHECK-NEXT:    cmp w8, w9
+; CHECK-NEXT:    cset w8, hi
+; CHECK-NEXT:    cset w9, lo
 ; CHECK-NEXT:    sub w0, w8, w9
 ; CHECK-NEXT:    ret
   %m = tail call i32 @memcmp(ptr %X, ptr %Y, i64 3) nounwind
