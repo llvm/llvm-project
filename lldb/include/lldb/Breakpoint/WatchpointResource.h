@@ -21,7 +21,6 @@ class WatchpointResource
     : public std::enable_shared_from_this<WatchpointResource> {
 
 public:
-  // Constructors and Destructors
   WatchpointResource(lldb::addr_t addr, size_t size, bool read, bool write);
 
   ~WatchpointResource();
@@ -38,7 +37,7 @@ public:
 
   typedef std::vector<lldb::WatchpointSP> WatchpointCollection;
   typedef LockingAdaptedIterable<WatchpointCollection, lldb::WatchpointSP,
-                                 vector_adapter, std::recursive_mutex>
+                                 vector_adapter, std::mutex>
       WatchpointIterable;
 
   /// Iterate over the watchpoint owners for this resource
@@ -87,7 +86,7 @@ public:
   ///
   /// \result
   ///     true if this resource's owners includes the watchpoint.
-  bool OwnersContains(lldb::WatchpointSP &wp_sp);
+  bool OwnersContains(const lldb::WatchpointSP &wp_sp);
 
   /// Check if the owners includes a watchpoint.
   ///
@@ -101,13 +100,9 @@ public:
   /// This method copies the watchpoint resource's owners into a new collection.
   /// It does this while the owners mutex is locked.
   ///
-  /// \param[out] out_collection
-  ///    The BreakpointLocationCollection into which to put the owners
-  ///    of this breakpoint site.
-  ///
   /// \return
-  ///    The number of elements copied into out_collection.
-  size_t CopyOwnersList(WatchpointCollection &out_collection);
+  ///    A copy of the Watchpoints which own this resource.
+  WatchpointCollection CopyOwnersList();
 
   // The ID of the WatchpointResource is set by the WatchpointResourceList
   // when the Resource has been set in the inferior and is being added
@@ -132,19 +127,19 @@ protected:
 private:
   lldb::wp_resource_id_t m_id;
 
-  // start address & size aligned & expanded to be a valid watchpoint
+  // Start address & size aligned & expanded to be a valid watchpoint
   // memory granule on this target.
   lldb::addr_t m_addr;
   size_t m_size;
 
-  bool m_watch_read;  // true if we stop when the watched data is read from
-  bool m_watch_write; // true if we stop when the watched data is written to
+  bool m_watch_read;
+  bool m_watch_write;
 
-  // The watchpoints using this WatchpointResource.
+  /// The Watchpoints which own this resource.
   WatchpointCollection m_owners;
 
-  std::recursive_mutex
-      m_owners_mutex; ///< This mutex protects the owners collection.
+  /// This mutex protects the owners collection.
+  std::mutex m_owners_mutex;
 
   WatchpointResource(const WatchpointResource &) = delete;
   const WatchpointResource &operator=(const WatchpointResource &) = delete;

@@ -6,8 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <assert.h>
+
 #include "lldb/Breakpoint/WatchpointResource.h"
-#include "lldb/Utility/LLDBAssert.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -18,7 +19,7 @@ WatchpointResource::WatchpointResource(lldb::addr_t addr, size_t size,
       m_watch_read(read), m_watch_write(write) {}
 
 WatchpointResource::~WatchpointResource() {
-  std::lock_guard<std::recursive_mutex> guard(m_owners_mutex);
+  std::lock_guard<std::mutex> guard(m_owners_mutex);
   m_owners.clear();
 }
 
@@ -48,30 +49,28 @@ bool WatchpointResource::Contains(addr_t addr) {
 }
 
 void WatchpointResource::AddOwner(const WatchpointSP &wp_sp) {
-  std::lock_guard<std::recursive_mutex> guard(m_owners_mutex);
+  std::lock_guard<std::mutex> guard(m_owners_mutex);
   m_owners.push_back(wp_sp);
 }
 
 void WatchpointResource::RemoveOwner(WatchpointSP &wp_sp) {
-  std::lock_guard<std::recursive_mutex> guard(m_owners_mutex);
+  std::lock_guard<std::mutex> guard(m_owners_mutex);
   const auto &it = std::find(m_owners.begin(), m_owners.end(), wp_sp);
   if (it != m_owners.end())
     m_owners.erase(it);
 }
 
 size_t WatchpointResource::GetNumberOfOwners() {
-  std::lock_guard<std::recursive_mutex> guard(m_owners_mutex);
+  std::lock_guard<std::mutex> guard(m_owners_mutex);
   return m_owners.size();
 }
 
-bool WatchpointResource::OwnersContains(WatchpointSP &wp_sp) {
-  std::lock_guard<std::recursive_mutex> guard(m_owners_mutex);
-  const auto &it = std::find(m_owners.begin(), m_owners.end(), wp_sp);
-  return it != m_owners.end();
+bool WatchpointResource::OwnersContains(const WatchpointSP &wp_sp) {
+  return OwnersContains(wp_sp.get());
 }
 
 bool WatchpointResource::OwnersContains(const Watchpoint *wp) {
-  std::lock_guard<std::recursive_mutex> guard(m_owners_mutex);
+  std::lock_guard<std::mutex> guard(m_owners_mutex);
   WatchpointCollection::const_iterator match =
       std::find_if(m_owners.begin(), m_owners.end(),
                    [&wp](const WatchpointSP &x) { return x.get() == wp; });
@@ -79,19 +78,15 @@ bool WatchpointResource::OwnersContains(const Watchpoint *wp) {
 }
 
 WatchpointSP WatchpointResource::GetOwnerAtIndex(size_t idx) {
-  std::lock_guard<std::recursive_mutex> guard(m_owners_mutex);
-  lldbassert(idx < m_owners.size());
+  std::lock_guard<std::mutex> guard(m_owners_mutex);
+  assert(idx < m_owners.size());
   if (idx >= m_owners.size())
     return {};
 
   return m_owners[idx];
 }
 
-size_t
-WatchpointResource::CopyOwnersList(WatchpointCollection &out_collection) {
-  std::lock_guard<std::recursive_mutex> guard(m_owners_mutex);
-  for (auto wp_sp : m_owners) {
-    out_collection.push_back(wp_sp);
-  }
-  return out_collection.size();
+WatchpointResource::WatchpointCollection WatchpointResource::CopyOwnersList() {
+  std::lock_guard<std::mutex> guard(m_owners_mutex);
+  return m_owners;
 }

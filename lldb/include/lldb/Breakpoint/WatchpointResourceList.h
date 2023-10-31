@@ -21,7 +21,6 @@ namespace lldb_private {
 class WatchpointResourceList {
 
 public:
-  // Constructors and Destructors
   WatchpointResourceList();
 
   ~WatchpointResourceList();

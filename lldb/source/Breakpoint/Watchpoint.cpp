@@ -283,12 +283,10 @@ bool Watchpoint::DumpSnapshots(Stream *s, const char *prefix) const {
     values_ss.Indent(prefix);
 
   if (m_old_value_sp) {
-    const char *old_value_cstr = m_old_value_sp->GetValueAsCString();
-    if (old_value_cstr) {
+    if (auto *old_value_cstr = m_old_value_sp->GetValueAsCString()) {
       values_ss.Printf("old value: %s", old_value_cstr);
     } else {
-      const char *old_summary_cstr = m_old_value_sp->GetSummaryAsCString();
-      if (old_summary_cstr)
+      if (auto *old_summary_cstr = m_old_value_sp->GetSummaryAsCString())
         values_ss.Printf("old value: %s", old_summary_cstr);
       else {
         StreamString strm;
@@ -308,12 +306,10 @@ bool Watchpoint::DumpSnapshots(Stream *s, const char *prefix) const {
     if (values_ss.GetSize())
       values_ss.Printf("\n");
 
-    const char *new_value_cstr = m_new_value_sp->GetValueAsCString();
-    if (new_value_cstr)
+    if (auto *new_value_cstr = m_new_value_sp->GetValueAsCString())
       values_ss.Printf("new value: %s", new_value_cstr);
     else {
-      const char *new_summary_cstr = m_new_value_sp->GetSummaryAsCString();
-      if (new_summary_cstr)
+      if (auto *new_summary_cstr = m_new_value_sp->GetSummaryAsCString())
         values_ss.Printf("new value: %s", new_summary_cstr);
       else {
         StreamString strm;
@@ -379,8 +375,7 @@ uint32_t Watchpoint::GetHardwareIndex() const {
         ->GetWatchpointResourceList()
         .FindByWatchpoint(this)
         ->GetID();
-  else
-    return UINT32_MAX;
+  return UINT32_MAX;
 }
 
 // Within StopInfo.cpp, we purposely turn on the ephemeral mode right before
