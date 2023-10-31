@@ -10280,11 +10280,9 @@ RISCVTargetLowering::lowerVPReverseExperimental(SDValue Op,
 
   unsigned EltSize = GatherVT.getScalarSizeInBits();
   unsigned MinSize = GatherVT.getSizeInBits().getKnownMinValue();
-  unsigned MaxVLMAX = 0;
   unsigned VectorBitsMax = Subtarget.getRealMaxVLen();
-  if (VectorBitsMax != 0)
-    MaxVLMAX =
-        RISCVTargetLowering::computeVLMAX(VectorBitsMax, EltSize, MinSize);
+  unsigned MaxVLMAX =
+      RISCVTargetLowering::computeVLMAX(VectorBitsMax, EltSize, MinSize);
 
   unsigned GatherOpc = RISCVISD::VRGATHER_VV_VL;
   // If this is SEW=8 and VLMAX is unknown or more than 256, we need
@@ -10292,7 +10290,7 @@ RISCVTargetLowering::lowerVPReverseExperimental(SDValue Op,
   // TODO: It's also possible to use vrgatherei16.vv for other types to
   // decrease register width for the index calculation.
   // NOTE: This code assumes VLMAX <= 65536 for LMUL=8 SEW=16.
-  if ((MaxVLMAX == 0 || MaxVLMAX > 256) && EltSize == 8) {
+  if (MaxVLMAX > 256 && EltSize == 8) {
     // If this is LMUL=8, we have to split before using vrgatherei16.vv.
     // Split the vector in half and reverse each half using a full register
     // reverse.

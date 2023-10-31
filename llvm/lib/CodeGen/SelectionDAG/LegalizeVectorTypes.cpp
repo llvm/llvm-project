@@ -2902,8 +2902,7 @@ void DAGTypeLegalizer::SplitVecRes_VP_REVERSE(SDNode *N, SDValue &Lo,
 
   SDValue Load = DAG.getLoadVP(VT, DL, Store, StackPtr, Mask, EVL, LoadMMO);
 
-  EVT LoVT, HiVT;
-  std::tie(LoVT, HiVT) = DAG.GetSplitDestVTs(VT);
+  auto [LoVT, HiVT] = DAG.GetSplitDestVTs(VT);
   Lo = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, LoVT, Load,
                    DAG.getVectorIdxConstant(0, DL));
   Hi =
