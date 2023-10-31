@@ -77,8 +77,7 @@ static LogicalResult runMLIRPasses(Operation *op,
   ConvertFuncToLLVMPassOptions funcToLLVMOptions{};
   funcToLLVMOptions.indexBitwidth =
       DataLayout(module).getTypeSizeInBits(IndexType::get(module.getContext()));
-  passManager.addPass(
-      createConvertFuncToLLVMPass(funcToLLVMOptions));
+  passManager.addPass(createConvertFuncToLLVMPass(funcToLLVMOptions));
   passManager.addPass(createReconcileUnrealizedCastsPass());
   passManager.addPass(createConvertVulkanLaunchFuncToVulkanCallsPass());
 

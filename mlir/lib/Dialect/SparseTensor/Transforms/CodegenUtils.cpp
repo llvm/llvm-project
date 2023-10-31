@@ -341,7 +341,7 @@ func::CallOp mlir::sparse_tensor::createFuncCall(
 }
 
 Type mlir::sparse_tensor::getOpaquePointerType(MLIRContext *ctx) {
-  return LLVM::LLVMPointerType::get(IntegerType::get(ctx, 8));
+  return LLVM::LLVMPointerType::get(ctx);
 }
 
 Type mlir::sparse_tensor::getOpaquePointerType(Builder &builder) {
