@@ -409,6 +409,14 @@ Value *createAnyOfTargetReduction(IRBuilderBase &B, Value *Src,
 Value *createTargetReduction(IRBuilderBase &B, const RecurrenceDescriptor &Desc,
                              Value *Src, PHINode *OrigPhi = nullptr);
 
+Value *createTargetCompact(IRBuilderBase &B, Module *M,
+                           const TargetTransformInfo *TTI, Value *Mask,
+                           Value *Val);
+
+Value *createTargetCNTP(IRBuilderBase &B, Module *M,
+                        const TargetTransformInfo *TTI, Value *Mask,
+                        Value *Val);
+
 /// Create an ordered reduction intrinsic using the given recurrence
 /// descriptor \p Desc.
 Value *createOrderedReduction(IRBuilderBase &B,

@@ -224,6 +224,26 @@ private:
   Instruction *ExactFPMathInst = nullptr;
 };
 
+class CompactDescriptor {
+  PHINode *LiveOutPhi;
+  bool IsCompactSign;
+  SmallPtrSet<Value *, 8> Chain;
+
+public:
+  CompactDescriptor() = default;
+  CompactDescriptor(SmallPtrSetImpl<Value *> &CompactChain, PHINode *LiveOut,
+                    bool IsSign)
+      : LiveOutPhi(LiveOut), IsCompactSign(IsSign) {
+    Chain.insert(CompactChain.begin(), CompactChain.end());
+  }
+
+  bool isInCompactChain(Value *V) const { return Chain.find(V) != Chain.end(); }
+
+  PHINode *getLiveOutPhi() const { return LiveOutPhi; }
+
+  bool isSign() const { return IsCompactSign; }
+};
+
 /// LoopVectorizationLegality checks if it is legal to vectorize a loop, and
 /// to what vectorization factor.
 /// This class does not look at the profitability of vectorization, only the
@@ -260,6 +280,8 @@ public:
   /// RecurrenceSet contains the phi nodes that are recurrences other than
   /// inductions and reductions.
   using RecurrenceSet = SmallPtrSet<const PHINode *, 8>;
+
+  using CompactList = MapVector<PHINode *, CompactDescriptor>;
 
   /// Returns true if it is legal to vectorize this loop.
   /// This does not mean that it is profitable to vectorize this
@@ -397,6 +419,14 @@ public:
 
   DominatorTree *getDominatorTree() const { return DT; }
 
+  const CompactList &getCompactList() const { return CpList; }
+
+  bool hasCompactChain() const { return CpList.size() > 0; }
+
+  PHINode *getCompactChainStart(Instruction *I) const;
+
+  bool isSign(PHINode *Phi) { return CpList[Phi].isSign(); };
+
 private:
   /// Return true if the pre-header, exiting and latch blocks of \p Lp and all
   /// its nested loops are considered legal for vectorization. These legal
@@ -424,6 +454,8 @@ private:
   /// At this point we know that this is a loop with a constant trip count
   /// and we only need to check individual instructions.
   bool canVectorizeInstrs();
+
+  bool isMatchCompact(PHINode *Phi, Loop *TheLoop, CompactDescriptor &CpDesc);
 
   /// When we vectorize loops we may change the order in which
   /// we read and write from memory. This method checks if it is
@@ -538,6 +570,9 @@ private:
   /// BFI and PSI are used to check for profile guided size optimizations.
   BlockFrequencyInfo *BFI;
   ProfileSummaryInfo *PSI;
+
+  // Record compact chain in the loop.
+  CompactList CpList;
 };
 
 } // namespace llvm

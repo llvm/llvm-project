@@ -620,6 +620,8 @@ protected:
   /// Create code for the loop exit value of the reduction.
   void fixReduction(VPReductionPHIRecipe *Phi, VPTransformState &State);
 
+  void fixCompactPHI(VPCompactPHIRecipe *CompactPHIR, VPTransformState &State);
+
   /// Iteratively sink the scalarized operands of a predicated instruction into
   /// the block that was created for it.
   void sinkScalarOperands(Instruction *PredInst);
@@ -1969,7 +1971,8 @@ public:
   /// there is no vector code generation, the check blocks are removed
   /// completely.
   void Create(Loop *L, const LoopAccessInfo &LAI,
-              const SCEVPredicate &UnionPred, ElementCount VF, unsigned IC) {
+              const SCEVPredicate &UnionPred, ElementCount VF, unsigned IC,
+              LoopVectorizationLegality *LVL = nullptr) {
 
     // Hard cutoff to limit compile-time increase in case a very large number of
     // runtime checks needs to be generated.
@@ -2002,7 +2005,7 @@ public:
                                  "vector.memcheck");
 
       auto DiffChecks = RtPtrChecking.getDiffChecks();
-      if (DiffChecks) {
+      if (DiffChecks && !(LVL && LVL->hasCompactChain())) {
         Value *RuntimeVF = nullptr;
         MemRuntimeCheckCond = addDiffRuntimeChecks(
             MemCheckBlock->getTerminator(), *DiffChecks, MemCheckExp,
@@ -3633,6 +3636,47 @@ void InnerLoopVectorizer::fixCrossIterationPHIs(VPTransformState &State) {
   for (VPRecipeBase &R : Header->phis()) {
     if (auto *FOR = dyn_cast<VPFirstOrderRecurrencePHIRecipe>(&R))
       fixFixedOrderRecurrence(FOR, State);
+    else if (auto *CompactR = dyn_cast<VPCompactPHIRecipe>(&R))
+      fixCompactPHI(CompactR, State);
+  }
+}
+
+void InnerLoopVectorizer::fixCompactPHI(VPCompactPHIRecipe *CompactPHIR,
+                                        VPTransformState &State) {
+  Builder.SetInsertPoint(&*LoopMiddleBlock->getFirstNonPHI());
+  VPValue *VPBackEdgeValue = CompactPHIR->getBackedgeValue();
+  Value *BackEdgeValue = State.get(VPBackEdgeValue, State.UF - 1);
+  Value *StartValue = CompactPHIR->getStartValue()->getUnderlyingValue();
+  Value *TruncBackEdgeValue = BackEdgeValue;
+  if (StartValue->getType() != BackEdgeValue->getType())
+    TruncBackEdgeValue =
+        Builder.CreateTruncOrBitCast(BackEdgeValue, StartValue->getType());
+
+  // Generate phi in scalar preheader to pass LiveIns outside the loop.
+  PHINode *ScalarPreheaderPN =
+      PHINode::Create(StartValue->getType(), 2, "compact.rdx",
+                      LoopScalarPreHeader->getFirstNonPHI());
+
+  for (auto *Incoming : predecessors(LoopScalarPreHeader)) {
+    if (Incoming == LoopMiddleBlock)
+      ScalarPreheaderPN->addIncoming(TruncBackEdgeValue, Incoming);
+    else
+      ScalarPreheaderPN->addIncoming(StartValue, Incoming);
+  }
+
+  Value *ScalarBackEdgeValue =
+      CompactPHIR->getBackedgeValue()->getUnderlyingValue();
+  for (PHINode &Phi : LoopScalarBody->phis()) {
+    if (llvm::is_contained(Phi.incoming_values(), ScalarBackEdgeValue)) {
+      Phi.setIncomingValueForBlock(LoopScalarPreHeader, ScalarPreheaderPN);
+    }
+  }
+
+  for (PHINode &LCSSAPhi : LoopExitBlock->phis()) {
+    if (llvm::is_contained(LCSSAPhi.incoming_values(), ScalarBackEdgeValue)) {
+      LCSSAPhi.addIncoming(TruncBackEdgeValue, LoopMiddleBlock);
+      State.Plan->removeLiveOut(&LCSSAPhi);
+    }
   }
 }
 
@@ -4222,6 +4266,8 @@ bool LoopVectorizationCostModel::isScalarWithPredication(
                .Kind == CM_Scalarize;
   case Instruction::Load:
   case Instruction::Store: {
+    if (Legal->getCompactChainStart(I) != nullptr)
+      return false;
     auto *Ptr = getLoadStorePointerOperand(I);
     auto *Ty = getLoadStoreType(I);
     Type *VTy = Ty;
@@ -4580,6 +4626,12 @@ void LoopVectorizationCostModel::collectLoopUniforms(ElementCount VF) {
         assert(isOutOfScope(EVI->getAggregateOperand()) &&
                "Expected aggregate value to be loop invariant");
         addToWorklistIfAllowed(EVI);
+        continue;
+      }
+
+      // GEPs in compact chain should be uniform after vectorization.
+      if (isa<GetElementPtrInst>(&I) && Legal->getCompactChainStart(&I)) {
+        addToWorklistIfAllowed(&I);
         continue;
       }
 
@@ -6806,6 +6858,24 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
         continue;
       }
 
+      if (isa<StoreInst>(I) && Legal->hasCompactChain()) {
+        InstructionCost Cost = 0;
+        if (!VF.isScalable() || VF.isScalar()) {
+          setWideningDecision(&I, VF, CM_Widen, InstructionCost::getInvalid());
+          continue;
+        }
+        Type *EleTy = getLoadStoreType(&I);
+        VectorType *VectorTy = cast<VectorType>(ToVectorTy(EleTy, VF));
+        const Align Alignment = getLoadStoreAlignment(&I);
+        unsigned AS = getLoadStoreAddressSpace(&I);
+        enum TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+        Cost += TTI.getMaskedMemoryOpCost(I.getOpcode(), VectorTy, Alignment,
+                                          AS, CostKind);
+        Cost += TTI.getCompactCost();
+        setWideningDecision(&I, VF, CM_Widen, Cost);
+        continue;
+      }
+
       // Choose between Interleaving, Gather/Scatter or Scalarization.
       InstructionCost InterleaveCost = InstructionCost::getInvalid();
       unsigned NumAccesses = 1;
@@ -8570,6 +8640,30 @@ VPRecipeOrVPValueTy VPRecipeBuilder::handleReplication(Instruction *I,
   return toVPRecipeResult(Recipe);
 }
 
+VPRecipeOrVPValueTy VPRecipeBuilder::tryToCreateWidenCompactRecipe(
+    Instruction *Instr, ArrayRef<VPValue *> Operands, VPlanPtr &Plan,
+    bool IsSign, const TargetTransformInfo *TTI) {
+  if (auto Phi = dyn_cast<PHINode>(Instr)) {
+    if (Instr->getParent() != OrigLoop->getHeader())
+      return toVPRecipeResult(new VPWidenCompactInstructionRecipe(
+          Instr, Instr->getOpcode(), Operands));
+
+    VPValue *StartV = Operands[0];
+    VPHeaderPHIRecipe *PhiRecipe = new VPCompactPHIRecipe(Phi, StartV, IsSign);
+    recordRecipeOf(cast<Instruction>(
+        Phi->getIncomingValueForBlock(OrigLoop->getLoopLatch())));
+    PhisToFix.push_back(PhiRecipe);
+    return toVPRecipeResult(PhiRecipe);
+  }
+
+  if (isa<GetElementPtrInst>(Instr))
+    return nullptr;
+
+  VPValue *Mask = createBlockInMask(Instr->getParent(), *Plan);
+  return toVPRecipeResult(new VPWidenCompactInstructionRecipe(
+      Instr, Instr->getOpcode(), Operands, Mask, TTI));
+}
+
 VPRecipeOrVPValueTy
 VPRecipeBuilder::tryToCreateWidenRecipe(Instruction *Instr,
                                         ArrayRef<VPValue *> Operands,
@@ -8661,6 +8755,10 @@ VPRecipeBuilder::tryToCreateWidenRecipe(Instruction *Instr,
 void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
                                                         ElementCount MaxVF) {
   assert(OrigLoop->isInnermost() && "Inner loop expected.");
+  // Don't build vplan of fixed width version if there is a compact chain in the
+  // loop.
+  if (Legal->hasCompactChain() && !MinVF.isScalable())
+    return;
 
   auto MaxVFTimes2 = MaxVF * 2;
   for (ElementCount VF = MinVF; ElementCount::isKnownLT(VF, MaxVFTimes2);) {
@@ -8833,8 +8931,15 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
           Legal->isInvariantAddressOfReduction(SI->getPointerOperand()))
         continue;
 
-      auto RecipeOrValue = RecipeBuilder.tryToCreateWidenRecipe(
-          Instr, Operands, Range, VPBB, Plan);
+      VPRecipeOrVPValueTy RecipeOrValue;
+      if (PHINode *ChainStart = Legal->getCompactChainStart(Instr)) {
+        RecipeOrValue = RecipeBuilder.tryToCreateWidenCompactRecipe(
+            Instr, Operands, Plan, Legal->isSign(ChainStart), &TTI);
+      } else {
+        RecipeOrValue = RecipeBuilder.tryToCreateWidenRecipe(Instr, Operands,
+                                                             Range, VPBB, Plan);
+      }
+
       if (!RecipeOrValue)
         RecipeOrValue = RecipeBuilder.handleReplication(Instr, Range, *Plan);
       // If Instr can be simplified to an existing VPValue, use it.
@@ -10077,7 +10182,8 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     //  Optimistically generate runtime checks if they are needed. Drop them if
     //  they turn out to not be profitable.
     if (VF.Width.isVector() || SelectedIC > 1)
-      Checks.Create(L, *LVL.getLAI(), PSE.getPredicate(), VF.Width, SelectedIC);
+      Checks.Create(L, *LVL.getLAI(), PSE.getPredicate(), VF.Width, SelectedIC,
+                    &LVL);
 
     // Check if it is profitable to vectorize with runtime checks.
     bool ForceVectorization =

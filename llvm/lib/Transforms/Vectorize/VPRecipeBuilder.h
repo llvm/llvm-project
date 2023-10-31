@@ -123,6 +123,11 @@ public:
                                              VFRange &Range, VPBasicBlock *VPBB,
                                              VPlanPtr &Plan);
 
+  VPRecipeOrVPValueTy
+  tryToCreateWidenCompactRecipe(Instruction *Instr,
+                                ArrayRef<VPValue *> Operands, VPlanPtr &Plan,
+                                bool IsSign, const TargetTransformInfo *TTI);
+
   /// Set the recipe created for given ingredient. This operation is a no-op for
   /// ingredients that were not marked using a nullptr entry in the map.
   void setRecipe(Instruction *I, VPRecipeBase *R) {

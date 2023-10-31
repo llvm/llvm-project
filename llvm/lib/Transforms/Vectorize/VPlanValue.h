@@ -348,6 +348,7 @@ public:
     VPWidenCastSC,
     VPWidenGEPSC,
     VPWidenMemoryInstructionSC,
+    VPCompactInstructionSC,
     VPWidenSC,
     VPWidenSelectSC,
     // START: Phi-like recipes. Need to be kept together.
@@ -361,6 +362,7 @@ public:
     VPWidenPHISC,
     VPWidenIntOrFpInductionSC,
     VPWidenPointerInductionSC,
+    VPCompactPHISC,
     VPReductionPHISC,
     // END: SubclassID for recipes that inherit VPHeaderPHIRecipe
     // END: Phi-like recipes

@@ -24,6 +24,7 @@
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/Support/KnownBits.h"
 #include "llvm/Transforms/Utils/SizeOpts.h"
 #include "llvm/Transforms/Vectorize/LoopVectorize.h"
 
@@ -77,6 +78,11 @@ static cl::opt<LoopVectorizeHints::ScalableForceKind>
                 LoopVectorizeHints::SK_PreferScalable, "on",
                 "Scalable vectorization is available and favored when the "
                 "cost is inconclusive.")));
+
+static cl::opt<bool>
+    EnableCompactVectorization("enable-compact-vectorization", cl::init(true),
+                               cl::Hidden,
+                               cl::desc("Enable vectorizing compact pattern."));
 
 /// Maximum vectorization interleave count.
 static const unsigned MaxInterleaveFactor = 16;
@@ -785,6 +791,143 @@ static bool isTLIScalarize(const TargetLibraryInfo &TLI, const CallInst &CI) {
   return Scalarize;
 }
 
+static bool isUserOfCompactPHI(BasicBlock *BB, PHINode *Phi, Instruction *I) {
+  if (I->getParent() != BB)
+    return false;
+
+  // Operations on PHI should be affine.
+  if (I->getOpcode() != Instruction::Add &&
+      I->getOpcode() != Instruction::Sub &&
+      I->getOpcode() != Instruction::SExt &&
+      I->getOpcode() != Instruction::ZExt)
+    return false;
+
+  if (I == Phi)
+    return true;
+
+  for (unsigned i = 0; i < I->getNumOperands(); i++) {
+    if (auto *Instr = dyn_cast<Instruction>(I->getOperand(i)))
+      if (isUserOfCompactPHI(BB, Phi, Instr))
+        return true;
+  }
+  return false;
+}
+
+// Match the basic compact pattern:
+// for.body:
+//    %src.phi = phi i64 [ 0, %preheader ], [ %target.phi, %for.inc ]
+//    ...
+// if.then:
+//    ...
+//    %data = load i32, ptr %In
+//    (there may be additional sext/zext if %src.phi types i32)
+//    %addr = getelementptr i32, ptr %Out, i64 %src.phi
+//    store i32 %data, ptr %addr
+//    %inc = add i64 %src.phi, 1
+// for.inc
+//    %target.phi = phi i64 [ %inc, if.then ], [ %src.phi, %for.body ]
+bool LoopVectorizationLegality::isMatchCompact(PHINode *Phi, Loop *TheLoop,
+                                               CompactDescriptor &CpDesc) {
+  if (Phi->getNumIncomingValues() > 2)
+    return false;
+
+  // Don't support phis who is used as mask.
+  for (User *U : Phi->users()) {
+    if (isa<CmpInst>(U))
+      return false;
+  }
+
+  SmallPtrSet<Value *, 8> CompactChain;
+  CompactChain.insert(Phi);
+
+  BasicBlock *LoopPreHeader = TheLoop->getLoopPreheader();
+  int ExitIndex = Phi->getIncomingBlock(0) == LoopPreHeader ? 1 : 0;
+  BasicBlock *ExitBlock = Phi->getIncomingBlock(ExitIndex);
+  PHINode *CompactLiveOut = nullptr;
+  Value *IncValue = nullptr;
+  BasicBlock *IncBlock = nullptr;
+  bool IsCycle = false;
+  for (auto &CandPhi : ExitBlock->phis()) {
+    if (llvm::is_contained(CandPhi.incoming_values(), Phi) &&
+        CandPhi.getNumIncomingValues() == 2) {
+      IsCycle = true;
+      CompactLiveOut = &CandPhi;
+      int IncIndex = CandPhi.getIncomingBlock(0) == Phi->getParent() ? 1 : 0;
+      IncBlock = CandPhi.getIncomingBlock(IncIndex);
+      IncValue = CandPhi.getIncomingValueForBlock(IncBlock);
+      break;
+    }
+  }
+  // Similar with reduction PHI.
+  if (!IsCycle)
+    return false;
+  CompactChain.insert(CompactLiveOut);
+
+  // Match the pattern %inc = add i32 %src.phi, 1.
+  Value *Index = nullptr, *Step = nullptr;
+  if (!match(IncValue, m_Add(m_Value(Index), m_Value(Step))))
+    return false;
+  if (Index != Phi) {
+    std::swap(Index, Step);
+  }
+  if (Step != ConstantInt::get(Step->getType(), 1))
+    return false;
+  CompactChain.insert(IncValue);
+
+  const DataLayout &DL = Phi->getModule()->getDataLayout();
+  int CntCandStores = 0;
+  GetElementPtrInst *GEP = nullptr;
+  for (auto &Inst : *IncBlock) {
+    if (auto *SI = dyn_cast<StoreInst>(&Inst)) {
+      // TODO: Support llvm.sve.compact.nxv8i16, llvm.sve.compact.nxv16i18 in
+      // the future.
+      unsigned TySize = DL.getTypeSizeInBits(SI->getValueOperand()->getType());
+      if (TySize < 32)
+        return false;
+
+      GEP = dyn_cast<GetElementPtrInst>(SI->getPointerOperand());
+      if (GEP == nullptr)
+        continue;
+
+      // Only handle single pointer.
+      if (GEP->getNumOperands() != 2)
+        continue;
+
+      // Get the index of GEP, index could be phi or sext/zext (if phi types
+      // i32).
+      Value *Op1 = GEP->getOperand(1);
+      Value *X = nullptr;
+      SmallSet<Value *, 16> CandiInstrs;
+      if (match(Op1, m_SExt(m_Value(X))) || match(Op1, m_ZExt(m_Value(X)))) {
+        Op1 = X;
+      }
+      Instruction *Op1Instr = dyn_cast<Instruction>(Op1);
+      if (!Op1Instr || isUserOfCompactPHI(IncBlock, Phi, Op1Instr))
+        continue;
+      CompactChain.insert(GEP);
+      CompactChain.insert(SI);
+      CntCandStores++;
+    }
+  }
+  if (!CntCandStores)
+    return false;
+
+  KnownBits Bits = computeKnownBits(Phi, DL);
+  bool IsSign = !Bits.isNonNegative();
+  CompactDescriptor CompactDesc(CompactChain, CompactLiveOut, IsSign);
+  CpDesc = CompactDesc;
+  LLVM_DEBUG(dbgs() << "LV: Found a compact chain.\n");
+  return true;
+}
+
+PHINode *LoopVectorizationLegality::getCompactChainStart(Instruction *I) const {
+  for (auto &CpDesc : CpList) {
+    if (CpDesc.second.isInCompactChain(I))
+      return CpDesc.first;
+  }
+  return nullptr;
+}
+
 bool LoopVectorizationLegality::canVectorizeInstrs() {
   BasicBlock *Header = TheLoop->getHeader();
 
@@ -878,6 +1021,14 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
         if (InductionDescriptor::isInductionPHI(Phi, TheLoop, PSE, ID, true) &&
             !isDisallowedStridedPointerInduction(ID)) {
           addInductionPhi(Phi, ID, AllowedExit);
+          continue;
+        }
+
+        CompactDescriptor CpDesc;
+        if (EnableCompactVectorization &&
+            TTI->isTargetSupportedCompactStore() &&
+            isMatchCompact(Phi, TheLoop, CpDesc)) {
+          CpList[Phi] = CpDesc;
           continue;
         }
 
@@ -1525,15 +1676,21 @@ bool LoopVectorizationLegality::prepareToFoldTailByMasking() {
   LLVM_DEBUG(dbgs() << "LV: checking if tail can be folded by masking.\n");
 
   SmallPtrSet<const Value *, 8> ReductionLiveOuts;
+  SmallPtrSet<const Value *, 8> CompactLiveOuts;
 
   for (const auto &Reduction : getReductionVars())
     ReductionLiveOuts.insert(Reduction.second.getLoopExitInstr());
+
+  for (const auto &Compact : getCompactList())
+    CompactLiveOuts.insert(Compact.second.getLiveOutPhi());
 
   // TODO: handle non-reduction outside users when tail is folded by masking.
   for (auto *AE : AllowedExit) {
     // Check that all users of allowed exit values are inside the loop or
     // are the live-out of a reduction.
     if (ReductionLiveOuts.count(AE))
+      continue;
+    if (CompactLiveOuts.count(AE))
       continue;
     for (User *U : AE->users()) {
       Instruction *UI = cast<Instruction>(U);
