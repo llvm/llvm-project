@@ -362,7 +362,8 @@ let SubtargetPredicate = isGFX9Plus in {
   } // End hasSideEffects = 1, Defs = [EXEC, SCC], Uses = [EXEC]
 
   let isReMaterializable = 1 in
-  def S_BITREPLICATE_B64_B32 : SOP1_64_32<"s_bitreplicate_b64_b32">;
+  def S_BITREPLICATE_B64_B32 : SOP1_64_32<"s_bitreplicate_b64_b32",
+  [(set i64:$sdst, (int_amdgcn_s_bitreplicate i32:$src0))]>;
 } // End SubtargetPredicate = isGFX9Plus
 
 let SubtargetPredicate = isGFX10Plus in {
