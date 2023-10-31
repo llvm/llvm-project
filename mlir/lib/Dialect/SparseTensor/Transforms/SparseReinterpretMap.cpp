@@ -142,7 +142,7 @@ public:
 };
 
 //===----------------------------------------------------------------------===//
-// Rewriting rules for operations other than linalg generic ops.
+// Reinterpret Map Rewriters for operations other than linalg.generics
 //===----------------------------------------------------------------------===//
 
 // CRTP to help implementing a rewriter that demaps all its inputs and remaps
