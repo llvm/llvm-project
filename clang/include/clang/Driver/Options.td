@@ -1733,6 +1733,10 @@ def fswift_async_fp_EQ : Joined<["-"], "fswift-async-fp=">,
     NormalizedValuesScope<"CodeGenOptions::SwiftAsyncFramePointerKind">,
     NormalizedValues<["Auto", "Always", "Never"]>,
     MarshallingInfoEnum<CodeGenOpts<"SwiftAsyncFramePointer">, "Always">;
+def fapinotes_swift_version : Joined<["-"], "fapinotes-swift-version=">,
+  Group<f_clang_Group>, Visibility<[ClangOption, CC1Option]>,
+  MetaVarName<"<version>">,
+  HelpText<"Specify the Swift version to use when filtering API notes">;
 
 defm addrsig : BoolFOption<"addrsig",
   CodeGenOpts<"Addrsig">, DefaultFalse,
@@ -4129,6 +4133,9 @@ def ibuiltininc : Flag<["-"], "ibuiltininc">, Group<clang_i_Group>,
 def index_header_map : Flag<["-"], "index-header-map">,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Make the next included directory (-I or -F) an indexer header map">;
+def iapinotes_modules : JoinedOrSeparate<["-"], "iapinotes-modules">, Group<clang_i_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<"Add directory to the API notes search path referenced by module name">, MetaVarName<"<directory>">;
 def idirafter : JoinedOrSeparate<["-"], "idirafter">, Group<clang_i_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Add directory to AFTER include search path">;
