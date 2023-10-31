@@ -37,9 +37,7 @@ static bool IsDescriptor(const ObjectEntityDetails &details) {
   if (IsDescriptor(details.type()) || details.IsAssumedRank()) {
     return true;
   }
-  std::size_t j{0};
   for (const ShapeSpec &shapeSpec : details.shape()) {
-    ++j;
     if (const auto &ub{shapeSpec.ubound().GetExplicit()}) {
       if (!IsConstantExpr(*ub)) {
         return true;
