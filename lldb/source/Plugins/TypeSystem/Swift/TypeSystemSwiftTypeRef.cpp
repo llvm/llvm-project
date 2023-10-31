@@ -12,6 +12,7 @@
 
 #include "Plugins/TypeSystem/Swift/TypeSystemSwiftTypeRef.h"
 #include "Plugins/TypeSystem/Swift/SwiftASTContext.h"
+#include "Plugins/TypeSystem/Swift/SwiftDWARFImporterForClangTypes.h"
 #include "Plugins/TypeSystem/Swift/SwiftDemangle.h"
 
 #include "Plugins/LanguageRuntime/Swift/SwiftLanguageRuntime.h"
@@ -1492,11 +1493,13 @@ SwiftASTContext *TypeSystemSwiftTypeRef::GetSwiftASTContextOrNull() const {
   return m_swift_ast_context;
 }
 
-swift::DWARFImporterDelegate &TypeSystemSwiftTypeRef::GetDWARFImporterDelegate() {
-  if (!m_dwarf_importer_delegate_up)
-    m_dwarf_importer_delegate_up.reset(CreateSwiftDWARFImporterDelegate(*this));
-  assert(m_dwarf_importer_delegate_up);
-  return *m_dwarf_importer_delegate_up;
+SwiftDWARFImporterForClangTypes &
+TypeSystemSwiftTypeRef::GetSwiftDWARFImporterForClangTypes() {
+  if (!m_dwarf_importer_for_clang_types_up)
+    m_dwarf_importer_for_clang_types_up =
+        std::make_unique<SwiftDWARFImporterForClangTypes>(*this);
+  assert(m_dwarf_importer_for_clang_types_up);
+  return *m_dwarf_importer_for_clang_types_up;
 }
 
 ClangNameImporter *TypeSystemSwiftTypeRef::GetNameImporter() const {
