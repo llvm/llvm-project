@@ -1013,7 +1013,10 @@ public:
                                     lldb::LanguageType language,
                                     Expression::ResultType desired_type,
                                     const EvaluateExpressionOptions &options,
-                                    ValueObject *ctx_obj) override;
+                                    ValueObject *ctx_obj) override {
+    return m_typeref_typesystem->GetUserExpression(
+        expr, prefix, language, desired_type, options, ctx_obj);
+  }
 
   PersistentExpressionState *GetPersistentExpressionState() override;
 
