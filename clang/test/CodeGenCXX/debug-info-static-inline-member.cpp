@@ -9,11 +9,11 @@ struct Empty {};
 constexpr auto func() { return 25; }
 
 struct Foo {
-    static constexpr int cexpr_int = func();
+    static constexpr int cexpr_int_with_addr = func();
     static constexpr int cexpr_int2 = func() + 1;
     static constexpr float cexpr_float = 2.0 + 1.0;
     static constexpr Enum cexpr_enum = Enum::VAL;
-    static constexpr Empty cexpr_empty{};
+    static constexpr Empty cexpr_struct_with_addr{};
     static inline    Enum inline_enum = Enum::VAL;
 
     template<typename T>
@@ -24,24 +24,24 @@ int main() {
     Foo f;
 
     // Force global variable definitions to be emitted.
-    (void)&Foo::cexpr_int;
-    (void)&Foo::cexpr_empty;
+    (void)&Foo::cexpr_int_with_addr;
+    (void)&Foo::cexpr_struct_with_addr;
 
-    return Foo::cexpr_int + Foo::cexpr_float
+    return Foo::cexpr_int_with_addr + Foo::cexpr_float
            + (int)Foo::cexpr_enum + Foo::cexpr_template<short>;
 }
 
-// CHECK:      @{{.*}}cexpr_int{{.*}} =
+// CHECK:      @{{.*}}cexpr_int_with_addr{{.*}} =
 // CHECK-SAME:   !dbg ![[INT_GLOBAL:[0-9]+]]
 
-// CHECK:      @{{.*}}cexpr_empty{{.*}} = 
+// CHECK:      @{{.*}}cexpr_struct_with_addr{{.*}} = 
 // CHECK-SAME    !dbg ![[EMPTY_GLOBAL:[0-9]+]]
 
 // CHECK:      !DIGlobalVariableExpression(var: ![[INT_VAR:[0-9]+]], expr: !DIExpression())
-// CHECK:      ![[INT_VAR]] = distinct !DIGlobalVariable(name: "cexpr_int", linkageName:
+// CHECK:      ![[INT_VAR]] = distinct !DIGlobalVariable(name: "cexpr_int_with_addr", linkageName:
 // CHECK-SAME:                isLocal: false, isDefinition: true, declaration: ![[INT_DECL:[0-9]+]])
 
-// CHECK:      ![[INT_DECL]] = !DIDerivedType(tag: DW_TAG_member, name: "cexpr_int",
+// CHECK:      ![[INT_DECL]] = !DIDerivedType(tag: DW_TAG_member, name: "cexpr_int_with_addr",
 // CHECK-SAME:                 flags: DIFlagStaticMember
 // CHECK-NOT:                  extraData:
 
@@ -57,7 +57,7 @@ int main() {
 // CHECK-SAME:                         flags: DIFlagStaticMember
 // CHECK-NOT:                          extraData:
 
-// CHECK:      ![[EMPTY_DECL:[0-9]+]] = !DIDerivedType(tag: DW_TAG_member, name: "cexpr_empty",
+// CHECK:      ![[EMPTY_DECL:[0-9]+]] = !DIDerivedType(tag: DW_TAG_member, name: "cexpr_struct_with_addr",
 // CHECK-SAME:                          flags: DIFlagStaticMember
 // CHECK-NOT:                           extraData:
 
@@ -70,7 +70,7 @@ int main() {
 // CHECK-NOT:                              extraData:
 
 // CHECK:      !DIGlobalVariableExpression(var: ![[EMPTY_VAR:[0-9]+]], expr: !DIExpression())
-// CHECK:      ![[EMPTY_VAR]] = distinct !DIGlobalVariable(name: "cexpr_empty", linkageName:
+// CHECK:      ![[EMPTY_VAR]] = distinct !DIGlobalVariable(name: "cexpr_struct_with_addr", linkageName:
 // CHECK-SAME:                  isLocal: false, isDefinition: true, declaration: ![[EMPTY_DECL]])
 
 // CHECK:      !DIGlobalVariableExpression(var: ![[INT_VAR2:[0-9]+]], expr: !DIExpression(DW_OP_constu, 26, DW_OP_stack_value))
