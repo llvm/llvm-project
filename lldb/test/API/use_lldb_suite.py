@@ -20,24 +20,11 @@ def find_lldb_root():
 
 lldb_root = find_lldb_root()
 
-# Module imp got removed in Python 3.12.
-if (
-    sys.version_info.major == 3 and sys.version_info.minor >= 12
-) or sys.version_info.major > 3:
-    import importlib.machinery
-    import importlib.util
+import importlib.machinery
+import importlib.util
 
-    path = os.path.join(lldb_root, "use_lldb_suite_root.py")
-    loader = importlib.machinery.SourceFileLoader("use_lldb_suite_root", path)
-    spec = importlib.util.spec_from_loader("use_lldb_suite_root", loader=loader)
-    module = importlib.util.module_from_spec(spec)
-    loader.exec_module(module)
-else:
-    import imp
-
-    fp, pathname, desc = imp.find_module("use_lldb_suite_root", [lldb_root])
-    try:
-        imp.load_module("use_lldb_suite_root", fp, pathname, desc)
-    finally:
-        if fp:
-            fp.close()
+path = os.path.join(lldb_root, "use_lldb_suite_root.py")
+loader = importlib.machinery.SourceFileLoader("use_lldb_suite_root", path)
+spec = importlib.util.spec_from_loader("use_lldb_suite_root", loader=loader)
+module = importlib.util.module_from_spec(spec)
+loader.exec_module(module)
