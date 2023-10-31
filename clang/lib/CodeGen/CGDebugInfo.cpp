@@ -5930,6 +5930,9 @@ CGDebugInfo::createConstantValueExpression(const clang::ValueDecl *VD,
     return DBuilder.createConstantValueExpression(
         Val.getFloat().bitcastToAPInt().getZExtValue());
 
+  if (!Val.isInt())
+    return nullptr;
+
   llvm::APSInt const &ValInt = Val.getInt();
   std::optional<uint64_t> ValIntOpt;
   if (ValInt.isUnsigned())
