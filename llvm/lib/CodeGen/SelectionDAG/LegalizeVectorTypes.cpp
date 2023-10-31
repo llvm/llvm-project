@@ -675,6 +675,9 @@ bool DAGTypeLegalizer::ScalarizeVectorOperand(SDNode *N, unsigned OpNo) {
   case ISD::BITCAST:
     Res = ScalarizeVecOp_BITCAST(N);
     break;
+  case ISD::INSERT_SUBVECTOR:
+    Res = ScalarizeVecOp_INSERT_SUBVECTOR(N, OpNo);
+    break;
   case ISD::ANY_EXTEND:
   case ISD::ZERO_EXTEND:
   case ISD::SIGN_EXTEND:
@@ -764,6 +767,24 @@ SDValue DAGTypeLegalizer::ScalarizeVecOp_BITCAST(SDNode *N) {
   SDValue Elt = GetScalarizedVector(N->getOperand(0));
   return DAG.getNode(ISD::BITCAST, SDLoc(N),
                      N->getValueType(0), Elt);
+}
+
+/// If the value to subvector is a vector that needs to be scalarized, it must
+/// be <1 x ty>. Return the element instead.
+SDValue DAGTypeLegalizer::ScalarizeVecOp_INSERT_SUBVECTOR(SDNode *N,
+                                                          unsigned OpNo) {
+  // If the destination vector is unary, we can just return the source vector
+  auto src = GetScalarizedVector(N->getOperand(1));
+  if (OpNo == 0) {
+    return src;
+  }
+
+  auto dest = N->getOperand(0);
+  auto idx = N->getOperand(2);
+  return DAG.getNode(ISD::INSERT_VECTOR_ELT, SDLoc(N), N->getValueType(0), dest,
+                     src, idx);
+
+  return GetScalarizedVector(src);
 }
 
 /// If the input is a vector that needs to be scalarized, it must be <1 x ty>.
@@ -5891,8 +5912,11 @@ SDValue DAGTypeLegalizer::WidenVecRes_SETCC(SDNode *N) {
     InOp1 = GetWidenedVector(InOp1);
     InOp2 = GetWidenedVector(InOp2);
   } else {
-    InOp1 = DAG.WidenVector(InOp1, SDLoc(N));
-    InOp2 = DAG.WidenVector(InOp2, SDLoc(N));
+    do {
+      InOp1 = DAG.WidenVector(InOp1, SDLoc(N));
+      InOp2 = DAG.WidenVector(InOp2, SDLoc(N));
+    } while (ElementCount::isKnownLT(
+        InOp1.getValueType().getVectorElementCount(), WidenEC));
   }
 
   // Assume that the input and output will be widen appropriately.  If not,

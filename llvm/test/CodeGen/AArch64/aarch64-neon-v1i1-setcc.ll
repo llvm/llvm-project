@@ -67,3 +67,12 @@ if.then:
 if.end:
   ret i32 1;
 }
+
+define dso_local <1 x half> @cmp_select(<1 x half> %i105, <1 x half> %in) {
+; CHECK-LABEL: @cmp_select
+; CHECL: fcmge
+newFuncRoot:
+  %i179 = fcmp uno <1 x half> %i105, zeroinitializer
+  %i180 = select <1 x i1> %i179, <1 x half> %in, <1 x half> %i105
+  ret <1 x half> %i180
+}
