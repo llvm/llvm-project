@@ -3557,8 +3557,15 @@ bool TypeSystemClang::IsPolymorphicClass(lldb::opaque_compiler_type_t type) {
         if (record_decl) {
           const clang::CXXRecordDecl *cxx_record_decl =
               llvm::dyn_cast<clang::CXXRecordDecl>(record_decl);
-          if (cxx_record_decl)
-            return cxx_record_decl->isPolymorphic();
+          if (cxx_record_decl) {
+            // We can't just call is isPolymorphic() here because that just
+            // means the current class has virtual functions, it doesn't check
+            // if any inherited classes have virtual functions. The doc string
+            // in SBType::IsPolymorphicClass() says it is looking for both
+            // if the class has virtual methods or if any bases do, so this
+            // should be more correct.
+            return cxx_record_decl->isDynamicClass();
+          }
         }
       }
       break;
@@ -4708,6 +4715,21 @@ TypeSystemClang::GetTypedefedType(lldb::opaque_compiler_type_t type) {
 CompilerType TypeSystemClang::GetBasicTypeFromAST(lldb::BasicType basic_type) {
   return TypeSystemClang::GetBasicType(basic_type);
 }
+
+CompilerType TypeSystemClang::CreateGenericFunctionPrototype() {
+  clang::ASTContext &ast = getASTContext();
+  const FunctionType::ExtInfo generic_ext_info(
+    /*noReturn=*/false,
+    /*hasRegParm=*/false,
+    /*regParm=*/0,
+    CallingConv::CC_C,
+    /*producesResult=*/false,
+    /*noCallerSavedRegs=*/false,
+    /*NoCfCheck=*/false,
+    /*cmseNSCall=*/false);
+  QualType func_type = ast.getFunctionNoProtoType(ast.VoidTy, generic_ext_info);
+  return GetType(func_type);
+}
 // Exploring the type
 
 const llvm::fltSemantics &
@@ -4824,7 +4846,7 @@ lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type,
 
   case clang::Type::FunctionNoProto:
   case clang::Type::FunctionProto:
-    break;
+    return lldb::eEncodingUint;
 
   case clang::Type::IncompleteArray:
   case clang::Type::VariableArray:
