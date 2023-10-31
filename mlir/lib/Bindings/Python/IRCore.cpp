@@ -1913,6 +1913,8 @@ pybind11::object PyValue::maybeDownCast() {
          "mlirTypeID was expected to be non-null.");
   std::optional<pybind11::function> valueCaster =
       PyGlobals::get().lookupValueCaster(mlirTypeID, mlirTypeGetDialect(type));
+  // py::return_value_policy::move means use std::move to move the return value
+  // contents into a new instance that will be owned by Python.
   py::object thisObj = py::cast(this, py::return_value_policy::move);
   if (!valueCaster)
     return thisObj;

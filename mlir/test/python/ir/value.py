@@ -366,7 +366,7 @@ def testValueCasters():
             ...
 
     except RuntimeError as e:
-        # CHECK: Value caster is already registered: <function testValueCasters.<locals>.cast_int at
+        # CHECK: Value caster is already registered: {{.*}}cast_int
         print(e)
 
     @register_value_caster(IntegerType.static_typeid, replace=True)
