@@ -115,12 +115,12 @@ struct SplitProfile2 final : public SplitStrategy {
     return BF.hasValidProfile() && BF.hasFullProfile() && !BF.allBlocksCold();
   }
 
-  bool keepEmpty() override { return false; }
+  bool keepEmpty() override { return opts::UseCDSplit ? true : false; }
 
   void fragment(const BlockIt Start, const BlockIt End) override {
     for (BinaryBasicBlock *const BB : llvm::make_range(Start, End)) {
       if (BB->getExecutionCount() == 0)
-        BB->setFragmentNum(FragmentNum::cold());
+        BB->setFragmentNum(FragmentNum::cold(opts::UseCDSplit));
     }
   }
 };
@@ -144,7 +144,7 @@ struct SplitRandom2 final : public SplitStrategy {
     std::uniform_int_distribution<DiffT> Dist(1, LastSplitPoint);
     const DiffT SplitPoint = Dist(Gen);
     for (BinaryBasicBlock *BB : llvm::make_range(Start + SplitPoint, End))
-      BB->setFragmentNum(FragmentNum::cold());
+      BB->setFragmentNum(FragmentNum::cold(opts::UseCDSplit));
 
     LLVM_DEBUG(dbgs() << formatv("BOLT-DEBUG: randomly chose last {0} (out of "
                                  "{1} possible) blocks to split\n",

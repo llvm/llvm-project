@@ -359,6 +359,9 @@ private:
   /// Name for the section this function code should reside in.
   std::string CodeSectionName;
 
+  /// Name for the corresponding warm code section.
+  std::string WarmCodeSectionName;
+
   /// Name for the corresponding cold code section.
   std::string ColdCodeSectionName;
 
@@ -1235,13 +1238,7 @@ public:
 
   /// Return internal section name for this function.
   SmallString<32>
-  getCodeSectionName(const FragmentNum Fragment = FragmentNum::main()) const {
-    if (Fragment == FragmentNum::main())
-      return SmallString<32>(CodeSectionName);
-    if (Fragment == FragmentNum::cold())
-      return SmallString<32>(ColdCodeSectionName);
-    return formatv("{0}.{1}", ColdCodeSectionName, Fragment.get() - 1);
-  }
+  getCodeSectionName(const FragmentNum Fragment = FragmentNum::main()) const;
 
   /// Assign a code section name to the function.
   void setCodeSectionName(const StringRef Name) {
@@ -1252,6 +1249,11 @@ public:
   ErrorOr<BinarySection &>
   getCodeSection(const FragmentNum Fragment = FragmentNum::main()) const {
     return BC.getUniqueSectionByName(getCodeSectionName(Fragment));
+  }
+
+  /// Assign a section name for the warm part of the function.
+  void setWarmCodeSectionName(const StringRef Name) {
+    WarmCodeSectionName = Name.str();
   }
 
   /// Assign a section name for the cold part of the function.

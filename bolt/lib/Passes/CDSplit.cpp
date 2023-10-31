@@ -24,7 +24,6 @@ using namespace llvm;
 using namespace bolt;
 
 namespace opts {
-
 extern cl::OptionCategory BoltOptCategory;
 
 extern cl::opt<bool> UseCDSplit;

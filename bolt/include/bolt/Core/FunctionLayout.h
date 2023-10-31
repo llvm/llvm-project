@@ -62,7 +62,10 @@ public:
   }
 
   static constexpr FragmentNum main() { return FragmentNum(0); }
-  static constexpr FragmentNum cold() { return FragmentNum(1); }
+  static constexpr FragmentNum warm() { return FragmentNum(1); }
+  static constexpr FragmentNum cold(bool Flag = false) {
+    return FragmentNum(Flag ? 2 : 1);
+  }
 };
 
 /// A freestanding subset of contiguous blocks of a function.

@@ -1244,8 +1244,10 @@ void AssignSections::runOnFunctions(BinaryContext &BC) {
     else
       Function.setCodeSectionName(BC.getColdCodeSectionName());
 
-    if (Function.isSplit())
+    if (Function.isSplit()) {
+      Function.setWarmCodeSectionName(BC.getWarmCodeSectionName());
       Function.setColdCodeSectionName(BC.getColdCodeSectionName());
+    }
   }
 }
 

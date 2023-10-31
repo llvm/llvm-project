@@ -34,6 +34,7 @@ namespace opts {
 
 extern cl::opt<JumpTableSupportLevel> JumpTables;
 extern cl::opt<bool> PreserveBlocksAlignment;
+extern cl::opt<bool> UseCDSplit;
 
 cl::opt<bool> AlignBlocks("align-blocks", cl::desc("align basic blocks"),
                           cl::cat(BoltOptCategory));
@@ -287,7 +288,10 @@ void BinaryEmitter::emitFunctions() {
 
   // Mark the end of hot text.
   if (opts::HotText) {
-    Streamer.switchSection(BC.getTextSection());
+    if (opts::UseCDSplit)
+      Streamer.switchSection(BC.getCodeSection(BC.getWarmCodeSectionName()));
+    else
+      Streamer.switchSection(BC.getTextSection());
     Streamer.emitLabel(BC.getHotTextEndSymbol());
   }
 }

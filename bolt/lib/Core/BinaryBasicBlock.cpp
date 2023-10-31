@@ -15,17 +15,25 @@
 #include "bolt/Core/BinaryFunction.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/MC/MCInst.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Errc.h"
 
 #define DEBUG_TYPE "bolt"
 
-namespace llvm {
-namespace bolt {
+using namespace llvm;
+using namespace bolt;
+namespace opts {
+extern cl::opt<bool> UseCDSplit;
+}
 
 constexpr uint32_t BinaryBasicBlock::INVALID_OFFSET;
 
-bool operator<(const BinaryBasicBlock &LHS, const BinaryBasicBlock &RHS) {
-  return LHS.Index < RHS.Index;
+bool bolt::operator<(const BinaryBasicBlock &LHS, const BinaryBasicBlock &RHS) {
+  return LHS.getIndex() < RHS.getIndex();
+}
+
+void BinaryBasicBlock::setIsCold(const bool Flag) {
+  Fragment = Flag ? FragmentNum::cold(opts::UseCDSplit) : FragmentNum::main();
 }
 
 bool BinaryBasicBlock::hasCFG() const { return getParent()->hasCFG(); }
@@ -611,6 +619,3 @@ BinaryBasicBlock *BinaryBasicBlock::splitAt(iterator II) {
 
   return NewBlock;
 }
-
-} // namespace bolt
-} // namespace llvm
