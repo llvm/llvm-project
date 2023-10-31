@@ -14122,6 +14122,10 @@ public:
       // Initialize the final value in the reduction.
       return Res;
     };
+    bool AnyBoolLogicOp =
+        any_of(ReductionOps.back(), [](Value *V) {
+          return isBoolLogicOp(cast<Instruction>(V));
+        });
     // The reduction root is used as the insertion point for new instructions,
     // so set it as externally used to prevent it from being deleted.
     ExternallyUsedValues[ReductionRoot];
@@ -14454,7 +14458,9 @@ public:
         // To prevent poison from leaking across what used to be sequential,
         // safe, scalar boolean logic operations, the reduction operand must be
         // frozen.
-        if (isBoolLogicOp(RdxRootInst))
+        if ((isBoolLogicOp(RdxRootInst) ||
+             (AnyBoolLogicOp && VL.size() != TrackedVals.size())) &&
+            !isGuaranteedNotToBePoison(VectorizedRoot))
           VectorizedRoot = Builder.CreateFreeze(VectorizedRoot);
 
         // Emit code to correctly handle reused reduced values, if required.
