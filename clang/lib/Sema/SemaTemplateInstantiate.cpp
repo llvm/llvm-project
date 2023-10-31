@@ -1709,7 +1709,8 @@ TemplateInstantiator::RebuildElaboratedType(SourceLocation KeywordLoc,
 
     // TODO: should we even warn on struct/class mismatches for this?  Seems
     // like it's likely to produce a lot of spurious errors.
-    if (Id && Keyword != ETK_None && Keyword != ETK_Typename) {
+    if (Id && Keyword != ElaboratedTypeKeyword::None &&
+        Keyword != ElaboratedTypeKeyword::Typename) {
       TagTypeKind Kind = TypeWithKeyword::getTagTypeKindForKeyword(Keyword);
       if (!SemaRef.isAcceptableTagRedeclaration(TD, Kind, /*isDefinition*/false,
                                                 TagLocation, Id)) {

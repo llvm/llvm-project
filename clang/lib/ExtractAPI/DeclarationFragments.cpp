@@ -297,7 +297,7 @@ DeclarationFragments DeclarationFragmentsBuilder::getFragmentsForType(
   // qualified name, e.g., `N::M::type`, or both.
   if (const ElaboratedType *ET = dyn_cast<ElaboratedType>(T)) {
     ElaboratedTypeKeyword Keyword = ET->getKeyword();
-    if (Keyword != ETK_None) {
+    if (Keyword != ElaboratedTypeKeyword::None) {
       Fragments
           .append(ElaboratedType::getKeywordName(Keyword),
                   DeclarationFragments::FragmentKind::Keyword)

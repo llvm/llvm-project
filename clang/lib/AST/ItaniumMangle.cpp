@@ -4209,20 +4209,20 @@ void CXXNameMangler::mangleType(const DependentNameType *T) {
   //                   ::= Te <name> # dependent elaborated type specifier using
   //                                 # 'enum'
   switch (T->getKeyword()) {
-    case ETK_None:
-    case ETK_Typename:
-      break;
-    case ETK_Struct:
-    case ETK_Class:
-    case ETK_Interface:
-      Out << "Ts";
-      break;
-    case ETK_Union:
-      Out << "Tu";
-      break;
-    case ETK_Enum:
-      Out << "Te";
-      break;
+  case ElaboratedTypeKeyword::None:
+  case ElaboratedTypeKeyword::Typename:
+    break;
+  case ElaboratedTypeKeyword::Struct:
+  case ElaboratedTypeKeyword::Class:
+  case ElaboratedTypeKeyword::Interface:
+    Out << "Ts";
+    break;
+  case ElaboratedTypeKeyword::Union:
+    Out << "Tu";
+    break;
+  case ElaboratedTypeKeyword::Enum:
+    Out << "Te";
+    break;
   }
   // Typename types are always nested
   Out << 'N';

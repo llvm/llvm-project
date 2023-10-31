@@ -266,7 +266,8 @@ static ParsedType recoverFromTypeInKnownDependentBase(Sema &S,
   ASTContext &Context = S.Context;
   auto *NNS = NestedNameSpecifier::Create(Context, nullptr, false,
                                           cast<Type>(Context.getRecordType(RD)));
-  QualType T = Context.getDependentNameType(ETK_Typename, NNS, &II);
+  QualType T =
+      Context.getDependentNameType(ElaboratedTypeKeyword::Typename, NNS, &II);
 
   CXXScopeSpec SS;
   SS.MakeTrivial(Context, NNS, SourceRange(NameLoc));
@@ -303,10 +304,10 @@ static ParsedType buildNamedType(Sema &S, const CXXScopeSpec *SS, QualType T,
   }
 
   if (!SS || SS->isEmpty())
-    return ParsedType::make(
-        S.Context.getElaboratedType(ETK_None, nullptr, T, nullptr));
+    return ParsedType::make(S.Context.getElaboratedType(
+        ElaboratedTypeKeyword::None, nullptr, T, nullptr));
 
-  QualType ElTy = S.getElaboratedType(ETK_None, *SS, T);
+  QualType ElTy = S.getElaboratedType(ElaboratedTypeKeyword::None, *SS, T);
   if (!WantNontrivialTypeSourceInfo)
     return ParsedType::make(ElTy);
 
@@ -383,9 +384,10 @@ ParsedType Sema::getTypeName(const IdentifierInfo &II, SourceLocation NameLoc,
               .get();
 
         NestedNameSpecifierLoc QualifierLoc = SS->getWithLocInContext(Context);
-        QualType T =
-            CheckTypenameType(IsImplicitTypename ? ETK_Typename : ETK_None,
-                              SourceLocation(), QualifierLoc, II, NameLoc);
+        QualType T = CheckTypenameType(
+            IsImplicitTypename ? ElaboratedTypeKeyword::Typename
+                               : ElaboratedTypeKeyword::None,
+            SourceLocation(), QualifierLoc, II, NameLoc);
         return ParsedType::make(T);
       }
 
@@ -648,7 +650,8 @@ ParsedType Sema::ActOnMSVCUnknownTypeName(const IdentifierInfo &II,
     return ParsedType();
   }
 
-  QualType T = Context.getDependentNameType(ETK_None, NNS, &II);
+  QualType T =
+      Context.getDependentNameType(ElaboratedTypeKeyword::None, NNS, &II);
 
   // Build type location information.  We synthesized the qualifier, so we have
   // to build a fake NestedNameSpecifierLoc.

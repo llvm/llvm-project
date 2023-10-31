@@ -1181,7 +1181,7 @@ public:
   }
 
   void VisitTypeWithKeyword(const TypeWithKeyword *T) {
-    ID.AddInteger(T->getKeyword());
+    ID.AddInteger(llvm::to_underlying(T->getKeyword()));
     VisitType(T);
   };
 

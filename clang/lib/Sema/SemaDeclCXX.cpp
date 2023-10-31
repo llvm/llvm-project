@@ -4511,9 +4511,9 @@ Sema::BuildMemInitializer(Decl *ConstructorD,
         if (!NotUnknownSpecialization) {
           // When the scope specifier can refer to a member of an unknown
           // specialization, we take it as a type name.
-          BaseType = CheckTypenameType(ETK_None, SourceLocation(),
-                                       SS.getWithLocInContext(Context),
-                                       *MemberOrBase, IdLoc);
+          BaseType = CheckTypenameType(
+              ElaboratedTypeKeyword::None, SourceLocation(),
+              SS.getWithLocInContext(Context), *MemberOrBase, IdLoc);
           if (BaseType.isNull())
             return true;
 
@@ -4596,7 +4596,8 @@ Sema::BuildMemInitializer(Decl *ConstructorD,
     }
 
     if (BaseType.isNull()) {
-      BaseType = getElaboratedType(ETK_None, SS, Context.getTypeDeclType(TyD));
+      BaseType = getElaboratedType(ElaboratedTypeKeyword::None, SS,
+                                   Context.getTypeDeclType(TyD));
       MarkAnyDeclReferenced(TyD->getLocation(), TyD, /*OdrUse=*/false);
       TInfo = Context.CreateTypeSourceInfo(BaseType);
       ElaboratedTypeLoc TL = TInfo->getTypeLoc().castAs<ElaboratedTypeLoc>();
@@ -7727,7 +7728,8 @@ bool Sema::CheckExplicitlyDefaultedSpecialMember(CXXMethodDecl *MD,
     QualType ThisType = MD->getFunctionObjectParameterType();
 
     QualType DeclType = Context.getTypeDeclType(RD);
-    DeclType = Context.getElaboratedType(ETK_None, nullptr, DeclType, nullptr);
+    DeclType = Context.getElaboratedType(ElaboratedTypeKeyword::None, nullptr,
+                                         DeclType, nullptr);
     DeclType = Context.getAddrSpaceQualType(
         DeclType, ThisType.getQualifiers().getAddressSpace());
     QualType ExpectedReturnType = Context.getLValueReferenceType(DeclType);
@@ -11836,7 +11838,8 @@ QualType Sema::CheckComparisonCategoryType(ComparisonCategoryType Kind,
   auto TyForDiags = [&](ComparisonCategoryInfo *Info) {
     auto *NNS =
         NestedNameSpecifier::Create(Context, nullptr, getStdNamespace());
-    return Context.getElaboratedType(ETK_None, NNS, Info->getType());
+    return Context.getElaboratedType(ElaboratedTypeKeyword::None, NNS,
+                                     Info->getType());
   };
 
   // Check if we've already successfully checked the comparison category type
@@ -12055,7 +12058,7 @@ QualType Sema::BuildStdInitializerList(QualType Element, SourceLocation Loc) {
                                        Context.getTrivialTypeSourceInfo(Element,
                                                                         Loc)));
   return Context.getElaboratedType(
-      ElaboratedTypeKeyword::ETK_None,
+      ElaboratedTypeKeyword::None,
       NestedNameSpecifier::Create(Context, nullptr, getStdNamespace()),
       CheckTemplateIdType(TemplateName(StdInitializerList), Loc, Args));
 }
@@ -14837,7 +14840,8 @@ CXXMethodDecl *Sema::DeclareImplicitCopyAssignment(CXXRecordDecl *ClassDecl) {
     return nullptr;
 
   QualType ArgType = Context.getTypeDeclType(ClassDecl);
-  ArgType = Context.getElaboratedType(ETK_None, nullptr, ArgType, nullptr);
+  ArgType = Context.getElaboratedType(ElaboratedTypeKeyword::None, nullptr,
+                                      ArgType, nullptr);
   LangAS AS = getDefaultCXXMethodAddrSpace();
   if (AS != LangAS::Default)
     ArgType = Context.getAddrSpaceQualType(ArgType, AS);
@@ -15190,7 +15194,8 @@ CXXMethodDecl *Sema::DeclareImplicitMoveAssignment(CXXRecordDecl *ClassDecl) {
   // constructor rules.
 
   QualType ArgType = Context.getTypeDeclType(ClassDecl);
-  ArgType = Context.getElaboratedType(ETK_None, nullptr, ArgType, nullptr);
+  ArgType = Context.getElaboratedType(ElaboratedTypeKeyword::None, nullptr,
+                                      ArgType, nullptr);
   LangAS AS = getDefaultCXXMethodAddrSpace();
   if (AS != LangAS::Default)
     ArgType = Context.getAddrSpaceQualType(ArgType, AS);
@@ -15579,7 +15584,8 @@ CXXConstructorDecl *Sema::DeclareImplicitCopyConstructor(
 
   QualType ClassType = Context.getTypeDeclType(ClassDecl);
   QualType ArgType = ClassType;
-  ArgType = Context.getElaboratedType(ETK_None, nullptr, ArgType, nullptr);
+  ArgType = Context.getElaboratedType(ElaboratedTypeKeyword::None, nullptr,
+                                      ArgType, nullptr);
   bool Const = ClassDecl->implicitCopyConstructorHasConstParam();
   if (Const)
     ArgType = ArgType.withConst();
@@ -15724,7 +15730,8 @@ CXXConstructorDecl *Sema::DeclareImplicitMoveConstructor(
   QualType ClassType = Context.getTypeDeclType(ClassDecl);
 
   QualType ArgType = ClassType;
-  ArgType = Context.getElaboratedType(ETK_None, nullptr, ArgType, nullptr);
+  ArgType = Context.getElaboratedType(ElaboratedTypeKeyword::None, nullptr,
+                                      ArgType, nullptr);
   LangAS AS = getDefaultCXXMethodAddrSpace();
   if (AS != LangAS::Default)
     ArgType = Context.getAddrSpaceQualType(ClassType, AS);

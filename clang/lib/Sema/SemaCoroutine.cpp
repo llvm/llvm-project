@@ -118,7 +118,8 @@ static QualType lookupPromiseType(Sema &S, const FunctionDecl *FD,
     auto *NNS = NestedNameSpecifier::Create(S.Context, nullptr, S.getStdNamespace());
     NNS = NestedNameSpecifier::Create(S.Context, NNS, false,
                                       CoroTrait.getTypePtr());
-    return S.Context.getElaboratedType(ETK_None, NNS, PromiseType);
+    return S.Context.getElaboratedType(ElaboratedTypeKeyword::None, NNS,
+                                       PromiseType);
   };
 
   if (!PromiseType->getAsCXXRecordDecl()) {
