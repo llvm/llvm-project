@@ -120,12 +120,8 @@ private:
   llvm::StringMap<pybind11::object> attributeBuilderMap;
   /// Map of MlirTypeID to custom type caster.
   llvm::DenseMap<MlirTypeID, pybind11::object> typeCasterMap;
-
   /// Map of MlirTypeID to custom value caster.
   llvm::DenseMap<MlirTypeID, pybind11::object> valueCasterMap;
-  /// Cache for map of MlirTypeID to custom value caster.
-  llvm::DenseMap<MlirTypeID, pybind11::object> valueCasterMapCache;
-
   /// Set of dialect namespaces that we have attempted to import implementation
   /// modules for.
   llvm::StringSet<> loadedDialectModules;
