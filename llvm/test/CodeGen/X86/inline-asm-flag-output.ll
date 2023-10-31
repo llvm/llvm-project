@@ -888,15 +888,15 @@ define void @test_cca_branch(i64 %nr, ptr %addr) nounwind {
 ;
 ; X64-LABEL: test_cca_branch:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    pushq %rax
 ; X64-NEXT:    #APP
 ; X64-NEXT:    cmp %rdi,(%rsi)
 ; X64-NEXT:    #NO_APP
 ; X64-NEXT:    jbe .LBB28_2
 ; X64-NEXT:  # %bb.1: # %then
+; X64-NEXT:    pushq %rax
 ; X64-NEXT:    callq bar@PLT
+; X64-NEXT:    addq $8, %rsp
 ; X64-NEXT:  .LBB28_2: # %exit
-; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
 entry:
   %cc = tail call i8 asm "cmp $2,$1", "={@cca},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(ptr elementtype(i64) %addr, i64 %nr) nounwind
@@ -928,15 +928,15 @@ define void @test_ccae_branch(i64 %nr, ptr %addr) nounwind {
 ;
 ; X64-LABEL: test_ccae_branch:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    pushq %rax
 ; X64-NEXT:    #APP
 ; X64-NEXT:    cmp %rdi,(%rsi)
 ; X64-NEXT:    #NO_APP
 ; X64-NEXT:    jb .LBB29_2
 ; X64-NEXT:  # %bb.1: # %then
+; X64-NEXT:    pushq %rax
 ; X64-NEXT:    callq bar@PLT
+; X64-NEXT:    addq $8, %rsp
 ; X64-NEXT:  .LBB29_2: # %exit
-; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
 entry:
   %cc = tail call i8 asm "cmp $2,$1", "={@ccae},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(ptr elementtype(i64) %addr, i64 %nr) nounwind
@@ -968,15 +968,15 @@ define void @test_ccb_branch(i64 %nr, ptr %addr) nounwind {
 ;
 ; X64-LABEL: test_ccb_branch:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    pushq %rax
 ; X64-NEXT:    #APP
 ; X64-NEXT:    cmp %rdi,(%rsi)
 ; X64-NEXT:    #NO_APP
 ; X64-NEXT:    jae .LBB30_2
 ; X64-NEXT:  # %bb.1: # %then
+; X64-NEXT:    pushq %rax
 ; X64-NEXT:    callq bar@PLT
+; X64-NEXT:    addq $8, %rsp
 ; X64-NEXT:  .LBB30_2: # %exit
-; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
 entry:
   %cc = tail call i8 asm "cmp $2,$1", "={@ccb},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(ptr elementtype(i64) %addr, i64 %nr) nounwind
@@ -1008,15 +1008,15 @@ define void @test_ccbe_branch(i64 %nr, ptr %addr) nounwind {
 ;
 ; X64-LABEL: test_ccbe_branch:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    pushq %rax
 ; X64-NEXT:    #APP
 ; X64-NEXT:    cmp %rdi,(%rsi)
 ; X64-NEXT:    #NO_APP
 ; X64-NEXT:    ja .LBB31_2
 ; X64-NEXT:  # %bb.1: # %then
+; X64-NEXT:    pushq %rax
 ; X64-NEXT:    callq bar@PLT
+; X64-NEXT:    addq $8, %rsp
 ; X64-NEXT:  .LBB31_2: # %exit
-; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
 entry:
   %cc = tail call i8 asm "cmp $2,$1", "={@ccbe},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(ptr elementtype(i64) %addr, i64 %nr) nounwind
@@ -1048,15 +1048,15 @@ define void @test_ccc_branch(i64 %nr, ptr %addr) nounwind {
 ;
 ; X64-LABEL: test_ccc_branch:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    pushq %rax
 ; X64-NEXT:    #APP
 ; X64-NEXT:    cmp %rdi,(%rsi)
 ; X64-NEXT:    #NO_APP
 ; X64-NEXT:    jae .LBB32_2
 ; X64-NEXT:  # %bb.1: # %then
+; X64-NEXT:    pushq %rax
 ; X64-NEXT:    callq bar@PLT
+; X64-NEXT:    addq $8, %rsp
 ; X64-NEXT:  .LBB32_2: # %exit
-; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
 entry:
   %cc = tail call i8 asm "cmp $2,$1", "={@ccc},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(ptr elementtype(i64) %addr, i64 %nr) nounwind
@@ -1088,15 +1088,15 @@ define void @test_cce_branch(i64 %nr, ptr %addr) nounwind {
 ;
 ; X64-LABEL: test_cce_branch:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    pushq %rax
 ; X64-NEXT:    #APP
 ; X64-NEXT:    cmp %rdi,(%rsi)
 ; X64-NEXT:    #NO_APP
 ; X64-NEXT:    jne .LBB33_2
 ; X64-NEXT:  # %bb.1: # %then
+; X64-NEXT:    pushq %rax
 ; X64-NEXT:    callq bar@PLT
+; X64-NEXT:    addq $8, %rsp
 ; X64-NEXT:  .LBB33_2: # %exit
-; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
 entry:
   %cc = tail call i8 asm "cmp $2,$1", "={@cce},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(ptr elementtype(i64) %addr, i64 %nr) nounwind
@@ -1128,15 +1128,15 @@ define void @test_ccz_branch(i64 %nr, ptr %addr) nounwind {
 ;
 ; X64-LABEL: test_ccz_branch:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    pushq %rax
 ; X64-NEXT:    #APP
 ; X64-NEXT:    cmp %rdi,(%rsi)
 ; X64-NEXT:    #NO_APP
 ; X64-NEXT:    jne .LBB34_2
 ; X64-NEXT:  # %bb.1: # %then
+; X64-NEXT:    pushq %rax
 ; X64-NEXT:    callq bar@PLT
+; X64-NEXT:    addq $8, %rsp
 ; X64-NEXT:  .LBB34_2: # %exit
-; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
 entry:
   %cc = tail call i8 asm "cmp $2,$1", "={@ccz},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(ptr elementtype(i64) %addr, i64 %nr) nounwind
@@ -1168,15 +1168,15 @@ define void @test_ccg_branch(i64 %nr, ptr %addr) nounwind {
 ;
 ; X64-LABEL: test_ccg_branch:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    pushq %rax
 ; X64-NEXT:    #APP
 ; X64-NEXT:    cmp %rdi,(%rsi)
 ; X64-NEXT:    #NO_APP
 ; X64-NEXT:    jle .LBB35_2
 ; X64-NEXT:  # %bb.1: # %then
+; X64-NEXT:    pushq %rax
 ; X64-NEXT:    callq bar@PLT
+; X64-NEXT:    addq $8, %rsp
 ; X64-NEXT:  .LBB35_2: # %exit
-; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
 entry:
   %cc = tail call i8 asm "cmp $2,$1", "={@ccg},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(ptr elementtype(i64) %addr, i64 %nr) nounwind
@@ -1208,15 +1208,15 @@ define void @test_ccge_branch(i64 %nr, ptr %addr) nounwind {
 ;
 ; X64-LABEL: test_ccge_branch:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    pushq %rax
 ; X64-NEXT:    #APP
 ; X64-NEXT:    cmp %rdi,(%rsi)
 ; X64-NEXT:    #NO_APP
 ; X64-NEXT:    jl .LBB36_2
 ; X64-NEXT:  # %bb.1: # %then
+; X64-NEXT:    pushq %rax
 ; X64-NEXT:    callq bar@PLT
+; X64-NEXT:    addq $8, %rsp
 ; X64-NEXT:  .LBB36_2: # %exit
-; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
 entry:
   %cc = tail call i8 asm "cmp $2,$1", "={@ccge},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(ptr elementtype(i64) %addr, i64 %nr) nounwind
@@ -1248,15 +1248,15 @@ define void @test_ccl_branch(i64 %nr, ptr %addr) nounwind {
 ;
 ; X64-LABEL: test_ccl_branch:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    pushq %rax
 ; X64-NEXT:    #APP
 ; X64-NEXT:    cmp %rdi,(%rsi)
 ; X64-NEXT:    #NO_APP
 ; X64-NEXT:    jge .LBB37_2
 ; X64-NEXT:  # %bb.1: # %then
+; X64-NEXT:    pushq %rax
 ; X64-NEXT:    callq bar@PLT
+; X64-NEXT:    addq $8, %rsp
 ; X64-NEXT:  .LBB37_2: # %exit
-; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
 entry:
   %cc = tail call i8 asm "cmp $2,$1", "={@ccl},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(ptr elementtype(i64) %addr, i64 %nr) nounwind
@@ -1288,15 +1288,15 @@ define void @test_ccle_branch(i64 %nr, ptr %addr) nounwind {
 ;
 ; X64-LABEL: test_ccle_branch:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    pushq %rax
 ; X64-NEXT:    #APP
 ; X64-NEXT:    cmp %rdi,(%rsi)
 ; X64-NEXT:    #NO_APP
 ; X64-NEXT:    jg .LBB38_2
 ; X64-NEXT:  # %bb.1: # %then
+; X64-NEXT:    pushq %rax
 ; X64-NEXT:    callq bar@PLT
+; X64-NEXT:    addq $8, %rsp
 ; X64-NEXT:  .LBB38_2: # %exit
-; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
 entry:
   %cc = tail call i8 asm "cmp $2,$1", "={@ccle},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(ptr elementtype(i64) %addr, i64 %nr) nounwind
@@ -1328,15 +1328,15 @@ define void @test_ccna_branch(i64 %nr, ptr %addr) nounwind {
 ;
 ; X64-LABEL: test_ccna_branch:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    pushq %rax
 ; X64-NEXT:    #APP
 ; X64-NEXT:    cmp %rdi,(%rsi)
 ; X64-NEXT:    #NO_APP
 ; X64-NEXT:    ja .LBB39_2
 ; X64-NEXT:  # %bb.1: # %then
+; X64-NEXT:    pushq %rax
 ; X64-NEXT:    callq bar@PLT
+; X64-NEXT:    addq $8, %rsp
 ; X64-NEXT:  .LBB39_2: # %exit
-; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
 entry:
   %cc = tail call i8 asm "cmp $2,$1", "={@ccna},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(ptr elementtype(i64) %addr, i64 %nr) nounwind
@@ -1368,15 +1368,15 @@ define void @test_ccnae_branch(i64 %nr, ptr %addr) nounwind {
 ;
 ; X64-LABEL: test_ccnae_branch:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    pushq %rax
 ; X64-NEXT:    #APP
 ; X64-NEXT:    cmp %rdi,(%rsi)
 ; X64-NEXT:    #NO_APP
 ; X64-NEXT:    jae .LBB40_2
 ; X64-NEXT:  # %bb.1: # %then
+; X64-NEXT:    pushq %rax
 ; X64-NEXT:    callq bar@PLT
+; X64-NEXT:    addq $8, %rsp
 ; X64-NEXT:  .LBB40_2: # %exit
-; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
 entry:
   %cc = tail call i8 asm "cmp $2,$1", "={@ccnae},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(ptr elementtype(i64) %addr, i64 %nr) nounwind
@@ -1408,15 +1408,15 @@ define void @test_ccnb_branch(i64 %nr, ptr %addr) nounwind {
 ;
 ; X64-LABEL: test_ccnb_branch:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    pushq %rax
 ; X64-NEXT:    #APP
 ; X64-NEXT:    cmp %rdi,(%rsi)
 ; X64-NEXT:    #NO_APP
 ; X64-NEXT:    jb .LBB41_2
 ; X64-NEXT:  # %bb.1: # %then
+; X64-NEXT:    pushq %rax
 ; X64-NEXT:    callq bar@PLT
+; X64-NEXT:    addq $8, %rsp
 ; X64-NEXT:  .LBB41_2: # %exit
-; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
 entry:
   %cc = tail call i8 asm "cmp $2,$1", "={@ccnb},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(ptr elementtype(i64) %addr, i64 %nr) nounwind
@@ -1448,15 +1448,15 @@ define void @test_ccnbe_branch(i64 %nr, ptr %addr) nounwind {
 ;
 ; X64-LABEL: test_ccnbe_branch:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    pushq %rax
 ; X64-NEXT:    #APP
 ; X64-NEXT:    cmp %rdi,(%rsi)
 ; X64-NEXT:    #NO_APP
 ; X64-NEXT:    jbe .LBB42_2
 ; X64-NEXT:  # %bb.1: # %then
+; X64-NEXT:    pushq %rax
 ; X64-NEXT:    callq bar@PLT
+; X64-NEXT:    addq $8, %rsp
 ; X64-NEXT:  .LBB42_2: # %exit
-; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
 entry:
   %cc = tail call i8 asm "cmp $2,$1", "={@ccnbe},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(ptr elementtype(i64) %addr, i64 %nr) nounwind
@@ -1488,15 +1488,15 @@ define void @test_ccnc_branch(i64 %nr, ptr %addr) nounwind {
 ;
 ; X64-LABEL: test_ccnc_branch:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    pushq %rax
 ; X64-NEXT:    #APP
 ; X64-NEXT:    cmp %rdi,(%rsi)
 ; X64-NEXT:    #NO_APP
 ; X64-NEXT:    jb .LBB43_2
 ; X64-NEXT:  # %bb.1: # %then
+; X64-NEXT:    pushq %rax
 ; X64-NEXT:    callq bar@PLT
+; X64-NEXT:    addq $8, %rsp
 ; X64-NEXT:  .LBB43_2: # %exit
-; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
 entry:
   %cc = tail call i8 asm "cmp $2,$1", "={@ccnc},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(ptr elementtype(i64) %addr, i64 %nr) nounwind
@@ -1528,15 +1528,15 @@ define void @test_ccne_branch(i64 %nr, ptr %addr) nounwind {
 ;
 ; X64-LABEL: test_ccne_branch:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    pushq %rax
 ; X64-NEXT:    #APP
 ; X64-NEXT:    cmp %rdi,(%rsi)
 ; X64-NEXT:    #NO_APP
 ; X64-NEXT:    je .LBB44_2
 ; X64-NEXT:  # %bb.1: # %then
+; X64-NEXT:    pushq %rax
 ; X64-NEXT:    callq bar@PLT
+; X64-NEXT:    addq $8, %rsp
 ; X64-NEXT:  .LBB44_2: # %exit
-; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
 entry:
   %cc = tail call i8 asm "cmp $2,$1", "={@ccne},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(ptr elementtype(i64) %addr, i64 %nr) nounwind
@@ -1568,15 +1568,15 @@ define void @test_ccnz_branch(i64 %nr, ptr %addr) nounwind {
 ;
 ; X64-LABEL: test_ccnz_branch:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    pushq %rax
 ; X64-NEXT:    #APP
 ; X64-NEXT:    cmp %rdi,(%rsi)
 ; X64-NEXT:    #NO_APP
 ; X64-NEXT:    je .LBB45_2
 ; X64-NEXT:  # %bb.1: # %then
+; X64-NEXT:    pushq %rax
 ; X64-NEXT:    callq bar@PLT
+; X64-NEXT:    addq $8, %rsp
 ; X64-NEXT:  .LBB45_2: # %exit
-; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
 entry:
   %cc = tail call i8 asm "cmp $2,$1", "={@ccnz},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(ptr elementtype(i64) %addr, i64 %nr) nounwind
@@ -1608,15 +1608,15 @@ define void @test_ccng_branch(i64 %nr, ptr %addr) nounwind {
 ;
 ; X64-LABEL: test_ccng_branch:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    pushq %rax
 ; X64-NEXT:    #APP
 ; X64-NEXT:    cmp %rdi,(%rsi)
 ; X64-NEXT:    #NO_APP
 ; X64-NEXT:    jg .LBB46_2
 ; X64-NEXT:  # %bb.1: # %then
+; X64-NEXT:    pushq %rax
 ; X64-NEXT:    callq bar@PLT
+; X64-NEXT:    addq $8, %rsp
 ; X64-NEXT:  .LBB46_2: # %exit
-; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
 entry:
   %cc = tail call i8 asm "cmp $2,$1", "={@ccng},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(ptr elementtype(i64) %addr, i64 %nr) nounwind
@@ -1648,15 +1648,15 @@ define void @test_ccnge_branch(i64 %nr, ptr %addr) nounwind {
 ;
 ; X64-LABEL: test_ccnge_branch:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    pushq %rax
 ; X64-NEXT:    #APP
 ; X64-NEXT:    cmp %rdi,(%rsi)
 ; X64-NEXT:    #NO_APP
 ; X64-NEXT:    jge .LBB47_2
 ; X64-NEXT:  # %bb.1: # %then
+; X64-NEXT:    pushq %rax
 ; X64-NEXT:    callq bar@PLT
+; X64-NEXT:    addq $8, %rsp
 ; X64-NEXT:  .LBB47_2: # %exit
-; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
 entry:
   %cc = tail call i8 asm "cmp $2,$1", "={@ccnge},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(ptr elementtype(i64) %addr, i64 %nr) nounwind
@@ -1688,15 +1688,15 @@ define void @test_ccnl_branch(i64 %nr, ptr %addr) nounwind {
 ;
 ; X64-LABEL: test_ccnl_branch:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    pushq %rax
 ; X64-NEXT:    #APP
 ; X64-NEXT:    cmp %rdi,(%rsi)
 ; X64-NEXT:    #NO_APP
 ; X64-NEXT:    jl .LBB48_2
 ; X64-NEXT:  # %bb.1: # %then
+; X64-NEXT:    pushq %rax
 ; X64-NEXT:    callq bar@PLT
+; X64-NEXT:    addq $8, %rsp
 ; X64-NEXT:  .LBB48_2: # %exit
-; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
 entry:
   %cc = tail call i8 asm "cmp $2,$1", "={@ccnl},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(ptr elementtype(i64) %addr, i64 %nr) nounwind
@@ -1728,15 +1728,15 @@ define void @test_ccnle_branch(i64 %nr, ptr %addr) nounwind {
 ;
 ; X64-LABEL: test_ccnle_branch:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    pushq %rax
 ; X64-NEXT:    #APP
 ; X64-NEXT:    cmp %rdi,(%rsi)
 ; X64-NEXT:    #NO_APP
 ; X64-NEXT:    jle .LBB49_2
 ; X64-NEXT:  # %bb.1: # %then
+; X64-NEXT:    pushq %rax
 ; X64-NEXT:    callq bar@PLT
+; X64-NEXT:    addq $8, %rsp
 ; X64-NEXT:  .LBB49_2: # %exit
-; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
 entry:
   %cc = tail call i8 asm "cmp $2,$1", "={@ccnle},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(ptr elementtype(i64) %addr, i64 %nr) nounwind
@@ -1768,15 +1768,15 @@ define void @test_ccno_branch(i64 %nr, ptr %addr) nounwind {
 ;
 ; X64-LABEL: test_ccno_branch:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    pushq %rax
 ; X64-NEXT:    #APP
 ; X64-NEXT:    cmp %rdi,(%rsi)
 ; X64-NEXT:    #NO_APP
 ; X64-NEXT:    jo .LBB50_2
 ; X64-NEXT:  # %bb.1: # %then
+; X64-NEXT:    pushq %rax
 ; X64-NEXT:    callq bar@PLT
+; X64-NEXT:    addq $8, %rsp
 ; X64-NEXT:  .LBB50_2: # %exit
-; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
 entry:
   %cc = tail call i8 asm "cmp $2,$1", "={@ccno},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(ptr elementtype(i64) %addr, i64 %nr) nounwind
@@ -1808,15 +1808,15 @@ define void @test_ccnp_branch(i64 %nr, ptr %addr) nounwind {
 ;
 ; X64-LABEL: test_ccnp_branch:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    pushq %rax
 ; X64-NEXT:    #APP
 ; X64-NEXT:    cmp %rdi,(%rsi)
 ; X64-NEXT:    #NO_APP
 ; X64-NEXT:    jp .LBB51_2
 ; X64-NEXT:  # %bb.1: # %then
+; X64-NEXT:    pushq %rax
 ; X64-NEXT:    callq bar@PLT
+; X64-NEXT:    addq $8, %rsp
 ; X64-NEXT:  .LBB51_2: # %exit
-; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
 entry:
   %cc = tail call i8 asm "cmp $2,$1", "={@ccnp},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(ptr elementtype(i64) %addr, i64 %nr) nounwind
@@ -1848,15 +1848,15 @@ define void @test_ccns_branch(i64 %nr, ptr %addr) nounwind {
 ;
 ; X64-LABEL: test_ccns_branch:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    pushq %rax
 ; X64-NEXT:    #APP
 ; X64-NEXT:    cmp %rdi,(%rsi)
 ; X64-NEXT:    #NO_APP
 ; X64-NEXT:    js .LBB52_2
 ; X64-NEXT:  # %bb.1: # %then
+; X64-NEXT:    pushq %rax
 ; X64-NEXT:    callq bar@PLT
+; X64-NEXT:    addq $8, %rsp
 ; X64-NEXT:  .LBB52_2: # %exit
-; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
 entry:
   %cc = tail call i8 asm "cmp $2,$1", "={@ccns},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(ptr elementtype(i64) %addr, i64 %nr) nounwind
@@ -1888,15 +1888,15 @@ define void @test_cco_branch(i64 %nr, ptr %addr) nounwind {
 ;
 ; X64-LABEL: test_cco_branch:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    pushq %rax
 ; X64-NEXT:    #APP
 ; X64-NEXT:    cmp %rdi,(%rsi)
 ; X64-NEXT:    #NO_APP
 ; X64-NEXT:    jno .LBB53_2
 ; X64-NEXT:  # %bb.1: # %then
+; X64-NEXT:    pushq %rax
 ; X64-NEXT:    callq bar@PLT
+; X64-NEXT:    addq $8, %rsp
 ; X64-NEXT:  .LBB53_2: # %exit
-; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
 entry:
   %cc = tail call i8 asm "cmp $2,$1", "={@cco},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(ptr elementtype(i64) %addr, i64 %nr) nounwind
@@ -1928,15 +1928,15 @@ define void @test_ccp_branch(i64 %nr, ptr %addr) nounwind {
 ;
 ; X64-LABEL: test_ccp_branch:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    pushq %rax
 ; X64-NEXT:    #APP
 ; X64-NEXT:    cmp %rdi,(%rsi)
 ; X64-NEXT:    #NO_APP
 ; X64-NEXT:    jnp .LBB54_2
 ; X64-NEXT:  # %bb.1: # %then
+; X64-NEXT:    pushq %rax
 ; X64-NEXT:    callq bar@PLT
+; X64-NEXT:    addq $8, %rsp
 ; X64-NEXT:  .LBB54_2: # %exit
-; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
 entry:
   %cc = tail call i8 asm "cmp $2,$1", "={@ccp},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(ptr elementtype(i64) %addr, i64 %nr) nounwind
@@ -1968,15 +1968,15 @@ define void @test_ccs_branch(i64 %nr, ptr %addr) nounwind {
 ;
 ; X64-LABEL: test_ccs_branch:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    pushq %rax
 ; X64-NEXT:    #APP
 ; X64-NEXT:    cmp %rdi,(%rsi)
 ; X64-NEXT:    #NO_APP
 ; X64-NEXT:    jns .LBB55_2
 ; X64-NEXT:  # %bb.1: # %then
+; X64-NEXT:    pushq %rax
 ; X64-NEXT:    callq bar@PLT
+; X64-NEXT:    addq $8, %rsp
 ; X64-NEXT:  .LBB55_2: # %exit
-; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
 entry:
   %cc = tail call i8 asm "cmp $2,$1", "={@ccs},=*m,r,~{cc},~{dirflag},~{fpsr},~{flags}"(ptr elementtype(i64) %addr, i64 %nr) nounwind
