@@ -401,14 +401,27 @@ void AccStructureChecker::CheckMultipleOccurrenceInDeclare(
             [&](const Fortran::parser::Designator &designator) {
               if (const auto *name = getDesignatorNameIfDataRef(designator)) {
                 if (declareSymbols.contains(&name->symbol->GetUltimate())) {
-                  context_.Say(GetContext().clauseSource,
-                      "'%s' in the %s clause is already present in another "
-                      "clause in this module"_err_en_US,
-                      name->symbol->name(),
-                      parser::ToUpperCaseLetters(
-                          llvm::acc::getOpenACCClauseName(clause).str()));
+                  if (declareSymbols[&name->symbol->GetUltimate()] == clause) {
+                    context_.Say(GetContext().clauseSource,
+                        "'%s' in the %s clause is already present in the same "
+                        "clause in this module"_warn_en_US,
+                        name->symbol->name(),
+                        parser::ToUpperCaseLetters(
+                            llvm::acc::getOpenACCClauseName(clause).str()));
+                  } else {
+                    context_.Say(GetContext().clauseSource,
+                        "'%s' in the %s clause is already present in another "
+                        "%s clause in this module"_err_en_US,
+                        name->symbol->name(),
+                        parser::ToUpperCaseLetters(
+                            llvm::acc::getOpenACCClauseName(clause).str()),
+                        parser::ToUpperCaseLetters(
+                            llvm::acc::getOpenACCClauseName(
+                                declareSymbols[&name->symbol->GetUltimate()])
+                                .str()));
+                  }
                 }
-                declareSymbols.insert(&name->symbol->GetUltimate());
+                declareSymbols.insert({&name->symbol->GetUltimate(), clause});
               }
             },
             [&](const Fortran::parser::Name &name) {
