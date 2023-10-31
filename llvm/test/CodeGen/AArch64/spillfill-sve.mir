@@ -120,11 +120,11 @@ body:             |
     ; CHECK-NEXT:     stack-id: scalable-vector, callee-saved-register: ''
 
     ; EXPAND-LABEL: name: spills_fills_stack_id_virtreg_pnr
-    ; EXPAND: renamable $pn8 = PTRUE_C_B
+    ; EXPAND: renamable $pn8 = WHILEGE_CXX_B
     ; EXPAND: STR_PXI killed renamable $pn8, $sp, 7
     ; EXPAND: $p0 = LDR_PXI $sp, 7, implicit-def $pn0
 
-    %0:pnr_p8to15 = PTRUE_C_B
+    %0:pnr_p8to15 = WHILEGE_CXX_B undef $x0, undef $x0, 0, implicit-def dead $nzcv
 
     $pn0 = IMPLICIT_DEF
     $pn1 = IMPLICIT_DEF
