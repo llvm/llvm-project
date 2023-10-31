@@ -402,6 +402,7 @@ private:
     // Downgrade IR constructs before writing the IR to bytecode.
     auto status = downgradeToVersion(op, targetEmissionVersion);
     assert(succeeded(status) && "expected the downgrade to succeed");
+    (void)status;
 
     BytecodeWriterConfig writeConfig;
     writeConfig.setDialectVersion<test::TestDialect>(
