@@ -6191,6 +6191,9 @@ NamedDecl *Sema::FindInstantiatedDecl(SourceLocation Loc, NamedDecl *D,
   }
 
   if (CXXRecordDecl *Record = dyn_cast<CXXRecordDecl>(D)) {
+    if (Record->isInjectedClassName())
+      Record = cast<CXXRecordDecl>(Record->getDeclContext());
+
     if (!Record->isDependentContext())
       return D;
 
