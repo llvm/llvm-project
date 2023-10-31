@@ -5561,8 +5561,10 @@ Instruction *InstCombinerImpl::foldICmpWithZextOrSext(ICmpInst &ICmp) {
       // If we have mismatched casts, treat the zext of a non-negative source as
       // a sext to simulate matching casts. Otherwise, we are done.
       // TODO: Can we handle some predicates (equality) without non-negative?
-      if ((IsZext0 && (IsNonNeg0 || isKnownNonNegative(X, DL, 0, &AC, &ICmp, &DT))) ||
-          (IsZext1 && (IsNonNeg1 || isKnownNonNegative(Y, DL, 0, &AC, &ICmp, &DT))))
+      if ((IsZext0 &&
+           (IsNonNeg0 || isKnownNonNegative(X, DL, 0, &AC, &ICmp, &DT))) ||
+          (IsZext1 &&
+           (IsNonNeg1 || isKnownNonNegative(Y, DL, 0, &AC, &ICmp, &DT))))
         IsSignedExt = true;
       else
         return nullptr;
