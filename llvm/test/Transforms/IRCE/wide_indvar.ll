@@ -125,7 +125,7 @@ define i32 @test_increasing_slt_slt_wide_non-negative(ptr %n_ptr, ptr %m_ptr) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[N:%.*]] = load i32, ptr [[N_PTR]], align 4, !range [[RNG6:![0-9]+]]
 ; CHECK-NEXT:    [[M:%.*]] = load i64, ptr [[M_PTR]], align 4, !range [[RNG7:![0-9]+]]
-; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[N]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = zext nneg i32 [[N]] to i64
 ; CHECK-NEXT:    [[EXIT_MAINLOOP_AT:%.*]] = call i64 @llvm.smin.i64(i64 [[M]], i64 [[TMP0]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i64 0, [[EXIT_MAINLOOP_AT]]
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[LOOP_PREHEADER:%.*]], label [[MAIN_PSEUDO_EXIT:%.*]]
@@ -217,7 +217,7 @@ define i32 @test_increasing_slt_slt_wide_general(ptr %n_ptr, ptr %m_ptr) {
 ; CHECK-NEXT:    [[SMAX1:%.*]] = call i64 @llvm.smax.i64(i64 [[SMIN]], i64 -1)
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nsw i64 [[SMAX1]], 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = zext i32 [[N]] to i64
+; CHECK-NEXT:    [[TMP4:%.*]] = zext nneg i32 [[N]] to i64
 ; CHECK-NEXT:    [[SMIN2:%.*]] = call i64 @llvm.smin.i64(i64 [[TMP3]], i64 [[TMP4]])
 ; CHECK-NEXT:    [[EXIT_MAINLOOP_AT:%.*]] = call i64 @llvm.smax.i64(i64 [[SMIN2]], i64 0)
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp slt i64 0, [[EXIT_MAINLOOP_AT]]
@@ -309,7 +309,7 @@ define i32 @test_increasing_slt_slt_wide_general_preloop(ptr %n_ptr, ptr %m_ptr)
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[M]], [[SMAX1]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nsw i64 [[SMAX]], 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = zext i32 [[N]] to i64
+; CHECK-NEXT:    [[TMP4:%.*]] = zext nneg i32 [[N]] to i64
 ; CHECK-NEXT:    [[SMIN2:%.*]] = call i64 @llvm.smin.i64(i64 [[TMP3]], i64 [[TMP4]])
 ; CHECK-NEXT:    [[EXIT_MAINLOOP_AT:%.*]] = call i64 @llvm.smax.i64(i64 [[SMIN2]], i64 -1)
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp slt i64 -1, [[EXIT_PRELOOP_AT]]
@@ -456,7 +456,7 @@ define i32 @test_increasing_slt_slt_wide_multiple_checks(ptr %n_ptr, ptr %m1_ptr
 ; CHECK-NEXT:    [[TMP14:%.*]] = add nsw i64 [[SMAX12]], 1
 ; CHECK-NEXT:    [[TMP15:%.*]] = mul i64 [[TMP13]], [[TMP14]]
 ; CHECK-NEXT:    [[SMIN13:%.*]] = call i64 @llvm.smin.i64(i64 [[SMIN9]], i64 [[TMP15]])
-; CHECK-NEXT:    [[TMP16:%.*]] = zext i32 [[N]] to i64
+; CHECK-NEXT:    [[TMP16:%.*]] = zext nneg i32 [[N]] to i64
 ; CHECK-NEXT:    [[SMIN14:%.*]] = call i64 @llvm.smin.i64(i64 [[SMIN13]], i64 [[TMP16]])
 ; CHECK-NEXT:    [[EXIT_MAINLOOP_AT:%.*]] = call i64 @llvm.smax.i64(i64 [[SMIN14]], i64 0)
 ; CHECK-NEXT:    [[TMP17:%.*]] = icmp slt i64 0, [[EXIT_MAINLOOP_AT]]
@@ -719,7 +719,7 @@ define i32 @test_increasing_ult_ult_wide_non-negative(ptr %n_ptr, ptr %m_ptr) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[N:%.*]] = load i32, ptr [[N_PTR]], align 4, !range [[RNG6]]
 ; CHECK-NEXT:    [[M:%.*]] = load i64, ptr [[M_PTR]], align 4, !range [[RNG7]]
-; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[N]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = zext nneg i32 [[N]] to i64
 ; CHECK-NEXT:    [[EXIT_MAINLOOP_AT:%.*]] = call i64 @llvm.umin.i64(i64 [[M]], i64 [[TMP0]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i64 0, [[EXIT_MAINLOOP_AT]]
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[LOOP_PREHEADER:%.*]], label [[MAIN_PSEUDO_EXIT:%.*]]
@@ -809,7 +809,7 @@ define i32 @test_increasing_ult_ult_wide_general(ptr %n_ptr, ptr %m_ptr) {
 ; CHECK-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[SMIN]], i64 -1)
 ; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i64 [[SMAX]], 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP0]], [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[N]] to i64
+; CHECK-NEXT:    [[TMP3:%.*]] = zext nneg i32 [[N]] to i64
 ; CHECK-NEXT:    [[EXIT_MAINLOOP_AT:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP2]], i64 [[TMP3]])
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp ult i64 0, [[EXIT_MAINLOOP_AT]]
 ; CHECK-NEXT:    br i1 [[TMP4]], label [[LOOP_PREHEADER:%.*]], label [[MAIN_PSEUDO_EXIT:%.*]]
@@ -918,7 +918,7 @@ define i32 @test_increasing_ult_ult_wide_multiple_checks(ptr %n_ptr, ptr %m1_ptr
 ; CHECK-NEXT:    [[TMP10:%.*]] = add nsw i64 [[SMAX7]], 1
 ; CHECK-NEXT:    [[TMP11:%.*]] = mul i64 [[TMP9]], [[TMP10]]
 ; CHECK-NEXT:    [[UMIN8:%.*]] = call i64 @llvm.umin.i64(i64 [[UMIN5]], i64 [[TMP11]])
-; CHECK-NEXT:    [[TMP12:%.*]] = zext i32 [[N]] to i64
+; CHECK-NEXT:    [[TMP12:%.*]] = zext nneg i32 [[N]] to i64
 ; CHECK-NEXT:    [[EXIT_MAINLOOP_AT:%.*]] = call i64 @llvm.umin.i64(i64 [[UMIN8]], i64 [[TMP12]])
 ; CHECK-NEXT:    [[TMP13:%.*]] = icmp ult i64 0, [[EXIT_MAINLOOP_AT]]
 ; CHECK-NEXT:    br i1 [[TMP13]], label [[LOOP_PREHEADER:%.*]], label [[MAIN_PSEUDO_EXIT:%.*]]

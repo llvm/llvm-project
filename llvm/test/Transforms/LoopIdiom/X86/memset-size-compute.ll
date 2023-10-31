@@ -17,7 +17,7 @@ define void @test(ptr %ptr) {
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[PTR:%.*]], i64 8
 ; CHECK-NEXT:    [[UMAX:%.*]] = call i32 @llvm.umax.i32(i32 [[LIM_0]], i32 2)
 ; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i32 [[UMAX]], -1
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[TMP0]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i32 [[TMP0]] to i64
 ; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw nsw i64 [[TMP1]], 3
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[SCEVGEP]], i8 0, i64 [[TMP2]], i1 false)
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
