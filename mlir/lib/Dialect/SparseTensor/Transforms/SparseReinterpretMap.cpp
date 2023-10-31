@@ -41,7 +41,7 @@ static AffineMap translateMap(OpBuilder &builder, SparseTensorType stt,
 // Generates a "de"mapping reinterpretation of the map.
 static Value genDemap(OpBuilder &builder, SparseTensorEncodingAttr enc,
                       Value val) {
-   return builder.create<ReinterpretMapOp>(val.getLoc(), enc.withoutDimToLvl(),
+  return builder.create<ReinterpretMapOp>(val.getLoc(), enc.withoutDimToLvl(),
                                           val);
 }
 
