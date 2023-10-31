@@ -4426,36 +4426,27 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     return;
   }
 
-  if (AArch64::PNRRegClass.contains(DestReg) &&
-      AArch64::PPRRegClass.contains(SrcReg)) {
+  // Copy a predicate-as-counter register by ORRing with itself as if it
+  // were a regular predicate (mask) register.
+  bool DestIsPNR = AArch64::PNRRegClass.contains(DestReg);
+  bool SrcIsPNR = AArch64::PNRRegClass.contains(SrcReg);
+  if (DestIsPNR || SrcIsPNR) {
     assert((Subtarget.hasSVE2p1() || Subtarget.hasSME2()) &&
            "Unexpected predicate-as-counter register.");
-    // Copy from pX to pnX is a no-op
-    if ((DestReg.id() - AArch64::PN0) == (SrcReg.id() - AArch64::P0))
-      return;
-    MCRegister PPRDestReg = (DestReg - AArch64::PN0) + AArch64::P0;
-    BuildMI(MBB, I, DL, get(AArch64::ORR_PPzPP), PPRDestReg)
-        .addReg(SrcReg)
-        .addReg(SrcReg)
-        .addReg(SrcReg, getKillRegState(KillSrc))
-        .addDef(DestReg, RegState::Implicit);
-    return;
-  }
+    auto ToPPR = [](MCRegister R) -> MCRegister {
+      return (R - AArch64::PN0) + AArch64::P0;
+    };
+    MCRegister PPRSrcReg = SrcIsPNR ? ToPPR(SrcReg) : SrcReg;
+    MCRegister PPRDestReg = DestIsPNR ? ToPPR(DestReg) : DestReg;
 
-  if (AArch64::PPRRegClass.contains(DestReg) &&
-      AArch64::PNRRegClass.contains(SrcReg)) {
-    assert((Subtarget.hasSVE2p1() || Subtarget.hasSME2()) &&
-           "Unexpected predicate-as-counter register.");
-    // Copy from pnX to pX is a no-op
-    if ((DestReg.id() - AArch64::P0) == (SrcReg.id() - AArch64::PN0))
-      return;
-    MCRegister PNRDestReg = (DestReg - AArch64::P0) + AArch64::PN0;
-    MCRegister PPRSrcReg = (SrcReg - AArch64::PN0) + AArch64::P0;
-    BuildMI(MBB, I, DL, get(AArch64::ORR_PPzPP), DestReg)
-        .addReg(PPRSrcReg)
-        .addReg(PPRSrcReg)
-        .addReg(PPRSrcReg, getKillRegState(KillSrc))
-        .addDef(PNRDestReg, RegState::Implicit);
+    if (PPRSrcReg != PPRDestReg) {
+      auto NewMI = BuildMI(MBB, I, DL, get(AArch64::ORR_PPzPP), PPRDestReg)
+                       .addReg(PPRSrcReg) // Pg
+                       .addReg(PPRSrcReg)
+                       .addReg(PPRSrcReg, getKillRegState(KillSrc));
+      if (DestIsPNR)
+        NewMI.addDef(DestReg, RegState::Implicit);
+    }
     return;
   }
 
