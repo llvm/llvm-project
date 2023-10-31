@@ -3,7 +3,13 @@
 import gc
 import io
 import itertools
+import sys
+
 from mlir.ir import *
+from mlir.dialects._ods_common import _cext
+
+sys.path.append(".")
+_cext.globals.append_dialect_search_prefix("custom_dialect")
 
 
 def run(f):
