@@ -205,7 +205,7 @@ void Prescanner::Statement() {
       Say(preprocessed->GetProvenanceRange(),
           "Preprocessed line resembles a preprocessor directive"_warn_en_US);
       preprocessed->ToLowerCase()
-          .CheckBadFortranCharacters(messages_)
+          .CheckBadFortranCharacters(messages_, *this)
           .CheckBadParentheses(messages_)
           .Emit(cooked_);
       break;
@@ -220,7 +220,7 @@ void Prescanner::Statement() {
       preprocessed->ToLowerCase();
       SourceFormChange(preprocessed->ToString());
       preprocessed->ClipComment(*this, true /* skip first ! */)
-          .CheckBadFortranCharacters(messages_)
+          .CheckBadFortranCharacters(messages_, *this)
           .CheckBadParentheses(messages_)
           .Emit(cooked_);
       break;
@@ -239,7 +239,7 @@ void Prescanner::Statement() {
       }
       preprocessed->ToLowerCase()
           .ClipComment(*this)
-          .CheckBadFortranCharacters(messages_)
+          .CheckBadFortranCharacters(messages_, *this)
           .CheckBadParentheses(messages_)
           .Emit(cooked_);
       break;
@@ -257,7 +257,7 @@ void Prescanner::Statement() {
         EnforceStupidEndStatementRules(tokens);
       }
     }
-    tokens.CheckBadFortranCharacters(messages_)
+    tokens.CheckBadFortranCharacters(messages_, *this)
         .CheckBadParentheses(messages_)
         .Emit(cooked_);
   }
@@ -1275,6 +1275,21 @@ const char *Prescanner::IsCompilerDirectiveSentinel(
   }
   const auto iter{compilerDirectiveSentinels_.find(std::string(sentinel, len))};
   return iter == compilerDirectiveSentinels_.end() ? nullptr : iter->c_str();
+}
+
+const char *Prescanner::IsCompilerDirectiveSentinel(CharBlock token) const {
+  const char *p{token.begin()};
+  const char *end{p + token.size()};
+  while (p < end && (*p == ' ' || *p == '\n')) {
+    ++p;
+  }
+  if (p < end && *p == '!') {
+    ++p;
+  }
+  while (end > p && (end[-1] == ' ' || end[-1] == '\t')) {
+    --end;
+  }
+  return end > p && IsCompilerDirectiveSentinel(p, end - p) ? p : nullptr;
 }
 
 constexpr bool IsDirective(const char *match, const char *dir) {

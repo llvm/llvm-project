@@ -68,7 +68,9 @@ public:
   bool IsNextLinePreprocessorDirective() const;
   TokenSequence TokenizePreprocessorDirective();
   Provenance GetCurrentProvenance() const { return GetProvenance(at_); }
+
   const char *IsCompilerDirectiveSentinel(const char *, std::size_t) const;
+  const char *IsCompilerDirectiveSentinel(CharBlock) const;
 
   template <typename... A> Message &Say(A &&...a) {
     return messages_.Say(std::forward<A>(a)...);
