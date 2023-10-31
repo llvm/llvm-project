@@ -236,7 +236,6 @@ struct ConvertControlFlowToLLVM
     LowerToLLVMOptions options(&getContext());
     if (indexBitwidth != kDeriveIndexBitwidthFromDataLayout)
       options.overrideIndexBitwidth(indexBitwidth);
-    options.useOpaquePointers = useOpaquePointers;
 
     LLVMTypeConverter converter(&getContext(), options);
     mlir::cf::populateControlFlowToLLVMConversionPatterns(converter, patterns);
