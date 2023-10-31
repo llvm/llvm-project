@@ -74,6 +74,9 @@ def testArithValue():
 
         with InsertionPoint(module.body):
             a = arith.constant(value=FloatAttr.get(f16_t, 42.42))
+            # CHECK: ArithValue(%cst = arith.constant 4.240
+            print(a)
+
             b = a + a
             # CHECK: ArithValue(%0 = arith.addf %cst, %cst : f16)
             print(b)

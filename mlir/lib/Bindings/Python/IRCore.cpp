@@ -2218,13 +2218,6 @@ public:
                   step),
         operation(std::move(operation)), block(block) {}
 
-  pybind11::object getItem(intptr_t index) override {
-    auto item = this->SliceableT::getItem(index);
-    if (item.ptr() != nullptr)
-      return item.attr(MLIR_PYTHON_MAYBE_DOWNCAST_ATTR)();
-    return item;
-  }
-
   static void bindDerived(ClassTy &c) {
     c.def_property_readonly("types", [](PyBlockArgumentList &self) {
       return getValueTypes(self, self.operation->getContext());
@@ -2273,13 +2266,6 @@ public:
                                : length,
                   step),
         operation(operation) {}
-
-  pybind11::object getItem(intptr_t index) override {
-    auto item = this->SliceableT::getItem(index);
-    if (item.ptr() != nullptr)
-      return item.attr(MLIR_PYTHON_MAYBE_DOWNCAST_ATTR)();
-    return item;
-  }
 
   void dunderSetItem(intptr_t index, PyValue value) {
     index = wrapIndex(index);
@@ -2336,13 +2322,6 @@ public:
                                : length,
                   step),
         operation(std::move(operation)) {}
-
-  pybind11::object getItem(intptr_t index) override {
-    auto item = this->SliceableT::getItem(index);
-    if (item.ptr() != nullptr)
-      return item.attr(MLIR_PYTHON_MAYBE_DOWNCAST_ATTR)();
-    return item;
-  }
 
   static void bindDerived(ClassTy &c) {
     c.def_property_readonly("types", [](PyOpResultList &self) {

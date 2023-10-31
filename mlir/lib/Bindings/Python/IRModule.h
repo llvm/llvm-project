@@ -1110,6 +1110,7 @@ public:
 /// bindings so such operation always exists).
 class PyValue {
 public:
+  virtual ~PyValue() = default;
   PyValue(PyOperationRef parentOperation, MlirValue value)
       : parentOperation(std::move(parentOperation)), value(value) {}
   operator MlirValue() const { return value; }
@@ -1122,7 +1123,7 @@ public:
   /// Gets a capsule wrapping the void* within the MlirValue.
   pybind11::object getCapsule();
 
-  virtual pybind11::object maybeDownCast();
+  pybind11::object maybeDownCast();
 
   /// Creates a PyValue from the MlirValue wrapped by a capsule. Ownership of
   /// the underlying MlirValue is still tied to the owning operation.

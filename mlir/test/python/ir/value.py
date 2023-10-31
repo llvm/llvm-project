@@ -370,7 +370,8 @@ def testValueCasters():
         print(e)
 
     @register_value_caster(IntegerType.static_typeid, replace=True)
-    def dont_cast_int(v) -> Value:
+    def dont_cast_int(v) -> OpResult:
+        assert isinstance(v, OpResult)
         print("don't cast", v.result_number, v)
         return v
 
