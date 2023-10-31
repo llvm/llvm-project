@@ -42,25 +42,32 @@ int main() {
 // CHECK-SAME:                isLocal: false, isDefinition: true, declaration: ![[INT_DECL:[0-9]+]])
 
 // CHECK:      ![[INT_DECL]] = !DIDerivedType(tag: DW_TAG_member, name: "cexpr_int",
-// CHECK-SAME:                 flags: DIFlagStaticMember, extraData: i32 25)
+// CHECK-SAME:                 flags: DIFlagStaticMember
+// CHECK-NOT:                  extraData:
 
 // CHECK:      ![[INT_DECL2:[0-9]+]] = !DIDerivedType(tag: DW_TAG_member, name: "cexpr_int2",
-// CHECK-SAME:                         flags: DIFlagStaticMember, extraData: i32 26)
+// CHECK-SAME:                         flags: DIFlagStaticMember
+// CHECK-NOT:                          extraData:
 
 // CHECK:      ![[FLOAT_DECL:[0-9]+]] = !DIDerivedType(tag: DW_TAG_member, name: "cexpr_float",
-// CHECK-SAME:                          flags: DIFlagStaticMember, extraData: float
+// CHECK-SAME:                          flags: DIFlagStaticMember
+// CHECK-NOT:                           extraData:
 
 // CHECK:      ![[ENUM_DECL:[0-9]+]] = !DIDerivedType(tag: DW_TAG_member, name: "cexpr_enum",
-// CHECK-SAME:                         flags: DIFlagStaticMember, extraData: i32 -1)
+// CHECK-SAME:                         flags: DIFlagStaticMember
+// CHECK-NOT:                          extraData:
 
 // CHECK:      ![[EMPTY_DECL:[0-9]+]] = !DIDerivedType(tag: DW_TAG_member, name: "cexpr_empty",
-// CHECK-SAME:                          flags: DIFlagStaticMember)
+// CHECK-SAME:                          flags: DIFlagStaticMember
+// CHECK-NOT:                           extraData:
 
 // CHECK:      ![[IENUM_DECL:[0-9]+]] = !DIDerivedType(tag: DW_TAG_member, name: "inline_enum",
-// CHECK-SAME:                          flags: DIFlagStaticMember, extraData: i32 -1)
+// CHECK-SAME:                          flags: DIFlagStaticMember
+// CHECK-NOT:                           extraData:
 
 // CHECK:      ![[TEMPLATE_DECL:[0-9]+]] = !DIDerivedType(tag: DW_TAG_member, name: "cexpr_template",
-// CHECK-SAME:                             flags: DIFlagStaticMember, extraData: i16 0)
+// CHECK-SAME:                             flags: DIFlagStaticMember
+// CHECK-NOT:                              extraData:
 
 // CHECK:      !DIGlobalVariableExpression(var: ![[EMPTY_VAR:[0-9]+]], expr: !DIExpression())
 // CHECK:      ![[EMPTY_VAR]] = distinct !DIGlobalVariable(name: "cexpr_empty", linkageName:

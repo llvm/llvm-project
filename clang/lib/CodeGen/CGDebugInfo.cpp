@@ -1677,21 +1677,11 @@ CGDebugInfo::CreateRecordStaticField(const VarDecl *Var, llvm::DIType *RecordTy,
 
   unsigned LineNumber = getLineNumber(Var->getLocation());
   StringRef VName = Var->getName();
-  llvm::Constant *C = nullptr;
-  if (Var->getInit()) {
-    const APValue *Value = Var->evaluateValue();
-    if (Value) {
-      if (Value->isInt())
-        C = llvm::ConstantInt::get(CGM.getLLVMContext(), Value->getInt());
-      if (Value->isFloat())
-        C = llvm::ConstantFP::get(CGM.getLLVMContext(), Value->getFloat());
-    }
-  }
 
   llvm::DINode::DIFlags Flags = getAccessFlag(Var->getAccess(), RD);
   auto Align = getDeclAlignIfRequired(Var, CGM.getContext());
   llvm::DIDerivedType *GV = DBuilder.createStaticMemberType(
-      RecordTy, VName, VUnit, LineNumber, VTy, Flags, C, Align);
+      RecordTy, VName, VUnit, LineNumber, VTy, Flags, /* Val */ nullptr, Align);
   StaticDataMemberCache[Var->getCanonicalDecl()].reset(GV);
   StaticDataMemberDefinitionsToEmit.push_back(Var->getCanonicalDecl());
   return GV;

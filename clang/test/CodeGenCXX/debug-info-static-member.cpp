@@ -67,15 +67,15 @@ int C::a = 4;
 // CHECK-NOT:            size:
 // CHECK-NOT:            align:
 // CHECK-NOT:            offset:
-// CHECK-SAME:           flags: DIFlagStaticMember,
-// CHECK-SAME:           extraData: i1 true)
+// CHECK-SAME:           flags: DIFlagStaticMember
+// CHECK-NOT:            extraData:
 
 // CHECK: !DIDerivedType(tag: DW_TAG_member, name: "const_b"
 // CHECK-NOT:            size:
 // CHECK-NOT:            align:
 // CHECK-NOT:            offset:
-// CHECK-SAME:           flags: DIFlagProtected | DIFlagStaticMember,
-// CHECK-SAME:           extraData: float 0x{{.*}})
+// CHECK-SAME:           flags: DIFlagProtected | DIFlagStaticMember
+// CHECK-NOT:            extraData:
 
 // CHECK: ![[DECL_C:[0-9]+]] = !DIDerivedType(tag: DW_TAG_member, name: "c"
 // CHECK-NOT:                                 size:
@@ -87,8 +87,8 @@ int C::a = 4;
 // CHECK-NOT:            size:
 // CHECK-NOT:            align:
 // CHECK-NOT:            offset:
-// CHECK-SAME:           flags: DIFlagPublic | DIFlagStaticMember,
-// CHECK-SAME:           extraData: i32 18)
+// CHECK-SAME:           flags: DIFlagPublic | DIFlagStaticMember
+// CHECK-NOT:            extraData:
 //
 // CHECK: !DIDerivedType(tag: DW_TAG_member, name: "x_a"
 // CHECK-SAME:           flags: DIFlagPublic | DIFlagStaticMember)
@@ -144,7 +144,7 @@ struct V {
 // const_va is not emitted for MS targets.
 // NOT-MS: !DIDerivedType(tag: DW_TAG_member, name: "const_va",
 // NOT-MS-SAME:           line: [[@LINE-5]]
-// NOT-MS-SAME:           extraData: i32 42
+// NOT-MS-NOT:            extraData:
 const int V::const_va;
 
 namespace x {
