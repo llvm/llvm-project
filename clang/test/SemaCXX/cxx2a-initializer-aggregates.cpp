@@ -4,7 +4,7 @@
 // RUN: %clang_cc1 -std=c++20 %s -verify=cxx20,expected,reorder -Wno-c99-designator -Werror=reorder-init-list -Wno-initializer-overrides
 // RUN: %clang_cc1 -std=c++20 %s -verify=cxx20,expected,override -Wno-c99-designator -Wno-reorder-init-list -Werror=initializer-overrides
 // RUN: %clang_cc1 -std=c++20 %s -verify=cxx20,expected -Wno-c99-designator -Wno-reorder-init-list -Wno-initializer-overrides
-// RUN: %clang_cc1 -std=c++20 %s -verify=cxx20,expected,wmissing -Wmissing-field-initializers -Wno-c99-designator -Wno-reorder-init-list -Wno-initializer-overrides
+// RUN: %clang_cc1 -std=c++20 %s -verify=cxx20,expected,wmissing -Wmissing-field-initializers -Wno-c99-designator -Wno-reorder-init-list -Wno-initializer-overrides -D NON_PEDANTIC
 
 
 namespace class_with_ctor {
@@ -246,4 +246,68 @@ void foo() {
                            // reorder-note-re@-1 {{previous initialization for field 'GH63759::C::(anonymous union at {{.*}})' is here}}
                            //
 }
+}
+
+namespace GH70384 {
+
+struct A {
+  int m;
+  union { int a; float n = 0; };
+};
+
+struct B {
+  int m;
+  int b;
+  union { int a ; };
+};
+
+union CU {
+  int a = 1;
+  double b;
+};
+
+struct C {
+  int a;
+  union { int b; CU c;};
+};
+
+struct CC {
+  int a;
+  CU c;
+};
+
+void foo() {
+  A a = A{.m = 0};
+  A aa = {0};
+  A aaa = {.a = 7}; // wmissing-warning {{missing field 'm' initializer}}
+  B b = {.m = 1, .b = 3 }; //wmissing-warning {{missing field 'a' initializer}}
+  B bb = {1}; // wmissing-warning {{missing field 'b' initializer}}
+              // wmissing-warning@-1 {{missing field 'a' initializer}}
+  C c = {.a = 1}; // wmissing-warning {{missing field 'b' initializer}}
+  CC cc = {.a = 1}; //// wmissing-warning {{missing field 'c' initializer}}
+}
+
+#if defined NON_PEDANTIC
+struct C1 {
+  int m;
+  union { float b; union {int n = 1; }; };
+};
+
+struct C2 {
+  int m;
+  struct { float b; int n = 1; };
+};
+
+struct C3 {
+  int m;
+  struct { float b = 1; union {int a;}; int n = 1; };
+};
+
+C1 c = C1{.m = 1};
+C1 cc = C1{.b = 1}; // wmissing-warning {{missing field 'm' initializer}}
+C2 c1 = C2{.m = 1}; // wmissing-warning {{missing field 'b' initializer}}
+C2 c22 = C2{.m = 1, .b = 1};
+C3 c2 = C3{.b = 1}; // wmissing-warning {{missing field 'a' initializer}}
+                    // wmissing-warning@-1 {{missing field 'm' initializer}}
+#endif // NON_PEDANTIC
 }

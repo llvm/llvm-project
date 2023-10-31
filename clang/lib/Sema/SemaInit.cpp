@@ -349,17 +349,13 @@ class InitListChecker {
                       bool SubobjectIsDesignatorContext, unsigned &Index,
                       InitListExpr *StructuredList,
                       unsigned &StructuredIndex);
-  bool CheckDesignatedInitializer(const InitializedEntity &Entity,
-                                  InitListExpr *IList, DesignatedInitExpr *DIE,
-                                  unsigned DesigIdx,
-                                  QualType &CurrentObjectType,
-                                  RecordDecl::field_iterator *NextField,
-                                  llvm::APSInt *NextElementIndex,
-                                  unsigned &Index,
-                                  InitListExpr *StructuredList,
-                                  unsigned &StructuredIndex,
-                                  bool FinishSubobjectInit,
-                                  bool TopLevelObject);
+  bool CheckDesignatedInitializer(
+      const InitializedEntity &Entity, InitListExpr *IList,
+      DesignatedInitExpr *DIE, unsigned DesigIdx, QualType &CurrentObjectType,
+      RecordDecl::field_iterator *NextField, llvm::APSInt *NextElementIndex,
+      unsigned &Index, InitListExpr *StructuredList, unsigned &StructuredIndex,
+      bool FinishSubobjectInit, bool TopLevelObject,
+      llvm::SmallPtrSetImpl<FieldDecl *> *InitializedFields = nullptr);
   InitListExpr *getStructuredSubobjectInit(InitListExpr *IList, unsigned Index,
                                            QualType CurrentObjectType,
                                            InitListExpr *StructuredList,
@@ -2248,7 +2244,8 @@ void InitListChecker::CheckStructUnionTypes(
       // the next field that we'll be initializing.
       bool DesignatedInitFailed = CheckDesignatedInitializer(
           Entity, IList, DIE, 0, DeclType, &Field, nullptr, Index,
-          StructuredList, StructuredIndex, true, TopLevelObject);
+          StructuredList, StructuredIndex, true, TopLevelObject,
+          &InitializedFields);
       if (DesignatedInitFailed)
         hadError = true;
 
@@ -2256,7 +2253,6 @@ void InitListChecker::CheckStructUnionTypes(
       DesignatedInitExpr::Designator *D = DIE->getDesignator(0);
       if (!VerifyOnly && D->isFieldDesignator()) {
         FieldDecl *F = D->getFieldDecl();
-        InitializedFields.insert(F);
         if (!DesignatedInitFailed) {
           QualType ET = SemaRef.Context.getBaseElementType(F->getType());
           if (checkDestructorReference(ET, InitLoc, SemaRef)) {
@@ -2365,21 +2361,43 @@ void InitListChecker::CheckStructUnionTypes(
       !RD->isUnion()) {
     // It is possible we have one or more unnamed bitfields remaining.
     // Find first (if any) named field and emit warning.
-    for (RecordDecl::field_iterator it = HasDesignatedInit ? RD->field_begin()
-                                                           : Field,
-                                    end = RD->field_end();
-         it != end; ++it) {
-      if (HasDesignatedInit && InitializedFields.count(*it))
-        continue;
+    auto MissingFieldCheck = [&](const RecordDecl *Record,
+                                 RecordDecl::field_iterator StartField,
+                                 auto &&MissingFieldCheck) -> bool {
+      FieldDecl *FirstUninitialized = nullptr;
+      for (RecordDecl::field_iterator it = StartField,
+                                      end = Record->field_end();
+           it != end; ++it) {
+        bool AllSet = false;
+        if (it->isAnonymousStructOrUnion()) {
+          RecordDecl *RDAnon = it->getType()->getAsRecordDecl();
+          AllSet = MissingFieldCheck(RDAnon, RDAnon->field_begin(),
+                                     MissingFieldCheck);
+        }
 
-      if (!it->isUnnamedBitfield() && !it->hasInClassInitializer() &&
-          !it->getType()->isIncompleteArrayType()) {
+        if ((HasDesignatedInit && InitializedFields.count(*it)) ||
+            it->hasInClassInitializer() || AllSet) {
+          if (Record->isUnion())
+            return true;
+          continue;
+        }
+
+        if (!it->isUnnamedBitfield() &&
+            !it->getType()->isIncompleteArrayType() &&
+            !it->isAnonymousStructOrUnion() && !FirstUninitialized)
+          FirstUninitialized = *it;
+      }
+
+      if (FirstUninitialized) {
         SemaRef.Diag(IList->getSourceRange().getEnd(),
                      diag::warn_missing_field_initializers)
-            << *it;
-        break;
+            << FirstUninitialized;
+        return false;
       }
-    }
+      return true;
+    };
+    MissingFieldCheck(RD, HasDesignatedInit ? RD->field_begin() : Field,
+                      MissingFieldCheck);
   }
 
   // Check that any remaining fields can be value-initialized if we're not
@@ -2537,19 +2555,13 @@ class FieldInitializerValidatorCCC final : public CorrectionCandidateCallback {
 /// actually be initialized.
 ///
 /// @returns true if there was an error, false otherwise.
-bool
-InitListChecker::CheckDesignatedInitializer(const InitializedEntity &Entity,
-                                            InitListExpr *IList,
-                                            DesignatedInitExpr *DIE,
-                                            unsigned DesigIdx,
-                                            QualType &CurrentObjectType,
-                                          RecordDecl::field_iterator *NextField,
-                                            llvm::APSInt *NextElementIndex,
-                                            unsigned &Index,
-                                            InitListExpr *StructuredList,
-                                            unsigned &StructuredIndex,
-                                            bool FinishSubobjectInit,
-                                            bool TopLevelObject) {
+bool InitListChecker::CheckDesignatedInitializer(
+    const InitializedEntity &Entity, InitListExpr *IList,
+    DesignatedInitExpr *DIE, unsigned DesigIdx, QualType &CurrentObjectType,
+    RecordDecl::field_iterator *NextField, llvm::APSInt *NextElementIndex,
+    unsigned &Index, InitListExpr *StructuredList, unsigned &StructuredIndex,
+    bool FinishSubobjectInit, bool TopLevelObject,
+    llvm::SmallPtrSetImpl<FieldDecl *> *InitializedFields) {
   if (DesigIdx == DIE->size()) {
     // C++20 designated initialization can result in direct-list-initialization
     // of the designated subobject. This is the only way that we can end up
@@ -2853,8 +2865,11 @@ InitListChecker::CheckDesignatedInitializer(const InitializedEntity &Entity,
 
 
     // Update the designator with the field declaration.
-    if (!VerifyOnly)
+    if (!VerifyOnly) {
       D->setFieldDecl(*Field);
+      if (InitializedFields)
+        InitializedFields->insert(*Field);
+    }
 
     // Make sure that our non-designated initializer list has space
     // for a subobject corresponding to this field.
@@ -2929,10 +2944,10 @@ InitListChecker::CheckDesignatedInitializer(const InitializedEntity &Entity,
 
       InitializedEntity MemberEntity =
         InitializedEntity::InitializeMember(*Field, &Entity);
-      if (CheckDesignatedInitializer(MemberEntity, IList, DIE, DesigIdx + 1,
-                                     FieldType, nullptr, nullptr, Index,
-                                     StructuredList, newStructuredIndex,
-                                     FinishSubobjectInit, false))
+      if (CheckDesignatedInitializer(
+              MemberEntity, IList, DIE, DesigIdx + 1, FieldType, nullptr,
+              nullptr, Index, StructuredList, newStructuredIndex,
+              FinishSubobjectInit, false, InitializedFields))
         return true;
     }
 
