@@ -103,7 +103,7 @@ public:
 
   bool VisitDeclRefExpr(DeclRefExpr *S) {
     DeclarationName Name = S->getNameInfo().getName();
-    return S->getQualifierLoc() || !Name.isIdentifier() ||
+    return S->getQualifierLoc() || Name.isEmpty() || !Name.isIdentifier() ||
            !visitUnqualName(Name.getAsIdentifierInfo()->getName());
   }
 
