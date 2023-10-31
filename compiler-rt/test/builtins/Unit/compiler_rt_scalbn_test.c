@@ -61,13 +61,13 @@ int main() {
   // should have the same rounding behavior as double-precision multiplication.
 #if (defined(__arm__) || defined(__aarch64__)) && defined(__ARM_FP) || \
     defined(__i386__) || defined(__x86_64__)
-// Skip these tests for MSVC because its scalbn function always behaves as if
-// the default rounding mode is set (FE_TONEAREST).
+// Skip these tests on Windows because the UCRT scalbn function always behaves
+// as if the default rounding mode is set (FE_TONEAREST).
 // Also skip for newlib because although its scalbn function does respect the
 // rounding mode, where the tests trigger an underflow or overflow using a
 // large exponent the result is rounded in the opposite direction to that which
 // would be expected in the (FE_UPWARD) and (FE_DOWNWARD) modes.
-#  if !defined(_MSC_VER) && !defined(_NEWLIB_VERSION)
+#  if !defined(_WIN32) && !defined(_NEWLIB_VERSION)
   fesetround(FE_UPWARD);
   if (iterate_cases("FE_UPWARD")) return 1;
 
