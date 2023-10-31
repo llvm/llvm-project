@@ -101,16 +101,13 @@ static cl::opt<bool> ClSanitizeOnOptimizerEarlyEP(
     cl::desc("Insert sanitizers on OptimizerEarlyEP."), cl::init(false));
 
 extern cl::opt<bool> DebugInfoCorrelate;
-extern cl::opt<InstrProfCorrelator::ProfCorrelatorKind> ProfileCorrelate;
 } // namespace llvm
 
 namespace {
 
 // Default filename used for profile generation.
 std::string getDefaultProfileGenName() {
-  return DebugInfoCorrelate || ProfileCorrelate != InstrProfCorrelator::NONE
-             ? "default_%m.proflite"
-             : "default_%m.profraw";
+  return DebugInfoCorrelate ? "default_%m.proflite" : "default_%m.profraw";
 }
 
 class EmitAssemblyHelper {
