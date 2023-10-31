@@ -15092,11 +15092,8 @@ void Sema::DiagnoseUnusedParameters(ArrayRef<ParmVarDecl *> Parameters) {
     return;
 
   for (const ParmVarDecl *Parameter : Parameters) {
-    if (Parameter->isReferenced() &&
-        !Parameter->isLastReferenceInCoroutineParamMoves())
-      continue;
-
-    if (Parameter->getDeclName() && !Parameter->hasAttr<UnusedAttr>() &&
+    if (!Parameter->isReferenced() && Parameter->getDeclName() &&
+        !Parameter->hasAttr<UnusedAttr>() &&
         !Parameter->getIdentifier()->isPlaceholder()) {
       Diag(Parameter->getLocation(), diag::warn_unused_parameter)
         << Parameter->getDeclName();

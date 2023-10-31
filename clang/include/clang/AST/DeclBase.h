@@ -306,11 +306,6 @@ private:
   /// are regarded as "referenced" but not "used".
   unsigned Referenced : 1;
 
-  /// Whether the last reference to this declaration happened in Coroutine
-  /// Parameter moves. Otherwise the reference caused by such moves would
-  /// prevent a warning against unused parameters in all coroutines.
-  unsigned LastReferenceInCoroutineParamMoves : 1;
-
   /// Whether this declaration is a top-level declaration (function,
   /// global variable, etc.) that is lexically inside an objc container
   /// definition.
@@ -614,22 +609,11 @@ public:
   /// Whether any declaration of this entity was referenced.
   bool isReferenced() const;
 
-  bool isLastReferenceInCoroutineParamMoves() const {
-    return LastReferenceInCoroutineParamMoves;
-  }
-
-  void setLastReferenceInCoroutineParamMoves(bool V = true) {
-    LastReferenceInCoroutineParamMoves = V;
-  }
-
   /// Whether this declaration was referenced. This should not be relied
   /// upon for anything other than debugging.
   bool isThisDeclarationReferenced() const { return Referenced; }
 
-  void setReferenced(bool R = true) {
-    Referenced = R;
-    LastReferenceInCoroutineParamMoves = false;
-  }
+  void setReferenced(bool R = true) { Referenced = R; }
 
   /// Whether this declaration is a top-level declaration (function,
   /// global variable, etc.) that is lexically inside an objc container
