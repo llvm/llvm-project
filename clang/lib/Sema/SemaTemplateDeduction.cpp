@@ -3573,10 +3573,10 @@ static Sema::TemplateDeductionResult instantiateExplicitSpecifierDeferred(
   };
 
   ExplicitSpecifier ES = GetExplicitSpecifier(Specialization);
-  Expr *const Expr = ES.getExpr();
-  if (!Expr)
+  Expr *ExplicitExpr = ES.getExpr();
+  if (!ExplicitExpr)
     return Sema::TDK_Success;
-  if (!Expr->isValueDependent())
+  if (!ExplicitExpr->isValueDependent())
     return Sema::TDK_Success;
 
   Sema::InstantiatingTemplate Inst(
@@ -3585,12 +3585,13 @@ static Sema::TemplateDeductionResult instantiateExplicitSpecifierDeferred(
   if (Inst.isInvalid())
     return Sema::TDK_InstantiationDepth;
   Sema::SFINAETrap Trap(S);
-  const auto Instantiated = S.instantiateExplicitSpecifier(SubstArgs, ES);
-  if (Instantiated.isInvalid() || Trap.hasErrorOccurred()) {
+  const ExplicitSpecifier InstantiatedES =
+      S.instantiateExplicitSpecifier(SubstArgs, ES);
+  if (InstantiatedES.isInvalid() || Trap.hasErrorOccurred()) {
     Specialization->setInvalidDecl(true);
     return Sema::TDK_SubstitutionFailure;
   }
-  SetExplicitSpecifier(Specialization, Instantiated);
+  SetExplicitSpecifier(Specialization, InstantiatedES);
   return Sema::TDK_Success;
 }
 
