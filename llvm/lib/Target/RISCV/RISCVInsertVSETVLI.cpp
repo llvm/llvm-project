@@ -539,6 +539,8 @@ public:
     MaskAgnostic = MA;
   }
 
+  void setVLMul(RISCVII::VLMUL VLMul) { this->VLMul = VLMul; }
+
   unsigned encodeVTYPE() const {
     assert(isValid() && !isUnknown() && !SEWLMULRatioOnly &&
            "Can't encode VTYPE for uninitialized or unknown");
@@ -1037,6 +1039,17 @@ void RISCVInsertVSETVLI::transferBefore(VSETVLIInfo &Info,
 
   if (!RISCVII::hasVLOp(TSFlags))
     return;
+
+  // If we don't use LMUL or the SEW/LMUL ratio, then adjust LMUL so that we
+  // maintain the SEW/LMUL ratio. This allows us to eliminate VL toggles in more
+  // places.
+  DemandedFields Demanded = getDemanded(MI, MRI, ST);
+  if (!Demanded.LMUL && !Demanded.SEWLMULRatio && Info.isValid() &&
+      PrevInfo.isValid() && !Info.isUnknown() && !PrevInfo.isUnknown()) {
+    if (auto NewVLMul = RISCVVType::getSameRatioLMUL(
+            PrevInfo.getSEW(), PrevInfo.getVLMUL(), Info.getSEW()))
+      Info.setVLMul(*NewVLMul);
+  }
 
   // For vmv.s.x and vfmv.s.f, there are only two behaviors, VL = 0 and
   // VL > 0. We can discard the user requested AVL and just use the last

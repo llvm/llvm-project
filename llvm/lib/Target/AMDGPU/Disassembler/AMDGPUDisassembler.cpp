@@ -2173,8 +2173,15 @@ MCDisassembler::DecodeStatus AMDGPUDisassembler::decodeCOMPUTE_PGM_RSRC2(
   PRINT_DIRECTIVE(".amdhsa_exception_int_div_zero",
                   COMPUTE_PGM_RSRC2_ENABLE_EXCEPTION_INT_DIVIDE_BY_ZERO);
 
-  if (FourByteBuffer & COMPUTE_PGM_RSRC2_RESERVED0)
-    return MCDisassembler::Fail;
+  // Bits [31].
+  if (isGFX12Plus()) {
+    PRINT_PSEUDO_DIRECTIVE_COMMENT(
+        "WGP_TAKEOVER",
+        COMPUTE_PGM_RSRC2_GFX12_PLUS_WGP_TAKEOVER);
+  } else {
+    if (FourByteBuffer & COMPUTE_PGM_RSRC2_GFX6_GFX11_RESERVED0)
+      return MCDisassembler::Fail;
+  }
 
   return MCDisassembler::Success;
 }
@@ -2194,6 +2201,7 @@ MCDisassembler::DecodeStatus AMDGPUDisassembler::decodeCOMPUTE_PGM_RSRC3(
     if (FourByteBuffer & COMPUTE_PGM_RSRC3_GFX90A_RESERVED1)
       return MCDisassembler::Fail;
   } else if (isGFX10Plus()) {
+    // Bits [0-3].
     if (!isGFX12Plus()) {
       if (!EnableWavefrontSize32 || !*EnableWavefrontSize32) {
         PRINT_DIRECTIVE(".amdhsa_shared_vgpr_count",
@@ -2203,28 +2211,50 @@ MCDisassembler::DecodeStatus AMDGPUDisassembler::decodeCOMPUTE_PGM_RSRC3(
             "SHARED_VGPR_COUNT",
             COMPUTE_PGM_RSRC3_GFX10_GFX11_SHARED_VGPR_COUNT);
       }
-    }
-
-    if (isGFX11Plus()) {
-      PRINT_PSEUDO_DIRECTIVE_COMMENT("INST_PREF_SIZE",
-                                     COMPUTE_PGM_RSRC3_GFX11_PLUS_INST_PREF_SIZE);
-      PRINT_PSEUDO_DIRECTIVE_COMMENT("TRAP_ON_START",
-                                     COMPUTE_PGM_RSRC3_GFX11_PLUS_TRAP_ON_START);
-      PRINT_PSEUDO_DIRECTIVE_COMMENT("TRAP_ON_END",
-                                     COMPUTE_PGM_RSRC3_GFX11_PLUS_TRAP_ON_END);
     } else {
-      if (FourByteBuffer & COMPUTE_PGM_RSRC3_GFX10_RESERVED0)
+      if (FourByteBuffer & COMPUTE_PGM_RSRC3_GFX12_PLUS_RESERVED0)
         return MCDisassembler::Fail;
     }
 
-    if (FourByteBuffer & COMPUTE_PGM_RSRC3_GFX10_PLUS_RESERVED1)
+    // Bits [4-11].
+    if (isGFX11()) {
+      PRINT_PSEUDO_DIRECTIVE_COMMENT("INST_PREF_SIZE",
+                                     COMPUTE_PGM_RSRC3_GFX11_INST_PREF_SIZE);
+      PRINT_PSEUDO_DIRECTIVE_COMMENT("TRAP_ON_START",
+                                     COMPUTE_PGM_RSRC3_GFX11_TRAP_ON_START);
+      PRINT_PSEUDO_DIRECTIVE_COMMENT("TRAP_ON_END",
+                                     COMPUTE_PGM_RSRC3_GFX11_TRAP_ON_END);
+    } else if (isGFX12Plus()) {
+      PRINT_PSEUDO_DIRECTIVE_COMMENT("INST_PREF_SIZE",
+                                     COMPUTE_PGM_RSRC3_GFX12_PLUS_INST_PREF_SIZE);
+    } else {
+      if (FourByteBuffer & COMPUTE_PGM_RSRC3_GFX10_RESERVED1)
+        return MCDisassembler::Fail;
+    }
+
+    // Bits [12].
+    if (FourByteBuffer & COMPUTE_PGM_RSRC3_GFX10_PLUS_RESERVED2)
       return MCDisassembler::Fail;
 
+    // Bits [13].
+    if (isGFX12Plus()) {
+      PRINT_PSEUDO_DIRECTIVE_COMMENT("GLG_EN",
+                                     COMPUTE_PGM_RSRC3_GFX12_PLUS_GLG_EN);
+    } else {
+      if (FourByteBuffer & COMPUTE_PGM_RSRC3_GFX10_GFX11_RESERVED3)
+        return MCDisassembler::Fail;
+    }
+
+    // Bits [14-30].
+    if (FourByteBuffer & COMPUTE_PGM_RSRC3_GFX10_PLUS_RESERVED4)
+      return MCDisassembler::Fail;
+
+    // Bits [31].
     if (isGFX11Plus()) {
       PRINT_PSEUDO_DIRECTIVE_COMMENT("IMAGE_OP",
-                                     COMPUTE_PGM_RSRC3_GFX11_PLUS_TRAP_ON_START);
+                                     COMPUTE_PGM_RSRC3_GFX11_PLUS_IMAGE_OP);
     } else {
-      if (FourByteBuffer & COMPUTE_PGM_RSRC3_GFX10_RESERVED2)
+      if (FourByteBuffer & COMPUTE_PGM_RSRC3_GFX10_RESERVED5)
         return MCDisassembler::Fail;
     }
   } else if (FourByteBuffer) {

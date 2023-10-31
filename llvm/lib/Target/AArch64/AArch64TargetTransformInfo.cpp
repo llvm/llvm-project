@@ -1961,21 +1961,20 @@ TypeSize
 AArch64TTIImpl::getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
   switch (K) {
   case TargetTransformInfo::RGK_Scalar:
-    return TypeSize::getFixed(64);
+    return TypeSize::Fixed(64);
   case TargetTransformInfo::RGK_FixedWidthVector:
     if (!ST->isNeonAvailable() && !EnableFixedwidthAutovecInStreamingMode)
-      return TypeSize::getFixed(0);
+      return TypeSize::Fixed(0);
 
     if (ST->hasSVE())
-      return TypeSize::getFixed(
-          std::max(ST->getMinSVEVectorSizeInBits(), 128u));
+      return TypeSize::Fixed(std::max(ST->getMinSVEVectorSizeInBits(), 128u));
 
-    return TypeSize::getFixed(ST->hasNEON() ? 128 : 0);
+    return TypeSize::Fixed(ST->hasNEON() ? 128 : 0);
   case TargetTransformInfo::RGK_ScalableVector:
     if (!ST->isSVEAvailable() && !EnableScalableAutovecInStreamingMode)
-      return TypeSize::getScalable(0);
+      return TypeSize::Scalable(0);
 
-    return TypeSize::getScalable(ST->hasSVE() ? 128 : 0);
+    return TypeSize::Scalable(ST->hasSVE() ? 128 : 0);
   }
   llvm_unreachable("Unsupported register kind");
 }
@@ -2962,6 +2961,7 @@ AArch64TTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
   // they may wake up the FP unit, which raises the power consumption.  Perhaps
   // they could be used with no holds barred (-O3).
   Options.LoadSizes = {8, 4, 2, 1};
+  Options.AllowedTailExpansions = {3, 5, 6};
   return Options;
 }
 
