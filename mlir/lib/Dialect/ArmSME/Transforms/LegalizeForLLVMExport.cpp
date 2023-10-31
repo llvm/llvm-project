@@ -460,11 +460,11 @@ struct MoveTileSliceToVectorArmSMELowering
   }
 };
 
-/// Lower `vector.outerproduct` to SME MOPA intrinsics.
+/// Lower `arm_sme.outerproduct` to SME MOPA intrinsics.
 ///
 /// Example:
 ///
-///   %0 = vector.outerproduct %lhs, %rhs, %acc {kind = #vector.kind<add>}
+///   %0 = arm_sme.outerproduct %lhs, %rhs acc(%acc)
 ///     : vector<[4]xf32>, vector<[4]xf32>
 ///
 /// is converted to:
@@ -474,13 +474,13 @@ struct MoveTileSliceToVectorArmSMELowering
 ///        vector<[4]xf32>) -> ()
 ///
 /// Currently only supports FMOPA and BFMOPA (non-widening).
-struct VectorOuterProductToArmSMELowering
-    : public ConvertOpToLLVMPattern<vector::OuterProductOp> {
-  using ConvertOpToLLVMPattern<vector::OuterProductOp>::ConvertOpToLLVMPattern;
+struct OuterProductOpConversion
+    : public ConvertOpToLLVMPattern<arm_sme::OuterProductOp> {
+  using ConvertOpToLLVMPattern<arm_sme::OuterProductOp>::ConvertOpToLLVMPattern;
 
   LogicalResult
-  matchAndRewrite(vector::OuterProductOp outerProductOp,
-                  vector::OuterProductOp::Adaptor adaptor,
+  matchAndRewrite(arm_sme::OuterProductOp outerProductOp,
+                  arm_sme::OuterProductOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     auto isSupportedType = [](VectorType vectorType) {
       // TODO: the FP outer product instruction variants are predicated on
@@ -512,24 +512,13 @@ struct VectorOuterProductToArmSMELowering
       return true;
     };
 
-    auto resultVectorType = outerProductOp.getResultVectorType();
-    if (!isSupportedType(resultVectorType))
-      return outerProductOp.emitError("unsupported type");
-
-    vector::CombiningKind kind = outerProductOp.getKind();
-    if (kind != vector::CombiningKind::ADD)
-      // TODO: support subtract.
+    // TODO: Support CombiningKind::Sub for outer products.
+    if (outerProductOp.getKind() != CombiningKind::Add)
       return outerProductOp.emitError("unsupported kind");
 
-    auto maskableOp =
-        cast<vector::MaskableOpInterface>(outerProductOp.getOperation());
-    if (maskableOp.isMasked())
-      // TODO: support masking.
-      return outerProductOp.emitError("masking is currently unsupported");
-
-    if (!isa<VectorType>(outerProductOp.getOperandTypeRHS()))
-      // AXPY operation not suited for SME.
-      return failure();
+    auto resultVectorType = outerProductOp.getResultType();
+    if (!isSupportedType(resultVectorType))
+      return outerProductOp.emitError("unsupported type");
 
     auto loc = outerProductOp.getLoc();
 
@@ -542,21 +531,24 @@ struct VectorOuterProductToArmSMELowering
     auto tileId = rewriter.create<arm_sme::CastVectorToTile>(
         loc, rewriter.getIntegerType(elementWidth), acc);
 
-    // Create all active predicate mask.
-    auto one = rewriter.create<arith::ConstantOp>(
-        loc, rewriter.getI1Type(),
-        rewriter.getIntegerAttr(rewriter.getI1Type(), 1));
-    auto predTy =
-        VectorType::get(resultVectorType.getShape()[0], rewriter.getI1Type(),
-                        /*scalableDims=*/{true});
-    auto allActiveMask = rewriter.create<vector::SplatOp>(loc, predTy, one);
-
     auto tileI32 = castTileIDToI32(tileId, loc, rewriter);
 
+    Value lhsMask = outerProductOp.getLhsMask();
+    Value rhsMask = outerProductOp.getRhsMask();
+
+    if (!lhsMask || !rhsMask) {
+      auto predTy =
+          outerProductOp.getLhsType().cloneWith({}, rewriter.getI1Type());
+      Value allActiveMask = rewriter.create<arith::ConstantOp>(
+          loc, DenseElementsAttr::get(predTy, true));
+      lhsMask = allActiveMask;
+      rhsMask = allActiveMask;
+    }
+
     // Create 'arm_sme.intr.mopa' outer product intrinsic.
-    rewriter.create<arm_sme::aarch64_sme_mopa>(
-        loc, tileI32, allActiveMask, allActiveMask, outerProductOp.getLhs(),
-        outerProductOp.getRhs());
+    rewriter.create<arm_sme::aarch64_sme_mopa>(loc, tileI32, lhsMask, rhsMask,
+                                               outerProductOp.getLhs(),
+                                               outerProductOp.getRhs());
 
     // Create `CastTileToVectorOp` to use as the output.
     rewriter.replaceOpWithNewOp<arm_sme::CastTileToVector>(
@@ -733,6 +725,6 @@ void mlir::populateArmSMELegalizeForLLVMExportPatterns(
   patterns.add<
       LoadTileSliceToArmSMELowering, MoveTileSliceToVectorArmSMELowering,
       MoveVectorToTileSliceToArmSMELowering, StoreTileSliceToArmSMELowering,
-      VectorOuterProductToArmSMELowering, ZeroOpConversion,
-      VectorExtractToArmSMELowering, VectorInsertToArmSMELowering>(converter);
+      OuterProductOpConversion, ZeroOpConversion, VectorExtractToArmSMELowering,
+      VectorInsertToArmSMELowering>(converter);
 }

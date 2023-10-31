@@ -79,6 +79,27 @@ def ArmSME_TileSliceLayoutAttr : EnumAttr<ArmSME_Dialect, TileSliceLayout,
   let defaultValue = "TileSliceLayout::Horizontal";
 }
 
+def CombiningKind : I32EnumAttr<"CombiningKind", "Kind of combining function", [
+  I32EnumAttrCase<"Add", 0, "add">,
+  I32EnumAttrCase<"Sub", 1, "sub">,
+]> {
+  let cppNamespace = "::mlir::arm_sme";
+  let genSpecializedAttr = 0;
+}
+
+/// An attribute that specifies how to combine a newly produced value with the
+/// accumulator. This is similar to vector::CombiningKindAttr, but limited to
+/// the functions that are valid for SME outer products. Add corresponds to a
+/// MOPA and sub to a MOPS.
+/// E.g. For f32:
+/// FMOPA: https://developer.arm.com/documentation/ddi0602/2022-03/SME-Instructions/FMOPA--non-widening---Floating-point-outer-product-and-accumulate-
+/// FMOPS: https://developer.arm.com/documentation/ddi0602/2022-03/SME-Instructions/FMOPS--non-widening---Floating-point-outer-product-and-subtract-
+def ArmSME_CombiningKindAttr : EnumAttr<ArmSME_Dialect, CombiningKind,
+                                          "kind"> {
+  let assemblyFormat = "`<` $value `>`";
+  let defaultValue = "CombiningKind::Add";
+}
+
 //===----------------------------------------------------------------------===//
 // ArmSME op definitions
 //===----------------------------------------------------------------------===//
@@ -209,7 +230,7 @@ def ZeroOp : ArmSME_Op<"zero", [Pure]> {
   let results = (outs SMETile:$res);
   let description = [{
     Initialise ZA with 0. This operation is convenient wrapper for the SME
-    `zero` intrinsic and instruction. 
+    `zero` intrinsic and instruction.
 
     Example 1: Zero an 8-bit element ZA tile.
 
@@ -558,6 +579,92 @@ def MoveTileSliceToVectorOp : ArmSME_Op<"move_tile_slice_to_vector", [Pure,
   let assemblyFormat = [{
       $tile `[` $tile_slice_index `]` (`layout` `` $layout^)? attr-dict
       `:` type($result) `from` type($tile)
+  }];
+}
+
+class HasMatchingMaskTypeConstraint<string operand> :
+  OptionalTypesMatchWith<
+    "shape of `" # operand #  "Mask` matches `" # operand # "`",
+    operand, operand # "Mask",
+    "::llvm::cast<mlir::VectorType>($_self).cloneWith({}, IntegerType::get($_ctxt, 1))">;
+
+class OuterProductResultTileTypeConstraint<string operand> :
+  OptionalTypesMatchWith<operand # "type is derived from `lhs` and `rhs`",
+    "lhs", operand,
+    "[&]{"
+    "  auto vectorType = ::llvm::cast<mlir::VectorType>($_self);"
+    "  int64_t size = vectorType.getDimSize(0);"
+    "  return VectorType::get("
+    "    { size, size }, vectorType.getElementType(), { true, true });"
+    "}()">;
+
+def OuterProductOp :
+  ArmSME_Op<"outerproduct", [Pure,
+    AttrSizedOperandSegments,
+    AllTypesMatch<["lhs", "rhs"]>,
+    HasMatchingMaskTypeConstraint<"lhs">,
+    HasMatchingMaskTypeConstraint<"rhs">,
+    PredOpTrait<
+      "both `lhsMask` and `rhsMask` should be provided or neither",
+      CPred<"bool(getLhsMask()) == bool(getRhsMask())">>,
+    OuterProductResultTileTypeConstraint<"result">,
+    OuterProductResultTileTypeConstraint<"acc">
+  ]>
+{
+  let summary = "Outer product with optional fused add/sub";
+
+  let description = [{
+    This operation represents an outer product that fits within an SME tile.
+    All operands must be SVE vectors and the result a SME tile. Unlike
+    `vector.outerproduct` masking is on the operands (rather than the result),
+    which mirrors the SME instructions.
+
+    Example 1: Unmasked outerproduct (without accumulator)
+    ```mlir
+    // Not specifying an accumulator implicitly zeros the destination tile.
+    %result = arm_sme.outerproduct $lhs, $rhs : vector<[4]xf32>, vector<[4]xf32>
+    ```
+
+    Example 2: Unmasked outerproduct (with accumulator)
+    ```mlir
+    %result = arm_sme.outerproduct $lhs, $rhs acc($accumulator)
+                : vector<[4]xf32>, vector<[4]xf32>
+    ```
+
+    Example 3: Masked outerproduct
+    ```mlir
+    %result = arm_sme.outerproduct $lhs, $rhs masks($lhsMask, $rhsMask)
+                : vector<[4]xf32>, vector<[4]xf32>
+    ```
+
+    Example 4: Masked outerproduct (with accumulator)
+    ```mlir
+    %result = arm_sme.outerproduct $lhs, $rhs acc($accumulator) masks($lhsMask, $rhsMask)
+                : vector<[4]xf32>, vector<[4]xf32>
+    ```
+  }];
+
+  let arguments = (ins
+    SVEVector:$lhs, SVEVector:$rhs,
+    Optional<SVEPredicate>:$lhsMask,
+    Optional<SVEPredicate>:$rhsMask,
+    Optional<SMETile>: $acc,
+    ArmSME_CombiningKindAttr:$kind);
+  let results = (outs SMETile:$result);
+
+  let assemblyFormat = [{
+    $lhs `,` $rhs
+    oilist(
+        `kind` `` $kind
+      | `acc` `` `(` $acc `)`
+      | `masks` `` `(` $lhsMask `,` $rhsMask `)`
+    ) attr-dict `:` type($lhs) `,` type($rhs)
+  }];
+
+  let extraClassDeclaration = [{
+    VectorType getLhsType() { return llvm::cast<VectorType>(getLhs().getType()); }
+    VectorType getRhsType() { return llvm::cast<VectorType>(getRhs().getType()); }
+    VectorType getResultType() { return llvm::cast<VectorType>(getResult().getType()); }
   }];
 }
 
