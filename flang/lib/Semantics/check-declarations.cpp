@@ -1394,12 +1394,6 @@ void CheckHelper::CheckSubprogram(
     if (ClassifyProcedure(symbol) == ProcedureDefinitionClass::Internal) {
       messages_.Say(symbol.name(),
           "A device subprogram may not be an internal subprogram"_err_en_US);
-    } else if ((*cudaAttrs == common::CUDASubprogramAttrs::Device ||
-                   *cudaAttrs == common::CUDASubprogramAttrs::HostDevice) &&
-        (symbol.owner().kind() != Scope::Kind::Module ||
-            details.isInterface())) {
-      messages_.Say(symbol.name(),
-          "An ATTRIBUTES(DEVICE) subprogram must be a top-level module procedure"_err_en_US);
     }
   }
   if ((!details.cudaLaunchBounds().empty() ||
