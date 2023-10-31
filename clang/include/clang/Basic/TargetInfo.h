@@ -1291,20 +1291,20 @@ public:
     fillValidCPUList(Values);
   }
 
-  /// brief Determine whether this TargetInfo supports the given CPU name.
+  /// Determine whether this TargetInfo supports the given CPU name.
   virtual bool isValidCPUName(StringRef Name) const {
     return true;
   }
 
-  /// brief Determine whether this TargetInfo supports the given CPU name for
-  // tuning.
+  /// Determine whether this TargetInfo supports the given CPU name for
+  /// tuning.
   virtual bool isValidTuneCPUName(StringRef Name) const {
     return isValidCPUName(Name);
   }
 
   virtual ParsedTargetAttr parseTargetAttr(StringRef Str) const;
 
-  /// brief Determine whether this TargetInfo supports tune in target attribute.
+  /// Determine whether this TargetInfo supports tune in target attribute.
   virtual bool supportsTargetAttributeTune() const {
     return false;
   }
