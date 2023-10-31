@@ -59,7 +59,8 @@ public:
   static void CloseAll(IoErrorHandler &);
   static void FlushAll(IoErrorHandler &);
 
-  void OpenUnit(std::optional<OpenStatus>, std::optional<Action>, Position,
+  // Returns true if an existing unit was closed
+  bool OpenUnit(std::optional<OpenStatus>, std::optional<Action>, Position,
       OwningPtr<char> &&path, std::size_t pathLength, Convert,
       IoErrorHandler &);
   void OpenAnonymousUnit(std::optional<OpenStatus>, std::optional<Action>,
