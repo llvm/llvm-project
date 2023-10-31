@@ -74,18 +74,14 @@ public:
 
   bool operator==(const VXRMInfo &Other) const {
     // Uninitialized is only equal to another Uninitialized.
-    if (!isValid())
-      return !Other.isValid();
-    if (!Other.isValid())
-      return !isValid();
+    if (State != Other.State)
+      return false;
 
-    // Unknown is only equal to another Unknown.
-    if (isUnknown())
-      return Other.isUnknown();
-    if (Other.isUnknown())
-      return isUnknown();
+    if (isStatic())
+      return VXRMImm == Other.VXRMImm;
 
-    return VXRMImm == Other.VXRMImm;
+    assert((isValid() || isUnknown()) && "Unexpected state");
+    return true;
   }
 
   bool operator!=(const VXRMInfo &Other) const { return !(*this == Other); }
