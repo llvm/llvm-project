@@ -71,11 +71,6 @@
 using namespace llvm;
 using namespace dwarf;
 
-namespace llvm {
-
-
-} // namespace llvm
-
 static cl::opt<bool> JumpTableInFunctionSection(
     "jumptable-in-function-section", cl::Hidden, cl::init(false),
     cl::desc("Putting Jump Table in function section"));

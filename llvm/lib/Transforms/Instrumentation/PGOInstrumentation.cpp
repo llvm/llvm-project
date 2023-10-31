@@ -219,8 +219,6 @@ cl::opt<bool> NoPGOWarnMismatchComdatWeak(
     cl::desc("The option is used to turn on/off "
              "warnings about hash mismatch for comdat "
              "or weak functions."));
-
-extern cl::opt<bool> DebugInfoCorrelate;
 } // namespace llvm
 
 // Command line option to enable/disable select instruction instrumentation.
