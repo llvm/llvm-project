@@ -44,6 +44,9 @@ public:
     DS_Generic,
   };
 
+  /// Get barrier to synchronize all threads in a block.
+  void syncCTAThreads(CodeGenFunction &CGF);
+
 private:
   /// Parallel outlined function work for workers to execute.
   llvm::SmallVector<llvm::Function *, 16> Work;
@@ -55,9 +58,6 @@ private:
   ExecutionMode getExecutionMode() const;
 
   DataSharingMode getDataSharingMode() const;
-
-  /// Get barrier to synchronize all threads in a block.
-  void syncCTAThreads(CodeGenFunction &CGF);
 
   /// Helper for target directive initialization.
   void emitKernelInit(const OMPExecutableDirective &D, CodeGenFunction &CGF,

@@ -18,9 +18,12 @@
 #include "clang/AST/OpenMPClause.h"
 #include "clang/AST/StmtOpenMP.h"
 #include "clang/AST/StmtVisitor.h"
+#include "clang/AST/Type.h"
 #include "clang/Basic/Cuda.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Frontend/OpenMP/OMPGridValues.h"
+#include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/GlobalVariable.h"
 #include "llvm/Support/MathExtras.h"
 
 using namespace clang;
@@ -1342,7 +1345,7 @@ void CGOpenMPRuntimeGPU::emitBarrierCall(CodeGenFunction &CGF,
   // Build call __kmpc_cancel_barrier(loc, thread_id);
   unsigned Flags = getDefaultFlagsForBarriers(Kind);
   llvm::Value *Args[] = {emitUpdateLocation(CGF, Loc, Flags),
-                         getThreadID(CGF, Loc)};
+                         llvm::ConstantInt::getNullValue(CGF.Int32Ty)};
 
   CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
                           CGM.getModule(), OMPRTL___kmpc_barrier),
@@ -1798,7 +1801,6 @@ static void emitReductionListCopy(
 /// void inter_warp_copy_func(void* reduce_data, num_warps)
 ///   shared smem[warp_size];
 ///   For all data entries D in reduce_data:
-///     sync
 ///     If (I am the first lane in each warp)
 ///       Copy my local D to smem[warp_id]
 ///     sync
@@ -1844,21 +1846,27 @@ static llvm::Value *emitInterWarpCopyFunction(CodeGenModule &CGM,
   // for reduced latency, as well as to have a distinct copy for concurrently
   // executing target regions.  The array is declared with common linkage so
   // as to be shared across compilation units.
-  StringRef TransferMediumName =
-      "__openmp_nvptx_data_transfer_temporary_storage";
-  llvm::GlobalVariable *TransferMedium =
-      M.getGlobalVariable(TransferMediumName);
-  unsigned WarpSize = CGF.getTarget().getGridValue().GV_Warp_Size;
-  if (!TransferMedium) {
-    auto *Ty = llvm::ArrayType::get(CGM.Int32Ty, WarpSize);
-    unsigned SharedAddressSpace = C.getTargetAddressSpace(LangAS::cuda_shared);
-    TransferMedium = new llvm::GlobalVariable(
-        M, Ty, /*isConstant=*/false, llvm::GlobalVariable::WeakAnyLinkage,
-        llvm::UndefValue::get(Ty), TransferMediumName,
-        /*InsertBefore=*/nullptr, llvm::GlobalVariable::NotThreadLocal,
-        SharedAddressSpace);
-    CGM.addCompilerUsedGlobal(TransferMedium);
-  }
+  auto CreateSharedMem = [&](llvm::IntegerType *ElementTy, StringRef Suffix) {
+    std::string TransferMediumName =
+        "__openmp_nvptx_data_transfer_temporary_storage";
+    TransferMediumName += Suffix;
+    llvm::GlobalVariable *TransferMedium =
+        M.getGlobalVariable(TransferMediumName);
+    unsigned WarpSize = CGF.getTarget().getGridValue().GV_Warp_Size;
+    if (!TransferMedium) {
+      auto *Ty = llvm::ArrayType::get(ElementTy, WarpSize);
+      unsigned SharedAddressSpace =
+          C.getTargetAddressSpace(LangAS::cuda_shared);
+      TransferMedium = new llvm::GlobalVariable(
+          M, Ty, /*isConstant=*/false, llvm::GlobalVariable::WeakAnyLinkage,
+          llvm::UndefValue::get(Ty), TransferMediumName,
+          /*InsertBefore=*/nullptr, llvm::GlobalVariable::NotThreadLocal,
+          SharedAddressSpace);
+    }
+    return TransferMedium;
+  };
+  llvm::GlobalVariable *TransferMedium4 = CreateSharedMem(CGM.Int32Ty, "_4");
+  llvm::GlobalVariable *TransferMedium8 = CreateSharedMem(CGM.Int64Ty, "_8");
 
   auto &RT = static_cast<CGOpenMPRuntimeGPU &>(CGF.CGM.getOpenMPRuntime());
   // Get the CUDA thread id of the current OpenMP thread on the GPU.
@@ -1888,7 +1896,11 @@ static llvm::Value *emitInterWarpCopyFunction(CodeGenModule &CGM,
         C.getTypeSizeInChars(Private->getType())
             .alignTo(C.getTypeAlignInChars(Private->getType()))
             .getQuantity();
-    for (unsigned TySize = 4; TySize > 0 && RealTySize > 0; TySize /=2) {
+
+    llvm::GlobalVariable *TransferMedium =
+        RealTySize >= 8 ? TransferMedium8 : TransferMedium4;
+    for (unsigned TySize = RealTySize >= 8 ? 8 : 4;
+         TySize > 0 && RealTySize > 0; TySize /= 2) {
       unsigned NumIters = RealTySize / TySize;
       if (NumIters == 0)
         continue;
@@ -1916,10 +1928,7 @@ static llvm::Value *emitInterWarpCopyFunction(CodeGenModule &CGM,
         Bld.CreateCondBr(Cmp, BodyBB, ExitBB);
         CGF.EmitBlock(BodyBB);
       }
-      // kmpc_barrier.
-      CGM.getOpenMPRuntime().emitBarrierCall(CGF, Loc, OMPD_unknown,
-                                             /*EmitChecks=*/false,
-                                             /*ForceSimpleCall=*/true);
+
       llvm::BasicBlock *ThenBB = CGF.createBasicBlock("then");
       llvm::BasicBlock *ElseBB = CGF.createBasicBlock("else");
       llvm::BasicBlock *MergeBB = CGF.createBasicBlock("ifcont");
@@ -1958,7 +1967,7 @@ static llvm::Value *emitInterWarpCopyFunction(CodeGenModule &CGM,
           ElemPtr, /*Volatile=*/false, CType, Loc,
           LValueBaseInfo(AlignmentSource::Type), TBAAAccessInfo());
       // Store the source element value to the dest element address.
-      CGF.EmitStoreOfScalar(Elem, MediumPtr, /*Volatile=*/true, CType,
+      CGF.EmitStoreOfScalar(Elem, MediumPtr, /*Volatile=*/false, CType,
                             LValueBaseInfo(AlignmentSource::Type),
                             TBAAAccessInfo());
 
@@ -2014,7 +2023,7 @@ static llvm::Value *emitInterWarpCopyFunction(CodeGenModule &CGM,
 
       // *TargetElemPtr = SrcMediumVal;
       llvm::Value *SrcMediumValue =
-          CGF.EmitLoadOfScalar(SrcMediumPtr, /*Volatile=*/true, CType, Loc);
+          CGF.EmitLoadOfScalar(SrcMediumPtr, /*Volatile=*/false, CType, Loc);
       CGF.EmitStoreOfScalar(SrcMediumValue, TargetElemPtr, /*Volatile=*/false,
                             CType);
       Bld.CreateBr(W0MergeBB);
