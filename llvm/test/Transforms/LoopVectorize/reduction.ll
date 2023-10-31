@@ -1200,7 +1200,7 @@ define i64 @reduction_with_phi_with_one_incoming_on_backedge(i16 %n, ptr %A) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SMAX:%.*]] = call i16 @llvm.smax.i16(i16 [[N]], i16 2)
 ; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i16 [[SMAX]], -1
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[TMP0]] to i32
+; CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i16 [[TMP0]] to i32
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i16 [[SMAX]], 5
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
@@ -1278,7 +1278,7 @@ define i64 @reduction_with_phi_with_two_incoming_on_backedge(i16 %n, ptr %A) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SMAX:%.*]] = call i16 @llvm.smax.i16(i16 [[N]], i16 2)
 ; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i16 [[SMAX]], -1
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[TMP0]] to i32
+; CHECK-NEXT:    [[TMP1:%.*]] = zext nneg i16 [[TMP0]] to i32
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i16 [[SMAX]], 5
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:

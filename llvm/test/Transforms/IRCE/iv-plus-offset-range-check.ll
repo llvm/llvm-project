@@ -1088,7 +1088,7 @@ define i8 @test_overflow_check_runtime(i8 %limit, ptr %p) {
 ; CHECK-NEXT:    [[SMAX2:%.*]] = call i8 @llvm.smax.i8(i8 [[SMIN]], i8 -1)
 ; CHECK-NEXT:    [[TMP4:%.*]] = add nsw i8 [[SMAX2]], 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = mul i8 [[TMP2]], [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = zext i8 [[N]] to i16
+; CHECK-NEXT:    [[TMP6:%.*]] = zext nneg i8 [[N]] to i16
 ; CHECK-NEXT:    [[TMP7:%.*]] = sub i16 124, [[TMP6]]
 ; CHECK-NEXT:    [[SMIN3:%.*]] = call i16 @llvm.smin.i16(i16 [[TMP7]], i16 0)
 ; CHECK-NEXT:    [[TMP8:%.*]] = trunc i16 [[SMIN3]] to i8
