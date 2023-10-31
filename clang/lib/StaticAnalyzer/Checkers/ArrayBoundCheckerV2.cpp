@@ -177,15 +177,13 @@ compareValueToThreshold(ProgramStateRef State, NonLoc Value, NonLoc Threshold,
 }
 
 static std::string getRegionName(const SubRegion *Region) {
-  std::string RegName = Region->getDescriptiveName();
-  if (!RegName.empty())
+  if (std::string RegName = Region->getDescriptiveName(); !RegName.empty())
     return RegName;
 
   // Field regions only have descriptive names when their parent has a
   // descriptive name; so we provide a fallback representation for them:
   if (const auto *FR = Region->getAs<FieldRegion>()) {
-    StringRef Name = FR->getDecl()->getName();
-    if (!Name.empty())
+    if (StringRef Name = FR->getDecl()->getName(); !Name.empty())
       return formatv("the field '{0}'", Name);
     return "the unnamed field";
   }
@@ -205,18 +203,17 @@ static std::string getRegionName(const SubRegion *Region) {
 
 static std::optional<int64_t> getConcreteValue(NonLoc SV) {
   if (auto ConcreteVal = SV.getAs<nonloc::ConcreteInt>()) {
-    const llvm::APSInt &IntVal = ConcreteVal->getValue();
-    return IntVal.tryExtValue();
+    return ConcreteVal->getValue().tryExtValue();
   }
   return std::nullopt;
 }
 
-static const char *ShortMsgTemplates[] = {
-    "Out of bound access to memory preceding {0}",
-    "Out of bound access to memory after the end of {0}",
-    "Potential out of bound access to {0} with tainted offset"};
-
 static std::string getShortMsg(OOB_Kind Kind, std::string RegName) {
+  static const char *ShortMsgTemplates[] = {
+      "Out of bound access to memory preceding {0}",
+      "Out of bound access to memory after the end of {0}",
+      "Potential out of bound access to {0} with tainted offset"};
+
   return formatv(ShortMsgTemplates[Kind], RegName);
 }
 
