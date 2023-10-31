@@ -1673,7 +1673,8 @@ void MicrosoftCXXABI::EmitDestructorCall(CodeGenFunction &CGF,
 void MicrosoftCXXABI::emitVTableTypeMetadata(const VPtrInfo &Info,
                                              const CXXRecordDecl *RD,
                                              llvm::GlobalVariable *VTable) {
-  if (!CGM.getCodeGenOpts().LTOUnit)
+  if (!CGM.getCodeGenOpts().LTOUnit &&
+      !CGM.getCodeGenOpts().hasProfileIRInstr())
     return;
 
   // TODO: Should VirtualFunctionElimination also be supported here?
