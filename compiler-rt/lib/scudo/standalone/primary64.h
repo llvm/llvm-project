@@ -12,6 +12,7 @@
 #include "allocator_common.h"
 #include "bytemap.h"
 #include "common.h"
+#include "condition_variable.h"
 #include "list.h"
 #include "local_cache.h"
 #include "mem_map.h"
@@ -21,8 +22,6 @@
 #include "stats.h"
 #include "string_utils.h"
 #include "thread_annotations.h"
-
-#include "condition_variable.h"
 
 namespace scudo {
 
