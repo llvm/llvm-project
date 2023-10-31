@@ -23,10 +23,6 @@ namespace {
 //   (2) rewrite linalg.generic ops traits on level crds
 //   (3) compute topsort, and resolve cyles with sparse_tensor.convert ops
 
-//===----------------------------------------------------------------------===//
-// Reinterpret Map Rewriters for operations other than linalg.generics
-//===----------------------------------------------------------------------===//
-
 // CRTP to help implementing a rewriter that demaps all its inputs and remaps
 // all its outputs.
 template <typename SubClass, typename SourceOp>
@@ -62,6 +58,10 @@ struct DemapInsRemapOutsRewriter : public OpRewritePattern<SourceOp> {
     return success();
   }
 };
+
+//===----------------------------------------------------------------------===//
+// Reinterpret Map Rewriters for operations other than linalg.generics
+//===----------------------------------------------------------------------===//
 
 struct CrdTranslateRewriter : public OpRewritePattern<CrdTranslateOp> {
   using OpRewritePattern::OpRewritePattern;
