@@ -511,6 +511,19 @@ def testCustomTypeTypeCaster():
             print(e)
 
         def type_caster(pytype):
+            return RankedTensorType(pytype)
+
+        # python_test dialect registers a caster for RankedTensorType in its extension (pybind) module.
+        # So this one replaces that one (successfully). And then just to be sure we restore the original caster below.
+        register_type_caster(c.typeid, type_caster, replace=True)
+
+        d = tensor.EmptyOp([10, 10], IntegerType.get_signless(5)).result
+        # CHECK: tensor<10x10xi5>
+        print(d.type)
+        # CHECK: ranked tensor type RankedTensorType(tensor<10x10xi5>)
+        print("ranked tensor type", repr(d.type))
+
+        def type_caster(pytype):
             return test.TestIntegerRankedTensorType(pytype)
 
         register_type_caster(c.typeid, type_caster, replace=True)
