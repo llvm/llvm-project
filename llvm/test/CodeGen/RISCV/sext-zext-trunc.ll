@@ -350,6 +350,164 @@ define i64 @zext_i32_to_i64(i32 %a) nounwind {
   ret i64 %1
 }
 
+define i8 @zext_nneg_i1_to_i8(i1 %a) nounwind {
+; RV32I-LABEL: zext_nneg_i1_to_i8:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    andi a0, a0, 1
+; RV32I-NEXT:    ret
+;
+; RV64-LABEL: zext_nneg_i1_to_i8:
+; RV64:       # %bb.0:
+; RV64-NEXT:    andi a0, a0, 1
+; RV64-NEXT:    ret
+  %1 = zext nneg i1 %a to i8
+  ret i8 %1
+}
+
+define i16 @zext_nneg_i1_to_i16(i1 %a) nounwind {
+; RV32I-LABEL: zext_nneg_i1_to_i16:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    andi a0, a0, 1
+; RV32I-NEXT:    ret
+;
+; RV64-LABEL: zext_nneg_i1_to_i16:
+; RV64:       # %bb.0:
+; RV64-NEXT:    andi a0, a0, 1
+; RV64-NEXT:    ret
+  %1 = zext nneg i1 %a to i16
+  ret i16 %1
+}
+
+define i32 @zext_nneg_i1_to_i32(i1 %a) nounwind {
+; RV32I-LABEL: zext_nneg_i1_to_i32:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    andi a0, a0, 1
+; RV32I-NEXT:    ret
+;
+; RV64-LABEL: zext_nneg_i1_to_i32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    andi a0, a0, 1
+; RV64-NEXT:    ret
+  %1 = zext nneg i1 %a to i32
+  ret i32 %1
+}
+
+define i64 @zext_nneg_i1_to_i64(i1 %a) nounwind {
+; RV32I-LABEL: zext_nneg_i1_to_i64:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    andi a0, a0, 1
+; RV32I-NEXT:    li a1, 0
+; RV32I-NEXT:    ret
+;
+; RV64-LABEL: zext_nneg_i1_to_i64:
+; RV64:       # %bb.0:
+; RV64-NEXT:    andi a0, a0, 1
+; RV64-NEXT:    ret
+  %1 = zext nneg i1 %a to i64
+  ret i64 %1
+}
+
+define i16 @zext_nneg_i8_to_i16(i8 %a) nounwind {
+; RV32I-LABEL: zext_nneg_i8_to_i16:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    andi a0, a0, 255
+; RV32I-NEXT:    ret
+;
+; RV64-LABEL: zext_nneg_i8_to_i16:
+; RV64:       # %bb.0:
+; RV64-NEXT:    andi a0, a0, 255
+; RV64-NEXT:    ret
+  %1 = zext nneg i8 %a to i16
+  ret i16 %1
+}
+
+define i32 @zext_nneg_i8_to_i32(i8 %a) nounwind {
+; RV32I-LABEL: zext_nneg_i8_to_i32:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    andi a0, a0, 255
+; RV32I-NEXT:    ret
+;
+; RV64-LABEL: zext_nneg_i8_to_i32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    andi a0, a0, 255
+; RV64-NEXT:    ret
+  %1 = zext nneg i8 %a to i32
+  ret i32 %1
+}
+
+define i64 @zext_nneg_i8_to_i64(i8 %a) nounwind {
+; RV32I-LABEL: zext_nneg_i8_to_i64:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    andi a0, a0, 255
+; RV32I-NEXT:    li a1, 0
+; RV32I-NEXT:    ret
+;
+; RV64-LABEL: zext_nneg_i8_to_i64:
+; RV64:       # %bb.0:
+; RV64-NEXT:    andi a0, a0, 255
+; RV64-NEXT:    ret
+  %1 = zext nneg i8 %a to i64
+  ret i64 %1
+}
+
+define i32 @zext_nneg_i16_to_i32(i16 %a) nounwind {
+; RV32I-LABEL: zext_nneg_i16_to_i32:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    slli a0, a0, 16
+; RV32I-NEXT:    srli a0, a0, 16
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: zext_nneg_i16_to_i32:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    slli a0, a0, 48
+; RV64I-NEXT:    srli a0, a0, 48
+; RV64I-NEXT:    ret
+;
+; RV64ZBB-LABEL: zext_nneg_i16_to_i32:
+; RV64ZBB:       # %bb.0:
+; RV64ZBB-NEXT:    zext.h a0, a0
+; RV64ZBB-NEXT:    ret
+  %1 = zext nneg i16 %a to i32
+  ret i32 %1
+}
+
+define i64 @zext_nneg_i16_to_i64(i16 %a) nounwind {
+; RV32I-LABEL: zext_nneg_i16_to_i64:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    slli a0, a0, 16
+; RV32I-NEXT:    srli a0, a0, 16
+; RV32I-NEXT:    li a1, 0
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: zext_nneg_i16_to_i64:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    slli a0, a0, 48
+; RV64I-NEXT:    srli a0, a0, 48
+; RV64I-NEXT:    ret
+;
+; RV64ZBB-LABEL: zext_nneg_i16_to_i64:
+; RV64ZBB:       # %bb.0:
+; RV64ZBB-NEXT:    zext.h a0, a0
+; RV64ZBB-NEXT:    ret
+  %1 = zext nneg i16 %a to i64
+  ret i64 %1
+}
+
+define i64 @zext_nneg_i32_to_i64(i32 %a) nounwind {
+; RV32I-LABEL: zext_nneg_i32_to_i64:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a1, 0
+; RV32I-NEXT:    ret
+;
+; RV64-LABEL: zext_nneg_i32_to_i64:
+; RV64:       # %bb.0:
+; RV64-NEXT:    slli a0, a0, 32
+; RV64-NEXT:    srli a0, a0, 32
+; RV64-NEXT:    ret
+  %1 = zext nneg i32 %a to i64
+  ret i64 %1
+}
+
 define i1 @trunc_i8_to_i1(i8 %a) nounwind {
 ; RV32I-LABEL: trunc_i8_to_i1:
 ; RV32I:       # %bb.0:
