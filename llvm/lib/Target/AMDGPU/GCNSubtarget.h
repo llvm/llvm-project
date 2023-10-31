@@ -1318,7 +1318,7 @@ public:
   bool hasIntMinMax64() const { return GFX12_10Insts; }
 
   // \returns true if the target has V_ADD_{MIN|MAX}_{I|U}32 instructions.
-  bool HasAddMinMaxInsts() const { return GFX12_10Insts; }
+  bool hasAddMinMaxInsts() const { return GFX12_10Insts; }
 
   // \returns true if the target has V_PK_ADD_{MIN|MAX}_{I|U}16 instructions.
   bool HasPkAddMinMaxInsts() const { return GFX12_10Insts; }
