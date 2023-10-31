@@ -1124,6 +1124,9 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    - Size : The number of instructions that are in the group.
                                                    - SyncID : Order is enforced between groups with matching values.
 
+                                                   The mask can include multiple instruction types. It is undefined behavior to set
+                                                   values beyond the range of valid masks.
+
                                                    Combining multiple sched_group_barrier intrinsics enables an ordering of specific
                                                    instruction types during instruction scheduling. For example, the following enforces
                                                    a sequence of 1 VMEM read, followed by 1 VALU instruction, followed by 5 MFMA
@@ -1138,11 +1141,14 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
 
   llvm.amdgcn.iglp_opt                             An **experimental** intrinsic for instruction group level parallelism. The intrinsic
                                                    implements predefined intruction scheduling orderings. The intrinsic applies to the
-                                                   code that appears after the intrinsic. The intrinsic takes a value that specifies the
+                                                   surrounding scheduling region. The intrinsic takes a value that specifies the
                                                    strategy.  The compiler implements two strategies.
 
                                                    0. Interleave DS and MFMA instructions for small GEMM kernels.
                                                    1. Interleave DS and MFMA instructions for single wave small GEMM kernels.
+
+                                                   Only one iglp_opt intrinsic may be used in a scheduling region. The iglp_opt intrinsic
+                                                   cannot be combined with sched_barrier or sched_group_barrier.
 
                                                    The iglp_opt strategy implementations are subject to change.
 
