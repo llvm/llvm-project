@@ -1242,7 +1242,8 @@ Expected<bool> XCOFFSymbolRef::isFunction() const {
 
   const XCOFFCsectAuxRef CsectAuxRef = ExpCsectAuxEnt.get();
 
-  if (CsectAuxRef.getStorageMappingClass() != XCOFF::XMC_PR)
+  if (CsectAuxRef.getStorageMappingClass() != XCOFF::XMC_PR &&
+      CsectAuxRef.getStorageMappingClass() != XCOFF::XMC_GL)
     return false;
 
   // A function definition should not be a common type symbol or a external
@@ -1263,13 +1264,6 @@ Expected<bool> XCOFFSymbolRef::isFunction() const {
     if (getSize() == 0)
       return false;
 
-    Expected<uint64_t> SymbolAddressOrErr = getAddress();
-    if (!SymbolAddressOrErr) {
-      // If there is no address for this symbol, won't be a function.
-      consumeError(SymbolAddressOrErr.takeError());
-      return false;
-    }
-
     uint8_t NumberOfAuxEntries = getNumberOfAuxEntries();
 
     // If this is the last main symbol table entry, there won't be XTY_LD type
@@ -1286,13 +1280,13 @@ Expected<bool> XCOFFSymbolRef::isFunction() const {
     if (!NextSym.isCsectSymbol())
       return true;
 
+    Expected<uint64_t> SymbolAddressOrErr = getAddress();
+    if (!SymbolAddressOrErr)
+      return false;
+
     Expected<uint64_t> NextSymbolAddressOrErr = NextSym.getAddress();
-    if (!NextSymbolAddressOrErr) {
-      // If there is no address for next symbol, won't be same with the XTY_SD
-      // symbol's address.
-      consumeError(NextSymbolAddressOrErr.takeError());
+    if (!NextSymbolAddressOrErr)
       return true;
-    }
 
     if (SymbolAddressOrErr.get() != NextSymbolAddressOrErr.get())
       return true;
