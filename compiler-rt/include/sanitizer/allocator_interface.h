@@ -83,8 +83,8 @@ void SANITIZER_CDECL __sanitizer_free_hook(const volatile void *ptr);
    other threads.
 */
 int SANITIZER_CDECL __sanitizer_install_malloc_and_free_hooks(
-    void (*SANITIZER_CDECL malloc_hook)(const volatile void *, size_t),
-    void (*SANITIZER_CDECL free_hook)(const volatile void *));
+    void(SANITIZER_CDECL *malloc_hook)(const volatile void *, size_t),
+    void(SANITIZER_CDECL *free_hook)(const volatile void *));
 
 /* Drains allocator quarantines (calling thread's and global ones), returns
    freed memory back to OS and releases other non-essential internal allocator
