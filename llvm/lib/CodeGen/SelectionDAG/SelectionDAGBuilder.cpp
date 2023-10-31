@@ -3527,18 +3527,20 @@ void SelectionDAGBuilder::visitZExt(const User &I) {
   auto &TLI = DAG.getTargetLoweringInfo();
   EVT DestVT = TLI.getValueType(DAG.getDataLayout(), I.getType());
 
-  // Since we don't yet have a representation of zext nneg in SDAG or MI,
-  // eagerly use the information to canonicalize towards sign_extend if
-  // that is the target's preference.  TODO: Add nneg support to the
-  // SDAG and MI representations.
-  if (auto *PNI = dyn_cast<PossiblyNonNegInst>(&I);
-      PNI && PNI->hasNonNeg() &&
+  SDNodeFlags Flags;
+  if (auto *PNI = dyn_cast<PossiblyNonNegInst>(&I))
+    Flags.setNonNeg(PNI->hasNonNeg());
+
+  // Eagerly use nonneg information to canonicalize towards sign_extend if
+  // that is the target's preference.
+  // TODO: Let the target do this later.
+  if (Flags.hasNonNeg() &&
       TLI.isSExtCheaperThanZExt(N.getValueType(), DestVT)) {
     setValue(&I, DAG.getNode(ISD::SIGN_EXTEND, getCurSDLoc(), DestVT, N));
     return;
   }
 
-  setValue(&I, DAG.getNode(ISD::ZERO_EXTEND, getCurSDLoc(), DestVT, N));
+  setValue(&I, DAG.getNode(ISD::ZERO_EXTEND, getCurSDLoc(), DestVT, N, Flags));
 }
 
 void SelectionDAGBuilder::visitSExt(const User &I) {
