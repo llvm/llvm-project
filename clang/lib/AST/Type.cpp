@@ -3016,13 +3016,20 @@ bool Type::isSpecifierType() const {
 ElaboratedTypeKeyword
 TypeWithKeyword::getKeywordForTypeSpec(unsigned TypeSpec) {
   switch (TypeSpec) {
-  default: return ETK_None;
-  case TST_typename: return ETK_Typename;
-  case TST_class: return ETK_Class;
-  case TST_struct: return ETK_Struct;
-  case TST_interface: return ETK_Interface;
-  case TST_union: return ETK_Union;
-  case TST_enum: return ETK_Enum;
+  default:
+    return ElaboratedTypeKeyword::None;
+  case TST_typename:
+    return ElaboratedTypeKeyword::Typename;
+  case TST_class:
+    return ElaboratedTypeKeyword::Class;
+  case TST_struct:
+    return ElaboratedTypeKeyword::Struct;
+  case TST_interface:
+    return ElaboratedTypeKeyword::Interface;
+  case TST_union:
+    return ElaboratedTypeKeyword::Union;
+  case TST_enum:
+    return ElaboratedTypeKeyword::Enum;
   }
 }
 
@@ -3042,11 +3049,16 @@ TypeWithKeyword::getTagTypeKindForTypeSpec(unsigned TypeSpec) {
 ElaboratedTypeKeyword
 TypeWithKeyword::getKeywordForTagTypeKind(TagTypeKind Kind) {
   switch (Kind) {
-  case TTK_Class: return ETK_Class;
-  case TTK_Struct: return ETK_Struct;
-  case TTK_Interface: return ETK_Interface;
-  case TTK_Union: return ETK_Union;
-  case TTK_Enum: return ETK_Enum;
+  case TTK_Class:
+    return ElaboratedTypeKeyword::Class;
+  case TTK_Struct:
+    return ElaboratedTypeKeyword::Struct;
+  case TTK_Interface:
+    return ElaboratedTypeKeyword::Interface;
+  case TTK_Union:
+    return ElaboratedTypeKeyword::Union;
+  case TTK_Enum:
+    return ElaboratedTypeKeyword::Enum;
   }
   llvm_unreachable("Unknown tag type kind.");
 }
@@ -3054,13 +3066,18 @@ TypeWithKeyword::getKeywordForTagTypeKind(TagTypeKind Kind) {
 TagTypeKind
 TypeWithKeyword::getTagTypeKindForKeyword(ElaboratedTypeKeyword Keyword) {
   switch (Keyword) {
-  case ETK_Class: return TTK_Class;
-  case ETK_Struct: return TTK_Struct;
-  case ETK_Interface: return TTK_Interface;
-  case ETK_Union: return TTK_Union;
-  case ETK_Enum: return TTK_Enum;
-  case ETK_None: // Fall through.
-  case ETK_Typename:
+  case ElaboratedTypeKeyword::Class:
+    return TTK_Class;
+  case ElaboratedTypeKeyword::Struct:
+    return TTK_Struct;
+  case ElaboratedTypeKeyword::Interface:
+    return TTK_Interface;
+  case ElaboratedTypeKeyword::Union:
+    return TTK_Union;
+  case ElaboratedTypeKeyword::Enum:
+    return TTK_Enum;
+  case ElaboratedTypeKeyword::None: // Fall through.
+  case ElaboratedTypeKeyword::Typename:
     llvm_unreachable("Elaborated type keyword is not a tag type kind.");
   }
   llvm_unreachable("Unknown elaborated type keyword.");
@@ -3069,14 +3086,14 @@ TypeWithKeyword::getTagTypeKindForKeyword(ElaboratedTypeKeyword Keyword) {
 bool
 TypeWithKeyword::KeywordIsTagTypeKind(ElaboratedTypeKeyword Keyword) {
   switch (Keyword) {
-  case ETK_None:
-  case ETK_Typename:
+  case ElaboratedTypeKeyword::None:
+  case ElaboratedTypeKeyword::Typename:
     return false;
-  case ETK_Class:
-  case ETK_Struct:
-  case ETK_Interface:
-  case ETK_Union:
-  case ETK_Enum:
+  case ElaboratedTypeKeyword::Class:
+  case ElaboratedTypeKeyword::Struct:
+  case ElaboratedTypeKeyword::Interface:
+  case ElaboratedTypeKeyword::Union:
+  case ElaboratedTypeKeyword::Enum:
     return true;
   }
   llvm_unreachable("Unknown elaborated type keyword.");
@@ -3084,13 +3101,20 @@ TypeWithKeyword::KeywordIsTagTypeKind(ElaboratedTypeKeyword Keyword) {
 
 StringRef TypeWithKeyword::getKeywordName(ElaboratedTypeKeyword Keyword) {
   switch (Keyword) {
-  case ETK_None: return {};
-  case ETK_Typename: return "typename";
-  case ETK_Class:  return "class";
-  case ETK_Struct: return "struct";
-  case ETK_Interface: return "__interface";
-  case ETK_Union:  return "union";
-  case ETK_Enum:   return "enum";
+  case ElaboratedTypeKeyword::None:
+    return {};
+  case ElaboratedTypeKeyword::Typename:
+    return "typename";
+  case ElaboratedTypeKeyword::Class:
+    return "class";
+  case ElaboratedTypeKeyword::Struct:
+    return "struct";
+  case ElaboratedTypeKeyword::Interface:
+    return "__interface";
+  case ElaboratedTypeKeyword::Union:
+    return "union";
+  case ElaboratedTypeKeyword::Enum:
+    return "enum";
   }
 
   llvm_unreachable("Unknown elaborated type keyword.");
@@ -3123,7 +3147,7 @@ DependentTemplateSpecializationType::Profile(llvm::FoldingSetNodeID &ID,
                                              NestedNameSpecifier *Qualifier,
                                              const IdentifierInfo *Name,
                                              ArrayRef<TemplateArgument> Args) {
-  ID.AddInteger(Keyword);
+  ID.AddInteger(llvm::to_underlying(Keyword));
   ID.AddPointer(Qualifier);
   ID.AddPointer(Name);
   for (const TemplateArgument &Arg : Args)
@@ -4741,7 +4765,7 @@ AutoType::AutoType(QualType DeducedAsType, AutoTypeKeyword Keyword,
                    ConceptDecl *TypeConstraintConcept,
                    ArrayRef<TemplateArgument> TypeConstraintArgs)
     : DeducedType(Auto, DeducedAsType, ExtraDependence, Canon) {
-  AutoTypeBits.Keyword = (unsigned)Keyword;
+  AutoTypeBits.Keyword = llvm::to_underlying(Keyword);
   AutoTypeBits.NumArgs = TypeConstraintArgs.size();
   this->TypeConstraintConcept = TypeConstraintConcept;
   assert(TypeConstraintConcept || AutoTypeBits.NumArgs == 0);
