@@ -348,7 +348,8 @@ enum class instrprof_error {
   uncompress_failed,
   empty_raw_profile,
   zlib_unavailable,
-  raw_profile_version_mismatch
+  raw_profile_version_mismatch,
+  counter_value_too_large,
 };
 
 /// An ordered list of functions identified by their NameRef found in
