@@ -1597,7 +1597,7 @@ void TypePrinter::printElaboratedBefore(const ElaboratedType *T,
   if (!Policy.IncludeTagDefinition)
   {
     OS << TypeWithKeyword::getKeywordName(T->getKeyword());
-    if (T->getKeyword() != ETK_None)
+    if (T->getKeyword() != ElaboratedTypeKeyword::None)
       OS << " ";
     NestedNameSpecifier *Qualifier = T->getQualifier();
     if (Qualifier)
@@ -1641,7 +1641,7 @@ void TypePrinter::printParenAfter(const ParenType *T, raw_ostream &OS) {
 void TypePrinter::printDependentNameBefore(const DependentNameType *T,
                                            raw_ostream &OS) {
   OS << TypeWithKeyword::getKeywordName(T->getKeyword());
-  if (T->getKeyword() != ETK_None)
+  if (T->getKeyword() != ElaboratedTypeKeyword::None)
     OS << " ";
 
   T->getQualifier()->print(OS, Policy);
@@ -1658,7 +1658,7 @@ void TypePrinter::printDependentTemplateSpecializationBefore(
   IncludeStrongLifetimeRAII Strong(Policy);
 
   OS << TypeWithKeyword::getKeywordName(T->getKeyword());
-  if (T->getKeyword() != ETK_None)
+  if (T->getKeyword() != ElaboratedTypeKeyword::None)
     OS << " ";
 
   if (T->getQualifier())
