@@ -48,4 +48,4 @@ struct __asan_win_stack_data {
   __sanitizer::uptr caller_pc;
 };
 
-}
+}  // namespace __sanitizer

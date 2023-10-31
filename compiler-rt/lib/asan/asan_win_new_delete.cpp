@@ -12,12 +12,11 @@
 //===----------------------------------------------------------------------===//
 #include <stddef.h>
 
-#include "asan_win_thunk_common.h"
 #include "asan_allocator.h"
 #include "asan_internal.h"
 #include "asan_report.h"
 #include "asan_stack.h"
-
+#include "asan_win_thunk_common.h"
 
 using __asan_win_new_delete_data = __sanitizer::__asan_win_stack_data;
 
