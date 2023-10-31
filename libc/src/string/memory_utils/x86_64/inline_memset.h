@@ -46,7 +46,7 @@ LIBC_INLINE_VAR constexpr bool kUseSoftwarePrefetchingMemset =
     sw_prefetch::PrefetchW(dst + sw_prefetch::kCachelineSize);
     if (count <= 128)
       return generic::Memset<uint512_t>::head_tail(dst, value, count);
-    // Prefetch the next cacheline
+    // Prefetch the second cacheline
     sw_prefetch::PrefetchW(dst + sw_prefetch::kCachelineSize * 2);
     // Aligned loop
     generic::Memset<uint256_t>::block(dst, value);
