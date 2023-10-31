@@ -517,7 +517,7 @@ declare float @llvm.copysign.f32(float, float)
 
 define void @copysign_f64(i32 %n, ptr %y, ptr %x, ptr %z) {
 ; CHECK-LABEL: @copysign_f64(
-; CHECK-NOT: llvm.copysign
+; CHECK: llvm.copysign.v4f64
 ; CHECK: ret void
 ;
 entry:
@@ -529,7 +529,7 @@ for.body:                                         ; preds = %entry, %for.body
   %arrayidx = getelementptr inbounds double, ptr %y, i64 %indvars.iv
   %0 = load double, ptr %arrayidx, align 8
   %arrayidx1 = getelementptr inbounds double, ptr %z, i64 %indvars.iv
-  %1 = load double, ptr %arrayidx, align 8
+  %1 = load double, ptr %arrayidx1, align 8
   %call = tail call double @llvm.copysign(double %0, double %1)
   %arrayidx2 = getelementptr inbounds double, ptr %x, i64 %indvars.iv
   store double %call, ptr %arrayidx2, align 8
@@ -598,10 +598,11 @@ for.end:                                          ; preds = %for.body, %entry
 
 declare double @llvm.floor.f64(double)
 
-;CHECK-LABEL: @ceil_f32(
-;CHECK: llvm.ceil.v4f32
-;CHECK: ret void
 define void @ceil_f32(i32 %n, ptr %y, ptr %x) {
+; CHECK-LABEL: @ceil_f32(
+; CHECK: llvm.ceil.v4f32
+; CHECK: ret void
+;
 entry:
   %cmp6 = icmp sgt i32 %n, 0
   br i1 %cmp6, label %for.body, label %for.end
