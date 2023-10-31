@@ -191,11 +191,6 @@ def ConvertAsyncToLLVMPass : Pass<"convert-async-to-llvm", "ModuleOp"> {
     "LLVM::LLVMDialect",
     "func::FuncDialect",
   ];
-  let options = [
-    Option<"useOpaquePointers", "use-opaque-pointers", "bool",
-           /*default=*/"true", "Generate LLVM IR using opaque pointers "
-           "instead of typed pointers">,
-  ];
 }
 
 //===----------------------------------------------------------------------===//

@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -convert-async-to-llvm='use-opaque-pointers=1' | FileCheck %s
+// RUN: mlir-opt %s -convert-async-to-llvm | FileCheck %s
 
 // CHECK-LABEL: @coro_id
 func.func @coro_id() {
