@@ -620,10 +620,11 @@ def GetParentOp : TransformDialectOp<"get_parent_op",
     that case for each target op, the closest parent op that fulfills all
     requirements, is returned.
     - `isolated_from_above`: the parent op must be isolated from above
-    - `allow_empty_results`: get_parent_op is allowed to return an empty list and
-      still succeeds. In such a case, if get_parent_op fails for any operation
-      in the list, the entire transform returns an empty handle.
+    - `allow_empty_results`: get_parent_op is allowed to return an empty list
+      and still succeeds. In such a case, if get_parent_op fails for any
+      operation in the list, the entire transform returns an empty handle.
     - `op_name`: the parent op must have the specified name
+    - `nth_parent`: get the n-th parent of that satisfies the above requirements
 
     If `deduplicate` is set, the result handle does not contain any duplicate
     ops. For example, given the list
@@ -641,7 +642,9 @@ def GetParentOp : TransformDialectOp<"get_parent_op",
                        UnitAttr:$isolated_from_above,
                        UnitAttr:$allow_empty_results,
                        OptionalAttr<StrAttr>:$op_name,
-                       UnitAttr:$deduplicate);
+                       UnitAttr:$deduplicate,
+                       DefaultValuedAttr<ConfinedAttr<I64Attr, [IntPositive]>,
+                                         "1">:$nth_parent);
   let results = (outs TransformHandleTypeInterface:$parent);
   let assemblyFormat =
     "$target attr-dict `:` functional-type(operands, results)";
