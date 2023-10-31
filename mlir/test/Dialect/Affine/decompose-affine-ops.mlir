@@ -108,12 +108,12 @@ func.func @larger_test(%0: index, %1: index, %2: index, %lb: index, %ub: index, 
         // The hoisted part is %b.
         %a = affine.apply affine_map<()[s0, s1, s2, s3] -> (s1 * 16 + s2 * 32 + s3 * 32 + s0 floordiv 4)>()[%0, %1, %2, %i]
 
-        // Gets completely hoisted
+        // Gets completely hoisted 
         %b = affine.apply affine_map<()[s0, s1, s2] -> (s1 * 16 + s2 * 32 + s0 floordiv 4)>()[%0, %1, %2]
 
-        // Gets completely hoisted
+        // Gets completely hoisted 
         %c = affine.apply affine_map<()[s0] -> (s0 * 8 - (s0 floordiv 4) * 32)>()[%0]
-
+ 
         // 32 * %j + %c remains here, the rest is hoisted.
         // CHECK-DAG: %[[R10:.*]] = affine.apply #[[$times32]]()[%[[j]]]
         // CHECK-DAG: %[[d:.*]] = affine.apply #[[$add]]()[%[[c]], %[[R10]]]
@@ -134,7 +134,7 @@ func.func @larger_test(%0: index, %1: index, %2: index, %lb: index, %ub: index, 
 
           // CHECK-NEXT: %[[g:.*]] = affine.apply #[[$add]]()[%[[b]], %[[idk]]]
           %g = affine.apply affine_map<()[s0, s1, s2, s3] -> (s0 + s2 * 16 + s3 * 32 + s1 floordiv 4)>()[%k, %0, %1, %2]
-
+          
           // CHECK-NEXT: "some_side_effecting_consumer"(%[[a]]) : (index) -> ()
           "some_side_effecting_consumer"(%a) : (index) -> ()
           // CHECK-NEXT: "some_side_effecting_consumer"(%[[b]]) : (index) -> ()
@@ -151,6 +151,6 @@ func.func @larger_test(%0: index, %1: index, %2: index, %lb: index, %ub: index, 
           "some_side_effecting_consumer"(%g) : (index) -> ()
         }
     }
-  }
+  }   
   return
 }
