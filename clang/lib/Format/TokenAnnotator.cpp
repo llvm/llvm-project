@@ -2101,7 +2101,8 @@ private:
               BeforeParen->isNot(TT_TypenameMacro) &&
               BeforeParen->TokenText == BeforeParen->TokenText.upper() &&
               (!BeforeParen->Previous ||
-               BeforeParen->Previous->ClosesTemplateDeclaration)) {
+               BeforeParen->Previous->ClosesTemplateDeclaration ||
+               BeforeParen->Previous->ClosesRequiresClause)) {
             Current.setType(TT_FunctionAnnotationRParen);
           }
         }
