@@ -154,6 +154,9 @@ public:
 
   static TypeSystemClang *GetASTContext(clang::ASTContext *ast_ctx);
 
+  // Returns true if the given type is a coroutine frame debug type.
+  static bool IsCoroutineFrameType(const CompilerType &Type);
+
   /// Returns the display name of this TypeSystemClang that indicates what
   /// purpose it serves in LLDB. Used for example in logs.
   llvm::StringRef getDisplayName() const { return m_display_name; }

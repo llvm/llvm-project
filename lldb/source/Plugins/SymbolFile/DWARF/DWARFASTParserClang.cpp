@@ -3061,7 +3061,8 @@ void DWARFASTParserClang::ParseSingleMember(
   // artificial member with (unnamed bitfield) padding.
   // FIXME: This check should verify that this is indeed an artificial member
   // we are supposed to ignore.
-  if (attrs.is_artificial) {
+  if (attrs.is_artificial &&
+      !TypeSystemClang::IsCoroutineFrameType(class_clang_type)) {
     last_field_info.SetIsArtificial(true);
     return;
   }

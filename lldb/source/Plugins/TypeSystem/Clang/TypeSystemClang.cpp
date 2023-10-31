@@ -771,6 +771,10 @@ TypeSystemClang *TypeSystemClang::GetASTContext(clang::ASTContext *ast) {
   return clang_ast;
 }
 
+bool TypeSystemClang::IsCoroutineFrameType(const CompilerType &Type) {
+  return Type.GetTypeName().GetStringRef().ends_with(".coro_frame_ty");
+}
+
 clang::MangleContext *TypeSystemClang::getMangleContext() {
   if (m_mangle_ctx_up == nullptr)
     m_mangle_ctx_up.reset(getASTContext().createMangleContext());
