@@ -56,12 +56,6 @@
 
 using namespace llvm;
 
-static inline MDNode *getValueMetadata(const Value &Value, unsigned KindID,
-                                       const LLVMContext &Ctx) {
-  const MDAttachments &Attachements = Ctx.pImpl->ValueMetadata.at(&Value);
-  return Attachements.lookup(KindID);
-}
-
 MetadataAsValue::MetadataAsValue(Type *Ty, Metadata *MD)
     : Value(Ty, MetadataAsValueVal), MD(MD) {
   track();
@@ -1357,18 +1351,17 @@ bool MDAttachments::erase(unsigned ID) {
   return OldSize != Attachments.size();
 }
 
-MDNode *Value::getMetadata(unsigned KindID) const {
-  if (!hasMetadata())
-    return nullptr;
-  return getValueMetadata(*this, KindID, getContext());
-}
-
 MDNode *Value::getMetadata(StringRef Kind) const {
   if (!hasMetadata())
     return nullptr;
+  unsigned KindID = getContext().getMDKindID(Kind);
+  return getMetadataImpl(KindID);
+}
+
+MDNode *Value::getMetadataImpl(unsigned KindID) const {
   const LLVMContext &Ctx = getContext();
-  unsigned KindID = Ctx.getMDKindID(Kind);
-  return getValueMetadata(*this, KindID, Ctx);
+  const MDAttachments &Attachements = Ctx.pImpl->ValueMetadata.at(this);
+  return Attachements.lookup(KindID);
 }
 
 void Value::getMetadata(unsigned KindID, SmallVectorImpl<MDNode *> &MDs) const {
@@ -1468,9 +1461,7 @@ MDNode *Instruction::getMetadataImpl(StringRef Kind) const {
   unsigned KindID = Ctx.getMDKindID(Kind);
   if (KindID == LLVMContext::MD_dbg)
     return DbgLoc.getAsMDNode();
-  if (hasMetadataOtherThanDebugLoc())
-    return getValueMetadata(*this, KindID, Ctx);
-  return nullptr;
+  return Value::getMetadata(KindID);
 }
 
 void Instruction::dropUnknownNonDebugMetadata(ArrayRef<unsigned> KnownIDs) {
@@ -1626,10 +1617,6 @@ void Instruction::setAAMetadata(const AAMDNodes &N) {
 void Instruction::setNoSanitizeMetadata() {
   setMetadata(llvm::LLVMContext::MD_nosanitize,
               llvm::MDNode::get(getContext(), std::nullopt));
-}
-
-MDNode *Instruction::getMetadataImpl(unsigned KindID) const {
-  return getValueMetadata(*this, KindID, getContext());
 }
 
 void Instruction::getAllMetadataImpl(

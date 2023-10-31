@@ -306,9 +306,7 @@ public:
     // Handle 'dbg' as a special case since it is not stored in the hash table.
     if (KindID == LLVMContext::MD_dbg)
       return DbgLoc.getAsMDNode();
-    if (hasMetadataOtherThanDebugLoc())
-      return getMetadataImpl(KindID);
-    return nullptr;
+    return Value::getMetadata(KindID);
   }
 
   /// Get the metadata of given kind attached to this Instruction.
@@ -598,7 +596,6 @@ public:
 
 private:
   // These are all implemented in Metadata.cpp.
-  MDNode *getMetadataImpl(unsigned KindID) const;
   MDNode *getMetadataImpl(StringRef Kind) const;
   void
   getAllMetadataImpl(SmallVectorImpl<std::pair<unsigned, MDNode *>> &) const;
