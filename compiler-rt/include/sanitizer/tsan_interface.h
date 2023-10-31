@@ -21,8 +21,8 @@ extern "C" {
 
 // __tsan_release establishes a happens-before relation with a preceding
 // __tsan_acquire on the same address.
-void __sanitizer_cdecl __tsan_acquire(void *addr);
-void __sanitizer_cdecl __tsan_release(void *addr);
+void SANITIZER_CDECL __tsan_acquire(void *addr);
+void SANITIZER_CDECL __tsan_release(void *addr);
 
 // Annotations for custom mutexes.
 // The annotations allow to get better reports (with sets of locked mutexes),
@@ -75,20 +75,20 @@ static const unsigned __tsan_mutex_try_read_lock_failed =
 
 // Annotate creation of a mutex.
 // Supported flags: mutex creation flags.
-void __sanitizer_cdecl __tsan_mutex_create(void *addr, unsigned flags);
+void SANITIZER_CDECL __tsan_mutex_create(void *addr, unsigned flags);
 
 // Annotate destruction of a mutex.
 // Supported flags:
 //   - __tsan_mutex_linker_init
 //   - __tsan_mutex_not_static
-void __sanitizer_cdecl __tsan_mutex_destroy(void *addr, unsigned flags);
+void SANITIZER_CDECL __tsan_mutex_destroy(void *addr, unsigned flags);
 
 // Annotate start of lock operation.
 // Supported flags:
 //   - __tsan_mutex_read_lock
 //   - __tsan_mutex_try_lock
 //   - all mutex creation flags
-void __sanitizer_cdecl __tsan_mutex_pre_lock(void *addr, unsigned flags);
+void SANITIZER_CDECL __tsan_mutex_pre_lock(void *addr, unsigned flags);
 
 // Annotate end of lock operation.
 // Supported flags:
@@ -97,24 +97,24 @@ void __sanitizer_cdecl __tsan_mutex_pre_lock(void *addr, unsigned flags);
 //   - __tsan_mutex_try_lock_failed
 //   - __tsan_mutex_recursive_lock
 //   - all mutex creation flags
-void __sanitizer_cdecl __tsan_mutex_post_lock(void *addr, unsigned flags,
+void SANITIZER_CDECL __tsan_mutex_post_lock(void *addr, unsigned flags,
                                               int recursion);
 
 // Annotate start of unlock operation.
 // Supported flags:
 //   - __tsan_mutex_read_lock
 //   - __tsan_mutex_recursive_unlock
-int __sanitizer_cdecl __tsan_mutex_pre_unlock(void *addr, unsigned flags);
+int SANITIZER_CDECL __tsan_mutex_pre_unlock(void *addr, unsigned flags);
 
 // Annotate end of unlock operation.
 // Supported flags:
 //   - __tsan_mutex_read_lock (must match __tsan_mutex_pre_unlock)
-void __sanitizer_cdecl __tsan_mutex_post_unlock(void *addr, unsigned flags);
+void SANITIZER_CDECL __tsan_mutex_post_unlock(void *addr, unsigned flags);
 
 // Annotate start/end of notify/signal/broadcast operation.
 // Supported flags: none.
-void __sanitizer_cdecl __tsan_mutex_pre_signal(void *addr, unsigned flags);
-void __sanitizer_cdecl __tsan_mutex_post_signal(void *addr, unsigned flags);
+void SANITIZER_CDECL __tsan_mutex_pre_signal(void *addr, unsigned flags);
+void SANITIZER_CDECL __tsan_mutex_post_signal(void *addr, unsigned flags);
 
 // Annotate start/end of a region of code where lock/unlock/signal operation
 // diverts to do something else unrelated to the mutex. This can be used to
@@ -124,8 +124,8 @@ void __sanitizer_cdecl __tsan_mutex_post_signal(void *addr, unsigned flags);
 // __tsan_mutex_pre/post_lock, __tsan_mutex_pre/post_unlock,
 // __tsan_mutex_pre/post_signal regions.
 // Supported flags: none.
-void __sanitizer_cdecl __tsan_mutex_pre_divert(void *addr, unsigned flags);
-void __sanitizer_cdecl __tsan_mutex_post_divert(void *addr, unsigned flags);
+void SANITIZER_CDECL __tsan_mutex_pre_divert(void *addr, unsigned flags);
+void SANITIZER_CDECL __tsan_mutex_post_divert(void *addr, unsigned flags);
 
 // External race detection API.
 // Can be used by non-instrumented libraries to detect when their objects are
@@ -137,13 +137,13 @@ void __sanitizer_cdecl __tsan_mutex_post_divert(void *addr, unsigned flags);
 //   - __tsan_external_register_tag registers a 'tag' with the specified name,
 //       which is later used in read/write annotations to denote the object type
 //   - __tsan_external_assign_tag can optionally mark a heap object with a tag
-void *__sanitizer_cdecl __tsan_external_register_tag(const char *object_type);
-void __sanitizer_cdecl __tsan_external_register_header(void *tag,
+void *SANITIZER_CDECL __tsan_external_register_tag(const char *object_type);
+void SANITIZER_CDECL __tsan_external_register_header(void *tag,
                                                        const char *header);
-void __sanitizer_cdecl __tsan_external_assign_tag(void *addr, void *tag);
-void __sanitizer_cdecl __tsan_external_read(void *addr, void *caller_pc,
+void SANITIZER_CDECL __tsan_external_assign_tag(void *addr, void *tag);
+void SANITIZER_CDECL __tsan_external_read(void *addr, void *caller_pc,
                                             void *tag);
-void __sanitizer_cdecl __tsan_external_write(void *addr, void *caller_pc,
+void SANITIZER_CDECL __tsan_external_write(void *addr, void *caller_pc,
                                              void *tag);
 
 // Fiber switching API.
@@ -154,33 +154,33 @@ void __sanitizer_cdecl __tsan_external_write(void *addr, void *caller_pc,
 //   - __tsan_switch_to_fiber should be called immediately before switch
 //     to fiber, such as call of swapcontext.
 //   - Fiber name can be set by __tsan_set_fiber_name.
-void *__sanitizer_cdecl __tsan_get_current_fiber(void);
-void *__sanitizer_cdecl __tsan_create_fiber(unsigned flags);
-void __sanitizer_cdecl __tsan_destroy_fiber(void *fiber);
-void __sanitizer_cdecl __tsan_switch_to_fiber(void *fiber, unsigned flags);
-void __sanitizer_cdecl __tsan_set_fiber_name(void *fiber, const char *name);
+void *SANITIZER_CDECL __tsan_get_current_fiber(void);
+void *SANITIZER_CDECL __tsan_create_fiber(unsigned flags);
+void SANITIZER_CDECL __tsan_destroy_fiber(void *fiber);
+void SANITIZER_CDECL __tsan_switch_to_fiber(void *fiber, unsigned flags);
+void SANITIZER_CDECL __tsan_set_fiber_name(void *fiber, const char *name);
 
 // Flags for __tsan_switch_to_fiber:
 // Do not establish a happens-before relation between fibers
 static const unsigned __tsan_switch_to_fiber_no_sync = 1 << 0;
 
 // User-provided callback invoked on TSan initialization.
-void __sanitizer_cdecl __tsan_on_initialize();
+void SANITIZER_CDECL __tsan_on_initialize();
 
 // User-provided callback invoked on TSan shutdown.
 // `failed` - Nonzero if TSan did detect issues, zero otherwise.
 // Return `0` if TSan should exit as if no issues were detected.  Return nonzero
 // if TSan should exit as if issues were detected.
-int __sanitizer_cdecl __tsan_on_finalize(int failed);
+int SANITIZER_CDECL __tsan_on_finalize(int failed);
 
 // Release TSan internal memory in a best-effort manner.
-void __sanitizer_cdecl __tsan_flush_memory();
+void SANITIZER_CDECL __tsan_flush_memory();
 
 // User-provided default TSAN options.
-const char *__sanitizer_cdecl __tsan_default_options(void);
+const char *SANITIZER_CDECL __tsan_default_options(void);
 
 // User-provided default TSAN suppressions.
-const char *__sanitizer_cdecl __tsan_default_suppressions(void);
+const char *SANITIZER_CDECL __tsan_default_suppressions(void);
 
 /// Returns a report's description.
 ///
@@ -202,7 +202,7 @@ const char *__sanitizer_cdecl __tsan_default_suppressions(void);
 /// call.
 /// \param trace_size Size in bytes of the trace buffer.
 /// \returns Returns 1 if successful, 0 if not.
-int __sanitizer_cdecl __tsan_get_report_data(
+int SANITIZER_CDECL __tsan_get_report_data(
     void *report, const char **description, int *count, int *stack_count,
     int *mop_count, int *loc_count, int *mutex_count, int *thread_count,
     int *unique_tid_count, void **sleep_trace, unsigned long trace_size);
@@ -214,7 +214,7 @@ int __sanitizer_cdecl __tsan_get_report_data(
 /// \param trace A buffer to store the stack trace.
 /// \param trace_size Size in bytes of the trace buffer.
 /// \returns Returns 1 if successful, 0 if not.
-int __sanitizer_cdecl __tsan_get_report_stack(void *report, unsigned long idx,
+int SANITIZER_CDECL __tsan_get_report_stack(void *report, unsigned long idx,
                                               void **trace,
                                               unsigned long trace_size);
 
@@ -230,7 +230,7 @@ int __sanitizer_cdecl __tsan_get_report_stack(void *report, unsigned long idx,
 /// \param trace A buffer to store the stack trace.
 /// \param trace_size Size in bytes of the trace buffer.
 /// \returns Returns 1 if successful, 0 if not.
-int __sanitizer_cdecl __tsan_get_report_mop(void *report, unsigned long idx,
+int SANITIZER_CDECL __tsan_get_report_mop(void *report, unsigned long idx,
                                             int *tid, void **addr, int *size,
                                             int *write, int *atomic,
                                             void **trace,
@@ -250,7 +250,7 @@ int __sanitizer_cdecl __tsan_get_report_mop(void *report, unsigned long idx,
 /// \param trace A buffer to store the stack trace.
 /// \param trace_size Size in bytes of the trace buffer.
 /// \returns Returns 1 if successful, 0 if not.
-int __sanitizer_cdecl __tsan_get_report_loc(void *report, unsigned long idx,
+int SANITIZER_CDECL __tsan_get_report_loc(void *report, unsigned long idx,
                                             const char **type, void **addr,
                                             void **start, unsigned long *size,
                                             int *tid, int *fd,
@@ -267,7 +267,7 @@ int __sanitizer_cdecl __tsan_get_report_loc(void *report, unsigned long idx,
 /// \param trace A buffer to store the stack trace.
 /// \param trace_size Size in bytes of the trace buffer.
 /// \returns Returns 1 if successful, 0 if not.
-int __sanitizer_cdecl __tsan_get_report_mutex(void *report, unsigned long idx,
+int SANITIZER_CDECL __tsan_get_report_mutex(void *report, unsigned long idx,
                                               uint64_t *mutex_id, void **addr,
                                               int *destroyed, void **trace,
                                               unsigned long trace_size);
@@ -284,7 +284,7 @@ int __sanitizer_cdecl __tsan_get_report_mutex(void *report, unsigned long idx,
 /// \param trace A buffer to store the stack trace.
 /// \param trace_size Size in bytes of the trace buffer.
 /// \returns Returns 1 if successful, 0 if not.
-int __sanitizer_cdecl __tsan_get_report_thread(void *report, unsigned long idx,
+int SANITIZER_CDECL __tsan_get_report_thread(void *report, unsigned long idx,
                                                int *tid, uint64_t *os_id,
                                                int *running, const char **name,
                                                int *parent_tid, void **trace,
@@ -296,7 +296,7 @@ int __sanitizer_cdecl __tsan_get_report_thread(void *report, unsigned long idx,
 /// \param idx Index to the report's unique thread IDs.
 /// \param[out] tid Unique thread ID of the report.
 /// \returns Returns 1 if successful, 0 if not.
-int __sanitizer_cdecl __tsan_get_report_unique_tid(void *report,
+int SANITIZER_CDECL __tsan_get_report_unique_tid(void *report,
                                                    unsigned long idx, int *tid);
 
 /// Returns the current report.
@@ -304,7 +304,7 @@ int __sanitizer_cdecl __tsan_get_report_unique_tid(void *report,
 /// If TSan is currently reporting a detected issue on the current thread,
 /// returns an opaque pointer to the current report. Otherwise returns NULL.
 /// \returns An opaque pointer to the current report. Otherwise returns NULL.
-void *__sanitizer_cdecl __tsan_get_current_report();
+void *SANITIZER_CDECL __tsan_get_current_report();
 
 #ifdef __cplusplus
 } // extern "C"

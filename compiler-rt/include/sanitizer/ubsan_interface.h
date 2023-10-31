@@ -23,7 +23,7 @@ extern "C" {
 /// <c>verbosity=1:halt_on_error=0</c>).
 ///
 /// \returns Default options string.
-const char *__sanitizer_cdecl __ubsan_default_options(void);
+const char *SANITIZER_CDECL __ubsan_default_options(void);
 
 #ifdef __cplusplus
 } // extern "C"

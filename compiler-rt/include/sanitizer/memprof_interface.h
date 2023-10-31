@@ -24,7 +24,7 @@ extern "C" {
 ///
 /// \param addr Start of memory region.
 /// \param size Size of memory region.
-void __sanitizer_cdecl __memprof_record_access_range(void const volatile *addr,
+void SANITIZER_CDECL __memprof_record_access_range(void const volatile *addr,
                                                      size_t size);
 
 /// Records access to a memory address <c><i>addr</i></c>.
@@ -32,18 +32,18 @@ void __sanitizer_cdecl __memprof_record_access_range(void const volatile *addr,
 /// This memory must be previously allocated by your program.
 ///
 /// \param addr Accessed memory address
-void __sanitizer_cdecl __memprof_record_access(void const volatile *addr);
+void SANITIZER_CDECL __memprof_record_access(void const volatile *addr);
 
 /// User-provided callback on MemProf errors.
 ///
 /// You can provide a function that would be called immediately when MemProf
 /// detects an error. This is useful in cases when MemProf detects an error but
 /// your program crashes before the MemProf report is printed.
-void __sanitizer_cdecl __memprof_on_error(void);
+void SANITIZER_CDECL __memprof_on_error(void);
 
 /// Prints accumulated statistics to <c>stderr</c> (useful for calling from the
 /// debugger).
-void __sanitizer_cdecl __memprof_print_accumulated_stats(void);
+void SANITIZER_CDECL __memprof_print_accumulated_stats(void);
 
 /// User-provided default option settings.
 ///
@@ -52,12 +52,12 @@ void __sanitizer_cdecl __memprof_print_accumulated_stats(void);
 /// <c>verbosity=1:print_stats=1</c>).
 ///
 /// \returns Default options string.
-const char *__sanitizer_cdecl __memprof_default_options(void);
+const char *SANITIZER_CDECL __memprof_default_options(void);
 
 /// Prints the memory profile to the current profile file.
 ///
 /// \returns 0 on success.
-int __sanitizer_cdecl __memprof_profile_dump(void);
+int SANITIZER_CDECL __memprof_profile_dump(void);
 
 #ifdef __cplusplus
 } // extern "C"

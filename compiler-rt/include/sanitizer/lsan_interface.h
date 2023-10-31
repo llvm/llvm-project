@@ -20,11 +20,11 @@ extern "C" {
 #endif
 // Allocations made between calls to __lsan_disable() and __lsan_enable() will
 // be treated as non-leaks. Disable/enable pairs may be nested.
-void __sanitizer_cdecl __lsan_disable(void);
-void __sanitizer_cdecl __lsan_enable(void);
+void SANITIZER_CDECL __lsan_disable(void);
+void SANITIZER_CDECL __lsan_enable(void);
 
 // The heap object into which p points will be treated as a non-leak.
-void __sanitizer_cdecl __lsan_ignore_object(const void *p);
+void SANITIZER_CDECL __lsan_ignore_object(const void *p);
 
 // Memory regions registered through this interface will be treated as sources
 // of live pointers during leak checking. Useful if you store pointers in
@@ -37,8 +37,8 @@ void __sanitizer_cdecl __lsan_ignore_object(const void *p);
 // register the entire large region.
 // - the implementation is not optimized for performance. This interface is
 // intended to be used for a small number of relatively static regions.
-void __sanitizer_cdecl __lsan_register_root_region(const void *p, size_t size);
-void __sanitizer_cdecl __lsan_unregister_root_region(const void *p,
+void SANITIZER_CDECL __lsan_register_root_region(const void *p, size_t size);
+void SANITIZER_CDECL __lsan_unregister_root_region(const void *p,
                                                      size_t size);
 
 // Check for leaks now. This function behaves identically to the default
@@ -49,7 +49,7 @@ void __sanitizer_cdecl __lsan_unregister_root_region(const void *p,
 // the time of first invocation of this function.
 // By calling this function early during process shutdown, you can instruct
 // LSan to ignore shutdown-only leaks which happen later on.
-void __sanitizer_cdecl __lsan_do_leak_check(void);
+void SANITIZER_CDECL __lsan_do_leak_check(void);
 
 // Check for leaks now. Returns zero if no leaks have been found or if leak
 // detection is disabled, non-zero otherwise.
@@ -58,7 +58,7 @@ void __sanitizer_cdecl __lsan_do_leak_check(void);
 // terminate the process. It does not affect the behavior of
 // __lsan_do_leak_check() or the end-of-process leak check, and is not
 // affected by them.
-int __sanitizer_cdecl __lsan_do_recoverable_leak_check(void);
+int SANITIZER_CDECL __lsan_do_recoverable_leak_check(void);
 
 // The user may optionally provide this function to disallow leak checking
 // for the program it is linked into (if the return value is non-zero). This
@@ -66,15 +66,15 @@ int __sanitizer_cdecl __lsan_do_recoverable_leak_check(void);
 // that is unsupported.
 // To avoid dead stripping, you may need to define this function with
 // __attribute__((used))
-int __sanitizer_cdecl __lsan_is_turned_off(void);
+int SANITIZER_CDECL __lsan_is_turned_off(void);
 
 // This function may be optionally provided by user and should return
 // a string containing LSan runtime options. See lsan_flags.inc for details.
-const char *__sanitizer_cdecl __lsan_default_options(void);
+const char *SANITIZER_CDECL __lsan_default_options(void);
 
 // This function may be optionally provided by the user and should return
 // a string containing LSan suppressions.
-const char *__sanitizer_cdecl __lsan_default_suppressions(void);
+const char *SANITIZER_CDECL __lsan_default_suppressions(void);
 #ifdef __cplusplus
 } // extern "C"
 
