@@ -472,12 +472,6 @@ def LowerHostCodeToLLVMPass : Pass<"lower-host-to-llvm", "ModuleOp"> {
     dialect, emitting C wrappers.
   }];
 
-  let options = [
-    Option<"useOpaquePointers", "use-opaque-pointers", "bool",
-                 /*default=*/"true", "Generate LLVM IR using opaque pointers "
-                 "instead of typed pointers">
-  ];
-
   let dependentDialects = ["LLVM::LLVMDialect"];
 }
 
