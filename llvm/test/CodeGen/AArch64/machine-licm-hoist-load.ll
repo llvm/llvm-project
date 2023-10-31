@@ -4,18 +4,23 @@
 define i64 @one_dimensional(ptr %a, ptr %b, i64 %N, i64 %M, i64 %K) {
 ; CHECK-LABEL: one_dimensional:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    cbz x2, .LBB0_4
+; CHECK-NEXT:  // %bb.1: // %for.body.preheader
+; CHECK-NEXT:    ldr w9, [x1]
 ; CHECK-NEXT:    mov x8, xzr
-; CHECK-NEXT:    cbz x2, .LBB0_2
-; CHECK-NEXT:  .LBB0_1: // %for.body
+; CHECK-NEXT:  .LBB0_2: // %for.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldr x9, [x0], #8
-; CHECK-NEXT:    ldr w10, [x1]
-; CHECK-NEXT:    ldr w9, [x9]
-; CHECK-NEXT:    cmp w9, w10
+; CHECK-NEXT:    ldr x10, [x0], #8
+; CHECK-NEXT:    ldr w10, [x10]
+; CHECK-NEXT:    cmp w10, w9
 ; CHECK-NEXT:    cinc x8, x8, ne
 ; CHECK-NEXT:    subs x2, x2, #1
-; CHECK-NEXT:    b.ne .LBB0_1
-; CHECK-NEXT:  .LBB0_2: // %for.cond.cleanup
+; CHECK-NEXT:    b.ne .LBB0_2
+; CHECK-NEXT:  // %bb.3: // %for.cond.cleanup
+; CHECK-NEXT:    mov x0, x8
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB0_4:
+; CHECK-NEXT:    mov x8, xzr
 ; CHECK-NEXT:    mov x0, x8
 ; CHECK-NEXT:    ret
 entry:
@@ -48,22 +53,22 @@ define i64 @two_dimensional(ptr %a, ptr %b, i64 %N, i64 %M, i64 %K) {
 ; CHECK-NEXT:  // %bb.1: // %entry
 ; CHECK-NEXT:    cbz x3, .LBB1_6
 ; CHECK-NEXT:  // %bb.2: // %for.cond1.preheader.preheader
+; CHECK-NEXT:    ldr w10, [x1]
 ; CHECK-NEXT:    mov x9, xzr
 ; CHECK-NEXT:    mov x8, xzr
 ; CHECK-NEXT:  .LBB1_3: // %for.cond1.preheader
 ; CHECK-NEXT:    // =>This Loop Header: Depth=1
 ; CHECK-NEXT:    // Child Loop BB1_4 Depth 2
-; CHECK-NEXT:    ldr x10, [x0, x9, lsl #3]
-; CHECK-NEXT:    mov x11, x3
+; CHECK-NEXT:    ldr x11, [x0, x9, lsl #3]
+; CHECK-NEXT:    mov x12, x3
 ; CHECK-NEXT:  .LBB1_4: // %for.body4
 ; CHECK-NEXT:    // Parent Loop BB1_3 Depth=1
 ; CHECK-NEXT:    // => This Inner Loop Header: Depth=2
-; CHECK-NEXT:    ldr x12, [x10], #8
-; CHECK-NEXT:    ldr w13, [x1]
-; CHECK-NEXT:    ldr w12, [x12]
-; CHECK-NEXT:    cmp w12, w13
+; CHECK-NEXT:    ldr x13, [x11], #8
+; CHECK-NEXT:    ldr w13, [x13]
+; CHECK-NEXT:    cmp w13, w10
 ; CHECK-NEXT:    cinc x8, x8, ne
-; CHECK-NEXT:    subs x11, x11, #1
+; CHECK-NEXT:    subs x12, x12, #1
 ; CHECK-NEXT:    b.ne .LBB1_4
 ; CHECK-NEXT:  // %bb.5: // %for.cond1.for.cond.cleanup3_crit_edge
 ; CHECK-NEXT:    // in Loop: Header=BB1_3 Depth=1
@@ -132,18 +137,18 @@ define i64 @three_dimensional_middle(ptr %a, ptr %b, i64 %N, i64 %M, i64 %K) {
 ; CHECK-NEXT:    // Parent Loop BB2_4 Depth=1
 ; CHECK-NEXT:    // => This Loop Header: Depth=2
 ; CHECK-NEXT:    // Child Loop BB2_6 Depth 3
-; CHECK-NEXT:    lsl x13, x11, #3
+; CHECK-NEXT:    lsl x12, x11, #3
 ; CHECK-NEXT:    mov x14, x4
-; CHECK-NEXT:    ldr x12, [x10, x13]
-; CHECK-NEXT:    ldr x13, [x1, x13]
+; CHECK-NEXT:    ldr x13, [x1, x12]
+; CHECK-NEXT:    ldr x12, [x10, x12]
+; CHECK-NEXT:    ldr w13, [x13]
 ; CHECK-NEXT:  .LBB2_6: // %for.body8
 ; CHECK-NEXT:    // Parent Loop BB2_4 Depth=1
 ; CHECK-NEXT:    // Parent Loop BB2_5 Depth=2
 ; CHECK-NEXT:    // => This Inner Loop Header: Depth=3
 ; CHECK-NEXT:    ldr x15, [x12], #8
-; CHECK-NEXT:    ldr w16, [x13]
 ; CHECK-NEXT:    ldr w15, [x15]
-; CHECK-NEXT:    cmp w15, w16
+; CHECK-NEXT:    cmp w15, w13
 ; CHECK-NEXT:    cinc x0, x0, ne
 ; CHECK-NEXT:    subs x14, x14, #1
 ; CHECK-NEXT:    b.ne .LBB2_6
@@ -214,43 +219,42 @@ for.cond.cleanup:                                 ; preds = %for.cond1.for.cond,
 define i64 @three_dimensional(ptr %a, ptr %b, i64 %N, i64 %M, i64 %K) {
 ; CHECK-LABEL: three_dimensional:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov x8, x0
-; CHECK-NEXT:    mov x0, xzr
+; CHECK-NEXT:    mov x8, xzr
 ; CHECK-NEXT:    cbz x2, .LBB3_9
 ; CHECK-NEXT:  // %bb.1: // %entry
 ; CHECK-NEXT:    cbz x3, .LBB3_9
 ; CHECK-NEXT:  // %bb.2: // %entry
 ; CHECK-NEXT:    cbz x4, .LBB3_9
 ; CHECK-NEXT:  // %bb.3: // %for.cond1.preheader.preheader
+; CHECK-NEXT:    ldr w10, [x1]
 ; CHECK-NEXT:    mov x9, xzr
-; CHECK-NEXT:    mov x0, xzr
+; CHECK-NEXT:    mov x8, xzr
 ; CHECK-NEXT:  .LBB3_4: // %for.cond1.preheader
 ; CHECK-NEXT:    // =>This Loop Header: Depth=1
 ; CHECK-NEXT:    // Child Loop BB3_5 Depth 2
 ; CHECK-NEXT:    // Child Loop BB3_6 Depth 3
-; CHECK-NEXT:    ldr x10, [x8, x9, lsl #3]
-; CHECK-NEXT:    mov x11, xzr
+; CHECK-NEXT:    ldr x11, [x0, x9, lsl #3]
+; CHECK-NEXT:    mov x12, xzr
 ; CHECK-NEXT:  .LBB3_5: // %for.cond5.preheader
 ; CHECK-NEXT:    // Parent Loop BB3_4 Depth=1
 ; CHECK-NEXT:    // => This Loop Header: Depth=2
 ; CHECK-NEXT:    // Child Loop BB3_6 Depth 3
-; CHECK-NEXT:    ldr x12, [x10, x11, lsl #3]
-; CHECK-NEXT:    mov x13, x4
+; CHECK-NEXT:    ldr x13, [x11, x12, lsl #3]
+; CHECK-NEXT:    mov x14, x4
 ; CHECK-NEXT:  .LBB3_6: // %for.body8
 ; CHECK-NEXT:    // Parent Loop BB3_4 Depth=1
 ; CHECK-NEXT:    // Parent Loop BB3_5 Depth=2
 ; CHECK-NEXT:    // => This Inner Loop Header: Depth=3
-; CHECK-NEXT:    ldr x14, [x12], #8
-; CHECK-NEXT:    ldr w15, [x1]
-; CHECK-NEXT:    ldr w14, [x14]
-; CHECK-NEXT:    cmp w14, w15
-; CHECK-NEXT:    cinc x0, x0, ne
-; CHECK-NEXT:    subs x13, x13, #1
+; CHECK-NEXT:    ldr x15, [x13], #8
+; CHECK-NEXT:    ldr w15, [x15]
+; CHECK-NEXT:    cmp w15, w10
+; CHECK-NEXT:    cinc x8, x8, ne
+; CHECK-NEXT:    subs x14, x14, #1
 ; CHECK-NEXT:    b.ne .LBB3_6
 ; CHECK-NEXT:  // %bb.7: // %for.cond5.for.cond
 ; CHECK-NEXT:    // in Loop: Header=BB3_5 Depth=2
-; CHECK-NEXT:    add x11, x11, #1
-; CHECK-NEXT:    cmp x11, x3
+; CHECK-NEXT:    add x12, x12, #1
+; CHECK-NEXT:    cmp x12, x3
 ; CHECK-NEXT:    b.ne .LBB3_5
 ; CHECK-NEXT:  // %bb.8: // %for.cond1.for.cond
 ; CHECK-NEXT:    // in Loop: Header=BB3_4 Depth=1
@@ -258,6 +262,7 @@ define i64 @three_dimensional(ptr %a, ptr %b, i64 %N, i64 %M, i64 %K) {
 ; CHECK-NEXT:    cmp x9, x2
 ; CHECK-NEXT:    b.ne .LBB3_4
 ; CHECK-NEXT:  .LBB3_9: // %for.cond.cleanup
+; CHECK-NEXT:    mov x0, x8
 ; CHECK-NEXT:    ret
 entry:
   %cmp31 = icmp eq i64 %N, 0
