@@ -80,6 +80,7 @@ struct TileLoadOpConversion : public OpRewritePattern<arm_sme::TileLoadOp> {
   LogicalResult matchAndRewrite(arm_sme::TileLoadOp tileLoadOp,
                                 PatternRewriter &rewriter) const override {
     if (tileLoadOp.getMask())
+      // TODO: add masked patterns.
       return rewriter.notifyMatchFailure(
           tileLoadOp, "op has mask, needs masked pattern(s)");
 

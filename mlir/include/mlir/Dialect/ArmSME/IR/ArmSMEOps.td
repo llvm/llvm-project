@@ -392,7 +392,7 @@ def TileStoreOp : ArmSME_Op<"tile_store"> {
 def LoadTileSliceOp : ArmSME_Op<"load_tile_slice", [
     AllTypesMatch<["tile", "result"]>,
     TypesMatchWith<
-      "mask has i1 element type and same shape as result",
+      "mask has i1 element type and is a slice of the result",
       "result", "mask",
       "VectorType("
         "VectorType::Builder("
@@ -434,7 +434,7 @@ def LoadTileSliceOp : ArmSME_Op<"load_tile_slice", [
     ```
   }];
   let arguments = (ins
-    Arg<AnyMemRef, "the reference to load from">:$base, AnyVector:$mask,
+    Arg<AnyMemRef, "the reference to load from">:$base, SVEPredicate:$mask,
     SMETile:$tile, Variadic<Index>:$indices, Index:$tile_slice_index,
     ArmSME_TileSliceLayoutAttr:$layout
   );
