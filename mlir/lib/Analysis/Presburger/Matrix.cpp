@@ -550,14 +550,6 @@ Fraction FracMatrix::determinant(FracMatrix *inverse) const {
   return determinant;
 }
 
-Fraction dotProduct(MutableArrayRef<Fraction> a, MutableArrayRef<Fraction> b) {
-    assert(a.size() == b.size() && "Dot product of two unequal vectors!");
-    Fraction sum = 0;
-    for (unsigned i = 0; i < a.size(); i++)
-            sum += a[i] * b[i];
-    return sum;
-}
-
 FracMatrix FracMatrix::gramSchmidt() const {
 
     // Create a copy of the argument to store
