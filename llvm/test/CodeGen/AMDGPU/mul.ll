@@ -1952,7 +1952,7 @@ define amdgpu_kernel void @v_mul_i64(ptr addrspace(1) %out, ptr addrspace(1) %ap
 ; SI-NEXT:    v_mul_hi_u32 v4, v2, v0
 ; SI-NEXT:    v_mul_lo_u32 v3, v3, v0
 ; SI-NEXT:    v_mul_lo_u32 v0, v2, v0
-; SI-NEXT:    v_add_i32_e32 v1, vcc, v4, v1
+; SI-NEXT:    v_add_i32_e32 v1, vcc, v1, v4
 ; SI-NEXT:    v_add_i32_e32 v1, vcc, v1, v3
 ; SI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
@@ -1978,7 +1978,7 @@ define amdgpu_kernel void @v_mul_i64(ptr addrspace(1) %out, ptr addrspace(1) %ap
 ; VI-NEXT:    v_mul_lo_u32 v4, v2, v1
 ; VI-NEXT:    v_mad_u64_u32 v[1:2], s[6:7], v2, v0, 0
 ; VI-NEXT:    v_mul_lo_u32 v0, v3, v0
-; VI-NEXT:    v_add_u32_e32 v2, vcc, v2, v4
+; VI-NEXT:    v_add_u32_e32 v2, vcc, v4, v2
 ; VI-NEXT:    v_add_u32_e32 v2, vcc, v2, v0
 ; VI-NEXT:    buffer_store_dwordx2 v[1:2], off, s[0:3], 0
 ; VI-NEXT:    s_endpgm
