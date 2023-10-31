@@ -54,7 +54,7 @@ public:
 
   ~CommandObjectIterateOverThreads() override = default;
 
-  bool DoExecute(Args &command, CommandReturnObject &result) override;
+  void DoExecute(Args &command, CommandReturnObject &result) override;
 
 protected:
   // Override this to do whatever you need to do for one thread.
@@ -84,7 +84,7 @@ public:
                                const char *name, const char *help,
                                const char *syntax, uint32_t flags);
 
-  bool DoExecute(Args &command, CommandReturnObject &result) override;
+  void DoExecute(Args &command, CommandReturnObject &result) override;
 
 protected:
   /// Method that handles the command after the main arguments have been parsed.

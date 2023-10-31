@@ -980,7 +980,7 @@ void WhitespaceManager::alignConsecutiveDeclarations() {
   AlignTokens(
       Style,
       [](Change const &C) {
-        if (C.Tok->isOneOf(TT_FunctionDeclarationName, TT_FunctionTypeLParen))
+        if (C.Tok->is(TT_FunctionDeclarationName))
           return true;
         if (C.Tok->isNot(TT_StartOfName))
           return false;
@@ -1048,6 +1048,9 @@ void WhitespaceManager::alignChainedConditionals() {
 }
 
 void WhitespaceManager::alignTrailingComments() {
+  if (Style.AlignTrailingComments.Kind == FormatStyle::TCAS_Never)
+    return;
+
   const int Size = Changes.size();
   int MinColumn = 0;
   int StartOfSequence = 0;
@@ -1118,16 +1121,48 @@ void WhitespaceManager::alignTrailingComments() {
       }
     }
 
-    // We don't want to align namespace end comments.
-    const bool DontAlignThisComment =
-        I > 0 && C.NewlinesBefore == 0 &&
-        Changes[I - 1].Tok->is(TT_NamespaceRBrace);
-    if (Style.AlignTrailingComments.Kind == FormatStyle::TCAS_Never ||
-        DontAlignThisComment) {
+    // We don't want to align comments which end a scope, which are here
+    // identified by most closing braces.
+    auto DontAlignThisComment = [](const auto *Tok) {
+      if (Tok->is(tok::semi)) {
+        Tok = Tok->getPreviousNonComment();
+        if (!Tok)
+          return false;
+      }
+      if (Tok->is(tok::r_paren)) {
+        // Back up past the parentheses and a `TT_DoWhile` that may precede.
+        Tok = Tok->MatchingParen;
+        if (!Tok)
+          return false;
+        Tok = Tok->getPreviousNonComment();
+        if (!Tok)
+          return false;
+        if (Tok->is(TT_DoWhile)) {
+          const auto *Prev = Tok->getPreviousNonComment();
+          if (!Prev) {
+            // A do-while-loop without braces.
+            return true;
+          }
+          Tok = Prev;
+        }
+      }
+
+      if (Tok->isNot(tok::r_brace))
+        return false;
+
+      while (Tok->Previous && Tok->Previous->is(tok::r_brace))
+        Tok = Tok->Previous;
+      return Tok->NewlinesBefore > 0;
+    };
+
+    if (I > 0 && C.NewlinesBefore == 0 &&
+        DontAlignThisComment(Changes[I - 1].Tok)) {
       alignTrailingComments(StartOfSequence, I, MinColumn);
-      MinColumn = ChangeMinColumn;
-      MaxColumn = ChangeMinColumn;
-      StartOfSequence = I;
+      // Reset to initial values, but skip this change for the next alignment
+      // pass.
+      MinColumn = 0;
+      MaxColumn = INT_MAX;
+      StartOfSequence = I + 1;
     } else if (BreakBeforeNext || Newlines > NewLineThreshold ||
                (ChangeMinColumn > MaxColumn || ChangeMaxColumn < MinColumn) ||
                // Break the comment sequence if the previous line did not end

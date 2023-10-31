@@ -34,7 +34,7 @@ struct CompilerContext {
   }
   bool operator!=(const CompilerContext &rhs) const { return !(*this == rhs); }
 
-  void Dump() const;
+  void Dump(Stream &s) const;
 
   CompilerContextKind kind;
   ConstString name;
@@ -419,6 +419,8 @@ public:
   void SetName(ConstString type_name);
 
   void SetName(const char *type_name_cstr);
+
+  void SetName(llvm::StringRef name);
 
   void SetTypeSP(lldb::TypeSP type_sp);
 

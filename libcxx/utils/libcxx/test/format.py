@@ -45,11 +45,12 @@ def _executeScriptInternal(test, litConfig, commands):
 
     _, tmpBase = _getTempPaths(test)
     execDir = os.path.dirname(test.getExecPath())
-    res = lit.TestRunner.executeScriptInternal(
-        test, litConfig, tmpBase, parsedCommands, execDir, debug=False
-    )
-    if isinstance(res, lit.Test.Result):  # Handle failure to parse the Lit test
-        res = ("", res.output, 127, None)
+    try:
+        res = lit.TestRunner.executeScriptInternal(
+            test, litConfig, tmpBase, parsedCommands, execDir, debug=False
+        )
+    except lit.TestRunner.ScriptFatal as e:
+        res = ("", str(e), 127, None)
     (out, err, exitCode, timeoutInfo) = res
 
     return (out, err, exitCode, timeoutInfo, parsedCommands)

@@ -2646,7 +2646,7 @@ Expected<Value *> BitcodeReader::recordValue(SmallVectorImpl<uint64_t> &Record,
   Value *V = ValueList[ValueID];
 
   StringRef NameStr(ValueName.data(), ValueName.size());
-  if (NameStr.find_first_of(0) != StringRef::npos)
+  if (NameStr.contains(0))
     return error("Invalid value name");
   V->setName(NameStr);
   auto *GO = dyn_cast<GlobalObject>(V);
@@ -4877,12 +4877,13 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       Value *Op;
       unsigned OpTypeID;
       if (getValueTypePair(Record, OpNum, NextValueNo, Op, OpTypeID, CurBB) ||
-          OpNum+2 != Record.size())
+          OpNum + 1 > Record.size())
         return error("Invalid record");
 
-      ResTypeID = Record[OpNum];
+      ResTypeID = Record[OpNum++];
       Type *ResTy = getTypeByID(ResTypeID);
-      int Opc = getDecodedCastOpcode(Record[OpNum + 1]);
+      int Opc = getDecodedCastOpcode(Record[OpNum++]);
+
       if (Opc == -1 || !ResTy)
         return error("Invalid record");
       Instruction *Temp = nullptr;
@@ -4898,6 +4899,9 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
           return error("Invalid cast");
         I = CastInst::Create(CastOp, Op, ResTy);
       }
+      if (OpNum < Record.size() && isa<PossiblyNonNegInst>(I) &&
+          (Record[OpNum] & (1 << bitc::PNNI_NON_NEG)))
+        I->setNonNeg(true);
       InstructionList.push_back(I);
       break;
     }

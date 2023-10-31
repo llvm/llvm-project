@@ -985,8 +985,8 @@ struct {
 } s;
 } union_het_vecint;
 TEST(union_het_vecint)
-// CHECK: define{{.*}} swiftcc void @return_union_het_vecint(ptr noalias sret([[UNION:.+]])
-// CHECK: define{{.*}} swiftcc void @take_union_het_vecint(ptr
+// CHECK: define{{.*}} swiftcc { i64, i64, i64, i64 } @return_union_het_vecint()
+// CHECK: define{{.*}} swiftcc void @take_union_het_vecint(i64 %0, i64 %1, i64 %2, i64 %3)
 
 typedef struct {
   float3 f3;
@@ -1044,3 +1044,20 @@ typedef struct {
 
 // CHECK-LABEL: use_atomic_padded(i64 %0, i64 %1)
 SWIFTCALL void use_atomic_padded(atomic_padded a) {}
+
+
+typedef union {
+  float4 v;
+  float3 v2;
+  struct {
+    float a;
+    float b;
+    float c;
+    float d;
+  };
+} vector_union;
+
+TEST(vector_union)
+
+// CHECK-LABEL: define swiftcc { float, float, float, float } @return_vector_union()
+// CHECK-LABEL: define swiftcc void @take_vector_union(float %0, float %1, float %2, float %3)

@@ -3389,7 +3389,7 @@ static bool EquivalentArrayTypes(QualType Old, QualType New,
     if (Ty->isIncompleteArrayType() || Ty->isPointerType())
       return true;
     if (const auto *VAT = Ctx.getAsVariableArrayType(Ty))
-      return VAT->getSizeModifier() == ArrayType::ArraySizeModifier::Star;
+      return VAT->getSizeModifier() == ArraySizeModifier::Star;
     return false;
   };
 
@@ -3401,8 +3401,8 @@ static bool EquivalentArrayTypes(QualType Old, QualType New,
   if (Old->isVariableArrayType() && New->isVariableArrayType()) {
     const auto *OldVAT = Ctx.getAsVariableArrayType(Old);
     const auto *NewVAT = Ctx.getAsVariableArrayType(New);
-    if ((OldVAT->getSizeModifier() == ArrayType::ArraySizeModifier::Star) ^
-        (NewVAT->getSizeModifier() == ArrayType::ArraySizeModifier::Star))
+    if ((OldVAT->getSizeModifier() == ArraySizeModifier::Star) ^
+        (NewVAT->getSizeModifier() == ArraySizeModifier::Star))
       return false;
     return true;
   }
@@ -3922,18 +3922,6 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
   }
 
   if (getLangOpts().CPlusPlus) {
-    // C++1z [over.load]p2
-    //   Certain function declarations cannot be overloaded:
-    //     -- Function declarations that differ only in the return type,
-    //        the exception specification, or both cannot be overloaded.
-
-    // Check the exception specifications match. This may recompute the type of
-    // both Old and New if it resolved exception specifications, so grab the
-    // types again after this. Because this updates the type, we do this before
-    // any of the other checks below, which may update the "de facto" NewQType
-    // but do not necessarily update the type of New.
-    if (CheckEquivalentExceptionSpec(Old, New))
-      return true;
     OldQType = Context.getCanonicalType(Old->getType());
     NewQType = Context.getCanonicalType(New->getType());
 
@@ -4054,6 +4042,19 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
         return true;
       }
     }
+
+    // C++1z [over.load]p2
+    //   Certain function declarations cannot be overloaded:
+    //     -- Function declarations that differ only in the return type,
+    //        the exception specification, or both cannot be overloaded.
+
+    // Check the exception specifications match. This may recompute the type of
+    // both Old and New if it resolved exception specifications, so grab the
+    // types again after this. Because this updates the type, we do this before
+    // any of the other checks below, which may update the "de facto" NewQType
+    // but do not necessarily update the type of New.
+    if (CheckEquivalentExceptionSpec(Old, New))
+      return true;
 
     // C++11 [dcl.attr.noreturn]p1:
     //   The first declaration of a function shall specify the noreturn
@@ -6594,7 +6595,7 @@ static QualType TryToFixInvalidVariablyModifiedType(QualType T,
   }
 
   QualType FoldedArrayType = Context.getConstantArrayType(
-      ElemTy, Res, VLATy->getSizeExpr(), ArrayType::Normal, 0);
+      ElemTy, Res, VLATy->getSizeExpr(), ArraySizeModifier::Normal, 0);
   return Qs.apply(Context, FoldedArrayType);
 }
 
@@ -16722,10 +16723,8 @@ bool Sema::CheckEnumUnderlyingType(TypeSourceInfo *TI) {
     if (BT->isInteger())
       return false;
 
-  if (T->isBitIntType())
-    return false;
-
-  return Diag(UnderlyingLoc, diag::err_enum_invalid_underlying) << T;
+  return Diag(UnderlyingLoc, diag::err_enum_invalid_underlying)
+         << T << T->isBitIntType();
 }
 
 /// Check whether this is a valid redeclaration of a previous enumeration.

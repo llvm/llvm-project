@@ -522,8 +522,8 @@ def NVGPU_MBarrierInitOp : NVGPU_Op<"mbarrier.init", []> {
       nvgpu.mbarrier.init %barrier, %num_threads : !nvgpu.mbarrier.barrier<memorySpace = #gpu.address_space<workgroup>>
     ```
   }];
-  let arguments = (ins NVGPU_MBarrierGroup:$barriers, Index:$count, Index:$mbarId);
-  let assemblyFormat = "$barriers `[` $mbarId `]` `,` $count attr-dict `:` type($barriers)";
+  let arguments = (ins NVGPU_MBarrierGroup:$barriers, Index:$count, Index:$mbarId, Optional<I1>:$predicate);
+  let assemblyFormat = "$barriers `[` $mbarId `]` `,` $count (`,` `predicate` `=` $predicate^)? attr-dict `:` type($barriers)";
 }
 
 def NVGPU_MBarrierTestWaitOp : NVGPU_Op<"mbarrier.test.wait", []> {
@@ -597,8 +597,8 @@ def NVGPU_MBarrierArriveExpectTxOp : NVGPU_Op<"mbarrier.arrive.expect_tx", []> {
       nvgpu.mbarrier.arrive.expect_tx %barrier, %ic0 : !nvgpu.mbarrier.barrier<memorySpace = #gpu.address_space<workgroup>>
     ```
   }];
-  let arguments = (ins NVGPU_MBarrierGroup:$barriers, Index:$txcount, Index:$mbarId);
-  let assemblyFormat = "$barriers `[` $mbarId `]` `,` $txcount  attr-dict `:` type($barriers)";
+  let arguments = (ins NVGPU_MBarrierGroup:$barriers, Index:$txcount, Index:$mbarId, Optional<I1>:$predicate);
+  let assemblyFormat = "$barriers `[` $mbarId `]` `,` $txcount  (`,` `predicate` `=` $predicate^)? attr-dict `:` type($barriers)";
 }
 
 def NVGPU_MBarrierTryWaitParityOp : NVGPU_Op<"mbarrier.try_wait.parity", []> {
@@ -627,11 +627,11 @@ def NVGPU_TmaPrefetchOp : NVGPU_Op<"tma.prefetch.descriptor", []> {
   }];
   let arguments = (ins NVGPU_TensorMapDescriptor:$tensorMapDescriptor, Optional<I1>:$predicate);
   let assemblyFormat = [{
-    $tensorMapDescriptor (`,` $predicate^)? attr-dict `:` type($tensorMapDescriptor)
+    $tensorMapDescriptor (`,` `predicate` `=` $predicate^)? attr-dict `:` type($tensorMapDescriptor)
   }];
 }
 
-def NVGPU_TmaAsyncLoadOp : NVGPU_Op<"tma.async.load", []> {
+def NVGPU_TmaAsyncLoadOp : NVGPU_Op<"tma.async.load", [AttrSizedOperandSegments]> {
   let summary = "TMA asynchronous load";
   let description = [{
     The Op loads a tile memory region from global memory to shared memory by 
@@ -646,10 +646,14 @@ def NVGPU_TmaAsyncLoadOp : NVGPU_Op<"tma.async.load", []> {
                        NVGPU_MBarrierGroup:$barriers,
                        NVGPU_TensorMapDescriptor:$tensorMapDescriptor,
                        Variadic<Index>:$coordinates, 
-                       Index:$mbarId);
+                       Index:$mbarId,
+                       Optional<I1>:$predicate);
   let assemblyFormat = [{
-    $tensorMapDescriptor `[` $coordinates `]` `,` $barriers `[` $mbarId `]` `to` $dst
-      attr-dict `:` type($tensorMapDescriptor) `,` type($barriers) `->` type($dst)
+    $tensorMapDescriptor `[` $coordinates `]` `,` $barriers `[` $mbarId `]` 
+      `to` $dst
+      (`,` `predicate` `=` $predicate^)? 
+      attr-dict `:` type($tensorMapDescriptor) `,` type($barriers) 
+      `->` type($dst)
   }];
   let hasVerifier = 1;
 

@@ -1,6 +1,6 @@
 # Check the various features of the GoogleTest format.
 
-# RUN: not %{lit} -v --disable-gtest-sharding --order=random %{inputs}/googletest-no-sharding > %t.out
+# RUN: not %{lit} -v --no-gtest-sharding --order=random %{inputs}/googletest-no-sharding > %t.out
 # FIXME: Temporarily dump test output so we can debug failing tests on
 # buildbots.
 # RUN: cat %t.out

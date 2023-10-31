@@ -1569,6 +1569,12 @@ enum class AutoTypeKeyword {
   GNUAutoType
 };
 
+/// Capture whether this is a normal array (e.g. int X[4])
+/// an array with a static size (e.g. int X[static 4]), or an array
+/// with a star size (e.g. int X[*]).
+/// 'static' is only allowed on function parameters.
+enum class ArraySizeModifier { Normal, Static, Star };
+
 /// The base class of the type hierarchy.
 ///
 /// A central concept with types is that each type always has a canonical
@@ -1660,14 +1666,15 @@ protected:
 
     /// Storage class qualifiers from declarations like
     /// 'int X[static restrict 4]'. For function parameters only.
-    /// Actually an ArrayType::ArraySizeModifier.
+    /// Actually an ArraySizeModifier.
     unsigned SizeModifier : 3;
   };
+  enum { NumArrayTypeBits = NumTypeBits + 6 };
 
   class ConstantArrayTypeBitfields {
     friend class ConstantArrayType;
 
-    unsigned : NumTypeBits + 3 + 3;
+    unsigned : NumArrayTypeBits;
 
     /// Whether we have a stored size expression.
     unsigned HasStoredSizeExpr : 1;
@@ -1780,7 +1787,7 @@ protected:
     unsigned Keyword : 8;
   };
 
-  enum { NumTypeWithKeywordBits = 8 };
+  enum { NumTypeWithKeywordBits = NumTypeBits + 8 };
 
   class ElaboratedTypeBitfields {
     friend class ElaboratedType;
@@ -1913,7 +1920,6 @@ protected:
   class DependentTemplateSpecializationTypeBitfields {
     friend class DependentTemplateSpecializationType;
 
-    unsigned : NumTypeBits;
     unsigned : NumTypeWithKeywordBits;
 
     /// The number of template arguments named in this class template
@@ -2059,6 +2065,9 @@ public:
   /// or layout.
   bool isSizelessType() const;
   bool isSizelessBuiltinType() const;
+
+  /// Returns true for all scalable vector types.
+  bool isSizelessVectorType() const;
 
   /// Returns true for SVE scalable vector types.
   bool isSVESizelessBuiltinType() const;
@@ -3083,15 +3092,6 @@ public:
 
 /// Represents an array type, per C99 6.7.5.2 - Array Declarators.
 class ArrayType : public Type, public llvm::FoldingSetNode {
-public:
-  /// Capture whether this is a normal array (e.g. int X[4])
-  /// an array with a static size (e.g. int X[static 4]), or an array
-  /// with a star size (e.g. int X[*]).
-  /// 'static' is only allowed on function parameters.
-  enum ArraySizeModifier {
-    Normal, Static, Star
-  };
-
 private:
   /// The element type of the array.
   QualType ElementType;
@@ -3215,7 +3215,7 @@ public:
   static void Profile(llvm::FoldingSetNodeID &ID, QualType ET,
                       ArraySizeModifier SizeMod, unsigned TypeQuals) {
     ID.AddPointer(ET.getAsOpaquePtr());
-    ID.AddInteger(SizeMod);
+    ID.AddInteger(llvm::to_underlying(SizeMod));
     ID.AddInteger(TypeQuals);
   }
 };

@@ -23,8 +23,8 @@ static long clock() { return LIBC_NAMESPACE::gpu::fixed_frequency_clock(); }
 #else
 // The AMDGPU loader needs to initialize this at runtime by querying the driver.
 extern "C" [[gnu::visibility("protected")]] uint64_t
-    [[clang::address_space(4)]] LIBC_NAMESPACE_clock_freq;
-#define CLOCKS_PER_SEC LIBC_NAMESPACE_clock_freq
+    [[clang::address_space(4)]] __llvm_libc_clock_freq;
+#define CLOCKS_PER_SEC __llvm_libc_clock_freq
 #endif
 #else
 static long clock() { return 0; }

@@ -315,12 +315,16 @@ std::string JSONNodeDumper::createPointerRepresentation(const void *Ptr) {
 
 llvm::json::Object JSONNodeDumper::createQualType(QualType QT, bool Desugar) {
   SplitQualType SQT = QT.split();
-  llvm::json::Object Ret{{"qualType", QualType::getAsString(SQT, PrintPolicy)}};
+  std::string SQTS = QualType::getAsString(SQT, PrintPolicy);
+  llvm::json::Object Ret{{"qualType", SQTS}};
 
   if (Desugar && !QT.isNull()) {
     SplitQualType DSQT = QT.getSplitDesugaredType();
-    if (DSQT != SQT)
-      Ret["desugaredQualType"] = QualType::getAsString(DSQT, PrintPolicy);
+    if (DSQT != SQT) {
+      std::string DSQTS = QualType::getAsString(DSQT, PrintPolicy);
+      if (DSQTS != SQTS)
+        Ret["desugaredQualType"] = DSQTS;
+    }
     if (const auto *TT = QT->getAs<TypedefType>())
       Ret["typeAliasDeclId"] = createPointerRepresentation(TT->getDecl());
   }
@@ -642,13 +646,13 @@ void JSONNodeDumper::VisitRValueReferenceType(const ReferenceType *RT) {
 
 void JSONNodeDumper::VisitArrayType(const ArrayType *AT) {
   switch (AT->getSizeModifier()) {
-  case ArrayType::Star:
+  case ArraySizeModifier::Star:
     JOS.attribute("sizeModifier", "*");
     break;
-  case ArrayType::Static:
+  case ArraySizeModifier::Static:
     JOS.attribute("sizeModifier", "static");
     break;
-  case ArrayType::Normal:
+  case ArraySizeModifier::Normal:
     break;
   }
 

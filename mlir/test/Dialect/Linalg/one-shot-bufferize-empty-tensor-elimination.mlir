@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s --test-transform-dialect-interpreter --split-input-file | FileCheck %s
+// RUN: mlir-opt %s --transform-interpreter --split-input-file | FileCheck %s
 
 // CHECK-LABEL: func.func @eliminate_tensor_empty(
 //  CHECK-SAME:     %[[arg0:.*]]: tensor<50x91xf32>,
@@ -32,11 +32,13 @@ func.func @eliminate_tensor_empty(
   return %3 : tensor<50x91xf32>
 }
 
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  transform.structured.eliminate_empty_tensors %0 : !transform.any_op
-  transform.apply_patterns to %0 {
-    transform.apply_patterns.linalg.erase_unnecessary_inputs
-  } : !transform.any_op
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.structured.eliminate_empty_tensors %0 : !transform.any_op
+    transform.apply_patterns to %0 {
+      transform.apply_patterns.linalg.erase_unnecessary_inputs
+    } : !transform.any_op
+    transform.yield
+  }
 }

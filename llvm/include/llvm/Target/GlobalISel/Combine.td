@@ -111,6 +111,24 @@ class GICombinePatFrag<dag outs, dag ins, list<dag> alts> {
 }
 
 //===----------------------------------------------------------------------===//
+// Pattern Special Types
+//===----------------------------------------------------------------------===//
+
+class GISpecialType;
+
+// In an apply pattern, GITypeOf can be used to set the type of a new temporary
+// register to match the type of a matched register.
+//
+// This can only be used on temporary registers defined by the apply pattern.
+//
+// TODO: Make this work in matchers as well?
+//
+// FIXME: Syntax is very ugly.
+class GITypeOf<string opName> : GISpecialType {
+  string OpName = opName;
+}
+
+//===----------------------------------------------------------------------===//
 // Pattern Builtins
 //===----------------------------------------------------------------------===//
 
@@ -776,10 +794,9 @@ def trunc_shift: GICombineRule <
 
 // Transform (mul x, -1) -> (sub 0, x)
 def mul_by_neg_one: GICombineRule <
-  (defs root:$root),
-  (match (wip_match_opcode G_MUL):$root,
-         [{ return Helper.matchConstantOp(${root}->getOperand(2), -1); }]),
-  (apply [{ Helper.applyCombineMulByNegativeOne(*${root}); }])
+  (defs root:$dst),
+  (match (G_MUL $dst, $x, -1)),
+  (apply (G_SUB $dst, (GITypeOf<"$x"> 0), $x))
 >;
 
 // Fold (xor (and x, y), y) -> (and (not x), y)
@@ -1248,7 +1265,7 @@ def constant_fold_binops : GICombineGroup<[constant_fold_binop,
 
 def all_combines : GICombineGroup<[trivial_combines, insert_vec_elt_combines,
     extract_vec_elt_combines, combines_for_extload,
-    combine_indexed_load_store, undef_combines, identity_combines, phi_combines,
+    undef_combines, identity_combines, phi_combines,
     simplify_add_to_sub, hoist_logic_op_with_same_opcode_hands, shifts_too_big,
     reassocs, ptr_add_immed_chain,
     shl_ashr_to_sext_inreg, sext_inreg_of_load,

@@ -881,7 +881,7 @@ public:
 
   ~CommandObjectProcessKDPPacketSend() override = default;
 
-  bool DoExecute(Args &command, CommandReturnObject &result) override {
+  void DoExecute(Args &command, CommandReturnObject &result) override {
     if (!m_command_byte.GetOptionValue().OptionWasSet()) {
       result.AppendError(
           "the --command option must be set to a valid command byte");
@@ -907,7 +907,7 @@ public:
                                              "even number of ASCII hex "
                                              "characters: '%s'",
                                              ascii_hex_bytes_cstr);
-                return false;
+                return;
               }
               payload_bytes.resize(ascii_hex_bytes_cstr_len / 2);
               if (extractor.GetHexBytes(payload_bytes, '\xdd') !=
@@ -916,7 +916,7 @@ public:
                                              "ASCII hex characters (no "
                                              "spaces or hex prefixes): '%s'",
                                              ascii_hex_bytes_cstr);
-                return false;
+                return;
               }
             }
             Status error;
@@ -934,7 +934,7 @@ public:
                   endian::InlHostByteOrder(), endian::InlHostByteOrder());
               result.AppendMessage(packet.GetString());
               result.SetStatus(eReturnStatusSuccessFinishResult);
-              return true;
+              return;
             } else {
               const char *error_cstr = error.AsCString();
               if (error_cstr && error_cstr[0])
@@ -942,7 +942,7 @@ public:
               else
                 result.AppendErrorWithFormat("unknown error 0x%8.8x",
                                              error.GetError());
-              return false;
+              return;
             }
           } else {
             result.AppendErrorWithFormat("process must be stopped in order "
@@ -958,7 +958,6 @@ public:
                                      command_byte);
       }
     }
-    return false;
   }
 };
 

@@ -18,6 +18,7 @@
 # RUN: echo '[ -z "${args##*"--sysroot /my/sysroot/path"*}" ] || exit' >> %t.dir/bin/my_driver.sh
 # RUN: echo '[ -z "${args##*"-isysroot /isysroot"*}" ] || exit' >> %t.dir/bin/my_driver.sh
 # RUN: echo '[ -z "${args##*"-target arm-linux-gnueabihf"*}" ] || exit' >> %t.dir/bin/my_driver.sh
+# RUN: echo '[ -z "${args##*"--stdlib libc++"*}" ] || exit' >> %t.dir/bin/my_driver.sh
 # RUN: echo 'echo line to ignore >&2' >> %t.dir/bin/my_driver.sh
 # RUN: echo 'printf "Target: arm-linux-gnueabihf\r\n" >&2' >> %t.dir/bin/my_driver.sh
 # RUN: echo 'printf "#include <...> search starts here:\r\n" >&2' >> %t.dir/bin/my_driver.sh
@@ -37,7 +38,7 @@
 
 # Generate a compile_commands.json that will query the mock driver we've
 # created. Which should add a.h and b.h into include search path.
-# RUN: echo '[{"directory": "%/t.dir", "command": "my_driver.sh the-file.cpp --target=arm-linux-gnueabihf -nostdinc --sysroot /my/sysroot/path -isysroot/isysroot", "file": "the-file.cpp"}]' > %t.dir/compile_commands.json
+# RUN: echo '[{"directory": "%/t.dir", "command": "my_driver.sh the-file.cpp --target=arm-linux-gnueabihf -nostdinc --sysroot /my/sysroot/path -isysroot/isysroot -stdlib=libc++", "file": "the-file.cpp"}]' > %t.dir/compile_commands.json
 
 # RUN: sed -e "s|INPUT_DIR|%/t.dir|g" %s > %t.test.1
 # On Windows, we need the URI in didOpen to look like "uri":"file:///C:/..."
@@ -75,7 +76,7 @@
 {"jsonrpc":"2.0","method":"exit"}
 
 # Generate a different compile_commands.json which does not point to the mock driver
-# RUN: echo '[{"directory": "%/t.dir", "command": "gcc the-file.cpp --target=arm-linux-gnueabihf -nostdinc --sysroot /my/sysroot/path -isysroot/isysroot", "file": "the-file.cpp"}]' > %t.dir/compile_commands.json
+# RUN: echo '[{"directory": "%/t.dir", "command": "gcc the-file.cpp --target=arm-linux-gnueabihf -nostdinc --sysroot /my/sysroot/path -isysroot/isysroot -stdlib=libc++", "file": "the-file.cpp"}]' > %t.dir/compile_commands.json
 
 # Generate a clangd config file which points to the mock driver instead
 # RUN: echo 'CompileFlags:' > %t.dir/.clangd

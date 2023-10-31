@@ -356,9 +356,8 @@ def err_file_modified : Error<
   "file '%0' modified since it was first processed">, DefaultFatal;
 def err_file_too_large : Error<
   "sorry, unsupported: file '%0' is too large for Clang to process">;
-def err_include_too_large : Error<
-  "sorry, this include generates a translation unit too large for"
-  " Clang to process.">, DefaultFatal;
+def err_sloc_space_too_large : Error<
+  "sorry, the translation unit is too large for Clang to process: ran out of source locations">, DefaultFatal;
 def err_unsupported_bom : Error<"%0 byte order mark detected in '%1', but "
   "encoding is not supported">, DefaultFatal;
 def err_unable_to_rename_temp : Error<

@@ -2475,7 +2475,7 @@ bool Sema::checkArrayElementAlignment(QualType EltTy, SourceLocation Loc) {
 ///
 /// \returns A suitable array type, if there are no errors. Otherwise,
 /// returns a NULL type.
-QualType Sema::BuildArrayType(QualType T, ArrayType::ArraySizeModifier ASM,
+QualType Sema::BuildArrayType(QualType T, ArraySizeModifier ASM,
                               Expr *ArraySize, unsigned Quals,
                               SourceRange Brackets, DeclarationName Entity) {
 
@@ -2582,6 +2582,27 @@ QualType Sema::BuildArrayType(QualType T, ArrayType::ArraySizeModifier ASM,
     return QualType();
   }
 
+  auto IsStaticAssertLike = [](const Expr *ArraySize, ASTContext &Context) {
+    if (!ArraySize)
+      return false;
+
+    // If the array size expression is a conditional expression whose branches
+    // are both integer constant expressions, one negative and one positive,
+    // then it's assumed to be like an old-style static assertion. e.g.,
+    //   int old_style_assert[expr ? 1 : -1];
+    // We will accept any integer constant expressions instead of assuming the
+    // values 1 and -1 are always used.
+    if (const auto *CondExpr = dyn_cast_if_present<ConditionalOperator>(
+            ArraySize->IgnoreParenImpCasts())) {
+      std::optional<llvm::APSInt> LHS =
+          CondExpr->getLHS()->getIntegerConstantExpr(Context);
+      std::optional<llvm::APSInt> RHS =
+          CondExpr->getRHS()->getIntegerConstantExpr(Context);
+      return LHS && RHS && LHS->isNegative() != RHS->isNegative();
+    }
+    return false;
+  };
+
   // VLAs always produce at least a -Wvla diagnostic, sometimes an error.
   unsigned VLADiag;
   bool VLAIsError;
@@ -2598,6 +2619,15 @@ QualType Sema::BuildArrayType(QualType T, ArrayType::ArraySizeModifier ASM,
   } else if (getLangOpts().OpenMP && isInOpenMPTaskUntiedContext()) {
     VLADiag = diag::err_openmp_vla_in_task_untied;
     VLAIsError = true;
+  } else if (getLangOpts().CPlusPlus) {
+    if (getLangOpts().CPlusPlus11 && IsStaticAssertLike(ArraySize, Context))
+      VLADiag = getLangOpts().GNUMode
+                    ? diag::ext_vla_cxx_in_gnu_mode_static_assert
+                    : diag::ext_vla_cxx_static_assert;
+    else
+      VLADiag = getLangOpts().GNUMode ? diag::ext_vla_cxx_in_gnu_mode
+                                      : diag::ext_vla_cxx;
+    VLAIsError = false;
   } else {
     VLADiag = diag::ext_vla;
     VLAIsError = false;
@@ -2605,7 +2635,7 @@ QualType Sema::BuildArrayType(QualType T, ArrayType::ArraySizeModifier ASM,
 
   llvm::APSInt ConstVal(Context.getTypeSize(Context.getSizeType()));
   if (!ArraySize) {
-    if (ASM == ArrayType::Star) {
+    if (ASM == ArraySizeModifier::Star) {
       Diag(Loc, VLADiag);
       if (VLAIsError)
         return QualType();
@@ -2676,20 +2706,26 @@ QualType Sema::BuildArrayType(QualType T, ArrayType::ArraySizeModifier ASM,
     }
   }
 
-  if (T->isVariableArrayType() && !Context.getTargetInfo().isVLASupported()) {
-    // CUDA device code and some other targets don't support VLAs.
-    bool IsCUDADevice = (getLangOpts().CUDA && getLangOpts().CUDAIsDevice);
-    targetDiag(Loc,
-               IsCUDADevice ? diag::err_cuda_vla : diag::err_vla_unsupported)
-        << (IsCUDADevice ? CurrentCUDATarget() : 0);
+  if (T->isVariableArrayType()) {
+    if (!Context.getTargetInfo().isVLASupported()) {
+      // CUDA device code and some other targets don't support VLAs.
+      bool IsCUDADevice = (getLangOpts().CUDA && getLangOpts().CUDAIsDevice);
+      targetDiag(Loc,
+                 IsCUDADevice ? diag::err_cuda_vla : diag::err_vla_unsupported)
+          << (IsCUDADevice ? CurrentCUDATarget() : 0);
+    } else if (sema::FunctionScopeInfo *FSI = getCurFunction()) {
+      // VLAs are supported on this target, but we may need to do delayed
+      // checking that the VLA is not being used within a coroutine.
+      FSI->setHasVLA(Loc);
+    }
   }
 
   // If this is not C99, diagnose array size modifiers on non-VLAs.
   if (!getLangOpts().C99 && !T->isVariableArrayType() &&
-      (ASM != ArrayType::Normal || Quals != 0)) {
+      (ASM != ArraySizeModifier::Normal || Quals != 0)) {
     Diag(Loc, getLangOpts().CPlusPlus ? diag::err_c99_array_usage_cxx
                                       : diag::ext_c99_array_usage)
-        << ASM;
+        << llvm::to_underlying(ASM);
   }
 
   // OpenCL v2.0 s6.12.5 - Arrays of blocks are not supported.
@@ -5120,7 +5156,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
       }
       DeclaratorChunk::ArrayTypeInfo &ATI = DeclType.Arr;
       Expr *ArraySize = static_cast<Expr*>(ATI.NumElts);
-      ArrayType::ArraySizeModifier ASM;
+      ArraySizeModifier ASM;
 
       // Microsoft property fields can have multiple sizeless array chunks
       // (i.e. int x[][][]). Skip all of these except one to avoid creating
@@ -5135,31 +5171,32 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
       }
 
       if (ATI.isStar)
-        ASM = ArrayType::Star;
+        ASM = ArraySizeModifier::Star;
       else if (ATI.hasStatic)
-        ASM = ArrayType::Static;
+        ASM = ArraySizeModifier::Static;
       else
-        ASM = ArrayType::Normal;
-      if (ASM == ArrayType::Star && !D.isPrototypeContext()) {
+        ASM = ArraySizeModifier::Normal;
+      if (ASM == ArraySizeModifier::Star && !D.isPrototypeContext()) {
         // FIXME: This check isn't quite right: it allows star in prototypes
         // for function definitions, and disallows some edge cases detailed
         // in http://gcc.gnu.org/ml/gcc-patches/2009-02/msg00133.html
         S.Diag(DeclType.Loc, diag::err_array_star_outside_prototype);
-        ASM = ArrayType::Normal;
+        ASM = ArraySizeModifier::Normal;
         D.setInvalidType(true);
       }
 
       // C99 6.7.5.2p1: The optional type qualifiers and the keyword static
       // shall appear only in a declaration of a function parameter with an
       // array type, ...
-      if (ASM == ArrayType::Static || ATI.TypeQuals) {
+      if (ASM == ArraySizeModifier::Static || ATI.TypeQuals) {
         if (!(D.isPrototypeContext() ||
               D.getContext() == DeclaratorContext::KNRTypeList)) {
-          S.Diag(DeclType.Loc, diag::err_array_static_outside_prototype) <<
-              (ASM == ArrayType::Static ? "'static'" : "type qualifier");
+          S.Diag(DeclType.Loc, diag::err_array_static_outside_prototype)
+              << (ASM == ArraySizeModifier::Static ? "'static'"
+                                                   : "type qualifier");
           // Remove the 'static' and the type qualifiers.
-          if (ASM == ArrayType::Static)
-            ASM = ArrayType::Normal;
+          if (ASM == ArraySizeModifier::Static)
+            ASM = ArraySizeModifier::Normal;
           ATI.TypeQuals = 0;
           D.setInvalidType(true);
         }
@@ -5167,10 +5204,11 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
         // C99 6.7.5.2p1: ... and then only in the outermost array type
         // derivation.
         if (hasOuterPointerLikeChunk(D, chunkIndex)) {
-          S.Diag(DeclType.Loc, diag::err_array_static_not_outermost) <<
-            (ASM == ArrayType::Static ? "'static'" : "type qualifier");
-          if (ASM == ArrayType::Static)
-            ASM = ArrayType::Normal;
+          S.Diag(DeclType.Loc, diag::err_array_static_not_outermost)
+              << (ASM == ArraySizeModifier::Static ? "'static'"
+                                                   : "type qualifier");
+          if (ASM == ArraySizeModifier::Static)
+            ASM = ArraySizeModifier::Normal;
           ATI.TypeQuals = 0;
           D.setInvalidType(true);
         }
@@ -5180,8 +5218,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
       // necessary if they're marked 'static'.
       if (complainAboutMissingNullability == CAMN_Yes &&
           !hasNullabilityAttr(DeclType.getAttrs()) &&
-          ASM != ArrayType::Static &&
-          D.isPrototypeContext() &&
+          ASM != ArraySizeModifier::Static && D.isPrototypeContext() &&
           !hasOuterPointerLikeChunk(D, chunkIndex)) {
         checkNullabilityConsistency(S, SimplePointerKind::Array, DeclType.Loc);
       }

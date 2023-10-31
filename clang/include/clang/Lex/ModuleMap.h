@@ -20,8 +20,8 @@
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/PointerIntPair.h"
-#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -194,7 +194,7 @@ public:
     }
   };
 
-  using AdditionalModMapsSet = llvm::SmallPtrSet<FileEntryRef, 1>;
+  using AdditionalModMapsSet = llvm::DenseSet<FileEntryRef>;
 
 private:
   friend class ModuleMapParser;
@@ -410,12 +410,15 @@ public:
   }
 
   /// Get the directory that contains Clang-supplied include files.
-  const DirectoryEntry *getBuiltinDir() const {
+  OptionalDirectoryEntryRefDegradesToDirectoryEntryPtr getBuiltinDir() const {
     return BuiltinIncludeDir;
   }
 
   /// Is this a compiler builtin header?
   bool isBuiltinHeader(FileEntryRef File);
+
+  bool shouldImportRelativeToBuiltinIncludeDir(StringRef FileName,
+                                               Module *Module) const;
 
   /// Add a module map callback.
   void addModuleMapCallbacks(std::unique_ptr<ModuleMapCallbacks> Callback) {

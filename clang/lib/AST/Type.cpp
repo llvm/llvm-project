@@ -156,7 +156,7 @@ ArrayType::ArrayType(TypeClass tc, QualType et, QualType can,
                     : TypeDependence::None)),
       ElementType(et) {
   ArrayTypeBits.IndexTypeQuals = tq;
-  ArrayTypeBits.SizeModifier = sm;
+  ArrayTypeBits.SizeModifier = llvm::to_underlying(sm);
 }
 
 unsigned ConstantArrayType::getNumAddressingBits(const ASTContext &Context,
@@ -218,7 +218,7 @@ void ConstantArrayType::Profile(llvm::FoldingSetNodeID &ID,
                                 unsigned TypeQuals) {
   ID.AddPointer(ET.getAsOpaquePtr());
   ID.AddInteger(ArraySize.getZExtValue());
-  ID.AddInteger(SizeMod);
+  ID.AddInteger(llvm::to_underlying(SizeMod));
   ID.AddInteger(TypeQuals);
   ID.AddBoolean(SizeExpr != nullptr);
   if (SizeExpr)
@@ -239,7 +239,7 @@ void DependentSizedArrayType::Profile(llvm::FoldingSetNodeID &ID,
                                       unsigned TypeQuals,
                                       Expr *E) {
   ID.AddPointer(ET.getAsOpaquePtr());
-  ID.AddInteger(SizeMod);
+  ID.AddInteger(llvm::to_underlying(SizeMod));
   ID.AddInteger(TypeQuals);
   E->Profile(ID, Context, true);
 }
@@ -2369,7 +2369,7 @@ bool Type::isIncompleteType(NamedDecl **Def) const {
 }
 
 bool Type::isSizelessBuiltinType() const {
-  if (isSVESizelessBuiltinType() || isRVVSizelessBuiltinType())
+  if (isSizelessVectorType())
     return true;
 
   if (const BuiltinType *BT = getAs<BuiltinType>()) {
@@ -2402,6 +2402,10 @@ bool Type::isWebAssemblyTableType() const {
 }
 
 bool Type::isSizelessType() const { return isSizelessBuiltinType(); }
+
+bool Type::isSizelessVectorType() const {
+  return isSVESizelessBuiltinType() || isRVVSizelessBuiltinType();
+}
 
 bool Type::isSVESizelessBuiltinType() const {
   if (const BuiltinType *BT = getAs<BuiltinType>()) {

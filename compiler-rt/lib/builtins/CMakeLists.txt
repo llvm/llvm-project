@@ -187,8 +187,6 @@ set(BF16_SOURCES
     truncsfbf2.c
 )
 
-# TODO: Several "tf" files (and divtc3.c, but not multc3.c) are in
-# GENERIC_SOURCES instead of here.
 set(GENERIC_TF_SOURCES
   addtf3.c
   comparetf2.c
@@ -762,6 +760,12 @@ else ()
   endif()
 
   append_list_if(COMPILER_RT_HAS_STD_C11_FLAG -std=c11 BUILTIN_CFLAGS)
+
+  # Don't embed directives for picking any specific CRT
+  if (MSVC)
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "")
+    append_list_if(COMPILER_RT_HAS_ZL_FLAG /Zl BUILTIN_CFLAGS)
+  endif()
 
   # These flags would normally be added to CMAKE_C_FLAGS by the llvm
   # cmake step. Add them manually if this is a standalone build.

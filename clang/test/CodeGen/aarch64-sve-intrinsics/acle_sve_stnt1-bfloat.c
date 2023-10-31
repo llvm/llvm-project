@@ -21,7 +21,7 @@
 // CHECK-NEXT:    tail call void @llvm.aarch64.sve.stnt1.nxv8bf16(<vscale x 8 x bfloat> [[DATA:%.*]], <vscale x 8 x i1> [[TMP0]], ptr [[BASE:%.*]])
 // CHECK-NEXT:    ret void
 //
-// CPP-CHECK-LABEL: @_Z17test_svstnt1_bf16u10__SVBool_tPu6__bf16u14__SVBFloat16_t(
+// CPP-CHECK-LABEL: @_Z17test_svstnt1_bf16u10__SVBool_tPu6__bf16u14__SVBfloat16_t(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
 // CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.stnt1.nxv8bf16(<vscale x 8 x bfloat> [[DATA:%.*]], <vscale x 8 x i1> [[TMP0]], ptr [[BASE:%.*]])
@@ -39,7 +39,7 @@ void test_svstnt1_bf16(svbool_t pg, bfloat16_t *base, svbfloat16_t data)
 // CHECK-NEXT:    tail call void @llvm.aarch64.sve.stnt1.nxv8bf16(<vscale x 8 x bfloat> [[DATA:%.*]], <vscale x 8 x i1> [[TMP0]], ptr [[TMP1]])
 // CHECK-NEXT:    ret void
 //
-// CPP-CHECK-LABEL: @_Z22test_svstnt1_vnum_bf16u10__SVBool_tPu6__bf16lu14__SVBFloat16_t(
+// CPP-CHECK-LABEL: @_Z22test_svstnt1_vnum_bf16u10__SVBool_tPu6__bf16lu14__SVBfloat16_t(
 // CPP-CHECK-NEXT:  entry:
 // CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = getelementptr <vscale x 8 x bfloat>, ptr [[BASE:%.*]], i64 [[VNUM:%.*]]

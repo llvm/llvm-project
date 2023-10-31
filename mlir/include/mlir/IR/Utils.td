@@ -66,4 +66,28 @@ class CArg<string ty, string value = ""> {
   string defaultValue = value;
 }
 
+// Helper which makes the first letter of a string uppercase.
+// e.g. cat -> Cat
+class firstCharToUpper<string str>
+{
+  string ret = !if(!gt(!size(str), 0),
+    !toupper(!substr(str, 0, 1)) # !substr(str, 1),
+    "");
+}
+
+class _snakeCaseHelper<string str> {
+  int idx = !find(str, "_");
+  string ret = !if(!ge(idx, 0),
+    !substr(str, 0, idx) # firstCharToUpper<!substr(str, !add(idx, 1))>.ret,
+    str);
+}
+
+// Converts a snake_case string to CamelCase.
+// TODO: Replace with a !tocamelcase bang operator.
+class snakeCaseToCamelCase<string str>
+{
+  string ret = !foldl(firstCharToUpper<str>.ret,
+    !range(0, !size(str)), acc, idx, _snakeCaseHelper<acc>.ret);
+}
+
 #endif // UTILS_TD
