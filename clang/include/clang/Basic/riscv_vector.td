@@ -2462,18 +2462,17 @@ let HasMasked = false, HasVL = false, IRName = "" in {
             ReturnTuple = Builder.CreateInsertValue(ReturnTuple, Ops[I], {I});
           }
           return ReturnTuple;
-        } else {
-          llvm::Value *ReturnVector = llvm::PoisonValue::get(ResultType);
-          auto *VecTy = cast<ScalableVectorType>(Ops[0]->getType());
-          for (unsigned I = 0, N = Ops.size(); I < N; ++I) {
-            llvm::Value *Idx =
-              ConstantInt::get(Builder.getInt64Ty(),
-                               VecTy->getMinNumElements() * I);
-            ReturnVector =
-              Builder.CreateInsertVector(ResultType, ReturnVector, Ops[I], Idx);
-          }
-          return ReturnVector;
         }
+        llvm::Value *ReturnVector = llvm::PoisonValue::get(ResultType);
+        auto *VecTy = cast<ScalableVectorType>(Ops[0]->getType());
+        for (unsigned I = 0, N = Ops.size(); I < N; ++I) {
+          llvm::Value *Idx =
+            ConstantInt::get(Builder.getInt64Ty(),
+                              VecTy->getMinNumElements() * I);
+          ReturnVector =
+            Builder.CreateInsertVector(ResultType, ReturnVector, Ops[I], Idx);
+        }
+        return ReturnVector;
       }
       }] in {
 
