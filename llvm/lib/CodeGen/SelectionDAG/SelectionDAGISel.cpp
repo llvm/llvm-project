@@ -204,6 +204,16 @@ static RegisterScheduler
 defaultListDAGScheduler("default", "Best scheduler for the target",
                         createDefaultScheduler);
 
+static bool dontUseFastISelFor(const Function &Fn) {
+  // Don't enable FastISel for functions with swiftasync Arguments.
+  // Debug info on those is reliant on good Argument lowering, and FastISel is
+  // not capable of lowering the entire function. Mixing the two selectors tend
+  // to result in poor lowering of Arguments.
+  return any_of(Fn.args(), [](const Argument &Arg) {
+    return Arg.hasAttribute(Attribute::AttrKind::SwiftAsync);
+  });
+}
+
 namespace llvm {
 
   //===--------------------------------------------------------------------===//
@@ -227,13 +237,14 @@ namespace llvm {
                         << IS.MF->getFunction().getName() << "\n");
       LLVM_DEBUG(dbgs() << "\tBefore: -O" << static_cast<int>(SavedOptLevel) << " ; After: -O"
                         << static_cast<int>(NewOptLevel) << "\n");
-      if (NewOptLevel == CodeGenOptLevel::None) {
+      if (NewOptLevel == CodeGenOptLevel::None)
         IS.TM.setFastISel(IS.TM.getO0WantsFastISel());
-        LLVM_DEBUG(
-            dbgs() << "\tFastISel is "
-                   << (IS.TM.Options.EnableFastISel ? "enabled" : "disabled")
-                   << "\n");
-      }
+      if (dontUseFastISelFor(IS.MF->getFunction()))
+        IS.TM.setFastISel(false);
+      LLVM_DEBUG(
+          dbgs() << "\tFastISel is "
+                 << (IS.TM.Options.EnableFastISel ? "enabled" : "disabled")
+                 << "\n");
     }
 
     ~OptLevelChanger() {
@@ -1441,21 +1452,11 @@ static void processSingleLocVars(FunctionLoweringInfo &FuncInfo,
   }
 }
 
-static bool shouldEnableFastISel(const Function &Fn) {
-  // Don't enable FastISel for functions with swiftasync Arguments.
-  // Debug info on those is reliant on good Argument lowering, and FastISel is
-  // not capable of lowering the entire function. Mixing the two selectors tend
-  // to result in poor lowering of Arguments.
-  return none_of(Fn.args(), [](const Argument &Arg) {
-    return Arg.hasAttribute(Attribute::AttrKind::SwiftAsync);
-  });
-}
-
 void SelectionDAGISel::SelectAllBasicBlocks(const Function &Fn) {
   FastISelFailed = false;
   // Initialize the Fast-ISel state, if needed.
   FastISel *FastIS = nullptr;
-  if (TM.Options.EnableFastISel && shouldEnableFastISel(Fn)) {
+  if (TM.Options.EnableFastISel) {
     LLVM_DEBUG(dbgs() << "Enabling fast-isel\n");
     FastIS = TLI->createFastISel(*FuncInfo, LibInfo);
   }
