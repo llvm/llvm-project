@@ -37,8 +37,9 @@ class ClangExternalASTSourceCallbacks;
 class ClangNameImporter;
 class SwiftASTContext;
 class SwiftASTContextForExpressions;
+class SwiftDWARFImporterForClangTypes;
 class SwiftPersistentExpressionState;
-  
+
 /// A Swift TypeSystem that does not own a swift::ASTContext.
 class TypeSystemSwiftTypeRef : public TypeSystemSwift {
   /// LLVM RTTI support.
@@ -65,7 +66,7 @@ public:
   const TypeSystemSwiftTypeRef &GetTypeSystemSwiftTypeRef() const override {
     return *this;
   }
-  swift::DWARFImporterDelegate &GetDWARFImporterDelegate();
+  SwiftDWARFImporterForClangTypes &GetSwiftDWARFImporterForClangTypes();
   ClangNameImporter *GetNameImporter() const;
   llvm::Triple GetTriple() const;
   void SetTriple(const llvm::Triple triple) override;
@@ -436,8 +437,8 @@ protected:
   mutable bool m_swift_ast_context_initialized = false;
   mutable lldb::TypeSystemSP m_swift_ast_context_sp;
   mutable SwiftASTContext *m_swift_ast_context = nullptr;
-  mutable std::unique_ptr<swift::DWARFImporterDelegate>
-      m_dwarf_importer_delegate_up;
+  mutable std::unique_ptr<SwiftDWARFImporterForClangTypes>
+      m_dwarf_importer_for_clang_types_up;
   mutable std::unique_ptr<ClangNameImporter> m_name_importer_up;
   std::unique_ptr<DWARFASTParser> m_dwarf_ast_parser_up;
 
@@ -505,8 +506,5 @@ protected:
   std::unique_ptr<SwiftPersistentExpressionState> m_persistent_state_up;
 };
 
-swift::DWARFImporterDelegate *
-CreateSwiftDWARFImporterDelegate(TypeSystemSwiftTypeRef &ts);
-  
 } // namespace lldb_private
 #endif
