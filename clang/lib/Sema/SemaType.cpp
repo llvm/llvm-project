@@ -1802,11 +1802,11 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
   } else if (DS.isTypeAltiVecVector()) {
     unsigned typeSize = static_cast<unsigned>(Context.getTypeSize(Result));
     assert(typeSize > 0 && "type size for vector must be greater than 0 bits");
-    VectorType::VectorKind VecKind = VectorType::AltiVecVector;
+    VectorKind VecKind = VectorKind::AltiVecVector;
     if (DS.isTypeAltiVecPixel())
-      VecKind = VectorType::AltiVecPixel;
+      VecKind = VectorKind::AltiVecPixel;
     else if (DS.isTypeAltiVecBool())
-      VecKind = VectorType::AltiVecBool;
+      VecKind = VectorKind::AltiVecBool;
     Result = Context.getVectorType(Result, 128/typeSize, VecKind);
   }
 
@@ -2767,7 +2767,7 @@ QualType Sema::BuildVectorType(QualType CurType, Expr *SizeExpr,
 
   if (SizeExpr->isTypeDependent() || SizeExpr->isValueDependent())
     return Context.getDependentVectorType(CurType, SizeExpr, AttrLoc,
-                                               VectorType::GenericVector);
+                                          VectorKind::Generic);
 
   std::optional<llvm::APSInt> VecSize =
       SizeExpr->getIntegerConstantExpr(Context);
@@ -2780,7 +2780,7 @@ QualType Sema::BuildVectorType(QualType CurType, Expr *SizeExpr,
 
   if (CurType->isDependentType())
     return Context.getDependentVectorType(CurType, SizeExpr, AttrLoc,
-                                               VectorType::GenericVector);
+                                          VectorKind::Generic);
 
   // vecSize is specified in bytes - convert to bits.
   if (!VecSize->isIntN(61)) {
@@ -2811,7 +2811,7 @@ QualType Sema::BuildVectorType(QualType CurType, Expr *SizeExpr,
   }
 
   return Context.getVectorType(CurType, VectorSizeBits / TypeSize,
-                               VectorType::GenericVector);
+                               VectorKind::Generic);
 }
 
 /// Build an ext-vector type.
@@ -8267,8 +8267,7 @@ static void HandleExtVectorTypeAttr(QualType &CurType, const ParsedAttr &Attr,
     CurType = T;
 }
 
-static bool isPermittedNeonBaseType(QualType &Ty,
-                                    VectorType::VectorKind VecKind, Sema &S) {
+static bool isPermittedNeonBaseType(QualType &Ty, VectorKind VecKind, Sema &S) {
   const BuiltinType *BTy = Ty->getAs<BuiltinType>();
   if (!BTy)
     return false;
@@ -8280,7 +8279,7 @@ static bool isPermittedNeonBaseType(QualType &Ty,
   bool IsPolyUnsigned = Triple.getArch() == llvm::Triple::aarch64 ||
                         Triple.getArch() == llvm::Triple::aarch64_32 ||
                         Triple.getArch() == llvm::Triple::aarch64_be;
-  if (VecKind == VectorType::NeonPolyVector) {
+  if (VecKind == VectorKind::NeonPoly) {
     if (IsPolyUnsigned) {
       // AArch64 polynomial vectors are unsigned.
       return BTy->getKind() == BuiltinType::UChar ||
@@ -8340,7 +8339,7 @@ static bool verifyValidIntegerConstantExpr(Sema &S, const ParsedAttr &Attr,
 /// not the vector size in bytes.  The vector width and element type must
 /// match one of the standard Neon vector types.
 static void HandleNeonVectorTypeAttr(QualType &CurType, const ParsedAttr &Attr,
-                                     Sema &S, VectorType::VectorKind VecKind) {
+                                     Sema &S, VectorKind VecKind) {
   bool IsTargetCUDAAndHostARM = false;
   if (S.getLangOpts().CUDAIsDevice) {
     const TargetInfo *AuxTI = S.getASTContext().getAuxTargetInfo();
@@ -8448,11 +8447,11 @@ static void HandleArmSveVectorBitsTypeAttr(QualType &CurType, ParsedAttr &Attr,
 
   QualType EltType = CurType->getSveEltType(S.Context);
   unsigned TypeSize = S.Context.getTypeSize(EltType);
-  VectorType::VectorKind VecKind = VectorType::SveFixedLengthDataVector;
+  VectorKind VecKind = VectorKind::SveFixedLengthData;
   if (BT->getKind() == BuiltinType::SveBool) {
     // Predicates are represented as i8.
     VecSize /= S.Context.getCharWidth() * S.Context.getCharWidth();
-    VecKind = VectorType::SveFixedLengthPredicateVector;
+    VecKind = VectorKind::SveFixedLengthPredicate;
   } else
     VecSize /= TypeSize;
   CurType = S.Context.getVectorType(EltType, VecSize, VecKind);
@@ -8462,7 +8461,7 @@ static void HandleArmMveStrictPolymorphismAttr(TypeProcessingState &State,
                                                QualType &CurType,
                                                ParsedAttr &Attr) {
   const VectorType *VT = dyn_cast<VectorType>(CurType);
-  if (!VT || VT->getVectorKind() != VectorType::NeonVector) {
+  if (!VT || VT->getVectorKind() != VectorKind::Neon) {
     State.getSema().Diag(Attr.getLoc(),
                          diag::err_attribute_arm_mve_polymorphism);
     Attr.setInvalid();
@@ -8533,7 +8532,7 @@ static void HandleRISCVRVVVectorBitsTypeAttr(QualType &CurType,
     return;
   }
 
-  VectorType::VectorKind VecKind = VectorType::RVVFixedLengthDataVector;
+  VectorKind VecKind = VectorKind::RVVFixedLengthData;
   VecSize /= EltSize;
   CurType = S.Context.getVectorType(Info.ElementType, VecSize, VecKind);
 }
@@ -8770,13 +8769,12 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
       attr.setUsedAsTypeAttr();
       break;
     case ParsedAttr::AT_NeonVectorType:
-      HandleNeonVectorTypeAttr(type, attr, state.getSema(),
-                               VectorType::NeonVector);
+      HandleNeonVectorTypeAttr(type, attr, state.getSema(), VectorKind::Neon);
       attr.setUsedAsTypeAttr();
       break;
     case ParsedAttr::AT_NeonPolyVectorType:
       HandleNeonVectorTypeAttr(type, attr, state.getSema(),
-                               VectorType::NeonPolyVector);
+                               VectorKind::NeonPoly);
       attr.setUsedAsTypeAttr();
       break;
     case ParsedAttr::AT_ArmSveVectorBits:

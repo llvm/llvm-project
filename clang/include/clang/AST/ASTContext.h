@@ -1493,12 +1493,12 @@ public:
   ///
   /// \pre \p VectorType must be a built-in type.
   QualType getVectorType(QualType VectorType, unsigned NumElts,
-                         VectorType::VectorKind VecKind) const;
+                         VectorKind VecKind) const;
   /// Return the unique reference to the type for a dependently sized vector of
   /// the specified element type.
   QualType getDependentVectorType(QualType VectorType, Expr *SizeExpr,
                                   SourceLocation AttrLoc,
-                                  VectorType::VectorKind VecKind) const;
+                                  VectorKind VecKind) const;
 
   /// Return the unique reference to an extended vector type
   /// of the specified element type and size.

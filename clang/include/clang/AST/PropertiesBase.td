@@ -142,7 +142,7 @@ def TypeOfKind : EnumPropertyType<"TypeOfKind">;
 def UInt32 : CountPropertyType<"uint32_t">;
 def UInt64 : CountPropertyType<"uint64_t">;
 def UnaryTypeTransformKind : EnumPropertyType<"UnaryTransformType::UTTKind">;
-def VectorKind : EnumPropertyType<"VectorType::VectorKind">;
+def VectorKind : EnumPropertyType<"VectorKind">;
 
 def ExceptionSpecInfo : PropertyType<"FunctionProtoType::ExceptionSpecInfo"> {
   let BufferElementTypes = [ QualType ];

@@ -4861,7 +4861,7 @@ void Sema::AddModeAttr(Decl *D, const AttributeCommonInfo &CI,
   QualType NewTy = NewElemTy;
   if (VectorSize.getBoolValue()) {
     NewTy = Context.getVectorType(NewTy, VectorSize.getZExtValue(),
-                                  VectorType::GenericVector);
+                                  VectorKind::Generic);
   } else if (const auto *OldVT = OldTy->getAs<VectorType>()) {
     // Complex machine mode does not support base vector types.
     if (ComplexMode) {

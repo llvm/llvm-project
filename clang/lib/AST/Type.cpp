@@ -246,23 +246,22 @@ void DependentSizedArrayType::Profile(llvm::FoldingSetNodeID &ID,
 
 DependentVectorType::DependentVectorType(QualType ElementType,
                                          QualType CanonType, Expr *SizeExpr,
-                                         SourceLocation Loc,
-                                         VectorType::VectorKind VecKind)
+                                         SourceLocation Loc, VectorKind VecKind)
     : Type(DependentVector, CanonType,
            TypeDependence::DependentInstantiation |
                ElementType->getDependence() |
                (SizeExpr ? toTypeDependence(SizeExpr->getDependence())
                          : TypeDependence::None)),
       ElementType(ElementType), SizeExpr(SizeExpr), Loc(Loc) {
-  VectorTypeBits.VecKind = VecKind;
+  VectorTypeBits.VecKind = llvm::to_underlying(VecKind);
 }
 
 void DependentVectorType::Profile(llvm::FoldingSetNodeID &ID,
                                   const ASTContext &Context,
                                   QualType ElementType, const Expr *SizeExpr,
-                                  VectorType::VectorKind VecKind) {
+                                  VectorKind VecKind) {
   ID.AddPointer(ElementType.getAsOpaquePtr());
-  ID.AddInteger(VecKind);
+  ID.AddInteger(llvm::to_underlying(VecKind));
   SizeExpr->Profile(ID, Context, true);
 }
 
@@ -358,7 +357,7 @@ VectorType::VectorType(QualType vecType, unsigned nElements, QualType canonType,
 VectorType::VectorType(TypeClass tc, QualType vecType, unsigned nElements,
                        QualType canonType, VectorKind vecKind)
     : Type(tc, canonType, vecType->getDependence()), ElementType(vecType) {
-  VectorTypeBits.VecKind = vecKind;
+  VectorTypeBits.VecKind = llvm::to_underlying(vecKind);
   VectorTypeBits.NumElements = nElements;
 }
 

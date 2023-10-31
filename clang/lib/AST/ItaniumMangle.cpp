@@ -3707,7 +3707,7 @@ void CXXNameMangler::mangleNeonVectorType(const VectorType *T) {
   QualType EltType = T->getElementType();
   assert(EltType->isBuiltinType() && "Neon vector element not a BuiltinType");
   const char *EltName = nullptr;
-  if (T->getVectorKind() == VectorType::NeonPolyVector) {
+  if (T->getVectorKind() == VectorKind::NeonPoly) {
     switch (cast<BuiltinType>(EltType)->getKind()) {
     case BuiltinType::SChar:
     case BuiltinType::UChar:
@@ -3809,7 +3809,7 @@ void CXXNameMangler::mangleAArch64NeonVectorType(const VectorType *T) {
          "Neon vector type not 64 or 128 bits");
 
   StringRef EltName;
-  if (T->getVectorKind() == VectorType::NeonPolyVector) {
+  if (T->getVectorKind() == VectorKind::NeonPoly) {
     switch (cast<BuiltinType>(EltType)->getKind()) {
     case BuiltinType::UChar:
       EltName = "Poly8";
@@ -3864,8 +3864,8 @@ void CXXNameMangler::mangleAArch64NeonVectorType(const DependentVectorType *T) {
 // for the Arm Architecture, see
 // https://github.com/ARM-software/abi-aa/blob/main/aapcs64/aapcs64.rst#appendix-c-mangling
 void CXXNameMangler::mangleAArch64FixedSveVectorType(const VectorType *T) {
-  assert((T->getVectorKind() == VectorType::SveFixedLengthDataVector ||
-          T->getVectorKind() == VectorType::SveFixedLengthPredicateVector) &&
+  assert((T->getVectorKind() == VectorKind::SveFixedLengthData ||
+          T->getVectorKind() == VectorKind::SveFixedLengthPredicate) &&
          "expected fixed-length SVE vector!");
 
   QualType EltType = T->getElementType();
@@ -3878,7 +3878,7 @@ void CXXNameMangler::mangleAArch64FixedSveVectorType(const VectorType *T) {
     TypeName = "__SVInt8_t";
     break;
   case BuiltinType::UChar: {
-    if (T->getVectorKind() == VectorType::SveFixedLengthDataVector)
+    if (T->getVectorKind() == VectorKind::SveFixedLengthData)
       TypeName = "__SVUint8_t";
     else
       TypeName = "__SVBool_t";
@@ -3920,7 +3920,7 @@ void CXXNameMangler::mangleAArch64FixedSveVectorType(const VectorType *T) {
 
   unsigned VecSizeInBits = getASTContext().getTypeInfo(T).Width;
 
-  if (T->getVectorKind() == VectorType::SveFixedLengthPredicateVector)
+  if (T->getVectorKind() == VectorKind::SveFixedLengthPredicate)
     VecSizeInBits *= 8;
 
   Out << "9__SVE_VLSI" << 'u' << TypeName.size() << TypeName << "Lj"
@@ -3937,7 +3937,7 @@ void CXXNameMangler::mangleAArch64FixedSveVectorType(
 }
 
 void CXXNameMangler::mangleRISCVFixedRVVVectorType(const VectorType *T) {
-  assert(T->getVectorKind() == VectorType::RVVFixedLengthDataVector &&
+  assert(T->getVectorKind() == VectorKind::RVVFixedLengthData &&
          "expected fixed-length RVV vector!");
 
   QualType EltType = T->getElementType();
@@ -4021,8 +4021,8 @@ void CXXNameMangler::mangleRISCVFixedRVVVectorType(
 //                         ::= p # AltiVec vector pixel
 //                         ::= b # Altivec vector bool
 void CXXNameMangler::mangleType(const VectorType *T) {
-  if ((T->getVectorKind() == VectorType::NeonVector ||
-       T->getVectorKind() == VectorType::NeonPolyVector)) {
+  if ((T->getVectorKind() == VectorKind::Neon ||
+       T->getVectorKind() == VectorKind::NeonPoly)) {
     llvm::Triple Target = getASTContext().getTargetInfo().getTriple();
     llvm::Triple::ArchType Arch =
         getASTContext().getTargetInfo().getTriple().getArch();
@@ -4032,26 +4032,26 @@ void CXXNameMangler::mangleType(const VectorType *T) {
     else
       mangleNeonVectorType(T);
     return;
-  } else if (T->getVectorKind() == VectorType::SveFixedLengthDataVector ||
-             T->getVectorKind() == VectorType::SveFixedLengthPredicateVector) {
+  } else if (T->getVectorKind() == VectorKind::SveFixedLengthData ||
+             T->getVectorKind() == VectorKind::SveFixedLengthPredicate) {
     mangleAArch64FixedSveVectorType(T);
     return;
-  } else if (T->getVectorKind() == VectorType::RVVFixedLengthDataVector) {
+  } else if (T->getVectorKind() == VectorKind::RVVFixedLengthData) {
     mangleRISCVFixedRVVVectorType(T);
     return;
   }
   Out << "Dv" << T->getNumElements() << '_';
-  if (T->getVectorKind() == VectorType::AltiVecPixel)
+  if (T->getVectorKind() == VectorKind::AltiVecPixel)
     Out << 'p';
-  else if (T->getVectorKind() == VectorType::AltiVecBool)
+  else if (T->getVectorKind() == VectorKind::AltiVecBool)
     Out << 'b';
   else
     mangleType(T->getElementType());
 }
 
 void CXXNameMangler::mangleType(const DependentVectorType *T) {
-  if ((T->getVectorKind() == VectorType::NeonVector ||
-       T->getVectorKind() == VectorType::NeonPolyVector)) {
+  if ((T->getVectorKind() == VectorKind::Neon ||
+       T->getVectorKind() == VectorKind::NeonPoly)) {
     llvm::Triple Target = getASTContext().getTargetInfo().getTriple();
     llvm::Triple::ArchType Arch =
         getASTContext().getTargetInfo().getTriple().getArch();
@@ -4061,11 +4061,11 @@ void CXXNameMangler::mangleType(const DependentVectorType *T) {
     else
       mangleNeonVectorType(T);
     return;
-  } else if (T->getVectorKind() == VectorType::SveFixedLengthDataVector ||
-             T->getVectorKind() == VectorType::SveFixedLengthPredicateVector) {
+  } else if (T->getVectorKind() == VectorKind::SveFixedLengthData ||
+             T->getVectorKind() == VectorKind::SveFixedLengthPredicate) {
     mangleAArch64FixedSveVectorType(T);
     return;
-  } else if (T->getVectorKind() == VectorType::RVVFixedLengthDataVector) {
+  } else if (T->getVectorKind() == VectorKind::RVVFixedLengthData) {
     mangleRISCVFixedRVVVectorType(T);
     return;
   }
@@ -4073,9 +4073,9 @@ void CXXNameMangler::mangleType(const DependentVectorType *T) {
   Out << "Dv";
   mangleExpression(T->getSizeExpr());
   Out << '_';
-  if (T->getVectorKind() == VectorType::AltiVecPixel)
+  if (T->getVectorKind() == VectorKind::AltiVecPixel)
     Out << 'p';
-  else if (T->getVectorKind() == VectorType::AltiVecBool)
+  else if (T->getVectorKind() == VectorKind::AltiVecBool)
     Out << 'b';
   else
     mangleType(T->getElementType());
