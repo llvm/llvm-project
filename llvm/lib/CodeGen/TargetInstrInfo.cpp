@@ -1640,8 +1640,8 @@ std::string TargetInstrInfo::createMIROperandComment(
     OS << " tiedto:$" << TiedTo;
 
   if ((F.isRegDefKind() || F.isRegDefEarlyClobberKind() || F.isRegUseKind()) &&
-      F.getRegMayBeSpilled())
-    OS << " spillable";
+      F.getRegMayBeFolded())
+    OS << " foldable";
 
   return OS.str();
 }

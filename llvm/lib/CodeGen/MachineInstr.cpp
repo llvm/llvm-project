@@ -1794,8 +1794,8 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
 
       if ((F.isRegDefKind() || F.isRegDefEarlyClobberKind() ||
            F.isRegUseKind()) &&
-          F.getRegMayBeSpilled()) {
-        OS << " spillable";
+          F.getRegMayBeFolded()) {
+        OS << " foldable";
       }
 
       OS << ']';
@@ -2533,7 +2533,7 @@ void MachineInstr::insert(mop_iterator InsertBefore,
   }
 }
 
-bool MachineInstr::mayFoldInlineAsmMemOp(unsigned OpId) const {
+bool MachineInstr::mayFoldInlineAsmRegOp(unsigned OpId) const {
   assert(OpId && "expected non-zero operand id");
   assert(isInlineAsm() && "should only be used on inline asm");
 
@@ -2546,6 +2546,6 @@ bool MachineInstr::mayFoldInlineAsmMemOp(unsigned OpId) const {
 
   InlineAsm::Flag F(MD.getImm());
   if (F.isRegUseKind() || F.isRegDefKind() || F.isRegDefEarlyClobberKind())
-    return F.getRegMayBeSpilled();
+    return F.getRegMayBeFolded();
   return false;
 }

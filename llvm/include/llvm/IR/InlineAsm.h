@@ -293,7 +293,7 @@ public:
   //   Else:
   //     Bits 29-16 - The register class ID to use for the operand. (RegClass)
   //     Bit  30    - If the register is permitted to be spilled.
-  //                  (RegMayBeSpilled)
+  //                  (RegMayBeFolded)
   //                  Defaults to false "r", may be set for constraints like
   //                  "rm" (or "g").
   //
@@ -307,7 +307,7 @@ public:
     using MatchedOperandNo = Bitfield::Element<unsigned, 16, 15>;
     using MemConstraintCode = Bitfield::Element<ConstraintCode, 16, 15, ConstraintCode::Max>;
     using RegClass = Bitfield::Element<unsigned, 16, 14>;
-    using RegMayBeSpilled = Bitfield::Element<bool, 30, 1>;
+    using RegMayBeFolded = Bitfield::Element<bool, 30, 1>;
     using IsMatched = Bitfield::Element<bool, 31, 1>;
 
 
@@ -428,15 +428,15 @@ public:
     /// ("rm") vs ones it does not ("r"). This is because the inline asm may use
     /// instructions which don't support memory addressing modes for that
     /// operand.
-    void setRegMayBeSpilled(bool B) {
+    void setRegMayBeFolded(bool B) {
       assert((isRegDefKind() || isRegDefEarlyClobberKind() || isRegUseKind()) &&
              "Must be reg");
-      Bitfield::set<RegMayBeSpilled>(Storage, B);
+      Bitfield::set<RegMayBeFolded>(Storage, B);
     }
-    bool getRegMayBeSpilled() const {
+    bool getRegMayBeFolded() const {
       assert((isRegDefKind() || isRegDefEarlyClobberKind() || isRegUseKind()) &&
              "Must be reg");
-      return Bitfield::get<RegMayBeSpilled>(Storage);
+      return Bitfield::get<RegMayBeFolded>(Storage);
     }
   };
 
