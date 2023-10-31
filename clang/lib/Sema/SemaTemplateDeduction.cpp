@@ -3574,18 +3574,16 @@ static Sema::TemplateDeductionResult instantiateExplicitSpecifierDeferred(
 
   ExplicitSpecifier ES = GetExplicitSpecifier(Specialization);
   Expr *const Expr = ES.getExpr();
-  if (!Expr) {
+  if (!Expr)
     return Sema::TDK_Success;
-  }
-  if (!Expr->isValueDependent()) {
+  if (!Expr->isValueDependent())
     return Sema::TDK_Success;
-  }
+
   Sema::InstantiatingTemplate Inst(
       S, Info.getLocation(), FunctionTemplate, DeducedArgs,
       Sema::CodeSynthesisContext::DeducedTemplateArgumentSubstitution, Info);
-  if (Inst.isInvalid()) {
+  if (Inst.isInvalid())
     return Sema::TDK_InstantiationDepth;
-  }
   Sema::SFINAETrap Trap(S);
   const auto Instantiated = S.instantiateExplicitSpecifier(SubstArgs, ES);
   if (Instantiated.isInvalid() || Trap.hasErrorOccurred()) {
