@@ -615,12 +615,6 @@ def MoveTileSliceToVectorOp : ArmSME_Op<"move_tile_slice_to_vector", [Pure,
   }];
 }
 
-class HasMatchingMaskTypeConstraint<string operand> :
-  OptionalTypesMatchWith<
-    "shape of `" # operand #  "Mask` matches `" # operand # "`",
-    operand, operand # "Mask",
-    "::llvm::cast<mlir::VectorType>($_self).cloneWith({}, IntegerType::get($_ctxt, 1))">;
-
 class OuterProductResultTileTypeConstraint<string operand> :
   OptionalTypesMatchWith<operand # "type is derived from `lhs` and `rhs`",
     "lhs", operand,
@@ -635,8 +629,8 @@ def OuterProductOp :
   ArmSME_Op<"outerproduct", [Pure,
     AttrSizedOperandSegments,
     AllTypesMatch<["lhs", "rhs"]>,
-    HasMatchingMaskTypeConstraint<"lhs">,
-    HasMatchingMaskTypeConstraint<"rhs">,
+    HasMatchingMaskTypeConstraint<"lhs", "lhsMask">,
+    HasMatchingMaskTypeConstraint<"rhs", "rhsMask">,
     PredOpTrait<
       "both `lhsMask` and `rhsMask` should be provided or neither",
       CPred<"bool(getLhsMask()) == bool(getRhsMask())">>,
