@@ -30,8 +30,7 @@ define float @test1(ptr nocapture readonly %arr, i64 %start, float %threshold) {
 ; CHECK-NEXT:    add x1, x1, #1
 ; CHECK-NEXT:    cbnz x1, .LBB0_2
 ; CHECK-NEXT:  .LBB0_4:
-; CHECK-NEXT:    fmov s0, #-7.00000000
-; CHECK-NEXT:    ret
+; CHECK-NEXT:    fmov s1, #-7.00000000
 ; CHECK-NEXT:  .LBB0_5: // %cleanup2
 ; CHECK-NEXT:    fmov s0, s1
 ; CHECK-NEXT:    ret
@@ -77,8 +76,7 @@ define float @test2(ptr nocapture readonly %arr, i64 %start, float %threshold) {
 ; CHECK-NEXT:    add x1, x1, #1
 ; CHECK-NEXT:    cbnz x1, .LBB1_2
 ; CHECK-NEXT:  .LBB1_4:
-; CHECK-NEXT:    fmov s0, #-7.00000000
-; CHECK-NEXT:    ret
+; CHECK-NEXT:    fmov s1, #-7.00000000
 ; CHECK-NEXT:  .LBB1_5: // %cleanup4
 ; CHECK-NEXT:    fmov s0, s1
 ; CHECK-NEXT:    ret

@@ -1448,7 +1448,7 @@ define i1 @beq_to_bx(ptr %y, i32 %head) {
 ; ENABLE-V4T-NEXT:    movs r2, r0
 ; ENABLE-V4T-NEXT:    movs r0, #1
 ; ENABLE-V4T-NEXT:    cmp r2, #0
-; ENABLE-V4T-NEXT:    beq LBB11_3
+; ENABLE-V4T-NEXT:    beq LBB11_4
 ; ENABLE-V4T-NEXT:  @ %bb.1: @ %if.end
 ; ENABLE-V4T-NEXT:    push {r4, lr}
 ; ENABLE-V4T-NEXT:    .cfi_def_cfa_offset 8
@@ -1456,16 +1456,16 @@ define i1 @beq_to_bx(ptr %y, i32 %head) {
 ; ENABLE-V4T-NEXT:    .cfi_offset r4, -8
 ; ENABLE-V4T-NEXT:    ldr r3, [r2]
 ; ENABLE-V4T-NEXT:    lsls r4, r3, #30
-; ENABLE-V4T-NEXT:    ldr r4, [sp, #4]
-; ENABLE-V4T-NEXT:    mov lr, r4
-; ENABLE-V4T-NEXT:    pop {r4}
-; ENABLE-V4T-NEXT:    add sp, #4
 ; ENABLE-V4T-NEXT:    bpl LBB11_3
 ; ENABLE-V4T-NEXT:  @ %bb.2: @ %if.end4
 ; ENABLE-V4T-NEXT:    str r1, [r2]
 ; ENABLE-V4T-NEXT:    str r3, [r2]
 ; ENABLE-V4T-NEXT:    movs r0, #0
-; ENABLE-V4T-NEXT:  LBB11_3: @ %cleanup
+; ENABLE-V4T-NEXT:  LBB11_3:
+; ENABLE-V4T-NEXT:    pop {r4}
+; ENABLE-V4T-NEXT:    pop {r1}
+; ENABLE-V4T-NEXT:    mov lr, r1
+; ENABLE-V4T-NEXT:  LBB11_4: @ %cleanup
 ; ENABLE-V4T-NEXT:    bx lr
 ;
 ; ENABLE-V5T-LABEL: beq_to_bx:
@@ -1473,7 +1473,7 @@ define i1 @beq_to_bx(ptr %y, i32 %head) {
 ; ENABLE-V5T-NEXT:    movs r2, r0
 ; ENABLE-V5T-NEXT:    movs r0, #1
 ; ENABLE-V5T-NEXT:    cmp r2, #0
-; ENABLE-V5T-NEXT:    beq LBB11_3
+; ENABLE-V5T-NEXT:    beq LBB11_4
 ; ENABLE-V5T-NEXT:  @ %bb.1: @ %if.end
 ; ENABLE-V5T-NEXT:    push {r4, lr}
 ; ENABLE-V5T-NEXT:    .cfi_def_cfa_offset 8
@@ -1481,16 +1481,14 @@ define i1 @beq_to_bx(ptr %y, i32 %head) {
 ; ENABLE-V5T-NEXT:    .cfi_offset r4, -8
 ; ENABLE-V5T-NEXT:    ldr r3, [r2]
 ; ENABLE-V5T-NEXT:    lsls r4, r3, #30
-; ENABLE-V5T-NEXT:    ldr r4, [sp, #4]
-; ENABLE-V5T-NEXT:    mov lr, r4
-; ENABLE-V5T-NEXT:    pop {r4}
-; ENABLE-V5T-NEXT:    add sp, #4
 ; ENABLE-V5T-NEXT:    bpl LBB11_3
 ; ENABLE-V5T-NEXT:  @ %bb.2: @ %if.end4
 ; ENABLE-V5T-NEXT:    str r1, [r2]
 ; ENABLE-V5T-NEXT:    str r3, [r2]
 ; ENABLE-V5T-NEXT:    movs r0, #0
-; ENABLE-V5T-NEXT:  LBB11_3: @ %cleanup
+; ENABLE-V5T-NEXT:  LBB11_3:
+; ENABLE-V5T-NEXT:    pop {r4, pc}
+; ENABLE-V5T-NEXT:  LBB11_4: @ %cleanup
 ; ENABLE-V5T-NEXT:    bx lr
 ;
 ; DISABLE-V4T-LABEL: beq_to_bx:

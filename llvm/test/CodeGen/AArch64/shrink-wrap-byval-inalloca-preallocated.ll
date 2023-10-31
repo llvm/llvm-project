@@ -12,6 +12,13 @@ declare void @fn(ptr, ptr)
 define void @test_regular_pointers(ptr %a, ptr %b) {
 ; CHECK-LABEL: test_regular_pointers:
 ; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    stp x20, x19, [sp, #-32]! ; 16-byte Folded Spill
+; CHECK-NEXT:    stp x29, x30, [sp, #16] ; 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    .cfi_offset w30, -8
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    .cfi_offset w19, -24
+; CHECK-NEXT:    .cfi_offset w20, -32
 ; CHECK-NEXT:    ldr d0, [x0]
 ; CHECK-NEXT:    mov x8, #1 ; =0x1
 ; CHECK-NEXT:    ldr d1, [x1, #8]
@@ -23,19 +30,12 @@ define void @test_regular_pointers(ptr %a, ptr %b) {
 ; CHECK-NEXT:    b.mi LBB0_2
 ; CHECK-NEXT:    b.gt LBB0_2
 ; CHECK-NEXT:  ; %bb.1: ; %then
-; CHECK-NEXT:    stp x20, x19, [sp, #-32]! ; 16-byte Folded Spill
-; CHECK-NEXT:    stp x29, x30, [sp, #16] ; 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    .cfi_offset w30, -8
-; CHECK-NEXT:    .cfi_offset w29, -16
-; CHECK-NEXT:    .cfi_offset w19, -24
-; CHECK-NEXT:    .cfi_offset w20, -32
 ; CHECK-NEXT:    mov x19, x1
 ; CHECK-NEXT:    bl _fn
-; CHECK-NEXT:    ldp x29, x30, [sp, #16] ; 16-byte Folded Reload
 ; CHECK-NEXT:    str xzr, [x19]
-; CHECK-NEXT:    ldp x20, x19, [sp], #32 ; 16-byte Folded Reload
 ; CHECK-NEXT:  LBB0_2: ; %exit
+; CHECK-NEXT:    ldp x29, x30, [sp, #16] ; 16-byte Folded Reload
+; CHECK-NEXT:    ldp x20, x19, [sp], #32 ; 16-byte Folded Reload
 ; CHECK-NEXT:    ret
 entry:
   %l.a = load double, ptr %a, align 8
