@@ -42,7 +42,6 @@
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Passes/PassPlugin.h"
 #include "llvm/Passes/StandardInstrumentations.h"
-#include "llvm/ProfileData/InstrProfCorrelator.h"
 #include "llvm/Support/BuryPointer.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -56,7 +55,6 @@
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
 #include "llvm/TargetParser/Triple.h"
-#include "llvm/Transforms/HipStdPar/HipStdPar.h"
 #include "llvm/Transforms/IPO/EmbedBitcodePass.h"
 #include "llvm/Transforms/IPO/LowerTypeTests.h"
 #include "llvm/Transforms/IPO/ThinLTOBitcodeWriter.h"
@@ -80,6 +78,7 @@
 #include "llvm/Transforms/Scalar/EarlyCSE.h"
 #include "llvm/Transforms/Scalar/GVN.h"
 #include "llvm/Transforms/Scalar/JumpThreading.h"
+#include "llvm/Transforms/HipStdPar/HipStdPar.h"
 #include "llvm/Transforms/Utils/Debugify.h"
 #include "llvm/Transforms/Utils/EntryExitInstrumenter.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
@@ -99,18 +98,13 @@ extern cl::opt<bool> PrintPipelinePasses;
 static cl::opt<bool> ClSanitizeOnOptimizerEarlyEP(
     "sanitizer-early-opt-ep", cl::Optional,
     cl::desc("Insert sanitizers on OptimizerEarlyEP."), cl::init(false));
-
-extern cl::opt<bool> DebugInfoCorrelate;
-extern cl::opt<InstrProfCorrelator::ProfCorrelatorKind> ProfileCorrelate;
-} // namespace llvm
+}
 
 namespace {
 
 // Default filename used for profile generation.
 std::string getDefaultProfileGenName() {
-  return DebugInfoCorrelate || ProfileCorrelate != InstrProfCorrelator::NONE
-             ? "default_%m.proflite"
-             : "default_%m.profraw";
+  return DebugInfoCorrelate ? "default_%m.proflite" : "default_%m.profraw";
 }
 
 class EmitAssemblyHelper {
@@ -203,7 +197,7 @@ public:
   void EmitAssembly(BackendAction Action,
                     std::unique_ptr<raw_pwrite_stream> OS);
 };
-} // namespace
+}
 
 static SanitizerCoverageOptions
 getSancovOptsFromCGOpts(const CodeGenOptions &CGOpts) {
