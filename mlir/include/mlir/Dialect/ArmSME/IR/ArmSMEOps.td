@@ -358,10 +358,8 @@ def TileStoreOp : ArmSME_Op<"tile_store", [
     rank 2 with dynamic dimensions, since the operation is scalable, and the
     element type must be a scalar that matches the element type of the result.
 
-    An optional SSA value `mask` may be specified to mask out elements written
-    to the MemRef. The `mask` type is an `i1` vector of the same shape as the
-    vector type that matches how elements are written into the MemRef. Elements
-    whose corresponding mask element is `0` are masked out.
+    An optional `mask` may be provided, the shape of which corresponds to the
+    `tile`, and selects which elements of the tile will be stored.
 
     Example 1: Store an 8-bit element ZA tile with horizontal (default) layout to memory (ZA0.B).
     ```mlir

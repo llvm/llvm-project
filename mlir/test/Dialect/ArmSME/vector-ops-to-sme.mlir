@@ -320,7 +320,7 @@ func.func @transfer_write_2d_f64(%vector : vector<[2]x[2]xf64>, %dest : memref<?
 // CHECK-SAME:                                             %[[DEST:.*]]: memref<?x?xf64>,
 // CHECK-SAME:                                             %[[MASK:.*]]: vector<[2]x[2]xi1>) {
 // CHECK:         %[[C0:.*]] = arith.constant 0 : index
-// CHECK:         arm_sme.tile_store %[[VECTOR]], %[[DEST]]{{\[}}%[[C0]], %[[C0]]], {{.*}} : memref<?x?xf64>, vector<[2]x[2]xf64>
+// CHECK:         arm_sme.tile_store %[[VECTOR]], %[[DEST]]{{\[}}%[[C0]], %[[C0]]], %[[MASK]] : memref<?x?xf64>, vector<[2]x[2]xf64>
 func.func @transfer_write_2d_with_mask_f64(%vector : vector<[2]x[2]xf64>, %dest : memref<?x?xf64>, %mask : vector<[2]x[2]xi1>) {
   %c0 = arith.constant 0 : index
   vector.transfer_write %vector, %dest[%c0, %c0], %mask {in_bounds = [true, true]} : vector<[2]x[2]xf64>, memref<?x?xf64>
