@@ -31,6 +31,7 @@ LLVM_C_EXTERN_C_BEGIN
  * @{
  */
 
+typedef struct LLVMOpaqueTargetMachineOptions *LLVMTargetMachineOptionsRef;
 typedef struct LLVMOpaqueTargetMachine *LLVMTargetMachineRef;
 typedef struct LLVMTarget *LLVMTargetRef;
 
@@ -98,6 +99,55 @@ LLVMBool LLVMTargetHasTargetMachine(LLVMTargetRef T);
 LLVMBool LLVMTargetHasAsmBackend(LLVMTargetRef T);
 
 /*===-- Target Machine ----------------------------------------------------===*/
+/**
+ * Create a new set of options for an llvm::TargetMachine.
+ *
+ * The returned option structure must be released with
+ * LLVMDisposeTargetMachineOptions() after the call to
+ * LLVMCreateTargetMachineWithOptions().
+ */
+LLVMTargetMachineOptionsRef LLVMCreateTargetMachineOptions(void);
+
+/**
+ * Dispose of an LLVMTargetMachineOptionsRef instance.
+ */
+void LLVMDisposeTargetMachineOptions(LLVMTargetMachineOptionsRef Options);
+
+void LLVMTargetMachineOptionsSetCPU(LLVMTargetMachineOptionsRef Options,
+                                    const char *CPU);
+
+/**
+ * Set the list of features for the target machine.
+ *
+ * \param Features a comma-separated list of features.
+ */
+void LLVMTargetMachineOptionsSetFeatures(LLVMTargetMachineOptionsRef Options,
+                                         const char *Features);
+
+void LLVMTargetMachineOptionsSetABI(LLVMTargetMachineOptionsRef Options,
+                                    const char *ABI);
+
+void LLVMTargetMachineOptionsSetCodeGenOptLevel(
+    LLVMTargetMachineOptionsRef Options, LLVMCodeGenOptLevel Level);
+
+void LLVMTargetMachineOptionsSetRelocMode(LLVMTargetMachineOptionsRef Options,
+                                          LLVMRelocMode Reloc);
+
+void LLVMTargetMachineOptionsSetCodeModel(LLVMTargetMachineOptionsRef Options,
+                                          LLVMCodeModel CodeModel);
+
+/**
+ * Create a new llvm::TargetMachine.
+ *
+ * \param T the target to create a machine for.
+ * \param Triple a triple describing the target machine.
+ * \param Options additional configuration (see
+ *                LLVMCreateTargetMachineOptions()).
+ */
+LLVMTargetMachineRef
+LLVMCreateTargetMachineWithOptions(LLVMTargetRef T, const char *Triple,
+                                   LLVMTargetMachineOptionsRef Options);
+
 /** Creates a new llvm::TargetMachine. See llvm::Target::createTargetMachine */
 LLVMTargetMachineRef LLVMCreateTargetMachine(LLVMTargetRef T,
   const char *Triple, const char *CPU, const char *Features,

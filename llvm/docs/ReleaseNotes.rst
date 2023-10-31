@@ -167,6 +167,11 @@ Changes to the C API
   * ``LLVMConstAnd``
   * ``LLVMConstOr``
 
+* Added ``LLVMCreateTargetMachineWithOptions``, along with helper functions for
+  an opaque option structure, as an alternative to ``LLVMCreateTargetMachine``.
+  The option structure exposes an additional setting (i.e., the target ABI) and
+  provides default values for unspecified settings.
+
 Changes to the CodeGen infrastructure
 -------------------------------------
 
