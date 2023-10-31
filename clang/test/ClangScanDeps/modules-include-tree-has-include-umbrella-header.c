@@ -1,6 +1,7 @@
 // This test checks that __has_include(<FW/PrivateHeader.h>) in a module does
 // not clobber #include <FW/PrivateHeader.h> in importers of said module.
 
+// REQUIRES: ondisk_cas
 // RUN: rm -rf %t
 // RUN: split-file %s %t
 

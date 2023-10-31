@@ -1,6 +1,7 @@
 // Test path prefix-mapping when using a cas-fs with clang-scan-deps in
 // tree, full-tree, and full dependencies modes.
 
+// REQUIRES: ondisk_cas
 // RUN: rm -rf %t
 // RUN: split-file %s %t
 // RUN: sed -e "s|DIR|%t|g" -e "s|CLANG|%clang|g" -e "s|SDK|%S/Inputs/SDK|g" %t/cdb.json.template > %t/cdb.json

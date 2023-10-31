@@ -1,3 +1,4 @@
+// REQUIRES: ondisk_cas
 // RUN: rm -rf %t
 // RUN: split-file %s %t
 // RUN: sed "s|DIR|%/t|g" %t/cdb1.json.template > %t/cdb1.json

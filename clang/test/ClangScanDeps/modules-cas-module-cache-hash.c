@@ -1,6 +1,7 @@
 // Check that using the same module cache does not cause errors when switching
 // between cas-fs and include-tree.
 
+// REQUIRES: ondisk_cas
 // RUN: rm -rf %t
 // RUN: split-file %s %t
 // RUN: sed "s|DIR|%/t|g" %t/cdb.json.template > %t/cdb.json

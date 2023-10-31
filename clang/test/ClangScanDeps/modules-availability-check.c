@@ -1,6 +1,7 @@
 // Check cas-fs-based caching works with availability check based on
 // SDKSettings.json.
 
+// REQUIRES: ondisk_cas
 // RUN: rm -rf %t
 // RUN: split-file %s %t
 // RUN: sed -e "s|DIR|%/t|g" %t/cdb.json.template > %t/cdb.json
