@@ -2011,6 +2011,12 @@ LogicalResult convertFlagsAttr(Operation *op, mlir::omp::FlagsAttr attribute,
 
   llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
 
+  ompBuilder->M.addModuleFlag(llvm::Module::Max, "openmp-device",
+                              attribute.getOpenmpDeviceVersion());
+
+  if (attribute.getNoGpuLib())
+    return success();
+
   ompBuilder->createGlobalFlag(
       attribute.getDebugKind() /*LangOpts().OpenMPTargetDebug*/,
       "__omp_rtl_debug_kind");
@@ -2032,8 +2038,6 @@ LogicalResult convertFlagsAttr(Operation *op, mlir::omp::FlagsAttr attribute,
           .getAssumeNoNestedParallelism() /*LangOpts().OpenMPNoNestedParallelism*/
       ,
       "__omp_rtl_assume_no_nested_parallelism");
-  ompBuilder->M.addModuleFlag(llvm::Module::Max, "openmp-device",
-                              attribute.getOpenmpDeviceVersion());
   return success();
 }
 
