@@ -130,15 +130,15 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
       }]
     >,
     InterfaceMethod<[{
-        Return the "init" operands that are used as initialization values for
-        the region "iter_args" of this loop.
+        Return the mutable "init" operands that are used as initialization
+        values for the region "iter_args" of this loop.
       }],
-      /*retTy=*/"::mlir::OperandRange",
-      /*methodName=*/"getInits",
+      /*retTy=*/"::llvm::MutableArrayRef<::mlir::OpOperand>",
+      /*methodName=*/"getInitsMutable",
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        return ::mlir::OperandRange($_op->operand_end(), $_op->operand_end());
+        return {};
       }]
     >,
     InterfaceMethod<[{
@@ -155,14 +155,15 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
       }]
     >,
     InterfaceMethod<[{
-        Return the values that are yielded to the next iteration.
+        Return the mutable operand range of values that are yielded to the next
+        iteration by the loop terminator.
       }],
-      /*retTy=*/"::mlir::ValueRange",
-      /*methodName=*/"getYieldedValues",
+      /*retTy=*/"::llvm::MutableArrayRef<::mlir::OpOperand>",
+      /*methodName=*/"getYieldedValuesMutable",
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        return ::mlir::ValueRange();
+        return {};
       }]
     >,
     InterfaceMethod<[{
@@ -214,6 +215,58 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
           [](OpBuilder &b, Location loc, ArrayRef<BlockArgument> newBBArgs) {
             return SmallVector<Value>(newBBArgs);
           });
+    }
+
+    /// Return the values that are yielded to the next iteration.
+    ::mlir::ValueRange getYieldedValues() {
+      auto mutableValues = $_op.getYieldedValuesMutable();
+      if (mutableValues.empty())
+        return {};
+      Operation *yieldOp = mutableValues.begin()->getOwner();
+      unsigned firstOperandIndex = mutableValues.begin()->getOperandNumber();
+      return OperandRange(
+          yieldOp->operand_begin() + firstOperandIndex,
+          yieldOp->operand_begin() + firstOperandIndex + mutableValues.size());
+    }
+
+    /// Return the "init" operands that are used as initialization values for
+    /// the region "iter_args" of this loop.
+    ::mlir::OperandRange getInits() {
+      auto initsMutable = $_op.getInitsMutable();
+      if (initsMutable.empty())
+        return ::mlir::OperandRange($_op->operand_end(), $_op->operand_end());
+      unsigned firstOperandIndex = initsMutable.begin()->getOperandNumber();
+      return OperandRange(
+          $_op->operand_begin() + firstOperandIndex,
+          $_op->operand_begin() + firstOperandIndex + initsMutable.size());
+    }
+
+    /// Return the region iter_arg that corresponds to the given init operand.
+    BlockArgument getTiedLoopRegionIterArg(OpOperand *opOperand) {
+      auto initsMutable = $_op.getInitsMutable();
+      auto it = llvm::find(initsMutable, *opOperand);
+      if (it == initsMutable.end())
+        return {};
+      return $_op.getRegionIterArgs()[std::distance(initsMutable.begin(), it)];
+    }
+
+    /// Return the init operand that corresponds to the given region iter_arg.
+    OpOperand *getTiedLoopInit(BlockArgument bbArg) {
+      auto iterArgs = $_op.getRegionIterArgs();
+      auto it = llvm::find(iterArgs, bbArg);
+      if (it == iterArgs.end())
+        return {};
+      return &$_op.getInitsMutable()[std::distance(iterArgs.begin(), it)];
+    }
+
+    /// Return the yielded value that corresponds to the given region iter_arg.
+    OpOperand *getTiedLoopYieldedValue(BlockArgument bbArg) {
+      auto iterArgs = $_op.getRegionIterArgs();
+      auto it = llvm::find(iterArgs, bbArg);
+      if (it == iterArgs.end())
+        return {};
+      return
+          &$_op.getYieldedValuesMutable()[std::distance(iterArgs.begin(), it)];
     }
   }];
 

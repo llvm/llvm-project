@@ -23,3 +23,4 @@ local:
   warning instead of an error as other compiler accepts it.
 * The `if` clause accepts scalar integer expression in addition to scalar
   logical expression.
+* `!$acc routine` directive can be placed at the top level. 

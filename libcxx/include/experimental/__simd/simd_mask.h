@@ -42,8 +42,8 @@ public:
   _LIBCPP_HIDE_FROM_ABI explicit simd_mask(value_type __v) noexcept : __s_(_Impl::__broadcast(__v)) {}
 
   // scalar access [simd.mask.subscr]
-  // Add operator[] temporarily to test braodcast. Add test for it in later patch.
-  _LIBCPP_HIDE_FROM_ABI value_type operator[](size_t __i) const { return __s_.__get(__i); }
+  _LIBCPP_HIDE_FROM_ABI reference operator[](size_t __i) noexcept { return reference(__s_, __i); }
+  _LIBCPP_HIDE_FROM_ABI value_type operator[](size_t __i) const noexcept { return __s_.__get(__i); }
 };
 
 template <class _Tp>

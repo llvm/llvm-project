@@ -13,3 +13,17 @@ subroutine test(a, n)
     !ERROR: expected OpenACC directive
     !$acc p
   end subroutine
+
+subroutine test2(a, n)
+  integer :: a(n)
+  integer :: i
+
+  !$acc parallel
+  !$acc loop
+  DO i = 1, n
+  END DO
+  !$acc end parallel
+  !WARN: Misplaced OpenACC end directive
+  !$acc end loop
+
+end subroutine

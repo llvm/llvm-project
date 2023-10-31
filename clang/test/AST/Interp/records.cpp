@@ -1042,13 +1042,10 @@ namespace TemporaryObjectExpr {
       F f{12};
     };
     constexpr int foo(S x) {
-      return x.a; // expected-note {{read of uninitialized object}} \
-                  // ref-note {{read of uninitialized object}}
+      return x.a; // expected-note {{read of uninitialized object}}
     }
     static_assert(foo(S()) == 0, ""); // expected-error {{not an integral constant expression}} \
-                                      // expected-note {{in call to}} \
-                                      // ref-error {{not an integral constant expression}} \
-                                      // ref-note {{in call to}}
+                                      // expected-note {{in call to}}
   };
 #endif
 }
@@ -1064,6 +1061,22 @@ namespace ParenInit {
   };
 
   constexpr B b(A(1),2);
+
+
+  struct O {
+    int &&j;
+  };
+
+  /// Not constexpr!
+  O o1(0);
+  constinit O o2(0); // ref-error {{variable does not have a constant initializer}} \
+                     // ref-note {{required by 'constinit' specifier}} \
+                     // ref-note {{reference to temporary is not a constant expression}} \
+                     // ref-note {{temporary created here}} \
+                     // expected-error {{variable does not have a constant initializer}} \
+                     // expected-note {{required by 'constinit' specifier}} \
+                     // expected-note {{reference to temporary is not a constant expression}} \
+                     // expected-note {{temporary created here}}
 }
 #endif
 
@@ -1088,4 +1101,37 @@ namespace DelegatingConstructors {
   constexpr A d4 = {};
   static_assert(d4.a == 10, "");
   static_assert(d4.b == 12, "");
+}
+
+namespace AccessOnNullptr {
+  struct F {
+    int a;
+  };
+
+  constexpr int a() { // expected-error {{never produces a constant expression}} \
+                      // ref-error {{never produces a constant expression}}
+    F *f = nullptr;
+
+    f->a = 0; // expected-note 2{{cannot access field of null pointer}} \
+              // ref-note 2{{cannot access field of null pointer}}
+    return f->a;
+  }
+  static_assert(a() == 0, ""); // expected-error {{not an integral constant expression}} \
+                               // expected-note {{in call to 'a()'}} \
+                               // ref-error {{not an integral constant expression}} \
+                               // ref-note {{in call to 'a()'}}
+
+  constexpr int a2() { // expected-error {{never produces a constant expression}} \
+                      // ref-error {{never produces a constant expression}}
+    F *f = nullptr;
+
+
+    const int *a = &(f->a); // expected-note 2{{cannot access field of null pointer}} \
+                            // ref-note 2{{cannot access field of null pointer}}
+    return f->a;
+  }
+  static_assert(a2() == 0, ""); // expected-error {{not an integral constant expression}} \
+                               // expected-note {{in call to 'a2()'}} \
+                               // ref-error {{not an integral constant expression}} \
+                               // ref-note {{in call to 'a2()'}}
 }

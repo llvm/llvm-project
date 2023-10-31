@@ -22,7 +22,7 @@
 // CHECK-C-NEXT:    tail call void @llvm.aarch64.sme.addha.nxv4i32(i32 0, <vscale x 4 x i1> [[TMP0]], <vscale x 4 x i1> [[TMP1]], <vscale x 4 x i32> [[ZN]])
 // CHECK-C-NEXT:    ret void
 //
-// CHECK-CXX-LABEL: define dso_local void @_Z21test_svaddha_za32_u32u10__SVBool_tu10__SVBool_tu12__SVUint32_t(
+// CHECK-CXX-LABEL: define dso_local void @_Z21test_svaddha_za32_u32u10__SVBool_tS_u12__SVUint32_t(
 // CHECK-CXX-SAME: <vscale x 16 x i1> [[PN:%.*]], <vscale x 16 x i1> [[PM:%.*]], <vscale x 4 x i32> [[ZN:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // CHECK-CXX-NEXT:  entry:
 // CHECK-CXX-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PN]])
@@ -42,7 +42,7 @@ void test_svaddha_za32_u32(svbool_t pn, svbool_t pm, svuint32_t zn) {
 // CHECK-C-NEXT:    tail call void @llvm.aarch64.sme.addha.nxv4i32(i32 3, <vscale x 4 x i1> [[TMP0]], <vscale x 4 x i1> [[TMP1]], <vscale x 4 x i32> [[ZN]])
 // CHECK-C-NEXT:    ret void
 //
-// CHECK-CXX-LABEL: define dso_local void @_Z23test_svaddha_za32_u32_1u10__SVBool_tu10__SVBool_tu12__SVUint32_t(
+// CHECK-CXX-LABEL: define dso_local void @_Z23test_svaddha_za32_u32_1u10__SVBool_tS_u12__SVUint32_t(
 // CHECK-CXX-SAME: <vscale x 16 x i1> [[PN:%.*]], <vscale x 16 x i1> [[PM:%.*]], <vscale x 4 x i32> [[ZN:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-CXX-NEXT:  entry:
 // CHECK-CXX-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PN]])
@@ -62,7 +62,7 @@ void test_svaddha_za32_u32_1(svbool_t pn, svbool_t pm, svuint32_t zn) {
 // CHECK-C-NEXT:    tail call void @llvm.aarch64.sme.addha.nxv4i32(i32 0, <vscale x 4 x i1> [[TMP0]], <vscale x 4 x i1> [[TMP1]], <vscale x 4 x i32> [[ZN]])
 // CHECK-C-NEXT:    ret void
 //
-// CHECK-CXX-LABEL: define dso_local void @_Z21test_svaddha_za32_s32u10__SVBool_tu10__SVBool_tu11__SVInt32_t(
+// CHECK-CXX-LABEL: define dso_local void @_Z21test_svaddha_za32_s32u10__SVBool_tS_u11__SVInt32_t(
 // CHECK-CXX-SAME: <vscale x 16 x i1> [[PN:%.*]], <vscale x 16 x i1> [[PM:%.*]], <vscale x 4 x i32> [[ZN:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-CXX-NEXT:  entry:
 // CHECK-CXX-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PN]])
@@ -82,7 +82,7 @@ void test_svaddha_za32_s32(svbool_t pn, svbool_t pm, svint32_t zn) {
 // CHECK-C-NEXT:    tail call void @llvm.aarch64.sme.addha.nxv4i32(i32 3, <vscale x 4 x i1> [[TMP0]], <vscale x 4 x i1> [[TMP1]], <vscale x 4 x i32> [[ZN]])
 // CHECK-C-NEXT:    ret void
 //
-// CHECK-CXX-LABEL: define dso_local void @_Z23test_svaddha_za32_s32_1u10__SVBool_tu10__SVBool_tu11__SVInt32_t(
+// CHECK-CXX-LABEL: define dso_local void @_Z23test_svaddha_za32_s32_1u10__SVBool_tS_u11__SVInt32_t(
 // CHECK-CXX-SAME: <vscale x 16 x i1> [[PN:%.*]], <vscale x 16 x i1> [[PM:%.*]], <vscale x 4 x i32> [[ZN:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-CXX-NEXT:  entry:
 // CHECK-CXX-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PN]])
@@ -102,7 +102,7 @@ void test_svaddha_za32_s32_1(svbool_t pn, svbool_t pm, svint32_t zn) {
 // CHECK-C-NEXT:    tail call void @llvm.aarch64.sme.addva.nxv4i32(i32 0, <vscale x 4 x i1> [[TMP0]], <vscale x 4 x i1> [[TMP1]], <vscale x 4 x i32> [[ZN]])
 // CHECK-C-NEXT:    ret void
 //
-// CHECK-CXX-LABEL: define dso_local void @_Z21test_svaddva_za32_u32u10__SVBool_tu10__SVBool_tu12__SVUint32_t(
+// CHECK-CXX-LABEL: define dso_local void @_Z21test_svaddva_za32_u32u10__SVBool_tS_u12__SVUint32_t(
 // CHECK-CXX-SAME: <vscale x 16 x i1> [[PN:%.*]], <vscale x 16 x i1> [[PM:%.*]], <vscale x 4 x i32> [[ZN:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-CXX-NEXT:  entry:
 // CHECK-CXX-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PN]])
@@ -122,7 +122,7 @@ void test_svaddva_za32_u32(svbool_t pn, svbool_t pm, svuint32_t zn) {
 // CHECK-C-NEXT:    tail call void @llvm.aarch64.sme.addva.nxv4i32(i32 3, <vscale x 4 x i1> [[TMP0]], <vscale x 4 x i1> [[TMP1]], <vscale x 4 x i32> [[ZN]])
 // CHECK-C-NEXT:    ret void
 //
-// CHECK-CXX-LABEL: define dso_local void @_Z23test_svaddva_za32_u32_1u10__SVBool_tu10__SVBool_tu12__SVUint32_t(
+// CHECK-CXX-LABEL: define dso_local void @_Z23test_svaddva_za32_u32_1u10__SVBool_tS_u12__SVUint32_t(
 // CHECK-CXX-SAME: <vscale x 16 x i1> [[PN:%.*]], <vscale x 16 x i1> [[PM:%.*]], <vscale x 4 x i32> [[ZN:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-CXX-NEXT:  entry:
 // CHECK-CXX-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PN]])
@@ -142,7 +142,7 @@ void test_svaddva_za32_u32_1(svbool_t pn, svbool_t pm, svuint32_t zn) {
 // CHECK-C-NEXT:    tail call void @llvm.aarch64.sme.addva.nxv4i32(i32 0, <vscale x 4 x i1> [[TMP0]], <vscale x 4 x i1> [[TMP1]], <vscale x 4 x i32> [[ZN]])
 // CHECK-C-NEXT:    ret void
 //
-// CHECK-CXX-LABEL: define dso_local void @_Z21test_svaddva_za32_s32u10__SVBool_tu10__SVBool_tu11__SVInt32_t(
+// CHECK-CXX-LABEL: define dso_local void @_Z21test_svaddva_za32_s32u10__SVBool_tS_u11__SVInt32_t(
 // CHECK-CXX-SAME: <vscale x 16 x i1> [[PN:%.*]], <vscale x 16 x i1> [[PM:%.*]], <vscale x 4 x i32> [[ZN:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-CXX-NEXT:  entry:
 // CHECK-CXX-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PN]])
@@ -162,7 +162,7 @@ void test_svaddva_za32_s32(svbool_t pn, svbool_t pm, svint32_t zn) {
 // CHECK-C-NEXT:    tail call void @llvm.aarch64.sme.addva.nxv4i32(i32 3, <vscale x 4 x i1> [[TMP0]], <vscale x 4 x i1> [[TMP1]], <vscale x 4 x i32> [[ZN]])
 // CHECK-C-NEXT:    ret void
 //
-// CHECK-CXX-LABEL: define dso_local void @_Z23test_svaddva_za32_s32_1u10__SVBool_tu10__SVBool_tu11__SVInt32_t(
+// CHECK-CXX-LABEL: define dso_local void @_Z23test_svaddva_za32_s32_1u10__SVBool_tS_u11__SVInt32_t(
 // CHECK-CXX-SAME: <vscale x 16 x i1> [[PN:%.*]], <vscale x 16 x i1> [[PM:%.*]], <vscale x 4 x i32> [[ZN:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-CXX-NEXT:  entry:
 // CHECK-CXX-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PN]])

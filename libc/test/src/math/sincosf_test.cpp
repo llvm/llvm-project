@@ -18,14 +18,13 @@
 #include <errno.h>
 #include <stdint.h>
 
+using LlvmLibcSinCosfTest = LIBC_NAMESPACE::testing::FPTest<float>;
+
 using LIBC_NAMESPACE::testing::SDCOMP26094_VALUES;
-using FPBits = LIBC_NAMESPACE::fputil::FPBits<float>;
 
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
-DECLARE_SPECIAL_CONSTANTS(float)
-
-TEST(LlvmLibcSinCosfTest, SpecialNumbers) {
+TEST_F(LlvmLibcSinCosfTest, SpecialNumbers) {
   libc_errno = 0;
   float sin, cos;
 
@@ -97,7 +96,7 @@ TEST(LlvmLibcSinCosfTest, SpecialNumbers) {
     }                                                                          \
   }
 
-TEST(LlvmLibcSinCosfTest, InFloatRange) {
+TEST_F(LlvmLibcSinCosfTest, InFloatRange) {
   constexpr uint32_t COUNT = 1'001;
   constexpr uint32_t STEP = UINT32_MAX / COUNT;
   for (uint32_t i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
@@ -111,7 +110,7 @@ TEST(LlvmLibcSinCosfTest, InFloatRange) {
 }
 
 // For hard to round inputs.
-TEST(LlvmLibcSinCosfTest, SpecialValues) {
+TEST_F(LlvmLibcSinCosfTest, SpecialValues) {
   constexpr int N = 43;
   constexpr uint32_t INPUTS[N] = {
       0x3b56'37f5U, // x = 0x1.ac6feap-9f
@@ -168,7 +167,7 @@ TEST(LlvmLibcSinCosfTest, SpecialValues) {
 
 // SDCOMP-26094: check sinf in the cases for which the range reducer
 // returns values furthest beyond its nominal upper bound of pi/4.
-TEST(LlvmLibcSinCosfTest, SDCOMP_26094) {
+TEST_F(LlvmLibcSinCosfTest, SDCOMP_26094) {
   for (uint32_t v : SDCOMP26094_VALUES) {
     float x = float(FPBits((v)));
     EXPECT_SINCOS_MATCH_ALL_ROUNDING(x);
