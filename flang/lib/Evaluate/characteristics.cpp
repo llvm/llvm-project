@@ -300,7 +300,15 @@ bool DummyDataObject::IsCompatibleWith(
     }
     return false;
   }
-  if (!type.type().IsTkLenCompatibleWith(actual.type.type())) {
+  // Treat deduced dummy character type as if it were assumed-length character
+  // to avoid useless "implicit interfaces have distinct type" warnings from
+  // CALL FOO('abc'); CALL FOO('abcd').
+  bool deducedAssumedLength{type.type().category() == TypeCategory::Character &&
+      attrs.test(Attr::DeducedFromActual)};
+  bool compatibleTypes{deducedAssumedLength
+          ? type.type().IsTkCompatibleWith(actual.type.type())
+          : type.type().IsTkLenCompatibleWith(actual.type.type())};
+  if (!compatibleTypes) {
     if (whyNot) {
       *whyNot = "incompatible dummy data object types: "s +
           type.type().AsFortran() + " vs " + actual.type.type().AsFortran();
@@ -314,7 +322,8 @@ bool DummyDataObject::IsCompatibleWith(
     }
     return false;
   }
-  if (type.type().category() == TypeCategory::Character) {
+  if (type.type().category() == TypeCategory::Character &&
+      !deducedAssumedLength) {
     if (actual.type.type().IsAssumedLengthCharacter() !=
         type.type().IsAssumedLengthCharacter()) {
       if (whyNot) {
