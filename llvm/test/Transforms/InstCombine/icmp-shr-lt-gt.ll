@@ -2442,7 +2442,7 @@ define i1 @ashr_sle_noexact(i8 %x) {
 define i1 @ashr_00_00_ashr_extra_use(i8 %x, ptr %ptr) {
 ; CHECK-LABEL: @ashr_00_00_ashr_extra_use(
 ; CHECK-NEXT:    [[S:%.*]] = ashr exact i8 [[X:%.*]], 3
-; CHECK-NEXT:    [[C:%.*]] = icmp ult i8 [[X]], 88
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i8 [[S]], 11
 ; CHECK-NEXT:    store i8 [[S]], ptr [[PTR:%.*]], align 1
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
