@@ -222,6 +222,8 @@ end
   we also treat scalars as being trivially contiguous, so that they
   can be used in contexts like data targets in pointer assignments
   with bounds remapping.
+* The `CONTIGUOUS` attribute can be redundantly applied to simply
+  contiguous objects, including scalars, with a portability warning.
 * We support some combinations of specific procedures in generic
   interfaces that a strict reading of the standard would preclude
   when their calls must nonetheless be distinguishable.

@@ -2129,11 +2129,11 @@ void CheckHelper::CheckContiguous(const Symbol &symbol) {
           evaluate::IsAssumedRank(symbol))) {
   } else if (symbol.owner().IsDerivedType()) { // C752
     messages_.Say(
-        "CONTIGUOUS component '%s' must be an array with the POINTER attribute"_err_en_US,
+        "CONTIGUOUS component '%s' should be an array with the POINTER attribute"_port_en_US,
         symbol.name());
   } else {
     messages_.Say(
-        "CONTIGUOUS entity '%s' must be an array pointer, assumed-shape, or assumed-rank"_err_en_US,
+        "CONTIGUOUS entity '%s' should be an array pointer, assumed-shape, or assumed-rank"_port_en_US,
         symbol.name());
   }
 }
