@@ -1222,7 +1222,7 @@ public:
   void VisitVectorType(const VectorType *T) {
     AddQualType(T->getElementType());
     ID.AddInteger(T->getNumElements());
-    ID.AddInteger(T->getVectorKind());
+    ID.AddInteger(llvm::to_underlying(T->getVectorKind()));
     VisitType(T);
   }
 
