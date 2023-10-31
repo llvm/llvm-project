@@ -2306,9 +2306,12 @@ void AMDGPUDAGToDAGISel::SelectBRCOND(SDNode *N) {
 
   if (Cond.getOpcode() == ISD::SETCC &&
       Cond->getOperand(0)->getOpcode() == AMDGPUISD::SETCC) {
+    SDValue VCMP = Cond->getOperand(0);
     auto CC = cast<CondCodeSDNode>(Cond->getOperand(2))->get();
     auto *CRHS = dyn_cast<ConstantSDNode>(Cond->getOperand(1));
-    if ((CC == ISD::SETEQ || CC == ISD::SETNE) && CRHS && CRHS->isZero()) {
+    if ((CC == ISD::SETEQ || CC == ISD::SETNE) && CRHS && CRHS->isZero() &&
+        // TODO: make condition below an assert after fixing ballot bitwidth.
+        VCMP.getValueType().getSizeInBits() == ST->getWavefrontSize()) {
       // %VCMP = i(WaveSize) AMDGPUISD::SETCC ...
       // %C = i1 ISD::SETCC %VCMP, 0, setne/seteq
       // BRCOND i1 %C, %BB
@@ -2317,7 +2320,6 @@ void AMDGPUDAGToDAGISel::SelectBRCOND(SDNode *N) {
       // VCC = COPY i(WaveSize) %VCMP
       // S_CBRANCH_VCCNZ/VCCZ %BB
       Negate = CC == ISD::SETEQ;
-      auto VCMP = Cond->getOperand(0);
       bool NegatedBallot = false;
       if (auto BallotCond = combineBallotPattern(VCMP, NegatedBallot)) {
         Cond = BallotCond;
