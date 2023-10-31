@@ -88,6 +88,7 @@ enum CPUFeatures {
   FEAT_WFXT,
   FEAT_SME_F64,
   FEAT_SME_I64,
+  FEAT_SME_FA64,
   FEAT_SME2,
   FEAT_RCPC3,
   FEAT_MAX,
@@ -172,6 +173,7 @@ enum ArchExtKind : unsigned {
   AEK_SME_LUTv2 =     68, // FEAT_SME_LUTv2
   AEK_SMEF8F16 =      69, // FEAT_SME_F8F16
   AEK_SMEF8F32 =      70, // FEAT_SME_F8F32
+  AEK_SMEFA64 =       61, // FEAT_SMEFA64
   AEK_NUM_EXTENSIONS
 };
 using ExtensionBitset = Bitset<AEK_NUM_EXTENSIONS>;
@@ -258,8 +260,9 @@ inline constexpr ExtensionInfo Extensions[] = {
     {"simd", AArch64::AEK_SIMD, "+neon", "-neon", FEAT_SIMD, "+fp-armv8,+neon", 100},
     {"sm4", AArch64::AEK_SM4, "+sm4", "-sm4", FEAT_SM4, "+sm4,+fp-armv8,+neon", 60},
     {"sme-f16f16", AArch64::AEK_SMEF16F16, "+sme-f16f16", "-sme-f16f16", FEAT_INIT, "", 0},
-    {"sme-f64f64", AArch64::AEK_SMEF64F64, "+sme-f64f64", "-sme-f64f64", FEAT_SME_F64, "+sme,+sme-f64f64,+bf16", 560},
-    {"sme-i16i64", AArch64::AEK_SMEI16I64, "+sme-i16i64", "-sme-i16i64", FEAT_SME_I64, "+sme,+sme-i16i64,+bf16", 570},
+    {"sme-f64f64", AArch64::AEK_SMEF64F64, "+sme-f64f64", "-sme-f64f64", FEAT_SME_F64,  "+sme,+sme-f64f64,+bf16", 560},
+    {"sme-i16i64", AArch64::AEK_SMEI16I64, "+sme-i16i64", "-sme-i16i64", FEAT_SME_I64,  "+sme,+sme-i16i64,+bf16", 570},
+    {"sme-fa64",   AArch64::AEK_SMEFA64,   "+sme-fa64",   "-sme-fa64",   FEAT_SME_FA64, "+sve2",                  580},
     {"sme", AArch64::AEK_SME, "+sme", "-sme", FEAT_SME, "+sme,+bf16", 430},
     {"sme2", AArch64::AEK_SME2, "+sme2", "-sme2", FEAT_SME2, "+sme2,+sme,+bf16", 580},
     {"sme2p1", AArch64::AEK_SME2p1, "+sme2p1", "-sme2p1", FEAT_INIT, "", 0},

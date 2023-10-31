@@ -1244,6 +1244,7 @@ enum CPUFeatures {
   FEAT_WFXT,
   FEAT_SME_F64,
   FEAT_SME_I64,
+  FEAT_SME_FA64,
   FEAT_SME2,
   FEAT_RCPC3,
   FEAT_MAX,
@@ -1363,6 +1364,8 @@ static void __init_cpu_features_constructor(unsigned long hwcap,
     setCPUFeature(FEAT_SME_I64);
   if (hwcap2 & HWCAP2_SME_F64F64)
     setCPUFeature(FEAT_SME_F64);
+  if (hwcap2 & HWCAP2_SME_FA64)
+    setCPUFeature(FEAT_SME_FA64);
   if (hwcap & HWCAP_CPUID) {
     unsigned long ftr;
     getCPUFeature(ID_AA64PFR1_EL1, ftr);
