@@ -90,7 +90,6 @@ void  operator delete[](void* ptr, void*) noexcept;
 #include <__availability>
 #include <__config>
 #include <__exception/exception.h>
-#include <__type_traits/alignment_of.h>
 #include <__type_traits/is_function.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/remove_cv.h>
@@ -259,7 +258,7 @@ _LIBCPP_CONSTEXPR inline _LIBCPP_INLINE_VISIBILITY bool __is_overaligned_for_new
 #ifdef __STDCPP_DEFAULT_NEW_ALIGNMENT__
   return __align > __STDCPP_DEFAULT_NEW_ALIGNMENT__;
 #else
-  return __align > alignment_of<max_align_t>::value;
+  return __align > _LIBCPP_ALIGNOF(max_align_t);
 #endif
 }
 

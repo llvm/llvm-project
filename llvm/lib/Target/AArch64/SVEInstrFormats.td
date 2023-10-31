@@ -9249,6 +9249,7 @@ class sve2p1_ptrue_pn<string mnemonic, bits<2> sz, PNRP8to15RegOp pnrty, SDPatte
   let Inst{2-0}   = PNd;
 
   let hasSideEffects = 0;
+  let isReMaterializable = 1;
 }
 
 
