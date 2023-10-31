@@ -906,7 +906,8 @@ CodeGenFunction::emitBuiltinObjectSize(const Expr *E, unsigned Type,
         // The whole struct is specificed in the __bdos.
         QualType StructTy = DRE->getType()->getPointeeType();
         llvm::Value *StructSize = ConstantInt::get(
-            ResType, getContext().getTypeSize(StructTy) / 8, true);
+            ResType, getContext().getTypeSizeInChars(StructTy).getQuantity(),
+            true);
         ObjectSize = Builder.CreateAdd(StructSize, ObjectSize);
       }
 
