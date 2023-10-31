@@ -148,7 +148,7 @@ private:
       ConditionValue = false;
     }
 
-    Env.addToFlowCondition(Val->formula());
+    Env.assume(Val->formula());
     return {&Cond, ConditionValue};
   }
 

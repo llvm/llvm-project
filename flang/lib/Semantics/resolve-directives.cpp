@@ -2241,7 +2241,9 @@ void ResolveOmpTopLevelParts(
       if (!std::holds_alternative<common::Indirection<parser::Module>>(
               unit.u) &&
           !std::holds_alternative<common::Indirection<parser::Submodule>>(
-              unit.u)) {
+              unit.u) &&
+          !std::holds_alternative<
+              common::Indirection<parser::CompilerDirective>>(unit.u)) {
         Symbol *symbol{common::visit(
             [&context](auto &x) {
               Scope *scope = GetScope(context, x.value());
