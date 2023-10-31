@@ -116,7 +116,7 @@ APINotesManager::loadAPINotes(FileEntryRef apiNotesFile) {
   }
 
   // Load the binary form we just compiled.
-  auto reader = APINotesReader::get(std::move(compiledBuffer), SwiftVersion);
+  auto reader = APINotesReader::Create(std::move(compiledBuffer), SwiftVersion);
   assert(reader && "Could not load the API notes we just generated?");
   return reader;
 }
@@ -137,7 +137,7 @@ APINotesManager::loadAPINotes(StringRef Buffer) {
 
   compiledBuffer = llvm::MemoryBuffer::getMemBufferCopy(
       StringRef(apiNotesBuffer.data(), apiNotesBuffer.size()));
-  auto reader = APINotesReader::get(std::move(compiledBuffer), SwiftVersion);
+  auto reader = APINotesReader::Create(std::move(compiledBuffer), SwiftVersion);
   assert(reader && "Could not load the API notes we just generated?");
   return reader;
 }
