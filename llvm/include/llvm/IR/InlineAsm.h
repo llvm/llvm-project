@@ -298,7 +298,7 @@ public:
   //                  "rm" (or "g").
   //
   //   As such, MatchedOperandNo, MemConstraintCode, and
-  //   (RegClass+RegMayBeSpilled) are views of the same slice of bits, but are
+  //   (RegClass+RegMayBeFolded) are views of the same slice of bits, but are
   //   mutually exclusive depending on the fields IsMatched then KindField.
   class Flag {
     uint32_t Storage;
