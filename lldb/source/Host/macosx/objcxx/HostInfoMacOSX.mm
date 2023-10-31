@@ -417,6 +417,8 @@ xcrun(const std::string &sdk, llvm::ArrayRef<llvm::StringRef> arguments,
     // xcrun didn't find a matching SDK. Not an error, we'll try
     // different spellings.
     LLDB_LOG(log, "xcrun returned exit code {0}", status);
+    if (!output_str.empty())
+      LLDB_LOG(log, "xcrun output was:\n{0}", output_str);
     return "";
   }
   if (output_str.empty()) {
