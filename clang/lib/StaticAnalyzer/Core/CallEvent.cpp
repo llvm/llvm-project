@@ -716,8 +716,13 @@ SVal CXXInstanceCall::getCXXThisVal() const {
   const Expr *Base = getCXXThisExpr();
   // FIXME: This doesn't handle an overloaded ->* operator.
   SVal ThisVal = Base ? getSVal(Base) : UnknownVal();
-  if (isa<NonLoc>(ThisVal))
-    return UnknownVal();
+
+  if (isa<NonLoc>(ThisVal)) {
+    SValBuilder &SVB = getState()->getStateManager().getSValBuilder();
+    QualType OriginalTy = ThisVal.getType(SVB.getContext());
+    return SVB.evalCast(ThisVal, Base->getType(), OriginalTy);
+  }
+
   assert(ThisVal.isUnknownOrUndef() || isa<Loc>(ThisVal));
   return ThisVal;
 }
