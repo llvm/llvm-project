@@ -672,7 +672,7 @@ void ModuleDepCollector::addFileDep(StringRef Path) {
     FileDeps.push_back(std::string(Path));
     return;
   }
-  
+
   llvm::SmallString<256> Storage;
   Path = makeAbsoluteAndPreferred(ScanInstance, Path, Storage);
   FileDeps.push_back(std::string(Path));
@@ -683,7 +683,7 @@ void ModuleDepCollector::addFileDep(ModuleDeps &MD, StringRef Path) {
     MD.FileDeps.insert(Path);
     return;
   }
-  
+
   llvm::SmallString<256> Storage;
   Path = makeAbsoluteAndPreferred(ScanInstance, Path, Storage);
   MD.FileDeps.insert(Path);
