@@ -96,39 +96,31 @@ bool WatchpointResourceList::RemoveByAddress(addr_t addr) {
 
 WatchpointResourceSP WatchpointResourceList::FindByAddress(addr_t addr) {
   std::lock_guard<std::mutex> guard(m_mutex);
-  for (collection::iterator pos = m_resources.begin(); pos != m_resources.end();
-       ++pos)
-    if ((*pos)->Contains(addr))
-      return *pos;
+  for (WatchpointResourceSP wp_res_sp : m_resources)
+    if (wp_res_sp->Contains(addr))
+      return wp_res_sp;
   return {};
 }
 
 WatchpointResourceSP
 WatchpointResourceList::FindByWatchpointSP(WatchpointSP &wp_sp) {
-  std::lock_guard<std::mutex> guard(m_mutex);
-  for (collection::iterator pos = m_resources.begin(); pos != m_resources.end();
-       ++pos)
-    if ((*pos)->OwnersContains(wp_sp))
-      return *pos;
-  return {};
+  return FindByWatchpoint(wp_sp.get());
 }
 
 WatchpointResourceSP
 WatchpointResourceList::FindByWatchpoint(const Watchpoint *wp) {
   std::lock_guard<std::mutex> guard(m_mutex);
-  for (collection::iterator pos = m_resources.begin(); pos != m_resources.end();
-       ++pos)
-    if ((*pos)->OwnersContains(wp))
-      return *pos;
+  for (WatchpointResourceSP wp_res_sp : m_resources)
+    if (wp_res_sp->OwnersContains(wp))
+      return wp_res_sp;
   return {};
 }
 
 WatchpointResourceSP WatchpointResourceList::FindByID(wp_resource_id_t id) {
   std::lock_guard<std::mutex> guard(m_mutex);
-  for (collection::iterator pos = m_resources.begin(); pos != m_resources.end();
-       ++pos)
-    if ((*pos)->GetID() == id)
-      return *pos;
+  for (WatchpointResourceSP wp_res_sp : m_resources)
+    if (wp_res_sp->GetID() == id)
+      return wp_res_sp;
   return {};
 }
 
