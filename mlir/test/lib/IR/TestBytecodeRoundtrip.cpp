@@ -45,22 +45,28 @@ public:
 
 /// This is a test pass which uses callbacks to encode attributes and types in a
 /// custom fashion.
-struct TestBytecodeCallbackPass
-    : public PassWrapper<TestBytecodeCallbackPass, OperationPass<ModuleOp>> {
-  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestBytecodeCallbackPass)
+struct TestBytecodeRoundtripPass
+    : public PassWrapper<TestBytecodeRoundtripPass, OperationPass<ModuleOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestBytecodeRoundtripPass)
 
-  StringRef getArgument() const final { return "test-bytecode-callback"; }
+  StringRef getArgument() const final { return "test-bytecode-roundtrip"; }
   StringRef getDescription() const final {
-    return "Test encoding of a dialect type/attributes with a custom callback";
+    return "Test pass to implement bytecode roundtrip tests.";
   }
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<test::TestDialect>();
   }
-  TestBytecodeCallbackPass() = default;
-  TestBytecodeCallbackPass(const TestBytecodeCallbackPass &) {}
+  TestBytecodeRoundtripPass() = default;
+  TestBytecodeRoundtripPass(const TestBytecodeRoundtripPass &) {}
+
+  LogicalResult initialize(MLIRContext *context) override {
+    testDialect = context->getOrLoadDialect<test::TestDialect>();
+    return success();
+  }
 
   void runOnOperation() override {
     switch (testKind) {
+      // Tests 0-5 implement a custom roundtrip with callbacks.
     case (0):
       return runTest0(getOperation());
     case (1):
@@ -73,6 +79,10 @@ struct TestBytecodeCallbackPass
       return runTest4(getOperation());
     case (5):
       return runTest5(getOperation());
+    case (6):
+      // test-kind 6 is a plain roundtrip with downgrade/upgrade to/from
+      // `targetVersion`.
+      return runTest6(getOperation());
     default:
       llvm_unreachable("unhandled test kind for TestBytecodeCallbacks pass");
     }
@@ -85,8 +95,8 @@ struct TestBytecodeCallbackPass
                     cl::init(test::TestDialectVersion())};
 
   mlir::Pass::Option<int> testKind{
-      *this, "callback-test",
-      llvm::cl::desc("Specifies the test kind to execute"), cl::init(0)};
+      *this, "test-kind", llvm::cl::desc("Specifies the test kind to execute"),
+      cl::init(0)};
 
 private:
   void doRoundtripWithConfigs(Operation *op,
@@ -122,11 +132,19 @@ private:
     auto newCtx = std::make_shared<MLIRContext>();
     test::TestDialectVersion targetEmissionVersion = targetVersion;
     BytecodeWriterConfig writeConfig;
+    // Set the emission version for the test dialect.
+    writeConfig.setDialectVersion<test::TestDialect>(
+        std::make_unique<test::TestDialectVersion>(targetEmissionVersion));
     writeConfig.attachTypeCallback(
         [&](Type entryValue, std::optional<StringRef> &dialectGroupName,
             DialectBytecodeWriter &writer) -> LogicalResult {
-          // Do not override anything if version less than 2.0.
-          if (targetEmissionVersion.major_ >= 2)
+          // Do not override anything if version greater than 2.0.
+          auto versionOr = writer.getDialectVersion<test::TestDialect>();
+          assert(succeeded(versionOr) && "expected reader to be able to access "
+                                         "the version for test dialect");
+          const auto *version =
+              reinterpret_cast<const test::TestDialectVersion *>(*versionOr);
+          if (version->major_ >= 2)
             return failure();
 
           // For version less than 2.0, override the encoding of IntegerType.
@@ -146,19 +164,12 @@ private:
         [&](DialectBytecodeReader &reader, StringRef dialectName,
             Type &entry) -> LogicalResult {
           // Get test dialect version from the version map.
-          auto versionOr = reader.getDialectVersion("test");
+          auto versionOr = reader.getDialectVersion<test::TestDialect>();
           assert(succeeded(versionOr) && "expected reader to be able to access "
                                          "the version for test dialect");
           const auto *version =
               reinterpret_cast<const test::TestDialectVersion *>(*versionOr);
-
-          // TODO: once back-deployment is formally supported,
-          // `targetEmissionVersion` will be encoded in the bytecode file, and
-          // exposed through the versionMap. Right now though this is not yet
-          // supported. For the purpose of the test, just use
-          // `targetEmissionVersion`.
-          (void)version;
-          if (targetEmissionVersion.major_ >= 2)
+          if (version->major_ >= 2)
             return success();
 
           // `dialectName` is the name of the group we have the opportunity to
@@ -355,11 +366,56 @@ private:
         });
     doRoundtripWithConfigs(op, writeConfig, parseConfig);
   }
+
+  LogicalResult downgradeToVersion(Operation *op,
+                                   const test::TestDialectVersion &version) {
+    if ((version.major_ == 2) && (version.minor_ == 0))
+      return success();
+    if (version.major_ > 2 || (version.major_ == 2 && version.minor_ > 0)) {
+      return op->emitError() << "current test dialect version is 2.0, "
+                                "can't downgrade to version: "
+                             << version.major_ << "." << version.minor_;
+    }
+    // Prior version 2.0, the old op supported only a single attribute called
+    // "dimensions". We need to check that the modifier is false, otherwise we
+    // can't do the downgrade.
+    auto status = op->walk([&](test::TestVersionedOpA op) {
+      auto &prop = op.getProperties();
+      if (prop.modifier.getValue()) {
+        op->emitOpError() << "cannot downgrade to version " << version.major_
+                          << "." << version.minor_
+                          << " since the modifier is not compatible";
+        return WalkResult::interrupt();
+      }
+      llvm::outs() << "downgrading op...\n";
+      return WalkResult::advance();
+    });
+    return failure(status.wasInterrupted());
+  }
+
+  // Test6: Downgrade IR to `targetVersion`, write to bytecode. Then, read and
+  // upgrade IR when back in memory. The module is expected to be unmodified at
+  // the end of the function.
+  void runTest6(Operation *op) {
+    test::TestDialectVersion targetEmissionVersion = targetVersion;
+
+    // Downgrade IR constructs before writing the IR to bytecode.
+    auto status = downgradeToVersion(op, targetEmissionVersion);
+    assert(succeeded(status) && "expected the downgrade to succeed");
+
+    BytecodeWriterConfig writeConfig;
+    writeConfig.setDialectVersion<test::TestDialect>(
+        std::make_unique<test::TestDialectVersion>(targetEmissionVersion));
+    ParserConfig parseConfig(op->getContext(), /*verifyAfterParse=*/true);
+    doRoundtripWithConfigs(op, writeConfig, parseConfig);
+  }
+
+  test::TestDialect *testDialect;
 };
 } // namespace
 
 namespace mlir {
-void registerTestBytecodeCallbackPasses() {
-  PassRegistration<TestBytecodeCallbackPass>();
+void registerTestBytecodeRoundtripPasses() {
+  PassRegistration<TestBytecodeRoundtripPass>();
 }
 } // namespace mlir
