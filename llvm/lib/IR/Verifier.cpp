@@ -5673,11 +5673,21 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
   case Intrinsic::llrint: {
     Type *ValTy = Call.getArgOperand(0)->getType();
     Type *ResultTy = Call.getType();
+    unsigned ResultSz = ResultTy->getScalarSizeInBits();
     Check(
         ValTy->isFPOrFPVectorTy() && ResultTy->isIntOrIntVectorTy(),
         "llvm.lrint, llvm.llrint: argument must be floating-point or vector "
         "of floating-points, and result must be integer or vector of integers",
         &Call);
+
+    if (ID == Intrinsic::lrint)
+      Check(ResultSz == 32 || ResultSz == 64,
+            "llvm.lrint: result type must be i32, i64, or a vector thereof",
+            &Call);
+    else
+      Check(ResultSz == 64,
+            "llvm.llrint: result type must be i64 or a vector thereof", &Call);
+
     Check(ValTy->isVectorTy() == ResultTy->isVectorTy(),
           "llvm.lrint, llvm.llrint: argument and result disagree on vector use",
           &Call);

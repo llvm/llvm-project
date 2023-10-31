@@ -31,7 +31,7 @@ declare <2 x i32> @llvm.fptoui.sat.v2i32.v2f32(<2 x float>)
 
 ; Unary fp operand, int return type
 declare <2 x i32> @llvm.lrint.v2i32.v2f32(<2 x float>)
-declare <2 x i32> @llvm.llrint.v2i32.v2f32(<2 x float>)
+declare <2 x i64> @llvm.llrint.v2i64.v2f32(<2 x float>)
 
 ; Bool return type, overloaded on fp operand type
 declare <2 x i1> @llvm.is.fpclass(<2 x float>, i32)
@@ -224,13 +224,13 @@ define <2 x i32> @scalarize_lrint(<2 x float> %x) #0 {
   ret <2 x i32> %rnd
 }
 
-define <2 x i32> @scalarize_llrint(<2 x float> %x) #0 {
+define <2 x i64> @scalarize_llrint(<2 x float> %x) #0 {
 ; CHECK-LABEL: @scalarize_llrint(
-; CHECK-NEXT:    [[RND:%.*]] = call <2 x i32> @llvm.llrint.v2i32.v2f32(<2 x float> [[X:%.*]])
-; CHECK-NEXT:    ret <2 x i32> [[RND]]
+; CHECK-NEXT:    [[RND:%.*]] = call <2 x i64> @llvm.llrint.v2i64.v2f32(<2 x float> [[X:%.*]])
+; CHECK-NEXT:    ret <2 x i64> [[RND]]
 ;
-  %rnd = call <2 x i32> @llvm.llrint.v2i32.v2f32(<2 x float> %x)
-  ret <2 x i32> %rnd
+  %rnd = call <2 x i64> @llvm.llrint.v2i64.v2f32(<2 x float> %x)
+  ret <2 x i64> %rnd
 }
 
 define <2 x i1> @scalarize_is_fpclass(<2 x float> %x) #0 {

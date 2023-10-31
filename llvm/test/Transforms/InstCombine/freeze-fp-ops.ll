@@ -411,15 +411,15 @@ define i32 @freeze_lrint(float %arg) {
   ret i32 %freeze
 }
 
-define i32 @freeze_llrint(float %arg) {
+define i64 @freeze_llrint(float %arg) {
 ; CHECK-LABEL: @freeze_llrint(
 ; CHECK-NEXT:    [[ARG_FR:%.*]] = freeze float [[ARG:%.*]]
-; CHECK-NEXT:    [[OP:%.*]] = call i32 @llvm.llrint.i32.f32(float [[ARG_FR]])
-; CHECK-NEXT:    ret i32 [[OP]]
+; CHECK-NEXT:    [[OP:%.*]] = call i64 @llvm.llrint.i64.f32(float [[ARG_FR]])
+; CHECK-NEXT:    ret i64 [[OP]]
 ;
-  %op = call i32 @llvm.llrint.i32.f32(float %arg)
-  %freeze = freeze i32 %op
-  ret i32 %freeze
+  %op = call i64 @llvm.llrint.i64.f32(float %arg)
+  %freeze = freeze i64 %op
+  ret i64 %freeze
 }
 
 define i32 @freeze_noundef_lround(float %arg) {
@@ -452,14 +452,14 @@ define i32 @freeze_noundef_lrint(float %arg) {
   ret i32 %freeze
 }
 
-define i32 @freeze_noundef_llrint(float %arg) {
+define i64 @freeze_noundef_llrint(float %arg) {
 ; CHECK-LABEL: @freeze_noundef_llrint(
-; CHECK-NEXT:    [[OP:%.*]] = call noundef i32 @llvm.llrint.i32.f32(float [[ARG:%.*]])
-; CHECK-NEXT:    ret i32 [[OP]]
+; CHECK-NEXT:    [[OP:%.*]] = call noundef i64 @llvm.llrint.i64.f32(float [[ARG:%.*]])
+; CHECK-NEXT:    ret i64 [[OP]]
 ;
-  %op = call noundef i32 @llvm.llrint.i32.f32(float %arg)
-  %freeze = freeze i32 %op
-  ret i32 %freeze
+  %op = call noundef i64 @llvm.llrint.i64.f32(float %arg)
+  %freeze = freeze i64 %op
+  ret i64 %freeze
 }
 
 define float @freeze_minnum(float %arg0, float noundef %arg1) {
@@ -603,7 +603,7 @@ declare float @llvm.arithmetic.fence.f32(float)
 declare i32 @llvm.lround.i32.f32(float)
 declare i32 @llvm.llround.i32.f32(float)
 declare i32 @llvm.lrint.i32.f32(float)
-declare i32 @llvm.llrint.i32.f32(float)
+declare i64 @llvm.llrint.i64.f32(float)
 declare float @llvm.minnum.f32(float, float)
 declare float @llvm.maxnum.f32(float, float)
 declare float @llvm.minimum.f32(float, float)
