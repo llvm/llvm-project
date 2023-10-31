@@ -614,7 +614,6 @@ basic_string<char32_t> operator""s( const char32_t *str, size_t len );          
 #include <__utility/swap.h>
 #include <__utility/unreachable.h>
 #include <climits>
-#include <cstdint>
 #include <cstdio>  // EOF
 #include <cstring>
 #include <limits>
