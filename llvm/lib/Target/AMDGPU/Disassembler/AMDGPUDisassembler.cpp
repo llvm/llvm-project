@@ -1991,6 +1991,10 @@ bool AMDGPUDisassembler::isGFX12Plus() const {
   return AMDGPU::isGFX12Plus(STI);
 }
 
+bool AMDGPUDisassembler::isGFX12_10() const {
+  return AMDGPU::isGFX12_10(STI);
+}
+
 bool AMDGPUDisassembler::hasArchitectedFlatScratch() const {
   return STI.hasFeature(AMDGPU::FeatureArchitectedFlatScratch);
 }
@@ -2099,23 +2103,37 @@ MCDisassembler::DecodeStatus AMDGPUDisassembler::decodeCOMPUTE_PGM_RSRC1(
   if (FourByteBuffer & COMPUTE_PGM_RSRC1_CDBG_USER)
     return MCDisassembler::Fail;
 
-  if (isGFX9Plus())
+  // Bits [26].
+  if (isGFX9Plus()) {
     PRINT_DIRECTIVE(".amdhsa_fp16_overflow", COMPUTE_PGM_RSRC1_GFX9_PLUS_FP16_OVFL);
-
-  if (!isGFX9Plus())
-    if (FourByteBuffer & COMPUTE_PGM_RSRC1_GFX6_GFX8_RESERVED0)
+  } else if (FourByteBuffer & COMPUTE_PGM_RSRC1_GFX6_GFX8_RESERVED0) {
       return MCDisassembler::Fail;
-  if (FourByteBuffer & COMPUTE_PGM_RSRC1_RESERVED1)
+  }
+
+  // Bits [27].
+  if (isGFX12_10()) {
+    PRINT_PSEUDO_DIRECTIVE_COMMENT("FLAT_SCRATCH_IS_NV",
+                                   COMPUTE_PGM_RSRC1_GFX121_FLAT_SCRATCH_IS_NV);
+  } else if (FourByteBuffer & COMPUTE_PGM_RSRC1_GFX6_GFX120_RESERVED1) {
     return MCDisassembler::Fail;
-  if (!isGFX10Plus())
-    if (FourByteBuffer & COMPUTE_PGM_RSRC1_GFX6_GFX9_RESERVED2)
-      return MCDisassembler::Fail;
+  }
 
+  // Bits [28].
+  if (FourByteBuffer & COMPUTE_PGM_RSRC1_RESERVED2) {
+    return MCDisassembler::Fail;
+  }
+
+  // Bits [29-31].
   if (isGFX10Plus()) {
-    PRINT_DIRECTIVE(".amdhsa_workgroup_processor_mode",
-                    COMPUTE_PGM_RSRC1_GFX10_PLUS_WGP_MODE);
+    // WGP_MODE is not available on GFX1210.
+    if (!isGFX12_10()) {
+      PRINT_DIRECTIVE(".amdhsa_workgroup_processor_mode",
+                      COMPUTE_PGM_RSRC1_GFX10_PLUS_WGP_MODE);
+    }
     PRINT_DIRECTIVE(".amdhsa_memory_ordered", COMPUTE_PGM_RSRC1_GFX10_PLUS_MEM_ORDERED);
     PRINT_DIRECTIVE(".amdhsa_forward_progress", COMPUTE_PGM_RSRC1_GFX10_PLUS_FWD_PROGRESS);
+  } else if (FourByteBuffer & COMPUTE_PGM_RSRC1_GFX6_GFX9_RESERVED3) {
+    return MCDisassembler::Fail;
   }
 
   if (isGFX12Plus())
@@ -2245,16 +2263,31 @@ MCDisassembler::DecodeStatus AMDGPUDisassembler::decodeCOMPUTE_PGM_RSRC3(
         return MCDisassembler::Fail;
     }
 
-    // Bits [14-30].
-    if (FourByteBuffer & COMPUTE_PGM_RSRC3_GFX10_PLUS_RESERVED4)
+    // Bits [14-21].
+    if (isGFX12_10()) {
+      PRINT_PSEUDO_DIRECTIVE_COMMENT("NAMED_BAR_CNT",
+                                     COMPUTE_PGM_RSRC3_GFX121_NAMED_BAR_CNT);
+      PRINT_PSEUDO_DIRECTIVE_COMMENT("ENABLE_DYNAMIC_VGPR",
+                                     COMPUTE_PGM_RSRC3_GFX121_ENABLE_DYNAMIC_VGPR);
+      PRINT_PSEUDO_DIRECTIVE_COMMENT("TCP_SPLIT",
+                                     COMPUTE_PGM_RSRC3_GFX121_TCP_SPLIT);
+      PRINT_PSEUDO_DIRECTIVE_COMMENT("ENABLE_DIDT_THROTTLE",
+                                     COMPUTE_PGM_RSRC3_GFX121_ENABLE_DIDT_THROTTLE);
+    } else if (FourByteBuffer & COMPUTE_PGM_RSRC3_GFX10_GFX120_RESERVED4) {
       return MCDisassembler::Fail;
+    }
+
+    // Bits [22-30].
+    if (FourByteBuffer & COMPUTE_PGM_RSRC3_GFX10_PLUS_RESERVED5) {
+      return MCDisassembler::Fail;
+    }
 
     // Bits [31].
     if (isGFX11Plus()) {
       PRINT_PSEUDO_DIRECTIVE_COMMENT("IMAGE_OP",
                                      COMPUTE_PGM_RSRC3_GFX11_PLUS_IMAGE_OP);
     } else {
-      if (FourByteBuffer & COMPUTE_PGM_RSRC3_GFX10_RESERVED5)
+      if (FourByteBuffer & COMPUTE_PGM_RSRC3_GFX10_RESERVED6)
         return MCDisassembler::Fail;
     }
   } else if (FourByteBuffer) {

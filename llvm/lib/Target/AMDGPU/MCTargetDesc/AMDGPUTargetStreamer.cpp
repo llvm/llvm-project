@@ -351,9 +351,15 @@ void AMDGPUTargetAsmStreamer::EmitAmdhsaKernelDescriptor(
      << KD.private_segment_fixed_size << '\n';
   OS << "\t\t.amdhsa_kernarg_size " << KD.kernarg_size << '\n';
 
-  PRINT_FIELD(OS, ".amdhsa_user_sgpr_count", KD,
-              compute_pgm_rsrc2,
-              amdhsa::COMPUTE_PGM_RSRC2_USER_SGPR_COUNT);
+  if (isGFX12_10(STI)) {
+    PRINT_FIELD(OS, ".amdhsa_user_sgpr_count", KD,
+                compute_pgm_rsrc2,
+                amdhsa::COMPUTE_PGM_RSRC2_GFX121_USER_SGPR_COUNT);
+  } else {
+    PRINT_FIELD(OS, ".amdhsa_user_sgpr_count", KD,
+                compute_pgm_rsrc2,
+                amdhsa::COMPUTE_PGM_RSRC2_GFX6_GFX120_USER_SGPR_COUNT);
+  }
 
   if (!hasArchitectedFlatScratch(STI))
     PRINT_FIELD(

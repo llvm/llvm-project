@@ -5920,10 +5920,17 @@ bool AMDGPUAsmParser::ParseDirectiveAMDHSAKernel() {
   unsigned UserSGPRCount =
       ExplicitUserSGPRCount ? *ExplicitUserSGPRCount : ImpliedUserSGPRCount;
 
-  if (!isUInt<COMPUTE_PGM_RSRC2_USER_SGPR_COUNT_WIDTH>(UserSGPRCount))
-    return TokError("too many user SGPRs enabled");
-  AMDHSA_BITS_SET(KD.compute_pgm_rsrc2, COMPUTE_PGM_RSRC2_USER_SGPR_COUNT,
-                  UserSGPRCount);
+  if (isGFX12_10()) {
+    if (!isUInt<COMPUTE_PGM_RSRC2_GFX121_USER_SGPR_COUNT_WIDTH>(UserSGPRCount))
+      return TokError("too many user SGPRs enabled");
+    AMDHSA_BITS_SET(KD.compute_pgm_rsrc2, COMPUTE_PGM_RSRC2_GFX121_USER_SGPR_COUNT,
+                    UserSGPRCount);
+  } else {
+    if (!isUInt<COMPUTE_PGM_RSRC2_GFX6_GFX120_USER_SGPR_COUNT_WIDTH>(UserSGPRCount))
+      return TokError("too many user SGPRs enabled");
+    AMDHSA_BITS_SET(KD.compute_pgm_rsrc2, COMPUTE_PGM_RSRC2_GFX6_GFX120_USER_SGPR_COUNT,
+                    UserSGPRCount);
+  }
 
   if (PreloadLength && KD.kernarg_size &&
       (PreloadLength * 4 + PreloadOffset * 4 > KD.kernarg_size))
