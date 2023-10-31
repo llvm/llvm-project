@@ -34,6 +34,7 @@ extern cl::OptionCategory BoltOptCategory;
 extern cl::opt<IndirectCallPromotionType> ICP;
 extern cl::opt<unsigned> Verbosity;
 extern cl::opt<unsigned> ExecutionCountThreshold;
+extern cl::opt<bool> UseCDSplit;
 
 static cl::opt<unsigned> ICPJTRemainingPercentThreshold(
     "icp-jt-remaining-percent-threshold",
@@ -259,9 +260,10 @@ IndirectCallPromotion::getCallTargets(BinaryBasicBlock &BB,
       MCSymbol *Entry = JT->Entries[I];
       const BinaryBasicBlock *ToBB = BF.getBasicBlockForLabel(Entry);
       assert(ToBB || Entry == BF.getFunctionEndLabel() ||
-             Entry == BF.getFunctionEndLabel(FragmentNum::cold()));
+             Entry ==
+                 BF.getFunctionEndLabel(FragmentNum::cold(opts::UseCDSplit)));
       if (Entry == BF.getFunctionEndLabel() ||
-          Entry == BF.getFunctionEndLabel(FragmentNum::cold()))
+          Entry == BF.getFunctionEndLabel(FragmentNum::cold(opts::UseCDSplit)))
         continue;
       const Location To(Entry);
       const BinaryBasicBlock::BinaryBranchInfo &BI = BB.getBranchInfo(*ToBB);

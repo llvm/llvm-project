@@ -59,6 +59,7 @@ extern cl::opt<bool> EnableBAT;
 extern cl::opt<bool> Instrument;
 extern cl::opt<bool> StrictMode;
 extern cl::opt<bool> UpdateDebugSections;
+extern cl::opt<bool> UseCDSplit;
 extern cl::opt<unsigned> Verbosity;
 
 extern bool processAllFunctions();
@@ -165,6 +166,18 @@ namespace bolt {
 
 template <typename R> static bool emptyRange(const R &Range) {
   return Range.begin() == Range.end();
+}
+
+/// Return internal section name for this function.
+SmallString<32>
+BinaryFunction::getCodeSectionName(const FragmentNum Fragment) const {
+  if (Fragment == FragmentNum::main())
+    return SmallString<32>(CodeSectionName);
+  if (Fragment == FragmentNum::cold(opts::UseCDSplit))
+    return SmallString<32>(ColdCodeSectionName);
+  if (Fragment == FragmentNum::warm())
+    return SmallString<32>(WarmCodeSectionName);
+  return formatv("{0}.{1}", ColdCodeSectionName, Fragment.get() - 1);
 }
 
 /// Gets debug line information for the instruction located at the given

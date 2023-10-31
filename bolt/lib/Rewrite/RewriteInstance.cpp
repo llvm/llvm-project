@@ -84,6 +84,7 @@ extern cl::opt<JumpTableSupportLevel> JumpTables;
 extern cl::list<std::string> ReorderData;
 extern cl::opt<bolt::ReorderFunctions::ReorderType> ReorderFunctions;
 extern cl::opt<bool> TimeBuild;
+extern cl::opt<bool> UseCDSplit;
 
 cl::opt<bool> AllowStripped("allow-stripped",
                             cl::desc("allow processing of stripped binaries"),
@@ -3478,11 +3479,21 @@ std::vector<BinarySection *> RewriteInstance::getCodeSections() {
     if (B->getName() == BC->getHotTextMoverSectionName())
       return false;
 
-    // Depending on the option, put main text at the beginning or at the end.
-    if (opts::HotFunctionsAtEnd)
-      return B->getName() == BC->getMainCodeSectionName();
-    else
-      return A->getName() == BC->getMainCodeSectionName();
+    // Depending on opts::HotFunctionsAtEnd, place main and warm sections in
+    // order.
+    if (opts::HotFunctionsAtEnd) {
+      if (B->getName() == BC->getMainCodeSectionName())
+        return true;
+      if (A->getName() == BC->getMainCodeSectionName())
+        return false;
+      return (B->getName() == BC->getWarmCodeSectionName());
+    } else {
+      if (A->getName() == BC->getMainCodeSectionName())
+        return true;
+      if (B->getName() == BC->getMainCodeSectionName())
+        return false;
+      return (A->getName() == BC->getWarmCodeSectionName());
+    }
   };
 
   // Determine the order of sections.
@@ -3639,7 +3650,7 @@ void RewriteInstance::mapCodeSections(BOLTLinker::SectionMapper MapSection) {
            "non-relocation mode.");
 
     FunctionFragment &FF =
-        Function.getLayout().getFragment(FragmentNum::cold());
+        Function.getLayout().getFragment(FragmentNum::cold(opts::UseCDSplit));
     ErrorOr<BinarySection &> ColdSection =
         Function.getCodeSection(FF.getFragmentNum());
     assert(ColdSection && "cannot find section for cold part");
@@ -4423,9 +4434,15 @@ void RewriteInstance::updateELFSymbolTable(
            Function.getLayout().getSplitFragments()) {
         if (FF.getAddress()) {
           ELFSymTy NewColdSym = FunctionSymbol;
-          const SmallString<256> SymbolName = formatv(
-              "{0}.cold.{1}", cantFail(FunctionSymbol.getName(StringSection)),
-              FF.getFragmentNum().get() - 1);
+          SmallString<256> SymbolName;
+          if (opts::UseCDSplit)
+            SymbolName = formatv(
+                "{0}.{1}", cantFail(FunctionSymbol.getName(StringSection)),
+                FF.getFragmentNum().get() == 1 ? "warm" : "cold");
+          else
+            SymbolName = formatv(
+                "{0}.cold.{1}", cantFail(FunctionSymbol.getName(StringSection)),
+                FF.getFragmentNum().get() - 1);
           NewColdSym.st_name = AddToStrTab(SymbolName);
           NewColdSym.st_shndx =
               Function.getCodeSection(FF.getFragmentNum())->getIndex();
@@ -4684,8 +4701,8 @@ void RewriteInstance::updateELFSymbolTable(
       SmallVector<char, 256> Buf;
       NewColdSym.st_name = AddToStrTab(
           Twine(Function->getPrintName()).concat(".cold.0").toStringRef(Buf));
-      const FunctionFragment &ColdFF =
-          Function->getLayout().getFragment(FragmentNum::cold());
+      const FunctionFragment &ColdFF = Function->getLayout().getFragment(
+          FragmentNum::cold(opts::UseCDSplit));
       NewColdSym.st_value = ColdFF.getAddress();
       NewColdSym.st_size = ColdFF.getImageSize();
       Symbols.emplace_back(NewColdSym);

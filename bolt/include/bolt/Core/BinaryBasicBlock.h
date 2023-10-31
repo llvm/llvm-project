@@ -677,9 +677,7 @@ public:
     return isSplit();
   }
 
-  void setIsCold(const bool Flag) {
-    Fragment = Flag ? FragmentNum::cold() : FragmentNum::main();
-  }
+  void setIsCold(const bool Flag);
 
   /// Return true if the block can be outlined. At the moment we disallow
   /// outlining of blocks that can potentially throw exceptions or are

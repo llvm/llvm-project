@@ -927,6 +927,8 @@ public:
 
   const char *getMainCodeSectionName() const { return ".text"; }
 
+  const char *getWarmCodeSectionName() const { return ".text.warm"; }
+
   const char *getColdCodeSectionName() const { return ".text.cold"; }
 
   const char *getHotTextMoverSectionName() const { return ".text.mover"; }
