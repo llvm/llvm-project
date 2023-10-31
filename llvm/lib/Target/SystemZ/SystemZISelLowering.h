@@ -452,6 +452,8 @@ public:
     return VT != MVT::f64;
   }
   bool hasInlineStackProbe(const MachineFunction &MF) const override;
+  AtomicExpansionKind
+  shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const override;
   bool isLegalICmpImmediate(int64_t Imm) const override;
   bool isLegalAddImmediate(int64_t Imm) const override;
   bool isLegalAddressingMode(const DataLayout &DL, const AddrMode &AM, Type *Ty,

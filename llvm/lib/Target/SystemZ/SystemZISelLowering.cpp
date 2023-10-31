@@ -872,6 +872,15 @@ bool SystemZTargetLowering::hasInlineStackProbe(const MachineFunction &MF) const
   return false;
 }
 
+TargetLowering::AtomicExpansionKind
+SystemZTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
+  return (RMW->isFloatingPointOperation() ||
+          RMW->getOperation() == AtomicRMWInst::UIncWrap ||
+          RMW->getOperation() == AtomicRMWInst::UDecWrap)
+             ? AtomicExpansionKind::CmpXChg
+             : AtomicExpansionKind::None;
+}
+
 bool SystemZTargetLowering::isLegalICmpImmediate(int64_t Imm) const {
   // We can use CGFI or CLGFI.
   return isInt<32>(Imm) || isUInt<32>(Imm);
