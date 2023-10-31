@@ -24,7 +24,7 @@ namespace {
 //   (3) compute topsort, and resolve cyles with sparse_tensor.convert ops
 
 //===----------------------------------------------------------------------===//
-// Reiterpret Map Rewriters for operations other than linalg.generics
+// Reinterpret Map Rewriters for operations other than linalg.generics
 //===----------------------------------------------------------------------===//
 
 // CRTP to help implementing a rewriter that demaps all its inputs and remaps
