@@ -40,7 +40,8 @@ ScriptedThreadPlanPythonInterface::ExplainsStop(Event *event) {
   Status error;
   StructuredData::ObjectSP obj = Dispatch("explains_stop", error, event);
 
-  if (!CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj, error))
+  if (!ScriptedInterface::CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj,
+                                                    error))
     return error.ToError();
 
   return obj->GetBooleanValue();
@@ -51,7 +52,8 @@ ScriptedThreadPlanPythonInterface::ShouldStop(Event *event) {
   Status error;
   StructuredData::ObjectSP obj = Dispatch("should_stop", error, event);
 
-  if (!CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj, error))
+  if (!ScriptedInterface::CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj,
+                                                    error))
     return error.ToError();
 
   return obj->GetBooleanValue();
@@ -61,7 +63,8 @@ llvm::Expected<bool> ScriptedThreadPlanPythonInterface::IsStale() {
   Status error;
   StructuredData::ObjectSP obj = Dispatch("is_stale", error);
 
-  if (!CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj, error))
+  if (!ScriptedInterface::CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj,
+                                                    error))
     return error.ToError();
 
   return obj->GetBooleanValue();
@@ -71,7 +74,8 @@ lldb::StateType ScriptedThreadPlanPythonInterface::GetRunState() {
   Status error;
   StructuredData::ObjectSP obj = Dispatch("should_step", error);
 
-  if (!CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj, error))
+  if (!ScriptedInterface::CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj,
+                                                    error))
     return lldb::eStateStepping;
 
   return static_cast<lldb::StateType>(obj->GetUnsignedIntegerValue(

@@ -45,7 +45,8 @@ lldb::tid_t ScriptedThreadPythonInterface::GetThreadID() {
   Status error;
   StructuredData::ObjectSP obj = Dispatch("get_thread_id", error);
 
-  if (!CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj, error))
+  if (!ScriptedInterface::CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj,
+                                                    error))
     return LLDB_INVALID_THREAD_ID;
 
   return obj->GetUnsignedIntegerValue(LLDB_INVALID_THREAD_ID);
@@ -55,7 +56,8 @@ std::optional<std::string> ScriptedThreadPythonInterface::GetName() {
   Status error;
   StructuredData::ObjectSP obj = Dispatch("get_name", error);
 
-  if (!CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj, error))
+  if (!ScriptedInterface::CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj,
+                                                    error))
     return {};
 
   return obj->GetStringValue().str();
@@ -65,7 +67,8 @@ lldb::StateType ScriptedThreadPythonInterface::GetState() {
   Status error;
   StructuredData::ObjectSP obj = Dispatch("get_state", error);
 
-  if (!CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj, error))
+  if (!ScriptedInterface::CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj,
+                                                    error))
     return eStateInvalid;
 
   return static_cast<StateType>(obj->GetUnsignedIntegerValue(eStateInvalid));
@@ -75,7 +78,8 @@ std::optional<std::string> ScriptedThreadPythonInterface::GetQueue() {
   Status error;
   StructuredData::ObjectSP obj = Dispatch("get_queue", error);
 
-  if (!CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj, error))
+  if (!ScriptedInterface::CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj,
+                                                    error))
     return {};
 
   return obj->GetStringValue().str();
@@ -86,7 +90,8 @@ StructuredData::DictionarySP ScriptedThreadPythonInterface::GetStopReason() {
   StructuredData::DictionarySP dict =
       Dispatch<StructuredData::DictionarySP>("get_stop_reason", error);
 
-  if (!CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, dict, error))
+  if (!ScriptedInterface::CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, dict,
+                                                    error))
     return {};
 
   return dict;
@@ -97,7 +102,8 @@ StructuredData::ArraySP ScriptedThreadPythonInterface::GetStackFrames() {
   StructuredData::ArraySP arr =
       Dispatch<StructuredData::ArraySP>("get_stackframes", error);
 
-  if (!CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, arr, error))
+  if (!ScriptedInterface::CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, arr,
+                                                    error))
     return {};
 
   return arr;
@@ -108,7 +114,8 @@ StructuredData::DictionarySP ScriptedThreadPythonInterface::GetRegisterInfo() {
   StructuredData::DictionarySP dict =
       Dispatch<StructuredData::DictionarySP>("get_register_info", error);
 
-  if (!CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, dict, error))
+  if (!ScriptedInterface::CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, dict,
+                                                    error))
     return {};
 
   return dict;
@@ -118,7 +125,8 @@ std::optional<std::string> ScriptedThreadPythonInterface::GetRegisterContext() {
   Status error;
   StructuredData::ObjectSP obj = Dispatch("get_register_context", error);
 
-  if (!CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj, error))
+  if (!ScriptedInterface::CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj,
+                                                    error))
     return {};
 
   return obj->GetAsString()->GetValue().str();
@@ -129,7 +137,8 @@ StructuredData::ArraySP ScriptedThreadPythonInterface::GetExtendedInfo() {
   StructuredData::ArraySP arr =
       Dispatch<StructuredData::ArraySP>("get_extended_info", error);
 
-  if (!CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, arr, error))
+  if (!ScriptedInterface::CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, arr,
+                                                    error))
     return {};
 
   return arr;
