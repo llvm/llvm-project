@@ -954,6 +954,10 @@ def TuneSiFive7 : SubtargetFeature<"sifive7", "RISCVProcFamily", "SiFive7",
                                    [TuneNoDefaultUnroll,
                                     TuneShortForwardBranchOpt]>;
 
+def TuneVentanaVeyron : SubtargetFeature<"ventana-veyron", "RISCVProcFamily", "VentanaVeyron",
+                                         "Ventana-Veyron Series processors",
+                                         [TuneLUIADDIFusion]>;
+
 // Assume that lock-free native-width atomics are available, even if the target
 // and operating system combination would not usually provide them. The user
 // is responsible for providing any necessary __sync implementations. Code
