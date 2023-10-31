@@ -3121,8 +3121,8 @@ llvm::DIType *CGDebugInfo::CreateType(const VectorType *Ty,
     uint64_t NumVectorBytes = Size / Ctx.getCharWidth();
 
     // Construct the vector of 'char' type.
-    QualType CharVecTy = Ctx.getVectorType(Ctx.CharTy, NumVectorBytes,
-                                           VectorType::GenericVector);
+    QualType CharVecTy =
+        Ctx.getVectorType(Ctx.CharTy, NumVectorBytes, VectorKind::Generic);
     return CreateType(CharVecTy->getAs<VectorType>(), Unit);
   }
 

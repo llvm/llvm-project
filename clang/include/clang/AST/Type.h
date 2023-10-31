@@ -1601,6 +1601,35 @@ enum class ElaboratedTypeKeyword {
   None
 };
 
+enum class VectorKind {
+  /// not a target-specific vector type
+  Generic,
+
+  /// is AltiVec vector
+  AltiVecVector,
+
+  /// is AltiVec 'vector Pixel'
+  AltiVecPixel,
+
+  /// is AltiVec 'vector bool ...'
+  AltiVecBool,
+
+  /// is ARM Neon vector
+  Neon,
+
+  /// is ARM Neon polynomial vector
+  NeonPoly,
+
+  /// is AArch64 SVE fixed-length data vector
+  SveFixedLengthData,
+
+  /// is AArch64 SVE fixed-length predicate vector
+  SveFixedLengthPredicate,
+
+  /// is RISC-V RVV fixed-length data vector
+  RVVFixedLengthData,
+};
+
 /// The base class of the type hierarchy.
 ///
 /// A central concept with types is that each type always has a canonical
@@ -3452,36 +3481,6 @@ public:
 /// Since the constructor takes the number of vector elements, the
 /// client is responsible for converting the size into the number of elements.
 class VectorType : public Type, public llvm::FoldingSetNode {
-public:
-  enum VectorKind {
-    /// not a target-specific vector type
-    GenericVector,
-
-    /// is AltiVec vector
-    AltiVecVector,
-
-    /// is AltiVec 'vector Pixel'
-    AltiVecPixel,
-
-    /// is AltiVec 'vector bool ...'
-    AltiVecBool,
-
-    /// is ARM Neon vector
-    NeonVector,
-
-    /// is ARM Neon polynomial vector
-    NeonPolyVector,
-
-    /// is AArch64 SVE fixed-length data vector
-    SveFixedLengthDataVector,
-
-    /// is AArch64 SVE fixed-length predicate vector
-    SveFixedLengthPredicateVector,
-
-    /// is RISC-V RVV fixed-length data vector
-    RVVFixedLengthDataVector,
-  };
-
 protected:
   friend class ASTContext; // ASTContext creates these.
 
@@ -3516,7 +3515,7 @@ public:
     ID.AddPointer(ElementType.getAsOpaquePtr());
     ID.AddInteger(NumElements);
     ID.AddInteger(TypeClass);
-    ID.AddInteger(VecKind);
+    ID.AddInteger(llvm::to_underlying(VecKind));
   }
 
   static bool classof(const Type *T) {
@@ -3541,14 +3540,14 @@ class DependentVectorType : public Type, public llvm::FoldingSetNode {
   SourceLocation Loc;
 
   DependentVectorType(QualType ElementType, QualType CanonType, Expr *SizeExpr,
-                      SourceLocation Loc, VectorType::VectorKind vecKind);
+                      SourceLocation Loc, VectorKind vecKind);
 
 public:
   Expr *getSizeExpr() const { return SizeExpr; }
   QualType getElementType() const { return ElementType; }
   SourceLocation getAttributeLoc() const { return Loc; }
-  VectorType::VectorKind getVectorKind() const {
-    return VectorType::VectorKind(VectorTypeBits.VecKind);
+  VectorKind getVectorKind() const {
+    return VectorKind(VectorTypeBits.VecKind);
   }
 
   bool isSugared() const { return false; }
@@ -3564,7 +3563,7 @@ public:
 
   static void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context,
                       QualType ElementType, const Expr *SizeExpr,
-                      VectorType::VectorKind VecKind);
+                      VectorKind VecKind);
 };
 
 /// ExtVectorType - Extended vector type. This type is created using
@@ -3577,7 +3576,8 @@ class ExtVectorType : public VectorType {
   friend class ASTContext; // ASTContext creates these.
 
   ExtVectorType(QualType vecType, unsigned nElements, QualType canonType)
-      : VectorType(ExtVector, vecType, nElements, canonType, GenericVector) {}
+      : VectorType(ExtVector, vecType, nElements, canonType,
+                   VectorKind::Generic) {}
 
 public:
   static int getPointAccessorIdx(char c) {
