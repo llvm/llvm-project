@@ -156,7 +156,7 @@ define void @foo2_sext(i32* nocapture readonly %A, i32 %N, i32 %M) {
 ; CHECK-NEXT:    [[INDVAR:%.*]] = phi i64 [ 0, [[FOR_COND1_PREHEADER_US]] ]
 ; CHECK-NEXT:    [[J_016_US:%.*]] = phi i32 [ 0, [[FOR_COND1_PREHEADER_US]] ]
 ; CHECK-NEXT:    [[TMP5:%.*]] = add nsw i64 [[INDVAR]], [[TMP3]]
-; CHECK-NEXT:    [[TMP6:%.*]] = sext i32 [[J_016_US]] to i64
+; CHECK-NEXT:    [[TMP6:%.*]] = zext nneg i32 [[J_016_US]] to i64
 ; CHECK-NEXT:    [[TMP7:%.*]] = add nsw i64 [[TMP6]], [[TMP3]]
 ; CHECK-NEXT:    [[ADD_US:%.*]] = add nsw i32 [[J_016_US]], [[MUL_US]]
 ; CHECK-NEXT:    [[IDXPROM_US:%.*]] = sext i32 [[FLATTEN_TRUNCIV]] to i64

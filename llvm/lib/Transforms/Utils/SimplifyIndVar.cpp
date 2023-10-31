@@ -1200,6 +1200,16 @@ Value *WidenIV::createExtendInst(Value *NarrowOper, Type *WideType,
        L = L->getParentLoop())
     Builder.SetInsertPoint(L->getLoopPreheader()->getTerminator());
 
+  // If we know the operand is never negative, prefer zext nneg.
+  // For constant expressions, fall back to plain sext or zext.
+  if (SE->isKnownNonNegative(SE->getSCEV(NarrowOper))) {
+    auto *Res = Builder.CreateZExt(NarrowOper, WideType);
+    if (auto I = dyn_cast<Instruction>(Res)) {
+      I->setNonNeg(true);
+      return I;
+    }
+  }
+
   return IsSigned ? Builder.CreateSExt(NarrowOper, WideType) :
                     Builder.CreateZExt(NarrowOper, WideType);
 }
@@ -1685,6 +1695,17 @@ bool WidenIV::widenWithVariantUse(WidenIV::NarrowIVDefUse DU) {
     auto ExtendedOp = [&](Value * V)->Value * {
       if (V == NarrowUse)
         return WideBO;
+
+      // If we know the operand is never negative, prefer zext nneg.
+      // For constant expressions, fall back to plain sext or zext.
+      if (SE->isKnownNonNegative(SE->getSCEV(V))) {
+        auto *Res = Builder.CreateZExt(V, WideBO->getType());
+        if (auto I = dyn_cast<Instruction>(Res)) {
+          I->setNonNeg(true);
+          return I;
+        }
+      }
+      
       if (ExtKind == ExtendKind::Zero)
         return Builder.CreateZExt(V, WideBO->getType());
       else
