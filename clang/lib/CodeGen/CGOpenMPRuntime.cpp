@@ -9639,8 +9639,6 @@ static void emitTargetCallKernelLaunch(
       int64_t XteamRedNumTeamsFromClause =
           CGF.CGM.getXteamRedNumTeamsFromClause(D);
       if (XteamRedNumTeamsFromClause > 0) {
-        if (XteamRedNumTeamsFromClause > llvm::omp::xteam_red::MaxTeams)
-          XteamRedNumTeamsFromClause = llvm::omp::xteam_red::MaxTeams;
         XteamRedNumTeamsFromClauseVal =
             llvm::ConstantInt::get(CGF.Int64Ty, XteamRedNumTeamsFromClause);
       }

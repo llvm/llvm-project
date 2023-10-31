@@ -859,8 +859,6 @@ private:
 
       // The number of teams must not exceed this upper limit.
       uint64_t MaxNumGroups = DeviceNumCUs * CUMultiplier;
-      if (MaxNumGroups > llvm::omp::xteam_red::MaxTeams)
-        MaxNumGroups = llvm::omp::xteam_red::MaxTeams;
 
       // Honor OMP_NUM_TEAMS environment variable for XteamReduction kernel
       // type, if possible.

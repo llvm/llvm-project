@@ -278,11 +278,8 @@ enum class RTLDependenceKindTy {
 };
 
 namespace xteam_red {
-// Maximum number of teams allowed.
-constexpr int16_t MaxTeams = 512;
-
 // Upper limit on CU multiplier for computing number of teams.
-constexpr int16_t MaxCUMultiplier = 4;
+constexpr int16_t MaxCUMultiplier = 32;
 
 // Maximum number of threads allowed per CU.
 constexpr int16_t MaxThreadsPerCU = 2048;
