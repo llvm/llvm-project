@@ -1597,3 +1597,55 @@ for.body:                                         ; preds = %entry, %for.body
 for.end:                                          ; preds = %for.body, %entry
   ret void
 }
+
+declare i32 @llvm.lrint.i32.f32(float)
+
+define void @lrint_i32_f32(ptr %x, ptr %y, i64 %n) {
+; CHECK-LABEL: @lrint_i32_f32(
+; CHECK-NOT: llvm.lrint.v4i32.v4f32
+; CHECK: ret void
+;
+entry:
+  %cmp = icmp sgt i64 %n, 0
+  br i1 %cmp, label %for.body, label %exit
+
+for.body:                                         ; preds = %entry, %for.body
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %gep.load = getelementptr inbounds float, ptr %x, i64 %iv
+  %0 = load float, ptr %gep.load, align 4
+  %1 = tail call i32 @llvm.lrint.i32.f32(float %0)
+  %gep.store = getelementptr inbounds i32, ptr %y, i64 %iv
+  store i32 %1, ptr %gep.store, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, %n
+  br i1 %exitcond, label %exit, label %for.body
+
+exit:                                            ; preds = %for.body, %entry
+  ret void
+}
+
+declare i64 @llvm.llrint.i64.f32(float)
+
+define void @llrint_i64_f32(ptr %x, ptr %y, i64 %n) {
+; CHECK-LABEL: @llrint_i64_f32(
+; CHECK-NOT: llvm.llrint.v4i32.v4f32
+; CHECK: ret void
+;
+entry:
+  %cmp = icmp sgt i64 %n, 0
+  br i1 %cmp, label %for.body, label %exit
+
+for.body:                                         ; preds = %entry, %for.body
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %gep.load = getelementptr inbounds float, ptr %x, i64 %iv
+  %0 = load float, ptr %gep.load, align 4
+  %1 = tail call i64 @llvm.llrint.i64.f32(float %0)
+  %gep.store = getelementptr inbounds i64, ptr %y, i64 %iv
+  store i64 %1, ptr %gep.store, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, %n
+  br i1 %exitcond, label %exit, label %for.body
+
+exit:                                            ; preds = %for.body, %entry
+  ret void
+}
