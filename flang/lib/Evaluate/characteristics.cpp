@@ -1069,13 +1069,32 @@ bool FunctionResult::IsCompatibleWith(
                 actual.IsAssumedLengthCharacter()) {
               return true;
             } else {
-              const auto *ifaceLenParam{
-                  ifaceTypeShape->type().charLengthParamValue()};
-              const auto *actualLenParam{
-                  actualTypeShape->type().charLengthParamValue()};
-              if (ifaceLenParam && actualLenParam &&
-                  *ifaceLenParam == *actualLenParam) {
-                return true;
+              auto len{ToInt64(ifaceTypeShape->LEN())};
+              auto actualLen{ToInt64(actualTypeShape->LEN())};
+              if (len.has_value() != actualLen.has_value()) {
+                if (whyNot) {
+                  *whyNot = "constant-length vs non-constant-length character "
+                            "results";
+                }
+              } else if (len && *len != *actualLen) {
+                if (whyNot) {
+                  *whyNot = "character results with distinct lengths";
+                }
+              } else {
+                const auto *ifaceLenParam{
+                    ifaceTypeShape->type().charLengthParamValue()};
+                const auto *actualLenParam{
+                    actualTypeShape->type().charLengthParamValue()};
+                if (ifaceLenParam && actualLenParam &&
+                    ifaceLenParam->isExplicit() !=
+                        actualLenParam->isExplicit()) {
+                  if (whyNot) {
+                    *whyNot =
+                        "explicit-length vs deferred-length character results";
+                  }
+                } else {
+                  return true;
+                }
               }
             }
           }

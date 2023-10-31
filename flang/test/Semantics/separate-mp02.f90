@@ -272,10 +272,10 @@ contains
   !OK
   real module function f1()
   end
-  !ERROR: Return type of function 'f2' does not match return type of the corresponding interface body
+  !ERROR: Result of function 'f2' is not compatible with the result of the corresponding interface body: function results have distinct types: INTEGER(4) vs REAL(4)
   integer module function f2()
   end
-  !ERROR: Return type of function 'f3' does not match return type of the corresponding interface body
+  !ERROR: Result of function 'f3' is not compatible with the result of the corresponding interface body: function results have incompatible attributes
   module function f3()
     real :: f3
     pointer :: f3
@@ -333,4 +333,17 @@ submodule(m9) sm1
     !ERROR: Dummy argument 's' has type CHARACTER(KIND=1,LEN=1_8); the corresponding argument in the interface body has distinct type CHARACTER(KIND=1,LEN=0_8)
     character(len=1) s
   end subroutine
+end submodule
+
+module m10
+  interface
+    module character(2) function f()
+    end function
+  end interface
+end module
+submodule(m10) sm10
+ contains
+  !ERROR: Result of function 'f' is not compatible with the result of the corresponding interface body: function results have distinct types: CHARACTER(KIND=1,LEN=3_8) vs CHARACTER(KIND=1,LEN=2_8)
+  module character(3) function f()
+  end function
 end submodule

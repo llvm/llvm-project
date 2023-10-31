@@ -3289,11 +3289,14 @@ void SubprogramMatchHelper::Check(
     Say(symbol1, symbol2,
         "Module subprogram '%s' and its corresponding interface body are not both BIND(C)"_err_en_US);
   }
-  if (proc1->functionResult && proc2->functionResult &&
-      *proc1->functionResult != *proc2->functionResult) {
-    Say(symbol1, symbol2,
-        "Return type of function '%s' does not match return type of"
-        " the corresponding interface body"_err_en_US);
+  if (proc1->functionResult && proc2->functionResult) {
+    std::string whyNot;
+    if (!proc1->functionResult->IsCompatibleWith(
+            *proc2->functionResult, &whyNot)) {
+      Say(symbol1, symbol2,
+          "Result of function '%s' is not compatible with the result of the corresponding interface body: %s"_err_en_US,
+          whyNot);
+    }
   }
   for (int i{0}; i < nargs1; ++i) {
     const Symbol *arg1{args1[i]};
