@@ -1321,10 +1321,10 @@ public:
   bool hasAddMinMaxInsts() const { return GFX12_10Insts; }
 
   // \returns true if the target has V_PK_ADD_{MIN|MAX}_{I|U}16 instructions.
-  bool HasPkAddMinMaxInsts() const { return GFX12_10Insts; }
+  bool hasPkAddMinMaxInsts() const { return GFX12_10Insts; }
 
   // \returns true if the target has V_PK_{MIN|MAX}3_{I|U}16 instructions.
-  bool HasPkMinMax3Insts() const { return GFX12_10Insts; }
+  bool hasPkMinMax3Insts() const { return GFX12_10Insts; }
 
   // \returns true if FP8/BF8 VOP1 form of conversion to F32 is unreliable.
   bool hasCvtFP8VOP1Bug() const { return true; }

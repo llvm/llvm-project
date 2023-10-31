@@ -315,6 +315,21 @@ defm V_PK_MIN3_U16 : VOP3PInst<"v_pk_min3_u16", PK_ADD_MINMAX_Profile>;
 }
 } // End isCommutable = 1, isReMaterializable = 1
 
+// TODO: Extend pattern to select op_sel and op_sel_hi.
+class ThreeOp_v2i16_OpSelClampPats <SDPatternOperator op1, SDPatternOperator op2,
+                                    Instruction inst> : GCNPat <
+  (ThreeOpFrag<op1, op2> v2i16:$src0, v2i16:$src1, v2i16:$src2),
+  (inst SRCMODS.OP_SEL_1, VSrc_v2b16:$src0, SRCMODS.OP_SEL_1, VSrc_v2b16:$src1,
+        SRCMODS.OP_SEL_1, VSrc_v2b16:$src2, DSTCLAMP.NONE, 0)
+>;
+
+let SubtargetPredicate = HasPkAddMinMaxInsts in {
+def : ThreeOp_v2i16_OpSelClampPats<add, smax, V_PK_ADD_MAX_I16>;
+def : ThreeOp_v2i16_OpSelClampPats<add, umax, V_PK_ADD_MAX_U16>;
+def : ThreeOp_v2i16_OpSelClampPats<add, smin, V_PK_ADD_MIN_I16>;
+def : ThreeOp_v2i16_OpSelClampPats<add, umin, V_PK_ADD_MIN_U16>;
+}
+
 // Defines patterns that extract signed 4bit from each Idx[0].
 foreach Idx = [[0,28],[4,24],[8,20],[12,16],[16,12],[20,8],[24,4]] in
   def ExtractSigned4bit_#Idx[0] : PatFrag<(ops node:$src),
