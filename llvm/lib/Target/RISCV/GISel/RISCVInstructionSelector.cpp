@@ -784,8 +784,7 @@ bool RISCVInstructionSelector::selectSelect(MachineInstr &MI,
   Register RHS = RISCV::X0;
   RISCVCC::CondCode CC = RISCVCC::COND_NE;
 
-  bool Op1IsICMP = mi_match(LHS, MRI, m_GICmp(m_Pred(), m_Reg(), m_Reg()));
-  if (Op1IsICMP)
+  if (mi_match(LHS, MRI, m_GICmp(m_Pred(), m_Reg(), m_Reg())))
     getICMPOperandsForBranch(*MRI.getVRegDef(LHS), MIB, MRI, CC, LHS, RHS);
 
   MachineInstr *Result = MIB.buildInstr(RISCV::Select_GPR_Using_CC_GPR)
