@@ -186,6 +186,8 @@ private:
       const char *) const;
   LineClassification ClassifyLine(const char *) const;
   void SourceFormChange(std::string &&);
+  bool CompilerDirectiveContinuation(TokenSequence &, const char *sentinel);
+  bool SourceLineContinuation(TokenSequence &);
 
   Messages &messages_;
   CookedSource &cooked_;
