@@ -4191,18 +4191,23 @@ bool SubprogramVisitor::HandlePreviousCalls(
     // ENTRY's name.  We have to replace that symbol in situ to avoid the
     // obligation to rewrite symbol pointers in the parse tree.
     if (!symbol.test(subpFlag)) {
+      auto other{subpFlag == Symbol::Flag::Subroutine
+              ? Symbol::Flag::Function
+              : Symbol::Flag::Subroutine};
       // External statements issue an explicit EXTERNAL attribute.
       if (symbol.attrs().test(Attr::EXTERNAL) &&
           !symbol.implicitAttrs().test(Attr::EXTERNAL)) {
         // Warn if external statement previously declared.
         Say(name,
             "EXTERNAL attribute was already specified on '%s'"_warn_en_US);
-      } else {
+      } else if (symbol.test(other)) {
         Say2(name,
             subpFlag == Symbol::Flag::Function
                 ? "'%s' was previously called as a subroutine"_err_en_US
                 : "'%s' was previously called as a function"_err_en_US,
             symbol, "Previous call of '%s'"_en_US);
+      } else {
+        symbol.set(subpFlag);
       }
     }
     EntityDetails entity;
@@ -8163,6 +8168,7 @@ bool ResolveNamesVisitor::Pre(const parser::PointerAssignmentStmt &x) {
       // Unknown target of procedure pointer must be an external procedure
       Symbol &symbol{MakeSymbol(
           context().globalScope(), name->source, Attrs{Attr::EXTERNAL})};
+      symbol.implicitAttrs().set(Attr::EXTERNAL);
       Resolve(*name, symbol);
       ConvertToProcEntity(symbol);
       return false;
