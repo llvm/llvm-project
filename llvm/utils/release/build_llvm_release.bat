@@ -261,6 +261,23 @@ set all_cmake_flags=^
   -DCMAKE_RC=%stage0_bin_dir%/llvm-windres.exe
 set cmake_flags=%all_cmake_flags:\=/%
 
+
+REM Build Clang with instrumentation.
+mkdir build64.instr
+cd build64.instr
+cmake -GNinja %cmake_flags% -DLLVM_BUILD_INSTRUMENTED=IR ..\llvm-project\llvm || exit /b 1
+ninja clang || ninja clang || ninja clang || exit /b 1
+cd ..
+REM Run instrumented Clang to generate a profile.
+curl -L https://commondatastorage.googleapis.com/chromium-browser-clang/pgo_training-1.ii -o train.ii || exit /b 1
+set profile=%build_dir:\=/%/build64.instr/profile.profdata
+build64.instr\bin\clang++ -target x86_64-unknown-unknown -O2 -g -std=c++14 -fno-exceptions -fno-rtti -w -c train.ii
+%stage0_bin_dir%\llvm-profdata merge -output=%profile% build64.instr\profiles\*.profraw || exit /b 1
+set cmake_flags=%cmake_flags% -DLLVM_PROFDATA_FILE=%profile%
+
+REM Enable ThinLTO
+set cmake_flags=%cmake_flags% -DLLVM_ENABLE_LTO=Thin
+
 mkdir build64
 cd build64
 cmake -GNinja %cmake_flags% ..\llvm-project\llvm || exit /b 1
