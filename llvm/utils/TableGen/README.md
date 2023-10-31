@@ -23,6 +23,7 @@ def HelloWorld {        // Hello
   string msg = "Hello world!";
 }
 ```
+[Try this example on Compiler Explorer.](https://godbolt.org/z/13xo1P5oz)
 
 The internalized records are passed on to various backends, which extract
 information from a subset of the records and generate one or more output files.
