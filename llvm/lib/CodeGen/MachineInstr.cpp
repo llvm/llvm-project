@@ -2481,3 +2481,48 @@ MachineInstr::getFirst5RegLLTs() const {
       Reg2, getRegInfo()->getType(Reg2), Reg3, getRegInfo()->getType(Reg3),
       Reg4, getRegInfo()->getType(Reg4));
 }
+
+void MachineInstr::insert(mop_iterator InsertBefore,
+                          ArrayRef<MachineOperand> Ops) {
+  assert(InsertBefore != nullptr && "invalid iterator");
+  assert(InsertBefore->getParent() == this &&
+         "iterator points to operand of other inst");
+  if (Ops.empty())
+    return;
+
+  // Do one pass to untie operands.
+  SmallDenseMap<unsigned, unsigned> TiedOpIndices;
+  for (const MachineOperand &MO : operands()) {
+    if (MO.isReg() && MO.isTied()) {
+      unsigned OpNo = getOperandNo(&MO);
+      unsigned TiedTo = findTiedOperandIdx(OpNo);
+      TiedOpIndices[OpNo] = TiedTo;
+      untieRegOperand(OpNo);
+    }
+  }
+
+  unsigned OpIdx = getOperandNo(InsertBefore);
+  unsigned NumOperands = getNumOperands();
+  unsigned OpsToMove = NumOperands - OpIdx;
+
+  SmallVector<MachineOperand> MovingOps;
+  MovingOps.reserve(OpsToMove);
+
+  for (unsigned I = 0; I < OpsToMove; ++I) {
+    MovingOps.emplace_back(getOperand(OpIdx));
+    removeOperand(OpIdx);
+  }
+  for (const MachineOperand &MO : Ops)
+    addOperand(MO);
+  for (const MachineOperand &OpMoved : MovingOps)
+    addOperand(OpMoved);
+
+  // Re-tie operands.
+  for (auto [Tie1, Tie2] : TiedOpIndices) {
+    if (Tie1 >= OpIdx)
+      Tie1 += Ops.size();
+    if (Tie2 >= OpIdx)
+      Tie2 += Ops.size();
+    tieOperands(Tie1, Tie2);
+  }
+}

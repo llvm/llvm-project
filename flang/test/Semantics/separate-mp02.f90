@@ -51,9 +51,9 @@ contains
     real :: y
   end
   module subroutine s6(x, y)
-    !ERROR: Dummy argument 'x' has type INTEGER(4); the corresponding argument in the interface body has type REAL(4)
+    !ERROR: Dummy argument 'x' has type INTEGER(4); the corresponding argument in the interface body has distinct type REAL(4)
     integer :: x
-    !ERROR: Dummy argument 'y' has type REAL(8); the corresponding argument in the interface body has type REAL(4)
+    !ERROR: Dummy argument 'y' has type REAL(8); the corresponding argument in the interface body has distinct type REAL(4)
     real(8) :: y
   end
   module subroutine s7(x, y, z)
@@ -72,10 +72,10 @@ contains
   end
   module subroutine s9(x, y, z, w)
     character(len=4) :: x
-    !ERROR: Dummy argument 'y' has type CHARACTER(KIND=1,LEN=5_8); the corresponding argument in the interface body has type CHARACTER(KIND=1,LEN=4_8)
+    !ERROR: Dummy argument 'y' has type CHARACTER(KIND=1,LEN=5_8); the corresponding argument in the interface body has distinct type CHARACTER(KIND=1,LEN=4_8)
     character(len=5) :: y
     character(len=*) :: z
-    !ERROR: Dummy argument 'w' has type CHARACTER(KIND=1,LEN=4_8); the corresponding argument in the interface body has type CHARACTER(KIND=1,LEN=*)
+    !ERROR: Dummy argument 'w' has type CHARACTER(KIND=1,LEN=4_8); the corresponding argument in the interface body has distinct type CHARACTER(KIND=1,LEN=*)
     character(len=4) :: w
   end
 end
@@ -330,7 +330,7 @@ submodule(m9) sm1
     character(len=-1) s ! ok
   end subroutine
   module subroutine sub2(s)
-    !ERROR: Dummy argument 's' has type CHARACTER(KIND=1,LEN=1_8); the corresponding argument in the interface body has type CHARACTER(KIND=1,LEN=0_8)
+    !ERROR: Dummy argument 's' has type CHARACTER(KIND=1,LEN=1_8); the corresponding argument in the interface body has distinct type CHARACTER(KIND=1,LEN=0_8)
     character(len=1) s
   end subroutine
 end submodule
