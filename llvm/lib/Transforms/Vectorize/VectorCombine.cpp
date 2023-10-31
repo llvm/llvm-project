@@ -14,6 +14,7 @@
 
 #include "llvm/Transforms/Vectorize/VectorCombine.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
@@ -1272,6 +1273,12 @@ bool VectorCombine::scalarizeLoadExtract(Instruction &I) {
   Instruction *LastCheckedInst = LI;
   unsigned NumInstChecked = 0;
   DenseMap<ExtractElementInst *, ScalarizationResult> NeedFreeze;
+  auto FailureGuard = make_scope_exit([&]() {
+    // If the transform is aborted, discard the ScalarizationResults.
+    for (auto &Pair : NeedFreeze)
+      Pair.second.discard();
+  });
+
   // Check if all users of the load are extracts with no memory modifications
   // between the load and the extract. Compute the cost of both the original
   // code and the scalarized version.
@@ -1339,6 +1346,7 @@ bool VectorCombine::scalarizeLoadExtract(Instruction &I) {
     replaceValue(*EI, *NewLoad);
   }
 
+  FailureGuard.release();
   return true;
 }
 
