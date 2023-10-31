@@ -37,7 +37,7 @@
 // OBJDUMP-NEXT: 0040 01000000 01000000 08000000 00000000
 // OBJDUMP-NEXT: 0050 00000000 00000000 00000000 00000000
 // OBJDUMP-NEXT: 0060 00000000 00000000 00000000 00000000
-// OBJDUMP-NEXT: 0070 005021c4 1f0f007f 5e040000 00000000
+// OBJDUMP-NEXT: 0070 005021c4 410f007f 5e040000 00000000
 // special_sgpr
 // OBJDUMP-NEXT: 0080 00000000 00000000 00000000 00000000
 // OBJDUMP-NEXT: 0090 00000000 00000000 00000000 00000000
@@ -107,7 +107,7 @@ max_lds_size:
   .amdhsa_group_segment_fixed_size 1
   .amdhsa_private_segment_fixed_size 1
   .amdhsa_kernarg_size 8
-  .amdhsa_user_sgpr_count 15
+  .amdhsa_user_sgpr_count 32
   .amdhsa_user_sgpr_dispatch_ptr 1
   .amdhsa_user_sgpr_queue_ptr 1
   .amdhsa_user_sgpr_kernarg_segment_ptr 1
@@ -144,7 +144,7 @@ max_lds_size:
 // ASM-NEXT: .amdhsa_group_segment_fixed_size 1
 // ASM-NEXT: .amdhsa_private_segment_fixed_size 1
 // ASM-NEXT: .amdhsa_kernarg_size 8
-// ASM-NEXT: .amdhsa_user_sgpr_count 15
+// ASM-NEXT: .amdhsa_user_sgpr_count 32
 // ASM-NEXT: .amdhsa_user_sgpr_dispatch_ptr 1
 // ASM-NEXT: .amdhsa_user_sgpr_queue_ptr 1
 // ASM-NEXT: .amdhsa_user_sgpr_kernarg_segment_ptr 1
