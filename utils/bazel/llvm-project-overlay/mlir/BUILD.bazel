@@ -8398,6 +8398,7 @@ cc_library(
         ":LLVMIntrinsicConversionIncGen",
         ":Support",
         ":TranslateLib",
+        "//llvm:BinaryFormat",
         "//llvm:Core",
         "//llvm:IRPrinter",
         "//llvm:IRReader",
