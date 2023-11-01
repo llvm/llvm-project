@@ -79,12 +79,7 @@ module {
        [  5.0,  6.0,  7.0,  8.0 ]
     ]> : tensor<2x4xf64>
 
-    //
-    // Convert dense tensor directly to various sparse tensors.
-    //    tensor1: stored as 2x3x4
-    //    tensor2: stored as 3x4x2
-    //    tensor3: stored as 4x2x3
-    //
+
     %1 = sparse_tensor.convert %t : tensor<2x4xf64> to tensor<2x4xf64, #CSR>
     %2 = sparse_tensor.convert %1 : tensor<2x4xf64, #CSR> to tensor<2x4xf64, #BSR>
     %3 = sparse_tensor.convert %2 : tensor<2x4xf64, #BSR> to tensor<2x4xf64, #CSC>
