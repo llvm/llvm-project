@@ -402,9 +402,8 @@ Error GenericKernelTy::init(GenericDeviceTy &GenericDevice,
     DP("Failed to read kernel environment for '%s': %s\n"
        "Using default SPMD (2) execution mode\n",
        Name, ErrStr.data());
-    KernelEnvironment.Configuration.ExecMode = OMP_TGT_EXEC_MODE_SPMD;
-    KernelEnvironment.Configuration.MayUseNestedParallelism = /*Unknown=*/2;
-    KernelEnvironment.Configuration.UseGenericStateMachine = /*Unknown=*/2;
+    assert(KernelEnvironment.Configuration.ReductionBufferSize == 0 &&
+           "Default initialization failed.");
   }
 
   // Max = Config.Max > 0 ? min(Config.Max, Device.Max) : Device.Max;
@@ -421,6 +420,43 @@ Error GenericKernelTy::init(GenericDeviceTy &GenericDevice,
           : GenericDevice.getDefaultNumThreads();
 
   return initImpl(GenericDevice, Image);
+}
+
+Expected<KernelLaunchEnvironmentTy *>
+GenericKernelTy::getKernelLaunchEnvironment(
+    GenericDeviceTy &GenericDevice,
+    AsyncInfoWrapperTy &AsyncInfoWrapper) const {
+  // TODO: Check if the kernel needs a launch environment.
+  auto AllocOrErr = GenericDevice.dataAlloc(sizeof(KernelLaunchEnvironmentTy),
+                                            /*HostPtr=*/nullptr,
+                                            TargetAllocTy::TARGET_ALLOC_DEVICE);
+  if (!AllocOrErr)
+    return AllocOrErr.takeError();
+
+  // Remember to free the memory later.
+  AsyncInfoWrapper.freeAllocationAfterSynchronization(*AllocOrErr);
+
+  /// Use the KLE in the __tgt_async_info to ensure a stable address for the
+  /// async data transfer.
+  auto &LocalKLE = (*AsyncInfoWrapper).KernelLaunchEnvironment;
+  LocalKLE = KernelLaunchEnvironment;
+  if (KernelEnvironment.Configuration.ReductionBufferSize) {
+    auto AllocOrErr = GenericDevice.dataAlloc(
+        KernelEnvironment.Configuration.ReductionBufferSize,
+        /*HostPtr=*/nullptr, TargetAllocTy::TARGET_ALLOC_DEVICE);
+    if (!AllocOrErr)
+      return AllocOrErr.takeError();
+    LocalKLE.ReductionBuffer = *AllocOrErr;
+    // Remember to free the memory later.
+    AsyncInfoWrapper.freeAllocationAfterSynchronization(*AllocOrErr);
+  }
+
+  auto Err = GenericDevice.dataSubmit(*AllocOrErr, &LocalKLE,
+                                      sizeof(KernelLaunchEnvironmentTy),
+                                      AsyncInfoWrapper);
+  if (Err)
+    return Err;
+  return static_cast<KernelLaunchEnvironmentTy *>(*AllocOrErr);
 }
 
 Error GenericKernelTy::printLaunchInfo(GenericDeviceTy &GenericDevice,
@@ -448,8 +484,14 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
   llvm::SmallVector<void *, 16> Args;
   llvm::SmallVector<void *, 16> Ptrs;
 
-  void *KernelArgsPtr = prepareArgs(GenericDevice, ArgPtrs, ArgOffsets,
-                                    KernelArgs.NumArgs, Args, Ptrs);
+  auto KernelLaunchEnvOrErr =
+      getKernelLaunchEnvironment(GenericDevice, AsyncInfoWrapper);
+  if (!KernelLaunchEnvOrErr)
+    return KernelLaunchEnvOrErr.takeError();
+
+  void *KernelArgsPtr =
+      prepareArgs(GenericDevice, ArgPtrs, ArgOffsets, KernelArgs.NumArgs, Args,
+                  Ptrs, *KernelLaunchEnvOrErr);
 
   uint32_t NumThreads = getNumThreads(GenericDevice, KernelArgs.ThreadLimit);
   uint64_t NumBlocks =
@@ -464,19 +506,24 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
                     KernelArgsPtr, AsyncInfoWrapper);
 }
 
-void *GenericKernelTy::prepareArgs(GenericDeviceTy &GenericDevice,
-                                   void **ArgPtrs, ptrdiff_t *ArgOffsets,
-                                   int32_t NumArgs,
-                                   llvm::SmallVectorImpl<void *> &Args,
-                                   llvm::SmallVectorImpl<void *> &Ptrs) const {
+void *GenericKernelTy::prepareArgs(
+    GenericDeviceTy &GenericDevice, void **ArgPtrs, ptrdiff_t *ArgOffsets,
+    uint32_t &NumArgs, llvm::SmallVectorImpl<void *> &Args,
+    llvm::SmallVectorImpl<void *> &Ptrs,
+    KernelLaunchEnvironmentTy *KernelLaunchEnvironment) const {
+  if (isCtorOrDtor())
+    return nullptr;
+
+  NumArgs += 1;
+
   Args.resize(NumArgs);
   Ptrs.resize(NumArgs);
 
-  if (NumArgs == 0)
-    return nullptr;
+  Ptrs[0] = KernelLaunchEnvironment;
+  Args[0] = &Ptrs[0];
 
-  for (int I = 0; I < NumArgs; ++I) {
-    Ptrs[I] = (void *)((intptr_t)ArgPtrs[I] + ArgOffsets[I]);
+  for (int I = 1; I < NumArgs; ++I) {
+    Ptrs[I] = (void *)((intptr_t)ArgPtrs[I - 1] + ArgOffsets[I - 1]);
     Args[I] = &Ptrs[I];
   }
   return &Args[0];
@@ -1227,7 +1274,15 @@ Error GenericDeviceTy::synchronize(__tgt_async_info *AsyncInfo) {
   if (!AsyncInfo || !AsyncInfo->Queue)
     return Plugin::error("Invalid async info queue");
 
-  return synchronizeImpl(*AsyncInfo);
+  if (auto Err = synchronizeImpl(*AsyncInfo))
+    return Err;
+
+  for (auto *Ptr : AsyncInfo->AssociatedAllocations)
+    if (auto Err = dataDelete(Ptr, TargetAllocTy::TARGET_ALLOC_DEVICE))
+      return Err;
+  AsyncInfo->AssociatedAllocations.clear();
+
+  return Plugin::success();
 }
 
 Error GenericDeviceTy::queryAsync(__tgt_async_info *AsyncInfo) {
