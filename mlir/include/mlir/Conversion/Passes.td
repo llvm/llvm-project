@@ -589,12 +589,6 @@ def ConvertVulkanLaunchFuncToVulkanCallsPass
     This pass is only intended for the mlir-vulkan-runner.
   }];
 
-  let options = [
-     Option<"useOpaquePointers", "use-opaque-pointers", "bool",
-            /*default=*/"true", "Generate LLVM IR using opaque pointers "
-            "instead of typed pointers">
-  ];
-
   let dependentDialects = ["LLVM::LLVMDialect"];
 }
 
