@@ -9,7 +9,6 @@
 #ifndef LLVM_CLANG_FRONTEND_COMPILERINVOCATION_H
 #define LLVM_CLANG_FRONTEND_COMPILERINVOCATION_H
 
-#include "clang/APINotes/APINotesOptions.h"
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/FileSystemOptions.h"
@@ -93,9 +92,6 @@ protected:
 
   std::shared_ptr<MigratorOptions> MigratorOpts;
 
-  /// Options controlling API notes.
-  std::shared_ptr<APINotesOptions> APINotesOpts;
-
   /// Options controlling IRgen and the backend.
   std::shared_ptr<CodeGenOptions> CodeGenOpts;
 
@@ -135,7 +131,6 @@ public:
   const PreprocessorOptions &getPreprocessorOpts() const { return *PPOpts; }
   const AnalyzerOptions &getAnalyzerOpts() const { return *AnalyzerOpts; }
   const MigratorOptions &getMigratorOpts() const { return *MigratorOpts; }
-  const APINotesOptions &getAPINotesOpts() const { return *APINotesOpts; }
   const CodeGenOptions &getCodeGenOpts() const { return *CodeGenOpts; }
   const FileSystemOptions &getFileSystemOpts() const { return *FSOpts; }
   const FrontendOptions &getFrontendOpts() const { return *FrontendOpts; }
@@ -247,7 +242,6 @@ public:
   PreprocessorOptions &getPreprocessorOpts() { return *PPOpts; }
   AnalyzerOptions &getAnalyzerOpts() { return *AnalyzerOpts; }
   MigratorOptions &getMigratorOpts() { return *MigratorOpts; }
-  APINotesOptions &getAPINotesOpts() { return *APINotesOpts; }
   CodeGenOptions &getCodeGenOpts() { return *CodeGenOpts; }
   FileSystemOptions &getFileSystemOpts() { return *FSOpts; }
   FrontendOptions &getFrontendOpts() { return *FrontendOpts; }

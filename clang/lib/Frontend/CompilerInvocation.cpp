@@ -3261,17 +3261,6 @@ static bool ParseHeaderSearchArgs(HeaderSearchOptions &Opts, ArgList &Args,
   return Diags.getNumErrors() == NumErrorsBefore;
 }
 
-static void ParseAPINotesArgs(APINotesOptions &Opts, ArgList &Args,
-                              DiagnosticsEngine &diags) {
-  if (const Arg *A = Args.getLastArg(OPT_fapinotes_swift_version)) {
-    if (Opts.SwiftVersion.tryParse(A->getValue()))
-      diags.Report(diag::err_drv_invalid_value)
-          << A->getAsString(Args) << A->getValue();
-  }
-  for (const Arg *A : Args.filtered(OPT_iapinotes_modules))
-    Opts.ModuleSearchPaths.push_back(A->getValue());
-}
-
 /// Check if input file kind and language standard are compatible.
 static bool IsInputCompatibleWithStandard(InputKind IK,
                                           const LangStandard &S) {
@@ -4549,7 +4538,6 @@ bool CompilerInvocation::CreateFromArgsImpl(
   llvm::Triple T(Res.getTargetOpts().Triple);
   ParseHeaderSearchArgs(Res.getHeaderSearchOpts(), Args, Diags,
                         Res.getFileSystemOpts().WorkingDir);
-  ParseAPINotesArgs(Res.getAPINotesOpts(), Args, Diags);
 
   ParseLangArgs(LangOpts, Args, DashX, T, Res.getPreprocessorOpts().Includes,
                 Diags);
