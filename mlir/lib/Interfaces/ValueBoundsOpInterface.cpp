@@ -25,6 +25,32 @@ namespace mlir {
 #include "mlir/Interfaces/ValueBoundsOpInterface.cpp.inc"
 } // namespace mlir
 
+HyperrectangularSlice::HyperrectangularSlice(ArrayRef<OpFoldResult> offsets,
+                                             ArrayRef<OpFoldResult> sizes,
+                                             ArrayRef<OpFoldResult> strides)
+    : mixedOffsets(offsets), mixedSizes(sizes), mixedStrides(strides) {
+  assert(offsets.size() == sizes.size() &&
+         "expected same number of offsets, sizes, strides");
+  assert(offsets.size() == strides.size() &&
+         "expected same number of offsets, sizes, strides");
+}
+
+HyperrectangularSlice::HyperrectangularSlice(ArrayRef<OpFoldResult> offsets,
+                                             ArrayRef<OpFoldResult> sizes)
+    : mixedOffsets(offsets), mixedSizes(sizes) {
+  assert(offsets.size() == sizes.size() &&
+         "expected same number of offsets and sizes");
+  // Assume that all strides are 1.
+  if (offsets.empty())
+    return;
+  MLIRContext *ctx = offsets.front().getContext();
+  mixedStrides.append(offsets.size(), Builder(ctx).getIndexAttr(1));
+}
+
+HyperrectangularSlice::HyperrectangularSlice(OffsetSizeAndStrideOpInterface op)
+    : HyperrectangularSlice(op.getMixedOffsets(), op.getMixedSizes(),
+                            op.getMixedStrides()) {}
+
 /// If ofr is a constant integer or an IntegerAttr, return the integer.
 static std::optional<int64_t> getConstantIntValue(OpFoldResult ofr) {
   // Case 1: Check for Constant integer.
@@ -524,19 +550,44 @@ ValueBoundsConstraintSet::areEqual(Value value1, Value value2,
   return *delta == 0;
 }
 
-FailureOr<bool> ValueBoundsConstraintSet::areOverlappingSlices(
-    OffsetSizeAndStrideOpInterface slice1,
-    OffsetSizeAndStrideOpInterface slice2) {
-  assert(slice1.getStaticOffsets().size() == slice1.getStaticOffsets().size() &&
+FailureOr<bool> ValueBoundsConstraintSet::areEqual(OpFoldResult ofr1,
+                                                   OpFoldResult ofr2) {
+  Builder b(ofr1.getContext());
+  AffineMap map =
+      AffineMap::get(/*dimCount=*/0, /*symbolCount=*/2,
+                     b.getAffineSymbolExpr(0) - b.getAffineSymbolExpr(1));
+  SmallVector<OpFoldResult> ofrOperands;
+  ofrOperands.push_back(ofr1);
+  ofrOperands.push_back(ofr2);
+  SmallVector<Value> valueOperands;
+  AffineMap foldedMap =
+      foldAttributesIntoMap(b, map, ofrOperands, valueOperands);
+  ValueDimList valueDims;
+  for (Value v : valueOperands) {
+    assert(v.getType().isIndex() && "expected index type");
+    valueDims.emplace_back(v, std::nullopt);
+  }
+  FailureOr<int64_t> delta =
+      computeConstantBound(presburger::BoundType::EQ, foldedMap, valueDims);
+  if (failed(delta))
+    return failure();
+  return *delta == 0;
+}
+
+FailureOr<bool>
+ValueBoundsConstraintSet::areOverlappingSlices(MLIRContext *ctx,
+                                               HyperrectangularSlice slice1,
+                                               HyperrectangularSlice slice2) {
+  assert(slice1.getMixedOffsets().size() == slice1.getMixedOffsets().size() &&
          "expected slices of same rank");
-  assert(slice1.getStaticSizes().size() == slice1.getStaticSizes().size() &&
+  assert(slice1.getMixedSizes().size() == slice1.getMixedSizes().size() &&
          "expected slices of same rank");
-  assert(slice1.getStaticStrides().size() == slice1.getStaticStrides().size() &&
+  assert(slice1.getMixedStrides().size() == slice1.getMixedStrides().size() &&
          "expected slices of same rank");
 
-  Builder b(slice1.getContext());
+  Builder b(ctx);
   bool foundUnknownBound = false;
-  for (int64_t i = 0, e = slice1.getStaticOffsets().size(); i < e; ++i) {
+  for (int64_t i = 0, e = slice1.getMixedOffsets().size(); i < e; ++i) {
     AffineMap map =
         AffineMap::get(/*dimCount=*/0, /*symbolCount=*/4,
                        b.getAffineSymbolExpr(0) +
@@ -585,6 +636,48 @@ FailureOr<bool> ValueBoundsConstraintSet::areOverlappingSlices(
 
   // All bounds could be computed and none of the above cases applied.
   // Therefore, the slices are guaranteed to overlap.
+  return true;
+}
+
+FailureOr<bool>
+ValueBoundsConstraintSet::areEquivalentSlices(MLIRContext *ctx,
+                                              HyperrectangularSlice slice1,
+                                              HyperrectangularSlice slice2) {
+  assert(slice1.getMixedOffsets().size() == slice1.getMixedOffsets().size() &&
+         "expected slices of same rank");
+  assert(slice1.getMixedSizes().size() == slice1.getMixedSizes().size() &&
+         "expected slices of same rank");
+  assert(slice1.getMixedStrides().size() == slice1.getMixedStrides().size() &&
+         "expected slices of same rank");
+
+  // The two slices are equivalent if all of their offsets, sizes and strides
+  // are equal. If equality cannot be determined for at least one of those
+  // values, equivalence cannot be determined and this function returns
+  // "failure".
+  for (auto [offset1, offset2] :
+       llvm::zip_equal(slice1.getMixedOffsets(), slice2.getMixedOffsets())) {
+    FailureOr<bool> equal = areEqual(offset1, offset2);
+    if (failed(equal))
+      return failure();
+    if (!equal.value())
+      return false;
+  }
+  for (auto [size1, size2] :
+       llvm::zip_equal(slice1.getMixedSizes(), slice2.getMixedSizes())) {
+    FailureOr<bool> equal = areEqual(size1, size2);
+    if (failed(equal))
+      return failure();
+    if (!equal.value())
+      return false;
+  }
+  for (auto [stride1, stride2] :
+       llvm::zip_equal(slice1.getMixedStrides(), slice2.getMixedStrides())) {
+    FailureOr<bool> equal = areEqual(stride1, stride2);
+    if (failed(equal))
+      return failure();
+    if (!equal.value())
+      return false;
+  }
   return true;
 }
 

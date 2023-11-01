@@ -21,6 +21,31 @@
 namespace mlir {
 class OffsetSizeAndStrideOpInterface;
 
+/// A hyperrectangular slice, represented as a list of offsets, sizes and
+/// strides.
+class HyperrectangularSlice {
+public:
+  HyperrectangularSlice(ArrayRef<OpFoldResult> offsets,
+                        ArrayRef<OpFoldResult> sizes,
+                        ArrayRef<OpFoldResult> strides);
+
+  /// Create a hyperrectangular slice with unit strides.
+  HyperrectangularSlice(ArrayRef<OpFoldResult> offsets,
+                        ArrayRef<OpFoldResult> sizes);
+
+  /// Infer a hyperrectangular slice from `OffsetSizeAndStrideOpInterface`.
+  HyperrectangularSlice(OffsetSizeAndStrideOpInterface op);
+
+  ArrayRef<OpFoldResult> getMixedOffsets() const { return mixedOffsets; }
+  ArrayRef<OpFoldResult> getMixedSizes() const { return mixedSizes; }
+  ArrayRef<OpFoldResult> getMixedStrides() const { return mixedStrides; }
+
+private:
+  SmallVector<OpFoldResult> mixedOffsets;
+  SmallVector<OpFoldResult> mixedSizes;
+  SmallVector<OpFoldResult> mixedStrides;
+};
+
 using ValueDimList = SmallVector<std::pair<Value, std::optional<int64_t>>>;
 
 /// A helper class to be used with `ValueBoundsOpInterface`. This class stores a
@@ -182,12 +207,34 @@ public:
                                   std::optional<int64_t> dim1 = std::nullopt,
                                   std::optional<int64_t> dim2 = std::nullopt);
 
+  /// Compute whether the given values/attributes are equal. Return "failure" if
+  /// equality could not be determined.
+  ///
+  /// `ofr1`/`ofr2` must be of index type.
+  static FailureOr<bool> areEqual(OpFoldResult ofr1, OpFoldResult ofr2);
+
   /// Return "true" if the given slices are guaranteed to be overlapping.
   /// Return "false" if the given slices are guaranteed to be non-overlapping.
   /// Return "failure" if unknown.
-  static FailureOr<bool>
-  areOverlappingSlices(OffsetSizeAndStrideOpInterface slice1,
-                       OffsetSizeAndStrideOpInterface slice2);
+  ///
+  /// Slices are overlapping if for all dimensions:
+  /// *      offset1 + size1 * stride1 <= offset2
+  /// * and  offset2 + size2 * stride2 <= offset1
+  ///
+  /// Slice are non-overlapping if the above constraint is not satisfied for
+  /// at least one dimension.
+  static FailureOr<bool> areOverlappingSlices(MLIRContext *ctx,
+                                              HyperrectangularSlice slice1,
+                                              HyperrectangularSlice slice2);
+
+  /// Return "true" if the given slices are guaranteed to be equivalent.
+  /// Return "false" if the given slices are guaranteed to be non-equivalent.
+  /// Return "failure" if unknown.
+  ///
+  /// Slices are equivalent if their offsets, sizes and strices are equal.
+  static FailureOr<bool> areEquivalentSlices(MLIRContext *ctx,
+                                             HyperrectangularSlice slice1,
+                                             HyperrectangularSlice slice2);
 
   /// Add a bound for the given index-typed value or shaped value. This function
   /// returns a builder that adds the bound.

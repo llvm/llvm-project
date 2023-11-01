@@ -10,6 +10,7 @@
 #define MLIR_INTERFACES_SUBSETOPINTERFACE_H_
 
 #include "mlir/IR/OpDefinition.h"
+#include "mlir/Interfaces/ValueBoundsOpInterface.h"
 
 namespace mlir {
 class SubsetOpInterface;
@@ -27,9 +28,22 @@ OpOperand &defaultGetDestinationOperand(Operation *op);
 /// `DestinationStyleOpInterface`.
 OpResult defaultGetUpdatedDestination(Operation *op);
 
-/// Default implementation of `isEquivalentSubset`.
+/// Default implementation of `SubsetInsertionOpInterface::isEquivalentSubset`.
 bool defaultIsEquivalentSubset(Operation *op, Value candidate,
                                function_ref<bool(Value, Value)> equivalenceFn);
+
+/// Default implementation of `SubsetOpInterface::operatesOnEquivalentSubset`.
+bool defaultOperatesOnEquivalentSubset(
+    Operation *op, SubsetOpInterface candidate,
+    function_ref<bool(Value, Value)> equivalenceFn);
+
+/// Default implementation of `SubsetOpInterface::operatesOnDisjointSubset`.
+bool defaultOperatesOnDisjointSubset(
+    Operation *op, SubsetOpInterface candidate,
+    function_ref<bool(Value, Value)> equivalenceFn);
+
+/// Return the container that the given subset op is operating on.
+Value getTensorContainer(Operation *op);
 
 /// Verify `SubsetOpInterface`.
 LogicalResult verifySubsetOpInterface(SubsetOpInterface op);

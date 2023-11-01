@@ -93,10 +93,12 @@ add_mlir_library(MLIRSubsetOpInterface
   DEPENDS
   MLIRDestinationStyleOpInterface
   MLIRSubsetOpInterfaceIncGen
+  MLIRValueBoundsOpInterface
 
   LINK_LIBS PUBLIC
   MLIRDestinationStyleOpInterface
   MLIRIR
+  MLIRValueBoundsOpInterface
   )
 
 add_mlir_interface_library(TilingInterface)

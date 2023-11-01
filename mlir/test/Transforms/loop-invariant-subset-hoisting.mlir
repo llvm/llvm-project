@@ -7,6 +7,11 @@ func.func @hoist_matching_extract_insert(%arg: tensor<?xf32>) -> tensor<?xf32> {
   %ub = "test.foo"() : () -> (index)
   %step = "test.foo"() : () -> (index)
 
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %add = arith.addi %c0, %c1 : index
+  %sub = arith.subi %add, %c1 : index
+
   // CHECK: %[[extract:.*]] = tensor.extract_slice %[[arg]]
   // CHECK: %[[for:.*]]:2 = scf.for {{.*}} iter_args(%[[t:.*]] = %[[arg]], %[[hoisted:.*]] = %[[extract]])
   %0 = scf.for %iv = %lb to %ub step %step iter_args(%t = %arg) -> (tensor<?xf32>) {
@@ -17,7 +22,9 @@ func.func @hoist_matching_extract_insert(%arg: tensor<?xf32>) -> tensor<?xf32> {
     %1 = tensor.extract_slice %t[0][5][1] : tensor<?xf32> to tensor<5xf32>
     // CHECK: %[[foo:.*]] = "test.foo"(%[[hoisted]])
     %2 = "test.foo"(%1) : (tensor<5xf32>) -> (tensor<5xf32>)
-    %3 = tensor.insert_slice %2 into %t[0][5][1] : tensor<5xf32> into tensor<?xf32>
+    // Obfuscate the IR by inserting at offset %sub instead of 0; both of them
+    // have the same value.
+    %3 = tensor.insert_slice %2 into %t[%sub][5][1] : tensor<5xf32> into tensor<?xf32>
     // CHECK: scf.yield %[[t]], %[[foo]]
     scf.yield %3 : tensor<?xf32>
   }
