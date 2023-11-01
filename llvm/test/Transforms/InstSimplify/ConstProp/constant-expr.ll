@@ -28,15 +28,8 @@
 @N = global i1 icmp ne (i1 icmp ult (ptr @X, ptr @Y), i1 false)
 ; CHECK: @N = global i1 icmp ult (ptr @X, ptr @Y)
 
-@O = global i1 icmp eq (i32 zext (i1 icmp ult (ptr @X, ptr @Y) to i32), i32 0)
-; CHECK: @O = global i1 icmp uge (ptr @X, ptr @Y)
-
 ; PR9011
 
-@pr9011_1 = constant <4 x i32> zext (<4 x i8> zeroinitializer to <4 x i32>)
-; CHECK: pr9011_1 = constant <4 x i32> zeroinitializer
-@pr9011_2 = constant <4 x i32> sext (<4 x i8> zeroinitializer to <4 x i32>)
-; CHECK: pr9011_2 = constant <4 x i32> zeroinitializer
 @pr9011_3 = constant <4 x i32> bitcast (<16 x i8> zeroinitializer to <4 x i32>)
 ; CHECK: pr9011_3 = constant <4 x i32> zeroinitializer
 @pr9011_4 = constant <4 x float> uitofp (<4 x i8> zeroinitializer to <4 x float>)
