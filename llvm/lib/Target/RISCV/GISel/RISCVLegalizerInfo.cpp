@@ -111,6 +111,8 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST) {
                                                {s64, p0, s64, 64}});
     ExtLoadActions.legalForTypesWithMemDesc(
         {{s64, p0, s8, 8}, {s64, p0, s16, 16}, {s64, p0, s32, 32}});
+  } else if (ST.hasStdExtD()) {
+    LoadStoreActions.legalForTypesWithMemDesc({{s64, p0, s64, 64}});
   }
   LoadStoreActions.clampScalar(0, s32, sXLen).lower();
   ExtLoadActions.widenScalarToNextPow2(0).clampScalar(0, s32, sXLen).lower();
