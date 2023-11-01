@@ -210,14 +210,23 @@ static Instruction *simplifyAllocaArraySize(InstCombinerImpl &IC,
   if (const ConstantInt *C = dyn_cast<ConstantInt>(AI.getArraySize())) {
     if (C->getValue().getActiveBits() <= 64) {
       Type *NewTy = ArrayType::get(AI.getAllocatedType(), C->getZExtValue());
+
+      // Make sure we do not create an array type larger than pointers on the
+      // target can index.
+      unsigned MaxArrSizeBitWidth =
+          IC.getDataLayout().getPointerTypeSizeInBits(AI.getType());
+      APInt ArrayAllocSize(64, IC.getDataLayout().getTypeAllocSize(NewTy));
+      if (ArrayAllocSize.getActiveBits() > MaxArrSizeBitWidth)
+        NewTy = ArrayType::get(AI.getAllocatedType(), 0);
+
       AllocaInst *New = IC.Builder.CreateAlloca(NewTy, AI.getAddressSpace(),
                                                 nullptr, AI.getName());
       New->setAlignment(AI.getAlign());
 
       replaceAllDbgUsesWith(AI, *New, *New, DT);
 
-      // Scan to the end of the allocation instructions, to skip over a block of
-      // allocas if possible...also skip interleaved debug info
+      // Scan to the end of the allocation instructions, to skip over a block
+      // of allocas if possible...also skip interleaved debug info
       //
       BasicBlock::iterator It(New);
       while (isa<AllocaInst>(*It) || isa<DbgInfoIntrinsic>(*It))
@@ -243,7 +252,7 @@ static Instruction *simplifyAllocaArraySize(InstCombinerImpl &IC,
     return IC.replaceInstUsesWith(AI, Constant::getNullValue(AI.getType()));
 
   // Ensure that the alloca array size argument has type equal to the offset
-  // size of the alloca() pointer, which, in the tyical case, is intptr_t,
+  // size of the alloca() pointer, which, in the typical case, is intptr_t,
   // so that any casting is exposed early.
   Type *PtrIdxTy = IC.getDataLayout().getIndexType(AI.getType());
   if (AI.getArraySize()->getType() != PtrIdxTy) {
