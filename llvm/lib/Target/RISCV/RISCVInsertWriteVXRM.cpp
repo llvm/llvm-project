@@ -214,6 +214,12 @@ bool RISCVInsertWriteVXRM::computeVXRMChanges(const MachineBasicBlock &MBB) {
 
       BBInfo.VXRMOut.setVXRMImm(NewVXRMImm);
       NeedVXRMWrite = true;
+      continue;
+    }
+
+    if (MI.getOpcode() == RISCV::WriteVXRMImm) {
+      BBInfo.VXRMOut.setVXRMImm(MI.getOperand(0).getImm());
+      continue;
     }
 
     if (MI.isCall() || MI.isInlineAsm() || MI.modifiesRegister(RISCV::VXRM)) {
