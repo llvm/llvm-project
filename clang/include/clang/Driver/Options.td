@@ -3609,25 +3609,23 @@ def fpass_plugin_EQ : Joined<["-"], "fpass-plugin=">,
   MetaVarName<"<dsopath>">,
   HelpText<"Load pass plugin from a dynamic shared object file (only with new pass manager).">,
   MarshallingInfoStringVector<CodeGenOpts<"PassPlugins">>;
-def mtocdata : Flag<["-"], "mtocdata">,
-  Visibility<[ClangOption, CLOption, DXCOption, CC1Option]>,
-  Flags<[TargetSpecific]>,
-  HelpText<"All suitable variables will have the TOC data transformation applied.">,
-  MarshallingInfoFlag<CodeGenOpts<"AllTocData">>;
-def mno_tocdata : Flag<["-"], "mno-tocdata">,
-  Visibility<[ClangOption, CLOption, DXCOption, CC1Option]>,
-  Flags<[TargetSpecific]>,
-  HelpText<"This is the default. TOC data transformation is not applied to any"
-           "variables. Only variables specified explicitly in -mtocdata= will"
-           "have the TOC data transformation.">;
+defm tocdata : BoolOption<"m","tocdata",
+  CodeGenOpts<"AllTocData">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option],
+  "All suitable variables will have the TOC data transformation applied">,
+  NegFlag<SetFalse, [], [ClangOption, CC1Option],
+  "This is the default. TOC data transformation is not applied to any"
+  "variables. Only variables specified explicitly in -mtocdata= will"
+  "have the TOC data transformation.">,
+  BothFlags<[], [ClangOption, CLOption]>>, Group<m_Group>;
 def mtocdata_EQ : CommaJoined<["-"], "mtocdata=">,
-  Visibility<[ClangOption, CLOption, DXCOption, CC1Option]>,
+  Visibility<[ClangOption, CC1Option]>,
   Flags<[TargetSpecific]>,
   HelpText<"Specifies a list of variables to which the TOC data transformation"
            "will be applied.">,
   MarshallingInfoStringVector<CodeGenOpts<"TocDataVarsUserSpecified">>;
 def mno_tocdata_EQ : CommaJoined<["-"], "mno-tocdata=">,
-  Visibility<[ClangOption, CLOption, DXCOption, CC1Option]>,
+  Visibility<[ClangOption, CC1Option]>,
   Flags<[TargetSpecific]>,
   HelpText<"Specifies a list of variables to be exempt from the TOC data"
            "transformation.">,

@@ -635,9 +635,7 @@ static void checkAliasForTocData(llvm::GlobalVariable *GVar,
   if (GVar->hasAttribute("toc-data")) {
     auto GVId = GVar->getGlobalIdentifier();
     // Is this a global variable specified by the user as local?
-    bool UserSpecifiedTOC =
-        llvm::binary_search(CodeGenOpts.TocDataVarsUserSpecified, GVId);
-    if (UserSpecifiedTOC) {
+    if ((llvm::binary_search(CodeGenOpts.TocDataVarsUserSpecified, GVId))) {
       Diags.Report(Location, diag::warn_toc_unsupported_type)
           << GVId << "the variable has an alias";
     }

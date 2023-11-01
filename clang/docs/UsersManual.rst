@@ -4245,6 +4245,7 @@ Suitable variables must:
 -  not have internal linkage
 -  not have aliases
 -  not have section attributes
+-  not be thread local storage
 
 The TOC data transformation results in the variable, not its address,
 being placed in the TOC. This eliminates the need to load the address of the

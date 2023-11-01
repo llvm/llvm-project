@@ -487,10 +487,8 @@ static void addTocDataOptions(const llvm::opt::ArgList &Args,
         ExplicitlySpecifiedGlobals.erase(Val);
   }
 
-  const bool HasExplicitValues = !ExplicitlySpecifiedGlobals.empty();
-
   auto buildExceptionList = [](const llvm::StringSet<> &ExplicitValues,
-                               const char *OptionSpelling) -> std::string {
+                               const char *OptionSpelling) {
     std::string Option(OptionSpelling);
     bool IsFirst = true;
     for (const auto &E : ExplicitValues) {
@@ -509,10 +507,11 @@ static void addTocDataOptions(const llvm::opt::ArgList &Args,
   // variables which would be exceptions to the default setting.
   const char *TocDataGlobalOption =
       TOCDataGloballyinEffect ? "-mtocdata" : "-mno-tocdata";
+  CC1Args.push_back(TocDataGlobalOption);
+
   const char *TocDataListOption =
       TOCDataGloballyinEffect ? "-mno-tocdata=" : "-mtocdata=";
-  CC1Args.push_back(TocDataGlobalOption);
-  if (HasExplicitValues)
+  if (const bool HasExplicitValues = !ExplicitlySpecifiedGlobals.empty())
     CC1Args.push_back(Args.MakeArgString(llvm::Twine(
         buildExceptionList(ExplicitlySpecifiedGlobals, TocDataListOption))));
 }

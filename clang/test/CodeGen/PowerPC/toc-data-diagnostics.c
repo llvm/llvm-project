@@ -11,27 +11,27 @@ struct large_struct {
   char c;
 };
 
-struct large_struct a;                      // expected-warning {{The -mtocdata option is ignored for a because variable is larger than a pointer.}}
-long long b = 5;                            // expected-warning {{The -mtocdata option is ignored for b because variable is larger than a pointer.}}
-int __attribute__((aligned(128))) c = 0;    // expected-warning {{The -mtocdata option is ignored for c because variable is aligned wider than a pointer.}}
-double d = 2.5;                             // expected-warning {{The -mtocdata option is ignored for d because variable is larger than a pointer.}}
-int e __attribute__((section("foo"))) = 10; // expected-warning {{The -mtocdata option is ignored for e because of a section attribute.}}
-__thread int f;                             // expected-warning {{The -mtocdata option is ignored for f because of thread local storage model.}}
+struct large_struct a;                      // expected-warning {{-mtocdata option is ignored for a because variable is larger than a pointer}}
+long long b = 5;                            // expected-warning {{-mtocdata option is ignored for b because variable is larger than a pointer}}
+int __attribute__((aligned(128))) c = 0;    // expected-warning {{-mtocdata option is ignored for c because variable is aligned wider than a pointer}}
+double d = 2.5;                             // expected-warning {{-mtocdata option is ignored for d because variable is larger than a pointer}}
+int e __attribute__((section("foo"))) = 10; // expected-warning {{-mtocdata option is ignored for e because of a section attribute}}
+__thread int f;                             // expected-warning {{-mtocdata option is ignored for f because of thread local storage}}
 
 struct SomeStruct;
-extern struct SomeStruct g;                 // expected-warning {{The -mtocdata option is ignored for g because of incomplete type.}}
+extern struct SomeStruct g;                 // expected-warning {{-mtocdata option is ignored for g because of incomplete type}}
 
-extern int h[];                             // expected-warning {{The -mtocdata option is ignored for h because of incomplete type.}}
+extern int h[];                             // expected-warning {{-mtocdata option is ignored for h because of incomplete type}}
 
 struct ty3 {
   int A;
   char C[];
 };
-struct ty3 t3 = { 4, "fo" }; // expected-warning {{The -mtocdata option is ignored for t3 because it contains a flexible array member.}}
+struct ty3 t3 = { 4, "fo" }; // expected-warning {{-mtocdata option is ignored for t3 because it contains a flexible array member}}
 
 int globalOneWithAlias = 10;
-__attribute__((__alias__("globalOneWithAlias"))) extern int aliasOne; // expected-warning {{The -mtocdata option is ignored for globalOneWithAlias because the variable has an alias.}}
-__attribute__((__alias__("globalTwoWithAlias"))) extern int aliasTwo; // expected-warning {{The -mtocdata option is ignored for globalTwoWithAlias because the variable has an alias.}}
+__attribute__((__alias__("globalOneWithAlias"))) extern int aliasOne; // expected-warning {{-mtocdata option is ignored for globalOneWithAlias because the variable has an alias}}
+__attribute__((__alias__("globalTwoWithAlias"))) extern int aliasTwo; // expected-warning {{-mtocdata option is ignored for globalTwoWithAlias because the variable has an alias}}
 int globalTwoWithAlias = 20;
 
 
