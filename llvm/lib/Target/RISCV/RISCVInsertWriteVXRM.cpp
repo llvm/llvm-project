@@ -216,7 +216,7 @@ bool RISCVInsertWriteVXRM::computeVXRMChanges(const MachineBasicBlock &MBB) {
       NeedVXRMWrite = true;
     }
 
-    if (MI.isCall() || MI.isInlineAsm()) {
+    if (MI.isCall() || MI.isInlineAsm() || MI.modifiesRegister(RISCV::VXRM)) {
       if (!BBInfo.VXRMUse.isValid())
         BBInfo.VXRMUse.setUnknown();
 
