@@ -238,10 +238,10 @@ define signext i32 @findLastSet_i32(i32 signext %a) nounwind {
 ; RV64XTHEADBB:       # %bb.0:
 ; RV64XTHEADBB-NEXT:    th.extu a1, a0, 31, 0
 ; RV64XTHEADBB-NEXT:    th.ff1 a1, a1
-; RV64XTHEADBB-NEXT:    addi a1, a1, -32
+; RV64XTHEADBB-NEXT:    addiw a1, a1, -32
 ; RV64XTHEADBB-NEXT:    xori a1, a1, 31
 ; RV64XTHEADBB-NEXT:    snez a0, a0
-; RV64XTHEADBB-NEXT:    addi a0, a0, -1
+; RV64XTHEADBB-NEXT:    addiw a0, a0, -1
 ; RV64XTHEADBB-NEXT:    or a0, a0, a1
 ; RV64XTHEADBB-NEXT:    ret
   %1 = call i32 @llvm.ctlz.i32(i32 %a, i1 true)
@@ -749,8 +749,9 @@ define i64 @no_sexth_i64(i64 %a) nounwind {
 define i32 @zexth_i32(i32 %a) nounwind {
 ; RV64I-LABEL: zexth_i32:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a0, a0, 48
-; RV64I-NEXT:    srli a0, a0, 48
+; RV64I-NEXT:    lui a1, 16
+; RV64I-NEXT:    addiw a1, a1, -1
+; RV64I-NEXT:    and a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
 ; RV64XTHEADBB-LABEL: zexth_i32:

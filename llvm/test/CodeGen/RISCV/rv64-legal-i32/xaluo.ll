@@ -758,7 +758,8 @@ define i1 @smulo.not.i32(i32 signext %v1, i32 signext %v2) {
 ; RV64-NEXT:    srai a1, a0, 32
 ; RV64-NEXT:    sraiw a0, a0, 31
 ; RV64-NEXT:    xor a0, a1, a0
-; RV64-NEXT:    seqz a0, a0
+; RV64-NEXT:    snez a0, a0
+; RV64-NEXT:    xori a0, a0, 1
 ; RV64-NEXT:    ret
 entry:
   %t = call {i32, i1} @llvm.smul.with.overflow.i32(i32 %v1, i32 %v2)
@@ -792,7 +793,8 @@ define i1 @smulo.not.i64(i64 %v1, i64 %v2) {
 ; RV64-NEXT:    mul a0, a0, a1
 ; RV64-NEXT:    srai a0, a0, 63
 ; RV64-NEXT:    xor a0, a2, a0
-; RV64-NEXT:    seqz a0, a0
+; RV64-NEXT:    snez a0, a0
+; RV64-NEXT:    xori a0, a0, 1
 ; RV64-NEXT:    ret
 entry:
   %t = call {i64, i1} @llvm.smul.with.overflow.i64(i64 %v1, i64 %v2)
@@ -827,7 +829,8 @@ define i1 @umulo.not.i32(i32 signext %v1, i32 signext %v2) {
 ; RV64-NEXT:    slli a0, a0, 32
 ; RV64-NEXT:    mulhu a0, a0, a1
 ; RV64-NEXT:    srai a0, a0, 32
-; RV64-NEXT:    seqz a0, a0
+; RV64-NEXT:    snez a0, a0
+; RV64-NEXT:    xori a0, a0, 1
 ; RV64-NEXT:    ret
 entry:
   %t = call {i32, i1} @llvm.umul.with.overflow.i32(i32 %v1, i32 %v2)
@@ -856,7 +859,8 @@ define i1 @umulo.not.i64(i64 %v1, i64 %v2) {
 ; RV64-LABEL: umulo.not.i64:
 ; RV64:       # %bb.0: # %entry
 ; RV64-NEXT:    mulhu a0, a0, a1
-; RV64-NEXT:    seqz a0, a0
+; RV64-NEXT:    snez a0, a0
+; RV64-NEXT:    xori a0, a0, 1
 ; RV64-NEXT:    ret
 entry:
   %t = call {i64, i1} @llvm.umul.with.overflow.i64(i64 %v1, i64 %v2)

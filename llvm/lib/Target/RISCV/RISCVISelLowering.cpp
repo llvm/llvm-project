@@ -275,16 +275,10 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   if (Subtarget.is64Bit()) {
     setOperationAction(ISD::EH_DWARF_CFA, MVT::i64, Custom);
 
-    if (!RV64LegalI32)
+    if (!RV64LegalI32) {
       setOperationAction(ISD::LOAD, MVT::i32, Custom);
-
-    if (RV64LegalI32)
-      setOperationAction({ISD::AND, ISD::OR, ISD::XOR}, MVT::i32, Promote);
-    else
       setOperationAction({ISD::ADD, ISD::SUB, ISD::SHL, ISD::SRA, ISD::SRL},
                          MVT::i32, Custom);
-
-    if (!RV64LegalI32) {
       setOperationAction(ISD::SADDO, MVT::i32, Custom);
       setOperationAction({ISD::UADDO, ISD::USUBO, ISD::UADDSAT, ISD::USUBSAT},
                          MVT::i32, Custom);

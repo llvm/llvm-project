@@ -71,16 +71,11 @@ define i64 @orn_i64(i64 %a, i64 %b) nounwind {
 }
 
 define signext i32 @xnor_i32(i32 signext %a, i32 signext %b) nounwind {
-; RV64I-LABEL: xnor_i32:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    xor a0, a0, a1
-; RV64I-NEXT:    not a0, a0
-; RV64I-NEXT:    ret
-;
-; RV64ZBB-ZBKB-LABEL: xnor_i32:
-; RV64ZBB-ZBKB:       # %bb.0:
-; RV64ZBB-ZBKB-NEXT:    xnor a0, a0, a1
-; RV64ZBB-ZBKB-NEXT:    ret
+; CHECK-LABEL: xnor_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xor a0, a0, a1
+; CHECK-NEXT:    not a0, a0
+; CHECK-NEXT:    ret
   %neg = xor i32 %a, -1
   %xor = xor i32 %neg, %b
   ret i32 %xor
@@ -446,8 +441,8 @@ define i64 @not_shl_one_i64(i64 %x) {
 define i8 @srli_i8(i8 %a) nounwind {
 ; CHECK-LABEL: srli_i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    andi a0, a0, 192
-; CHECK-NEXT:    srliw a0, a0, 6
+; CHECK-NEXT:    slli a0, a0, 56
+; CHECK-NEXT:    srli a0, a0, 62
 ; CHECK-NEXT:    ret
   %1 = lshr i8 %a, 6
   ret i8 %1
@@ -480,25 +475,11 @@ define i8 @srai_i8(i8 %a) nounwind {
 ; We could use zext.h+srli, but slli+srli offers more opportunities for
 ; comppressed instructions.
 define i16 @srli_i16(i16 %a) nounwind {
-; RV64I-LABEL: srli_i16:
-; RV64I:       # %bb.0:
-; RV64I-NEXT:    slli a0, a0, 48
-; RV64I-NEXT:    srli a0, a0, 48
-; RV64I-NEXT:    srliw a0, a0, 6
-; RV64I-NEXT:    ret
-;
-; RV64ZBB-LABEL: srli_i16:
-; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    zext.h a0, a0
-; RV64ZBB-NEXT:    srliw a0, a0, 6
-; RV64ZBB-NEXT:    ret
-;
-; RV64ZBKB-LABEL: srli_i16:
-; RV64ZBKB:       # %bb.0:
-; RV64ZBKB-NEXT:    slli a0, a0, 48
-; RV64ZBKB-NEXT:    srli a0, a0, 48
-; RV64ZBKB-NEXT:    srliw a0, a0, 6
-; RV64ZBKB-NEXT:    ret
+; CHECK-LABEL: srli_i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slli a0, a0, 48
+; CHECK-NEXT:    srli a0, a0, 54
+; CHECK-NEXT:    ret
   %1 = lshr i16 %a, 6
   ret i16 %1
 }
