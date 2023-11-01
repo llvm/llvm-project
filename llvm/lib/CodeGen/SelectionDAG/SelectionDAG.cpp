@@ -5038,7 +5038,7 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
 
   // Matches hasPoisonGeneratingFlags().
   case ISD::ZERO_EXTEND:
-    return ConsiderFlags && Op->getFlags().hasNonneg();
+    return ConsiderFlags && Op->getFlags().hasNonNeg();
 
   case ISD::ADD:
   case ISD::SUB:
