@@ -1950,15 +1950,16 @@ bool MIParser::parseLowLevelType(StringRef::iterator Loc, LLT &Ty) {
                       "or <vscale x M x pA> for GlobalISel type");
   lex();
 
-  bool HasVScale = Token.stringValue() == "vscale";
+  bool HasVScale =
+      Token.is(MIToken::Identifier) && Token.stringValue() == "vscale";
   if (HasVScale) {
     lex();
-    if (Token.stringValue() != "x")
+    if (Token.isNot(MIToken::Identifier) || Token.stringValue() != "x")
       return error("expected <vscale x M x sN> or <vscale x M x pA>");
     lex();
   }
 
-  auto GetError = [&](bool HasVScale, StringRef::iterator Loc) {
+  auto GetError = [this, &HasVScale, Loc]() {
     if (HasVScale)
       return error(
           Loc, "expected <vscale x M x sN> or <vscale M x pA> for vector type");
@@ -1967,7 +1968,7 @@ bool MIParser::parseLowLevelType(StringRef::iterator Loc, LLT &Ty) {
   };
 
   if (Token.isNot(MIToken::IntegerLiteral))
-    return GetError(HasVScale, Loc);
+    return GetError();
   uint64_t NumElements = Token.integerValue().getZExtValue();
   if (!verifyVectorElementCount(NumElements))
     return error("invalid number of vector elements");
@@ -1975,11 +1976,11 @@ bool MIParser::parseLowLevelType(StringRef::iterator Loc, LLT &Ty) {
   lex();
 
   if (Token.isNot(MIToken::Identifier) || Token.stringValue() != "x")
-    return GetError(HasVScale, Loc);
+    return GetError();
   lex();
 
   if (Token.range().front() != 's' && Token.range().front() != 'p')
-    return GetError(HasVScale, Loc);
+    return GetError();
 
   StringRef SizeStr = Token.range().drop_front();
   if (SizeStr.size() == 0 || !llvm::all_of(SizeStr, isdigit))
@@ -1998,18 +1999,15 @@ bool MIParser::parseLowLevelType(StringRef::iterator Loc, LLT &Ty) {
 
     Ty = LLT::pointer(AS, DL.getPointerSizeInBits(AS));
   } else
-    return GetError(HasVScale, Loc);
+    return GetError();
   lex();
 
   if (Token.isNot(MIToken::greater))
-    return GetError(HasVScale, Loc);
+    return GetError();
 
   lex();
 
-  if (HasVScale)
-    Ty = LLT::scalable_vector(NumElements, Ty);
-  else
-    Ty = LLT::fixed_vector(NumElements, Ty);
+  Ty = LLT::vector(ElementCount::get(NumElements, HasVScale), Ty);
   return false;
 }
 
