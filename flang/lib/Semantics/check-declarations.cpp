@@ -2395,6 +2395,10 @@ void CheckHelper::Check(const Scope &scope) {
     for (const auto &pair : scope) {
       Check(*pair.second);
     }
+    if (scope.IsSubmodule() && scope.symbol()) {
+      // Submodule names are not in their parent's scopes
+      Check(*scope.symbol());
+    }
     for (const auto &pair : scope.commonBlocks()) {
       CheckCommonBlock(*pair.second);
     }
