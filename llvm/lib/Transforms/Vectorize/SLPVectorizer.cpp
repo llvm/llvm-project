@@ -15822,8 +15822,8 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
         // to investigate if we can safely turn on slp-vectorize-hor-store
         // instead to allow lookup for reduction chains in all non-vectorized
         // stores (need to check side effects and compile time).
-        TryToVectorizeRoot = (I == Stores.end() || I->second.size() == 1) &&
-                             SI->getValueOperand()->hasOneUse();
+        TryToVectorizeRoot |= (I == Stores.end() || I->second.size() == 1) &&
+                              SI->getValueOperand()->hasOneUse();
       }
       if (TryToVectorizeRoot) {
         for (auto *V : it->operand_values()) {
