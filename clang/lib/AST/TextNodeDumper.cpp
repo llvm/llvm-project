@@ -2413,10 +2413,10 @@ void TextNodeDumper::VisitConstructorUsingShadowDecl(
 
 void TextNodeDumper::VisitLinkageSpecDecl(const LinkageSpecDecl *D) {
   switch (D->getLanguage()) {
-  case LinkageSpecDecl::lang_c:
+  case LinkageSpecLanguageIDs::C:
     OS << " C";
     break;
-  case LinkageSpecDecl::lang_cxx:
+  case LinkageSpecLanguageIDs::CXX:
     OS << " C++";
     break;
   }

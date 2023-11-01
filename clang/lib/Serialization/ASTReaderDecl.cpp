@@ -1773,7 +1773,7 @@ void ASTDeclReader::VisitCapturedDecl(CapturedDecl *CD) {
 
 void ASTDeclReader::VisitLinkageSpecDecl(LinkageSpecDecl *D) {
   VisitDecl(D);
-  D->setLanguage((LinkageSpecDecl::LanguageIDs)Record.readInt());
+  D->setLanguage(static_cast<LinkageSpecLanguageIDs>(Record.readInt()));
   D->setExternLoc(readSourceLocation());
   D->setRBraceLoc(readSourceLocation());
 }
