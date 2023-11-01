@@ -30,6 +30,25 @@ define void @fptrunc(<vscale x 4 x float> %a, <vscale x 4 x float> %b, ptr %ptr)
   ret void
 }
 
+define void @add(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, ptr %ptr) {
+; CHECK-LABEL: @add(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[ADD:%.*]] = add <vscale x 4 x i32> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[ADD4:%.*]] = add <vscale x 4 x i32> [[ADD]], [[B]]
+; CHECK-NEXT:    store <vscale x 4 x i32> [[ADD]], ptr [[PTR:%.*]], align 16
+; CHECK-NEXT:    [[INCDEC_PTR3:%.*]] = getelementptr inbounds <vscale x 4 x i32>, ptr [[PTR]], i64 1
+; CHECK-NEXT:    store <vscale x 4 x i32> [[ADD4]], ptr [[INCDEC_PTR3]], align 16
+; CHECK-NEXT:    ret void
+;
+entry:
+  %add = add <vscale x 4 x i32> %a, %b
+  %add4 = add <vscale x 4 x i32> %add, %b
+  store <vscale x 4 x i32> %add, ptr %ptr, align 16
+  %incdec.ptr3 = getelementptr inbounds <vscale x 4 x i32>, ptr %ptr, i64 1
+  store <vscale x 4 x i32> %add4, ptr %incdec.ptr3, align 16
+  ret void
+}
+
 declare i64 @llvm.vscale.i64()
 declare <vscale x 1 x half> @llvm.vector.extract.nxv1f16.nxv4f16(<vscale x 4 x half>, i64 immarg)
 declare <vscale x 4 x float> @llvm.vector.insert.nxv4f32.nxv1f32(<vscale x 4 x float>, <vscale x 1 x float>, i64 immarg)

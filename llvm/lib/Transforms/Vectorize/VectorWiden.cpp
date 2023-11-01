@@ -193,24 +193,25 @@ bool VectorWiden::canWidenNode(ArrayRef<Instruction *> IL,
   if (!OverrideTargetConsiderToWiden && !TTI.considerToWiden(Context, IL))
     return false;
 
+  bool HasSecondOperand = IL[0]->getNumOperands() > 1;
   for (int X = 0, E = IL.size(); X < E; X++) {
     for (int Y = 0, E = IL.size(); Y < E; Y++) {
       if (X == Y)
         continue;
-      if ((IL[X] == IL[Y]) || (IL[X]->getOpcode() != IL[Y]->getOpcode()) ||
-          // Ignore if any live in a diffrent Basic Block
-          (IL[X]->getType() != IL[Y]->getType()) ||
-          (IL[X]->getOperand(0)->getType() !=
-           IL[Y]->getOperand(0)->getType()) ||
-          // Ignore if disatance between two are too apart.
-          (IL[Y]->comesBefore(IL[X]) &&
-           std::distance(IL[Y]->getIterator(), IL[X]->getIterator()) >
-               MaxInstDistance) ||
-          (IL[X]->getOperand(0) == IL[Y] ||
-           (IL[X]->getNumOperands() > 1 && IL[X]->getOperand(1) == IL[Y])))
+      if (IL[X] == IL[Y] || IL[X]->getOperand(0) == IL[Y] ||
+          (HasSecondOperand && IL[X]->getOperand(1) == IL[Y]))
         return false;
     }
     if (isDeleted(IL[X]) || !IL[X]->hasOneUse())
+      return false;
+    if (X == 0)
+      continue;
+    if (IL[X]->getOpcode() != IL[X - 1]->getOpcode() ||
+        // Ignore if any types are different.
+        IL[X]->getType() != IL[X - 1]->getType() ||
+        IL[X]->getOperand(0)->getType() !=
+            IL[X - 1]->getOperand(0)->getType() ||
+        IL[X - 1]->comesBefore(IL[X]))
       return false;
     if (IL[0]->getParent() == IL[X]->user_back()->getParent() &&
         IL[X]->user_back()->comesBefore(IL[0]))
