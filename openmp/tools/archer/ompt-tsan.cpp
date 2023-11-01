@@ -1248,7 +1248,7 @@ ompt_start_tool(unsigned int omp_version, const char *runtime_version) {
                           // tool the chance to be loaded
   {
     if (archer_flags->verbose)
-      std::cout << "Archer detected OpenMP application without TSan "
+      std::cout << "Archer detected OpenMP application without TSan; "
                    "stopping operation"
                 << std::endl;
     delete archer_flags;
