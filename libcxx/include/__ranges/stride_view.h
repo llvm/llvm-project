@@ -10,6 +10,9 @@
 #ifndef _LIBCPP___RANGES_STRIDE_VIEW_H
 #define _LIBCPP___RANGES_STRIDE_VIEW_H
 
+#include "__concepts/relation.h"
+#include "__functional/ranges_operations.h"
+#include "__iterator/indirectly_comparable.h"
 #include <__config>
 
 #include <__compare/three_way_comparable.h>
@@ -17,6 +20,7 @@
 #include <__concepts/derived_from.h>
 #include <__concepts/equality_comparable.h>
 #include <__functional/bind_back.h>
+#include <__functional/operations.h>
 #include <__iterator/advance.h>
 #include <__iterator/concepts.h>
 #include <__iterator/default_sentinel.h>
@@ -194,7 +198,10 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr iterator_t<_Base> const& base() const& noexcept { return __current_; }
   _LIBCPP_HIDE_FROM_ABI constexpr iterator_t<_Base> base() && { return std::move(__current_); }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator*() const { return *__current_; }
+  _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator*() const {
+    _LIBCPP_ASSERT_UNCATEGORIZED(__current_ != __end_, "Cannot dereference an iterator at the end.");
+    return *__current_;
+  }
 
   _LIBCPP_HIDE_FROM_ABI constexpr __iterator& operator++() {
     _LIBCPP_ASSERT_UNCATEGORIZED(__current_ != __end_, "Cannot increment an iterator already at the end.");
@@ -361,8 +368,8 @@ namespace __stride {
 struct __fn {
   template <viewable_range _Range>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Range&& __range, range_difference_t<_Range> __n) const
-      noexcept(noexcept(stride_view{std::forward<_Range>(__range), __n}))
-          -> decltype(stride_view{std::forward<_Range>(__range), __n}) {
+      noexcept(noexcept(stride_view{
+          std::forward<_Range>(__range), __n})) -> decltype(stride_view{std::forward<_Range>(__range), __n}) {
     return stride_view(std::forward<_Range>(__range), __n);
   }
 
