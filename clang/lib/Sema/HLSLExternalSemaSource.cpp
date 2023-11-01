@@ -115,9 +115,8 @@ struct BuiltinTypeDeclBuilder {
     return addMemberVariable("h", Ty, Access);
   }
 
-  BuiltinTypeDeclBuilder &
-  annotateResourceClass(HLSLResourceAttr::ResourceClass RC,
-                        HLSLResourceAttr::ResourceKind RK) {
+  BuiltinTypeDeclBuilder &annotateResourceClass(ResourceClass RC,
+                                                ResourceKind RK) {
     if (Record->isCompleteDefinition())
       return *this;
     Record->addAttr(
@@ -503,7 +502,6 @@ void HLSLExternalSemaSource::completeBufferType(CXXRecordDecl *Record) {
       .addHandleMember()
       .addDefaultHandleConstructor(*SemaPtr, ResourceClass::UAV)
       .addArraySubscriptOperators()
-      .annotateResourceClass(HLSLResourceAttr::UAV,
-                             HLSLResourceAttr::TypedBuffer)
+      .annotateResourceClass(ResourceClass::UAV, ResourceKind::TypedBuffer)
       .completeDefinition();
 }
