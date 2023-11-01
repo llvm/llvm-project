@@ -110,6 +110,40 @@ DISASMM-NEXT:                 ...
 DISASMM-NEXT: 180002ffe: 00 00                        addb    %al, (%rax)
 DISASMM-NEXT: 180003000: b8 06 00 00 00               movl    $0x6, %eax
 
+Merging data sections into code sections causes data to be separated from the code when sorting chunks.
+
+RUN: lld-link -out:testdm.dll -machine:arm64ec arm64ec-func-sym.obj x86_64-func-sym.obj codemap.obj \
+RUN:          data-sec.obj loadconfig-arm64ec.obj -dll -noentry -merge:.testdata=.text -merge:.rdata=test
+
+RUN: llvm-readobj --coff-load-config testdm.dll | FileCheck -check-prefix=CODEMAPDM %s
+CODEMAPDM:      CodeMap [
+CODEMAPDM-NEXT:     0x2000 - 0x2008  ARM64EC
+CODEMAPDM-NEXT:     0x3000 - 0x3006  X64
+CODEMAPDM-NEXT:     0x5200 - 0x5208  ARM64EC
+CODEMAPDM-NEXT:     0x6000 - 0x6006  X64
+CODEMAPDM-NEXT: ]
+
+RUN: llvm-objdump -d testdm.dll | FileCheck -check-prefix=DISASMDM %s
+DISASMDM:      Disassembly of section .text:
+DISASMDM-EMPTY:
+DISASMDM-NEXT: 0000000180001000 <.text>:
+DISASMDM-NEXT: 180001000: 00000001     udf     #0x1
+DISASMDM-NEXT:                 ...
+DISASMDM-NEXT: 180002000: 52800040     mov     w0, #0x2
+DISASMDM-NEXT: 180002004: d65f03c0     ret
+DISASMDM-NEXT:                 ...
+DISASMDM-NEXT: 180003000: b8 03 00 00 00               movl    $0x3, %eax
+DISASMDM-NEXT: 180003005: c3                           retq
+DISASMDM-EMPTY:
+DISASMDM-NEXT: Disassembly of section test:
+DISASMDM-EMPTY:
+DISASMDM-NEXT: 0000000180005000 <test>:
+DISASMDM:      180005200: 528000a0     mov     w0, #0x5
+DISASMDM-NEXT: 180005204: d65f03c0     ret
+DISASMDM-NEXT:                 ...
+DISASMDM-NEXT: 180006000: b8 06 00 00 00               movl    $0x6, %eax
+DISASMDM-NEXT: 180006005: c3                           retq
+
 #--- arm64-func-sym.s
     .text
     .globl arm64_func_sym
@@ -147,6 +181,10 @@ x86_64_func_sym:
 x86_64_func_sym2:
     movl $6, %eax
     retq
+
+#--- data-sec.s
+    .section .testdata, "rd"
+    .xword 1
 
 #--- codemap.s
     .section .rdata,"dr"
