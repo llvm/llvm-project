@@ -670,6 +670,10 @@ Bug Fixes to C++ Support
   default initializing a base class in a constant expression context. Fixes:
   (`#69890 <https://github.com/llvm/llvm-project/issues/69890>`_)
 
+- Fix crash when template class static member imported to other translation unit.
+  Fixes:
+  (`#68769 <https://github.com/llvm/llvm-project/issues/68769>`_)
+
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fixed an import failure of recursive friend class template.
