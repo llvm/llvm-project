@@ -8,7 +8,7 @@ module {
   cir.global external @a = #cir.int<3> : !s32i
   cir.global external @rgb = #cir.const_array<[#cir.int<0> : !s8i, #cir.int<-23> : !s8i, #cir.int<33> : !s8i] : !cir.array<!s8i x 3>>
   cir.global external @b = #cir.const_array<"example\00" : !cir.array<!s8i x 8>>
-  cir.global external @rgb2 = #cir.const_struct<{#cir.int<0> : !s8i, #cir.int<5> : !s64i, #cir.ptr<null> : !cir.ptr<!s8i>}> : !cir.struct<struct "" {!s8i, !s64i, !cir.ptr<!s8i>}>
+  cir.global external @rgb2 = #cir.const_struct<{#cir.int<0> : !s8i, #cir.int<5> : !s64i, #cir.ptr<null> : !cir.ptr<!s8i>}> : !cir.struct<struct {!s8i, !s64i, !cir.ptr<!s8i>}>
   cir.global "private" constant internal @".str" : !cir.array<!s8i x 8> {alignment = 1 : i64}
   cir.global "private" internal @c : !s32i
   cir.global "private" constant internal @".str2" = #cir.const_array<"example\00" : !cir.array<!s8i x 8>> : !cir.array<!s8i x 8> {alignment = 1 : i64}
@@ -31,7 +31,7 @@ module {
     #cir.global_view<@_ZTVN10__cxxabiv120__si_class_type_infoE, [2]> : !cir.ptr<!s8i>,
     #cir.global_view<@type_info_name_B> : !cir.ptr<!s8i>,
     #cir.global_view<@type_info_A> : !cir.ptr<!s8i>}>
-  : !cir.struct<struct "" {!cir.ptr<!s8i>, !cir.ptr<!s8i>, !cir.ptr<!s8i>}>
+  : !cir.struct<struct {!cir.ptr<!s8i>, !cir.ptr<!s8i>, !cir.ptr<!s8i>}>
   cir.func private @_ZN4InitC1Eb(!cir.ptr<!ty_22Init22>, !s8i)
   cir.func private @_ZN4InitD1Ev(!cir.ptr<!ty_22Init22>)
   cir.global "private" internal @_ZL8__ioinit = ctor : !ty_22Init22 {
