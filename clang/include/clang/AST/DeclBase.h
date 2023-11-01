@@ -1399,37 +1399,9 @@ enum class DeductionCandidate : unsigned char {
   Aggregate,
 };
 
-/// Enum that represents the different ways arguments are passed to and
-/// returned from function calls. This takes into account the target-specific
-/// and version-specific rules along with the rules determined by the
-/// language.
-enum class ArgPassingKind {
-  /// The argument of this type can be passed directly in registers.
-  CanPassInRegs,
-
-  /// The argument of this type cannot be passed directly in registers.
-  /// Records containing this type as a subobject are not forced to be passed
-  /// indirectly. This value is used only in C++. This value is required by
-  /// C++ because, in uncommon situations, it is possible for a class to have
-  /// only trivial copy/move constructors even when one of its subobjects has
-  /// a non-trivial copy/move constructor (if e.g. the corresponding copy/move
-  /// constructor in the derived class is deleted).
-  CannotPassInRegs,
-
-  /// The argument of this type cannot be passed directly in registers.
-  /// Records containing this type as a subobject are forced to be passed
-  /// indirectly.
-  CanNeverPassInRegs
-};
-
-enum class OMPDeclareReductionInitKind {
-  Call,   // Initialized by function call.
-  Direct, // omp_priv(<expr>)
-  Copy    // omp_priv = <expr>
-};
-
-enum class ObjCImplementationControl { None, Required, Optional };
-
+enum class ArgPassingKind;
+enum class OMPDeclareReductionInitKind;
+enum class ObjCImplementationControl;
 enum class LinkageSpecLanguageIDs;
 
 /// DeclContext - This is used only as base class of specific decl types that
