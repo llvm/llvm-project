@@ -1028,6 +1028,42 @@ public:
   }
 };
 
+// Representing a pointer type expression of the form `Ptr += n` in an
+// Unspecified Untyped Context (UUC):
+class UUCAddAssignGadget : public FixableGadget {
+private:
+  static constexpr const char *const UUCAddAssignTag =
+    "PointerAddAssignUnderUUC";
+  const BinaryOperator *Node; // the `Ptr += n` node
+
+public:
+  UUCAddAssignGadget(const MatchFinder::MatchResult &Result)
+    : FixableGadget(Kind::UUCAddAssign),
+      Node(Result.Nodes.getNodeAs<BinaryOperator>(UUCAddAssignTag)) {
+    assert(Node != nullptr && "Expecting a non-null matching result");
+  }
+
+  static bool classof(const Gadget *G) {
+    return G->getKind() == Kind::UUCAddAssign;
+  }
+
+  static Matcher matcher() {
+    return stmt(isInUnspecifiedUntypedContext(expr(ignoringImpCasts(
+                    binaryOperator(hasOperatorName("+="),
+                      hasLHS(declRefExpr(
+                                                    toSupportedVariable()))
+                      ).bind(UUCAddAssignTag)))));
+  }
+
+  virtual std::optional<FixItList> getFixits(const Strategy &S) const override;
+
+  virtual const Stmt *getBaseStmt() const override { return Node; }
+
+  virtual DeclUseList getClaimedVarUseSites() const override {
+    return {dyn_cast<DeclRefExpr>(Node->getLHS())};
+  }
+};
+
 // Representing a fixable expression of the form `*(ptr + 123)` or `*(123 +
 // ptr)`:
 class DerefSimplePtrArithFixableGadget : public FixableGadget {
@@ -1766,6 +1802,35 @@ fixUPCAddressofArraySubscriptWithSpan(const UnaryOperator *Node) {
       FixItHint::CreateReplacement(Node->getSourceRange(), SS.str())};
 }
 
+std::optional<FixItList> UUCAddAssignGadget::getFixits(const Strategy &S) const {
+  DeclUseList DREs = getClaimedVarUseSites();
+
+  if (DREs.size() != 1)
+    return std::nullopt; // In cases of `Ptr += n` where `Ptr` is not a DRE, we
+                         // give up
+  if (const VarDecl *VD = dyn_cast<VarDecl>(DREs.front()->getDecl())) {
+    if (S.lookup(VD) == Strategy::Kind::Span) {
+      FixItList Fixes;
+      std::stringstream SS;
+      const Stmt *AddAssignNode = getBaseStmt();
+      StringRef varName = VD->getName();
+      const ASTContext &Ctx = VD->getASTContext();
+
+      // To transform UUC(p += n) to UUC((p = p.subspan(1)).data()):
+      SS << varName.data() << " = " << varName.data()
+         << ".subspan(" << getUserFillPlaceHolder() << ")";
+      std::optional<SourceLocation> AddAssignLocation =
+          getEndCharLoc(AddAssignNode, Ctx.getSourceManager(), Ctx.getLangOpts());
+      if (!AddAssignLocation)
+        return std::nullopt;
+
+      Fixes.push_back(FixItHint::CreateReplacement(
+          SourceRange(AddAssignNode->getBeginLoc(), *AddAssignLocation), SS.str()));
+      return Fixes;
+    }
+  }
+  return std::nullopt; // Not in the cases that we can handle for now, give up.
+}
 
 std::optional<FixItList> UPCPreIncrementGadget::getFixits(const Strategy &S) const {
   DeclUseList DREs = getClaimedVarUseSites();
