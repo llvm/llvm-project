@@ -1592,9 +1592,9 @@ createLoopOp(Fortran::lower::AbstractConverter &converter,
   addOperand(operands, operandSegments, workerNum);
   addOperand(operands, operandSegments, vectorNum);
   addOperands(operands, operandSegments, tileOperands);
+  addOperands(operands, operandSegments, cacheOperands);
   addOperands(operands, operandSegments, privateOperands);
   addOperands(operands, operandSegments, reductionOperands);
-  addOperands(operands, operandSegments, cacheOperands);
 
   auto loopOp = createRegionOp<mlir::acc::LoopOp, mlir::acc::YieldOp>(
       builder, currentLocation, eval, operands, operandSegments);
