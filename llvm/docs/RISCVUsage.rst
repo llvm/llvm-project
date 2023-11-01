@@ -106,7 +106,7 @@ on support follow.
      ``Zcb``          Supported
      ``Zcd``          Supported
      ``Zcf``          Supported
-     ``Zcmp``         Assembly Support
+     ``Zcmp``         Supported
      ``Zcmt``         Assembly Support
      ``Zdinx``        Supported
      ``Zfa``          Supported
@@ -116,7 +116,7 @@ on support follow.
      ``Zhinx``        Supported
      ``Zhinxmin``     Supported
      ``Zicbom``       Assembly Support
-     ``Zicbop``       Assembly Support
+     ``Zicbop``       Supported
      ``Zicboz``       Assembly Support
      ``Zicntr``       (`See Note <#riscv-i2p1-note>`__)
      ``Zicsr``        (`See Note <#riscv-i2p1-note>`__)
