@@ -116,6 +116,7 @@ def CIR_StructType : CIR_Type<"Struct", "struct",
   );
 
   let skipDefaultBuilders = 1;
+  let genVerifyDecl = 1;
   let builders = [
     // Build an identified and complete struct.
     TypeBuilder<(ins

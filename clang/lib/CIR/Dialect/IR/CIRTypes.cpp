@@ -17,10 +17,13 @@
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
+#include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
 
+#include "clang/CIR/Interfaces/ASTAttrInterfaces.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -155,13 +158,15 @@ Type StructType::parse(mlir::AsmParser &parser) {
 
   // Try to create the proper type.
   mlir::Type type = {};
+  ArrayRef<mlir::Type> membersRef(members); // Needed for template deduction.
+  const auto eLoc = parser.getEncodedSourceLoc(loc);
   if (name && incomplete) { // Identified & incomplete
-    type = StructType::get(context, name, kind);
+    type = getChecked(eLoc, context, name, kind);
   } else if (name && !incomplete) { // Identified & complete
-    type = StructType::get(context, members, name, packed, kind);
-  } else if (!name && !incomplete) { // anonymous
-    type = StructType::get(context, members, packed, kind);
-  } else {
+    type = getChecked(eLoc, context, membersRef, name, packed, kind);
+  } else if (!name && !incomplete) { // anonymous & complete
+    type = getChecked(eLoc, context, membersRef, packed, kind);
+  } else { // anonymous & incomplete
     parser.emitError(loc, "anonymous structs must be complete");
     return {};
   }
@@ -204,6 +209,19 @@ void StructType::print(mlir::AsmPrinter &printer) const {
   }
 
   printer << '>';
+}
+
+mlir::LogicalResult
+StructType::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
+                   llvm::ArrayRef<mlir::Type> members, mlir::StringAttr name,
+                   bool incomplete, bool packed,
+                   mlir::cir::StructType::RecordKind kind,
+                   ASTRecordDeclInterface ast) {
+  if (name && name.getValue().empty()) {
+    emitError() << "identified structs cannot have an empty name";
+    return mlir::failure();
+  }
+  return mlir::success();
 }
 
 //===----------------------------------------------------------------------===//

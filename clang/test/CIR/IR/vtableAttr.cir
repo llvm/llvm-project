@@ -1,9 +1,8 @@
 // RUN: cir-opt %s | FileCheck %s
 
 !u8i = !cir.int<u, 8>
-!ty_2222 = !cir.struct<struct "" {!cir.array<!cir.ptr<!u8i> x 1>}>
 module {
     // Should parse VTable attribute.
-    cir.global external @testVTable = #cir.vtable<{#cir.const_array<[#cir.ptr<null> : !cir.ptr<!u8i>]> : !cir.array<!cir.ptr<!u8i> x 1>}> : !ty_2222
-    // CHECK: cir.global external @testVTable = #cir.vtable<{#cir.const_array<[#cir.ptr<null> : !cir.ptr<!u8i>]> : !cir.array<!cir.ptr<!u8i> x 1>}> : !ty_2222
+    cir.global external @testVTable = #cir.vtable<{#cir.const_array<[#cir.ptr<null> : !cir.ptr<!u8i>]> : !cir.array<!cir.ptr<!u8i> x 1>}> : !cir.struct<struct {!cir.array<!cir.ptr<!u8i> x 1>}>
+    // CHECK: cir.global external @testVTable = #cir.vtable<{#cir.const_array<[#cir.ptr<null> : !cir.ptr<!u8i>]> : !cir.array<!cir.ptr<!u8i> x 1>}> : !ty_anon_struct
 }
