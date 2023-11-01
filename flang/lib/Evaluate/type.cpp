@@ -40,18 +40,12 @@ static bool IsDescriptor(const ObjectEntityDetails &details) {
   std::size_t j{0};
   for (const ShapeSpec &shapeSpec : details.shape()) {
     ++j;
-    if (const auto &lb{shapeSpec.lbound().GetExplicit()};
-        !lb || !IsConstantExpr(*lb)) {
-      return true;
-    }
     if (const auto &ub{shapeSpec.ubound().GetExplicit()}) {
       if (!IsConstantExpr(*ub)) {
         return true;
       }
-    } else if (j == details.shape().size() && details.isDummy()) {
-      // assumed size array
     } else {
-      return true;
+      return shapeSpec.ubound().isColon();
     }
   }
   return false;
