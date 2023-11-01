@@ -12023,6 +12023,9 @@ def err_hlsl_operator_unsupported : Error<
 def err_hlsl_param_qualifier_mismatch :
   Error<"conflicting parameter qualifier %0 on parameter %1">;
 
+def warn_hlsl_impcast_vector_truncation : Warning<
+  "implicit conversion truncates vector: %0 to %1">, InGroup<Conversion>;
+
 // Layout randomization diagnostics.
 def err_non_designated_init_used : Error<
   "a randomized struct can only be initialized with a designated initializer">;

@@ -610,6 +610,8 @@ public:
   llvm::Value *EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
                                        bool isInc, bool isPre);
 
+  llvm::Value *EmitVectorElementConversion(QualType SrcType, QualType DstType,
+                                           llvm::Value *Src);
 
   Value *VisitUnaryAddrOf(const UnaryOperator *E) {
     if (isa<MemberPointerType>(E->getType())) // never sugared
@@ -1422,6 +1424,9 @@ Value *ScalarExprEmitter::EmitScalarConversion(Value *Src, QualType SrcType,
     return Builder.CreateVectorSplat(NumElements, Src, "splat");
   }
 
+  if (SrcType->isExtVectorType() && DstType->isExtVectorType())
+    return EmitVectorElementConversion(SrcType, DstType, Src);
+
   if (SrcType->isMatrixType() && DstType->isMatrixType())
     return EmitScalarCast(Src, SrcType, DstType, SrcTy, DstTy, Opts);
 
@@ -1701,10 +1706,14 @@ Value *ScalarExprEmitter::VisitShuffleVectorExpr(ShuffleVectorExpr *E) {
 }
 
 Value *ScalarExprEmitter::VisitConvertVectorExpr(ConvertVectorExpr *E) {
-  QualType SrcType = E->getSrcExpr()->getType(),
-           DstType = E->getType();
+  QualType SrcType = E->getSrcExpr()->getType(), DstType = E->getType();
+  Value *Src = CGF.EmitScalarExpr(E->getSrcExpr());
+  return EmitVectorElementConversion(SrcType, DstType, Src);
+}
 
-  Value *Src  = CGF.EmitScalarExpr(E->getSrcExpr());
+llvm::Value *ScalarExprEmitter::EmitVectorElementConversion(QualType SrcType,
+                                                            QualType DstType,
+                                                            Value *Src) {
 
   SrcType = CGF.getContext().getCanonicalType(SrcType);
   DstType = CGF.getContext().getCanonicalType(DstType);
@@ -2465,6 +2474,14 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
 
   case CK_IntToOCLSampler:
     return CGF.CGM.createOpenCLIntToSamplerConversion(E, CGF);
+
+  case CK_VectorTruncation: {
+    assert(DestTy->isVectorType() && "Expected dest type to be vector type");
+    Value *Vec = Visit(const_cast<Expr *>(E));
+    SmallVector<int, 16> Mask;
+    Mask.insert(Mask.begin(), DestTy->getAs<VectorType>()->getNumElements(), 0);
+    return Builder.CreateShuffleVector(Vec, Mask, "trunc");
+  }
 
   } // end of switch
 

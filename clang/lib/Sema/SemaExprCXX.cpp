@@ -4763,6 +4763,20 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
                              CK_ZeroToOCLOpaqueType,
                              From->getValueKind()).get();
     break;
+  case ICK_HLSL_Vector_Truncation: {
+    // Note: HLSL vectors are ExtVectors. Since this truncates a vector to a
+    // smaller vector, this can only operate on arguments where the source and
+    // destination types are ExtVectors.
+    auto *FromVec = From->getType()->castAs<ExtVectorType>();
+    auto *ToVec = ToType->castAs<ExtVectorType>();
+    QualType ElType = FromVec->getElementType();
+    QualType TruncTy =
+        Context.getExtVectorType(ElType, ToVec->getNumElements());
+    From = ImpCastExprToType(From, TruncTy, CK_VectorTruncation,
+                             From->getValueKind())
+               .get();
+    break;
+  }
 
   case ICK_Lvalue_To_Rvalue:
   case ICK_Array_To_Pointer:
@@ -4773,6 +4787,76 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
   case ICK_C_Only_Conversion:
   case ICK_Incompatible_Pointer_Conversion:
     llvm_unreachable("Improper second standard conversion");
+  }
+
+  if (SCS.Element != ICK_Identity) {
+    // if SCS.Element is not ICK_Identity the To and From types must be HLSL
+    // vectors or matrices. HLSL matrices aren't yet supported so this code only
+    // handles vectors for now.
+
+    assert(From->getType()->isVectorType() && ToType->isVectorType() &&
+           "Element conversion is only supported for vector types.");
+    assert(From->getType()->getAs<VectorType>()->getNumElements() ==
+               ToType->getAs<VectorType>()->getNumElements() &&
+           "Element conversion is only supported for vectors with the same "
+           "element counts.");
+    QualType FromElTy = From->getType()->getAs<VectorType>()->getElementType();
+    unsigned NumElts = ToType->getAs<VectorType>()->getNumElements();
+    switch (SCS.Element) {
+    case ICK_Identity:
+      // Nothing to do.
+      break;
+    case ICK_Boolean_Conversion:
+      // Perform half-to-boolean conversion via float.
+      if (FromElTy->isHalfType()) {
+        QualType FPExtType = Context.getExtVectorType(FromElTy, NumElts);
+        From = ImpCastExprToType(From, FPExtType, CK_FloatingCast).get();
+        FromType = FPExtType;
+      }
+
+      From =
+          ImpCastExprToType(From, ToType, ScalarTypeToBooleanCastKind(FromElTy),
+                            VK_PRValue,
+                            /*BasePath=*/nullptr, CCK)
+              .get();
+      break;
+    case ICK_Integral_Promotion:
+    case ICK_Integral_Conversion:
+      if (ToType->isBooleanType()) {
+        assert(FromType->castAs<EnumType>()->getDecl()->isFixed() &&
+               SCS.Second == ICK_Integral_Promotion &&
+               "only enums with fixed underlying type can promote to bool");
+        From = ImpCastExprToType(From, ToType, CK_IntegralToBoolean, VK_PRValue,
+                                 /*BasePath=*/nullptr, CCK)
+                   .get();
+      } else {
+        From = ImpCastExprToType(From, ToType, CK_IntegralCast, VK_PRValue,
+                                 /*BasePath=*/nullptr, CCK)
+                   .get();
+      }
+      break;
+
+    case ICK_Floating_Promotion:
+    case ICK_Floating_Conversion:
+      From = ImpCastExprToType(From, ToType, CK_FloatingCast, VK_PRValue,
+                               /*BasePath=*/nullptr, CCK)
+                 .get();
+      break;
+    case ICK_Floating_Integral:
+      if (ToType->isRealFloatingType())
+        From =
+            ImpCastExprToType(From, ToType, CK_IntegralToFloating, VK_PRValue,
+                              /*BasePath=*/nullptr, CCK)
+                .get();
+      else
+        From =
+            ImpCastExprToType(From, ToType, CK_FloatingToIntegral, VK_PRValue,
+                              /*BasePath=*/nullptr, CCK)
+                .get();
+      break;
+    default:
+      llvm_unreachable("Improper element standard conversion");
+    }
   }
 
   switch (SCS.Third) {
