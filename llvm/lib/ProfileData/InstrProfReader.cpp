@@ -167,17 +167,20 @@ static Error printBinaryIdsInternal(raw_ostream &OS,
 
 Expected<std::unique_ptr<InstrProfReader>>
 InstrProfReader::create(const Twine &Path, vfs::FileSystem &FS,
-                        const InstrProfCorrelator *Correlator) {
+                        const InstrProfCorrelator *Correlator,
+                        std::function<void(Error)> Warn) {
   // Set up the buffer to read.
   auto BufferOrError = setupMemoryBuffer(Path, FS);
   if (Error E = BufferOrError.takeError())
     return std::move(E);
-  return InstrProfReader::create(std::move(BufferOrError.get()), Correlator);
+  return InstrProfReader::create(std::move(BufferOrError.get()), Correlator,
+                                 Warn);
 }
 
 Expected<std::unique_ptr<InstrProfReader>>
 InstrProfReader::create(std::unique_ptr<MemoryBuffer> Buffer,
-                        const InstrProfCorrelator *Correlator) {
+                        const InstrProfCorrelator *Correlator,
+                        std::function<void(Error)> Warn) {
   if (Buffer->getBufferSize() == 0)
     return make_error<InstrProfError>(instrprof_error::empty_raw_profile);
 
@@ -186,9 +189,9 @@ InstrProfReader::create(std::unique_ptr<MemoryBuffer> Buffer,
   if (IndexedInstrProfReader::hasFormat(*Buffer))
     Result.reset(new IndexedInstrProfReader(std::move(Buffer)));
   else if (RawInstrProfReader64::hasFormat(*Buffer))
-    Result.reset(new RawInstrProfReader64(std::move(Buffer), Correlator));
+    Result.reset(new RawInstrProfReader64(std::move(Buffer), Correlator, Warn));
   else if (RawInstrProfReader32::hasFormat(*Buffer))
-    Result.reset(new RawInstrProfReader32(std::move(Buffer), Correlator));
+    Result.reset(new RawInstrProfReader32(std::move(Buffer), Correlator, Warn));
   else if (TextInstrProfReader::hasFormat(*Buffer))
     Result.reset(new TextInstrProfReader(std::move(Buffer)));
   else
@@ -706,8 +709,12 @@ Error RawInstrProfReader<IntPtrT>::readRawCounts(
       // A value of zero signifies the block is covered.
       Record.Counts.push_back(*Ptr == 0 ? 1 : 0);
     } else {
-      const auto *CounterValue = reinterpret_cast<const uint64_t *>(Ptr);
-      Record.Counts.push_back(swap(*CounterValue));
+      uint64_t CounterValue = swap(*reinterpret_cast<const uint64_t *>(Ptr));
+      if (CounterValue > MaxCounterValue && Warn)
+        Warn(make_error<InstrProfError>(
+            instrprof_error::counter_value_too_large, Twine(CounterValue)));
+
+      Record.Counts.push_back(CounterValue);
     }
   }
 
