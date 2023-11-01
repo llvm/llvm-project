@@ -12,4 +12,5 @@
 
 // RUN: %{verify}
 
-static_assert(false, ""); // expected-error {{static assertion failed}}
+struct Foo { };
+typedef Foo::x x; // expected-error {{no type named 'x' in 'Foo'}}
