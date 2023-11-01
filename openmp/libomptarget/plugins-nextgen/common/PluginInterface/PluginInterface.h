@@ -287,6 +287,11 @@ struct GenericKernelTy {
     return *ImagePtr;
   }
 
+  /// Return the kernel environment object for kernel \p Name.
+  const KernelEnvironmentTy &getKernelEnvironmentForKernel() {
+    return KernelEnvironment;
+  }
+
   /// Indicate whether an execution mode is valid.
   static bool isValidExecutionMode(OMPTgtExecModeFlags ExecutionMode) {
     switch (ExecutionMode) {
@@ -360,10 +365,14 @@ private:
   /// user-defined threads and block clauses.
   virtual uint32_t getNumThreads(GenericDeviceTy &GenericDevice,
                                  uint32_t ThreadLimitClause[3]) const;
+
+  /// The number of threads \p NumThreads can be adjusted by this method.
+  /// \p IsNumThreadsFromUser is true is \p NumThreads is defined by user via
+  /// thread_limit clause.
   virtual uint64_t getNumBlocks(GenericDeviceTy &GenericDevice,
                                 uint32_t BlockLimitClause[3],
-                                uint64_t LoopTripCount,
-                                uint32_t &NumThreads) const;
+                                uint64_t LoopTripCount, uint32_t &NumThreads,
+                                bool IsNumThreadsFromUser) const;
 
   /// The kernel name.
   const char *Name;
@@ -400,6 +409,8 @@ protected:
   bool isXTeamReductionsMode() const {
     return ExecutionMode == OMP_TGT_EXEC_MODE_XTEAM_RED;
   }
+  /// The kernel environment, including execution flags.
+  KernelEnvironmentTy KernelEnvironment;
 };
 
 /// Class representing a map of host pinned allocations. We track these pinned

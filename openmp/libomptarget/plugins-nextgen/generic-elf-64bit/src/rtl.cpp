@@ -25,6 +25,7 @@
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
+#include "llvm/Frontend/OpenMP/OMPDeviceConstants.h"
 #include "llvm/Frontend/OpenMP/OMPGridValues.h"
 #include "llvm/Support/DynamicLibrary.h"
 
@@ -85,6 +86,10 @@ struct GenELF64KernelTy : public GenericKernelTy {
 
     // Save the function pointer.
     Func = (void (*)())Global.getPtr();
+
+    KernelEnvironment.Configuration.ExecMode = OMP_TGT_EXEC_MODE_GENERIC;
+    KernelEnvironment.Configuration.MayUseNestedParallelism = /* Unknown */ 2;
+    KernelEnvironment.Configuration.UseGenericStateMachine = /* Unknown */ 2;
 
     // Set the maximum number of threads to a single.
     MaxNumThreads = 1;

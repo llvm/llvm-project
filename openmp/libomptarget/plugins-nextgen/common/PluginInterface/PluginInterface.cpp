@@ -423,9 +423,33 @@ Error GenericKernelTy::init(GenericDeviceTy &GenericDevice,
 
   ImagePtr = &Image;
 
-  PreferredNumThreads = GenericDevice.getDefaultNumThreads();
+  // Retrieve kernel environment object for the kernel.
+  GlobalTy KernelEnv(std::string(Name) + "_kernel_environment",
+                     sizeof(KernelEnvironment), &KernelEnvironment);
+  GenericGlobalHandlerTy &GHandler = Plugin::get().getGlobalHandler();
+  if (auto Err =
+          GHandler.readGlobalFromImage(GenericDevice, *ImagePtr, KernelEnv)) {
+    [[maybe_unused]] std::string ErrStr = toString(std::move(Err));
+    DP("Failed to read kernel environment for '%s': %s\n"
+       "Using default SPMD (2) execution mode\n",
+       Name, ErrStr.data());
+    KernelEnvironment.Configuration.ExecMode = OMP_TGT_EXEC_MODE_SPMD;
+    KernelEnvironment.Configuration.MayUseNestedParallelism = /*Unknown=*/2;
+    KernelEnvironment.Configuration.UseGenericStateMachine = /*Unknown=*/2;
+  }
 
-  MaxNumThreads = GenericDevice.getThreadLimit();
+  // Max = Config.Max > 0 ? min(Config.Max, Device.Max) : Device.Max;
+  MaxNumThreads = KernelEnvironment.Configuration.MaxThreads > 0
+                      ? std::min(KernelEnvironment.Configuration.MaxThreads,
+                                 int32_t(GenericDevice.getThreadLimit()))
+                      : GenericDevice.getThreadLimit();
+
+  // Pref = Config.Pref > 0 ? max(Config.Pref, Device.Pref) : Device.Pref;
+  PreferredNumThreads =
+      KernelEnvironment.Configuration.MinThreads > 0
+          ? std::max(KernelEnvironment.Configuration.MinThreads,
+                     int32_t(GenericDevice.getDefaultNumThreads()))
+          : GenericDevice.getDefaultNumThreads();
 
   return initImpl(GenericDevice, Image);
 }
@@ -465,8 +489,9 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
   if (AdjustInfo.first)
     NumThreads = AdjustInfo.second;
 
-  uint64_t NumBlocks = getNumBlocks(GenericDevice, KernelArgs.NumTeams,
-                                    KernelArgs.Tripcount, NumThreads);
+  uint64_t NumBlocks =
+      getNumBlocks(GenericDevice, KernelArgs.NumTeams, KernelArgs.Tripcount,
+                   NumThreads, KernelArgs.ThreadLimit[0] > 0);
 
   if (auto Err =
           printLaunchInfo(GenericDevice, KernelArgs, NumThreads, NumBlocks))
@@ -516,7 +541,8 @@ uint32_t GenericKernelTy::getNumThreads(GenericDeviceTy &GenericDevice,
 uint64_t GenericKernelTy::getNumBlocks(GenericDeviceTy &GenericDevice,
                                        uint32_t NumTeamsClause[3],
                                        uint64_t LoopTripCount,
-                                       uint32_t &NumThreads) const {
+                                       uint32_t &NumThreads,
+                                       bool IsNumThreadsFromUser) const {
   assert(NumTeamsClause[1] == 0 && NumTeamsClause[2] == 0 &&
          "Multi dimensional launch not supported yet.");
 
@@ -932,21 +958,6 @@ Error GenericDeviceTy::registerKernelOffloadEntry(
   Image.getOffloadEntryTable().addEntry(DeviceEntry);
 
   return Plugin::success();
-}
-
-Expected<KernelEnvironmentTy>
-GenericDeviceTy::getKernelEnvironmentForKernel(StringRef Name,
-                                               DeviceImageTy &Image) {
-  // Create a metadata object for the kernel environment object.
-  StaticGlobalTy<KernelEnvironmentTy> KernelEnv(Name.data(),
-                                                "_kernel_environment");
-
-  // Retrieve kernel environment object for the kernel.
-  GenericGlobalHandlerTy &GHandler = Plugin::get().getGlobalHandler();
-  if (auto Err = GHandler.readGlobalFromImage(*this, Image, KernelEnv))
-    return std::move(Err);
-
-  return KernelEnv.getValue();
 }
 
 Expected<OMPTgtExecModeFlags>
