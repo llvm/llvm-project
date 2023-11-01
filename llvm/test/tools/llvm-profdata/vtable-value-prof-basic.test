@@ -18,15 +18,15 @@ RAW-NEXT:  Counters: 2
 RAW-NEXT:  Indirect Call Site Count: 2
 RAW-NEXT:  Number of instrumented vtables: 2
 RAW-NEXT:  Indirect Target Results:
-RAW-NEXT:	     [  0, _ZN8Derived15func1Eii,        250 ] (25.00%)
-RAW-NEXT:	     [  0, _ZN8Derived25func1Eii,        750 ] (75.00%)
-RAW-NEXT:	     [  1, _ZN8Derived15func2Eii,        250 ] (25.00%)
-RAW-NEXT:	     [  1, _ZN8Derived25func2Eii,        750 ] (75.00%)
+RAW-NEXT:       [  0, _ZN8Derived15func1Eii,        250 ] (25.00%)
+RAW-NEXT:       [  0, _ZN8Derived25func1Eii,        750 ] (75.00%)
+RAW-NEXT:       [  1, _ZN8Derived15func2Eii,        250 ] (25.00%)
+RAW-NEXT:       [  1, _ZN8Derived25func2Eii,        750 ] (75.00%)
 RAW-NEXT:  VTable Results:
-RAW-NEXT:	     [  0, _ZTV8Derived1,        250 ] (25.00%)
-RAW-NEXT:        [  0, _ZTV8Derived2,        750 ] (75.00%)
-RAW-NEXT:        [  1, _ZTV8Derived1,        250 ] (25.00%)
-RAW-NEXT:	     [  1, _ZTV8Derived2,        750 ] (75.00%)
+RAW-NEXT:       [  0, _ZTV8Derived1,        250 ] (25.00%)
+RAW-NEXT:       [  0, _ZTV8Derived2,        750 ] (75.00%)
+RAW-NEXT:       [  1, _ZTV8Derived1,        250 ] (25.00%)
+RAW-NEXT:       [  1, _ZTV8Derived2,        750 ] (75.00%)
 RAW-NEXT: Instrumentation level: IR  entry_first = 0
 RAW-NEXT: Functions shown: 1
 RAW-NEXT: Total functions: 6
@@ -44,7 +44,7 @@ RAW-NEXT:   Total number of sites: 2
 RAW-NEXT:   Total number of sites with values: 2
 RAW-NEXT:   Total number of profiled values: 4
 RAW-NEXT:   Value sites histogram:
-RAW-NEXT:	      NumTargets, SiteCount
+RAW-NEXT:         NumTargets, SiteCount
 RAW-NEXT:         2, 2
 
 
@@ -81,8 +81,8 @@ INDEXED-NEXT:   Total number of sites: 2
 INDEXED-NEXT:   Total number of sites with values: 2
 INDEXED-NEXT:   Total number of profiled values: 4
 INDEXED-NEXT:   Value sites histogram:
-INDEXED-NEXT:	      NumTargets, SiteCount
-INDEXED-NEXT:         2, 2
+INDEXED-NEXT:       NumTargets, SiteCount
+INDEXED-NEXT:       2, 2
 
 ICTEXT: :ir
 ICTEXT: main
