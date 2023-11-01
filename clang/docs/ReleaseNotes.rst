@@ -219,7 +219,7 @@ New Compiler Flags
   multiplication and enables application of Smith's algorithm for complex
   division. See SMITH, R. L. Algorithm 116: Complex division. Commun. ACM 5, 8
   (1962). The default is ``-fno-cx-fortran-rules``, but is enabled by
-  ``-ffat-math``.
+  ``-ffast-math``.
 
 
 Deprecated Compiler Flags
