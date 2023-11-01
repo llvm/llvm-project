@@ -6485,7 +6485,7 @@ void CodeGenModule::EmitObjCIvarInitializations(ObjCImplementationDecl *D) {
         /*isInstance=*/true, /*isVariadic=*/false,
         /*isPropertyAccessor=*/true, /*isSynthesizedAccessorStub=*/false,
         /*isImplicitlyDeclared=*/true,
-        /*isDefined=*/false, ObjCMethodDecl::Required);
+        /*isDefined=*/false, ObjCImplementationControl::Required);
     D->addInstanceMethod(DTORMethod);
     CodeGenFunction(*this).GenerateObjCCtorDtorMethod(D, DTORMethod, false);
     D->setHasDestructors(true);
@@ -6506,7 +6506,7 @@ void CodeGenModule::EmitObjCIvarInitializations(ObjCImplementationDecl *D) {
       /*isVariadic=*/false,
       /*isPropertyAccessor=*/true, /*isSynthesizedAccessorStub=*/false,
       /*isImplicitlyDeclared=*/true,
-      /*isDefined=*/false, ObjCMethodDecl::Required);
+      /*isDefined=*/false, ObjCImplementationControl::Required);
   D->addInstanceMethod(CTORMethod);
   CodeGenFunction(*this).GenerateObjCCtorDtorMethod(D, CTORMethod, true);
   D->setHasNonZeroConstructors(true);
@@ -6514,8 +6514,8 @@ void CodeGenModule::EmitObjCIvarInitializations(ObjCImplementationDecl *D) {
 
 // EmitLinkageSpec - Emit all declarations in a linkage spec.
 void CodeGenModule::EmitLinkageSpec(const LinkageSpecDecl *LSD) {
-  if (LSD->getLanguage() != LinkageSpecDecl::lang_c &&
-      LSD->getLanguage() != LinkageSpecDecl::lang_cxx) {
+  if (LSD->getLanguage() != LinkageSpecLanguageIDs::C &&
+      LSD->getLanguage() != LinkageSpecLanguageIDs::CXX) {
     ErrorUnsupported(LSD, "linkage spec");
     return;
   }

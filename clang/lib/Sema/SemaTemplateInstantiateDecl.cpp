@@ -3639,7 +3639,7 @@ Decl *TemplateDeclInstantiator::VisitOMPDeclareReductionDecl(
     SemaRef.CurrentInstantiationScope->InstantiatedLocal(
         cast<DeclRefExpr>(D->getInitPriv())->getDecl(),
         cast<DeclRefExpr>(NewDRD->getInitPriv())->getDecl());
-    if (D->getInitializerKind() == OMPDeclareReductionDecl::CallInit) {
+    if (D->getInitializerKind() == OMPDeclareReductionInitKind::Call) {
       SubstInitializer = SemaRef.SubstExpr(Init, TemplateArgs).get();
     } else {
       auto *OldPrivParm =
@@ -3654,9 +3654,9 @@ Decl *TemplateDeclInstantiator::VisitOMPDeclareReductionDecl(
   }
   IsCorrect = IsCorrect && SubstCombiner &&
               (!Init ||
-               (D->getInitializerKind() == OMPDeclareReductionDecl::CallInit &&
+               (D->getInitializerKind() == OMPDeclareReductionInitKind::Call &&
                 SubstInitializer) ||
-               (D->getInitializerKind() != OMPDeclareReductionDecl::CallInit &&
+               (D->getInitializerKind() != OMPDeclareReductionInitKind::Call &&
                 !SubstInitializer));
 
   (void)SemaRef.ActOnOpenMPDeclareReductionDirectiveEnd(

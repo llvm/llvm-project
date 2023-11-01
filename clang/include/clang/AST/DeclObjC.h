@@ -139,10 +139,6 @@ class ObjCMethodDecl : public NamedDecl, public DeclContext {
   // This class stores some data in DeclContext::ObjCMethodDeclBits
   // to save some space. Use the provided accessors to access it.
 
-public:
-  enum ImplementationControl { None, Required, Optional };
-
-private:
   /// Return type of this method.
   QualType MethodDeclType;
 
@@ -168,14 +164,14 @@ private:
   /// constructed by createImplicitParams.
   ImplicitParamDecl *CmdDecl = nullptr;
 
-  ObjCMethodDecl(SourceLocation beginLoc, SourceLocation endLoc,
-                 Selector SelInfo, QualType T, TypeSourceInfo *ReturnTInfo,
-                 DeclContext *contextDecl, bool isInstance = true,
-                 bool isVariadic = false, bool isPropertyAccessor = false,
-                 bool isSynthesizedAccessorStub = false,
-                 bool isImplicitlyDeclared = false, bool isDefined = false,
-                 ImplementationControl impControl = None,
-                 bool HasRelatedResultType = false);
+  ObjCMethodDecl(
+      SourceLocation beginLoc, SourceLocation endLoc, Selector SelInfo,
+      QualType T, TypeSourceInfo *ReturnTInfo, DeclContext *contextDecl,
+      bool isInstance = true, bool isVariadic = false,
+      bool isPropertyAccessor = false, bool isSynthesizedAccessorStub = false,
+      bool isImplicitlyDeclared = false, bool isDefined = false,
+      ObjCImplementationControl impControl = ObjCImplementationControl::None,
+      bool HasRelatedResultType = false);
 
   SelectorLocationsKind getSelLocsKind() const {
     return static_cast<SelectorLocationsKind>(ObjCMethodDeclBits.SelLocsKind);
@@ -235,7 +231,7 @@ public:
          bool isVariadic = false, bool isPropertyAccessor = false,
          bool isSynthesizedAccessorStub = false,
          bool isImplicitlyDeclared = false, bool isDefined = false,
-         ImplementationControl impControl = None,
+         ObjCImplementationControl impControl = ObjCImplementationControl::None,
          bool HasRelatedResultType = false);
 
   static ObjCMethodDecl *CreateDeserialized(ASTContext &C, unsigned ID);
@@ -495,16 +491,17 @@ public:
   const ObjCPropertyDecl *findPropertyDecl(bool CheckOverrides = true) const;
 
   // Related to protocols declared in  \@protocol
-  void setDeclImplementation(ImplementationControl ic) {
-    ObjCMethodDeclBits.DeclImplementation = ic;
+  void setDeclImplementation(ObjCImplementationControl ic) {
+    ObjCMethodDeclBits.DeclImplementation = llvm::to_underlying(ic);
   }
 
-  ImplementationControl getImplementationControl() const {
-    return ImplementationControl(ObjCMethodDeclBits.DeclImplementation);
+  ObjCImplementationControl getImplementationControl() const {
+    return static_cast<ObjCImplementationControl>(
+        ObjCMethodDeclBits.DeclImplementation);
   }
 
   bool isOptional() const {
-    return getImplementationControl() == Optional;
+    return getImplementationControl() == ObjCImplementationControl::Optional;
   }
 
   /// Returns true if this specific method declaration is marked with the

@@ -4598,6 +4598,7 @@ cc_library(
         ":Pass",
         ":SCFDialect",
         ":SideEffectInterfaces",
+        ":SubsetOpInterface",
         ":Support",
         ":TensorDialect",
         ":Transforms",
@@ -7035,6 +7036,7 @@ cc_library(
         ":MemorySlotInterfaces",
         ":Rewrite",
         ":SideEffectInterfaces",
+        ":SubsetOpInterface",
         ":Support",
         ":TransformsPassIncGen",
         ":config",
@@ -10229,6 +10231,7 @@ cc_library(
         ":IR",
         ":SubsetOpInterfaceIncGen",
         ":Support",
+        ":ValueBoundsOpInterface",
         "//llvm:Support",
     ],
 )

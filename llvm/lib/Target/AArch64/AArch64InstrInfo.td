@@ -166,6 +166,13 @@ def HasFP8           : Predicate<"Subtarget->hasFP8()">,
                                  AssemblerPredicateWithAll<(all_of FeatureFP8), "fp8">;
 def HasFAMINMAX      : Predicate<"Subtarget->hasFAMINMAX()">,
                                  AssemblerPredicateWithAll<(all_of FeatureFAMINMAX), "faminmax">;
+def HasFP8FMA        : Predicate<"Subtarget->hasFP8FMA()">,
+                                 AssemblerPredicateWithAll<(all_of FeatureFP8FMA), "fp8fma">;
+def HasSSVE_FP8FMA   : Predicate<"Subtarget->SSVE_FP8FMA() || "
+                                 "(Subtarget->hasSVE2() && Subtarget->hasFP8FMA())">,
+                                 AssemblerPredicateWithAll<(any_of FeatureSSVE_FP8FMA,
+                                                           (all_of FeatureSVE2, FeatureFP8FMA)),
+                                                           "ssve-fp8fma or (sve2 and fp8fma)">;
 
 // A subset of SVE(2) instructions are legal in Streaming SVE execution mode,
 // they should be enabled if either has been specified.
@@ -9286,6 +9293,21 @@ let Predicates = [HasFAMINMAX] in {
  defm FAMIN : SIMDThreeSameVectorFP<0b1, 0b1, 0b011, "famin", null_frag>;
 } // End let Predicates = [HasFAMAXMIN]
 
+let Predicates = [HasFP8FMA] in {
+ defm FMLALBlane : SIMDThreeSameVectorMLAIndex<0b0, "fmlalb">;
+ defm FMLALTlane : SIMDThreeSameVectorMLAIndex<0b1, "fmlalt">;
+ defm FMLALLBBlane : SIMDThreeSameVectorMLALIndex<0b0, 0b00, "fmlallbb">;
+ defm FMLALLBTlane : SIMDThreeSameVectorMLALIndex<0b0, 0b01, "fmlallbt">;
+ defm FMLALLTBlane : SIMDThreeSameVectorMLALIndex<0b1, 0b00, "fmlalltb">;
+ defm FMLALLTTlane : SIMDThreeSameVectorMLALIndex<0b1, 0b01, "fmlalltt">;
+
+ defm FMLALB : SIMDThreeSameVectorMLA<0b0, "fmlalb">;
+ defm FMLALT : SIMDThreeSameVectorMLA<0b1, "fmlalt">;
+ defm FMLALLBB : SIMDThreeSameVectorMLAL<0b0, 0b00, "fmlallbb">;
+ defm FMLALLBT : SIMDThreeSameVectorMLAL<0b0, 0b01, "fmlallbt">;
+ defm FMLALLTB : SIMDThreeSameVectorMLAL<0b1, 0b00, "fmlalltb">;
+ defm FMLALLTT : SIMDThreeSameVectorMLAL<0b1, 0b01, "fmlalltt">;
+} // End let Predicates = [HasFP8FMA]
 
 include "AArch64InstrAtomics.td"
 include "AArch64SVEInstrInfo.td"

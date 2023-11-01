@@ -1929,7 +1929,7 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
         m_ast.GetAsCXXRecordDecl(clang_type.GetOpaqueQualType());
     if (record_decl)
       record_decl->setArgPassingRestrictions(
-          clang::RecordDecl::APK_CannotPassInRegs);
+          clang::ArgPassingKind::CannotPassInRegs);
   }
   return type_sp;
 }

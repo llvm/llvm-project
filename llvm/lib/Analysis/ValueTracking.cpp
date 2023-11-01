@@ -5390,10 +5390,9 @@ Value *llvm::isBytewiseValue(Value *V, const DataLayout &DL) {
     if (CE->getOpcode() == Instruction::IntToPtr) {
       if (auto *PtrTy = dyn_cast<PointerType>(CE->getType())) {
         unsigned BitWidth = DL.getPointerSizeInBits(PtrTy->getAddressSpace());
-        return isBytewiseValue(
-            ConstantExpr::getIntegerCast(CE->getOperand(0),
-                                         Type::getIntNTy(Ctx, BitWidth), false),
-            DL);
+        if (Constant *Op = ConstantFoldIntegerCast(
+                CE->getOperand(0), Type::getIntNTy(Ctx, BitWidth), false, DL))
+          return isBytewiseValue(Op, DL);
       }
     }
   }
