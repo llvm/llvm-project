@@ -317,9 +317,10 @@ static bool isSupportedArgumentType(Type *T, const RISCVSubtarget &Subtarget,
     return true;
   if (T->isPointerTy())
     return true;
+  // TODO: support 16bit FPtypes.
   // TODO: Support fixed vector types.
-  if (IsLowerArgs && T->isVectorTy() && T->isScalableTy() &&
-      Subtarget.hasVInstructions())
+  if (IsLowerArgs && T->isVectorTy() && Subtarget.hasVInstructions() &&
+      !T->is16bitFPTy() && T->isScalableTy())
     return true;
   return false;
 }
