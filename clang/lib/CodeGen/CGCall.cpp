@@ -2719,7 +2719,7 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
 
       auto *Decl = ParamType->getAsRecordDecl();
       if (CodeGenOpts.PassByValueIsNoAlias && Decl &&
-          Decl->getArgPassingRestrictions() == RecordDecl::APK_CanPassInRegs)
+          Decl->getArgPassingRestrictions() == ArgPassingKind::CanPassInRegs)
         // When calling the function, the pointer passed in will be the only
         // reference to the underlying object. Mark it accordingly.
         Attrs.addAttribute(llvm::Attribute::NoAlias);

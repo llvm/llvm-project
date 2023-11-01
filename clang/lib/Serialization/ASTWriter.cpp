@@ -5302,7 +5302,7 @@ void ASTWriter::WriteDeclUpdatesBlocks(RecordDataImpl &OffsetsRecord) {
         auto *RD = cast<CXXRecordDecl>(D);
         UpdatedDeclContexts.insert(RD->getPrimaryContext());
         Record.push_back(RD->isParamDestroyedInCallee());
-        Record.push_back(RD->getArgPassingRestrictions());
+        Record.push_back(llvm::to_underlying(RD->getArgPassingRestrictions()));
         Record.AddCXXDefinitionData(RD);
         Record.AddOffset(WriteDeclContextLexicalBlock(
             *Context, const_cast<CXXRecordDecl *>(RD)));

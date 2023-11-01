@@ -7280,11 +7280,11 @@ void Sema::CheckCompletedCXXClass(Scope *S, CXXRecordDecl *Record) {
   bool CanPass = canPassInRegisters(*this, Record, CCK);
 
   // Do not change ArgPassingRestrictions if it has already been set to
-  // APK_CanNeverPassInRegs.
-  if (Record->getArgPassingRestrictions() != RecordDecl::APK_CanNeverPassInRegs)
+  // ArgPassingKind::CanNeverPassInRegs.
+  if (Record->getArgPassingRestrictions() != ArgPassingKind::CanNeverPassInRegs)
     Record->setArgPassingRestrictions(CanPass
-                                          ? RecordDecl::APK_CanPassInRegs
-                                          : RecordDecl::APK_CannotPassInRegs);
+                                          ? ArgPassingKind::CanPassInRegs
+                                          : ArgPassingKind::CannotPassInRegs);
 
   // If canPassInRegisters returns true despite the record having a non-trivial
   // destructor, the record is destructed in the callee. This happens only when
