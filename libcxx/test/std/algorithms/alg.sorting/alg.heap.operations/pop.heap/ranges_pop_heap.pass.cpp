@@ -61,15 +61,7 @@ static_assert(!HasPopHeapR<UncheckedRange<const int*>>); // Doesn't satisfy `sor
 template <std::size_t N, class T, class Iter>
 constexpr void verify_heap(const std::array<T, N>& heapified, Iter last, std::array<T, N> expected) {
   assert(heapified == expected);
-  assert(last == heapified.end());
-  assert(std::is_heap(heapified.begin(), heapified.end() - 1));
-  assert(*std::max_element(heapified.begin(), heapified.end()) == heapified.back());
-}
-
-template <std::size_t N, class T, class Iter>
-constexpr void verify_heap_iterator(const std::array<T, N>& heapified, Iter last, std::array<T, N> expected) {
-  assert(heapified == expected);
-  assert(base(last) == heapified.data() + heapified.size());
+  assert(std::to_address(base(last)) == heapified.data() + heapified.size());
   assert(std::is_heap(heapified.begin(), heapified.end() - 1));
   assert(*std::max_element(heapified.begin(), heapified.end()) == heapified.back());
 }
@@ -85,7 +77,7 @@ constexpr void test_one(const std::array<int, N> input, std::array<int, N> expec
     auto e = Sent(Iter(heapified.data() + heapified.size()));
 
     std::same_as<Iter> decltype(auto) last = std::ranges::pop_heap(b, e);
-    verify_heap_iterator(heapified, last, expected);
+    verify_heap(heapified, last, expected);
   }
 
   { // (range) overload.
@@ -95,7 +87,7 @@ constexpr void test_one(const std::array<int, N> input, std::array<int, N> expec
     auto range = std::ranges::subrange(b, e);
 
     std::same_as<Iter> decltype(auto) last = std::ranges::pop_heap(range);
-    verify_heap_iterator(heapified, last, expected);
+    verify_heap(heapified, last, expected);
   }
 }
 
