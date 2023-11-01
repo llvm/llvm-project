@@ -99,7 +99,7 @@ def main():
         "-non-zero-exit-code",
         action="store_true",
         default=False,
-        help="exit with a non-zero status if formatting changes are necessary"
+        help="exit with a non-zero status if formatting changes are necessary",
     )
     args = parser.parse_args()
 
