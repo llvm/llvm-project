@@ -1978,11 +1978,17 @@ bool RISCVTargetLowering::isOffsetFoldingLegal(
   return false;
 }
 
-// Returns 0-31 if the fli instruction is available for the type and this is
-// legal FP immediate for the type. Returns -1 otherwise.
-int RISCVTargetLowering::getLegalZfaFPImm(const APFloat &Imm, EVT VT) const {
+// Return one of the followings:
+// (1) `{0-31 value, false}` if FLI is available for Imm's type and FP value.
+// (2) `{0-31 value, true}` if Imm is negative and FLI is available for its
+// positive counterpart, which will be materialized from the first returned
+// element. The second returned element indicated that there should be a FNEG
+// followed.
+// (3) `{-1, _}` if there is no way FLI can be used to materialize Imm.
+std::pair<int, bool> RISCVTargetLowering::getLegalZfaFPImm(const APFloat &Imm,
+                                                           EVT VT) const {
   if (!Subtarget.hasStdExtZfa())
-    return -1;
+    return std::make_pair(-1, false);
 
   bool IsSupportedVT = false;
   if (VT == MVT::f16) {
@@ -1995,9 +2001,14 @@ int RISCVTargetLowering::getLegalZfaFPImm(const APFloat &Imm, EVT VT) const {
   }
 
   if (!IsSupportedVT)
-    return -1;
+    return std::make_pair(-1, false);
 
-  return RISCVLoadFPImm::getLoadFPImm(Imm);
+  int Index = RISCVLoadFPImm::getLoadFPImm(Imm);
+  if (Index < 0 && Imm.isNegative())
+    // Try the combination of its positive counterpart + FNEG.
+    return std::make_pair(RISCVLoadFPImm::getLoadFPImm(-Imm), true);
+  else
+    return std::make_pair(Index, false);
 }
 
 bool RISCVTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
@@ -2015,7 +2026,7 @@ bool RISCVTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
   if (!IsLegalVT)
     return false;
 
-  if (getLegalZfaFPImm(Imm, VT) >= 0)
+  if (getLegalZfaFPImm(Imm, VT).first >= 0)
     return true;
 
   // Cannot create a 64 bit floating-point immediate value for rv32.
