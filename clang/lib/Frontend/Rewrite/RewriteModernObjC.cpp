@@ -600,7 +600,7 @@ namespace {
     StringLiteral *getStringLiteral(StringRef Str) {
       QualType StrType = Context->getConstantArrayType(
           Context->CharTy, llvm::APInt(32, Str.size() + 1), nullptr,
-          ArrayType::Normal, 0);
+          ArraySizeModifier::Normal, 0);
       return StringLiteral::Create(*Context, Str, StringLiteral::Ordinary,
                                    /*Pascal=*/false, StrType, SourceLocation());
     }

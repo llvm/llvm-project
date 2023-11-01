@@ -4,7 +4,8 @@
 // RUN:   FileCheck %s --check-prefix=CHECK-SPARSE
 // RUN: mlir-opt %s --linalg-generalize-named-ops \
 // RUN:             --linalg-fuse-elementwise-ops \
-// RUN:             --sparsification --post-sparsification-rewrite \
+// RUN:             --sparsification --lower-sparse-ops-to-foreach \
+// RUN:             --lower-sparse-foreach-to-scf \
 // RUN:             --sparse-tensor-conversion --cse | \
 // RUN:   FileCheck %s --check-prefix=CHECK-CONVERT
 
@@ -45,7 +46,7 @@
 // CHECK-SPARSE: return %[[RET]]
 //
 // CHECK-CONVERT-LABEL: func @kernel(
-// CHECK-CONVERT-SAME: %[[A:.*]]: !llvm.ptr<i8>) -> !llvm.ptr<i8>
+// CHECK-CONVERT-SAME: %[[A:.*]]: !llvm.ptr) -> !llvm.ptr
 // CHECK-CONVERT-DAG: %[[C1:.*]] = arith.constant 1 : index
 // CHECK-CONVERT-DAG: %[[C0:.*]] = arith.constant 0 : index
 // CHECK-CONVERT: %[[N:.*]] = call @sparseLvlSize(%[[A]], %[[C1]])

@@ -36,11 +36,11 @@ define dso_local i32 @test(ptr %arg) local_unnamed_addr #0 !dbg !13 {
 ; CHECK-ALU64-NEXT:  # %bb.0: # %entry
 ; CHECK-ALU64-NEXT:    #DEBUG_VALUE: test:arg <- $r1
 ; CHECK-ALU64-NEXT:  .Ltmp0:
-; CHECK-ALU64-NEXT:    r1 = 20
+; CHECK-ALU64-NEXT:    r1 = 16
 ; CHECK-ALU64-NEXT:  .Ltmp1:
 ; CHECK-ALU64-NEXT:  .Ltmp2:
 ; CHECK-ALU64-NEXT:  .Ltmp3:
-; CHECK-ALU64-NEXT:    r0 = 4
+; CHECK-ALU64-NEXT:    r0 = 8
 ; CHECK-ALU64-NEXT:  .Ltmp4:
 ; CHECK-ALU64-NEXT:    .loc 1 12 69 prologue_end # test.c:12:69
 ; CHECK-ALU64-NEXT:  .Ltmp5:
@@ -67,11 +67,11 @@ define dso_local i32 @test(ptr %arg) local_unnamed_addr #0 !dbg !13 {
 ; CHECK-ALU32-NEXT:  # %bb.0: # %entry
 ; CHECK-ALU32-NEXT:    #DEBUG_VALUE: test:arg <- $r1
 ; CHECK-ALU32-NEXT:  .Ltmp0:
-; CHECK-ALU32-NEXT:    r1 = 20
+; CHECK-ALU32-NEXT:    r1 = 16
 ; CHECK-ALU32-NEXT:  .Ltmp1:
 ; CHECK-ALU32-NEXT:  .Ltmp2:
 ; CHECK-ALU32-NEXT:  .Ltmp3:
-; CHECK-ALU32-NEXT:    r0 = 4
+; CHECK-ALU32-NEXT:    r0 = 8
 ; CHECK-ALU32-NEXT:  .Ltmp4:
 ; CHECK-ALU32-NEXT:    .loc 1 12 69 prologue_end # test.c:12:69
 ; CHECK-ALU32-NEXT:  .Ltmp5:

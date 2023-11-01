@@ -18,6 +18,7 @@ builtin_check_c_compiler_flag(-fno-profile-generate COMPILER_RT_HAS_FNO_PROFILE_
 builtin_check_c_compiler_flag(-fno-profile-instr-generate COMPILER_RT_HAS_FNO_PROFILE_INSTR_GENERATE_FLAG)
 builtin_check_c_compiler_flag(-fno-profile-instr-use COMPILER_RT_HAS_FNO_PROFILE_INSTR_USE_FLAG)
 builtin_check_c_compiler_flag(-Wno-pedantic         COMPILER_RT_HAS_WNO_PEDANTIC)
+builtin_check_c_compiler_flag(/Zl COMPILER_RT_HAS_ZL_FLAG)
 
 builtin_check_c_compiler_source(COMPILER_RT_HAS_ATOMIC_KEYWORD
 "
@@ -231,7 +232,7 @@ else()
     ${ALL_BUILTIN_SUPPORTED_ARCH})
 endif()
 
-if (OS_NAME MATCHES "Linux" AND NOT LLVM_USE_SANITIZER)
+if (OS_NAME MATCHES "Linux|SerenityOS" AND NOT LLVM_USE_SANITIZER)
   set(COMPILER_RT_HAS_CRT TRUE)
 else()
   set(COMPILER_RT_HAS_CRT FALSE)

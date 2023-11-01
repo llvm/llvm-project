@@ -8,11 +8,10 @@
 
 #include "mlir/Dialect/Linalg/Transforms/SubsetInsertionOpInterfaceImpl.h"
 
-#include "mlir/Dialect/Bufferization/IR/SubsetInsertionOpInterface.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
+#include "mlir/Interfaces/SubsetInsertionOpInterface.h"
 
 using namespace mlir;
-using namespace mlir::bufferization;
 using namespace mlir::linalg;
 
 namespace {

@@ -245,6 +245,18 @@ public:
   /// Returns the dimension-shape.
   ArrayRef<DynSize> getDimShape() const { return rtp.getShape(); }
 
+  /// Returns the Level-shape.
+  SmallVector<DynSize> getLvlShape() const {
+    return getEncoding().tranlateShape(getDimShape(),
+                                       CrdTransDirectionKind::dim2lvl);
+  }
+
+  RankedTensorType getDemappedType() const {
+    auto lvlShape = getLvlShape();
+    return RankedTensorType::get(lvlShape, rtp.getElementType(),
+                                 enc.withoutDimToLvl());
+  }
+
   /// Safely looks up the requested dimension-DynSize.  If you intend
   /// to check the result with `ShapedType::isDynamic`, then see the
   /// `getStaticDimSize` method instead.
@@ -281,6 +293,7 @@ public:
   /// `ShapedType::Trait<T>::getNumDynamicDims`.
   int64_t getNumDynamicDims() const { return rtp.getNumDynamicDims(); }
 
+  ArrayRef<DimLevelType> getLvlTypes() const { return enc.getLvlTypes(); }
   DimLevelType getLvlType(Level l) const {
     // This OOB check is for dense-tensors, since this class knows
     // their lvlRank (whereas STEA::getLvlType will/can only check
@@ -323,10 +336,17 @@ private:
   const AffineMap lvlToDim;
 };
 
-/// Convenience method to abbreviate wrapping `getRankedTensorType`.
+/// Convenience methods to abbreviate wrapping `getRankedTensorType`.
 template <typename T>
 inline SparseTensorType getSparseTensorType(T t) {
   return SparseTensorType(getRankedTensorType(t));
+}
+template <typename T>
+inline std::optional<SparseTensorType> tryGetSparseTensorType(T t) {
+  RankedTensorType rtp = getRankedTensorType(t);
+  if (rtp)
+    return SparseTensorType(rtp);
+  return std::nullopt;
 }
 
 } // namespace sparse_tensor
