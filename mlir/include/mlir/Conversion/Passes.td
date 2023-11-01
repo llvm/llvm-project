@@ -191,11 +191,6 @@ def ConvertAsyncToLLVMPass : Pass<"convert-async-to-llvm", "ModuleOp"> {
     "LLVM::LLVMDialect",
     "func::FuncDialect",
   ];
-  let options = [
-    Option<"useOpaquePointers", "use-opaque-pointers", "bool",
-           /*default=*/"true", "Generate LLVM IR using opaque pointers "
-           "instead of typed pointers">,
-  ];
 }
 
 //===----------------------------------------------------------------------===//
@@ -298,10 +293,7 @@ def ConvertControlFlowToLLVMPass : Pass<"convert-cf-to-llvm", "ModuleOp"> {
   let options = [
     Option<"indexBitwidth", "index-bitwidth", "unsigned",
            /*default=kDeriveIndexBitwidthFromDataLayout*/"0",
-           "Bitwidth of the index type, 0 to use size of machine word">,
-    Option<"useOpaquePointers", "use-opaque-pointers", "bool",
-                   /*default=*/"true", "Generate LLVM IR using opaque pointers "
-                   "instead of typed pointers">,
+           "Bitwidth of the index type, 0 to use size of machine word">
   ];
 }
 
@@ -409,9 +401,6 @@ def ConvertFuncToLLVMPass : Pass<"convert-func-to-llvm", "ModuleOp"> {
     Option<"indexBitwidth", "index-bitwidth", "unsigned",
            /*default=kDeriveIndexBitwidthFromDataLayout*/"0",
            "Bitwidth of the index type, 0 to use size of machine word">,
-    Option<"useOpaquePointers", "use-opaque-pointers", "bool",
-                       /*default=*/"true", "Generate LLVM IR using opaque pointers "
-                       "instead of typed pointers">,
   ];
 }
 
@@ -460,10 +449,7 @@ def GpuToLLVMConversionPass : Pass<"gpu-to-llvm", "ModuleOp"> {
     Option<"gpuBinaryAnnotation", "gpu-binary-annotation", "std::string",
                /*default=*/"gpu::getDefaultGpuBinaryAnnotation()",
                "Annotation attribute string for GPU binary"
-               >,
-    Option<"useOpaquePointers", "use-opaque-pointers", "bool",
-               /*default=*/"true", "Generate LLVM IR using opaque pointers "
-               "instead of typed pointers">,
+               >
   ];
 
   let dependentDialects = [
@@ -485,12 +471,6 @@ def LowerHostCodeToLLVMPass : Pass<"lower-host-to-llvm", "ModuleOp"> {
     also converts the remaining Arithmetic, Func, and MemRef dialects into LLVM
     dialect, emitting C wrappers.
   }];
-
-  let options = [
-    Option<"useOpaquePointers", "use-opaque-pointers", "bool",
-                 /*default=*/"true", "Generate LLVM IR using opaque pointers "
-                 "instead of typed pointers">
-  ];
 
   let dependentDialects = ["LLVM::LLVMDialect"];
 }
@@ -1019,9 +999,6 @@ def ConvertSPIRVToLLVMPass : Pass<"convert-spirv-to-llvm", "ModuleOp"> {
   let dependentDialects = ["LLVM::LLVMDialect"];
 
   let options = [
-    Option<"useOpaquePointers", "use-opaque-pointers", "bool",
-                 /*default=*/"true", "Generate LLVM IR using opaque pointers "
-                 "instead of typed pointers">,
     Option<"clientAPI", "client-api", "::mlir::spirv::ClientAPI",
 	   /*default=*/"::mlir::spirv::ClientAPI::Unknown",
 	   "Derive StorageClass to address space mapping from the client API",

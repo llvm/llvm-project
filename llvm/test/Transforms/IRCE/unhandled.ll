@@ -87,7 +87,7 @@ define void @already_cloned(ptr %arr, ptr %a_len_ptr, i32 %n) {
   %addr = getelementptr i32, ptr %arr, i32 %idx
   store i32 0, ptr %addr
   %next = icmp slt i32 %idx.next, %n
-  br i1 %next, label %loop, label %exit, !irce.loop.clone !{}
+  br i1 %next, label %loop, label %exit, !loop_constrainer.loop.clone !{}
 
  out.of.bounds:
   ret void

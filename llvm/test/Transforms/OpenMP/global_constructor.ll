@@ -10,9 +10,9 @@
 @_ZL6Device = internal global double 0.000000e+00, align 8
 @__omp_offloading_fd02_85283c04_main_l11_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0 }, ptr @1, ptr null }
 
-define weak void @__omp_offloading_fd02_85283c04_main_l11(ptr nonnull align 8 dereferenceable(8) %X) local_unnamed_addr "kernel" {
+define weak void @__omp_offloading_fd02_85283c04_main_l11(ptr %dyn, ptr nonnull align 8 dereferenceable(8) %X) local_unnamed_addr "kernel" {
 entry:
-  %0 = tail call i32 @__kmpc_target_init(ptr @__omp_offloading_fd02_85283c04_main_l11_kernel_environment) #0
+  %0 = tail call i32 @__kmpc_target_init(ptr @__omp_offloading_fd02_85283c04_main_l11_kernel_environment, ptr %dyn) #0
   %exec_user_code = icmp eq i32 %0, -1
   br i1 %exec_user_code, label %user_code.entry, label %common.ret
 
@@ -35,7 +35,7 @@ region.barrier:
   br label %common.ret
 }
 
-declare i32 @__kmpc_target_init(ptr) local_unnamed_addr
+declare i32 @__kmpc_target_init(ptr, ptr) local_unnamed_addr
 
 declare void @__kmpc_target_deinit() local_unnamed_addr
 
@@ -78,9 +78,9 @@ attributes #1 = { convergent nounwind }
 !13 = !{!"omnipotent char", !14, i64 0}
 !14 = !{!"Simple C++ TBAA"}
 ; CHECK-LABEL: define {{[^@]+}}@__omp_offloading_fd02_85283c04_main_l11
-; CHECK-SAME: (ptr nonnull align 8 dereferenceable(8) [[X:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: (ptr [[DYN:%.*]], ptr nonnull align 8 dereferenceable(8) [[X:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @__kmpc_target_init(ptr @__omp_offloading_fd02_85283c04_main_l11_kernel_environment) #[[ATTR1:[0-9]+]]
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @__kmpc_target_init(ptr @__omp_offloading_fd02_85283c04_main_l11_kernel_environment, ptr [[DYN]]) #[[ATTR1:[0-9]+]]
 ; CHECK-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 ; CHECK-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[COMMON_RET:%.*]]
 ; CHECK:       common.ret:
