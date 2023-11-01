@@ -707,7 +707,10 @@ genBoundsOps(fir::FirOpBuilder &builder, mlir::Location loc,
           asFortran << lexpr->AsFortran();
         }
       } else {
-        lbound = defaultLb ? zero : baseLb;
+        // If the lower bound is not specified, then the section
+        // starts from offset 0 of the dimension.
+        // Note that the lowerbound in the BoundsOp is always 0-based.
+        lbound = zero;
       }
       asFortran << ':';
       const auto &upper{std::get<1>(triplet->t)};
@@ -745,16 +748,9 @@ genBoundsOps(fir::FirOpBuilder &builder, mlir::Location loc,
         }
       }
       if (!ubound) {
+        // ub = extent - 1
         extent = fir::factory::readExtent(builder, loc, dataExv, dimension);
-        if (defaultLb) {
-          // ub = extent - 1
-          ubound = builder.create<mlir::arith::SubIOp>(loc, extent, one);
-        } else {
-          // ub = baseLb + extent - 1
-          mlir::Value lbExt =
-              builder.create<mlir::arith::AddIOp>(loc, extent, baseLb);
-          ubound = builder.create<mlir::arith::SubIOp>(loc, lbExt, one);
-        }
+        ubound = builder.create<mlir::arith::SubIOp>(loc, extent, one);
       }
       mlir::Value bound = builder.create<BoundsOp>(
           loc, boundTy, lbound, ubound, extent, stride, strideInBytes, baseLb);
