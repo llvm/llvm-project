@@ -433,15 +433,15 @@ namespace qualified_friend_no_match {
 namespace gh21483 {
 template <typename I>
 struct B {
-  struct mixin {
-    int type;
-    friend void foo(B<I>::mixin it) {
-      (void)it.mixin::type;
+  struct T {
+    int v;
+    friend void foo(B<I>::T t) {
+      (void)t.T::v;
     }
   };
 };
 
 void bar() {
-  foo(B<int>::mixin{});
+  foo(B<int>::T{});
 }
 }
