@@ -95,6 +95,12 @@ def main():
         default="clang-format",
         help="location of binary to use for clang-format",
     )
+    parser.add_argument(
+        "-non-zero-exit-code",
+        action="store_true",
+        default=False,
+        help="exit with a non-zero status if formatting changes are necessary"
+    )
     args = parser.parse_args()
 
     # Extract changed lines for each file.
@@ -185,6 +191,8 @@ def main():
             diff_string = "".join(diff)
             if len(diff_string) > 0:
                 sys.stdout.write(diff_string)
+                if args.non_zero_exit_code:
+                    sys.exit(1)
 
 
 if __name__ == "__main__":
