@@ -547,9 +547,7 @@ TypeSystemSwiftTypeRef::ResolveTypeAlias(swift::Demangle::Demangler &dem,
       types.Insert(cached);
     else if (auto *M = GetModule())
       M->FindTypes({mangled}, false, 1, searched_symbol_files, types);
-    else if (TargetSP target_sp = GetSwiftASTContext()
-                                      ? GetSwiftASTContext()->GetTargetWP().lock()
-                                      : nullptr)
+    else if (TargetSP target_sp = GetTargetWP().lock())
       target_sp->GetImages().FindTypes(nullptr, {mangled}, false, 1,
                                        searched_symbol_files, types);
     else {
