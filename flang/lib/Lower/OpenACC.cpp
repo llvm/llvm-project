@@ -1592,9 +1592,9 @@ createLoopOp(Fortran::lower::AbstractConverter &converter,
   addOperand(operands, operandSegments, workerNum);
   addOperand(operands, operandSegments, vectorNum);
   addOperands(operands, operandSegments, tileOperands);
+  addOperands(operands, operandSegments, cacheOperands);
   addOperands(operands, operandSegments, privateOperands);
   addOperands(operands, operandSegments, reductionOperands);
-  addOperands(operands, operandSegments, cacheOperands);
 
   auto loopOp = createRegionOp<mlir::acc::LoopOp, mlir::acc::YieldOp>(
       builder, currentLocation, eval, operands, operandSegments);
@@ -3295,9 +3295,12 @@ void Fortran::lower::finalizeOpenACCRoutineAttachment(
     mlir::func::FuncOp funcOp =
         mod.lookupSymbol<mlir::func::FuncOp>(mapping.first);
     if (!funcOp)
-      llvm::report_fatal_error(
-          "could not find function to attach OpenACC routine information.");
-    attachRoutineInfo(funcOp, mapping.second);
+      mlir::emitWarning(mod.getLoc(),
+                        llvm::Twine("function '") + llvm::Twine(mapping.first) +
+                            llvm::Twine("' in acc routine directive is not "
+                                        "found in this translation unit."));
+    else
+      attachRoutineInfo(funcOp, mapping.second);
   }
   accRoutineInfos.clear();
 }
