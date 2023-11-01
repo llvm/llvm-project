@@ -614,6 +614,8 @@ public:
     return error;
   }
 
+  virtual void DidLoadCore() {}
+
   /// The "ShadowListener" for a process is just an ordinary Listener that 
   /// listens for all the Process event bits.  It's convenient because you can
   /// specify it in the LaunchInfo or AttachInfo, so it will get events from
