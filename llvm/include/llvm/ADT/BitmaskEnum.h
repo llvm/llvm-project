@@ -13,6 +13,7 @@
 #include <type_traits>
 #include <utility>
 
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/Support/MathExtras.h"
 
 /// LLVM_MARK_AS_BITMASK_ENUM lets you opt in an individual enum type so you can
@@ -125,7 +126,7 @@ template <typename E> constexpr std::underlying_type_t<E> Mask() {
 /// Check that Val is in range for E, and return Val cast to E's underlying
 /// type.
 template <typename E> constexpr std::underlying_type_t<E> Underlying(E Val) {
-  auto U = static_cast<std::underlying_type_t<E>>(Val);
+  auto U = llvm::to_underlying(Val);
   assert(U >= 0 && "Negative enum values are not allowed.");
   assert(U <= Mask<E>() && "Enum value too large (or largest val too small?)");
   return U;
@@ -181,9 +182,8 @@ E &operator^=(E &LHS, E RHS) {
 // Enable bitmask enums in namespace ::llvm and all nested namespaces.
 LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
 template <typename E, typename = std::enable_if_t<is_bitmask_enum<E>::value>>
-constexpr unsigned BitWidth = BitmaskEnumDetail::bitWidth(uint64_t{
-    static_cast<std::underlying_type_t<E>>(
-        E::LLVM_BITMASK_LARGEST_ENUMERATOR)});
+constexpr unsigned BitWidth = BitmaskEnumDetail::bitWidth(
+    uint64_t{llvm::to_underlying(E::LLVM_BITMASK_LARGEST_ENUMERATOR)});
 
 } // namespace llvm
 
