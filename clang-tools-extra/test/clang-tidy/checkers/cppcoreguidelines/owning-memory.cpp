@@ -395,3 +395,13 @@ namespace PR63994 {
     // CHECK-NOTES: [[@LINE-1]]:5: warning: returning a newly created resource of type 'A *' or 'gsl::owner<>' from a function whose return type is not 'gsl::owner<>'
   }
 }
+
+namespace PR70460 {
+  template<typename T>
+  void h(T&& x) { x(); }
+
+  void f(int N) {
+    int a[N];
+    h([&a]() {});
+  }
+}

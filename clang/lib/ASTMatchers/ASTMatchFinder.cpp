@@ -290,7 +290,8 @@ public:
         continue;
       if (Node->isInitCapture(C) && !match(*C->getCapturedVar()))
         return false;
-      if (!match(*Node->capture_init_begin()[I]))
+      const Expr *CI = Node->capture_init_begin()[I];
+      if (CI && !match(*CI))
         return false;
     }
 

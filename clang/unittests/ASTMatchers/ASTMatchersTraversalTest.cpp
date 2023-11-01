@@ -606,6 +606,19 @@ void foo()
                                   varDecl(hasName("lPtrDecay"))))))));
 }
 
+TEST(Matcher, NotCrashesOnLambdaThatCapturesVla) {
+  StringRef Code = R"cpp(
+void f(int N) {
+    int a[N];
+    [&a]() {};
+}
+)cpp";
+  EXPECT_FALSE(
+      matches(Code, traverse(TK_AsIs, lambdaExpr(hasDescendant(expr())))));
+  EXPECT_FALSE(matches(Code, traverse(TK_IgnoreUnlessSpelledInSource,
+                                      lambdaExpr(hasDescendant(expr())))));
+}
+
 TEST(Matcher, MatchesCoroutine) {
   FileContentMappings M;
   M.push_back(std::make_pair("/coro_header", R"cpp(
