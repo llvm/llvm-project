@@ -1,0 +1,188 @@
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  OSABI:           ELFOSABI_GNU
+  Type:            ET_EXEC
+  Machine:         EM_AARCH64
+  Entry:           0x400500
+ProgramHeaders:
+  - Type:            PT_PHDR
+    Flags:           [ PF_R ]
+    VAddr:           0x400040
+    Align:           0x8
+    Offset:          0x40
+  - Type:            PT_LOAD
+    Flags:           [ PF_X, PF_R ]
+    FirstSec:        .dynsym
+    LastSec:         .text
+    VAddr:           0x400278
+    Align:           0x4
+    Offset:          0x0
+  - Type:            PT_LOAD
+    Flags:           [ PF_W, PF_R ]
+    FirstSec:        .dynamic
+    LastSec:         .got.plt
+    VAddr:           0x41FE08
+    Align:           0x10000
+    Offset:          0x478
+  - Type:            PT_DYNAMIC
+    Flags:           [ PF_W, PF_R ]
+    FirstSec:        .dynamic
+    LastSec:         .dynamic
+    VAddr:           0x41FE08
+    Align:           0x8
+    Offset:          0x478
+Sections:
+  - Name:            .dynsym
+    Type:            SHT_DYNSYM
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x400278
+    Link:            .dynstr
+    AddressAlign:    0x8
+  - Name:            .dynstr
+    Type:            SHT_STRTAB
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x400320
+    AddressAlign:    0x1
+  - Name:            .rela.dyn
+    Type:            SHT_RELA
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x4003E8
+    Link:            .dynsym
+    AddressAlign:    0x8
+    Relocations:
+      - Offset:          0x41FFE0
+        Symbol:          __gmon_start__
+        Type:            R_AARCH64_GLOB_DAT
+  - Name:            .rela.plt
+    Type:            SHT_RELA
+    Flags:           [ SHF_ALLOC, SHF_INFO_LINK ]
+    Address:         0x400400
+    Link:            .dynsym
+    AddressAlign:    0x8
+    Info:            .plt
+    Relocations:
+      - Offset:          0x420000
+        Symbol:          __libc_start_main
+        Type:            R_AARCH64_JUMP_SLOT
+      - Offset:          0x420008
+        Symbol:          abort
+        Type:            R_AARCH64_JUMP_SLOT
+      - Offset:          0x420010
+        Symbol:          __gmon_start__
+        Type:            R_AARCH64_JUMP_SLOT
+      - Offset:          0x420018
+        Symbol:          puts
+        Type:            R_AARCH64_JUMP_SLOT
+      - Offset:          0x420020
+        Type:            R_AARCH64_IRELATIVE
+        Addend:          4195828
+  - Name:            .plt
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x400490
+    AddressAlign:    0x8
+    EntSize:         0x10
+    Content:         F07BBFA9F00000F011FE47F910E23F9120021FD61F2003D51F2003D51F2003D510010090110240F91002009120021FD610010090110640F91022009120021FD610010090110A40F91042009120021FD610010090110E40F91062009120021FD610010090111240F91082009120021FD6
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x400500
+    AddressAlign:    0x8
+    Content:         1D0080D21E0080D2E50300AAE10340F9E2230091E60300910000009000E014910300009063A018910400009084A01A91E0FFFF97E3FFFF9732000014E00000F000F047F9400000B4E2FFFF17C0035FD60001009000E000910101009021E000913F0000EBC000005401000090216443F9610000B4F00301AA00021FD6C0035FD60001009000E000910101009021E00091210000CB22FC7FD3410C818BFF0781EB21FC4193C000005402000090426843F9620000B4F00302AA00021FD6C0035FD6FD7BBEA9FD030091F30B00F91301009060E2403980000035DEFFFF972000805260E20039F30B40F9FD7BC2A8C0035FD6E4FFFF170000009000601891C0035FD6FD7BBFA9FD030091BAFFFF97E0031F2AFD7BC1A8C0035FD60000009000601B91B0FFFF1700000000FD7BBCA9FD030091F35301A9F40000F094223891F55B02A9F50000F0B5023891940215CBF603002AF76303A9F70301AAF80302AA87FFFF97FF0F94EB6001005494FE4393130080D2A37A73F8E20318AA73060091E10317AAE003162A60003FD69F0213EB21FFFF54F35341A9F55B42A9F76343A9FD7BC4A8C0035FD61F2003D5C0035FD6
+  - Name:            .dynamic
+    Type:            SHT_DYNAMIC
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x41FE08
+    Link:            .dynstr
+    AddressAlign:    0x8
+    Entries:
+      - Tag:             DT_PLTGOT
+        Value:           0x41FFE8
+      - Tag:             DT_PLTRELSZ
+        Value:           0x78
+      - Tag:             DT_JMPREL
+        Value:           0x400400
+      - Tag:             DT_PLTREL
+        Value:           0x7
+      - Tag:             DT_RELA
+        Value:           0x4003E8
+      - Tag:             DT_RELASZ
+        Value:           0x18
+      - Tag:             DT_RELAENT
+        Value:           0x18
+      - Tag:             DT_SYMENT
+        Value:           0x18
+      - Tag:             DT_STRTAB
+        Value:           0x400320
+      - Tag:             DT_STRSZ
+        Value:           0x78
+      - Tag:             DT_NULL
+        Value:           0x0
+  - Name:            .got
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x41FFD8
+    AddressAlign:    0x8
+    Content:         08FE4100000000000000000000000000
+  - Name:            .got.plt
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x41FFE8
+    AddressAlign:    0x8
+    Content:         '00000000000000000000000000000000000000000000000090044000000000009004400000000000900440000000000090044000000000009004400000000000'
+  - Name:            .rela.text
+    Type:            SHT_RELA
+    Flags:           [ SHF_INFO_LINK ]
+    Link:            .symtab
+    AddressAlign:    0x8
+    Info:            .text
+    Relocations:
+      - Offset:          0x400530
+        Symbol:          __libc_start_main
+        Type:            R_AARCH64_CALL26
+Symbols:
+  - Name:            resolver_foo
+    Type:            STT_FUNC
+    Section:         .text
+    Value:           0x4005F4
+    Size:            0xC
+  - Name:            foo
+    Type:            STT_FUNC
+    Section:         .text
+    Value:           0x400618
+    Size:            0xC
+  - Name:            __libc_start_main
+    Type:            STT_FUNC
+    Binding:         STB_GLOBAL
+  - Name:            ifoo
+    Type:            STT_GNU_IFUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Value:           0x4005F4
+    Size:            0xC
+  - Name:            main
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Value:           0x400600
+    Size:            0x18
+  - Name:            _start
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Value:           0x400500
+DynamicSymbols:
+  - Name:            __libc_start_main
+    Type:            STT_FUNC
+    Binding:         STB_GLOBAL
+  - Name:            abort
+    Type:            STT_FUNC
+    Binding:         STB_GLOBAL
+  - Name:            puts
+    Type:            STT_FUNC
+    Binding:         STB_GLOBAL
+  - Name:            __gmon_start__
+    Binding:         STB_WEAK
+...

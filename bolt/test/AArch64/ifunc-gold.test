@@ -1,0 +1,10 @@
+// This test checks that IFUNC-related PLT entries references are correctly
+// recognised and handled by BOLT.
+// The IFUNC uses the same address for ifunc symbol and resolver, so check
+// for common name (foo).
+
+// RUN: yaml2obj %p/Inputs/ifunc-gold.yaml &> %t.exe
+// RUN: llvm-bolt %t.exe -o %t.bolt --print-disasm --print-only=main | \
+// RUN:   FileCheck %s
+
+CHECK: {{.*}} bl {{.*}}foo{{.*}}@PLT
