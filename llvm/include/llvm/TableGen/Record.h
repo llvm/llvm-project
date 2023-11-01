@@ -2154,6 +2154,11 @@ struct LessRecordRegister {
   };
 
   bool operator()(const Record *Rec1, const Record *Rec2) const {
+    int64_t LHSPositionOrder = Rec1->getValueAsInt("PositionOrder");
+    int64_t RHSPositionOrder = Rec2->getValueAsInt("PositionOrder");
+    if (LHSPositionOrder != RHSPositionOrder)
+      return LHSPositionOrder < RHSPositionOrder;
+
     RecordParts LHSParts(StringRef(Rec1->getName()));
     RecordParts RHSParts(StringRef(Rec2->getName()));
 
