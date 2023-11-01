@@ -404,20 +404,6 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
     bool isPermutation() const;
 
     //
-    // posWidth/crdWidth methods.
-    //
-
-    /// Returns the type for position storage based on posWidth.
-    /// Asserts that the encoding is non-null (since there's nowhere
-    /// to get the `MLIRContext` from).
-    Type getPosType() const;
-
-    /// Returns the type for coordinate storage based on crdWidth.
-    /// Asserts that the encoding is non-null (since there's nowhere
-    /// to get the `MLIRContext` from).
-    Type getCrdType() const;
-
-    //
     // dimSlices methods.
     //
 
@@ -570,6 +556,5 @@ def SparseTensorCrdTransDirectionAttr
     : EnumAttr<SparseTensor_Dialect, SparseTensorCrdTransDirectionEnum,
                "CrdTransDirection"> {
 }
-
 
 #endif // SPARSETENSOR_ATTRDEFS
