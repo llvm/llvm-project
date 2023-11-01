@@ -76,16 +76,14 @@ PPCTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     if (getOrEnforceKnownAlignment(
             II.getArgOperand(0), Align(16), IC.getDataLayout(), &II,
             &IC.getAssumptionCache(), &IC.getDominatorTree()) >= 16) {
-      Value *Ptr = IC.Builder.CreateBitCast(
-          II.getArgOperand(0), PointerType::getUnqual(II.getType()));
+      Value *Ptr = II.getArgOperand(0);
       return new LoadInst(II.getType(), Ptr, "", false, Align(16));
     }
     break;
   case Intrinsic::ppc_vsx_lxvw4x:
   case Intrinsic::ppc_vsx_lxvd2x: {
     // Turn PPC VSX loads into normal loads.
-    Value *Ptr = IC.Builder.CreateBitCast(II.getArgOperand(0),
-                                          PointerType::getUnqual(II.getType()));
+    Value *Ptr = II.getArgOperand(0);
     return new LoadInst(II.getType(), Ptr, Twine(""), false, Align(1));
   }
   case Intrinsic::ppc_altivec_stvx:
@@ -94,16 +92,14 @@ PPCTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     if (getOrEnforceKnownAlignment(
             II.getArgOperand(1), Align(16), IC.getDataLayout(), &II,
             &IC.getAssumptionCache(), &IC.getDominatorTree()) >= 16) {
-      Type *OpPtrTy = PointerType::getUnqual(II.getArgOperand(0)->getType());
-      Value *Ptr = IC.Builder.CreateBitCast(II.getArgOperand(1), OpPtrTy);
+      Value *Ptr = II.getArgOperand(1);
       return new StoreInst(II.getArgOperand(0), Ptr, false, Align(16));
     }
     break;
   case Intrinsic::ppc_vsx_stxvw4x:
   case Intrinsic::ppc_vsx_stxvd2x: {
     // Turn PPC VSX stores into normal stores.
-    Type *OpPtrTy = PointerType::getUnqual(II.getArgOperand(0)->getType());
-    Value *Ptr = IC.Builder.CreateBitCast(II.getArgOperand(1), OpPtrTy);
+    Value *Ptr = II.getArgOperand(1);
     return new StoreInst(II.getArgOperand(0), Ptr, false, Align(1));
   }
   case Intrinsic::ppc_altivec_vperm:
