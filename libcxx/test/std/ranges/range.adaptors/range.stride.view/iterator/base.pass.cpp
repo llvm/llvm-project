@@ -14,25 +14,42 @@
 
 #include "../test.h"
 #include <ranges>
+#include <type_traits>
 
 constexpr bool base_noexcept() {
   {
-    // If the type of the iterator of the range being strided is default
-    // constructible, then the stride view's iterator should be default
-    // constructible, too!
     int arr[]                         = {1, 2, 3};
     auto stride                       = std::ranges::stride_view(arr, 1);
     [[maybe_unused]] auto stride_iter = stride.begin();
 
+    // Check that calling base on an iterator where this is an lvalue reference
+    // is noexcept.
     static_assert(noexcept(stride_iter.base()));
+    // Calling base on an iterator where this is an rvalue reference may except.
     static_assert(!noexcept((std::move(stride_iter).base())));
   }
 
   return true;
 }
 
+constexpr bool base_const() {
+  {
+    int arr[]                         = {1, 2, 3};
+    auto stride                       = std::ranges::stride_view(arr, 1);
+    [[maybe_unused]] auto stride_iter = stride.begin();
+
+    // Calling base on an iterator where this is lvalue returns a const ref to an iterator.
+    static_assert(std::is_const_v<std::remove_reference_t<decltype(stride_iter.base())>>);
+    // Calling base on an iterator where this is an rvalue reference returns a non-const iterator.
+    static_assert(!std::is_const_v<decltype(std::move(stride_iter).base())>);
+  }
+
+  return true;
+}
 int main(int, char**) {
   base_noexcept();
   static_assert(base_noexcept());
+  base_const();
+  static_assert(base_const());
   return 0;
 }
