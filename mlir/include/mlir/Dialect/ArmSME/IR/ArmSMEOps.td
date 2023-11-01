@@ -433,9 +433,8 @@ def LoadTileSliceOp : ArmSME_Op<"load_tile_slice", [
     dimensions since the operation is scalable, and the element type must be a
     scalar that matches the element type of the result.
 
-    An SSA value `mask` specifies to mask out elements read from the MemRef.
-    The `mask` type is an `i1` vector with a shape that matches how elements
-    are read from the MemRef.
+    The provided `mask` is used to specify which elements of the tile slice
+    will be loaded.
 
     Example 1: Load a vector<[16]xi8> tile slice from memory into tile horizontally (default) at given index.
     ```mlir
@@ -492,9 +491,8 @@ def StoreTileSliceOp : ArmSME_Op<"store_tile_slice", [
     dimensions since the operation is scalable, and the element type must be a
     scalar that matches the element type of the input tile.
 
-    An SSA value `mask` specifies to mask out elements written to the MemRef.
-    The `mask` type is an `i1` vector with a shape that matches how elements
-    are written to the MemRef.
+    The provided `mask` is used to specify which elements of the tile slice
+    will be stored.
 
     Example 1: Store vector<[16]xi8> horizontal (default) tile slice from tile at given index to memory.
     ```mlir
@@ -512,7 +510,7 @@ def StoreTileSliceOp : ArmSME_Op<"store_tile_slice", [
     ```
   }];
   let arguments = (ins
-    SMETile:$tile, Index:$tile_slice_index, AnyVector:$mask,
+    SMETile:$tile, Index:$tile_slice_index, SVEPredicate:$mask,
     Arg<AnyMemRef, "the reference to store to", [MemWrite]>:$base,
     Variadic<Index>:$indices, ArmSME_TileSliceLayoutAttr:$layout
   );
