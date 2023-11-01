@@ -17,7 +17,7 @@
 #define DECLARE_FLEX_ARRAY(TYPE, NAME)                              \
   struct {                                                          \
     struct { } __empty_ ## NAME;                                    \
-      TYPE NAME[];                                                  \
+    TYPE NAME[];                                                    \
   }
 
 #define DECLARE_BOUNDED_FLEX_ARRAY(COUNT_TYPE, COUNT, TYPE, NAME)   \
@@ -161,7 +161,7 @@ void test2(struct annotated *p, size_t index) {
 // SANITIZE-WITH-ATTR:       cont12:
 // SANITIZE-WITH-ATTR-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [[STRUCT_ANNOTATED]], ptr [[P]], i64 0, i32 2, i64 [[INDEX]]
 // SANITIZE-WITH-ATTR-NEXT:    [[TMP3:%.*]] = shl i32 [[TMP0]], 2
-// SANITIZE-WITH-ATTR-NEXT:    [[CONV:%.*]] = add i32 [[TMP3]], 16
+// SANITIZE-WITH-ATTR-NEXT:    [[CONV:%.*]] = add i32 [[TMP3]], 12
 // SANITIZE-WITH-ATTR-NEXT:    store i32 [[CONV]], ptr [[ARRAYIDX]], align 4, !tbaa [[TBAA2]]
 // SANITIZE-WITH-ATTR-NEXT:    ret void
 //
@@ -171,7 +171,7 @@ void test2(struct annotated *p, size_t index) {
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[COUNT:%.*]] = getelementptr inbounds [[STRUCT_ANNOTATED:%.*]], ptr [[P]], i64 0, i32 1
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP0:%.*]] = load i32, ptr [[COUNT]], align 8, !tbaa [[TBAA2]]
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP1:%.*]] = shl i32 [[TMP0]], 2
-// NO-SANITIZE-WITH-ATTR-NEXT:    [[CONV:%.*]] = add i32 [[TMP1]], 16
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[CONV:%.*]] = add i32 [[TMP1]], 12
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [[STRUCT_ANNOTATED]], ptr [[P]], i64 0, i32 2, i64 [[INDEX]]
 // NO-SANITIZE-WITH-ATTR-NEXT:    store i32 [[CONV]], ptr [[ARRAYIDX]], align 4, !tbaa [[TBAA2]]
 // NO-SANITIZE-WITH-ATTR-NEXT:    ret void
@@ -212,8 +212,7 @@ void test3(struct annotated *p, size_t index) {
 // SANITIZE-WITH-ATTR-NEXT:    [[ARRAY:%.*]] = getelementptr inbounds [[STRUCT_ANON_STRUCT]], ptr [[P]], i64 1
 // SANITIZE-WITH-ATTR-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [0 x i32], ptr [[ARRAY]], i64 0, i64 [[TMP1]]
 // SANITIZE-WITH-ATTR-NEXT:    [[DOTTR:%.*]] = trunc i64 [[TMP0]] to i32
-// SANITIZE-WITH-ATTR-NEXT:    [[TMP4:%.*]] = shl i32 [[DOTTR]], 2
-// SANITIZE-WITH-ATTR-NEXT:    [[CONV:%.*]] = add i32 [[TMP4]], 16
+// SANITIZE-WITH-ATTR-NEXT:    [[CONV:%.*]] = shl i32 [[DOTTR]], 2
 // SANITIZE-WITH-ATTR-NEXT:    store i32 [[CONV]], ptr [[ARRAYIDX]], align 4, !tbaa [[TBAA2]]
 // SANITIZE-WITH-ATTR-NEXT:    ret void
 //
@@ -223,8 +222,7 @@ void test3(struct annotated *p, size_t index) {
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[COUNT:%.*]] = getelementptr inbounds [[STRUCT_ANON_STRUCT:%.*]], ptr [[P]], i64 0, i32 1
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP0:%.*]] = load i64, ptr [[COUNT]], align 8, !tbaa [[TBAA6:![0-9]+]]
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[DOTTR:%.*]] = trunc i64 [[TMP0]] to i32
-// NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP1:%.*]] = shl i32 [[DOTTR]], 2
-// NO-SANITIZE-WITH-ATTR-NEXT:    [[CONV:%.*]] = add i32 [[TMP1]], 16
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[CONV:%.*]] = shl i32 [[DOTTR]], 2
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[ARRAY:%.*]] = getelementptr inbounds [[STRUCT_ANON_STRUCT]], ptr [[P]], i64 1
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[IDXPROM:%.*]] = sext i32 [[INDEX]] to i64
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [0 x i32], ptr [[ARRAY]], i64 0, i64 [[IDXPROM]]
@@ -325,7 +323,7 @@ void test5(struct anon_struct *p, int index) {
 // SANITIZE-WITH-ATTR-NEXT:    [[TMP4:%.*]] = sext i32 [[INDEX]] to i64, !nosanitize !6
 // SANITIZE-WITH-ATTR-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [0 x i8], ptr [[INTS]], i64 0, i64 [[TMP4]]
 // SANITIZE-WITH-ATTR-NEXT:    [[TMP5:%.*]] = trunc i32 [[TMP1]] to i8
-// SANITIZE-WITH-ATTR-NEXT:    [[CONV:%.*]] = add i8 [[TMP5]], 16
+// SANITIZE-WITH-ATTR-NEXT:    [[CONV:%.*]] = add i8 [[TMP5]], 4
 // SANITIZE-WITH-ATTR-NEXT:    store i8 [[CONV]], ptr [[ARRAYIDX]], align 1, !tbaa [[TBAA10:![0-9]+]]
 // SANITIZE-WITH-ATTR-NEXT:    ret void
 //
@@ -335,7 +333,7 @@ void test5(struct anon_struct *p, int index) {
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[STRUCT_UNION_OF_FAMS:%.*]], ptr [[P]], i64 0, i32 1
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP1:%.*]] = load i32, ptr [[TMP0]], align 8, !tbaa [[TBAA8:![0-9]+]]
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP2:%.*]] = trunc i32 [[TMP1]] to i8
-// NO-SANITIZE-WITH-ATTR-NEXT:    [[CONV:%.*]] = add i8 [[TMP2]], 16
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[CONV:%.*]] = add i8 [[TMP2]], 4
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[INTS:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 9
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[IDXPROM:%.*]] = sext i32 [[INDEX]] to i64
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [0 x i8], ptr [[INTS]], i64 0, i64 [[IDXPROM]]
@@ -433,7 +431,7 @@ void test7(struct union_of_fams *p, int index) {
 // SANITIZE-WITH-ATTR-NEXT:    [[BYTES:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 12
 // SANITIZE-WITH-ATTR-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [0 x i8], ptr [[BYTES]], i64 0, i64 [[TMP3]]
 // SANITIZE-WITH-ATTR-NEXT:    [[TMP6:%.*]] = trunc i32 [[TMP1]] to i8
-// SANITIZE-WITH-ATTR-NEXT:    [[CONV:%.*]] = add i8 [[TMP6]], 16
+// SANITIZE-WITH-ATTR-NEXT:    [[CONV:%.*]] = add i8 [[TMP6]], 4
 // SANITIZE-WITH-ATTR-NEXT:    store i8 [[CONV]], ptr [[ARRAYIDX]], align 1, !tbaa [[TBAA10]]
 // SANITIZE-WITH-ATTR-NEXT:    ret void
 //
@@ -443,7 +441,7 @@ void test7(struct union_of_fams *p, int index) {
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[STRUCT_UNION_OF_FAMS:%.*]], ptr [[P]], i64 0, i32 1
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP1:%.*]] = load i32, ptr [[TMP0]], align 8, !tbaa [[TBAA8]]
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[TMP2:%.*]] = trunc i32 [[TMP1]] to i8
-// NO-SANITIZE-WITH-ATTR-NEXT:    [[CONV:%.*]] = add i8 [[TMP2]], 16
+// NO-SANITIZE-WITH-ATTR-NEXT:    [[CONV:%.*]] = add i8 [[TMP2]], 4
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[BYTES:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 12
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[IDXPROM:%.*]] = sext i32 [[INDEX]] to i64
 // NO-SANITIZE-WITH-ATTR-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [0 x i8], ptr [[BYTES]], i64 0, i64 [[IDXPROM]]
