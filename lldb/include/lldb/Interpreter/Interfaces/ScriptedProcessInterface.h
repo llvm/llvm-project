@@ -25,8 +25,7 @@ public:
   CreatePluginObject(llvm::StringRef class_name, ExecutionContext &exe_ctx,
                      StructuredData::DictionarySP args_sp,
                      StructuredData::Generic *script_obj = nullptr) {
-    llvm_unreachable(
-        "Cannot create an instance of the ScriptedProcessInterface!");
+    return {llvm::make_error<UnimplementedError>()};
   }
 
   virtual StructuredData::DictionarySP GetCapabilities() { return {}; }

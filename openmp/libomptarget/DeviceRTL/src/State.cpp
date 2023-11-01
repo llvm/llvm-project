@@ -36,6 +36,10 @@ using namespace ompx;
 /// The kernel environment passed to the init method by the compiler.
 static KernelEnvironmentTy *SHARED(KernelEnvironmentPtr);
 
+/// The kernel launch environment passed as argument to the kernel by the
+/// runtime.
+static KernelLaunchEnvironmentTy *SHARED(KernelLaunchEnvironmentPtr);
+
 ///}
 
 namespace {
@@ -238,17 +242,23 @@ int returnValIfLevelIsActive(int Level, int Val, int DefaultVal,
 
 } // namespace
 
-void state::init(bool IsSPMD, KernelEnvironmentTy &KernelEnvironment) {
+void state::init(bool IsSPMD, KernelEnvironmentTy &KernelEnvironment,
+                 KernelLaunchEnvironmentTy &KernelLaunchEnvironment) {
   SharedMemorySmartStack.init(IsSPMD);
   if (mapping::isInitialThreadInLevel0(IsSPMD)) {
     TeamState.init(IsSPMD);
     ThreadStates = nullptr;
     KernelEnvironmentPtr = &KernelEnvironment;
+    KernelLaunchEnvironmentPtr = &KernelLaunchEnvironment;
   }
 }
 
 KernelEnvironmentTy &state::getKernelEnvironment() {
   return *KernelEnvironmentPtr;
+}
+
+KernelLaunchEnvironmentTy &state::getKernelLaunchEnvironment() {
+  return *KernelLaunchEnvironmentPtr;
 }
 
 void state::enterDataEnvironment(IdentTy *Ident) {

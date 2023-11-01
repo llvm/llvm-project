@@ -391,7 +391,7 @@ def should_add_line_to_output(
     m = CHECK_RE.match(input_line)
     if m and m.group(1) in prefix_set:
         if skip_global_checks:
-            global_ir_value_re = re.compile(r"\[\[", flags=(re.M))
+            global_ir_value_re = re.compile(r"(\[\[|@)", flags=(re.M))
             return not global_ir_value_re.search(input_line)
         return False
 
@@ -502,6 +502,7 @@ DEBUG_ONLY_ARG_RE = re.compile(r"-debug-only[= ]([^ ]+)")
 
 SCRUB_LEADING_WHITESPACE_RE = re.compile(r"^(\s+)")
 SCRUB_WHITESPACE_RE = re.compile(r"(?!^(|  \w))[ \t]+", flags=re.M)
+SCRUB_PRESERVE_LEADING_WHITESPACE_RE = re.compile(r"((?!^)[ \t]*(\S))[ \t]+")
 SCRUB_TRAILING_WHITESPACE_RE = re.compile(r"[ \t]+$", flags=re.M)
 SCRUB_TRAILING_WHITESPACE_TEST_RE = SCRUB_TRAILING_WHITESPACE_RE
 SCRUB_TRAILING_WHITESPACE_AND_ATTRIBUTES_RE = re.compile(
@@ -592,7 +593,8 @@ def do_filter(body, filters):
 def scrub_body(body):
     # Scrub runs of whitespace out of the assembly, but leave the leading
     # whitespace in place.
-    body = SCRUB_WHITESPACE_RE.sub(r" ", body)
+    body = SCRUB_PRESERVE_LEADING_WHITESPACE_RE.sub(lambda m: m.group(2) + " ", body)
+
     # Expand the tabs used for indentation.
     body = str.expandtabs(body, 2)
     # Strip trailing whitespace.
@@ -770,6 +772,7 @@ class FunctionTestBuilder:
                 supported_analyses = {
                     "cost model analysis",
                     "scalar evolution analysis",
+                    "loop access analysis",
                 }
                 if analysis.lower() not in supported_analyses:
                     warn("Unsupported analysis mode: %r!" % (analysis,))
@@ -931,7 +934,7 @@ class NamelessValue:
     def get_value_name(self, var: str, check_prefix: str):
         var = var.replace("!", "")
         if self.replace_number_with_counter:
-            assert var.isdigit(), var
+            assert var
             replacement = self.variable_mapping.get(var, None)
             if replacement is None:
                 # Replace variable with an incrementing counter
@@ -1023,6 +1026,16 @@ asm_nameless_values = [
     ),
 ]
 
+analyze_nameless_values = [
+    NamelessValue(
+        r"GRP",
+        "#",
+        r"",
+        r"0x[0-9a-f]+",
+        None,
+        replace_number_with_counter=True,
+    ),
+]
 
 def createOrRegexp(old, new):
     if not old:
@@ -1064,6 +1077,20 @@ for nameless_value in asm_nameless_values:
 ASM_VALUE_REGEXP_SUFFIX = r"([>\s]|\Z)"
 ASM_VALUE_RE = re.compile(
     r"((?:#|//)\s*)" + "(" + ASM_VALUE_REGEXP_STRING + ")" + ASM_VALUE_REGEXP_SUFFIX
+)
+
+ANALYZE_VALUE_REGEXP_PREFIX = r"(\s*)"
+ANALYZE_VALUE_REGEXP_STRING = r""
+for nameless_value in analyze_nameless_values:
+    match = createPrefixMatch(nameless_value.ir_prefix, nameless_value.ir_regexp)
+    ANALYZE_VALUE_REGEXP_STRING = createOrRegexp(ANALYZE_VALUE_REGEXP_STRING, match)
+ANALYZE_VALUE_REGEXP_SUFFIX = r"(\)?:)"
+ANALYZE_VALUE_RE = re.compile(
+    ANALYZE_VALUE_REGEXP_PREFIX
+    + r"("
+    + ANALYZE_VALUE_REGEXP_STRING
+    + r")"
+    + ANALYZE_VALUE_REGEXP_SUFFIX
 )
 
 # The entire match is group 0, the prefix has one group (=1), the entire
@@ -1110,6 +1137,7 @@ def generalize_check_lines_common(
     nameless_values,
     nameless_value_regex,
     is_asm,
+    preserve_names,
 ):
     # This gets called for each match that occurs in
     # a line. We transform variables we haven't seen
@@ -1145,7 +1173,7 @@ def generalize_check_lines_common(
     lines_with_def = []
 
     for i, line in enumerate(lines):
-        if not is_asm:
+        if not is_asm and not is_analyze:
             # An IR variable named '%.' matches the FileCheck regex string.
             line = line.replace("%.", "%dot")
             for regex in _global_hex_value_regex:
@@ -1163,7 +1191,7 @@ def generalize_check_lines_common(
             # Ignore any comments, since the check lines will too.
             scrubbed_line = SCRUB_IR_COMMENT_RE.sub(r"", line)
             lines[i] = scrubbed_line
-        if is_asm or not is_analyze:
+        if not preserve_names:
             # It can happen that two matches are back-to-back and for some reason sub
             # will not replace both of them. For now we work around this by
             # substituting until there is no more match.
@@ -1176,7 +1204,9 @@ def generalize_check_lines_common(
 
 
 # Replace IR value defs and uses with FileCheck variables.
-def generalize_check_lines(lines, is_analyze, vars_seen, global_vars_seen):
+def generalize_check_lines(
+    lines, is_analyze, vars_seen, global_vars_seen, preserve_names
+):
     return generalize_check_lines_common(
         lines,
         is_analyze,
@@ -1185,6 +1215,7 @@ def generalize_check_lines(lines, is_analyze, vars_seen, global_vars_seen):
         ir_nameless_values,
         IR_VALUE_RE,
         False,
+        preserve_names,
     )
 
 
@@ -1197,8 +1228,21 @@ def generalize_asm_check_lines(lines, vars_seen, global_vars_seen):
         asm_nameless_values,
         ASM_VALUE_RE,
         True,
+        False,
     )
 
+
+def generalize_analyze_check_lines(lines, vars_seen, global_vars_seen):
+    return generalize_check_lines_common(
+        lines,
+        True,
+        vars_seen,
+        global_vars_seen,
+        analyze_nameless_values,
+        ANALYZE_VALUE_RE,
+        False,
+        False,
+    )
 
 def add_checks(
     output_lines,
@@ -1212,6 +1256,7 @@ def add_checks(
     version,
     global_vars_seen_dict,
     is_filtered,
+    preserve_names=False,
 ):
     # prefix_exclusions are prefixes we cannot use to print the function because it doesn't exist in run lines that use these prefixes as well.
     prefix_exclusions = set()
@@ -1279,7 +1324,11 @@ def add_checks(
             args_and_sig = str(func_dict[checkprefix][func_name].args_and_sig)
             if args_and_sig:
                 args_and_sig = generalize_check_lines(
-                    [args_and_sig], is_analyze, vars_seen, global_vars_seen
+                    [args_and_sig],
+                    is_analyze,
+                    vars_seen,
+                    global_vars_seen,
+                    preserve_names,
                 )[0]
             func_name_separator = func_dict[checkprefix][func_name].func_name_separator
             if "[[" in args_and_sig:
@@ -1356,56 +1405,85 @@ def add_checks(
                     if key not in global_vars_seen_before:
                         global_vars_seen_dict[checkprefix][key] = global_vars_seen[key]
                 break
+            # For analyze output, generalize the output, and emit CHECK-EMPTY lines as well.
+            elif is_analyze:
+                func_body = generalize_analyze_check_lines(
+                    func_body, vars_seen, global_vars_seen
+                )
+                for func_line in func_body:
+                    if func_line.strip() == "":
+                        output_lines.append(
+                            "{} {}-EMPTY:".format(comment_marker, checkprefix)
+                        )
+                    else:
+                        check_suffix = "-NEXT" if not is_filtered else ""
+                        output_lines.append(
+                            "{} {}{}:  {}".format(
+                                comment_marker, checkprefix, check_suffix, func_line
+                            )
+                        )
 
+                # Add space between different check prefixes and also before the first
+                # line of code in the test function.
+                output_lines.append(comment_marker)
+
+                # Remember new global variables we have not seen before
+                for key in global_vars_seen:
+                    if key not in global_vars_seen_before:
+                        global_vars_seen_dict[checkprefix][key] = global_vars_seen[key]
+                break
             # For IR output, change all defs to FileCheck variables, so we're immune
             # to variable naming fashions.
-            func_body = generalize_check_lines(
-                func_body, is_analyze, vars_seen, global_vars_seen
-            )
+            else:
+                func_body = generalize_check_lines(
+                    func_body, False, vars_seen, global_vars_seen, preserve_names
+                )
 
-            # This could be selectively enabled with an optional invocation argument.
-            # Disabled for now: better to check everything. Be safe rather than sorry.
+                # This could be selectively enabled with an optional invocation argument.
+                # Disabled for now: better to check everything. Be safe rather than sorry.
 
-            # Handle the first line of the function body as a special case because
-            # it's often just noise (a useless asm comment or entry label).
-            # if func_body[0].startswith("#") or func_body[0].startswith("entry:"):
-            #  is_blank_line = True
-            # else:
-            #  output_lines.append('%s %s:       %s' % (comment_marker, checkprefix, func_body[0]))
-            #  is_blank_line = False
+                # Handle the first line of the function body as a special case because
+                # it's often just noise (a useless asm comment or entry label).
+                # if func_body[0].startswith("#") or func_body[0].startswith("entry:"):
+                #  is_blank_line = True
+                # else:
+                #  output_lines.append('%s %s:       %s' % (comment_marker, checkprefix, func_body[0]))
+                #  is_blank_line = False
 
-            is_blank_line = False
-
-            for func_line in func_body:
-                if func_line.strip() == "":
-                    is_blank_line = True
-                    continue
-                # Do not waste time checking IR comments.
-                func_line = SCRUB_IR_COMMENT_RE.sub(r"", func_line)
-
-                # Skip blank lines instead of checking them.
-                if is_blank_line:
-                    output_lines.append(
-                        "{} {}:       {}".format(comment_marker, checkprefix, func_line)
-                    )
-                else:
-                    check_suffix = "-NEXT" if not is_filtered else ""
-                    output_lines.append(
-                        "{} {}{}:  {}".format(
-                            comment_marker, checkprefix, check_suffix, func_line
-                        )
-                    )
                 is_blank_line = False
 
-            # Add space between different check prefixes and also before the first
-            # line of code in the test function.
-            output_lines.append(comment_marker)
+                for func_line in func_body:
+                    if func_line.strip() == "":
+                        is_blank_line = True
+                        continue
+                    # Do not waste time checking IR comments.
+                    func_line = SCRUB_IR_COMMENT_RE.sub(r"", func_line)
 
-            # Remember new global variables we have not seen before
-            for key in global_vars_seen:
-                if key not in global_vars_seen_before:
-                    global_vars_seen_dict[checkprefix][key] = global_vars_seen[key]
-            break
+                    # Skip blank lines instead of checking them.
+                    if is_blank_line:
+                        output_lines.append(
+                            "{} {}:       {}".format(
+                                comment_marker, checkprefix, func_line
+                            )
+                        )
+                    else:
+                        check_suffix = "-NEXT" if not is_filtered else ""
+                        output_lines.append(
+                            "{} {}{}:  {}".format(
+                                comment_marker, checkprefix, check_suffix, func_line
+                            )
+                        )
+                    is_blank_line = False
+
+                # Add space between different check prefixes and also before the first
+                # line of code in the test function.
+                output_lines.append(comment_marker)
+
+                # Remember new global variables we have not seen before
+                for key in global_vars_seen:
+                    if key not in global_vars_seen_before:
+                        global_vars_seen_dict[checkprefix][key] = global_vars_seen[key]
+                break
     return printed_prefixes
 
 
@@ -1439,10 +1517,11 @@ def add_ir_checks(
         func_name,
         check_label_format,
         False,
-        preserve_names,
+        False,
         version,
         global_vars_seen_dict,
         is_filtered,
+        preserve_names,
     )
 
 
@@ -1500,7 +1579,7 @@ def add_global_checks(
     prefix_list,
     output_lines,
     global_vars_seen_dict,
-    is_analyze,
+    preserve_names,
     is_before_functions,
 ):
     printed_prefixes = set()
@@ -1540,7 +1619,7 @@ def add_global_checks(
                         if not matched:
                             continue
                     tmp = generalize_check_lines(
-                        [line], is_analyze, set(), global_vars_seen
+                        [line], False, set(), global_vars_seen, preserve_names
                     )
                     check_line = "%s %s: %s" % (comment_marker, checkprefix, tmp[0])
                     check_lines.append(check_line)

@@ -52,8 +52,9 @@ LLVM::LLVMFuncOp lookupOrCreatePrintNewlineFn(ModuleOp moduleOp);
 LLVM::LLVMFuncOp lookupOrCreateMallocFn(ModuleOp moduleOp, Type indexType,
                                         bool opaquePointers);
 LLVM::LLVMFuncOp lookupOrCreateAlignedAllocFn(ModuleOp moduleOp, Type indexType,
-                                              bool opaquePointers);
-LLVM::LLVMFuncOp lookupOrCreateFreeFn(ModuleOp moduleOp, bool opaquePointers);
+                                              bool opaquePointers = true);
+LLVM::LLVMFuncOp lookupOrCreateFreeFn(ModuleOp moduleOp,
+                                      bool opaquePointers = true);
 LLVM::LLVMFuncOp lookupOrCreateGenericAllocFn(ModuleOp moduleOp, Type indexType,
                                               bool opaquePointers);
 LLVM::LLVMFuncOp lookupOrCreateGenericAlignedAllocFn(ModuleOp moduleOp,

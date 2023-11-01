@@ -626,20 +626,12 @@
 @ptr = global ptr null
 
 define <8 x i8> @test_v8i8_pre_load(ptr %addr) {
-; SDAG-LABEL: test_v8i8_pre_load:
-; SDAG:       ; %bb.0:
-; SDAG-NEXT:    ldr d0, [x0, #40]!
-; SDAG-NEXT:    adrp x8, _ptr@PAGE
-; SDAG-NEXT:    str x0, [x8, _ptr@PAGEOFF]
-; SDAG-NEXT:    ret
-;
-; CHECK-GISEL-LABEL: test_v8i8_pre_load:
-; CHECK-GISEL:       ; %bb.0:
-; CHECK-GISEL-NEXT:    ldr d0, [x0, #40]
-; CHECK-GISEL-NEXT:    adrp x8, _ptr@PAGE
-; CHECK-GISEL-NEXT:    add x9, x0, #40
-; CHECK-GISEL-NEXT:    str x9, [x8, _ptr@PAGEOFF]
-; CHECK-GISEL-NEXT:    ret
+; CHECK-LABEL: test_v8i8_pre_load:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    ldr d0, [x0, #40]!
+; CHECK-NEXT:    adrp x8, _ptr@PAGE
+; CHECK-NEXT:    str x0, [x8, _ptr@PAGEOFF]
+; CHECK-NEXT:    ret
   %newaddr = getelementptr <8 x i8>, ptr %addr, i32 5
   %val = load <8 x i8>, ptr %newaddr, align 8
   store ptr %newaddr, ptr @ptr
@@ -660,20 +652,12 @@ define <8 x i8> @test_v8i8_post_load(ptr %addr) {
 }
 
 define void @test_v8i8_pre_store(<8 x i8> %in, ptr %addr) {
-; SDAG-LABEL: test_v8i8_pre_store:
-; SDAG:       ; %bb.0:
-; SDAG-NEXT:    adrp x8, _ptr@PAGE
-; SDAG-NEXT:    str d0, [x0, #40]!
-; SDAG-NEXT:    str x0, [x8, _ptr@PAGEOFF]
-; SDAG-NEXT:    ret
-;
-; CHECK-GISEL-LABEL: test_v8i8_pre_store:
-; CHECK-GISEL:       ; %bb.0:
-; CHECK-GISEL-NEXT:    adrp x8, _ptr@PAGE
-; CHECK-GISEL-NEXT:    add x9, x0, #40
-; CHECK-GISEL-NEXT:    str d0, [x0, #40]
-; CHECK-GISEL-NEXT:    str x9, [x8, _ptr@PAGEOFF]
-; CHECK-GISEL-NEXT:    ret
+; CHECK-LABEL: test_v8i8_pre_store:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    adrp x8, _ptr@PAGE
+; CHECK-NEXT:    str d0, [x0, #40]!
+; CHECK-NEXT:    str x0, [x8, _ptr@PAGEOFF]
+; CHECK-NEXT:    ret
   %newaddr = getelementptr <8 x i8>, ptr %addr, i32 5
   store <8 x i8> %in, ptr %newaddr, align 8
   store ptr %newaddr, ptr @ptr
@@ -694,20 +678,12 @@ define void @test_v8i8_post_store(<8 x i8> %in, ptr %addr) {
 }
 
 define <4 x i16> @test_v4i16_pre_load(ptr %addr) {
-; SDAG-LABEL: test_v4i16_pre_load:
-; SDAG:       ; %bb.0:
-; SDAG-NEXT:    ldr d0, [x0, #40]!
-; SDAG-NEXT:    adrp x8, _ptr@PAGE
-; SDAG-NEXT:    str x0, [x8, _ptr@PAGEOFF]
-; SDAG-NEXT:    ret
-;
-; CHECK-GISEL-LABEL: test_v4i16_pre_load:
-; CHECK-GISEL:       ; %bb.0:
-; CHECK-GISEL-NEXT:    ldr d0, [x0, #40]
-; CHECK-GISEL-NEXT:    adrp x8, _ptr@PAGE
-; CHECK-GISEL-NEXT:    add x9, x0, #40
-; CHECK-GISEL-NEXT:    str x9, [x8, _ptr@PAGEOFF]
-; CHECK-GISEL-NEXT:    ret
+; CHECK-LABEL: test_v4i16_pre_load:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    ldr d0, [x0, #40]!
+; CHECK-NEXT:    adrp x8, _ptr@PAGE
+; CHECK-NEXT:    str x0, [x8, _ptr@PAGEOFF]
+; CHECK-NEXT:    ret
   %newaddr = getelementptr <4 x i16>, ptr %addr, i32 5
   %val = load <4 x i16>, ptr %newaddr, align 8
   store ptr %newaddr, ptr @ptr
@@ -728,20 +704,12 @@ define <4 x i16> @test_v4i16_post_load(ptr %addr) {
 }
 
 define void @test_v4i16_pre_store(<4 x i16> %in, ptr %addr) {
-; SDAG-LABEL: test_v4i16_pre_store:
-; SDAG:       ; %bb.0:
-; SDAG-NEXT:    adrp x8, _ptr@PAGE
-; SDAG-NEXT:    str d0, [x0, #40]!
-; SDAG-NEXT:    str x0, [x8, _ptr@PAGEOFF]
-; SDAG-NEXT:    ret
-;
-; CHECK-GISEL-LABEL: test_v4i16_pre_store:
-; CHECK-GISEL:       ; %bb.0:
-; CHECK-GISEL-NEXT:    adrp x8, _ptr@PAGE
-; CHECK-GISEL-NEXT:    add x9, x0, #40
-; CHECK-GISEL-NEXT:    str d0, [x0, #40]
-; CHECK-GISEL-NEXT:    str x9, [x8, _ptr@PAGEOFF]
-; CHECK-GISEL-NEXT:    ret
+; CHECK-LABEL: test_v4i16_pre_store:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    adrp x8, _ptr@PAGE
+; CHECK-NEXT:    str d0, [x0, #40]!
+; CHECK-NEXT:    str x0, [x8, _ptr@PAGEOFF]
+; CHECK-NEXT:    ret
   %newaddr = getelementptr <4 x i16>, ptr %addr, i32 5
   store <4 x i16> %in, ptr %newaddr, align 8
   store ptr %newaddr, ptr @ptr
@@ -762,20 +730,12 @@ define void @test_v4i16_post_store(<4 x i16> %in, ptr %addr) {
 }
 
 define <2 x i32> @test_v2i32_pre_load(ptr %addr) {
-; SDAG-LABEL: test_v2i32_pre_load:
-; SDAG:       ; %bb.0:
-; SDAG-NEXT:    ldr d0, [x0, #40]!
-; SDAG-NEXT:    adrp x8, _ptr@PAGE
-; SDAG-NEXT:    str x0, [x8, _ptr@PAGEOFF]
-; SDAG-NEXT:    ret
-;
-; CHECK-GISEL-LABEL: test_v2i32_pre_load:
-; CHECK-GISEL:       ; %bb.0:
-; CHECK-GISEL-NEXT:    ldr d0, [x0, #40]
-; CHECK-GISEL-NEXT:    adrp x8, _ptr@PAGE
-; CHECK-GISEL-NEXT:    add x9, x0, #40
-; CHECK-GISEL-NEXT:    str x9, [x8, _ptr@PAGEOFF]
-; CHECK-GISEL-NEXT:    ret
+; CHECK-LABEL: test_v2i32_pre_load:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    ldr d0, [x0, #40]!
+; CHECK-NEXT:    adrp x8, _ptr@PAGE
+; CHECK-NEXT:    str x0, [x8, _ptr@PAGEOFF]
+; CHECK-NEXT:    ret
   %newaddr = getelementptr <2 x i32>, ptr %addr, i32 5
   %val = load <2 x i32>, ptr %newaddr, align 8
   store ptr %newaddr, ptr @ptr
@@ -796,20 +756,12 @@ define <2 x i32> @test_v2i32_post_load(ptr %addr) {
 }
 
 define void @test_v2i32_pre_store(<2 x i32> %in, ptr %addr) {
-; SDAG-LABEL: test_v2i32_pre_store:
-; SDAG:       ; %bb.0:
-; SDAG-NEXT:    adrp x8, _ptr@PAGE
-; SDAG-NEXT:    str d0, [x0, #40]!
-; SDAG-NEXT:    str x0, [x8, _ptr@PAGEOFF]
-; SDAG-NEXT:    ret
-;
-; CHECK-GISEL-LABEL: test_v2i32_pre_store:
-; CHECK-GISEL:       ; %bb.0:
-; CHECK-GISEL-NEXT:    adrp x8, _ptr@PAGE
-; CHECK-GISEL-NEXT:    add x9, x0, #40
-; CHECK-GISEL-NEXT:    str d0, [x0, #40]
-; CHECK-GISEL-NEXT:    str x9, [x8, _ptr@PAGEOFF]
-; CHECK-GISEL-NEXT:    ret
+; CHECK-LABEL: test_v2i32_pre_store:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    adrp x8, _ptr@PAGE
+; CHECK-NEXT:    str d0, [x0, #40]!
+; CHECK-NEXT:    str x0, [x8, _ptr@PAGEOFF]
+; CHECK-NEXT:    ret
   %newaddr = getelementptr <2 x i32>, ptr %addr, i32 5
   store <2 x i32> %in, ptr %newaddr, align 8
   store ptr %newaddr, ptr @ptr
@@ -830,20 +782,12 @@ define void @test_v2i32_post_store(<2 x i32> %in, ptr %addr) {
 }
 
 define <2 x float> @test_v2f32_pre_load(ptr %addr) {
-; SDAG-LABEL: test_v2f32_pre_load:
-; SDAG:       ; %bb.0:
-; SDAG-NEXT:    ldr d0, [x0, #40]!
-; SDAG-NEXT:    adrp x8, _ptr@PAGE
-; SDAG-NEXT:    str x0, [x8, _ptr@PAGEOFF]
-; SDAG-NEXT:    ret
-;
-; CHECK-GISEL-LABEL: test_v2f32_pre_load:
-; CHECK-GISEL:       ; %bb.0:
-; CHECK-GISEL-NEXT:    ldr d0, [x0, #40]
-; CHECK-GISEL-NEXT:    adrp x8, _ptr@PAGE
-; CHECK-GISEL-NEXT:    add x9, x0, #40
-; CHECK-GISEL-NEXT:    str x9, [x8, _ptr@PAGEOFF]
-; CHECK-GISEL-NEXT:    ret
+; CHECK-LABEL: test_v2f32_pre_load:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    ldr d0, [x0, #40]!
+; CHECK-NEXT:    adrp x8, _ptr@PAGE
+; CHECK-NEXT:    str x0, [x8, _ptr@PAGEOFF]
+; CHECK-NEXT:    ret
   %newaddr = getelementptr <2 x float>, ptr %addr, i32 5
   %val = load <2 x float>, ptr %newaddr, align 8
   store ptr %newaddr, ptr @ptr
@@ -864,20 +808,12 @@ define <2 x float> @test_v2f32_post_load(ptr %addr) {
 }
 
 define void @test_v2f32_pre_store(<2 x float> %in, ptr %addr) {
-; SDAG-LABEL: test_v2f32_pre_store:
-; SDAG:       ; %bb.0:
-; SDAG-NEXT:    adrp x8, _ptr@PAGE
-; SDAG-NEXT:    str d0, [x0, #40]!
-; SDAG-NEXT:    str x0, [x8, _ptr@PAGEOFF]
-; SDAG-NEXT:    ret
-;
-; CHECK-GISEL-LABEL: test_v2f32_pre_store:
-; CHECK-GISEL:       ; %bb.0:
-; CHECK-GISEL-NEXT:    adrp x8, _ptr@PAGE
-; CHECK-GISEL-NEXT:    add x9, x0, #40
-; CHECK-GISEL-NEXT:    str d0, [x0, #40]
-; CHECK-GISEL-NEXT:    str x9, [x8, _ptr@PAGEOFF]
-; CHECK-GISEL-NEXT:    ret
+; CHECK-LABEL: test_v2f32_pre_store:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    adrp x8, _ptr@PAGE
+; CHECK-NEXT:    str d0, [x0, #40]!
+; CHECK-NEXT:    str x0, [x8, _ptr@PAGEOFF]
+; CHECK-NEXT:    ret
   %newaddr = getelementptr <2 x float>, ptr %addr, i32 5
   store <2 x float> %in, ptr %newaddr, align 8
   store ptr %newaddr, ptr @ptr
@@ -907,10 +843,10 @@ define <1 x i64> @test_v1i64_pre_load(ptr %addr) {
 ;
 ; CHECK-GISEL-LABEL: test_v1i64_pre_load:
 ; CHECK-GISEL:       ; %bb.0:
-; CHECK-GISEL-NEXT:    ldr d0, [x0, #40]
-; CHECK-GISEL-NEXT:    adrp x8, _ptr@PAGE
-; CHECK-GISEL-NEXT:    add x9, x0, #40
-; CHECK-GISEL-NEXT:    str x9, [x8, _ptr@PAGEOFF]
+; CHECK-GISEL-NEXT:    ldr x8, [x0, #40]!
+; CHECK-GISEL-NEXT:    adrp x9, _ptr@PAGE
+; CHECK-GISEL-NEXT:    str x0, [x9, _ptr@PAGEOFF]
+; CHECK-GISEL-NEXT:    fmov d0, x8
 ; CHECK-GISEL-NEXT:    ret
   %newaddr = getelementptr <1 x i64>, ptr %addr, i32 5
   %val = load <1 x i64>, ptr %newaddr, align 8
@@ -940,20 +876,12 @@ define <1 x i64> @test_v1i64_post_load(ptr %addr) {
 }
 
 define void @test_v1i64_pre_store(<1 x i64> %in, ptr %addr) {
-; SDAG-LABEL: test_v1i64_pre_store:
-; SDAG:       ; %bb.0:
-; SDAG-NEXT:    adrp x8, _ptr@PAGE
-; SDAG-NEXT:    str d0, [x0, #40]!
-; SDAG-NEXT:    str x0, [x8, _ptr@PAGEOFF]
-; SDAG-NEXT:    ret
-;
-; CHECK-GISEL-LABEL: test_v1i64_pre_store:
-; CHECK-GISEL:       ; %bb.0:
-; CHECK-GISEL-NEXT:    adrp x8, _ptr@PAGE
-; CHECK-GISEL-NEXT:    add x9, x0, #40
-; CHECK-GISEL-NEXT:    str d0, [x0, #40]
-; CHECK-GISEL-NEXT:    str x9, [x8, _ptr@PAGEOFF]
-; CHECK-GISEL-NEXT:    ret
+; CHECK-LABEL: test_v1i64_pre_store:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    adrp x8, _ptr@PAGE
+; CHECK-NEXT:    str d0, [x0, #40]!
+; CHECK-NEXT:    str x0, [x8, _ptr@PAGEOFF]
+; CHECK-NEXT:    ret
   %newaddr = getelementptr <1 x i64>, ptr %addr, i32 5
   store <1 x i64> %in, ptr %newaddr, align 8
   store ptr %newaddr, ptr @ptr
@@ -974,20 +902,12 @@ define void @test_v1i64_post_store(<1 x i64> %in, ptr %addr) {
 }
 
 define <16 x i8> @test_v16i8_pre_load(ptr %addr) {
-; SDAG-LABEL: test_v16i8_pre_load:
-; SDAG:       ; %bb.0:
-; SDAG-NEXT:    ldr q0, [x0, #80]!
-; SDAG-NEXT:    adrp x8, _ptr@PAGE
-; SDAG-NEXT:    str x0, [x8, _ptr@PAGEOFF]
-; SDAG-NEXT:    ret
-;
-; CHECK-GISEL-LABEL: test_v16i8_pre_load:
-; CHECK-GISEL:       ; %bb.0:
-; CHECK-GISEL-NEXT:    ldr q0, [x0, #80]
-; CHECK-GISEL-NEXT:    adrp x8, _ptr@PAGE
-; CHECK-GISEL-NEXT:    add x9, x0, #80
-; CHECK-GISEL-NEXT:    str x9, [x8, _ptr@PAGEOFF]
-; CHECK-GISEL-NEXT:    ret
+; CHECK-LABEL: test_v16i8_pre_load:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    ldr q0, [x0, #80]!
+; CHECK-NEXT:    adrp x8, _ptr@PAGE
+; CHECK-NEXT:    str x0, [x8, _ptr@PAGEOFF]
+; CHECK-NEXT:    ret
   %newaddr = getelementptr <16 x i8>, ptr %addr, i32 5
   %val = load <16 x i8>, ptr %newaddr, align 8
   store ptr %newaddr, ptr @ptr
@@ -1008,20 +928,12 @@ define <16 x i8> @test_v16i8_post_load(ptr %addr) {
 }
 
 define void @test_v16i8_pre_store(<16 x i8> %in, ptr %addr) {
-; SDAG-LABEL: test_v16i8_pre_store:
-; SDAG:       ; %bb.0:
-; SDAG-NEXT:    adrp x8, _ptr@PAGE
-; SDAG-NEXT:    str q0, [x0, #80]!
-; SDAG-NEXT:    str x0, [x8, _ptr@PAGEOFF]
-; SDAG-NEXT:    ret
-;
-; CHECK-GISEL-LABEL: test_v16i8_pre_store:
-; CHECK-GISEL:       ; %bb.0:
-; CHECK-GISEL-NEXT:    adrp x8, _ptr@PAGE
-; CHECK-GISEL-NEXT:    add x9, x0, #80
-; CHECK-GISEL-NEXT:    str q0, [x0, #80]
-; CHECK-GISEL-NEXT:    str x9, [x8, _ptr@PAGEOFF]
-; CHECK-GISEL-NEXT:    ret
+; CHECK-LABEL: test_v16i8_pre_store:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    adrp x8, _ptr@PAGE
+; CHECK-NEXT:    str q0, [x0, #80]!
+; CHECK-NEXT:    str x0, [x8, _ptr@PAGEOFF]
+; CHECK-NEXT:    ret
   %newaddr = getelementptr <16 x i8>, ptr %addr, i32 5
   store <16 x i8> %in, ptr %newaddr, align 8
   store ptr %newaddr, ptr @ptr
@@ -1042,20 +954,12 @@ define void @test_v16i8_post_store(<16 x i8> %in, ptr %addr) {
 }
 
 define <8 x i16> @test_v8i16_pre_load(ptr %addr) {
-; SDAG-LABEL: test_v8i16_pre_load:
-; SDAG:       ; %bb.0:
-; SDAG-NEXT:    ldr q0, [x0, #80]!
-; SDAG-NEXT:    adrp x8, _ptr@PAGE
-; SDAG-NEXT:    str x0, [x8, _ptr@PAGEOFF]
-; SDAG-NEXT:    ret
-;
-; CHECK-GISEL-LABEL: test_v8i16_pre_load:
-; CHECK-GISEL:       ; %bb.0:
-; CHECK-GISEL-NEXT:    ldr q0, [x0, #80]
-; CHECK-GISEL-NEXT:    adrp x8, _ptr@PAGE
-; CHECK-GISEL-NEXT:    add x9, x0, #80
-; CHECK-GISEL-NEXT:    str x9, [x8, _ptr@PAGEOFF]
-; CHECK-GISEL-NEXT:    ret
+; CHECK-LABEL: test_v8i16_pre_load:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    ldr q0, [x0, #80]!
+; CHECK-NEXT:    adrp x8, _ptr@PAGE
+; CHECK-NEXT:    str x0, [x8, _ptr@PAGEOFF]
+; CHECK-NEXT:    ret
   %newaddr = getelementptr <8 x i16>, ptr %addr, i32 5
   %val = load <8 x i16>, ptr %newaddr, align 8
   store ptr %newaddr, ptr @ptr
@@ -1076,20 +980,12 @@ define <8 x i16> @test_v8i16_post_load(ptr %addr) {
 }
 
 define void @test_v8i16_pre_store(<8 x i16> %in, ptr %addr) {
-; SDAG-LABEL: test_v8i16_pre_store:
-; SDAG:       ; %bb.0:
-; SDAG-NEXT:    adrp x8, _ptr@PAGE
-; SDAG-NEXT:    str q0, [x0, #80]!
-; SDAG-NEXT:    str x0, [x8, _ptr@PAGEOFF]
-; SDAG-NEXT:    ret
-;
-; CHECK-GISEL-LABEL: test_v8i16_pre_store:
-; CHECK-GISEL:       ; %bb.0:
-; CHECK-GISEL-NEXT:    adrp x8, _ptr@PAGE
-; CHECK-GISEL-NEXT:    add x9, x0, #80
-; CHECK-GISEL-NEXT:    str q0, [x0, #80]
-; CHECK-GISEL-NEXT:    str x9, [x8, _ptr@PAGEOFF]
-; CHECK-GISEL-NEXT:    ret
+; CHECK-LABEL: test_v8i16_pre_store:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    adrp x8, _ptr@PAGE
+; CHECK-NEXT:    str q0, [x0, #80]!
+; CHECK-NEXT:    str x0, [x8, _ptr@PAGEOFF]
+; CHECK-NEXT:    ret
   %newaddr = getelementptr <8 x i16>, ptr %addr, i32 5
   store <8 x i16> %in, ptr %newaddr, align 8
   store ptr %newaddr, ptr @ptr
@@ -1110,20 +1006,12 @@ define void @test_v8i16_post_store(<8 x i16> %in, ptr %addr) {
 }
 
 define <4 x i32> @test_v4i32_pre_load(ptr %addr) {
-; SDAG-LABEL: test_v4i32_pre_load:
-; SDAG:       ; %bb.0:
-; SDAG-NEXT:    ldr q0, [x0, #80]!
-; SDAG-NEXT:    adrp x8, _ptr@PAGE
-; SDAG-NEXT:    str x0, [x8, _ptr@PAGEOFF]
-; SDAG-NEXT:    ret
-;
-; CHECK-GISEL-LABEL: test_v4i32_pre_load:
-; CHECK-GISEL:       ; %bb.0:
-; CHECK-GISEL-NEXT:    ldr q0, [x0, #80]
-; CHECK-GISEL-NEXT:    adrp x8, _ptr@PAGE
-; CHECK-GISEL-NEXT:    add x9, x0, #80
-; CHECK-GISEL-NEXT:    str x9, [x8, _ptr@PAGEOFF]
-; CHECK-GISEL-NEXT:    ret
+; CHECK-LABEL: test_v4i32_pre_load:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    ldr q0, [x0, #80]!
+; CHECK-NEXT:    adrp x8, _ptr@PAGE
+; CHECK-NEXT:    str x0, [x8, _ptr@PAGEOFF]
+; CHECK-NEXT:    ret
   %newaddr = getelementptr <4 x i32>, ptr %addr, i32 5
   %val = load <4 x i32>, ptr %newaddr, align 8
   store ptr %newaddr, ptr @ptr
@@ -1144,20 +1032,12 @@ define <4 x i32> @test_v4i32_post_load(ptr %addr) {
 }
 
 define void @test_v4i32_pre_store(<4 x i32> %in, ptr %addr) {
-; SDAG-LABEL: test_v4i32_pre_store:
-; SDAG:       ; %bb.0:
-; SDAG-NEXT:    adrp x8, _ptr@PAGE
-; SDAG-NEXT:    str q0, [x0, #80]!
-; SDAG-NEXT:    str x0, [x8, _ptr@PAGEOFF]
-; SDAG-NEXT:    ret
-;
-; CHECK-GISEL-LABEL: test_v4i32_pre_store:
-; CHECK-GISEL:       ; %bb.0:
-; CHECK-GISEL-NEXT:    adrp x8, _ptr@PAGE
-; CHECK-GISEL-NEXT:    add x9, x0, #80
-; CHECK-GISEL-NEXT:    str q0, [x0, #80]
-; CHECK-GISEL-NEXT:    str x9, [x8, _ptr@PAGEOFF]
-; CHECK-GISEL-NEXT:    ret
+; CHECK-LABEL: test_v4i32_pre_store:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    adrp x8, _ptr@PAGE
+; CHECK-NEXT:    str q0, [x0, #80]!
+; CHECK-NEXT:    str x0, [x8, _ptr@PAGEOFF]
+; CHECK-NEXT:    ret
   %newaddr = getelementptr <4 x i32>, ptr %addr, i32 5
   store <4 x i32> %in, ptr %newaddr, align 8
   store ptr %newaddr, ptr @ptr
@@ -1179,20 +1059,12 @@ define void @test_v4i32_post_store(<4 x i32> %in, ptr %addr) {
 
 
 define <4 x float> @test_v4f32_pre_load(ptr %addr) {
-; SDAG-LABEL: test_v4f32_pre_load:
-; SDAG:       ; %bb.0:
-; SDAG-NEXT:    ldr q0, [x0, #80]!
-; SDAG-NEXT:    adrp x8, _ptr@PAGE
-; SDAG-NEXT:    str x0, [x8, _ptr@PAGEOFF]
-; SDAG-NEXT:    ret
-;
-; CHECK-GISEL-LABEL: test_v4f32_pre_load:
-; CHECK-GISEL:       ; %bb.0:
-; CHECK-GISEL-NEXT:    ldr q0, [x0, #80]
-; CHECK-GISEL-NEXT:    adrp x8, _ptr@PAGE
-; CHECK-GISEL-NEXT:    add x9, x0, #80
-; CHECK-GISEL-NEXT:    str x9, [x8, _ptr@PAGEOFF]
-; CHECK-GISEL-NEXT:    ret
+; CHECK-LABEL: test_v4f32_pre_load:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    ldr q0, [x0, #80]!
+; CHECK-NEXT:    adrp x8, _ptr@PAGE
+; CHECK-NEXT:    str x0, [x8, _ptr@PAGEOFF]
+; CHECK-NEXT:    ret
   %newaddr = getelementptr <4 x float>, ptr %addr, i32 5
   %val = load <4 x float>, ptr %newaddr, align 8
   store ptr %newaddr, ptr @ptr
@@ -1213,20 +1085,12 @@ define <4 x float> @test_v4f32_post_load(ptr %addr) {
 }
 
 define void @test_v4f32_pre_store(<4 x float> %in, ptr %addr) {
-; SDAG-LABEL: test_v4f32_pre_store:
-; SDAG:       ; %bb.0:
-; SDAG-NEXT:    adrp x8, _ptr@PAGE
-; SDAG-NEXT:    str q0, [x0, #80]!
-; SDAG-NEXT:    str x0, [x8, _ptr@PAGEOFF]
-; SDAG-NEXT:    ret
-;
-; CHECK-GISEL-LABEL: test_v4f32_pre_store:
-; CHECK-GISEL:       ; %bb.0:
-; CHECK-GISEL-NEXT:    adrp x8, _ptr@PAGE
-; CHECK-GISEL-NEXT:    add x9, x0, #80
-; CHECK-GISEL-NEXT:    str q0, [x0, #80]
-; CHECK-GISEL-NEXT:    str x9, [x8, _ptr@PAGEOFF]
-; CHECK-GISEL-NEXT:    ret
+; CHECK-LABEL: test_v4f32_pre_store:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    adrp x8, _ptr@PAGE
+; CHECK-NEXT:    str q0, [x0, #80]!
+; CHECK-NEXT:    str x0, [x8, _ptr@PAGEOFF]
+; CHECK-NEXT:    ret
   %newaddr = getelementptr <4 x float>, ptr %addr, i32 5
   store <4 x float> %in, ptr %newaddr, align 8
   store ptr %newaddr, ptr @ptr
@@ -1248,20 +1112,12 @@ define void @test_v4f32_post_store(<4 x float> %in, ptr %addr) {
 
 
 define <2 x i64> @test_v2i64_pre_load(ptr %addr) {
-; SDAG-LABEL: test_v2i64_pre_load:
-; SDAG:       ; %bb.0:
-; SDAG-NEXT:    ldr q0, [x0, #80]!
-; SDAG-NEXT:    adrp x8, _ptr@PAGE
-; SDAG-NEXT:    str x0, [x8, _ptr@PAGEOFF]
-; SDAG-NEXT:    ret
-;
-; CHECK-GISEL-LABEL: test_v2i64_pre_load:
-; CHECK-GISEL:       ; %bb.0:
-; CHECK-GISEL-NEXT:    ldr q0, [x0, #80]
-; CHECK-GISEL-NEXT:    adrp x8, _ptr@PAGE
-; CHECK-GISEL-NEXT:    add x9, x0, #80
-; CHECK-GISEL-NEXT:    str x9, [x8, _ptr@PAGEOFF]
-; CHECK-GISEL-NEXT:    ret
+; CHECK-LABEL: test_v2i64_pre_load:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    ldr q0, [x0, #80]!
+; CHECK-NEXT:    adrp x8, _ptr@PAGE
+; CHECK-NEXT:    str x0, [x8, _ptr@PAGEOFF]
+; CHECK-NEXT:    ret
   %newaddr = getelementptr <2 x i64>, ptr %addr, i32 5
   %val = load <2 x i64>, ptr %newaddr, align 8
   store ptr %newaddr, ptr @ptr
@@ -1282,20 +1138,12 @@ define <2 x i64> @test_v2i64_post_load(ptr %addr) {
 }
 
 define void @test_v2i64_pre_store(<2 x i64> %in, ptr %addr) {
-; SDAG-LABEL: test_v2i64_pre_store:
-; SDAG:       ; %bb.0:
-; SDAG-NEXT:    adrp x8, _ptr@PAGE
-; SDAG-NEXT:    str q0, [x0, #80]!
-; SDAG-NEXT:    str x0, [x8, _ptr@PAGEOFF]
-; SDAG-NEXT:    ret
-;
-; CHECK-GISEL-LABEL: test_v2i64_pre_store:
-; CHECK-GISEL:       ; %bb.0:
-; CHECK-GISEL-NEXT:    adrp x8, _ptr@PAGE
-; CHECK-GISEL-NEXT:    add x9, x0, #80
-; CHECK-GISEL-NEXT:    str q0, [x0, #80]
-; CHECK-GISEL-NEXT:    str x9, [x8, _ptr@PAGEOFF]
-; CHECK-GISEL-NEXT:    ret
+; CHECK-LABEL: test_v2i64_pre_store:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    adrp x8, _ptr@PAGE
+; CHECK-NEXT:    str q0, [x0, #80]!
+; CHECK-NEXT:    str x0, [x8, _ptr@PAGEOFF]
+; CHECK-NEXT:    ret
   %newaddr = getelementptr <2 x i64>, ptr %addr, i32 5
   store <2 x i64> %in, ptr %newaddr, align 8
   store ptr %newaddr, ptr @ptr
@@ -1317,20 +1165,12 @@ define void @test_v2i64_post_store(<2 x i64> %in, ptr %addr) {
 
 
 define <2 x double> @test_v2f64_pre_load(ptr %addr) {
-; SDAG-LABEL: test_v2f64_pre_load:
-; SDAG:       ; %bb.0:
-; SDAG-NEXT:    ldr q0, [x0, #80]!
-; SDAG-NEXT:    adrp x8, _ptr@PAGE
-; SDAG-NEXT:    str x0, [x8, _ptr@PAGEOFF]
-; SDAG-NEXT:    ret
-;
-; CHECK-GISEL-LABEL: test_v2f64_pre_load:
-; CHECK-GISEL:       ; %bb.0:
-; CHECK-GISEL-NEXT:    ldr q0, [x0, #80]
-; CHECK-GISEL-NEXT:    adrp x8, _ptr@PAGE
-; CHECK-GISEL-NEXT:    add x9, x0, #80
-; CHECK-GISEL-NEXT:    str x9, [x8, _ptr@PAGEOFF]
-; CHECK-GISEL-NEXT:    ret
+; CHECK-LABEL: test_v2f64_pre_load:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    ldr q0, [x0, #80]!
+; CHECK-NEXT:    adrp x8, _ptr@PAGE
+; CHECK-NEXT:    str x0, [x8, _ptr@PAGEOFF]
+; CHECK-NEXT:    ret
   %newaddr = getelementptr <2 x double>, ptr %addr, i32 5
   %val = load <2 x double>, ptr %newaddr, align 8
   store ptr %newaddr, ptr @ptr
@@ -1351,20 +1191,12 @@ define <2 x double> @test_v2f64_post_load(ptr %addr) {
 }
 
 define void @test_v2f64_pre_store(<2 x double> %in, ptr %addr) {
-; SDAG-LABEL: test_v2f64_pre_store:
-; SDAG:       ; %bb.0:
-; SDAG-NEXT:    adrp x8, _ptr@PAGE
-; SDAG-NEXT:    str q0, [x0, #80]!
-; SDAG-NEXT:    str x0, [x8, _ptr@PAGEOFF]
-; SDAG-NEXT:    ret
-;
-; CHECK-GISEL-LABEL: test_v2f64_pre_store:
-; CHECK-GISEL:       ; %bb.0:
-; CHECK-GISEL-NEXT:    adrp x8, _ptr@PAGE
-; CHECK-GISEL-NEXT:    add x9, x0, #80
-; CHECK-GISEL-NEXT:    str q0, [x0, #80]
-; CHECK-GISEL-NEXT:    str x9, [x8, _ptr@PAGEOFF]
-; CHECK-GISEL-NEXT:    ret
+; CHECK-LABEL: test_v2f64_pre_store:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    adrp x8, _ptr@PAGE
+; CHECK-NEXT:    str q0, [x0, #80]!
+; CHECK-NEXT:    str x0, [x8, _ptr@PAGEOFF]
+; CHECK-NEXT:    ret
   %newaddr = getelementptr <2 x double>, ptr %addr, i32 5
   store <2 x double> %in, ptr %newaddr, align 8
   store ptr %newaddr, ptr @ptr

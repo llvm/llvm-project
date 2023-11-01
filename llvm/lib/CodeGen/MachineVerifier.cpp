@@ -1592,6 +1592,12 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
       report("G_SEXT_INREG size must be less than source bit width", MI);
     break;
   }
+  case TargetOpcode::G_BSWAP: {
+    LLT DstTy = MRI->getType(MI->getOperand(0).getReg());
+    if (DstTy.getScalarSizeInBits() % 16 != 0)
+      report("G_BSWAP size must be a multiple of 16 bits", MI);
+    break;
+  }
   case TargetOpcode::G_SHUFFLE_VECTOR: {
     const MachineOperand &MaskOp = MI->getOperand(3);
     if (!MaskOp.isShuffleMask()) {

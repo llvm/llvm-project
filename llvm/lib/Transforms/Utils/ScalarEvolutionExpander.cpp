@@ -1293,7 +1293,10 @@ Value *SCEVExpander::visitTruncateExpr(const SCEVTruncateExpr *S) {
 
 Value *SCEVExpander::visitZeroExtendExpr(const SCEVZeroExtendExpr *S) {
   Value *V = expand(S->getOperand());
-  return Builder.CreateZExt(V, S->getType());
+  auto *Res = Builder.CreateZExt(V, S->getType());
+  if (auto *I = dyn_cast<Instruction>(Res))
+    I->setNonNeg(SE.isKnownNonNegative(S->getOperand()));
+  return Res;
 }
 
 Value *SCEVExpander::visitSignExtendExpr(const SCEVSignExtendExpr *S) {

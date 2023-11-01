@@ -459,7 +459,24 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .legalIf(IndexedLoadBasicPred)
       .unsupported();
   getActionDefinitionsBuilder({G_INDEXED_SEXTLOAD, G_INDEXED_ZEXTLOAD})
-      .unsupported(); // TODO: implement
+      .unsupportedIf(
+          atomicOrderingAtLeastOrStrongerThan(0, AtomicOrdering::Unordered))
+      .legalIf(all(typeInSet(0, {s16, s32, s64}),
+                   LegalityPredicate([=](const LegalityQuery &Q) {
+                     LLT LdTy = Q.Types[0];
+                     LLT PtrTy = Q.Types[1];
+                     LLT MemTy = Q.MMODescrs[0].MemoryTy;
+                     if (PtrTy != p0)
+                       return false;
+                     if (LdTy == s16)
+                       return MemTy == s8;
+                     if (LdTy == s32)
+                       return MemTy == s8 || MemTy == s16;
+                     if (LdTy == s64)
+                       return MemTy == s8 || MemTy == s16 || MemTy == s32;
+                     return false;
+                   })))
+      .unsupported();
 
   // Constants
   getActionDefinitionsBuilder(G_CONSTANT)
@@ -1253,11 +1270,12 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   }
   case Intrinsic::aarch64_mops_memset_tag: {
     assert(MI.getOpcode() == TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS);
-    // Zext the value to 64 bit
+    // Anyext the value being set to 64 bit (only the bottom 8 bits are read by
+    // the instruction).
     MachineIRBuilder MIB(MI);
     auto &Value = MI.getOperand(3);
-    Register ZExtValueReg = MIB.buildAnyExt(LLT::scalar(64), Value).getReg(0);
-    Value.setReg(ZExtValueReg);
+    Register ExtValueReg = MIB.buildAnyExt(LLT::scalar(64), Value).getReg(0);
+    Value.setReg(ExtValueReg);
     return true;
   }
   case Intrinsic::prefetch: {
@@ -1776,11 +1794,12 @@ bool AArch64LegalizerInfo::legalizeMemOps(MachineInstr &MI,
 
   // Tagged version MOPSMemorySetTagged is legalised in legalizeIntrinsic
   if (MI.getOpcode() == TargetOpcode::G_MEMSET) {
-    // Zext the value operand to 64 bit
+    // Anyext the value being set to 64 bit (only the bottom 8 bits are read by
+    // the instruction).
     auto &Value = MI.getOperand(1);
-    Register ZExtValueReg =
+    Register ExtValueReg =
         MIRBuilder.buildAnyExt(LLT::scalar(64), Value).getReg(0);
-    Value.setReg(ZExtValueReg);
+    Value.setReg(ExtValueReg);
     return true;
   }
 
