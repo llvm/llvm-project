@@ -84,7 +84,6 @@ namespace lldb_private {
 struct SourceModule;
 class SwiftASTContext;
 class ClangExternalASTSourceCallbacks;
-
 CompilerType ToCompilerType(swift::Type qual_type);
 
 namespace detail {
@@ -904,6 +903,7 @@ protected:
   swift::ClangImporter *m_clangimporter = nullptr;
   /// Wraps the clang::ASTContext owned by ClangImporter.
   std::shared_ptr<TypeSystemClang> m_clangimporter_typesystem;
+  std::unique_ptr<swift::DWARFImporterDelegate> m_dwarfimporter_delegate_up;
   SwiftModuleMap m_swift_module_cache;
   SwiftTypeFromMangledNameMap m_mangled_name_to_type_map;
   SwiftMangledNameFromTypeMap m_type_to_mangled_name_map;

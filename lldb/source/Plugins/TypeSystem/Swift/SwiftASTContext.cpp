@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Plugins/TypeSystem/Swift/SwiftASTContext.h"
+#include "Plugins/TypeSystem/Swift/SwiftDWARFImporterForClangTypes.h"
 #include "Plugins/TypeSystem/Swift/StoringDiagnosticConsumer.h"
 #include "Plugins/ExpressionParser/Swift/SwiftPersistentExpressionState.h"
 
@@ -2947,12 +2948,13 @@ swift::ASTContext *SwiftASTContext::GetASTContext() {
     if (!clang_importer_options.OverrideResourceDir.empty()) {
       // Create the DWARFImporterDelegate.
       const auto &props = ModuleList::GetGlobalModuleListProperties();
-      swift::DWARFImporterDelegate *delegate = nullptr;
       if (props.GetUseSwiftDWARFImporter())
-        delegate = &m_typeref_typesystem->GetDWARFImporterDelegate();
+        m_dwarfimporter_delegate_up =
+            std::make_unique<SwiftDWARFImporterDelegate>(*this);
       auto importer_diags = getScopedDiagnosticConsumer();
       clang_importer_ap = swift::ClangImporter::create(
-          *m_ast_context_ap, "", m_dependency_tracker.get(), delegate);
+          *m_ast_context_ap, "", m_dependency_tracker.get(),
+          m_dwarfimporter_delegate_up.get());
 
       // Handle any errors.
       if (!clang_importer_ap || importer_diags->HasErrors()) {
