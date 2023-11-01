@@ -825,7 +825,7 @@ ObjCMethodDecl::ObjCMethodDecl(
     QualType T, TypeSourceInfo *ReturnTInfo, DeclContext *contextDecl,
     bool isInstance, bool isVariadic, bool isPropertyAccessor,
     bool isSynthesizedAccessorStub, bool isImplicitlyDeclared, bool isDefined,
-    ImplementationControl impControl, bool HasRelatedResultType)
+    ObjCImplementationControl impControl, bool HasRelatedResultType)
     : NamedDecl(ObjCMethod, contextDecl, beginLoc, SelInfo),
       DeclContext(ObjCMethod), MethodDeclType(T), ReturnTInfo(ReturnTInfo),
       DeclEndLoc(endLoc) {
@@ -855,8 +855,8 @@ ObjCMethodDecl *ObjCMethodDecl::Create(
     Selector SelInfo, QualType T, TypeSourceInfo *ReturnTInfo,
     DeclContext *contextDecl, bool isInstance, bool isVariadic,
     bool isPropertyAccessor, bool isSynthesizedAccessorStub,
-    bool isImplicitlyDeclared, bool isDefined, ImplementationControl impControl,
-    bool HasRelatedResultType) {
+    bool isImplicitlyDeclared, bool isDefined,
+    ObjCImplementationControl impControl, bool HasRelatedResultType) {
   return new (C, contextDecl) ObjCMethodDecl(
       beginLoc, endLoc, SelInfo, T, ReturnTInfo, contextDecl, isInstance,
       isVariadic, isPropertyAccessor, isSynthesizedAccessorStub,
