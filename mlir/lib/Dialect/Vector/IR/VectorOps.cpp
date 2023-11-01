@@ -2507,7 +2507,8 @@ OpFoldResult vector::InsertElementOp::fold(FoldAdaptor adaptor) {
 
   auto attr = llvm::dyn_cast<IntegerAttr>(pos);
   uint64_t posIdx = attr.getInt();
-
+  if (posIdx >= results.size())
+    return {};
   results[posIdx] = src;
 
   return DenseElementsAttr::get(getDestVectorType(), results);
