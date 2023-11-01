@@ -4045,3 +4045,22 @@ let Predicates = [HasSVE2orSME2, HasFAMINMAX] in {
 defm FAMIN_ZPmZ : sve_fp_2op_p_zds<0b1111, "famin", "", null_frag, DestructiveOther>;
 defm FAMAX_ZPmZ : sve_fp_2op_p_zds<0b1110, "famax", "", null_frag, DestructiveOther>;
 } // End HasSVE2orSME2, HasFAMINMAX
+
+let Predicates = [HasSSVE_FP8FMA] in {
+// FP8 Widening Multiply-Add Long - Indexed Group
+def FMLALB_ZZZI : sve2_fp8_mla_long_by_indexed_elem<0b0, "fmlalb">;
+def FMLALT_ZZZI : sve2_fp8_mla_long_by_indexed_elem<0b1, "fmlalt">;
+// FP8 Widening Multiply-Add Long Group
+def FMLALB_ZZZ : sve2_fp8_mla<0b100, ZPR16, "fmlalb">;
+def FMLALT_ZZZ : sve2_fp8_mla<0b101, ZPR16, "fmlalt">;
+// FP8 Widening Multiply-Add Long Long - Indexed Group
+def FMLALLBB_ZZZI : sve2_fp8_mla_long_long_by_indexed_elem<0b00, "fmlallbb">;
+def FMLALLBT_ZZZI : sve2_fp8_mla_long_long_by_indexed_elem<0b01, "fmlallbt">;
+def FMLALLTB_ZZZI : sve2_fp8_mla_long_long_by_indexed_elem<0b10, "fmlalltb">;
+def FMLALLTT_ZZZI : sve2_fp8_mla_long_long_by_indexed_elem<0b11, "fmlalltt">;
+// FP8 Widening Multiply-Add Long Long Group
+def FMLALLBB_ZZZ : sve2_fp8_mla<0b000, ZPR32, "fmlallbb">;
+def FMLALLBT_ZZZ : sve2_fp8_mla<0b001, ZPR32, "fmlallbt">;
+def FMLALLTB_ZZZ : sve2_fp8_mla<0b010, ZPR32, "fmlalltb">;
+def FMLALLTT_ZZZ : sve2_fp8_mla<0b011, ZPR32, "fmlalltt">;
+} // End HasSSVE_FP8FMA
