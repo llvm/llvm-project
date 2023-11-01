@@ -1328,24 +1328,24 @@ int foo() {
 // IR-GPU-NEXT:    [[TMP38:%.*]] = load i32, ptr [[TMP37]], align 4
 // IR-GPU-NEXT:    [[TMP39:%.*]] = getelementptr inbounds [1 x ptr], ptr [[DOTOMP_REDUCTION_RED_LIST_ASCAST]], i64 0, i64 0
 // IR-GPU-NEXT:    store ptr [[SUM1_ASCAST]], ptr [[TMP39]], align 8
-// IR-GPU-NEXT:    [[TMP40:%.*]] = load ptr, ptr addrspace(1) @"_openmp_teams_reductions_buffer_$_$ptr", align 8
-// IR-GPU-NEXT:    [[TMP41:%.*]] = call i32 @__kmpc_nvptx_teams_reduce_nowait_v2(ptr addrspacecast (ptr addrspace(1) @[[GLOB1]] to ptr), i32 [[TMP38]], ptr [[TMP40]], i32 1024, ptr [[DOTOMP_REDUCTION_RED_LIST_ASCAST]], ptr @_omp_reduction_shuffle_and_reduce_func.1, ptr @_omp_reduction_inter_warp_copy_func.2, ptr @_omp_reduction_list_to_global_copy_func, ptr @_omp_reduction_list_to_global_reduce_func, ptr @_omp_reduction_global_to_list_copy_func, ptr @_omp_reduction_global_to_list_reduce_func)
-// IR-GPU-NEXT:    [[TMP42:%.*]] = icmp eq i32 [[TMP41]], 1
-// IR-GPU-NEXT:    br i1 [[TMP42]], label [[DOTOMP_REDUCTION_THEN:%.*]], label [[DOTOMP_REDUCTION_DONE:%.*]]
+// IR-GPU-NEXT:    %"_openmp_teams_reductions_buffer_$_$ptr" = call ptr @__kmpc_reduction_get_fixed_buffer()
+// IR-GPU-NEXT:    [[TMP40:%.*]] = call i32 @__kmpc_nvptx_teams_reduce_nowait_v2(ptr addrspacecast (ptr addrspace(1) @[[GLOB1]] to ptr), i32 [[TMP38]], ptr %"_openmp_teams_reductions_buffer_$_$ptr", i32 1024, ptr [[DOTOMP_REDUCTION_RED_LIST_ASCAST]], ptr @_omp_reduction_shuffle_and_reduce_func.1, ptr @_omp_reduction_inter_warp_copy_func.2, ptr @_omp_reduction_list_to_global_copy_func, ptr @_omp_reduction_list_to_global_reduce_func, ptr @_omp_reduction_global_to_list_copy_func, ptr @_omp_reduction_global_to_list_reduce_func)
+// IR-GPU-NEXT:    [[TMP41:%.*]] = icmp eq i32 [[TMP40]], 1
+// IR-GPU-NEXT:    br i1 [[TMP41]], label [[DOTOMP_REDUCTION_THEN:%.*]], label [[DOTOMP_REDUCTION_DONE:%.*]]
 // IR-GPU:       .omp.reduction.then:
-// IR-GPU-NEXT:    [[TMP43:%.*]] = getelementptr i32, ptr [[TMP0]], i64 100
-// IR-GPU-NEXT:    [[OMP_ARRAYCPY_ISEMPTY:%.*]] = icmp eq ptr [[TMP0]], [[TMP43]]
+// IR-GPU-NEXT:    [[TMP42:%.*]] = getelementptr i32, ptr [[TMP0]], i64 100
+// IR-GPU-NEXT:    [[OMP_ARRAYCPY_ISEMPTY:%.*]] = icmp eq ptr [[TMP0]], [[TMP42]]
 // IR-GPU-NEXT:    br i1 [[OMP_ARRAYCPY_ISEMPTY]], label [[OMP_ARRAYCPY_DONE17:%.*]], label [[OMP_ARRAYCPY_BODY:%.*]]
 // IR-GPU:       omp.arraycpy.body:
 // IR-GPU-NEXT:    [[OMP_ARRAYCPY_SRCELEMENTPAST:%.*]] = phi ptr [ [[SUM1_ASCAST]], [[DOTOMP_REDUCTION_THEN]] ], [ [[OMP_ARRAYCPY_SRC_ELEMENT:%.*]], [[OMP_ARRAYCPY_BODY]] ]
 // IR-GPU-NEXT:    [[OMP_ARRAYCPY_DESTELEMENTPAST13:%.*]] = phi ptr [ [[TMP0]], [[DOTOMP_REDUCTION_THEN]] ], [ [[OMP_ARRAYCPY_DEST_ELEMENT15:%.*]], [[OMP_ARRAYCPY_BODY]] ]
-// IR-GPU-NEXT:    [[TMP44:%.*]] = load i32, ptr [[OMP_ARRAYCPY_DESTELEMENTPAST13]], align 4
-// IR-GPU-NEXT:    [[TMP45:%.*]] = load i32, ptr [[OMP_ARRAYCPY_SRCELEMENTPAST]], align 4
-// IR-GPU-NEXT:    [[ADD14:%.*]] = add nsw i32 [[TMP44]], [[TMP45]]
+// IR-GPU-NEXT:    [[TMP43:%.*]] = load i32, ptr [[OMP_ARRAYCPY_DESTELEMENTPAST13]], align 4
+// IR-GPU-NEXT:    [[TMP44:%.*]] = load i32, ptr [[OMP_ARRAYCPY_SRCELEMENTPAST]], align 4
+// IR-GPU-NEXT:    [[ADD14:%.*]] = add nsw i32 [[TMP43]], [[TMP44]]
 // IR-GPU-NEXT:    store i32 [[ADD14]], ptr [[OMP_ARRAYCPY_DESTELEMENTPAST13]], align 4
 // IR-GPU-NEXT:    [[OMP_ARRAYCPY_DEST_ELEMENT15]] = getelementptr i32, ptr [[OMP_ARRAYCPY_DESTELEMENTPAST13]], i32 1
 // IR-GPU-NEXT:    [[OMP_ARRAYCPY_SRC_ELEMENT]] = getelementptr i32, ptr [[OMP_ARRAYCPY_SRCELEMENTPAST]], i32 1
-// IR-GPU-NEXT:    [[OMP_ARRAYCPY_DONE16:%.*]] = icmp eq ptr [[OMP_ARRAYCPY_DEST_ELEMENT15]], [[TMP43]]
+// IR-GPU-NEXT:    [[OMP_ARRAYCPY_DONE16:%.*]] = icmp eq ptr [[OMP_ARRAYCPY_DEST_ELEMENT15]], [[TMP42]]
 // IR-GPU-NEXT:    br i1 [[OMP_ARRAYCPY_DONE16]], label [[OMP_ARRAYCPY_DONE17]], label [[OMP_ARRAYCPY_BODY]]
 // IR-GPU:       omp.arraycpy.done17:
 // IR-GPU-NEXT:    call void @__kmpc_nvptx_end_reduce_nowait(i32 [[TMP38]])
