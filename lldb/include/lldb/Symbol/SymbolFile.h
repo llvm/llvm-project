@@ -445,7 +445,11 @@ public:
   ///     contains the keys "type", "symfile", and "separate-debug-info-files".
   ///     "type" can be used to assume the structure of each object in
   ///     "separate-debug-info-files".
-  virtual bool GetSeparateDebugInfo(StructuredData::Dictionary &d) {
+  /// \param errors_only
+  ///     If true, then only return separate debug info files that encountered
+  ///     errors during loading.
+  virtual bool GetSeparateDebugInfo(StructuredData::Dictionary &d,
+                                    bool errors_only) {
     return false;
   };
 
