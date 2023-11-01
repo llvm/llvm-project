@@ -7,7 +7,15 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Analysis/Presburger/SlowMPInt.h"
-#include "llvm/Support/MathExtras.h"
+#include "mlir/Support/LLVM.h"
+#include "llvm/ADT/APInt.h"
+#include "llvm/ADT/Hashing.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
+#include "llvm/Support/raw_ostream.h"
+#include <algorithm>
+#include <cassert>
+#include <cstdint>
+#include <functional>
 
 using namespace mlir;
 using namespace presburger;

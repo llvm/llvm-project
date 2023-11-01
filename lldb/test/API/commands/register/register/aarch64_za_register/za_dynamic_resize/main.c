@@ -29,6 +29,7 @@ void set_za_register(int svl, int value_offset) {
   // you have. So setting one that didn't exist would actually set one that did.
   // That's why we need the streaming vector length here.
   for (int i = 0; i < svl; ++i) {
+    // This may involve instructions that require the smefa64 extension.
     memset(data, i + value_offset, MAX_VL_BYTES);
     // Each one of these loads a VL sized row of ZA.
     asm volatile("mov w12, %w0\n\t"

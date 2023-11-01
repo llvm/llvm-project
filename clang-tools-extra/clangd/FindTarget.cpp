@@ -1131,7 +1131,7 @@ private:
   void reportReference(ReferenceLoc &&Ref, DynTypedNode N) {
     // Strip null targets that can arise from invalid code.
     // (This avoids having to check for null everywhere we insert)
-    llvm::erase_value(Ref.Targets, nullptr);
+    llvm::erase(Ref.Targets, nullptr);
     // Our promise is to return only references from the source code. If we lack
     // location information, skip these nodes.
     // Normally this should not happen in practice, unless there are bugs in the

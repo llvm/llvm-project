@@ -191,6 +191,10 @@ namespace KernelInfo {
 //   uint8_t UseGenericStateMachine;
 //   uint8_t MayUseNestedParallelism;
 //   llvm::omp::OMPTgtExecModeFlags ExecMode;
+//   int32_t MinThreads;
+//   int32_t MaxThreads;
+//   int32_t MinTeams;
+//   int32_t MaxTeams;
 // };
 
 // struct DynamicEnvironmentTy {
@@ -217,6 +221,10 @@ KERNEL_ENVIRONMENT_IDX(Ident, 1)
 KERNEL_ENVIRONMENT_CONFIGURATION_IDX(UseGenericStateMachine, 0)
 KERNEL_ENVIRONMENT_CONFIGURATION_IDX(MayUseNestedParallelism, 1)
 KERNEL_ENVIRONMENT_CONFIGURATION_IDX(ExecMode, 2)
+KERNEL_ENVIRONMENT_CONFIGURATION_IDX(MinThreads, 3)
+KERNEL_ENVIRONMENT_CONFIGURATION_IDX(MaxThreads, 4)
+KERNEL_ENVIRONMENT_CONFIGURATION_IDX(MinTeams, 5)
+KERNEL_ENVIRONMENT_CONFIGURATION_IDX(MaxTeams, 6)
 
 #undef KERNEL_ENVIRONMENT_CONFIGURATION_IDX
 
@@ -241,6 +249,10 @@ KERNEL_ENVIRONMENT_GETTER(Configuration, ConstantStruct)
 KERNEL_ENVIRONMENT_CONFIGURATION_GETTER(UseGenericStateMachine)
 KERNEL_ENVIRONMENT_CONFIGURATION_GETTER(MayUseNestedParallelism)
 KERNEL_ENVIRONMENT_CONFIGURATION_GETTER(ExecMode)
+KERNEL_ENVIRONMENT_CONFIGURATION_GETTER(MinThreads)
+KERNEL_ENVIRONMENT_CONFIGURATION_GETTER(MaxThreads)
+KERNEL_ENVIRONMENT_CONFIGURATION_GETTER(MinTeams)
+KERNEL_ENVIRONMENT_CONFIGURATION_GETTER(MaxTeams)
 
 #undef KERNEL_ENVIRONMENT_CONFIGURATION_GETTER
 
@@ -733,6 +745,7 @@ struct KernelInfoState : AbstractState {
     SPMDCompatibilityTracker.indicatePessimisticFixpoint();
     ReachedKnownParallelRegions.indicatePessimisticFixpoint();
     ReachedUnknownParallelRegions.indicatePessimisticFixpoint();
+    NestedParallelism = true;
     return ChangeStatus::CHANGED;
   }
 
@@ -761,6 +774,8 @@ struct KernelInfoState : AbstractState {
     if (ReachingKernelEntries != RHS.ReachingKernelEntries)
       return false;
     if (ParallelLevels != RHS.ParallelLevels)
+      return false;
+    if (NestedParallelism != RHS.NestedParallelism)
       return false;
     return true;
   }
@@ -962,6 +977,9 @@ struct OpenMPOpt {
         }
       }
     }
+
+    if (OMPInfoCache.OpenMPPostLink)
+      Changed |= removeRuntimeSymbols();
 
     return Changed;
   }
@@ -1490,6 +1508,37 @@ private:
     }
 
     return Changed;
+  }
+
+  /// Tries to remove known runtime symbols that are optional from the module.
+  bool removeRuntimeSymbols() {
+    // The RPC client symbol is defined in `libc` and indicates that something
+    // required an RPC server. If its users were all optimized out then we can
+    // safely remove it.
+    // TODO: This should be somewhere more common in the future.
+    if (GlobalVariable *GV = M.getNamedGlobal("__llvm_libc_rpc_client")) {
+      if (!GV->getType()->isPointerTy())
+        return false;
+
+      Constant *C = GV->getInitializer();
+      if (!C)
+        return false;
+
+      // Check to see if the only user of the RPC client is the external handle.
+      GlobalVariable *Client = dyn_cast<GlobalVariable>(C->stripPointerCasts());
+      if (!Client || Client->getNumUses() > 1 ||
+          Client->user_back() != GV->getInitializer())
+        return false;
+
+      Client->replaceAllUsesWith(PoisonValue::get(Client->getType()));
+      Client->eraseFromParent();
+
+      GV->replaceAllUsesWith(PoisonValue::get(GV->getType()));
+      GV->eraseFromParent();
+
+      return true;
+    }
+    return false;
   }
 
   /// Tries to hide the latency of runtime calls that involve host to
@@ -3580,7 +3629,8 @@ struct AAKernelInfo : public StateWrapper<KernelInfoState, AbstractAttribute> {
            ", #ParLevels: " +
            (ParallelLevels.isValidState()
                 ? std::to_string(ParallelLevels.size())
-                : "<invalid>");
+                : "<invalid>") +
+           ", NestedPar: " + (NestedParallelism ? "yes" : "no");
   }
 
   /// Create an abstract attribute biew for the position \p IRP.
@@ -3632,6 +3682,10 @@ struct AAKernelInfoFunction : AAKernelInfo {
   KERNEL_ENVIRONMENT_CONFIGURATION_SETTER(UseGenericStateMachine)
   KERNEL_ENVIRONMENT_CONFIGURATION_SETTER(MayUseNestedParallelism)
   KERNEL_ENVIRONMENT_CONFIGURATION_SETTER(ExecMode)
+  KERNEL_ENVIRONMENT_CONFIGURATION_SETTER(MinThreads)
+  KERNEL_ENVIRONMENT_CONFIGURATION_SETTER(MaxThreads)
+  KERNEL_ENVIRONMENT_CONFIGURATION_SETTER(MinTeams)
+  KERNEL_ENVIRONMENT_CONFIGURATION_SETTER(MaxTeams)
 
 #undef KERNEL_ENVIRONMENT_CONFIGURATION_SETTER
 
@@ -3718,6 +3772,21 @@ struct AAKernelInfoFunction : AAKernelInfo {
       SPMDCompatibilityTracker.indicatePessimisticFixpoint();
     else
       setExecModeOfKernelEnvironment(AssumedExecModeC);
+
+    const Triple T(Fn->getParent()->getTargetTriple());
+    auto *Int32Ty = Type::getInt32Ty(Fn->getContext());
+    auto [MinThreads, MaxThreads] =
+        OpenMPIRBuilder::readThreadBoundsForKernel(T, *Fn);
+    if (MinThreads)
+      setMinThreadsOfKernelEnvironment(ConstantInt::get(Int32Ty, MinThreads));
+    if (MaxThreads)
+      setMaxThreadsOfKernelEnvironment(ConstantInt::get(Int32Ty, MaxThreads));
+    auto [MinTeams, MaxTeams] =
+        OpenMPIRBuilder::readTeamBoundsForKernel(T, *Fn);
+    if (MinTeams)
+      setMinTeamsOfKernelEnvironment(ConstantInt::get(Int32Ty, MinTeams));
+    if (MaxTeams)
+      setMaxTeamsOfKernelEnvironment(ConstantInt::get(Int32Ty, MaxTeams));
 
     ConstantInt *MayUseNestedParallelismC =
         KernelInfo::getMayUseNestedParallelismFromKernelEnvironment(KernelEnvC);

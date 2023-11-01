@@ -668,6 +668,11 @@ FailureOr<GenericOp> interchangeGenericOp(RewriterBase &rewriter,
 FailureOr<GenericOp> generalizeNamedOp(RewriterBase &rewriter,
                                        LinalgOp namedOp);
 
+/// Create a namedOp from the given GenericOp and replace the GenericOp.
+/// Currently we can specialize only trivial linalg copy operations.
+FailureOr<LinalgOp> specializeGenericOp(RewriterBase &rewriter,
+                                        GenericOp genericOp);
+
 /// Create a new buffer using the `allocationFn` provided. The size of this
 /// buffer is the smallest constant bounding size along each dimension that
 /// can be computed for the size of the result of `subView`. Returns the
@@ -1047,16 +1052,18 @@ bool isDimSequencePreserved(AffineMap map, ReassociationIndicesRef dimSequence);
 bool areDimSequencesPreserved(ArrayRef<AffineMap> maps,
                               ArrayRef<ReassociationIndices> dimSequences);
 
-/// Collapses dimensions of linalg.generic operation. A precondition to
-/// calling this method is that for each list in `foldedIterationDim`, the
+/// Collapses dimensions of linalg.generic/linalg.copy operation. A precondition
+/// to calling this method is that for each list in `foldedIterationDim`, the
 /// sequence of dimensions is contiguous in domains of all `indexing_maps` of
-/// the `genericOp`. This can be checked using `areDimSequencePreserved` method.
+/// the `linalgOp`. This can be checked using `areDimSequencePreserved` method.
 /// When valid, the method also collapses the operands of the op. Returns
-/// replacement values of the results of the original `genericOp` by inserting
+/// replacement values of the results of the original `linalgOp` by inserting
 /// reshapes to get back values of compatible types.
-FailureOr<SmallVector<Value>> collapseGenericOpIterationDims(
-    GenericOp genericOp, ArrayRef<ReassociationIndices> foldedIterationDims,
-    RewriterBase &rewriter);
+template <typename LinalgType>
+FailureOr<SmallVector<Value>>
+collapseOpIterationDims(LinalgType op,
+                        ArrayRef<ReassociationIndices> foldedIterationDims,
+                        RewriterBase &rewriter);
 
 struct LowerPackResult {
   tensor::PadOp padOp;
@@ -1515,7 +1522,7 @@ void populateEraseUnnecessaryInputsPatterns(RewritePatternSet &patterns);
 /// to return an array of `ReassociationIndices` representing dimensions that
 /// should be merged.
 using GetCollapsableDimensionsFn =
-    std::function<SmallVector<ReassociationIndices>(linalg::GenericOp)>;
+    std::function<SmallVector<ReassociationIndices>(linalg::LinalgOp)>;
 
 /// Pattern to collapse dimensions in a linalg.generic op. This will collapse
 /// tensor operands when needed and expand back the result tensors.

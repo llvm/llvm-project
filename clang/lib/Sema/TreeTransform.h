@@ -878,12 +878,9 @@ public:
   /// By default, performs semantic analysis when building the array type.
   /// Subclasses may override this routine to provide different behavior.
   /// Also by default, all of the other Rebuild*Array
-  QualType RebuildArrayType(QualType ElementType,
-                            ArrayType::ArraySizeModifier SizeMod,
-                            const llvm::APInt *Size,
-                            Expr *SizeExpr,
-                            unsigned IndexTypeQuals,
-                            SourceRange BracketsRange);
+  QualType RebuildArrayType(QualType ElementType, ArraySizeModifier SizeMod,
+                            const llvm::APInt *Size, Expr *SizeExpr,
+                            unsigned IndexTypeQuals, SourceRange BracketsRange);
 
   /// Build a new constant array type given the element type, size
   /// modifier, (known) size of the array, and index type qualifiers.
@@ -891,9 +888,8 @@ public:
   /// By default, performs semantic analysis when building the array type.
   /// Subclasses may override this routine to provide different behavior.
   QualType RebuildConstantArrayType(QualType ElementType,
-                                    ArrayType::ArraySizeModifier SizeMod,
-                                    const llvm::APInt &Size,
-                                    Expr *SizeExpr,
+                                    ArraySizeModifier SizeMod,
+                                    const llvm::APInt &Size, Expr *SizeExpr,
                                     unsigned IndexTypeQuals,
                                     SourceRange BracketsRange);
 
@@ -903,7 +899,7 @@ public:
   /// By default, performs semantic analysis when building the array type.
   /// Subclasses may override this routine to provide different behavior.
   QualType RebuildIncompleteArrayType(QualType ElementType,
-                                      ArrayType::ArraySizeModifier SizeMod,
+                                      ArraySizeModifier SizeMod,
                                       unsigned IndexTypeQuals,
                                       SourceRange BracketsRange);
 
@@ -913,8 +909,7 @@ public:
   /// By default, performs semantic analysis when building the array type.
   /// Subclasses may override this routine to provide different behavior.
   QualType RebuildVariableArrayType(QualType ElementType,
-                                    ArrayType::ArraySizeModifier SizeMod,
-                                    Expr *SizeExpr,
+                                    ArraySizeModifier SizeMod, Expr *SizeExpr,
                                     unsigned IndexTypeQuals,
                                     SourceRange BracketsRange);
 
@@ -924,7 +919,7 @@ public:
   /// By default, performs semantic analysis when building the array type.
   /// Subclasses may override this routine to provide different behavior.
   QualType RebuildDependentSizedArrayType(QualType ElementType,
-                                          ArrayType::ArraySizeModifier SizeMod,
+                                          ArraySizeModifier SizeMod,
                                           Expr *SizeExpr,
                                           unsigned IndexTypeQuals,
                                           SourceRange BracketsRange);
@@ -935,7 +930,7 @@ public:
   /// By default, performs semantic analysis when building the vector type.
   /// Subclasses may override this routine to provide different behavior.
   QualType RebuildVectorType(QualType ElementType, unsigned NumElements,
-                             VectorType::VectorKind VecKind);
+                             VectorKind VecKind);
 
   /// Build a new potentially dependently-sized extended vector type
   /// given the element type and number of elements.
@@ -943,8 +938,7 @@ public:
   /// By default, performs semantic analysis when building the vector type.
   /// Subclasses may override this routine to provide different behavior.
   QualType RebuildDependentVectorType(QualType ElementType, Expr *SizeExpr,
-                                           SourceLocation AttributeLoc,
-                                           VectorType::VectorKind);
+                                      SourceLocation AttributeLoc, VectorKind);
 
   /// Build a new extended vector type given the element type and
   /// number of elements.
@@ -1165,7 +1159,8 @@ public:
                                                     Id);
     }
 
-    if (Keyword == ETK_None || Keyword == ETK_Typename) {
+    if (Keyword == ElaboratedTypeKeyword::None ||
+        Keyword == ElaboratedTypeKeyword::Typename) {
       return SemaRef.CheckTypenameType(Keyword, KeywordLoc, QualifierLoc,
                                        *Id, IdLoc, DeducedTSTContext);
     }
@@ -1908,16 +1903,14 @@ public:
   ///
   /// By default, performs semantic analysis to build the new OpenMP clause.
   /// Subclasses may override this routine to provide different behavior.
-  OMPClause *RebuildOMPLinearClause(ArrayRef<Expr *> VarList, Expr *Step,
-                                    SourceLocation StartLoc,
-                                    SourceLocation LParenLoc,
-                                    OpenMPLinearClauseKind Modifier,
-                                    SourceLocation ModifierLoc,
-                                    SourceLocation ColonLoc,
-                                    SourceLocation EndLoc) {
+  OMPClause *RebuildOMPLinearClause(
+      ArrayRef<Expr *> VarList, Expr *Step, SourceLocation StartLoc,
+      SourceLocation LParenLoc, OpenMPLinearClauseKind Modifier,
+      SourceLocation ModifierLoc, SourceLocation ColonLoc,
+      SourceLocation StepModifierLoc, SourceLocation EndLoc) {
     return getSema().ActOnOpenMPLinearClause(VarList, Step, StartLoc, LParenLoc,
                                              Modifier, ModifierLoc, ColonLoc,
-                                             EndLoc);
+                                             StepModifierLoc, EndLoc);
   }
 
   /// Build a new OpenMP 'aligned' clause.
@@ -7026,7 +7019,8 @@ TreeTransform<Derived>::TransformElaboratedType(TypeLocBuilder &TLB,
   //   If the identifier resolves to a typedef-name or the simple-template-id
   //   resolves to an alias template specialization, the
   //   elaborated-type-specifier is ill-formed.
-  if (T->getKeyword() != ETK_None && T->getKeyword() != ETK_Typename) {
+  if (T->getKeyword() != ElaboratedTypeKeyword::None &&
+      T->getKeyword() != ElaboratedTypeKeyword::Typename) {
     if (const TemplateSpecializationType *TST =
           NamedT->getAs<TemplateSpecializationType>()) {
       TemplateName Template = TST->getTemplateName();
@@ -10287,7 +10281,8 @@ TreeTransform<Derived>::TransformOMPLinearClause(OMPLinearClause *C) {
     return nullptr;
   return getDerived().RebuildOMPLinearClause(
       Vars, Step.get(), C->getBeginLoc(), C->getLParenLoc(), C->getModifier(),
-      C->getModifierLoc(), C->getColonLoc(), C->getEndLoc());
+      C->getModifierLoc(), C->getColonLoc(), C->getStepModifierLoc(),
+      C->getEndLoc());
 }
 
 template <typename Derived>
@@ -11783,8 +11778,6 @@ TreeTransform<Derived>::TransformDesignatedInitExpr(DesignatedInitExpr *E) {
   bool ExprChanged = false;
   for (const DesignatedInitExpr::Designator &D : E->designators()) {
     if (D.isFieldDesignator()) {
-      Desig.AddDesignator(Designator::CreateFieldDesignator(
-          D.getFieldName(), D.getDotLoc(), D.getFieldLoc()));
       if (D.getFieldDecl()) {
         FieldDecl *Field = cast_or_null<FieldDecl>(
             getDerived().TransformDecl(D.getFieldLoc(), D.getFieldDecl()));
@@ -11792,12 +11785,16 @@ TreeTransform<Derived>::TransformDesignatedInitExpr(DesignatedInitExpr *E) {
           // Rebuild the expression when the transformed FieldDecl is
           // different to the already assigned FieldDecl.
           ExprChanged = true;
+        if (Field->isAnonymousStructOrUnion())
+          continue;
       } else {
         // Ensure that the designator expression is rebuilt when there isn't
         // a resolved FieldDecl in the designator as we don't want to assign
         // a FieldDecl to a pattern designator that will be instantiated again.
         ExprChanged = true;
       }
+      Desig.AddDesignator(Designator::CreateFieldDesignator(
+          D.getFieldName(), D.getDotLoc(), D.getFieldLoc()));
       continue;
     }
 
@@ -14917,14 +14914,10 @@ QualType TreeTransform<Derived>::RebuildObjCObjectPointerType(
   return SemaRef.Context.getObjCObjectPointerType(PointeeType);
 }
 
-template<typename Derived>
-QualType
-TreeTransform<Derived>::RebuildArrayType(QualType ElementType,
-                                         ArrayType::ArraySizeModifier SizeMod,
-                                         const llvm::APInt *Size,
-                                         Expr *SizeExpr,
-                                         unsigned IndexTypeQuals,
-                                         SourceRange BracketsRange) {
+template <typename Derived>
+QualType TreeTransform<Derived>::RebuildArrayType(
+    QualType ElementType, ArraySizeModifier SizeMod, const llvm::APInt *Size,
+    Expr *SizeExpr, unsigned IndexTypeQuals, SourceRange BracketsRange) {
   if (SizeExpr || !Size)
     return SemaRef.BuildArrayType(ElementType, SizeMod, SizeExpr,
                                   IndexTypeQuals, BracketsRange,
@@ -14952,47 +14945,35 @@ TreeTransform<Derived>::RebuildArrayType(QualType ElementType,
                                 getDerived().getBaseEntity());
 }
 
-template<typename Derived>
-QualType
-TreeTransform<Derived>::RebuildConstantArrayType(QualType ElementType,
-                                                 ArrayType::ArraySizeModifier SizeMod,
-                                                 const llvm::APInt &Size,
-                                                 Expr *SizeExpr,
-                                                 unsigned IndexTypeQuals,
-                                                 SourceRange BracketsRange) {
+template <typename Derived>
+QualType TreeTransform<Derived>::RebuildConstantArrayType(
+    QualType ElementType, ArraySizeModifier SizeMod, const llvm::APInt &Size,
+    Expr *SizeExpr, unsigned IndexTypeQuals, SourceRange BracketsRange) {
   return getDerived().RebuildArrayType(ElementType, SizeMod, &Size, SizeExpr,
                                         IndexTypeQuals, BracketsRange);
 }
 
-template<typename Derived>
-QualType
-TreeTransform<Derived>::RebuildIncompleteArrayType(QualType ElementType,
-                                          ArrayType::ArraySizeModifier SizeMod,
-                                                 unsigned IndexTypeQuals,
-                                                   SourceRange BracketsRange) {
+template <typename Derived>
+QualType TreeTransform<Derived>::RebuildIncompleteArrayType(
+    QualType ElementType, ArraySizeModifier SizeMod, unsigned IndexTypeQuals,
+    SourceRange BracketsRange) {
   return getDerived().RebuildArrayType(ElementType, SizeMod, nullptr, nullptr,
                                        IndexTypeQuals, BracketsRange);
 }
 
-template<typename Derived>
-QualType
-TreeTransform<Derived>::RebuildVariableArrayType(QualType ElementType,
-                                          ArrayType::ArraySizeModifier SizeMod,
-                                                 Expr *SizeExpr,
-                                                 unsigned IndexTypeQuals,
-                                                 SourceRange BracketsRange) {
+template <typename Derived>
+QualType TreeTransform<Derived>::RebuildVariableArrayType(
+    QualType ElementType, ArraySizeModifier SizeMod, Expr *SizeExpr,
+    unsigned IndexTypeQuals, SourceRange BracketsRange) {
   return getDerived().RebuildArrayType(ElementType, SizeMod, nullptr,
                                        SizeExpr,
                                        IndexTypeQuals, BracketsRange);
 }
 
-template<typename Derived>
-QualType
-TreeTransform<Derived>::RebuildDependentSizedArrayType(QualType ElementType,
-                                          ArrayType::ArraySizeModifier SizeMod,
-                                                       Expr *SizeExpr,
-                                                       unsigned IndexTypeQuals,
-                                                   SourceRange BracketsRange) {
+template <typename Derived>
+QualType TreeTransform<Derived>::RebuildDependentSizedArrayType(
+    QualType ElementType, ArraySizeModifier SizeMod, Expr *SizeExpr,
+    unsigned IndexTypeQuals, SourceRange BracketsRange) {
   return getDerived().RebuildArrayType(ElementType, SizeMod, nullptr,
                                        SizeExpr,
                                        IndexTypeQuals, BracketsRange);
@@ -15006,10 +14987,9 @@ QualType TreeTransform<Derived>::RebuildDependentAddressSpaceType(
 }
 
 template <typename Derived>
-QualType
-TreeTransform<Derived>::RebuildVectorType(QualType ElementType,
-                                          unsigned NumElements,
-                                          VectorType::VectorKind VecKind) {
+QualType TreeTransform<Derived>::RebuildVectorType(QualType ElementType,
+                                                   unsigned NumElements,
+                                                   VectorKind VecKind) {
   // FIXME: semantic checking!
   return SemaRef.Context.getVectorType(ElementType, NumElements, VecKind);
 }
@@ -15017,7 +14997,7 @@ TreeTransform<Derived>::RebuildVectorType(QualType ElementType,
 template <typename Derived>
 QualType TreeTransform<Derived>::RebuildDependentVectorType(
     QualType ElementType, Expr *SizeExpr, SourceLocation AttributeLoc,
-    VectorType::VectorKind VecKind) {
+    VectorKind VecKind) {
   return SemaRef.BuildVectorType(ElementType, SizeExpr, AttributeLoc);
 }
 

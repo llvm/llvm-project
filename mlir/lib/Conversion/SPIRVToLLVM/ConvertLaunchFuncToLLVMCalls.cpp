@@ -298,7 +298,6 @@ public:
 
     // Specify options to lower to LLVM and pull in the conversion patterns.
     LowerToLLVMOptions options(module.getContext());
-    options.useOpaquePointers = useOpaquePointers;
 
     auto *context = module.getContext();
     RewritePatternSet patterns(context);

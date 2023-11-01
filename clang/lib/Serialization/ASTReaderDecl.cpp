@@ -845,7 +845,7 @@ ASTDeclReader::VisitRecordDeclImpl(RecordDecl *RD) {
   RD->setHasNonTrivialToPrimitiveDestructCUnion(Record.readInt());
   RD->setHasNonTrivialToPrimitiveCopyCUnion(Record.readInt());
   RD->setParamDestroyedInCallee(Record.readInt());
-  RD->setArgPassingRestrictions((RecordDecl::ArgPassingKind)Record.readInt());
+  RD->setArgPassingRestrictions((ArgPassingKind)Record.readInt());
   return Redecl;
 }
 
@@ -3005,7 +3005,7 @@ void ASTDeclReader::VisitOMPDeclareReductionDecl(OMPDeclareReductionDecl *D) {
   Expr *Priv = Record.readExpr();
   D->setInitializerData(Orig, Priv);
   Expr *Init = Record.readExpr();
-  auto IK = static_cast<OMPDeclareReductionDecl::InitKind>(Record.readInt());
+  auto IK = static_cast<OMPDeclareReductionInitKind>(Record.readInt());
   D->setInitializer(Init, IK);
   D->PrevDeclInScope = readDeclID();
 }
@@ -4513,7 +4513,7 @@ void ASTDeclReader::UpdateDecl(Decl *D,
                     !Reader.PendingFakeDefinitionData.count(OldDD));
       RD->setParamDestroyedInCallee(Record.readInt());
       RD->setArgPassingRestrictions(
-          (RecordDecl::ArgPassingKind)Record.readInt());
+          static_cast<ArgPassingKind>(Record.readInt()));
       ReadCXXRecordDefinition(RD, /*Update*/true);
 
       // Visible update is handled separately.

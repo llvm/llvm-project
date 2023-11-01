@@ -210,7 +210,6 @@ private:
 
   void CheckAllowedRequiresClause(llvmOmpClause clause);
   bool deviceConstructFound_{false};
-  bool atomicDirectiveDefaultOrderFound_{false};
 
   void EnterDirectiveNest(const int index) { directiveNest_[index]++; }
   void ExitDirectiveNest(const int index) { directiveNest_[index]--; }

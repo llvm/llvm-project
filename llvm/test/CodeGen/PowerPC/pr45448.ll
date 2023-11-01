@@ -7,17 +7,17 @@ define hidden void @julia_tryparse_internal_45896() #0 {
 ; CHECK:       # %bb.0: # %top
 ; CHECK-NEXT:    ld r3, 0(r3)
 ; CHECK-NEXT:    cmpldi r3, 0
-; CHECK-NEXT:    beq cr0, .LBB0_3
+; CHECK-NEXT:    beq cr0, .LBB0_6
 ; CHECK-NEXT:  # %bb.1: # %top
 ; CHECK-NEXT:    cmpldi r3, 10
-; CHECK-NEXT:    beq cr0, .LBB0_4
+; CHECK-NEXT:    beq cr0, .LBB0_3
 ; CHECK-NEXT:  # %bb.2: # %top
-; CHECK-NEXT:  .LBB0_3: # %fail194
-; CHECK-NEXT:  .LBB0_4: # %L294
-; CHECK-NEXT:    bc 12, 4*cr5+lt, .LBB0_6
-; CHECK-NEXT:  # %bb.5: # %L294
+; CHECK-NEXT:  .LBB0_3: # %L294
+; CHECK-NEXT:    bc 12, 4*cr5+lt, .LBB0_5
+; CHECK-NEXT:  # %bb.4: # %L294
 ; CHECK-NEXT:    bc 4, 4*cr5+lt, .LBB0_7
-; CHECK-NEXT:  .LBB0_6: # %L1057.preheader
+; CHECK-NEXT:  .LBB0_5: # %L1057.preheader
+; CHECK-NEXT:  .LBB0_6: # %fail194
 ; CHECK-NEXT:  .LBB0_7: # %L670
 ; CHECK-NEXT:    li r5, -3
 ; CHECK-NEXT:    cmpdi r3, 0
