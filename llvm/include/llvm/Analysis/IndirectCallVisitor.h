@@ -52,9 +52,13 @@ struct PGOIndirectCallVisitor : public InstVisitor<PGOIndirectCallVisitor> {
         // FIXME: Add support in the frontend so LLVM type intrinsics are
         // emitted without LTO. This way, added intrinsics could filter
         // non-vtable instructions and reduce instrumentation overhead.
-        // Note a profiled address will be dropped if it's not within
-        // the address range of vtable objects, so there are no correctness
-        // or performance issues at profile use time.
+        // Since a non-vtable profiled address is not within the address
+        // range of vtable objects, it's stored as zero in indexed profiles.
+        // A pass that looks up symbol with an zero hash will (almost) always
+        // find nullptr and skip the actual transformation (e.g., comparison
+        // of symbols). So the performance overhead from non-vtable profiled
+        // address is negligible if exists at all. Comparing loaded address
+        // with symbol address guarantees correctness.
         if (VTablePtr != nullptr && isa<Instruction>(VTablePtr)) {
           ProfiledAddresses.push_back(cast<Instruction>(VTablePtr));
         }

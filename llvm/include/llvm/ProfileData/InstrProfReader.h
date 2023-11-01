@@ -663,14 +663,13 @@ private:
   std::unique_ptr<MemProfRecordHashTable> MemProfRecordTable;
   /// MemProf frame profile data on-disk indexed via frame id.
   std::unique_ptr<MemProfFrameHashTable> MemProfFrameTable;
-  /// The reader itself doesn't decompress vtable names.
-  /// A compiler that reads indexed profiles could construct
-  /// symtab from module IR so it doesn't need the decompressed
-  /// names.
-  /// When a symtab is constructed (from llvm-profdata),
-  /// the symtab decompress the list of names based on
-  /// `VTableNamePtr` and `CompressedVTableNamesLen`.
-  /// Points to the beginning of compressed vtable names.
+  /// The reader itself doesn't decompress vtable names. A compiler that reads
+  /// indexed profiles could construct symtab from module IR so it doesn't need
+  /// the decompressed names.
+  /// When a symtab is constructed from profiles by llvm-profdata, the list of
+  /// names could be decompressed based on `VTableNamePtr` and
+  /// `CompressedVTableNamesLen`.
+  /// VTableNamePtr points to the beginning of compressed vtable names.
   const char *VTableNamePtr = nullptr;
   /// The length of compressed vtable names.
   uint64_t CompressedVTableNamesLen = 0;

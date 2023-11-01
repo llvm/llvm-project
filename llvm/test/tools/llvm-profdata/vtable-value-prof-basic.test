@@ -60,8 +60,8 @@ INDEXED-NEXT:         [  0, _ZN8Derived15func1Eii,        250 ] (25.00%)
 INDEXED-NEXT:         [  1, _ZN8Derived25func2Eii,        750 ] (75.00%)
 INDEXED-NEXT:         [  1, _ZN8Derived15func2Eii,        250 ] (25.00%)
 INDEXED-NEXT:     VTable Results:
-INDEXED-NEXT:	      [  0, _ZTV8Derived2,        750 ] (75.00%)
-INDEXED-NEXT:     	  [  0, _ZTV8Derived1,        250 ] (25.00%)
+INDEXED-NEXT:         [  0, _ZTV8Derived2,        750 ] (75.00%)
+INDEXED-NEXT:         [  0, _ZTV8Derived1,        250 ] (25.00%)
 INDEXED-NEXT:         [  1, _ZTV8Derived2,        750 ] (75.00%)
 INDEXED-NEXT:         [  1, _ZTV8Derived1,        250 ] (25.00%)
 INDEXED-NEXT: Instrumentation level: IR  entry_first = 0

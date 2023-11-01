@@ -323,8 +323,7 @@ lprofWriteDataImpl(ProfDataWriter *Writer, const __llvm_profile_data *DataBegin,
     return -1;
 
   /* Write the binary id lengths and data. */
-  int binary_id_size = __llvm_write_binary_ids(Writer);
-  if (binary_id_size == -1)
+  if (__llvm_write_binary_ids(Writer) == -1)
     return -1;
 
   /* Write the profile data. */

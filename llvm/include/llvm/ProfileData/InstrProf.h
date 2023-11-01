@@ -541,9 +541,11 @@ public:
   }
 
   /// The method name is kept since there are many callers.
-  // It just forwards to 'addSymbolName'.
+  /// It just forwards to 'addSymbolName'.
   Error addFuncName(StringRef FuncName) { return addSymbolName(FuncName); }
 
+  /// Adds VTableName as a known symbol, and inserts it to a map that
+  /// tracks all vtable names.
   Error addVTableName(StringRef VTableName) {
     if (Error E = addSymbolName(VTableName))
       return E;
@@ -562,8 +564,8 @@ public:
     AddrToMD5Map.push_back(std::make_pair(Addr, MD5Val));
   }
 
-  // Map the address range (i.e., [start_address, end_address]) of a variable to
-  // its names' MD5 hash. This interface is only used by the raw profile header.
+  /// Map the address range (i.e., [start_address, end_address]) of a variable to
+  /// its names' MD5 hash. This interface is only used by the raw profile header.
   void mapVTableAddress(uint64_t StartAddr, uint64_t EndAddr, uint64_t MD5Val) {
     VTableAddrRangeToMD5Map.push_back(
         std::make_pair(std::make_pair(StartAddr, EndAddr), MD5Val));
@@ -674,7 +676,7 @@ void InstrProfSymtab::finalizeSymtab() {
   llvm::sort(AddrToMD5Map, less_first());
   AddrToMD5Map.erase(std::unique(AddrToMD5Map.begin(), AddrToMD5Map.end()),
                      AddrToMD5Map.end());
-  // GlobalVariable address ranges should not overlap; so sort by either
+  // VTable object address ranges should not overlap; so sort by either
   // beginning address or end address is fine.
   llvm::sort(VTableAddrRangeToMD5Map, less_first());
   // std::unique uses == operator for std::pair.

@@ -218,11 +218,8 @@ cl::opt<bool> DoInstrProfNameCompression(
 cl::opt<bool> EnableVTableValueProfiling(
     "enable-vtable-value-profiling", cl::init(false),
     cl::desc("If true, the virtual table address will be instrumented to know "
-             "the types of a C++ pointer. The information could be used in "
-             "indirect-call-promotion to do selective vtable-based comparison "
-             "and interprocedural type propagation. Requires type metadata and "
-             "type intrinsics (https://llvm.org/docs/TypeMetadata.html) to use"
-             " this option."));
+             "the types of a C++ pointer. The information is used in indirect "
+             "call promotion to do selective vtable-based comparison."));
 
 std::string getInstrProfSectionName(InstrProfSectKind IPSK,
                                     Triple::ObjectFormatType OF,
@@ -622,7 +619,7 @@ Error collectVTableStrings(ArrayRef<GlobalVariable *> VTables,
 
 instrprof_error decodeAndSplitStrings(
     const uint8_t *Input, SmallVector<uint8_t, 128> &UncompressedNameStrings,
-    StringRef &NameStrings, uint32_t &Dist, bool &isCompressed) {
+    StringRef &NameStrings, uint32_t &Dist, bool &IsCompressed) {
   Dist = 0;
   const uint8_t *Start = Input;
   uint32_t UncompressedSizeLen = 0;
@@ -633,23 +630,24 @@ instrprof_error decodeAndSplitStrings(
   uint64_t CompressedSize = decodeULEB128(Start, &CompressedSizeLen);
   Start += CompressedSizeLen;
   Dist += CompressedSizeLen;
-  isCompressed = (CompressedSize != 0);
-  if (isCompressed) {
-    if (!llvm::compression::zlib::isAvailable())
-      return instrprof_error::zlib_unavailable;
-
-    if (Error E = compression::zlib::decompress(ArrayRef(Start, CompressedSize),
-                                                UncompressedNameStrings,
-                                                UncompressedSize)) {
-      consumeError(std::move(E));
-      return instrprof_error::uncompress_failed;
-    }
-    Dist += CompressedSize;
-  } else {
+  IsCompressed = (CompressedSize != 0);
+  if (!IsCompressed) {
     NameStrings =
         StringRef(reinterpret_cast<const char *>(Start), UncompressedSize);
     Dist += UncompressedSize;
+    return instrprof_error::success;
   }
+
+  if (!llvm::compression::zlib::isAvailable())
+    return instrprof_error::zlib_unavailable;
+
+  if (Error E = compression::zlib::decompress(ArrayRef(Start, CompressedSize),
+                                              UncompressedNameStrings,
+                                              UncompressedSize)) {
+    consumeError(std::move(E));
+    return instrprof_error::uncompress_failed;
+  }
+  Dist += CompressedSize;
 
   return instrprof_error::success;
 }
@@ -664,13 +662,13 @@ Error readPGOFuncNameStrings(StringRef NameStrings,
     StringRef NameStrings;
     SmallVector<uint8_t, 128> UncompressedNameStrings;
     SmallVector<StringRef, 0> Names;
-    bool isCompressed = false;
+    bool IsCompressed = false;
     instrprof_error E = decodeAndSplitStrings(P, UncompressedNameStrings,
-                                              NameStrings, Dist, isCompressed);
+                                              NameStrings, Dist, IsCompressed);
     if (E != instrprof_error::success)
       return make_error<InstrProfError>(E);
 
-    if (isCompressed) {
+    if (IsCompressed) {
       NameStrings = toStringRef(UncompressedNameStrings);
     }
 

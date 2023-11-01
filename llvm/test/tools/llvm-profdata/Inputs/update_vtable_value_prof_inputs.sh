@@ -1,6 +1,6 @@
 #!/bin/bash
 
-if [ $# -lt 2 ]; then
+if [ $# -lt 1 ]; then
   echo "Path to clang++ required!"
   echo "Usage: update_vtable_value_prof_inputs.sh /path/to/updated/clang++"
   exit 1
@@ -73,7 +73,7 @@ int main(int argc, char** argv) {
 }
 EOF
 
-FLAGS="-fuse-ld=lld -O2 -g -fprofile-generate=. -flto=thin -Xclang -fwhole-program-vtables -Wl,--lto-whole-program-visibility"
+FLAGS="-fuse-ld=lld -O2 -g -fprofile-generate=. "
 
 ${CLANG} ${FLAGS} ${OUTDIR}/vtable_prof.cc -o ${OUTDIR}/vtable_prof
 env LLVM_PROFILE_FILE=${OUTDIR}/vtable_prof.profraw ${OUTDIR}/vtable_prof
