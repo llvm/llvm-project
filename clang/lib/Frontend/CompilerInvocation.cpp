@@ -1780,6 +1780,9 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
       Opts.setDebugInfo(llvm::codegenoptions::LimitedDebugInfo);
   }
 
+  if (const Arg *A = Args.getLastArg(OPT_mregnames))
+    Opts.UseFullRegisterNames = true;
+
   for (const auto &Arg : Args.getAllArgValues(OPT_fdebug_prefix_map_EQ)) {
     auto Split = StringRef(Arg).split('=');
     Opts.DebugPrefixMap.emplace_back(Split.first, Split.second);

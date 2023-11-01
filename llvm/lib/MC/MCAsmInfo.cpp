@@ -67,6 +67,7 @@ MCAsmInfo::MCAsmInfo() {
   UseIntegratedAssembler = true;
   ParseInlineAsmUsingAsmParser = false;
   PreserveAsmComments = true;
+  UseFullRegisterNames = false;
 }
 
 MCAsmInfo::~MCAsmInfo() = default;

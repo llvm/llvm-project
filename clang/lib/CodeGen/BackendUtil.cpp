@@ -488,6 +488,7 @@ static bool initTargetOptions(DiagnosticsEngine &Diags,
   Options.MCOptions.Argv0 = CodeGenOpts.Argv0;
   Options.MCOptions.CommandLineArgs = CodeGenOpts.CommandLineArgs;
   Options.MCOptions.AsSecureLogFile = CodeGenOpts.AsSecureLogFile;
+  Options.MCOptions.UseFullRegisterNames = CodeGenOpts.UseFullRegisterNames;
   Options.MisExpect = CodeGenOpts.MisExpect;
 
   return true;

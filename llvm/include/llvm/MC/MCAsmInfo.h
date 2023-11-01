@@ -240,6 +240,9 @@ protected:
   /// True if the target supports LEB128 directives.
   bool HasLEB128Directives = true;
 
+  /// True if full register names are printed.
+  bool UseFullRegisterNames = false;
+
   //===--- Data Emission Directives -------------------------------------===//
 
   /// This should be set to the directive used to get some number of zero (and
@@ -709,6 +712,9 @@ public:
   }
 
   bool hasLEB128Directives() const { return HasLEB128Directives; }
+
+  bool useFullRegisterNames() const { return UseFullRegisterNames; }
+  void setFullRegisterNames(bool V) { UseFullRegisterNames = V; }
 
   const char *getZeroDirective() const { return ZeroDirective; }
   bool doesZeroDirectiveSupportNonZeroValue() const {
