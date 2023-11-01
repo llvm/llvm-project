@@ -162,8 +162,11 @@ public:
   }
 };
 
-// CRTP to help implementing a rewriter that demaps all its inputs and remaps
-// all its outputs.
+//===----------------------------------------------------------------------===//
+// Reinterpret Map Rewriters for operations other than linalg.generics
+//===----------------------------------------------------------------------===//
+
+// CRTP to help implementing a rewriter that demaps all its inputs.
 template <typename SubClass, typename SourceOp>
 struct DemapInsRewriter : public OpRewritePattern<SourceOp> {
   using OpRewritePattern<SourceOp>::OpRewritePattern;
@@ -184,10 +187,6 @@ struct DemapInsRewriter : public OpRewritePattern<SourceOp> {
                                                           rewriter);
   }
 };
-
-//===----------------------------------------------------------------------===//
-// Reinterpret Map Rewriters for operations other than linalg.generics
-//===----------------------------------------------------------------------===//
 
 struct TensorInsertDemapper
     : public DemapInsRewriter<TensorInsertDemapper, tensor::InsertOp> {
