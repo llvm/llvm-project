@@ -5886,9 +5886,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &Job,
     } else if (Triple.getArch() == llvm::Triple::x86_64) {
       Ok = llvm::is_contained({"small", "kernel", "medium", "large", "tiny"},
                               CM);
-    } else if (Triple.isNVPTX()) {
-      // NVPTX does not care about the code model and will accept whatever works
-      // for the host.
+    } else if (Triple.isNVPTX() || Triple.isAMDGPU()) {
+      // NVPTX/AMDGPU does not care about the code model and will accept
+      // whatever works for the host.
       Ok = true;
     }
     if (Ok) {
