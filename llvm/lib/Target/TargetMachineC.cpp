@@ -262,7 +262,7 @@ void LLVMSetTargetMachineGlobalISel(LLVMTargetMachineRef T, LLVMBool Enable) {
 
 void LLVMSetTargetMachineGlobalISelAbort(LLVMTargetMachineRef T,
                                          LLVMGlobalISelAbortMode Mode) {
-  GlobalISelAbortMode AM;
+  GlobalISelAbortMode AM = GlobalISelAbortMode::Enable;
   switch (Mode) {
   case LLVMGlobalISelAbortDisable:
     AM = GlobalISelAbortMode::Disable;
@@ -272,9 +272,6 @@ void LLVMSetTargetMachineGlobalISelAbort(LLVMTargetMachineRef T,
     break;
   case LLVMGlobalISelAbortDisableWithDiag:
     AM = GlobalISelAbortMode::DisableWithDiag;
-    break;
-  default:
-    AM = GlobalISelAbortMode::Enable;
     break;
   }
 
