@@ -4,7 +4,7 @@ foreach(t ${LLVM_TARGETS_TO_BUILD})
   endif()
 endforeach()
 
-set(LLVM_LINK_COMPONENTS Target AllTargetsCodeGens)
+set(LLVM_LINK_COMPONENTS Core Target AllTargetsCodeGens AllTargetsDescs AllTargetsInfos)
 
 add_llvm_unittest(TargetMachineCTests
   TargetMachineOptionsTest.cpp
