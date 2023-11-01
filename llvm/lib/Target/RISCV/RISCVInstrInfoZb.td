@@ -827,6 +827,10 @@ def : Pat<(i32 (sext_inreg GPR:$rs1, i16)), (SEXT_H GPR:$rs1)>;
 } // Predicates = [HasStdExtZbb, IsRV64]
 
 let Predicates = [HasStdExtZbbOrZbkb, IsRV64] in {
+def : Pat<(i32 (and GPR:$rs1, (not GPR:$rs2))), (ANDN GPR:$rs1, GPR:$rs2)>;
+def : Pat<(i32 (or  GPR:$rs1, (not GPR:$rs2))), (ORN  GPR:$rs1, GPR:$rs2)>;
+def : Pat<(i32 (xor GPR:$rs1, (not GPR:$rs2))), (XNOR GPR:$rs1, GPR:$rs2)>;
+
 def : PatGprGpr<shiftopw<rotl>, ROLW, i32, i64>;
 def : PatGprGpr<shiftopw<rotr>, RORW, i32, i64>;
 def : PatGprImm<rotr, RORIW, uimm5, i32>;

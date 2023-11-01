@@ -330,8 +330,9 @@ define i16 @urem16_constant_lhs(i16 %a) nounwind {
 ;
 ; RV64IM-LABEL: urem16_constant_lhs:
 ; RV64IM:       # %bb.0:
-; RV64IM-NEXT:    slli a0, a0, 48
-; RV64IM-NEXT:    srli a0, a0, 48
+; RV64IM-NEXT:    lui a1, 16
+; RV64IM-NEXT:    addi a1, a1, -1
+; RV64IM-NEXT:    and a0, a0, a1
 ; RV64IM-NEXT:    li a1, 10
 ; RV64IM-NEXT:    remuw a0, a1, a0
 ; RV64IM-NEXT:    ret
