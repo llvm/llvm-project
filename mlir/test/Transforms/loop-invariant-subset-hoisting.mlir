@@ -235,3 +235,38 @@ func.func @non_loop_invariant_subset_op(%arg: tensor<?xf32>) -> tensor<?xf32> {
 
   return %0 : tensor<?xf32>
 }
+
+// -----
+
+// CHECK-LABEL: func @nested_hoisting(
+//  CHECK-SAME:     %[[arg:.*]]: tensor<?xf32>
+func.func @nested_hoisting(%arg: tensor<?xf32>) -> tensor<?xf32> {
+  %lb = "test.foo"() : () -> (index)
+  %ub = "test.foo"() : () -> (index)
+  %step = "test.foo"() : () -> (index)
+
+  // CHECK: %[[extract:.*]] = tensor.extract_slice %[[arg]][0] [5] [1]
+  // CHECK: %[[extract2:.*]] = tensor.extract_slice %[[arg]][5] [5] [1]
+  // CHECK: %[[for:.*]]:3 = scf.for {{.*}} iter_args(%[[t:.*]] = %[[arg]], %[[hoisted:.*]] = %[[extract]], %[[hoisted2:.*]] = %[[extract2]])
+  %0 = scf.for %iv = %lb to %ub step %step iter_args(%t = %arg) -> (tensor<?xf32>) {
+    %1 = tensor.extract_slice %t[0][5][1] : tensor<?xf32> to tensor<5xf32>
+    // CHECK: %[[foo:.*]] = "test.foo"(%[[hoisted]])
+    %2 = "test.foo"(%1) : (tensor<5xf32>) -> (tensor<5xf32>)
+    %3 = tensor.insert_slice %2 into %t[0][5][1] : tensor<5xf32> into tensor<?xf32>
+    // CHECK: %[[for2:.*]]:2 = {{.*}} iter_args(%[[t2:.*]] = %[[t]], %[[hoisted2_nested:.*]] = %[[hoisted2]])
+    %4 = scf.for %iv2 = %lb to %ub step %step iter_args(%t2 = %3) -> (tensor<?xf32>) {
+      %5 = tensor.extract_slice %t2[5][5][1] : tensor<?xf32> to tensor<5xf32>
+      // CHECK: %[[foo2:.*]] = "test.foo"(%[[hoisted2_nested]])
+      %6 = "test.foo"(%5) : (tensor<5xf32>) -> (tensor<5xf32>)
+      %7 = tensor.insert_slice %6 into %t2[5][5][1] : tensor<5xf32> into tensor<?xf32>
+      // CHECK: scf.yield %[[t2]], %[[foo2]]
+      scf.yield %7 : tensor<?xf32>
+    }
+    // CHECK: scf.yield %[[for2]]#0, %[[foo]], %[[for2]]#1
+    scf.yield %4 : tensor<?xf32>
+  }
+  // CHECK: %[[insert:.*]] = tensor.insert_slice %[[for]]#2 into %[[for]]#0[5] [5] [1]
+  // CHECK: %[[insert2:.*]] = tensor.insert_slice %[[for]]#1 into %[[insert]][0] [5] [1]
+  // CHECK: return %[[insert2]]
+  return %0 : tensor<?xf32>
+}
