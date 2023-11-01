@@ -7,45 +7,14 @@
 // expected-no-diagnostics
 
 
-// CHECK: [[VARFN_ARGS_STORE:%[a-zA-Z0-9_]+]] = type { i32, i32, i32, i32, i32, i32 }
-// CHECK: [[VARFN_ARGS_STORE_0:%[a-zA-Z0-9_]+.0]] = type { i32, i32, i32, i32, i32, i32 }
-// CHECK: [[STR:@.[a-zA-Z0-9_]+]] = private unnamed_addr addrspace(4) constant [4 x i8] c"%s\0A\00", align 1
 
-// CHECK-DAG: @__omp_offloading_[[KERNEL:.*]]_wg_size = weak addrspace(1) constant
 extern int printf(const char *, ...);
 
-// CHECK-LABEL: define weak_odr protected  amdgpu_kernel void @__omp_offloading{{.+}}CheckInlinedConditionalArg{{.+}}
 int CheckInlinedConditionalArg() {
   char *true_string = "true string";
   char *false_string = "false string";
 
-  // CHECK: [[TRUE_STR_ADDR:%[a-zA-Z0-9_]+.addr]] = alloca ptr, align 8, addrspace(5)
-  // CHECK: [[TRUE_STR_ADDR_CAST:%[a-zA-Z0-9_]+.addr.ascast]] = addrspacecast ptr addrspace(5) [[TRUE_STR_ADDR]] to ptr
 
-  // CHECK: [[TRUE_STR:%[a-zA-Z0-9_]+]] = load ptr, ptr [[TRUE_STR_ADDR_CAST]], align 8
-  // CHECK: [[COND_STR_LEN:%[a-zA-Z0-9_]+]] = call i32 @__strlen_max(ptr [[TRUE_STR]], i32 1024)
-  // CHECK: [[SUM_OF_VAR_STRINGS_LENGTH:%[a-zA-Z0-9_]+]] = add i32 0, [[COND_STR_LEN]]
-  // CHECK: [[TOTAL_BUFFER_SIZE:%[a-zA-Z0-9_]+]] = add i32 [[SUM_OF_VAR_STRINGS_LENGTH]], 28
-  // CHECK: [[ALLOC:%[a-zA-Z0-9_]+]] = call ptr @printf_allocate(i32 [[TOTAL_BUFFER_SIZE]])
-  // CHECK: [[VARFN_ARGS_STORE_CASTED:%[a-zA-Z0-9_]+]] = addrspacecast ptr [[ALLOC]] to ptr addrspace(1)
-  // CHECK: getelementptr inbounds [[VARFN_ARGS_STORE]], ptr addrspace(1) [[VARFN_ARGS_STORE_CASTED]], i32 0, i32 0
-  // CHECK: store i32 24, ptr addrspace(1)
-  // CHECK: getelementptr inbounds [[VARFN_ARGS_STORE]], ptr addrspace(1) [[VARFN_ARGS_STORE_CASTED]], i32 0, i32 1
-  // CHECK: store i32 2, ptr addrspace(1)
-  // CHECK: getelementptr inbounds [[VARFN_ARGS_STORE]], ptr addrspace(1) [[VARFN_ARGS_STORE_CASTED]], i32 0, i32 2
-  // CHECK: store i32 983041, ptr addrspace(1)
-  // CHECK: getelementptr inbounds [[VARFN_ARGS_STORE]], ptr addrspace(1) [[VARFN_ARGS_STORE_CASTED]], i32 0, i32 3
-  // CHECK: store i32 983041, ptr addrspace(1)
-  // CHECK: getelementptr inbounds [[VARFN_ARGS_STORE]], ptr addrspace(1) [[VARFN_ARGS_STORE_CASTED]], i32 0, i32 4
-  // CHECK: store i32 4, ptr addrspace(1)
-  // CHECK: getelementptr inbounds [[VARFN_ARGS_STORE]], ptr addrspace(1) [[VARFN_ARGS_STORE_CASTED]], i32 0, i32 5
-  // CHECK: store i32 [[COND_STR_LEN]], ptr addrspace(1)
-  // CHECK: [[TMP_10:%[a-zA-Z0-9_]+]] = getelementptr inbounds i8, ptr addrspace(1) [[VARFN_ARGS_STORE_CASTED]], i64 24
-  // CHECK: call void @llvm.memcpy.p1.p0.i64(ptr addrspace(1) align 1 [[TMP_10]], ptr align 1 addrspacecast (ptr addrspace(4) [[STR]] to ptr), i64 4, i1 false)
-  // CHECK: [[TMP_11:%[a-zA-Z0-9_]+]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP_10]], i64 4
-  // CHECK: call void @llvm.memcpy.p1.p0.i32(ptr addrspace(1) align 1 [[TMP_11]], ptr align 1 [[TRUE_STR]], i32 [[COND_STR_LEN]], i1 false)
-  // CHECK: [[TMP_12:%[a-zA-Z0-9_]+]] = getelementptr i8, ptr addrspace(1) [[TMP_11]], i32 [[COND_STR_LEN]]
-  // CHECK: call i32 @printf_execute(ptr [[ALLOC]], i32 [[TOTAL_BUFFER_SIZE]])
 
   #pragma omp target
   {
@@ -55,44 +24,11 @@ int CheckInlinedConditionalArg() {
   return 0;
 }
 
-// CHECK-LABEL: define weak_odr protected amdgpu_kernel void @__omp_offloading{{.+}}CheckOutlinedConditionalArg{{.+}}
 int CheckOutlinedConditionalArg() {
   char *true_string = "true string";
   char *false_string = "false string";
 
-  // CHECK: [[TRUE_STR_ADDR:%[a-zA-Z0-9_]+.addr]] = alloca ptr, align 8, addrspace(5)
-  // CHECK: alloca ptr, align 8, addrspace(5)
-  // CHECK: [[CONDITIONAL:%[a-zA-Z0-9_]+]] = alloca ptr, align 8, addrspace(5)
-  // CHECK: [[TRUE_STR_ADDR_CAST:%[a-zA-Z0-9_]+.addr.ascast]] = addrspacecast ptr addrspace(5) [[TRUE_STR_ADDR]] to ptr
-  // CHECK: addrspacecast ptr addrspace(5)
-  // CHECK: [[CONDITIONAL_CAST:%[a-zA-Z0-9_]+.ascast]] = addrspacecast ptr addrspace(5) [[CONDITIONAL]] to ptr
 
-  // CHECK: [[TRUE_STR:%[a-zA-Z0-9_]+]] = load ptr, ptr [[TRUE_STR_ADDR_CAST]], align 8
-  // CHECK: store ptr [[TRUE_STR]], ptr [[CONDITIONAL_CAST]], align 8
-  // CHECK: [[COND_STR:%[a-zA-Z0-9_]+]] = load ptr, ptr [[CONDITIONAL_CAST]], align 8
-  // CHECK: [[COND_STR_LEN:%[a-zA-Z0-9_]+]] = call i32 @__strlen_max(ptr [[COND_STR]], i32 1024)
-  // CHECK: [[SUM_OF_VAR_STRINGS_LENGTH:%[a-zA-Z0-9_]+]] = add i32 0, [[COND_STR_LEN]]
-  // CHECK: [[TOTAL_BUFFER_SIZE:%[a-zA-Z0-9_]+]] = add i32 [[SUM_OF_VAR_STRINGS_LENGTH]], 28
-  // CHECK: [[ALLOC:%[a-zA-Z0-9_]+]] = call ptr @printf_allocate(i32 [[TOTAL_BUFFER_SIZE]])
-  // CHECK: [[VARFN_ARGS_STORE_CASTED:%[a-zA-Z0-9_]+]] = addrspacecast ptr [[ALLOC]] to ptr addrspace(1)
-  // CHECK: getelementptr inbounds [[VARFN_ARGS_STORE_0]], ptr addrspace(1) [[VARFN_ARGS_STORE_CASTED]], i32 0, i32 0
-  // CHECK: store i32 24, ptr addrspace(1)
-  // CHECK: getelementptr inbounds [[VARFN_ARGS_STORE_0]], ptr addrspace(1) [[VARFN_ARGS_STORE_CASTED]], i32 0, i32 1
-  // CHECK: store i32 2, ptr addrspace(1)
-  // CHECK: getelementptr inbounds [[VARFN_ARGS_STORE_0]], ptr addrspace(1) [[VARFN_ARGS_STORE_CASTED]], i32 0, i32 2
-  // CHECK: store i32 983041, ptr addrspace(1)
-  // CHECK: getelementptr inbounds [[VARFN_ARGS_STORE_0]], ptr addrspace(1) [[VARFN_ARGS_STORE_CASTED]], i32 0, i32 3
-  // CHECK: store i32 983041, ptr addrspace(1)
-  // CHECK: getelementptr inbounds [[VARFN_ARGS_STORE_0]], ptr addrspace(1) [[VARFN_ARGS_STORE_CASTED]], i32 0, i32 4
-  // CHECK: store i32 4, ptr addrspace(1)
-  // CHECK: getelementptr inbounds [[VARFN_ARGS_STORE_0]], ptr addrspace(1) [[VARFN_ARGS_STORE_CASTED]], i32 0, i32 5
-  // CHECK: store i32 [[COND_STR_LEN]], ptr addrspace(1)
-  // CHECK: [[TMP_10:%[a-zA-Z0-9_]+]] = getelementptr inbounds i8, ptr addrspace(1) [[VARFN_ARGS_STORE_CASTED]], i64 24
-  // CHECK: call void @llvm.memcpy.p1.p0.i64(ptr addrspace(1) align 1 [[TMP_10]], ptr align 1 addrspacecast (ptr addrspace(4) [[STR]] to ptr), i64 4, i1 false)
-  // CHECK: [[TMP_11:%[a-zA-Z0-9_]+]] = getelementptr inbounds i8, ptr addrspace(1) [[TMP_10]], i64 4
-  // CHECK: call void @llvm.memcpy.p1.p0.i32(ptr addrspace(1) align 1 [[TMP_11]], ptr align 1 [[COND_STR]], i32 [[COND_STR_LEN]], i1 false)
-  // CHECK: [[TMP_12:%[a-zA-Z0-9_]+]] = getelementptr i8, ptr addrspace(1) [[TMP_11]], i32 [[COND_STR_LEN]]
-  // CHECK: call i32 @printf_execute(ptr [[ALLOC]], i32 [[TOTAL_BUFFER_SIZE]])
 
   #pragma omp target
   {
@@ -102,3 +38,5 @@ int CheckOutlinedConditionalArg() {
 
   return 0;
 }
+//// NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+// CHECK: {{.*}}

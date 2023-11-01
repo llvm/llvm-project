@@ -15,7 +15,7 @@ target triple = "nvptx64"
 
 define void @foo() "kernel" {
 entry:
-  %c = call i32 @__kmpc_target_init(ptr @foo_kernel_environment)
+  %c = call i32 @__kmpc_target_init(ptr @foo_kernel_environment, ptr null)
   %0 = call ptr @__kmpc_alloc_shared(i64 4), !dbg !10
   call void @share(ptr %0), !dbg !10
   call void @__kmpc_free_shared(ptr %0)
@@ -33,7 +33,7 @@ declare ptr @__kmpc_alloc_shared(i64)
 
 declare void @__kmpc_free_shared(ptr nocapture)
 
-declare i32 @__kmpc_target_init(ptr);
+declare i32 @__kmpc_target_init(ptr, ptr);
 
 declare void @__kmpc_target_deinit()
 

@@ -25,15 +25,16 @@ using namespace ompx;
 
 #pragma omp begin declare target device_type(nohost)
 
-static void inititializeRuntime(bool IsSPMD,
-                                KernelEnvironmentTy &KernelEnvironment) {
+static void
+inititializeRuntime(bool IsSPMD, KernelEnvironmentTy &KernelEnvironment,
+                    KernelLaunchEnvironmentTy &KernelLaunchEnvironment) {
   // Order is important here.
   synchronize::init(IsSPMD);
   mapping::init(IsSPMD);
-  state::init(IsSPMD, KernelEnvironment);
   if (__kmpc_get_hardware_thread_id_in_block() == 0)
     __init_ThreadDSTPtrPtr();
 
+  state::init(IsSPMD, KernelEnvironment, KernelLaunchEnvironment);
   allocator::init(IsSPMD, KernelEnvironment);
 }
 
@@ -72,16 +73,19 @@ extern "C" {
 ///
 /// \param Ident               Source location identification, can be NULL.
 ///
-int32_t __kmpc_target_init(KernelEnvironmentTy &KernelEnvironment) {
+int32_t __kmpc_target_init(KernelEnvironmentTy &KernelEnvironment,
+                           KernelLaunchEnvironmentTy &KernelLaunchEnvironment) {
   ConfigurationEnvironmentTy &Configuration = KernelEnvironment.Configuration;
   bool IsSPMD = Configuration.ExecMode &
                 llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_SPMD;
   bool UseGenericStateMachine = Configuration.UseGenericStateMachine;
   if (IsSPMD) {
-    inititializeRuntime(/* IsSPMD */ true, KernelEnvironment);
+    inititializeRuntime(/* IsSPMD */ true, KernelEnvironment,
+                        KernelLaunchEnvironment);
     synchronize::threadsAligned(atomic::relaxed);
   } else {
-    inititializeRuntime(/* IsSPMD */ false, KernelEnvironment);
+    inititializeRuntime(/* IsSPMD */ false, KernelEnvironment,
+                        KernelLaunchEnvironment);
     // No need to wait since only the main threads will execute user
     // code and workers will run into a barrier right away.
   }
@@ -161,7 +165,8 @@ int32_t __kmpc_target_init_v1(int64_t *, int8_t Mode,
                           static_cast<llvm::omp::OMPTgtExecModeFlags>(Mode)},
                          /*Ident=*/nullptr,
                          /*DebugIndentionLevel=*/0};
-  int32_t res = __kmpc_target_init(KE);
+  KernelLaunchEnvironmentTy KernelLaunchEnvironment;
+  int32_t res = __kmpc_target_init(KE, KernelLaunchEnvironment);
   if (Mode & llvm::omp::OMP_TGT_EXEC_MODE_SPMD) {
 
     uint32_t TId = mapping::getThreadIdInBlock();

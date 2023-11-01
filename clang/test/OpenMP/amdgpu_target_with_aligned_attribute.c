@@ -19,8 +19,9 @@ void write_to_aligned_array(int *a, int N) {
 
 #endif
 // CHECK-AMD-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_write_to_aligned_array_l14
-// CHECK-AMD-SAME: (i64 noundef [[N:%.*]], ptr noundef [[APTR:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK-AMD-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], i64 noundef [[N:%.*]], ptr noundef [[APTR:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-AMD-NEXT:  entry:
+// CHECK-AMD-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // CHECK-AMD-NEXT:    [[N_ADDR:%.*]] = alloca i64, align 8, addrspace(5)
 // CHECK-AMD-NEXT:    [[APTR_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // CHECK-AMD-NEXT:    [[I:%.*]] = alloca i32, align 4, addrspace(5)
@@ -29,6 +30,7 @@ void write_to_aligned_array(int *a, int N) {
 // CHECK-AMD-NEXT:    [[DOTOMP_LB:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-AMD-NEXT:    [[DOTOMP_UB:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-AMD-NEXT:    [[DOTOMP_IV:%.*]] = alloca i32, align 4, addrspace(5)
+// CHECK-AMD-NEXT:    [[DYN_PTR_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DYN_PTR_ADDR]] to ptr
 // CHECK-AMD-NEXT:    [[N_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[N_ADDR]] to ptr
 // CHECK-AMD-NEXT:    [[APTR_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[APTR_ADDR]] to ptr
 // CHECK-AMD-NEXT:    [[I_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[I]] to ptr
@@ -37,6 +39,7 @@ void write_to_aligned_array(int *a, int N) {
 // CHECK-AMD-NEXT:    [[DOTOMP_LB_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTOMP_LB]] to ptr
 // CHECK-AMD-NEXT:    [[DOTOMP_UB_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTOMP_UB]] to ptr
 // CHECK-AMD-NEXT:    [[DOTOMP_IV_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTOMP_IV]] to ptr
+// CHECK-AMD-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR_ASCAST]], align 8
 // CHECK-AMD-NEXT:    store i64 [[N]], ptr [[N_ADDR_ASCAST]], align 8
 // CHECK-AMD-NEXT:    store ptr [[APTR]], ptr [[APTR_ADDR_ASCAST]], align 8
 // CHECK-AMD-NEXT:    store i32 0, ptr [[I_ASCAST]], align 4

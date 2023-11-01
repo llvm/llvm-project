@@ -1143,22 +1143,25 @@ int foo() {
 // CHECK-NEXT:    call void @"_omp$reduction$reduction_func.2"(ptr [[TMP7]], ptr [[DOTOMP_REDUCTION_RED_LIST_ASCAST]]) #[[ATTR2]]
 // CHECK-NEXT:    ret void
 // IR-GPU-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l22
-// IR-GPU-SAME: (i64 noundef [[J:%.*]], ptr noundef nonnull align 4 dereferenceable(400) [[SUM:%.*]]) #[[ATTR0:[0-9]+]] {
+// IR-GPU-SAME: (ptr noalias noundef [[DYN_PTR:%.*]], i64 noundef [[J:%.*]], ptr noundef nonnull align 4 dereferenceable(400) [[SUM:%.*]]) #[[ATTR0:[0-9]+]] {
 // IR-GPU-NEXT:  entry:
+// IR-GPU-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // IR-GPU-NEXT:    [[J_ADDR:%.*]] = alloca i64, align 8, addrspace(5)
 // IR-GPU-NEXT:    [[SUM_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // IR-GPU-NEXT:    [[J_CASTED:%.*]] = alloca i64, align 8, addrspace(5)
 // IR-GPU-NEXT:    [[DOTZERO_ADDR:%.*]] = alloca i32, align 4, addrspace(5)
 // IR-GPU-NEXT:    [[DOTTHREADID_TEMP_:%.*]] = alloca i32, align 4, addrspace(5)
+// IR-GPU-NEXT:    [[DYN_PTR_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DYN_PTR_ADDR]] to ptr
 // IR-GPU-NEXT:    [[J_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[J_ADDR]] to ptr
 // IR-GPU-NEXT:    [[SUM_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[SUM_ADDR]] to ptr
 // IR-GPU-NEXT:    [[J_CASTED_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[J_CASTED]] to ptr
 // IR-GPU-NEXT:    [[DOTZERO_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTZERO_ADDR]] to ptr
 // IR-GPU-NEXT:    [[DOTTHREADID_TEMP__ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[DOTTHREADID_TEMP_]] to ptr
+// IR-GPU-NEXT:    store ptr [[DYN_PTR]], ptr [[DYN_PTR_ADDR_ASCAST]], align 8
 // IR-GPU-NEXT:    store i64 [[J]], ptr [[J_ADDR_ASCAST]], align 8
 // IR-GPU-NEXT:    store ptr [[SUM]], ptr [[SUM_ADDR_ASCAST]], align 8
 // IR-GPU-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[SUM_ADDR_ASCAST]], align 8
-// IR-GPU-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_target_init(ptr addrspacecast (ptr addrspace(1) @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l22_kernel_environment to ptr))
+// IR-GPU-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_target_init(ptr addrspacecast (ptr addrspace(1) @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l22_kernel_environment to ptr), ptr [[DYN_PTR]])
 // IR-GPU-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP1]], -1
 // IR-GPU-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // IR-GPU:       user_code.entry:
