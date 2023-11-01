@@ -510,8 +510,8 @@ bool RegisterInfoPOSIX_arm64::IsSMERegZA(unsigned reg) const {
 
 bool RegisterInfoPOSIX_arm64::IsSMERegZT(unsigned reg) const {
   // ZT0 is part of the SME register set only if SME2 is present.
-  return m_sme_regnum_collection.size() == 4 &&
-         reg == m_sme_regnum_collection.back();
+  return m_sme_regnum_collection.size() >= 4 &&
+         reg == m_sme_regnum_collection[3];
 }
 
 bool RegisterInfoPOSIX_arm64::IsPAuthReg(unsigned reg) const {
