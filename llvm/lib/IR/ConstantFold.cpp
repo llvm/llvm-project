@@ -295,6 +295,13 @@ static Constant *ExtractConstantBytes(Constant *C, unsigned ByteStart,
   }
 }
 
+static Constant *foldMaybeUndesirableCast(unsigned opc, Constant *V,
+                                          Type *DestTy) {
+  return ConstantExpr::isDesirableCastOp(opc)
+             ? ConstantExpr::getCast(opc, V, DestTy)
+             : ConstantFoldCastInstruction(opc, V, DestTy);
+}
+
 Constant *llvm::ConstantFoldCastInstruction(unsigned opc, Constant *V,
                                             Type *DestTy) {
   if (isa<PoisonValue>(V))
@@ -320,7 +327,7 @@ Constant *llvm::ConstantFoldCastInstruction(unsigned opc, Constant *V,
     if (CE->isCast()) {
       // Try hard to fold cast of cast because they are often eliminable.
       if (unsigned newOpc = foldConstantCastPair(opc, CE, DestTy))
-        return ConstantExpr::getCast(newOpc, CE->getOperand(0), DestTy);
+        return foldMaybeUndesirableCast(newOpc, CE->getOperand(0), DestTy);
     } else if (CE->getOpcode() == Instruction::GetElementPtr &&
                // Do not fold addrspacecast (gep 0, .., 0). It might make the
                // addrspacecast uncanonicalized.
@@ -357,18 +364,22 @@ Constant *llvm::ConstantFoldCastInstruction(unsigned opc, Constant *V,
     Type *DstEltTy = DestVecTy->getElementType();
     // Fast path for splatted constants.
     if (Constant *Splat = V->getSplatValue()) {
+      Constant *Res = foldMaybeUndesirableCast(opc, Splat, DstEltTy);
+      if (!Res)
+        return nullptr;
       return ConstantVector::getSplat(
-          cast<VectorType>(DestTy)->getElementCount(),
-          ConstantExpr::getCast(opc, Splat, DstEltTy));
+          cast<VectorType>(DestTy)->getElementCount(), Res);
     }
     SmallVector<Constant *, 16> res;
     Type *Ty = IntegerType::get(V->getContext(), 32);
     for (unsigned i = 0,
                   e = cast<FixedVectorType>(V->getType())->getNumElements();
          i != e; ++i) {
-      Constant *C =
-        ConstantExpr::getExtractElement(V, ConstantInt::get(Ty, i));
-      res.push_back(ConstantExpr::getCast(opc, C, DstEltTy));
+      Constant *C = ConstantExpr::getExtractElement(V, ConstantInt::get(Ty, i));
+      Constant *Casted = foldMaybeUndesirableCast(opc, C, DstEltTy);
+      if (!Casted)
+        return nullptr;
+      res.push_back(Casted);
     }
     return ConstantVector::get(res);
   }
