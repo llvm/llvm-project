@@ -317,10 +317,9 @@ static bool isSupportedArgumentType(Type *T, const RISCVSubtarget &Subtarget,
     return true;
   if (T->isPointerTy())
     return true;
-  // TODO: support 16bit FPtypes.
   // TODO: Support fixed vector types.
   if (IsLowerArgs && T->isVectorTy() && Subtarget.hasVInstructions() &&
-      !T->is16bitFPTy() && T->isScalableTy())
+      T->isScalableTy())
     return true;
   return false;
 }
@@ -409,7 +408,8 @@ bool RISCVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
   const RISCVSubtarget &Subtarget =
       MIRBuilder.getMF().getSubtarget<RISCVSubtarget>();
   for (auto &Arg : F.args()) {
-    if (!isSupportedArgumentType(Arg.getType(), Subtarget, /*IsLowerArgs*/true))
+    if (!isSupportedArgumentType(Arg.getType(), Subtarget,
+                                 /*IsLowerArgs=*/true))
       return false;
   }
 

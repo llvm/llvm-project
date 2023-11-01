@@ -691,3 +691,63 @@ define void @test_args_nxv8f64(<vscale x 8 x double> %a) {
 entry:
   ret void
 }
+
+define void @test_args_nxv1f16(<vscale x 1 x half> %a) {
+entry:
+  ret void
+}
+
+define void @test_args_nxv2f16(<vscale x 2 x half> %a) {
+entry:
+  ret void
+}
+
+define void @test_args_nxv4f16(<vscale x 4 x half> %a) {
+entry:
+  ret void
+}
+
+define void @test_args_nxv8f16(<vscale x 8 x half> %a) {
+entry:
+  ret void
+}
+
+define void @test_args_nxv16f16(<vscale x 16 x half> %a) {
+entry:
+  ret void
+}
+
+define void @test_args_nxv32f16(<vscale x 32 x half> %a) {
+entry:
+  ret void
+}
+
+define void @test_args_nxv1b16(<vscale x 1 x bfloat> %a) {
+entry:
+  ret void
+}
+
+define void @test_args_nxv2b16(<vscale x 2 x bfloat> %a) {
+entry:
+  ret void
+}
+
+define void @test_args_nxv4b16(<vscale x 4 x bfloat> %a) {
+entry:
+  ret void
+}
+
+define void @test_args_nxv8b16(<vscale x 8 x bfloat> %a) {
+entry:
+  ret void
+}
+
+define void @test_args_nxv16b16(<vscale x 16 x bfloat> %a) {
+entry:
+  ret void
+}
+
+define void @test_args_nxv32b16(<vscale x 32 x bfloat> %a) {
+entry:
+  ret void
+}
