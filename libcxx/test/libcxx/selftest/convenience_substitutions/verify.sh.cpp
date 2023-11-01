@@ -12,5 +12,5 @@
 
 // RUN: %{verify}
 
-struct Foo { };
+struct Foo {};
 typedef Foo::x x; // expected-error {{no type named 'x' in 'Foo'}}
