@@ -8,6 +8,7 @@
 
 #include "mlir/Interfaces/SubsetOpInterface.h"
 #include "mlir/Interfaces/DestinationStyleOpInterface.h"
+#include "mlir/Interfaces/ValueBoundsOpInterface.h"
 
 #include "mlir/Interfaces/SubsetOpInterface.cpp.inc"
 
@@ -38,6 +39,54 @@ bool detail::defaultIsEquivalentSubset(
     return false;
   return cast<SubsetOpInterface>(op).operatesOnEquivalentSubset(
       candidate.getDefiningOp<SubsetOpInterface>(), equivalenceFn);
+}
+
+bool detail::defaultOperatesOnEquivalentSubset(
+    Operation *op, SubsetOpInterface candidate,
+    function_ref<bool(Value, Value)> equivalenceFn) {
+  auto subsetOp = cast<SubsetOpInterface>(op);
+  FailureOr<HyperrectangularSlice> slice =
+      subsetOp.getAccessedHyperrectangularSlice();
+  assert(succeeded(slice) &&
+         "operatesOnEquivalentSubset must be implemented if "
+         "getAccessedHyperrectangularSlice is not implemented");
+  FailureOr<HyperrectangularSlice> otherSlice =
+      candidate.getAccessedHyperrectangularSlice();
+  if (failed(otherSlice))
+    return false;
+  if (!equivalenceFn(subsetOp.getTensorContainer(),
+                     candidate.getTensorContainer()))
+    return false;
+  FailureOr<bool> equivalent = ValueBoundsConstraintSet::areEquivalentSlices(
+      op->getContext(), *slice, *otherSlice);
+  return succeeded(equivalent) && *equivalent;
+}
+
+bool detail::defaultOperatesOnDisjointSubset(
+    Operation *op, SubsetOpInterface candidate,
+    function_ref<bool(Value, Value)> equivalenceFn) {
+  auto subsetOp = cast<SubsetOpInterface>(op);
+  FailureOr<HyperrectangularSlice> slice =
+      subsetOp.getAccessedHyperrectangularSlice();
+  assert(succeeded(slice) &&
+         "defaultOperatesOnDisjointSubset must be implemented if "
+         "getAccessedHyperrectangularSlice is not implemented");
+  FailureOr<HyperrectangularSlice> otherSlice =
+      candidate.getAccessedHyperrectangularSlice();
+  if (failed(otherSlice))
+    return false;
+  if (!equivalenceFn(subsetOp.getTensorContainer(),
+                     candidate.getTensorContainer()))
+    return false;
+  FailureOr<bool> overlapping = ValueBoundsConstraintSet::areOverlappingSlices(
+      op->getContext(), *slice, *otherSlice);
+  return succeeded(overlapping) && !*overlapping;
+}
+
+Value detail::getTensorContainer(Operation *op) {
+  if (auto insertionOp = dyn_cast<::mlir::SubsetInsertionOpInterface>(op))
+    return insertionOp.getDestinationOperand().get();
+  return cast<::mlir::SubsetExtractionOpInterface>(op).getSourceOperand().get();
 }
 
 LogicalResult detail::verifySubsetOpInterface(SubsetOpInterface op) {
