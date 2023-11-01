@@ -7,8 +7,8 @@ target triple = "amdgcn-amd-amdhsa"
 
 @_ZN4ompx5state9TeamStateE = internal addrspace(3) global %"struct.ompx::state::TeamStateTy" undef
 
-define amdgpu_kernel void @__omp_offloading_32_70c2e76c_main_l24() {
-  %1 = tail call i32 @__kmpc_target_init(ptr null)
+define amdgpu_kernel void @__omp_offloading_32_70c2e76c_main_l24(ptr %dyn) {
+  %1 = tail call i32 @__kmpc_target_init(ptr null, ptr %dyn)
   call void @__kmpc_parallel_51(ptr null, i32 0, i32 0, i32 0, i32 0, ptr @__omp_offloading_32_70c2e76c_main_l24_omp_outlined, ptr null, ptr null, i64 0)
   ret void
 }
@@ -24,7 +24,7 @@ define void @__omp_offloading_32_70c2e76c_main_l24_omp_outlined(ptr %0) {
   br label %2
 }
 
-define internal i32 @__kmpc_target_init(ptr %0) {
+define internal i32 @__kmpc_target_init(ptr %0, ptr) {
   store i32 0, ptr addrspace(3) @_ZN4ompx5state9TeamStateE, align 16
   ret i32 0
 }

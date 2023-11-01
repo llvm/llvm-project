@@ -15,12 +15,12 @@ target triple = "nvptx64"
 
 declare void @use(i32)
 
-define weak void @__omp_offloading_50_a3e09bf8_foo_l2() #0 {
+define weak void @__omp_offloading_50_a3e09bf8_foo_l2(ptr %dyn) #0 {
 ; CHECK-LABEL: define {{[^@]+}}@__omp_offloading_50_a3e09bf8_foo_l2
-; CHECK-SAME: () #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: (ptr [[DYN:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 8
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_50_a3e09bf8_foo_l2_kernel_environment)
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @__omp_offloading_50_a3e09bf8_foo_l2_kernel_environment, ptr [[DYN]])
 ; CHECK-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 ; CHECK-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 ; CHECK:       user_code.entry:
@@ -32,7 +32,7 @@ define weak void @__omp_offloading_50_a3e09bf8_foo_l2() #0 {
 ;
 entry:
   %captured_vars_addrs = alloca [0 x ptr], align 8
-  %0 = call i32 @__kmpc_target_init(ptr @__omp_offloading_50_a3e09bf8_foo_l2_kernel_environment)
+  %0 = call i32 @__kmpc_target_init(ptr @__omp_offloading_50_a3e09bf8_foo_l2_kernel_environment, ptr %dyn)
   %exec_user_code = icmp eq i32 %0, -1
   br i1 %exec_user_code, label %user_code.entry, label %worker.exit
 
@@ -46,7 +46,7 @@ worker.exit:                                      ; preds = %entry
   ret void
 }
 
-declare i32 @__kmpc_target_init(ptr)
+declare i32 @__kmpc_target_init(ptr, ptr)
 
 declare i32 @__kmpc_global_thread_num(ptr) #1
 

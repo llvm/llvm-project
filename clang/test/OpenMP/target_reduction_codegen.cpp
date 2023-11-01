@@ -45,7 +45,8 @@ int foo(int n) {
   {
   }
 
-  // TCHECK: define weak_odr protected void @__omp_offloading_{{.+}}(ptr{{.+}} %{{.+}})
+  // TCHECK: define weak_odr protected void @__omp_offloading_{{.+}}(ptr {{[^,]+}}, ptr{{.+}} %{{.+}})
+  // TCHECK: [[DYN_PTR:%.+]] = alloca ptr,
   // TCHECK: [[A:%.+]] = alloca ptr,
   // TCHECK: store {{.+}}, {{.+}} [[A]],
   // TCHECK: load ptr, ptr [[A]],
@@ -56,7 +57,8 @@ int foo(int n) {
     a = 1;
   }
 
-  // TCHECK:  define weak_odr protected void @__omp_offloading_{{.+}}(ptr{{.+}} %{{.+}})
+  // TCHECK:  define weak_odr protected void @__omp_offloading_{{.+}}(ptr {{[^,]+}}, ptr{{.+}} %{{.+}})
+  // TCHECK: [[DYN_PTR:%.+]] = alloca ptr,
   // TCHECK: [[A:%.+]] = alloca ptr,
   // TCHECK: store {{.+}}, {{.+}} [[A]],
   // TCHECK: [[REF:%.+]] = load ptr, ptr [[A]],
@@ -69,7 +71,8 @@ int foo(int n) {
     aa = 1;
   }
 
-  // TCHECK:  define weak_odr protected void @__omp_offloading_{{.+}}(ptr{{.+}} [[A:%.+]], ptr{{.+}} [[AA:%.+]])
+  // TCHECK:  define weak_odr protected void @__omp_offloading_{{.+}}(ptr {{[^,]+}}, ptr{{.+}} [[A:%.+]], ptr{{.+}} [[AA:%.+]])
+  // TCHECK: [[DYN_PTR:%.+]] = alloca ptr,
   // TCHECK:  [[A:%.+]] = alloca ptr,
   // TCHECK:  [[AA:%.+]] = alloca ptr,
   // TCHECK: store {{.+}}, {{.+}} [[A]],
@@ -118,7 +121,8 @@ int fstatic(int n) {
   return a;
 }
 
-// TCHECK: define weak_odr protected void @__omp_offloading_{{.+}}(ptr{{.+}}, ptr{{.+}}, ptr{{.+}}, ptr{{.+}})
+// TCHECK: define weak_odr protected void @__omp_offloading_{{.+}}(ptr {{[^,]+}}, ptr{{.+}}, ptr{{.+}}, ptr{{.+}}, ptr{{.+}})
+// TCHECK: [[DYN_PTR:%.+]] = alloca ptr,
 // TCHECK:  [[A:%.+]] = alloca ptr,
 // TCHECK:  [[A2:%.+]] = alloca ptr,
 // TCHECK:  [[A3:%.+]] = alloca ptr,
@@ -154,7 +158,8 @@ struct S1 {
     return c[1][1] + (int)b;
   }
 
-  // TCHECK: define weak_odr protected void @__omp_offloading_{{.+}}(ptr noundef [[TH:%.+]], ptr{{.+}}, i{{[0-9]+}} noundef [[VLA:%.+]], i{{[0-9]+}} noundef [[VLA1:%.+]], ptr{{.+}})
+  // TCHECK: define weak_odr protected void @__omp_offloading_{{.+}}(ptr {{[^,]+}}, ptr noundef [[TH:%.+]], ptr{{.+}}, i{{[0-9]+}} noundef [[VLA:%.+]], i{{[0-9]+}} noundef [[VLA1:%.+]], ptr{{.+}})
+  // TCHECK: [[DYN_PTR:%.+]] = alloca ptr,
   // TCHECK: [[TH_ADDR:%.+]] = alloca ptr,
   // TCHECK: [[B_ADDR:%.+]] = alloca ptr,
   // TCHECK: [[VLA_ADDR:%.+]] = alloca i{{[0-9]+}},
@@ -206,7 +211,8 @@ int bar(int n){
 }
 
 // template
-// TCHECK: define weak_odr protected void @__omp_offloading_{{.+}}(ptr{{.+}}, ptr{{.+}}, ptr{{.+}})
+// TCHECK: define weak_odr protected void @__omp_offloading_{{.+}}(ptr {{[^,]+}}, ptr{{.+}}, ptr{{.+}}, ptr{{.+}})
+// TCHECK: [[DYN_PTR:%.+]] = alloca ptr,
 // TCHECK: [[A:%.+]] = alloca ptr,
 // TCHECK: [[A2:%.+]] = alloca ptr,
 // TCHECK: [[B:%.+]] = alloca ptr,

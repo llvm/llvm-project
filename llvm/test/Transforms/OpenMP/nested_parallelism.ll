@@ -43,11 +43,11 @@ target triple = "nvptx64"
 ; CHECK: @[[__OMP_OFFLOADING_10302_BD7E0_MAIN_L13_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 0, i8 0, i8 2, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
 ; CHECK: @[[__OMP_OFFLOADING_10302_BD7E0_MAIN_L16_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 1, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
 ;.
-define weak_odr protected void @__omp_offloading_10302_bd7e0_main_l13(i64 noundef %i) local_unnamed_addr "kernel" {
+define weak_odr protected void @__omp_offloading_10302_bd7e0_main_l13(ptr %dyn, i64 noundef %i) local_unnamed_addr "kernel" {
 ; CHECK-LABEL: @__omp_offloading_10302_bd7e0_main_l13(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CAPTURED_VARS_ADDRS_I:%.*]] = alloca [1 x ptr], align 8
-; CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @__kmpc_target_init(ptr @__omp_offloading_10302_bd7e0_main_l13_kernel_environment)
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @__kmpc_target_init(ptr @__omp_offloading_10302_bd7e0_main_l13_kernel_environment, ptr [[DYN:%.*]])
 ; CHECK-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 ; CHECK-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[COMMON_RET:%.*]]
 ; CHECK:       common.ret:
@@ -72,7 +72,7 @@ define weak_odr protected void @__omp_offloading_10302_bd7e0_main_l13(i64 nounde
 ;
 entry:
   %captured_vars_addrs.i = alloca [1 x ptr], align 8
-  %0 = tail call i32 @__kmpc_target_init(ptr @__omp_offloading_10302_bd7e0_main_l13_kernel_environment) #6
+  %0 = tail call i32 @__kmpc_target_init(ptr @__omp_offloading_10302_bd7e0_main_l13_kernel_environment, ptr %dyn) #6
   %exec_user_code = icmp eq i32 %0, -1
   br i1 %exec_user_code, label %user_code.entry, label %common.ret
 
@@ -100,7 +100,7 @@ _Z3fooi.internalized.exit:                        ; preds = %user_code.entry, %r
   br label %common.ret
 }
 
-declare i32 @__kmpc_target_init(ptr) local_unnamed_addr
+declare i32 @__kmpc_target_init(ptr, ptr) local_unnamed_addr
 
 define hidden void @_Z3fooi(i32 noundef %i1) local_unnamed_addr #1 {
 ; CHECK-LABEL: @_Z3fooi(
@@ -127,11 +127,11 @@ entry:
 
 declare void @__kmpc_target_deinit(ptr, i8) local_unnamed_addr
 
-define weak_odr protected void @__omp_offloading_10302_bd7e0_main_l16(i64 noundef %i) local_unnamed_addr "kernel" {
+define weak_odr protected void @__omp_offloading_10302_bd7e0_main_l16(ptr %dyn, i64 noundef %i) local_unnamed_addr "kernel" {
 ; CHECK-LABEL: @__omp_offloading_10302_bd7e0_main_l16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CAPTURED_VARS_ADDRS_I:%.*]] = alloca [1 x ptr], align 8
-; CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @__kmpc_target_init(ptr @__omp_offloading_10302_bd7e0_main_l16_kernel_environment)
+; CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @__kmpc_target_init(ptr @__omp_offloading_10302_bd7e0_main_l16_kernel_environment, ptr [[DYN:%.*]])
 ; CHECK-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 ; CHECK-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[COMMON_RET:%.*]]
 ; CHECK:       common.ret:
@@ -149,7 +149,7 @@ define weak_odr protected void @__omp_offloading_10302_bd7e0_main_l16(i64 nounde
 ;
 entry:
   %captured_vars_addrs.i = alloca [1 x ptr], align 8
-  %0 = tail call i32 @__kmpc_target_init(ptr @__omp_offloading_10302_bd7e0_main_l16_kernel_environment) #6
+  %0 = tail call i32 @__kmpc_target_init(ptr @__omp_offloading_10302_bd7e0_main_l16_kernel_environment, ptr %dyn) #6
   %exec_user_code = icmp eq i32 %0, -1
   br i1 %exec_user_code, label %user_code.entry, label %common.ret
 

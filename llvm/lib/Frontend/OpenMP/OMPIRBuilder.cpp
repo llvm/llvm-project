@@ -4110,6 +4110,7 @@ OpenMPIRBuilder::createTargetInit(const LocationDescription &Loc, bool IsSPMD,
   Constant *MaxThreads = ConstantInt::getSigned(Int32, MaxThreadsVal);
   Constant *MinTeams = ConstantInt::getSigned(Int32, MinTeamsVal);
   Constant *MaxTeams = ConstantInt::getSigned(Int32, MaxTeamsVal);
+  Constant *ReductionBufferSize = ConstantInt::getSigned(Int32, 0);
 
   // We need to strip the debug prefix to get the correct kernel name.
   StringRef KernelName = Kernel->getName();
@@ -4146,6 +4147,7 @@ OpenMPIRBuilder::createTargetInit(const LocationDescription &Loc, bool IsSPMD,
                                     MaxThreads,
                                     MinTeams,
                                     MaxTeams,
+                                    ReductionBufferSize,
                                 });
   Constant *KernelEnvironmentInitializer = ConstantStruct::get(
       KernelEnvironment, {
@@ -4166,7 +4168,9 @@ OpenMPIRBuilder::createTargetInit(const LocationDescription &Loc, bool IsSPMD,
           ? KernelEnvironmentGV
           : ConstantExpr::getAddrSpaceCast(KernelEnvironmentGV,
                                            KernelEnvironmentPtr);
-  CallInst *ThreadKind = Builder.CreateCall(Fn, {KernelEnvironment});
+  Value *KernelLaunchEnvironment = Kernel->getArg(0);
+  CallInst *ThreadKind =
+      Builder.CreateCall(Fn, {KernelEnvironment, KernelLaunchEnvironment});
 
   Value *ExecUserCode = Builder.CreateICmpEQ(
       ThreadKind, ConstantInt::get(ThreadKind->getType(), -1),
@@ -4199,7 +4203,8 @@ OpenMPIRBuilder::createTargetInit(const LocationDescription &Loc, bool IsSPMD,
   return InsertPointTy(UserCodeEntryBB, UserCodeEntryBB->getFirstInsertionPt());
 }
 
-void OpenMPIRBuilder::createTargetDeinit(const LocationDescription &Loc) {
+void OpenMPIRBuilder::createTargetDeinit(const LocationDescription &Loc,
+                                         int32_t TeamsReductionBufferSize) {
   if (!updateToLocation(Loc))
     return;
 
@@ -4207,6 +4212,24 @@ void OpenMPIRBuilder::createTargetDeinit(const LocationDescription &Loc) {
       omp::RuntimeFunction::OMPRTL___kmpc_target_deinit);
 
   Builder.CreateCall(Fn, {});
+
+  if (!TeamsReductionBufferSize)
+    return;
+
+  Function *Kernel = Builder.GetInsertBlock()->getParent();
+  // We need to strip the debug prefix to get the correct kernel name.
+  StringRef KernelName = Kernel->getName();
+  const std::string DebugPrefix = "_debug__";
+  if (KernelName.ends_with(DebugPrefix))
+    KernelName = KernelName.drop_back(DebugPrefix.length());
+  auto *KernelEnvironmentGV =
+      M.getNamedGlobal((KernelName + "_kernel_environment").str());
+  assert(KernelEnvironmentGV && "Expected kernel environment global\n");
+  auto *KernelEnvironmentInitializer = KernelEnvironmentGV->getInitializer();
+  auto *NewInitializer = ConstantFoldInsertValueInstruction(
+      KernelEnvironmentInitializer,
+      ConstantInt::get(Int32, TeamsReductionBufferSize), {0, 7});
+  KernelEnvironmentGV->setInitializer(NewInitializer);
 }
 
 static MDNode *getNVPTXMDNode(Function &Kernel, StringRef Name) {
@@ -4584,6 +4607,11 @@ static Function *createOutlinedFunction(
     OpenMPIRBuilder::TargetGenArgAccessorsCallbackTy &ArgAccessorFuncCB) {
   SmallVector<Type *> ParameterTypes;
   if (OMPBuilder.Config.isTargetDevice()) {
+    // Add the "implicit" runtime argument we use to provide launch specific
+    // information for target devices.
+    auto *Int8PtrTy = Type::getInt8PtrTy(Builder.getContext());
+    ParameterTypes.push_back(Int8PtrTy);
+
     // All parameters to target devices are passed as pointers
     // or i64. This assumes 64-bit address spaces/pointers.
     for (auto &Arg : Inputs)
@@ -4627,8 +4655,14 @@ static Function *createOutlinedFunction(
 
   Builder.SetInsertPoint(UserCodeEntryBB->getFirstNonPHIOrDbg());
 
+  // Skip the artificial dyn_ptr on the device.
+  const auto &ArgRange =
+      OMPBuilder.Config.isTargetDevice()
+          ? make_range(Func->arg_begin() + 1, Func->arg_end())
+          : Func->args();
+
   // Rewrite uses of input valus to parameters.
-  for (auto InArg : zip(Inputs, Func->args())) {
+  for (auto InArg : zip(Inputs, ArgRange)) {
     Value *Input = std::get<0>(InArg);
     Argument &Arg = std::get<1>(InArg);
     Value *InputCopy = nullptr;

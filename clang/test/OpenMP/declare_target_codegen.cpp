@@ -151,7 +151,7 @@ int bar() { return 1 + foo() + bar() + baz1() + baz2(); }
 int maini1() {
   int a;
   static long aa = 32 + bbb + ccc + fff + ggg;
-// CHECK-DAG: define weak_odr protected void @__omp_offloading_{{.*}}maini1{{.*}}_l[[@LINE+1]](ptr noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %{{.*}}, i64 {{.*}}, i64 {{.*}})
+// CHECK-DAG: define weak_odr protected void @__omp_offloading_{{.*}}maini1{{.*}}_l[[@LINE+1]](ptr {{.*}}, ptr noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %{{.*}}, i64 {{.*}}, i64 {{.*}})
 #pragma omp target map(tofrom \
                        : a, b)
   {
@@ -164,7 +164,7 @@ int maini1() {
 
 int baz3() { return 2 + baz2(); }
 int baz2() {
-// CHECK-DAG: define weak_odr protected void @__omp_offloading_{{.*}}baz2{{.*}}_l[[@LINE+1]](i64 {{.*}})
+// CHECK-DAG: define weak_odr protected void @__omp_offloading_{{.*}}baz2{{.*}}_l[[@LINE+1]](ptr {{.*}}, i64 {{.*}})
 #pragma omp target parallel
   ++c;
   return 2 + baz3();
@@ -176,7 +176,7 @@ static __typeof(create) __t_create __attribute__((__weakref__("__create")));
 
 int baz5() {
   bool a;
-// CHECK-DAG: define weak_odr protected void @__omp_offloading_{{.*}}baz5{{.*}}_l[[@LINE+1]](i64 {{.*}})
+// CHECK-DAG: define weak_odr protected void @__omp_offloading_{{.*}}baz5{{.*}}_l[[@LINE+1]](ptr {{.*}}, i64 {{.*}})
 #pragma omp target
   a = __extension__(void *) & __t_create != 0;
   return a;
@@ -242,8 +242,8 @@ int main() {
   return 0;
 }
 
-// CHECK-DAG: define {{.*}}void @__omp_offloading_{{.*}}virtual_foo{{.*}}_l[[@LINE-25]]()
-// CHECK-DAG: define {{.*}}void @__omp_offloading_{{.*}}emitted{{.*}}_l[[@LINE-11]]()
+// CHECK-DAG: define {{.*}}void @__omp_offloading_{{.*}}virtual_foo{{.*}}_l[[@LINE-25]](ptr {{.*}})
+// CHECK-DAG: define {{.*}}void @__omp_offloading_{{.*}}emitted{{.*}}_l[[@LINE-11]](ptr {{.*}})
 
 template <typename T>
 struct TTT {
@@ -253,7 +253,7 @@ struct TTT {
   }
 };
 
-// CHECK-DAG: define {{.*}}void @__omp_offloading_{{.*}}emitted{{.*}}_l[[@LINE-5]]()
+// CHECK-DAG: define {{.*}}void @__omp_offloading_{{.*}}emitted{{.*}}_l[[@LINE-5]](ptr {{.*}})
 
 // CHECK-DAG: declare extern_weak noundef signext i32 @__create()
 

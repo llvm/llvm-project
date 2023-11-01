@@ -58,15 +58,15 @@ target triple = "nvptx64"
 ; CHECK-DISABLED: @[[__OMP_OFFLOADING_2A_FBFA7A_SEQUENTIAL_LOOP_L6_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 0, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
 ; CHECK-DISABLED: @[[__OMP_OUTLINED__1_WRAPPER_ID:[a-zA-Z0-9_$"\\.-]+]] = private constant i8 undef
 ;.
-define weak void @__omp_offloading_2a_fbfa7a_sequential_loop_l6(ptr %x, i64 %N) #0 {
+define weak void @__omp_offloading_2a_fbfa7a_sequential_loop_l6(ptr %dyn, ptr %x, i64 %N) #0 {
 ; CHECK-LABEL: define {{[^@]+}}@__omp_offloading_2a_fbfa7a_sequential_loop_l6
-; CHECK-SAME: (ptr [[X:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: (ptr [[DYN:%.*]], ptr [[X:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[HEAP2STACK_H2S:%.*]] = alloca i8, i64 8, align 8
 ; CHECK-NEXT:    [[LOC:%.*]] = alloca ptr, align 8
 ; CHECK-NEXT:    [[AL32:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[N_ADDR_SROA_0_0_EXTRACT_TRUNC:%.*]] = trunc i64 [[N]] to i32
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr nonnull @__omp_offloading_2a_fbfa7a_sequential_loop_l6_kernel_environment) #[[ATTR6:[0-9]+]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr nonnull @__omp_offloading_2a_fbfa7a_sequential_loop_l6_kernel_environment, ptr [[DYN]]) #[[ATTR6:[0-9]+]]
 ; CHECK-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 ; CHECK-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 ; CHECK:       user_code.entry:
@@ -183,14 +183,14 @@ define weak void @__omp_offloading_2a_fbfa7a_sequential_loop_l6(ptr %x, i64 %N) 
 ; CHECK-NEXT:    ret void
 ;
 ; CHECK-DISABLED-LABEL: define {{[^@]+}}@__omp_offloading_2a_fbfa7a_sequential_loop_l6
-; CHECK-DISABLED-SAME: (ptr [[X:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-DISABLED-SAME: (ptr [[DYN:%.*]], ptr [[X:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-DISABLED-NEXT:  entry:
 ; CHECK-DISABLED-NEXT:    [[HEAP2STACK_H2S:%.*]] = alloca i8, i64 8, align 8
 ; CHECK-DISABLED-NEXT:    [[WORKER_WORK_FN_ADDR:%.*]] = alloca ptr, align 8
 ; CHECK-DISABLED-NEXT:    [[LOC:%.*]] = alloca ptr, align 8
 ; CHECK-DISABLED-NEXT:    [[AL32:%.*]] = alloca i32, align 4
 ; CHECK-DISABLED-NEXT:    [[N_ADDR_SROA_0_0_EXTRACT_TRUNC:%.*]] = trunc i64 [[N]] to i32
-; CHECK-DISABLED-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr nonnull @__omp_offloading_2a_fbfa7a_sequential_loop_l6_kernel_environment) #[[ATTR6:[0-9]+]]
+; CHECK-DISABLED-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr nonnull @__omp_offloading_2a_fbfa7a_sequential_loop_l6_kernel_environment, ptr [[DYN]]) #[[ATTR6:[0-9]+]]
 ; CHECK-DISABLED-NEXT:    [[THREAD_IS_WORKER:%.*]] = icmp ne i32 [[TMP0]], -1
 ; CHECK-DISABLED-NEXT:    br i1 [[THREAD_IS_WORKER]], label [[IS_WORKER_CHECK:%.*]], label [[THREAD_USER_CODE_CHECK:%.*]]
 ; CHECK-DISABLED:       is_worker_check:
@@ -278,7 +278,7 @@ entry:
   %loc = alloca ptr
   %al32 = alloca i32
   %N.addr.sroa.0.0.extract.trunc = trunc i64 %N to i32
-  %0 = call i32 @__kmpc_target_init(ptr nonnull @__omp_offloading_2a_fbfa7a_sequential_loop_l6_kernel_environment) #3
+  %0 = call i32 @__kmpc_target_init(ptr nonnull @__omp_offloading_2a_fbfa7a_sequential_loop_l6_kernel_environment, ptr %dyn) #3
   %exec_user_code = icmp eq i32 %0, -1
   br i1 %exec_user_code, label %user_code.entry, label %worker.exit
 
@@ -366,13 +366,13 @@ define internal void @__omp_outlined__1_wrapper(i16 zeroext %0, i32 %1) {
 declare void @__kmpc_parallel_51(ptr, i32, i32, i32, i32, ptr, ptr, ptr, i64)
 
 ; Make it a weak definition so we will apply custom state machine rewriting but can't use the body in the reasoning.
-define weak i32 @__kmpc_target_init(ptr) {
+define weak i32 @__kmpc_target_init(ptr, ptr) {
 ; CHECK-LABEL: define {{[^@]+}}@__kmpc_target_init
-; CHECK-SAME: (ptr [[TMP0:%.*]]) {
+; CHECK-SAME: (ptr [[TMP0:%.*]], ptr [[TMP1:%.*]]) {
 ; CHECK-NEXT:    ret i32 0
 ;
 ; CHECK-DISABLED-LABEL: define {{[^@]+}}@__kmpc_target_init
-; CHECK-DISABLED-SAME: (ptr [[TMP0:%.*]]) {
+; CHECK-DISABLED-SAME: (ptr [[TMP0:%.*]], ptr [[TMP1:%.*]]) {
 ; CHECK-DISABLED-NEXT:    ret i32 0
 ;
   ret i32 0

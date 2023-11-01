@@ -17,11 +17,11 @@
 ; CHECK: @[[G:[a-zA-Z0-9_$"\\.-]+]] = external global i8
 ; CHECK: @[[KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 0, i8 0, i8 3, i32 0, i32 0, i32 0, i32 0 }, ptr @[[GLOB1]], ptr null }
 ;.
-define weak void @__omp_offloading_fd02_c0934fc2_foo_l4() #0 {
+define weak void @__omp_offloading_fd02_c0934fc2_foo_l4(ptr %dyn) #0 {
 ; CHECK: Function Attrs: norecurse nounwind
 ; CHECK-LABEL: @__omp_offloading_fd02_c0934fc2_foo_l4(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @kernel_environment)
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @kernel_environment, ptr [[DYN:%.*]])
 ; CHECK-NEXT:    [[THREAD_ID_IN_BLOCK:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
 ; CHECK-NEXT:    [[THREAD_IS_MAIN:%.*]] = icmp ne i32 [[THREAD_ID_IN_BLOCK]], 0
 ; CHECK-NEXT:    br i1 [[THREAD_IS_MAIN]], label [[EXIT_THREADS:%.*]], label [[MAIN_THREAD_USER_CODE:%.*]]
@@ -38,7 +38,7 @@ define weak void @__omp_offloading_fd02_c0934fc2_foo_l4() #0 {
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %0 = call i32 @__kmpc_target_init(ptr @kernel_environment)
+  %0 = call i32 @__kmpc_target_init(ptr @kernel_environment, ptr %dyn)
   %exec_user_code = icmp eq i32 %0, -1
   br i1 %exec_user_code, label %user_code.entry, label %worker.exit
 
@@ -59,7 +59,7 @@ worker.exit:                                      ; preds = %entry
 
 declare i8 @__kmpc_is_spmd_exec_mode()
 
-declare i32 @__kmpc_target_init(ptr)
+declare i32 @__kmpc_target_init(ptr, ptr)
 
 declare void @__kmpc_target_deinit()
 
