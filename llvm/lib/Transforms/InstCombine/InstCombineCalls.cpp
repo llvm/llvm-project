@@ -2539,10 +2539,9 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     VectorType *NewVT = cast<VectorType>(II->getType());
     if (Constant *CV0 = dyn_cast<Constant>(Arg0)) {
       if (Constant *CV1 = dyn_cast<Constant>(Arg1)) {
-        CV0 = ConstantExpr::getIntegerCast(CV0, NewVT, /*isSigned=*/!Zext);
-        CV1 = ConstantExpr::getIntegerCast(CV1, NewVT, /*isSigned=*/!Zext);
-
-        return replaceInstUsesWith(CI, ConstantExpr::getMul(CV0, CV1));
+        Value *V0 = Builder.CreateIntCast(CV0, NewVT, /*isSigned=*/!Zext);
+        Value *V1 = Builder.CreateIntCast(CV1, NewVT, /*isSigned=*/!Zext);
+        return replaceInstUsesWith(CI, Builder.CreateMul(V0, V1));
       }
 
       // Couldn't simplify - canonicalize constant to the RHS.

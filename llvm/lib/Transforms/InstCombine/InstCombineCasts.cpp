@@ -582,13 +582,15 @@ Instruction *InstCombinerImpl::narrowBinOp(TruncInst &Trunc) {
                                       APInt(SrcWidth, MaxShiftAmt)))) {
         auto *OldShift = cast<Instruction>(Trunc.getOperand(0));
         bool IsExact = OldShift->isExact();
-        auto *ShAmt = ConstantExpr::getIntegerCast(C, A->getType(), true);
-        ShAmt = Constant::mergeUndefsWith(ShAmt, C);
-        Value *Shift =
-            OldShift->getOpcode() == Instruction::AShr
-                ? Builder.CreateAShr(A, ShAmt, OldShift->getName(), IsExact)
-                : Builder.CreateLShr(A, ShAmt, OldShift->getName(), IsExact);
-        return CastInst::CreateTruncOrBitCast(Shift, DestTy);
+        if (Constant *ShAmt = ConstantFoldIntegerCast(C, A->getType(),
+                                                      /*IsSigned*/ true, DL)) {
+          ShAmt = Constant::mergeUndefsWith(ShAmt, C);
+          Value *Shift =
+              OldShift->getOpcode() == Instruction::AShr
+                  ? Builder.CreateAShr(A, ShAmt, OldShift->getName(), IsExact)
+                  : Builder.CreateLShr(A, ShAmt, OldShift->getName(), IsExact);
+          return CastInst::CreateTruncOrBitCast(Shift, DestTy);
+        }
       }
     }
     break;
