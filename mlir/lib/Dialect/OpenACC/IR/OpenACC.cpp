@@ -878,6 +878,22 @@ LogicalResult acc::LoopOp::verify() {
   return success();
 }
 
+unsigned LoopOp::getNumDataOperands() {
+  return getReductionOperands().size() + getPrivateOperands().size();
+}
+
+Value LoopOp::getDataOperand(unsigned i) {
+  unsigned numOptional = getGangNum() ? 1 : 0;
+  numOptional += getGangDim() ? 1 : 0;
+  numOptional += getGangStatic() ? 1 : 0;
+  numOptional += getVectorLength() ? 1 : 0;
+  numOptional += getWorkerNum() ? 1 : 0;
+  numOptional += getVectorLength() ? 1 : 0;
+  numOptional += getTileOperands().size();
+  numOptional += getCacheOperands().size();
+  return getOperand(numOptional + i);
+}
+
 //===----------------------------------------------------------------------===//
 // DataOp
 //===----------------------------------------------------------------------===//
