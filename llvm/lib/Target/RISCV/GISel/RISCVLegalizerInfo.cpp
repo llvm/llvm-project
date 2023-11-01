@@ -95,25 +95,24 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST) {
       .clampScalar(0, sXLen, sXLen)
       .clampScalar(1, sXLen, sXLen);
 
-  getActionDefinitionsBuilder({G_LOAD, G_STORE})
-      .legalForTypesWithMemDesc({{s32, p0, s8, 8},
-                                 {s32, p0, s16, 16},
-                                 {s32, p0, s32, 32},
-                                 {sXLen, p0, s8, 8},
-                                 {sXLen, p0, s16, 16},
-                                 {sXLen, p0, s32, 32},
-                                 {sXLen, p0, sXLen, XLen},
-                                 {p0, p0, sXLen, XLen}})
-      .clampScalar(0, s32, sXLen)
-      .lower();
-
-  auto &ExtLoadActions = getActionDefinitionsBuilder({G_SEXTLOAD, G_ZEXTLOAD})
-                             .legalForTypesWithMemDesc({{s32, p0, s8, 8},
-                                                        {s32, p0, s16, 16},
-                                                        {sXLen, p0, s8, 8},
-                                                        {sXLen, p0, s16, 16}});
-  if (XLen == 64)
-    ExtLoadActions.legalForTypesWithMemDesc({{sXLen, p0, s32, 32}});
+  auto &LoadStoreActions =
+      getActionDefinitionsBuilder({G_LOAD, G_STORE})
+          .legalForTypesWithMemDesc({{s32, p0, s8, 8},
+                                     {s32, p0, s16, 16},
+                                     {s32, p0, s32, 32},
+                                     {p0, p0, sXLen, XLen}});
+  auto &ExtLoadActions =
+      getActionDefinitionsBuilder({G_SEXTLOAD, G_ZEXTLOAD})
+          .legalForTypesWithMemDesc({{s32, p0, s8, 8}, {s32, p0, s16, 16}});
+  if (XLen == 64) {
+    LoadStoreActions.legalForTypesWithMemDesc({{s64, p0, s8, 8},
+                                               {s64, p0, s16, 16},
+                                               {s64, p0, s32, 32},
+                                               {s64, p0, s64, 64}});
+    ExtLoadActions.legalForTypesWithMemDesc(
+        {{s64, p0, s8, 8}, {s64, p0, s16, 16}, {s64, p0, s32, 32}});
+  }
+  LoadStoreActions.clampScalar(0, s32, sXLen).lower();
   ExtLoadActions.widenScalarToNextPow2(0).clampScalar(0, s32, sXLen).lower();
 
   getActionDefinitionsBuilder(G_PTR_ADD).legalFor({{p0, sXLen}});
