@@ -14,6 +14,7 @@
 
 #include "AMDGPU.h"
 #include "Utils/AMDGPUBaseInfo.h"
+#include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
@@ -286,8 +287,8 @@ static bool processUse(CallInst *CI, bool IsV5OrAbove) {
             if (HasReqdWorkGroupSize) {
               ConstantInt *KnownSize
                 = mdconst::extract<ConstantInt>(MD->getOperand(I));
-              UMin->replaceAllUsesWith(ConstantExpr::getIntegerCast(
-                  KnownSize, UMin->getType(), false));
+              UMin->replaceAllUsesWith(ConstantFoldIntegerCast(
+                  KnownSize, UMin->getType(), false, DL));
             } else {
               UMin->replaceAllUsesWith(ZextGroupSize);
             }
@@ -310,7 +311,7 @@ static bool processUse(CallInst *CI, bool IsV5OrAbove) {
 
     ConstantInt *KnownSize = mdconst::extract<ConstantInt>(MD->getOperand(I));
     GroupSize->replaceAllUsesWith(
-        ConstantExpr::getIntegerCast(KnownSize, GroupSize->getType(), false));
+        ConstantFoldIntegerCast(KnownSize, GroupSize->getType(), false, DL));
     MadeChange = true;
   }
 
