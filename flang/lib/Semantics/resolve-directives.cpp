@@ -1518,6 +1518,8 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPLoopConstruct &x) {
 
 void OmpAttributeVisitor::ResolveSeqLoopIndexInParallelOrTaskConstruct(
     const parser::Name &iv) {
+  // Find the parallel or task generating construct enclosing the
+  // sequential loop.
   auto targetIt{dirContext_.rbegin()};
   for (;; ++targetIt) {
     if (targetIt == dirContext_.rend()) {
@@ -1528,6 +1530,18 @@ void OmpAttributeVisitor::ResolveSeqLoopIndexInParallelOrTaskConstruct(
       break;
     }
   }
+  // If this symbol is already Private or Firstprivate in the enclosing
+  // OpenMP parallel or task then there is nothing to do here.
+  if (auto *symbol{targetIt->scope.FindSymbol(iv.source)}) {
+    if (symbol->owner() == targetIt->scope) {
+      if (symbol->test(Symbol::Flag::OmpPrivate) ||
+          symbol->test(Symbol::Flag::OmpFirstPrivate)) {
+        return;
+      }
+    }
+  }
+  // Otherwise find the symbol and make it Private for the entire enclosing
+  // parallel or task
   if (auto *symbol{ResolveOmp(iv, Symbol::Flag::OmpPrivate, targetIt->scope)}) {
     targetIt++;
     // If this object already had a DSA then it is not predetermined
