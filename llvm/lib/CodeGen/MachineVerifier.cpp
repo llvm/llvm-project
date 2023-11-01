@@ -1939,7 +1939,6 @@ void MachineVerifier::visitMachineInstrBefore(const MachineInstr *MI) {
     // and physical register.
     TypeSize SrcSize = TRI->getRegSizeInBits(SrcReg, *MRI);
     TypeSize DstSize = TRI->getRegSizeInBits(DstReg, *MRI);
-
     if (SrcReg.isPhysical() && DstTy.isValid()) {
       const TargetRegisterClass *SrcRC =
           TRI->getMinimalPhysRegClassLLT(SrcReg, DstTy);
@@ -1947,18 +1946,12 @@ void MachineVerifier::visitMachineInstrBefore(const MachineInstr *MI) {
         SrcSize = TRI->getRegSizeInBits(*SrcRC);
     }
 
-    if (SrcSize.isZero())
-      SrcSize = TRI->getRegSizeInBits(SrcReg, *MRI);
-
     if (DstReg.isPhysical() && SrcTy.isValid()) {
       const TargetRegisterClass *DstRC =
           TRI->getMinimalPhysRegClassLLT(DstReg, SrcTy);
       if (DstRC)
         DstSize = TRI->getRegSizeInBits(*DstRC);
     }
-
-    if (DstSize.isZero())
-      DstSize = TRI->getRegSizeInBits(DstReg, *MRI);
 
     // If the Dst is scalable and the Src is fixed, then the Dst can only hold
     // the Src if the minimum size Dst can hold is at least as big as Src.
