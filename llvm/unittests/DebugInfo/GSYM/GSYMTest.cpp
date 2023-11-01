@@ -4182,12 +4182,12 @@ TEST(GSYMTest, TestLineTablesWithEmptyRanges) {
   //
   // The line table has a duplicate entry at 0x1010:
   //
-  // Address            Line   Column File   ISA Discriminator Flags
-  // ------------------ ------ ------ ------ --- ------------- -------------
-  // 0x0000000000001000     10      0      1   0             0  is_stmt
-  // 0x0000000000001010     11      0      1   0             0  is_stmt
-  // 0x0000000000001010     12      0      1   0             0  is_stmt
-  // 0x0000000000001050     13      0      1   0             0  is_stmt end_sequence
+  // Address    Line   Column File   ISA Discriminator Flags
+  // ---------- ------ ------ ------ --- ------------- -------------
+  // 0x00001000     10      0      1   0             0  is_stmt
+  // 0x00001010     11      0      1   0             0  is_stmt
+  // 0x00001010     12      0      1   0             0  is_stmt
+  // 0x00001050     13      0      1   0             0  is_stmt end_sequence
 
   StringRef yamldata = R"(
   debug_str:
@@ -4323,6 +4323,6 @@ TEST(GSYMTest, TestLineTablesWithEmptyRanges) {
   // 0x1010.
   auto LR = GR->lookup(0x1010);
   ASSERT_THAT_EXPECTED(LR, Succeeded());
-  EXPECT_THAT(LR->Locations,
-    testing::ElementsAre(SourceLocation{"foo", "/tmp", "main.cpp", 12, 16}));
-}
+  SourceLocation src_loc = {"foo", "/tmp", "main.cpp", 12, 16};
+  EXPECT_THAT(LR->Locations, testing::ElementsAre(src_loc));
+git}
