@@ -877,42 +877,49 @@ CodeGenFunction::emitBuiltinObjectSize(const Expr *E, unsigned Type,
     //   2) bdos of the whole struct, including the flexible array:
     //
     //     __builtin_dynamic_object_size(p, 1) ==
-    //        offsetof(struct s, array) + p->count * sizeof(*p->array)
+    //        max(sizeof(struct s),
+    //            offsetof(struct s, array) + p->count * sizeof(*p->array))
     //
     if (const ValueDecl *CountedByFD = FindCountedByField(E)) {
-      // Find the flexible array member.
-      ASTContext &Ctx = getContext();
       const RecordDecl *OuterRD =
           CountedByFD->getDeclContext()->getOuterLexicalRecordContext();
+      ASTContext &Ctx = getContext();
+
+      // Find the flexible array member.
       const ValueDecl *FAM = FindFlexibleArrayMemberField(Ctx, OuterRD);
 
-      // Find the outer struct expr (i.e. p in p->a.b.c.d).
-      const Expr *CountedByExpr = BuildCountedByFieldExpr(E, CountedByFD);
-
       // Load the counted_by field.
-      llvm::Value *CountedByInstr =
+      const Expr *CountedByExpr = BuildCountedByFieldExpr(E, CountedByFD);
+      llvm::Value *CountedByInst =
           EmitAnyExprToTemp(CountedByExpr).getScalarVal();
 
       // Get the size of the flexible array member's base type.
       const auto *ArrayTy = Ctx.getAsArrayType(FAM->getType());
       CharUnits Size = Ctx.getTypeSizeInChars(ArrayTy->getElementType());
-      llvm::Constant *ArraySize =
-          llvm::ConstantInt::get(CountedByInstr->getType(), Size.getQuantity());
+      llvm::Constant *ElemSize =
+          llvm::ConstantInt::get(CountedByInst->getType(), Size.getQuantity());
 
-      llvm::Value *ObjectSize = Builder.CreateMul(CountedByInstr, ArraySize);
-      ObjectSize = Builder.CreateZExtOrTrunc(ObjectSize, ResType);
+      llvm::Value *FAMSize = Builder.CreateMul(CountedByInst, ElemSize);
+      llvm::Value *Res = Builder.CreateZExtOrTrunc(FAMSize, ResType);
 
+      // The whole struct is specificed in the __bdos.
       if (const auto *DRE = dyn_cast<DeclRefExpr>(E->IgnoreParenImpCasts())) {
-        // The whole struct is specificed in the __bdos.
-        CharUnits FAMOffset = Ctx.toCharUnitsFromBits(Ctx.getFieldOffset(FAM));
-        llvm::Value *StructSize =
-            ConstantInt::get(ResType, FAMOffset.getQuantity(), true);
+        // Get the full size of the struct.
+        const ASTRecordLayout &Layout = Ctx.getASTRecordLayout(OuterRD);
+        llvm::Value *SizeofStruct =
+            ConstantInt::get(ResType, Layout.getSize().getQuantity(), true);
 
-        ObjectSize = Builder.CreateAdd(StructSize, ObjectSize);
+        CharUnits Offset = Ctx.toCharUnitsFromBits(Ctx.getFieldOffset(FAM));
+        llvm::Value *FAMOffset =
+            ConstantInt::get(ResType, Offset.getQuantity(), true);
+
+        llvm::Value *OffsetAndFAMSize = Builder.CreateAdd(FAMOffset, Res);
+        Res = Builder.CreateBinaryIntrinsic(llvm::Intrinsic::smax,
+                                            OffsetAndFAMSize, SizeofStruct);
       }
 
       // PULL THE STRING!!
-      return ObjectSize;
+      return Res;
     }
   }
 
