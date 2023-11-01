@@ -1376,6 +1376,20 @@ TEST_F(TokenAnnotatorTest, RequiresDoesNotChangeParsingOfTheRest) {
                     "}";
   RequiresTokenCount = 9;
   TestRequires(__LINE__);
+
+  BaseCode = "template<typename T>\n"
+             "ANNOTATE(\"S\"\n"
+             "         \"S\")\n"
+             "void foo();";
+  ConstrainedCode = "template<typename T>\n"
+                    "  requires(true)\n"
+                    "ANNOTATE(\"S\"\n"
+                    "         \"S\")\n"
+                    "void foo();";
+  BaseTokenCount = 16;
+  RequiresTokenCount = 4;
+  PrefixTokenCount = 5;
+  TestRequires(__LINE__);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsAsm) {
