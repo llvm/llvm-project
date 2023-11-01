@@ -776,27 +776,24 @@ static void getICMPOperandsForBranch(MachineInstr &MI, MachineIRBuilder &MIB,
 bool RISCVInstructionSelector::selectSelect(MachineInstr &MI,
                                             MachineIRBuilder &MIB,
                                             MachineRegisterInfo &MRI) const {
-  assert(MI.getOpcode() == TargetOpcode::G_SELECT);
+  auto &SelectMI = cast<GSelect>(MI);
 
   // If MI is a G_SELECT(G_ICMP(tst, A, B), C, D) then we can use (A, B, tst)
   // as the (LHS, RHS, CC) of the Select_GPR_Using_CC_GPR.
-  Register MIOp1Reg = MI.getOperand(1).getReg();
-  bool Op1IsICMP = mi_match(MIOp1Reg, MRI, m_GICmp(m_Pred(), m_Reg(), m_Reg()));
-  RISCVCC::CondCode CC;
-  Register LHS, RHS;
-  if (Op1IsICMP)
-    getICMPOperandsForBranch(*MRI.getVRegDef(MIOp1Reg), MIB, MRI, CC, LHS, RHS);
+  Register LHS = SelectMI.getCondReg();
+  Register RHS = RISCV::X0;
+  RISCVCC::CondCode CC = RISCVCC::COND_NE;
 
-  Register Op1 = Op1IsICMP ? LHS : MI.getOperand(1).getReg();
-  Register Op2 = Op1IsICMP ? RHS : RISCV::X0;
-  unsigned Op3 = Op1IsICMP ? CC : RISCVCC::COND_NE;
+  if (mi_match(LHS, MRI, m_GICmp(m_Pred(), m_Reg(), m_Reg())))
+    getICMPOperandsForBranch(*MRI.getVRegDef(LHS), MIB, MRI, CC, LHS, RHS);
+
   MachineInstr *Result = MIB.buildInstr(RISCV::Select_GPR_Using_CC_GPR)
-                             .addDef(MI.getOperand(0).getReg())
-                             .addReg(Op1)
-                             .addReg(Op2)
-                             .addImm(Op3)
-                             .addReg(MI.getOperand(2).getReg())
-                             .addReg(MI.getOperand(3).getReg());
+                             .addDef(SelectMI.getReg(0))
+                             .addReg(LHS)
+                             .addReg(RHS)
+                             .addImm(CC)
+                             .addReg(SelectMI.getTrueReg())
+                             .addReg(SelectMI.getFalseReg());
   MI.eraseFromParent();
   return constrainSelectedInstRegOperands(*Result, TII, TRI, RBI);
 }
