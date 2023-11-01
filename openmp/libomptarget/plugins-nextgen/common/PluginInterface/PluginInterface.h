@@ -93,6 +93,12 @@ struct AsyncInfoWrapperTy {
   /// object and only once.
   void finalize(Error &Err);
 
+  /// Register \p Ptr as an associated alloction that is freed after
+  /// finalization.
+  void freeAllocationAfterSynchronization(void *Ptr) {
+    AsyncInfoPtr->AssociatedAllocations.push_back(Ptr);
+  }
+
 private:
   GenericDeviceTy &Device;
   __tgt_async_info LocalAsyncInfo;
@@ -289,6 +295,11 @@ struct GenericKernelTy {
     return KernelEnvironment;
   }
 
+  /// Return a device pointer to a new kernel launch environment.
+  Expected<KernelLaunchEnvironmentTy *>
+  getKernelLaunchEnvironment(GenericDeviceTy &GenericDevice,
+                             AsyncInfoWrapperTy &AsyncInfo) const;
+
   /// Indicate whether an execution mode is valid.
   static bool isValidExecutionMode(OMPTgtExecModeFlags ExecutionMode) {
     switch (ExecutionMode) {
@@ -329,9 +340,10 @@ protected:
 private:
   /// Prepare the arguments before launching the kernel.
   void *prepareArgs(GenericDeviceTy &GenericDevice, void **ArgPtrs,
-                    ptrdiff_t *ArgOffsets, int32_t NumArgs,
+                    ptrdiff_t *ArgOffsets, uint32_t &NumArgs,
                     llvm::SmallVectorImpl<void *> &Args,
-                    llvm::SmallVectorImpl<void *> &Ptrs) const;
+                    llvm::SmallVectorImpl<void *> &Ptrs,
+                    KernelLaunchEnvironmentTy *KernelLaunchEnvironment) const;
 
   /// Get the number of threads and blocks for the kernel based on the
   /// user-defined threads and block clauses.
@@ -373,6 +385,9 @@ protected:
 
   /// The kernel environment, including execution flags.
   KernelEnvironmentTy KernelEnvironment;
+
+  /// The prototype kernel launch environment.
+  KernelLaunchEnvironmentTy KernelLaunchEnvironment;
 };
 
 /// Class representing a map of host pinned allocations. We track these pinned

@@ -97,4 +97,6 @@ struct KernelEnvironmentTy {
   DynamicEnvironmentTy *DynamicEnv;
 };
 
+struct KernelLaunchEnvironmentTy {};
+
 #endif // _OMPTARGET_ENVIRONMENT_H_
