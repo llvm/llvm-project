@@ -1177,18 +1177,41 @@ CodeGenRegBank::CodeGenRegBank(RecordKeeper &Records,
 
   // Read in the register and register tuple definitions.
   std::vector<Record *> Regs = Records.getAllDerivedDefinitions("Register");
-  std::vector<Record *> Tups =
-      Records.getAllDerivedDefinitions("RegisterTuples");
-  for (Record *R : Tups) {
-    // Expand tuples and merge the vectors
-    std::vector<Record *> TupRegs = *Sets.expand(R);
-    Regs.insert(Regs.end(), TupRegs.begin(), TupRegs.end());
-  }
+  if (!Regs.empty() && Regs[0]->isSubClassOf("X86Reg")) {
+    // For X86, we need to sort Registers and RegisterTuples together to list
+    // new registers and register tuples at a later position. So that we can
+    // reduce unnecessary iterations on unsupported registers in LiveVariables.
+    // TODO: Remove this logic when migrate from LiveVariables to LiveIntervals
+    // completely.
+    std::vector<Record *> Tups =
+        Records.getAllDerivedDefinitions("RegisterTuples");
+    for (Record *R : Tups) {
+      // Expand tuples and merge the vectors
+      std::vector<Record *> TupRegs = *Sets.expand(R);
+      Regs.insert(Regs.end(), TupRegs.begin(), TupRegs.end());
+    }
 
-  llvm::sort(Regs, LessRecordRegister());
-  // Assign the enumeration values.
-  for (unsigned i = 0, e = Regs.size(); i != e; ++i)
-    getReg(Regs[i]);
+    llvm::sort(Regs, LessRecordRegister());
+    // Assign the enumeration values.
+    for (unsigned i = 0, e = Regs.size(); i != e; ++i)
+      getReg(Regs[i]);
+  } else {
+    llvm::sort(Regs, LessRecordRegister());
+    // Assign the enumeration values.
+    for (unsigned i = 0, e = Regs.size(); i != e; ++i)
+      getReg(Regs[i]);
+
+    // Expand tuples and number the new registers.
+    std::vector<Record *> Tups =
+        Records.getAllDerivedDefinitions("RegisterTuples");
+
+    for (Record *R : Tups) {
+      std::vector<Record *> TupRegs = *Sets.expand(R);
+      llvm::sort(TupRegs, LessRecordRegister());
+      for (Record *RC : TupRegs)
+        getReg(RC);
+    }
+  }
 
   // Now all the registers are known. Build the object graph of explicit
   // register-register references.
