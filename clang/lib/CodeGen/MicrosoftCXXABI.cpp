@@ -1674,7 +1674,7 @@ void MicrosoftCXXABI::emitVTableTypeMetadata(const VPtrInfo &Info,
                                              const CXXRecordDecl *RD,
                                              llvm::GlobalVariable *VTable) {
   if (!CGM.getCodeGenOpts().LTOUnit &&
-      !CGM.getCodeGenOpts().hasProfileIRInstr())
+      !CGM.getCodeGenOpts().hasProfileIRInstrOrUse())
     return;
 
   // TODO: Should VirtualFunctionElimination also be supported here?
