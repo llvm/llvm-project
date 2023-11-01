@@ -116,7 +116,7 @@ public:
   bool isHotPatchable() const;
 
   MachineTypes getMachine() const;
-  chpe_range_type getArm64ECRangeType() const;
+  std::optional<chpe_range_type> getArm64ECRangeType() const;
 
 protected:
   Chunk(Kind k = OtherKind) : chunkKind(k), hasData(true), p2Align(0) {}
@@ -178,6 +178,16 @@ public:
 
 protected:
   NonSectionChunk(Kind k = OtherKind) : Chunk(k) {}
+};
+
+class NonSectionCodeChunk : public NonSectionChunk {
+public:
+  virtual uint32_t getOutputCharacteristics() const override {
+    return llvm::COFF::IMAGE_SCN_MEM_READ | llvm::COFF::IMAGE_SCN_MEM_EXECUTE;
+  }
+
+protected:
+  NonSectionCodeChunk(Kind k = OtherKind) : NonSectionChunk(k) {}
 };
 
 // MinGW specific; information about one individual location in the image
@@ -427,7 +437,11 @@ inline MachineTypes Chunk::getMachine() const {
   return static_cast<const NonSectionChunk *>(this)->getMachine();
 }
 
-inline chpe_range_type Chunk::getArm64ECRangeType() const {
+inline std::optional<chpe_range_type> Chunk::getArm64ECRangeType() const {
+  // Data sections don't need codemap entries.
+  if (!(getOutputCharacteristics() & llvm::COFF::IMAGE_SCN_MEM_EXECUTE))
+    return std::nullopt;
+
   switch (getMachine()) {
   case AMD64:
     return chpe_range_type::Amd64;
@@ -508,10 +522,10 @@ static const uint8_t importThunkARM64[] = {
 // Windows-specific.
 // A chunk for DLL import jump table entry. In a final output, its
 // contents will be a JMP instruction to some __imp_ symbol.
-class ImportThunkChunk : public NonSectionChunk {
+class ImportThunkChunk : public NonSectionCodeChunk {
 public:
   ImportThunkChunk(COFFLinkerContext &ctx, Defined *s)
-      : NonSectionChunk(ImportThunkKind), impSymbol(s), ctx(ctx) {}
+      : NonSectionCodeChunk(ImportThunkKind), impSymbol(s), ctx(ctx) {}
   static bool classof(const Chunk *c) { return c->kind() == ImportThunkKind; }
 
 protected:
@@ -560,7 +574,7 @@ public:
   MachineTypes getMachine() const override { return ARM64; }
 };
 
-class RangeExtensionThunkARM : public NonSectionChunk {
+class RangeExtensionThunkARM : public NonSectionCodeChunk {
 public:
   explicit RangeExtensionThunkARM(COFFLinkerContext &ctx, Defined *t)
       : target(t), ctx(ctx) {
@@ -576,7 +590,7 @@ private:
   COFFLinkerContext &ctx;
 };
 
-class RangeExtensionThunkARM64 : public NonSectionChunk {
+class RangeExtensionThunkARM64 : public NonSectionCodeChunk {
 public:
   explicit RangeExtensionThunkARM64(COFFLinkerContext &ctx, Defined *t)
       : target(t), ctx(ctx) {

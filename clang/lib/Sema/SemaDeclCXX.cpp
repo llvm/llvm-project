@@ -7281,10 +7281,11 @@ void Sema::CheckCompletedCXXClass(Scope *S, CXXRecordDecl *Record) {
 
   // Do not change ArgPassingRestrictions if it has already been set to
   // ArgPassingKind::CanNeverPassInRegs.
-  if (Record->getArgPassingRestrictions() != ArgPassingKind::CanNeverPassInRegs)
-    Record->setArgPassingRestrictions(CanPass
-                                          ? ArgPassingKind::CanPassInRegs
-                                          : ArgPassingKind::CannotPassInRegs);
+  if (Record->getArgPassingRestrictions() !=
+      RecordArgPassingKind::CanNeverPassInRegs)
+    Record->setArgPassingRestrictions(
+        CanPass ? RecordArgPassingKind::CanPassInRegs
+                : RecordArgPassingKind::CannotPassInRegs);
 
   // If canPassInRegisters returns true despite the record having a non-trivial
   // destructor, the record is destructed in the callee. This happens only when
@@ -16784,11 +16785,11 @@ Decl *Sema::ActOnStartLinkageSpecification(Scope *S, SourceLocation ExternLoc,
   assert(Lit->isUnevaluated() && "Unexpected string literal kind");
 
   StringRef Lang = Lit->getString();
-  LinkageSpecDecl::LanguageIDs Language;
+  LinkageSpecLanguageIDs Language;
   if (Lang == "C")
-    Language = LinkageSpecDecl::lang_c;
+    Language = LinkageSpecLanguageIDs::C;
   else if (Lang == "C++")
-    Language = LinkageSpecDecl::lang_cxx;
+    Language = LinkageSpecLanguageIDs::CXX;
   else {
     Diag(LangStr->getExprLoc(), diag::err_language_linkage_spec_unknown)
       << LangStr->getSourceRange();
