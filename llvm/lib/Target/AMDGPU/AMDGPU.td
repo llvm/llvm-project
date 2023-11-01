@@ -2139,6 +2139,9 @@ def HasFlatAtomicFaddF32Inst
 def HasDsSrc2Insts : Predicate<"!Subtarget->hasDsSrc2Insts()">,
   AssemblerPredicate<(all_of FeatureDsSrc2Insts)>;
 
+def HasAddPC64Inst : Predicate<"Subtarget->hasAddPC64Inst()">,
+  AssemblerPredicate<(any_of FeatureGFX12_10Insts)>;
+
 def EnableLateCFGStructurize : Predicate<
   "EnableLateStructurizeCFG">;
 

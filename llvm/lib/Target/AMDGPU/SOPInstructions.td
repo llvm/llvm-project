@@ -151,6 +151,10 @@ class SOP1_1 <string opName, list<dag> pattern=[]> : SOP1_Pseudo <
   let has_sdst = 0;
 }
 
+class SOP1_1_REGIMM64 <string opName, list<dag> pattern=[]> : SOP1_Pseudo <
+  opName, (outs), (ins SSrc_b64:$src0), "$src0", pattern> {
+  let has_sdst = 0;
+}
 
 class UniformUnaryFrag<SDPatternOperator Op> : PatFrag <
   (ops node:$src0),
@@ -303,6 +307,9 @@ let isTerminator = 1, isBarrier = 1, SchedRW = [WriteBranch] in {
 
 let isBranch = 1, isIndirectBranch = 1 in {
 def S_SETPC_B64 : SOP1_1  <"s_setpc_b64">;
+
+let SubtargetPredicate = HasAddPC64Inst in
+def S_ADD_PC_I64 : SOP1_1_REGIMM64 <"s_add_pc_i64">;
 } // End isBranch = 1, isIndirectBranch = 1
 
 let isReturn = 1 in {
@@ -2110,6 +2117,9 @@ defm S_BARRIER_JOIN_IMM           : SOP1_Real_gfx12<0x052>;
 defm S_ALLOC_VGPR                 : SOP1_Real_gfx12<0x053>;
 defm S_WAKEUP_BARRIER_IMM         : SOP1_Real_gfx12<0x057>;
 defm S_SLEEP_VAR                  : SOP1_Real_gfx12<0x058>;
+
+// GFX1210
+defm S_ADD_PC_I64                 : SOP1_Real_gfx12<0x04b>;
 
 //===----------------------------------------------------------------------===//
 // SOP1 - GFX1150, GFX12
