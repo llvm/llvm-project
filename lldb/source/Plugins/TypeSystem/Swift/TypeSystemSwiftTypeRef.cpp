@@ -14,7 +14,13 @@
 #include "Plugins/TypeSystem/Swift/SwiftASTContext.h"
 #include "Plugins/TypeSystem/Swift/SwiftDemangle.h"
 
+#include "Plugins/ExpressionParser/Clang/ClangExternalASTSourceCallbacks.h"
+#include "Plugins/ExpressionParser/Clang/ClangUtil.h"
+#include "Plugins/ExpressionParser/Swift/SwiftPersistentExpressionState.h"
+#include "Plugins/ExpressionParser/Swift/SwiftUserExpression.h"
 #include "Plugins/LanguageRuntime/Swift/SwiftLanguageRuntime.h"
+#include "Plugins/SymbolFile/DWARF/DWARFASTParserSwift.h"
+#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Core/DumpDataExtractor.h"
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Symbol/CompileUnit.h"
@@ -24,12 +30,6 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/Timer.h"
-
-#include "Plugins/ExpressionParser/Clang/ClangExternalASTSourceCallbacks.h"
-#include "Plugins/ExpressionParser/Clang/ClangUtil.h"
-#include "Plugins/ExpressionParser/Swift/SwiftPersistentExpressionState.h"
-#include "Plugins/SymbolFile/DWARF/DWARFASTParserSwift.h"
-#include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 
 #include "swift/ClangImporter/ClangImporter.h"
 #include "swift/../../lib/ClangImporter/ClangAdapter.h"
@@ -1427,11 +1427,19 @@ UserExpression *TypeSystemSwiftTypeRefForExpressions::GetUserExpression(
     llvm::StringRef expr, llvm::StringRef prefix, lldb::LanguageType language,
     Expression::ResultType desired_type,
     const EvaluateExpressionOptions &options, ValueObject *ctx_obj) {
-  auto *swift_ast_ctx = GetSwiftASTContext();
-  if (!swift_ast_ctx)
+  TargetSP target_sp = GetTargetWP().lock();
+  if (!target_sp)
     return nullptr;
-  return swift_ast_ctx->GetUserExpression(expr, prefix, language, desired_type,
-                                          options, ctx_obj);
+  if (ctx_obj != nullptr) {
+    lldb_assert(0,
+                "Swift doesn't support 'evaluate in the context"
+                " of an object'.",
+                __FUNCTION__, __FILE__, __LINE__);
+    return nullptr;
+  }
+
+  return new SwiftUserExpression(*target_sp.get(), expr, prefix, language,
+                                 desired_type, options);
 }
 
 PersistentExpressionState *

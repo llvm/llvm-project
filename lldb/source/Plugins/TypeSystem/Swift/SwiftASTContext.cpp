@@ -81,7 +81,6 @@
 #include "swift/Strings.h"
 
 #include "Plugins/ExpressionParser/Clang/ClangHost.h"
-#include "Plugins/ExpressionParser/Swift/SwiftUserExpression.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/DumpDataExtractor.h"
@@ -8086,25 +8085,6 @@ lldb::TargetWP SwiftASTContextForExpressions::GetTargetWP() const {
   auto *ts = reinterpret_cast<TypeSystemSwiftTypeRefForExpressions *>(
       m_typeref_typesystem);
   return ts->m_target_wp;
-}
-
-UserExpression *SwiftASTContextForExpressions::GetUserExpression(
-    llvm::StringRef expr, llvm::StringRef prefix, lldb::LanguageType language,
-    Expression::ResultType desired_type,
-    const EvaluateExpressionOptions &options, ValueObject *ctx_obj) {
-  TargetSP target_sp = GetTargetWP().lock();
-  if (!target_sp)
-    return nullptr;
-  if (ctx_obj != nullptr) {
-    lldb_assert(0,
-                "Swift doesn't support 'evaluate in the context"
-                " of an object'.",
-                __FUNCTION__, __FILE__, __LINE__);
-    return nullptr;
-  }
-
-  return new SwiftUserExpression(*target_sp.get(), expr, prefix, language,
-                                 desired_type, options);
 }
 
 PersistentExpressionState *
