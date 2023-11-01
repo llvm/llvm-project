@@ -11,6 +11,7 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/Interfaces/DestinationStyleOpInterface.h"
+#include "mlir/Interfaces/ViewLikeInterface.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/Support/Debug.h"
 
@@ -85,7 +86,7 @@ AffineExpr ValueBoundsConstraintSet::getExpr(Value value,
       return builder.getAffineConstantExpr(shapedType.getDimSize(*dim));
   } else {
     // Constant index value: return directly.
-    if (auto constInt = getConstantIntValue(value))
+    if (auto constInt = ::getConstantIntValue(value))
       return builder.getAffineConstantExpr(*constInt);
   }
 
@@ -102,7 +103,7 @@ AffineExpr ValueBoundsConstraintSet::getExpr(Value value,
 AffineExpr ValueBoundsConstraintSet::getExpr(OpFoldResult ofr) {
   if (Value value = llvm::dyn_cast_if_present<Value>(ofr))
     return getExpr(value, /*dim=*/std::nullopt);
-  auto constInt = getConstantIntValue(ofr);
+  auto constInt = ::getConstantIntValue(ofr);
   assert(constInt.has_value() && "expected Integer constant");
   return builder.getAffineConstantExpr(*constInt);
 }
@@ -484,6 +485,17 @@ FailureOr<int64_t> ValueBoundsConstraintSet::computeConstantBound(
   return failure();
 }
 
+FailureOr<int64_t> ValueBoundsConstraintSet::computeConstantBound(
+    presburger::BoundType type, AffineMap map, ArrayRef<Value> operands,
+    StopConditionFn stopCondition, bool closedUB) {
+  ValueDimList valueDims;
+  for (Value v : operands) {
+    assert(v.getType().isIndex() && "expected index type");
+    valueDims.emplace_back(v, std::nullopt);
+  }
+  return computeConstantBound(type, map, valueDims, stopCondition, closedUB);
+}
+
 FailureOr<int64_t>
 ValueBoundsConstraintSet::computeConstantDelta(Value value1, Value value2,
                                                std::optional<int64_t> dim1,
@@ -510,6 +522,70 @@ ValueBoundsConstraintSet::areEqual(Value value1, Value value2,
   if (failed(delta))
     return failure();
   return *delta == 0;
+}
+
+FailureOr<bool> ValueBoundsConstraintSet::areOverlappingSlices(
+    OffsetSizeAndStrideOpInterface slice1,
+    OffsetSizeAndStrideOpInterface slice2) {
+  assert(slice1.getStaticOffsets().size() == slice1.getStaticOffsets().size() &&
+         "expected slices of same rank");
+  assert(slice1.getStaticSizes().size() == slice1.getStaticSizes().size() &&
+         "expected slices of same rank");
+  assert(slice1.getStaticStrides().size() == slice1.getStaticStrides().size() &&
+         "expected slices of same rank");
+
+  Builder b(slice1.getContext());
+  bool foundUnknownBound = false;
+  for (int64_t i = 0, e = slice1.getStaticOffsets().size(); i < e; ++i) {
+    AffineMap map =
+        AffineMap::get(/*dimCount=*/0, /*symbolCount=*/4,
+                       b.getAffineSymbolExpr(0) +
+                           b.getAffineSymbolExpr(1) * b.getAffineSymbolExpr(2) -
+                           b.getAffineSymbolExpr(3));
+    {
+      // Case 1: Slices are guaranteed to be non-overlapping if
+      // offset1 + size1 * stride1 <= offset2 (for at least one dimension).
+      SmallVector<OpFoldResult> ofrOperands;
+      ofrOperands.push_back(slice1.getMixedOffsets()[i]);
+      ofrOperands.push_back(slice1.getMixedSizes()[i]);
+      ofrOperands.push_back(slice1.getMixedStrides()[i]);
+      ofrOperands.push_back(slice2.getMixedOffsets()[i]);
+      SmallVector<Value> valueOperands;
+      AffineMap foldedMap =
+          foldAttributesIntoMap(b, map, ofrOperands, valueOperands);
+      FailureOr<int64_t> constBound = computeConstantBound(
+          presburger::BoundType::EQ, foldedMap, valueOperands);
+      foundUnknownBound |= failed(constBound);
+      if (succeeded(constBound) && *constBound <= 0)
+        return false;
+    }
+    {
+      // Case 2: Slices are guaranteed to be non-overlapping if
+      // offset2 + size2 * stride2 <= offset1 (for at least one dimension).
+      SmallVector<OpFoldResult> ofrOperands;
+      ofrOperands.push_back(slice2.getMixedOffsets()[i]);
+      ofrOperands.push_back(slice2.getMixedSizes()[i]);
+      ofrOperands.push_back(slice2.getMixedStrides()[i]);
+      ofrOperands.push_back(slice1.getMixedOffsets()[i]);
+      SmallVector<Value> valueOperands;
+      AffineMap foldedMap =
+          foldAttributesIntoMap(b, map, ofrOperands, valueOperands);
+      FailureOr<int64_t> constBound = computeConstantBound(
+          presburger::BoundType::EQ, foldedMap, valueOperands);
+      foundUnknownBound |= failed(constBound);
+      if (succeeded(constBound) && *constBound <= 0)
+        return false;
+    }
+  }
+
+  // If at least one bound could not be computed, we cannot be certain that the
+  // slices are really overlapping.
+  if (foundUnknownBound)
+    return failure();
+
+  // All bounds could be computed and none of the above cases applied.
+  // Therefore, the slices are guaranteed to overlap.
+  return true;
 }
 
 ValueBoundsConstraintSet::BoundBuilder &

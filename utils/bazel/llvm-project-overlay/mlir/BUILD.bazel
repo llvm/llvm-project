@@ -6933,7 +6933,7 @@ cc_library(
         ":MemRefDialect",
         ":Pass",
         ":SCFDialect",
-        ":SubsetInsertionOpInterface",
+        ":SubsetOpInterface",
         ":TensorDialect",
         ":TensorPassIncGen",
         ":TensorUtils",
@@ -10190,9 +10190,9 @@ gentbl_cc_library(
 )
 
 td_library(
-    name = "SubsetInsertionOpInterfaceTdFiles",
+    name = "SubsetOpInterfaceTdFiles",
     srcs = [
-        "include/mlir/Interfaces/SubsetInsertionOpInterface.td",
+        "include/mlir/Interfaces/SubsetOpInterface.td",
     ],
     includes = ["include"],
     deps = [
@@ -10201,33 +10201,33 @@ td_library(
 )
 
 gentbl_cc_library(
-    name = "SubsetInsertionOpInterfaceIncGen",
+    name = "SubsetOpInterfaceIncGen",
     tbl_outs = [
         (
             ["-gen-op-interface-decls"],
-            "include/mlir/Interfaces/SubsetInsertionOpInterface.h.inc",
+            "include/mlir/Interfaces/SubsetOpInterface.h.inc",
         ),
         (
             ["-gen-op-interface-defs"],
-            "include/mlir/Interfaces/SubsetInsertionOpInterface.cpp.inc",
+            "include/mlir/Interfaces/SubsetOpInterface.cpp.inc",
         ),
     ],
     tblgen = ":mlir-tblgen",
-    td_file = "include/mlir/Interfaces/SubsetInsertionOpInterface.td",
+    td_file = "include/mlir/Interfaces/SubsetOpInterface.td",
     deps = [
-        ":SubsetInsertionOpInterfaceTdFiles",
+        ":SubsetOpInterfaceTdFiles",
     ],
 )
 
 cc_library(
-    name = "SubsetInsertionOpInterface",
-    srcs = ["lib/Interfaces/SubsetInsertionOpInterface.cpp"],
-    hdrs = ["include/mlir/Interfaces/SubsetInsertionOpInterface.h"],
+    name = "SubsetOpInterface",
+    srcs = ["lib/Interfaces/SubsetOpInterface.cpp"],
+    hdrs = ["include/mlir/Interfaces/SubsetOpInterface.h"],
     includes = ["include"],
     deps = [
         ":DestinationStyleOpInterface",
         ":IR",
-        ":SubsetInsertionOpInterfaceIncGen",
+        ":SubsetOpInterfaceIncGen",
         ":Support",
         "//llvm:Support",
     ],
@@ -10471,7 +10471,7 @@ cc_library(
         ":SCFTransforms",
         ":SCFUtils",
         ":SparseTensorDialect",
-        ":SubsetInsertionOpInterface",
+        ":SubsetOpInterface",
         ":Support",
         ":TensorDialect",
         ":TensorTilingInterfaceImpl",
@@ -10531,6 +10531,7 @@ cc_library(
         ":IR",
         ":Support",
         ":ValueBoundsOpInterfaceIncGen",
+        ":ViewLikeInterface",
         "//llvm:Support",
     ],
 )
@@ -12580,7 +12581,7 @@ gentbl_cc_library(
         ":BufferizableOpInterfaceTdFiles",
         ":BufferizationOpsTdFiles",
         ":DestinationStyleOpInterfaceTdFiles",
-        ":SubsetInsertionOpInterfaceTdFiles",
+        ":SubsetOpInterfaceTdFiles",
     ],
 )
 
@@ -12620,7 +12621,7 @@ cc_library(
         ":InferTypeOpInterface",
         ":MemRefDialect",
         ":SparseTensorDialect",
-        ":SubsetInsertionOpInterface",
+        ":SubsetOpInterface",
         ":Support",
         ":TensorDialect",
         "//llvm:Support",
@@ -12670,7 +12671,7 @@ cc_library(
         ":Pass",
         ":SCFDialect",
         ":SideEffectInterfaces",
-        ":SubsetInsertionOpInterface",
+        ":SubsetOpInterface",
         ":Support",
         ":TensorDialect",
         ":Transforms",

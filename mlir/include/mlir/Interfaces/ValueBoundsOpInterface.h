@@ -19,6 +19,7 @@
 #include <queue>
 
 namespace mlir {
+class OffsetSizeAndStrideOpInterface;
 
 using ValueDimList = SmallVector<std::pair<Value, std::optional<int64_t>>>;
 
@@ -134,28 +135,6 @@ public:
                           std::optional<int64_t> dim, ValueRange independencies,
                           bool closedUB = false);
 
-  /// Compute a constant bound for the given index-typed value or shape
-  /// dimension size.
-  ///
-  /// `dim` must be `nullopt` if and only if `value` is index-typed. This
-  /// function traverses the backward slice of the given value in a
-  /// worklist-driven manner until `stopCondition` evaluates to "true". The
-  /// constraint set is populated according to `ValueBoundsOpInterface` for each
-  /// visited value. (No constraints are added for values for which the stop
-  /// condition evaluates to "true".)
-  ///
-  /// The stop condition is optional: If none is specified, the backward slice
-  /// is traversed in a breadth-first manner until a constant bound could be
-  /// computed.
-  ///
-  /// By default, lower/equal bounds are closed and upper bounds are open. If
-  /// `closedUB` is set to "true", upper bounds are also closed.
-  static FailureOr<int64_t>
-  computeConstantBound(presburger::BoundType type, Value value,
-                       std::optional<int64_t> dim = std::nullopt,
-                       StopConditionFn stopCondition = nullptr,
-                       bool closedUB = false);
-
   /// Compute a constant bound for the given affine map, where dims and symbols
   /// are bound to the given operands. The affine map must have exactly one
   /// result.
@@ -172,8 +151,16 @@ public:
   ///
   /// By default, lower/equal bounds are closed and upper bounds are open. If
   /// `closedUB` is set to "true", upper bounds are also closed.
+  static FailureOr<int64_t>
+  computeConstantBound(presburger::BoundType type, Value value,
+                       std::optional<int64_t> dim = std::nullopt,
+                       StopConditionFn stopCondition = nullptr,
+                       bool closedUB = false);
   static FailureOr<int64_t> computeConstantBound(
       presburger::BoundType type, AffineMap map, ValueDimList mapOperands,
+      StopConditionFn stopCondition = nullptr, bool closedUB = false);
+  static FailureOr<int64_t> computeConstantBound(
+      presburger::BoundType type, AffineMap map, ArrayRef<Value> mapOperands,
       StopConditionFn stopCondition = nullptr, bool closedUB = false);
 
   /// Compute a constant delta between the given two values. Return "failure"
@@ -194,6 +181,13 @@ public:
   static FailureOr<bool> areEqual(Value value1, Value value2,
                                   std::optional<int64_t> dim1 = std::nullopt,
                                   std::optional<int64_t> dim2 = std::nullopt);
+
+  /// Return "true" if the given slices are guaranteed to be overlapping.
+  /// Return "false" if the given slices are guaranteed to be non-overlapping.
+  /// Return "failure" if unknown.
+  static FailureOr<bool>
+  areOverlappingSlices(OffsetSizeAndStrideOpInterface slice1,
+                       OffsetSizeAndStrideOpInterface slice2);
 
   /// Add a bound for the given index-typed value or shaped value. This function
   /// returns a builder that adds the bound.

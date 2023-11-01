@@ -643,6 +643,18 @@ OpOperand &MaterializeInDestinationOp::getSourceOperand() {
   return getOperation()->getOpOperand(0) /*source*/;
 }
 
+bool MaterializeInDestinationOp::operatesOnEquivalentSubset(
+    SubsetOpInterface subsetOp,
+    function_ref<bool(Value, Value)> equivalenceFn) {
+  return false;
+}
+
+bool MaterializeInDestinationOp::operatesOnDisjointSubset(
+    SubsetOpInterface subsetOp,
+    function_ref<bool(Value, Value)> equivalenceFn) {
+  return false;
+}
+
 LogicalResult MaterializeInDestinationOp::verify() {
   if (!isa<TensorType, BaseMemRefType>(getDest().getType()))
     return emitOpError("'dest' must be a tensor or a memref");
