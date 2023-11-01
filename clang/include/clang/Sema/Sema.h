@@ -3163,18 +3163,23 @@ public:
   /// attribute for which parsing is delayed.
   void ActOnFinishDelayedAttribute(Scope *S, Decl *D, ParsedAttributes &Attrs);
 
-  /// Diagnose any unused parameters in the given sequence of
-  /// ParmVarDecl pointers.
+  /// Diagnose any unused parameters in the given sequence of ParmVarDecl
+  /// pointers. This function does not work with Coroutines parameters. Use
+  /// DiagnoseUnusedParametersInCoroutine instead.
+  void DiagnoseUnusedParameters(ArrayRef<ParmVarDecl *> Parameters);
+
+  /// Diagnose any unused parameters in the given sequence of ParmVarDecl
+  /// pointers and a set of user referenced parameters inside the coroutine.
   ///
-  /// Normally, we check if the parameter decls have the Referenced bit set.
-  /// C++ Coroutines, however, are a special case due to the existences of
+  /// Normally, having the Referenced bit set suffices to show that parameters
+  /// are used. C++ Coroutines, however, are special due to the existence of
   /// parameter moves (See Sema::buildCoroutineParameterMoves), the parameters
   /// are always referenced in coroutines. Therefore, in the case of coroutines,
-  /// CoroutineBodyRefs must be passed to correctly diagnose parameter usages
-  /// as written by the user.
-  void DiagnoseUnusedParameters(
+  /// this variant of the function must be called with CoroutineBodyRefs that
+  /// contain the actual referenced parameters as written by the user.
+  void DiagnoseUnusedParametersInCoroutine(
       ArrayRef<ParmVarDecl *> Parameters,
-      llvm::SmallSet<ParmVarDecl *, 4> *CoroutineBodyRefs = nullptr);
+      const llvm::SmallSet<ParmVarDecl *, 4> &CoroutineBodyRefs);
 
   /// Diagnose whether the size of parameters or return value of a
   /// function or obj-c method definition is pass-by-value and larger than a

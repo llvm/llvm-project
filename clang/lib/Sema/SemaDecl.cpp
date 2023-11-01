@@ -15087,22 +15087,32 @@ ParmVarDecl *Sema::BuildParmVarDeclForTypedef(DeclContext *DC,
   return Param;
 }
 
-void Sema::DiagnoseUnusedParameters(
-    ArrayRef<ParmVarDecl *> Parameters,
-    llvm::SmallSet<ParmVarDecl *, 4> *CoroutineBodyRefs) {
+void Sema::DiagnoseUnusedParameters(ArrayRef<ParmVarDecl *> Parameters) {
   // Don't diagnose unused-parameter errors in template instantiations; we
   // will already have done so in the template itself.
   if (inTemplateInstantiation())
     return;
 
-  auto isReferenced = [&](const ParmVarDecl *Parameter) {
-    if (CoroutineBodyRefs) {
-      if (CoroutineBodyRefs->count(Parameter))
-        return true;
-    } else if (Parameter->isReferenced())
-      return true;
+  for (const ParmVarDecl *Parameter : Parameters) {
+    if (!Parameter->isReferenced() && Parameter->getDeclName() &&
+        !Parameter->hasAttr<UnusedAttr>() &&
+        !Parameter->getIdentifier()->isPlaceholder()) {
+      Diag(Parameter->getLocation(), diag::warn_unused_parameter)
+        << Parameter->getDeclName();
+    }
+  }
+}
 
-    return false;
+void Sema::DiagnoseUnusedParametersInCoroutine(
+    ArrayRef<ParmVarDecl *> Parameters,
+    const llvm::SmallSet<ParmVarDecl *, 4> &CoroutineBodyRefs) {
+  // Don't diagnose unused-parameter errors in template instantiations; we
+  // will already have done so in the template itself.
+  if (inTemplateInstantiation())
+    return;
+
+  auto isReferenced = [&](const ParmVarDecl *Parameter) -> bool {
+    return CoroutineBodyRefs.count(Parameter);
   };
 
   for (const ParmVarDecl *Parameter : Parameters) {
@@ -15110,7 +15120,7 @@ void Sema::DiagnoseUnusedParameters(
         !Parameter->hasAttr<UnusedAttr>() &&
         !Parameter->getIdentifier()->isPlaceholder()) {
       Diag(Parameter->getLocation(), diag::warn_unused_parameter)
-        << Parameter->getDeclName();
+          << Parameter->getDeclName();
     }
   }
 }
@@ -15852,7 +15862,8 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
   sema::AnalysisBasedWarnings::Policy WP = AnalysisWarnings.getDefaultPolicy();
   sema::AnalysisBasedWarnings::Policy *ActivePolicy = nullptr;
 
-  if (getLangOpts().Coroutines && FSI->isCoroutine())
+  bool IsCoroutine = FSI->isCoroutine();
+  if (getLangOpts().Coroutines && IsCoroutine)
     CheckCompletedCoroutineBody(FD, Body);
 
   {
@@ -15920,13 +15931,16 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
         if (!FD->isDeleted() && !FD->isDefaulted() && !FD->hasSkippedBody() &&
             !FD->hasAttr<NakedAttr>()) {
 
-          if (auto CBS = dyn_cast<CoroutineBodyStmt>(Body)) {
+          if (IsCoroutine) {
+            auto *CBS = dyn_cast<CoroutineBodyStmt>(Body);
+            assert(CBS && "Coroutine should have a coroutine body statement!");
             auto BodyAsWritten = CBS->getBody();
             assert(BodyAsWritten &&
                    "Coroutine body CompoundStmt should exist!");
             StmtReferenceVisitor SRV(Context);
             SRV.TraverseStmt(BodyAsWritten);
-            DiagnoseUnusedParameters(FD->parameters(), &SRV.UsedParams);
+            DiagnoseUnusedParametersInCoroutine(FD->parameters(),
+                                                SRV.UsedParams);
           } else
             DiagnoseUnusedParameters(FD->parameters());
         }
