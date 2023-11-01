@@ -18,15 +18,13 @@
 using namespace mlir;
 using namespace mlir::sparse_tensor;
 
-namespace {
-
 //===----------------------------------------------------------------------===//
-// Helper methods.
+// File Local Helper methods.
 //===----------------------------------------------------------------------===//
 
 // Translates a "simple" map according to an identity lvl-map.
-AffineMap translateMap(OpBuilder &builder, SparseTensorType stt,
-                       AffineMap map) {
+static AffineMap translateMap(OpBuilder &builder, SparseTensorType stt,
+                              AffineMap map) {
   unsigned lvlRank = stt.getLvlRank();
   AffineMap lvl2dim = stt.getLvlToDim();
   assert(lvl2dim.getNumInputs() == lvlRank);
@@ -39,18 +37,20 @@ AffineMap translateMap(OpBuilder &builder, SparseTensorType stt,
 }
 
 // Generates a "de"mapping reinterpretation of the map.
-Value genDemap(OpBuilder &builder, SparseTensorEncodingAttr enc, Value val) {
+static Value genDemap(OpBuilder &builder, SparseTensorEncodingAttr enc,
+                      Value val) {
   return builder.create<ReinterpretMapOp>(val.getLoc(), enc.withoutDimToLvl(),
                                           val);
 }
 
 // Generates a "re"mapping reinterpretation of the map.
-Value genRemap(OpBuilder &builder, SparseTensorEncodingAttr enc, Value val) {
+static Value genRemap(OpBuilder &builder, SparseTensorEncodingAttr enc,
+                      Value val) {
   return builder.create<ReinterpretMapOp>(val.getLoc(), enc, val);
 }
 
-SmallVector<Value> remapValueRange(OpBuilder &rewriter, TypeRange types,
-                                   ValueRange outs) {
+static SmallVector<Value> remapValueRange(OpBuilder &rewriter, TypeRange types,
+                                          ValueRange outs) {
   SmallVector<Value> ret(outs);
   assert(outs.size() == types.size());
   for (auto [r, t] : llvm::zip(ret, types))
@@ -60,7 +60,7 @@ SmallVector<Value> remapValueRange(OpBuilder &rewriter, TypeRange types,
 }
 
 /// Whether the operation has any sparse tensor with non-identity dim2lvl maps.
-bool hasNonIdentityOperandsOrResults(Operation *op) {
+static bool hasNonIdentityOperandsOrResults(Operation *op) {
   auto hasNonIdentityMap = [](Value v) {
     auto stt = tryGetSparseTensorType(v);
     return stt && !stt->isIdentity();
@@ -104,6 +104,8 @@ static linalg::GenericOp genGenericLinalg(PatternRewriter &rewriter,
                              newOp.getRegion().begin());
   return newOp;
 }
+
+namespace {
 
 //===----------------------------------------------------------------------===//
 // Rewriting rules for linalg generic ops.
@@ -163,7 +165,7 @@ public:
 // CRTP to help implementing a rewriter that demaps all its inputs and remaps
 // all its outputs.
 template <typename SubClass, typename SourceOp>
-struct DemapInsRemapOutsRewriter : public OpRewritePattern<SourceOp> {
+struct DemapInsRewriter : public OpRewritePattern<SourceOp> {
   using OpRewritePattern<SourceOp>::OpRewritePattern;
   using OpAdaptor = typename SourceOp::Adaptor;
 
@@ -188,8 +190,8 @@ struct DemapInsRemapOutsRewriter : public OpRewritePattern<SourceOp> {
 //===----------------------------------------------------------------------===//
 
 struct TensorInsertDemapper
-    : public DemapInsRemapOutsRewriter<TensorInsertDemapper, tensor::InsertOp> {
-  using DemapInsRemapOutsRewriter::DemapInsRemapOutsRewriter;
+    : public DemapInsRewriter<TensorInsertDemapper, tensor::InsertOp> {
+  using DemapInsRewriter::DemapInsRewriter;
   LogicalResult rewriteOp(tensor::InsertOp op, OpAdaptor adaptor,
                           PatternRewriter &rewriter) const {
     if (!hasAnySparseResult(op))
@@ -199,19 +201,18 @@ struct TensorInsertDemapper
     auto stt = getSparseTensorType(op.getResult());
     ValueRange lvlCrd = stt.translateCrds(rewriter, loc, op.getIndices(),
                                           CrdTransDirectionKind::dim2lvl);
-    Operation *insertOp = rewriter.create<sparse_tensor::InsertOp>(
+    auto insertOp = rewriter.create<sparse_tensor::InsertOp>(
         loc, op.getScalar(), adaptor.getDest(), lvlCrd);
 
-    SmallVector<Value> outs(insertOp->getResults());
-    remapValueRange(rewriter, op->getResultTypes(), outs);
-    rewriter.replaceOp(op, outs);
+    Value out = genRemap(rewriter, stt.getEncoding(), insertOp.getResult());
+    rewriter.replaceOp(op, out);
     return success();
   }
 };
 
 struct ForeachOpDemapper
-    : public DemapInsRemapOutsRewriter<ForeachOpDemapper, ForeachOp> {
-  using DemapInsRemapOutsRewriter::DemapInsRemapOutsRewriter;
+    : public DemapInsRewriter<ForeachOpDemapper, ForeachOp> {
+  using DemapInsRewriter::DemapInsRewriter;
   LogicalResult rewriteOp(ForeachOp op, OpAdaptor adaptor,
                           PatternRewriter &rewriter) const {
     // Only handles operations with sparse input/output.
@@ -288,8 +289,8 @@ struct ForeachOpDemapper
     rewriter.finalizeRootUpdate(op);
 
     rewriter.setInsertionPointAfter(op);
-    SmallVector<Value> outs(op.getResults());
-    remapValueRange(rewriter, prevRetTps, outs);
+    SmallVector<Value> outs =
+        remapValueRange(rewriter, prevRetTps, op.getResults());
 
     // Replace all the uses of the foreach results, expect the use in
     // reinterpret_map used to remap the output.
