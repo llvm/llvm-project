@@ -1008,8 +1008,9 @@ CodeGenFunction::FindFlexibleArrayMemberField(ASTContext &Ctx,
 
   for (const Decl *D : RD->decls()) {
     if (const auto *VD = dyn_cast<ValueDecl>(D);
-        VD && Decl::isFlexibleArrayMemberLike(Ctx, VD, VD->getType(),
-                                              StrictFlexArraysLevel, true))
+        VD && Decl::isFlexibleArrayMemberLike(
+                  Ctx, VD, VD->getType(), StrictFlexArraysLevel,
+                  /*IgnoreTemplateOrMacroSubstitution=*/true))
       return VD;
 
     if (const auto *Record = dyn_cast<RecordDecl>(D))

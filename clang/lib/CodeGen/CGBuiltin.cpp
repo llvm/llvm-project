@@ -25,6 +25,7 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/OSLog.h"
+#include "clang/AST/OperationKinds.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
@@ -874,21 +875,46 @@ CodeGenFunction::emitBuiltinObjectSize(const Expr *E, unsigned Type,
     //     __builtin_dynamic_object_size(p->array, 1) ==
     //         p->count * sizeof(*p->array)
     //
+    //   2) bdos of a pointer into the flexible array:
+    //
+    //     __builtin_dynamic_object_size(&p->array[42], 1) ==
+    //         (p->count - 42) * sizeof(*p->array)
+    //
     //   2) bdos of the whole struct, including the flexible array:
     //
     //     __builtin_dynamic_object_size(p, 1) ==
     //        max(sizeof(struct s),
     //            offsetof(struct s, array) + p->count * sizeof(*p->array))
     //
-    if (const ValueDecl *CountedByFD = FindCountedByField(E)) {
+    const Expr *Base = E->IgnoreParenImpCasts();
+    const Expr *Idx = nullptr;
+    if (const auto *UO = dyn_cast<UnaryOperator>(Base);
+        UO && UO->getOpcode() == UO_AddrOf) {
+      if (const auto *ASE = dyn_cast<ArraySubscriptExpr>(UO->getSubExpr())) {
+        Base = ASE->getBase();
+        Idx = ASE->getIdx()->IgnoreParenImpCasts();
+        if (const auto *IL = dyn_cast<IntegerLiteral>(Idx);
+            IL && !IL->getValue().getZExtValue()) {
+          Idx = nullptr;
+        }
+      }
+    }
+
+    if (const ValueDecl *CountedByFD = FindCountedByField(Base)) {
       const RecordDecl *OuterRD =
           CountedByFD->getDeclContext()->getOuterLexicalRecordContext();
       ASTContext &Ctx = getContext();
 
       // Load the counted_by field.
-      const Expr *CountedByExpr = BuildCountedByFieldExpr(E, CountedByFD);
+      const Expr *CountedByExpr = BuildCountedByFieldExpr(Base, CountedByFD);
       llvm::Value *CountedByInst =
           EmitAnyExprToTemp(CountedByExpr).getScalarVal();
+
+      if (Idx) {
+        llvm::Value *IdxInst = EmitAnyExprToTemp(Idx).getScalarVal();
+        IdxInst = Builder.CreateZExtOrTrunc(IdxInst, CountedByInst->getType());
+        CountedByInst = Builder.CreateSub(CountedByInst, IdxInst);
+      }
 
       // Get the size of the flexible array member's base type.
       const ValueDecl *FAM = FindFlexibleArrayMemberField(Ctx, OuterRD);
@@ -900,7 +926,7 @@ CodeGenFunction::emitBuiltinObjectSize(const Expr *E, unsigned Type,
       llvm::Value *FAMSize = Builder.CreateMul(CountedByInst, ElemSize);
       llvm::Value *Res = Builder.CreateZExtOrTrunc(FAMSize, ResType);
 
-      if (const auto *DRE = dyn_cast<DeclRefExpr>(E->IgnoreParenImpCasts())) {
+      if (const auto *DRE = dyn_cast<DeclRefExpr>(Base)) {
         // The whole struct is specificed in the __bdos.
         // Get the full size of the struct.
         const ASTRecordLayout &Layout = Ctx.getASTRecordLayout(OuterRD);
