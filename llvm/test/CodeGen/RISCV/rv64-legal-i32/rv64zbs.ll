@@ -440,34 +440,50 @@ define signext i32 @bclri_i32_10(i32 signext %a) nounwind {
 }
 
 define signext i32 @bclri_i32_11(i32 signext %a) nounwind {
-; CHECK-LABEL: bclri_i32_11:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a1, 1048575
-; CHECK-NEXT:    addiw a1, a1, 2047
-; CHECK-NEXT:    and a0, a0, a1
-; CHECK-NEXT:    ret
+; RV64I-LABEL: bclri_i32_11:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    lui a1, 1048575
+; RV64I-NEXT:    addiw a1, a1, 2047
+; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64ZBS-LABEL: bclri_i32_11:
+; RV64ZBS:       # %bb.0:
+; RV64ZBS-NEXT:    bclri a0, a0, 11
+; RV64ZBS-NEXT:    ret
   %and = and i32 %a, -2049
   ret i32 %and
 }
 
 define signext i32 @bclri_i32_30(i32 signext %a) nounwind {
-; CHECK-LABEL: bclri_i32_30:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a1, 786432
-; CHECK-NEXT:    addiw a1, a1, -1
-; CHECK-NEXT:    and a0, a0, a1
-; CHECK-NEXT:    ret
+; RV64I-LABEL: bclri_i32_30:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    lui a1, 786432
+; RV64I-NEXT:    addiw a1, a1, -1
+; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64ZBS-LABEL: bclri_i32_30:
+; RV64ZBS:       # %bb.0:
+; RV64ZBS-NEXT:    bclri a0, a0, 30
+; RV64ZBS-NEXT:    ret
   %and = and i32 %a, -1073741825
   ret i32 %and
 }
 
 define signext i32 @bclri_i32_31(i32 signext %a) nounwind {
-; CHECK-LABEL: bclri_i32_31:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a1, 524288
-; CHECK-NEXT:    addiw a1, a1, -1
-; CHECK-NEXT:    and a0, a0, a1
-; CHECK-NEXT:    ret
+; RV64I-LABEL: bclri_i32_31:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    lui a1, 524288
+; RV64I-NEXT:    addiw a1, a1, -1
+; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64ZBS-LABEL: bclri_i32_31:
+; RV64ZBS:       # %bb.0:
+; RV64ZBS-NEXT:    bclri a0, a0, 31
+; RV64ZBS-NEXT:    sext.w a0, a0
+; RV64ZBS-NEXT:    ret
   %and = and i32 %a, -2147483649
   ret i32 %and
 }
@@ -614,29 +630,39 @@ define signext i32 @bseti_i32_11(i32 signext %a) nounwind {
 ;
 ; RV64ZBS-LABEL: bseti_i32_11:
 ; RV64ZBS:       # %bb.0:
-; RV64ZBS-NEXT:    bseti a1, zero, 11
-; RV64ZBS-NEXT:    or a0, a0, a1
+; RV64ZBS-NEXT:    bseti a0, a0, 11
 ; RV64ZBS-NEXT:    ret
   %or = or i32 %a, 2048
   ret i32 %or
 }
 
 define signext i32 @bseti_i32_30(i32 signext %a) nounwind {
-; CHECK-LABEL: bseti_i32_30:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a1, 262144
-; CHECK-NEXT:    or a0, a0, a1
-; CHECK-NEXT:    ret
+; RV64I-LABEL: bseti_i32_30:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    lui a1, 262144
+; RV64I-NEXT:    or a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64ZBS-LABEL: bseti_i32_30:
+; RV64ZBS:       # %bb.0:
+; RV64ZBS-NEXT:    bseti a0, a0, 30
+; RV64ZBS-NEXT:    ret
   %or = or i32 %a, 1073741824
   ret i32 %or
 }
 
 define signext i32 @bseti_i32_31(i32 signext %a) nounwind {
-; CHECK-LABEL: bseti_i32_31:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a1, 524288
-; CHECK-NEXT:    or a0, a0, a1
-; CHECK-NEXT:    ret
+; RV64I-LABEL: bseti_i32_31:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    lui a1, 524288
+; RV64I-NEXT:    or a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64ZBS-LABEL: bseti_i32_31:
+; RV64ZBS:       # %bb.0:
+; RV64ZBS-NEXT:    bseti a0, a0, 31
+; RV64ZBS-NEXT:    sext.w a0, a0
+; RV64ZBS-NEXT:    ret
   %or = or i32 %a, 2147483648
   ret i32 %or
 }
@@ -748,29 +774,39 @@ define signext i32 @binvi_i32_11(i32 signext %a) nounwind {
 ;
 ; RV64ZBS-LABEL: binvi_i32_11:
 ; RV64ZBS:       # %bb.0:
-; RV64ZBS-NEXT:    bseti a1, zero, 11
-; RV64ZBS-NEXT:    xor a0, a0, a1
+; RV64ZBS-NEXT:    binvi a0, a0, 11
 ; RV64ZBS-NEXT:    ret
   %xor = xor i32 %a, 2048
   ret i32 %xor
 }
 
 define signext i32 @binvi_i32_30(i32 signext %a) nounwind {
-; CHECK-LABEL: binvi_i32_30:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a1, 262144
-; CHECK-NEXT:    xor a0, a0, a1
-; CHECK-NEXT:    ret
+; RV64I-LABEL: binvi_i32_30:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    lui a1, 262144
+; RV64I-NEXT:    xor a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64ZBS-LABEL: binvi_i32_30:
+; RV64ZBS:       # %bb.0:
+; RV64ZBS-NEXT:    binvi a0, a0, 30
+; RV64ZBS-NEXT:    ret
   %xor = xor i32 %a, 1073741824
   ret i32 %xor
 }
 
 define signext i32 @binvi_i32_31(i32 signext %a) nounwind {
-; CHECK-LABEL: binvi_i32_31:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a1, 524288
-; CHECK-NEXT:    xor a0, a0, a1
-; CHECK-NEXT:    ret
+; RV64I-LABEL: binvi_i32_31:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    lui a1, 524288
+; RV64I-NEXT:    xor a0, a0, a1
+; RV64I-NEXT:    ret
+;
+; RV64ZBS-LABEL: binvi_i32_31:
+; RV64ZBS:       # %bb.0:
+; RV64ZBS-NEXT:    binvi a0, a0, 31
+; RV64ZBS-NEXT:    sext.w a0, a0
+; RV64ZBS-NEXT:    ret
   %xor = xor i32 %a, 2147483648
   ret i32 %xor
 }
