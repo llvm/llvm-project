@@ -327,8 +327,8 @@ void RISCVInsertWriteVXRM::emitWriteVXRM(MachineBasicBlock &MBB) {
   // Insert VXRM write if anticipated and not available.
   if (BBInfo.AnticipatedIn.isStatic()) {
     bool NeedInsert = false;
-    // If there are no predecessors and the value is anticipated, insert.
-    if (MBB.pred_empty()) {
+    // If this is the entry block and the value is anticipated, insert.
+    if (MBB.isEntryBlock()) {
       NeedInsert = true;
     } else {
       // Search for any predecessors that wouldn't satisfy our requirement and
