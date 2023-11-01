@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "NewPMDriver.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
@@ -186,6 +187,8 @@ static cl::opt<std::string> RemarksFormat(
     cl::desc("The format used for serializing remarks (default: YAML)"),
     cl::value_desc("format"), cl::init("yaml"));
 
+static cl::opt<bool> EnableNewPassManager(
+    "enable-new-pm", cl::desc("Enable the new pass manager"), cl::init(false));
 static cl::opt<bool> TryUseNewDbgInfoFormat(
     "try-experimental-debuginfo-iterators",
     cl::desc("Enable debuginfo iterator positions, if they're built in"),
@@ -305,41 +308,6 @@ static std::unique_ptr<ToolOutputFile> GetOutputStream(const char *TargetName,
 
   return FDOut;
 }
-
-struct LLCDiagnosticHandler : public DiagnosticHandler {
-  bool *HasError;
-  LLCDiagnosticHandler(bool *HasErrorPtr) : HasError(HasErrorPtr) {}
-  bool handleDiagnostics(const DiagnosticInfo &DI) override {
-    if (DI.getKind() == llvm::DK_SrcMgr) {
-      const auto &DISM = cast<DiagnosticInfoSrcMgr>(DI);
-      const SMDiagnostic &SMD = DISM.getSMDiag();
-
-      if (SMD.getKind() == SourceMgr::DK_Error)
-        *HasError = true;
-
-      SMD.print(nullptr, errs());
-
-      // For testing purposes, we print the LocCookie here.
-      if (DISM.isInlineAsmDiag() && DISM.getLocCookie())
-        WithColor::note() << "!srcloc = " << DISM.getLocCookie() << "\n";
-
-      return true;
-    }
-
-    if (DI.getSeverity() == DS_Error)
-      *HasError = true;
-
-    if (auto *Remark = dyn_cast<DiagnosticInfoOptimizationBase>(&DI))
-      if (!Remark->isEnabled())
-        return true;
-
-    DiagnosticPrinterRawOStream DP(errs());
-    errs() << LLVMContext::getDiagnosticMessagePrefix(DI.getSeverity()) << ": ";
-    DI.print(DP);
-    errs() << "\n";
-    return true;
-  }
-};
 
 // main - Entry point for the llc compiler.
 //
@@ -651,16 +619,12 @@ static int compileModule(char **argv, LLVMContext &Context) {
       reportError(EC.message(), SplitDwarfOutputFile);
   }
 
-  // Build up all of the passes that we want to do to the module.
-  legacy::PassManager PM;
-
   // Add an appropriate TargetLibraryInfo pass for the module's triple.
   TargetLibraryInfoImpl TLII(Triple(M->getTargetTriple()));
 
   // The -disable-simplify-libcalls flag actually disables all builtin optzns.
   if (DisableSimplifyLibCalls)
     TLII.disableAllFunctions();
-  PM.add(new TargetLibraryInfoWrapperPass(TLII));
 
   // Verify module immediately to catch problems before doInitialization() is
   // called on any passes.
@@ -675,6 +639,19 @@ static int compileModule(char **argv, LLVMContext &Context) {
       codegen::getFileType() != CodeGenFileType::ObjectFile)
     WithColor::warning(errs(), argv[0])
         << ": warning: ignoring -mc-relax-all because filetype != obj";
+
+  bool RunPassNone =
+      !getRunPassNames().empty() && getRunPassNames().at(0) == "none";
+  if (EnableNewPassManager && !RunPassNone) {
+    return compileModuleWithNewPM(argv[0], std::move(M), std::move(MIR),
+                                  std::move(Target), std::move(Out),
+                                  std::move(DwoOut), Context, TLII, NoVerify,
+                                  getRunPassNames(), codegen::getFileType());
+  }
+
+  // Build up all of the passes that we want to do to the module.
+  legacy::PassManager PM;
+  PM.add(new TargetLibraryInfoWrapperPass(TLII));
 
   {
     raw_pwrite_stream *OS = &Out->os();

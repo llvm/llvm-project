@@ -461,8 +461,15 @@ public:
   }
 
   virtual std::pair<StringRef, bool> getPassNameFromLegacyName(StringRef) {
-    llvm_unreachable(
-        "getPassNameFromLegacyName parseMIRPipeline is not overridden");
+    llvm_unreachable("getPassNameFromLegacyName is not overridden");
+  }
+
+  virtual Error parseMIRPipeline(MachineFunctionPassManager &MFPM,
+                                 StringRef PipelineText,
+                                 CGPassBuilderOption Opts,
+                                 MachineFunctionAnalysisManager &MFAM,
+                                 PassInstrumentationCallbacks *PIC) {
+    llvm_unreachable("parseMIRPipeline is not overridden");
   }
 
   /// Add passes to the specified pass manager to get machine code emitted with

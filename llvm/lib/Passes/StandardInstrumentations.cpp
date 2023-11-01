@@ -1039,9 +1039,10 @@ void PrintPassInstrumentation::registerCallbacks(
     SpecialPasses.emplace_back("PassAdaptor");
   }
 
-  PIC.registerBeforeSkippedPassCallback([this, SpecialPasses](StringRef PassID,
-                                                              Any IR) {
-    assert(!isSpecialPass(PassID, SpecialPasses) &&
+  PIC.registerBeforeSkippedPassCallback([this, SpecialPasses,
+                                         &PIC](StringRef PassID, Any IR) {
+    assert((!isSpecialPass(PassID, SpecialPasses) ||
+            PIC.isStartStopInfoRegistered()) &&
            "Unexpectedly skipping special pass");
 
     print() << "Skipping pass: " << PassID << " on " << getIRName(IR) << "\n";

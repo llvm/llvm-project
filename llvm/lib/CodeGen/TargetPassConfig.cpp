@@ -516,6 +516,9 @@ static void registerPartialPipelineCallback(PassInstrumentationCallbacks &PIC,
   unsigned StopBeforeInstanceNum = 0;
   unsigned StopAfterInstanceNum = 0;
 
+  bool IsStopBeforeMachinePass = false;
+  bool IsStopAfterMachinePass = false;
+
   std::tie(StartBefore, StartBeforeInstanceNum) =
       getPassNameAndInstanceNum(StartBeforeOpt);
   std::tie(StartAfter, StartAfterInstanceNum) =
@@ -544,7 +547,15 @@ static void registerPartialPipelineCallback(PassInstrumentationCallbacks &PIC,
     report_fatal_error(Twine(StopBeforeOptName) + Twine(" and ") +
                        Twine(StopAfterOptName) + Twine(" specified!"));
 
-  PIC.registerShouldRunOptionalPassCallback(
+  std::vector<StringRef> SpecialPasses = {"PassManager", "PassAdaptor",
+                                          "PrintMIRPass", "PrintModulePass"};
+
+  PassInstrumentationCallbacks::CodeGenStartStopInfo Info;
+  Info.Start = StartBefore.empty() ? StartAfter : StartBefore;
+  Info.Stop = StopBefore.empty() ? StopAfter : StopBefore;
+
+  Info.IsStopMachinePass = IsStopBeforeMachinePass || IsStopAfterMachinePass;
+  Info.StartStopCallback =
       [=, EnableCurrent = StartBefore.empty() && StartAfter.empty(),
        EnableNext = std::optional<bool>(), StartBeforeCount = 0u,
        StartAfterCount = 0u, StopBeforeCount = 0u,
@@ -575,8 +586,10 @@ static void registerPartialPipelineCallback(PassInstrumentationCallbacks &PIC,
           EnableCurrent = true;
         if (StopBeforePass && StopBeforeCount++ == StopBeforeInstanceNum)
           EnableCurrent = false;
-        return EnableCurrent;
-      });
+        return EnableCurrent || isSpecialPass(P, SpecialPasses);
+      };
+
+  PIC.registerStartStopInfo(std::move(Info));
 }
 
 void llvm::registerCodeGenCallback(PassInstrumentationCallbacks &PIC,

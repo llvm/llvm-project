@@ -84,6 +84,23 @@ public:
   using AfterAnalysisFunc = void(StringRef, Any);
   using AnalysisInvalidatedFunc = void(StringRef, Any);
   using AnalysesClearedFunc = void(StringRef);
+  using StartStopFunc = bool(StringRef, Any);
+
+  struct CodeGenStartStopInfo {
+    StringRef Start;
+    StringRef Stop;
+
+    bool IsStopMachinePass = false;
+
+    llvm::unique_function<StartStopFunc> StartStopCallback;
+
+    bool operator()(StringRef PassID, Any IR) {
+      return StartStopCallback(PassID, IR);
+    }
+    bool isStopMachineFunctionPass() const { return IsStopMachinePass; }
+    bool willCompleteCodeGenPipeline() const { return Stop.empty(); }
+    StringRef getStop() const { return Stop; }
+  };
 
 public:
   PassInstrumentationCallbacks() = default;
@@ -148,6 +165,17 @@ public:
     AnalysesClearedCallbacks.emplace_back(std::move(C));
   }
 
+  void registerStartStopInfo(CodeGenStartStopInfo &&C) {
+    StartStopInfo = std::move(C);
+  }
+
+  bool isStartStopInfoRegistered() const { return StartStopInfo.has_value(); }
+
+  CodeGenStartStopInfo &getStartStopInfo() {
+    assert(StartStopInfo.has_value() && "StartStopInfo is unregistered!");
+    return *StartStopInfo;
+  }
+
   /// Add a class name to pass name mapping for use by pass instrumentation.
   void addClassToPassName(StringRef ClassName, StringRef PassName);
   /// Get the pass name for a given pass class name.
@@ -183,6 +211,8 @@ private:
   /// These are run on analyses that have been cleared.
   SmallVector<llvm::unique_function<AnalysesClearedFunc>, 4>
       AnalysesClearedCallbacks;
+  /// For `llc` -start-* -stop-* options.
+  std::optional<CodeGenStartStopInfo> StartStopInfo;
 
   StringMap<std::string> ClassToPassName;
 };
@@ -235,6 +265,9 @@ public:
       for (auto &C : Callbacks->ShouldRunOptionalPassCallbacks)
         ShouldRun &= C(Pass.name(), llvm::Any(&IR));
     }
+
+    if (Callbacks->StartStopInfo)
+      ShouldRun &= (*Callbacks->StartStopInfo)(Pass.name(), llvm::Any(&IR));
 
     if (ShouldRun) {
       for (auto &C : Callbacks->BeforeNonSkippedPassCallbacks)
