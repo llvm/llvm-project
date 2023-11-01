@@ -104,8 +104,8 @@ public:
   }
 
   void runOnOperation() override {
+    // Run enabling transformations.
     {
-      // Run enabling transformations.
       OpPassManager pm("builtin.module");
       pm.addPass(createPreSparsificationRewritePass());
       pm.addNestedPass<func::FuncOp>(
@@ -128,7 +128,7 @@ public:
                                                  bufferizationOptions)))
       return signalPassFailure();
 
-    // `testAnalysisOnly` is a debug/testing flag. If set, the results of
+    // Option `testAnalysisOnly` is a debug/testing flag. If set, the results of
     // OneShotAnalysis are added to the IR via attributes. In that case, do not
     // continue with the remaining pipeline.
     if (bufferizationOptions.testAnalysisOnly)
@@ -139,6 +139,8 @@ public:
     // of `bufferization.alloc_tensor` ops.
     {
       OpPassManager pm("builtin.module");
+      pm.addPass(
+          createSparseReinterpretMapPass(ReinterpretMapScope::kGenericOnly));
       pm.addPass(createSparsificationPass(sparsificationOptions));
       pm.addNestedPass<func::FuncOp>(createStageSparseOperationsPass());
       pm.addPass(createLowerSparseOpsToForeachPass(enableRuntimeLibrary,

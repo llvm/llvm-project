@@ -341,11 +341,9 @@ template <typename T>
 inline SparseTensorType getSparseTensorType(T t) {
   return SparseTensorType(getRankedTensorType(t));
 }
-template <typename T>
-inline std::optional<SparseTensorType> tryGetSparseTensorType(T t) {
-  RankedTensorType rtp = getRankedTensorType(t);
-  if (rtp)
-    return SparseTensorType(rtp);
+inline std::optional<SparseTensorType> tryGetSparseTensorType(Value v) {
+  if (isa<RankedTensorType>(v.getType()))
+    return getSparseTensorType(v);
   return std::nullopt;
 }
 

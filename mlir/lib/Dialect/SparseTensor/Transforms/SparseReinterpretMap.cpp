@@ -116,11 +116,11 @@ public:
         if (map.getResult(i).getKind() != AffineExprKind::DimId)
           return failure();
       // Inspect sparse operands.
-      auto stt = getSparseTensorType(t.get());
-      if (stt.hasEncoding()) {
-        if (stt.isPermutation())
+      auto stt = tryGetSparseTensorType(t.get());
+      if (stt && stt->hasEncoding()) {
+        if (stt->isPermutation())
           continue;
-        assert(stt.getDimRank() < stt.getLvlRank()); // only allowed non-perm
+        assert(stt->getDimRank() < stt->getLvlRank()); // only allowed non-perm
         if (tx)
           return failure(); // more than one non-perm
         if (!map.isIdentity())
