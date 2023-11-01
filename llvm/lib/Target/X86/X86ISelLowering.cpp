@@ -49604,14 +49604,12 @@ static SDValue combineTruncateWithSat(SDValue In, EVT VT, const SDLoc &DL,
                       (Subtarget.hasVLX() || InVT.getSizeInBits() > 256) &&
                       !(!Subtarget.useAVX512Regs() && VT.getSizeInBits() >= 256);
 
-  if (isPowerOf2_32(VT.getVectorNumElements()) && !PreferAVX512 &&
-      VT.getSizeInBits() >= 64 &&
+  if (!PreferAVX512 && VT.getVectorNumElements() > 1 &&
+      isPowerOf2_32(VT.getVectorNumElements()) &&
       (SVT == MVT::i8 || SVT == MVT::i16) &&
       (InSVT == MVT::i16 || InSVT == MVT::i32)) {
     if (SDValue USatVal = detectSSatPattern(In, VT, true)) {
       // vXi32 -> vXi8 must be performed as PACKUSWB(PACKSSDW,PACKSSDW).
-      // Only do this when the result is at least 64 bits or we'll leaving
-      // dangling PACKSSDW nodes.
       if (SVT == MVT::i8 && InSVT == MVT::i32) {
         EVT MidVT = VT.changeVectorElementType(MVT::i16);
         SDValue Mid = truncateVectorWithPACK(X86ISD::PACKSS, MidVT, USatVal, DL,

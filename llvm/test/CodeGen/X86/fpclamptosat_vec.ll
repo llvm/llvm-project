@@ -1092,38 +1092,14 @@ define <2 x i16> @stest_f64i16(<2 x double> %x) nounwind {
 ; SSE-LABEL: stest_f64i16:
 ; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    cvttpd2dq %xmm0, %xmm0
-; SSE-NEXT:    movdqa {{.*#+}} xmm1 = <32767,32767,u,u>
-; SSE-NEXT:    movdqa %xmm1, %xmm2
-; SSE-NEXT:    pcmpgtd %xmm0, %xmm2
-; SSE-NEXT:    pand %xmm2, %xmm0
-; SSE-NEXT:    pandn %xmm1, %xmm2
-; SSE-NEXT:    por %xmm0, %xmm2
-; SSE-NEXT:    movdqa {{.*#+}} xmm0 = <4294934528,4294934528,u,u>
-; SSE-NEXT:    movdqa %xmm2, %xmm1
-; SSE-NEXT:    pcmpgtd %xmm0, %xmm1
-; SSE-NEXT:    pand %xmm1, %xmm2
-; SSE-NEXT:    pandn %xmm0, %xmm1
-; SSE-NEXT:    por %xmm2, %xmm1
-; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm1[0,2,2,3,4,5,6,7]
+; SSE-NEXT:    packssdw %xmm0, %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX2-LABEL: stest_f64i16:
-; AVX2:       # %bb.0: # %entry
-; AVX2-NEXT:    vcvttpd2dq %xmm0, %xmm0
-; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [32767,32767,32767,32767]
-; AVX2-NEXT:    vpminsd %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [4294934528,4294934528,4294934528,4294934528]
-; AVX2-NEXT:    vpmaxsd %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,2,2,3,4,5,6,7]
-; AVX2-NEXT:    retq
-;
-; AVX512-LABEL: stest_f64i16:
-; AVX512:       # %bb.0: # %entry
-; AVX512-NEXT:    vcvttpd2dq %xmm0, %xmm0
-; AVX512-NEXT:    vpminsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
-; AVX512-NEXT:    vpmaxsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
-; AVX512-NEXT:    vpmovdw %xmm0, %xmm0
-; AVX512-NEXT:    retq
+; AVX-LABEL: stest_f64i16:
+; AVX:       # %bb.0: # %entry
+; AVX-NEXT:    vcvttpd2dq %xmm0, %xmm0
+; AVX-NEXT:    vpackssdw %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    retq
 entry:
   %conv = fptosi <2 x double> %x to <2 x i32>
   %0 = icmp slt <2 x i32> %conv, <i32 32767, i32 32767>
@@ -1198,24 +1174,11 @@ define <2 x i16> @ustest_f64i16(<2 x double> %x) nounwind {
 ; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm1[0,2,2,3,4,5,6,7]
 ; SSE-NEXT:    retq
 ;
-; AVX2-LABEL: ustest_f64i16:
-; AVX2:       # %bb.0: # %entry
-; AVX2-NEXT:    vcvttpd2dq %xmm0, %xmm0
-; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [65535,65535,65535,65535]
-; AVX2-NEXT:    vpminsd %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX2-NEXT:    vpmaxsd %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,2,2,3,4,5,6,7]
-; AVX2-NEXT:    retq
-;
-; AVX512-LABEL: ustest_f64i16:
-; AVX512:       # %bb.0: # %entry
-; AVX512-NEXT:    vcvttpd2dq %xmm0, %xmm0
-; AVX512-NEXT:    vpminsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
-; AVX512-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX512-NEXT:    vpmaxsd %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vpmovdw %xmm0, %xmm0
-; AVX512-NEXT:    retq
+; AVX-LABEL: ustest_f64i16:
+; AVX:       # %bb.0: # %entry
+; AVX-NEXT:    vcvttpd2dq %xmm0, %xmm0
+; AVX-NEXT:    vpackusdw %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    retq
 entry:
   %conv = fptosi <2 x double> %x to <2 x i32>
   %0 = icmp slt <2 x i32> %conv, <i32 65535, i32 65535>
@@ -1652,40 +1615,16 @@ define <2 x i8> @stest_f64i8(<2 x double> %x) nounwind {
 ; SSE-LABEL: stest_f64i8:
 ; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    cvttpd2dq %xmm0, %xmm0
-; SSE-NEXT:    movdqa {{.*#+}} xmm1 = <127,127,u,u>
-; SSE-NEXT:    movdqa %xmm1, %xmm2
-; SSE-NEXT:    pcmpgtd %xmm0, %xmm2
-; SSE-NEXT:    pand %xmm2, %xmm0
-; SSE-NEXT:    pandn %xmm1, %xmm2
-; SSE-NEXT:    por %xmm0, %xmm2
-; SSE-NEXT:    movdqa {{.*#+}} xmm1 = <4294967168,4294967168,u,u>
-; SSE-NEXT:    movdqa %xmm2, %xmm0
-; SSE-NEXT:    pcmpgtd %xmm1, %xmm0
-; SSE-NEXT:    pand %xmm0, %xmm2
-; SSE-NEXT:    pandn %xmm1, %xmm0
-; SSE-NEXT:    por %xmm2, %xmm0
 ; SSE-NEXT:    packssdw %xmm0, %xmm0
 ; SSE-NEXT:    packsswb %xmm0, %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX2-LABEL: stest_f64i8:
-; AVX2:       # %bb.0: # %entry
-; AVX2-NEXT:    vcvttpd2dq %xmm0, %xmm0
-; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [127,127,127,127]
-; AVX2-NEXT:    vpminsd %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [4294967168,4294967168,4294967168,4294967168]
-; AVX2-NEXT:    vpmaxsd %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vpackssdw %xmm0, %xmm0, %xmm0
-; AVX2-NEXT:    vpacksswb %xmm0, %xmm0, %xmm0
-; AVX2-NEXT:    retq
-;
-; AVX512-LABEL: stest_f64i8:
-; AVX512:       # %bb.0: # %entry
-; AVX512-NEXT:    vcvttpd2dq %xmm0, %xmm0
-; AVX512-NEXT:    vpminsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
-; AVX512-NEXT:    vpmaxsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
-; AVX512-NEXT:    vpmovdb %xmm0, %xmm0
-; AVX512-NEXT:    retq
+; AVX-LABEL: stest_f64i8:
+; AVX:       # %bb.0: # %entry
+; AVX-NEXT:    vcvttpd2dq %xmm0, %xmm0
+; AVX-NEXT:    vpackssdw %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    vpacksswb %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    retq
 entry:
   %conv = fptosi <2 x double> %x to <2 x i32>
   %0 = icmp slt <2 x i32> %conv, <i32 127, i32 127>
@@ -1748,39 +1687,16 @@ define <2 x i8> @ustest_f64i8(<2 x double> %x) nounwind {
 ; SSE-LABEL: ustest_f64i8:
 ; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    cvttpd2dq %xmm0, %xmm0
-; SSE-NEXT:    movdqa {{.*#+}} xmm1 = <255,255,u,u>
-; SSE-NEXT:    movdqa %xmm1, %xmm2
-; SSE-NEXT:    pcmpgtd %xmm0, %xmm2
-; SSE-NEXT:    pand %xmm2, %xmm0
-; SSE-NEXT:    pandn %xmm1, %xmm2
-; SSE-NEXT:    por %xmm0, %xmm2
-; SSE-NEXT:    pxor %xmm1, %xmm1
-; SSE-NEXT:    movdqa %xmm2, %xmm0
-; SSE-NEXT:    pcmpgtd %xmm1, %xmm0
-; SSE-NEXT:    pand %xmm2, %xmm0
-; SSE-NEXT:    packuswb %xmm0, %xmm0
+; SSE-NEXT:    packssdw %xmm0, %xmm0
 ; SSE-NEXT:    packuswb %xmm0, %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX2-LABEL: ustest_f64i8:
-; AVX2:       # %bb.0: # %entry
-; AVX2-NEXT:    vcvttpd2dq %xmm0, %xmm0
-; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [255,255,255,255]
-; AVX2-NEXT:    vpminsd %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX2-NEXT:    vpmaxsd %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vpackusdw %xmm0, %xmm0, %xmm0
-; AVX2-NEXT:    vpackuswb %xmm0, %xmm0, %xmm0
-; AVX2-NEXT:    retq
-;
-; AVX512-LABEL: ustest_f64i8:
-; AVX512:       # %bb.0: # %entry
-; AVX512-NEXT:    vcvttpd2dq %xmm0, %xmm0
-; AVX512-NEXT:    vpminsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
-; AVX512-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX512-NEXT:    vpmaxsd %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vpmovdb %xmm0, %xmm0
-; AVX512-NEXT:    retq
+; AVX-LABEL: ustest_f64i8:
+; AVX:       # %bb.0: # %entry
+; AVX-NEXT:    vcvttpd2dq %xmm0, %xmm0
+; AVX-NEXT:    vpackssdw %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    vpackuswb %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    retq
 entry:
   %conv = fptosi <2 x double> %x to <2 x i32>
   %0 = icmp slt <2 x i32> %conv, <i32 255, i32 255>
@@ -1795,37 +1711,16 @@ define <4 x i8> @stest_f32i8(<4 x float> %x) nounwind {
 ; SSE-LABEL: stest_f32i8:
 ; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    cvttps2dq %xmm0, %xmm0
-; SSE-NEXT:    movdqa {{.*#+}} xmm1 = [127,127,127,127]
-; SSE-NEXT:    movdqa %xmm1, %xmm2
-; SSE-NEXT:    pcmpgtd %xmm0, %xmm2
-; SSE-NEXT:    pand %xmm2, %xmm0
-; SSE-NEXT:    pandn %xmm1, %xmm2
-; SSE-NEXT:    por %xmm0, %xmm2
-; SSE-NEXT:    movdqa {{.*#+}} xmm1 = [4294967168,4294967168,4294967168,4294967168]
-; SSE-NEXT:    movdqa %xmm2, %xmm0
-; SSE-NEXT:    pcmpgtd %xmm1, %xmm0
-; SSE-NEXT:    pand %xmm0, %xmm2
-; SSE-NEXT:    pandn %xmm1, %xmm0
-; SSE-NEXT:    por %xmm2, %xmm0
 ; SSE-NEXT:    packssdw %xmm0, %xmm0
 ; SSE-NEXT:    packsswb %xmm0, %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX2-LABEL: stest_f32i8:
-; AVX2:       # %bb.0: # %entry
-; AVX2-NEXT:    vcvttps2dq %xmm0, %xmm0
-; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [127,127,127,127]
-; AVX2-NEXT:    vpminsd %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [4294967168,4294967168,4294967168,4294967168]
-; AVX2-NEXT:    vpmaxsd %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,4,8,12,0,4,8,12,0,4,8,12,0,4,8,12]
-; AVX2-NEXT:    retq
-;
-; AVX512-LABEL: stest_f32i8:
-; AVX512:       # %bb.0: # %entry
-; AVX512-NEXT:    vcvttps2dq %xmm0, %xmm0
-; AVX512-NEXT:    vpmovsdb %xmm0, %xmm0
-; AVX512-NEXT:    retq
+; AVX-LABEL: stest_f32i8:
+; AVX:       # %bb.0: # %entry
+; AVX-NEXT:    vcvttps2dq %xmm0, %xmm0
+; AVX-NEXT:    vpackssdw %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    vpacksswb %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    retq
 entry:
   %conv = fptosi <4 x float> %x to <4 x i32>
   %0 = icmp slt <4 x i32> %conv, <i32 127, i32 127, i32 127, i32 127>
@@ -1888,37 +1783,16 @@ define <4 x i8> @ustest_f32i8(<4 x float> %x) nounwind {
 ; SSE-LABEL: ustest_f32i8:
 ; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    cvttps2dq %xmm0, %xmm0
-; SSE-NEXT:    movdqa {{.*#+}} xmm1 = [255,255,255,255]
-; SSE-NEXT:    movdqa %xmm1, %xmm2
-; SSE-NEXT:    pcmpgtd %xmm0, %xmm2
-; SSE-NEXT:    pand %xmm2, %xmm0
-; SSE-NEXT:    pandn %xmm1, %xmm2
-; SSE-NEXT:    por %xmm0, %xmm2
-; SSE-NEXT:    pxor %xmm1, %xmm1
-; SSE-NEXT:    movdqa %xmm2, %xmm0
-; SSE-NEXT:    pcmpgtd %xmm1, %xmm0
-; SSE-NEXT:    pand %xmm2, %xmm0
-; SSE-NEXT:    packuswb %xmm0, %xmm0
+; SSE-NEXT:    packssdw %xmm0, %xmm0
 ; SSE-NEXT:    packuswb %xmm0, %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX2-LABEL: ustest_f32i8:
-; AVX2:       # %bb.0: # %entry
-; AVX2-NEXT:    vcvttps2dq %xmm0, %xmm0
-; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [255,255,255,255]
-; AVX2-NEXT:    vpminsd %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX2-NEXT:    vpmaxsd %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,4,8,12,0,4,8,12,0,4,8,12,0,4,8,12]
-; AVX2-NEXT:    retq
-;
-; AVX512-LABEL: ustest_f32i8:
-; AVX512:       # %bb.0: # %entry
-; AVX512-NEXT:    vcvttps2dq %xmm0, %xmm0
-; AVX512-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX512-NEXT:    vpmaxsd %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vpmovusdb %xmm0, %xmm0
-; AVX512-NEXT:    retq
+; AVX-LABEL: ustest_f32i8:
+; AVX:       # %bb.0: # %entry
+; AVX-NEXT:    vcvttps2dq %xmm0, %xmm0
+; AVX-NEXT:    vpackssdw %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    vpackuswb %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    retq
 entry:
   %conv = fptosi <4 x float> %x to <4 x i32>
   %0 = icmp slt <4 x i32> %conv, <i32 255, i32 255, i32 255, i32 255>
@@ -3863,38 +3737,14 @@ define <2 x i16> @stest_f64i16_mm(<2 x double> %x) nounwind {
 ; SSE-LABEL: stest_f64i16_mm:
 ; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    cvttpd2dq %xmm0, %xmm0
-; SSE-NEXT:    movdqa {{.*#+}} xmm1 = <32767,32767,u,u>
-; SSE-NEXT:    movdqa %xmm1, %xmm2
-; SSE-NEXT:    pcmpgtd %xmm0, %xmm2
-; SSE-NEXT:    pand %xmm2, %xmm0
-; SSE-NEXT:    pandn %xmm1, %xmm2
-; SSE-NEXT:    por %xmm0, %xmm2
-; SSE-NEXT:    movdqa {{.*#+}} xmm0 = <4294934528,4294934528,u,u>
-; SSE-NEXT:    movdqa %xmm2, %xmm1
-; SSE-NEXT:    pcmpgtd %xmm0, %xmm1
-; SSE-NEXT:    pand %xmm1, %xmm2
-; SSE-NEXT:    pandn %xmm0, %xmm1
-; SSE-NEXT:    por %xmm2, %xmm1
-; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm1[0,2,2,3,4,5,6,7]
+; SSE-NEXT:    packssdw %xmm0, %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX2-LABEL: stest_f64i16_mm:
-; AVX2:       # %bb.0: # %entry
-; AVX2-NEXT:    vcvttpd2dq %xmm0, %xmm0
-; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [32767,32767,32767,32767]
-; AVX2-NEXT:    vpminsd %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [4294934528,4294934528,4294934528,4294934528]
-; AVX2-NEXT:    vpmaxsd %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,2,2,3,4,5,6,7]
-; AVX2-NEXT:    retq
-;
-; AVX512-LABEL: stest_f64i16_mm:
-; AVX512:       # %bb.0: # %entry
-; AVX512-NEXT:    vcvttpd2dq %xmm0, %xmm0
-; AVX512-NEXT:    vpminsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
-; AVX512-NEXT:    vpmaxsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
-; AVX512-NEXT:    vpmovdw %xmm0, %xmm0
-; AVX512-NEXT:    retq
+; AVX-LABEL: stest_f64i16_mm:
+; AVX:       # %bb.0: # %entry
+; AVX-NEXT:    vcvttpd2dq %xmm0, %xmm0
+; AVX-NEXT:    vpackssdw %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    retq
 entry:
   %conv = fptosi <2 x double> %x to <2 x i32>
   %spec.store.select = call <2 x i32> @llvm.smin.v2i32(<2 x i32> %conv, <2 x i32> <i32 32767, i32 32767>)
@@ -3966,24 +3816,11 @@ define <2 x i16> @ustest_f64i16_mm(<2 x double> %x) nounwind {
 ; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm1[0,2,2,3,4,5,6,7]
 ; SSE-NEXT:    retq
 ;
-; AVX2-LABEL: ustest_f64i16_mm:
-; AVX2:       # %bb.0: # %entry
-; AVX2-NEXT:    vcvttpd2dq %xmm0, %xmm0
-; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [65535,65535,65535,65535]
-; AVX2-NEXT:    vpminsd %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX2-NEXT:    vpmaxsd %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,2,2,3,4,5,6,7]
-; AVX2-NEXT:    retq
-;
-; AVX512-LABEL: ustest_f64i16_mm:
-; AVX512:       # %bb.0: # %entry
-; AVX512-NEXT:    vcvttpd2dq %xmm0, %xmm0
-; AVX512-NEXT:    vpminsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
-; AVX512-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX512-NEXT:    vpmaxsd %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vpmovdw %xmm0, %xmm0
-; AVX512-NEXT:    retq
+; AVX-LABEL: ustest_f64i16_mm:
+; AVX:       # %bb.0: # %entry
+; AVX-NEXT:    vcvttpd2dq %xmm0, %xmm0
+; AVX-NEXT:    vpackusdw %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    retq
 entry:
   %conv = fptosi <2 x double> %x to <2 x i32>
   %spec.store.select = call <2 x i32> @llvm.smin.v2i32(<2 x i32> %conv, <2 x i32> <i32 65535, i32 65535>)
