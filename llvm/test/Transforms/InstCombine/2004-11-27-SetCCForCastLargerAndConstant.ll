@@ -404,8 +404,9 @@ define i1 @different_size_sext_sext_ule(i7 %x, i4 %y) {
 
 define i1 @different_size_sext_zext_ne(i7 %x, i4 %y) {
 ; CHECK-LABEL: @different_size_sext_zext_ne(
-; CHECK-NEXT:    [[TMP1:%.*]] = sext i4 [[Y:%.*]] to i7
-; CHECK-NEXT:    [[R:%.*]] = icmp ne i7 [[TMP1]], [[X:%.*]]
+; CHECK-NEXT:    [[SX:%.*]] = sext i7 [[X:%.*]] to i25
+; CHECK-NEXT:    [[ZY:%.*]] = zext i4 [[Y:%.*]] to i25
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i25 [[SX]], [[ZY]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %sx = sext i7 %x to i25

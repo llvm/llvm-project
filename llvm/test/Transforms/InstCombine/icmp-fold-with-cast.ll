@@ -104,7 +104,7 @@ for.cond:                                         ; preds = %cond.end, %entry
   br i1 %cmp, label %for.body, label %for.cond.cleanup
 
 for.body:                                         ; preds = %for.cond
-  %conv = zext i16 %p.0 to i32                    ;; %p.0 is always positive here
+  %conv = zext nneg i16 %p.0 to i32                    ;; %p.0 is always positive here
   %idxprom = sext i32 %i.0 to i64
   %arrayidx = getelementptr i16, ptr %v, i64 %idxprom
   %0 = load i16, ptr %arrayidx, align 2
@@ -157,7 +157,7 @@ for.cond:                                         ; preds = %cond.end, %entry
   br label %for.body
 
 for.body:                                         ; preds = %for.cond
-  %conv = zext i16 %v to i32                    ;; %p.0 is always positive here
+  %conv = zext nneg i16 %v to i32                    ;; %p.0 is always positive here
   %conv1 = sext i16 %x to i32                    ;; %p.0 is always positive here
   %cmp2 = icmp slt i32 %conv1, %conv ;; positive/positive
   br i1 %cmp2, label %cond.true, label %cond.false
