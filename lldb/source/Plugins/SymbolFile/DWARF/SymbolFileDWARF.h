@@ -342,6 +342,11 @@ public:
     return m_forward_decl_compiler_type_to_die;
   }
 
+  typedef llvm::DenseMap<const DWARFDebugInfoEntry *, lldb::VariableSP>
+      DIEToVariableSP;
+
+  virtual DIEToVariableSP &GetDIEToVariable() { return m_die_to_variable_sp; }
+
   virtual UniqueDWARFASTTypeMap &GetUniqueDWARFASTTypeMap();
 
   bool ClassOrStructIsVirtual(const DWARFDIE &die);
@@ -361,9 +366,6 @@ public:
   Type *ResolveTypeUID(const DIERef &die_ref);
 
 protected:
-  typedef llvm::DenseMap<const DWARFDebugInfoEntry *, lldb::VariableSP>
-      DIEToVariableSP;
-
   SymbolFileDWARF(const SymbolFileDWARF &) = delete;
   const SymbolFileDWARF &operator=(const SymbolFileDWARF &) = delete;
 
@@ -486,8 +488,6 @@ protected:
   GlobalVariableMap &GetGlobalAranges();
 
   void UpdateExternalModuleListIfNeeded();
-
-  virtual DIEToVariableSP &GetDIEToVariable() { return m_die_to_variable_sp; }
 
   void BuildCuTranslationTable();
   std::optional<uint32_t> GetDWARFUnitIndex(uint32_t cu_idx);

@@ -373,6 +373,9 @@ private:
                        lldb_private::CompilerType &class_clang_type,
                        const lldb::AccessType default_accesibility,
                        lldb_private::ClangASTImporter::LayoutInfo &layout_info);
+
+  std::optional<lldb_private::plugin::dwarf::DWARFFormValue>
+  FindConstantOnVariableDefinition(lldb_private::plugin::dwarf::DWARFDIE die);
 };
 
 /// Parsed form of all attributes that are relevant for type reconstruction.
