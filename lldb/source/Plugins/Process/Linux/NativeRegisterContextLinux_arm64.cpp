@@ -616,7 +616,7 @@ enum RegisterSetType : uint32_t {
   // Pointer authentication registers are read only, so not included here.
   MTE,
   TLS,
-  SME,  // ZA only , SVCR and SVG are pseudo registers.
+  SME,  // ZA only, because SVCR and SVG are pseudo registers.
   SME2, // ZT only.
 };
 
@@ -670,8 +670,8 @@ NativeRegisterContextLinux_arm64::CacheAllRegisters(uint32_t &cached_size) {
         // And ZA is active, which means that ZT0 is also active.
         m_za_header.size > sizeof(m_za_header)) {
       cached_size += sizeof(RegisterSetType) + GetZTBufferSize();
-      // Unlike ZA where we have to fake data for an inactive ZA, the kernel
-      // handles an inactive ZA for us and always returns some data.
+      // The kernel handles an inactive ZT0 for us, and it will read as 0s if
+      // inactive (unlike ZA where we fake that behaviour).
       error = ReadZT();
       if (error.Fail())
         return error;
