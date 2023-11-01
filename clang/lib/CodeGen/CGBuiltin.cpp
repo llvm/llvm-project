@@ -885,16 +885,14 @@ CodeGenFunction::emitBuiltinObjectSize(const Expr *E, unsigned Type,
           CountedByFD->getDeclContext()->getOuterLexicalRecordContext();
       ASTContext &Ctx = getContext();
 
-      // Find the flexible array member.
-      const ValueDecl *FAM = FindFlexibleArrayMemberField(Ctx, OuterRD);
-
       // Load the counted_by field.
       const Expr *CountedByExpr = BuildCountedByFieldExpr(E, CountedByFD);
       llvm::Value *CountedByInst =
           EmitAnyExprToTemp(CountedByExpr).getScalarVal();
 
       // Get the size of the flexible array member's base type.
-      const auto *ArrayTy = Ctx.getAsArrayType(FAM->getType());
+      const ValueDecl *FAM = FindFlexibleArrayMemberField(Ctx, OuterRD);
+      const ArrayType *ArrayTy = Ctx.getAsArrayType(FAM->getType());
       CharUnits Size = Ctx.getTypeSizeInChars(ArrayTy->getElementType());
       llvm::Constant *ElemSize =
           llvm::ConstantInt::get(CountedByInst->getType(), Size.getQuantity());
@@ -902,17 +900,20 @@ CodeGenFunction::emitBuiltinObjectSize(const Expr *E, unsigned Type,
       llvm::Value *FAMSize = Builder.CreateMul(CountedByInst, ElemSize);
       llvm::Value *Res = Builder.CreateZExtOrTrunc(FAMSize, ResType);
 
-      // The whole struct is specificed in the __bdos.
       if (const auto *DRE = dyn_cast<DeclRefExpr>(E->IgnoreParenImpCasts())) {
+        // The whole struct is specificed in the __bdos.
         // Get the full size of the struct.
         const ASTRecordLayout &Layout = Ctx.getASTRecordLayout(OuterRD);
         llvm::Value *SizeofStruct =
             ConstantInt::get(ResType, Layout.getSize().getQuantity(), true);
 
+        // Get the offset of the FAM.
         CharUnits Offset = Ctx.toCharUnitsFromBits(Ctx.getFieldOffset(FAM));
         llvm::Value *FAMOffset =
             ConstantInt::get(ResType, Offset.getQuantity(), true);
 
+        // max(sizeof(struct s),
+        //     offsetof(struct s, array) + p->count * sizeof(*p->array))
         llvm::Value *OffsetAndFAMSize = Builder.CreateAdd(FAMOffset, Res);
         Res = Builder.CreateBinaryIntrinsic(llvm::Intrinsic::smax,
                                             OffsetAndFAMSize, SizeofStruct);
