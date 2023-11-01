@@ -28,6 +28,7 @@ func.func @inner_func_inlinable(%ptr : !llvm.ptr) -> i32 {
   llvm.unreachable
 ^bb2:
   llvm.intr.stackrestore %stack : !llvm.ptr
+  llvm.call_intrinsic "llvm.x86.sse41.round.ss"() : () -> (vector<8xf32>)
   return %1 : i32
 }
 
@@ -50,6 +51,7 @@ func.func @inner_func_inlinable(%ptr : !llvm.ptr) -> i32 {
 // CHECK: llvm.inline_asm has_side_effects "foo", "bar"
 // CHECK: llvm.unreachable
 // CHECK: llvm.intr.stackrestore %[[STACK]]
+// CHECK: llvm.call_intrinsic "llvm.x86.sse41.round.ss"(
 func.func @test_inline(%ptr : !llvm.ptr) -> i32 {
   %0 = call @inner_func_inlinable(%ptr) : (!llvm.ptr) -> i32
   return %0 : i32
