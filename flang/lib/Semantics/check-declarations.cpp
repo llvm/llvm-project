@@ -198,10 +198,10 @@ private:
   SemanticsContext &context_;
   struct ProcedureInfo {
     GenericKind kind;
-    const Symbol &symbol;
     const Procedure &procedure;
   };
-  std::map<SourceName, std::vector<ProcedureInfo>> nameToInfo_;
+  std::map<SourceName, std::map<const Symbol *, ProcedureInfo>>
+      nameToSpecifics_;
 };
 
 void CheckHelper::Check(const ParamValue &value, bool canBeAssumed) {
@@ -3444,26 +3444,26 @@ evaluate::Shape SubprogramMatchHelper::FoldShape(const evaluate::Shape &shape) {
 }
 
 void DistinguishabilityHelper::Add(const Symbol &generic, GenericKind kind,
-    const Symbol &specific, const Procedure &procedure) {
-  if (!context_.HasError(specific)) {
-    nameToInfo_[generic.name()].emplace_back(
-        ProcedureInfo{kind, specific, procedure});
+    const Symbol &ultimateSpecific, const Procedure &procedure) {
+  if (!context_.HasError(ultimateSpecific)) {
+    nameToSpecifics_[generic.name()].emplace(
+        &ultimateSpecific, ProcedureInfo{kind, procedure});
   }
 }
 
 void DistinguishabilityHelper::Check(const Scope &scope) {
-  for (const auto &[name, info] : nameToInfo_) {
-    auto count{info.size()};
-    for (std::size_t i1{0}; i1 < count - 1; ++i1) {
-      const auto &[kind, symbol, proc]{info[i1]};
-      for (std::size_t i2{i1 + 1}; i2 < count; ++i2) {
+  for (const auto &[name, info] : nameToSpecifics_) {
+    for (auto iter1{info.begin()}; iter1 != info.end(); ++iter1) {
+      const auto &[ultimate, procInfo]{*iter1};
+      const auto &[kind, proc]{procInfo};
+      for (auto iter2{iter1}; ++iter2 != info.end();) {
         auto distinguishable{kind.IsName()
                 ? evaluate::characteristics::Distinguishable
                 : evaluate::characteristics::DistinguishableOpOrAssign};
         if (!distinguishable(
-                context_.languageFeatures(), proc, info[i2].procedure)) {
+                context_.languageFeatures(), proc, iter2->second.procedure)) {
           SayNotDistinguishable(GetTopLevelUnitContaining(scope), name, kind,
-              symbol, info[i2].symbol);
+              *ultimate, *iter2->first);
         }
       }
     }
