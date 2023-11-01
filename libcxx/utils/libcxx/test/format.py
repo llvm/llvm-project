@@ -81,8 +81,15 @@ def parseScript(test, preamble):
     #       errors, which doesn't make sense for clang-verify tests because we may want to check
     #       for specific warning diagnostics.
     _checkBaseSubstitutions(substitutions)
-    substitutions.append(("%{build}", "%{cxx} %s %{flags} %{compile_flags} %{link_flags} -o %t.exe"))
-    substitutions.append(("%{verify}", "%{cxx} %s %{flags} %{compile_flags} -fsyntax-only -Wno-error -Xclang -verify -Xclang -verify-ignore-unexpected=note -ferror-limit=0"))
+    substitutions.append(
+        ("%{build}", "%{cxx} %s %{flags} %{compile_flags} %{link_flags} -o %t.exe")
+    )
+    substitutions.append(
+        (
+            "%{verify}",
+            "%{cxx} %s %{flags} %{compile_flags} -fsyntax-only -Wno-error -Xclang -verify -Xclang -verify-ignore-unexpected=note -ferror-limit=0",
+        )
+    )
     substitutions.append(("%{run}", "%{exec} %t.exe"))
 
     # Parse the test file, including custom directives
@@ -312,9 +319,7 @@ class CxxStandardLibraryTest(lit.formats.FileBasedTest):
                         test.getFullName()
                     ),
                 )
-            steps = [
-                "%dbg(COMPILED WITH) %{verify}"
-            ]
+            steps = ["%dbg(COMPILED WITH) %{verify}"]
             return self._executeShTest(test, litConfig, steps)
         # Make sure to check these ones last, since they will match other
         # suffixes above too.
