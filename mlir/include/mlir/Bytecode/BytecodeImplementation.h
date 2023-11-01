@@ -412,7 +412,7 @@ public:
   template <class T>
   FailureOr<const DialectVersion *> getDialectVersion() const {
     return getDialectVersion(T::getDialectNamespace());
-  };
+  }
 };
 
 //===----------------------------------------------------------------------===//
