@@ -429,3 +429,19 @@ namespace qualified_friend_no_match {
     friend void Y::f(double); // expected-error {{friend declaration of 'f' does not match any declaration in 'qualified_friend_no_match::Y'}}
   };
 }
+
+namespace gh21483 {
+template <typename I>
+struct B {
+  struct mixin {
+    int type;
+    friend void foo(B<I>::mixin it) {
+      (void)it.mixin::type;
+    }
+  };
+};
+
+void bar() {
+  foo(B<int>::mixin{});
+}
+}
