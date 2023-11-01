@@ -10,9 +10,6 @@
 
 // UNSUPPORTED: c++03, c++11, c++14
 
-// We get availability markup errors when aligned allocation is missing
-// XFAIL: availability-aligned_allocation-missing
-
 // asan and msan will not call the new handler.
 // UNSUPPORTED: sanitizer-new-delete
 
