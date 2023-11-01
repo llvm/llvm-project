@@ -32,11 +32,6 @@ def SubsetOpInterface : OpInterface<"SubsetOpInterface"> {
       hyperrectangular slice.
     - `tensor.gather/scatter` describe the subset as list of indices. (Not
       implemented yet.)
-
-    Note: This interface does not expose any interface methods to get a
-    description of the accessed subset. That is because there is currently no
-    efficient way to describe arbitrary subsets. This interface merely provides
-    interface methods to check if two subsets are equivalent or disjoint.
   }];
 
   let cppNamespace = "::mlir";
@@ -46,30 +41,74 @@ def SubsetOpInterface : OpInterface<"SubsetOpInterface"> {
           Return "true" if this op and the given candidate subset op operate on
           equivalent subsets. Return "false" if the two subsets are disjoint
           or cannot be proven to be equivalent.
+
+          This interface method does not have to be implemented if
+          `getAccessedHyperrectangularSlice` is implemented.
         }],
         /*retType=*/"bool",
         /*methodName=*/"operatesOnEquivalentSubset",
         /*args=*/(ins
             "::mlir::SubsetOpInterface":$candidate,
-            "::llvm::function_ref<bool(Value, Value)>":$equivalenceFn)
+            "::llvm::function_ref<bool(Value, Value)>":$equivalenceFn),
+        /*methodBody=*/"",
+        /*defaultImplementation=*/[{
+          return ::mlir::detail::defaultOperatesOnEquivalentSubset(
+              $_op, candidate, equivalenceFn);
+        }]
       >,
       InterfaceMethod<
         /*desc=*/[{
           Return "true" if this op and the given candidate subset op operate on
           disjoint subsets. Return "false" if the two subsets are equivalent,
           overlapping or cannot be proven to be disjoint.
+
+          This interface method does not have to be implemented if
+          `getAccessedHyperrectangularSlice` is implemented.
         }],
         /*retType=*/"bool",
         /*methodName=*/"operatesOnDisjointSubset",
         /*args=*/(ins
             "::mlir::SubsetOpInterface":$candidate,
-            "::llvm::function_ref<bool(Value, Value)>":$equivalenceFn)
+            "::llvm::function_ref<bool(Value, Value)>":$equivalenceFn),
+        /*methodBody=*/"",
+        /*defaultImplementation=*/[{
+          return ::mlir::detail::defaultOperatesOnDisjointSubset(
+              $_op, candidate, equivalenceFn);
+        }]
+      >,
+      InterfaceMethod<
+        /*desc=*/[{
+          If this op operates on a hyperrectangular subset, return a
+          description of the subset in terms of offsets, sizes and strides.
+          Otherwise, return "failure".
+
+          This interface method is a convenience method for the most common case
+          of hyperrectangular subset ops. It is optional. If it is implemented,
+          `operatesOnEquivalentSubset` and `operatesOnDisjointSubset` do not
+          have to be implemented.
+        }],
+        /*retType=*/"::mlir::FailureOr<::mlir::HyperrectangularSlice>",
+        /*methodName=*/"getAccessedHyperrectangularSlice",
+        /*args=*/(ins),
+        /*methodBody=*/"",
+        /*defaultImplementation=*/[{
+          return ::mlir::failure();
+        }]
       >,
   ];
 
   let verify = [{
     return ::mlir::detail::verifySubsetOpInterface(
         ::mlir::cast<::mlir::SubsetOpInterface>($_op));
+  }];
+
+  let extraClassDeclaration = [{
+    /// Return the container that this operation is operating on. In case of an
+    /// extraction op, the container is the source tensor. In case of an
+    /// insertion op, the container is the destination tensor.
+    Value getTensorContainer() {
+      return ::mlir::detail::getTensorContainer(getOperation());
+    }
   }];
 }
 
