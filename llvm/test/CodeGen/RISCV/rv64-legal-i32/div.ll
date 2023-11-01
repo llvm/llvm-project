@@ -184,14 +184,14 @@ define i8 @udiv8_constant(i8 %a) nounwind {
 define i8 @udiv8_pow2(i8 %a) nounwind {
 ; RV64I-LABEL: udiv8_pow2:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    andi a0, a0, 248
-; RV64I-NEXT:    srliw a0, a0, 3
+; RV64I-NEXT:    slli a0, a0, 56
+; RV64I-NEXT:    srli a0, a0, 59
 ; RV64I-NEXT:    ret
 ;
 ; RV64IM-LABEL: udiv8_pow2:
 ; RV64IM:       # %bb.0:
-; RV64IM-NEXT:    andi a0, a0, 248
-; RV64IM-NEXT:    srliw a0, a0, 3
+; RV64IM-NEXT:    slli a0, a0, 56
+; RV64IM-NEXT:    srli a0, a0, 59
 ; RV64IM-NEXT:    ret
   %1 = udiv i8 %a, 8
   ret i8 %1
@@ -260,11 +260,10 @@ define i16 @udiv16_constant(i16 %a) nounwind {
 ;
 ; RV64IM-LABEL: udiv16_constant:
 ; RV64IM:       # %bb.0:
+; RV64IM-NEXT:    lui a1, 52429
+; RV64IM-NEXT:    slli a1, a1, 4
 ; RV64IM-NEXT:    slli a0, a0, 48
-; RV64IM-NEXT:    srli a0, a0, 48
-; RV64IM-NEXT:    lui a1, 13
-; RV64IM-NEXT:    addi a1, a1, -819
-; RV64IM-NEXT:    mul a0, a0, a1
+; RV64IM-NEXT:    mulhu a0, a0, a1
 ; RV64IM-NEXT:    srliw a0, a0, 18
 ; RV64IM-NEXT:    ret
   %1 = udiv i16 %a, 5
@@ -275,15 +274,13 @@ define i16 @udiv16_pow2(i16 %a) nounwind {
 ; RV64I-LABEL: udiv16_pow2:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    slli a0, a0, 48
-; RV64I-NEXT:    srli a0, a0, 48
-; RV64I-NEXT:    srliw a0, a0, 3
+; RV64I-NEXT:    srli a0, a0, 51
 ; RV64I-NEXT:    ret
 ;
 ; RV64IM-LABEL: udiv16_pow2:
 ; RV64IM:       # %bb.0:
 ; RV64IM-NEXT:    slli a0, a0, 48
-; RV64IM-NEXT:    srli a0, a0, 48
-; RV64IM-NEXT:    srliw a0, a0, 3
+; RV64IM-NEXT:    srli a0, a0, 51
 ; RV64IM-NEXT:    ret
   %1 = udiv i16 %a, 8
   ret i16 %1
@@ -304,8 +301,9 @@ define i16 @udiv16_constant_lhs(i16 %a) nounwind {
 ;
 ; RV64IM-LABEL: udiv16_constant_lhs:
 ; RV64IM:       # %bb.0:
-; RV64IM-NEXT:    slli a0, a0, 48
-; RV64IM-NEXT:    srli a0, a0, 48
+; RV64IM-NEXT:    lui a1, 16
+; RV64IM-NEXT:    addi a1, a1, -1
+; RV64IM-NEXT:    and a0, a0, a1
 ; RV64IM-NEXT:    li a1, 10
 ; RV64IM-NEXT:    divuw a0, a1, a0
 ; RV64IM-NEXT:    ret
@@ -536,8 +534,8 @@ define i8 @sdiv8_constant(i8 %a) nounwind {
 ; RV64IM-NEXT:    li a1, 103
 ; RV64IM-NEXT:    mul a0, a0, a1
 ; RV64IM-NEXT:    sraiw a1, a0, 9
-; RV64IM-NEXT:    srliw a0, a0, 15
-; RV64IM-NEXT:    andi a0, a0, 1
+; RV64IM-NEXT:    slli a0, a0, 48
+; RV64IM-NEXT:    srli a0, a0, 63
 ; RV64IM-NEXT:    addw a0, a1, a0
 ; RV64IM-NEXT:    ret
   %1 = sdiv i8 %a, 5
@@ -549,8 +547,8 @@ define i8 @sdiv8_pow2(i8 %a) nounwind {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    slli a1, a0, 24
 ; RV64I-NEXT:    sraiw a1, a1, 24
-; RV64I-NEXT:    srliw a1, a1, 12
-; RV64I-NEXT:    andi a1, a1, 7
+; RV64I-NEXT:    slli a1, a1, 49
+; RV64I-NEXT:    srli a1, a1, 61
 ; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    slli a0, a0, 24
 ; RV64I-NEXT:    sraiw a0, a0, 27
@@ -560,8 +558,8 @@ define i8 @sdiv8_pow2(i8 %a) nounwind {
 ; RV64IM:       # %bb.0:
 ; RV64IM-NEXT:    slli a1, a0, 24
 ; RV64IM-NEXT:    sraiw a1, a1, 24
-; RV64IM-NEXT:    srliw a1, a1, 12
-; RV64IM-NEXT:    andi a1, a1, 7
+; RV64IM-NEXT:    slli a1, a1, 49
+; RV64IM-NEXT:    srli a1, a1, 61
 ; RV64IM-NEXT:    add a0, a0, a1
 ; RV64IM-NEXT:    slli a0, a0, 24
 ; RV64IM-NEXT:    sraiw a0, a0, 27
@@ -653,8 +651,8 @@ define i16 @sdiv16_pow2(i16 %a) nounwind {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    slli a1, a0, 16
 ; RV64I-NEXT:    sraiw a1, a1, 16
-; RV64I-NEXT:    srliw a1, a1, 28
-; RV64I-NEXT:    andi a1, a1, 7
+; RV64I-NEXT:    slli a1, a1, 33
+; RV64I-NEXT:    srli a1, a1, 61
 ; RV64I-NEXT:    add a0, a0, a1
 ; RV64I-NEXT:    slli a0, a0, 16
 ; RV64I-NEXT:    sraiw a0, a0, 19
@@ -664,8 +662,8 @@ define i16 @sdiv16_pow2(i16 %a) nounwind {
 ; RV64IM:       # %bb.0:
 ; RV64IM-NEXT:    slli a1, a0, 16
 ; RV64IM-NEXT:    sraiw a1, a1, 16
-; RV64IM-NEXT:    srliw a1, a1, 28
-; RV64IM-NEXT:    andi a1, a1, 7
+; RV64IM-NEXT:    slli a1, a1, 33
+; RV64IM-NEXT:    srli a1, a1, 61
 ; RV64IM-NEXT:    add a0, a0, a1
 ; RV64IM-NEXT:    slli a0, a0, 16
 ; RV64IM-NEXT:    sraiw a0, a0, 19

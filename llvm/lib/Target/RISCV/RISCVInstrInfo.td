@@ -2023,12 +2023,21 @@ def : Pat<(trunc GPR:$src), (COPY GPR:$src)>;
 
 def : PatGprGpr<add, ADDW, i32, i32>;
 def : PatGprGpr<sub, SUBW, i32, i32>;
+def : PatGprGpr<and, AND, i32, i32>;
+def : PatGprGpr<or, OR, i32, i32>;
+def : PatGprGpr<xor, XOR, i32, i32>;
 def : PatGprGpr<shiftopw<shl>, SLLW, i32, i64>;
 def : PatGprGpr<shiftopw<srl>, SRLW, i32, i64>;
 def : PatGprGpr<shiftopw<sra>, SRAW, i32, i64>;
 
 def : Pat<(i32 (add GPR:$rs1, simm12i32:$imm)),
           (ADDIW GPR:$rs1, (i64 (as_i64imm $imm)))>;
+def : Pat<(i32 (and GPR:$rs1, simm12i32:$imm)),
+          (ANDI GPR:$rs1, (i64 (as_i64imm $imm)))>;
+def : Pat<(i32 (or GPR:$rs1, simm12i32:$imm)),
+          (ORI GPR:$rs1, (i64 (as_i64imm $imm)))>;
+def : Pat<(i32 (xor GPR:$rs1, simm12i32:$imm)),
+          (XORI GPR:$rs1, (i64 (as_i64imm $imm)))>;
 
 def : PatGprImm<shl, SLLIW, uimm5, i32>;
 def : PatGprImm<srl, SRLIW, uimm5, i32>;
