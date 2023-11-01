@@ -10234,6 +10234,8 @@ def err_missing_type_specifier : Error<
   "a type specifier is required for all declarations">;
 def err_dfp_disabled : Error<
   "decimal floating-point extensions are not enabled">;
+def err_dfp_not_supported : Error<
+  "decimal floating-point extensions are not supported on the current target">;
 def err_objc_array_of_interfaces : Error<
   "array of interface %0 is invalid (probably should be an array of pointers)">;
 def ext_c99_array_usage : Extension<

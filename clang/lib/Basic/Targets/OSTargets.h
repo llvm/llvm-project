@@ -352,6 +352,12 @@ public:
     case llvm::Triple::x86:
     case llvm::Triple::x86_64:
       this->HasFloat128 = true;
+      if (!Triple.isAndroid()) {
+        // Android NDK r23 and later no longer provide libgcc. DFP support
+        // for Android is therefore not enabled by default pending the
+        // availability of a different DFP run-time library.
+        this->DecimalFloatEnablementAndMode = DecimalFloatMode::BID;
+      }
       break;
     }
   }

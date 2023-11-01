@@ -524,6 +524,12 @@ void TargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts) {
 
   if (Opts.FakeAddressSpaceMap)
     AddrSpaceMap = &FakeAddrSpaceMap;
+
+  // If decimal floating-point extensions are not enabled at the language
+  // level, reset the target dependent DFP mode configuration in order to
+  // avoid surprises.
+  if (!Opts.DecimalFloatingPoint)
+    DecimalFloatEnablementAndMode.reset();
 }
 
 bool TargetInfo::initFeatureMap(

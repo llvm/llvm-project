@@ -1592,6 +1592,10 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
       S.Diag(DS.getTypeSpecTypeLoc(), diag::err_dfp_disabled);
       Result = Context.IntTy;
       declarator.setInvalidType(true);
+    } else if (!S.Context.getTargetInfo().hasDecimalFloatingPoint()) {
+      S.Diag(DS.getTypeSpecTypeLoc(), diag::err_dfp_not_supported);
+      Result = Context.IntTy;
+      declarator.setInvalidType(true);
     } else {
       Result = TSTToDecimalFloatType(Context, DS.getTypeSpecType());
     }

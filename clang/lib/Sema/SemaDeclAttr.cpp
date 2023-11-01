@@ -4865,6 +4865,10 @@ void Sema::AddModeAttr(Decl *D, const AttributeCommonInfo &CI,
       Diag(AttrLoc, diag::err_dfp_disabled);
       return;
     }
+    if (!Context.getTargetInfo().hasDecimalFloatingPoint()) {
+      Diag(AttrLoc, diag::err_dfp_not_supported);
+      return;
+    }
   }
 
   if (ComplexMode) {
