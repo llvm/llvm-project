@@ -546,7 +546,8 @@ define i32 @promotionOfArgEndsUpInValue(ptr %addr) {
 ; OPT-NEXT:  entry:
 ; OPT-NEXT:    [[VAL:%.*]] = load i16, ptr [[ADDR]], align 2
 ; OPT-NEXT:    [[CONV3:%.*]] = sext i16 [[VAL]] to i32
-; OPT-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[CONV3]], zext (i1 icmp ne (ptr getelementptr inbounds ([2 x i32], ptr @c, i64 0, i64 1), ptr @a) to i32)
+; OPT-NEXT:    [[PROMOTED:%.*]] = sext i16 zext (i1 icmp ne (ptr getelementptr inbounds ([2 x i32], ptr @c, i64 0, i64 1), ptr @a) to i16) to i32
+; OPT-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[CONV3]], [[PROMOTED]]
 ; OPT-NEXT:    ret i32 [[ADD]]
 ;
 ; DISABLE-LABEL: define i32 @promotionOfArgEndsUpInValue(
