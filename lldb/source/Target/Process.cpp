@@ -2639,6 +2639,19 @@ Status Process::LoadCore() {
     else
       StartPrivateStateThread();
 
+    DynamicLoader *dyld = GetDynamicLoader();
+    if (dyld)
+      dyld->DidAttach();
+
+    GetJITLoaders().DidAttach();
+
+    SystemRuntime *system_runtime = GetSystemRuntime();
+    if (system_runtime)
+      system_runtime->DidAttach();
+
+    if (!m_os_up)
+      LoadOperatingSystemPlugin(false);
+
     // We successfully loaded a core file, now pretend we stopped so we can
     // show all of the threads in the core file and explore the crashed state.
     SetPrivateState(eStateStopped);
@@ -2655,23 +2668,7 @@ Status Process::LoadCore() {
                 StateAsCString(state));
       error.SetErrorString(
           "Did not get stopped event after loading the core file.");
-    } else {
-      DidLoadCore();
-
-      DynamicLoader *dyld = GetDynamicLoader();
-      if (dyld)
-        dyld->DidAttach();
-
-      GetJITLoaders().DidAttach();
-
-      SystemRuntime *system_runtime = GetSystemRuntime();
-      if (system_runtime)
-        system_runtime->DidAttach();
-
-      if (!m_os_up)
-        LoadOperatingSystemPlugin(false);
     }
-
     RestoreProcessEvents();
   }
   return error;

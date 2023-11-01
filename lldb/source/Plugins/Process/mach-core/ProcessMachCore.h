@@ -46,8 +46,6 @@ public:
   // Creating a new process, or attaching to an existing one
   lldb_private::Status DoLoadCore() override;
 
-  void DidLoadCore() override;
-
   lldb_private::DynamicLoader *GetDynamicLoader() override;
 
   // PluginInterface protocol
