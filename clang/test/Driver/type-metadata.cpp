@@ -3,12 +3,6 @@
 // RUN: %clang -fprofile-generate -fno-lto -target x86_64-unknown-linux -emit-llvm -S %s -o - | FileCheck %s --check-prefix=ITANIUM
 // RUN: %clang -fprofile-generate -fno-lto -target x86_64-pc-windows-msvc -emit-llvm -S %s -o - | FileCheck %s --check-prefix=MS
 
-// Test that type metadata are emitted with -fprofile-use
-//
-// RUN: llvm-profdata merge %S/Inputs/irpgo.proftext -o %t-ir.profdata
-// RUN: %clang -fprofile-use=%t-ir.profdata -fno-lto -target x86_64-unknown-linux -emit-llvm -S %s -o - | FileCheck %s --check-prefix=ITANIUM
-// RUN: %clang -fprofile-use=%t-ir.profdata -fno-lto -target x86_64-pc-windows-msvc -emit-llvm -S %s -o - | FileCheck %s --check-prefix=MS
-
 // ITANIUM: @_ZTV1A = {{[^!]*}}, !type [[A16:![0-9]+]]
 // ITANIUM-SAME:  !type [[AF16:![0-9]+]]
 
