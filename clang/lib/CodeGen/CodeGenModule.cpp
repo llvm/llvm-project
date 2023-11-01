@@ -977,9 +977,11 @@ void CodeGenModule::Release() {
   getModule().addModuleFlag(llvm::Module::Error, "wchar_size", WCharWidth);
 
   if (getTriple().isOSzOS()) {
-    getModule().addModuleFlag(llvm::Module::Warning, "zos_product_major_version",
+    getModule().addModuleFlag(llvm::Module::Warning,
+                              "zos_product_major_version",
                               uint32_t(CLANG_VERSION_MAJOR));
-    getModule().addModuleFlag(llvm::Module::Warning, "zos_product_minor_version",
+    getModule().addModuleFlag(llvm::Module::Warning,
+                              "zos_product_minor_version",
                               uint32_t(CLANG_VERSION_MINOR));
     getModule().addModuleFlag(llvm::Module::Warning, "zos_product_patchlevel",
                               uint32_t(CLANG_VERSION_PATCHLEVEL));
