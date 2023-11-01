@@ -6,15 +6,10 @@ define void @test(ptr noalias %pl, ptr noalias %res, ptr noalias %p2) {
 ; CHECK-LABEL: define void @test(
 ; CHECK-SAME: ptr noalias [[PL:%.*]], ptr noalias [[RES:%.*]], ptr noalias [[P2:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr @arr_i32, align 16
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr getelementptr inbounds ([32 x i32], ptr @arr_i32, i64 0, i64 1), align 4
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP1]], [[TMP0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr getelementptr inbounds ([32 x i32], ptr @arr_i32, i64 0, i64 2), align 8
-; CHECK-NEXT:    [[ADD_1:%.*]] = add nsw i32 [[TMP2]], [[ADD]]
-; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr getelementptr inbounds ([32 x i32], ptr @arr_i32, i64 0, i64 3), align 4
-; CHECK-NEXT:    [[ADD_2:%.*]] = add nsw i32 [[TMP3]], [[ADD_1]]
-; CHECK-NEXT:    store i32 [[ADD_2]], ptr [[P2]], align 16
-; CHECK-NEXT:    store i32 [[ADD_2]], ptr [[RES]], align 16
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr @arr_i32, align 16
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP0]])
+; CHECK-NEXT:    store i32 [[TMP1]], ptr [[P2]], align 16
+; CHECK-NEXT:    store i32 [[TMP1]], ptr [[RES]], align 16
 ; CHECK-NEXT:    ret void
 ;
 entry:
