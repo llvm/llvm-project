@@ -2016,6 +2016,19 @@ func.func @insert_element_fold() -> vector<4xi32> {
 
 // -----
 
+// CHECK-LABEL: func @insert_element_invalid_fold
+func.func @insert_element_invalid_fold() -> vector<1xf32> {
+  // Out-of-bound index here.
+  %c26 = arith.constant 26 : index
+  %cst_2 = arith.constant 1.60215309E+9 : f32
+  %cst_20 = arith.constant dense<1.60215309E+9> : vector<1xf32>
+// CHECK: vector.insertelement
+  %46 = vector.insertelement %cst_2, %cst_20[%c26 : index] : vector<1xf32>
+  return %46 : vector<1xf32>
+}
+
+// -----
+
 // CHECK-LABEL: func @extract_element_fold
 //       CHECK:   %[[C:.+]] = arith.constant 5 : i32
 //       CHECK:   return %[[C]]
