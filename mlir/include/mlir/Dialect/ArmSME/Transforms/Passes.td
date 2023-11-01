@@ -22,19 +22,27 @@ def EnableArmStreaming
   }];
   let constructor = "mlir::arm_sme::createEnableArmStreamingPass()";
   let options = [
-    Option<"mode", "mode", "mlir::arm_sme::ArmStreaming",
-          /*default=*/"mlir::arm_sme::ArmStreaming::Default",
+    Option<"streamingMode", "streaming-mode", "mlir::arm_sme::ArmStreamingMode",
+          /*default=*/"mlir::arm_sme::ArmStreamingMode::Default",
           "Select how streaming-mode is managed at the function-level.",
           [{::llvm::cl::values(
-                clEnumValN(mlir::arm_sme::ArmStreaming::Default, "default",
+                clEnumValN(mlir::arm_sme::ArmStreamingMode::Default, "default",
 						   "Streaming mode is part of the function interface "
 						   "(ABI), caller manages PSTATE.SM on entry/exit."),
-                clEnumValN(mlir::arm_sme::ArmStreaming::Locally, "locally",
+                clEnumValN(mlir::arm_sme::ArmStreamingMode::Locally, "locally",
 						   "Streaming mode is internal to the function, callee "
 						   "manages PSTATE.SM on entry/exit.")
           )}]>,
-    Option<"enableZA", "enable-za", "bool", /*default=*/"false",
-           "Enable ZA storage array.">,
+    Option<"zaMode", "za-mode", "mlir::arm_sme::ArmZaMode",
+           /*default=*/"mlir::arm_sme::ArmZaMode::Disabled",
+           "Select how ZA-storage is managed at the function-level.",
+           [{::llvm::cl::values(
+                clEnumValN(mlir::arm_sme::ArmZaMode::Disabled, "disabled",
+					 	   "ZA storage is not enabled."),
+                clEnumValN(mlir::arm_sme::ArmZaMode::New, "new",
+					 	   "The function has ZA state. The ZA state is created on entry "
+               "and destroyed on exit.")
+           )}]>
   ];
   let dependentDialects = ["func::FuncDialect"];
 }

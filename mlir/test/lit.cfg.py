@@ -126,6 +126,9 @@ if config.enable_rocm_runner:
 if config.enable_cuda_runner:
     tools.extend([add_runtime("mlir_cuda_runtime")])
 
+if config.mlir_run_arm_sme_tests:
+    tools.extend([add_runtime("mlir_arm_sme_runtime")])
+
 # The following tools are optional
 tools.extend(
     [
