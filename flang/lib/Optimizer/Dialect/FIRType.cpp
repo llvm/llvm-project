@@ -546,7 +546,7 @@ std::string getTypeAsString(mlir::Type ty, const fir::KindMapping &kindMap,
     } else if (auto charTy = mlir::dyn_cast_or_null<fir::CharacterType>(ty)) {
       name << 'c' << kindMap.getCharacterBitsize(charTy.getFKind());
       if (charTy.getLen() == fir::CharacterType::unknownLen())
-        name << "x?";
+        name << "xU";
       else if (charTy.getLen() != fir::CharacterType::singleton())
         name << "x" << charTy.getLen();
       break;
