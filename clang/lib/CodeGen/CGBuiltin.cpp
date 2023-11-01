@@ -9920,12 +9920,7 @@ void CodeGenFunction::GetAArch64SVEProcessedOperands(
       continue;
     }
 
-    if (IsTupleGetOrSet) {
-      Ops.push_back(EmitScalarExpr(E->getArg(i)));
-      continue;
-    }
-
-    if (!isa<ScalableVectorType>(Arg->getType())) {
+    if (IsTupleGetOrSet || !isa<ScalableVectorType>(Arg->getType())) {
       Ops.push_back(Arg);
       continue;
     }
@@ -9947,8 +9942,6 @@ void CodeGenFunction::GetAArch64SVEProcessedOperands(
       Ops.push_back(Builder.CreateExtractVector(NewVTy, Arg, Idx));
     }
   }
-
-  return;
 }
 
 Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
