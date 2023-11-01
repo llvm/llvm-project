@@ -51,6 +51,7 @@ CHECK1:      Successors: .Ltmp[[#BB13:]] (mispreds: 0, count: 300), .LFT[[#BB1:]
 CHECK1:    .LFT[[#BB1:]] (2 instructions, align : 1)
 # Check the overall inference stats.
 CHECK1:  2 out of 7 functions in the binary (28.6%) have non-empty execution profile
+CHECK1:  BOLT-WARNING: 2 (100.0% of all profiled) functions have invalid (possibly stale) profile
 CHECK1:  inferred profile for 2 (100.00% of profiled, 100.00% of stale) functions responsible for {{.*}} samples ({{.*}} out of {{.*}})
 
 
