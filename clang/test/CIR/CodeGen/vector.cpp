@@ -12,13 +12,13 @@ namespace std {
 } // namespace std
 
 // CHECK: cir.func linkonce_odr @_ZNSt6vectorIyE6resizeEm(
-// CHECK:   %0 = cir.alloca !cir.ptr<!ty_22std3A3Avector22>, cir.ptr <!cir.ptr<!ty_22std3A3Avector22>>, ["this", init] {alignment = 8 : i64}
+// CHECK:   %0 = cir.alloca !cir.ptr<!ty_22std3A3Avector3Cunsigned_long_long3E22>, cir.ptr <!cir.ptr<!ty_22std3A3Avector3Cunsigned_long_long3E22>>, ["this", init] {alignment = 8 : i64}
 // CHECK:   %1 = cir.alloca !u64i, cir.ptr <!u64i>, ["__sz", init] {alignment = 8 : i64}
 // CHECK:   %2 = cir.alloca !u64i, cir.ptr <!u64i>, ["__cs", init] {alignment = 8 : i64}
-// CHECK:   cir.store %arg0, %0 : !cir.ptr<!ty_22std3A3Avector22>, cir.ptr <!cir.ptr<!ty_22std3A3Avector22>>
+// CHECK:   cir.store %arg0, %0 : !cir.ptr<!ty_22std3A3Avector3Cunsigned_long_long3E22>, cir.ptr <!cir.ptr<!ty_22std3A3Avector3Cunsigned_long_long3E22>>
 // CHECK:   cir.store %arg1, %1 : !u64i, cir.ptr <!u64i>
-// CHECK:   %3 = cir.load %0 : cir.ptr <!cir.ptr<!ty_22std3A3Avector22>>, !cir.ptr<!ty_22std3A3Avector22>
-// CHECK:   %4 = cir.call @_ZNKSt6vectorIyE4sizeEv(%3) : (!cir.ptr<!ty_22std3A3Avector22>) -> !u64i
+// CHECK:   %3 = cir.load %0 : cir.ptr <!cir.ptr<!ty_22std3A3Avector3Cunsigned_long_long3E22>>, !cir.ptr<!ty_22std3A3Avector3Cunsigned_long_long3E22>
+// CHECK:   %4 = cir.call @_ZNKSt6vectorIyE4sizeEv(%3) : (!cir.ptr<!ty_22std3A3Avector3Cunsigned_long_long3E22>) -> !u64i
 // CHECK:   cir.store %4, %2 : !u64i, cir.ptr <!u64i>
 // CHECK:   cir.scope {
 // CHECK:     %5 = cir.load %2 : cir.ptr <!u64i>, !u64i
