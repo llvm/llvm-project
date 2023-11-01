@@ -1136,6 +1136,7 @@ struct DimOfMemRefReshape : public OpRewritePattern<DimOp> {
 void DimOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                         MLIRContext *context) {
   results.add<DimOfMemRefReshape>(context);
+  populateResolveRankedShapedTypeResultDimsPattern<memref::DimOp>(results);
 }
 
 // ---------------------------------------------------------------------------

@@ -118,6 +118,11 @@ void transform::ApplyReassociativeReshapeFoldingPatternsOp::populatePatterns(
   tensor::populateReassociativeReshapeFoldingPatterns(patterns);
 }
 
+void transform::ApplyTensorResolveRankedShapedTypeResultDimsPatternsOp::
+    populatePatterns(RewritePatternSet &patterns) {
+  populateResolveRankedShapedTypeResultDimsPattern<tensor::DimOp>(patterns);
+}
+
 void transform::ApplyRewriteTensorOpsAsConstantPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
   tensor::populateRewriteAsConstantPatterns(patterns);

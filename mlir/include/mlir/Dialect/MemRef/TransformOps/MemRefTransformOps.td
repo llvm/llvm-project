@@ -131,9 +131,10 @@ def ApplyFoldMemrefAliasOpsPatternsOp : Op<Transform_Dialect,
   let assemblyFormat = "attr-dict";
 }
 
-def ApplyResolveRankedShapedTypeResultDimsPatternsOp : Op<Transform_Dialect,
-    "apply_patterns.memref.resolve_ranked_shaped_type_result_dims",
-    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+def ApplyMemrefResolveRankedShapedTypeResultDimsPatternsOp
+    : Op<Transform_Dialect,
+        "apply_patterns.memref.resolve_ranked_shaped_type_result_dims",
+        [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
   let description = [{
     Collects patterns that resolve `memref.dim` operations with values that are
     defined by operations that implement the `ReifyRankedShapedTypeOpInterface`,

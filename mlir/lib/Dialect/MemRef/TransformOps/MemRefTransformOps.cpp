@@ -121,9 +121,9 @@ void transform::ApplyFoldMemrefAliasOpsPatternsOp::populatePatterns(
   memref::populateFoldMemRefAliasOpPatterns(patterns);
 }
 
-void transform::ApplyResolveRankedShapedTypeResultDimsPatternsOp::
+void transform::ApplyMemrefResolveRankedShapedTypeResultDimsPatternsOp::
     populatePatterns(RewritePatternSet &patterns) {
-  memref::populateResolveRankedShapedTypeResultDimsPatterns(patterns);
+  populateResolveRankedShapedTypeResultDimsPattern<memref::DimOp>(patterns);
 }
 
 //===----------------------------------------------------------------------===//

@@ -99,6 +99,19 @@ def ApplyReassociativeReshapeFoldingPatternsOp : Op<Transform_Dialect,
   let assemblyFormat = "attr-dict";
 }
 
+def ApplyTensorResolveRankedShapedTypeResultDimsPatternsOp
+    : Op<Transform_Dialect,
+        "apply_patterns.tensor.resolve_ranked_shaped_type_result_dims",
+        [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Collects patterns that resolve `tensor.dim` operations with values that are
+    defined by operations that implement the `ReifyRankedShapedTypeOpInterface`,
+    in terms of shapes of its input operands.
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
 def ApplyRewriteTensorOpsAsConstantPatternsOp : Op<Transform_Dialect,
     "apply_patterns.tensor.rewrite_as_constant",
     [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {

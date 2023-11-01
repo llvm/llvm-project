@@ -606,6 +606,7 @@ struct DimOfDestStyleOp : public OpRewritePattern<DimOp> {
 void DimOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                         MLIRContext *context) {
   results.add<DimOfCastOp, DimOfDestStyleOp>(context);
+  populateResolveRankedShapedTypeResultDimsPattern<tensor::DimOp>(results);
 }
 
 //===----------------------------------------------------------------------===//
@@ -737,23 +738,6 @@ struct ReplaceEmptyTensorStaticShapeDims : OpRewritePattern<EmptyOp> {
   }
 };
 
-struct FoldEmptyTensorWithDimOp : public OpRewritePattern<DimOp> {
-  using OpRewritePattern<DimOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(tensor::DimOp dimOp,
-                                PatternRewriter &rewriter) const override {
-    std::optional<int64_t> maybeConstantIndex = dimOp.getConstantIndex();
-    auto emptyTensorOp = dimOp.getSource().getDefiningOp<EmptyOp>();
-    if (!emptyTensorOp || !maybeConstantIndex)
-      return failure();
-    if (!emptyTensorOp.getType().isDynamicDim(*maybeConstantIndex))
-      return failure();
-    rewriter.replaceOp(dimOp,
-                       emptyTensorOp.getDynamicSize(*maybeConstantIndex));
-    return success();
-  }
-};
-
 /// Canonicalize
 ///
 /// ```mlir
@@ -830,8 +814,8 @@ struct FoldEmptyTensorWithCastOp : public OpRewritePattern<CastOp> {
 
 void EmptyOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                           MLIRContext *context) {
-  results.add<FoldEmptyTensorWithCastOp, FoldEmptyTensorWithDimOp,
-              ReplaceEmptyTensorStaticShapeDims>(context);
+  results.add<FoldEmptyTensorWithCastOp, ReplaceEmptyTensorStaticShapeDims>(
+      context);
 }
 
 //===----------------------------------------------------------------------===//

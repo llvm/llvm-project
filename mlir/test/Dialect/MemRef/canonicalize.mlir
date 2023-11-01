@@ -965,3 +965,15 @@ func.func @subview_rank_reduction(%arg0: memref<1x384x384xf32>, %idx: index)
   // CHECK: return %[[cast]]
   return %0 : memref<?x?xf32, strided<[384, 1], offset: ?>>
 }
+
+// -----
+
+// CHECK-LABEL: func @dim_out_of_bounds(
+//  CHECK-NEXT:   arith.constant
+//  CHECK-NEXT:   memref.dim
+//  CHECK-NEXT:   return
+func.func @dim_out_of_bounds(%m : memref<7x8xf32>) -> index {
+  %idx = arith.constant 7 : index
+  %0 = memref.dim %m, %idx : memref<7x8xf32>
+  return %0 : index
+}

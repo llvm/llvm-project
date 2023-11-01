@@ -1861,3 +1861,18 @@ func.func @invalid_empty_negative_size() -> (tensor<4x5x?xf32>) {
   %1 = tensor.empty(%0) : tensor<4x5x?xf32>
   return %1 : tensor<4x5x?xf32>
 }
+
+// -----
+
+// CHECK-LABEL: func @dim_out_of_bounds(
+//  CHECK-NEXT:   arith.constant 7
+//  CHECK-NEXT:   %[[alloc_tensor:.*]] = bufferization.alloc_tensor
+//  CHECK-NEXT:   tensor.dim %[[alloc_tensor]]
+//  CHECK-NEXT:   return
+func.func @dim_out_of_bounds(%idx1 : index, %idx2 : index) -> index {
+  %idx = arith.constant 7 : index
+  %sz = arith.constant 5 : index
+  %alloc = bufferization.alloc_tensor(%sz, %sz) : tensor<?x?xf32>
+  %0 = tensor.dim %alloc, %idx : tensor<?x?xf32>
+  return %0 : index
+}

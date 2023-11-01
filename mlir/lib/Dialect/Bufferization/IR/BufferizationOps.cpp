@@ -329,28 +329,11 @@ struct ReplaceStaticShapeDims : OpRewritePattern<AllocTensorOp> {
     return success();
   }
 };
-
-struct FoldDimOfAllocTensorOp : public OpRewritePattern<tensor::DimOp> {
-  using OpRewritePattern<tensor::DimOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(tensor::DimOp dimOp,
-                                PatternRewriter &rewriter) const override {
-    std::optional<int64_t> maybeConstantIndex = dimOp.getConstantIndex();
-    auto allocTensorOp = dimOp.getSource().getDefiningOp<AllocTensorOp>();
-    if (!allocTensorOp || !maybeConstantIndex)
-      return failure();
-    if (!allocTensorOp.getType().isDynamicDim(*maybeConstantIndex))
-      return failure();
-    rewriter.replaceOp(
-        dimOp, allocTensorOp.getDynamicSize(rewriter, *maybeConstantIndex));
-    return success();
-  }
-};
 } // namespace
 
 void AllocTensorOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                                 MLIRContext *ctx) {
-  results.add<FoldDimOfAllocTensorOp, ReplaceStaticShapeDims>(ctx);
+  results.add<ReplaceStaticShapeDims>(ctx);
 }
 
 LogicalResult AllocTensorOp::reifyResultShapes(

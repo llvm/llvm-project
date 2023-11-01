@@ -46,13 +46,6 @@ void populateExpandOpsPatterns(RewritePatternSet &patterns);
 void populateFoldMemRefAliasOpPatterns(RewritePatternSet &patterns);
 
 /// Appends patterns that resolve `memref.dim` operations with values that are
-/// defined by operations that implement the
-/// `ReifyRankedShapedTypeOpInterface`, in terms of shapes of its input
-/// operands.
-void populateResolveRankedShapedTypeResultDimsPatterns(
-    RewritePatternSet &patterns);
-
-/// Appends patterns that resolve `memref.dim` operations with values that are
 /// defined by operations that implement the `InferShapedTypeOpInterface`, in
 /// terms of shapes of its input operands.
 void populateResolveShapedTypeResultDimsPatterns(RewritePatternSet &patterns);

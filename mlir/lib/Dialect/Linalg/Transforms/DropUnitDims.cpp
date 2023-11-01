@@ -647,7 +647,8 @@ populateFoldUnitExtentDimsViaReshapesPatterns(RewritePatternSet &patterns,
   tensor::EmptyOp::getCanonicalizationPatterns(patterns, context);
   tensor::ExpandShapeOp::getCanonicalizationPatterns(patterns, context);
   tensor::populateFoldTensorEmptyPatterns(patterns);
-  memref::populateResolveRankedShapedTypeResultDimsPatterns(patterns);
+  populateResolveRankedShapedTypeResultDimsPattern<memref::DimOp>(patterns);
+  populateResolveRankedShapedTypeResultDimsPattern<tensor::DimOp>(patterns);
   memref::populateResolveShapedTypeResultDimsPatterns(patterns);
 }
 
@@ -662,7 +663,8 @@ populateFoldUnitExtentDimsViaSlicesPatterns(RewritePatternSet &patterns,
   linalg::FillOp::getCanonicalizationPatterns(patterns, context);
   tensor::EmptyOp::getCanonicalizationPatterns(patterns, context);
   tensor::populateFoldTensorEmptyPatterns(patterns);
-  memref::populateResolveRankedShapedTypeResultDimsPatterns(patterns);
+  populateResolveRankedShapedTypeResultDimsPattern<memref::DimOp>(patterns);
+  populateResolveRankedShapedTypeResultDimsPattern<tensor::DimOp>(patterns);
   memref::populateResolveShapedTypeResultDimsPatterns(patterns);
 }
 

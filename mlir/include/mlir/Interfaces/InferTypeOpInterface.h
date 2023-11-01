@@ -19,6 +19,7 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/OpDefinition.h"
+#include "mlir/IR/PatternMatch.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/SmallVector.h"
@@ -277,6 +278,57 @@ template <typename ConcreteType>
 class InferTensorType : public TraitBase<ConcreteType, InferTensorType> {};
 
 } // namespace OpTrait
+
+namespace {
+/// Fold dim of an operation that implements ReifyRankedShapedTypeOpInterface.
+template <typename OpTy>
+struct FoldDimOfReifyRankedShapedTypeOp : public OpRewritePattern<OpTy> {
+  using OpRewritePattern<OpTy>::OpRewritePattern;
+
+  void initialize() { OpRewritePattern<OpTy>::setHasBoundedRewriteRecursion(); }
+
+  LogicalResult matchAndRewrite(OpTy dimOp,
+                                PatternRewriter &rewriter) const override {
+    OpResult dimValue = dyn_cast<OpResult>(dimOp.getSource());
+    if (!dimValue)
+      return failure();
+    // Can fold only if the dimension is a constant.
+    std::optional<int64_t> dimIndex = dimOp.getConstantIndex();
+    if (!dimIndex)
+      return failure();
+    // Reify result dimensions.
+    ReifiedRankedShapedTypeDims reifiedResultShapes;
+    if (failed(reifyResultShapes(rewriter, dimValue.getOwner(),
+                                 reifiedResultShapes)))
+      return rewriter.notifyMatchFailure(dimOp,
+                                         "failed to reify result shapes");
+    unsigned resultNumber = dimValue.getResultNumber();
+    // Do not apply pattern if the IR is invalid (dim out of bounds).
+    if (*dimIndex >= reifiedResultShapes[resultNumber].size())
+      return rewriter.notifyMatchFailure(dimOp, "dimension is out of bounds");
+    OpFoldResult dimSize = reifiedResultShapes[resultNumber][*dimIndex];
+    // If the dim size is a value, replace the op directly.
+    if (auto value = dimSize.dyn_cast<Value>()) {
+      rewriter.replaceOp(dimOp, value);
+      return success();
+    }
+    // Otherwise, materialize a constant value.
+    rewriter.replaceOp(dimOp, dimOp->getDialect()->materializeConstant(
+                                  rewriter, dimSize.get<Attribute>(),
+                                  rewriter.getIndexType(), dimOp->getLoc()));
+    return success();
+  }
+};
+} // namespace
+
+/// Populate `patterns` with a pattern that dim ops of type OpTy that operate
+/// on ops that implement ReifyRankedShapedTypeOpInterface.
+template <typename OpTy>
+void populateResolveRankedShapedTypeResultDimsPattern(
+    RewritePatternSet &patterns) {
+  patterns.insert<FoldDimOfReifyRankedShapedTypeOp<OpTy>>(
+      patterns.getContext());
+}
 } // namespace mlir
 
 #endif // MLIR_INTERFACES_INFERTYPEOPINTERFACE_H_

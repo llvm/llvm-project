@@ -159,21 +159,6 @@ def NormalizeMemRefs : Pass<"normalize-memrefs", "ModuleOp"> {
   let dependentDialects = ["affine::AffineDialect"];
 }
 
-def ResolveRankedShapeTypeResultDims :
-    Pass<"resolve-ranked-shaped-type-result-dims"> {
-  let summary = "Resolve memref.dim of result values of ranked shape type";
-  let description = [{
-    The pass resolves memref.dim of result of operations that
-    implement the `ReifyRankedShapedTypeOpInterface` in terms of
-    shapes of its operands.
-  }];
-  let constructor =
-      "mlir::memref::createResolveRankedShapeTypeResultDimsPass()";
-  let dependentDialects = [
-    "memref::MemRefDialect", "tensor::TensorDialect"
-  ];
-}
-
 def ResolveShapedTypeResultDims : Pass<"resolve-shaped-type-result-dims"> {
   let summary = "Resolve memref.dim of result values";
   let description = [{
