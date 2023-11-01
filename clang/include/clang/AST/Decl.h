@@ -4063,7 +4063,7 @@ public:
 /// returned from function calls. This takes into account the target-specific
 /// and version-specific rules along with the rules determined by the
 /// language.
-enum class ArgPassingKind {
+enum class RecordArgPassingKind {
   /// The argument of this type can be passed directly in registers.
   CanPassInRegs,
 
@@ -4216,14 +4216,15 @@ public:
   /// it must have at least one trivial, non-deleted copy or move constructor.
   /// FIXME: This should be set as part of completeDefinition.
   bool canPassInRegisters() const {
-    return getArgPassingRestrictions() == ArgPassingKind::CanPassInRegs;
+    return getArgPassingRestrictions() == RecordArgPassingKind::CanPassInRegs;
   }
 
-  ArgPassingKind getArgPassingRestrictions() const {
-    return static_cast<ArgPassingKind>(RecordDeclBits.ArgPassingRestrictions);
+  RecordArgPassingKind getArgPassingRestrictions() const {
+    return static_cast<RecordArgPassingKind>(
+        RecordDeclBits.ArgPassingRestrictions);
   }
 
-  void setArgPassingRestrictions(ArgPassingKind Kind) {
+  void setArgPassingRestrictions(RecordArgPassingKind Kind) {
     RecordDeclBits.ArgPassingRestrictions = llvm::to_underlying(Kind);
   }
 
