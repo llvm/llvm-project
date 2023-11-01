@@ -731,7 +731,12 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                          VT, Custom);
       setOperationAction({ISD::FP_TO_SINT_SAT, ISD::FP_TO_UINT_SAT}, VT,
                          Custom);
-      setOperationAction({ISD::LRINT, ISD::LLRINT}, VT, Custom);
+      if (VT.getVectorElementType() == MVT::i32 ||
+          (VT.getVectorElementType() == MVT::i64 && Subtarget.is64Bit()))
+        setOperationAction({ISD::LRINT}, VT, Custom);
+      if (VT.getVectorElementType() == MVT::i64 ||
+          VT.getVectorElementType() == MVT::i32)
+        setOperationAction({ISD::LLRINT}, VT, Custom);
       setOperationAction(
           {ISD::SADDSAT, ISD::UADDSAT, ISD::SSUBSAT, ISD::USUBSAT}, VT, Legal);
 
