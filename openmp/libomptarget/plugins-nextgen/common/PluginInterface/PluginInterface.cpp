@@ -402,9 +402,8 @@ Error GenericKernelTy::init(GenericDeviceTy &GenericDevice,
     DP("Failed to read kernel environment for '%s': %s\n"
        "Using default SPMD (2) execution mode\n",
        Name, ErrStr.data());
-    KernelEnvironment.Configuration.ExecMode = OMP_TGT_EXEC_MODE_SPMD;
-    KernelEnvironment.Configuration.MayUseNestedParallelism = /*Unknown=*/2;
-    KernelEnvironment.Configuration.UseGenericStateMachine = /*Unknown=*/2;
+    assert(KernelEnvironment.Configuration.ReductionBufferSize == 0 &&
+           "Default initialization failed.");
   }
 
   // Max = Config.Max > 0 ? min(Config.Max, Device.Max) : Device.Max;
@@ -441,6 +440,17 @@ GenericKernelTy::getKernelLaunchEnvironment(
   /// async data transfer.
   auto &LocalKLE = (*AsyncInfoWrapper).KernelLaunchEnvironment;
   LocalKLE = KernelLaunchEnvironment;
+  if (KernelEnvironment.Configuration.ReductionBufferSize) {
+    auto AllocOrErr = GenericDevice.dataAlloc(
+        KernelEnvironment.Configuration.ReductionBufferSize,
+        /*HostPtr=*/nullptr, TargetAllocTy::TARGET_ALLOC_DEVICE);
+    if (!AllocOrErr)
+      return AllocOrErr.takeError();
+    LocalKLE.ReductionBuffer = *AllocOrErr;
+    // Remember to free the memory later.
+    AsyncInfoWrapper.freeAllocationAfterSynchronization(*AllocOrErr);
+  }
+
   auto Err = GenericDevice.dataSubmit(*AllocOrErr, &LocalKLE,
                                       sizeof(KernelLaunchEnvironmentTy),
                                       AsyncInfoWrapper);
