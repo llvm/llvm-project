@@ -22,7 +22,6 @@ define void @kinds__sbytezero(ptr nocapture %a) nounwind {
 ; CHECK-NEXT:  bb.thread:
 ; CHECK-NEXT:    [[TMP46:%.*]] = getelementptr [256 x i32], ptr [[A]], i32 0, i32 0
 ; CHECK-NEXT:    store i32 0, ptr [[TMP46]], align 4
-; CHECK-NEXT:    [[SEXT:%.*]] = sext i8 127 to i32
 ; CHECK-NEXT:    br label [[BB:%.*]]
 ; CHECK:       bb:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i32 [ [[INDVARS_IV_NEXT:%.*]], [[BB]] ], [ -128, [[BB_THREAD:%.*]] ]
@@ -30,7 +29,7 @@ define void @kinds__sbytezero(ptr nocapture %a) nounwind {
 ; CHECK-NEXT:    [[TMP3:%.*]] = add nsw i32 [[INDVARS_IV_NEXT]], 128
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr [256 x i32], ptr [[A]], i32 0, i32 [[TMP3]]
 ; CHECK-NEXT:    store i32 0, ptr [[TMP4]], align 4
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i32 [[INDVARS_IV_NEXT]], [[SEXT]]
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i32 [[INDVARS_IV_NEXT]], 127
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[RETURN:%.*]], label [[BB]]
 ; CHECK:       return:
 ; CHECK-NEXT:    ret void
