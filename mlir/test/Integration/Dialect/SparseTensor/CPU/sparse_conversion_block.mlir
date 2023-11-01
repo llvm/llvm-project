@@ -72,7 +72,7 @@ module {
     %c2 = arith.constant 2 : index
 
     //
-    // Initialize a 3-dim dense tensor.
+    // Initialize a 2-dim dense tensor.
     //
     %t = arith.constant dense<[
        [  1.0,  2.0,  3.0,  4.0 ],
