@@ -765,9 +765,13 @@ ComplexPairTy ComplexExprEmitter::EmitBinMul(const BinOpInfo &Op) {
 
     CodeGenFunction::CGFPOptionsRAII FPOptsRAII(CGF, Op.FPFeatures);
     if (Op.LHS.second && Op.RHS.second) {
-      // (a+ib)*(c+id) = (ac-bd)+i(bc+ad)
-      if (Op.FPFeatures.getCxLimitedRange() ||
-          CGF.getLangOpts().CxLimitedRange) {
+      if (Op.FPFeatures.getComplexRange() == LangOptions::CX_Limited ||
+          (Op.FPFeatures.getComplexRange() == LangOptions::CX_None &&
+           CGF.getLangOpts().getComplexRange() == LangOptions::CX_Limited) ||
+          (Op.FPFeatures.getComplexRange() == LangOptions::CX_None &&
+              CGF.getLangOpts().getComplexRange() == LangOptions::CX_Fortran) ||
+          CGF.getLangOpts().FastMath) {
+        // (a+ib)*(c+id) = (ac-bd)+i(bc+ad)
         llvm::Value *LHSr = Op.LHS.first, *LHSi = Op.LHS.second;
         llvm::Value *RHSr = Op.RHS.first, *RHSi = Op.RHS.second;
 
@@ -889,7 +893,7 @@ ComplexPairTy ComplexExprEmitter::EmitAlgebraicDiv(llvm::Value *LHSr,
   return ComplexPairTy(DSTr, DSTi);
 }
 
-/// EmitFAbs - Emit a call to @llvm.fabs.
+// EmitFAbs - Emit a call to @llvm.fabs.
 static llvm::Value *EmitllvmFAbs(CodeGenFunction &CGF, llvm::Value *Value) {
   llvm::Function *Func =
       CGF.CGM.getIntrinsic(llvm::Intrinsic::fabs, Value->getType());
@@ -897,6 +901,8 @@ static llvm::Value *EmitllvmFAbs(CodeGenFunction &CGF, llvm::Value *Value) {
   return Call;
 }
 
+// EmitRangeReductionDiv - Implements the Smith's algorithm.
+// SMITH, R. L. Algorithm 116: Complex division. Commun. ACM 5, 8 (1962).
 ComplexPairTy ComplexExprEmitter::EmitRangeReductionDiv(llvm::Value *LHSr,
                                                         llvm::Value *LHSi,
                                                         llvm::Value *RHSr,
@@ -907,9 +913,9 @@ ComplexPairTy ComplexExprEmitter::EmitRangeReductionDiv(llvm::Value *LHSr,
   // |c| >= |d|
   llvm::Value *IsR = Builder.CreateFCmpUGT(FAbsRHSr, FAbsRHSi, "abs_cmp");
 
-  llvm::BasicBlock *TrueBB = CGF.createBasicBlock("true_bb_name");
-  llvm::BasicBlock *FalseBB = CGF.createBasicBlock("false_bb_name");
-  llvm::BasicBlock *ContBB = CGF.createBasicBlock("cont_bb");
+  llvm::BasicBlock *TrueBB = CGF.createBasicBlock("abs_rhsr_greater_or_equal_abs_rhsi");
+  llvm::BasicBlock *FalseBB = CGF.createBasicBlock("abs_rhsr_less_than_abs_rhsi");
+  llvm::BasicBlock *ContBB = CGF.createBasicBlock("complex_div");
   Builder.CreateCondBr(IsR, TrueBB, FalseBB);
 
   CGF.EmitBlock(TrueBB);
@@ -918,18 +924,18 @@ ComplexPairTy ComplexExprEmitter::EmitRangeReductionDiv(llvm::Value *LHSr,
   // tmp = c + rd
   // e = (a + br)/tmp
   // f = (b - ar)/tmp
-  llvm::Value *DdC = Builder.CreateFDiv(RHSi, RHSr); // d/c
+  llvm::Value *DdC = Builder.CreateFDiv(RHSi, RHSr); // r=d/c
 
-  llvm::Value *RD = Builder.CreateFMul(DdC, RHSi);  // (d/c)d
-  llvm::Value *CpRD = Builder.CreateFAdd(RHSr, RD); // c+((d/c)d)
+  llvm::Value *RD = Builder.CreateFMul(DdC, RHSi);   // rd
+  llvm::Value *CpRD = Builder.CreateFAdd(RHSr, RD);  // tmp=c+rd
 
-  llvm::Value *T3 = Builder.CreateFMul(LHSi, DdC);   // b(d/c)
-  llvm::Value *T4 = Builder.CreateFAdd(LHSr, T3);    // a+b(d/c)
-  llvm::Value *DSTTr = Builder.CreateFDiv(T4, CpRD); // (a+b(d/c))/(c+(d/c)d)
+  llvm::Value *T3 = Builder.CreateFMul(LHSi, DdC);   // br
+  llvm::Value *T4 = Builder.CreateFAdd(LHSr, T3);    // a+br
+  llvm::Value *DSTTr = Builder.CreateFDiv(T4, CpRD); // (a+br)/tmp
 
   llvm::Value *T5 = Builder.CreateFMul(LHSr, DdC);   // ar
   llvm::Value *T6 = Builder.CreateFSub(LHSi, T5);    // b-ar
-  llvm::Value *DSTTi = Builder.CreateFDiv(T6, CpRD); // (b-a(d/c))/(c+(d/c)d)
+  llvm::Value *DSTTi = Builder.CreateFDiv(T6, CpRD); // (b-ar)/tmp
   Builder.CreateBr(ContBB);
 
   CGF.EmitBlock(FalseBB);
@@ -938,19 +944,18 @@ ComplexPairTy ComplexExprEmitter::EmitRangeReductionDiv(llvm::Value *LHSr,
   // tmp = d + rc
   // e = (ar + b)/tmp
   // f = (br - a)/tmp
-  llvm::Value *CdD = Builder.CreateFDiv(RHSr, RHSi); // c/d
+  llvm::Value *CdD = Builder.CreateFDiv(RHSr, RHSi); // r=c/d
 
-  llvm::Value *RC = Builder.CreateFMul(CdD, RHSr);  // (c/d)c
-  llvm::Value *DpRC = Builder.CreateFAdd(RHSi, RC); // d+(c/d)c
+  llvm::Value *RC = Builder.CreateFMul(CdD, RHSr);    // rc
+  llvm::Value *DpRC = Builder.CreateFAdd(RHSi, RC);   // tmp=d+rc
 
-  llvm::Value *T7 = Builder.CreateFAdd(CdD, RHSi);   // (c/d)+b
-  llvm::Value *T8 = Builder.CreateFMul(LHSr, T7);    // a((c/d)+b)
-  llvm::Value *DSTFr = Builder.CreateFDiv(T8, DpRC); // (a((c/d)+b)/(d+(c/d)c))
+  llvm::Value *T7 = Builder.CreateFMul(LHSr, RC);     // ar
+  llvm::Value *T8 = Builder.CreateFAdd(T7, LHSi);     // ar+b
+  llvm::Value *DSTFr = Builder.CreateFDiv(T8, DpRC);  // (ar+b)/tmp
 
-  llvm::Value *T9 = Builder.CreateFSub(CdD, LHSr); // (c/d)-a
-  llvm::Value *T10 = Builder.CreateFMul(RHSi, T9); // b((c/d)-a)
-  llvm::Value *DSTFi =
-      Builder.CreateFDiv(T10, DpRC); // (b((c/d)-a))/(d+(c/d)c))
+  llvm::Value *T9 = Builder.CreateFMul(LHSi, CdD);    // br
+  llvm::Value *T10 = Builder.CreateFSub(T9, LHSr);    // br-a
+  llvm::Value *DSTFi = Builder.CreateFDiv(T10, DpRC); // (br-a)/tmp
   Builder.CreateBr(ContBB);
 
   // Phi together the computation paths.
@@ -972,12 +977,23 @@ ComplexPairTy ComplexExprEmitter::EmitBinDiv(const BinOpInfo &Op) {
 
   llvm::Value *DSTr, *DSTi;
   if (LHSr->getType()->isFloatingPointTy()) {
+    const LangOptions &LO = CGF.getLangOpts();
+    if (LO.getComplexRange() == LangOptions::CX_Fortran)
+      printf("fortran \n");
+    if (LO.getComplexRange() == LangOptions::CX_Limited)
+      printf("cx_limited \n");
     CodeGenFunction::CGFPOptionsRAII FPOptsRAII(CGF, Op.FPFeatures);
-    if (RHSi && CGF.getLangOpts().CxFortranRules &&
-        !Op.FPFeatures.getCxLimitedRange()) {
+    if (RHSi &&
+        ((CGF.getLangOpts().getComplexRange() == LangOptions::CX_Fortran &&
+          Op.FPFeatures.getComplexRange() == LangOptions::CX_None) ||
+         // fast-math mode implies fortran rules.
+         CGF.getLangOpts().FastMath)) {
       return EmitRangeReductionDiv(LHSr, LHSi, RHSr, RHSi);
-    } else if (RHSi && (Op.FPFeatures.getCxLimitedRange() ||
-                        CGF.getLangOpts().CxLimitedRange)) {
+    } else if (RHSi &&
+               (Op.FPFeatures.getComplexRange() == LangOptions::CX_Limited ||
+                (Op.FPFeatures.getComplexRange() == LangOptions::CX_None &&
+                 CGF.getLangOpts().getComplexRange() ==
+                     LangOptions::CX_Limited))) {
       if (!LHSi)
         LHSi = llvm::Constant::getNullValue(RHSi->getType());
       return EmitAlgebraicDiv(LHSr, LHSi, RHSr, RHSi);
@@ -1145,7 +1161,13 @@ ComplexExprEmitter::EmitBinOps(const BinaryOperator *E,
     Ops.Ty = PromotionType;
   else
     Ops.Ty = E->getType();
-  Ops.FPFeatures = E->getFPFeaturesInEffect(CGF.getLangOpts());
+  if (E->hasStoredFPFeatures()) {
+    if (E->getFPFeatures().hasComplexRangeOverride())
+      // A '#pragma STDC CX_LIMITED_RANGE' is present.
+      Ops.FPFeatures = E->getFPFeaturesInEffect(CGF.getLangOpts());
+  } else {
+    Ops.FPFeatures.setComplexRange(LangOptions::ComplexRangeKind::CX_None);
+  }
   return Ops;
 }
 

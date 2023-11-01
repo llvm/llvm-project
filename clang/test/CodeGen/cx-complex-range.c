@@ -2,13 +2,16 @@
 // RUN: -o - | FileCheck %s --check-prefix=FULL
 
 // RUN: %clang_cc1 %s -O0 -emit-llvm -triple x86_64-unknown-unknown \
-// RUN: -fcx-limited-range -o - | FileCheck %s --check-prefix=LMTD
+// RUN: -complex-range=cx_limited -o - | FileCheck %s --check-prefix=LMTD
 
 // RUN: %clang_cc1 %s -O0 -emit-llvm -triple x86_64-unknown-unknown \
 // RUN: -fno-cx-limited-range -o - | FileCheck %s --check-prefix=FULL
 
 // RUN: %clang_cc1 %s -O0 -emit-llvm -triple x86_64-unknown-unknown \
-// RUN: -fcx-fortran-rules -o - | FileCheck %s --check-prefix=FRTRN
+// RUN: -complex-range=cx_fortran -o - | FileCheck %s --check-prefix=FRTRN
+
+// RUN: %clang_cc1 %s -O0 -emit-llvm -triple x86_64-unknown-unknown \
+// RUN: -ffast-math -o - | FileCheck %s --check-prefix=FRTRN
 
 // RUN: %clang_cc1 %s -O0 -emit-llvm -triple x86_64-unknown-unknown \
 // RUN: -fno-cx-fortran-rules -o - | FileCheck %s --check-prefix=FULL
@@ -33,7 +36,7 @@ _Complex float div(_Complex float a, _Complex float b) {
   // FRTRN-NEXT: call float @llvm.fabs.f32(float {{.*}})
   // FRTRN-NEXT: fcmp ugt float
   // FRTRN-NEXT: br i1 {{.*}}, label
-  // FRTRN:      true_bb_name:
+  // FRTRN:      abs_rhsr_greater_or_equal_abs_rhsi:
   // FRTRN-NEXT: fdiv float
   // FRTRN-NEXT: fmul float
   // FRTRN-NEXT: fadd float
@@ -44,18 +47,18 @@ _Complex float div(_Complex float a, _Complex float b) {
   // FRTRN-NEXT: fsub float
   // FRTRN-NEXT: fdiv float
   // FRTRN-NEXT: br label
-  // FRTRN:      false_bb_name:
+  // FRTRN:      abs_rhsr_less_than_abs_rhsi:
   // FRTRN-NEXT: fdiv float
   // FRTRN-NEXT: fmul float
   // FRTRN-NEXT: fadd float
-  // FRTRN-NEXT: fadd float
   // FRTRN-NEXT: fmul float
+  // FRTRN-NEXT: fadd float
   // FRTRN-NEXT: fdiv float
+  // FRTRN-NEXT: fmul float
   // FRTRN-NEXT: fsub float
-  // FRTRN-NEXT: fmul float
   // FRTRN-NEXT: fdiv float
   // FRTRN-NEXT: br label
-  // FRTRN:      cont_bb:
+  // FRTRN:      complex_div:
   // FRTRN-NEXT: phi float
   // FRTRN-NEXT: phi float
 
@@ -73,7 +76,12 @@ _Complex float mul(_Complex float a, _Complex float b) {
   // LMTD-NEXT: fmul float
   // LMTD-NEXT: fadd float
 
-  // FRTRN: call <2 x float> @__mulsc3
+  // FRTRN: fmul float
+  // FRTRN-NEXT: fmul float
+  // FRTRN-NEXT: fsub float
+  // FRTRN-NEXT: fmul float
+  // FRTRN-NEXT: fmul float
+  // FRTRN-NEXT: fadd float
 
   return a * b;
 }

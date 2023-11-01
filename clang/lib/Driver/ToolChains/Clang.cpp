@@ -2790,6 +2790,38 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
   }
 }
 
+
+
+static StringRef EnumComplexRangeToStr(LangOptions::ComplexRangeKind Range) {
+  StringRef RangeStr = "";
+  switch (Range) {
+  case LangOptions::ComplexRangeKind::CX_Limited:
+    return "-fcx-limited-range";
+    break;
+  case LangOptions::ComplexRangeKind::CX_Fortran:
+    return "-fcx-fortran-rules";
+    break;
+  default:
+    return RangeStr;
+    break;
+  }
+}
+
+static void EmitComplexRangeDiag(const Driver &D,
+                                  LangOptions::ComplexRangeKind Range1,
+                                  LangOptions::ComplexRangeKind Range2) {
+   if (Range1 != LangOptions::ComplexRangeKind::CX_Full)
+    D.Diag(clang::diag::warn_drv_overriding_option)
+         << EnumComplexRangeToStr(Range1) << EnumComplexRangeToStr(Range2);
+ }
+
+
+static std::string RenderComplexRangeOption(std::string Range) {
+   std::string ComplexRangeStr = "-complex-range=";
+   ComplexRangeStr += Range;
+   return ComplexRangeStr;
+}
+
 static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
                                        bool OFastEnabled, const ArgList &Args,
                                        ArgStringList &CmdArgs,
@@ -2838,7 +2870,8 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
   StringRef BFloat16ExcessPrecision = "";
   StringRef CxLimitedRange = "NoCxLimiteRange";
   StringRef CxFortranRules = "NoCxFortranRules";
-  StringRef Range = "";
+  LangOptions::ComplexRangeKind Range =
+      LangOptions::ComplexRangeKind::CX_Full;
 
   if (const Arg *A = Args.getLastArg(options::OPT_flimited_precision_EQ)) {
     CmdArgs.push_back("-mlimit-float-precision");
@@ -2852,26 +2885,26 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
     default:
       break;
     case options::OPT_fcx_limited_range: {
-      if (Range == "")
-        Range = "CxLimitedRange";
-      else
-        D.Diag(clang::diag::err_drv_incompatible_options)
-            << "fcx-limited-range" << Range;
+      EmitComplexRangeDiag(D, Range, LangOptions::ComplexRangeKind::CX_Limited);
+      Range = LangOptions::ComplexRangeKind::CX_Limited;
+      std::string ComplexRangeStr = RenderComplexRangeOption("cx_limited");
+      if (!ComplexRangeStr.empty())
+        CmdArgs.push_back(Args.MakeArgString(ComplexRangeStr));
       break;
     }
     case options::OPT_fno_cx_limited_range:
-      Range = "NoCxLimitedRange";
+      Range = LangOptions::ComplexRangeKind::CX_Full;
       break;
     case options::OPT_fcx_fortran_rules: {
-      if (Range == "")
-        Range = "CxFortranRules";
-      else
-        D.Diag(clang::diag::err_drv_incompatible_options)
-            << "fcx-fortan-rules" << Range;
+      EmitComplexRangeDiag(D, Range, LangOptions::ComplexRangeKind::CX_Fortran);
+      Range = LangOptions::ComplexRangeKind::CX_Fortran;
+      std::string ComplexRangeStr = RenderComplexRangeOption("cx_fortran");
+      if (!ComplexRangeStr.empty())
+        CmdArgs.push_back(Args.MakeArgString(ComplexRangeStr));
       break;
     }
     case options::OPT_fno_cx_fortran_rules:
-      CxFortranRules = "NoCxFortranRules";
+      Range = LangOptions::ComplexRangeKind::CX_Full;
       break;
     case options::OPT_ffp_model_EQ: {
       // If -ffp-model= is seen, reset to fno-fast-math

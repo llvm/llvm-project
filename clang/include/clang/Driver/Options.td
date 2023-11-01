@@ -1011,19 +1011,26 @@ defm offload_uniform_block : BoolFOption<"offload-uniform-block",
 def fcx_limited_range : Joined<["-"], "fcx-limited-range">,
   Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
   HelpText<"Basic algebraic expansions of complex arithmetic operations "
-           "involving are enabled.">,
-  MarshallingInfoFlag<LangOpts<"CxLimitedRange">>;
+           "involving are enabled.">;
+
 def fno_cx_limited_range : Joined<["-"], "fno-cx-limited-range">,
   Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
   HelpText<"Basic algebraic expansions of complex arithmetic operations "
            "involving are enabled.">;
+
 def fcx_fortran_rules : Joined<["-"], "fcx-fortran-rules">,
   Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
-  HelpText<"Range reduction is enabled for complex arithmetic operations.">,
-  MarshallingInfoFlag<LangOpts<"CxFortranRules">>;
+  HelpText<"Range reduction is enabled for complex arithmetic operations.">;
+
 def fno_cx_fortran_rules : Joined<["-"], "fno-cx-fortran-rules">,
   Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
   HelpText<"Range reduction is disabled for complex arithmetic operations.">;
+
+def complex_range_EQ : Joined<["-"], "complex-range=">, Group<f_Group>,
+  Visibility<[ClangOption, CC1Option]>,
+  Values<"cx_full,cx_limited,cx_fortran,cx_none">, NormalizedValuesScope<"LangOptions">,
+  NormalizedValues<["CX_Full", "CX_Limited", "CX_Fortran", "CX_None"]>,
+  MarshallingInfoEnum<LangOpts<"ComplexRange">, "CX_Full">;
 
 // OpenCL-only Options
 def cl_opt_disable : Flag<["-"], "cl-opt-disable">, Group<opencl_Group>,

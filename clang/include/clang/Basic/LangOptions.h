@@ -391,6 +391,8 @@ public:
     IncompleteOnly = 3,
   };
 
+  enum ComplexRangeKind { CX_Full, CX_Limited, CX_Fortran, CX_None };
+
 public:
   /// The used language standard.
   LangStandard::Kind LangStd;

@@ -211,6 +211,17 @@ New Compiler Flags
   the preprocessed text to the output. This can greatly reduce the size of the
   preprocessed output, which can be helpful when trying to reduce a test case.
 
+* ``-fcx-limited-range`` enables the naive mathematical formulas for complex
+  division and multiplication with no NaN checking of results. The default is
+  ``-fno-cx-limited-range``.
+
+* ``-fcx-fortran-rules`` enables the naive mathematical formulas for complex
+  multiplication and enables application of Smith's algorithm for complex
+  division. See SMITH, R. L. Algorithm 116: Complex division. Commun. ACM 5, 8
+  (1962). The default is ``-fno-cx-fortran-rules``, but is enabled by
+  ``-ffat-math``.
+
+
 Deprecated Compiler Flags
 -------------------------
 
@@ -779,6 +790,9 @@ Floating Point Support in Clang
 - Add ``__builtin_exp10``, ``__builtin_exp10f``,
   ``__builtin_exp10f16``, ``__builtin_exp10l`` and
   ``__builtin_exp10f128`` builtins.
+- ``#pragma STDC CX_LIMITED_RANGE on-off-switch`` enables the naive mathematical
+  formulas for complex division and multiplication with no NaN checking of
+  results.
 
 AST Matchers
 ------------

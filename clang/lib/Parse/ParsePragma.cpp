@@ -864,24 +864,28 @@ void Parser::HandlePragmaCXLimitedRange() {
   tok::OnOffSwitch OOS = static_cast<tok::OnOffSwitch>(
       reinterpret_cast<uintptr_t>(Tok.getAnnotationValue()));
 
-  bool IsEnabled;
+  LangOptions::ComplexRangeKind Range;
   switch (OOS) {
   case tok::OOS_ON:
-    IsEnabled = true;
+    Range = LangOptions::CX_Limited;
     break;
   case tok::OOS_OFF:
-    IsEnabled = false;
+    Range = LangOptions::CX_Full;
     break;
   case tok::OOS_DEFAULT:
     // According to ISO C99 standard chapter 7.3.4, the default value
-    // for the pragma is ``off'. In GCC, the option -fcx-limited-range
-    // controls the default setting of the pragma.
-    IsEnabled = getLangOpts().CxLimitedRange ? true : false;
+    // for the pragma is ``off'. -fcx-limited-range and -fcx-fortran-rules
+    // control the default value of these pragmas.
+    Range = (getLangOpts().getComplexRange() == LangOptions::CX_Limited)
+                ? LangOptions::CX_Limited
+            : (getLangOpts().getComplexRange() == LangOptions::CX_Fortran)
+                ? LangOptions::CX_Fortran
+                : LangOptions::CX_Full;
     break;
   }
 
   SourceLocation PragmaLoc = ConsumeAnnotationToken();
-  Actions.ActOnPragmaCXLimitedRange(PragmaLoc, IsEnabled);
+  Actions.ActOnPragmaCXLimitedRange(PragmaLoc, Range);
 }
 
 StmtResult Parser::HandlePragmaCaptured()

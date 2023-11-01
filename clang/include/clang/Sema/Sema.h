@@ -11003,7 +11003,8 @@ public:
 
   /// ActOnPragmaCXLimitedRange - Called on well formed
   /// \#pragma STDC CX_LIMITED_RANGE
-  void ActOnPragmaCXLimitedRange(SourceLocation Loc, bool IsEnabled);
+  void ActOnPragmaCXLimitedRange(SourceLocation Loc,
+                                 LangOptions::ComplexRangeKind Range);
 
   /// Called on well formed '\#pragma clang fp' that has option 'exceptions'.
   void ActOnPragmaFPExceptions(SourceLocation Loc,
