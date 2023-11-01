@@ -231,6 +231,7 @@ public:
   using CompilerInvocationBase::getPreprocessorOpts;
   using CompilerInvocationBase::getAnalyzerOpts;
   using CompilerInvocationBase::getMigratorOpts;
+  using CompilerInvocationBase::getAPINotesOpts;
   using CompilerInvocationBase::getCodeGenOpts;
   using CompilerInvocationBase::getFileSystemOpts;
   using CompilerInvocationBase::getFrontendOpts;
@@ -374,6 +375,7 @@ public:
   PreprocessorOptions &getMutPreprocessorOpts();
   AnalyzerOptions &getMutAnalyzerOpts();
   MigratorOptions &getMutMigratorOpts();
+  APINotesOptions &getMutAPINotesOpts();
   CodeGenOptions &getMutCodeGenOpts();
   FileSystemOptions &getMutFileSystemOpts();
   FrontendOptions &getMutFrontendOpts();
