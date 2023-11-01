@@ -10,7 +10,7 @@ jobs:
       - name: Fetch LLVM sources
         uses: actions/checkout@v4
         with:
-          fetch-depth: 2000 # Fetches only the last 2000 commits
+          fetch-depth: 2 # Fetches only the last 2 commits
 
       - name: Get changed files
         id: changed-files
