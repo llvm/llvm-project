@@ -977,11 +977,11 @@ void CodeGenModule::Release() {
   getModule().addModuleFlag(llvm::Module::Error, "wchar_size", WCharWidth);
 
   if (getTriple().isOSzOS()) {
-    getModule().addModuleFlag(llvm::Module::Warning, "Product Major Version",
+    getModule().addModuleFlag(llvm::Module::Warning, "zos_product_major_version",
                               uint32_t(CLANG_VERSION_MAJOR));
-    getModule().addModuleFlag(llvm::Module::Warning, "Product Minor Version",
+    getModule().addModuleFlag(llvm::Module::Warning, "zos_product_minor_version",
                               uint32_t(CLANG_VERSION_MINOR));
-    getModule().addModuleFlag(llvm::Module::Warning, "Product Patchlevel",
+    getModule().addModuleFlag(llvm::Module::Warning, "zos_product_patchlevel",
                               uint32_t(CLANG_VERSION_PATCHLEVEL));
     std::string ProductId;
 #ifdef CLANG_VENDOR
@@ -989,7 +989,7 @@ void CodeGenModule::Release() {
 #else
     ProductId = "clang";
 #endif
-    getModule().addModuleFlag(llvm::Module::Error, "Product Id",
+    getModule().addModuleFlag(llvm::Module::Error, "zos_product_id",
                               llvm::MDString::get(VMContext, ProductId));
 
     // Record the language because we need it for the PPA2.
@@ -998,7 +998,7 @@ void CodeGenModule::Release() {
     getModule().addModuleFlag(llvm::Module::Error, "zos_cu_language",
                               llvm::MDString::get(VMContext, lang_str));
 
-    getModule().addModuleFlag(llvm::Module::Max, "TranslationTime",
+    getModule().addModuleFlag(llvm::Module::Max, "zos_translation_time",
                               static_cast<uint64_t>(std::time(nullptr)));
 
     getModule().addModuleFlag(llvm::Module::Error, "zos_le_char_mode",

@@ -1032,21 +1032,21 @@ void SystemZAsmPrinter::emitADASection() {
 
 static uint32_t getProductVersion(Module &M) {
   if (auto *VersionVal = cast_or_null<ConstantAsMetadata>(
-          M.getModuleFlag("Product Major Version")))
+          M.getModuleFlag("zos_product_major_version")))
     return cast<ConstantInt>(VersionVal->getValue())->getZExtValue();
   return LLVM_VERSION_MAJOR;
 }
 
 static uint32_t getProductRelease(Module &M) {
   if (auto *ReleaseVal = cast_or_null<ConstantAsMetadata>(
-          M.getModuleFlag("Product Minor Version")))
+          M.getModuleFlag("zos_product_minor_version")))
     return cast<ConstantInt>(ReleaseVal->getValue())->getZExtValue();
   return LLVM_VERSION_MINOR;
 }
 
 static uint32_t getProductPatch(Module &M) {
   if (auto *PatchVal = cast_or_null<ConstantAsMetadata>(
-          M.getModuleFlag("Product Patchlevel")))
+          M.getModuleFlag("zos_product_patchlevel")))
     return cast<ConstantInt>(PatchVal->getValue())->getZExtValue();
   return LLVM_VERSION_PATCH;
 }
@@ -1054,7 +1054,7 @@ static uint32_t getProductPatch(Module &M) {
 static time_t getTranslationTime(Module &M) {
   std::time_t Time = 0;
   if (auto *Val = cast_or_null<ConstantAsMetadata>(
-          M.getModuleFlag("TranslationTime"))) {
+          M.getModuleFlag("zos_translation_time"))) {
     long SecondsSinceEpoch = cast<ConstantInt>(Val->getValue())->getSExtValue();
     Time = static_cast<time_t>(SecondsSinceEpoch);
   }
@@ -1071,7 +1071,7 @@ void SystemZAsmPrinter::emitIDRLSection(Module &M) {
   uint32_t ProductRelease = getProductRelease(M);
 
   std::string ProductID;
-  if (auto *MD = M.getModuleFlag("Product Id"))
+  if (auto *MD = M.getModuleFlag("zos_product_id"))
     ProductID = cast<MDString>(MD)->getString().str();
 
   if (ProductID.empty()) {
