@@ -1,5 +1,6 @@
 """
-Test the AArch64 SME ZA register is saved and restored around expressions.
+Test the AArch64 SME ZA and ZT0 registers are saved and restored around
+expressions.
 
 This attempts to cover expressions that change the following:
 * ZA enabled or not.
@@ -105,6 +106,21 @@ class AArch64ZATestCase(TestBase):
         # When ZA is disabled, lldb will show ZA as all 0s.
         self.expect("register read za", substrs=[self.make_za_value(vl, lambda row: 0)])
 
+    def make_zt0_value(self, generator):
+        num_bytes = 512 // 8
+        elements = []
+        for i in range(num_bytes):
+            elements.append("0x{:02x}".format(generator(i)))
+
+        return "{" + " ".join(elements) + "}"
+
+    def check_zt0(self):
+        self.expect("register read zt0", substrs=[self.make_zt0_value(lambda n: n + 1)])
+
+    def check_zt0_disabled(self):
+        # Like ZA, zt0 reads as 0 when SVCR.ZA is not set.
+        self.expect("register read zt0", substrs=[self.make_zt0_value(lambda n: 0)])
+
     def za_expr_test_impl(self, sve_mode, za_state, swap_start_vl):
         if not self.isAArch64SMEFA64():
             self.skipTest("SME and the smefa64 extension must be present.")
@@ -168,11 +184,17 @@ class AArch64ZATestCase(TestBase):
         if za_state == ZA.Enabled:
             svcr_value += 2
 
+        has_zt0 = self.isAArch64SME2()
+
         def check_regs():
             if za_state == ZA.Enabled:
                 self.check_za(start_vl)
+                if has_zt0:
+                    self.check_zt0()
             else:
                 self.check_za_disabled(start_vl)
+                if has_zt0:
+                    self.check_zt0_disabled()
 
             # svg and vg are in units of 8 bytes.
             self.assertEqual(start_vl, self.read_svg() * 8)
