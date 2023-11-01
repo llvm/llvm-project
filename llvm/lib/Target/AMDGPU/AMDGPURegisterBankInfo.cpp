@@ -3205,6 +3205,7 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
       applyMappingBFE(B, OpdMapper, false);
       return;
     case Intrinsic::amdgcn_inverse_ballot:
+    case Intrinsic::amdgcn_s_bitreplicate:
       applyDefaultMapping(OpdMapper);
       constrainOpWithReadfirstlane(B, MI, 2); // Mask
       return;
@@ -4575,6 +4576,8 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_fdot4_f32_bf8_bf8:
     case Intrinsic::amdgcn_wmma_bf16_16x16x16_bf16:
     case Intrinsic::amdgcn_wmma_f16_16x16x16_f16:
+    case Intrinsic::amdgcn_wmma_bf16_16x16x16_bf16_tied:
+    case Intrinsic::amdgcn_wmma_f16_16x16x16_f16_tied:
     case Intrinsic::amdgcn_wmma_f32_16x16x16_bf16:
     case Intrinsic::amdgcn_wmma_f32_16x16x16_f16:
     case Intrinsic::amdgcn_wmma_i32_16x16x16_iu4:
@@ -4884,6 +4887,11 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       OpdsMapping[2] = AMDGPU::getValueMapping(regBankID, OpSize);
       break;
     }
+    case Intrinsic::amdgcn_s_bitreplicate:
+      Register MaskReg = MI.getOperand(2).getReg();
+      unsigned MaskBank = getRegBankID(MaskReg, MRI, AMDGPU::SGPRRegBankID);
+      OpdsMapping[0] = AMDGPU::getValueMapping(AMDGPU::SGPRRegBankID, 64);
+      OpdsMapping[2] = AMDGPU::getValueMapping(MaskBank, 32);
     }
     break;
   }

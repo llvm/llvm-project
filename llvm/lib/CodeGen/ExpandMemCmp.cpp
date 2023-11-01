@@ -648,7 +648,7 @@ Value *MemCmpExpansion::getMemCmpOneBlock() {
 
   // The i8 and i16 cases don't need compares. We zext the loaded values and
   // subtract them to get the suitable negative, zero, or positive i32 result.
-  if (Size < 4) {
+  if (Size == 1 || Size == 2) {
     const LoadPair Loads = getLoadPair(LoadSizeType, BSwapSizeType,
                                        Builder.getInt32Ty(), /*Offset*/ 0);
     return Builder.CreateSub(Loads.Lhs, Loads.Rhs);

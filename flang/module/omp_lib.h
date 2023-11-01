@@ -90,7 +90,7 @@
     omp_atv_blocked = 17, &
     omp_atv_interleaved = 18
 
-  type :: omp_alloctrait
+  type, bind(c) :: omp_alloctrait
     integer(kind=omp_alloctrait_key_kind) :: key, value
   end type omp_alloctrait
 
@@ -264,23 +264,23 @@
       integer(kind=omp_integer_kind), intent(out) :: place_nums(*)
     end subroutine omp_get_partition_place_nums
 
-    subroutine omp_set_affinity_format(format)
+    subroutine omp_set_affinity_format(format) bind(c)
       import
       character(len=*), intent(in) :: format
     end subroutine omp_set_affinity_format
 
-    function omp_get_affinity_format(buffer)
+    function omp_get_affinity_format(buffer) bind(c)
       import
       character(len=*), intent(out) :: buffer
       integer(kind=omp_integer_kind) :: omp_get_affinity_format
     end function omp_get_affinity_format
 
-    subroutine omp_display_affinity(format)
+    subroutine omp_display_affinity(format) bind(c)
       import
       character(len=*), intent(in) :: format
     end subroutine omp_display_affinity
 
-    function omp_capture_affinity(buffer, format)
+    function omp_capture_affinity(buffer, format) bind(c)
       import
       character(len=*), intent(out) :: buffer
       character(len=*), intent(in) :: format
@@ -339,7 +339,7 @@
       integer(kind=omp_integer_kind) :: omp_pause_resource
     end function omp_pause_resource
 
-    function omp_pause_resource_all(kind)
+    function omp_pause_resource_all(kind) bind(c)
       import
       integer(kind=omp_pause_resource_kind), value :: kind
       integer(kind=omp_integer_kind) :: omp_pause_resource_all
@@ -428,7 +428,7 @@
 ! Device Memory Routines
 
 ! Memory Management Routines
-    function omp_init_allocator(memspace, ntraits, traits)
+    function omp_init_allocator(memspace, ntraits, traits) bind(c)
       import
       integer(kind=omp_memspace_handle_kind), value :: memspace
       integer, value :: ntraits
@@ -446,7 +446,7 @@
       integer(kind=omp_allocator_handle_kind), value :: allocator
     end subroutine omp_set_default_allocator
 
-    function omp_get_default_allocator()
+    function omp_get_default_allocator() bind(c)
       import
       integer(kind=omp_allocator_handle_kind) :: omp_get_default_allocator
     end function omp_get_default_allocator

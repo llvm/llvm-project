@@ -529,7 +529,7 @@ void TypePrinter::printConstantArrayAfter(const ConstantArrayType *T,
     OS << ' ';
   }
 
-  if (T->getSizeModifier() == ArrayType::Static)
+  if (T->getSizeModifier() == ArraySizeModifier::Static)
     OS << "static ";
 
   OS << T->getSize().getZExtValue() << ']';
@@ -562,9 +562,9 @@ void TypePrinter::printVariableArrayAfter(const VariableArrayType *T,
     OS << ' ';
   }
 
-  if (T->getSizeModifier() == VariableArrayType::Static)
+  if (T->getSizeModifier() == ArraySizeModifier::Static)
     OS << "static ";
-  else if (T->getSizeModifier() == VariableArrayType::Star)
+  else if (T->getSizeModifier() == ArraySizeModifier::Star)
     OS << '*';
 
   if (T->getSizeExpr())
@@ -642,28 +642,28 @@ void TypePrinter::printDependentSizedExtVectorAfter(
 
 void TypePrinter::printVectorBefore(const VectorType *T, raw_ostream &OS) {
   switch (T->getVectorKind()) {
-  case VectorType::AltiVecPixel:
+  case VectorKind::AltiVecPixel:
     OS << "__vector __pixel ";
     break;
-  case VectorType::AltiVecBool:
+  case VectorKind::AltiVecBool:
     OS << "__vector __bool ";
     printBefore(T->getElementType(), OS);
     break;
-  case VectorType::AltiVecVector:
+  case VectorKind::AltiVecVector:
     OS << "__vector ";
     printBefore(T->getElementType(), OS);
     break;
-  case VectorType::NeonVector:
+  case VectorKind::Neon:
     OS << "__attribute__((neon_vector_type("
        << T->getNumElements() << "))) ";
     printBefore(T->getElementType(), OS);
     break;
-  case VectorType::NeonPolyVector:
+  case VectorKind::NeonPoly:
     OS << "__attribute__((neon_polyvector_type(" <<
           T->getNumElements() << "))) ";
     printBefore(T->getElementType(), OS);
     break;
-  case VectorType::GenericVector: {
+  case VectorKind::Generic: {
     // FIXME: We prefer to print the size directly here, but have no way
     // to get the size of the type.
     OS << "__attribute__((__vector_size__("
@@ -674,13 +674,13 @@ void TypePrinter::printVectorBefore(const VectorType *T, raw_ostream &OS) {
     printBefore(T->getElementType(), OS);
     break;
   }
-  case VectorType::SveFixedLengthDataVector:
-  case VectorType::SveFixedLengthPredicateVector:
+  case VectorKind::SveFixedLengthData:
+  case VectorKind::SveFixedLengthPredicate:
     // FIXME: We prefer to print the size directly here, but have no way
     // to get the size of the type.
     OS << "__attribute__((__arm_sve_vector_bits__(";
 
-    if (T->getVectorKind() == VectorType::SveFixedLengthPredicateVector)
+    if (T->getVectorKind() == VectorKind::SveFixedLengthPredicate)
       // Predicates take a bit per byte of the vector size, multiply by 8 to
       // get the number of bits passed to the attribute.
       OS << T->getNumElements() * 8;
@@ -693,7 +693,7 @@ void TypePrinter::printVectorBefore(const VectorType *T, raw_ostream &OS) {
     OS << ") * 8))) ";
     printBefore(T->getElementType(), OS);
     break;
-  case VectorType::RVVFixedLengthDataVector:
+  case VectorKind::RVVFixedLengthData:
     // FIXME: We prefer to print the size directly here, but have no way
     // to get the size of the type.
     OS << "__attribute__((__riscv_rvv_vector_bits__(";
@@ -716,32 +716,32 @@ void TypePrinter::printVectorAfter(const VectorType *T, raw_ostream &OS) {
 void TypePrinter::printDependentVectorBefore(
     const DependentVectorType *T, raw_ostream &OS) {
   switch (T->getVectorKind()) {
-  case VectorType::AltiVecPixel:
+  case VectorKind::AltiVecPixel:
     OS << "__vector __pixel ";
     break;
-  case VectorType::AltiVecBool:
+  case VectorKind::AltiVecBool:
     OS << "__vector __bool ";
     printBefore(T->getElementType(), OS);
     break;
-  case VectorType::AltiVecVector:
+  case VectorKind::AltiVecVector:
     OS << "__vector ";
     printBefore(T->getElementType(), OS);
     break;
-  case VectorType::NeonVector:
+  case VectorKind::Neon:
     OS << "__attribute__((neon_vector_type(";
     if (T->getSizeExpr())
       T->getSizeExpr()->printPretty(OS, nullptr, Policy);
     OS << "))) ";
     printBefore(T->getElementType(), OS);
     break;
-  case VectorType::NeonPolyVector:
+  case VectorKind::NeonPoly:
     OS << "__attribute__((neon_polyvector_type(";
     if (T->getSizeExpr())
       T->getSizeExpr()->printPretty(OS, nullptr, Policy);
     OS << "))) ";
     printBefore(T->getElementType(), OS);
     break;
-  case VectorType::GenericVector: {
+  case VectorKind::Generic: {
     // FIXME: We prefer to print the size directly here, but have no way
     // to get the size of the type.
     OS << "__attribute__((__vector_size__(";
@@ -753,14 +753,14 @@ void TypePrinter::printDependentVectorBefore(
     printBefore(T->getElementType(), OS);
     break;
   }
-  case VectorType::SveFixedLengthDataVector:
-  case VectorType::SveFixedLengthPredicateVector:
+  case VectorKind::SveFixedLengthData:
+  case VectorKind::SveFixedLengthPredicate:
     // FIXME: We prefer to print the size directly here, but have no way
     // to get the size of the type.
     OS << "__attribute__((__arm_sve_vector_bits__(";
     if (T->getSizeExpr()) {
       T->getSizeExpr()->printPretty(OS, nullptr, Policy);
-      if (T->getVectorKind() == VectorType::SveFixedLengthPredicateVector)
+      if (T->getVectorKind() == VectorKind::SveFixedLengthPredicate)
         // Predicates take a bit per byte of the vector size, multiply by 8 to
         // get the number of bits passed to the attribute.
         OS << " * 8";
@@ -772,7 +772,7 @@ void TypePrinter::printDependentVectorBefore(
     OS << "))) ";
     printBefore(T->getElementType(), OS);
     break;
-  case VectorType::RVVFixedLengthDataVector:
+  case VectorKind::RVVFixedLengthData:
     // FIXME: We prefer to print the size directly here, but have no way
     // to get the size of the type.
     OS << "__attribute__((__riscv_rvv_vector_bits__(";
@@ -1597,7 +1597,7 @@ void TypePrinter::printElaboratedBefore(const ElaboratedType *T,
   if (!Policy.IncludeTagDefinition)
   {
     OS << TypeWithKeyword::getKeywordName(T->getKeyword());
-    if (T->getKeyword() != ETK_None)
+    if (T->getKeyword() != ElaboratedTypeKeyword::None)
       OS << " ";
     NestedNameSpecifier *Qualifier = T->getQualifier();
     if (Qualifier)
@@ -1641,7 +1641,7 @@ void TypePrinter::printParenAfter(const ParenType *T, raw_ostream &OS) {
 void TypePrinter::printDependentNameBefore(const DependentNameType *T,
                                            raw_ostream &OS) {
   OS << TypeWithKeyword::getKeywordName(T->getKeyword());
-  if (T->getKeyword() != ETK_None)
+  if (T->getKeyword() != ElaboratedTypeKeyword::None)
     OS << " ";
 
   T->getQualifier()->print(OS, Policy);
@@ -1658,7 +1658,7 @@ void TypePrinter::printDependentTemplateSpecializationBefore(
   IncludeStrongLifetimeRAII Strong(Policy);
 
   OS << TypeWithKeyword::getKeywordName(T->getKeyword());
-  if (T->getKeyword() != ETK_None)
+  if (T->getKeyword() != ElaboratedTypeKeyword::None)
     OS << " ";
 
   if (T->getQualifier())

@@ -81,6 +81,14 @@ constexpr bool test() {
     assert(e.value().i == 10);
   }
 
+  // TailClobberer
+  {
+    std::expected<TailClobberer<0>, bool> e(std::unexpect);
+    auto list = {4, 5, 6};
+    e.emplace(list);
+    assert(e.has_value());
+  }
+
   return true;
 }
 
