@@ -3165,7 +3165,16 @@ public:
 
   /// Diagnose any unused parameters in the given sequence of
   /// ParmVarDecl pointers.
-  void DiagnoseUnusedParameters(ArrayRef<ParmVarDecl *> Parameters);
+  ///
+  /// Normally, we check if the parameter decls have the Referenced bit set.
+  /// C++ Coroutines, however, are a special case due to the existences of
+  /// parameter moves (See Sema::buildCoroutineParameterMoves), the parameters
+  /// are always referenced in coroutines. Therefore, in the case of coroutines,
+  /// CoroutineBodyRefs must be passed to correctly diagnose parameter usages
+  /// as written by the user.
+  void DiagnoseUnusedParameters(
+      ArrayRef<ParmVarDecl *> Parameters,
+      llvm::SmallSet<ParmVarDecl *, 4> *CoroutineBodyRefs = nullptr);
 
   /// Diagnose whether the size of parameters or return value of a
   /// function or obj-c method definition is pass-by-value and larger than a

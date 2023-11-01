@@ -25,6 +25,7 @@
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/NonTrivialTypeVisitor.h"
 #include "clang/AST/Randstruct.h"
+#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/StmtCXX.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/HLSLRuntime.h"
@@ -45,6 +46,7 @@
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/Template.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/TargetParser/Triple.h"
@@ -15085,14 +15087,26 @@ ParmVarDecl *Sema::BuildParmVarDeclForTypedef(DeclContext *DC,
   return Param;
 }
 
-void Sema::DiagnoseUnusedParameters(ArrayRef<ParmVarDecl *> Parameters) {
+void Sema::DiagnoseUnusedParameters(
+    ArrayRef<ParmVarDecl *> Parameters,
+    llvm::SmallSet<ParmVarDecl *, 4> *CoroutineBodyRefs) {
   // Don't diagnose unused-parameter errors in template instantiations; we
   // will already have done so in the template itself.
   if (inTemplateInstantiation())
     return;
 
+  auto isReferenced = [&](const ParmVarDecl *Parameter) {
+    if (CoroutineBodyRefs) {
+      if (CoroutineBodyRefs->count(Parameter))
+        return true;
+    } else if (Parameter->isReferenced())
+      return true;
+
+    return false;
+  };
+
   for (const ParmVarDecl *Parameter : Parameters) {
-    if (!Parameter->isReferenced() && Parameter->getDeclName() &&
+    if (!isReferenced(Parameter) && Parameter->getDeclName() &&
         !Parameter->hasAttr<UnusedAttr>() &&
         !Parameter->getIdentifier()->isPlaceholder()) {
       Diag(Parameter->getLocation(), diag::warn_unused_parameter)
@@ -15805,6 +15819,28 @@ static void diagnoseImplicitlyRetainedSelf(Sema &S) {
           << FixItHint::CreateInsertion(P.first, "self->");
 }
 
+namespace {
+struct StmtReferenceVisitor : public RecursiveASTVisitor<StmtReferenceVisitor> {
+  const ASTContext &Context;
+  StmtReferenceVisitor(const ASTContext &Ctx) : Context(Ctx) {}
+
+  llvm::SmallSet<ParmVarDecl *, 4> UsedParams;
+
+  bool VisitStmt(Stmt *S) {
+    ValueDecl *D = nullptr;
+    if (auto E = dyn_cast<DeclRefExpr>(S))
+      D = E->getDecl();
+
+    if (D)
+      if (auto PVD = dyn_cast<ParmVarDecl>(D))
+        UsedParams.insert(PVD);
+
+    return true;
+  }
+};
+
+} // end anonymous namespace
+
 Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
                                     bool IsInstantiation) {
   FunctionScopeInfo *FSI = getCurFunction();
@@ -15882,8 +15918,18 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
         // Don't diagnose unused parameters of defaulted, deleted or naked
         // functions.
         if (!FD->isDeleted() && !FD->isDefaulted() && !FD->hasSkippedBody() &&
-            !FD->hasAttr<NakedAttr>())
-          DiagnoseUnusedParameters(FD->parameters());
+            !FD->hasAttr<NakedAttr>()) {
+
+          if (auto CBS = dyn_cast<CoroutineBodyStmt>(Body)) {
+            auto BodyAsWritten = CBS->getBody();
+            assert(BodyAsWritten &&
+                   "Coroutine body CompoundStmt should exist!");
+            StmtReferenceVisitor SRV(Context);
+            SRV.TraverseStmt(BodyAsWritten);
+            DiagnoseUnusedParameters(FD->parameters(), &SRV.UsedParams);
+          } else
+            DiagnoseUnusedParameters(FD->parameters());
+        }
         DiagnoseSizeOfParametersAndReturnValue(FD->parameters(),
                                                FD->getReturnType(), FD);
 
