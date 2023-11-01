@@ -162,6 +162,8 @@ enum ArchExtKind : unsigned {
   AEK_FPMR =          58, // FEAT_FPMR
   AEK_FP8 =           59, // FEAT_FP8
   AEK_FAMINMAX =      60, // FEAT_FAMINMAX
+  AEK_FP8FMA =        61, // FEAT_FP8FMA
+  AEK_SSVE_FP8FMA =   62, // FEAT_SSVE_FP8FMA
   AEK_NUM_EXTENSIONS
 };
 using ExtensionBitset = Bitset<AEK_NUM_EXTENSIONS>;
@@ -273,6 +275,8 @@ inline constexpr ExtensionInfo Extensions[] = {
     {"fpmr", AArch64::AEK_FPMR, "+fpmr", "-fpmr", FEAT_INIT, "", 0},
     {"fp8", AArch64::AEK_FP8, "+fp8", "-fp8", FEAT_INIT, "+fpmr", 0},
     {"faminmax", AArch64::AEK_FAMINMAX, "+faminmax", "-faminmax", FEAT_INIT, "", 0},
+    {"fp8fma", AArch64::AEK_FP8FMA, "+fp8fma", "-fp8fma", FEAT_INIT, "+fpmr", 0},
+    {"ssve-fp8fma", AArch64::AEK_SSVE_FP8FMA, "+ssve-fp8fma", "-ssve-fp8fma", FEAT_INIT, "+sme2", 0},
     // Special cases
     {"none", AArch64::AEK_NONE, {}, {}, FEAT_INIT, "", ExtensionInfo::MaxFMVPriority},
 };

@@ -1223,6 +1223,12 @@ public:
                 Reg.RegNum));
   }
 
+  bool isNeonVectorReg0to7() const {
+    return Kind == k_Register && Reg.Kind == RegKind::NeonVector &&
+           (AArch64MCRegisterClasses[AArch64::FPR128_0to7RegClassID].contains(
+               Reg.RegNum));
+  }
+
   bool isMatrix() const { return Kind == k_MatrixRegister; }
   bool isMatrixTileList() const { return Kind == k_MatrixTileList; }
 
@@ -1762,6 +1768,11 @@ public:
   }
 
   void addVectorRegLoOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    Inst.addOperand(MCOperand::createReg(getReg()));
+  }
+
+  void addVectorReg0to7Operands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
     Inst.addOperand(MCOperand::createReg(getReg()));
   }
@@ -2598,31 +2609,31 @@ static std::optional<std::pair<int, int>> parseVectorKind(StringRef Suffix,
 
   switch (VectorKind) {
   case RegKind::NeonVector:
-    Res =
-        StringSwitch<std::pair<int, int>>(Suffix.lower())
-            .Case("", {0, 0})
-            .Case(".1d", {1, 64})
-            .Case(".1q", {1, 128})
-            // '.2h' needed for fp16 scalar pairwise reductions
-            .Case(".2h", {2, 16})
-            .Case(".2s", {2, 32})
-            .Case(".2d", {2, 64})
-            // '.4b' is another special case for the ARMv8.2a dot product
-            // operand
-            .Case(".4b", {4, 8})
-            .Case(".4h", {4, 16})
-            .Case(".4s", {4, 32})
-            .Case(".8b", {8, 8})
-            .Case(".8h", {8, 16})
-            .Case(".16b", {16, 8})
-            // Accept the width neutral ones, too, for verbose syntax. If those
-            // aren't used in the right places, the token operand won't match so
-            // all will work out.
-            .Case(".b", {0, 8})
-            .Case(".h", {0, 16})
-            .Case(".s", {0, 32})
-            .Case(".d", {0, 64})
-            .Default({-1, -1});
+    Res = StringSwitch<std::pair<int, int>>(Suffix.lower())
+              .Case("", {0, 0})
+              .Case(".1d", {1, 64})
+              .Case(".1q", {1, 128})
+              // '.2h' needed for fp16 scalar pairwise reductions
+              .Case(".2h", {2, 16})
+              .Case(".2b", {2, 8})
+              .Case(".2s", {2, 32})
+              .Case(".2d", {2, 64})
+              // '.4b' is another special case for the ARMv8.2a dot product
+              // operand
+              .Case(".4b", {4, 8})
+              .Case(".4h", {4, 16})
+              .Case(".4s", {4, 32})
+              .Case(".8b", {8, 8})
+              .Case(".8h", {8, 16})
+              .Case(".16b", {16, 8})
+              // Accept the width neutral ones, too, for verbose syntax. If
+              // those aren't used in the right places, the token operand won't
+              // match so all will work out.
+              .Case(".b", {0, 8})
+              .Case(".h", {0, 16})
+              .Case(".s", {0, 32})
+              .Case(".d", {0, 64})
+              .Default({-1, -1});
     break;
   case RegKind::SVEPredicateAsCounter:
   case RegKind::SVEPredicateVector:
@@ -3641,6 +3652,8 @@ static const struct Extension {
     {"fpmr", {AArch64::FeatureFPMR}},
     {"fp8", {AArch64::FeatureFP8}},
     {"faminmax", {AArch64::FeatureFAMINMAX}},
+    {"fp8fma", {AArch64::FeatureFP8FMA}},
+    {"ssve-fp8fma", {AArch64::FeatureSSVE_FP8FMA}},
 };
 
 static void setRequiredFeatureString(FeatureBitset FBS, std::string &Str) {

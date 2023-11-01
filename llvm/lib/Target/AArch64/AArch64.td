@@ -517,6 +517,12 @@ def FeatureSME2p1 : SubtargetFeature<"sme2p1", "HasSME2p1", "true",
 def FeatureFAMINMAX: SubtargetFeature<"faminmax", "HasFAMINMAX", "true",
    "Enable FAMIN and FAMAX instructions (FEAT_FAMINMAX)">;
 
+def FeatureFP8FMA : SubtargetFeature<"fp8fma", "HasFP8FMA", "true",
+  "Enable fp8 multiply-add instructions (FEAT_FP8FMA)">;
+
+def FeatureSSVE_FP8FMA : SubtargetFeature<"ssve-fp8fma", "HasSSVE_FP8FMA", "true",
+  "Enable SVE2 fp8 multiply-add instructions (FEAT_SSVE_FP8FMA)", [FeatureSME2]>;
+
 def FeatureAppleA7SysReg  : SubtargetFeature<"apple-a7-sysreg", "HasAppleA7SysReg", "true",
   "Apple A7 (the CPU formerly known as Cyclone)">;
 
@@ -747,7 +753,7 @@ let F = [HasSVE2p1, HasSVE2p1_or_HasSME2, HasSVE2p1_or_HasSME2p1] in
 def SVE2p1Unsupported : AArch64Unsupported;
 
 def SVE2Unsupported : AArch64Unsupported {
-  let F = !listconcat([HasSVE2, HasSVE2orSME,
+  let F = !listconcat([HasSVE2, HasSVE2orSME, HasSSVE_FP8FMA,
                        HasSVE2AES, HasSVE2SHA3, HasSVE2SM4, HasSVE2BitPerm],
                        SVE2p1Unsupported.F);
 }
@@ -761,7 +767,7 @@ let F = [HasSME2p1, HasSVE2p1_or_HasSME2p1] in
 def SME2p1Unsupported : AArch64Unsupported;
 
 def SME2Unsupported : AArch64Unsupported {
-  let F = !listconcat([HasSME2, HasSVE2p1_or_HasSME2],
+  let F = !listconcat([HasSME2, HasSVE2p1_or_HasSME2, HasSSVE_FP8FMA],
                       SME2p1Unsupported.F);
 }
 

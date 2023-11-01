@@ -10122,3 +10122,74 @@ class sve2_fp8_down_cvt_single<bits<2> opc, string mnemonic,
 multiclass sve2_fp8_down_cvt_single<bits<2> opc, string mnemonic, RegisterOperand src> {
   def NAME : sve2_fp8_down_cvt_single<opc, mnemonic, ZPR8, src>;
 }
+
+// FP8 Widening Multiply-Add Long - Indexed Group
+class sve2_fp8_mla_long_by_indexed_elem<bit T, string mnemonic>
+    : I<(outs ZPR16:$Zda),
+      (ins ZPR16:$_Zda, ZPR8:$Zn, ZPR3b8:$Zm, VectorIndexB:$imm4),
+      mnemonic, "\t$Zda, $Zn, $Zm$imm4",
+      "", []>, Sched<[]>{
+  bits<5> Zda;
+  bits<5> Zn;
+  bits<3> Zm;
+  bits<4> imm4;
+  let Inst{31-24} = 0b01100100;
+  let Inst{23}    = T;
+  let Inst{22-21} = 0b01;
+  let Inst{20-19} = imm4{3-2};
+  let Inst{18-16} = Zm;
+  let Inst{15-12} = 0b0101;
+  let Inst{11-10} = imm4{1-0};
+  let Inst{9-5}   = Zn;
+  let Inst{4-0}   = Zda;
+  let Constraints = "$Zda = $_Zda";
+  let DestructiveInstType = DestructiveOther;
+  let ElementSize         = ZPR16.ElementSize;
+}
+
+// FP8 Widening Multiply-Add (Long)/(Long Long) Group
+class sve2_fp8_mla<bits<3>opc, ZPRRegOp dst_ty, string mnemonic>
+    : I<(outs dst_ty:$Zda),
+      (ins dst_ty:$_Zda, ZPR8:$Zn, ZPR8:$Zm),
+      mnemonic, "\t$Zda, $Zn, $Zm",
+      "", []>, Sched<[]>{
+  bits<5> Zda;
+  bits<5> Zn;
+  bits<5> Zm;
+  let Inst{31-24} = 0b01100100;
+  let Inst{23}    = opc{2};
+  let Inst{22-21} = 0b01;
+  let Inst{20-16} = Zm;
+  let Inst{15-14} = 0b10;
+  let Inst{13-12} = opc{1-0};
+  let Inst{11-10} = 0b10;
+  let Inst{9-5}   = Zn;
+  let Inst{4-0}   = Zda;
+  let Constraints = "$Zda = $_Zda";
+  let DestructiveInstType = DestructiveOther;
+  let ElementSize         = dst_ty.ElementSize;
+}
+
+// FP8 Widening Multiply-Add Long Long - Indexed Group
+class sve2_fp8_mla_long_long_by_indexed_elem<bits<2> TT, string mnemonic>
+    : I<(outs ZPR32:$Zda),
+      (ins ZPR32:$_Zda, ZPR8:$Zn, ZPR3b8:$Zm, VectorIndexB:$imm4),
+      mnemonic, "\t$Zda, $Zn, $Zm$imm4",
+      "", []>, Sched<[]>{
+  bits<5> Zda;
+  bits<5> Zn;
+  bits<3> Zm;
+  bits<4> imm4;
+  let Inst{31-24} = 0b01100100;
+  let Inst{23-22} = TT;
+  let Inst{21}    = 0b1;
+  let Inst{20-19} = imm4{3-2};
+  let Inst{18-16} = Zm;
+  let Inst{15-12} = 0b1100;
+  let Inst{11-10} = imm4{1-0};
+  let Inst{9-5}   = Zn;
+  let Inst{4-0}   = Zda;
+  let Constraints = "$Zda = $_Zda";
+  let DestructiveInstType = DestructiveOther;
+  let ElementSize         = ZPR32.ElementSize;
+}
