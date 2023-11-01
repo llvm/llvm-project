@@ -3508,7 +3508,7 @@ QualType ASTContext::getMemberPointerType(QualType T, const Type *Cls) const {
 QualType ASTContext::getConstantArrayType(QualType EltTy,
                                           const llvm::APInt &ArySizeIn,
                                           const Expr *SizeExpr,
-                                          ArrayType::ArraySizeModifier ASM,
+                                          ArraySizeModifier ASM,
                                           unsigned IndexTypeQuals) const {
   assert((EltTy->isDependentType() ||
           EltTy->isIncompleteType() || EltTy->isConstantSizeType()) &&
@@ -3674,12 +3674,10 @@ QualType ASTContext::getVariableArrayDecayedType(QualType type) const {
   // Turn incomplete types into [*] types.
   case Type::IncompleteArray: {
     const auto *iat = cast<IncompleteArrayType>(ty);
-    result = getVariableArrayType(
-                 getVariableArrayDecayedType(iat->getElementType()),
-                                  /*size*/ nullptr,
-                                  ArrayType::Normal,
-                                  iat->getIndexTypeCVRQualifiers(),
-                                  SourceRange());
+    result =
+        getVariableArrayType(getVariableArrayDecayedType(iat->getElementType()),
+                             /*size*/ nullptr, ArraySizeModifier::Normal,
+                             iat->getIndexTypeCVRQualifiers(), SourceRange());
     break;
   }
 
@@ -3687,11 +3685,9 @@ QualType ASTContext::getVariableArrayDecayedType(QualType type) const {
   case Type::VariableArray: {
     const auto *vat = cast<VariableArrayType>(ty);
     result = getVariableArrayType(
-                 getVariableArrayDecayedType(vat->getElementType()),
-                                  /*size*/ nullptr,
-                                  ArrayType::Star,
-                                  vat->getIndexTypeCVRQualifiers(),
-                                  vat->getBracketsRange());
+        getVariableArrayDecayedType(vat->getElementType()),
+        /*size*/ nullptr, ArraySizeModifier::Star,
+        vat->getIndexTypeCVRQualifiers(), vat->getBracketsRange());
     break;
   }
   }
@@ -3702,9 +3698,8 @@ QualType ASTContext::getVariableArrayDecayedType(QualType type) const {
 
 /// getVariableArrayType - Returns a non-unique reference to the type for a
 /// variable array of the specified element type.
-QualType ASTContext::getVariableArrayType(QualType EltTy,
-                                          Expr *NumElts,
-                                          ArrayType::ArraySizeModifier ASM,
+QualType ASTContext::getVariableArrayType(QualType EltTy, Expr *NumElts,
+                                          ArraySizeModifier ASM,
                                           unsigned IndexTypeQuals,
                                           SourceRange Brackets) const {
   // Since we don't unique expressions, it isn't possible to unique VLA's
@@ -3733,7 +3728,7 @@ QualType ASTContext::getVariableArrayType(QualType EltTy,
 /// type.
 QualType ASTContext::getDependentSizedArrayType(QualType elementType,
                                                 Expr *numElements,
-                                                ArrayType::ArraySizeModifier ASM,
+                                                ArraySizeModifier ASM,
                                                 unsigned elementTypeQuals,
                                                 SourceRange brackets) const {
   assert((!numElements || numElements->isTypeDependent() ||
@@ -3796,7 +3791,7 @@ QualType ASTContext::getDependentSizedArrayType(QualType elementType,
 }
 
 QualType ASTContext::getIncompleteArrayType(QualType elementType,
-                                            ArrayType::ArraySizeModifier ASM,
+                                            ArraySizeModifier ASM,
                                             unsigned elementTypeQuals) const {
   llvm::FoldingSetNodeID ID;
   IncompleteArrayType::Profile(ID, elementType, ASM, elementTypeQuals);
@@ -8869,9 +8864,8 @@ static TypedefDecl *CreatePowerABIBuiltinVaListDecl(const ASTContext *Context) {
 
   // typedef __va_list_tag __builtin_va_list[1];
   llvm::APInt Size(Context->getTypeSize(Context->getSizeType()), 1);
-  QualType VaListTagArrayType
-    = Context->getConstantArrayType(VaListTagTypedefType,
-                                    Size, nullptr, ArrayType::Normal, 0);
+  QualType VaListTagArrayType = Context->getConstantArrayType(
+      VaListTagTypedefType, Size, nullptr, ArraySizeModifier::Normal, 0);
   return Context->buildImplicitTypedef(VaListTagArrayType, "__builtin_va_list");
 }
 
@@ -8925,7 +8919,7 @@ CreateX86_64ABIBuiltinVaListDecl(const ASTContext *Context) {
   // typedef struct __va_list_tag __builtin_va_list[1];
   llvm::APInt Size(Context->getTypeSize(Context->getSizeType()), 1);
   QualType VaListTagArrayType = Context->getConstantArrayType(
-      VaListTagType, Size, nullptr, ArrayType::Normal, 0);
+      VaListTagType, Size, nullptr, ArraySizeModifier::Normal, 0);
   return Context->buildImplicitTypedef(VaListTagArrayType, "__builtin_va_list");
 }
 
@@ -8933,7 +8927,7 @@ static TypedefDecl *CreatePNaClABIBuiltinVaListDecl(const ASTContext *Context) {
   // typedef int __builtin_va_list[4];
   llvm::APInt Size(Context->getTypeSize(Context->getSizeType()), 4);
   QualType IntArrayType = Context->getConstantArrayType(
-      Context->IntTy, Size, nullptr, ArrayType::Normal, 0);
+      Context->IntTy, Size, nullptr, ArraySizeModifier::Normal, 0);
   return Context->buildImplicitTypedef(IntArrayType, "__builtin_va_list");
 }
 
@@ -9028,7 +9022,7 @@ CreateSystemZBuiltinVaListDecl(const ASTContext *Context) {
   // typedef __va_list_tag __builtin_va_list[1];
   llvm::APInt Size(Context->getTypeSize(Context->getSizeType()), 1);
   QualType VaListTagArrayType = Context->getConstantArrayType(
-      VaListTagType, Size, nullptr, ArrayType::Normal, 0);
+      VaListTagType, Size, nullptr, ArraySizeModifier::Normal, 0);
 
   return Context->buildImplicitTypedef(VaListTagArrayType, "__builtin_va_list");
 }
@@ -9079,7 +9073,7 @@ static TypedefDecl *CreateHexagonBuiltinVaListDecl(const ASTContext *Context) {
   // typedef __va_list_tag __builtin_va_list[1];
   llvm::APInt Size(Context->getTypeSize(Context->getSizeType()), 1);
   QualType VaListTagArrayType = Context->getConstantArrayType(
-      VaListTagTypedefType, Size, nullptr, ArrayType::Normal, 0);
+      VaListTagTypedefType, Size, nullptr, ArraySizeModifier::Normal, 0);
 
   return Context->buildImplicitTypedef(VaListTagArrayType, "__builtin_va_list");
 }
@@ -10775,12 +10769,10 @@ QualType ASTContext::mergeTypes(QualType LHS, QualType RHS, bool OfBlockPointer,
       return RHS;
     if (LCAT)
       return getConstantArrayType(ResultType, LCAT->getSize(),
-                                  LCAT->getSizeExpr(),
-                                  ArrayType::ArraySizeModifier(), 0);
+                                  LCAT->getSizeExpr(), ArraySizeModifier(), 0);
     if (RCAT)
       return getConstantArrayType(ResultType, RCAT->getSize(),
-                                  RCAT->getSizeExpr(),
-                                  ArrayType::ArraySizeModifier(), 0);
+                                  RCAT->getSizeExpr(), ArraySizeModifier(), 0);
     if (LVAT && getCanonicalType(LHSElem) == getCanonicalType(ResultType))
       return LHS;
     if (RVAT && getCanonicalType(RHSElem) == getCanonicalType(ResultType))
@@ -10799,8 +10791,7 @@ QualType ASTContext::mergeTypes(QualType LHS, QualType RHS, bool OfBlockPointer,
     }
     if (getCanonicalType(LHSElem) == getCanonicalType(ResultType)) return LHS;
     if (getCanonicalType(RHSElem) == getCanonicalType(ResultType)) return RHS;
-    return getIncompleteArrayType(ResultType,
-                                  ArrayType::ArraySizeModifier(), 0);
+    return getIncompleteArrayType(ResultType, ArraySizeModifier(), 0);
   }
   case Type::FunctionNoProto:
     return mergeFunctionTypes(LHS, RHS, OfBlockPointer, Unqualified,
@@ -12237,7 +12228,7 @@ QualType ASTContext::getStringLiteralArrayType(QualType EltTy,
   // Get an array type for the string, according to C99 6.4.5. This includes
   // the null terminator character.
   return getConstantArrayType(EltTy, llvm::APInt(32, Length + 1), nullptr,
-                              ArrayType::Normal, /*IndexTypeQuals*/ 0);
+                              ArraySizeModifier::Normal, /*IndexTypeQuals*/ 0);
 }
 
 StringLiteral *
