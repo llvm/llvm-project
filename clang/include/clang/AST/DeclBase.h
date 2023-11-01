@@ -1399,7 +1399,7 @@ enum class DeductionCandidate : unsigned char {
   Aggregate,
 };
 
-enum class ArgPassingKind;
+enum class RecordArgPassingKind;
 enum class OMPDeclareReductionInitKind;
 enum class ObjCImplementationControl;
 enum class LinkageSpecLanguageIDs;
