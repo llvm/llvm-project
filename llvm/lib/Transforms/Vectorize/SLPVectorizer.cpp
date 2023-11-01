@@ -34,6 +34,7 @@
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/CodeMetrics.h"
+#include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/DemandedBits.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/IVDescriptors.h"
@@ -6286,8 +6287,8 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth,
         if (!CI)
           Operands.back().push_back(Op);
         else
-          Operands.back().push_back(ConstantExpr::getIntegerCast(
-              CI, Ty, CI->getValue().isSignBitSet()));
+          Operands.back().push_back(ConstantFoldIntegerCast(
+              CI, Ty, CI->getValue().isSignBitSet(), *DL));
       }
       TE->setOperand(IndexIdx, Operands.back());
 
