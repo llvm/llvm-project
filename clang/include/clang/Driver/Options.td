@@ -8326,3 +8326,5 @@ def dxc_disable_validation : DXCFlag<"Vd">,
 def : Option<["/", "-"], "Qembed_debug", KIND_FLAG>, Group<dxc_Group>,
   Flags<[Ignored]>, Visibility<[DXCOption]>,
   HelpText<"Embed PDB in shader container (ignored)">;
+def spirv : DXCFlag<"spirv">,
+  HelpText<"Generate SPIR-V code">;
