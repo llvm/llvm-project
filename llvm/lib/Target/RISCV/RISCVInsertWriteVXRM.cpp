@@ -337,8 +337,9 @@ void RISCVInsertWriteVXRM::emitWriteVXRM(MachineBasicBlock &MBB) {
             PInfo.AvailableOut.getVXRMImm() ==
                 BBInfo.AnticipatedIn.getVXRMImm())
           continue;
-        // If the predecessor anticipated this value for all its succesors,
-        // then it should have already inserted.
+        // If the predecessor anticipates this value for all its succesors,
+        // then a write to VXRM would have already occured before this block is
+        // executed.
         if (PInfo.AnticipatedOut.isStatic() &&
             PInfo.AnticipatedOut.getVXRMImm() ==
                 BBInfo.AnticipatedIn.getVXRMImm())
