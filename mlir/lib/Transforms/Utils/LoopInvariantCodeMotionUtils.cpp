@@ -120,8 +120,10 @@ namespace {
 class MatchingSubsets {
 public:
   /// Insert a subset op.
-  void insert(SubsetOpInterface op) {
+  void insert(SubsetOpInterface op, bool collectHoistableOps = true) {
     allSubsetOps.push_back(op);
+    if (!collectHoistableOps)
+      return;
     if (auto extractionOp =
             dyn_cast<SubsetExtractionOpInterface>(op.getOperation()))
       insertExtractionOp(extractionOp);
@@ -147,6 +149,15 @@ public:
           return allDisjoint(extractionOp, insertionOp);
         });
   }
+
+  /// Populate subset ops starting from the given region iter_arg. Return
+  /// "failure" if non-subset ops are found along the path to the loop yielding
+  /// op or if there is no single path to the tied yielded operand. If
+  /// `collectHoistableOps` is set to "false", subset ops are gathered
+  /// throughout the traversal, but not enumerated by `getHoistableSubsetOps`.
+  LogicalResult populateSubsetOpsAtIterArg(LoopLikeOpInterface loopLike,
+                                           BlockArgument iterArg,
+                                           bool collectHoistableOps = true);
 
 private:
   /// Helper function for equivalence of tensor values. Since only insertion
@@ -225,18 +236,12 @@ static OpOperand *getSingleTerminatorUse(Value value) {
   return nullptr;
 }
 
-/// Hoist all subset ops that operate on the idx-th region iter_arg of the given
-/// loop-like op and index into loop-invariant subset locations. Return the
-/// newly created loop op (that has extra iter_args) or the original loop op if
-/// nothing was hoisted.
-static LoopLikeOpInterface hoistSubsetAtIterArg(LoopLikeOpInterface loopLike,
-                                                BlockArgument iterArg) {
-  IRRewriter rewriter(loopLike.getContext());
+LogicalResult
+MatchingSubsets::populateSubsetOpsAtIterArg(LoopLikeOpInterface loopLike,
+                                            BlockArgument iterArg,
+                                            bool collectHoistableOps) {
   assert(iterArg.getOwner()->getParentOp() == loopLike && "invalid iter_arg");
-  auto it = llvm::find(loopLike.getRegionIterArgs(), iterArg);
-  int64_t iterArgIdx = std::distance(loopLike.getRegionIterArgs().begin(), it);
   Value value = iterArg;
-  MatchingSubsets subsets;
 
   // Traverse use-def chain. Subset ops can be hoisted only if all ops along the
   // use-def chain starting from the region iter_arg are subset extraction or
@@ -249,21 +254,39 @@ static LoopLikeOpInterface hoistSubsetAtIterArg(LoopLikeOpInterface loopLike,
     Value nextValue = {};
 
     for (OpOperand &use : value.getUses()) {
+      if (auto nestedLoop = dyn_cast<LoopLikeOpInterface>(use.getOwner())) {
+        // Subset ops in nested loops are collected to check if there are only
+        // disjoint subset ops, but such subset ops are not subject to hoisting.
+        // To hoist subset ops from nested loops, the hoisting transformation
+        // should be run on the nested loop.
+        auto nestedIterArg = nestedLoop.getTiedLoopRegionIterArg(&use);
+        if (!nestedIterArg)
+          return failure();
+        // Note: `populateSubsetOpsAtIterArg` fails if there is no single SSA
+        // use-def chain starting at `nestedIterArg` and terminating in the
+        // tied, yielding operand.
+        if (failed(populateSubsetOpsAtIterArg(nestedLoop, nestedIterArg,
+                                              /*collectHoistableOps=*/false)))
+          return failure();
+        nextValue = nestedLoop.getTiedLoopResult(&use);
+        continue;
+      }
+
       auto subsetOp = dyn_cast<SubsetOpInterface>(use.getOwner());
       if (!subsetOp)
-        return loopLike;
-      subsets.insert(subsetOp);
+        return failure();
+      insert(subsetOp);
 
       if (auto insertionOp =
               dyn_cast<SubsetInsertionOpInterface>(use.getOwner())) {
         // The value must be used as a destination. (In case of a source, the
         // entire tensor would be read, which would prevent any hoisting.)
         if (&use != &insertionOp.getDestinationOperand())
-          return loopLike;
+          return failure();
         // There must be a single use-def chain from the region iter_arg to the
         // terminator. I.e., only one insertion op. Branches are not supported.
         if (nextValue)
-          return loopLike;
+          return failure();
         nextValue = insertionOp.getUpdatedDestination();
       }
     }
@@ -271,7 +294,7 @@ static LoopLikeOpInterface hoistSubsetAtIterArg(LoopLikeOpInterface loopLike,
     // Nothing can be hoisted if the chain does not continue with loop yielding
     // op or a subset insertion op.
     if (!nextValue)
-      return loopLike;
+      return failure();
     value = nextValue;
   }
 
@@ -279,6 +302,23 @@ static LoopLikeOpInterface hoistSubsetAtIterArg(LoopLikeOpInterface loopLike,
   // loop and the yielded value is the `idx`-th operand. (I.e., there is no
   // swapping yield.)
   if (loopLike.getTiedLoopYieldedValue(iterArg) != yieldedOperand)
+    return failure();
+
+  return success();
+}
+
+/// Hoist all subset ops that operate on the idx-th region iter_arg of the given
+/// loop-like op and index into loop-invariant subset locations. Return the
+/// newly created loop op (that has extra iter_args) or the original loop op if
+/// nothing was hoisted.
+static LoopLikeOpInterface hoistSubsetAtIterArg(LoopLikeOpInterface loopLike,
+                                                BlockArgument iterArg) {
+  assert(iterArg.getOwner()->getParentOp() == loopLike && "invalid iter_arg");
+  auto it = llvm::find(loopLike.getRegionIterArgs(), iterArg);
+  int64_t iterArgIdx = std::distance(loopLike.getRegionIterArgs().begin(), it);
+  IRRewriter rewriter(loopLike.getContext());
+  MatchingSubsets subsets;
+  if (failed(subsets.populateSubsetOpsAtIterArg(loopLike, iterArg)))
     return loopLike;
 
   // Hoist all matching extraction-insertion pairs one-by-one.
