@@ -803,8 +803,30 @@ void CGOpenMPRuntimeGPU::emitKernelDeinit(CodeGenFunction &CGF,
   if (!IsSPMD)
     emitGenericVarsEpilog(CGF);
 
+  // This is temporary until we remove the fixed sized buffer.
+  ASTContext &C = CGM.getContext();
+  RecordDecl *StaticRD = C.buildImplicitRecord(
+      "_openmp_teams_reduction_type_$_", RecordDecl::TagKind::TTK_Union);
+  StaticRD->startDefinition();
+  for (const RecordDecl *TeamReductionRec : TeamsReductions) {
+    QualType RecTy = C.getRecordType(TeamReductionRec);
+    auto *Field = FieldDecl::Create(
+        C, StaticRD, SourceLocation(), SourceLocation(), nullptr, RecTy,
+        C.getTrivialTypeSourceInfo(RecTy, SourceLocation()),
+        /*BW=*/nullptr, /*Mutable=*/false,
+        /*InitStyle=*/ICIS_NoInit);
+    Field->setAccess(AS_public);
+    StaticRD->addDecl(Field);
+  }
+  StaticRD->completeDefinition();
+  QualType StaticTy = C.getRecordType(StaticRD);
+  llvm::Type *LLVMReductionsBufferTy =
+      CGM.getTypes().ConvertTypeForMem(StaticTy);
+  const auto &DL = CGM.getModule().getDataLayout();
+  uint64_t BufferSize =
+      DL.getTypeAllocSize(LLVMReductionsBufferTy).getFixedValue();
   CGBuilderTy &Bld = CGF.Builder;
-  OMPBuilder.createTargetDeinit(Bld);
+  OMPBuilder.createTargetDeinit(Bld, BufferSize);
 }
 
 void CGOpenMPRuntimeGPU::emitSPMDKernel(const OMPExecutableDirective &D,
@@ -2998,15 +3020,10 @@ void CGOpenMPRuntimeGPU::emitReduction(
         CGM.getContext(), PrivatesReductions, std::nullopt, VarFieldMap,
         C.getLangOpts().OpenMPCUDAReductionBufNum);
     TeamsReductions.push_back(TeamReductionRec);
-    if (!KernelTeamsReductionPtr) {
-      KernelTeamsReductionPtr = new llvm::GlobalVariable(
-          CGM.getModule(), CGM.VoidPtrTy, /*isConstant=*/true,
-          llvm::GlobalValue::InternalLinkage, nullptr,
-          "_openmp_teams_reductions_buffer_$_$ptr");
-    }
-    llvm::Value *GlobalBufferPtr = CGF.EmitLoadOfScalar(
-        Address(KernelTeamsReductionPtr, CGF.VoidPtrTy, CGM.getPointerAlign()),
-        /*Volatile=*/false, C.getPointerType(C.VoidPtrTy), Loc);
+    auto *KernelTeamsReductionPtr = CGF.EmitRuntimeCall(
+        OMPBuilder.getOrCreateRuntimeFunction(
+            CGM.getModule(), OMPRTL___kmpc_reduction_get_fixed_buffer),
+        {}, "_openmp_teams_reductions_buffer_$_$ptr");
     llvm::Value *GlobalToBufferCpyFn = ::emitListToGlobalCopyFunction(
         CGM, Privates, ReductionArrayTy, Loc, TeamReductionRec, VarFieldMap);
     llvm::Value *GlobalToBufferRedFn = ::emitListToGlobalReduceFunction(
@@ -3021,7 +3038,7 @@ void CGOpenMPRuntimeGPU::emitReduction(
     llvm::Value *Args[] = {
         RTLoc,
         ThreadId,
-        GlobalBufferPtr,
+        KernelTeamsReductionPtr,
         CGF.Builder.getInt32(C.getLangOpts().OpenMPCUDAReductionBufNum),
         RL,
         ShuffleAndReduceFn,
@@ -3652,42 +3669,6 @@ void CGOpenMPRuntimeGPU::processRequiresDirective(
     }
   }
   CGOpenMPRuntime::processRequiresDirective(D);
-}
-
-void CGOpenMPRuntimeGPU::clear() {
-
-  if (!TeamsReductions.empty()) {
-    ASTContext &C = CGM.getContext();
-    RecordDecl *StaticRD = C.buildImplicitRecord(
-        "_openmp_teams_reduction_type_$_", RecordDecl::TagKind::TTK_Union);
-    StaticRD->startDefinition();
-    for (const RecordDecl *TeamReductionRec : TeamsReductions) {
-      QualType RecTy = C.getRecordType(TeamReductionRec);
-      auto *Field = FieldDecl::Create(
-          C, StaticRD, SourceLocation(), SourceLocation(), nullptr, RecTy,
-          C.getTrivialTypeSourceInfo(RecTy, SourceLocation()),
-          /*BW=*/nullptr, /*Mutable=*/false,
-          /*InitStyle=*/ICIS_NoInit);
-      Field->setAccess(AS_public);
-      StaticRD->addDecl(Field);
-    }
-    StaticRD->completeDefinition();
-    QualType StaticTy = C.getRecordType(StaticRD);
-    llvm::Type *LLVMReductionsBufferTy =
-        CGM.getTypes().ConvertTypeForMem(StaticTy);
-    // FIXME: nvlink does not handle weak linkage correctly (object with the
-    // different size are reported as erroneous).
-    // Restore CommonLinkage as soon as nvlink is fixed.
-    auto *GV = new llvm::GlobalVariable(
-        CGM.getModule(), LLVMReductionsBufferTy,
-        /*isConstant=*/false, llvm::GlobalValue::InternalLinkage,
-        llvm::Constant::getNullValue(LLVMReductionsBufferTy),
-        "_openmp_teams_reductions_buffer_$_");
-    KernelTeamsReductionPtr->setInitializer(
-        llvm::ConstantExpr::getPointerBitCastOrAddrSpaceCast(GV,
-                                                             CGM.VoidPtrTy));
-  }
-  CGOpenMPRuntime::clear();
 }
 
 llvm::Value *CGOpenMPRuntimeGPU::getGPUNumThreads(CodeGenFunction &CGF) {
