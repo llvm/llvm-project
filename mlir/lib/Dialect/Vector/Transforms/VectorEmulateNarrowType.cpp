@@ -819,8 +819,8 @@ void vector::populateVectorNarrowTypeEmulationPatterns(
     RewritePatternSet &patterns) {
 
   // Populate `vector.*` conversion patterns.
-  patterns.add<ConvertVectorLoad, ConvertVectorMaskedLoad, ConvertVectorStore, ConvertVectorTransferRead>(
-      typeConverter, patterns.getContext());
+  patterns.add<ConvertVectorLoad, ConvertVectorMaskedLoad, ConvertVectorStore,
+               ConvertVectorTransferRead>(typeConverter, patterns.getContext());
 }
 
 void vector::populateVectorNarrowTypeRewritePatterns(
