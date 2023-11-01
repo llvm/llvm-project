@@ -314,7 +314,11 @@ struct ReplaceStaticShapeDims : OpRewritePattern<AllocTensorOp> {
       Value value = op.getDynamicSizes()[dynValCounter++];
       APInt intVal;
       if (matchPattern(value, m_ConstantInt(&intVal))) {
-        newShape[i] = intVal.getSExtValue();
+        int64_t dim = intVal.getSExtValue();
+        if (dim >= 0)
+          newShape[i] = intVal.getSExtValue();
+        else
+          newDynamicSizes.push_back(value);
       } else {
         newDynamicSizes.push_back(value);
       }
