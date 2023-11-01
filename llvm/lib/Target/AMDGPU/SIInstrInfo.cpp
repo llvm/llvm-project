@@ -2388,21 +2388,33 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     Register Reg = MI.getOperand(0).getReg();
     Register RegLo = RI.getSubReg(Reg, AMDGPU::sub0);
     Register RegHi = RI.getSubReg(Reg, AMDGPU::sub1);
+    MachineOperand OpLo = MI.getOperand(1);
+    MachineOperand OpHi = MI.getOperand(2);
 
     // Create a bundle so these instructions won't be re-ordered by the
     // post-RA scheduler.
     MIBundleBuilder Bundler(MBB, MI);
     Bundler.append(BuildMI(MF, DL, get(AMDGPU::S_GETPC_B64), Reg));
 
-    // Add 32-bit offset from this instruction to the start of the
-    // constant data.
-    Bundler.append(BuildMI(MF, DL, get(AMDGPU::S_ADD_U32), RegLo)
-                       .addReg(RegLo)
-                       .add(MI.getOperand(1)));
+    // What we want here is an offset from the value returned by s_getpc (which
+    // is the address of the s_add_u32 instruction) to the global variable, but
+    // since the encoding of $symbol starts 4 bytes after the start of the
+    // s_add_u32 instruction, we end up with an offset that is 4 bytes too
+    // small. This requires us to add 4 to the global variable offset in order
+    // to compute the correct address. Similarly for the s_addc_u32 instruction,
+    // the encoding of $symbol starts 12 bytes after the start of the s_add_u32
+    // instruction.
 
+    if (OpLo.isGlobal())
+      OpLo.setOffset(OpLo.getOffset() + 4);
+    Bundler.append(
+        BuildMI(MF, DL, get(AMDGPU::S_ADD_U32), RegLo).addReg(RegLo).add(OpLo));
+
+    if (OpHi.isGlobal())
+      OpHi.setOffset(OpHi.getOffset() + 12);
     Bundler.append(BuildMI(MF, DL, get(AMDGPU::S_ADDC_U32), RegHi)
                        .addReg(RegHi)
-                       .add(MI.getOperand(2)));
+                       .add(OpHi));
 
     finalizeBundle(MBB, Bundler.begin());
 
