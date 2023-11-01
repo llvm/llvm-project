@@ -1362,6 +1362,7 @@ TEST_F(FormatTest, FormatLoopsWithoutCompoundStatement) {
 
   FormatStyle AllowsMergedLoops = getLLVMStyle();
   AllowsMergedLoops.AllowShortLoopsOnASingleLine = true;
+
   verifyFormat("while (true) continue;", AllowsMergedLoops);
   verifyFormat("for (;;) continue;", AllowsMergedLoops);
   verifyFormat("for (int &v : vec) v *= 2;", AllowsMergedLoops);
@@ -1405,6 +1406,7 @@ TEST_F(FormatTest, FormatLoopsWithoutCompoundStatement) {
                "  a++;\n"
                "while (true);",
                AllowsMergedLoops);
+
   // Without braces labels are interpreted differently.
   verifyFormat("{\n"
                "  do\n"
@@ -1413,6 +1415,17 @@ TEST_F(FormatTest, FormatLoopsWithoutCompoundStatement) {
                "  while (true);\n"
                "}",
                AllowsMergedLoops);
+
+  // Don't merge if there are comments before the null statement.
+  verifyFormat("while (1) //\n"
+               "  ;",
+               AllowsMergedLoops);
+  verifyFormat("for (;;) /**/\n"
+               "  ;",
+               AllowsMergedLoops);
+  verifyFormat("while (true) /**/\n"
+               "  ;",
+               "while (true) /**/;", AllowsMergedLoops);
 }
 
 TEST_F(FormatTest, FormatShortBracedStatements) {
