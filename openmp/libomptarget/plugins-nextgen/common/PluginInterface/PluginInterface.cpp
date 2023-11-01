@@ -511,6 +511,9 @@ void *GenericKernelTy::prepareArgs(
     uint32_t &NumArgs, llvm::SmallVectorImpl<void *> &Args,
     llvm::SmallVectorImpl<void *> &Ptrs,
     KernelLaunchEnvironmentTy *KernelLaunchEnvironment) const {
+  if (isCtorOrDtor())
+    return nullptr;
+
   NumArgs += 1;
 
   Args.resize(NumArgs);
