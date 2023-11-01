@@ -306,7 +306,9 @@ RISCVCallLowering::RISCVCallLowering(const RISCVTargetLowering &TLI)
     : CallLowering(&TLI) {}
 
 // TODO: Support all argument types.
-static bool isSupportedArgumentType(Type *T, const RISCVSubtarget &Subtarget) {
+// TODO: Remove IsLowerArgs argument by adding support for vectors in lowerCall.
+static bool isSupportedArgumentType(Type *T, const RISCVSubtarget &Subtarget,
+                                    bool IsLowerArgs = false) {
   // TODO: Integers larger than 2*XLen are passed indirectly which is not
   // supported yet.
   if (T->isIntegerTy())
@@ -316,7 +318,8 @@ static bool isSupportedArgumentType(Type *T, const RISCVSubtarget &Subtarget) {
   if (T->isPointerTy())
     return true;
   // TODO: Support fixed vector types.
-  if (T->isVectorTy() && T->isScalableTy() && Subtarget.hasVInstructions())
+  if (IsLowerArgs && T->isVectorTy() && T->isScalableTy() &&
+      Subtarget.hasVInstructions())
     return true;
   return false;
 }
@@ -405,7 +408,7 @@ bool RISCVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
   const RISCVSubtarget &Subtarget =
       MIRBuilder.getMF().getSubtarget<RISCVSubtarget>();
   for (auto &Arg : F.args()) {
-    if (!isSupportedArgumentType(Arg.getType(), Subtarget))
+    if (!isSupportedArgumentType(Arg.getType(), Subtarget, /*IsLowerArgs*/true))
       return false;
   }
 
