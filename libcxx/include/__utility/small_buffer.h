@@ -62,7 +62,7 @@ public:
   }
 
   template <class _Stored>
-  _LIBCPP_AVAILABILITY_SIZED_NEW_DELETE _LIBCPP_HIDE_FROM_ABI _Stored* __alloc() {
+  _LIBCPP_HIDE_FROM_ABI _Stored* __alloc() {
     if constexpr (__fits_in_buffer<_Stored>) {
       return std::launder(reinterpret_cast<_Stored*>(__buffer_));
     } else {
@@ -73,13 +73,13 @@ public:
   }
 
   template <class _Stored>
-  _LIBCPP_AVAILABILITY_SIZED_NEW_DELETE _LIBCPP_HIDE_FROM_ABI void __dealloc() noexcept {
+  _LIBCPP_HIDE_FROM_ABI void __dealloc() noexcept {
     if constexpr (!__fits_in_buffer<_Stored>)
       ::operator delete[](*reinterpret_cast<void**>(__buffer_), sizeof(_Stored), align_val_t{alignof(_Stored)});
   }
 
   template <class _Stored, class... _Args>
-  _LIBCPP_AVAILABILITY_SIZED_NEW_DELETE _LIBCPP_HIDE_FROM_ABI void __construct(_Args&&... __args) {
+  _LIBCPP_HIDE_FROM_ABI void __construct(_Args&&... __args) {
     _Stored* __buffer = __alloc<_Stored>();
     auto __guard      = std::__make_exception_guard([&] { __dealloc<_Stored>(); });
     std::construct_at(__buffer, std::forward<_Args>(__args)...);

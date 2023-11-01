@@ -8,9 +8,6 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
-// This test requires support for aligned allocation to test overaligned types.
-// XFAIL: availability-aligned_allocation-missing
-
 // <memory>
 
 // shared_ptr

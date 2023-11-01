@@ -11,8 +11,6 @@
 
 // ALLOW_RETRIES: 3
 
-// UNSUPPORTED: availability-shared_mutex-missing
-
 // <shared_mutex>
 
 // class shared_timed_mutex;

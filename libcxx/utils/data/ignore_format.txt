@@ -827,7 +827,6 @@ libcxx/test/libcxx/iterators/predef.iterators/__unconstrained_reverse_iterator/t
 libcxx/test/libcxx/iterators/stream.iterators/ostreambuf.iterator/ostreambuf.iter.ops/failed.pass.cpp
 libcxx/test/libcxx/iterators/unwrap_iter.pass.cpp
 libcxx/test/libcxx/language.support/cxa_deleted_virtual.pass.cpp
-libcxx/test/libcxx/language.support/support.dynamic/aligned_alloc_availability.verify.cpp
 libcxx/test/libcxx/language.support/support.dynamic/libcpp_deallocate.sh.cpp
 libcxx/test/libcxx/language.support/support.dynamic/new_faligned_allocation.pass.cpp
 libcxx/test/libcxx/language.support/support.rtti/type.info/type_info.comparison.apple.compile.pass.cpp

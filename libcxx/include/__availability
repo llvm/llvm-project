@@ -87,11 +87,6 @@
 
 #if defined(_LIBCPP_HAS_NO_VENDOR_AVAILABILITY_ANNOTATIONS)
 
-    // This controls the availability of std::shared_mutex and std::shared_timed_mutex,
-    // which were added to the dylib later.
-// #   define _LIBCPP_AVAILABILITY_HAS_NO_SHARED_MUTEX
-#   define _LIBCPP_AVAILABILITY_SHARED_MUTEX
-
     // These macros control the availability of std::bad_optional_access and
     // other exception types. These were put in the shared library to prevent
     // code bloat from every user program defining the vtable for these exception
@@ -108,41 +103,6 @@
 
 // #   define _LIBCPP_AVAILABILITY_HAS_NO_BAD_ANY_CAST
 #   define _LIBCPP_AVAILABILITY_BAD_ANY_CAST
-
-    // This controls the availability of std::uncaught_exceptions().
-// #   define _LIBCPP_AVAILABILITY_HAS_NO_UNCAUGHT_EXCEPTIONS
-#   define _LIBCPP_AVAILABILITY_UNCAUGHT_EXCEPTIONS
-
-    // This controls the availability of the sized version of ::operator delete,
-    // ::operator delete[], and their align_val_t variants, which were all added
-    // in C++17, and hence not present in early dylibs.
-// #   define _LIBCPP_AVAILABILITY_HAS_NO_SIZED_NEW_DELETE
-#   define _LIBCPP_AVAILABILITY_SIZED_NEW_DELETE
-
-    // This controls the availability of the std::future_error exception.
-    //
-    // Note that when exceptions are disabled, the methods that normally throw
-    // std::future_error can be used even on older deployment targets, but those
-    // methods will abort instead of throwing.
-// #   define _LIBCPP_AVAILABILITY_HAS_NO_FUTURE_ERROR
-#   define _LIBCPP_AVAILABILITY_FUTURE_ERROR
-
-    // This controls the availability of std::type_info's vtable.
-    // I can't imagine how using std::type_info can work at all if
-    // this isn't supported.
-// #   define _LIBCPP_AVAILABILITY_HAS_NO_TYPEINFO_VTABLE
-#   define _LIBCPP_AVAILABILITY_TYPEINFO_VTABLE
-
-    // This controls the availability of std::locale::category members
-    // (e.g. std::locale::collate), which are defined in the dylib.
-// #   define _LIBCPP_AVAILABILITY_HAS_NO_LOCALE_CATEGORY
-#   define _LIBCPP_AVAILABILITY_LOCALE_CATEGORY
-
-    // This controls the availability of atomic operations on std::shared_ptr
-    // (e.g. `std::atomic_store(std::shared_ptr)`), which require a shared
-    // lock table located in the dylib.
-// #   define _LIBCPP_AVAILABILITY_HAS_NO_ATOMIC_SHARED_PTR
-#   define _LIBCPP_AVAILABILITY_ATOMIC_SHARED_PTR
 
     // These macros control the availability of all parts of <filesystem> that
     // depend on something in the dylib.
@@ -192,100 +152,14 @@
 
 #elif defined(__APPLE__)
 
-    // shared_mutex and shared_timed_mutex
-#   if (defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ < 101200) ||    \
-        (defined(__ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__ < 100000) || \
-        (defined(__ENVIRONMENT_TV_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_TV_OS_VERSION_MIN_REQUIRED__ < 100000) ||         \
-        (defined(__ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__ < 30000)
-#       define _LIBCPP_AVAILABILITY_HAS_NO_SHARED_MUTEX
-#   endif
-#   define _LIBCPP_AVAILABILITY_SHARED_MUTEX                                    \
-        __attribute__((availability(macos,strict,introduced=10.12)))            \
-        __attribute__((availability(ios,strict,introduced=10.0)))               \
-        __attribute__((availability(tvos,strict,introduced=10.0)))              \
-        __attribute__((availability(watchos,strict,introduced=3.0)))
-
-        // bad_optional_access, bad_variant_access and bad_any_cast
-        // Note: bad_optional_access & friends were not introduced in the matching
-        // macOS and iOS versions, so the version mismatch between macOS and others
-        // is intended.
-#   if (defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ < 101300) ||    \
-        (defined(__ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__ < 120000) || \
-        (defined(__ENVIRONMENT_TV_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_TV_OS_VERSION_MIN_REQUIRED__ < 120000) ||         \
-        (defined(__ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__ < 50000)
-#       define _LIBCPP_AVAILABILITY_HAS_NO_BAD_OPTIONAL_ACCESS
-#       define _LIBCPP_AVAILABILITY_HAS_NO_BAD_VARIANT_ACCESS
-#       define _LIBCPP_AVAILABILITY_HAS_NO_BAD_ANY_CAST
-#   endif
-#   define _LIBCPP_AVAILABILITY_BAD_OPTIONAL_ACCESS                             \
-        __attribute__((availability(macos,strict,introduced=10.13)))            \
-        __attribute__((availability(ios,strict,introduced=12.0)))               \
-        __attribute__((availability(tvos,strict,introduced=12.0)))              \
-        __attribute__((availability(watchos,strict,introduced=5.0)))
-#   define _LIBCPP_AVAILABILITY_BAD_VARIANT_ACCESS                              \
-        _LIBCPP_AVAILABILITY_BAD_OPTIONAL_ACCESS
-#   define _LIBCPP_AVAILABILITY_BAD_ANY_CAST                                    \
-        _LIBCPP_AVAILABILITY_BAD_OPTIONAL_ACCESS
-
-    // uncaught_exceptions
-#   if (defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ < 101200) ||    \
-        (defined(__ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__ < 100000) || \
-        (defined(__ENVIRONMENT_TV_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_TV_OS_VERSION_MIN_REQUIRED__ < 100000) ||         \
-        (defined(__ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__ < 30000)
-#       define _LIBCPP_AVAILABILITY_HAS_NO_UNCAUGHT_EXCEPTIONS
-#   endif
-#   define _LIBCPP_AVAILABILITY_UNCAUGHT_EXCEPTIONS                             \
-        __attribute__((availability(macos,strict,introduced=10.12)))            \
-        __attribute__((availability(ios,strict,introduced=10.0)))               \
-        __attribute__((availability(tvos,strict,introduced=10.0)))              \
-        __attribute__((availability(watchos,strict,introduced=3.0)))
-
-    // sized operator new and sized operator delete
-#   if (defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ < 101200) ||    \
-        (defined(__ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__ < 100000) || \
-        (defined(__ENVIRONMENT_TV_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_TV_OS_VERSION_MIN_REQUIRED__ < 100000) ||         \
-        (defined(__ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__ < 30000)
-#       define _LIBCPP_AVAILABILITY_HAS_NO_SIZED_NEW_DELETE
-#   endif
-#   define _LIBCPP_AVAILABILITY_SIZED_NEW_DELETE                                \
-        __attribute__((availability(macos,strict,introduced=10.12)))            \
-        __attribute__((availability(ios,strict,introduced=10.0)))               \
-        __attribute__((availability(tvos,strict,introduced=10.0)))              \
-        __attribute__((availability(watchos,strict,introduced=3.0)))
-
-    // future_error
-#   if (defined(__ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__ < 60000)
-#       define _LIBCPP_AVAILABILITY_HAS_NO_FUTURE_ERROR
-#   endif
-#   define _LIBCPP_AVAILABILITY_FUTURE_ERROR                                    \
-        __attribute__((availability(ios,strict,introduced=6.0)))
-
-    // type_info's vtable
-#   if (defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ < 100900) ||    \
-        (defined(__ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__ < 70000)
-#       define _LIBCPP_AVAILABILITY_HAS_NO_TYPEINFO_VTABLE
-#   endif
-#   define _LIBCPP_AVAILABILITY_TYPEINFO_VTABLE                                 \
-        __attribute__((availability(macos,strict,introduced=10.9)))             \
-        __attribute__((availability(ios,strict,introduced=7.0)))
-
-    // locale::category
-#   if (defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ < 100900) ||    \
-        (defined(__ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__ < 70000)
-#       define _LIBCPP_AVAILABILITY_HAS_NO_LOCALE_CATEGORY
-#   endif
-#   define _LIBCPP_AVAILABILITY_LOCALE_CATEGORY                                 \
-        __attribute__((availability(macos,strict,introduced=10.9)))             \
-        __attribute__((availability(ios,strict,introduced=7.0)))
-
-    // atomic operations on shared_ptr
-#   if (defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ < 100900) ||    \
-        (defined(__ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__ < 70000)
-#       define _LIBCPP_AVAILABILITY_HAS_NO_ATOMIC_SHARED_PTR
-#   endif
-#   define _LIBCPP_AVAILABILITY_ATOMIC_SHARED_PTR                               \
-        __attribute__((availability(macos,strict,introduced=10.9)))             \
-        __attribute__((availability(ios,strict,introduced=7.0)))
+#  if (defined(__ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__ < 50000)
+#    define _LIBCPP_AVAILABILITY_HAS_NO_BAD_OPTIONAL_ACCESS
+#    define _LIBCPP_AVAILABILITY_HAS_NO_BAD_VARIANT_ACCESS
+#    define _LIBCPP_AVAILABILITY_HAS_NO_BAD_ANY_CAST
+#  endif
+#  define _LIBCPP_AVAILABILITY_BAD_OPTIONAL_ACCESS __attribute__((availability(watchos,strict,introduced=5.0)))
+#  define _LIBCPP_AVAILABILITY_BAD_VARIANT_ACCESS _LIBCPP_AVAILABILITY_BAD_OPTIONAL_ACCESS
+#  define _LIBCPP_AVAILABILITY_BAD_ANY_CAST _LIBCPP_AVAILABILITY_BAD_OPTIONAL_ACCESS
 
     // <filesystem>
 #   if (defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ < 101500) ||    \
@@ -385,12 +259,10 @@
 // Those are defined in terms of the availability attributes above, and
 // should not be vendor-specific.
 #if defined(_LIBCPP_HAS_NO_EXCEPTIONS)
-#   define _LIBCPP_AVAILABILITY_FUTURE
 #   define _LIBCPP_AVAILABILITY_THROW_BAD_ANY_CAST
 #   define _LIBCPP_AVAILABILITY_THROW_BAD_OPTIONAL_ACCESS
 #   define _LIBCPP_AVAILABILITY_THROW_BAD_VARIANT_ACCESS
 #else
-#   define _LIBCPP_AVAILABILITY_FUTURE                    _LIBCPP_AVAILABILITY_FUTURE_ERROR
 #   define _LIBCPP_AVAILABILITY_THROW_BAD_ANY_CAST        _LIBCPP_AVAILABILITY_BAD_ANY_CAST
 #   define _LIBCPP_AVAILABILITY_THROW_BAD_OPTIONAL_ACCESS _LIBCPP_AVAILABILITY_BAD_OPTIONAL_ACCESS
 #   define _LIBCPP_AVAILABILITY_THROW_BAD_VARIANT_ACCESS  _LIBCPP_AVAILABILITY_BAD_VARIANT_ACCESS
