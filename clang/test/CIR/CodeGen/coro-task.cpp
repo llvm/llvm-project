@@ -126,13 +126,13 @@ co_invoke_fn co_invoke;
 
 }} // namespace folly::coro
 
-// CHECK: ![[VoidTask:ty_.*]] = !cir.struct<struct "folly::coro::Task" {!u8i}>
-// CHECK: ![[IntTask:ty_.*]] = !cir.struct<struct "folly::coro::Task" {!u8i}>
-// CHECK: ![[VoidPromisse:ty_.*]] = !cir.struct<struct "folly::coro::Task<void>::promise_type" {!u8i}>
-// CHECK: ![[CoroHandleVoid:ty_.*]] = !cir.struct<struct "std::coroutine_handle" {!u8i}>
-// CHECK: ![[CoroHandlePromise:ty_.*]] = !cir.struct<struct "std::coroutine_handle" {!u8i}>
-// CHECK: ![[StdString:ty_.*]] = !cir.struct<struct "std::string" {!u8i}
-// CHECK: ![[SuspendAlways:ty_.*]] = !cir.struct<struct "std::suspend_always" {!u8i}>
+// CHECK-DAG: ![[IntTask:.*]] = !cir.struct<struct "folly::coro::Task<int>" {!u8i}>
+// CHECK-DAG: ![[VoidTask:.*]] = !cir.struct<struct "folly::coro::Task<void>" {!u8i}>
+// CHECK-DAG: ![[VoidPromisse:.*]] = !cir.struct<struct "folly::coro::Task<void>::promise_type" {!u8i}>
+// CHECK-DAG: ![[CoroHandleVoid:.*]] = !cir.struct<struct "std::coroutine_handle<void>" {!u8i}>
+// CHECK-DAG: ![[CoroHandlePromise:ty_.*]]  = !cir.struct<struct "std::coroutine_handle<folly::coro::Task<void>::promise_type>" {!u8i}>
+// CHECK-DAG: ![[StdString:.*]] = !cir.struct<struct "std::string" {!u8i}>
+// CHECK-DAG: ![[SuspendAlways:.*]] = !cir.struct<struct "std::suspend_always" {!u8i}>
 
 // CHECK: module {{.*}} {
 // CHECK-NEXT: cir.global external @_ZN5folly4coro9co_invokeE = #cir.zero : !ty_22folly3A3Acoro3A3Aco_invoke_fn22
@@ -362,20 +362,20 @@ folly::coro::Task<int> go4() {
 // CHECK:   %17 = cir.alloca !ty_22anon2E522, cir.ptr <!ty_22anon2E522>, ["ref.tmp1"] {alignment = 1 : i64}
 
 // Get the lambda invoker ptr via `lambda operator folly::coro::Task<int> (*)(int const&)()`
-// CHECK:   %18 = cir.call @_ZZ3go4vENK3$_0cvPFN5folly4coro4TaskIiEERKiEEv(%17) : (!cir.ptr<!ty_22anon2E522>) -> !cir.ptr<!cir.func<!ty_22folly3A3Acoro3A3ATask221 (!cir.ptr<!s32i>)>>
-// CHECK:   %19 = cir.unary(plus, %18) : !cir.ptr<!cir.func<!ty_22folly3A3Acoro3A3ATask221 (!cir.ptr<!s32i>)>>, !cir.ptr<!cir.func<!ty_22folly3A3Acoro3A3ATask221 (!cir.ptr<!s32i>)>>
-// CHECK:   cir.yield %19 : !cir.ptr<!cir.func<!ty_22folly3A3Acoro3A3ATask221 (!cir.ptr<!s32i>)>>
+// CHECK:   %18 = cir.call @_ZZ3go4vENK3$_0cvPFN5folly4coro4TaskIiEERKiEEv(%17) : (!cir.ptr<!ty_22anon2E522>) -> !cir.ptr<!cir.func<![[IntTask]] (!cir.ptr<!s32i>)>>
+// CHECK:   %19 = cir.unary(plus, %18) : !cir.ptr<!cir.func<![[IntTask]] (!cir.ptr<!s32i>)>>, !cir.ptr<!cir.func<![[IntTask]] (!cir.ptr<!s32i>)>>
+// CHECK:   cir.yield %19 : !cir.ptr<!cir.func<![[IntTask]] (!cir.ptr<!s32i>)>>
 // CHECK: }
-// CHECK: cir.store %12, %3 : !cir.ptr<!cir.func<!ty_22folly3A3Acoro3A3ATask221 (!cir.ptr<!s32i>)>>, cir.ptr <!cir.ptr<!cir.func<!ty_22folly3A3Acoro3A3ATask221 (!cir.ptr<!s32i>)>>>
+// CHECK: cir.store %12, %3 : !cir.ptr<!cir.func<![[IntTask]] (!cir.ptr<!s32i>)>>, cir.ptr <!cir.ptr<!cir.func<![[IntTask]] (!cir.ptr<!s32i>)>>>
 // CHECK: cir.scope {
 // CHECK:   %17 = cir.alloca !s32i, cir.ptr <!s32i>, ["ref.tmp2", init] {alignment = 4 : i64}
-// CHECK:   %18 = cir.load %3 : cir.ptr <!cir.ptr<!cir.func<!ty_22folly3A3Acoro3A3ATask221 (!cir.ptr<!s32i>)>>>, !cir.ptr<!cir.func<!ty_22folly3A3Acoro3A3ATask221 (!cir.ptr<!s32i>)>>
+// CHECK:   %18 = cir.load %3 : cir.ptr <!cir.ptr<!cir.func<![[IntTask]] (!cir.ptr<!s32i>)>>>, !cir.ptr<!cir.func<![[IntTask]] (!cir.ptr<!s32i>)>>
 // CHECK:   %19 = cir.const(#cir.int<3> : !s32i) : !s32i
 // CHECK:   cir.store %19, %17 : !s32i, cir.ptr <!s32i>
 
 // Call invoker, which calls operator() indirectly.
-// CHECK:   %20 = cir.call %18(%17) : (!cir.ptr<!cir.func<!ty_22folly3A3Acoro3A3ATask221 (!cir.ptr<!s32i>)>>, !cir.ptr<!s32i>) -> !ty_22folly3A3Acoro3A3ATask221
-// CHECK:   cir.store %20, %4 : !ty_22folly3A3Acoro3A3ATask221, cir.ptr <!ty_22folly3A3Acoro3A3ATask221>
+// CHECK:   %20 = cir.call %18(%17) : (!cir.ptr<!cir.func<![[IntTask]] (!cir.ptr<!s32i>)>>, !cir.ptr<!s32i>) -> ![[IntTask]]
+// CHECK:   cir.store %20, %4 : ![[IntTask]], cir.ptr <![[IntTask]]>
 // CHECK: }
 
 // CHECK:   cir.await(user, ready : {

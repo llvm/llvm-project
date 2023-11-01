@@ -22,40 +22,40 @@ void init(unsigned numImages) {
 }
 
 // CHECK-DAG: !ty_22triple22 = !cir.struct<struct "triple" {!u32i, !cir.ptr<!void>, !u32i}>
-// CHECK-DAG: !ty_22std3A3Avector22 = !cir.struct<class "std::vector" {!cir.ptr<!ty_22triple22>, !cir.ptr<!ty_22triple22>, !cir.ptr<!ty_22triple22>}>
-// CHECK-DAG: !ty_22__vector_iterator22 = !cir.struct<struct "__vector_iterator" {!cir.ptr<!ty_22triple22>}>
+// CHECK-DAG: ![[VEC:.*]] = !cir.struct<class "std::vector<triple>" {!cir.ptr<!ty_22triple22>, !cir.ptr<!ty_22triple22>, !cir.ptr<!ty_22triple22>}>
+// CHECK-DAG: ![[VEC_IT:.*]] = !cir.struct<struct "__vector_iterator<triple, triple *, triple &>" {!cir.ptr<!ty_22triple22>}>
 
 // CHECK: cir.func @_Z4initj(%arg0: !u32i
 // CHECK:   %0 = cir.alloca !u32i, cir.ptr <!u32i>, ["numImages", init] {alignment = 4 : i64}
-// CHECK:   %1 = cir.alloca !ty_22std3A3Avector22, cir.ptr <!ty_22std3A3Avector22>, ["images", init] {alignment = 8 : i64}
+// CHECK:   %1 = cir.alloca ![[VEC]], cir.ptr <![[VEC]]>, ["images", init] {alignment = 8 : i64}
 // CHECK:   cir.store %arg0, %0 : !u32i, cir.ptr <!u32i>
 // CHECK:   %2 = cir.load %0 : cir.ptr <!u32i>, !u32i
 // CHECK:   %3 = cir.cast(integral, %2 : !u32i), !u64i
-// CHECK:   cir.call @_ZNSt6vectorI6tripleEC1Em(%1, %3) : (!cir.ptr<!ty_22std3A3Avector22>, !u64i) -> ()
+// CHECK:   cir.call @_ZNSt6vectorI6tripleEC1Em(%1, %3) : (!cir.ptr<![[VEC]]>, !u64i) -> ()
 // CHECK:   cir.scope {
-// CHECK:     %4 = cir.alloca !cir.ptr<!ty_22std3A3Avector22>, cir.ptr <!cir.ptr<!ty_22std3A3Avector22>>, ["__range1", init] {alignment = 8 : i64}
-// CHECK:     %5 = cir.alloca !ty_22__vector_iterator22, cir.ptr <!ty_22__vector_iterator22>, ["__begin1", init] {alignment = 8 : i64}
-// CHECK:     %6 = cir.alloca !ty_22__vector_iterator22, cir.ptr <!ty_22__vector_iterator22>, ["__end1", init] {alignment = 8 : i64}
+// CHECK:     %4 = cir.alloca !cir.ptr<![[VEC]]>, cir.ptr <!cir.ptr<![[VEC]]>>, ["__range1", init] {alignment = 8 : i64}
+// CHECK:     %5 = cir.alloca ![[VEC_IT]], cir.ptr <![[VEC_IT]]>, ["__begin1", init] {alignment = 8 : i64}
+// CHECK:     %6 = cir.alloca ![[VEC_IT]], cir.ptr <![[VEC_IT]]>, ["__end1", init] {alignment = 8 : i64}
 // CHECK:     %7 = cir.alloca !cir.ptr<!ty_22triple22>, cir.ptr <!cir.ptr<!ty_22triple22>>, ["image", init] {alignment = 8 : i64}
-// CHECK:     cir.store %1, %4 : !cir.ptr<!ty_22std3A3Avector22>, cir.ptr <!cir.ptr<!ty_22std3A3Avector22>>
-// CHECK:     %8 = cir.load %4 : cir.ptr <!cir.ptr<!ty_22std3A3Avector22>>, !cir.ptr<!ty_22std3A3Avector22>
-// CHECK:     %9 = cir.call @_ZNSt6vectorI6tripleE5beginEv(%8) : (!cir.ptr<!ty_22std3A3Avector22>) -> !ty_22__vector_iterator22
-// CHECK:     cir.store %9, %5 : !ty_22__vector_iterator22, cir.ptr <!ty_22__vector_iterator22>
-// CHECK:     %10 = cir.load %4 : cir.ptr <!cir.ptr<!ty_22std3A3Avector22>>, !cir.ptr<!ty_22std3A3Avector22>
-// CHECK:     %11 = cir.call @_ZNSt6vectorI6tripleE3endEv(%10) : (!cir.ptr<!ty_22std3A3Avector22>) -> !ty_22__vector_iterator22
-// CHECK:     cir.store %11, %6 : !ty_22__vector_iterator22, cir.ptr <!ty_22__vector_iterator22>
+// CHECK:     cir.store %1, %4 : !cir.ptr<![[VEC]]>, cir.ptr <!cir.ptr<![[VEC]]>>
+// CHECK:     %8 = cir.load %4 : cir.ptr <!cir.ptr<![[VEC]]>>, !cir.ptr<![[VEC]]>
+// CHECK:     %9 = cir.call @_ZNSt6vectorI6tripleE5beginEv(%8) : (!cir.ptr<![[VEC]]>) -> ![[VEC_IT]]
+// CHECK:     cir.store %9, %5 : ![[VEC_IT]], cir.ptr <![[VEC_IT]]>
+// CHECK:     %10 = cir.load %4 : cir.ptr <!cir.ptr<![[VEC]]>>, !cir.ptr<![[VEC]]>
+// CHECK:     %11 = cir.call @_ZNSt6vectorI6tripleE3endEv(%10) : (!cir.ptr<![[VEC]]>) -> ![[VEC_IT]]
+// CHECK:     cir.store %11, %6 : ![[VEC_IT]], cir.ptr <![[VEC_IT]]>
 // CHECK:     cir.loop for(cond : {
-// CHECK:       %12 = cir.call @_ZNK17__vector_iteratorI6triplePS0_RS0_EneERKS3_(%5, %6) : (!cir.ptr<!ty_22__vector_iterator22>, !cir.ptr<!ty_22__vector_iterator22>) -> !cir.bool
+// CHECK:       %12 = cir.call @_ZNK17__vector_iteratorI6triplePS0_RS0_EneERKS3_(%5, %6) : (!cir.ptr<![[VEC_IT]]>, !cir.ptr<![[VEC_IT]]>) -> !cir.bool
 // CHECK:       cir.brcond %12 ^bb1, ^bb2
 // CHECK:     ^bb1:  // pred: ^bb0
 // CHECK:       cir.yield continue
 // CHECK:     ^bb2:  // pred: ^bb0
 // CHECK:       cir.yield
 // CHECK:     }, step : {
-// CHECK:       %12 = cir.call @_ZN17__vector_iteratorI6triplePS0_RS0_EppEv(%5) : (!cir.ptr<!ty_22__vector_iterator22>) -> !cir.ptr<!ty_22__vector_iterator22>
+// CHECK:       %12 = cir.call @_ZN17__vector_iteratorI6triplePS0_RS0_EppEv(%5) : (!cir.ptr<![[VEC_IT]]>) -> !cir.ptr<![[VEC_IT]]>
 // CHECK:       cir.yield
 // CHECK:     }) {
-// CHECK:       %12 = cir.call @_ZNK17__vector_iteratorI6triplePS0_RS0_EdeEv(%5) : (!cir.ptr<!ty_22__vector_iterator22>) -> !cir.ptr<!ty_22triple22>
+// CHECK:       %12 = cir.call @_ZNK17__vector_iteratorI6triplePS0_RS0_EdeEv(%5) : (!cir.ptr<![[VEC_IT]]>) -> !cir.ptr<!ty_22triple22>
 // CHECK:       cir.store %12, %7 : !cir.ptr<!ty_22triple22>, cir.ptr <!cir.ptr<!ty_22triple22>>
 // CHECK:       cir.scope {
 // CHECK:         %13 = cir.alloca !ty_22triple22, cir.ptr <!ty_22triple22>, ["ref.tmp0"] {alignment = 8 : i64}
