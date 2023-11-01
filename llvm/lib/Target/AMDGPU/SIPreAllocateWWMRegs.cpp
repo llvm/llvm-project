@@ -99,7 +99,7 @@ bool SIPreAllocateWWMRegs::processDef(MachineOperand &MO) {
   LiveInterval &LI = LIS->getInterval(Reg);
 
   for (MCRegister PhysReg : RegClassInfo.getOrder(MRI->getRegClass(Reg))) {
-    if (!MRI->isPhysRegUsed(PhysReg) &&
+    if (!MRI->isPhysRegUsed(PhysReg, true) &&
         Matrix->checkInterference(LI, PhysReg) == LiveRegMatrix::IK_Free) {
       Matrix->assign(LI, PhysReg);
       assert(PhysReg != 0);
