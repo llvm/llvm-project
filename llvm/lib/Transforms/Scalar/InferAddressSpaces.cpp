@@ -1204,9 +1204,9 @@ bool InferAddressSpacesImpl::rewriteWithNewAddressSpaces(
           DenseSet<User *> Visited{WorkList.begin(), WorkList.end()};
           while (!WorkList.empty()) {
             User *U = WorkList.pop_back_val();
-            if (auto *I = dyn_cast<Instruction>(U);
-                I && I->getFunction() == F) {
-              VMapper.remapInstruction(*I);
+            if (auto *I = dyn_cast<Instruction>(U)) {
+              if (I->getFunction() == F)
+                VMapper.remapInstruction(*I);
               continue;
             }
             for (User *U2 : U->users())
