@@ -2400,11 +2400,10 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
                        .addReg(RegLo)
                        .add(MI.getOperand(1)));
 
-    MachineInstrBuilder MIB = BuildMI(MF, DL, get(AMDGPU::S_ADDC_U32), RegHi)
-                                  .addReg(RegHi);
-    MIB.add(MI.getOperand(2));
+    Bundler.append(BuildMI(MF, DL, get(AMDGPU::S_ADDC_U32), RegHi)
+                       .addReg(RegHi)
+                       .add(MI.getOperand(2)));
 
-    Bundler.append(MIB);
     finalizeBundle(MBB, Bundler.begin());
 
     MI.eraseFromParent();
