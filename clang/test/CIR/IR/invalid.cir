@@ -548,3 +548,10 @@ module {
     cir.return
   }
 }
+
+
+// -----
+
+!u16i = !cir.int<u, 16>
+// expected-error@+1 {{anonymous structs must be complete}}
+!struct = !cir.struct<struct incomplete>

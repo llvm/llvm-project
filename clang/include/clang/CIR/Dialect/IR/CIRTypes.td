@@ -115,6 +115,37 @@ def CIR_StructType : CIR_Type<"Struct", "struct",
     "ASTRecordDeclInterface":$ast
   );
 
+  let skipDefaultBuilders = 1;
+  let builders = [
+    // Build an identified and complete struct.
+    TypeBuilder<(ins
+      "ArrayRef<Type>":$members,
+      "StringAttr":$name,
+      "bool":$packed,
+      "RecordKind":$kind,
+      CArg<"ASTRecordDeclInterface", "nullptr">:$ast), [{
+      return $_get(context, members, name, /*incomplete=*/false,
+                   packed, kind, ast);
+    }]>,
+    // Build an incomplete struct.
+    TypeBuilder<(ins
+      "StringAttr":$name,
+      "RecordKind":$kind), [{
+      return $_get(context, /*members=*/ArrayRef<Type>{}, name,
+                   /*incomplete=*/true, /*packed=*/false, kind,
+                   /*ast=*/nullptr);
+    }]>,
+    // Build an anonymous struct.
+    TypeBuilder<(ins
+      "ArrayRef<Type>":$members,
+      "bool":$packed,
+      "RecordKind":$kind,
+      CArg<"ASTRecordDeclInterface", "nullptr">:$ast), [{
+      return $_get(context, members, /*name=*/nullptr,
+                   /*incomplete=*/false, packed, kind, ast);
+    }]>
+  ];
+
   let hasCustomAssemblyFormat = 1;
 
   let extraClassDeclaration = [{
@@ -138,16 +169,19 @@ def CIR_StructType : CIR_Type<"Struct", "struct",
     bool isComplete() const { return !getIncomplete(); }
     bool isPadded(const ::mlir::DataLayout &dataLayout) const;
 
-    std::string getPrefixedName() {
-      const auto name = getName().getValue().str();
+    std::string getKindAsStr() {
       switch (getKind()) {
       case RecordKind::Class:
-        return "class." + name;
+        return "class";
       case RecordKind::Union:
-        return "union." + name;
+        return "union";
       case RecordKind::Struct:
-        return "struct." + name;
+        return "struct";
       }
+    }
+
+    std::string getPrefixedName() {
+      return getKindAsStr() + "." + getName().getValue().str();
     }
 
     /// Return the member with the largest bit-length.

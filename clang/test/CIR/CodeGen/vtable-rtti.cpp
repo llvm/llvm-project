@@ -18,10 +18,10 @@ public:
 };
 
 // Type info B.
-// CHECK: ![[TypeInfoB:ty_.*]] = !cir.struct<struct "" {!cir.ptr<!u8i>, !cir.ptr<!u8i>, !cir.ptr<!u8i>}>
+// CHECK: ![[TypeInfoB:ty_.*]] = !cir.struct<struct {!cir.ptr<!u8i>, !cir.ptr<!u8i>, !cir.ptr<!u8i>}>
 
 // vtable for A type
-// CHECK: ![[VTableTypeA:ty_.*]] = !cir.struct<struct "" {!cir.array<!cir.ptr<!u8i> x 5>}>
+// CHECK: ![[VTableTypeA:ty_.*]] = !cir.struct<struct {!cir.array<!cir.ptr<!u8i> x 5>}>
 
 // Class A
 // CHECK: ![[ClassA:ty_.*]] = !cir.struct<class "A" {!cir.ptr<!cir.ptr<!cir.func<!u32i ()>>>} #cir.record.decl.ast>
@@ -57,7 +57,7 @@ public:
 // CHECK:   }
 
 // Vtable definition for A
-// cir.global "private" external @_ZTV1A : ![[VTableTypeA]] {alignment = 8 : i64}
+// CHECK: cir.global "private" external @_ZTV1A : ![[VTableTypeA]] {alignment = 8 : i64}
 
 // A ctor => @A::A()
 // Calls @A::A() and initialize __vptr with address of A's vtable

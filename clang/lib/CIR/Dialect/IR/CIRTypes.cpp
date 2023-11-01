@@ -108,6 +108,7 @@ Type StructType::parse(mlir::AsmParser &parser) {
   const auto loc = parser.getCurrentLocation();
   bool packed = false;
   RecordKind kind;
+  auto *context = parser.getContext();
 
   if (parser.parseLess())
     return {};
@@ -152,8 +153,20 @@ Type StructType::parse(mlir::AsmParser &parser) {
   if (parser.parseGreater())
     return {};
 
-  return StructType::get(parser.getContext(), members, name, incomplete, packed,
-                         kind, nullptr);
+  // Try to create the proper type.
+  mlir::Type type = {};
+  if (name && incomplete) { // Identified & incomplete
+    type = StructType::get(context, name, kind);
+  } else if (name && !incomplete) { // Identified & complete
+    type = StructType::get(context, members, name, packed, kind);
+  } else if (!name && !incomplete) { // anonymous
+    type = StructType::get(context, members, packed, kind);
+  } else {
+    parser.emitError(loc, "anonymous structs must be complete");
+    return {};
+  }
+
+  return type;
 }
 
 void StructType::print(mlir::AsmPrinter &printer) const {

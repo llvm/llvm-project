@@ -1,10 +1,15 @@
 // RUN: cir-opt %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s
 
-!s32i = !cir.int<s, 32>
 module {
-  // CHECK: cir.func @shouldNotUseAliasWithAnonStruct(%arg0: !cir.struct<struct {!s32i}>)
-  cir.func @shouldNotUseAliasWithAnonStruct(%arg0 : !cir.struct<struct {!s32i}>) {
+  // CHECK: @testAnonRecordsAlias
+  cir.func @testAnonRecordsAlias() {
+    // CHECK: cir.alloca !ty_anon_struct, cir.ptr <!ty_anon_struct>
+    %0 = cir.alloca !cir.struct<struct {!cir.int<s, 32>}>, cir.ptr <!cir.struct<struct {!cir.int<s, 32>}>>, ["A"]
+    // CHECK: cir.alloca !ty_anon_struct1, cir.ptr <!ty_anon_struct1>
+    %1 = cir.alloca !cir.struct<struct {!cir.int<u, 8>}>, cir.ptr <!cir.struct<struct {!cir.int<u, 8>}>>, ["B"]
+    // CHECK: cir.alloca !ty_anon_union, cir.ptr <!ty_anon_union>
+    %2 = cir.alloca !cir.struct<union {!cir.int<s, 32>}>, cir.ptr <!cir.struct<union {!cir.int<s, 32>}>>, ["C"]
     cir.return
   }
 }
