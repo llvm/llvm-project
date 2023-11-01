@@ -10193,3 +10193,13 @@ class sve2_fp8_mla_long_long_by_indexed_elem<bits<2> TT, string mnemonic>
   let DestructiveInstType = DestructiveOther;
   let ElementSize         = ZPR32.ElementSize;
 }
+
+// FP8 Widening Dot-Product - Indexed Group
+multiclass sve2_fp8_dot_indexed<string mnemonic>{
+  def NAME : sve_float_dot_indexed<0b0, ZPR16, ZPR8, ZPR3b8, VectorIndexH, mnemonic> {
+    bits<3> iop;
+    let Inst{20-19} = iop{2-1};
+    let Inst{11} = iop{0};
+    let Inst{10} = 0b1;
+  }
+}

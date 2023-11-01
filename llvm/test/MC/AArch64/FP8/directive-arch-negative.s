@@ -23,3 +23,15 @@ fmlalb  v0.8h, v0.16b, v0.16b
 fmlalb  z23.h, z13.b, z0.b[7]
 // CHECK: error: instruction requires: ssve-fp8fma or (sve2 and fp8fma)
 // CHECK: fmlalb  z23.h, z13.b, z0.b[7]
+
+.arch armv9-a+fp8dot2
+.arch armv9-a+nofp8dot2
+fdot  v31.4h, v0.8b, v0.8b
+// CHECK: error: instruction requires: fp8dot2
+// CHECK: fdot  v31.4h, v0.8b, v0.8b
+
+.arch armv9-a+fp8dot4
+.arch armv9-a+nofp8dot4
+fdot  v0.2s, v0.8b, v31.8b
+// CHECK: error: instruction requires: fp8dot4
+// CHECK: fdot  v0.2s, v0.8b, v31.8b

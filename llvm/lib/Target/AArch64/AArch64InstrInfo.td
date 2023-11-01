@@ -173,6 +173,20 @@ def HasSSVE_FP8FMA   : Predicate<"Subtarget->SSVE_FP8FMA() || "
                                  AssemblerPredicateWithAll<(any_of FeatureSSVE_FP8FMA,
                                                            (all_of FeatureSVE2, FeatureFP8FMA)),
                                                            "ssve-fp8fma or (sve2 and fp8fma)">;
+def HasFP8DOT2       : Predicate<"Subtarget->hasFP8DOT2()">,
+                                 AssemblerPredicateWithAll<(all_of FeatureFP8DOT2), "fp8dot2">;
+def HasSSVE_FP8DOT2  : Predicate<"Subtarget->hasSSVE_FP8DOT2() || "
+                                 "(Subtarget->hasSVE2() && Subtarget->hasFP8DOT2())">,
+                                 AssemblerPredicateWithAll<(any_of FeatureSSVE_FP8DOT2,
+                                                           (all_of FeatureSVE2, FeatureFP8DOT2)),
+                                "ssve-fp8dot2 or (sve2 and fp8dot2)">;
+def HasFP8DOT4       : Predicate<"Subtarget->hasFP8DOT4()">,
+                                 AssemblerPredicateWithAll<(all_of FeatureFP8DOT4), "fp8dot4">;
+def HasSSVE_FP8DOT4  : Predicate<"Subtarget->hasSSVE_FP8DOT4() || "
+                                 "(Subtarget->hasSVE2() && Subtarget->hasFP8DOT4())">,
+                                 AssemblerPredicateWithAll<(any_of FeatureSSVE_FP8DOT4,
+                                                           (all_of FeatureSVE2, FeatureFP8DOT4)),
+                                 "ssve-fp8dot4 or (sve2 and fp8dot4)">;
 
 // A subset of SVE(2) instructions are legal in Streaming SVE execution mode,
 // they should be enabled if either has been specified.
@@ -9308,6 +9322,16 @@ let Predicates = [HasFP8FMA] in {
  defm FMLALLTB : SIMDThreeSameVectorMLAL<0b1, 0b00, "fmlalltb">;
  defm FMLALLTT : SIMDThreeSameVectorMLAL<0b1, 0b01, "fmlalltt">;
 } // End let Predicates = [HasFP8FMA]
+
+let Predicates = [HasFP8DOT2] in {
+ defm FDOTlane : SIMDThreeSameVectorFP8DOT2Index<"fdot">;
+ defm FDOT : SIMDThreeSameVectorDOT2<"fdot">;
+} // End let Predicates = [HasFP8DOT2]
+
+let Predicates = [HasFP8DOT4] in {
+ defm FDOTlane : SIMDThreeSameVectorFP8DOT4Index<"fdot">;
+ defm FDOT : SIMDThreeSameVectorDOT4<"fdot">;
+} // End let Predicates = [HasFP8DOT4]
 
 include "AArch64InstrAtomics.td"
 include "AArch64SVEInstrInfo.td"

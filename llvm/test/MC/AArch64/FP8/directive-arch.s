@@ -19,3 +19,13 @@ fmlalb  v0.8h, v0.16b, v0.16b
 fmlalb z23.h, z13.b, z0.b[7]
 // CHECK: fmlalb z23.h, z13.b, z0.b[7]
 .arch armv9-a+nossve-fp8fma
+
+.arch armv9-a+fp8dot2
+fdot  v31.4h, v0.8b, v0.8b
+// CHECK: fdot  v31.4h, v0.8b, v0.8b
+.arch armv9-a+nofp8dot2
+
+.arch armv9-a+fp8dot4
+fdot  v0.2s, v0.8b, v31.8b
+// CHECK: fdot  v0.2s, v0.8b, v31.8b
+.arch armv9-a+nofp8dot4
