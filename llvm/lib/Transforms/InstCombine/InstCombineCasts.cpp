@@ -29,11 +29,8 @@ using namespace PatternMatch;
 /// true for, actually insert the code to evaluate the expression.
 Value *InstCombinerImpl::EvaluateInDifferentType(Value *V, Type *Ty,
                                                  bool isSigned) {
-  if (Constant *C = dyn_cast<Constant>(V)) {
-    C = ConstantExpr::getIntegerCast(C, Ty, isSigned /*Sext or ZExt*/);
-    // If we got a constantexpr back, try to simplify it with DL info.
-    return ConstantFoldConstant(C, DL, &TLI);
-  }
+  if (Constant *C = dyn_cast<Constant>(V))
+    return ConstantFoldIntegerCast(C, Ty, isSigned, DL);
 
   // Otherwise, it must be an instruction.
   Instruction *I = cast<Instruction>(V);
@@ -216,7 +213,7 @@ Instruction *InstCombinerImpl::commonCastTransforms(CastInst &CI) {
 /// Constants and extensions/truncates from the destination type are always
 /// free to be evaluated in that type. This is a helper for canEvaluate*.
 static bool canAlwaysEvaluateInType(Value *V, Type *Ty) {
-  if (isa<Constant>(V))
+  if (match(V, m_ImmConstant()))
     return true;
   Value *X;
   if ((match(V, m_ZExtOrSExt(m_Value(X))) || match(V, m_Trunc(m_Value(X)))) &&
@@ -229,7 +226,6 @@ static bool canAlwaysEvaluateInType(Value *V, Type *Ty) {
 /// Filter out values that we can not evaluate in the destination type for free.
 /// This is a helper for canEvaluate*.
 static bool canNotEvaluateInType(Value *V, Type *Ty) {
-  assert(!isa<Constant>(V) && "Constant should already be handled.");
   if (!isa<Instruction>(V))
     return true;
   // We don't extend or shrink something that has multiple uses --  doing so
