@@ -298,7 +298,7 @@ void SANITIZER_CDECL __sanitizer_symbolize_global(void *data_ptr,
 #define __sanitizer_return_address()                                           \
   __builtin_extract_return_addr(__builtin_return_address(0))
 #else
-extern "C" void *SANITIZER_CDECL _ReturnAddress(void);
+void *SANITIZER_CDECL _ReturnAddress(void);
 #pragma intrinsic(_ReturnAddress)
 #define __sanitizer_return_address() _ReturnAddress()
 #endif
