@@ -1972,7 +1972,7 @@ void ASTDeclWriter::VisitOMPDeclareReductionDecl(OMPDeclareReductionDecl *D) {
   Record.AddStmt(D->getInitOrig());
   Record.AddStmt(D->getInitPriv());
   Record.AddStmt(D->getInitializer());
-  Record.push_back(D->getInitializerKind());
+  Record.push_back(llvm::to_underlying(D->getInitializerKind()));
   Record.AddDeclRef(D->getPrevDeclInScope());
   Code = serialization::DECL_OMP_DECLARE_REDUCTION;
 }

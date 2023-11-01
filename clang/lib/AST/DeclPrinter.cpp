@@ -1866,17 +1866,17 @@ void DeclPrinter::VisitOMPDeclareReductionDecl(OMPDeclareReductionDecl *D) {
     if (auto *Init = D->getInitializer()) {
       Out << " initializer(";
       switch (D->getInitializerKind()) {
-      case OMPDeclareReductionDecl::DirectInit:
+      case OMPDeclareReductionInitKind::Direct:
         Out << "omp_priv(";
         break;
-      case OMPDeclareReductionDecl::CopyInit:
+      case OMPDeclareReductionInitKind::Copy:
         Out << "omp_priv = ";
         break;
-      case OMPDeclareReductionDecl::CallInit:
+      case OMPDeclareReductionInitKind::Call:
         break;
       }
       Init->printPretty(Out, nullptr, Policy, 0, "\n", &Context);
-      if (D->getInitializerKind() == OMPDeclareReductionDecl::DirectInit)
+      if (D->getInitializerKind() == OMPDeclareReductionInitKind::Direct)
         Out << ")";
       Out << ")";
     }

@@ -22611,12 +22611,12 @@ void Sema::ActOnOpenMPDeclareReductionInitializerEnd(Decl *D, Expr *Initializer,
   PopFunctionScopeInfo();
 
   if (Initializer != nullptr) {
-    DRD->setInitializer(Initializer, OMPDeclareReductionDecl::CallInit);
+    DRD->setInitializer(Initializer, OMPDeclareReductionInitKind::Call);
   } else if (OmpPrivParm->hasInit()) {
     DRD->setInitializer(OmpPrivParm->getInit(),
                         OmpPrivParm->isDirectInit()
-                            ? OMPDeclareReductionDecl::DirectInit
-                            : OMPDeclareReductionDecl::CopyInit);
+                            ? OMPDeclareReductionInitKind::Direct
+                            : OMPDeclareReductionInitKind::Copy);
   } else {
     DRD->setInvalidDecl();
   }

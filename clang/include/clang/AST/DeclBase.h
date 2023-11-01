@@ -1422,6 +1422,12 @@ enum class ArgPassingKind {
   CanNeverPassInRegs
 };
 
+enum class OMPDeclareReductionInitKind {
+  Call,   // Initialized by function call.
+  Direct, // omp_priv(<expr>)
+  Copy    // omp_priv = <expr>
+};
+
 /// DeclContext - This is used only as base class of specific decl types that
 /// can act as declaration contexts. These decls are (only the top classes
 /// that directly derive from DeclContext are mentioned, not their subclasses):
