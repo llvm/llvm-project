@@ -1569,66 +1569,9 @@ enum class AutoTypeKeyword {
   GNUAutoType
 };
 
-/// Capture whether this is a normal array (e.g. int X[4])
-/// an array with a static size (e.g. int X[static 4]), or an array
-/// with a star size (e.g. int X[*]).
-/// 'static' is only allowed on function parameters.
-enum class ArraySizeModifier { Normal, Static, Star };
-
-/// The elaboration keyword that precedes a qualified type name or
-/// introduces an elaborated-type-specifier.
-enum class ElaboratedTypeKeyword {
-  /// The "struct" keyword introduces the elaborated-type-specifier.
-  Struct,
-
-  /// The "__interface" keyword introduces the elaborated-type-specifier.
-  Interface,
-
-  /// The "union" keyword introduces the elaborated-type-specifier.
-  Union,
-
-  /// The "class" keyword introduces the elaborated-type-specifier.
-  Class,
-
-  /// The "enum" keyword introduces the elaborated-type-specifier.
-  Enum,
-
-  /// The "typename" keyword precedes the qualified type name, e.g.,
-  /// \c typename T::type.
-  Typename,
-
-  /// No keyword precedes the qualified type name.
-  None
-};
-
-enum class VectorKind {
-  /// not a target-specific vector type
-  Generic,
-
-  /// is AltiVec vector
-  AltiVecVector,
-
-  /// is AltiVec 'vector Pixel'
-  AltiVecPixel,
-
-  /// is AltiVec 'vector bool ...'
-  AltiVecBool,
-
-  /// is ARM Neon vector
-  Neon,
-
-  /// is ARM Neon polynomial vector
-  NeonPoly,
-
-  /// is AArch64 SVE fixed-length data vector
-  SveFixedLengthData,
-
-  /// is AArch64 SVE fixed-length predicate vector
-  SveFixedLengthPredicate,
-
-  /// is RISC-V RVV fixed-length data vector
-  RVVFixedLengthData,
-};
+enum class ArraySizeModifier;
+enum class ElaboratedTypeKeyword;
+enum class VectorKind;
 
 /// The base class of the type hierarchy.
 ///
@@ -3145,6 +3088,12 @@ public:
   }
 };
 
+/// Capture whether this is a normal array (e.g. int X[4])
+/// an array with a static size (e.g. int X[static 4]), or an array
+/// with a star size (e.g. int X[*]).
+/// 'static' is only allowed on function parameters.
+enum class ArraySizeModifier { Normal, Static, Star };
+
 /// Represents an array type, per C99 6.7.5.2 - Array Declarators.
 class ArrayType : public Type, public llvm::FoldingSetNode {
 private:
@@ -3474,6 +3423,34 @@ public:
                       QualType ElementType, Expr *SizeExpr);
 };
 
+enum class VectorKind {
+  /// not a target-specific vector type
+  Generic,
+
+  /// is AltiVec vector
+  AltiVecVector,
+
+  /// is AltiVec 'vector Pixel'
+  AltiVecPixel,
+
+  /// is AltiVec 'vector bool ...'
+  AltiVecBool,
+
+  /// is ARM Neon vector
+  Neon,
+
+  /// is ARM Neon polynomial vector
+  NeonPoly,
+
+  /// is AArch64 SVE fixed-length data vector
+  SveFixedLengthData,
+
+  /// is AArch64 SVE fixed-length predicate vector
+  SveFixedLengthPredicate,
+
+  /// is RISC-V RVV fixed-length data vector
+  RVVFixedLengthData,
+};
 
 /// Represents a GCC generic vector type. This type is created using
 /// __attribute__((vector_size(n)), where "n" specifies the vector size in
@@ -5665,6 +5642,32 @@ public:
   static bool classof(const Type *T) {
     return T->getTypeClass() == InjectedClassName;
   }
+};
+
+/// The elaboration keyword that precedes a qualified type name or
+/// introduces an elaborated-type-specifier.
+enum class ElaboratedTypeKeyword {
+  /// The "struct" keyword introduces the elaborated-type-specifier.
+  Struct,
+
+  /// The "__interface" keyword introduces the elaborated-type-specifier.
+  Interface,
+
+  /// The "union" keyword introduces the elaborated-type-specifier.
+  Union,
+
+  /// The "class" keyword introduces the elaborated-type-specifier.
+  Class,
+
+  /// The "enum" keyword introduces the elaborated-type-specifier.
+  Enum,
+
+  /// The "typename" keyword precedes the qualified type name, e.g.,
+  /// \c typename T::type.
+  Typename,
+
+  /// No keyword precedes the qualified type name.
+  None
 };
 
 /// The kind of a tag type.

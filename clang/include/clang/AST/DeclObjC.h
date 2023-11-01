@@ -115,6 +115,8 @@ public:
            const SourceLocation *Locs, ASTContext &Ctx);
 };
 
+enum class ObjCImplementationControl { None, Required, Optional };
+
 /// ObjCMethodDecl - Represents an instance or class method declaration.
 /// ObjC methods can be declared within 4 contexts: class interfaces,
 /// categories, protocols, and class implementations. While C++ member
