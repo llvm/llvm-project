@@ -371,7 +371,7 @@ SDValue DAGTypeLegalizer::PromoteIntRes_AtomicCmpSwap(AtomicSDNode *N,
         N->getMemOperand());
     ReplaceValueWith(SDValue(N, 0), Res.getValue(0));
     ReplaceValueWith(SDValue(N, 2), Res.getValue(2));
-    return Res.getValue(1);
+    return DAG.getSExtOrTrunc(Res.getValue(1), SDLoc(N), NVT);
   }
 
   // Op2 is used for the comparison and thus must be extended according to the
