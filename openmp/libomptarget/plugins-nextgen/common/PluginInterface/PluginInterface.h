@@ -284,6 +284,12 @@ struct GenericKernelTy {
   /// Get the kernel name.
   const char *getName() const { return Name; }
 
+  /// Return true if this kernel is a constructor or destructor.
+  bool isCtorOrDtor() const {
+    // TODO: This is not a great solution and should be revisited.
+    return StringRef(Name).endswith("tor");
+  }
+
   /// Get the kernel image.
   DeviceImageTy &getImage() const {
     assert(ImagePtr && "Kernel is not initialized!");
