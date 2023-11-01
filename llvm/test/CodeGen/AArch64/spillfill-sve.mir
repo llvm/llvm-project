@@ -121,8 +121,13 @@ body:             |
 
     ; EXPAND-LABEL: name: spills_fills_stack_id_virtreg_pnr
     ; EXPAND: renamable $pn8 = WHILEGE_CXX_B
-    ; EXPAND: STR_PXI killed renamable $pn8, $sp, 7
-    ; EXPAND: $p0 = LDR_PXI $sp, 7, implicit-def $pn0
+    ; EXPAND: $p0 = ORR_PPzPP $p8, $p8, killed $p8
+    ; EXPAND: STR_PXI killed renamable $p0, $sp, 7
+    ;
+    ; EXPAND: renamable $p0 = LDR_PXI $sp, 7
+    ; EXPAND: $p8 = ORR_PPzPP $p0, $p0, killed $p0, implicit-def $pn8
+    ; EXPAND: $p0 = PEXT_PCI_B killed renamable $pn8, 0
+
 
     %0:pnr_p8to15 = WHILEGE_CXX_B undef $x0, undef $x0, 0, implicit-def dead $nzcv
 
@@ -143,7 +148,7 @@ body:             |
     $pn14 = IMPLICIT_DEF
     $pn15 = IMPLICIT_DEF
 
-    $pn0 = COPY %0
+    $p0 = PEXT_PCI_B %0, 0
     RET_ReallyLR
 ...
 ---
