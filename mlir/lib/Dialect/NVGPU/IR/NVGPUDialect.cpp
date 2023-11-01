@@ -416,17 +416,10 @@ LogicalResult TmaCreateDescriptorOp::verify() {
 //===----------------------------------------------------------------------===//
 
 LogicalResult WarpgroupGenerateDescriptorOp::verify() {
-  MemRefType memrefType = getTensor().getType();
-  MemRefType tensorMapType = getTensorMap().getType().getTensor();
-
-  if (memrefType != tensorMapType)
-    return emitError() << "memref and tensor map type mismatch";
-
-  if (!memrefType.hasStaticShape() || !tensorMapType.hasStaticShape())
-    return emitError() << "supports only static shapes";
-
-  if (memrefType.getRank() != 2)
-    return emitError() << "supports only 2d memref is supported for now";
+  std::optional<InFlightDiagnostic> error =
+      verifyTmaDescriptorWithMemref(*this, getTensorMap().getType());
+  if (error.has_value())
+    return error.value();
 
   if (getTensorMap().getType().getSwizzle() !=
       TensorMapSwizzleKind::SWIZZLE_128B) {
