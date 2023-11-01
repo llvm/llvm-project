@@ -5555,8 +5555,11 @@ Instruction *InstCombinerImpl::foldICmpWithZextOrSext(ICmpInst &ICmp) {
                             Constant::getNullValue(X->getType()));
 
       // Treat "zext nneg" as "sext"
-      bool IsNonNeg0 = isa<PossiblyNonNegInst>(ICmp.getOperand(0));
-      bool IsNonNeg1 = isa<PossiblyNonNegInst>(ICmp.getOperand(1));
+      auto *NonNegInst0 = dyn_cast<PossiblyNonNegInst>(ICmp.getOperand(0));
+      auto *NonNegInst1 = dyn_cast<PossiblyNonNegInst>(ICmp.getOperand(1));
+
+      bool IsNonNeg0 = NonNegInst0 && NonNegInst0->hasNonNeg();
+      bool IsNonNeg1 = NonNegInst1 && NonNegInst1->hasNonNeg();
 
       // If we have mismatched casts, treat the zext of a non-negative source as
       // a sext to simulate matching casts. Otherwise, we are done.
