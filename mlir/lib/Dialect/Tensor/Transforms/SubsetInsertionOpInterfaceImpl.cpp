@@ -9,40 +9,121 @@
 #include "mlir/Dialect/Tensor/Transforms/SubsetInsertionOpInterfaceImpl.h"
 
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
-#include "mlir/Interfaces/SubsetInsertionOpInterface.h"
+#include "mlir/Interfaces/SubsetOpInterface.h"
+#include "mlir/Interfaces/ValueBoundsOpInterface.h"
 
 using namespace mlir;
 using namespace mlir::tensor;
 
 namespace {
 
+/// Return the tensor that the given subset op operates on.
+Value getContainerOperand(SubsetOpInterface op) {
+  if (auto extractionOp =
+          dyn_cast<SubsetExtractionOpInterface>(op.getOperation()))
+    return extractionOp.getSourceOperand().get();
+  if (auto insertionOp =
+          dyn_cast<SubsetInsertionOpInterface>(op.getOperation()))
+    return insertionOp.getDestinationOperand().get();
+  llvm_unreachable("expected SubsetExtraction/InsertionOpInterface");
+}
+
+/// Return "true" if the two ops operate on an equivalent subset.
+/// `equivalenceFn` is used to determine equivalence of tensors. Return "false"
+/// if the two ops operate non-equivalent subsets, if equivalence cannot be
+/// determined or if `op1` is not a subset op.
 template <typename OpTy>
-struct InsertSliceLikeOpInterface
+bool operateOnEquivalentSubsets(
+    OpTy op1, SubsetOpInterface op2,
+    function_ref<bool(Value, Value)> equivalenceFn) {
+  auto offsetsSizesAndStrides2 =
+      dyn_cast<OffsetSizeAndStrideOpInterface>(op2.getOperation());
+  if (!offsetsSizesAndStrides2)
+    return false;
+  if (!sameOffsetsSizesAndStrides(op1, offsetsSizesAndStrides2,
+                                  isEqualConstantIntOrValue))
+    return false;
+  return equivalenceFn(
+      getContainerOperand(cast<SubsetOpInterface>(op1.getOperation())),
+      getContainerOperand(op2));
+}
+
+/// Return "true" if the two ops operate on a disjoint subsets.
+/// `equivalenceFn` is used to determine equivalence of tensors. Return "false"
+/// if the two ops operate non-disjoint subsets, if disjointness cannot be
+/// determined or if `op1` is not a subset op.
+template <typename OpTy>
+bool operateOnDisjointSubsets(OpTy op1, SubsetOpInterface op2,
+                              function_ref<bool(Value, Value)> equivalenceFn) {
+  auto offsetsSizesAndStrides2 =
+      dyn_cast<OffsetSizeAndStrideOpInterface>(op2.getOperation());
+  if (!offsetsSizesAndStrides2)
+    return false;
+  FailureOr<bool> overlappingSlices =
+      ValueBoundsConstraintSet::areOverlappingSlices(op1,
+                                                     offsetsSizesAndStrides2);
+  if (failed(overlappingSlices) || *overlappingSlices)
+    return false;
+  return equivalenceFn(
+      getContainerOperand(cast<SubsetOpInterface>(op1.getOperation())),
+      getContainerOperand(op2));
+}
+
+struct ExtractSliceOpSubsetOpInterface
+    : public SubsetOpInterface::ExternalModel<ExtractSliceOpSubsetOpInterface,
+                                              tensor::ExtractSliceOp> {
+  bool operatesOnEquivalentSubset(
+      Operation *op, SubsetOpInterface candidate,
+      function_ref<bool(Value, Value)> equivalenceFn) const {
+    auto extractSliceOp = cast<tensor::ExtractSliceOp>(op);
+    return operateOnEquivalentSubsets(extractSliceOp, candidate, equivalenceFn);
+  }
+
+  bool operatesOnDisjointSubset(
+      Operation *op, SubsetOpInterface candidate,
+      function_ref<bool(Value, Value)> equivalenceFn) const {
+    auto extractSliceOp = cast<tensor::ExtractSliceOp>(op);
+    return operateOnDisjointSubsets(extractSliceOp, candidate, equivalenceFn);
+  }
+};
+
+struct ExtractSliceOpSubsetExtractionOpInterface
+    : public SubsetExtractionOpInterface::ExternalModel<
+          ExtractSliceOpSubsetExtractionOpInterface, tensor::ExtractSliceOp> {
+  OpOperand &getSourceOperand(Operation *op) const {
+    return cast<tensor::ExtractSliceOp>(op).getSourceMutable();
+  }
+};
+
+template <typename OpTy>
+struct InsertSliceLikeOpSubsetOpInterface
+    : public SubsetOpInterface::ExternalModel<
+          InsertSliceLikeOpSubsetOpInterface<OpTy>, OpTy> {
+  bool operatesOnEquivalentSubset(
+      Operation *op, SubsetOpInterface candidate,
+      function_ref<bool(Value, Value)> equivalenceFn) const {
+    auto insertSliceOp = cast<OpTy>(op);
+    return operateOnEquivalentSubsets(insertSliceOp, candidate, equivalenceFn);
+  }
+
+  bool operatesOnDisjointSubset(
+      Operation *op, SubsetOpInterface candidate,
+      function_ref<bool(Value, Value)> equivalenceFn) const {
+    auto insertSliceOp = cast<OpTy>(op);
+    return operateOnDisjointSubsets(insertSliceOp, candidate, equivalenceFn);
+  }
+};
+
+template <typename OpTy>
+struct InsertSliceLikeOpSubsetInsertionOpInterface
     : public SubsetInsertionOpInterface::ExternalModel<
-          InsertSliceLikeOpInterface<OpTy>, OpTy> {
+          InsertSliceLikeOpSubsetInsertionOpInterface<OpTy>, OpTy> {
   OpOperand &getSourceOperand(Operation *op) const {
     return cast<OpTy>(op).getSourceMutable();
   }
 
   OpOperand &getDestinationOperand(Operation *op) const {
     return cast<OpTy>(op).getDestMutable();
-  }
-
-  /// Return "true" if `insertSliceOp` inserts into a subset that is equivalent
-  /// to the subset defined by `candidate`. `equivalenceFn` is used to determine
-  /// equivalence of tensors.
-  bool
-  isEquivalentSubset(Operation *op, Value candidate,
-                     function_ref<bool(Value, Value)> equivalenceFn) const {
-    auto insertSliceOp = cast<OpTy>(op);
-    // Look for a matching tensor.extract_slice op.
-    auto extractSliceOp = candidate.getDefiningOp<tensor::ExtractSliceOp>();
-    if (!extractSliceOp)
-      return false;
-    if (!equivalenceFn(extractSliceOp.getSource(), insertSliceOp.getDest()))
-      return false;
-    return sameOffsetsSizesAndStrides(extractSliceOp, insertSliceOp,
-                                      isEqualConstantIntOrValue);
   }
 
   Value buildSubsetExtraction(Operation *op, OpBuilder &builder,
@@ -73,12 +154,22 @@ struct InsertSliceLikeOpInterface
 
 } // namespace
 
-void mlir::tensor::registerSubsetInsertionOpInterfaceExternalModels(
+void mlir::tensor::registerSubsetOpInterfaceExternalModels(
     DialectRegistry &registry) {
   registry.addExtension(+[](MLIRContext *ctx, tensor::TensorDialect *dialect) {
-    InsertSliceOp::attachInterface<InsertSliceLikeOpInterface<InsertSliceOp>>(
+    // Note: `SubsetExtractionOpInterface` and `SubsetInsertionOpInterface`
+    // require `SubsetOpInterface`.
+    ExtractSliceOp::attachInterface<ExtractSliceOpSubsetOpInterface>(*ctx);
+    ExtractSliceOp::attachInterface<ExtractSliceOpSubsetExtractionOpInterface>(
         *ctx);
+    InsertSliceOp::attachInterface<
+        InsertSliceLikeOpSubsetOpInterface<InsertSliceOp>>(*ctx);
+    InsertSliceOp::attachInterface<
+        InsertSliceLikeOpSubsetInsertionOpInterface<InsertSliceOp>>(*ctx);
     ParallelInsertSliceOp::attachInterface<
-        InsertSliceLikeOpInterface<ParallelInsertSliceOp>>(*ctx);
+        InsertSliceLikeOpSubsetOpInterface<ParallelInsertSliceOp>>(*ctx);
+    ParallelInsertSliceOp::attachInterface<
+        InsertSliceLikeOpSubsetInsertionOpInterface<ParallelInsertSliceOp>>(
+        *ctx);
   });
 }
