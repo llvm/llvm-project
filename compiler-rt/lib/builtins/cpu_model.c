@@ -1133,6 +1133,9 @@ typedef struct __ifunc_arg_t {
 #ifndef HWCAP2_SME_F64F64
 #define HWCAP2_SME_F64F64 (1 << 25)
 #endif
+#ifndef HWCAP2_SME_FA64
+#define HWCAP2_SME_FA64 (1 << 26)
+#endif
 #ifndef HWCAP2_WFXT
 #define HWCAP2_WFXT (1UL << 31)
 #endif
