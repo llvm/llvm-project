@@ -17,7 +17,8 @@ define i32 @main() {
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq i64 [[IND1_I]], 8
 ; CHECK-NEXT:    br i1 [[COND]], label [[EXIT2:%.*]], label [[FOR_HEADER]]
 ; CHECK:       exit2:
-; CHECK-NEXT:    [[RET:%.*]] = zext i1 false to i32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[REM]], 0
+; CHECK-NEXT:    [[RET:%.*]] = zext i1 [[CMP]] to i32
 ; CHECK-NEXT:    ret i32 [[RET]]
 ; CHECK:       exit1:
 ; CHECK-NEXT:    ret i32 0
@@ -63,7 +64,8 @@ define i32 @test2() {
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq i64 [[IND1_I]], 8
 ; CHECK-NEXT:    br i1 [[COND]], label [[EXIT2:%.*]], label [[FOR_HEADER]]
 ; CHECK:       exit2:
-; CHECK-NEXT:    [[RET:%.*]] = zext i1 false to i32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[VAL]], 0
+; CHECK-NEXT:    [[RET:%.*]] = zext i1 [[CMP]] to i32
 ; CHECK-NEXT:    ret i32 [[RET]]
 ; CHECK:       exit1:
 ; CHECK-NEXT:    ret i32 0
