@@ -446,8 +446,8 @@ CXXRecordDecl::setBases(CXXBaseSpecifier const * const *Bases,
       setHasVolatileMember(true);
 
     if (BaseClassDecl->getArgPassingRestrictions() ==
-        ArgPassingKind::CanNeverPassInRegs)
-      setArgPassingRestrictions(ArgPassingKind::CanNeverPassInRegs);
+        RecordArgPassingKind::CanNeverPassInRegs)
+      setArgPassingRestrictions(RecordArgPassingKind::CanNeverPassInRegs);
 
     // Keep track of the presence of mutable fields.
     if (BaseClassDecl->hasMutableFields())
@@ -1032,7 +1032,7 @@ void CXXRecordDecl::addedMember(Decl *D) {
 
         // Structs with __weak fields should never be passed directly.
         if (LT == Qualifiers::OCL_Weak)
-          setArgPassingRestrictions(ArgPassingKind::CanNeverPassInRegs);
+          setArgPassingRestrictions(RecordArgPassingKind::CanNeverPassInRegs);
 
         Data.HasIrrelevantDestructor = false;
 
@@ -1226,8 +1226,8 @@ void CXXRecordDecl::addedMember(Decl *D) {
         if (FieldRec->hasVolatileMember())
           setHasVolatileMember(true);
         if (FieldRec->getArgPassingRestrictions() ==
-            ArgPassingKind::CanNeverPassInRegs)
-          setArgPassingRestrictions(ArgPassingKind::CanNeverPassInRegs);
+            RecordArgPassingKind::CanNeverPassInRegs)
+          setArgPassingRestrictions(RecordArgPassingKind::CanNeverPassInRegs);
 
         // C++0x [class]p7:
         //   A standard-layout class is a class that:
