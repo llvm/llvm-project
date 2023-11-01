@@ -175,6 +175,8 @@ static Address buildPointerWithAlignment(const Expr *E,
 
     // Nothing to do here...
     case CK_LValueToRValue:
+    case CK_NullToPointer:
+    case CK_IntegralToPointer:
       break;
 
     // Array-to-pointer decay. TODO(cir): BaseInfo and TBAAInfo.

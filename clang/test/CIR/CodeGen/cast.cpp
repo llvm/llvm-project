@@ -112,3 +112,26 @@ void lvalue_cast(int x) {
 // CHECK:   %1 = cir.const(#cir.int<42> : !s32i) : !s32i 
 // CHECK:   cir.store %1, %0 : !s32i, cir.ptr <!s32i> 
 
+struct A { int x; };
+
+void null_cast(long ptr) {
+  *(int *)0 = 0;
+  ((A *)0)->x = 0;
+}
+
+// CHECK: cir.func @_Z9null_castl
+// CHECK:   %[[ADDR:[0-9]+]] = cir.const(#cir.ptr<null> : !cir.ptr<!s32i>) : !cir.ptr<!s32i>
+// CHECK:   cir.store %{{[0-9]+}}, %[[ADDR]] : !s32i, cir.ptr <!s32i>
+// CHECK:   %[[BASE:[0-9]+]] = cir.const(#cir.ptr<null> : !cir.ptr<!ty_22A22>) : !cir.ptr<!ty_22A22>
+// CHECK:   %[[FIELD:[0-9]+]] = cir.get_member %[[BASE]][0] {name = "x"} : !cir.ptr<!ty_22A22> -> !cir.ptr<!s32i>
+// CHECK:   cir.store %{{[0-9]+}}, %[[FIELD]] : !s32i, cir.ptr <!s32i>
+
+void int_cast(long ptr) {
+  ((A *)ptr)->x = 0;
+}
+
+// CHECK: cir.func @_Z8int_castl
+// CHECK:   %[[BASE:[0-9]+]] = cir.cast(int_to_ptr, %{{[0-9]+}} : !u64i), !cir.ptr<!ty_22A22>
+// CHECK:   %[[FIELD:[0-9]+]] = cir.get_member %[[BASE]][0] {name = "x"} : !cir.ptr<!ty_22A22> -> !cir.ptr<!s32i>
+// CHECK:   cir.store %{{[0-9]+}}, %[[FIELD]] : !s32i, cir.ptr <!s32i>
+
