@@ -526,6 +526,7 @@ std::unique_ptr<lto::LTO> createLTO(
 
   Conf.CPU = Arch.str();
   Conf.Options = codegen::InitTargetOptionsFromCodeGenFlags(Triple);
+  Conf.Freestanding = true;
 
   StringRef OptLevel = Args.getLastArgValue(OPT_opt_level, "O2");
   Conf.MAttrs = Features;
