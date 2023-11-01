@@ -12,9 +12,7 @@ on:
   # To guarantee Maintained check is occasionally updated. See
   # https://github.com/ossf/scorecard/blob/main/docs/checks.md#maintained
   schedule:
-    - cron: '38 20 * * 4'
-  push:
-    branches: [ "main" ]
+    - cron: '38 20 * * *'
 
 # Declare default permissions as read only.
 permissions:
