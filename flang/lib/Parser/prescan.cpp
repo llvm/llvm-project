@@ -1008,20 +1008,27 @@ const char *Prescanner::FixedFormContinuationLine(bool mightNeedSpace) {
   }
   tabInCurrentLine_ = false;
   char col1{*nextLine_};
-  if (InCompilerDirective()) {
-    // Must be a continued compiler directive.
-    if (!IsFixedFormCommentChar(col1)) {
-      return nullptr;
-    }
+  if (IsFixedFormCommentChar(col1)) {
     int j{1};
-    for (; j < 5; ++j) {
-      char ch{directiveSentinel_[j - 1]};
-      if (ch == '\0') {
-        break;
+    if (InCompilerDirective()) {
+      // Must be a continued compiler directive.
+      for (; j < 5; ++j) {
+        char ch{directiveSentinel_[j - 1]};
+        if (ch == '\0') {
+          break;
+        }
+        if (ch != ToLowerCaseLetter(nextLine_[j])) {
+          return nullptr;
+        }
       }
-      if (ch != ToLowerCaseLetter(nextLine_[j])) {
+    } else if (features_.IsEnabled(LanguageFeature::OpenMP)) {
+      // Fixed Source Form Conditional Compilation Sentinels.
+      if (nextLine_[1] != '$') {
         return nullptr;
       }
+      j++;
+    } else {
+      return nullptr;
     }
     for (; j < 5; ++j) {
       if (nextLine_[j] != ' ') {
