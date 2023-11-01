@@ -1196,11 +1196,12 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
       UnitAttr:$hasWorker,
       UnitAttr:$hasVector,
       Variadic<IntOrIndex>:$tileOperands,
+      Variadic<OpenACC_PointerLikeTypeInterface>:$cacheOperands,
       Variadic<OpenACC_PointerLikeTypeInterface>:$privateOperands,
       OptionalAttr<SymbolRefArrayAttr>:$privatizations,
       Variadic<AnyType>:$reductionOperands,
-      OptionalAttr<SymbolRefArrayAttr>:$reductionRecipes,
-      Variadic<OpenACC_PointerLikeTypeInterface>:$cacheOperands);
+      OptionalAttr<SymbolRefArrayAttr>:$reductionRecipes
+      );
 
   let results = (outs Variadic<AnyType>:$results);
 
@@ -1211,6 +1212,12 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
     static StringRef getGangNumKeyword() { return "num"; }
     static StringRef getGangDimKeyword() { return "dim"; }
     static StringRef getGangStaticKeyword() { return "static"; }
+
+    /// The number of private and reduction operands.
+    unsigned getNumDataOperands();
+
+    /// The i-th data operand passed.
+    Value getDataOperand(unsigned i);
   }];
 
   let hasCustomAssemblyFormat = 1;
