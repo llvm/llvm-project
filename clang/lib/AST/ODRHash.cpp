@@ -380,7 +380,7 @@ public:
     Hash.AddBoolean(Method->isThisDeclarationADesignatedInitializer());
     Hash.AddBoolean(Method->hasSkippedBody());
 
-    ID.AddInteger(Method->getImplementationControl());
+    ID.AddInteger(llvm::to_underlying(Method->getImplementationControl()));
     ID.AddInteger(Method->getMethodFamily());
     ImplicitParamDecl *Cmd = Method->getCmdDecl();
     Hash.AddBoolean(Cmd);

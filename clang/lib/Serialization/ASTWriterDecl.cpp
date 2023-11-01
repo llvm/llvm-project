@@ -756,7 +756,7 @@ void ASTDeclWriter::VisitObjCMethodDecl(ObjCMethodDecl *D) {
   }
 
   // FIXME: stable encoding for @required/@optional
-  Record.push_back(D->getImplementationControl());
+  Record.push_back(llvm::to_underlying(D->getImplementationControl()));
   // FIXME: stable encoding for in/out/inout/bycopy/byref/oneway/nullability
   Record.push_back(D->getObjCDeclQualifier());
   Record.push_back(D->hasRelatedResultType());
