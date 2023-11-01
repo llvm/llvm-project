@@ -18,7 +18,6 @@
 #ifndef LLVM_IR_USER_H
 #define LLVM_IR_USER_H
 
-#include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/IR/Use.h"
@@ -333,15 +332,6 @@ template<> struct simplify_type<User::const_op_iterator> {
   static SimpleType getSimplifiedValue(User::const_op_iterator &Val) {
     return Val->get();
   }
-};
-
-template <> struct GraphTraits<User *> {
-  using NodeRef = User *;
-  using ChildIteratorType = Value::user_iterator;
-
-  static NodeRef getEntryNode(NodeRef N) { return N; }
-  static ChildIteratorType child_begin(NodeRef N) { return N->user_begin(); }
-  static ChildIteratorType child_end(NodeRef N) { return N->user_end(); }
 };
 
 } // end namespace llvm

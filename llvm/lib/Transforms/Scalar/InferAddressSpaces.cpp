@@ -477,7 +477,7 @@ void InferAddressSpacesImpl::appendsFlatAddressExpressionToPostorderStack(
 }
 
 // Returns all flat address expressions in function F. The elements are ordered
-// ordered in postorder.
+// in postorder.
 std::vector<WeakTrackingVH>
 InferAddressSpacesImpl::collectFlatAddressExpressions(Function &F) const {
   // This function implements a non-recursive postorder traversal of a partial
@@ -1190,16 +1190,28 @@ bool InferAddressSpacesImpl::rewriteWithNewAddressSpaces(
       if (C != Replace) {
         LLVM_DEBUG(dbgs() << "Inserting replacement const cast: " << Replace
                           << ": " << *Replace << '\n');
-        VMap[C] = Replace;
+        SmallVector<User *, 16> WorkList;
         for (User *U : make_early_inc_range(C->users())) {
-          for (auto It = df_begin(U), E = df_end(U); It != E;) {
-            if (auto *I = dyn_cast<Instruction>(*It)) {
-              if (I->getFunction() == F)
-                VMapper.remapInstruction(*I);
-              It.skipChildren();
+          if (auto *I = dyn_cast<Instruction>(U)) {
+            if (I->getFunction() == F)
+              I->replaceUsesOfWith(C, Replace);
+          } else {
+            WorkList.append(U->user_begin(), U->user_end());
+          }
+        }
+        if (!WorkList.empty()) {
+          VMap[C] = Replace;
+          DenseSet<User *> Visited{WorkList.begin(), WorkList.end()};
+          while (!WorkList.empty()) {
+            User *U = WorkList.pop_back_val();
+            if (auto *I = dyn_cast<Instruction>(U);
+                I && I->getFunction() == F) {
+              VMapper.remapInstruction(*I);
               continue;
             }
-            ++It;
+            for (User *U2 : U->users())
+              if (Visited.insert(U2).second)
+                WorkList.push_back(U2);
           }
         }
         V = Replace;
