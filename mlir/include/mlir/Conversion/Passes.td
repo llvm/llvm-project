@@ -495,10 +495,7 @@ def ConvertGpuOpsToNVVMOps : Pass<"convert-gpu-to-nvvm", "gpu::GPUModuleOp"> {
     Option<"useBarePtrCallConv", "use-bare-ptr-memref-call-conv", "bool",
            /*default=*/"false",
            "Replace memref arguments in GPU functions with bare pointers. "
-           "All memrefs must have static shape.">,
-    Option<"useOpaquePointers", "use-opaque-pointers", "bool",
-                   /*default=*/"true", "Generate LLVM IR using opaque pointers "
-                   "instead of typed pointers">,
+           "All memrefs must have static shape.">
   ];
 }
 
