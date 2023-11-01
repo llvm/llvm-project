@@ -1946,12 +1946,28 @@ bool MIParser::parseLowLevelType(StringRef::iterator Loc, LLT &Ty) {
 
   // Now we're looking for a vector.
   if (Token.isNot(MIToken::less))
-    return error(Loc,
-                 "expected sN, pA, <M x sN>, or <M x pA> for GlobalISel type");
+    return error(Loc, "expected sN, pA, <M x sN>, <M x pA>, <vscale x M x sN>, "
+                      "or <vscale x M x pA> for GlobalISel type");
   lex();
 
+  bool HasVScale = Token.stringValue() == "vscale";
+  if (HasVScale) {
+    lex();
+    if (Token.stringValue() != "x")
+      return error("expected <vscale x M x sN> or <vscale x M x pA>");
+    lex();
+  }
+
+  auto GetError = [&](bool HasVScale, StringRef::iterator Loc) {
+    if (HasVScale)
+      return error(
+          Loc, "expected <vscale x M x sN> or <vscale M x pA> for vector type");
+    else
+      return error(Loc, "expected <M x sN> or <M x pA> for vector type");
+  };
+
   if (Token.isNot(MIToken::IntegerLiteral))
-    return error(Loc, "expected <M x sN> or <M x pA> for vector type");
+    return GetError(HasVScale, Loc);
   uint64_t NumElements = Token.integerValue().getZExtValue();
   if (!verifyVectorElementCount(NumElements))
     return error("invalid number of vector elements");
@@ -1959,11 +1975,12 @@ bool MIParser::parseLowLevelType(StringRef::iterator Loc, LLT &Ty) {
   lex();
 
   if (Token.isNot(MIToken::Identifier) || Token.stringValue() != "x")
-    return error(Loc, "expected <M x sN> or <M x pA> for vector type");
+    return GetError(HasVScale, Loc);
   lex();
 
   if (Token.range().front() != 's' && Token.range().front() != 'p')
-    return error(Loc, "expected <M x sN> or <M x pA> for vector type");
+    return GetError(HasVScale, Loc);
+
   StringRef SizeStr = Token.range().drop_front();
   if (SizeStr.size() == 0 || !llvm::all_of(SizeStr, isdigit))
     return error("expected integers after 's'/'p' type character");
@@ -1981,14 +1998,18 @@ bool MIParser::parseLowLevelType(StringRef::iterator Loc, LLT &Ty) {
 
     Ty = LLT::pointer(AS, DL.getPointerSizeInBits(AS));
   } else
-    return error(Loc, "expected <M x sN> or <M x pA> for vector type");
+    return GetError(HasVScale, Loc);
   lex();
 
   if (Token.isNot(MIToken::greater))
-    return error(Loc, "expected <M x sN> or <M x pA> for vector type");
+    return GetError(HasVScale, Loc);
+
   lex();
 
-  Ty = LLT::fixed_vector(NumElements, Ty);
+  if (HasVScale)
+    Ty = LLT::scalable_vector(NumElements, Ty);
+  else
+    Ty = LLT::fixed_vector(NumElements, Ty);
   return false;
 }
 
