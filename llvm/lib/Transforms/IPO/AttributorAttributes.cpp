@@ -12405,11 +12405,14 @@ struct AAIndirectCallInfoCallSite : public AAIndirectCallInfo {
       Instruction *ThenTI =
           SplitBlockAndInsertIfThen(LastCmp, IP, /* Unreachable */ false);
       BasicBlock *CBBB = CB->getParent();
+      A.registerManifestAddedBasicBlock(*ThenTI->getParent());
+      A.registerManifestAddedBasicBlock(*CBBB);
       auto *SplitTI = cast<BranchInst>(LastCmp->getNextNode());
       BasicBlock *ElseBB;
       if (IP == CB) {
         ElseBB = BasicBlock::Create(ThenTI->getContext(), "",
                                     ThenTI->getFunction(), CBBB);
+        A.registerManifestAddedBasicBlock(*ElseBB);
         IP = BranchInst::Create(CBBB, ElseBB);
         SplitTI->replaceUsesOfWith(CBBB, ElseBB);
       } else {

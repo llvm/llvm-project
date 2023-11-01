@@ -4567,6 +4567,8 @@ struct AAKernelInfoFunction : AAKernelInfo {
       BasicBlock *PRNextBB =
           BasicBlock::Create(Ctx, "worker_state_machine.parallel_region.check",
                              Kernel, StateMachineEndParallelBB);
+      A.registerManifestAddedBasicBlock(*PRExecuteBB);
+      A.registerManifestAddedBasicBlock(*PRNextBB);
 
       // Check if we need to compare the pointer at all or if we can just
       // call the parallel region function.
