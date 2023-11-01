@@ -1737,6 +1737,7 @@ protected:
   class ConstantArrayTypeBitfields {
     friend class ConstantArrayType;
 
+    LLVM_PREFERRED_TYPE(ArrayTypeBitfields)
     unsigned : NumArrayTypeBits;
 
     /// Whether we have a stored size expression.
@@ -1865,6 +1866,7 @@ protected:
     unsigned : NumTypeBits;
 
     /// An ElaboratedTypeKeyword.  8 bits for efficient access.
+    LLVM_PREFERRED_TYPE(ElaboratedTypeKeyword)
     unsigned Keyword : 8;
   };
 
@@ -1890,6 +1892,7 @@ protected:
 
     /// The kind of vector, either a generic vector type or some
     /// target-specific vector type such as for AltiVec or Neon.
+    LLVM_PREFERRED_TYPE(VectorKind)
     unsigned VecKind : 4;
     /// The number of elements in the vector.
     uint32_t NumElements;
@@ -1901,7 +1904,7 @@ protected:
     LLVM_PREFERRED_TYPE(TypeBitfields)
     unsigned : NumTypeBits;
 
-    /// An AttributedType::Kind
+    LLVM_PREFERRED_TYPE(attr::Kind)
     unsigned AttrKind : 32 - NumTypeBits;
   };
 
@@ -2017,6 +2020,7 @@ protected:
   class DependentTemplateSpecializationTypeBitfields {
     friend class DependentTemplateSpecializationType;
 
+    LLVM_PREFERRED_TYPE(TypeWithKeywordBitfields)
     unsigned : NumTypeWithKeywordBits;
 
     /// The number of template arguments named in this class template
