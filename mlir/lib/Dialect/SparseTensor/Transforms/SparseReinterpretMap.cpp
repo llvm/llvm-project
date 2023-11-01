@@ -215,7 +215,8 @@ struct ForeachOpDemapper
   using DemapInsRewriter::DemapInsRewriter;
   LogicalResult rewriteOp(ForeachOp op, OpAdaptor adaptor,
                           PatternRewriter &rewriter) const {
-    // Only handles operations with sparse input/output.
+    // Only handle operations with sparse input/output with non-identity dim2lvl
+    // maps.
     if (!hasNonIdentityOperandsOrResults(op))
       return failure();
 
