@@ -550,8 +550,12 @@ void *GenericKernelTy::prepareArgs(
     uint32_t Version, uint32_t &NumArgs, llvm::SmallVectorImpl<void *> &Args,
     llvm::SmallVectorImpl<void *> &Ptrs,
     KernelLaunchEnvironmentTy *KernelLaunchEnvironment) const {
+
   if (Version == OMP_KERNEL_ARG_VERSION)
     NumArgs += 1;
+
+  if (isCtorOrDtor())
+    return nullptr;
 
   Args.resize(NumArgs);
   Ptrs.resize(NumArgs);

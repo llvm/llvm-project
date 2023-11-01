@@ -6,11 +6,6 @@ Johannes: breakage
   [OpenMP][FIX] Move workaround code to avoid races 
    see smoke-fails, smoke-limbo, smoke, examples
 
-Johannes: Revert these 3 to get time to integrate them into ASO
-   [OpenMP] Introduce the KernelLaunchEnvironment as implicit
-   [OpenMP][FIX] Allocate per launch memory for GPU team reductions (#70752)
-   [OpenMP][FIX] Do not add implicit argument to device Ctors and Dtors
-
 Revert/defer 8f5a18b6e58 Perf/lexer faster slow get char and size (#70543)
   to integrate into ASO
 
