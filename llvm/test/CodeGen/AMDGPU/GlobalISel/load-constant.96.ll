@@ -69,9 +69,6 @@ define <3 x i32> @v_load_constant_v3i32_align1(ptr addrspace(4) %ptr) {
 ; GFX1210-UNALIGNED-LABEL: v_load_constant_v3i32_align1:
 ; GFX1210-UNALIGNED:       ; %bb.0:
 ; GFX1210-UNALIGNED-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1210-UNALIGNED-NEXT:    s_wait_expcnt 0x0
-; GFX1210-UNALIGNED-NEXT:    s_wait_samplecnt 0x0
-; GFX1210-UNALIGNED-NEXT:    s_wait_bvhcnt 0x0
 ; GFX1210-UNALIGNED-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-UNALIGNED-NEXT:    global_load_b96 v[0:2], v[0:1], off
 ; GFX1210-UNALIGNED-NEXT:    s_wait_loadcnt 0x0
@@ -80,9 +77,6 @@ define <3 x i32> @v_load_constant_v3i32_align1(ptr addrspace(4) %ptr) {
 ; GFX1210-NOUNALIGNED-LABEL: v_load_constant_v3i32_align1:
 ; GFX1210-NOUNALIGNED:       ; %bb.0:
 ; GFX1210-NOUNALIGNED-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1210-NOUNALIGNED-NEXT:    s_wait_expcnt 0x0
-; GFX1210-NOUNALIGNED-NEXT:    s_wait_samplecnt 0x0
-; GFX1210-NOUNALIGNED-NEXT:    s_wait_bvhcnt 0x0
 ; GFX1210-NOUNALIGNED-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-NOUNALIGNED-NEXT:    s_clause 0xb
 ; GFX1210-NOUNALIGNED-NEXT:    global_load_u8 v2, v[0:1], off
@@ -312,9 +306,6 @@ define <3 x i32> @v_load_constant_v3i32_align2(ptr addrspace(4) %ptr) {
 ; GFX1210-UNALIGNED-LABEL: v_load_constant_v3i32_align2:
 ; GFX1210-UNALIGNED:       ; %bb.0:
 ; GFX1210-UNALIGNED-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1210-UNALIGNED-NEXT:    s_wait_expcnt 0x0
-; GFX1210-UNALIGNED-NEXT:    s_wait_samplecnt 0x0
-; GFX1210-UNALIGNED-NEXT:    s_wait_bvhcnt 0x0
 ; GFX1210-UNALIGNED-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-UNALIGNED-NEXT:    global_load_b96 v[0:2], v[0:1], off
 ; GFX1210-UNALIGNED-NEXT:    s_wait_loadcnt 0x0
@@ -323,9 +314,6 @@ define <3 x i32> @v_load_constant_v3i32_align2(ptr addrspace(4) %ptr) {
 ; GFX1210-NOUNALIGNED-LABEL: v_load_constant_v3i32_align2:
 ; GFX1210-NOUNALIGNED:       ; %bb.0:
 ; GFX1210-NOUNALIGNED-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1210-NOUNALIGNED-NEXT:    s_wait_expcnt 0x0
-; GFX1210-NOUNALIGNED-NEXT:    s_wait_samplecnt 0x0
-; GFX1210-NOUNALIGNED-NEXT:    s_wait_bvhcnt 0x0
 ; GFX1210-NOUNALIGNED-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-NOUNALIGNED-NEXT:    s_clause 0x5
 ; GFX1210-NOUNALIGNED-NEXT:    global_load_u16 v2, v[0:1], off
@@ -432,16 +420,35 @@ define <3 x i32> @v_load_constant_v3i32_align2(ptr addrspace(4) %ptr) {
 }
 
 define <3 x i32> @v_load_constant_v3i32_align4(ptr addrspace(4) %ptr) {
-; GFX12-LABEL: v_load_constant_v3i32_align4:
-; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX12-NEXT:    s_wait_expcnt 0x0
-; GFX12-NEXT:    s_wait_samplecnt 0x0
-; GFX12-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    global_load_b96 v[0:2], v[0:1], off
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    s_setpc_b64 s[30:31]
+; GFX12-UNALIGNED-LABEL: v_load_constant_v3i32_align4:
+; GFX12-UNALIGNED:       ; %bb.0:
+; GFX12-UNALIGNED-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-UNALIGNED-NEXT:    s_wait_expcnt 0x0
+; GFX12-UNALIGNED-NEXT:    s_wait_samplecnt 0x0
+; GFX12-UNALIGNED-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-UNALIGNED-NEXT:    s_wait_kmcnt 0x0
+; GFX12-UNALIGNED-NEXT:    global_load_b96 v[0:2], v[0:1], off
+; GFX12-UNALIGNED-NEXT:    s_wait_loadcnt 0x0
+; GFX12-UNALIGNED-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-NOUNALIGNED-LABEL: v_load_constant_v3i32_align4:
+; GFX12-NOUNALIGNED:       ; %bb.0:
+; GFX12-NOUNALIGNED-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NOUNALIGNED-NEXT:    s_wait_expcnt 0x0
+; GFX12-NOUNALIGNED-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NOUNALIGNED-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NOUNALIGNED-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NOUNALIGNED-NEXT:    global_load_b96 v[0:2], v[0:1], off
+; GFX12-NOUNALIGNED-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NOUNALIGNED-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1210-LABEL: v_load_constant_v3i32_align4:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    global_load_b96 v[0:2], v[0:1], off
+; GFX1210-NEXT:    s_wait_loadcnt 0x0
+; GFX1210-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: v_load_constant_v3i32_align4:
 ; GFX9:       ; %bb.0:
@@ -478,16 +485,35 @@ define <3 x i32> @v_load_constant_v3i32_align4(ptr addrspace(4) %ptr) {
 }
 
 define i96 @v_load_constant_i96_align8(ptr addrspace(4) %ptr) {
-; GFX12-LABEL: v_load_constant_i96_align8:
-; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX12-NEXT:    s_wait_expcnt 0x0
-; GFX12-NEXT:    s_wait_samplecnt 0x0
-; GFX12-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    global_load_b96 v[0:2], v[0:1], off
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    s_setpc_b64 s[30:31]
+; GFX12-UNALIGNED-LABEL: v_load_constant_i96_align8:
+; GFX12-UNALIGNED:       ; %bb.0:
+; GFX12-UNALIGNED-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-UNALIGNED-NEXT:    s_wait_expcnt 0x0
+; GFX12-UNALIGNED-NEXT:    s_wait_samplecnt 0x0
+; GFX12-UNALIGNED-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-UNALIGNED-NEXT:    s_wait_kmcnt 0x0
+; GFX12-UNALIGNED-NEXT:    global_load_b96 v[0:2], v[0:1], off
+; GFX12-UNALIGNED-NEXT:    s_wait_loadcnt 0x0
+; GFX12-UNALIGNED-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-NOUNALIGNED-LABEL: v_load_constant_i96_align8:
+; GFX12-NOUNALIGNED:       ; %bb.0:
+; GFX12-NOUNALIGNED-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NOUNALIGNED-NEXT:    s_wait_expcnt 0x0
+; GFX12-NOUNALIGNED-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NOUNALIGNED-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NOUNALIGNED-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NOUNALIGNED-NEXT:    global_load_b96 v[0:2], v[0:1], off
+; GFX12-NOUNALIGNED-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NOUNALIGNED-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1210-LABEL: v_load_constant_i96_align8:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    global_load_b96 v[0:2], v[0:1], off
+; GFX1210-NEXT:    s_wait_loadcnt 0x0
+; GFX1210-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: v_load_constant_i96_align8:
 ; GFX9:       ; %bb.0:
@@ -524,16 +550,35 @@ define i96 @v_load_constant_i96_align8(ptr addrspace(4) %ptr) {
 }
 
 define <3 x i32> @v_load_constant_v3i32_align8(ptr addrspace(4) %ptr) {
-; GFX12-LABEL: v_load_constant_v3i32_align8:
-; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX12-NEXT:    s_wait_expcnt 0x0
-; GFX12-NEXT:    s_wait_samplecnt 0x0
-; GFX12-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    global_load_b96 v[0:2], v[0:1], off
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    s_setpc_b64 s[30:31]
+; GFX12-UNALIGNED-LABEL: v_load_constant_v3i32_align8:
+; GFX12-UNALIGNED:       ; %bb.0:
+; GFX12-UNALIGNED-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-UNALIGNED-NEXT:    s_wait_expcnt 0x0
+; GFX12-UNALIGNED-NEXT:    s_wait_samplecnt 0x0
+; GFX12-UNALIGNED-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-UNALIGNED-NEXT:    s_wait_kmcnt 0x0
+; GFX12-UNALIGNED-NEXT:    global_load_b96 v[0:2], v[0:1], off
+; GFX12-UNALIGNED-NEXT:    s_wait_loadcnt 0x0
+; GFX12-UNALIGNED-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-NOUNALIGNED-LABEL: v_load_constant_v3i32_align8:
+; GFX12-NOUNALIGNED:       ; %bb.0:
+; GFX12-NOUNALIGNED-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NOUNALIGNED-NEXT:    s_wait_expcnt 0x0
+; GFX12-NOUNALIGNED-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NOUNALIGNED-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NOUNALIGNED-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NOUNALIGNED-NEXT:    global_load_b96 v[0:2], v[0:1], off
+; GFX12-NOUNALIGNED-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NOUNALIGNED-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1210-LABEL: v_load_constant_v3i32_align8:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    global_load_b96 v[0:2], v[0:1], off
+; GFX1210-NEXT:    s_wait_loadcnt 0x0
+; GFX1210-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: v_load_constant_v3i32_align8:
 ; GFX9:       ; %bb.0:
@@ -570,16 +615,35 @@ define <3 x i32> @v_load_constant_v3i32_align8(ptr addrspace(4) %ptr) {
 }
 
 define <6 x i16> @v_load_constant_v6i16_align8(ptr addrspace(4) %ptr) {
-; GFX12-LABEL: v_load_constant_v6i16_align8:
-; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX12-NEXT:    s_wait_expcnt 0x0
-; GFX12-NEXT:    s_wait_samplecnt 0x0
-; GFX12-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    global_load_b96 v[0:2], v[0:1], off
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    s_setpc_b64 s[30:31]
+; GFX12-UNALIGNED-LABEL: v_load_constant_v6i16_align8:
+; GFX12-UNALIGNED:       ; %bb.0:
+; GFX12-UNALIGNED-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-UNALIGNED-NEXT:    s_wait_expcnt 0x0
+; GFX12-UNALIGNED-NEXT:    s_wait_samplecnt 0x0
+; GFX12-UNALIGNED-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-UNALIGNED-NEXT:    s_wait_kmcnt 0x0
+; GFX12-UNALIGNED-NEXT:    global_load_b96 v[0:2], v[0:1], off
+; GFX12-UNALIGNED-NEXT:    s_wait_loadcnt 0x0
+; GFX12-UNALIGNED-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-NOUNALIGNED-LABEL: v_load_constant_v6i16_align8:
+; GFX12-NOUNALIGNED:       ; %bb.0:
+; GFX12-NOUNALIGNED-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NOUNALIGNED-NEXT:    s_wait_expcnt 0x0
+; GFX12-NOUNALIGNED-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NOUNALIGNED-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NOUNALIGNED-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NOUNALIGNED-NEXT:    global_load_b96 v[0:2], v[0:1], off
+; GFX12-NOUNALIGNED-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NOUNALIGNED-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1210-LABEL: v_load_constant_v6i16_align8:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    global_load_b96 v[0:2], v[0:1], off
+; GFX1210-NEXT:    s_wait_loadcnt 0x0
+; GFX1210-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: v_load_constant_v6i16_align8:
 ; GFX9:       ; %bb.0:
@@ -674,9 +738,6 @@ define <12 x i8> @v_load_constant_v12i8_align8(ptr addrspace(4) %ptr) {
 ; GFX1210-LABEL: v_load_constant_v12i8_align8:
 ; GFX1210:       ; %bb.0:
 ; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1210-NEXT:    s_wait_expcnt 0x0
-; GFX1210-NEXT:    s_wait_samplecnt 0x0
-; GFX1210-NEXT:    s_wait_bvhcnt 0x0
 ; GFX1210-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-NEXT:    global_load_b96 v[0:2], v[0:1], off
 ; GFX1210-NEXT:    s_wait_loadcnt 0x0
@@ -759,16 +820,35 @@ define <12 x i8> @v_load_constant_v12i8_align8(ptr addrspace(4) %ptr) {
 }
 
 define <3 x i32> @v_load_constant_v3i32_align16(ptr addrspace(4) %ptr) {
-; GFX12-LABEL: v_load_constant_v3i32_align16:
-; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX12-NEXT:    s_wait_expcnt 0x0
-; GFX12-NEXT:    s_wait_samplecnt 0x0
-; GFX12-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    global_load_b96 v[0:2], v[0:1], off
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    s_setpc_b64 s[30:31]
+; GFX12-UNALIGNED-LABEL: v_load_constant_v3i32_align16:
+; GFX12-UNALIGNED:       ; %bb.0:
+; GFX12-UNALIGNED-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-UNALIGNED-NEXT:    s_wait_expcnt 0x0
+; GFX12-UNALIGNED-NEXT:    s_wait_samplecnt 0x0
+; GFX12-UNALIGNED-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-UNALIGNED-NEXT:    s_wait_kmcnt 0x0
+; GFX12-UNALIGNED-NEXT:    global_load_b96 v[0:2], v[0:1], off
+; GFX12-UNALIGNED-NEXT:    s_wait_loadcnt 0x0
+; GFX12-UNALIGNED-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-NOUNALIGNED-LABEL: v_load_constant_v3i32_align16:
+; GFX12-NOUNALIGNED:       ; %bb.0:
+; GFX12-NOUNALIGNED-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NOUNALIGNED-NEXT:    s_wait_expcnt 0x0
+; GFX12-NOUNALIGNED-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NOUNALIGNED-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NOUNALIGNED-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NOUNALIGNED-NEXT:    global_load_b96 v[0:2], v[0:1], off
+; GFX12-NOUNALIGNED-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NOUNALIGNED-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX1210-LABEL: v_load_constant_v3i32_align16:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    global_load_b96 v[0:2], v[0:1], off
+; GFX1210-NEXT:    s_wait_loadcnt 0x0
+; GFX1210-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: v_load_constant_v3i32_align16:
 ; GFX9:       ; %bb.0:

@@ -16,9 +16,6 @@ define i64 @test_umin_i64(i64 %a, i64 %b) {
 ; CHECK-LABEL: test_umin_i64:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_wait_loadcnt_dscnt 0x0
-; CHECK-NEXT:    s_wait_expcnt 0x0
-; CHECK-NEXT:    s_wait_samplecnt 0x0
-; CHECK-NEXT:    s_wait_bvhcnt 0x0
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    v_min_u64 v[0:1], v[0:1], v[2:3]
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
@@ -30,9 +27,6 @@ define i64 @test_umax_i64(i64 %a, i64 %b) {
 ; CHECK-LABEL: test_umax_i64:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_wait_loadcnt_dscnt 0x0
-; CHECK-NEXT:    s_wait_expcnt 0x0
-; CHECK-NEXT:    s_wait_samplecnt 0x0
-; CHECK-NEXT:    s_wait_bvhcnt 0x0
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    v_max_u64 v[0:1], v[0:1], v[2:3]
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
@@ -44,9 +38,6 @@ define i64 @test_smin_i64(i64 %a, i64 %b) {
 ; CHECK-LABEL: test_smin_i64:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_wait_loadcnt_dscnt 0x0
-; CHECK-NEXT:    s_wait_expcnt 0x0
-; CHECK-NEXT:    s_wait_samplecnt 0x0
-; CHECK-NEXT:    s_wait_bvhcnt 0x0
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    v_min_i64 v[0:1], v[0:1], v[2:3]
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
@@ -58,9 +49,6 @@ define i64 @test_smax_i64(i64 %a, i64 %b) {
 ; CHECK-LABEL: test_smax_i64:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_wait_loadcnt_dscnt 0x0
-; CHECK-NEXT:    s_wait_expcnt 0x0
-; CHECK-NEXT:    s_wait_samplecnt 0x0
-; CHECK-NEXT:    s_wait_bvhcnt 0x0
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    v_max_i64 v[0:1], v[0:1], v[2:3]
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
@@ -72,9 +60,6 @@ define <4 x i64> @test_umin_v4i64(<4 x i64> %a, <4 x i64> %b) {
 ; CHECK-LABEL: test_umin_v4i64:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_wait_loadcnt_dscnt 0x0
-; CHECK-NEXT:    s_wait_expcnt 0x0
-; CHECK-NEXT:    s_wait_samplecnt 0x0
-; CHECK-NEXT:    s_wait_bvhcnt 0x0
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    v_min_u64 v[0:1], v[0:1], v[8:9]
 ; CHECK-NEXT:    v_min_u64 v[2:3], v[2:3], v[10:11]
@@ -89,9 +74,6 @@ define <4 x i64> @test_umax_v4i64(<4 x i64> %a, <4 x i64> %b) {
 ; CHECK-LABEL: test_umax_v4i64:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_wait_loadcnt_dscnt 0x0
-; CHECK-NEXT:    s_wait_expcnt 0x0
-; CHECK-NEXT:    s_wait_samplecnt 0x0
-; CHECK-NEXT:    s_wait_bvhcnt 0x0
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    v_max_u64 v[0:1], v[0:1], v[8:9]
 ; CHECK-NEXT:    v_max_u64 v[2:3], v[2:3], v[10:11]
@@ -106,9 +88,6 @@ define <4 x i64> @test_smin_v4i64(<4 x i64> %a, <4 x i64> %b) {
 ; CHECK-LABEL: test_smin_v4i64:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_wait_loadcnt_dscnt 0x0
-; CHECK-NEXT:    s_wait_expcnt 0x0
-; CHECK-NEXT:    s_wait_samplecnt 0x0
-; CHECK-NEXT:    s_wait_bvhcnt 0x0
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    v_min_i64 v[0:1], v[0:1], v[8:9]
 ; CHECK-NEXT:    v_min_i64 v[2:3], v[2:3], v[10:11]
@@ -123,9 +102,6 @@ define <4 x i64> @test_smax_v4i64(<4 x i64> %a, <4 x i64> %b) {
 ; CHECK-LABEL: test_smax_v4i64:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_wait_loadcnt_dscnt 0x0
-; CHECK-NEXT:    s_wait_expcnt 0x0
-; CHECK-NEXT:    s_wait_samplecnt 0x0
-; CHECK-NEXT:    s_wait_bvhcnt 0x0
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    v_max_i64 v[0:1], v[0:1], v[8:9]
 ; CHECK-NEXT:    v_max_i64 v[2:3], v[2:3], v[10:11]
@@ -140,9 +116,6 @@ define i64 @test_abs_i64(i64 %a) {
 ; CHECK-LABEL: test_abs_i64:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_wait_loadcnt_dscnt 0x0
-; CHECK-NEXT:    s_wait_expcnt 0x0
-; CHECK-NEXT:    s_wait_samplecnt 0x0
-; CHECK-NEXT:    s_wait_bvhcnt 0x0
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    v_ashrrev_i32_e32 v2, 31, v1
 ; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
