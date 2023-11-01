@@ -24,9 +24,9 @@ define i32 @fputs() {
   ret i32 0
 }
 
-define internal i32 @__kmpc_target_init(ptr %0) {
+define internal i32 @__kmpc_target_init(ptr %0, ptr %dyn) {
 ; AMDGPU-LABEL: define {{[^@]+}}@__kmpc_target_init
-; AMDGPU-SAME: (ptr [[TMP0:%.*]]) #[[ATTR1:[0-9]+]] {
+; AMDGPU-SAME: (ptr [[TMP0:%.*]], ptr [[DYN:%.*]]) #[[ATTR1:[0-9]+]] {
 ; AMDGPU-NEXT:    [[TMP2:%.*]] = load i8, ptr getelementptr (i8, ptr addrspacecast (ptr addrspace(1) @__omp_offloading_10302_b20a40e_main_l4_kernel_environment to ptr), i64 2), align 2
 ; AMDGPU-NEXT:    [[TMP3:%.*]] = and i8 [[TMP2]], 2
 ; AMDGPU-NEXT:    [[TMP4:%.*]] = icmp ne i8 [[TMP3]], 0
@@ -75,16 +75,17 @@ declare i32 @llvm.amdgcn.workitem.id.x() #0
 
 declare void @__kmpc_target_deinit()
 
-define amdgpu_kernel void @__omp_offloading_10302_b20a40e_main_l4() {
-; AMDGPU-LABEL: define {{[^@]+}}@__omp_offloading_10302_b20a40e_main_l4() {
-; AMDGPU-NEXT:    [[TMP1:%.*]] = tail call i32 @__kmpc_target_init(ptr addrspacecast (ptr addrspace(1) @__omp_offloading_10302_b20a40e_main_l4_kernel_environment to ptr)) #[[ATTR4:[0-9]+]]
+define amdgpu_kernel void @__omp_offloading_10302_b20a40e_main_l4(ptr %dyn) {
+; AMDGPU-LABEL: define {{[^@]+}}@__omp_offloading_10302_b20a40e_main_l4
+; AMDGPU-SAME: (ptr [[DYN:%.*]]) {
+; AMDGPU-NEXT:    [[TMP1:%.*]] = tail call i32 @__kmpc_target_init(ptr addrspacecast (ptr addrspace(1) @__omp_offloading_10302_b20a40e_main_l4_kernel_environment to ptr), ptr [[DYN]]) #[[ATTR4:[0-9]+]]
 ; AMDGPU-NEXT:    br label [[TMP2:%.*]]
 ; AMDGPU:       2:
 ; AMDGPU-NEXT:    [[TMP3:%.*]] = call i32 @fputs() #[[ATTR0]]
 ; AMDGPU-NEXT:    tail call void @__kmpc_target_deinit()
 ; AMDGPU-NEXT:    ret void
 ;
-  %1 = tail call i32 @__kmpc_target_init(ptr addrspacecast (ptr addrspace(1) @__omp_offloading_10302_b20a40e_main_l4_kernel_environment to ptr))
+  %1 = tail call i32 @__kmpc_target_init(ptr addrspacecast (ptr addrspace(1) @__omp_offloading_10302_b20a40e_main_l4_kernel_environment to ptr), ptr %dyn)
   br label %2
 
 2:                                                ; preds = %0

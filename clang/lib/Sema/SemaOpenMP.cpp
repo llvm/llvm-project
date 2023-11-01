@@ -4249,12 +4249,15 @@ void Sema::ActOnOpenMPRegionStart(OpenMPDirectiveKind DKind, Scope *CurScope) {
     getCurCapturedRegion()->TheCapturedDecl->addAttr(
         AlwaysInlineAttr::CreateImplicit(
             Context, {}, AlwaysInlineAttr::Keyword_forceinline));
-    Sema::CapturedParamNameType ParamsTarget[] = {
-        std::make_pair(StringRef(), QualType()) // __context with shared vars
-    };
+    SmallVector<Sema::CapturedParamNameType, 2> ParamsTarget;
+    if (getLangOpts().OpenMPIsTargetDevice)
+      ParamsTarget.push_back(std::make_pair(StringRef("dyn_ptr"), VoidPtrTy));
+    ParamsTarget.push_back(
+        std::make_pair(StringRef(), QualType())); // __context with shared vars;
     // Start a captured region for 'target' with no implicit parameters.
     ActOnCapturedRegionStart(DSAStack->getConstructLoc(), CurScope, CR_OpenMP,
-                             ParamsTarget, /*OpenMPCaptureLevel=*/1);
+                             ParamsTarget,
+                             /*OpenMPCaptureLevel=*/1);
     Sema::CapturedParamNameType ParamsTeamsOrParallel[] = {
         std::make_pair(".global_tid.", KmpInt32PtrTy),
         std::make_pair(".bound_tid.", KmpInt32PtrTy),
@@ -4293,8 +4296,13 @@ void Sema::ActOnOpenMPRegionStart(OpenMPDirectiveKind DKind, Scope *CurScope) {
     getCurCapturedRegion()->TheCapturedDecl->addAttr(
         AlwaysInlineAttr::CreateImplicit(
             Context, {}, AlwaysInlineAttr::Keyword_forceinline));
+    SmallVector<Sema::CapturedParamNameType, 2> ParamsTarget;
+    if (getLangOpts().OpenMPIsTargetDevice)
+      ParamsTarget.push_back(std::make_pair(StringRef("dyn_ptr"), VoidPtrTy));
+    ParamsTarget.push_back(
+        std::make_pair(StringRef(), QualType())); // __context with shared vars;
     ActOnCapturedRegionStart(DSAStack->getConstructLoc(), CurScope, CR_OpenMP,
-                             std::make_pair(StringRef(), QualType()),
+                             ParamsTarget,
                              /*OpenMPCaptureLevel=*/1);
     break;
   }
@@ -4499,9 +4507,11 @@ void Sema::ActOnOpenMPRegionStart(OpenMPDirectiveKind DKind, Scope *CurScope) {
     getCurCapturedRegion()->TheCapturedDecl->addAttr(
         AlwaysInlineAttr::CreateImplicit(
             Context, {}, AlwaysInlineAttr::Keyword_forceinline));
-    Sema::CapturedParamNameType ParamsTarget[] = {
-        std::make_pair(StringRef(), QualType()) // __context with shared vars
-    };
+    SmallVector<Sema::CapturedParamNameType, 2> ParamsTarget;
+    if (getLangOpts().OpenMPIsTargetDevice)
+      ParamsTarget.push_back(std::make_pair(StringRef("dyn_ptr"), VoidPtrTy));
+    ParamsTarget.push_back(
+        std::make_pair(StringRef(), QualType())); // __context with shared vars;
     // Start a captured region for 'target' with no implicit parameters.
     ActOnCapturedRegionStart(DSAStack->getConstructLoc(), CurScope, CR_OpenMP,
                              ParamsTarget, /*OpenMPCaptureLevel=*/1);
