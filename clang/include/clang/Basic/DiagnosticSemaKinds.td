@@ -4252,6 +4252,12 @@ def err_attribute_cleanup_func_must_take_one_arg : Error<
 def err_attribute_cleanup_func_arg_incompatible_type : Error<
   "'cleanup' function %0 parameter has "
   "%diff{type $ which is incompatible with type $|incompatible type}1,2">;
+def err_attribute_malloc_arg_not_function : Error<
+  "'malloc' argument %select{for deallocator |%1 |%1 }0is not a %select{||single }0function">;
+def err_attribute_malloc_arg_not_function_with_pointer_arg : Error<
+  "'malloc' argument %0 must take a pointer type as its first argument">;
+def err_attribute_malloc_arg_refers_to_non_pointer_type : Error<
+  "'malloc' argument '%0' refers to non-pointer type %1 of %2">; // in GCC, this is a warning, not an error
 def err_attribute_regparm_wrong_platform : Error<
   "'regparm' is not valid on this platform">;
 def err_attribute_regparm_invalid_number : Error<

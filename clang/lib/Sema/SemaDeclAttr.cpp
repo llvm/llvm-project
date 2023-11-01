@@ -2070,7 +2070,7 @@ static void handleRestrictAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     return;
   }
 
-  if (getNumAttributeArgs(AL) == 0) {
+  if (AL.getNumArgs() == 0) {
     D->addAttr(::new (S.Context) RestrictAttr(S.Context, AL));
     return;
   }
@@ -2081,9 +2081,69 @@ static void handleRestrictAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     return;
   }
 
-  // FIXME: GCC uses [[malloc(my_func)]] to specify a deallocator for the
-  // returned pointer, but this isn't currently supported in LLVM
-  // see https://github.com/llvm/llvm-project/issues/51607
+  // [[gnu::malloc(deallocator)]] with args specifies a deallocator function
+  Expr *DeallocE = AL.getArgAsExpr(0);
+  SourceLocation DeallocLoc = DeallocE->getExprLoc();
+  FunctionDecl *DeallocFD = nullptr;
+  DeclarationNameInfo DeallocNI;
+
+  if (auto *DRE = dyn_cast<DeclRefExpr>(DeallocE)) {
+    DeallocFD = dyn_cast<FunctionDecl>(DRE->getDecl());
+    DeallocNI = DRE->getNameInfo();
+    if (!DeallocFD) {
+      S.Diag(DeallocLoc, diag::err_attribute_malloc_arg_not_function)
+          << 1 << DeallocNI.getName();
+      return;
+    }
+  } else if (auto *ULE = dyn_cast<UnresolvedLookupExpr>(DeallocE)) {
+    DeallocFD = S.ResolveSingleFunctionTemplateSpecialization(ULE, true);
+    DeallocNI = ULE->getNameInfo();
+    if (!DeallocFD) {
+      S.Diag(DeallocLoc, diag::err_attribute_malloc_arg_not_function)
+          << 2 << DeallocNI.getName();
+      if (ULE->getType() == S.Context.OverloadTy)
+        S.NoteAllOverloadCandidates(ULE);
+      return;
+    }
+  } else {
+    S.Diag(DeallocLoc, diag::err_attribute_malloc_arg_not_function) << 0;
+    return;
+  }
+
+  // 2nd arg of [[gnu::malloc(deallocator, 2)]] with args specifies the param
+  // of deallocator that deallocates the pointer (defaults to 1)
+  ParamIdx DeallocPtrIdx;
+  if (AL.getNumArgs() == 1) {
+    DeallocPtrIdx = ParamIdx(1, DeallocFD);
+
+    if (!DeallocPtrIdx.isValid() ||
+        !getFunctionOrMethodParamType(DeallocFD, DeallocPtrIdx.getASTIndex())
+             .getCanonicalType()
+             ->isPointerType()) {
+      S.Diag(DeallocLoc,
+             diag::err_attribute_malloc_arg_not_function_with_pointer_arg)
+          << DeallocNI.getName();
+      return;
+    }
+  } else {
+    if (!checkFunctionOrMethodParameterIndex(S, DeallocFD, AL, 2,
+                                             AL.getArgAsExpr(1), DeallocPtrIdx,
+                                             /* CanIndexImplicitThis=*/false))
+      return;
+
+    QualType DeallocPtrArgType =
+        getFunctionOrMethodParamType(DeallocFD, DeallocPtrIdx.getASTIndex());
+    if (!DeallocPtrArgType.getCanonicalType()->isPointerType()) {
+      S.Diag(DeallocLoc,
+             diag::err_attribute_malloc_arg_refers_to_non_pointer_type)
+          << DeallocPtrIdx.getSourceIndex() << DeallocPtrArgType
+          << DeallocNI.getName();
+      return;
+    }
+  }
+
+  // FIXME: we should add this attribute to Clang's AST, so that clang-analyzer
+  // can use it.
   S.Diag(AL.getLoc(), diag::warn_attribute_form_ignored) << AL;
 }
 
