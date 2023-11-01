@@ -1,7 +1,9 @@
+#include <asm/hwcap.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/auxv.h>
 #include <sys/prctl.h>
 
 // Important details for this program:
@@ -30,8 +32,13 @@
 #define SMSTOP_SM SM_INST(2)
 #define SMSTOP_ZA SM_INST(4)
 
+#ifndef HWCAP2_SME2
+#define HWCAP2_SME2 (1UL << 37)
+#endif
+
 int start_vl = 0;
 int other_vl = 0;
+bool has_zt0 = false;
 
 void write_sve_regs() {
   // We assume the smefa64 feature is present, which allows ffr access
@@ -143,7 +150,7 @@ void write_sve_regs_expr() {
   asm volatile("cpy  z31.b, p15/z, #33\n\t");
 }
 
-void set_za_register(int svl, int value_offset) {
+void set_sme_registers(int svl, uint8_t value_offset) {
 #define MAX_VL_BYTES 256
   uint8_t data[MAX_VL_BYTES];
 
@@ -158,6 +165,17 @@ void set_za_register(int svl, int value_offset) {
                  "r"(&data)
                  : "w12");
   }
+#undef MAX_VL_BYTES
+
+  if (has_zt0) {
+#define ZTO_LEN (512 / 8)
+    uint8_t data[ZTO_LEN];
+    for (unsigned i = 0; i < ZTO_LEN; ++i)
+      data[i] = i + value_offset;
+
+    asm volatile("ldr zt0, [%0]" ::"r"(&data));
+#undef ZT0_LEN
+  }
 }
 
 void expr_disable_za() {
@@ -167,21 +185,21 @@ void expr_disable_za() {
 
 void expr_enable_za() {
   SMSTART_ZA;
-  set_za_register(start_vl, 2);
+  set_sme_registers(start_vl, 2);
   write_sve_regs_expr();
 }
 
 void expr_start_vl() {
   prctl(PR_SME_SET_VL, start_vl);
   SMSTART_ZA;
-  set_za_register(start_vl, 4);
+  set_sme_registers(start_vl, 4);
   write_sve_regs_expr();
 }
 
 void expr_other_vl() {
   prctl(PR_SME_SET_VL, other_vl);
   SMSTART_ZA;
-  set_za_register(other_vl, 5);
+  set_sme_registers(other_vl, 5);
   write_sve_regs_expr();
 }
 
@@ -209,6 +227,9 @@ int main(int argc, char *argv[]) {
   start_vl = atoi(argv[3]);
   other_vl = atoi(argv[4]);
 
+  if ((getauxval(AT_HWCAP2) & HWCAP2_SME2))
+    has_zt0 = true;
+
   prctl(PR_SME_SET_VL, start_vl);
 
   if (ssve)
@@ -216,7 +237,7 @@ int main(int argc, char *argv[]) {
 
   if (za) {
     SMSTART_ZA;
-    set_za_register(start_vl, 1);
+    set_sme_registers(start_vl, 1);
   }
 
   write_sve_regs();
