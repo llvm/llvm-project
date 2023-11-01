@@ -104,10 +104,6 @@ public:
   }
 
   void runOnOperation() override {
-#ifdef AART
-    llvm::dbgs() << "\n\n**** BEGIN MINI PIPELINE ****\n\n";
-    getOperation().dump();
-#endif
     // Run enabling transformations.
     {
       OpPassManager pm("builtin.module");
@@ -172,10 +168,6 @@ public:
     // Bufferize all dense ops.
     if (failed(runDenseBufferization()))
       signalPassFailure();
-#ifdef AART
-    llvm::dbgs() << "\n\n**** END MINI PIPELINE ****\n\n";
-    getOperation().dump();
-#endif
   }
 
 private:
