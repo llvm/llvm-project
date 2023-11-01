@@ -418,37 +418,40 @@ bool RISCVInsertWriteVXRM::runOnMachineFunction(MachineFunction &MF) {
   for (const MachineBasicBlock &MBB : MF)
     NeedVXRMChange |= computeVXRMChanges(MBB);
 
-  if (NeedVXRMChange) {
-    // Phase 2 - Compute available VXRM using a forward walk.
-    for (const MachineBasicBlock &MBB : MF) {
-      WorkList.push(&MBB);
-      BlockInfo[MBB.getNumber()].InQueue = true;
-    }
-    while (!WorkList.empty()) {
-      const MachineBasicBlock &MBB = *WorkList.front();
-      WorkList.pop();
-      computeAvailable(MBB);
-    }
-
-    // Phase 3 - Compute anticipated VXRM using a backwards walk.
-    for (const MachineBasicBlock &MBB : llvm::reverse(MF)) {
-      WorkList.push(&MBB);
-      BlockInfo[MBB.getNumber()].InQueue = true;
-    }
-    while (!WorkList.empty()) {
-      const MachineBasicBlock &MBB = *WorkList.front();
-      WorkList.pop();
-      computeAnticipated(MBB);
-    }
-
-    // Phase 4 - Emit VXRM writes at the earliest place possible.
-    for (MachineBasicBlock &MBB : MF)
-      emitWriteVXRM(MBB);
+  if (!NeedVXRMChange) {
+    BlockInfo.clear();
+    return false;
   }
+
+  // Phase 2 - Compute available VXRM using a forward walk.
+  for (const MachineBasicBlock &MBB : MF) {
+    WorkList.push(&MBB);
+    BlockInfo[MBB.getNumber()].InQueue = true;
+  }
+  while (!WorkList.empty()) {
+    const MachineBasicBlock &MBB = *WorkList.front();
+    WorkList.pop();
+    computeAvailable(MBB);
+  }
+
+  // Phase 3 - Compute anticipated VXRM using a backwards walk.
+  for (const MachineBasicBlock &MBB : llvm::reverse(MF)) {
+    WorkList.push(&MBB);
+    BlockInfo[MBB.getNumber()].InQueue = true;
+  }
+  while (!WorkList.empty()) {
+    const MachineBasicBlock &MBB = *WorkList.front();
+    WorkList.pop();
+    computeAnticipated(MBB);
+  }
+
+  // Phase 4 - Emit VXRM writes at the earliest place possible.
+  for (MachineBasicBlock &MBB : MF)
+    emitWriteVXRM(MBB);
 
   BlockInfo.clear();
 
-  return NeedVXRMChange;
+  return true;
 }
 
 FunctionPass *llvm::createRISCVInsertWriteVXRMPass() {
