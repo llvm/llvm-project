@@ -869,6 +869,7 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     // Check if that store is fed by fp instructions.
     if (OpRegBankIdx[0] == PMI_FirstGPR) {
       Register VReg = MI.getOperand(0).getReg();
+      assert(VReg);
       if (!VReg)
         break;
       MachineInstr *DefMI = MRI.getVRegDef(VReg);
