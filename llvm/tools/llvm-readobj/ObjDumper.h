@@ -129,7 +129,7 @@ public:
   virtual void printGroupSections() {}
   virtual void printHashHistograms() {}
   virtual void printCGProfile() {}
-  virtual void printBBAddrMaps() {}
+  virtual void printBBAddrMaps(bool IncludePGOAnalysis = false) {}
   virtual void printAddrsig() {}
   virtual void printNotes() {}
   virtual void printELFLinkerOptions() {}
