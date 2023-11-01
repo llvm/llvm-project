@@ -320,6 +320,7 @@ generic-gcc)
                    -DLIBCXXABI_ENABLE_WERROR=NO \
                    -DLIBUNWIND_ENABLE_WERROR=NO
     check-runtimes
+    check-abi-list
 ;;
 generic-gcc-cxx11)
     clean
