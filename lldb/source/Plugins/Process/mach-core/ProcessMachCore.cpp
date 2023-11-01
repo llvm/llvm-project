@@ -570,6 +570,8 @@ Status ProcessMachCore::DoLoadCore() {
 
   CreateMemoryRegions();
 
+  LoadBinariesAndSetDYLD();
+
   CleanupMemoryRegionPermissions();
 
   AddressableBits addressable_bits = core_objfile->GetAddressableBits();
@@ -577,8 +579,6 @@ Status ProcessMachCore::DoLoadCore() {
 
   return error;
 }
-
-void ProcessMachCore::DidLoadCore() { LoadBinariesAndSetDYLD(); }
 
 lldb_private::DynamicLoader *ProcessMachCore::GetDynamicLoader() {
   if (m_dyld_up.get() == nullptr)
