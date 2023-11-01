@@ -213,8 +213,9 @@ Instruction *InstCombinerImpl::commonCastTransforms(CastInst &CI) {
 /// Constants and extensions/truncates from the destination type are always
 /// free to be evaluated in that type. This is a helper for canEvaluate*.
 static bool canAlwaysEvaluateInType(Value *V, Type *Ty) {
-  if (match(V, m_ImmConstant()))
-    return true;
+  if (isa<Constant>(V))
+    return match(V, m_ImmConstant());
+
   Value *X;
   if ((match(V, m_ZExtOrSExt(m_Value(X))) || match(V, m_Trunc(m_Value(X)))) &&
       X->getType() == Ty)
