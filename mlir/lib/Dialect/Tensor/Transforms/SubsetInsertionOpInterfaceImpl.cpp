@@ -17,73 +17,12 @@ using namespace mlir::tensor;
 
 namespace {
 
-/// Return the tensor that the given subset op operates on.
-Value getContainerOperand(SubsetOpInterface op) {
-  if (auto extractionOp =
-          dyn_cast<SubsetExtractionOpInterface>(op.getOperation()))
-    return extractionOp.getSourceOperand().get();
-  if (auto insertionOp =
-          dyn_cast<SubsetInsertionOpInterface>(op.getOperation()))
-    return insertionOp.getDestinationOperand().get();
-  llvm_unreachable("expected SubsetExtraction/InsertionOpInterface");
-}
-
-/// Return "true" if the two ops operate on an equivalent subset.
-/// `equivalenceFn` is used to determine equivalence of tensors. Return "false"
-/// if the two ops operate non-equivalent subsets, if equivalence cannot be
-/// determined or if `op1` is not a subset op.
-template <typename OpTy>
-bool operateOnEquivalentSubsets(
-    OpTy op1, SubsetOpInterface op2,
-    function_ref<bool(Value, Value)> equivalenceFn) {
-  auto offsetsSizesAndStrides2 =
-      dyn_cast<OffsetSizeAndStrideOpInterface>(op2.getOperation());
-  if (!offsetsSizesAndStrides2)
-    return false;
-  if (!sameOffsetsSizesAndStrides(op1, offsetsSizesAndStrides2,
-                                  isEqualConstantIntOrValue))
-    return false;
-  return equivalenceFn(
-      getContainerOperand(cast<SubsetOpInterface>(op1.getOperation())),
-      getContainerOperand(op2));
-}
-
-/// Return "true" if the two ops operate on a disjoint subsets.
-/// `equivalenceFn` is used to determine equivalence of tensors. Return "false"
-/// if the two ops operate non-disjoint subsets, if disjointness cannot be
-/// determined or if `op1` is not a subset op.
-template <typename OpTy>
-bool operateOnDisjointSubsets(OpTy op1, SubsetOpInterface op2,
-                              function_ref<bool(Value, Value)> equivalenceFn) {
-  auto offsetsSizesAndStrides2 =
-      dyn_cast<OffsetSizeAndStrideOpInterface>(op2.getOperation());
-  if (!offsetsSizesAndStrides2)
-    return false;
-  FailureOr<bool> overlappingSlices =
-      ValueBoundsConstraintSet::areOverlappingSlices(op1,
-                                                     offsetsSizesAndStrides2);
-  if (failed(overlappingSlices) || *overlappingSlices)
-    return false;
-  return equivalenceFn(
-      getContainerOperand(cast<SubsetOpInterface>(op1.getOperation())),
-      getContainerOperand(op2));
-}
-
 struct ExtractSliceOpSubsetOpInterface
     : public SubsetOpInterface::ExternalModel<ExtractSliceOpSubsetOpInterface,
                                               tensor::ExtractSliceOp> {
-  bool operatesOnEquivalentSubset(
-      Operation *op, SubsetOpInterface candidate,
-      function_ref<bool(Value, Value)> equivalenceFn) const {
-    auto extractSliceOp = cast<tensor::ExtractSliceOp>(op);
-    return operateOnEquivalentSubsets(extractSliceOp, candidate, equivalenceFn);
-  }
-
-  bool operatesOnDisjointSubset(
-      Operation *op, SubsetOpInterface candidate,
-      function_ref<bool(Value, Value)> equivalenceFn) const {
-    auto extractSliceOp = cast<tensor::ExtractSliceOp>(op);
-    return operateOnDisjointSubsets(extractSliceOp, candidate, equivalenceFn);
+  FailureOr<HyperrectangularSlice>
+  getAccessedHyperrectangularSlice(Operation *op) const {
+    return HyperrectangularSlice(cast<OffsetSizeAndStrideOpInterface>(op));
   }
 };
 
@@ -99,18 +38,9 @@ template <typename OpTy>
 struct InsertSliceLikeOpSubsetOpInterface
     : public SubsetOpInterface::ExternalModel<
           InsertSliceLikeOpSubsetOpInterface<OpTy>, OpTy> {
-  bool operatesOnEquivalentSubset(
-      Operation *op, SubsetOpInterface candidate,
-      function_ref<bool(Value, Value)> equivalenceFn) const {
-    auto insertSliceOp = cast<OpTy>(op);
-    return operateOnEquivalentSubsets(insertSliceOp, candidate, equivalenceFn);
-  }
-
-  bool operatesOnDisjointSubset(
-      Operation *op, SubsetOpInterface candidate,
-      function_ref<bool(Value, Value)> equivalenceFn) const {
-    auto insertSliceOp = cast<OpTy>(op);
-    return operateOnDisjointSubsets(insertSliceOp, candidate, equivalenceFn);
+  FailureOr<HyperrectangularSlice>
+  getAccessedHyperrectangularSlice(Operation *op) const {
+    return HyperrectangularSlice(cast<OffsetSizeAndStrideOpInterface>(op));
   }
 };
 
