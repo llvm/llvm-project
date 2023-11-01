@@ -27,6 +27,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Target/CGPassBuilderOption.h"
 
 #include <map>
 
@@ -150,10 +151,7 @@ class MachineFunctionPassManager
   using Base = PassManager<MachineFunction, MachineFunctionAnalysisManager>;
 
 public:
-  MachineFunctionPassManager(bool RequireCodeGenSCCOrder = false,
-                             bool VerifyMachineFunction = false)
-      : RequireCodeGenSCCOrder(RequireCodeGenSCCOrder),
-        VerifyMachineFunction(VerifyMachineFunction) {}
+  MachineFunctionPassManager() : Opt(getCGPassBuilderOption()) {}
   MachineFunctionPassManager(MachineFunctionPassManager &&) = default;
   MachineFunctionPassManager &
   operator=(MachineFunctionPassManager &&) = default;
@@ -261,10 +259,7 @@ private:
   using PassIndex = decltype(Passes)::size_type;
   std::map<PassIndex, llvm::unique_function<FuncTy>> MachineModulePasses;
 
-  // Run codegen in the SCC order.
-  bool RequireCodeGenSCCOrder;
-
-  bool VerifyMachineFunction;
+  CGPassBuilderOption Opt;
 };
 
 } // end namespace llvm
