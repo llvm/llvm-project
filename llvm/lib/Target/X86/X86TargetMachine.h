@@ -50,6 +50,18 @@ public:
   // Set up the pass pipeline.
   TargetPassConfig *createPassConfig(PassManagerBase &PM) override;
 
+  Error buildCodeGenPipeline(ModulePassManager &, MachineFunctionPassManager &,
+                             MachineFunctionAnalysisManager &,
+                             raw_pwrite_stream &, raw_pwrite_stream *,
+                             CodeGenFileType, CGPassBuilderOption,
+                             PassInstrumentationCallbacks *) override;
+
+  std::pair<StringRef, bool> getPassNameFromLegacyName(StringRef) override;
+
+  Error parseMIRPipeline(MachineFunctionPassManager &MFPM, StringRef,
+                         CGPassBuilderOption, MachineFunctionAnalysisManager &,
+                         PassInstrumentationCallbacks *) override;
+
   TargetLoweringObjectFile *getObjFileLowering() const override {
     return TLOF.get();
   }

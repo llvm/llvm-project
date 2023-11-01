@@ -99,8 +99,10 @@ add_llvm_target(X86CodeGen ${sources}
   Core
   GlobalISel
   Instrumentation
+  IRPrinter
   MC
   ProfileData
+  ScalarOpts
   SelectionDAG
   Support
   Target

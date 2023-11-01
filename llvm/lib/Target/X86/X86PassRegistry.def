@@ -1,0 +1,76 @@
+//===- X86PassRegistry.def - Registry of passes for X86 ---------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// X86 pass registry
+//
+//===----------------------------------------------------------------------===//
+
+// NOTE: NO INCLUDE GUARD DESIRED!
+
+#ifndef FUNCTION_PASS
+#define FUNCTION_PASS(NAME, PASS_NAME, CONSTRUCTOR)
+#endif
+
+#undef FUNCTION_PASS
+
+#ifndef DUMMY_FUNCTION_PASS
+#define DUMMY_FUNCTION_PASS(NAME, PASS_NAME, CONSTRUCTOR)
+#endif
+DUMMY_FUNCTION_PASS("x86-win-eh-state", X86WinEHStatePass, ())
+#undef DUMMY_FUNCTION_PASS
+
+#ifndef MACHINE_FUNCTION_PASS
+#define MACHINE_FUNCTION_PASS(NAME, PASS_NAME, CONSTRUCTOR)
+#endif
+
+#undef MACHINE_FUNCTION_PASS
+
+// PASS_NAME is for mocking machine passes, remove it after all machine passes
+// are added new pass manager interface.
+#ifndef DUMMY_MACHINE_FUNCTION_PASS
+#define DUMMY_MACHINE_FUNCTION_PASS(NAME, PASS_NAME, CONSTRUCTOR)
+#endif
+DUMMY_MACHINE_FUNCTION_PASS("x86-isel-dag", X86ISelDagPass, (getTM<X86TargetMachine>(), getOptLevel()))
+DUMMY_MACHINE_FUNCTION_PASS("x86-global-basereg", X86GlobalBaseRegPass, ())
+DUMMY_MACHINE_FUNCTION_PASS("x86-cmov-converter", X86CmovConverterDummyPass, ())
+DUMMY_MACHINE_FUNCTION_PASS("x86-fixup-setcc", X86FixupSetCCPass, ())
+DUMMY_MACHINE_FUNCTION_PASS("x86-opt-leas", X86OptimizeLEAsPass, ())
+DUMMY_MACHINE_FUNCTION_PASS("x86-callframe-opt", X86CallFrameOptimizationPass, ())
+DUMMY_MACHINE_FUNCTION_PASS("x86-avoid-store-foword-block", X86AvoidStoreForwardingBlocksPass, ())
+DUMMY_MACHINE_FUNCTION_PASS("x86-speculative-load-hardening", X86SpeculativeLoadHardeningPass, ())
+DUMMY_MACHINE_FUNCTION_PASS("x86-flags-copy-lowering", X86FlagsCopyLoweringDummyPass, ())
+DUMMY_MACHINE_FUNCTION_PASS("x86-domain-reassign", X86DomainReassignmentPass, ())
+DUMMY_MACHINE_FUNCTION_PASS("x86-fp-stackifier", X86FloatingPointStackifierPass, ())
+DUMMY_MACHINE_FUNCTION_PASS("x86-expand-pseudo", X86ExpandPseudoPass, ())
+DUMMY_MACHINE_FUNCTION_PASS("x86-exec-domain-fix", X86ExecutionDomainFixPass, ())
+DUMMY_MACHINE_FUNCTION_PASS("x86-indirectbr-tracking", X86IndirectBranchTrackingPass, ())
+DUMMY_MACHINE_FUNCTION_PASS("x86-issue-vzero-upper", X86IssueVZeroUpperPass, ())
+DUMMY_MACHINE_FUNCTION_PASS("x86-fixup-bwinsts", X86FixupBWInstsPass, ())
+DUMMY_MACHINE_FUNCTION_PASS("x86-pad-short-funcs", X86PadShortFunctionsPass, ())
+DUMMY_MACHINE_FUNCTION_PASS("x86-fixup-leas", X86FixupLEAsPass, ())
+DUMMY_MACHINE_FUNCTION_PASS("x86-evex-to-vex-insts", X86EvexToVexInstsPass, ())
+DUMMY_MACHINE_FUNCTION_PASS("x86-discriminate-memops", X86DiscriminateMemOpsPass, ())
+DUMMY_MACHINE_FUNCTION_PASS("x86-insert-prefetch", X86InsertPrefetchPass, ())
+DUMMY_MACHINE_FUNCTION_PASS("x86-insert-x87-wait", X86InsertX87waitPass, ())
+DUMMY_MACHINE_FUNCTION_PASS("x86-avoid-trailing-call", X86AvoidTrailingCallPass, ())
+DUMMY_MACHINE_FUNCTION_PASS("x86-asm-printer", X86AsmPrinterPass, ())
+DUMMY_MACHINE_FUNCTION_PASS("cleanup-local-dyn-tls", CleanupLocalDynamicTLSPass, ())
+DUMMY_MACHINE_FUNCTION_PASS("x86-fixup-inst-tuning", X86FixupInstTuningPass, ())
+DUMMY_MACHINE_FUNCTION_PASS("x86-fixup-vector-constants", X86FixupVectorConstantsPass, ())
+DUMMY_MACHINE_FUNCTION_PASS("ehcontguard-catchret", EHContGuardCatchretPass, ())
+DUMMY_MACHINE_FUNCTION_PASS("x86-lvi-ret", X86LoadValueInjectionRetHardeningPass, ())
+DUMMY_MACHINE_FUNCTION_PASS("x86-lower-tile-copy", X86LowerTileCopyPass, ())
+DUMMY_MACHINE_FUNCTION_PASS("x86-seses", X86SpeculativeExecutionSideEffectSuppressionPass, ())
+DUMMY_MACHINE_FUNCTION_PASS("x86-retpoline-thunks", X86IndirectThunksPass, ())
+DUMMY_MACHINE_FUNCTION_PASS("x86-return-thunks", X86ReturnThunksPass, ())
+DUMMY_MACHINE_FUNCTION_PASS("tileconfig", X86TileConfigPass, ())
+DUMMY_MACHINE_FUNCTION_PASS("tile-pre-config", X86PreTileConfigPass, ())
+DUMMY_MACHINE_FUNCTION_PASS("fastpretileconfig", X86FastPreTileConfigPass, ())
+DUMMY_MACHINE_FUNCTION_PASS("fasttileconfig", X86FastTileConfigPass, ())
+DUMMY_MACHINE_FUNCTION_PASS("x86-dyn-alloca-expander", X86DynAllocaExpanderPass, ())
+#undef DUMMY_MACHINE_FUNCTION_PASS
