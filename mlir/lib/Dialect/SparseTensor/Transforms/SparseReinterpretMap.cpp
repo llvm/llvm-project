@@ -266,12 +266,11 @@ struct ForeachOpDemapper
     body->eraseArgument(0);
     // Block Args: [initArgs, lvlCrds, val, DemappedArgs]
     ValueRange srcArgs = body->getArguments().take_front(numInitArgs);
-    SmallVector<Value> dstArgs(body->getArguments().take_back(numInitArgs));
-    // Remap back before replacement;
-    for (auto [s, d] : llvm::zip(srcArgs, dstArgs))
-      if (s.getType() != d.getType())
-        d = rewriter.create<ReinterpretMapOp>(loc, s.getType(), d);
-    rewriter.replaceAllUsesWith(srcArgs, dstArgs);
+    ValueRange dstArgs = body->getArguments().take_back(numInitArgs);
+    // Remap back before replacement.
+    SmallVector<Value> reMappedArgs =
+        remapValueRange(rewriter, srcArgs.getTypes(), dstArgs);
+    rewriter.replaceAllUsesWith(srcArgs, reMappedArgs);
     body->eraseArguments(0, numInitArgs);
     // Block Args: [lvlCrds, DemappedArgs] and we are done.
 
@@ -281,8 +280,7 @@ struct ForeachOpDemapper
       auto yield = llvm::cast<YieldOp>(body->getTerminator());
       if (auto stt = tryGetSparseTensorType(yield.getResult());
           stt && !stt->isIdentity()) {
-        Value y = rewriter.create<ReinterpretMapOp>(loc, stt->getDemappedType(),
-                                                    yield.getResult());
+        Value y = genDemap(rewriter, stt->getEncoding(), yield.getResult());
         rewriter.create<YieldOp>(loc, y);
         rewriter.eraseOp(yield);
       }
