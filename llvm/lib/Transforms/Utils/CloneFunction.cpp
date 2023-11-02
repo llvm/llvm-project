@@ -44,7 +44,6 @@ BasicBlock *llvm::CloneBasicBlock(const BasicBlock *BB, ValueToValueMapTy &VMap,
                                   ClonedCodeInfo *CodeInfo,
                                   DebugInfoFinder *DIFinder) {
   BasicBlock *NewBB = BasicBlock::Create(BB->getContext(), "", F);
-  NewBB->IsNewDbgInfoFormat = BB->IsNewDbgInfoFormat;
   if (BB->hasName())
     NewBB->setName(BB->getName() + NameSuffix);
 
@@ -245,7 +244,12 @@ void llvm::CloneFunctionInto(Function *NewFunc, const Function *OldFunc,
       mapToSelfIfNew(CU);
 
     for (DIType *Type : DIFinder->types())
-      mapToSelfIfNew(Type);
+      // Don't skip subprogram's local types.
+      if (!isa_and_present<DILocalScope>(Type->getScope()) ||
+          SPClonedWithinModule == nullptr ||
+          dyn_cast<DILocalScope>(Type->getScope())->getSubprogram() !=
+              SPClonedWithinModule)
+        mapToSelfIfNew(Type);
   } else {
     assert(!SPClonedWithinModule &&
            "Subprogram should be in DIFinder->subprogram_count()...");
@@ -473,7 +477,6 @@ void PruningFunctionCloner::CloneBlock(
   BasicBlock *NewBB;
   Twine NewName(BB->hasName() ? Twine(BB->getName()) + NameSuffix : "");
   BBEntry = NewBB = BasicBlock::Create(BB->getContext(), NewName, NewFunc);
-  NewBB->IsNewDbgInfoFormat = BB->IsNewDbgInfoFormat;
 
   // It is only legal to clone a function if a block address within that
   // function is never referenced outside of the function.  Given that, we

@@ -899,6 +899,10 @@ void State::addInfoForInductions(BasicBlock &BB) {
   else
     return;
 
+  // Make sure the bound B is loop-invariant.
+  if (!L->isLoopInvariant(B))
+    return;
+
   // Handle negative steps.
   if (StepOffset.isNegative()) {
     // TODO: Extend to allow steps > -1.
