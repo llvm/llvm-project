@@ -730,6 +730,10 @@ private:
     CodeMetrics Metrics;
     SwitchInst *Switch = SwitchPaths->getSwitchInst();
 
+    // Don't thread switch without multiple successors.
+    if (Switch->getNumSuccessors() <= 1)
+      return false;
+
     // Note that DuplicateBlockMap is not being used as intended here. It is
     // just being used to ensure (BB, State) pairs are only counted once.
     DuplicateBlockMap DuplicateMap;
@@ -807,6 +811,8 @@ private:
       // using binary search, hence the LogBase2().
       unsigned CondBranches =
           APInt(32, Switch->getNumSuccessors()).ceilLogBase2();
+      assert(CondBranches > 0 &&
+             "The threaded switch must have multiple branches");
       DuplicationCost = Metrics.NumInsts / CondBranches;
     } else {
       // Compared with jump tables, the DFA optimizer removes an indirect branch
