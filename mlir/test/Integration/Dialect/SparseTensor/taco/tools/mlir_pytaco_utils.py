@@ -249,6 +249,7 @@ def compile_and_build_engine(module: ir.Module) -> execution_engine.ExecutionEng
     """
     return _get_sparse_compiler().compile_and_jit(module)
 
+
 class _SparseTensorDescriptor(ctypes.Structure):
     """A C structure for an MLIR sparse tensor."""
 

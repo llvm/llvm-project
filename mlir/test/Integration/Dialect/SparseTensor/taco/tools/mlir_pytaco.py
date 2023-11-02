@@ -781,63 +781,64 @@ class IndexExpr(abc.ABC):
 
         return engine
 
-  def compile_kokkos(
-      self,
-      dst: "Tensor",
-      dst_indices: Tuple["IndexVar", ...],
-      options: str = ""
-  ) -> execution_engine.ExecutionEngine:
-    """Compiles the tensor assignment dst[dst_indices] = expression.
+    def compile_kokkos(
+        self,
+        dst: "Tensor",
+        dst_indices: Tuple["IndexVar", ...],
+        options: str = ""
+    ) -> execution_engine.ExecutionEngine:
+        """Compiles the tensor assignment dst[dst_indices] = expression.
 
-    Args:
-      dst: The destination tensor.
-      dst_indices: The tuple of IndexVar used to access the destination tensor.
+        Args:
+          dst: The destination tensor.
+          dst_indices: The tuple of IndexVar used to access the destination tensor.
 
-    Returns:
-      The Kokkos/CTypes execution engine for the tensor assignment.
+        Returns:
+          The Kokkos/CTypes execution engine for the tensor assignment.
 
-    Raises:
-      ValueError: If the expression is not proper or not supported.
-    """
-    expr_to_info = self._validate_and_collect_expr_info(dst, dst_indices)
-    input_accesses = self.get_input_accesses()
+        Raises:
+          ValueError: If the expression is not proper or not supported.
+        """
+        expr_to_info = self._validate_and_collect_expr_info(dst, dst_indices)
+        input_accesses = self.get_input_accesses()
 
-    # Build and compile the module to produce the execution engine.
-    with ir.Context(), ir.Location.unknown():
-      module = ir.Module.create()
-      self._emit_assignment(module, dst, dst_indices, expr_to_info,
-                            input_accesses)
-      backend = KokkosBackend.KokkosBackendLinalgOnTensorsBackend(dump_mlir=True, before_mlir_filename = "dump_pytaco.mlir", after_mlir_filename = "lowered_dump_pytaco.mlir")
-      engine = backend.compile_sparse(module, options=options)
-    return engine
+        # Build and compile the module to produce the execution engine.
+        with ir.Context(), ir.Location.unknown():
+            module = ir.Module.create()
+            self._emit_assignment(module, dst, dst_indices, expr_to_info,
+                                  input_accesses)
+            backend = KokkosBackend.KokkosBackendLinalgOnTensorsBackend(dump_mlir=True, before_mlir_filename = "dump_pytaco.mlir", after_mlir_filename = "lowered_dump_pytaco.mlir")
+            engine = backend.compile_sparse(module, options=options)
+        return engine
 
-  def get_module(
-      self,
-      dst: "Tensor",
-      dst_indices: Tuple["IndexVar", ...],
-  ) -> ir.Module:
-    """Get module
+    def get_module(
+        self,
+        dst: "Tensor",
+        dst_indices: Tuple["IndexVar", ...],
+    ) -> ir.Module:
+        """Get module
 
-    Args:
-      dst: The destination tensor.
-      dst_indices: The tuple of IndexVar used to access the destination tensor.
+        Args:
+          dst: The destination tensor.
+          dst_indices: The tuple of IndexVar used to access the destination tensor.
 
-    Returns:
-      The module.
+        Returns:
+          The module.
 
-    Raises:
-      ValueError: If the expression is not proper or not supported.
-    """
-    expr_to_info = self._validate_and_collect_expr_info(dst, dst_indices)
-    input_accesses = self.get_input_accesses()
+        Raises:
+          ValueError: If the expression is not proper or not supported.
+        """
+        expr_to_info = self._validate_and_collect_expr_info(dst, dst_indices)
+        input_accesses = self.get_input_accesses()
 
-    # Build and compile the module to produce the execution engine.
-    with ir.Context(), ir.Location.unknown():
-      module = ir.Module.create()
-      self._emit_assignment(module, dst, dst_indices, expr_to_info,
-                            input_accesses)
+        # Build and compile the module to produce the execution engine.
+        with ir.Context(), ir.Location.unknown():
+            module = ir.Module.create()
+            self._emit_assignment(module, dst, dst_indices, expr_to_info,
+                                  input_accesses)
 
-      return module
+            return module
+
 
 class _AtomicCounter:
     """An atomic counter."""
@@ -1157,6 +1158,7 @@ class Tensor:
         self._name = name or self._get_unique_name()
         self._assignment = None
         self._engine = None
+        self._engine_kokkos = None
         self._sparse_value_location = _SparseValueInfo._UNPACKED
         self._dense_storage = None
         self._dtype = dtype
@@ -1415,6 +1417,30 @@ class Tensor:
             _dtype_to_mlir_str(self._dtype),
         )
 
+    def to_file_kokkos(self, filename: str, options: str = "") -> None:
+        """Compute the result tensor(s) using Kokkos pipeline and write to a file.
+
+        Args:
+          filename: A string file name.
+
+        Raises:
+           ValueError: If the tensor is dense, or an unpacked sparse tensor.
+        """
+        self._sync_value_kokkos(options=options)
+
+        if self.is_dense():
+            raise ValueError("Writing dense tensors without sparsity annotation to "
+                           "file is not supported.")
+
+        if self.is_unpacked():
+            raise ValueError("Writing unpacked sparse tensors to file is not "
+                           "supported.")
+
+        utils.output_sparse_tensor(self._packed_sparse_value, filename,
+                                   self._format.format_pack.formats,
+                                   _dtype_to_mlir_str(self._dtype))
+
+
     @property
     def dtype(self) -> DType:
         """Returns the data type for the Tensor."""
@@ -1540,6 +1566,46 @@ class Tensor:
             self, self._assignment.indices
         )
 
+    def compile_kokkos(self, force_recompile: bool = False, options: str = "") -> None:
+        """Compiles the tensor assignment to native code with a CTypes-based wrapper class.
+
+        Calling compile the second time does not do anything unless force_recompile is True.
+
+        Args:
+          force_recompile: A boolean value to enable recompilation, such as for the
+            purpose of timing.
+
+        Raises:
+          ValueError: If the assignment is not proper or not supported.
+        """
+
+        if self._assignment is None or (self._engine_kokkos is not None and
+                                        not force_recompile):
+            return
+
+        self._engine_kokkos = self._assignment.expression.compile_kokkos(self,
+                                                           self._assignment.indices, options=options)
+
+    def get_module(self, force_recompile: bool = False) -> ir.Module:
+        """Compiles the tensor assignment to an execution engine.
+  
+        Calling compile the second time does not do anything unless
+        force_recompile is True.
+  
+        Args:
+          force_recompile: A boolean value to enable recompilation, such as for the
+            purpose of timing.
+  
+        Raises:
+          ValueError: If the assignment is not proper or not supported.
+        """
+        if self._assignment is None or (self._engine is not None and
+                                        not force_recompile):
+            return
+  
+        return self._assignment.expression.get_module(self, self._assignment.indices)
+
+
     def compute(self) -> None:
         """Executes the engine for the tensor assignment.
 
@@ -1580,15 +1646,66 @@ class Tensor:
         self._assignment = None
         self._engine = None
 
+    def compute_kokkos(self) -> None:
+        """Executes the Kokkos/CTypes module for the tensor assignment.
+        Raises:
+          ValueError: If the assignment hasn't been compiled yet.
+        """
+        if self._assignment is None:
+            return
+  
+        if self._engine_kokkos is None:
+            raise ValueError("Need to invoke compile_kokkos() before invoking compute_kokkos().")
+  
+        input_accesses = self._assignment.expression.get_input_accesses()
+        # Gather the pointers for the input buffers.
+        input_pointers = [a.tensor.ctype_pointer().contents for a in input_accesses]
+        #if self.is_dense():
+        #  # The pointer to receive dense output is the first argument to the
+        #  # execution engine.
+        #  arg_pointers = [self.dense_dst_ctype_pointer()] + input_pointers
+        #else:
+        #  # The pointer to receive the sparse tensor output is the last argument
+        #  # to the execution engine and is a pointer to pointer of char.
+        #  arg_pointers = input_pointers + [
+        #      ctypes.pointer(ctypes.pointer(ctypes.c_char(0)))
+        #  ]
+  
+        # Invoke the execution engine to run the module.
+        # Get the function we want by name
+        func = getattr(self._engine_kokkos, _ENTRY_NAME)
+        resultRaw = func(*input_pointers)
+  
+        # Retrieve the result.
+        if self.is_dense():
+            result = runtime.ranked_memref_to_numpy(resultRaw)
+            assert isinstance(result, np.ndarray)
+            self._dense_storage = result
+        else:
+            self._set_packed_sparse_tensor(resultRaw)
+  
+        self._assignment = None
+        self._engine_kokkos = None
+
     def evaluate(self) -> None:
         """Evaluates the tensor assignment."""
         self.compile()
         self.compute()
 
+    def evaluate_kokkos(self, options = "") -> None:
+        """Evaluates the tensor assignment."""
+        self.compile_kokkos(options=options)
+        self.compute_kokkos()
+
     def _sync_value(self) -> None:
         """Updates the tensor value by evaluating the pending assignment."""
         if self._assignment is not None:
             self.evaluate()
+
+    def _sync_value_kokkos(self, options = "") -> None:
+        """Updates the tensor value by evaluating the pending assignment."""
+        if self._assignment is not None:
+            self.evaluate_kokkos(options=options)
 
     def mlir_tensor_type(self) -> ir.RankedTensorType:
         """Returns the MLIR type for the tensor."""
@@ -1692,6 +1809,7 @@ def _emit_operand(
       indices: A tuple of IndexVar used to access the tensor.
       name: A unique string name of the tensor.
       kind: An OperandKind for the operand.
+
     Returns:
       An OperandDef representing the operand.
     """
@@ -1699,6 +1817,7 @@ def _emit_operand(
     opnd = lang.OperandDef(kind, lang.T, dim_sym)
     op_def.add_operand(name, opnd)
     return opnd
+
 
 @dataclasses.dataclass(frozen=True)
 class _DimInfo:

@@ -21,6 +21,7 @@
 #include "mlir/Support/IndentedOstream.h"
 #include "mlir/Target/KokkosCpp/KokkosCppEmitter.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -921,14 +922,20 @@ static LogicalResult printSupportCall(KokkosCppEmitter &emitter, func::CallOp ca
       return failure();
     os << " " << emitter.getOrCreateName(callOp.getResult(0)) << "_smr;\n";
   }
-  // Now go through all the input arguments and convert memrefs to StridedMemRefTypes as well
+  // Now go through all the input arguments and convert memrefs to StridedMemRefTypes as well.
+  // Because the same Value can be used for multiple arguments, do not create more than one
+  // StridedMemRef version per Value.
+  llvm::DenseSet<Value> convertedStridedMemrefs;
   for(Value arg : callOp.getOperands())
   {
     if(isa<MemRefType>(arg.getType()))
     {
+      if(convertedStridedMemrefs.contains(arg))
+        continue;
       if(failed(emitter.emitType(callOp.getLoc(), arg.getType(), true)))
         return failure();
       os << " " << emitter.getOrCreateName(arg) << "_smr = viewToStridedMemref(" << emitter.getOrCreateName(arg) << ");\n";
+      convertedStridedMemrefs.insert(arg);
     }
   }
   // Finally, emit the call.
@@ -2203,12 +2210,31 @@ void KokkosCppEmitter::populateSparseSupportFunctions()
       sparseSupportFunctions.insert({name, {pointerResult, name}});
     };
   registerCIface(false, "newSparseTensor");
-  registerCIface(true, "sparseValuesF32");
-  registerCIface(true, "sparseValuesF64");
-  registerCIface(true, "sparseIndices0");
-  registerCIface(true, "sparsePointers0");
-  registerCIface(true, "sparsePointers32");
-  registerCIface(true, "sparsePointers64");
+  for(std::string funcName : {
+      "sparseCoordinates0",
+      "sparseCoordinates8",
+      "sparseCoordinates16",
+      "sparseCoordinates32",
+      "sparseCoordinates64",
+      "sparsePositions0",
+      "sparsePositions8",
+      "sparsePositions16",
+      "sparsePositions32",
+      "sparsePositions64",
+      "sparseValuesBF16",
+      "sparseValuesC32",
+      "sparseValuesC64",
+      "sparseValuesF16",
+      "sparseValuesF32",
+      "sparseValuesF64",
+      "sparseValuesI8",
+      "sparseValuesI16",
+      "sparseValuesI32",
+      "sparseValuesI64"
+  })
+  {
+    registerCIface(true, funcName);
+  }
   registerCIface(false, "lexInsertF32");
   registerCIface(false, "lexInsertF64");
   registerCIface(false, "expInsertF32");
