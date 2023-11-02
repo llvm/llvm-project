@@ -289,7 +289,7 @@ constexpr bool isDLTWithPos(DimLevelType dlt) {
 /// Check if the `DimLevelType` needs coordinates array.
 constexpr bool isDLTWithCrd(DimLevelType dlt) {
   return isSingletonDLT(dlt) || isLooseCompressedDLT(dlt) ||
-         isCompressedDLT(dlt);
+         isCompressedDLT(dlt) || is2OutOf4DLT(dlt);
 }
 
 /// Check if the `DimLevelType` is ordered (regardless of storage format).
