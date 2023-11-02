@@ -291,7 +291,7 @@ public:
 #define __NR_sched_setaffinity 203
 #elif __NR_sched_setaffinity != 203
 #error Wrong code for setaffinity system call.
-#endif /* __NR_sched_getaffinity */
+#endif /* __NR_sched_setaffinity */
 #ifndef __NR_sched_getaffinity
 #define __NR_sched_getaffinity 204
 #elif __NR_sched_getaffinity != 204
