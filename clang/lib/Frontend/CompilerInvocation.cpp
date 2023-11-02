@@ -3625,14 +3625,10 @@ static void CheckBoundsSafetyLang(InputKind IK, DiagnosticsEngine &Diags) {
   // some build systems, like xcbuild and somewhat clumsy Makefiles, will pass
   // C_FLAGS to Clang while building assembly files.
   switch (IK.getLanguage()) {
-  case Language::Asm:
-    Diags.Report(diag::warn_bounds_safety_asm_ignored);
-    break;
-
   case Language::Unknown:
   case Language::LLVM_IR:
     llvm_unreachable("Unexpected file format");
-
+  case Language::Asm:
   case Language::C:
     break;
 
