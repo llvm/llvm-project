@@ -31,10 +31,6 @@ private:
   const char *Name;
   BitVector ContainedRegClasses;
 
-  /// Sentinel value used to recognize register bank not properly
-  /// initialized yet.
-  static const unsigned InvalidID;
-
   /// Only the RegisterBankInfo can initialize RegisterBank properly.
   friend RegisterBankInfo;
 
@@ -49,9 +45,6 @@ public:
   /// Should be used only for debugging purposes.
   const char *getName() const { return Name; }
 
-  /// Check whether this instance is ready to be used.
-  bool isValid() const;
-
   /// Check if this register bank is valid. In other words,
   /// if it has been properly constructed.
   ///
@@ -63,7 +56,6 @@ public:
   /// Check whether this register bank covers \p RC.
   /// In other words, check if this register bank fully covers
   /// the registers that \p RC contains.
-  /// \pre isValid()
   bool covers(const TargetRegisterClass &RC) const;
 
   /// Check whether \p OtherRB is the same as this.

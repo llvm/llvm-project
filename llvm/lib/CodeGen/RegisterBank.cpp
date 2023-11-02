@@ -20,8 +20,6 @@
 
 using namespace llvm;
 
-const unsigned RegisterBank::InvalidID = UINT_MAX;
-
 RegisterBank::RegisterBank(unsigned ID, const char *Name,
                            const uint32_t *CoveredClasses,
                            unsigned NumRegClasses)
@@ -32,7 +30,6 @@ RegisterBank::RegisterBank(unsigned ID, const char *Name,
 
 bool RegisterBank::verify(const RegisterBankInfo &RBI,
                           const TargetRegisterInfo &TRI) const {
-  assert(isValid() && "Invalid register bank");
   for (unsigned RCId = 0, End = TRI.getNumRegClasses(); RCId != End; ++RCId) {
     const TargetRegisterClass &RC = *TRI.getRegClass(RCId);
 
@@ -61,14 +58,7 @@ bool RegisterBank::verify(const RegisterBankInfo &RBI,
 }
 
 bool RegisterBank::covers(const TargetRegisterClass &RC) const {
-  assert(isValid() && "RB hasn't been initialized yet");
   return ContainedRegClasses.test(RC.getID());
-}
-
-bool RegisterBank::isValid() const {
-  return ID != InvalidID && Name != nullptr &&
-         // A register bank that does not cover anything is useless.
-         !ContainedRegClasses.empty();
 }
 
 bool RegisterBank::operator==(const RegisterBank &OtherRB) const {
@@ -92,7 +82,6 @@ void RegisterBank::print(raw_ostream &OS, bool IsForDebug,
   if (!IsForDebug)
     return;
   OS << "(ID:" << getID() << ")\n"
-     << "isValid:" << isValid() << '\n'
      << "Number of Covered register classes: " << ContainedRegClasses.count()
      << '\n';
   // Print all the subclasses if we can.
