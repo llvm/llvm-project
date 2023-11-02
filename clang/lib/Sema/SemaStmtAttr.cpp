@@ -333,11 +333,9 @@ CodeAlignAttr *Sema::BuildCodeAlignAttr(const AttributeCommonInfo &CI,
 
     int align_value = ArgVal.getSExtValue();
     if (align_value < CodeAlignAttr::getMinValue() ||
-        align_value > CodeAlignAttr::getMaxValue() ||
-        !ArgVal.isPowerOf2()) {
-      Diag(CI.getLoc(), diag:: err_attribute_power_of_two_in_range)
-          << CI << CodeAlignAttr::getMinValue()
-	  << CodeAlignAttr::getMaxValue();
+        align_value > CodeAlignAttr::getMaxValue() || !ArgVal.isPowerOf2()) {
+      Diag(CI.getLoc(), diag::err_attribute_power_of_two_in_range)
+          << CI << CodeAlignAttr::getMinValue() << CodeAlignAttr::getMaxValue();
       return nullptr;
     }
   }
@@ -362,8 +360,8 @@ CheckForDuplicateLoopAttribute(Sema &S,
       if (A) {
         // Cannot specify same type of attribute twice.
         S.Diag(I->getLocation(), diag::err_loop_attr_duplication) << A;
-       }
-       A = I;
+      }
+      A = I;
     }
   }
 }
