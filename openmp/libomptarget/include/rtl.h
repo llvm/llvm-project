@@ -48,6 +48,9 @@ struct RTLInfoTy {
   typedef int32_t(data_exchange_ty)(int32_t, void *, int32_t, void *, int64_t);
   typedef int32_t(data_exchange_async_ty)(int32_t, void *, int32_t, void *,
                                           int64_t, __tgt_async_info *);
+  typedef int32_t(fill_memory_ty)(int32_t, void *, int32_t, uint64_t);
+  typedef int32_t(fill_memory_async_ty)(int32_t, void *, int32_t, uint64_t,
+                                        __tgt_async_info *);
   typedef int32_t(data_delete_ty)(int32_t, void *, int32_t);
   typedef int32_t(launch_kernel_ty)(int32_t, void *, void **, ptrdiff_t *,
                                     const KernelArgsTy *, __tgt_async_info *);
@@ -101,6 +104,8 @@ struct RTLInfoTy {
   data_retrieve_async_ty *data_retrieve_async = nullptr;
   data_exchange_ty *data_exchange = nullptr;
   data_exchange_async_ty *data_exchange_async = nullptr;
+  fill_memory_ty *fill_memory = nullptr;
+  fill_memory_async_ty *fill_memory_async = nullptr;
   data_delete_ty *data_delete = nullptr;
   launch_kernel_ty *launch_kernel = nullptr;
   init_requires_ty *init_requires = nullptr;

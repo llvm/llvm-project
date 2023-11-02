@@ -1453,6 +1453,14 @@ Error GenericDeviceTy::dataExchange(const void *SrcPtr, GenericDeviceTy &DstDev,
   return Err;
 }
 
+Error GenericDeviceTy::fillMemory(void *Ptr, int32_t Val, uint64_t NumValues,
+                                  __tgt_async_info *AsyncInfo) {
+  AsyncInfoWrapperTy AsyncInfoWrapper(*this, AsyncInfo);
+  auto Err = fillMemoryImpl(Ptr, Val, NumValues, AsyncInfoWrapper);
+  AsyncInfoWrapper.finalize(Err);
+  return Err;
+}
+
 Error GenericDeviceTy::launchKernel(void *EntryPtr, void **ArgPtrs,
                                     ptrdiff_t *ArgOffsets,
                                     KernelArgsTy &KernelArgs,
@@ -1892,6 +1900,29 @@ int32_t __tgt_rtl_data_exchange_async(int32_t SrcDeviceId, void *SrcPtr,
     return OFFLOAD_FAIL;
   }
 
+  return OFFLOAD_SUCCESS;
+}
+
+int32_t __tgt_rtl_fill_memory(int32_t DevId, void *Ptr, int32_t ByteVal,
+                              int64_t NumBytes) {
+  return __tgt_rtl_fill_memory_async(DevId, Ptr, ByteVal, NumBytes,
+                                     /* AsyncInfoPtr */ nullptr);
+}
+
+int32_t __tgt_rtl_fill_memory_async(int32_t DevId, void *Ptr, int32_t Val,
+                                    int64_t NumValues,
+                                    __tgt_async_info *AsyncInfo) {
+  printf("--> in function %s\n", __FUNCTION__);
+  printf("--> Dev: %d, Ptr: %p, Val: %d, NumValues: %ld\n", DevId, Ptr, Val,
+         NumValues);
+  GenericDeviceTy &Device = Plugin::get().getDevice(DevId);
+  auto Err = Device.fillMemory(Ptr, Val, NumValues, AsyncInfo);
+  if (Err) {
+    REPORT("Failure to fill memory on device (%d) at pointer " DPxMOD
+           " with byte value %d and %" PRId64 " values: %s\n",
+           DevId, DPxPTR(Ptr), Val, NumValues, toString(std::move(Err)).data());
+    return OFFLOAD_FAIL;
+  }
   return OFFLOAD_SUCCESS;
 }
 

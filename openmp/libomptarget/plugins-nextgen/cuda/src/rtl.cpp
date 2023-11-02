@@ -746,6 +746,10 @@ struct CUDADeviceTy : public GenericDeviceTy {
                          void *DstPtr, int64_t Size,
                          AsyncInfoWrapperTy &AsyncInfoWrapper) override;
 
+  // Fill memory on the target device (aka memset)
+  Error fillMemoryImpl(void *Ptr, int32_t Val, uint64_t NumValues,
+                       AsyncInfoWrapperTy &AsyncInfoWrapperTy) override;
+
   /// Initialize the async info for interoperability purposes.
   Error initAsyncInfoImpl(AsyncInfoWrapperTy &AsyncInfoWrapper) override {
     if (auto Err = setContext())
@@ -1385,6 +1389,14 @@ Error CUDADeviceTy::dataExchangeImpl(const void *SrcPtr,
   // Fallback to D2D copy.
   Res = cuMemcpyDtoDAsync(CUDstPtr, CUSrcPtr, Size, Stream);
   return Plugin::check(Res, "Error in cuMemcpyDtoDAsync: %s");
+}
+
+/// Fill memory on the target device (aka memset)
+Error CUDADeviceTy::fillMemoryImpl(void *Ptr, int32_t Val, uint64_t NumValues,
+                                   AsyncInfoWrapperTy &AsyncInfoWrapperTy) {
+  CUdeviceptr DevPtr = reinterpret_cast<CUdeviceptr>(Ptr);
+  CUresult Res = cuMemsetD32(DevPtr, Val, static_cast<size_t>(NumValues));
+  return Plugin::check(Res, "Error in cuMemsetD32: %s");
 }
 
 GenericPluginTy *Plugin::createPlugin() { return new CUDAPluginTy(); }

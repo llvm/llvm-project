@@ -109,6 +109,17 @@ int32_t __tgt_rtl_data_exchange_async(int32_t SrcID, void *SrcPtr,
                                       int32_t DesID, void *DstPtr, int64_t Size,
                                       __tgt_async_info *AsyncInfo);
 
+// Perform a memory fill operation on the target device (aka "memset") by
+// calling a native driver operation.  In case of success, return zero.
+// Otherwise, return an error code.
+int32_t __tgt_rtl_fill_memory(int32_t DevID, void *Ptr, int32_t ByteVal,
+                              int64_t NumBytes);
+
+// Asynchronous version of __tgt_rtl_fill_memory
+int32_t __tgt_rtl_fill_memory_async(int32_t DevID, void *Ptr, int32_t Val,
+                                    int64_t NumValues,
+                                    __tgt_async_info *AsyncInfo);
+
 // De-allocate the data referenced by target ptr on the device. In case of
 // success, return zero. Otherwise, return an error code. Kind dictates what
 // allocator to use (e.g. shared, host, device).
