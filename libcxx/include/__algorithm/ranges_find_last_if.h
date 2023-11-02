@@ -10,9 +10,11 @@
 #define _LIBCPP___ALGORITHM_RANGES_FIND_LAST_IF_H
 
 #include <__config>
+#include <__concepts/assignable.h>
 #include <__functional/identity.h>
 #include <__functional/invoke.h>
 #include <__iterator/concepts.h>
+#include <__iterator/next.h>
 #include <__iterator/projected.h>
 #include <__ranges/access.h>
 #include <__ranges/concepts.h>
@@ -33,15 +35,32 @@ namespace ranges {
 
 template <class _Ip, class _Sp, class _Pred, class _Proj>
 _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI static constexpr subrange<_Ip>
-__find_last_if_impl(_Ip __first, _Sp __last, _Pred __pred, _Proj __proj) {
-  _Ip __result = __last;
-  while (__first != __last) {
-    if (std::invoke(__pred, std::invoke(__proj, *__first))) {
-      __result = __first;
+__find_last_if_impl(_Ip __first, _Sp __last, _Pred&& __pred, _Proj&& __proj) {
+  if constexpr ((bidirectional_range<_Ip> && common_range<_Ip>) ||
+                (bidirectional_iterator<_Ip> && assignable_from<_Ip&, _Sp&>)) {
+    // Implement optimized bidirectional range and common range version.
+    // Perform a reverse search from the end.
+    _Ip __original_last = __last;                        // Save the original value of __last
+    _Ip __result        = ranges::next(__first, __last); // Set __result to the end of the range
+    while (__first != __last) {
+      --__last;
+      if (std::invoke(__pred, std::invoke(__proj, *__last))) {
+        __result = __last;
+        break;
+      }
     }
-    ++__first;
+    return {__result, __original_last};
+  } else {
+    _Ip __original_first = __first;
+    _Ip __result         = __first;
+    while (__first != __last) {
+      if (std::invoke(__pred, std::invoke(__proj, *__first))) {
+        __result = __first;
+      }
+      ++__first;
+    }
+    return {__result, __original_first};
   }
-  return {__result, __last};
 }
 
 namespace __find_last_if {

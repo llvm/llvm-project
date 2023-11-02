@@ -204,6 +204,7 @@ struct NonConstComparableValue {
 constexpr bool test() {
   test_iterators<const int*>();
   test_iterators<int*>();
+  test_iterators<int*, const int*>();
   test_iterators<bidirectional_iterator<int*>>();
   test_iterators<forward_iterator<int*>>();
   test_iterators<random_access_iterator<int*>>();
@@ -301,8 +302,8 @@ constexpr bool test() {
       });
       assert(ret.data() == a + 2);
       assert(*(ret.data()) == 2);
-      assert(predicate_count == 5);
-      assert(projection_count == 5);
+      assert(predicate_count == 3);
+      assert(projection_count == 3);
     }
 
     {
@@ -315,8 +316,8 @@ constexpr bool test() {
       });
       assert(ret.data() == a + 2);
       assert(*(ret.data()) == 2);
-      assert(predicate_count == 5);
-      assert(projection_count == 5);
+      assert(predicate_count == 3);
+      assert(projection_count == 3);
     }
 
   }

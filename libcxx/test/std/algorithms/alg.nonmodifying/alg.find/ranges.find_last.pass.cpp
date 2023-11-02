@@ -183,7 +183,7 @@ constexpr bool test() {
       std::same_as<std::ranges::subrange<int*>> auto ret = std::ranges::find_last(a, a + 5, 2, [&](int i) { ++projection_count; return i; });
       assert(ret.data() == a + 2);
       assert(*(ret.data()) == 2);
-      assert(projection_count == 5);
+      assert(projection_count == 3);
     }
 
     {
@@ -192,7 +192,7 @@ constexpr bool test() {
       std::same_as<std::ranges::subrange<int*>> auto ret = std::ranges::find_last(a, 2, [&](int i) { ++projection_count; return i; });
       assert(ret.data() == a + 2);
       assert(*(ret.data()) == 2);
-      assert(projection_count == 5);
+      assert(projection_count == 3);
     }
 
   }
