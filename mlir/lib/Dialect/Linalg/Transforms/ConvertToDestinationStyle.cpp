@@ -317,6 +317,27 @@ Value linalg::bufferizeToAllocation(
   return alloc;
 }
 
+Value linalg::bufferizeToAllocation(
+    RewriterBase &rewriter, const linalg::BufferizeToAllocationOptions &options,
+    bufferization::AllocTensorOp allocTensorOp, Attribute memorySpace,
+    Operation *insertionPoint) {
+  Location loc = allocTensorOp.getLoc();
+  OpBuilder::InsertionGuard g(rewriter);
+  rewriter.setInsertionPoint(insertionPoint ? insertionPoint : allocTensorOp);
+  bufferization::BufferizationOptions bufferizationOptions;
+
+  // Create buffer allocation.
+  Value alloc = createAllocationForTensor(
+      rewriter, loc, allocTensorOp.getResult(), options, memorySpace);
+
+  // Create bufferization.to_tensor with "restrict" and "writable". The returned
+  // tensor is a new buffer allocation, so it does not alias with any buffer.
+  Value toTensorOp = rewriter.create<bufferization::ToTensorOp>(
+      loc, alloc, /*restrict=*/true, /*writable=*/true);
+  rewriter.replaceOp(allocTensorOp, toTensorOp);
+  return alloc;
+}
+
 /// Lower tensor.from_elements to a sequence of chained tensor.insert.
 FailureOr<Operation *> mlir::linalg::rewriteInDestinationPassingStyle(
     RewriterBase &rewriter, tensor::FromElementsOp fromElementsOp) {
@@ -454,6 +475,8 @@ Value linalg::bufferizeToAllocation(
     return bufferizeToAllocation(rewriter, options, padOp, memorySpace);
   if (auto maskOp = dyn_cast<vector::MaskOp>(op))
     return bufferizeToAllocation(rewriter, options, maskOp, memorySpace);
+  if (auto allocTensorOp = dyn_cast<bufferization::AllocTensorOp>(op))
+    return bufferizeToAllocation(rewriter, options, allocTensorOp, memorySpace);
 
   // Only bufferizable ops are supported.
   auto bufferizableOp = dyn_cast<BufferizableOpInterface>(op);

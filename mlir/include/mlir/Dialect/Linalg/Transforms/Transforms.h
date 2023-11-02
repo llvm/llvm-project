@@ -12,6 +12,7 @@
 #include <utility>
 
 #include "mlir/Conversion/VectorToSCF/VectorToSCF.h"
+#include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/Utils/Utils.h"
@@ -28,6 +29,7 @@
 
 namespace mlir {
 namespace bufferization {
+class AllocTensorOp;
 class OneShotAnalysisState;
 } // namespace bufferization
 
@@ -108,6 +110,18 @@ Value bufferizeToAllocation(RewriterBase &rewriter,
 Value bufferizeToAllocation(RewriterBase &rewriter,
                             const BufferizeToAllocationOptions &options,
                             vector::MaskOp maskOp, Attribute memorySpace = {},
+                            Operation *insertionPoint = nullptr);
+
+/// Materialize a buffer allocation for the given bufferization.alloc_tensor op
+/// and lower the op to memref.alloc + memref.tensor_store.
+///
+/// In addition to rewriting the IR, this function returns the newly allocated
+/// buffer. The `insertionPoint` parameter can be used to specify a custom
+/// insertion point for the buffer allocation.
+Value bufferizeToAllocation(RewriterBase &rewriter,
+                            const BufferizeToAllocationOptions &options,
+                            bufferization::AllocTensorOp allocTensorOp,
+                            Attribute memorySpace = {},
                             Operation *insertionPoint = nullptr);
 
 /// Bufferize the given op with tensor semantics and materialize the result in
