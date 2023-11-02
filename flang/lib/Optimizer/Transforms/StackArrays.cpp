@@ -45,7 +45,8 @@ namespace fir {
 static llvm::cl::opt<std::size_t> maxAllocsPerFunc(
     "stack-arrays-max-allocs",
     llvm::cl::desc("The maximum number of heap allocations to consider in one "
-                   "function before skipping (to save compilation time)"),
+                   "function before skipping (to save compilation time). Set "
+                   "to 0 for no limit."),
     llvm::cl::init(1000), llvm::cl::Hidden);
 
 namespace {
