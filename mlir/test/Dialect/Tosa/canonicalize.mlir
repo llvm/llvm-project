@@ -607,9 +607,9 @@ func.func nested @fold_reduce_rank_zero() {
 // -----
 
 // CHECK-LABEL: @fold_tile_rank_zero
-func.func nested @fold_tile_rank_zero() {
+func.func nested @fold_tile_rank_zero() -> tensor<i32> {
   // CHECK-NOT: tosa.tile
   %0 = tensor.empty() : tensor<i32>
   %1 = tosa.tile %0 {multiples = array<i64>} : (tensor<i32>) -> tensor<i32>
-  return
+  return %1 : tensor<i32>
 }
