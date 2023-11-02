@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -fsyntax-only -ast-dump -verify -x c %s | FileCheck -check-prefix=CHECK-C %s
 // RUN: %clang_cc1 -fsyntax-only -ast-dump -x c++ -std=c++11 %s | FileCheck %s --check-prefixes CHECK-C,CHECK-CPP
 
+// expected-no-diagnostics
+
 void bar(int);
 // CHECK-C: FunctionDecl{{.*}}code_align 'void ()'
 void code_align() {
