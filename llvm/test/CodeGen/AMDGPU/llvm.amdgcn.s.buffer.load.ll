@@ -723,8 +723,9 @@ define amdgpu_ps void @s_buffer_load_index_across_bb(<4 x i32> inreg %desc, i32 
 ; GFX12-LABEL: s_buffer_load_index_across_bb:
 ; GFX12:       ; %bb.0: ; %main_body
 ; GFX12-NEXT:    s_getpc_b64 s[4:5]
-; GFX12-NEXT:    s_add_co_u32 s4, s4, gv@gotpcrel32@lo+4
-; GFX12-NEXT:    s_add_co_ci_u32 s5, s5, gv@gotpcrel32@hi+12
+; GFX12-NEXT:    s_sext_i32_i16 s5, s5
+; GFX12-NEXT:    s_add_co_u32 s4, s4, gv@gotpcrel32@lo+8
+; GFX12-NEXT:    s_add_co_ci_u32 s5, s5, gv@gotpcrel32@hi+16
 ; GFX12-NEXT:    v_lshlrev_b32_e32 v0, 4, v0
 ; GFX12-NEXT:    s_load_b64 s[4:5], s[4:5], 0x0
 ; GFX12-NEXT:    v_mov_b32_e32 v1, 0

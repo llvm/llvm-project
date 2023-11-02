@@ -62,15 +62,18 @@ define void @test_remat_s_getpc_b64() {
 ; GFX12-NEXT:    s_mov_b32 exec_lo, s0
 ; GFX12-NEXT:    v_writelane_b32 v0, s30, 0
 ; GFX12-NEXT:    s_getpc_b64 s[0:1]
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_4) | instid1(SALU_CYCLE_1)
+; GFX12-NEXT:    s_sext_i32_i16 s1, s1
 ; GFX12-NEXT:    ;;#ASMSTART
 ; GFX12-NEXT:    ;;#ASMEND
 ; GFX12-NEXT:    v_writelane_b32 v0, s31, 1
 ; GFX12-NEXT:    ;;#ASMSTART
 ; GFX12-NEXT:    ;;#ASMEND
 ; GFX12-NEXT:    s_getpc_b64 s[0:1]
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX12-NEXT:    v_dual_mov_b32 v2, s1 :: v_dual_mov_b32 v1, s0
+; GFX12-NEXT:    s_sext_i32_i16 s1, s1
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_readlane_b32 s31, v0, 1
+; GFX12-NEXT:    v_dual_mov_b32 v2, s1 :: v_dual_mov_b32 v1, s0
 ; GFX12-NEXT:    v_readlane_b32 s30, v0, 0
 ; GFX12-NEXT:    global_store_b64 v[1:2], v[1:2], off
 ; GFX12-NEXT:    s_xor_saveexec_b32 s0, -1
