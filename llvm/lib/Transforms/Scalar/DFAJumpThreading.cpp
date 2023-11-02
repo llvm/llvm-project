@@ -249,16 +249,20 @@ void unfold(DomTreeUpdater *DTU, SelectInstToUnfold SIToUnfold,
     FT = FalseBlock;
 
     // Update the phi node of SI.
-    SIUse->removeIncomingValue(StartBlock, /* DeletePHIIfEmpty = */ false);
     SIUse->addIncoming(SI->getTrueValue(), TrueBlock);
     SIUse->addIncoming(SI->getFalseValue(), FalseBlock);
 
     // Update any other PHI nodes in EndBlock.
     for (PHINode &Phi : EndBlock->phis()) {
       if (&Phi != SIUse) {
-        Phi.addIncoming(Phi.getIncomingValueForBlock(StartBlock), TrueBlock);
-        Phi.addIncoming(Phi.getIncomingValueForBlock(StartBlock), FalseBlock);
+        Value *OrigValue = Phi.getIncomingValueForBlock(StartBlock);
+        Phi.addIncoming(OrigValue, TrueBlock);
+        Phi.addIncoming(OrigValue, FalseBlock);
       }
+
+      // Remove incoming place of original StartBlock, which comes in a indirect
+      // way (through TrueBlock and FalseBlock) now.
+      Phi.removeIncomingValue(StartBlock, /* DeletePHIIfEmpty = */ false);
     }
   } else {
     BasicBlock *NewBlock = nullptr;
