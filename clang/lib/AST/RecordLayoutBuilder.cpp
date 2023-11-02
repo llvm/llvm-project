@@ -2297,19 +2297,22 @@ void ItaniumRecordLayoutBuilder::CheckFieldPadding(
       PadSize = PadSize / CharBitNum;
       InBits = false;
     }
-    if (D->getIdentifier())
-      Diag(D->getLocation(), diag::warn_padded_struct_field)
+    if (D->getIdentifier()) {
+      auto Diagnostic = D->isBitField() ? diag::warn_padded_struct_bitfield
+                                        : diag::warn_padded_struct_field;
+      Diag(D->getLocation(), Diagnostic)
           << getPaddingDiagFromTagKind(D->getParent()->getTagKind())
-          << Context.getTypeDeclType(D->getParent())
-          << PadSize
+          << Context.getTypeDeclType(D->getParent()) << PadSize
           << (InBits ? 1 : 0) // (byte|bit)
           << D->getIdentifier();
-    else
-      Diag(D->getLocation(), diag::warn_padded_struct_anon_field)
+    } else {
+      auto Diagnostic = D->isBitField() ? diag::warn_padded_struct_anon_bitfield
+                                        : diag::warn_padded_struct_anon_field;
+      Diag(D->getLocation(), Diagnostic)
           << getPaddingDiagFromTagKind(D->getParent()->getTagKind())
-          << Context.getTypeDeclType(D->getParent())
-          << PadSize
+          << Context.getTypeDeclType(D->getParent()) << PadSize
           << (InBits ? 1 : 0); // (byte|bit)
+    }
  }
  if (isPacked && Offset != UnpackedOffset) {
    HasPackedField = true;

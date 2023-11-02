@@ -998,6 +998,16 @@ def warn_npot_ms_struct : Warning<
   "data types with sizes that aren't a power of two">,
   DefaultError, InGroup<IncompatibleMSStruct>;
 
+// -Wpadded-bitfield
+def warn_padded_struct_bitfield : Warning<
+  "padding %select{struct|interface|class}0 %1 with %2 "
+  "%select{byte|bit}3%s2 to align %4">,
+  InGroup<PaddedBitField>, DefaultIgnore;
+def warn_padded_struct_anon_bitfield : Warning<
+  "padding %select{struct|interface|class}0 %1 with %2 "
+  "%select{byte|bit}3%s2 to align anonymous bit-field">,
+  InGroup<PaddedBitField>, DefaultIgnore;
+
 // -Wpadded, -Wpacked
 def warn_padded_struct_field : Warning<
   "padding %select{struct|interface|class}0 %1 with %2 "
@@ -1005,7 +1015,7 @@ def warn_padded_struct_field : Warning<
   InGroup<Padded>, DefaultIgnore;
 def warn_padded_struct_anon_field : Warning<
   "padding %select{struct|interface|class}0 %1 with %2 "
-  "%select{byte|bit}3%s2 to align anonymous bit-field">,
+  "%select{byte|bit}3%s2 to align anonymous field">,
   InGroup<Padded>, DefaultIgnore;
 def warn_padded_struct_size : Warning<
   "padding size of %0 with %1 %select{byte|bit}2%s1 to alignment boundary">,
