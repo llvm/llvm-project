@@ -2941,14 +2941,6 @@ void Verifier::visitBasicBlock(BasicBlock &BB) {
   {
     Check(I.getParent() == &BB, "Instruction has bogus parent pointer!");
   }
-
-  // Confirm that no issues arise from the debug program.
-  if (BB.IsNewDbgInfoFormat) {
-    // Configure the validate function to not fire assertions, instead print
-    // errors and return true if there's a problem.
-    bool RetVal = BB.validateDbgValues(false, true, OS);
-    Check(!RetVal, "Invalid configuration of new-debug-info data found");
-  }
 }
 
 void Verifier::visitTerminator(Instruction &I) {
