@@ -59,15 +59,16 @@ struct ConvertVectorStore final : OpConversionPattern<vector::StoreOp> {
     int scale = dstBits / srcBits;
 
     // Adjust the number of elements to store when emulating narrow types.
-    // Here only the 1-D vector load is considered, and the N-D memref types
+    // Here only the 1-D vector store is considered, and the N-D memref types
     // should be linearized.
     // For example, to emulate i4 to i8, the following op:
     //
-    // vector.store %arg1, %0[%arg2, %arg3] :memref<4x8xi4>, vector<8xi4>
+    // vector.store %arg1, %0[%arg2, %arg3] : memref<4x8xi4>, vector<8xi4>
     //
     // can be replaced with
     //
-    // vector.store %bitcast_arg1, %alloc[%linear_index] : memref<16xi8>,
+    // %bitcast = vector.bitcast %arg1 : vector<8xi4> to vector<4xi8>
+    // vector.store %bitcast, %alloc[%linear_index] : memref<16xi8>,
     // vector<4xi8>
 
     auto origElements = op.getValueToStore().getType().getNumElements();
