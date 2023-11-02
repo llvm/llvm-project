@@ -4174,9 +4174,7 @@ llvm::Constant *ItaniumRTTIBuilder::BuildTypeInfo(
   // If there's already an old global variable, replace it with the new one.
   if (OldGV) {
     GV->takeName(OldGV);
-    llvm::Constant *NewPtr =
-      llvm::ConstantExpr::getBitCast(GV, OldGV->getType());
-    OldGV->replaceAllUsesWith(NewPtr);
+    OldGV->replaceAllUsesWith(GV);
     OldGV->eraseFromParent();
   }
 
