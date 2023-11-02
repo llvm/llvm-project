@@ -431,14 +431,16 @@ bool CXIndexDataConsumer::isFunctionLocalDecl(const Decl *D) {
 
   if (const NamedDecl *ND = dyn_cast<NamedDecl>(D)) {
     switch (ND->getFormalLinkage()) {
-    case NoLinkage:
-    case InternalLinkage:
+    case Linkage::Invalid:
+      llvm_unreachable("Linkage hasn't been computed!");
+    case Linkage::None:
+    case Linkage::Internal:
       return true;
-    case VisibleNoLinkage:
-    case UniqueExternalLinkage:
+    case Linkage::VisibleNone:
+    case Linkage::UniqueExternal:
       llvm_unreachable("Not a sema linkage");
-    case ModuleLinkage:
-    case ExternalLinkage:
+    case Linkage::Module:
+    case Linkage::External:
       return false;
     }
   }
@@ -560,7 +562,7 @@ bool CXIndexDataConsumer::handleDecl(const NamedDecl *D,
 
   if (shouldSuppressRefs())
     markEntityOccurrenceInFile(D, Loc);
-  
+
   DInfo.entityInfo = &DInfo.EntInfo;
   DInfo.cursor = Cursor;
   DInfo.loc = getIndexLoc(Loc);
@@ -664,10 +666,9 @@ bool CXIndexDataConsumer::handleObjCInterface(const ObjCInterfaceDecl *D) {
     bool isRedeclaration = D->hasDefinition() || D->getPreviousDecl();
     ObjCContainerDeclInfo ContDInfo(/*isForwardRef=*/true, isRedeclaration,
                                     /*isImplementation=*/false);
-    return handleObjCContainer(D, D->getLocation(),
-                               MakeCursorObjCClassRef(D, D->getLocation(),
-                                                      CXTU), 
-                               ContDInfo);
+    return handleObjCContainer(
+        D, D->getLocation(), MakeCursorObjCClassRef(D, D->getLocation(), CXTU),
+        ContDInfo);
   }
 
   ScratchAlloc SA(*this);
@@ -685,13 +686,13 @@ bool CXIndexDataConsumer::handleObjCInterface(const ObjCInterfaceDecl *D) {
     if (shouldSuppressRefs())
       markEntityOccurrenceInFile(SuperD, SuperLoc);
   }
-  
+
   ObjCProtocolList EmptyProtoList;
-  ObjCProtocolListInfo ProtInfo(D->isThisDeclarationADefinition() 
-                                  ? D->getReferencedProtocols()
-                                  : EmptyProtoList, 
+  ObjCProtocolListInfo ProtInfo(D->isThisDeclarationADefinition()
+                                    ? D->getReferencedProtocols()
+                                    : EmptyProtoList,
                                 *this, SA);
-  
+
   ObjCInterfaceDeclInfo InterInfo(D);
   InterInfo.ObjCProtoListInfo = ProtInfo.getListInfo();
   InterInfo.ObjCInterDeclInfo.containerInfo = &InterInfo.ObjCContDeclInfo;
@@ -714,25 +715,24 @@ bool CXIndexDataConsumer::handleObjCProtocol(const ObjCProtocolDecl *D) {
   if (!D->isThisDeclarationADefinition()) {
     if (shouldSuppressRefs() && markEntityOccurrenceInFile(D, D->getLocation()))
       return false; // already occurred.
-    
+
     // FIXME: This seems like the wrong definition for redeclaration.
     bool isRedeclaration = D->hasDefinition() || D->getPreviousDecl();
     ObjCContainerDeclInfo ContDInfo(/*isForwardRef=*/true,
                                     isRedeclaration,
                                     /*isImplementation=*/false);
-    return handleObjCContainer(D, D->getLocation(), 
-                               MakeCursorObjCProtocolRef(D, D->getLocation(),
-                                                         CXTU),
-                               ContDInfo);    
+    return handleObjCContainer(
+        D, D->getLocation(),
+        MakeCursorObjCProtocolRef(D, D->getLocation(), CXTU), ContDInfo);
   }
-  
+
   ScratchAlloc SA(*this);
   ObjCProtocolList EmptyProtoList;
   ObjCProtocolListInfo ProtListInfo(D->isThisDeclarationADefinition()
                                       ? D->getReferencedProtocols()
                                       : EmptyProtoList,
                                     *this, SA);
-  
+
   ObjCProtocolDeclInfo ProtInfo(D);
   ProtInfo.ObjCProtoRefListInfo = ProtListInfo.getListInfo();
 
@@ -754,7 +754,7 @@ bool CXIndexDataConsumer::handleObjCCategory(const ObjCCategoryDecl *D) {
     markEntityOccurrenceInFile(IFaceD, ClassLoc);
 
   ObjCProtocolListInfo ProtInfo(D->getReferencedProtocols(), *this, SA);
-  
+
   CatDInfo.ObjCCatDeclInfo.containerInfo = &CatDInfo.ObjCContDeclInfo;
   if (IFaceD) {
     CatDInfo.ObjCCatDeclInfo.objcClass = &ClassEntity;
@@ -1014,12 +1014,12 @@ bool CXIndexDataConsumer::markEntityOccurrenceInFile(const NamedDecl *D,
 
   SourceManager &SM = Ctx->getSourceManager();
   D = getEntityDecl(D);
-  
+
   std::pair<FileID, unsigned> LocInfo = SM.getDecomposedLoc(SM.getFileLoc(Loc));
   FileID FID = LocInfo.first;
   if (FID.isInvalid())
     return true;
-  
+
   const FileEntry *FE = SM.getFileEntryForID(FID);
   if (!FE)
     return true;
@@ -1102,7 +1102,7 @@ void CXIndexDataConsumer::translateLoc(SourceLocation Loc,
 
   if (FID.isInvalid())
     return;
-  
+
   OptionalFileEntryRefDegradesToFileEntryPtr FE = SM.getFileEntryRefForID(FID);
   if (indexFile)
     *indexFile = getIndexFile(FE);
@@ -1196,7 +1196,7 @@ CXCursor CXIndexDataConsumer::getRefCursor(const NamedDecl *D, SourceLocation Lo
     return MakeCursorMemberRef(Field, Loc, CXTU);
   if (const VarDecl *Var = dyn_cast<VarDecl>(D))
     return MakeCursorVariableRef(Var, Loc, CXTU);
-  
+
   return clang_getNullCursor();
 }
 
