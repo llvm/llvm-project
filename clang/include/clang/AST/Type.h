@@ -2043,7 +2043,7 @@ protected:
     TypeBits.Dependence = static_cast<unsigned>(Dependence);
     TypeBits.CacheValid = false;
     TypeBits.CachedLocalOrUnnamed = false;
-    TypeBits.CachedLinkage = NoLinkage;
+    TypeBits.CachedLinkage = llvm::to_underlying(Linkage::Invalid);
     TypeBits.FromAST = false;
   }
 
