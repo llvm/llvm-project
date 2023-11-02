@@ -36,6 +36,12 @@ jobs:
       - name: Checkout LLVM
         uses: actions/checkout@v4
 
+      - name: Setup Python env
+        uses: actions/setup-python@v4
+        with:
+          cache: 'pip'
+          cache-dependency-path: './llvm/docs/requirements.txt'
+
       - name: Install Dependencies
         run: |
           sudo apt-get update
@@ -46,7 +52,6 @@ jobs:
               ninja-build \
               texlive-font-utils
           pip3 install --user -r ./llvm/docs/requirements.txt
-          echo "UPLOAD SETTING: $upload"
 
       - name: Build Documentation
         env:
