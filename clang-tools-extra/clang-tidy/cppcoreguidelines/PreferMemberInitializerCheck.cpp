@@ -118,7 +118,12 @@ static void updateAssignmentLevel(
   }
 }
 
-static std::optional<std::pair<const FieldDecl *, const Expr *>>
+struct AssignmentPair {
+  const FieldDecl *Field;
+  const Expr *Init;
+};
+
+static std::optional<AssignmentPair>
 isAssignmentToMemberOf(const CXXRecordDecl *Rec, const Stmt *S,
                        const CXXConstructorDecl *Ctor) {
   if (const auto *BO = dyn_cast<BinaryOperator>(S)) {
@@ -136,7 +141,7 @@ isAssignmentToMemberOf(const CXXRecordDecl *Rec, const Stmt *S,
     if (!isa<CXXThisExpr>(ME->getBase()))
       return {};
     const Expr *Init = BO->getRHS()->IgnoreParenImpCasts();
-    return std::make_pair(Field, Init);
+    return AssignmentPair{Field, Init};
   }
   if (const auto *COCE = dyn_cast<CXXOperatorCallExpr>(S)) {
     if (COCE->getOperator() != OO_Equal)
@@ -154,7 +159,7 @@ isAssignmentToMemberOf(const CXXRecordDecl *Rec, const Stmt *S,
     if (!isa<CXXThisExpr>(ME->getBase()))
       return {};
     const Expr *Init = COCE->getArg(1)->IgnoreParenImpCasts();
-    return std::make_pair(Field, Init);
+    return AssignmentPair{Field, Init};
   }
   return {};
 }
@@ -216,12 +221,12 @@ void PreferMemberInitializerCheck::check(
         return;
     }
 
-    std::optional<std::pair<const FieldDecl *, const Expr *>>
-        AssignmentToMember = isAssignmentToMemberOf(Class, S, Ctor);
+    std::optional<AssignmentPair> AssignmentToMember =
+        isAssignmentToMemberOf(Class, S, Ctor);
     if (!AssignmentToMember)
       continue;
-    const FieldDecl *Field = AssignmentToMember.value().first;
-    const Expr *InitValue = AssignmentToMember.value().second;
+    const FieldDecl *Field = AssignmentToMember->Field;
+    const Expr *InitValue = AssignmentToMember->Init;
     updateAssignmentLevel(Field, InitValue, Ctor, AssignedFields);
     if (!canAdvanceAssignment(AssignedFields[Field]))
       continue;
