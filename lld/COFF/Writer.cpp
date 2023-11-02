@@ -1423,8 +1423,17 @@ void Writer::assignAddresses() {
     // If /FUNCTIONPADMIN is used, functions are padded in order to create a
     // hotpatchable image.
     uint32_t padding = sec->isCodeSection() ? config->functionPadMin : 0;
+    std::optional<chpe_range_type> prevECRange;
 
     for (Chunk *c : sec->chunks) {
+      // Alignment EC code range baudaries.
+      if (isArm64EC(ctx.config.machine) && sec->isCodeSection()) {
+        std::optional<chpe_range_type> rangeType = c->getArm64ECRangeType();
+        if (rangeType != prevECRange) {
+          virtualSize = alignTo(virtualSize, 4096);
+          prevECRange = rangeType;
+        }
+      }
       if (padding && c->isHotPatchable())
         virtualSize += padding;
       virtualSize = alignTo(virtualSize, c->getAlignment());
