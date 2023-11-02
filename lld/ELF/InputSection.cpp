@@ -20,7 +20,6 @@
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/xxhash.h"
-#include <cstdint>
 #include <optional>
 #include <vector>
 
