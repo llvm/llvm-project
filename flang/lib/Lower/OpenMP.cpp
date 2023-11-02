@@ -2214,15 +2214,15 @@ static void createBodyOfTargetDataOp(
   }
 
   // Insert dummy instruction to remember the insertion position. The
-  // marker will be deleted since there are not uses.
-  // In the HLFIR flow there are hlfir.declares inserted above while
-  // setting block arguments.
+  // marker will be deleted by clean up passes since there are no uses.
+  // Remembering the position for further insertion is important since
+  // there are hlfir.declares inserted above while setting block arguments
+  // and new code from the body should be inserted after that.
   mlir::Value undefMarker = firOpBuilder.create<fir::UndefOp>(
       dataOp.getOperation()->getLoc(), firOpBuilder.getIndexType());
 
   // Create blocks for unstructured regions. This has to be done since
-  // the original block allocation are created with the function as
-  // the parent region of blocks.
+  // blocks are initially allocated with the function as the parent region.
   if (eval.lowerAsUnstructured()) {
     Fortran::lower::createEmptyRegionBlocks<mlir::omp::TerminatorOp,
                                             mlir::omp::YieldOp>(
@@ -2231,7 +2231,7 @@ static void createBodyOfTargetDataOp(
 
   firOpBuilder.create<mlir::omp::TerminatorOp>(currentLocation);
 
-  // Create the insertion point after the marker.
+  // Set the insertion point after the marker.
   firOpBuilder.setInsertionPointAfter(undefMarker.getDefiningOp());
 }
 
