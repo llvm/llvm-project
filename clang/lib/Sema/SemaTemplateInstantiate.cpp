@@ -1907,7 +1907,7 @@ const AlwaysInlineAttr *TemplateInstantiator::TransformStmtAlwaysInlineAttr(
 
 const CodeAlignAttr *
 TemplateInstantiator::TransformCodeAlignAttr(const CodeAlignAttr *CA) {
-  Expr *TransformedExpr = getDerived().TransformExpr(CA->getNExpr()).get();
+  Expr *TransformedExpr = getDerived().TransformExpr(CA->getAlignment()).get();
   return getSema().BuildCodeAlignAttr(*CA, TransformedExpr);
 }
 

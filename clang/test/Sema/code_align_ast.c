@@ -1,9 +1,5 @@
-// RUN: %clang_cc1 -fsyntax-only -ast-dump -verify %s | FileCheck -check-prefix=CHECK-C %s
-// RUN: %clang_cc1 -x c++ -std=c++11 -fsyntax-only -ast-dump %s | FileCheck %s --check-prefixes CHECK-C,CHECK-CPP
-
-// expected-no-diagnostics
-
-// Add AST tests for Loop attribute: [[clang::code_align()]].
+// RUN: %clang_cc1 -fsyntax-only -ast-dump -verify -x c %s | FileCheck -check-prefix=CHECK-C %s
+// RUN: %clang_cc1 -fsyntax-only -ast-dump -x c++ -std=c++11 %s | FileCheck %s --check-prefixes CHECK-C,CHECK-CPP
 
 void bar(int);
 // CHECK-C: FunctionDecl{{.*}}code_align 'void ()'

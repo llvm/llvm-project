@@ -4282,10 +4282,17 @@ def PreferredType: InheritableAttr {
 }
 
 def CodeAlign: StmtAttr {
-  let Spellings = [CXX11<"clang", "code_align">,
-                   C23<"clang", "code_align">];
+  let Spellings = [Clang<"code_align">];
   let Subjects = SubjectList<[ForStmt, CXXForRangeStmt, WhileStmt, DoStmt],
                               ErrorDiag, "'for', 'while', and 'do' statements">;
-  let Args = [ExprArgument<"NExpr">];
+  let Args = [ExprArgument<"Alignment">];
   let Documentation = [CodeAlignAttrDocs];
+  let AdditionalMembers = [{
+    static int getMinValue() {
+      return 1;
+    }
+    static int getMaxValue() {
+      return 4096;
+    }
+  }];
 }

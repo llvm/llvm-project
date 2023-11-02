@@ -797,15 +797,12 @@ void LoopInfoStack::push(BasicBlock *Header, clang::ASTContext &Ctx,
     }
   }
 
-  // Translate 'loop attributes' arguments to equivalent Attr enums.
-  // It's being handled separately from LoopHintAttrs not to support
-  // legacy GNU attributes and pragma styles.
-  //
+  // Identify loop attribute 'code_align' from Attrs.
   // For attribute code_align:
   // n - 'llvm.loop.align i32 n' metadata will be emitted.
   for (const auto *A : Attrs) {
     if (const auto *CodeAlign = dyn_cast<CodeAlignAttr>(A)) {
-      const auto *CE = cast<ConstantExpr>(CodeAlign->getNExpr());
+      const auto *CE = cast<ConstantExpr>(CodeAlign->getAlignment());
       llvm::APSInt ArgVal = CE->getResultAsAPSInt();
       setCodeAlign(ArgVal.getSExtValue());
     }

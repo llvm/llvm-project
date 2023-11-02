@@ -1,7 +1,5 @@
-// RUN: %clang_cc1 -fsyntax-only -verify=expected,c-local %s
-// RUN: %clang_cc1 -fsyntax-only -verify=expected,cpp-local -pedantic -x c++ -std=c++11 %s 
-
-// Add diagnostics tests for Loop attribute: [[clang::code_align()]].
+// RUN: %clang_cc1 -fsyntax-only -verify=expected,c-local -x c %s
+// RUN: %clang_cc1 -fsyntax-only -verify=expected,cpp-local -pedantic -x c++ -std=c++11 %s
 
 void foo() {
   int i;
@@ -28,11 +26,11 @@ void bar(int);
 #endif
 void foo1(int A)
 {
-  // expected-error@+1 {{'code_align' attribute requires a positive integral compile time constant expression}}
+  // expected-error@+1 {{'code_align' attribute must be a constant power of two between 1 and 4096 inclusive}}
   [[clang::code_align(0)]]
   for(int I=0; I<128; ++I) { bar(I); }
 
-  // expected-error@+1{{'code_align' attribute requires a positive integral compile time constant expression}}
+  // expected-error@+1{{'code_align' attribute must be a constant power of two between 1 and 4096 inclusive}}
   [[clang::code_align(-4)]]
   for(int I=0; I<128; ++I) { bar(I); }
 
@@ -69,8 +67,12 @@ void foo1(int A)
   [[clang::code_align(64)]]
   for(int I=0; I<128; ++I) { bar(I); }
 
-  // expected-error@+1 {{'code_align' attribute argument must be a constant power of two greater than zero}}
+  // expected-error@+1 {{'code_align' attribute must be a constant power of two between 1 and 4096 inclusive}}
   [[clang::code_align(7)]]
+  for(int I=0; I<128; ++I) { bar(I); }
+
+  // expected-error@+1 {{'code_align' attribute must be a constant power of two between 1 and 4096 inclusive}}
+  [[clang::code_align(5000)]]
   for(int I=0; I<128; ++I) { bar(I); }
 
 #if __cplusplus >= 201103L
@@ -112,13 +114,14 @@ void code_align_dependent() {
   [[clang::code_align(B)]]
   for(int I=0; I<128; ++I) { bar(I); }
 
-  // cpp-local-error@+1{{'code_align' attribute requires a positive integral compile time constant expression}}
+  // cpp-local-error@+2{{'code_align' attribute must be a constant power of two between 1 and 4096 inclusive}}
+  // cpp-local-note@#neg-instantiation {{in instantiation of function template specialization}}
   [[clang::code_align(D)]]
   for(int I=0; I<128; ++I) { bar(I); }
 }
 
 int main() {
-  code_align_dependent<8, 16, 32, -10>(); // cpp-local-note{{in instantiation of function template specialization 'code_align_dependent<8, 16, 32, -10>' requested here}}
+  code_align_dependent<8, 16, 32, -10>(); // #neg-instantiation
   return 0;
 }
 #endif

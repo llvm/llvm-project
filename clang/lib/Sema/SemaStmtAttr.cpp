@@ -331,17 +331,13 @@ CodeAlignAttr *Sema::BuildCodeAlignAttr(const AttributeCommonInfo &CI,
       return nullptr;
     E = Res.get();
 
-    // This attribute requires a strictly positive value.
-    if (ArgVal <= 0) {
-      Diag(E->getExprLoc(), diag::err_attribute_requires_positive_integer)
-          << CI << /*positive*/ 0;
-      return nullptr;
-    }
-
-    // This attribute requires a single constant power of two greater than zero.
-    if (!ArgVal.isPowerOf2()) {
-      Diag(E->getExprLoc(), diag::err_attribute_argument_not_power_of_two)
-          << CI;
+    int align_value = ArgVal.getSExtValue();
+    if (align_value < CodeAlignAttr::getMinValue() ||
+        align_value > CodeAlignAttr::getMaxValue() ||
+        !ArgVal.isPowerOf2()) {
+      Diag(CI.getLoc(), diag:: err_attribute_power_of_two_in_range)
+          << CI << CodeAlignAttr::getMinValue()
+	  << CodeAlignAttr::getMaxValue();
       return nullptr;
     }
   }
@@ -360,15 +356,15 @@ template <typename LoopAttrT>
 static void
 CheckForDuplicateLoopAttribute(Sema &S,
                                const SmallVectorImpl<const Attr *> &Attrs) {
-  const LoopAttrT *LoopAttr = nullptr;
-
+  const Attr *A = nullptr;
   for (const auto *I : Attrs) {
-    if (LoopAttr && isa<LoopAttrT>(I)) {
-      // Cannot specify same type of attribute twice.
-      S.Diag(I->getLocation(), diag::err_loop_attr_duplication) << LoopAttr;
+    if (isa<LoopAttrT>(I)) {
+      if (A) {
+        // Cannot specify same type of attribute twice.
+        S.Diag(I->getLocation(), diag::err_loop_attr_duplication) << A;
+       }
+       A = I;
     }
-    if (isa<LoopAttrT>(I))
-      LoopAttr = cast<LoopAttrT>(I);
   }
 }
 

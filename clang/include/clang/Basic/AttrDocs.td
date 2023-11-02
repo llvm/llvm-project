@@ -7421,12 +7421,11 @@ def CodeAlignAttrDocs : Documentation {
   let Category = DocCatVariable;
   let Heading = "clang::code_align";
   let Content = [{
-The ``clang::code_align(N)`` attribute applies to a loop and it specifies the
-byte alignment for a loop. The attribute accepts a positive integer constant
+The ``clang::code_align(N)`` attribute applies to a loop and specifies the byte
+alignment for a loop. The attribute accepts a positive integer constant
 initialization expression indicating the number of bytes for the minimum
-alignment boundary. Its value must be a power of 2, between 1 and 4096, such as
-1, 2, 4, 8, and so on. This attribute sets ``llvm.loop.align`` loop metadata
-when it applies on a loop statement.
+alignment boundary. Its value must be a power of 2, between 1 and 4096
+(inclusive).
 
 .. code-block:: c++
 
