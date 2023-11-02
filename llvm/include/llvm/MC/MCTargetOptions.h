@@ -90,7 +90,7 @@ public:
   bool EmitCompactUnwindNonCanonical : 1;
 
   // Whether or not to use full register names on PowerPC.
-  bool UseFullRegisterNames : 1;
+  bool PPCUseFullRegisterNames : 1;
 
   MCTargetOptions();
 

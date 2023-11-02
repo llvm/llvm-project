@@ -241,7 +241,7 @@ protected:
   bool HasLEB128Directives = true;
 
   /// True if full register names are printed.
-  bool UseFullRegisterNames = false;
+  bool PPCUseFullRegisterNames = false;
 
   //===--- Data Emission Directives -------------------------------------===//
 
@@ -713,8 +713,8 @@ public:
 
   bool hasLEB128Directives() const { return HasLEB128Directives; }
 
-  bool useFullRegisterNames() const { return UseFullRegisterNames; }
-  void setFullRegisterNames(bool V) { UseFullRegisterNames = V; }
+  bool useFullRegisterNames() const { return PPCUseFullRegisterNames; }
+  void setFullRegisterNames(bool V) { PPCUseFullRegisterNames = V; }
 
   const char *getZeroDirective() const { return ZeroDirective; }
   bool doesZeroDirectiveSupportNonZeroValue() const {

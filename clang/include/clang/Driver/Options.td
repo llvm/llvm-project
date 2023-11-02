@@ -4791,7 +4791,7 @@ def mprivileged : Flag<["-"], "mprivileged">,
     Group<m_ppc_Features_Group>;
 
 defm regnames : BoolOption<"m", "regnames",
-  CodeGenOpts<"UseFullRegisterNames">, DefaultFalse,
+  CodeGenOpts<"PPCUseFullRegisterNames">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option], "Use full register names when writing assembly output">,
   NegFlag<SetFalse, [], [ClangOption], "Use only register numbers when writing assembly output">>,
   Group<m_Group>;
