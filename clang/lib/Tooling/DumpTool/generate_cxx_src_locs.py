@@ -25,7 +25,7 @@ class Generator(object):
 
     def GeneratePrologue(self):
 
-        self.implementationContent += """
+        self.implementationContent += R"""
 /*===- Generated file -------------------------------------------*- C++ -*-===*\
 |*                                                                            *|
 |* Introspection of available AST node SourceLocations                        *|
@@ -58,7 +58,7 @@ struct RecursionPopper
 private:
 std::vector<clang::TypeLoc> &TLRG;
 };
-"""
+"""[1:]
 
     def GenerateBaseGetLocationsDeclaration(self, CladeName):
         InstanceDecoration = "*"
