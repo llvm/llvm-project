@@ -31,7 +31,6 @@ static_library("IR") {
     "DataLayout.cpp",
     "DebugInfo.cpp",
     "DebugInfoMetadata.cpp",
-    "DebugProgramInstruction.cpp",
     "DebugLoc.cpp",
     "DiagnosticHandler.cpp",
     "DiagnosticInfo.cpp",
