@@ -799,7 +799,7 @@ def SME2Unsupported : AArch64Unsupported {
 }
 
 def SMEUnsupported : AArch64Unsupported {
-  let F = !listconcat([HasSME, HasSMEI16I64, HasSMEF16F16, HasSMEF64F64],
+  let F = !listconcat([HasSME, HasSMEI16I64, HasSMEF16F16, HasSMEF64F64, HasSMEFA64],
                       SME2Unsupported.F);
 }
 

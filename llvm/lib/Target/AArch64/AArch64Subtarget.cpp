@@ -499,15 +499,13 @@ bool AArch64Subtarget::isStreamingCompatible() const {
 }
 
 bool AArch64Subtarget::isNeonAvailable() const {
-  if (hasSMEFA64())
-    return true;
-  return (hasNEON() && !isStreaming() && !isStreamingCompatible());
+  return hasNEON() &&
+         (hasSMEFA64() || (!isStreaming() && !isStreamingCompatible()));
 }
 
 bool AArch64Subtarget::isSVEAvailable() const {
-  if (hasSMEFA64())
-    return true;
-  return (hasSVE() && !isStreaming() && !isStreamingCompatible());
+  return hasSVE() &&
+         (hasSMEFA64() || (!isStreaming() && !isStreamingCompatible()));
 }
 
 // If return address signing is enabled, tail calls are emitted as follows:

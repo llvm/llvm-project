@@ -70,6 +70,7 @@ class LLVM_LIBRARY_VISIBILITY AArch64TargetInfo : public TargetInfo {
   bool HasSME = false;
   bool HasSMEF64F64 = false;
   bool HasSMEI16I64 = false;
+  bool HasSMEFA64 = false;
   bool HasSB = false;
   bool HasPredRes = false;
   bool HasSSBS = false;
