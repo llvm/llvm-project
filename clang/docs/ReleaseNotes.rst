@@ -790,6 +790,8 @@ Floating Point Support in Clang
 - Add ``__builtin_exp10``, ``__builtin_exp10f``,
   ``__builtin_exp10f16``, ``__builtin_exp10l`` and
   ``__builtin_exp10f128`` builtins.
+- Add ``__builtin_iszero``, ``__builtin_issignaling`` and
+  ``__builtin_issubnormal``.
 - ``#pragma STDC CX_LIMITED_RANGE on-off-switch`` enables the naive mathematical
   formulas for complex division and multiplication with no NaN checking of
   results.
