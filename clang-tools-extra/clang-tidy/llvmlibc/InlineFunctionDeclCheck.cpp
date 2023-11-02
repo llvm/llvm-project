@@ -79,6 +79,10 @@ void InlineFunctionDeclCheck::check(const MatchFinder::MatchResult &Result) {
     if (MethodDecl->getParent()->isLambda())
       return;
 
+  // Ignore implicit functions (e.g. implicit constructors or destructors)
+  if (FuncDecl->isImplicit())
+    return;
+
   // Check if decl starts with LIBC_INLINE
   auto Loc = FullSourceLoc(Result.SourceManager->getFileLoc(SrcBegin),
                            *Result.SourceManager);
