@@ -1167,7 +1167,9 @@ void LinkerScript::adjustOutputSections() {
   //   * The address assignment.
   // The other option is to pick flags that minimize the impact the section
   // will have on the rest of the linker. That is why we copy the flags from
-  // the previous sections. Only a few flags are needed to keep the impact low.
+  // the previous sections. We copy just SHF_ALLOC and SHF_WRITE to keep the
+  // impact low. We do not propagate SHF_EXECINSTR as in some cases this can
+  // lead to executable writeable section.
   uint64_t flags = SHF_ALLOC;
 
   SmallVector<StringRef, 0> defPhdrs;
@@ -1193,8 +1195,8 @@ void LinkerScript::adjustOutputSections() {
     // We do not want to keep any special flags for output section
     // in case it is empty.
     if (isEmpty)
-      sec->flags = flags & ((sec->nonAlloc ? 0 : (uint64_t)SHF_ALLOC) |
-                            SHF_WRITE | SHF_EXECINSTR);
+      sec->flags =
+          flags & ((sec->nonAlloc ? 0 : (uint64_t)SHF_ALLOC) | SHF_WRITE);
 
     // The code below may remove empty output sections. We should save the
     // specified program headers (if exist) and propagate them to subsequent
