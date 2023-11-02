@@ -2607,11 +2607,10 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     Register DstReg = MI.getOperand(0).getReg();
     Register SrcReg0 = MI.getOperand(1).getReg();
     Register SrcReg1 = MI.getOperand(2).getReg();
-    LLT DstTy = MRI.getType(DstReg);
     const LLT S32 = LLT::scalar(32);
     const LLT S64 = LLT::scalar(64);
-    assert(DstTy == S64 && "This is a special case for s_mul_u64 that handles "
-                           "only 64-bit operands.");
+    assert(MRI.getType(DstReg) == S64 && "This is a special case for s_mul_u64 "
+                                         "that handles only 64-bit operands.");
     const RegisterBank *DstBank =
         OpdMapper.getInstrMapping().getOperandMapping(0).BreakDown[0].RegBank;
 
@@ -3206,6 +3205,7 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
       return;
     case Intrinsic::amdgcn_inverse_ballot:
     case Intrinsic::amdgcn_s_bitreplicate:
+    case Intrinsic::amdgcn_s_quadmask:
       applyDefaultMapping(OpdMapper);
       constrainOpWithReadfirstlane(B, MI, 2); // Mask
       return;
@@ -4855,6 +4855,14 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       unsigned MaskSize = MRI.getType(MaskReg).getSizeInBits();
       unsigned MaskBank = getRegBankID(MaskReg, MRI, AMDGPU::SGPRRegBankID);
       OpdsMapping[0] = AMDGPU::getValueMapping(AMDGPU::VCCRegBankID, 1);
+      OpdsMapping[2] = AMDGPU::getValueMapping(MaskBank, MaskSize);
+      break;
+    }
+    case Intrinsic::amdgcn_s_quadmask: {
+      Register MaskReg = MI.getOperand(2).getReg();
+      unsigned MaskSize = MRI.getType(MaskReg).getSizeInBits();
+      unsigned MaskBank = getRegBankID(MaskReg, MRI, AMDGPU::SGPRRegBankID);
+      OpdsMapping[0] = AMDGPU::getValueMapping(AMDGPU::SGPRRegBankID, MaskSize);
       OpdsMapping[2] = AMDGPU::getValueMapping(MaskBank, MaskSize);
       break;
     }
