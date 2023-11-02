@@ -15,7 +15,8 @@ define i1 @test(i32 %0, i32 %1, i32 %p) {
 ; CHECK-NEXT:    [[TMP7:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP6]])
 ; CHECK-NEXT:    [[OP_RDX:%.*]] = select i1 [[TMP7]], i1 true, i1 [[CMP6]]
 ; CHECK-NEXT:    [[OP_RDX1:%.*]] = select i1 [[CMP1]], i1 true, i1 [[CMP1]]
-; CHECK-NEXT:    [[OP_RDX2:%.*]] = select i1 [[OP_RDX]], i1 true, i1 [[OP_RDX1]]
+; CHECK-NEXT:    [[TMP8:%.*]] = freeze i1 [[OP_RDX]]
+; CHECK-NEXT:    [[OP_RDX2:%.*]] = select i1 [[TMP8]], i1 true, i1 [[OP_RDX1]]
 ; CHECK-NEXT:    ret i1 [[OP_RDX2]]
 ;
 entry:

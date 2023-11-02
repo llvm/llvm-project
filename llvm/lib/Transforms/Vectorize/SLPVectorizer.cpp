@@ -14616,15 +14616,15 @@ public:
                                                    Instruction *RedOp1,
                                                    Instruction *RedOp2,
                                                    bool InitStep) {
-        if (!isBoolLogicOp(RedOp1))
+        if (!AnyBoolLogicOp)
           return;
-        if ((!InitStep && LHS == VectorizedTree) ||
-            getRdxOperand(RedOp1, 0) == LHS || isGuaranteedNotToBePoison(LHS))
+        if (isBoolLogicOp(RedOp1) &&
+            ((!InitStep && LHS == VectorizedTree) ||
+             getRdxOperand(RedOp1, 0) == LHS || isGuaranteedNotToBePoison(LHS)))
           return;
-        if (!isBoolLogicOp(RedOp2))
-          return;
-        if ((!InitStep && RHS == VectorizedTree) ||
-            getRdxOperand(RedOp2, 0) == RHS || isGuaranteedNotToBePoison(RHS)) {
+        if (isBoolLogicOp(RedOp2) && ((!InitStep && RHS == VectorizedTree) ||
+                                      getRdxOperand(RedOp2, 0) == RHS ||
+                                      isGuaranteedNotToBePoison(RHS))) {
           std::swap(LHS, RHS);
           return;
         }
