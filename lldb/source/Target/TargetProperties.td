@@ -195,7 +195,7 @@ let Definition = "target" in {
   def DebugUtilityExpression: Property<"debug-utility-expression", "Boolean">,
     DefaultFalse,
     Desc<"Enable debugging of LLDB-internal utility expressions.">;
-  def DebugInfoDURLs: Property<"debuginfod-urls", "Array">,
+  def DebuginfodURLs: Property<"debuginfod-urls", "Array">,
     Global,
     ElementType<"String">,
     Desc<"A list valid debuginfod server URLs that can be used to locate symbol files.">;

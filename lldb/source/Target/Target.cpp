@@ -4189,7 +4189,7 @@ TargetProperties::TargetProperties(Target *target)
     m_collection_sp->SetValueChangedCallback(
         ePropertyDisableSTDIO, [this] { DisableSTDIOValueChangedCallback(); });
     m_collection_sp->SetValueChangedCallback(
-        ePropertyDebugInfoDURLs, [this] { DebugInfoDURLsChangedCallback(); });
+        ePropertyDebuginfodURLs, [this] { DebuginfodURLsChangedCallback(); });
     m_collection_sp->SetValueChangedCallback(
         ePropertySaveObjectsDir, [this] { CheckJITObjectsDir(); });
     m_experimental_properties_up =
@@ -4901,16 +4901,16 @@ void TargetProperties::SetDebugUtilityExpression(bool debug) {
   SetPropertyAtIndex(idx, debug);
 }
 
-Args TargetProperties::GetDebugInfoDURLs() const {
+Args TargetProperties::GetDebuginfodURLs() const {
   Args urls;
-  m_collection_sp->GetPropertyAtIndexAsArgs(ePropertyDebugInfoDURLs, urls);
+  m_collection_sp->GetPropertyAtIndexAsArgs(ePropertyDebuginfodURLs, urls);
   return urls;
 }
 
-void TargetProperties::DebugInfoDURLsChangedCallback() {
-  Args urls = GetDebugInfoDURLs();
+void TargetProperties::DebuginfodURLsChangedCallback() {
+  Args urls = GetDebuginfodURLs();
   llvm::SmallVector<llvm::StringRef> dbginfod_urls;
-  std::transform(urls.begin(), urls.end(), dbginfod_urls.end(),
+  llvm::transform(urls, dbginfod_urls.end(),
                  [](const auto &obj) { return obj.ref(); });
   llvm::setDefaultDebuginfodUrls(dbginfod_urls);
 }
