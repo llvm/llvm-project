@@ -100,10 +100,10 @@ static cl::opt<unsigned> MaxPathLength(
     cl::desc("Max number of blocks searched to find a threading path"),
     cl::Hidden, cl::init(20));
 
-static cl::opt<unsigned> MaxNumPaths(
-    "dfa-max-num-paths",
-    cl::desc("Max number of paths enumerated around a switch"),
-    cl::Hidden, cl::init(200));
+static cl::opt<unsigned>
+    MaxNumPaths("dfa-max-num-paths",
+                cl::desc("Max number of paths enumerated around a switch"),
+                cl::Hidden, cl::init(200));
 
 static cl::opt<unsigned>
     CostThreshold("dfa-cost-threshold",
@@ -297,6 +297,7 @@ void unfold(DomTreeUpdater *DTU, SelectInstToUnfold SIToUnfold,
                      {DominatorTree::Insert, StartBlock, FT}});
 
   // The select is now dead.
+  assert(SI->use_empty() && "Select must be dead now");
   SI->eraseFromParent();
 }
 
@@ -466,8 +467,9 @@ private:
     if (!SITerm || !SITerm->isUnconditional())
       return false;
 
-    if (isa<PHINode>(SIUse) &&
-        SIBB->getSingleSuccessor() != cast<Instruction>(SIUse)->getParent())
+    // Only fold the select coming from directly where it is defined.
+    PHINode *PHIUser = dyn_cast<PHINode>(SIUse);
+    if (PHIUser && PHIUser->getIncomingBlock(*SI->use_begin()) != SIBB)
       return false;
 
     // If select will not be sunk during unfolding, and it is in the same basic
@@ -728,6 +730,10 @@ private:
     CodeMetrics Metrics;
     SwitchInst *Switch = SwitchPaths->getSwitchInst();
 
+    // Don't thread switch without multiple successors.
+    if (Switch->getNumSuccessors() <= 1)
+      return false;
+
     // Note that DuplicateBlockMap is not being used as intended here. It is
     // just being used to ensure (BB, State) pairs are only counted once.
     DuplicateBlockMap DuplicateMap;
@@ -805,6 +811,8 @@ private:
       // using binary search, hence the LogBase2().
       unsigned CondBranches =
           APInt(32, Switch->getNumSuccessors()).ceilLogBase2();
+      assert(CondBranches > 0 &&
+             "The threaded switch must have multiple branches");
       DuplicationCost = Metrics.NumInsts / CondBranches;
     } else {
       // Compared with jump tables, the DFA optimizer removes an indirect branch
