@@ -182,7 +182,8 @@ define amdgpu_ps void @prefetch_data_pc_rel_too_large_offset() {
 ; GFX12-SDAG-LABEL: prefetch_data_pc_rel_too_large_offset:
 ; GFX12-SDAG:       ; %bb.0: ; %entry
 ; GFX12-SDAG-NEXT:    s_getpc_b64 s[0:1]
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GFX12-SDAG-NEXT:    s_sext_i32_i16 s1, s1
 ; GFX12-SDAG-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 0x800000
 ; GFX12-SDAG-NEXT:    s_prefetch_data s[0:1], 0x14, null, 0
 ; GFX12-SDAG-NEXT:    s_endpgm
@@ -466,7 +467,8 @@ define amdgpu_ps void @prefetch_inst_pc_rel_too_large_offset() {
 ; GFX12-SDAG-LABEL: prefetch_inst_pc_rel_too_large_offset:
 ; GFX12-SDAG:       ; %bb.0: ; %entry
 ; GFX12-SDAG-NEXT:    s_getpc_b64 s[0:1]
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GFX12-SDAG-NEXT:    s_sext_i32_i16 s1, s1
 ; GFX12-SDAG-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 0x800000
 ; GFX12-SDAG-NEXT:    s_prefetch_inst s[0:1], 0x14, null, 0
 ; GFX12-SDAG-NEXT:    s_endpgm
