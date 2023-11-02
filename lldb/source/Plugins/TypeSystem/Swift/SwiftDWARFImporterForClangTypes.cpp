@@ -195,13 +195,13 @@ void SwiftDWARFImporterDelegate::lookupValue(
     // Import the type into SwiftASTContext's ClangImporter's clang::ASTContext.
     clang::ASTContext &to_ctx = clang_importer->getClangASTContext();
     clang::ASTContext &from_ctx = type_system->getASTContext();
-
     clang::QualType qual_type = ClangUtil::GetQualType(compiler_type);
     importType(qual_type, from_ctx, to_ctx, kind, results);
 
-    LLDB_LOG(GetLog(LLDBLog::Types),
-             "{0}::lookupValue() -- imported {1} types from debug info.",
-             m_description.c_str(), results.size());
   }
+  LLDB_LOG(GetLog(LLDBLog::Types),
+           "{0}::lookupValue() -- imported {1} types from debug info.",
+           m_description.c_str(), results.size());
 }
-}
+
+} // namespace lldb_private

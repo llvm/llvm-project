@@ -625,7 +625,7 @@ AddRequiredAliases(Block *block, lldb::StackFrameSP &stack_frame_sp,
     // If we are extending a generic class it's going to be a metatype,
     // and we have to grab the instance type:
     imported_self_type = swift_type_system->GetInstanceType(
-        imported_self_type.GetOpaqueQualType());
+        imported_self_type.GetOpaqueQualType(), stack_frame_sp.get());
     if (!imported_self_type)
       return Status(
           "Unable to add the aliases the expression needs because the Swift "

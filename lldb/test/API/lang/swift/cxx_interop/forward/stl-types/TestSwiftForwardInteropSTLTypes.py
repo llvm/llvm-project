@@ -16,7 +16,10 @@ class TestSwiftForwardInteropSTLTypes(TestBase):
         
         _, _, _, _= lldbutil.run_to_source_breakpoint(
             self, 'Set breakpoint here', lldb.SBFileSpec('main.swift'))
-
+        # FIXME: TypeSystemSwiftTypeRef::GetCanonicalType() doesn't
+        # take an execution context, so the validation happens in the
+        # wrong SwiftASTContext.
+        self.expect('settings set symbols.swift-validate-typesystem false')
         self.expect('v map', substrs=['CxxMap', 'first = 1, second = 3', 
             'first = 2, second = 2', 'first = 3, second = 3'])
         self.expect('expr map', substrs=['CxxMap', 'first = 1, second = 3', 

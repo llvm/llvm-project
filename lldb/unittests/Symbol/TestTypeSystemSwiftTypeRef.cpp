@@ -673,7 +673,7 @@ TEST_F(TestTypeSystemSwiftTypeRef, GetInstanceType) {
 
     CompilerType t = GetCompilerType(b.Mangle(n));
     CompilerType instance_type =
-        m_swift_ts->GetInstanceType(t.GetOpaqueQualType());
+      m_swift_ts->GetInstanceType(t.GetOpaqueQualType(), nullptr);
     ASSERT_EQ(instance_type.GetMangledTypeName(), "$sSSD");
   };
   {
@@ -683,7 +683,7 @@ TEST_F(TestTypeSystemSwiftTypeRef, GetInstanceType) {
 
     CompilerType t = GetCompilerType(b.Mangle(n));
     CompilerType instance_type =
-        m_swift_ts->GetInstanceType(t.GetOpaqueQualType());
+      m_swift_ts->GetInstanceType(t.GetOpaqueQualType(), nullptr);
     ASSERT_EQ(instance_type.GetMangledTypeName(), "$sSSD");
   };
 };

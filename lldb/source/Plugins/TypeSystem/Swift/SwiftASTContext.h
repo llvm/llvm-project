@@ -201,6 +201,12 @@ public:
                  TypeSystemSwiftTypeRefForExpressions &typeref_typesystem,
                  const char *extra_options);
 
+  /// Create a SwiftASTContextForExpressions taylored to a specific symbol
+  /// context.
+  static lldb::TypeSystemSP
+  CreateInstance(const SymbolContext &sc,
+                 TypeSystemSwiftTypeRefForExpressions &typeref_typesystem);
+
   static void EnumerateSupportedLanguages(
       std::set<lldb::LanguageType> &languages_for_types,
       std::set<lldb::LanguageType> &languages_for_expressions);
@@ -643,7 +649,8 @@ public:
 
   CompilerType GetCanonicalType(lldb::opaque_compiler_type_t type) override;
 
-  CompilerType GetInstanceType(lldb::opaque_compiler_type_t type) override;
+  CompilerType GetInstanceType(lldb::opaque_compiler_type_t type,
+                               ExecutionContextScope *exe_scope) override;
 
   // Returns -1 if this isn't a function of if the function doesn't have a
   // prototype. Returns a value >override if there is a prototype.
@@ -814,18 +821,18 @@ public:
   /// Retrieve/import the modules imported by the compilation
   /// unit. Early-exists with false if there was an import failure.
   bool GetCompileUnitImports(
-      SymbolContext &sc, lldb::ProcessSP process_sp,
+      const SymbolContext &sc, lldb::ProcessSP process_sp,
       llvm::SmallVectorImpl<swift::AttributedImport<swift::ImportedModule>>
           &modules,
       Status &error);
 
   /// Perform all the implicit imports for the current frame.
-  void PerformCompileUnitImports(SymbolContext &sc, lldb::ProcessSP process_sp,
+  void PerformCompileUnitImports(const SymbolContext &sc, lldb::ProcessSP process_sp,
                                  Status &error);
 
 protected:
   bool GetCompileUnitImportsImpl(
-      SymbolContext &sc, lldb::ProcessSP process_sp,
+      const SymbolContext &sc, lldb::ProcessSP process_sp,
       llvm::SmallVectorImpl<swift::AttributedImport<swift::ImportedModule>>
           *modules,
       Status &error);

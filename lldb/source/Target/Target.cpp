@@ -1728,12 +1728,7 @@ void Target::ModulesDidLoad(ModuleList &module_list) {
               type_system.get());
       if (!swift_scratch_ctx)
         return true;
-      auto *swift_ast_ctx =
-          llvm::dyn_cast_or_null<SwiftASTContextForExpressions>(
-              swift_scratch_ctx->GetSwiftASTContextOrNull());
-      if (!swift_ast_ctx)
-        return true;
-      swift_ast_ctx->ModulesDidLoad(module_list);
+      swift_scratch_ctx->ModulesDidLoad(module_list);
 #endif // LLDB_ENABLE_SWIFT
       return true;
     };

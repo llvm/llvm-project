@@ -25,8 +25,9 @@ bool lldb_private::formatters::swift::SwiftMetatype_SummaryProvider(
   lldb::addr_t metadata_ptr = valobj.GetPointerValue();
   if (metadata_ptr == LLDB_INVALID_ADDRESS || metadata_ptr == 0) {
     CompilerType compiler_metatype_type(valobj.GetCompilerType());
-    CompilerType instancetype =
-      TypeSystemSwift::GetInstanceType(compiler_metatype_type);
+    ExecutionContext exe_ctx = valobj.GetExecutionContextRef();
+    CompilerType instancetype = TypeSystemSwift::GetInstanceType(
+        compiler_metatype_type, exe_ctx.GetBestExecutionContextScope());
     name = instancetype.GetDisplayTypeName();
   } else if (CompilerType meta_type = valobj.GetCompilerType()) {
     name = meta_type.GetDisplayTypeName();
