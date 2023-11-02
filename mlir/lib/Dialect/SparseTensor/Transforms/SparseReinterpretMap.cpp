@@ -6,7 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "CodegenUtils.h"
+
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
@@ -188,6 +191,56 @@ struct DemapInsRewriter : public OpRewritePattern<SourceOp> {
   }
 };
 
+struct TensorAllocDemapper
+    : public OpRewritePattern<bufferization::AllocTensorOp> {
+  using OpRewritePattern::OpRewritePattern;
+  LogicalResult matchAndRewrite(bufferization::AllocTensorOp op,
+                                PatternRewriter &rewriter) const override {
+    if (!hasNonIdentityOperandsOrResults(op))
+      return failure();
+
+    Location loc = op.getLoc();
+    auto stt = getSparseTensorType(op.getResult());
+
+    SmallVector<Value> maxDimCrds;
+    maxDimCrds.reserve(stt.getDimRank());
+    ValueRange dynSz = op.getDynamicSizes();
+    for (int64_t dimSz : stt.getDimShape()) {
+      if (ShapedType::isDynamic(dimSz)) {
+        Value maxCrd = rewriter.create<arith::SubIOp>(
+            loc, dynSz.front(), constantIndex(rewriter, loc, 1));
+        maxDimCrds.push_back(maxCrd);
+        dynSz = dynSz.drop_front();
+      } else {
+        maxDimCrds.push_back(constantIndex(rewriter, loc, dimSz - 1));
+      }
+    }
+
+    ValueRange maxLvlCrds = stt.translateCrds(rewriter, loc, maxDimCrds,
+                                              CrdTransDirectionKind::dim2lvl);
+    auto lvlShape = stt.getLvlShape();
+    SmallVector<Value> dynLvlSzs;
+    for (unsigned i = 0, e = lvlShape.size(); i < e; i++) {
+      if (ShapedType::isDynamic(lvlShape[i])) {
+        Value sz = rewriter.create<arith::AddIOp>(
+            loc, maxLvlCrds[i], constantIndex(rewriter, loc, 1));
+        dynLvlSzs.push_back(sz);
+      }
+    }
+
+    assert(dynSz.empty()); // should have consumed all.
+    rewriter.startRootUpdate(op);
+    op->setOperands(dynLvlSzs);
+    op.getResult().setType(stt.getDemappedType());
+    rewriter.finalizeRootUpdate(op);
+    rewriter.setInsertionPointAfter(op);
+
+    Value t = genRemap(rewriter, stt.getEncoding(), op.getResult());
+    rewriter.replaceAllUsesExcept(op.getResult(), t, t.getDefiningOp());
+    return success();
+  }
+};
+
 struct TensorInsertDemapper
     : public DemapInsRewriter<TensorInsertDemapper, tensor::InsertOp> {
   using DemapInsRewriter::DemapInsRewriter;
@@ -309,7 +362,7 @@ void mlir::populateSparseReinterpretMap(RewritePatternSet &patterns,
   }
   if (scope == ReinterpretMapScope::kAll ||
       scope == ReinterpretMapScope::kExceptGeneric) {
-    patterns.add<TensorInsertDemapper, ForeachOpDemapper>(
+    patterns.add<TensorAllocDemapper, TensorInsertDemapper, ForeachOpDemapper>(
         patterns.getContext());
   }
 }
