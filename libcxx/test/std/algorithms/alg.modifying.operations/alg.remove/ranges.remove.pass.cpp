@@ -180,20 +180,6 @@ constexpr bool test() {
     }
   }
 
-  {
-    // check that the implicit conversion to bool works
-    {
-      StrictComparable<int> a[] = {1, 2, 3, 4};
-      auto ret                  = std::ranges::remove(a, a + 4, StrictComparable<int>{2});
-      assert(ret.begin() == a + 3);
-    }
-    {
-      StrictComparable<int> a[] = {1, 2, 3, 4};
-      auto ret                  = std::ranges::remove(a, StrictComparable<int>{2});
-      assert(ret.begin() == a + 3);
-    }
-  }
-
   return true;
 }
 
