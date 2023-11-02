@@ -229,16 +229,17 @@ namespace llvm {
         : IS(ISel) {
       SavedOptLevel = IS.OptLevel;
       SavedFastISel = IS.TM.Options.EnableFastISel;
-      if (NewOptLevel == SavedOptLevel)
-        return;
-      IS.OptLevel = NewOptLevel;
-      IS.TM.setOptLevel(NewOptLevel);
-      LLVM_DEBUG(dbgs() << "\nChanging optimization level for Function "
-                        << IS.MF->getFunction().getName() << "\n");
-      LLVM_DEBUG(dbgs() << "\tBefore: -O" << static_cast<int>(SavedOptLevel) << " ; After: -O"
-                        << static_cast<int>(NewOptLevel) << "\n");
-      if (NewOptLevel == CodeGenOptLevel::None)
-        IS.TM.setFastISel(IS.TM.getO0WantsFastISel());
+      if (NewOptLevel != SavedOptLevel) {
+        IS.OptLevel = NewOptLevel;
+        IS.TM.setOptLevel(NewOptLevel);
+        LLVM_DEBUG(dbgs() << "\nChanging optimization level for Function "
+                          << IS.MF->getFunction().getName() << "\n");
+        LLVM_DEBUG(dbgs() << "\tBefore: -O" << static_cast<int>(SavedOptLevel)
+                          << " ; After: -O" << static_cast<int>(NewOptLevel)
+                          << "\n");
+        if (NewOptLevel == CodeGenOptLevel::None)
+          IS.TM.setFastISel(IS.TM.getO0WantsFastISel());
+      }
       if (dontUseFastISelFor(IS.MF->getFunction()))
         IS.TM.setFastISel(false);
       LLVM_DEBUG(
