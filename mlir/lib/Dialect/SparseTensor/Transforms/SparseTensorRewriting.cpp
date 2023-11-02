@@ -1129,14 +1129,11 @@ public:
 
     SmallVector<Value> lcvs = loopEmitter.getLoopIVs();
     if (op.getOrder()) {
-      // FIXME: There is some dim/lvl confusion here since `dimRank != lvlRank`
-      const Dimension dimRank = stt.getDimRank();
-      SmallVector<Value> dcvs = lcvs; // keep a copy
-      for (Dimension d = 0; d < dimRank; d++) {
-        auto l = op.getOrder()->getDimPosition(d);
-        lcvs[l] = dcvs[d];
-      }
+      // TODO: Support it so that we can do direct conversion from CSR->BSR.
+      llvm_unreachable(
+          "Level order not yet implemented on non-constant input tensors.");
     }
+
     Value vals = loopEmitter.getValBuffer()[0];
     Value pos = loopEmitter.getPosits()[0].back();
     // Loads the value from sparse tensor using position-index;

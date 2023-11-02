@@ -1666,11 +1666,10 @@ LogicalResult ForeachOp::verify() {
   const Dimension dimRank = t.getDimRank();
   const auto args = getBody()->getArguments();
 
-  if (getOrder().has_value() &&
-      (t.getEncoding() || !getOrder()->isPermutation()))
-    return emitError("Only support permuted order on non encoded dense tensor");
+  if (getOrder().has_value() && getOrder()->getNumDims() != t.getLvlRank())
+    return emitError("Level traverse order does not match tensor's level rank");
 
-  if (static_cast<size_t>(dimRank) + 1 + getInitArgs().size() != args.size())
+  if (dimRank + 1 + getInitArgs().size() != args.size())
     return emitError("Unmatched number of arguments in the block");
 
   if (getNumResults() != getInitArgs().size())
