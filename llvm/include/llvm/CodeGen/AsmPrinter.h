@@ -249,8 +249,15 @@ private:
   MCSection *YkLastBBAddrMapSection = nullptr;
 
   /// Symbols marking the call instructions of each block. Used for the Yk JIT.
+  ///
+  /// Values are a 3-tuple:
+  ///  - A symbol marking the call instruction.
+  ///  - A symbol marking the return address of the call (if it were to return
+  ///    by conventional means)
+  ///  - If it's a direct call, a symbol marking the target of the call, or
+  ///    `nullptr` if the call is indirect.
   std::map<const MachineBasicBlock *,
-           SmallVector<std::tuple<MCSymbol *, MCSymbol *>>>
+           SmallVector<std::tuple<MCSymbol *, MCSymbol *, MCSymbol *>>>
       YkCallMarkerSyms;
 
 protected:

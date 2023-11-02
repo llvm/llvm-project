@@ -1528,8 +1528,10 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
       for (auto Tup : YkCallMarkerSyms[&MBB]) {
         // Emit address of the call instruction.
         OutStreamer->emitSymbolValue(std::get<0>(Tup), getPointerSize());
+        // Emit the return address of the call.
+        OutStreamer->emitSymbolValue(std::get<1>(Tup), getPointerSize());
         // Emit address of target if known, or 0.
-        MCSymbol *Target = std::get<1>(Tup);
+        MCSymbol *Target = std::get<2>(Tup);
         if (Target)
           OutStreamer->emitSymbolValue(Target, getPointerSize());
         else
@@ -1988,15 +1990,33 @@ void AsmPrinter::emitFunctionBody() {
             (MI.getOpcode() != TargetOpcode::STACKMAP) &&
             (MI.getOpcode() != TargetOpcode::PATCHPOINT) &&
             (MI.getOpcode() != TargetOpcode::STATEPOINT)) {
+          // Record the address of the call instruction itself.
           MCSymbol *YkPreCallSym =
               MF->getContext().createTempSymbol("yk_precall", true);
           OutStreamer->emitLabel(YkPreCallSym);
+
+          // Codegen it as usual.
+          emitInstruction(&MI);
+
+          // Record the address of the instruction following the call. In other
+          // words, this is the return address of the call.
+          MCSymbol *YkPostCallSym =
+              MF->getContext().createTempSymbol("yk_postcall", true);
+          OutStreamer->emitLabel(YkPostCallSym);
+
+          // Figure out if this is a direct or indirect call.
+          //
+          // If it's direct, then we know the call's target from the first
+          // operand alone.
           const MachineOperand CallOpnd = MI.getOperand(0);
           MCSymbol *CallTargetSym = nullptr;
           if (CallOpnd.isGlobal()) {
-            // Statically known function address.
+            // Direct call.
             CallTargetSym = getSymbol(CallOpnd.getGlobal());
-          }
+          } else if (CallOpnd.isMCSymbol()) {
+            // Also a direct call.
+            CallTargetSym = CallOpnd.getMCSymbol();
+          } // Otherwise it's an indirect call.
 
           // Ensure we are only working with near calls. This matters because
           // Intel PT optimises near calls, and it simplifies our implementation
@@ -2005,10 +2025,11 @@ void AsmPrinter::emitFunctionBody() {
           assert(!MF->getSubtarget().getInstrInfo()->isFarCall(MI));
 
           assert(YkCallMarkerSyms.find(&MBB) != YkCallMarkerSyms.end());
-          YkCallMarkerSyms[&MBB].push_back({YkPreCallSym, CallTargetSym});
+          YkCallMarkerSyms[&MBB].push_back({YkPreCallSym, YkPostCallSym, CallTargetSym});
+        } else {
+          emitInstruction(&MI);
         }
 
-        emitInstruction(&MI);
         // Generate labels for function calls so we can record the correct
         // instruction offset. The conditions for generating the label must be
         // the same as the ones for generating the stackmap call in
