@@ -66,3 +66,23 @@ struct Derived : Base {
 void entry() { Derived test; }
 
 } // namespace delegate_ctor_call
+
+// Additional test case from issue #59493
+namespace init_list_array {
+
+struct Base {
+  int foox[1];
+};
+
+class Derived : public Base {
+public:
+  Derived() : Base{{42}} {
+    // The dereference to this->foox below should be initialized properly.
+    clang_analyzer_dump(this->foox[0]); // expected-warning{{42 S32b}}
+    clang_analyzer_dump(foox[0]); // expected-warning{{42 S32b}}
+  }
+};
+
+void entry() { Derived test; }
+
+} // namespace init_list_array
