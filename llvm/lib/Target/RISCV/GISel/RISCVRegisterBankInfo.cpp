@@ -69,8 +69,8 @@ enum ValueMappingsIdx {
 
 const RegisterBankInfo::ValueMapping *getFPValueMapping(unsigned Size) {
   assert(Size == 32 || Size == 64);
-  unsigned Idx = Size == 64 ? PMI_FPR64 : PMI_FPR32;
-  return &ValueMappings[1 + Idx * 3];
+  unsigned Idx = Size == 64 ? FPR64Idx : FPR32Idx;
+  return &ValueMappings[Idx];
 }
 } // namespace RISCV
 } // namespace llvm
