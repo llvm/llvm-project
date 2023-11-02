@@ -1615,22 +1615,28 @@ private:
     template <class T> friend class TypePropertyCache;
 
     /// TypeClass bitfield - Enum that specifies what subclass this belongs to.
+    LLVM_PREFERRED_TYPE(TypeClass)
     unsigned TC : 8;
 
     /// Store information on the type dependency.
+    LLVM_PREFERRED_TYPE(TypeDependence)
     unsigned Dependence : llvm::BitWidth<TypeDependence>;
 
     /// True if the cache (i.e. the bitfields here starting with
     /// 'Cache') is valid.
+    LLVM_PREFERRED_TYPE(bool)
     mutable unsigned CacheValid : 1;
 
     /// Linkage of this type.
+    LLVM_PREFERRED_TYPE(Linkage)
     mutable unsigned CachedLinkage : 3;
 
     /// Whether this type involves and local or unnamed types.
+    LLVM_PREFERRED_TYPE(bool)
     mutable unsigned CachedLocalOrUnnamed : 1;
 
     /// Whether this type comes from an AST file.
+    LLVM_PREFERRED_TYPE(bool)
     mutable unsigned FromAST : 1;
 
     bool isCacheValid() const {
@@ -1656,10 +1662,12 @@ protected:
   class ArrayTypeBitfields {
     friend class ArrayType;
 
+    LLVM_PREFERRED_TYPE(TypeBitfields)
     unsigned : NumTypeBits;
 
     /// CVR qualifiers from declarations like
     /// 'int X[static restrict 4]'. For function parameters only.
+    LLVM_PREFERRED_TYPE(Qualifiers)
     unsigned IndexTypeQuals : 3;
 
     /// Storage class qualifiers from declarations like
@@ -1672,15 +1680,18 @@ protected:
   class ConstantArrayTypeBitfields {
     friend class ConstantArrayType;
 
+    LLVM_PREFERRED_TYPE(ArrayTypeBitfields)
     unsigned : NumArrayTypeBits;
 
     /// Whether we have a stored size expression.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned HasStoredSizeExpr : 1;
   };
 
   class BuiltinTypeBitfields {
     friend class BuiltinType;
 
+    LLVM_PREFERRED_TYPE(TypeBitfields)
     unsigned : NumTypeBits;
 
     /// The kind (BuiltinType::Kind) of builtin type this is.
@@ -1695,15 +1706,18 @@ protected:
     friend class FunctionProtoType;
     friend class FunctionType;
 
+    LLVM_PREFERRED_TYPE(TypeBitfields)
     unsigned : NumTypeBits;
 
     /// Extra information which affects how the function is called, like
     /// regparm and the calling convention.
+    LLVM_PREFERRED_TYPE(CallingConv)
     unsigned ExtInfo : 13;
 
     /// The ref-qualifier associated with a \c FunctionProtoType.
     ///
     /// This is a value of type \c RefQualifierKind.
+    LLVM_PREFERRED_TYPE(RefQualifierKind)
     unsigned RefQualifier : 2;
 
     /// Used only by FunctionProtoType, put here to pack with the
@@ -1712,8 +1726,10 @@ protected:
     ///
     /// C++ 8.3.5p4: The return type, the parameter type list and the
     /// cv-qualifier-seq, [...], are part of the function type.
+    LLVM_PREFERRED_TYPE(Qualifiers)
     unsigned FastTypeQuals : Qualifiers::FastWidth;
     /// Whether this function has extended Qualifiers.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned HasExtQuals : 1;
 
     /// The number of parameters this function has, not counting '...'.
@@ -1723,24 +1739,30 @@ protected:
     unsigned NumParams : 16;
 
     /// The type of exception specification this function has.
+    LLVM_PREFERRED_TYPE(ExceptionSpecificationType)
     unsigned ExceptionSpecType : 4;
 
     /// Whether this function has extended parameter information.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned HasExtParameterInfos : 1;
 
     /// Whether this function has extra bitfields for the prototype.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned HasExtraBitfields : 1;
 
     /// Whether the function is variadic.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned Variadic : 1;
 
     /// Whether this function has a trailing return type.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned HasTrailingReturn : 1;
   };
 
   class ObjCObjectTypeBitfields {
     friend class ObjCObjectType;
 
+    LLVM_PREFERRED_TYPE(TypeBitfields)
     unsigned : NumTypeBits;
 
     /// The number of type arguments stored directly on this object type.
@@ -1750,12 +1772,14 @@ protected:
     unsigned NumProtocols : 6;
 
     /// Whether this is a "kindof" type.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned IsKindOf : 1;
   };
 
   class ReferenceTypeBitfields {
     friend class ReferenceType;
 
+    LLVM_PREFERRED_TYPE(TypeBitfields)
     unsigned : NumTypeBits;
 
     /// True if the type was originally spelled with an lvalue sigil.
@@ -1769,19 +1793,23 @@ protected:
     ///   ref &&a;             // lvalue, inner ref
     ///   rvref &a;            // lvalue, inner ref, spelled lvalue
     ///   rvref &&a;           // rvalue, inner ref
+    LLVM_PREFERRED_TYPE(bool)
     unsigned SpelledAsLValue : 1;
 
     /// True if the inner type is a reference type.  This only happens
     /// in non-canonical forms.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned InnerRef : 1;
   };
 
   class TypeWithKeywordBitfields {
     friend class TypeWithKeyword;
 
+    LLVM_PREFERRED_TYPE(TypeBitfields)
     unsigned : NumTypeBits;
 
     /// An ElaboratedTypeKeyword.  8 bits for efficient access.
+    LLVM_PREFERRED_TYPE(ElaboratedTypeKeyword)
     unsigned Keyword : 8;
   };
 
@@ -1790,10 +1818,11 @@ protected:
   class ElaboratedTypeBitfields {
     friend class ElaboratedType;
 
-    unsigned : NumTypeBits;
+    LLVM_PREFERRED_TYPE(TypeWithKeywordBitfields)
     unsigned : NumTypeWithKeywordBits;
 
     /// Whether the ElaboratedType has a trailing OwnedTagDecl.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned HasOwnedTagDecl : 1;
   };
 
@@ -1801,10 +1830,12 @@ protected:
     friend class VectorType;
     friend class DependentVectorType;
 
+    LLVM_PREFERRED_TYPE(TypeBitfields)
     unsigned : NumTypeBits;
 
     /// The kind of vector, either a generic vector type or some
     /// target-specific vector type such as for AltiVec or Neon.
+    LLVM_PREFERRED_TYPE(VectorKind)
     unsigned VecKind : 4;
     /// The number of elements in the vector.
     uint32_t NumElements;
@@ -1813,19 +1844,22 @@ protected:
   class AttributedTypeBitfields {
     friend class AttributedType;
 
+    LLVM_PREFERRED_TYPE(TypeBitfields)
     unsigned : NumTypeBits;
 
-    /// An AttributedType::Kind
+    LLVM_PREFERRED_TYPE(attr::Kind)
     unsigned AttrKind : 32 - NumTypeBits;
   };
 
   class AutoTypeBitfields {
     friend class AutoType;
 
+    LLVM_PREFERRED_TYPE(TypeBitfields)
     unsigned : NumTypeBits;
 
     /// Was this placeholder type spelled as 'auto', 'decltype(auto)',
     /// or '__auto_type'?  AutoTypeKeyword value.
+    LLVM_PREFERRED_TYPE(AutoTypeKeyword)
     unsigned Keyword : 2;
 
     /// The number of template arguments in the type-constraints, which is
@@ -1842,33 +1876,41 @@ protected:
     friend class TypeOfType;
     friend class TypeOfExprType;
 
+    LLVM_PREFERRED_TYPE(TypeBitfields)
     unsigned : NumTypeBits;
+    LLVM_PREFERRED_TYPE(bool)
     unsigned IsUnqual : 1; // If true: typeof_unqual, else: typeof
   };
 
   class UsingBitfields {
     friend class UsingType;
 
+    LLVM_PREFERRED_TYPE(TypeBitfields)
     unsigned : NumTypeBits;
 
     /// True if the underlying type is different from the declared one.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned hasTypeDifferentFromDecl : 1;
   };
 
   class TypedefBitfields {
     friend class TypedefType;
 
+    LLVM_PREFERRED_TYPE(TypeBitfields)
     unsigned : NumTypeBits;
 
     /// True if the underlying type is different from the declared one.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned hasTypeDifferentFromDecl : 1;
   };
 
   class SubstTemplateTypeParmTypeBitfields {
     friend class SubstTemplateTypeParmType;
 
+    LLVM_PREFERRED_TYPE(TypeBitfields)
     unsigned : NumTypeBits;
 
+    LLVM_PREFERRED_TYPE(bool)
     unsigned HasNonCanonicalUnderlyingType : 1;
 
     // The index of the template parameter this substitution represents.
@@ -1885,6 +1927,7 @@ protected:
   class SubstTemplateTypeParmPackTypeBitfields {
     friend class SubstTemplateTypeParmPackType;
 
+    LLVM_PREFERRED_TYPE(TypeBitfields)
     unsigned : NumTypeBits;
 
     // The index of the template parameter this substitution represents.
@@ -1900,9 +1943,11 @@ protected:
   class TemplateSpecializationTypeBitfields {
     friend class TemplateSpecializationType;
 
+    LLVM_PREFERRED_TYPE(TypeBitfields)
     unsigned : NumTypeBits;
 
     /// Whether this template specialization type is a substituted type alias.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned TypeAlias : 1;
 
     /// The number of template arguments named in this class template
@@ -1918,6 +1963,7 @@ protected:
   class DependentTemplateSpecializationTypeBitfields {
     friend class DependentTemplateSpecializationType;
 
+    LLVM_PREFERRED_TYPE(TypeWithKeywordBitfields)
     unsigned : NumTypeWithKeywordBits;
 
     /// The number of template arguments named in this class template
@@ -1933,6 +1979,7 @@ protected:
   class PackExpansionTypeBitfields {
     friend class PackExpansionType;
 
+    LLVM_PREFERRED_TYPE(TypeBitfields)
     unsigned : NumTypeBits;
 
     /// The number of expansions that this pack expansion will
