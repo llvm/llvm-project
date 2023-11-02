@@ -2346,20 +2346,33 @@ HeaderFileInfoTrait::ReadData(internal_key_ref key, const unsigned char *d,
   HeaderFileInfo HFI;
   unsigned Flags = *d++;
 
-  OptionalFileEntryRef FE;
-  bool Included = (Flags >> 6) & 0x01;
-  if (Included)
-    if ((FE = getFile(key)))
-      // Not using \c Preprocessor::markIncluded(), since that would attempt to
-      // deserialize this header file info again.
-      Reader.getPreprocessor().getIncludedFiles().insert(*FE);
-
   // FIXME: Refactor with mergeHeaderFileInfo in HeaderSearch.cpp.
   HFI.isImport |= (Flags >> 5) & 0x01;
   HFI.isPragmaOnce |= (Flags >> 4) & 0x01;
   HFI.DirInfo = (Flags >> 1) & 0x07;
   HFI.LazyControllingMacro = Reader.getGlobalIdentifierID(
       M, endian::readNext<IdentifierID, llvm::endianness::little>(d));
+
+  auto FE = getFile(key);
+  Preprocessor &PP = Reader.getPreprocessor();
+  ModuleMap &ModMap = PP.getHeaderSearchInfo().getModuleMap();
+
+  unsigned IncludedCount =
+      endian::readNext<uint32_t, llvm::endianness::little, unaligned>(d);
+  for (unsigned I = 0; I < IncludedCount; ++I) {
+    uint32_t LocalSMID =
+        endian::readNext<uint32_t, llvm::endianness::little, unaligned>(d);
+    if (!FE)
+      continue;
+
+    if (LocalSMID == 0) {
+      PP.markIncludedOnTopLevel(*FE);
+    } else {
+      SubmoduleID GlobalSMID = Reader.getGlobalSubmoduleID(M, LocalSMID);
+      Module *Mod = Reader.getSubmodule(GlobalSMID);
+      PP.markIncludedInModule(Mod, *FE);
+    }
+  }
 
   assert((End - d) % 4 == 0 &&
          "Wrong data length in HeaderFileInfo deserialization");
@@ -2373,10 +2386,8 @@ HeaderFileInfoTrait::ReadData(internal_key_ref key, const unsigned char *d,
     // implicit module import.
     SubmoduleID GlobalSMID = Reader.getGlobalSubmoduleID(M, LocalSMID);
     Module *Mod = Reader.getSubmodule(GlobalSMID);
-    ModuleMap &ModMap =
-        Reader.getPreprocessor().getHeaderSearchInfo().getModuleMap();
 
-    if (FE || (FE = getFile(key))) {
+    if (FE) {
       // FIXME: NameAsWritten
       Module::Header H = {std::string(key.Filename), "", *FE};
       ModMap.addHeader(Mod, H, HeaderRole, /*Imported=*/true);
