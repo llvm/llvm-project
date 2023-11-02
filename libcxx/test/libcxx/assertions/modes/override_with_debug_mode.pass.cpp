@@ -21,9 +21,8 @@
 
 int main(int, char**) {
   _LIBCPP_ASSERT_INTERNAL(true, "Should not fire");
-  TEST_LIBCPP_ASSERT_FAILURE([] {
-    _LIBCPP_ASSERT_INTERNAL(false, "Debug-mode assertions should fire");
-  }(), "Debug-mode assertions should fire");
+  TEST_LIBCPP_ASSERT_FAILURE([] { _LIBCPP_ASSERT_INTERNAL(false, "Debug-mode assertions should fire"); }(),
+                             "Debug-mode assertions should fire");
 
   return 0;
 }

@@ -14,7 +14,7 @@
 // REQUIRES: has-unix-headers
 // The ability to set a custom abort message is required to compare the assertion message.
 // XFAIL: availability-verbose_abort-missing
-// ADDITIONAL_COMPILE_FLAGS: -Wno-macro-redefined -D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_UNCHECKED
+// ADDITIONAL_COMPILE_FLAGS: -Wno-macro-redefined -D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_NONE
 
 #include <cassert>
 #include "check_assertion.h"

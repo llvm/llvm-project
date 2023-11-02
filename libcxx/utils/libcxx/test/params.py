@@ -287,18 +287,18 @@ DEFAULT_PARAMETERS = [
     ),
     Parameter(
         name="hardening_mode",
-        choices=["unchecked", "hardened", "debug_lite", "debug"],
+        choices=["none", "fast", "strict", "debug"],
         type=str,
-        default="unchecked",
+        default="none",
         help="Whether to enable one of the hardening modes when compiling the test suite. This is only "
         "meaningful when running the tests against libc++.",
         actions=lambda hardening_mode: filter(
             None,
             [
-                AddCompileFlag("-D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_HARDENED")   if hardening_mode == "hardened" else None,
-                AddCompileFlag("-D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_DEBUG_LITE") if hardening_mode == "debug_lite" else None,
-                AddCompileFlag("-D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_DEBUG")      if hardening_mode == "debug" else None,
-                AddCompileFlag("-D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_UNCHECKED")  if hardening_mode == "unchecked" else None,
+                AddCompileFlag("-D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_NONE")   if hardening_mode == "none" else None,
+                AddCompileFlag("-D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_FAST")   if hardening_mode == "fast" else None,
+                AddCompileFlag("-D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_STRICT") if hardening_mode == "strict" else None,
+                AddCompileFlag("-D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_DEBUG")  if hardening_mode == "debug" else None,
                 AddFeature("libcpp-hardening-mode={}".format(hardening_mode)),
             ],
         ),

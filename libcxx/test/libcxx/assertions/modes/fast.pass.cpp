@@ -6,25 +6,22 @@
 //
 //===----------------------------------------------------------------------===//
 
-// This test ensures that we can override any hardening mode with the hardened mode on a per-TU basis.
+// This test ensures that assertions trigger without the user having to do anything when the fast hardening mode has
+// been enabled by default.
 
+// REQUIRES: libcpp-hardening-mode=fast
 // `check_assertion.h` is only available starting from C++11.
 // UNSUPPORTED: c++03
 // `check_assertion.h` requires Unix headers.
 // REQUIRES: has-unix-headers
-// The ability to set a custom abort message is required to compare the assertion message.
 // XFAIL: availability-verbose_abort-missing
-// ADDITIONAL_COMPILE_FLAGS: -Wno-macro-redefined -D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_HARDENED
 
 #include <cassert>
 #include "check_assertion.h"
 
 int main(int, char**) {
   _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(true, "Should not fire");
-  TEST_LIBCPP_ASSERT_FAILURE([] {
-    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(false, "Hardened-mode assertions should fire");
-  }(), "Hardened-mode assertions should fire");
-  _LIBCPP_ASSERT_INTERNAL(false, "Debug-mode assertions should not fire");
+  TEST_LIBCPP_ASSERT_FAILURE([] { _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(false, "Should fire"); }(), "Should fire");
 
   return 0;
 }

@@ -12,36 +12,36 @@
 // Test that we encode the hardening mode in an ABI tag to avoid ODR violations
 // when linking TUs that have different values for it.
 
-// RUN: %{cxx} %s %{flags} %{compile_flags} -c -DTU1  -Wno-macro-redefined -D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_HARDENED   -o %t.tu1.o
-// RUN: %{cxx} %s %{flags} %{compile_flags} -c -DTU2  -Wno-macro-redefined -D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_DEBUG_LITE -o %t.tu2.o
-// RUN: %{cxx} %s %{flags} %{compile_flags} -c -DTU3  -Wno-macro-redefined -D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_DEBUG      -o %t.tu3.o
-// RUN: %{cxx} %s %{flags} %{compile_flags} -c -DTU4  -Wno-macro-redefined -D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_UNCHECKED  -o %t.tu4.o
-// RUN: %{cxx} %s %{flags} %{compile_flags} -c -DMAIN                                                            -o %t.main.o
+// RUN: %{cxx} %s %{flags} %{compile_flags} -c -DTU1  -Wno-macro-redefined -D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_FAST   -o %t.tu1.o
+// RUN: %{cxx} %s %{flags} %{compile_flags} -c -DTU2  -Wno-macro-redefined -D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_STRICT -o %t.tu2.o
+// RUN: %{cxx} %s %{flags} %{compile_flags} -c -DTU3  -Wno-macro-redefined -D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_DEBUG  -o %t.tu3.o
+// RUN: %{cxx} %s %{flags} %{compile_flags} -c -DTU4  -Wno-macro-redefined -D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_NONE   -o %t.tu4.o
+// RUN: %{cxx} %s %{flags} %{compile_flags} -c -DMAIN                                                                             -o %t.main.o
 // RUN: %{cxx} %t.tu1.o %t.tu2.o %t.tu3.o %t.tu4.o %t.main.o %{flags} %{link_flags} -o %t.exe
 // RUN: %{exec} %t.exe
 
-// hardened mode
+// fast hardening mode
 #ifdef TU1
 #  include <__config>
 _LIBCPP_HIDE_FROM_ABI inline int f() { return 1; }
 int tu1() { return f(); }
 #endif // TU1
 
-// safe mode
+// stricthardening mode
 #ifdef TU2
 #  include <__config>
 _LIBCPP_HIDE_FROM_ABI inline int f() { return 2; }
 int tu2() { return f(); }
 #endif // TU2
 
-// debug mode
+// debug hardening mode
 #ifdef TU3
 #  include <__config>
 _LIBCPP_HIDE_FROM_ABI inline int f() { return 3; }
 int tu3() { return f(); }
 #endif // TU3
 
-// unchecked mode
+// No hardening
 #ifdef TU4
 #  include <__config>
 _LIBCPP_HIDE_FROM_ABI inline int f() { return 4; }

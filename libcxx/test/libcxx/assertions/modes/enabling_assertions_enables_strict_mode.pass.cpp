@@ -7,7 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 // TODO(hardening): remove in LLVM 20.
-// This test ensures that enabling assertions now enables the debug-lite mode.
+// This test ensures that enabling assertions with the legacy `_LIBCPP_ENABLE_ASSERTIONS` now enables the strict
+// hardening mode.
 
 // `check_assertion.h` is only available starting from C++11 and requires Unix headers.
 // UNSUPPORTED: c++03, !has-unix-headers
@@ -19,13 +20,11 @@
 #include "check_assertion.h"
 
 int main(int, char**) {
-  static_assert(_LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_DEBUG_LITE,
-      "Debug-lite mode should be implicitly enabled");
+  static_assert(
+      _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_STRICT, "Strict hardening mode should be implicitly enabled");
 
   _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(true, "Should not fire");
-  TEST_LIBCPP_ASSERT_FAILURE([] {
-    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(false, "Should fire");
-  }(), "Should fire");
+  TEST_LIBCPP_ASSERT_FAILURE([] { _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(false, "Should fire"); }(), "Should fire");
 
   return 0;
 }
