@@ -203,7 +203,7 @@ end
 ! CHECK:         %[[FCTRES:.*]] = fir.alloca !fir.complex<4>
 ! CHECK:         %[[A_VAL:.*]] = fir.load %[[A]] : !fir.ref<!fir.complex<4>>
 ! CHECK:         %[[B_VAL:.*]] = fir.load %[[B]] : !fir.ref<!fir.complex<4>>
-! CHECK:         %[[ADD:.*]] = fir.addc %[[A_VAL]], %[[B_VAL]] : !fir.complex<4>
+! CHECK:         %[[ADD:.*]] = fir.addc %[[A_VAL]], %[[B_VAL]] {fastmath = #arith.fastmath<contract>} : !fir.complex<4>
 ! CHECK:         fir.store %[[ADD]] to %[[FCTRES]] : !fir.ref<!fir.complex<4>>
 ! CHECK:         %[[RET:.*]] = fir.load %[[FCTRES]] : !fir.ref<!fir.complex<4>>
 ! CHECK:         return %[[RET]] : !fir.complex<4>
@@ -219,7 +219,7 @@ end
 ! CHECK:         %[[FCTRES:.*]] = fir.alloca !fir.complex<4>
 ! CHECK:         %[[A_VAL:.*]] = fir.load %[[A]] : !fir.ref<!fir.complex<4>>
 ! CHECK:         %[[B_VAL:.*]] = fir.load %[[B]] : !fir.ref<!fir.complex<4>>
-! CHECK:         %[[SUB:.*]] = fir.subc %[[A_VAL]], %[[B_VAL]] : !fir.complex<4>
+! CHECK:         %[[SUB:.*]] = fir.subc %[[A_VAL]], %[[B_VAL]] {fastmath = #arith.fastmath<contract>} : !fir.complex<4>
 ! CHECK:         fir.store %[[SUB]] to %[[FCTRES]] : !fir.ref<!fir.complex<4>>
 ! CHECK:         %[[RET:.*]] = fir.load %[[FCTRES]] : !fir.ref<!fir.complex<4>>
 ! CHECK:         return %[[RET]] : !fir.complex<4>
@@ -235,7 +235,7 @@ end
 ! CHECK:         %[[FCTRES:.*]] = fir.alloca !fir.complex<4>
 ! CHECK:         %[[A_VAL:.*]] = fir.load %[[A]] : !fir.ref<!fir.complex<4>>
 ! CHECK:         %[[B_VAL:.*]] = fir.load %[[B]] : !fir.ref<!fir.complex<4>>
-! CHECK:         %[[MUL:.*]] = fir.mulc %[[A_VAL]], %[[B_VAL]] : !fir.complex<4>
+! CHECK:         %[[MUL:.*]] = fir.mulc %[[A_VAL]], %[[B_VAL]] {fastmath = #arith.fastmath<contract>} : !fir.complex<4>
 ! CHECK:         fir.store %[[MUL]] to %[[FCTRES]] : !fir.ref<!fir.complex<4>>
 ! CHECK:         %[[RET:.*]] = fir.load %[[FCTRES]] : !fir.ref<!fir.complex<4>>
 ! CHECK:         return %[[RET]] : !fir.complex<4>

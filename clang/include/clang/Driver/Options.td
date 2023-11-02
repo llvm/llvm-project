@@ -208,6 +208,8 @@ def m_riscv_Features_Group : OptionGroup<"<riscv features group>">,
                              Group<m_Group>, DocName<"RISC-V">;
 def m_ve_Features_Group : OptionGroup<"<ve features group>">,
                           Group<m_Group>, DocName<"VE">;
+def m_loongarch_Features_Group : OptionGroup<"<loongarch features group>">,
+                                 Group<m_Group>, DocName<"LoongArch">;
 
 def m_libc_Group : OptionGroup<"<m libc group>">, Group<m_mips_Features_Group>,
                    Flags<[HelpHidden]>;
@@ -4504,14 +4506,6 @@ def msave_restore : Flag<["-"], "msave-restore">, Group<m_riscv_Features_Group>,
 def mno_save_restore : Flag<["-"], "mno-save-restore">, Group<m_riscv_Features_Group>,
   HelpText<"Disable using library calls for save and restore">;
 } // let Flags = [TargetSpecific]
-def mcmodel_EQ_medlow : Flag<["-"], "mcmodel=medlow">, Group<m_Group>,
-  Visibility<[ClangOption, CC1Option]>,
-  Alias<mcmodel_EQ>, AliasArgs<["small"]>,
-  HelpText<"Equivalent to -mcmodel=small, compatible with RISC-V gcc.">;
-def mcmodel_EQ_medany : Flag<["-"], "mcmodel=medany">, Group<m_Group>,
-  Visibility<[ClangOption, CC1Option]>,
-  Alias<mcmodel_EQ>, AliasArgs<["medium"]>,
-  HelpText<"Equivalent to -mcmodel=medium, compatible with RISC-V gcc.">;
 let Flags = [TargetSpecific] in {
 def menable_experimental_extensions : Flag<["-"], "menable-experimental-extensions">, Group<m_Group>,
   HelpText<"Enable use of experimental RISC-V extensions.">;
@@ -4918,6 +4912,14 @@ def mstack_protector_guard_reg_EQ : Joined<["-"], "mstack-protector-guard-reg=">
 def mfentry : Flag<["-"], "mfentry">, HelpText<"Insert calls to fentry at function entry (x86/SystemZ only)">,
   Visibility<[ClangOption, CC1Option]>, Group<m_Group>,
   MarshallingInfoFlag<CodeGenOpts<"CallFEntry">>;
+def mlsx : Flag<["-"], "mlsx">, Group<m_loongarch_Features_Group>,
+  HelpText<"Enable Loongson SIMD Extension (LSX).">;
+def mno_lsx : Flag<["-"], "mno-lsx">, Group<m_loongarch_Features_Group>,
+  HelpText<"Disable Loongson SIMD Extension (LSX).">;
+def mlasx : Flag<["-"], "mlasx">, Group<m_loongarch_Features_Group>,
+  HelpText<"Enable Loongson Advanced SIMD Extension (LASX).">;
+def mno_lasx : Flag<["-"], "mno-lasx">, Group<m_loongarch_Features_Group>,
+  HelpText<"Disable Loongson Advanced SIMD Extension (LASX).">;
 def mnop_mcount : Flag<["-"], "mnop-mcount">, HelpText<"Generate mcount/__fentry__ calls as nops. To activate they need to be patched in.">,
   Visibility<[ClangOption, CC1Option]>, Group<m_Group>,
   MarshallingInfoFlag<CodeGenOpts<"MNopMCount">>;
@@ -8348,3 +8350,5 @@ def dxc_disable_validation : DXCFlag<"Vd">,
 def : Option<["/", "-"], "Qembed_debug", KIND_FLAG>, Group<dxc_Group>,
   Flags<[Ignored]>, Visibility<[DXCOption]>,
   HelpText<"Embed PDB in shader container (ignored)">;
+def spirv : DXCFlag<"spirv">,
+  HelpText<"Generate SPIR-V code">;

@@ -17,6 +17,7 @@
 #include "lldb/Core/ValueObjectDynamicValue.h"
 #include "lldb/Core/ValueObjectMemory.h"
 #include "lldb/Core/ValueObjectSyntheticFilter.h"
+#include "lldb/Core/ValueObjectVTable.h"
 #include "lldb/DataFormatters/DataVisualization.h"
 #include "lldb/DataFormatters/DumpValueObjectOptions.h"
 #include "lldb/DataFormatters/FormatManager.h"
@@ -3154,4 +3155,8 @@ ValueObjectSP ValueObject::Persist() {
   persistent_var_sp->m_flags |= ExpressionVariable::EVIsProgramReference;
 
   return persistent_var_sp->GetValueObject();
+}
+
+lldb::ValueObjectSP ValueObject::GetVTable() {
+  return ValueObjectVTable::Create(*this);
 }

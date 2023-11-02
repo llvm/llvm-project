@@ -4249,12 +4249,15 @@ void Sema::ActOnOpenMPRegionStart(OpenMPDirectiveKind DKind, Scope *CurScope) {
     getCurCapturedRegion()->TheCapturedDecl->addAttr(
         AlwaysInlineAttr::CreateImplicit(
             Context, {}, AlwaysInlineAttr::Keyword_forceinline));
-    Sema::CapturedParamNameType ParamsTarget[] = {
-        std::make_pair(StringRef(), QualType()) // __context with shared vars
-    };
+    SmallVector<Sema::CapturedParamNameType, 2> ParamsTarget;
+    if (getLangOpts().OpenMPIsTargetDevice)
+      ParamsTarget.push_back(std::make_pair(StringRef("dyn_ptr"), VoidPtrTy));
+    ParamsTarget.push_back(
+        std::make_pair(StringRef(), QualType())); // __context with shared vars;
     // Start a captured region for 'target' with no implicit parameters.
     ActOnCapturedRegionStart(DSAStack->getConstructLoc(), CurScope, CR_OpenMP,
-                             ParamsTarget, /*OpenMPCaptureLevel=*/1);
+                             ParamsTarget,
+                             /*OpenMPCaptureLevel=*/1);
     Sema::CapturedParamNameType ParamsTeamsOrParallel[] = {
         std::make_pair(".global_tid.", KmpInt32PtrTy),
         std::make_pair(".bound_tid.", KmpInt32PtrTy),
@@ -4293,8 +4296,13 @@ void Sema::ActOnOpenMPRegionStart(OpenMPDirectiveKind DKind, Scope *CurScope) {
     getCurCapturedRegion()->TheCapturedDecl->addAttr(
         AlwaysInlineAttr::CreateImplicit(
             Context, {}, AlwaysInlineAttr::Keyword_forceinline));
+    SmallVector<Sema::CapturedParamNameType, 2> ParamsTarget;
+    if (getLangOpts().OpenMPIsTargetDevice)
+      ParamsTarget.push_back(std::make_pair(StringRef("dyn_ptr"), VoidPtrTy));
+    ParamsTarget.push_back(
+        std::make_pair(StringRef(), QualType())); // __context with shared vars;
     ActOnCapturedRegionStart(DSAStack->getConstructLoc(), CurScope, CR_OpenMP,
-                             std::make_pair(StringRef(), QualType()),
+                             ParamsTarget,
                              /*OpenMPCaptureLevel=*/1);
     break;
   }
@@ -4499,9 +4507,11 @@ void Sema::ActOnOpenMPRegionStart(OpenMPDirectiveKind DKind, Scope *CurScope) {
     getCurCapturedRegion()->TheCapturedDecl->addAttr(
         AlwaysInlineAttr::CreateImplicit(
             Context, {}, AlwaysInlineAttr::Keyword_forceinline));
-    Sema::CapturedParamNameType ParamsTarget[] = {
-        std::make_pair(StringRef(), QualType()) // __context with shared vars
-    };
+    SmallVector<Sema::CapturedParamNameType, 2> ParamsTarget;
+    if (getLangOpts().OpenMPIsTargetDevice)
+      ParamsTarget.push_back(std::make_pair(StringRef("dyn_ptr"), VoidPtrTy));
+    ParamsTarget.push_back(
+        std::make_pair(StringRef(), QualType())); // __context with shared vars;
     // Start a captured region for 'target' with no implicit parameters.
     ActOnCapturedRegionStart(DSAStack->getConstructLoc(), CurScope, CR_OpenMP,
                              ParamsTarget, /*OpenMPCaptureLevel=*/1);
@@ -5062,18 +5072,6 @@ static bool checkNestingOfRegions(Sema &SemaRef, const DSAStackTy *Stack,
         CurrentRegion != OMPD_cancellation_point &&
         CurrentRegion != OMPD_cancel && CurrentRegion != OMPD_scan)
       return false;
-    // Checks needed for mapping "loop" construct. Please check mapLoopConstruct
-    // for a detailed explanation
-    if (SemaRef.LangOpts.OpenMP >= 50 && CurrentRegion == OMPD_loop &&
-        ((BindKind == OMPC_BIND_parallel) || (BindKind == OMPC_BIND_teams)) &&
-        (isOpenMPWorksharingDirective(ParentRegion) ||
-         ParentRegion == OMPD_loop)) {
-      int ErrorMsgNumber = (BindKind == OMPC_BIND_parallel) ? 1 : 4;
-      SemaRef.Diag(StartLoc, diag::err_omp_prohibited_region)
-          << true << getOpenMPDirectiveName(ParentRegion) << ErrorMsgNumber
-          << getOpenMPDirectiveName(CurrentRegion);
-      return true;
-    }
     if (CurrentRegion == OMPD_cancellation_point ||
         CurrentRegion == OMPD_cancel) {
       // OpenMP [2.16, Nesting of Regions]
@@ -6126,40 +6124,35 @@ processImplicitMapsWithDefaultMappers(Sema &S, DSAStackTy *Stack,
 
 bool Sema::mapLoopConstruct(llvm::SmallVector<OMPClause *> &ClausesWithoutBind,
                             ArrayRef<OMPClause *> Clauses,
-                            OpenMPBindClauseKind &BindKind,
+                            OpenMPBindClauseKind BindKind,
                             OpenMPDirectiveKind &Kind,
-                            OpenMPDirectiveKind &PrevMappedDirective,
-                            SourceLocation StartLoc, SourceLocation EndLoc,
-                            const DeclarationNameInfo &DirName,
-                            OpenMPDirectiveKind CancelRegion) {
+                            OpenMPDirectiveKind &PrevMappedDirective) {
 
   bool UseClausesWithoutBind = false;
 
   // Restricting to "#pragma omp loop bind"
   if (getLangOpts().OpenMP >= 50 && Kind == OMPD_loop) {
-
-    const OpenMPDirectiveKind ParentDirective = DSAStack->getParentDirective();
-
     if (BindKind == OMPC_BIND_unknown) {
       // Setting the enclosing teams or parallel construct for the loop
       // directive without bind clause.
       BindKind = OMPC_BIND_thread; // Default bind(thread) if binding is unknown
 
+      const OpenMPDirectiveKind ParentDirective =
+          DSAStack->getParentDirective();
       if (ParentDirective == OMPD_unknown) {
         Diag(DSAStack->getDefaultDSALocation(),
              diag::err_omp_bind_required_on_loop);
-      } else if (isOpenMPParallelDirective(ParentDirective) &&
-                 !isOpenMPTeamsDirective(ParentDirective)) {
+      } else if (ParentDirective == OMPD_parallel ||
+                 ParentDirective == OMPD_target_parallel) {
         BindKind = OMPC_BIND_parallel;
-      } else if (isOpenMPNestingTeamsDirective(ParentDirective) ||
-                 (ParentDirective == OMPD_target_teams)) {
+      } else if (ParentDirective == OMPD_teams ||
+                 ParentDirective == OMPD_target_teams) {
         BindKind = OMPC_BIND_teams;
       }
     } else {
-      // bind clause is present in loop directive. When the loop directive is
-      // changed to a new directive the bind clause is not used. So, we should
-      // set flag indicating to only use the clauses that aren't the
-      // bind clause.
+      // bind clause is present, so we should set flag indicating to only
+      // use the clauses that aren't the bind clause for the new directive that
+      // loop is lowered to.
       UseClausesWithoutBind = true;
     }
 
@@ -6220,34 +6213,25 @@ StmtResult Sema::ActOnOpenMPExecutableDirective(
     OpenMPDirectiveKind PrevMappedDirective) {
   StmtResult Res = StmtError();
   OpenMPBindClauseKind BindKind = OMPC_BIND_unknown;
-  llvm::SmallVector<OMPClause *> ClausesWithoutBind;
-  bool UseClausesWithoutBind = false;
-
   if (const OMPBindClause *BC =
           OMPExecutableDirective::getSingleClause<OMPBindClause>(Clauses))
     BindKind = BC->getBindKind();
-
-  // Variable used to note down the DirectiveKind because mapLoopConstruct may
-  // change "Kind" variable, due to mapping of "omp loop" to other directives.
-  OpenMPDirectiveKind DK = Kind;
-  if ((Kind == OMPD_loop) || (PrevMappedDirective == OMPD_loop)) {
-    UseClausesWithoutBind = mapLoopConstruct(
-        ClausesWithoutBind, Clauses, BindKind, Kind, PrevMappedDirective,
-        StartLoc, EndLoc, DirName, CancelRegion);
-    DK = OMPD_loop;
-  }
-
   // First check CancelRegion which is then used in checkNestingOfRegions.
   if (checkCancelRegion(*this, Kind, CancelRegion, StartLoc) ||
-      checkNestingOfRegions(*this, DSAStack, DK, DirName, CancelRegion,
-                            BindKind, StartLoc)) {
+      checkNestingOfRegions(*this, DSAStack, Kind, DirName, CancelRegion,
+                            BindKind, StartLoc))
     return StmtError();
-  }
 
   // Report affected OpenMP target offloading behavior when in HIP lang-mode.
   if (getLangOpts().HIP && (isOpenMPTargetExecutionDirective(Kind) ||
                             isOpenMPTargetDataManagementDirective(Kind)))
     Diag(StartLoc, diag::warn_hip_omp_target_directives);
+
+  llvm::SmallVector<OMPClause *> ClausesWithoutBind;
+  bool UseClausesWithoutBind = false;
+
+  UseClausesWithoutBind = mapLoopConstruct(ClausesWithoutBind, Clauses,
+                                           BindKind, Kind, PrevMappedDirective);
 
   llvm::SmallVector<OMPClause *, 8> ClausesWithImplicit;
   VarsWithInheritedDSAType VarsWithInheritedDSA;
@@ -19682,7 +19666,7 @@ static bool actOnOMPReductionKindClause(
       if (ConstantLengthOASE && !SingleElement) {
         for (llvm::APSInt &Size : ArraySizes)
           PrivateTy = Context.getConstantArrayType(PrivateTy, Size, nullptr,
-                                                   ArrayType::Normal,
+                                                   ArraySizeModifier::Normal,
                                                    /*IndexTypeQuals=*/0);
       }
     }
@@ -19709,7 +19693,7 @@ static bool actOnOMPReductionKindClause(
           Type,
           new (Context)
               OpaqueValueExpr(ELoc, Context.getSizeType(), VK_PRValue),
-          ArrayType::Normal, /*IndexTypeQuals=*/0, SourceRange());
+          ArraySizeModifier::Normal, /*IndexTypeQuals=*/0, SourceRange());
     } else if (!ASE && !OASE &&
                Context.getAsArrayType(D->getType().getNonReferenceType())) {
       PrivateTy = D->getType().getNonReferenceType();
@@ -19947,9 +19931,9 @@ static bool actOnOMPReductionKindClause(
         // Build temp array for prefix sum.
         auto *Dim = new (S.Context)
             OpaqueValueExpr(ELoc, S.Context.getSizeType(), VK_PRValue);
-        QualType ArrayTy =
-            S.Context.getVariableArrayType(PrivateTy, Dim, ArrayType::Normal,
-                                           /*IndexTypeQuals=*/0, {ELoc, ELoc});
+        QualType ArrayTy = S.Context.getVariableArrayType(
+            PrivateTy, Dim, ArraySizeModifier::Normal,
+            /*IndexTypeQuals=*/0, {ELoc, ELoc});
         VarDecl *TempArrayVD =
             buildVarDecl(S, ELoc, ArrayTy, D->getName(),
                          D->hasAttrs() ? &D->getAttrs() : nullptr);
@@ -22627,12 +22611,12 @@ void Sema::ActOnOpenMPDeclareReductionInitializerEnd(Decl *D, Expr *Initializer,
   PopFunctionScopeInfo();
 
   if (Initializer != nullptr) {
-    DRD->setInitializer(Initializer, OMPDeclareReductionDecl::CallInit);
+    DRD->setInitializer(Initializer, OMPDeclareReductionInitKind::Call);
   } else if (OmpPrivParm->hasInit()) {
     DRD->setInitializer(OmpPrivParm->getInit(),
                         OmpPrivParm->isDirectInit()
-                            ? OMPDeclareReductionDecl::DirectInit
-                            : OMPDeclareReductionDecl::CopyInit);
+                            ? OMPDeclareReductionInitKind::Direct
+                            : OMPDeclareReductionInitKind::Copy);
   } else {
     DRD->setInvalidDecl();
   }

@@ -1775,9 +1775,10 @@ llvm::Constant *ConstantEmitter::tryEmitPrivate(const Expr *E,
                                                 QualType destType) {
   assert(!destType->isVoidType() && "can't emit a void constant");
 
-  if (llvm::Constant *C =
-          ConstExprEmitter(*this).Visit(const_cast<Expr *>(E), destType))
-    return C;
+  if (!destType->isReferenceType())
+    if (llvm::Constant *C =
+            ConstExprEmitter(*this).Visit(const_cast<Expr *>(E), destType))
+      return C;
 
   Expr::EvalResult Result;
 
@@ -1929,8 +1930,9 @@ ConstantLValueEmitter::tryEmitAbsolute(llvm::Type *destTy) {
   // FIXME: signedness depends on the original integer type.
   auto intptrTy = CGM.getDataLayout().getIntPtrType(destPtrTy);
   llvm::Constant *C;
-  C = llvm::ConstantExpr::getIntegerCast(getOffset(), intptrTy,
-                                         /*isSigned*/ false);
+  C = llvm::ConstantFoldIntegerCast(getOffset(), intptrTy, /*isSigned*/ false,
+                                    CGM.getDataLayout());
+  assert(C && "Must have folded, as Offset is a ConstantInt");
   C = llvm::ConstantExpr::getIntToPtr(C, destPtrTy);
   return C;
 }
@@ -2151,6 +2153,9 @@ llvm::Constant *ConstantEmitter::tryEmitPrivate(const APValue &Value,
         Inits[I] = llvm::ConstantInt::get(CGM.getLLVMContext(), Elt.getInt());
       else if (Elt.isFloat())
         Inits[I] = llvm::ConstantFP::get(CGM.getLLVMContext(), Elt.getFloat());
+      else if (Elt.isIndeterminate())
+        Inits[I] = llvm::UndefValue::get(CGM.getTypes().ConvertType(
+            DestType->castAs<VectorType>()->getElementType()));
       else
         llvm_unreachable("unsupported vector element type");
     }

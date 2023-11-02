@@ -114,8 +114,8 @@ static void exitWithErrorCode(std::error_code EC, StringRef Whence = "") {
 
 namespace {
 enum ProfileKinds { instr, sample, memory };
-enum FailureMode { failIfAnyAreInvalid, failIfAllAreInvalid };
-}
+enum FailureMode { warnOnly, failIfAnyAreInvalid, failIfAllAreInvalid };
+} // namespace
 
 static void warnOrExitGivenError(FailureMode FailMode, std::error_code EC,
                                  StringRef Whence = "") {
@@ -314,7 +314,22 @@ static void loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
   }
 
   auto FS = vfs::getRealFileSystem();
-  auto ReaderOrErr = InstrProfReader::create(Input.Filename, *FS, Correlator);
+  // TODO: This only saves the first non-fatal error from InstrProfReader, and
+  // then added to WriterContext::Errors. However, this is not extensible, if
+  // we have more non-fatal errors from InstrProfReader in the future. How
+  // should this interact with different -failure-mode?
+  std::optional<std::pair<Error, std::string>> ReaderWarning;
+  auto Warn = [&](Error E) {
+    if (ReaderWarning) {
+      consumeError(std::move(E));
+      return;
+    }
+    // Only show the first time an error occurs in this file.
+    auto [ErrCode, Msg] = InstrProfError::take(std::move(E));
+    ReaderWarning = {make_error<InstrProfError>(ErrCode, Msg), Filename};
+  };
+  auto ReaderOrErr =
+      InstrProfReader::create(Input.Filename, *FS, Correlator, Warn);
   if (Error E = ReaderOrErr.takeError()) {
     // Skip the empty profiles by returning silently.
     auto [ErrCode, Msg] = InstrProfError::take(std::move(E));
@@ -362,14 +377,23 @@ static void loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
           Traces, Reader->getTemporalProfTraceStreamSize());
   }
   if (Reader->hasError()) {
-    if (Error E = Reader->getError())
+    if (Error E = Reader->getError()) {
       WC->Errors.emplace_back(std::move(E), Filename);
+      return;
+    }
   }
 
   std::vector<llvm::object::BuildID> BinaryIds;
-  if (Error E = Reader->readBinaryIds(BinaryIds))
+  if (Error E = Reader->readBinaryIds(BinaryIds)) {
     WC->Errors.emplace_back(std::move(E), Filename);
+    return;
+  }
   WC->Writer.addBinaryIds(BinaryIds);
+
+  if (ReaderWarning) {
+    WC->Errors.emplace_back(std::move(ReaderWarning->first),
+                            ReaderWarning->second);
+  }
 }
 
 /// Merge the \p Src writer context into \p Dst.
@@ -426,8 +450,9 @@ mergeInstrProfile(const WeightedFileVector &Inputs, StringRef DebugInfoFilename,
 
   std::unique_ptr<InstrProfCorrelator> Correlator;
   if (!DebugInfoFilename.empty()) {
-    if (auto Err =
-            InstrProfCorrelator::get(DebugInfoFilename).moveInto(Correlator))
+    if (auto Err = InstrProfCorrelator::get(DebugInfoFilename,
+                                            InstrProfCorrelator::DEBUG_INFO)
+                       .moveInto(Correlator))
       exitWithError(std::move(Err), DebugInfoFilename);
     if (auto Err = Correlator->correlateProfileData(MaxDbgCorrelationWarnings))
       exitWithError(std::move(Err), DebugInfoFilename);
@@ -492,7 +517,7 @@ mergeInstrProfile(const WeightedFileVector &Inputs, StringRef DebugInfoFilename,
       warn(toString(std::move(ErrorPair.first)), ErrorPair.second);
     }
   }
-  if (NumErrors == Inputs.size() ||
+  if ((NumErrors == Inputs.size() && FailMode == failIfAllAreInvalid) ||
       (NumErrors > 0 && FailMode == failIfAnyAreInvalid))
     exitWithError("no profile can be merged");
 
@@ -1202,10 +1227,12 @@ static int merge_main(int argc, const char *argv[]) {
                      "GCC encoding (only meaningful for -sample)")));
   cl::opt<FailureMode> FailureMode(
       "failure-mode", cl::init(failIfAnyAreInvalid), cl::desc("Failure mode:"),
-      cl::values(clEnumValN(failIfAnyAreInvalid, "any",
-                            "Fail if any profile is invalid."),
-                 clEnumValN(failIfAllAreInvalid, "all",
-                            "Fail only if all profiles are invalid.")));
+      cl::values(
+          clEnumValN(warnOnly, "warn", "Do not fail and just print warnings."),
+          clEnumValN(failIfAnyAreInvalid, "any",
+                     "Fail if any profile is invalid."),
+          clEnumValN(failIfAllAreInvalid, "all",
+                     "Fail only if all profiles are invalid.")));
   cl::opt<bool> OutputSparse("sparse", cl::init(false),
       cl::desc("Generate a sparse profile (only meaningful for -instr)"));
   cl::opt<unsigned> NumThreads(
@@ -2893,7 +2920,9 @@ static int showDebugInfoCorrelation(const std::string &Filename,
   if (SFormat == ShowFormat::Json)
     exitWithError("JSON output is not supported for debug info correlation");
   std::unique_ptr<InstrProfCorrelator> Correlator;
-  if (auto Err = InstrProfCorrelator::get(Filename).moveInto(Correlator))
+  if (auto Err =
+          InstrProfCorrelator::get(Filename, InstrProfCorrelator::DEBUG_INFO)
+              .moveInto(Correlator))
     exitWithError(std::move(Err), Filename);
   if (SFormat == ShowFormat::Yaml) {
     if (auto Err = Correlator->dumpYaml(MaxDbgCorrelationWarnings, OS))

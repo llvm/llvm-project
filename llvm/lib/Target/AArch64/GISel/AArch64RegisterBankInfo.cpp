@@ -245,9 +245,10 @@ AArch64RegisterBankInfo::getRegBankFromRegClass(const TargetRegisterClass &RC,
   case AArch64::FPR32_with_hsub_in_FPR16_loRegClassID:
   case AArch64::FPR32RegClassID:
   case AArch64::FPR64RegClassID:
-  case AArch64::FPR64_loRegClassID:
   case AArch64::FPR128RegClassID:
+  case AArch64::FPR64_loRegClassID:
   case AArch64::FPR128_loRegClassID:
+  case AArch64::FPR128_0to7RegClassID:
   case AArch64::DDRegClassID:
   case AArch64::DDDRegClassID:
   case AArch64::DDDDRegClassID:
@@ -887,9 +888,12 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       break;
     }
     break;
-  case TargetOpcode::G_INDEXED_LOAD:
   case TargetOpcode::G_INDEXED_SEXTLOAD:
-  case TargetOpcode::G_INDEXED_ZEXTLOAD: {
+  case TargetOpcode::G_INDEXED_ZEXTLOAD:
+    // These should always be GPR.
+    OpRegBankIdx[0] = PMI_FirstGPR;
+    break;
+  case TargetOpcode::G_INDEXED_LOAD: {
     if (isLoadFromFPType(MI))
       OpRegBankIdx[0] = PMI_FirstFPR;
     break;

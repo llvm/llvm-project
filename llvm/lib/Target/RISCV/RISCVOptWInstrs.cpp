@@ -84,10 +84,9 @@ FunctionPass *llvm::createRISCVOptWInstrsPass() {
 static bool vectorPseudoHasAllNBitUsers(const MachineOperand &UserOp,
                                         unsigned Bits) {
   const MachineInstr &MI = *UserOp.getParent();
-  const RISCVVPseudosTable::PseudoInfo *PseudoInfo =
-      RISCVVPseudosTable::getPseudoInfo(MI.getOpcode());
+  unsigned MCOpcode = RISCV::getRVVMCOpcode(MI.getOpcode());
 
-  if (!PseudoInfo)
+  if (!MCOpcode)
     return false;
 
   const MCInstrDesc &MCID = MI.getDesc();
@@ -101,7 +100,7 @@ static bool vectorPseudoHasAllNBitUsers(const MachineOperand &UserOp,
     return false;
 
   auto NumDemandedBits =
-      RISCV::getVectorLowDemandedScalarBits(PseudoInfo->BaseInstr, Log2SEW);
+      RISCV::getVectorLowDemandedScalarBits(MCOpcode, Log2SEW);
   return NumDemandedBits && Bits >= *NumDemandedBits;
 }
 
@@ -360,6 +359,10 @@ static bool isSignExtendingOpW(const MachineInstr &MI,
   // An ORI with an >11 bit immediate (negative 12-bit) will set bits 63:11.
   case RISCV::ORI:
     return !isUInt<11>(MI.getOperand(2).getImm());
+  // A bseti with X0 is sign extended if the immediate is less than 31.
+  case RISCV::BSETI:
+    return MI.getOperand(2).getImm() < 31 &&
+           MI.getOperand(1).getReg() == RISCV::X0;
   // Copying from X0 produces zero.
   case RISCV::COPY:
     return MI.getOperand(1).getReg() == RISCV::X0;

@@ -8,42 +8,52 @@
 
 #include "mlir/Dialect/Tensor/Transforms/SubsetInsertionOpInterfaceImpl.h"
 
-#include "mlir/Dialect/Bufferization/IR/SubsetInsertionOpInterface.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/Interfaces/SubsetOpInterface.h"
+#include "mlir/Interfaces/ValueBoundsOpInterface.h"
 
 using namespace mlir;
-using namespace mlir::bufferization;
 using namespace mlir::tensor;
 
 namespace {
 
+struct ExtractSliceOpSubsetOpInterface
+    : public SubsetOpInterface::ExternalModel<ExtractSliceOpSubsetOpInterface,
+                                              tensor::ExtractSliceOp> {
+  FailureOr<HyperrectangularSlice>
+  getAccessedHyperrectangularSlice(Operation *op) const {
+    return HyperrectangularSlice(cast<OffsetSizeAndStrideOpInterface>(op));
+  }
+};
+
+struct ExtractSliceOpSubsetExtractionOpInterface
+    : public SubsetExtractionOpInterface::ExternalModel<
+          ExtractSliceOpSubsetExtractionOpInterface, tensor::ExtractSliceOp> {
+  OpOperand &getSourceOperand(Operation *op) const {
+    return cast<tensor::ExtractSliceOp>(op).getSourceMutable();
+  }
+};
+
 template <typename OpTy>
-struct InsertSliceLikeOpInterface
+struct InsertSliceLikeOpSubsetOpInterface
+    : public SubsetOpInterface::ExternalModel<
+          InsertSliceLikeOpSubsetOpInterface<OpTy>, OpTy> {
+  FailureOr<HyperrectangularSlice>
+  getAccessedHyperrectangularSlice(Operation *op) const {
+    return HyperrectangularSlice(cast<OffsetSizeAndStrideOpInterface>(op));
+  }
+};
+
+template <typename OpTy>
+struct InsertSliceLikeOpSubsetInsertionOpInterface
     : public SubsetInsertionOpInterface::ExternalModel<
-          InsertSliceLikeOpInterface<OpTy>, OpTy> {
+          InsertSliceLikeOpSubsetInsertionOpInterface<OpTy>, OpTy> {
   OpOperand &getSourceOperand(Operation *op) const {
     return cast<OpTy>(op).getSourceMutable();
   }
 
   OpOperand &getDestinationOperand(Operation *op) const {
     return cast<OpTy>(op).getDestMutable();
-  }
-
-  /// Return "true" if `insertSliceOp` inserts into a subset that is equivalent
-  /// to the subset defined by `candidate`. `equivalenceFn` is used to determine
-  /// equivalence of tensors.
-  bool
-  isEquivalentSubset(Operation *op, Value candidate,
-                     function_ref<bool(Value, Value)> equivalenceFn) const {
-    auto insertSliceOp = cast<OpTy>(op);
-    // Look for a matching tensor.extract_slice op.
-    auto extractSliceOp = candidate.getDefiningOp<tensor::ExtractSliceOp>();
-    if (!extractSliceOp)
-      return false;
-    if (!equivalenceFn(extractSliceOp.getSource(), insertSliceOp.getDest()))
-      return false;
-    return sameOffsetsSizesAndStrides(extractSliceOp, insertSliceOp,
-                                      isEqualConstantIntOrValue);
   }
 
   Value buildSubsetExtraction(Operation *op, OpBuilder &builder,
@@ -74,12 +84,22 @@ struct InsertSliceLikeOpInterface
 
 } // namespace
 
-void mlir::tensor::registerSubsetInsertionOpInterfaceExternalModels(
+void mlir::tensor::registerSubsetOpInterfaceExternalModels(
     DialectRegistry &registry) {
   registry.addExtension(+[](MLIRContext *ctx, tensor::TensorDialect *dialect) {
-    InsertSliceOp::attachInterface<InsertSliceLikeOpInterface<InsertSliceOp>>(
+    // Note: `SubsetExtractionOpInterface` and `SubsetInsertionOpInterface`
+    // require `SubsetOpInterface`.
+    ExtractSliceOp::attachInterface<ExtractSliceOpSubsetOpInterface>(*ctx);
+    ExtractSliceOp::attachInterface<ExtractSliceOpSubsetExtractionOpInterface>(
         *ctx);
+    InsertSliceOp::attachInterface<
+        InsertSliceLikeOpSubsetOpInterface<InsertSliceOp>>(*ctx);
+    InsertSliceOp::attachInterface<
+        InsertSliceLikeOpSubsetInsertionOpInterface<InsertSliceOp>>(*ctx);
     ParallelInsertSliceOp::attachInterface<
-        InsertSliceLikeOpInterface<ParallelInsertSliceOp>>(*ctx);
+        InsertSliceLikeOpSubsetOpInterface<ParallelInsertSliceOp>>(*ctx);
+    ParallelInsertSliceOp::attachInterface<
+        InsertSliceLikeOpSubsetInsertionOpInterface<ParallelInsertSliceOp>>(
+        *ctx);
   });
 }

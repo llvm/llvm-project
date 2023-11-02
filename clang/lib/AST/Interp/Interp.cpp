@@ -216,7 +216,7 @@ bool CheckLive(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
 }
 
 bool CheckDummy(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
-  return !Ptr.isDummy();
+  return !Ptr.isZero() && !Ptr.isDummy();
 }
 
 bool CheckNull(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
@@ -439,7 +439,8 @@ bool CheckPure(InterpState &S, CodePtr OpPC, const CXXMethodDecl *MD) {
 static void DiagnoseUninitializedSubobject(InterpState &S, const SourceInfo &SI,
                                            const FieldDecl *SubObjDecl) {
   assert(SubObjDecl && "Subobject declaration does not exist");
-  S.FFDiag(SI, diag::note_constexpr_uninitialized) << SubObjDecl;
+  S.FFDiag(SI, diag::note_constexpr_uninitialized)
+      << /*(name)*/ 1 << SubObjDecl;
   S.Note(SubObjDecl->getLocation(),
          diag::note_constexpr_subobject_declared_here);
 }

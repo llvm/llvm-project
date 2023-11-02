@@ -8,8 +8,10 @@
 
 #include "PreferMemberInitializerCheck.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/Decl.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Lexer.h"
+#include "llvm/ADT/DenseMap.h"
 
 using namespace clang::ast_matchers;
 
@@ -54,74 +56,112 @@ static bool shouldBeDefaultMemberInitializer(const Expr *Value) {
 }
 
 namespace {
+
 AST_MATCHER_P(FieldDecl, indexNotLessThan, unsigned, Index) {
   return Node.getFieldIndex() >= Index;
 }
+
+enum class AssignedLevel {
+  // Field is not assigned.
+  None,
+  // Field is assigned.
+  Default,
+  // Assignment of field has side effect:
+  // - assign to reference.
+  // FIXME: support other side effect.
+  HasSideEffect,
+  // Assignment of field has data dependence.
+  HasDependence,
+};
+
 } // namespace
+
+static bool canAdvanceAssignment(AssignedLevel Level) {
+  return Level == AssignedLevel::None || Level == AssignedLevel::Default;
+}
 
 // Checks if Field is initialised using a field that will be initialised after
 // it.
 // TODO: Probably should guard against function calls that could have side
-// effects or if they do reference another field that's initialized before this
-// field, but is modified before the assignment.
-static bool isSafeAssignment(const FieldDecl *Field, const Expr *Init,
-                             const CXXConstructorDecl *Context) {
+// effects or if they do reference another field that's initialized before
+// this field, but is modified before the assignment.
+static void updateAssignmentLevel(
+    const FieldDecl *Field, const Expr *Init, const CXXConstructorDecl *Ctor,
+    llvm::DenseMap<const FieldDecl *, AssignedLevel> &AssignedFields) {
+  auto It = AssignedFields.find(Field);
+  if (It == AssignedFields.end())
+    It = AssignedFields.insert({Field, AssignedLevel::None}).first;
+
+  if (!canAdvanceAssignment(It->second))
+    // fast path for already decided field.
+    return;
+
+  if (Field->getType().getCanonicalType()->isReferenceType()) {
+    // assign to reference type twice cannot be simplified to once.
+    It->second = AssignedLevel::HasSideEffect;
+    return;
+  }
 
   auto MemberMatcher =
       memberExpr(hasObjectExpression(cxxThisExpr()),
                  member(fieldDecl(indexNotLessThan(Field->getFieldIndex()))));
-
   auto DeclMatcher = declRefExpr(
-      to(varDecl(unless(parmVarDecl()), hasDeclContext(equalsNode(Context)))));
-
-  return match(expr(anyOf(MemberMatcher, DeclMatcher,
-                          hasDescendant(MemberMatcher),
-                          hasDescendant(DeclMatcher))),
-               *Init, Field->getASTContext())
-      .empty();
+      to(varDecl(unless(parmVarDecl()), hasDeclContext(equalsNode(Ctor)))));
+  const bool HasDependence = !match(expr(anyOf(MemberMatcher, DeclMatcher,
+                                               hasDescendant(MemberMatcher),
+                                               hasDescendant(DeclMatcher))),
+                                    *Init, Field->getASTContext())
+                                  .empty();
+  if (HasDependence) {
+    It->second = AssignedLevel::HasDependence;
+    return;
+  }
 }
 
-static std::pair<const FieldDecl *, const Expr *>
+struct AssignmentPair {
+  const FieldDecl *Field;
+  const Expr *Init;
+};
+
+static std::optional<AssignmentPair>
 isAssignmentToMemberOf(const CXXRecordDecl *Rec, const Stmt *S,
                        const CXXConstructorDecl *Ctor) {
   if (const auto *BO = dyn_cast<BinaryOperator>(S)) {
     if (BO->getOpcode() != BO_Assign)
-      return std::make_pair(nullptr, nullptr);
+      return {};
 
     const auto *ME = dyn_cast<MemberExpr>(BO->getLHS()->IgnoreParenImpCasts());
     if (!ME)
-      return std::make_pair(nullptr, nullptr);
+      return {};
 
     const auto *Field = dyn_cast<FieldDecl>(ME->getMemberDecl());
     if (!Field)
-      return std::make_pair(nullptr, nullptr);
+      return {};
 
     if (!isa<CXXThisExpr>(ME->getBase()))
-      return std::make_pair(nullptr, nullptr);
+      return {};
     const Expr *Init = BO->getRHS()->IgnoreParenImpCasts();
-    if (isSafeAssignment(Field, Init, Ctor))
-      return std::make_pair(Field, Init);
-  } else if (const auto *COCE = dyn_cast<CXXOperatorCallExpr>(S)) {
+    return AssignmentPair{Field, Init};
+  }
+  if (const auto *COCE = dyn_cast<CXXOperatorCallExpr>(S)) {
     if (COCE->getOperator() != OO_Equal)
-      return std::make_pair(nullptr, nullptr);
+      return {};
 
     const auto *ME =
         dyn_cast<MemberExpr>(COCE->getArg(0)->IgnoreParenImpCasts());
     if (!ME)
-      return std::make_pair(nullptr, nullptr);
+      return {};
 
     const auto *Field = dyn_cast<FieldDecl>(ME->getMemberDecl());
     if (!Field)
-      return std::make_pair(nullptr, nullptr);
+      return {};
 
     if (!isa<CXXThisExpr>(ME->getBase()))
-      return std::make_pair(nullptr, nullptr);
+      return {};
     const Expr *Init = COCE->getArg(1)->IgnoreParenImpCasts();
-    if (isSafeAssignment(Field, Init, Ctor))
-      return std::make_pair(Field, Init);
+    return AssignmentPair{Field, Init};
   }
-
-  return std::make_pair(nullptr, nullptr);
+  return {};
 }
 
 PreferMemberInitializerCheck::PreferMemberInitializerCheck(
@@ -156,6 +196,12 @@ void PreferMemberInitializerCheck::check(
   const CXXRecordDecl *Class = Ctor->getParent();
   bool FirstToCtorInits = true;
 
+  llvm::DenseMap<const FieldDecl *, AssignedLevel> AssignedFields{};
+
+  for (const CXXCtorInitializer *Init : Ctor->inits())
+    if (FieldDecl *Field = Init->getMember())
+      updateAssignmentLevel(Field, Init->getInit(), Ctor, AssignedFields);
+
   for (const Stmt *S : Body->body()) {
     if (S->getBeginLoc().isMacroID()) {
       StringRef MacroName = Lexer::getImmediateMacroName(
@@ -175,10 +221,14 @@ void PreferMemberInitializerCheck::check(
         return;
     }
 
-    const FieldDecl *Field = nullptr;
-    const Expr *InitValue = nullptr;
-    std::tie(Field, InitValue) = isAssignmentToMemberOf(Class, S, Ctor);
-    if (!Field)
+    std::optional<AssignmentPair> AssignmentToMember =
+        isAssignmentToMemberOf(Class, S, Ctor);
+    if (!AssignmentToMember)
+      continue;
+    const FieldDecl *Field = AssignmentToMember->Field;
+    const Expr *InitValue = AssignmentToMember->Init;
+    updateAssignmentLevel(Field, InitValue, Ctor, AssignedFields);
+    if (!canAdvanceAssignment(AssignedFields[Field]))
       continue;
     const bool IsInDefaultMemberInitializer =
         IsUseDefaultMemberInitEnabled && getLangOpts().CPlusPlus11 &&

@@ -54,7 +54,6 @@ def BitFieldConstantConversion : DiagGroup<"bitfield-constant-conversion",
                                            [SingleBitBitFieldConstantConversion]>;
 def BitFieldEnumConversion : DiagGroup<"bitfield-enum-conversion">;
 def BitFieldWidth : DiagGroup<"bitfield-width">;
-def BitFieldType : DiagGroup<"bitfield-type">;
 def CompoundTokenSplitByMacro : DiagGroup<"compound-token-split-by-macro">;
 def CompoundTokenSplitBySpace : DiagGroup<"compound-token-split-by-space">;
 def CompoundTokenSplit : DiagGroup<"compound-token-split",
@@ -415,7 +414,11 @@ def : DiagGroup<"c++2a-compat-pedantic", [CXX20CompatPedantic]>;
 def ExitTimeDestructors : DiagGroup<"exit-time-destructors">;
 def FlexibleArrayExtensions : DiagGroup<"flexible-array-extensions">;
 def FourByteMultiChar : DiagGroup<"four-char-constants">;
-def GlobalConstructors : DiagGroup<"global-constructors">;
+def GlobalConstructors : DiagGroup<"global-constructors"> {
+ code Documentation = [{
+Emit a warning for each variable declaration that generates code run at startup.
+ }];
+}
 def BitwiseConditionalParentheses: DiagGroup<"bitwise-conditional-parentheses">;
 def BitwiseOpParentheses: DiagGroup<"bitwise-op-parentheses">;
 def LogicalOpParentheses: DiagGroup<"logical-op-parentheses">;
