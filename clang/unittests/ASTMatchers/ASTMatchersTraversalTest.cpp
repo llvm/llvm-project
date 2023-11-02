@@ -613,10 +613,10 @@ void f(int N) {
     [&a]() {};
 }
 )cpp";
-  EXPECT_FALSE(
+  EXPECT_TRUE(
       matches(Code, traverse(TK_AsIs, lambdaExpr(hasDescendant(expr())))));
-  EXPECT_FALSE(matches(Code, traverse(TK_IgnoreUnlessSpelledInSource,
-                                      lambdaExpr(hasDescendant(expr())))));
+  EXPECT_TRUE(matches(Code, traverse(TK_IgnoreUnlessSpelledInSource,
+                                     lambdaExpr(hasDescendant(expr())))));
 }
 
 TEST(Matcher, MatchesCoroutine) {
