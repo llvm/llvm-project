@@ -265,6 +265,29 @@ end subroutine omp_target_device_ptr
    !CHECK: }
 end subroutine omp_target_device_addr
 
+
+!===============================================================================
+! Target Data with unstructured code
+!===============================================================================
+!CHECK-LABEL: func.func @_QPsb
+subroutine sb
+   integer :: i = 1
+   integer :: j = 11
+!CHECK: omp.target_data map_entries(%{{.*}}, %{{.*}} : !fir.ref<i32>, !fir.ref<i32>)
+   !$omp target data map(tofrom: i, j)
+     j = j - 1
+!CHECK: %[[J_VAL:.*]] = arith.subi
+!CHECK: hlfir.assign %[[J_VAL]]
+!CHECK: cf.br ^[[BB:.*]]
+!CHECK: ^[[BB]]:
+     goto 20
+20   i = i + 1
+!CHECK: %[[I_VAL:.*]] = arith.addi
+!CHECK: hlfir.assign %[[I_VAL]]
+!CHECK: omp.terminator
+   !$omp end target data
+end subroutine
+
 !===============================================================================
 ! Target with parallel loop
 !===============================================================================
