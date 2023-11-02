@@ -218,8 +218,7 @@ body:             |
 # GFX9: [[REG_SEQUENCE2:%[0-9]+]]:vreg_64 = REG_SEQUENCE %{{[0-9]+}}, %subreg.sub0, %{{[0-9]+}}, %subreg.sub1
 # GFX9: [[GLOBAL_LOAD_DWORDX4_:%[0-9]+]]:vreg_128_align2 = GLOBAL_LOAD_DWORDX4 [[REG_SEQUENCE2]], -3072, 0
 # GFX9: [[GLOBAL_LOAD_DWORDX4_1:%[0-9]+]]:vreg_128_align2 = GLOBAL_LOAD_DWORDX4 [[REG_SEQUENCE2]], 0, 0
-# GFX9: [[REG_SEQUENCE5:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE %{{[0-9]+}}, %subreg.sub0, %{{[0-9]+}}, %subreg.sub1
-# GFX9: [[GLOBAL_LOAD_DWORDX4_2:%[0-9]+]]:vreg_128_align2 = GLOBAL_LOAD_DWORDX4 [[REG_SEQUENCE5]], 0, 0
+# GFX9: [[GLOBAL_LOAD_DWORDX4_2:%[0-9]+]]:vreg_128_align2 = GLOBAL_LOAD_DWORDX4 [[REG_SEQUENCE2]], -4096, 0
 
 name: offset0_rebased
 body:             |
@@ -246,10 +245,9 @@ body:             |
 
 # GFX9-LABEL: name: offset0_base
 # GFX9: [[REG_SEQUENCE2:%[0-9]+]]:vreg_64 = REG_SEQUENCE %{{[0-9]+}}, %subreg.sub0, %{{[0-9]+}}, %subreg.sub1
-# GFX9: [[GLOBAL_LOAD_DWORDX4_:%[0-9]+]]:vreg_128_align2 = GLOBAL_LOAD_DWORDX4 [[REG_SEQUENCE2]], -1024, 0
-# GFX9: [[GLOBAL_LOAD_DWORDX4_1:%[0-9]+]]:vreg_128_align2 = GLOBAL_LOAD_DWORDX4 [[REG_SEQUENCE2]], 0, 0
-# GFX9: [[REG_SEQUENCE5:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE %{{[0-9]+}}, %subreg.sub0, %{{[0-9]+}}, %subreg.sub1
-# GFX9: [[GLOBAL_LOAD_DWORDX4_2:%[0-9]+]]:vreg_128_align2 = GLOBAL_LOAD_DWORDX4 [[REG_SEQUENCE5]], 0, 0
+# GFX9: [[GLOBAL_LOAD_DWORDX4_:%[0-9]+]]:vreg_128_align2 = GLOBAL_LOAD_DWORDX4 [[REG_SEQUENCE2]], 2048, 0
+# GFX9: [[GLOBAL_LOAD_DWORDX4_1:%[0-9]+]]:vreg_128_align2 = GLOBAL_LOAD_DWORDX4 [[REG_SEQUENCE2]], 3072, 0
+# GFX9: [[GLOBAL_LOAD_DWORDX4_2:%[0-9]+]]:vreg_128_align2 = GLOBAL_LOAD_DWORDX4 [[REG_SEQUENCE2]], 0, 0
 
 name: offset0_base
 body:             |
@@ -276,13 +274,12 @@ body:             |
 ---
 
 # GFX9-LABEL: name: two_bases
-# GFX9: [[REG_SEQUENCE2:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE %{{[0-9]+}}, %subreg.sub0, %{{[0-9]+}}, %subreg.sub1
-# GFX9: [[GLOBAL_LOAD_DWORDX4_:%[0-9]+]]:vreg_128_align2 = GLOBAL_LOAD_DWORDX4 [[REG_SEQUENCE2]], 0, 0
+# GFX9: [[REG_SEQUENCE2:%[0-9]+]]:vreg_64 = REG_SEQUENCE %{{[0-9]+}}, %subreg.sub0, %{{[0-9]+}}, %subreg.sub1
+# GFX9: [[GLOBAL_LOAD_DWORDX4_:%[0-9]+]]:vreg_128_align2 = GLOBAL_LOAD_DWORDX4 [[REG_SEQUENCE2]], -4096, 0
+# GFX9: [[GLOBAL_LOAD_DWORDX4_1:%[0-9]+]]:vreg_128_align2 = GLOBAL_LOAD_DWORDX4 [[REG_SEQUENCE2]],  0, 0
 # GFX9: [[REG_SEQUENCE5:%[0-9]+]]:vreg_64 = REG_SEQUENCE %{{[0-9]+}}, %subreg.sub0, %{{[0-9]+}}, %subreg.sub1
-# GFX9: [[GLOBAL_LOAD_DWORDX4_1:%[0-9]+]]:vreg_128_align2 = GLOBAL_LOAD_DWORDX4 [[REG_SEQUENCE5]], -4096, 0
-# GFX9: [[GLOBAL_LOAD_DWORDX4_2:%[0-9]+]]:vreg_128_align2 = GLOBAL_LOAD_DWORDX4 [[REG_SEQUENCE5]], 0, 0
-# GFX9: [[REG_SEQUENCE7:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE killed %{{[0-9]+}}, %subreg.sub0, killed %{{[0-9]+}}, %subreg.sub1
-# GFX9: [[GLOBAL_LOAD_DWORDX4_3:%[0-9]+]]:vreg_128_align2 = GLOBAL_LOAD_DWORDX4 killed [[REG_SEQUENCE7]], 0, 0
+# GFX9: [[GLOBAL_LOAD_DWORDX4_2:%[0-9]+]]:vreg_128_align2 = GLOBAL_LOAD_DWORDX4 [[REG_SEQUENCE5]], -4096, 0
+# GFX9: [[GLOBAL_LOAD_DWORDX4_3:%[0-9]+]]:vreg_128_align2 = GLOBAL_LOAD_DWORDX4 [[REG_SEQUENCE5]], 0, 0
 
 
 name: two_bases
