@@ -1037,7 +1037,7 @@ StreamChecker::ensureStreamNonNull(SVal StreamVal, const Expr *StreamE,
   ConstraintManager &CM = C.getConstraintManager();
 
   ProgramStateRef StateNotNull, StateNull;
-  std::tie(StateNotNull, StateNull) = CM.assumeDual(C.getState(), *Stream);
+  std::tie(StateNotNull, StateNull) = CM.assumeDual(State, *Stream);
 
   if (!StateNotNull && StateNull) {
     if (ExplodedNode *N = C.generateErrorNode(StateNull)) {
