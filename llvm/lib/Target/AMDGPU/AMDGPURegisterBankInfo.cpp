@@ -3205,6 +3205,7 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
       return;
     case Intrinsic::amdgcn_inverse_ballot:
     case Intrinsic::amdgcn_s_bitreplicate:
+    case Intrinsic::amdgcn_s_quadmask:
       applyDefaultMapping(OpdMapper);
       constrainOpWithReadfirstlane(B, MI, 2); // Mask
       return;
@@ -4854,6 +4855,14 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       unsigned MaskSize = MRI.getType(MaskReg).getSizeInBits();
       unsigned MaskBank = getRegBankID(MaskReg, MRI, AMDGPU::SGPRRegBankID);
       OpdsMapping[0] = AMDGPU::getValueMapping(AMDGPU::VCCRegBankID, 1);
+      OpdsMapping[2] = AMDGPU::getValueMapping(MaskBank, MaskSize);
+      break;
+    }
+    case Intrinsic::amdgcn_s_quadmask: {
+      Register MaskReg = MI.getOperand(2).getReg();
+      unsigned MaskSize = MRI.getType(MaskReg).getSizeInBits();
+      unsigned MaskBank = getRegBankID(MaskReg, MRI, AMDGPU::SGPRRegBankID);
+      OpdsMapping[0] = AMDGPU::getValueMapping(AMDGPU::SGPRRegBankID, MaskSize);
       OpdsMapping[2] = AMDGPU::getValueMapping(MaskBank, MaskSize);
       break;
     }
