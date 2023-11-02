@@ -2561,6 +2561,7 @@ static const auto &getFrontendActionTable() {
       {frontend::InitOnly, OPT_init_only},
       {frontend::ParseSyntaxOnly, OPT_fsyntax_only},
       {frontend::ModuleFileInfo, OPT_module_file_info},
+      {frontend::GetBMIDeclsHash, OPT_get_bmi_decls_hash},
       {frontend::VerifyPCH, OPT_verify_pch},
       {frontend::PrintPreamble, OPT_print_preamble},
       {frontend::PrintPreprocessedInput, OPT_E},
@@ -4243,6 +4244,7 @@ static bool isStrictlyPreprocessorAction(frontend::ActionKind Action) {
   case frontend::GenerateInterfaceStubs:
   case frontend::ParseSyntaxOnly:
   case frontend::ModuleFileInfo:
+  case frontend::GetBMIDeclsHash:
   case frontend::VerifyPCH:
   case frontend::PluginAction:
   case frontend::RewriteObjC:

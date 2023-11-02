@@ -107,6 +107,9 @@ enum ActionKind {
   /// Dump information about a module file.
   ModuleFileInfo,
 
+  /// Get BMI Decls Hash about a module file.
+  GetBMIDeclsHash,
+
   /// Load and verify that a PCH file is usable.
   VerifyPCH,
 

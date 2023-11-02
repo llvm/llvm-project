@@ -4960,7 +4960,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     } else if (JA.getType() == types::TY_AST) {
       CmdArgs.push_back("-emit-pch");
     } else if (JA.getType() == types::TY_ModuleFile) {
-      CmdArgs.push_back("-module-file-info");
+      if (Args.hasArg(options::OPT_get_bmi_decls_hash))
+        CmdArgs.push_back("-get-bmi-decls-hash");
+      else
+        CmdArgs.push_back("-module-file-info");
     } else if (JA.getType() == types::TY_RewrittenObjC) {
       CmdArgs.push_back("-rewrite-objc");
       rewriteKind = RK_NonFragile;

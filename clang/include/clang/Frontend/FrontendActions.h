@@ -190,9 +190,8 @@ public:
   bool hasCodeCompletionSupport() const override { return true; }
 };
 
-/// Dump information about the given module file, to be used for
-/// basic debugging and discovery.
-class DumpModuleInfoAction : public ASTFrontendAction {
+// Base action for dumping module informations.
+class DumpModuleInfoActionBase : public ASTFrontendAction {
   // Allow other tools (ex lldb) to direct output for their use.
   std::shared_ptr<llvm::raw_ostream> OutputStream;
 
@@ -200,16 +199,39 @@ protected:
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
                                                  StringRef InFile) override;
   bool BeginInvocation(CompilerInstance &CI) override;
-  void ExecuteAction() override;
+  // Setup the output file.
+  llvm::raw_ostream &getOutputStream();
 
 public:
-  DumpModuleInfoAction() = default;
-  explicit DumpModuleInfoAction(std::shared_ptr<llvm::raw_ostream> Out)
+  DumpModuleInfoActionBase() = default;
+  explicit DumpModuleInfoActionBase(std::shared_ptr<llvm::raw_ostream> Out)
       : OutputStream(Out) {}
   bool hasPCHSupport() const override { return false; }
   bool hasASTFileSupport() const override { return true; }
   bool hasIRSupport() const override { return false; }
   bool hasCodeCompletionSupport() const override { return false; }
+};
+
+/// Dump information about the given module file, to be used for
+/// basic debugging and discovery.
+class DumpModuleInfoAction : public DumpModuleInfoActionBase {
+  void ExecuteAction() override;
+
+public:
+  DumpModuleInfoAction() = default;
+  explicit DumpModuleInfoAction(std::shared_ptr<llvm::raw_ostream> Out)
+      : DumpModuleInfoActionBase(Out) {}
+};
+
+/// Get the modules decl hash value action. The information is contained by
+/// DumpModuleInfoAction too. But this should be much faster.
+class GetModuleDeclsHashAction : public DumpModuleInfoActionBase {
+  void ExecuteAction() override;
+
+public:
+  GetModuleDeclsHashAction() = default;
+  explicit GetModuleDeclsHashAction(std::shared_ptr<llvm::raw_ostream> Out)
+      : DumpModuleInfoActionBase(Out) {}
 };
 
 class VerifyPCHAction : public ASTFrontendAction {

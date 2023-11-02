@@ -328,8 +328,8 @@ SyntaxOnlyAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
 }
 
 std::unique_ptr<ASTConsumer>
-DumpModuleInfoAction::CreateASTConsumer(CompilerInstance &CI,
-                                        StringRef InFile) {
+DumpModuleInfoActionBase::CreateASTConsumer(CompilerInstance &CI,
+                                            StringRef InFile) {
   return std::make_unique<ASTConsumer>();
 }
 
@@ -809,11 +809,21 @@ namespace {
   };
 }
 
-bool DumpModuleInfoAction::BeginInvocation(CompilerInstance &CI) {
+bool DumpModuleInfoActionBase::BeginInvocation(CompilerInstance &CI) {
   // The Object file reader also supports raw ast files and there is no point in
   // being strict about the module file format in -module-file-info mode.
   CI.getHeaderSearchOpts().ModuleFormat = "obj";
   return true;
+}
+
+llvm::raw_ostream &DumpModuleInfoActionBase::getOutputStream() {
+  StringRef OutputFileName = getCompilerInstance().getFrontendOpts().OutputFile;
+  if (!OutputFileName.empty() && OutputFileName != "-") {
+    std::error_code EC;
+    OutputStream.reset(new llvm::raw_fd_ostream(
+        OutputFileName.str(), EC, llvm::sys::fs::OF_TextWithCRLF));
+  }
+  return OutputStream ? *OutputStream : llvm::outs();
 }
 
 static StringRef ModuleKindName(Module::ModuleKind MK) {
@@ -842,15 +852,9 @@ static StringRef ModuleKindName(Module::ModuleKind MK) {
 
 void DumpModuleInfoAction::ExecuteAction() {
   assert(isCurrentFileAST() && "dumping non-AST?");
-  // Set up the output file.
+
   CompilerInstance &CI = getCompilerInstance();
-  StringRef OutputFileName = CI.getFrontendOpts().OutputFile;
-  if (!OutputFileName.empty() && OutputFileName != "-") {
-    std::error_code EC;
-    OutputStream.reset(new llvm::raw_fd_ostream(
-        OutputFileName.str(), EC, llvm::sys::fs::OF_TextWithCRLF));
-  }
-  llvm::raw_ostream &Out = OutputStream ? *OutputStream : llvm::outs();
+  llvm::raw_ostream &Out = getOutputStream();
 
   Out << "Information for module file '" << getCurrentFile() << "':\n";
   auto &FileMgr = CI.getFileManager();
@@ -874,6 +878,12 @@ void DumpModuleInfoAction::ExecuteAction() {
     unsigned SubModuleCount = R->getTotalNumSubmodules();
     serialization::ModuleFile &MF = R->getModuleManager().getPrimaryModule();
     Out << "  ====== C++20 Module structure ======\n";
+
+    std::optional<uint64_t> DeclsHash = R->getReadedBMIDeclsHash();
+    if (DeclsHash) {
+      Out << "  Decls Hash: ";
+      Out.write_hex(*DeclsHash) << "\n";
+    }
 
     if (MF.ModuleName != LO.CurrentModule)
       Out << "  Mismatched module names : " << MF.ModuleName << " and "
@@ -961,6 +971,23 @@ void DumpModuleInfoAction::ExecuteAction() {
       CI.getPCHContainerReader(),
       /*FindModuleFileExtensions=*/true, Listener,
       HSOpts.ModulesValidateDiagnosticOptions);
+}
+
+void GetModuleDeclsHashAction::ExecuteAction() {
+  llvm::raw_ostream &Out = getOutputStream();
+
+  if (!isCurrentFileAST()) {
+    Out << "We should only trying to get Decls hash from a module file.\n";
+    return;
+  }
+
+  ASTReader *R = getCurrentASTUnit().getASTReader().get();
+  std::optional<uint64_t> DeclsHash = R->getReadedBMIDeclsHash();
+  if (DeclsHash) {
+    Out << "Decls Hash: ";
+    Out.write_hex(*DeclsHash) << "\n";
+  } else
+    Out << "Failed to read Decls Hash.\n";
 }
 
 //===----------------------------------------------------------------------===//

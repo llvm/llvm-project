@@ -170,6 +170,11 @@ private:
   /// named modules.
   bool GeneratingThinBMI = false;
 
+  /// The hash for recorded decls for C++20 named modules. The parts of decls
+  /// which not affecting the ABI may not be recorded. e.g.,
+  /// the function body of a non-inline function.
+  llvm::hash_code BMIDeclsHash = 0;
+
   /// Mapping from input file entries to the index into the
   /// offset table where information about that input file is stored.
   llvm::DenseMap<const FileEntry *, uint32_t> InputFileIDs;

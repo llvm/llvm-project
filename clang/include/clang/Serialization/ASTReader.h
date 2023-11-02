@@ -937,6 +937,9 @@ private:
   /// Sema tracks these to emit deferred diags.
   llvm::SmallSetVector<serialization::DeclID, 4> DeclsToCheckForDeferredDiags;
 
+  /// The hash value of read C++20 thin BMI.
+  std::optional<uint64_t> ReadedBMIDeclsHash;
+
 private:
   struct ImportedSubmodule {
     serialization::SubmoduleID ID;
@@ -1793,6 +1796,13 @@ public:
                                   const PreprocessorOptions &PPOpts,
                                   StringRef ExistingModuleCachePath,
                                   bool RequireStrictOptionMatches = false);
+
+  static std::optional<uint64_t> getBMIHash(StringRef Filename,
+                                            FileManager &FileMgr);
+
+  std::optional<uint64_t> getReadedBMIDeclsHash() const {
+    return ReadedBMIDeclsHash;
+  }
 
   /// Returns the suggested contents of the predefines buffer,
   /// which contains a (typically-empty) subset of the predefines

@@ -826,6 +826,7 @@ void ASTWriter::WriteBlockInfoBlock() {
 
   // AST Top-Level Block.
   BLOCK(AST_BLOCK);
+  RECORD(BMI_DECLS_HASH);
   RECORD(TYPE_OFFSET);
   RECORD(DECL_OFFSET);
   RECORD(IDENTIFIER_OFFSET);
@@ -5092,6 +5093,15 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
   Stream.ExitBlock();
 
   DoneWritingDeclsAndTypes = true;
+
+  if (isWritingStdCXXNamedModules()) {
+    if (Chain && Chain->getReadedBMIDeclsHash())
+      BMIDeclsHash =
+          llvm::hash_combine(BMIDeclsHash, *Chain->getReadedBMIDeclsHash());
+
+    RecordData Record = {BMIDeclsHash};
+    Stream.EmitRecord(BMI_DECLS_HASH, Record);
+  }
 
   // These things can only be done once we've written out decls and types.
   WriteTypeDeclOffsets();

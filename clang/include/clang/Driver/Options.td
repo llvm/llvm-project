@@ -5093,6 +5093,9 @@ def muclibc : Flag<["-"], "muclibc">, Group<m_libc_Group>, Flags<[HelpHidden]>;
 def module_file_info : Flag<["-"], "module-file-info">, Flags<[]>,
   Visibility<[ClangOption, CC1Option]>, Group<Action_Group>,
   HelpText<"Provide information about a particular module file">;
+def get_bmi_decls_hash : Flag<["-"], "get-bmi-decls-hash">, Flags<[]>,
+  Visibility<[ClangOption, CC1Option]>, Group<Action_Group>,
+  HelpText<"Get the BMI Decls hash value for a particular module file">;
 def mthumb : Flag<["-"], "mthumb">, Group<m_Group>;
 def mtune_EQ : Joined<["-"], "mtune=">, Group<m_Group>,
   HelpText<"Only supported on AArch64, PowerPC, RISC-V, SystemZ, and X86">;

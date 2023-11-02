@@ -75,6 +75,8 @@ CreateFrontendBaseAction(CompilerInstance &CI) {
   case InitOnly:               return std::make_unique<InitOnlyAction>();
   case ParseSyntaxOnly:        return std::make_unique<SyntaxOnlyAction>();
   case ModuleFileInfo:         return std::make_unique<DumpModuleInfoAction>();
+  case GetBMIDeclsHash:
+    return std::make_unique<GetModuleDeclsHashAction>();
   case VerifyPCH:              return std::make_unique<VerifyPCHAction>();
   case TemplightDump:          return std::make_unique<TemplightDumpAction>();
 
