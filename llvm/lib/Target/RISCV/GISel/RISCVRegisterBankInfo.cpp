@@ -24,7 +24,7 @@
 namespace llvm {
 namespace RISCV {
 
-RegisterBankInfo::PartialMapping PartMappings[] = {
+const RegisterBankInfo::PartialMapping PartMappings[] = {
     {0, 32, GPRRegBank},
     {0, 64, GPRRegBank},
     {0, 32, FPRRegBank},
@@ -38,7 +38,7 @@ enum PartialMappingIdx {
   PMI_FPR64 = 3,
 };
 
-RegisterBankInfo::ValueMapping ValueMappings[] = {
+const RegisterBankInfo::ValueMapping ValueMappings[] = {
     // Invalid value mapping.
     {nullptr, 0},
     // Maximum 3 GPR operands; 32 bit.
