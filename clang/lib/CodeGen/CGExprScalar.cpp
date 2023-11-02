@@ -3245,6 +3245,7 @@ BinOpInfo ScalarExprEmitter::EmitBinOps(const BinaryOperator *E,
   Result.Opcode = E->getOpcode();
   Result.FPFeatures = E->getFPFeaturesInEffect(CGF.getLangOpts());
   Result.E = E;
+  // This is only a test.
   return Result;
 }
 

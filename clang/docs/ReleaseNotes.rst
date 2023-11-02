@@ -841,6 +841,7 @@ the source code. You can access versions of these documents specific to
 this release by going into the "``clang/docs/``" directory in the Clang
 tree.
 
+This is only a test.
 If you have any questions or comments about Clang, please feel free to
 contact us on the `Discourse forums (Clang Frontend category)
 <https://discourse.llvm.org/c/clang/6>`_.
