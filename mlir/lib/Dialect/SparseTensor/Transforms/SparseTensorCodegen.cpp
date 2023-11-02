@@ -178,7 +178,7 @@ static void createAllocFields(OpBuilder &builder, Location loc,
   SmallVector<Value> dimSizes;
   dimSizes.reserve(dimRank);
   unsigned i = 0; // cumulative index into `dynSizes`.
-  for (const DynSize sh : stt.getDimShape())
+  for (const Size sh : stt.getDimShape())
     dimSizes.push_back(ShapedType::isDynamic(sh)
                            ? dynSizes[i++]
                            : constantIndex(builder, loc, sh));
