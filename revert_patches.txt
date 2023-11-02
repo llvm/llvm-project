@@ -3,10 +3,6 @@ Revert "[OpenMP] Disable early vectorization of loads/stores in the runtime "
   asserts in  snap and MI-Teams
 
 Johannes: breakage
-Revert "[OpenMP] Basic BumpAllocator for (AMD)GPUs (#69806) "
-  breaks omptests flang-272343 flang-272343-3 flang-305553
-
-Johannes: breakage
   [OpenMP][FIX] Move workaround code to avoid races 
    see smoke-fails, smoke-limbo, smoke, examples
 
