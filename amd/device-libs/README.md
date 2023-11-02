@@ -2,7 +2,7 @@
 
 ROCm Device libraries.
 
-This repository contains the sources and CMake build system for a
+This subdirectory contains the sources and CMake build system for a
 set of AMD specific device-side language runtime libraries.  Specifically:
 
 | **Name** | **Comments** | **Dependencies** |
@@ -20,20 +20,21 @@ Refer to [LICENSE.TXT](LICENSE.TXT) for license information.
 
 The build requires clang and several llvm development tools. This can
 be built using the amd-stg-open branch of the RadeonOpenCompute
-modified llvm-project repository, but the upstream llvm-project should
-also work.
+modified llvm-project repository where this subdirectory now lives,
+but the upstream llvm-project should also work.
 
 There are two different methods to build the device libraries; as a
 standalone project or as an llvm external subproject.
 
-For a standalone build, this will find a preexisting clang and llvm
+For a standalone build, this will find preexisting clang and llvm
 tools using the standard cmake search mechanisms. If you wish to use a
 specific build, you can specify this with the CMAKE_PREFIX_PATH
 variable:
 
-    git clone https://github.com/RadeonOpenCompute/ROCm-Device-Libs.git -b amd-stg-open
+    git clone https://github.com/RadeonOpenCompute/llvm-project.git -b amd-stg-open
+    cd llvm-project/amd/device-libs
 
-and from its top level run the following commands:
+Then run the following commands:
 
     mkdir -p build
     cd build
