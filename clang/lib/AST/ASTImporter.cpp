@@ -4476,6 +4476,17 @@ ExpectedDecl ASTNodeImporter::VisitVarDecl(VarDecl *D) {
     auto ToVTOrErr = import(D->getDescribedVarTemplate());
     if (!ToVTOrErr)
       return ToVTOrErr.takeError();
+  } else if (MemberSpecializationInfo *MSI = D->getMemberSpecializationInfo()) {
+    TemplateSpecializationKind SK = MSI->getTemplateSpecializationKind();
+    VarDecl *FromInst = D->getInstantiatedFromStaticDataMember();
+    if (Expected<VarDecl *> ToInstOrErr = import(FromInst))
+      ToVar->setInstantiationOfStaticDataMember(*ToInstOrErr, SK);
+    else
+      return ToInstOrErr.takeError();
+    if (ExpectedSLoc POIOrErr = import(MSI->getPointOfInstantiation()))
+      ToVar->getMemberSpecializationInfo()->setPointOfInstantiation(*POIOrErr);
+    else
+      return POIOrErr.takeError();
   }
 
   if (Error Err = ImportInitializer(D, ToVar))

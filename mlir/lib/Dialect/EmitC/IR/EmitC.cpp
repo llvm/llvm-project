@@ -190,6 +190,101 @@ LogicalResult emitc::ConstantOp::verify() {
 OpFoldResult emitc::ConstantOp::fold(FoldAdaptor adaptor) { return getValue(); }
 
 //===----------------------------------------------------------------------===//
+// ForOp
+//===----------------------------------------------------------------------===//
+
+void ForOp::build(OpBuilder &builder, OperationState &result, Value lb,
+                  Value ub, Value step, BodyBuilderFn bodyBuilder) {
+  result.addOperands({lb, ub, step});
+  Type t = lb.getType();
+  Region *bodyRegion = result.addRegion();
+  bodyRegion->push_back(new Block);
+  Block &bodyBlock = bodyRegion->front();
+  bodyBlock.addArgument(t, result.location);
+
+  // Create the default terminator if the builder is not provided.
+  if (!bodyBuilder) {
+    ForOp::ensureTerminator(*bodyRegion, builder, result.location);
+  } else {
+    OpBuilder::InsertionGuard guard(builder);
+    builder.setInsertionPointToStart(&bodyBlock);
+    bodyBuilder(builder, result.location, bodyBlock.getArgument(0));
+  }
+}
+
+void ForOp::getCanonicalizationPatterns(RewritePatternSet &, MLIRContext *) {}
+
+ParseResult ForOp::parse(OpAsmParser &parser, OperationState &result) {
+  Builder &builder = parser.getBuilder();
+  Type type;
+
+  OpAsmParser::Argument inductionVariable;
+  OpAsmParser::UnresolvedOperand lb, ub, step;
+
+  // Parse the induction variable followed by '='.
+  if (parser.parseOperand(inductionVariable.ssaName) || parser.parseEqual() ||
+      // Parse loop bounds.
+      parser.parseOperand(lb) || parser.parseKeyword("to") ||
+      parser.parseOperand(ub) || parser.parseKeyword("step") ||
+      parser.parseOperand(step))
+    return failure();
+
+  // Parse the optional initial iteration arguments.
+  SmallVector<OpAsmParser::Argument, 4> regionArgs;
+  SmallVector<OpAsmParser::UnresolvedOperand, 4> operands;
+  regionArgs.push_back(inductionVariable);
+
+  // Parse optional type, else assume Index.
+  if (parser.parseOptionalColon())
+    type = builder.getIndexType();
+  else if (parser.parseType(type))
+    return failure();
+
+  // Resolve input operands.
+  regionArgs.front().type = type;
+  if (parser.resolveOperand(lb, type, result.operands) ||
+      parser.resolveOperand(ub, type, result.operands) ||
+      parser.resolveOperand(step, type, result.operands))
+    return failure();
+
+  // Parse the body region.
+  Region *body = result.addRegion();
+  if (parser.parseRegion(*body, regionArgs))
+    return failure();
+
+  ForOp::ensureTerminator(*body, builder, result.location);
+
+  // Parse the optional attribute list.
+  if (parser.parseOptionalAttrDict(result.attributes))
+    return failure();
+
+  return success();
+}
+
+void ForOp::print(OpAsmPrinter &p) {
+  p << " " << getInductionVar() << " = " << getLowerBound() << " to "
+    << getUpperBound() << " step " << getStep();
+
+  p << ' ';
+  if (Type t = getInductionVar().getType(); !t.isIndex())
+    p << " : " << t << ' ';
+  p.printRegion(getRegion(),
+                /*printEntryBlockArgs=*/false,
+                /*printBlockTerminators=*/false);
+  p.printOptionalAttrDict((*this)->getAttrs());
+}
+
+LogicalResult ForOp::verifyRegions() {
+  // Check that the body defines as single block argument for the induction
+  // variable.
+  if (getInductionVar().getType() != getLowerBound().getType())
+    return emitOpError(
+        "expected induction variable to be same type as bounds and step");
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // IfOp
 //===----------------------------------------------------------------------===//
 

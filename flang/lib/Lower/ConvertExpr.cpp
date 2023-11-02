@@ -1237,41 +1237,8 @@ public:
         [&](const fir::CharBoxValue &boxchar) -> ExtValue {
           if constexpr (TC1 == Fortran::common::TypeCategory::Character &&
                         TC2 == TC1) {
-            // Use char_convert. Each code point is translated from a
-            // narrower/wider encoding to the target encoding. For example, 'A'
-            // may be translated from 0x41 : i8 to 0x0041 : i16. The symbol
-            // for euro (0x20AC : i16) may be translated from a wide character
-            // to "0xE2 0x82 0xAC" : UTF-8.
-            mlir::Value bufferSize = boxchar.getLen();
-            auto kindMap = builder.getKindMap();
-            mlir::Value boxCharAddr = boxchar.getAddr();
-            auto fromTy = boxCharAddr.getType();
-            if (auto charTy = fromTy.dyn_cast<fir::CharacterType>()) {
-              // boxchar is a value, not a variable. Turn it into a temporary.
-              // As a value, it ought to have a constant LEN value.
-              assert(charTy.hasConstantLen() && "must have constant length");
-              mlir::Value tmp = builder.createTemporary(loc, charTy);
-              builder.create<fir::StoreOp>(loc, boxCharAddr, tmp);
-              boxCharAddr = tmp;
-            }
-            auto fromBits =
-                kindMap.getCharacterBitsize(fir::unwrapRefType(fromTy)
-                                                .cast<fir::CharacterType>()
-                                                .getFKind());
-            auto toBits = kindMap.getCharacterBitsize(
-                ty.cast<fir::CharacterType>().getFKind());
-            if (toBits < fromBits) {
-              // Scale by relative ratio to give a buffer of the same length.
-              auto ratio = builder.createIntegerConstant(
-                  loc, bufferSize.getType(), fromBits / toBits);
-              bufferSize =
-                  builder.create<mlir::arith::MulIOp>(loc, bufferSize, ratio);
-            }
-            auto dest = builder.create<fir::AllocaOp>(
-                loc, ty, mlir::ValueRange{bufferSize});
-            builder.create<fir::CharConvertOp>(loc, boxCharAddr,
-                                               boxchar.getLen(), dest);
-            return fir::CharBoxValue{dest, boxchar.getLen()};
+            return fir::factory::convertCharacterKind(builder, loc, boxchar,
+                                                      KIND);
           } else {
             fir::emitFatalError(
                 loc, "unsupported evaluate::Convert between CHARACTER type "
@@ -3965,7 +3932,7 @@ private:
       auto castTo = builder.createConvert(loc, memrefTy, origVal);
       origVal = builder.create<fir::EmboxOp>(loc, eleTy, castTo);
     }
-    mlir::Value val = builder.createConvert(loc, eleTy, origVal);
+    mlir::Value val = builder.convertWithSemantics(loc, eleTy, origVal);
     if (isBoundsSpec()) {
       assert(lbounds.has_value());
       auto lbs = *lbounds;

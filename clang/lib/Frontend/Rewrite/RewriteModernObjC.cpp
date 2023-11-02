@@ -600,7 +600,7 @@ namespace {
     StringLiteral *getStringLiteral(StringRef Str) {
       QualType StrType = Context->getConstantArrayType(
           Context->CharTy, llvm::APInt(32, Str.size() + 1), nullptr,
-          ArrayType::Normal, 0);
+          ArraySizeModifier::Normal, 0);
       return StringLiteral::Create(*Context, Str, StringLiteral::Ordinary,
                                    /*Pascal=*/false, StrType, SourceLocation());
     }
@@ -6855,7 +6855,7 @@ void RewriteModernObjC::RewriteObjCProtocolMetaData(ObjCProtocolDecl *PDecl,
   std::vector<ObjCMethodDecl *> InstanceMethods, ClassMethods;
   std::vector<ObjCMethodDecl *> OptInstanceMethods, OptClassMethods;
   for (auto *MD : PDecl->instance_methods()) {
-    if (MD->getImplementationControl() == ObjCMethodDecl::Optional) {
+    if (MD->getImplementationControl() == ObjCImplementationControl::Optional) {
       OptInstanceMethods.push_back(MD);
     } else {
       InstanceMethods.push_back(MD);
@@ -6863,7 +6863,7 @@ void RewriteModernObjC::RewriteObjCProtocolMetaData(ObjCProtocolDecl *PDecl,
   }
 
   for (auto *MD : PDecl->class_methods()) {
-    if (MD->getImplementationControl() == ObjCMethodDecl::Optional) {
+    if (MD->getImplementationControl() == ObjCImplementationControl::Optional) {
       OptClassMethods.push_back(MD);
     } else {
       ClassMethods.push_back(MD);

@@ -1,4 +1,4 @@
-// RUN: mlir-opt -set-llvm-module-datalayout -convert-func-to-llvm='use-opaque-pointers=1' %s | FileCheck %s
+// RUN: mlir-opt -set-llvm-module-datalayout -convert-func-to-llvm %s | FileCheck %s
 
 // RUN-32: mlir-opt -set-llvm-module-datalayout='data-layout=p:32:32:32' -convert-func-to-llvm='use-opaque-pointers=1' %s \
 // RUN-32: | FileCheck %s

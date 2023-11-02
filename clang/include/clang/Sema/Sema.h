@@ -2080,9 +2080,9 @@ public:
                             SourceLocation Loc, DeclarationName Entity);
   QualType BuildReferenceType(QualType T, bool LValueRef,
                               SourceLocation Loc, DeclarationName Entity);
-  QualType BuildArrayType(QualType T, ArrayType::ArraySizeModifier ASM,
-                          Expr *ArraySize, unsigned Quals,
-                          SourceRange Brackets, DeclarationName Entity);
+  QualType BuildArrayType(QualType T, ArraySizeModifier ASM, Expr *ArraySize,
+                          unsigned Quals, SourceRange Brackets,
+                          DeclarationName Entity);
   QualType BuildVectorType(QualType T, Expr *VecSize, SourceLocation AttrLoc);
   QualType BuildExtVectorType(QualType T, Expr *ArraySize,
                               SourceLocation AttrLoc);
@@ -10430,6 +10430,9 @@ public:
                                   const CXXConstructorDecl *Tmpl,
                             const MultiLevelTemplateArgumentList &TemplateArgs);
 
+  ExplicitSpecifier instantiateExplicitSpecifier(
+      const MultiLevelTemplateArgumentList &TemplateArgs, ExplicitSpecifier ES);
+
   NamedDecl *FindInstantiatedDecl(SourceLocation Loc, NamedDecl *D,
                           const MultiLevelTemplateArgumentList &TemplateArgs,
                           bool FindingInstantiatedContext = false);
@@ -11312,7 +11315,6 @@ private:
   /// on the parameter of the bind clause. In the methods for the
   /// mapped directives, check the parameters of the lastprivate clause.
   bool checkLastPrivateForMappedDirectives(ArrayRef<OMPClause *> Clauses);
-
   /// Depending on the bind clause of OMPD_loop map the directive to new
   /// directives.
   ///    1) loop bind(parallel) --> OMPD_for
@@ -11322,12 +11324,9 @@ private:
   /// rigorous semantic checking in the new mapped directives.
   bool mapLoopConstruct(llvm::SmallVector<OMPClause *> &ClausesWithoutBind,
                         ArrayRef<OMPClause *> Clauses,
-                        OpenMPBindClauseKind &BindKind,
+                        OpenMPBindClauseKind BindKind,
                         OpenMPDirectiveKind &Kind,
-                        OpenMPDirectiveKind &PrevMappedDirective,
-                        SourceLocation StartLoc, SourceLocation EndLoc,
-                        const DeclarationNameInfo &DirName,
-                        OpenMPDirectiveKind CancelRegion);
+                        OpenMPDirectiveKind &PrevMappedDirective);
 
 public:
   /// The declarator \p D defines a function in the scope \p S which is nested
