@@ -650,8 +650,9 @@ define amdgpu_kernel void @global_atomic_fsub_uni_address_div_value_agent_scope_
 ; GFX1164-NEXT:    s_mov_b32 s13, s9
 ; GFX1164-NEXT:    s_addc_u32 s9, s35, 0
 ; GFX1164-NEXT:    s_getpc_b64 s[4:5]
-; GFX1164-NEXT:    s_add_u32 s4, s4, div.float.value@gotpcrel32@lo+4
-; GFX1164-NEXT:    s_addc_u32 s5, s5, div.float.value@gotpcrel32@hi+12
+; GFX1164-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1164-NEXT:    s_add_u32 s4, s4, div.float.value@gotpcrel32@lo+8
+; GFX1164-NEXT:    s_addc_u32 s5, s5, div.float.value@gotpcrel32@hi+16
 ; GFX1164-NEXT:    v_mov_b32_e32 v31, v0
 ; GFX1164-NEXT:    s_load_b64 s[16:17], s[4:5], 0x0
 ; GFX1164-NEXT:    s_mov_b32 s14, s10
@@ -714,8 +715,9 @@ define amdgpu_kernel void @global_atomic_fsub_uni_address_div_value_agent_scope_
 ; GFX1132-NEXT:    s_add_u32 s8, s34, 44
 ; GFX1132-NEXT:    s_addc_u32 s9, s35, 0
 ; GFX1132-NEXT:    s_getpc_b64 s[4:5]
-; GFX1132-NEXT:    s_add_u32 s4, s4, div.float.value@gotpcrel32@lo+4
-; GFX1132-NEXT:    s_addc_u32 s5, s5, div.float.value@gotpcrel32@hi+12
+; GFX1132-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1132-NEXT:    s_add_u32 s4, s4, div.float.value@gotpcrel32@lo+8
+; GFX1132-NEXT:    s_addc_u32 s5, s5, div.float.value@gotpcrel32@hi+16
 ; GFX1132-NEXT:    s_mov_b32 s12, s13
 ; GFX1132-NEXT:    s_load_b64 s[16:17], s[4:5], 0x0
 ; GFX1132-NEXT:    s_mov_b64 s[10:11], s[6:7]
@@ -1021,8 +1023,9 @@ define amdgpu_kernel void @global_atomic_fsub_uni_address_div_value_agent_scope_
 ; GFX1164-DPP-NEXT:    s_mov_b32 s13, s9
 ; GFX1164-DPP-NEXT:    s_addc_u32 s9, s35, 0
 ; GFX1164-DPP-NEXT:    s_getpc_b64 s[4:5]
-; GFX1164-DPP-NEXT:    s_add_u32 s4, s4, div.float.value@gotpcrel32@lo+4
-; GFX1164-DPP-NEXT:    s_addc_u32 s5, s5, div.float.value@gotpcrel32@hi+12
+; GFX1164-DPP-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1164-DPP-NEXT:    s_add_u32 s4, s4, div.float.value@gotpcrel32@lo+8
+; GFX1164-DPP-NEXT:    s_addc_u32 s5, s5, div.float.value@gotpcrel32@hi+16
 ; GFX1164-DPP-NEXT:    v_mov_b32_e32 v31, v0
 ; GFX1164-DPP-NEXT:    s_load_b64 s[16:17], s[4:5], 0x0
 ; GFX1164-DPP-NEXT:    s_mov_b32 s14, s10
@@ -1103,8 +1106,9 @@ define amdgpu_kernel void @global_atomic_fsub_uni_address_div_value_agent_scope_
 ; GFX1132-DPP-NEXT:    s_add_u32 s8, s34, 44
 ; GFX1132-DPP-NEXT:    s_addc_u32 s9, s35, 0
 ; GFX1132-DPP-NEXT:    s_getpc_b64 s[4:5]
-; GFX1132-DPP-NEXT:    s_add_u32 s4, s4, div.float.value@gotpcrel32@lo+4
-; GFX1132-DPP-NEXT:    s_addc_u32 s5, s5, div.float.value@gotpcrel32@hi+12
+; GFX1132-DPP-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1132-DPP-NEXT:    s_add_u32 s4, s4, div.float.value@gotpcrel32@lo+8
+; GFX1132-DPP-NEXT:    s_addc_u32 s5, s5, div.float.value@gotpcrel32@hi+16
 ; GFX1132-DPP-NEXT:    s_mov_b32 s12, s13
 ; GFX1132-DPP-NEXT:    s_load_b64 s[16:17], s[4:5], 0x0
 ; GFX1132-DPP-NEXT:    s_mov_b64 s[10:11], s[6:7]
@@ -1900,8 +1904,9 @@ define amdgpu_kernel void @global_atomic_fsub_uni_address_div_value_one_as_scope
 ; GFX1164-NEXT:    s_mov_b32 s13, s9
 ; GFX1164-NEXT:    s_addc_u32 s9, s35, 0
 ; GFX1164-NEXT:    s_getpc_b64 s[4:5]
-; GFX1164-NEXT:    s_add_u32 s4, s4, div.float.value@gotpcrel32@lo+4
-; GFX1164-NEXT:    s_addc_u32 s5, s5, div.float.value@gotpcrel32@hi+12
+; GFX1164-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1164-NEXT:    s_add_u32 s4, s4, div.float.value@gotpcrel32@lo+8
+; GFX1164-NEXT:    s_addc_u32 s5, s5, div.float.value@gotpcrel32@hi+16
 ; GFX1164-NEXT:    v_mov_b32_e32 v31, v0
 ; GFX1164-NEXT:    s_load_b64 s[16:17], s[4:5], 0x0
 ; GFX1164-NEXT:    s_mov_b32 s14, s10
@@ -1964,8 +1969,9 @@ define amdgpu_kernel void @global_atomic_fsub_uni_address_div_value_one_as_scope
 ; GFX1132-NEXT:    s_add_u32 s8, s34, 44
 ; GFX1132-NEXT:    s_addc_u32 s9, s35, 0
 ; GFX1132-NEXT:    s_getpc_b64 s[4:5]
-; GFX1132-NEXT:    s_add_u32 s4, s4, div.float.value@gotpcrel32@lo+4
-; GFX1132-NEXT:    s_addc_u32 s5, s5, div.float.value@gotpcrel32@hi+12
+; GFX1132-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1132-NEXT:    s_add_u32 s4, s4, div.float.value@gotpcrel32@lo+8
+; GFX1132-NEXT:    s_addc_u32 s5, s5, div.float.value@gotpcrel32@hi+16
 ; GFX1132-NEXT:    s_mov_b32 s12, s13
 ; GFX1132-NEXT:    s_load_b64 s[16:17], s[4:5], 0x0
 ; GFX1132-NEXT:    s_mov_b64 s[10:11], s[6:7]
@@ -2271,8 +2277,9 @@ define amdgpu_kernel void @global_atomic_fsub_uni_address_div_value_one_as_scope
 ; GFX1164-DPP-NEXT:    s_mov_b32 s13, s9
 ; GFX1164-DPP-NEXT:    s_addc_u32 s9, s35, 0
 ; GFX1164-DPP-NEXT:    s_getpc_b64 s[4:5]
-; GFX1164-DPP-NEXT:    s_add_u32 s4, s4, div.float.value@gotpcrel32@lo+4
-; GFX1164-DPP-NEXT:    s_addc_u32 s5, s5, div.float.value@gotpcrel32@hi+12
+; GFX1164-DPP-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1164-DPP-NEXT:    s_add_u32 s4, s4, div.float.value@gotpcrel32@lo+8
+; GFX1164-DPP-NEXT:    s_addc_u32 s5, s5, div.float.value@gotpcrel32@hi+16
 ; GFX1164-DPP-NEXT:    v_mov_b32_e32 v31, v0
 ; GFX1164-DPP-NEXT:    s_load_b64 s[16:17], s[4:5], 0x0
 ; GFX1164-DPP-NEXT:    s_mov_b32 s14, s10
@@ -2353,8 +2360,9 @@ define amdgpu_kernel void @global_atomic_fsub_uni_address_div_value_one_as_scope
 ; GFX1132-DPP-NEXT:    s_add_u32 s8, s34, 44
 ; GFX1132-DPP-NEXT:    s_addc_u32 s9, s35, 0
 ; GFX1132-DPP-NEXT:    s_getpc_b64 s[4:5]
-; GFX1132-DPP-NEXT:    s_add_u32 s4, s4, div.float.value@gotpcrel32@lo+4
-; GFX1132-DPP-NEXT:    s_addc_u32 s5, s5, div.float.value@gotpcrel32@hi+12
+; GFX1132-DPP-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1132-DPP-NEXT:    s_add_u32 s4, s4, div.float.value@gotpcrel32@lo+8
+; GFX1132-DPP-NEXT:    s_addc_u32 s5, s5, div.float.value@gotpcrel32@hi+16
 ; GFX1132-DPP-NEXT:    s_mov_b32 s12, s13
 ; GFX1132-DPP-NEXT:    s_load_b64 s[16:17], s[4:5], 0x0
 ; GFX1132-DPP-NEXT:    s_mov_b64 s[10:11], s[6:7]
@@ -3150,8 +3158,9 @@ define amdgpu_kernel void @global_atomic_fsub_uni_address_div_value_agent_scope_
 ; GFX1164-NEXT:    s_mov_b32 s13, s9
 ; GFX1164-NEXT:    s_addc_u32 s9, s35, 0
 ; GFX1164-NEXT:    s_getpc_b64 s[4:5]
-; GFX1164-NEXT:    s_add_u32 s4, s4, div.float.value@gotpcrel32@lo+4
-; GFX1164-NEXT:    s_addc_u32 s5, s5, div.float.value@gotpcrel32@hi+12
+; GFX1164-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1164-NEXT:    s_add_u32 s4, s4, div.float.value@gotpcrel32@lo+8
+; GFX1164-NEXT:    s_addc_u32 s5, s5, div.float.value@gotpcrel32@hi+16
 ; GFX1164-NEXT:    v_mov_b32_e32 v31, v0
 ; GFX1164-NEXT:    s_load_b64 s[16:17], s[4:5], 0x0
 ; GFX1164-NEXT:    s_mov_b32 s14, s10
@@ -3214,8 +3223,9 @@ define amdgpu_kernel void @global_atomic_fsub_uni_address_div_value_agent_scope_
 ; GFX1132-NEXT:    s_add_u32 s8, s34, 44
 ; GFX1132-NEXT:    s_addc_u32 s9, s35, 0
 ; GFX1132-NEXT:    s_getpc_b64 s[4:5]
-; GFX1132-NEXT:    s_add_u32 s4, s4, div.float.value@gotpcrel32@lo+4
-; GFX1132-NEXT:    s_addc_u32 s5, s5, div.float.value@gotpcrel32@hi+12
+; GFX1132-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1132-NEXT:    s_add_u32 s4, s4, div.float.value@gotpcrel32@lo+8
+; GFX1132-NEXT:    s_addc_u32 s5, s5, div.float.value@gotpcrel32@hi+16
 ; GFX1132-NEXT:    s_mov_b32 s12, s13
 ; GFX1132-NEXT:    s_load_b64 s[16:17], s[4:5], 0x0
 ; GFX1132-NEXT:    s_mov_b64 s[10:11], s[6:7]
@@ -3521,8 +3531,9 @@ define amdgpu_kernel void @global_atomic_fsub_uni_address_div_value_agent_scope_
 ; GFX1164-DPP-NEXT:    s_mov_b32 s13, s9
 ; GFX1164-DPP-NEXT:    s_addc_u32 s9, s35, 0
 ; GFX1164-DPP-NEXT:    s_getpc_b64 s[4:5]
-; GFX1164-DPP-NEXT:    s_add_u32 s4, s4, div.float.value@gotpcrel32@lo+4
-; GFX1164-DPP-NEXT:    s_addc_u32 s5, s5, div.float.value@gotpcrel32@hi+12
+; GFX1164-DPP-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1164-DPP-NEXT:    s_add_u32 s4, s4, div.float.value@gotpcrel32@lo+8
+; GFX1164-DPP-NEXT:    s_addc_u32 s5, s5, div.float.value@gotpcrel32@hi+16
 ; GFX1164-DPP-NEXT:    v_mov_b32_e32 v31, v0
 ; GFX1164-DPP-NEXT:    s_load_b64 s[16:17], s[4:5], 0x0
 ; GFX1164-DPP-NEXT:    s_mov_b32 s14, s10
@@ -3603,8 +3614,9 @@ define amdgpu_kernel void @global_atomic_fsub_uni_address_div_value_agent_scope_
 ; GFX1132-DPP-NEXT:    s_add_u32 s8, s34, 44
 ; GFX1132-DPP-NEXT:    s_addc_u32 s9, s35, 0
 ; GFX1132-DPP-NEXT:    s_getpc_b64 s[4:5]
-; GFX1132-DPP-NEXT:    s_add_u32 s4, s4, div.float.value@gotpcrel32@lo+4
-; GFX1132-DPP-NEXT:    s_addc_u32 s5, s5, div.float.value@gotpcrel32@hi+12
+; GFX1132-DPP-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1132-DPP-NEXT:    s_add_u32 s4, s4, div.float.value@gotpcrel32@lo+8
+; GFX1132-DPP-NEXT:    s_addc_u32 s5, s5, div.float.value@gotpcrel32@hi+16
 ; GFX1132-DPP-NEXT:    s_mov_b32 s12, s13
 ; GFX1132-DPP-NEXT:    s_load_b64 s[16:17], s[4:5], 0x0
 ; GFX1132-DPP-NEXT:    s_mov_b64 s[10:11], s[6:7]
@@ -3942,8 +3954,9 @@ define amdgpu_kernel void @global_atomic_fsub_uni_address_div_value_agent_scope_
 ; GFX1164-NEXT:    s_mov_b32 s13, s9
 ; GFX1164-NEXT:    s_addc_u32 s9, s35, 0
 ; GFX1164-NEXT:    s_getpc_b64 s[4:5]
-; GFX1164-NEXT:    s_add_u32 s4, s4, div.float.value@gotpcrel32@lo+4
-; GFX1164-NEXT:    s_addc_u32 s5, s5, div.float.value@gotpcrel32@hi+12
+; GFX1164-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1164-NEXT:    s_add_u32 s4, s4, div.float.value@gotpcrel32@lo+8
+; GFX1164-NEXT:    s_addc_u32 s5, s5, div.float.value@gotpcrel32@hi+16
 ; GFX1164-NEXT:    v_mov_b32_e32 v31, v0
 ; GFX1164-NEXT:    s_load_b64 s[16:17], s[4:5], 0x0
 ; GFX1164-NEXT:    s_mov_b32 s14, s10
@@ -4006,8 +4019,9 @@ define amdgpu_kernel void @global_atomic_fsub_uni_address_div_value_agent_scope_
 ; GFX1132-NEXT:    s_add_u32 s8, s34, 44
 ; GFX1132-NEXT:    s_addc_u32 s9, s35, 0
 ; GFX1132-NEXT:    s_getpc_b64 s[4:5]
-; GFX1132-NEXT:    s_add_u32 s4, s4, div.float.value@gotpcrel32@lo+4
-; GFX1132-NEXT:    s_addc_u32 s5, s5, div.float.value@gotpcrel32@hi+12
+; GFX1132-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1132-NEXT:    s_add_u32 s4, s4, div.float.value@gotpcrel32@lo+8
+; GFX1132-NEXT:    s_addc_u32 s5, s5, div.float.value@gotpcrel32@hi+16
 ; GFX1132-NEXT:    s_mov_b32 s12, s13
 ; GFX1132-NEXT:    s_load_b64 s[16:17], s[4:5], 0x0
 ; GFX1132-NEXT:    s_mov_b64 s[10:11], s[6:7]
@@ -4313,8 +4327,9 @@ define amdgpu_kernel void @global_atomic_fsub_uni_address_div_value_agent_scope_
 ; GFX1164-DPP-NEXT:    s_mov_b32 s13, s9
 ; GFX1164-DPP-NEXT:    s_addc_u32 s9, s35, 0
 ; GFX1164-DPP-NEXT:    s_getpc_b64 s[4:5]
-; GFX1164-DPP-NEXT:    s_add_u32 s4, s4, div.float.value@gotpcrel32@lo+4
-; GFX1164-DPP-NEXT:    s_addc_u32 s5, s5, div.float.value@gotpcrel32@hi+12
+; GFX1164-DPP-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1164-DPP-NEXT:    s_add_u32 s4, s4, div.float.value@gotpcrel32@lo+8
+; GFX1164-DPP-NEXT:    s_addc_u32 s5, s5, div.float.value@gotpcrel32@hi+16
 ; GFX1164-DPP-NEXT:    v_mov_b32_e32 v31, v0
 ; GFX1164-DPP-NEXT:    s_load_b64 s[16:17], s[4:5], 0x0
 ; GFX1164-DPP-NEXT:    s_mov_b32 s14, s10
@@ -4395,8 +4410,9 @@ define amdgpu_kernel void @global_atomic_fsub_uni_address_div_value_agent_scope_
 ; GFX1132-DPP-NEXT:    s_add_u32 s8, s34, 44
 ; GFX1132-DPP-NEXT:    s_addc_u32 s9, s35, 0
 ; GFX1132-DPP-NEXT:    s_getpc_b64 s[4:5]
-; GFX1132-DPP-NEXT:    s_add_u32 s4, s4, div.float.value@gotpcrel32@lo+4
-; GFX1132-DPP-NEXT:    s_addc_u32 s5, s5, div.float.value@gotpcrel32@hi+12
+; GFX1132-DPP-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1132-DPP-NEXT:    s_add_u32 s4, s4, div.float.value@gotpcrel32@lo+8
+; GFX1132-DPP-NEXT:    s_addc_u32 s5, s5, div.float.value@gotpcrel32@hi+16
 ; GFX1132-DPP-NEXT:    s_mov_b32 s12, s13
 ; GFX1132-DPP-NEXT:    s_load_b64 s[16:17], s[4:5], 0x0
 ; GFX1132-DPP-NEXT:    s_mov_b64 s[10:11], s[6:7]
@@ -5191,8 +5207,9 @@ define amdgpu_kernel void @global_atomic_fsub_uni_address_div_value_defalut_scop
 ; GFX1164-NEXT:    s_mov_b32 s13, s9
 ; GFX1164-NEXT:    s_addc_u32 s9, s35, 0
 ; GFX1164-NEXT:    s_getpc_b64 s[4:5]
-; GFX1164-NEXT:    s_add_u32 s4, s4, div.float.value@gotpcrel32@lo+4
-; GFX1164-NEXT:    s_addc_u32 s5, s5, div.float.value@gotpcrel32@hi+12
+; GFX1164-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1164-NEXT:    s_add_u32 s4, s4, div.float.value@gotpcrel32@lo+8
+; GFX1164-NEXT:    s_addc_u32 s5, s5, div.float.value@gotpcrel32@hi+16
 ; GFX1164-NEXT:    v_mov_b32_e32 v31, v0
 ; GFX1164-NEXT:    s_load_b64 s[16:17], s[4:5], 0x0
 ; GFX1164-NEXT:    s_mov_b32 s14, s10
@@ -5255,8 +5272,9 @@ define amdgpu_kernel void @global_atomic_fsub_uni_address_div_value_defalut_scop
 ; GFX1132-NEXT:    s_add_u32 s8, s34, 44
 ; GFX1132-NEXT:    s_addc_u32 s9, s35, 0
 ; GFX1132-NEXT:    s_getpc_b64 s[4:5]
-; GFX1132-NEXT:    s_add_u32 s4, s4, div.float.value@gotpcrel32@lo+4
-; GFX1132-NEXT:    s_addc_u32 s5, s5, div.float.value@gotpcrel32@hi+12
+; GFX1132-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1132-NEXT:    s_add_u32 s4, s4, div.float.value@gotpcrel32@lo+8
+; GFX1132-NEXT:    s_addc_u32 s5, s5, div.float.value@gotpcrel32@hi+16
 ; GFX1132-NEXT:    s_mov_b32 s12, s13
 ; GFX1132-NEXT:    s_load_b64 s[16:17], s[4:5], 0x0
 ; GFX1132-NEXT:    s_mov_b64 s[10:11], s[6:7]
@@ -5562,8 +5580,9 @@ define amdgpu_kernel void @global_atomic_fsub_uni_address_div_value_defalut_scop
 ; GFX1164-DPP-NEXT:    s_mov_b32 s13, s9
 ; GFX1164-DPP-NEXT:    s_addc_u32 s9, s35, 0
 ; GFX1164-DPP-NEXT:    s_getpc_b64 s[4:5]
-; GFX1164-DPP-NEXT:    s_add_u32 s4, s4, div.float.value@gotpcrel32@lo+4
-; GFX1164-DPP-NEXT:    s_addc_u32 s5, s5, div.float.value@gotpcrel32@hi+12
+; GFX1164-DPP-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1164-DPP-NEXT:    s_add_u32 s4, s4, div.float.value@gotpcrel32@lo+8
+; GFX1164-DPP-NEXT:    s_addc_u32 s5, s5, div.float.value@gotpcrel32@hi+16
 ; GFX1164-DPP-NEXT:    v_mov_b32_e32 v31, v0
 ; GFX1164-DPP-NEXT:    s_load_b64 s[16:17], s[4:5], 0x0
 ; GFX1164-DPP-NEXT:    s_mov_b32 s14, s10
@@ -5644,8 +5663,9 @@ define amdgpu_kernel void @global_atomic_fsub_uni_address_div_value_defalut_scop
 ; GFX1132-DPP-NEXT:    s_add_u32 s8, s34, 44
 ; GFX1132-DPP-NEXT:    s_addc_u32 s9, s35, 0
 ; GFX1132-DPP-NEXT:    s_getpc_b64 s[4:5]
-; GFX1132-DPP-NEXT:    s_add_u32 s4, s4, div.float.value@gotpcrel32@lo+4
-; GFX1132-DPP-NEXT:    s_addc_u32 s5, s5, div.float.value@gotpcrel32@hi+12
+; GFX1132-DPP-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1132-DPP-NEXT:    s_add_u32 s4, s4, div.float.value@gotpcrel32@lo+8
+; GFX1132-DPP-NEXT:    s_addc_u32 s5, s5, div.float.value@gotpcrel32@hi+16
 ; GFX1132-DPP-NEXT:    s_mov_b32 s12, s13
 ; GFX1132-DPP-NEXT:    s_load_b64 s[16:17], s[4:5], 0x0
 ; GFX1132-DPP-NEXT:    s_mov_b64 s[10:11], s[6:7]

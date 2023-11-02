@@ -159,8 +159,9 @@ define amdgpu_kernel void @call_coldcc() #0 {
 ; GFX11-LABEL: call_coldcc:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_getpc_b64 s[0:1]
-; GFX11-NEXT:    s_add_u32 s0, s0, coldcc@gotpcrel32@lo+4
-; GFX11-NEXT:    s_addc_u32 s1, s1, coldcc@gotpcrel32@hi+12
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_add_u32 s0, s0, coldcc@gotpcrel32@lo+8
+; GFX11-NEXT:    s_addc_u32 s1, s1, coldcc@gotpcrel32@hi+16
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 1.0
 ; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
 ; GFX11-NEXT:    s_mov_b32 s32, 0
@@ -223,8 +224,9 @@ define amdgpu_kernel void @call_fastcc() #0 {
 ; GFX11-LABEL: call_fastcc:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_getpc_b64 s[0:1]
-; GFX11-NEXT:    s_add_u32 s0, s0, fastcc@gotpcrel32@lo+4
-; GFX11-NEXT:    s_addc_u32 s1, s1, fastcc@gotpcrel32@hi+12
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_add_u32 s0, s0, fastcc@gotpcrel32@lo+8
+; GFX11-NEXT:    s_addc_u32 s1, s1, fastcc@gotpcrel32@hi+16
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 1.0
 ; GFX11-NEXT:    s_load_b64 s[0:1], s[0:1], 0x0
 ; GFX11-NEXT:    s_mov_b32 s32, 0

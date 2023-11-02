@@ -234,8 +234,9 @@ define amdgpu_kernel void @clmem_read_simplified(ptr addrspace(1)  %buffer) {
 ; GFX11-LABEL: clmem_read_simplified:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_getpc_b64 s[2:3]
-; GFX11-NEXT:    s_add_u32 s2, s2, _Z13get_global_idj@gotpcrel32@lo+4
-; GFX11-NEXT:    s_addc_u32 s3, s3, _Z13get_global_idj@gotpcrel32@hi+12
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_add_u32 s2, s2, _Z13get_global_idj@gotpcrel32@lo+8
+; GFX11-NEXT:    s_addc_u32 s3, s3, _Z13get_global_idj@gotpcrel32@hi+16
 ; GFX11-NEXT:    v_dual_mov_b32 v31, v0 :: v_dual_mov_b32 v0, 0
 ; GFX11-NEXT:    s_load_b64 s[2:3], s[2:3], 0x0
 ; GFX11-NEXT:    s_load_b64 s[34:35], s[0:1], 0x24
@@ -812,8 +813,9 @@ define hidden amdgpu_kernel void @clmem_read(ptr addrspace(1)  %buffer) {
 ; GFX11-LABEL: clmem_read:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_getpc_b64 s[2:3]
-; GFX11-NEXT:    s_add_u32 s2, s2, _Z13get_global_idj@gotpcrel32@lo+4
-; GFX11-NEXT:    s_addc_u32 s3, s3, _Z13get_global_idj@gotpcrel32@hi+12
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_add_u32 s2, s2, _Z13get_global_idj@gotpcrel32@lo+8
+; GFX11-NEXT:    s_addc_u32 s3, s3, _Z13get_global_idj@gotpcrel32@hi+16
 ; GFX11-NEXT:    v_dual_mov_b32 v31, v0 :: v_dual_mov_b32 v0, 0
 ; GFX11-NEXT:    s_load_b64 s[2:3], s[2:3], 0x0
 ; GFX11-NEXT:    s_load_b64 s[34:35], s[0:1], 0x24
@@ -1242,8 +1244,9 @@ define amdgpu_kernel void @Address32(ptr addrspace(1) %buffer) {
 ; GFX11-LABEL: Address32:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_getpc_b64 s[2:3]
-; GFX11-NEXT:    s_add_u32 s2, s2, _Z13get_global_idj@gotpcrel32@lo+4
-; GFX11-NEXT:    s_addc_u32 s3, s3, _Z13get_global_idj@gotpcrel32@hi+12
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_add_u32 s2, s2, _Z13get_global_idj@gotpcrel32@lo+8
+; GFX11-NEXT:    s_addc_u32 s3, s3, _Z13get_global_idj@gotpcrel32@hi+16
 ; GFX11-NEXT:    v_dual_mov_b32 v31, v0 :: v_dual_mov_b32 v0, 0
 ; GFX11-NEXT:    s_load_b64 s[2:3], s[2:3], 0x0
 ; GFX11-NEXT:    s_load_b64 s[34:35], s[0:1], 0x24
@@ -1502,8 +1505,9 @@ define amdgpu_kernel void @Offset64(ptr addrspace(1)  %buffer) {
 ; GFX11-LABEL: Offset64:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_getpc_b64 s[2:3]
-; GFX11-NEXT:    s_add_u32 s2, s2, _Z13get_global_idj@gotpcrel32@lo+4
-; GFX11-NEXT:    s_addc_u32 s3, s3, _Z13get_global_idj@gotpcrel32@hi+12
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_add_u32 s2, s2, _Z13get_global_idj@gotpcrel32@lo+8
+; GFX11-NEXT:    s_addc_u32 s3, s3, _Z13get_global_idj@gotpcrel32@hi+16
 ; GFX11-NEXT:    v_dual_mov_b32 v31, v0 :: v_dual_mov_b32 v0, 0
 ; GFX11-NEXT:    s_load_b64 s[2:3], s[2:3], 0x0
 ; GFX11-NEXT:    s_load_b64 s[34:35], s[0:1], 0x24
@@ -1717,8 +1721,9 @@ define amdgpu_kernel void @p32Offset64(ptr addrspace(1)  %buffer) {
 ; GFX11-LABEL: p32Offset64:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_getpc_b64 s[2:3]
-; GFX11-NEXT:    s_add_u32 s2, s2, _Z13get_global_idj@gotpcrel32@lo+4
-; GFX11-NEXT:    s_addc_u32 s3, s3, _Z13get_global_idj@gotpcrel32@hi+12
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_add_u32 s2, s2, _Z13get_global_idj@gotpcrel32@lo+8
+; GFX11-NEXT:    s_addc_u32 s3, s3, _Z13get_global_idj@gotpcrel32@hi+16
 ; GFX11-NEXT:    v_dual_mov_b32 v31, v0 :: v_dual_mov_b32 v0, 0
 ; GFX11-NEXT:    s_load_b64 s[2:3], s[2:3], 0x0
 ; GFX11-NEXT:    s_load_b64 s[34:35], s[0:1], 0x24
@@ -1968,8 +1973,9 @@ define amdgpu_kernel void @DiffBase(ptr addrspace(1) %buffer1,
 ; GFX11-LABEL: DiffBase:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_getpc_b64 s[2:3]
-; GFX11-NEXT:    s_add_u32 s2, s2, _Z13get_global_idj@gotpcrel32@lo+4
-; GFX11-NEXT:    s_addc_u32 s3, s3, _Z13get_global_idj@gotpcrel32@hi+12
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_add_u32 s2, s2, _Z13get_global_idj@gotpcrel32@lo+8
+; GFX11-NEXT:    s_addc_u32 s3, s3, _Z13get_global_idj@gotpcrel32@hi+16
 ; GFX11-NEXT:    v_dual_mov_b32 v31, v0 :: v_dual_mov_b32 v0, 0
 ; GFX11-NEXT:    s_load_b64 s[2:3], s[2:3], 0x0
 ; GFX11-NEXT:    s_load_b128 s[36:39], s[0:1], 0x24
@@ -2285,8 +2291,9 @@ define amdgpu_kernel void @ReverseOrder(ptr addrspace(1) %buffer) {
 ; GFX11-LABEL: ReverseOrder:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_getpc_b64 s[2:3]
-; GFX11-NEXT:    s_add_u32 s2, s2, _Z13get_global_idj@gotpcrel32@lo+4
-; GFX11-NEXT:    s_addc_u32 s3, s3, _Z13get_global_idj@gotpcrel32@hi+12
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_add_u32 s2, s2, _Z13get_global_idj@gotpcrel32@lo+8
+; GFX11-NEXT:    s_addc_u32 s3, s3, _Z13get_global_idj@gotpcrel32@hi+16
 ; GFX11-NEXT:    v_dual_mov_b32 v31, v0 :: v_dual_mov_b32 v0, 0
 ; GFX11-NEXT:    s_load_b64 s[2:3], s[2:3], 0x0
 ; GFX11-NEXT:    s_load_b64 s[34:35], s[0:1], 0x24
@@ -2522,8 +2529,9 @@ define hidden amdgpu_kernel void @negativeoffset(ptr addrspace(1) nocapture %buf
 ; GFX11-LABEL: negativeoffset:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_getpc_b64 s[2:3]
-; GFX11-NEXT:    s_add_u32 s2, s2, _Z13get_global_idj@gotpcrel32@lo+4
-; GFX11-NEXT:    s_addc_u32 s3, s3, _Z13get_global_idj@gotpcrel32@hi+12
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_add_u32 s2, s2, _Z13get_global_idj@gotpcrel32@lo+8
+; GFX11-NEXT:    s_addc_u32 s3, s3, _Z13get_global_idj@gotpcrel32@hi+16
 ; GFX11-NEXT:    v_dual_mov_b32 v31, v0 :: v_dual_mov_b32 v0, 0
 ; GFX11-NEXT:    s_load_b64 s[2:3], s[2:3], 0x0
 ; GFX11-NEXT:    s_load_b64 s[34:35], s[0:1], 0x24
