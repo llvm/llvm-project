@@ -625,14 +625,15 @@ define i8 @oneArgPromotionBlockSExtZExt(i1 %arg1, ptr %base) {
 ; CHECK-LABEL: define void @pr70938(
 ; CHECK-SAME: ptr [[F:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i64 0, 0
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i64 0, 1
 ; CHECK-NEXT:    [[SUNKADDR:%.*]] = mul i64 [[ADD]], 2
 ; CHECK-NEXT:    [[SUNKADDR1:%.*]] = getelementptr i8, ptr [[F]], i64 [[SUNKADDR]]
-; CHECK-NEXT:    store i8 0, ptr [[SUNKADDR1]], align 1
+; CHECK-NEXT:    [[SUNKADDR2:%.*]] = getelementptr i8, ptr [[SUNKADDR1]], i64 1
+; CHECK-NEXT:    store i8 0, ptr [[SUNKADDR2]], align 1
 ; CHECK-NEXT:    ret void
 define void @pr70938(ptr %f) {
 entry:
-  %add = add nsw i32 0, 0
+  %add = add nsw i32 0, 1
   %idxprom3 = sext i32 %add to i64
   %arrayidx4 = getelementptr [2 x [1 x [2 x i8]]], ptr %f, i64 0, i64 %idxprom3
   %arrayidx8 = getelementptr [2 x i8], ptr %arrayidx4, i64 0, i64 %idxprom3
