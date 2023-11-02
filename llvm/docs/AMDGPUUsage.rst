@@ -5538,7 +5538,7 @@ following sections:
 
 * :ref:`amdgpu-amdhsa-memory-model-gfx6-gfx9`
 * :ref:`amdgpu-amdhsa-memory-model-gfx90a`
-* :ref:`amdgpu-amdhsa-memory-model-gfx940`
+* :ref:`amdgpu-amdhsa-memory-model-gfx942`
 * :ref:`amdgpu-amdhsa-memory-model-gfx10-gfx11`
 
 .. _amdgpu-amdhsa-memory-model-gfx6-gfx9:
@@ -9190,12 +9190,12 @@ in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx90a-table`.
                                - system                  for OpenCL.*
      ============ ============ ============== ========== ================================
 
-.. _amdgpu-amdhsa-memory-model-gfx940:
+.. _amdgpu-amdhsa-memory-model-gfx942:
 
-Memory Model GFX940
+Memory Model GFX942
 +++++++++++++++++++
 
-For GFX940:
+For GFX942:
 
 * Each agent has multiple shader arrays (SA).
 * Each SA has multiple compute units (CU).
@@ -9249,7 +9249,7 @@ For GFX940:
   model. See :ref:`amdgpu-amdhsa-memory-spaces`.
 * The vector and scalar memory operations use an L2 cache.
 
-  * The gfx940 can be configured as a number of smaller agents with each having
+  * The gfx942 can be configured as a number of smaller agents with each having
     a single L2 shared by all CUs on the same agent, or as fewer (possibly one)
     larger agents with groups of CUs on each agent each sharing separate L2
     caches.
@@ -9325,15 +9325,15 @@ only accessed by a single thread, and is always write-before-read, there is
 never a need to invalidate these entries from the L1 cache. Hence all cache
 invalidates are done as ``*_vol`` to only invalidate the volatile cache lines.
 
-The code sequences used to implement the memory model for GFX940 are defined
-in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx940-table`.
+The code sequences used to implement the memory model for GFX940, GFX941, GFX942
+are defined in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx940-gfx941-gfx942-table`.
 
-  .. table:: AMDHSA Memory Model Code Sequences GFX940
-     :name: amdgpu-amdhsa-memory-model-code-sequences-gfx940-table
+  .. table:: AMDHSA Memory Model Code Sequences GFX940, GFX941, GFX942
+     :name: amdgpu-amdhsa-memory-model-code-sequences-gfx940-gfx941-gfx942-table
 
      ============ ============ ============== ========== ================================
      LLVM Instr   LLVM Memory  LLVM Memory    AMDGPU     AMDGPU Machine Code
-                  Ordering     Sync Scope     Address    GFX940
+                  Ordering     Sync Scope     Address    GFX940, GFX941, GFX942
                                               Space
      ============ ============ ============== ========== ================================
      **Non-Atomic**
@@ -9368,12 +9368,20 @@ in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx940-table`.
      load         *none*       *none*         - local    1. ds_load
      store        *none*       *none*         - global   - !volatile & !nontemporal
                                               - generic
-                                              - private    1. buffer/global/flat_store
-                                              - constant
+                                              - private    1. GFX940, GFX941
+                                              - constant        buffer/global/flat_store
+                                                                sc0=1 sc1=1
+                                                              GFX942
+                                                                buffer/global/flat_store
+
                                                          - !volatile & nontemporal
 
-                                                           1. buffer/global/flat_store
-                                                              nt=1
+                                                           1. GFX940, GFX941
+                                                                buffer/global/flat_store
+                                                                nt=1 sc0=1 sc1=1
+                                                              GFX942
+                                                                buffer/global/flat_store
+                                                                nt=1
 
                                                          - volatile
 
@@ -10065,8 +10073,12 @@ in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx940-table`.
 
      **Release Atomic**
      ------------------------------------------------------------------------------------
-     store atomic release      - singlethread - global   1. buffer/global/flat_store
-                               - wavefront    - generic
+     store atomic release      - singlethread - global   1. GFX940, GFX941
+                               - wavefront    - generic       buffer/global/flat_store
+                                                              sc0=1 sc1=1
+                                                            GFX942
+                                                              buffer/global/flat_store
+
      store atomic release      - singlethread - local    *If TgSplit execution mode,
                                - wavefront               local address space cannot
                                                          be used.*
@@ -10103,7 +10115,12 @@ in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx940-table`.
                                                              store that is being
                                                              released.
 
-                                                         2. buffer/global/flat_store sc0=1
+                                                         2. GFX940, GFX941
+                                                              buffer/global/flat_store
+                                                              sc0=1 sc1=1
+                                                            GFX942
+                                                              buffer/global/flat_store
+                                                              sc0=1
      store atomic release      - workgroup    - local    *If TgSplit execution mode,
                                                          local address space cannot
                                                          be used.*
@@ -10162,7 +10179,12 @@ in table :ref:`amdgpu-amdhsa-memory-model-code-sequences-gfx940-table`.
                                                              store that is being
                                                              released.
 
-                                                         3. buffer/global/flat_store sc1=1
+                                                         3. GFX940, GFX941
+                                                              buffer/global/flat_store
+                                                              sc0=1 sc1=1
+                                                            GFX942
+                                                              buffer/global/flat_store
+                                                              sc1=1
      store atomic release      - system       - global   1. buffer_wbl2 sc0=1 sc1=1
                                               - generic
                                                            - Must happen before
