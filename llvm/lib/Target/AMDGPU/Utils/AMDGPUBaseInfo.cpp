@@ -2550,6 +2550,7 @@ bool isArgPassedInSGPR(const Argument *A) {
     return A->hasAttribute(Attribute::InReg) ||
            A->hasAttribute(Attribute::ByVal);
   default:
+    // TODO: treat i1 as divergent?
     return A->hasAttribute(Attribute::InReg);
   }
 }
