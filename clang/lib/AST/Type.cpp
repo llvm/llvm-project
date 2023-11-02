@@ -4175,7 +4175,7 @@ public:
     // Compute the cached properties and then set the cache.
     CachedProperties Result = computeCachedProperties(T);
     T->TypeBits.CacheValid = true;
-    T->TypeBits.CachedLinkage = Result.getLinkage();
+    T->TypeBits.CachedLinkage = llvm::to_underlying(Result.getLinkage());
     T->TypeBits.CachedLocalOrUnnamed = Result.hasLocalOrUnnamedType();
   }
 };
@@ -4207,20 +4207,20 @@ static CachedProperties computeCachedProperties(const Type *T) {
     // Treat instantiation-dependent types as external.
     if (!T->isInstantiationDependentType()) T->dump();
     assert(T->isInstantiationDependentType());
-    return CachedProperties(ExternalLinkage, false);
+    return CachedProperties(Linkage::External, false);
 
   case Type::Auto:
   case Type::DeducedTemplateSpecialization:
     // Give non-deduced 'auto' types external linkage. We should only see them
     // here in error recovery.
-    return CachedProperties(ExternalLinkage, false);
+    return CachedProperties(Linkage::External, false);
 
   case Type::BitInt:
   case Type::Builtin:
     // C++ [basic.link]p8:
     //   A type is said to have linkage if and only if:
     //     - it is a fundamental type (3.9.1); or
-    return CachedProperties(ExternalLinkage, false);
+    return CachedProperties(Linkage::External, false);
 
   case Type::Record:
   case Type::Enum: {
