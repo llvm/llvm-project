@@ -234,6 +234,8 @@ void __kmpc_nvptx_end_reduce(int32_t TId);
 
 void __kmpc_nvptx_end_reduce_nowait(int32_t TId);
 
+void *__kmpc_reduction_get_fixed_buffer();
+
 int32_t __kmpc_nvptx_parallel_reduce_nowait_v2(
     IdentTy *Loc, int32_t TId, int32_t num_vars, uint64_t reduce_size,
     void *reduce_data, ShuffleReductFnTy shflFct, InterWarpCopyFnTy cpyFct);

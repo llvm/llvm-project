@@ -417,6 +417,42 @@ for.body:                                         ; preds = %for.body.lr.ph, %fo
 }
 
 define i32 @foo6(ptr %input, i32 %length, ptr %in) {
+; CHECK-LABEL: @foo6(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[STRIDE:%.*]] = getelementptr inbounds [[STRUCT_IMAGE:%.*]], ptr [[INPUT:%.*]], i64 0, i32 1
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[STRIDE]], align 4
+; CHECK-NEXT:    [[CMP17:%.*]] = icmp sgt i32 [[LENGTH:%.*]], 1
+; CHECK-NEXT:    br i1 [[CMP17]], label [[FOR_BODY_LR_PH:%.*]], label [[FOR_COND_CLEANUP:%.*]]
+; CHECK:       for.body.lr.ph:
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[TMP0]] to i64
+; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[LENGTH]] to i64
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.cond.cleanup.loopexit:
+; CHECK-NEXT:    [[TMP2:%.*]] = phi i32 [ [[TMP12:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    br label [[FOR_COND_CLEANUP]]
+; CHECK:       for.cond.cleanup:
+; CHECK-NEXT:    [[TMP3:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[TMP2]], [[FOR_COND_CLEANUP_LOOPEXIT:%.*]] ]
+; CHECK-NEXT:    ret i32 [[TMP3]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ], [ 1, [[FOR_BODY_LR_PH]] ]
+; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
+; CHECK-NEXT:    [[TMP4:%.*]] = and i32 [[LENGTH]], [[TMP0]]
+; CHECK-NEXT:    [[TMP5:%.*]] = zext i32 [[TMP4]] to i64
+; CHECK-NEXT:    [[TMP6:%.*]] = mul nuw i64 [[TMP5]], [[INDVARS_IV_NEXT]]
+; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i32, ptr [[IN:%.*]], i64 [[TMP6]]
+; CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr [[ADD_PTR]], align 4
+; CHECK-NEXT:    [[TMP8:%.*]] = mul nuw i64 [[TMP1]], [[INDVARS_IV_NEXT]]
+; CHECK-NEXT:    [[ADD_PTR1:%.*]] = getelementptr inbounds i32, ptr [[IN]], i64 [[TMP8]]
+; CHECK-NEXT:    [[TMP9:%.*]] = load i32, ptr [[ADD_PTR1]], align 4
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[LENGTH]], [[TMP9]]
+; CHECK-NEXT:    [[TMP10:%.*]] = zext i32 [[OR]] to i64
+; CHECK-NEXT:    [[TMP11:%.*]] = sub nuw i64 [[TMP10]], [[INDVARS_IV_NEXT]]
+; CHECK-NEXT:    [[PTR_OR:%.*]] = getelementptr inbounds i32, ptr [[IN]], i64 [[TMP11]]
+; CHECK-NEXT:    [[VAL_OR:%.*]] = load i32, ptr [[PTR_OR]], align 4
+; CHECK-NEXT:    [[TMP12]] = add i32 [[TMP7]], [[VAL_OR]]
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY]], label [[FOR_COND_CLEANUP_LOOPEXIT]]
+;
 entry:
   %stride = getelementptr inbounds %struct.image, ptr %input, i64 0, i32 1
   %0 = load i32, ptr %stride, align 4
@@ -436,12 +472,6 @@ for.cond.cleanup:                                 ; preds = %for.cond.cleanup.lo
 
 ; Extend foo4 so that any loop variants (%3 and %or) with mul/sub/add then extend will not
 ; need a trunc instruction
-; CHECK: for.body:
-; CHECK-NOT: trunc
-; CHECK:      [[TMP0:%.*]] = and i32 %length, %0
-; CHECK-NEXT: zext i32 [[TMP0]] to i64
-; CHECK:      [[TMP1:%.*]] = or i32 %length, [[TMP2:%.*]]
-; CHECK-NEXT: zext i32 [[TMP1]] to i64
 for.body:                                         ; preds = %for.body.lr.ph, %for.body
   %x.018 = phi i32 [ 1, %for.body.lr.ph ], [ %add, %for.body ]
   %add = add nuw nsw i32 %x.018, 1

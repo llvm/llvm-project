@@ -668,11 +668,11 @@ getAsConstantIndexedAddress(Type *ElemTy, Value *V, const DataLayout &DL) {
       if (!GEP->isInBounds())
         break;
       if (GEP->hasAllConstantIndices() && GEP->getNumIndices() == 1 &&
-          GEP->getSourceElementType() == ElemTy) {
+          GEP->getSourceElementType() == ElemTy &&
+          GEP->getOperand(1)->getType() == IndexType) {
         V = GEP->getOperand(0);
         Constant *GEPIndex = static_cast<Constant *>(GEP->getOperand(1));
-        Index = ConstantExpr::getAdd(
-            Index, ConstantExpr::getSExtOrTrunc(GEPIndex, IndexType));
+        Index = ConstantExpr::getAdd(Index, GEPIndex);
         continue;
       }
       break;
