@@ -662,36 +662,6 @@ tryToGatherSingleRegisterExtractElements(MutableArrayRef<Value *> VL,
   return Res;
 }
 
-/// Tries to find extractelement instructions with constant indices from fixed
-/// vector type and gather such instructions into a bunch, which highly likely
-/// might be detected as a shuffle of 1 or 2 input vectors. If this attempt was
-/// successful, the matched scalars are replaced by poison values in \p VL for
-/// future analysis.
-static SmallVector<std::optional<TTI::ShuffleKind>>
-tryToGatherExtractElements(SmallVectorImpl<Value *> &VL,
-                           SmallVectorImpl<int> &Mask, unsigned NumParts) {
-  assert(NumParts > 0 && "NumParts expected be greater than or equal to 1.");
-  SmallVector<std::optional<TTI::ShuffleKind>> ShufflesRes(NumParts);
-  Mask.assign(VL.size(), PoisonMaskElem);
-  unsigned SliceSize = VL.size() / NumParts;
-  for (unsigned Part = 0; Part < NumParts; ++Part) {
-    // Scan list of gathered scalars for extractelements that can be represented
-    // as shuffles.
-    MutableArrayRef<Value *> SubVL =
-        MutableArrayRef(VL).slice(Part * SliceSize, SliceSize);
-    SmallVector<int> SubMask;
-    std::optional<TTI::ShuffleKind> Res =
-        tryToGatherSingleRegisterExtractElements(SubVL, SubMask);
-    ShufflesRes[Part] = Res;
-    copy(SubMask, std::next(Mask.begin(), Part * SliceSize));
-  }
-  if (none_of(ShufflesRes, [](const std::optional<TTI::ShuffleKind> &Res) {
-        return Res.has_value();
-      }))
-    ShufflesRes.clear();
-  return ShufflesRes;
-}
-
 namespace {
 
 /// Main data required for vectorization of instructions.
@@ -7182,80 +7152,101 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
                 : R.getGatherCost(Gathers, !Root && VL.equals(Gathers)));
   };
 
-  /// Compute the cost of creating a vector containing the extracted values from
-  /// \p VL.
-  InstructionCost
-  computeExtractCost(ArrayRef<Value *> VL, ArrayRef<int> Mask,
-                     ArrayRef<std::optional<TTI::ShuffleKind>> ShuffleKinds,
-                     unsigned NumParts) {
-    assert(VL.size() > NumParts && "Unexpected scalarized shuffle.");
-    unsigned NumElts =
-        std::accumulate(VL.begin(), VL.end(), 0, [](unsigned Sz, Value *V) {
-          auto *EE = dyn_cast<ExtractElementInst>(V);
-          if (!EE)
-            return Sz;
-          auto *VecTy = cast<FixedVectorType>(EE->getVectorOperandType());
-          return std::max(Sz, VecTy->getNumElements());
-        });
-    unsigned NumSrcRegs = TTI.getNumberOfParts(
-        FixedVectorType::get(VL.front()->getType(), NumElts));
-    if (NumSrcRegs == 0)
-      NumSrcRegs = 1;
-    // FIXME: this must be moved to TTI for better estimation.
-    unsigned EltsPerVector = PowerOf2Ceil(std::max(
-        divideCeil(VL.size(), NumParts), divideCeil(NumElts, NumSrcRegs)));
-    auto CheckPerRegistersShuffle =
-        [&](MutableArrayRef<int> Mask) -> std::optional<TTI::ShuffleKind> {
-      DenseSet<int> RegIndices;
-      // Check that if trying to permute same single/2 input vectors.
-      TTI::ShuffleKind ShuffleKind = TTI::SK_PermuteSingleSrc;
-      int FirstRegId = -1;
-      for (int &I : Mask) {
-        if (I == PoisonMaskElem)
-          continue;
-        int RegId = (I / NumElts) * NumParts + (I % NumElts) / EltsPerVector;
-        if (FirstRegId < 0)
-          FirstRegId = RegId;
-        RegIndices.insert(RegId);
-        if (RegIndices.size() > 2)
-          return std::nullopt;
-        if (RegIndices.size() == 2)
-          ShuffleKind = TTI::SK_PermuteTwoSrc;
-        I = (I % NumElts) % EltsPerVector +
-            (RegId == FirstRegId ? 0 : EltsPerVector);
-      }
-      return ShuffleKind;
-    };
+  /// Compute the cost of creating a vector of type \p VecTy containing the
+  /// extracted values from \p VL.
+  InstructionCost computeExtractCost(ArrayRef<Value *> VL, ArrayRef<int> Mask,
+                                     TTI::ShuffleKind ShuffleKind) {
+    unsigned NumElts = 0;
+    for (Value *V : VL) {
+      auto *EE = dyn_cast<ExtractElementInst>(V);
+      if (!EE)
+        continue;
+      auto *VecTy = cast<FixedVectorType>(EE->getVectorOperandType());
+      NumElts = std::max(NumElts, VecTy->getNumElements());
+    }
+    assert(NumElts > 0 &&
+           "Expected at least 1-element fixed length vector(s).");
+    auto *VecTy = FixedVectorType::get(VL.front()->getType(), NumElts);
+    unsigned NumOfParts = TTI.getNumberOfParts(VecTy);
+    if (!NumOfParts || NumElts < NumOfParts)
+      return TTI.getShuffleCost(ShuffleKind, VecTy, Mask);
+    unsigned EltsPerVector = PowerOf2Ceil(divideCeil(NumElts, NumOfParts));
+    int ValNum = -1;
+    int ValIdx = -1;
+    // Check that if trying to permute 2 input vectors (which may result in
+    // several vector registers), each per-register subvector is the result of
+    // the permutation of 2 single registers.
+    if (ShuffleKind != TargetTransformInfo::SK_PermuteSingleSrc &&
+        !all_of(enumerate(Mask), [&](auto &&Arg) {
+          if (Arg.value() == PoisonMaskElem)
+            return true;
+          int CurValNum = (Arg.value() % NumElts) / EltsPerVector;
+          int CurValIdx = Arg.index() / EltsPerVector;
+          if (ValIdx != CurValIdx) {
+            ValIdx = CurValIdx;
+            ValNum = CurValNum;
+            return true;
+          }
+          return CurValNum == ValNum;
+        }))
+      return TTI.getShuffleCost(ShuffleKind, VecTy, Mask);
+
     InstructionCost Cost = 0;
 
     // Process extracts in blocks of EltsPerVector to check if the source vector
     // operand can be re-used directly. If not, add the cost of creating a
     // shuffle to extract the values into a vector register.
-    for (unsigned Part = 0; Part < NumParts; ++Part) {
-      if (!ShuffleKinds[Part])
-        continue;
-      ArrayRef<int> MaskSlice =
-          Mask.slice(Part * EltsPerVector,
-                     (Part == NumParts - 1 && Mask.size() % EltsPerVector != 0)
-                         ? Mask.size() % EltsPerVector
-                         : EltsPerVector);
-      SmallVector<int> SubMask(EltsPerVector, PoisonMaskElem);
-      copy(MaskSlice, SubMask.begin());
-      std::optional<TTI::ShuffleKind> RegShuffleKind =
-          CheckPerRegistersShuffle(SubMask);
-      if (!RegShuffleKind) {
-        Cost += TTI.getShuffleCost(
-            *ShuffleKinds[Part],
-            FixedVectorType::get(VL.front()->getType(), NumElts), MaskSlice);
-        continue;
+    auto *RegisterVecTy =
+        FixedVectorType::get(VL.front()->getType(), EltsPerVector);
+    SmallVector<int> RegMask(EltsPerVector, PoisonMaskElem);
+    TTI::ShuffleKind RegisterSK = TargetTransformInfo::SK_PermuteSingleSrc;
+    Value *VecBase = nullptr;
+    bool IsIdentity = true;
+    for (auto [Idx, V] : enumerate(VL)) {
+      // Reached the start of a new vector registers.
+      if (Idx % EltsPerVector == 0) {
+        RegMask.assign(EltsPerVector, PoisonMaskElem);
+        RegisterSK = TargetTransformInfo::SK_PermuteSingleSrc;
+        VecBase = nullptr;
       }
-      if (*RegShuffleKind != TTI::SK_PermuteSingleSrc ||
-          !ShuffleVectorInst::isIdentityMask(SubMask, EltsPerVector)) {
-        Cost += TTI.getShuffleCost(
-            *RegShuffleKind,
-            FixedVectorType::get(VL.front()->getType(), EltsPerVector),
-            SubMask);
+
+      // Need to exclude undefs from analysis.
+      if (isa<UndefValue>(V) || Mask[Idx] == PoisonMaskElem)
+        continue;
+
+      // Check all extracts for a vector register on the target directly
+      // extract values in order.
+      unsigned CurrentIdx = *getExtractIndex(cast<Instruction>(V));
+      unsigned PrevIdx = CurrentIdx;
+      if (Idx % EltsPerVector != 0 && !isa<UndefValue>(VL[Idx - 1]) &&
+          Mask[Idx - 1] != PoisonMaskElem)
+        PrevIdx = *getExtractIndex(cast<Instruction>(VL[Idx - 1])) + 1;
+      if (!VecBase) {
+        VecBase = cast<ExtractElementInst>(V)->getVectorOperand();
+        RegMask[Idx % EltsPerVector] = CurrentIdx % EltsPerVector;
+        IsIdentity = CurrentIdx % EltsPerVector == Idx % EltsPerVector;
+      } else if (VecBase != cast<ExtractElementInst>(V)->getVectorOperand()) {
+        IsIdentity = false;
+        RegisterSK = TargetTransformInfo::SK_PermuteTwoSrc;
+        RegMask[Idx % EltsPerVector] =
+            CurrentIdx % EltsPerVector + EltsPerVector;
+      } else {
+        IsIdentity &= PrevIdx == CurrentIdx &&
+                      CurrentIdx % EltsPerVector == Idx % EltsPerVector;
+        RegMask[Idx % EltsPerVector] = CurrentIdx % EltsPerVector;
       }
+
+      if (IsIdentity)
+        continue;
+
+      // Skip all indices, except for the last index per vector block.
+      if ((Idx + 1) % EltsPerVector != 0 && Idx + 1 != VL.size())
+        continue;
+
+      // If we have a series of extracts which are not consecutive and hence
+      // cannot re-use the source vector register directly, compute the shuffle
+      // cost to extract the vector with EltsPerVector elements.
+      Cost += TTI.getShuffleCost(RegisterSK, RegisterVecTy, RegMask);
     }
     return Cost;
   }
@@ -7473,76 +7464,90 @@ public:
                        SmallPtrSetImpl<Value *> &CheckedExtracts)
       : TTI(TTI), VectorizedVals(VectorizedVals.begin(), VectorizedVals.end()),
         R(R), CheckedExtracts(CheckedExtracts) {}
-  Value *adjustExtracts(const TreeEntry *E, MutableArrayRef<int> Mask,
-                        ArrayRef<std::optional<TTI::ShuffleKind>> ShuffleKinds,
-                        unsigned NumParts) {
+  Value *adjustExtracts(const TreeEntry *E, ArrayRef<int> Mask,
+                        TTI::ShuffleKind ShuffleKind) {
     if (Mask.empty())
       return nullptr;
     Value *VecBase = nullptr;
     ArrayRef<Value *> VL = E->Scalars;
+    auto *VecTy = FixedVectorType::get(VL.front()->getType(), VL.size());
     // If the resulting type is scalarized, do not adjust the cost.
-    if (NumParts == VL.size())
+    unsigned VecNumParts = TTI.getNumberOfParts(VecTy);
+    if (VecNumParts == VecTy->getNumElements())
       return nullptr;
-    // Check if it can be considered reused if same extractelements were
-    // vectorized already.
-    bool PrevNodeFound = any_of(
-        ArrayRef(R.VectorizableTree).take_front(E->Idx),
-        [&](const std::unique_ptr<TreeEntry> &TE) {
-          return ((!TE->isAltShuffle() &&
-                   TE->getOpcode() == Instruction::ExtractElement) ||
-                  TE->State == TreeEntry::NeedToGather) &&
-                 all_of(enumerate(TE->Scalars), [&](auto &&Data) {
-                   return VL.size() > Data.index() &&
-                          (Mask[Data.index()] == PoisonMaskElem ||
-                           isa<UndefValue>(VL[Data.index()]) ||
-                           Data.value() == VL[Data.index()]);
-                 });
-        });
-    unsigned SliceSize = VL.size() / NumParts;
-    for (unsigned Part = 0; Part < NumParts; ++Part) {
-      ArrayRef<int> SubMask = Mask.slice(Part * SliceSize, SliceSize);
-      for (auto [I, V] : enumerate(VL.slice(Part * SliceSize, SliceSize))) {
-        // Ignore non-extractelement scalars.
-        if (isa<UndefValue>(V) ||
-            (!SubMask.empty() && SubMask[I] == PoisonMaskElem))
+    DenseMap<Value *, int> ExtractVectorsTys;
+    for (auto [I, V] : enumerate(VL)) {
+      // Ignore non-extractelement scalars.
+      if (isa<UndefValue>(V) || (!Mask.empty() && Mask[I] == PoisonMaskElem))
+        continue;
+      // If all users of instruction are going to be vectorized and this
+      // instruction itself is not going to be vectorized, consider this
+      // instruction as dead and remove its cost from the final cost of the
+      // vectorized tree.
+      // Also, avoid adjusting the cost for extractelements with multiple uses
+      // in different graph entries.
+      const TreeEntry *VE = R.getTreeEntry(V);
+      if (!CheckedExtracts.insert(V).second ||
+          !R.areAllUsersVectorized(cast<Instruction>(V), &VectorizedVals) ||
+          (VE && VE != E))
+        continue;
+      auto *EE = cast<ExtractElementInst>(V);
+      VecBase = EE->getVectorOperand();
+      std::optional<unsigned> EEIdx = getExtractIndex(EE);
+      if (!EEIdx)
+        continue;
+      unsigned Idx = *EEIdx;
+      if (VecNumParts != TTI.getNumberOfParts(EE->getVectorOperandType())) {
+        auto It =
+            ExtractVectorsTys.try_emplace(EE->getVectorOperand(), Idx).first;
+        It->getSecond() = std::min<int>(It->second, Idx);
+      }
+      // Take credit for instruction that will become dead.
+      if (EE->hasOneUse()) {
+        Instruction *Ext = EE->user_back();
+        if (isa<SExtInst, ZExtInst>(Ext) && all_of(Ext->users(), [](User *U) {
+              return isa<GetElementPtrInst>(U);
+            })) {
+          // Use getExtractWithExtendCost() to calculate the cost of
+          // extractelement/ext pair.
+          Cost -= TTI.getExtractWithExtendCost(Ext->getOpcode(), Ext->getType(),
+                                               EE->getVectorOperandType(), Idx);
+          // Add back the cost of s|zext which is subtracted separately.
+          Cost += TTI.getCastInstrCost(
+              Ext->getOpcode(), Ext->getType(), EE->getType(),
+              TTI::getCastContextHint(Ext), CostKind, Ext);
           continue;
-        // If all users of instruction are going to be vectorized and this
-        // instruction itself is not going to be vectorized, consider this
-        // instruction as dead and remove its cost from the final cost of the
-        // vectorized tree.
-        // Also, avoid adjusting the cost for extractelements with multiple uses
-        // in different graph entries.
-        const TreeEntry *VE = R.getTreeEntry(V);
-        if (!CheckedExtracts.insert(V).second ||
-            !R.areAllUsersVectorized(cast<Instruction>(V), &VectorizedVals) ||
-            (VE && VE != E))
-          continue;
-        auto *EE = cast<ExtractElementInst>(V);
-        VecBase = EE->getVectorOperand();
-        std::optional<unsigned> EEIdx = getExtractIndex(EE);
-        if (!EEIdx)
-          continue;
-        unsigned Idx = *EEIdx;
-        // Take credit for instruction that will become dead.
-        if (EE->hasOneUse() || !PrevNodeFound) {
-          Instruction *Ext = EE->user_back();
-          if (isa<SExtInst, ZExtInst>(Ext) && all_of(Ext->users(), [](User *U) {
-                return isa<GetElementPtrInst>(U);
-              })) {
-            // Use getExtractWithExtendCost() to calculate the cost of
-            // extractelement/ext pair.
-            Cost -=
-                TTI.getExtractWithExtendCost(Ext->getOpcode(), Ext->getType(),
-                                             EE->getVectorOperandType(), Idx);
-            // Add back the cost of s|zext which is subtracted separately.
-            Cost += TTI.getCastInstrCost(
-                Ext->getOpcode(), Ext->getType(), EE->getType(),
-                TTI::getCastContextHint(Ext), CostKind, Ext);
-            continue;
-          }
         }
-        Cost -= TTI.getVectorInstrCost(*EE, EE->getVectorOperandType(),
-                                       CostKind, Idx);
+      }
+      Cost -= TTI.getVectorInstrCost(*EE, EE->getVectorOperandType(), CostKind,
+                                     Idx);
+    }
+    // Add a cost for subvector extracts/inserts if required.
+    for (const auto &Data : ExtractVectorsTys) {
+      auto *EEVTy = cast<FixedVectorType>(Data.first->getType());
+      unsigned NumElts = VecTy->getNumElements();
+      if (Data.second % NumElts == 0)
+        continue;
+      if (TTI.getNumberOfParts(EEVTy) > VecNumParts) {
+        unsigned Idx = (Data.second / NumElts) * NumElts;
+        unsigned EENumElts = EEVTy->getNumElements();
+        if (Idx % NumElts == 0)
+          continue;
+        if (Idx + NumElts <= EENumElts) {
+          Cost += TTI.getShuffleCost(TargetTransformInfo::SK_ExtractSubvector,
+                                     EEVTy, std::nullopt, CostKind, Idx, VecTy);
+        } else {
+          // Need to round up the subvector type vectorization factor to avoid a
+          // crash in cost model functions. Make SubVT so that Idx + VF of SubVT
+          // <= EENumElts.
+          auto *SubVT =
+              FixedVectorType::get(VecTy->getElementType(), EENumElts - Idx);
+          Cost += TTI.getShuffleCost(TargetTransformInfo::SK_ExtractSubvector,
+                                     EEVTy, std::nullopt, CostKind, Idx, SubVT);
+        }
+      } else {
+        Cost += TTI.getShuffleCost(TargetTransformInfo::SK_InsertSubvector,
+                                   VecTy, std::nullopt, CostKind, 0, EEVTy);
       }
     }
     // Check that gather of extractelements can be represented as just a
@@ -7550,9 +7555,7 @@ public:
     // Found the bunch of extractelement instructions that must be gathered
     // into a vector and can be represented as a permutation elements in a
     // single input vector or of 2 input vectors.
-    // Done for reused if same extractelements were vectorized already.
-    if (!PrevNodeFound)
-      Cost += computeExtractCost(VL, Mask, ShuffleKinds, NumParts);
+    Cost += computeExtractCost(VL, Mask, ShuffleKind);
     InVectors.assign(1, E);
     CommonMask.assign(Mask.begin(), Mask.end());
     transformMaskAfterShuffle(CommonMask, CommonMask);
@@ -7674,7 +7677,7 @@ public:
     assert((IsFinalized || CommonMask.empty()) &&
            "Shuffle construction must be finalized.");
   }
-  };
+};
 
 InstructionCost
 BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
@@ -7735,41 +7738,40 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       reorderScalars(GatheredScalars, ReorderMask);
     SmallVector<int> Mask;
     SmallVector<int> ExtractMask;
+    std::optional<TargetTransformInfo::ShuffleKind> ExtractShuffle;
     SmallVector<std::optional<TargetTransformInfo::ShuffleKind>> GatherShuffles;
     SmallVector<SmallVector<const TreeEntry *>> Entries;
-    SmallVector<std::optional<TTI::ShuffleKind>> ExtractShuffles;
     // Check for gathered extracts.
+    ExtractShuffle =
+        tryToGatherSingleRegisterExtractElements(GatheredScalars, ExtractMask);
+
     bool Resized = false;
     unsigned NumParts = TTI->getNumberOfParts(VecTy);
     if (NumParts == 0 || NumParts >= GatheredScalars.size())
       NumParts = 1;
-    if (!all_of(GatheredScalars, UndefValue::classof)) {
-      ExtractShuffles =
-          tryToGatherExtractElements(GatheredScalars, ExtractMask, NumParts);
-      if (!ExtractShuffles.empty()) {
-        if (Value *VecBase = Estimator.adjustExtracts(
-                E, ExtractMask, ExtractShuffles, NumParts)) {
-          if (auto *VecBaseTy = dyn_cast<FixedVectorType>(VecBase->getType()))
-            if (VF == VecBaseTy->getNumElements() &&
-                GatheredScalars.size() != VF) {
-              Resized = true;
-              GatheredScalars.append(VF - GatheredScalars.size(),
-                                     PoisonValue::get(ScalarTy));
-            }
+    if (Value *VecBase = Estimator.adjustExtracts(
+            E, ExtractMask, ExtractShuffle.value_or(TTI::SK_PermuteTwoSrc))) {
+      if (auto *VecBaseTy = dyn_cast<FixedVectorType>(VecBase->getType()))
+        if (VF == VecBaseTy->getNumElements() && GatheredScalars.size() != VF) {
+          Resized = true;
+          GatheredScalars.append(VF - GatheredScalars.size(),
+                                 PoisonValue::get(ScalarTy));
         }
-      }
-
-      // Do not try to look for reshuffled loads for gathered loads (they will
-      // be handled later), for vectorized scalars, and cases, which are
-      // definitely not profitable (splats and small gather nodes.)
-      if (!ExtractShuffles.empty() || E->getOpcode() != Instruction::Load ||
-          E->isAltShuffle() ||
-          all_of(E->Scalars, [this](Value *V) { return getTreeEntry(V); }) ||
-          isSplat(E->Scalars) ||
-          (E->Scalars != GatheredScalars && GatheredScalars.size() <= 2))
-        GatherShuffles =
-            isGatherShuffledEntry(E, GatheredScalars, Mask, Entries, NumParts);
+    } else if (ExtractShuffle &&
+               TTI->getNumberOfParts(VecTy) == VecTy->getNumElements()) {
+      copy(VL, GatheredScalars.begin());
     }
+
+    // Do not try to look for reshuffled loads for gathered loads (they will be
+    // handled later), for vectorized scalars, and cases, which are definitely
+    // not profitable (splats and small gather nodes.)
+    if (ExtractShuffle || E->getOpcode() != Instruction::Load ||
+        E->isAltShuffle() ||
+        all_of(E->Scalars, [this](Value *V) { return getTreeEntry(V); }) ||
+        isSplat(E->Scalars) ||
+        (E->Scalars != GatheredScalars && GatheredScalars.size() <= 2))
+      GatherShuffles =
+          isGatherShuffledEntry(E, GatheredScalars, Mask, Entries, NumParts);
     if (!GatherShuffles.empty()) {
       if (GatherShuffles.size() == 1 &&
           *GatherShuffles.front() == TTI::SK_PermuteSingleSrc &&
@@ -10011,10 +10013,7 @@ public:
       : Builder(Builder), R(R) {}
 
   /// Adjusts extractelements after reusing them.
-  Value *adjustExtracts(const TreeEntry *E, MutableArrayRef<int> Mask,
-                        unsigned NumParts, bool &UseVecBaseAsInput) {
-    UseVecBaseAsInput = false;
-    SmallPtrSet<Value *, 4> UniqueBases;
+  Value *adjustExtracts(const TreeEntry *E, ArrayRef<int> Mask) {
     Value *VecBase = nullptr;
     for (int I = 0, Sz = Mask.size(); I < Sz; ++I) {
       int Idx = Mask[I];
@@ -10022,7 +10021,6 @@ public:
         continue;
       auto *EI = cast<ExtractElementInst>(E->Scalars[I]);
       VecBase = EI->getVectorOperand();
-      UniqueBases.insert(VecBase);
       // If the only one use is vectorized - can delete the extractelement
       // itself.
       if (!EI->hasOneUse() || any_of(EI->users(), [&](User *U) {
@@ -10031,75 +10029,7 @@ public:
         continue;
       R.eraseInstruction(EI);
     }
-    if (NumParts == 1 || UniqueBases.size() == 1)
-      return VecBase;
-    UseVecBaseAsInput = true;
-    auto TransformToIdentity = [](MutableArrayRef<int> Mask) {
-      for (auto [I, Idx] : enumerate(Mask))
-        if (Idx != PoisonMaskElem)
-          Idx = I;
-    };
-    // Perform multi-register vector shuffle, joining them into a single virtual
-    // long vector.
-    // Need to shuffle each part independently and then insert all this parts
-    // into a long virtual vector register, forming the original vector.
-    Value *Vec = nullptr;
-    SmallVector<int> VecMask(Mask.size(), PoisonMaskElem);
-    unsigned SliceSize = E->Scalars.size() / NumParts;
-    for (unsigned Part = 0; Part < NumParts; ++Part) {
-      ArrayRef<Value *> VL =
-          ArrayRef(E->Scalars).slice(Part * SliceSize, SliceSize);
-      MutableArrayRef<int> SubMask = Mask.slice(Part * SliceSize, SliceSize);
-      constexpr int MaxBases = 2;
-      SmallVector<Value *, MaxBases> Bases(MaxBases);
-#ifndef NDEBUG
-      int PrevSize = 0;
-#endif // NDEBUG
-      for (const auto [I, V]: enumerate(VL)) {
-        if (SubMask[I] == PoisonMaskElem)
-          continue;
-        Value *VecOp = cast<ExtractElementInst>(V)->getVectorOperand();
-        const int Size =
-            cast<FixedVectorType>(VecOp->getType())->getNumElements();
-#ifndef NDEBUG
-        assert((PrevSize == Size || PrevSize == 0) &&
-               "Expected vectors of the same size.");
-        PrevSize = Size;
-#endif // NDEBUG
-        Bases[SubMask[I] < Size ? 0 : 1] = VecOp;
-      }
-      if (!Bases.front())
-        continue;
-      Value *SubVec;
-      if (Bases.back()) {
-        SubVec = createShuffle(Bases.front(), Bases.back(), SubMask);
-        TransformToIdentity(SubMask);
-      } else {
-        SubVec = Bases.front();
-      }
-      if (!Vec) {
-        Vec = SubVec;
-        copy(SubMask, VecMask.begin());
-      } else {
-        unsigned VF = cast<FixedVectorType>(Vec->getType())->getNumElements();
-        if (Vec->getType() != SubVec->getType()) {
-          unsigned SubVecVF =
-              cast<FixedVectorType>(SubVec->getType())->getNumElements();
-          if (VF < SubVecVF)
-            TransformToIdentity(VecMask);
-          VF = std::max(VF, SubVecVF);
-        }
-        // Adjust SubMask.
-        for (auto [I, Idx] : enumerate(SubMask))
-          if (Idx != PoisonMaskElem)
-            Idx += VF;
-        copy(SubMask, std::next(VecMask.begin(), Part * SliceSize));
-        Vec = createShuffle(Vec, SubVec, VecMask);
-        TransformToIdentity(VecMask);
-      }
-    }
-    copy(VecMask, Mask.begin());
-    return Vec;
+    return VecBase;
   }
   /// Checks if the specified entry \p E needs to be delayed because of its
   /// dependency nodes.
@@ -10442,37 +10372,29 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Args &...Params) {
   BVTy ShuffleBuilder(Params...);
   ResTy Res = ResTy();
   SmallVector<int> Mask;
-  SmallVector<int> ExtractMask(GatheredScalars.size(), PoisonMaskElem);
-  SmallVector<std::optional<TTI::ShuffleKind>> ExtractShuffles;
-  Value *ExtractVecBase = nullptr;
-  bool UseVecBaseAsInput;
+  SmallVector<int> ExtractMask;
+  std::optional<TargetTransformInfo::ShuffleKind> ExtractShuffle;
   SmallVector<std::optional<TargetTransformInfo::ShuffleKind>> GatherShuffles;
   SmallVector<SmallVector<const TreeEntry *>> Entries;
   Type *ScalarTy = GatheredScalars.front()->getType();
-  auto *VecTy = FixedVectorType::get(ScalarTy, GatheredScalars.size());
-  unsigned NumParts = TTI->getNumberOfParts(VecTy);
+  unsigned NumParts = TTI->getNumberOfParts(
+      FixedVectorType::get(ScalarTy, GatheredScalars.size()));
   if (NumParts == 0 || NumParts >= GatheredScalars.size())
     NumParts = 1;
   if (!all_of(GatheredScalars, UndefValue::classof)) {
     // Check for gathered extracts.
+    ExtractShuffle =
+        tryToGatherSingleRegisterExtractElements(GatheredScalars, ExtractMask);
     bool Resized = false;
-    ExtractShuffles =
-        tryToGatherExtractElements(GatheredScalars, ExtractMask, NumParts);
-    if (!ExtractShuffles.empty()) {
-      if (Value *VecBase = ShuffleBuilder.adjustExtracts(
-              E, ExtractMask, NumParts, UseVecBaseAsInput)) {
-        ExtractVecBase = VecBase;
-        if (auto *VecBaseTy = dyn_cast<FixedVectorType>(VecBase->getType()))
-          if (VF == VecBaseTy->getNumElements() &&
-              GatheredScalars.size() != VF) {
-            Resized = true;
-            GatheredScalars.append(VF - GatheredScalars.size(),
-                                   PoisonValue::get(ScalarTy));
-          }
-      }
-    }
+    if (Value *VecBase = ShuffleBuilder.adjustExtracts(E, ExtractMask))
+      if (auto *VecBaseTy = dyn_cast<FixedVectorType>(VecBase->getType()))
+        if (VF == VecBaseTy->getNumElements() && GatheredScalars.size() != VF) {
+          Resized = true;
+          GatheredScalars.append(VF - GatheredScalars.size(),
+                                 PoisonValue::get(ScalarTy));
+        }
     // Gather extracts after we check for full matched gathers only.
-    if (!ExtractShuffles.empty() || E->getOpcode() != Instruction::Load ||
+    if (ExtractShuffle || E->getOpcode() != Instruction::Load ||
         E->isAltShuffle() ||
         all_of(E->Scalars, [this](Value *V) { return getTreeEntry(V); }) ||
         isSplat(E->Scalars) ||
@@ -10623,35 +10545,30 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Args &...Params) {
       }
     }
   };
-  if (!ExtractShuffles.empty() || !GatherShuffles.empty()) {
+  if (ExtractShuffle || !GatherShuffles.empty()) {
     bool IsNonPoisoned = true;
     bool IsUsedInExpr = true;
     Value *Vec1 = nullptr;
-    if (!ExtractShuffles.empty()) {
+    if (ExtractShuffle) {
       // Gather of extractelements can be represented as just a shuffle of
       // a single/two vectors the scalars are extracted from.
       // Find input vectors.
       Value *Vec2 = nullptr;
       for (unsigned I = 0, Sz = ExtractMask.size(); I < Sz; ++I) {
-        if (!Mask.empty() && Mask[I] != PoisonMaskElem)
+        if (ExtractMask[I] == PoisonMaskElem ||
+            (!Mask.empty() && Mask[I] != PoisonMaskElem)) {
           ExtractMask[I] = PoisonMaskElem;
-      }
-      if (UseVecBaseAsInput) {
-        Vec1 = ExtractVecBase;
-      } else {
-        for (unsigned I = 0, Sz = ExtractMask.size(); I < Sz; ++I) {
-          if (ExtractMask[I] == PoisonMaskElem)
-            continue;
-          if (isa<UndefValue>(E->Scalars[I]))
-            continue;
-          auto *EI = cast<ExtractElementInst>(E->Scalars[I]);
-          if (!Vec1) {
-            Vec1 = EI->getVectorOperand();
-          } else if (Vec1 != EI->getVectorOperand()) {
-            assert((!Vec2 || Vec2 == EI->getVectorOperand()) &&
-                   "Expected only 1 or 2 vectors shuffle.");
-            Vec2 = EI->getVectorOperand();
-          }
+          continue;
+        }
+        if (isa<UndefValue>(E->Scalars[I]))
+          continue;
+        auto *EI = cast<ExtractElementInst>(E->Scalars[I]);
+        if (!Vec1) {
+          Vec1 = EI->getVectorOperand();
+        } else if (Vec1 != EI->getVectorOperand()) {
+          assert((!Vec2 || Vec2 == EI->getVectorOperand()) &&
+                 "Expected only 1 or 2 vectors shuffle.");
+          Vec2 = EI->getVectorOperand();
         }
       }
       if (Vec2) {
@@ -10712,14 +10629,10 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Args &...Params) {
     int MSz = Mask.size();
     // Try to build constant vector and shuffle with it only if currently we
     // have a single permutation and more than 1 scalar constants.
-    bool IsSingleShuffle = ExtractShuffles.empty() || GatherShuffles.empty();
+    bool IsSingleShuffle = !ExtractShuffle || GatherShuffles.empty();
     bool IsIdentityShuffle =
-        ((UseVecBaseAsInput ||
-          all_of(ExtractShuffles,
-                 [](const std::optional<TTI::ShuffleKind> &SK) {
-                   return SK.value_or(TTI::SK_PermuteTwoSrc) ==
-                          TTI::SK_PermuteSingleSrc;
-                 })) &&
+        (ExtractShuffle.value_or(TTI::SK_PermuteTwoSrc) ==
+             TTI::SK_PermuteSingleSrc &&
          none_of(ExtractMask, [&](int I) { return I >= EMSz; }) &&
          ShuffleVectorInst::isIdentityMask(ExtractMask, EMSz)) ||
         (!GatherShuffles.empty() &&
