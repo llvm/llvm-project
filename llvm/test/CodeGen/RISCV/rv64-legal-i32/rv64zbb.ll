@@ -944,16 +944,14 @@ define i64 @abs_i64(i64 %x) {
 define i32 @zexth_i32(i32 %a) nounwind {
 ; RV64I-LABEL: zexth_i32:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    lui a1, 16
-; RV64I-NEXT:    addiw a1, a1, -1
-; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    slli a0, a0, 48
+; RV64I-NEXT:    srli a0, a0, 48
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBB-LABEL: zexth_i32:
 ; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    lui a1, 16
-; RV64ZBB-NEXT:    addiw a1, a1, -1
-; RV64ZBB-NEXT:    and a0, a0, a1
+; RV64ZBB-NEXT:    slli a0, a0, 48
+; RV64ZBB-NEXT:    srli a0, a0, 48
 ; RV64ZBB-NEXT:    ret
   %and = and i32 %a, 65535
   ret i32 %and
