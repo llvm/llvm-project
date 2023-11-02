@@ -1302,7 +1302,7 @@ bool SymbolFileDWARFDebugMap::GetSeparateDebugInfo(
       oso_data->AddStringItem("error", info.oso_load_error.AsCString());
     }
     oso_data->AddBooleanItem("loaded", loaded_successfully);
-    if (!errors_only || (errors_only && oso_data->HasKey("error")))
+    if (!errors_only || oso_data->HasKey("error"))
       separate_debug_info_files.AddItem(oso_data);
   }
 

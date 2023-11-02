@@ -4297,7 +4297,7 @@ bool SymbolFileDWARF::GetSeparateDebugInfo(StructuredData::Dictionary &d,
                               dwarf_cu->GetDwoError().AsCString("unknown"));
     }
     dwo_data->AddBooleanItem("loaded", dwo_symfile != nullptr);
-    if (!errors_only || (errors_only && dwo_data->HasKey("error")))
+    if (!errors_only || dwo_data->HasKey("error"))
       separate_debug_info_files.AddItem(dwo_data);
   }
 
