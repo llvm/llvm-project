@@ -10903,13 +10903,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E, bool PostponedPHIs) {
           continue;
         }
 
-        // if (any_of(E->getOperand(i), [&](Value *V) {
-        //       auto *I = dyn_cast<Instruction>(V);
-        //       return I && I->getParent() == IBB;
-        //     }))
-          Builder.SetInsertPoint(IBB->getTerminator());
-        // else
-        //   Builder.SetInsertPoint(IBB->getFirstNonPHIOrDbgOrLifetime());
+        Builder.SetInsertPoint(IBB->getTerminator());
         Builder.SetCurrentDebugLocation(PH->getDebugLoc());
         Value *Vec = vectorizeOperand(E, i, /*PostponedPHIs=*/true);
         NewPhi->addIncoming(Vec, IBB);
