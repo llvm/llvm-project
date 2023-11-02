@@ -317,6 +317,25 @@ protected:
   _LIBCPP_HIDE_FROM_ABI constexpr explicit __expected_base(_Args&&... __args)
       : __repr_(std::forward<_Args>(__args)...) {}
 
+  // In case we copy/move construct from another `expected` we need to create
+  // our `expected` so that it either has a value or not, depending on the "has
+  // value" flag of the other `expected`. To do this without falling back on
+  // `std::construct_at` we rely on guaranteed copy elision using two helper
+  // functions `__make_repr` and `__make_union`. There have to be two since
+  // there are two data layouts with different members being
+  // `[[no_unique_address]]`. GCC (as of version 13) does not do guaranteed
+  // copy elision when initializing `[[no_unique_address]]` members. The two
+  // cases are:
+  //
+  // - `__make_repr`: This is used when the "has value" flag lives in the tail
+  //   of the union. In this case, the `__repr` member is _not_
+  //   `[[no_unique_address]]`.
+  // - `__make_union`: When the "has value" flag does _not_ fit in the tail of
+  //   the union, the `__repr` member is `[[no_unique_address]]` and the union
+  //   is not.
+  //
+  // This constructor "catches" the first case and leaves the second case to
+  // `__union_t`, its constructors and `__make_union`.
   template <class _OtherUnion>
   _LIBCPP_HIDE_FROM_ABI constexpr explicit __expected_base(bool __has_val, _OtherUnion&& __other)
     requires(__put_flag_in_tail)
