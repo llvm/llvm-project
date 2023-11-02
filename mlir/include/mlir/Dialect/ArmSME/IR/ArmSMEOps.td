@@ -43,7 +43,47 @@ def nxnxv4f32  : SMETileType<F32,  [4,  4 ], "vector<[4]x[4]xf32>">;
 def nxnxv2f64  : SMETileType<F64,  [2,  2 ], "vector<[2]x[2]xf64>">;
 
 def SMETile : AnyTypeOf<[nxnxv16i8, nxnxv8i16, nxnxv4i32, nxnxv2i64, nxnxv1i128,
-                         nxnxv8f16, nxnxv8bf16, nxnxv4f32, nxnxv2f64]>;
+                         nxnxv8f16, nxnxv8bf16, nxnxv4f32, nxnxv2f64],
+                        "a vector type that fits into a SME tile">
+{
+  let description = [{
+    Possible vector types:
+
+    Integer elements:
+
+    * `vector<[16]x[16]xi8>`
+    * `vector<[8]x[8]xi16>`
+    * `vector<[4]x[4]xi32>`
+    * `vector<[2]x[2]xi64>`
+    * `vector<[1]x[1]xi128>`
+
+    Floating point elements:
+
+    * `vector<[8]x[8]xf16>`
+    * `vector<[8]x[8]xbf16>`
+    * `vector<[4]x[4]xf32>`
+    * `vector<[2]x[2]xf64>`
+  }];
+}
+
+def TileID : AnyTypeOf<[I8, I16, I32, I64, I128],
+                       "an identifier of a virtual tile (of a size) within the ZA storage">
+{
+  let description = [{
+    The tile ID is an 8, 16, 32, 64, or 128-bit signless integer. The value of
+    the integer indicates the tile to use, and the bit size indicates the size
+    of tile. The number of tiles available and the element types of those depend
+    on the size. This is summarised below:
+
+    | Tile ID Type | Possible Tile IDs   | Tile Vector Types                                                       |
+    |--------------|---------------------|-------------------------------------------------------------------------|
+    | `i8`         | 0                   | `vector<[16]x[16]xi8>`                                                  |
+    | `i16`        | 0 and 1             | `vector<[8]x[8]xi16>`, `vector<[8]x[8]xf16>`, or `vector<[8]x[8]xbf16>` |
+    | `i32`        | 0 to 3 (inclusive)  | `vector<[4]x[4]xi32>` or `vector<[4]x[4]xf32>`                          |
+    | `i64`        | 0 to 7 (inclusive)  | `vector<[2]x[2]xi64>` or `vector<[2]x[2]xf64>`                          |
+    | `i128`       | 0 to 15 (inclusive) | `vector<[1]x[1]xi128>`                                                  |
+  }];
+}
 
 // A type constraint that verifies the bitwidth of the scalar integer returned
 // from 'arm_sme.get_tile_id' matches the element bitwidth of a "virtual tile".
@@ -160,7 +200,7 @@ def CastTileToVector : ArmSME_Op<"cast_tile_to_vector", [Pure, TileElementWidthM
     Canonicalization will look through `arm_sme.cast_tile_to_vector` and fold
     the cast away if it comes from a `arm_sme.cast_vector_to_tile`.
   }];
-  let arguments = (ins AnyTypeOf<[I8, I16, I32, I64, I128]>:$tile_id);
+  let arguments = (ins TileID:$tile_id);
   let results = (outs SMETile:$vector);
   let assemblyFormat =
     "$tile_id attr-dict `:` type($tile_id) `to` type($vector)";
@@ -196,7 +236,7 @@ def CastVectorToTile : ArmSME_Op<"cast_vector_to_tile", [Pure, TileElementWidthM
     the cast away if it comes from a `arm_sme.cast_tile_to_vector`.
   }];
   let arguments = (ins SMETile:$vector);
-  let results = (outs AnyTypeOf<[I8, I16, I32, I64, I128]>:$tile_id);
+  let results = (outs TileID:$tile_id);
   let assemblyFormat =
     "$vector attr-dict `:` type($vector) `to` type($tile_id)";
   let hasCanonicalizeMethod = 1;
@@ -232,7 +272,7 @@ def GetTileID : ArmSME_Op<"get_tile_id"> {
     ```
   }];
 
-  let results = (outs AnyTypeOf<[I8, I16, I32, I64, I128]>:$tile_id);
+  let results = (outs TileID:$tile_id);
   let assemblyFormat = "attr-dict `:` type($tile_id)";
 }
 
