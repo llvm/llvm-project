@@ -29,3 +29,18 @@ fdot  v31.4h, v0.8b, v0.8b
 fdot  v0.2s, v0.8b, v31.8b
 // CHECK: fdot  v0.2s, v0.8b, v31.8b
 .arch armv9-a+nofp8dot4
+
+.arch armv9-a+lut
+luti2  v30.8h, {v20.8h}, v31[7]
+// CHECK: luti2  v30.8h, { v20.8h }, v31[7]
+.arch armv9-a+nolut
+
+.arch armv9-a+sve2+lut
+luti2  z0.h, {z0.h}, z0[0]
+// CHECK: luti2  z0.h, { z0.h }, z0[0]
+.arch armv9-a+nosve2+nolut
+
+.arch armv9-a+sme2p1+sme-lutv2
+luti4  {z0.b-z3.b}, zt0, {z0-z1}
+// CHECK: luti4  { z0.b - z3.b }, zt0, { z0, z1 }
+.arch armv9-a+nosme2p1+nosme-lutv2

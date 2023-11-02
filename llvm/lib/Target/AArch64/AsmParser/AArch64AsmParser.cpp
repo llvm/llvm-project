@@ -3658,6 +3658,8 @@ static const struct Extension {
     {"ssve-fp8dot2", {AArch64::FeatureSSVE_FP8DOT2}},
     {"fp8dot4", {AArch64::FeatureFP8DOT4}},
     {"ssve-fp8dot4", {AArch64::FeatureSSVE_FP8DOT4}},
+    {"lut", {AArch64::FeatureLUT}},
+    {"sme-lutv2", {AArch64::FeatureSME_LUTv2}},
 };
 
 static void setRequiredFeatureString(FeatureBitset FBS, std::string &Str) {
@@ -4553,7 +4555,7 @@ ParseStatus AArch64AsmParser::tryParseZTOperand(OperandVector &Operands) {
 
   Operands.push_back(AArch64Operand::CreateReg(
       RegNum, RegKind::LookupTable, StartLoc, getLoc(), getContext()));
-  Lex(); // Eat identifier token.
+  Lex(); // Eat register.
 
   // Check if register is followed by an index
   if (parseOptionalToken(AsmToken::LBrac)) {
@@ -4565,12 +4567,14 @@ ParseStatus AArch64AsmParser::tryParseZTOperand(OperandVector &Operands) {
     const MCConstantExpr *MCE = dyn_cast<MCConstantExpr>(ImmVal);
     if (!MCE)
       return TokError("immediate value expected for vector index");
-    if (parseToken(AsmToken::RBrac, "']' expected"))
-      return ParseStatus::Failure;
-
     Operands.push_back(AArch64Operand::CreateImm(
         MCConstantExpr::create(MCE->getValue(), getContext()), StartLoc,
         getLoc(), getContext()));
+    if (parseOptionalToken(AsmToken::Comma))
+      if (parseOptionalMulOperand(Operands))
+        return MatchOperand_ParseFail;
+    if (parseToken(AsmToken::RBrac, "']' expected"))
+      return ParseStatus::Failure;
     Operands.push_back(
         AArch64Operand::CreateToken("]", getLoc(), getContext()));
   }
