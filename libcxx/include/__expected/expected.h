@@ -90,6 +90,10 @@ _LIBCPP_HIDE_FROM_ABI void __throw_bad_expected_access(_Arg&& __arg) {
 
 struct __conditional_no_unique_address_invoke_tag {};
 
+// This class implements an object with `[[no_unique_address]]` conditionally applied to it,
+// based on the value of `_NoUnique`.
+//
+// If we had a language feature, this class would basically be replaced by `[[no_unique_address(condition)]]`.
 template <bool _NoUnique, class _Tp>
 struct __conditional_no_unique_address;
 
