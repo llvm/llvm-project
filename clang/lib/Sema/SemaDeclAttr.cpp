@@ -5928,28 +5928,6 @@ static void handlePreferredTypeAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   S.RequireCompleteType(ParmTSI->getTypeLoc().getBeginLoc(), QT,
                         diag::err_incomplete_type);
 
-  if (QT->isEnumeralType()) {
-    auto IsCorrespondingType = [&](QualType LHS, QualType RHS) {
-      assert(LHS != RHS);
-      if (LHS->isSignedIntegerType())
-        return LHS == S.getASTContext().getCorrespondingSignedType(RHS);
-      return LHS == S.getASTContext().getCorrespondingUnsignedType(RHS);
-    };
-    QualType BitfieldType =
-        cast<FieldDecl>(D)->getType()->getCanonicalTypeUnqualified();
-    QualType EnumUnderlyingType = QT->getAs<EnumType>()
-                                      ->getDecl()
-                                      ->getIntegerType()
-                                      ->getCanonicalTypeUnqualified();
-    if (EnumUnderlyingType != BitfieldType &&
-        !IsCorrespondingType(EnumUnderlyingType, BitfieldType)) {
-      S.Diag(ParmTSI->getTypeLoc().getBeginLoc(),
-             diag::warn_attribute_underlying_type_mismatch)
-          << EnumUnderlyingType << QT << BitfieldType;
-      return;
-    }
-  }
-
   D->addAttr(::new (S.Context) PreferredTypeAttr(S.Context, AL, ParmTSI));
 }
 
