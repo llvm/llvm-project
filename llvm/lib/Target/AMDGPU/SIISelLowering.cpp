@@ -4744,8 +4744,8 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
     const SIRegisterInfo *TRI = ST.getRegisterInfo();
 
     Register Dst = MI.getOperand(0).getReg();
-    Register Src0 = MI.getOperand(1).getReg();
-    Register Src1 = MI.getOperand(2).getReg();
+    const MachineOperand &Src0 = MI.getOperand(1);
+    const MachineOperand &Src1 = MI.getOperand(2);
     const DebugLoc &DL = MI.getDebugLoc();
     Register SrcCond = MI.getOperand(3).getReg();
 
@@ -4754,20 +4754,42 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
     const auto *CondRC = TRI->getRegClass(AMDGPU::SReg_1_XEXECRegClassID);
     Register SrcCondCopy = MRI.createVirtualRegister(CondRC);
 
+    const TargetRegisterClass *Src0RC = Src0.isReg()
+                                            ? MRI.getRegClass(Src0.getReg())
+                                            : &AMDGPU::VReg_64RegClass;
+    const TargetRegisterClass *Src1RC = Src1.isReg()
+                                            ? MRI.getRegClass(Src1.getReg())
+                                            : &AMDGPU::VReg_64RegClass;
+
+    const TargetRegisterClass *Src0SubRC =
+        TRI->getSubRegisterClass(Src0RC, AMDGPU::sub0);
+    const TargetRegisterClass *Src1SubRC =
+        TRI->getSubRegisterClass(Src1RC, AMDGPU::sub1);
+
+    MachineOperand Src0Sub0 = TII->buildExtractSubRegOrImm(
+        MI, MRI, Src0, Src0RC, AMDGPU::sub0, Src0SubRC);
+    MachineOperand Src1Sub0 = TII->buildExtractSubRegOrImm(
+        MI, MRI, Src1, Src1RC, AMDGPU::sub0, Src1SubRC);
+
+    MachineOperand Src0Sub1 = TII->buildExtractSubRegOrImm(
+        MI, MRI, Src0, Src0RC, AMDGPU::sub1, Src0SubRC);
+    MachineOperand Src1Sub1 = TII->buildExtractSubRegOrImm(
+        MI, MRI, Src1, Src1RC, AMDGPU::sub1, Src1SubRC);
+
     BuildMI(*BB, MI, DL, TII->get(AMDGPU::COPY), SrcCondCopy)
       .addReg(SrcCond);
     BuildMI(*BB, MI, DL, TII->get(AMDGPU::V_CNDMASK_B32_e64), DstLo)
-      .addImm(0)
-      .addReg(Src0, 0, AMDGPU::sub0)
-      .addImm(0)
-      .addReg(Src1, 0, AMDGPU::sub0)
-      .addReg(SrcCondCopy);
+        .addImm(0)
+        .add(Src0Sub0)
+        .addImm(0)
+        .add(Src1Sub0)
+        .addReg(SrcCondCopy);
     BuildMI(*BB, MI, DL, TII->get(AMDGPU::V_CNDMASK_B32_e64), DstHi)
-      .addImm(0)
-      .addReg(Src0, 0, AMDGPU::sub1)
-      .addImm(0)
-      .addReg(Src1, 0, AMDGPU::sub1)
-      .addReg(SrcCondCopy);
+        .addImm(0)
+        .add(Src0Sub1)
+        .addImm(0)
+        .add(Src1Sub1)
+        .addReg(SrcCondCopy);
 
     BuildMI(*BB, MI, DL, TII->get(AMDGPU::REG_SEQUENCE), Dst)
       .addReg(DstLo)
