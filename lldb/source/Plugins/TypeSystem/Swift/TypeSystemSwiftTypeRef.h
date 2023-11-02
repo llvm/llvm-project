@@ -59,9 +59,15 @@ public:
   ~TypeSystemSwiftTypeRef();
   TypeSystemSwiftTypeRef(Module &module);
   /// Get the corresponding SwiftASTContext, and create one if necessary.
-  SwiftASTContext *GetSwiftASTContext() const override;
+  SwiftASTContext *GetSwiftASTContext(const SymbolContext *sc) const override;
+  /// Convenience helpers.
+  SwiftASTContext *
+  GetSwiftASTContextFromExecutionScope(ExecutionContextScope *exe_scope) const;
+  SwiftASTContext *
+  GetSwiftASTContextFromExecutionContext(const ExecutionContext *exe_ctx) const;
   /// Return SwiftASTContext, iff one has already been created.
-  SwiftASTContext *GetSwiftASTContextOrNull() const;
+  virtual SwiftASTContext *
+  GetSwiftASTContextOrNull(const SymbolContext *sc = nullptr) const;
   TypeSystemSwiftTypeRef &GetTypeSystemSwiftTypeRef() override { return *this; }
   const TypeSystemSwiftTypeRef &GetTypeSystemSwiftTypeRef() const override {
     return *this;
@@ -475,7 +481,9 @@ public:
   TypeSystemSwiftTypeRefForExpressions(lldb::LanguageType language,
                                        Target &target, Module &module);
 
-  SwiftASTContext *GetSwiftASTContext() const override;
+  SwiftASTContext *GetSwiftASTContext(const SymbolContext *sc) const override;
+  SwiftASTContext *
+  GetSwiftASTContextOrNull(const SymbolContext *sc = nullptr) const override;
   lldb::TargetWP GetTargetWP() const override { return m_target_wp; }
 
   /// Forwards to SwiftASTContext.

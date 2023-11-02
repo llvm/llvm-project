@@ -1416,7 +1416,8 @@ static llvm::Expected<ParsedExpression> ParseAndImport(
   std::unique_ptr<SwiftASTManipulator> code_manipulator;
   if (repl || !playground) {
     code_manipulator = std::make_unique<SwiftASTManipulator>(
-        swift_ast_context, *source_file, repl, options.GetBindGenericTypes());
+        swift_ast_context, *source_file, sc, repl,
+        options.GetBindGenericTypes());
 
     if (!playground) {
       code_manipulator->RewriteResult();

@@ -69,10 +69,6 @@ void SwiftDWARFImporterForClangTypes::lookupValue(
   if (SwiftLanguageRuntime::IsSwiftMangledName(name_cs.GetStringRef()))
     return;
 
-  auto *swift_ast_ctx = m_swift_typesystem.GetSwiftASTContext();
-  if (!swift_ast_ctx)
-    return;
-
   // Find the type in the debug info.
   TypeSP clang_type_sp;
   // FIXME: LookupClangType won't work for nested C++ types.

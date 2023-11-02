@@ -563,13 +563,12 @@ void SwiftREPL::CompleteCode(const std::string &current_code,
       llvm::consumeError(type_system_or_err.takeError());
       return;
     }
-
     auto *swift_ts =
         llvm::dyn_cast_or_null<TypeSystemSwiftTypeRefForExpressions>(
             type_system_or_err->get());
     auto *target_swift_ast =
         llvm::dyn_cast_or_null<SwiftASTContextForExpressions>(
-            swift_ts->GetSwiftASTContext());
+            swift_ts->GetSwiftASTContext(nullptr));
     m_swift_ast = target_swift_ast;
   }
   SwiftASTContextForExpressions *swift_ast = m_swift_ast;

@@ -207,8 +207,8 @@ public:
 
   bool SupportsLanguage(lldb::LanguageType language) override;
 
-  SwiftASTContext *GetSwiftASTContext() const override {
-    return const_cast<SwiftASTContext *>(this);
+  SwiftASTContext *GetSwiftASTContext(const SymbolContext *sc) const override {
+    return GetTypeSystemSwiftTypeRef().GetSwiftASTContext(sc);
   }
 
   TypeSystemSwiftTypeRef &GetTypeSystemSwiftTypeRef() override {

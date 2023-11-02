@@ -2564,7 +2564,7 @@ Target::GetScratchTypeSystemForLanguage(lldb::LanguageType language,
                 type_system_or_err->get())) {
       auto *swift_ast_ctx =
           llvm::dyn_cast_or_null<SwiftASTContextForExpressions>(
-              swift_scratch_ctx->GetSwiftASTContextOrNull());
+              swift_scratch_ctx->GetSwiftASTContextOrNull(nullptr));
       // Replace the scratch context if it contains fatal errors or
       // needs to be replaced because new lldb::Modules were loaded.
       if (swift_ast_ctx && (swift_ast_ctx->CheckProcessChanged() ||
@@ -2613,7 +2613,7 @@ Target::GetScratchTypeSystemForLanguage(lldb::LanguageType language,
                   message, llvm::inconvertibleErrorCode());
             };
             auto *new_swift_ast_ctx =
-                new_swift_scratch_ctx->GetSwiftASTContext();
+                new_swift_scratch_ctx->GetSwiftASTContext(nullptr);
             if (!new_swift_ast_ctx)
               report_error("Failed to construct SwiftASTContextForExpressions");
             else if (new_swift_ast_ctx->HasFatalErrors()) {
@@ -2835,12 +2835,13 @@ llvm::Optional<SwiftScratchContextReader> Target::GetSwiftScratchContext(
   Log *log = GetLog(LLDBLog::Target | LLDBLog::Types | LLDBLog::Expressions);
   LLDB_SCOPED_TIMER();
 
+  const SymbolContext *sc = nullptr;
   Module *lldb_module = nullptr;
   if (lldb::StackFrameSP stack_frame = exe_scope.CalculateStackFrame()) {
-    auto sc = stack_frame->GetSymbolContext(lldb::eSymbolContextEverything);
-    lldb_module = sc.module_sp.get();
+    sc = &stack_frame->GetSymbolContext(lldb::eSymbolContextEverything);
+    lldb_module = sc->module_sp.get();
   }
-
+  
   // Opt into the per-module scratch context if we find incompatible triples.
   if (!m_use_scratch_typesystem_per_module) {
     TargetSP target_sp = exe_scope.CalculateTarget();
@@ -2883,7 +2884,7 @@ llvm::Optional<SwiftScratchContextReader> Target::GetSwiftScratchContext(
     if (auto *cached_ts = get_cached_module_ts(lldb_module)) {
       auto *cached_ast_ctx =
           llvm::dyn_cast_or_null<SwiftASTContextForExpressions>(
-              cached_ts->GetSwiftASTContext());
+              cached_ts->GetSwiftASTContext(sc));
       if (cached_ast_ctx && cached_ast_ctx->HasFatalErrors() &&
           !m_cant_make_scratch_type_system.count(lldb::eLanguageTypeSwift)) {
         DisplayFallbackSwiftContextErrors(cached_ast_ctx);
@@ -2946,12 +2947,12 @@ llvm::Optional<SwiftScratchContextReader> Target::GetSwiftScratchContext(
                 type_system_or_err->get()))
       if (auto *swift_ast_ctx =
               llvm::dyn_cast_or_null<SwiftASTContextForExpressions>(
-                  global_scratch_ctx->GetSwiftASTContext()))
+                  global_scratch_ctx->GetSwiftASTContext(sc)))
         DisplayFallbackSwiftContextErrors(swift_ast_ctx);
 
     auto typesystem_sp = std::make_shared<TypeSystemSwiftTypeRefForExpressions>(
         lldb::eLanguageTypeSwift, *this, *lldb_module);
-    typesystem_sp->GetSwiftASTContext();
+    typesystem_sp->GetSwiftASTContext(sc);
     m_scratch_typesystem_for_module.insert({key, typesystem_sp});
     if (log)
       log->PutCString("created module-wide scratch context");

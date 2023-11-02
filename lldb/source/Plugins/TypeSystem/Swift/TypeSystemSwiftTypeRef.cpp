@@ -1548,13 +1548,13 @@ TypeSystemSwiftTypeRef::GetMangledTypeName(opaque_compiler_type_t type) {
 
 void *TypeSystemSwiftTypeRef::ReconstructType(opaque_compiler_type_t type) {
   Status error;
-  if (auto *swift_ast_context = GetSwiftASTContext())
+  if (auto *swift_ast_context = GetSwiftASTContext(nullptr))
     return swift_ast_context->ReconstructType(GetMangledTypeName(type), error);
   return {};
 }
 
 CompilerType TypeSystemSwiftTypeRef::ReconstructType(CompilerType type) {
-  if (auto *swift_ast_context = GetSwiftASTContext())
+  if (auto *swift_ast_context = GetSwiftASTContext(nullptr))
     return {swift_ast_context->weak_from_this(),
             ReconstructType(type.GetOpaqueQualType())};
   return {};
@@ -1583,14 +1583,17 @@ bool TypeSystemSwiftTypeRef::SupportsLanguage(lldb::LanguageType language) {
 }
 
 Status TypeSystemSwiftTypeRef::IsCompatible() {
-  if (auto *swift_ast_context = GetSwiftASTContext())
+  // This is called only from SBModule.
+  if (auto *swift_ast_context = GetSwiftASTContext(nullptr))
     return swift_ast_context->IsCompatible();
   return {};
 }
 
 void TypeSystemSwiftTypeRef::DiagnoseWarnings(Process &process,
                                               Module &module) const {
-  if (auto *swift_ast_context = GetSwiftASTContextOrNull())
+  // This gets called only from Thread::FrameSelectedCallback(StackFrame)
+  // and is of limited usefuleness.
+  if (auto *swift_ast_context = GetSwiftASTContextOrNull(nullptr))
     swift_ast_context->DiagnoseWarnings(process, module);
 }
 
@@ -1897,7 +1900,7 @@ constexpr ExecutionContextScope *g_no_exe_ctx = nullptr;
   do {                                                                         \
     if (!ModuleList::GetGlobalModuleListProperties()                           \
              .GetUseSwiftTypeRefTypeSystem()) {                                \
-      if (auto *swift_ast_context = GetSwiftASTContext())                      \
+      if (auto *swift_ast_context = GetSwiftASTContext(nullptr))               \
         return swift_ast_context->REFERENCE ARGS;                              \
       return {};                                                               \
     }                                                                          \
@@ -1911,9 +1914,9 @@ constexpr ExecutionContextScope *g_no_exe_ctx = nullptr;
     if (!ModuleList::GetGlobalModuleListProperties()                           \
              .GetSwiftValidateTypeSystem())                                    \
       return result;                                                           \
-    if (!GetSwiftASTContext())                                                 \
+    if (!GetSwiftASTContext(nullptr))                                          \
       return result;                                                           \
-    assert((result == GetSwiftASTContext()->REFERENCE()) &&                    \
+    assert((result == GetSwiftASTContext(nullptr)->REFERENCE()) &&             \
            "TypeSystemSwiftTypeRef diverges from SwiftASTContext");            \
     return result;                                                             \
   } while (0)
@@ -1926,18 +1929,18 @@ constexpr ExecutionContextScope *g_no_exe_ctx = nullptr;
     if (!ModuleList::GetGlobalModuleListProperties()                           \
              .GetSwiftValidateTypeSystem())                                    \
       return result;                                                           \
-    if (!GetSwiftASTContext())                                                 \
+    if (!GetSwiftASTContext(nullptr))                                          \
       return result;                                                           \
     if (ShouldSkipValidation(TYPE))                                            \
       return result;                                                           \
     if ((TYPE) && !ReconstructType(TYPE))                                      \
       return result;                                                           \
     ExecutionContext _exe_ctx(EXE_CTX);                                        \
-    auto swift_scratch_ctx_lock = SwiftScratchContextLock(                         \
+    auto swift_scratch_ctx_lock = SwiftScratchContextLock(                     \
         _exe_ctx == ExecutionContext() ? nullptr : &_exe_ctx);                 \
     bool equivalent =                                                          \
         !ReconstructType(TYPE) /* missing .swiftmodule */ ||                   \
-        (Equivalent(result, GetSwiftASTContext()->REFERENCE ARGS));            \
+        (Equivalent(result, GetSwiftASTContext(nullptr)->REFERENCE ARGS));     \
     if (!equivalent)                                                           \
       llvm::dbgs() << "failing type was " << (const char *)TYPE << "\n";       \
     assert(equivalent &&                                                       \
@@ -2363,11 +2366,11 @@ uint32_t TypeSystemSwiftTypeRef::GetTypeInfo(
     NodePointer node = dem.demangleSymbol(AsMangledName(type));
     bool unresolved_typealias = false;
     uint32_t flags = CollectTypeInfo(dem, node, unresolved_typealias);
-    if (unresolved_typealias && GetSwiftASTContext()) {
+    if (unresolved_typealias && GetSwiftASTContext(nullptr)) {
       // If this is a typealias defined in the expression evaluator,
       // then we don't have debug info to resolve it from.
-      return GetSwiftASTContext()->GetTypeInfo(ReconstructType(type),
-                                               pointee_or_element_clang_type);
+      return GetSwiftASTContext(nullptr)->GetTypeInfo(
+          ReconstructType(type), pointee_or_element_clang_type);
     }
     return flags;
   };
@@ -2494,7 +2497,7 @@ TypeSystemSwiftTypeRef::GetNumMemberFunctions(opaque_compiler_type_t type) {
   // this function would require it to have an execution context being passed
   // in. Given the purpose of TypeSystemSwiftTypeRef, it's unlikely this
   // function will be called much.
-  if (auto *swift_ast_context = GetSwiftASTContext())
+  if (auto *swift_ast_context = GetSwiftASTContext(nullptr))
     return swift_ast_context->GetNumMemberFunctions(ReconstructType(type));
   return {};
 }
@@ -2505,7 +2508,7 @@ TypeSystemSwiftTypeRef::GetMemberFunctionAtIndex(opaque_compiler_type_t type,
   // this function would require it to have an execution context being passed
   // in. Given the purpose of TypeSystemSwiftTypeRef, it's unlikely this
   // function will be called much.
-  if (auto *swift_ast_context = GetSwiftASTContext())
+  if (auto *swift_ast_context = GetSwiftASTContext(nullptr))
     return swift_ast_context->GetMemberFunctionAtIndex(ReconstructType(type),
                                                        idx);
   return {};
@@ -2625,7 +2628,9 @@ TypeSystemSwiftTypeRef::GetBitSize(opaque_compiler_type_t type,
       LLDB_LOGF(GetLog(LLDBLog::Types),
                 "Couldn't compute size of type %s using SwiftLanguageRuntime.",
                 AsMangledName(type));
-      if (auto *swift_ast_context = GetSwiftASTContext())
+
+      if (auto *swift_ast_context =
+              GetSwiftASTContextFromExecutionScope(exe_scope))
         return swift_ast_context->GetBitSize(ReconstructType(type), exe_scope);
     }
 
@@ -2794,7 +2799,7 @@ TypeSystemSwiftTypeRef::GetNumChildren(opaque_compiler_type_t type,
             "Using SwiftASTContext::GetNumChildren fallback for type %s",
             AsMangledName(type));
 
-  if (auto *swift_ast_context = GetSwiftASTContext())
+  if (auto *swift_ast_context = GetSwiftASTContextFromExecutionContext(exe_ctx))
     return swift_ast_context->GetNumChildren(ReconstructType(type),
                                              omit_empty_base_classes, exe_ctx);
   return {};
@@ -2851,7 +2856,7 @@ uint32_t TypeSystemSwiftTypeRef::GetNumFields(opaque_compiler_type_t type,
             "Using SwiftASTContext::GetNumFields fallback for type %s",
             AsMangledName(type));
 
-  if (auto *swift_ast_context = GetSwiftASTContext())
+  if (auto *swift_ast_context = GetSwiftASTContextFromExecutionContext(exe_ctx))
     return swift_ast_context->GetNumFields(ReconstructType(type), exe_ctx);
   return {};
 }
@@ -2865,7 +2870,7 @@ CompilerType TypeSystemSwiftTypeRef::GetFieldAtIndex(
   // in. Given the purpose of TypeSystemSwiftTypeRef, it's unlikely this
   // function will be called much.
   LLDB_SCOPED_TIMER();
-  if (auto *swift_ast_context = GetSwiftASTContext())
+  if (auto *swift_ast_context = GetSwiftASTContext(nullptr))
     return swift_ast_context->GetFieldAtIndex(
         ReconstructType(type), idx, name, bit_offset_ptr, bitfield_bit_size_ptr,
         is_bitfield_ptr);
@@ -2917,7 +2922,8 @@ CompilerType TypeSystemSwiftTypeRef::GetChildCompilerTypeAtIndex(
     LLDB_LOGF(GetLog(LLDBLog::Types),
               "Had to engage SwiftASTContext fallback for type %s.",
               AsMangledName(type));
-    if (auto *swift_ast_context = GetSwiftASTContext())
+    if (auto *swift_ast_context =
+            GetSwiftASTContextFromExecutionContext(exe_ctx))
       return swift_ast_context->GetChildCompilerTypeAtIndex(
           ReconstructType(type), exe_ctx, idx, transparent_pointers,
           omit_empty_base_classes, ignore_array_bounds, child_name,
@@ -2936,7 +2942,8 @@ CompilerType TypeSystemSwiftTypeRef::GetChildCompilerTypeAtIndex(
   auto get_ast_num_children = [&]() {
     if (ast_num_children)
       return *ast_num_children;
-    if (auto *swift_ast_context = GetSwiftASTContext())
+    if (auto *swift_ast_context =
+            GetSwiftASTContextFromExecutionContext(exe_ctx))
       ast_num_children = swift_ast_context->GetNumChildren(
           ReconstructType(type), omit_empty_base_classes, exe_ctx);
     return ast_num_children.value_or(0);
@@ -3141,7 +3148,7 @@ size_t TypeSystemSwiftTypeRef::GetIndexOfChildMemberWithName(
 #ifndef NDEBUG
         // This block is a custom VALIDATE_AND_RETURN implementation to support
         // checking the return value, plus the by-ref `child_indexes`.
-        if (!GetSwiftASTContext())
+        if (!GetSwiftASTContextFromExecutionContext(exe_ctx))
           return index_size;
         auto swift_scratch_ctx_lock = SwiftScratchContextLock(exe_ctx);
         auto ast_type = ReconstructType(type);
@@ -3149,9 +3156,10 @@ size_t TypeSystemSwiftTypeRef::GetIndexOfChildMemberWithName(
           return index_size;
         std::vector<uint32_t> ast_child_indexes;
         auto ast_index_size =
-            GetSwiftASTContext()->GetIndexOfChildMemberWithName(
-                ast_type, name, exe_ctx, omit_empty_base_classes,
-                ast_child_indexes);
+            GetSwiftASTContextFromExecutionContext(exe_ctx)
+                ->GetIndexOfChildMemberWithName(ast_type, name, exe_ctx,
+                                                omit_empty_base_classes,
+                                                ast_child_indexes);
         // The runtime has more info than the AST. No useful validation can be
         // done.
         if (index_size > ast_index_size)
@@ -3194,7 +3202,7 @@ size_t TypeSystemSwiftTypeRef::GetIndexOfChildMemberWithName(
             "type %s",
             AsMangledName(type));
 
-  if (auto *swift_ast_context = GetSwiftASTContext())
+  if (auto *swift_ast_context = GetSwiftASTContextFromExecutionContext(exe_ctx))
     return swift_ast_context->GetIndexOfChildMemberWithName(
         ReconstructType(type), name, exe_ctx, omit_empty_base_classes,
         child_indexes);
@@ -3496,7 +3504,7 @@ TypeSystemSwiftTypeRef::GetInstanceType(opaque_compiler_type_t type) {
       // type alias isn't possible, or the user might have defined the
       // type alias in the REPL. In these cases, fallback to asking the AST
       // for the canonical type.
-      if (auto *swift_ast_context = GetSwiftASTContext())
+      if (auto *swift_ast_context = GetSwiftASTContext(nullptr))
         return swift_ast_context->GetInstanceType(ReconstructType(type));
       return {};
     }
@@ -3621,9 +3629,11 @@ CompilerType TypeSystemSwiftTypeRef::CreateTupleType(
   // is an inlined function-specific variation.
   FALLBACK(CreateTupleType, (elements));
 #ifndef NDEBUG
-  {
+  if (ModuleList::GetGlobalModuleListProperties()
+          .GetSwiftValidateTypeSystem()) {
     auto result = impl();
-    if (!GetSwiftASTContext())
+    SwiftASTContext *swift_ast_ctx = GetSwiftASTContext(nullptr);
+    if (!swift_ast_ctx)
       return result;
     std::vector<TupleElement> ast_elements;
     std::transform(elements.begin(), elements.end(),
@@ -3632,10 +3642,10 @@ CompilerType TypeSystemSwiftTypeRef::CreateTupleType(
                                          ReconstructType(element.element_type));
                    });
     bool equivalent =
-        Equivalent(result, GetSwiftASTContext()->CreateTupleType(ast_elements));
+        Equivalent(result, swift_ast_ctx->CreateTupleType(ast_elements));
     if (!equivalent) {
       result.dump();
-      auto a = GetSwiftASTContext()->CreateTupleType(elements);
+      auto a = swift_ast_ctx->CreateTupleType(elements);
       llvm::dbgs() << "AST type: " << a.GetMangledTypeName() << "\n";
       llvm::dbgs() << "failing tuple type\n";
     }
@@ -3644,9 +3654,8 @@ CompilerType TypeSystemSwiftTypeRef::CreateTupleType(
            "TypeSystemSwiftTypeRef diverges from SwiftASTContext");
     return result;
   }
-#else
-  return impl();
 #endif
+  return impl();
 }
 
 bool TypeSystemSwiftTypeRef::IsTupleType(lldb::opaque_compiler_type_t type) {
@@ -3734,7 +3743,8 @@ void TypeSystemSwiftTypeRef::DumpTypeDescription(
 
   // Also dump the swift ast context info, as this functions should not be in
   // any critical path.
-  if (auto *swift_ast_context = GetSwiftASTContext()) {
+  if (auto *swift_ast_context =
+          GetSwiftASTContextFromExecutionScope(exe_scope)) {
     s->PutCString("Source code info:\n");
     swift_ast_context->DumpTypeDescription(
         ReconstructType(type), s, print_help_if_available,
@@ -3863,7 +3873,8 @@ bool TypeSystemSwiftTypeRef::DumpTypeValue(
 
       // No result available from the runtime, fallback to the AST. This occurs
       // for some Clang imported enums
-      if (auto *swift_ast_context = GetSwiftASTContext())
+      if (auto *swift_ast_context =
+              GetSwiftASTContextFromExecutionScope(exe_scope))
         return swift_ast_context->DumpTypeValue(
             ReconstructType(type), s, format, data, data_offset, data_byte_size,
             bitfield_bit_size, bitfield_bit_offset, exe_scope, is_base_class);
@@ -3875,7 +3886,8 @@ bool TypeSystemSwiftTypeRef::DumpTypeValue(
       // SwiftASTContext couldn't resolve. This happens for ObjC
       // typedefs such as CFString in the REPL. More investigation is
       // needed.
-      if (auto *swift_ast_context = GetSwiftASTContext())
+      if (auto *swift_ast_context =
+              GetSwiftASTContextFromExecutionScope(exe_scope))
         return swift_ast_context->DumpTypeValue(
             ReconstructType(type), s, format, data, data_offset, data_byte_size,
             bitfield_bit_size, bitfield_bit_offset, exe_scope, is_base_class);
@@ -3958,7 +3970,7 @@ TypeSystemSwiftTypeRef::GetTypeBitAlign(opaque_compiler_type_t type,
     // defined in the expression. In that case we don't have debug
     // info for it, so defer to SwiftASTContext.
     if (llvm::isa_and_nonnull<SwiftASTContextForExpressions>(
-            GetSwiftASTContext()))
+            GetSwiftASTContextFromExecutionScope(exe_scope)))
       return ReconstructType({weak_from_this(), type}).GetTypeBitAlign(exe_scope);
   }
 
@@ -4066,7 +4078,7 @@ TypeSystemSwiftTypeRef::GetNumDirectBaseClasses(opaque_compiler_type_t type) {
   // this function would require it to have an execution context being passed
   // in. Given the purpose of TypeSystemSwiftTypeRef, it's unlikely this
   // function will be called much.
-  if (auto *swift_ast_context = GetSwiftASTContext())
+  if (auto *swift_ast_context = GetSwiftASTContext(nullptr))
     return swift_ast_context->GetNumDirectBaseClasses(ReconstructType(type));
   return {};
 }
@@ -4076,7 +4088,7 @@ CompilerType TypeSystemSwiftTypeRef::GetDirectBaseClassAtIndex(
   // this function would require it to have an execution context being passed
   // in. Given the purpose of TypeSystemSwiftTypeRef, it's unlikely this
   // function will be called much.
-  if (auto *swift_ast_context = GetSwiftASTContext())
+  if (auto *swift_ast_context = GetSwiftASTContext(nullptr))
     return swift_ast_context->GetDirectBaseClassAtIndex(ReconstructType(type),
                                                         idx, bit_offset_ptr);
   return {};

@@ -2780,7 +2780,8 @@ SwiftLanguageRuntimeImpl::GetConcreteType(ExecutionContextScope *exe_scope,
   if (!promise_sp)
     return CompilerType();
 
-  return promise_sp->FulfillTypePromise();
+  const SymbolContext *sc = &frame->GetSymbolContext(eSymbolContextFunction);
+  return promise_sp->FulfillTypePromise(sc);
 }
 
 } // namespace lldb_private
