@@ -1000,8 +1000,11 @@ void CodeGenModule::Release() {
     getModule().addModuleFlag(llvm::Module::Error, "zos_cu_language",
                               llvm::MDString::get(VMContext, lang_str));
 
+    time_t TT = PreprocessorOpts.SourceDateEpoch
+                    ? *PreprocessorOpts.SourceDateEpoch
+                    : std::time(nullptr);
     getModule().addModuleFlag(llvm::Module::Max, "zos_translation_time",
-                              static_cast<uint64_t>(std::time(nullptr)));
+                              static_cast<uint64_t>(TT));
 
     getModule().addModuleFlag(llvm::Module::Error, "zos_le_char_mode",
                               llvm::MDString::get(VMContext, "ascii"));
