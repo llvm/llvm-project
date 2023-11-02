@@ -977,17 +977,14 @@ ComplexPairTy ComplexExprEmitter::EmitBinDiv(const BinOpInfo &Op) {
 
   llvm::Value *DSTr, *DSTi;
   if (LHSr->getType()->isFloatingPointTy()) {
-    const LangOptions &LO = CGF.getLangOpts();
-    if (LO.getComplexRange() == LangOptions::CX_Fortran)
-      printf("fortran \n");
-    if (LO.getComplexRange() == LangOptions::CX_Limited)
-      printf("cx_limited \n");
     CodeGenFunction::CGFPOptionsRAII FPOptsRAII(CGF, Op.FPFeatures);
     if (RHSi &&
         ((CGF.getLangOpts().getComplexRange() == LangOptions::CX_Fortran &&
           Op.FPFeatures.getComplexRange() == LangOptions::CX_None) ||
          // fast-math mode implies fortran rules.
          CGF.getLangOpts().FastMath)) {
+      if (!LHSi)
+        LHSi = llvm::Constant::getNullValue(RHSi->getType());
       return EmitRangeReductionDiv(LHSr, LHSi, RHSr, RHSi);
     } else if (RHSi &&
                (Op.FPFeatures.getComplexRange() == LangOptions::CX_Limited ||

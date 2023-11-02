@@ -2868,8 +2868,6 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
   bool StrictFPModel = false;
   StringRef Float16ExcessPrecision = "";
   StringRef BFloat16ExcessPrecision = "";
-  StringRef CxLimitedRange = "NoCxLimiteRange";
-  StringRef CxFortranRules = "NoCxFortranRules";
   LangOptions::ComplexRangeKind Range =
       LangOptions::ComplexRangeKind::CX_Full;
 
