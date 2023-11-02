@@ -291,3 +291,28 @@ for.inc:
 for.end:
   ret i32 0
 }
+
+define void @select_coming_elsewhere(i1 %cond, i16 %a, i16 %b) {
+; CHECK-LABEL: @select_coming_elsewhere(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[DIV:%.*]] = select i1 [[COND:%.*]], i16 [[A:%.*]], i16 [[B:%.*]]
+; CHECK-NEXT:    br label [[FOR_COND:%.*]]
+; CHECK:       for.cond:
+; CHECK-NEXT:    [[E_ADDR_0:%.*]] = phi i16 [ 0, [[ENTRY:%.*]] ], [ [[DIV]], [[LOR_END:%.*]] ]
+; CHECK-NEXT:    switch i16 [[E_ADDR_0]], label [[LOR_END]] [
+; CHECK-NEXT:    ]
+; CHECK:       lor.end:
+; CHECK-NEXT:    br label [[FOR_COND]]
+;
+entry:
+  %div = select i1 %cond, i16 %a, i16 %b
+  br label %for.cond
+
+for.cond:                                         ; preds = %lor.end, %entry
+  %e.addr.0 = phi i16 [ 0, %entry ], [ %div, %lor.end ]
+  switch i16 %e.addr.0, label %lor.end [
+  ]
+
+lor.end:                                          ; preds = %for.cond
+  br label %for.cond
+}
