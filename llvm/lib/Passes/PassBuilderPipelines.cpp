@@ -406,6 +406,10 @@ PassBuilder::buildO1FunctionSimplificationPipeline(OptimizationLevel Level,
   FPM.addPass(
       SimplifyCFGPass(SimplifyCFGOptions().convertSwitchRangeToICmp(true)));
 
+  // ReassociatePass may clear nsw/nuw flags of some instructions, which may
+  // have side effects on optimizations in IndVarSimplifyPass.
+  FPM.addPass(createFunctionToLoopPassAdaptor(IndVarSimplifyPass()));
+
   // Form canonically associated expression trees, and simplify the trees using
   // basic mathematical properties. For example, this will form (nearly)
   // minimal multiplication trees.
@@ -579,6 +583,10 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
   FPM.addPass(TailCallElimPass());
   FPM.addPass(
       SimplifyCFGPass(SimplifyCFGOptions().convertSwitchRangeToICmp(true)));
+
+  // ReassociatePass may clear nsw/nuw flags of some instructions, which may
+  // have side effects on optimizations in IndVarSimplifyPass.
+  FPM.addPass(createFunctionToLoopPassAdaptor(IndVarSimplifyPass()));
 
   // Form canonically associated expression trees, and simplify the trees using
   // basic mathematical properties. For example, this will form (nearly)
