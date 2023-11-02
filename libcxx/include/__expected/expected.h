@@ -93,6 +93,12 @@ struct __conditional_no_unique_address_invoke_tag {};
 // This class implements an object with `[[no_unique_address]]` conditionally applied to it,
 // based on the value of `_NoUnique`.
 //
+// A member of this class must always have `[[no_unique_address]]` applied to
+// it. Otherwise, the `[[no_unique_address]]` in the "`_NoUnique == true`" case
+// would not have any effect. In the `false` case, the `__v` is not
+// `[[no_unique_address]]`, so nullifies the effects of the "outer"
+// `[[no_unique_address]]` regarding data layout.
+//
 // If we had a language feature, this class would basically be replaced by `[[no_unique_address(condition)]]`.
 template <bool _NoUnique, class _Tp>
 struct __conditional_no_unique_address;
