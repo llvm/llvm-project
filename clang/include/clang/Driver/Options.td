@@ -1733,7 +1733,7 @@ def fswift_async_fp_EQ : Joined<["-"], "fswift-async-fp=">,
     MarshallingInfoEnum<CodeGenOpts<"SwiftAsyncFramePointer">, "Always">;
 
 defm bounds_safety : BoolFOption<
-  "bounds-safety-experimental",
+  "experimental-bounds-safety",
   LangOpts<"BoundsSafety">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption], "Enable">,
   NegFlag<SetFalse, [], [ClangOption], "Disable">,

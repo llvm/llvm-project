@@ -3623,11 +3623,12 @@ static void CheckBoundsSafetyLang(InputKind IK, DiagnosticsEngine &Diags) {
   // possible to pass assembly files and LLVM IR through Clang, and
   // those should be trivially supported. This is especially important because
   // some build systems, like xcbuild and somewhat clumsy Makefiles, will pass
-  // C_FLAGS to Clang while building assembly files.
+  // C_FLAGS to Clang while building assembly files. 
   switch (IK.getLanguage()) {
   case Language::Unknown:
   case Language::LLVM_IR:
     llvm_unreachable("Unexpected file format");
+  // 'argument unused' warning is reported for assembler in the driver.
   case Language::Asm:
   case Language::C:
     break;
