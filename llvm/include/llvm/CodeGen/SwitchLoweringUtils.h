@@ -176,11 +176,10 @@ struct JumpTable {
 
   /// The debug location of the instruction this JumpTable was produced from.
   std::optional<SDLoc> SL; // For SelectionDAG
-  DebugLoc DbgLoc;         // For GISel
 
   JumpTable(unsigned R, unsigned J, MachineBasicBlock *M, MachineBasicBlock *D,
-            std::optional<SDLoc> SL, DebugLoc DL)
-      : Reg(R), JTI(J), MBB(M), Default(D), SL(SL), DbgLoc(DL) {}
+            std::optional<SDLoc> SL)
+      : Reg(R), JTI(J), MBB(M), Default(D), SL(SL) {}
 };
 struct JumpTableHeader {
   APInt First;
