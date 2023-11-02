@@ -2214,7 +2214,7 @@ void ASTWriter::WriteDeclAbbrevs() {
   Abv->Add(BitCodeAbbrevOp(0));                       // TSCSpec
   Abv->Add(BitCodeAbbrevOp(0));                       // InitStyle
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // isARCPseudoStrong
-  Abv->Add(BitCodeAbbrevOp(1));                         // Linkage
+  Abv->Add(BitCodeAbbrevOp(1));                         // Linkage::None
   Abv->Add(BitCodeAbbrevOp(0));                       // ModulesCodegen
   Abv->Add(BitCodeAbbrevOp(0));                       // VarKind (local enum)
   // ParmVarDecl
