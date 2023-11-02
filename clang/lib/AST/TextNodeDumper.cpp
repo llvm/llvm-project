@@ -2078,13 +2078,13 @@ void TextNodeDumper::VisitOMPDeclareReductionDecl(
     OS << " initializer";
     dumpPointer(Initializer);
     switch (D->getInitializerKind()) {
-    case OMPDeclareReductionDecl::DirectInit:
+    case OMPDeclareReductionInitKind::Direct:
       OS << " omp_priv = ";
       break;
-    case OMPDeclareReductionDecl::CopyInit:
+    case OMPDeclareReductionInitKind::Copy:
       OS << " omp_priv ()";
       break;
-    case OMPDeclareReductionDecl::CallInit:
+    case OMPDeclareReductionInitKind::Call:
       break;
     }
   }
