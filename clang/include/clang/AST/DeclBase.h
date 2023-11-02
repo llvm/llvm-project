@@ -1399,14 +1399,8 @@ enum class DeductionCandidate : unsigned char {
   Aggregate,
 };
 
-enum class OMPDeclareReductionInitKind {
-  Call,   // Initialized by function call.
-  Direct, // omp_priv(<expr>)
-  Copy    // omp_priv = <expr>
-};
-
-enum class ObjCImplementationControl { None, Required, Optional };
-
+enum class OMPDeclareReductionInitKind;
+enum class ObjCImplementationControl;
 enum class LinkageSpecLanguageIDs;
 
 /// DeclContext - This is used only as base class of specific decl types that
