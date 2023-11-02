@@ -331,6 +331,8 @@ bool AMDGPURewriteOutArguments::runOnFunction(Function &F) {
   NewFunc->removeRetAttrs(RetAttrs);
   // TODO: How to preserve metadata?
 
+  NewFunc->setIsNewDbgInfoFormat(F.IsNewDbgInfoFormat);
+
   // Move the body of the function into the new rewritten function, and replace
   // this function with a stub.
   NewFunc->splice(NewFunc->begin(), &F);

@@ -3282,6 +3282,9 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
       constrainOpWithReadfirstlane(B, MI, 2);
       return;
     }
+    case Intrinsic::amdgcn_s_ttracedata:
+      constrainOpWithReadfirstlane(B, MI, 1); // M0
+      return;
     case Intrinsic::amdgcn_raw_buffer_load_lds:
     case Intrinsic::amdgcn_raw_ptr_buffer_load_lds: {
       applyDefaultMapping(OpdMapper);
@@ -5013,6 +5016,13 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       unsigned Bank = getRegBankID(MI.getOperand(2).getReg(), MRI,
                                    AMDGPU::SGPRRegBankID);
       OpdsMapping[2] = AMDGPU::getValueMapping(Bank, 32);
+      break;
+    }
+    case Intrinsic::amdgcn_s_ttracedata: {
+      // This must be an SGPR, but accept a VGPR.
+      unsigned Bank =
+          getRegBankID(MI.getOperand(1).getReg(), MRI, AMDGPU::SGPRRegBankID);
+      OpdsMapping[1] = AMDGPU::getValueMapping(Bank, 32);
       break;
     }
     case Intrinsic::amdgcn_end_cf: {
