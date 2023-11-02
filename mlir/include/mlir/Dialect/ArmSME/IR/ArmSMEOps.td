@@ -60,6 +60,12 @@ def TileElementWidthMatchesTileID : TypesMatchWith<
                   "::llvm::cast<VectorType>($_self).getElementType())"
                   ".getWidth())">;
 
+class HasMatchingMaskTypeConstraint<string vector, string mask> :
+  OptionalTypesMatchWith<
+    mask # " has i1 element type and same shape as " # vector,
+    vector, mask,
+    "::llvm::cast<mlir::VectorType>($_self).cloneWith({}, IntegerType::get($_ctxt, 1))">;
+
 //===----------------------------------------------------------------------===//
 // ArmSME attr definitions
 //===----------------------------------------------------------------------===//
@@ -259,14 +265,7 @@ def TileLoadOp : ArmSME_Op<"tile_load", [
     "result", "padding",
     "::llvm::cast<VectorType>($_self).getElementType()"
   >,
-  OptionalTypesMatchWith<
-    "mask has i1 element type and same shape as result",
-    "result", "mask",
-    "VectorType("
-      "VectorType::Builder("
-        "::llvm::cast<mlir::VectorType>($_self)"
-      ").setElementType(IntegerType::get($_self.getContext(), 1)))"
-  >,
+  HasMatchingMaskTypeConstraint<"result", "mask">,
   PredOpTrait<
     "both `padding` and `mask` should be provided or neither",
     CPred<"bool(getPadding()) == bool(getMask())">
@@ -345,7 +344,10 @@ def TileLoadOp : ArmSME_Op<"tile_load", [
       "attr-dict `:` type($base) `,` type($result)";
 }
 
-def TileStoreOp : ArmSME_Op<"tile_store"> {
+def TileStoreOp : ArmSME_Op<"tile_store", [
+  AttrSizedOperandSegments,
+  HasMatchingMaskTypeConstraint<"valueToStore", "mask">,
+]> {
   let summary = "Tile store operation";
   let description = [{
     Stores a 2D SME "virtual tile" to memory defined by a base and indices,
@@ -355,6 +357,9 @@ def TileStoreOp : ArmSME_Op<"tile_store"> {
     slice of memory must be contiguous. The memref must be either rank 1 or
     rank 2 with dynamic dimensions, since the operation is scalable, and the
     element type must be a scalar that matches the element type of the result.
+
+    An optional `mask` may be provided, the shape of which corresponds to the
+    `tile`, and selects which elements of the tile will be stored.
 
     Example 1: Store an 8-bit element ZA tile with horizontal (default) layout to memory (ZA0.B).
     ```mlir
@@ -370,10 +375,16 @@ def TileStoreOp : ArmSME_Op<"tile_store"> {
     ```mlir
     arm_sme.tile_store %tile, %base[%c0, %c0] layout<horizontal> : vector<[1]x[1]xi128>, memref<?x?xi128>
     ```
+
+    Example 4: Masked store a int 32-bit element ZA tile with vertical layout to memory.
+    ```mlir
+    arm_sme.tile_store %tile, %base[%c0, %c0], %mask layout<vertical> : vector<[4]x[4]xf32>, memref<?x?xf32>
+    ```
   }];
   let arguments = (ins SMETile:$valueToStore,
     Arg<AnyMemRef, "the reference to store to", [MemWrite]>:$base,
-    Variadic<Index>:$indices, ArmSME_TileSliceLayoutAttr:$layout
+    Variadic<Index>:$indices, Optional<AnyVector>:$mask,
+    ArmSME_TileSliceLayoutAttr:$layout
   );
   let extraClassDeclaration = [{
     MemRefType getMemRefType() {
@@ -384,9 +395,16 @@ def TileStoreOp : ArmSME_Op<"tile_store"> {
     }
   }];
 
+  let builders = [
+    OpBuilder<(ins "Value":$valueToStore, "Value":$base,
+                   "ValueRange":$indices), [{
+      build($_builder, $_state, valueToStore, base, indices, {});
+    }]>,
+  ];
+
   let assemblyFormat =
-    "$valueToStore `,` $base `[` $indices `]` (`layout` `` $layout^)? attr-dict "
-      "`:` type($base) `,` type($valueToStore)";
+    "$valueToStore `,` $base `[` $indices `]` (`,` $mask^)? (`layout` `` $layout^)?"
+      "attr-dict `:` type($base) `,` type($valueToStore)";
 }
 
 def LoadTileSliceOp : ArmSME_Op<"load_tile_slice", [
@@ -595,12 +613,6 @@ def MoveTileSliceToVectorOp : ArmSME_Op<"move_tile_slice_to_vector", [Pure,
   }];
 }
 
-class HasMatchingMaskTypeConstraint<string operand> :
-  OptionalTypesMatchWith<
-    "shape of `" # operand #  "Mask` matches `" # operand # "`",
-    operand, operand # "Mask",
-    "::llvm::cast<mlir::VectorType>($_self).cloneWith({}, IntegerType::get($_ctxt, 1))">;
-
 class OuterProductResultTileTypeConstraint<string operand> :
   OptionalTypesMatchWith<operand # "type is derived from `lhs` and `rhs`",
     "lhs", operand,
@@ -615,8 +627,8 @@ def OuterProductOp :
   ArmSME_Op<"outerproduct", [Pure,
     AttrSizedOperandSegments,
     AllTypesMatch<["lhs", "rhs"]>,
-    HasMatchingMaskTypeConstraint<"lhs">,
-    HasMatchingMaskTypeConstraint<"rhs">,
+    HasMatchingMaskTypeConstraint<"lhs", "lhsMask">,
+    HasMatchingMaskTypeConstraint<"rhs", "rhsMask">,
     PredOpTrait<
       "both `lhsMask` and `rhsMask` should be provided or neither",
       CPred<"bool(getLhsMask()) == bool(getRhsMask())">>,

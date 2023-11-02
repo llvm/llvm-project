@@ -223,6 +223,8 @@ def XMM13: X86Reg<"xmm13", 13>, DwarfRegNum<[30, -2, -2]>;
 def XMM14: X86Reg<"xmm14", 14>, DwarfRegNum<[31, -2, -2]>;
 def XMM15: X86Reg<"xmm15", 15>, DwarfRegNum<[32, -2, -2]>;
 
+let PositionOrder = 2 in {
+// XMM16-31 registers, used by AVX-512 instructions.
 def XMM16:  X86Reg<"xmm16", 16>, DwarfRegNum<[67, -2, -2]>;
 def XMM17:  X86Reg<"xmm17", 17>, DwarfRegNum<[68, -2, -2]>;
 def XMM18:  X86Reg<"xmm18", 18>, DwarfRegNum<[69, -2, -2]>;
@@ -239,37 +241,33 @@ def XMM28:  X86Reg<"xmm28", 28>, DwarfRegNum<[79, -2, -2]>;
 def XMM29:  X86Reg<"xmm29", 29>, DwarfRegNum<[80, -2, -2]>;
 def XMM30:  X86Reg<"xmm30", 30>, DwarfRegNum<[81, -2, -2]>;
 def XMM31:  X86Reg<"xmm31", 31>, DwarfRegNum<[82, -2, -2]>;
+}
 
 // YMM0-15 registers, used by AVX instructions and
 // YMM16-31 registers, used by AVX-512 instructions.
-let SubRegIndices = [sub_xmm] in {
-  foreach  Index = 0-31 in {
+let SubRegIndices = [sub_xmm], PositionOrder = 1 in {
+  foreach  Index = 0-15 in {
+    def YMM#Index : X86Reg<"ymm"#Index, Index, [!cast<X86Reg>("XMM"#Index)]>,
+                    DwarfRegAlias<!cast<X86Reg>("XMM"#Index)>;
+  }
+}
+let SubRegIndices = [sub_xmm], PositionOrder = 2 in {
+  foreach  Index = 16-31 in {
     def YMM#Index : X86Reg<"ymm"#Index, Index, [!cast<X86Reg>("XMM"#Index)]>,
                     DwarfRegAlias<!cast<X86Reg>("XMM"#Index)>;
   }
 }
 
+
 // ZMM Registers, used by AVX-512 instructions.
-let SubRegIndices = [sub_ymm] in {
+let SubRegIndices = [sub_ymm], PositionOrder = 2 in {
   foreach  Index = 0-31 in {
     def ZMM#Index : X86Reg<"zmm"#Index, Index, [!cast<X86Reg>("YMM"#Index)]>,
                     DwarfRegAlias<!cast<X86Reg>("XMM"#Index)>;
   }
 }
 
-// Tile config registers.
-def TMMCFG: X86Reg<"tmmcfg", 0>;
-
-// Tile "registers".
-def TMM0:  X86Reg<"tmm0",   0>;
-def TMM1:  X86Reg<"tmm1",   1>;
-def TMM2:  X86Reg<"tmm2",   2>;
-def TMM3:  X86Reg<"tmm3",   3>;
-def TMM4:  X86Reg<"tmm4",   4>;
-def TMM5:  X86Reg<"tmm5",   5>;
-def TMM6:  X86Reg<"tmm6",   6>;
-def TMM7:  X86Reg<"tmm7",   7>;
-
+let PositionOrder = 2 in {
 // Mask Registers, used by AVX-512 instructions.
 def K0 : X86Reg<"k0", 0>, DwarfRegNum<[118,  93,  93]>;
 def K1 : X86Reg<"k1", 1>, DwarfRegNum<[119,  94,  94]>;
@@ -279,6 +277,25 @@ def K4 : X86Reg<"k4", 4>, DwarfRegNum<[122,  97,  97]>;
 def K5 : X86Reg<"k5", 5>, DwarfRegNum<[123,  98,  98]>;
 def K6 : X86Reg<"k6", 6>, DwarfRegNum<[124,  99,  99]>;
 def K7 : X86Reg<"k7", 7>, DwarfRegNum<[125, 100, 100]>;
+// Mask register pairs
+def KPAIRS : RegisterTuples<[sub_mask_0, sub_mask_1],
+                             [(add K0, K2, K4, K6), (add K1, K3, K5, K7)]>;
+}
+
+// TMM registers, used by AMX instructions.
+let PositionOrder = 3 in {
+// Tile config registers.
+def TMMCFG: X86Reg<"tmmcfg", 0>;
+// Tile "registers".
+def TMM0:  X86Reg<"tmm0",   0>;
+def TMM1:  X86Reg<"tmm1",   1>;
+def TMM2:  X86Reg<"tmm2",   2>;
+def TMM3:  X86Reg<"tmm3",   3>;
+def TMM4:  X86Reg<"tmm4",   4>;
+def TMM5:  X86Reg<"tmm5",   5>;
+def TMM6:  X86Reg<"tmm6",   6>;
+def TMM7:  X86Reg<"tmm7",   7>;
+}
 
 // Floating point stack registers. These don't map one-to-one to the FP
 // pseudo registers, but we still mark them as aliasing FP registers. That
@@ -626,10 +643,6 @@ def VK8     : RegisterClass<"X86", [v8i1],  16,  (add VK4)> {let Size = 16;}
 def VK16    : RegisterClass<"X86", [v16i1], 16, (add VK8)> {let Size = 16;}
 def VK32    : RegisterClass<"X86", [v32i1], 32, (add VK16)> {let Size = 32;}
 def VK64    : RegisterClass<"X86", [v64i1], 64, (add VK32)> {let Size = 64;}
-
-// Mask register pairs
-def KPAIRS : RegisterTuples<[sub_mask_0, sub_mask_1],
-                             [(add K0, K2, K4, K6), (add K1, K3, K5, K7)]>;
 
 def VK1PAIR   : RegisterClass<"X86", [untyped], 16, (add KPAIRS)> {let Size = 32;}
 def VK2PAIR   : RegisterClass<"X86", [untyped], 16, (add KPAIRS)> {let Size = 32;}

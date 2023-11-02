@@ -522,7 +522,7 @@ void ASTDeclWriter::VisitRecordDecl(RecordDecl *D) {
   Record.push_back(D->hasNonTrivialToPrimitiveDestructCUnion());
   Record.push_back(D->hasNonTrivialToPrimitiveCopyCUnion());
   Record.push_back(D->isParamDestroyedInCallee());
-  Record.push_back(D->getArgPassingRestrictions());
+  Record.push_back(llvm::to_underlying(D->getArgPassingRestrictions()));
   // Only compute this for C/Objective-C, in C++ this is computed as part
   // of CXXRecordDecl.
   if (!isa<CXXRecordDecl>(D))
@@ -756,7 +756,7 @@ void ASTDeclWriter::VisitObjCMethodDecl(ObjCMethodDecl *D) {
   }
 
   // FIXME: stable encoding for @required/@optional
-  Record.push_back(D->getImplementationControl());
+  Record.push_back(llvm::to_underlying(D->getImplementationControl()));
   // FIXME: stable encoding for in/out/inout/bycopy/byref/oneway/nullability
   Record.push_back(D->getObjCDeclQualifier());
   Record.push_back(D->hasRelatedResultType());
@@ -1273,7 +1273,7 @@ void ASTDeclWriter::VisitLinkageSpecDecl(LinkageSpecDecl *D) {
                 "LinkageSpecDeclBits");
 
   VisitDecl(D);
-  Record.push_back(D->getLanguage());
+  Record.push_back(llvm::to_underlying(D->getLanguage()));
   Record.AddSourceLocation(D->getExternLoc());
   Record.AddSourceLocation(D->getRBraceLoc());
   Code = serialization::DECL_LINKAGE_SPEC;
@@ -1972,7 +1972,7 @@ void ASTDeclWriter::VisitOMPDeclareReductionDecl(OMPDeclareReductionDecl *D) {
   Record.AddStmt(D->getInitOrig());
   Record.AddStmt(D->getInitPriv());
   Record.AddStmt(D->getInitializer());
-  Record.push_back(D->getInitializerKind());
+  Record.push_back(llvm::to_underlying(D->getInitializerKind()));
   Record.AddDeclRef(D->getPrevDeclInScope());
   Code = serialization::DECL_OMP_DECLARE_REDUCTION;
 }

@@ -252,6 +252,37 @@ void LLVMSetTargetMachineAsmVerbosity(LLVMTargetMachineRef T,
   unwrap(T)->Options.MCOptions.AsmVerbose = VerboseAsm;
 }
 
+void LLVMSetTargetMachineFastISel(LLVMTargetMachineRef T, LLVMBool Enable) {
+  unwrap(T)->setFastISel(Enable);
+}
+
+void LLVMSetTargetMachineGlobalISel(LLVMTargetMachineRef T, LLVMBool Enable) {
+  unwrap(T)->setGlobalISel(Enable);
+}
+
+void LLVMSetTargetMachineGlobalISelAbort(LLVMTargetMachineRef T,
+                                         LLVMGlobalISelAbortMode Mode) {
+  GlobalISelAbortMode AM = GlobalISelAbortMode::Enable;
+  switch (Mode) {
+  case LLVMGlobalISelAbortDisable:
+    AM = GlobalISelAbortMode::Disable;
+    break;
+  case LLVMGlobalISelAbortEnable:
+    AM = GlobalISelAbortMode::Enable;
+    break;
+  case LLVMGlobalISelAbortDisableWithDiag:
+    AM = GlobalISelAbortMode::DisableWithDiag;
+    break;
+  }
+
+  unwrap(T)->setGlobalISelAbort(AM);
+}
+
+void LLVMSetTargetMachineMachineOutliner(LLVMTargetMachineRef T,
+                                         LLVMBool Enable) {
+  unwrap(T)->setMachineOutliner(Enable);
+}
+
 LLVMTargetDataRef LLVMCreateTargetDataLayout(LLVMTargetMachineRef T) {
   return wrap(new DataLayout(unwrap(T)->createDataLayout()));
 }
