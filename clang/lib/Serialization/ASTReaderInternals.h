@@ -278,7 +278,8 @@ public:
   data_type ReadData(internal_key_ref,const unsigned char *d, unsigned DataLen);
 
 private:
-  const FileEntry *getFile(const internal_key_type &Key);
+  OptionalFileEntryRefDegradesToFileEntryPtr
+  getFile(const internal_key_type &Key);
 };
 
 /// The on-disk hash table used for known header files.
