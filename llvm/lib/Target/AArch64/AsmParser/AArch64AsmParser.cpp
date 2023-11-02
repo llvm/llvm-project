@@ -4572,7 +4572,7 @@ ParseStatus AArch64AsmParser::tryParseZTOperand(OperandVector &Operands) {
         getLoc(), getContext()));
     if (parseOptionalToken(AsmToken::Comma))
       if (parseOptionalMulOperand(Operands))
-        return MatchOperand_ParseFail;
+        return ParseStatus::Failure;
     if (parseToken(AsmToken::RBrac, "']' expected"))
       return ParseStatus::Failure;
     Operands.push_back(
