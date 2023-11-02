@@ -21,6 +21,7 @@
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/xxhash.h"
 #include <cstdint>
+#include <optional>
 #include <vector>
 
 using namespace llvm;
@@ -886,8 +887,8 @@ void InputSection::relocateNonAlloc(uint8_t *buf, ArrayRef<RelTy> rels) {
   const TargetInfo &target = *elf::target;
   const bool isDebug = isDebugSection(*this);
   const bool isDebugLine = isDebug && name == ".debug_line";
-  std::optional<uint64_t> tombstone;
-  uint64_t tombstoneValueToUse = 0;
+  std::optional<uint64_t> tombstone = std::nullopt;
+  std::optional<uint64_t> tombstoneValueToUse = std::nullopt;
   for (const auto &patAndValue : llvm::reverse(config->deadRelocInNonAlloc))
     if (patAndValue.first.match(this->name)) {
       tombstone = patAndValue.second;
@@ -925,7 +926,7 @@ void InputSection::relocateNonAlloc(uint8_t *buf, ArrayRef<RelTy> rels) {
     if (expr == R_NONE)
       continue;
 
-    if (tombstone || isDebug) {
+    if (tombstoneValueToUse) {
       // Resolve relocations in .debug_* referencing (discarded symbols or ICF
       // folded section symbols) to a tombstone value. Resolving to addend is
       // unsatisfactory because the result address range may collide with a
@@ -958,11 +959,11 @@ void InputSection::relocateNonAlloc(uint8_t *buf, ArrayRef<RelTy> rels) {
       // Extending 32bit MAX value to 64bit MAX value..
       // One usage example is in .debug_names LocatTU tombstoning.
       if (!tombstone && type == target.symbolicRel)
-        tombstoneValueToUse = SignExtend64<32>(tombstoneValueToUse);
+        tombstoneValueToUse = SignExtend64<32>(*tombstoneValueToUse);
 
       auto *ds = dyn_cast<Defined>(&sym);
       if (!sym.getOutputSection() || (ds && ds->folded && !isDebugLine)) {
-        target.relocateNoSym(bufLoc, type, tombstoneValueToUse);
+        target.relocateNoSym(bufLoc, type, *tombstoneValueToUse);
         continue;
       }
     }
