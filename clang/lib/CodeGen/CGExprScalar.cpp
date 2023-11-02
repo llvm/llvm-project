@@ -3234,6 +3234,7 @@ Value *ScalarExprEmitter::EmitPromoted(const Expr *E, QualType PromotionType) {
 
 BinOpInfo ScalarExprEmitter::EmitBinOps(const BinaryOperator *E,
                                         QualType PromotionType) {
+  // Testing only.
   TestAndClearIgnoreResultAssign();
   BinOpInfo Result;
   Result.LHS = CGF.EmitPromotedScalarExpr(E->getLHS(), PromotionType);
