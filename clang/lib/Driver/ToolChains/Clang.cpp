@@ -1180,8 +1180,19 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
     if (ArgM->getOption().matches(options::OPT_M) ||
         ArgM->getOption().matches(options::OPT_MD))
       CmdArgs.push_back("-sys-header-deps");
+
+      // #70011: Canonicalization on Windows does unexpected things like change
+      // drive letters.
+      // FIXME: find and use Windows API that canonicalizes paths except for
+      // drive letter.
+#if defined(_WIN32) || defined(_WIN64)
+    bool CanonicalSystemHeadersDefault = false;
+#else
+    bool CanonicalSystemHeadersDefault = true;
+#endif
     if (Args.hasFlag(options::OPT_canonical_prefixes,
-                     options::OPT_no_canonical_prefixes, true))
+                     options::OPT_no_canonical_prefixes,
+                     CanonicalSystemHeadersDefault))
       CmdArgs.push_back("-canonical-system-headers");
     if ((isa<PrecompileJobAction>(JA) &&
          !Args.hasArg(options::OPT_fno_module_file_deps)) ||
