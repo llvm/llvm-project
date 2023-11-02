@@ -22,7 +22,7 @@
 // RUN:         -convert-vector-to-llvm \
 // RUN:         -convert-index-to-llvm=index-bitwidth=32 \
 // RUN:         -convert-arith-to-llvm \
-// RUN:         -finalize-memref-to-llvm='use-opaque-pointers=1' \
+// RUN:         -finalize-memref-to-llvm \
 // RUN:         -convert-func-to-llvm \
 // RUN:         -expand-strided-metadata --nvvm-attach-target="module=main_kernel features=+ptx80 chip=sm_90 O=3" \
 // RUN:  | mlir-opt -pass-pipeline='builtin.module(gpu.module(strip-debuginfo,convert-gpu-to-nvvm,convert-index-to-llvm{index-bitwidth=32},canonicalize,cse))' \
