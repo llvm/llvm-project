@@ -324,4 +324,7 @@ TEST(MatrixTest, gramSchmidt) {
   FracMatrix gs = mat.gramSchmidt();
 
   EXPECT_EQ_FRAC_MATRIX(gs, gramSchmidt);
+  for (unsigned i = 0; i < 3u; i++)
+    for (unsigned j = i+1; j < 3u; j++)
+      EXPECT_EQ(dotProduct(gramSchmidt.getRow(i), gramSchmidt.getRow(j)), 0);
 }
