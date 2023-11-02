@@ -289,6 +289,17 @@ template <unsigned int NumberOfBits> struct HasMemberAndTemplate {
 
 static auto instanceOfStruct = HasMemberAndTemplate<16>(); 
 
+struct HasMemberAndExplicitDefault {
+  int TrivialMember;
+
+  HasMemberAndExplicitDefault() = default;
+// CHECK-MESSAGES: :[[@LINE-1]]:3: warning: 'HasMemberAndExplicitDefault' must be tagged with the LIBC_INLINE macro; the macro should be placed at the beginning of the declaration [llvmlibc-inline-function-decl]
+// CHECK-FIXES: LIBC_INLINE HasMemberAndExplicitDefault() = default;
+
+  ~HasMemberAndExplicitDefault() = delete;
+};
+
+
 } // namespace issue_62746
 
 } // namespace __llvm_libc

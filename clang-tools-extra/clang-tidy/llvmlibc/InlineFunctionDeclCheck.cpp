@@ -79,8 +79,8 @@ void InlineFunctionDeclCheck::check(const MatchFinder::MatchResult &Result) {
     if (MethodDecl->getParent()->isLambda())
       return;
 
-  // Ignore implicit functions (e.g. implicit constructors or destructors)
-  if (FuncDecl->isImplicit())
+  // Ignore functions that have been deleted.
+  if (FuncDecl->isDeleted())
     return;
 
   // Check if decl starts with LIBC_INLINE
