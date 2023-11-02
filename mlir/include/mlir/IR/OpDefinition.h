@@ -1591,7 +1591,8 @@ foldTrait(Operation *, ArrayRef<Attribute>, SmallVectorImpl<OpFoldResult> &) {
 /// Given a tuple type containing a set of traits, return the result of folding
 /// the given operation.
 template <typename... Ts>
-static LogicalResult foldTraits(Operation *op, ArrayRef<Attribute> operands,
+static LogicalResult foldTraits([[maybe_unused]] Operation *op,
+                                [[maybe_unused]] ArrayRef<Attribute> operands,
                                 SmallVectorImpl<OpFoldResult> &results) {
   return success((succeeded(foldTrait<Ts>(op, operands, results)) || ...));
 }
@@ -1627,7 +1628,7 @@ verifyTrait(Operation *) {
 
 /// Given a set of traits, return the result of verifying the given operation.
 template <typename... Ts>
-LogicalResult verifyTraits(Operation *op) {
+LogicalResult verifyTraits([[maybe_unused]] Operation *op) {
   return success((succeeded(verifyTrait<Ts>(op)) && ...));
 }
 
@@ -1647,7 +1648,7 @@ verifyRegionTrait(Operation *) {
 /// Given a set of traits, return the result of verifying the regions of the
 /// given operation.
 template <typename... Ts>
-LogicalResult verifyRegionTraits(Operation *op) {
+LogicalResult verifyRegionTraits([[maybe_unused]] Operation *op) {
   return success((succeeded(verifyRegionTrait<Ts>(op)) && ...));
 }
 } // namespace op_definition_impl

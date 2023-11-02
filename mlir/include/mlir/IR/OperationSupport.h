@@ -577,6 +577,7 @@ public:
       // dictionnary of discardable attributes for now.
       return cast<ConcreteOp>(op)->getDiscardableAttr(name);
     }
+
     void setInherentAttr(Operation *op, StringAttr name,
                          Attribute value) final {
       if constexpr (hasProperties) {
@@ -588,20 +589,24 @@ public:
       // dictionnary of discardable attributes for now.
       return cast<ConcreteOp>(op)->setDiscardableAttr(name, value);
     }
-    void populateInherentAttrs(Operation *op, NamedAttrList &attrs) final {
+
+    void populateInherentAttrs([[maybe_unused]] Operation *op,
+                               NamedAttrList &attrs) final {
       if constexpr (hasProperties) {
         auto concreteOp = cast<ConcreteOp>(op);
         ConcreteOp::populateInherentAttrs(concreteOp->getContext(),
                                           concreteOp.getProperties(), attrs);
       }
     }
-    LogicalResult
-    verifyInherentAttrs(OperationName opName, NamedAttrList &attributes,
-                        function_ref<InFlightDiagnostic()> emitError) final {
+
+    LogicalResult verifyInherentAttrs(
+        [[maybe_unused]] OperationName opName, NamedAttrList &attributes,
+        [[maybe_unused]] function_ref<InFlightDiagnostic()> emitError) final {
       if constexpr (hasProperties)
         return ConcreteOp::verifyInherentAttrs(opName, attributes, emitError);
       return success();
     }
+
     // Detect if the concrete operation defined properties.
     static constexpr bool hasProperties = !std::is_same_v<
         typename ConcreteOp::template InferredProperties<ConcreteOp>,
@@ -612,8 +617,9 @@ public:
         return sizeof(Properties);
       return 0;
     }
-    void initProperties(OperationName opName, OpaqueProperties storage,
-                        OpaqueProperties init) final {
+
+    void initProperties([[maybe_unused]] OperationName opName,
+                        OpaqueProperties storage, OpaqueProperties init) final {
       using Properties =
           typename ConcreteOp::template InferredProperties<ConcreteOp>;
       if (init)
@@ -624,11 +630,14 @@ public:
         ConcreteOp::populateDefaultProperties(opName,
                                               *storage.as<Properties *>());
     }
+
     void deleteProperties(OpaqueProperties prop) final {
       prop.as<Properties *>()->~Properties();
     }
-    void populateDefaultProperties(OperationName opName,
-                                   OpaqueProperties properties) final {
+
+    void populateDefaultProperties(
+        [[maybe_unused]] OperationName opName,
+        [[maybe_unused]] OpaqueProperties properties) final {
       if constexpr (hasProperties)
         ConcreteOp::populateDefaultProperties(opName,
                                               *properties.as<Properties *>());
@@ -645,7 +654,8 @@ public:
       emitError() << "this operation does not support properties";
       return failure();
     }
-    Attribute getPropertiesAsAttr(Operation *op) final {
+
+    Attribute getPropertiesAsAttr([[maybe_unused]] Operation *op) final {
       if constexpr (hasProperties) {
         auto concreteOp = cast<ConcreteOp>(op);
         return ConcreteOp::getPropertiesAsAttr(concreteOp->getContext(),
@@ -653,17 +663,22 @@ public:
       }
       return {};
     }
-    bool compareProperties(OpaqueProperties lhs, OpaqueProperties rhs) final {
+
+    bool compareProperties([[maybe_unused]] OpaqueProperties lhs,
+                           [[maybe_unused]] OpaqueProperties rhs) final {
       if constexpr (hasProperties) {
         return *lhs.as<Properties *>() == *rhs.as<Properties *>();
       } else {
         return true;
       }
     }
+
     void copyProperties(OpaqueProperties lhs, OpaqueProperties rhs) final {
       *lhs.as<Properties *>() = *rhs.as<Properties *>();
     }
-    llvm::hash_code hashProperties(OpaqueProperties prop) final {
+
+    llvm::hash_code
+    hashProperties([[maybe_unused]] OpaqueProperties prop) final {
       if constexpr (hasProperties)
         return ConcreteOp::computePropertiesHash(*prop.as<Properties *>());
 
