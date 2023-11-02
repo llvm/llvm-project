@@ -790,7 +790,6 @@ struct ConvertFuncToLLVMPass
     if (indexBitwidth != kDeriveIndexBitwidthFromDataLayout)
       options.overrideIndexBitwidth(indexBitwidth);
     options.dataLayout = llvm::DataLayout(dataLayout);
-    options.useOpaquePointers = useOpaquePointers;
 
     LLVMTypeConverter typeConverter(&getContext(), options,
                                     &dataLayoutAnalysis);
@@ -805,7 +804,8 @@ struct ConvertFuncToLLVMPass
     RewritePatternSet patterns(&getContext());
     populateFuncToLLVMConversionPatterns(typeConverter, patterns, symbolTable);
 
-    // TODO: Remove these in favor of their dedicated conversion passes.
+    // TODO(https://github.com/llvm/llvm-project/issues/70982): Remove these in
+    // favor of their dedicated conversion passes.
     arith::populateArithToLLVMConversionPatterns(typeConverter, patterns);
     cf::populateControlFlowToLLVMConversionPatterns(typeConverter, patterns);
 

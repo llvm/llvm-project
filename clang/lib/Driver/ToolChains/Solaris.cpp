@@ -126,8 +126,7 @@ void solaris::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (LinkerIsGnuLd) {
     // Set the correct linker emulation for 32- and 64-bit Solaris.
-    const toolchains::Solaris &ToolChain =
-        static_cast<const toolchains::Solaris &>(getToolChain());
+    const auto &ToolChain = static_cast<const Solaris &>(getToolChain());
     const llvm::Triple::ArchType Arch = ToolChain.getArch();
 
     switch (Arch) {
@@ -221,6 +220,8 @@ void solaris::Linker::ConstructJob(Compilation &C, const JobAction &JA,
         getToolChain().AddCXXStdlibLibArgs(Args, CmdArgs);
       CmdArgs.push_back("-lm");
     }
+    // Silence warnings when linking C code with a C++ '-stdlib' argument.
+    Args.ClaimAllArgs(options::OPT_stdlib_EQ);
     // Additional linker set-up and flags for Fortran. This is required in order
     // to generate executables. As Fortran runtime depends on the C runtime,
     // these dependencies need to be listed before the C runtime below.

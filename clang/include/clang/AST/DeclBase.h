@@ -1399,6 +1399,11 @@ enum class DeductionCandidate : unsigned char {
   Aggregate,
 };
 
+enum class RecordArgPassingKind;
+enum class OMPDeclareReductionInitKind;
+enum class ObjCImplementationControl;
+enum class LinkageSpecLanguageIDs;
+
 /// DeclContext - This is used only as base class of specific decl types that
 /// can act as declaration contexts. These decls are (only the top classes
 /// that directly derive from DeclContext are mentioned, not their subclasses):

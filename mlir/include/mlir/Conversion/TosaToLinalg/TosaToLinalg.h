@@ -26,7 +26,8 @@ namespace mlir {
 namespace tosa {
 
 std::unique_ptr<Pass> createTosaToLinalg();
-std::unique_ptr<Pass> createTosaToLinalgNamed();
+std::unique_ptr<Pass> createTosaToLinalgNamed(
+    const TosaToLinalgNamedOptions &options = TosaToLinalgNamedOptions());
 
 /// Populates passes to convert from TOSA to Linalg on buffers. At the end of
 /// the pass, the function will only contain linalg ops or standard ops if the
@@ -34,6 +35,8 @@ std::unique_ptr<Pass> createTosaToLinalgNamed();
 /// benchmarking performance improvements from the canonicalizations.
 void addTosaToLinalgPasses(
     OpPassManager &pm, const TosaToLinalgOptions &options,
+    const TosaToLinalgNamedOptions &tosaToLinalgNamedOptions =
+        TosaToLinalgNamedOptions(),
     // Note: Default to 'none' level unless otherwise specified.
     tosa::TosaValidationOptions const &validationOptions = {
         tosa::TosaProfileEnum::Undefined, false, tosa::TosaLevelEnum::None});
@@ -46,7 +49,8 @@ void registerTosaToLinalgPipelines();
 void populateTosaToLinalgConversionPatterns(RewritePatternSet *patterns);
 
 /// Populates conversion passes from TOSA dialect to Linalg named operations.
-void populateTosaToLinalgNamedConversionPatterns(RewritePatternSet *patterns);
+void populateTosaToLinalgNamedConversionPatterns(
+    RewritePatternSet *patterns, const TosaToLinalgNamedOptions &options);
 
 } // namespace tosa
 } // namespace mlir

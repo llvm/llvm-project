@@ -2849,7 +2849,8 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
     if (OpFlags & AArch64II::MO_GOT) {
       I.setDesc(TII.get(AArch64::LOADgot));
       I.getOperand(1).setTargetFlags(OpFlags);
-    } else if (TM.getCodeModel() == CodeModel::Large) {
+    } else if (TM.getCodeModel() == CodeModel::Large &&
+               !TM.isPositionIndependent()) {
       // Materialize the global using movz/movk instructions.
       materializeLargeCMVal(I, GV, OpFlags);
       I.eraseFromParent();
@@ -3502,7 +3503,7 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
     return true;
   }
   case TargetOpcode::G_BLOCK_ADDR: {
-    if (TM.getCodeModel() == CodeModel::Large) {
+    if (TM.getCodeModel() == CodeModel::Large && !TM.isPositionIndependent()) {
       materializeLargeCMVal(I, I.getOperand(1).getBlockAddress(), 0);
       I.eraseFromParent();
       return true;
@@ -7397,9 +7398,6 @@ AArch64InstructionSelector::selectAddrModeUnscaled(MachineOperand &Root,
     return std::nullopt;
   RHSC = RHSOp1.getCImm()->getSExtValue();
 
-  // If the offset is valid as a scaled immediate, don't match here.
-  if ((RHSC & (Size - 1)) == 0 && RHSC >= 0 && RHSC < (0x1000 << Log2_32(Size)))
-    return std::nullopt;
   if (RHSC >= -256 && RHSC < 256) {
     MachineOperand &Base = RootDef->getOperand(1);
     return {{

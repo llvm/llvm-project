@@ -903,6 +903,7 @@ cc_library(
         ":type_nodes_gen",
         "//llvm:BinaryFormat",
         "//llvm:Core",
+        "//llvm:FrontendHLSL",
         "//llvm:FrontendOpenMP",
         "//llvm:Support",
         "//llvm:TargetParser",
