@@ -69,7 +69,9 @@ def upload_files(repo, release, files):
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument("command", type=str, choices=["create", "upload", "check-permissions"])
+parser.add_argument(
+    "command", type=str, choices=["create", "upload", "check-permissions"]
+)
 
 # All args
 parser.add_argument("--token", type=str)
@@ -88,13 +90,13 @@ llvm_repo = llvm_org.get_repo("llvm-project")
 if args.user:
     # Validate that this user is allowed to modify releases.
     user = github.get_user(args.user)
-    team = llvm_org.get_team_by_slug('llvm-release-managers')
+    team = llvm_org.get_team_by_slug("llvm-release-managers")
     if not team.has_in_members(user):
         print("User {} is not a allowed to modify releases".format(args.user))
         sys.exit(1)
 elif args.command == "check-permissions":
-  print("--user option required for check-permissions")
-  sys.exit(1)
+    print("--user option required for check-permissions")
+    sys.exit(1)
 
 if args.command == "create":
     create_release(llvm_repo, args.release, args.user)
