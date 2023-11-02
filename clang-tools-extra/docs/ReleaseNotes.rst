@@ -306,7 +306,7 @@ Changes in existing checks
 
 - Improved :doc:`llvmlibc-inline-function-decl
   <clang-tidy/checks/llvmlibc/inline-function-decl>` to properly ignore implicit
-  functions, such as struct constructors.
+  functions, such as struct constructors, and explicitly deleted functions.
 
 - Improved :doc:`misc-const-correctness
   <clang-tidy/checks/misc/const-correctness>` check to avoid false positive when
