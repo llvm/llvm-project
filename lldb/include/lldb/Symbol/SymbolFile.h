@@ -447,7 +447,8 @@ public:
   ///     "separate-debug-info-files".
   /// \param errors_only
   ///     If true, then only return separate debug info files that encountered
-  ///     errors during loading.
+  ///     errors during loading. If false, then return all expected separate
+  ///     debug info files, regardless of whether they were successfully loaded.
   virtual bool GetSeparateDebugInfo(StructuredData::Dictionary &d,
                                     bool errors_only) {
     return false;
