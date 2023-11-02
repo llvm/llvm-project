@@ -280,8 +280,8 @@ public:
 
   bool buildJumpTable(const CaseClusterVector &Clusters, unsigned First,
                       unsigned Last, const SwitchInst *SI,
-                      std::optional<SDLoc> SL, MachineBasicBlock *DefaultMBB,
-                      CaseCluster &JTCluster);
+                      const std::optional<SDLoc> &SL,
+                      MachineBasicBlock *DefaultMBB, CaseCluster &JTCluster);
 
   void findBitTestClusters(CaseClusterVector &Clusters, const SwitchInst *SI);
 

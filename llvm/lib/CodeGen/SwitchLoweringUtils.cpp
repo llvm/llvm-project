@@ -191,7 +191,7 @@ void SwitchCG::SwitchLowering::findJumpTables(CaseClusterVector &Clusters,
 bool SwitchCG::SwitchLowering::buildJumpTable(const CaseClusterVector &Clusters,
                                               unsigned First, unsigned Last,
                                               const SwitchInst *SI,
-                                              std::optional<SDLoc> SL,
+                                              const std::optional<SDLoc> &SL,
                                               MachineBasicBlock *DefaultMBB,
                                               CaseCluster &JTCluster) {
   assert(First <= Last);
