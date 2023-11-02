@@ -551,11 +551,9 @@ Fraction FracMatrix::determinant(FracMatrix *inverse) const {
 }
 
 FracMatrix FracMatrix::gramSchmidt() const {
-
     // Create a copy of the argument to store
     // the orthogonalised version.
     FracMatrix orth(*this);
-    Fraction projectionScale;
 
     // For each vector (row) in the matrix,
     // subtract its unit projection along
@@ -565,8 +563,8 @@ FracMatrix FracMatrix::gramSchmidt() const {
     // previous vectors.
     for (unsigned i = 1; i < getNumRows(); i++) {
         for (unsigned j = 0; j < i; j++) {
-            projectionScale = dotProduct(orth.getRow(i), orth.getRow(j)) /
-                              dotProduct(orth.getRow(j), orth.getRow(j));
+            Fraction projectionScale = dotProduct(orth.getRow(i), orth.getRow(j)) /
+                                       dotProduct(orth.getRow(j), orth.getRow(j));
             orth.addToRow(j, i, -projectionScale);
         }
     }

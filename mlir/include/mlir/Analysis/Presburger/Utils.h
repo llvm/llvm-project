@@ -278,7 +278,7 @@ SmallVector<MPInt, 8> getNegatedCoeffs(ArrayRef<MPInt> coeffs);
 SmallVector<MPInt, 8> getComplementIneq(ArrayRef<MPInt> ineq);
 
 /// Compute the dot product of two vectors.
-/// Assumes that the vectors have the same sizes.
+/// The vectors must have the same sizes.
 Fraction dotProduct(MutableArrayRef<Fraction> a, MutableArrayRef<Fraction> b);
 
 } // namespace presburger
