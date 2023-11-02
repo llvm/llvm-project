@@ -312,19 +312,28 @@ TEST(MatrixTest, intInverse) {
 }
 
 TEST(MatrixTest, gramSchmidt) {
-  FracMatrix mat = makeFracMatrix(3, 5, {{Fraction(3, 1), Fraction(4, 1), Fraction(5, 1), Fraction(12, 1), Fraction(19, 1)},
-                                         {Fraction(4, 1), Fraction(5, 1), Fraction(6, 1), Fraction(13, 1), Fraction(20, 1)},
-                                         {Fraction(7, 1), Fraction(8, 1), Fraction(9, 1), Fraction(16, 1), Fraction(24, 1)}});
+  FracMatrix mat =
+      makeFracMatrix(3, 5,
+                     {{Fraction(3, 1), Fraction(4, 1), Fraction(5, 1),
+                       Fraction(12, 1), Fraction(19, 1)},
+                      {Fraction(4, 1), Fraction(5, 1), Fraction(6, 1),
+                       Fraction(13, 1), Fraction(20, 1)},
+                      {Fraction(7, 1), Fraction(8, 1), Fraction(9, 1),
+                       Fraction(16, 1), Fraction(24, 1)}});
 
-  FracMatrix gramSchmidt = makeFracMatrix(3, 5,
-         {{Fraction(3, 1),     Fraction(4, 1),     Fraction(5, 1),    Fraction(12, 1),     Fraction(19, 1)},
-          {Fraction(142, 185), Fraction(383, 555), Fraction(68, 111), Fraction(13, 185),   Fraction(-262, 555)},
-          {Fraction(53, 463),  Fraction(27, 463),  Fraction(1, 463),  Fraction(-181, 463), Fraction(100, 463)}});
+  FracMatrix gramSchmidt = makeFracMatrix(
+      3, 5,
+      {{Fraction(3, 1), Fraction(4, 1), Fraction(5, 1), Fraction(12, 1),
+        Fraction(19, 1)},
+       {Fraction(142, 185), Fraction(383, 555), Fraction(68, 111),
+        Fraction(13, 185), Fraction(-262, 555)},
+       {Fraction(53, 463), Fraction(27, 463), Fraction(1, 463),
+        Fraction(-181, 463), Fraction(100, 463)}});
 
   FracMatrix gs = mat.gramSchmidt();
 
   EXPECT_EQ_FRAC_MATRIX(gs, gramSchmidt);
   for (unsigned i = 0; i < 3u; i++)
-    for (unsigned j = i+1; j < 3u; j++)
+    for (unsigned j = i + 1; j < 3u; j++)
       EXPECT_EQ(dotProduct(gramSchmidt.getRow(i), gramSchmidt.getRow(j)), 0);
 }

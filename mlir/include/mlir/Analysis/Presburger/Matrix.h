@@ -270,7 +270,6 @@ public:
   // of the rows of matrix (cubic time).
   // The rows of the matrix must be linearly independent.
   FracMatrix gramSchmidt() const;
-
 };
 
 } // namespace presburger
