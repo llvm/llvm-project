@@ -1348,7 +1348,7 @@ def warn_pragma_acc_ignored : Warning<
 def err_acc_unexpected_directive : Error<
   "unexpected OpenACC directive %select{|'#pragma acc %1'}0">;
 def warn_pragma_acc_unimplemented
-    : Warning<"OpenACC Directives not yet implemented, pragma ignored">,
+    : Warning<"OpenACC directives not yet implemented, pragma ignored">,
       InGroup<SourceUsesOpenACC>;
 
 // OpenMP support.
