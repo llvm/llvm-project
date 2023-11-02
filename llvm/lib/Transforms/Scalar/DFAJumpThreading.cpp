@@ -100,10 +100,10 @@ static cl::opt<unsigned> MaxPathLength(
     cl::desc("Max number of blocks searched to find a threading path"),
     cl::Hidden, cl::init(20));
 
-static cl::opt<unsigned> MaxNumPaths(
-    "dfa-max-num-paths",
-    cl::desc("Max number of paths enumerated around a switch"),
-    cl::Hidden, cl::init(200));
+static cl::opt<unsigned>
+    MaxNumPaths("dfa-max-num-paths",
+                cl::desc("Max number of paths enumerated around a switch"),
+                cl::Hidden, cl::init(200));
 
 static cl::opt<unsigned>
     CostThreshold("dfa-cost-threshold",
@@ -297,6 +297,7 @@ void unfold(DomTreeUpdater *DTU, SelectInstToUnfold SIToUnfold,
                      {DominatorTree::Insert, StartBlock, FT}});
 
   // The select is now dead.
+  assert(SI->use_empty() && "Select must be dead now");
   SI->eraseFromParent();
 }
 
@@ -466,8 +467,9 @@ private:
     if (!SITerm || !SITerm->isUnconditional())
       return false;
 
-    if (isa<PHINode>(SIUse) &&
-        SIBB->getSingleSuccessor() != cast<Instruction>(SIUse)->getParent())
+    // Only fold the select coming from directly where it is defined.
+    PHINode *PHIUser = dyn_cast<PHINode>(SIUse);
+    if (PHIUser && PHIUser->getIncomingBlock(*SI->use_begin()) != SIBB)
       return false;
 
     // If select will not be sunk during unfolding, and it is in the same basic
