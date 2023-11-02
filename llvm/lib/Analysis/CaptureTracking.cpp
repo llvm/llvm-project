@@ -258,10 +258,10 @@ bool llvm::PointerMayBeCapturedBefore(const Value *V, bool ReturnCaptures,
   return CB.Captured;
 }
 
-Instruction *
-llvm::FindEarliestCapture(const Value *V, Function &F, bool ReturnCaptures,
-                          bool StoreCaptures, const DominatorTree &DT,
-                          unsigned MaxUsesToExplore) {
+Instruction *llvm::FindEarliestCapture(const Value *V, Function &F,
+                                       bool ReturnCaptures, bool StoreCaptures,
+                                       const DominatorTree &DT,
+                                       unsigned MaxUsesToExplore) {
   assert(!isa<GlobalValue>(V) &&
          "It doesn't make sense to ask whether a global is captured.");
 
