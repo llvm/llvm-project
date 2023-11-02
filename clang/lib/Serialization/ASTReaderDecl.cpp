@@ -1151,7 +1151,8 @@ void ASTDeclReader::VisitObjCMethodDecl(ObjCMethodDecl *MD) {
     Reader.getContext().setObjCMethodRedeclaration(MD,
                                        readDeclAs<ObjCMethodDecl>());
 
-  MD->setDeclImplementation((ObjCMethodDecl::ImplementationControl)Record.readInt());
+  MD->setDeclImplementation(
+      static_cast<ObjCImplementationControl>(Record.readInt()));
   MD->setObjCDeclQualifier((Decl::ObjCDeclQualifier)Record.readInt());
   MD->setRelatedResultType(Record.readInt());
   MD->setReturnType(Record.readType());
