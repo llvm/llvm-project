@@ -2612,6 +2612,8 @@ public:
   ConflictResolution getResolution(unsigned Num) const {
     return Vals[Num].Resolution;
   }
+
+  bool canCRReplaceBeResolved(JoinVals &Other);
 };
 
 } // end anonymous namespace
@@ -3481,6 +3483,39 @@ void JoinVals::eraseInstrs(SmallPtrSetImpl<MachineInstr*> &ErasedInstrs,
   }
 }
 
+// If the overlapping segment all be mark as CR_Replace resolution, 
+// but can't be resolved resolveConflicts/pruneValues function.
+// 
+// This function target this particular pattern and make joinVReg fail. 
+//
+// For example: 
+//   LHS: %12 [32r,80r:0)[96r,240r:1) 0@32r 1@96r 
+//   RHS: %17 [240e,288r:1) 0@48r 1@240e
+// [96r,240r:2) and [240e,288r:1) both be mark as CR_Replace, 
+// but does't be resolved after pruneValues.
+// 
+bool JoinVals::canCRReplaceBeResolved(JoinVals &Other) {
+  for (auto Seg : LR.segments) {
+    for (auto OtherSeg : Other.LR.segments) {
+      int NewVNInoSeg = getAssignments()[Seg.valno->id];
+      int NewVNInoOtherSeg = Other.getAssignments()[OtherSeg.valno->id];
+
+      if (NewVNInoSeg == NewVNInoOtherSeg)
+        continue;
+
+      if (!(getResolution(Seg.valno->id) == CR_Replace &&
+            Other.getResolution(OtherSeg.valno->id) == CR_Replace))
+        continue;
+
+      if (Seg.contains(OtherSeg.start) && OtherSeg.start.isEarlyClobber() &&
+          !Seg.end.isEarlyClobber() &&
+          (Seg.end.getBaseIndex() == OtherSeg.start.getBaseIndex()))
+        return false;
+    }
+  }
+  return true;
+}
+
 void RegisterCoalescer::joinSubRegRanges(LiveRange &LRange, LiveRange &RRange,
                                          LaneBitmask LaneMask,
                                          const CoalescerPair &CP) {
@@ -3597,6 +3632,10 @@ bool RegisterCoalescer::joinVirtRegs(CoalescerPair &CP) {
 
   // Some conflicts can only be resolved after all values have been mapped.
   if (!LHSVals.resolveConflicts(RHSVals) || !RHSVals.resolveConflicts(LHSVals))
+    return false;
+
+  // Some CR_Replace can't be solved by pruneValues. Early exit here.
+  if (!LHSVals.canCRReplaceBeResolved(RHSVals) || !RHSVals.canCRReplaceBeResolved(LHSVals))
     return false;
 
   // All clear, the live ranges can be merged.
