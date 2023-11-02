@@ -63,7 +63,15 @@
 #undef KMP_CANCEL_THREADS
 #endif
 
+// Some WASI targets (e.g., wasm32-wasi-threads) do not support thread
+// cancellation.
+#if KMP_OS_WASI
+#undef KMP_CANCEL_THREADS
+#endif
+
+#if !KMP_OS_WASI
 #include <signal.h>
+#endif
 #include <stdarg.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -124,7 +132,7 @@ class kmp_stats_list;
 #endif
 #include "kmp_i18n.h"
 
-#define KMP_HANDLE_SIGNALS (KMP_OS_UNIX || KMP_OS_WINDOWS)
+#define KMP_HANDLE_SIGNALS ((KMP_OS_UNIX && !KMP_OS_WASI) || KMP_OS_WINDOWS)
 
 #include "kmp_wrapper_malloc.h"
 #if KMP_OS_UNIX
@@ -601,7 +609,9 @@ typedef int PACKED_REDUCTION_METHOD_T;
 #endif
 
 #if KMP_OS_UNIX
+#if !KMP_OS_WASI
 #include <dlfcn.h>
+#endif
 #include <pthread.h>
 #endif
 
@@ -1338,6 +1348,10 @@ extern kmp_uint64 __kmp_now_nsec();
 #define KMP_NEXT_WAIT 512U /* susequent number of spin-tests */
 #elif KMP_OS_SOLARIS
 /* TODO: tune for KMP_OS_SOLARIS */
+#define KMP_INIT_WAIT 1024U /* initial number of spin-tests   */
+#define KMP_NEXT_WAIT 512U /* susequent number of spin-tests */
+#elif KMP_OS_WASI
+/* TODO: tune for KMP_OS_WASI */
 #define KMP_INIT_WAIT 1024U /* initial number of spin-tests   */
 #define KMP_NEXT_WAIT 512U /* susequent number of spin-tests */
 #endif
