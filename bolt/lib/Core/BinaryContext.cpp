@@ -2305,14 +2305,47 @@ BinaryContext::calculateEmittedSize(BinaryFunction &BF, bool FixBranches) {
   MCAsmLayout Layout(Assembler);
   Assembler.layout(Layout);
 
+  // Obtain main fragment size.
   const uint64_t HotSize =
       Layout.getSymbolOffset(*EndLabel) - Layout.getSymbolOffset(*StartLabel);
-  const uint64_t ColdSize =
-      std::accumulate(SplitLabels.begin(), SplitLabels.end(), 0ULL,
-                      [&](const uint64_t Accu, const LabelRange &Labels) {
-                        return Accu + Layout.getSymbolOffset(*Labels.second) -
-                               Layout.getSymbolOffset(*Labels.first);
-                      });
+  // Populate new start and end offsets of each basic block in main.
+  BinaryBasicBlock *PrevBB = nullptr;
+  for (BinaryBasicBlock *BB : BF.getLayout().getMainFragment()) {
+    uint64_t BBStartOffset = Layout.getSymbolOffset(*(BB->getLabel()));
+    BB->setOutputStartAddress(BBStartOffset);
+    if (PrevBB)
+      PrevBB->setOutputEndAddress(BBStartOffset);
+    PrevBB = BB;
+  }
+  if (PrevBB)
+    PrevBB->setOutputEndAddress(HotSize);
+
+  // Obtain split fragment sizes.
+  std::vector<uint64_t> SplitFragmentSizes;
+  uint64_t ColdSize = 0;
+  for (const auto &Labels : SplitLabels) {
+    uint64_t Size = Layout.getSymbolOffset(*Labels.second) -
+                    Layout.getSymbolOffset(*Labels.first);
+    SplitFragmentSizes.push_back(Size);
+    ColdSize += Size;
+  }
+
+  // Populate new start and end offsets of each basic block in split fragments.
+  PrevBB = nullptr;
+  uint64_t FragmentInd = 0;
+  for (FunctionFragment &FF : BF.getLayout().getSplitFragments()) {
+    for (BinaryBasicBlock *BB : FF) {
+      uint64_t BBStartOffset = Layout.getSymbolOffset(*(BB->getLabel()));
+      BB->setOutputStartAddress(BBStartOffset);
+      if (PrevBB)
+        PrevBB->setOutputEndAddress(BBStartOffset);
+      PrevBB = BB;
+    }
+    if (PrevBB)
+      PrevBB->setOutputEndAddress(SplitFragmentSizes[FragmentInd]);
+    FragmentInd++;
+    PrevBB = nullptr;
+  }
 
   // Clean-up the effect of the code emission.
   for (const MCSymbol &Symbol : Assembler.symbols()) {
