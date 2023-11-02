@@ -46,6 +46,7 @@
 #include <queue>
 
 using namespace llvm;
+using ProfCorrelatorKind = InstrProfCorrelator::ProfCorrelatorKind;
 
 // We use this string to indicate that there are
 // multiple static functions map to the same name.
@@ -436,8 +437,8 @@ static void writeInstrProfile(StringRef OutputFilename,
 }
 
 static void
-mergeInstrProfile(const WeightedFileVector &Inputs, StringRef DebugInfoFilename,
-                  StringRef BinaryFilename, SymbolRemapper *Remapper,
+mergeInstrProfile(const WeightedFileVector &Inputs, StringRef CorrelateFilename,
+                  ProfCorrelatorKind CorrelateKind, SymbolRemapper *Remapper,
                   StringRef OutputFilename, ProfileFormat OutputFormat,
                   uint64_t TraceReservoirSize, uint64_t MaxTraceLength,
                   int MaxDbgCorrelationWarnings, bool OutputSparse,
@@ -450,17 +451,12 @@ mergeInstrProfile(const WeightedFileVector &Inputs, StringRef DebugInfoFilename,
     exitWithError("unknown format is specified");
 
   std::unique_ptr<InstrProfCorrelator> Correlator;
-  if (!DebugInfoFilename.empty() || !BinaryFilename.empty()) {
-    InstrProfCorrelator::ProfCorrelatorKind Kind =
-        DebugInfoFilename.empty() ? InstrProfCorrelator::BINARY
-                                  : InstrProfCorrelator::DEBUG_INFO;
-    StringRef FileName =
-        DebugInfoFilename.empty() ? BinaryFilename : DebugInfoFilename;
-    if (auto Err =
-            InstrProfCorrelator::get(FileName, Kind).moveInto(Correlator))
-      exitWithError(std::move(Err), FileName);
+  if (CorrelateKind != InstrProfCorrelator::NONE) {
+    if (auto Err = InstrProfCorrelator::get(CorrelateFilename, CorrelateKind)
+                       .moveInto(Correlator))
+      exitWithError(std::move(Err), CorrelateFilename);
     if (auto Err = Correlator->correlateProfileData(MaxDbgCorrelationWarnings))
-      exitWithError(std::move(Err), FileName);
+      exitWithError(std::move(Err), CorrelateFilename);
   }
 
   std::mutex ErrorLock;
@@ -1343,6 +1339,15 @@ static int merge_main(int argc, const char *argv[]) {
   if (!DebugInfoFilename.empty() && !BinaryFilename.empty()) {
     exitWithError("Expected only one of -debug-info, -binary-file");
   }
+  std::string CorrelateFilename = "";
+  ProfCorrelatorKind CorrelateKind = ProfCorrelatorKind::NONE;
+  if (!DebugInfoFilename.empty()) {
+    CorrelateFilename = DebugInfoFilename;
+    CorrelateKind = ProfCorrelatorKind::DEBUG_INFO;
+  } else if (!BinaryFilename.empty()) {
+    CorrelateFilename = BinaryFilename;
+    CorrelateKind = ProfCorrelatorKind::BINARY;
+  }
 
   WeightedFileVector WeightedInputs;
   for (StringRef Filename : InputFilenames)
@@ -1381,7 +1386,7 @@ static int merge_main(int argc, const char *argv[]) {
   }
 
   if (ProfileKind == instr)
-    mergeInstrProfile(WeightedInputs, DebugInfoFilename, BinaryFilename,
+    mergeInstrProfile(WeightedInputs, CorrelateFilename, CorrelateKind,
                       Remapper.get(), OutputFilename, OutputFormat,
                       TemporalProfTraceReservoirSize,
                       TemporalProfMaxTraceLength, MaxDbgCorrelationWarnings,

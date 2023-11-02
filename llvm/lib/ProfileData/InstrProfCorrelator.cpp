@@ -140,7 +140,8 @@ InstrProfCorrelator::get(StringRef Filename, ProfCorrelatorKind FileKind) {
   }
   return make_error<InstrProfError>(
       instrprof_error::unable_to_correlate_profile,
-      "unsupported correlation kind (only DWARF debug info is supported)");
+      "unsupported correlation kind (only DWARF debug info and Binary format "
+      "(ELF/COFF) are supported)");
 }
 
 llvm::Expected<std::unique_ptr<InstrProfCorrelator>>

@@ -163,8 +163,7 @@ Value genIsNonzero(OpBuilder &builder, Location loc, Value v);
 /// stored into dstShape.
 void genReshapeDstShape(OpBuilder &builder, Location loc,
                         SmallVectorImpl<Value> &dstShape,
-                        ArrayRef<Value> srcShape,
-                        ArrayRef<StaticSize> staticDstShape,
+                        ArrayRef<Value> srcShape, ArrayRef<Size> staticDstShape,
                         ArrayRef<ReassociationIndices> reassociation);
 
 /// Reshape coordinates during a reshaping operation.
