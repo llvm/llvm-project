@@ -193,3 +193,16 @@ defm MEMORY_GROW_A#B : I<(outs rc:$dst), (ins i32imm:$flags, rc:$delta),
 
 defm : MemoryOps<I32, "32">;
 defm : MemoryOps<I64, "64">;
+
+multiclass MemoryTags<WebAssemblyRegClass rc, string B> {
+
+// Memtag generate tag.
+defm MEMORY_RANDOMTAG_A#B : I<(outs rc:$dst), (ins rc:$addr),
+                         (outs), (ins rc:$addr),
+                         [(set rc:$dst,
+                           (int_wasm_memory_randomtag (rc:$addr)))],
+                         "memory.randomtag\t$dst",
+                         "memory.randomtag\t$addr",0x41>;
+
+
+}
