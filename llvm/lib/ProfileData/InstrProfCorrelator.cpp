@@ -51,17 +51,17 @@ Expected<object::SectionRef> getInstrProfSection(const object::ObjectFile &Obj,
       getInstrProfSectionName(IPSK, ObjFormat,
                               /*AddSegmentInfo=*/false);
   ExpectedSectionName = StripSuffix(ExpectedSectionName);
-  for (auto &Section : Obj.sections())
+  for (auto &Section : Obj.sections()) {
     if (auto SectionName = Section.getName())
       if (StripSuffix(*SectionName) == ExpectedSectionName) {
         // There will be extra profile name and data sections in COFF used for
-        // runtime to detect start/stop of those sections, skipping them.
+        // runtime to find start/stop of those sections, skipping them.
         // (details at compiler-rt/lib/profile/InstrProfilingPlatformWindows.c)
         if (ObjFormat == Triple::COFF && IPSK != IPSK_cnts && Section.isData())
           continue;
         return Section;
       }
-
+  }
   return make_error<InstrProfError>(
       instrprof_error::unable_to_correlate_profile,
       "could not find section (" + Twine(ExpectedSectionName) + ")");
@@ -125,12 +125,22 @@ InstrProfCorrelator::get(StringRef Filename, ProfCorrelatorKind FileKind) {
             "using multiple objects is not yet supported");
       Filename = *DsymObjectsOrErr->begin();
     }
-  }
-  auto BufferOrErr = errorOrToExpected(MemoryBuffer::getFile(Filename));
-  if (auto Err = BufferOrErr.takeError())
-    return std::move(Err);
+    auto BufferOrErr = errorOrToExpected(MemoryBuffer::getFile(Filename));
+    if (auto Err = BufferOrErr.takeError())
+      return std::move(Err);
 
-  return get(std::move(*BufferOrErr), FileKind);
+    return get(std::move(*BufferOrErr), FileKind);
+  }
+  if (FileKind == BINARY) {
+    auto BufferOrErr = errorOrToExpected(MemoryBuffer::getFile(Filename));
+    if (auto Err = BufferOrErr.takeError())
+      return std::move(Err);
+
+    return get(std::move(*BufferOrErr), FileKind);
+  }
+  return make_error<InstrProfError>(
+      instrprof_error::unable_to_correlate_profile,
+      "unsupported correlation kind (only DWARF debug info is supported)");
 }
 
 llvm::Expected<std::unique_ptr<InstrProfCorrelator>>
@@ -255,34 +265,37 @@ Error InstrProfCorrelatorImpl<IntPtrT>::dumpYaml(int MaxWarnings,
   if (Data.Probes.empty())
     return make_error<InstrProfError>(
         instrprof_error::unable_to_correlate_profile,
-        "could not find any profile metadata in debug info");
+        "could not find any profile data metadata in debug info");
   yaml::Output YamlOS(OS);
   YamlOS << Data;
   return Error::success();
 }
 
 template <class IntPtrT>
-void InstrProfCorrelatorImpl<IntPtrT>::addProbe(StringRef FunctionName,
-                                                uint64_t CFGHash,
-                                                IntPtrT CounterOffset,
-                                                IntPtrT FunctionPtr,
-                                                uint32_t NumCounters) {
+void InstrProfCorrelatorImpl<IntPtrT>::addDataProbe(uint64_t NameRef,
+                                                    uint64_t CFGHash,
+                                                    IntPtrT CounterOffset,
+                                                    IntPtrT FunctionPtr,
+                                                    uint32_t NumCounters) {
   // Check if a probe was already added for this counter offset.
   if (!CounterOffsets.insert(CounterOffset).second)
     return;
   Data.push_back({
-      maybeSwap<uint64_t>(IndexedInstrProf::ComputeHash(FunctionName)),
+      maybeSwap<uint64_t>(NameRef),
       maybeSwap<uint64_t>(CFGHash),
       // In this mode, CounterPtr actually stores the section relative address
       // of the counter.
       maybeSwap<IntPtrT>(CounterOffset),
+      // TODO: MC/DC is not yet supported.
+      /*BitmapOffset=*/maybeSwap<IntPtrT>(0),
       maybeSwap<IntPtrT>(FunctionPtr),
       // TODO: Value profiling is not yet supported.
       /*ValuesPtr=*/maybeSwap<IntPtrT>(0),
       maybeSwap<uint32_t>(NumCounters),
       /*NumValueSites=*/{maybeSwap<uint16_t>(0), maybeSwap<uint16_t>(0)},
+      // TODO: MC/DC is not yet supported.
+      /*NumBitmapBytes=*/maybeSwap<uint32_t>(0),
   });
-  NamesVec.push_back(FunctionName.str());
 }
 
 template <class IntPtrT>
@@ -395,6 +408,8 @@ void DwarfInstrProfCorrelator<IntPtrT>::correlateProfileDataImpl(
                                      *FunctionName);
       LLVM_DEBUG(Die.dump(dbgs()));
     }
+    // In debug info correlation mode, the CounterPtr is an absolute address of
+    // the counter, but it's expected to be relative later when iterating Data.
     IntPtrT CounterOffset = *CounterPtr - CountersStart;
     if (Data) {
       InstrProfCorrelator::Probe P;
@@ -412,8 +427,9 @@ void DwarfInstrProfCorrelator<IntPtrT>::correlateProfileDataImpl(
         P.LineNumber = LineNumber;
       Data->Probes.push_back(P);
     } else {
-      this->addProbe(*FunctionName, *CFGHash, CounterOffset,
-                     FunctionPtr.value_or(0), *NumCounters);
+      this->addDataProbe(IndexedInstrProf::ComputeHash(*FunctionName), *CFGHash,
+                         CounterOffset, FunctionPtr.value_or(0), *NumCounters);
+      this->NamesVec.push_back(*FunctionName);
     }
   };
   for (auto &CU : DICtx->normal_units())
@@ -435,8 +451,9 @@ Error DwarfInstrProfCorrelator<IntPtrT>::correlateProfileNameImpl() {
         instrprof_error::unable_to_correlate_profile,
         "could not find any profile name metadata in debug info");
   }
-  auto Result = collectPGOFuncNameStrings(this->NamesVec,
-                                          /*doCompression=*/false, this->Names);
+  auto Result =
+      collectGlobalObjectNameStrings(this->NamesVec,
+                                     /*doCompression=*/false, this->Names);
   return Result;
 }
 
@@ -466,15 +483,11 @@ void BinaryInstrProfCorrelator<IntPtrT>::correlateProfileDataImpl(
             (I - DataStart) * sizeof(RawInstrProf::ProfileData<IntPtrT>));
       }
     }
+    // In binary correlation mode, the CounterPtr is an absolute address of the
+    // counter, but it's expected to be relative later when iterating Data.
     IntPtrT CounterOffset = CounterPtr - CountersStart;
-    this->Data.push_back({I->NameRef,
-                          I->FuncHash,
-                          this->template maybeSwap<IntPtrT>(CounterOffset),
-                          I->FunctionPointer,
-                          // Value profiling is not supported.
-                          0,
-                          I->NumCounters,
-                          {0, 0}});
+    this->addDataProbe(I->NameRef, I->FuncHash, CounterOffset,
+                       I->FunctionPointer, I->NumCounters);
   }
 }
 

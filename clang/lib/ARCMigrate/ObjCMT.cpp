@@ -123,9 +123,7 @@ public:
         NSIntegerTypedefed(nullptr), NSUIntegerTypedefed(nullptr),
         Remapper(remapper), FileMgr(fileMgr), PPRec(PPRec), PP(PP),
         IsOutputFile(isOutputFile), FoundationIncluded(false) {
-    // FIXME: StringSet should have insert(iter, iter) to use here.
-    for (const std::string &Val : AllowList)
-      AllowListFilenames.insert(Val);
+    AllowListFilenames.insert(AllowList.begin(), AllowList.end());
   }
 
 protected:
@@ -638,7 +636,7 @@ ClassImplementsAllMethodsAndProperties(ASTContext &Ctx,
     for (const auto *MD : PDecl->methods()) {
       if (MD->isImplicit())
         continue;
-      if (MD->getImplementationControl() == ObjCMethodDecl::Optional)
+      if (MD->getImplementationControl() == ObjCImplementationControl::Optional)
         continue;
       DeclContext::lookup_result R = ImpDecl->lookup(MD->getDeclName());
       if (R.empty())

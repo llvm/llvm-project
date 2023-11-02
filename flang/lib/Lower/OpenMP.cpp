@@ -109,6 +109,7 @@ class DataSharingProcessor {
   bool hasLastPrivateOp;
   mlir::OpBuilder::InsertPoint lastPrivIP;
   mlir::OpBuilder::InsertPoint insPt;
+  mlir::Value loopIV;
   // Symbols in private, firstprivate, and/or lastprivate clauses.
   llvm::SetVector<const Fortran::semantics::Symbol *> privatizedSymbols;
   llvm::SetVector<const Fortran::semantics::Symbol *> defaultSymbols;
@@ -157,6 +158,11 @@ public:
   // dealocation code as well.
   void processStep1();
   void processStep2(mlir::Operation *op, bool isLoop);
+
+  void setLoopIV(mlir::Value iv) {
+    assert(!loopIV && "Loop iteration variable already set");
+    loopIV = iv;
+  }
 };
 
 void DataSharingProcessor::processStep1() {
@@ -270,7 +276,6 @@ void DataSharingProcessor ::insertBarrier() {
 }
 
 void DataSharingProcessor::insertLastPrivateCompare(mlir::Operation *op) {
-  mlir::arith::CmpIOp cmpOp;
   bool cmpCreated = false;
   mlir::OpBuilder::InsertPoint localInsPt = firOpBuilder.saveInsertionPoint();
   for (const Fortran::parser::OmpClause &clause : opClauseList.v) {
@@ -349,18 +354,17 @@ void DataSharingProcessor::insertLastPrivateCompare(mlir::Operation *op) {
           }
         }
       } else if (mlir::isa<mlir::omp::WsLoopOp>(op)) {
-        mlir::Operation *lastOper = op->getRegion(0).back().getTerminator();
-        firOpBuilder.setInsertionPoint(lastOper);
-
         // Update the original variable just before exiting the worksharing
         // loop. Conversion as follows:
         //
         //                       omp.wsloop {
         // omp.wsloop {            ...
         //    ...                  store
-        //    store       ===>     %cmp = llvm.icmp "eq" %iv %ub
-        //    omp.yield            fir.if %cmp {
-        // }                         ^%lpv_update_blk:
+        //    store       ===>     %v = arith.addi %iv, %step
+        //    omp.yield            %cmp = %step < 0 ? %v < %ub : %v > %ub
+        // }                       fir.if %cmp {
+        //                           fir.store %v to %loopIV
+        //                           ^%lpv_update_blk:
         //                         }
         //                         omp.yield
         //                       }
@@ -368,15 +372,37 @@ void DataSharingProcessor::insertLastPrivateCompare(mlir::Operation *op) {
 
         // Only generate the compare once in presence of multiple LastPrivate
         // clauses.
-        if (!cmpCreated) {
-          cmpOp = firOpBuilder.create<mlir::arith::CmpIOp>(
-              op->getLoc(), mlir::arith::CmpIPredicate::eq,
-              op->getRegion(0).front().getArguments()[0],
-              mlir::dyn_cast<mlir::omp::WsLoopOp>(op).getUpperBound()[0]);
-        }
-        auto ifOp =
-            firOpBuilder.create<fir::IfOp>(op->getLoc(), cmpOp, /*else*/ false);
+        if (cmpCreated)
+          continue;
+        cmpCreated = true;
+
+        mlir::Location loc = op->getLoc();
+        mlir::Operation *lastOper = op->getRegion(0).back().getTerminator();
+        firOpBuilder.setInsertionPoint(lastOper);
+
+        mlir::Value iv = op->getRegion(0).front().getArguments()[0];
+        mlir::Value ub =
+            mlir::dyn_cast<mlir::omp::WsLoopOp>(op).getUpperBound()[0];
+        mlir::Value step = mlir::dyn_cast<mlir::omp::WsLoopOp>(op).getStep()[0];
+
+        // v = iv + step
+        // cmp = step < 0 ? v < ub : v > ub
+        mlir::Value v = firOpBuilder.create<mlir::arith::AddIOp>(loc, iv, step);
+        mlir::Value zero =
+            firOpBuilder.createIntegerConstant(loc, step.getType(), 0);
+        mlir::Value negativeStep = firOpBuilder.create<mlir::arith::CmpIOp>(
+            loc, mlir::arith::CmpIPredicate::slt, step, zero);
+        mlir::Value vLT = firOpBuilder.create<mlir::arith::CmpIOp>(
+            loc, mlir::arith::CmpIPredicate::slt, v, ub);
+        mlir::Value vGT = firOpBuilder.create<mlir::arith::CmpIOp>(
+            loc, mlir::arith::CmpIPredicate::sgt, v, ub);
+        mlir::Value cmpOp = firOpBuilder.create<mlir::arith::SelectOp>(
+            loc, negativeStep, vLT, vGT);
+
+        auto ifOp = firOpBuilder.create<fir::IfOp>(loc, cmpOp, /*else*/ false);
         firOpBuilder.setInsertionPointToStart(&ifOp.getThenRegion().front());
+        assert(loopIV && "loopIV was not set");
+        firOpBuilder.create<fir::StoreOp>(op->getLoc(), v, loopIV);
         lastPrivIP = firOpBuilder.saveInsertionPoint();
       } else {
         TODO(converter.getCurrentLocation(),
@@ -1675,6 +1701,8 @@ createMapInfoOp(fir::FirOpBuilder &builder, mlir::Location loc,
 
   mlir::omp::MapInfoOp op =
       builder.create<mlir::omp::MapInfoOp>(loc, retTy, baseAddr);
+  op.setVarTypeAttr(mlir::TypeAttr::get(
+      llvm::dyn_cast<mlir::omp::PointerLikeType>(retTy).getElementType()));
   op.setNameAttr(builder.getStringAttr(name.str()));
   op.setImplicit(implicit);
   op.setMapType(mapType);
@@ -2128,6 +2156,8 @@ static void createBodyOfOp(
       proc.processStep1();
       proc.processStep2(op, is_loop);
     } else {
+      if (is_loop && args.size() > 0)
+        dsp->setLoopIV(converter.getSymbolAddress(*args[0]));
       dsp->processStep2(op, is_loop);
     }
 
@@ -2143,7 +2173,8 @@ static void createBodyOfOp(
 }
 
 static void createBodyOfTargetDataOp(
-    Fortran::lower::AbstractConverter &converter, mlir::omp::DataOp &dataOp,
+    Fortran::lower::AbstractConverter &converter,
+    Fortran::lower::pft::Evaluation &eval, mlir::omp::DataOp &dataOp,
     const llvm::SmallVector<mlir::Type> &useDeviceTypes,
     const llvm::SmallVector<mlir::Location> &useDeviceLocs,
     const llvm::SmallVector<const Fortran::semantics::Symbol *>
@@ -2153,8 +2184,6 @@ static void createBodyOfTargetDataOp(
   mlir::Region &region = dataOp.getRegion();
 
   firOpBuilder.createBlock(&region, {}, useDeviceTypes, useDeviceLocs);
-  firOpBuilder.create<mlir::omp::TerminatorOp>(currentLocation);
-  firOpBuilder.setInsertionPointToStart(&region.front());
 
   unsigned argIndex = 0;
   for (const Fortran::semantics::Symbol *sym : useDeviceSymbols) {
@@ -2183,6 +2212,27 @@ static void createBodyOfTargetDataOp(
     }
     argIndex++;
   }
+
+  // Insert dummy instruction to remember the insertion position. The
+  // marker will be deleted by clean up passes since there are no uses.
+  // Remembering the position for further insertion is important since
+  // there are hlfir.declares inserted above while setting block arguments
+  // and new code from the body should be inserted after that.
+  mlir::Value undefMarker = firOpBuilder.create<fir::UndefOp>(
+      dataOp.getOperation()->getLoc(), firOpBuilder.getIndexType());
+
+  // Create blocks for unstructured regions. This has to be done since
+  // blocks are initially allocated with the function as the parent region.
+  if (eval.lowerAsUnstructured()) {
+    Fortran::lower::createEmptyRegionBlocks<mlir::omp::TerminatorOp,
+                                            mlir::omp::YieldOp>(
+        firOpBuilder, eval.getNestedEvaluations());
+  }
+
+  firOpBuilder.create<mlir::omp::TerminatorOp>(currentLocation);
+
+  // Set the insertion point after the marker.
+  firOpBuilder.setInsertionPointAfter(undefMarker.getDefiningOp());
 }
 
 template <typename OpTy, typename... Args>
@@ -2330,6 +2380,7 @@ genTaskGroupOp(Fortran::lower::AbstractConverter &converter,
 
 static mlir::omp::DataOp
 genDataOp(Fortran::lower::AbstractConverter &converter,
+          Fortran::lower::pft::Evaluation &eval,
           Fortran::semantics::SemanticsContext &semanticsContext,
           mlir::Location currentLocation,
           const Fortran::parser::OmpClauseList &clauseList) {
@@ -2356,8 +2407,8 @@ genDataOp(Fortran::lower::AbstractConverter &converter,
   auto dataOp = converter.getFirOpBuilder().create<mlir::omp::DataOp>(
       currentLocation, ifClauseOperand, deviceOperand, devicePtrOperands,
       deviceAddrOperands, mapOperands);
-  createBodyOfTargetDataOp(converter, dataOp, useDeviceTypes, useDeviceLocs,
-                           useDeviceSymbols, currentLocation);
+  createBodyOfTargetDataOp(converter, eval, dataOp, useDeviceTypes,
+                           useDeviceLocs, useDeviceSymbols, currentLocation);
   return dataOp;
 }
 
@@ -2573,7 +2624,7 @@ genOmpSimpleStandalone(Fortran::lower::AbstractConverter &converter,
     firOpBuilder.create<mlir::omp::TaskyieldOp>(currentLocation);
     break;
   case llvm::omp::Directive::OMPD_target_data:
-    genDataOp(converter, semanticsContext, currentLocation, opClauseList);
+    genDataOp(converter, eval, semanticsContext, currentLocation, opClauseList);
     break;
   case llvm::omp::Directive::OMPD_target_enter_data:
     genEnterExitDataOp<mlir::omp::EnterDataOp>(converter, semanticsContext,
@@ -2862,7 +2913,8 @@ genOMP(Fortran::lower::AbstractConverter &converter,
                 beginClauseList, directive.v);
     break;
   case llvm::omp::Directive::OMPD_target_data:
-    genDataOp(converter, semanticsContext, currentLocation, beginClauseList);
+    genDataOp(converter, eval, semanticsContext, currentLocation,
+              beginClauseList);
     break;
   case llvm::omp::Directive::OMPD_task:
     genTaskOp(converter, eval, currentLocation, beginClauseList);
@@ -3030,29 +3082,38 @@ genOMP(Fortran::lower::AbstractConverter &converter,
   std::visit(
       Fortran::common::visitors{
           [&](const Fortran::parser::OmpAtomicRead &atomicRead) {
+            mlir::Location loc = converter.genLocation(atomicRead.source);
             Fortran::lower::genOmpAccAtomicRead<
                 Fortran::parser::OmpAtomicRead,
-                Fortran::parser::OmpAtomicClauseList>(converter, atomicRead);
+                Fortran::parser::OmpAtomicClauseList>(converter, atomicRead,
+                                                      loc);
           },
           [&](const Fortran::parser::OmpAtomicWrite &atomicWrite) {
+            mlir::Location loc = converter.genLocation(atomicWrite.source);
             Fortran::lower::genOmpAccAtomicWrite<
                 Fortran::parser::OmpAtomicWrite,
-                Fortran::parser::OmpAtomicClauseList>(converter, atomicWrite);
+                Fortran::parser::OmpAtomicClauseList>(converter, atomicWrite,
+                                                      loc);
           },
           [&](const Fortran::parser::OmpAtomic &atomicConstruct) {
+            mlir::Location loc = converter.genLocation(atomicConstruct.source);
             Fortran::lower::genOmpAtomic<Fortran::parser::OmpAtomic,
                                          Fortran::parser::OmpAtomicClauseList>(
-                converter, atomicConstruct);
+                converter, atomicConstruct, loc);
           },
           [&](const Fortran::parser::OmpAtomicUpdate &atomicUpdate) {
+            mlir::Location loc = converter.genLocation(atomicUpdate.source);
             Fortran::lower::genOmpAccAtomicUpdate<
                 Fortran::parser::OmpAtomicUpdate,
-                Fortran::parser::OmpAtomicClauseList>(converter, atomicUpdate);
+                Fortran::parser::OmpAtomicClauseList>(converter, atomicUpdate,
+                                                      loc);
           },
           [&](const Fortran::parser::OmpAtomicCapture &atomicCapture) {
+            mlir::Location loc = converter.genLocation(atomicCapture.source);
             Fortran::lower::genOmpAccAtomicCapture<
                 Fortran::parser::OmpAtomicCapture,
-                Fortran::parser::OmpAtomicClauseList>(converter, atomicCapture);
+                Fortran::parser::OmpAtomicClauseList>(converter, atomicCapture,
+                                                      loc);
           },
       },
       atomicConstruct.u);

@@ -10,6 +10,10 @@
 // UNSUPPORTED: no-filesystem
 // UNSUPPORTED: availability-filesystem-missing
 
+// Starting in Android N (API 24), SELinux policy prevents the shell user from
+// creating a hard link.
+// XFAIL: LIBCXX-ANDROID-FIXME && !android-device-api={{21|22|23}}
+
 // <filesystem>
 
 // uintmax_t hard_link_count(const path& p);

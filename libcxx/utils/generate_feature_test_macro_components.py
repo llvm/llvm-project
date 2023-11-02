@@ -689,7 +689,6 @@ feature_test_macros = [
             "name": "__cpp_lib_mdspan",
             "values": {"c++23": 202207},
             "headers": ["mdspan"],
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_memory_resource",
@@ -912,8 +911,8 @@ feature_test_macros = [
             "name": "__cpp_lib_shared_mutex",
             "values": {"c++17": 201505},
             "headers": ["shared_mutex"],
-            "test_suite_guard": "!defined(_LIBCPP_HAS_NO_THREADS) && !defined(_LIBCPP_AVAILABILITY_HAS_NO_SHARED_MUTEX)",
-            "libcxx_guard": "!defined(_LIBCPP_HAS_NO_THREADS) && !defined(_LIBCPP_AVAILABILITY_HAS_NO_SHARED_MUTEX)",
+            "test_suite_guard": "!defined(_LIBCPP_HAS_NO_THREADS)",
+            "libcxx_guard": "!defined(_LIBCPP_HAS_NO_THREADS)",
         },
         {
             "name": "__cpp_lib_shared_ptr_arrays",
@@ -929,8 +928,8 @@ feature_test_macros = [
             "name": "__cpp_lib_shared_timed_mutex",
             "values": {"c++14": 201402},
             "headers": ["shared_mutex"],
-            "test_suite_guard": "!defined(_LIBCPP_HAS_NO_THREADS) && !defined(_LIBCPP_AVAILABILITY_HAS_NO_SHARED_MUTEX)",
-            "libcxx_guard": "!defined(_LIBCPP_HAS_NO_THREADS) && !defined(_LIBCPP_AVAILABILITY_HAS_NO_SHARED_MUTEX)",
+            "test_suite_guard": "!defined(_LIBCPP_HAS_NO_THREADS)",
+            "libcxx_guard": "!defined(_LIBCPP_HAS_NO_THREADS)",
         },
         {
             "name": "__cpp_lib_shift",

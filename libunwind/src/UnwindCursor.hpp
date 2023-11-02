@@ -2404,7 +2404,7 @@ int UnwindCursor<A, R>::stepWithTBTable(pint_t pc, tbtable *TBTable,
     if (!TBTable->tb.saves_lr && registers.getLR()) {
       // This case should only occur if we were called from a signal handler
       // and the signal occurred in a function that doesn't save the LR.
-      returnAddress = registers.getLR();
+      returnAddress = static_cast<pint_t>(registers.getLR());
       _LIBUNWIND_TRACE_UNWINDING("Use saved LR=%p",
                                  reinterpret_cast<void *>(returnAddress));
     } else {

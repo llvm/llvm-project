@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -fms-extensions -std=c++11 -verify %s
-// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -fms-extensions -std=c++20 -verify %s
-// RUN: %clang_cc1 -std=c++11 -fms-extensions -verify=ref %s
-// RUN: %clang_cc1 -std=c++20 -fms-extensions -verify=ref %s
+// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -Wno-vla -fms-extensions -std=c++11 -verify %s
+// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -Wno-vla -fms-extensions -std=c++20 -verify %s
+// RUN: %clang_cc1 -std=c++11 -fms-extensions -Wno-vla -verify=ref %s
+// RUN: %clang_cc1 -std=c++20 -fms-extensions -Wno-vla -verify=ref %s
 
 #define INT_MIN (~__INT_MAX__)
 #define INT_MAX __INT_MAX__
@@ -56,6 +56,15 @@ namespace ScalarTypes {
   };
   static_assert(getScalar<E>() == First, "");
   /// FIXME: Member pointers.
+
+#if __cplusplus >= 201402L
+  constexpr void Void(int n) {
+    void(n + 1);
+    void();
+  }
+  constexpr int void_test = (Void(0), 1);
+  static_assert(void_test == 1, "");
+#endif
 }
 
 namespace IntegralCasts {

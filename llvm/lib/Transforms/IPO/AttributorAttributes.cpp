@@ -1200,6 +1200,11 @@ struct AAPointerInfoImpl
         A, this, IRPosition::function(Scope), DepClassTy::OPTIONAL,
         IsKnownNoRecurse);
 
+    // TODO: Use reaching kernels from AAKernelInfo (or move it to
+    // AAExecutionDomain) such that we allow scopes other than kernels as long
+    // as the reaching kernels are disjoint.
+    bool InstInKernel = Scope.hasFnAttribute("kernel");
+    bool ObjHasKernelLifetime = false;
     const bool UseDominanceReasoning =
         FindInterferingWrites && IsKnownNoRecurse;
     const DominatorTree *DT =
@@ -1232,6 +1237,7 @@ struct AAPointerInfoImpl
       // If the alloca containing function is not recursive the alloca
       // must be dead in the callee.
       const Function *AIFn = AI->getFunction();
+      ObjHasKernelLifetime = AIFn->hasFnAttribute("kernel");
       bool IsKnownNoRecurse;
       if (AA::hasAssumedIRAttr<Attribute::NoRecurse>(
               A, this, IRPosition::function(*AIFn), DepClassTy::OPTIONAL,
@@ -1241,7 +1247,8 @@ struct AAPointerInfoImpl
     } else if (auto *GV = dyn_cast<GlobalValue>(&getAssociatedValue())) {
       // If the global has kernel lifetime we can stop if we reach a kernel
       // as it is "dead" in the (unknown) callees.
-      if (HasKernelLifetime(GV, *GV->getParent()))
+      ObjHasKernelLifetime = HasKernelLifetime(GV, *GV->getParent());
+      if (ObjHasKernelLifetime)
         IsLiveInCalleeCB = [](const Function &Fn) {
           return !Fn.hasFnAttribute("kernel");
         };
@@ -1252,6 +1259,15 @@ struct AAPointerInfoImpl
     AA::InstExclusionSetTy ExclusionSet;
 
     auto AccessCB = [&](const Access &Acc, bool Exact) {
+      Function *AccScope = Acc.getRemoteInst()->getFunction();
+      bool AccInSameScope = AccScope == &Scope;
+
+      // If the object has kernel lifetime we can ignore accesses only reachable
+      // by other kernels. For now we only skip accesses *in* other kernels.
+      if (InstInKernel && ObjHasKernelLifetime && !AccInSameScope &&
+          AccScope->hasFnAttribute("kernel"))
+        return true;
+
       if (Exact && Acc.isMustAccess() && Acc.getRemoteInst() != &I) {
         if (Acc.isWrite() || (isa<LoadInst>(I) && Acc.isWriteOrAssumption()))
           ExclusionSet.insert(Acc.getRemoteInst());
@@ -1262,8 +1278,7 @@ struct AAPointerInfoImpl
         return true;
 
       bool Dominates = FindInterferingWrites && DT && Exact &&
-                       Acc.isMustAccess() &&
-                       (Acc.getRemoteInst()->getFunction() == &Scope) &&
+                       Acc.isMustAccess() && AccInSameScope &&
                        DT->dominates(Acc.getRemoteInst(), &I);
       if (Dominates)
         DominatingWrites.insert(&Acc);
@@ -2531,7 +2546,8 @@ static int64_t getKnownNonNullAndDerefBytesForUse(
   }
 
   std::optional<MemoryLocation> Loc = MemoryLocation::getOrNone(I);
-  if (!Loc || Loc->Ptr != UseV || !Loc->Size.isPrecise() || I->isVolatile())
+  if (!Loc || Loc->Ptr != UseV || !Loc->Size.isPrecise() ||
+      Loc->Size.isScalable() || I->isVolatile())
     return 0;
 
   int64_t Offset;
@@ -7829,6 +7845,9 @@ struct AAMemoryBehaviorImpl : public AAMemoryBehavior {
 
     // Clear existing attributes.
     A.removeAttrs(IRP, AttrKinds);
+    // Clear conflicting writable attribute.
+    if (isAssumedReadOnly())
+      A.removeAttrs(IRP, Attribute::Writable);
 
     // Use the generic manifest method.
     return IRAttribute::manifest(A);
@@ -8016,6 +8035,10 @@ struct AAMemoryBehaviorFunction final : public AAMemoryBehaviorImpl {
       ME = MemoryEffects::writeOnly();
 
     A.removeAttrs(getIRPosition(), AttrKinds);
+    // Clear conflicting writable attribute.
+    if (ME.onlyReadsMemory())
+      for (Argument &Arg : F.args())
+        A.removeAttrs(IRPosition::argument(Arg), Attribute::Writable);
     return A.manifestAttrs(getIRPosition(),
                            Attribute::getWithMemoryEffects(F.getContext(), ME));
   }
@@ -8050,6 +8073,11 @@ struct AAMemoryBehaviorCallSite final
       ME = MemoryEffects::writeOnly();
 
     A.removeAttrs(getIRPosition(), AttrKinds);
+    // Clear conflicting writable attribute.
+    if (ME.onlyReadsMemory())
+      for (Use &U : CB.args())
+        A.removeAttrs(IRPosition::callsite_argument(CB, U.getOperandNo()),
+                      Attribute::Writable);
     return A.manifestAttrs(
         getIRPosition(), Attribute::getWithMemoryEffects(CB.getContext(), ME));
   }
@@ -12377,11 +12405,14 @@ struct AAIndirectCallInfoCallSite : public AAIndirectCallInfo {
       Instruction *ThenTI =
           SplitBlockAndInsertIfThen(LastCmp, IP, /* Unreachable */ false);
       BasicBlock *CBBB = CB->getParent();
+      A.registerManifestAddedBasicBlock(*ThenTI->getParent());
+      A.registerManifestAddedBasicBlock(*CBBB);
       auto *SplitTI = cast<BranchInst>(LastCmp->getNextNode());
       BasicBlock *ElseBB;
       if (IP == CB) {
         ElseBB = BasicBlock::Create(ThenTI->getContext(), "",
                                     ThenTI->getFunction(), CBBB);
+        A.registerManifestAddedBasicBlock(*ElseBB);
         IP = BranchInst::Create(CBBB, ElseBB);
         SplitTI->replaceUsesOfWith(CBBB, ElseBB);
       } else {

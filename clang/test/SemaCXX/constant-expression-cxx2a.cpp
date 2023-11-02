@@ -1492,3 +1492,9 @@ class B{
 class D : B{}; // expected-error {{deleted function '~D' cannot override a non-deleted function}}
 // expected-note@-1 {{destructor of 'D' is implicitly deleted because base class 'B' has an inaccessible destructor}}
 }
+
+namespace GH67317 {
+  constexpr unsigned char a = // expected-error {{constexpr variable 'a' must be initialized by a constant expression}} \
+                              // expected-note {{subobject of type 'const unsigned char' is not initialized}}
+    __builtin_bit_cast(unsigned char, *new char[3][1]);
+};

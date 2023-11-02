@@ -159,7 +159,16 @@ enum ArchExtKind : unsigned {
   AEK_RASv2 =         55, // FEAT_RASv2
   AEK_ITE =           56, // FEAT_ITE
   AEK_GCS =           57, // FEAT_GCS
-  AEK_NUM_EXTENSIONS =  AEK_GCS + 1
+  AEK_FPMR =          58, // FEAT_FPMR
+  AEK_FP8 =           59, // FEAT_FP8
+  AEK_FAMINMAX =      60, // FEAT_FAMINMAX
+  AEK_FP8FMA =        61, // FEAT_FP8FMA
+  AEK_SSVE_FP8FMA =   62, // FEAT_SSVE_FP8FMA
+  AEK_FP8DOT2 =       63, // FEAT_FP8DOT2
+  AEK_SSVE_FP8DOT2 =  64, // FEAT_SSVE_FP8DOT2
+  AEK_FP8DOT4 =       65, // FEAT_FP8DOT4
+  AEK_SSVE_FP8DOT4 =  66, // FEAT_SSVE_FP8DOT4
+  AEK_NUM_EXTENSIONS
 };
 using ExtensionBitset = Bitset<AEK_NUM_EXTENSIONS>;
 // clang-format on
@@ -267,6 +276,15 @@ inline constexpr ExtensionInfo Extensions[] = {
     {"tme", AArch64::AEK_TME, "+tme", "-tme", FEAT_INIT, "", 0},
     {"wfxt", AArch64::AEK_NONE, {}, {}, FEAT_WFXT, "+wfxt", 550},
     {"gcs", AArch64::AEK_GCS, "+gcs", "-gcs", FEAT_INIT, "", 0},
+    {"fpmr", AArch64::AEK_FPMR, "+fpmr", "-fpmr", FEAT_INIT, "", 0},
+    {"fp8", AArch64::AEK_FP8, "+fp8", "-fp8", FEAT_INIT, "+fpmr", 0},
+    {"faminmax", AArch64::AEK_FAMINMAX, "+faminmax", "-faminmax", FEAT_INIT, "", 0},
+    {"fp8fma", AArch64::AEK_FP8FMA, "+fp8fma", "-fp8fma", FEAT_INIT, "+fpmr", 0},
+    {"ssve-fp8fma", AArch64::AEK_SSVE_FP8FMA, "+ssve-fp8fma", "-ssve-fp8fma", FEAT_INIT, "+sme2", 0},
+    {"fp8dot2", AArch64::AEK_FP8DOT2, "+fp8dot2", "-fp8dot2", FEAT_INIT, "", 0},
+    {"ssve-fp8dot2", AArch64::AEK_SSVE_FP8DOT2, "+ssve-fp8dot2", "-ssve-fp8dot2", FEAT_INIT, "+sme2", 0},
+    {"fp8dot4", AArch64::AEK_FP8DOT4, "+fp8dot4", "-fp8dot4", FEAT_INIT, "", 0},
+    {"ssve-fp8dot4", AArch64::AEK_SSVE_FP8DOT4, "+ssve-fp8dot4", "-ssve-fp8dot4", FEAT_INIT, "+sme2", 0},
     // Special cases
     {"none", AArch64::AEK_NONE, {}, {}, FEAT_INIT, "", ExtensionInfo::MaxFMVPriority},
 };

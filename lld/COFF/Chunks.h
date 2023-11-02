@@ -24,10 +24,11 @@
 namespace lld::coff {
 
 using llvm::COFF::ImportDirectoryTableEntry;
-using llvm::object::COFFSymbolRef;
-using llvm::object::SectionRef;
+using llvm::object::chpe_range_type;
 using llvm::object::coff_relocation;
 using llvm::object::coff_section;
+using llvm::object::COFFSymbolRef;
+using llvm::object::SectionRef;
 
 class Baserel;
 class Defined;
@@ -114,6 +115,9 @@ public:
   // synthesized by the linker.
   bool isHotPatchable() const;
 
+  MachineTypes getMachine() const;
+  std::optional<chpe_range_type> getArm64ECRangeType() const;
+
 protected:
   Chunk(Kind k = OtherKind) : chunkKind(k), hasData(true), p2Align(0) {}
 
@@ -164,6 +168,8 @@ public:
   // Collect all locations that contain absolute addresses for base relocations.
   virtual void getBaserels(std::vector<Baserel> *res) {}
 
+  virtual MachineTypes getMachine() const { return IMAGE_FILE_MACHINE_UNKNOWN; }
+
   // Returns a human-readable name of this chunk. Chunks are unnamed chunks of
   // bytes, so this is used only for logging or debugging.
   virtual StringRef getDebugName() const { return ""; }
@@ -172,6 +178,16 @@ public:
 
 protected:
   NonSectionChunk(Kind k = OtherKind) : Chunk(k) {}
+};
+
+class NonSectionCodeChunk : public NonSectionChunk {
+public:
+  virtual uint32_t getOutputCharacteristics() const override {
+    return llvm::COFF::IMAGE_SCN_MEM_READ | llvm::COFF::IMAGE_SCN_MEM_EXECUTE;
+  }
+
+protected:
+  NonSectionCodeChunk(Kind k = OtherKind) : NonSectionChunk(k) {}
 };
 
 // MinGW specific; information about one individual location in the image
@@ -380,16 +396,13 @@ private:
 inline size_t Chunk::getSize() const {
   if (isa<SectionChunk>(this))
     return static_cast<const SectionChunk *>(this)->getSize();
-  else
-    return static_cast<const NonSectionChunk *>(this)->getSize();
+  return static_cast<const NonSectionChunk *>(this)->getSize();
 }
 
 inline uint32_t Chunk::getOutputCharacteristics() const {
   if (isa<SectionChunk>(this))
     return static_cast<const SectionChunk *>(this)->getOutputCharacteristics();
-  else
-    return static_cast<const NonSectionChunk *>(this)
-        ->getOutputCharacteristics();
+  return static_cast<const NonSectionChunk *>(this)->getOutputCharacteristics();
 }
 
 inline void Chunk::writeTo(uint8_t *buf) const {
@@ -402,8 +415,7 @@ inline void Chunk::writeTo(uint8_t *buf) const {
 inline StringRef Chunk::getSectionName() const {
   if (isa<SectionChunk>(this))
     return static_cast<const SectionChunk *>(this)->getSectionName();
-  else
-    return static_cast<const NonSectionChunk *>(this)->getSectionName();
+  return static_cast<const NonSectionChunk *>(this)->getSectionName();
 }
 
 inline void Chunk::getBaserels(std::vector<Baserel> *res) {
@@ -416,8 +428,28 @@ inline void Chunk::getBaserels(std::vector<Baserel> *res) {
 inline StringRef Chunk::getDebugName() const {
   if (isa<SectionChunk>(this))
     return static_cast<const SectionChunk *>(this)->getDebugName();
-  else
-    return static_cast<const NonSectionChunk *>(this)->getDebugName();
+  return static_cast<const NonSectionChunk *>(this)->getDebugName();
+}
+
+inline MachineTypes Chunk::getMachine() const {
+  if (isa<SectionChunk>(this))
+    return static_cast<const SectionChunk *>(this)->getMachine();
+  return static_cast<const NonSectionChunk *>(this)->getMachine();
+}
+
+inline std::optional<chpe_range_type> Chunk::getArm64ECRangeType() const {
+  // Data sections don't need codemap entries.
+  if (!(getOutputCharacteristics() & llvm::COFF::IMAGE_SCN_MEM_EXECUTE))
+    return std::nullopt;
+
+  switch (getMachine()) {
+  case AMD64:
+    return chpe_range_type::Amd64;
+  case ARM64EC:
+    return chpe_range_type::Arm64EC;
+  default:
+    return chpe_range_type::Arm64;
+  }
 }
 
 // This class is used to implement an lld-specific feature (not implemented in
@@ -490,10 +522,10 @@ static const uint8_t importThunkARM64[] = {
 // Windows-specific.
 // A chunk for DLL import jump table entry. In a final output, its
 // contents will be a JMP instruction to some __imp_ symbol.
-class ImportThunkChunk : public NonSectionChunk {
+class ImportThunkChunk : public NonSectionCodeChunk {
 public:
   ImportThunkChunk(COFFLinkerContext &ctx, Defined *s)
-      : NonSectionChunk(ImportThunkKind), impSymbol(s), ctx(ctx) {}
+      : NonSectionCodeChunk(ImportThunkKind), impSymbol(s), ctx(ctx) {}
   static bool classof(const Chunk *c) { return c->kind() == ImportThunkKind; }
 
 protected:
@@ -506,6 +538,7 @@ public:
   explicit ImportThunkChunkX64(COFFLinkerContext &ctx, Defined *s);
   size_t getSize() const override { return sizeof(importThunkX86); }
   void writeTo(uint8_t *buf) const override;
+  MachineTypes getMachine() const override { return AMD64; }
 };
 
 class ImportThunkChunkX86 : public ImportThunkChunk {
@@ -515,6 +548,7 @@ public:
   size_t getSize() const override { return sizeof(importThunkX86); }
   void getBaserels(std::vector<Baserel> *res) override;
   void writeTo(uint8_t *buf) const override;
+  MachineTypes getMachine() const override { return I386; }
 };
 
 class ImportThunkChunkARM : public ImportThunkChunk {
@@ -526,6 +560,7 @@ public:
   size_t getSize() const override { return sizeof(importThunkARM); }
   void getBaserels(std::vector<Baserel> *res) override;
   void writeTo(uint8_t *buf) const override;
+  MachineTypes getMachine() const override { return ARMNT; }
 };
 
 class ImportThunkChunkARM64 : public ImportThunkChunk {
@@ -536,9 +571,10 @@ public:
   }
   size_t getSize() const override { return sizeof(importThunkARM64); }
   void writeTo(uint8_t *buf) const override;
+  MachineTypes getMachine() const override { return ARM64; }
 };
 
-class RangeExtensionThunkARM : public NonSectionChunk {
+class RangeExtensionThunkARM : public NonSectionCodeChunk {
 public:
   explicit RangeExtensionThunkARM(COFFLinkerContext &ctx, Defined *t)
       : target(t), ctx(ctx) {
@@ -546,6 +582,7 @@ public:
   }
   size_t getSize() const override;
   void writeTo(uint8_t *buf) const override;
+  MachineTypes getMachine() const override { return ARMNT; }
 
   Defined *target;
 
@@ -553,7 +590,7 @@ private:
   COFFLinkerContext &ctx;
 };
 
-class RangeExtensionThunkARM64 : public NonSectionChunk {
+class RangeExtensionThunkARM64 : public NonSectionCodeChunk {
 public:
   explicit RangeExtensionThunkARM64(COFFLinkerContext &ctx, Defined *t)
       : target(t), ctx(ctx) {
@@ -561,6 +598,7 @@ public:
   }
   size_t getSize() const override;
   void writeTo(uint8_t *buf) const override;
+  MachineTypes getMachine() const override { return ARM64; }
 
   Defined *target;
 

@@ -153,8 +153,9 @@ protected:
 
   Error dumpYaml(int MaxWarnings, raw_ostream &OS) override;
 
-  void addProbe(StringRef FunctionName, uint64_t CFGHash, IntPtrT CounterOffset,
-                IntPtrT FunctionPtr, uint32_t NumCounters);
+  void addDataProbe(uint64_t FunctionName, uint64_t CFGHash,
+                    IntPtrT CounterOffset, IntPtrT FunctionPtr,
+                    uint32_t NumCounters);
 
   // Byte-swap the value if necessary.
   template <class T> T maybeSwap(T Value) const {

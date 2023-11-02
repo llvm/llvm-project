@@ -15,11 +15,10 @@ body:             |
     ; CHECK-NEXT: [[ASHR1:%[0-9]+]]:_(s32) = G_ASHR [[ASHR]], [[C]](s32)
     ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[ASSERT_ZEXT]](s64)
     ; CHECK-NEXT: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[TRUNC1]], [[ASHR1]]
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[ADD]](s32)
-    ; CHECK-NEXT: [[ANYEXT1:%[0-9]+]]:_(s64) = G_ANYEXT [[ASHR1]](s32)
-    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(s64) = G_XOR [[ANYEXT]], [[ANYEXT1]]
+    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(s32) = G_XOR [[ADD]], [[ASHR1]]
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[XOR]](s32)
     ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 255
-    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[XOR]], [[C2]]
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[ANYEXT]], [[C2]]
     ; CHECK-NEXT: $x10 = COPY [[AND]](s64)
     ; CHECK-NEXT: PseudoRET implicit $x10
     %1:_(s64) = COPY $x10
@@ -45,11 +44,10 @@ body:             |
     ; CHECK-NEXT: [[ASHR1:%[0-9]+]]:_(s32) = G_ASHR [[ASHR]], [[C]](s32)
     ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[ASSERT_SEXT]](s64)
     ; CHECK-NEXT: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[TRUNC1]], [[ASHR1]]
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[ADD]](s32)
-    ; CHECK-NEXT: [[ANYEXT1:%[0-9]+]]:_(s64) = G_ANYEXT [[ASHR1]](s32)
-    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(s64) = G_XOR [[ANYEXT]], [[ANYEXT1]]
+    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(s32) = G_XOR [[ADD]], [[ASHR1]]
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[XOR]](s32)
     ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 48
-    ; CHECK-NEXT: [[SHL1:%[0-9]+]]:_(s64) = G_SHL [[XOR]], [[C2]](s64)
+    ; CHECK-NEXT: [[SHL1:%[0-9]+]]:_(s64) = G_SHL [[ANYEXT]], [[C2]](s64)
     ; CHECK-NEXT: [[ASHR2:%[0-9]+]]:_(s64) = G_ASHR [[SHL1]], [[C2]](s64)
     ; CHECK-NEXT: $x10 = COPY [[ASHR2]](s64)
     ; CHECK-NEXT: PseudoRET implicit $x10
@@ -72,11 +70,9 @@ body:             |
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 31
     ; CHECK-NEXT: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[TRUNC]], [[C]](s32)
     ; CHECK-NEXT: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[TRUNC]], [[ASHR]]
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[ADD]](s32)
-    ; CHECK-NEXT: [[ANYEXT1:%[0-9]+]]:_(s64) = G_ANYEXT [[ASHR]](s32)
-    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(s64) = G_XOR [[ANYEXT]], [[ANYEXT1]]
-    ; CHECK-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s64) = G_SEXT_INREG [[XOR]], 32
-    ; CHECK-NEXT: $x10 = COPY [[SEXT_INREG]](s64)
+    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(s32) = G_XOR [[ADD]], [[ASHR]]
+    ; CHECK-NEXT: [[SEXT:%[0-9]+]]:_(s64) = G_SEXT [[XOR]](s32)
+    ; CHECK-NEXT: $x10 = COPY [[SEXT]](s64)
     ; CHECK-NEXT: PseudoRET implicit $x10
     %1:_(s64) = COPY $x10
     %2:_(s64) = G_ASSERT_SEXT %1, 32

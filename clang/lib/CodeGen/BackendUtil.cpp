@@ -107,8 +107,9 @@ namespace {
 
 // Default filename used for profile generation.
 std::string getDefaultProfileGenName() {
-  return ProfileCorrelate.getNumOccurrences() ? "default_%m.proflite"
-                                              : "default_%m.profraw";
+  return DebugInfoCorrelate || ProfileCorrelate != InstrProfCorrelator::NONE
+             ? "default_%m.proflite"
+             : "default_%m.profraw";
 }
 
 class EmitAssemblyHelper {

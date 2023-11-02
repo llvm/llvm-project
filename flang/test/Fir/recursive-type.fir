@@ -11,9 +11,9 @@
 !t4 = !fir.type<t4 {d1:!fir.ptr<!fir.type<t3>>}>
 
 // CHECK-LABEL: llvm.func @recursiveTypes
-// CHECK-SAME: %{{.*}}: !llvm.struct<"[[T1:.*]]", (ptr<struct<"[[T1]]">>)>
-// CHECK-SAME: %{{.*}}: !llvm.struct<"[[T2:.*]]", (f32, ptr<struct<"[[T2]]">>, i32, ptr<struct<"[[T2]]">>)>
-// CHECK-SAME: %{{.*}}: !llvm.struct<"[[T3:.*]]", (ptr<struct<"[[T4:.*]]", (ptr<struct<"[[T3]]">>)>>)>, %{{.*}}: !llvm.struct<"[[T4]]", (ptr<struct<"[[T3]]", (ptr<struct<"[[T4]]">>)>>)>)
+// CHECK-SAME: %{{.*}}: !llvm.struct<"t1", (ptr)>
+// CHECK-SAME: %{{.*}}: !llvm.struct<"t2", (f32, ptr, i32, ptr)>
+// CHECK-SAME: %{{.*}}: !llvm.struct<"t3", (ptr)>, %{{.*}}: !llvm.struct<"t4", (ptr)>)
 func.func @recursiveTypes(%a : !t1, %b : !t2, %c : !t3, %d : !t4) {
   return
 }

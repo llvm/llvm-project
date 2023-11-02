@@ -1,6 +1,6 @@
 ; RUN: opt < %s -passes=instrprof -profile-correlate=binary -S | FileCheck %s
 
-; CHECK: @__profd_foo = private global { i64, i64, i64, ptr, ptr, i32, [2 x i16] } { i64 {{.*}}, i64 {{.*}}, i64 ptrtoint (ptr @__profc_foo to i64)
+; CHECK: @__profd_foo = private global { i64, i64, i64, i64, ptr, ptr, i32, [2 x i16], i32 } { i64 {{.*}}, i64 {{.*}}, i64 ptrtoint (ptr @__profc_foo to i64)
 
 @__profn_foo = private constant [3 x i8] c"foo"
 define void @_Z3foov() {

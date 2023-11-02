@@ -895,7 +895,8 @@ static Value *simplifySubInst(Value *Op0, Value *Op1, bool IsNSW, bool IsNUW,
   // Variations on GEP(base, I, ...) - GEP(base, i, ...) -> GEP(null, I-i, ...).
   if (match(Op0, m_PtrToInt(m_Value(X))) && match(Op1, m_PtrToInt(m_Value(Y))))
     if (Constant *Result = computePointerDifference(Q.DL, X, Y))
-      return ConstantExpr::getIntegerCast(Result, Op0->getType(), true);
+      return ConstantFoldIntegerCast(Result, Op0->getType(), /*IsSigned*/ true,
+                                     Q.DL);
 
   // i1 sub -> xor.
   if (MaxRecurse && Op0->getType()->isIntOrIntVectorTy(1))
@@ -2736,13 +2737,6 @@ static Constant *computePointerICmp(CmpInst::Predicate Pred, Value *LHS,
   const TargetLibraryInfo *TLI = Q.TLI;
   const DominatorTree *DT = Q.DT;
   const Instruction *CxtI = Q.CxtI;
-  const InstrInfoQuery &IIQ = Q.IIQ;
-
-  // A non-null pointer is not equal to a null pointer.
-  if (isa<ConstantPointerNull>(RHS) && ICmpInst::isEquality(Pred) &&
-      llvm::isKnownNonZero(LHS, DL, 0, nullptr, nullptr, nullptr,
-                           IIQ.UseInstrInfo))
-    return ConstantInt::get(getCompareTy(LHS), !CmpInst::isTrueWhenEqual(Pred));
 
   // We can only fold certain predicates on pointer comparisons.
   switch (Pred) {
@@ -4443,8 +4437,15 @@ static Value *simplifyWithOpReplaced(Value *V, Value *Op, Value *RepOp,
   // TODO: This may be unsound, because it only catches some forms of
   // refinement.
   if (!AllowRefinement) {
-    if (canCreatePoison(cast<Operator>(I), !DropFlags))
-      return nullptr;
+    if (canCreatePoison(cast<Operator>(I), !DropFlags)) {
+      // abs cannot create poison if the value is known to never be int_min.
+      if (auto *II = dyn_cast<IntrinsicInst>(I);
+          II && II->getIntrinsicID() == Intrinsic::abs) {
+        if (!ConstOps[0]->isNotMinSignedValue())
+          return nullptr;
+      } else
+        return nullptr;
+    }
     Constant *Res = ConstantFoldInstOperands(I, ConstOps, Q.DL, Q.TLI);
     if (DropFlags && Res && I->hasPoisonGeneratingFlagsOrMetadata())
       DropFlags->push_back(I);
@@ -6409,6 +6410,44 @@ static Value *simplifyBinaryIntrinsic(Function *F, Value *Op0, Value *Op1,
       return X;
     if (match(Op0, m_AShr(m_Negative(), m_Value())))
       return Constant::getNullValue(ReturnType);
+    break;
+  }
+  case Intrinsic::ptrmask: {
+    if (isa<PoisonValue>(Op0) || isa<PoisonValue>(Op1))
+      return PoisonValue::get(Op0->getType());
+
+    // NOTE: We can't apply this simplifications based on the value of Op1
+    // because we need to preserve provenance.
+    if (Q.isUndefValue(Op0) || match(Op0, m_Zero()))
+      return Constant::getNullValue(Op0->getType());
+
+    assert(Op1->getType()->getScalarSizeInBits() ==
+               Q.DL.getIndexTypeSizeInBits(Op0->getType()) &&
+           "Invalid mask width");
+    // If index-width (mask size) is less than pointer-size then mask is
+    // 1-extended.
+    if (match(Op1, m_PtrToInt(m_Specific(Op0))))
+      return Op0;
+
+    // NOTE: We may have attributes associated with the return value of the
+    // llvm.ptrmask intrinsic that will be lost when we just return the
+    // operand. We should try to preserve them.
+    if (match(Op1, m_AllOnes()) || Q.isUndefValue(Op1))
+      return Op0;
+
+    Constant *C;
+    if (match(Op1, m_ImmConstant(C))) {
+      KnownBits PtrKnown = computeKnownBits(Op0, /*Depth=*/0, Q);
+      // See if we only masking off bits we know are already zero due to
+      // alignment.
+      APInt IrrelevantPtrBits =
+          PtrKnown.Zero.zextOrTrunc(C->getType()->getScalarSizeInBits());
+      C = ConstantFoldBinaryOpOperands(
+          Instruction::Or, C, ConstantInt::get(C->getType(), IrrelevantPtrBits),
+          Q.DL);
+      if (C != nullptr && C->isAllOnesValue())
+        return Op0;
+    }
     break;
   }
   case Intrinsic::smax:

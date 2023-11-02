@@ -212,6 +212,7 @@ private:
   void locateImportTables();
   void createExportTable();
   void mergeSections();
+  void sortECChunks();
   void removeUnusedSections();
   void assignAddresses();
   bool isInRange(uint16_t relType, uint64_t s, uint64_t p, int margin);
@@ -676,6 +677,7 @@ void Writer::run() {
     createMiscChunks();
     createExportTable();
     mergeSections();
+    sortECChunks();
     removeUnusedSections();
     finalizeAddresses();
     removeEmptySections();
@@ -1377,6 +1379,23 @@ void Writer::mergeSections() {
   }
 }
 
+// EC targets may have chunks of various architectures mixed together at this
+// point. Group code chunks of the same architecture together by sorting chunks
+// by their EC range type.
+void Writer::sortECChunks() {
+  if (!isArm64EC(ctx.config.machine))
+    return;
+
+  for (OutputSection *sec : ctx.outputSections) {
+    if (sec->isCodeSection())
+      llvm::stable_sort(sec->chunks, [=](const Chunk *a, const Chunk *b) {
+        std::optional<chpe_range_type> aType = a->getArm64ECRangeType(),
+                                       bType = b->getArm64ECRangeType();
+        return !aType || (bType && *aType < *bType);
+      });
+  }
+}
+
 // Visits all sections to assign incremental, non-overlapping RVAs and
 // file offsets.
 void Writer::assignAddresses() {
@@ -1404,8 +1423,17 @@ void Writer::assignAddresses() {
     // If /FUNCTIONPADMIN is used, functions are padded in order to create a
     // hotpatchable image.
     uint32_t padding = sec->isCodeSection() ? config->functionPadMin : 0;
+    std::optional<chpe_range_type> prevECRange;
 
     for (Chunk *c : sec->chunks) {
+      // Alignment EC code range baudaries.
+      if (isArm64EC(ctx.config.machine) && sec->isCodeSection()) {
+        std::optional<chpe_range_type> rangeType = c->getArm64ECRangeType();
+        if (rangeType != prevECRange) {
+          virtualSize = alignTo(virtualSize, 4096);
+          prevECRange = rangeType;
+        }
+      }
       if (padding && c->isHotPatchable())
         virtualSize += padding;
       virtualSize = alignTo(virtualSize, c->getAlignment());

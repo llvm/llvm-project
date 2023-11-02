@@ -442,3 +442,15 @@ define <4 x i32> @add_general_splat(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e) {
   %v3 = insertelement <4 x i32> %v2, i32 %e3, i32 3
   ret <4 x i32> %v3
 }
+
+; This test previously failed with an assertion failure because constant shift
+; amounts are type legalized early.
+define void @buggy(i32 %0) #0 {
+entry:
+  %mul.us.us.i.3 = shl i32 %0, 1
+  %1 = insertelement <4 x i32> zeroinitializer, i32 %mul.us.us.i.3, i64 0
+  %2 = or <4 x i32> %1, <i32 1, i32 1, i32 1, i32 1>
+  %3 = shufflevector <4 x i32> %2, <4 x i32> zeroinitializer, <4 x i32> zeroinitializer
+  store <4 x i32> %3, ptr null, align 16
+  ret void
+}

@@ -94,7 +94,10 @@ bool ICF::isEligible(SectionChunk *c) {
     return true;
 
   // So are vtables.
-  if (c->sym && c->sym->getName().starts_with("??_7"))
+  const char *itaniumVtablePrefix =
+      ctx.config.machine == I386 ? "__ZTV" : "_ZTV";
+  if (c->sym && (c->sym->getName().starts_with("??_7") ||
+                 c->sym->getName().starts_with(itaniumVtablePrefix)))
     return true;
 
   // Anything else not in an address-significance table is eligible.
