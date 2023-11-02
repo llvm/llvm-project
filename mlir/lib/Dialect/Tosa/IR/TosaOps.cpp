@@ -1849,8 +1849,9 @@ ParseResult WhileOp::parse(OpAsmParser &parser, OperationState &result) {
 
   if (functionType.getNumInputs() != operands.size()) {
     return parser.emitError(typeLoc)
-           << "expected as many input types as operands " << "(expected "
-           << operands.size() << " got " << functionType.getNumInputs() << ")";
+           << "expected as many input types as operands "
+           << "(expected " << operands.size() << " got "
+           << functionType.getNumInputs() << ")";
   }
 
   // Resolve input operands.
