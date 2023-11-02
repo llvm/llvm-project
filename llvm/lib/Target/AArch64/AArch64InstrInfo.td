@@ -6702,9 +6702,10 @@ defm : SIMDAcrossLanesUnsignedIntrinsic<"UMINV", AArch64uminv>;
 def : Pat<(v2i32 (AArch64uminv (v2i32 V64:$Rn))),
           (UMINPv2i32 V64:$Rn, V64:$Rn)>;
 
-// For vecreduce_{opc}
+// For vecreduce_{opc} used by GlobalISel, not SDAG at the moment
+// because GlobalISel allows us to specify the return register to be a FPR
 multiclass SIMDAcrossLanesVecReductionIntrinsic<string baseOpc,
-                                            SDPatternOperator opNode> {
+                                               SDPatternOperator opNode> {
 def : Pat<(i8 (opNode (v8i8 FPR64:$Rn))),
           (!cast<Instruction>(!strconcat(baseOpc, "v8i8v")) FPR64:$Rn)>;
 
@@ -6719,9 +6720,9 @@ def : Pat<(i16 (opNode (v8i16 FPR128:$Rn))),
 
 def : Pat<(i32 (opNode (v4i32 V128:$Rn))), 
           (!cast<Instruction>(!strconcat(baseOpc, "v4i32v")) V128:$Rn)>;
-
 }
 
+// For v2i32 source type, the pairwise instruction can be used instead
 defm : SIMDAcrossLanesVecReductionIntrinsic<"UMINV", vecreduce_umin>;
 def : Pat<(i32 (vecreduce_umin (v2i32 V64:$Rn))), 
           (i32 (EXTRACT_SUBREG (UMINPv2i32 V64:$Rn, V64:$Rn), ssub))>;
