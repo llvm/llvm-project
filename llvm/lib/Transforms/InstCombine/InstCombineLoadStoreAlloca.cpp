@@ -211,11 +211,12 @@ static Instruction *simplifyAllocaArraySize(InstCombinerImpl &IC,
     if (C->getValue().getActiveBits() <= 64) {
       Type *NewTy = ArrayType::get(AI.getAllocatedType(), C->getZExtValue());
 
+      const DataLayout &DL = IC.getDataLayout();
       // Make sure we do not create an array type larger than pointers on the
       // target can index.
       unsigned MaxArrSizeBitWidth =
-          IC.getDataLayout().getPointerTypeSizeInBits(AI.getType());
-      APInt ArrayAllocSize(64, IC.getDataLayout().getTypeAllocSize(NewTy));
+          DL.getIndexSizeInBits(AI.getType()->getPointerAddressSpace());
+      APInt ArrayAllocSize(64, DL.getTypeAllocSize(NewTy));
       if (ArrayAllocSize.getActiveBits() > MaxArrSizeBitWidth)
         NewTy = ArrayType::get(AI.getAllocatedType(), 0);
 
@@ -235,7 +236,7 @@ static Instruction *simplifyAllocaArraySize(InstCombinerImpl &IC,
       // Now that I is pointing to the first non-allocation-inst in the block,
       // insert our getelementptr instruction...
       //
-      Type *IdxTy = IC.getDataLayout().getIndexType(AI.getType());
+      Type *IdxTy = DL.getIndexType(AI.getType());
       Value *NullIdx = Constant::getNullValue(IdxTy);
       Value *Idx[2] = {NullIdx, NullIdx};
       Instruction *GEP = GetElementPtrInst::CreateInBounds(
