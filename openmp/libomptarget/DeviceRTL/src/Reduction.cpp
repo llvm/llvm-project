@@ -167,9 +167,6 @@ uint32_t roundToWarpsize(uint32_t s) {
 
 uint32_t kmpcMin(uint32_t x, uint32_t y) { return x < y ? x : y; }
 
-static uint32_t IterCnt = 0;
-static uint32_t Cnt = 0;
-
 } // namespace
 
 extern "C" {
@@ -194,6 +191,9 @@ int32_t __kmpc_nvptx_teams_reduce_nowait_v2(
     ThreadId = 0;
   }
 
+  uint32_t &IterCnt = state::getKernelLaunchEnvironment().ReductionIterCnt;
+  uint32_t &Cnt = state::getKernelLaunchEnvironment().ReductionCnt;
+
   // In non-generic mode all workers participate in the teams reduction.
   // In generic mode only the team master participates in the teams
   // reduction because the workers are waiting for parallel work.
@@ -208,7 +208,7 @@ int32_t __kmpc_nvptx_teams_reduce_nowait_v2(
   // to the number of slots in the buffer.
   bool IsMaster = (ThreadId == 0);
   while (IsMaster) {
-    Bound = atomic::load(&IterCnt, atomic::seq_cst);
+    Bound = atomic::load(&IterCnt, atomic::aquire);
     if (TeamId < Bound + num_of_records)
       break;
   }
@@ -220,8 +220,6 @@ int32_t __kmpc_nvptx_teams_reduce_nowait_v2(
     } else
       lgredFct(GlobalBuffer, ModBockId, reduce_data);
 
-    fence::system(atomic::seq_cst);
-
     // Increment team counter.
     // This counter is incremented by all teams in the current
     // BUFFER_SIZE chunk.
@@ -230,7 +228,9 @@ int32_t __kmpc_nvptx_teams_reduce_nowait_v2(
   }
   // Synchronize
   if (mapping::isSPMDMode())
-    __kmpc_barrier(Loc, TId);
+    synchronize::threadsAligned(atomic::acq_rel);
+  else
+    fence::kernel(atomic::acq_rel);
 
   // reduce_data is global or shared so before being reduced within the
   // warp we need to bring it in local memory:
@@ -311,6 +311,10 @@ int32_t __kmpc_nvptx_teams_reduce_nowait_v2(
 void __kmpc_nvptx_end_reduce(int32_t TId) {}
 
 void __kmpc_nvptx_end_reduce_nowait(int32_t TId) {}
+}
+
+void *__kmpc_reduction_get_fixed_buffer() {
+  return state::getKernelLaunchEnvironment().ReductionBuffer;
 }
 
 #pragma omp end declare target

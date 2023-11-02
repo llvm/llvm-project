@@ -317,7 +317,7 @@ def note_constexpr_memcpy_unsupported : Note<
   "source is not a contiguous array of at least %4 elements of type %3|"
   "destination is not a contiguous array of at least %4 elements of type %3}2">;
 def note_constexpr_bit_cast_unsupported_type : Note<
-  "constexpr bit_cast involving type %0 is not yet supported">;
+  "constexpr bit cast involving type %0 is not yet supported">;
 def note_constexpr_bit_cast_unsupported_bitfield : Note<
   "constexpr bit_cast involving bit-field is not yet supported">;
 def note_constexpr_bit_cast_invalid_type : Note<
@@ -326,6 +326,9 @@ def note_constexpr_bit_cast_invalid_type : Note<
   "%select{type|member}1 is not allowed in a constant expression">;
 def note_constexpr_bit_cast_invalid_subtype : Note<
   "invalid type %0 is a %select{member|base}1 of %2">;
+def note_constexpr_bit_cast_invalid_vector : Note<
+  "bit_cast involving type %0 is not allowed in a constant expression; "
+  "element size %1 * element count %2 is not a multiple of the byte size %3">;
 def note_constexpr_bit_cast_indet_dest : Note<
   "indeterminate value can only initialize an object of type 'unsigned char'"
   "%select{, 'char',|}1 or 'std::byte'; %0 is invalid">;

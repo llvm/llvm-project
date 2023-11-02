@@ -446,7 +446,7 @@ define <2 x i64> @extract_fixed_v2i64_nxv2i64(<vscale x 2 x i64> %vec) nounwind 
   ret <2 x i64> %retval
 }
 
-define <4 x i64> @extract_fixed_v4i64_nxv2i64(<vscale x 2 x i64> %vec) nounwind #0 {
+define void @extract_fixed_v4i64_nxv2i64(<vscale x 2 x i64> %vec, ptr %p) nounwind #0 {
 ; CHECK-LABEL: extract_fixed_v4i64_nxv2i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
@@ -454,12 +454,13 @@ define <4 x i64> @extract_fixed_v4i64_nxv2i64(<vscale x 2 x i64> %vec) nounwind 
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    st1d { z0.d }, p0, [sp]
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [sp]
-; CHECK-NEXT:    st1d { z0.d }, p0, [x8]
+; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
 ; CHECK-NEXT:    addvl sp, sp, #1
 ; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
   %retval = call <4 x i64> @llvm.vector.extract.v4i64.nxv2i64(<vscale x 2 x i64> %vec, i64 4)
-  ret <4 x i64> %retval
+  store <4 x i64> %retval, ptr %p
+  ret void
 }
 
 ; Check that extract from load via bitcast-gep-of-scalar-ptr does not crash.

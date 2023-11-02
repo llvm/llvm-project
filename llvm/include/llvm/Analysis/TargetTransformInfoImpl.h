@@ -802,6 +802,11 @@ public:
             Callee->getFnAttribute("target-features"));
   }
 
+  unsigned getInlineCallPenalty(const Function *F, const CallBase &Call,
+                                unsigned DefaultCallPenalty) const {
+    return DefaultCallPenalty;
+  }
+
   bool areTypesABICompatible(const Function *Caller, const Function *Callee,
                              const ArrayRef<Type *> &Types) const {
     return (Caller->getFnAttribute("target-cpu") ==

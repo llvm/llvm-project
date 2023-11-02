@@ -1532,6 +1532,30 @@ Currently, only the following parameter attributes are defined:
     If a function reads from a writeonly pointer argument, the behavior is
     undefined.
 
+``writable``
+    This attribute is only meaningful in conjunction with ``dereferenceable(N)``
+    or another attribute that implies the first ``N`` bytes of the pointer
+    argument are dereferenceable.
+
+    In that case, the attribute indicates that the first ``N`` bytes will be
+    (non-atomically) loaded and stored back on entry to the function.
+
+    This implies that it's possible to introduce spurious stores on entry to
+    the function without introducing traps or data races. This does not
+    necessarily hold throughout the whole function, as the pointer may escape
+    to a different thread during the execution of the function. See also the
+    :ref:`atomic optimization guide <Optimization outside atomic>`
+
+    The "other attributes" that imply dereferenceability are
+    ``dereferenceable_or_null`` (if the pointer is non-null) and the
+    ``sret``, ``byval``, ``byref``, ``inalloca``, ``preallocated`` family of
+    attributes. Note that not all of these combinations are useful, e.g.
+    ``byval`` arguments are known to be writable even without this attribute.
+
+    The ``writable`` attribute cannot be combined with ``readnone``,
+    ``readonly`` or a ``memory`` attribute that does not contain
+    ``argmem: write``.
+
 .. _gc:
 
 Garbage Collector Strategy Names
@@ -18496,6 +18520,45 @@ Arguments:
 """"""""""
 Both arguments must be vectors of the same type whereby their logical
 concatenation matches the result type.
+
+'``llvm.experimental.cttz.elts``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ```llvm.experimental.cttz.elts```
+on any vector of integer elements, both fixed width and scalable.
+
+::
+
+      declare i8 @llvm.experimental.cttz.elts.i8.v8i1(<8 x i1> <src>, i1 <is_zero_poison>)
+
+Overview:
+"""""""""
+
+The '``llvm.experimental.cttz.elts``' intrinsic counts the number of trailing
+zero elements of a vector.
+
+Arguments:
+""""""""""
+
+The first argument is the vector to be counted. This argument must be a vector
+with integer element type. The return type must also be an integer type which is
+wide enough to hold the maximum number of elements of the source vector. The
+behaviour of this intrinsic is undefined if the return type is not wide enough
+for the number of elements in the input vector.
+
+The second argument is a constant flag that indicates whether the intrinsic
+returns a valid result if the first argument is all zero. If the first argument
+is all zero and the second argument is true, the result is poison.
+
+Semantics:
+""""""""""
+
+The '``llvm.experimental.cttz.elts``' intrinsic counts the trailing (least
+significant) zero elements in a vector. If ``src == 0`` the result is the
+number of elements in the input vector.
 
 '``llvm.experimental.vector.splice``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

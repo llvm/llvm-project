@@ -31,6 +31,7 @@ public:
     eRegsetMaskMTE = 8,
     eRegsetMaskTLS = 16,
     eRegsetMaskZA = 32,
+    eRegsetMaskZT = 64,
     eRegsetMaskDynamic = ~1,
   };
 
@@ -107,7 +108,7 @@ public:
 
   void AddRegSetTLS(bool has_tpidr2);
 
-  void AddRegSetSME();
+  void AddRegSetSME(bool has_zt);
 
   uint32_t ConfigureVectorLengthSVE(uint32_t sve_vq);
 
@@ -123,6 +124,7 @@ public:
   bool IsSVEPresent() const { return m_opt_regsets.AnySet(eRegsetMaskSVE); }
   bool IsSSVEPresent() const { return m_opt_regsets.AnySet(eRegsetMaskSSVE); }
   bool IsZAPresent() const { return m_opt_regsets.AnySet(eRegsetMaskZA); }
+  bool IsZTPresent() const { return m_opt_regsets.AnySet(eRegsetMaskZT); }
   bool IsPAuthPresent() const { return m_opt_regsets.AnySet(eRegsetMaskPAuth); }
   bool IsMTEPresent() const { return m_opt_regsets.AnySet(eRegsetMaskMTE); }
   bool IsTLSPresent() const { return m_opt_regsets.AnySet(eRegsetMaskTLS); }
@@ -136,6 +138,7 @@ public:
   bool IsTLSReg(unsigned reg) const;
   bool IsSMEReg(unsigned reg) const;
   bool IsSMERegZA(unsigned reg) const;
+  bool IsSMERegZT(unsigned reg) const;
 
   uint32_t GetRegNumSVEZ0() const;
   uint32_t GetRegNumSVEFFR() const;

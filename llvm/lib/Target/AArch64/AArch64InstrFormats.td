@@ -6055,6 +6055,15 @@ multiclass SIMDThreeSameVectorFML<bit U, bit b13, bits<3> size, string asm,
                                          v4f32, v8f16, OpNode>;
 }
 
+multiclass SIMDThreeSameVectorMLA<bit Q, string asm>{
+  def v8f16 : BaseSIMDThreeSameVectorDot<Q, 0b0, 0b11, 0b1111, asm, ".8h", ".16b",
+                                         V128, v8f16, v16i8, null_frag>;
+}
+
+multiclass SIMDThreeSameVectorMLAL<bit Q, bits<2> sz, string asm>{
+  def v4f32 : BaseSIMDThreeSameVectorDot<Q, 0b0, sz, 0b1000, asm, ".4s", ".16b",
+                                         V128, v4f32, v16i8, null_frag>;
+}
 
 // FP8 assembly/disassembly classes
 
@@ -6097,6 +6106,21 @@ multiclass SIMDThreeVectorCvt<string asm> {
    def v8f8 : BaseSIMDThreeVectors<0b0, 0b0, 0b00, 0b1110, V64, V128, asm, ".8b", ".4s">;
    def 2v16f8 : BaseSIMDThreeSameVectorDot<0b1, 0b0, 0b00, 0b1110, asm#2, ".16b", ".4s",
                                            V128, v16i8, v4f32, null_frag>;
+}
+
+// TODO: Create a new Value Type v8f8 and v16f8
+multiclass SIMDThreeSameVectorDOT2<string asm> {
+   def v4f16 : BaseSIMDThreeSameVectorDot<0b0, 0b0, 0b01, 0b1111, asm, ".4h", ".8b",
+                                          V64, v4f16, v8i8, null_frag>;
+   def v8f16 : BaseSIMDThreeSameVectorDot<0b1, 0b0, 0b01, 0b1111, asm, ".8h", ".16b",
+                                          V128, v8f16, v16i8, null_frag>;
+}
+
+multiclass SIMDThreeSameVectorDOT4<string asm> {
+   def v2f32 : BaseSIMDThreeSameVectorDot<0b0, 0b0, 0b00, 0b1111, asm, ".2s", ".8b",
+                                          V64, v2f32, v8i8, null_frag>;
+   def v4f32 : BaseSIMDThreeSameVectorDot<0b1, 0b0, 0b00, 0b1111, asm, ".4s", ".16b",
+                                          V128, v4f32, v16i8, null_frag>;
 }
 
 //----------------------------------------------------------------------------
@@ -8522,6 +8546,31 @@ class BF16ToSinglePrecision<string asm>
 } // End of let mayStore = 0, mayLoad = 0, hasSideEffects = 0
 
 //----------------------------------------------------------------------------
+class BaseSIMDThreeSameVectorIndexB<bit Q, bit U, bits<2> sz, bits<4> opc,
+                                    string asm, string dst_kind,
+                                    RegisterOperand RegType,
+                                    RegisterOperand RegType_lo>
+  : BaseSIMDIndexedTied<Q, U, 0b0, sz, opc,
+                        RegType, RegType, RegType_lo, VectorIndexB,
+                        asm, "", dst_kind, ".16b", ".b", []> {
+
+  // idx = H:L:M
+  bits<4> idx;
+  let Inst{11}    = idx{3};
+  let Inst{21-19} = idx{2-0};
+}
+
+multiclass SIMDThreeSameVectorMLAIndex<bit Q, string asm> {
+  def v8f16 : BaseSIMDThreeSameVectorIndexB<Q, 0b0, 0b11, 0b0000, asm, ".8h",
+                                            V128, V128_0to7>;
+}
+
+multiclass SIMDThreeSameVectorMLALIndex<bit Q, bits<2> sz, string asm> {
+  def v4f32 : BaseSIMDThreeSameVectorIndexB<Q, 0b1, sz, 0b1000, asm, ".4s",
+                                            V128, V128_0to7>;
+}
+
+//----------------------------------------------------------------------------
 // Armv8.6 Matrix Multiply Extension
 //----------------------------------------------------------------------------
 
@@ -8536,10 +8585,10 @@ class SIMDThreeSameVectorMatMul<bit B, bit U, string asm, SDPatternOperator OpNo
 //----------------------------------------------------------------------------
 // ARMv8.2-A Dot Product Instructions (Indexed)
 class BaseSIMDThreeSameVectorIndexS<bit Q, bit U, bits<2> size, bits<4> opc, string asm,
-                                      string dst_kind, string lhs_kind, string rhs_kind,
-                                      RegisterOperand RegType,
-                                      ValueType AccumType, ValueType InputType,
-                                      SDPatternOperator OpNode> :
+                                    string dst_kind, string lhs_kind, string rhs_kind,
+                                    RegisterOperand RegType,
+                                    ValueType AccumType, ValueType InputType,
+                                    SDPatternOperator OpNode> :
         BaseSIMDIndexedTied<Q, U, 0b0, size, opc, RegType, RegType, V128,
                             VectorIndexS, asm, "", dst_kind, lhs_kind, rhs_kind,
         [(set (AccumType RegType:$dst),
@@ -8559,6 +8608,14 @@ multiclass SIMDThreeSameVectorDotIndex<bit U, bit Mixed, bits<2> size, string as
                                               V64, v2i32, v8i8, OpNode>;
   def v16i8 : BaseSIMDThreeSameVectorIndexS<1, U, size, {0b111, Mixed}, asm, ".4s", ".16b", ".4b",
                                               V128, v4i32, v16i8, OpNode>;
+}
+
+// TODO: The vectors v8i8 and v16i8 should be v8f8 and v16f8
+multiclass SIMDThreeSameVectorFP8DOT4Index<string asm> {
+  def v8f8 : BaseSIMDThreeSameVectorIndexS<0b0, 0b0, 0b00, 0b0000, asm, ".2s", ".8b", ".4b",
+                                           V64, v2f32, v8i8, null_frag>;
+  def v16f8 : BaseSIMDThreeSameVectorIndexS<0b1, 0b0, 0b00, 0b0000, asm, ".4s", ".16b",".4b",
+                                            V128, v4f32, v16i8, null_frag>;
 }
 
 // ARMv8.2-A Fused Multiply Add-Long Instructions (Indexed)
@@ -8588,6 +8645,16 @@ multiclass SIMDThreeSameVectorFMLIndex<bit U, bits<4> opc, string asm,
                                               V64, V128_lo, v2f32, v4f16, OpNode>;
   def v8f16 : BaseSIMDThreeSameVectorIndexH<1, U, 0b10, opc, asm, ".4s", ".4h", ".h",
                                               V128, V128_lo, v4f32, v8f16, OpNode>;
+}
+
+//----------------------------------------------------------------------------
+// FP8 Advanced SIMD vector x indexed element
+// TODO: Replace value types v8i8 and v16i8 by v8f8 and v16f8
+multiclass SIMDThreeSameVectorFP8DOT2Index<string asm> {
+  def v4f16 : BaseSIMDThreeSameVectorIndexH<0b0, 0b0, 0b01, 0b0000, asm, ".4h", ".8b", ".2b",
+                                            V64, V128_lo, v4f16, v8i8, null_frag>;
+  def v8f16 : BaseSIMDThreeSameVectorIndexH<0b1, 0b0, 0b01, 0b0000, asm, ".8h", ".16b", ".2b",
+                                            V128, V128_lo, v8f16, v8i16, null_frag>;
 }
 
 multiclass SIMDFPIndexed<bit U, bits<4> opc, string asm,

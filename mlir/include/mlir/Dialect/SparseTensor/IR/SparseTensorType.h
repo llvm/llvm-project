@@ -251,6 +251,12 @@ public:
                                        CrdTransDirectionKind::dim2lvl);
   }
 
+  RankedTensorType getDemappedType() const {
+    auto lvlShape = getLvlShape();
+    return RankedTensorType::get(lvlShape, rtp.getElementType(),
+                                 enc.withoutDimToLvl());
+  }
+
   /// Safely looks up the requested dimension-DynSize.  If you intend
   /// to check the result with `ShapedType::isDynamic`, then see the
   /// `getStaticDimSize` method instead.
@@ -330,10 +336,15 @@ private:
   const AffineMap lvlToDim;
 };
 
-/// Convenience method to abbreviate wrapping `getRankedTensorType`.
+/// Convenience methods to abbreviate wrapping `getRankedTensorType`.
 template <typename T>
 inline SparseTensorType getSparseTensorType(T t) {
   return SparseTensorType(getRankedTensorType(t));
+}
+inline std::optional<SparseTensorType> tryGetSparseTensorType(Value v) {
+  if (isa<RankedTensorType>(v.getType()))
+    return getSparseTensorType(v);
+  return std::nullopt;
 }
 
 } // namespace sparse_tensor
