@@ -136,7 +136,7 @@ static lldb::ModuleSP GetContainingClangModule(const DWARFDIE &die) {
 
 std::optional<DWARFFormValue>
 DWARFASTParserClang::FindConstantOnVariableDefinition(DWARFDIE die) {
-  assert (die.Tag() == llvm::dwarf::DW_TAG_member);
+  assert(die.Tag() == llvm::dwarf::DW_TAG_member);
 
   auto *dwarf = die.GetDWARF();
   if (!dwarf)
