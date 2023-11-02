@@ -1193,40 +1193,39 @@ bool RISCVInstrInfo::optimizeCondBranch(MachineInstr &MI) const {
   // To make sure this optimization is really beneficial, we only
   // optimize for cases where Y had only one use (i.e. only used by the branch).
 
-  // Right now we only care about LI (i.e. ADDI rs, 0)
-  auto isLoadImm = [](const MachineInstr *MI) -> bool {
-    return MI->getOpcode() == RISCV::ADDI && MI->getOperand(1).isReg() &&
-           MI->getOperand(1).getReg() == RISCV::X0;
+  // Right now we only care about LI (i.e. ADDI x0, imm)
+  auto isLoadImm = [](const MachineInstr *MI, int64_t &Imm) -> bool {
+    if (MI->getOpcode() == RISCV::ADDI && MI->getOperand(1).isReg() &&
+        MI->getOperand(1).getReg() == RISCV::X0) {
+      Imm = MI->getOperand(2).getImm();
+      return true;
+    } else {
+      return false;
+    }
   };
   // Either a load from immediate instruction or X0.
-  auto isFromLoadImm = [&](const MachineOperand &Op) -> bool {
+  auto isFromLoadImm = [&](const MachineOperand &Op, int64_t &Imm) -> bool {
     if (!Op.isReg())
       return false;
     Register Reg = Op.getReg();
-    if (Reg == RISCV::X0)
+    if (Reg == RISCV::X0) {
+      Imm = 0;
       return true;
+    }
     if (!Reg.isVirtual())
       return false;
-    return isLoadImm(MRI.getVRegDef(Op.getReg()));
+    return isLoadImm(MRI.getVRegDef(Op.getReg()), Imm);
   };
 
   MachineOperand &LHS = MI.getOperand(0);
   MachineOperand &RHS = MI.getOperand(1);
-  auto getConst = [&MRI](MachineOperand &Op) -> int64_t {
-    Register Reg = Op.getReg();
-    if (Reg == RISCV::X0)
-      return 0;
-    assert(Reg.isVirtual());
-    MachineInstr *Def = MRI.getVRegDef(Reg);
-    return Def->getOperand(2).getImm();
-  };
-
   // Try to find the register for constant Z; return
   // invalid register otherwise.
   auto searchConst = [&](int64_t C1) -> Register {
     MachineBasicBlock::reverse_iterator II(&MI), E = MBB->rend();
     auto DefC1 = std::find_if(++II, E, [&](const MachineInstr &I) -> bool {
-      return isLoadImm(&I) && I.getOperand(2).getImm() == C1;
+      int64_t Imm;
+      return isLoadImm(&I, Imm) && Imm == C1;
     });
     if (DefC1 != E)
       return DefC1->getOperand(0).getReg();
@@ -1235,9 +1234,9 @@ bool RISCVInstrInfo::optimizeCondBranch(MachineInstr &MI) const {
   };
 
   bool Modify = false;
-  if (isFromLoadImm(LHS) && MRI.hasOneUse(LHS.getReg())) {
+  int64_t C0;
+  if (isFromLoadImm(LHS, C0) && MRI.hasOneUse(LHS.getReg())) {
     // Might be case 1.
-    int64_t C0 = getConst(LHS);
     // Signed integer overflow is UB. (UINT64_MAX is bigger so we don't need
     // to worry about unsigned overflow here)
     if (C0 < INT64_MAX)
@@ -1250,9 +1249,8 @@ bool RISCVInstrInfo::optimizeCondBranch(MachineInstr &MI) const {
         MRI.clearKillFlags(RegZ);
         Modify = true;
       }
-  } else if (isFromLoadImm(RHS) && MRI.hasOneUse(RHS.getReg())) {
+  } else if (isFromLoadImm(RHS, C0) && MRI.hasOneUse(RHS.getReg())) {
     // Might be case 2.
-    int64_t C0 = getConst(RHS);
     // For unsigned cases, we don't want C1 to wrap back to UINT64_MAX
     // when C0 is zero.
     if ((CC == RISCVCC::COND_GE || CC == RISCVCC::COND_LT) || C0)
