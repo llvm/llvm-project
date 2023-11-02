@@ -20,6 +20,7 @@
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/xxhash.h"
+#include <cstdint>
 #include <vector>
 
 using namespace llvm;
@@ -884,9 +885,9 @@ void InputSection::relocateNonAlloc(uint8_t *buf, ArrayRef<RelTy> rels) {
   const unsigned bits = sizeof(typename ELFT::uint) * 8;
   const TargetInfo &target = *elf::target;
   const bool isDebug = isDebugSection(*this);
-  const bool isDebugNames = isDebug && name == ".debug_names";
   const bool isDebugLine = isDebug && name == ".debug_line";
   std::optional<uint64_t> tombstone;
+  uint64_t tombstoneValueToUse = 0;
   for (const auto &patAndValue : llvm::reverse(config->deadRelocInNonAlloc))
     if (patAndValue.first.match(this->name)) {
       tombstone = patAndValue.second;
@@ -900,9 +901,9 @@ void InputSection::relocateNonAlloc(uint8_t *buf, ArrayRef<RelTy> rels) {
                                       .Default(0);
   // If -z dead-reloc-in-nonalloc= is specified, respect it.
   if (!tombstone && isDebug)
-    tombstone = debugTombstone;
+    tombstoneValueToUse = debugTombstone;
   else if (tombstone)
-    tombstone = SignExtend64<bits>(*tombstone);
+    tombstoneValueToUse = SignExtend64<bits>(*tombstone);
   for (const RelTy &rel : rels) {
     RelType type = rel.getType(config->isMips64EL);
 
@@ -924,7 +925,7 @@ void InputSection::relocateNonAlloc(uint8_t *buf, ArrayRef<RelTy> rels) {
     if (expr == R_NONE)
       continue;
 
-    if (tombstone) {
+    if (tombstone || isDebug) {
       // Resolve relocations in .debug_* referencing (discarded symbols or ICF
       // folded section symbols) to a tombstone value. Resolving to addend is
       // unsatisfactory because the result address range may collide with a
@@ -954,13 +955,14 @@ void InputSection::relocateNonAlloc(uint8_t *buf, ArrayRef<RelTy> rels) {
       // TODO To reduce disruption, we use 0 instead of -1 as the tombstone
       // value. Enable -1 in a future release.
 
-      // Extend to 64bit MAX for 64 bit relocations, LocalTU, in .debug_names.
-      if (isDebugNames && type == target.symbolicRel)
-        tombstone = SignExtend64<32>(*tombstone);
+      // Extending 32bit MAX value to 64bit MAX value..
+      // One usage example is in .debug_names LocatTU tombstoning.
+      if (!tombstone && type == target.symbolicRel)
+        tombstoneValueToUse = SignExtend64<32>(tombstoneValueToUse);
 
       auto *ds = dyn_cast<Defined>(&sym);
       if (!sym.getOutputSection() || (ds && ds->folded && !isDebugLine)) {
-        target.relocateNoSym(bufLoc, type, *tombstone);
+        target.relocateNoSym(bufLoc, type, tombstoneValueToUse);
         continue;
       }
     }
