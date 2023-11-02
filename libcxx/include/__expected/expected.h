@@ -88,34 +88,37 @@ _LIBCPP_HIDE_FROM_ABI void __throw_bad_expected_access(_Arg&& __arg) {
 #  endif
 }
 
-struct __expected_invoke_tag {};
+struct __conditional_no_unique_address_invoke_tag {};
 
 template <bool _NoUnique, class _Tp>
-class __expected_conditional_no_unique_address {
-  struct __unique {
-    template <class... _Args>
-    _LIBCPP_HIDE_FROM_ABI constexpr explicit __unique(_Args&&... __args) : __v(std::forward<_Args>(__args)...) {}
+struct __conditional_no_unique_address;
 
-    template <class _Func, class... _Args>
-    _LIBCPP_HIDE_FROM_ABI constexpr explicit __unique(__expected_invoke_tag, _Func&& __f, _Args&&... __args)
-        : __v(std::invoke(std::forward<_Func>(__f), std::forward<_Args>(__args)...)) {}
+template <class _Tp>
+struct __conditional_no_unique_address<true, _Tp> {
+  template <class... _Args>
+  _LIBCPP_HIDE_FROM_ABI constexpr explicit __conditional_no_unique_address(_Args&&... __args)
+      : __v(std::forward<_Args>(__args)...) {}
 
-    _Tp __v;
-  };
+  template <class _Func, class... _Args>
+  _LIBCPP_HIDE_FROM_ABI constexpr explicit __conditional_no_unique_address(
+      __conditional_no_unique_address_invoke_tag, _Func&& __f, _Args&&... __args)
+      : __v(std::invoke(std::forward<_Func>(__f), std::forward<_Args>(__args)...)) {}
 
-  struct __no_unique {
-    template <class... _Args>
-    _LIBCPP_HIDE_FROM_ABI constexpr explicit __no_unique(_Args&&... __args) : __v(std::forward<_Args>(__args)...) {}
+  _LIBCPP_NO_UNIQUE_ADDRESS _Tp __v;
+};
 
-    template <class _Func, class... _Args>
-    _LIBCPP_HIDE_FROM_ABI constexpr explicit __no_unique(__expected_invoke_tag, _Func&& __f, _Args&&... __args)
-        : __v(std::invoke(std::forward<_Func>(__f), std::forward<_Args>(__args)...)) {}
+template <class _Tp>
+struct __conditional_no_unique_address<false, _Tp> {
+  template <class... _Args>
+  _LIBCPP_HIDE_FROM_ABI constexpr explicit __conditional_no_unique_address(_Args&&... __args)
+      : __v(std::forward<_Args>(__args)...) {}
 
-    _LIBCPP_NO_UNIQUE_ADDRESS _Tp __v;
-  };
+  template <class _Func, class... _Args>
+  _LIBCPP_HIDE_FROM_ABI constexpr explicit __conditional_no_unique_address(
+      __conditional_no_unique_address_invoke_tag, _Func&& __f, _Args&&... __args)
+      : __v(std::invoke(std::forward<_Func>(__f), std::forward<_Args>(__args)...)) {}
 
-public:
-  using __type = std::conditional<_NoUnique, __no_unique, __unique>::type;
+  _Tp __v;
 };
 
 template <class _Union>
@@ -203,7 +206,7 @@ class __expected_base {
     template <class _OtherUnion>
     _LIBCPP_HIDE_FROM_ABI constexpr explicit __repr(bool __has_val, _OtherUnion&& __other)
       requires(!__can_stuff_tail)
-        : __union_(__expected_invoke_tag{},
+        : __union_(__conditional_no_unique_address_invoke_tag{},
                    [&] { return __make_union(__has_val, std::forward<_OtherUnion>(__other)); }),
           __has_val_(__has_val) {}
 
@@ -284,7 +287,7 @@ class __expected_base {
         return __union_t(unexpect, std::forward<_OtherUnion>(__other).__unex_);
     }
 
-    _LIBCPP_NO_UNIQUE_ADDRESS __expected_conditional_no_unique_address< __can_stuff_tail, __union_t>::__type __union_;
+    _LIBCPP_NO_UNIQUE_ADDRESS __conditional_no_unique_address<__can_stuff_tail, __union_t> __union_;
     _LIBCPP_NO_UNIQUE_ADDRESS bool __has_val_;
   };
 
@@ -306,7 +309,8 @@ protected:
   template <class _OtherUnion>
   _LIBCPP_HIDE_FROM_ABI constexpr explicit __expected_base(bool __has_val, _OtherUnion&& __other)
     requires(__can_stuff_tail)
-      : __repr_(__expected_invoke_tag{}, [&] { return __make_repr(__has_val, std::forward<_OtherUnion>(__other)); }) {}
+      : __repr_(__conditional_no_unique_address_invoke_tag{},
+                [&] { return __make_repr(__has_val, std::forward<_OtherUnion>(__other)); }) {}
 
   _LIBCPP_HIDE_FROM_ABI constexpr void __destroy() {
     if constexpr (__can_stuff_tail)
@@ -332,7 +336,7 @@ protected:
   _LIBCPP_HIDE_FROM_ABI constexpr const _Err& __unex() const { return __repr_.__v.__union_.__v.__unex_; }
 
 private:
-  _LIBCPP_NO_UNIQUE_ADDRESS __expected_conditional_no_unique_address< !__can_stuff_tail, __repr>::__type __repr_;
+  _LIBCPP_NO_UNIQUE_ADDRESS __conditional_no_unique_address<!__can_stuff_tail, __repr> __repr_;
 };
 
 template <class _Tp, class _Err>
@@ -1110,7 +1114,7 @@ class __expected_void_base {
     template <class _OtherUnion>
     _LIBCPP_HIDE_FROM_ABI constexpr explicit __repr(bool __has_val, _OtherUnion&& __other)
       requires(!__can_stuff_tail)
-        : __union_(__expected_invoke_tag{},
+        : __union_(__conditional_no_unique_address_invoke_tag{},
                    [&] { return __make_union(__has_val, std::forward<_OtherUnion>(__other)); }),
           __has_val_(__has_val) {}
 
@@ -1185,7 +1189,7 @@ class __expected_void_base {
         return __union_t(unexpect, std::forward<_OtherUnion>(__other).__unex_);
     }
 
-    _LIBCPP_NO_UNIQUE_ADDRESS __expected_conditional_no_unique_address< __can_stuff_tail, __union_t>::__type __union_;
+    _LIBCPP_NO_UNIQUE_ADDRESS __conditional_no_unique_address<__can_stuff_tail, __union_t> __union_;
     _LIBCPP_NO_UNIQUE_ADDRESS bool __has_val_;
   };
 
@@ -1207,7 +1211,8 @@ protected:
   template <class _OtherUnion>
   _LIBCPP_HIDE_FROM_ABI constexpr explicit __expected_void_base(bool __has_val, _OtherUnion&& __other)
     requires(__can_stuff_tail)
-      : __repr_(__expected_invoke_tag{}, [&] { return __make_repr(__has_val, std::forward<_OtherUnion>(__other)); }) {}
+      : __repr_(__conditional_no_unique_address_invoke_tag{},
+                [&] { return __make_repr(__has_val, std::forward<_OtherUnion>(__other)); }) {}
 
   _LIBCPP_HIDE_FROM_ABI constexpr void __destroy() {
     if constexpr (__can_stuff_tail)
@@ -1231,7 +1236,7 @@ protected:
   _LIBCPP_HIDE_FROM_ABI constexpr const _Err& __unex() const { return __repr_.__v.__union_.__v.__unex_; }
 
 private:
-  _LIBCPP_NO_UNIQUE_ADDRESS __expected_conditional_no_unique_address< !__can_stuff_tail, __repr>::__type __repr_;
+  _LIBCPP_NO_UNIQUE_ADDRESS __conditional_no_unique_address<!__can_stuff_tail, __repr> __repr_;
 };
 
 template <class _Tp, class _Err>
