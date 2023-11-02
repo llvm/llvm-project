@@ -405,7 +405,7 @@ steps:
     timeout_in_minutes: 120
 
   - label: "Fast hardening mode"
-    command: "libcxx/utils/ci/run-buildbot generic-fast-hardening-mode"
+    command: "libcxx/utils/ci/run-buildbot generic-hardening-mode-fast"
     artifact_paths:
       - "**/test-results.xml"
       - "**/*.abilist"
@@ -422,8 +422,8 @@ steps:
           limit: 2
     timeout_in_minutes: 120
 
-  - label: "Hardened mode with ABI breaks"
-    command: "libcxx/utils/ci/run-buildbot generic-hardened-mode-with-abi-breaks"
+  - label: "Fast hardening mode with ABI breaks"
+    command: "libcxx/utils/ci/run-buildbot generic-hardening-mode-with-abi-breaks"
     artifact_paths:
       - "**/test-results.xml"
       - "**/*.abilist"
@@ -441,7 +441,7 @@ steps:
     timeout_in_minutes: 120
 
   - label: "Strict hardening mode"
-    command: "libcxx/utils/ci/run-buildbot generic-strict-hardening-mode"
+    command: "libcxx/utils/ci/run-buildbot generic-hardening-mode-strict"
     artifact_paths:
       - "**/test-results.xml"
       - "**/*.abilist"
@@ -462,7 +462,7 @@ steps:
     timeout_in_minutes: 120
 
   - label: "Debug hardening mode"
-    command: "libcxx/utils/ci/run-buildbot generic-debug-hardening-mode"
+    command: "libcxx/utils/ci/run-buildbot generic-hardening-mode-debug"
     artifact_paths:
       - "**/test-results.xml"
       - "**/*.abilist"

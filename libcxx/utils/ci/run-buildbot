@@ -395,27 +395,27 @@ generic-merged)
                    -DLIBUNWIND_TEST_CONFIG="llvm-libunwind-merged.cfg.in"
     check-runtimes
 ;;
-generic-fast-hardening-mode)
+generic-hardening-mode-fast)
     clean
-    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-fast-hardening-mode.cmake"
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-hardening-mode-fast.cmake"
     check-runtimes
     check-abi-list
 ;;
-generic-hardened-mode-with-abi-breaks)
+generic-hardening-mode-fast-with-abi-breaks)
     clean
-    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-hardened-mode-with-abi-breaks.cmake"
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-hardening-mode-fast-with-abi-breaks.cmake"
     check-runtimes
     check-abi-list
 ;;
-generic-strict-hardening-mode)
+generic-hardening-mode-strict)
     clean
-    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-strict-hardening-mode.cmake"
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-hardening-mode-strict.cmake"
     check-runtimes
     check-abi-list
 ;;
-generic-debug-hardening-mode)
+generic-hardening-mode-debug)
     clean
-    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-debug-hardening-mode.cmake"
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-hardening-mode-debug.cmake"
     check-runtimes
     check-abi-list
 ;;
