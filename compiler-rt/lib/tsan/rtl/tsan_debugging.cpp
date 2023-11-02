@@ -35,8 +35,8 @@ static const char *ReportTypeDescription(ReportType typ) {
     case ReportTypeSignalUnsafe: return "signal-unsafe-call";
     case ReportTypeErrnoInSignal: return "errno-in-signal-handler";
     case ReportTypeDeadlock: return "lock-order-inversion";
-    case ReportTypeMutexCannotBeLocked:
-      return "mutex-cannot-be-locked";
+    case ReportTypeMutexHeldWrongContext:
+      return "mutex-held-in-wrong-context";
       // No default case so compiler warns us if we miss one
   }
   UNREACHABLE("missing case");

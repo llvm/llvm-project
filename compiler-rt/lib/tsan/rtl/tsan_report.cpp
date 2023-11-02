@@ -93,8 +93,8 @@ static const char *ReportTypeString(ReportType typ, uptr tag) {
       return "signal handler spoils errno";
     case ReportTypeDeadlock:
       return "lock-order-inversion (potential deadlock)";
-    case ReportTypeMutexCannotBeLocked:
-      return "mutex cannot be locked on this code path";
+    case ReportTypeMutexHeldWrongContext:
+      return "mutex held in the wrong context";
       // No default case so compiler warns us if we miss one
   }
   UNREACHABLE("missing case");
@@ -218,16 +218,11 @@ static void PrintMutexShortWithAddress(const ReportMutex *rm,
          reinterpret_cast<void *>(rm->addr), d.Default(), after);
 }
 
-static void PrintMutex(const ReportMutex *rm, ReportType typ) {
+static void PrintMutex(const ReportMutex *rm) {
   Decorator d;
   Printf("%s", d.Mutex());
-  if (typ != ReportTypeMutexCannotBeLocked) {
-    Printf("  Mutex M%u (%p) created at:\n", rm->id,
-           reinterpret_cast<void *>(rm->addr));
-  } else {
-    Printf("  Mutex M%u (%p) acquired at:\n", rm->id,
-           reinterpret_cast<void *>(rm->addr));
-  }
+  Printf("  Mutex M%u (%p) created at:\n", rm->id,
+         reinterpret_cast<void *>(rm->addr));
   Printf("%s", d.Default());
   PrintStack(rm->stack);
 }
@@ -361,7 +356,7 @@ void PrintReport(const ReportDesc *rep) {
 
   if (rep->typ != ReportTypeDeadlock) {
     for (uptr i = 0; i < rep->mutexes.Size(); i++)
-      PrintMutex(rep->mutexes[i], rep->typ);
+      PrintMutex(rep->mutexes[i]);
   }
 
   for (uptr i = 0; i < rep->threads.Size(); i++)

@@ -436,9 +436,9 @@ void __tsan_mutex_post_divert(void *addr, unsigned flagz) {
   ThreadIgnoreSyncBegin(thr, 0);
 }
 
-static void ReportMutexCannotBeLocked(ThreadState *thr, uptr pc) {
+static void ReportMutexHeldWrongContext(ThreadState *thr, uptr pc) {
   ThreadRegistryLock l(&ctx->thread_registry);
-  ScopedReport rep(ReportTypeMutexCannotBeLocked);
+  ScopedReport rep(ReportTypeMutexHeldWrongContext);
   for (uptr i = 0; i < thr->mset.Size(); ++i) {
     MutexSet::Desc desc = thr->mset.Get(i);
     rep.AddMutex(desc.addr, desc.stack_id);
@@ -455,6 +455,6 @@ void __tsan_check_no_mutexes_held() {
   if (thr->mset.Size() == 0) {
     return;
   }
-  ReportMutexCannotBeLocked(thr, pc);
+  ReportMutexHeldWrongContext(thr, pc);
 }
 }  // extern "C"
