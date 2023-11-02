@@ -17,8 +17,8 @@
 # CHECK-NEXT:  0000 {{.*}}000 00000000 {{.*}}000 00000000
 # CHECK-NEXT:  0010 00000000  00000000 {{.*}}000 00000000
 # CHECK:      Contents of section .debug_foo:
-# CHECK-NEXT:  0000 00000000 00000000 08000000 00000000
-# CHECK-NEXT:  0010 00000000 00000000 08000000 00000000
+# CHECK-NEXT:  0000 00000000 00000000 00000000 00000000
+# CHECK-NEXT:  0010 00000000 00000000 00000000 00000000
 
 # REL:      Relocations [
 # REL-NEXT:   .rela.text {
@@ -80,8 +80,6 @@ group:
 .section .debug_foo
   .quad .text.1+8
 
-## We only deal with DW_FORM_addr. Don't special case short-range absolute
-## relocations. Treat them like regular absolute relocations referencing
-## discarded symbols, which are resolved to the addend.
+## Treat short-range absolute relocations the same as DW_FORM_addr.
   .long .text.1+8
   .long 0

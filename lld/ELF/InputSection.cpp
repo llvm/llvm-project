@@ -884,8 +884,6 @@ void InputSection::relocateNonAlloc(uint8_t *buf, ArrayRef<RelTy> rels) {
   const unsigned bits = sizeof(typename ELFT::uint) * 8;
   const TargetInfo &target = *elf::target;
   const bool isDebug = isDebugSection(*this);
-  const bool isDebugLocOrRanges =
-      isDebug && (name == ".debug_loc" || name == ".debug_ranges");
   const bool isDebugNames = isDebug && name == ".debug_names";
   const bool isDebugLine = isDebug && name == ".debug_line";
   std::optional<uint64_t> tombstone;
@@ -895,6 +893,16 @@ void InputSection::relocateNonAlloc(uint8_t *buf, ArrayRef<RelTy> rels) {
       break;
     }
 
+  const uint64_t debugTombstone = StringSwitch<uint64_t>(name)
+                                      .Case(".debug_ranges", 1)
+                                      .Case(".debug_loc", 1)
+                                      .Case(".debug_names", llvm::maxUIntN(32))
+                                      .Default(0);
+  // If -z dead-reloc-in-nonalloc= is specified, respect it.
+  if (!tombstone && isDebug)
+    tombstone = debugTombstone;
+  else if (tombstone)
+    tombstone = SignExtend64<bits>(*tombstone);
   for (const RelTy &rel : rels) {
     RelType type = rel.getType(config->isMips64EL);
 
@@ -916,9 +924,7 @@ void InputSection::relocateNonAlloc(uint8_t *buf, ArrayRef<RelTy> rels) {
     if (expr == R_NONE)
       continue;
 
-    if (tombstone ||
-        ((isDebug && (type == target.symbolicRel || expr == R_DTPREL))) ||
-        isDebugNames) {
+    if (tombstone) {
       // Resolve relocations in .debug_* referencing (discarded symbols or ICF
       // folded section symbols) to a tombstone value. Resolving to addend is
       // unsatisfactory because the result address range may collide with a
@@ -948,27 +954,13 @@ void InputSection::relocateNonAlloc(uint8_t *buf, ArrayRef<RelTy> rels) {
       // TODO To reduce disruption, we use 0 instead of -1 as the tombstone
       // value. Enable -1 in a future release.
 
-      if (isDebugNames && dyn_cast<Undefined>(&sym)) {
-        uint64_t maxVal = 0;
-        switch (type) {
-        case R_X86_64_64:
-          maxVal = llvm::maxUIntN(64);
-          break;
-        case R_X86_64_32:
-          maxVal = llvm::maxUIntN(32);
-          break;
-        default:
-          llvm_unreachable("Unsupported relocation type in .debug_names.");
-        }
-        target.relocateNoSym(bufLoc, type, SignExtend64<bits>(maxVal));
-        continue;
-      }
+      // Extend to 64bit MAX for 64 bit relocations, LocalTU, in .debug_names.
+      if (isDebugNames && type == target.symbolicRel)
+        tombstone = SignExtend64<32>(*tombstone);
+
       auto *ds = dyn_cast<Defined>(&sym);
       if (!sym.getOutputSection() || (ds && ds->folded && !isDebugLine)) {
-        // If -z dead-reloc-in-nonalloc= is specified, respect it.
-        const uint64_t value = tombstone ? SignExtend64<bits>(*tombstone)
-                                         : (isDebugLocOrRanges ? 1 : 0);
-        target.relocateNoSym(bufLoc, type, value);
+        target.relocateNoSym(bufLoc, type, *tombstone);
         continue;
       }
     }
