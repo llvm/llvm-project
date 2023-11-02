@@ -160,7 +160,7 @@ DPValue *DPValue::clone() const { return new DPValue(*this); }
 
 DbgVariableIntrinsic *
 DPValue::createDebugIntrinsic(Module *M, Instruction *InsertBefore) const {
-  DICompileUnit *Unit =
+  [[maybe_unused]] DICompileUnit *Unit =
       getDebugLoc().get()->getScope()->getSubprogram()->getUnit();
   assert(M && Unit &&
          "Cannot clone from BasicBlock that is not part of a Module or "
