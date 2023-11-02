@@ -4059,28 +4059,6 @@ public:
   static bool classofKind(Kind K) { return K == Enum; }
 };
 
-/// Enum that represents the different ways arguments are passed to and
-/// returned from function calls. This takes into account the target-specific
-/// and version-specific rules along with the rules determined by the
-/// language.
-enum class ArgPassingKind {
-  /// The argument of this type can be passed directly in registers.
-  CanPassInRegs,
-
-  /// The argument of this type cannot be passed directly in registers.
-  /// Records containing this type as a subobject are not forced to be passed
-  /// indirectly. This value is used only in C++. This value is required by
-  /// C++ because, in uncommon situations, it is possible for a class to have
-  /// only trivial copy/move constructors even when one of its subobjects has
-  /// a non-trivial copy/move constructor (if e.g. the corresponding copy/move
-  /// constructor in the derived class is deleted).
-  CannotPassInRegs,
-
-  /// The argument of this type cannot be passed directly in registers.
-  /// Records containing this type as a subobject are forced to be passed
-  /// indirectly.
-  CanNeverPassInRegs
-};
 
 /// Represents a struct/union/class.  For example:
 ///   struct X;                  // Forward declaration, no "body".
@@ -4092,28 +4070,6 @@ class RecordDecl : public TagDecl {
 public:
   friend class DeclContext;
   friend class ASTDeclReader;
-  /// Enum that represents the different ways arguments are passed to and
-  /// returned from function calls. This takes into account the target-specific
-  /// and version-specific rules along with the rules determined by the
-  /// language.
-  enum ArgPassingKind : unsigned {
-    /// The argument of this type can be passed directly in registers.
-    APK_CanPassInRegs,
-
-    /// The argument of this type cannot be passed directly in registers.
-    /// Records containing this type as a subobject are not forced to be passed
-    /// indirectly. This value is used only in C++. This value is required by
-    /// C++ because, in uncommon situations, it is possible for a class to have
-    /// only trivial copy/move constructors even when one of its subobjects has
-    /// a non-trivial copy/move constructor (if e.g. the corresponding copy/move
-    /// constructor in the derived class is deleted).
-    APK_CannotPassInRegs,
-
-    /// The argument of this type cannot be passed directly in registers.
-    /// Records containing this type as a subobject are forced to be passed
-    /// indirectly.
-    APK_CanNeverPassInRegs
-  };
 
 protected:
   RecordDecl(Kind DK, TagKind TK, const ASTContext &C, DeclContext *DC,
@@ -4238,7 +4194,7 @@ public:
   /// it must have at least one trivial, non-deleted copy or move constructor.
   /// FIXME: This should be set as part of completeDefinition.
   bool canPassInRegisters() const {
-    return getArgPassingRestrictions() == APK_CanPassInRegs;
+    return getArgPassingRestrictions() == ArgPassingKind::CanPassInRegs;
   }
 
   ArgPassingKind getArgPassingRestrictions() const {
@@ -4246,7 +4202,7 @@ public:
   }
 
   void setArgPassingRestrictions(ArgPassingKind Kind) {
-    RecordDeclBits.ArgPassingRestrictions = Kind;
+    RecordDeclBits.ArgPassingRestrictions = llvm::to_underlying(Kind);
   }
 
   bool isParamDestroyedInCallee() const {

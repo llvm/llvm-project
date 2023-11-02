@@ -522,7 +522,7 @@ void ASTDeclWriter::VisitRecordDecl(RecordDecl *D) {
   Record.push_back(D->hasNonTrivialToPrimitiveDestructCUnion());
   Record.push_back(D->hasNonTrivialToPrimitiveCopyCUnion());
   Record.push_back(D->isParamDestroyedInCallee());
-  Record.push_back(D->getArgPassingRestrictions());
+  Record.push_back(llvm::to_underlying(D->getArgPassingRestrictions()));
   // Only compute this for C/Objective-C, in C++ this is computed as part
   // of CXXRecordDecl.
   if (!isa<CXXRecordDecl>(D))
