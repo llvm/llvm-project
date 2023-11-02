@@ -7,7 +7,6 @@
 ! UNSUPPORTED: x86_64-pc-linux-gnu-LTO
 
 ! RUN: %libomptarget-compile-fortran-run-and-check-generic
-! XFAIL: *
 
 program main
   use omp_lib
@@ -15,11 +14,11 @@ program main
   common var4
   var4 = 24
   tmp = 12
-  print *, "var4 before target = ", var4
+  print *, "var4 before target =", var4
   !$omp target map(tofrom:var4)
     var4 = tmp
   !$omp end target
-  print *, "var4 after target = ", var4
+  print *, "var4 after target =", var4
 end program
 
 ! CHECK: var4 before target = 24
