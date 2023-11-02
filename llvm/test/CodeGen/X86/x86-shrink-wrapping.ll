@@ -642,11 +642,11 @@ define void @useLEA(ptr readonly %x) {
 ; ENABLE-NEXT:    testq %rdi, %rdi
 ; ENABLE-NEXT:    je LBB8_9
 ; ENABLE-NEXT:  ## %bb.1: ## %if.end
-; ENABLE-NEXT:    cmpw $66, (%rdi)
-; ENABLE-NEXT:    jne LBB8_9
-; ENABLE-NEXT:  ## %bb.2: ## %lor.lhs.false
 ; ENABLE-NEXT:    pushq %rax
 ; ENABLE-NEXT:    .cfi_def_cfa_offset 16
+; ENABLE-NEXT:    cmpw $66, (%rdi)
+; ENABLE-NEXT:    jne LBB8_8
+; ENABLE-NEXT:  ## %bb.2: ## %lor.lhs.false
 ; ENABLE-NEXT:    movq 8(%rdi), %rdi
 ; ENABLE-NEXT:    movzwl (%rdi), %eax
 ; ENABLE-NEXT:    leal -54(%rax), %ecx

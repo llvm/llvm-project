@@ -11,45 +11,43 @@ target triple = "thumbv7-unknown-linux-gnueabihf"
 define i1 @foo(ptr %ha, i32 %he) !prof !39 {
 ; CHECK-LABEL: foo:
 ; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    .save {r7, lr}
+; CHECK-NEXT:    push {r7, lr}
 ; CHECK-NEXT:    ldr r2, [r0]
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    itt eq
 ; CHECK-NEXT:    moveq r0, #0
-; CHECK-NEXT:    bxeq lr
-; CHECK-NEXT:  .LBB0_1: @ %for.body.preheader
-; CHECK-NEXT:    .save {r7, lr}
-; CHECK-NEXT:    push {r7, lr}
-; CHECK-NEXT:    b .LBB0_3
+; CHECK-NEXT:    popeq {r7, pc}
+; CHECK-NEXT:  .LBB0_1: @ %for.body
+; CHECK-NEXT:    @ =>This Loop Header: Depth=1
+; CHECK-NEXT:    @ Child Loop BB0_4 Depth 2
+; CHECK-NEXT:    ldr r0, [r2, #4]
+; CHECK-NEXT:    cbnz r0, .LBB0_3
 ; CHECK-NEXT:  .LBB0_2: @ %for.inc
-; CHECK-NEXT:    @ in Loop: Header=BB0_3 Depth=1
+; CHECK-NEXT:    @ in Loop: Header=BB0_1 Depth=1
 ; CHECK-NEXT:    ldr r2, [r2]
 ; CHECK-NEXT:    movs r0, #0
 ; CHECK-NEXT:    cmp r2, #0
 ; CHECK-NEXT:    it eq
 ; CHECK-NEXT:    popeq {r7, pc}
-; CHECK-NEXT:  .LBB0_3: @ %for.body
-; CHECK-NEXT:    @ =>This Loop Header: Depth=1
-; CHECK-NEXT:    @ Child Loop BB0_5 Depth 2
-; CHECK-NEXT:    ldr r0, [r2, #4]
-; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    beq .LBB0_2
-; CHECK-NEXT:  @ %bb.4: @ %if.then
-; CHECK-NEXT:    @ in Loop: Header=BB0_3 Depth=1
+; CHECK-NEXT:    b .LBB0_1
+; CHECK-NEXT:  .LBB0_3: @ %if.then
+; CHECK-NEXT:    @ in Loop: Header=BB0_1 Depth=1
 ; CHECK-NEXT:    ldrd r3, r0, [r0]
 ; CHECK-NEXT:    sub.w r12, r0, #4
-; CHECK-NEXT:  .LBB0_5: @ %for.cond.i
-; CHECK-NEXT:    @ Parent Loop BB0_3 Depth=1
+; CHECK-NEXT:  .LBB0_4: @ %for.cond.i
+; CHECK-NEXT:    @ Parent Loop BB0_1 Depth=1
 ; CHECK-NEXT:    @ => This Inner Loop Header: Depth=2
 ; CHECK-NEXT:    cmp r3, #1
 ; CHECK-NEXT:    blt .LBB0_2
-; CHECK-NEXT:  @ %bb.6: @ %for.body.i
-; CHECK-NEXT:    @ in Loop: Header=BB0_5 Depth=2
+; CHECK-NEXT:  @ %bb.5: @ %for.body.i
+; CHECK-NEXT:    @ in Loop: Header=BB0_4 Depth=2
 ; CHECK-NEXT:    ldr.w lr, [r12, r3, lsl #2]
 ; CHECK-NEXT:    subs r3, #1
 ; CHECK-NEXT:    movs r0, #1
 ; CHECK-NEXT:    cmp lr, r1
-; CHECK-NEXT:    bne .LBB0_5
-; CHECK-NEXT:  @ %bb.7:
+; CHECK-NEXT:    bne .LBB0_4
+; CHECK-NEXT:  @ %bb.6: @ %return
 ; CHECK-NEXT:    pop {r7, pc}
 entry:
   %TargetPtr = load ptr, ptr %ha, align 4
