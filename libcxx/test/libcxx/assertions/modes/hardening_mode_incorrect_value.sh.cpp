@@ -11,8 +11,14 @@
 
 // Modules build produces a different error ("Could not build module 'std'").
 // UNSUPPORTED: clang-modules-build
-// ADDITIONAL_COMPILE_FLAGS: -Wno-macro-redefined -D_LIBCPP_HARDENING_MODE=42
+
+// RUN: %{verify} -Wno-macro-redefined -D_LIBCPP_HARDENING_MODE=42
+// Make sure that common cases of misuse produce readable errors. We deliberately disallow setting the hardening mode as
+// if it were a boolean flag.
+// RUN: %{verify} -Wno-macro-redefined -D_LIBCPP_HARDENING_MODE=0
+// RUN: %{verify} -Wno-macro-redefined -D_LIBCPP_HARDENING_MODE=1
+// RUN: %{verify} -Wno-macro-redefined -D_LIBCPP_HARDENING_MODE
 
 #include <cassert>
 
-// expected-error@*:*  {{_LIBCPP_HARDENING_MODE must be set to one of the following values: _LIBCPP_HARDENING_MODE_NONE, _LIBCPP_HARDENING_MODE_FAST, _LIBCPP_HARDENING_MODE_STRICT, _LIBCPP_HARDENING_MODE_DEBUG}}
+// expected-error@*:* {{_LIBCPP_HARDENING_MODE must be set to one of the following values: _LIBCPP_HARDENING_MODE_NONE, _LIBCPP_HARDENING_MODE_FAST, _LIBCPP_HARDENING_MODE_STRICT, _LIBCPP_HARDENING_MODE_DEBUG}}
