@@ -632,11 +632,18 @@ genBaseBoundsOps(fir::FirOpBuilder &builder, mlir::Location loc,
   for (std::size_t dim = 0; dim < dataExv.rank(); ++dim) {
     mlir::Value baseLb =
         fir::factory::readLowerBound(builder, loc, dataExv, dim, one);
+    mlir::Value zero = builder.createIntegerConstant(loc, idxTy, 0);
+    mlir::Value ub;
+    mlir::Value lb = zero;
     mlir::Value ext = fir::factory::readExtent(builder, loc, dataExv, dim);
-    mlir::Value lb = builder.createIntegerConstant(loc, idxTy, 0);
+    if (mlir::isa<fir::UndefOp>(ext.getDefiningOp())) {
+      ext = zero;
+      ub = lb;
+    } else {
+      // ub = extent - 1
+      ub = builder.create<mlir::arith::SubIOp>(loc, ext, one);
+    }
 
-    // ub = extent - 1
-    mlir::Value ub = builder.create<mlir::arith::SubIOp>(loc, ext, one);
     mlir::Value bound =
         builder.create<BoundsOp>(loc, boundTy, lb, ub, ext, one, false, baseLb);
     bounds.push_back(bound);
@@ -738,7 +745,7 @@ genBoundsOps(fir::FirOpBuilder &builder, mlir::Location loc,
           const auto &strideExpr{std::get<2>(triplet->t)};
           if (strideExpr) {
             mlir::emitError(loc, "stride cannot be specified on "
-                                 "an OpenMP array section");
+                                 "an array section");
             break;
           }
         }
