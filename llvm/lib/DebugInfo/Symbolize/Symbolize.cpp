@@ -55,7 +55,7 @@ template <typename T>
 Expected<DILineInfo>
 LLVMSymbolizer::symbolizeCodeCommon(const T &ModuleSpecifier,
                                     object::SectionedAddress ModuleOffset,
-                                    bool nearest) {
+                                    bool Nearest) {
 
   auto InfoOrErr = getOrCreateModuleInfo(ModuleSpecifier);
   if (!InfoOrErr)
@@ -103,22 +103,22 @@ LLVMSymbolizer::symbolizeCodeCommon(const T &ModuleSpecifier,
 Expected<DILineInfo>
 LLVMSymbolizer::symbolizeCode(const ObjectFile &Obj,
                               object::SectionedAddress ModuleOffset,
-                              bool nearest) {
-  return symbolizeCodeCommon(Obj, ModuleOffset, nearest);
+                              bool Nearest) {
+  return symbolizeCodeCommon(Obj, ModuleOffset, Nearest);
 }
 
 Expected<DILineInfo>
 LLVMSymbolizer::symbolizeCode(const std::string &ModuleName,
                               object::SectionedAddress ModuleOffset,
-                              bool nearest) {
-  return symbolizeCodeCommon(ModuleName, ModuleOffset, nearest);
+                              bool Nearest) {
+  return symbolizeCodeCommon(ModuleName, ModuleOffset, Nearest);
 }
 
 Expected<DILineInfo>
 LLVMSymbolizer::symbolizeCode(ArrayRef<uint8_t> BuildID,
                               object::SectionedAddress ModuleOffset,
-                              bool nearest) {
-  return symbolizeCodeCommon(BuildID, ModuleOffset, nearest);
+                              bool Nearest) {
+  return symbolizeCodeCommon(BuildID, ModuleOffset, Nearest);
 }
 
 template <typename T>
