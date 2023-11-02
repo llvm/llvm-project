@@ -708,7 +708,7 @@ ItaniumMangleContextImpl::getEffectiveDeclContext(const Decl *D) {
 }
 
 bool ItaniumMangleContextImpl::isInternalLinkageDecl(const NamedDecl *ND) {
-  if (ND && ND->getFormalLinkage() == InternalLinkage &&
+  if (ND && ND->getFormalLinkage() == Linkage::Internal &&
       !ND->isExternallyVisible() &&
       getEffectiveDeclContext(ND)->isFileContext() &&
       !ND->isInAnonymousNamespace())
@@ -790,7 +790,7 @@ bool ItaniumMangleContextImpl::shouldMangleCXXName(const NamedDecl *D) {
     if (DC->isFunctionOrMethod() && D->hasLinkage())
       while (!DC->isFileContext())
         DC = getEffectiveParentContext(DC);
-    if (DC->isTranslationUnit() && D->getFormalLinkage() != InternalLinkage &&
+    if (DC->isTranslationUnit() && D->getFormalLinkage() != Linkage::Internal &&
         !CXXNameMangler::shouldHaveAbiTags(*this, VD) &&
         !isa<VarTemplateSpecializationDecl>(VD) &&
         !VD->getOwningModuleForLinkage())

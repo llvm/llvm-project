@@ -1606,11 +1606,11 @@ ASTDeclReader::RedeclarableResult ASTDeclReader::VisitVarDeclImpl(VarDecl *VD) {
     VD->setType(Reader.GetType(DeferredTypeID));
   DeferredTypeID = 0;
 
-  auto VarLinkage = Linkage(Record.readInt());
+  auto VarLinkage = static_cast<Linkage>(Record.readInt());
   VD->setCachedLinkage(VarLinkage);
 
   // Reconstruct the one piece of the IdentifierNamespace that we need.
-  if (VD->getStorageClass() == SC_Extern && VarLinkage != NoLinkage &&
+  if (VD->getStorageClass() == SC_Extern && VarLinkage != Linkage::None &&
       VD->getLexicalDeclContext()->isFunctionOrMethod())
     VD->setLocalExternDecl();
 

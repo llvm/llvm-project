@@ -49,7 +49,7 @@ class ExternalSourceSymbolAttr;
 class FunctionDecl;
 class FunctionType;
 class IdentifierInfo;
-enum Linkage : unsigned char;
+enum class Linkage : unsigned char;
 class LinkageSpecDecl;
 class Module;
 class NamedDecl;
@@ -335,7 +335,6 @@ protected:
   unsigned IdentifierNamespace : 14;
 
   /// If 0, we have not computed the linkage of this declaration.
-  /// Otherwise, it is the linkage + 1.
   mutable unsigned CacheValidAndLinkage : 3;
 
   /// Allocate memory for a deserialized declaration.
@@ -386,7 +385,7 @@ protected:
         Implicit(false), Used(false), Referenced(false),
         TopLevelDeclInObjCContainer(false), Access(AS_none), FromASTFile(0),
         IdentifierNamespace(getIdentifierNamespaceForKind(DK)),
-        CacheValidAndLinkage(0) {
+        CacheValidAndLinkage(llvm::to_underlying(Linkage::Invalid)) {
     if (StatisticsEnabled) add(DK);
   }
 
@@ -395,7 +394,7 @@ protected:
         Used(false), Referenced(false), TopLevelDeclInObjCContainer(false),
         Access(AS_none), FromASTFile(0),
         IdentifierNamespace(getIdentifierNamespaceForKind(DK)),
-        CacheValidAndLinkage(0) {
+        CacheValidAndLinkage(llvm::to_underlying(Linkage::Invalid)) {
     if (StatisticsEnabled) add(DK);
   }
 
@@ -405,11 +404,11 @@ protected:
   void updateOutOfDate(IdentifierInfo &II) const;
 
   Linkage getCachedLinkage() const {
-    return Linkage(CacheValidAndLinkage - 1);
+    return static_cast<Linkage>(CacheValidAndLinkage);
   }
 
   void setCachedLinkage(Linkage L) const {
-    CacheValidAndLinkage = L + 1;
+    CacheValidAndLinkage = llvm::to_underlying(L);
   }
 
   bool hasCachedLinkage() const {

@@ -683,7 +683,7 @@ void ASTDeclWriter::VisitFunctionDecl(FunctionDecl *D) {
   Record.push_back(D->isMultiVersion());
   Record.push_back(D->isLateTemplateParsed());
   Record.push_back(D->FriendConstraintRefersToEnclosingTemplate());
-  Record.push_back(D->getLinkageInternal());
+  Record.push_back(llvm::to_underlying(D->getLinkageInternal()));
   Record.AddSourceLocation(D->getEndLoc());
   Record.AddSourceLocation(D->getDefaultLoc());
 
@@ -1067,7 +1067,7 @@ void ASTDeclWriter::VisitVarDecl(VarDecl *D) {
     HasDeducedType = D->getType()->getContainedDeducedType();
     Record.push_back(HasDeducedType);
   }
-  Record.push_back(D->getLinkageInternal());
+  Record.push_back(llvm::to_underlying(D->getLinkageInternal()));
 
   if (D->hasAttr<BlocksAttr>()) {
     BlockVarCopyInit Init = Writer.Context->getBlockVarCopyInit(D);
@@ -2214,7 +2214,7 @@ void ASTWriter::WriteDeclAbbrevs() {
   Abv->Add(BitCodeAbbrevOp(0));                       // TSCSpec
   Abv->Add(BitCodeAbbrevOp(0));                       // InitStyle
   Abv->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // isARCPseudoStrong
-  Abv->Add(BitCodeAbbrevOp(0));                       // Linkage
+  Abv->Add(BitCodeAbbrevOp(1));                         // Linkage::None
   Abv->Add(BitCodeAbbrevOp(0));                       // ModulesCodegen
   Abv->Add(BitCodeAbbrevOp(0));                       // VarKind (local enum)
   // ParmVarDecl

@@ -844,7 +844,7 @@ static bool checkExportedDecl(Sema &S, Decl *D, SourceLocation BlockStart) {
     // Don't diagnose anonymous union objects; we'll diagnose their members
     // instead.
     HasName = (bool)ND->getDeclName();
-    if (HasName && ND->getFormalLinkage() == InternalLinkage) {
+    if (HasName && ND->getFormalLinkage() == Linkage::Internal) {
       S.Diag(ND->getLocation(), diag::err_export_internal) << ND;
       if (BlockStart.isValid())
         S.Diag(BlockStart, diag::note_export);
@@ -858,9 +858,9 @@ static bool checkExportedDecl(Sema &S, Decl *D, SourceLocation BlockStart) {
   if (auto *USD = dyn_cast<UsingShadowDecl>(D)) {
     NamedDecl *Target = USD->getUnderlyingDecl();
     Linkage Lk = Target->getFormalLinkage();
-    if (Lk == InternalLinkage || Lk == ModuleLinkage) {
+    if (Lk == Linkage::Internal || Lk == Linkage::Module) {
       S.Diag(USD->getLocation(), diag::err_export_using_internal)
-          << (Lk == InternalLinkage ? 0 : 1) << Target;
+          << (Lk == Linkage::Internal ? 0 : 1) << Target;
       S.Diag(Target->getLocation(), diag::note_using_decl_target);
       if (BlockStart.isValid())
         S.Diag(BlockStart, diag::note_export);

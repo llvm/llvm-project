@@ -3706,14 +3706,17 @@ static llvm::GlobalVariable::LinkageTypes getTypeInfoLinkage(CodeGenModule &CGM,
     return llvm::GlobalValue::InternalLinkage;
 
   switch (Ty->getLinkage()) {
-  case NoLinkage:
-  case InternalLinkage:
-  case UniqueExternalLinkage:
+  case Linkage::Invalid:
+    llvm_unreachable("Linkage hasn't been computed!");
+
+  case Linkage::None:
+  case Linkage::Internal:
+  case Linkage::UniqueExternal:
     return llvm::GlobalValue::InternalLinkage;
 
-  case VisibleNoLinkage:
-  case ModuleLinkage:
-  case ExternalLinkage:
+  case Linkage::VisibleNone:
+  case Linkage::Module:
+  case Linkage::External:
     // RTTI is not enabled, which means that this type info struct is going
     // to be used for exception handling. Give it linkonce_odr linkage.
     if (!CGM.getLangOpts().RTTI)

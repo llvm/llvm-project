@@ -1204,12 +1204,11 @@ Linkage NamedDecl::getFormalLinkage() const {
   // [basic.namespace.general]/p2
   //   A namespace is never attached to a named module and never has a name with
   //   module linkage.
-  if (isInModulePurview(this) &&
-      InternalLinkage == ExternalLinkage &&
+  if (isInModulePurview(this) && InternalLinkage == Linkage::External &&
       !isExportedFromModuleInterfaceUnit(
           cast<NamedDecl>(this->getCanonicalDecl())) &&
       !isa<NamespaceDecl>(this))
-    InternalLinkage = ModuleLinkage;
+    InternalLinkage = Linkage::Module;
 
   return clang::getFormalLinkage(InternalLinkage);
 }
@@ -1337,7 +1336,7 @@ LinkageInfo LinkageComputer::getLVForClosure(const DeclContext *DC,
   // visible, then the lambda is too. We apply the same rules to blocks.
   if (!isExternallyVisible(OwnerLV.getLinkage()))
     return LinkageInfo::none();
-  return LinkageInfo(VisibleNoLinkage, OwnerLV.getVisibility(),
+  return LinkageInfo(Linkage::VisibleNone, OwnerLV.getVisibility(),
                      OwnerLV.isVisibilityExplicit());
 }
 
@@ -1382,7 +1381,7 @@ LinkageInfo LinkageComputer::getLVForLocalDecl(const NamedDecl *D,
 
       if (const VarDecl *Prev = Var->getPreviousDecl()) {
         LinkageInfo PrevLV = getLVForDecl(Prev, computation);
-        if (PrevLV.getLinkage())
+        if (PrevLV.getLinkage() != Linkage::Invalid)
           LV.setLinkage(PrevLV.getLinkage());
         LV.mergeVisibility(PrevLV);
       }
@@ -1433,14 +1432,14 @@ LinkageInfo LinkageComputer::getLVForLocalDecl(const NamedDecl *D,
             computation.isValueVisibility()
                 ? Context.getLangOpts().getValueVisibilityMode()
                 : Context.getLangOpts().getTypeVisibilityMode();
-        return LinkageInfo(VisibleNoLinkage, globalVisibility,
+        return LinkageInfo(Linkage::VisibleNone, globalVisibility,
                            /*visibilityExplicit=*/false);
       }
     }
   }
   if (!isExternallyVisible(LV.getLinkage()))
     return LinkageInfo::none();
-  return LinkageInfo(VisibleNoLinkage, LV.getVisibility(),
+  return LinkageInfo(Linkage::VisibleNone, LV.getVisibility(),
                      LV.isVisibilityExplicit());
 }
 
@@ -1921,7 +1920,20 @@ bool NamedDecl::declarationReplaces(NamedDecl *OldD, bool IsKnownNewer) const {
 }
 
 bool NamedDecl::hasLinkage() const {
-  return getFormalLinkage() != NoLinkage;
+  switch (getFormalLinkage()) {
+  case Linkage::Invalid:
+    llvm_unreachable("Linkage hasn't been computed!");
+  case Linkage::None:
+    return false;
+  case Linkage::Internal:
+    return true;
+  case Linkage::UniqueExternal:
+  case Linkage::VisibleNone:
+    llvm_unreachable("Non-formal linkage is not allowed here!");
+  case Linkage::Module:
+  case Linkage::External:
+    return true;
+  }
 }
 
 NamedDecl *NamedDecl::getUnderlyingDeclImpl() {
