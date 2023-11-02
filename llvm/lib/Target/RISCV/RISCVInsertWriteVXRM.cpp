@@ -217,11 +217,6 @@ bool RISCVInsertWriteVXRM::computeVXRMChanges(const MachineBasicBlock &MBB) {
       continue;
     }
 
-    if (MI.getOpcode() == RISCV::WriteVXRMImm) {
-      BBInfo.VXRMOut.setVXRMImm(MI.getOperand(0).getImm());
-      continue;
-    }
-
     if (MI.isCall() || MI.isInlineAsm() || MI.modifiesRegister(RISCV::VXRM)) {
       if (!BBInfo.VXRMUse.isValid())
         BBInfo.VXRMUse.setUnknown();
@@ -324,12 +319,15 @@ void RISCVInsertWriteVXRM::emitWriteVXRM(MachineBasicBlock &MBB) {
 
   VXRMInfo Info = BBInfo.AvailableIn;
 
+  // Flag to indicates we need to insert a VXRM write. We want to delay it as
+  // late as possible in this block.
+  bool PendingInsert = false;
+
   // Insert VXRM write if anticipated and not available.
   if (BBInfo.AnticipatedIn.isStatic()) {
-    bool NeedInsert = false;
     // If this is the entry block and the value is anticipated, insert.
     if (MBB.isEntryBlock()) {
-      NeedInsert = true;
+      PendingInsert = true;
     } else {
       // Search for any predecessors that wouldn't satisfy our requirement and
       // insert a write VXRM if needed.
@@ -350,20 +348,11 @@ void RISCVInsertWriteVXRM::emitWriteVXRM(MachineBasicBlock &MBB) {
             PInfo.AnticipatedOut.getVXRMImm() ==
                 BBInfo.AnticipatedIn.getVXRMImm())
           continue;
-        NeedInsert = true;
+        PendingInsert = true;
         break;
       }
     }
 
-    if (NeedInsert) {
-      LLVM_DEBUG(dbgs() << "Inserting at beginning of "
-                        << printMBBReference(MBB) << " changing to "
-                        << BBInfo.AnticipatedIn << "\n");
-      BuildMI(MBB, MBB.getFirstNonPHI(), DebugLoc(),
-              TII->get(RISCV::WriteVXRMImm))
-          .addImm(BBInfo.AnticipatedIn.getVXRMImm());
-      Info.setVXRMImm(BBInfo.AnticipatedIn.getVXRMImm());
-    }
     Info = BBInfo.AnticipatedIn;
   }
 
@@ -372,20 +361,20 @@ void RISCVInsertWriteVXRM::emitWriteVXRM(MachineBasicBlock &MBB) {
     if (VXRMIdx >= 0) {
       unsigned NewVXRMImm = MI.getOperand(VXRMIdx).getImm();
 
-      if (!Info.isStatic() || Info.getVXRMImm() != NewVXRMImm) {
+      if (PendingInsert || !Info.isStatic() ||
+          Info.getVXRMImm() != NewVXRMImm) {
+        assert((!PendingInsert ||
+                (Info.isStatic() && Info.getVXRMImm() == NewVXRMImm)) &&
+               "Pending VXRM insertion mismatch");
         LLVM_DEBUG(dbgs() << "Inserting before "; MI.print(dbgs()));
         BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(RISCV::WriteVXRMImm))
             .addImm(NewVXRMImm);
+        PendingInsert = false;
       }
 
       MI.addOperand(MachineOperand::CreateReg(RISCV::VXRM, /*IsDef*/ false,
                                               /*IsImp*/ true));
       Info.setVXRMImm(NewVXRMImm);
-      continue;
-    }
-
-    if (MI.getOpcode() == RISCV::WriteVXRMImm) {
-      Info.setVXRMImm(MI.getOperand(0).getImm());
       continue;
     }
 
@@ -398,9 +387,14 @@ void RISCVInsertWriteVXRM::emitWriteVXRM(MachineBasicBlock &MBB) {
   // correct value. This can occur on critical edges. If we don't split the
   // critical edge we'll also have a write vxrm in the succesor that is
   // redundant with this one.
-  if (BBInfo.AnticipatedOut.isStatic() &&
-      (!Info.isStatic() ||
-       Info.getVXRMImm() != BBInfo.AnticipatedOut.getVXRMImm())) {
+  if (PendingInsert ||
+      (BBInfo.AnticipatedOut.isStatic() &&
+       (!Info.isStatic() ||
+        Info.getVXRMImm() != BBInfo.AnticipatedOut.getVXRMImm()))) {
+    assert((!PendingInsert ||
+            (Info.isStatic() && BBInfo.AnticipatedOut.isStatic() &&
+             Info.getVXRMImm() == BBInfo.AnticipatedOut.getVXRMImm())) &&
+           "Pending VXRM insertion mismatch");
     LLVM_DEBUG(dbgs() << "Inserting at end of " << printMBBReference(MBB)
                       << " changing to " << BBInfo.AnticipatedOut << "\n");
     BuildMI(MBB, MBB.getFirstTerminator(), DebugLoc(),
