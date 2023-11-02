@@ -252,6 +252,8 @@ public:
     // TODO: Implement diagnostic bucketing to reduce the impact of strict
     // context hashing.
     ScanInstance.getHeaderSearchOpts().ModulesStrictContextHash = true;
+    ScanInstance.getHeaderSearchOpts().ModulesSkipDiagnosticOptions = true;
+    ScanInstance.getHeaderSearchOpts().ModulesSkipHeaderSearchPaths = true;
 
     // Avoid some checks and module map parsing when loading PCM files.
     ScanInstance.getPreprocessorOpts().ModulesCheckRelocated = false;
