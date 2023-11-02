@@ -29,37 +29,15 @@ ScriptedThreadPythonInterface::ScriptedThreadPythonInterface(
     ScriptInterpreterPythonImpl &interpreter)
     : ScriptedThreadInterface(), ScriptedPythonInterface(interpreter) {}
 
-StructuredData::GenericSP ScriptedThreadPythonInterface::CreatePluginObject(
+llvm::Expected<StructuredData::GenericSP>
+ScriptedThreadPythonInterface::CreatePluginObject(
     const llvm::StringRef class_name, ExecutionContext &exe_ctx,
     StructuredData::DictionarySP args_sp, StructuredData::Generic *script_obj) {
-  if (class_name.empty() && !script_obj)
-    return {};
-
-  StructuredDataImpl args_impl(args_sp);
-  std::string error_string;
-
-  Locker py_lock(&m_interpreter, Locker::AcquireLock | Locker::NoSTDIN,
-                 Locker::FreeLock);
-
-  PythonObject ret_val;
-
-  if (!script_obj) {
-    lldb::ExecutionContextRefSP exe_ctx_ref_sp =
-        std::make_shared<ExecutionContextRef>(exe_ctx);
-    ret_val = SWIGBridge::LLDBSwigPythonCreateScriptedObject(
-        class_name.str().c_str(), m_interpreter.GetDictionaryName(),
-        exe_ctx_ref_sp, args_impl, error_string);
-  } else
-    ret_val = PythonObject(PyRefType::Borrowed,
-                           static_cast<PyObject *>(script_obj->GetValue()));
-
-  if (!ret_val)
-    return {};
-
-  m_object_instance_sp =
-      StructuredData::GenericSP(new StructuredPythonObject(std::move(ret_val)));
-
-  return m_object_instance_sp;
+  ExecutionContextRefSP exe_ctx_ref_sp =
+      std::make_shared<ExecutionContextRef>(exe_ctx);
+  StructuredDataImpl sd_impl(args_sp);
+  return ScriptedPythonInterface::CreatePluginObject(class_name, script_obj,
+                                                     exe_ctx_ref_sp, sd_impl);
 }
 
 lldb::tid_t ScriptedThreadPythonInterface::GetThreadID() {

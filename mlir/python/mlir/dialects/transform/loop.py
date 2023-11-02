@@ -18,30 +18,6 @@ from typing import Optional, Union
 
 
 @_ods_cext.register_operation(_Dialect, replace=True)
-class GetParentForOp(GetParentForOp):
-    """Extension for GetParentForOp."""
-
-    def __init__(
-        self,
-        result_type: Type,
-        target: Union[Operation, Value],
-        *,
-        num_loops: Optional[int] = None,
-        ip=None,
-        loc=None,
-    ):
-        if num_loops is None:
-            num_loops = 1
-        super().__init__(
-            result_type,
-            _get_op_result_or_value(target),
-            num_loops=num_loops,
-            ip=ip,
-            loc=loc,
-        )
-
-
-@_ods_cext.register_operation(_Dialect, replace=True)
 class LoopOutlineOp(LoopOutlineOp):
     """Extension for LoopOutlineOp."""
 

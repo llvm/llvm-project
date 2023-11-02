@@ -13,6 +13,39 @@
 #include "llvm/TargetParser/Triple.h"
 using namespace clang;
 
+StringRef clang::languageToString(Language L) {
+  switch (L) {
+  case Language::Unknown:
+    return "Unknown";
+  case Language::Asm:
+    return "Asm";
+  case Language::LLVM_IR:
+    return "LLVM IR";
+  case Language::C:
+    return "C";
+  case Language::CXX:
+    return "C++";
+  case Language::ObjC:
+    return "Objective-C";
+  case Language::ObjCXX:
+    return "Objective-C++";
+  case Language::OpenCL:
+    return "OpenCL";
+  case Language::OpenCLCXX:
+    return "OpenCLC++";
+  case Language::CUDA:
+    return "CUDA";
+  case Language::RenderScript:
+    return "RenderScript";
+  case Language::HIP:
+    return "HIP";
+  case Language::HLSL:
+    return "HLSL";
+  }
+
+  llvm_unreachable("unhandled language kind");
+}
+
 #define LANGSTANDARD(id, name, lang, desc, features)                           \
   static const LangStandard Lang_##id = {name, desc, features, Language::lang};
 #include "clang/Basic/LangStandards.def"

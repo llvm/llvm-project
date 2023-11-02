@@ -23,7 +23,7 @@ class ScriptedThreadPythonInterface : public ScriptedThreadInterface,
 public:
   ScriptedThreadPythonInterface(ScriptInterpreterPythonImpl &interpreter);
 
-  StructuredData::GenericSP
+  llvm::Expected<StructuredData::GenericSP>
   CreatePluginObject(llvm::StringRef class_name, ExecutionContext &exe_ctx,
                      StructuredData::DictionarySP args_sp,
                      StructuredData::Generic *script_obj = nullptr) override;

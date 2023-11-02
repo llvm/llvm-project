@@ -90,7 +90,6 @@ namespace std {
 #include <__type_traits/add_const.h>
 #include <__type_traits/add_pointer.h>
 #include <__type_traits/aligned_storage.h>
-#include <__type_traits/alignment_of.h>
 #include <__type_traits/conditional.h>
 #include <__type_traits/decay.h>
 #include <__type_traits/is_constructible.h>
@@ -156,14 +155,13 @@ add_pointer_t<_ValueType> any_cast(any *) _NOEXCEPT;
 namespace __any_imp
 {
   _LIBCPP_SUPPRESS_DEPRECATED_PUSH
-  using _Buffer = aligned_storage_t<3*sizeof(void*), alignment_of<void*>::value>;
+  using _Buffer = aligned_storage_t<3*sizeof(void*), alignof(void*)>;
   _LIBCPP_SUPPRESS_DEPRECATED_POP
 
   template <class _Tp>
   using _IsSmallObject = integral_constant<bool
         , sizeof(_Tp) <= sizeof(_Buffer)
-          && alignment_of<_Buffer>::value
-             % alignment_of<_Tp>::value == 0
+          && alignof(_Buffer) % alignof(_Tp) == 0
           && is_nothrow_move_constructible<_Tp>::value
         >;
 

@@ -1141,11 +1141,28 @@ bool CombinerHelper::findPreIndexCandidate(GLoadStore &LdSt, Register &Addr,
       return false;
   }
 
+  // Avoid increasing cross-block register pressure.
+  for (auto &AddrUse : MRI.use_nodbg_instructions(Addr))
+    if (AddrUse.getParent() != LdSt.getParent())
+      return false;
+
   // FIXME: check whether all uses of the base pointer are constant PtrAdds.
   // That might allow us to end base's liveness here by adjusting the constant.
+  bool RealUse = false;
+  for (auto &AddrUse : MRI.use_nodbg_instructions(Addr)) {
+    if (!dominates(LdSt, AddrUse))
+      return false; // All use must be dominated by the load/store.
 
-  return all_of(MRI.use_nodbg_instructions(Addr),
-                [&](MachineInstr &UseMI) { return dominates(LdSt, UseMI); });
+    // If Ptr may be folded in addressing mode of other use, then it's
+    // not profitable to do this transformation.
+    if (auto *UseLdSt = dyn_cast<GLoadStore>(&AddrUse)) {
+      if (!canFoldInAddressingMode(UseLdSt, TLI, MRI))
+        RealUse = true;
+    } else {
+      RealUse = true;
+    }
+  }
+  return RealUse;
 }
 
 bool CombinerHelper::matchCombineIndexedLoadStore(
@@ -2332,18 +2349,6 @@ void CombinerHelper::applyCombineExtOfExt(
     Builder.buildInstr(SrcExtOp, {DstReg}, {Reg});
     MI.eraseFromParent();
   }
-}
-
-void CombinerHelper::applyCombineMulByNegativeOne(MachineInstr &MI) {
-  assert(MI.getOpcode() == TargetOpcode::G_MUL && "Expected a G_MUL");
-  Register DstReg = MI.getOperand(0).getReg();
-  Register SrcReg = MI.getOperand(1).getReg();
-  LLT DstTy = MRI.getType(DstReg);
-
-  Builder.setInstrAndDebugLoc(MI);
-  Builder.buildSub(DstReg, Builder.buildConstant(DstTy, 0), SrcReg,
-                   MI.getFlags());
-  MI.eraseFromParent();
 }
 
 bool CombinerHelper::matchCombineTruncOfExt(
