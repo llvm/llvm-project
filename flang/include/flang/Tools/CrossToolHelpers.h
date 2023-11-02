@@ -72,7 +72,7 @@ struct OffloadModuleOpts {
         OpenMPNoNestedParallelism(Opts.OpenMPNoNestedParallelism),
         OpenMPIsTargetDevice(Opts.OpenMPIsTargetDevice),
         OpenMPIsGPU(Opts.OpenMPIsGPU), OpenMPVersion(Opts.OpenMPVersion),
-        OMPHostIRFile(Opts.OMPHostIRFile), NoGPULib(false) {}
+        OMPHostIRFile(Opts.OMPHostIRFile), NoGPULib(Opts.NoGPULib) {}
 
   uint32_t OpenMPTargetDebug = 0;
   bool OpenMPTeamSubscription = false;
@@ -98,7 +98,7 @@ void setOffloadModuleInterfaceAttributes(
     if (Opts.OpenMPIsTargetDevice) {
       offloadMod.setFlags(Opts.OpenMPTargetDebug, Opts.OpenMPTeamSubscription,
           Opts.OpenMPThreadSubscription, Opts.OpenMPNoThreadState,
-          Opts.OpenMPNoNestedParallelism, Opts.OpenMPVersion, false);
+          Opts.OpenMPNoNestedParallelism, Opts.OpenMPVersion, Opts.NoGPULib);
 
       if (!Opts.OMPHostIRFile.empty())
         offloadMod.setHostIRFilePath(Opts.OMPHostIRFile);
