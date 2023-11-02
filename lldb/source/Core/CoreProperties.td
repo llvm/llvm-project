@@ -26,6 +26,9 @@ let Definition = "modulelist" in {
   def SwiftValidateTypeSystem: Property<"swift-validate-typesystem", "Boolean">,
     DefaultFalse,
     Desc<"Validate all Swift typesystem queries. Used for testing an asserts-enabled LLDB only.">;
+  def UseSwiftPreciseCompilerInvocation: Property<"swift-precise-compiler-invocation", "Boolean">,
+    DefaultFalse,
+    Desc<"In the Swift expression evaluator, create many Swift compiler instances with the precise invocation for the current context, instead of a single compiler instance that merges all flags from the entire project.">;
   def SwiftModuleLoadingMode: Property<"swift-module-loading-mode", "Enum">,
     DefaultEnumValue<"eSwiftModuleLoadingModePreferSerialized">,
     EnumValues<"OptionEnumValues(g_swift_module_loading_mode_enums)">,

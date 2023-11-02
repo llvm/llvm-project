@@ -183,6 +183,12 @@ bool ModuleListProperties::GetSwiftValidateTypeSystem() const {
       idx, g_modulelist_properties[idx].default_uint_value != 0);
 }
 
+bool ModuleListProperties::GetUseSwiftPreciseCompilerInvocation() const {
+  const uint32_t idx = ePropertyUseSwiftPreciseCompilerInvocation;
+  return GetPropertyAtIndexAs<bool>(
+      idx, g_modulelist_properties[idx].default_uint_value != 0);
+}
+
 bool ModuleListProperties::SetUseSwiftTypeRefTypeSystem(bool new_value) {
   const uint32_t idx = ePropertyUseSwiftTypeRefTypeSystem;
   return SetPropertyAtIndex(idx, new_value);
