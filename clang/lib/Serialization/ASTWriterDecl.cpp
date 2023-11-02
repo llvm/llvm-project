@@ -1275,7 +1275,7 @@ void ASTDeclWriter::VisitLinkageSpecDecl(LinkageSpecDecl *D) {
                 "LinkageSpecDeclBits");
 
   VisitDecl(D);
-  Record.push_back(D->getLanguage());
+  Record.push_back(llvm::to_underlying(D->getLanguage()));
   Record.AddSourceLocation(D->getExternLoc());
   Record.AddSourceLocation(D->getRBraceLoc());
   Code = serialization::DECL_LINKAGE_SPEC;
