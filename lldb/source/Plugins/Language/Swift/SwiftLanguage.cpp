@@ -1369,8 +1369,16 @@ std::unique_ptr<Language::TypeScavenger> SwiftLanguage::GetTypeScavenger() {
                 if (result_sp && result_sp->GetCompilerType().IsValid()) {
                   CompilerType result_type(result_sp->GetCompilerType());
                   if (Flags(result_type.GetTypeInfo())
-                          .AllSet(eTypeIsSwift | eTypeIsMetatype))
-                    result_type = TypeSystemSwift::GetInstanceType(result_type);
+                      .AllSet(eTypeIsSwift | eTypeIsMetatype)) {
+                    result_type = TypeSystemSwift::GetInstanceType(result_type,
+                                                                   exe_scope);
+                    if (auto swift_ast_ctx =
+                            result_type.GetTypeSystem()
+                                .dyn_cast_or_null<SwiftASTContext>())
+                      result_type = swift_ast_ctx->GetTypeSystemSwiftTypeRef()
+                                        .GetTypeFromMangledTypename(
+                                            result_type.GetMangledTypeName());
+                  }
                   results.insert(TypeOrDecl(result_type));
                 }
               }

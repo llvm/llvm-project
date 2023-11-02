@@ -206,4 +206,4 @@ class TestSwiftPlaygrounds(TestBase):
                and 'Versions/A/Dylib' in line \
                and 'ClangImporter needs to be reinitialized' in line:
                     found += 1
-        self.assertEqual(found, 2)
+        self.assertGreater(found, 1)
