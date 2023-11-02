@@ -61,7 +61,7 @@ LLVM::LLVMFuncOp lookupOrCreateGenericAlignedAllocFn(ModuleOp moduleOp,
                                                      Type indexType,
                                                      bool opaquePointers);
 LLVM::LLVMFuncOp lookupOrCreateGenericFreeFn(ModuleOp moduleOp,
-                                             bool opaquePointers);
+                                             bool opaquePointers = true);
 LLVM::LLVMFuncOp lookupOrCreateMemRefCopyFn(ModuleOp moduleOp, Type indexType,
                                             Type unrankedDescriptorType);
 

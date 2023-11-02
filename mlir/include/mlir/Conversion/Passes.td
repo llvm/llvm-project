@@ -746,10 +746,7 @@ def FinalizeMemRefToLLVMConversionPass :
            "bool",
            /*default=*/"false",
            "Use generic allocation and deallocation functions instead of the "
-           "classic 'malloc', 'aligned_alloc' and 'free' functions">,
-    Option<"useOpaquePointers", "use-opaque-pointers", "bool",
-               /*default=*/"true", "Generate LLVM IR using opaque pointers "
-               "instead of typed pointers">
+           "classic 'malloc', 'aligned_alloc' and 'free' functions">
   ];
 }
 
