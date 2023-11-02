@@ -693,61 +693,541 @@ entry:
 }
 
 define void @test_args_nxv1f16(<vscale x 1 x half> %a) {
+  ; RV32-LABEL: name: test_args_nxv1f16
+  ; RV32: bb.1.entry:
+  ; RV32-NEXT:   liveins: $x10
+  ; RV32-NEXT: {{  $}}
+  ; RV32-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $x10
+  ; RV32-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<vscale x 1 x s32>) = G_BUILD_VECTOR [[COPY]](s32)
+  ; RV32-NEXT:   [[TRUNC:%[0-9]+]]:_(<vscale x 1 x s16>) = G_TRUNC [[BUILD_VECTOR]](<vscale x 1 x s32>)
+  ; RV32-NEXT:   PseudoRET
+  ;
+  ; RV64-LABEL: name: test_args_nxv1f16
+  ; RV64: bb.1.entry:
+  ; RV64-NEXT:   liveins: $x10
+  ; RV64-NEXT: {{  $}}
+  ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+  ; RV64-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<vscale x 1 x s64>) = G_BUILD_VECTOR [[COPY]](s64)
+  ; RV64-NEXT:   [[TRUNC:%[0-9]+]]:_(<vscale x 1 x s16>) = G_TRUNC [[BUILD_VECTOR]](<vscale x 1 x s64>)
+  ; RV64-NEXT:   PseudoRET
 entry:
   ret void
 }
 
 define void @test_args_nxv2f16(<vscale x 2 x half> %a) {
+  ; RV32-LABEL: name: test_args_nxv2f16
+  ; RV32: bb.1.entry:
+  ; RV32-NEXT:   liveins: $x10, $x11
+  ; RV32-NEXT: {{  $}}
+  ; RV32-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $x10
+  ; RV32-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
+  ; RV32-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<vscale x 2 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32)
+  ; RV32-NEXT:   [[TRUNC:%[0-9]+]]:_(<vscale x 2 x s16>) = G_TRUNC [[BUILD_VECTOR]](<vscale x 2 x s32>)
+  ; RV32-NEXT:   PseudoRET
+  ;
+  ; RV64-LABEL: name: test_args_nxv2f16
+  ; RV64: bb.1.entry:
+  ; RV64-NEXT:   liveins: $x10, $x11
+  ; RV64-NEXT: {{  $}}
+  ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+  ; RV64-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
+  ; RV64-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<vscale x 2 x s64>) = G_BUILD_VECTOR [[COPY]](s64), [[COPY1]](s64)
+  ; RV64-NEXT:   [[TRUNC:%[0-9]+]]:_(<vscale x 2 x s16>) = G_TRUNC [[BUILD_VECTOR]](<vscale x 2 x s64>)
+  ; RV64-NEXT:   PseudoRET
 entry:
   ret void
 }
 
 define void @test_args_nxv4f16(<vscale x 4 x half> %a) {
+  ; RV32-LABEL: name: test_args_nxv4f16
+  ; RV32: bb.1.entry:
+  ; RV32-NEXT:   liveins: $x10
+  ; RV32-NEXT: {{  $}}
+  ; RV32-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $x10
+  ; RV32-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $x10
+  ; RV32-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $x10
+  ; RV32-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $x10
+  ; RV32-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<vscale x 4 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32)
+  ; RV32-NEXT:   [[TRUNC:%[0-9]+]]:_(<vscale x 4 x s16>) = G_TRUNC [[BUILD_VECTOR]](<vscale x 4 x s32>)
+  ; RV32-NEXT:   PseudoRET
+  ;
+  ; RV64-LABEL: name: test_args_nxv4f16
+  ; RV64: bb.1.entry:
+  ; RV64-NEXT:   liveins: $x10
+  ; RV64-NEXT: {{  $}}
+  ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+  ; RV64-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY $x10
+  ; RV64-NEXT:   [[COPY2:%[0-9]+]]:_(s64) = COPY $x10
+  ; RV64-NEXT:   [[COPY3:%[0-9]+]]:_(s64) = COPY $x10
+  ; RV64-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<vscale x 4 x s64>) = G_BUILD_VECTOR [[COPY]](s64), [[COPY1]](s64), [[COPY2]](s64), [[COPY3]](s64)
+  ; RV64-NEXT:   [[TRUNC:%[0-9]+]]:_(<vscale x 4 x s16>) = G_TRUNC [[BUILD_VECTOR]](<vscale x 4 x s64>)
+  ; RV64-NEXT:   PseudoRET
 entry:
   ret void
 }
 
 define void @test_args_nxv8f16(<vscale x 8 x half> %a) {
+  ; RV32-LABEL: name: test_args_nxv8f16
+  ; RV32: bb.1.entry:
+  ; RV32-NEXT:   liveins: $x10
+  ; RV32-NEXT: {{  $}}
+  ; RV32-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $x10
+  ; RV32-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $x10
+  ; RV32-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $x10
+  ; RV32-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $x10
+  ; RV32-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $x10
+  ; RV32-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $x10
+  ; RV32-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $x10
+  ; RV32-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $x10
+  ; RV32-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<vscale x 8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; RV32-NEXT:   [[TRUNC:%[0-9]+]]:_(<vscale x 8 x s16>) = G_TRUNC [[BUILD_VECTOR]](<vscale x 8 x s32>)
+  ; RV32-NEXT:   PseudoRET
+  ;
+  ; RV64-LABEL: name: test_args_nxv8f16
+  ; RV64: bb.1.entry:
+  ; RV64-NEXT:   liveins: $x10
+  ; RV64-NEXT: {{  $}}
+  ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+  ; RV64-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY $x10
+  ; RV64-NEXT:   [[COPY2:%[0-9]+]]:_(s64) = COPY $x10
+  ; RV64-NEXT:   [[COPY3:%[0-9]+]]:_(s64) = COPY $x10
+  ; RV64-NEXT:   [[COPY4:%[0-9]+]]:_(s64) = COPY $x10
+  ; RV64-NEXT:   [[COPY5:%[0-9]+]]:_(s64) = COPY $x10
+  ; RV64-NEXT:   [[COPY6:%[0-9]+]]:_(s64) = COPY $x10
+  ; RV64-NEXT:   [[COPY7:%[0-9]+]]:_(s64) = COPY $x10
+  ; RV64-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<vscale x 8 x s64>) = G_BUILD_VECTOR [[COPY]](s64), [[COPY1]](s64), [[COPY2]](s64), [[COPY3]](s64), [[COPY4]](s64), [[COPY5]](s64), [[COPY6]](s64), [[COPY7]](s64)
+  ; RV64-NEXT:   [[TRUNC:%[0-9]+]]:_(<vscale x 8 x s16>) = G_TRUNC [[BUILD_VECTOR]](<vscale x 8 x s64>)
+  ; RV64-NEXT:   PseudoRET
 entry:
   ret void
 }
 
 define void @test_args_nxv16f16(<vscale x 16 x half> %a) {
+  ; RV32-LABEL: name: test_args_nxv16f16
+  ; RV32: bb.1.entry:
+  ; RV32-NEXT:   liveins: $x10
+  ; RV32-NEXT: {{  $}}
+  ; RV32-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $x10
+  ; RV32-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $x10
+  ; RV32-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $x10
+  ; RV32-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $x10
+  ; RV32-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $x10
+  ; RV32-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $x10
+  ; RV32-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $x10
+  ; RV32-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $x10
+  ; RV32-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $x10
+  ; RV32-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $x10
+  ; RV32-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $x10
+  ; RV32-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $x10
+  ; RV32-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $x10
+  ; RV32-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $x10
+  ; RV32-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY $x10
+  ; RV32-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY $x10
+  ; RV32-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<vscale x 16 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32), [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32), [[COPY12]](s32), [[COPY13]](s32), [[COPY14]](s32), [[COPY15]](s32)
+  ; RV32-NEXT:   [[TRUNC:%[0-9]+]]:_(<vscale x 16 x s16>) = G_TRUNC [[BUILD_VECTOR]](<vscale x 16 x s32>)
+  ; RV32-NEXT:   PseudoRET
+  ;
+  ; RV64-LABEL: name: test_args_nxv16f16
+  ; RV64: bb.1.entry:
+  ; RV64-NEXT:   liveins: $x10
+  ; RV64-NEXT: {{  $}}
+  ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+  ; RV64-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY $x10
+  ; RV64-NEXT:   [[COPY2:%[0-9]+]]:_(s64) = COPY $x10
+  ; RV64-NEXT:   [[COPY3:%[0-9]+]]:_(s64) = COPY $x10
+  ; RV64-NEXT:   [[COPY4:%[0-9]+]]:_(s64) = COPY $x10
+  ; RV64-NEXT:   [[COPY5:%[0-9]+]]:_(s64) = COPY $x10
+  ; RV64-NEXT:   [[COPY6:%[0-9]+]]:_(s64) = COPY $x10
+  ; RV64-NEXT:   [[COPY7:%[0-9]+]]:_(s64) = COPY $x10
+  ; RV64-NEXT:   [[COPY8:%[0-9]+]]:_(s64) = COPY $x10
+  ; RV64-NEXT:   [[COPY9:%[0-9]+]]:_(s64) = COPY $x10
+  ; RV64-NEXT:   [[COPY10:%[0-9]+]]:_(s64) = COPY $x10
+  ; RV64-NEXT:   [[COPY11:%[0-9]+]]:_(s64) = COPY $x10
+  ; RV64-NEXT:   [[COPY12:%[0-9]+]]:_(s64) = COPY $x10
+  ; RV64-NEXT:   [[COPY13:%[0-9]+]]:_(s64) = COPY $x10
+  ; RV64-NEXT:   [[COPY14:%[0-9]+]]:_(s64) = COPY $x10
+  ; RV64-NEXT:   [[COPY15:%[0-9]+]]:_(s64) = COPY $x10
+  ; RV64-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<vscale x 16 x s64>) = G_BUILD_VECTOR [[COPY]](s64), [[COPY1]](s64), [[COPY2]](s64), [[COPY3]](s64), [[COPY4]](s64), [[COPY5]](s64), [[COPY6]](s64), [[COPY7]](s64), [[COPY8]](s64), [[COPY9]](s64), [[COPY10]](s64), [[COPY11]](s64), [[COPY12]](s64), [[COPY13]](s64), [[COPY14]](s64), [[COPY15]](s64)
+  ; RV64-NEXT:   [[TRUNC:%[0-9]+]]:_(<vscale x 16 x s16>) = G_TRUNC [[BUILD_VECTOR]](<vscale x 16 x s64>)
+  ; RV64-NEXT:   PseudoRET
 entry:
   ret void
 }
 
 define void @test_args_nxv32f16(<vscale x 32 x half> %a) {
+  ; RV32-LABEL: name: test_args_nxv32f16
+  ; RV32: bb.1.entry:
+  ; RV32-NEXT:   liveins: $x10
+  ; RV32-NEXT: {{  $}}
+  ; RV32-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $x10
+  ; RV32-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $x10
+  ; RV32-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $x10
+  ; RV32-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $x10
+  ; RV32-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $x10
+  ; RV32-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $x10
+  ; RV32-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $x10
+  ; RV32-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $x10
+  ; RV32-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $x10
+  ; RV32-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $x10
+  ; RV32-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $x10
+  ; RV32-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $x10
+  ; RV32-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $x10
+  ; RV32-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $x10
+  ; RV32-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY $x10
+  ; RV32-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY $x10
+  ; RV32-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY $x10
+  ; RV32-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY $x10
+  ; RV32-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY $x10
+  ; RV32-NEXT:   [[COPY19:%[0-9]+]]:_(s32) = COPY $x10
+  ; RV32-NEXT:   [[COPY20:%[0-9]+]]:_(s32) = COPY $x10
+  ; RV32-NEXT:   [[COPY21:%[0-9]+]]:_(s32) = COPY $x10
+  ; RV32-NEXT:   [[COPY22:%[0-9]+]]:_(s32) = COPY $x10
+  ; RV32-NEXT:   [[COPY23:%[0-9]+]]:_(s32) = COPY $x10
+  ; RV32-NEXT:   [[COPY24:%[0-9]+]]:_(s32) = COPY $x10
+  ; RV32-NEXT:   [[COPY25:%[0-9]+]]:_(s32) = COPY $x10
+  ; RV32-NEXT:   [[COPY26:%[0-9]+]]:_(s32) = COPY $x10
+  ; RV32-NEXT:   [[COPY27:%[0-9]+]]:_(s32) = COPY $x10
+  ; RV32-NEXT:   [[COPY28:%[0-9]+]]:_(s32) = COPY $x10
+  ; RV32-NEXT:   [[COPY29:%[0-9]+]]:_(s32) = COPY $x10
+  ; RV32-NEXT:   [[COPY30:%[0-9]+]]:_(s32) = COPY $x10
+  ; RV32-NEXT:   [[COPY31:%[0-9]+]]:_(s32) = COPY $x10
+  ; RV32-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<vscale x 32 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32), [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32), [[COPY12]](s32), [[COPY13]](s32), [[COPY14]](s32), [[COPY15]](s32), [[COPY16]](s32), [[COPY17]](s32), [[COPY18]](s32), [[COPY19]](s32), [[COPY20]](s32), [[COPY21]](s32), [[COPY22]](s32), [[COPY23]](s32), [[COPY24]](s32), [[COPY25]](s32), [[COPY26]](s32), [[COPY27]](s32), [[COPY28]](s32), [[COPY29]](s32), [[COPY30]](s32), [[COPY31]](s32)
+  ; RV32-NEXT:   [[TRUNC:%[0-9]+]]:_(<vscale x 32 x s16>) = G_TRUNC [[BUILD_VECTOR]](<vscale x 32 x s32>)
+  ; RV32-NEXT:   PseudoRET
+  ;
+  ; RV64-LABEL: name: test_args_nxv32f16
+  ; RV64: bb.1.entry:
+  ; RV64-NEXT:   liveins: $x10
+  ; RV64-NEXT: {{  $}}
+  ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+  ; RV64-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY $x10
+  ; RV64-NEXT:   [[COPY2:%[0-9]+]]:_(s64) = COPY $x10
+  ; RV64-NEXT:   [[COPY3:%[0-9]+]]:_(s64) = COPY $x10
+  ; RV64-NEXT:   [[COPY4:%[0-9]+]]:_(s64) = COPY $x10
+  ; RV64-NEXT:   [[COPY5:%[0-9]+]]:_(s64) = COPY $x10
+  ; RV64-NEXT:   [[COPY6:%[0-9]+]]:_(s64) = COPY $x10
+  ; RV64-NEXT:   [[COPY7:%[0-9]+]]:_(s64) = COPY $x10
+  ; RV64-NEXT:   [[COPY8:%[0-9]+]]:_(s64) = COPY $x10
+  ; RV64-NEXT:   [[COPY9:%[0-9]+]]:_(s64) = COPY $x10
+  ; RV64-NEXT:   [[COPY10:%[0-9]+]]:_(s64) = COPY $x10
+  ; RV64-NEXT:   [[COPY11:%[0-9]+]]:_(s64) = COPY $x10
+  ; RV64-NEXT:   [[COPY12:%[0-9]+]]:_(s64) = COPY $x10
+  ; RV64-NEXT:   [[COPY13:%[0-9]+]]:_(s64) = COPY $x10
+  ; RV64-NEXT:   [[COPY14:%[0-9]+]]:_(s64) = COPY $x10
+  ; RV64-NEXT:   [[COPY15:%[0-9]+]]:_(s64) = COPY $x10
+  ; RV64-NEXT:   [[COPY16:%[0-9]+]]:_(s64) = COPY $x10
+  ; RV64-NEXT:   [[COPY17:%[0-9]+]]:_(s64) = COPY $x10
+  ; RV64-NEXT:   [[COPY18:%[0-9]+]]:_(s64) = COPY $x10
+  ; RV64-NEXT:   [[COPY19:%[0-9]+]]:_(s64) = COPY $x10
+  ; RV64-NEXT:   [[COPY20:%[0-9]+]]:_(s64) = COPY $x10
+  ; RV64-NEXT:   [[COPY21:%[0-9]+]]:_(s64) = COPY $x10
+  ; RV64-NEXT:   [[COPY22:%[0-9]+]]:_(s64) = COPY $x10
+  ; RV64-NEXT:   [[COPY23:%[0-9]+]]:_(s64) = COPY $x10
+  ; RV64-NEXT:   [[COPY24:%[0-9]+]]:_(s64) = COPY $x10
+  ; RV64-NEXT:   [[COPY25:%[0-9]+]]:_(s64) = COPY $x10
+  ; RV64-NEXT:   [[COPY26:%[0-9]+]]:_(s64) = COPY $x10
+  ; RV64-NEXT:   [[COPY27:%[0-9]+]]:_(s64) = COPY $x10
+  ; RV64-NEXT:   [[COPY28:%[0-9]+]]:_(s64) = COPY $x10
+  ; RV64-NEXT:   [[COPY29:%[0-9]+]]:_(s64) = COPY $x10
+  ; RV64-NEXT:   [[COPY30:%[0-9]+]]:_(s64) = COPY $x10
+  ; RV64-NEXT:   [[COPY31:%[0-9]+]]:_(s64) = COPY $x10
+  ; RV64-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<vscale x 32 x s64>) = G_BUILD_VECTOR [[COPY]](s64), [[COPY1]](s64), [[COPY2]](s64), [[COPY3]](s64), [[COPY4]](s64), [[COPY5]](s64), [[COPY6]](s64), [[COPY7]](s64), [[COPY8]](s64), [[COPY9]](s64), [[COPY10]](s64), [[COPY11]](s64), [[COPY12]](s64), [[COPY13]](s64), [[COPY14]](s64), [[COPY15]](s64), [[COPY16]](s64), [[COPY17]](s64), [[COPY18]](s64), [[COPY19]](s64), [[COPY20]](s64), [[COPY21]](s64), [[COPY22]](s64), [[COPY23]](s64), [[COPY24]](s64), [[COPY25]](s64), [[COPY26]](s64), [[COPY27]](s64), [[COPY28]](s64), [[COPY29]](s64), [[COPY30]](s64), [[COPY31]](s64)
+  ; RV64-NEXT:   [[TRUNC:%[0-9]+]]:_(<vscale x 32 x s16>) = G_TRUNC [[BUILD_VECTOR]](<vscale x 32 x s64>)
+  ; RV64-NEXT:   PseudoRET
 entry:
   ret void
 }
 
 define void @test_args_nxv1b16(<vscale x 1 x bfloat> %a) {
+  ; RV32-LABEL: name: test_args_nxv1b16
+  ; RV32: bb.1.entry:
+  ; RV32-NEXT:   liveins: $f10_f
+  ; RV32-NEXT: {{  $}}
+  ; RV32-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $f10_f
+  ; RV32-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<vscale x 1 x s32>) = G_BUILD_VECTOR [[COPY]](s32)
+  ; RV32-NEXT:   [[TRUNC:%[0-9]+]]:_(<vscale x 1 x s16>) = G_TRUNC [[BUILD_VECTOR]](<vscale x 1 x s32>)
+  ; RV32-NEXT:   PseudoRET
+  ;
+  ; RV64-LABEL: name: test_args_nxv1b16
+  ; RV64: bb.1.entry:
+  ; RV64-NEXT:   liveins: $f10_f
+  ; RV64-NEXT: {{  $}}
+  ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $f10_f
+  ; RV64-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<vscale x 1 x s32>) = G_BUILD_VECTOR [[COPY]](s32)
+  ; RV64-NEXT:   [[TRUNC:%[0-9]+]]:_(<vscale x 1 x s16>) = G_TRUNC [[BUILD_VECTOR]](<vscale x 1 x s32>)
+  ; RV64-NEXT:   PseudoRET
 entry:
   ret void
 }
 
 define void @test_args_nxv2b16(<vscale x 2 x bfloat> %a) {
+  ; RV32-LABEL: name: test_args_nxv2b16
+  ; RV32: bb.1.entry:
+  ; RV32-NEXT:   liveins: $f10_f, $f11_f
+  ; RV32-NEXT: {{  $}}
+  ; RV32-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $f10_f
+  ; RV32-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $f11_f
+  ; RV32-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<vscale x 2 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32)
+  ; RV32-NEXT:   [[TRUNC:%[0-9]+]]:_(<vscale x 2 x s16>) = G_TRUNC [[BUILD_VECTOR]](<vscale x 2 x s32>)
+  ; RV32-NEXT:   PseudoRET
+  ;
+  ; RV64-LABEL: name: test_args_nxv2b16
+  ; RV64: bb.1.entry:
+  ; RV64-NEXT:   liveins: $f10_f, $f11_f
+  ; RV64-NEXT: {{  $}}
+  ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $f10_f
+  ; RV64-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $f11_f
+  ; RV64-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<vscale x 2 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32)
+  ; RV64-NEXT:   [[TRUNC:%[0-9]+]]:_(<vscale x 2 x s16>) = G_TRUNC [[BUILD_VECTOR]](<vscale x 2 x s32>)
+  ; RV64-NEXT:   PseudoRET
 entry:
   ret void
 }
 
 define void @test_args_nxv4b16(<vscale x 4 x bfloat> %a) {
+  ; RV32-LABEL: name: test_args_nxv4b16
+  ; RV32: bb.1.entry:
+  ; RV32-NEXT:   liveins: $f10_f, $f11_f, $f12_f, $f13_f
+  ; RV32-NEXT: {{  $}}
+  ; RV32-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $f10_f
+  ; RV32-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $f11_f
+  ; RV32-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $f12_f
+  ; RV32-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $f13_f
+  ; RV32-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<vscale x 4 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32)
+  ; RV32-NEXT:   [[TRUNC:%[0-9]+]]:_(<vscale x 4 x s16>) = G_TRUNC [[BUILD_VECTOR]](<vscale x 4 x s32>)
+  ; RV32-NEXT:   PseudoRET
+  ;
+  ; RV64-LABEL: name: test_args_nxv4b16
+  ; RV64: bb.1.entry:
+  ; RV64-NEXT:   liveins: $f10_f, $f11_f, $f12_f, $f13_f
+  ; RV64-NEXT: {{  $}}
+  ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $f10_f
+  ; RV64-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $f11_f
+  ; RV64-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $f12_f
+  ; RV64-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $f13_f
+  ; RV64-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<vscale x 4 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32)
+  ; RV64-NEXT:   [[TRUNC:%[0-9]+]]:_(<vscale x 4 x s16>) = G_TRUNC [[BUILD_VECTOR]](<vscale x 4 x s32>)
+  ; RV64-NEXT:   PseudoRET
 entry:
   ret void
 }
 
 define void @test_args_nxv8b16(<vscale x 8 x bfloat> %a) {
+  ; RV32-LABEL: name: test_args_nxv8b16
+  ; RV32: bb.1.entry:
+  ; RV32-NEXT:   liveins: $f10_f, $f11_f, $f12_f, $f13_f, $f14_f, $f15_f, $f16_f, $f17_f
+  ; RV32-NEXT: {{  $}}
+  ; RV32-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $f10_f
+  ; RV32-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $f11_f
+  ; RV32-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $f12_f
+  ; RV32-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $f13_f
+  ; RV32-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $f14_f
+  ; RV32-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $f15_f
+  ; RV32-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $f16_f
+  ; RV32-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $f17_f
+  ; RV32-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<vscale x 8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; RV32-NEXT:   [[TRUNC:%[0-9]+]]:_(<vscale x 8 x s16>) = G_TRUNC [[BUILD_VECTOR]](<vscale x 8 x s32>)
+  ; RV32-NEXT:   PseudoRET
+  ;
+  ; RV64-LABEL: name: test_args_nxv8b16
+  ; RV64: bb.1.entry:
+  ; RV64-NEXT:   liveins: $f10_f, $f11_f, $f12_f, $f13_f, $f14_f, $f15_f, $f16_f, $f17_f
+  ; RV64-NEXT: {{  $}}
+  ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $f10_f
+  ; RV64-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $f11_f
+  ; RV64-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $f12_f
+  ; RV64-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $f13_f
+  ; RV64-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $f14_f
+  ; RV64-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $f15_f
+  ; RV64-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $f16_f
+  ; RV64-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $f17_f
+  ; RV64-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<vscale x 8 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32)
+  ; RV64-NEXT:   [[TRUNC:%[0-9]+]]:_(<vscale x 8 x s16>) = G_TRUNC [[BUILD_VECTOR]](<vscale x 8 x s32>)
+  ; RV64-NEXT:   PseudoRET
 entry:
   ret void
 }
 
 define void @test_args_nxv16b16(<vscale x 16 x bfloat> %a) {
+  ; RV32-LABEL: name: test_args_nxv16b16
+  ; RV32: bb.1.entry:
+  ; RV32-NEXT:   liveins: $x10, $x11, $x12, $x13, $x14, $x15, $x16, $x17, $f10_f, $f11_f, $f12_f, $f13_f, $f14_f, $f15_f, $f16_f, $f17_f
+  ; RV32-NEXT: {{  $}}
+  ; RV32-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $f10_f
+  ; RV32-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $f11_f
+  ; RV32-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $f12_f
+  ; RV32-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $f13_f
+  ; RV32-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $f14_f
+  ; RV32-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $f15_f
+  ; RV32-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $f16_f
+  ; RV32-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $f17_f
+  ; RV32-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $x10
+  ; RV32-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $x11
+  ; RV32-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $x12
+  ; RV32-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $x13
+  ; RV32-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $x14
+  ; RV32-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $x15
+  ; RV32-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY $x16
+  ; RV32-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY $x17
+  ; RV32-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<vscale x 16 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32), [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32), [[COPY12]](s32), [[COPY13]](s32), [[COPY14]](s32), [[COPY15]](s32)
+  ; RV32-NEXT:   [[TRUNC:%[0-9]+]]:_(<vscale x 16 x s16>) = G_TRUNC [[BUILD_VECTOR]](<vscale x 16 x s32>)
+  ; RV32-NEXT:   PseudoRET
+  ;
+  ; RV64-LABEL: name: test_args_nxv16b16
+  ; RV64: bb.1.entry:
+  ; RV64-NEXT:   liveins: $x10, $x11, $x12, $x13, $x14, $x15, $x16, $x17, $f10_f, $f11_f, $f12_f, $f13_f, $f14_f, $f15_f, $f16_f, $f17_f
+  ; RV64-NEXT: {{  $}}
+  ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $f10_f
+  ; RV64-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $f11_f
+  ; RV64-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $f12_f
+  ; RV64-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $f13_f
+  ; RV64-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $f14_f
+  ; RV64-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $f15_f
+  ; RV64-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $f16_f
+  ; RV64-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $f17_f
+  ; RV64-NEXT:   [[COPY8:%[0-9]+]]:_(s64) = COPY $x10
+  ; RV64-NEXT:   [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY8]](s64)
+  ; RV64-NEXT:   [[COPY9:%[0-9]+]]:_(s64) = COPY $x11
+  ; RV64-NEXT:   [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[COPY9]](s64)
+  ; RV64-NEXT:   [[COPY10:%[0-9]+]]:_(s64) = COPY $x12
+  ; RV64-NEXT:   [[TRUNC2:%[0-9]+]]:_(s32) = G_TRUNC [[COPY10]](s64)
+  ; RV64-NEXT:   [[COPY11:%[0-9]+]]:_(s64) = COPY $x13
+  ; RV64-NEXT:   [[TRUNC3:%[0-9]+]]:_(s32) = G_TRUNC [[COPY11]](s64)
+  ; RV64-NEXT:   [[COPY12:%[0-9]+]]:_(s64) = COPY $x14
+  ; RV64-NEXT:   [[TRUNC4:%[0-9]+]]:_(s32) = G_TRUNC [[COPY12]](s64)
+  ; RV64-NEXT:   [[COPY13:%[0-9]+]]:_(s64) = COPY $x15
+  ; RV64-NEXT:   [[TRUNC5:%[0-9]+]]:_(s32) = G_TRUNC [[COPY13]](s64)
+  ; RV64-NEXT:   [[COPY14:%[0-9]+]]:_(s64) = COPY $x16
+  ; RV64-NEXT:   [[TRUNC6:%[0-9]+]]:_(s32) = G_TRUNC [[COPY14]](s64)
+  ; RV64-NEXT:   [[COPY15:%[0-9]+]]:_(s64) = COPY $x17
+  ; RV64-NEXT:   [[TRUNC7:%[0-9]+]]:_(s32) = G_TRUNC [[COPY15]](s64)
+  ; RV64-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<vscale x 16 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32), [[TRUNC]](s32), [[TRUNC1]](s32), [[TRUNC2]](s32), [[TRUNC3]](s32), [[TRUNC4]](s32), [[TRUNC5]](s32), [[TRUNC6]](s32), [[TRUNC7]](s32)
+  ; RV64-NEXT:   [[TRUNC8:%[0-9]+]]:_(<vscale x 16 x s16>) = G_TRUNC [[BUILD_VECTOR]](<vscale x 16 x s32>)
+  ; RV64-NEXT:   PseudoRET
 entry:
   ret void
 }
 
 define void @test_args_nxv32b16(<vscale x 32 x bfloat> %a) {
+  ; RV32-LABEL: name: test_args_nxv32b16
+  ; RV32: bb.1.entry:
+  ; RV32-NEXT:   liveins: $x10, $x11, $x12, $x13, $x14, $x15, $x16, $x17, $f10_f, $f11_f, $f12_f, $f13_f, $f14_f, $f15_f, $f16_f, $f17_f
+  ; RV32-NEXT: {{  $}}
+  ; RV32-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $f10_f
+  ; RV32-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $f11_f
+  ; RV32-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $f12_f
+  ; RV32-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $f13_f
+  ; RV32-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $f14_f
+  ; RV32-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $f15_f
+  ; RV32-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $f16_f
+  ; RV32-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $f17_f
+  ; RV32-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $x10
+  ; RV32-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $x11
+  ; RV32-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $x12
+  ; RV32-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $x13
+  ; RV32-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $x14
+  ; RV32-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $x15
+  ; RV32-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY $x16
+  ; RV32-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY $x17
+  ; RV32-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.15
+  ; RV32-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p0) :: (load (s32) from %fixed-stack.15, align 16)
+  ; RV32-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.14
+  ; RV32-NEXT:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX1]](p0) :: (load (s32) from %fixed-stack.14)
+  ; RV32-NEXT:   [[FRAME_INDEX2:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.13
+  ; RV32-NEXT:   [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX2]](p0) :: (load (s32) from %fixed-stack.13, align 8)
+  ; RV32-NEXT:   [[FRAME_INDEX3:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.12
+  ; RV32-NEXT:   [[LOAD3:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX3]](p0) :: (load (s32) from %fixed-stack.12)
+  ; RV32-NEXT:   [[FRAME_INDEX4:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.11
+  ; RV32-NEXT:   [[LOAD4:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX4]](p0) :: (load (s32) from %fixed-stack.11, align 16)
+  ; RV32-NEXT:   [[FRAME_INDEX5:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.10
+  ; RV32-NEXT:   [[LOAD5:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX5]](p0) :: (load (s32) from %fixed-stack.10)
+  ; RV32-NEXT:   [[FRAME_INDEX6:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.9
+  ; RV32-NEXT:   [[LOAD6:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX6]](p0) :: (load (s32) from %fixed-stack.9, align 8)
+  ; RV32-NEXT:   [[FRAME_INDEX7:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.8
+  ; RV32-NEXT:   [[LOAD7:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX7]](p0) :: (load (s32) from %fixed-stack.8)
+  ; RV32-NEXT:   [[FRAME_INDEX8:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.7
+  ; RV32-NEXT:   [[LOAD8:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX8]](p0) :: (load (s32) from %fixed-stack.7, align 16)
+  ; RV32-NEXT:   [[FRAME_INDEX9:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.6
+  ; RV32-NEXT:   [[LOAD9:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX9]](p0) :: (load (s32) from %fixed-stack.6)
+  ; RV32-NEXT:   [[FRAME_INDEX10:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.5
+  ; RV32-NEXT:   [[LOAD10:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX10]](p0) :: (load (s32) from %fixed-stack.5, align 8)
+  ; RV32-NEXT:   [[FRAME_INDEX11:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.4
+  ; RV32-NEXT:   [[LOAD11:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX11]](p0) :: (load (s32) from %fixed-stack.4)
+  ; RV32-NEXT:   [[FRAME_INDEX12:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.3
+  ; RV32-NEXT:   [[LOAD12:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX12]](p0) :: (load (s32) from %fixed-stack.3, align 16)
+  ; RV32-NEXT:   [[FRAME_INDEX13:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.2
+  ; RV32-NEXT:   [[LOAD13:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX13]](p0) :: (load (s32) from %fixed-stack.2)
+  ; RV32-NEXT:   [[FRAME_INDEX14:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
+  ; RV32-NEXT:   [[LOAD14:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX14]](p0) :: (load (s32) from %fixed-stack.1, align 8)
+  ; RV32-NEXT:   [[FRAME_INDEX15:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
+  ; RV32-NEXT:   [[LOAD15:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX15]](p0) :: (load (s32) from %fixed-stack.0)
+  ; RV32-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<vscale x 32 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32), [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32), [[COPY12]](s32), [[COPY13]](s32), [[COPY14]](s32), [[COPY15]](s32), [[LOAD]](s32), [[LOAD1]](s32), [[LOAD2]](s32), [[LOAD3]](s32), [[LOAD4]](s32), [[LOAD5]](s32), [[LOAD6]](s32), [[LOAD7]](s32), [[LOAD8]](s32), [[LOAD9]](s32), [[LOAD10]](s32), [[LOAD11]](s32), [[LOAD12]](s32), [[LOAD13]](s32), [[LOAD14]](s32), [[LOAD15]](s32)
+  ; RV32-NEXT:   [[TRUNC:%[0-9]+]]:_(<vscale x 32 x s16>) = G_TRUNC [[BUILD_VECTOR]](<vscale x 32 x s32>)
+  ; RV32-NEXT:   PseudoRET
+  ;
+  ; RV64-LABEL: name: test_args_nxv32b16
+  ; RV64: bb.1.entry:
+  ; RV64-NEXT:   liveins: $x10, $x11, $x12, $x13, $x14, $x15, $x16, $x17, $f10_f, $f11_f, $f12_f, $f13_f, $f14_f, $f15_f, $f16_f, $f17_f
+  ; RV64-NEXT: {{  $}}
+  ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $f10_f
+  ; RV64-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $f11_f
+  ; RV64-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $f12_f
+  ; RV64-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $f13_f
+  ; RV64-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $f14_f
+  ; RV64-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $f15_f
+  ; RV64-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $f16_f
+  ; RV64-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $f17_f
+  ; RV64-NEXT:   [[COPY8:%[0-9]+]]:_(s64) = COPY $x10
+  ; RV64-NEXT:   [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY8]](s64)
+  ; RV64-NEXT:   [[COPY9:%[0-9]+]]:_(s64) = COPY $x11
+  ; RV64-NEXT:   [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[COPY9]](s64)
+  ; RV64-NEXT:   [[COPY10:%[0-9]+]]:_(s64) = COPY $x12
+  ; RV64-NEXT:   [[TRUNC2:%[0-9]+]]:_(s32) = G_TRUNC [[COPY10]](s64)
+  ; RV64-NEXT:   [[COPY11:%[0-9]+]]:_(s64) = COPY $x13
+  ; RV64-NEXT:   [[TRUNC3:%[0-9]+]]:_(s32) = G_TRUNC [[COPY11]](s64)
+  ; RV64-NEXT:   [[COPY12:%[0-9]+]]:_(s64) = COPY $x14
+  ; RV64-NEXT:   [[TRUNC4:%[0-9]+]]:_(s32) = G_TRUNC [[COPY12]](s64)
+  ; RV64-NEXT:   [[COPY13:%[0-9]+]]:_(s64) = COPY $x15
+  ; RV64-NEXT:   [[TRUNC5:%[0-9]+]]:_(s32) = G_TRUNC [[COPY13]](s64)
+  ; RV64-NEXT:   [[COPY14:%[0-9]+]]:_(s64) = COPY $x16
+  ; RV64-NEXT:   [[TRUNC6:%[0-9]+]]:_(s32) = G_TRUNC [[COPY14]](s64)
+  ; RV64-NEXT:   [[COPY15:%[0-9]+]]:_(s64) = COPY $x17
+  ; RV64-NEXT:   [[TRUNC7:%[0-9]+]]:_(s32) = G_TRUNC [[COPY15]](s64)
+  ; RV64-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.15
+  ; RV64-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p0) :: (load (s32) from %fixed-stack.15, align 16)
+  ; RV64-NEXT:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.14
+  ; RV64-NEXT:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX1]](p0) :: (load (s32) from %fixed-stack.14, align 8)
+  ; RV64-NEXT:   [[FRAME_INDEX2:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.13
+  ; RV64-NEXT:   [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX2]](p0) :: (load (s32) from %fixed-stack.13, align 16)
+  ; RV64-NEXT:   [[FRAME_INDEX3:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.12
+  ; RV64-NEXT:   [[LOAD3:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX3]](p0) :: (load (s32) from %fixed-stack.12, align 8)
+  ; RV64-NEXT:   [[FRAME_INDEX4:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.11
+  ; RV64-NEXT:   [[LOAD4:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX4]](p0) :: (load (s32) from %fixed-stack.11, align 16)
+  ; RV64-NEXT:   [[FRAME_INDEX5:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.10
+  ; RV64-NEXT:   [[LOAD5:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX5]](p0) :: (load (s32) from %fixed-stack.10, align 8)
+  ; RV64-NEXT:   [[FRAME_INDEX6:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.9
+  ; RV64-NEXT:   [[LOAD6:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX6]](p0) :: (load (s32) from %fixed-stack.9, align 16)
+  ; RV64-NEXT:   [[FRAME_INDEX7:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.8
+  ; RV64-NEXT:   [[LOAD7:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX7]](p0) :: (load (s32) from %fixed-stack.8, align 8)
+  ; RV64-NEXT:   [[FRAME_INDEX8:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.7
+  ; RV64-NEXT:   [[LOAD8:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX8]](p0) :: (load (s32) from %fixed-stack.7, align 16)
+  ; RV64-NEXT:   [[FRAME_INDEX9:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.6
+  ; RV64-NEXT:   [[LOAD9:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX9]](p0) :: (load (s32) from %fixed-stack.6, align 8)
+  ; RV64-NEXT:   [[FRAME_INDEX10:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.5
+  ; RV64-NEXT:   [[LOAD10:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX10]](p0) :: (load (s32) from %fixed-stack.5, align 16)
+  ; RV64-NEXT:   [[FRAME_INDEX11:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.4
+  ; RV64-NEXT:   [[LOAD11:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX11]](p0) :: (load (s32) from %fixed-stack.4, align 8)
+  ; RV64-NEXT:   [[FRAME_INDEX12:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.3
+  ; RV64-NEXT:   [[LOAD12:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX12]](p0) :: (load (s32) from %fixed-stack.3, align 16)
+  ; RV64-NEXT:   [[FRAME_INDEX13:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.2
+  ; RV64-NEXT:   [[LOAD13:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX13]](p0) :: (load (s32) from %fixed-stack.2, align 8)
+  ; RV64-NEXT:   [[FRAME_INDEX14:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
+  ; RV64-NEXT:   [[LOAD14:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX14]](p0) :: (load (s32) from %fixed-stack.1, align 16)
+  ; RV64-NEXT:   [[FRAME_INDEX15:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
+  ; RV64-NEXT:   [[LOAD15:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX15]](p0) :: (load (s32) from %fixed-stack.0, align 8)
+  ; RV64-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<vscale x 32 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32), [[TRUNC]](s32), [[TRUNC1]](s32), [[TRUNC2]](s32), [[TRUNC3]](s32), [[TRUNC4]](s32), [[TRUNC5]](s32), [[TRUNC6]](s32), [[TRUNC7]](s32), [[LOAD]](s32), [[LOAD1]](s32), [[LOAD2]](s32), [[LOAD3]](s32), [[LOAD4]](s32), [[LOAD5]](s32), [[LOAD6]](s32), [[LOAD7]](s32), [[LOAD8]](s32), [[LOAD9]](s32), [[LOAD10]](s32), [[LOAD11]](s32), [[LOAD12]](s32), [[LOAD13]](s32), [[LOAD14]](s32), [[LOAD15]](s32)
+  ; RV64-NEXT:   [[TRUNC8:%[0-9]+]]:_(<vscale x 32 x s16>) = G_TRUNC [[BUILD_VECTOR]](<vscale x 32 x s32>)
+  ; RV64-NEXT:   PseudoRET
 entry:
   ret void
 }

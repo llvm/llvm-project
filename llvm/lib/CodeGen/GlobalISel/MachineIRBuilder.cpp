@@ -1065,16 +1065,16 @@ void MachineIRBuilder::validateTruncExt(const LLT DstTy, const LLT SrcTy,
 #ifndef NDEBUG
   if (DstTy.isVector()) {
     assert(SrcTy.isVector() && "mismatched cast between vector and non-vector");
-    assert(SrcTy.getNumElements() == DstTy.getNumElements() &&
+    assert(SrcTy.getElementCount() == DstTy.getElementCount() &&
            "different number of elements in a trunc/ext");
   } else
     assert(DstTy.isScalar() && SrcTy.isScalar() && "invalid extend/trunc");
 
   if (IsExtend)
-    assert(DstTy.getSizeInBits() > SrcTy.getSizeInBits() &&
+    assert(TypeSize::isKnownGT(DstTy.getSizeInBits(), SrcTy.getSizeInBits()) &&
            "invalid narrowing extend");
   else
-    assert(DstTy.getSizeInBits() < SrcTy.getSizeInBits() &&
+    assert(TypeSize::isKnownLT(DstTy.getSizeInBits(), SrcTy.getSizeInBits()) &&
            "invalid widening trunc");
 #endif
 }
@@ -1281,10 +1281,19 @@ MachineIRBuilder::buildInstr(unsigned Opc, ArrayRef<DstOp> DstOps,
                                  SrcOps[0].getLLTTy(*getMRI());
                         }) &&
            "type mismatch in input list");
-    assert((TypeSize::ScalarTy)SrcOps.size() *
-                   SrcOps[0].getLLTTy(*getMRI()).getSizeInBits() ==
-               DstOps[0].getLLTTy(*getMRI()).getSizeInBits() &&
-           "input scalars do not exactly cover the output vector register");
+    if (DstOps[0].getLLTTy(*getMRI()).isScalable())
+      assert((TypeSize::ScalarTy)SrcOps.size() *
+                     SrcOps[0].getLLTTy(*getMRI()).getSizeInBits() >=
+                 DstOps[0]
+                     .getLLTTy(*getMRI())
+                     .getSizeInBits()
+                     .getKnownMinValue() &&
+             "input scalars does not cover the output vector register");
+    else
+      assert((TypeSize::ScalarTy)SrcOps.size() *
+                     SrcOps[0].getLLTTy(*getMRI()).getSizeInBits() ==
+                 DstOps[0].getLLTTy(*getMRI()).getSizeInBits() &&
+             "input scalars do not exactly cover the output vector register");
     break;
   }
   case TargetOpcode::G_BUILD_VECTOR_TRUNC: {
