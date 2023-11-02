@@ -2551,6 +2551,14 @@ def fno_modules_validate_textual_header_includes :
   MarshallingInfoNegativeFlag<LangOpts<"ModulesValidateTextualHeaderIncludes">>,
   HelpText<"Do not enforce -fmodules-decluse and private header restrictions for textual headers. "
            "This flag will be removed in a future Clang release.">;
+defm modules_skip_diagnostic_options : BoolFOption<"modules-skip-diagnostic-options",
+    HeaderSearchOpts<"ModulesSkipDiagnosticOptions">, DefaultFalse,
+    PosFlag<SetTrue, [], "Disable writing diagnostic options">,
+    NegFlag<SetFalse>, BothFlags<[CC1Option]>>;
+defm modules_skip_header_search_paths : BoolFOption<"modules-skip-header-search-paths",
+    HeaderSearchOpts<"ModulesSkipHeaderSearchPaths">, DefaultFalse,
+    PosFlag<SetTrue, [], "Disable writing header search paths">,
+    NegFlag<SetFalse>, BothFlags<[CC1Option]>>;
 
 def fincremental_extensions :
   Flag<["-"], "fincremental-extensions">,
@@ -7075,11 +7083,6 @@ defm cache_compile_job : BoolFOption<"cache-compile-job",
 defm cache_disable_replay : BoolFOption<"cache-disable-replay",
     FrontendOpts<"DisableCachedCompileJobReplay">, DefaultFalse,
     PosFlag<SetTrue, [], "Disable replaying a cached compile job">,
-    NegFlag<SetFalse>>;
-
-defm modules_skip_diagnostic_options : BoolFOption<"modules-skip-diagnostic-options",
-    HeaderSearchOpts<"ModulesSkipDiagnosticOptions">, DefaultFalse,
-    PosFlag<SetTrue, [], "Disable writing diagnostic options">,
     NegFlag<SetFalse>>;
 
 def fcompilation_caching_service_path : Separate<["-"], "fcompilation-caching-service-path">,
