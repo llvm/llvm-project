@@ -15,11 +15,11 @@
 // RUN: not %clang -### -c --target=aarch64 -mcmodel=medium %s 2>&1 | FileCheck --check-prefix=ERR-MEDIUM %s
 // RUN: not %clang -### -c --target=aarch64 -mcmodel=kernel %s 2>&1 | FileCheck --check-prefix=ERR-KERNEL %s
 // RUN: not %clang --target=aarch64_32-linux -### -S -mcmodel=small %s 2>&1 | FileCheck --check-prefix=ERR-AARCH64_32 %s
-// RUN: %clang --target=amdgcn-amd-amdhsa -nogpulib -### -c -mcmodel=tiny %s 2>&1 | FileCheck --check-prefix=AMDGPU-MCMODEL-TINY %s
-// RUN: %clang --target=amdgcn-amd-amdhsa -nogpulib -### -c -mcmodel=small %s 2>&1 | FileCheck --check-prefix=AMDGPU-MCMODEL-SMALL %s
-// RUN: %clang --target=amdgcn-amd-amdhsa -nogpulib -### -S -mcmodel=kernel %s 2>&1 | FileCheck --check-prefix=AMDGPU-MCMODEL-KERNEL %s
-// RUN: %clang --target=amdgcn-amd-amdhsa -nogpulib -### -c -mcmodel=medium %s 2>&1 | FileCheck --check-prefix=AMDGPU-MCMODEL-MEDIUM %s
-// RUN: %clang --target=amdgcn-amd-amdhsa -nogpulib -### -S -mcmodel=large %s 2>&1 | FileCheck --check-prefix=AMDGPU-MCMODEL-LARGE %s
+// RUN: %clang --offload-arch=gfx906 -nogpulib -### -c -x hip -mcmodel=tiny %s 2>&1 | FileCheck --check-prefix=AMDGPU-MCMODEL-TINY %s
+// RUN: %clang --offload-arch=gfx906 -nogpulib -### -c -x hip -mcmodel=small %s 2>&1 | FileCheck --check-prefix=AMDGPU-MCMODEL-SMALL %s
+// RUN: %clang --offload-arch=gfx906 -nogpulib -### -S -x hip -mcmodel=kernel %s 2>&1 | FileCheck --check-prefix=AMDGPU-MCMODEL-KERNEL %s
+// RUN: %clang --offload-arch=gfx906 -nogpulib -### -c -x hip -mcmodel=medium %s 2>&1 | FileCheck --check-prefix=AMDGPU-MCMODEL-MEDIUM %s
+// RUN: %clang --offload-arch=gfx906 -nogpulib -### -S -x hip -mcmodel=large %s 2>&1 | FileCheck --check-prefix=AMDGPU-MCMODEL-LARGE %s
 
 // TINY: "-mcmodel=tiny"
 // SMALL: "-mcmodel=small"
