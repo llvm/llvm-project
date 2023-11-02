@@ -131,15 +131,16 @@ struct __conditional_no_unique_address<false, _Tp> {
   _Tp __v;
 };
 
-template <class _Union>
-_LIBCPP_HIDE_FROM_ABI constexpr bool __expected_can_stuff_tail() {
+// This function returns whether the type `_Second` can be stuffed into the tail padding
+// of the `_First` type if both of them are given `[[no_unique_address]]`.
+template <class _First, class _Second>
+inline constexpr bool __fits_in_tail_padding = []() {
   struct __x {
-  private:
-    _LIBCPP_NO_UNIQUE_ADDRESS _Union __union_;
-    _LIBCPP_NO_UNIQUE_ADDRESS bool __has_val_;
+    _LIBCPP_NO_UNIQUE_ADDRESS _First __first;
+    _LIBCPP_NO_UNIQUE_ADDRESS _Second __second;
   };
-  return sizeof(__x) == sizeof(_Union);
-}
+  return sizeof(__x) == sizeof(_First);
+}();
 
 template <class _Tp, class _Err>
 class __expected_base {
@@ -190,7 +191,7 @@ class __expected_base {
     _LIBCPP_NO_UNIQUE_ADDRESS _Err __unex_;
   };
 
-  static constexpr bool __can_stuff_tail = __expected_can_stuff_tail<__union_t>();
+  static constexpr bool __put_flag_in_tail = __fits_in_tail_padding<__union_t, bool>;
 
   struct __repr {
     _LIBCPP_HIDE_FROM_ABI constexpr explicit __repr() = delete;
@@ -215,7 +216,7 @@ class __expected_base {
 
     template <class _OtherUnion>
     _LIBCPP_HIDE_FROM_ABI constexpr explicit __repr(bool __has_val, _OtherUnion&& __other)
-      requires(!__can_stuff_tail)
+      requires(!__put_flag_in_tail)
         : __union_(__conditional_no_unique_address_invoke_tag{},
                    [&] { return __make_union(__has_val, std::forward<_OtherUnion>(__other)); }),
           __has_val_(__has_val) {}
@@ -245,13 +246,13 @@ class __expected_base {
     }
 
     _LIBCPP_HIDE_FROM_ABI constexpr void __destroy_union()
-      requires(!__can_stuff_tail && (is_trivially_destructible_v<_Tp> && is_trivially_destructible_v<_Err>))
+      requires(!__put_flag_in_tail && (is_trivially_destructible_v<_Tp> && is_trivially_destructible_v<_Err>))
     {
       std::destroy_at(&__union_.__v);
     }
 
     _LIBCPP_HIDE_FROM_ABI constexpr void __destroy_union()
-      requires(!__can_stuff_tail && (!is_trivially_destructible_v<_Tp> || !is_trivially_destructible_v<_Err>))
+      requires(!__put_flag_in_tail && (!is_trivially_destructible_v<_Tp> || !is_trivially_destructible_v<_Err>))
     {
       __destroy_union_member();
       std::destroy_at(&__union_.__v);
@@ -259,7 +260,7 @@ class __expected_base {
 
     template <class... _Args>
     _LIBCPP_HIDE_FROM_ABI constexpr void __construct_union(in_place_t, _Args&&... __args)
-      requires(!__can_stuff_tail)
+      requires(!__put_flag_in_tail)
     {
       std::construct_at(&__union_.__v, in_place, std::forward<_Args>(__args)...);
       __has_val_ = true;
@@ -267,7 +268,7 @@ class __expected_base {
 
     template <class... _Args>
     _LIBCPP_HIDE_FROM_ABI constexpr void __construct_union(unexpect_t, _Args&&... __args)
-      requires(!__can_stuff_tail)
+      requires(!__put_flag_in_tail)
     {
       std::construct_at(&__union_.__v, unexpect, std::forward<_Args>(__args)...);
       __has_val_ = false;
@@ -289,7 +290,7 @@ class __expected_base {
 
     template <class _OtherUnion>
     _LIBCPP_HIDE_FROM_ABI static constexpr __union_t __make_union(bool __has_val, _OtherUnion&& __other)
-      requires(!__can_stuff_tail)
+      requires(!__put_flag_in_tail)
     {
       if (__has_val)
         return __union_t(in_place, std::forward<_OtherUnion>(__other).__val_);
@@ -297,13 +298,13 @@ class __expected_base {
         return __union_t(unexpect, std::forward<_OtherUnion>(__other).__unex_);
     }
 
-    _LIBCPP_NO_UNIQUE_ADDRESS __conditional_no_unique_address<__can_stuff_tail, __union_t> __union_;
+    _LIBCPP_NO_UNIQUE_ADDRESS __conditional_no_unique_address<__put_flag_in_tail, __union_t> __union_;
     _LIBCPP_NO_UNIQUE_ADDRESS bool __has_val_;
   };
 
   template <class _OtherUnion>
   _LIBCPP_HIDE_FROM_ABI static constexpr __repr __make_repr(bool __has_val, _OtherUnion&& __other)
-    requires(__can_stuff_tail)
+    requires(__put_flag_in_tail)
   {
     if (__has_val)
       return __repr(in_place, std::forward<_OtherUnion>(__other).__val_);
@@ -318,12 +319,12 @@ protected:
 
   template <class _OtherUnion>
   _LIBCPP_HIDE_FROM_ABI constexpr explicit __expected_base(bool __has_val, _OtherUnion&& __other)
-    requires(__can_stuff_tail)
+    requires(__put_flag_in_tail)
       : __repr_(__conditional_no_unique_address_invoke_tag{},
                 [&] { return __make_repr(__has_val, std::forward<_OtherUnion>(__other)); }) {}
 
   _LIBCPP_HIDE_FROM_ABI constexpr void __destroy() {
-    if constexpr (__can_stuff_tail)
+    if constexpr (__put_flag_in_tail)
       std::destroy_at(&__repr_.__v);
     else
       __repr_.__v.__destroy_union();
@@ -331,7 +332,7 @@ protected:
 
   template <class _Tag, class... _Args>
   _LIBCPP_HIDE_FROM_ABI constexpr void __construct(_Tag __tag, _Args&&... __args) {
-    if constexpr (__can_stuff_tail)
+    if constexpr (__put_flag_in_tail)
       std::construct_at(&__repr_.__v, __tag, std::forward<_Args>(__args)...);
     else
       __repr_.__v.__construct_union(__tag, std::forward<_Args>(__args)...);
@@ -346,7 +347,7 @@ protected:
   _LIBCPP_HIDE_FROM_ABI constexpr const _Err& __unex() const { return __repr_.__v.__union_.__v.__unex_; }
 
 private:
-  _LIBCPP_NO_UNIQUE_ADDRESS __conditional_no_unique_address<!__can_stuff_tail, __repr> __repr_;
+  _LIBCPP_NO_UNIQUE_ADDRESS __conditional_no_unique_address<!__put_flag_in_tail, __repr> __repr_;
 };
 
 template <class _Tp, class _Err>
@@ -1104,7 +1105,7 @@ class __expected_void_base {
     _LIBCPP_NO_UNIQUE_ADDRESS _Err __unex_;
   };
 
-  static constexpr bool __can_stuff_tail = __expected_can_stuff_tail<__union_t>();
+  static constexpr bool __put_flag_in_tail = __fits_in_tail_padding<__union_t, bool>;
 
   struct __repr {
     _LIBCPP_HIDE_FROM_ABI constexpr explicit __repr() = delete;
@@ -1123,7 +1124,7 @@ class __expected_void_base {
 
     template <class _OtherUnion>
     _LIBCPP_HIDE_FROM_ABI constexpr explicit __repr(bool __has_val, _OtherUnion&& __other)
-      requires(!__can_stuff_tail)
+      requires(!__put_flag_in_tail)
         : __union_(__conditional_no_unique_address_invoke_tag{},
                    [&] { return __make_union(__has_val, std::forward<_OtherUnion>(__other)); }),
           __has_val_(__has_val) {}
@@ -1151,20 +1152,20 @@ class __expected_void_base {
     }
 
     _LIBCPP_HIDE_FROM_ABI constexpr void __destroy_union()
-      requires(!__can_stuff_tail && is_trivially_destructible_v<_Err>)
+      requires(!__put_flag_in_tail && is_trivially_destructible_v<_Err>)
     {
       std::destroy_at(&__union_.__v);
     }
 
     _LIBCPP_HIDE_FROM_ABI constexpr void __destroy_union()
-      requires(!__can_stuff_tail && !is_trivially_destructible_v<_Err>)
+      requires(!__put_flag_in_tail && !is_trivially_destructible_v<_Err>)
     {
       __destroy_union_member();
       std::destroy_at(&__union_.__v);
     }
 
     _LIBCPP_HIDE_FROM_ABI constexpr void __construct_union(in_place_t)
-      requires(!__can_stuff_tail)
+      requires(!__put_flag_in_tail)
     {
       std::construct_at(&__union_.__v, in_place);
       __has_val_ = true;
@@ -1172,7 +1173,7 @@ class __expected_void_base {
 
     template <class... _Args>
     _LIBCPP_HIDE_FROM_ABI constexpr void __construct_union(unexpect_t, _Args&&... __args)
-      requires(!__can_stuff_tail)
+      requires(!__put_flag_in_tail)
     {
       std::construct_at(&__union_.__v, unexpect, std::forward<_Args>(__args)...);
       __has_val_ = false;
@@ -1191,7 +1192,7 @@ class __expected_void_base {
 
     template <class _OtherUnion>
     _LIBCPP_HIDE_FROM_ABI static constexpr __union_t __make_union(bool __has_val, _OtherUnion&& __other)
-      requires(!__can_stuff_tail)
+      requires(!__put_flag_in_tail)
     {
       if (__has_val)
         return __union_t(in_place);
@@ -1199,13 +1200,13 @@ class __expected_void_base {
         return __union_t(unexpect, std::forward<_OtherUnion>(__other).__unex_);
     }
 
-    _LIBCPP_NO_UNIQUE_ADDRESS __conditional_no_unique_address<__can_stuff_tail, __union_t> __union_;
+    _LIBCPP_NO_UNIQUE_ADDRESS __conditional_no_unique_address<__put_flag_in_tail, __union_t> __union_;
     _LIBCPP_NO_UNIQUE_ADDRESS bool __has_val_;
   };
 
   template <class _OtherUnion>
   _LIBCPP_HIDE_FROM_ABI static constexpr __repr __make_repr(bool __has_val, _OtherUnion&& __other)
-    requires(__can_stuff_tail)
+    requires(__put_flag_in_tail)
   {
     if (__has_val)
       return __repr(in_place);
@@ -1220,12 +1221,12 @@ protected:
 
   template <class _OtherUnion>
   _LIBCPP_HIDE_FROM_ABI constexpr explicit __expected_void_base(bool __has_val, _OtherUnion&& __other)
-    requires(__can_stuff_tail)
+    requires(__put_flag_in_tail)
       : __repr_(__conditional_no_unique_address_invoke_tag{},
                 [&] { return __make_repr(__has_val, std::forward<_OtherUnion>(__other)); }) {}
 
   _LIBCPP_HIDE_FROM_ABI constexpr void __destroy() {
-    if constexpr (__can_stuff_tail)
+    if constexpr (__put_flag_in_tail)
       std::destroy_at(&__repr_.__v);
     else
       __repr_.__v.__destroy_union();
@@ -1233,7 +1234,7 @@ protected:
 
   template <class _Tag, class... _Args>
   _LIBCPP_HIDE_FROM_ABI constexpr void __construct(_Tag __tag, _Args&&... __args) {
-    if constexpr (__can_stuff_tail)
+    if constexpr (__put_flag_in_tail)
       std::construct_at(&__repr_.__v, __tag, std::forward<_Args>(__args)...);
     else
       __repr_.__v.__construct_union(__tag, std::forward<_Args>(__args)...);
@@ -1246,7 +1247,7 @@ protected:
   _LIBCPP_HIDE_FROM_ABI constexpr const _Err& __unex() const { return __repr_.__v.__union_.__v.__unex_; }
 
 private:
-  _LIBCPP_NO_UNIQUE_ADDRESS __conditional_no_unique_address<!__can_stuff_tail, __repr> __repr_;
+  _LIBCPP_NO_UNIQUE_ADDRESS __conditional_no_unique_address<!__put_flag_in_tail, __repr> __repr_;
 };
 
 template <class _Tp, class _Err>
