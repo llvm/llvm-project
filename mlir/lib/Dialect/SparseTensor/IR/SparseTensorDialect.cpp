@@ -409,6 +409,7 @@ SparseTensorEncodingAttr::tranlateShape(ArrayRef<int64_t> srcShape,
 
   if (isPermutation()) {
     for (unsigned r = 0; r < rank; r++) {
+      // FIXME: `toOrigDim` and `toStoredDim` are deprecated.
       unsigned trans = dir == CrdTransDirectionKind::dim2lvl
                            ? toOrigDim(*this, r)
                            : toStoredDim(*this, r);
@@ -951,21 +952,6 @@ Level mlir::sparse_tensor::toStoredDim(SparseTensorEncodingAttr enc,
     }
   }
   return d;
-}
-
-// TODO: Remove this definition once all use-sites have been fixed to
-// properly handle non-permutations.
-Dimension mlir::sparse_tensor::toOrigDim(RankedTensorType type, Level l) {
-  const auto enc = getSparseTensorEncoding(type);
-  assert(!enc || l < enc.getLvlRank());
-  return toOrigDim(enc, l);
-}
-
-// TODO: Remove this definition once all use-sites have been fixed to
-// properly handle non-permutations.
-Level mlir::sparse_tensor::toStoredDim(RankedTensorType type, Dimension d) {
-  assert(d < static_cast<Dimension>(type.getRank()));
-  return toStoredDim(getSparseTensorEncoding(type), d);
 }
 
 /// We normalized sparse tensor encoding attribute by always using
