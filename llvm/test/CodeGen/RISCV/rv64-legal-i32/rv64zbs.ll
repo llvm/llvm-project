@@ -474,9 +474,8 @@ define signext i32 @bclri_i32_30(i32 signext %a) nounwind {
 define signext i32 @bclri_i32_31(i32 signext %a) nounwind {
 ; RV64I-LABEL: bclri_i32_31:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    lui a1, 524288
-; RV64I-NEXT:    addiw a1, a1, -1
-; RV64I-NEXT:    and a0, a0, a1
+; RV64I-NEXT:    slli a0, a0, 33
+; RV64I-NEXT:    srli a0, a0, 33
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBS-LABEL: bclri_i32_31:
