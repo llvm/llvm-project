@@ -1199,9 +1199,8 @@ bool RISCVInstrInfo::optimizeCondBranch(MachineInstr &MI) const {
         MI->getOperand(1).getReg() == RISCV::X0) {
       Imm = MI->getOperand(2).getImm();
       return true;
-    } else {
-      return false;
     }
+    return false;
   };
   // Either a load from immediate instruction or X0.
   auto isFromLoadImm = [&](const MachineOperand &Op, int64_t &Imm) -> bool {
@@ -1229,8 +1228,8 @@ bool RISCVInstrInfo::optimizeCondBranch(MachineInstr &MI) const {
     });
     if (DefC1 != E)
       return DefC1->getOperand(0).getReg();
-    else
-      return Register();
+
+    return Register();
   };
 
   bool Modify = false;
