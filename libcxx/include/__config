@@ -291,7 +291,7 @@
 
 #  if _LIBCPP_HARDENING_MODE != _LIBCPP_HARDENING_MODE_NONE &&                                                         \
       _LIBCPP_HARDENING_MODE != _LIBCPP_HARDENING_MODE_FAST &&                                                         \
-      _LIBCPP_HARDENING_MODE != _LIBCPP_HARDENING_MODE_EXTENSIVE &&                                                       \
+      _LIBCPP_HARDENING_MODE != _LIBCPP_HARDENING_MODE_EXTENSIVE &&                                                    \
       _LIBCPP_HARDENING_MODE != _LIBCPP_HARDENING_MODE_DEBUG
 #    error _LIBCPP_HARDENING_MODE must be set to one of the following values: \
 _LIBCPP_HARDENING_MODE_NONE, \
