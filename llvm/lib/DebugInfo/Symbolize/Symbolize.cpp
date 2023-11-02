@@ -74,7 +74,7 @@ LLVMSymbolizer::symbolizeCodeCommon(const T &ModuleSpecifier,
     ModuleOffset.Address += Info->getModulePreferredBase();
 
   DILineInfo LineInfo;
-  if (!nearest)
+  if (!Nearest)
     LineInfo = Info->symbolizeCode(
         ModuleOffset, DILineInfoSpecifier(Opts.PathStyle, Opts.PrintFunctions),
         Opts.UseSymbolTable);
