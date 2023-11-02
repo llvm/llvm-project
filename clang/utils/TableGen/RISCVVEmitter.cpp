@@ -664,6 +664,7 @@ void RVVEmitter::createRVVIntrinsics(
                                   .Case("Zvknha", RVV_REQ_Zvknha)
                                   .Case("Zvksed", RVV_REQ_Zvksed)
                                   .Case("Zvksh", RVV_REQ_Zvksh)
+                                  .Case("Zexperimental", RVV_REQ_Zexperimental)
                                   .Default(RVV_REQ_None);
       assert(RequireExt != RVV_REQ_None && "Unrecognized required feature?");
       SR.RequiredExtensions |= RequireExt;

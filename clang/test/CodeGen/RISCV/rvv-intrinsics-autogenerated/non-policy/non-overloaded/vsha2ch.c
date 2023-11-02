@@ -3,11 +3,14 @@
 // RUN: %clang_cc1 -triple riscv64 -target-feature +v -target-feature +zvl512b \
 // RUN:   -target-feature +zvbb \
 // RUN:   -target-feature +zvbc \
+// RUN:   -target-feature +zvkb \
 // RUN:   -target-feature +zvkg \
 // RUN:   -target-feature +zvkned \
 // RUN:   -target-feature +zvknhb \
 // RUN:   -target-feature +zvksed \
-// RUN:   -target-feature +zvksh -disable-O0-optnone \
+// RUN:   -target-feature +zvksh \
+// RUN:   -target-feature +zexperimental \
+// RUN:   -disable-O0-optnone \
 // RUN:   -emit-llvm %s -o - | opt -S -passes=mem2reg | \
 // RUN:   FileCheck --check-prefix=CHECK-RV64 %s
 
