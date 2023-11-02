@@ -36,7 +36,8 @@ intended to be used for testing, not in production.
 Vendors can set the default hardening mode by using the
 ``LIBCXX_HARDENING_MODE`` variable at CMake configuration time with the possible
 values of ``none``, ``fast``, ``strict`` and ``debug``. The default value is
-``none`` which doesn't enable any hardening checks.
+``none`` which doesn't enable any hardening checks (this mode is sometimes
+called the ``unchecked`` mode).
 
 When hardening is enabled, the compiled library is built with the corresponding
 mode enabled, **and** user code will be built with the same mode enabled by

@@ -56,12 +56,12 @@ Improvements and New Features
   can lead up to 350x performance improvements.
 
 - The library now provides several hardening modes under which common cases of library undefined behavior will be turned
-  into a reliable program termination. The fast hardening mode enables a set of security-critical checks with minimal
-  runtime overhead; the strict hardening mode additionally enables relatively cheap checks that catch common logic
-  errors but aren't necessarily security-critical; and the debug hardening mode enables all available checks, some of
-  which might be very expensive. Vendors can configure which hardening mode is enabled by default with the
-  ``LIBCXX_HARDENING_MODE`` variable at CMake configuration time. Users can control which hardening mode is enabled
-  on a per translation unit basis using the ``_LIBCPP_HARDENING_MODE`` macro. See :ref:`the hardening documentation
+  into a reliable program termination. The ``fast`` hardening mode enables a set of security-critical checks with
+  minimal runtime overhead; the ``strict`` hardening mode additionally enables relatively cheap checks that catch common
+  logic errors but aren't necessarily security-critical; and the ``debug`` hardening mode enables all available checks,
+  some of which might be very expensive. Vendors can configure which hardening mode is enabled by default with the
+  ``LIBCXX_HARDENING_MODE`` variable at CMake configuration time. Users can control which hardening mode is enabled on
+  a per translation unit basis using the ``_LIBCPP_HARDENING_MODE`` macro. See :ref:`the hardening documentation
   <using-hardening-modes>` for more details.
 
 Deprecations and Removals

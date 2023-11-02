@@ -27,7 +27,7 @@ _LIBCPP_HIDE_FROM_ABI inline int f() { return 1; }
 int tu1() { return f(); }
 #endif // TU1
 
-// stricthardening mode
+// strict hardening mode
 #ifdef TU2
 #  include <__config>
 _LIBCPP_HIDE_FROM_ABI inline int f() { return 2; }

@@ -11,6 +11,7 @@
 
 // Modules build produces a different error ("Could not build module 'std'").
 // UNSUPPORTED: clang-modules-build
+// REQUIRES: verify-support
 
 // RUN: %{verify} -Wno-macro-redefined -D_LIBCPP_HARDENING_MODE=42
 // Make sure that common cases of misuse produce readable errors. We deliberately disallow setting the hardening mode as

@@ -738,13 +738,13 @@ typedef __char32_t char32_t;
 #  endif
 
 #  if _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_FAST
-#    define _LIBCPP_HARDENING_SIG h
+#    define _LIBCPP_HARDENING_SIG f
 #  elif _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_STRICT
-#    define _LIBCPP_HARDENING_SIG s // "safe"
+#    define _LIBCPP_HARDENING_SIG s
 #  elif _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_DEBUG
 #    define _LIBCPP_HARDENING_SIG d
 #  else
-#    define _LIBCPP_HARDENING_SIG u // "unchecked"
+#    define _LIBCPP_HARDENING_SIG n // "none"
 #  endif
 
 #  ifdef _LIBCPP_HAS_NO_EXCEPTIONS
