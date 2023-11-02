@@ -42,7 +42,6 @@
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Type.h"
-#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/Demangle/Demangle.h"
 
 #include <map>
