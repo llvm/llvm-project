@@ -511,8 +511,8 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
     return KernelLaunchEnvOrErr.takeError();
 
   void *KernelArgsPtr =
-      prepareArgs(GenericDevice, ArgPtrs, ArgOffsets, KernelArgs.NumArgs, Args,
-                  Ptrs, *KernelLaunchEnvOrErr);
+      prepareArgs(GenericDevice, ArgPtrs, ArgOffsets, KernelArgs.Version,
+                  KernelArgs.NumArgs, Args, Ptrs, *KernelLaunchEnvOrErr);
 
   uint32_t NumThreads = getNumThreads(GenericDevice, KernelArgs.ThreadLimit);
 
@@ -537,20 +537,33 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
 
 void *GenericKernelTy::prepareArgs(
     GenericDeviceTy &GenericDevice, void **ArgPtrs, ptrdiff_t *ArgOffsets,
-    uint32_t &NumArgs, llvm::SmallVectorImpl<void *> &Args,
+    uint32_t Version, uint32_t &NumArgs, llvm::SmallVectorImpl<void *> &Args,
     llvm::SmallVectorImpl<void *> &Ptrs,
     KernelLaunchEnvironmentTy *KernelLaunchEnvironment) const {
-  NumArgs += 1;
+  if (Version == OMP_KERNEL_ARG_VERSION)
+    NumArgs += 1;
 
   Args.resize(NumArgs);
   Ptrs.resize(NumArgs);
 
-  Ptrs[0] = KernelLaunchEnvironment;
-  Args[0] = &Ptrs[0];
+  if (Version == OMP_KERNEL_ARG_VERSION) {
+    Ptrs[0] = KernelLaunchEnvironment;
+    Args[0] = &Ptrs[0];
+  } else {
+    if (NumArgs == 0)
+      return nullptr;
+  }
 
-  for (int I = 1; I < NumArgs; ++I) {
-    Ptrs[I] = (void *)((intptr_t)ArgPtrs[I - 1] + ArgOffsets[I - 1]);
-    Args[I] = &Ptrs[I];
+  if (Version == OMP_KERNEL_ARG_VERSION) {
+    for (int I = 1; I < NumArgs; ++I) {
+      Ptrs[I] = (void *)((intptr_t)ArgPtrs[I - 1] + ArgOffsets[I - 1]);
+      Args[I] = &Ptrs[I];
+    }
+  } else {
+    for (int I = 0; I < NumArgs; ++I) {
+      Ptrs[I] = (void *)((intptr_t)ArgPtrs[I] + ArgOffsets[I]);
+      Args[I] = &Ptrs[I];
+    }
   }
   return &Args[0];
 }

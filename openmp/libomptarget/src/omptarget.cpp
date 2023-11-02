@@ -1786,7 +1786,7 @@ int target_replay(ident_t *Loc, DeviceTy &Device, void *HostPtr,
   Device.submitData(TgtPtr, DeviceMemory, DeviceMemorySize, AsyncInfo);
 
   KernelArgsTy KernelArgs = {0};
-  KernelArgs.Version = 2;
+  KernelArgs.Version = 3;
   KernelArgs.NumArgs = NumArgs;
   KernelArgs.Tripcount = LoopTripCount;
   KernelArgs.NumTeams[0] = NumTeams;

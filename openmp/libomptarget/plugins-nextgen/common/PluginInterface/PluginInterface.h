@@ -360,7 +360,7 @@ protected:
 private:
   /// Prepare the arguments before launching the kernel.
   void *prepareArgs(GenericDeviceTy &GenericDevice, void **ArgPtrs,
-                    ptrdiff_t *ArgOffsets, uint32_t &NumArgs,
+                    ptrdiff_t *ArgOffsets, uint32_t Version, uint32_t &NumArgs,
                     llvm::SmallVectorImpl<void *> &Args,
                     llvm::SmallVectorImpl<void *> &Ptrs,
                     KernelLaunchEnvironmentTy *KernelLaunchEnvironment) const;
