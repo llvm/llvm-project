@@ -572,7 +572,7 @@ void AnnotateIgnoreWritesEnd(const char *file, int line);
 /// \macro LLVM_PREFERRED_TYPE
 /// Adjust type of bit-field in debug info.
 #if __has_attribute(preferred_type)
-#define LLVM_PREFERRED_TYPE(T) [[clang::preferred_type(T)]]
+#define LLVM_PREFERRED_TYPE(T) __attribute__((preferred_type(T)))
 #else
 #define LLVM_PREFERRED_TYPE(T)
 #endif
