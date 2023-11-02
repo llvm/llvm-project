@@ -96,6 +96,99 @@ define <2 x i64> @llrint_v2i64_v2f32(<2 x float> %x) {
 }
 declare <2 x i64> @llvm.llrint.v2i64.v2f32(<2 x float>)
 
+define <3 x i64> @llrint_v3i64_v3f32(<3 x float> %x) {
+; RV32-LABEL: llrint_v3i64_v3f32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    addi sp, sp, -32
+; RV32-NEXT:    .cfi_def_cfa_offset 32
+; RV32-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
+; RV32-NEXT:    .cfi_offset ra, -4
+; RV32-NEXT:    csrr a0, vlenb
+; RV32-NEXT:    slli a0, a0, 2
+; RV32-NEXT:    sub sp, sp, a0
+; RV32-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x20, 0x22, 0x11, 0x04, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 32 + 4 * vlenb
+; RV32-NEXT:    csrr a0, vlenb
+; RV32-NEXT:    slli a0, a0, 1
+; RV32-NEXT:    add a0, sp, a0
+; RV32-NEXT:    addi a0, a0, 16
+; RV32-NEXT:    vs1r.v v8, (a0) # Unknown-size Folded Spill
+; RV32-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
+; RV32-NEXT:    vfmv.f.s fa0, v8
+; RV32-NEXT:    call llrintf@plt
+; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; RV32-NEXT:    vslide1down.vx v8, v8, a0
+; RV32-NEXT:    vslide1down.vx v8, v8, a1
+; RV32-NEXT:    addi a0, sp, 16
+; RV32-NEXT:    vs2r.v v8, (a0) # Unknown-size Folded Spill
+; RV32-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
+; RV32-NEXT:    csrr a0, vlenb
+; RV32-NEXT:    slli a0, a0, 1
+; RV32-NEXT:    add a0, sp, a0
+; RV32-NEXT:    addi a0, a0, 16
+; RV32-NEXT:    vl1r.v v8, (a0) # Unknown-size Folded Reload
+; RV32-NEXT:    vslidedown.vi v8, v8, 1
+; RV32-NEXT:    vfmv.f.s fa0, v8
+; RV32-NEXT:    call llrintf@plt
+; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; RV32-NEXT:    addi a2, sp, 16
+; RV32-NEXT:    vl2r.v v8, (a2) # Unknown-size Folded Reload
+; RV32-NEXT:    vslide1down.vx v8, v8, a0
+; RV32-NEXT:    vslide1down.vx v8, v8, a1
+; RV32-NEXT:    addi a0, sp, 16
+; RV32-NEXT:    vs2r.v v8, (a0) # Unknown-size Folded Spill
+; RV32-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
+; RV32-NEXT:    csrr a0, vlenb
+; RV32-NEXT:    slli a0, a0, 1
+; RV32-NEXT:    add a0, sp, a0
+; RV32-NEXT:    addi a0, a0, 16
+; RV32-NEXT:    vl1r.v v8, (a0) # Unknown-size Folded Reload
+; RV32-NEXT:    vslidedown.vi v8, v8, 2
+; RV32-NEXT:    vfmv.f.s fa0, v8
+; RV32-NEXT:    call llrintf@plt
+; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; RV32-NEXT:    addi a2, sp, 16
+; RV32-NEXT:    vl2r.v v8, (a2) # Unknown-size Folded Reload
+; RV32-NEXT:    vslide1down.vx v8, v8, a0
+; RV32-NEXT:    vslide1down.vx v8, v8, a1
+; RV32-NEXT:    vslidedown.vi v8, v8, 2
+; RV32-NEXT:    csrr a0, vlenb
+; RV32-NEXT:    slli a0, a0, 2
+; RV32-NEXT:    add sp, sp, a0
+; RV32-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
+; RV32-NEXT:    addi sp, sp, 32
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: llrint_v3i64_v3f32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
+; RV64-NEXT:    vfmv.f.s fa5, v8
+; RV64-NEXT:    fcvt.l.s a0, fa5
+; RV64-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
+; RV64-NEXT:    vslide1down.vx v10, v8, a0
+; RV64-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
+; RV64-NEXT:    vslidedown.vi v9, v8, 1
+; RV64-NEXT:    vfmv.f.s fa5, v9
+; RV64-NEXT:    fcvt.l.s a0, fa5
+; RV64-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
+; RV64-NEXT:    vslide1down.vx v10, v10, a0
+; RV64-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
+; RV64-NEXT:    vslidedown.vi v9, v8, 2
+; RV64-NEXT:    vfmv.f.s fa5, v9
+; RV64-NEXT:    fcvt.l.s a0, fa5
+; RV64-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
+; RV64-NEXT:    vslide1down.vx v10, v10, a0
+; RV64-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
+; RV64-NEXT:    vslidedown.vi v8, v8, 3
+; RV64-NEXT:    vfmv.f.s fa5, v8
+; RV64-NEXT:    fcvt.l.s a0, fa5
+; RV64-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
+; RV64-NEXT:    vslide1down.vx v8, v10, a0
+; RV64-NEXT:    ret
+  %a = call <3 x i64> @llvm.llrint.v3i64.v3f32(<3 x float> %x)
+  ret <3 x i64> %a
+}
+declare <3 x i64> @llvm.llrint.v3i64.v3f32(<3 x float>)
+
 define <4 x i64> @llrint_v4i64_v4f32(<4 x float> %x) {
 ; RV32-LABEL: llrint_v4i64_v4f32:
 ; RV32:       # %bb.0:
