@@ -204,7 +204,7 @@ define amdgpu_kernel void @f1(ptr addrspace(1) %arg, ptr addrspace(1) %arg1, i64
   ; GFX90A-NEXT: {{  $}}
   ; GFX90A-NEXT:   renamable $sgpr8 = S_ADD_U32 renamable $sgpr6, 48, implicit-def $scc
   ; GFX90A-NEXT:   renamable $sgpr9 = S_ADDC_U32 killed renamable $sgpr7, 0, implicit-def dead $scc, implicit killed $scc
-  ; GFX90A-NEXT:   renamable $sgpr6_sgpr7 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @f2 + 4, target-flags(amdgpu-gotprel32-hi) @f2 + 12, implicit-def dead $scc
+  ; GFX90A-NEXT:   renamable $sgpr6_sgpr7 = SI_PC_ADD_REL_OFFSET target-flags(amdgpu-gotprel32-lo) @f2, target-flags(amdgpu-gotprel32-hi) @f2, implicit-def dead $scc
   ; GFX90A-NEXT:   renamable $sgpr6_sgpr7 = S_LOAD_DWORDX2_IMM killed renamable $sgpr6_sgpr7, 0, 0 :: (dereferenceable invariant load (s64) from got, addrspace 4)
   ; GFX90A-NEXT:   dead $sgpr30_sgpr31 = SI_CALL killed renamable $sgpr6_sgpr7, @f2, csr_amdgpu_gfx90ainsts, implicit $sgpr4_sgpr5, implicit undef $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit undef $sgpr15, implicit $vgpr31, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $vgpr0, implicit $vgpr1
   ; GFX90A-NEXT:   renamable $sgpr54_sgpr55 = S_OR_B64 killed renamable $sgpr54_sgpr55, $exec, implicit-def dead $scc
