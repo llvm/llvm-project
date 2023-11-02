@@ -809,11 +809,6 @@ def ConvertNVGPUToNVVMPass : Pass<"convert-nvgpu-to-nvvm"> {
   let dependentDialects = [
     "NVVM::NVVMDialect",
   ];
-  let options = [
-    Option<"useOpaquePointers", "use-opaque-pointers", "bool",
-              /*default=*/"true", "Generate LLVM IR using opaque pointers "
-              "instead of typed pointers">
-  ];
 }
 
 
