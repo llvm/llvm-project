@@ -298,6 +298,7 @@ struct Config {
   bool warnCommon;
   bool warnMissingEntry;
   bool warnSymbolOrdering;
+  bool warnLarge;
   bool writeAddends;
   bool zCombreloc;
   bool zCopyreloc;
@@ -482,6 +483,8 @@ struct Ctx {
   // True if all native vtable symbols have corresponding type info symbols
   // during LTO.
   bool ltoAllVtablesHaveTypeInfos;
+  // True if any output section has the SHF_X86_64_LARGE flag set.
+  bool hasLargeSection;
 
   // Each symbol assignment and DEFINED(sym) reference is assigned an increasing
   // order. Each DEFINED(sym) evaluation checks whether the reference happens

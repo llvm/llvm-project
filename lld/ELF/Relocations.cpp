@@ -73,7 +73,7 @@ static std::optional<std::string> getLinkerScriptLocation(const Symbol &sym) {
   return std::nullopt;
 }
 
-static std::string getDefinedLocation(const Symbol &sym) {
+std::string elf::getDefinedLocation(const Symbol &sym) {
   const char msg[] = "\n>>> defined in ";
   if (sym.file)
     return msg + toString(sym.file);
