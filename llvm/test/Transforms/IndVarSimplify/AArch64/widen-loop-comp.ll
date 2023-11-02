@@ -507,15 +507,15 @@ declare void @consume.i1(i1)
 define i32 @test10(i32 %v) {
 ; CHECK-LABEL: @test10(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SEXT:%.*]] = sext i32 [[V:%.*]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[V:%.*]] to i64
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[LOOP]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[TMP0:%.*]] = mul nsw i64 [[INDVARS_IV]], -1
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[TMP0]], [[SEXT]]
-; CHECK-NEXT:    call void @consume.i1(i1 [[TMP1]])
-; CHECK-NEXT:    call void @consume.i64(i64 [[TMP0]])
+; CHECK-NEXT:    [[TMP1:%.*]] = mul nsw i64 [[INDVARS_IV]], -1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[TMP1]], [[TMP0]]
+; CHECK-NEXT:    call void @consume.i1(i1 [[CMP]])
+; CHECK-NEXT:    call void @consume.i64(i64 [[TMP1]])
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], 11
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[LEAVE:%.*]]
 ; CHECK:       leave:

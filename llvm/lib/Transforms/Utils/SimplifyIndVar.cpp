@@ -1122,6 +1122,7 @@ protected:
   bool widenLoopCompare(NarrowIVDefUse DU);
   bool widenWithVariantUse(NarrowIVDefUse DU);
 
+  bool isKnownNonNegative(const SCEV *S);
   void pushNarrowIVUsers(Instruction *NarrowDef, Instruction *WideDef);
 
 private:
@@ -1885,12 +1886,45 @@ Instruction *WidenIV::widenIVUse(WidenIV::NarrowIVDefUse DU, SCEVExpander &Rewri
   return WideUse;
 }
 
+// A special version of isKnownNonNegative which additionally tries
+// to prove that an addrec with a negative step would be non-negative
+// because the start is non-negative, and the increment would have
+// "nuw" if using a sub-instruction.
+// TODO: All of this should be sunk into SCEV once we figure out how to
+// reasonable do so without exploding compile time.
+bool WidenIV::isKnownNonNegative(const SCEV *S) {
+  const SCEV *Zero = SE->getZero(S->getType());
+  if (SE->isKnownPredicate(ICmpInst::ICMP_SGE, S, Zero))
+    return true;
+  auto *AR = dyn_cast<SCEVAddRecExpr>(S);
+  if (!AR || !AR->isAffine())
+    return false;
+
+  const SCEV *Start = AR->getStart();
+  const SCEV *Step = AR->getStepRecurrence(*SE);
+  const SCEV *PostInc = AR->getPostIncExpr(*SE);
+  // For a negative step, we can prove the result non-negative if the addrec
+  // only traverses values in the range zext([0,UINT_MAX]).
+  // TODO:  Consider extending this for unknown steps?  Would need to
+  // handle the positive step bound
+  if (!SE->isKnownNegative(Step))
+    return false;
+  if (!SE->isLoopEntryGuardedByCond(L, ICmpInst::ICMP_SGE, Start, Zero))
+    return false;
+
+  // Check for the unsigned form of these comparisons.  The signed form
+  // should have been handled recursively in the query above.
+  uint32_t BitWidth = cast<IntegerType>(AR->getType())->getBitWidth();
+  const SCEV *N = SE->getConstant(APInt::getMaxValue(BitWidth) -
+                                  SE->getSignedRangeMin(Step));
+  return SE->isLoopBackedgeGuardedByCond(L, ICmpInst::ICMP_UGT, AR, N) ||
+    SE->isLoopBackedgeGuardedByCond(L, ICmpInst::ICMP_UGT, PostInc, N);
+}
+
 /// Add eligible users of NarrowDef to NarrowIVUsers.
 void WidenIV::pushNarrowIVUsers(Instruction *NarrowDef, Instruction *WideDef) {
-  const SCEV *NarrowSCEV = SE->getSCEV(NarrowDef);
-  bool NonNegativeDef =
-      SE->isKnownPredicate(ICmpInst::ICMP_SGE, NarrowSCEV,
-                           SE->getZero(NarrowSCEV->getType()));
+  assert(L->contains(NarrowDef));
+  const bool NonNegativeDef = isKnownNonNegative(SE->getSCEV(NarrowDef));
   for (User *U : NarrowDef->users()) {
     Instruction *NarrowUser = cast<Instruction>(U);
 
