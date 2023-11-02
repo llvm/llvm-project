@@ -21,7 +21,7 @@ namespace pdb {
 class YAMLOutputStyle : public OutputStyle {
 public:
   YAMLOutputStyle(PDBFile &File);
-
+  YAMLOutputStyle(PDBFile &File, raw_ostream &Output);
   Error dump() override;
 
 private:
