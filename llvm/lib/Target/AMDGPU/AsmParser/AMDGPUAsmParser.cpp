@@ -489,7 +489,7 @@ public:
   bool isSSrcB64() const {
     // TODO: Find out how SALU supports extension of 32-bit literals to 64 bits.
     // See isVSrc64().
-    return isSCSrcB64() || isLiteralImm(MVT::i64);
+    return isSCSrcB64() || isLiteralImm(MVT::i64) || isExpr();
   }
 
   bool isSSrcF32() const {

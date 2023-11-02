@@ -242,7 +242,10 @@ AMDGPUMCCodeEmitter::getLitEncoding(const MCOperand &MO,
   if (MO.isExpr()) {
     const auto *C = dyn_cast<MCConstantExpr>(MO.getExpr());
     if (!C)
-      return 255;
+      return (STI.hasFeature(AMDGPU::Feature64BitLiterals) &&
+              OpInfo.OperandType == AMDGPU::OPERAND_REG_IMM_INT64)
+                 ? 254
+                 : 255;
 
     Imm = C->getValue();
   } else {
@@ -605,13 +608,17 @@ void AMDGPUMCCodeEmitter::getMachineOpValueCommon(
     //
     // .Ltmp1:
     //   s_add_u32 s2, s2, (extern_const_addrspace+16)-.Ltmp1
+    const MCInstrDesc &Desc = MCII.get(MI.getOpcode());
+    auto OpType = Desc.operands()[OpNo].OperandType;
     MCFixupKind Kind;
     if (needsPCRel(MO.getExpr()))
       Kind = FK_PCRel_4;
     else
-      Kind = FK_Data_4;
+      Kind = (STI.hasFeature(AMDGPU::Feature64BitLiterals) &&
+              OpType == AMDGPU::OPERAND_REG_IMM_INT64)
+                 ? FK_Data_8
+                 : FK_Data_4;
 
-    const MCInstrDesc &Desc = MCII.get(MI.getOpcode());
     uint32_t Offset = Desc.getSize();
     assert(Offset == 4 || Offset == 8);
 
