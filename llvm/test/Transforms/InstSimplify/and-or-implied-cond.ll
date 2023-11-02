@@ -264,3 +264,62 @@ define i1 @pr69091(i32 %arg, i32 %arg1) {
   %or = or i1 %icmp, %icmp2
   ret i1 %or
 }
+
+declare void @barrier()
+
+define i1 @or_icmp_implies_ub(i32 %x) {
+; CHECK-LABEL: @or_icmp_implies_ub(
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i32 [[X:%.*]], 0
+; CHECK-NEXT:    call void @barrier()
+; CHECK-NEXT:    ret i1 [[CMP1]]
+;
+  %cmp1 = icmp ne i32 %x, 0
+  call void @barrier()
+  %div = udiv i32 2147483647, %x
+  %cmp2 = icmp ugt i32 %x, %div
+  %or = or i1 %cmp1, %cmp2
+  ret i1 %or
+}
+
+define i1 @and_icmp_implies_ub(i32 %x) {
+; CHECK-LABEL: @and_icmp_implies_ub(
+; CHECK-NEXT:    call void @barrier()
+; CHECK-NEXT:    ret i1 false
+;
+  %cmp1 = icmp eq i32 %x, 0
+  call void @barrier()
+  %div = udiv i32 2147483647, %x
+  %cmp2 = icmp ugt i32 %x, %div
+  %and = and i1 %cmp1, %cmp2
+  ret i1 %and
+}
+
+define i1 @or_icmp_implies_poison(i32 %x) {
+; CHECK-LABEL: @or_icmp_implies_poison(
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i32 [[X:%.*]], 32
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 1, [[X]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ugt i32 [[X]], [[SHL]]
+; CHECK-NEXT:    [[OR:%.*]] = or i1 [[CMP1]], [[CMP2]]
+; CHECK-NEXT:    ret i1 [[OR]]
+;
+  %cmp1 = icmp ne i32 %x, 32
+  %shl = shl i32 1, %x
+  %cmp2 = icmp ugt i32 %x, %shl
+  %or = or i1 %cmp1, %cmp2
+  ret i1 %or
+}
+
+define i1 @and_icmp_implies_poison(i32 %x) {
+; CHECK-LABEL: @and_icmp_implies_poison(
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[X:%.*]], 32
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 1, [[X]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ugt i32 [[X]], [[SHL]]
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[CMP1]], [[CMP2]]
+; CHECK-NEXT:    ret i1 [[AND]]
+;
+  %cmp1 = icmp eq i32 %x, 32
+  %shl = shl i32 1, %x
+  %cmp2 = icmp ugt i32 %x, %shl
+  %and = and i1 %cmp1, %cmp2
+  ret i1 %and
+}
