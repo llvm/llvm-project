@@ -105,7 +105,8 @@ public:
         : M(M), P(P), ProtocolPriority(ProtocolPriority) {}
 
     bool isRequired() const {
-      return M->getImplementationControl() == ObjCMethodDecl::Required;
+      return M->getImplementationControl() ==
+             ObjCImplementationControl::Required;
     }
     void markAs(MethodPresenceKind Kind) { PresenceKind |= Kind; }
     bool is(MethodPresenceKind Kind) const {
