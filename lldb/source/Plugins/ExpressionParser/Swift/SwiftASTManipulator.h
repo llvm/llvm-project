@@ -146,9 +146,10 @@ public:
     VariableMetadataSP m_metadata;
   };
 
-  SwiftASTManipulatorBase(swift::SourceFile &source_file, bool repl,
+  SwiftASTManipulatorBase(swift::SourceFile &source_file,
+                          const SymbolContext &sc, bool repl,
                           lldb::BindGenericTypes bind_generic_types)
-      : m_source_file(source_file), m_variables(), m_repl(repl),
+      : m_source_file(source_file), m_sc(sc), m_repl(repl),
         m_bind_generic_types(bind_generic_types) {
     DoInitialization();
   }
@@ -168,7 +169,7 @@ private:
 protected:
   swift::SourceFile &m_source_file;
   llvm::SmallVector<VariableInfo, 1> m_variables;
-
+  const SymbolContext &m_sc;
   bool m_repl = false;
 
   lldb::BindGenericTypes m_bind_generic_types = lldb::eBindAuto;
@@ -196,8 +197,8 @@ protected:
 class SwiftASTManipulator : public SwiftASTManipulatorBase {
 public:
   SwiftASTManipulator(SwiftASTContextForExpressions &swift_ast_ctx,
-                      swift::SourceFile &source_file, bool repl,
-                      lldb::BindGenericTypes bind_generic_types);
+                      swift::SourceFile &source_file, const SymbolContext &sc,
+                      bool repl, lldb::BindGenericTypes bind_generic_types);
   SwiftASTContextForExpressions &GetScratchContext() { return m_swift_ast_ctx; }
 
   void FindSpecialNames(llvm::SmallVectorImpl<swift::Identifier> &names,

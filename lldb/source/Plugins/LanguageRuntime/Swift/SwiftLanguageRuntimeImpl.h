@@ -291,11 +291,13 @@ protected:
     llvm::Optional<CompilerType> m_compiler_type;
 
   public:
-    CompilerType FulfillTypePromise(Status *error = nullptr);
+    CompilerType FulfillTypePromise(const SymbolContext *sc,
+                                    Status *error = nullptr);
   };
   typedef std::shared_ptr<MetadataPromise> MetadataPromiseSP;
 
-  MetadataPromiseSP GetMetadataPromise(lldb::addr_t addr,
+  MetadataPromiseSP GetMetadataPromise(const SymbolContext *sc,
+                                       lldb::addr_t addr,
                                        ValueObject &for_object);
   MetadataPromiseSP
   GetPromiseForTypeNameAndFrame(const char *type_name, StackFrame *frame);

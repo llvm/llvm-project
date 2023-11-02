@@ -695,8 +695,10 @@ bool SwiftUserExpression::Parse(DiagnosticManager &diagnostic_manager,
     return error("could not create a Swift scratch context: ",
                  m_err.AsCString());
 
+  const SymbolContext *sc =
+      &frame->GetSymbolContext(lldb::eSymbolContextFunction);
   m_swift_ast_ctx = llvm::dyn_cast_or_null<SwiftASTContextForExpressions>(
-      m_swift_scratch_ctx->get()->GetSwiftASTContext());
+      m_swift_scratch_ctx->get()->GetSwiftASTContext(sc));
 
   if (!m_swift_ast_ctx)
     return error("could not create a Swift AST context");
