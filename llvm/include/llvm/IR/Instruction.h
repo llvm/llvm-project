@@ -29,6 +29,7 @@
 namespace llvm {
 
 class BasicBlock;
+class DPMarker;
 class FastMathFlags;
 class MDNode;
 class Module;
@@ -50,6 +51,12 @@ private:
   /// Relative order of this instruction in its parent basic block. Used for
   /// O(1) local dominance checks between instructions.
   mutable unsigned Order = 0;
+
+public:
+  /// Optional marker recording the position for debugging information that
+  /// takes effect immediately before this instruction. Null unless there is
+  /// debugging information present.
+  DPMarker *DbgMarker = nullptr;
 
 protected:
   // The 15 first bits of `Value::SubclassData` are available for subclasses of
