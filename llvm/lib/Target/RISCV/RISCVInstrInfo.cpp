@@ -1194,7 +1194,7 @@ bool RISCVInstrInfo::optimizeCondBranch(MachineInstr &MI) const {
   // optimize for cases where Y had only one use (i.e. only used by the branch).
 
   // Right now we only care about LI (i.e. ADDI rs, 0)
-  auto isLoadImm = [](MachineInstr *MI) -> bool {
+  auto isLoadImm = [](const MachineInstr *MI) -> bool {
     return MI->getOpcode() == RISCV::ADDI && MI->getOperand(1).isReg() &&
            MI->getOperand(1).getReg() == RISCV::X0;
   };
@@ -1224,16 +1224,11 @@ bool RISCVInstrInfo::optimizeCondBranch(MachineInstr &MI) const {
   // Try to find the register for constant Z; return
   // invalid register otherwise.
   auto searchConst = [&](int64_t C1) -> Register {
-    MachineInstr *DefC1 = nullptr;
     MachineBasicBlock::reverse_iterator II(&MI), E = MBB->rend();
-    for (++II; II != E; ++II) {
-      if (isLoadImm(&*II))
-        if (II->getOperand(2).getImm() == C1) {
-          DefC1 = &*II;
-          break;
-        }
-    }
-    if (DefC1)
+    auto DefC1 = std::find_if(++II, E, [&](const MachineInstr &I) -> bool {
+      return isLoadImm(&I) && I.getOperand(2).getImm() == C1;
+    });
+    if (DefC1 != E)
       return DefC1->getOperand(0).getReg();
     else
       return Register();
@@ -1243,9 +1238,9 @@ bool RISCVInstrInfo::optimizeCondBranch(MachineInstr &MI) const {
   if (isFromLoadImm(LHS) && MRI.hasOneUse(LHS.getReg())) {
     // Might be case 1.
     int64_t C0 = getConst(LHS);
-    // Signed integer overflow is UB. (UINT_MAX is bigger so we don't need
+    // Signed integer overflow is UB. (UINT64_MAX is bigger so we don't need
     // to worry about unsigned overflow here)
-    if (C0 < INT_MAX)
+    if (C0 < INT64_MAX)
       if (Register RegZ = searchConst(C0 + 1)) {
         reverseBranchCondition(Cond);
         Cond[1] = MachineOperand::CreateReg(RHS.getReg(), /*isDef=*/false);
@@ -1258,7 +1253,7 @@ bool RISCVInstrInfo::optimizeCondBranch(MachineInstr &MI) const {
   } else if (isFromLoadImm(RHS) && MRI.hasOneUse(RHS.getReg())) {
     // Might be case 2.
     int64_t C0 = getConst(RHS);
-    // For unsigned cases, we don't want C1 to wrap back to UINT_MAX
+    // For unsigned cases, we don't want C1 to wrap back to UINT64_MAX
     // when C0 is zero.
     if ((CC == RISCVCC::COND_GE || CC == RISCVCC::COND_LT) || C0)
       if (Register RegZ = searchConst(C0 - 1)) {
