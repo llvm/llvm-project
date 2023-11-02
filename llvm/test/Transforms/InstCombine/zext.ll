@@ -783,7 +783,7 @@ define i64 @evaluate_zexted_const_expr(i1 %c) {
 ; but the flag on the zext doesn't.
 define i16 @zext_nneg_flag_drop(i8 %x, i16 %y) {
 ; CHECK-LABEL: @zext_nneg_flag_drop(
-; CHECK-NEXT:    [[EXT:%.*]] = zext nneg i8 [[X:%.*]] to i16
+; CHECK-NEXT:    [[EXT:%.*]] = zext i8 [[X:%.*]] to i16
 ; CHECK-NEXT:    [[OR1:%.*]] = or i16 [[EXT]], [[Y:%.*]]
 ; CHECK-NEXT:    [[OR2:%.*]] = or i16 [[OR1]], 128
 ; CHECK-NEXT:    ret i16 [[OR2]]
