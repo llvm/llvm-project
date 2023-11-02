@@ -323,3 +323,18 @@ define i1 @and_icmp_implies_poison(i32 %x) {
   %and = and i1 %cmp1, %cmp2
   ret i1 %and
 }
+
+define i1 @and_is_constant(ptr %arg, ptr %arg2) {
+; CHECK-LABEL: @and_is_constant(
+; CHECK-NEXT:    [[ICMP:%.*]] = icmp eq ptr [[ARG:%.*]], [[ARG2:%.*]]
+; CHECK-NEXT:    [[CALL:%.*]] = call i1 @llvm.is.constant.i1(i1 [[ICMP]])
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[CALL]], [[ICMP]]
+; CHECK-NEXT:    ret i1 [[AND]]
+;
+  %icmp = icmp eq ptr %arg, %arg2
+  %call = call i1 @llvm.is.constant.i1(i1 %icmp)
+  %and = and i1 %call, %icmp
+  ret i1 %and
+}
+
+declare i1 @llvm.is.constant.i1(i1)
