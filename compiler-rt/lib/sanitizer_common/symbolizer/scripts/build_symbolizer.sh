@@ -71,7 +71,7 @@ FLAGS+=" -include ${SRC_DIR}/../sanitizer_redefine_builtins.h -DSANITIZER_COMMON
 LINKFLAGS="-fuse-ld=lld -target $TARGET_TRIPLE"
 
 # Build zlib.
-if [[ -d ${ZLIB_BUILD} ]]; then
+if [[ ! -d ${ZLIB_BUILD} ]]; then
   if [[ -z "${ZLIB_SRC}" ]]; then
     git clone https://github.com/madler/zlib ${ZLIB_BUILD}
   else
