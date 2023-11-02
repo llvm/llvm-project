@@ -4,8 +4,7 @@ if(UNIX AND LIBCXX_ENABLE_STATIC AND LIBCXXABI_ENABLE_STATIC)
 
     DEPENDS
     clang
-    cxx
-    cxxabi
+    runtimes
     lld
   )
 
