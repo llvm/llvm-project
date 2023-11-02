@@ -19,10 +19,10 @@ module Mod { header "mod.h" }
 // RUN:   | FileCheck %s --allow-empty --check-prefix=DID-REUSE
 // DID-REUSE-NOT: remark: building module 'Mod'
 //
-// RUN: %clang_cc1 -module-file-info %t/cache1/Mod.pcm | FileCheck %s --check-prefix=HS-PATHS -DPREFIX=%/t
+// RUN: %clang_cc1 -module-file-info %t/cache1/Mod.pcm | FileCheck %s --check-prefix=HS-PATHS
 // HS-PATHS:      Header search paths:
 // HS-PATHS-NEXT:   User entries:
-// HS-PATHS-NEXT:     [[PREFIX]]/one
+// HS-PATHS-NEXT:     one
 
 // When skipping serialization of header search paths, mismatches cannot be detected, old PCM file gets reused.
 //
