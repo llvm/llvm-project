@@ -132,8 +132,8 @@ public:
 PreservedAnalyses ExpandLargeDivRemPass::run(Function &F,
                                              FunctionAnalysisManager &FAM) {
   const TargetSubtargetInfo *STI = TM->getSubtargetImpl(F);
-  PreservedAnalyses PA = PreservedAnalyses::none();
-  return runImpl(F, *STI->getTargetLowering()) ? PA : PreservedAnalyses::all();
+  return runImpl(F, *STI->getTargetLowering()) ? PreservedAnalyses::none()
+                                               : PreservedAnalyses::all();
 }
 
 char ExpandLargeDivRemLegacyPass::ID = 0;
