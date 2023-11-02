@@ -910,7 +910,9 @@ template <typename T> Expr<T> Folder<T>::RESHAPE(FunctionRef<T> &&funcRef) {
                 : pad->Reshape(std::move(shape.value()))};
         ConstantSubscripts subscripts{result.lbounds()};
         auto copied{result.CopyFrom(*source,
-            std::min(source->size(), resultElements), subscripts, dimOrderPtr)};
+            std::min(static_cast<decltype(resultElements)>(source->size()),
+                resultElements),
+            subscripts, dimOrderPtr)};
         if (copied < resultElements) {
           CHECK(pad);
           copied += result.CopyFrom(
