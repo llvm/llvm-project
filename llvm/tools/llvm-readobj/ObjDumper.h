@@ -25,6 +25,7 @@ namespace object {
 class Archive;
 class COFFImportFile;
 class ObjectFile;
+class GOFFObjectFile;
 class XCOFFObjectFile;
 class ELFObjectFileBase;
 } // namespace object
@@ -205,6 +206,9 @@ std::unique_ptr<ObjDumper> createELFDumper(const object::ELFObjectFileBase &Obj,
 
 std::unique_ptr<ObjDumper> createMachODumper(const object::MachOObjectFile &Obj,
                                              ScopedPrinter &Writer);
+
+std::unique_ptr<ObjDumper> createGOFFDumper(const object::GOFFObjectFile &Obj,
+                                            ScopedPrinter &Writer);
 
 std::unique_ptr<ObjDumper> createWasmDumper(const object::WasmObjectFile &Obj,
                                             ScopedPrinter &Writer);
