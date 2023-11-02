@@ -55,11 +55,7 @@ static inline bool checkForSingleVariableOnRHS(
   const Fortran::common::Indirection<Fortran::parser::Designator> *designator =
       std::get_if<Fortran::common::Indirection<Fortran::parser::Designator>>(
           &expr.u);
-  const Fortran::parser::Name *name =
-      designator
-          ? Fortran::semantics::getDesignatorNameIfDataRef(designator->value())
-          : nullptr;
-  return name != nullptr;
+  return designator != nullptr;
 }
 
 /// Checks if the symbol on the LHS of the assignment statement is present in
