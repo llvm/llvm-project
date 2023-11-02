@@ -1730,9 +1730,9 @@ bool Sema::CheckRedeclarationExported(NamedDecl *New, NamedDecl *Old) {
 
   auto Lk = Old->getFormalLinkage();
   int S = 0;
-  if (Lk == Linkage::InternalLinkage)
+  if (Lk == Linkage::Internal)
     S = 1;
-  else if (Lk == Linkage::ModuleLinkage)
+  else if (Lk == Linkage::Module)
     S = 2;
   Diag(New->getLocation(), diag::err_redeclaration_non_exported) << New << S;
   Diag(Old->getLocation(), diag::note_previous_declaration);
@@ -2407,7 +2407,7 @@ FunctionDecl *Sema::CreateBuiltin(IdentifierInfo *II, QualType Type,
 
   if (getLangOpts().CPlusPlus) {
     LinkageSpecDecl *CLinkageDecl = LinkageSpecDecl::Create(
-        Context, Parent, Loc, Loc, LinkageSpecDecl::lang_c, false);
+        Context, Parent, Loc, Loc, LinkageSpecLanguageIDs::C, false);
     CLinkageDecl->setImplicit();
     Parent->addDecl(CLinkageDecl);
     Parent = CLinkageDecl;
@@ -4843,11 +4843,9 @@ void Sema::notePreviousDefinition(const NamedDecl *Old, SourceLocation New) {
 /// of the same variable. Either diagnose or fix the problem.
 bool Sema::checkVarDeclRedefinition(VarDecl *Old, VarDecl *New) {
   if (!hasVisibleDefinition(Old) &&
-      (New->getFormalLinkage() == InternalLinkage ||
-       New->isInline() ||
+      (New->getFormalLinkage() == Linkage::Internal || New->isInline() ||
        isa<VarTemplateSpecializationDecl>(New) ||
-       New->getDescribedVarTemplate() ||
-       New->getNumTemplateParameterLists() ||
+       New->getDescribedVarTemplate() || New->getNumTemplateParameterLists() ||
        New->getDeclContext()->isDependentContext())) {
     // The previous definition is hidden, and multiple definitions are
     // permitted (in separate TUs). Demote this to a declaration.
@@ -13413,9 +13411,8 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
   // units.
   if (getLangOpts().CPlusPlusModules && currentModuleIsHeaderUnit() &&
       !VDecl->isInvalidDecl() && VDecl->isThisDeclarationADefinition() &&
-      VDecl->getFormalLinkage() == Linkage::ExternalLinkage &&
-      !VDecl->isInline() && !VDecl->isTemplated() &&
-      !isa<VarTemplateSpecializationDecl>(VDecl)) {
+      VDecl->getFormalLinkage() == Linkage::External && !VDecl->isInline() &&
+      !VDecl->isTemplated() && !isa<VarTemplateSpecializationDecl>(VDecl)) {
     Diag(VDecl->getLocation(), diag::err_extern_def_in_header_unit);
     VDecl->setInvalidDecl();
   }
@@ -15394,9 +15391,8 @@ Sema::CheckForFunctionRedefinition(FunctionDecl *FD,
   // If we don't have a visible definition of the function, and it's inline or
   // a template, skip the new definition.
   if (SkipBody && !hasVisibleDefinition(Definition) &&
-      (Definition->getFormalLinkage() == InternalLinkage ||
-       Definition->isInlined() ||
-       Definition->getDescribedFunctionTemplate() ||
+      (Definition->getFormalLinkage() == Linkage::Internal ||
+       Definition->isInlined() || Definition->getDescribedFunctionTemplate() ||
        Definition->getNumTemplateParameterLists())) {
     SkipBody->ShouldSkip = true;
     SkipBody->Previous = const_cast<FunctionDecl*>(Definition);
@@ -15652,8 +15648,8 @@ Decl *Sema::ActOnStartOfFunctionDef(Scope *FnBodyScope, Decl *D,
   if (getLangOpts().CPlusPlusModules && currentModuleIsHeaderUnit() &&
       !FD->isInvalidDecl() && !FD->isInlined() &&
       BodyKind != FnBodyKind::Delete && BodyKind != FnBodyKind::Default &&
-      FD->getFormalLinkage() == Linkage::ExternalLinkage &&
-      !FD->isTemplated() && !FD->isTemplateInstantiation()) {
+      FD->getFormalLinkage() == Linkage::External && !FD->isTemplated() &&
+      !FD->isTemplateInstantiation()) {
     assert(FD->isThisDeclarationADefinition());
     Diag(FD->getLocation(), diag::err_extern_def_in_header_unit);
     FD->setInvalidDecl();
@@ -16627,11 +16623,10 @@ void Sema::AddKnownFunctionAttributes(FunctionDecl *FD) {
   IdentifierInfo *Name = FD->getIdentifier();
   if (!Name)
     return;
-  if ((!getLangOpts().CPlusPlus &&
-       FD->getDeclContext()->isTranslationUnit()) ||
+  if ((!getLangOpts().CPlusPlus && FD->getDeclContext()->isTranslationUnit()) ||
       (isa<LinkageSpecDecl>(FD->getDeclContext()) &&
        cast<LinkageSpecDecl>(FD->getDeclContext())->getLanguage() ==
-       LinkageSpecDecl::lang_c)) {
+           LinkageSpecLanguageIDs::C)) {
     // Okay: this could be a libc/libm/Objective-C function we know
     // about.
   } else
@@ -19197,10 +19192,12 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
 
       if (const auto *RT = FT->getAs<RecordType>()) {
         if (RT->getDecl()->getArgPassingRestrictions() ==
-            RecordDecl::APK_CanNeverPassInRegs)
-          Record->setArgPassingRestrictions(RecordDecl::APK_CanNeverPassInRegs);
+            RecordArgPassingKind::CanNeverPassInRegs)
+          Record->setArgPassingRestrictions(
+              RecordArgPassingKind::CanNeverPassInRegs);
       } else if (FT.getQualifiers().getObjCLifetime() == Qualifiers::OCL_Weak)
-        Record->setArgPassingRestrictions(RecordDecl::APK_CanNeverPassInRegs);
+        Record->setArgPassingRestrictions(
+            RecordArgPassingKind::CanNeverPassInRegs);
     }
 
     if (Record && FD->getType().isVolatileQualified())

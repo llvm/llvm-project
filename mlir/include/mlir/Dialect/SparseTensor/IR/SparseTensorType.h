@@ -60,10 +60,7 @@ public:
       : SparseTensorType(
             RankedTensorType::get(stp.getShape(), stp.getElementType(), enc)) {}
 
-  // Copy-assignment would be implicitly deleted (because our fields
-  // are const), so we explicitly delete it for clarity.
   SparseTensorType &operator=(const SparseTensorType &) = delete;
-  // So we must explicitly define the copy-ctor to silence -Wdeprecated-copy.
   SparseTensorType(const SparseTensorType &) = default;
 
   //
@@ -243,10 +240,10 @@ public:
   Level getLvlRank() const { return lvlRank; }
 
   /// Returns the dimension-shape.
-  ArrayRef<DynSize> getDimShape() const { return rtp.getShape(); }
+  ArrayRef<Size> getDimShape() const { return rtp.getShape(); }
 
   /// Returns the Level-shape.
-  SmallVector<DynSize> getLvlShape() const {
+  SmallVector<Size> getLvlShape() const {
     return getEncoding().tranlateShape(getDimShape(),
                                        CrdTransDirectionKind::dim2lvl);
   }
@@ -260,17 +257,9 @@ public:
   /// Safely looks up the requested dimension-DynSize.  If you intend
   /// to check the result with `ShapedType::isDynamic`, then see the
   /// `getStaticDimSize` method instead.
-  DynSize getDynamicDimSize(Dimension d) const {
+  Size getDynamicDimSize(Dimension d) const {
     assert(d < getDimRank() && "Dimension is out of bounds");
     return getDimShape()[d];
-  }
-
-  /// Safely looks up the requested dimension-size, mapping dynamic
-  /// sizes to `std::nullopt`.
-  std::optional<StaticSize> getStaticDimSize(Dimension d) const {
-    const DynSize sh = getDynamicDimSize(d);
-    return ShapedType::isDynamic(sh) ? std::nullopt
-                                     : std::optional<StaticSize>(sh);
   }
 
   /// Returns true if no dimension has dynamic size.
@@ -318,12 +307,16 @@ public:
 
   /// Returns the coordinate-overhead MLIR type, defaulting to `IndexType`.
   Type getCrdType() const {
-    return detail::getIntegerOrIndexType(getContext(), getCrdWidth());
+    if (getCrdWidth())
+      return IntegerType::get(getContext(), getCrdWidth());
+    return IndexType::get(getContext());
   }
 
   /// Returns the position-overhead MLIR type, defaulting to `IndexType`.
   Type getPosType() const {
-    return detail::getIntegerOrIndexType(getContext(), getPosWidth());
+    if (getPosWidth())
+      return IntegerType::get(getContext(), getPosWidth());
+    return IndexType::get(getContext());
   }
 
 private:
@@ -336,15 +329,12 @@ private:
   const AffineMap lvlToDim;
 };
 
-/// Convenience methods to abbreviate wrapping `getRankedTensorType`.
-template <typename T>
-inline SparseTensorType getSparseTensorType(T t) {
-  return SparseTensorType(getRankedTensorType(t));
+/// Convenience methods to obtain a SparseTensorType from a Value.
+inline SparseTensorType getSparseTensorType(Value val) {
+  return SparseTensorType(cast<RankedTensorType>(val.getType()));
 }
-template <typename T>
-inline std::optional<SparseTensorType> tryGetSparseTensorType(T t) {
-  RankedTensorType rtp = getRankedTensorType(t);
-  if (rtp)
+inline std::optional<SparseTensorType> tryGetSparseTensorType(Value val) {
+  if (auto rtp = dyn_cast<RankedTensorType>(val.getType()))
     return SparseTensorType(rtp);
   return std::nullopt;
 }

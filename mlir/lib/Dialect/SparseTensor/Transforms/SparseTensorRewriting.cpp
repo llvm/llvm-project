@@ -729,7 +729,7 @@ public:
       for (Dimension d : dstTp.getDimShape())
         dstSizes.push_back(constantIndex(rewriter, loc, d));
     } else {
-      ArrayRef<DynSize> dstShape = dstTp.getDimShape();
+      ArrayRef<Size> dstShape = dstTp.getDimShape();
       genReshapeDstShape(rewriter, loc, dstSizes, srcSizes, dstShape,
                          op.getReassociationIndices());
       for (auto [idx, shape] : llvm::enumerate(dstShape)) {
@@ -872,8 +872,9 @@ struct SparseTensorDimOpRewriter : public OpRewritePattern<tensor::DimOp> {
       return failure();
 
     if (stt.isPermutation()) {
+      // FIXME: `toStoredDim` is deprecated
       rewriter.replaceOpWithNewOp<LvlOp>(op, op.getSource(),
-                                         toStoredDim(stt, *dim));
+                                         toStoredDim(stt.getEncoding(), *dim));
       return success();
     }
 
@@ -970,11 +971,10 @@ struct ConcatenateRewriter : public OpRewritePattern<ConcatenateOp> {
       // Accumulates the offset. Note that only static-shaped inputs are allowed
       // by concatenate op verifier, which saves us from computing the offset
       // dynamically.
-      const auto sh = getSparseTensorType(input).getStaticDimSize(conDim);
-      assert(sh.has_value());
-      offset = rewriter.create<arith::AddIOp>(
-          loc, offset, constantIndex(rewriter, loc, *sh));
-
+      const Size sz = getSparseTensorType(input).getDynamicDimSize(conDim);
+      assert(!ShapedType::isDynamic(sz));
+      offset = rewriter.create<arith::AddIOp>(loc, offset,
+                                              constantIndex(rewriter, loc, sz));
       iterArg = foreachOp.getResult(0);
       dstBuf.val = iterArg;
     }
@@ -1063,6 +1063,29 @@ struct DirectConvertRewriter : public OpRewritePattern<ConvertOp> {
   }
 };
 
+struct CrdTranslateRewriter : public OpRewritePattern<CrdTranslateOp> {
+  using OpRewritePattern::OpRewritePattern;
+  LogicalResult matchAndRewrite(CrdTranslateOp op,
+                                PatternRewriter &rewriter) const override {
+    AffineMap map = op.getDirection() == CrdTransDirectionKind::dim2lvl
+                        ? op.getEncoder().getDimToLvl()
+                        : op.getEncoder().getLvlToDim();
+
+    SmallVector<Value> outCrds;
+    for (AffineExpr result : map.getResults()) {
+      // TODO: we should probably expand the affine map to IR using our own
+      // rules, since affine.apply assume signed value, while the cooridinates
+      // we provided must always be signless.
+      Value trans = rewriter.create<affine::AffineApplyOp>(
+          op.getLoc(), AffineMap::get(map.getNumDims(), 0, result),
+          op.getInCrds());
+      outCrds.push_back(trans);
+    }
+    rewriter.replaceOp(op, outCrds);
+    return success();
+  }
+};
+
 /// Sparse rewriting rule for the foreach operator.
 struct ForeachRewriter : public OpRewritePattern<ForeachOp> {
 public:
@@ -1107,14 +1130,11 @@ public:
 
     SmallVector<Value> lcvs = loopEmitter.getLoopIVs();
     if (op.getOrder()) {
-      // FIXME: There is some dim/lvl confusion here since `dimRank != lvlRank`
-      const Dimension dimRank = stt.getDimRank();
-      SmallVector<Value> dcvs = lcvs; // keep a copy
-      for (Dimension d = 0; d < dimRank; d++) {
-        auto l = op.getOrder()->getDimPosition(d);
-        lcvs[l] = dcvs[d];
-      }
+      // TODO: Support it so that we can do direct conversion from CSR->BSR.
+      llvm_unreachable(
+          "Level order not yet implemented on non-constant input tensors.");
     }
+
     Value vals = loopEmitter.getValBuffer()[0];
     Value pos = loopEmitter.getPosits()[0].back();
     // Loads the value from sparse tensor using position-index;
@@ -1284,5 +1304,7 @@ void mlir::populateLowerSparseOpsToForeachPatterns(RewritePatternSet &patterns,
 }
 
 void mlir::populateLowerForeachToSCFPatterns(RewritePatternSet &patterns) {
-  patterns.add<ForeachRewriter>(patterns.getContext());
+  // Run CrdTranslateRewriter later in the pipeline so that operation can be
+  // folded before lowering to affine.apply
+  patterns.add<CrdTranslateRewriter, ForeachRewriter>(patterns.getContext());
 }

@@ -51,9 +51,9 @@ void test() {
   // CHECK-SAME:                              name: "<lambda_2_1>",
   c.lambda_params();
 
-  // CHECK: !DISubprogram(name: "operator()", scope: ![[LAMBDA1:[0-9]+]],
-  // CHECK: ![[LAMBDA1]] = !DICompositeType(tag: DW_TAG_class_type,
+  // CHECK: ![[LAMBDA1:[0-9]+]] = !DICompositeType(tag: DW_TAG_class_type,
   // CHECK-SAME:                            name: "<lambda_1>",
   // CHECK-SAME:                            flags: DIFlagFwdDecl
+  // CHECK: !DISubprogram(name: "operator()", scope: ![[LAMBDA1]],
   c.lambda2();
 }

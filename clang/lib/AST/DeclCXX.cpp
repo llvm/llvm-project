@@ -446,8 +446,8 @@ CXXRecordDecl::setBases(CXXBaseSpecifier const * const *Bases,
       setHasVolatileMember(true);
 
     if (BaseClassDecl->getArgPassingRestrictions() ==
-        RecordDecl::APK_CanNeverPassInRegs)
-      setArgPassingRestrictions(RecordDecl::APK_CanNeverPassInRegs);
+        RecordArgPassingKind::CanNeverPassInRegs)
+      setArgPassingRestrictions(RecordArgPassingKind::CanNeverPassInRegs);
 
     // Keep track of the presence of mutable fields.
     if (BaseClassDecl->hasMutableFields())
@@ -1032,7 +1032,7 @@ void CXXRecordDecl::addedMember(Decl *D) {
 
         // Structs with __weak fields should never be passed directly.
         if (LT == Qualifiers::OCL_Weak)
-          setArgPassingRestrictions(RecordDecl::APK_CanNeverPassInRegs);
+          setArgPassingRestrictions(RecordArgPassingKind::CanNeverPassInRegs);
 
         Data.HasIrrelevantDestructor = false;
 
@@ -1226,8 +1226,8 @@ void CXXRecordDecl::addedMember(Decl *D) {
         if (FieldRec->hasVolatileMember())
           setHasVolatileMember(true);
         if (FieldRec->getArgPassingRestrictions() ==
-            RecordDecl::APK_CanNeverPassInRegs)
-          setArgPassingRestrictions(RecordDecl::APK_CanNeverPassInRegs);
+            RecordArgPassingKind::CanNeverPassInRegs)
+          setArgPassingRestrictions(RecordArgPassingKind::CanNeverPassInRegs);
 
         // C++0x [class]p7:
         //   A standard-layout class is a class that:
@@ -2854,8 +2854,8 @@ bool CXXConversionDecl::isLambdaToBlockPointerConversion() const {
 }
 
 LinkageSpecDecl::LinkageSpecDecl(DeclContext *DC, SourceLocation ExternLoc,
-                                 SourceLocation LangLoc, LanguageIDs lang,
-                                 bool HasBraces)
+                                 SourceLocation LangLoc,
+                                 LinkageSpecLanguageIDs lang, bool HasBraces)
     : Decl(LinkageSpec, DC, LangLoc), DeclContext(LinkageSpec),
       ExternLoc(ExternLoc), RBraceLoc(SourceLocation()) {
   setLanguage(lang);
@@ -2864,19 +2864,19 @@ LinkageSpecDecl::LinkageSpecDecl(DeclContext *DC, SourceLocation ExternLoc,
 
 void LinkageSpecDecl::anchor() {}
 
-LinkageSpecDecl *LinkageSpecDecl::Create(ASTContext &C,
-                                         DeclContext *DC,
+LinkageSpecDecl *LinkageSpecDecl::Create(ASTContext &C, DeclContext *DC,
                                          SourceLocation ExternLoc,
                                          SourceLocation LangLoc,
-                                         LanguageIDs Lang,
+                                         LinkageSpecLanguageIDs Lang,
                                          bool HasBraces) {
   return new (C, DC) LinkageSpecDecl(DC, ExternLoc, LangLoc, Lang, HasBraces);
 }
 
 LinkageSpecDecl *LinkageSpecDecl::CreateDeserialized(ASTContext &C,
                                                      unsigned ID) {
-  return new (C, ID) LinkageSpecDecl(nullptr, SourceLocation(),
-                                     SourceLocation(), lang_c, false);
+  return new (C, ID)
+      LinkageSpecDecl(nullptr, SourceLocation(), SourceLocation(),
+                      LinkageSpecLanguageIDs::C, false);
 }
 
 void UsingDirectiveDecl::anchor() {}

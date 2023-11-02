@@ -8203,7 +8203,8 @@ SDValue AArch64TargetLowering::LowerGlobalAddress(SDValue Op,
   }
 
   SDValue Result;
-  if (getTargetMachine().getCodeModel() == CodeModel::Large) {
+  if (getTargetMachine().getCodeModel() == CodeModel::Large &&
+      !getTargetMachine().isPositionIndependent()) {
     Result = getAddrLarge(GN, DAG, OpFlags);
   } else if (getTargetMachine().getCodeModel() == CodeModel::Tiny) {
     Result = getAddrTiny(GN, DAG, OpFlags);
@@ -9568,12 +9569,12 @@ SDValue AArch64TargetLowering::LowerJumpTable(SDValue Op,
   // is necessary here. Just get the address of the jump table.
   JumpTableSDNode *JT = cast<JumpTableSDNode>(Op);
 
-  if (getTargetMachine().getCodeModel() == CodeModel::Large &&
-      !Subtarget->isTargetMachO()) {
+  CodeModel::Model CM = getTargetMachine().getCodeModel();
+  if (CM == CodeModel::Large && !getTargetMachine().isPositionIndependent() &&
+      !Subtarget->isTargetMachO())
     return getAddrLarge(JT, DAG);
-  } else if (getTargetMachine().getCodeModel() == CodeModel::Tiny) {
+  if (CM == CodeModel::Tiny)
     return getAddrTiny(JT, DAG);
-  }
   return getAddr(JT, DAG);
 }
 
@@ -9599,27 +9600,28 @@ SDValue AArch64TargetLowering::LowerBR_JT(SDValue Op,
 SDValue AArch64TargetLowering::LowerConstantPool(SDValue Op,
                                                  SelectionDAG &DAG) const {
   ConstantPoolSDNode *CP = cast<ConstantPoolSDNode>(Op);
-
-  if (getTargetMachine().getCodeModel() == CodeModel::Large) {
+  CodeModel::Model CM = getTargetMachine().getCodeModel();
+  if (CM == CodeModel::Large) {
     // Use the GOT for the large code model on iOS.
     if (Subtarget->isTargetMachO()) {
       return getGOT(CP, DAG);
     }
-    return getAddrLarge(CP, DAG);
-  } else if (getTargetMachine().getCodeModel() == CodeModel::Tiny) {
+    if (!getTargetMachine().isPositionIndependent())
+      return getAddrLarge(CP, DAG);
+  } else if (CM == CodeModel::Tiny) {
     return getAddrTiny(CP, DAG);
-  } else {
-    return getAddr(CP, DAG);
   }
+  return getAddr(CP, DAG);
 }
 
 SDValue AArch64TargetLowering::LowerBlockAddress(SDValue Op,
                                                SelectionDAG &DAG) const {
   BlockAddressSDNode *BA = cast<BlockAddressSDNode>(Op);
-  if (getTargetMachine().getCodeModel() == CodeModel::Large &&
-      !Subtarget->isTargetMachO()) {
-    return getAddrLarge(BA, DAG);
-  } else if (getTargetMachine().getCodeModel() == CodeModel::Tiny) {
+  CodeModel::Model CM = getTargetMachine().getCodeModel();
+  if (CM == CodeModel::Large && !Subtarget->isTargetMachO()) {
+    if (!getTargetMachine().isPositionIndependent())
+      return getAddrLarge(BA, DAG);
+  } else if (CM == CodeModel::Tiny) {
     return getAddrTiny(BA, DAG);
   }
   return getAddr(BA, DAG);

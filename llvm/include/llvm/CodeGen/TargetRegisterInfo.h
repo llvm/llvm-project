@@ -266,6 +266,11 @@ protected:
   virtual ~TargetRegisterInfo();
 
 public:
+  /// Return the number of registers for the function. (may overestimate)
+  virtual unsigned getNumSupportedRegs(const MachineFunction &) const {
+    return getNumRegs();
+  }
+
   // Register numbers can represent physical registers, virtual registers, and
   // sometimes stack slots. The unsigned values are divided into these ranges:
   //
