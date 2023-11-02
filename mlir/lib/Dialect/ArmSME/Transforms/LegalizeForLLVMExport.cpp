@@ -278,13 +278,7 @@ struct StoreTileSliceToArmSMELowering
     auto tileSliceI32 = rewriter.create<arith::IndexCastUIOp>(
         loc, rewriter.getI32Type(), tileSlice);
 
-    // Create all active predicate mask.
-    auto one = rewriter.create<arith::ConstantOp>(
-        loc, rewriter.getI1Type(),
-        rewriter.getIntegerAttr(rewriter.getI1Type(), 1));
-    auto predTy = VectorType::get(tileType.getShape()[0], rewriter.getI1Type(),
-                                  /*scalableDims=*/{true});
-    auto allActiveMask = rewriter.create<vector::SplatOp>(loc, predTy, one);
+    auto maskOp = storeTileSliceOp.getMask();
 
     Value tileI32 = castTileIDToI32(tile, loc, rewriter);
     arm_sme::TileSliceLayout layout = storeTileSliceOp.getLayout();
@@ -295,23 +289,23 @@ struct StoreTileSliceToArmSMELowering
         llvm_unreachable("unexpected element type!");
       case 8:
         rewriter.replaceOpWithNewOp<arm_sme::aarch64_sme_st1b_horiz>(
-            storeTileSliceOp, allActiveMask, ptr, tileI32, tileSliceI32);
+            storeTileSliceOp, maskOp, ptr, tileI32, tileSliceI32);
         break;
       case 16:
         rewriter.replaceOpWithNewOp<arm_sme::aarch64_sme_st1h_horiz>(
-            storeTileSliceOp, allActiveMask, ptr, tileI32, tileSliceI32);
+            storeTileSliceOp, maskOp, ptr, tileI32, tileSliceI32);
         break;
       case 32:
         rewriter.replaceOpWithNewOp<arm_sme::aarch64_sme_st1w_horiz>(
-            storeTileSliceOp, allActiveMask, ptr, tileI32, tileSliceI32);
+            storeTileSliceOp, maskOp, ptr, tileI32, tileSliceI32);
         break;
       case 64:
         rewriter.replaceOpWithNewOp<arm_sme::aarch64_sme_st1d_horiz>(
-            storeTileSliceOp, allActiveMask, ptr, tileI32, tileSliceI32);
+            storeTileSliceOp, maskOp, ptr, tileI32, tileSliceI32);
         break;
       case 128:
         rewriter.replaceOpWithNewOp<arm_sme::aarch64_sme_st1q_horiz>(
-            storeTileSliceOp, allActiveMask, ptr, tileI32, tileSliceI32);
+            storeTileSliceOp, maskOp, ptr, tileI32, tileSliceI32);
         break;
       }
     } else {
@@ -320,23 +314,23 @@ struct StoreTileSliceToArmSMELowering
         llvm_unreachable("unexpected element type!");
       case 8:
         rewriter.replaceOpWithNewOp<arm_sme::aarch64_sme_st1b_vert>(
-            storeTileSliceOp, allActiveMask, ptr, tileI32, tileSliceI32);
+            storeTileSliceOp, maskOp, ptr, tileI32, tileSliceI32);
         break;
       case 16:
         rewriter.replaceOpWithNewOp<arm_sme::aarch64_sme_st1h_vert>(
-            storeTileSliceOp, allActiveMask, ptr, tileI32, tileSliceI32);
+            storeTileSliceOp, maskOp, ptr, tileI32, tileSliceI32);
         break;
       case 32:
         rewriter.replaceOpWithNewOp<arm_sme::aarch64_sme_st1w_vert>(
-            storeTileSliceOp, allActiveMask, ptr, tileI32, tileSliceI32);
+            storeTileSliceOp, maskOp, ptr, tileI32, tileSliceI32);
         break;
       case 64:
         rewriter.replaceOpWithNewOp<arm_sme::aarch64_sme_st1d_vert>(
-            storeTileSliceOp, allActiveMask, ptr, tileI32, tileSliceI32);
+            storeTileSliceOp, maskOp, ptr, tileI32, tileSliceI32);
         break;
       case 128:
         rewriter.replaceOpWithNewOp<arm_sme::aarch64_sme_st1q_vert>(
-            storeTileSliceOp, allActiveMask, ptr, tileI32, tileSliceI32);
+            storeTileSliceOp, maskOp, ptr, tileI32, tileSliceI32);
         break;
       }
     }

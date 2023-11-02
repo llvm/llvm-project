@@ -66,6 +66,15 @@ class HasMatchingMaskTypeConstraint<string vector, string mask> :
     vector, mask,
     "::llvm::cast<mlir::VectorType>($_self).cloneWith({}, IntegerType::get($_ctxt, 1))">;
 
+class TileSliceMaskConstraint<string tile, string mask> :
+  TypesMatchWith<
+    "`" # mask # "` has i1 element type and the shape is a slice of `" # tile # "`",
+    tile, mask,
+    "VectorType("
+      "VectorType::Builder("
+        "::llvm::cast<mlir::VectorType>($_self)"
+      ").dropDim(0).setElementType(IntegerType::get($_self.getContext(), 1)))">;
+
 //===----------------------------------------------------------------------===//
 // ArmSME attr definitions
 //===----------------------------------------------------------------------===//
@@ -408,15 +417,7 @@ def TileStoreOp : ArmSME_Op<"tile_store", [
 }
 
 def LoadTileSliceOp : ArmSME_Op<"load_tile_slice", [
-    AllTypesMatch<["tile", "result"]>,
-    TypesMatchWith<
-      "mask has i1 element type and is a slice of the result",
-      "result", "mask",
-      "VectorType("
-        "VectorType::Builder("
-          "::llvm::cast<mlir::VectorType>($_self)"
-        ").dropDim(0).setElementType(IntegerType::get($_self.getContext(), 1))"
-      ")">,
+  AllTypesMatch<["tile", "result"]>, TileSliceMaskConstraint<"result", "mask">
 ]> {
   let summary = "Tile slice load and update operation";
   let description = [{
@@ -432,9 +433,8 @@ def LoadTileSliceOp : ArmSME_Op<"load_tile_slice", [
     dimensions since the operation is scalable, and the element type must be a
     scalar that matches the element type of the result.
 
-    An SSA value `mask` specifies to mask out elements read from the MemRef.
-    The `mask` type is an `i1` vector with a shape that matches how elements
-    are read from the MemRef.
+    The provided `mask` is used to specify which elements of the tile slice
+    will be loaded.
 
     Example 1: Load a vector<[16]xi8> tile slice from memory into tile horizontally (default) at given index.
     ```mlir
@@ -474,7 +474,9 @@ def LoadTileSliceOp : ArmSME_Op<"load_tile_slice", [
   }];
 }
 
-def StoreTileSliceOp : ArmSME_Op<"store_tile_slice"> {
+def StoreTileSliceOp : ArmSME_Op<"store_tile_slice", [
+  TileSliceMaskConstraint<"tile", "mask">
+]> {
   let summary = "Tile slice store operation";
   let description = [{
     Stores a 1D tile slice from a 2D SME "virtual tile" into memory. The tile
@@ -489,22 +491,26 @@ def StoreTileSliceOp : ArmSME_Op<"store_tile_slice"> {
     dimensions since the operation is scalable, and the element type must be a
     scalar that matches the element type of the input tile.
 
+    The provided `mask` is used to specify which elements of the tile slice
+    will be stored.
+
     Example 1: Store vector<[16]xi8> horizontal (default) tile slice from tile at given index to memory.
     ```mlir
-    arm_sme.store_tile_slice %tile, %tile_slice_index, %base[%c0] : vector<[16]x[16]xi8>, memref<?x?xi8>
+    arm_sme.store_tile_slice %tile, %tile_slice_index, %mask, %base[%c0] : vector<[16]x[16]xi8>, vector<[16]xi1>, memref<?x?xi8>
     ```
 
     Example 2: Store vector<[4]xf32> vertical tile slice from tile at given index to memory.
     ```mlir
-    arm_sme.store_tile_slice %tile, %tile_slice_index, %base[%c0] layout<vertical> : vector<[4]x[4]xf32>, memref<?x?xf32>
+    arm_sme.store_tile_slice %tile, %tile_slice_index, %mask, %base[%c0] layout<vertical> : vector<[4]x[4]xf32>, vector<[4]xi1>, memref<?x?xf32>
     ```
 
     Example 3: Store a vector<[1]xi128> vertical tile slice from tile at given index to memory.
     ```mlir
-    arm_sme.store_tile_slice %tile, %tile_slice_index, %base[%c0] layout<vertical> : vector<[1]x[1]xi128>, memref<?x?xi128>
+    arm_sme.store_tile_slice %tile, %tile_slice_index, %mask, %base[%c0] layout<vertical> : vector<[1]x[1]xi128>, vector<[1]xi1>, memref<?x?xi128>
     ```
   }];
-  let arguments = (ins SMETile:$tile, Index:$tile_slice_index,
+  let arguments = (ins
+    SMETile:$tile, Index:$tile_slice_index, SVEPredicate:$mask,
     Arg<AnyMemRef, "the reference to store to", [MemWrite]>:$base,
     Variadic<Index>:$indices, ArmSME_TileSliceLayoutAttr:$layout
   );
@@ -518,8 +524,8 @@ def StoreTileSliceOp : ArmSME_Op<"store_tile_slice"> {
   }];
 
   let assemblyFormat = [{
-    $tile `,` $tile_slice_index `,` $base `[` $indices `]` (`layout` `` $layout^)?
-      attr-dict `:` type($base) `,` type($tile)
+    $tile `,` $tile_slice_index `,` $mask `,` $base `[` $indices `]` (`layout` `` $layout^)?
+      attr-dict `:` type($base) `,` type($mask) `,` type($tile)
   }];
 }
 
