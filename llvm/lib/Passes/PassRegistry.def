@@ -445,6 +445,7 @@ FUNCTION_PASS("transform-warning", WarnMissedTransformationsPass())
 FUNCTION_PASS("tsan", ThreadSanitizerPass())
 FUNCTION_PASS("memprof", MemProfilerPass())
 FUNCTION_PASS("declare-to-assign", llvm::AssignmentTrackingPass())
+FUNCTION_PASS("expand-large-div-rem", ExpandLargeDivRemPass(TM));
 #undef FUNCTION_PASS
 
 #ifndef FUNCTION_PASS_WITH_PARAMS
