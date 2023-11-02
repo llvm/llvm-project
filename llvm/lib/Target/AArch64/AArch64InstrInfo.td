@@ -6676,6 +6676,7 @@ def : Pat<(i32 (and (i32 (vector_extract (opNode (v8i16 V128:$Rn)), (i64 0))),
           ssub))>;
 }
 
+// For vecreduce_add, used by GlobalISel not SDAG
 def : Pat<(i8 (vecreduce_add (v8i8 V64:$Rn))), 
           (i8 (ADDVv8i8v V64:$Rn))>;
 def : Pat<(i8 (vecreduce_add (v16i8 V128:$Rn))), 
