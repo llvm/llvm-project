@@ -5014,8 +5014,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     Args.AddLastArg(CmdArgs, options::OPT_fthinlto_index_EQ);
   }
 
-  if (const Arg *A = Args.getLastArg(options::OPT_mregnames,
-                                     options::OPT_mno_regnames)) {
+  if (const Arg *A =
+          Args.getLastArg(options::OPT_mregnames, options::OPT_mno_regnames)) {
     if (A->getOption().matches(options::OPT_mregnames))
       Args.AddLastArg(CmdArgs, options::OPT_mregnames);
   }
