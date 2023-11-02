@@ -267,7 +267,8 @@ public:
   Fraction determinant(FracMatrix *inverse = nullptr) const;
 
   // Computes the Gram-Schmidt orthogonalisation
-  // of the matrix (cubic time).
+  // of the rows of matrix (cubic time).
+  // The rows of the matrix must be linearly independent.
   FracMatrix gramSchmidt() const;
 
 };

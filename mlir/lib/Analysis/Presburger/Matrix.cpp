@@ -551,6 +551,9 @@ Fraction FracMatrix::determinant(FracMatrix *inverse) const {
 }
 
 FracMatrix FracMatrix::gramSchmidt() const {
+    bool linIndep = (nRows < nColumns) || (nRows == nColumns && determinant(nullptr) != 0);
+    assert(linIndep && "the vectors must be linearly independent!");
+
     // Create a copy of the argument to store
     // the orthogonalised version.
     FracMatrix orth(*this);
