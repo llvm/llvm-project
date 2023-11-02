@@ -349,35 +349,35 @@ static_assert(
     (buildLevelType(LevelFormat::Dense, false, true) == std::nullopt &&
      buildLevelType(LevelFormat::Dense, true, false) == std::nullopt &&
      buildLevelType(LevelFormat::Dense, false, false) == std::nullopt &&
-     buildLevelType(LevelFormat::Dense, true, true) == DimLevelType::Dense &&
-     buildLevelType(LevelFormat::Compressed, true, true) ==
+     *buildLevelType(LevelFormat::Dense, true, true) == DimLevelType::Dense &&
+     *buildLevelType(LevelFormat::Compressed, true, true) ==
          DimLevelType::Compressed &&
-     buildLevelType(LevelFormat::Compressed, true, false) ==
+     *buildLevelType(LevelFormat::Compressed, true, false) ==
          DimLevelType::CompressedNu &&
-     buildLevelType(LevelFormat::Compressed, false, true) ==
+     *buildLevelType(LevelFormat::Compressed, false, true) ==
          DimLevelType::CompressedNo &&
-     buildLevelType(LevelFormat::Compressed, false, false) ==
+     *buildLevelType(LevelFormat::Compressed, false, false) ==
          DimLevelType::CompressedNuNo &&
-     buildLevelType(LevelFormat::Singleton, true, true) ==
+     *buildLevelType(LevelFormat::Singleton, true, true) ==
          DimLevelType::Singleton &&
-     buildLevelType(LevelFormat::Singleton, true, false) ==
+     *buildLevelType(LevelFormat::Singleton, true, false) ==
          DimLevelType::SingletonNu &&
-     buildLevelType(LevelFormat::Singleton, false, true) ==
+     *buildLevelType(LevelFormat::Singleton, false, true) ==
          DimLevelType::SingletonNo &&
-     buildLevelType(LevelFormat::Singleton, false, false) ==
+     *buildLevelType(LevelFormat::Singleton, false, false) ==
          DimLevelType::SingletonNuNo &&
-     buildLevelType(LevelFormat::LooseCompressed, true, true) ==
+     *buildLevelType(LevelFormat::LooseCompressed, true, true) ==
          DimLevelType::LooseCompressed &&
-     buildLevelType(LevelFormat::LooseCompressed, true, false) ==
+     *buildLevelType(LevelFormat::LooseCompressed, true, false) ==
          DimLevelType::LooseCompressedNu &&
-     buildLevelType(LevelFormat::LooseCompressed, false, true) ==
+     *buildLevelType(LevelFormat::LooseCompressed, false, true) ==
          DimLevelType::LooseCompressedNo &&
-     buildLevelType(LevelFormat::LooseCompressed, false, false) ==
+     *buildLevelType(LevelFormat::LooseCompressed, false, false) ==
          DimLevelType::LooseCompressedNuNo &&
      buildLevelType(LevelFormat::TwoOutOfFour, false, true) == std::nullopt &&
      buildLevelType(LevelFormat::TwoOutOfFour, true, false) == std::nullopt &&
      buildLevelType(LevelFormat::TwoOutOfFour, false, false) == std::nullopt &&
-     buildLevelType(LevelFormat::TwoOutOfFour, true, true) ==
+     *buildLevelType(LevelFormat::TwoOutOfFour, true, true) ==
          DimLevelType::TwoOutOfFour),
     "buildLevelType conversion is broken");
 
