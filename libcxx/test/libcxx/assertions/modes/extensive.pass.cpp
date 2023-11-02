@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-// This test ensures that assertions trigger without the user having to do anything when the strict hardening mode has
-// been enabled by default.
+// This test ensures that assertions trigger without the user having to do anything when the extensive hardening mode
+// has been enabled by default.
 
-// REQUIRES: libcpp-hardening-mode=strict
+// REQUIRES: libcpp-hardening-mode=extensive
 // `check_assertion.h` is only available starting from C++11.
 // UNSUPPORTED: c++03
 // `check_assertion.h` requires Unix headers.

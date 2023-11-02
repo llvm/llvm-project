@@ -59,7 +59,7 @@ option(LIBCXX_ENABLE_FILESYSTEM
    available on the platform. This includes things like most parts of <filesystem> and
    others like <fstream>" ON)
 option(LIBCXX_INCLUDE_TESTS "Build the libc++ tests." ${LLVM_INCLUDE_TESTS})
-set(LIBCXX_SUPPORTED_HARDENING_MODES none fast strict debug)
+set(LIBCXX_SUPPORTED_HARDENING_MODES none fast extensive debug)
 set(LIBCXX_HARDENING_MODE "none" CACHE STRING
   "Specify the default hardening mode to use. This mode will be used inside the
    compiled library and will be the default when compiling user code. Note that
@@ -751,13 +751,13 @@ config_define_if_not(LIBCXX_ENABLE_VENDOR_AVAILABILITY_ANNOTATIONS _LIBCPP_HAS_N
 
 # TODO(LLVM 19): Produce a deprecation warning.
 if (LIBCXX_ENABLE_ASSERTIONS)
-  set(LIBCXX_HARDENING_MODE "strict")
+  set(LIBCXX_HARDENING_MODE "extensive")
 endif()
 if (LIBCXX_HARDENING_MODE STREQUAL "none")
   config_define(2 _LIBCPP_HARDENING_MODE_DEFAULT)
 elseif (LIBCXX_HARDENING_MODE STREQUAL "fast")
   config_define(4 _LIBCPP_HARDENING_MODE_DEFAULT)
-elseif (LIBCXX_HARDENING_MODE STREQUAL "strict")
+elseif (LIBCXX_HARDENING_MODE STREQUAL "extensive")
   config_define(16 _LIBCPP_HARDENING_MODE_DEFAULT)
 elseif (LIBCXX_HARDENING_MODE STREQUAL "debug")
   config_define(8 _LIBCPP_HARDENING_MODE_DEFAULT)

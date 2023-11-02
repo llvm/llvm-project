@@ -407,9 +407,9 @@ generic-hardening-mode-fast-with-abi-breaks)
     check-runtimes
     check-abi-list
 ;;
-generic-hardening-mode-strict)
+generic-hardening-mode-extensive)
     clean
-    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-hardening-mode-strict.cmake"
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-hardening-mode-extensive.cmake"
     check-runtimes
     check-abi-list
 ;;

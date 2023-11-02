@@ -16,18 +16,18 @@ the standard library. Different hardening modes make different trade-offs
 between the amount of checking and runtime performance. The available hardening
 modes are:
 - fast mode;
-- strict mode;
+- extensive mode;
 - debug mode.
 
 The fast mode contains a set of security-critical checks that can be done with
 relatively little overhead in constant time and are intended to be used in
 production. We recommend most projects to adopt the fast mode.
 
-The strict mode contains all the checks from the fast mode and additionally some
-checks for undefined behavior that incur relatively little overhead but aren't
-security-critical. While the performance penalty is somewhat more significant
-compared to the fast mode, the strict mode is still intended to be usable in
-production.
+The extensive mode contains all the checks from the fast mode and additionally
+some checks for undefined behavior that incur relatively little overhead but
+aren't security-critical. While the performance penalty is somewhat more
+significant compared to the fast mode, the extensive mode is still intended to
+be usable in production.
 
 The debug mode enables all the available checks in the library, including
 internal assertions, some of which might be very expensive. This mode is
@@ -35,7 +35,7 @@ intended to be used for testing, not in production.
 
 Vendors can set the default hardening mode by using the
 ``LIBCXX_HARDENING_MODE`` variable at CMake configuration time with the possible
-values of ``none``, ``fast``, ``strict`` and ``debug``. The default value is
+values of ``none``, ``fast``, ``extensive`` and ``debug``. The default value is
 ``none`` which doesn't enable any hardening checks (this mode is sometimes
 called the ``unchecked`` mode).
 
@@ -54,7 +54,7 @@ set to one of the following possible values:
 
 - ``_LIBCPP_HARDENING_MODE_NONE``;
 - ``_LIBCPP_HARDENING_MODE_FAST``;
-- ``_LIBCPP_HARDENING_MODE_STRICT``;
+- ``_LIBCPP_HARDENING_MODE_EXTENSIVE``;
 - ``_LIBCPP_HARDENING_MODE_DEBUG``.
 
 The exact numeric values of these macros are unspecified and users should not

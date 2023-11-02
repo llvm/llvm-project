@@ -23,7 +23,7 @@ int main(int, char**) {
   _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(true, "Should not fire");
   TEST_LIBCPP_ASSERT_FAILURE([] { _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(false, "Fast-mode assertions should fire"); }(),
                              "Fast-mode assertions should fire");
-  _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(false, "Strict-mode assertions should not fire");
+  _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(false, "Extensive-mode assertions should not fire");
 
   return 0;
 }

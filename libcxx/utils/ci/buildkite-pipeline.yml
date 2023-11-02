@@ -440,8 +440,8 @@ steps:
           limit: 2
     timeout_in_minutes: 120
 
-  - label: "Strict hardening mode"
-    command: "libcxx/utils/ci/run-buildbot generic-hardening-mode-strict"
+  - label: "Extensive hardening mode"
+    command: "libcxx/utils/ci/run-buildbot generic-hardening-mode-extensive"
     artifact_paths:
       - "**/test-results.xml"
       - "**/*.abilist"

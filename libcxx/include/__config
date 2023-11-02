@@ -217,13 +217,13 @@
 
 // TODO(hardening): deprecate this in LLVM 19.
 // This is for backward compatibility -- make enabling `_LIBCPP_ENABLE_ASSERTIONS` (which predates hardening modes)
-// equivalent to setting the strict mode.
+// equivalent to setting the extensive mode.
 #  ifdef _LIBCPP_ENABLE_ASSERTIONS
 #    if _LIBCPP_ENABLE_ASSERTIONS != 0 && _LIBCPP_ENABLE_ASSERTIONS != 1
 #      error "_LIBCPP_ENABLE_ASSERTIONS must be set to 0 or 1"
 #    endif
 #    if _LIBCPP_ENABLE_ASSERTIONS
-#      define _LIBCPP_HARDENING_MODE _LIBCPP_HARDENING_MODE_STRICT
+#      define _LIBCPP_HARDENING_MODE _LIBCPP_HARDENING_MODE_EXTENSIVE
 #    endif
 #  endif
 
@@ -231,7 +231,7 @@
 //
 // - `_LIBCPP_HARDENING_MODE_NONE`;
 // - `_LIBCPP_HARDENING_MODE_FAST`;
-// - `_LIBCPP_HARDENING_MODE_STRICT`;
+// - `_LIBCPP_HARDENING_MODE_EXTENSIVE`;
 // - `_LIBCPP_HARDENING_MODE_DEBUG`.
 //
 // These values have the following effects:
@@ -241,12 +241,13 @@
 // - `_LIBCPP_HARDENING_MODE_FAST` -- sets that hardening mode to "fast". The fast mode enables security-critical checks
 //   that can be done with relatively little runtime overhead in constant time;
 //
-// - `_LIBCPP_HARDENING_MODE_STRICT` -- sets the hardening mode to "strict". The strict mode extends the fast mode with
-//   checks that are relatively cheap and prevent common types of errors but are not necessarily security-critical;
+// - `_LIBCPP_HARDENING_MODE_EXTENSIVE` -- sets the hardening mode to "extensive". The extensive mode is a superset of
+//   the fast mode that additionally enables checks that are relatively cheap and prevent common types of logic errors
+//   but are not necessarily security-critical;
 //
-// - `_LIBCPP_HARDENING_MODE_DEBUG` -- sets the hardening mode to "debug". The debug mode extends the strict mode and
-//   enables all checks available in the library, including internal assertions. Checks that are part of the debug mode
-//   can be very expensive and thus the debug mode is intended to be used for testing, not in production.
+// - `_LIBCPP_HARDENING_MODE_DEBUG` -- sets the hardening mode to "debug". The debug mode is a superset of the extensive
+//   mode and enables all checks available in the library, including internal assertions. Checks that are part of the
+//   debug mode can be very expensive and thus the debug mode is intended to be used for testing, not in production.
 
 // Inside the library, assertions are categorized so they can be cherry-picked based on the chosen hardening mode. These
 // macros are only for internal use -- users should only pick one of the high-level hardening modes described above.
@@ -278,10 +279,10 @@
 // - `_LIBCPP_ASSERT_UNCATEGORIZED` -- for assertions that haven't been properly classified yet.
 
 // clang-format off
-#  define _LIBCPP_HARDENING_MODE_NONE   (1 << 1)
-#  define _LIBCPP_HARDENING_MODE_FAST   (1 << 2)
-#  define _LIBCPP_HARDENING_MODE_STRICT (1 << 4) // Deliberately not ordered.
-#  define _LIBCPP_HARDENING_MODE_DEBUG  (1 << 3)
+#  define _LIBCPP_HARDENING_MODE_NONE      (1 << 1)
+#  define _LIBCPP_HARDENING_MODE_FAST      (1 << 2)
+#  define _LIBCPP_HARDENING_MODE_EXTENSIVE (1 << 4) // Deliberately not ordered.
+#  define _LIBCPP_HARDENING_MODE_DEBUG     (1 << 3)
 // clang-format on
 
 #  ifndef _LIBCPP_HARDENING_MODE
@@ -290,12 +291,12 @@
 
 #  if _LIBCPP_HARDENING_MODE != _LIBCPP_HARDENING_MODE_NONE &&                                                         \
       _LIBCPP_HARDENING_MODE != _LIBCPP_HARDENING_MODE_FAST &&                                                         \
-      _LIBCPP_HARDENING_MODE != _LIBCPP_HARDENING_MODE_STRICT &&                                                       \
+      _LIBCPP_HARDENING_MODE != _LIBCPP_HARDENING_MODE_EXTENSIVE &&                                                       \
       _LIBCPP_HARDENING_MODE != _LIBCPP_HARDENING_MODE_DEBUG
 #    error _LIBCPP_HARDENING_MODE must be set to one of the following values: \
 _LIBCPP_HARDENING_MODE_NONE, \
 _LIBCPP_HARDENING_MODE_FAST, \
-_LIBCPP_HARDENING_MODE_STRICT, \
+_LIBCPP_HARDENING_MODE_EXTENSIVE, \
 _LIBCPP_HARDENING_MODE_DEBUG
 #  endif
 
@@ -317,9 +318,9 @@ _LIBCPP_HARDENING_MODE_DEBUG
 #    define _LIBCPP_ASSERT_INTERNAL(expression, message)                 _LIBCPP_ASSUME(expression)
 #    define _LIBCPP_ASSERT_UNCATEGORIZED(expression, message)            _LIBCPP_ASSUME(expression)
 
-// Strict hardening mode checks.
+// Extensive hardening mode checks.
 
-#  elif _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_STRICT
+#  elif _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_EXTENSIVE
 
 // Enabled checks.
 #    define _LIBCPP_ASSERT_VALID_INPUT_RANGE(expression, message)        _LIBCPP_ASSERT(expression, message)
@@ -739,7 +740,7 @@ typedef __char32_t char32_t;
 
 #  if _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_FAST
 #    define _LIBCPP_HARDENING_SIG f
-#  elif _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_STRICT
+#  elif _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_EXTENSIVE
 #    define _LIBCPP_HARDENING_SIG s
 #  elif _LIBCPP_HARDENING_MODE == _LIBCPP_HARDENING_MODE_DEBUG
 #    define _LIBCPP_HARDENING_SIG d
