@@ -22,23 +22,23 @@
 /// op13 encodes the anonymous decl number which should be in order.
 // CHECK: <TYPE_FUNCTION_PROTO
 // CHECK-NEXT: <DECL_PARM_VAR
-// CHECK-SAME: op13=2
+// CHECK-SAME: op11=4024
 // CHECK-NEXT: <DECL_PARM_VAR
-// CHECK-SAME: op13=3
+// CHECK-SAME: op11=4032
 // CHECK-NEXT: <DECL_PARM_VAR
-// CHECK-SAME: op13=4
+// CHECK-SAME: op11=4040
 // CHECK-NEXT: <DECL_PARM_VAR
-// CHECK-SAME: op13=5
+// CHECK-SAME: op11=4048
 
 /// Decl records start at 43
 // CHECK: <DECL_RECORD
-// CHECK-SAME: op13=43
+// CHECK-SAME: op9=4352
 // CHECK-NEXT: <DECL_RECORD
-// CHECK-SAME: op13=44
+// CHECK-SAME: op9=4360
 // CHECK-NEXT: <DECL_RECORD
-// CHECK-SAME: op13=45
+// CHECK-SAME: op9=4368
 // CHECK-NEXT: <DECL_RECORD
-// CHECK-SAME: op13=46
+// CHECK-SAME: op9=4376
 
 //--- headers/a.h
 void f(struct A0 *a0,

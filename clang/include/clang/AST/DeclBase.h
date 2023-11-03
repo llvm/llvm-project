@@ -211,7 +211,7 @@ public:
   /// The kind of ownership a declaration has, for visibility purposes.
   /// This enumeration is designed such that higher values represent higher
   /// levels of name hiding.
-  enum class ModuleOwnershipKind : unsigned {
+  enum class ModuleOwnershipKind : unsigned char {
     /// This declaration is not owned by a module.
     Unowned,
 
