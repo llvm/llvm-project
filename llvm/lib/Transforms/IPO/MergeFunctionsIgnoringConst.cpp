@@ -1275,12 +1275,14 @@ fixUpTypesInByValAndStructRetAttributes(llvm::FunctionType *fnType,
     auto paramTy = fnType->getParamType(i);
     auto attrListIndex = llvm::AttributeList::FirstArgIndex + i;
     if (attrList.hasParamAttr(i, llvm::Attribute::StructRet) &&
-        paramTy->getNonOpaquePointerElementType() != attrList.getParamStructRetType(i))
+        paramTy->getNonOpaquePointerElementType() !=
+            attrList.getParamStructRetType(i))
       attrList = attrList.replaceAttributeTypeAtIndex(
           context, attrListIndex, llvm::Attribute::StructRet,
           paramTy->getNonOpaquePointerElementType());
     if (attrList.hasParamAttr(i, llvm::Attribute::ByVal) &&
-        paramTy->getNonOpaquePointerElementType() != attrList.getParamByValType(i))
+        paramTy->getNonOpaquePointerElementType() !=
+            attrList.getParamByValType(i))
       attrList = attrList.replaceAttributeTypeAtIndex(
           context, attrListIndex, llvm::Attribute::ByVal,
           paramTy->getNonOpaquePointerElementType());
@@ -1372,8 +1374,7 @@ bool MergeFuncIgnoringConstImpl::replaceDirectCallers(Function *Old,
     // Don't transfer attributes from the function to the callee. Function
     // attributes typically aren't relevant to the calling convention or ABI.
     auto newAttrList = AttributeList::get(Context, /*FnAttrs=*/AttributeSet(),
-                                            NewPAL.getRetAttrs(),
-                                            NewArgAttrs);
+                                          NewPAL.getRetAttrs(), NewArgAttrs);
     newAttrList = fixUpTypesInByValAndStructRetAttributes(FType, newAttrList);
     NewCI->setAttributes(newAttrList);
     if (IgnoreMusttailFunction && CI->isMustTailCall()) {
