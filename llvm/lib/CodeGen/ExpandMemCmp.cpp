@@ -667,11 +667,13 @@ Value *MemCmpExpansion::getMemCmpOneBlock() {
     ICmpInst::Predicate Pred = ICmpInst::Predicate::BAD_ICMP_PREDICATE;
     uint64_t Shift;
     bool NeedsZExt = false;
-    // This is a special case because instead of checking if the result is less than zero:
+    // This is a special case because instead of checking if the result is less
+    // than zero:
     //    bool result = memcmp(a, b, NBYTES) < 0;
     // Compiler is clever enough to generate the following code:
     //    bool result = memcmp(a, b, NBYTES) >> 31;
-    if (match(UI, m_LShr(m_Value(), m_ConstantInt(Shift))) && Shift == CI->getType()->getIntegerBitWidth() - 1) {
+    if (match(UI, m_LShr(m_Value(), m_ConstantInt(Shift))) &&
+        Shift == CI->getType()->getIntegerBitWidth() - 1) {
       Pred = ICmpInst::ICMP_SLT;
       NeedsZExt = true;
     } else {
@@ -680,7 +682,8 @@ Value *MemCmpExpansion::getMemCmpOneBlock() {
     }
     // Generate new code and remove the original memcmp call and the user
     if (ICmpInst::isSigned(Pred)) {
-      Value *Cmp = Builder.CreateICmp(CmpInst::getUnsignedPredicate(Pred), Loads.Lhs, Loads.Rhs);
+      Value *Cmp = Builder.CreateICmp(CmpInst::getUnsignedPredicate(Pred),
+                                      Loads.Lhs, Loads.Rhs);
       auto *Result = NeedsZExt ? Builder.CreateZExt(Cmp, U->getType()) : Cmp;
       UI->replaceAllUsesWith(Result);
       UI->eraseFromParent();
