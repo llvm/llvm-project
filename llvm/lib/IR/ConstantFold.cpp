@@ -1617,39 +1617,6 @@ Constant *llvm::ConstantFoldGetElementPtr(Type *PointeeTy, Constant *C,
                      cast<VectorType>(GEPTy)->getElementCount(), C)
                : C;
 
-  if (C->isNullValue()) {
-    bool isNull = true;
-    for (Value *Idx : Idxs)
-      if (!isa<UndefValue>(Idx) && !cast<Constant>(Idx)->isNullValue()) {
-        isNull = false;
-        break;
-      }
-    if (isNull) {
-      PointerType *PtrTy = cast<PointerType>(C->getType()->getScalarType());
-      Type *Ty = GetElementPtrInst::getIndexedType(PointeeTy, Idxs);
-
-      assert(Ty && "Invalid indices for GEP!");
-      Type *OrigGEPTy = PointerType::get(Ty, PtrTy->getAddressSpace());
-      Type *GEPTy = PointerType::get(Ty, PtrTy->getAddressSpace());
-      if (VectorType *VT = dyn_cast<VectorType>(C->getType()))
-        GEPTy = VectorType::get(OrigGEPTy, VT->getElementCount());
-
-      // The GEP returns a vector of pointers when one of more of
-      // its arguments is a vector.
-      for (Value *Idx : Idxs) {
-        if (auto *VT = dyn_cast<VectorType>(Idx->getType())) {
-          assert((!isa<VectorType>(GEPTy) || isa<ScalableVectorType>(GEPTy) ==
-                                                 isa<ScalableVectorType>(VT)) &&
-                 "Mismatched GEPTy vector types");
-          GEPTy = VectorType::get(OrigGEPTy, VT->getElementCount());
-          break;
-        }
-      }
-
-      return Constant::getNullValue(GEPTy);
-    }
-  }
-
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(C))
     if (auto *GEP = dyn_cast<GEPOperator>(CE))
       if (Constant *C = foldGEPOfGEP(GEP, PointeeTy, InBounds, Idxs))
