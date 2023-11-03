@@ -253,8 +253,6 @@ TEST(ConstantsTest, AsInstructionsTest) {
   CHECK(ConstantExpr::getAShr(P0, P0, true),
         "ashr exact i32 " P0STR ", " P0STR);
 
-  CHECK(ConstantExpr::getSExt(P0, Int64Ty), "sext i32 " P0STR " to i64");
-  CHECK(ConstantExpr::getZExt(P0, Int64Ty), "zext i32 " P0STR " to i64");
   CHECK(ConstantExpr::getFPTrunc(P2, FloatTy),
         "fptrunc double " P2STR " to float");
   CHECK(ConstantExpr::getFPExtend(P1, DoubleTy),

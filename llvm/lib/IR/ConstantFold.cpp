@@ -258,40 +258,6 @@ static Constant *ExtractConstantBytes(Constant *C, unsigned ByteStart,
     // TODO: Handle the 'partially zero' case.
     return nullptr;
   }
-
-  case Instruction::ZExt: {
-    unsigned SrcBitSize =
-      cast<IntegerType>(CE->getOperand(0)->getType())->getBitWidth();
-
-    // If extracting something that is completely zero, return 0.
-    if (ByteStart*8 >= SrcBitSize)
-      return Constant::getNullValue(IntegerType::get(CE->getContext(),
-                                                     ByteSize*8));
-
-    // If exactly extracting the input, return it.
-    if (ByteStart == 0 && ByteSize*8 == SrcBitSize)
-      return CE->getOperand(0);
-
-    // If extracting something completely in the input, if the input is a
-    // multiple of 8 bits, recurse.
-    if ((SrcBitSize&7) == 0 && (ByteStart+ByteSize)*8 <= SrcBitSize)
-      return ExtractConstantBytes(CE->getOperand(0), ByteStart, ByteSize);
-
-    // Otherwise, if extracting a subset of the input, which is not multiple of
-    // 8 bits, do a shift and trunc to get the bits.
-    if ((ByteStart+ByteSize)*8 < SrcBitSize) {
-      assert((SrcBitSize&7) && "Shouldn't get byte sized case here");
-      Constant *Res = CE->getOperand(0);
-      if (ByteStart)
-        Res = ConstantExpr::getLShr(Res,
-                                 ConstantInt::get(Res->getType(), ByteStart*8));
-      return ConstantExpr::getTrunc(Res, IntegerType::get(C->getContext(),
-                                                          ByteSize*8));
-    }
-
-    // TODO: Handle the 'partially zero' case.
-    return nullptr;
-  }
   }
 }
 
@@ -986,16 +952,6 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode, Constant *C1,
         return C1;                                            // X & -1 == X
 
       if (ConstantExpr *CE1 = dyn_cast<ConstantExpr>(C1)) {
-        // (zext i32 to i64) & 4294967295 -> (zext i32 to i64)
-        if (CE1->getOpcode() == Instruction::ZExt) {
-          unsigned DstWidth = CI2->getType()->getBitWidth();
-          unsigned SrcWidth =
-            CE1->getOperand(0)->getType()->getPrimitiveSizeInBits();
-          APInt PossiblySetBits(APInt::getLowBitsSet(DstWidth, SrcWidth));
-          if ((PossiblySetBits & CI2->getValue()) == PossiblySetBits)
-            return C1;
-        }
-
         // If and'ing the address of a global with a constant, fold it.
         if (CE1->getOpcode() == Instruction::PtrToInt &&
             isa<GlobalValue>(CE1->getOperand(0))) {
@@ -1055,12 +1011,6 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode, Constant *C1,
                                           CE1->getOperand(1));
         }
       }
-      break;
-    case Instruction::AShr:
-      // ashr (zext C to Ty), C2 -> lshr (zext C, CSA), C2
-      if (ConstantExpr *CE1 = dyn_cast<ConstantExpr>(C1))
-        if (CE1->getOpcode() == Instruction::ZExt)  // Top bits known zero.
-          return ConstantExpr::getLShr(C1, C2);
       break;
     }
   } else if (isa<ConstantInt>(C1)) {
@@ -1461,8 +1411,6 @@ static ICmpInst::Predicate evaluateICmpRelation(Constant *V1, Constant *V2,
       [[fallthrough]];
     case Instruction::UIToFP:
     case Instruction::SIToFP:
-    case Instruction::ZExt:
-    case Instruction::SExt:
       // We can't evaluate floating point casts or truncations.
       if (CE1Op0->getType()->isFPOrFPVectorTy())
         break;
@@ -1470,8 +1418,6 @@ static ICmpInst::Predicate evaluateICmpRelation(Constant *V1, Constant *V2,
       // If the cast is not actually changing bits, and the second operand is a
       // null pointer, do the comparison with the pre-casted value.
       if (V2->isNullValue() && CE1->getType()->isIntOrPtrTy()) {
-        if (CE1->getOpcode() == Instruction::ZExt) isSigned = false;
-        if (CE1->getOpcode() == Instruction::SExt) isSigned = true;
         return evaluateICmpRelation(CE1Op0,
                                     Constant::getNullValue(CE1Op0->getType()),
                                     isSigned);
@@ -1825,24 +1771,6 @@ Constant *llvm::ConstantFoldCompareInstruction(CmpInst::Predicate Predicate,
           !CE2Op0->getType()->isFPOrFPVectorTy()) {
         Constant *Inverse = ConstantExpr::getBitCast(C1, CE2Op0->getType());
         return ConstantExpr::getICmp(Predicate, Inverse, CE2Op0);
-      }
-    }
-
-    // If the left hand side is an extension, try eliminating it.
-    if (ConstantExpr *CE1 = dyn_cast<ConstantExpr>(C1)) {
-      if ((CE1->getOpcode() == Instruction::SExt &&
-           ICmpInst::isSigned(Predicate)) ||
-          (CE1->getOpcode() == Instruction::ZExt &&
-           !ICmpInst::isSigned(Predicate))) {
-        Constant *CE1Op0 = CE1->getOperand(0);
-        Constant *CE1Inverse = ConstantExpr::getTrunc(CE1, CE1Op0->getType());
-        if (CE1Inverse == CE1Op0) {
-          // Check whether we can safely truncate the right hand side.
-          Constant *C2Inverse = ConstantExpr::getTrunc(C2, CE1Op0->getType());
-          if (ConstantExpr::getCast(CE1->getOpcode(), C2Inverse,
-                                    C2->getType()) == C2)
-            return ConstantExpr::getICmp(Predicate, CE1Inverse, C2Inverse);
-        }
       }
     }
 

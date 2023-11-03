@@ -1272,18 +1272,6 @@ value llvm_const_trunc(value CV, value T) {
 }
 
 /* llvalue -> lltype -> llvalue */
-value llvm_const_sext(value CV, value T) {
-  LLVMValueRef Value = LLVMConstSExt(Value_val(CV), Type_val(T));
-  return to_val(Value);
-}
-
-/* llvalue -> lltype -> llvalue */
-value llvm_const_zext(value CV, value T) {
-  LLVMValueRef Value = LLVMConstZExt(Value_val(CV), Type_val(T));
-  return to_val(Value);
-}
-
-/* llvalue -> lltype -> llvalue */
 value llvm_const_fptrunc(value CV, value T) {
   LLVMValueRef Value = LLVMConstFPTrunc(Value_val(CV), Type_val(T));
   return to_val(Value);
@@ -1338,18 +1326,6 @@ value llvm_const_bitcast(value CV, value T) {
 }
 
 /* llvalue -> lltype -> llvalue */
-value llvm_const_zext_or_bitcast(value CV, value T) {
-  LLVMValueRef Value = LLVMConstZExtOrBitCast(Value_val(CV), Type_val(T));
-  return to_val(Value);
-}
-
-/* llvalue -> lltype -> llvalue */
-value llvm_const_sext_or_bitcast(value CV, value T) {
-  LLVMValueRef Value = LLVMConstSExtOrBitCast(Value_val(CV), Type_val(T));
-  return to_val(Value);
-}
-
-/* llvalue -> lltype -> llvalue */
 value llvm_const_trunc_or_bitcast(value CV, value T) {
   LLVMValueRef Value = LLVMConstTruncOrBitCast(Value_val(CV), Type_val(T));
   return to_val(Value);
@@ -1359,12 +1335,6 @@ value llvm_const_trunc_or_bitcast(value CV, value T) {
 value llvm_const_pointercast(value CV, value T) {
   LLVMValueRef Value = LLVMConstPointerCast(Value_val(CV), Type_val(T));
   return to_val(Value);
-}
-
-/* llvalue -> lltype -> is_signed:bool -> llvalue */
-value llvm_const_intcast(value CV, value T, value IsSigned) {
-  return to_val(
-      LLVMConstIntCast(Value_val(CV), Type_val(T), Bool_val(IsSigned)));
 }
 
 /* llvalue -> lltype -> llvalue */
