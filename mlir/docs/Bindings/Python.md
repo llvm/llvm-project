@@ -945,10 +945,11 @@ When the python bindings need to locate a wrapper module, they consult the
 `dialect_search_path` and use it to find an appropriately named module. For the
 main repository, this search path is hard-coded to include the `mlir.dialects`
 module, which is where wrappers are emitted by the above build rule. Out of tree
-dialects and add their modules to the search path by calling:
+dialects can add their modules to the search path by calling:
 
 ```python
-mlir._cext.append_dialect_search_prefix("myproject.mlir.dialects")
+from mlir.dialects._ods_common import _cext
+_cext.globals.append_dialect_search_prefix("myproject.mlir.dialects")
 ```
 
 ### Wrapper module code organization
