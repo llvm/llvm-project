@@ -33,7 +33,7 @@ set(Clang_DIR "${Clang_DIR_SAVE}" CACHE PATH "The directory containing a CMake c
 
 message(STATUS "Found system-installed LLVM ${LLVM_PACKAGE_VERSION} with headers in ${LLVM_INCLUDE_DIRS}")
 
-set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD 20)
 
 # Link only against clangTidy itself, not anything that clangTidy uses; otherwise we run setup code multiple times
 # which results in clang-tidy crashing
@@ -58,7 +58,7 @@ add_library(cxx-tidy MODULE ${SOURCES})
 target_link_libraries(cxx-tidy clangTidy)
 
 set_target_properties(cxx-tidy PROPERTIES
-                      CXX_STANDARD 23
+                      CXX_STANDARD 20
                       CXX_STANDARD_REQUIRED YES
                       CXX_EXTENSIONS NO)
 
