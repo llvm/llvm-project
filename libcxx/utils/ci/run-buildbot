@@ -242,6 +242,32 @@ check-generated-output)
         echo "formatting of some of the changed files. The diff above represents the "
         echo "changes that would be needed to ignore_format.txt to keep it representative "
         echo "of which files are mis-formatted in the project."
+        # If CLANG_FORMAT was not set a default is needed
+        if [ -z "${CLANG_FORMAT}" ]; then
+            CLANG_FORMAT=clang-format
+        fi
+        clang_format_version=`${CLANG_FORMAT} --version`
+        echo "+++ Using the following version of clang-format: ${clang_format_version}"
+        # Printing the changes that clang-format would apply to the files that
+        # are incorrectly formatted
+        for file in `cat ${BUILD_DIR}/ignore_format.diff`; do
+            # Ignoring the line numbers and angle brackets in diff output
+            if ! test -f ${file}; then
+                continue;
+            fi
+            tmpfile=${file}.clang-formatted
+            tmpdiff=${file}.diff
+            ${CLANG_FORMAT} ${file} > ${tmpfile}
+            diff ${file} ${tmpfile} > ${tmpdiff} || true
+            if [ -s ${tmpdiff} ]; then
+                echo "+++ You should apply the following changes to ${file}:"
+                cat ${tmpdiff}
+            else
+                echo "+++ The following file is no longer incorrectly formatted: ${file}"
+                echo "+++ Please remove it from ignore_format.txt."
+            fi
+            rm -f ${tmpfile} ${tmpdiff}
+        done
         false
     fi
 
