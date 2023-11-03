@@ -77,6 +77,7 @@ constexpr void test_allocators() {
   test_string<std::basic_string<CharT, CharTraits, std::allocator<CharT>>>();
   test_string<std::basic_string<CharT, CharTraits, min_allocator<CharT>>>();
   test_string<std::basic_string<CharT, CharTraits, test_allocator<CharT>>>();
+  test_string<std::basic_string<CharT, CharTraits, fancy_pointer_allocator<CharT>>>();
 }
 
 template <class CharT>

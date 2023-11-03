@@ -43,6 +43,9 @@ template <class CharT>
 using min_string = std::basic_string<CharT, std::char_traits<CharT>, min_allocator<CharT> >;
 
 template <class CharT>
+using fancy_string = std::basic_string<CharT, std::char_traits<CharT>, fancy_pointer_allocator<CharT> >;
+
+template <class CharT>
 using test_string = std::basic_string<CharT, std::char_traits<CharT>, test_allocator<CharT> >;
 
 template <class CharT>
@@ -52,6 +55,9 @@ using small_string = std::basic_string<CharT, std::char_traits<CharT>, small_ite
 
 static_assert(sizeof(std::string) == 24, "");
 static_assert(sizeof(min_string<char>) == 24, "");
+#  if TEST_STD_VER >= 11
+static_assert(sizeof(fancy_string<char>) == 24, "");
+#  endif
 static_assert(sizeof(test_string<char>) == 32, "");
 static_assert(sizeof(small_string<char>) == 6, "");
 
@@ -59,11 +65,17 @@ static_assert(sizeof(small_string<char>) == 6, "");
 #    if __WCHAR_WIDTH__ == 32
 static_assert(sizeof(std::wstring) == 24, "");
 static_assert(sizeof(min_string<wchar_t>) == 24, "");
+#      if TEST_STD_VER >= 11
+static_assert(sizeof(fancy_string<wchar_t>) == 24, "");
+#      endif
 static_assert(sizeof(test_string<wchar_t>) == 32, "");
 static_assert(sizeof(small_string<wchar_t>) == 12, "");
 #    elif __WCHAR_WIDTH__ == 16
 static_assert(sizeof(std::wstring) == 24, "");
 static_assert(sizeof(min_string<wchar_t>) == 24, "");
+#      if TEST_STD_VER >= 11
+static_assert(sizeof(fancy_string<wchar_t>) == 24, "");
+#      endif
 static_assert(sizeof(test_string<wchar_t>) == 32, "");
 static_assert(sizeof(small_string<wchar_t>) == 6, "");
 #    else
@@ -74,6 +86,9 @@ static_assert(sizeof(small_string<wchar_t>) == 6, "");
 #  ifndef TEST_HAS_NO_CHAR8_T
 static_assert(sizeof(std::u8string) == 24, "");
 static_assert(sizeof(min_string<char8_t>) == 24, "");
+#    if TEST_STD_VER >= 11
+static_assert(sizeof(fancy_string<char8_t>) == 24, "");
+#    endif
 static_assert(sizeof(test_string<char8_t>) == 32, "");
 static_assert(sizeof(small_string<char8_t>) == 6, "");
 #  endif
@@ -83,6 +98,10 @@ static_assert(sizeof(std::u16string) == 24, "");
 static_assert(sizeof(std::u32string) == 24, "");
 static_assert(sizeof(min_string<char16_t>) == 24, "");
 static_assert(sizeof(min_string<char32_t>) == 24, "");
+#    if TEST_STD_VER >= 11
+static_assert(sizeof(fancy_string<char16_t>) == 24, "");
+static_assert(sizeof(fancy_string<char32_t>) == 24, "");
+#    endif
 static_assert(sizeof(test_string<char16_t>) == 32, "");
 static_assert(sizeof(test_string<char32_t>) == 32, "");
 static_assert(sizeof(small_string<char16_t>) == 6, "");
@@ -93,6 +112,9 @@ static_assert(sizeof(small_string<char32_t>) == 12, "");
 
 static_assert(sizeof(std::string) == 12, "");
 static_assert(sizeof(min_string<char>) == 12, "");
+#  if TEST_STD_VER >= 11
+static_assert(sizeof(fancy_string<char>) == 12, "");
+#  endif
 static_assert(sizeof(test_string<char>) == 24, "");
 static_assert(sizeof(small_string<char>) == 6, "");
 
@@ -100,11 +122,17 @@ static_assert(sizeof(small_string<char>) == 6, "");
 #    if __WCHAR_WIDTH__ == 32
 static_assert(sizeof(std::wstring) == 12, "");
 static_assert(sizeof(min_string<wchar_t>) == 12, "");
+#      if TEST_STD_VER >= 11
+static_assert(sizeof(fancy_string<wchar_t>) == 12, "");
+#      endif
 static_assert(sizeof(test_string<wchar_t>) == 24, "");
 static_assert(sizeof(small_string<wchar_t>) == 12, "");
 #    elif __WCHAR_WIDTH__ == 16
 static_assert(sizeof(std::wstring) == 12, "");
 static_assert(sizeof(min_string<wchar_t>) == 12, "");
+#      if TEST_STD_VER >= 11
+static_assert(sizeof(fancy_string<wchar_t>) == 12, "");
+#      endif
 static_assert(sizeof(test_string<wchar_t>) == 24, "");
 static_assert(sizeof(small_string<wchar_t>) == 6, "");
 #    else
@@ -115,6 +143,9 @@ static_assert(sizeof(small_string<wchar_t>) == 6, "");
 #  ifndef TEST_HAS_NO_CHAR8_T
 static_assert(sizeof(std::u8string) == 12, "");
 static_assert(sizeof(min_string<char8_t>) == 12, "");
+#    if TEST_STD_VER >= 11
+static_assert(sizeof(fancy_string<char8_t>) == 12, "");
+#    endif
 static_assert(sizeof(test_string<char8_t>) == 24, "");
 static_assert(sizeof(small_string<char>) == 6, "");
 #  endif
@@ -124,6 +155,10 @@ static_assert(sizeof(std::u16string) == 12, "");
 static_assert(sizeof(std::u32string) == 12, "");
 static_assert(sizeof(min_string<char16_t>) == 12, "");
 static_assert(sizeof(min_string<char32_t>) == 12, "");
+#    if TEST_STD_VER >= 11
+static_assert(sizeof(fancy_string<char16_t>) == 12, "");
+static_assert(sizeof(fancy_string<char32_t>) == 12, "");
+#    endif
 static_assert(sizeof(test_string<char16_t>) == 24, "");
 static_assert(sizeof(test_string<char32_t>) == 24, "");
 static_assert(sizeof(small_string<char16_t>) == 6, "");

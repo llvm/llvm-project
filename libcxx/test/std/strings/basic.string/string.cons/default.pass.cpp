@@ -23,6 +23,9 @@ LIBCPP_STATIC_ASSERT(std::is_nothrow_default_constructible<std::string>::value, 
 LIBCPP_STATIC_ASSERT(std::is_nothrow_default_constructible<
                          std::basic_string<char, std::char_traits<char>, test_allocator<char>>>::value,
                      "");
+LIBCPP_STATIC_ASSERT(std::is_nothrow_default_constructible<
+                         std::basic_string<char, std::char_traits<char>, fancy_pointer_allocator<char>>>::value,
+                     "");
 LIBCPP_STATIC_ASSERT(!std::is_nothrow_default_constructible<
                          std::basic_string<char, std::char_traits<char>, limited_allocator<char, 10>>>::value,
                      "");

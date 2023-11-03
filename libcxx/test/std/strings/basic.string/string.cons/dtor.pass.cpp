@@ -36,6 +36,9 @@ std::wstring unused_wide_string;
 static_assert(std::is_nothrow_destructible<std::string>::value, "");
 static_assert(
     std::is_nothrow_destructible< std::basic_string<char, std::char_traits<char>, test_allocator<char>>>::value, "");
+static_assert(std::is_nothrow_destructible<
+                  std::basic_string<char, std::char_traits<char>, fancy_pointer_allocator<char>>>::value,
+              "");
 LIBCPP_STATIC_ASSERT(
     !std::is_nothrow_destructible< std::basic_string<char, std::char_traits<char>, throwing_alloc<char>>>::value, "");
 

@@ -116,6 +116,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
 #if TEST_STD_VER >= 11
   test_string(min_allocator<char>());
   test_string(safe_allocator<char>());
+  test_string(fancy_pointer_allocator<char>());
 #endif
 
   {

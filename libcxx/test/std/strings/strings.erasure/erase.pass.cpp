@@ -66,8 +66,9 @@ void test() {
 
 int main(int, char**) {
   test<std::string>();
-  test<std::basic_string<char, std::char_traits<char>, min_allocator<char>>>();
-  test<std::basic_string<char, std::char_traits<char>, test_allocator<char>>>();
+  test<std::basic_string<char, std::char_traits<char>, min_allocator<char> > >();
+  test<std::basic_string<char, std::char_traits<char>, test_allocator<char> > >();
+  test<std::basic_string<char, std::char_traits<char>, fancy_pointer_allocator<char> > >();
 
   return 0;
 }

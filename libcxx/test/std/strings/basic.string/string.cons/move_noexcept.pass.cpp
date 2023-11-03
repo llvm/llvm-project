@@ -31,6 +31,10 @@ int main(int, char**) {
     static_assert(std::is_nothrow_move_constructible<C>::value, "");
   }
   {
+    typedef std::basic_string<char, std::char_traits<char>, fancy_pointer_allocator<char>> C;
+    static_assert(std::is_nothrow_move_constructible<C>::value, "");
+  }
+  {
     typedef std::basic_string<char, std::char_traits<char>, limited_allocator<char, 10>> C;
 #if TEST_STD_VER <= 14
     static_assert(!std::is_nothrow_move_constructible<C>::value, "");

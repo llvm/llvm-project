@@ -63,6 +63,7 @@ int main(int, char**) {
     test_hash_enabled_for_type<std::u16string>();
     test_hash_enabled_for_type<std::u32string>();
     test_hash_enabled_for_type<std::basic_string<char, std::char_traits<char>, test_allocator<char>>>();
+    test_hash_enabled_for_type<std::basic_string<char, std::char_traits<char>, fancy_pointer_allocator<char>>>();
     test_hash_disabled_for_type<std::basic_string<MyChar, std::char_traits<MyChar>, std::allocator<MyChar>>>();
     test_hash_disabled_for_type<std::basic_string<char, constexpr_char_traits<char>, std::allocator<char>>>();
   }

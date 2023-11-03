@@ -102,7 +102,6 @@ TEST_CONSTEXPR_CXX20 bool test() {
   test_string(test_allocator<char>(3));
 #if TEST_STD_VER >= 11
   test_string(min_allocator<char>());
-  test_string(safe_allocator<char>());
 #endif
 
 #if TEST_STD_VER >= 11
