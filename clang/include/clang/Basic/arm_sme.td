@@ -299,6 +299,51 @@ multiclass ZAAddSub<string n_suffix> {
 defm SVADD : ZAAddSub<"add">;
 defm SVSUB : ZAAddSub<"sub">;
 
+// SME2 - MOVA
+
+//
+// 2 and 4 vector-group read/write intrinsics.
+//
+
+multiclass WriteHV_VG<string n, string t, string i, list<ImmCheck> checks> {
+  let TargetGuard = "sme2" in {
+    def NAME # _VG2_H : Inst<"svwrite_hor_" # n # "_vg2", "vim2", t, MergeNone, i # "_hor_vg2", [IsSharedZA, IsStreaming], checks>;
+    def NAME # _VG2_V : Inst<"svwrite_ver_" # n # "_vg2", "vim2", t, MergeNone, i # "_ver_vg2", [IsSharedZA, IsStreaming], checks>;
+    def NAME # _VG4_H : Inst<"svwrite_hor_" # n # "_vg4", "vim4", t, MergeNone, i # "_hor_vg4", [IsSharedZA, IsStreaming], checks>;
+    def NAME # _VG4_V : Inst<"svwrite_ver_" # n # "_vg4", "vim4", t, MergeNone, i # "_ver_vg4", [IsSharedZA, IsStreaming], checks>;
+  }
+}
+
+defm SVWRITE_ZA8  : WriteHV_VG<"za8[_{d}]",  "cUc",   "aarch64_sme_write", [ImmCheck<0, ImmCheck0_0>]>;
+defm SVWRITE_ZA16 : WriteHV_VG<"za16[_{d}]", "sUshb", "aarch64_sme_write", [ImmCheck<0, ImmCheck0_1>]>;
+defm SVWRITE_ZA32 : WriteHV_VG<"za32[_{d}]", "iUif",  "aarch64_sme_write", [ImmCheck<0, ImmCheck0_3>]>;
+defm SVWRITE_ZA64 : WriteHV_VG<"za64[_{d}]", "lUld",  "aarch64_sme_write", [ImmCheck<0, ImmCheck0_7>]>;
+
+multiclass ReadHV_VG<string n, string t, string i, list<ImmCheck> checks> {
+  let TargetGuard = "sme2" in {
+    def NAME # _VG2_H : Inst<"svread_hor_" # n # "_vg2", "2im", t, MergeNone, i # "_hor_vg2", [IsSharedZA, IsPreservesZA, IsStreaming], checks>;
+    def NAME # _VG2_V : Inst<"svread_ver_" # n # "_vg2", "2im", t, MergeNone, i # "_ver_vg2", [IsSharedZA, IsPreservesZA, IsStreaming], checks>;
+    def NAME # _VG4_H : Inst<"svread_hor_" # n # "_vg4", "4im", t, MergeNone, i # "_hor_vg4", [IsSharedZA, IsPreservesZA, IsStreaming], checks>;
+    def NAME # _VG4_V : Inst<"svread_ver_" # n # "_vg4", "4im", t, MergeNone, i # "_ver_vg4", [IsSharedZA, IsPreservesZA, IsStreaming], checks>;
+  }
+}
+
+defm SVREAD_ZA8  : ReadHV_VG<"za8_{d}",  "cUc",   "aarch64_sme_read", [ImmCheck<0, ImmCheck0_0>]>;
+defm SVREAD_ZA16 : ReadHV_VG<"za16_{d}", "sUshb", "aarch64_sme_read", [ImmCheck<0, ImmCheck0_1>]>;
+defm SVREAD_ZA32 : ReadHV_VG<"za32_{d}", "iUif",  "aarch64_sme_read", [ImmCheck<0, ImmCheck0_3>]>;
+defm SVREAD_ZA64 : ReadHV_VG<"za64_{d}", "lUld",  "aarch64_sme_read", [ImmCheck<0, ImmCheck0_7>]>;
+
+//
+// Single vector-group read/write intrinsics.
+//
+
+let TargetGuard = "sme2" in {
+  def SVWRITE_ZA64_VG1x2 : Inst<"svwrite_za64[_{d}]_vg1x2", "vm2", "lUld", MergeNone, "aarch64_sme_write_vg1x2", [IsSharedZA, IsStreaming], []>;
+  def SVWRITE_ZA64_VG1x4 : Inst<"svwrite_za64[_{d}]_vg1x4", "vm4", "lUld", MergeNone, "aarch64_sme_write_vg1x4", [IsSharedZA, IsStreaming], []>;
+  def SVREAD_ZA64_VG1x2  : Inst<"svread_za64_{d}_vg1x2",    "2m",  "lUld", MergeNone, "aarch64_sme_read_vg1x2",  [IsSharedZA, IsPreservesZA, IsStreaming], []>;
+  def SVREAD_ZA64_VG1x4  : Inst<"svread_za64_{d}_vg1x4",    "4m",  "lUld", MergeNone, "aarch64_sme_read_vg1x4",  [IsSharedZA, IsPreservesZA, IsStreaming], []>;
+}
+
 //
 // Outer product and accumulate/subtract
 //
