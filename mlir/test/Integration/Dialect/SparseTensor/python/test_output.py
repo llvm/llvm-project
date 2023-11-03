@@ -19,11 +19,11 @@ from tools import sparse_compiler
 def boilerplate(attr: st.EncodingAttr):
     """Returns boilerplate main method."""
     return f"""
-func.func @main(%p : !llvm.ptr<i8>) -> () attributes {{ llvm.emit_c_interface }} {{
+func.func @main(%p : !llvm.ptr) -> () attributes {{ llvm.emit_c_interface }} {{
   %d = arith.constant sparse<[[0, 0], [1, 1], [0, 9], [9, 0], [4, 4]],
                              [1.0, 2.0, 3.0, 4.0, 5.0]> : tensor<10x10xf64>
   %a = sparse_tensor.convert %d : tensor<10x10xf64> to tensor<10x10xf64, {attr}>
-  sparse_tensor.out %a, %p : tensor<10x10xf64, {attr}>, !llvm.ptr<i8>
+  sparse_tensor.out %a, %p : tensor<10x10xf64, {attr}>, !llvm.ptr
   return
 }}
 """
