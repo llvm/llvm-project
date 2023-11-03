@@ -957,26 +957,27 @@ void Preprocessor::Lex(Token &Result) {
       ModuleDeclState.handlePeriod();
       break;
     case tok::identifier:
-      if (Result.getIdentifierInfo()->isModulesImport()) {
-        TrackGMFState.handleImport(StdCXXImportSeqState.afterTopLevelSeq());
-        StdCXXImportSeqState.handleImport();
-        if (StdCXXImportSeqState.afterImportSeq()) {
-          ModuleImportLoc = Result.getLocation();
-          NamedModuleImportPath.clear();
-          IsAtImport = false;
-          ModuleImportExpectsIdentifier = true;
-          CurLexerKind = CLK_LexAfterModuleImport;
-        }
-        break;
-      } else if (Result.getIdentifierInfo() == getIdentifierInfo("module")) {
-        TrackGMFState.handleModule(StdCXXImportSeqState.afterTopLevelSeq());
-        ModuleDeclState.handleModule();
-        break;
-      } else {
-        ModuleDeclState.handleIdentifier(Result.getIdentifierInfo());
-        if (ModuleDeclState.isModuleCandidate())
+      if (StdCXXImportSeqState.atTopLevel()) {
+        if (Result.getIdentifierInfo()->isModulesImport()) {
+          TrackGMFState.handleImport(StdCXXImportSeqState.afterTopLevelSeq());
+          StdCXXImportSeqState.handleImport();
+          if (StdCXXImportSeqState.afterImportSeq()) {
+            ModuleImportLoc = Result.getLocation();
+            NamedModuleImportPath.clear();
+            IsAtImport = false;
+            ModuleImportExpectsIdentifier = true;
+            CurLexerKind = CLK_LexAfterModuleImport;
+          }
           break;
+        } else if (Result.getIdentifierInfo() == getIdentifierInfo("module")) {
+          TrackGMFState.handleModule(StdCXXImportSeqState.afterTopLevelSeq());
+          ModuleDeclState.handleModule();
+          break;
+        }
       }
+      ModuleDeclState.handleIdentifier(Result.getIdentifierInfo());
+      if (ModuleDeclState.isModuleCandidate())
+        break;
       [[fallthrough]];
     default:
       TrackGMFState.handleMisc();
