@@ -301,16 +301,6 @@ Constant *llvm::ConstantFoldCastInstruction(unsigned opc, Constant *V,
       return ConstantInt::get(FPC->getContext(), IntVal);
     }
     return nullptr; // Can't fold.
-  case Instruction::IntToPtr:   //always treated as unsigned
-    if (V->isNullValue())       // Is it an integral null value?
-      return ConstantPointerNull::get(cast<PointerType>(DestTy));
-    return nullptr;                   // Other pointer types cannot be casted
-  case Instruction::PtrToInt:   // always treated as unsigned
-    // Is it a null pointer value?
-    if (V->isNullValue())
-      return ConstantInt::get(DestTy, 0);
-    // Other pointer types cannot be casted
-    return nullptr;
   case Instruction::UIToFP:
   case Instruction::SIToFP:
     if (ConstantInt *CI = dyn_cast<ConstantInt>(V)) {
@@ -359,6 +349,8 @@ Constant *llvm::ConstantFoldCastInstruction(unsigned opc, Constant *V,
   case Instruction::BitCast:
     return FoldBitCast(V, DestTy);
   case Instruction::AddrSpaceCast:
+  case Instruction::IntToPtr:
+  case Instruction::PtrToInt:
     return nullptr;
   }
 }
