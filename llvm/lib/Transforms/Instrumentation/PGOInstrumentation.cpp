@@ -1760,17 +1760,10 @@ static void collectComdatMembers(
       ComdatMembers.insert(std::make_pair(C, &GA));
 }
 
-// Don't perform PGO instrumeatnion / profile-use.
-static bool skipPGO(const Function &F) {
+// Return true if we should not find instrumentation data for this function
+static bool skipPGOUse(const Function &F) {
   if (F.isDeclaration())
     return true;
-  if (F.hasFnAttribute(llvm::Attribute::NoProfile))
-    return true;
-  if (F.hasFnAttribute(llvm::Attribute::SkipProfile))
-    return true;
-  if (F.getInstructionCount() < PGOFunctionSizeThreshold)
-    return true;
-
   // If there are too many critical edges, PGO might cause
   // compiler time problem. Skip PGO if the number of
   // critical edges execeed the threshold.
@@ -1788,7 +1781,19 @@ static bool skipPGO(const Function &F) {
                       << " exceed the threshold. Skip PGO.\n");
     return true;
   }
+  return false;
+}
 
+// Return true if we should not instrument this function
+static bool skipPGOGen(const Function &F) {
+  if (skipPGOUse(F))
+    return true;
+  if (F.hasFnAttribute(llvm::Attribute::NoProfile))
+    return true;
+  if (F.hasFnAttribute(llvm::Attribute::SkipProfile))
+    return true;
+  if (F.getInstructionCount() < PGOFunctionSizeThreshold)
+    return true;
   return false;
 }
 
@@ -1804,7 +1809,7 @@ static bool InstrumentAllFunctions(
   collectComdatMembers(M, ComdatMembers);
 
   for (auto &F : M) {
-    if (skipPGO(F))
+    if (skipPGOGen(F))
       continue;
     auto &TLI = LookupTLI(F);
     auto *BPI = LookupBPI(F);
@@ -2031,7 +2036,7 @@ static bool annotateAllFunctions(
     InstrumentFuncEntry = PGOInstrumentEntry;
   bool HasSingleByteCoverage = PGOReader->hasSingleByteCoverage();
   for (auto &F : M) {
-    if (skipPGO(F))
+    if (skipPGOUse(F))
       continue;
     auto &TLI = LookupTLI(F);
     auto *BPI = LookupBPI(F);
