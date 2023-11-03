@@ -305,6 +305,10 @@ end
   compilers.
 * A `NULL()` pointer is treated as an unallocated allocatable
   when associated with an `INTENT(IN)` allocatable dummy argument.
+* `READ(..., SIZE=n)` is accepted with `NML=` and `FMT=*` with
+  a portability warning.
+  The Fortran standard doesn't allow `SIZE=` with formatted input
+  modes that might require look-ahead, perhaps to ease implementations.
 
 ### Extensions supported when enabled by options
 
