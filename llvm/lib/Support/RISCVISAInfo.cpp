@@ -311,21 +311,21 @@ void RISCVISAInfo::addExtension(StringRef ExtName, unsigned MajorVersion,
 }
 
 static StringRef getExtensionTypeDesc(StringRef Ext) {
-  if (Ext.startswith("s"))
+  if (Ext.starts_with("s"))
     return "standard supervisor-level extension";
-  if (Ext.startswith("x"))
+  if (Ext.starts_with("x"))
     return "non-standard user-level extension";
-  if (Ext.startswith("z"))
+  if (Ext.starts_with("z"))
     return "standard user-level extension";
   return StringRef();
 }
 
 static StringRef getExtensionType(StringRef Ext) {
-  if (Ext.startswith("s"))
+  if (Ext.starts_with("s"))
     return "s";
-  if (Ext.startswith("x"))
+  if (Ext.starts_with("x"))
     return "x";
-  if (Ext.startswith("z"))
+  if (Ext.starts_with("z"))
     return "z";
   return StringRef();
 }
@@ -641,9 +641,9 @@ RISCVISAInfo::parseNormalizedArchString(StringRef Arch) {
   }
   // Must start with a valid base ISA name.
   unsigned XLen;
-  if (Arch.startswith("rv32i") || Arch.startswith("rv32e"))
+  if (Arch.starts_with("rv32i") || Arch.starts_with("rv32e"))
     XLen = 32;
-  else if (Arch.startswith("rv64i") || Arch.startswith("rv64e"))
+  else if (Arch.starts_with("rv64i") || Arch.starts_with("rv64e"))
     XLen = 64;
   else
     return createStringError(errc::invalid_argument,
@@ -704,9 +704,9 @@ RISCVISAInfo::parseArchString(StringRef Arch, bool EnableExperimentalExtension,
                              "string must be lowercase");
   }
 
-  bool HasRV64 = Arch.startswith("rv64");
+  bool HasRV64 = Arch.starts_with("rv64");
   // ISA string must begin with rv32 or rv64.
-  if (!(Arch.startswith("rv32") || HasRV64) || (Arch.size() < 5)) {
+  if (!(Arch.starts_with("rv32") || HasRV64) || (Arch.size() < 5)) {
     return createStringError(
         errc::invalid_argument,
         "string must begin with rv32{i,e,g} or rv64{i,e,g}");

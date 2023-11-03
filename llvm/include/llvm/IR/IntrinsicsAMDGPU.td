@@ -1944,6 +1944,12 @@ def int_amdgcn_s_bitreplicate :
 def int_amdgcn_s_quadmask :
   DefaultAttrsIntrinsic<[llvm_anyint_ty], [llvm_anyint_ty], [IntrNoMem, IntrConvergent]>;
 
+// Lowers to S_WQM_B{32,64}
+// The argument must be uniform; otherwise, the result is undefined.
+// Does not set WQM; merely calculates the bitmask.
+def int_amdgcn_s_wqm :
+  DefaultAttrsIntrinsic<[llvm_anyint_ty], [llvm_anyint_ty], [IntrNoMem, IntrConvergent]>;
+
 class AMDGPUWaveReduce<LLVMType data_ty = llvm_anyint_ty> : Intrinsic<
     [data_ty],
     [

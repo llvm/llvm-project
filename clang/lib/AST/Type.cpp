@@ -3035,11 +3035,16 @@ TypeWithKeyword::getKeywordForTypeSpec(unsigned TypeSpec) {
 TagTypeKind
 TypeWithKeyword::getTagTypeKindForTypeSpec(unsigned TypeSpec) {
   switch(TypeSpec) {
-  case TST_class: return TTK_Class;
-  case TST_struct: return TTK_Struct;
-  case TST_interface: return TTK_Interface;
-  case TST_union: return TTK_Union;
-  case TST_enum: return TTK_Enum;
+  case TST_class:
+    return TagTypeKind::Class;
+  case TST_struct:
+    return TagTypeKind::Struct;
+  case TST_interface:
+    return TagTypeKind::Interface;
+  case TST_union:
+    return TagTypeKind::Union;
+  case TST_enum:
+    return TagTypeKind::Enum;
   }
 
   llvm_unreachable("Type specifier is not a tag type kind.");
@@ -3048,15 +3053,15 @@ TypeWithKeyword::getTagTypeKindForTypeSpec(unsigned TypeSpec) {
 ElaboratedTypeKeyword
 TypeWithKeyword::getKeywordForTagTypeKind(TagTypeKind Kind) {
   switch (Kind) {
-  case TTK_Class:
+  case TagTypeKind::Class:
     return ElaboratedTypeKeyword::Class;
-  case TTK_Struct:
+  case TagTypeKind::Struct:
     return ElaboratedTypeKeyword::Struct;
-  case TTK_Interface:
+  case TagTypeKind::Interface:
     return ElaboratedTypeKeyword::Interface;
-  case TTK_Union:
+  case TagTypeKind::Union:
     return ElaboratedTypeKeyword::Union;
-  case TTK_Enum:
+  case TagTypeKind::Enum:
     return ElaboratedTypeKeyword::Enum;
   }
   llvm_unreachable("Unknown tag type kind.");
@@ -3066,15 +3071,15 @@ TagTypeKind
 TypeWithKeyword::getTagTypeKindForKeyword(ElaboratedTypeKeyword Keyword) {
   switch (Keyword) {
   case ElaboratedTypeKeyword::Class:
-    return TTK_Class;
+    return TagTypeKind::Class;
   case ElaboratedTypeKeyword::Struct:
-    return TTK_Struct;
+    return TagTypeKind::Struct;
   case ElaboratedTypeKeyword::Interface:
-    return TTK_Interface;
+    return TagTypeKind::Interface;
   case ElaboratedTypeKeyword::Union:
-    return TTK_Union;
+    return TagTypeKind::Union;
   case ElaboratedTypeKeyword::Enum:
-    return TTK_Enum;
+    return TagTypeKind::Enum;
   case ElaboratedTypeKeyword::None: // Fall through.
   case ElaboratedTypeKeyword::Typename:
     llvm_unreachable("Elaborated type keyword is not a tag type kind.");
