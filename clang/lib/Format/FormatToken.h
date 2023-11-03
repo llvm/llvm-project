@@ -148,6 +148,23 @@ namespace format {
   TYPE(StructLBrace)                                                           \
   TYPE(StructRBrace)                                                           \
   TYPE(StructuredBindingLSquare)                                               \
+  TYPE(TableGenBangOperator)                                                   \
+  TYPE(TableGenCondOperator)                                                   \
+  TYPE(TableGenCondOperatorColon)                                              \
+  TYPE(TableGenCondOperatorComma)                                              \
+  TYPE(TableGenDAGArgCloser)                                                   \
+  TYPE(TableGenDAGArgListColon)                                                \
+  TYPE(TableGenDAGArgListColonToAlign)                                         \
+  TYPE(TableGenDAGArgListComma)                                                \
+  TYPE(TableGenDAGArgOpener)                                                   \
+  TYPE(TableGenDAGArgOperatorID)                                               \
+  TYPE(TableGenListCloser)                                                     \
+  TYPE(TableGenListOpener)                                                     \
+  TYPE(TableGenMultiLineString)                                                \
+  TYPE(TableGenParamAngleOpener)                                               \
+  TYPE(TableGenParamAngleCloser)                                               \
+  TYPE(TableGenTrailingPasteOperator)                                          \
+  TYPE(TableGenValueSuffix)                                                    \
   TYPE(TemplateCloser)                                                         \
   TYPE(TemplateOpener)                                                         \
   TYPE(TemplateString)                                                         \
@@ -671,6 +688,8 @@ public:
       return true;
     if (is(TT_DictLiteral) && is(tok::less))
       return true;
+    if (is(TT_TableGenParamAngleOpener))
+      return true;
     return isOneOf(tok::l_paren, tok::l_brace, tok::l_square,
                    TT_TemplateOpener);
   }
@@ -680,6 +699,10 @@ public:
     if (is(TT_TemplateString) && TokenText.starts_with("}"))
       return true;
     if (is(TT_DictLiteral) && is(tok::greater))
+      return true;
+    if (is(TT_TableGenParamAngleCloser))
+      return true;
+    if (is(TT_TableGenListCloser))
       return true;
     return isOneOf(tok::r_paren, tok::r_brace, tok::r_square,
                    TT_TemplateCloser);
@@ -1202,6 +1225,21 @@ struct AdditionalKeywords {
     kw_verilogHashHash = &IdentTable.get("##");
     kw_apostrophe = &IdentTable.get("\'");
 
+    // TableGen keywords
+    kw_bit = &IdentTable.get("bit");
+    kw_bits = &IdentTable.get("bits");
+    kw_code = &IdentTable.get("code");
+    kw_dag = &IdentTable.get("dag");
+    kw_def = &IdentTable.get("def");
+    kw_defm = &IdentTable.get("defm");
+    kw_defset = &IdentTable.get("defset");
+    kw_defvar = &IdentTable.get("defvar");
+    kw_dump = &IdentTable.get("dump");
+    kw_include = &IdentTable.get("include");
+    kw_list = &IdentTable.get("list");
+    kw_multiclass = &IdentTable.get("multiclass");
+    kw_then = &IdentTable.get("then");
+
     // Keep this at the end of the constructor to make sure everything here
     // is
     // already initialized.
@@ -1294,6 +1332,27 @@ struct AdditionalKeywords {
          kw_wildcard,     kw_wire,
          kw_with,         kw_wor,
          kw_verilogHash,  kw_verilogHashHash});
+
+    TableGenExtraKeywords = std::unordered_set<IdentifierInfo *>({
+        kw_assert,
+        kw_bit,
+        kw_bits,
+        kw_code,
+        kw_dag,
+        kw_def,
+        kw_defm,
+        kw_defset,
+        kw_defvar,
+        kw_dump,
+        kw_foreach,
+        kw_in,
+        kw_include,
+        kw_let,
+        kw_list,
+        kw_multiclass,
+        kw_string,
+        kw_then,
+    });
   }
 
   // Context sensitive keywords.
@@ -1538,6 +1597,21 @@ struct AdditionalKeywords {
 
   // Symbols in Verilog that don't exist in C++.
   IdentifierInfo *kw_apostrophe;
+
+  // TableGen keywords
+  IdentifierInfo *kw_bit;
+  IdentifierInfo *kw_bits;
+  IdentifierInfo *kw_code;
+  IdentifierInfo *kw_dag;
+  IdentifierInfo *kw_def;
+  IdentifierInfo *kw_defm;
+  IdentifierInfo *kw_defset;
+  IdentifierInfo *kw_defvar;
+  IdentifierInfo *kw_dump;
+  IdentifierInfo *kw_include;
+  IdentifierInfo *kw_list;
+  IdentifierInfo *kw_multiclass;
+  IdentifierInfo *kw_then;
 
   /// Returns \c true if \p Tok is a keyword or an identifier.
   bool isWordLike(const FormatToken &Tok) const {
@@ -1811,6 +1885,27 @@ struct AdditionalKeywords {
     }
   }
 
+  bool isTableGenDefinition(const FormatToken &Tok) const {
+    return Tok.isOneOf(kw_def, kw_defm, kw_defset, kw_defvar, kw_multiclass,
+                       kw_let, tok::kw_class);
+  }
+
+  bool isTableGenKeyword(const FormatToken &Tok) const {
+    switch (Tok.Tok.getKind()) {
+    case tok::kw_class:
+    case tok::kw_else:
+    case tok::kw_false:
+    case tok::kw_if:
+    case tok::kw_int:
+    case tok::kw_true:
+      return true;
+    default:
+      return Tok.is(tok::identifier) &&
+             TableGenExtraKeywords.find(Tok.Tok.getIdentifierInfo()) !=
+                 TableGenExtraKeywords.end();
+    }
+  }
+
 private:
   /// The JavaScript keywords beyond the C++ keyword set.
   std::unordered_set<IdentifierInfo *> JsExtraKeywords;
@@ -1820,6 +1915,9 @@ private:
 
   /// The Verilog keywords beyond the C++ keyword set.
   std::unordered_set<IdentifierInfo *> VerilogExtraKeywords;
+
+  /// The TableGen keywords beyond the C++ keyword set.
+  std::unordered_set<IdentifierInfo *> TableGenExtraKeywords;
 };
 
 inline bool isLineComment(const FormatToken &FormatTok) {

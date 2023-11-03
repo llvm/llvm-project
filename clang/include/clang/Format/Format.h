@@ -396,6 +396,36 @@ struct FormatStyle {
   /// \version 17
   ShortCaseStatementsAlignmentStyle AlignConsecutiveShortCaseStatements;
 
+  /// Style of aligning consecutive TableGen cond operator colons.
+  /// \code
+  ///   !cond(!eq(size, 1) : 1,
+  ///         !eq(size, 16): 1,
+  ///         true         : 0)
+  /// \endcode
+  /// \version 18
+  AlignConsecutiveStyle AlignConsecutiveTableGenCondOperatorColons;
+
+  /// Style of aligning consecutive TableGen DAGArg operator colons.
+  /// Intended to be used with TableGenBreakInsideDAGArgList
+  /// \code
+  ///   let dagarg = (ins
+  ///       a  :$src1,
+  ///       aa :$src2,
+  ///       aaa:$src3
+  ///   )
+  /// \endcode
+  /// \version 18
+  AlignConsecutiveStyle AlignConsecutiveTableGenBreakingDAGArgColons;
+
+  /// Style of aligning consecutive TableGen def colons.
+  /// \code
+  ///   def Def       : Parent {}
+  ///   def DefDef    : Parent {}
+  ///   def DefDefDef : Parent {}
+  /// \endcode
+  /// \version 18
+  AlignConsecutiveStyle AlignConsecutiveTableGenDefinitions;
+
   /// Different styles for aligning escaped newlines.
   enum EscapedNewlineAlignmentStyle : int8_t {
     /// Don't align escaped newlines.
@@ -3037,6 +3067,7 @@ struct FormatStyle {
   bool isProto() const {
     return Language == LK_Proto || Language == LK_TextProto;
   }
+  bool isTableGen() const { return Language == LK_TableGen; }
 
   /// Language, this format style is targeted at.
   /// \version 3.5
@@ -4656,6 +4687,15 @@ struct FormatStyle {
   /// \version 8
   std::vector<std::string> StatementMacros;
 
+  /// Tablegen
+  bool TableGenAllowBreakBeforeInheritColon;
+  bool TableGenAllowBreakAfterInheritColon;
+  bool TableGenBreakInsideCondOperator;
+  bool TableGenBreakInsideDAGArgList;
+  bool TableGenPreferBreakInsideSquareBracket;
+  bool TableGenSpaceAroundDAGArgColon;
+  std::vector<std::string> TableGenBreakingDAGArgOperators;
+
   /// The number of columns used for tab stops.
   /// \version 3.7
   unsigned TabWidth;
@@ -4753,6 +4793,13 @@ struct FormatStyle {
            AlignConsecutiveMacros == R.AlignConsecutiveMacros &&
            AlignConsecutiveShortCaseStatements ==
                R.AlignConsecutiveShortCaseStatements &&
+           AlignConsecutiveTableGenCondOperatorColons ==
+               R.AlignConsecutiveTableGenCondOperatorColons &&
+           AlignConsecutiveTableGenBreakingDAGArgColons ==
+               R.AlignConsecutiveTableGenBreakingDAGArgColons &&
+           AlignConsecutiveTableGenDefinitions ==
+               R.AlignConsecutiveTableGenDefinitions &&
+           AlignConsecutiveMacros == R.AlignConsecutiveMacros &&
            AlignEscapedNewlines == R.AlignEscapedNewlines &&
            AlignOperands == R.AlignOperands &&
            AlignTrailingComments == R.AlignTrailingComments &&

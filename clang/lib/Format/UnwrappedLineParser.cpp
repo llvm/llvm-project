@@ -495,7 +495,8 @@ void UnwrappedLineParser::calculateBraceTypes(bool ExpectClassBody) {
     do {
       NextTok = Tokens->getNextToken();
     } while (NextTok->is(tok::comment));
-    while (NextTok->is(tok::hash) && !Line->InMacroBody) {
+    while (NextTok->is(tok::hash) && !Line->InMacroBody &&
+           !Style.isTableGen()) {
       NextTok = Tokens->getNextToken();
       do {
         NextTok = Tokens->getNextToken();
@@ -1652,7 +1653,7 @@ void UnwrappedLineParser::parseStructuralElement(
     // In Verilog labels can be any expression, so we don't do them here.
     // JS doesn't have macros, and within classes colons indicate fields, not
     // labels.
-    if (!Style.isJavaScript() && !Style.isVerilog() &&
+    if (!Style.isJavaScript() && !Style.isVerilog() && !Style.isTableGen() &&
         Tokens->peekNextToken()->is(tok::colon) && !Line->MustBeDeclaration) {
       nextToken();
       Line->Tokens.begin()->Tok->MustBreakBefore = true;
@@ -1780,6 +1781,12 @@ void UnwrappedLineParser::parseStructuralElement(
         parseBlock();
         addUnwrappedLine();
         return;
+      }
+      if (Style.isTableGen()) {
+        // Do nothing special. In this case the l_brace becomes FunctionLBrace.
+        // This is same as def and so on.
+        nextToken();
+        break;
       }
       [[fallthrough]];
     case tok::kw_struct:
@@ -2014,6 +2021,15 @@ void UnwrappedLineParser::parseStructuralElement(
 
       nextToken();
       if (FormatTok->is(tok::l_brace)) {
+        if (Style.isTableGen() &&
+            Line->Tokens.begin()->Tok->is(Keywords.kw_defset)) {
+          // TableGen's defset statement has strange syntax of the form,
+          // defset type id = { ... }
+          parseBlock(/*MustBeDeclaration=*/false, /*AddLevels=*/1u,
+                     /*MunchSemi=*/false);
+          addUnwrappedLine();
+          break;
+        }
         // Block kind should probably be set to BK_BracedInit for any language.
         // C# needs this change to ensure that array initialisers and object
         // initialisers are indented the same way.
@@ -2739,23 +2755,31 @@ FormatToken *UnwrappedLineParser::parseIfThenElse(IfStmtKind *IfKind,
     nextToken();
 
   bool KeepIfBraces = true;
-  if (FormatTok->is(tok::kw_consteval)) {
+  if (Style.isTableGen()) {
+    while (!eof() && !(FormatTok->is(Keywords.kw_then))) {
+      // Simply skip until then. This range only contains a value.
+      nextToken();
+    }
     nextToken();
   } else {
-    KeepIfBraces = !Style.RemoveBracesLLVM || KeepBraces;
-    if (FormatTok->isOneOf(tok::kw_constexpr, tok::identifier))
+    if (FormatTok->is(tok::kw_consteval)) {
       nextToken();
-    if (FormatTok->is(tok::l_paren)) {
-      FormatTok->setFinalizedType(TT_ConditionLParen);
-      parseParens();
+    } else {
+      KeepIfBraces = !Style.RemoveBracesLLVM || KeepBraces;
+      if (FormatTok->isOneOf(tok::kw_constexpr, tok::identifier))
+        nextToken();
+      if (FormatTok->is(tok::l_paren)) {
+        FormatTok->setFinalizedType(TT_ConditionLParen);
+        parseParens();
+      }
     }
-  }
-  handleAttributes();
-  // The then action is optional in Verilog assert statements.
-  if (IsVerilogAssert && FormatTok->is(tok::semi)) {
-    nextToken();
-    addUnwrappedLine();
-    return nullptr;
+    handleAttributes();
+    // The then action is optional in Verilog assert statements.
+    if (IsVerilogAssert && FormatTok->is(tok::semi)) {
+      nextToken();
+      addUnwrappedLine();
+      return nullptr;
+    }
   }
 
   bool NeedsUnwrappedLine = false;

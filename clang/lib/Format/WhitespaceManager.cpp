@@ -111,6 +111,9 @@ const tooling::Replacements &WhitespaceManager::generateReplacements() {
   alignConsecutiveDeclarations();
   alignConsecutiveBitFields();
   alignConsecutiveAssignments();
+  alignConsecutiveTableGenCondOperatorColons();
+  AlignConsecutiveTableGenBreakingDAGArgColons();
+  alignConsecutiveTableGenDefinition();
   alignChainedConditionals();
   alignTrailingComments();
   alignEscapedNewlines();
@@ -848,8 +851,9 @@ void WhitespaceManager::alignConsecutiveAssignments() {
       /*RightJustify=*/true);
 }
 
-void WhitespaceManager::alignConsecutiveBitFields() {
-  if (!Style.AlignConsecutiveBitFields.Enabled)
+void WhitespaceManager::alignConsecutiveColons(
+    const FormatStyle::AlignConsecutiveStyle &AlignStyle, TokenType Type) {
+  if (!AlignStyle.Enabled)
     return;
 
   AlignTokens(
@@ -863,9 +867,28 @@ void WhitespaceManager::alignConsecutiveBitFields() {
         if (&C != &Changes.back() && (&C + 1)->NewlinesBefore > 0)
           return false;
 
-        return C.Tok->is(TT_BitFieldColon);
+        return C.Tok->is(Type);
       },
-      Changes, /*StartAt=*/0, Style.AlignConsecutiveBitFields);
+      Changes, /*StartAt=*/0, AlignStyle);
+}
+
+void WhitespaceManager::alignConsecutiveBitFields() {
+  alignConsecutiveColons(Style.AlignConsecutiveBitFields, TT_BitFieldColon);
+}
+
+void WhitespaceManager::alignConsecutiveTableGenCondOperatorColons() {
+  alignConsecutiveColons(Style.AlignConsecutiveTableGenCondOperatorColons,
+                         TT_TableGenCondOperatorColon);
+}
+
+void WhitespaceManager::AlignConsecutiveTableGenBreakingDAGArgColons() {
+  alignConsecutiveColons(Style.AlignConsecutiveTableGenBreakingDAGArgColons,
+                         TT_TableGenDAGArgListColonToAlign);
+}
+
+void WhitespaceManager::alignConsecutiveTableGenDefinition() {
+  alignConsecutiveColons(Style.AlignConsecutiveTableGenDefinitions,
+                         TT_InheritanceColon);
 }
 
 void WhitespaceManager::alignConsecutiveShortCaseStatements() {

@@ -223,11 +223,25 @@ private:
   /// Align consecutive assignments over all \c Changes.
   void alignConsecutiveAssignments();
 
+  /// Align consecutive colon. For bitfields, TableGen DAGArgs and defintions.
+  void
+  alignConsecutiveColons(const FormatStyle::AlignConsecutiveStyle &AlignStyle,
+                         TokenType Type);
+
   /// Align consecutive bitfields over all \c Changes.
   void alignConsecutiveBitFields();
 
   /// Align consecutive declarations over all \c Changes.
   void alignConsecutiveDeclarations();
+
+  /// Align consecutive TableGen cond operator colon over all \c Changes.
+  void alignConsecutiveTableGenCondOperatorColons();
+
+  /// Align consecutive TableGen DAGArg colon over all \c Changes.
+  void AlignConsecutiveTableGenBreakingDAGArgColons();
+
+  /// Align consecutive TableGen definition over all \c Changes.
+  void alignConsecutiveTableGenDefinition();
 
   /// Align consecutive declarations over all \c Changes.
   void alignChainedConditionals();

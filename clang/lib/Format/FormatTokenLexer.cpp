@@ -93,6 +93,10 @@ ArrayRef<FormatToken *> FormatTokenLexer::lex() {
       // string literals are correctly identified.
       handleCSharpVerbatimAndInterpolatedStrings();
     }
+    if (Style.isTableGen()) {
+      handleTableGenMultilineString();
+      handleTableGenNumericLikeIdentifier();
+    }
     if (Tokens.back()->NewlinesBefore > 0 || Tokens.back()->IsMultiline)
       FirstInLineIndex = Tokens.size() - 1;
   } while (Tokens.back()->isNot(tok::eof));
@@ -269,6 +273,38 @@ void FormatTokenLexer::tryMergePreviousTokens() {
                           TT_BinaryOperator) ||
         Tokens.back()->is(tok::arrow)) {
       Tokens.back()->ForcedPrecedence = prec::Comma;
+      return;
+    }
+  }
+  if (Style.isTableGen()) {
+    if (tryMergeTokens({tok::l_square, tok::l_brace},
+                       TT_TableGenMultiLineString)) {
+      Tokens.back()->Tok.setKind(tok::string_literal);
+      return;
+    }
+    if (Tokens.size() > 1 && Tokens.end()[-2]->is(tok::exclaim)) {
+      if (Tokens.back()->is(tok::identifier) ||
+          (Tokens.back()->is(tok::kw_if) && Tokens.back())) {
+      }
+    }
+    if (tryMergeTokens({tok::exclaim, tok::identifier},
+                       TT_TableGenBangOperator)) {
+      Tokens.back()->Tok.setKind(tok::identifier);
+      if (Tokens.back()->TokenText == "!cond")
+        Tokens.back()->setType(TT_TableGenCondOperator);
+      return;
+    }
+    if (tryMergeTokens({tok::exclaim, tok::kw_if}, TT_TableGenBangOperator)) {
+      // Here, "! if" becomes "!if".  That is, ! captures if even when the space
+      // exists. That is only one possibility in TableGen's syntax.
+      return;
+    }
+    if (tryMergeTokens({tok::plus, tok::numeric_constant}, TT_Unknown)) {
+      Tokens.back()->Tok.setKind(tok::numeric_constant);
+      return;
+    }
+    if (tryMergeTokens({tok::minus, tok::numeric_constant}, TT_Unknown)) {
+      Tokens.back()->Tok.setKind(tok::numeric_constant);
       return;
     }
   }
@@ -763,6 +799,109 @@ void FormatTokenLexer::handleCSharpVerbatimAndInterpolatedStrings() {
   resetLexer(SourceMgr.getFileOffset(Lex->getSourceLocation(Offset + 1)));
 }
 
+void FormatTokenLexer::handleTableGenMultilineString() {
+  FormatToken *MultiLineString = Tokens.back();
+  if (MultiLineString->isNot(TT_TableGenMultiLineString)) {
+    // Multi line string starts with [{
+    return;
+  }
+  bool PrevIsRBrace = false;
+  const char *FirstBreak = nullptr;
+  const char *LastBreak = nullptr;
+  const char *Begin = MultiLineString->TokenText.begin();
+  for (const char *Current = Begin, *End = Lex->getBuffer().end();
+       Current != End; ++Current) {
+    if (*Current == ']' && PrevIsRBrace) {
+      // }] is the end of multi line string.
+      if (!FirstBreak)
+        FirstBreak = Current;
+      MultiLineString->TokenText = StringRef(Begin, Current - Begin + 1);
+      MultiLineString->ColumnWidth = encoding::columnWidthWithTabs(
+          StringRef(Begin, FirstBreak - Begin + 1),
+          MultiLineString->OriginalColumn, Style.TabWidth, Encoding);
+      if (LastBreak) {
+        MultiLineString->LastLineColumnWidth = encoding::columnWidthWithTabs(
+            StringRef(LastBreak + 1, Current - LastBreak),
+            MultiLineString->OriginalColumn, Style.TabWidth, Encoding);
+      }
+      resetLexer(SourceMgr.getFileOffset(Lex->getSourceLocation(Current + 1)));
+      return;
+    }
+    PrevIsRBrace = false;
+    if (*Current == '\n') {
+      MultiLineString->IsMultiline = true;
+      // Assure LastBreak is not equal to FirstBreak.
+      if (!FirstBreak)
+        FirstBreak = Current;
+      LastBreak = Current;
+      continue;
+    }
+    if (*Current == '}') {
+      // Memorize '}'. If next character is ']', we find the end.
+      PrevIsRBrace = true;
+      continue;
+    }
+  }
+}
+
+void FormatTokenLexer::handleTableGenNumericLikeIdentifier() {
+  FormatToken *Tok = Tokens.back();
+  if (Tok->isNot(tok::numeric_constant))
+    return;
+  StringRef Text = Tok->TokenText;
+  if (Text.size() < 1 || Text[0] == '+' || Text[0] == '-')
+    return;
+  size_t I = 0;
+  // Identifiers in TalbleGen may begin from digits.
+  while (I < Text.size() && isdigit(Text[I]))
+    ++I;
+  if (I >= Text.size())
+    return;
+  char Second = Text[I];
+  if (I > 1 || Second != 'x' || Second != 'b') {
+    // If non-digit appears in integer that does not begin from + or -,
+    // it must be in the second character.
+    Tok->Tok.setKind(tok::identifier);
+    return;
+  }
+  while (I < Text.size()) {
+    switch (Text[I]) {
+    default: // Invalid char for identifier is also allowed here.
+      Tok->Tok.setKind(tok::identifier);
+      return;
+    case 'a':
+    case 'b':
+    case 'c':
+    case 'd':
+    case 'e':
+    case 'f':
+    case 'A':
+    case 'B':
+    case 'C':
+    case 'D':
+    case 'E':
+    case 'F':
+    case '2':
+    case '3':
+    case '4':
+    case '5':
+    case '6':
+    case '7':
+    case '8':
+    case '9':
+      if (Second != 'b') {
+        Tok->Tok.setKind(tok::identifier);
+        return;
+      }
+      [[fallthrough]];
+    case '0':
+    case '1':
+      break;
+    }
+    ++I;
+  }
+}
+
 void FormatTokenLexer::handleTemplateStrings() {
   FormatToken *BacktickToken = Tokens.back();
 
@@ -1180,6 +1319,9 @@ FormatToken *FormatTokenLexer::getNextToken() {
     } else if (Style.isJavaScript() &&
                FormatTok->isOneOf(tok::kw_struct, tok::kw_union,
                                   tok::kw_operator)) {
+      FormatTok->Tok.setKind(tok::identifier);
+      FormatTok->Tok.setIdentifierInfo(nullptr);
+    } else if (Style.isTableGen() && !Keywords.isTableGenKeyword(*FormatTok)) {
       FormatTok->Tok.setKind(tok::identifier);
       FormatTok->Tok.setIdentifierInfo(nullptr);
     }

@@ -95,6 +95,12 @@ private:
 
   void handleCSharpVerbatimAndInterpolatedStrings();
 
+  // Handles TableGen multiline strings. It has the form [{ ... }].
+  void handleTableGenMultilineString();
+  // Handles TableGen numeric like identifiers.
+  // It has forms of [0-9]*[_a-zA-Z]([_a-zA-Z0-9]*) where it is not an integer.
+  void handleTableGenNumericLikeIdentifier();
+
   void tryParsePythonComment();
 
   bool tryMerge_TMacro();
