@@ -379,9 +379,9 @@ private:
   /// DW_AT_const_value of that definition if available. Returns std::nullopt
   /// otherwise.
   ///
-  /// In newer versions of clang, DW_AT_const_value's are not attached to the
-  /// declaration of a inline static data-member anymore, but rather on its
-  /// definition. This function is used to locate said constant.
+  /// In newer versions of clang, DW_AT_const_value attributes are not attached
+  /// to the declaration of a inline static data-member anymore, but rather on
+  /// its definition. This function is used to locate said constant.
   std::optional<lldb_private::plugin::dwarf::DWARFFormValue>
   FindConstantOnVariableDefinition(lldb_private::plugin::dwarf::DWARFDIE die);
 };

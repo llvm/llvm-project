@@ -2959,7 +2959,7 @@ void DWARFASTParserClang::ParseSingleMember(
         return;
 
       // Newer versions of Clang don't emit the DW_AT_const_value
-      // on the declaration of a inline static data member. Instead
+      // on the declaration of an inline static data member. Instead
       // it's attached to the definition DIE. If that's the case,
       // try and fetch it.
       if (!attrs.const_value_form) {
