@@ -23,16 +23,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/TableGen/Record.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/TableGen/Error.h"
-#include <string>
-#include <sstream>
-#include <set>
+#include "llvm/TableGen/Record.h"
+#include <array>
 #include <cctype>
+#include <set>
+#include <sstream>
+#include <string>
 #include <tuple>
 
 using namespace llvm;
@@ -64,24 +65,27 @@ public:
 };
 
 class SVEType {
-  TypeSpec TS;
   bool Float, Signed, Immediate, Void, Constant, Pointer, BFloat;
   bool DefaultType, IsScalable, Predicate, PredicatePattern, PrefetchOp,
       Svcount;
   unsigned Bitwidth, ElementBitwidth, NumVectors;
 
 public:
-  SVEType() : SVEType(TypeSpec(), 'v') {}
+  SVEType() : SVEType("", 'v') {}
 
-  SVEType(TypeSpec TS, char CharMod, unsigned NumVectors = 1)
-      : TS(TS), Float(false), Signed(true), Immediate(false), Void(false),
+  SVEType(StringRef TS, char CharMod, unsigned NumVectors = 1)
+      : Float(false), Signed(true), Immediate(false), Void(false),
         Constant(false), Pointer(false), BFloat(false), DefaultType(false),
         IsScalable(true), Predicate(false), PredicatePattern(false),
         PrefetchOp(false), Svcount(false), Bitwidth(128), ElementBitwidth(~0U),
         NumVectors(NumVectors) {
     if (!TS.empty())
-      applyTypespec();
+      applyTypespec(TS);
     applyModifier(CharMod);
+  }
+
+  SVEType(const SVEType &Base, unsigned NumV) : SVEType(Base) {
+    NumVectors = NumV;
   }
 
   bool isPointer() const { return Pointer; }
@@ -129,12 +133,11 @@ public:
 
 private:
   /// Creates the type based on the typespec string in TS.
-  void applyTypespec();
+  void applyTypespec(StringRef TS);
 
   /// Applies a prototype modifier to the type.
   void applyModifier(char Mod);
 };
-
 
 class SVEEmitter;
 
@@ -263,17 +266,11 @@ private:
   // which is inconvenient to specify in the arm_sve.td file or
   // generate in CGBuiltin.cpp.
   struct ReinterpretTypeInfo {
+    SVEType BaseType;
     const char *Suffix;
-    const char *Type;
-    const char *BuiltinType;
   };
-  SmallVector<ReinterpretTypeInfo, 12> Reinterprets = {
-      {"s8", "svint8_t", "q16Sc"},   {"s16", "svint16_t", "q8Ss"},
-      {"s32", "svint32_t", "q4Si"},  {"s64", "svint64_t", "q2SWi"},
-      {"u8", "svuint8_t", "q16Uc"},  {"u16", "svuint16_t", "q8Us"},
-      {"u32", "svuint32_t", "q4Ui"}, {"u64", "svuint64_t", "q2UWi"},
-      {"f16", "svfloat16_t", "q8h"}, {"bf16", "svbfloat16_t", "q8y"},
-      {"f32", "svfloat32_t", "q4f"}, {"f64", "svfloat64_t", "q2d"}};
+
+  static const std::array<ReinterpretTypeInfo, 12> Reinterprets;
 
   RecordKeeper &Records;
   llvm::StringMap<uint64_t> EltTypes;
@@ -382,6 +379,20 @@ public:
   void createIntrinsic(Record *R,
                        SmallVectorImpl<std::unique_ptr<Intrinsic>> &Out);
 };
+
+const std::array<SVEEmitter::ReinterpretTypeInfo, 12> SVEEmitter::Reinterprets =
+    {{{SVEType("c", 'd'), "s8"},
+      {SVEType("Uc", 'd'), "u8"},
+      {SVEType("s", 'd'), "s16"},
+      {SVEType("Us", 'd'), "u16"},
+      {SVEType("i", 'd'), "s32"},
+      {SVEType("Ui", 'd'), "u32"},
+      {SVEType("l", 'd'), "s64"},
+      {SVEType("Ul", 'd'), "u64"},
+      {SVEType("h", 'd'), "f16"},
+      {SVEType("b", 'd'), "bf16"},
+      {SVEType("f", 'd'), "f32"},
+      {SVEType("d", 'd'), "f64"}}};
 
 } // end anonymous namespace
 
@@ -497,7 +508,8 @@ std::string SVEType::str() const {
 
   return S;
 }
-void SVEType::applyTypespec() {
+
+void SVEType::applyTypespec(StringRef TS) {
   for (char I : TS) {
     switch (I) {
     case 'Q':
@@ -1315,21 +1327,28 @@ void SVEEmitter::createHeader(raw_ostream &OS) {
         "__nodebug__, __overloadable__))\n\n";
 
   // Add reinterpret functions.
-  for (auto ShortForm : { false, true } )
-    for (const ReinterpretTypeInfo &From : Reinterprets)
+  for (auto [N, Suffix] :
+       std::initializer_list<std::pair<unsigned, const char *>>{
+           {1, ""}, {2, "_x2"}, {3, "_x3"}, {4, "_x4"}}) {
+    for (auto ShortForm : {false, true})
       for (const ReinterpretTypeInfo &To : Reinterprets) {
-        if (ShortForm) {
-          OS << "__aio __attribute__((target(\"sve\"))) " << From.Type
-             << " svreinterpret_" << From.Suffix;
-          OS << "(" << To.Type << " op) __arm_streaming_compatible {\n";
-          OS << "  return __builtin_sve_reinterpret_" << From.Suffix << "_"
-             << To.Suffix << "(op);\n";
-          OS << "}\n\n";
-        } else
-          OS << "#define svreinterpret_" << From.Suffix << "_" << To.Suffix
-             << "(...) __builtin_sve_reinterpret_" << From.Suffix << "_"
-             << To.Suffix << "(__VA_ARGS__)\n";
+        SVEType ToV(To.BaseType, N);
+        for (const ReinterpretTypeInfo &From : Reinterprets) {
+          SVEType FromV(From.BaseType, N);
+          if (ShortForm) {
+            OS << "__aio __attribute__((target(\"sve\"))) " << ToV.str()
+               << " svreinterpret_" << To.Suffix;
+            OS << "(" << FromV.str() << " op) __arm_streaming_compatible {\n";
+            OS << "  return __builtin_sve_reinterpret_" << To.Suffix << "_"
+               << From.Suffix << Suffix << "(op);\n";
+            OS << "}\n\n";
+          } else
+            OS << "#define svreinterpret_" << To.Suffix << "_" << From.Suffix
+               << Suffix << "(...) __builtin_sve_reinterpret_" << To.Suffix
+               << "_" << From.Suffix << Suffix << "(__VA_ARGS__)\n";
+        }
       }
+  }
 
   SmallVector<std::unique_ptr<Intrinsic>, 128> Defs;
   std::vector<Record *> RV = Records.getAllDerivedDefinitions("Inst");
@@ -1394,12 +1413,20 @@ void SVEEmitter::createBuiltins(raw_ostream &OS) {
          << "\")\n";
   }
 
-  // Add reinterpret builtins
-  for (const ReinterpretTypeInfo &From : Reinterprets)
-    for (const ReinterpretTypeInfo &To : Reinterprets)
-      OS << "TARGET_BUILTIN(__builtin_sve_reinterpret_" << From.Suffix << "_"
-         << To.Suffix << +", \"" << From.BuiltinType << To.BuiltinType
-         << "\", \"n\", \"sve\")\n";
+  // Add reinterpret functions.
+  for (auto [N, Suffix] :
+       std::initializer_list<std::pair<unsigned, const char *>>{
+           {1, ""}, {2, "_x2"}, {3, "_x3"}, {4, "_x4"}}) {
+    for (const ReinterpretTypeInfo &To : Reinterprets) {
+      SVEType ToV(To.BaseType, N);
+      for (const ReinterpretTypeInfo &From : Reinterprets) {
+        SVEType FromV(From.BaseType, N);
+        OS << "TARGET_BUILTIN(__builtin_sve_reinterpret_" << To.Suffix << "_"
+           << From.Suffix << Suffix << +", \"" << ToV.builtin_str()
+           << FromV.builtin_str() << "\", \"n\", \"sve\")\n";
+      }
+    }
+  }
 
   OS << "#endif\n\n";
 }
