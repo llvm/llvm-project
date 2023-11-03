@@ -6,7 +6,7 @@ define i32 @test_invert_bool(i32 %call, i32 %a) {
 ; CHECK-SAME: i32 [[CALL:%.*]], i32 [[A:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i32 [[CALL]], 0
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata i1 [[TOBOOL_NOT]], metadata [[META3:![0-9]+]], metadata !DIExpression(DW_OP_LLVM_convert, 1, DW_ATE_unsigned, DW_OP_LLVM_convert, 32, DW_ATE_unsigned, DW_OP_stack_value)), !dbg [[DBG8:![0-9]+]]
+; CHECK-NEXT:    call void @llvm.dbg.value(metadata i1 [[TOBOOL_NOT]], metadata [[META3:![0-9]+]], metadata !DIExpression(DW_OP_constu, 18446744073709551615, DW_OP_xor, DW_OP_LLVM_convert, 1, DW_ATE_unsigned, DW_OP_LLVM_convert, 32, DW_ATE_unsigned, DW_OP_stack_value)), !dbg [[DBG8:![0-9]+]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = and i32 [[A]], 1
 ; CHECK-NEXT:    [[AND:%.*]] = select i1 [[TOBOOL_NOT]], i32 0, i32 [[TMP0]]
 ; CHECK-NEXT:    ret i32 [[AND]]
