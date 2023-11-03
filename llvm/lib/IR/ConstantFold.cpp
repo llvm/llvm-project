@@ -1451,20 +1451,6 @@ Constant *llvm::ConstantFoldCompareInstruction(CmpInst::Predicate Predicate,
     if (Result != -1)
       return ConstantInt::get(ResultTy, Result);
 
-    // If the right hand side is a bitcast, try using its inverse to simplify
-    // it by moving it to the left hand side.  We can't do this if it would turn
-    // a vector compare into a scalar compare or visa versa, or if it would turn
-    // the operands into FP values.
-    if (ConstantExpr *CE2 = dyn_cast<ConstantExpr>(C2)) {
-      Constant *CE2Op0 = CE2->getOperand(0);
-      if (CE2->getOpcode() == Instruction::BitCast &&
-          CE2->getType()->isVectorTy() == CE2Op0->getType()->isVectorTy() &&
-          !CE2Op0->getType()->isFPOrFPVectorTy()) {
-        Constant *Inverse = ConstantExpr::getBitCast(C1, CE2Op0->getType());
-        return ConstantExpr::getICmp(Predicate, Inverse, CE2Op0);
-      }
-    }
-
     if ((!isa<ConstantExpr>(C1) && isa<ConstantExpr>(C2)) ||
         (C1->isNullValue() && !C2->isNullValue())) {
       // If C2 is a constant expr and C1 isn't, flip them around and fold the
