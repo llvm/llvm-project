@@ -184,6 +184,56 @@ public:
     }
   }
 
+  /// Clobber \p Reg first, and then remove the corresponding COPY
+  /// record pair from the tracker. We need to locate and remove
+  /// the COPY instruction that defines \p Reg, as well as the
+  /// record in the tracker that make src defines \p Reg.
+  void eraseRegMIPair(MCRegister Reg, const TargetRegisterInfo &TRI,
+                      const TargetInstrInfo &TII, bool UseCopyInstr) {
+    for (MCRegUnit Unit : TRI.regunits(Reg)) {
+      auto I = Copies.find(Unit);
+
+      if (I != Copies.end()) {
+        // When we clobber the source of a copy, we need to clobber everything
+        // it defined.
+        markRegsUnavailable(I->second.DefRegs, TRI);
+        // When we clobber the destination of a copy, we need to clobber the
+        // whole register it defined.
+        if (MachineInstr *MI = I->second.MI) {
+          std::optional<DestSourcePair> CopyOperands =
+              isCopyInstr(*MI, TII, UseCopyInstr);
+
+          MCRegister Src = CopyOperands->Source->getReg().asMCReg();
+          MCRegister Def = CopyOperands->Destination->getReg().asMCReg();
+
+          markRegsUnavailable(Def, TRI);
+
+          for (MCRegUnit SrcUnit : TRI.regunits(Src)) {
+            auto SrcCopy = Copies.find(SrcUnit);
+            if (SrcCopy != Copies.end() && SrcCopy->second.LastSeenUseInCopy) {
+              // Src only defined Reg, erase SrcCopy directly.
+              if (SrcCopy->second.DefRegs.size() == 1) {
+                Copies.erase(SrcCopy);
+              } else {
+                // If Src define multiple value, we only need
+                // to erase the Unit in DefRegs.
+                for (auto itr = SrcCopy->second.DefRegs.begin();
+                     itr != SrcCopy->second.DefRegs.end(); itr++) {
+                  if (*itr == Unit) {
+                    SrcCopy->second.DefRegs.erase(itr);
+                    break;
+                  }
+                }
+              }
+            }
+          }
+        }
+        // Now we can erase the copy.
+        Copies.erase(I);
+      }
+    }
+  }
+
   /// Add this copy's registers into the tracker's copy maps.
   void trackCopy(MachineInstr *MI, const TargetRegisterInfo &TRI,
                  const TargetInstrInfo &TII, bool UseCopyInstr) {
@@ -719,7 +769,6 @@ void MachineCopyPropagation::ForwardCopyPropagateBlock(MachineBasicBlock &MBB) {
   LLVM_DEBUG(dbgs() << "MCP: ForwardCopyPropagateBlock " << MBB.getName()
                     << "\n");
 
-  const MachineInstr *LastMI = nullptr;
   for (MachineInstr &MI : llvm::make_early_inc_range(MBB)) {
     // Analyze copies (which don't overlap themselves).
     std::optional<DestSourcePair> CopyOperands =
@@ -735,27 +784,6 @@ void MachineCopyPropagation::ForwardCopyPropagateBlock(MachineBasicBlock &MBB) {
 
         MCRegister Def = RegDef.asMCReg();
         MCRegister Src = RegSrc.asMCReg();
-
-        // Target may lost some opportunity to further remove the redundant
-        // copy instruction, consider the following sequence:
-        // L1: r0 = COPY r9     <- TrackMI
-        // L2: r0 = COPY r8     <- TrackMI
-        // L3: use r0           <- Remove L2 from MaybeDeadCopies
-        // L4: early-clobber r9 <- Invalid L2 from Tracker
-        // L5: r0 = COPY r8     <- Miss remove chance
-        // L6: use r0           <- Miss remove L5 chance
-        if (LastMI) {
-          std::optional<DestSourcePair> PrevCopyOperands =
-              isCopyInstr(*LastMI, *TII, UseCopyInstr);
-          if (PrevCopyOperands) {
-            Register PrevRegDef = PrevCopyOperands->Destination->getReg();
-            // We could remove the previous copy from tracker directly.
-            if (TRI->isSubRegisterEq(RegDef, PrevRegDef)) {
-              Tracker.invalidateRegister(PrevRegDef.asMCReg(), *TRI, *TII,
-                                         UseCopyInstr);
-            }
-          }
-        }
 
         // The two copies cancel out and the source of the first copy
         // hasn't been overridden, eliminate the second one. e.g.
@@ -806,7 +834,21 @@ void MachineCopyPropagation::ForwardCopyPropagateBlock(MachineBasicBlock &MBB) {
         // %xmm2 = copy %xmm0
         // ...
         // %xmm2 = copy %xmm9
-        Tracker.clobberRegister(Def, *TRI, *TII, UseCopyInstr);
+
+        // While we do need to clobber the register here, simply clobbering it
+        // is not sufficient. We also need to remove the COPY record pair for
+        // 'Def' in the tracker. Failing to do so might cause the target to miss
+        // some opportunities to eliminate redundant copy instructions.
+
+        // Consider the following sequence:
+        // L1: r0 = COPY r9     <- TrackMI
+        // L2: r0 = COPY r8     <- TrackMI
+        // L3: use r0           <- Remove L2 from MaybeDeadCopies
+        // L4: early-clobber r9 <- Invalid L2 from Tracker
+        // L5: r0 = COPY r8     <- Miss remove chance
+        // L6: use r0           <- Miss remove L5 chance
+        Tracker.eraseRegMIPair(Def, *TRI, *TII, UseCopyInstr);
+
         for (const MachineOperand &MO : MI.implicit_operands()) {
           if (!MO.isReg() || !MO.isDef())
             continue;
@@ -817,8 +859,6 @@ void MachineCopyPropagation::ForwardCopyPropagateBlock(MachineBasicBlock &MBB) {
         }
 
         Tracker.trackCopy(&MI, *TRI, *TII, UseCopyInstr);
-        LastMI = &MI;
-
         continue;
       }
     }
@@ -898,7 +938,6 @@ void MachineCopyPropagation::ForwardCopyPropagateBlock(MachineBasicBlock &MBB) {
     for (MCRegister Reg : Defs)
       Tracker.clobberRegister(Reg, *TRI, *TII, UseCopyInstr);
 
-    LastMI = &MI;
   }
 
   // If MBB doesn't have successors, delete the copies whose defs are not used.
