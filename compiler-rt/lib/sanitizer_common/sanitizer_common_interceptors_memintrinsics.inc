@@ -40,10 +40,16 @@
 #define PLATFORM_HAS_DIFFERENT_MEMCPY_AND_MEMMOVE 1
 #endif  // SANITIZER_APPLE
 
+#ifndef COMMON_INTERCEPTOR_MEMSET_CHECK_IN_SHADOW
+#define COMMON_INTERCEPTOR_MEMSET_CHECK_IN_SHADOW(p) (0)
+#endif
+
 #ifndef COMMON_INTERCEPTOR_MEMSET_IMPL
 #define COMMON_INTERCEPTOR_MEMSET_IMPL(ctx, dst, v, size) \
   {                                                       \
     if (COMMON_INTERCEPTOR_NOTHING_IS_INITIALIZED)        \
+      return internal_memset(dst, v, size);               \
+    if (COMMON_INTERCEPTOR_MEMSET_CHECK_IN_SHADOW(dst))   \
       return internal_memset(dst, v, size);               \
     COMMON_INTERCEPTOR_ENTER(ctx, memset, dst, v, size);  \
     if (common_flags()->intercept_intrin)                 \

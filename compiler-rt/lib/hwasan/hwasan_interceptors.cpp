@@ -19,6 +19,7 @@
 #include "hwasan.h"
 #include "hwasan_allocator.h"
 #include "hwasan_checks.h"
+#include "hwasan_mapping.h"
 #include "hwasan_platform_interceptors.h"
 #include "hwasan_thread.h"
 #include "hwasan_thread_list.h"
@@ -146,14 +147,6 @@ struct HWAsanInterceptorContext {
         (void)(name);                           \
       } while (false)
 
-#    define COMMON_INTERCEPTOR_MEMSET_IMPL(ctx, block, c, size) \
-      do {                                                      \
-        (void)(ctx);                                            \
-        (void)(block);                                          \
-        (void)(c);                                              \
-        (void)(size);                                           \
-      } while (false)
-
 #    define COMMON_INTERCEPTOR_STRERROR() \
       do {                                \
       } while (false)
@@ -161,6 +154,9 @@ struct HWAsanInterceptorContext {
 #    define COMMON_INTERCEPT_FUNCTION(name) HWASAN_INTERCEPT_FUNC(name)
 
 #    define COMMON_INTERCEPTOR_NOTHING_IS_INITIALIZED (!hwasan_inited)
+
+#    define COMMON_INTERCEPTOR_MEMSET_CHECK_IN_SHADOW(p) \
+  MemIsShadow(reinterpret_cast<uptr>(p))
 
 // The main purpose of the mmap interceptor is to prevent the user from
 // allocating on top of shadow pages.
