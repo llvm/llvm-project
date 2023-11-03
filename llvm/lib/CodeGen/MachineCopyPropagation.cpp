@@ -937,7 +937,6 @@ void MachineCopyPropagation::ForwardCopyPropagateBlock(MachineBasicBlock &MBB) {
     // Any previous copy definition or reading the Defs is no longer available.
     for (MCRegister Reg : Defs)
       Tracker.clobberRegister(Reg, *TRI, *TII, UseCopyInstr);
-
   }
 
   // If MBB doesn't have successors, delete the copies whose defs are not used.
