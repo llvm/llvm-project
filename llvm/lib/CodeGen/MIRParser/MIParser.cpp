@@ -1963,8 +1963,7 @@ bool MIParser::parseLowLevelType(StringRef::iterator Loc, LLT &Ty) {
     if (HasVScale)
       return error(
           Loc, "expected <vscale x M x sN> or <vscale M x pA> for vector type");
-    else
-      return error(Loc, "expected <M x sN> or <M x pA> for vector type");
+    return error(Loc, "expected <M x sN> or <M x pA> for vector type");
   };
 
   if (Token.isNot(MIToken::IntegerLiteral))
