@@ -54,3 +54,10 @@ namespace pr33140_10 {
   int a(const int &n = 0);
   bool b() { return a() == a(); }
 }
+
+namespace GH67317 {
+struct array {
+  int (&data)[2];
+  array() : data(*new int[1][2]) {}
+};
+}

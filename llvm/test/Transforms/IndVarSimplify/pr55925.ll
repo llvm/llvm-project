@@ -16,7 +16,7 @@ define void @test(ptr %p) personality ptr undef {
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH]] ]
 ; CHECK-NEXT:    [[RES:%.*]] = invoke i32 @foo(i32 returned [[IV]])
-; CHECK-NEXT:    to label [[LOOP_LATCH]] unwind label [[EXIT:%.*]]
+; CHECK-NEXT:            to label [[LOOP_LATCH]] unwind label [[EXIT:%.*]]
 ; CHECK:       loop.latch:
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add i64 [[INDVARS_IV]], 1
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw i32 [[IV]], 1
@@ -25,7 +25,7 @@ define void @test(ptr %p) personality ptr undef {
 ; CHECK-NEXT:    br label [[LOOP]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[LP:%.*]] = landingpad { ptr, i32 }
-; CHECK-NEXT:    cleanup
+; CHECK-NEXT:            cleanup
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -60,7 +60,7 @@ define void @test_critedge(i1 %c, ptr %p) personality ptr undef {
 ; CHECK:       loop.invoke:
 ; CHECK-NEXT:    [[TMP0:%.*]] = trunc i64 [[INDVARS_IV]] to i32
 ; CHECK-NEXT:    [[RES:%.*]] = invoke i32 @foo(i32 returned [[IV]])
-; CHECK-NEXT:    to label [[LOOP_LATCH]] unwind label [[EXIT:%.*]]
+; CHECK-NEXT:            to label [[LOOP_LATCH]] unwind label [[EXIT:%.*]]
 ; CHECK:       loop.other:
 ; CHECK-NEXT:    br label [[LOOP_LATCH]]
 ; CHECK:       loop.latch:
@@ -71,7 +71,7 @@ define void @test_critedge(i1 %c, ptr %p) personality ptr undef {
 ; CHECK-NEXT:    br label [[LOOP]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[LP:%.*]] = landingpad { ptr, i32 }
-; CHECK-NEXT:    cleanup
+; CHECK-NEXT:            cleanup
 ; CHECK-NEXT:    ret void
 ;
 entry:

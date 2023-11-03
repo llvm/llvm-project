@@ -1,6 +1,7 @@
 // RUN: %clang_cc1 -verify=expected,lt50,lt51 -fopenmp -fno-openmp-extensions -fopenmp-version=45 -ferror-limit 100 %s -Wno-openmp-mapping -Wuninitialized
 // RUN: %clang_cc1 -verify=expected,ge50,lt51 -fopenmp -fno-openmp-extensions -fopenmp-version=50 -ferror-limit 100 %s -Wno-openmp-mapping -Wuninitialized
 // RUN: %clang_cc1 -verify=expected,ge50,ge51 -fopenmp -fno-openmp-extensions -ferror-limit 100 %s -Wno-openmp-mapping -Wuninitialized
+// RUN: %clang_cc1 -verify=expected,ge50,lt51,omp52 -fopenmp -fno-openmp-extensions -fopenmp-version=52 -ferror-limit 100 %s -Wno-openmp-mapping -Wuninitialized
 
 // RUN: %clang_cc1 -verify=expected,lt50,lt51 -fopenmp-simd -fno-openmp-extensions -fopenmp-version=45 -ferror-limit 100 %s -Wno-openmp-mapping -Wuninitialized
 
@@ -308,6 +309,8 @@ int main(int argc, char **argv) {
 #pragma omp target teams distribute parallel for map(tofrom, always: x)
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target teams distribute parallel for map(always, tofrom: always, tofrom, x)
+  for (i = 0; i < argc; ++i) foo();
+#pragma omp target teams distribute parallel for map(always close tofrom: x) // omp52-error 2 {{missing ',' after map type modifier}}
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target teams distribute parallel for map(tofrom j) // expected-error {{expected ',' or ')' in 'map' clause}}
   for (i = 0; i < argc; ++i) foo();

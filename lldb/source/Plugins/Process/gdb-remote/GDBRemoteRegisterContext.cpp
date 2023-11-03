@@ -434,11 +434,6 @@ bool GDBRemoteRegisterContext::WriteRegisterBytes(const RegisterInfo *reg_info,
         } else {
           // This is an actual register, write it
           success = SetPrimordialRegister(reg_info, gdb_comm);
-
-          if (success && do_reconfigure_arm64_sve) {
-            AArch64Reconfigure();
-            InvalidateAllRegisters();
-          }
         }
 
         // Check if writing this register will invalidate any other register
@@ -450,6 +445,11 @@ bool GDBRemoteRegisterContext::WriteRegisterBytes(const RegisterInfo *reg_info,
             SetRegisterIsValid(ConvertRegisterKindToRegisterNumber(
                                    eRegisterKindLLDB, reg),
                                false);
+        }
+
+        if (success && do_reconfigure_arm64_sve) {
+          AArch64Reconfigure();
+          InvalidateAllRegisters();
         }
 
         return success;
@@ -772,8 +772,6 @@ void GDBRemoteRegisterContext::AArch64Reconfigure() {
   std::optional<uint64_t> vg_reg_value;
   const RegisterInfo *vg_reg_info = m_reg_info_sp->GetRegisterInfo("vg");
   if (vg_reg_info) {
-    // Make sure we get the latest value of vg from the remote.
-    SetRegisterIsValid(vg_reg_info, false);
     uint32_t vg_reg_num = vg_reg_info->kinds[eRegisterKindLLDB];
     uint64_t reg_value = ReadRegisterAsUnsigned(vg_reg_num, fail_value);
     if (reg_value != fail_value && reg_value <= 32)

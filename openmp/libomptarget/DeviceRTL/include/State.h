@@ -13,6 +13,7 @@
 #define OMPTARGET_STATE_H
 
 #include "Debug.h"
+#include "Environment.h"
 #include "Mapping.h"
 #include "Types.h"
 #include "Utils.h"
@@ -117,10 +118,15 @@ extern ThreadStateTy **ThreadStates;
 #pragma omp allocate(ThreadStates) allocator(omp_pteam_mem_alloc)
 
 /// Initialize the state machinery. Must be called by all threads.
-void init(bool IsSPMD, KernelEnvironmentTy &KernelEnvironment);
+void init(bool IsSPMD, KernelEnvironmentTy &KernelEnvironment,
+          KernelLaunchEnvironmentTy &KernelLaunchEnvironment);
 
-/// Return the kernel environment associated with the current kernel.
+/// Return the kernel and kernel launch environment associated with the current
+/// kernel. The former is static and contains compile time information that
+/// holds for all instances of the kernel. The latter is dynamic and provides
+/// per-launch information.
 KernelEnvironmentTy &getKernelEnvironment();
+KernelLaunchEnvironmentTy &getKernelLaunchEnvironment();
 
 /// TODO
 enum ValueKind {
@@ -176,7 +182,7 @@ inline uint32_t &lookupImpl(uint32_t state::ICVStateTy::*Var,
   return TeamState.ICVState.*Var;
 }
 
-__attribute__((always_inline, flatten)) inline uint32_t &
+[[gnu::always_inline, gnu::flatten]] inline uint32_t &
 lookup32(ValueKind Kind, bool IsReadonly, IdentTy *Ident, bool ForceTeamState) {
   switch (Kind) {
   case state::VK_NThreads:
@@ -218,7 +224,7 @@ lookup32(ValueKind Kind, bool IsReadonly, IdentTy *Ident, bool ForceTeamState) {
   __builtin_unreachable();
 }
 
-__attribute__((always_inline, flatten)) inline void *&
+[[gnu::always_inline, gnu::flatten]] inline void *&
 lookupPtr(ValueKind Kind, bool IsReadonly, bool ForceTeamState) {
   switch (Kind) {
   case state::VK_ParallelRegionFn:
@@ -232,47 +238,45 @@ lookupPtr(ValueKind Kind, bool IsReadonly, bool ForceTeamState) {
 /// A class without actual state used to provide a nice interface to lookup and
 /// update ICV values we can declare in global scope.
 template <typename Ty, ValueKind Kind> struct Value {
-  __attribute__((flatten, always_inline)) operator Ty() {
+  [[gnu::flatten, gnu::always_inline]] operator Ty() {
     return lookup(/* IsReadonly */ true, /* IdentTy */ nullptr,
                   /* ForceTeamState */ false);
   }
 
-  __attribute__((flatten, always_inline)) Value &operator=(const Ty &Other) {
+  [[gnu::flatten, gnu::always_inline]] Value &operator=(const Ty &Other) {
     set(Other, /* IdentTy */ nullptr);
     return *this;
   }
 
-  __attribute__((flatten, always_inline)) Value &operator++() {
+  [[gnu::flatten, gnu::always_inline]] Value &operator++() {
     inc(1, /* IdentTy */ nullptr);
     return *this;
   }
 
-  __attribute__((flatten, always_inline)) Value &operator--() {
+  [[gnu::flatten, gnu::always_inline]] Value &operator--() {
     inc(-1, /* IdentTy */ nullptr);
     return *this;
   }
 
-  __attribute__((flatten, always_inline)) void
+  [[gnu::flatten, gnu::always_inline]] void
   assert_eq(const Ty &V, IdentTy *Ident = nullptr,
             bool ForceTeamState = false) {
     ASSERT(lookup(/* IsReadonly */ true, Ident, ForceTeamState) == V, nullptr);
   }
 
 private:
-  __attribute__((flatten, always_inline)) Ty &
+  [[gnu::flatten, gnu::always_inline]] Ty &
   lookup(bool IsReadonly, IdentTy *Ident, bool ForceTeamState) {
     Ty &t = lookup32(Kind, IsReadonly, Ident, ForceTeamState);
     return t;
   }
 
-  __attribute__((flatten, always_inline)) Ty &inc(int UpdateVal,
-                                                  IdentTy *Ident) {
+  [[gnu::flatten, gnu::always_inline]] Ty &inc(int UpdateVal, IdentTy *Ident) {
     return (lookup(/* IsReadonly */ false, Ident, /* ForceTeamState */ false) +=
             UpdateVal);
   }
 
-  __attribute__((flatten, always_inline)) Ty &set(Ty UpdateVal,
-                                                  IdentTy *Ident) {
+  [[gnu::flatten, gnu::always_inline]] Ty &set(Ty UpdateVal, IdentTy *Ident) {
     return (lookup(/* IsReadonly */ false, Ident, /* ForceTeamState */ false) =
                 UpdateVal);
   }
@@ -284,12 +288,12 @@ private:
 /// a nice interface to lookup and update ICV values
 /// we can declare in global scope.
 template <typename Ty, ValueKind Kind> struct PtrValue {
-  __attribute__((flatten, always_inline)) operator Ty() {
+  [[gnu::flatten, gnu::always_inline]] operator Ty() {
     return lookup(/* IsReadonly */ true, /* IdentTy */ nullptr,
                   /* ForceTeamState */ false);
   }
 
-  __attribute__((flatten, always_inline)) PtrValue &operator=(const Ty Other) {
+  [[gnu::flatten, gnu::always_inline]] PtrValue &operator=(const Ty Other) {
     set(Other);
     return *this;
   }

@@ -14,9 +14,9 @@
 
 #include <stdint.h>
 
-DECLARE_SPECIAL_CONSTANTS(float)
+using LlvmLibcLogfTest = LIBC_NAMESPACE::testing::FPTest<float>;
 
-TEST(LlvmLibcLogfTest, SpecialNumbers) {
+TEST_F(LlvmLibcLogfTest, SpecialNumbers) {
   EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::logf(aNaN));
   EXPECT_FP_EQ(inf, LIBC_NAMESPACE::logf(inf));
   EXPECT_FP_IS_NAN_WITH_EXCEPTION(LIBC_NAMESPACE::logf(neg_inf), FE_INVALID);

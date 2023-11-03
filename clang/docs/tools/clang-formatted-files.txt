@@ -6813,7 +6813,6 @@ llvm/lib/Target/X86/X86LoadValueInjectionRetHardening.cpp
 llvm/lib/Target/X86/X86LowerAMXIntrinsics.cpp
 llvm/lib/Target/X86/X86LowerAMXType.cpp
 llvm/lib/Target/X86/X86LowerTileCopy.cpp
-llvm/lib/Target/X86/X86PreAMXConfig.cpp
 llvm/lib/Target/X86/X86PreTileConfig.cpp
 llvm/lib/Target/X86/X86RegisterBankInfo.h
 llvm/lib/Target/X86/X86ShuffleDecodeConstantPool.cpp

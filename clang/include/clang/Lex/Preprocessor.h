@@ -2879,9 +2879,9 @@ public:
   /// Alter the state of whether this PP currently is in a
   /// "-Wunsafe-buffer-usage" opt-out region.
   ///
-  /// \param isEnter: true if this PP is entering a region; otherwise, this PP
+  /// \param isEnter true if this PP is entering a region; otherwise, this PP
   /// is exiting a region
-  /// \param Loc: the location of the entry or exit of a
+  /// \param Loc the location of the entry or exit of a
   /// region
   /// \return true iff it is INVALID to enter or exit a region, i.e.,
   /// attempt to enter a region before exiting a previous region, or exiting a
@@ -2893,7 +2893,7 @@ public:
   ///          opt-out region
   bool isPPInSafeBufferOptOutRegion();
 
-  /// \param StartLoc: output argument. It will be set to the start location of
+  /// \param StartLoc output argument. It will be set to the start location of
   /// the current "-Wunsafe-buffer-usage" opt-out region iff this function
   /// returns true.
   /// \return true iff this PP is currently in a "-Wunsafe-buffer-usage"

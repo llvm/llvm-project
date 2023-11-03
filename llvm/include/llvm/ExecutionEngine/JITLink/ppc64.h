@@ -61,6 +61,7 @@ enum EdgeKind_ppc64 : Edge::Kind {
   RequestCallNoTOC,
   RequestTLSDescInGOTAndTransformToTOCDelta16HA,
   RequestTLSDescInGOTAndTransformToTOCDelta16LO,
+  RequestTLSDescInGOTAndTransformToDelta34,
 };
 
 enum PLTCallStubKind {
@@ -202,6 +203,10 @@ public:
 
   static StringRef getSectionName() { return "$__STUBS"; }
 
+  // FIXME: One external symbol can only have one PLT stub in a object file.
+  // This is a limitation when we need different PLT stubs for the same symbol.
+  // For example, we need two different PLT stubs for `bl __tls_get_addr` and
+  // `bl __tls_get_addr@notoc`.
   bool visitEdge(LinkGraph &G, Block *B, Edge &E) {
     bool isExternal = E.getTarget().isExternal();
     Edge::Kind K = E.getKind();

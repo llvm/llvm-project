@@ -617,7 +617,8 @@ std::optional<HighlightingModifier> scopeModifier(const NamedDecl *D) {
   if (DC->isTranslationUnit() && D->isTemplateParameter())
     return std::nullopt;
   // ExternalLinkage threshold could be tweaked, e.g. module-visible as global.
-  if (D->getLinkageInternal() < ExternalLinkage)
+  if (llvm::to_underlying(D->getLinkageInternal()) <
+      llvm::to_underlying(Linkage::External))
     return HighlightingModifier::FileScope;
   return HighlightingModifier::GlobalScope;
 }

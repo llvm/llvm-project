@@ -64,49 +64,49 @@ bool lldb_private::contextMatches(llvm::ArrayRef<CompilerContext> context_chain,
   return true;
 }
 
-void CompilerContext::Dump() const {
+void CompilerContext::Dump(Stream &s) const {
   switch (kind) {
   default:
-    printf("Invalid");
+    s << "Invalid";
     break;
   case CompilerContextKind::TranslationUnit:
-    printf("TranslationUnit");
+    s << "TranslationUnit";
     break;
   case CompilerContextKind::Module:
-    printf("Module");
+    s << "Module";
     break;
   case CompilerContextKind::Namespace:
-    printf("Namespace");
+    s << "Namespace";
     break;
   case CompilerContextKind::Class:
-    printf("Class");
+    s << "Class";
     break;
   case CompilerContextKind::Struct:
-    printf("Structure");
+    s << "Structure";
     break;
   case CompilerContextKind::Union:
-    printf("Union");
+    s << "Union";
     break;
   case CompilerContextKind::Function:
-    printf("Function");
+    s << "Function";
     break;
   case CompilerContextKind::Variable:
-    printf("Variable");
+    s << "Variable";
     break;
   case CompilerContextKind::Enum:
-    printf("Enumeration");
+    s << "Enumeration";
     break;
   case CompilerContextKind::Typedef:
-    printf("Typedef");
+    s << "Typedef";
     break;
   case CompilerContextKind::AnyModule:
-    printf("AnyModule");
+    s << "AnyModule";
     break;
   case CompilerContextKind::AnyType:
-    printf("AnyType");
+    s << "AnyType";
     break;
   }
-  printf("(\"%s\")\n", name.GetCString());
+  s << "(" << name << ")";
 }
 
 class TypeAppendVisitor {
@@ -748,6 +748,10 @@ void TypeAndOrName::SetName(const char *type_name_cstr) {
   m_type_name.SetCString(type_name_cstr);
 }
 
+void TypeAndOrName::SetName(llvm::StringRef type_name) {
+  m_type_name.SetString(type_name);
+}
+
 void TypeAndOrName::SetTypeSP(lldb::TypeSP type_sp) {
   if (type_sp) {
     m_compiler_type = type_sp->GetForwardCompilerType();
@@ -1038,6 +1042,23 @@ bool TypeImpl::GetDescription(lldb_private::Stream &strm,
     strm.PutCString("Invalid TypeImpl module for type has been deleted\n");
   }
   return true;
+}
+
+CompilerType TypeImpl::FindDirectNestedType(llvm::StringRef name) {
+  if (name.empty())
+    return CompilerType();
+  auto type_system = GetTypeSystem(/*prefer_dynamic*/ false);
+  auto *symbol_file = type_system->GetSymbolFile();
+  auto decl_context = type_system->GetCompilerDeclContextForType(m_static_type);
+  if (!decl_context.IsValid())
+    return CompilerType();
+  llvm::DenseSet<lldb_private::SymbolFile *> searched_symbol_files;
+  TypeMap search_result;
+  symbol_file->FindTypes(ConstString(name), decl_context, /*max_matches*/ 1,
+                         searched_symbol_files, search_result);
+  if (search_result.Empty())
+    return CompilerType();
+  return search_result.GetTypeAtIndex(0)->GetFullCompilerType();
 }
 
 bool TypeMemberFunctionImpl::IsValid() {

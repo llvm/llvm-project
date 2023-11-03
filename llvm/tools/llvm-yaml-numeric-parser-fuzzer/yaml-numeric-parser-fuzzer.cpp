@@ -38,7 +38,7 @@ inline bool isNumericRegex(llvm::StringRef S) {
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
   std::string Input(reinterpret_cast<const char *>(Data), Size);
-  llvm::erase_value(Input, 0);
+  llvm::erase(Input, 0);
   if (!Input.empty() && llvm::yaml::isNumeric(Input) != isNumericRegex(Input))
     LLVM_BUILTIN_TRAP;
   return 0;

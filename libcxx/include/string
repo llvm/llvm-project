@@ -614,7 +614,6 @@ basic_string<char32_t> operator""s( const char32_t *str, size_t len );          
 #include <__utility/swap.h>
 #include <__utility/unreachable.h>
 #include <climits>
-#include <cstdint>
 #include <cstdio>  // EOF
 #include <cstring>
 #include <limits>
@@ -979,12 +978,7 @@ public:
 
     auto __len = std::min<size_type>(__n, __str.size() - __pos);
     if (__alloc_traits::is_always_equal::value || __alloc == __str.__alloc()) {
-      __r_.first() = __str.__r_.first();
-      __str.__r_.first() = __rep();
-
-      _Traits::move(data(), data() + __pos, __len);
-      __set_size(__len);
-      _Traits::assign(data()[__len], value_type());
+      __move_assign(std::move(__str), __pos, __len);
     } else {
       // Perform a copy because the allocators are not compatible.
       __init(__str.data() + __pos, __len);
@@ -1203,11 +1197,17 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 const_reference operator[](size_type __pos) const _NOEXCEPT {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__pos <= size(), "string index out of bounds");
+    if (__builtin_constant_p(__pos) && !__fits_in_sso(__pos)) {
+      return *(__get_long_pointer() + __pos);
+    }
     return *(data() + __pos);
   }
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 reference operator[](size_type __pos) _NOEXCEPT {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__pos <= size(), "string index out of bounds");
+    if (__builtin_constant_p(__pos) && !__fits_in_sso(__pos)) {
+      return *(__get_long_pointer() + __pos);
+    }
     return *(__get_pointer() + __pos);
   }
 
@@ -1328,6 +1328,20 @@ public:
     __self_view __sv = __t;
     return assign(__sv.data(), __sv.size());
   }
+
+#if _LIBCPP_STD_VER >= 20
+  _LIBCPP_HIDE_FROM_ABI constexpr
+  void __move_assign(basic_string&& __str, size_type __pos, size_type __len) {
+    // Pilfer the allocation from __str.
+    _LIBCPP_ASSERT_INTERNAL(__alloc() == __str.__alloc(), "__move_assign called with wrong allocator");
+    __r_.first() = __str.__r_.first();
+    __str.__r_.first() = __rep();
+
+    _Traits::move(data(), data() + __pos, __len);
+    __set_size(__len);
+    _Traits::assign(data()[__len], value_type());
+  }
+#endif
 
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
     basic_string& assign(const basic_string& __str) { return *this = __str; }

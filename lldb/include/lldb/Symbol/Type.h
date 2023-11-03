@@ -34,7 +34,7 @@ struct CompilerContext {
   }
   bool operator!=(const CompilerContext &rhs) const { return !(*this == rhs); }
 
-  void Dump() const;
+  void Dump(Stream &s) const;
 
   CompilerContextKind kind;
   ConstString name;
@@ -304,6 +304,8 @@ public:
   bool GetDescription(lldb_private::Stream &strm,
                       lldb::DescriptionLevel description_level);
 
+  CompilerType FindDirectNestedType(llvm::StringRef name);
+
 private:
   bool CheckModule(lldb::ModuleSP &module_sp) const;
   bool CheckExeModule(lldb::ModuleSP &module_sp) const;
@@ -417,6 +419,8 @@ public:
   void SetName(ConstString type_name);
 
   void SetName(const char *type_name_cstr);
+
+  void SetName(llvm::StringRef name);
 
   void SetTypeSP(lldb::TypeSP type_sp);
 

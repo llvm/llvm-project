@@ -31,4 +31,4 @@ ret i32 %val
 !2 = !{!"branch_weights", i32 5, i32 5}
 !3 = !{!"branch_weights", i32 4, i32 1}
 
-; CHECK: [[COUNT1]] = !{!"branch_weights", i32 31, i32 8}
+; CHECK: [[COUNT1]] = !{!"branch_weights", i32 858993459, i32 214748365}

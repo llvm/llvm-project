@@ -50,7 +50,7 @@ END
 !CHECK: %[[C1_0:.*]] = arith.constant 1 : index
 !CHECK: %[[C1_1:.*]] = arith.constant 1 : index
 !CHECK: %[[BOUNDS:.*]] = omp.bounds   lower_bound(%[[C1]] : index) upper_bound(%[[C4]] : index) stride(%[[C1_1]] : index) start_idx(%[[C1_1]] : index)
-!CHECK: %[[ENTRY:.*]] = omp.map_info var_ptr(%[[ARG1]] : !fir.ref<!fir.array<10xi32>>)   map_clauses(tofrom) capture(ByRef) bounds(%[[BOUNDS]]) -> !fir.ref<!fir.array<10xi32>> {name = "sp_write(2:5)"}
+!CHECK: %[[ENTRY:.*]] = omp.map_info var_ptr(%[[ARG1]] : !fir.ref<!fir.array<10xi32>>, !fir.array<10xi32>)   map_clauses(tofrom) capture(ByRef) bounds(%[[BOUNDS]]) -> !fir.ref<!fir.array<10xi32>> {name = "sp_write(2:5)"}
 !CHECK: omp.target   map_entries(%[[ENTRY]] : !fir.ref<!fir.array<10xi32>>) {
 !CHECK:  %c2_i32 = arith.constant 2 : i32
 !CHECK:  %2 = fir.convert %c2_i32 : (i32) -> index

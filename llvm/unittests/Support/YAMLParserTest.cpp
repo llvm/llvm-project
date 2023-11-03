@@ -47,6 +47,10 @@ TEST(YAMLParser, ParsesEmptyArray) {
   ExpectParseSuccess("Empty array", "[]");
 }
 
+TEST(YAMLParser, ParsesComplexMap) {
+  ExpectParseSuccess("Complex block map", "? a\n: b");
+}
+
 TEST(YAMLParser, FailsIfNotClosingArray) {
   ExpectParseError("Not closing array", "[");
   ExpectParseError("Not closing array", "  [  ");
@@ -82,7 +86,10 @@ TEST(YAMLParser, FailsIfMissingColon) {
 }
 
 TEST(YAMLParser, FailsOnMissingQuote) {
-  ExpectParseError("Missing open quote", "[{a\":\"b\"}]");
+  // Missing open quote counts as a plain scalar per YAML spec
+  // (Following is equivalent to JSON [{"a\":\"b\"": null}])
+  ExpectParseSuccess("Missing open quote", "[{a\":\"b\"}]");
+  // Closing quote is more strict -- plain scalars cannot start with a quote
   ExpectParseError("Missing closing quote", "[{\"a\":\"b}]");
 }
 
@@ -126,6 +133,48 @@ TEST(YAMLParser, ParsesSpacesInBetweenTokens) {
 
 TEST(YAMLParser, ParsesArrayOfArrays) {
   ExpectParseSuccess("Array of arrays", "[[]]");
+}
+
+TEST(YAMLParser, ParsesPlainScalars) {
+  ExpectParseSuccess("Plain scalar", "hello");
+  ExpectParseSuccess("Plain scalar beginning with a question mark", "?hello");
+  ExpectParseSuccess("Plain scalar beginning with a colon", ":hello");
+  ExpectParseSuccess("Plain scalar beginning with two colons", "::hello");
+  ExpectParseSuccess("Plain scalar beginning with a hyphen", "-hello");
+  ExpectParseSuccess("Multi-line plain scalar", "Hello\nworld");
+  ExpectParseSuccess("Plain scalar with indicator characters",
+                     "He-!l*lo, []world{}");
+  ExpectParseSuccess("Plain scalar with indicator characters used as block key",
+                     "He-!l*lo, []world{}: value");
+  ExpectParseSuccess("Plain scalar in flow sequence", "hello");
+  ExpectParseSuccess(
+      "Plain scalar beginning with a question mark in flow sequence",
+      "[ ?hello ]");
+  ExpectParseSuccess("Plain scalar beginning with a colon in flow sequence",
+                     "[ :hello ]");
+  ExpectParseSuccess("Plain scalar beginning with two colons in flow sequence",
+                     "[ ::hello ]");
+  ExpectParseSuccess("Plain scalar beginning with a hyphen in flow sequence",
+                     "[ -hello ]");
+  ExpectParseSuccess("Multi-line plain scalar in flow sequence",
+                     "[ Hello\nworld ]");
+  ExpectParseSuccess(
+      "Plain scalar with non-flow indicator characters in flow sequence",
+      "[ He-!l*lo, world ]");
+  ExpectParseSuccess(
+      "Plain scalar with non-flow indicator characters used as flow key",
+      "{ He-!l*lo, world: value } ");
+  ExpectParseError(
+      "Plain scalar with flow indicator characters inside flow sequence",
+      "[ Hello[world ]");
+  ExpectParseError(
+      "Plain scalar with flow indicator characters inside flow key",
+      "{ Hello[world: value }");
+  // Multi-line plain scalar in keys is strictly invalid per the spec, but many
+  // implementations accept it in flow keys nonetheless.  Block keys are not
+  // accepted by any other implementation I can find.
+  ExpectParseSuccess("Multi-line plain scalar in block key", "a\nb: c");
+  ExpectParseSuccess("Multi-line plain scalar in flow key", "{\na\nb: c\n}");
 }
 
 TEST(YAMLParser, ParsesBlockLiteralScalars) {
@@ -176,11 +225,21 @@ TEST(YAMLParser, HandlesEndOfFileGracefully) {
   ExpectParseError("In array hitting EOF", "[[] ");
   ExpectParseError("In array hitting EOF", "[[]");
   ExpectParseError("In object hitting EOF", "{\"\"");
+  // This one is valid, equivalent to the JSON {"": null}
+  ExpectParseSuccess("In complex block map hitting EOF", "?");
+  // Equivalent to JSON [null]
+  ExpectParseSuccess("In block sequence hitting EOF", "-");
 }
 
 TEST(YAMLParser, HandlesNullValuesInKeyValueNodesGracefully) {
   ExpectParseError("KeyValueNode with null key", "? \"\n:");
   ExpectParseError("KeyValueNode with null value", "test: '");
+}
+
+TEST(YAMLParser, BlockSequenceEOF) {
+  SourceMgr SM;
+  yaml::Stream Stream("-", SM);
+  EXPECT_TRUE(isa_and_present<yaml::SequenceNode>(Stream.begin()->getRoot()));
 }
 
 // Checks that the given string can be parsed into an identical string inside

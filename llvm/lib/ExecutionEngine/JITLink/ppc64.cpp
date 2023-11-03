@@ -134,6 +134,8 @@ const char *getEdgeKindName(Edge::Kind K) {
     return "RequestTLSDescInGOTAndTransformToTOCDelta16HA";
   case RequestTLSDescInGOTAndTransformToTOCDelta16LO:
     return "RequestTLSDescInGOTAndTransformToTOCDelta16LO";
+  case RequestTLSDescInGOTAndTransformToDelta34:
+    return "RequestTLSDescInGOTAndTransformToDelta34";
   default:
     return getGenericEdgeKindName(static_cast<Edge::Kind>(K));
   }

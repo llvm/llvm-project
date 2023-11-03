@@ -102,7 +102,8 @@ private:
   BumpPtrAllocator Allocator;
 };
 
-constexpr endianness Endians[] = {big, little, native};
+constexpr llvm::endianness Endians[] = {
+    llvm::endianness::big, llvm::endianness::little, llvm::endianness::native};
 constexpr uint32_t NumEndians = std::size(Endians);
 constexpr uint32_t NumStreams = 2 * NumEndians;
 
@@ -931,7 +932,7 @@ TEST_F(BinaryStreamTest, BinaryItemStream) {
     Objects.push_back(BinaryItemStreamObject(Buffer));
   }
 
-  BinaryItemStream<BinaryItemStreamObject> ItemStream(big);
+  BinaryItemStream<BinaryItemStreamObject> ItemStream(llvm::endianness::big);
   ItemStream.setItems(Objects);
   BinaryStreamReader Reader(ItemStream);
 

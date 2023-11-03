@@ -1,5 +1,5 @@
-// RUN: mlir-opt %s --gpu-to-llvm="gpu-binary-annotation=nvvm.cubin use-opaque-pointers=1" -split-input-file | FileCheck %s
-// RUN: mlir-opt %s --gpu-to-llvm="gpu-binary-annotation=rocdl.hsaco use-opaque-pointers=1" -split-input-file | FileCheck %s --check-prefix=ROCDL
+// RUN: mlir-opt %s --gpu-to-llvm="gpu-binary-annotation=nvvm.cubin" -split-input-file | FileCheck %s
+// RUN: mlir-opt %s --gpu-to-llvm="gpu-binary-annotation=rocdl.hsaco" -split-input-file | FileCheck %s --check-prefix=ROCDL
 
 module attributes {gpu.container_module} {
 

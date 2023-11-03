@@ -1,5 +1,5 @@
-RUN: llvm-remarkutil count --parser=yaml --pass-name=generic-remarks-pass %p/Inputs/remark-filter-by.yaml | FileCheck %s 
-RUN: llvm-remarkutil count --parser=yaml --rpass-name=.* %p/Inputs/remark-filter-by.yaml | FileCheck %s --check-prefix=CHECKALL 
+RUN: llvm-remarkutil count --parser=yaml --pass-name=generic-remarks-pass %p/Inputs/remark-filter-by.yaml | FileCheck %s
+RUN: llvm-remarkutil count --parser=yaml --rpass-name=.* %p/Inputs/remark-filter-by.yaml | FileCheck %s --check-prefix=CHECKALL
 
 ; CHECK-LABEL: Source,Count
 ; CHECK: path/to/anno.c,2

@@ -114,8 +114,8 @@ static void exitWithErrorCode(std::error_code EC, StringRef Whence = "") {
 
 namespace {
 enum ProfileKinds { instr, sample, memory };
-enum FailureMode { failIfAnyAreInvalid, failIfAllAreInvalid };
-}
+enum FailureMode { warnOnly, failIfAnyAreInvalid, failIfAllAreInvalid };
+} // namespace
 
 static void warnOrExitGivenError(FailureMode FailMode, std::error_code EC,
                                  StringRef Whence = "") {
@@ -198,6 +198,14 @@ public:
   StringRef operator()(StringRef Name) {
     StringRef New = RemappingTable.lookup(Name);
     return New.empty() ? Name : New;
+  }
+
+  FunctionId operator()(FunctionId Name) {
+    // MD5 name cannot be remapped.
+    if (!Name.isStringRef())
+      return Name;
+    StringRef New = RemappingTable.lookup(Name.stringRef());
+    return New.empty() ? Name : FunctionId(New);
   }
 };
 }
@@ -306,7 +314,22 @@ static void loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
   }
 
   auto FS = vfs::getRealFileSystem();
-  auto ReaderOrErr = InstrProfReader::create(Input.Filename, *FS, Correlator);
+  // TODO: This only saves the first non-fatal error from InstrProfReader, and
+  // then added to WriterContext::Errors. However, this is not extensible, if
+  // we have more non-fatal errors from InstrProfReader in the future. How
+  // should this interact with different -failure-mode?
+  std::optional<std::pair<Error, std::string>> ReaderWarning;
+  auto Warn = [&](Error E) {
+    if (ReaderWarning) {
+      consumeError(std::move(E));
+      return;
+    }
+    // Only show the first time an error occurs in this file.
+    auto [ErrCode, Msg] = InstrProfError::take(std::move(E));
+    ReaderWarning = {make_error<InstrProfError>(ErrCode, Msg), Filename};
+  };
+  auto ReaderOrErr =
+      InstrProfReader::create(Input.Filename, *FS, Correlator, Warn);
   if (Error E = ReaderOrErr.takeError()) {
     // Skip the empty profiles by returning silently.
     auto [ErrCode, Msg] = InstrProfError::take(std::move(E));
@@ -354,14 +377,23 @@ static void loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
           Traces, Reader->getTemporalProfTraceStreamSize());
   }
   if (Reader->hasError()) {
-    if (Error E = Reader->getError())
+    if (Error E = Reader->getError()) {
       WC->Errors.emplace_back(std::move(E), Filename);
+      return;
+    }
   }
 
   std::vector<llvm::object::BuildID> BinaryIds;
-  if (Error E = Reader->readBinaryIds(BinaryIds))
+  if (Error E = Reader->readBinaryIds(BinaryIds)) {
     WC->Errors.emplace_back(std::move(E), Filename);
+    return;
+  }
   WC->Writer.addBinaryIds(BinaryIds);
+
+  if (ReaderWarning) {
+    WC->Errors.emplace_back(std::move(ReaderWarning->first),
+                            ReaderWarning->second);
+  }
 }
 
 /// Merge the \p Src writer context into \p Dst.
@@ -418,8 +450,9 @@ mergeInstrProfile(const WeightedFileVector &Inputs, StringRef DebugInfoFilename,
 
   std::unique_ptr<InstrProfCorrelator> Correlator;
   if (!DebugInfoFilename.empty()) {
-    if (auto Err =
-            InstrProfCorrelator::get(DebugInfoFilename).moveInto(Correlator))
+    if (auto Err = InstrProfCorrelator::get(DebugInfoFilename,
+                                            InstrProfCorrelator::DEBUG_INFO)
+                       .moveInto(Correlator))
       exitWithError(std::move(Err), DebugInfoFilename);
     if (auto Err = Correlator->correlateProfileData(MaxDbgCorrelationWarnings))
       exitWithError(std::move(Err), DebugInfoFilename);
@@ -484,7 +517,7 @@ mergeInstrProfile(const WeightedFileVector &Inputs, StringRef DebugInfoFilename,
       warn(toString(std::move(ErrorPair.first)), ErrorPair.second);
     }
   }
-  if (NumErrors == Inputs.size() ||
+  if ((NumErrors == Inputs.size() && FailMode == failIfAllAreInvalid) ||
       (NumErrors > 0 && FailMode == failIfAnyAreInvalid))
     exitWithError("no profile can be merged");
 
@@ -709,14 +742,15 @@ adjustInstrProfile(std::unique_ptr<WriterContext> &WC,
   //
   // Note that goo's count will remain in bar.cc:bar() as it does not have an
   // entry in InstrProfile.
-  DenseMap<StringRef, std::pair<uint64_t, uint64_t>> FlattenSampleMap;
+  llvm::StringMap<std::pair<uint64_t, uint64_t>> FlattenSampleMap;
   auto BuildMaxSampleMap = [&FlattenSampleMap, &StaticFuncMap,
                             &InstrProfileMap](const FunctionSamples &FS,
                                               const StringRef &RootName) {
     auto BuildMaxSampleMapImpl = [&](const FunctionSamples &FS,
                                      const StringRef &RootName,
                                      auto &BuildImpl) -> void {
-      const StringRef &Name = FS.getName();
+      std::string NameStr = FS.getFunction().str();
+      const StringRef Name = NameStr;
       const StringRef *NewRootName = &RootName;
       uint64_t EntrySample = FS.getHeadSamplesEstimate();
       uint64_t MaxBodySample = FS.getMaxCountInside(/* SkipCallSite*/ true);
@@ -770,7 +804,8 @@ adjustInstrProfile(std::unique_ptr<WriterContext> &WC,
 
   for (auto &PD : Reader->getProfiles()) {
     sampleprof::FunctionSamples &FS = PD.second;
-    BuildMaxSampleMap(FS, FS.getName());
+    std::string Name = FS.getFunction().str();
+    BuildMaxSampleMap(FS, Name);
   }
 
   ProfileSummary InstrPS = *IPBuilder.getSummary();
@@ -806,7 +841,7 @@ adjustInstrProfile(std::unique_ptr<WriterContext> &WC,
     uint64_t SampleMaxCount = std::max(E.second.first, E.second.second);
     if (SampleMaxCount < ColdSampleThreshold)
       continue;
-    const StringRef &Name = E.first;
+    StringRef Name = E.first();
     auto It = InstrProfileMap.find(Name);
     if (It == InstrProfileMap.end()) {
       auto NewName = StaticFuncMap.find(Name);
@@ -885,7 +920,7 @@ static sampleprof::FunctionSamples
 remapSamples(const sampleprof::FunctionSamples &Samples,
              SymbolRemapper &Remapper, sampleprof_error &Error) {
   sampleprof::FunctionSamples Result;
-  Result.setName(Remapper(Samples.getName()));
+  Result.setFunction(Remapper(Samples.getFunction()));
   Result.addTotalSamples(Samples.getTotalSamples());
   Result.addHeadSamples(Samples.getHeadSamples());
   for (const auto &BodySample : Samples.getBodySamples()) {
@@ -896,7 +931,7 @@ remapSamples(const sampleprof::FunctionSamples &Samples,
     for (const auto &Target : BodySample.second.getCallTargets()) {
       Result.addCalledTargetSamples(BodySample.first.LineOffset,
                                     MaskedDiscriminator,
-                                    Remapper(Target.first()), Target.second);
+                                    Remapper(Target.first), Target.second);
     }
   }
   for (const auto &CallsiteSamples : Samples.getCallsiteSamples()) {
@@ -905,8 +940,7 @@ remapSamples(const sampleprof::FunctionSamples &Samples,
     for (const auto &Callsite : CallsiteSamples.second) {
       sampleprof::FunctionSamples Remapped =
           remapSamples(Callsite.second, Remapper, Error);
-      MergeResult(Error,
-                  Target[std::string(Remapped.getName())].merge(Remapped));
+      MergeResult(Error, Target[Remapped.getFunction()].merge(Remapped));
     }
   }
   return Result;
@@ -1193,10 +1227,12 @@ static int merge_main(int argc, const char *argv[]) {
                      "GCC encoding (only meaningful for -sample)")));
   cl::opt<FailureMode> FailureMode(
       "failure-mode", cl::init(failIfAnyAreInvalid), cl::desc("Failure mode:"),
-      cl::values(clEnumValN(failIfAnyAreInvalid, "any",
-                            "Fail if any profile is invalid."),
-                 clEnumValN(failIfAllAreInvalid, "all",
-                            "Fail only if all profiles are invalid.")));
+      cl::values(
+          clEnumValN(warnOnly, "warn", "Do not fail and just print warnings."),
+          clEnumValN(failIfAnyAreInvalid, "any",
+                     "Fail if any profile is invalid."),
+          clEnumValN(failIfAllAreInvalid, "all",
+                     "Fail only if all profiles are invalid.")));
   cl::opt<bool> OutputSparse("sparse", cl::init(false),
       cl::desc("Generate a sparse profile (only meaningful for -instr)"));
   cl::opt<unsigned> NumThreads(
@@ -2884,7 +2920,9 @@ static int showDebugInfoCorrelation(const std::string &Filename,
   if (SFormat == ShowFormat::Json)
     exitWithError("JSON output is not supported for debug info correlation");
   std::unique_ptr<InstrProfCorrelator> Correlator;
-  if (auto Err = InstrProfCorrelator::get(Filename).moveInto(Correlator))
+  if (auto Err =
+          InstrProfCorrelator::get(Filename, InstrProfCorrelator::DEBUG_INFO)
+              .moveInto(Correlator))
     exitWithError(std::move(Err), Filename);
   if (SFormat == ShowFormat::Yaml) {
     if (auto Err = Correlator->dumpYaml(MaxDbgCorrelationWarnings, OS))

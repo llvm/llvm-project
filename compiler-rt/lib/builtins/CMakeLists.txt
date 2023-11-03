@@ -187,8 +187,6 @@ set(BF16_SOURCES
     truncsfbf2.c
 )
 
-# TODO: Several "tf" files (and divtc3.c, but not multc3.c) are in
-# GENERIC_SOURCES instead of here.
 set(GENERIC_TF_SOURCES
   addtf3.c
   comparetf2.c
@@ -280,6 +278,7 @@ endif ()
 # long double is not 80 bits on Android or MSVC.
 set(x86_80_BIT_SOURCES
   divxc3.c
+  extendxftf2.c
   fixxfdi.c
   fixxfti.c
   fixunsxfdi.c
@@ -291,6 +290,7 @@ set(x86_80_BIT_SOURCES
   floatuntixf.c
   mulxc3.c
   powixf2.c
+  trunctfxf2.c
 )
 
 if (NOT MSVC)
@@ -551,9 +551,14 @@ set(aarch64_SOURCES
   ${GENERIC_SOURCES}
   cpu_model.c
   aarch64/fp_mode.c
-  aarch64/sme-abi.S
-  aarch64/sme-abi-init.c
 )
+
+if(COMPILER_RT_HAS_ASM_SME AND (COMPILER_RT_HAS_AUXV OR COMPILER_RT_BAREMETAL_BUILD))
+  list(APPEND aarch64_SOURCES aarch64/sme-abi.S aarch64/sme-abi-init.c)
+  message(STATUS "AArch64 SME ABI routines enabled")
+else()
+  message(STATUS "AArch64 SME ABI routines disabled")
+endif()
 
 # Generate outline atomics helpers from lse.S base
 set(OA_HELPERS_DIR "${CMAKE_CURRENT_BINARY_DIR}/outline_atomic_helpers.dir")
@@ -756,6 +761,12 @@ else ()
 
   append_list_if(COMPILER_RT_HAS_STD_C11_FLAG -std=c11 BUILTIN_CFLAGS)
 
+  # Don't embed directives for picking any specific CRT
+  if (MSVC)
+    set(CMAKE_MSVC_RUNTIME_LIBRARY "")
+    append_list_if(COMPILER_RT_HAS_ZL_FLAG /Zl BUILTIN_CFLAGS)
+  endif()
+
   # These flags would normally be added to CMAKE_C_FLAGS by the llvm
   # cmake step. Add them manually if this is a standalone build.
   if(COMPILER_RT_STANDALONE_BUILD)
@@ -782,7 +793,6 @@ else ()
   endif()
 
   append_list_if(COMPILER_RT_HAS_ASM_LSE HAS_ASM_LSE BUILTIN_DEFS)
-  append_list_if(COMPILER_RT_HAS_ASM_SME HAS_ASM_SME BUILTIN_DEFS)
 
   foreach (arch ${BUILTIN_SUPPORTED_ARCH})
     if (CAN_TARGET_${arch})

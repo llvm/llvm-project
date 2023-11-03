@@ -895,7 +895,8 @@ static Value *simplifySubInst(Value *Op0, Value *Op1, bool IsNSW, bool IsNUW,
   // Variations on GEP(base, I, ...) - GEP(base, i, ...) -> GEP(null, I-i, ...).
   if (match(Op0, m_PtrToInt(m_Value(X))) && match(Op1, m_PtrToInt(m_Value(Y))))
     if (Constant *Result = computePointerDifference(Q.DL, X, Y))
-      return ConstantExpr::getIntegerCast(Result, Op0->getType(), true);
+      return ConstantFoldIntegerCast(Result, Op0->getType(), /*IsSigned*/ true,
+                                     Q.DL);
 
   // i1 sub -> xor.
   if (MaxRecurse && Op0->getType()->isIntOrIntVectorTy(1))
@@ -2025,6 +2026,58 @@ static Value *simplifyAndOrOfCmps(const SimplifyQuery &Q, Value *Op0,
   return nullptr;
 }
 
+static Value *simplifyWithOpReplaced(Value *V, Value *Op, Value *RepOp,
+                                     const SimplifyQuery &Q,
+                                     bool AllowRefinement,
+                                     SmallVectorImpl<Instruction *> *DropFlags,
+                                     unsigned MaxRecurse);
+
+static Value *simplifyAndOrWithICmpEq(unsigned Opcode, Value *Op0, Value *Op1,
+                                      const SimplifyQuery &Q,
+                                      unsigned MaxRecurse) {
+  assert((Opcode == Instruction::And || Opcode == Instruction::Or) &&
+         "Must be and/or");
+  ICmpInst::Predicate Pred;
+  Value *A, *B;
+  if (!match(Op0, m_ICmp(Pred, m_Value(A), m_Value(B))) ||
+      !ICmpInst::isEquality(Pred))
+    return nullptr;
+
+  auto Simplify = [&](Value *Res) -> Value * {
+    Constant *Absorber = ConstantExpr::getBinOpAbsorber(Opcode, Res->getType());
+
+    // and (icmp eq a, b), x implies (a==b) inside x.
+    // or (icmp ne a, b), x implies (a==b) inside x.
+    // If x simplifies to true/false, we can simplify the and/or.
+    if (Pred ==
+        (Opcode == Instruction::And ? ICmpInst::ICMP_EQ : ICmpInst::ICMP_NE)) {
+      if (Res == Absorber)
+        return Absorber;
+      if (Res == ConstantExpr::getBinOpIdentity(Opcode, Res->getType()))
+        return Op0;
+      return nullptr;
+    }
+
+    // If we have and (icmp ne a, b), x and for a==b we can simplify x to false,
+    // then we can drop the icmp, as x will already be false in the case where
+    // the icmp is false. Similar for or and true.
+    if (Res == Absorber)
+      return Op1;
+    return nullptr;
+  };
+
+  if (Value *Res =
+          simplifyWithOpReplaced(Op1, A, B, Q, /* AllowRefinement */ true,
+                                 /* DropFlags */ nullptr, MaxRecurse))
+    return Simplify(Res);
+  if (Value *Res =
+          simplifyWithOpReplaced(Op1, B, A, Q, /* AllowRefinement */ true,
+                                 /* DropFlags */ nullptr, MaxRecurse))
+    return Simplify(Res);
+
+  return nullptr;
+}
+
 /// Given a bitwise logic op, check if the operands are add/sub with a common
 /// source value and inverted constant (identity: C - X -> ~(X + ~C)).
 static Value *simplifyLogicOfAddSub(Value *Op0, Value *Op1,
@@ -2158,6 +2211,13 @@ static Value *simplifyAndInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
   if (match(Op1, m_Add(m_Specific(Op0), m_AllOnes())) &&
       isKnownToBeAPowerOfTwo(Op0, Q.DL, /*OrZero*/ true, 0, Q.AC, Q.CxtI, Q.DT))
     return Constant::getNullValue(Op0->getType());
+
+  if (Value *V =
+          simplifyAndOrWithICmpEq(Instruction::And, Op0, Op1, Q, MaxRecurse))
+    return V;
+  if (Value *V =
+          simplifyAndOrWithICmpEq(Instruction::And, Op1, Op0, Q, MaxRecurse))
+    return V;
 
   if (Value *V = simplifyAndOrOfCmps(Q, Op0, Op1, true))
     return V;
@@ -2434,6 +2494,13 @@ static Value *simplifyOrInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
             m_Intrinsic<Intrinsic::fshr>(m_Value(), m_Value(X), m_Value(Y))) &&
       match(Op0, m_LShr(m_Specific(X), m_Specific(Y))))
     return Op1;
+
+  if (Value *V =
+          simplifyAndOrWithICmpEq(Instruction::Or, Op0, Op1, Q, MaxRecurse))
+    return V;
+  if (Value *V =
+          simplifyAndOrWithICmpEq(Instruction::Or, Op1, Op0, Q, MaxRecurse))
+    return V;
 
   if (Value *V = simplifyAndOrOfCmps(Q, Op0, Op1, false))
     return V;
@@ -2736,13 +2803,6 @@ static Constant *computePointerICmp(CmpInst::Predicate Pred, Value *LHS,
   const TargetLibraryInfo *TLI = Q.TLI;
   const DominatorTree *DT = Q.DT;
   const Instruction *CxtI = Q.CxtI;
-  const InstrInfoQuery &IIQ = Q.IIQ;
-
-  // A non-null pointer is not equal to a null pointer.
-  if (isa<ConstantPointerNull>(RHS) && ICmpInst::isEquality(Pred) &&
-      llvm::isKnownNonZero(LHS, DL, 0, nullptr, nullptr, nullptr,
-                           IIQ.UseInstrInfo))
-    return ConstantInt::get(getCompareTy(LHS), !CmpInst::isTrueWhenEqual(Pred));
 
   // We can only fold certain predicates on pointer comparisons.
   switch (Pred) {
@@ -4343,6 +4403,10 @@ static Value *simplifyWithOpReplaced(Value *V, Value *Op, Value *RepOp,
       return nullptr;
   }
 
+  // Don't fold away llvm.is.constant checks based on assumptions.
+  if (match(I, m_Intrinsic<Intrinsic::is_constant>()))
+    return nullptr;
+
   // Replace Op with RepOp in instruction operands.
   SmallVector<Value *, 8> NewOps;
   bool AnyReplaced = false;
@@ -4443,8 +4507,15 @@ static Value *simplifyWithOpReplaced(Value *V, Value *Op, Value *RepOp,
   // TODO: This may be unsound, because it only catches some forms of
   // refinement.
   if (!AllowRefinement) {
-    if (canCreatePoison(cast<Operator>(I), !DropFlags))
-      return nullptr;
+    if (canCreatePoison(cast<Operator>(I), !DropFlags)) {
+      // abs cannot create poison if the value is known to never be int_min.
+      if (auto *II = dyn_cast<IntrinsicInst>(I);
+          II && II->getIntrinsicID() == Intrinsic::abs) {
+        if (!ConstOps[0]->isNotMinSignedValue())
+          return nullptr;
+      } else
+        return nullptr;
+    }
     Constant *Res = ConstantFoldInstOperands(I, ConstOps, Q.DL, Q.TLI);
     if (DropFlags && Res && I->hasPoisonGeneratingFlagsOrMetadata())
       DropFlags->push_back(I);
@@ -6409,6 +6480,44 @@ static Value *simplifyBinaryIntrinsic(Function *F, Value *Op0, Value *Op1,
       return X;
     if (match(Op0, m_AShr(m_Negative(), m_Value())))
       return Constant::getNullValue(ReturnType);
+    break;
+  }
+  case Intrinsic::ptrmask: {
+    if (isa<PoisonValue>(Op0) || isa<PoisonValue>(Op1))
+      return PoisonValue::get(Op0->getType());
+
+    // NOTE: We can't apply this simplifications based on the value of Op1
+    // because we need to preserve provenance.
+    if (Q.isUndefValue(Op0) || match(Op0, m_Zero()))
+      return Constant::getNullValue(Op0->getType());
+
+    assert(Op1->getType()->getScalarSizeInBits() ==
+               Q.DL.getIndexTypeSizeInBits(Op0->getType()) &&
+           "Invalid mask width");
+    // If index-width (mask size) is less than pointer-size then mask is
+    // 1-extended.
+    if (match(Op1, m_PtrToInt(m_Specific(Op0))))
+      return Op0;
+
+    // NOTE: We may have attributes associated with the return value of the
+    // llvm.ptrmask intrinsic that will be lost when we just return the
+    // operand. We should try to preserve them.
+    if (match(Op1, m_AllOnes()) || Q.isUndefValue(Op1))
+      return Op0;
+
+    Constant *C;
+    if (match(Op1, m_ImmConstant(C))) {
+      KnownBits PtrKnown = computeKnownBits(Op0, /*Depth=*/0, Q);
+      // See if we only masking off bits we know are already zero due to
+      // alignment.
+      APInt IrrelevantPtrBits =
+          PtrKnown.Zero.zextOrTrunc(C->getType()->getScalarSizeInBits());
+      C = ConstantFoldBinaryOpOperands(
+          Instruction::Or, C, ConstantInt::get(C->getType(), IrrelevantPtrBits),
+          Q.DL);
+      if (C != nullptr && C->isAllOnesValue())
+        return Op0;
+    }
     break;
   }
   case Intrinsic::smax:

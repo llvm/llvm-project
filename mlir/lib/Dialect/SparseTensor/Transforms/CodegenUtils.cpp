@@ -51,8 +51,6 @@ OverheadType mlir::sparse_tensor::overheadTypeEncoding(Type tp) {
   llvm_unreachable("Unknown overhead type");
 }
 
-// TODO: should offer an overload of this that takes a `MLIRContext*`
-// instead of the builder, similar to `detail::getIntegerOrIndexType`.
 Type mlir::sparse_tensor::getOverheadType(Builder &builder, OverheadType ot) {
   switch (ot) {
   case OverheadType::kIndex:
@@ -209,7 +207,7 @@ Value mlir::sparse_tensor::genIsNonzero(OpBuilder &builder, mlir::Location loc,
 
 void mlir::sparse_tensor::genReshapeDstShape(
     OpBuilder &builder, Location loc, SmallVectorImpl<Value> &dstShape,
-    ArrayRef<Value> srcShape, ArrayRef<StaticSize> staticDstShape,
+    ArrayRef<Value> srcShape, ArrayRef<Size> staticDstShape,
     ArrayRef<ReassociationIndices> reassociation) {
   // Collapse shape.
   if (reassociation.size() < srcShape.size()) {
@@ -242,7 +240,7 @@ void mlir::sparse_tensor::genReshapeDstShape(
       if (staticDstShape[j] == ShapedType::kDynamic) {
         // The expanded dimension has dynamic size. We compute the dimension
         // by dividing srcDim by the product of the static dimensions.
-        StaticSize product = 1;
+        Size product = 1;
         for (unsigned k = start; k < start + map.size(); k++) {
           if (staticDstShape[k] != ShapedType::kDynamic) {
             product *= staticDstShape[k];
@@ -341,7 +339,7 @@ func::CallOp mlir::sparse_tensor::createFuncCall(
 }
 
 Type mlir::sparse_tensor::getOpaquePointerType(MLIRContext *ctx) {
-  return LLVM::LLVMPointerType::get(IntegerType::get(ctx, 8));
+  return LLVM::LLVMPointerType::get(ctx);
 }
 
 Type mlir::sparse_tensor::getOpaquePointerType(Builder &builder) {
@@ -423,7 +421,11 @@ Operation *mlir::sparse_tensor::getTop(Operation *op) {
 void sparse_tensor::foreachInSparseConstant(
     OpBuilder &builder, Location loc, SparseElementsAttr attr, AffineMap order,
     function_ref<void(ArrayRef<Value>, Value)> callback) {
-  const Dimension dimRank = getSparseTensorType(attr).getDimRank();
+  if (!order)
+    order = builder.getMultiDimIdentityMap(attr.getType().getRank());
+
+  auto stt = SparseTensorType(getRankedTensorType(attr));
+  const Dimension dimRank = stt.getDimRank();
   const auto coordinates = attr.getIndices().getValues<IntegerAttr>();
   const auto values = attr.getValues().getValues<Attribute>();
 
@@ -447,20 +449,23 @@ void sparse_tensor::foreachInSparseConstant(
 
   // Sorts the sparse element attribute based on coordinates.
   std::sort(elems.begin(), elems.end(),
-            [order, dimRank](const ElementAttr &lhs, const ElementAttr &rhs) {
-              const auto &lhsCoords = lhs.first;
-              const auto &rhsCoords = rhs.first;
-              for (Dimension d = 0; d < dimRank; d++) {
-                // FIXME: This only makes sense for permutations.
-                // And since we don't check that `order` is a permutation,
-                // it can also cause OOB errors when we use `l`.
-                const Level l = order ? order.getDimPosition(d) : d;
-                if (lhsCoords[l].getInt() == rhsCoords[l].getInt())
-                  continue;
-                return lhsCoords[l].getInt() < rhsCoords[l].getInt();
-              }
+            [order](const ElementAttr &lhs, const ElementAttr &rhs) {
               if (std::addressof(lhs) == std::addressof(rhs))
                 return false;
+
+              auto lhsCoords = llvm::map_to_vector(
+                  lhs.first, [](IntegerAttr i) { return i.getInt(); });
+              auto rhsCoords = llvm::map_to_vector(
+                  rhs.first, [](IntegerAttr i) { return i.getInt(); });
+
+              SmallVector<int64_t, 4> lhsLvlCrds = order.compose(lhsCoords);
+              SmallVector<int64_t, 4> rhsLvlCrds = order.compose(rhsCoords);
+              // Sort the element based on the lvl coordinates.
+              for (Level l = 0; l < order.getNumResults(); l++) {
+                if (lhsLvlCrds[l] == rhsLvlCrds[l])
+                  continue;
+                return lhsLvlCrds[l] < rhsLvlCrds[l];
+              }
               llvm_unreachable("no equal coordinate in sparse element attr");
             });
 
@@ -494,8 +499,8 @@ SmallVector<Value> sparse_tensor::loadAll(OpBuilder &builder, Location loc,
 #ifndef NDEBUG
   const auto memTp = cast<MemRefType>(mem.getType());
   assert(memTp.getRank() == 1);
-  const DynSize memSh = memTp.getDimSize(0);
-  assert(ShapedType::isDynamic(memSh) || memSh >= static_cast<DynSize>(size));
+  const Size memSh = memTp.getDimSize(0);
+  assert(ShapedType::isDynamic(memSh) || memSh >= static_cast<Size>(size));
   assert(offsetIdx == 0 || offsetIdx < size);
 #endif // NDEBUG
   SmallVector<Value> vs;
@@ -516,8 +521,8 @@ void sparse_tensor::storeAll(OpBuilder &builder, Location loc, Value mem,
   const size_t vsize = vs.size();
   const auto memTp = cast<MemRefType>(mem.getType());
   assert(memTp.getRank() == 1);
-  const DynSize memSh = memTp.getDimSize(0);
-  assert(ShapedType::isDynamic(memSh) || memSh >= static_cast<DynSize>(vsize));
+  const Size memSh = memTp.getDimSize(0);
+  assert(ShapedType::isDynamic(memSh) || memSh >= static_cast<Size>(vsize));
   assert(offsetIdx == 0 || offsetIdx < vsize);
 #endif // NDEBUG
   for (const auto &v : llvm::enumerate(vs)) {
@@ -546,11 +551,11 @@ Value sparse_tensor::reshapeValuesToLevels(OpBuilder &builder, Location loc,
   // The memref ReshapeOp requires the sizes buffer to have a static
   // shape.
   const auto iTp = builder.getIndexType();
-  const SmallVector<DynSize, 1> lvlSizesShape{static_cast<DynSize>(lvlRank)};
+  const SmallVector<Size, 1> lvlSizesShape{static_cast<Size>(lvlRank)};
   const auto lvlSizesTp = MemRefType::get(lvlSizesShape, iTp);
   lvlCoords = builder.create<memref::CastOp>(loc, lvlSizesTp, lvlCoords);
   // Finally, create the ReshapeOp.
-  const SmallVector<DynSize> resShape(lvlRank, ShapedType::kDynamic);
+  const SmallVector<Size> resShape(lvlRank, ShapedType::kDynamic);
   const Type elemTp = getMemRefType(valuesBuffer).getElementType();
   const auto resTp = MemRefType::get(resShape, elemTp);
   return builder.create<memref::ReshapeOp>(loc, resTp, valuesBuffer, lvlCoords);
@@ -628,7 +633,7 @@ void sparse_tensor::fillDimShape(OpBuilder &builder, Location loc,
                                  SmallVectorImpl<Value> &out) {
   out.clear();
   out.reserve(stt.getDimRank());
-  for (const DynSize sh : stt.getDimShape()) {
+  for (const Size sh : stt.getDimShape()) {
     const auto s = ShapedType::isDynamic(sh) ? 0 : sh;
     out.push_back(constantIndex(builder, loc, s));
   }
@@ -688,25 +693,92 @@ Value sparse_tensor::genMapBuffers(OpBuilder &builder, Location loc,
     return dimSizesBuffer;
   }
   // Otherwise, some code needs to be generated to set up the buffers.
-  // TODO: use the lvl2dim once available and deal with non-permutations!
+  // This code deals with permutations as well as non-permutations that
+  // arise from rank changing blocking.
   const auto dimToLvl = stt.getDimToLvl();
-  assert(dimToLvl.isPermutation());
-  SmallVector<Value> dim2lvlValues(dimRank);
-  SmallVector<Value> lvl2dimValues(lvlRank);
+  const auto lvlToDim = stt.getLvlToDim();
+  SmallVector<Value> dim2lvlValues(lvlRank); // for each lvl, expr in dim vars
+  SmallVector<Value> lvl2dimValues(dimRank); // for each dim, expr in lvl vars
   SmallVector<Value> lvlSizesValues(lvlRank);
+  // Generate dim2lvl.
+  assert(lvlRank == dimToLvl.getNumResults());
   for (Level l = 0; l < lvlRank; l++) {
-    // The `d`th source variable occurs in the `l`th result position.
-    Dimension d = dimToLvl.getDimPosition(l);
-    Value lvl = constantIndex(builder, loc, l);
-    Value dim = constantIndex(builder, loc, d);
-    dim2lvlValues[d] = lvl;
-    lvl2dimValues[l] = dim;
-    if (stt.isDynamicDim(d))
-      lvlSizesValues[l] =
-          builder.create<memref::LoadOp>(loc, dimSizesBuffer, dim);
-    else
-      lvlSizesValues[l] = dimShapesValues[d];
+    AffineExpr exp = dimToLvl.getResult(l);
+    // We expect:
+    //    (1) l = d
+    //    (2) l = d / c
+    //    (3) l = d % c
+    Dimension d = 0;
+    uint64_t cf = 0, cm = 0;
+    switch (exp.getKind()) {
+    case AffineExprKind::DimId: {
+      d = exp.cast<AffineDimExpr>().getPosition();
+      break;
+    }
+    case AffineExprKind::FloorDiv: {
+      auto floor = exp.cast<AffineBinaryOpExpr>();
+      d = floor.getLHS().cast<AffineDimExpr>().getPosition();
+      cf = floor.getRHS().cast<AffineConstantExpr>().getValue();
+      break;
+    }
+    case AffineExprKind::Mod: {
+      auto mod = exp.cast<AffineBinaryOpExpr>();
+      d = mod.getLHS().cast<AffineDimExpr>().getPosition();
+      cm = mod.getRHS().cast<AffineConstantExpr>().getValue();
+      break;
+    }
+    default:
+      llvm::report_fatal_error("unsupported dim2lvl in sparse tensor type");
+    }
+    dim2lvlValues[l] = constantIndex(builder, loc, encodeDim(d, cf, cm));
+    // Compute the level sizes.
+    //    (1) l = d        : size(d)
+    //    (2) l = d / c    : size(d) / c
+    //    (3) l = d % c    : c
+    Value lvlSz;
+    if (cm == 0) {
+      lvlSz = dimShapesValues[d];
+      if (stt.isDynamicDim(d))
+        lvlSz = builder.create<memref::LoadOp>(loc, dimSizesBuffer,
+                                               constantIndex(builder, loc, d));
+      if (cf != 0)
+        lvlSz = builder.create<arith::DivUIOp>(loc, lvlSz,
+                                               constantIndex(builder, loc, cf));
+    } else {
+      lvlSz = constantIndex(builder, loc, cm);
+    }
+    lvlSizesValues[l] = lvlSz;
   }
+  // Generate lvl2dim.
+  assert(dimRank == lvlToDim.getNumResults());
+  for (Dimension d = 0; d < dimRank; d++) {
+    AffineExpr exp = lvlToDim.getResult(d);
+    // We expect:
+    //    (1) d = l
+    //    (2) d = l' * c + l
+    Level l = 0, ll = 0;
+    uint64_t c = 0;
+    switch (exp.getKind()) {
+    case AffineExprKind::DimId: {
+      l = exp.cast<AffineDimExpr>().getPosition();
+      break;
+    }
+    case AffineExprKind::Add: {
+      // Always mul on lhs, symbol/constant on rhs.
+      auto add = exp.cast<AffineBinaryOpExpr>();
+      assert(add.getLHS().getKind() == AffineExprKind::Mul);
+      auto mul = add.getLHS().cast<AffineBinaryOpExpr>();
+      ll = mul.getLHS().cast<AffineDimExpr>().getPosition();
+      c = mul.getRHS().cast<AffineConstantExpr>().getValue();
+      l = add.getRHS().cast<AffineDimExpr>().getPosition();
+      break;
+    }
+    default:
+      llvm::report_fatal_error("unsupported lvl2dim in sparse tensor type");
+    }
+    lvl2dimValues[d] = constantIndex(builder, loc, encodeLvl(l, c, ll));
+  }
+  // Return buffers.
   dim2lvlBuffer = allocaBuffer(builder, loc, dim2lvlValues);
   lvl2dimBuffer = allocaBuffer(builder, loc, lvl2dimValues);
   return allocaBuffer(builder, loc, lvlSizesValues);

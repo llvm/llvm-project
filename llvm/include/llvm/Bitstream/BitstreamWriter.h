@@ -139,10 +139,11 @@ public:
     uint64_t NumOfFlushedBytes = GetNumOfFlushedBytes();
 
     if (ByteNo >= NumOfFlushedBytes) {
-      assert((!endian::readAtBitAlignment<uint8_t, little, unaligned>(
+      assert((!endian::readAtBitAlignment<uint8_t, llvm::endianness::little,
+                                          unaligned>(
                  &Out[ByteNo - NumOfFlushedBytes], StartBit)) &&
              "Expected to be patching over 0-value placeholders");
-      endian::writeAtBitAlignment<uint8_t, little, unaligned>(
+      endian::writeAtBitAlignment<uint8_t, llvm::endianness::little, unaligned>(
           &Out[ByteNo - NumOfFlushedBytes], NewByte, StartBit);
       return;
     }
@@ -171,14 +172,14 @@ public:
       assert(BytesRead >= 0 && static_cast<size_t>(BytesRead) == BytesFromDisk);
       for (size_t i = 0; i < BytesFromBuffer; ++i)
         Bytes[BytesFromDisk + i] = Out[i];
-      assert((!endian::readAtBitAlignment<uint8_t, little, unaligned>(
-                 Bytes, StartBit)) &&
+      assert((!endian::readAtBitAlignment<uint8_t, llvm::endianness::little,
+                                          unaligned>(Bytes, StartBit)) &&
              "Expected to be patching over 0-value placeholders");
     }
 
     // Update Bytes in terms of bit offset and value.
-    endian::writeAtBitAlignment<uint8_t, little, unaligned>(Bytes, NewByte,
-                                                            StartBit);
+    endian::writeAtBitAlignment<uint8_t, llvm::endianness::little, unaligned>(
+        Bytes, NewByte, StartBit);
 
     // Copy updated data back to the file FS and the buffer Out.
     FS->seek(ByteNo);

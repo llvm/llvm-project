@@ -391,6 +391,43 @@ def GeneralizeOp : Op<Transform_Dialect, "structured.generalize",
 }
 
 //===----------------------------------------------------------------------===//
+// SpecializeOp
+//===----------------------------------------------------------------------===//
+
+def SpecializeOp : Op<Transform_Dialect, "structured.specialize",
+    [FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,
+     TransformOpInterface, TransformEachOpTrait,
+     ReportTrackingListenerFailuresOpTrait]> {
+  let description = [{
+    Transforms a generic operation into the equivalent named form.
+
+    #### Return modes
+
+    This operation ignores non-Linalg ops and drops them in the return. If all
+    the operations referred to by the `target` handle specialize, the transform
+    succeeds; otherwise, the operation produces a silenceable failure.  The return
+    handle points to only the subset of successfully produced equivalent named
+    operations, which can be empty or contain the original ops if they were already
+    in named form. The supported specialization to named Linalg operations are:
+    - linalg.copy of any rank.
+  }];
+
+  let arguments = (ins TransformHandleTypeInterface:$target);
+  let results = (outs TransformHandleTypeInterface:$transformed);
+  let assemblyFormat =
+      "$target attr-dict `:` "
+      "custom<SemiFunctionType>(type($target), type($transformed))";
+
+  let extraClassDeclaration = [{
+    ::mlir::DiagnosedSilenceableFailure applyToOne(
+        ::mlir::transform::TransformRewriter &rewriter,
+        ::mlir::linalg::LinalgOp target,
+        ::mlir::transform::ApplyToEachResultList &results,
+        ::mlir::transform::TransformState &state);
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // InterchangeOp
 //===----------------------------------------------------------------------===//
 

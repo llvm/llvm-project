@@ -3,6 +3,10 @@
 ; RUN:     -verify-machineinstrs < %s | FileCheck %s
 ; RUN: llc -mtriple=riscv64 -mattr=+d,+zfh,+zvfh,+v -target-abi=lp64d \
 ; RUN:     -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -mtriple=riscv32 -mattr=+d,+zfh,+zvfhmin,+v -target-abi=ilp32d \
+; RUN:     -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -mtriple=riscv64 -mattr=+d,+zfh,+zvfhmin,+v -target-abi=lp64d \
+; RUN:     -verify-machineinstrs < %s | FileCheck %s
 
 declare <vscale x 1 x float> @llvm.experimental.constrained.fptrunc.nxv1f32.nxv1f64(<vscale x 1 x double>, metadata, metadata)
 define <vscale x 1 x float> @vfptrunc_nxv1f64_nxv1f32(<vscale x 1 x double> %va) strictfp {

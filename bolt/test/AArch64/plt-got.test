@@ -1,0 +1,7 @@
+// This test checks .plt.got handling by BOLT
+
+RUN: yaml2obj %p/Inputs/plt-got.yaml &> %t.exe
+RUN: llvm-bolt %t.exe -o %t.bolt --print-disasm --print-only=_start/1 | \
+RUN:   FileCheck %s
+
+CHECK: bl abort@PLT
