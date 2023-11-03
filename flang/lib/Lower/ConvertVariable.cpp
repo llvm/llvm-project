@@ -1646,8 +1646,8 @@ void Fortran::lower::genDeclareSymbol(
     fir::FirOpBuilder &builder = converter.getFirOpBuilder();
     const mlir::Location loc = genLocation(converter, sym);
     fir::FortranVariableFlagsAttr attributes =
-        Fortran::lower::translateSymbolAttributes(builder.getContext(), sym,
-                                                  extraFlags);
+        Fortran::lower::translateSymbolAttributes(
+            builder.getContext(), sym.GetUltimate(), extraFlags);
     auto name = converter.mangleName(sym);
     hlfir::EntityWithAttributes declare =
         hlfir::genDeclare(loc, builder, exv, name, attributes);
