@@ -226,25 +226,20 @@ AffineMap AffineMap::getPermutationMap(ArrayRef<unsigned> permutation,
                                        MLIRContext *context) {
   assert(!permutation.empty() &&
          "Cannot create permutation map from empty permutation vector");
-  SmallVector<AffineExpr, 4> affExprs;
-  for (auto index : permutation)
-    affExprs.push_back(getAffineDimExpr(index, context));
   const auto *m = std::max_element(permutation.begin(), permutation.end());
-  auto permutationMap = AffineMap::get(*m + 1, 0, affExprs, context);
+  auto permutationMap = getMultiDimMapWithTargets(*m + 1, permutation, context);
   assert(permutationMap.isPermutation() && "Invalid permutation vector");
   return permutationMap;
 }
 
 AffineMap AffineMap::getMultiDimMapWithTargets(unsigned numDims,
-                                               ArrayRef<int64_t> targets,
+                                               ArrayRef<unsigned> targets,
                                                MLIRContext *context) {
-  AffineMap result =
-      AffineMap::get(/*dimCount=*/numDims, /*symbolCount=*/0, context);
-  int64_t pos = 0;
-  for (int64_t t : targets) {
-    result = result.insertResult(getAffineDimExpr(t, context), pos);
-    pos += 1;
-  }
+  SmallVector<AffineExpr, 4> affExprs;
+  for (unsigned t : targets)
+    affExprs.push_back(getAffineDimExpr(t, context));
+  AffineMap result = AffineMap::get(/*dimCount=*/numDims, /*symbolCount=*/0,
+                                    affExprs, context);
   return result;
 }
 

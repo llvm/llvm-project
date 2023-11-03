@@ -110,7 +110,7 @@ public:
   /// * getMultiDimMapWithTargets(3, [2, 1])
   ///       -> affine_map<(d0, d1, d2) -> (d2, d1)>
   static AffineMap getMultiDimMapWithTargets(unsigned numDims,
-                                             ArrayRef<int64_t> targets,
+                                             ArrayRef<unsigned> targets,
                                              MLIRContext *context);
 
   /// Returns a vector of AffineMaps; each with as many results as
