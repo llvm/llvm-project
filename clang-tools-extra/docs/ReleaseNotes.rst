@@ -304,6 +304,10 @@ Changes in existing checks
   customizable namespace. This further allows for testing the libc when the
   system-libc is also LLVM's libc.
 
+- Improved :doc:`llvmlibc-inline-function-decl
+  <clang-tidy/checks/llvmlibc/inline-function-decl>` to properly ignore implicit
+  functions, such as struct constructors, and explicitly deleted functions.
+
 - Improved :doc:`misc-const-correctness
   <clang-tidy/checks/misc/const-correctness>` check to avoid false positive when
   using pointer to member function.
