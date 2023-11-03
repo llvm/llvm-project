@@ -390,6 +390,7 @@ mlir::Block *CIRGenFunction::buildLandingPad() {
   {
     // Save the current CIR generation state.
     mlir::OpBuilder::InsertionGuard guard(builder);
+
     assert(!UnimplementedFeature::generateDebugInfo() && "NYI");
     // FIXME(cir): handle CIR relevant landing pad bits, there's no good
     // way to assert here right now and leaving one in break important
