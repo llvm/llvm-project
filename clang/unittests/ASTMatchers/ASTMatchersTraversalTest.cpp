@@ -2000,6 +2000,95 @@ TEST(Matcher, UnaryOperatorTypes) {
       "void x() { A a; !a; }", unaryOperator(hasOperatorName("!"))));
 }
 
+TEST_P(ASTMatchersTest, HasInit) {
+  if (!GetParam().isCXX11OrLater()) {
+    // FIXME: Add a test for `hasInit()` that does not depend on C++.
+    return;
+  }
+
+  EXPECT_TRUE(matches("int x{0};", initListExpr(hasInit(0, expr()))));
+  EXPECT_FALSE(matches("int x{0};", initListExpr(hasInit(1, expr()))));
+  EXPECT_FALSE(matches("int x;", initListExpr(hasInit(0, expr()))));
+}
+
+TEST_P(ASTMatchersTest, HasFoldInit) {
+  if (!GetParam().isCXX17OrLater()) {
+    return;
+  }
+
+  EXPECT_TRUE(matches("template <typename... Args> auto sum(Args... args) { "
+                      "return (0 + ... + args); }",
+                      cxxFoldExpr(hasFoldInit(expr()))));
+  EXPECT_TRUE(matches("template <typename... Args> auto sum(Args... args) { "
+                      "return (args + ... + 0); }",
+                      cxxFoldExpr(hasFoldInit(expr()))));
+  EXPECT_FALSE(matches("template <typename... Args> auto sum(Args... args) { "
+                       "return (... + args); };",
+                       cxxFoldExpr(hasFoldInit(expr()))));
+}
+
+TEST_P(ASTMatchersTest, HasPattern) {
+  if (!GetParam().isCXX17OrLater()) {
+    return;
+  }
+
+  EXPECT_TRUE(matches("template <typename... Args> auto sum(Args... args) { "
+                      "return (0 + ... + args); }",
+                      cxxFoldExpr(hasPattern(expr()))));
+  EXPECT_TRUE(matches("template <typename... Args> auto sum(Args... args) { "
+                      "return (args + ... + 0); }",
+                      cxxFoldExpr(hasPattern(expr()))));
+  EXPECT_TRUE(matches("template <typename... Args> auto sum(Args... args) { "
+                      "return (... + args); };",
+                      cxxFoldExpr(hasPattern(expr()))));
+}
+
+TEST_P(ASTMatchersTest, HasLHSAndHasRHS) {
+  if (!GetParam().isCXX17OrLater()) {
+    return;
+  }
+
+  EXPECT_TRUE(matches("template <typename... Args> auto sum(Args... args) { "
+                      "return (0 + ... + args); }",
+                      cxxFoldExpr(hasLHS(expr()))));
+  EXPECT_TRUE(matches("template <typename... Args> auto sum(Args... args) { "
+                      "return (args + ... + 0); }",
+                      cxxFoldExpr(hasLHS(expr()))));
+  EXPECT_FALSE(matches("template <typename... Args> auto sum(Args... args) { "
+                       "return (... + args); };",
+                       cxxFoldExpr(hasLHS(expr()))));
+  EXPECT_TRUE(matches("template <typename... Args> auto sum(Args... args) { "
+                      "return (args + ...); };",
+                      cxxFoldExpr(hasLHS(expr()))));
+
+  EXPECT_TRUE(matches("template <typename... Args> auto sum(Args... args) { "
+                      "return (0 + ... + args); }",
+                      cxxFoldExpr(hasRHS(expr()))));
+  EXPECT_TRUE(matches("template <typename... Args> auto sum(Args... args) { "
+                      "return (args + ... + 0); }",
+                      cxxFoldExpr(hasRHS(expr()))));
+  EXPECT_TRUE(matches("template <typename... Args> auto sum(Args... args) { "
+                      "return (... + args); };",
+                      cxxFoldExpr(hasRHS(expr()))));
+  EXPECT_FALSE(matches("template <typename... Args> auto sum(Args... args) { "
+                       "return (args + ...); };",
+                       cxxFoldExpr(hasRHS(expr()))));
+}
+
+TEST_P(ASTMatchersTest, Callee) {
+  if (!GetParam().isCXX17OrLater()) {
+    return;
+  }
+
+  EXPECT_TRUE(matches(
+      "struct Dummy {}; Dummy operator+(Dummy, Dummy); template "
+      "<typename... Args> auto sum(Args... args) { return (0 + ... + args); }",
+      cxxFoldExpr(callee(expr()))));
+  EXPECT_FALSE(matches("template <typename... Args> auto sum(Args... args) { "
+                       "return (0 + ... + args); }",
+                       cxxFoldExpr(callee(expr()))));
+}
+
 TEST(ArraySubscriptMatchers, ArrayIndex) {
   EXPECT_TRUE(matches(
     "int i[2]; void f() { i[1] = 1; }",
