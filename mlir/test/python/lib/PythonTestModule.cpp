@@ -94,6 +94,9 @@ PYBIND11_MODULE(_mlirPythonTest, m) {
             py::object capsule = mlirApiObjectToCapsule(valueObj);
             MlirValue v = mlirPythonCapsuleToValue(capsule.ptr());
             MlirType t = mlirValueGetType(v);
+            // This is hyper-specific in order to exercise/test registering a
+            // value caster from cpp (but only for a single test case; see
+            // testTensorValue python_test.py).
             if (mlirShapedTypeHasStaticShape(t) &&
                 mlirShapedTypeGetDimSize(t, 0) == 1 &&
                 mlirShapedTypeGetDimSize(t, 1) == 2 &&

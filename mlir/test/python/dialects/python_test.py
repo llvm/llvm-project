@@ -428,7 +428,7 @@ def testTensorValue():
             d = tensor.EmptyOp([1, 2, 3], IntegerType.get_signless(5)).result
             # CHECK: Value(%{{.*}} = tensor.empty() : tensor<1x2x3xi5>)
             print(d)
-            # CHECK: <importlib._bootstrap.TestTensorValue object at
+            # CHECK: TestTensorValue
             print(repr(d))
 
 
