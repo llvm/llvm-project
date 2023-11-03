@@ -1762,7 +1762,7 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
     }
   }
   assert(tag_decl_kind != -1);
-  (void)tag_decl_kind;
+  UNUSED_IF_ASSERT_DISABLED(tag_decl_kind);
   bool clang_type_was_created = false;
   clang_type = CompilerType(
       m_ast.weak_from_this(),
