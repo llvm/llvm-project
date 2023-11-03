@@ -30,11 +30,11 @@
 # RUN: not ld.lld main.o a.so empty.so b.so -o /dev/null 2>&1 | FileCheck %s --check-prefix=CHECK2
 
 ## Test some cases when a relocatable object file provides a non-exported definition.
-# RUN: ld.lld main.o a.so def-hidden.o --fatal-warnings -o /dev/null
-# RUN: ld.lld main.o a.so def-hidden.o -shared --no-allow-shlib-undefined --fatal-warnings -o /dev/null
+# RUN: not ld.lld main.o a.so def-hidden.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=NONEXPORTED
+# RUN: not ld.lld main.o a.so def-hidden.o -shared --no-allow-shlib-undefined -o /dev/null 2>&1 | FileCheck %s --check-prefix=NONEXPORTED
 # RUN: ld.lld main.o a.so def-hidden.o --allow-shlib-undefined --fatal-warnings -o /dev/null
 ## Test a relocatable object file definition that is converted to STB_LOCAL.
-# RUN: ld.lld main.o a.so def-hidden.o --version-script=local.ver --fatal-warnings -o /dev/null
+# RUN: not ld.lld main.o a.so def-hidden.o --version-script=local.ver -o /dev/null 2>&1 | FileCheck %s --check-prefix=NONEXPORTED
 
 ## The section containing the definition is discarded, and we report an error.
 # RUN: not ld.lld --gc-sections main.o a.so def-hidden.o -o /dev/null 2>&1 | FileCheck %s
@@ -56,6 +56,10 @@
 
 # WARN:        warning: undefined reference due to --no-allow-shlib-undefined: x1
 # WARN-NEXT:   >>> referenced by a.so
+
+# NONEXPORTED-NOT: error:
+# NONEXPORTED:     error: non-exported symbol 'x1' in 'def-hidden.o' is referenced by DSO 'a.so'
+# NONEXPORTED-NOT: {{.}}
 
 #--- main.s
 .globl _start
