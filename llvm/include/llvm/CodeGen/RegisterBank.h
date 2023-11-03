@@ -13,7 +13,7 @@
 #ifndef LLVM_CODEGEN_REGISTERBANK_H
 #define LLVM_CODEGEN_REGISTERBANK_H
 
-#include "llvm/ADT/BitVector.h"
+#include <cstdint>
 
 namespace llvm {
 // Forward declarations.
@@ -28,15 +28,18 @@ class TargetRegisterInfo;
 class RegisterBank {
 private:
   unsigned ID;
+  unsigned NumRegClasses;
   const char *Name;
-  BitVector ContainedRegClasses;
+  const uint32_t *CoveredClasses;
 
   /// Only the RegisterBankInfo can initialize RegisterBank properly.
   friend RegisterBankInfo;
 
 public:
   RegisterBank(unsigned ID, const char *Name, const uint32_t *CoveredClasses,
-               unsigned NumRegClasses);
+               unsigned NumRegClasses)
+      : ID(ID), NumRegClasses(NumRegClasses), Name(Name),
+        CoveredClasses(CoveredClasses) {}
 
   /// Get the identifier of this register bank.
   unsigned getID() const { return ID; }
