@@ -194,7 +194,7 @@ command line (use the bc file corresponding to the command above that failed):
 
    llvm-reduce --test reduce.sh a.out.0.2.internalize.bc
 
-Example of reduce.sh Script
+Example of reduce.sh script
 
 .. code-block:: bash
 
