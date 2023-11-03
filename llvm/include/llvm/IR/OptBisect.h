@@ -53,7 +53,14 @@ public:
 
   /// Checks the bisect limit to determine if the specified pass should run.
   ///
-  /// This forwards to checkPass().
+  /// The method prints the name of the pass, its assigned bisect number, and
+  /// whether or not the pass will be executed. It returns true if the pass
+  /// should run, i.e. if the bisect limit is set to -1 or has not yet been
+  /// exceeded.
+  ///
+  /// Most passes should not call this routine directly. Instead, it is called
+  /// through helper routines provided by the base classes of the pass. For
+  /// instance, function passes should call FunctionPass::skipFunction().
   bool shouldRunPass(const StringRef PassName,
                      StringRef IRDescription) override;
 
@@ -66,19 +73,6 @@ public:
     BisectLimit = Limit;
     LastBisectNum = 0;
   }
-
-  /// Checks the bisect limit to determine if the specified pass should run.
-  ///
-  /// If the bisect limit is set to -1, the function prints a message describing
-  /// the pass and the bisect number assigned to it and return true.  Otherwise,
-  /// the function prints a message with the bisect number assigned to the
-  /// pass and indicating whether or not the pass will be run and return true if
-  /// the bisect limit has not yet been exceeded or false if it has.
-  ///
-  /// Most passes should not call this routine directly. Instead, they are
-  /// called through helper routines provided by the pass base classes.  For
-  /// instance, function passes should call FunctionPass::skipFunction().
-  bool checkPass(const StringRef PassName, const StringRef TargetDesc);
 
   static const int Disabled = std::numeric_limits<int>::max();
 
