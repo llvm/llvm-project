@@ -1,7 +1,6 @@
 ; RUN: opt -mtriple=riscv64 -mattr=+v -riscv-v-vector-bits-max=128 -riscv-v-register-bit-width-lmul=1 -passes='require<profile-summary>,loop-vectorize' -debug-only=loop-vectorize -disable-output < %s 2>&1 | FileCheck %s
 
-; FIXME: This test will fail as branch weights are not considered when computing 
-; cost of scalar loop
+; Check that branch weights make a difference when computing cost of scalar loop
 
 define void @foo_with_wts(ptr %A, ptr %B, i32 %n) {
 ; CHECK: LV: Checking a loop in 'foo_with_wts'

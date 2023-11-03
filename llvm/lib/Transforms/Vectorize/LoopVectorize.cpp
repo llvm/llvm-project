@@ -401,13 +401,22 @@ static bool hasIrregularType(Type *Ty, const DataLayout &DL) {
   return DL.getTypeAllocSizeInBits(Ty) != DL.getTypeSizeInBits(Ty);
 }
 
-/// A helper function that returns the reciprocal of the block probability of
-/// predicated blocks. If we return X, we are assuming the predicated block
-/// will execute once for every X iterations of the loop header.
-///
-/// TODO: We should use actual block probability here, if available. Currently,
-///       we always assume predicated blocks have a 50% chance of executing.
+/// A helper function that returns the reciprocal of the block probability of a 
+/// predicated block. Without further information, we assume a prob. of 50%.
 static unsigned getReciprocalPredBlockProb() { return 2; }
+
+/// A helper function that returns the reciprocal of the block probability of a 
+// predicated block by comparing its BlockFrequency to that of the loop header.
+static unsigned getReciprocalPredBlockProb(BlockFrequencyInfo *BFI,
+                                           Loop *L, BasicBlock *BB) {
+  if (BFI == nullptr)
+    return getReciprocalPredBlockProb();
+  auto HeaderFreq = BFI->getBlockFreq(L->getHeader()).getFrequency();
+  auto BlockFreq = BFI->getBlockFreq(BB).getFrequency();
+  if (HeaderFreq == 0 || BlockFreq == 0)
+    return getReciprocalPredBlockProb();
+  return HeaderFreq / BlockFreq;
+}
 
 /// Returns "best known" trip count for the specified loop \p L as defined by
 /// the following procedure:
@@ -1205,10 +1214,11 @@ public:
                              AssumptionCache *AC,
                              OptimizationRemarkEmitter *ORE, const Function *F,
                              const LoopVectorizeHints *Hints,
-                             InterleavedAccessInfo &IAI)
+                             InterleavedAccessInfo &IAI,
+                             BlockFrequencyInfo *BFI)
       : ScalarEpilogueStatus(SEL), TheLoop(L), PSE(PSE), LI(LI), Legal(Legal),
         TTI(TTI), TLI(TLI), DB(DB), AC(AC), ORE(ORE), TheFunction(F),
-        Hints(Hints), InterleaveInfo(IAI) {}
+        Hints(Hints), InterleaveInfo(IAI), BFInfo(BFI) {}
 
   /// \return An upper bound for the vectorization factors (both fixed and
   /// scalable). If the factors are 0, vectorization and interleaving should be
@@ -1914,6 +1924,8 @@ public:
   /// The interleave access information contains groups of interleaved accesses
   /// with the same stride and close to each other.
   InterleavedAccessInfo &InterleaveInfo;
+
+  BlockFrequencyInfo *BFInfo;
 
   /// Values to ignore in the cost model.
   SmallPtrSet<const Value *, 16> ValuesToIgnore;
@@ -4326,7 +4338,7 @@ LoopVectorizationCostModel::getDivRemSpeculationCost(Instruction *I,
     // Scale the cost by the probability of executing the predicated blocks.
     // This assumes the predicated block for each vector lane is equally
     // likely.
-    ScalarizationCost = ScalarizationCost / getReciprocalPredBlockProb();
+    ScalarizationCost /= getReciprocalPredBlockProb();
   }
   InstructionCost SafeDivisorCost = 0;
 
@@ -6245,7 +6257,7 @@ LoopVectorizationCostModel::expectedCost(
     // cost by the probability of executing it. blockNeedsPredication from
     // Legal is used so as to not include all blocks in tail folded loops.
     if (VF.isScalar() && Legal->blockNeedsPredication(BB))
-      BlockCost.first /= getReciprocalPredBlockProb();
+      BlockCost.first /= getReciprocalPredBlockProb(BFInfo, TheLoop, BB);
 
     Cost.first += BlockCost.first;
     Cost.second |= BlockCost.second;
@@ -9697,7 +9709,7 @@ static bool processLoopInVPlanNativePath(
       getScalarEpilogueLowering(F, L, Hints, PSI, BFI, TTI, TLI, *LVL, &IAI);
 
   LoopVectorizationCostModel CM(SEL, L, PSE, LI, LVL, *TTI, TLI, DB, AC, ORE, F,
-                                &Hints, IAI);
+                                &Hints, IAI, BFI);
   // Use the planner for outer loop vectorization.
   // TODO: CM is not used at this point inside the planner. Turn CM into an
   // optional argument if we don't need it in the future.
@@ -10052,7 +10064,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
 
   // Use the cost model.
   LoopVectorizationCostModel CM(SEL, L, PSE, LI, &LVL, *TTI, TLI, DB, AC, ORE,
-                                F, &Hints, IAI);
+                                F, &Hints, IAI, BFI);
   // Use the planner for vectorization.
   LoopVectorizationPlanner LVP(L, LI, DT, TLI, *TTI, &LVL, CM, IAI, PSE, Hints,
                                ORE);
