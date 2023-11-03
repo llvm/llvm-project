@@ -7,7 +7,6 @@
 ! UNSUPPORTED: x86_64-pc-linux-gnu-LTO
 
 ! RUN: %libomptarget-compile-fortran-run-and-check-generic
-! XFAIL: *
 
 program main
   use omp_lib
