@@ -306,31 +306,24 @@ RISCVCallLowering::RISCVCallLowering(const RISCVTargetLowering &TLI)
     : CallLowering(&TLI) {}
 
 /// Return true if scalable vector with ScalarTy is legal for lowering.
-static bool isLegalElementTypeForRVV(EVT ScalarTy,
+static bool isLegalElementTypeForRVV(Type *EltTy,
                                      const RISCVSubtarget &Subtarget) {
-  if (!ScalarTy.isSimple())
-    return false;
-  switch (ScalarTy.getSimpleVT().SimpleTy) {
-  case MVT::iPTR:
+  if (EltTy->isPointerTy())
     return Subtarget.is64Bit() ? Subtarget.hasVInstructionsI64() : true;
-  case MVT::i1:
-  case MVT::i8:
-  case MVT::i16:
-  case MVT::i32:
+  if (EltTy->isIntegerTy(1) || EltTy->isIntegerTy(8) ||
+      EltTy->isIntegerTy(16) || EltTy->isIntegerTy(32))
     return true;
-  case MVT::i64:
+  if (EltTy->isIntegerTy(64))
     return Subtarget.hasVInstructionsI64();
-  case MVT::f16:
+  if (EltTy->isHalfTy())
     return Subtarget.hasVInstructionsF16();
-  case MVT::bf16:
+  if (EltTy->isBFloatTy())
     return Subtarget.hasVInstructionsBF16();
-  case MVT::f32:
+  if (EltTy->isFloatTy())
     return Subtarget.hasVInstructionsF32();
-  case MVT::f64:
+  if (EltTy->isDoubleTy())
     return Subtarget.hasVInstructionsF64();
-  default:
-    return false;
-  }
+  return false;
 }
 
 // TODO: Support all argument types.
@@ -348,7 +341,7 @@ static bool isSupportedArgumentType(Type *T, const RISCVSubtarget &Subtarget,
   // TODO: Support fixed vector types.
   if (IsLowerArgs && T->isVectorTy() && Subtarget.hasVInstructions() &&
       T->isScalableTy() &&
-      isLegalElementTypeForRVV(EVT::getEVT(T->getScalarType()), Subtarget))
+      isLegalElementTypeForRVV(T->getScalarType(), Subtarget))
     return true;
   return false;
 }
