@@ -237,6 +237,8 @@ public:
     requires random_access_range<_Base>
   {
     if (__n > 0) {
+      _LIBCPP_ASSERT_UNCATEGORIZED(ranges::distance(__current_, __end_) > __stride_ * (__n - 1),
+                                   "Advancing the iterator beyond the end is not allowed.");
       ranges::advance(__current_, __stride_ * (__n - 1));
       __missing_ = ranges::advance(__current_, __stride_, __end_);
     } else if (__n < 0) {
@@ -368,8 +370,8 @@ namespace __stride {
 struct __fn {
   template <viewable_range _Range>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Range&& __range, range_difference_t<_Range> __n) const
-      noexcept(noexcept(stride_view{std::forward<_Range>(__range), __n}))
-          -> decltype(stride_view{std::forward<_Range>(__range), __n}) {
+      noexcept(noexcept(stride_view{
+          std::forward<_Range>(__range), __n})) -> decltype(stride_view{std::forward<_Range>(__range), __n}) {
     return stride_view(std::forward<_Range>(__range), __n);
   }
 
