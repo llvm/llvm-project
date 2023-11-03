@@ -85,18 +85,6 @@ public:
   ~ExecutionRuntimeModesRAII() { ExecMode = SavedExecMode; }
 };
 
-/// GPU Configuration:  This information can be derived from cuda registers,
-/// however, providing compile time constants helps generate more efficient
-/// code.  For all practical purposes this is fine because the configuration
-/// is the same for all known NVPTX architectures.
-enum MachineConfiguration : unsigned {
-  /// See "llvm/Frontend/OpenMP/OMPGridValues.h" for various related target
-  /// specific Grid Values like GV_Warp_Size, GV_Slot_Size
-
-  /// Global memory alignment for performance.
-  GlobalMemoryAlignment = 128,
-};
-
 static const ValueDecl *getPrivateItem(const Expr *RefExpr) {
   RefExpr = RefExpr->IgnoreParens();
   if (const auto *ASE = dyn_cast<ArraySubscriptExpr>(RefExpr)) {
@@ -119,31 +107,23 @@ static const ValueDecl *getPrivateItem(const Expr *RefExpr) {
   return cast<ValueDecl>(ME->getMemberDecl()->getCanonicalDecl());
 }
 
-
 static RecordDecl *buildRecordForGlobalizedVars(
     ASTContext &C, ArrayRef<const ValueDecl *> EscapedDecls,
     ArrayRef<const ValueDecl *> EscapedDeclsForTeams,
     llvm::SmallDenseMap<const ValueDecl *, const FieldDecl *>
-        &MappedDeclsFields, int BufSize) {
+        &MappedDeclsFields,
+    int BufSize) {
   using VarsDataTy = std::pair<CharUnits /*Align*/, const ValueDecl *>;
   if (EscapedDecls.empty() && EscapedDeclsForTeams.empty())
     return nullptr;
   SmallVector<VarsDataTy, 4> GlobalizedVars;
   for (const ValueDecl *D : EscapedDecls)
-    GlobalizedVars.emplace_back(
-        CharUnits::fromQuantity(std::max(
-            C.getDeclAlign(D).getQuantity(),
-            static_cast<CharUnits::QuantityType>(GlobalMemoryAlignment))),
-        D);
+    GlobalizedVars.emplace_back(C.getDeclAlign(D), D);
   for (const ValueDecl *D : EscapedDeclsForTeams)
     GlobalizedVars.emplace_back(C.getDeclAlign(D), D);
-  llvm::stable_sort(GlobalizedVars, [](VarsDataTy L, VarsDataTy R) {
-    return L.first > R.first;
-  });
 
   // Build struct _globalized_locals_ty {
-  //         /*  globalized vars  */[WarSize] align (max(decl_align,
-  //         GlobalMemoryAlignment))
+  //         /*  globalized vars  */[WarSize] align (decl_align)
   //         /*  globalized vars  */ for EscapedDeclsForTeams
   //       };
   RecordDecl *GlobalizedRD = C.buildImplicitRecord("_globalized_locals_ty");
@@ -182,9 +162,7 @@ static RecordDecl *buildRecordForGlobalizedVars(
           /*BW=*/nullptr, /*Mutable=*/false,
           /*InitStyle=*/ICIS_NoInit);
       Field->setAccess(AS_public);
-      llvm::APInt Align(32, std::max(C.getDeclAlign(VD).getQuantity(),
-                                     static_cast<CharUnits::QuantityType>(
-                                         GlobalMemoryAlignment)));
+      llvm::APInt Align(32, Pair.first.getQuantity());
       Field->addAttr(AlignedAttr::CreateImplicit(
           C, /*IsAlignmentExpr=*/true,
           IntegerLiteral::Create(C, Align,
