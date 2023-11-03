@@ -1673,7 +1673,11 @@ void MicrosoftCXXABI::EmitDestructorCall(CodeGenFunction &CGF,
 void MicrosoftCXXABI::emitVTableTypeMetadata(const VPtrInfo &Info,
                                              const CXXRecordDecl *RD,
                                              llvm::GlobalVariable *VTable) {
-  if (!CGM.getCodeGenOpts().LTOUnit)
+  // Emit type metadata on vtables with LTO or IR instrumentation.
+  // In IR instrumentation, the type metadata could be used to find out vtable
+  // definitions (for type profiling) among all global variables.
+  if (!CGM.getCodeGenOpts().LTOUnit &&
+      !CGM.getCodeGenOpts().hasProfileIRInstr())
     return;
 
   // TODO: Should VirtualFunctionElimination also be supported here?
