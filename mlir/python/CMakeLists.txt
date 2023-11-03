@@ -607,11 +607,13 @@ if(MLIR_INCLUDE_TESTS)
     ROOT_DIR "${MLIR_SOURCE_DIR}/test/python/lib"
     SOURCES
       PythonTestModule.cpp
+      PythonTestPass.cpp
     PRIVATE_LINK_LIBS
       LLVMSupport
     EMBED_CAPI_LINK_LIBS
       MLIRCAPIPythonTestDialect
   )
+  set_source_files_properties(${MLIR_SOURCE_DIR}/test/python/lib/PythonTestPass.cpp PROPERTIES COMPILE_FLAGS -fno-rtti)
 endif()
 
 ################################################################################

@@ -5,6 +5,7 @@ import mlir.dialects.func as func
 import mlir.dialects.python_test as test
 import mlir.dialects.tensor as tensor
 import mlir.dialects.arith as arith
+from mlir.passmanager import PassManager
 
 
 def run(f):
@@ -551,3 +552,37 @@ def testInferTypeOpInterface():
             two_operands = test.InferResultsVariadicInputsOp(single=zero, doubled=zero)
             # CHECK: f32
             print(two_operands.result.type)
+
+
+# CHECK-LABEL: testPythonPassDemo
+@run
+def testPythonPassDemo():
+    def print_ops(op):
+        print(op.name)
+
+    module = """
+    module {
+      func.func @main() {
+        %memref = memref.alloca() : memref<1xi64>
+        %c0 = arith.constant 0 : index
+        %c1 = arith.constant 1 : i64
+        memref.store %c1, %memref[%c0] : memref<1xi64>
+        %u_memref = memref.cast %memref : memref<1xi64> to memref<*xi64>
+        return
+      }
+    }
+    """
+
+    # CHECK: memref.alloca
+    # CHECK: arith.constant
+    # CHECK: arith.constant
+    # CHECK: memref.store
+    # CHECK: memref.cast
+    # CHECK: func.return
+    # CHECK: func.func
+    # CHECK: builtin.module
+    with Context() as ctx, Location.unknown():
+        test.register_python_test_dialect(ctx)
+        test.register_python_test_pass_demo_pass(print_ops)
+        mlir_module = Module.parse(module)
+        PassManager.parse("builtin.module(python-pass-demo)").run(mlir_module.operation)
