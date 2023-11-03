@@ -1,6 +1,6 @@
 ; RUN:  not llvm-as %s -o /dev/null 2>&1 | FileCheck %s
 
-; CHECK: llvm-as: assembly parsed, but does not verify as correct!
+; CHECK: : assembly parsed, but does not verify as correct!
 ; CHECK-NOT: {{(^A| a)lias(es)? }}
 
 declare void @f()
