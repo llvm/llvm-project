@@ -628,11 +628,13 @@ private:
   Error parseModulePassPipeline(ModulePassManager &MPM,
                                 ArrayRef<PipelineElement> Pipeline);
 
+  void addPreInlinerPasses(ModulePassManager &MPM, OptimizationLevel Level,
+                           ThinOrFullLTOPhase LTOPhase);
+
   void addPGOInstrPasses(ModulePassManager &MPM, OptimizationLevel Level,
                          bool RunProfileGen, bool IsCS,
                          bool AtomicCounterUpdate, std::string ProfileFile,
                          std::string ProfileRemappingFile,
-                         ThinOrFullLTOPhase LTOPhase,
                          IntrusiveRefCntPtr<vfs::FileSystem> FS);
 
   // Extension Point callbacks
