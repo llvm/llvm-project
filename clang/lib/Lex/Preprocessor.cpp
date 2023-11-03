@@ -957,6 +957,8 @@ void Preprocessor::Lex(Token &Result) {
       ModuleDeclState.handlePeriod();
       break;
     case tok::identifier:
+      // Check "import" and "module" when there is no open bracket. The two
+      // identifiers are not meaningful with open brackets.
       if (StdCXXImportSeqState.atTopLevel()) {
         if (Result.getIdentifierInfo()->isModulesImport()) {
           TrackGMFState.handleImport(StdCXXImportSeqState.afterTopLevelSeq());
