@@ -664,6 +664,7 @@ void RVVEmitter::createRVVIntrinsics(
                                   .Case("Zvkg", RVV_REQ_Zvkg)
                                   .Case("Zvkned", RVV_REQ_Zvkned)
                                   .Case("Zvknha", RVV_REQ_Zvknha)
+                                  .Case("Zvknhb", RVV_REQ_Zvknhb)
                                   .Case("Zvksed", RVV_REQ_Zvksed)
                                   .Case("Zvksh", RVV_REQ_Zvksh)
                                   .Default(RVV_REQ_None);

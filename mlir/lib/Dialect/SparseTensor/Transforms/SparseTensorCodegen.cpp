@@ -178,7 +178,7 @@ static void createAllocFields(OpBuilder &builder, Location loc,
   SmallVector<Value> dimSizes;
   dimSizes.reserve(dimRank);
   unsigned i = 0; // cumulative index into `dynSizes`.
-  for (const DynSize sh : stt.getDimShape())
+  for (const Size sh : stt.getDimShape())
     dimSizes.push_back(ShapedType::isDynamic(sh)
                            ? dynSizes[i++]
                            : constantIndex(builder, loc, sh));
@@ -248,7 +248,7 @@ static void createAllocFields(OpBuilder &builder, Location loc,
   for (Level lvlRank = stt.getLvlRank(), l = 0; l < lvlRank; l++) {
     // Fills dim sizes array.
     // FIXME: `toOrigDim` is deprecated.
-    desc.setLvlSize(builder, loc, l, dimSizes[toOrigDim(stt, l)]);
+    desc.setLvlSize(builder, loc, l, dimSizes[toOrigDim(stt.getEncoding(), l)]);
     // Pushes a leading zero to positions memref.
     if (stt.isCompressedLvl(l))
       createPushback(builder, loc, desc, SparseTensorFieldKind::PosMemRef, l,

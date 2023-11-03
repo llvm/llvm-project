@@ -3059,6 +3059,25 @@ class sme2_movt_scalar_to_zt<string mnemonic, bits<7> opc>
   let Inst{4-0}   = Rt;
 }
 
+// SME2 move vector to lookup table
+class sme2_movt_zt_to_zt<string mnemonic, bits<7> opc>
+   : I<(outs ZTR:$ZTt), (ins sme_elm_idx0_3:$off2, ZPRAny:$Zt),
+        mnemonic, "\t$ZTt[$off2, mul vl], $Zt",
+        "", []>, Sched<[]> {
+  bits<5> Zt;
+  bits<2> off2;
+  let Inst{31-14} = 0b110000000100111100;
+  let Inst{13-12} = off2;
+  let Inst{11-5}  = opc;
+  let Inst{4-0}   = Zt;
+}
+
+multiclass sme2_movt_zt_to_zt<string mnemonic, bits<7> opc> {
+  def NAME : sme2_movt_zt_to_zt<mnemonic, opc>;
+  def : InstAlias<mnemonic # "\t$ZTt, $Zt",
+                 (!cast<Instruction>(NAME) ZTR:$ZTt, 0, ZPRAny:$Zt), 1>;
+}
+
 //===----------------------------------------------------------------------===//
 // SME2 lookup table expand one register
 class sme2_luti_vector_index<bits<2> sz, bits<7> opc, RegisterOperand vector_ty,
@@ -4712,4 +4731,37 @@ class sme2p1_luti4_vector_vg4_index<bits<2> sz, RegisterOperand vector_ty,
 
 multiclass sme2p1_luti4_vector_vg4_index<string mnemonic> {
   def _H: sme2p1_luti4_vector_vg4_index<0b01, ZZZZ_h_strided, VectorIndexD, mnemonic>;
+}
+
+// SME2 lookup table two source registers expand to four contiguous destination registers
+class sme2_luti4_vector_vg4<bits<2> sz, bits<2> op, string mnemonic>
+  : I<(outs ZZZZ_b_mul_r:$Zd), (ins ZTR:$ZTt, ZZ_mul_r:$Zn),
+       mnemonic, "\t$Zd, $ZTt, $Zn",
+       "", []>, Sched<[]> {
+  bits<4> Zn;
+  bits<3> Zd;
+  let Inst{31-14} = 0b110000001000101100;
+  let Inst{13-12} = sz;
+  let Inst{11-10} = op;
+  let Inst{9-6}   = Zn;
+  let Inst{5}     = 0b0;
+  let Inst{4-2}   = Zd;
+  let Inst{1-0}   = 0b00;
+}
+
+// SME2 lookup table two source registers expand to four non-contiguous destination registers
+class sme2_luti4_vector_vg4_strided<bits<2> sz, bits<2> op, string mnemonic>
+   : I<(outs ZZZZ_b_strided:$Zd), (ins ZTR:$ZTt, ZZ_mul_r:$Zn),
+        mnemonic, "\t$Zd, $ZTt, $Zn",
+        "", []>, Sched<[]> {
+  bits<4> Zn;
+  bits<3> Zd;
+  let Inst{31-14} = 0b110000001001101100;
+  let Inst{13-12} = sz;
+  let Inst{11-10} = op;
+  let Inst{9-6}   = Zn;
+  let Inst{5}     = 0b0;
+  let Inst{4}     = Zd{2};
+  let Inst{3-2}   = 0b00;
+  let Inst{1-0}   = Zd{1-0};
 }

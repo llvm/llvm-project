@@ -746,10 +746,7 @@ def FinalizeMemRefToLLVMConversionPass :
            "bool",
            /*default=*/"false",
            "Use generic allocation and deallocation functions instead of the "
-           "classic 'malloc', 'aligned_alloc' and 'free' functions">,
-    Option<"useOpaquePointers", "use-opaque-pointers", "bool",
-               /*default=*/"true", "Generate LLVM IR using opaque pointers "
-               "instead of typed pointers">
+           "classic 'malloc', 'aligned_alloc' and 'free' functions">
   ];
 }
 
@@ -808,11 +805,6 @@ def ConvertNVGPUToNVVMPass : Pass<"convert-nvgpu-to-nvvm"> {
 
   let dependentDialects = [
     "NVVM::NVVMDialect",
-  ];
-  let options = [
-    Option<"useOpaquePointers", "use-opaque-pointers", "bool",
-              /*default=*/"true", "Generate LLVM IR using opaque pointers "
-              "instead of typed pointers">
   ];
 }
 
@@ -890,12 +882,6 @@ def SCFToControlFlow : Pass<"convert-scf-to-cf"> {
 def ConvertSCFToOpenMPPass : Pass<"convert-scf-to-openmp", "ModuleOp"> {
   let summary = "Convert SCF parallel loop to OpenMP parallel + workshare "
                 "constructs.";
-
-  let options = [
-    Option<"useOpaquePointers", "use-opaque-pointers", "bool",
-                 /*default=*/"true", "Generate LLVM IR using opaque pointers "
-                 "instead of typed pointers">
-  ];
 
   let dependentDialects = ["omp::OpenMPDialect", "LLVM::LLVMDialect",
                            "memref::MemRefDialect"];
