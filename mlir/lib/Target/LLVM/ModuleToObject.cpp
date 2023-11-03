@@ -45,8 +45,10 @@ Operation &ModuleToObject::getOperation() { return module; }
 
 std::optional<llvm::TargetMachine *>
 ModuleToObject::getOrCreateTargetMachine() {
-  std::string error;
+  if (targetMachine)
+    return targetMachine.get();
   // Load the target.
+  std::string error;
   const llvm::Target *target =
       llvm::TargetRegistry::lookupTarget(triple, error);
   if (!target) {
