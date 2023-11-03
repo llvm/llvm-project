@@ -2691,6 +2691,7 @@ protected:
                     "Found unsupported debug info type '%s'.\n",
                     type.str().c_str());
               }
+              strm.EOL();
               return true;
             });
       }

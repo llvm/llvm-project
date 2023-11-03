@@ -130,3 +130,29 @@ class TestDumpDWO(lldbtest.TestBase):
                 "0x[a-zA-Z0-9]{16}\s+E\s+.*foo\.dwo",
             ],
         )
+
+    @skipIfRemote
+    @skipIfDarwin
+    @skipIfWindows
+    def test_dwos_loaded_symbols_on_demand(self):
+        self.build()
+        exe = self.getBuildArtifact("a.out")
+        main_dwo = self.getBuildArtifact("main.dwo")
+        foo_dwo = self.getBuildArtifact("foo.dwo")
+
+        # Make sure dwo files exist
+        self.assertTrue(os.path.exists(main_dwo), f'Make sure "{main_dwo}" file exists')
+        self.assertTrue(os.path.exists(foo_dwo), f'Make sure "{foo_dwo}" file exists')
+
+        # Load symbols on-demand
+        self.runCmd("settings set symbols.load-on-demand true")
+
+        target = self.dbg.CreateTarget(exe)
+        self.assertTrue(target, lldbtest.VALID_TARGET)
+
+        self.runCmd("target modules dump separate-debug-info --json")
+
+        # Check the output
+        output = self.get_dwos_from_json_output()
+        self.assertTrue(output[exe]["main.dwo"]["loaded"])
+        self.assertTrue(output[exe]["foo.dwo"]["loaded"])
