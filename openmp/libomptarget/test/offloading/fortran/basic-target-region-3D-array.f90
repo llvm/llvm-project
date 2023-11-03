@@ -51,4 +51,11 @@ k = 1
     end do
 end program main
   
-! CHECK: 1 2 3 4 5 6 7 8
+! CHECK: 1 
+! CHECK: 2 
+! CHECK: 3 
+! CHECK: 4
+! CHECK: 5
+! CHECK: 6
+! CHECK: 7
+! CHECK: 8
