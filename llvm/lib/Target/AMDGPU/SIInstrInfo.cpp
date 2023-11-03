@@ -6484,10 +6484,12 @@ SIInstrInfo::legalizeOperands(MachineInstr &MI,
     return CreatedBB;
   }
 
-  // Legalize S_BITREPLICATE and S_QUADMASK
+  // Legalize S_BITREPLICATE, S_QUADMASK and S_WQM
   if (MI.getOpcode() == AMDGPU::S_BITREPLICATE_B64_B32 ||
       MI.getOpcode() == AMDGPU::S_QUADMASK_B32 ||
-      MI.getOpcode() == AMDGPU::S_QUADMASK_B64) {
+      MI.getOpcode() == AMDGPU::S_QUADMASK_B64 ||
+      MI.getOpcode() == AMDGPU::S_WQM_B32 ||
+      MI.getOpcode() == AMDGPU::S_WQM_B64) {
     MachineOperand &Src = MI.getOperand(1);
     if (Src.isReg() && RI.hasVectorRegisters(MRI.getRegClass(Src.getReg())))
       Src.setReg(readlaneVGPRToSGPR(Src.getReg(), MI, MRI));
