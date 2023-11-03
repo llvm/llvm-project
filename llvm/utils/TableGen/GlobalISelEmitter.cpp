@@ -1,3 +1,4 @@
+
 //===- GlobalISelEmitter.cpp - Generate an instruction selector -----------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -288,11 +289,22 @@ static std::string getMangledRootDefName(StringRef DefOperandName) {
 
 //===- GlobalISelEmitter class --------------------------------------------===//
 
-static Expected<LLTCodeGen> getInstResultType(const TreePatternNode &Dst) {
-  ArrayRef<TypeSetByHwMode> ChildTypes = Dst.getExtTypes();
-  if (ChildTypes.size() != 1)
-    return failedImport("Dst pattern child has multiple results");
+static Expected<LLTCodeGen> getInstResultType(const TreePatternNode &Dst,
+                                              const CodeGenTarget &Target) {
+  // While we allow more than one output (both implicit and explicit defs)
+  // below, we only expect one explicit def here.
+  assert(Dst.getOperator()->isSubClassOf("Instruction"));
+  CodeGenInstruction &InstInfo = Target.getInstruction(Dst.getOperator());
+  if (InstInfo.Operands.NumDefs != 1)
+    return failedImport(
+        "Dst pattern child only supported with exactly one result");
 
+  ArrayRef<TypeSetByHwMode> ChildTypes = Dst.getExtTypes();
+  if (ChildTypes.size() < 1)
+    return failedImport("Dst pattern child has no result");
+
+  // If there are multiple results, just take the first one (this is how
+  // SelectionDAG does it).
   std::optional<LLTCodeGen> MaybeOpTy;
   if (ChildTypes.front().isMachineValueType()) {
     MaybeOpTy = MVTToLLT(ChildTypes.front().getMachineValueType().SimpleTy);
@@ -1220,7 +1232,7 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderer(
     }
 
     if (DstChild.getOperator()->isSubClassOf("Instruction")) {
-      auto OpTy = getInstResultType(DstChild);
+      auto OpTy = getInstResultType(DstChild, Target);
       if (!OpTy)
         return OpTy.takeError();
 
@@ -1555,7 +1567,7 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderers(
     if (!ValChild.isLeaf()) {
       // We really have to handle the source instruction, and then insert a
       // copy from the subregister.
-      auto ExtractSrcTy = getInstResultType(ValChild);
+      auto ExtractSrcTy = getInstResultType(ValChild, Target);
       if (!ExtractSrcTy)
         return ExtractSrcTy.takeError();
 
@@ -1773,10 +1785,11 @@ GlobalISelEmitter::inferRegClassFromPattern(const TreePatternNode &N) {
     return getRegClassFromLeaf(N);
 
   // We don't have a leaf node, so we have to try and infer something. Check
-  // that we have an instruction that we an infer something from.
+  // that we have an instruction that we can infer something from.
 
-  // Only handle things that produce a single type.
-  if (N.getNumTypes() != 1)
+  // Only handle things that produce at least one value (if multiple values,
+  // just take the first one).
+  if (N.getNumTypes() < 1)
     return std::nullopt;
   Record *OpRec = N.getOperator();
 
