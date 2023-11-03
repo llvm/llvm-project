@@ -83,18 +83,8 @@ static Constant *FoldBitCast(Constant *V, Type *DestTy) {
     return nullptr;
   }
 
-  // Finally, implement bitcast folding now.   The code below doesn't handle
-  // bitcast right.
-  if (isa<ConstantPointerNull>(V))  // ptr->ptr cast.
-    return ConstantPointerNull::get(cast<PointerType>(DestTy));
-
   // Handle integral constant input.
   if (ConstantInt *CI = dyn_cast<ConstantInt>(V)) {
-    if (DestTy->isIntegerTy())
-      // Integral -> Integral. This is a no-op because the bit widths must
-      // be the same. Consequently, we just fold to V.
-      return V;
-
     // See note below regarding the PPC_FP128 restriction.
     if (DestTy->isFloatingPointTy() && !DestTy->isPPC_FP128Ty())
       return ConstantFP::get(DestTy->getContext(),
