@@ -57,7 +57,7 @@ define void @test_2(i32 %n, ptr %len_buf) {
 ; CHECK-SAME: (i32 [[N:%.*]], ptr [[LEN_BUF:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[LEN:%.*]] = load i32, ptr [[LEN_BUF]], align 4, !range [[RNG1:![0-9]+]]
-; CHECK-NEXT:    [[TMP0:%.*]] = zext nneg i32 [[LEN]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = zext i32 [[LEN]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[N]] to i64
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
