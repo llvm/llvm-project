@@ -66,12 +66,6 @@ enum ValueMappingsIdx {
   FPR32Idx = 7,
   FPR64Idx = 10,
 };
-
-const RegisterBankInfo::ValueMapping *getFPValueMapping(unsigned Size) {
-  assert(Size == 32 || Size == 64);
-  unsigned Idx = Size == 64 ? FPR64Idx : FPR32Idx;
-  return &ValueMappings[Idx];
-}
 } // namespace RISCV
 } // namespace llvm
 
@@ -107,6 +101,12 @@ RISCVRegisterBankInfo::getRegBankFromRegClass(const TargetRegisterClass &RC,
   case RISCV::FPR32CRegClassID:
     return getRegBank(RISCV::FPRRegBankID);
   }
+}
+
+static const RegisterBankInfo::ValueMapping *getFPValueMapping(unsigned Size) {
+  assert(Size == 32 || Size == 64);
+  unsigned Idx = Size == 64 ? RISCV::FPR64Idx : RISCV::FPR32Idx;
+  return &RISCV::ValueMappings[Idx];
 }
 
 const RegisterBankInfo::InstructionMapping &
@@ -191,13 +191,13 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case TargetOpcode::G_FMAXNUM:
   case TargetOpcode::G_FMINNUM: {
     LLT Ty = MRI.getType(MI.getOperand(0).getReg());
-    OperandsMapping = RISCV::getFPValueMapping(Ty.getSizeInBits());
+    OperandsMapping = getFPValueMapping(Ty.getSizeInBits());
     break;
   }
   case TargetOpcode::G_FMA: {
     LLT Ty = MRI.getType(MI.getOperand(0).getReg());
     const RegisterBankInfo::ValueMapping *FPValueMapping =
-        RISCV::getFPValueMapping(Ty.getSizeInBits());
+        getFPValueMapping(Ty.getSizeInBits());
     OperandsMapping = getOperandsMapping(
         {FPValueMapping, FPValueMapping, FPValueMapping, FPValueMapping});
     break;
@@ -209,8 +209,8 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     LLT FromTy = MRI.getType(MI.getOperand(1).getReg());
     (void)FromTy;
     OperandsMapping =
-        getOperandsMapping({RISCV::getFPValueMapping(ToTy.getSizeInBits()),
-                            RISCV::getFPValueMapping(FromTy.getSizeInBits())});
+        getOperandsMapping({getFPValueMapping(ToTy.getSizeInBits()),
+                            getFPValueMapping(FromTy.getSizeInBits())});
     break;
   }
   default:
