@@ -213,6 +213,7 @@ void RISCVIntrinsicManagerImpl::ConstructRVVIntrinsics(
       {"experimental-zvkg", RVV_REQ_Zvkg},
       {"experimental-zvkned", RVV_REQ_Zvkned},
       {"experimental-zvknha", RVV_REQ_Zvknha},
+      {"experimental-zvknhb", RVV_REQ_Zvknhb},
       {"experimental-zvksed", RVV_REQ_Zvksed},
       {"experimental-zvksh", RVV_REQ_Zvksh}};
 
