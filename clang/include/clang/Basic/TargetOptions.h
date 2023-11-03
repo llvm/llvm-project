@@ -88,7 +88,7 @@ public:
     COV_5 = 500,
   };
   /// \brief Code object version for AMDGPU.
-  CodeObjectVersionKind CodeObjectVersion = CodeObjectVersionKind::COV_None;
+  CodeObjectVersionKind CodeObjectVersion = CodeObjectVersionKind::COV_4;
 
   /// \brief Enumeration values for AMDGPU printf lowering scheme
   enum class AMDGPUPrintfKind {
