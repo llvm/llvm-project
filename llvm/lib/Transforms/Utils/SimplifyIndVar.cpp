@@ -1393,7 +1393,22 @@ WidenIV::getExtendedOperandRecurrence(WidenIV::NarrowIVDefUse DU) {
   else if (ExtKind == ExtendKind::Zero && OBO->hasNoUnsignedWrap())
     ExtendOperExpr = SE->getZeroExtendExpr(
       SE->getSCEV(DU.NarrowUse->getOperand(ExtendOperIdx)), WideType);
-  else
+  else if (DU.NeverNegative) {
+    // For a non-negative NarrowDef, we can choose either type of
+    // extension.  We want to use the current extend kind if legal
+    // (see above), and we only hit this code if we need to check
+    // the opposite case.
+    if (OBO->hasNoSignedWrap()) {
+      ExtKind = ExtendKind::Sign;
+      ExtendOperExpr = SE->getSignExtendExpr(
+        SE->getSCEV(DU.NarrowUse->getOperand(ExtendOperIdx)), WideType);
+    } else if (OBO->hasNoUnsignedWrap()) {
+      ExtKind = ExtendKind::Zero;
+      ExtendOperExpr = SE->getZeroExtendExpr(
+        SE->getSCEV(DU.NarrowUse->getOperand(ExtendOperIdx)), WideType);
+    } else
+      return {nullptr, ExtendKind::Unknown};
+  } else
     return {nullptr, ExtendKind::Unknown};
 
   // When creating this SCEV expr, don't apply the current operations NSW or NUW
