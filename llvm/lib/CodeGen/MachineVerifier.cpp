@@ -1435,7 +1435,7 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     if (DstTy.getElementType() != SrcEltTy)
       report("G_BUILD_VECTOR result element type must match source type", MI);
 
-    if (DstTy.getElementCount().getKnownMinValue() > MI->getNumOperands() - 1)
+    if (DstTy.getNumElements() != MI->getNumOperands() - 1)
       report("G_BUILD_VECTOR must have an operand for each elemement", MI);
 
     for (const MachineOperand &MO : llvm::drop_begin(MI->operands(), 2))
