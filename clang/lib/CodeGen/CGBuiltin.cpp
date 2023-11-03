@@ -17632,8 +17632,20 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_mov_dpp:
   case AMDGPU::BI__builtin_amdgcn_update_dpp: {
     llvm::SmallVector<llvm::Value *, 6> Args;
-    for (unsigned I = 0; I != E->getNumArgs(); ++I)
-      Args.push_back(EmitScalarExpr(E->getArg(I)));
+    for (unsigned I = 0; I != E->getNumArgs(); ++I) {
+      llvm::Value *Arg = EmitScalarExpr(E->getArg(I));
+      // Except first two input operands, all other are imm operands for dpp
+      // intrinsic.
+      if (llvm::is_contained(std::initializer_list<unsigned>{2, 3, 4, 5}, I)) {
+        // If this is required to be a constant, constant fold it so that we
+        // know that the generated intrinsic gets a ConstantInt.
+        std::optional<llvm::APSInt> Result =
+            E->getArg(I)->getIntegerConstantExpr(getContext());
+        assert(Result && "Expected argument to be a constant");
+        Arg = llvm::ConstantInt::get(getLLVMContext(), *Result);
+      }
+      Args.push_back(Arg);
+    }
     assert(Args.size() == 5 || Args.size() == 6);
     if (Args.size() == 5)
       Args.insert(Args.begin(), llvm::PoisonValue::get(Args[0]->getType()));
