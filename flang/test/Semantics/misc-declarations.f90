@@ -38,4 +38,8 @@ module m
       volatile :: coarrayComponent
     end block
   end subroutine
+  subroutine C839(x)
+    !ERROR: Coarray 'x' may not be an assumed-rank array
+    real, intent(in) :: x(..)[*]
+  end
 end module
