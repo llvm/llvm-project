@@ -3,12 +3,12 @@
 
 %struct.ident_t = type { i32, i32, i32, i32, ptr }
 %struct.KernelEnvironmentTy = type { %struct.ConfigurationEnvironmentTy, ptr, ptr }
-%struct.ConfigurationEnvironmentTy = type { i8, i8, i8, i32, i32, i32, i32 }
+%struct.ConfigurationEnvironmentTy = type { i8, i8, i8, i32, i32, i32, i32, i32, i32 }
 
 @0 = private unnamed_addr constant [23 x i8] c";unknown;unknown;0;0;;\00", align 1
 @1 = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 0, ptr @0 }, align 8
 @_ZL6Device = internal global double 0.000000e+00, align 8
-@__omp_offloading_fd02_85283c04_main_l11_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0 }, ptr @1, ptr null }
+@__omp_offloading_fd02_85283c04_main_l11_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @1, ptr null }
 
 define weak void @__omp_offloading_fd02_85283c04_main_l11(ptr %dyn, ptr nonnull align 8 dereferenceable(8) %X) local_unnamed_addr "kernel" {
 entry:
