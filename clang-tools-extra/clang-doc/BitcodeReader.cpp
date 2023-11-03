@@ -75,10 +75,9 @@ llvm::Error decodeRecord(const Record &R, TagTypeKind &Field,
   case TagTypeKind::Enum:
     Field = static_cast<TagTypeKind>(R[0]);
     return llvm::Error::success();
-  default:
-    return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   "invalid value for TagTypeKind");
   }
+  return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                 "invalid value for TagTypeKind");
 }
 
 llvm::Error decodeRecord(const Record &R, std::optional<Location> &Field,
