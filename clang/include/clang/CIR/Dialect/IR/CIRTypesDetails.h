@@ -14,7 +14,9 @@
 #define CIR_DIALECT_IR_CIRTYPESDETAILS_H
 
 #include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/Support/LogicalResult.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
+#include "llvm/ADT/Hashing.h"
 
 namespace mlir {
 namespace cir {
@@ -58,14 +60,18 @@ struct StructTypeStorage : public TypeStorage {
   }
 
   bool operator==(const KeyTy &key) const {
+    if (name)
+      return (name == key.name) && (kind == key.kind);
     return (members == key.members) && (name == key.name) &&
            (incomplete == key.incomplete) && (packed == key.packed) &&
            (kind == key.kind) && (ast == key.ast);
   }
 
   static llvm::hash_code hashKey(const KeyTy &key) {
-    return hash_combine(key.members, key.name, key.incomplete, key.packed,
-                        key.kind, key.ast);
+    if (key.name)
+      return llvm::hash_combine(key.name, key.kind);
+    return llvm::hash_combine(key.members, key.incomplete, key.packed, key.kind,
+                              key.ast);
   }
 
   static StructTypeStorage *construct(TypeStorageAllocator &allocator,
@@ -73,6 +79,32 @@ struct StructTypeStorage : public TypeStorage {
     return new (allocator.allocate<StructTypeStorage>())
         StructTypeStorage(allocator.copyInto(key.members), key.name,
                           key.incomplete, key.packed, key.kind, key.ast);
+  }
+
+  /// Mutates the members and attributes an identified struct.
+  ///
+  /// Once a record is mutated, it is marked as complete, preventing further
+  /// mutations. Anonymous structs are always complete and cannot be mutated.
+  /// This method does not fail if a mutation of a complete struct does not
+  /// change the struct.
+  LogicalResult mutate(TypeStorageAllocator &allocator, ArrayRef<Type> members,
+                       bool packed, ASTRecordDeclInterface ast) {
+    // Anonymous structs cannot mutate.
+    if (!name)
+      return failure();
+
+    // Mutation of complete structs are allowed if they change nothing.
+    if (!incomplete)
+      return mlir::success((this->members == members) &&
+                           (this->packed == packed) && (this->ast == ast));
+
+    // Mutate incomplete struct.
+    this->members = allocator.copyInto(members);
+    this->packed = packed;
+    this->ast = ast;
+
+    incomplete = false;
+    return success();
   }
 };
 

@@ -11,7 +11,7 @@ void baz() {
   Struk s;
 }
 
-// CHECK: !ty_22Struk22 = !cir.struct<struct "Struk" {!s32i}>
+// CHECK: !ty_22Struk22 = !cir.struct<struct "Struk" {!cir.int<s, 32>}>
 
 // CHECK:   cir.func linkonce_odr @_ZN5StrukC2Ev(%arg0: !cir.ptr<!ty_22Struk22>
 // CHECK-NEXT:     %0 = cir.alloca !cir.ptr<!ty_22Struk22>, cir.ptr <!cir.ptr<!ty_22Struk22>>, ["this", init] {alignment = 8 : i64}

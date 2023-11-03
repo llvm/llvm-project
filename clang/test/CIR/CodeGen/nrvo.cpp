@@ -9,7 +9,7 @@ std::vector<const char*> test_nrvo() {
   return result;
 }
 
-// CHECK: ![[VEC:.*]] = !cir.struct<class "std::vector<const char *>" {!cir.ptr<!cir.ptr<!s8i>>, !cir.ptr<!cir.ptr<!s8i>>, !cir.ptr<!cir.ptr<!s8i>>}>
+// CHECK: ![[VEC:.*]] = !cir.struct<class "std::vector<const char *>" {!cir.ptr<!cir.ptr<!cir.int<s, 8>>>, !cir.ptr<!cir.ptr<!cir.int<s, 8>>>, !cir.ptr<!cir.ptr<!cir.int<s, 8>>>}>
 
 // CHECK: cir.func @_Z9test_nrvov() -> ![[VEC]]
 // CHECK:   %0 = cir.alloca ![[VEC]], cir.ptr <![[VEC]]>, ["__retval", init] {alignment = 8 : i64}

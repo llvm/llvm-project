@@ -27,10 +27,10 @@ typedef struct {
   int a : 3;  // one bitfield with size < 8
   unsigned b;
 } T; 
-// CHECK: !ty_22S22 = !cir.struct<struct "S" {!u32i, !u32i, !u16i, !u32i}>
-// CHECK: !ty_22T22 = !cir.struct<struct "T" {!u8i, !u32i} #cir.record.decl.ast>
-// CHECK: !ty_22anon2E122 = !cir.struct<struct "anon.1" {!u32i} #cir.record.decl.ast>
-// CHECK: !ty_22__long22 = !cir.struct<struct "__long" {!ty_22anon2E122, !u32i, !cir.ptr<!u32i>}>
+// CHECK: !ty_22S22 = !cir.struct<struct "S" {!cir.int<u, 32>, !cir.int<u, 32>, !cir.int<u, 16>, !cir.int<u, 32>}>
+// CHECK: !ty_22T22 = !cir.struct<struct "T" {!cir.int<u, 8>, !cir.int<u, 32>} #cir.record.decl.ast>
+// CHECK: !ty_22anon2E122 = !cir.struct<struct "anon.1" {!cir.int<u, 32>} #cir.record.decl.ast>
+// CHECK: !ty_22__long22 = !cir.struct<struct "__long" {!cir.struct<struct "anon.1" {!cir.int<u, 32>} #cir.record.decl.ast>, !cir.int<u, 32>, !cir.ptr<!cir.int<u, 32>>}>
 
 // CHECK: cir.func {{.*@store_field}}
 // CHECK:   [[TMP0:%.*]] = cir.alloca !ty_22S22, cir.ptr <!ty_22S22>

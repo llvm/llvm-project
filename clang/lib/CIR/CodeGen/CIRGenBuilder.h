@@ -435,6 +435,9 @@ public:
   }
 
   /// Get a CIR named struct type.
+  ///
+  /// If a struct already exists and is complete, but the client tries to fetch
+  /// it with a different set of attributes, this method will crash.
   mlir::cir::StructType getCompleteStructTy(llvm::ArrayRef<mlir::Type> members,
                                             llvm::StringRef name, bool packed,
                                             const clang::RecordDecl *ast) {
@@ -445,8 +448,16 @@ public:
       astAttr = getAttr<mlir::cir::ASTRecordDeclAttr>(ast);
       kind = getRecordKind(ast->getTagKind());
     }
-    return getType<mlir::cir::StructType>(members, nameAttr, packed, kind,
-                                          astAttr);
+
+    // Create or get the struct.
+    auto type = getType<mlir::cir::StructType>(members, nameAttr, packed, kind,
+                                               astAttr);
+
+    // Complete an incomplete struct or ensure the existing complete struct
+    // matches the requested attributes.
+    type.complete(members, packed, astAttr);
+
+    return type;
   }
 
   //
@@ -689,7 +700,6 @@ public:
     auto flag = getBool(val, loc);
     return create<mlir::cir::StoreOp>(loc, flag, dst);
   }
-
 };
 
 } // namespace cir

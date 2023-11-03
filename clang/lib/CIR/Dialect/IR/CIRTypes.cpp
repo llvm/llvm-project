@@ -128,7 +128,9 @@ Type StructType::getLargestMember(const ::mlir::DataLayout &dataLayout) const {
 }
 
 Type StructType::parse(mlir::AsmParser &parser) {
+  FailureOr<AsmParser::CyclicParseReset> cyclicParseGuard;
   const auto loc = parser.getCurrentLocation();
+  const auto eLoc = parser.getEncodedSourceLoc(loc);
   bool packed = false;
   RecordKind kind;
   auto *context = parser.getContext();
@@ -151,6 +153,26 @@ Type StructType::parse(mlir::AsmParser &parser) {
 
   mlir::StringAttr name;
   parser.parseOptionalAttribute(name);
+
+  // Is a self reference: ensure referenced type was parsed.
+  if (name && parser.parseOptionalGreater().succeeded()) {
+    auto type = getChecked(eLoc, context, name, kind);
+    if (succeeded(parser.tryStartCyclicParse(type))) {
+      parser.emitError(loc, "invalid self-reference within record");
+      return {};
+    }
+    return type;
+  }
+
+  // Is a named record definition: ensure name has not been parsed yet.
+  if (name) {
+    auto type = getChecked(eLoc, context, name, kind);
+    cyclicParseGuard = parser.tryStartCyclicParse(type);
+    if (failed(cyclicParseGuard)) {
+      parser.emitError(loc, "record already defined");
+      return {};
+    }
+  }
 
   if (parser.parseOptionalKeyword("packed").succeeded())
     packed = true;
@@ -176,14 +198,17 @@ Type StructType::parse(mlir::AsmParser &parser) {
   if (parser.parseGreater())
     return {};
 
-  // Try to create the proper type.
-  mlir::Type type = {};
+  // Try to create the proper record type.
   ArrayRef<mlir::Type> membersRef(members); // Needed for template deduction.
-  const auto eLoc = parser.getEncodedSourceLoc(loc);
+  mlir::Type type = {};
   if (name && incomplete) { // Identified & incomplete
     type = getChecked(eLoc, context, name, kind);
   } else if (name && !incomplete) { // Identified & complete
     type = getChecked(eLoc, context, membersRef, name, packed, kind);
+    // If the record has a self-reference, its type already exists in a
+    // incomplete state. In this case, we must complete it.
+    if (type.cast<StructType>().isIncomplete())
+      type.cast<StructType>().complete(membersRef, packed, ast);
   } else if (!name && !incomplete) { // anonymous & complete
     type = getChecked(eLoc, context, membersRef, packed, kind);
   } else { // anonymous & incomplete
@@ -195,6 +220,7 @@ Type StructType::parse(mlir::AsmParser &parser) {
 }
 
 void StructType::print(mlir::AsmPrinter &printer) const {
+  FailureOr<AsmPrinter::CyclicPrintReset> cyclicPrintGuard;
   printer << '<';
 
   switch (getKind()) {
@@ -210,7 +236,17 @@ void StructType::print(mlir::AsmPrinter &printer) const {
   }
 
   if (getName())
-    printer << getName() << " ";
+    printer << getName();
+
+  // Current type has already been printed: print as self reference.
+  cyclicPrintGuard = printer.tryStartCyclicPrint(*this);
+  if (failed(cyclicPrintGuard)) {
+    printer << '>';
+    return;
+  }
+
+  // Type not yet printed: continue printing the entire record.
+  printer << ' ';
 
   if (getPacked())
     printer << "packed ";
@@ -307,6 +343,12 @@ mlir::cir::StructType::RecordKind StructType::getKind() const {
 }
 
 ASTRecordDeclInterface StructType::getAst() const { return getImpl()->ast; }
+
+void StructType::complete(ArrayRef<Type> members, bool packed,
+                          ASTRecordDeclInterface ast) {
+  if (mutate(members, packed, ast).failed())
+    llvm_unreachable("failed to complete struct");
+}
 
 //===----------------------------------------------------------------------===//
 // Data Layout information for types

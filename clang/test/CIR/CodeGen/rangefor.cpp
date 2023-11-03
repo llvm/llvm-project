@@ -21,9 +21,9 @@ void init(unsigned numImages) {
   }
 }
 
-// CHECK-DAG: !ty_22triple22 = !cir.struct<struct "triple" {!u32i, !cir.ptr<!void>, !u32i}>
-// CHECK-DAG: ![[VEC:.*]] = !cir.struct<class "std::vector<triple>" {!cir.ptr<!ty_22triple22>, !cir.ptr<!ty_22triple22>, !cir.ptr<!ty_22triple22>}>
-// CHECK-DAG: ![[VEC_IT:.*]] = !cir.struct<struct "__vector_iterator<triple, triple *, triple &>" {!cir.ptr<!ty_22triple22>}>
+// CHECK-DAG: !ty_22triple22 = !cir.struct<struct "triple" {!cir.int<u, 32>, !cir.ptr<!cir.void>, !cir.int<u, 32>}>
+// CHECK-DAG: ![[VEC:.*]] = !cir.struct<class "std::vector<triple>" {!cir.ptr<!cir.struct<struct "triple" {!cir.int<u, 32>, !cir.ptr<!cir.void>, !cir.int<u, 32>}>>, !cir.ptr<!cir.struct<struct "triple" {!cir.int<u, 32>, !cir.ptr<!cir.void>, !cir.int<u, 32>}>>, !cir.ptr<!cir.struct<struct "triple" {!cir.int<u, 32>, !cir.ptr<!cir.void>, !cir.int<u, 32>}>>}>
+// CHECK-DAG: ![[VEC_IT:.*]] = !cir.struct<struct "__vector_iterator<triple, triple *, triple &>" {!cir.ptr<!cir.struct<struct "triple" {!cir.int<u, 32>, !cir.ptr<!cir.void>, !cir.int<u, 32>}>
 
 // CHECK: cir.func @_Z4initj(%arg0: !u32i
 // CHECK:   %0 = cir.alloca !u32i, cir.ptr <!u32i>, ["numImages", init] {alignment = 4 : i64}

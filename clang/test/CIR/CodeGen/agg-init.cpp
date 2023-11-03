@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++17 -fclangir -Wno-unused-value -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s
 
-// CHECK: !ty_22yep_22 = !cir.struct<struct "yep_" {!u32i, !u32i}>
+// CHECK: !ty_22yep_22 = !cir.struct<struct "yep_" {!cir.int<u, 32>, !cir.int<u, 32>}>
 
 typedef enum xxy_ {
   xxy_Low = 0,

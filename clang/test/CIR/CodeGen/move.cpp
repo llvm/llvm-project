@@ -16,7 +16,7 @@ struct string {
 
 } // std namespace
 
-// CHECK: ![[StdString:ty_.*]] = !cir.struct<struct "std::string" {!u8i}>
+// CHECK: ![[StdString:ty_.*]] = !cir.struct<struct "std::string" {!cir.int<u, 8>}>
 
 std::string getstr();
 void emplace(std::string &&s);

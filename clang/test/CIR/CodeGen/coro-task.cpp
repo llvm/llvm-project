@@ -126,13 +126,13 @@ co_invoke_fn co_invoke;
 
 }} // namespace folly::coro
 
-// CHECK-DAG: ![[IntTask:.*]] = !cir.struct<struct "folly::coro::Task<int>" {!u8i}>
-// CHECK-DAG: ![[VoidTask:.*]] = !cir.struct<struct "folly::coro::Task<void>" {!u8i}>
-// CHECK-DAG: ![[VoidPromisse:.*]] = !cir.struct<struct "folly::coro::Task<void>::promise_type" {!u8i}>
-// CHECK-DAG: ![[CoroHandleVoid:.*]] = !cir.struct<struct "std::coroutine_handle<void>" {!u8i}>
-// CHECK-DAG: ![[CoroHandlePromise:ty_.*]]  = !cir.struct<struct "std::coroutine_handle<folly::coro::Task<void>::promise_type>" {!u8i}>
-// CHECK-DAG: ![[StdString:.*]] = !cir.struct<struct "std::string" {!u8i}>
-// CHECK-DAG: ![[SuspendAlways:.*]] = !cir.struct<struct "std::suspend_always" {!u8i}>
+// CHECK-DAG: ![[IntTask:.*]] = !cir.struct<struct "folly::coro::Task<int>" {!cir.int<u, 8>}>
+// CHECK-DAG: ![[VoidTask:.*]] = !cir.struct<struct "folly::coro::Task<void>" {!cir.int<u, 8>}>
+// CHECK-DAG: ![[VoidPromisse:.*]] = !cir.struct<struct "folly::coro::Task<void>::promise_type" {!cir.int<u, 8>}>
+// CHECK-DAG: ![[CoroHandleVoid:.*]] = !cir.struct<struct "std::coroutine_handle<void>" {!cir.int<u, 8>}>
+// CHECK-DAG: ![[CoroHandlePromise:ty_.*]]  = !cir.struct<struct "std::coroutine_handle<folly::coro::Task<void>::promise_type>" {!cir.int<u, 8>}>
+// CHECK-DAG: ![[StdString:.*]] = !cir.struct<struct "std::string" {!cir.int<u, 8>}>
+// CHECK-DAG: ![[SuspendAlways:.*]] = !cir.struct<struct "std::suspend_always" {!cir.int<u, 8>}>
 
 // CHECK: module {{.*}} {
 // CHECK-NEXT: cir.global external @_ZN5folly4coro9co_invokeE = #cir.zero : !ty_22folly3A3Acoro3A3Aco_invoke_fn22
