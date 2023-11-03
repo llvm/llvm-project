@@ -62,9 +62,9 @@ struct BuiltinTypeDeclBuilder {
       return;
     }
 
-    Record = CXXRecordDecl::Create(AST, TagDecl::TagKind::TTK_Class,
-                                   HLSLNamespace, SourceLocation(),
-                                   SourceLocation(), &II, PrevDecl, true);
+    Record = CXXRecordDecl::Create(AST, TagDecl::TagKind::Class, HLSLNamespace,
+                                   SourceLocation(), SourceLocation(), &II,
+                                   PrevDecl, true);
     Record->setImplicit(true);
     Record->setLexicalDeclContext(HLSLNamespace);
     Record->setHasExternalLexicalStorage();

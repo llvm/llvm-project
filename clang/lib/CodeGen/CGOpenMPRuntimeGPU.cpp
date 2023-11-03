@@ -806,7 +806,7 @@ void CGOpenMPRuntimeGPU::emitKernelDeinit(CodeGenFunction &CGF,
   // This is temporary until we remove the fixed sized buffer.
   ASTContext &C = CGM.getContext();
   RecordDecl *StaticRD = C.buildImplicitRecord(
-      "_openmp_teams_reduction_type_$_", RecordDecl::TagKind::TTK_Union);
+      "_openmp_teams_reduction_type_$_", RecordDecl::TagKind::Union);
   StaticRD->startDefinition();
   for (const RecordDecl *TeamReductionRec : TeamsReductions) {
     QualType RecTy = C.getRecordType(TeamReductionRec);

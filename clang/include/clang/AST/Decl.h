@@ -3703,13 +3703,15 @@ public:
     return static_cast<TagKind>(TagDeclBits.TagDeclKind);
   }
 
-  void setTagKind(TagKind TK) { TagDeclBits.TagDeclKind = TK; }
+  void setTagKind(TagKind TK) {
+    TagDeclBits.TagDeclKind = llvm::to_underlying(TK);
+  }
 
-  bool isStruct() const { return getTagKind() == TTK_Struct; }
-  bool isInterface() const { return getTagKind() == TTK_Interface; }
-  bool isClass()  const { return getTagKind() == TTK_Class; }
-  bool isUnion()  const { return getTagKind() == TTK_Union; }
-  bool isEnum()   const { return getTagKind() == TTK_Enum; }
+  bool isStruct() const { return getTagKind() == TagTypeKind::Struct; }
+  bool isInterface() const { return getTagKind() == TagTypeKind::Interface; }
+  bool isClass() const { return getTagKind() == TagTypeKind::Class; }
+  bool isUnion() const { return getTagKind() == TagTypeKind::Union; }
+  bool isEnum() const { return getTagKind() == TagTypeKind::Enum; }
 
   /// Is this tag type named, either directly or via being defined in
   /// a typedef of this type?

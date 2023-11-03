@@ -5333,7 +5333,7 @@ void ASTWriter::WriteDeclUpdatesBlocks(RecordDataImpl &OffsetsRecord) {
             Record.push_back(false);
           }
         }
-        Record.push_back(RD->getTagKind());
+        Record.push_back(llvm::to_underlying(RD->getTagKind()));
         Record.AddSourceLocation(RD->getLocation());
         Record.AddSourceLocation(RD->getBeginLoc());
         Record.AddSourceRange(RD->getBraceRange());
