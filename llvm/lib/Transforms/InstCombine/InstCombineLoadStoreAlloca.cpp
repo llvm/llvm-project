@@ -217,35 +217,34 @@ static Instruction *simplifyAllocaArraySize(InstCombinerImpl &IC,
       unsigned MaxArrSizeBitWidth =
           DL.getIndexSizeInBits(AI.getType()->getPointerAddressSpace());
       APInt ArrayAllocSize(64, DL.getTypeAllocSize(NewTy));
-      if (ArrayAllocSize.getActiveBits() > MaxArrSizeBitWidth)
-        NewTy = ArrayType::get(AI.getAllocatedType(), 0);
+      if (ArrayAllocSize.getActiveBits() <= MaxArrSizeBitWidth) {
+        AllocaInst *New = IC.Builder.CreateAlloca(NewTy, AI.getAddressSpace(),
+                                                  nullptr, AI.getName());
+        New->setAlignment(AI.getAlign());
 
-      AllocaInst *New = IC.Builder.CreateAlloca(NewTy, AI.getAddressSpace(),
-                                                nullptr, AI.getName());
-      New->setAlignment(AI.getAlign());
+        replaceAllDbgUsesWith(AI, *New, *New, DT);
 
-      replaceAllDbgUsesWith(AI, *New, *New, DT);
+        // Scan to the end of the allocation instructions, to skip over a block
+        // of allocas if possible...also skip interleaved debug info
+        //
+        BasicBlock::iterator It(New);
+        while (isa<AllocaInst>(*It) || isa<DbgInfoIntrinsic>(*It))
+          ++It;
 
-      // Scan to the end of the allocation instructions, to skip over a block
-      // of allocas if possible...also skip interleaved debug info
-      //
-      BasicBlock::iterator It(New);
-      while (isa<AllocaInst>(*It) || isa<DbgInfoIntrinsic>(*It))
-        ++It;
+        // Now that I is pointing to the first non-allocation-inst in the block,
+        // insert our getelementptr instruction...
+        //
+        Type *IdxTy = DL.getIndexType(AI.getType());
+        Value *NullIdx = Constant::getNullValue(IdxTy);
+        Value *Idx[2] = {NullIdx, NullIdx};
+        Instruction *GEP = GetElementPtrInst::CreateInBounds(
+            NewTy, New, Idx, New->getName() + ".sub");
+        IC.InsertNewInstBefore(GEP, It);
 
-      // Now that I is pointing to the first non-allocation-inst in the block,
-      // insert our getelementptr instruction...
-      //
-      Type *IdxTy = DL.getIndexType(AI.getType());
-      Value *NullIdx = Constant::getNullValue(IdxTy);
-      Value *Idx[2] = {NullIdx, NullIdx};
-      Instruction *GEP = GetElementPtrInst::CreateInBounds(
-          NewTy, New, Idx, New->getName() + ".sub");
-      IC.InsertNewInstBefore(GEP, It);
-
-      // Now make everything use the getelementptr instead of the original
-      // allocation.
-      return IC.replaceInstUsesWith(AI, GEP);
+        // Now make everything use the getelementptr instead of the original
+        // allocation.
+        return IC.replaceInstUsesWith(AI, GEP);
+      }
     }
   }
 

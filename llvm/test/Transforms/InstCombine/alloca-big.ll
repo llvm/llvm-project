@@ -24,7 +24,7 @@ define void @test_negalloc(ptr %dst) {
 ; CHECK-NEXT:    store ptr [[TMP1]], ptr [[DST:%.*]], align 8
 ; CHECK-NEXT:    ret void
 ; CHECK32-LABEL: @test_negalloc(
-; CHECK32-NEXT:    [[TMP1:%.*]] = alloca [0 x i32], align 4
+; CHECK32-NEXT:    [[TMP1:%.*]] = alloca i32, i32 -1, align 4
 ; CHECK32-NEXT:    store ptr [[TMP1]], ptr [[DST:%.*]], align 4
 ; CHECK32-NEXT:    ret void
 ;
