@@ -67,7 +67,7 @@ llvm::Error decodeRecord(const Record &R, AccessSpecifier &Field,
 
 llvm::Error decodeRecord(const Record &R, TagTypeKind &Field,
                          llvm::StringRef Blob) {
-  switch (R[0]) {
+  switch (static_cast<TagTypeKind>(R[0])) {
   case TagTypeKind::Struct:
   case TagTypeKind::Interface:
   case TagTypeKind::Union:
