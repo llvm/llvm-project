@@ -8,6 +8,8 @@ The LLVM project's main README follows.
 
 # The LLVM Compiler Infrastructure
 
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/llvm/llvm-project/badge)](https://securityscorecards.dev/viewer/?uri=github.com/llvm/llvm-project)
+
 Welcome to the LLVM project!
 
 This repository contains the source code for LLVM, a toolkit for the
