@@ -24,9 +24,9 @@ define <vscale x 32 x i8> @split_insert_32i8_idx(<vscale x 32 x i8> %a, i8 %elt,
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x10, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 16 * VG
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    ptrue p0.b
-; CHECK-NEXT:    mov x8, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    rdvl x8, #2
 ; CHECK-NEXT:    mov x9, sp
-; CHECK-NEXT:    addvl x8, x8, #2
+; CHECK-NEXT:    sub x8, x8, #1
 ; CHECK-NEXT:    cmp x1, x8
 ; CHECK-NEXT:    csel x8, x1, x8, lo
 ; CHECK-NEXT:    st1b { z1.b }, p0, [sp, #1, mul vl]
@@ -136,9 +136,9 @@ define <vscale x 32 x i16> @split_insert_32i16(<vscale x 32 x i16> %a, i16 %elt)
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x20, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 32 * VG
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    mov x8, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    rdvl x8, #2
 ; CHECK-NEXT:    mov w9, #128 // =0x80
-; CHECK-NEXT:    addvl x8, x8, #2
+; CHECK-NEXT:    sub x8, x8, #1
 ; CHECK-NEXT:    cmp x8, #128
 ; CHECK-NEXT:    csel x8, x8, x9, lo
 ; CHECK-NEXT:    mov x9, sp
