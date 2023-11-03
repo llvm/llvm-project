@@ -10,8 +10,8 @@
 // visible buffers and actual compiler IR that implements these primitives on
 // the selected sparse tensor storage schemes. This pass provides an alternative
 // to the SparseTensorConversion pass, eliminating the dependence on a runtime
-// support library, and providing much more opportunities for subsequent
-// compiler optimization of the generated code.
+// support library (other than for file I/O), and providing many more
+// opportunities for subsequent compiler optimization of the generated code.
 //
 //===----------------------------------------------------------------------===//
 
@@ -37,16 +37,11 @@
 using namespace mlir;
 using namespace mlir::sparse_tensor;
 
-namespace {
-
-using FuncGeneratorType =
-    function_ref<void(OpBuilder &, ModuleOp, func::FuncOp, RankedTensorType)>;
-
 //===----------------------------------------------------------------------===//
 // Helper methods.
 //===----------------------------------------------------------------------===//
 
-/// Flatten a list of operands that may contain sparse tensors.
+/// Flattens a list of operands that may contain sparse tensors.
 static void flattenOperands(ValueRange operands,
                             SmallVectorImpl<Value> &flattened) {
   // In case of
@@ -97,6 +92,7 @@ static scf::ForOp createFor(OpBuilder &builder, Location loc, Value upper,
   return forOp;
 }
 
+/// Creates a push back operation.
 static void createPushback(OpBuilder &builder, Location loc,
                            MutSparseTensorDescriptor desc,
                            SparseTensorFieldKind kind, std::optional<Level> lvl,
@@ -368,6 +364,95 @@ static Value genCompressed(OpBuilder &builder, Location loc,
   return ifOp2.getResult(o);
 }
 
+/// Generates insertion finalization code.
+static void genEndInsert(OpBuilder &builder, Location loc,
+                         SparseTensorDescriptor desc) {
+  const SparseTensorType stt(desc.getRankedTensorType());
+  const Level lvlRank = stt.getLvlRank();
+  for (Level l = 0; l < lvlRank; l++) {
+    const auto dlt = stt.getLvlType(l);
+    if (isLooseCompressedDLT(dlt))
+      llvm_unreachable("TODO: Not yet implemented");
+    if (isCompressedDLT(dlt)) {
+      // Compressed dimensions need a position cleanup for all entries
+      // that were not visited during the insertion pass.
+      //
+      // TODO: avoid cleanup and keep compressed scheme consistent at all
+      // times?
+      //
+      if (l > 0) {
+        Type posType = stt.getPosType();
+        Value posMemRef = desc.getPosMemRef(l);
+        Value hi = desc.getPosMemSize(builder, loc, l);
+        Value zero = constantIndex(builder, loc, 0);
+        Value one = constantIndex(builder, loc, 1);
+        // Vector of only one, but needed by createFor's prototype.
+        SmallVector<Value, 1> inits{genLoad(builder, loc, posMemRef, zero)};
+        scf::ForOp loop = createFor(builder, loc, hi, inits, one);
+        Value i = loop.getInductionVar();
+        Value oldv = loop.getRegionIterArg(0);
+        Value newv = genLoad(builder, loc, posMemRef, i);
+        Value posZero = constantZero(builder, loc, posType);
+        Value cond = builder.create<arith::CmpIOp>(
+            loc, arith::CmpIPredicate::eq, newv, posZero);
+        scf::IfOp ifOp = builder.create<scf::IfOp>(loc, TypeRange(posType),
+                                                   cond, /*else*/ true);
+        builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
+        genStore(builder, loc, oldv, posMemRef, i);
+        builder.create<scf::YieldOp>(loc, oldv);
+        builder.setInsertionPointToStart(&ifOp.getElseRegion().front());
+        builder.create<scf::YieldOp>(loc, newv);
+        builder.setInsertionPointAfter(ifOp);
+        builder.create<scf::YieldOp>(loc, ifOp.getResult(0));
+        builder.setInsertionPointAfter(loop);
+      }
+    } else {
+      assert(isDenseDLT(dlt) || isSingletonDLT(dlt));
+    }
+  }
+}
+
+/// Generates a subview into the sizes.
+static Value genSliceToSize(OpBuilder &builder, Location loc, Value mem,
+                            Value sz) {
+  auto elemTp = llvm::cast<MemRefType>(mem.getType()).getElementType();
+  return builder
+      .create<memref::SubViewOp>(
+          loc, MemRefType::get({ShapedType::kDynamic}, elemTp), mem,
+          ValueRange{}, ValueRange{sz}, ValueRange{},
+          ArrayRef<int64_t>{0},                    // static offset
+          ArrayRef<int64_t>{ShapedType::kDynamic}, // dynamic size
+          ArrayRef<int64_t>{1})                    // static stride
+      .getResult();
+}
+
+/// Creates the reassociation array.
+static ReassociationIndices getReassociationForFlattening(ShapedType srcTp) {
+  ReassociationIndices reassociation;
+  for (int i = 0, e = srcTp.getRank(); i < e; i++)
+    reassociation.push_back(i);
+  return reassociation;
+}
+
+/// Generates scalar to tensor cast.
+static Value genScalarToTensor(OpBuilder &builder, Location loc, Value elem,
+                               Type dstTp) {
+  if (auto rtp = dstTp.dyn_cast<RankedTensorType>()) {
+    // Scalars can only be converted to 0-ranked tensors.
+    if (rtp.getRank() != 0)
+      return nullptr;
+    elem = genCast(builder, loc, elem, rtp.getElementType());
+    return builder.create<tensor::FromElementsOp>(loc, rtp, elem);
+  }
+  return genCast(builder, loc, elem, dstTp);
+}
+
+//===----------------------------------------------------------------------===//
+// Codegen rules.
+//===----------------------------------------------------------------------===//
+
+namespace {
+
 /// Helper class to help lowering sparse_tensor.insert operation.
 class SparseInsertGenerator
     : public FuncCallOrInlineGenerator<SparseInsertGenerator> {
@@ -471,90 +556,6 @@ public:
 private:
   TensorType rtp;
 };
-
-/// Generations insertion finalization code.
-static void genEndInsert(OpBuilder &builder, Location loc,
-                         SparseTensorDescriptor desc) {
-  const SparseTensorType stt(desc.getRankedTensorType());
-  const Level lvlRank = stt.getLvlRank();
-  for (Level l = 0; l < lvlRank; l++) {
-    const auto dlt = stt.getLvlType(l);
-    if (isLooseCompressedDLT(dlt))
-      llvm_unreachable("TODO: Not yet implemented");
-    if (isCompressedDLT(dlt)) {
-      // Compressed dimensions need a position cleanup for all entries
-      // that were not visited during the insertion pass.
-      //
-      // TODO: avoid cleanup and keep compressed scheme consistent at all
-      // times?
-      //
-      if (l > 0) {
-        Type posType = stt.getPosType();
-        Value posMemRef = desc.getPosMemRef(l);
-        Value hi = desc.getPosMemSize(builder, loc, l);
-        Value zero = constantIndex(builder, loc, 0);
-        Value one = constantIndex(builder, loc, 1);
-        // Vector of only one, but needed by createFor's prototype.
-        SmallVector<Value, 1> inits{genLoad(builder, loc, posMemRef, zero)};
-        scf::ForOp loop = createFor(builder, loc, hi, inits, one);
-        Value i = loop.getInductionVar();
-        Value oldv = loop.getRegionIterArg(0);
-        Value newv = genLoad(builder, loc, posMemRef, i);
-        Value posZero = constantZero(builder, loc, posType);
-        Value cond = builder.create<arith::CmpIOp>(
-            loc, arith::CmpIPredicate::eq, newv, posZero);
-        scf::IfOp ifOp = builder.create<scf::IfOp>(loc, TypeRange(posType),
-                                                   cond, /*else*/ true);
-        builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
-        genStore(builder, loc, oldv, posMemRef, i);
-        builder.create<scf::YieldOp>(loc, oldv);
-        builder.setInsertionPointToStart(&ifOp.getElseRegion().front());
-        builder.create<scf::YieldOp>(loc, newv);
-        builder.setInsertionPointAfter(ifOp);
-        builder.create<scf::YieldOp>(loc, ifOp.getResult(0));
-        builder.setInsertionPointAfter(loop);
-      }
-    } else {
-      assert(isDenseDLT(dlt) || isSingletonDLT(dlt));
-    }
-  }
-}
-
-static Value genSliceToSize(OpBuilder &builder, Location loc, Value mem,
-                            Value sz) {
-  auto elemTp = llvm::cast<MemRefType>(mem.getType()).getElementType();
-  return builder
-      .create<memref::SubViewOp>(
-          loc, MemRefType::get({ShapedType::kDynamic}, elemTp), mem,
-          ValueRange{}, ValueRange{sz}, ValueRange{},
-          ArrayRef<int64_t>{0},                    // static offset
-          ArrayRef<int64_t>{ShapedType::kDynamic}, // dynamic size
-          ArrayRef<int64_t>{1})                    // static stride
-      .getResult();
-}
-
-static ReassociationIndices getReassociationForFlattening(ShapedType srcTp) {
-  ReassociationIndices reassociation;
-  for (int i = 0, e = srcTp.getRank(); i < e; i++)
-    reassociation.push_back(i);
-  return reassociation;
-}
-
-static Value genScalarToTensor(OpBuilder &builder, Location loc, Value elem,
-                               Type dstTp) {
-  if (auto rtp = dstTp.dyn_cast<RankedTensorType>()) {
-    // Scalars can only be converted to 0-ranked tensors.
-    if (rtp.getRank() != 0)
-      return nullptr;
-    elem = genCast(builder, loc, elem, rtp.getElementType());
-    return builder.create<tensor::FromElementsOp>(loc, rtp, elem);
-  }
-  return genCast(builder, loc, elem, dstTp);
-}
-
-//===----------------------------------------------------------------------===//
-// Codegen rules.
-//===----------------------------------------------------------------------===//
 
 /// Sparse tensor storage conversion rule for returns.
 class SparseReturnConverter : public OpConversionPattern<func::ReturnOp> {
