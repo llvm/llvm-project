@@ -3035,11 +3035,10 @@ void Sema::DeclareGlobalNewDelete() {
   if (!StdBadAlloc && !getLangOpts().CPlusPlus11) {
     // The "std::bad_alloc" class has not yet been declared, so build it
     // implicitly.
-    StdBadAlloc = CXXRecordDecl::Create(Context, TTK_Class,
-                                        getOrCreateStdNamespace(),
-                                        SourceLocation(), SourceLocation(),
-                                      &PP.getIdentifierTable().get("bad_alloc"),
-                                        nullptr);
+    StdBadAlloc = CXXRecordDecl::Create(
+        Context, TagTypeKind::Class, getOrCreateStdNamespace(),
+        SourceLocation(), SourceLocation(),
+        &PP.getIdentifierTable().get("bad_alloc"), nullptr);
     getStdBadAlloc()->setImplicit(true);
 
     // The implicitly declared "std::bad_alloc" should live in global module

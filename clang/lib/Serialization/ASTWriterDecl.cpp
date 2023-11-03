@@ -445,7 +445,7 @@ void ASTDeclWriter::VisitTagDecl(TagDecl *D) {
   Record.push_back(D->getIdentifierNamespace());
 
   BitsPacker TagDeclBits;
-  TagDeclBits.addBits(D->getTagKind(), /*BitWidth=*/3);
+  TagDeclBits.addBits(llvm::to_underlying(D->getTagKind()), /*BitWidth=*/3);
   TagDeclBits.addBit(!isa<CXXRecordDecl>(D) ? D->isCompleteDefinition() : 0);
   TagDeclBits.addBit(D->isEmbeddedInDeclarator());
   TagDeclBits.addBit(D->isFreeStanding());
