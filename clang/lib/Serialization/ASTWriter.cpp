@@ -1212,52 +1212,54 @@ void ASTWriter::writeUnhashedControlBlock(Preprocessor &PP,
     Record.clear();
   }
 
+  const auto &HSOpts = PP.getHeaderSearchInfo().getHeaderSearchOpts();
+
   // Diagnostic options.
   const auto &Diags = Context.getDiagnostics();
   const DiagnosticOptions &DiagOpts = Diags.getDiagnosticOptions();
+  if (!HSOpts.ModulesSkipDiagnosticOptions) {
 #define DIAGOPT(Name, Bits, Default) Record.push_back(DiagOpts.Name);
 #define ENUM_DIAGOPT(Name, Type, Bits, Default)                                \
   Record.push_back(static_cast<unsigned>(DiagOpts.get##Name()));
 #include "clang/Basic/DiagnosticOptions.def"
-  Record.push_back(DiagOpts.Warnings.size());
-  for (unsigned I = 0, N = DiagOpts.Warnings.size(); I != N; ++I)
-    AddString(DiagOpts.Warnings[I], Record);
-  Record.push_back(DiagOpts.Remarks.size());
-  for (unsigned I = 0, N = DiagOpts.Remarks.size(); I != N; ++I)
-    AddString(DiagOpts.Remarks[I], Record);
-  // Note: we don't serialize the log or serialization file names, because they
-  // are generally transient files and will almost always be overridden.
-  Stream.EmitRecord(DIAGNOSTIC_OPTIONS, Record);
-  Record.clear();
+    Record.push_back(DiagOpts.Warnings.size());
+    for (unsigned I = 0, N = DiagOpts.Warnings.size(); I != N; ++I)
+      AddString(DiagOpts.Warnings[I], Record);
+    Record.push_back(DiagOpts.Remarks.size());
+    for (unsigned I = 0, N = DiagOpts.Remarks.size(); I != N; ++I)
+      AddString(DiagOpts.Remarks[I], Record);
+    // Note: we don't serialize the log or serialization file names, because
+    // they are generally transient files and will almost always be overridden.
+    Stream.EmitRecord(DIAGNOSTIC_OPTIONS, Record);
+    Record.clear();
+  }
 
   // Header search paths.
-  Record.clear();
-  const HeaderSearchOptions &HSOpts =
-      PP.getHeaderSearchInfo().getHeaderSearchOpts();
+  if (!HSOpts.ModulesSkipHeaderSearchPaths) {
+    // Include entries.
+    Record.push_back(HSOpts.UserEntries.size());
+    for (unsigned I = 0, N = HSOpts.UserEntries.size(); I != N; ++I) {
+      const HeaderSearchOptions::Entry &Entry = HSOpts.UserEntries[I];
+      AddString(Entry.Path, Record);
+      Record.push_back(static_cast<unsigned>(Entry.Group));
+      Record.push_back(Entry.IsFramework);
+      Record.push_back(Entry.IgnoreSysRoot);
+    }
 
-  // Include entries.
-  Record.push_back(HSOpts.UserEntries.size());
-  for (unsigned I = 0, N = HSOpts.UserEntries.size(); I != N; ++I) {
-    const HeaderSearchOptions::Entry &Entry = HSOpts.UserEntries[I];
-    AddString(Entry.Path, Record);
-    Record.push_back(static_cast<unsigned>(Entry.Group));
-    Record.push_back(Entry.IsFramework);
-    Record.push_back(Entry.IgnoreSysRoot);
+    // System header prefixes.
+    Record.push_back(HSOpts.SystemHeaderPrefixes.size());
+    for (unsigned I = 0, N = HSOpts.SystemHeaderPrefixes.size(); I != N; ++I) {
+      AddString(HSOpts.SystemHeaderPrefixes[I].Prefix, Record);
+      Record.push_back(HSOpts.SystemHeaderPrefixes[I].IsSystemHeader);
+    }
+
+    // VFS overlay files.
+    Record.push_back(HSOpts.VFSOverlayFiles.size());
+    for (StringRef VFSOverlayFile : HSOpts.VFSOverlayFiles)
+      AddString(VFSOverlayFile, Record);
+
+    Stream.EmitRecord(HEADER_SEARCH_PATHS, Record);
   }
-
-  // System header prefixes.
-  Record.push_back(HSOpts.SystemHeaderPrefixes.size());
-  for (unsigned I = 0, N = HSOpts.SystemHeaderPrefixes.size(); I != N; ++I) {
-    AddString(HSOpts.SystemHeaderPrefixes[I].Prefix, Record);
-    Record.push_back(HSOpts.SystemHeaderPrefixes[I].IsSystemHeader);
-  }
-
-  // VFS overlay files.
-  Record.push_back(HSOpts.VFSOverlayFiles.size());
-  for (StringRef VFSOverlayFile : HSOpts.VFSOverlayFiles)
-    AddString(VFSOverlayFile, Record);
-
-  Stream.EmitRecord(HEADER_SEARCH_PATHS, Record);
 
   // Write out the diagnostic/pragma mappings.
   WritePragmaDiagnosticMappings(Diags, /* isModule = */ WritingModule);

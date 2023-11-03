@@ -656,6 +656,8 @@ void RVVEmitter::createRVVIntrinsics(
                                   .Case("RV64", RVV_REQ_RV64)
                                   .Case("ZvfhminOrZvfh", RVV_REQ_ZvfhminOrZvfh)
                                   .Case("Xsfvcp", RVV_REQ_Xsfvcp)
+                                  .Case("Xsfvfnrclipxfqf", RVV_REQ_Xsfvfnrclipxfqf)
+                                  .Case("Xsfvfwmaccqqq", RVV_REQ_Xsfvfwmaccqqq)
                                   .Case("Xsfvqmaccdod", RVV_REQ_Xsfvqmaccdod)
                                   .Case("Xsfvqmaccqoq", RVV_REQ_Xsfvqmaccqoq)
                                   .Case("Zvbb", RVV_REQ_Zvbb)
@@ -664,6 +666,7 @@ void RVVEmitter::createRVVIntrinsics(
                                   .Case("Zvkg", RVV_REQ_Zvkg)
                                   .Case("Zvkned", RVV_REQ_Zvkned)
                                   .Case("Zvknha", RVV_REQ_Zvknha)
+                                  .Case("Zvknhb", RVV_REQ_Zvknhb)
                                   .Case("Zvksed", RVV_REQ_Zvksed)
                                   .Case("Zvksh", RVV_REQ_Zvksh)
                                   .Default(RVV_REQ_None);
