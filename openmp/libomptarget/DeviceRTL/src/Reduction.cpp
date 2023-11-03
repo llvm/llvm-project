@@ -65,12 +65,10 @@ static uint32_t gpu_irregular_simd_reduce(void *reduce_data,
 }
 #endif
 
-static int32_t nvptx_parallel_reduce_nowait(int32_t TId, int32_t num_vars,
-                                            uint64_t reduce_size,
+static int32_t nvptx_parallel_reduce_nowait(
                                             void *reduce_data,
                                             ShuffleReductFnTy shflFct,
-                                            InterWarpCopyFnTy cpyFct,
-                                            bool isSPMDExecutionMode, bool) {
+                                            InterWarpCopyFnTy cpyFct) {
   uint32_t BlockThreadId = mapping::getThreadIdInBlock();
   if (mapping::isMainThreadInGenericMode(/* IsSPMD */ false))
     BlockThreadId = 0;
@@ -155,7 +153,7 @@ static int32_t nvptx_parallel_reduce_nowait(int32_t TId, int32_t num_vars,
 
   // Get the OMP thread Id. This is different from BlockThreadId in the case of
   // an L2 parallel region.
-  return TId == 0;
+  return BlockThreadId == 0;
 #endif // __CUDA_ARCH__ >= 700
 }
 
@@ -170,19 +168,19 @@ uint32_t kmpcMin(uint32_t x, uint32_t y) { return x < y ? x : y; }
 } // namespace
 
 extern "C" {
-int32_t __kmpc_nvptx_parallel_reduce_nowait_v2(
-    IdentTy *Loc, int32_t TId, int32_t num_vars, uint64_t reduce_size,
-    void *reduce_data, ShuffleReductFnTy shflFct, InterWarpCopyFnTy cpyFct) {
-  return nvptx_parallel_reduce_nowait(TId, num_vars, reduce_size, reduce_data,
-                                      shflFct, cpyFct, mapping::isSPMDMode(),
-                                      false);
+int32_t __kmpc_nvptx_parallel_reduce_nowait_v2(IdentTy *Loc,
+                                               uint64_t reduce_data_size,
+                                               void *reduce_data,
+                                               ShuffleReductFnTy shflFct,
+                                               InterWarpCopyFnTy cpyFct) {
+  return nvptx_parallel_reduce_nowait(reduce_data, shflFct, cpyFct);
 }
 
 /// Mostly like _v2 but with the builtin assumption that we have less than
 /// num_of_records (by default 1024) teams.
 int32_t __kmpc_nvptx_teams_reduce_nowait_v3(
-    IdentTy *Loc, int32_t TId, void *__restrict__ GlobalBuffer,
-    uint32_t num_of_records, void *reduce_data, ShuffleReductFnTy shflFct,
+    IdentTy *Loc, void *__restrict__ GlobalBuffer, uint32_t num_of_records,
+    uint64_t reduce_data_size, void *reduce_data, ShuffleReductFnTy shflFct,
     InterWarpCopyFnTy cpyFct, ListGlobalFnTy lgcpyFct, ListGlobalFnTy lgredFct,
     ListGlobalFnTy glcpyFct, ListGlobalFnTy glredFct) {
   // Terminate all threads in non-SPMD mode except for the main thread.
@@ -267,10 +265,10 @@ int32_t __kmpc_nvptx_teams_reduce_nowait_v3(
 }
 
 int32_t __kmpc_nvptx_teams_reduce_nowait_v2(
-    IdentTy *Loc, int32_t TId, void *GlobalBuffer, uint32_t num_of_records,
-    void *reduce_data, ShuffleReductFnTy shflFct, InterWarpCopyFnTy cpyFct,
-    ListGlobalFnTy lgcpyFct, ListGlobalFnTy lgredFct, ListGlobalFnTy glcpyFct,
-    ListGlobalFnTy glredFct) {
+    IdentTy *Loc, void *GlobalBuffer, uint32_t num_of_records,
+    uint64_t reduce_data_size, void *reduce_data, ShuffleReductFnTy shflFct,
+    InterWarpCopyFnTy cpyFct, ListGlobalFnTy lgcpyFct, ListGlobalFnTy lgredFct,
+    ListGlobalFnTy glcpyFct, ListGlobalFnTy glredFct) {
   // The first check is a compile time constant, the second one a runtime check.
   // If the first one succeeds we will use the specialized version.
   if ((state::getKernelEnvironment().Configuration.MaxTeams >= 0 &&
@@ -278,8 +276,8 @@ int32_t __kmpc_nvptx_teams_reduce_nowait_v2(
        num_of_records == 1024) ||
       (omp_get_num_teams() <= num_of_records))
     return __kmpc_nvptx_teams_reduce_nowait_v3(
-        Loc, TId, GlobalBuffer, num_of_records, reduce_data, shflFct, cpyFct,
-        lgcpyFct, lgredFct, glcpyFct, glredFct);
+        Loc, GlobalBuffer, num_of_records, reduce_data_size, reduce_data,
+        shflFct, cpyFct, lgcpyFct, lgredFct, glcpyFct, glredFct);
 
   // Terminate all threads in non-SPMD mode except for the master thread.
   uint32_t ThreadId = mapping::getThreadIdInBlock();
