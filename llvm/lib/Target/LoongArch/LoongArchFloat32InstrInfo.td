@@ -143,6 +143,13 @@ def PseudoCopyCFR : Pseudo<(outs CFR:$dst), (ins CFR:$src)> {
   let Size = 12;
 }
 
+// Pseduo float conditional long jump instructions.
+let isBarrier = 1, isBranch = 1, hasSideEffects = 0, mayLoad = 0,
+    mayStore = 0, isAsmParserOnly = 1, hasNoSchedulingInfo = 1 in {
+def PseudoLongBCEQZ : Pseudo<(outs), (ins CFR:$cc, simm26_b:$imm26), []>;
+def PseudoLongBCNEZ : Pseudo<(outs), (ins CFR:$cc, simm26_b:$imm26), []>;
+}
+
 } // Predicates = [HasBasicF]
 
 //===----------------------------------------------------------------------===//

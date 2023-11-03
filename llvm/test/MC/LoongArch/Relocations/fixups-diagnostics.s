@@ -1,4 +1,4 @@
-# RUN: not llvm-mc --triple=loongarch64 --filetype=obj %s -o /dev/null 2>&1 | FileCheck %s
+# RUN: not llvm-mc --triple=loongarch64 --filetype=obj %s -loongarch-asm-relax-branches=0 -o /dev/null 2>&1 | FileCheck %s
 
   beq $a0, $a1, unaligned # CHECK: :[[#@LINE]]:3: error: fixup value must be 4-byte aligned
   beqz $a0, unaligned # CHECK: :[[#@LINE]]:3: error: fixup value must be 4-byte aligned

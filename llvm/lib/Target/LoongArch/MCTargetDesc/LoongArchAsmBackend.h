@@ -46,8 +46,14 @@ public:
   bool fixupNeedsRelaxation(const MCFixup &Fixup, uint64_t Value,
                             const MCRelaxableFragment *DF,
                             const MCAsmLayout &Layout) const override {
-    return false;
+    llvm_unreachable("Handled by fixupNeedsRelaxationAdvanced");
   }
+
+  bool fixupNeedsRelaxationAdvanced(const MCFixup &Fixup, bool Resolved,
+                                    uint64_t Value,
+                                    const MCRelaxableFragment *DF,
+                                    const MCAsmLayout &Layout,
+                                    const bool WasForced) const override;
 
   unsigned getNumFixupKinds() const override {
     return LoongArch::NumTargetFixupKinds;
@@ -57,8 +63,11 @@ public:
 
   const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override;
 
+  bool mayNeedRelaxation(const MCInst &Inst,
+                         const MCSubtargetInfo &STI) const override;
+
   void relaxInstruction(MCInst &Inst,
-                        const MCSubtargetInfo &STI) const override {}
+                        const MCSubtargetInfo &STI) const override;
 
   bool writeNopData(raw_ostream &OS, uint64_t Count,
                     const MCSubtargetInfo *STI) const override;
