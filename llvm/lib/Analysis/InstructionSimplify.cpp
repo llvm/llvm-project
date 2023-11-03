@@ -2028,6 +2028,16 @@ static Value *simplifyAndCommutative(Value *Op0, Value *Op1,
       isKnownToBeAPowerOfTwo(Op1, Q.DL, /*OrZero*/ true, 0, Q.AC, Q.CxtI, Q.DT))
     return Constant::getNullValue(Op1->getType());
 
+  // (x << N) & ((x << M) - 1) --> 0, where x is known to be a power of 2 and
+  // M <= N.
+  const APInt *Shift1, *Shift2;
+  if (match(Op0, m_Shl(m_Value(X), m_APInt(Shift1))) &&
+      match(Op1, m_Add(m_Shl(m_Specific(X), m_APInt(Shift2)), m_AllOnes())) &&
+      isKnownToBeAPowerOfTwo(X, Q.DL, /*OrZero*/ true, /*Depth*/ 0, Q.AC,
+                             Q.CxtI) &&
+      Shift1->uge(*Shift2))
+    return Constant::getNullValue(Op0->getType());
+
   if (Value *V =
           simplifyAndOrWithICmpEq(Instruction::And, Op0, Op1, Q, MaxRecurse))
     return V;
