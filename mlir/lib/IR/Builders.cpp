@@ -316,15 +316,6 @@ ArrayAttr Builder::getStrArrayAttr(ArrayRef<StringRef> values) {
   return getArrayAttr(attrs);
 }
 
-ArrayAttr
-Builder::getArrayOfI32ArrayAttr(ArrayRef<SmallVector<int32_t>> values) {
-  auto attrs =
-      llvm::map_to_vector<8>(values, [this](ArrayRef<int32_t> v) -> Attribute {
-        return getDenseI32ArrayAttr(v);
-      });
-  return getArrayAttr(attrs);
-}
-
 ArrayAttr Builder::getTypeArrayAttr(TypeRange values) {
   auto attrs = llvm::map_to_vector<8>(
       values, [](Type v) -> Attribute { return TypeAttr::get(v); });
