@@ -158,7 +158,7 @@ static std::error_code WildcardExpand(StringRef Arg,
   // option. Paths that start with \\?\ are absolute paths, and aren't
   // expected to be used with wildcard expressions.
   if (Arg.find_first_of("*?") == StringRef::npos || Arg == "/?" ||
-      Arg == "-?" || Arg.startswith("\\\\?\\")) {
+      Arg == "-?" || Arg.starts_with("\\\\?\\")) {
     Args.push_back(Arg.data());
     return EC;
   }
