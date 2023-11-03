@@ -1781,9 +1781,12 @@ static bool CheckConstexprReturnType(Sema &SemaRef, const FunctionDecl *FD,
 /// \returns diagnostic %select index.
 static unsigned getRecordDiagFromTagKind(TagTypeKind Tag) {
   switch (Tag) {
-  case TTK_Struct: return 0;
-  case TTK_Interface: return 1;
-  case TTK_Class:  return 2;
+  case TagTypeKind::Struct:
+    return 0;
+  case TagTypeKind::Interface:
+    return 1;
+  case TagTypeKind::Class:
+    return 2;
   default: llvm_unreachable("Invalid tag kind for record diagnostic!");
   }
 }
@@ -2680,7 +2683,7 @@ Sema::CheckBaseSpecifier(CXXRecordDecl *Class,
                          TypeSourceInfo *TInfo,
                          SourceLocation EllipsisLoc) {
   // In HLSL, unspecified class access is public rather than private.
-  if (getLangOpts().HLSL && Class->getTagKind() == TTK_Class &&
+  if (getLangOpts().HLSL && Class->getTagKind() == TagTypeKind::Class &&
       Access == AS_none)
     Access = AS_public;
 
@@ -2733,9 +2736,9 @@ Sema::CheckBaseSpecifier(CXXRecordDecl *Class,
     // emitted.
     if (!Class->getTypeForDecl()->isDependentType())
       Class->setInvalidDecl();
-    return new (Context) CXXBaseSpecifier(SpecifierRange, Virtual,
-                                          Class->getTagKind() == TTK_Class,
-                                          Access, TInfo, EllipsisLoc);
+    return new (Context) CXXBaseSpecifier(
+        SpecifierRange, Virtual, Class->getTagKind() == TagTypeKind::Class,
+        Access, TInfo, EllipsisLoc);
   }
 
   // Base specifiers must be record types.
@@ -2821,9 +2824,9 @@ Sema::CheckBaseSpecifier(CXXRecordDecl *Class,
     Class->setInvalidDecl();
 
   // Create the base specifier.
-  return new (Context) CXXBaseSpecifier(SpecifierRange, Virtual,
-                                        Class->getTagKind() == TTK_Class,
-                                        Access, TInfo, EllipsisLoc);
+  return new (Context) CXXBaseSpecifier(
+      SpecifierRange, Virtual, Class->getTagKind() == TagTypeKind::Class,
+      Access, TInfo, EllipsisLoc);
 }
 
 /// ActOnBaseSpecifier - Parsed a base specifier. A base specifier is
@@ -7010,7 +7013,7 @@ void Sema::CheckCompletedCXXClass(Scope *S, CXXRecordDecl *Record) {
           (F->getType().isConstQualified() && F->getType()->isScalarType())) {
         if (!Complained) {
           Diag(Record->getLocation(), diag::warn_no_constructor_for_refconst)
-            << Record->getTagKind() << Record;
+              << llvm::to_underlying(Record->getTagKind()) << Record;
           Complained = true;
         }
 

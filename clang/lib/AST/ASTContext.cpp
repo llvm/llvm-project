@@ -6525,12 +6525,12 @@ bool ASTContext::isSameEntity(const NamedDecl *X, const NamedDecl *Y) const {
   if (const auto *TagX = dyn_cast<TagDecl>(X)) {
     const auto *TagY = cast<TagDecl>(Y);
     return (TagX->getTagKind() == TagY->getTagKind()) ||
-           ((TagX->getTagKind() == TTK_Struct ||
-             TagX->getTagKind() == TTK_Class ||
-             TagX->getTagKind() == TTK_Interface) &&
-            (TagY->getTagKind() == TTK_Struct ||
-             TagY->getTagKind() == TTK_Class ||
-             TagY->getTagKind() == TTK_Interface));
+           ((TagX->getTagKind() == TagTypeKind::Struct ||
+             TagX->getTagKind() == TagTypeKind::Class ||
+             TagX->getTagKind() == TagTypeKind::Interface) &&
+            (TagY->getTagKind() == TagTypeKind::Struct ||
+             TagY->getTagKind() == TagTypeKind::Class ||
+             TagY->getTagKind() == TagTypeKind::Interface));
   }
 
   // Functions with the same type and linkage match.
