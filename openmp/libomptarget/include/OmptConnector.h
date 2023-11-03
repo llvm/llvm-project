@@ -30,10 +30,6 @@
 #undef DEBUG_PREFIX
 #define DEBUG_PREFIX "OMPT"
 
-#define stringify(s) #s
-
-#define LIBOMPTARGET_GET_TARGET_OPID libomptarget_get_target_opid
-
 /// Type for the function to be invoked for connecting two libraries.
 typedef void (*OmptConnectRtnTy)(ompt_start_tool_result_t *result);
 

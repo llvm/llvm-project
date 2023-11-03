@@ -110,30 +110,31 @@ targetData(ident_t *Loc, int64_t DeviceId, int32_t ArgNum, void **ArgsBase,
   AsyncInfoTy &AsyncInfo = TargetAsyncInfo;
 
   /// RAII to establish tool anchors before and after data begin / end / update
-  OMPT_IF_BUILT(assert((TargetDataFunction == targetDataBegin ||
-                        TargetDataFunction == targetDataEnd ||
-                        TargetDataFunction == targetDataUpdate) &&
-                       "Encountered unexpected TargetDataFunction during "
-                       "execution of targetData");
-                auto CallbackFunctions =
-                    (TargetDataFunction == targetDataBegin)
-                        ? RegionInterface.getCallbacks<ompt_target_enter_data>()
-                    : (TargetDataFunction == targetDataEnd)
-                        ? RegionInterface.getCallbacks<ompt_target_exit_data>()
-                        : RegionInterface.getCallbacks<ompt_target_update>();
+  OMPT_IF_BUILT(
+      assert((TargetDataFunction == targetDataBegin ||
+              TargetDataFunction == targetDataEnd ||
+              TargetDataFunction == targetDataUpdate) &&
+             "Encountered unexpected TargetDataFunction during "
+             "execution of targetData");
+      auto CallbackFunctions =
+          (TargetDataFunction == targetDataBegin)
+              ? RegionInterface.getCallbacks<ompt_target_enter_data>()
+          : (TargetDataFunction == targetDataEnd)
+              ? RegionInterface.getCallbacks<ompt_target_exit_data>()
+              : RegionInterface.getCallbacks<ompt_target_update>();
 
-                auto TraceGenerators =
-                    (TargetDataFunction == targetDataBegin)
-                        ? RegionInterface.getTraceGenerators<ompt_target_enter_data>()
-                    : (TargetDataFunction == targetDataEnd)
-                        ? RegionInterface.getTraceGenerators<ompt_target_exit_data>()
-                    : RegionInterface.getTraceGenerators<ompt_target_update>();
-                InterfaceRAII TargetDataRAII(CallbackFunctions, DeviceId,
-                                             OMPT_GET_RETURN_ADDRESS(0));)
+      auto TraceGenerators =
+          (TargetDataFunction == targetDataBegin)
+              ? RegionInterface.getTraceGenerators<ompt_target_enter_data>()
+          : (TargetDataFunction == targetDataEnd)
+              ? RegionInterface.getTraceGenerators<ompt_target_exit_data>()
+              : RegionInterface.getTraceGenerators<ompt_target_update>();
+      InterfaceRAII TargetDataRAII(CallbackFunctions, DeviceId,
+                                   /*CodePtr=*/OMPT_GET_RETURN_ADDRESS(0));
       // ToDo: mhalk Do we need a check for TracingActive here?
       InterfaceRAII TargetDataTraceRAII(
           TraceGenerators, DeviceId,
-          /* CodePtr */ OMPT_GET_RETURN_ADDRESS(0));
+          /*CodePtr=*/OMPT_GET_RETURN_ADDRESS(0));)
 
   int Rc = OFFLOAD_SUCCESS;
   Rc = TargetDataFunction(Loc, Device, ArgNum, ArgsBase, Args, ArgSizes,

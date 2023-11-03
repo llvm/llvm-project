@@ -677,8 +677,8 @@ GenericDeviceTy::GenericDeviceTy(int32_t DeviceId, int32_t NumDevices,
 #undef bindOmptCallback
 
 #define bindOmptTracingFunction(FunctionName)                                  \
-  if (ompt::CallbacksInitialized && ompt::doLookup) {                          \
-    FunctionName##_fn = ompt::doLookup(#FunctionName);                         \
+  if (ompt::CallbacksInitialized && ompt::lookupDeviceTracingFn) {             \
+    FunctionName##_fn = ompt::lookupDeviceTracingFn(#FunctionName);            \
     DP("device tracing fn bound %s=%p\n", #FunctionName,                       \
        ((void *)(uint64_t)FunctionName##_fn));                                 \
   }
@@ -704,7 +704,7 @@ Error GenericDeviceTy::init(GenericPluginTy &Plugin) {
                               Plugin.getDeviceIdStartIndex(),
                           /* type */ getComputeUnitKind().c_str(),
                           /* device */ DevicePtr,
-                          /* lookup */ ompt::doLookup,
+                          /* lookup */ ompt::lookupDeviceTracingFn,
                           /* documentation */ nullptr);
     }
   }

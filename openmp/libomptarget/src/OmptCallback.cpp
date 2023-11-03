@@ -492,22 +492,6 @@ void llvm::omp::target::ompt::connectLibrary() {
   DP("Exiting connectLibrary (libomp)\n");
 }
 
-static void LIBOMPTARGET_GET_TARGET_OPID(uint64_t *DeviceId,
-                                         ompt_id_t *TargetId,
-                                         ompt_id_t *HostOpId) {
-  printf("  -- Executing LIBOMPTARGET_GET_TARGET_OPID <<<<<<<<<<<<<<<<<<<<<<<");
-  *HostOpId = IdCounter;
-}
-
-ompt_interface_fn_t
-llvm::omp::target::ompt::doLookup(const char *InterfaceFunctionName) {
-  if (strcmp(InterfaceFunctionName, stringify(LIBOMPTARGET_GET_TARGET_OPID)) ==
-      0)
-    return (ompt_interface_fn_t)LIBOMPTARGET_GET_TARGET_OPID;
-
-  return (ompt_interface_fn_t)lookupCallbackByName(InterfaceFunctionName);
-}
-
 extern "C" {
 /// Used for connecting libomptarget with a plugin
 void ompt_libomptarget_connect(ompt_start_tool_result_t *result) {

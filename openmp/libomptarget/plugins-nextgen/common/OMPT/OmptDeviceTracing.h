@@ -70,7 +70,8 @@ void setDeviceId(ompt_device_t *Device, int32_t DeviceId);
 void removeDeviceId(ompt_device_t *Device);
 
 /// Provide name based lookup for the device tracing functions
-ompt_interface_fn_t doLookup(const char *InterfaceFunctionName);
+extern ompt_interface_fn_t
+lookupDeviceTracingFn(const char *InterfaceFunctionName);
 
 /// Host to device linear clock correlation
 extern double HostToDeviceSlope;

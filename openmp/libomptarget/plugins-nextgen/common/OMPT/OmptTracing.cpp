@@ -273,8 +273,8 @@ void llvm::omp::target::ompt::setOmptGrantedNumTeams(uint64_t NumTeams) {
   ompt_set_granted_teams_fn(NumTeams);
 }
 
-ompt_interface_fn_t
-llvm::omp::target::ompt::doLookup(const char *InterfaceFunctionName) {
+ompt_interface_fn_t llvm::omp::target::ompt::lookupDeviceTracingFn(
+    const char *InterfaceFunctionName) {
 #define compareAgainst(AvailableFunction)                                      \
   if (strcmp(InterfaceFunctionName, #AvailableFunction) == 0)                  \
     return (ompt_interface_fn_t)AvailableFunction;

@@ -47,9 +47,6 @@ extern ompt_get_callback_t lookupCallbackByCode;
 /// \p InterfaceFunctionName the name of the OMPT callback function to look up
 extern ompt_function_lookup_t lookupCallbackByName;
 
-/// Wrapper function to find a callback given its name
-extern ompt_interface_fn_t doLookup(const char *InterfaceFunctionName);
-
 /// This is the function called by the higher layer (libomp / libomtarget)
 /// responsible for initializing OMPT in this library. This is passed to libomp
 /// as part of the OMPT connector object.

@@ -34,18 +34,10 @@ ompt_function_lookup_t llvm::omp::target::ompt::lookupCallbackByName = nullptr;
 #undef DEBUG_PREFIX
 #define DEBUG_PREFIX "OMPT"
 
-static ompt_get_target_info_t LIBOMPTARGET_GET_TARGET_OPID;
-
 int llvm::omp::target::ompt::initializeLibrary(ompt_function_lookup_t lookup,
                                                int initial_device_num,
                                                ompt_data_t *tool_data) {
   DP("Executing initializeLibrary (libomptarget)\n");
-
-  LIBOMPTARGET_GET_TARGET_OPID =
-      (ompt_get_target_info_t)lookup(stringify(LIBOMPTARGET_GET_TARGET_OPID));
-
-  DP("libomptarget_get_target_info = %p\n",
-     FUNCPTR_TO_PTR(LIBOMPTARGET_GET_TARGET_OPID));
 
 #define bindOmptFunctionName(OmptFunction, DestinationFunction)                \
   if (lookup)                                                                  \
@@ -64,26 +56,26 @@ int llvm::omp::target::ompt::initializeLibrary(ompt_function_lookup_t lookup,
     return 0;
 }
 
-  void llvm::omp::target::ompt::finalizeLibrary(ompt_data_t * tool_data) {
-    DP("Executing finalizeLibrary (libomptarget)\n");
-  }
+void llvm::omp::target::ompt::finalizeLibrary(ompt_data_t *tool_data) {
+  DP("Executing finalizeLibrary (libomptarget)\n");
+}
 
-  void llvm::omp::target::ompt::connectLibrary() {
-    DP("Entering connectLibrary (libomptarget)\n");
-    /// Connect plugin instance with libomptarget
-    OmptLibraryConnectorTy LibomptargetConnector("libomptarget");
-    ompt_start_tool_result_t OmptResult;
+void llvm::omp::target::ompt::connectLibrary() {
+  DP("Entering connectLibrary (libomptarget)\n");
+  /// Connect plugin instance with libomptarget
+  OmptLibraryConnectorTy LibomptargetConnector("libomptarget");
+  ompt_start_tool_result_t OmptResult;
 
-    // Initialize OmptResult with the init and fini functions that will be
-    // called by the connector
-    OmptResult.initialize = ompt::initializeLibrary;
-    OmptResult.finalize = ompt::finalizeLibrary;
-    OmptResult.tool_data.value = 0;
+  // Initialize OmptResult with the init and fini functions that will be
+  // called by the connector
+  OmptResult.initialize = ompt::initializeLibrary;
+  OmptResult.finalize = ompt::finalizeLibrary;
+  OmptResult.tool_data.value = 0;
 
-    // Now call connect that causes the above init/fini functions to be called
-    LibomptargetConnector.connect(&OmptResult);
-    DP("Exiting connectLibrary (libomptarget)\n");
-  }
+  // Now call connect that causes the above init/fini functions to be called
+  LibomptargetConnector.connect(&OmptResult);
+  DP("Exiting connectLibrary (libomptarget)\n");
+}
 
 #pragma pop_macro("DEBUG_PREFIX")
 
