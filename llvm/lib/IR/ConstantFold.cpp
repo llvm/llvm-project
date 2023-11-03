@@ -1172,30 +1172,24 @@ static ICmpInst::Predicate evaluateICmpRelation(Constant *V1, Constant *V2) {
   }
 
   if (const BlockAddress *BA = dyn_cast<BlockAddress>(V1)) {
-    // Now we know that the RHS is a BlockAddress or simple
-    // constant (which, since the types must match, means that it is a
-    // ConstantPointerNull).
+    // Now we know that the RHS is a BlockAddress or simple constant.
     if (const BlockAddress *BA2 = dyn_cast<BlockAddress>(V2)) {
       // Block address in another function can't equal this one, but block
       // addresses in the current function might be the same if blocks are
       // empty.
       if (BA2->getFunction() != BA->getFunction())
         return ICmpInst::ICMP_NE;
-    } else {
-      // Block addresses aren't null.
-      assert(isa<ConstantPointerNull>(V2) && "Canonicalization guarantee!");
+    } else if (isa<ConstantPointerNull>(V2)) {
       return ICmpInst::ICMP_NE;
     }
   } else if (const GlobalValue *GV = dyn_cast<GlobalValue>(V1)) {
     // Now we know that the RHS is a GlobalValue, BlockAddress or simple
-    // constant (which, since the types must match, means that it's a
-    // ConstantPointerNull).
+    // constant.
     if (const GlobalValue *GV2 = dyn_cast<GlobalValue>(V2)) {
       return areGlobalsPotentiallyEqual(GV, GV2);
     } else if (isa<BlockAddress>(V2)) {
       return ICmpInst::ICMP_NE; // Globals never equal labels.
-    } else {
-      assert(isa<ConstantPointerNull>(V2) && "Canonicalization guarantee!");
+    } else if (isa<ConstantPointerNull>(V2)) {
       // GlobalVals can never be null unless they have external weak linkage.
       // We don't try to evaluate aliases here.
       // NOTE: We should not be doing this constant folding if null pointer
