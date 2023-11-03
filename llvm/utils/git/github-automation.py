@@ -77,7 +77,12 @@ class IssueSubscriber:
         if team.slug == "issue-subscribers-good-first-issue":
             comment = "{}\n".format(beginner_comment)
 
-        body = escape_description(self.issue.body)
+        # Check for an empty issue description,
+        # which should not occur, but this avoids crashing
+        # if it does.
+        body = ""
+        if self.issue.body is not None:
+            body = escape_description(self.issue.body)
 
         comment = f"""
 @llvm/{team.slug}
@@ -160,7 +165,10 @@ class PRSubscriber:
             patch = patch[0:DIFF_LIMIT] + "...\n[truncated]\n"
         team_mention = "@llvm/{}".format(team.slug)
 
-        body = escape_description(self.pr.body)
+        # Check for an empty pr description
+        body = ""
+        if self.pr.body is not None:
+            body = escape_description(self.pr.body)
         # Note: the comment is in markdown and the code below
         # is sensible to line break
         comment = f"""
