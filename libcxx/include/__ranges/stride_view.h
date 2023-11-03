@@ -241,6 +241,7 @@ public:
                                    "Advancing the iterator beyond the end is not allowed.");
       ranges::advance(__current_, __stride_ * (__n - 1));
       __missing_ = ranges::advance(__current_, __stride_, __end_);
+
     } else if (__n < 0) {
       ranges::advance(__current_, __stride_ * __n + __missing_);
       __missing_ = 0;
