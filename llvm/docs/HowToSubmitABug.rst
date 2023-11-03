@@ -157,22 +157,22 @@ LTO bugs
 ---------------------------
 
 If you encounter a bug that leads to crashes in the LLVM LTO phase when using
-the `-flto` option, follow these steps to diagnose and report the issue:
+the ``-flto`` option, follow these steps to diagnose and report the issue:
 
-Compile your source file to a .bc (Bitcode) file with the following flags,
+Compile your source file to a ``.bc`` (Bitcode) file with the following options,
 in addition to your existing compilation options:
 
 .. code-block:: bash
 
    export CFLAGS="-flto -fuse-ld=lld" CXXFLAGS="-flto -fuse-ld=lld" LDFLAGS="-Wl,-plugin-opt=save-temps"
 
-These flags enable LTO and save temporary files generated during compilation
+These options enable LTO and save temporary files generated during compilation
 for later analysis.
 
 On Windows, you should be using lld-link as the linker. Adjust your compilation 
 flags as follows:
-* Add `/lldsavetemps` to the linker flags.
-* When linking from the compiler driver, add `/link /lldsavetemps` in order to forward that flag to the linker.
+* Add ``/lldsavetemps`` to the linker flags.
+* When linking from the compiler driver, add ``/link /lldsavetemps`` in order to forward that flag to the linker.
 
 Using the specified flags will generate four intermediate bytecode files:
 
@@ -199,9 +199,9 @@ Example of reduce.sh Script
 .. code-block:: bash
 
    $ cat reduce.sh
-   #!/usr/bin/env bash
+   #!/bin/bash -e
 
-   $HOME/llvm/llvm-project/build/bin/opt "-passes=lto<O3>" $1 -o temp.bc  2>&1 | tee err.log
+   path/to/not --crash path/to/opt "-passes=lto<O3>" $1 -o temp.bc  2> err.log
    grep -q "It->second == &Insn" err.log
 
 Here we have grepped the failed assert message.
