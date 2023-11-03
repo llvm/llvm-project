@@ -55,10 +55,27 @@ AST_MATCHER_P(clang::QualType, hasCanonicalTypeUnqualified,
                               Builder);
 }
 
+AST_MATCHER(clang::QualType, isArithmetic) { return Node->isArithmeticType(); }
+AST_MATCHER(clang::QualType, isFloating) { return Node->isFloatingType(); }
+
+auto ignoreImplicitAndArithmeticCasting(const Matcher<clang::Expr> Matcher) {
+  return expr(
+      ignoringImplicit(expr(hasType(qualType(isArithmetic())),
+                            ignoringParenCasts(ignoringImplicit(Matcher)))));
+}
+
+auto ignoreImplicitAndFloatingCasting(const Matcher<clang::Expr> Matcher) {
+  return expr(
+      ignoringImplicit(expr(hasType(qualType(isFloating())),
+                            ignoringParenCasts(ignoringImplicit(Matcher)))));
+}
+
 auto matchMathCall(const StringRef FunctionName,
                    const Matcher<clang::Expr> ArgumentMatcher) {
-  return callExpr(callee(functionDecl(hasName(FunctionName))),
-                  hasArgument(0, ignoringImplicit(ArgumentMatcher)));
+  return callExpr(
+      callee(functionDecl(hasName(FunctionName),
+                          hasParameter(0, hasType(isArithmetic())))),
+      hasArgument(0, ArgumentMatcher));
 }
 
 auto matchSqrt(const Matcher<clang::Expr> ArgumentMatcher) {
@@ -73,7 +90,7 @@ auto matchSqrt(const Matcher<clang::Expr> ArgumentMatcher) {
 //
 // We only care about the literal if the match is for a top-level match
 auto matchFloatLiteralNear(const double Val) {
-  return expr(ignoringImplicit(floatLiteral(near(Val))));
+  return expr(ignoreImplicitAndFloatingCasting(floatLiteral(near(Val))));
 }
 
 // Used for non-top-level matchers (i.e. matchers that are used as inner
@@ -91,18 +108,22 @@ auto matchFloatValueNear(const double Val) {
   const auto Float = floatLiteral(near(Val));
 
   const auto Dref = declRefExpr(to(varDecl(
-      anyOf(isConstexpr(), varDecl(hasType(qualType(isConstQualified())))),
+      anyOf(isConstexpr(),
+            varDecl(hasType(qualType(isConstQualified(), isArithmetic())))),
       hasInitializer(Float))));
-  return expr(ignoringImplicit(anyOf(Float, Dref)));
+  return expr(ignoreImplicitAndFloatingCasting(anyOf(Float, Dref)));
 }
 
 auto matchValue(const int64_t ValInt) {
-  const auto Int = integerLiteral(equals(ValInt));
-  const auto Float = matchFloatValueNear(static_cast<double>(ValInt));
+  const auto Int =
+      expr(ignoreImplicitAndArithmeticCasting(integerLiteral(equals(ValInt))));
+  const auto Float = expr(ignoreImplicitAndFloatingCasting(
+      matchFloatValueNear(static_cast<double>(ValInt))));
   const auto Dref = declRefExpr(to(varDecl(
-      anyOf(isConstexpr(), varDecl(hasType(qualType(isConstQualified())))),
-      hasInitializer(expr(ignoringImplicit(anyOf(Int, Float)))))));
-  return expr(ignoringImplicit(anyOf(Int, Float, Dref)));
+      anyOf(isConstexpr(),
+            varDecl(hasType(qualType(isConstQualified(), isArithmetic())))),
+      hasInitializer(anyOf(Int, Float)))));
+  return expr(anyOf(Int, Float, Dref));
 }
 
 auto match1Div(const Matcher<clang::Expr> Match) {
@@ -208,7 +229,8 @@ RewriteRuleWith<std::string> makeRule(const Matcher<clang::Stmt> Matcher,
       DefaultEdit, {{"float", FloatEdit}, {"long double", LongDoubleEdit}});
 
   return makeRule(
-      expr(Matcher, unless(isInTemplateInstantiation()),
+      expr(ignoreImplicitAndFloatingCasting(Matcher),
+           unless(isInTemplateInstantiation()),
            hasType(qualType(hasCanonicalType(hasCanonicalTypeUnqualified(anyOf(
                qualType(asString("float")).bind("float"),
                qualType(asString("double")),

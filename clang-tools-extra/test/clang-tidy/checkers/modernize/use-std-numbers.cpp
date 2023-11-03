@@ -21,6 +21,8 @@ double log10(double Arg);
 template<typename T>
 void sink(T&&) { }
 
+void floatSink(float) {}
+
 #define MY_PI 3.1415926
 
 #define INV_SQRT3 1 / bar::sqrt(3)
@@ -138,6 +140,52 @@ void foo(){
     auto log2e = 1.4426950;
     // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: prefer std::numbers math constant [modernize-use-std-numbers]
     // CHECK-FIXES: auto log2e = std::numbers::log2e;
+
+    floatSink(log2(Euler));
+    // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: prefer std::numbers math constant [modernize-use-std-numbers]
+    // CHECK-FIXES: floatSink(std::numbers::log2e_v<float>);
+
+    floatSink(static_cast<float>(log2(Euler)));
+    // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: prefer std::numbers math constant [modernize-use-std-numbers]
+    // CHECK-MESSAGES: :[[@LINE-2]]:34: warning: prefer std::numbers math constant [modernize-use-std-numbers]
+    // CHECK-FIXES: floatSink(std::numbers::log2e_v<float>);
+
+    floatSink(1.4426950);
+    // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: prefer std::numbers math constant [modernize-use-std-numbers]
+    // CHECK-FIXES: floatSink(std::numbers::log2e_v<float>);
+
+    floatSink(static_cast<float>(1.4426950));
+    // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: prefer std::numbers math constant [modernize-use-std-numbers]
+    // CHECK-MESSAGES: :[[@LINE-2]]:34: warning: prefer std::numbers math constant [modernize-use-std-numbers]
+    // CHECK-FIXES: floatSink(std::numbers::log2e_v<float>);
+
+    floatSink(log2(static_cast<float>(Euler)));
+    // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: prefer std::numbers math constant [modernize-use-std-numbers]
+    // CHECK-FIXES: floatSink(std::numbers::log2e_v<float>);
+
+    floatSink(static_cast<float>(log2(static_cast<float>(Euler))));
+    // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: prefer std::numbers math constant [modernize-use-std-numbers]
+    // CHECK-MESSAGES: :[[@LINE-2]]:34: warning: prefer std::numbers math constant [modernize-use-std-numbers]
+    // CHECK-FIXES: floatSink(std::numbers::log2e_v<float>);
+
+    floatSink(static_cast<float>(log2(static_cast<int>(Euler))));
+
+    floatSink(static_cast<int>(log2(static_cast<float>(Euler))));
+    // CHECK-MESSAGES: :[[@LINE-1]]:32: warning: prefer std::numbers math constant [modernize-use-std-numbers]
+    // CHECK-FIXES: floatSink(static_cast<int>(std::numbers::log2e));
+
+    floatSink(1.4426950F);
+    // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: prefer std::numbers math constant [modernize-use-std-numbers]
+    // CHECK-FIXES: floatSink(std::numbers::log2e_v<float>);
+
+    floatSink(static_cast<double>(1.4426950F));
+    // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: prefer std::numbers math constant [modernize-use-std-numbers]
+    // CHECK-MESSAGES: :[[@LINE-2]]:35: warning: prefer std::numbers math constant [modernize-use-std-numbers]
+    // CHECK-FIXES: floatSink(std::numbers::log2e_v<float>);
+
+    floatSink(static_cast<int>(1.4426950F));
+    // CHECK-MESSAGES: :[[@LINE-1]]:32: warning: prefer std::numbers math constant [modernize-use-std-numbers]
+    // CHECK-FIXES: floatSink(static_cast<int>(std::numbers::log2e_v<float>));
 
     log10(exp(1));
     // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: prefer std::numbers math constant [modernize-use-std-numbers]
