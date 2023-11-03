@@ -205,6 +205,7 @@ void RISCVIntrinsicManagerImpl::ConstructRVVIntrinsics(
   static const std::pair<const char *, RVVRequire> FeatureCheckList[] = {
       {"64bit", RVV_REQ_RV64},
       {"xsfvcp", RVV_REQ_Xsfvcp},
+      {"xsfvfnrclipxfqf", RVV_REQ_Xsfvfnrclipxfqf},
       {"xsfvfwmaccqqq", RVV_REQ_Xsfvfwmaccqqq},
       {"xsfvqmaccdod", RVV_REQ_Xsfvqmaccdod},
       {"xsfvqmaccqoq", RVV_REQ_Xsfvqmaccqoq},
