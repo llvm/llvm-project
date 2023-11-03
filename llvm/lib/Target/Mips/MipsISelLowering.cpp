@@ -2593,7 +2593,7 @@ SDValue MipsTargetLowering::lowerShiftLeftParts(SDValue Op,
   SDValue Shamt = Op.getOperand(2);
   // if shamt < (VT.bits):
   //  lo = (shl lo, shamt)
-  //  hi = (or (shl hi, shamt) (srl (srl lo, 1), (VT.bits-1) ^ shamt))
+  //  hi = (or (shl hi, shamt) (srl (srl lo, 1), (xor shamt, (VT.bits-1))))
   // else:
   //  lo = 0
   //  hi = (shl lo, shamt[4:0])
@@ -2624,7 +2624,7 @@ SDValue MipsTargetLowering::lowerShiftRightParts(SDValue Op, SelectionDAG &DAG,
   MVT VT = Subtarget.isGP64bit() ? MVT::i64 : MVT::i32;
 
   // if shamt < (VT.bits):
-  //  lo = (or (shl (shl hi, 1), (VT.bits-1) ^ shamt) (srl lo, shamt))
+  //  lo = (or (shl (shl hi, 1), (xor shamt, (VT.bits-1))) (srl lo, shamt))
   //  if isSRA:
   //    hi = (sra hi, shamt)
   //  else:
