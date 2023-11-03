@@ -762,8 +762,8 @@ std::optional<unsigned> InstInfo::getInvalidCompOperandIndex(
     if (!OpXRegs[CompOprIdx] || !OpYRegs[CompOprIdx])
       continue;
 
-    if (isHighVGPR(OpXRegs[CompOprIdx], MRI) !=
-        isHighVGPR(OpYRegs[CompOprIdx], MRI))
+    if (isLo256VGPR(OpXRegs[CompOprIdx], MRI) !=
+        isLo256VGPR(OpYRegs[CompOprIdx], MRI))
       return CompOprIdx;
 
     if (SkipSrc && CompOprIdx >= Component::DST_NUM)
@@ -3097,10 +3097,10 @@ const MCRegisterClass *getVGPRPhysRegClass(MCPhysReg Reg,
   return nullptr;
 }
 
-bool isHighVGPR(MCPhysReg Reg, const MCRegisterInfo &MRI) {
+bool isLo256VGPR(MCPhysReg Reg, const MCRegisterInfo &MRI) {
   unsigned Enc = MRI.getEncodingValue(Reg);
   unsigned Idx = Enc & AMDGPU::HWEncoding::REG_IDX_MASK;
-  return Idx >= 0x100;
+  return Idx < 0x100;
 }
 
 bool supportsScaleOffset(const MCInstrInfo &MII, unsigned Opcode) {
