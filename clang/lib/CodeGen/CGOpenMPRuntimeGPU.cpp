@@ -1574,11 +1574,6 @@ enum CopyAction : unsigned {
   RemoteLaneToThread,
   // ThreadCopy: Make a copy of a Reduce list on the thread's stack.
   ThreadCopy,
-  // ThreadToScratchpad: Copy a team-reduced array to the scratchpad.
-  ThreadToScratchpad,
-  // ScratchpadToThread: Copy from a scratchpad array in global memory
-  // containing team-reduced data to a thread's stack.
-  ScratchpadToThread,
 };
 } // namespace
 
@@ -1600,13 +1595,10 @@ static void emitReductionListCopy(
   CGBuilderTy &Bld = CGF.Builder;
 
   llvm::Value *RemoteLaneOffset = CopyOptions.RemoteLaneOffset;
-  llvm::Value *ScratchpadIndex = CopyOptions.ScratchpadIndex;
-  llvm::Value *ScratchpadWidth = CopyOptions.ScratchpadWidth;
 
   // Iterates, element-by-element, through the source Reduce list and
   // make a copy.
   unsigned Idx = 0;
-  unsigned Size = Privates.size();
   for (const Expr *Private : Privates) {
     Address SrcElementAddr = Address::invalid();
     Address DestElementAddr = Address::invalid();
@@ -1616,10 +1608,6 @@ static void emitReductionListCopy(
     // Set to true to update the pointer in the dest Reduce list to a
     // newly created element.
     bool UpdateDestListPtr = false;
-    // Increment the src or dest pointer to the scratchpad, for each
-    // new element.
-    bool IncrScratchpadSrc = false;
-    bool IncrScratchpadDest = false;
     QualType PrivatePtrType = C.getPointerType(Private->getType());
     llvm::Type *PrivateLlvmPtrType = CGF.ConvertType(PrivatePtrType);
 
@@ -1653,49 +1641,6 @@ static void emitReductionListCopy(
       DestElementAddr = CGF.EmitLoadOfPointer(
           DestElementPtrAddr.withElementType(PrivateLlvmPtrType),
           PrivatePtrType->castAs<PointerType>());
-      break;
-    }
-    case ThreadToScratchpad: {
-      // Step 1.1: Get the address for the src element in the Reduce list.
-      Address SrcElementPtrAddr = Bld.CreateConstArrayGEP(SrcBase, Idx);
-      SrcElementAddr = CGF.EmitLoadOfPointer(
-          SrcElementPtrAddr.withElementType(PrivateLlvmPtrType),
-          PrivatePtrType->castAs<PointerType>());
-
-      // Step 1.2: Get the address for dest element:
-      // address = base + index * ElementSizeInChars.
-      llvm::Value *ElementSizeInChars = CGF.getTypeSize(Private->getType());
-      llvm::Value *CurrentOffset =
-          Bld.CreateNUWMul(ElementSizeInChars, ScratchpadIndex);
-      llvm::Value *ScratchPadElemAbsolutePtrVal =
-          Bld.CreateNUWAdd(DestBase.getPointer(), CurrentOffset);
-      ScratchPadElemAbsolutePtrVal =
-          Bld.CreateIntToPtr(ScratchPadElemAbsolutePtrVal, CGF.VoidPtrTy);
-      DestElementAddr = Address(ScratchPadElemAbsolutePtrVal, CGF.Int8Ty,
-                                C.getTypeAlignInChars(Private->getType()));
-      IncrScratchpadDest = true;
-      break;
-    }
-    case ScratchpadToThread: {
-      // Step 1.1: Get the address for the src element in the scratchpad.
-      // address = base + index * ElementSizeInChars.
-      llvm::Value *ElementSizeInChars = CGF.getTypeSize(Private->getType());
-      llvm::Value *CurrentOffset =
-          Bld.CreateNUWMul(ElementSizeInChars, ScratchpadIndex);
-      llvm::Value *ScratchPadElemAbsolutePtrVal =
-          Bld.CreateNUWAdd(SrcBase.getPointer(), CurrentOffset);
-      ScratchPadElemAbsolutePtrVal =
-          Bld.CreateIntToPtr(ScratchPadElemAbsolutePtrVal, CGF.VoidPtrTy);
-      SrcElementAddr = Address(ScratchPadElemAbsolutePtrVal, CGF.Int8Ty,
-                               C.getTypeAlignInChars(Private->getType()));
-      IncrScratchpadSrc = true;
-
-      // Step 1.2: Create a temporary to store the element in the destination
-      // Reduce list.
-      DestElementPtrAddr = Bld.CreateConstArrayGEP(DestBase, Idx);
-      DestElementAddr =
-          CGF.CreateMemTemp(Private->getType(), ".omp.reduction.element");
-      UpdateDestListPtr = true;
       break;
     }
     }
@@ -1753,39 +1698,6 @@ static void emitReductionListCopy(
                                 DestElementAddr.getPointer(), CGF.VoidPtrTy),
                             DestElementPtrAddr, /*Volatile=*/false,
                             C.VoidPtrTy);
-    }
-
-    // Step 4.1: Increment SrcBase/DestBase so that it points to the starting
-    // address of the next element in scratchpad memory, unless we're currently
-    // processing the last one.  Memory alignment is also taken care of here.
-    if ((IncrScratchpadDest || IncrScratchpadSrc) && (Idx + 1 < Size)) {
-      // FIXME: This code doesn't make any sense, it's trying to perform
-      // integer arithmetic on pointers.
-      llvm::Value *ScratchpadBasePtr =
-          IncrScratchpadDest ? DestBase.getPointer() : SrcBase.getPointer();
-      llvm::Value *ElementSizeInChars = CGF.getTypeSize(Private->getType());
-      ScratchpadBasePtr = Bld.CreateNUWAdd(
-          ScratchpadBasePtr,
-          Bld.CreateNUWMul(ScratchpadWidth, ElementSizeInChars));
-
-      // Take care of global memory alignment for performance
-      ScratchpadBasePtr = Bld.CreateNUWSub(
-          ScratchpadBasePtr, llvm::ConstantInt::get(CGM.SizeTy, 1));
-      ScratchpadBasePtr = Bld.CreateUDiv(
-          ScratchpadBasePtr,
-          llvm::ConstantInt::get(CGM.SizeTy, GlobalMemoryAlignment));
-      ScratchpadBasePtr = Bld.CreateNUWAdd(
-          ScratchpadBasePtr, llvm::ConstantInt::get(CGM.SizeTy, 1));
-      ScratchpadBasePtr = Bld.CreateNUWMul(
-          ScratchpadBasePtr,
-          llvm::ConstantInt::get(CGM.SizeTy, GlobalMemoryAlignment));
-
-      if (IncrScratchpadDest)
-        DestBase =
-            Address(ScratchpadBasePtr, CGF.VoidPtrTy, CGF.getPointerAlign());
-      else /* IncrScratchpadSrc = true */
-        SrcBase =
-            Address(ScratchpadBasePtr, CGF.VoidPtrTy, CGF.getPointerAlign());
     }
 
     ++Idx;
