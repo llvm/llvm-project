@@ -844,6 +844,14 @@ def HasVendorXSfvfwmaccqqq : Predicate<"Subtarget->hasVendorXSfvfwmaccqqq()">,
                          AssemblerPredicate<(all_of FeatureVendorXSfvfwmaccqqq),
                          "'XSfvfwmaccqqq' (SiFive Matrix Multiply Accumulate Instruction and 4-by-4))">;
 
+def FeatureVendorXSfvfnrclipxfqf
+    : SubtargetFeature<"xsfvfnrclipxfqf", "HasVendorXSfvfnrclipxfqf", "true",
+                       "'XSfvfnrclipxfqf' (FP32-to-int8 Ranged Clip Instructions)",
+                       [FeatureStdExtZve32f]>;
+def HasVendorXSfvfnrclipxfqf : Predicate<"Subtarget->hasVendorXSfvfnrclipxfqf()">,
+                               AssemblerPredicate<(all_of FeatureVendorXSfvfnrclipxfqf),
+                               "'XSfvfnrclipxfqf' (FP32-to-int8 Ranged Clip Instructions)">;
+
 def FeatureVendorXCVbitmanip
     : SubtargetFeature<"xcvbitmanip", "HasVendorXCVbitmanip", "true",
                        "'XCVbitmanip' (CORE-V Bit Manipulation)">;

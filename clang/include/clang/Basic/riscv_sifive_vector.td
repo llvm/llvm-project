@@ -120,6 +120,14 @@ multiclass RVVVQMACCBuiltinSet<list<list<string>> suffixes_prototypes> {
     defm NAME : RVVOutOp1Op2BuiltinSet<NAME, "i", suffixes_prototypes>;
 }
 
+multiclass RVVVFNRCLIPBuiltinSet<string suffix, string prototype, string type_range> {
+  let Log2LMUL = [-3, -2, -1, 0, 1, 2],
+      Name = NAME,
+      IRName = NAME,
+      MaskedIRName = NAME # "_mask" in
+  def : RVVConvBuiltin<suffix, prototype, type_range, NAME>;
+}
+
 let UnMaskedPolicyScheme = HasPolicyOperand in
   let RequiredFeatures = ["Xsfvqmaccdod"] in {
     defm sf_vqmaccu_2x8x2 : RVVVQMACCBuiltinSet<[["", "v", "vv(FixedSEW:8)SUv(FixedSEW:8)Uv"]]>;
@@ -139,3 +147,57 @@ let UnMaskedPolicyScheme = HasPolicyOperand in
 let UnMaskedPolicyScheme = HasPolicyOperand in
   let RequiredFeatures = ["Xsfvfwmaccqqq"] in
     defm sf_vfwmacc_4x4x4 : RVVVFWMACCBuiltinSet<[["", "w", "wwSvv"]]>;
+
+let UnMaskedPolicyScheme = HasPassthruOperand, RequiredFeatures = ["Xsfvfnrclipxfqf"] in {
+let ManualCodegen = [{
+  {
+    // LLVM intrinsic
+    // Unmasked: (passthru, vector_in, scalar_in, frm, vl)
+    // Masked:   (passthru, vector_in, scalar_in, mask, frm, vl, policy)
+
+    SmallVector<llvm::Value*, 7> Operands;
+    bool HasMaskedOff = !(
+        (IsMasked && (PolicyAttrs & RVV_VTA) && (PolicyAttrs & RVV_VMA)) ||
+        (!IsMasked && PolicyAttrs & RVV_VTA));
+    bool HasRoundModeOp = IsMasked ?
+      (HasMaskedOff ? Ops.size() == 6 : Ops.size() == 5) :
+      (HasMaskedOff ? Ops.size() == 5 : Ops.size() == 4);
+
+    unsigned Offset = IsMasked ?
+        (HasMaskedOff ? 2 : 1) : (HasMaskedOff ? 1 : 0);
+
+    if (!HasMaskedOff)
+      Operands.push_back(llvm::PoisonValue::get(ResultType));
+    else
+      Operands.push_back(Ops[IsMasked ? 1 : 0]);
+
+    Operands.push_back(Ops[Offset]); // op0
+    Operands.push_back(Ops[Offset + 1]); // op1
+
+    if (IsMasked)
+      Operands.push_back(Ops[0]); // mask
+
+    if (HasRoundModeOp) {
+      Operands.push_back(Ops[Offset + 2]); // frm
+      Operands.push_back(Ops[Offset + 3]); // vl
+    } else {
+      Operands.push_back(ConstantInt::get(Ops[Offset + 2]->getType(), 7)); // frm
+      Operands.push_back(Ops[Offset + 2]); // vl
+    }
+
+    if (IsMasked)
+      Operands.push_back(ConstantInt::get(Ops.back()->getType(), PolicyAttrs));
+
+    IntrinsicTypes = {ResultType, Ops[Offset]->getType(), Operands.back()->getType()};
+    llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
+    return Builder.CreateCall(F, Operands, "");
+  }
+}] in {
+  let HasFRMRoundModeOp = true in {
+    defm sf_vfnrclip_x_f_qf : RVVVFNRCLIPBuiltinSet<"v", "vFqfu", "c">;
+    defm sf_vfnrclip_xu_f_qf : RVVVFNRCLIPBuiltinSet<"Uv", "UvFqfu", "c">;
+  }
+  defm sf_vfnrclip_x_f_qf : RVVVFNRCLIPBuiltinSet<"v", "vFqf", "c">;
+  defm sf_vfnrclip_xu_f_qf : RVVVFNRCLIPBuiltinSet<"Uv", "UvFqf", "c">;
+}
+}
