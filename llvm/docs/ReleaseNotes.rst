@@ -57,6 +57,8 @@ Changes to the LLVM IR
 
   * ``and``
   * ``or``
+  * ``zext``
+  * ``sext``
 
 * Added `llvm.exp10` intrinsic.
 
@@ -166,6 +168,11 @@ Changes to the C API
 
   * ``LLVMConstAnd``
   * ``LLVMConstOr``
+  * ``LLVMConstZExt``
+  * ``LLVMConstSExt``
+  * ``LLVMConstZExtOrBitCast``
+  * ``LLVMConstSExtOrBitCast``
+  * ``LLVMConstIntCast``
 
 * Added ``LLVMCreateTargetMachineWithOptions``, along with helper functions for
   an opaque option structure, as an alternative to ``LLVMCreateTargetMachine``.
