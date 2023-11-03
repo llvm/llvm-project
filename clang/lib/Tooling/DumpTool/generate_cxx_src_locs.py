@@ -58,7 +58,7 @@ struct RecursionPopper
 private:
 std::vector<clang::TypeLoc> &TLRG;
 };
-"""[1:]
+"""
 
     def GenerateBaseGetLocationsDeclaration(self, CladeName):
         InstanceDecoration = "*"
