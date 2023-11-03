@@ -208,6 +208,10 @@ let Predicates = [HasVendorXSfvqmaccqoq], DecoderNamespace = "XSfvqmaccqoq" in {
   def VQMACCSU_4x8x4 : CustomSiFiveVMACC<0b111111, OPMVV, "sf.vqmaccsu.4x8x4">;
 }
 
+let Predicates = [HasVendorXSfvfwmaccqqq], DecoderNamespace = "XSfvfwmaccqqq" in {
+  def VFWMACC_4x4x4 : CustomSiFiveVMACC<0b111100, OPFVV, "sf.vfwmacc.4x4x4">;
+}
+
 class VPseudoVC_X<Operand OpClass, DAGOperand RS1Class,
                   bit HasSideEffect = 1> :
       Pseudo<(outs),
@@ -341,6 +345,11 @@ multiclass VPseudoSiFiveVQMACC<string Constraint = ""> {
     defm NAME : VPseudoSiFiveVMACC<m.MX, m.vrclass, m.vrclass, Constraint>;
 }
 
+multiclass VPseudoSiFiveVFWMACC<string Constraint = ""> {
+  foreach m = MxListFW in
+    defm NAME : VPseudoSiFiveVMACC<m.MX, m.wvrclass, m.vrclass, Constraint>;
+}
+
 let Predicates = [HasVendorXSfvcp] in {
   foreach m = MxList in {
     defm X : VPseudoVC_X<m, GPR>;
@@ -381,6 +390,10 @@ let Predicates = [HasVendorXSfvqmaccqoq], DecoderNamespace = "XSfvqmaccqoq" in {
   defm VQMACC_4x8x4   : VPseudoSiFiveVQMACC;
   defm VQMACCUS_4x8x4 : VPseudoSiFiveVQMACC;
   defm VQMACCSU_4x8x4 : VPseudoSiFiveVQMACC;
+}
+
+let Predicates = [HasVendorXSfvfwmaccqqq], DecoderNamespace = "XSfvfwmaccqqq" in {
+  defm VFWMACC_4x4x4 : VPseudoSiFiveVFWMACC;
 }
 
 class VPatVC_OP4<string intrinsic_name,
@@ -537,6 +550,11 @@ defset list<VTypeInfoToWide> VQMACCInfoPairs = {
 multiclass VPatVQMACC<string intrinsic, string instruction, string kind>
     : VPatVMACC<intrinsic, instruction, kind, VQMACCInfoPairs, vint8m1_t>;
 
+
+multiclass VPatVFWMACC<string intrinsic, string instruction, string kind>
+    : VPatVMACC<intrinsic, instruction, kind, AllWidenableBFloatToFloatVectors,
+                vbfloat16m1_t>;
+
 let Predicates = [HasVendorXSfvcp] in {
   foreach vti = AllVectors in {
     defm : VPatVC_X<"x", "X", vti, XLenVT, GPR>;
@@ -584,6 +602,10 @@ let Predicates = [HasVendorXSfvqmaccqoq] in {
   defm : VPatVQMACC<"vqmacc_4x8x4", "VQMACC", "4x8x4">;
   defm : VPatVQMACC<"vqmaccus_4x8x4", "VQMACCUS", "4x8x4">;
   defm : VPatVQMACC<"vqmaccsu_4x8x4", "VQMACCSU", "4x8x4">;
+}
+
+let Predicates = [HasVendorXSfvfwmaccqqq] in {
+  defm : VPatVFWMACC<"vfwmacc_4x4x4", "VFWMACC", "4x4x4">;
 }
 
 let Predicates = [HasVendorXSfcie] in {

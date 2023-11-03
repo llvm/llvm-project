@@ -152,4 +152,7 @@ let TargetPrefix = "riscv" in {
   def int_riscv_sf_vqmacc_4x8x4   : RISCVSFCustomVMACC;
   def int_riscv_sf_vqmaccus_4x8x4 : RISCVSFCustomVMACC;
   def int_riscv_sf_vqmaccsu_4x8x4 : RISCVSFCustomVMACC;
+
+  // XSfvfwmaccqqq
+  def int_riscv_sf_vfwmacc_4x4x4 : RISCVSFCustomVMACC;
 } // TargetPrefix = "riscv"
