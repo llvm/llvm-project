@@ -96,6 +96,8 @@ rm ${OUTDIR}/pgo.exe
 rm ${OUTDIR}/memprof_pgo.profraw
 
 # Use musttail to simulate a missing leaf debug frame in the profiled binary.
+# Note we don't currently match onto explicit ::operator new calls, which is
+# why the non-musttail case uses implicit new (which doesn't support musttail).
 # Note that changes in the code below which affect relative line number
 # offsets of calls from their parent function can affect callsite matching in
 # the LLVM IR.

@@ -628,6 +628,9 @@ private:
   Error parseModulePassPipeline(ModulePassManager &MPM,
                                 ArrayRef<PipelineElement> Pipeline);
 
+  // Adds passes to do pre-inlining and related cleanup passes before
+  // profile instrumentation/matching (to enable better context sensitivity),
+  // and for memprof to enable better matching with missing debug frames.
   void addPreInlinerPasses(ModulePassManager &MPM, OptimizationLevel Level,
                            ThinOrFullLTOPhase LTOPhase);
 

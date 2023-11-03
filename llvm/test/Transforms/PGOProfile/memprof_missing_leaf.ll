@@ -8,13 +8,9 @@
 
 ;; TODO: Use text profile inputs once that is available for memprof.
 ;; # To update the Inputs below, run Inputs/update_memprof_inputs.sh.
-;; # To generate below LLVM IR for use in matching:
+;; # To generate below LLVM IR for use in matching.
 ;; $ clang++ -gmlt -fdebug-info-for-profiling -S memprof_missing_leaf.cc \
-;; 	-O2 -mllvm -disable-llvm-optzns -flto
-;; $ opt < memprof_missing_leaf.s -passes='cgscc(inline)' -S >memprof_missing_leaf.ll
-
-;; $ clang++ -gmlt -fdebug-info-for-profiling -fno-omit-frame-pointer \
-;;      -fno-optimize-sibling-calls memprof.cc -S -emit-llvm
+;; 	-O2 -emit-llvm
 
 ; RUN: llvm-profdata merge %S/Inputs/memprof_missing_leaf.memprofraw --profiled-binary %S/Inputs/memprof_missing_leaf.exe -o %t.memprofdata
 ; RUN: opt < %s -passes='memprof-use<profile-filename=%t.memprofdata>' -S | FileCheck %s
