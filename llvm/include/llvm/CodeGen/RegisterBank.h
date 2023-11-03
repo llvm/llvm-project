@@ -36,8 +36,8 @@ private:
   friend RegisterBankInfo;
 
 public:
-  RegisterBank(unsigned ID, const char *Name, const uint32_t *CoveredClasses,
-               unsigned NumRegClasses)
+  constexpr RegisterBank(unsigned ID, const char *Name,
+                         const uint32_t *CoveredClasses, unsigned NumRegClasses)
       : ID(ID), NumRegClasses(NumRegClasses), Name(Name),
         CoveredClasses(CoveredClasses) {}
 
