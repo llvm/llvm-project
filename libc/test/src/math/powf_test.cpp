@@ -23,7 +23,7 @@ namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
 TEST_F(LlvmLibcPowfTest, TrickyInputs) {
   constexpr int N = 11;
-  constexpr mpfr::BinaryInput<float> INPUTS[2] = {
+  constexpr mpfr::BinaryInput<float> INPUTS[N] = {
       {0x1.290bbp-124f, 0x1.1e6d92p-25f}, {0x1.2e9fb6p+5f, -0x1.1b82b6p-18f},
       {0x1.6877f6p+60f, -0x1.75f1c6p-4f}, {0x1.0936acp-63f, -0x1.55200ep-15f},
       {0x1.d6d72ap+43f, -0x1.749ccap-5f}, {0x1.4afb2ap-40f, 0x1.063198p+0f},
