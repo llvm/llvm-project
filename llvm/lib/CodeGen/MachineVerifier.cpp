@@ -1953,9 +1953,11 @@ void MachineVerifier::visitMachineInstrBefore(const MachineInstr *MI) {
         DstSize = TRI->getRegSizeInBits(*DstRC);
     }
 
-    // If the Dst is scalable and the Src is fixed, then the Dst can only hold
-    // the Src if the minimum size Dst can hold is at least as big as Src.
-    if (DstSize.isScalable() && !SrcSize.isScalable() &&
+    // If this is a copy from physical register to virtual register, and if the
+    // Dst is scalable and the Src is fixed, then the Dst can only hold the Src
+    // if the minimum size Dst can hold is at least as big as Src.
+    if (SrcReg.isPhysical() && DstReg.isVirtual() && DstSize.isScalable() &&
+        !SrcSize.isScalable() &&
         DstSize.getKnownMinValue() <= SrcSize.getFixedValue())
       break;
 
