@@ -1841,7 +1841,8 @@ DeclResult Sema::CheckClassTemplate(
     return true;
 
   TagTypeKind Kind = TypeWithKeyword::getTagTypeKindForTypeSpec(TagSpec);
-  assert(Kind != TTK_Enum && "can't build template of enumerated type");
+  assert(Kind != TagTypeKind::Enum &&
+         "can't build template of enumerated type");
 
   // There is no such thing as an unnamed class template.
   if (!Name) {
@@ -4292,7 +4293,7 @@ TypeResult Sema::ActOnTagTemplateIdType(TagUseKind TUK,
     //   resolves to an alias template specialization, the
     //   elaborated-type-specifier is ill-formed.
     Diag(TemplateLoc, diag::err_tag_reference_non_tag)
-        << TAT << NTK_TypeAliasTemplate << TagKind;
+        << TAT << NTK_TypeAliasTemplate << llvm::to_underlying(TagKind);
     Diag(TAT->getLocation(), diag::note_declared_at);
   }
 
@@ -8722,7 +8723,8 @@ DeclResult Sema::ActOnClassTemplateSpecialization(
   // Check that the specialization uses the same tag kind as the
   // original template.
   TagTypeKind Kind = TypeWithKeyword::getTagTypeKindForTypeSpec(TagSpec);
-  assert(Kind != TTK_Enum && "Invalid enum tag in class template spec!");
+  assert(Kind != TagTypeKind::Enum &&
+         "Invalid enum tag in class template spec!");
   if (!isAcceptableTagRedeclaration(ClassTemplate->getTemplatedDecl(),
                                     Kind, TUK == TUK_Definition, KWLoc,
                                     ClassTemplate->getIdentifier())) {
@@ -9968,14 +9970,15 @@ DeclResult Sema::ActOnExplicitInstantiation(
   // Check that the specialization uses the same tag kind as the
   // original template.
   TagTypeKind Kind = TypeWithKeyword::getTagTypeKindForTypeSpec(TagSpec);
-  assert(Kind != TTK_Enum &&
+  assert(Kind != TagTypeKind::Enum &&
          "Invalid enum tag in class template explicit instantiation!");
 
   ClassTemplateDecl *ClassTemplate = dyn_cast<ClassTemplateDecl>(TD);
 
   if (!ClassTemplate) {
     NonTagKind NTK = getNonTagTypeDeclKind(TD, Kind);
-    Diag(TemplateNameLoc, diag::err_tag_reference_non_tag) << TD << NTK << Kind;
+    Diag(TemplateNameLoc, diag::err_tag_reference_non_tag)
+        << TD << NTK << llvm::to_underlying(Kind);
     Diag(TD->getLocation(), diag::note_previous_use);
     return true;
   }
@@ -10800,7 +10803,8 @@ Sema::ActOnDependentTag(Scope *S, unsigned TagSpec, TagUseKind TUK,
 
   if (TUK == TUK_Declaration || TUK == TUK_Definition) {
     Diag(NameLoc, diag::err_dependent_tag_decl)
-      << (TUK == TUK_Definition) << Kind << SS.getRange();
+        << (TUK == TUK_Definition) << llvm::to_underlying(Kind)
+        << SS.getRange();
     return true;
   }
 
