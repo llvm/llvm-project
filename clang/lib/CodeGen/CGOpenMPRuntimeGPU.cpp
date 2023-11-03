@@ -3081,14 +3081,7 @@ void CGOpenMPRuntimeGPU::emitReduction(
       ++IRHS;
     }
   };
-  llvm::Value *EndArgs[] = {ThreadId};
   RegionCodeGenTy RCG(CodeGen);
-  NVPTXActionTy Action(
-      nullptr, std::nullopt,
-      OMPBuilder.getOrCreateRuntimeFunction(
-          CGM.getModule(), OMPRTL___kmpc_nvptx_end_reduce_nowait),
-      EndArgs);
-  RCG.setAction(Action);
   RCG(CGF);
   // There is no need to emit line number for unconditional branch.
   (void)ApplyDebugLocation::CreateEmpty(CGF);
