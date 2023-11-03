@@ -233,28 +233,6 @@ Constant *llvm::ConstantFoldCastInstruction(unsigned opc, Constant *V,
       // Try hard to fold cast of cast because they are often eliminable.
       if (unsigned newOpc = foldConstantCastPair(opc, CE, DestTy))
         return foldMaybeUndesirableCast(newOpc, CE->getOperand(0), DestTy);
-    } else if (CE->getOpcode() == Instruction::GetElementPtr &&
-               // Do not fold addrspacecast (gep 0, .., 0). It might make the
-               // addrspacecast uncanonicalized.
-               opc != Instruction::AddrSpaceCast &&
-               // Do not fold bitcast (gep) with inrange index, as this loses
-               // information.
-               !cast<GEPOperator>(CE)->getInRangeIndex() &&
-               // Do not fold if the gep type is a vector, as bitcasting
-               // operand 0 of a vector gep will result in a bitcast between
-               // different sizes.
-               !CE->getType()->isVectorTy()) {
-      // If all of the indexes in the GEP are null values, there is no pointer
-      // adjustment going on.  We might as well cast the source pointer.
-      bool isAllNull = true;
-      for (unsigned i = 1, e = CE->getNumOperands(); i != e; ++i)
-        if (!CE->getOperand(i)->isNullValue()) {
-          isAllNull = false;
-          break;
-        }
-      if (isAllNull)
-        // This is casting one pointer type to another, always BitCast
-        return ConstantExpr::getPointerCast(CE->getOperand(0), DestTy);
     }
   }
 
