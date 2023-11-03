@@ -132,13 +132,19 @@ class TestVTableValue(TestBase):
         # Overwrite the first entry in the vtable and make sure we can still
         # see the bogus value which should have no summary
         vtable_addr = vtable.GetValueAsUnsigned()
-        data = str("\x01\x01\x01\x01\x01\x01\x01\x01")
+
+        is_64bit = self.process().GetAddressByteSize() == 8
+        data = str(
+            "\x01\x01\x01\x01\x01\x01\x01\x01" if is_64bit else "\x01\x01\x01\x01"
+        )
         error = lldb.SBError()
         process.WriteMemory(vtable_addr, data, error)
 
         scribbled_child = vtable.GetChildAtIndex(0)
-        self.assertEquals(scribbled_child.GetValueAsUnsigned(0),
-                          0x0101010101010101)
+        self.assertEquals(
+            scribbled_child.GetValueAsUnsigned(0),
+            0x0101010101010101 if is_64bit else 0x01010101,
+        )
         self.assertEquals(scribbled_child.GetSummary(), None)
 
     def expected_vtable_addr(self, var: lldb.SBValue) -> int:
