@@ -234,29 +234,6 @@ static FileSpec LocateExecutableSymbolFileDsym(const ModuleSpec &module_spec) {
   return dsym_module_spec.GetSymbolFileSpec();
 }
 
-ModuleSpec Symbols::LocateExecutableObjectFile(const ModuleSpec &module_spec) {
-  ModuleSpec result;
-  const FileSpec &exec_fspec = module_spec.GetFileSpec();
-  const ArchSpec *arch = module_spec.GetArchitecturePtr();
-  const UUID *uuid = module_spec.GetUUIDPtr();
-  LLDB_SCOPED_TIMERF(
-      "LocateExecutableObjectFile (file = %s, arch = %s, uuid = %p)",
-      exec_fspec ? exec_fspec.GetFilename().AsCString("<NULL>") : "<NULL>",
-      arch ? arch->GetArchitectureName() : "<NULL>", (const void *)uuid);
-
-  ModuleSpecList module_specs;
-  ModuleSpec matched_module_spec;
-  if (exec_fspec &&
-      ObjectFile::GetModuleSpecifications(exec_fspec, 0, 0, module_specs) &&
-      module_specs.FindMatchingModuleSpec(module_spec, matched_module_spec)) {
-    result.GetFileSpec() = exec_fspec;
-  } else {
-    LocateMacOSXFilesUsingDebugSymbols(module_spec, result);
-  }
-
-  return result;
-}
-
 // Keep "symbols.enable-external-lookup" description in sync with this function.
 
 FileSpec

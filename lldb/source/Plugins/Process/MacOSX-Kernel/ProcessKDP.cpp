@@ -282,7 +282,7 @@ Status ProcessKDP::DoConnectRemote(llvm::StringRef remote_url) {
                                                       search_paths);
               if (module_spec.GetSymbolFileSpec()) {
                 ModuleSpec executable_module_spec =
-                    Symbols::LocateExecutableObjectFile(module_spec);
+                    PluginManager::LocateExecutableObjectFile(module_spec);
                 if (FileSystem::Instance().Exists(
                         executable_module_spec.GetFileSpec())) {
                   module_spec.GetFileSpec() =
