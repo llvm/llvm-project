@@ -25,7 +25,7 @@ class Generator(object):
 
     def GeneratePrologue(self):
 
-        self.implementationContent += R"""
+        self.implementationContent += r"""
 /*===- Generated file -------------------------------------------*- C++ -*-===*\
 |*                                                                            *|
 |* Introspection of available AST node SourceLocations                        *|
