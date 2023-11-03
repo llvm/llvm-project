@@ -255,6 +255,7 @@ struct TileLoadOpWithMaskAndPadZeroConversion
 ///  %pad_1d = arith.constant dense<1> : vector<[4]xi32>
 ///  %num_rows = arith.constant 2 : index
 ///  %num_cols = arith.constant 4 : index
+///  %num_cols_i32 = arith.index_castui %num_cols : index to i32
 ///  %tile_id = arm_sme.get_tile_id : i32
 ///  %tile = arm_sme.cast_tile_to_vector %tile_id : i32 to vector<[4]x[4]xi32>
 ///  %vscale = vector.vscale
@@ -264,14 +265,13 @@ struct TileLoadOpWithMaskAndPadZeroConversion
 ///  %svl_s = arith.muli %min_svl_s, %vscale : index
 ///  scf.for %tile_slice_idx = %c0 to %svl_s step %c1 {
 ///    %row_is_active = arith.cmpi ult %tile_slice_idx, %num_rows : index
-///    %slice = scf.if %row_is_active -> vector<[4]xi32> {
-///      %slice = vector.maskedload %base[%tile_slice_idx, %c0], %num_cols, %pad
-///        : memref<?x?xi32>, vector<[4]xi1>,
-///          vector<[4]xi32> into vector<[4]xi32>
-///      scf.yield %slice : vector<[4]xi32>
-///    } else {
-///      scf.yield %pad_1d : vector<[4]xi32>
-///    }
+///    %row_is_active_i32 = arith.extsi %row_is_active : i1 to i32
+///    %mask = arith.andi %row_is_active_i32, %num_cols_i32 : i32
+///    %mask_index = arith.index_cast %mask : i32 to index
+///    %mask_1d = vector.create_mask %mask_index : vector<[4]xi1>
+///    %slice = vector.maskedload %base[%tile_slice_idx, %c0], %mask_1d, %pad
+///      : memref<?x?xi32>, vector<[4]xi1>,
+///        vector<[4]xi32> into vector<[4]xi32>
 ///    // Insert slice into tile
 ///    arm_sme.move_vector_to_tile_slice %slice, %tile, %tile_slice_idx
 ///      : vector<[4]xi32> into vector<[4]x[4]xi32>
@@ -312,11 +312,8 @@ struct TileLoadOpWithMaskAndPadNonZeroConversion
     auto numRows = createMaskOp.getOperands()[0];
     auto numCols = createMaskOp.getOperands()[1];
 
-    VectorType tileSliceType = VectorType::Builder(tileType).dropDim(0);
-    auto predicateType =
-        VectorType::get(tileType.getDimSize(1), rewriter.getI1Type(), true);
-    auto numColsOp =
-        rewriter.create<vector::CreateMaskOp>(loc, predicateType, numCols);
+    auto numColsI32 = rewriter.create<arith::IndexCastUIOp>(
+        loc, rewriter.getI32Type(), numCols);
 
     // Create 'arm_sme.get_tile' op.
     auto tileId = rewriter.create<arm_sme::GetTileID>(
@@ -343,8 +340,18 @@ struct TileLoadOpWithMaskAndPadNonZeroConversion
 
     auto tileSliceIndex = forOp.getInductionVar();
 
+    // Combine masks.
     auto rowIsActive = rewriter.create<arith::CmpIOp>(
         loc, arith::CmpIPredicate::ult, tileSliceIndex, numRows);
+    auto rowIsActiveI32 = rewriter.create<arith::ExtSIOp>(
+        loc, rewriter.getI32Type(), rowIsActive);
+    auto mask = rewriter.create<arith::AndIOp>(loc, rowIsActiveI32, numColsI32);
+    auto maskIndex =
+        rewriter.create<arith::IndexCastOp>(loc, rewriter.getIndexType(), mask);
+    auto predicateType =
+        VectorType::get(tileType.getDimSize(1), rewriter.getI1Type(), true);
+    auto maskOp1D = rewriter.create<vector::CreateMaskOp>(
+        loc, predicateType, maskIndex.getResult());
 
     SmallVector<Value> memrefIndices;
     getMemrefIndices(tileLoadOp.getIndices(),
@@ -352,32 +359,16 @@ struct TileLoadOpWithMaskAndPadNonZeroConversion
                      numTileSlices, memrefIndices, loc, rewriter);
 
     // Splat pad into 1-D vector matching type of tile slice.
+    VectorType tileSliceType = VectorType::Builder(tileType).dropDim(0);
     auto pad1DOp = rewriter.create<vector::SplatOp>(loc, tileSliceType, padOp);
 
-    Operation *slice = rewriter.create<scf::IfOp>(
-        loc, rowIsActive,
-        [&](OpBuilder &b, Location loc) {
-          // If the row is active, emit a masked load where the predicate is
-          // 'numCols'. Pad is used for inactive elements, taken from
-          // passthru.
-          auto loadSlice = rewriter.create<vector::MaskedLoadOp>(
-              loc, tileSliceType, tileLoadOp.getBase(), memrefIndices,
-              numColsOp, /*passthru=*/pad1DOp);
-          rewriter.create<scf::YieldOp>(loc, loadSlice->getResult(0));
-        },
-        [&](OpBuilder &b, Location loc) {
-          // Inactive rows are filled with pad.
-          rewriter.create<scf::YieldOp>(loc, pad1DOp.getResult());
-        });
-
-    // TODO: If the load is vertical the transpose can't be done in-flight with
-    // a regular (SVE) maskedload. Propagate layout to
-    // 'arm_sme.move_vector_to_tile_slice' below once it supports layout. This
-    // is currently broken.
+    auto loadSlice = rewriter.create<vector::MaskedLoadOp>(
+        loc, tileSliceType, tileLoadOp.getBase(), memrefIndices, maskOp1D,
+        /*passthru=*/pad1DOp);
 
     // Create 'arm_sme.move_vector_to_tile_slice' to move slice into tile.
     rewriter.create<arm_sme::MoveVectorToTileSliceOp>(
-        loc, tileType, slice->getResult(0), tile, tileSliceIndex,
+        loc, tileType, loadSlice->getResult(0), tile, tileSliceIndex,
         tileLoadOp.getLayout());
 
     rewriter.setInsertionPointAfter(forOp);
