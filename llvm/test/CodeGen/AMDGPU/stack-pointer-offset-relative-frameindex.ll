@@ -87,9 +87,8 @@ define amdgpu_kernel void @kernel_background_evaluate(ptr addrspace(5) %kg, ptr 
 ; MUBUF11-NEXT:    v_mov_b32_e32 v4, 0x400000
 ; MUBUF11-NEXT:    s_movk_i32 s32, 0x6000
 ; MUBUF11-NEXT:    s_getpc_b64 s[0:1]
-; MUBUF11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; MUBUF11-NEXT:    s_add_u32 s0, s0, svm_eval_nodes@rel32@lo+8
-; MUBUF11-NEXT:    s_addc_u32 s1, s1, svm_eval_nodes@rel32@hi+16
+; MUBUF11-NEXT:    s_add_u32 s0, s0, svm_eval_nodes@rel32@lo+4
+; MUBUF11-NEXT:    s_addc_u32 s1, s1, svm_eval_nodes@rel32@hi+12
 ; MUBUF11-NEXT:    s_waitcnt lgkmcnt(0)
 ; MUBUF11-NEXT:    v_mov_b32_e32 v0, s2
 ; MUBUF11-NEXT:    s_swappc_b64 s[30:31], s[0:1]
@@ -115,9 +114,8 @@ define amdgpu_kernel void @kernel_background_evaluate(ptr addrspace(5) %kg, ptr 
 ; FLATSCR11-NEXT:    v_mov_b32_e32 v4, 0x400000
 ; FLATSCR11-NEXT:    s_movk_i32 s32, 0x6000
 ; FLATSCR11-NEXT:    s_getpc_b64 s[0:1]
-; FLATSCR11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; FLATSCR11-NEXT:    s_add_u32 s0, s0, svm_eval_nodes@rel32@lo+8
-; FLATSCR11-NEXT:    s_addc_u32 s1, s1, svm_eval_nodes@rel32@hi+16
+; FLATSCR11-NEXT:    s_add_u32 s0, s0, svm_eval_nodes@rel32@lo+4
+; FLATSCR11-NEXT:    s_addc_u32 s1, s1, svm_eval_nodes@rel32@hi+12
 ; FLATSCR11-NEXT:    s_waitcnt lgkmcnt(0)
 ; FLATSCR11-NEXT:    v_mov_b32_e32 v0, s2
 ; FLATSCR11-NEXT:    s_swappc_b64 s[30:31], s[0:1]

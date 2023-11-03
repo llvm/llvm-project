@@ -138,9 +138,8 @@ define amdgpu_kernel void @test_kern_call() local_unnamed_addr #0 {
 ; GFX1100-NEXT:    s_mov_b32 s14, s15
 ; GFX1100-NEXT:    s_mov_b32 s32, 0
 ; GFX1100-NEXT:    s_getpc_b64 s[16:17]
-; GFX1100-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1100-NEXT:    s_add_u32 s16, s16, ex@rel32@lo+8
-; GFX1100-NEXT:    s_addc_u32 s17, s17, ex@rel32@hi+16
+; GFX1100-NEXT:    s_add_u32 s16, s16, ex@rel32@lo+4
+; GFX1100-NEXT:    s_addc_u32 s17, s17, ex@rel32@hi+12
 ; GFX1100-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; GFX1100-NEXT:    s_endpgm
 
@@ -235,9 +234,8 @@ define amdgpu_kernel void @test_kern_stack_and_call() local_unnamed_addr #0 {
 ; GFX1100-NEXT:    scratch_store_b32 off, v1, off offset:4 dlc
 ; GFX1100-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX1100-NEXT:    s_getpc_b64 s[16:17]
-; GFX1100-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1100-NEXT:    s_add_u32 s16, s16, ex@rel32@lo+8
-; GFX1100-NEXT:    s_addc_u32 s17, s17, ex@rel32@hi+16
+; GFX1100-NEXT:    s_add_u32 s16, s16, ex@rel32@lo+4
+; GFX1100-NEXT:    s_addc_u32 s17, s17, ex@rel32@hi+12
 ; GFX1100-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; GFX1100-NEXT:    s_endpgm
 
@@ -395,9 +393,8 @@ define amdgpu_kernel void @test_force_fp_kern_call() local_unnamed_addr #2 {
 ; GFX1100-NEXT:    s_mov_b32 s32, 0
 ; GFX1100-NEXT:    s_mov_b32 s33, 0
 ; GFX1100-NEXT:    s_getpc_b64 s[16:17]
-; GFX1100-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1100-NEXT:    s_add_u32 s16, s16, ex@rel32@lo+8
-; GFX1100-NEXT:    s_addc_u32 s17, s17, ex@rel32@hi+16
+; GFX1100-NEXT:    s_add_u32 s16, s16, ex@rel32@lo+4
+; GFX1100-NEXT:    s_addc_u32 s17, s17, ex@rel32@hi+12
 ; GFX1100-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; GFX1100-NEXT:    s_endpgm
 ; GFX1010-NEXT    s_add_u32 s12, s12, s17
@@ -514,9 +511,8 @@ define amdgpu_kernel void @test_force_fp_kern_stack_and_call() local_unnamed_add
 ; GFX1100-NEXT:    scratch_store_b32 off, v1, s33 offset:4 dlc
 ; GFX1100-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX1100-NEXT:    s_getpc_b64 s[16:17]
-; GFX1100-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1100-NEXT:    s_add_u32 s16, s16, ex@rel32@lo+8
-; GFX1100-NEXT:    s_addc_u32 s17, s17, ex@rel32@hi+16
+; GFX1100-NEXT:    s_add_u32 s16, s16, ex@rel32@lo+4
+; GFX1100-NEXT:    s_addc_u32 s17, s17, ex@rel32@hi+12
 ; GFX1100-NEXT:    s_swappc_b64 s[30:31], s[16:17]
 ; GFX1100-NEXT:    s_endpgm
 entry:

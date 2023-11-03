@@ -22,6 +22,10 @@
 
 namespace llvm {
 
+/// Return true if GFX11+ s_delay_alu insertion has not been disabled by the
+/// command line option.
+bool ShouldInsertDelayAlu();
+
 //===----------------------------------------------------------------------===//
 // AMDGPU Target Machine (R600+)
 //===----------------------------------------------------------------------===//

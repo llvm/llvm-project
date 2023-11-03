@@ -2406,7 +2406,7 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     // instruction.
 
     int64_t Adjust = 0;
-    if (ST.hasDelayAlu()) {
+    if (ST.hasDelayAlu() && ShouldInsertDelayAlu()) {
       // Manually add the 1 cycle delay before using RegLo. AMDGPUInsertDelayAlu
       // will not add this automatically inside a bundle:
       //   s_delay_alu instid0(SALU_CYCLE_1)
