@@ -62,9 +62,7 @@ static Value castAllocFuncResult(ConversionPatternRewriter &rewriter,
   unsigned memrefAddrSpace = *maybeMemrefAddrSpace;
   if (allocatedPtrTy.getAddressSpace() != memrefAddrSpace)
     allocatedPtr = rewriter.create<LLVM::AddrSpaceCastOp>(
-        loc,
-        typeConverter.getPointerType(allocatedPtrTy.getElementType(),
-                                     memrefAddrSpace),
+        loc, LLVM::LLVMPointerType::get(rewriter.getContext(), memrefAddrSpace),
         allocatedPtr);
   return allocatedPtr;
 }
