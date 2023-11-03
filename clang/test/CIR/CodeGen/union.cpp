@@ -8,6 +8,7 @@ typedef union { yolo y; struct { bool life; int genpad; }; } yolm3;
 
 // CHECK-DAG: !ty_22U23A3ADummy22 = !cir.struct<struct "U2::Dummy" {!s16i, f32} #cir.record.decl.ast>
 // CHECK-DAG: !ty_22anon2E522 = !cir.struct<struct "anon.5" {!cir.bool, !s32i} #cir.record.decl.ast>
+// CHECK-DAG: !ty_22anon2E122 = !cir.struct<struct "anon.1" {!s32i} #cir.record.decl.ast>
 // CHECK-DAG: !ty_22yolo22 = !cir.struct<struct "yolo" {!s32i} #cir.record.decl.ast>
 // CHECK-DAG: !ty_22anon2E322 = !cir.struct<struct "anon.3" {!cir.ptr<!s32i>, !s32i} #cir.record.decl.ast>
 

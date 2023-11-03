@@ -596,7 +596,7 @@ std::unique_ptr<CIRGenRecordLayout>
 CIRGenTypes::computeRecordLayout(const RecordDecl *D,
                                  mlir::cir::StructType *Ty) {
   CIRRecordLowering builder(*this, D, /*packed=*/false);
-
+  assert(Ty->isIncomplete() && "recomputing record layout?");
   builder.lower(/*nonVirtualBaseType=*/false);
 
   // If we're in C++, compute the base subobject type.

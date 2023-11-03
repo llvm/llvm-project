@@ -26,7 +26,7 @@ void baz() {
 struct incomplete;
 void yoyo(incomplete *i) {}
 
-//  CHECK-DAG-DAG: !ty_22incomplete22 = !cir.struct<struct "incomplete" incomplete
+//  CHECK-DAG: !ty_22incomplete22 = !cir.struct<struct "incomplete" incomplete
 //  CHECK-DAG: !ty_22Bar22 = !cir.struct<struct "Bar" {!s32i, !s8i}>
 
 //  CHECK-DAG: !ty_22Foo22 = !cir.struct<struct "Foo" {!s32i, !s8i, !ty_22Bar22}>

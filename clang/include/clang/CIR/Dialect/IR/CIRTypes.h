@@ -41,9 +41,43 @@ struct StructTypeStorage;
 
 /// Each unique clang::RecordDecl is mapped to a `cir.struct` and any object in
 /// C/C++ that has a struct type will have a `cir.struct` in CIR.
+///
+/// There are three possible formats for this type:
+///
+///  - Identified and complete structs: unique name and a known body.
+///  - Identified and incomplete structs: unique name and unkonwn body.
+///  - Anonymous structs: no name and a known body.
+///
+/// Identified structs are uniqued by their name, and anonymous structs are
+/// uniqued by their body. This means that two anonymous structs with the same
+/// body will be the same type, and two identified structs with the same name
+/// will be the same type. Attempting to build a struct with a existing name,
+/// but a different body will result in an error.
+///
+/// A few examples:
+///
+/// ```mlir
+///     !complete = !cir.struct<struct "complete" {!cir.int<u, 8>}>
+///     !incomplete = !cir.struct<struct "incomplete" incomplete>
+///     !anonymous = !cir.struct<struct {!cir.int<u, 8>}>
+/// ```
+///
+/// Incomplete structs are mutable, meaning the can be later completed with a
+/// body automatically updating in place every type in the code that uses the
+/// incomplete struct. Mutability allows for recursive types to be represented,
+/// meaning the struct can have members that refer to itself. This is useful for
+/// representing recursive records and is implemented through a special syntax.
+/// In the example below, the `Node` struct has a member that is a pointer to a
+/// `Node` struct:
+///
+/// ```mlir
+///     !struct = !cir.struct<struct "Node" {!cir.ptr<!cir.struct<struct
+///     "Node">>}>
+/// ```
 class StructType
     : public Type::TypeBase<StructType, Type, detail::StructTypeStorage,
-                            DataLayoutTypeInterface::Trait> {
+                            DataLayoutTypeInterface::Trait,
+                            TypeTrait::IsMutable> {
   // FIXME(cir): migrate this type to Tablegen once mutable types are supported.
 public:
   using Base::Base;
@@ -122,6 +156,10 @@ public:
   std::string getPrefixedName() {
     return getKindAsStr() + "." + getName().getValue().str();
   }
+
+  /// Complete the struct type by mutating its members and attributes.
+  void complete(ArrayRef<Type> members, bool packed,
+                ASTRecordDeclInterface ast = {});
 
   /// DataLayoutTypeInterface methods.
   llvm::TypeSize getTypeSizeInBits(const DataLayout &dataLayout,

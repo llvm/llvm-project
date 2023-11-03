@@ -22,8 +22,7 @@ void baz(void) {
   struct Foo f;
 }
 
-// CHECK-DAG: !ty_22Node22 = !cir.struct<struct "Node" incomplete>
-// CHECK-DAG: !ty_22Node221 = !cir.struct<struct "Node" {!cir.ptr<!ty_22Node22>} #cir.record.decl.ast>
+// CHECK-DAG: !ty_22Node22 = !cir.struct<struct "Node" {!cir.ptr<!cir.struct<struct "Node">>} #cir.record.decl.ast>
 // CHECK-DAG: !ty_22Bar22 = !cir.struct<struct "Bar" {!s32i, !s8i}>
 // CHECK-DAG: !ty_22Foo22 = !cir.struct<struct "Foo" {!s32i, !s8i, !ty_22Bar22}>
 //  CHECK-DAG: module {{.*}} {
@@ -96,7 +95,7 @@ void local_decl(void) {
 }
 
 // CHECK-DAG: cir.func @useRecursiveType
-// CHECK-DAG: cir.get_member {{%.}}[0] {name = "next"} : !cir.ptr<!ty_22Node221> -> !cir.ptr<!cir.ptr<!ty_22Node221>>
+// CHECK-DAG: cir.get_member {{%.}}[0] {name = "next"} : !cir.ptr<!ty_22Node22> -> !cir.ptr<!cir.ptr<!ty_22Node22>>
 void useRecursiveType(NodeStru* a) {
   a->next = 0;
 }

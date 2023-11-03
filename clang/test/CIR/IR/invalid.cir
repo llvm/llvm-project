@@ -560,3 +560,13 @@ module {
 !u16i = !cir.int<u, 16>
 // expected-error@+1 {{identified structs cannot have an empty name}}
 !struct = !cir.struct<struct "" incomplete>
+
+// -----
+
+// expected-error@+1 {{invalid self-reference within record}}
+!struct = !cir.struct<struct {!cir.struct<struct "SelfReference">}>
+
+// -----
+
+// expected-error@+1 {{record already defined}}
+!struct = !cir.struct<struct "SelfReference" {!cir.struct<struct "SelfReference" {}>}>

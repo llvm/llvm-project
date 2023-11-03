@@ -13,7 +13,16 @@
 !ty_22S22 = !cir.struct<struct "S" {!u8i, !u16i, !u32i}>
 !ty_22S122 = !cir.struct<struct "S1" {!s32i, !s32i}>
 
+// Test recursive struct parsing/printing.
+!ty_22Node22 = !cir.struct<struct "Node" {!cir.ptr<!cir.struct<struct "Node">>} #cir.record.decl.ast>
+// CHECK-DAG: !cir.struct<struct "Node" {!cir.ptr<!cir.struct<struct "Node">>} #cir.record.decl.ast>
+
 module  {
+  // Dummy function to use types and force them to be printed.
+  cir.func @useTypes(%arg0: !ty_22Node22) {
+    cir.return
+  }
+
   cir.func @structs() {
     %0 = cir.alloca !cir.ptr<!cir.struct<struct "S" {!u8i, !u16i, !u32i}>>, cir.ptr <!cir.ptr<!cir.struct<struct "S" {!u8i, !u16i, !u32i}>>>, ["s", init]
     %1 = cir.alloca !cir.ptr<!cir.struct<union "i" incomplete>>, cir.ptr <!cir.ptr<!cir.struct<union "i" incomplete>>>, ["i", init]
