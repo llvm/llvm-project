@@ -75,7 +75,7 @@ namespace sparse_tensor {
 ///
 /// Slice on #COO storage of 2-dim matrix yields
 ///  ;; Inherited from the original sparse tensors
-///  memref<?xindex>,                          ; positions-0, essentially   [0,sz]
+///  memref<?xindex>,                          ; positions-0, essentially [0,sz]
 ///  memref<?xindex>                           ; AOS coordinates storage
 ///  memref<?xf64>                             ; values
 ///  struct<(array<2 x i64>, array<3 x i64>,   ; lvl0, lvl1, 3xsizes
