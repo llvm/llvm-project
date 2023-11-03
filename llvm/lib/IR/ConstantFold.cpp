@@ -1142,57 +1142,51 @@ static ICmpInst::Predicate areGlobalsPotentiallyEqual(const GlobalValue *GV1,
 /// If we can determine that the two constants have a particular relation to
 /// each other, we should return the corresponding ICmp predicate, otherwise
 /// return ICmpInst::BAD_ICMP_PREDICATE.
-///
-/// To simplify this code we canonicalize the relation so that the first
-/// operand is always the most "complex" of the two.  We consider simple
-/// constants (like ConstantInt) to be the simplest, followed by
-/// GlobalValues, followed by ConstantExpr's (the most complex).
-///
-static ICmpInst::Predicate evaluateICmpRelation(Constant *V1, Constant *V2,
-                                                bool isSigned) {
+static ICmpInst::Predicate evaluateICmpRelation(Constant *V1, Constant *V2) {
   assert(V1->getType() == V2->getType() &&
          "Cannot compare different types of values!");
   if (V1 == V2) return ICmpInst::ICMP_EQ;
 
-  if (!isa<ConstantExpr>(V1) && !isa<GlobalValue>(V1) &&
-      !isa<BlockAddress>(V1)) {
-    if (!isa<GlobalValue>(V2) && !isa<ConstantExpr>(V2) &&
-        !isa<BlockAddress>(V2)) {
-      // We distilled this down to a simple case, use the standard constant
-      // folder.
-      ConstantInt *R = nullptr;
-      ICmpInst::Predicate pred = ICmpInst::ICMP_EQ;
-      R = dyn_cast<ConstantInt>(ConstantExpr::getICmp(pred, V1, V2));
-      if (R && !R->isZero())
-        return pred;
-      pred = isSigned ? ICmpInst::ICMP_SLT : ICmpInst::ICMP_ULT;
-      R = dyn_cast<ConstantInt>(ConstantExpr::getICmp(pred, V1, V2));
-      if (R && !R->isZero())
-        return pred;
-      pred = isSigned ? ICmpInst::ICMP_SGT : ICmpInst::ICMP_UGT;
-      R = dyn_cast<ConstantInt>(ConstantExpr::getICmp(pred, V1, V2));
-      if (R && !R->isZero())
-        return pred;
+  // The following folds only apply to pointers.
+  if (!V1->getType()->isPointerTy())
+    return ICmpInst::BAD_ICMP_PREDICATE;
 
-      // If we couldn't figure it out, bail.
-      return ICmpInst::BAD_ICMP_PREDICATE;
-    }
-
-    // If the first operand is simple, swap operands.
-    ICmpInst::Predicate SwappedRelation =
-      evaluateICmpRelation(V2, V1, isSigned);
+  // To simplify this code we canonicalize the relation so that the first
+  // operand is always the most "complex" of the two.  We consider simple
+  // constants (like ConstantPointerNull) to be the simplest, followed by
+  // BlockAddress, GlobalValues, and ConstantExpr's (the most complex).
+  auto GetComplexity = [](Constant *V) {
+    if (isa<ConstantExpr>(V))
+      return 3;
+    if (isa<GlobalValue>(V))
+      return 2;
+    if (isa<BlockAddress>(V))
+      return 1;
+    return 0;
+  };
+  if (GetComplexity(V1) < GetComplexity(V2)) {
+    ICmpInst::Predicate SwappedRelation = evaluateICmpRelation(V2, V1);
     if (SwappedRelation != ICmpInst::BAD_ICMP_PREDICATE)
       return ICmpInst::getSwappedPredicate(SwappedRelation);
+    return ICmpInst::BAD_ICMP_PREDICATE;
+  }
 
-  } else if (const GlobalValue *GV = dyn_cast<GlobalValue>(V1)) {
-    if (isa<ConstantExpr>(V2)) {  // Swap as necessary.
-      ICmpInst::Predicate SwappedRelation =
-        evaluateICmpRelation(V2, V1, isSigned);
-      if (SwappedRelation != ICmpInst::BAD_ICMP_PREDICATE)
-        return ICmpInst::getSwappedPredicate(SwappedRelation);
-      return ICmpInst::BAD_ICMP_PREDICATE;
+  if (const BlockAddress *BA = dyn_cast<BlockAddress>(V1)) {
+    // Now we know that the RHS is a BlockAddress or simple
+    // constant (which, since the types must match, means that it is a
+    // ConstantPointerNull).
+    if (const BlockAddress *BA2 = dyn_cast<BlockAddress>(V2)) {
+      // Block address in another function can't equal this one, but block
+      // addresses in the current function might be the same if blocks are
+      // empty.
+      if (BA2->getFunction() != BA->getFunction())
+        return ICmpInst::ICMP_NE;
+    } else {
+      // Block addresses aren't null.
+      assert(isa<ConstantPointerNull>(V2) && "Canonicalization guarantee!");
+      return ICmpInst::ICMP_NE;
     }
-
+  } else if (const GlobalValue *GV = dyn_cast<GlobalValue>(V1)) {
     // Now we know that the RHS is a GlobalValue, BlockAddress or simple
     // constant (which, since the types must match, means that it's a
     // ConstantPointerNull).
@@ -1211,30 +1205,6 @@ static ICmpInst::Predicate evaluateICmpRelation(Constant *V1, Constant *V2,
           !NullPointerIsDefined(nullptr /* F */,
                                 GV->getType()->getAddressSpace()))
         return ICmpInst::ICMP_UGT;
-    }
-  } else if (const BlockAddress *BA = dyn_cast<BlockAddress>(V1)) {
-    if (isa<ConstantExpr>(V2)) {  // Swap as necessary.
-      ICmpInst::Predicate SwappedRelation =
-        evaluateICmpRelation(V2, V1, isSigned);
-      if (SwappedRelation != ICmpInst::BAD_ICMP_PREDICATE)
-        return ICmpInst::getSwappedPredicate(SwappedRelation);
-      return ICmpInst::BAD_ICMP_PREDICATE;
-    }
-
-    // Now we know that the RHS is a GlobalValue, BlockAddress or simple
-    // constant (which, since the types must match, means that it is a
-    // ConstantPointerNull).
-    if (const BlockAddress *BA2 = dyn_cast<BlockAddress>(V2)) {
-      // Block address in another function can't equal this one, but block
-      // addresses in the current function might be the same if blocks are
-      // empty.
-      if (BA2->getFunction() != BA->getFunction())
-        return ICmpInst::ICMP_NE;
-    } else {
-      // Block addresses aren't null, don't equal the address of globals.
-      assert((isa<ConstantPointerNull>(V2) || isa<GlobalValue>(V2)) &&
-             "Canonicalization guarantee!");
-      return ICmpInst::ICMP_NE;
     }
   } else {
     // Ok, the LHS is known to be a constantexpr.  The RHS can be any of a
@@ -1429,7 +1399,7 @@ Constant *llvm::ConstantFoldCompareInstruction(CmpInst::Predicate Predicate,
   } else {
     // Evaluate the relation between the two constants, per the predicate.
     int Result = -1;  // -1 = unknown, 0 = known false, 1 = known true.
-    switch (evaluateICmpRelation(C1, C2, CmpInst::isSigned(Predicate))) {
+    switch (evaluateICmpRelation(C1, C2)) {
     default: llvm_unreachable("Unknown relational!");
     case ICmpInst::BAD_ICMP_PREDICATE:
       break;  // Couldn't determine anything about these constants.
