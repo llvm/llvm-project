@@ -158,7 +158,6 @@ int main()
 // CHECK-NEXT:    [[TMP15:%.*]] = load double, ptr [[E2]], align 8
 // CHECK-NEXT:    [[ADD:%.*]] = fadd double [[TMP14]], [[TMP15]]
 // CHECK-NEXT:    store double [[ADD]], ptr [[ARRAYIDX]], align 8
-// CHECK-NEXT:    call void @__kmpc_nvptx_end_reduce_nowait(i32 [[TMP10]])
 // CHECK-NEXT:    br label [[DOTOMP_REDUCTION_DONE]]
 // CHECK:       .omp.reduction.done:
 // CHECK-NEXT:    ret void

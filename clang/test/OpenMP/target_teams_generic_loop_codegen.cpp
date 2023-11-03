@@ -614,7 +614,6 @@ int foo() {
 // CHECK-NEXT:    [[OMP_ARRAYCPY_DONE16:%.*]] = icmp eq ptr [[OMP_ARRAYCPY_DEST_ELEMENT15]], [[TMP43]]
 // CHECK-NEXT:    br i1 [[OMP_ARRAYCPY_DONE16]], label [[OMP_ARRAYCPY_DONE17]], label [[OMP_ARRAYCPY_BODY]]
 // CHECK:       omp.arraycpy.done17:
-// CHECK-NEXT:    call void @__kmpc_nvptx_end_reduce_nowait(i32 [[TMP38]])
 // CHECK-NEXT:    br label [[DOTOMP_REDUCTION_DONE]]
 // CHECK:       .omp.reduction.done:
 // CHECK-NEXT:    ret void
@@ -759,7 +758,6 @@ int foo() {
 // CHECK-NEXT:    [[OMP_ARRAYCPY_DONE18:%.*]] = icmp eq ptr [[OMP_ARRAYCPY_DEST_ELEMENT17]], [[TMP25]]
 // CHECK-NEXT:    br i1 [[OMP_ARRAYCPY_DONE18]], label [[OMP_ARRAYCPY_DONE19]], label [[OMP_ARRAYCPY_BODY]]
 // CHECK:       omp.arraycpy.done19:
-// CHECK-NEXT:    call void @__kmpc_nvptx_end_reduce_nowait(i32 [[TMP21]])
 // CHECK-NEXT:    br label [[DOTOMP_REDUCTION_DONE]]
 // CHECK:       .omp.reduction.done:
 // CHECK-NEXT:    [[TMP28:%.*]] = load i32, ptr [[DOTOMP_IS_LAST_ASCAST]], align 4
@@ -1348,7 +1346,6 @@ int foo() {
 // IR-GPU-NEXT:    [[OMP_ARRAYCPY_DONE16:%.*]] = icmp eq ptr [[OMP_ARRAYCPY_DEST_ELEMENT15]], [[TMP42]]
 // IR-GPU-NEXT:    br i1 [[OMP_ARRAYCPY_DONE16]], label [[OMP_ARRAYCPY_DONE17]], label [[OMP_ARRAYCPY_BODY]]
 // IR-GPU:       omp.arraycpy.done17:
-// IR-GPU-NEXT:    call void @__kmpc_nvptx_end_reduce_nowait(i32 [[TMP38]])
 // IR-GPU-NEXT:    br label [[DOTOMP_REDUCTION_DONE]]
 // IR-GPU:       .omp.reduction.done:
 // IR-GPU-NEXT:    ret void
@@ -1495,7 +1492,6 @@ int foo() {
 // IR-GPU-NEXT:    [[OMP_ARRAYCPY_DONE18:%.*]] = icmp eq ptr [[OMP_ARRAYCPY_DEST_ELEMENT17]], [[TMP25]]
 // IR-GPU-NEXT:    br i1 [[OMP_ARRAYCPY_DONE18]], label [[OMP_ARRAYCPY_DONE19]], label [[OMP_ARRAYCPY_BODY]]
 // IR-GPU:       omp.arraycpy.done19:
-// IR-GPU-NEXT:    call void @__kmpc_nvptx_end_reduce_nowait(i32 [[TMP21]])
 // IR-GPU-NEXT:    br label [[DOTOMP_REDUCTION_DONE]]
 // IR-GPU:       .omp.reduction.done:
 // IR-GPU-NEXT:    [[TMP28:%.*]] = load i32, ptr [[DOTOMP_IS_LAST_ASCAST]], align 4

@@ -148,7 +148,6 @@ int bar(int n){
 // CHECK-64-NEXT:    [[TMP8:%.*]] = load double, ptr [[E1]], align 8
 // CHECK-64-NEXT:    [[ADD2:%.*]] = fadd double [[TMP7]], [[TMP8]]
 // CHECK-64-NEXT:    store double [[ADD2]], ptr [[TMP0]], align 8
-// CHECK-64-NEXT:    call void @__kmpc_nvptx_end_reduce_nowait(i32 [[TMP3]])
 // CHECK-64-NEXT:    br label [[DOTOMP_REDUCTION_DONE]]
 // CHECK-64:       .omp.reduction.done:
 // CHECK-64-NEXT:    ret void
@@ -353,7 +352,6 @@ int bar(int n){
 // CHECK-64-NEXT:    [[TMP13:%.*]] = load float, ptr [[D2]], align 4
 // CHECK-64-NEXT:    [[MUL8:%.*]] = fmul float [[TMP12]], [[TMP13]]
 // CHECK-64-NEXT:    store float [[MUL8]], ptr [[TMP1]], align 4
-// CHECK-64-NEXT:    call void @__kmpc_nvptx_end_reduce_nowait(i32 [[TMP5]])
 // CHECK-64-NEXT:    br label [[DOTOMP_REDUCTION_DONE]]
 // CHECK-64:       .omp.reduction.done:
 // CHECK-64-NEXT:    ret void
@@ -609,7 +607,6 @@ int bar(int n){
 // CHECK-64:       cond.end11:
 // CHECK-64-NEXT:    [[COND12:%.*]] = phi i16 [ [[TMP15]], [[COND_TRUE9]] ], [ [[TMP16]], [[COND_FALSE10]] ]
 // CHECK-64-NEXT:    store i16 [[COND12]], ptr [[TMP1]], align 2
-// CHECK-64-NEXT:    call void @__kmpc_nvptx_end_reduce_nowait(i32 [[TMP6]])
 // CHECK-64-NEXT:    br label [[DOTOMP_REDUCTION_DONE]]
 // CHECK-64:       .omp.reduction.done:
 // CHECK-64-NEXT:    ret void
@@ -824,7 +821,6 @@ int bar(int n){
 // CHECK-32-NEXT:    [[TMP8:%.*]] = load double, ptr [[E1]], align 8
 // CHECK-32-NEXT:    [[ADD2:%.*]] = fadd double [[TMP7]], [[TMP8]]
 // CHECK-32-NEXT:    store double [[ADD2]], ptr [[TMP0]], align 8
-// CHECK-32-NEXT:    call void @__kmpc_nvptx_end_reduce_nowait(i32 [[TMP3]])
 // CHECK-32-NEXT:    br label [[DOTOMP_REDUCTION_DONE]]
 // CHECK-32:       .omp.reduction.done:
 // CHECK-32-NEXT:    ret void
@@ -1029,7 +1025,6 @@ int bar(int n){
 // CHECK-32-NEXT:    [[TMP13:%.*]] = load float, ptr [[D2]], align 4
 // CHECK-32-NEXT:    [[MUL8:%.*]] = fmul float [[TMP12]], [[TMP13]]
 // CHECK-32-NEXT:    store float [[MUL8]], ptr [[TMP1]], align 4
-// CHECK-32-NEXT:    call void @__kmpc_nvptx_end_reduce_nowait(i32 [[TMP5]])
 // CHECK-32-NEXT:    br label [[DOTOMP_REDUCTION_DONE]]
 // CHECK-32:       .omp.reduction.done:
 // CHECK-32-NEXT:    ret void
@@ -1285,7 +1280,6 @@ int bar(int n){
 // CHECK-32:       cond.end11:
 // CHECK-32-NEXT:    [[COND12:%.*]] = phi i16 [ [[TMP15]], [[COND_TRUE9]] ], [ [[TMP16]], [[COND_FALSE10]] ]
 // CHECK-32-NEXT:    store i16 [[COND12]], ptr [[TMP1]], align 2
-// CHECK-32-NEXT:    call void @__kmpc_nvptx_end_reduce_nowait(i32 [[TMP6]])
 // CHECK-32-NEXT:    br label [[DOTOMP_REDUCTION_DONE]]
 // CHECK-32:       .omp.reduction.done:
 // CHECK-32-NEXT:    ret void
@@ -1500,7 +1494,6 @@ int bar(int n){
 // CHECK-32-EX-NEXT:    [[TMP8:%.*]] = load double, ptr [[E1]], align 8
 // CHECK-32-EX-NEXT:    [[ADD2:%.*]] = fadd double [[TMP7]], [[TMP8]]
 // CHECK-32-EX-NEXT:    store double [[ADD2]], ptr [[TMP0]], align 8
-// CHECK-32-EX-NEXT:    call void @__kmpc_nvptx_end_reduce_nowait(i32 [[TMP3]])
 // CHECK-32-EX-NEXT:    br label [[DOTOMP_REDUCTION_DONE]]
 // CHECK-32-EX:       .omp.reduction.done:
 // CHECK-32-EX-NEXT:    ret void
@@ -1705,7 +1698,6 @@ int bar(int n){
 // CHECK-32-EX-NEXT:    [[TMP13:%.*]] = load float, ptr [[D2]], align 4
 // CHECK-32-EX-NEXT:    [[MUL8:%.*]] = fmul float [[TMP12]], [[TMP13]]
 // CHECK-32-EX-NEXT:    store float [[MUL8]], ptr [[TMP1]], align 4
-// CHECK-32-EX-NEXT:    call void @__kmpc_nvptx_end_reduce_nowait(i32 [[TMP5]])
 // CHECK-32-EX-NEXT:    br label [[DOTOMP_REDUCTION_DONE]]
 // CHECK-32-EX:       .omp.reduction.done:
 // CHECK-32-EX-NEXT:    ret void
@@ -1961,7 +1953,6 @@ int bar(int n){
 // CHECK-32-EX:       cond.end11:
 // CHECK-32-EX-NEXT:    [[COND12:%.*]] = phi i16 [ [[TMP15]], [[COND_TRUE9]] ], [ [[TMP16]], [[COND_FALSE10]] ]
 // CHECK-32-EX-NEXT:    store i16 [[COND12]], ptr [[TMP1]], align 2
-// CHECK-32-EX-NEXT:    call void @__kmpc_nvptx_end_reduce_nowait(i32 [[TMP6]])
 // CHECK-32-EX-NEXT:    br label [[DOTOMP_REDUCTION_DONE]]
 // CHECK-32-EX:       .omp.reduction.done:
 // CHECK-32-EX-NEXT:    ret void
