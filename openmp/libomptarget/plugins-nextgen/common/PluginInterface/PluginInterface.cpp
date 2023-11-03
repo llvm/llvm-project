@@ -402,7 +402,7 @@ Error GenericKernelTy::init(GenericDeviceTy &GenericDevice,
     DP("Failed to read kernel environment for '%s': %s\n"
        "Using default SPMD (2) execution mode\n",
        Name, ErrStr.data());
-    assert(KernelEnvironment.Configuration.ReductionBufferSize == 0 &&
+    assert(KernelEnvironment.Configuration.ReductionDataSize == 0 &&
            "Default initialization failed.");
   }
 
@@ -440,9 +440,11 @@ GenericKernelTy::getKernelLaunchEnvironment(
   /// async data transfer.
   auto &LocalKLE = (*AsyncInfoWrapper).KernelLaunchEnvironment;
   LocalKLE = KernelLaunchEnvironment;
-  if (KernelEnvironment.Configuration.ReductionBufferSize) {
+  if (KernelEnvironment.Configuration.ReductionDataSize &&
+      KernelEnvironment.Configuration.ReductionBufferLength) {
     auto AllocOrErr = GenericDevice.dataAlloc(
-        KernelEnvironment.Configuration.ReductionBufferSize,
+        KernelEnvironment.Configuration.ReductionDataSize *
+            KernelEnvironment.Configuration.ReductionBufferLength,
         /*HostPtr=*/nullptr, TargetAllocTy::TARGET_ALLOC_DEVICE);
     if (!AllocOrErr)
       return AllocOrErr.takeError();

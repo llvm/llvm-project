@@ -801,10 +801,12 @@ void CGOpenMPRuntimeGPU::emitKernelDeinit(CodeGenFunction &CGF,
   llvm::Type *LLVMReductionsBufferTy =
       CGM.getTypes().ConvertTypeForMem(StaticTy);
   const auto &DL = CGM.getModule().getDataLayout();
-  uint64_t BufferSize =
+  uint64_t ReductionDataSize =
       DL.getTypeAllocSize(LLVMReductionsBufferTy).getFixedValue();
   CGBuilderTy &Bld = CGF.Builder;
-  OMPBuilder.createTargetDeinit(Bld, BufferSize);
+  OMPBuilder.createTargetDeinit(Bld, ReductionDataSize,
+                                C.getLangOpts().OpenMPCUDAReductionBufNum);
+  TeamsReductions.clear();
 }
 
 void CGOpenMPRuntimeGPU::emitSPMDKernel(const OMPExecutableDirective &D,
@@ -2828,15 +2830,25 @@ void CGOpenMPRuntimeGPU::emitReduction(
   assert((TeamsReduction || ParallelReduction) &&
          "Invalid reduction selection in emitReduction.");
 
+  llvm::SmallDenseMap<const ValueDecl *, const FieldDecl *> VarFieldMap;
+  llvm::SmallVector<const ValueDecl *, 4> PrivatesReductions(Privates.size());
+  int Cnt = 0;
+  for (const Expr *DRE : Privates) {
+    PrivatesReductions[Cnt] = cast<DeclRefExpr>(DRE)->getDecl();
+    ++Cnt;
+  }
+
+  ASTContext &C = CGM.getContext();
+  const RecordDecl *ReductionRec = ::buildRecordForGlobalizedVars(
+      CGM.getContext(), PrivatesReductions, std::nullopt, VarFieldMap, 1);
+
   // Build res = __kmpc_reduce{_nowait}(<gtid>, <n>, sizeof(RedList),
   // RedList, shuffle_reduce_func, interwarp_copy_func);
   // or
   // Build res = __kmpc_reduce_teams_nowait_simple(<loc>, <gtid>, <lck>);
   llvm::Value *RTLoc = emitUpdateLocation(CGF, Loc);
-  llvm::Value *ThreadId = getThreadID(CGF, Loc);
 
   llvm::Value *Res;
-  ASTContext &C = CGM.getContext();
   // 1. Build a list of reduction variables.
   // void *RedList[<n>] = {<ReductionVars>[0], ..., <ReductionVars>[<n>-1]};
   auto Size = RHSExprs.size();
@@ -2878,19 +2890,17 @@ void CGOpenMPRuntimeGPU::emitReduction(
   llvm::Function *ReductionFn = emitReductionFunction(
       CGF.CurFn->getName(), Loc, CGF.ConvertTypeForMem(ReductionArrayTy),
       Privates, LHSExprs, RHSExprs, ReductionOps);
-  llvm::Value *ReductionArrayTySize = CGF.getTypeSize(ReductionArrayTy);
+  llvm::Value *ReductionDataSize =
+      CGF.getTypeSize(C.getRecordType(ReductionRec));
+  ReductionDataSize =
+      CGF.Builder.CreateSExtOrTrunc(ReductionDataSize, CGF.Int64Ty);
   llvm::Function *ShuffleAndReduceFn = emitShuffleAndReduceFunction(
       CGM, Privates, ReductionArrayTy, ReductionFn, Loc);
   llvm::Value *InterWarpCopyFn =
       emitInterWarpCopyFunction(CGM, Privates, ReductionArrayTy, Loc);
 
   if (ParallelReduction) {
-    llvm::Value *Args[] = {RTLoc,
-                           ThreadId,
-                           CGF.Builder.getInt32(RHSExprs.size()),
-                           ReductionArrayTySize,
-                           RL,
-                           ShuffleAndReduceFn,
+    llvm::Value *Args[] = {RTLoc, ReductionDataSize, RL, ShuffleAndReduceFn,
                            InterWarpCopyFn};
 
     Res = CGF.EmitRuntimeCall(
@@ -2899,37 +2909,27 @@ void CGOpenMPRuntimeGPU::emitReduction(
         Args);
   } else {
     assert(TeamsReduction && "expected teams reduction.");
-    llvm::SmallDenseMap<const ValueDecl *, const FieldDecl *> VarFieldMap;
-    llvm::SmallVector<const ValueDecl *, 4> PrivatesReductions(Privates.size());
-    int Cnt = 0;
-    for (const Expr *DRE : Privates) {
-      PrivatesReductions[Cnt] = cast<DeclRefExpr>(DRE)->getDecl();
-      ++Cnt;
-    }
-    const RecordDecl *TeamReductionRec = ::buildRecordForGlobalizedVars(
-        CGM.getContext(), PrivatesReductions, std::nullopt, VarFieldMap,
-        C.getLangOpts().OpenMPCUDAReductionBufNum);
-    TeamsReductions.push_back(TeamReductionRec);
+    TeamsReductions.push_back(ReductionRec);
     auto *KernelTeamsReductionPtr = CGF.EmitRuntimeCall(
         OMPBuilder.getOrCreateRuntimeFunction(
             CGM.getModule(), OMPRTL___kmpc_reduction_get_fixed_buffer),
         {}, "_openmp_teams_reductions_buffer_$_$ptr");
     llvm::Value *GlobalToBufferCpyFn = ::emitListToGlobalCopyFunction(
-        CGM, Privates, ReductionArrayTy, Loc, TeamReductionRec, VarFieldMap);
+        CGM, Privates, ReductionArrayTy, Loc, ReductionRec, VarFieldMap);
     llvm::Value *GlobalToBufferRedFn = ::emitListToGlobalReduceFunction(
-        CGM, Privates, ReductionArrayTy, Loc, TeamReductionRec, VarFieldMap,
+        CGM, Privates, ReductionArrayTy, Loc, ReductionRec, VarFieldMap,
         ReductionFn);
     llvm::Value *BufferToGlobalCpyFn = ::emitGlobalToListCopyFunction(
-        CGM, Privates, ReductionArrayTy, Loc, TeamReductionRec, VarFieldMap);
+        CGM, Privates, ReductionArrayTy, Loc, ReductionRec, VarFieldMap);
     llvm::Value *BufferToGlobalRedFn = ::emitGlobalToListReduceFunction(
-        CGM, Privates, ReductionArrayTy, Loc, TeamReductionRec, VarFieldMap,
+        CGM, Privates, ReductionArrayTy, Loc, ReductionRec, VarFieldMap,
         ReductionFn);
 
     llvm::Value *Args[] = {
         RTLoc,
-        ThreadId,
         KernelTeamsReductionPtr,
         CGF.Builder.getInt32(C.getLangOpts().OpenMPCUDAReductionBufNum),
+        ReductionDataSize,
         RL,
         ShuffleAndReduceFn,
         InterWarpCopyFn,
