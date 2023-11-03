@@ -1815,7 +1815,7 @@ int foo() {
 // IR-GPU-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[TMP6]], align 8
 // IR-GPU-NEXT:    [[SUM:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY:%.*]], ptr [[TMP4]], i32 0, i32 0
 // IR-GPU-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [1024 x [10 x [10 x i32]]], ptr [[SUM]], i32 0, i32 [[TMP5]]
-// IR-GPU-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 128 [[TMP8]], ptr align 4 [[TMP7]], i64 400, i1 false)
+// IR-GPU-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[TMP8]], ptr align 4 [[TMP7]], i64 400, i1 false)
 // IR-GPU-NEXT:    ret void
 //
 //
@@ -1863,7 +1863,7 @@ int foo() {
 // IR-GPU-NEXT:    [[TMP7:%.*]] = load ptr, ptr [[TMP6]], align 8
 // IR-GPU-NEXT:    [[SUM:%.*]] = getelementptr inbounds [[STRUCT__GLOBALIZED_LOCALS_TY:%.*]], ptr [[TMP4]], i32 0, i32 0
 // IR-GPU-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [1024 x [10 x [10 x i32]]], ptr [[SUM]], i32 0, i32 [[TMP5]]
-// IR-GPU-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[TMP7]], ptr align 128 [[TMP8]], i64 400, i1 false)
+// IR-GPU-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[TMP7]], ptr align 4 [[TMP8]], i64 400, i1 false)
 // IR-GPU-NEXT:    ret void
 //
 //
@@ -2021,8 +2021,8 @@ int foo() {
 // IR-NEXT:    [[TMP24:%.*]] = load i32, ptr [[TMP23]], align 4
 // IR-NEXT:    [[TMP25:%.*]] = call i32 @__kmpc_reduce(ptr @[[GLOB3:[0-9]+]], i32 [[TMP24]], i32 1, i64 8, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l22.omp_outlined.omp.reduction.reduction_func, ptr @.gomp_critical_user_.reduction.var)
 // IR-NEXT:    switch i32 [[TMP25]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
-// IR-NEXT:    i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
-// IR-NEXT:    i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
+// IR-NEXT:      i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
+// IR-NEXT:      i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
 // IR-NEXT:    ]
 // IR:       .omp.reduction.case1:
 // IR-NEXT:    [[TMP26:%.*]] = getelementptr i32, ptr [[TMP0]], i64 100
@@ -2177,8 +2177,8 @@ int foo() {
 // IR-NEXT:    [[TMP23:%.*]] = load i32, ptr [[TMP22]], align 4
 // IR-NEXT:    [[TMP24:%.*]] = call i32 @__kmpc_reduce(ptr @[[GLOB3]], i32 [[TMP23]], i32 1, i64 8, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l22.omp_outlined.omp_outlined.omp.reduction.reduction_func, ptr @.gomp_critical_user_.reduction.var)
 // IR-NEXT:    switch i32 [[TMP24]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
-// IR-NEXT:    i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
-// IR-NEXT:    i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
+// IR-NEXT:      i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
+// IR-NEXT:      i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
 // IR-NEXT:    ]
 // IR:       .omp.reduction.case1:
 // IR-NEXT:    [[TMP25:%.*]] = getelementptr i32, ptr [[TMP0]], i64 100
@@ -2418,8 +2418,8 @@ int foo() {
 // IR-PCH-NEXT:    [[TMP24:%.*]] = load i32, ptr [[TMP23]], align 4
 // IR-PCH-NEXT:    [[TMP25:%.*]] = call i32 @__kmpc_reduce(ptr @[[GLOB3:[0-9]+]], i32 [[TMP24]], i32 1, i64 8, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l22.omp_outlined.omp.reduction.reduction_func, ptr @.gomp_critical_user_.reduction.var)
 // IR-PCH-NEXT:    switch i32 [[TMP25]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
-// IR-PCH-NEXT:    i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
-// IR-PCH-NEXT:    i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
+// IR-PCH-NEXT:      i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
+// IR-PCH-NEXT:      i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
 // IR-PCH-NEXT:    ]
 // IR-PCH:       .omp.reduction.case1:
 // IR-PCH-NEXT:    [[TMP26:%.*]] = getelementptr i32, ptr [[TMP0]], i64 100
@@ -2574,8 +2574,8 @@ int foo() {
 // IR-PCH-NEXT:    [[TMP23:%.*]] = load i32, ptr [[TMP22]], align 4
 // IR-PCH-NEXT:    [[TMP24:%.*]] = call i32 @__kmpc_reduce(ptr @[[GLOB3]], i32 [[TMP23]], i32 1, i64 8, ptr [[DOTOMP_REDUCTION_RED_LIST]], ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3foov_l22.omp_outlined.omp_outlined.omp.reduction.reduction_func, ptr @.gomp_critical_user_.reduction.var)
 // IR-PCH-NEXT:    switch i32 [[TMP24]], label [[DOTOMP_REDUCTION_DEFAULT:%.*]] [
-// IR-PCH-NEXT:    i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
-// IR-PCH-NEXT:    i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
+// IR-PCH-NEXT:      i32 1, label [[DOTOMP_REDUCTION_CASE1:%.*]]
+// IR-PCH-NEXT:      i32 2, label [[DOTOMP_REDUCTION_CASE2:%.*]]
 // IR-PCH-NEXT:    ]
 // IR-PCH:       .omp.reduction.case1:
 // IR-PCH-NEXT:    [[TMP25:%.*]] = getelementptr i32, ptr [[TMP0]], i64 100
