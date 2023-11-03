@@ -523,8 +523,7 @@ public:
 
   lldb::SearchFilterSP GetSearchFilter() { return m_filter_sp; }
 
-private: // The target needs to manage adding & removing names.  It will do the
-         // checking for name validity as well.
+private:
   void AddName(llvm::StringRef new_name);
 
   void RemoveName(const char *name_to_remove) {
