@@ -235,14 +235,17 @@ llvm::Expected<LanguageRuntime::VTableInfo>
                                    "failed to get the address of the value");
 
   Status error;
-  const lldb::addr_t vtable_load_addr =
+  lldb::addr_t vtable_load_addr =
       process->ReadPointerFromMemory(original_ptr, error);
 
   if (!error.Success() || vtable_load_addr == LLDB_INVALID_ADDRESS)
     return llvm::createStringError(std::errc::invalid_argument,
         "failed to read vtable pointer from memory at 0x%" PRIx64,
         original_ptr);
-;
+
+  // The vtable load address can have authentication bits with
+  // AArch64 targets on Darwin.
+  vtable_load_addr = process->FixDataAddress(vtable_load_addr);
 
   // Find the symbol that contains the "vtable_load_addr" address
   Address vtable_addr;
