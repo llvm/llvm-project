@@ -1760,6 +1760,10 @@ def fswift_async_fp_EQ : Joined<["-"], "fswift-async-fp=">,
     NormalizedValuesScope<"CodeGenOptions::SwiftAsyncFramePointerKind">,
     NormalizedValues<["Auto", "Always", "Never"]>,
     MarshallingInfoEnum<CodeGenOpts<"SwiftAsyncFramePointer">, "Always">;
+def fapinotes_swift_version : Joined<["-"], "fapinotes-swift-version=">,
+  Group<f_clang_Group>, Visibility<[ClangOption, CC1Option]>,
+  MetaVarName<"<version>">,
+  HelpText<"Specify the Swift version to use when filtering API notes">;
 
 defm apinotes : BoolOption<"f", "apinotes",
   LangOpts<"APINotes">, DefaultFalse,
@@ -1777,10 +1781,6 @@ defm apinotes_modules : BoolOption<"f", "apinotes-modules",
 def fapinotes_cache_path : Joined<["-"], "fapinotes-cache-path=">,
   Group<i_Group>, Flags<[NoXarchOption]>, MetaVarName<"<directory>">,
   HelpText<"Does nothing; API notes are no longer cached separately from modules">;
-def fapinotes_swift_version : Joined<["-"], "fapinotes-swift-version=">,
-  Group<f_clang_Group>, Visibility<[ClangOption, CC1Option]>,
-  MetaVarName<"<version>">,
-  HelpText<"Specify the Swift version to use when filtering API notes">;
 
 defm addrsig : BoolFOption<"addrsig",
   CodeGenOpts<"Addrsig">, DefaultFalse,

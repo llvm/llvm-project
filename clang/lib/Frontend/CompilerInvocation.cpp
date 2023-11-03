@@ -3643,11 +3643,10 @@ static void GenerateAPINotesArgs(const APINotesOptions &Opts,
 
 static void ParseAPINotesArgs(APINotesOptions &Opts, ArgList &Args,
                               DiagnosticsEngine &diags) {
-  using namespace options;
   if (const Arg *A = Args.getLastArg(OPT_fapinotes_swift_version)) {
     if (Opts.SwiftVersion.tryParse(A->getValue()))
       diags.Report(diag::err_drv_invalid_value)
-        << A->getAsString(Args) << A->getValue();
+          << A->getAsString(Args) << A->getValue();
   }
   for (const Arg *A : Args.filtered(OPT_iapinotes_modules))
     Opts.ModuleSearchPaths.push_back(A->getValue());
