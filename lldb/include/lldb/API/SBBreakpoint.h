@@ -112,7 +112,7 @@ public:
 
   SBError SetScriptCallbackBody(const char *script_body_text);
 
-  LLDB_DEPRECATED("Use AddNameWithErrorHandling instead")
+  LLDB_DEPRECATED_FIXME("Doesn't provide error handling", "AddNameWithErrorHandling")
   bool AddName(const char *new_name);
 
   SBError AddNameWithErrorHandling(const char *new_name);
