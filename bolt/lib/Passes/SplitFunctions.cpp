@@ -60,6 +60,7 @@ extern cl::OptionCategory BoltOptCategory;
 extern cl::opt<bool> SplitEH;
 extern cl::opt<unsigned> ExecutionCountThreshold;
 extern cl::opt<uint32_t> RandomSeed;
+extern cl::opt<bool> UseCDSplit;
 
 static cl::opt<bool> AggressiveSplitting(
     "split-all-cold", cl::desc("outline as many cold basic blocks as possible"),
@@ -231,6 +232,17 @@ bool SplitFunctions::shouldOptimize(const BinaryFunction &BF) const {
 }
 
 void SplitFunctions::runOnFunctions(BinaryContext &BC) {
+  if (opts::UseCDSplit &&
+      !(opts::SplitFunctions &&
+        opts::SplitStrategy == SplitFunctionsStrategy::Profile2)) {
+    errs() << "BOLT-ERROR: -use-cdsplit should be applied together with "
+              "-split-functions using default -split-strategy=profile2. "
+              "-split-functions 2-way splits functions before the function "
+              "reordering pass, while -use-cdsplit 3-way splits functions "
+              "after the function reordering pass. \n";
+    exit(1);
+  }
+
   if (!opts::SplitFunctions)
     return;
 
