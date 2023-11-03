@@ -231,11 +231,6 @@ protected:
   llvm::StringRef
   GetReflectionSectionIdentifier(swift::ReflectionSectionKind section) override;
 
-#ifdef LLDB_ENABLE_SWIFT
-  bool
-  CanContainSwiftReflectionData(const lldb_private::Section &section) override;
-#endif // LLDB_ENABLE_SWIFT
-
   /// A corefile may include metadata about all of the binaries that were
   /// present in the process when the corefile was taken.  This is only
   /// implemented for Mach-O files for now; we'll generalize it when we
