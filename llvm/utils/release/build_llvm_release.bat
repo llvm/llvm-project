@@ -268,10 +268,21 @@ cd build64.instr
 cmake -GNinja %cmake_flags% -DLLVM_BUILD_INSTRUMENTED=IR ..\llvm-project\llvm || exit /b 1
 ninja clang || ninja clang || ninja clang || exit /b 1
 cd ..
-REM Run instrumented Clang to generate a profile.
-curl -L https://commondatastorage.googleapis.com/chromium-browser-clang/pgo_training-1.ii -o train.ii || exit /b 1
-set profile=%build_dir:\=/%/build64.instr/profile.profdata
-build64.instr\bin\clang++ -target x86_64-unknown-unknown -O2 -g -std=c++14 -fno-exceptions -fno-rtti -w -c train.ii
+REM Use that to buid some part of llvm to generate a profile.
+mkdir build64.train
+cd build64.train
+set instrumented_clang=%build_dir:\=/%/build64.instr/bin/clang-cl.exe
+cmake -GNinja %cmake_flags% ^
+  -DCMAKE_C_COMPILER=%instrumented_clang% ^
+  -DCMAKE_CXX_COMPILER=%instrumented_clang% ^
+  -DLLVM_ENABLE_PROJECTS=clang ^
+  -DLLVM_TARGETS_TO_BUILD=X86 ^
+  ..\llvm-project\llvm || exit /b 1
+REM Drop profiles from running cmake, those are not representative.
+del ..\build64.instr\profiles\*.profraw
+ninja tools/clang/lib/Sema/CMakeFiles/obj.clangSema.dir/Sema.cpp.obj
+cd ..
+set profile=%build_dir:\=/%/profile.profdata
 %stage0_bin_dir%\llvm-profdata merge -output=%profile% build64.instr\profiles\*.profraw || exit /b 1
 set cmake_flags=%cmake_flags% -DLLVM_PROFDATA_FILE=%profile%
 
