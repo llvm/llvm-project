@@ -412,7 +412,7 @@ def DefaultDictAttrOp : NS_Op<"default_dict_attr_op", []> {
 // DEF:   attributes.append(attrNames[1], odsBuilder.getDictionaryAttr(getDefaultDictAttrs(odsBuilder)));
 
 // DECL-LABEL: DefaultDictAttrOp declarations
-// DECL: build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, ::mlir::DictionaryAttr empty, ::mlir::DictionaryAttr non_empty)
+// DECL: build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, ::mlir::DictionaryAttr empty = nullptr, ::mlir::DictionaryAttr non_empty = nullptr)
 
 
 // Test derived type attr.
