@@ -10307,9 +10307,8 @@ RISCVTargetLowering::lowerVPReverseExperimental(SDValue Op,
                                   DAG.getConstant(MinElts, DL, XLenVT));
       SDValue Diff = DAG.getNode(ISD::SUB, DL, XLenVT, VLMax, EVL);
 
-      Result =
-          getVSlidedown(DAG, Subtarget, DL, GatherVT, DAG.getUNDEF(GatherVT),
-                        Result, Diff, Mask, EVL);
+      Result = getVSlidedown(DAG, Subtarget, DL, GatherVT,
+                             DAG.getUNDEF(GatherVT), Result, Diff, Mask, EVL);
 
       if (IsMaskVector) {
         // Truncate Result back to a mask vector
