@@ -50,6 +50,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/Utils/FunctionComparatorIgnoringConst.h"
+#include "llvm/Transforms/Utils/MergeFunctionsIgnoringConst.h"
 #include <vector>
 
 using namespace llvm;
@@ -112,62 +113,9 @@ static cl::list<std::string> MergeAllowRegexFilters(
              "regular expression"),
     cl::ZeroOrMore);
 
-bool isEligibleInstrunctionForConstantSharing(const Instruction *I) {
-  switch (I->getOpcode()) {
-  case Instruction::Load:
-  case Instruction::Store:
-  case Instruction::Call:
-    return true;
-  default: {
-    if (EnableAggressiveMergeFunc && I->getOpcode() == Instruction::Invoke)
-      return true;
-    return false;
-  }
-  }
-}
-
 /// Returns true if the \OpIdx operand of \p CI is the callee operand.
 static bool isCalleeOperand(const CallBase *CI, unsigned OpIdx) {
   return &CI->getCalledOperandUse() == &CI->getOperandUse(OpIdx);
-}
-
-static bool canParameterizeCallOperand(const CallBase *CI, unsigned OpIdx) {
-  if (CI->isInlineAsm())
-    return false;
-  Function *Callee = CI->getCalledOperand()
-                         ? dyn_cast_or_null<Function>(
-                               CI->getCalledOperand()->stripPointerCasts())
-                         : nullptr;
-  if (Callee) {
-    if (Callee->isIntrinsic())
-      return false;
-    // objc_msgSend stubs must be called, and can't have their address taken.
-    if (Callee->getName().startswith("objc_msgSend$"))
-      return false;
-  }
-  if (isCalleeOperand(CI, OpIdx) &&
-      CI->getOperandBundle(LLVMContext::OB_ptrauth).has_value()) {
-    // The operand is the callee and it has already been signed. Ignore this
-    // because we cannot add another ptrauth bundle to the call instruction.
-    return false;
-  }
-  return true;
-}
-
-bool isEligibleOperandForConstantSharing(const Instruction *I, unsigned OpIdx) {
-  assert(OpIdx < I->getNumOperands() && "Invalid operand index");
-
-  if (!isEligibleInstrunctionForConstantSharing(I))
-    return false;
-
-  auto Opnd = I->getOperand(OpIdx);
-  if (!isa<Constant>(Opnd))
-    return false;
-
-  if (const auto *CI = dyn_cast<CallBase>(I))
-    return canParameterizeCallOperand(CI, OpIdx);
-
-  return true;
 }
 
 namespace {
@@ -1268,25 +1216,7 @@ static llvm::AttributeList
 fixUpTypesInByValAndStructRetAttributes(llvm::FunctionType *fnType,
                                         llvm::AttributeList attrList) {
   auto &context = fnType->getContext();
-  if (!context.supportsTypedPointers())
-    return attrList;
-
-  for (unsigned i = 0; i < fnType->getNumParams(); ++i) {
-    auto paramTy = fnType->getParamType(i);
-    auto attrListIndex = llvm::AttributeList::FirstArgIndex + i;
-    if (attrList.hasParamAttr(i, llvm::Attribute::StructRet) &&
-        paramTy->getNonOpaquePointerElementType() !=
-            attrList.getParamStructRetType(i))
-      attrList = attrList.replaceAttributeTypeAtIndex(
-          context, attrListIndex, llvm::Attribute::StructRet,
-          paramTy->getNonOpaquePointerElementType());
-    if (attrList.hasParamAttr(i, llvm::Attribute::ByVal) &&
-        paramTy->getNonOpaquePointerElementType() !=
-            attrList.getParamByValType(i))
-      attrList = attrList.replaceAttributeTypeAtIndex(
-          context, attrListIndex, llvm::Attribute::ByVal,
-          paramTy->getNonOpaquePointerElementType());
-  }
+  // supportsTypedPointers always returns false now.
   return attrList;
 }
 

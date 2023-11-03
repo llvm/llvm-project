@@ -10,9 +10,71 @@
 
 #include "llvm/Transforms/Utils/FunctionComparatorIgnoringConst.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Utils/MergeFunctionsIgnoringConst.h"
 
 using namespace llvm;
+static cl::opt<bool> EnableMergeOnInvoke(
+    "enable-aggressive-mergefunc-invoke", cl::init(false), cl::Hidden,
+    cl::desc("Enable aggressive function merger on Invoke"));
+
+/// Returns true if the \OpIdx operand of \p CI is the callee operand.
+static bool isCalleeOperand(const CallBase *CI, unsigned OpIdx) {
+  return &CI->getCalledOperandUse() == &CI->getOperandUse(OpIdx);
+}
+
+bool isEligibleInstrunctionForConstantSharing(const Instruction *I) {
+  switch (I->getOpcode()) {
+  case Instruction::Load:
+  case Instruction::Store:
+  case Instruction::Call:
+    return true;
+  default: {
+    if (EnableMergeOnInvoke && I->getOpcode() == Instruction::Invoke)
+      return true;
+    return false;
+  }
+  }
+}
+
+static bool canParameterizeCallOperand(const CallBase *CI, unsigned OpIdx) {
+  if (CI->isInlineAsm())
+    return false;
+  Function *Callee = CI->getCalledOperand()
+                         ? dyn_cast_or_null<Function>(
+                               CI->getCalledOperand()->stripPointerCasts())
+                         : nullptr;
+  if (Callee) {
+    if (Callee->isIntrinsic())
+      return false;
+    // objc_msgSend stubs must be called, and can't have their address taken.
+    if (Callee->getName().startswith("objc_msgSend$"))
+      return false;
+  }
+  if (isCalleeOperand(CI, OpIdx) &&
+      CI->getOperandBundle(LLVMContext::OB_ptrauth).has_value()) {
+    // The operand is the callee and it has already been signed. Ignore this
+    // because we cannot add another ptrauth bundle to the call instruction.
+    return false;
+  }
+  return true;
+}
+
+bool isEligibleOperandForConstantSharing(const Instruction *I, unsigned OpIdx) {
+  assert(OpIdx < I->getNumOperands() && "Invalid operand index");
+
+  if (!isEligibleInstrunctionForConstantSharing(I))
+    return false;
+
+  auto Opnd = I->getOperand(OpIdx);
+  if (!isa<Constant>(Opnd))
+    return false;
+
+  if (const auto *CI = dyn_cast<CallBase>(I))
+    return canParameterizeCallOperand(CI, OpIdx);
+
+  return true;
+}
 
 int FunctionComparatorIgnoringConst::cmpOperandsIgnoringConsts(
     const Instruction *L, const Instruction *R, unsigned opIdx) {
