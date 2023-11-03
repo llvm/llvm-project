@@ -550,6 +550,9 @@ DecodeStatus RISCVDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
     TRY_TO_DECODE_FEATURE(
         RISCV::FeatureVendorXSfvqmaccqoq, DecoderTableXSfvqmaccqoq32,
         "SiFive Matrix Multiplication (4x8 and 8x4) Instruction opcode table");
+    TRY_TO_DECODE_FEATURE(
+        RISCV::FeatureVendorXSfvfwmaccqqq, DecoderTableXSfvfwmaccqqq32,
+        "SiFive Matrix Multiplication Instruction opcode table");
     TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXSfcie, DecoderTableXSfcie32,
                           "Sifive CIE custom opcode table");
     TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXCVbitmanip,
