@@ -493,8 +493,9 @@ enum RVVRequire : uint16_t {
   RVV_REQ_Zvkg = 1 << 8,
   RVV_REQ_Zvkned = 1 << 9,
   RVV_REQ_Zvknha = 1 << 10,
-  RVV_REQ_Zvksed = 1 << 11,
-  RVV_REQ_Zvksh = 1 << 12,
+  RVV_REQ_Zvknhb = 1 << 11,
+  RVV_REQ_Zvksed = 1 << 12,
+  RVV_REQ_Zvksh = 1 << 13,
 
   LLVM_MARK_AS_BITMASK_ENUM(RVV_REQ_Zvksh)
 };
