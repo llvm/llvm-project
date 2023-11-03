@@ -446,8 +446,8 @@ CXXRecordDecl::setBases(CXXBaseSpecifier const * const *Bases,
       setHasVolatileMember(true);
 
     if (BaseClassDecl->getArgPassingRestrictions() ==
-        ArgPassingKind::CanNeverPassInRegs)
-      setArgPassingRestrictions(ArgPassingKind::CanNeverPassInRegs);
+        RecordArgPassingKind::CanNeverPassInRegs)
+      setArgPassingRestrictions(RecordArgPassingKind::CanNeverPassInRegs);
 
     // Keep track of the presence of mutable fields.
     if (BaseClassDecl->hasMutableFields())
@@ -1032,7 +1032,7 @@ void CXXRecordDecl::addedMember(Decl *D) {
 
         // Structs with __weak fields should never be passed directly.
         if (LT == Qualifiers::OCL_Weak)
-          setArgPassingRestrictions(ArgPassingKind::CanNeverPassInRegs);
+          setArgPassingRestrictions(RecordArgPassingKind::CanNeverPassInRegs);
 
         Data.HasIrrelevantDestructor = false;
 
@@ -1064,7 +1064,7 @@ void CXXRecordDecl::addedMember(Decl *D) {
         Data.HasTrivialSpecialMembers &=
             ~(SMF_CopyConstructor | SMF_MoveConstructor |
               SMF_CopyAssignment | SMF_MoveAssignment);
-        setArgPassingRestrictions(ArgPassingKind::CanNeverPassInRegs);
+        setArgPassingRestrictions(RecordArgPassingKind::CanNeverPassInRegs);
 
         // Copy/move constructors/assignment operators of a union are deleted by
         // default if it has an address-discriminated ptrauth field.
@@ -1253,8 +1253,8 @@ void CXXRecordDecl::addedMember(Decl *D) {
         if (FieldRec->hasVolatileMember())
           setHasVolatileMember(true);
         if (FieldRec->getArgPassingRestrictions() ==
-            ArgPassingKind::CanNeverPassInRegs)
-          setArgPassingRestrictions(ArgPassingKind::CanNeverPassInRegs);
+            RecordArgPassingKind::CanNeverPassInRegs)
+          setArgPassingRestrictions(RecordArgPassingKind::CanNeverPassInRegs);
 
         // C++0x [class]p7:
         //   A standard-layout class is a class that:

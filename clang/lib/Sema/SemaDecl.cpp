@@ -19222,13 +19222,13 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
 
       if (const auto *RT = FT->getAs<RecordType>()) {
         if (RT->getDecl()->getArgPassingRestrictions() ==
-            ArgPassingKind::CanNeverPassInRegs)
-          Record->setArgPassingRestrictions(ArgPassingKind::CanNeverPassInRegs);
+            RecordArgPassingKind::CanNeverPassInRegs)
+          Record->setArgPassingRestrictions(RecordArgPassingKind::CanNeverPassInRegs);
       } else if (FT.getQualifiers().getObjCLifetime() == Qualifiers::OCL_Weak) {
-        Record->setArgPassingRestrictions(ArgPassingKind::CanNeverPassInRegs);
+        Record->setArgPassingRestrictions(RecordArgPassingKind::CanNeverPassInRegs);
       } else if (PointerAuthQualifier Q = FT.getPointerAuth()) {
         if (Q.isAddressDiscriminated())
-          Record->setArgPassingRestrictions(ArgPassingKind::CanNeverPassInRegs);
+          Record->setArgPassingRestrictions(RecordArgPassingKind::CanNeverPassInRegs);
       }
     }
 
