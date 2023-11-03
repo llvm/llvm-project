@@ -401,6 +401,12 @@ generic-hardened-mode)
     check-runtimes
     check-abi-list
 ;;
+generic-hardened-mode-with-abi-breaks)
+    clean
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-hardened-mode-with-abi-breaks.cmake"
+    check-runtimes
+    check-abi-list
+;;
 generic-safe-mode)
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-safe-mode.cmake"
