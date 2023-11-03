@@ -639,14 +639,14 @@ static bool hasNestedSPMDDirective(ASTContext &Ctx,
   return false;
 }
 
-static bool supportsSPMDExecutionMode(ASTContext &Ctx,
+static bool supportsSPMDExecutionMode(CodeGenModule &CGM,
                                       const OMPExecutableDirective &D) {
+  ASTContext &Ctx = CGM.getContext();
   OpenMPDirectiveKind DirectiveKind = D.getDirectiveKind();
   switch (DirectiveKind) {
   case OMPD_target:
   case OMPD_target_teams:
     return hasNestedSPMDDirective(Ctx, D);
-  case OMPD_target_teams_loop:
   case OMPD_target_parallel_loop:
   case OMPD_target_parallel:
   case OMPD_target_parallel_for:
@@ -658,6 +658,10 @@ static bool supportsSPMDExecutionMode(ASTContext &Ctx,
     return true;
   case OMPD_target_teams_distribute:
     return false;
+  case OMPD_target_teams_loop:
+    // Whether this is true or not depends on how the directive will
+    // eventually be emitted.
+    return CGM.teamsLoopCanBeParallelFor(D);
   case OMPD_parallel:
   case OMPD_for:
   case OMPD_parallel_for:
@@ -872,7 +876,7 @@ void CGOpenMPRuntimeGPU::emitTargetOutlinedFunction(
 
   assert(!ParentName.empty() && "Invalid target region parent name!");
 
-  bool Mode = supportsSPMDExecutionMode(CGM.getContext(), D);
+  bool Mode = supportsSPMDExecutionMode(CGM, D);
   bool IsBareKernel = D.getSingleClause<OMPXBareClause>();
   if (Mode || IsBareKernel)
     emitSPMDKernel(D, ParentName, OutlinedFn, OutlinedFnID, IsOffloadEntry,

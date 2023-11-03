@@ -1534,6 +1534,8 @@ public:
                                            LValueBaseInfo *BaseInfo = nullptr,
                                            TBAAAccessInfo *TBAAInfo = nullptr);
   bool stopAutoInit();
+  /// Determine if 'teams loop' can be emitted using 'parallel for'.
+  bool teamsLoopCanBeParallelFor(const OMPExecutableDirective &D);
 
   /// Print the postfix for externalized static variable or kernels for single
   /// source offloading languages CUDA and HIP. The unique postfix is created
@@ -1542,6 +1544,12 @@ public:
   /// does not define separate macros via the -cc1 options.
   void printPostfixForExternalizedDecl(llvm::raw_ostream &OS,
                                        const Decl *D) const;
+
+  /// Under debug mode, print status of target teams loop transformation,
+  /// which should be either '#distribute' or '#parallel for'
+  void emitTargetTeamsLoopCodegenStatus(std::string StatusMsg,
+                                        const OMPExecutableDirective &D,
+                                        bool IsDevice);
 
   /// Move some lazily-emitted states to the NewBuilder. This is especially
   /// essential for the incremental parsing environment like Clang Interpreter,
