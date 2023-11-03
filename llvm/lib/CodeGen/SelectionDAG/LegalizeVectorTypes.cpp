@@ -4204,6 +4204,11 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
     Res = WidenVecRes_FP_TO_XINT_SAT(N);
     break;
 
+  case ISD::LRINT:
+  case ISD::LLRINT:
+    Res = WidenVecRes_XRINT(N);
+    break;
+
   case ISD::FABS:
   case ISD::FCEIL:
   case ISD::FCOS:
@@ -4216,8 +4221,6 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::FLOG2:
   case ISD::FNEARBYINT:
   case ISD::FRINT:
-  case ISD::LRINT:
-  case ISD::LLRINT:
   case ISD::FROUND:
   case ISD::FROUNDEVEN:
   case ISD::FSIN:
@@ -4789,6 +4792,27 @@ SDValue DAGTypeLegalizer::WidenVecRes_FP_TO_XINT_SAT(SDNode *N) {
     return DAG.UnrollVectorOp(N, WidenNumElts.getKnownMinValue());
 
   return DAG.getNode(N->getOpcode(), dl, WidenVT, Src, N->getOperand(1));
+}
+
+SDValue DAGTypeLegalizer::WidenVecRes_XRINT(SDNode *N) {
+  SDLoc dl(N);
+  EVT WidenVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
+  ElementCount WidenNumElts = WidenVT.getVectorElementCount();
+
+  SDValue Src = N->getOperand(0);
+  EVT SrcVT = Src.getValueType();
+
+  // Also widen the input.
+  if (getTypeAction(SrcVT) == TargetLowering::TypeWidenVector) {
+    Src = GetWidenedVector(Src);
+    SrcVT = Src.getValueType();
+  }
+
+  // Input and output not widened to the same size, give up.
+  if (WidenNumElts != SrcVT.getVectorElementCount())
+    return DAG.UnrollVectorOp(N, WidenNumElts.getKnownMinValue());
+
+  return DAG.getNode(N->getOpcode(), dl, WidenVT, Src);
 }
 
 SDValue DAGTypeLegalizer::WidenVecRes_Convert_StrictFP(SDNode *N) {
