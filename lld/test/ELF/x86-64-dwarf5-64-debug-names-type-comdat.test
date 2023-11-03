@@ -1,20 +1,18 @@
 // REQUIRES: x86
-// RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %p/Inputs/dwarf5-64-debug-names-type-comdat-main.s -o %t.o
-// RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %p/Inputs/dwarf5-64-debug-names-type-comdat-helper.s -o %t1.o
+// RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %p/Inputs/dwarf5-64-debug-names-type-comdat.s -o %t.o
+// RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %p/Inputs/dwarf5-64-debug-names-type-comdat.s -o %t1.o
 // RUN: ld.lld %t.o %t1.o -o %t1
-// RUN: llvm-readelf --relocs %t.o | FileCheck --check-prefix=RELOCMAIN %s
-// RUN: llvm-dwarfdump --debug-names %t1 | FileCheck %s
+// RUN: llvm-objdump -s %t1 | FileCheck %s
 
 // Test checks that LLD tombstones TU section that was de-duplicated using COMDAT to the maxium value.
-// For some reason llvm-dwarfdump doesn't print out full 64bitt offset at the moment.
-// Working around it by checking that relocation is 64 bit.
 
-// RELOCMAIN: rela.debug_names
-// RELOCMAIN-NEXT: Offset
-// RELOCMAIN-NEXT: R_X86_64_64
-// RELOCMAIN-SAME: .debug_info + 0
-// RELOCMAIN-NEXT: R_X86_64_64
-// RELOCMAIN-SAME: .debug_info + 0
-
-// CHECK: LocalTU[0]: 0x00000000
-// CHECK: LocalTU[0]: 0xffffffffffffffff
+CHECK: Contents of section .debug_names:
+CHECK-NEXT:  0000 ffffffff 3f000000 00000000 05000000  ....?...........
+CHECK-NEXT:  0010 00000000 01000000 00000000 00000000  ................
+CHECK-NEXT:  0020 00000000 03000000 08000000 4c4c564d  ............LLVM
+CHECK-NEXT:  0030 30373030 00000000 00000000 00000000  0700............
+CHECK-NEXT:  0040 00000000 00000000 000000ff ffffff3f  ...............?
+CHECK-NEXT:  0050 00000000 00000005 00000000 00000001  ................
+CHECK-NEXT:  0060 00000000 00000000 00000000 00000003  ................
+CHECK-NEXT:  0070 00000008 0000004c 4c564d30 37303000  .......LLVM0700.
+CHECK-NEXT:  0080 00000000 000000ff ffffffff ffffff00  ................
