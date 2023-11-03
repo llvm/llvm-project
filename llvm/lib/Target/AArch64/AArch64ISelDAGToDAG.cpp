@@ -379,7 +379,6 @@ public:
   void SelectPExtPair(SDNode *N, unsigned Opc);
   void SelectWhilePair(SDNode *N, unsigned Opc);
   void SelectCVTIntrinsic(SDNode *N, unsigned NumVecs, unsigned Opcode);
-  void SelectSMELdrStrZA(SDNode *N, bool IsLoad);
   void SelectClamp(SDNode *N, unsigned NumVecs, unsigned Opcode);
   void SelectUnaryMultiIntrinsic(SDNode *N, unsigned NumOutVecs,
                                  bool IsTupleInput, unsigned Opc);
@@ -1744,54 +1743,6 @@ void AArch64DAGToDAGISel::SelectCVTIntrinsic(SDNode *N, unsigned NumVecs,
                                    AArch64::zsub0 + i, DL, VT, SuperReg));
 
   CurDAG->RemoveDeadNode(N);
-}
-
-void AArch64DAGToDAGISel::SelectSMELdrStrZA(SDNode *N, bool IsLoad) {
-  // Lower an SME LDR/STR ZA intrinsic to LDR_ZA_PSEUDO or STR_ZA.
-  // If the vector select parameter is an immediate in the range 0-15 then we
-  // can emit it directly into the instruction as it's a legal operand.
-  // Otherwise we must emit 0 as the vector select operand and modify the base
-  // register instead.
-  SDLoc DL(N);
-
-  SDValue VecNum = N->getOperand(4), Base = N->getOperand(3),
-          TileSlice = N->getOperand(2);
-  int Imm = -1;
-  if (auto ImmNode = dyn_cast<ConstantSDNode>(VecNum))
-    Imm = ImmNode->getZExtValue();
-
-  if (Imm >= 0 && Imm <= 15) {
-    // 0-15 is a legal immediate so just pass it directly as a TargetConstant
-    VecNum = CurDAG->getTargetConstant(Imm, DL, MVT::i32);
-  } else {
-    // Get the vector length that will be multiplied by vnum
-    auto SVL = SDValue(
-        CurDAG->getMachineNode(AArch64::RDSVLI_XI, DL, MVT::i64,
-                               CurDAG->getTargetConstant(1, DL, MVT::i32)),
-        0);
-
-    // Multiply SVL and vnum then add it to the base register
-    if (VecNum.getValueType() == MVT::i32)
-      VecNum = Widen(CurDAG, VecNum);
-    SDValue AddOps[] = {SVL, VecNum, Base};
-    auto Add = SDValue(
-        CurDAG->getMachineNode(AArch64::MADDXrrr, DL, MVT::i64, AddOps), 0);
-
-    // The base register has been modified to take vnum into account so just
-    // pass 0
-    VecNum = CurDAG->getTargetConstant(0, DL, MVT::i32);
-    Base = Add;
-  }
-
-  SmallVector<SDValue, 6> Ops = {TileSlice, VecNum, Base};
-  if (!IsLoad) {
-    Ops.insert(Ops.begin(), CurDAG->getRegister(AArch64::ZA, MVT::Other));
-    Ops.push_back(VecNum);
-  }
-  auto LdrStr =
-      CurDAG->getMachineNode(IsLoad ? AArch64::LDR_ZA_PSEUDO : AArch64::STR_ZA,
-                             DL, N->getValueType(0), Ops);
-  ReplaceNode(N, LdrStr);
 }
 
 void AArch64DAGToDAGISel::SelectDestructiveMultiIntrinsic(SDNode *N,
@@ -5716,11 +5667,6 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
     switch (IntNo) {
     default:
       break;
-    case Intrinsic::aarch64_sme_str:
-    case Intrinsic::aarch64_sme_ldr: {
-      SelectSMELdrStrZA(Node, IntNo == Intrinsic::aarch64_sme_ldr);
-      return;
-    }
     case Intrinsic::aarch64_neon_st1x2: {
       if (VT == MVT::v8i8) {
         SelectStore(Node, 2, AArch64::ST1Twov8b);

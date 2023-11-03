@@ -2406,6 +2406,8 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(AArch64ISD::FCMP)
     MAKE_CASE(AArch64ISD::STRICT_FCMP)
     MAKE_CASE(AArch64ISD::STRICT_FCMPE)
+    MAKE_CASE(AArch64ISD::SME_ZA_LDR)
+    MAKE_CASE(AArch64ISD::SME_ZA_STR)
     MAKE_CASE(AArch64ISD::DUP)
     MAKE_CASE(AArch64ISD::DUPLANE8)
     MAKE_CASE(AArch64ISD::DUPLANE16)
@@ -4830,6 +4832,72 @@ SDValue AArch64TargetLowering::getPStateSM(SelectionDAG &DAG, SDValue Chain,
                      Mask);
 }
 
+SDValue LowerSMELdrStr(SDValue N, SelectionDAG &DAG, bool IsLoad) {
+  // Lower an SME LDR/STR ZA intrinsic to LDR_ZA_PSEUDO or STR_ZA.
+  // If the vector number is an immediate between 0 and 15 inclusive then we can
+  // put that directly into the immediate field of the instruction. If it's
+  // outside of that range then we modify the base and slice by the greatest
+  // multiple of 15 smaller than that number and put the remainder in the
+  // instruction field. If it's not an immediate then we modify the base and
+  // slice registers by that number and put 0 in the instruction.
+  SDLoc DL(N);
+
+  SDValue TileSlice = N->getOperand(2);
+  SDValue Base = N->getOperand(3);
+  SDValue VecNum = N->getOperand(4);
+  SDValue Remainder = DAG.getTargetConstant(0, DL, MVT::i32);
+
+  // true if the base and slice registers need to me modified
+  bool NeedsAdd = true;
+  if (auto ImmNode = dyn_cast<ConstantSDNode>(VecNum)) {
+    int Imm = ImmNode->getSExtValue();
+    if (Imm >= 0 && Imm <= 15) {
+      Remainder = DAG.getTargetConstant(Imm, DL, MVT::i32);
+      NeedsAdd = false;
+    } else {
+      Remainder = DAG.getTargetConstant(Imm % 15, DL, MVT::i32);
+      NeedsAdd = true;
+      VecNum = DAG.getConstant(Imm - (Imm % 15), DL, MVT::i32);
+    }
+  } else if (VecNum.getOpcode() == ISD::ADD) {
+    // If the vnum is an add, we can fold that add into the instruction if the
+    // operand is an immediate in range
+    if (auto ImmNode = dyn_cast<ConstantSDNode>(VecNum.getOperand(1))) {
+      int Imm = ImmNode->getSExtValue();
+      if (Imm >= 0 && Imm <= 15) {
+        VecNum = VecNum.getOperand(0);
+        Remainder = DAG.getTargetConstant(Imm, DL, MVT::i32);
+        NeedsAdd = true;
+      }
+    }
+  }
+  if (NeedsAdd) {
+    // Get the vector length that will be multiplied by vnum
+    auto SVL = DAG.getNode(AArch64ISD::RDSVL, DL, MVT::i64,
+                           DAG.getConstant(1, DL, MVT::i32));
+
+    // Multiply SVL and vnum then add it to the base
+    // Just add vnum to the tileslice
+    SDValue BaseMulOps[] = {
+        SVL, VecNum.getValueType() == MVT::i32
+                 ? DAG.getNode(ISD::SIGN_EXTEND, DL, MVT::i64, VecNum)
+                 : VecNum};
+    SDValue Mul = DAG.getNode(ISD::MUL, DL, MVT::i64, BaseMulOps);
+
+    SDValue BaseAddOps[] = {Base, Mul};
+    Base = DAG.getNode(ISD::ADD, DL, MVT::i64, BaseAddOps);
+
+    SDValue SliceAddOps[] = {TileSlice, VecNum};
+    TileSlice = DAG.getNode(ISD::ADD, DL, MVT::i32, SliceAddOps);
+  }
+
+  SmallVector<SDValue, 4> Ops = {N.getOperand(0), TileSlice, Base, Remainder};
+  auto LdrStr =
+      DAG.getNode(IsLoad ? AArch64ISD::SME_ZA_LDR : AArch64ISD::SME_ZA_STR, DL,
+                  MVT::Other, Ops);
+  return LdrStr;
+}
+
 SDValue AArch64TargetLowering::LowerINTRINSIC_VOID(SDValue Op,
                                                    SelectionDAG &DAG) const {
   unsigned IntNo = Op.getConstantOperandVal(1);
@@ -4852,6 +4920,10 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_VOID(SDValue Op,
 
     return DAG.getNode(AArch64ISD::PREFETCH, DL, MVT::Other, Chain,
                        DAG.getTargetConstant(PrfOp, DL, MVT::i32), Addr);
+  }
+  case Intrinsic::aarch64_sme_str:
+  case Intrinsic::aarch64_sme_ldr: {
+    return LowerSMELdrStr(Op, DAG, IntNo == Intrinsic::aarch64_sme_ldr);
   }
   case Intrinsic::aarch64_sme_za_enable:
     return DAG.getNode(
