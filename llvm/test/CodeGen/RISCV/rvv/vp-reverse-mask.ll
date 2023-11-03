@@ -242,21 +242,21 @@ define <vscale x 64 x i1> @test_vp_reverse_nxv64i1_masked(<vscale x 64 x i1> %sr
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
 ; CHECK-NEXT:    vmv.v.i v16, 0
-; CHECK-NEXT:    vmerge.vim v16, v16, 1, v0
+; CHECK-NEXT:    vmerge.vim v24, v16, 1, v0
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    slli a2, a1, 2
 ; CHECK-NEXT:    addi a2, a2, -1
 ; CHECK-NEXT:    vsetvli a3, zero, e16, m8, ta, ma
-; CHECK-NEXT:    vid.v v24
-; CHECK-NEXT:    vrsub.vx v0, v24, a2
+; CHECK-NEXT:    vid.v v16
+; CHECK-NEXT:    vrsub.vx v0, v16, a2
 ; CHECK-NEXT:    vsetvli zero, zero, e8, m4, ta, ma
-; CHECK-NEXT:    vrgatherei16.vv v28, v16, v0
-; CHECK-NEXT:    vrgatherei16.vv v24, v20, v0
+; CHECK-NEXT:    vrgatherei16.vv v20, v24, v0
+; CHECK-NEXT:    vrgatherei16.vv v16, v28, v0
 ; CHECK-NEXT:    slli a1, a1, 3
 ; CHECK-NEXT:    sub a1, a1, a0
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m8, ta, ma
-; CHECK-NEXT:    vslidedown.vx v16, v24, a1
 ; CHECK-NEXT:    vmv1r.v v0, v8
+; CHECK-NEXT:    vslidedown.vx v16, v16, a1, v0.t
 ; CHECK-NEXT:    vmsne.vi v8, v16, 0, v0.t
 ; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    ret
