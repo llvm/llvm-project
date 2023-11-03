@@ -771,8 +771,8 @@ TypeSystemClang *TypeSystemClang::GetASTContext(clang::ASTContext *ast) {
   return clang_ast;
 }
 
-bool TypeSystemClang::IsCoroutineFrameType(const CompilerType &Type) {
-  return Type.GetTypeName().GetStringRef().ends_with(".coro_frame_ty");
+bool TypeSystemClang::ShouldIgnoreArtificialField(llvm::StringRef Name) {
+  return Name.starts_with("_vptr$");
 }
 
 clang::MangleContext *TypeSystemClang::getMangleContext() {

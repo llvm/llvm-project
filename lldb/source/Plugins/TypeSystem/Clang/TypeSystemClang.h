@@ -154,8 +154,9 @@ public:
 
   static TypeSystemClang *GetASTContext(clang::ASTContext *ast_ctx);
 
-  // Returns true if the given type is a coroutine frame debug type.
-  static bool IsCoroutineFrameType(const CompilerType &Type);
+  // Returns true if the given artificial field name should be ignored when
+  // parsing the DWARF.
+  static bool ShouldIgnoreArtificialField(llvm::StringRef FieldName);
 
   /// Returns the display name of this TypeSystemClang that indicates what
   /// purpose it serves in LLDB. Used for example in logs.
