@@ -51,8 +51,6 @@ OverheadType mlir::sparse_tensor::overheadTypeEncoding(Type tp) {
   llvm_unreachable("Unknown overhead type");
 }
 
-// TODO: should offer an overload of this that takes a `MLIRContext*`
-// instead of the builder, similar to `detail::getIntegerOrIndexType`.
 Type mlir::sparse_tensor::getOverheadType(Builder &builder, OverheadType ot) {
   switch (ot) {
   case OverheadType::kIndex:
@@ -209,7 +207,7 @@ Value mlir::sparse_tensor::genIsNonzero(OpBuilder &builder, mlir::Location loc,
 
 void mlir::sparse_tensor::genReshapeDstShape(
     OpBuilder &builder, Location loc, SmallVectorImpl<Value> &dstShape,
-    ArrayRef<Value> srcShape, ArrayRef<StaticSize> staticDstShape,
+    ArrayRef<Value> srcShape, ArrayRef<Size> staticDstShape,
     ArrayRef<ReassociationIndices> reassociation) {
   // Collapse shape.
   if (reassociation.size() < srcShape.size()) {
@@ -242,7 +240,7 @@ void mlir::sparse_tensor::genReshapeDstShape(
       if (staticDstShape[j] == ShapedType::kDynamic) {
         // The expanded dimension has dynamic size. We compute the dimension
         // by dividing srcDim by the product of the static dimensions.
-        StaticSize product = 1;
+        Size product = 1;
         for (unsigned k = start; k < start + map.size(); k++) {
           if (staticDstShape[k] != ShapedType::kDynamic) {
             product *= staticDstShape[k];
@@ -423,7 +421,8 @@ Operation *mlir::sparse_tensor::getTop(Operation *op) {
 void sparse_tensor::foreachInSparseConstant(
     OpBuilder &builder, Location loc, SparseElementsAttr attr, AffineMap order,
     function_ref<void(ArrayRef<Value>, Value)> callback) {
-  const Dimension dimRank = getSparseTensorType(attr).getDimRank();
+  const Dimension dimRank =
+      SparseTensorType(getRankedTensorType(attr)).getDimRank();
   const auto coordinates = attr.getIndices().getValues<IntegerAttr>();
   const auto values = attr.getValues().getValues<Attribute>();
 
@@ -494,8 +493,8 @@ SmallVector<Value> sparse_tensor::loadAll(OpBuilder &builder, Location loc,
 #ifndef NDEBUG
   const auto memTp = cast<MemRefType>(mem.getType());
   assert(memTp.getRank() == 1);
-  const DynSize memSh = memTp.getDimSize(0);
-  assert(ShapedType::isDynamic(memSh) || memSh >= static_cast<DynSize>(size));
+  const Size memSh = memTp.getDimSize(0);
+  assert(ShapedType::isDynamic(memSh) || memSh >= static_cast<Size>(size));
   assert(offsetIdx == 0 || offsetIdx < size);
 #endif // NDEBUG
   SmallVector<Value> vs;
@@ -516,8 +515,8 @@ void sparse_tensor::storeAll(OpBuilder &builder, Location loc, Value mem,
   const size_t vsize = vs.size();
   const auto memTp = cast<MemRefType>(mem.getType());
   assert(memTp.getRank() == 1);
-  const DynSize memSh = memTp.getDimSize(0);
-  assert(ShapedType::isDynamic(memSh) || memSh >= static_cast<DynSize>(vsize));
+  const Size memSh = memTp.getDimSize(0);
+  assert(ShapedType::isDynamic(memSh) || memSh >= static_cast<Size>(vsize));
   assert(offsetIdx == 0 || offsetIdx < vsize);
 #endif // NDEBUG
   for (const auto &v : llvm::enumerate(vs)) {
@@ -546,11 +545,11 @@ Value sparse_tensor::reshapeValuesToLevels(OpBuilder &builder, Location loc,
   // The memref ReshapeOp requires the sizes buffer to have a static
   // shape.
   const auto iTp = builder.getIndexType();
-  const SmallVector<DynSize, 1> lvlSizesShape{static_cast<DynSize>(lvlRank)};
+  const SmallVector<Size, 1> lvlSizesShape{static_cast<Size>(lvlRank)};
   const auto lvlSizesTp = MemRefType::get(lvlSizesShape, iTp);
   lvlCoords = builder.create<memref::CastOp>(loc, lvlSizesTp, lvlCoords);
   // Finally, create the ReshapeOp.
-  const SmallVector<DynSize> resShape(lvlRank, ShapedType::kDynamic);
+  const SmallVector<Size> resShape(lvlRank, ShapedType::kDynamic);
   const Type elemTp = getMemRefType(valuesBuffer).getElementType();
   const auto resTp = MemRefType::get(resShape, elemTp);
   return builder.create<memref::ReshapeOp>(loc, resTp, valuesBuffer, lvlCoords);
@@ -628,7 +627,7 @@ void sparse_tensor::fillDimShape(OpBuilder &builder, Location loc,
                                  SmallVectorImpl<Value> &out) {
   out.clear();
   out.reserve(stt.getDimRank());
-  for (const DynSize sh : stt.getDimShape()) {
+  for (const Size sh : stt.getDimShape()) {
     const auto s = ShapedType::isDynamic(sh) ? 0 : sh;
     out.push_back(constantIndex(builder, loc, s));
   }

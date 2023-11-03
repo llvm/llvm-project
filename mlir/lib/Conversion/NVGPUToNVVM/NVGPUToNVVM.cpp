@@ -402,7 +402,6 @@ struct ConvertNVGPUToNVVMPass
 
   void runOnOperation() override {
     LowerToLLVMOptions options(&getContext());
-    options.useOpaquePointers = useOpaquePointers;
     RewritePatternSet patterns(&getContext());
     LLVMTypeConverter converter(&getContext(), options);
     IRRewriter rewriter(&getContext());
@@ -451,7 +450,7 @@ struct ConvertNVGPUToNVVMPass
           nvgpu::getMBarrierMemrefType(rewriter.getContext(), type));
     });
     converter.addConversion([&](nvgpu::TensorMapDescriptorType type) -> Type {
-      return converter.getPointerType(type.getTensor().getElementType());
+      return LLVM::LLVMPointerType::get(type.getContext());
     });
     populateNVGPUToNVVMConversionPatterns(converter, patterns);
     LLVMConversionTarget target(getContext());
@@ -651,16 +650,11 @@ struct NVGPUAsyncCopyLowering
     Value dstPtr =
         getStridedElementPtr(b.getLoc(), dstMemrefType, adaptor.getDst(),
                              adaptor.getDstIndices(), rewriter);
-    auto i8Ty = IntegerType::get(op.getContext(), 8);
     FailureOr<unsigned> dstAddressSpace =
         getTypeConverter()->getMemRefAddressSpace(dstMemrefType);
     if (failed(dstAddressSpace))
       return rewriter.notifyMatchFailure(
           loc, "destination memref address space not convertible to integer");
-    auto dstPointerType =
-        getTypeConverter()->getPointerType(i8Ty, *dstAddressSpace);
-    if (!getTypeConverter()->useOpaquePointers())
-      dstPtr = b.create<LLVM::BitcastOp>(dstPointerType, dstPtr);
 
     auto srcMemrefType = cast<MemRefType>(op.getSrc().getType());
     FailureOr<unsigned> srcAddressSpace =
@@ -671,13 +665,9 @@ struct NVGPUAsyncCopyLowering
 
     Value scrPtr = getStridedElementPtr(loc, srcMemrefType, adaptor.getSrc(),
                                         adaptor.getSrcIndices(), rewriter);
-    auto srcPointerType =
-        getTypeConverter()->getPointerType(i8Ty, *srcAddressSpace);
-    if (!getTypeConverter()->useOpaquePointers())
-      scrPtr = b.create<LLVM::BitcastOp>(srcPointerType, scrPtr);
     // Intrinsics takes a global pointer so we need an address space cast.
-    auto srcPointerGlobalType = getTypeConverter()->getPointerType(
-        i8Ty, NVVM::NVVMMemorySpace::kGlobalMemorySpace);
+    auto srcPointerGlobalType = LLVM::LLVMPointerType::get(
+        op->getContext(), NVVM::NVVMMemorySpace::kGlobalMemorySpace);
     scrPtr = b.create<LLVM::AddrSpaceCastOp>(srcPointerGlobalType, scrPtr);
     int64_t dstElements = adaptor.getDstElements().getZExtValue();
     int64_t sizeInBytes =
@@ -1128,8 +1118,7 @@ struct NVGPUTmaCreateDescriptorOpLowering
   matchAndRewrite(nvgpu::TmaCreateDescriptorOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     ImplicitLocOpBuilder b(op->getLoc(), rewriter);
-    LLVM::LLVMPointerType llvmPointerType = getTypeConverter()->getPointerType(
-        IntegerType::get(op->getContext(), 8));
+    auto llvmPointerType = LLVM::LLVMPointerType::get(op->getContext());
     Type llvmInt64Type = IntegerType::get(op->getContext(), 64);
 
     Value tensorElementType =

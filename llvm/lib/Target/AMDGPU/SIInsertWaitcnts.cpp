@@ -180,9 +180,11 @@ static bool updateVMCntOnly(const MachineInstr &Inst) {
          SIInstrInfo::isFLATScratch(Inst);
 }
 
+#ifndef NDEBUG
 static bool isNormalMode(InstCounterType MaxCounter) {
   return MaxCounter == NUM_NORMAL_INST_CNTS;
 }
+#endif // NDEBUG
 
 static bool isExpertMode(InstCounterType MaxCounter) {
   return MaxCounter == NUM_EXPERT_INST_CNTS;
