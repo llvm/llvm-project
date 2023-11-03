@@ -27,6 +27,7 @@
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/expression.h"
+#include "flang/Semantics/scope.h"
 #include "flang/Semantics/tools.h"
 #include "llvm/Frontend/OpenACC/ACC.h.inc"
 
@@ -2740,33 +2741,40 @@ static void genACC(Fortran::lower::AbstractConverter &converter,
 
 template <typename GlobalOp, typename EntryOp, typename DeclareOp,
           typename ExitOp>
-static void createDeclareGlobalOp(mlir::OpBuilder &modBuilder,
-                                  fir::FirOpBuilder &builder,
-                                  mlir::Location loc, fir::GlobalOp &globalOp,
-                                  mlir::acc::DataClause clause, bool implicit) {
-  std::stringstream declareGlobalName;
-
-  if constexpr (std::is_same_v<GlobalOp, mlir::acc::GlobalConstructorOp>)
-    declareGlobalName << globalOp.getSymName().str() << "_acc_ctor";
-  else if constexpr (std::is_same_v<GlobalOp, mlir::acc::GlobalDestructorOp>)
-    declareGlobalName << globalOp.getSymName().str() << "_acc_dtor";
-
+static void
+createDeclareGlobalOp(mlir::OpBuilder &modBuilder, fir::FirOpBuilder &builder,
+                      mlir::Location loc, fir::GlobalOp globalOp,
+                      mlir::acc::DataClause clause,
+                      const std::string declareGlobalName, bool implicit,
+                      std::optional<std::size_t> &offset, mlir::Type aliasType,
+                      std::stringstream &asFortran) {
   GlobalOp declareGlobalOp =
-      modBuilder.create<GlobalOp>(loc, declareGlobalName.str());
+      modBuilder.create<GlobalOp>(loc, declareGlobalName);
   builder.createBlock(&declareGlobalOp.getRegion(),
                       declareGlobalOp.getRegion().end(), {}, {});
   builder.setInsertionPointToEnd(&declareGlobalOp.getRegion().back());
+  mlir::Value entryAddr;
 
   fir::AddrOfOp addrOp = builder.create<fir::AddrOfOp>(
       loc, fir::ReferenceType::get(globalOp.getType()), globalOp.getSymbol());
-  addDeclareAttr(builder, addrOp.getOperation(), clause);
+  entryAddr = addrOp.getResTy();
+  // If the variable in the declare clause is part of an equivalence it has an
+  // offset.
+  if (offset) {
+    mlir::Type i8Ptr = builder.getRefType(builder.getI8Type());
+    mlir::Value off =
+        builder.createIntegerConstant(loc, builder.getIndexType(), *offset);
+    mlir::Value aliasAddr = builder.create<fir::CoordinateOp>(
+        loc, i8Ptr, addrOp.getResTy(), mlir::ValueRange{off});
+    entryAddr =
+        builder.createConvert(loc, fir::PointerType::get(aliasType), aliasAddr);
+  }
+  addDeclareAttr(builder, entryAddr.getDefiningOp(), clause);
 
-  std::stringstream asFortran;
-  asFortran << Fortran::lower::mangle::demangleName(globalOp.getSymName());
   llvm::SmallVector<mlir::Value> bounds;
   EntryOp entryOp = createDataEntryOp<EntryOp>(
-      builder, loc, addrOp.getResTy(), asFortran, bounds,
-      /*structured=*/false, implicit, clause, addrOp.getResTy().getType());
+      builder, loc, entryAddr, asFortran, bounds,
+      /*structured=*/false, implicit, clause, entryAddr.getType());
   builder.create<DeclareOp>(loc, mlir::ValueRange(entryOp.getAccPtr()));
   mlir::Value varPtr;
   if constexpr (std::is_same_v<GlobalOp, mlir::acc::GlobalDestructorOp>) {
@@ -2904,8 +2912,39 @@ static void genGlobalCtors(Fortran::lower::AbstractConverter &converter,
                           designator)) {
                 std::string globalName = converter.mangleName(*name->symbol);
                 fir::GlobalOp globalOp = builder.getNamedGlobal(globalName);
-                if (!globalOp)
-                  llvm::report_fatal_error("could not retrieve global symbol");
+                std::stringstream declareGlobalCtorName;
+                declareGlobalCtorName << globalName << "_acc_ctor";
+                std::stringstream declareGlobalDtorName;
+                declareGlobalDtorName << globalName << "_acc_dtor";
+                std::optional<std::size_t> offset = std::nullopt;
+                mlir::Type aliasType;
+
+                std::stringstream asFortran;
+                asFortran << name->symbol->name().ToString();
+
+                if (!globalOp) {
+                  if (Fortran::semantics::FindEquivalenceSet(*name->symbol)) {
+                    for (Fortran::semantics::EquivalenceObject eqObj :
+                         *Fortran::semantics::FindEquivalenceSet(
+                             *name->symbol)) {
+                      std::string eqName = converter.mangleName(eqObj.symbol);
+                      globalOp = builder.getNamedGlobal(eqName);
+                      if (globalOp)
+                        break;
+                    }
+
+                    if (!globalOp)
+                      llvm::report_fatal_error(
+                          "could not retrieve global symbol");
+
+                    offset = name->symbol->GetUltimate().offset();
+                    aliasType = converter.genType(name->symbol->GetUltimate());
+                  } else {
+                    llvm::report_fatal_error(
+                        "could not retrieve global symbol");
+                  }
+                }
+
                 addDeclareAttr(builder, globalOp.getOperation(), clause);
                 auto crtPos = builder.saveInsertionPoint();
                 modBuilder.setInsertionPointAfter(globalOp);
@@ -2915,7 +2954,8 @@ static void genGlobalCtors(Fortran::lower::AbstractConverter &converter,
                                         mlir::acc::CopyinOp,
                                         mlir::acc::DeclareEnterOp, ExitOp>(
                       modBuilder, builder, operandLocation, globalOp, clause,
-                      /*implicit=*/true);
+                      declareGlobalCtorName.str(), /*implicit=*/true, offset,
+                      aliasType, asFortran);
                   createDeclareAllocFunc<EntryOp>(
                       modBuilder, builder, operandLocation, globalOp, clause);
                   if constexpr (!std::is_same_v<EntryOp, ExitOp>)
@@ -2925,14 +2965,16 @@ static void genGlobalCtors(Fortran::lower::AbstractConverter &converter,
                   createDeclareGlobalOp<mlir::acc::GlobalConstructorOp, EntryOp,
                                         mlir::acc::DeclareEnterOp, ExitOp>(
                       modBuilder, builder, operandLocation, globalOp, clause,
-                      /*implicit=*/false);
+                      declareGlobalCtorName.str(), /*implicit=*/false, offset,
+                      aliasType, asFortran);
                 }
                 if constexpr (!std::is_same_v<EntryOp, ExitOp>) {
                   createDeclareGlobalOp<mlir::acc::GlobalDestructorOp,
                                         mlir::acc::GetDevicePtrOp,
                                         mlir::acc::DeclareExitOp, ExitOp>(
                       modBuilder, builder, operandLocation, globalOp, clause,
-                      /*implicit=*/false);
+                      declareGlobalDtorName.str(), /*implicit=*/false, offset,
+                      aliasType, asFortran);
                 }
                 builder.restoreInsertionPoint(crtPos);
               }
