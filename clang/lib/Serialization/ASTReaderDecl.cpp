@@ -750,7 +750,7 @@ ASTDeclReader::RedeclarableResult ASTDeclReader::VisitTagDecl(TagDecl *TD) {
   VisitTypeDecl(TD);
 
   TD->IdentifierNamespace = Record.readInt();
-  TD->setTagKind((TagDecl::TagKind)Record.readInt());
+  TD->setTagKind(static_cast<TagDecl::TagKind>(Record.readInt()));
   if (!isa<CXXRecordDecl>(TD))
     TD->setCompleteDefinition(Record.readInt());
   TD->setEmbeddedInDeclarator(Record.readInt());
@@ -4551,7 +4551,7 @@ void ASTDeclReader::UpdateDecl(Decl *D,
         }
       }
 
-      RD->setTagKind((TagTypeKind)Record.readInt());
+      RD->setTagKind(static_cast<TagTypeKind>(Record.readInt()));
       RD->setLocation(readSourceLocation());
       RD->setLocStart(readSourceLocation());
       RD->setBraceRange(readSourceRange());

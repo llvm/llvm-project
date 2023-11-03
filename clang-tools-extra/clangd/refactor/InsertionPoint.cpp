@@ -85,7 +85,7 @@ SourceLocation endLoc(const DeclContext &DC) {
 }
 
 AccessSpecifier getAccessAtEnd(const CXXRecordDecl &C) {
-  AccessSpecifier Spec = (C.getTagKind() == TTK_Class ? AS_private : AS_public);
+  AccessSpecifier Spec = (C.getTagKind() == Class ? AS_private : AS_public);
   for (const auto *D : C.decls())
     if (const auto *ASD = llvm::dyn_cast<AccessSpecDecl>(D))
       Spec = ASD->getAccess();
