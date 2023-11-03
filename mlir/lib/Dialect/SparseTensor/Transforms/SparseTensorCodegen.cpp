@@ -248,7 +248,7 @@ static void createAllocFields(OpBuilder &builder, Location loc,
   for (Level lvlRank = stt.getLvlRank(), l = 0; l < lvlRank; l++) {
     // Fills dim sizes array.
     // FIXME: `toOrigDim` is deprecated.
-    desc.setLvlSize(builder, loc, l, dimSizes[toOrigDim(stt, l)]);
+    desc.setLvlSize(builder, loc, l, dimSizes[toOrigDim(stt.getEncoding(), l)]);
     // Pushes a leading zero to positions memref.
     if (stt.isCompressedLvl(l))
       createPushback(builder, loc, desc, SparseTensorFieldKind::PosMemRef, l,

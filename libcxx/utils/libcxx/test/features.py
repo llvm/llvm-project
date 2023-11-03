@@ -136,24 +136,6 @@ DEFAULT_FEATURES = [
           """,
         ),
     ),
-    # Some tests rely on creating shared libraries which link in the C++ Standard Library. In some
-    # cases, this doesn't work (e.g. if the library was built as a static archive and wasn't compiled
-    # as position independent). This feature informs the test suite of whether it's possible to create
-    # a shared library in a shell test by using the '-shared' compiler flag.
-    #
-    # Note: To implement this check properly, we need to make sure that we use something inside the
-    # compiled library, not only in the headers. It should be safe to assume that all implementations
-    # define `operator new` in the compiled library.
-    Feature(
-        name="cant-build-shared-library",
-        when=lambda cfg: not sourceBuilds(
-            cfg,
-            """
-            void f() { new int(3); }
-          """,
-            ["-shared"],
-        ),
-    ),
     # Check for a Windows UCRT bug (fixed in UCRT/Windows 10.0.20348.0):
     # https://developercommunity.visualstudio.com/t/utf-8-locales-break-ctype-functions-for-wchar-type/1653678
     Feature(
