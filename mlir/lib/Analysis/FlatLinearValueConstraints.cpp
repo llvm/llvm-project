@@ -85,8 +85,10 @@ getFlattenedAffineExprs(ArrayRef<AffineExpr> exprs, unsigned numDims,
   for (auto expr : exprs) {
     if (!expr.isPureAffine())
       return failure();
-
-    flattener.walkPostOrder(expr);
+    // has poison expression
+    auto flattenResult = flattener.walkPostOrder(expr);
+    if (failed(flattenResult))
+      return failure();
   }
 
   assert(flattener.operandExprStack.size() == exprs.size());
