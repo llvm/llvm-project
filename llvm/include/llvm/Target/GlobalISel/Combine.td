@@ -165,6 +165,25 @@ def GIReplaceReg : GIBuiltinInst;
 def GIEraseRoot : GIBuiltinInst;
 
 //===----------------------------------------------------------------------===//
+// Pattern MIFlags
+//===----------------------------------------------------------------------===//
+
+class MIFlagEnum<string enumName> {
+  string EnumName = "MachineInstr::" # enumName;
+}
+
+def FmNoNans    : MIFlagEnum<"FmNoNans">;
+def FmNoInfs    : MIFlagEnum<"FmNoInfs">;
+def FmNsz       : MIFlagEnum<"FmNsz">;
+def FmArcp      : MIFlagEnum<"FmArcp">;
+def FmContract  : MIFlagEnum<"FmContract">;
+def FmAfn       : MIFlagEnum<"FmAfn">;
+def FmReassoc   : MIFlagEnum<"FmReassoc">;
+
+def MIFlags;
+// def not; -> Already defined as a SDNode
+
+//===----------------------------------------------------------------------===//
 
 def extending_load_matchdata : GIDefMatchData<"PreferredTuple">;
 def indexed_load_store_matchdata : GIDefMatchData<"IndexedLoadStoreMatchInfo">;
