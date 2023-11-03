@@ -1281,19 +1281,10 @@ MachineIRBuilder::buildInstr(unsigned Opc, ArrayRef<DstOp> DstOps,
                                  SrcOps[0].getLLTTy(*getMRI());
                         }) &&
            "type mismatch in input list");
-    if (DstOps[0].getLLTTy(*getMRI()).isScalable())
-      assert((TypeSize::ScalarTy)SrcOps.size() *
-                     SrcOps[0].getLLTTy(*getMRI()).getSizeInBits() >=
-                 DstOps[0]
-                     .getLLTTy(*getMRI())
-                     .getSizeInBits()
-                     .getKnownMinValue() &&
-             "input scalars does not cover the output vector register");
-    else
-      assert((TypeSize::ScalarTy)SrcOps.size() *
-                     SrcOps[0].getLLTTy(*getMRI()).getSizeInBits() ==
-                 DstOps[0].getLLTTy(*getMRI()).getSizeInBits() &&
-             "input scalars do not exactly cover the output vector register");
+    assert((TypeSize::ScalarTy)SrcOps.size() *
+                   SrcOps[0].getLLTTy(*getMRI()).getSizeInBits() ==
+               DstOps[0].getLLTTy(*getMRI()).getSizeInBits() &&
+           "input scalars do not exactly cover the output vector register");
     break;
   }
   case TargetOpcode::G_BUILD_VECTOR_TRUNC: {
