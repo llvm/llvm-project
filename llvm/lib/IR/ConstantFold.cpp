@@ -1243,20 +1243,6 @@ static ICmpInst::Predicate evaluateICmpRelation(Constant *V1, Constant *V2,
     Constant *CE1Op0 = CE1->getOperand(0);
 
     switch (CE1->getOpcode()) {
-    case Instruction::BitCast:
-      // We can't evaluate floating point casts or truncations.
-      if (CE1Op0->getType()->isFPOrFPVectorTy())
-        break;
-
-      // If the cast is not actually changing bits, and the second operand is a
-      // null pointer, do the comparison with the pre-casted value.
-      if (V2->isNullValue() && CE1->getType()->isIntOrPtrTy()) {
-        return evaluateICmpRelation(CE1Op0,
-                                    Constant::getNullValue(CE1Op0->getType()),
-                                    isSigned);
-      }
-      break;
-
     case Instruction::GetElementPtr: {
       GEPOperator *CE1GEP = cast<GEPOperator>(CE1);
       // Ok, since this is a getelementptr, we know that the constant has a
