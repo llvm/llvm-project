@@ -17,22 +17,12 @@ jobs:
         with:
           separator: ","
 
-      - name: Calculate number of commits to fetch
-        run: echo "PR_FETCH_DEPTH=$(( ${{ github.event.pull_request.commits }} + 1 ))" >> "${GITHUB_ENV}"
-
       - name: Fetch PR sources
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.head.sha }}
-          fetch-depth: ${{ env.PR_FETCH_DEPTH }}
+          ref: "refs/pull/${{ github.event.number }}/merge"
+          fetch-depth: 2
           path: pr-sources
-
-      - name: Print commits being evaluated
-        working-directory: ./pr-sources
-        env:
-          PR_DEPTH: ${{ github.event.pull_request.commits }}
-        run: |
-          git log HEAD~$PR_DEPTH...HEAD
 
       # We need to make sure that we aren't executing/using any code from the
       # PR for security reasons as we're using pull_request_target. Checkout
@@ -69,13 +59,12 @@ jobs:
       - name: Run code formatter
         env:
           GITHUB_PR_NUMBER: ${{ github.event.pull_request.number }}
-          PR_DEPTH: ${{ github.event.pull_request.commits }}
           CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
         working-directory: ./pr-sources
         run: |
           python ../llvm-sources/llvm/utils/git/code-format-helper.py \
             --token ${{ secrets.GITHUB_TOKEN }} \
             --issue-number $GITHUB_PR_NUMBER \
-            --start-rev HEAD~$PR_DEPTH \
+            --start-rev HEAD^ \
             --end-rev HEAD \
             --changed-files "$CHANGED_FILES"
