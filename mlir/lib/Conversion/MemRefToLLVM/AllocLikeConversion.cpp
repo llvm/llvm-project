@@ -23,11 +23,9 @@ LLVM::LLVMFuncOp getNotalignedAllocFn(const LLVMTypeConverter *typeConverter,
   bool useGenericFn = typeConverter->getOptions().useGenericFunctions;
 
   if (useGenericFn)
-    return LLVM::lookupOrCreateGenericAllocFn(
-        module, indexType, typeConverter->useOpaquePointers());
+    return LLVM::lookupOrCreateGenericAllocFn(module, indexType);
 
-  return LLVM::lookupOrCreateMallocFn(module, indexType,
-                                      typeConverter->useOpaquePointers());
+  return LLVM::lookupOrCreateMallocFn(module, indexType);
 }
 
 LLVM::LLVMFuncOp getAlignedAllocFn(const LLVMTypeConverter *typeConverter,
@@ -35,11 +33,9 @@ LLVM::LLVMFuncOp getAlignedAllocFn(const LLVMTypeConverter *typeConverter,
   bool useGenericFn = typeConverter->getOptions().useGenericFunctions;
 
   if (useGenericFn)
-    return LLVM::lookupOrCreateGenericAlignedAllocFn(
-        module, indexType, typeConverter->useOpaquePointers());
+    return LLVM::lookupOrCreateGenericAlignedAllocFn(module, indexType);
 
-  return LLVM::lookupOrCreateAlignedAllocFn(module, indexType,
-                                            typeConverter->useOpaquePointers());
+  return LLVM::lookupOrCreateAlignedAllocFn(module, indexType);
 }
 
 } // end namespace
@@ -70,10 +66,6 @@ static Value castAllocFuncResult(ConversionPatternRewriter &rewriter,
         typeConverter.getPointerType(allocatedPtrTy.getElementType(),
                                      memrefAddrSpace),
         allocatedPtr);
-
-  if (!typeConverter.useOpaquePointers())
-    allocatedPtr =
-        rewriter.create<LLVM::BitcastOp>(loc, elementPtrType, allocatedPtr);
   return allocatedPtr;
 }
 

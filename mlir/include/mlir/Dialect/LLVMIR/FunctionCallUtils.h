@@ -50,16 +50,16 @@ LLVM::LLVMFuncOp lookupOrCreatePrintCloseFn(ModuleOp moduleOp);
 LLVM::LLVMFuncOp lookupOrCreatePrintCommaFn(ModuleOp moduleOp);
 LLVM::LLVMFuncOp lookupOrCreatePrintNewlineFn(ModuleOp moduleOp);
 LLVM::LLVMFuncOp lookupOrCreateMallocFn(ModuleOp moduleOp, Type indexType,
-                                        bool opaquePointers);
+                                        bool opaquePointers = true);
 LLVM::LLVMFuncOp lookupOrCreateAlignedAllocFn(ModuleOp moduleOp, Type indexType,
                                               bool opaquePointers = true);
 LLVM::LLVMFuncOp lookupOrCreateFreeFn(ModuleOp moduleOp,
                                       bool opaquePointers = true);
 LLVM::LLVMFuncOp lookupOrCreateGenericAllocFn(ModuleOp moduleOp, Type indexType,
-                                              bool opaquePointers);
-LLVM::LLVMFuncOp lookupOrCreateGenericAlignedAllocFn(ModuleOp moduleOp,
-                                                     Type indexType,
-                                                     bool opaquePointers);
+                                              bool opaquePointers = true);
+LLVM::LLVMFuncOp
+lookupOrCreateGenericAlignedAllocFn(ModuleOp moduleOp, Type indexType,
+                                    bool opaquePointers = true);
 LLVM::LLVMFuncOp lookupOrCreateGenericFreeFn(ModuleOp moduleOp,
                                              bool opaquePointers = true);
 LLVM::LLVMFuncOp lookupOrCreateMemRefCopyFn(ModuleOp moduleOp, Type indexType,
