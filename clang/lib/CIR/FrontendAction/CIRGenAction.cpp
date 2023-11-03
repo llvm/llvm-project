@@ -72,11 +72,14 @@ static std::string sanitizePassOptions(llvm::StringRef o) {
 
 namespace cir {
 
-static std::unique_ptr<llvm::Module> lowerFromCIRToLLVMIR(
-    const clang::FrontendOptions &feOptions, mlir::ModuleOp mlirMod,
-    std::unique_ptr<mlir::MLIRContext> mlirCtx, llvm::LLVMContext &llvmCtx) {
+static std::unique_ptr<llvm::Module>
+lowerFromCIRToLLVMIR(const clang::FrontendOptions &feOptions,
+                     mlir::ModuleOp mlirMod,
+                     std::unique_ptr<mlir::MLIRContext> mlirCtx,
+                     llvm::LLVMContext &llvmCtx, bool disableVerifier = false) {
   if (feOptions.ClangIRDirectLowering)
-    return direct::lowerDirectlyFromCIRToLLVMIR(mlirMod, llvmCtx);
+    return direct::lowerDirectlyFromCIRToLLVMIR(mlirMod, llvmCtx,
+                                                disableVerifier);
   else
     return lowerFromCIRToMLIRToLLVMIR(mlirMod, std::move(mlirCtx), llvmCtx);
 }
@@ -245,7 +248,8 @@ public:
     case CIRGenAction::OutputType::EmitLLVM: {
       llvm::LLVMContext llvmCtx;
       auto llvmModule =
-          lowerFromCIRToLLVMIR(feOptions, mlirMod, std::move(mlirCtx), llvmCtx);
+          lowerFromCIRToLLVMIR(feOptions, mlirMod, std::move(mlirCtx), llvmCtx,
+                               feOptions.ClangIRDisableCIRVerifier);
 
       llvmModule->setTargetTriple(targetOptions.Triple);
 
@@ -259,7 +263,8 @@ public:
     case CIRGenAction::OutputType::EmitObj: {
       llvm::LLVMContext llvmCtx;
       auto llvmModule =
-          lowerFromCIRToLLVMIR(feOptions, mlirMod, std::move(mlirCtx), llvmCtx);
+          lowerFromCIRToLLVMIR(feOptions, mlirMod, std::move(mlirCtx), llvmCtx,
+                               feOptions.ClangIRDisableCIRVerifier);
 
       llvmModule->setTargetTriple(targetOptions.Triple);
       EmitBackendOutput(diagnosticsEngine, headerSearchOptions, codeGenOptions,
@@ -272,7 +277,8 @@ public:
     case CIRGenAction::OutputType::EmitAssembly: {
       llvm::LLVMContext llvmCtx;
       auto llvmModule =
-          lowerFromCIRToLLVMIR(feOptions, mlirMod, std::move(mlirCtx), llvmCtx);
+          lowerFromCIRToLLVMIR(feOptions, mlirMod, std::move(mlirCtx), llvmCtx,
+                               feOptions.ClangIRDisableCIRVerifier);
 
       llvmModule->setTargetTriple(targetOptions.Triple);
       EmitBackendOutput(diagnosticsEngine, headerSearchOptions, codeGenOptions,
