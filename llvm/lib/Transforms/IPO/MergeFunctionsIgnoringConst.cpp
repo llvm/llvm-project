@@ -1215,7 +1215,6 @@ void MergeFuncIgnoringConstImpl::writeThunk(Function *ToFunc, Function *Thunk,
 static llvm::AttributeList
 fixUpTypesInByValAndStructRetAttributes(llvm::FunctionType *fnType,
                                         llvm::AttributeList attrList) {
-  auto &context = fnType->getContext();
   // supportsTypedPointers always returns false now.
   return attrList;
 }
