@@ -242,7 +242,7 @@ NativeRegisterContextLinux_arm64::ReadRegister(const RegisterInfo *reg_info,
       return error;
 
     offset = reg_info->byte_offset;
-    assert(offset < GetGPRSize());
+    lldbassert(offset < GetGPRSize() && "Invalid GPR register read offset");
     src = (uint8_t *)GetGPRBuffer() + offset;
 
   } else if (IsFPR(reg)) {
@@ -253,7 +253,7 @@ NativeRegisterContextLinux_arm64::ReadRegister(const RegisterInfo *reg_info,
         return error;
 
       offset = CalculateFprOffset(reg_info);
-      assert(offset < GetFPRSize());
+      lldbassert(offset < GetFPRSize() && "Invalid FPR register read offset");
       src = (uint8_t *)GetFPRBuffer() + offset;
     } else {
       // SVE or SSVE enabled, we will read and cache SVE ptrace data.
@@ -288,7 +288,8 @@ NativeRegisterContextLinux_arm64::ReadRegister(const RegisterInfo *reg_info,
         offset = CalculateSVEOffset(GetRegisterInfoAtIndex(sve_reg_num));
       }
 
-      assert(offset < GetSVEBufferSize());
+      lldbassert(offset < GetSVEBufferSize() &&
+                 "Invalid SVE FPR register read offset");
       src = (uint8_t *)GetSVEBuffer() + offset;
     }
   } else if (IsTLS(reg)) {
@@ -297,7 +298,8 @@ NativeRegisterContextLinux_arm64::ReadRegister(const RegisterInfo *reg_info,
       return error;
 
     offset = reg_info->byte_offset - GetRegisterInfo().GetTLSOffset();
-    assert(offset < GetTLSBufferSize());
+    lldbassert(offset < GetTLSBufferSize() &&
+               "Invalid TLS register read offset");
     src = (uint8_t *)GetTLSBuffer() + offset;
   } else if (IsSVE(reg)) {
     if (m_sve_state == SVEState::Disabled || m_sve_state == SVEState::Unknown)
@@ -321,13 +323,15 @@ NativeRegisterContextLinux_arm64::ReadRegister(const RegisterInfo *reg_info,
 
         if (GetRegisterInfo().IsSVEZReg(reg)) {
           offset = CalculateSVEOffset(reg_info);
-          assert(offset < GetSVEBufferSize());
+          lldbassert(offset < GetSVEBufferSize() &&
+                     "Invalid SVE register read offset");
           ::memcpy(sve_reg_non_live.data(), (uint8_t *)GetSVEBuffer() + offset,
                    16);
         }
       } else {
         offset = CalculateSVEOffset(reg_info);
-        assert(offset < GetSVEBufferSize());
+        lldbassert(offset < GetSVEBufferSize() &&
+                   "Invalid SVE register read offset");
         src = (uint8_t *)GetSVEBuffer() + offset;
       }
     }
@@ -337,7 +341,8 @@ NativeRegisterContextLinux_arm64::ReadRegister(const RegisterInfo *reg_info,
       return error;
 
     offset = reg_info->byte_offset - GetRegisterInfo().GetPAuthOffset();
-    assert(offset < GetPACMaskSize());
+    lldbassert(offset < GetPACMaskSize() &&
+               "Invalid PAuth register read offset");
     src = (uint8_t *)GetPACMask() + offset;
   } else if (IsMTE(reg)) {
     error = ReadMTEControl();
@@ -345,7 +350,8 @@ NativeRegisterContextLinux_arm64::ReadRegister(const RegisterInfo *reg_info,
       return error;
 
     offset = reg_info->byte_offset - GetRegisterInfo().GetMTEOffset();
-    assert(offset < GetMTEControlSize());
+    lldbassert(offset < GetMTEControlSize() &&
+               "Invalid MTE register read offset");
     src = (uint8_t *)GetMTEControl() + offset;
   } else if (IsSME(reg)) {
     if (GetRegisterInfo().IsSMERegZA(reg)) {
@@ -391,7 +397,8 @@ NativeRegisterContextLinux_arm64::ReadRegister(const RegisterInfo *reg_info,
       ReadSMEControl();
 
       offset = reg_info->byte_offset - GetRegisterInfo().GetSMEOffset();
-      assert(offset < GetSMEPseudoBufferSize());
+      lldbassert(offset < GetSMEPseudoBufferSize() &&
+                 "Invalid SME register read offset");
       src = (uint8_t *)GetSMEPseudoBuffer() + offset;
     }
   } else
@@ -427,7 +434,8 @@ Status NativeRegisterContextLinux_arm64::WriteRegister(
     if (error.Fail())
       return error;
 
-    assert(reg_info->byte_offset < GetGPRSize());
+    lldbassert(reg_info->byte_offset < GetGPRSize() &&
+               "Invalid GPR register write offset");
     dst = (uint8_t *)GetGPRBuffer() + reg_info->byte_offset;
     ::memcpy(dst, reg_value.GetBytes(), reg_info->byte_size);
 
@@ -440,7 +448,7 @@ Status NativeRegisterContextLinux_arm64::WriteRegister(
         return error;
 
       offset = CalculateFprOffset(reg_info);
-      assert(offset < GetFPRSize());
+      lldbassert(offset < GetFPRSize() && "Invalid FPR register write offset");
       dst = (uint8_t *)GetFPRBuffer() + offset;
       ::memcpy(dst, reg_value.GetBytes(), reg_info->byte_size);
 
@@ -476,7 +484,8 @@ Status NativeRegisterContextLinux_arm64::WriteRegister(
         offset = CalculateSVEOffset(GetRegisterInfoAtIndex(sve_reg_num));
       }
 
-      assert(offset < GetSVEBufferSize());
+      lldbassert(offset < GetSVEBufferSize() &&
+                 "Invalid SVE register write offset");
       dst = (uint8_t *)GetSVEBuffer() + offset;
       ::memcpy(dst, reg_value.GetBytes(), reg_info->byte_size);
       return WriteAllSVE();
@@ -541,7 +550,8 @@ Status NativeRegisterContextLinux_arm64::WriteRegister(
           // We are writing a Z register which is zero beyond 16 bytes so copy
           // first 16 bytes only as SVE payload mirrors legacy fpsimd structure
           offset = CalculateSVEOffset(reg_info);
-          assert(offset < GetSVEBufferSize());
+          lldbassert(offset < GetSVEBufferSize() &&
+                     "Invalid SVE register write offset");
           dst = (uint8_t *)GetSVEBuffer() + offset;
           ::memcpy(dst, reg_value.GetBytes(), 16);
 
@@ -550,7 +560,8 @@ Status NativeRegisterContextLinux_arm64::WriteRegister(
           return Status("SVE state change operation not supported");
       } else {
         offset = CalculateSVEOffset(reg_info);
-        assert(offset < GetSVEBufferSize());
+        lldbassert(offset < GetSVEBufferSize() &&
+                   "Invalid SVE register write offset");
         dst = (uint8_t *)GetSVEBuffer() + offset;
         ::memcpy(dst, reg_value.GetBytes(), reg_info->byte_size);
         return WriteAllSVE();
@@ -562,7 +573,8 @@ Status NativeRegisterContextLinux_arm64::WriteRegister(
       return error;
 
     offset = reg_info->byte_offset - GetRegisterInfo().GetMTEOffset();
-    assert(offset < GetMTEControlSize());
+    lldbassert(offset < GetMTEControlSize() &&
+               "Invalid MTE register write offset");
     dst = (uint8_t *)GetMTEControl() + offset;
     ::memcpy(dst, reg_value.GetBytes(), reg_info->byte_size);
 
@@ -573,7 +585,8 @@ Status NativeRegisterContextLinux_arm64::WriteRegister(
       return error;
 
     offset = reg_info->byte_offset - GetRegisterInfo().GetTLSOffset();
-    assert(offset < GetTLSBufferSize());
+    lldbassert(offset < GetTLSBufferSize() &&
+               "Invalid MTE register write offset");
     dst = (uint8_t *)GetTLSBuffer() + offset;
     ::memcpy(dst, reg_value.GetBytes(), reg_info->byte_size);
 
@@ -758,11 +771,11 @@ Status NativeRegisterContextLinux_arm64::ReadAllRegisterValues(
   // For more information on this, look up the uses of the relevant NT_ARM_
   // constants and the functions vec_set_vector_length, sve_set_common and
   // za_set in the Linux Kernel.
-
   if ((m_sve_state != SVEState::Streaming) && GetRegisterInfo().IsZAPresent()) {
     // Use the header size not the buffer size, as we may be using the buffer
     // for fake data, which we do not want to write out.
-    assert(m_za_header.size <= GetZABufferSize());
+    lldbassert(m_za_header.size <= GetZABufferSize() &&
+               "Unexpected ZA header size");
     dst = AddSavedRegisters(dst, RegisterSetType::SME, GetZABuffer(),
                             m_za_header.size);
   }
@@ -778,7 +791,8 @@ Status NativeRegisterContextLinux_arm64::ReadAllRegisterValues(
   }
 
   if ((m_sve_state == SVEState::Streaming) && GetRegisterInfo().IsZAPresent()) {
-    assert(m_za_header.size <= GetZABufferSize());
+    lldbassert(m_za_header.size <= GetZABufferSize() &&
+               "Unexpected ZA Header Size");
     dst = AddSavedRegisters(dst, RegisterSetType::SME, GetZABuffer(),
                             m_za_header.size);
   }

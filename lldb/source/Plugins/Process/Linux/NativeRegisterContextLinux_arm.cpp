@@ -143,7 +143,8 @@ NativeRegisterContextLinux_arm::ReadRegister(const RegisterInfo *reg_info,
 
   // Get pointer to m_fpr variable and set the data from it.
   uint32_t fpr_offset = CalculateFprOffset(reg_info);
-  assert(fpr_offset < sizeof m_fpr);
+  lldbassert(fpr_offset < sizeof m_fpr &&
+             "Invalid fpr offset for register read");
   uint8_t *src = (uint8_t *)&m_fpr + fpr_offset;
   switch (reg_info->byte_size) {
   case 2:
@@ -186,7 +187,8 @@ NativeRegisterContextLinux_arm::WriteRegister(const RegisterInfo *reg_info,
   if (IsFPR(reg_index)) {
     // Get pointer to m_fpr variable and set the data to it.
     uint32_t fpr_offset = CalculateFprOffset(reg_info);
-    assert(fpr_offset < sizeof m_fpr);
+    lldbassert(fpr_offset < sizeof m_fpr &&
+               "Invalid fpr offset for register read");
     uint8_t *dst = (uint8_t *)&m_fpr + fpr_offset;
     ::memcpy(dst, reg_value.GetBytes(), reg_info->byte_size);
 
@@ -794,7 +796,8 @@ Status NativeRegisterContextLinux_arm::DoReadRegisterValue(
   // read out the full GPR register set instead. This approach is about 4 times
   // slower but the performance overhead is negligible in comparison to
   // processing time in lldb-server.
-  assert(offset % 4 == 0 && "Try to write a register with unaligned offset");
+  lldbassert(offset % 4 == 0 &&
+             "Trying to read a register with unaligned offset");
   if (offset + sizeof(uint32_t) > sizeof(m_gpr_arm))
     return Status("Register isn't fit into the size of the GPR area");
 
@@ -813,7 +816,8 @@ Status NativeRegisterContextLinux_arm::DoWriteRegisterValue(
   // read out the full GPR register set, modify the requested register and
   // write it back. This approach is about 4 times slower but the performance
   // overhead is negligible in comparison to processing time in lldb-server.
-  assert(offset % 4 == 0 && "Try to write a register with unaligned offset");
+  lldbassert(offset % 4 == 0 &&
+             "Try to write a register with unaligned offset");
   if (offset + sizeof(uint32_t) > sizeof(m_gpr_arm))
     return Status("Register isn't fit into the size of the GPR area");
 

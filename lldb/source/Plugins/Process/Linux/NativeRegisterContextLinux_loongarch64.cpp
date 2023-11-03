@@ -113,7 +113,7 @@ Status NativeRegisterContextLinux_loongarch64::ReadRegister(
       return error;
 
     offset = reg_info->byte_offset;
-    assert(offset < GetGPRSize());
+    lldbassert(offset < GetGPRSize() && "Invalid GPR register read offset");
     src = (uint8_t *)GetGPRBuffer() + offset;
 
   } else if (IsFPR(reg)) {
@@ -122,7 +122,7 @@ Status NativeRegisterContextLinux_loongarch64::ReadRegister(
       return error;
 
     offset = CalculateFprOffset(reg_info);
-    assert(offset < GetFPRSize());
+    lldbassert(offset < GetFPRSize() && "Invalid FPR register read offset");
     src = (uint8_t *)GetFPRBuffer() + offset;
   } else
     return Status("failed - register wasn't recognized to be a GPR or an FPR, "
@@ -156,7 +156,8 @@ Status NativeRegisterContextLinux_loongarch64::WriteRegister(
     if (error.Fail())
       return error;
 
-    assert(reg_info->byte_offset < GetGPRSize());
+    lldbassert(reg_info->byte_offset < GetGPRSize() &&
+               "Invalid GPR register write offset");
     dst = (uint8_t *)GetGPRBuffer() + reg_info->byte_offset;
     ::memcpy(dst, reg_value.GetBytes(), reg_info->byte_size);
 
@@ -167,7 +168,7 @@ Status NativeRegisterContextLinux_loongarch64::WriteRegister(
       return error;
 
     offset = CalculateFprOffset(reg_info);
-    assert(offset < GetFPRSize());
+    lldbassert(offset < GetFPRSize() && "Invalid FPR register write offset");
     dst = (uint8_t *)GetFPRBuffer() + offset;
     ::memcpy(dst, reg_value.GetBytes(), reg_info->byte_size);
 

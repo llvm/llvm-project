@@ -246,8 +246,8 @@ bool RegisterContextCorePOSIX_arm64::ReadRegister(const RegisterInfo *reg_info,
         offset = CalculateSVEOffset(GetRegisterInfoAtIndex(sve_reg_num));
       }
 
-      assert(sve_reg_num != LLDB_INVALID_REGNUM);
-      assert(offset < m_sve_data.GetByteSize());
+      lldbassert(sve_reg_num != LLDB_INVALID_REGNUM);
+      lldbassert(offset < m_sve_data.GetByteSize());
       value.SetFromMemoryData(*reg_info, GetSVEBuffer(offset),
                               reg_info->byte_size, lldb::eByteOrderLittle,
                               error);
@@ -269,7 +269,7 @@ bool RegisterContextCorePOSIX_arm64::ReadRegister(const RegisterInfo *reg_info,
       if (IsSVEZ(reg)) {
         byte_size = 16;
         offset = CalculateSVEOffset(reg_info);
-        assert(offset < m_sve_data.GetByteSize());
+        lldbassert(offset < m_sve_data.GetByteSize());
         src = GetSVEBuffer(offset);
       }
       value.SetFromMemoryData(*reg_info, src, byte_size, lldb::eByteOrderLittle,
@@ -278,7 +278,7 @@ bool RegisterContextCorePOSIX_arm64::ReadRegister(const RegisterInfo *reg_info,
     case SVEState::Full:
     case SVEState::Streaming:
       offset = CalculateSVEOffset(reg_info);
-      assert(offset < m_sve_data.GetByteSize());
+      lldbassert(offset < m_sve_data.GetByteSize());
       value.SetFromMemoryData(*reg_info, GetSVEBuffer(offset),
                               reg_info->byte_size, lldb::eByteOrderLittle,
                               error);
@@ -289,17 +289,17 @@ bool RegisterContextCorePOSIX_arm64::ReadRegister(const RegisterInfo *reg_info,
     }
   } else if (IsPAuth(reg)) {
     offset = reg_info->byte_offset - m_register_info_up->GetPAuthOffset();
-    assert(offset < m_pac_data.GetByteSize());
+    lldbassert(offset < m_pac_data.GetByteSize());
     value.SetFromMemoryData(*reg_info, m_pac_data.GetDataStart() + offset,
                             reg_info->byte_size, lldb::eByteOrderLittle, error);
   } else if (IsTLS(reg)) {
     offset = reg_info->byte_offset - m_register_info_up->GetTLSOffset();
-    assert(offset < m_tls_data.GetByteSize());
+    lldbassert(offset < m_tls_data.GetByteSize());
     value.SetFromMemoryData(*reg_info, m_tls_data.GetDataStart() + offset,
                             reg_info->byte_size, lldb::eByteOrderLittle, error);
   } else if (IsMTE(reg)) {
     offset = reg_info->byte_offset - m_register_info_up->GetMTEOffset();
-    assert(offset < m_mte_data.GetByteSize());
+    lldbassert(offset < m_mte_data.GetByteSize());
     value.SetFromMemoryData(*reg_info, m_mte_data.GetDataStart() + offset,
                             reg_info->byte_size, lldb::eByteOrderLittle, error);
   } else if (IsSME(reg)) {
@@ -343,7 +343,7 @@ bool RegisterContextCorePOSIX_arm64::ReadRegister(const RegisterInfo *reg_info,
                               error);
     } else {
       offset = reg_info->byte_offset - m_register_info_up->GetSMEOffset();
-      assert(offset < sizeof(m_sme_pseudo_regs));
+      lldbassert(offset < sizeof(m_sme_pseudo_regs));
       // Host endian since these values are derived instead of being read from a
       // core file note.
       value.SetFromMemoryData(
