@@ -14,9 +14,9 @@ include "mlir/IR/OpBase.td"
 
 // DEF: #ifdef GET_ATTRDEF_LIST
 // DEF: #undef GET_ATTRDEF_LIST
+// DEF: ::test::IndexAttr,
 // DEF: ::test::SimpleAAttr,
 // DEF: ::test::CompoundAAttr,
-// DEF: ::test::IndexAttr,
 // DEF: ::test::SingleParameterAttr
 
 // DEF-LABEL: ::mlir::OptionalParseResult generatedAttributeParser(
@@ -24,13 +24,13 @@ include "mlir/IR/OpBase.td"
 // DEF-SAME: ::llvm::StringRef *mnemonic, ::mlir::Type type,
 // DEF-SAME: ::mlir::Attribute &value) {
 // DEF: return ::mlir::AsmParser::KeywordSwitch<::mlir::OptionalParseResult>(parser)
+// DEF: .Case(::test::IndexAttr::getMnemonic()
+// DEF-NEXT:   value = ::test::IndexAttr::parse(parser, type);
+// DEF-NEXT:   return ::mlir::success(!!value);
 // DEF: .Case(::test::CompoundAAttr::getMnemonic()
 // DEF-NEXT: value = ::test::CompoundAAttr::parse(parser, type);
 // DEF-NEXT: return ::mlir::success(!!value);
 // DEF-NEXT: })
-// DEF-NEXT: .Case(::test::IndexAttr::getMnemonic()
-// DEF-NEXT:   value = ::test::IndexAttr::parse(parser, type);
-// DEF-NEXT:   return ::mlir::success(!!value);
 // DEF: .Default([&](llvm::StringRef keyword,
 // DEF-NEXT:   *mnemonic = keyword;
 // DEF-NEXT:   return std::nullopt;
@@ -43,6 +43,24 @@ def Test_Dialect: Dialect {
 }
 
 class TestAttr<string name> : AttrDef<Test_Dialect, name> { }
+
+def C_IndexAttr : TestAttr<"Index"> {
+    let mnemonic = "index";
+
+    let parameters = (
+      ins
+      StringRefParameter<"Label for index">:$label
+    );
+  let hasCustomAssemblyFormat = 1;
+
+// DECL-LABEL: class IndexAttr : public ::mlir::Attribute
+// DECL: static constexpr ::llvm::StringLiteral getMnemonic() {
+// DECL:   return {"index"};
+// DECL: }
+// DECL: static ::mlir::Attribute parse(
+// DECL-SAME: ::mlir::AsmParser &odsParser, ::mlir::Type odsType);
+// DECL: void print(::mlir::AsmPrinter &odsPrinter) const;
+}
 
 def A_SimpleAttrA : TestAttr<"SimpleA"> {
 // DECL: class SimpleAAttr : public ::mlir::Attribute
@@ -98,24 +116,6 @@ def B_CompoundAttrA : TestAttr<"CompoundA"> {
 
 // DEF: ::mlir::Type CompoundAAttr::getInner() const {
 // DEF-NEXT: return getImpl()->inner;
-}
-
-def C_IndexAttr : TestAttr<"Index"> {
-    let mnemonic = "index";
-
-    let parameters = (
-      ins
-      StringRefParameter<"Label for index">:$label
-    );
-  let hasCustomAssemblyFormat = 1;
-
-// DECL-LABEL: class IndexAttr : public ::mlir::Attribute
-// DECL: static constexpr ::llvm::StringLiteral getMnemonic() {
-// DECL:   return {"index"};
-// DECL: }
-// DECL: static ::mlir::Attribute parse(
-// DECL-SAME: ::mlir::AsmParser &odsParser, ::mlir::Type odsType);
-// DECL: void print(::mlir::AsmPrinter &odsPrinter) const;
 }
 
 def D_SingleParameterAttr : TestAttr<"SingleParameter"> {
