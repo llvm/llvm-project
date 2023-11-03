@@ -504,10 +504,10 @@ remove_flags(-Wno-pedantic -pedantic-errors -pedantic)
 # Required flags ==============================================================
 function(cxx_add_basic_build_flags target)
 
-  # Require C++23 for all targets.
+  # Use C++23 for all targets.
   set_target_properties(${target} PROPERTIES
     CXX_STANDARD 23
-    CXX_STANDARD_REQUIRED YES
+    CXX_STANDARD_REQUIRED OFF
     CXX_EXTENSIONS NO)
 
   # When building the dylib, don't warn for unavailable aligned allocation
