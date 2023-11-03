@@ -12,6 +12,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Lexer.h"
+#include <iostream>
 
 using namespace clang::ast_matchers;
 
@@ -24,13 +25,25 @@ SuspiciousPointerArithmeticsUsingSizeofCheck::SuspiciousPointerArithmeticsUsingS
 
 void SuspiciousPointerArithmeticsUsingSizeofCheck::registerMatchers(MatchFinder *Finder) {
     Finder->addMatcher(
-		   sizeOfExpr(expr())
-            .bind("sizeof-expression"),
+	     expr(anyOf(
+                    binaryOperator(hasAnyOperatorName("+","-"),
+                      hasEitherOperand(hasType(pointerType())),
+		      hasEitherOperand(sizeOfExpr(expr())),
+		      unless(allOf(hasLHS(hasType(pointerType())),
+				   hasRHS(hasType(pointerType()))))
+		      ).bind("ptr-sizeof-expression"),
+		    binaryOperator(hasAnyOperatorName("+=","-="),
+	              hasLHS(hasType(pointerType())),
+		      hasRHS(sizeOfExpr(expr()))
+		      ).bind("ptr-sizeof-expression")
+            )),
         this);
 }
 
-void SuspiciousPointerArithmeticsUsingSizeofCheck::check(
-    const MatchFinder::MatchResult &Result) {
+void SuspiciousPointerArithmeticsUsingSizeofCheck::check(const MatchFinder::MatchResult &Result) {
+    static const char *diag_msg	= "Suspicious pointer arithmetics using sizeof() operator";
+    auto Matched = Result.Nodes.getNodeAs<BinaryOperator>("ptr-sizeof-expression");
+    diag(Matched->getExprLoc(),diag_msg)<< Matched->getSourceRange();
 }
 
 } // namespace clang::tidy::bugprone
