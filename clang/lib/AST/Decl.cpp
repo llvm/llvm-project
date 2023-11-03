@@ -1934,6 +1934,7 @@ bool NamedDecl::hasLinkage() const {
   case Linkage::External:
     return true;
   }
+  llvm_unreachable("Unhandled Linkage enum");
 }
 
 NamedDecl *NamedDecl::getUnderlyingDeclImpl() {
