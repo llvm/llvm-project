@@ -1446,9 +1446,10 @@ void Verifier::visitDISubprogram(const DISubprogram &N) {
     CheckDI(Node, "invalid retained nodes list", &N, RawNode);
     for (Metadata *Op : Node->operands()) {
       CheckDI(Op && (isa<DILocalVariable>(Op) || isa<DILabel>(Op) ||
-                     isa<DILifetime>(Op) || isa<DIImportedEntity>(Op)),
-              "invalid retained nodes, expected DILocalVariable, DILabel or "
-              "DIImportedEntity",
+                  isa<DILifetime>(Op) ||
+	       	  isa<DIImportedEntity>(Op) || isa<DIType>(Op)),
+              "invalid retained nodes, expected DILocalVariable, DILabel, "
+              "DIImportedEntity or DIType",
               &N, Node, Op);
     }
   }
@@ -3016,14 +3017,6 @@ void Verifier::visitBasicBlock(BasicBlock &BB) {
   for (auto &I : BB)
   {
     Check(I.getParent() == &BB, "Instruction has bogus parent pointer!");
-  }
-
-  // Confirm that no issues arise from the debug program.
-  if (BB.IsNewDbgInfoFormat) {
-    // Configure the validate function to not fire assertions, instead print
-    // errors and return true if there's a problem.
-    bool RetVal = BB.validateDbgValues(false, true, OS);
-    Check(!RetVal, "Invalid configuration of new-debug-info data found");
   }
 }
 

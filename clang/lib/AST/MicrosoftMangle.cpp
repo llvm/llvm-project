@@ -539,9 +539,8 @@ bool MicrosoftMangleContextImpl::shouldMangleCXXName(const NamedDecl *D) {
       while (!DC->isNamespace() && !DC->isTranslationUnit())
         DC = getEffectiveParentContext(DC);
 
-    if (DC->isTranslationUnit() && D->getFormalLinkage() == InternalLinkage &&
-        !isa<VarTemplateSpecializationDecl>(D) &&
-        D->getIdentifier() != nullptr)
+    if (DC->isTranslationUnit() && D->getFormalLinkage() == Linkage::Internal &&
+        !isa<VarTemplateSpecializationDecl>(D) && D->getIdentifier() != nullptr)
       return false;
   }
 

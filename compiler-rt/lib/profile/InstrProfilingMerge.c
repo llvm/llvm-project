@@ -141,7 +141,7 @@ int __llvm_profile_merge_from_buffer(const char *ProfileData,
 
   // Merge counters by iterating the entire counter section when correlation is
   // enabled.
-  if (hasCorrelation()) {
+  if (__llvm_profile_has_correlation()) {
     for (SrcCounter = SrcCountersStart,
         DstCounter = __llvm_profile_begin_counters();
          SrcCounter < SrcCountersEnd;) {
