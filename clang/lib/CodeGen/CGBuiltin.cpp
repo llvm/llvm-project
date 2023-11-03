@@ -17632,11 +17632,18 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_mov_dpp:
   case AMDGPU::BI__builtin_amdgcn_update_dpp: {
     llvm::SmallVector<llvm::Value *, 6> Args;
+    // Find out if any arguments are required to be integer constant
+    // expressions.
+    unsigned ICEArguments = 0;
+    ASTContext::GetBuiltinTypeError Error;
+    getContext().GetBuiltinType(BuiltinID, Error, &ICEArguments);
+    assert(Error == ASTContext::GE_None && "Should not codegen an error");
     for (unsigned I = 0; I != E->getNumArgs(); ++I) {
-      llvm::Value *Arg = EmitScalarExpr(E->getArg(I));
-      // Except first two input operands, all other are imm operands for dpp
-      // intrinsic.
-      if (llvm::is_contained(std::initializer_list<unsigned>{2, 3, 4, 5}, I)) {
+      llvm::Value *Arg = nullptr;
+      // If this is a normal argument, just emit it as a scalar.
+      if ((ICEArguments & (1 << I)) == 0) {
+        Arg = EmitScalarExpr(E->getArg(I));
+      } else {
         // If this is required to be a constant, constant fold it so that we
         // know that the generated intrinsic gets a ConstantInt.
         std::optional<llvm::APSInt> Result =
