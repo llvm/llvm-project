@@ -51,12 +51,17 @@ AST_MATCHER_P(clang::FloatingLiteral, near, double, Value) {
 
 AST_MATCHER_P(clang::QualType, hasCanonicalTypeUnqualified,
               Matcher<clang::QualType>, InnerMatcher) {
-  return InnerMatcher.matches(Node->getCanonicalTypeUnqualified(), Finder,
+  return !Node.isNull() &&
+         InnerMatcher.matches(Node->getCanonicalTypeUnqualified(), Finder,
                               Builder);
 }
 
-AST_MATCHER(clang::QualType, isArithmetic) { return Node->isArithmeticType(); }
-AST_MATCHER(clang::QualType, isFloating) { return Node->isFloatingType(); }
+AST_MATCHER(clang::QualType, isArithmetic) {
+  return !Node.isNull() && Node->isArithmeticType();
+}
+AST_MATCHER(clang::QualType, isFloating) {
+  return !Node.isNull() && Node->isFloatingType();
+}
 
 auto ignoreImplicitAndArithmeticCasting(const Matcher<clang::Expr> Matcher) {
   return expr(
