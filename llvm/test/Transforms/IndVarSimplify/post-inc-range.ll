@@ -120,7 +120,7 @@ define void @test_range_metadata(ptr %array_length_ptr, ptr %base,
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_INC:%.*]] ], [ [[TMP0]], [[FOR_BODY_LR_PH:%.*]] ]
 ; CHECK-NEXT:    [[ARRAY_LENGTH:%.*]] = load i32, ptr [[ARRAY_LENGTH_PTR:%.*]], align 4, !range [[RNG0:![0-9]+]]
-; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[ARRAY_LENGTH]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = zext nneg i32 [[ARRAY_LENGTH]] to i64
 ; CHECK-NEXT:    [[WITHIN_LIMITS:%.*]] = icmp ult i64 [[INDVARS_IV]], [[TMP2]]
 ; CHECK-NEXT:    br i1 [[WITHIN_LIMITS]], label [[CONTINUE:%.*]], label [[FOR_END:%.*]]
 ; CHECK:       continue:

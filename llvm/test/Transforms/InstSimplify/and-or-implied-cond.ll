@@ -236,9 +236,7 @@ define i1 @pr69050(i32 %arg, i32 %arg1) {
 ; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[ARG:%.*]], -1
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[XOR]], [[ARG1:%.*]]
 ; CHECK-NEXT:    [[ICMP:%.*]] = icmp ne i32 [[AND]], 0
-; CHECK-NEXT:    [[ICMP2:%.*]] = icmp ne i32 [[ARG]], -1
-; CHECK-NEXT:    [[AND3:%.*]] = and i1 [[ICMP2]], [[ICMP]]
-; CHECK-NEXT:    ret i1 [[AND3]]
+; CHECK-NEXT:    ret i1 [[ICMP]]
 ;
   %xor = xor i32 %arg, -1
   %and = and i32 %xor, %arg1
@@ -251,11 +249,7 @@ define i1 @pr69050(i32 %arg, i32 %arg1) {
 define i1 @pr69091(i32 %arg, i32 %arg1) {
 ; CHECK-LABEL: @pr69091(
 ; CHECK-NEXT:    [[ICMP:%.*]] = icmp ne i32 [[ARG:%.*]], -1
-; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[ARG]], 1
-; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[ADD]], [[ARG1:%.*]]
-; CHECK-NEXT:    [[ICMP2:%.*]] = icmp ne i32 [[MUL]], 0
-; CHECK-NEXT:    [[OR:%.*]] = or i1 [[ICMP]], [[ICMP2]]
-; CHECK-NEXT:    ret i1 [[OR]]
+; CHECK-NEXT:    ret i1 [[ICMP]]
 ;
   %icmp = icmp ne i32 %arg, -1
   %add = add i32 %arg, 1

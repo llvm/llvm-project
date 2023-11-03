@@ -4657,10 +4657,6 @@ The following is the syntax for constant expressions:
 
 ``trunc (CST to TYPE)``
     Perform the :ref:`trunc operation <i_trunc>` on constants.
-``zext (CST to TYPE)``
-    Perform the :ref:`zext operation <i_zext>` on constants.
-``sext (CST to TYPE)``
-    Perform the :ref:`sext operation <i_sext>` on constants.
 ``fptrunc (CST to TYPE)``
     Truncate a floating-point constant to another floating-point type.
     The size of CST must be larger than the size of TYPE. Both types
@@ -5098,6 +5094,8 @@ AArch64:
   offsets). (However, LLVM currently does this for the ``m`` constraint as
   well.)
 - ``r``: A 32 or 64-bit integer register (W* or X*).
+- ``Uci``: Like r, but restricted to registers 8 to 11 inclusive.
+- ``Ucj``: Like r, but restricted to registers 12 to 15 inclusive.
 - ``w``: A 32, 64, or 128-bit floating-point, SIMD or SVE vector register.
 - ``x``: Like w, but restricted to registers 0 to 15 inclusive.
 - ``y``: Like w, but restricted to SVE vector registers Z0 to Z7 inclusive.
