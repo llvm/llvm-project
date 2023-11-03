@@ -25,7 +25,6 @@
 #include <optional>
 
 namespace swift {
-class SwiftObjectFileFormat;
 enum ReflectionSectionKind : uint8_t;
 }
 namespace lldb_private {
@@ -724,12 +723,6 @@ public:
 
   virtual llvm::StringRef
   GetReflectionSectionIdentifier(swift::ReflectionSectionKind section);
-
-#ifdef LLDB_ENABLE_SWIFT
-  virtual bool CanContainSwiftReflectionData(const Section &section) {
-    return false;
-  }
-#endif // LLDB_ENABLE_SWIFT
 
   /// Load binaries listed in a corefile
   ///

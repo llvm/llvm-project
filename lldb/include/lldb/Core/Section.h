@@ -209,8 +209,6 @@ public:
   ObjectFile *GetObjectFile() { return m_obj_file; }
   const ObjectFile *GetObjectFile() const { return m_obj_file; }
 
-  bool CanContainSwiftReflectionData() const;
-
   /// Read the section data from the object file that the section
   /// resides in.
   ///

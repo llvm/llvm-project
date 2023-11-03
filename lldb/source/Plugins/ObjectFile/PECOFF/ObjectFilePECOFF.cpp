@@ -1444,11 +1444,3 @@ llvm::StringRef ObjectFilePECOFF::GetReflectionSectionIdentifier(
   llvm_unreachable("Swift support disabled");
 #endif //LLDB_ENABLE_SWIFT
 }
-
-#ifdef LLDB_ENABLE_SWIFT
-bool ObjectFilePECOFF::CanContainSwiftReflectionData(const Section &section) {
-  swift::SwiftObjectFileFormatCOFF file_format;
-  return file_format.sectionContainsReflectionData(
-      section.GetName().GetStringRef());
-}
-#endif // LLDB_ENABLE_SWIFT

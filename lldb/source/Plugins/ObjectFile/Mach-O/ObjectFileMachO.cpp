@@ -6956,14 +6956,6 @@ llvm::StringRef ObjectFileMachO::GetReflectionSectionIdentifier(
 #endif //LLDB_ENABLE_SWIFT
 }
 
-#ifdef LLDB_ENABLE_SWIFT
-bool ObjectFileMachO::CanContainSwiftReflectionData(const Section &section) {
-  swift::SwiftObjectFileFormatMachO file_format;
-  return file_format.sectionContainsReflectionData(
-      section.GetName().GetStringRef());
-}
-#endif // LLDB_ENABLE_SWIFT
-
 ObjectFileMachO::MachOCorefileAllImageInfos
 ObjectFileMachO::GetCorefileAllImageInfos() {
   MachOCorefileAllImageInfos image_infos;
