@@ -1027,7 +1027,6 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
     }
 
     if (!NewPMPasses.empty()) {
-      MPM.addPass(PB.buildO0DefaultPipeline(Level, PrepareForThinLTO || PrepareForLTO));
       if (auto Err = PB.parsePassPipeline(MPM, NewPMPasses)) {
         report_fatal_error(Twine("unable to parse pass pipeline description '") +
             NewPMPasses + "': " + toString(std::move(Err)));
