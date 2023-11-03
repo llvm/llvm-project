@@ -9,6 +9,7 @@ add_llvm_library(LLVMBOLTPasses
   CacheMetrics.cpp
   CallGraph.cpp
   CallGraphWalker.cpp
+  CDSplit.cpp
   DataflowAnalysis.cpp
   DataflowInfoManager.cpp
   FrameAnalysis.cpp

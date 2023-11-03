@@ -191,6 +191,12 @@ cl::opt<unsigned>
               cl::init(0), cl::ZeroOrMore, cl::cat(BoltCategory),
               cl::sub(cl::SubCommand::getAll()));
 
+cl::opt<bool>
+    UseCDSplit("use-cdsplit",
+               cl::desc("split functions into 3 fragments using the CDSplit "
+                        "algorithm after function reordering pass"),
+               cl::init(false), cl::cat(BoltOptCategory));
+
 bool processAllFunctions() {
   if (opts::AggregateOnly)
     return false;

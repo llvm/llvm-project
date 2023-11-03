@@ -11,6 +11,7 @@
 #include "bolt/Passes/Aligner.h"
 #include "bolt/Passes/AllocCombiner.h"
 #include "bolt/Passes/AsmDump.h"
+#include "bolt/Passes/CDSplit.h"
 #include "bolt/Passes/CMOVConversion.h"
 #include "bolt/Passes/FixRISCVCallsPass.h"
 #include "bolt/Passes/FixRelaxationPass.h"
@@ -181,6 +182,10 @@ static cl::opt<bool> PrintSimplifyROLoads(
 static cl::opt<bool>
     PrintSplit("print-split", cl::desc("print functions after code splitting"),
                cl::Hidden, cl::cat(BoltOptCategory));
+
+static cl::opt<bool> PrintCDSplit("print-cdsplit",
+                                  cl::desc("print functions after cdsplit"),
+                                  cl::Hidden, cl::cat(BoltOptCategory));
 
 static cl::opt<bool>
     PrintStoke("print-stoke", cl::desc("print functions after stoke analysis"),
@@ -429,6 +434,11 @@ void BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
   // also happen after any changes to the call graph are made, e.g. inlining.
   Manager.registerPass(
       std::make_unique<ReorderFunctions>(PrintReorderedFunctions));
+
+  /// This pass three-way splits functions after function reordering.
+  Manager.registerPass(std::make_unique<CDSplit>(PrintCDSplit));
+
+  Manager.registerPass(std::make_unique<FixupBranches>(PrintAfterBranchFixup));
 
   // Print final dyno stats right while CFG and instruction analysis are intact.
   Manager.registerPass(
