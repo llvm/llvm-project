@@ -1958,11 +1958,6 @@ void MachineVerifier::visitMachineInstrBefore(const MachineInstr *MI) {
     if (DstSize.isScalable() && !SrcSize.isScalable() &&
         DstSize.getKnownMinValue() <= SrcSize.getFixedValue())
       break;
-    // If the Src is scalable and the Dst is fixed, then Dest can only hold
-    // the Src is known to fit in Dest
-    if (SrcSize.isScalable() && !DstSize.isScalable() &&
-        TypeSize::isKnownLE(DstSize, SrcSize))
-      break;
 
     if (SrcSize.isNonZero() && DstSize.isNonZero() && SrcSize != DstSize) {
       if (!DstOp.getSubReg() && !SrcOp.getSubReg()) {
