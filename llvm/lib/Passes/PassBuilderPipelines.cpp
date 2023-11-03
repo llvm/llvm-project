@@ -60,7 +60,6 @@
 #include "llvm/Transforms/IPO/LowerTypeTests.h"
 #include "llvm/Transforms/IPO/MemProfContextDisambiguation.h"
 #include "llvm/Transforms/IPO/MergeFunctions.h"
-#include "llvm/Transforms/IPO/MergeFunctionsIgnoringConst.h"
 #include "llvm/Transforms/IPO/ModuleInliner.h"
 #include "llvm/Transforms/IPO/OpenMPOpt.h"
 #include "llvm/Transforms/IPO/PartialInlining.h"
@@ -176,10 +175,6 @@ static cl::opt<bool> EnableEagerlyInvalidateAnalyses(
 static cl::opt<bool> EnableMergeFunctions(
     "enable-merge-functions", cl::init(false), cl::Hidden,
     cl::desc("Enable function merging as part of the optimization pipeline"));
-
-static cl::opt<bool> EnableMergeFuncIgnoringConst(
-    "enable-merge-func-ignoring-const", cl::init(false), cl::Hidden,
-    cl::desc("Enable function merger that ignores constants"));
 
 static cl::opt<bool> EnablePostPGOLoopRotation(
     "enable-post-pgo-loop-rotation", cl::init(true), cl::Hidden,
@@ -1638,9 +1633,6 @@ ModulePassManager PassBuilder::buildThinLTODefaultPipeline(
   MPM.addPass(buildModuleOptimizationPipeline(
       Level, ThinOrFullLTOPhase::ThinLTOPostLink));
 
-  if (EnableMergeFuncIgnoringConst)
-    MPM.addPass(MergeFuncIgnoringConstPass());
-
   // Emit annotation remarks.
   addAnnotationRemarksPass(MPM);
 
@@ -1965,9 +1957,6 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
     MPM.addPass(CGProfilePass());
 
   invokeFullLinkTimeOptimizationLastEPCallbacks(MPM, Level);
-
-  if (EnableMergeFuncIgnoringConst)
-    MPM.addPass(MergeFuncIgnoringConstPass());
 
   // Emit annotation remarks.
   addAnnotationRemarksPass(MPM);
