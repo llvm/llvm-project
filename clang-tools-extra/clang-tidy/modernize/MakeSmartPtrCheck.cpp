@@ -96,14 +96,18 @@ void MakeSmartPtrCheck::registerMatchers(ast_matchers::MatchFinder *Finder) {
       this);
 
   Finder->addMatcher(
-      traverse(TK_AsIs,
-               cxxMemberCallExpr(
-                   thisPointerType(getSmartPointerTypeMatcher()),
-                   callee(cxxMethodDecl(hasName("reset"))),
-                   hasArgument(0, cxxNewExpr(CanCallCtor, unless(IsPlacement))
-                                      .bind(NewExpression)),
-                   unless(isInTemplateInstantiation()))
-                   .bind(ResetCall)),
+      traverse(
+          TK_AsIs,
+          cxxMemberCallExpr(
+              unless(isInTemplateInstantiation()),
+              hasArgument(0, cxxNewExpr(CanCallCtor, unless(IsPlacement))
+                                 .bind(NewExpression)),
+              callee(cxxMethodDecl(hasName("reset"))),
+              anyOf(thisPointerType(getSmartPointerTypeMatcher()),
+                    on(ignoringImplicit(anyOf(
+                        hasType(getSmartPointerTypeMatcher()),
+                        hasType(pointsTo(getSmartPointerTypeMatcher())))))))
+              .bind(ResetCall)),
       this);
 }
 

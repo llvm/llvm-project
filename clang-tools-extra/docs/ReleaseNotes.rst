@@ -331,6 +331,11 @@ Changes in existing checks
   iterators initialized by free functions like ``begin``, ``end``, or ``size``
   and avoid crash for array of dependent array.
 
+- Improved :doc:`modernize-make-shared
+  <clang-tidy/checks/modernize/make-shared>` check to support
+  ``std::shared_ptr`` implementations that inherit the ``reset`` method from a
+  base class.
+
 - Improved :doc:`modernize-return-braced-init-list
   <clang-tidy/checks/modernize/return-braced-init-list>` check to ignore
   false-positives when constructing the container with ``count`` copies of
