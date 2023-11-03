@@ -7294,7 +7294,7 @@ inline bool Type::isRVVType() const {
 inline bool Type::isRVVType(unsigned ElementCount) const {
   bool Ret = false;
 #define RVV_VECTOR_TYPE(Name, Id, SingletonId, NumEls, ElBits, NF, IsSigned,   \
-                        IsFP)                                                  \
+                        IsFP, IsBF)                                            \
   if (NumEls == ElementCount)                                                  \
     Ret |= isSpecificBuiltinType(BuiltinType::Id);
 #include "clang/Basic/RISCVVTypes.def"
@@ -7305,7 +7305,7 @@ inline bool Type::isRVVType(unsigned Bitwidth, bool IsFloat) const {
   bool Ret = false;
 #define RVV_TYPE(Name, Id, SingletonId)
 #define RVV_VECTOR_TYPE(Name, Id, SingletonId, NumEls, ElBits, NF, IsSigned,   \
-                        IsFP)                                                  \
+                        IsFP, IsBF)                                            \
   if (ElBits == Bitwidth && IsFloat == IsFP)                                   \
     Ret |= isSpecificBuiltinType(BuiltinType::Id);
 #include "clang/Basic/RISCVVTypes.def"
