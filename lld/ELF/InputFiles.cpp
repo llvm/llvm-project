@@ -1520,7 +1520,7 @@ template <class ELFT> void SharedFile::parse() {
       }
       Symbol *s = symtab.addSymbol(
           Undefined{this, name, sym.getBinding(), sym.st_other, sym.getType()});
-      s->exportDynamic = true;
+      s->versionId = VER_NDX_GLOBAL;
       if (s->isUndefined() && sym.getBinding() != STB_WEAK &&
           config->unresolvedSymbolsInShlib != UnresolvedPolicy::Ignore)
         requiredSymbols.push_back(s);
@@ -1698,7 +1698,7 @@ createBitcodeSymbol(Symbol *&sym, const std::vector<bool> &keptComdats,
   } else {
     Defined newSym(&f, StringRef(), binding, visibility, type, 0, 0, nullptr);
     if (objSym.canBeOmittedFromSymbolTable())
-      newSym.exportDynamic = false;
+      newSym.versionId = nonExported;
     sym->resolve(newSym);
   }
 }

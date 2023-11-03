@@ -20,7 +20,8 @@
 # RUN: ld.lld -pie --version-script=%t/ver1 %t/def1.o %t/ref.o -o %t1
 # RUN: llvm-readelf -s %t1 | FileCheck %s --check-prefix=EXE1
 
-# EXE1:         Symbol table '.dynsym' contains 1 entries:
+# EXE1:         Symbol table '.dynsym' contains 2 entries:
+# EXE:          1: {{.*}} NOTYPE GLOBAL DEFAULT [[#]] foo@v1
 # EXE1:         Symbol table '.symtab' contains 3 entries:
 # EXE1:         2: {{.*}} NOTYPE GLOBAL DEFAULT [[#]] foo{{$}}
 
@@ -49,7 +50,8 @@
 # RUN: ld.lld -pie --version-script=%t/ver1 %t/def2.o %t/def3.o %t/ref.o -o %t3
 # RUN: llvm-readelf -s %t3 | FileCheck %s --check-prefix=EXE3
 
-# EXE3:         Symbol table '.dynsym' contains 1 entries:
+# EXE3:         Symbol table '.dynsym' contains 2 entries:
+# EXE3:         1: {{.*}} NOTYPE GLOBAL DEFAULT [[#]] foo@v1
 # EXE3:         Symbol table '.symtab' contains 4 entries:
 # EXE3:         2: {{.*}} NOTYPE GLOBAL DEFAULT [[#SEC:]] foo{{$}}
 # EXE3-NEXT:    3: {{.*}} NOTYPE GLOBAL DEFAULT [[#SEC]] foo{{$}}

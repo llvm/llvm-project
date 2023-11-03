@@ -67,6 +67,9 @@ struct SymbolAux {
 
 LLVM_LIBRARY_VISIBILITY extern SmallVector<SymbolAux, 0> symAux;
 
+// A versionId value similar to VER_NDX_LOCAL, but the binding is not changed.
+constexpr uint16_t nonExported = uint16_t(-1);
+
 // The base class for real symbol classes.
 class Symbol {
 public:
@@ -128,17 +131,6 @@ public:
   // NOTE: In Writer.cpp the field is used to mark local defined symbols
   // which are referenced by relocations when -r or --emit-relocs is given.
   uint8_t used : 1;
-
-  // Used by a Defined symbol with protected or default visibility, to record
-  // whether it is required to be exported into .dynsym. This is set when any of
-  // the following conditions hold:
-  //
-  // - If there is an interposable symbol from a DSO. Note: We also do this for
-  //   STV_PROTECTED symbols which can't be interposed (to match BFD behavior).
-  // - If -shared or --export-dynamic is specified, any symbol in an object
-  //   file/bitcode sets this property, unless suppressed by LTO
-  //   canBeOmittedFromSymbolTable().
-  uint8_t exportDynamic : 1;
 
   // True if the symbol is in the --dynamic-list file. A Defined symbol with
   // protected or default visibility with this property is required to be
@@ -254,7 +246,7 @@ protected:
   Symbol(Kind k, InputFile *file, StringRef name, uint8_t binding,
          uint8_t stOther, uint8_t type)
       : file(file), nameData(name.data()), nameSize(name.size()), type(type),
-        binding(binding), stOther(stOther), symbolKind(k), exportDynamic(false),
+        binding(binding), stOther(stOther), symbolKind(k),
         archSpecificBit(false) {}
 
   void overwrite(Symbol &sym, Kind k) const {
@@ -316,9 +308,25 @@ public:
   // This field is a index to the symbol's version definition.
   uint16_t verdefIndex;
 
-  // Version definition index.
-  uint16_t versionId;
+  // Used by a Defined symbol with protected or default visibility, to record
+  // the verdef index and whether the symbol is exported into .dynsym.
+  // * -1 (initial): not exported, binding unchanged
+  // * 0: VER_NDX_LOCAL, not exported, binding changed to STB_LOCAL
+  // * 1: VER_NDX_GLOBAL, exported, binding unchanged
+  // * others: verdef index, exported, binding unchanged
+  //
+  // -1 transits to 1 if any of the following conditions hold:
+  // * If there is an interposable symbol from a DSO. Note: We also do this for
+  //   STV_PROTECTED symbols which can't be interposed (to match BFD behavior).
+  // * If -shared or --export-dynamic is specified, any symbol in an object
+  //   file/bitcode sets this property, unless suppressed by LTO
+  //   canBeOmittedFromSymbolTable().
+  uint16_t versionId = nonExported;
 
+  void exportIfNonExported() {
+    if (versionId == nonExported)
+      versionId = llvm::ELF::VER_NDX_GLOBAL;
+  }
   void setFlags(uint16_t bits) {
     flags.fetch_or(bits, std::memory_order_relaxed);
   }
@@ -353,7 +361,7 @@ public:
           uint8_t type, uint64_t value, uint64_t size, SectionBase *section)
       : Symbol(DefinedKind, file, name, binding, stOther, type), value(value),
         size(size), section(section) {
-    exportDynamic = config->exportDynamic;
+    versionId = config->defaultVersionId;
   }
   void overwrite(Symbol &sym) const {
     Symbol::overwrite(sym, DefinedKind);
@@ -398,7 +406,7 @@ public:
                uint8_t stOther, uint8_t type, uint64_t alignment, uint64_t size)
       : Symbol(CommonKind, file, name, binding, stOther, type),
         alignment(alignment), size(size) {
-    exportDynamic = config->exportDynamic;
+    versionId = config->defaultVersionId;
   }
   void overwrite(Symbol &sym) const {
     Symbol::overwrite(sym, CommonKind);
@@ -442,7 +450,7 @@ public:
                uint32_t alignment)
       : Symbol(SharedKind, &file, name, binding, stOther, type), value(value),
         size(size), alignment(alignment) {
-    exportDynamic = true;
+    versionId = llvm::ELF::VER_NDX_GLOBAL;
     dsoProtected = visibility() == llvm::ELF::STV_PROTECTED;
     // GNU ifunc is a mechanism to allow user-supplied functions to
     // resolve PLT slot values at load-time. This is contrary to the

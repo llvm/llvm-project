@@ -310,7 +310,7 @@ static void replaceWithDefined(Symbol &sym, SectionBase &sec, uint64_t value,
       .overwrite(sym);
 
   sym.verdefIndex = old.verdefIndex;
-  sym.exportDynamic = true;
+  sym.exportIfNonExported();
   sym.isUsedInRegularObj = true;
   // A copy relocated alias may need a GOT entry.
   sym.flags.store(old.flags.load(std::memory_order_relaxed) & NEEDS_GOT,
@@ -1068,7 +1068,7 @@ void RelocationScanner::processAux(RelExpr expr, RelType type, uint64_t offset,
   // direct relocation on through.
   if (LLVM_UNLIKELY(isIfunc) && config->zIfuncNoplt) {
     std::lock_guard<std::mutex> lock(relocMutex);
-    sym.exportDynamic = true;
+    sym.exportIfNonExported();
     mainPart->relaDyn->addSymbolReloc(type, *sec, offset, sym, addend, type);
     return;
   }

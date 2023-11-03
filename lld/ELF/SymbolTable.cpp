@@ -93,7 +93,7 @@ Symbol *SymbolTable::insert(StringRef name) {
   sym->setName(name);
   sym->partition = 1;
   sym->verdefIndex = -1;
-  sym->versionId = VER_NDX_GLOBAL;
+  sym->versionId = nonExported;
   if (pos != StringRef::npos)
     sym->hasVersionSuffix = true;
   return sym;

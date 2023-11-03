@@ -225,6 +225,7 @@ struct Config {
   bool cref;
   llvm::SmallVector<std::pair<llvm::GlobPattern, uint64_t>, 0>
       deadRelocInNonAlloc;
+  uint16_t defaultVersionId;
   bool demangle = true;
   bool dependentLibraries;
   bool disableVerify;

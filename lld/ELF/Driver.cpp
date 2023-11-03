@@ -1683,6 +1683,9 @@ static void readConfigs(opt::InputArgList &args) {
     }
   }
 
+  config->defaultVersionId =
+      config->exportDynamic ? ELF::VER_NDX_GLOBAL : nonExported;
+
   assert(config->versionDefinitions.empty());
   config->versionDefinitions.push_back(
       {"local", (uint16_t)VER_NDX_LOCAL, {}, {}});
@@ -2518,9 +2521,9 @@ static void combineVersionedSymbol(Symbol &sym,
     sym.symbolKind = Symbol::PlaceholderKind;
     sym.isUsedInRegularObj = false;
   } else if (auto *sym1 = dyn_cast<Defined>(&sym)) {
-    if (sym2->versionId > VER_NDX_GLOBAL
-            ? config->versionDefinitions[sym2->versionId].name == suffix1 + 1
-            : sym1->section == sym2->section && sym1->value == sym2->value) {
+    if (sym2->versionId == VER_NDX_GLOBAL || sym2->versionId == nonExported
+            ? sym1->section == sym2->section && sym1->value == sym2->value
+            : config->versionDefinitions[sym2->versionId].name == suffix1 + 1) {
       // Due to an assembler design flaw, if foo is defined, .symver foo,
       // foo@v1 defines both foo and foo@v1. Unless foo is bound to a
       // different version, GNU ld makes foo@v1 canonical and eliminates

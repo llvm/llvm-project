@@ -3128,7 +3128,8 @@ void VersionTableSection::writeTo(uint8_t *buf) {
     // For an unextracted lazy symbol (undefined weak), it must have been
     // converted to Undefined and have VER_NDX_GLOBAL version here.
     assert(!s.sym->isLazy());
-    write16(buf, s.sym->versionId);
+    write16(buf, s.sym->versionId == nonExported ? VER_NDX_GLOBAL
+                                                 : s.sym->versionId);
     buf += 2;
   }
 }
