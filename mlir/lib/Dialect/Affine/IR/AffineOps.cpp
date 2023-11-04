@@ -786,12 +786,14 @@ getBoundForExpr(AffineExpr expr, unsigned numDims, unsigned numSymbols,
   // symbolic input depending on `isUpper` to determine the bound.
   for (unsigned i = 0, e = numDims + numSymbols; i < e; ++i) {
     if (flattenedExpr[i] > 0) {
-      auto &constBound = isUpper ? constUpperBounds[i] : constLowerBounds[i];
+      const std::optional<int64_t> &constBound =
+          isUpper ? constUpperBounds[i] : constLowerBounds[i];
       if (!constBound)
         return std::nullopt;
       bound += *constBound * flattenedExpr[i];
     } else if (flattenedExpr[i] < 0) {
-      auto &constBound = isUpper ? constLowerBounds[i] : constUpperBounds[i];
+      const std::optional<int64_t> &constBound =
+          isUpper ? constLowerBounds[i] : constUpperBounds[i];
       if (!constBound)
         return std::nullopt;
       bound += *constBound * flattenedExpr[i];
