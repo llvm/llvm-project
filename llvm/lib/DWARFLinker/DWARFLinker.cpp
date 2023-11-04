@@ -187,7 +187,7 @@ static SmallString<128> guessToolchainBaseDir(StringRef SysRoot) {
     return Result;
   Base = sys::path::parent_path(Base);
   Result = Base;
-  sys::path::append(Result, "Toolchains");
+  Result += "/Toolchains";
   return Result;
 }
 
