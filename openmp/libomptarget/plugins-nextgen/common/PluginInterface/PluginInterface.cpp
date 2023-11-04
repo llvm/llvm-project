@@ -184,37 +184,31 @@ private:
     StringRef DeviceMemoryContents(DeviceMemoryMB.get()->getBuffer().data(),
                                    DeviceMemoryMB.get()->getBuffer().size());
 
+    // Loop over all memory locations
+    // If mismatch is found create a new diff line
+    // Diff format: location, size, differences
     for (size_t I = 0; I < MemorySize; ++I) {
       // If buffers are same, continue
       if (InputBufferContents[I] == DeviceMemoryContents[I])
         continue;
 
-      // If mismatch is found create a new diff line
-      // Current format: location, size, differences
       OS << I << " "; // Marks the start offset
 
       SmallVector<uint8_t, 128> Modified;
       Modified.push_back(DeviceMemoryContents[I]);
 
-      size_t J; // Length of current diff line
-      // Loop until next match is found
-      for (J = 1; J < MemorySize - I; ++J) {
+      for (I += 1; I < MemorySize; ++I) {
         // If no more mismatch, break out of the loop
-        if (InputBufferContents[I + J] == DeviceMemoryContents[I + J])
+        if (InputBufferContents[I] == DeviceMemoryContents[I])
           break;
-
         // If mismatch continues - push diff to Modified
-        Modified.push_back(DeviceMemoryContents[I + J]);
+        Modified.push_back(DeviceMemoryContents[I]);
       }
-
-      OS << J << " "; // Marks the length of the mismatching sequence
-      for (const auto &value : Modified)
-        OS << value << " ";
+      OS << Modified.size()
+         << " "; // Marks the length of the mismatching sequence
+      for (const auto &Value : Modified)
+        OS << Value << " ";
       OS << "\n";
-
-      // Increment I by J to skip ahead to next
-      // matching sequence in the buffer
-      I += J;
     }
     OS.close();
   }
