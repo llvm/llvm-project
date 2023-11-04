@@ -92,10 +92,6 @@ LogicalResult AddFieldGetterToStructDirectUse<LoadOp>::matchAndRewrite(
     LoadOp load, PatternRewriter &rewriter) const {
   PatternRewriter::InsertionGuard guard(rewriter);
 
-  // Load from typed pointers are not supported.
-  if (!load.getAddr().getType().isOpaque())
-    return failure();
-
   Type inconsistentElementType =
       isElementTypeInconsistent(load.getAddr(), load.getType());
   if (!inconsistentElementType)
@@ -128,10 +124,6 @@ template <>
 LogicalResult AddFieldGetterToStructDirectUse<StoreOp>::matchAndRewrite(
     StoreOp store, PatternRewriter &rewriter) const {
   PatternRewriter::InsertionGuard guard(rewriter);
-
-  // Store to typed pointers are not supported.
-  if (!store.getAddr().getType().isOpaque())
-    return failure();
 
   Type inconsistentElementType =
       isElementTypeInconsistent(store.getAddr(), store.getValue().getType());

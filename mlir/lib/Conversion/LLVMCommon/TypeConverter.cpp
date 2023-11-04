@@ -78,13 +78,7 @@ LLVMTypeConverter::LLVMTypeConverter(MLIRContext *ctx,
 
   // LLVM container types may (recursively) contain other types that must be
   // converted even when the outer type is compatible.
-  addConversion([&](LLVM::LLVMPointerType type) -> std::optional<Type> {
-    if (type.isOpaque())
-      return type;
-    if (auto pointee = convertType(type.getElementType()))
-      return LLVM::LLVMPointerType::get(pointee, type.getAddressSpace());
-    return std::nullopt;
-  });
+  addConversion([&](LLVM::LLVMPointerType type) { return type; });
 
   addConversion([&](LLVM::LLVMStructType type, SmallVectorImpl<Type> &results)
                     -> std::optional<LogicalResult> {
