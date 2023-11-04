@@ -573,8 +573,6 @@ void ASTStmtWriter::VisitConstantExpr(ConstantExpr *E) {
   case ConstantResultStorageKind::APValue:
     Record.AddAPValue(E->APValueResult());
     break;
-  default:
-    llvm_unreachable("unexpected ResultKind!");
   }
 
   Record.AddStmt(E->getSubExpr());
