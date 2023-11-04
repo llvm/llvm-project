@@ -257,6 +257,11 @@ struct Config {
       const DenseSet<GlobalValue::GUID> &GUIDPreservedSymbols)>;
   CombinedIndexHookFn CombinedIndexHook;
 
+  /// This hook is called when the optimization pipeline is being built.
+  using PassInstrumentationHookFn =
+      std::function<void(PassInstrumentationCallbacks &)>;
+  PassInstrumentationHookFn PassInstrumentationHook;
+
   /// This is a convenience function that configures this Config object to write
   /// temporary files named after the given OutputFileName for each of the LTO
   /// phases to disk. A client can use this function to implement -save-temps.

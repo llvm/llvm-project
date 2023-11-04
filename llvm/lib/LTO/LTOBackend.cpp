@@ -265,6 +265,8 @@ static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
   ModuleAnalysisManager MAM;
 
   PassInstrumentationCallbacks PIC;
+  if (Conf.PassInstrumentationHook)
+    Conf.PassInstrumentationHook(PIC);
   StandardInstrumentations SI(Mod.getContext(), Conf.DebugPassManager,
                               Conf.VerifyEach);
   SI.registerCallbacks(PIC, &MAM);
