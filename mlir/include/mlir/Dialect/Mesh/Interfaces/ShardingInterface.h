@@ -24,8 +24,8 @@ using ShardingArrayRef = ArrayRef<SmallVector<int32_t>>;
 struct ShardingOption {
   // An array of int array. The sub-array at the i-th position signifies the
   // mesh axes the i-th loop will be sharded on.
-  ShardingArray shardingArray;
-  SymbolRefAttr cluster;
+  ShardingArray shardingArray = {};
+  SymbolRefAttr cluster = nullptr;
   // `empty` being true indicates that no sharding information can be inferred
   // at present. Note that it is different from the case where an operation is
   // not sharded.
