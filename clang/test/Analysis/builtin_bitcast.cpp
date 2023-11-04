@@ -2,6 +2,7 @@
 // RUN:   -analyzer-checker=core,debug.ExprInspection
 
 template <typename T> void clang_analyzer_dump(T);
+using size_t = decltype(sizeof(int));
 
 __attribute__((always_inline)) static inline constexpr unsigned int _castf32_u32(float __A) {
   return __builtin_bit_cast(unsigned int, __A); // no-warning
@@ -37,9 +38,8 @@ struct A {
     n = x;
   }
 };
-using ptr_size = decltype(sizeof(void *));
-void gh_69922(ptr_size p) {
-  // expected-warning-re@+1 {{(reg_${{[0-9]+}}<ptr_size p>) & 1U}}
+void gh_69922(size_t p) {
+  // expected-warning-re@+1 {{(reg_${{[0-9]+}}<size_t p>) & 1U}}
   clang_analyzer_dump(__builtin_bit_cast(A*, p & 1));
 
   __builtin_bit_cast(A*, p & 1)->set(2); // no-crash
@@ -49,5 +49,5 @@ void gh_69922(ptr_size p) {
   // store to the member variable `n`.
 
   clang_analyzer_dump(__builtin_bit_cast(A*, p & 1)->n); // Ideally, this should print "2".
-  // expected-warning-re@-1 {{(reg_${{[0-9]+}}<ptr_size p>) & 1U}}
+  // expected-warning-re@-1 {{(reg_${{[0-9]+}}<size_t p>) & 1U}}
 }
