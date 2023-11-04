@@ -1,7 +1,6 @@
 // RUN: mlir-opt %s
-// This is the how the lowered file by same name without `.sparse_tensor.`
-// suffix should look like, This file need to ideally compile all the way to
-// llvm and run
+// This is the example asked by Prof. Nasko as test for first part_tensor operation.
+// This example is parsed without issue by mlir-opt (without any options.)
 
 #SortedCOO = #sparse_tensor.encoding<{
   lvlTypes = [ "compressed-nu", "singleton" ]
@@ -17,26 +16,10 @@
   iterator_types = ["parallel", "parallel"],
   doc = "X(i,j) = max(X(i,j), 0)"
 }
-
-func.func @dumpPartitions(%A: !llvm.ptr) {
-  %partition_plan = call @snl_mv_get_partitions(%A): (!llvm.ptr) -> tensor<?xindex>
-  %c0 = arith.constant 0 : index
-  %c2_i64 = arith.constant 2 : i64
-  %c4_index = arith.constant 4 : index
-  %n0 = tensor.dim %partition_plan, %c0 : tensor<?xindex>
-  // might want to add assert saying %n0 is divisible by 4
-  %partition_plan_memref = memref.alloc(%n0): memref<?xindex>
-  // hopefully these two memrefs (one created by bufferization and one
-  // allocated here are co-alesced by compiler) as it's anyway read-only
-  memref.tensor_store %partition_plan, %partition_plan_memref: memref<?xindex>
-  %num_points_index = call @snl_mv_get_num_partitions(%A) : (!llvm.ptr) -> index
-  scf.forall(%i) in (%num_points_index) {
-    %i_offset = arith.muli %i, %c4_index: index
-    %v4 = vector.load %partition_plan_memref[%i_offset]: memref<?xindex>, vector<4xindex>
-    vector.print %v4 : vector<4xindex>
+module {
+  func.func @dumpPartitions(%A: !llvm.ptr) -> memref<?xindex> {
+    %partition_plan = call @mv_get_partitions(%A): (!llvm.ptr) -> memref<?xindex>
+    return %partition_plan: memref<?xindex>
   }
-  return
+  func.func private @mv_get_partitions(!llvm.ptr) -> memref<?xindex>
 }
-
-func.func private @snl_mv_get_partitions(%A: !llvm.ptr) -> tensor<?xindex>
-func.func private @snl_mv_get_num_partitions(%A: !llvm.ptr) -> index
