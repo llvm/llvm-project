@@ -15,4 +15,8 @@ Revert: waiting on pip install myst-parser
 Revert: breaks qmcpack ISEL
  "[X86][EVEX512] Restrict attaching EVEX512 for default CPU only, NFCI (#65920)"
 
-
+Johannes: revert breaks 3 sollve tests
+[OpenMP] Simplify parallel reductions (#70983)
+ test_loop_reduction_and_device.c
+ test_loop_reduction_bitand_device.c
+ test_loop_reduction_multiply_device.c
