@@ -2776,12 +2776,6 @@ bool SIInstrInfo::isBranchOffsetInRange(unsigned BranchOp,
 
 MachineBasicBlock *SIInstrInfo::getBranchDestBlock(
   const MachineInstr &MI) const {
-  if (MI.getOpcode() == AMDGPU::S_SETPC_B64) {
-    // This would be a difficult analysis to perform, but can always be legal so
-    // there's no need to analyze it.
-    return nullptr;
-  }
-
   return MI.getOperand(0).getMBB();
 }
 
