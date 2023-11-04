@@ -57,10 +57,9 @@ func.func @mul(%arg0: tensor<32x32xf32>,
 
 // CHECK-LABEL:   func.func @sparse_foreach_reinterpret_map(
 // CHECK-SAME:      %[[VAL_0:.*]]: tensor<2x4xf64
-// CHECK:           %[[VAL_1:.*]] = bufferization.alloc_tensor() : tensor<2x4xf64
+// CHECK:           %[[VAL_1:.*]] = bufferization.alloc_tensor() : tensor<1x2x2x2xf64
 // CHECK:           %[[VAL_2:.*]] = sparse_tensor.reinterpret_map %[[VAL_0]] : tensor<2x4xf64
-// CHECK:           %[[VAL_3:.*]] = sparse_tensor.reinterpret_map %[[VAL_1]] : tensor<2x4xf64
-// CHECK:           %[[VAL_4:.*]] = sparse_tensor.foreach in %[[VAL_2]] init(%[[VAL_3]])
+// CHECK:           %[[VAL_4:.*]] = sparse_tensor.foreach in %[[VAL_2]] init(%[[VAL_1]])
 // CHECK:           ^bb0(%[[VAL_5:.*]]: index, %[[VAL_6:.*]]: index, %[[VAL_7:.*]]: index, %[[VAL_8:.*]]: index, %[[VAL_9:.*]]: f64, %[[VAL_10:.*]]: tensor<1x2x2x2xf64
 // CHECK:             %[[VAL_11:.*]] = sparse_tensor.insert %[[VAL_9]] into %[[VAL_10]]{{\[}}%[[VAL_5]], %[[VAL_6]], %[[VAL_7]], %[[VAL_8]]] : tensor<1x2x2x2xf64
 // CHECK:             sparse_tensor.yield %[[VAL_11]] : tensor<1x2x2x2xf64
