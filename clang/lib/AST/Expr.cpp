@@ -2196,31 +2196,31 @@ bool BinaryOperator::isNullPointerArithmeticExtension(ASTContext &Ctx,
   return true;
 }
 
-SourceLocExpr::SourceLocExpr(const ASTContext &Ctx, IdentKind Kind,
+SourceLocExpr::SourceLocExpr(const ASTContext &Ctx, SourceLocIdentKind Kind,
                              QualType ResultTy, SourceLocation BLoc,
                              SourceLocation RParenLoc,
                              DeclContext *ParentContext)
     : Expr(SourceLocExprClass, ResultTy, VK_PRValue, OK_Ordinary),
       BuiltinLoc(BLoc), RParenLoc(RParenLoc), ParentContext(ParentContext) {
-  SourceLocExprBits.Kind = Kind;
+  SourceLocExprBits.Kind = llvm::to_underlying(Kind);
   setDependence(ExprDependence::None);
 }
 
 StringRef SourceLocExpr::getBuiltinStr() const {
   switch (getIdentKind()) {
-  case File:
+  case SourceLocIdentKind::File:
     return "__builtin_FILE";
-  case FileName:
+  case SourceLocIdentKind::FileName:
     return "__builtin_FILE_NAME";
-  case Function:
+  case SourceLocIdentKind::Function:
     return "__builtin_FUNCTION";
-  case FuncSig:
+  case SourceLocIdentKind::FuncSig:
     return "__builtin_FUNCSIG";
-  case Line:
+  case SourceLocIdentKind::Line:
     return "__builtin_LINE";
-  case Column:
+  case SourceLocIdentKind::Column:
     return "__builtin_COLUMN";
-  case SourceLocStruct:
+  case SourceLocIdentKind::SourceLocStruct:
     return "__builtin_source_location";
   }
   llvm_unreachable("unexpected IdentKind!");
@@ -2255,7 +2255,7 @@ APValue SourceLocExpr::EvaluateInContext(const ASTContext &Ctx,
   };
 
   switch (getIdentKind()) {
-  case SourceLocExpr::FileName: {
+  case SourceLocIdentKind::FileName: {
     // __builtin_FILE_NAME() is a Clang-specific extension that expands to the
     // the last part of __builtin_FILE().
     SmallString<256> FileName;
@@ -2263,26 +2263,26 @@ APValue SourceLocExpr::EvaluateInContext(const ASTContext &Ctx,
         FileName, PLoc, Ctx.getLangOpts(), Ctx.getTargetInfo());
     return MakeStringLiteral(FileName);
   }
-  case SourceLocExpr::File: {
+  case SourceLocIdentKind::File: {
     SmallString<256> Path(PLoc.getFilename());
     clang::Preprocessor::processPathForFileMacro(Path, Ctx.getLangOpts(),
                                                  Ctx.getTargetInfo());
     return MakeStringLiteral(Path);
   }
-  case SourceLocExpr::Function:
-  case SourceLocExpr::FuncSig: {
+  case SourceLocIdentKind::Function:
+  case SourceLocIdentKind::FuncSig: {
     const auto *CurDecl = dyn_cast<Decl>(Context);
-    const auto Kind = getIdentKind() == SourceLocExpr::Function
+    const auto Kind = getIdentKind() == SourceLocIdentKind::Function
                           ? PredefinedExpr::Function
                           : PredefinedExpr::FuncSig;
     return MakeStringLiteral(
         CurDecl ? PredefinedExpr::ComputeName(Kind, CurDecl) : std::string(""));
   }
-  case SourceLocExpr::Line:
+  case SourceLocIdentKind::Line:
     return APValue(Ctx.MakeIntValue(PLoc.getLine(), Ctx.UnsignedIntTy));
-  case SourceLocExpr::Column:
+  case SourceLocIdentKind::Column:
     return APValue(Ctx.MakeIntValue(PLoc.getColumn(), Ctx.UnsignedIntTy));
-  case SourceLocExpr::SourceLocStruct: {
+  case SourceLocIdentKind::SourceLocStruct: {
     // Fill in a std::source_location::__impl structure, by creating an
     // artificial file-scoped CompoundLiteralExpr, and returning a pointer to
     // that.

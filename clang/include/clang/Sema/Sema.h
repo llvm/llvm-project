@@ -6086,14 +6086,13 @@ public:
 
   // __builtin_LINE(), __builtin_FUNCTION(), __builtin_FUNCSIG(),
   // __builtin_FILE(), __builtin_COLUMN(), __builtin_source_location()
-  ExprResult ActOnSourceLocExpr(SourceLocExpr::IdentKind Kind,
+  ExprResult ActOnSourceLocExpr(SourceLocIdentKind Kind,
                                 SourceLocation BuiltinLoc,
                                 SourceLocation RPLoc);
 
   // Build a potentially resolved SourceLocExpr.
-  ExprResult BuildSourceLocExpr(SourceLocExpr::IdentKind Kind,
-                                QualType ResultTy, SourceLocation BuiltinLoc,
-                                SourceLocation RPLoc,
+  ExprResult BuildSourceLocExpr(SourceLocIdentKind Kind, QualType ResultTy,
+                                SourceLocation BuiltinLoc, SourceLocation RPLoc,
                                 DeclContext *ParentContext);
 
   // __null
