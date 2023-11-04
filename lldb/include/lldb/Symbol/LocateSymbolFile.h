@@ -32,10 +32,6 @@ public:
   LocateExecutableSymbolFile(const ModuleSpec &module_spec,
                              const FileSpecList &default_search_paths);
 
-  static FileSpec FindSymbolFileInBundle(const FileSpec &dsym_bundle_fspec,
-                                         const lldb_private::UUID *uuid,
-                                         const ArchSpec *arch);
-
   // Locate the object and symbol file given a module specification.
   //
   // Locating the file can try to download the file from a corporate build

@@ -408,13 +408,6 @@ void Symbols::DownloadSymbolFileAsync(const UUID &uuid) {
 
 #if !defined(__APPLE__)
 
-FileSpec Symbols::FindSymbolFileInBundle(const FileSpec &symfile_bundle,
-                                         const lldb_private::UUID *uuid,
-                                         const ArchSpec *arch) {
-  // FIXME
-  return FileSpec();
-}
-
 bool Symbols::DownloadObjectAndSymbolFile(ModuleSpec &module_spec,
                                           Status &error, bool force_lookup,
                                           bool copy_executable) {

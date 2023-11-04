@@ -321,8 +321,8 @@ Status PlatformDarwin::ResolveSymbolFile(Target &target,
                                          FileSpec &sym_file) {
   sym_file = sym_spec.GetSymbolFileSpec();
   if (FileSystem::Instance().IsDirectory(sym_file)) {
-    sym_file = Symbols::FindSymbolFileInBundle(sym_file, sym_spec.GetUUIDPtr(),
-                                               sym_spec.GetArchitecturePtr());
+    sym_file = PluginManager::FindSymbolFileInBundle(
+        sym_file, sym_spec.GetUUIDPtr(), sym_spec.GetArchitecturePtr());
   }
   return {};
 }
