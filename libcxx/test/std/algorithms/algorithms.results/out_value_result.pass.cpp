@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11, c++14, c++17, C++20
+// UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 
 //  template <class O, class T>
 //    struct out_value_result;

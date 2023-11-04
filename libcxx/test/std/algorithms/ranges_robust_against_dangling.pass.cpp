@@ -79,7 +79,9 @@ constexpr bool test_all() {
   using std::ranges::move_backward_result;
   using std::ranges::move_result;
   using std::ranges::next_permutation_result;
+#if TEST_STD_VER >= 23
   using std::ranges::out_value_result;
+#endif
   using std::ranges::partial_sort_copy_result;
   using std::ranges::partition_copy_result;
   using std::ranges::prev_permutation_result;
