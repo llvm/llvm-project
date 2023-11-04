@@ -430,9 +430,12 @@ Error applyFixupData(LinkGraph &G, Block &B, const Edge &E) {
   }
   case Data_Pointer32: {
     int64_t Value = TargetAddress + Addend;
-    if (!isInt<32>(Value))
+    if (!isUInt<32>(Value))
       return makeTargetOutOfRangeError(G, B, E);
-    Write32(Value);
+    if (LLVM_LIKELY(G.getEndianness() == llvm::endianness::little))
+      endian::write32<llvm::endianness::little>(FixupPtr, Value);
+    else
+      endian::write32<llvm::endianness::big>(FixupPtr, Value);
     return Error::success();
   }
   default:
