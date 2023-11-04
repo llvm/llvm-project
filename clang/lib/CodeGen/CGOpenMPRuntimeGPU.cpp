@@ -4278,9 +4278,10 @@ llvm::Value *CGOpenMPRuntimeGPU::getXteamRedSum(
 bool CGOpenMPRuntimeGPU::supportFastFPAtomics() {
     CudaArch Arch = getCudaArch(CGM);
     switch (Arch) {
-      case CudaArch::GFX90a:
-        return true;
-      default:
+    case CudaArch::GFX90a:
+    case CudaArch::GFX942:
+      return true;
+    default:
         break;
     }
     return false;
