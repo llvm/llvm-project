@@ -1741,10 +1741,10 @@ ConstantRange ConstantRange::ctlz(bool ZeroIsPoison) const {
 
 static ConstantRange getUnsignedPopCountRange(const APInt &Lower,
                                               const APInt &Upper) {
-  assert(Lower.ule(Upper) && "Unexpected wrapped set.");
+  assert(!ConstantRange(Lower, Upper).isWrappedSet() &&
+         "Unexpected wrapped set.");
+  assert(Lower != Upper && "Unexpected empty set.");
   unsigned BitWidth = Lower.getBitWidth();
-  if (Lower == Upper)
-    return ConstantRange::getEmpty(BitWidth);
   if (Lower + 1 == Upper)
     return ConstantRange(APInt(BitWidth, Lower.popcount()));
 
@@ -1760,9 +1760,9 @@ static ConstantRange getUnsignedPopCountRange(const APInt &Lower,
   // length of LCP).
   // Otherwise, the minimum is the popcount of LCP + (BitWidth -
   // length of LCP - 1).
-  unsigned MaxBits = LCPPopCount + (BitWidth - LCPLength) +
-                     (Max.countr_one() >= BitWidth - LCPLength ? 1 : 0);
-  return ConstantRange(APInt(BitWidth, MinBits), APInt(BitWidth, MaxBits));
+  unsigned MaxBits = LCPPopCount + (BitWidth - LCPLength) -
+                     (Max.countr_one() < BitWidth - LCPLength ? 1 : 0);
+  return ConstantRange(APInt(BitWidth, MinBits), APInt(BitWidth, MaxBits + 1));
 }
 
 ConstantRange ConstantRange::ctpop() const {
@@ -1771,17 +1771,17 @@ ConstantRange ConstantRange::ctpop() const {
 
   unsigned BitWidth = getBitWidth();
   APInt Zero = APInt::getZero(BitWidth);
-  if (isFullSet()) {
+  if (isFullSet())
     return getNonEmpty(Zero, APInt(BitWidth, BitWidth + 1));
-  }
-  if (!isUpperWrapped()) {
+  if (!isWrappedSet())
     return getUnsignedPopCountRange(getLower(), getUpper());
-  }
-  ConstantRange CR1 = ConstantRange(
-      APInt(BitWidth,
-            BitWidth - (getUnsignedMax() - getLower() + 1).logBase2()),
-      APInt(BitWidth, BitWidth + 1)); // [lower, intmax]
-  ConstantRange CR2 = getUnsignedPopCountRange(Zero, getUpper()); // [0, upper)
+  // The range is wrapped. We decompose it into two ranges, [0, Upper) and
+  // [Lower, 0).
+  // Handle [Lower, 0) == [Lower, Max]
+  ConstantRange CR1 = ConstantRange(APInt(BitWidth, getLower().countl_one()),
+                                    APInt(BitWidth, BitWidth + 1));
+  // Handle [0, Upper)
+  ConstantRange CR2 = getUnsignedPopCountRange(Zero, getUpper());
   return CR1.unionWith(CR2);
 }
 
