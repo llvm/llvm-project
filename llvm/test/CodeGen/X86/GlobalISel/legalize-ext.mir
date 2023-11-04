@@ -104,19 +104,24 @@ body:             |
     liveins: $edi
 
     ; X32-LABEL: name: test_zext_i1toi8
-    ; X32: [[COPY:%[0-9]+]]:_(s32) = COPY $edi
-    ; X32: [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 1
-    ; X32: [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[COPY]](s32)
-    ; X32: [[AND:%[0-9]+]]:_(s8) = G_AND [[TRUNC]], [[C]]
-    ; X32: $al = COPY [[AND]](s8)
-    ; X32: RET 0, implicit $al
+    ; X32: liveins: $edi
+    ; X32-NEXT: {{  $}}
+    ; X32-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $edi
+    ; X32-NEXT: [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[COPY]](s32)
+    ; X32-NEXT: [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 1
+    ; X32-NEXT: [[AND:%[0-9]+]]:_(s8) = G_AND [[TRUNC]], [[C]]
+    ; X32-NEXT: $al = COPY [[AND]](s8)
+    ; X32-NEXT: RET 0, implicit $al
+    ;
     ; X64-LABEL: name: test_zext_i1toi8
-    ; X64: [[COPY:%[0-9]+]]:_(s32) = COPY $edi
-    ; X64: [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 1
-    ; X64: [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[COPY]](s32)
-    ; X64: [[AND:%[0-9]+]]:_(s8) = G_AND [[TRUNC]], [[C]]
-    ; X64: $al = COPY [[AND]](s8)
-    ; X64: RET 0, implicit $al
+    ; X64: liveins: $edi
+    ; X64-NEXT: {{  $}}
+    ; X64-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $edi
+    ; X64-NEXT: [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[COPY]](s32)
+    ; X64-NEXT: [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 1
+    ; X64-NEXT: [[AND:%[0-9]+]]:_(s8) = G_AND [[TRUNC]], [[C]]
+    ; X64-NEXT: $al = COPY [[AND]](s8)
+    ; X64-NEXT: RET 0, implicit $al
     %1:_(s32) = COPY $edi
     %0:_(s1) = G_TRUNC %1(s32)
     %2:_(s8) = G_ZEXT %0(s1)
@@ -137,19 +142,24 @@ body:             |
     liveins: $edi
 
     ; X32-LABEL: name: test_zext_i1toi16
-    ; X32: [[COPY:%[0-9]+]]:_(s32) = COPY $edi
-    ; X32: [[C:%[0-9]+]]:_(s16) = G_CONSTANT i16 1
-    ; X32: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
-    ; X32: [[AND:%[0-9]+]]:_(s16) = G_AND [[TRUNC]], [[C]]
-    ; X32: $ax = COPY [[AND]](s16)
-    ; X32: RET 0, implicit $ax
+    ; X32: liveins: $edi
+    ; X32-NEXT: {{  $}}
+    ; X32-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $edi
+    ; X32-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
+    ; X32-NEXT: [[C:%[0-9]+]]:_(s16) = G_CONSTANT i16 1
+    ; X32-NEXT: [[AND:%[0-9]+]]:_(s16) = G_AND [[TRUNC]], [[C]]
+    ; X32-NEXT: $ax = COPY [[AND]](s16)
+    ; X32-NEXT: RET 0, implicit $ax
+    ;
     ; X64-LABEL: name: test_zext_i1toi16
-    ; X64: [[COPY:%[0-9]+]]:_(s32) = COPY $edi
-    ; X64: [[C:%[0-9]+]]:_(s16) = G_CONSTANT i16 1
-    ; X64: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
-    ; X64: [[AND:%[0-9]+]]:_(s16) = G_AND [[TRUNC]], [[C]]
-    ; X64: $ax = COPY [[AND]](s16)
-    ; X64: RET 0, implicit $ax
+    ; X64: liveins: $edi
+    ; X64-NEXT: {{  $}}
+    ; X64-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $edi
+    ; X64-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
+    ; X64-NEXT: [[C:%[0-9]+]]:_(s16) = G_CONSTANT i16 1
+    ; X64-NEXT: [[AND:%[0-9]+]]:_(s16) = G_AND [[TRUNC]], [[C]]
+    ; X64-NEXT: $ax = COPY [[AND]](s16)
+    ; X64-NEXT: RET 0, implicit $ax
     %1:_(s32) = COPY $edi
     %0:_(s1) = G_TRUNC %1(s32)
     %2:_(s16) = G_ZEXT %0(s1)
@@ -171,19 +181,24 @@ body:             |
     liveins: $edi
 
     ; X32-LABEL: name: test_zext_i1
-    ; X32: [[COPY:%[0-9]+]]:_(s8) = COPY $dil
-    ; X32: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-    ; X32: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[COPY]](s8)
-    ; X32: [[AND:%[0-9]+]]:_(s32) = G_AND [[ANYEXT]], [[C]]
-    ; X32: $eax = COPY [[AND]](s32)
-    ; X32: RET 0, implicit $eax
+    ; X32: liveins: $edi
+    ; X32-NEXT: {{  $}}
+    ; X32-NEXT: [[COPY:%[0-9]+]]:_(s8) = COPY $dil
+    ; X32-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[COPY]](s8)
+    ; X32-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+    ; X32-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[ANYEXT]], [[C]]
+    ; X32-NEXT: $eax = COPY [[AND]](s32)
+    ; X32-NEXT: RET 0, implicit $eax
+    ;
     ; X64-LABEL: name: test_zext_i1
-    ; X64: [[COPY:%[0-9]+]]:_(s8) = COPY $dil
-    ; X64: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-    ; X64: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[COPY]](s8)
-    ; X64: [[AND:%[0-9]+]]:_(s32) = G_AND [[ANYEXT]], [[C]]
-    ; X64: $eax = COPY [[AND]](s32)
-    ; X64: RET 0, implicit $eax
+    ; X64: liveins: $edi
+    ; X64-NEXT: {{  $}}
+    ; X64-NEXT: [[COPY:%[0-9]+]]:_(s8) = COPY $dil
+    ; X64-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[COPY]](s8)
+    ; X64-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+    ; X64-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[ANYEXT]], [[C]]
+    ; X64-NEXT: $eax = COPY [[AND]](s32)
+    ; X64-NEXT: RET 0, implicit $eax
     %0(s8) = COPY $dil
     %1(s1) = G_TRUNC %0(s8)
     %2(s32) = G_ZEXT %1(s1)
@@ -204,15 +219,20 @@ body:             |
     liveins: $edi
 
     ; X32-LABEL: name: test_zext_i8toi16
-    ; X32: [[COPY:%[0-9]+]]:_(s8) = COPY $dil
-    ; X32: [[ZEXT:%[0-9]+]]:_(s16) = G_ZEXT [[COPY]](s8)
-    ; X32: $ax = COPY [[ZEXT]](s16)
-    ; X32: RET 0, implicit $ax
+    ; X32: liveins: $edi
+    ; X32-NEXT: {{  $}}
+    ; X32-NEXT: [[COPY:%[0-9]+]]:_(s8) = COPY $dil
+    ; X32-NEXT: [[ZEXT:%[0-9]+]]:_(s16) = G_ZEXT [[COPY]](s8)
+    ; X32-NEXT: $ax = COPY [[ZEXT]](s16)
+    ; X32-NEXT: RET 0, implicit $ax
+    ;
     ; X64-LABEL: name: test_zext_i8toi16
-    ; X64: [[COPY:%[0-9]+]]:_(s8) = COPY $dil
-    ; X64: [[ZEXT:%[0-9]+]]:_(s16) = G_ZEXT [[COPY]](s8)
-    ; X64: $ax = COPY [[ZEXT]](s16)
-    ; X64: RET 0, implicit $ax
+    ; X64: liveins: $edi
+    ; X64-NEXT: {{  $}}
+    ; X64-NEXT: [[COPY:%[0-9]+]]:_(s8) = COPY $dil
+    ; X64-NEXT: [[ZEXT:%[0-9]+]]:_(s16) = G_ZEXT [[COPY]](s8)
+    ; X64-NEXT: $ax = COPY [[ZEXT]](s16)
+    ; X64-NEXT: RET 0, implicit $ax
     %0(s8) = COPY $dil
     %1(s16) = G_ZEXT %0(s8)
     $ax = COPY %1(s16)
@@ -232,15 +252,20 @@ body:             |
     liveins: $edi
 
     ; X32-LABEL: name: test_zext_i8
-    ; X32: [[COPY:%[0-9]+]]:_(s8) = COPY $dil
-    ; X32: [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[COPY]](s8)
-    ; X32: $eax = COPY [[ZEXT]](s32)
-    ; X32: RET 0, implicit $eax
+    ; X32: liveins: $edi
+    ; X32-NEXT: {{  $}}
+    ; X32-NEXT: [[COPY:%[0-9]+]]:_(s8) = COPY $dil
+    ; X32-NEXT: [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[COPY]](s8)
+    ; X32-NEXT: $eax = COPY [[ZEXT]](s32)
+    ; X32-NEXT: RET 0, implicit $eax
+    ;
     ; X64-LABEL: name: test_zext_i8
-    ; X64: [[COPY:%[0-9]+]]:_(s8) = COPY $dil
-    ; X64: [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[COPY]](s8)
-    ; X64: $eax = COPY [[ZEXT]](s32)
-    ; X64: RET 0, implicit $eax
+    ; X64: liveins: $edi
+    ; X64-NEXT: {{  $}}
+    ; X64-NEXT: [[COPY:%[0-9]+]]:_(s8) = COPY $dil
+    ; X64-NEXT: [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[COPY]](s8)
+    ; X64-NEXT: $eax = COPY [[ZEXT]](s32)
+    ; X64-NEXT: RET 0, implicit $eax
     %0(s8) = COPY $dil
     %1(s32) = G_ZEXT %0(s8)
     $eax = COPY %1(s32)
@@ -260,15 +285,20 @@ body:             |
     liveins: $edi
 
     ; X32-LABEL: name: test_zext_i16
-    ; X32: [[COPY:%[0-9]+]]:_(s16) = COPY $di
-    ; X32: [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[COPY]](s16)
-    ; X32: $eax = COPY [[ZEXT]](s32)
-    ; X32: RET 0, implicit $eax
+    ; X32: liveins: $edi
+    ; X32-NEXT: {{  $}}
+    ; X32-NEXT: [[COPY:%[0-9]+]]:_(s16) = COPY $di
+    ; X32-NEXT: [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[COPY]](s16)
+    ; X32-NEXT: $eax = COPY [[ZEXT]](s32)
+    ; X32-NEXT: RET 0, implicit $eax
+    ;
     ; X64-LABEL: name: test_zext_i16
-    ; X64: [[COPY:%[0-9]+]]:_(s16) = COPY $di
-    ; X64: [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[COPY]](s16)
-    ; X64: $eax = COPY [[ZEXT]](s32)
-    ; X64: RET 0, implicit $eax
+    ; X64: liveins: $edi
+    ; X64-NEXT: {{  $}}
+    ; X64-NEXT: [[COPY:%[0-9]+]]:_(s16) = COPY $di
+    ; X64-NEXT: [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[COPY]](s16)
+    ; X64-NEXT: $eax = COPY [[ZEXT]](s32)
+    ; X64-NEXT: RET 0, implicit $eax
     %0(s16) = COPY $di
     %1(s32) = G_ZEXT %0(s16)
     $eax = COPY %1(s32)
@@ -288,13 +318,18 @@ body:             |
     liveins: $edi
 
     ; X32-LABEL: name: test_sext_i1toi8
-    ; X32: [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 0
-    ; X32: $al = COPY [[C]](s8)
-    ; X32: RET 0, implicit $al
+    ; X32: liveins: $edi
+    ; X32-NEXT: {{  $}}
+    ; X32-NEXT: [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 0
+    ; X32-NEXT: $al = COPY [[C]](s8)
+    ; X32-NEXT: RET 0, implicit $al
+    ;
     ; X64-LABEL: name: test_sext_i1toi8
-    ; X64: [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 0
-    ; X64: $al = COPY [[C]](s8)
-    ; X64: RET 0, implicit $al
+    ; X64: liveins: $edi
+    ; X64-NEXT: {{  $}}
+    ; X64-NEXT: [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 0
+    ; X64-NEXT: $al = COPY [[C]](s8)
+    ; X64-NEXT: RET 0, implicit $al
     %0(s1) = G_IMPLICIT_DEF
     %1(s8) = G_SEXT %0(s1)
     $al = COPY %1(s8)
@@ -314,13 +349,18 @@ body:             |
     liveins: $edi
 
     ; X32-LABEL: name: test_sext_i1toi16
-    ; X32: [[C:%[0-9]+]]:_(s16) = G_CONSTANT i16 0
-    ; X32: $ax = COPY [[C]](s16)
-    ; X32: RET 0, implicit $ax
+    ; X32: liveins: $edi
+    ; X32-NEXT: {{  $}}
+    ; X32-NEXT: [[C:%[0-9]+]]:_(s16) = G_CONSTANT i16 0
+    ; X32-NEXT: $ax = COPY [[C]](s16)
+    ; X32-NEXT: RET 0, implicit $ax
+    ;
     ; X64-LABEL: name: test_sext_i1toi16
-    ; X64: [[C:%[0-9]+]]:_(s16) = G_CONSTANT i16 0
-    ; X64: $ax = COPY [[C]](s16)
-    ; X64: RET 0, implicit $ax
+    ; X64: liveins: $edi
+    ; X64-NEXT: {{  $}}
+    ; X64-NEXT: [[C:%[0-9]+]]:_(s16) = G_CONSTANT i16 0
+    ; X64-NEXT: $ax = COPY [[C]](s16)
+    ; X64-NEXT: RET 0, implicit $ax
     %0(s1) = G_IMPLICIT_DEF
     %1(s16) = G_SEXT %0(s1)
     $ax = COPY %1(s16)
@@ -341,13 +381,18 @@ body:             |
     liveins: $edi
 
     ; X32-LABEL: name: test_sext_i1
-    ; X32: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; X32: $eax = COPY [[C]](s32)
-    ; X32: RET 0, implicit $eax
+    ; X32: liveins: $edi
+    ; X32-NEXT: {{  $}}
+    ; X32-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; X32-NEXT: $eax = COPY [[C]](s32)
+    ; X32-NEXT: RET 0, implicit $eax
+    ;
     ; X64-LABEL: name: test_sext_i1
-    ; X64: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; X64: $eax = COPY [[C]](s32)
-    ; X64: RET 0, implicit $eax
+    ; X64: liveins: $edi
+    ; X64-NEXT: {{  $}}
+    ; X64-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; X64-NEXT: $eax = COPY [[C]](s32)
+    ; X64-NEXT: RET 0, implicit $eax
     %0(s1) = G_IMPLICIT_DEF
     %2(s32) = G_SEXT %0(s1)
     $eax = COPY %2(s32)
@@ -367,15 +412,20 @@ body:             |
     liveins: $edi
 
     ; X32-LABEL: name: test_sext_i8toi16
-    ; X32: [[COPY:%[0-9]+]]:_(s8) = COPY $dil
-    ; X32: [[SEXT:%[0-9]+]]:_(s16) = G_SEXT [[COPY]](s8)
-    ; X32: $ax = COPY [[SEXT]](s16)
-    ; X32: RET 0, implicit $ax
+    ; X32: liveins: $edi
+    ; X32-NEXT: {{  $}}
+    ; X32-NEXT: [[COPY:%[0-9]+]]:_(s8) = COPY $dil
+    ; X32-NEXT: [[SEXT:%[0-9]+]]:_(s16) = G_SEXT [[COPY]](s8)
+    ; X32-NEXT: $ax = COPY [[SEXT]](s16)
+    ; X32-NEXT: RET 0, implicit $ax
+    ;
     ; X64-LABEL: name: test_sext_i8toi16
-    ; X64: [[COPY:%[0-9]+]]:_(s8) = COPY $dil
-    ; X64: [[SEXT:%[0-9]+]]:_(s16) = G_SEXT [[COPY]](s8)
-    ; X64: $ax = COPY [[SEXT]](s16)
-    ; X64: RET 0, implicit $ax
+    ; X64: liveins: $edi
+    ; X64-NEXT: {{  $}}
+    ; X64-NEXT: [[COPY:%[0-9]+]]:_(s8) = COPY $dil
+    ; X64-NEXT: [[SEXT:%[0-9]+]]:_(s16) = G_SEXT [[COPY]](s8)
+    ; X64-NEXT: $ax = COPY [[SEXT]](s16)
+    ; X64-NEXT: RET 0, implicit $ax
     %0(s8) = COPY $dil
     %1(s16) = G_SEXT %0(s8)
     $ax = COPY %1(s16)
@@ -395,15 +445,20 @@ body:             |
     liveins: $edi
 
     ; X32-LABEL: name: test_sext_i8
-    ; X32: [[COPY:%[0-9]+]]:_(s8) = COPY $dil
-    ; X32: [[SEXT:%[0-9]+]]:_(s32) = G_SEXT [[COPY]](s8)
-    ; X32: $eax = COPY [[SEXT]](s32)
-    ; X32: RET 0, implicit $eax
+    ; X32: liveins: $edi
+    ; X32-NEXT: {{  $}}
+    ; X32-NEXT: [[COPY:%[0-9]+]]:_(s8) = COPY $dil
+    ; X32-NEXT: [[SEXT:%[0-9]+]]:_(s32) = G_SEXT [[COPY]](s8)
+    ; X32-NEXT: $eax = COPY [[SEXT]](s32)
+    ; X32-NEXT: RET 0, implicit $eax
+    ;
     ; X64-LABEL: name: test_sext_i8
-    ; X64: [[COPY:%[0-9]+]]:_(s8) = COPY $dil
-    ; X64: [[SEXT:%[0-9]+]]:_(s32) = G_SEXT [[COPY]](s8)
-    ; X64: $eax = COPY [[SEXT]](s32)
-    ; X64: RET 0, implicit $eax
+    ; X64: liveins: $edi
+    ; X64-NEXT: {{  $}}
+    ; X64-NEXT: [[COPY:%[0-9]+]]:_(s8) = COPY $dil
+    ; X64-NEXT: [[SEXT:%[0-9]+]]:_(s32) = G_SEXT [[COPY]](s8)
+    ; X64-NEXT: $eax = COPY [[SEXT]](s32)
+    ; X64-NEXT: RET 0, implicit $eax
     %0(s8) = COPY $dil
     %1(s32) = G_SEXT %0(s8)
     $eax = COPY %1(s32)
@@ -423,15 +478,20 @@ body:             |
     liveins: $edi
 
     ; X32-LABEL: name: test_sext_i16
-    ; X32: [[COPY:%[0-9]+]]:_(s16) = COPY $di
-    ; X32: [[SEXT:%[0-9]+]]:_(s32) = G_SEXT [[COPY]](s16)
-    ; X32: $eax = COPY [[SEXT]](s32)
-    ; X32: RET 0, implicit $eax
+    ; X32: liveins: $edi
+    ; X32-NEXT: {{  $}}
+    ; X32-NEXT: [[COPY:%[0-9]+]]:_(s16) = COPY $di
+    ; X32-NEXT: [[SEXT:%[0-9]+]]:_(s32) = G_SEXT [[COPY]](s16)
+    ; X32-NEXT: $eax = COPY [[SEXT]](s32)
+    ; X32-NEXT: RET 0, implicit $eax
+    ;
     ; X64-LABEL: name: test_sext_i16
-    ; X64: [[COPY:%[0-9]+]]:_(s16) = COPY $di
-    ; X64: [[SEXT:%[0-9]+]]:_(s32) = G_SEXT [[COPY]](s16)
-    ; X64: $eax = COPY [[SEXT]](s32)
-    ; X64: RET 0, implicit $eax
+    ; X64: liveins: $edi
+    ; X64-NEXT: {{  $}}
+    ; X64-NEXT: [[COPY:%[0-9]+]]:_(s16) = COPY $di
+    ; X64-NEXT: [[SEXT:%[0-9]+]]:_(s32) = G_SEXT [[COPY]](s16)
+    ; X64-NEXT: $eax = COPY [[SEXT]](s32)
+    ; X64-NEXT: RET 0, implicit $eax
     %0(s16) = COPY $di
     %1(s32) = G_SEXT %0(s16)
     $eax = COPY %1(s32)
@@ -452,15 +512,20 @@ body:             |
     liveins: $edi
 
     ; X32-LABEL: name: test_anyext_i1toi8
-    ; X32: [[COPY:%[0-9]+]]:_(s32) = COPY $edi
-    ; X32: [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[COPY]](s32)
-    ; X32: $al = COPY [[TRUNC]](s8)
-    ; X32: RET 0, implicit $al
+    ; X32: liveins: $edi
+    ; X32-NEXT: {{  $}}
+    ; X32-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $edi
+    ; X32-NEXT: [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[COPY]](s32)
+    ; X32-NEXT: $al = COPY [[TRUNC]](s8)
+    ; X32-NEXT: RET 0, implicit $al
+    ;
     ; X64-LABEL: name: test_anyext_i1toi8
-    ; X64: [[COPY:%[0-9]+]]:_(s32) = COPY $edi
-    ; X64: [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[COPY]](s32)
-    ; X64: $al = COPY [[TRUNC]](s8)
-    ; X64: RET 0, implicit $al
+    ; X64: liveins: $edi
+    ; X64-NEXT: {{  $}}
+    ; X64-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $edi
+    ; X64-NEXT: [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[COPY]](s32)
+    ; X64-NEXT: $al = COPY [[TRUNC]](s8)
+    ; X64-NEXT: RET 0, implicit $al
     %0(s32) = COPY $edi
     %1(s1) = G_TRUNC %0(s32)
     %2(s8) = G_ANYEXT %1(s1)
@@ -482,15 +547,20 @@ body:             |
     liveins: $edi
 
     ; X32-LABEL: name: test_anyext_i1toi16
-    ; X32: [[COPY:%[0-9]+]]:_(s32) = COPY $edi
-    ; X32: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
-    ; X32: $ax = COPY [[TRUNC]](s16)
-    ; X32: RET 0, implicit $ax
+    ; X32: liveins: $edi
+    ; X32-NEXT: {{  $}}
+    ; X32-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $edi
+    ; X32-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
+    ; X32-NEXT: $ax = COPY [[TRUNC]](s16)
+    ; X32-NEXT: RET 0, implicit $ax
+    ;
     ; X64-LABEL: name: test_anyext_i1toi16
-    ; X64: [[COPY:%[0-9]+]]:_(s32) = COPY $edi
-    ; X64: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
-    ; X64: $ax = COPY [[TRUNC]](s16)
-    ; X64: RET 0, implicit $ax
+    ; X64: liveins: $edi
+    ; X64-NEXT: {{  $}}
+    ; X64-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $edi
+    ; X64-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
+    ; X64-NEXT: $ax = COPY [[TRUNC]](s16)
+    ; X64-NEXT: RET 0, implicit $ax
     %0(s32) = COPY $edi
     %1(s1) = G_TRUNC %0(s32)
     %2(s16) = G_ANYEXT %1(s1)
@@ -512,15 +582,20 @@ body:             |
     liveins: $edi
 
     ; X32-LABEL: name: test_anyext_i1
-    ; X32: [[COPY:%[0-9]+]]:_(s8) = COPY $dil
-    ; X32: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[COPY]](s8)
-    ; X32: $eax = COPY [[ANYEXT]](s32)
-    ; X32: RET 0, implicit $eax
+    ; X32: liveins: $edi
+    ; X32-NEXT: {{  $}}
+    ; X32-NEXT: [[COPY:%[0-9]+]]:_(s8) = COPY $dil
+    ; X32-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[COPY]](s8)
+    ; X32-NEXT: $eax = COPY [[ANYEXT]](s32)
+    ; X32-NEXT: RET 0, implicit $eax
+    ;
     ; X64-LABEL: name: test_anyext_i1
-    ; X64: [[COPY:%[0-9]+]]:_(s8) = COPY $dil
-    ; X64: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[COPY]](s8)
-    ; X64: $eax = COPY [[ANYEXT]](s32)
-    ; X64: RET 0, implicit $eax
+    ; X64: liveins: $edi
+    ; X64-NEXT: {{  $}}
+    ; X64-NEXT: [[COPY:%[0-9]+]]:_(s8) = COPY $dil
+    ; X64-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[COPY]](s8)
+    ; X64-NEXT: $eax = COPY [[ANYEXT]](s32)
+    ; X64-NEXT: RET 0, implicit $eax
     %0(s8) = COPY $dil
     %1(s1) = G_TRUNC %0(s8)
     %2(s32) = G_ANYEXT %1(s1)
@@ -541,15 +616,20 @@ body:             |
     liveins: $edi
 
     ; X32-LABEL: name: test_anyext_i8toi16
-    ; X32: [[COPY:%[0-9]+]]:_(s8) = COPY $dil
-    ; X32: [[ANYEXT:%[0-9]+]]:_(s16) = G_ANYEXT [[COPY]](s8)
-    ; X32: $ax = COPY [[ANYEXT]](s16)
-    ; X32: RET 0, implicit $ax
+    ; X32: liveins: $edi
+    ; X32-NEXT: {{  $}}
+    ; X32-NEXT: [[COPY:%[0-9]+]]:_(s8) = COPY $dil
+    ; X32-NEXT: [[ANYEXT:%[0-9]+]]:_(s16) = G_ANYEXT [[COPY]](s8)
+    ; X32-NEXT: $ax = COPY [[ANYEXT]](s16)
+    ; X32-NEXT: RET 0, implicit $ax
+    ;
     ; X64-LABEL: name: test_anyext_i8toi16
-    ; X64: [[COPY:%[0-9]+]]:_(s8) = COPY $dil
-    ; X64: [[ANYEXT:%[0-9]+]]:_(s16) = G_ANYEXT [[COPY]](s8)
-    ; X64: $ax = COPY [[ANYEXT]](s16)
-    ; X64: RET 0, implicit $ax
+    ; X64: liveins: $edi
+    ; X64-NEXT: {{  $}}
+    ; X64-NEXT: [[COPY:%[0-9]+]]:_(s8) = COPY $dil
+    ; X64-NEXT: [[ANYEXT:%[0-9]+]]:_(s16) = G_ANYEXT [[COPY]](s8)
+    ; X64-NEXT: $ax = COPY [[ANYEXT]](s16)
+    ; X64-NEXT: RET 0, implicit $ax
     %0(s8) = COPY $dil
     %1(s16) = G_ANYEXT %0(s8)
     $ax = COPY %1(s16)
@@ -569,15 +649,20 @@ body:             |
     liveins: $edi
 
     ; X32-LABEL: name: test_anyext_i8
-    ; X32: [[COPY:%[0-9]+]]:_(s8) = COPY $dil
-    ; X32: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[COPY]](s8)
-    ; X32: $eax = COPY [[ANYEXT]](s32)
-    ; X32: RET 0, implicit $eax
+    ; X32: liveins: $edi
+    ; X32-NEXT: {{  $}}
+    ; X32-NEXT: [[COPY:%[0-9]+]]:_(s8) = COPY $dil
+    ; X32-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[COPY]](s8)
+    ; X32-NEXT: $eax = COPY [[ANYEXT]](s32)
+    ; X32-NEXT: RET 0, implicit $eax
+    ;
     ; X64-LABEL: name: test_anyext_i8
-    ; X64: [[COPY:%[0-9]+]]:_(s8) = COPY $dil
-    ; X64: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[COPY]](s8)
-    ; X64: $eax = COPY [[ANYEXT]](s32)
-    ; X64: RET 0, implicit $eax
+    ; X64: liveins: $edi
+    ; X64-NEXT: {{  $}}
+    ; X64-NEXT: [[COPY:%[0-9]+]]:_(s8) = COPY $dil
+    ; X64-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[COPY]](s8)
+    ; X64-NEXT: $eax = COPY [[ANYEXT]](s32)
+    ; X64-NEXT: RET 0, implicit $eax
     %0(s8) = COPY $dil
     %1(s32) = G_ANYEXT %0(s8)
     $eax = COPY %1(s32)
@@ -597,15 +682,20 @@ body:             |
     liveins: $edi
 
     ; X32-LABEL: name: test_anyext_i16
-    ; X32: [[COPY:%[0-9]+]]:_(s16) = COPY $di
-    ; X32: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[COPY]](s16)
-    ; X32: $eax = COPY [[ANYEXT]](s32)
-    ; X32: RET 0, implicit $eax
+    ; X32: liveins: $edi
+    ; X32-NEXT: {{  $}}
+    ; X32-NEXT: [[COPY:%[0-9]+]]:_(s16) = COPY $di
+    ; X32-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[COPY]](s16)
+    ; X32-NEXT: $eax = COPY [[ANYEXT]](s32)
+    ; X32-NEXT: RET 0, implicit $eax
+    ;
     ; X64-LABEL: name: test_anyext_i16
-    ; X64: [[COPY:%[0-9]+]]:_(s16) = COPY $di
-    ; X64: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[COPY]](s16)
-    ; X64: $eax = COPY [[ANYEXT]](s32)
-    ; X64: RET 0, implicit $eax
+    ; X64: liveins: $edi
+    ; X64-NEXT: {{  $}}
+    ; X64-NEXT: [[COPY:%[0-9]+]]:_(s16) = COPY $di
+    ; X64-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[COPY]](s16)
+    ; X64-NEXT: $eax = COPY [[ANYEXT]](s32)
+    ; X64-NEXT: RET 0, implicit $eax
     %0(s16) = COPY $di
     %1(s32) = G_ANYEXT %0(s16)
     $eax = COPY %1(s32)
