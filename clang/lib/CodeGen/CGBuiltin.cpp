@@ -19696,10 +19696,6 @@ RValue CodeGenFunction::EmitBuiltinAlignTo(const CallExpr *E, bool AlignUp) {
     Result = Builder.CreateIntrinsic(
         Intrinsic::ptrmask, {Args.SrcType, Args.IntType},
         {SrcForMask, InvertedMask}, nullptr, "aligned_result");
-
-    // Emit an alignment assumption to ensure that the new alignment is
-    // propagated to loads/stores, etc.
-    emitAlignmentAssumption(Result, E, E->getExprLoc(), Args.Alignment);
   } else {
     Result = Builder.CreateAnd(SrcForMask, InvertedMask, "aligned_result");
   }
