@@ -423,7 +423,8 @@ static LogicalResult addShardOp(OpBuilder &b, OpResult result,
   }
 
   // process the partial axes
-  Partial partialType;
+  // partialType will be ignored if partialAxes is empty
+  Partial partialType = Partial::Sum;
   for (auto it : llvm::zip(loopTypes, shardingOption.shardingArray)) {
     IteratorType iType = std::get<0>(it);
     if (isReductionLoop(iType)) {
