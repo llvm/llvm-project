@@ -342,6 +342,8 @@ public:
 
     // Iterate over the contents of bundles, but don't emit any instructions
     // inside a bundle.
+    // TODO: If the bundle already contains an s_delay_alu instruction, remember
+    // it in LastDelayAlu so we can try encoding another delay in it?
     for (auto &MI : MBB.instrs()) {
       if (MI.isBundle() || MI.isMetaInstruction())
         continue;

@@ -580,8 +580,9 @@ define amdgpu_ps void @s_buffer_load_index_across_bb(<4 x i32> inreg %desc, i32 
 ; GFX11-LABEL: s_buffer_load_index_across_bb:
 ; GFX11:       ; %bb.0: ; %main_body
 ; GFX11-NEXT:    s_getpc_b64 s[4:5]
-; GFX11-NEXT:    s_add_u32 s4, s4, gv@gotpcrel32@lo+4
-; GFX11-NEXT:    s_addc_u32 s5, s5, gv@gotpcrel32@hi+12
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_add_u32 s4, s4, gv@gotpcrel32@lo+8
+; GFX11-NEXT:    s_addc_u32 s5, s5, gv@gotpcrel32@hi+16
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 4, v0
 ; GFX11-NEXT:    s_load_b64 s[4:5], s[4:5], 0x0
 ; GFX11-NEXT:    v_mov_b32_e32 v1, 0

@@ -124,8 +124,9 @@ define amdgpu_kernel void @test_call_external_void_func_i1_imm() #0 {
 ; GFX11-NEXT:    s_mov_b64 s[6:7], s[0:1]
 ; GFX11-NEXT:    s_mov_b32 s32, 0
 ; GFX11-NEXT:    s_getpc_b64 s[2:3]
-; GFX11-NEXT:    s_add_u32 s2, s2, external_void_func_i1@rel32@lo+4
-; GFX11-NEXT:    s_addc_u32 s3, s3, external_void_func_i1@rel32@hi+12
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_add_u32 s2, s2, external_void_func_i1@rel32@lo+8
+; GFX11-NEXT:    s_addc_u32 s3, s3, external_void_func_i1@rel32@hi+16
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_swappc_b64 s[30:31], s[2:3]
 ; GFX11-NEXT:    s_endpgm
@@ -228,8 +229,9 @@ define amdgpu_kernel void @test_call_external_void_func_i1_signext(i32) #0 {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_mov_b32 s32, 0
 ; GFX11-NEXT:    s_getpc_b64 s[2:3]
-; GFX11-NEXT:    s_add_u32 s2, s2, external_void_func_i1_signext@rel32@lo+4
-; GFX11-NEXT:    s_addc_u32 s3, s3, external_void_func_i1_signext@rel32@hi+12
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_add_u32 s2, s2, external_void_func_i1_signext@rel32@lo+8
+; GFX11-NEXT:    s_addc_u32 s3, s3, external_void_func_i1_signext@rel32@hi+16
 ; GFX11-NEXT:    v_bfe_i32 v0, v0, 0, 1
 ; GFX11-NEXT:    s_swappc_b64 s[30:31], s[2:3]
 ; GFX11-NEXT:    s_endpgm
@@ -338,8 +340,9 @@ define amdgpu_kernel void @test_call_external_void_func_i1_zeroext(i32) #0 {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_mov_b32 s32, 0
 ; GFX11-NEXT:    s_getpc_b64 s[2:3]
-; GFX11-NEXT:    s_add_u32 s2, s2, external_void_func_i1_zeroext@rel32@lo+4
-; GFX11-NEXT:    s_addc_u32 s3, s3, external_void_func_i1_zeroext@rel32@hi+12
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_add_u32 s2, s2, external_void_func_i1_zeroext@rel32@lo+8
+; GFX11-NEXT:    s_addc_u32 s3, s3, external_void_func_i1_zeroext@rel32@hi+16
 ; GFX11-NEXT:    v_and_b32_e32 v0, 1, v0
 ; GFX11-NEXT:    s_swappc_b64 s[30:31], s[2:3]
 ; GFX11-NEXT:    s_endpgm
@@ -432,8 +435,9 @@ define amdgpu_kernel void @test_call_external_void_func_i8_imm(i32) #0 {
 ; GFX11-NEXT:    s_mov_b64 s[6:7], s[0:1]
 ; GFX11-NEXT:    s_mov_b32 s32, 0
 ; GFX11-NEXT:    s_getpc_b64 s[2:3]
-; GFX11-NEXT:    s_add_u32 s2, s2, external_void_func_i8@rel32@lo+4
-; GFX11-NEXT:    s_addc_u32 s3, s3, external_void_func_i8@rel32@hi+12
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_add_u32 s2, s2, external_void_func_i8@rel32@lo+8
+; GFX11-NEXT:    s_addc_u32 s3, s3, external_void_func_i8@rel32@hi+16
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_swappc_b64 s[30:31], s[2:3]
 ; GFX11-NEXT:    s_endpgm
@@ -534,8 +538,9 @@ define amdgpu_kernel void @test_call_external_void_func_i8_signext(i32) #0 {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_mov_b32 s32, 0
 ; GFX11-NEXT:    s_getpc_b64 s[2:3]
-; GFX11-NEXT:    s_add_u32 s2, s2, external_void_func_i8_signext@rel32@lo+4
-; GFX11-NEXT:    s_addc_u32 s3, s3, external_void_func_i8_signext@rel32@hi+12
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_add_u32 s2, s2, external_void_func_i8_signext@rel32@lo+8
+; GFX11-NEXT:    s_addc_u32 s3, s3, external_void_func_i8_signext@rel32@hi+16
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_swappc_b64 s[30:31], s[2:3]
 ; GFX11-NEXT:    s_endpgm
@@ -639,8 +644,9 @@ define amdgpu_kernel void @test_call_external_void_func_i8_zeroext(i32) #0 {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_mov_b32 s32, 0
 ; GFX11-NEXT:    s_getpc_b64 s[2:3]
-; GFX11-NEXT:    s_add_u32 s2, s2, external_void_func_i8_zeroext@rel32@lo+4
-; GFX11-NEXT:    s_addc_u32 s3, s3, external_void_func_i8_zeroext@rel32@hi+12
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_add_u32 s2, s2, external_void_func_i8_zeroext@rel32@lo+8
+; GFX11-NEXT:    s_addc_u32 s3, s3, external_void_func_i8_zeroext@rel32@hi+16
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_swappc_b64 s[30:31], s[2:3]
 ; GFX11-NEXT:    s_endpgm
@@ -732,8 +738,9 @@ define amdgpu_kernel void @test_call_external_void_func_i16_imm() #0 {
 ; GFX11-NEXT:    s_mov_b64 s[6:7], s[0:1]
 ; GFX11-NEXT:    s_mov_b32 s32, 0
 ; GFX11-NEXT:    s_getpc_b64 s[2:3]
-; GFX11-NEXT:    s_add_u32 s2, s2, external_void_func_i16@rel32@lo+4
-; GFX11-NEXT:    s_addc_u32 s3, s3, external_void_func_i16@rel32@hi+12
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_add_u32 s2, s2, external_void_func_i16@rel32@lo+8
+; GFX11-NEXT:    s_addc_u32 s3, s3, external_void_func_i16@rel32@hi+16
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_swappc_b64 s[30:31], s[2:3]
 ; GFX11-NEXT:    s_endpgm
@@ -833,8 +840,9 @@ define amdgpu_kernel void @test_call_external_void_func_i16_signext(i32) #0 {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_mov_b32 s32, 0
 ; GFX11-NEXT:    s_getpc_b64 s[2:3]
-; GFX11-NEXT:    s_add_u32 s2, s2, external_void_func_i16_signext@rel32@lo+4
-; GFX11-NEXT:    s_addc_u32 s3, s3, external_void_func_i16_signext@rel32@hi+12
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_add_u32 s2, s2, external_void_func_i16_signext@rel32@lo+8
+; GFX11-NEXT:    s_addc_u32 s3, s3, external_void_func_i16_signext@rel32@hi+16
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_swappc_b64 s[30:31], s[2:3]
 ; GFX11-NEXT:    s_endpgm
@@ -938,8 +946,9 @@ define amdgpu_kernel void @test_call_external_void_func_i16_zeroext(i32) #0 {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_mov_b32 s32, 0
 ; GFX11-NEXT:    s_getpc_b64 s[2:3]
-; GFX11-NEXT:    s_add_u32 s2, s2, external_void_func_i16_zeroext@rel32@lo+4
-; GFX11-NEXT:    s_addc_u32 s3, s3, external_void_func_i16_zeroext@rel32@hi+12
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_add_u32 s2, s2, external_void_func_i16_zeroext@rel32@lo+8
+; GFX11-NEXT:    s_addc_u32 s3, s3, external_void_func_i16_zeroext@rel32@hi+16
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_swappc_b64 s[30:31], s[2:3]
 ; GFX11-NEXT:    s_endpgm
@@ -1031,8 +1040,9 @@ define amdgpu_kernel void @test_call_external_void_func_i32_imm(i32) #0 {
 ; GFX11-NEXT:    s_mov_b64 s[6:7], s[0:1]
 ; GFX11-NEXT:    s_mov_b32 s32, 0
 ; GFX11-NEXT:    s_getpc_b64 s[2:3]
-; GFX11-NEXT:    s_add_u32 s2, s2, external_void_func_i32@rel32@lo+4
-; GFX11-NEXT:    s_addc_u32 s3, s3, external_void_func_i32@rel32@hi+12
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_add_u32 s2, s2, external_void_func_i32@rel32@lo+8
+; GFX11-NEXT:    s_addc_u32 s3, s3, external_void_func_i32@rel32@hi+16
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_swappc_b64 s[30:31], s[2:3]
 ; GFX11-NEXT:    s_endpgm
@@ -1123,8 +1133,9 @@ define amdgpu_kernel void @test_call_external_void_func_i64_imm() #0 {
 ; GFX11-NEXT:    s_mov_b64 s[6:7], s[0:1]
 ; GFX11-NEXT:    s_mov_b32 s32, 0
 ; GFX11-NEXT:    s_getpc_b64 s[2:3]
-; GFX11-NEXT:    s_add_u32 s2, s2, external_void_func_i64@rel32@lo+4
-; GFX11-NEXT:    s_addc_u32 s3, s3, external_void_func_i64@rel32@hi+12
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_add_u32 s2, s2, external_void_func_i64@rel32@lo+8
+; GFX11-NEXT:    s_addc_u32 s3, s3, external_void_func_i64@rel32@hi+16
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_swappc_b64 s[30:31], s[2:3]
 ; GFX11-NEXT:    s_endpgm
@@ -1229,8 +1240,9 @@ define amdgpu_kernel void @test_call_external_void_func_v2i64() #0 {
 ; GFX11-NEXT:    buffer_load_b128 v[0:3], off, s[4:7], 0
 ; GFX11-NEXT:    s_mov_b64 s[6:7], s[0:1]
 ; GFX11-NEXT:    s_getpc_b64 s[2:3]
-; GFX11-NEXT:    s_add_u32 s2, s2, external_void_func_v2i64@rel32@lo+4
-; GFX11-NEXT:    s_addc_u32 s3, s3, external_void_func_v2i64@rel32@hi+12
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_add_u32 s2, s2, external_void_func_v2i64@rel32@lo+8
+; GFX11-NEXT:    s_addc_u32 s3, s3, external_void_func_v2i64@rel32@hi+16
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_swappc_b64 s[30:31], s[2:3]
 ; GFX11-NEXT:    s_endpgm
@@ -1333,8 +1345,9 @@ define amdgpu_kernel void @test_call_external_void_func_v2i64_imm() #0 {
 ; GFX11-NEXT:    s_mov_b64 s[6:7], s[0:1]
 ; GFX11-NEXT:    s_mov_b32 s32, 0
 ; GFX11-NEXT:    s_getpc_b64 s[2:3]
-; GFX11-NEXT:    s_add_u32 s2, s2, external_void_func_v2i64@rel32@lo+4
-; GFX11-NEXT:    s_addc_u32 s3, s3, external_void_func_v2i64@rel32@hi+12
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_add_u32 s2, s2, external_void_func_v2i64@rel32@lo+8
+; GFX11-NEXT:    s_addc_u32 s3, s3, external_void_func_v2i64@rel32@hi+16
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_swappc_b64 s[30:31], s[2:3]
 ; GFX11-NEXT:    s_endpgm
@@ -1448,8 +1461,9 @@ define amdgpu_kernel void @test_call_external_void_func_v3i64() #0 {
 ; GFX11-NEXT:    s_mov_b64 s[6:7], s[0:1]
 ; GFX11-NEXT:    s_mov_b32 s32, 0
 ; GFX11-NEXT:    s_getpc_b64 s[2:3]
-; GFX11-NEXT:    s_add_u32 s2, s2, external_void_func_v3i64@rel32@lo+4
-; GFX11-NEXT:    s_addc_u32 s3, s3, external_void_func_v3i64@rel32@hi+12
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_add_u32 s2, s2, external_void_func_v3i64@rel32@lo+8
+; GFX11-NEXT:    s_addc_u32 s3, s3, external_void_func_v3i64@rel32@hi+16
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_swappc_b64 s[30:31], s[2:3]
 ; GFX11-NEXT:    s_endpgm
@@ -1576,8 +1590,9 @@ define amdgpu_kernel void @test_call_external_void_func_v4i64() #0 {
 ; GFX11-NEXT:    s_mov_b64 s[6:7], s[0:1]
 ; GFX11-NEXT:    s_mov_b32 s32, 0
 ; GFX11-NEXT:    s_getpc_b64 s[2:3]
-; GFX11-NEXT:    s_add_u32 s2, s2, external_void_func_v4i64@rel32@lo+4
-; GFX11-NEXT:    s_addc_u32 s3, s3, external_void_func_v4i64@rel32@hi+12
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_add_u32 s2, s2, external_void_func_v4i64@rel32@lo+8
+; GFX11-NEXT:    s_addc_u32 s3, s3, external_void_func_v4i64@rel32@hi+16
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_swappc_b64 s[30:31], s[2:3]
 ; GFX11-NEXT:    s_endpgm
@@ -1675,8 +1690,9 @@ define amdgpu_kernel void @test_call_external_void_func_f16_imm() #0 {
 ; GFX11-NEXT:    s_mov_b64 s[6:7], s[0:1]
 ; GFX11-NEXT:    s_mov_b32 s32, 0
 ; GFX11-NEXT:    s_getpc_b64 s[2:3]
-; GFX11-NEXT:    s_add_u32 s2, s2, external_void_func_f16@rel32@lo+4
-; GFX11-NEXT:    s_addc_u32 s3, s3, external_void_func_f16@rel32@hi+12
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_add_u32 s2, s2, external_void_func_f16@rel32@lo+8
+; GFX11-NEXT:    s_addc_u32 s3, s3, external_void_func_f16@rel32@hi+16
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_swappc_b64 s[30:31], s[2:3]
 ; GFX11-NEXT:    s_endpgm
@@ -1764,8 +1780,9 @@ define amdgpu_kernel void @test_call_external_void_func_f32_imm() #0 {
 ; GFX11-NEXT:    s_mov_b64 s[6:7], s[0:1]
 ; GFX11-NEXT:    s_mov_b32 s32, 0
 ; GFX11-NEXT:    s_getpc_b64 s[2:3]
-; GFX11-NEXT:    s_add_u32 s2, s2, external_void_func_f32@rel32@lo+4
-; GFX11-NEXT:    s_addc_u32 s3, s3, external_void_func_f32@rel32@hi+12
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_add_u32 s2, s2, external_void_func_f32@rel32@lo+8
+; GFX11-NEXT:    s_addc_u32 s3, s3, external_void_func_f32@rel32@hi+16
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_swappc_b64 s[30:31], s[2:3]
 ; GFX11-NEXT:    s_endpgm
@@ -1856,8 +1873,9 @@ define amdgpu_kernel void @test_call_external_void_func_v2f32_imm() #0 {
 ; GFX11-NEXT:    s_mov_b64 s[6:7], s[0:1]
 ; GFX11-NEXT:    s_mov_b32 s32, 0
 ; GFX11-NEXT:    s_getpc_b64 s[2:3]
-; GFX11-NEXT:    s_add_u32 s2, s2, external_void_func_v2f32@rel32@lo+4
-; GFX11-NEXT:    s_addc_u32 s3, s3, external_void_func_v2f32@rel32@hi+12
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_add_u32 s2, s2, external_void_func_v2f32@rel32@lo+8
+; GFX11-NEXT:    s_addc_u32 s3, s3, external_void_func_v2f32@rel32@hi+16
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_swappc_b64 s[30:31], s[2:3]
 ; GFX11-NEXT:    s_endpgm
@@ -1953,8 +1971,9 @@ define amdgpu_kernel void @test_call_external_void_func_v3f32_imm() #0 {
 ; GFX11-NEXT:    s_mov_b64 s[6:7], s[0:1]
 ; GFX11-NEXT:    s_mov_b32 s32, 0
 ; GFX11-NEXT:    s_getpc_b64 s[2:3]
-; GFX11-NEXT:    s_add_u32 s2, s2, external_void_func_v3f32@rel32@lo+4
-; GFX11-NEXT:    s_addc_u32 s3, s3, external_void_func_v3f32@rel32@hi+12
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_add_u32 s2, s2, external_void_func_v3f32@rel32@lo+8
+; GFX11-NEXT:    s_addc_u32 s3, s3, external_void_func_v3f32@rel32@hi+16
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_swappc_b64 s[30:31], s[2:3]
 ; GFX11-NEXT:    s_endpgm
@@ -2058,8 +2077,9 @@ define amdgpu_kernel void @test_call_external_void_func_v5f32_imm() #0 {
 ; GFX11-NEXT:    s_mov_b64 s[6:7], s[0:1]
 ; GFX11-NEXT:    s_mov_b32 s32, 0
 ; GFX11-NEXT:    s_getpc_b64 s[2:3]
-; GFX11-NEXT:    s_add_u32 s2, s2, external_void_func_v5f32@rel32@lo+4
-; GFX11-NEXT:    s_addc_u32 s3, s3, external_void_func_v5f32@rel32@hi+12
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_add_u32 s2, s2, external_void_func_v5f32@rel32@lo+8
+; GFX11-NEXT:    s_addc_u32 s3, s3, external_void_func_v5f32@rel32@hi+16
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_swappc_b64 s[30:31], s[2:3]
 ; GFX11-NEXT:    s_endpgm
@@ -2154,8 +2174,9 @@ define amdgpu_kernel void @test_call_external_void_func_f64_imm() #0 {
 ; GFX11-NEXT:    s_mov_b64 s[6:7], s[0:1]
 ; GFX11-NEXT:    s_mov_b32 s32, 0
 ; GFX11-NEXT:    s_getpc_b64 s[2:3]
-; GFX11-NEXT:    s_add_u32 s2, s2, external_void_func_f64@rel32@lo+4
-; GFX11-NEXT:    s_addc_u32 s3, s3, external_void_func_f64@rel32@hi+12
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_add_u32 s2, s2, external_void_func_f64@rel32@lo+8
+; GFX11-NEXT:    s_addc_u32 s3, s3, external_void_func_f64@rel32@hi+16
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_swappc_b64 s[30:31], s[2:3]
 ; GFX11-NEXT:    s_endpgm
@@ -2254,8 +2275,9 @@ define amdgpu_kernel void @test_call_external_void_func_v2f64_imm() #0 {
 ; GFX11-NEXT:    s_mov_b64 s[6:7], s[0:1]
 ; GFX11-NEXT:    s_mov_b32 s32, 0
 ; GFX11-NEXT:    s_getpc_b64 s[2:3]
-; GFX11-NEXT:    s_add_u32 s2, s2, external_void_func_v2f64@rel32@lo+4
-; GFX11-NEXT:    s_addc_u32 s3, s3, external_void_func_v2f64@rel32@hi+12
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_add_u32 s2, s2, external_void_func_v2f64@rel32@lo+8
+; GFX11-NEXT:    s_addc_u32 s3, s3, external_void_func_v2f64@rel32@hi+16
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_swappc_b64 s[30:31], s[2:3]
 ; GFX11-NEXT:    s_endpgm
@@ -2363,8 +2385,9 @@ define amdgpu_kernel void @test_call_external_void_func_v3f64_imm() #0 {
 ; GFX11-NEXT:    s_mov_b64 s[6:7], s[0:1]
 ; GFX11-NEXT:    s_mov_b32 s32, 0
 ; GFX11-NEXT:    s_getpc_b64 s[2:3]
-; GFX11-NEXT:    s_add_u32 s2, s2, external_void_func_v3f64@rel32@lo+4
-; GFX11-NEXT:    s_addc_u32 s3, s3, external_void_func_v3f64@rel32@hi+12
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_add_u32 s2, s2, external_void_func_v3f64@rel32@lo+8
+; GFX11-NEXT:    s_addc_u32 s3, s3, external_void_func_v3f64@rel32@hi+16
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_swappc_b64 s[30:31], s[2:3]
 ; GFX11-NEXT:    s_endpgm
@@ -2467,8 +2490,9 @@ define amdgpu_kernel void @test_call_external_void_func_v2i16() #0 {
 ; GFX11-NEXT:    buffer_load_b32 v0, off, s[0:3], 0
 ; GFX11-NEXT:    s_mov_b32 s32, 0
 ; GFX11-NEXT:    s_getpc_b64 s[2:3]
-; GFX11-NEXT:    s_add_u32 s2, s2, external_void_func_v2i16@rel32@lo+4
-; GFX11-NEXT:    s_addc_u32 s3, s3, external_void_func_v2i16@rel32@hi+12
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_add_u32 s2, s2, external_void_func_v2i16@rel32@lo+8
+; GFX11-NEXT:    s_addc_u32 s3, s3, external_void_func_v2i16@rel32@hi+16
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_swappc_b64 s[30:31], s[2:3]
 ; GFX11-NEXT:    s_endpgm
@@ -2571,8 +2595,9 @@ define amdgpu_kernel void @test_call_external_void_func_v3i16() #0 {
 ; GFX11-NEXT:    buffer_load_b64 v[0:1], off, s[0:3], 0
 ; GFX11-NEXT:    s_mov_b32 s32, 0
 ; GFX11-NEXT:    s_getpc_b64 s[2:3]
-; GFX11-NEXT:    s_add_u32 s2, s2, external_void_func_v3i16@rel32@lo+4
-; GFX11-NEXT:    s_addc_u32 s3, s3, external_void_func_v3i16@rel32@hi+12
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_add_u32 s2, s2, external_void_func_v3i16@rel32@lo+8
+; GFX11-NEXT:    s_addc_u32 s3, s3, external_void_func_v3i16@rel32@hi+16
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_swappc_b64 s[30:31], s[2:3]
 ; GFX11-NEXT:    s_endpgm
@@ -2676,8 +2701,9 @@ define amdgpu_kernel void @test_call_external_void_func_v3f16() #0 {
 ; GFX11-NEXT:    buffer_load_b64 v[0:1], off, s[0:3], 0
 ; GFX11-NEXT:    s_mov_b32 s32, 0
 ; GFX11-NEXT:    s_getpc_b64 s[2:3]
-; GFX11-NEXT:    s_add_u32 s2, s2, external_void_func_v3f16@rel32@lo+4
-; GFX11-NEXT:    s_addc_u32 s3, s3, external_void_func_v3f16@rel32@hi+12
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_add_u32 s2, s2, external_void_func_v3f16@rel32@lo+8
+; GFX11-NEXT:    s_addc_u32 s3, s3, external_void_func_v3f16@rel32@hi+16
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_swappc_b64 s[30:31], s[2:3]
 ; GFX11-NEXT:    s_endpgm
@@ -2772,8 +2798,9 @@ define amdgpu_kernel void @test_call_external_void_func_v3i16_imm() #0 {
 ; GFX11-NEXT:    s_mov_b64 s[6:7], s[0:1]
 ; GFX11-NEXT:    s_mov_b32 s32, 0
 ; GFX11-NEXT:    s_getpc_b64 s[2:3]
-; GFX11-NEXT:    s_add_u32 s2, s2, external_void_func_v3i16@rel32@lo+4
-; GFX11-NEXT:    s_addc_u32 s3, s3, external_void_func_v3i16@rel32@hi+12
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_add_u32 s2, s2, external_void_func_v3i16@rel32@lo+8
+; GFX11-NEXT:    s_addc_u32 s3, s3, external_void_func_v3i16@rel32@hi+16
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_swappc_b64 s[30:31], s[2:3]
 ; GFX11-NEXT:    s_endpgm
@@ -2867,8 +2894,9 @@ define amdgpu_kernel void @test_call_external_void_func_v3f16_imm() #0 {
 ; GFX11-NEXT:    s_mov_b64 s[6:7], s[0:1]
 ; GFX11-NEXT:    s_mov_b32 s32, 0
 ; GFX11-NEXT:    s_getpc_b64 s[2:3]
-; GFX11-NEXT:    s_add_u32 s2, s2, external_void_func_v3f16@rel32@lo+4
-; GFX11-NEXT:    s_addc_u32 s3, s3, external_void_func_v3f16@rel32@hi+12
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_add_u32 s2, s2, external_void_func_v3f16@rel32@lo+8
+; GFX11-NEXT:    s_addc_u32 s3, s3, external_void_func_v3f16@rel32@hi+16
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_swappc_b64 s[30:31], s[2:3]
 ; GFX11-NEXT:    s_endpgm
@@ -2970,8 +2998,9 @@ define amdgpu_kernel void @test_call_external_void_func_v4i16() #0 {
 ; GFX11-NEXT:    buffer_load_b64 v[0:1], off, s[0:3], 0
 ; GFX11-NEXT:    s_mov_b32 s32, 0
 ; GFX11-NEXT:    s_getpc_b64 s[2:3]
-; GFX11-NEXT:    s_add_u32 s2, s2, external_void_func_v4i16@rel32@lo+4
-; GFX11-NEXT:    s_addc_u32 s3, s3, external_void_func_v4i16@rel32@hi+12
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_add_u32 s2, s2, external_void_func_v4i16@rel32@lo+8
+; GFX11-NEXT:    s_addc_u32 s3, s3, external_void_func_v4i16@rel32@hi+16
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_swappc_b64 s[30:31], s[2:3]
 ; GFX11-NEXT:    s_endpgm
@@ -3068,8 +3097,9 @@ define amdgpu_kernel void @test_call_external_void_func_v4i16_imm() #0 {
 ; GFX11-NEXT:    s_mov_b64 s[6:7], s[0:1]
 ; GFX11-NEXT:    s_mov_b32 s32, 0
 ; GFX11-NEXT:    s_getpc_b64 s[2:3]
-; GFX11-NEXT:    s_add_u32 s2, s2, external_void_func_v4i16@rel32@lo+4
-; GFX11-NEXT:    s_addc_u32 s3, s3, external_void_func_v4i16@rel32@hi+12
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_add_u32 s2, s2, external_void_func_v4i16@rel32@lo+8
+; GFX11-NEXT:    s_addc_u32 s3, s3, external_void_func_v4i16@rel32@hi+16
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_swappc_b64 s[30:31], s[2:3]
 ; GFX11-NEXT:    s_endpgm
@@ -3170,8 +3200,9 @@ define amdgpu_kernel void @test_call_external_void_func_v2f16() #0 {
 ; GFX11-NEXT:    buffer_load_b32 v0, off, s[0:3], 0
 ; GFX11-NEXT:    s_mov_b32 s32, 0
 ; GFX11-NEXT:    s_getpc_b64 s[2:3]
-; GFX11-NEXT:    s_add_u32 s2, s2, external_void_func_v2f16@rel32@lo+4
-; GFX11-NEXT:    s_addc_u32 s3, s3, external_void_func_v2f16@rel32@hi+12
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_add_u32 s2, s2, external_void_func_v2f16@rel32@lo+8
+; GFX11-NEXT:    s_addc_u32 s3, s3, external_void_func_v2f16@rel32@hi+16
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_swappc_b64 s[30:31], s[2:3]
 ; GFX11-NEXT:    s_endpgm
@@ -3270,8 +3301,9 @@ define amdgpu_kernel void @test_call_external_void_func_v2i32() #0 {
 ; GFX11-NEXT:    buffer_load_b64 v[0:1], off, s[0:3], 0
 ; GFX11-NEXT:    s_mov_b32 s32, 0
 ; GFX11-NEXT:    s_getpc_b64 s[2:3]
-; GFX11-NEXT:    s_add_u32 s2, s2, external_void_func_v2i32@rel32@lo+4
-; GFX11-NEXT:    s_addc_u32 s3, s3, external_void_func_v2i32@rel32@hi+12
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_add_u32 s2, s2, external_void_func_v2i32@rel32@lo+8
+; GFX11-NEXT:    s_addc_u32 s3, s3, external_void_func_v2i32@rel32@hi+16
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_swappc_b64 s[30:31], s[2:3]
 ; GFX11-NEXT:    s_endpgm
@@ -3365,8 +3397,9 @@ define amdgpu_kernel void @test_call_external_void_func_v2i32_imm() #0 {
 ; GFX11-NEXT:    s_mov_b64 s[6:7], s[0:1]
 ; GFX11-NEXT:    s_mov_b32 s32, 0
 ; GFX11-NEXT:    s_getpc_b64 s[2:3]
-; GFX11-NEXT:    s_add_u32 s2, s2, external_void_func_v2i32@rel32@lo+4
-; GFX11-NEXT:    s_addc_u32 s3, s3, external_void_func_v2i32@rel32@hi+12
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_add_u32 s2, s2, external_void_func_v2i32@rel32@lo+8
+; GFX11-NEXT:    s_addc_u32 s3, s3, external_void_func_v2i32@rel32@hi+16
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_swappc_b64 s[30:31], s[2:3]
 ; GFX11-NEXT:    s_endpgm
@@ -3462,8 +3495,9 @@ define amdgpu_kernel void @test_call_external_void_func_v3i32_imm(i32) #0 {
 ; GFX11-NEXT:    s_mov_b64 s[6:7], s[0:1]
 ; GFX11-NEXT:    s_mov_b32 s32, 0
 ; GFX11-NEXT:    s_getpc_b64 s[2:3]
-; GFX11-NEXT:    s_add_u32 s2, s2, external_void_func_v3i32@rel32@lo+4
-; GFX11-NEXT:    s_addc_u32 s3, s3, external_void_func_v3i32@rel32@hi+12
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_add_u32 s2, s2, external_void_func_v3i32@rel32@lo+8
+; GFX11-NEXT:    s_addc_u32 s3, s3, external_void_func_v3i32@rel32@hi+16
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_swappc_b64 s[30:31], s[2:3]
 ; GFX11-NEXT:    s_endpgm
@@ -3563,8 +3597,9 @@ define amdgpu_kernel void @test_call_external_void_func_v3i32_i32(i32) #0 {
 ; GFX11-NEXT:    s_mov_b64 s[6:7], s[0:1]
 ; GFX11-NEXT:    s_mov_b32 s32, 0
 ; GFX11-NEXT:    s_getpc_b64 s[2:3]
-; GFX11-NEXT:    s_add_u32 s2, s2, external_void_func_v3i32_i32@rel32@lo+4
-; GFX11-NEXT:    s_addc_u32 s3, s3, external_void_func_v3i32_i32@rel32@hi+12
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_add_u32 s2, s2, external_void_func_v3i32_i32@rel32@lo+8
+; GFX11-NEXT:    s_addc_u32 s3, s3, external_void_func_v3i32_i32@rel32@hi+16
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_swappc_b64 s[30:31], s[2:3]
 ; GFX11-NEXT:    s_endpgm
@@ -3663,8 +3698,9 @@ define amdgpu_kernel void @test_call_external_void_func_v4i32() #0 {
 ; GFX11-NEXT:    buffer_load_b128 v[0:3], off, s[0:3], 0
 ; GFX11-NEXT:    s_mov_b32 s32, 0
 ; GFX11-NEXT:    s_getpc_b64 s[2:3]
-; GFX11-NEXT:    s_add_u32 s2, s2, external_void_func_v4i32@rel32@lo+4
-; GFX11-NEXT:    s_addc_u32 s3, s3, external_void_func_v4i32@rel32@hi+12
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_add_u32 s2, s2, external_void_func_v4i32@rel32@lo+8
+; GFX11-NEXT:    s_addc_u32 s3, s3, external_void_func_v4i32@rel32@hi+16
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_swappc_b64 s[30:31], s[2:3]
 ; GFX11-NEXT:    s_endpgm
@@ -3765,8 +3801,9 @@ define amdgpu_kernel void @test_call_external_void_func_v4i32_imm() #0 {
 ; GFX11-NEXT:    s_mov_b64 s[6:7], s[0:1]
 ; GFX11-NEXT:    s_mov_b32 s32, 0
 ; GFX11-NEXT:    s_getpc_b64 s[2:3]
-; GFX11-NEXT:    s_add_u32 s2, s2, external_void_func_v4i32@rel32@lo+4
-; GFX11-NEXT:    s_addc_u32 s3, s3, external_void_func_v4i32@rel32@hi+12
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_add_u32 s2, s2, external_void_func_v4i32@rel32@lo+8
+; GFX11-NEXT:    s_addc_u32 s3, s3, external_void_func_v4i32@rel32@hi+16
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_swappc_b64 s[30:31], s[2:3]
 ; GFX11-NEXT:    s_endpgm
@@ -3871,8 +3908,9 @@ define amdgpu_kernel void @test_call_external_void_func_v5i32_imm() #0 {
 ; GFX11-NEXT:    s_mov_b64 s[6:7], s[0:1]
 ; GFX11-NEXT:    s_mov_b32 s32, 0
 ; GFX11-NEXT:    s_getpc_b64 s[2:3]
-; GFX11-NEXT:    s_add_u32 s2, s2, external_void_func_v5i32@rel32@lo+4
-; GFX11-NEXT:    s_addc_u32 s3, s3, external_void_func_v5i32@rel32@hi+12
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_add_u32 s2, s2, external_void_func_v5i32@rel32@lo+8
+; GFX11-NEXT:    s_addc_u32 s3, s3, external_void_func_v5i32@rel32@hi+16
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_swappc_b64 s[30:31], s[2:3]
 ; GFX11-NEXT:    s_endpgm
@@ -3980,8 +4018,9 @@ define amdgpu_kernel void @test_call_external_void_func_v8i32() #0 {
 ; GFX11-NEXT:    s_mov_b32 s6, -1
 ; GFX11-NEXT:    s_mov_b32 s32, 0
 ; GFX11-NEXT:    s_getpc_b64 s[2:3]
-; GFX11-NEXT:    s_add_u32 s2, s2, external_void_func_v8i32@rel32@lo+4
-; GFX11-NEXT:    s_addc_u32 s3, s3, external_void_func_v8i32@rel32@hi+12
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_add_u32 s2, s2, external_void_func_v8i32@rel32@lo+8
+; GFX11-NEXT:    s_addc_u32 s3, s3, external_void_func_v8i32@rel32@hi+16
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_clause 0x1
 ; GFX11-NEXT:    buffer_load_b128 v[0:3], off, s[4:7], 0
@@ -4104,8 +4143,9 @@ define amdgpu_kernel void @test_call_external_void_func_v8i32_imm() #0 {
 ; GFX11-NEXT:    s_mov_b64 s[6:7], s[0:1]
 ; GFX11-NEXT:    s_mov_b32 s32, 0
 ; GFX11-NEXT:    s_getpc_b64 s[2:3]
-; GFX11-NEXT:    s_add_u32 s2, s2, external_void_func_v8i32@rel32@lo+4
-; GFX11-NEXT:    s_addc_u32 s3, s3, external_void_func_v8i32@rel32@hi+12
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_add_u32 s2, s2, external_void_func_v8i32@rel32@lo+8
+; GFX11-NEXT:    s_addc_u32 s3, s3, external_void_func_v8i32@rel32@hi+16
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_swappc_b64 s[30:31], s[2:3]
 ; GFX11-NEXT:    s_endpgm
@@ -4222,8 +4262,9 @@ define amdgpu_kernel void @test_call_external_void_func_v16i32() #0 {
 ; GFX11-NEXT:    s_mov_b32 s6, -1
 ; GFX11-NEXT:    s_mov_b32 s32, 0
 ; GFX11-NEXT:    s_getpc_b64 s[2:3]
-; GFX11-NEXT:    s_add_u32 s2, s2, external_void_func_v16i32@rel32@lo+4
-; GFX11-NEXT:    s_addc_u32 s3, s3, external_void_func_v16i32@rel32@hi+12
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_add_u32 s2, s2, external_void_func_v16i32@rel32@lo+8
+; GFX11-NEXT:    s_addc_u32 s3, s3, external_void_func_v16i32@rel32@hi+16
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_clause 0x3
 ; GFX11-NEXT:    buffer_load_b128 v[0:3], off, s[4:7], 0
@@ -4366,8 +4407,9 @@ define amdgpu_kernel void @test_call_external_void_func_v32i32() #0 {
 ; GFX11-NEXT:    s_mov_b32 s6, -1
 ; GFX11-NEXT:    s_mov_b32 s32, 0
 ; GFX11-NEXT:    s_getpc_b64 s[2:3]
-; GFX11-NEXT:    s_add_u32 s2, s2, external_void_func_v32i32@rel32@lo+4
-; GFX11-NEXT:    s_addc_u32 s3, s3, external_void_func_v32i32@rel32@hi+12
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_add_u32 s2, s2, external_void_func_v32i32@rel32@lo+8
+; GFX11-NEXT:    s_addc_u32 s3, s3, external_void_func_v32i32@rel32@hi+16
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_clause 0x7
 ; GFX11-NEXT:    buffer_load_b128 v[28:31], off, s[4:7], 0 offset:112
@@ -4531,8 +4573,9 @@ define amdgpu_kernel void @test_call_external_void_func_v32i32_i32(i32) #0 {
 ; GFX11-NEXT:    s_mov_b32 s6, -1
 ; GFX11-NEXT:    s_mov_b32 s32, 0
 ; GFX11-NEXT:    s_getpc_b64 s[2:3]
-; GFX11-NEXT:    s_add_u32 s2, s2, external_void_func_v32i32_i32@rel32@lo+4
-; GFX11-NEXT:    s_addc_u32 s3, s3, external_void_func_v32i32_i32@rel32@hi+12
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_add_u32 s2, s2, external_void_func_v32i32_i32@rel32@lo+8
+; GFX11-NEXT:    s_addc_u32 s3, s3, external_void_func_v32i32_i32@rel32@hi+16
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_clause 0x8
 ; GFX11-NEXT:    buffer_load_b128 v[28:31], off, s[4:7], 0 offset:112
@@ -4673,8 +4716,9 @@ define amdgpu_kernel void @test_call_external_i32_func_i32_imm(ptr addrspace(1) 
 ; GFX11-NEXT:    s_mov_b32 s39, 0x31016000
 ; GFX11-NEXT:    s_mov_b32 s38, -1
 ; GFX11-NEXT:    s_getpc_b64 s[2:3]
-; GFX11-NEXT:    s_add_u32 s2, s2, external_i32_func_i32@rel32@lo+4
-; GFX11-NEXT:    s_addc_u32 s3, s3, external_i32_func_i32@rel32@hi+12
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_add_u32 s2, s2, external_i32_func_i32@rel32@lo+8
+; GFX11-NEXT:    s_addc_u32 s3, s3, external_i32_func_i32@rel32@hi+16
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_swappc_b64 s[30:31], s[2:3]
 ; GFX11-NEXT:    buffer_store_b32 v0, off, s[36:39], 0 dlc
@@ -4788,8 +4832,9 @@ define amdgpu_kernel void @test_call_external_void_func_struct_i8_i32() #0 {
 ; GFX11-NEXT:    s_mov_b32 s6, -1
 ; GFX11-NEXT:    s_mov_b32 s32, 0
 ; GFX11-NEXT:    s_getpc_b64 s[2:3]
-; GFX11-NEXT:    s_add_u32 s2, s2, external_void_func_struct_i8_i32@rel32@lo+4
-; GFX11-NEXT:    s_addc_u32 s3, s3, external_void_func_struct_i8_i32@rel32@hi+12
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_add_u32 s2, s2, external_void_func_struct_i8_i32@rel32@lo+8
+; GFX11-NEXT:    s_addc_u32 s3, s3, external_void_func_struct_i8_i32@rel32@hi+16
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_clause 0x1
 ; GFX11-NEXT:    buffer_load_u8 v0, off, s[4:7], 0
@@ -4916,8 +4961,9 @@ define amdgpu_kernel void @test_call_external_void_func_byval_struct_i8_i32() #0
 ; GFX11-NEXT:    s_mov_b32 s32, 16
 ; GFX11-NEXT:    s_mov_b64 s[6:7], s[0:1]
 ; GFX11-NEXT:    s_getpc_b64 s[2:3]
-; GFX11-NEXT:    s_add_u32 s2, s2, external_void_func_byval_struct_i8_i32@rel32@lo+4
-; GFX11-NEXT:    s_addc_u32 s3, s3, external_void_func_byval_struct_i8_i32@rel32@hi+12
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_add_u32 s2, s2, external_void_func_byval_struct_i8_i32@rel32@lo+8
+; GFX11-NEXT:    s_addc_u32 s3, s3, external_void_func_byval_struct_i8_i32@rel32@hi+16
 ; GFX11-NEXT:    s_clause 0x1
 ; GFX11-NEXT:    scratch_store_b8 off, v0, off offset:8
 ; GFX11-NEXT:    scratch_store_b32 off, v1, off offset:12
@@ -5082,8 +5128,9 @@ define amdgpu_kernel void @test_call_external_void_func_sret_struct_i8_i32_byval
 ; GFX11-NEXT:    s_mov_b32 s32, 32
 ; GFX11-NEXT:    s_mov_b64 s[6:7], s[0:1]
 ; GFX11-NEXT:    s_getpc_b64 s[2:3]
-; GFX11-NEXT:    s_add_u32 s2, s2, external_void_func_sret_struct_i8_i32_byval_struct_i8_i32@rel32@lo+4
-; GFX11-NEXT:    s_addc_u32 s3, s3, external_void_func_sret_struct_i8_i32_byval_struct_i8_i32@rel32@hi+12
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_add_u32 s2, s2, external_void_func_sret_struct_i8_i32_byval_struct_i8_i32@rel32@lo+8
+; GFX11-NEXT:    s_addc_u32 s3, s3, external_void_func_sret_struct_i8_i32_byval_struct_i8_i32@rel32@hi+16
 ; GFX11-NEXT:    s_clause 0x1
 ; GFX11-NEXT:    scratch_store_b8 off, v0, off offset:8
 ; GFX11-NEXT:    scratch_store_b32 off, v1, off offset:12
@@ -5292,8 +5339,9 @@ define amdgpu_kernel void @test_call_external_void_func_v16i8() #0 {
 ; GFX11-NEXT:    s_mov_b32 s6, -1
 ; GFX11-NEXT:    s_mov_b32 s32, 0
 ; GFX11-NEXT:    s_getpc_b64 s[2:3]
-; GFX11-NEXT:    s_add_u32 s2, s2, external_void_func_v16i8@rel32@lo+4
-; GFX11-NEXT:    s_addc_u32 s3, s3, external_void_func_v16i8@rel32@hi+12
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_add_u32 s2, s2, external_void_func_v16i8@rel32@lo+8
+; GFX11-NEXT:    s_addc_u32 s3, s3, external_void_func_v16i8@rel32@hi+16
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    buffer_load_b128 v[0:3], off, s[4:7], 0
 ; GFX11-NEXT:    s_mov_b64 s[6:7], s[0:1]
@@ -5573,8 +5621,9 @@ define amdgpu_kernel void @stack_passed_arg_alignment_v32i32_f64(<32 x i32> %val
 ; GFX11-NEXT:    v_mov_b32_e32 v30, s18
 ; GFX11-NEXT:    s_mov_b64 s[6:7], s[0:1]
 ; GFX11-NEXT:    s_getpc_b64 s[2:3]
-; GFX11-NEXT:    s_add_u32 s2, s2, stack_passed_f64_arg@rel32@lo+4
-; GFX11-NEXT:    s_addc_u32 s3, s3, stack_passed_f64_arg@rel32@hi+12
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_add_u32 s2, s2, stack_passed_f64_arg@rel32@lo+8
+; GFX11-NEXT:    s_addc_u32 s3, s3, stack_passed_f64_arg@rel32@hi+16
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_swappc_b64 s[30:31], s[2:3]
 ; GFX11-NEXT:    s_endpgm
@@ -5696,8 +5745,9 @@ define void @tail_call_byval_align16(<32 x i32> %val, double %tmp) #0 {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    scratch_load_b32 v31, off, s32
 ; GFX11-NEXT:    s_getpc_b64 s[0:1]
-; GFX11-NEXT:    s_add_u32 s0, s0, byval_align16_f64_arg@rel32@lo+4
-; GFX11-NEXT:    s_addc_u32 s1, s1, byval_align16_f64_arg@rel32@hi+12
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_add_u32 s0, s0, byval_align16_f64_arg@rel32@lo+8
+; GFX11-NEXT:    s_addc_u32 s1, s1, byval_align16_f64_arg@rel32@hi+16
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    scratch_store_b32 off, v31, s32
 ; GFX11-NEXT:    scratch_load_b64 v[31:32], off, s32 offset:24
@@ -5786,8 +5836,9 @@ define void @tail_call_stack_passed_arg_alignment_v32i32_f64(<32 x i32> %val, do
 ; GFX11-NEXT:    scratch_load_b32 v33, off, s32
 ; GFX11-NEXT:    scratch_load_b64 v[31:32], off, s32 offset:4
 ; GFX11-NEXT:    s_getpc_b64 s[0:1]
-; GFX11-NEXT:    s_add_u32 s0, s0, stack_passed_f64_arg@rel32@lo+4
-; GFX11-NEXT:    s_addc_u32 s1, s1, stack_passed_f64_arg@rel32@hi+12
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_add_u32 s0, s0, stack_passed_f64_arg@rel32@lo+8
+; GFX11-NEXT:    s_addc_u32 s1, s1, stack_passed_f64_arg@rel32@hi+16
 ; GFX11-NEXT:    s_waitcnt vmcnt(1)
 ; GFX11-NEXT:    scratch_store_b32 off, v33, s32
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
@@ -6055,8 +6106,9 @@ define void @stack_12xv3i32() #0 {
 ; GFX11-NEXT:    v_mov_b32_e32 v30, 10
 ; GFX11-NEXT:    v_writelane_b32 v40, s31, 1
 ; GFX11-NEXT:    s_getpc_b64 s[0:1]
-; GFX11-NEXT:    s_add_u32 s0, s0, external_void_func_12xv3i32@rel32@lo+4
-; GFX11-NEXT:    s_addc_u32 s1, s1, external_void_func_12xv3i32@rel32@hi+12
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_add_u32 s0, s0, external_void_func_12xv3i32@rel32@lo+8
+; GFX11-NEXT:    s_addc_u32 s1, s1, external_void_func_12xv3i32@rel32@hi+16
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_swappc_b64 s[30:31], s[0:1]
 ; GFX11-NEXT:    v_readlane_b32 s31, v40, 1
@@ -6398,8 +6450,9 @@ define void @stack_12xv3f32() #0 {
 ; GFX11-NEXT:    v_mov_b32_e32 v30, 0x41200000
 ; GFX11-NEXT:    v_writelane_b32 v40, s31, 1
 ; GFX11-NEXT:    s_getpc_b64 s[0:1]
-; GFX11-NEXT:    s_add_u32 s0, s0, external_void_func_12xv3f32@rel32@lo+4
-; GFX11-NEXT:    s_addc_u32 s1, s1, external_void_func_12xv3f32@rel32@hi+12
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_add_u32 s0, s0, external_void_func_12xv3f32@rel32@lo+8
+; GFX11-NEXT:    s_addc_u32 s1, s1, external_void_func_12xv3f32@rel32@hi+16
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_swappc_b64 s[30:31], s[0:1]
 ; GFX11-NEXT:    v_readlane_b32 s31, v40, 1
@@ -6766,8 +6819,9 @@ define void @stack_8xv5i32() #0 {
 ; GFX11-NEXT:    v_mov_b32_e32 v30, 6
 ; GFX11-NEXT:    v_writelane_b32 v40, s31, 1
 ; GFX11-NEXT:    s_getpc_b64 s[0:1]
-; GFX11-NEXT:    s_add_u32 s0, s0, external_void_func_8xv5i32@rel32@lo+4
-; GFX11-NEXT:    s_addc_u32 s1, s1, external_void_func_8xv5i32@rel32@hi+12
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_add_u32 s0, s0, external_void_func_8xv5i32@rel32@lo+8
+; GFX11-NEXT:    s_addc_u32 s1, s1, external_void_func_8xv5i32@rel32@hi+16
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_swappc_b64 s[30:31], s[0:1]
 ; GFX11-NEXT:    v_readlane_b32 s31, v40, 1
@@ -7141,8 +7195,9 @@ define void @stack_8xv5f32() #0 {
 ; GFX11-NEXT:    v_mov_b32_e32 v30, 0x40c00000
 ; GFX11-NEXT:    v_writelane_b32 v40, s31, 1
 ; GFX11-NEXT:    s_getpc_b64 s[0:1]
-; GFX11-NEXT:    s_add_u32 s0, s0, external_void_func_8xv5f32@rel32@lo+4
-; GFX11-NEXT:    s_addc_u32 s1, s1, external_void_func_8xv5f32@rel32@hi+12
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_add_u32 s0, s0, external_void_func_8xv5f32@rel32@lo+8
+; GFX11-NEXT:    s_addc_u32 s1, s1, external_void_func_8xv5f32@rel32@hi+16
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_swappc_b64 s[30:31], s[0:1]
 ; GFX11-NEXT:    v_readlane_b32 s31, v40, 1

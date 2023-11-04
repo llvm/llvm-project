@@ -292,6 +292,8 @@ static cl::opt<bool>
                          cl::desc("Enable s_delay_alu insertion"),
                          cl::init(true), cl::Hidden);
 
+bool llvm::ShouldInsertDelayAlu() { return EnableInsertDelayAlu; }
+
 // Enable GFX11+ VOPD
 static cl::opt<bool>
     EnableVOPD("amdgpu-enable-vopd",
