@@ -817,6 +817,13 @@ def : PatGprGpr<int_riscv_xperm8, XPERM8>;
 // Experimental RV64 i32 legalization patterns.
 //===----------------------------------------------------------------------===//
 
+def BCLRMaski32 : ImmLeaf<i32, [{
+  return !isInt<12>(Imm) && isPowerOf2_32(~Imm);
+}]>;
+def SingleBitSetMaski32 : ImmLeaf<i32, [{
+  return !isInt<12>(Imm) && isPowerOf2_32(Imm);
+}]>;
+
 let Predicates = [HasStdExtZbb, IsRV64] in {
 def : PatGpr<ctlz, CLZW, i32>;
 def : PatGpr<cttz, CTZW, i32>;
@@ -842,3 +849,12 @@ def : Pat<(i32 (rotl GPR:$rs1, uimm5:$rs2)),
 let Predicates = [HasStdExtZba, IsRV64] in {
 def : Pat<(zext GPR:$src), (ADD_UW GPR:$src, (XLenVT X0))>;
 }
+
+let Predicates = [HasStdExtZbs, IsRV64] in {
+def : Pat<(i32 (and GPR:$rs1, BCLRMaski32:$mask)),
+          (BCLRI GPR:$rs1, (i64 (BCLRXForm $mask)))>;
+def : Pat<(i32 (or GPR:$rs1, SingleBitSetMaski32:$mask)),
+          (BSETI GPR:$rs1, (i64 (SingleBitSetMaskToIndex $mask)))>;
+def : Pat<(i32 (xor GPR:$rs1, SingleBitSetMaski32:$mask)),
+          (BINVI GPR:$rs1, (i64 (SingleBitSetMaskToIndex $mask)))>;
+} // Predicates = [HasStdExtZbs, IsRV64]
