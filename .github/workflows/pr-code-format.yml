@@ -7,15 +7,9 @@ jobs:
   code_formatter:
     runs-on: ubuntu-latest
     steps:
-      # Get changed files before checking out the repository to force the action
-      # to analyze the diff from the Github API rather than looking at the
-      # shallow clone and erroring out, which is significantly more prone to
-      # failure.
-      - name: Get changed files
-        id: changed-files
-        uses: tj-actions/changed-files@v39
-        with:
-          separator: ","
+      - name: Check if PR is mergeable
+        run: |
+          gh api https://api.github.com/repos/${{ github.event.repository }}/pulls/${{ github.event.number }} | jq -e 'if (.mergeable == true) then true else false end'
 
       - name: Fetch PR sources
         uses: actions/checkout@v4
@@ -23,6 +17,14 @@ jobs:
           ref: "refs/pull/${{ github.event.number }}/merge"
           fetch-depth: 2
           path: pr-sources
+
+      - name: Get changed files
+        id: changed-files
+        uses: tj-actions/changed-files@v39
+        with:
+          separator: ","
+          base_sha: HEAD^
+          sha: HEAD
 
       # We need to make sure that we aren't executing/using any code from the
       # PR for security reasons as we're using pull_request_target. Checkout
