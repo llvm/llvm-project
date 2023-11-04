@@ -357,6 +357,42 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
     MI.eraseFromParent();
     return true;
   }
+  case TargetOpcode::G_FCONSTANT: {
+    // TODO: Use constant pool for complext constants.
+    // TODO: Optimize +0.0 to use fcvt.d.w for s64 on rv32.
+    Register DstReg = MI.getOperand(0).getReg();
+    const APFloat &FPimm = MI.getOperand(1).getFPImm()->getValueAPF();
+    APInt Imm = FPimm.bitcastToAPInt();
+    unsigned Size = MRI.getType(DstReg).getSizeInBits();
+    if (Size == 32 || (Size == 64 && Subtarget->is64Bit())) {
+      Register GPRReg = MRI.createVirtualRegister(&RISCV::GPRRegClass);
+      if (!materializeImm(GPRReg, Imm.getSExtValue(), MIB))
+        return false;
+
+      unsigned Opcode = Size == 64 ? RISCV::FMV_D_X : RISCV::FMV_W_X;
+      auto FMV = MIB.buildInstr(Opcode, {DstReg}, {GPRReg});
+      if (!FMV.constrainAllUses(TII, TRI, RBI))
+        return false;
+    } else {
+      assert(Size == 64 && !Subtarget->is64Bit() &&
+             "Unexpected size or subtarget");
+      // Split into two pieces and build through the stack.
+      Register GPRRegHigh = MRI.createVirtualRegister(&RISCV::GPRRegClass);
+      Register GPRRegLow = MRI.createVirtualRegister(&RISCV::GPRRegClass);
+      if (!materializeImm(GPRRegHigh, Imm.extractBits(32, 32).getSExtValue(),
+                          MIB))
+        return false;
+      if (!materializeImm(GPRRegLow, Imm.trunc(32).getSExtValue(), MIB))
+        return false;
+      MachineInstrBuilder PairF64 = MIB.buildInstr(
+          RISCV::BuildPairF64Pseudo, {DstReg}, {GPRRegLow, GPRRegHigh});
+      if (!PairF64.constrainAllUses(TII, TRI, RBI))
+        return false;
+    }
+
+    MI.eraseFromParent();
+    return true;
+  }
   case TargetOpcode::G_GLOBAL_VALUE:
     return selectGlobalValue(MI, MIB, MRI);
   case TargetOpcode::G_BRCOND: {
