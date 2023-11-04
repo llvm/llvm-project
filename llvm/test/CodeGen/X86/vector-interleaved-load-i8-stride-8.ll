@@ -11289,7 +11289,6 @@ define void @load_i8_stride8_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX512F-SLOW-NEXT:    vmovdqa64 %xmm30, %xmm10
 ; AVX512F-SLOW-NEXT:    vpshufb %xmm3, %xmm10, %xmm9
 ; AVX512F-SLOW-NEXT:    vpshufb %xmm3, %xmm12, %xmm15
-; AVX512F-SLOW-NEXT:    vmovdqa64 %xmm12, %xmm31
 ; AVX512F-SLOW-NEXT:    vpunpcklwd {{.*#+}} xmm9 = xmm15[0],xmm9[0],xmm15[1],xmm9[1],xmm15[2],xmm9[2],xmm15[3],xmm9[3]
 ; AVX512F-SLOW-NEXT:    vinserti128 $1, %xmm8, %ymm0, %ymm8
 ; AVX512F-SLOW-NEXT:    vinserti128 $1, %xmm9, %ymm0, %ymm9

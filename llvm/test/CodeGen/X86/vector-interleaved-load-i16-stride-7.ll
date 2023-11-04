@@ -14979,7 +14979,7 @@ define void @load_i16_stride7_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, pt
 ; AVX512DQ-SLOW-NEXT:    vpblendw {{.*#+}} xmm0 = xmm13[0],xmm0[1],xmm13[2,3,4,5],xmm0[6],xmm13[7]
 ; AVX512DQ-SLOW-NEXT:    vmovdqa %ymm12, %ymm7
 ; AVX512DQ-SLOW-NEXT:    vpblendd {{.*#+}} ymm13 = ymm12[0,1],ymm8[2,3],ymm12[4,5],ymm8[6,7]
-; AVX512DQ-SLOW-NEXT:    vmovdqu %ymm8, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX512DQ-SLOW-NEXT:    vmovdqu64 %ymm16, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; AVX512DQ-SLOW-NEXT:    vpermq {{.*#+}} ymm14 = ymm12[0,1,0,1]
 ; AVX512DQ-SLOW-NEXT:    vmovdqu %ymm12, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
 ; AVX512DQ-SLOW-NEXT:    vpblendw {{.*#+}} ymm13 = ymm13[0,1,2],ymm14[3],ymm13[4,5,6,7,8,9,10],ymm14[11],ymm13[12,13,14,15]

@@ -347,7 +347,6 @@ define void @test_lshr_v2i128(<2 x i128> %x, <2 x i128> %a, ptr nocapture %r) no
 ; i686-NEXT:    movl %edx, %ecx
 ; i686-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
 ; i686-NEXT:    shrdl %cl, %eax, (%esp) # 4-byte Folded Spill
-; i686-NEXT:    movl %edx, %ecx
 ; i686-NEXT:    shrl %cl, %esi
 ; i686-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; i686-NEXT:    movl %esi, 28(%ecx)

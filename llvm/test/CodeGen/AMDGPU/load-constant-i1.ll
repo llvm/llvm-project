@@ -6329,7 +6329,6 @@ define amdgpu_kernel void @constant_zextload_v64i1_to_v64i64(ptr addrspace(1) %o
 ; GFX8-NEXT:    v_mov_b32_e32 v2, s42
 ; GFX8-NEXT:    v_and_b32_e32 v24, 1, v20
 ; GFX8-NEXT:    v_lshrrev_b16_e64 v26, 7, s24
-; GFX8-NEXT:    v_mov_b32_e32 v25, v1
 ; GFX8-NEXT:    v_mov_b32_e32 v3, s43
 ; GFX8-NEXT:    s_add_u32 s42, s0, 0x60
 ; GFX8-NEXT:    flat_store_dwordx4 v[2:3], v[24:27]
@@ -6395,7 +6394,6 @@ define amdgpu_kernel void @constant_zextload_v64i1_to_v64i64(ptr addrspace(1) %o
 ; GFX8-NEXT:    v_mov_b32_e32 v6, s42
 ; GFX8-NEXT:    v_and_b32_e32 v10, 1, v23
 ; GFX8-NEXT:    v_mov_b32_e32 v13, 0
-; GFX8-NEXT:    v_mov_b32_e32 v11, v1
 ; GFX8-NEXT:    v_mov_b32_e32 v7, s43
 ; GFX8-NEXT:    flat_store_dwordx4 v[6:7], v[10:13]
 ; GFX8-NEXT:    v_lshrrev_b16_e64 v6, 5, s24

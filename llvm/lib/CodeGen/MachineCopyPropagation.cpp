@@ -185,9 +185,9 @@ public:
   }
 
   /// Clobber \p Reg first, and then remove the corresponding COPY
-  /// record pair from the tracker. We need to locate and remove
+  /// record pair from the tracker's copy maps. We need to locate and remove
   /// the COPY instruction that defines \p Reg, as well as the
-  /// record in the tracker that make src defines \p Reg.
+  /// record that make src defines \p Reg.
   void eraseRegMIPair(MCRegister Reg, const TargetRegisterInfo &TRI,
                       const TargetInstrInfo &TII, bool UseCopyInstr) {
     for (MCRegUnit Unit : TRI.regunits(Reg)) {
@@ -208,27 +208,29 @@ public:
 
           markRegsUnavailable(Def, TRI);
 
+          // At this point, we need to locate the record in copy maps that use
+          // Src to define Def, and remove them from Tracker.
           for (MCRegUnit SrcUnit : TRI.regunits(Src)) {
             auto SrcCopy = Copies.find(SrcUnit);
             if (SrcCopy != Copies.end() && SrcCopy->second.LastSeenUseInCopy) {
-              // Src only defined Reg, erase SrcCopy directly.
-              if (SrcCopy->second.DefRegs.size() == 1) {
-                Copies.erase(SrcCopy);
-              } else {
-                // If Src define multiple value, we only need
-                // to erase the Unit in DefRegs.
-                for (auto itr = SrcCopy->second.DefRegs.begin();
-                     itr != SrcCopy->second.DefRegs.end(); itr++) {
-                  if (*itr == Unit) {
-                    SrcCopy->second.DefRegs.erase(itr);
-                    break;
+              // If Src define multiple values, we only need
+              // to erase the such record in DefRegs.
+              for (auto itr = SrcCopy->second.DefRegs.begin();
+                   itr != SrcCopy->second.DefRegs.end(); itr++) {
+                if (*itr == Def) {
+                  SrcCopy->second.DefRegs.erase(itr);
+                  // If DefReg becomes empty after removal, we can directly
+                  // remove SrcCopy from the tracker's copy maps.
+                  if (!SrcCopy->second.DefRegs.size()) {
+                    Copies.erase(SrcCopy);
                   }
+                  break;
                 }
               }
             }
           }
         }
-        // Now we can erase the copy.
+        // Now we can erase the copy that define Reg.
         Copies.erase(I);
       }
     }
