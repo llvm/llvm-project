@@ -1672,7 +1672,7 @@ protected:
 
     /// Storage class qualifiers from declarations like
     /// 'int X[static restrict 4]'. For function parameters only.
-    /// Actually an ArraySizeModifier.
+    LLVM_PREFERRED_TYPE(ArraySizeModifier)
     unsigned SizeModifier : 3;
   };
   enum { NumArrayTypeBits = NumTypeBits + 6 };
@@ -6663,6 +6663,7 @@ public:
 /// A fixed int type of a specified bitwidth.
 class BitIntType final : public Type, public llvm::FoldingSetNode {
   friend class ASTContext;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsUnsigned : 1;
   unsigned NumBits : 24;
 
