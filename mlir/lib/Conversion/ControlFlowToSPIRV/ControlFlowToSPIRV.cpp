@@ -18,26 +18,48 @@
 #include "mlir/Dialect/SPIRV/Transforms/SPIRVConversion.h"
 #include "mlir/Dialect/SPIRV/Utils/LayoutUtils.h"
 #include "mlir/IR/AffineMap.h"
+#include "mlir/IR/PatternMatch.h"
 #include "mlir/Support/LogicalResult.h"
+#include "mlir/Transforms/DialectConversion.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/FormatVariadic.h"
 
 #define DEBUG_TYPE "cf-to-spirv-pattern"
 
 using namespace mlir;
+
+/// Checks that the target block arguments are legal.
+static LogicalResult checkBlockArguments(Block &block, Operation *op,
+                                         PatternRewriter &rewriter,
+                                         const TypeConverter &converter) {
+  for (BlockArgument arg : block.getArguments()) {
+    if (!converter.isLegal(arg.getType())) {
+      return rewriter.notifyMatchFailure(
+          op,
+          llvm::formatv(
+              "failed to match, destination argument not legalized (found {0})",
+              arg));
+    }
+  }
+  return success();
+}
 
 //===----------------------------------------------------------------------===//
 // Operation conversion
 //===----------------------------------------------------------------------===//
 
 namespace {
-
 /// Converts cf.br to spirv.Branch.
-struct BranchOpPattern final : public OpConversionPattern<cf::BranchOp> {
-  using OpConversionPattern<cf::BranchOp>::OpConversionPattern;
+struct BranchOpPattern final : OpConversionPattern<cf::BranchOp> {
+  using OpConversionPattern::OpConversionPattern;
 
   LogicalResult
   matchAndRewrite(cf::BranchOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
+    if (failed(checkBlockArguments(*op.getDest(), op, rewriter,
+                                   *getTypeConverter())))
+      return failure();
+
     rewriter.replaceOpWithNewOp<spirv::BranchOp>(op, op.getDest(),
                                                  adaptor.getDestOperands());
     return success();
@@ -45,16 +67,24 @@ struct BranchOpPattern final : public OpConversionPattern<cf::BranchOp> {
 };
 
 /// Converts cf.cond_br to spirv.BranchConditional.
-struct CondBranchOpPattern final
-    : public OpConversionPattern<cf::CondBranchOp> {
-  using OpConversionPattern<cf::CondBranchOp>::OpConversionPattern;
+struct CondBranchOpPattern final : OpConversionPattern<cf::CondBranchOp> {
+  using OpConversionPattern::OpConversionPattern;
 
   LogicalResult
   matchAndRewrite(cf::CondBranchOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
+    if (failed(checkBlockArguments(*op.getTrueDest(), op, rewriter,
+                                   *getTypeConverter())))
+      return failure();
+
+    if (failed(checkBlockArguments(*op.getFalseDest(), op, rewriter,
+                                   *getTypeConverter())))
+      return failure();
+
     rewriter.replaceOpWithNewOp<spirv::BranchConditionalOp>(
-        op, op.getCondition(), op.getTrueDest(), adaptor.getTrueDestOperands(),
-        op.getFalseDest(), adaptor.getFalseDestOperands());
+        op, adaptor.getCondition(), op.getTrueDest(),
+        adaptor.getTrueDestOperands(), op.getFalseDest(),
+        adaptor.getFalseDestOperands());
     return success();
   }
 };

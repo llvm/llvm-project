@@ -5727,10 +5727,11 @@ TEST_F(OpenMPIRBuilderTest, TargetRegionDevice) {
   EXPECT_NE(F, OutlinedFn);
 
   EXPECT_TRUE(OutlinedFn->hasWeakODRLinkage());
-  EXPECT_EQ(OutlinedFn->arg_size(), 2U);
+  // Account for the "implicit" first argument.
   EXPECT_EQ(OutlinedFn->getName(), "__omp_offloading_1_2_parent_l3");
-  EXPECT_TRUE(OutlinedFn->getArg(0)->getType()->isPointerTy());
+  EXPECT_EQ(OutlinedFn->arg_size(), 3U);
   EXPECT_TRUE(OutlinedFn->getArg(1)->getType()->isPointerTy());
+  EXPECT_TRUE(OutlinedFn->getArg(2)->getType()->isPointerTy());
 
   // Check entry block
   auto &EntryBlock = OutlinedFn->getEntryBlock();
@@ -5748,7 +5749,7 @@ TEST_F(OpenMPIRBuilderTest, TargetRegionDevice) {
   auto *InitCall = dyn_cast<CallInst>(Store2->getNextNode());
   EXPECT_NE(InitCall, nullptr);
   EXPECT_EQ(InitCall->getCalledFunction()->getName(), "__kmpc_target_init");
-  EXPECT_EQ(InitCall->arg_size(), 1U);
+  EXPECT_EQ(InitCall->arg_size(), 2U);
   EXPECT_TRUE(isa<GlobalVariable>(InitCall->getArgOperand(0)));
   auto *KernelEnvGV = cast<GlobalVariable>(InitCall->getArgOperand(0));
   EXPECT_TRUE(isa<ConstantStruct>(KernelEnvGV->getInitializer()));

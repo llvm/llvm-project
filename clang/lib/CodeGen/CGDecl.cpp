@@ -386,9 +386,7 @@ CodeGenFunction::AddInitializerToStaticVarDecl(const VarDecl &D,
     GV->takeName(OldGV);
 
     // Replace all uses of the old global with the new global
-    llvm::Constant *NewPtrForOldDecl =
-    llvm::ConstantExpr::getBitCast(GV, OldGV->getType());
-    OldGV->replaceAllUsesWith(NewPtrForOldDecl);
+    OldGV->replaceAllUsesWith(GV);
 
     // Erase the old global, since it is no longer used.
     OldGV->eraseFromParent();

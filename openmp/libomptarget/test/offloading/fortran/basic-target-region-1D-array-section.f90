@@ -14,10 +14,11 @@ program main
     integer :: write_arr(10) =  (/0,0,0,0,0,0,0,0,0,0/)
     integer :: read_arr(10) = (/1,2,3,4,5,6,7,8,9,10/)
     integer :: i = 2
-
-    !$omp target map(to:read_arr(2:5)) map(from:write_arr(2:5)) map(tofrom:i)
-        do i = 2, 5
+    integer :: j = 5
+    !$omp target map(to:read_arr(2:5)) map(from:write_arr(2:5)) map(to:i,j)
+        do while (i <= j)
             write_arr(i) = read_arr(i)
+            i = i + 1
         end do
     !$omp end target
     

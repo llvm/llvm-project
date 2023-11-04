@@ -248,9 +248,8 @@ hsa_status_t launch_kernel(hsa_agent_t dev_agent, hsa_executable_t executable,
       (HSA_PACKET_TYPE_KERNEL_DISPATCH << HSA_PACKET_HEADER_TYPE) |
       (HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_SCACQUIRE_FENCE_SCOPE) |
       (HSA_FENCE_SCOPE_SYSTEM << HSA_PACKET_HEADER_SCRELEASE_FENCE_SCOPE);
-  uint32_t header_word =
-      header | (setup << 16u) __atomic_store_n((uint32_t *)&packet->header,
-                                               header_word, __ATOMIC_RELEASE);
+  uint32_t header_word = header | (setup << 16u);
+  __atomic_store_n((uint32_t *)&packet->header, header_word, __ATOMIC_RELEASE);
   hsa_signal_store_relaxed(queue->doorbell_signal, packet_id);
 
   // Wait until the kernel has completed execution on the device. Periodically
@@ -488,21 +487,22 @@ int load(int argc, char **argv, char **envp, void *image, size_t size,
       handle_error(err);
     hsa_amd_agents_allow_access(1, &dev_agent, nullptr, host_clock_freq);
 
-    if (hsa_status_t err =
-            hsa_agent_get_info(dev_agent,
-                               static_cast<hsa_agent_info_t>(
-                                   HSA_AMD_AGENT_INFO_TIMESTAMP_FREQUENCY),
-                               host_clock_freq))
-      handle_error(err);
+    if (HSA_STATUS_SUCCESS ==
+        hsa_agent_get_info(dev_agent,
+                           static_cast<hsa_agent_info_t>(
+                               HSA_AMD_AGENT_INFO_TIMESTAMP_FREQUENCY),
+                           host_clock_freq)) {
 
-    void *freq_addr;
-    if (hsa_status_t err = hsa_executable_symbol_get_info(
-            freq_sym, HSA_EXECUTABLE_SYMBOL_INFO_VARIABLE_ADDRESS, &freq_addr))
-      handle_error(err);
+      void *freq_addr;
+      if (hsa_status_t err = hsa_executable_symbol_get_info(
+              freq_sym, HSA_EXECUTABLE_SYMBOL_INFO_VARIABLE_ADDRESS,
+              &freq_addr))
+        handle_error(err);
 
-    if (hsa_status_t err = hsa_memcpy(freq_addr, dev_agent, host_clock_freq,
-                                      host_agent, sizeof(uint64_t)))
-      handle_error(err);
+      if (hsa_status_t err = hsa_memcpy(freq_addr, dev_agent, host_clock_freq,
+                                        host_agent, sizeof(uint64_t)))
+        handle_error(err);
+    }
   }
 
   // Obtain a queue with the minimum (power of two) size, used to send commands

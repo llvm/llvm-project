@@ -14,6 +14,8 @@
 #ifndef _OMPTARGET_H_
 #define _OMPTARGET_H_
 
+#include "Environment.h"
+
 #include <cstdint>
 #include <deque>
 #include <functional>
@@ -192,6 +194,15 @@ struct __tgt_async_info {
   // We assume to use this structure to do synchronization. In CUDA backend, it
   // is CUstream.
   void *Queue = nullptr;
+
+  /// A collection of allocations that are associated with this stream and that
+  /// should be freed after finalization.
+  llvm::SmallVector<void *, 2> AssociatedAllocations;
+
+  /// The kernel launch environment used to issue a kernel. Stored here to
+  /// ensure it is a valid location while the transfer to the device is
+  /// happening.
+  KernelLaunchEnvironmentTy KernelLaunchEnvironment;
 };
 
 struct DeviceTy;

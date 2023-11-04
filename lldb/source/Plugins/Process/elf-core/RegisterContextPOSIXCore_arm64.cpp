@@ -54,6 +54,13 @@ RegisterContextCorePOSIX_arm64::Create(Thread &thread, const ArchSpec &arch,
   if (mte_data.GetByteSize() >= sizeof(uint64_t))
     opt_regsets.Set(RegisterInfoPOSIX_arm64::eRegsetMaskMTE);
 
+  DataExtractor zt_data = getRegset(notes, arch.GetTriple(), AARCH64_ZT_Desc);
+  // Although ZT0 can be in a disabled state like ZA can, the kernel reports
+  // its content as 0s in that state. Therefore even a disabled ZT0 will have
+  // a note containing those 0s. ZT0 is a 512 bit / 64 byte register.
+  if (zt_data.GetByteSize() >= 64)
+    opt_regsets.Set(RegisterInfoPOSIX_arm64::eRegsetMaskZT);
+
   auto register_info_up =
       std::make_unique<RegisterInfoPOSIX_arm64>(arch, opt_regsets);
   return std::unique_ptr<RegisterContextCorePOSIX_arm64>(
@@ -97,6 +104,9 @@ RegisterContextCorePOSIX_arm64::RegisterContextCorePOSIX_arm64(
 
   if (m_register_info_up->IsMTEPresent())
     m_mte_data = getRegset(notes, target_triple, AARCH64_MTE_Desc);
+
+  if (m_register_info_up->IsZTPresent())
+    m_zt_data = getRegset(notes, target_triple, AARCH64_ZT_Desc);
 
   ConfigureRegisterContext();
 }
@@ -298,19 +308,7 @@ bool RegisterContextCorePOSIX_arm64::ReadRegister(const RegisterInfo *reg_info,
     if (m_za_data.GetByteSize() < sizeof(sve::user_za_header))
       return false;
 
-    if (!IsSMEZA(reg)) {
-      offset = reg_info->byte_offset - m_register_info_up->GetSMEOffset();
-      assert(offset < sizeof(m_sme_pseudo_regs));
-      // Host endian since these values are derived instead of being read from a
-      // core file note.
-      value.SetFromMemoryData(
-          *reg_info, reinterpret_cast<uint8_t *>(&m_sme_pseudo_regs) + offset,
-          reg_info->byte_size, lldb_private::endian::InlHostByteOrder(), error);
-    } else {
-      // If the process did not have the SME extension.
-      if (m_za_data.GetByteSize() < sizeof(sve::user_za_header))
-        return false;
-
+    if (m_register_info_up->IsSMERegZA(reg)) {
       // Don't use the size of the note to tell whether ZA is enabled. There may
       // be non-register padding data after the header. Use the embedded
       // header's size field instead.
@@ -339,6 +337,18 @@ bool RegisterContextCorePOSIX_arm64::ReadRegister(const RegisterInfo *reg_info,
       value.SetFromMemoryData(*reg_info, src + sizeof(sve::user_za_header),
                               reg_info->byte_size, lldb::eByteOrderLittle,
                               error);
+    } else if (m_register_info_up->IsSMERegZT(reg)) {
+      value.SetFromMemoryData(*reg_info, m_zt_data.GetDataStart(),
+                              reg_info->byte_size, lldb::eByteOrderLittle,
+                              error);
+    } else {
+      offset = reg_info->byte_offset - m_register_info_up->GetSMEOffset();
+      assert(offset < sizeof(m_sme_pseudo_regs));
+      // Host endian since these values are derived instead of being read from a
+      // core file note.
+      value.SetFromMemoryData(
+          *reg_info, reinterpret_cast<uint8_t *>(&m_sme_pseudo_regs) + offset,
+          reg_info->byte_size, lldb_private::endian::InlHostByteOrder(), error);
     }
   } else
     return false;

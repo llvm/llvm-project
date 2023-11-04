@@ -581,3 +581,98 @@ entry:
   %res = call i64 @normal_callee_call_sme_state()
   ret i64 %res
 }
+
+
+
+declare void @streaming_body() "aarch64_pstate_sm_enabled"
+
+define void @streaming_caller_single_streaming_callee() "aarch64_pstate_sm_enabled" {
+; CHECK-LABEL: define void @streaming_caller_single_streaming_callee
+; CHECK-SAME: () #[[ATTR2]] {
+; CHECK-NEXT:    call void @streaming_body()
+; CHECK-NEXT:    ret void
+;
+  call void @streaming_body()
+  ret void
+}
+
+define void @streaming_caller_multiple_streaming_callees() "aarch64_pstate_sm_enabled" {
+; CHECK-LABEL: define void @streaming_caller_multiple_streaming_callees
+; CHECK-SAME: () #[[ATTR2]] {
+; CHECK-NEXT:    call void @streaming_body()
+; CHECK-NEXT:    call void @streaming_body()
+; CHECK-NEXT:    ret void
+;
+  call void @streaming_body()
+  call void @streaming_body()
+  ret void
+}
+
+; Allow inlining, as inline it would not increase the number of streaming-mode changes.
+define void @streaming_caller_single_streaming_callee_inline() {
+; CHECK-LABEL: define void @streaming_caller_single_streaming_callee_inline
+; CHECK-SAME: () #[[ATTR1]] {
+; CHECK-NEXT:    call void @streaming_body()
+; CHECK-NEXT:    ret void
+;
+  call void @streaming_caller_single_streaming_callee()
+  ret void
+}
+
+; Prevent inlining, as inline it would lead to multiple streaming-mode changes.
+define void @streaming_caller_multiple_streaming_callees_dont_inline() {
+; CHECK-LABEL: define void @streaming_caller_multiple_streaming_callees_dont_inline
+; CHECK-SAME: () #[[ATTR1]] {
+; CHECK-NEXT:    call void @streaming_caller_multiple_streaming_callees()
+; CHECK-NEXT:    ret void
+;
+  call void @streaming_caller_multiple_streaming_callees()
+  ret void
+}
+
+declare void @streaming_compatible_body() "aarch64_pstate_sm_compatible"
+
+define void @streaming_caller_single_streaming_compatible_callee() "aarch64_pstate_sm_enabled" {
+; CHECK-LABEL: define void @streaming_caller_single_streaming_compatible_callee
+; CHECK-SAME: () #[[ATTR2]] {
+; CHECK-NEXT:    call void @streaming_compatible_body()
+; CHECK-NEXT:    ret void
+;
+  call void @streaming_compatible_body()
+  ret void
+}
+
+define void @streaming_caller_multiple_streaming_compatible_callees() "aarch64_pstate_sm_enabled" {
+; CHECK-LABEL: define void @streaming_caller_multiple_streaming_compatible_callees
+; CHECK-SAME: () #[[ATTR2]] {
+; CHECK-NEXT:    call void @streaming_compatible_body()
+; CHECK-NEXT:    call void @streaming_compatible_body()
+; CHECK-NEXT:    ret void
+;
+  call void @streaming_compatible_body()
+  call void @streaming_compatible_body()
+  ret void
+}
+
+; Allow inlining, as inline would remove a streaming-mode change.
+define void @streaming_caller_single_streaming_compatible_callee_inline() {
+; CHECK-LABEL: define void @streaming_caller_single_streaming_compatible_callee_inline
+; CHECK-SAME: () #[[ATTR1]] {
+; CHECK-NEXT:    call void @streaming_compatible_body()
+; CHECK-NEXT:    ret void
+;
+  call void @streaming_caller_single_streaming_compatible_callee()
+  ret void
+}
+
+; Allow inlining, as inline would remove several stremaing-mode changes.
+define void @streaming_caller_multiple_streaming_compatible_callees_inline() {
+; CHECK-LABEL: define void @streaming_caller_multiple_streaming_compatible_callees_inline
+; CHECK-SAME: () #[[ATTR1]] {
+; CHECK-NEXT:    call void @streaming_compatible_body()
+; CHECK-NEXT:    call void @streaming_compatible_body()
+; CHECK-NEXT:    ret void
+;
+  call void @streaming_caller_multiple_streaming_compatible_callees()
+  ret void
+}

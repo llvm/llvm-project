@@ -23,7 +23,7 @@ add_mlir_dialect_library(MLIRBufferizationDialect
   MLIRFunctionInterfaces
   MLIRIR
   MLIRSparseTensorDialect
-  MLIRSubsetInsertionOpInterface
+  MLIRSubsetOpInterface
   MLIRTensorDialect
   MLIRMemRefDialect
   )

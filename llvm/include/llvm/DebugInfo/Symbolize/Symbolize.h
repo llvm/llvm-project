@@ -104,6 +104,14 @@ public:
   Expected<std::vector<DILocal>>
   symbolizeFrame(ArrayRef<uint8_t> BuildID,
                  object::SectionedAddress ModuleOffset);
+
+  Expected<std::vector<DILineInfo>> findSymbol(const ObjectFile &Obj,
+                                               StringRef Symbol);
+  Expected<std::vector<DILineInfo>> findSymbol(StringRef ModuleName,
+                                               StringRef Symbol);
+  Expected<std::vector<DILineInfo>> findSymbol(ArrayRef<uint8_t> BuildID,
+                                               StringRef Symbol);
+
   void flush();
 
   // Evict entries from the binary cache until it is under the maximum size
@@ -146,6 +154,9 @@ private:
   Expected<std::vector<DILocal>>
   symbolizeFrameCommon(const T &ModuleSpecifier,
                        object::SectionedAddress ModuleOffset);
+  template <typename T>
+  Expected<std::vector<DILineInfo>> findSymbolCommon(const T &ModuleSpecifier,
+                                                     StringRef Symbol);
 
   Expected<SymbolizableModule *> getOrCreateModuleInfo(const ObjectFile &Obj);
 

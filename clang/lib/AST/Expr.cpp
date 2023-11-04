@@ -281,85 +281,86 @@ SourceLocation Expr::getExprLoc() const {
 // Primary Expressions.
 //===----------------------------------------------------------------------===//
 
-static void AssertResultStorageKind(ConstantExpr::ResultStorageKind Kind) {
-  assert((Kind == ConstantExpr::RSK_APValue ||
-          Kind == ConstantExpr::RSK_Int64 || Kind == ConstantExpr::RSK_None) &&
+static void AssertResultStorageKind(ConstantResultStorageKind Kind) {
+  assert((Kind == ConstantResultStorageKind::APValue ||
+          Kind == ConstantResultStorageKind::Int64 ||
+          Kind == ConstantResultStorageKind::None) &&
          "Invalid StorageKind Value");
   (void)Kind;
 }
 
-ConstantExpr::ResultStorageKind
-ConstantExpr::getStorageKind(const APValue &Value) {
+ConstantResultStorageKind ConstantExpr::getStorageKind(const APValue &Value) {
   switch (Value.getKind()) {
   case APValue::None:
   case APValue::Indeterminate:
-    return ConstantExpr::RSK_None;
+    return ConstantResultStorageKind::None;
   case APValue::Int:
     if (!Value.getInt().needsCleanup())
-      return ConstantExpr::RSK_Int64;
+      return ConstantResultStorageKind::Int64;
     [[fallthrough]];
   default:
-    return ConstantExpr::RSK_APValue;
+    return ConstantResultStorageKind::APValue;
   }
 }
 
-ConstantExpr::ResultStorageKind
+ConstantResultStorageKind
 ConstantExpr::getStorageKind(const Type *T, const ASTContext &Context) {
   if (T->isIntegralOrEnumerationType() && Context.getTypeInfo(T).Width <= 64)
-    return ConstantExpr::RSK_Int64;
-  return ConstantExpr::RSK_APValue;
+    return ConstantResultStorageKind::Int64;
+  return ConstantResultStorageKind::APValue;
 }
 
-ConstantExpr::ConstantExpr(Expr *SubExpr, ResultStorageKind StorageKind,
+ConstantExpr::ConstantExpr(Expr *SubExpr, ConstantResultStorageKind StorageKind,
                            bool IsImmediateInvocation)
     : FullExpr(ConstantExprClass, SubExpr) {
-  ConstantExprBits.ResultKind = StorageKind;
+  ConstantExprBits.ResultKind = llvm::to_underlying(StorageKind);
   ConstantExprBits.APValueKind = APValue::None;
   ConstantExprBits.IsUnsigned = false;
   ConstantExprBits.BitWidth = 0;
   ConstantExprBits.HasCleanup = false;
   ConstantExprBits.IsImmediateInvocation = IsImmediateInvocation;
 
-  if (StorageKind == ConstantExpr::RSK_APValue)
+  if (StorageKind == ConstantResultStorageKind::APValue)
     ::new (getTrailingObjects<APValue>()) APValue();
 }
 
 ConstantExpr *ConstantExpr::Create(const ASTContext &Context, Expr *E,
-                                   ResultStorageKind StorageKind,
+                                   ConstantResultStorageKind StorageKind,
                                    bool IsImmediateInvocation) {
   assert(!isa<ConstantExpr>(E));
   AssertResultStorageKind(StorageKind);
 
   unsigned Size = totalSizeToAlloc<APValue, uint64_t>(
-      StorageKind == ConstantExpr::RSK_APValue,
-      StorageKind == ConstantExpr::RSK_Int64);
+      StorageKind == ConstantResultStorageKind::APValue,
+      StorageKind == ConstantResultStorageKind::Int64);
   void *Mem = Context.Allocate(Size, alignof(ConstantExpr));
   return new (Mem) ConstantExpr(E, StorageKind, IsImmediateInvocation);
 }
 
 ConstantExpr *ConstantExpr::Create(const ASTContext &Context, Expr *E,
                                    const APValue &Result) {
-  ResultStorageKind StorageKind = getStorageKind(Result);
+  ConstantResultStorageKind StorageKind = getStorageKind(Result);
   ConstantExpr *Self = Create(Context, E, StorageKind);
   Self->SetResult(Result, Context);
   return Self;
 }
 
-ConstantExpr::ConstantExpr(EmptyShell Empty, ResultStorageKind StorageKind)
+ConstantExpr::ConstantExpr(EmptyShell Empty,
+                           ConstantResultStorageKind StorageKind)
     : FullExpr(ConstantExprClass, Empty) {
-  ConstantExprBits.ResultKind = StorageKind;
+  ConstantExprBits.ResultKind = llvm::to_underlying(StorageKind);
 
-  if (StorageKind == ConstantExpr::RSK_APValue)
+  if (StorageKind == ConstantResultStorageKind::APValue)
     ::new (getTrailingObjects<APValue>()) APValue();
 }
 
 ConstantExpr *ConstantExpr::CreateEmpty(const ASTContext &Context,
-                                        ResultStorageKind StorageKind) {
+                                        ConstantResultStorageKind StorageKind) {
   AssertResultStorageKind(StorageKind);
 
   unsigned Size = totalSizeToAlloc<APValue, uint64_t>(
-      StorageKind == ConstantExpr::RSK_APValue,
-      StorageKind == ConstantExpr::RSK_Int64);
+      StorageKind == ConstantResultStorageKind::APValue,
+      StorageKind == ConstantResultStorageKind::Int64);
   void *Mem = Context.Allocate(Size, alignof(ConstantExpr));
   return new (Mem) ConstantExpr(EmptyShell(), StorageKind);
 }
@@ -368,15 +369,15 @@ void ConstantExpr::MoveIntoResult(APValue &Value, const ASTContext &Context) {
   assert((unsigned)getStorageKind(Value) <= ConstantExprBits.ResultKind &&
          "Invalid storage for this value kind");
   ConstantExprBits.APValueKind = Value.getKind();
-  switch (ConstantExprBits.ResultKind) {
-  case RSK_None:
+  switch (getResultStorageKind()) {
+  case ConstantResultStorageKind::None:
     return;
-  case RSK_Int64:
+  case ConstantResultStorageKind::Int64:
     Int64Result() = *Value.getInt().getRawData();
     ConstantExprBits.BitWidth = Value.getInt().getBitWidth();
     ConstantExprBits.IsUnsigned = Value.getInt().isUnsigned();
     return;
-  case RSK_APValue:
+  case ConstantResultStorageKind::APValue:
     if (!ConstantExprBits.HasCleanup && Value.needsCleanup()) {
       ConstantExprBits.HasCleanup = true;
       Context.addDestruction(&APValueResult());
@@ -388,10 +389,10 @@ void ConstantExpr::MoveIntoResult(APValue &Value, const ASTContext &Context) {
 }
 
 llvm::APSInt ConstantExpr::getResultAsAPSInt() const {
-  switch (ConstantExprBits.ResultKind) {
-  case ConstantExpr::RSK_APValue:
+  switch (getResultStorageKind()) {
+  case ConstantResultStorageKind::APValue:
     return APValueResult().getInt();
-  case ConstantExpr::RSK_Int64:
+  case ConstantResultStorageKind::Int64:
     return llvm::APSInt(llvm::APInt(ConstantExprBits.BitWidth, Int64Result()),
                         ConstantExprBits.IsUnsigned);
   default:
@@ -401,14 +402,14 @@ llvm::APSInt ConstantExpr::getResultAsAPSInt() const {
 
 APValue ConstantExpr::getAPValueResult() const {
 
-  switch (ConstantExprBits.ResultKind) {
-  case ConstantExpr::RSK_APValue:
+  switch (getResultStorageKind()) {
+  case ConstantResultStorageKind::APValue:
     return APValueResult();
-  case ConstantExpr::RSK_Int64:
+  case ConstantResultStorageKind::Int64:
     return APValue(
         llvm::APSInt(llvm::APInt(ConstantExprBits.BitWidth, Int64Result()),
                      ConstantExprBits.IsUnsigned));
-  case ConstantExpr::RSK_None:
+  case ConstantResultStorageKind::None:
     if (ConstantExprBits.APValueKind == APValue::Indeterminate)
       return APValue::IndeterminateValue();
     return APValue();
@@ -2196,31 +2197,31 @@ bool BinaryOperator::isNullPointerArithmeticExtension(ASTContext &Ctx,
   return true;
 }
 
-SourceLocExpr::SourceLocExpr(const ASTContext &Ctx, IdentKind Kind,
+SourceLocExpr::SourceLocExpr(const ASTContext &Ctx, SourceLocIdentKind Kind,
                              QualType ResultTy, SourceLocation BLoc,
                              SourceLocation RParenLoc,
                              DeclContext *ParentContext)
     : Expr(SourceLocExprClass, ResultTy, VK_PRValue, OK_Ordinary),
       BuiltinLoc(BLoc), RParenLoc(RParenLoc), ParentContext(ParentContext) {
-  SourceLocExprBits.Kind = Kind;
+  SourceLocExprBits.Kind = llvm::to_underlying(Kind);
   setDependence(ExprDependence::None);
 }
 
 StringRef SourceLocExpr::getBuiltinStr() const {
   switch (getIdentKind()) {
-  case File:
+  case SourceLocIdentKind::File:
     return "__builtin_FILE";
-  case FileName:
+  case SourceLocIdentKind::FileName:
     return "__builtin_FILE_NAME";
-  case Function:
+  case SourceLocIdentKind::Function:
     return "__builtin_FUNCTION";
-  case FuncSig:
+  case SourceLocIdentKind::FuncSig:
     return "__builtin_FUNCSIG";
-  case Line:
+  case SourceLocIdentKind::Line:
     return "__builtin_LINE";
-  case Column:
+  case SourceLocIdentKind::Column:
     return "__builtin_COLUMN";
-  case SourceLocStruct:
+  case SourceLocIdentKind::SourceLocStruct:
     return "__builtin_source_location";
   }
   llvm_unreachable("unexpected IdentKind!");
@@ -2255,7 +2256,7 @@ APValue SourceLocExpr::EvaluateInContext(const ASTContext &Ctx,
   };
 
   switch (getIdentKind()) {
-  case SourceLocExpr::FileName: {
+  case SourceLocIdentKind::FileName: {
     // __builtin_FILE_NAME() is a Clang-specific extension that expands to the
     // the last part of __builtin_FILE().
     SmallString<256> FileName;
@@ -2263,26 +2264,26 @@ APValue SourceLocExpr::EvaluateInContext(const ASTContext &Ctx,
         FileName, PLoc, Ctx.getLangOpts(), Ctx.getTargetInfo());
     return MakeStringLiteral(FileName);
   }
-  case SourceLocExpr::File: {
+  case SourceLocIdentKind::File: {
     SmallString<256> Path(PLoc.getFilename());
     clang::Preprocessor::processPathForFileMacro(Path, Ctx.getLangOpts(),
                                                  Ctx.getTargetInfo());
     return MakeStringLiteral(Path);
   }
-  case SourceLocExpr::Function:
-  case SourceLocExpr::FuncSig: {
+  case SourceLocIdentKind::Function:
+  case SourceLocIdentKind::FuncSig: {
     const auto *CurDecl = dyn_cast<Decl>(Context);
-    const auto Kind = getIdentKind() == SourceLocExpr::Function
+    const auto Kind = getIdentKind() == SourceLocIdentKind::Function
                           ? PredefinedExpr::Function
                           : PredefinedExpr::FuncSig;
     return MakeStringLiteral(
         CurDecl ? PredefinedExpr::ComputeName(Kind, CurDecl) : std::string(""));
   }
-  case SourceLocExpr::Line:
+  case SourceLocIdentKind::Line:
     return APValue(Ctx.MakeIntValue(PLoc.getLine(), Ctx.UnsignedIntTy));
-  case SourceLocExpr::Column:
+  case SourceLocIdentKind::Column:
     return APValue(Ctx.MakeIntValue(PLoc.getColumn(), Ctx.UnsignedIntTy));
-  case SourceLocExpr::SourceLocStruct: {
+  case SourceLocIdentKind::SourceLocStruct: {
     // Fill in a std::source_location::__impl structure, by creating an
     // artificial file-scoped CompoundLiteralExpr, and returning a pointer to
     // that.

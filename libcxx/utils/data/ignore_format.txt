@@ -708,7 +708,6 @@ libcxx/test/libcxx/containers/views/views.span/span.elem/assert.op_idx.pass.cpp
 libcxx/test/libcxx/containers/views/views.span/span.sub/assert.first.pass.cpp
 libcxx/test/libcxx/containers/views/views.span/span.sub/assert.last.pass.cpp
 libcxx/test/libcxx/containers/views/views.span/span.sub/assert.subspan.pass.cpp
-libcxx/test/libcxx/debug/containers/associative_containers.pass.cpp
 libcxx/test/libcxx/debug/containers.multithread.pass.cpp
 libcxx/test/libcxx/debug/containers/sequence_container_iterators.pass.cpp
 libcxx/test/libcxx/debug/containers/string.pass.cpp
@@ -827,7 +826,6 @@ libcxx/test/libcxx/iterators/predef.iterators/__unconstrained_reverse_iterator/t
 libcxx/test/libcxx/iterators/stream.iterators/ostreambuf.iterator/ostreambuf.iter.ops/failed.pass.cpp
 libcxx/test/libcxx/iterators/unwrap_iter.pass.cpp
 libcxx/test/libcxx/language.support/cxa_deleted_virtual.pass.cpp
-libcxx/test/libcxx/language.support/support.dynamic/aligned_alloc_availability.verify.cpp
 libcxx/test/libcxx/language.support/support.dynamic/libcpp_deallocate.sh.cpp
 libcxx/test/libcxx/language.support/support.dynamic/new_faligned_allocation.pass.cpp
 libcxx/test/libcxx/language.support/support.rtti/type.info/type_info.comparison.apple.compile.pass.cpp
@@ -6257,7 +6255,6 @@ libcxx/test/std/utilities/expected/expected.expected/observers/deref.pass.cpp
 libcxx/test/std/utilities/expected/expected.expected/observers/error.pass.cpp
 libcxx/test/std/utilities/expected/expected.expected/observers/has_value.pass.cpp
 libcxx/test/std/utilities/expected/expected.expected/observers/value.pass.cpp
-libcxx/test/std/utilities/expected/expected.expected/swap/member.swap.pass.cpp
 libcxx/test/std/utilities/expected/expected.unexpected/ctad.compile.pass.cpp
 libcxx/test/std/utilities/expected/expected.unexpected/ctor/ctor.inplace.pass.cpp
 libcxx/test/std/utilities/expected/expected.unexpected/ctor/ctor.move.pass.cpp
@@ -6277,7 +6274,6 @@ libcxx/test/std/utilities/expected/expected.void/observers/deref.pass.cpp
 libcxx/test/std/utilities/expected/expected.void/observers/error.pass.cpp
 libcxx/test/std/utilities/expected/expected.void/observers/has_value.pass.cpp
 libcxx/test/std/utilities/expected/expected.void/swap/free.swap.pass.cpp
-libcxx/test/std/utilities/expected/expected.void/swap/member.swap.pass.cpp
 libcxx/test/std/utilities/format/format.arguments/format.args/get.pass.cpp
 libcxx/test/std/utilities/format/format.arguments/format.args/types.compile.pass.cpp
 libcxx/test/std/utilities/format/format.arguments/format.arg/visit_format_arg.pass.cpp

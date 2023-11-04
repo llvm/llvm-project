@@ -285,15 +285,15 @@ static ObjCMethodDecl *getNSNumberFactoryMethod(Sema &S, SourceLocation Loc,
   if (!Method && S.getLangOpts().DebuggerObjCLiteral) {
     // create a stub definition this NSNumber factory method.
     TypeSourceInfo *ReturnTInfo = nullptr;
-    Method =
-        ObjCMethodDecl::Create(CX, SourceLocation(), SourceLocation(), Sel,
-                               S.NSNumberPointer, ReturnTInfo, S.NSNumberDecl,
-                               /*isInstance=*/false, /*isVariadic=*/false,
-                               /*isPropertyAccessor=*/false,
-                               /*isSynthesizedAccessorStub=*/false,
-                               /*isImplicitlyDeclared=*/true,
-                               /*isDefined=*/false, ObjCMethodDecl::Required,
-                               /*HasRelatedResultType=*/false);
+    Method = ObjCMethodDecl::Create(
+        CX, SourceLocation(), SourceLocation(), Sel, S.NSNumberPointer,
+        ReturnTInfo, S.NSNumberDecl,
+        /*isInstance=*/false, /*isVariadic=*/false,
+        /*isPropertyAccessor=*/false,
+        /*isSynthesizedAccessorStub=*/false,
+        /*isImplicitlyDeclared=*/true,
+        /*isDefined=*/false, ObjCImplementationControl::Required,
+        /*HasRelatedResultType=*/false);
     ParmVarDecl *value = ParmVarDecl::Create(S.Context, Method,
                                              SourceLocation(), SourceLocation(),
                                              &CX.Idents.get("value"),
@@ -568,7 +568,7 @@ ExprResult Sema::BuildObjCBoxedExpr(SourceRange SR, Expr *ValueExpr) {
               /*isPropertyAccessor=*/false,
               /*isSynthesizedAccessorStub=*/false,
               /*isImplicitlyDeclared=*/true,
-              /*isDefined=*/false, ObjCMethodDecl::Required,
+              /*isDefined=*/false, ObjCImplementationControl::Required,
               /*HasRelatedResultType=*/false);
           QualType ConstCharType = Context.CharTy.withConst();
           ParmVarDecl *value =
@@ -682,7 +682,7 @@ ExprResult Sema::BuildObjCBoxedExpr(SourceRange SR, Expr *ValueExpr) {
             /*isPropertyAccessor=*/false,
             /*isSynthesizedAccessorStub=*/false,
             /*isImplicitlyDeclared=*/true,
-            /*isDefined=*/false, ObjCMethodDecl::Required,
+            /*isDefined=*/false, ObjCImplementationControl::Required,
             /*HasRelatedResultType=*/false);
 
         SmallVector<ParmVarDecl *, 2> Params;
@@ -816,7 +816,7 @@ ExprResult Sema::BuildObjCArrayLiteral(SourceRange SR, MultiExprArg Elements) {
           false /*isVariadic*/,
           /*isPropertyAccessor=*/false, /*isSynthesizedAccessorStub=*/false,
           /*isImplicitlyDeclared=*/true, /*isDefined=*/false,
-          ObjCMethodDecl::Required, false);
+          ObjCImplementationControl::Required, false);
       SmallVector<ParmVarDecl *, 2> Params;
       ParmVarDecl *objects = ParmVarDecl::Create(Context, Method,
                                                  SourceLocation(),
@@ -978,7 +978,7 @@ ExprResult Sema::BuildObjCDictionaryLiteral(SourceRange SR,
           /*isPropertyAccessor=*/false,
           /*isSynthesizedAccessorStub=*/false,
           /*isImplicitlyDeclared=*/true, /*isDefined=*/false,
-          ObjCMethodDecl::Required, false);
+          ObjCImplementationControl::Required, false);
       SmallVector<ParmVarDecl *, 3> Params;
       ParmVarDecl *objects = ParmVarDecl::Create(Context, Method,
                                                  SourceLocation(),
@@ -1347,7 +1347,8 @@ ExprResult Sema::ParseObjCSelectorExpression(Selector Sel,
   }
 
   if (Method &&
-      Method->getImplementationControl() != ObjCMethodDecl::Optional &&
+      Method->getImplementationControl() !=
+          ObjCImplementationControl::Optional &&
       !getSourceManager().isInSystemHeader(Method->getLocation()))
     ReferencedSelectors.insert(std::make_pair(Sel, AtLoc));
 

@@ -1052,7 +1052,10 @@ static bool IsLastNameArray(const parser::Designator &designator) {
   const evaluate::DataRef dataRef{*(name.symbol)};
   return common::visit(
       common::visitors{
-          [](const evaluate::SymbolRef &ref) { return ref->Rank() > 0; },
+          [](const evaluate::SymbolRef &ref) {
+            return ref->Rank() > 0 ||
+                ref->GetType()->category() == DeclTypeSpec::Numeric;
+          },
           [](const evaluate::ArrayRef &aref) {
             return aref.base().IsSymbol() ||
                 aref.base().GetComponent().base().Rank() == 0;
