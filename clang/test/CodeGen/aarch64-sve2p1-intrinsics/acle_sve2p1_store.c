@@ -1723,14 +1723,14 @@ void test_svst4q_vnum_f64(svbool_t pg, const float64_t *base, int64_t vnum, svfl
 // vector base + scalar offset
 // CHECK-LABEL: @test_svst1q_scatter_u64base_offset_u64(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PG:%.*]])
-// CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1q.scatter.scalar.offset.nxv2i64.nxv2i64(<vscale x 2 x i64> [[DATA:%.*]], <vscale x 2 x i1> [[TMP0]], <vscale x 2 x i64> [[BASE:%.*]], i64 [[OFFSET:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 1 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv1i1(<vscale x 16 x i1> [[PG:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1q.scatter.scalar.offset.nxv2i64.nxv2i64(<vscale x 2 x i64> [[DATA:%.*]], <vscale x 1 x i1> [[TMP0]], <vscale x 2 x i64> [[BASE:%.*]], i64 [[OFFSET:%.*]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z38test_svst1q_scatter_u64base_offset_u64u10__SVBool_tu12__SVUint64_tlS0_(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PG:%.*]])
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1q.scatter.scalar.offset.nxv2i64.nxv2i64(<vscale x 2 x i64> [[DATA:%.*]], <vscale x 2 x i1> [[TMP0]], <vscale x 2 x i64> [[BASE:%.*]], i64 [[OFFSET:%.*]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 1 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv1i1(<vscale x 16 x i1> [[PG:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1q.scatter.scalar.offset.nxv2i64.nxv2i64(<vscale x 2 x i64> [[DATA:%.*]], <vscale x 1 x i1> [[TMP0]], <vscale x 2 x i64> [[BASE:%.*]], i64 [[OFFSET:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svst1q_scatter_u64base_offset_u64(svbool_t pg, svuint64_t base, int64_t offset, svuint64_t data)
@@ -1740,14 +1740,14 @@ void test_svst1q_scatter_u64base_offset_u64(svbool_t pg, svuint64_t base, int64_
 
 // CHECK-LABEL: @test_svst1q_scatter_u64base_offset_s64(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PG:%.*]])
-// CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1q.scatter.scalar.offset.nxv2i64.nxv2i64(<vscale x 2 x i64> [[DATA:%.*]], <vscale x 2 x i1> [[TMP0]], <vscale x 2 x i64> [[BASE:%.*]], i64 [[OFFSET:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 1 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv1i1(<vscale x 16 x i1> [[PG:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1q.scatter.scalar.offset.nxv2i64.nxv2i64(<vscale x 2 x i64> [[DATA:%.*]], <vscale x 1 x i1> [[TMP0]], <vscale x 2 x i64> [[BASE:%.*]], i64 [[OFFSET:%.*]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z38test_svst1q_scatter_u64base_offset_s64u10__SVBool_tu12__SVUint64_tlu11__SVInt64_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PG:%.*]])
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1q.scatter.scalar.offset.nxv2i64.nxv2i64(<vscale x 2 x i64> [[DATA:%.*]], <vscale x 2 x i1> [[TMP0]], <vscale x 2 x i64> [[BASE:%.*]], i64 [[OFFSET:%.*]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 1 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv1i1(<vscale x 16 x i1> [[PG:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1q.scatter.scalar.offset.nxv2i64.nxv2i64(<vscale x 2 x i64> [[DATA:%.*]], <vscale x 1 x i1> [[TMP0]], <vscale x 2 x i64> [[BASE:%.*]], i64 [[OFFSET:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svst1q_scatter_u64base_offset_s64(svbool_t pg, svuint64_t base, int64_t offset, svint64_t data)
@@ -1758,14 +1758,14 @@ void test_svst1q_scatter_u64base_offset_s64(svbool_t pg, svuint64_t base, int64_
 
 // CHECK-LABEL: @test_svst1q_scatter_u64base_offset_u32(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PG:%.*]])
-// CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1q.scatter.scalar.offset.nxv4i32.nxv2i64(<vscale x 4 x i32> [[DATA:%.*]], <vscale x 4 x i1> [[TMP0]], <vscale x 2 x i64> [[BASE:%.*]], i64 [[OFFSET:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 1 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv1i1(<vscale x 16 x i1> [[PG:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1q.scatter.scalar.offset.nxv4i32.nxv2i64(<vscale x 4 x i32> [[DATA:%.*]], <vscale x 1 x i1> [[TMP0]], <vscale x 2 x i64> [[BASE:%.*]], i64 [[OFFSET:%.*]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z38test_svst1q_scatter_u64base_offset_u32u10__SVBool_tu12__SVUint64_tlu12__SVUint32_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PG:%.*]])
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1q.scatter.scalar.offset.nxv4i32.nxv2i64(<vscale x 4 x i32> [[DATA:%.*]], <vscale x 4 x i1> [[TMP0]], <vscale x 2 x i64> [[BASE:%.*]], i64 [[OFFSET:%.*]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 1 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv1i1(<vscale x 16 x i1> [[PG:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1q.scatter.scalar.offset.nxv4i32.nxv2i64(<vscale x 4 x i32> [[DATA:%.*]], <vscale x 1 x i1> [[TMP0]], <vscale x 2 x i64> [[BASE:%.*]], i64 [[OFFSET:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svst1q_scatter_u64base_offset_u32(svbool_t pg, svuint64_t base, int64_t offset, svuint32_t data)
@@ -1775,14 +1775,14 @@ void test_svst1q_scatter_u64base_offset_u32(svbool_t pg, svuint64_t base, int64_
 
 // CHECK-LABEL: @test_svst1q_scatter_u64base_offset_s32(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PG:%.*]])
-// CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1q.scatter.scalar.offset.nxv4i32.nxv2i64(<vscale x 4 x i32> [[DATA:%.*]], <vscale x 4 x i1> [[TMP0]], <vscale x 2 x i64> [[BASE:%.*]], i64 [[OFFSET:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 1 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv1i1(<vscale x 16 x i1> [[PG:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1q.scatter.scalar.offset.nxv4i32.nxv2i64(<vscale x 4 x i32> [[DATA:%.*]], <vscale x 1 x i1> [[TMP0]], <vscale x 2 x i64> [[BASE:%.*]], i64 [[OFFSET:%.*]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z38test_svst1q_scatter_u64base_offset_s32u10__SVBool_tu12__SVUint64_tlu11__SVInt32_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PG:%.*]])
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1q.scatter.scalar.offset.nxv4i32.nxv2i64(<vscale x 4 x i32> [[DATA:%.*]], <vscale x 4 x i1> [[TMP0]], <vscale x 2 x i64> [[BASE:%.*]], i64 [[OFFSET:%.*]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 1 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv1i1(<vscale x 16 x i1> [[PG:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1q.scatter.scalar.offset.nxv4i32.nxv2i64(<vscale x 4 x i32> [[DATA:%.*]], <vscale x 1 x i1> [[TMP0]], <vscale x 2 x i64> [[BASE:%.*]], i64 [[OFFSET:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svst1q_scatter_u64base_offset_s32(svbool_t pg, svuint64_t base, int64_t offset, svint32_t data)
@@ -1792,14 +1792,14 @@ void test_svst1q_scatter_u64base_offset_s32(svbool_t pg, svuint64_t base, int64_
 
 // CHECK-LABEL: @test_svst1q_scatter_u64base_offset_u16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
-// CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1q.scatter.scalar.offset.nxv8i16.nxv2i64(<vscale x 8 x i16> [[DATA:%.*]], <vscale x 8 x i1> [[TMP0]], <vscale x 2 x i64> [[BASE:%.*]], i64 [[OFFSET:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 1 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv1i1(<vscale x 16 x i1> [[PG:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1q.scatter.scalar.offset.nxv8i16.nxv2i64(<vscale x 8 x i16> [[DATA:%.*]], <vscale x 1 x i1> [[TMP0]], <vscale x 2 x i64> [[BASE:%.*]], i64 [[OFFSET:%.*]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z38test_svst1q_scatter_u64base_offset_u16u10__SVBool_tu12__SVUint64_tlu12__SVUint16_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1q.scatter.scalar.offset.nxv8i16.nxv2i64(<vscale x 8 x i16> [[DATA:%.*]], <vscale x 8 x i1> [[TMP0]], <vscale x 2 x i64> [[BASE:%.*]], i64 [[OFFSET:%.*]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 1 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv1i1(<vscale x 16 x i1> [[PG:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1q.scatter.scalar.offset.nxv8i16.nxv2i64(<vscale x 8 x i16> [[DATA:%.*]], <vscale x 1 x i1> [[TMP0]], <vscale x 2 x i64> [[BASE:%.*]], i64 [[OFFSET:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svst1q_scatter_u64base_offset_u16(svbool_t pg, svuint64_t base, int64_t offset, svuint16_t data)
@@ -1809,14 +1809,14 @@ void test_svst1q_scatter_u64base_offset_u16(svbool_t pg, svuint64_t base, int64_
 
 // CHECK-LABEL: @test_svst1q_scatter_u64base_offset_s16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
-// CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1q.scatter.scalar.offset.nxv8i16.nxv2i64(<vscale x 8 x i16> [[DATA:%.*]], <vscale x 8 x i1> [[TMP0]], <vscale x 2 x i64> [[BASE:%.*]], i64 [[OFFSET:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 1 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv1i1(<vscale x 16 x i1> [[PG:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1q.scatter.scalar.offset.nxv8i16.nxv2i64(<vscale x 8 x i16> [[DATA:%.*]], <vscale x 1 x i1> [[TMP0]], <vscale x 2 x i64> [[BASE:%.*]], i64 [[OFFSET:%.*]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z38test_svst1q_scatter_u64base_offset_s16u10__SVBool_tu12__SVUint64_tlu11__SVInt16_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1q.scatter.scalar.offset.nxv8i16.nxv2i64(<vscale x 8 x i16> [[DATA:%.*]], <vscale x 8 x i1> [[TMP0]], <vscale x 2 x i64> [[BASE:%.*]], i64 [[OFFSET:%.*]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 1 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv1i1(<vscale x 16 x i1> [[PG:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1q.scatter.scalar.offset.nxv8i16.nxv2i64(<vscale x 8 x i16> [[DATA:%.*]], <vscale x 1 x i1> [[TMP0]], <vscale x 2 x i64> [[BASE:%.*]], i64 [[OFFSET:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svst1q_scatter_u64base_offset_s16(svbool_t pg, svuint64_t base, int64_t offset, svint16_t data)
@@ -1826,12 +1826,14 @@ void test_svst1q_scatter_u64base_offset_s16(svbool_t pg, svuint64_t base, int64_
 
 // CHECK-LABEL: @test_svst1q_scatter_u64base_offset_u8(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1q.scatter.scalar.offset.nxv16i8.nxv2i64(<vscale x 16 x i8> [[DATA:%.*]], <vscale x 16 x i1> [[PG:%.*]], <vscale x 2 x i64> [[BASE:%.*]], i64 [[OFFSET:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 1 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv1i1(<vscale x 16 x i1> [[PG:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1q.scatter.scalar.offset.nxv16i8.nxv2i64(<vscale x 16 x i8> [[DATA:%.*]], <vscale x 1 x i1> [[TMP0]], <vscale x 2 x i64> [[BASE:%.*]], i64 [[OFFSET:%.*]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z37test_svst1q_scatter_u64base_offset_u8u10__SVBool_tu12__SVUint64_tlu11__SVUint8_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1q.scatter.scalar.offset.nxv16i8.nxv2i64(<vscale x 16 x i8> [[DATA:%.*]], <vscale x 16 x i1> [[PG:%.*]], <vscale x 2 x i64> [[BASE:%.*]], i64 [[OFFSET:%.*]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 1 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv1i1(<vscale x 16 x i1> [[PG:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1q.scatter.scalar.offset.nxv16i8.nxv2i64(<vscale x 16 x i8> [[DATA:%.*]], <vscale x 1 x i1> [[TMP0]], <vscale x 2 x i64> [[BASE:%.*]], i64 [[OFFSET:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svst1q_scatter_u64base_offset_u8(svbool_t pg, svuint64_t base, int64_t offset, svuint8_t data)
@@ -1841,12 +1843,14 @@ void test_svst1q_scatter_u64base_offset_u8(svbool_t pg, svuint64_t base, int64_t
 
 // CHECK-LABEL: @test_svst1q_scatter_u64base_offset_s8(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1q.scatter.scalar.offset.nxv16i8.nxv2i64(<vscale x 16 x i8> [[DATA:%.*]], <vscale x 16 x i1> [[PG:%.*]], <vscale x 2 x i64> [[BASE:%.*]], i64 [[OFFSET:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 1 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv1i1(<vscale x 16 x i1> [[PG:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1q.scatter.scalar.offset.nxv16i8.nxv2i64(<vscale x 16 x i8> [[DATA:%.*]], <vscale x 1 x i1> [[TMP0]], <vscale x 2 x i64> [[BASE:%.*]], i64 [[OFFSET:%.*]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z37test_svst1q_scatter_u64base_offset_s8u10__SVBool_tu12__SVUint64_tlu10__SVInt8_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1q.scatter.scalar.offset.nxv16i8.nxv2i64(<vscale x 16 x i8> [[DATA:%.*]], <vscale x 16 x i1> [[PG:%.*]], <vscale x 2 x i64> [[BASE:%.*]], i64 [[OFFSET:%.*]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 1 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv1i1(<vscale x 16 x i1> [[PG:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1q.scatter.scalar.offset.nxv16i8.nxv2i64(<vscale x 16 x i8> [[DATA:%.*]], <vscale x 1 x i1> [[TMP0]], <vscale x 2 x i64> [[BASE:%.*]], i64 [[OFFSET:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svst1q_scatter_u64base_offset_s8(svbool_t pg, svuint64_t base, int64_t offset, svint8_t data)
@@ -1856,14 +1860,14 @@ void test_svst1q_scatter_u64base_offset_s8(svbool_t pg, svuint64_t base, int64_t
 
 // CHECK-LABEL: @test_svst1q_scatter_u64base_offset_f64(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PG:%.*]])
-// CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1q.scatter.scalar.offset.nxv2f64.nxv2i64(<vscale x 2 x double> [[DATA:%.*]], <vscale x 2 x i1> [[TMP0]], <vscale x 2 x i64> [[BASE:%.*]], i64 [[OFFSET:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 1 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv1i1(<vscale x 16 x i1> [[PG:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1q.scatter.scalar.offset.nxv2f64.nxv2i64(<vscale x 2 x double> [[DATA:%.*]], <vscale x 1 x i1> [[TMP0]], <vscale x 2 x i64> [[BASE:%.*]], i64 [[OFFSET:%.*]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z38test_svst1q_scatter_u64base_offset_f64u10__SVBool_tu12__SVUint64_tlu13__SVFloat64_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PG:%.*]])
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1q.scatter.scalar.offset.nxv2f64.nxv2i64(<vscale x 2 x double> [[DATA:%.*]], <vscale x 2 x i1> [[TMP0]], <vscale x 2 x i64> [[BASE:%.*]], i64 [[OFFSET:%.*]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 1 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv1i1(<vscale x 16 x i1> [[PG:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1q.scatter.scalar.offset.nxv2f64.nxv2i64(<vscale x 2 x double> [[DATA:%.*]], <vscale x 1 x i1> [[TMP0]], <vscale x 2 x i64> [[BASE:%.*]], i64 [[OFFSET:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svst1q_scatter_u64base_offset_f64(svbool_t pg, svuint64_t base, int64_t offset, svfloat64_t data)
@@ -1873,14 +1877,14 @@ void test_svst1q_scatter_u64base_offset_f64(svbool_t pg, svuint64_t base, int64_
 
 // CHECK-LABEL: @test_svst1q_scatter_u64base_offset_f32(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PG:%.*]])
-// CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1q.scatter.scalar.offset.nxv4f32.nxv2i64(<vscale x 4 x float> [[DATA:%.*]], <vscale x 4 x i1> [[TMP0]], <vscale x 2 x i64> [[BASE:%.*]], i64 [[OFFSET:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 1 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv1i1(<vscale x 16 x i1> [[PG:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1q.scatter.scalar.offset.nxv4f32.nxv2i64(<vscale x 4 x float> [[DATA:%.*]], <vscale x 1 x i1> [[TMP0]], <vscale x 2 x i64> [[BASE:%.*]], i64 [[OFFSET:%.*]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z38test_svst1q_scatter_u64base_offset_f32u10__SVBool_tu12__SVUint64_tlu13__SVFloat32_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PG:%.*]])
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1q.scatter.scalar.offset.nxv4f32.nxv2i64(<vscale x 4 x float> [[DATA:%.*]], <vscale x 4 x i1> [[TMP0]], <vscale x 2 x i64> [[BASE:%.*]], i64 [[OFFSET:%.*]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 1 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv1i1(<vscale x 16 x i1> [[PG:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1q.scatter.scalar.offset.nxv4f32.nxv2i64(<vscale x 4 x float> [[DATA:%.*]], <vscale x 1 x i1> [[TMP0]], <vscale x 2 x i64> [[BASE:%.*]], i64 [[OFFSET:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svst1q_scatter_u64base_offset_f32(svbool_t pg, svuint64_t base, int64_t offset, svfloat32_t data)
@@ -1890,14 +1894,14 @@ void test_svst1q_scatter_u64base_offset_f32(svbool_t pg, svuint64_t base, int64_
 
 // CHECK-LABEL: @test_svst1q_scatter_u64base_offset_f16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
-// CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1q.scatter.scalar.offset.nxv8f16.nxv2i64(<vscale x 8 x half> [[DATA:%.*]], <vscale x 8 x i1> [[TMP0]], <vscale x 2 x i64> [[BASE:%.*]], i64 [[OFFSET:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 1 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv1i1(<vscale x 16 x i1> [[PG:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1q.scatter.scalar.offset.nxv8f16.nxv2i64(<vscale x 8 x half> [[DATA:%.*]], <vscale x 1 x i1> [[TMP0]], <vscale x 2 x i64> [[BASE:%.*]], i64 [[OFFSET:%.*]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z38test_svst1q_scatter_u64base_offset_f16u10__SVBool_tu12__SVUint64_tlu13__SVFloat16_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1q.scatter.scalar.offset.nxv8f16.nxv2i64(<vscale x 8 x half> [[DATA:%.*]], <vscale x 8 x i1> [[TMP0]], <vscale x 2 x i64> [[BASE:%.*]], i64 [[OFFSET:%.*]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 1 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv1i1(<vscale x 16 x i1> [[PG:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1q.scatter.scalar.offset.nxv8f16.nxv2i64(<vscale x 8 x half> [[DATA:%.*]], <vscale x 1 x i1> [[TMP0]], <vscale x 2 x i64> [[BASE:%.*]], i64 [[OFFSET:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svst1q_scatter_u64base_offset_f16(svbool_t pg, svuint64_t base, int64_t offset, svfloat16_t data)
@@ -1907,14 +1911,14 @@ void test_svst1q_scatter_u64base_offset_f16(svbool_t pg, svuint64_t base, int64_
 
 // CHECK-LABEL: @test_svst1q_scatter_u64base_offset_bf16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
-// CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1q.scatter.scalar.offset.nxv8bf16.nxv2i64(<vscale x 8 x bfloat> [[DATA:%.*]], <vscale x 8 x i1> [[TMP0]], <vscale x 2 x i64> [[BASE:%.*]], i64 [[OFFSET:%.*]])
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 1 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv1i1(<vscale x 16 x i1> [[PG:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1q.scatter.scalar.offset.nxv8bf16.nxv2i64(<vscale x 8 x bfloat> [[DATA:%.*]], <vscale x 1 x i1> [[TMP0]], <vscale x 2 x i64> [[BASE:%.*]], i64 [[OFFSET:%.*]])
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z39test_svst1q_scatter_u64base_offset_bf16u10__SVBool_tu12__SVUint64_tlu14__SVBfloat16_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1q.scatter.scalar.offset.nxv8bf16.nxv2i64(<vscale x 8 x bfloat> [[DATA:%.*]], <vscale x 8 x i1> [[TMP0]], <vscale x 2 x i64> [[BASE:%.*]], i64 [[OFFSET:%.*]])
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 1 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv1i1(<vscale x 16 x i1> [[PG:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1q.scatter.scalar.offset.nxv8bf16.nxv2i64(<vscale x 8 x bfloat> [[DATA:%.*]], <vscale x 1 x i1> [[TMP0]], <vscale x 2 x i64> [[BASE:%.*]], i64 [[OFFSET:%.*]])
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svst1q_scatter_u64base_offset_bf16(svbool_t pg, svuint64_t base, int64_t offset, svbfloat16_t data)
@@ -1925,14 +1929,14 @@ void test_svst1q_scatter_u64base_offset_bf16(svbool_t pg, svuint64_t base, int64
 // Vector Base and no Offset
 // CHECK-LABEL: @test_svst1q_scatter_u64base_u64(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PG:%.*]])
-// CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1q.scatter.scalar.offset.nxv2i64.nxv2i64(<vscale x 2 x i64> [[DATA:%.*]], <vscale x 2 x i1> [[TMP0]], <vscale x 2 x i64> [[BASE:%.*]], i64 0)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 1 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv1i1(<vscale x 16 x i1> [[PG:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1q.scatter.scalar.offset.nxv2i64.nxv2i64(<vscale x 2 x i64> [[DATA:%.*]], <vscale x 1 x i1> [[TMP0]], <vscale x 2 x i64> [[BASE:%.*]], i64 0)
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z31test_svst1q_scatter_u64base_u64u10__SVBool_tu12__SVUint64_tS0_(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PG:%.*]])
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1q.scatter.scalar.offset.nxv2i64.nxv2i64(<vscale x 2 x i64> [[DATA:%.*]], <vscale x 2 x i1> [[TMP0]], <vscale x 2 x i64> [[BASE:%.*]], i64 0)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 1 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv1i1(<vscale x 16 x i1> [[PG:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1q.scatter.scalar.offset.nxv2i64.nxv2i64(<vscale x 2 x i64> [[DATA:%.*]], <vscale x 1 x i1> [[TMP0]], <vscale x 2 x i64> [[BASE:%.*]], i64 0)
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svst1q_scatter_u64base_u64(svbool_t pg, svuint64_t base, svuint64_t data)
@@ -1942,14 +1946,14 @@ void test_svst1q_scatter_u64base_u64(svbool_t pg, svuint64_t base, svuint64_t da
 
 // CHECK-LABEL: @test_svst1q_scatter_u64base_s64(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PG:%.*]])
-// CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1q.scatter.scalar.offset.nxv2i64.nxv2i64(<vscale x 2 x i64> [[DATA:%.*]], <vscale x 2 x i1> [[TMP0]], <vscale x 2 x i64> [[BASE:%.*]], i64 0)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 1 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv1i1(<vscale x 16 x i1> [[PG:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1q.scatter.scalar.offset.nxv2i64.nxv2i64(<vscale x 2 x i64> [[DATA:%.*]], <vscale x 1 x i1> [[TMP0]], <vscale x 2 x i64> [[BASE:%.*]], i64 0)
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z31test_svst1q_scatter_u64base_s64u10__SVBool_tu12__SVUint64_tu11__SVInt64_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PG:%.*]])
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1q.scatter.scalar.offset.nxv2i64.nxv2i64(<vscale x 2 x i64> [[DATA:%.*]], <vscale x 2 x i1> [[TMP0]], <vscale x 2 x i64> [[BASE:%.*]], i64 0)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 1 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv1i1(<vscale x 16 x i1> [[PG:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1q.scatter.scalar.offset.nxv2i64.nxv2i64(<vscale x 2 x i64> [[DATA:%.*]], <vscale x 1 x i1> [[TMP0]], <vscale x 2 x i64> [[BASE:%.*]], i64 0)
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svst1q_scatter_u64base_s64(svbool_t pg, svuint64_t base, svint64_t data)
@@ -1959,14 +1963,14 @@ void test_svst1q_scatter_u64base_s64(svbool_t pg, svuint64_t base, svint64_t dat
 
 // CHECK-LABEL: @test_svst1q_scatter_u64base_u32(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PG:%.*]])
-// CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1q.scatter.scalar.offset.nxv4i32.nxv2i64(<vscale x 4 x i32> [[DATA:%.*]], <vscale x 4 x i1> [[TMP0]], <vscale x 2 x i64> [[BASE:%.*]], i64 0)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 1 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv1i1(<vscale x 16 x i1> [[PG:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1q.scatter.scalar.offset.nxv4i32.nxv2i64(<vscale x 4 x i32> [[DATA:%.*]], <vscale x 1 x i1> [[TMP0]], <vscale x 2 x i64> [[BASE:%.*]], i64 0)
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z31test_svst1q_scatter_u64base_u32u10__SVBool_tu12__SVUint64_tu12__SVUint32_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PG:%.*]])
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1q.scatter.scalar.offset.nxv4i32.nxv2i64(<vscale x 4 x i32> [[DATA:%.*]], <vscale x 4 x i1> [[TMP0]], <vscale x 2 x i64> [[BASE:%.*]], i64 0)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 1 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv1i1(<vscale x 16 x i1> [[PG:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1q.scatter.scalar.offset.nxv4i32.nxv2i64(<vscale x 4 x i32> [[DATA:%.*]], <vscale x 1 x i1> [[TMP0]], <vscale x 2 x i64> [[BASE:%.*]], i64 0)
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svst1q_scatter_u64base_u32(svbool_t pg, svuint64_t base, svuint32_t data)
@@ -1976,14 +1980,14 @@ void test_svst1q_scatter_u64base_u32(svbool_t pg, svuint64_t base, svuint32_t da
 
 // CHECK-LABEL: @test_svst1q_scatter_u64base_s32(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PG:%.*]])
-// CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1q.scatter.scalar.offset.nxv4i32.nxv2i64(<vscale x 4 x i32> [[DATA:%.*]], <vscale x 4 x i1> [[TMP0]], <vscale x 2 x i64> [[BASE:%.*]], i64 0)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 1 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv1i1(<vscale x 16 x i1> [[PG:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1q.scatter.scalar.offset.nxv4i32.nxv2i64(<vscale x 4 x i32> [[DATA:%.*]], <vscale x 1 x i1> [[TMP0]], <vscale x 2 x i64> [[BASE:%.*]], i64 0)
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z31test_svst1q_scatter_u64base_s32u10__SVBool_tu12__SVUint64_tu11__SVInt32_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PG:%.*]])
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1q.scatter.scalar.offset.nxv4i32.nxv2i64(<vscale x 4 x i32> [[DATA:%.*]], <vscale x 4 x i1> [[TMP0]], <vscale x 2 x i64> [[BASE:%.*]], i64 0)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 1 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv1i1(<vscale x 16 x i1> [[PG:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1q.scatter.scalar.offset.nxv4i32.nxv2i64(<vscale x 4 x i32> [[DATA:%.*]], <vscale x 1 x i1> [[TMP0]], <vscale x 2 x i64> [[BASE:%.*]], i64 0)
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svst1q_scatter_u64base_s32(svbool_t pg, svuint64_t base, svint32_t data)
@@ -1993,14 +1997,14 @@ void test_svst1q_scatter_u64base_s32(svbool_t pg, svuint64_t base, svint32_t dat
 
 // CHECK-LABEL: @test_svst1q_scatter_u64base_u16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
-// CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1q.scatter.scalar.offset.nxv8i16.nxv2i64(<vscale x 8 x i16> [[DATA:%.*]], <vscale x 8 x i1> [[TMP0]], <vscale x 2 x i64> [[BASE:%.*]], i64 0)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 1 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv1i1(<vscale x 16 x i1> [[PG:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1q.scatter.scalar.offset.nxv8i16.nxv2i64(<vscale x 8 x i16> [[DATA:%.*]], <vscale x 1 x i1> [[TMP0]], <vscale x 2 x i64> [[BASE:%.*]], i64 0)
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z31test_svst1q_scatter_u64base_u16u10__SVBool_tu12__SVUint64_tu12__SVUint16_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1q.scatter.scalar.offset.nxv8i16.nxv2i64(<vscale x 8 x i16> [[DATA:%.*]], <vscale x 8 x i1> [[TMP0]], <vscale x 2 x i64> [[BASE:%.*]], i64 0)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 1 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv1i1(<vscale x 16 x i1> [[PG:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1q.scatter.scalar.offset.nxv8i16.nxv2i64(<vscale x 8 x i16> [[DATA:%.*]], <vscale x 1 x i1> [[TMP0]], <vscale x 2 x i64> [[BASE:%.*]], i64 0)
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svst1q_scatter_u64base_u16(svbool_t pg, svuint64_t base, svuint16_t data)
@@ -2010,14 +2014,14 @@ void test_svst1q_scatter_u64base_u16(svbool_t pg, svuint64_t base, svuint16_t da
 
 // CHECK-LABEL: @test_svst1q_scatter_u64base_s16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
-// CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1q.scatter.scalar.offset.nxv8i16.nxv2i64(<vscale x 8 x i16> [[DATA:%.*]], <vscale x 8 x i1> [[TMP0]], <vscale x 2 x i64> [[BASE:%.*]], i64 0)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 1 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv1i1(<vscale x 16 x i1> [[PG:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1q.scatter.scalar.offset.nxv8i16.nxv2i64(<vscale x 8 x i16> [[DATA:%.*]], <vscale x 1 x i1> [[TMP0]], <vscale x 2 x i64> [[BASE:%.*]], i64 0)
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z31test_svst1q_scatter_u64base_s16u10__SVBool_tu12__SVUint64_tu11__SVInt16_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1q.scatter.scalar.offset.nxv8i16.nxv2i64(<vscale x 8 x i16> [[DATA:%.*]], <vscale x 8 x i1> [[TMP0]], <vscale x 2 x i64> [[BASE:%.*]], i64 0)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 1 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv1i1(<vscale x 16 x i1> [[PG:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1q.scatter.scalar.offset.nxv8i16.nxv2i64(<vscale x 8 x i16> [[DATA:%.*]], <vscale x 1 x i1> [[TMP0]], <vscale x 2 x i64> [[BASE:%.*]], i64 0)
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svst1q_scatter_u64base_s16(svbool_t pg, svuint64_t base, svint16_t data)
@@ -2027,12 +2031,14 @@ void test_svst1q_scatter_u64base_s16(svbool_t pg, svuint64_t base, svint16_t dat
 
 // CHECK-LABEL: @test_svst1q_scatter_u64base_u8(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1q.scatter.scalar.offset.nxv16i8.nxv2i64(<vscale x 16 x i8> [[DATA:%.*]], <vscale x 16 x i1> [[PG:%.*]], <vscale x 2 x i64> [[BASE:%.*]], i64 0)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 1 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv1i1(<vscale x 16 x i1> [[PG:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1q.scatter.scalar.offset.nxv16i8.nxv2i64(<vscale x 16 x i8> [[DATA:%.*]], <vscale x 1 x i1> [[TMP0]], <vscale x 2 x i64> [[BASE:%.*]], i64 0)
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z30test_svst1q_scatter_u64base_u8u10__SVBool_tu12__SVUint64_tu11__SVUint8_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1q.scatter.scalar.offset.nxv16i8.nxv2i64(<vscale x 16 x i8> [[DATA:%.*]], <vscale x 16 x i1> [[PG:%.*]], <vscale x 2 x i64> [[BASE:%.*]], i64 0)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 1 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv1i1(<vscale x 16 x i1> [[PG:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1q.scatter.scalar.offset.nxv16i8.nxv2i64(<vscale x 16 x i8> [[DATA:%.*]], <vscale x 1 x i1> [[TMP0]], <vscale x 2 x i64> [[BASE:%.*]], i64 0)
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svst1q_scatter_u64base_u8(svbool_t pg, svuint64_t base, svuint8_t data)
@@ -2042,12 +2048,14 @@ void test_svst1q_scatter_u64base_u8(svbool_t pg, svuint64_t base, svuint8_t data
 
 // CHECK-LABEL: @test_svst1q_scatter_u64base_s8(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1q.scatter.scalar.offset.nxv16i8.nxv2i64(<vscale x 16 x i8> [[DATA:%.*]], <vscale x 16 x i1> [[PG:%.*]], <vscale x 2 x i64> [[BASE:%.*]], i64 0)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 1 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv1i1(<vscale x 16 x i1> [[PG:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1q.scatter.scalar.offset.nxv16i8.nxv2i64(<vscale x 16 x i8> [[DATA:%.*]], <vscale x 1 x i1> [[TMP0]], <vscale x 2 x i64> [[BASE:%.*]], i64 0)
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z30test_svst1q_scatter_u64base_s8u10__SVBool_tu12__SVUint64_tu10__SVInt8_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1q.scatter.scalar.offset.nxv16i8.nxv2i64(<vscale x 16 x i8> [[DATA:%.*]], <vscale x 16 x i1> [[PG:%.*]], <vscale x 2 x i64> [[BASE:%.*]], i64 0)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 1 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv1i1(<vscale x 16 x i1> [[PG:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1q.scatter.scalar.offset.nxv16i8.nxv2i64(<vscale x 16 x i8> [[DATA:%.*]], <vscale x 1 x i1> [[TMP0]], <vscale x 2 x i64> [[BASE:%.*]], i64 0)
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svst1q_scatter_u64base_s8(svbool_t pg, svuint64_t base, svint8_t data)
@@ -2057,14 +2065,14 @@ void test_svst1q_scatter_u64base_s8(svbool_t pg, svuint64_t base, svint8_t data)
 
 // CHECK-LABEL: @test_svst1q_scatter_u64base_f64(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PG:%.*]])
-// CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1q.scatter.scalar.offset.nxv2f64.nxv2i64(<vscale x 2 x double> [[DATA:%.*]], <vscale x 2 x i1> [[TMP0]], <vscale x 2 x i64> [[BASE:%.*]], i64 0)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 1 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv1i1(<vscale x 16 x i1> [[PG:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1q.scatter.scalar.offset.nxv2f64.nxv2i64(<vscale x 2 x double> [[DATA:%.*]], <vscale x 1 x i1> [[TMP0]], <vscale x 2 x i64> [[BASE:%.*]], i64 0)
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z31test_svst1q_scatter_u64base_f64u10__SVBool_tu12__SVUint64_tu13__SVFloat64_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PG:%.*]])
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1q.scatter.scalar.offset.nxv2f64.nxv2i64(<vscale x 2 x double> [[DATA:%.*]], <vscale x 2 x i1> [[TMP0]], <vscale x 2 x i64> [[BASE:%.*]], i64 0)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 1 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv1i1(<vscale x 16 x i1> [[PG:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1q.scatter.scalar.offset.nxv2f64.nxv2i64(<vscale x 2 x double> [[DATA:%.*]], <vscale x 1 x i1> [[TMP0]], <vscale x 2 x i64> [[BASE:%.*]], i64 0)
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svst1q_scatter_u64base_f64(svbool_t pg, svuint64_t base, svfloat64_t data)
@@ -2074,14 +2082,14 @@ void test_svst1q_scatter_u64base_f64(svbool_t pg, svuint64_t base, svfloat64_t d
 
 // CHECK-LABEL: @test_svst1q_scatter_u64base_f32(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PG:%.*]])
-// CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1q.scatter.scalar.offset.nxv4f32.nxv2i64(<vscale x 4 x float> [[DATA:%.*]], <vscale x 4 x i1> [[TMP0]], <vscale x 2 x i64> [[BASE:%.*]], i64 0)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 1 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv1i1(<vscale x 16 x i1> [[PG:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1q.scatter.scalar.offset.nxv4f32.nxv2i64(<vscale x 4 x float> [[DATA:%.*]], <vscale x 1 x i1> [[TMP0]], <vscale x 2 x i64> [[BASE:%.*]], i64 0)
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z31test_svst1q_scatter_u64base_f32u10__SVBool_tu12__SVUint64_tu13__SVFloat32_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv4i1(<vscale x 16 x i1> [[PG:%.*]])
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1q.scatter.scalar.offset.nxv4f32.nxv2i64(<vscale x 4 x float> [[DATA:%.*]], <vscale x 4 x i1> [[TMP0]], <vscale x 2 x i64> [[BASE:%.*]], i64 0)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 1 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv1i1(<vscale x 16 x i1> [[PG:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1q.scatter.scalar.offset.nxv4f32.nxv2i64(<vscale x 4 x float> [[DATA:%.*]], <vscale x 1 x i1> [[TMP0]], <vscale x 2 x i64> [[BASE:%.*]], i64 0)
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svst1q_scatter_u64base_f32(svbool_t pg, svuint64_t base, svfloat32_t data)
@@ -2091,14 +2099,14 @@ void test_svst1q_scatter_u64base_f32(svbool_t pg, svuint64_t base, svfloat32_t d
 
 // CHECK-LABEL: @test_svst1q_scatter_u64base_f16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
-// CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1q.scatter.scalar.offset.nxv8f16.nxv2i64(<vscale x 8 x half> [[DATA:%.*]], <vscale x 8 x i1> [[TMP0]], <vscale x 2 x i64> [[BASE:%.*]], i64 0)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 1 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv1i1(<vscale x 16 x i1> [[PG:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1q.scatter.scalar.offset.nxv8f16.nxv2i64(<vscale x 8 x half> [[DATA:%.*]], <vscale x 1 x i1> [[TMP0]], <vscale x 2 x i64> [[BASE:%.*]], i64 0)
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z31test_svst1q_scatter_u64base_f16u10__SVBool_tu12__SVUint64_tu13__SVFloat16_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1q.scatter.scalar.offset.nxv8f16.nxv2i64(<vscale x 8 x half> [[DATA:%.*]], <vscale x 8 x i1> [[TMP0]], <vscale x 2 x i64> [[BASE:%.*]], i64 0)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 1 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv1i1(<vscale x 16 x i1> [[PG:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1q.scatter.scalar.offset.nxv8f16.nxv2i64(<vscale x 8 x half> [[DATA:%.*]], <vscale x 1 x i1> [[TMP0]], <vscale x 2 x i64> [[BASE:%.*]], i64 0)
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svst1q_scatter_u64base_f16(svbool_t pg, svuint64_t base, svfloat16_t data)
@@ -2108,14 +2116,14 @@ void test_svst1q_scatter_u64base_f16(svbool_t pg, svuint64_t base, svfloat16_t d
 
 // CHECK-LABEL: @test_svst1q_scatter_u64base_bf16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
-// CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1q.scatter.scalar.offset.nxv8bf16.nxv2i64(<vscale x 8 x bfloat> [[DATA:%.*]], <vscale x 8 x i1> [[TMP0]], <vscale x 2 x i64> [[BASE:%.*]], i64 0)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 1 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv1i1(<vscale x 16 x i1> [[PG:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1q.scatter.scalar.offset.nxv8bf16.nxv2i64(<vscale x 8 x bfloat> [[DATA:%.*]], <vscale x 1 x i1> [[TMP0]], <vscale x 2 x i64> [[BASE:%.*]], i64 0)
 // CHECK-NEXT:    ret void
 //
 // CPP-CHECK-LABEL: @_Z32test_svst1q_scatter_u64base_bf16u10__SVBool_tu12__SVUint64_tu14__SVBfloat16_t(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PG:%.*]])
-// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1q.scatter.scalar.offset.nxv8bf16.nxv2i64(<vscale x 8 x bfloat> [[DATA:%.*]], <vscale x 8 x i1> [[TMP0]], <vscale x 2 x i64> [[BASE:%.*]], i64 0)
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 1 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv1i1(<vscale x 16 x i1> [[PG:%.*]])
+// CPP-CHECK-NEXT:    tail call void @llvm.aarch64.sve.st1q.scatter.scalar.offset.nxv8bf16.nxv2i64(<vscale x 8 x bfloat> [[DATA:%.*]], <vscale x 1 x i1> [[TMP0]], <vscale x 2 x i64> [[BASE:%.*]], i64 0)
 // CPP-CHECK-NEXT:    ret void
 //
 void test_svst1q_scatter_u64base_bf16(svbool_t pg, svuint64_t base, svbfloat16_t data)
