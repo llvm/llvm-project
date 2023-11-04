@@ -112,10 +112,9 @@ auto matchFloatLiteralNear(const double Val) {
 auto matchFloatValueNear(const double Val) {
   const auto Float = floatLiteral(near(Val));
 
-  const auto Dref = declRefExpr(to(varDecl(
-      anyOf(isConstexpr(),
-            varDecl(hasType(qualType(isConstQualified(), isArithmetic())))),
-      hasInitializer(Float))));
+  const auto Dref = declRefExpr(
+      to(varDecl(hasType(qualType(isConstQualified(), isFloating())),
+                 hasInitializer(ignoreImplicitAndFloatingCasting(Float)))));
   return expr(ignoreImplicitAndFloatingCasting(anyOf(Float, Dref)));
 }
 

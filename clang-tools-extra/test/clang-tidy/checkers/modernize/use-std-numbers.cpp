@@ -15,7 +15,12 @@ namespace bar {
 
 double exp(double Arg);
 double log(double Arg);
+
 double log2(double Arg);
+float log2(float Arg);
+template <typename T>
+auto log2(T val) { return log2(static_cast<double>(val)); }
+
 double log10(double Arg);
 
 template<typename T>
@@ -26,6 +31,9 @@ void floatSink(float) {}
 #define MY_PI 3.1415926
 
 #define INV_SQRT3 1 / bar::sqrt(3)
+
+using my_double = double;
+using my_float = float;
 
 void foo(){
     static constexpr double Pi = 3.1415926;
@@ -74,11 +82,18 @@ void foo(){
     // CHECK-MESSAGES: :[[@LINE-1]]:41: warning: prefer std::numbers math constant [modernize-use-std-numbers]
     // CHECK-FIXES: static constexpr long double Phi4 = std::numbers::phi_v<long double>;
 
+    static constexpr my_double Euler5 = 2.7182818;
+    // CHECK-MESSAGES: :[[@LINE-1]]:41: warning: prefer std::numbers math constant [modernize-use-std-numbers]
+    // CHECK-FIXES: static constexpr my_double Euler5 = std::numbers::e;
+
+    static constexpr my_float Euler6 = 2.7182818;
+    // CHECK-MESSAGES: :[[@LINE-1]]:40: warning: prefer std::numbers math constant [modernize-use-std-numbers]
+    // CHECK-FIXES: static constexpr my_float Euler6 = std::numbers::e_v<float>;
+
     static constexpr double InvPi = 1.0 / Pi;
     // CHECK-MESSAGES: :[[@LINE-1]]:37: warning: prefer std::numbers math constant [modernize-use-std-numbers]
     // CHECK-FIXES: static constexpr double InvPi = std::numbers::inv_pi;
 
-    using my_float = const float;
     static constexpr my_float Actually2MyFloat = 2;
     bar::sqrt(Actually2MyFloat);
     // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: prefer std::numbers math constant [modernize-use-std-numbers]
@@ -137,6 +152,14 @@ void foo(){
     // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: prefer std::numbers math constant [modernize-use-std-numbers]
     // CHECK-FIXES: std::numbers::log2e;
 
+    log2(Euler5);
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: prefer std::numbers math constant [modernize-use-std-numbers]
+    // CHECK-FIXES: std::numbers::log2e;
+
+    log2(Euler6);
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: prefer std::numbers math constant [modernize-use-std-numbers]
+    // CHECK-FIXES: std::numbers::log2e_v<float>;
+
     auto log2e = 1.4426950;
     // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: prefer std::numbers math constant [modernize-use-std-numbers]
     // CHECK-FIXES: auto log2e = std::numbers::log2e;
@@ -172,7 +195,7 @@ void foo(){
 
     floatSink(static_cast<int>(log2(static_cast<float>(Euler))));
     // CHECK-MESSAGES: :[[@LINE-1]]:32: warning: prefer std::numbers math constant [modernize-use-std-numbers]
-    // CHECK-FIXES: floatSink(static_cast<int>(std::numbers::log2e));
+    // CHECK-FIXES: floatSink(static_cast<int>(std::numbers::log2e_v<float>));
 
     floatSink(1.4426950F);
     // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: prefer std::numbers math constant [modernize-use-std-numbers]
@@ -303,7 +326,6 @@ void baz(){
     // CHECK-MESSAGES: :[[@LINE-1]]:31: warning: prefer std::numbers math constant [modernize-use-std-numbers]
     // CHECK-FIXES: static constexpr T Phi3 = std::numbers::phi_v<long double>;
 
-    using my_float = const float;
     static constexpr my_float Actually2MyFloat = 2;
     bar::sqrt(Actually2MyFloat);
     // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: prefer std::numbers math constant [modernize-use-std-numbers]
