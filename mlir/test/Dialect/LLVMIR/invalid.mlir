@@ -125,6 +125,13 @@ func.func @gep_too_few_dynamic(%base : !llvm.ptr) {
 
 // -----
 
+func.func @load_non_llvm_type(%foo : memref<f32>) {
+  // expected-error@+1 {{op operand #0 must be LLVM pointer type}}
+  llvm.load %foo : memref<f32> -> f32
+}
+
+// -----
+
 func.func @load_syncscope(%ptr : !llvm.ptr) {
   // expected-error@below {{expected syncscope to be null for non-atomic access}}
   %1 = "llvm.load"(%ptr) {syncscope = "singlethread"} : (!llvm.ptr) -> (f32)

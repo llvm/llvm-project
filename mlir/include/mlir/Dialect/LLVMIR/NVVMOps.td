@@ -19,8 +19,8 @@ include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Dialect/LLVMIR/BasicPtxBuilderInterface.td"
 
-def LLVM_ptr_global : LLVM_OpaquePointerInAddressSpace<1>;
-def LLVM_ptr_shared : LLVM_OpaquePointerInAddressSpace<3>;
+def LLVM_ptr_global : LLVM_PointerInAddressSpace<1>;
+def LLVM_ptr_shared : LLVM_PointerInAddressSpace<3>;
 
 //===----------------------------------------------------------------------===//
 // NVVM dialect definitions

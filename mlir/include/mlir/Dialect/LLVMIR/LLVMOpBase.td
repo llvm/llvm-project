@@ -56,10 +56,11 @@ def LLVM_AnyPointer : Type<CPred<"::llvm::isa<::mlir::LLVM::LLVMPointerType>($_s
                           "LLVM pointer type", "::mlir::LLVM::LLVMPointerType">;
 
 // Opaque pointer in a given address space.
-class LLVM_OpaquePointerInAddressSpace<int addressSpace> : Type<
-        CPred<
-          "::llvm::cast<::mlir::LLVM::LLVMPointerType>($_self).getAddressSpace() == "
-          # addressSpace>,
+class LLVM_PointerInAddressSpace<int addressSpace> : Type<
+  And<[LLVM_AnyPointer.predicate,
+      CPred<
+        "::llvm::cast<::mlir::LLVM::LLVMPointerType>($_self).getAddressSpace() == "
+        # addressSpace>]>,
   "Opaque LLVM pointer in address space " # addressSpace,
   "::mlir::LLVM::LLVMPointerType"> {
   let builderCall = "$_builder.getType<::mlir::LLVM::LLVMPointerType>("

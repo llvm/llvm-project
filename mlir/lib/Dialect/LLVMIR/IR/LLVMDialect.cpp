@@ -1954,6 +1954,13 @@ static bool isZeroAttribute(Attribute value) {
 }
 
 LogicalResult GlobalOp::verify() {
+  bool validType = isCompatibleOuterType(getType())
+                       ? !llvm::isa<LLVMVoidType, LLVMTokenType,
+                                    LLVMMetadataType, LLVMLabelType>(getType())
+                       : llvm::isa<PointerElementTypeInterface>(getType());
+  if (!validType)
+    return emitOpError(
+        "expects type to be a valid element type for an LLVM global");
   if ((*this)->getParentOp() && !satisfiesLLVMModule((*this)->getParentOp()))
     return emitOpError("must appear at the module level");
 
