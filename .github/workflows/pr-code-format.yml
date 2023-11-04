@@ -27,6 +27,7 @@ jobs:
           separator: ","
           base_sha: HEAD^
           sha: HEAD
+          path: ./pr-sources
 
       # We need to make sure that we aren't executing/using any code from the
       # PR for security reasons as we're using pull_request_target. Checkout
