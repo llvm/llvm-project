@@ -11,7 +11,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh api https://api.github.com/repos/${{ github.event.repository }}/pulls/${{ github.event.number }} | jq -e 'if (.mergeable == true) then true else false end'
+          gh api https://api.github.com/repos/${{ github.repository }}/pulls/${{ github.event.number }} | jq -e 'if (.mergeable == true) then true else false end'
 
       - name: Fetch PR sources
         uses: actions/checkout@v4
