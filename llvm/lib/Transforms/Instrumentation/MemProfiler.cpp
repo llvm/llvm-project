@@ -808,19 +808,19 @@ static void readMemprof(Module &M, Function &F,
         auto CalleeGUID = Function::getGUID(Name);
         auto StackId = computeStackId(CalleeGUID, GetOffset(DIL),
                                       ProfileHasColumns ? DIL->getColumn() : 0);
-        // LeafFound will only be false on the first iteration, since we either
-        // set it true or break out of the loop below.
+        // Check if we have found the profile's leaf frame. If yes, collect
+        // the rest of the call's inlined context starting here. If not, see if
+        // we find a match further up the inlined context (in case the profile
+        // was missing debug frames at the leaf).
         if (!LeafFound) {
           AllocInfoIter = LocHashToAllocInfo.find(StackId);
           CallSitesIter = LocHashToCallSites.find(StackId);
-          // Check if the leaf is in one of the maps. If not, no need to look
-          // further at this call.
-          if (AllocInfoIter == LocHashToAllocInfo.end() &&
-              CallSitesIter == LocHashToCallSites.end())
-            break;
-          LeafFound = true;
+          if (AllocInfoIter != LocHashToAllocInfo.end() ||
+              CallSitesIter != LocHashToCallSites.end())
+            LeafFound = true;
         }
-        InlinedCallStack.push_back(StackId);
+        if (LeafFound)
+          InlinedCallStack.push_back(StackId);
       }
       // If leaf not in either of the maps, skip inst.
       if (!LeafFound)
