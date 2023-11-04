@@ -209,6 +209,12 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST) {
                 typeIs(1, s32)(Query));
       });
 
+  getActionDefinitionsBuilder(G_FCONSTANT)
+      .legalIf([=, &ST](const LegalityQuery &Query) -> bool {
+        return (ST.hasStdExtF() && typeIs(0, s32)(Query)) ||
+               (ST.hasStdExtD() && typeIs(0, s64)(Query));
+      });
+
   getLegacyLegalizerInfo().computeTables();
 }
 
