@@ -1101,159 +1101,159 @@ acc.shutdown device_num(%idxValue : index) if(%ifCond)
 
 // -----
 
-func.func @testexitdataop(%a: !llvm.ptr<f32>) -> () {
+func.func @testexitdataop(%a: !llvm.ptr) -> () {
   %ifCond = arith.constant true
   %i64Value = arith.constant 1 : i64
   %i32Value = arith.constant 1 : i32
   %idxValue = arith.constant 1 : index
 
-  %0 = acc.getdeviceptr varPtr(%a : !llvm.ptr<f32>) -> !llvm.ptr<f32>
-  acc.exit_data dataOperands(%0 : !llvm.ptr<f32>)
-  acc.copyout accPtr(%0 : !llvm.ptr<f32>) to varPtr(%a : !llvm.ptr<f32>)
+  %0 = acc.getdeviceptr varPtr(%a : !llvm.ptr) -> !llvm.ptr
+  acc.exit_data dataOperands(%0 : !llvm.ptr)
+  acc.copyout accPtr(%0 : !llvm.ptr) to varPtr(%a : !llvm.ptr)
 
-  %1 = acc.getdeviceptr varPtr(%a : !llvm.ptr<f32>) -> !llvm.ptr<f32>
-  acc.exit_data dataOperands(%1 : !llvm.ptr<f32>)
-  acc.delete accPtr(%1 : !llvm.ptr<f32>)
+  %1 = acc.getdeviceptr varPtr(%a : !llvm.ptr) -> !llvm.ptr
+  acc.exit_data dataOperands(%1 : !llvm.ptr)
+  acc.delete accPtr(%1 : !llvm.ptr)
 
-  %2 = acc.getdeviceptr varPtr(%a : !llvm.ptr<f32>) -> !llvm.ptr<f32>
-  acc.exit_data dataOperands(%2 : !llvm.ptr<f32>) attributes {async,finalize}
-  acc.delete accPtr(%2 : !llvm.ptr<f32>)
+  %2 = acc.getdeviceptr varPtr(%a : !llvm.ptr) -> !llvm.ptr
+  acc.exit_data dataOperands(%2 : !llvm.ptr) attributes {async,finalize}
+  acc.delete accPtr(%2 : !llvm.ptr)
 
-  %3 = acc.getdeviceptr varPtr(%a : !llvm.ptr<f32>) -> !llvm.ptr<f32>
-  acc.exit_data dataOperands(%3 : !llvm.ptr<f32>)
-  acc.detach accPtr(%3 : !llvm.ptr<f32>)
+  %3 = acc.getdeviceptr varPtr(%a : !llvm.ptr) -> !llvm.ptr
+  acc.exit_data dataOperands(%3 : !llvm.ptr)
+  acc.detach accPtr(%3 : !llvm.ptr)
 
-  %4 = acc.getdeviceptr varPtr(%a : !llvm.ptr<f32>) -> !llvm.ptr<f32>
-  acc.exit_data dataOperands(%4 : !llvm.ptr<f32>) attributes {async}
-  acc.copyout accPtr(%4 : !llvm.ptr<f32>) to varPtr(%a : !llvm.ptr<f32>)
+  %4 = acc.getdeviceptr varPtr(%a : !llvm.ptr) -> !llvm.ptr
+  acc.exit_data dataOperands(%4 : !llvm.ptr) attributes {async}
+  acc.copyout accPtr(%4 : !llvm.ptr) to varPtr(%a : !llvm.ptr)
 
-  %5 = acc.getdeviceptr varPtr(%a : !llvm.ptr<f32>) -> !llvm.ptr<f32>
-  acc.exit_data dataOperands(%5 : !llvm.ptr<f32>) attributes {wait}
-  acc.delete accPtr(%5 : !llvm.ptr<f32>)
+  %5 = acc.getdeviceptr varPtr(%a : !llvm.ptr) -> !llvm.ptr
+  acc.exit_data dataOperands(%5 : !llvm.ptr) attributes {wait}
+  acc.delete accPtr(%5 : !llvm.ptr)
 
-  %6 = acc.getdeviceptr varPtr(%a : !llvm.ptr<f32>) -> !llvm.ptr<f32>
-  acc.exit_data async(%i64Value : i64) dataOperands(%6 : !llvm.ptr<f32>)
-  acc.copyout accPtr(%6 : !llvm.ptr<f32>) to varPtr(%a : !llvm.ptr<f32>)
+  %6 = acc.getdeviceptr varPtr(%a : !llvm.ptr) -> !llvm.ptr
+  acc.exit_data async(%i64Value : i64) dataOperands(%6 : !llvm.ptr)
+  acc.copyout accPtr(%6 : !llvm.ptr) to varPtr(%a : !llvm.ptr)
 
-  %7 = acc.getdeviceptr varPtr(%a : !llvm.ptr<f32>) -> !llvm.ptr<f32>
-  acc.exit_data dataOperands(%7 : !llvm.ptr<f32>) async(%i64Value : i64)
-  acc.copyout accPtr(%7 : !llvm.ptr<f32>) to varPtr(%a : !llvm.ptr<f32>)
+  %7 = acc.getdeviceptr varPtr(%a : !llvm.ptr) -> !llvm.ptr
+  acc.exit_data dataOperands(%7 : !llvm.ptr) async(%i64Value : i64)
+  acc.copyout accPtr(%7 : !llvm.ptr) to varPtr(%a : !llvm.ptr)
 
-  %8 = acc.getdeviceptr varPtr(%a : !llvm.ptr<f32>) -> !llvm.ptr<f32>
-  acc.exit_data if(%ifCond) dataOperands(%8 : !llvm.ptr<f32>)
-  acc.copyout accPtr(%8 : !llvm.ptr<f32>) to varPtr(%a : !llvm.ptr<f32>)
+  %8 = acc.getdeviceptr varPtr(%a : !llvm.ptr) -> !llvm.ptr
+  acc.exit_data if(%ifCond) dataOperands(%8 : !llvm.ptr)
+  acc.copyout accPtr(%8 : !llvm.ptr) to varPtr(%a : !llvm.ptr)
 
-  %9 = acc.getdeviceptr varPtr(%a : !llvm.ptr<f32>) -> !llvm.ptr<f32>
-  acc.exit_data wait_devnum(%i64Value: i64) wait(%i32Value, %idxValue : i32, index) dataOperands(%9 : !llvm.ptr<f32>)
-  acc.copyout accPtr(%9 : !llvm.ptr<f32>) to varPtr(%a : !llvm.ptr<f32>)
+  %9 = acc.getdeviceptr varPtr(%a : !llvm.ptr) -> !llvm.ptr
+  acc.exit_data wait_devnum(%i64Value: i64) wait(%i32Value, %idxValue : i32, index) dataOperands(%9 : !llvm.ptr)
+  acc.copyout accPtr(%9 : !llvm.ptr) to varPtr(%a : !llvm.ptr)
 
   return
 }
 
-// CHECK: func @testexitdataop(%[[ARGA:.*]]: !llvm.ptr<f32>) {
+// CHECK: func @testexitdataop(%[[ARGA:.*]]: !llvm.ptr) {
 // CHECK: %[[IFCOND:.*]] = arith.constant true
 // CHECK: %[[I64VALUE:.*]] = arith.constant 1 : i64
 // CHECK: %[[I32VALUE:.*]] = arith.constant 1 : i32
 // CHECK: %[[IDXVALUE:.*]] = arith.constant 1 : index
 
-// CHECK: %[[DEVPTR:.*]] = acc.getdeviceptr varPtr(%[[ARGA]] : !llvm.ptr<f32>) -> !llvm.ptr<f32>
-// CHECK: acc.exit_data dataOperands(%[[DEVPTR]] : !llvm.ptr<f32>)
-// CHECK: acc.copyout accPtr(%[[DEVPTR]] : !llvm.ptr<f32>) to varPtr(%[[ARGA]] : !llvm.ptr<f32>)
+// CHECK: %[[DEVPTR:.*]] = acc.getdeviceptr varPtr(%[[ARGA]] : !llvm.ptr) -> !llvm.ptr
+// CHECK: acc.exit_data dataOperands(%[[DEVPTR]] : !llvm.ptr)
+// CHECK: acc.copyout accPtr(%[[DEVPTR]] : !llvm.ptr) to varPtr(%[[ARGA]] : !llvm.ptr)
 
-// CHECK: %[[DEVPTR:.*]] = acc.getdeviceptr varPtr(%[[ARGA]] : !llvm.ptr<f32>) -> !llvm.ptr<f32>
-// CHECK: acc.exit_data dataOperands(%[[DEVPTR]] : !llvm.ptr<f32>)
-// CHECK: acc.delete accPtr(%[[DEVPTR]] : !llvm.ptr<f32>)
+// CHECK: %[[DEVPTR:.*]] = acc.getdeviceptr varPtr(%[[ARGA]] : !llvm.ptr) -> !llvm.ptr
+// CHECK: acc.exit_data dataOperands(%[[DEVPTR]] : !llvm.ptr)
+// CHECK: acc.delete accPtr(%[[DEVPTR]] : !llvm.ptr)
 
-// CHECK: %[[DEVPTR:.*]] = acc.getdeviceptr varPtr(%[[ARGA]] : !llvm.ptr<f32>) -> !llvm.ptr<f32>
-// CHECK: acc.exit_data dataOperands(%[[DEVPTR]] : !llvm.ptr<f32>) attributes {async, finalize}
-// CHECK: acc.delete accPtr(%[[DEVPTR]] : !llvm.ptr<f32>)
+// CHECK: %[[DEVPTR:.*]] = acc.getdeviceptr varPtr(%[[ARGA]] : !llvm.ptr) -> !llvm.ptr
+// CHECK: acc.exit_data dataOperands(%[[DEVPTR]] : !llvm.ptr) attributes {async, finalize}
+// CHECK: acc.delete accPtr(%[[DEVPTR]] : !llvm.ptr)
 
-// CHECK: %[[DEVPTR:.*]] = acc.getdeviceptr varPtr(%[[ARGA]] : !llvm.ptr<f32>) -> !llvm.ptr<f32>
-// CHECK: acc.exit_data dataOperands(%[[DEVPTR]] : !llvm.ptr<f32>)
-// CHECK: acc.detach accPtr(%[[DEVPTR]] : !llvm.ptr<f32>)
+// CHECK: %[[DEVPTR:.*]] = acc.getdeviceptr varPtr(%[[ARGA]] : !llvm.ptr) -> !llvm.ptr
+// CHECK: acc.exit_data dataOperands(%[[DEVPTR]] : !llvm.ptr)
+// CHECK: acc.detach accPtr(%[[DEVPTR]] : !llvm.ptr)
 
-// CHECK: %[[DEVPTR:.*]] = acc.getdeviceptr varPtr(%[[ARGA]] : !llvm.ptr<f32>) -> !llvm.ptr<f32>
-// CHECK: acc.exit_data dataOperands(%[[DEVPTR]] : !llvm.ptr<f32>) attributes {async}
-// CHECK: acc.copyout accPtr(%[[DEVPTR]] : !llvm.ptr<f32>) to varPtr(%[[ARGA]] : !llvm.ptr<f32>)
+// CHECK: %[[DEVPTR:.*]] = acc.getdeviceptr varPtr(%[[ARGA]] : !llvm.ptr) -> !llvm.ptr
+// CHECK: acc.exit_data dataOperands(%[[DEVPTR]] : !llvm.ptr) attributes {async}
+// CHECK: acc.copyout accPtr(%[[DEVPTR]] : !llvm.ptr) to varPtr(%[[ARGA]] : !llvm.ptr)
 
-// CHECK: %[[DEVPTR:.*]] = acc.getdeviceptr varPtr(%[[ARGA]] : !llvm.ptr<f32>) -> !llvm.ptr<f32>
-// CHECK: acc.exit_data dataOperands(%[[DEVPTR]] : !llvm.ptr<f32>) attributes {wait}
-// CHECK: acc.delete accPtr(%[[DEVPTR]] : !llvm.ptr<f32>)
+// CHECK: %[[DEVPTR:.*]] = acc.getdeviceptr varPtr(%[[ARGA]] : !llvm.ptr) -> !llvm.ptr
+// CHECK: acc.exit_data dataOperands(%[[DEVPTR]] : !llvm.ptr) attributes {wait}
+// CHECK: acc.delete accPtr(%[[DEVPTR]] : !llvm.ptr)
 
-// CHECK: %[[DEVPTR:.*]] = acc.getdeviceptr varPtr(%[[ARGA]] : !llvm.ptr<f32>) -> !llvm.ptr<f32>
-// CHECK: acc.exit_data async(%[[I64VALUE]] : i64) dataOperands(%[[DEVPTR]] : !llvm.ptr<f32>)
-// CHECK: acc.copyout accPtr(%[[DEVPTR]] : !llvm.ptr<f32>) to varPtr(%[[ARGA]] : !llvm.ptr<f32>)
+// CHECK: %[[DEVPTR:.*]] = acc.getdeviceptr varPtr(%[[ARGA]] : !llvm.ptr) -> !llvm.ptr
+// CHECK: acc.exit_data async(%[[I64VALUE]] : i64) dataOperands(%[[DEVPTR]] : !llvm.ptr)
+// CHECK: acc.copyout accPtr(%[[DEVPTR]] : !llvm.ptr) to varPtr(%[[ARGA]] : !llvm.ptr)
 
-// CHECK: %[[DEVPTR:.*]] = acc.getdeviceptr varPtr(%[[ARGA]] : !llvm.ptr<f32>) -> !llvm.ptr<f32>
-// CHECK: acc.exit_data async(%[[I64VALUE]] : i64) dataOperands(%[[DEVPTR]] : !llvm.ptr<f32>)
-// CHECK: acc.copyout accPtr(%[[DEVPTR]] : !llvm.ptr<f32>) to varPtr(%[[ARGA]] : !llvm.ptr<f32>)
+// CHECK: %[[DEVPTR:.*]] = acc.getdeviceptr varPtr(%[[ARGA]] : !llvm.ptr) -> !llvm.ptr
+// CHECK: acc.exit_data async(%[[I64VALUE]] : i64) dataOperands(%[[DEVPTR]] : !llvm.ptr)
+// CHECK: acc.copyout accPtr(%[[DEVPTR]] : !llvm.ptr) to varPtr(%[[ARGA]] : !llvm.ptr)
 
-// CHECK: %[[DEVPTR:.*]] = acc.getdeviceptr varPtr(%[[ARGA]] : !llvm.ptr<f32>) -> !llvm.ptr<f32>
-// CHECK: acc.exit_data if(%[[IFCOND]]) dataOperands(%[[DEVPTR]] : !llvm.ptr<f32>)
-// CHECK: acc.copyout accPtr(%[[DEVPTR]] : !llvm.ptr<f32>) to varPtr(%[[ARGA]] : !llvm.ptr<f32>)
+// CHECK: %[[DEVPTR:.*]] = acc.getdeviceptr varPtr(%[[ARGA]] : !llvm.ptr) -> !llvm.ptr
+// CHECK: acc.exit_data if(%[[IFCOND]]) dataOperands(%[[DEVPTR]] : !llvm.ptr)
+// CHECK: acc.copyout accPtr(%[[DEVPTR]] : !llvm.ptr) to varPtr(%[[ARGA]] : !llvm.ptr)
 
-// CHECK: %[[DEVPTR:.*]] = acc.getdeviceptr varPtr(%[[ARGA]] : !llvm.ptr<f32>) -> !llvm.ptr<f32>
-// CHECK: acc.exit_data wait_devnum(%[[I64VALUE]] : i64) wait(%[[I32VALUE]], %[[IDXVALUE]] : i32, index) dataOperands(%[[DEVPTR]] : !llvm.ptr<f32>)
-// CHECK: acc.copyout accPtr(%[[DEVPTR]] : !llvm.ptr<f32>) to varPtr(%[[ARGA]] : !llvm.ptr<f32>)
+// CHECK: %[[DEVPTR:.*]] = acc.getdeviceptr varPtr(%[[ARGA]] : !llvm.ptr) -> !llvm.ptr
+// CHECK: acc.exit_data wait_devnum(%[[I64VALUE]] : i64) wait(%[[I32VALUE]], %[[IDXVALUE]] : i32, index) dataOperands(%[[DEVPTR]] : !llvm.ptr)
+// CHECK: acc.copyout accPtr(%[[DEVPTR]] : !llvm.ptr) to varPtr(%[[ARGA]] : !llvm.ptr)
 
 // -----
 
 
-func.func @testenterdataop(%a: !llvm.ptr<f32>, %b: !llvm.ptr<f32>, %c: !llvm.ptr<f32>) -> () {
+func.func @testenterdataop(%a: !llvm.ptr, %b: !llvm.ptr, %c: !llvm.ptr) -> () {
   %ifCond = arith.constant true
   %i64Value = arith.constant 1 : i64
   %i32Value = arith.constant 1 : i32
   %idxValue = arith.constant 1 : index
 
-  %0 = acc.copyin varPtr(%a : !llvm.ptr<f32>) -> !llvm.ptr<f32>
-  acc.enter_data dataOperands(%0 : !llvm.ptr<f32>)
-  %1 = acc.create varPtr(%a : !llvm.ptr<f32>) -> !llvm.ptr<f32>
-  %2 = acc.create varPtr(%b : !llvm.ptr<f32>) -> !llvm.ptr<f32> {dataClause = #acc<data_clause acc_create_zero>}
-  %3 = acc.create varPtr(%c : !llvm.ptr<f32>) -> !llvm.ptr<f32> {dataClause = #acc<data_clause acc_create_zero>}
-  acc.enter_data dataOperands(%1, %2, %3 : !llvm.ptr<f32>, !llvm.ptr<f32>, !llvm.ptr<f32>)
-  %4 = acc.attach varPtr(%a : !llvm.ptr<f32>) -> !llvm.ptr<f32>
-  acc.enter_data dataOperands(%4 : !llvm.ptr<f32>)
-  %5 = acc.copyin varPtr(%a : !llvm.ptr<f32>) -> !llvm.ptr<f32>
-  acc.enter_data dataOperands(%5 : !llvm.ptr<f32>) attributes {async}
-  %6 = acc.create varPtr(%a : !llvm.ptr<f32>) -> !llvm.ptr<f32>
-  acc.enter_data dataOperands(%6 : !llvm.ptr<f32>) attributes {wait}
-  %7 = acc.copyin varPtr(%a : !llvm.ptr<f32>) -> !llvm.ptr<f32>
-  acc.enter_data async(%i64Value : i64) dataOperands(%7 : !llvm.ptr<f32>)
-  %8 = acc.copyin varPtr(%a : !llvm.ptr<f32>) -> !llvm.ptr<f32>
-  acc.enter_data dataOperands(%8 : !llvm.ptr<f32>) async(%i64Value : i64)
-  %9 = acc.copyin varPtr(%a : !llvm.ptr<f32>) -> !llvm.ptr<f32>
-  acc.enter_data if(%ifCond) dataOperands(%9 : !llvm.ptr<f32>)
-  %10 = acc.copyin varPtr(%a : !llvm.ptr<f32>) -> !llvm.ptr<f32>
-  acc.enter_data wait_devnum(%i64Value: i64) wait(%i32Value, %idxValue : i32, index) dataOperands(%10 : !llvm.ptr<f32>)
+  %0 = acc.copyin varPtr(%a : !llvm.ptr) -> !llvm.ptr
+  acc.enter_data dataOperands(%0 : !llvm.ptr)
+  %1 = acc.create varPtr(%a : !llvm.ptr) -> !llvm.ptr
+  %2 = acc.create varPtr(%b : !llvm.ptr) -> !llvm.ptr {dataClause = #acc<data_clause acc_create_zero>}
+  %3 = acc.create varPtr(%c : !llvm.ptr) -> !llvm.ptr {dataClause = #acc<data_clause acc_create_zero>}
+  acc.enter_data dataOperands(%1, %2, %3 : !llvm.ptr, !llvm.ptr, !llvm.ptr)
+  %4 = acc.attach varPtr(%a : !llvm.ptr) -> !llvm.ptr
+  acc.enter_data dataOperands(%4 : !llvm.ptr)
+  %5 = acc.copyin varPtr(%a : !llvm.ptr) -> !llvm.ptr
+  acc.enter_data dataOperands(%5 : !llvm.ptr) attributes {async}
+  %6 = acc.create varPtr(%a : !llvm.ptr) -> !llvm.ptr
+  acc.enter_data dataOperands(%6 : !llvm.ptr) attributes {wait}
+  %7 = acc.copyin varPtr(%a : !llvm.ptr) -> !llvm.ptr
+  acc.enter_data async(%i64Value : i64) dataOperands(%7 : !llvm.ptr)
+  %8 = acc.copyin varPtr(%a : !llvm.ptr) -> !llvm.ptr
+  acc.enter_data dataOperands(%8 : !llvm.ptr) async(%i64Value : i64)
+  %9 = acc.copyin varPtr(%a : !llvm.ptr) -> !llvm.ptr
+  acc.enter_data if(%ifCond) dataOperands(%9 : !llvm.ptr)
+  %10 = acc.copyin varPtr(%a : !llvm.ptr) -> !llvm.ptr
+  acc.enter_data wait_devnum(%i64Value: i64) wait(%i32Value, %idxValue : i32, index) dataOperands(%10 : !llvm.ptr)
 
   return
 }
 
-// CHECK: func @testenterdataop(%[[ARGA:.*]]: !llvm.ptr<f32>, %[[ARGB:.*]]: !llvm.ptr<f32>, %[[ARGC:.*]]: !llvm.ptr<f32>) {
+// CHECK: func @testenterdataop(%[[ARGA:.*]]: !llvm.ptr, %[[ARGB:.*]]: !llvm.ptr, %[[ARGC:.*]]: !llvm.ptr) {
 // CHECK: [[IFCOND:%.*]] = arith.constant true
 // CHECK: [[I64VALUE:%.*]] = arith.constant 1 : i64
 // CHECK: [[I32VALUE:%.*]] = arith.constant 1 : i32
 // CHECK: [[IDXVALUE:%.*]] = arith.constant 1 : index
-// CHECK: %[[COPYIN:.*]] = acc.copyin varPtr(%[[ARGA]] : !llvm.ptr<f32>) -> !llvm.ptr<f32>
-// CHECK: acc.enter_data dataOperands(%[[COPYIN]] : !llvm.ptr<f32>)
-// CHECK: %[[CREATE_A:.*]] = acc.create varPtr(%[[ARGA]] : !llvm.ptr<f32>) -> !llvm.ptr<f32>
-// CHECK: %[[CREATE_B:.*]] = acc.create varPtr(%[[ARGB]] : !llvm.ptr<f32>) -> !llvm.ptr<f32> {dataClause = #acc<data_clause acc_create_zero>}
-// CHECK: %[[CREATE_C:.*]] = acc.create varPtr(%[[ARGC]] : !llvm.ptr<f32>) -> !llvm.ptr<f32> {dataClause = #acc<data_clause acc_create_zero>}
-// CHECK: acc.enter_data dataOperands(%[[CREATE_A]], %[[CREATE_B]], %[[CREATE_C]] : !llvm.ptr<f32>, !llvm.ptr<f32>, !llvm.ptr<f32>)
-// CHECK: %[[ATTACH:.*]] = acc.attach varPtr(%[[ARGA]] : !llvm.ptr<f32>) -> !llvm.ptr<f32>
-// CHECK: acc.enter_data dataOperands(%[[ATTACH]] : !llvm.ptr<f32>)
-// CHECK: %[[COPYIN:.*]] = acc.copyin varPtr(%[[ARGA]] : !llvm.ptr<f32>) -> !llvm.ptr<f32>
-// CHECK: acc.enter_data dataOperands(%[[COPYIN]] : !llvm.ptr<f32>) attributes {async}
-// CHECK: %[[CREATE:.*]] = acc.create varPtr(%[[ARGA]] : !llvm.ptr<f32>) -> !llvm.ptr<f32>
-// CHECK: acc.enter_data dataOperands(%[[CREATE]] : !llvm.ptr<f32>) attributes {wait}
-// CHECK: %[[COPYIN:.*]] = acc.copyin varPtr(%[[ARGA]] : !llvm.ptr<f32>) -> !llvm.ptr<f32>
-// CHECK: acc.enter_data async([[I64VALUE]] : i64) dataOperands(%[[COPYIN]] : !llvm.ptr<f32>)
-// CHECK: %[[COPYIN:.*]] = acc.copyin varPtr(%[[ARGA]] : !llvm.ptr<f32>) -> !llvm.ptr<f32>
-// CHECK: acc.enter_data async([[I64VALUE]] : i64) dataOperands(%[[COPYIN]] : !llvm.ptr<f32>)
-// CHECK: %[[COPYIN:.*]] = acc.copyin varPtr(%[[ARGA]] : !llvm.ptr<f32>) -> !llvm.ptr<f32>
-// CHECK: acc.enter_data if([[IFCOND]]) dataOperands(%[[COPYIN]] : !llvm.ptr<f32>)
-// CHECK: %[[COPYIN:.*]] = acc.copyin varPtr(%[[ARGA]] : !llvm.ptr<f32>) -> !llvm.ptr<f32>
-// CHECK: acc.enter_data wait_devnum([[I64VALUE]] : i64) wait([[I32VALUE]], [[IDXVALUE]] : i32, index) dataOperands(%[[COPYIN]] : !llvm.ptr<f32>)
+// CHECK: %[[COPYIN:.*]] = acc.copyin varPtr(%[[ARGA]] : !llvm.ptr) -> !llvm.ptr
+// CHECK: acc.enter_data dataOperands(%[[COPYIN]] : !llvm.ptr)
+// CHECK: %[[CREATE_A:.*]] = acc.create varPtr(%[[ARGA]] : !llvm.ptr) -> !llvm.ptr
+// CHECK: %[[CREATE_B:.*]] = acc.create varPtr(%[[ARGB]] : !llvm.ptr) -> !llvm.ptr {dataClause = #acc<data_clause acc_create_zero>}
+// CHECK: %[[CREATE_C:.*]] = acc.create varPtr(%[[ARGC]] : !llvm.ptr) -> !llvm.ptr {dataClause = #acc<data_clause acc_create_zero>}
+// CHECK: acc.enter_data dataOperands(%[[CREATE_A]], %[[CREATE_B]], %[[CREATE_C]] : !llvm.ptr, !llvm.ptr, !llvm.ptr)
+// CHECK: %[[ATTACH:.*]] = acc.attach varPtr(%[[ARGA]] : !llvm.ptr) -> !llvm.ptr
+// CHECK: acc.enter_data dataOperands(%[[ATTACH]] : !llvm.ptr)
+// CHECK: %[[COPYIN:.*]] = acc.copyin varPtr(%[[ARGA]] : !llvm.ptr) -> !llvm.ptr
+// CHECK: acc.enter_data dataOperands(%[[COPYIN]] : !llvm.ptr) attributes {async}
+// CHECK: %[[CREATE:.*]] = acc.create varPtr(%[[ARGA]] : !llvm.ptr) -> !llvm.ptr
+// CHECK: acc.enter_data dataOperands(%[[CREATE]] : !llvm.ptr) attributes {wait}
+// CHECK: %[[COPYIN:.*]] = acc.copyin varPtr(%[[ARGA]] : !llvm.ptr) -> !llvm.ptr
+// CHECK: acc.enter_data async([[I64VALUE]] : i64) dataOperands(%[[COPYIN]] : !llvm.ptr)
+// CHECK: %[[COPYIN:.*]] = acc.copyin varPtr(%[[ARGA]] : !llvm.ptr) -> !llvm.ptr
+// CHECK: acc.enter_data async([[I64VALUE]] : i64) dataOperands(%[[COPYIN]] : !llvm.ptr)
+// CHECK: %[[COPYIN:.*]] = acc.copyin varPtr(%[[ARGA]] : !llvm.ptr) -> !llvm.ptr
+// CHECK: acc.enter_data if([[IFCOND]]) dataOperands(%[[COPYIN]] : !llvm.ptr)
+// CHECK: %[[COPYIN:.*]] = acc.copyin varPtr(%[[ARGA]] : !llvm.ptr) -> !llvm.ptr
+// CHECK: acc.enter_data wait_devnum([[I64VALUE]] : i64) wait([[I32VALUE]], [[IDXVALUE]] : i32, index) dataOperands(%[[COPYIN]] : !llvm.ptr)
 
 // -----
 
@@ -1419,42 +1419,42 @@ func.func @host_device_ops(%a: memref<f32>) -> () {
 
 // -----
 
-func.func @host_data_ops(%a: !llvm.ptr<f32>, %ifCond: i1) -> () {
-  %0 = acc.use_device varPtr(%a : !llvm.ptr<f32>) -> !llvm.ptr<f32>
-  acc.host_data dataOperands(%0: !llvm.ptr<f32>) {
+func.func @host_data_ops(%a: !llvm.ptr, %ifCond: i1) -> () {
+  %0 = acc.use_device varPtr(%a : !llvm.ptr) -> !llvm.ptr
+  acc.host_data dataOperands(%0: !llvm.ptr) {
   }
-  acc.host_data dataOperands(%0: !llvm.ptr<f32>) {
+  acc.host_data dataOperands(%0: !llvm.ptr) {
   } attributes {if_present}
-  acc.host_data if(%ifCond) dataOperands(%0: !llvm.ptr<f32>) {
+  acc.host_data if(%ifCond) dataOperands(%0: !llvm.ptr) {
   }
   return
 }
 
 // CHECK-LABEL: func.func @host_data_ops(
-// CHECK-SAME:    %[[A:.*]]: !llvm.ptr<f32>, %[[IFCOND:.*]]: i1)
-// CHECK: %[[PTR:.*]] = acc.use_device varPtr(%[[A]] : !llvm.ptr<f32>) -> !llvm.ptr<f32>
-// CHECK: acc.host_data dataOperands(%[[PTR]] : !llvm.ptr<f32>)
-// CHECK: acc.host_data dataOperands(%[[PTR]] : !llvm.ptr<f32>) {
+// CHECK-SAME:    %[[A:.*]]: !llvm.ptr, %[[IFCOND:.*]]: i1)
+// CHECK: %[[PTR:.*]] = acc.use_device varPtr(%[[A]] : !llvm.ptr) -> !llvm.ptr
+// CHECK: acc.host_data dataOperands(%[[PTR]] : !llvm.ptr)
+// CHECK: acc.host_data dataOperands(%[[PTR]] : !llvm.ptr) {
 // CHECK: } attributes {if_present}
-// CHECK: acc.host_data if(%[[IFCOND]]) dataOperands(%[[PTR]] : !llvm.ptr<f32>)
+// CHECK: acc.host_data if(%[[IFCOND]]) dataOperands(%[[PTR]] : !llvm.ptr)
 
 // -----
 
-acc.private.recipe @privatization_i32 : !llvm.ptr<i32> init {
-^bb0(%arg0: !llvm.ptr<i32>):
+acc.private.recipe @privatization_i32 : !llvm.ptr init {
+^bb0(%arg0: !llvm.ptr):
   %c1 = arith.constant 1 : i32
   %c0 = arith.constant 0 : i32
-  %0 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr<i32>
-  llvm.store %c0, %0 : !llvm.ptr<i32>
-  acc.yield %0 : !llvm.ptr<i32>
+  %0 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr
+  llvm.store %c0, %0 : i32, !llvm.ptr
+  acc.yield %0 : !llvm.ptr
 }
 
-// CHECK: acc.private.recipe @privatization_i32 : !llvm.ptr<i32> init {
+// CHECK: acc.private.recipe @privatization_i32 : !llvm.ptr init {
 // CHECK: %[[C1:.*]] = arith.constant 1 : i32
 // CHECK: %[[C0:.*]] = arith.constant 0 : i32
-// CHECK: %[[ALLOCA:.*]] = llvm.alloca %[[C1]] x i32 : (i32) -> !llvm.ptr<i32>
-// CHECK: llvm.store %[[C0]], %[[ALLOCA]] : !llvm.ptr<i32>
-// CHECK: acc.yield %[[ALLOCA]] : !llvm.ptr<i32>
+// CHECK: %[[ALLOCA:.*]] = llvm.alloca %[[C1]] x i32 : (i32) -> !llvm.ptr
+// CHECK: llvm.store %[[C0]], %[[ALLOCA]] : i32, !llvm.ptr
+// CHECK: acc.yield %[[ALLOCA]] : !llvm.ptr
 
 // -----
 
@@ -1617,29 +1617,29 @@ llvm.mlir.global external @globalvar() { acc.declare = #acc.declare<dataClause =
 }
 
 acc.global_ctor @acc_constructor {
-  %0 = llvm.mlir.addressof @globalvar { acc.declare = #acc.declare<dataClause = acc_create> } : !llvm.ptr<i32>
-  %1 = acc.create varPtr(%0 : !llvm.ptr<i32>) -> !llvm.ptr<i32>
-  acc.declare_enter dataOperands(%1 : !llvm.ptr<i32>)
+  %0 = llvm.mlir.addressof @globalvar { acc.declare = #acc.declare<dataClause = acc_create> } : !llvm.ptr
+  %1 = acc.create varPtr(%0 : !llvm.ptr) -> !llvm.ptr
+  acc.declare_enter dataOperands(%1 : !llvm.ptr)
   acc.terminator
 }
 
 acc.global_dtor @acc_destructor {
-  %0 = llvm.mlir.addressof @globalvar { acc.declare = #acc.declare<dataClause = acc_create> } : !llvm.ptr<i32>
-  %1 = acc.getdeviceptr varPtr(%0 : !llvm.ptr<i32>) -> !llvm.ptr<i32> {dataClause = #acc<data_clause acc_create>}
-  acc.declare_exit dataOperands(%1 : !llvm.ptr<i32>)
-  acc.delete accPtr(%1 : !llvm.ptr<i32>)
+  %0 = llvm.mlir.addressof @globalvar { acc.declare = #acc.declare<dataClause = acc_create> } : !llvm.ptr
+  %1 = acc.getdeviceptr varPtr(%0 : !llvm.ptr) -> !llvm.ptr {dataClause = #acc<data_clause acc_create>}
+  acc.declare_exit dataOperands(%1 : !llvm.ptr)
+  acc.delete accPtr(%1 : !llvm.ptr)
   acc.terminator
 }
 
 // CHECK-LABEL: acc.global_ctor @acc_constructor
-// CHECK: %[[ADDR:.*]] = llvm.mlir.addressof @globalvar {acc.declare = #acc.declare<dataClause = acc_create>} : !llvm.ptr<i32>
-// CHECK-NEXT: %[[CREATE:.*]] = acc.create varPtr(%[[ADDR]] : !llvm.ptr<i32>) -> !llvm.ptr<i32>
-// CHECK-NEXT: acc.declare_enter dataOperands(%[[CREATE]] : !llvm.ptr<i32>)
+// CHECK: %[[ADDR:.*]] = llvm.mlir.addressof @globalvar {acc.declare = #acc.declare<dataClause = acc_create>} : !llvm.ptr
+// CHECK-NEXT: %[[CREATE:.*]] = acc.create varPtr(%[[ADDR]] : !llvm.ptr) -> !llvm.ptr
+// CHECK-NEXT: acc.declare_enter dataOperands(%[[CREATE]] : !llvm.ptr)
 // CHECK: acc.global_dtor @acc_destructor
-// CHECK: %[[ADDR:.*]] = llvm.mlir.addressof @globalvar {acc.declare = #acc.declare<dataClause = acc_create>} : !llvm.ptr<i32>
-// CHECK-NEXT: %[[DELETE:.*]] = acc.getdeviceptr varPtr(%[[ADDR]] : !llvm.ptr<i32>) -> !llvm.ptr<i32> {dataClause = #acc<data_clause acc_create>}
-// CHECK-NEXT: acc.declare_exit dataOperands(%[[DELETE]] : !llvm.ptr<i32>)
-// CHECK-NEXT: acc.delete accPtr(%[[DELETE]] : !llvm.ptr<i32>)
+// CHECK: %[[ADDR:.*]] = llvm.mlir.addressof @globalvar {acc.declare = #acc.declare<dataClause = acc_create>} : !llvm.ptr
+// CHECK-NEXT: %[[DELETE:.*]] = acc.getdeviceptr varPtr(%[[ADDR]] : !llvm.ptr) -> !llvm.ptr {dataClause = #acc<data_clause acc_create>}
+// CHECK-NEXT: acc.declare_exit dataOperands(%[[DELETE]] : !llvm.ptr)
+// CHECK-NEXT: acc.delete accPtr(%[[DELETE]] : !llvm.ptr)
 
 // -----
 
@@ -1691,14 +1691,14 @@ func.func @compute3(%a: memref<10x10xf32>, %b: memref<10x10xf32>, %c: memref<10x
   %numWorkers = arith.constant 10 : i64
 
   %c20 = arith.constant 20 : i32
-  %alloc = llvm.alloca %c20 x i32 { acc.declare = #acc.declare<dataClause = acc_create, implicit = true> } : (i32) -> !llvm.ptr<i32>
-  %createlocal = acc.create varPtr(%alloc : !llvm.ptr<i32>) -> !llvm.ptr<i32> {implicit = true}
+  %alloc = llvm.alloca %c20 x i32 { acc.declare = #acc.declare<dataClause = acc_create, implicit = true> } : (i32) -> !llvm.ptr
+  %createlocal = acc.create varPtr(%alloc : !llvm.ptr) -> !llvm.ptr {implicit = true}
 
   %pa = acc.present varPtr(%a : memref<10x10xf32>) -> memref<10x10xf32>
   %pb = acc.present varPtr(%b : memref<10x10xf32>) -> memref<10x10xf32>
   %pc = acc.present varPtr(%c : memref<10xf32>) -> memref<10xf32>
   %pd = acc.present varPtr(%d : memref<10xf32>) -> memref<10xf32>
-  acc.declare dataOperands(%pa, %pb, %pc, %pd, %createlocal: memref<10x10xf32>, memref<10x10xf32>, memref<10xf32>, memref<10xf32>, !llvm.ptr<i32>) {
+  acc.declare dataOperands(%pa, %pb, %pc, %pd, %createlocal: memref<10x10xf32>, memref<10x10xf32>, memref<10xf32>, memref<10xf32>, !llvm.ptr) {
   }
 
   return

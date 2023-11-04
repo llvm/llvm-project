@@ -129,10 +129,10 @@ func.func private @foo() -> ()
 
 // -----
 
-func.func @constant_hoisting_target(%x : !llvm.ptr<i32>) {
+func.func @constant_hoisting_target(%x : !llvm.ptr) {
   omp.target {
     %c1 = arith.constant 10 : i32
-    llvm.store %c1, %x : i32, !llvm.ptr<i32>
+    llvm.store %c1, %x : i32, !llvm.ptr
     omp.terminator
   }
   return
