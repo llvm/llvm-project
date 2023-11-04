@@ -21,6 +21,7 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleList.h"
 #include "lldb/Core/ModuleSpec.h"
+#include "lldb/Core/PluginManager.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Symbol/ObjectFile.h"
@@ -119,8 +120,8 @@ int LocateMacOSXFilesUsingDebugSymbols(const ModuleSpec &module_spec,
               FileSystem::Instance().Resolve(dsym_filespec);
 
             if (FileSystem::Instance().IsDirectory(dsym_filespec)) {
-              dsym_filespec =
-                  Symbols::FindSymbolFileInBundle(dsym_filespec, uuid, arch);
+              dsym_filespec = PluginManager::FindSymbolFileInBundle(
+                  dsym_filespec, uuid, arch);
               ++items_found;
             } else {
               ++items_found;
@@ -287,45 +288,6 @@ int LocateMacOSXFilesUsingDebugSymbols(const ModuleSpec &module_spec,
   }
 
   return items_found;
-}
-
-FileSpec Symbols::FindSymbolFileInBundle(const FileSpec &dsym_bundle_fspec,
-                                         const lldb_private::UUID *uuid,
-                                         const ArchSpec *arch) {
-  std::string dsym_bundle_path = dsym_bundle_fspec.GetPath();
-  llvm::SmallString<128> buffer(dsym_bundle_path);
-  llvm::sys::path::append(buffer, "Contents", "Resources", "DWARF");
-
-  std::error_code EC;
-  llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> vfs =
-      FileSystem::Instance().GetVirtualFileSystem();
-  llvm::vfs::recursive_directory_iterator Iter(*vfs, buffer.str(), EC);
-  llvm::vfs::recursive_directory_iterator End;
-  for (; Iter != End && !EC; Iter.increment(EC)) {
-    llvm::ErrorOr<llvm::vfs::Status> Status = vfs->status(Iter->path());
-    if (Status->isDirectory())
-      continue;
-
-    FileSpec dsym_fspec(Iter->path());
-    ModuleSpecList module_specs;
-    if (ObjectFile::GetModuleSpecifications(dsym_fspec, 0, 0, module_specs)) {
-      ModuleSpec spec;
-      for (size_t i = 0; i < module_specs.GetSize(); ++i) {
-        bool got_spec = module_specs.GetModuleSpecAtIndex(i, spec);
-        assert(got_spec); // The call has side-effects so can't be inlined.
-        UNUSED_IF_ASSERT_DISABLED(got_spec);
-        if ((uuid == nullptr ||
-             (spec.GetUUIDPtr() && spec.GetUUID() == *uuid)) &&
-            (arch == nullptr ||
-             (spec.GetArchitecturePtr() &&
-              spec.GetArchitecture().IsCompatibleMatch(*arch)))) {
-          return dsym_fspec;
-        }
-      }
-    }
-  }
-
-  return {};
 }
 
 static bool GetModuleSpecInfoFromUUIDDictionary(CFDictionaryRef uuid_dict,
