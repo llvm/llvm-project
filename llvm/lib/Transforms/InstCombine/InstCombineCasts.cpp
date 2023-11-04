@@ -2546,6 +2546,32 @@ Instruction *InstCombinerImpl::visitBitCast(BitCastInst &CI) {
   if (DestTy == Src->getType())
     return replaceInstUsesWith(CI, Src);
 
+  // If we are clearing the sign bit of a floating-point value, convert this to
+  // fabs
+  //
+  // This is a generous interpretation for noimplicitfloat, this is not a true
+  // floating-point operation.
+  //
+  // Assumes any IEEE-represented type has the sign bit in the high bit.
+  if (!Builder.GetInsertBlock()->getParent()->hasFnAttribute(
+          Attribute::NoImplicitFloat) &&
+      DestTy->isFloatingPointTy() && DestTy->isIEEE()) {
+    Value *L, *R;
+    if (match(Src, m_And(m_Value(L), m_Value(R)))) {
+      Value *Cast;
+      if (match(L, m_BitCast(m_Value(Cast))) && match(R, m_MaxSignedValue())) {
+        Type *EltTy = Cast->getType()->getScalarType();
+        if (EltTy->isFloatingPointTy() && EltTy->isIEEE() &&
+            EltTy->getPrimitiveSizeInBits() ==
+                Src->getType()->getScalarType()->getPrimitiveSizeInBits()) {
+          return CallInst::Create(Intrinsic::getDeclaration(
+                                      CI.getModule(), Intrinsic::fabs, DestTy),
+                                  {Cast});
+        }
+      }
+    }
+  }
+
   if (FixedVectorType *DestVTy = dyn_cast<FixedVectorType>(DestTy)) {
     // Beware: messing with this target-specific oddity may cause trouble.
     if (DestVTy->getNumElements() == 1 && SrcTy->isX86_MMXTy()) {
