@@ -663,7 +663,7 @@ void Symbol::resolve(const LazyObject &other) {
 }
 
 void Symbol::resolve(const SharedSymbol &other) {
-  exportIfNonExported();
+  versionId = llvm::ELF::VER_NDX_GLOBAL;
   if (isPlaceholder()) {
     other.overwrite(*this);
     return;
