@@ -123,10 +123,9 @@ auto matchValue(const int64_t ValInt) {
       expr(ignoreImplicitAndArithmeticCasting(integerLiteral(equals(ValInt))));
   const auto Float = expr(ignoreImplicitAndFloatingCasting(
       matchFloatValueNear(static_cast<double>(ValInt))));
-  const auto Dref = declRefExpr(to(varDecl(
-      anyOf(isConstexpr(),
-            varDecl(hasType(qualType(isConstQualified(), isArithmetic())))),
-      hasInitializer(anyOf(Int, Float)))));
+  const auto Dref = declRefExpr(
+      to(varDecl(hasType(qualType(isConstQualified(), isArithmetic())),
+                 hasInitializer(anyOf(Int, Float)))));
   return expr(anyOf(Int, Float, Dref));
 }
 
