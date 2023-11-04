@@ -688,14 +688,14 @@ def HasStdExtZicond : Predicate<"Subtarget->hasStdExtZicond()">,
                                 "'Zicond' (Integer Conditional Operations)">;
 
 def FeatureStdExtSmaia
-    : SubtargetFeature<"experimental-smaia", "HasStdExtSmaia", "true",
+    : SubtargetFeature<"smaia", "HasStdExtSmaia", "true",
                        "'Smaia' (Smaia encompasses all added CSRs and all "
                        "modifications to interrupt response behavior that the "
                        "AIA specifies for a hart, over all privilege levels.)",
                        []>;
 
 def FeatureStdExtSsaia
-    : SubtargetFeature<"experimental-ssaia", "HasStdExtSsaia", "true",
+    : SubtargetFeature<"ssaia", "HasStdExtSsaia", "true",
                        "'Ssaia' (Ssaia is essentially the same as Smaia except "
                        "excluding the machine-level CSRs and behavior not "
                        "directly visible to supervisor level.)", []>;
