@@ -1655,6 +1655,39 @@ LLVMTypeRef LLVMTargetExtTypeInContext(LLVMContextRef C, const char *Name,
                                        unsigned IntParamCount);
 
 /**
+ * Obtain the name for this target extension type
+ */
+const char *LLVMGetTargetExtTypeName(LLVMTypeRef TargetExtTy);
+
+/**
+ * Obtain the number of type parameters for this target extension type
+ */
+unsigned LLVMCountTargetExtTypeTypeParams(LLVMTypeRef TargetExtTy);
+
+/**
+ * Obtain the values of a target extension type's type parameters, output to
+ * the passed-in pointer. The pointer should have enough space for all type
+ * params for the given target extension type
+ *
+ * @see LLVMCountTargetExtTypeTypeParams
+ */
+void LLVMGetTargetExtTypeTypeParams(LLVMTypeRef TargetExtTy, LLVMTypeRef *Dest);
+
+/**
+ * Obtain the number of int parameters for this target extension type
+ */
+unsigned LLVMCountTargetExtTypeIntParams(LLVMTypeRef TargetExtTy);
+
+/**
+ * Obtain the int values of a target extension type's int parameters, output to
+ * the passed-in pointer. The pointer should have enough space for all int
+ * params for the given target extension type
+ *
+ * @see LLVMCountTargetExtTypeIntParams
+ */
+void LLVMGetTargetExtTypeIntParams(LLVMTypeRef TargetExtTy, unsigned *Dest);
+
+/**
  * @}
  */
 

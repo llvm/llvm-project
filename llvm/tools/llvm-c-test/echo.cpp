@@ -157,8 +157,42 @@ struct TypeCloner {
         return LLVMX86MMXTypeInContext(Ctx);
       case LLVMTokenTypeKind:
         return LLVMTokenTypeInContext(Ctx);
-      case LLVMTargetExtTypeKind:
-        assert(false && "Implement me");
+      case LLVMTargetExtTypeKind: {
+        const char *Name = LLVMGetTargetExtTypeName(Src);
+        unsigned TypeParamCount = LLVMCountTargetExtTypeTypeParams(Src);
+        unsigned IntParamCount = LLVMCountTargetExtTypeIntParams(Src);
+
+        LLVMTypeRef *TypeParams = nullptr;
+        unsigned *IntParams = nullptr;
+
+        // If we have type params, get them from Src and clone them individually
+        if (TypeParamCount > 0) {
+          TypeParams = static_cast<LLVMTypeRef *>(
+              safe_malloc(TypeParamCount * sizeof(LLVMTypeRef)));
+          LLVMGetTargetExtTypeTypeParams(Src, TypeParams);
+
+          for (unsigned i = 0; i < TypeParamCount; i++)
+            TypeParams[i] = Clone(TypeParams[i]);
+        }
+
+        // If we have integer params, get them from Src
+        if (IntParamCount > 0) {
+          IntParams = static_cast<unsigned *>(
+              safe_malloc(IntParamCount * sizeof(unsigned)));
+          LLVMGetTargetExtTypeIntParams(Src, IntParams);
+        }
+
+        LLVMTypeRef TargtExtTy = LLVMTargetExtTypeInContext(
+            Ctx, Name, TypeParams, TypeParamCount, IntParams, IntParamCount);
+
+        if (TypeParams)
+          free(TypeParams);
+
+        if (IntParams)
+          free(IntParams);
+
+        return TargtExtTy;
+      }
     }
 
     fprintf(stderr, "%d is not a supported typekind\n", Kind);
