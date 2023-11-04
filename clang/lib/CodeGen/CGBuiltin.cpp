@@ -9774,14 +9774,14 @@ Value *CodeGenFunction::EmitSVEMaskedLoad(const CallExpr *E,
   auto VectorTy = cast<llvm::ScalableVectorType>(ReturnTy);
   llvm::ScalableVectorType *MemoryTy = nullptr;
   llvm::ScalableVectorType *PredTy = nullptr;
-  bool IsExtendingLoad = true;
+  bool IsQuadLoad = false;
   switch (IntrinsicID) {
   case Intrinsic::aarch64_sve_ld1uwq:
   case Intrinsic::aarch64_sve_ld1udq:
     MemoryTy = llvm::ScalableVectorType::get(MemEltTy, 1);
     PredTy =
         llvm::ScalableVectorType::get(IntegerType::get(getLLVMContext(), 1), 1);
-    IsExtendingLoad = false;
+    IsQuadLoad = true;
     break;
   default:
     MemoryTy = llvm::ScalableVectorType::get(MemEltTy, VectorTy);
@@ -9796,14 +9796,13 @@ Value *CodeGenFunction::EmitSVEMaskedLoad(const CallExpr *E,
   if (Ops.size() > 2)
     BasePtr = Builder.CreateGEP(MemoryTy, BasePtr, Ops[2]);
 
-  Function *F =
-      CGM.getIntrinsic(IntrinsicID, IsExtendingLoad ? MemoryTy : VectorTy);
+  Function *F = CGM.getIntrinsic(IntrinsicID, IsQuadLoad ? VectorTy : MemoryTy);
   auto *Load =
       cast<llvm::Instruction>(Builder.CreateCall(F, {Predicate, BasePtr}));
   auto TBAAInfo = CGM.getTBAAAccessInfo(LangPTy->getPointeeType());
   CGM.DecorateInstructionWithTBAA(Load, TBAAInfo);
 
-  if (!IsExtendingLoad)
+  if (IsQuadLoad)
     return Load;
 
   return IsZExtReturn ? Builder.CreateZExt(Load, VectorTy)
@@ -9824,15 +9823,15 @@ Value *CodeGenFunction::EmitSVEMaskedStore(const CallExpr *E,
 
   auto PredTy = MemoryTy;
   auto AddrMemoryTy = MemoryTy;
-  bool IsTruncatingStore = true;
-  ;
+  bool IsQuadStore = false;
+
   switch (IntrinsicID) {
   case Intrinsic::aarch64_sve_st1uwq:
   case Intrinsic::aarch64_sve_st1udq:
     AddrMemoryTy = llvm::ScalableVectorType::get(MemEltTy, 1);
     PredTy =
         llvm::ScalableVectorType::get(IntegerType::get(getLLVMContext(), 1), 1);
-    IsTruncatingStore = false;
+    IsQuadStore = true;
     break;
   default:
     break;
@@ -9845,11 +9844,11 @@ Value *CodeGenFunction::EmitSVEMaskedStore(const CallExpr *E,
     BasePtr = Builder.CreateGEP(AddrMemoryTy, BasePtr, Ops[2]);
 
   // Last value is always the data
-  Value *Val = IsTruncatingStore ? Builder.CreateTrunc(Ops.back(), MemoryTy)
-                                 : Ops.back();
+  Value *Val =
+      IsQuadStore ? Ops.back() : Builder.CreateTrunc(Ops.back(), MemoryTy);
 
   Function *F =
-      CGM.getIntrinsic(IntrinsicID, IsTruncatingStore ? MemoryTy : VectorTy);
+      CGM.getIntrinsic(IntrinsicID, IsQuadStore ? VectorTy : MemoryTy);
   auto *Store =
       cast<llvm::Instruction>(Builder.CreateCall(F, {Val, Predicate, BasePtr}));
   auto TBAAInfo = CGM.getTBAAAccessInfo(LangPTy->getPointeeType());

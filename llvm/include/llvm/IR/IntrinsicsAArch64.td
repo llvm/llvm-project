@@ -2626,7 +2626,7 @@ def int_aarch64_sve_ldnt1_pn_x4 : SVE2p1_Load_PN_X4_Intrinsic;
 class SVE2p1_Single_Load_Quadword
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
                             [llvm_nxv1i1_ty, llvm_ptr_ty],
-                            [IntrReadMem]>;
+                            [IntrReadMem, IntrArgMemOnly]>;
 def int_aarch64_sve_ld1uwq : SVE2p1_Single_Load_Quadword;
 def int_aarch64_sve_ld1udq : SVE2p1_Single_Load_Quadword;
 
@@ -2637,7 +2637,7 @@ def int_aarch64_sve_ld1udq : SVE2p1_Single_Load_Quadword;
 class SVE2p1_Single_Store_Quadword
     : DefaultAttrsIntrinsic<[],
                             [llvm_anyvector_ty, llvm_nxv1i1_ty, llvm_ptr_ty],
-                            [IntrArgMemOnly]>;
+                            [IntrWriteMem, IntrArgMemOnly]>;
 def int_aarch64_sve_st1uwq : SVE2p1_Single_Store_Quadword;
 def int_aarch64_sve_st1udq : SVE2p1_Single_Store_Quadword;
 
