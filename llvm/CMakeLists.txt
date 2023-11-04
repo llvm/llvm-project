@@ -1063,13 +1063,18 @@ if (NOT TENSORFLOW_AOT_PATH STREQUAL "")
 
 endif()
 
-# Configure the three LLVM configuration header files.
+# Configure the LLVM configurations header files.
 configure_file(
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/Config/config.h.cmake
   ${LLVM_INCLUDE_DIR}/llvm/Config/config.h)
-configure_file(
-  ${LLVM_MAIN_INCLUDE_DIR}/llvm/Config/llvm-config.h.cmake
-  ${LLVM_INCLUDE_DIR}/llvm/Config/llvm-config.h)
+
+# Configure all the llvm-config*.h.cmake files.
+file(GLOB LLVM_CONFIGS_H_FILES ${LLVM_MAIN_INCLUDE_DIR}/llvm/Config/llvm-config*.cmake)
+foreach(LLVM_CONFIGS_H_FILE ${LLVM_CONFIGS_H_FILES})
+  string( REPLACE ".cmake" "" LLVM_CONFIGS_H_FILE_DEST "${LLVM_CONFIGS_H_FILE}")
+  string( REPLACE "${LLVM_MAIN_INCLUDE_DIR}" "${LLVM_INCLUDE_DIR}" LLVM_CONFIGS_H_FILE_DEST "${LLVM_CONFIGS_H_FILE_DEST}")
+  configure_file(${LLVM_CONFIGS_H_FILE} ${LLVM_CONFIGS_H_FILE_DEST})
+endforeach()
 configure_file(
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/Config/abi-breaking.h.cmake
   ${LLVM_INCLUDE_DIR}/llvm/Config/abi-breaking.h)

@@ -13,6 +13,7 @@
 
 #include "mlir/Dialect/GPU/Transforms/Passes.h"
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
+#include "llvm/Config/llvm-config-target-NVPTX.h"
 #include "llvm/Support/Debug.h"
 
 #if MLIR_GPU_TO_CUBIN_PASS_ENABLE
