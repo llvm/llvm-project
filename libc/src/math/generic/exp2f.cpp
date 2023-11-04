@@ -80,7 +80,7 @@ LLVM_LIBC_FUNCTION(float, exp2f, (float x)) {
         fputil::raise_except_if_required(FE_OVERFLOW);
       }
       // x is +inf or nan
-      return x + FPBits::inf().get_val();
+      return x + FPBits::inf();
     }
     // x <= -150
     if (x_u >= 0xc316'0000U) {
