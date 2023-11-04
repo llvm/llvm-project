@@ -267,14 +267,14 @@ def LLVM_GEPOp : LLVM_Op<"getelementptr", [Pure,
 
     ```mlir
     // GEP with an SSA value offset
-    %0 = llvm.getelementptr %1[%2] : (!llvm.ptr<f32>, i64) -> !llvm.ptr<f32>
+    %0 = llvm.getelementptr %1[%2] : (!llvm.ptr, i64) -> !llvm.ptr, f32
 
     // GEP with a constant offset and the inbounds attribute set
-    %0 = llvm.getelementptr inbounds %1[3] : (!llvm.ptr<f32>) -> !llvm.ptr<f32>
+    %0 = llvm.getelementptr inbounds %1[3] : (!llvm.ptr) -> !llvm.ptr, f32
 
     // GEP with constant offsets into a structure
     %0 = llvm.getelementptr %1[0, 1]
-       : (!llvm.ptr<struct(i32, f32)>) -> !llvm.ptr<f32>
+       : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(i32, f32)>
     ```
   }];
 
@@ -1053,16 +1053,16 @@ def LLVM_AddressOfOp : LLVM_Op<"mlir.addressof",
     ```mlir
     func @foo() {
       // Get the address of a global variable.
-      %0 = llvm.mlir.addressof @const : !llvm.ptr<i32>
+      %0 = llvm.mlir.addressof @const : !llvm.ptr
 
       // Use it as a regular pointer.
-      %1 = llvm.load %0 : !llvm.ptr<i32>
+      %1 = llvm.load %0 : !llvm.ptr -> i32
 
       // Get the address of a function.
-      %2 = llvm.mlir.addressof @foo : !llvm.ptr<func<void ()>>
+      %2 = llvm.mlir.addressof @foo : !llvm.ptr
 
       // The function address can be used for indirect calls.
-      llvm.call %2() : () -> ()
+      llvm.call %2() : !llvm.ptr, () -> ()
     }
 
     // Define the global.
@@ -1141,13 +1141,13 @@ def LLVM_GlobalOp : LLVM_Op<"mlir.global",
     ```mlir
     // This global is initialized with the equivalent of:
     //   i32* getelementptr (i32* @g2, i32 2)
-    llvm.mlir.global constant @int_gep() : !llvm.ptr<i32> {
-      %0 = llvm.mlir.addressof @g2 : !llvm.ptr<i32>
+    llvm.mlir.global constant @int_gep() : !llvm.ptr {
+      %0 = llvm.mlir.addressof @g2 : !llvm.ptr
       %1 = llvm.mlir.constant(2 : i32) : i32
       %2 = llvm.getelementptr %0[%1]
-         : (!llvm.ptr<i32>, i32) -> !llvm.ptr<i32>
+         : (!llvm.ptr, i32) -> !llvm.ptr, i32
       // The initializer region must end with `llvm.return`.
-      llvm.return %2 : !llvm.ptr<i32>
+      llvm.return %2 : !llvm.ptr
     }
     ```
 
@@ -1174,12 +1174,12 @@ def LLVM_GlobalOp : LLVM_Op<"mlir.global",
     llvm.mlir.global constant @no_trailing_type("foo bar")
 
     // A complex initializer is constructed with an initializer region.
-    llvm.mlir.global constant @int_gep() : !llvm.ptr<i32> {
-      %0 = llvm.mlir.addressof @g2 : !llvm.ptr<i32>
+    llvm.mlir.global constant @int_gep() : !llvm.ptr {
+      %0 = llvm.mlir.addressof @g2 : !llvm.ptr
       %1 = llvm.mlir.constant(2 : i32) : i32
       %2 = llvm.getelementptr %0[%1]
-         : (!llvm.ptr<i32>, i32) -> !llvm.ptr<i32>
-      llvm.return %2 : !llvm.ptr<i32>
+         : (!llvm.ptr, i32) -> !llvm.ptr, i32
+      llvm.return %2 : !llvm.ptr
     }
     ```
 
