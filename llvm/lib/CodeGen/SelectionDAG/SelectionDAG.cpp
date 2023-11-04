@@ -5027,7 +5027,6 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
   case ISD::BITREVERSE:
   case ISD::PARITY:
   case ISD::SIGN_EXTEND:
-  case ISD::ZERO_EXTEND:
   case ISD::TRUNCATE:
   case ISD::SIGN_EXTEND_INREG:
   case ISD::SIGN_EXTEND_VECTOR_INREG:
@@ -5036,6 +5035,10 @@ bool SelectionDAG::canCreateUndefOrPoison(SDValue Op, const APInt &DemandedElts,
   case ISD::BUILD_VECTOR:
   case ISD::BUILD_PAIR:
     return false;
+
+  // Matches hasPoisonGeneratingFlags().
+  case ISD::ZERO_EXTEND:
+    return ConsiderFlags && Op->getFlags().hasNonNeg();
 
   case ISD::ADD:
   case ISD::SUB:

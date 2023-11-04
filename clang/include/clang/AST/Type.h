@@ -1672,7 +1672,7 @@ protected:
 
     /// Storage class qualifiers from declarations like
     /// 'int X[static restrict 4]'. For function parameters only.
-    /// Actually an ArraySizeModifier.
+    LLVM_PREFERRED_TYPE(ArraySizeModifier)
     unsigned SizeModifier : 3;
   };
   enum { NumArrayTypeBits = NumTypeBits + 6 };
@@ -5718,21 +5718,21 @@ enum class ElaboratedTypeKeyword {
 };
 
 /// The kind of a tag type.
-enum TagTypeKind {
+enum class TagTypeKind {
   /// The "struct" keyword.
-  TTK_Struct,
+  Struct,
 
   /// The "__interface" keyword.
-  TTK_Interface,
+  Interface,
 
   /// The "union" keyword.
-  TTK_Union,
+  Union,
 
   /// The "class" keyword.
-  TTK_Class,
+  Class,
 
   /// The "enum" keyword.
-  TTK_Enum
+  Enum
 };
 
 /// A helper class for Type nodes having an ElaboratedTypeKeyword.
@@ -6663,6 +6663,7 @@ public:
 /// A fixed int type of a specified bitwidth.
 class BitIntType final : public Type, public llvm::FoldingSetNode {
   friend class ASTContext;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsUnsigned : 1;
   unsigned NumBits : 24;
 

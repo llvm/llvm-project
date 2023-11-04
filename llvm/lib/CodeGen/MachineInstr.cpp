@@ -1812,6 +1812,12 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
       if (F.isUseOperandTiedToDef(TiedTo))
         OS << " tiedto:$" << TiedTo;
 
+      if ((F.isRegDefKind() || F.isRegDefEarlyClobberKind() ||
+           F.isRegUseKind()) &&
+          F.getRegMayBeFolded()) {
+        OS << " foldable";
+      }
+
       OS << ']';
 
       // Compute the index of the next operand descriptor.
@@ -2545,4 +2551,21 @@ void MachineInstr::insert(mop_iterator InsertBefore,
       Tie2 += Ops.size();
     tieOperands(Tie1, Tie2);
   }
+}
+
+bool MachineInstr::mayFoldInlineAsmRegOp(unsigned OpId) const {
+  assert(OpId && "expected non-zero operand id");
+  assert(isInlineAsm() && "should only be used on inline asm");
+
+  if (!getOperand(OpId).isReg())
+    return false;
+
+  const MachineOperand &MD = getOperand(OpId - 1);
+  if (!MD.isImm())
+    return false;
+
+  InlineAsm::Flag F(MD.getImm());
+  if (F.isRegUseKind() || F.isRegDefKind() || F.isRegDefEarlyClobberKind())
+    return F.getRegMayBeFolded();
+  return false;
 }

@@ -333,17 +333,18 @@ protected:
     /// The kind of Result as defined by APValue::Kind.
     unsigned APValueKind : 4;
 
-    /// When ResultKind == RSK_Int64, true if the tail-allocated integer is
-    /// unsigned.
+    /// When ResultKind == ConstantResultStorageKind::Int64, true if the
+    /// tail-allocated integer is unsigned.
     unsigned IsUnsigned : 1;
 
-    /// When ResultKind == RSK_Int64. the BitWidth of the tail-allocated
-    /// integer. 7 bits because it is the minimal number of bits to represent a
-    /// value from 0 to 64 (the size of the tail-allocated integer).
+    /// When ResultKind == ConstantResultStorageKind::Int64. the BitWidth of the
+    /// tail-allocated integer. 7 bits because it is the minimal number of bits
+    /// to represent a value from 0 to 64 (the size of the tail-allocated
+    /// integer).
     unsigned BitWidth : 7;
 
-    /// When ResultKind == RSK_APValue, true if the ASTContext will cleanup the
-    /// tail-allocated APValue.
+    /// When ResultKind == ConstantResultStorageKind::APValue, true if the
+    /// ASTContext will cleanup the tail-allocated APValue.
     unsigned HasCleanup : 1;
 
     /// True if this ConstantExpr was created for immediate invocation.
