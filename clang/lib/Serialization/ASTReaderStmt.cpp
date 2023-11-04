@@ -558,8 +558,6 @@ void ASTStmtReader::VisitConstantExpr(ConstantExpr *E) {
       Record.getContext().addDestruction(&E->APValueResult());
     }
     break;
-  default:
-    llvm_unreachable("unexpected ResultKind!");
   }
 
   E->setSubExpr(Record.readSubExpr());
