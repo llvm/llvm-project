@@ -28,20 +28,23 @@
 
 using namespace mlir;
 
-/// Checks that the target block arguments are legal.
-static LogicalResult checkBlockArguments(Block &block, Operation *op,
-                                         PatternRewriter &rewriter,
-                                         const TypeConverter &converter) {
-  for (BlockArgument arg : block.getArguments()) {
-    if (!converter.isLegal(arg.getType())) {
-      return rewriter.notifyMatchFailure(
-          op,
-          llvm::formatv(
-              "failed to match, destination argument not legalized (found {0})",
-              arg));
-    }
+/// Legailze target block arguments.
+static void legalizeBlockArguments(Block &block,
+                                   const TypeConverter &converter) {
+  auto builder = OpBuilder::atBlockBegin(&block);
+  for (unsigned i = 0; i < block.getNumArguments(); ++i) {
+    const auto arg = block.getArgument(i);
+    if (converter.isLegal(arg.getType()))
+      continue;
+    unsigned argNum = arg.getArgNumber();
+    Location loc = arg.getLoc();
+    Type ty = arg.getType();
+    Type newTy = converter.convertType(ty);
+    Value newArg = block.insertArgument(argNum, newTy, loc);
+    auto cast = builder.create<UnrealizedConversionCastOp>(loc, ty, newArg);
+    arg.replaceAllUsesWith(cast.getResult(0));
+    block.eraseArgument(argNum + 1);
   }
-  return success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -56,9 +59,7 @@ struct BranchOpPattern final : OpConversionPattern<cf::BranchOp> {
   LogicalResult
   matchAndRewrite(cf::BranchOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    if (failed(checkBlockArguments(*op.getDest(), op, rewriter,
-                                   *getTypeConverter())))
-      return failure();
+    legalizeBlockArguments(*op.getDest(), *getTypeConverter());
 
     rewriter.replaceOpWithNewOp<spirv::BranchOp>(op, op.getDest(),
                                                  adaptor.getDestOperands());
@@ -73,13 +74,8 @@ struct CondBranchOpPattern final : OpConversionPattern<cf::CondBranchOp> {
   LogicalResult
   matchAndRewrite(cf::CondBranchOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    if (failed(checkBlockArguments(*op.getTrueDest(), op, rewriter,
-                                   *getTypeConverter())))
-      return failure();
-
-    if (failed(checkBlockArguments(*op.getFalseDest(), op, rewriter,
-                                   *getTypeConverter())))
-      return failure();
+    legalizeBlockArguments(*op.getTrueDest(), *getTypeConverter());
+    legalizeBlockArguments(*op.getFalseDest(), *getTypeConverter());
 
     rewriter.replaceOpWithNewOp<spirv::BranchConditionalOp>(
         op, adaptor.getCondition(), op.getTrueDest(),
