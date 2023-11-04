@@ -564,13 +564,13 @@ void ASTStmtWriter::VisitConstantExpr(ConstantExpr *E) {
   // HasCleanup not serialized since we can just query the APValue.
   Record.push_back(E->ConstantExprBits.IsImmediateInvocation);
 
-  switch (E->ConstantExprBits.ResultKind) {
-  case ConstantExpr::RSK_None:
+  switch (E->getResultStorageKind()) {
+  case ConstantResultStorageKind::None:
     break;
-  case ConstantExpr::RSK_Int64:
+  case ConstantResultStorageKind::Int64:
     Record.push_back(E->Int64Result());
     break;
-  case ConstantExpr::RSK_APValue:
+  case ConstantResultStorageKind::APValue:
     Record.AddAPValue(E->APValueResult());
     break;
   default:

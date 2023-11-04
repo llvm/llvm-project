@@ -281,85 +281,86 @@ SourceLocation Expr::getExprLoc() const {
 // Primary Expressions.
 //===----------------------------------------------------------------------===//
 
-static void AssertResultStorageKind(ConstantExpr::ResultStorageKind Kind) {
-  assert((Kind == ConstantExpr::RSK_APValue ||
-          Kind == ConstantExpr::RSK_Int64 || Kind == ConstantExpr::RSK_None) &&
+static void AssertResultStorageKind(ConstantResultStorageKind Kind) {
+  assert((Kind == ConstantResultStorageKind::APValue ||
+          Kind == ConstantResultStorageKind::Int64 ||
+          Kind == ConstantResultStorageKind::None) &&
          "Invalid StorageKind Value");
   (void)Kind;
 }
 
-ConstantExpr::ResultStorageKind
-ConstantExpr::getStorageKind(const APValue &Value) {
+ConstantResultStorageKind ConstantExpr::getStorageKind(const APValue &Value) {
   switch (Value.getKind()) {
   case APValue::None:
   case APValue::Indeterminate:
-    return ConstantExpr::RSK_None;
+    return ConstantResultStorageKind::None;
   case APValue::Int:
     if (!Value.getInt().needsCleanup())
-      return ConstantExpr::RSK_Int64;
+      return ConstantResultStorageKind::Int64;
     [[fallthrough]];
   default:
-    return ConstantExpr::RSK_APValue;
+    return ConstantResultStorageKind::APValue;
   }
 }
 
-ConstantExpr::ResultStorageKind
+ConstantResultStorageKind
 ConstantExpr::getStorageKind(const Type *T, const ASTContext &Context) {
   if (T->isIntegralOrEnumerationType() && Context.getTypeInfo(T).Width <= 64)
-    return ConstantExpr::RSK_Int64;
-  return ConstantExpr::RSK_APValue;
+    return ConstantResultStorageKind::Int64;
+  return ConstantResultStorageKind::APValue;
 }
 
-ConstantExpr::ConstantExpr(Expr *SubExpr, ResultStorageKind StorageKind,
+ConstantExpr::ConstantExpr(Expr *SubExpr, ConstantResultStorageKind StorageKind,
                            bool IsImmediateInvocation)
     : FullExpr(ConstantExprClass, SubExpr) {
-  ConstantExprBits.ResultKind = StorageKind;
+  ConstantExprBits.ResultKind = llvm::to_underlying(StorageKind);
   ConstantExprBits.APValueKind = APValue::None;
   ConstantExprBits.IsUnsigned = false;
   ConstantExprBits.BitWidth = 0;
   ConstantExprBits.HasCleanup = false;
   ConstantExprBits.IsImmediateInvocation = IsImmediateInvocation;
 
-  if (StorageKind == ConstantExpr::RSK_APValue)
+  if (StorageKind == ConstantResultStorageKind::APValue)
     ::new (getTrailingObjects<APValue>()) APValue();
 }
 
 ConstantExpr *ConstantExpr::Create(const ASTContext &Context, Expr *E,
-                                   ResultStorageKind StorageKind,
+                                   ConstantResultStorageKind StorageKind,
                                    bool IsImmediateInvocation) {
   assert(!isa<ConstantExpr>(E));
   AssertResultStorageKind(StorageKind);
 
   unsigned Size = totalSizeToAlloc<APValue, uint64_t>(
-      StorageKind == ConstantExpr::RSK_APValue,
-      StorageKind == ConstantExpr::RSK_Int64);
+      StorageKind == ConstantResultStorageKind::APValue,
+      StorageKind == ConstantResultStorageKind::Int64);
   void *Mem = Context.Allocate(Size, alignof(ConstantExpr));
   return new (Mem) ConstantExpr(E, StorageKind, IsImmediateInvocation);
 }
 
 ConstantExpr *ConstantExpr::Create(const ASTContext &Context, Expr *E,
                                    const APValue &Result) {
-  ResultStorageKind StorageKind = getStorageKind(Result);
+  ConstantResultStorageKind StorageKind = getStorageKind(Result);
   ConstantExpr *Self = Create(Context, E, StorageKind);
   Self->SetResult(Result, Context);
   return Self;
 }
 
-ConstantExpr::ConstantExpr(EmptyShell Empty, ResultStorageKind StorageKind)
+ConstantExpr::ConstantExpr(EmptyShell Empty,
+                           ConstantResultStorageKind StorageKind)
     : FullExpr(ConstantExprClass, Empty) {
-  ConstantExprBits.ResultKind = StorageKind;
+  ConstantExprBits.ResultKind = llvm::to_underlying(StorageKind);
 
-  if (StorageKind == ConstantExpr::RSK_APValue)
+  if (StorageKind == ConstantResultStorageKind::APValue)
     ::new (getTrailingObjects<APValue>()) APValue();
 }
 
 ConstantExpr *ConstantExpr::CreateEmpty(const ASTContext &Context,
-                                        ResultStorageKind StorageKind) {
+                                        ConstantResultStorageKind StorageKind) {
   AssertResultStorageKind(StorageKind);
 
   unsigned Size = totalSizeToAlloc<APValue, uint64_t>(
-      StorageKind == ConstantExpr::RSK_APValue,
-      StorageKind == ConstantExpr::RSK_Int64);
+      StorageKind == ConstantResultStorageKind::APValue,
+      StorageKind == ConstantResultStorageKind::Int64);
   void *Mem = Context.Allocate(Size, alignof(ConstantExpr));
   return new (Mem) ConstantExpr(EmptyShell(), StorageKind);
 }
@@ -368,15 +369,15 @@ void ConstantExpr::MoveIntoResult(APValue &Value, const ASTContext &Context) {
   assert((unsigned)getStorageKind(Value) <= ConstantExprBits.ResultKind &&
          "Invalid storage for this value kind");
   ConstantExprBits.APValueKind = Value.getKind();
-  switch (ConstantExprBits.ResultKind) {
-  case RSK_None:
+  switch (getResultStorageKind()) {
+  case ConstantResultStorageKind::None:
     return;
-  case RSK_Int64:
+  case ConstantResultStorageKind::Int64:
     Int64Result() = *Value.getInt().getRawData();
     ConstantExprBits.BitWidth = Value.getInt().getBitWidth();
     ConstantExprBits.IsUnsigned = Value.getInt().isUnsigned();
     return;
-  case RSK_APValue:
+  case ConstantResultStorageKind::APValue:
     if (!ConstantExprBits.HasCleanup && Value.needsCleanup()) {
       ConstantExprBits.HasCleanup = true;
       Context.addDestruction(&APValueResult());
@@ -388,10 +389,10 @@ void ConstantExpr::MoveIntoResult(APValue &Value, const ASTContext &Context) {
 }
 
 llvm::APSInt ConstantExpr::getResultAsAPSInt() const {
-  switch (ConstantExprBits.ResultKind) {
-  case ConstantExpr::RSK_APValue:
+  switch (getResultStorageKind()) {
+  case ConstantResultStorageKind::APValue:
     return APValueResult().getInt();
-  case ConstantExpr::RSK_Int64:
+  case ConstantResultStorageKind::Int64:
     return llvm::APSInt(llvm::APInt(ConstantExprBits.BitWidth, Int64Result()),
                         ConstantExprBits.IsUnsigned);
   default:
@@ -401,14 +402,14 @@ llvm::APSInt ConstantExpr::getResultAsAPSInt() const {
 
 APValue ConstantExpr::getAPValueResult() const {
 
-  switch (ConstantExprBits.ResultKind) {
-  case ConstantExpr::RSK_APValue:
+  switch (getResultStorageKind()) {
+  case ConstantResultStorageKind::APValue:
     return APValueResult();
-  case ConstantExpr::RSK_Int64:
+  case ConstantResultStorageKind::Int64:
     return APValue(
         llvm::APSInt(llvm::APInt(ConstantExprBits.BitWidth, Int64Result()),
                      ConstantExprBits.IsUnsigned));
-  case ConstantExpr::RSK_None:
+  case ConstantResultStorageKind::None:
     if (ConstantExprBits.APValueKind == APValue::Indeterminate)
       return APValue::IndeterminateValue();
     return APValue();
