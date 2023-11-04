@@ -42,6 +42,7 @@ jobs:
   check-docs-build:
     name: "Test documentation build"
     runs-on: ubuntu-latest
+    if: github.repository == 'llvm/llvm-project'
     steps:
       # Don't fetch before checking for file changes to force the file changes
       # action to use the Github API in pull requests. If it's a push to a
