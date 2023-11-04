@@ -980,6 +980,11 @@ public:
           return VB.makeNonLoc(SE, T, CastTy);
     }
 
+    // FIXME: We should be able to cast NonLoc -> Loc
+    // (when Loc::isLocType(CastTy) is true)
+    // But it's hard to do as SymbolicRegions can't refer to SymbolCasts holding
+    // generic SymExprs. Check the commit message for the details.
+
     // Symbol to pointer and whatever else.
     return UnknownVal();
   }
