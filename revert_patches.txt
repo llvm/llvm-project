@@ -20,3 +20,11 @@ Johannes: revert breaks 3 sollve tests
  test_loop_reduction_and_device.c
  test_loop_reduction_bitand_device.c
  test_loop_reduction_multiply_device.c
+
+Johannes: breaks 4 sollve tests
+[OpenMP] Provide a specialized team reduction for the common case (#70766) 
+   test_target_teams_distribute_reduction_and.c
+   test_target_teams_distribute_reduction_multiply.c
+   test_target_teams_distribute_reduction_and.c
+   test_target_teams_distribute_reduction_multiply.c
+
