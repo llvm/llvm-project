@@ -597,7 +597,8 @@ void PPCInstPrinter::printTLSCall(const MCInst *MI, unsigned OpNo,
 /// showRegistersWithPercentPrefix - Check if this register name should be
 /// printed with a percentage symbol as prefix.
 bool PPCInstPrinter::showRegistersWithPercentPrefix(const char *RegName) const {
-  if (!FullRegNamesWithPercent || TT.getOS() == Triple::AIX)
+  if ((!FullRegNamesWithPercent && !MAI.useFullRegisterNames()) ||
+      TT.getOS() == Triple::AIX)
     return false;
 
   switch (RegName[0]) {
