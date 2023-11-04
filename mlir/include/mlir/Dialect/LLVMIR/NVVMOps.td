@@ -1066,7 +1066,7 @@ def NVVM_WMMALoadOp: NVVM_Op<"wmma.load">,
     ```mlir
     %2 = nvvm.wmma.load %0, %1
       {eltype = "f16", frag = "a", k = 16 : i32, layout = "row", m = 16 : i32, n = 16 : i32}
-      : (!llvm.ptr<i32, 3>) -> !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>
+      : (!llvm.ptr<3>) -> !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>
     ```
     }];
 
@@ -1121,7 +1121,7 @@ def NVVM_WMMAStoreOp : NVVM_Op<"wmma.store">,
     ```mlir
     nvvm.wmma.store %0, %1, %2, %3, %4, %5
       {eltype = "f16", k = 16 : i32, layout = "row", m = 16 : i32, n = 16 : i32}
-      : !llvm.ptr<i32, 3>, vector<2 x f16>, vector<2 x f16>, vector<2 x f16>, vector<2 x f16>
+      : !llvm.ptr<3>, vector<2 x f16>, vector<2 x f16>, vector<2 x f16>, vector<2 x f16>
     ```
   }];
 
@@ -1249,9 +1249,9 @@ def NVVM_LdMatrixOp: NVVM_Op<"ldmatrix">,
     Example:
     ```mlir
     %l1 = nvvm.ldmatrix %ptr {num = 1 : i32, layout = #nvvm.mma_layout<row>} :
-      (!llvm.ptr<i32, 3>) -> i32
+      (!llvm.ptr<3>) -> i32
     %l2 = nvvm.ldmatrix %ptr {num = 4 : i32, layout = #nvvm.mma_layout<row>} :
-      (!llvm.ptr<i32, 3>) -> !llvm.struct<(i32, i32, i32, i32)>
+      (!llvm.ptr<3>) -> !llvm.struct<(i32, i32, i32, i32)>
     ```
   }];
 

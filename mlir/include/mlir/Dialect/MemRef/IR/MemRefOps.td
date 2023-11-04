@@ -892,8 +892,8 @@ def MemRef_ExtractAlignedPointerAsIndexOp :
     ```
       %0 = memref.extract_aligned_pointer_as_index %arg : memref<4x4xf32> -> index
       %1 = arith.index_cast %0 : index to i64
-      %2 = llvm.inttoptr %1 : i64 to !llvm.ptr<f32>
-      call @foo(%2) : (!llvm.ptr<f32>) ->()
+      %2 = llvm.inttoptr %1 : i64 to !llvm.ptr
+      call @foo(%2) : (!llvm.ptr) ->()
     ```
   }];
 

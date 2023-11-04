@@ -35,7 +35,7 @@ TEST_F(LLVMIRTest, MutualReferencedSubElementTypes) {
   fooStructTy.walk([&](Type type) { subElementTypes.push_back(type); });
   ASSERT_EQ(subElementTypes.size(), 4U);
 
-  // !llvm.ptr<struct<"foo",...>>
+  // !llvm.ptr
   ASSERT_TRUE(isa<LLVMPointerType>(subElementTypes[0]));
 
   // !llvm.struct<"bar",...>
@@ -43,7 +43,7 @@ TEST_F(LLVMIRTest, MutualReferencedSubElementTypes) {
   ASSERT_TRUE(bool(structType));
   ASSERT_TRUE(structType.getName().equals("bar"));
 
-  // !llvm.ptr<struct<"bar",...>>
+  // !llvm.ptr
   ASSERT_TRUE(isa<LLVMPointerType>(subElementTypes[2]));
 
   // !llvm.struct<"foo",...>
