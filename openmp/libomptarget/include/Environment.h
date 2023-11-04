@@ -35,6 +35,7 @@ enum class DeviceDebugKind : uint32_t {
 struct DeviceEnvironmentTy {
   uint32_t DeviceDebugKind;
   uint32_t NumDevices;
+  uint32_t NumTeams;
   uint32_t DeviceNum;
   uint32_t DynamicMemSize;
   uint64_t ClockFrequency;

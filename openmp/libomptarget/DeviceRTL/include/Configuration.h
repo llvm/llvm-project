@@ -55,6 +55,9 @@ bool mayUseThreadStates();
 /// parallelism, or if it was explicitly disabled by the user.
 bool mayUseNestedParallelism();
 
+/// Return max number of teams in the device it's called on.
+uint32_t getMaxTeams(); 
+
 } // namespace config
 } // namespace ompx
 

@@ -75,4 +75,6 @@ bool config::mayUseNestedParallelism() {
   return state::getKernelEnvironment().Configuration.MayUseNestedParallelism;
 }
 
+uint32_t config::getMaxTeams() { return __omp_rtl_device_environment.NumTeams; }
+
 #pragma omp end declare target

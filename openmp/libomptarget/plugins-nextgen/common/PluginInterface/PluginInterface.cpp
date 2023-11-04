@@ -628,7 +628,7 @@ uint64_t GenericKernelTy::getNumBlocks(GenericDeviceTy &GenericDevice,
 GenericDeviceTy::GenericDeviceTy(int32_t DeviceId, int32_t NumDevices,
                                  const llvm::omp::GV &OMPGridValues)
     : MemoryManager(nullptr), OMP_TeamLimit("OMP_TEAM_LIMIT"),
-      OMP_NumTeams("OMP_NUM_TEAMS"),
+      OMP_NumTeams("OMP_NUM_TEAMS_DEV_" + std::to_string(DeviceId)),
       OMP_TeamsThreadLimit("OMP_TEAMS_THREAD_LIMIT"),
       OMPX_DebugKind("LIBOMPTARGET_DEVICE_RTL_DEBUG"),
       OMPX_SharedMemorySize("LIBOMPTARGET_SHARED_MEMORY_SIZE"),
@@ -854,6 +854,7 @@ Error GenericDeviceTy::setupDeviceEnvironment(GenericPluginTy &Plugin,
   DeviceEnvironmentTy DeviceEnvironment;
   DeviceEnvironment.DeviceDebugKind = OMPX_DebugKind;
   DeviceEnvironment.NumDevices = Plugin.getNumDevices();
+  DeviceEnvironment.NumTeams = (OMP_NumTeams >= 0) ? uint32_t(OMP_NumTeams) : 0;
   // TODO: The device ID used here is not the real device ID used by OpenMP.
   DeviceEnvironment.DeviceNum = DeviceId;
   DeviceEnvironment.DynamicMemSize = OMPX_SharedMemorySize;

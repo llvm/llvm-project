@@ -199,6 +199,7 @@ void state::ICVStateTy::assertEqual(const ICVStateTy &Other) const {
 
 void state::TeamStateTy::init(bool IsSPMD) {
   ICVState.NThreadsVar = 0;
+  ICVState.NTeamsVar = config::getMaxTeams();
   ICVState.LevelVar = 0;
   ICVState.ActiveLevelVar = 0;
   ICVState.Padding0Val = 0;
@@ -423,6 +424,13 @@ int omp_get_device_num(void) { return config::getDeviceNum(); }
 int omp_get_num_teams(void) { return mapping::getNumberOfBlocksInKernel(); }
 
 int omp_get_team_num() { return mapping::getBlockIdInKernel(); }
+
+int omp_get_max_teams(void) { return icv::NTeams; }
+
+void omp_set_num_teams(int V) {
+  icv::NTeams = (V < 0) ? 0 :
+                (V >= config::getMaxTeams()) ? config::getMaxTeams() : V;
+}
 
 int omp_get_initial_device(void) { return -1; }
 }

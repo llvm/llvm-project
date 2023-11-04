@@ -133,6 +133,10 @@ int omp_get_num_teams(void);
 
 int omp_get_team_num();
 
+int omp_get_max_teams(void);
+
+void omp_set_num_teams(int V);
+
 int omp_get_initial_device(void);
 
 void *llvm_omp_target_dynamic_shared_alloc();

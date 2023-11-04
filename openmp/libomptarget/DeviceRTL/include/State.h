@@ -54,6 +54,7 @@ inline constexpr uint32_t SharedScratchpadSize = SHARED_SCRATCHPAD_SIZE;
 
 struct ICVStateTy {
   uint32_t NThreadsVar;
+  uint32_t NTeamsVar;
   uint32_t LevelVar;
   uint32_t ActiveLevelVar;
   uint32_t Padding0Val;
@@ -131,6 +132,7 @@ KernelLaunchEnvironmentTy &getKernelLaunchEnvironment();
 /// TODO
 enum ValueKind {
   VK_NThreads,
+  VK_NTeams,
   VK_Level,
   VK_ActiveLevel,
   VK_MaxActiveLevels,
@@ -189,6 +191,11 @@ lookup32(ValueKind Kind, bool IsReadonly, IdentTy *Ident, bool ForceTeamState) {
     if (IsReadonly)
       return lookupImpl(&ICVStateTy::NThreadsVar, ForceTeamState);
     return lookupForModify32Impl(&ICVStateTy::NThreadsVar, Ident,
+                                 ForceTeamState);
+  case state::VK_NTeams:
+    if (IsReadonly)
+      return lookupImpl(&ICVStateTy::NTeamsVar, ForceTeamState);
+    return lookupForModify32Impl(&ICVStateTy::NTeamsVar, Ident,
                                  ForceTeamState);
   case state::VK_Level:
     if (IsReadonly)
@@ -359,6 +366,9 @@ namespace icv {
 
 /// TODO
 inline state::Value<uint32_t, state::VK_NThreads> NThreads;
+
+/// TODO
+inline state::Value<uint32_t, state::VK_NTeams> NTeams;
 
 /// TODO
 inline state::Value<uint32_t, state::VK_Level> Level;
