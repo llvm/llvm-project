@@ -3792,7 +3792,8 @@ static QualType GetDeclSpecTypeForDeclarator(TypeProcessingState &state,
         << Kind << Error << (int)SemaRef.getTemplateNameKindForDiagnostics(TN)
         << QualType(Deduced, 0) << AutoRange;
       if (auto *TD = TN.getAsTemplateDecl())
-        SemaRef.Diag(TD->getLocation(), diag::note_template_decl_here);
+        if (TD->getLocation().isValid())
+          SemaRef.Diag(TD->getLocation(), diag::note_template_decl_here);
 
       T = SemaRef.Context.IntTy;
       D.setInvalidType(true);
