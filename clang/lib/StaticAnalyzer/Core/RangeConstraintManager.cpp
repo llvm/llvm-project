@@ -2067,6 +2067,12 @@ public:
     return Assignor.assign(CoS, NewConstraint);
   }
 
+  /// Check if using an equivalent operand alternative would lead to
+  /// contradiction.
+  /// If a contradiction is witnessed, returns false; otherwise returns true.
+  bool handleEquivalentAlternativeSymOperands(const SymSymExpr *SymSym,
+                                              RangeSet Constraint);
+
   /// Handle expressions like: a % b != 0.
   template <typename SymT>
   bool handleRemainderOp(const SymT *Sym, RangeSet Constraint) {
@@ -2218,10 +2224,57 @@ bool ConstraintAssignor::assignSymExprToConst(const SymExpr *Sym,
   return true;
 }
 
+bool ConstraintAssignor::handleEquivalentAlternativeSymOperands(
+    const SymSymExpr *SymSym, RangeSet Constraint) {
+  SymbolRef LHS = SymSym->getLHS();
+  SymbolRef RHS = SymSym->getRHS();
+  EquivalenceClass LHSClass = EquivalenceClass::find(State, LHS);
+  EquivalenceClass RHSClass = EquivalenceClass::find(State, RHS);
+  SymbolSet SymbolsEqWithLHS = LHSClass.getClassMembers(State);
+  SymbolSet SymbolsEqWithRHS = RHSClass.getClassMembers(State);
+  llvm::SmallVector<SymSymExpr, 10> AlternativeSymSyms;
+
+  // Gather left alternatives.
+  for (SymbolRef AlternativeLHS : SymbolsEqWithLHS) {
+    if (AlternativeLHS == LHS)
+      continue;
+    AlternativeSymSyms.emplace_back(AlternativeLHS, SymSym->getOpcode(), RHS,
+                                    SymSym->getType());
+  }
+
+  // Gather right alternatives.
+  for (SymbolRef AlternativeRHS : SymbolsEqWithRHS) {
+    if (AlternativeRHS == RHS)
+      continue;
+    AlternativeSymSyms.emplace_back(LHS, SymSym->getOpcode(), AlternativeRHS,
+                                    SymSym->getType());
+  }
+
+  // Crosscheck the inferred ranges.
+  for (SymSymExpr AltSymSym : AlternativeSymSyms) {
+    RangeSet AltSymSymConstrant =
+        SymbolicRangeInferrer::inferRange(RangeFactory, State, &AltSymSym);
+    Constraint = intersect(RangeFactory, Constraint, AltSymSymConstrant);
+
+    // Check if we witnessed a contradiction with the equivalent alternative
+    // operand.
+    if (Constraint.isEmpty()) {
+      State = nullptr;
+      return false;
+    }
+  }
+  return true;
+}
+
 bool ConstraintAssignor::assignSymSymExprToRangeSet(const SymSymExpr *Sym,
                                                     RangeSet Constraint) {
   if (!handleRemainderOp(Sym, Constraint))
     return false;
+
+  if (const auto *SymSym = dyn_cast<SymSymExpr>(Sym);
+      SymSym && !handleEquivalentAlternativeSymOperands(SymSym, Constraint)) {
+    return false;
+  }
 
   std::optional<bool> ConstraintAsBool = interpreteAsBool(Constraint);
 
