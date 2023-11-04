@@ -428,8 +428,9 @@ int omp_get_team_num() { return mapping::getBlockIdInKernel(); }
 int omp_get_max_teams(void) { return icv::NTeams; }
 
 void omp_set_num_teams(int V) {
-  icv::NTeams = (V < 0) ? 0 :
-                (V >= config::getMaxTeams()) ? config::getMaxTeams() : V;
+  icv::NTeams = (V < 0)                        ? 0
+                : (V >= config::getMaxTeams()) ? config::getMaxTeams()
+                                               : V;
 }
 
 int omp_get_initial_device(void) { return -1; }

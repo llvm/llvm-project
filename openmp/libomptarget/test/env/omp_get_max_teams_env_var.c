@@ -4,7 +4,7 @@
 
 // RUN: %libomptarget-compile-generic -fopenmp-offload-mandatory
 // RUN: env OMP_NUM_TEAMS_DEV_0=5 OMP_NUM_TEAMS_DEV_1=-1 \
-// RUN: %libomptarget-run-generic 
+// RUN: %libomptarget-run-generic
 
 // UNSUPPORTED: x86_64-pc-linux-gnu
 // UNSUPPORTED: x86_64-pc-linux-gnu-LTO
@@ -33,8 +33,12 @@ int test_nteams_var_env(void) {
       device_id = omp_get_device_num();
       errors = errors + (device_id != i);
       curr_nteams = omp_get_max_teams();
-      if (device_id == 0) { errors = errors + (curr_nteams != EXPECTED_NTEAMS_DEV_0); } // device 0
-      if (device_id == 1) { errors = errors + (curr_nteams != EXPECTED_NTEAMS_DEV_1); } // device 1
+      if (device_id == 0) {
+        errors = errors + (curr_nteams != EXPECTED_NTEAMS_DEV_0);
+      } // device 0
+      if (device_id == 1) {
+        errors = errors + (curr_nteams != EXPECTED_NTEAMS_DEV_1);
+      } // device 1
     }
     printf("device: %d nteams: %d\n", device_id, curr_nteams);
   }

@@ -56,7 +56,7 @@ bool mayUseThreadStates();
 bool mayUseNestedParallelism();
 
 /// Return max number of teams in the device it's called on.
-uint32_t getMaxTeams(); 
+uint32_t getMaxTeams();
 
 } // namespace config
 } // namespace ompx

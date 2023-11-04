@@ -190,8 +190,7 @@ lookup32(ValueKind Kind, bool IsReadonly, IdentTy *Ident, bool ForceTeamState) {
   case state::VK_NThreads:
     if (IsReadonly)
       return lookupImpl(&ICVStateTy::NThreadsVar, ForceTeamState);
-    return lookupForModify32Impl(&ICVStateTy::NThreadsVar, Ident,
-                                 ForceTeamState);
+    return lookupForModify32Impl(&ICVStateTy::NTeamsVar, Ident, ForceTeamState);
   case state::VK_NTeams:
     if (IsReadonly)
       return lookupImpl(&ICVStateTy::NTeamsVar, ForceTeamState);
