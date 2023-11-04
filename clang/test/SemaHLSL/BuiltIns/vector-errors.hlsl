@@ -4,15 +4,10 @@
 hlsl::vector ShouldWorkSomeday; // expected-error{{use of alias template 'hlsl::vector' requires template arguments}}
 
 hlsl::vector<1> BadVec; // expected-error{{template argument for template type parameter must be a type}}
-// expected-note@*:* {{template is declared here}}
-// expected-note@*:* {{template parameter is declared here}}
-
 
 hlsl::vector<int, float> AnotherBadVec; // expected-error{{template argument for non-type template parameter must be an expression}}
-// expected-note@*:* {{template parameter is declared here}}
 
 hlsl::vector<int, 2, 3> YABV; // expected-error{{too many template arguments for alias template 'vector'}}
-// expected-note@*:* {{template is declared here}}
 
 // This code is rejected by clang because clang puts the HLSL built-in types
 // into the HLSL namespace.
