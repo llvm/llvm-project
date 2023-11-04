@@ -1179,7 +1179,7 @@ def LLVM_GlobalOp : LLVM_Op<"mlir.global",
       %1 = llvm.mlir.constant(2 : i32) : i32
       %2 = llvm.getelementptr %0[%1]
          : (!llvm.ptr, i32) -> !llvm.ptr, i32
-      llvm.return %2 : !llvm.ptri32>
+      llvm.return %2 : !llvm.ptr
     }
     ```
 

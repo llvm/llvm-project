@@ -92,7 +92,7 @@ protected:
   /// %nullptr     = llvm.mlir.zero : !llvm.ptr
   /// %gep         = llvm.getelementptr %nullptr[%size]
   ///                  : (!llvm.ptr, i64) -> !llvm.ptr, f32
-  /// `sizeBytes`  = llvm.ptrtoint %gep : !llvm.ptr, f32
+  /// `sizeBytes`  = llvm.ptrtoint %gep : !llvm.ptr to i64
   ///
   /// If `sizeInBytes = false`, memref<4x?xf32> emits:
   /// `sizes[0]`   = llvm.mlir.constant(4 : index) : i64
