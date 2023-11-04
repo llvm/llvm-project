@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s
+// RUN: mlir-opt --sparse-compiler=enable-runtime-library=true %s
 // This is the example asked by Prof. Nasko as test for first part_tensor operation.
 // This example is parsed without issue by mlir-opt (without any options.)
 
