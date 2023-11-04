@@ -1089,13 +1089,16 @@ struct SymbolLocatorInstance
       llvm::StringRef name, llvm::StringRef description,
       CallbackType create_callback,
       SymbolLocatorLocateExecutableObjectFile locate_executable_object_file,
+      SymbolLocatorLocateExecutableSymbolFile locate_executable_symbol_file,
       SymbolLocatorFindSymbolFileInBundle find_symbol_file_in_bundle)
       : PluginInstance<SymbolLocatorCreateInstance>(name, description,
                                                     create_callback),
         locate_executable_object_file(locate_executable_object_file),
+        locate_executable_symbol_file(locate_executable_symbol_file),
         find_symbol_file_in_bundle(find_symbol_file_in_bundle) {}
 
   SymbolLocatorLocateExecutableObjectFile locate_executable_object_file;
+  SymbolLocatorLocateExecutableSymbolFile locate_executable_symbol_file;
   SymbolLocatorFindSymbolFileInBundle find_symbol_file_in_bundle;
 };
 typedef PluginInstances<SymbolLocatorInstance> SymbolLocatorInstances;
@@ -1109,10 +1112,11 @@ bool PluginManager::RegisterPlugin(
     llvm::StringRef name, llvm::StringRef description,
     SymbolLocatorCreateInstance create_callback,
     SymbolLocatorLocateExecutableObjectFile locate_executable_object_file,
+    SymbolLocatorLocateExecutableSymbolFile locate_executable_symbol_file,
     SymbolLocatorFindSymbolFileInBundle find_symbol_file_in_bundle) {
   return GetSymbolLocatorInstances().RegisterPlugin(
       name, description, create_callback, locate_executable_object_file,
-      find_symbol_file_in_bundle);
+      locate_executable_symbol_file, find_symbol_file_in_bundle);
 }
 
 bool PluginManager::UnregisterPlugin(
@@ -1132,6 +1136,20 @@ PluginManager::LocateExecutableObjectFile(const ModuleSpec &module_spec) {
     if (instance.locate_executable_object_file) {
       std::optional<ModuleSpec> result =
           instance.locate_executable_object_file(module_spec);
+      if (result)
+        return *result;
+    }
+  }
+  return {};
+}
+
+FileSpec PluginManager::LocateExecutableSymbolFile(
+    const ModuleSpec &module_spec, const FileSpecList &default_search_paths) {
+  auto &instances = GetSymbolLocatorInstances().GetInstances();
+  for (auto &instance : instances) {
+    if (instance.locate_executable_symbol_file) {
+      std::optional<FileSpec> result = instance.locate_executable_symbol_file(
+          module_spec, default_search_paths);
       if (result)
         return *result;
     }

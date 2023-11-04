@@ -94,6 +94,8 @@ typedef std::optional<ModuleSpec> (*SymbolLocatorLocateExecutableObjectFile)(
     const ModuleSpec &module_spec);
 typedef std::optional<FileSpec> (*SymbolLocatorFindSymbolFileInBundle)(
     const FileSpec &dsym_bundle_fspec, const UUID *uuid, const ArchSpec *arch);
+typedef std::optional<FileSpec> (*SymbolLocatorLocateExecutableSymbolFile)(
+    const ModuleSpec &module_spec, const FileSpecList &default_search_paths);
 typedef bool (*BreakpointHitCallback)(void *baton,
                                       StoppointCallbackContext *context,
                                       lldb::user_id_t break_id,
