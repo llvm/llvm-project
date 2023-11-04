@@ -89,16 +89,6 @@ inline MemRefType getMemRefType(T &&t) {
 /// Returns null-attribute for any type without an encoding.
 SparseTensorEncodingAttr getSparseTensorEncoding(Type type);
 
-/// Convenience method to query whether a given DLT needs both position and
-/// coordinates array or only coordinates array.
-constexpr inline bool isDLTWithPos(DimLevelType dlt) {
-  return isLooseCompressedDLT(dlt) || isCompressedDLT(dlt);
-}
-constexpr inline bool isDLTWithCrd(DimLevelType dlt) {
-  return isSingletonDLT(dlt) || isLooseCompressedDLT(dlt) ||
-         isCompressedDLT(dlt);
-}
-
 /// Returns true iff the given sparse tensor encoding attribute has a trailing
 /// COO region starting at the given level.
 bool isCOOType(SparseTensorEncodingAttr enc, Level startLvl, bool isUnique);
@@ -172,12 +162,10 @@ bool isBlockSparsity(AffineMap dimToLvl);
 /// [deprecated] Convenience method to translate the given level to the
 /// corresponding dimension. Requires: `0 <= l < lvlRank`.
 Dimension toOrigDim(SparseTensorEncodingAttr enc, Level l);
-Dimension toOrigDim(RankedTensorType type, Level l);
 
 /// [deprecated] Convenience method to translate the given dimension to
 /// the corresponding level. Requires: `0 <= d < dimRank`.
 Level toStoredDim(SparseTensorEncodingAttr enc, Dimension d);
-Level toStoredDim(RankedTensorType type, Dimension d);
 
 } // namespace sparse_tensor
 } // namespace mlir
