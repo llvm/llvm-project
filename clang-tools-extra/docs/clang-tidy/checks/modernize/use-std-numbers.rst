@@ -4,15 +4,44 @@ modernize-use-std-numbers
 =========================
 
 Finds constants and function calls to math functions that can be replaced
-with c++20's mathematical constants from the ``numbers`` header and offers fix-it hints.
+with c++20's mathematical constants from the ``numbers`` header and offers
+fix-it hints.
 Does not match the use of variables with that value, and instead,
 offers a replacement at the definition of those variables.
+Function calls that match the pattern of how the constant is calculated are
+matched and replaced with the ``std::numbers`` constant.
+The use of macros gets replaced with the corresponding ``std::numbers``
+constant, instead of changing the macro definition.
+
+The following list of constants from the ``numbers`` header are supported:
+
+* e
+* log2e
+* log10e
+* pi
+* inv_pi
+* inv_sqrtpi
+* ln2
+* ln10
+* sqrt2
+* sqrt3
+* inv_sqrt3
+* egamma
+* phi
+
+The list currently includes all constants as of C++20.
+
+The replacements try to match the type of the inserted constant by how the
+removed expression was used, e.g., switching between ``std::numbers::e`` to
+``std::numbers::e_v<float>`` or ``std::numbers::e_v<long double>``
+where appropriate.
 
 .. code-block:: c++
 
     double sqrt(double);
     double log(double);
     void sink(auto&&) {}
+    void floatSink(float);
 
     #define MY_PI 3.1415926
 
@@ -25,4 +54,5 @@ offers a replacement at the definition of those variables.
         log2(Euler);      // std::numbers::log2e;
         1 / sqrt(MY_PI);  // std::numbers::inv_sqrtpi;
         sink(MY_PI);      // sink(std::numbers::pi);
+        floatSink(MY_PI); // floatSink(std::numbers::pi_v<float>);
     }
