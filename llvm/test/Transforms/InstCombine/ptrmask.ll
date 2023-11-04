@@ -12,7 +12,7 @@ define ptr @ptrmask_combine_consecutive_preserve_attrs(ptr %p0, i64 %m1) {
 ; CHECK-LABEL: define ptr @ptrmask_combine_consecutive_preserve_attrs
 ; CHECK-SAME: (ptr [[P0:%.*]], i64 [[M1:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[M1]], 224
-; CHECK-NEXT:    [[R:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[P0]], i64 [[TMP1]])
+; CHECK-NEXT:    [[R:%.*]] = call align 32 ptr @llvm.ptrmask.p0.i64(ptr [[P0]], i64 [[TMP1]])
 ; CHECK-NEXT:    ret ptr [[R]]
 ;
   %pm0 = call ptr @llvm.ptrmask.p0.i64(ptr %p0, i64 224)
@@ -47,7 +47,7 @@ define ptr @ptrmask_combine_consecutive_preserve_attrs_fail(ptr %p0, i64 %m0) {
 define ptr @ptrmask_combine_consecutive_preserve_attrs_todo0(ptr %p0) {
 ; CHECK-LABEL: define ptr @ptrmask_combine_consecutive_preserve_attrs_todo0
 ; CHECK-SAME: (ptr [[P0:%.*]]) {
-; CHECK-NEXT:    [[PM0:%.*]] = call noalias ptr @llvm.ptrmask.p0.i64(ptr [[P0]], i64 224)
+; CHECK-NEXT:    [[PM0:%.*]] = call noalias align 32 ptr @llvm.ptrmask.p0.i64(ptr [[P0]], i64 224)
 ; CHECK-NEXT:    ret ptr [[PM0]]
 ;
   %pm0 = call noalias ptr @llvm.ptrmask.p0.i64(ptr %p0, i64 224)
@@ -58,7 +58,7 @@ define ptr @ptrmask_combine_consecutive_preserve_attrs_todo0(ptr %p0) {
 define ptr @ptrmask_combine_consecutive_preserve_attrs_todo1(ptr %p0) {
 ; CHECK-LABEL: define ptr @ptrmask_combine_consecutive_preserve_attrs_todo1
 ; CHECK-SAME: (ptr [[P0:%.*]]) {
-; CHECK-NEXT:    [[PM0:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[P0]], i64 224)
+; CHECK-NEXT:    [[PM0:%.*]] = call align 32 ptr @llvm.ptrmask.p0.i64(ptr [[P0]], i64 224)
 ; CHECK-NEXT:    ret ptr [[PM0]]
 ;
   %pm0 = call ptr @llvm.ptrmask.p0.i64(ptr %p0, i64 224)
@@ -69,7 +69,7 @@ define ptr @ptrmask_combine_consecutive_preserve_attrs_todo1(ptr %p0) {
 define ptr addrspace(1) @ptrmask_combine_consecutive_preserve_attrs_todo2(ptr addrspace(1) %p0) {
 ; CHECK-LABEL: define ptr addrspace(1) @ptrmask_combine_consecutive_preserve_attrs_todo2
 ; CHECK-SAME: (ptr addrspace(1) [[P0:%.*]]) {
-; CHECK-NEXT:    [[PM0:%.*]] = call noalias ptr addrspace(1) @llvm.ptrmask.p1.i32(ptr addrspace(1) [[P0]], i32 224)
+; CHECK-NEXT:    [[PM0:%.*]] = call noalias align 32 ptr addrspace(1) @llvm.ptrmask.p1.i32(ptr addrspace(1) [[P0]], i32 224)
 ; CHECK-NEXT:    ret ptr addrspace(1) [[PM0]]
 ;
   %pm0 = call noalias ptr addrspace(1) @llvm.ptrmask.p1.i32(ptr addrspace(1) %p0, i32 224)
@@ -80,9 +80,9 @@ define ptr addrspace(1) @ptrmask_combine_consecutive_preserve_attrs_todo2(ptr ad
 define ptr @ptrmask_combine_add_nonnull(ptr %p) {
 ; CHECK-LABEL: define ptr @ptrmask_combine_add_nonnull
 ; CHECK-SAME: (ptr [[P:%.*]]) {
-; CHECK-NEXT:    [[PM0:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[P]], i64 -64)
+; CHECK-NEXT:    [[PM0:%.*]] = call align 64 ptr @llvm.ptrmask.p0.i64(ptr [[P]], i64 -64)
 ; CHECK-NEXT:    [[PGEP:%.*]] = getelementptr i8, ptr [[PM0]], i64 33
-; CHECK-NEXT:    [[R:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[PGEP]], i64 -32)
+; CHECK-NEXT:    [[R:%.*]] = call nonnull align 32 ptr @llvm.ptrmask.p0.i64(ptr [[PGEP]], i64 -32)
 ; CHECK-NEXT:    ret ptr [[R]]
 ;
   %pm0 = call ptr @llvm.ptrmask.p0.i64(ptr %p, i64 -64)
@@ -94,7 +94,7 @@ define ptr @ptrmask_combine_add_nonnull(ptr %p) {
 define ptr @ptrmask_combine_add_alignment(ptr %p) {
 ; CHECK-LABEL: define ptr @ptrmask_combine_add_alignment
 ; CHECK-SAME: (ptr [[P:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[P]], i64 -64)
+; CHECK-NEXT:    [[R:%.*]] = call align 64 ptr @llvm.ptrmask.p0.i64(ptr [[P]], i64 -64)
 ; CHECK-NEXT:    ret ptr [[R]]
 ;
   %r = call ptr @llvm.ptrmask.p0.i64(ptr %p, i64 -64)
@@ -104,7 +104,7 @@ define ptr @ptrmask_combine_add_alignment(ptr %p) {
 define ptr addrspace(1) @ptrmask_combine_add_alignment2(ptr addrspace(1) align 32 %p) {
 ; CHECK-LABEL: define ptr addrspace(1) @ptrmask_combine_add_alignment2
 ; CHECK-SAME: (ptr addrspace(1) align 32 [[P:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = call ptr addrspace(1) @llvm.ptrmask.p1.i32(ptr addrspace(1) [[P]], i32 -64)
+; CHECK-NEXT:    [[R:%.*]] = call align 64 ptr addrspace(1) @llvm.ptrmask.p1.i32(ptr addrspace(1) [[P]], i32 -64)
 ; CHECK-NEXT:    ret ptr addrspace(1) [[R]]
 ;
   %r = call ptr addrspace(1) @llvm.ptrmask.p1.i32(ptr addrspace(1) %p, i32 -64)
@@ -114,7 +114,7 @@ define ptr addrspace(1) @ptrmask_combine_add_alignment2(ptr addrspace(1) align 3
 define <2 x ptr> @ptrmask_combine_add_alignment_vec(<2 x ptr> %p) {
 ; CHECK-LABEL: define <2 x ptr> @ptrmask_combine_add_alignment_vec
 ; CHECK-SAME: (<2 x ptr> [[P:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = call <2 x ptr> @llvm.ptrmask.v2p0.v2i64(<2 x ptr> [[P]], <2 x i64> <i64 -96, i64 -96>)
+; CHECK-NEXT:    [[R:%.*]] = call align 32 <2 x ptr> @llvm.ptrmask.v2p0.v2i64(<2 x ptr> [[P]], <2 x i64> <i64 -96, i64 -96>)
 ; CHECK-NEXT:    ret <2 x ptr> [[R]]
 ;
   %r = call <2 x ptr> @llvm.ptrmask.v2p0.v2i64(<2 x ptr> %p, <2 x i64> <i64 -96, i64 -96>)
@@ -124,7 +124,7 @@ define <2 x ptr> @ptrmask_combine_add_alignment_vec(<2 x ptr> %p) {
 define ptr addrspace(1) @ptrmask_combine_improve_alignment(ptr addrspace(1) %p) {
 ; CHECK-LABEL: define ptr addrspace(1) @ptrmask_combine_improve_alignment
 ; CHECK-SAME: (ptr addrspace(1) [[P:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = call align 32 ptr addrspace(1) @llvm.ptrmask.p1.i32(ptr addrspace(1) [[P]], i32 -64)
+; CHECK-NEXT:    [[R:%.*]] = call align 64 ptr addrspace(1) @llvm.ptrmask.p1.i32(ptr addrspace(1) [[P]], i32 -64)
 ; CHECK-NEXT:    ret ptr addrspace(1) [[R]]
 ;
   %r = call align 32 ptr addrspace(1) @llvm.ptrmask.p1.i32(ptr addrspace(1) %p, i32 -64)
@@ -134,7 +134,7 @@ define ptr addrspace(1) @ptrmask_combine_improve_alignment(ptr addrspace(1) %p) 
 define <2 x ptr addrspace(1) > @ptrmask_combine_improve_alignment_vec(<2 x ptr addrspace(1) > %p) {
 ; CHECK-LABEL: define <2 x ptr addrspace(1)> @ptrmask_combine_improve_alignment_vec
 ; CHECK-SAME: (<2 x ptr addrspace(1)> [[P:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = call align 32 <2 x ptr addrspace(1)> @llvm.ptrmask.v2p1.v2i32(<2 x ptr addrspace(1)> [[P]], <2 x i32> <i32 -64, i32 -128>)
+; CHECK-NEXT:    [[R:%.*]] = call align 64 <2 x ptr addrspace(1)> @llvm.ptrmask.v2p1.v2i32(<2 x ptr addrspace(1)> [[P]], <2 x i32> <i32 -64, i32 -128>)
 ; CHECK-NEXT:    ret <2 x ptr addrspace(1)> [[R]]
 ;
   %r = call align 32 <2 x ptr addrspace(1) > @llvm.ptrmask.v2p1.v2i32(<2 x ptr addrspace(1) > %p, <2 x i32> <i32 -64, i32 -128>)
@@ -230,7 +230,7 @@ define <2 x i32> @ptrtoint_of_ptrmask_vec_fail(<2 x ptr addrspace(1) > %p, <2 x 
 define ptr addrspace(1) @ptrmask_is_null(ptr addrspace(1) align 32 %p) {
 ; CHECK-LABEL: define ptr addrspace(1) @ptrmask_is_null
 ; CHECK-SAME: (ptr addrspace(1) align 32 [[P:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = call ptr addrspace(1) @llvm.ptrmask.p1.i32(ptr addrspace(1) [[P]], i32 0)
+; CHECK-NEXT:    [[R:%.*]] = call align 4294967296 ptr addrspace(1) @llvm.ptrmask.p1.i32(ptr addrspace(1) [[P]], i32 0)
 ; CHECK-NEXT:    ret ptr addrspace(1) [[R]]
 ;
   %r = call ptr addrspace(1) @llvm.ptrmask.p1.i32(ptr addrspace(1) %p, i32 31)
@@ -250,7 +250,7 @@ define <2 x ptr addrspace(1) > @ptrmask_is_null_vec(<2 x ptr addrspace(1) > alig
 define ptr addrspace(1) @ptrmask_is_null_fail(ptr addrspace(1) align 16 %p) {
 ; CHECK-LABEL: define ptr addrspace(1) @ptrmask_is_null_fail
 ; CHECK-SAME: (ptr addrspace(1) align 16 [[P:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = call ptr addrspace(1) @llvm.ptrmask.p1.i32(ptr addrspace(1) [[P]], i32 16)
+; CHECK-NEXT:    [[R:%.*]] = call align 16 ptr addrspace(1) @llvm.ptrmask.p1.i32(ptr addrspace(1) [[P]], i32 16)
 ; CHECK-NEXT:    ret ptr addrspace(1) [[R]]
 ;
   %r = call ptr addrspace(1) @llvm.ptrmask.p1.i32(ptr addrspace(1) %p, i32 31)
@@ -270,7 +270,7 @@ define <2 x ptr addrspace(1) > @ptrmask_is_null_vec_fail(<2 x ptr addrspace(1) >
 define ptr @ptrmask_maintain_provenance_i64(ptr %p0) {
 ; CHECK-LABEL: define ptr @ptrmask_maintain_provenance_i64
 ; CHECK-SAME: (ptr [[P0:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[P0]], i64 0)
+; CHECK-NEXT:    [[R:%.*]] = call align 4294967296 ptr @llvm.ptrmask.p0.i64(ptr [[P0]], i64 0)
 ; CHECK-NEXT:    ret ptr [[R]]
 ;
   %r = call ptr @llvm.ptrmask.p0.i64(ptr %p0, i64 0)
@@ -280,7 +280,7 @@ define ptr @ptrmask_maintain_provenance_i64(ptr %p0) {
 define ptr addrspace(1) @ptrmask_maintain_provenance_i32(ptr addrspace(1) %p0) {
 ; CHECK-LABEL: define ptr addrspace(1) @ptrmask_maintain_provenance_i32
 ; CHECK-SAME: (ptr addrspace(1) [[P0:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = call ptr addrspace(1) @llvm.ptrmask.p1.i32(ptr addrspace(1) [[P0]], i32 0)
+; CHECK-NEXT:    [[R:%.*]] = call align 4294967296 ptr addrspace(1) @llvm.ptrmask.p1.i32(ptr addrspace(1) [[P0]], i32 0)
 ; CHECK-NEXT:    ret ptr addrspace(1) [[R]]
 ;
   %r = call ptr addrspace(1) @llvm.ptrmask.p1.i32(ptr addrspace(1) %p0, i32 0)
@@ -292,7 +292,7 @@ define ptr @ptrmask_is_useless0(i64 %i, i64 %m) {
 ; CHECK-SAME: (i64 [[I:%.*]], i64 [[M:%.*]]) {
 ; CHECK-NEXT:    [[I0:%.*]] = and i64 [[I]], -4
 ; CHECK-NEXT:    [[P0:%.*]] = inttoptr i64 [[I0]] to ptr
-; CHECK-NEXT:    [[R:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[P0]], i64 [[M]])
+; CHECK-NEXT:    [[R:%.*]] = call align 4 ptr @llvm.ptrmask.p0.i64(ptr [[P0]], i64 [[M]])
 ; CHECK-NEXT:    ret ptr [[R]]
 ;
   %m0 = and i64 %m, -4
@@ -307,7 +307,7 @@ define ptr @ptrmask_is_useless1(i64 %i, i64 %m) {
 ; CHECK-SAME: (i64 [[I:%.*]], i64 [[M:%.*]]) {
 ; CHECK-NEXT:    [[I0:%.*]] = and i64 [[I]], -8
 ; CHECK-NEXT:    [[P0:%.*]] = inttoptr i64 [[I0]] to ptr
-; CHECK-NEXT:    [[R:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[P0]], i64 [[M]])
+; CHECK-NEXT:    [[R:%.*]] = call align 8 ptr @llvm.ptrmask.p0.i64(ptr [[P0]], i64 [[M]])
 ; CHECK-NEXT:    ret ptr [[R]]
 ;
   %m0 = and i64 %m, -4
@@ -397,7 +397,7 @@ define ptr @ptrmask_is_useless_fail0(i64 %i, i64 %m) {
 ; CHECK-NEXT:    [[M0:%.*]] = and i64 [[M]], -4
 ; CHECK-NEXT:    [[I0:%.*]] = or i64 [[I]], -4
 ; CHECK-NEXT:    [[P0:%.*]] = inttoptr i64 [[I0]] to ptr
-; CHECK-NEXT:    [[R:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr nonnull [[P0]], i64 [[M0]])
+; CHECK-NEXT:    [[R:%.*]] = call align 4 ptr @llvm.ptrmask.p0.i64(ptr nonnull [[P0]], i64 [[M0]])
 ; CHECK-NEXT:    ret ptr [[R]]
 ;
   %m0 = and i64 %m, -4
