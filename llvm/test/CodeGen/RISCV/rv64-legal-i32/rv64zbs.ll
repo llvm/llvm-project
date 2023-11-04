@@ -616,7 +616,6 @@ define signext i32 @bseti_i32_11(i32 signext %a) nounwind {
 ; RV64ZBS:       # %bb.0:
 ; RV64ZBS-NEXT:    bseti a1, zero, 11
 ; RV64ZBS-NEXT:    or a0, a0, a1
-; RV64ZBS-NEXT:    sext.w a0, a0
 ; RV64ZBS-NEXT:    ret
   %or = or i32 %a, 2048
   ret i32 %or
@@ -751,7 +750,6 @@ define signext i32 @binvi_i32_11(i32 signext %a) nounwind {
 ; RV64ZBS:       # %bb.0:
 ; RV64ZBS-NEXT:    bseti a1, zero, 11
 ; RV64ZBS-NEXT:    xor a0, a0, a1
-; RV64ZBS-NEXT:    sext.w a0, a0
 ; RV64ZBS-NEXT:    ret
   %xor = xor i32 %a, 2048
   ret i32 %xor
