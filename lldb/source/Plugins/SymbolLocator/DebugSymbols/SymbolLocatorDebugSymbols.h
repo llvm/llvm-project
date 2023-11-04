@@ -38,6 +38,14 @@ public:
   static std::optional<ModuleSpec>
   LocateExecutableObjectFile(const ModuleSpec &module_spec);
 
+  // Locate the symbol file given a module specification.
+  //
+  // Locating the file should happen only on the local computer or using the
+  // current computers global settings.
+  static std::optional<FileSpec>
+  LocateExecutableSymbolFile(const ModuleSpec &module_spec,
+                             const FileSpecList &default_search_paths);
+
   static std::optional<FileSpec>
   FindSymbolFileInBundle(const FileSpec &dsym_bundle_fspec, const UUID *uuid,
                          const ArchSpec *arch);

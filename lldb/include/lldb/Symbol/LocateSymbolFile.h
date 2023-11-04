@@ -24,14 +24,6 @@ class UUID;
 
 class Symbols {
 public:
-  // Locate the symbol file given a module specification.
-  //
-  // Locating the file should happen only on the local computer or using the
-  // current computers global settings.
-  static FileSpec
-  LocateExecutableSymbolFile(const ModuleSpec &module_spec,
-                             const FileSpecList &default_search_paths);
-
   // Locate the object and symbol file given a module specification.
   //
   // Locating the file can try to download the file from a corporate build

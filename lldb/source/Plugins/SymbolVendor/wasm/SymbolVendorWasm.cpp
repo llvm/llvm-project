@@ -87,7 +87,7 @@ SymbolVendorWasm::CreateInstance(const lldb::ModuleSP &module_sp,
 
   FileSpecList search_paths = Target::GetDefaultDebugFileSearchPaths();
   FileSpec sym_fspec =
-      Symbols::LocateExecutableSymbolFile(module_spec, search_paths);
+      PluginManager::LocateExecutableSymbolFile(module_spec, search_paths);
   if (!sym_fspec)
     return nullptr;
 
