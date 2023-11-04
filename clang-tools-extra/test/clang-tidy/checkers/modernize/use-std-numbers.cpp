@@ -90,6 +90,10 @@ void foo(){
     // CHECK-MESSAGES: :[[@LINE-1]]:40: warning: prefer std::numbers math constant [modernize-use-std-numbers]
     // CHECK-FIXES: static constexpr my_float Euler6 = std::numbers::e_v<float>;
 
+    static constexpr int NotEuler7 = 2.7182818;
+    // CHECK-MESSAGES: :[[@LINE-1]]:38: warning: prefer std::numbers math constant [modernize-use-std-numbers]
+    // CHECK-FIXES: static constexpr int NotEuler7 = std::numbers::e;
+
     static constexpr double InvPi = 1.0 / Pi;
     // CHECK-MESSAGES: :[[@LINE-1]]:37: warning: prefer std::numbers math constant [modernize-use-std-numbers]
     // CHECK-FIXES: static constexpr double InvPi = std::numbers::inv_pi;
@@ -159,6 +163,8 @@ void foo(){
     log2(Euler6);
     // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: prefer std::numbers math constant [modernize-use-std-numbers]
     // CHECK-FIXES: std::numbers::log2e_v<float>;
+
+    log2(NotEuler7);
 
     auto log2e = 1.4426950;
     // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: prefer std::numbers math constant [modernize-use-std-numbers]
