@@ -40,7 +40,6 @@ int test_nteams_var_env(void) {
         errors = errors + (curr_nteams != EXPECTED_NTEAMS_DEV_1);
       } // device 1
     }
-    printf("device: %d nteams: %d\n", device_id, curr_nteams);
   }
   return errors;
 }

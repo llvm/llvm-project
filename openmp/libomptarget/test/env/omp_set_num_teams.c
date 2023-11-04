@@ -21,17 +21,13 @@ int omp_get_max_teams(void);
 
 int test_set_over_max(void) {
   int errors = 0;
-  int n_devs;
   int curr_nteams = -1;
-
-#pragma omp target map(tofrom : n_devs)
-  { n_devs = omp_get_num_devices(); }
 
 #pragma omp target device(0) map(tofrom : curr_nteams, errors)
   {
-    omp_set_num_teams(3 + 1);
+    omp_set_num_teams(EXPECTED_NTEAMS + 1);
     curr_nteams = omp_get_max_teams();
-    errors = errors + (curr_nteams != 3);
+    errors = errors + (curr_nteams != EXPECTED_NTEAMS);
 
     omp_set_num_teams(-1);
     curr_nteams = omp_get_max_teams();
@@ -39,7 +35,7 @@ int test_set_over_max(void) {
 
     omp_set_num_teams(3);
     curr_nteams = omp_get_max_teams();
-    errors = errors + (curr_nteams != 3);
+    errors = errors + (curr_nteams != EXPECTED_NTEAMS);
   }
   return errors;
 }
