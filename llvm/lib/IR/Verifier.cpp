@@ -2250,14 +2250,14 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
 
   if (auto A = Attrs.getFnAttr("sign-return-address-key"); A.isValid()) {
     StringRef S = A.getValueAsString();
-    if (!S.equals_insensitive("a_key") && !S.equals_insensitive("b_key"))
+    if (S != "a_key" && S != "b_key")
       CheckFailed("invalid value for 'sign-return-address-key' attribute: " + S,
                   V);
   }
 
   if (auto A = Attrs.getFnAttr("branch-target-enforcement"); A.isValid()) {
     StringRef S = A.getValueAsString();
-    if (!S.equals_insensitive("true") && !S.equals_insensitive("false"))
+    if (S != "true" && S != "false")
       CheckFailed(
           "invalid value for 'branch-target-enforcement' attribute: " + S, V);
   }
