@@ -13,7 +13,6 @@ add_lldb_library(lldbSymbol NO_PLUGIN_DEPENDENCIES
   Function.cpp
   LineEntry.cpp
   LineTable.cpp
-  LocateSymbolFile.cpp
   ObjectContainer.cpp
   ObjectFile.cpp
   PostfixExpression.cpp
@@ -21,6 +20,7 @@ add_lldb_library(lldbSymbol NO_PLUGIN_DEPENDENCIES
   SymbolContext.cpp
   SymbolFile.cpp
   SymbolFileOnDemand.cpp
+  SymbolLocator.cpp
   SymbolVendor.cpp
   Symtab.cpp
   Type.cpp
