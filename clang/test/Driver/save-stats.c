@@ -20,6 +20,8 @@
 // CHECK-INVALID: invalid value 'bla' in '-save-stats=bla'
 
 // RUN: %clang -target x86_64-linux-unknown -save-stats -flto -o obj/dir/save-stats.exe %s -### 2>&1 | FileCheck %s -check-prefix=CHECK-LTO
+// Previously `-plugin-opt=stats-file` would use empty filename if a linker flag (i.e. -Wl) is presented before any input filename.
+// RUN: %clang --target=x86_64-linux-unknown -save-stats -flto -o obj/dir/save-stats.exe -Wl,-plugin-opt=-dummy %s -### 2>&1 | FileCheck %s -check-prefix=CHECK-LTO
 // CHECK-LTO: "-stats-file=save-stats.stats"
 // CHECK-LTO: "-o" "obj/dir{{/|\\\\}}save-stats.exe"
 // CHECK-LTO: "-plugin-opt=stats-file=save-stats.stats"
