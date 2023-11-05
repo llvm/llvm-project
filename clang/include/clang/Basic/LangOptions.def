@@ -145,6 +145,7 @@ ENUM_LANGOPT(ExceptionHandling, ExceptionHandlingKind, 3,
              ExceptionHandlingKind::None, "exception handling")
 LANGOPT(IgnoreExceptions  , 1, 0, "ignore exceptions")
 LANGOPT(ExternCNoUnwind   , 1, 0, "Assume extern C functions don't unwind")
+LANGOPT(AssumeNothrowExceptionDtor , 1, 0, "Assume exception object's destructor is nothrow")
 LANGOPT(TraditionalCPP    , 1, 0, "traditional CPP emulation")
 LANGOPT(RTTI              , 1, 1, "run-time type information")
 LANGOPT(RTTIData          , 1, 1, "emit run-time type information data")

@@ -385,6 +385,9 @@ static bool addExceptionArgs(const ArgList &Args, types::ID InputType,
   // So we do not set EH to false.
   Args.AddLastArg(CmdArgs, options::OPT_fignore_exceptions);
 
+  Args.addOptInFlag(CmdArgs, options::OPT_fassume_nothrow_exception_dtor,
+                    options::OPT_fno_assume_nothrow_exception_dtor);
+
   if (EH)
     CmdArgs.push_back("-fexceptions");
   return EH;
