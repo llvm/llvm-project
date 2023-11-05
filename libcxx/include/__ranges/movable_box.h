@@ -16,6 +16,7 @@
 #include <__config>
 #include <__memory/addressof.h>
 #include <__memory/construct_at.h>
+#include <__type_traits/is_empty.h>
 #include <__type_traits/is_nothrow_constructible.h>
 #include <__type_traits/is_nothrow_copy_constructible.h>
 #include <__type_traits/is_nothrow_default_constructible.h>
@@ -146,21 +147,41 @@ template <class _Tp>
 concept __doesnt_need_empty_state = __doesnt_need_empty_state_for_copy<_Tp> && __doesnt_need_empty_state_for_move<_Tp>;
 #  endif
 
+template <class _Tp, bool _NoUniqueAddress>
+struct __no_unique_address_if {
+  _Tp __val_;
+
+  template <class... _Args>
+    requires is_constructible_v<_Tp, _Args&&...>
+  _LIBCPP_HIDE_FROM_ABI constexpr explicit __no_unique_address_if(_Args&&... __args)
+      : __val_(std::forward<_Args>(__args)...) {}
+};
+
+template <class _Tp>
+struct __no_unique_address_if<_Tp, true> {
+  _LIBCPP_NO_UNIQUE_ADDRESS _Tp __val_;
+
+  template <class... _Args>
+    requires is_constructible_v<_Tp, _Args&&...>
+  _LIBCPP_HIDE_FROM_ABI constexpr explicit __no_unique_address_if(_Args&&... __args)
+      : __val_(std::forward<_Args>(__args)...) {}
+};
+
 template <__movable_box_object _Tp>
   requires __doesnt_need_empty_state<_Tp>
-class __movable_box<_Tp> {
-  _LIBCPP_NO_UNIQUE_ADDRESS _Tp __val_;
+class __movable_box<_Tp> : private __no_unique_address_if<_Tp, is_empty_v<_Tp>> {
+  using __base = __no_unique_address_if<_Tp, is_empty_v<_Tp>>;
 
 public:
   template <class... _Args>
     requires is_constructible_v<_Tp, _Args...>
   _LIBCPP_HIDE_FROM_ABI constexpr explicit __movable_box(in_place_t, _Args&&... __args) noexcept(
       is_nothrow_constructible_v<_Tp, _Args...>)
-      : __val_(std::forward<_Args>(__args)...) {}
+      : __base(std::forward<_Args>(__args)...) {}
 
   _LIBCPP_HIDE_FROM_ABI constexpr __movable_box() noexcept(is_nothrow_default_constructible_v<_Tp>)
     requires default_initializable<_Tp>
-      : __val_() {}
+      : __base() {}
 
   _LIBCPP_HIDE_FROM_ABI __movable_box(__movable_box const&) = default;
   _LIBCPP_HIDE_FROM_ABI __movable_box(__movable_box&&)      = default;
@@ -177,8 +198,8 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr __movable_box& operator=(__movable_box const& __other) noexcept {
     static_assert(is_nothrow_copy_constructible_v<_Tp>);
     if (this != std::addressof(__other)) {
-      std::destroy_at(std::addressof(__val_));
-      std::construct_at(std::addressof(__val_), __other.__val_);
+      std::destroy_at(std::addressof(this->__val_));
+      std::construct_at(std::addressof(this->__val_), __other.__val_);
     }
     return *this;
   }
@@ -186,17 +207,17 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr __movable_box& operator=(__movable_box&& __other) noexcept {
     static_assert(is_nothrow_move_constructible_v<_Tp>);
     if (this != std::addressof(__other)) {
-      std::destroy_at(std::addressof(__val_));
-      std::construct_at(std::addressof(__val_), std::move(__other.__val_));
+      std::destroy_at(std::addressof(this->__val_));
+      std::construct_at(std::addressof(this->__val_), std::move(__other.__val_));
     }
     return *this;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr _Tp const& operator*() const noexcept { return __val_; }
-  _LIBCPP_HIDE_FROM_ABI constexpr _Tp& operator*() noexcept { return __val_; }
+  _LIBCPP_HIDE_FROM_ABI constexpr _Tp const& operator*() const noexcept { return this->__val_; }
+  _LIBCPP_HIDE_FROM_ABI constexpr _Tp& operator*() noexcept { return this->__val_; }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr const _Tp* operator->() const noexcept { return std::addressof(__val_); }
-  _LIBCPP_HIDE_FROM_ABI constexpr _Tp* operator->() noexcept { return std::addressof(__val_); }
+  _LIBCPP_HIDE_FROM_ABI constexpr const _Tp* operator->() const noexcept { return std::addressof(this->__val_); }
+  _LIBCPP_HIDE_FROM_ABI constexpr _Tp* operator->() noexcept { return std::addressof(this->__val_); }
 
   _LIBCPP_HIDE_FROM_ABI constexpr bool __has_value() const noexcept { return true; }
 };

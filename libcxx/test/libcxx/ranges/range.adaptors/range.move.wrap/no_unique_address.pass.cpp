@@ -15,6 +15,20 @@
 #include <cassert>
 #include <utility>
 
+// movable_box should not use no_unique_address internally if T is not empty
+struct WithPadding {
+  WithPadding() {}
+  int i;
+  bool b;
+};
+
+struct Test {
+  [[no_unique_address]] std::ranges::__movable_box<WithPadding> box_;
+  bool b2;
+};
+
+static_assert(sizeof(Test) > sizeof(std::ranges::__movable_box<WithPadding>));
+
 bool copied = false;
 bool moved  = false;
 
