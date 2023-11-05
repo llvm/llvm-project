@@ -4105,20 +4105,20 @@ Sema::IsStringLiteralToNonConstPointerConversion(Expr *From, QualType ToType) {
         // explicit appropriate pointer target type (C++ 4.2p2).
         if (!ToPtrType->getPointeeType().hasQualifiers()) {
           switch (StrLit->getKind()) {
-            case StringLiteral::UTF8:
-            case StringLiteral::UTF16:
-            case StringLiteral::UTF32:
-              // We don't allow UTF literals to be implicitly converted
-              break;
-            case StringLiteral::Ordinary:
-              return (ToPointeeType->getKind() == BuiltinType::Char_U ||
-                      ToPointeeType->getKind() == BuiltinType::Char_S);
-            case StringLiteral::Wide:
-              return Context.typesAreCompatible(Context.getWideCharType(),
-                                                QualType(ToPointeeType, 0));
-            case StringLiteral::Unevaluated:
-              assert(false && "Unevaluated string literal in expression");
-              break;
+          case StringLiteralKind::UTF8:
+          case StringLiteralKind::UTF16:
+          case StringLiteralKind::UTF32:
+            // We don't allow UTF literals to be implicitly converted
+            break;
+          case StringLiteralKind::Ordinary:
+            return (ToPointeeType->getKind() == BuiltinType::Char_U ||
+                    ToPointeeType->getKind() == BuiltinType::Char_S);
+          case StringLiteralKind::Wide:
+            return Context.typesAreCompatible(Context.getWideCharType(),
+                                              QualType(ToPointeeType, 0));
+          case StringLiteralKind::Unevaluated:
+            assert(false && "Unevaluated string literal in expression");
+            break;
           }
         }
       }

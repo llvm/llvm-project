@@ -1060,23 +1060,23 @@ double FloatingLiteral::getValueAsApproximateDouble() const {
 }
 
 unsigned StringLiteral::mapCharByteWidth(TargetInfo const &Target,
-                                         StringKind SK) {
+                                         StringLiteralKind SK) {
   unsigned CharByteWidth = 0;
   switch (SK) {
-  case Ordinary:
-  case UTF8:
+  case StringLiteralKind::Ordinary:
+  case StringLiteralKind::UTF8:
     CharByteWidth = Target.getCharWidth();
     break;
-  case Wide:
+  case StringLiteralKind::Wide:
     CharByteWidth = Target.getWCharWidth();
     break;
-  case UTF16:
+  case StringLiteralKind::UTF16:
     CharByteWidth = Target.getChar16Width();
     break;
-  case UTF32:
+  case StringLiteralKind::UTF32:
     CharByteWidth = Target.getChar32Width();
     break;
-  case Unevaluated:
+  case StringLiteralKind::Unevaluated:
     return sizeof(char); // Host;
   }
   assert((CharByteWidth & 7) == 0 && "Assumes character size is byte multiple");
@@ -1087,17 +1087,17 @@ unsigned StringLiteral::mapCharByteWidth(TargetInfo const &Target,
 }
 
 StringLiteral::StringLiteral(const ASTContext &Ctx, StringRef Str,
-                             StringKind Kind, bool Pascal, QualType Ty,
+                             StringLiteralKind Kind, bool Pascal, QualType Ty,
                              const SourceLocation *Loc,
                              unsigned NumConcatenated)
     : Expr(StringLiteralClass, Ty, VK_LValue, OK_Ordinary) {
 
   unsigned Length = Str.size();
 
-  StringLiteralBits.Kind = Kind;
+  StringLiteralBits.Kind = llvm::to_underlying(Kind);
   StringLiteralBits.NumConcatenated = NumConcatenated;
 
-  if (Kind != StringKind::Unevaluated) {
+  if (Kind != StringLiteralKind::Unevaluated) {
     assert(Ctx.getAsConstantArrayType(Ty) &&
            "StringLiteral must be of constant array type!");
     unsigned CharByteWidth = mapCharByteWidth(Ctx.getTargetInfo(), Kind);
@@ -1152,8 +1152,8 @@ StringLiteral::StringLiteral(EmptyShell Empty, unsigned NumConcatenated,
 }
 
 StringLiteral *StringLiteral::Create(const ASTContext &Ctx, StringRef Str,
-                                     StringKind Kind, bool Pascal, QualType Ty,
-                                     const SourceLocation *Loc,
+                                     StringLiteralKind Kind, bool Pascal,
+                                     QualType Ty, const SourceLocation *Loc,
                                      unsigned NumConcatenated) {
   void *Mem = Ctx.Allocate(totalSizeToAlloc<unsigned, SourceLocation, char>(
                                1, NumConcatenated, Str.size()),
@@ -1175,13 +1175,21 @@ StringLiteral *StringLiteral::CreateEmpty(const ASTContext &Ctx,
 
 void StringLiteral::outputString(raw_ostream &OS) const {
   switch (getKind()) {
-  case Unevaluated:
-  case Ordinary:
+  case StringLiteralKind::Unevaluated:
+  case StringLiteralKind::Ordinary:
     break; // no prefix.
-  case Wide:  OS << 'L'; break;
-  case UTF8:  OS << "u8"; break;
-  case UTF16: OS << 'u'; break;
-  case UTF32: OS << 'U'; break;
+  case StringLiteralKind::Wide:
+    OS << 'L';
+    break;
+  case StringLiteralKind::UTF8:
+    OS << "u8";
+    break;
+  case StringLiteralKind::UTF16:
+    OS << 'u';
+    break;
+  case StringLiteralKind::UTF32:
+    OS << 'U';
+    break;
   }
   OS << '"';
   static const char Hex[] = "0123456789ABCDEF";
@@ -1195,8 +1203,8 @@ void StringLiteral::outputString(raw_ostream &OS) const {
 
       // Convert UTF-16 surrogate pairs back to codepoints before rendering.
       // Leave invalid surrogates alone; we'll use \x for those.
-      if (getKind() == UTF16 && I != N - 1 && Char >= 0xd800 &&
-          Char <= 0xdbff) {
+      if (getKind() == StringLiteralKind::UTF16 && I != N - 1 &&
+          Char >= 0xd800 && Char <= 0xdbff) {
         uint32_t Trail = getCodeUnit(I + 1);
         if (Trail >= 0xdc00 && Trail <= 0xdfff) {
           Char = 0x10000 + ((Char - 0xd800) << 10) + (Trail - 0xdc00);
@@ -1208,7 +1216,7 @@ void StringLiteral::outputString(raw_ostream &OS) const {
         // If this is a wide string, output characters over 0xff using \x
         // escapes. Otherwise, this is a UTF-16 or UTF-32 string, and Char is a
         // codepoint: use \x escapes for invalid codepoints.
-        if (getKind() == Wide ||
+        if (getKind() == StringLiteralKind::Wide ||
             (Char >= 0xd800 && Char <= 0xdfff) || Char >= 0x110000) {
           // FIXME: Is this the best way to print wchar_t?
           OS << "\\x";
@@ -1285,9 +1293,9 @@ StringLiteral::getLocationOfByte(unsigned ByteNo, const SourceManager &SM,
                                  const LangOptions &Features,
                                  const TargetInfo &Target, unsigned *StartToken,
                                  unsigned *StartTokenByteOffset) const {
-  assert((getKind() == StringLiteral::Ordinary ||
-          getKind() == StringLiteral::UTF8 ||
-          getKind() == StringLiteral::Unevaluated) &&
+  assert((getKind() == StringLiteralKind::Ordinary ||
+          getKind() == StringLiteralKind::UTF8 ||
+          getKind() == StringLiteralKind::Unevaluated) &&
          "Only narrow string literals are currently supported");
 
   // Loop over all of the tokens in this string until we find the one that

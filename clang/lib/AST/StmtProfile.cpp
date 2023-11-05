@@ -1371,7 +1371,7 @@ void StmtProfiler::VisitImaginaryLiteral(const ImaginaryLiteral *S) {
 void StmtProfiler::VisitStringLiteral(const StringLiteral *S) {
   VisitExpr(S);
   ID.AddString(S->getBytes());
-  ID.AddInteger(S->getKind());
+  ID.AddInteger(llvm::to_underlying(S->getKind()));
 }
 
 void StmtProfiler::VisitParenExpr(const ParenExpr *S) {
