@@ -38,10 +38,14 @@ auto pred1     = StrictUnaryPredicate;
 auto pred2     = StrictBinaryPredicate;
 
 void f(Range in) {
+  (void)pred1; (void)pred2;
+
+#if TEST_STD_VER >= 23
   {
     auto view = std::views::chunk_by(in, pred2);
     use(view);
   }
+#endif
   {
     auto view = std::views::drop_while(in, pred1);
     use(view);
