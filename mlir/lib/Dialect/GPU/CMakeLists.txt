@@ -60,6 +60,7 @@ add_mlir_dialect_library(MLIRGPUTransforms
   Transforms/SerializeToCubin.cpp
   Transforms/SerializeToHsaco.cpp
   Transforms/ShuffleRewriter.cpp
+  Transforms/SPIRVAttachTarget.cpp
   Transforms/ROCDLAttachTarget.cpp
 
   ADDITIONAL_HEADER_DIRS
@@ -95,6 +96,7 @@ add_mlir_dialect_library(MLIRGPUTransforms
   MLIRPass
   MLIRSCFDialect
   MLIRSideEffectInterfaces
+  MLIRSPIRVTarget
   MLIRSupport
   MLIRROCDLTarget
   MLIRTransformUtils
