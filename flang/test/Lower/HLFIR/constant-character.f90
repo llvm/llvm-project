@@ -8,10 +8,10 @@ subroutine repro(c1, c4)
   print *, 4_""
 end subroutine
 !CHECK-LABEL: func.func @_QPrepro
-!CHECK:    fir.address_of(@_QQcl.) : !fir.ref<!fir.char<1,0>>
+!CHECK:    fir.address_of(@_QQcl_) : !fir.ref<!fir.char<1,0>>
 !CHECK:    fir.call @_FortranAioOutputAscii
-!CHECK:    fir.address_of(@_QQcl4.) : !fir.ref<!fir.char<4,0>>
+!CHECK:    fir.address_of(@_QQcl4_) : !fir.ref<!fir.char<4,0>>
 !CHECK:    fir.call @_FortranAioOutputDescriptor(
 
-!CHECK-DAG:  fir.global linkonce @_QQcl. constant : !fir.char<1,0>
-!CHECK-DAG:  fir.global linkonce @_QQcl4. constant : !fir.char<4,0>
+!CHECK-DAG:  fir.global linkonce @_QQcl_ constant : !fir.char<1,0>
+!CHECK-DAG:  fir.global linkonce @_QQcl4_ constant : !fir.char<4,0>
