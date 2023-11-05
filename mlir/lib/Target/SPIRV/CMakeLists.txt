@@ -33,9 +33,8 @@ add_mlir_dialect_library(MLIRSPIRVTarget
 
   LINK_LIBS PUBLIC
   MLIRIR
+  MLIRGPUDialect
   MLIRSPIRVDialect
   MLIRSPIRVSerialization
-  MLIRSPIRVDeserialization
   MLIRSupport
-  MLIRTranslateLib
   )
