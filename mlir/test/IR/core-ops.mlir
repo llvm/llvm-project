@@ -289,24 +289,6 @@ func.func @test_dimop(%arg0: tensor<4x4x?xf32>) {
   return
 }
 
-// CHECK-LABEL: func @tensor_load_store
-func.func @tensor_load_store(%0 : memref<4x4xi32>, %1 : tensor<4x4xi32>) {
-  // CHECK-SAME: (%[[MEMREF:.*]]: memref<4x4xi32>,
-  // CHECK-SAME:  %[[TENSOR:.*]]: tensor<4x4xi32>)
-  // CHECK: memref.tensor_store %[[TENSOR]], %[[MEMREF]] : memref<4x4xi32>
-  memref.tensor_store %1, %0 : memref<4x4xi32>
-  return
-}
-
-// CHECK-LABEL: func @unranked_tensor_load_store
-func.func @unranked_tensor_load_store(%0 : memref<*xi32>, %1 : tensor<*xi32>) {
-  // CHECK-SAME: (%[[MEMREF:.*]]: memref<*xi32>,
-  // CHECK-SAME:  %[[TENSOR:.*]]: tensor<*xi32>)
-  // CHECK: memref.tensor_store %[[TENSOR]], %[[MEMREF]] : memref<*xi32>
-  memref.tensor_store %1, %0 : memref<*xi32>
-  return
-}
-
 // CHECK-LABEL: func @assume_alignment
 // CHECK-SAME: %[[MEMREF:.*]]: memref<4x4xf16>
 func.func @assume_alignment(%0: memref<4x4xf16>) {

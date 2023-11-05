@@ -63,11 +63,14 @@ static void createMemcpy(OpBuilder &b, Location loc, Value tensorSource,
   assert(memrefDest.getType().isa<MemRefType>() && "expected ranked memref");
 
   switch (options.memcpyOp) {
-  case linalg::BufferizeToAllocationOptions::MemcpyOp::MemrefTensorStore:
+  case linalg::BufferizeToAllocationOptions::MemcpyOp::
+      MaterializeInDestination: {
     // Note: This is the preferred way of memcpy'ing because no layout map
     // and/or memory space must be specified for the source.
-    b.create<memref::TensorStoreOp>(loc, tensorSource, memrefDest);
-    break;
+    auto materializeOp = b.create<bufferization::MaterializeInDestinationOp>(
+        loc, tensorSource, memrefDest);
+    materializeOp.setWritable(true);
+  } break;
   case linalg::BufferizeToAllocationOptions::MemcpyOp::MemrefCopy: {
     // TODO: Support custom memory space on source.
     // We do not know the layout map of the source yet, so use a fully dynamic
@@ -238,7 +241,7 @@ Value linalg::bufferizeToAllocation(
     rewriter.setInsertionPointAfter(fillOp);
   }
 
-  // Create memref.tensor_store.
+  // Create memcpy.
   SmallVector<OpFoldResult> sizes =
       getMixedSizes(rewriter, loc, padOp.getSource());
   SmallVector<OpFoldResult> strides(padOp.getResultType().getRank(),
