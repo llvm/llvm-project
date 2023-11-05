@@ -430,8 +430,6 @@ void BinaryFunction::print(raw_ostream &OS, std::string Annotation) {
   OS << "\n  IsSplit     : " << isSplit();
   OS << "\n  BB Count    : " << size();
 
-  if (HasFixedIndirectBranch)
-    OS << "\n  HasFixedIndirectBranch : true";
   if (HasUnknownControlFlow)
     OS << "\n  Unknown CF  : true";
   if (getPersonalityFunction())
@@ -1116,7 +1114,7 @@ void BinaryFunction::handleIndirectBranch(MCInst &Instruction, uint64_t Size,
       Instruction.clear();
       MIB->createUncondBranch(Instruction, TargetSymbol, BC.Ctx.get());
       TakenBranches.emplace_back(Offset, IndirectTarget - getAddress());
-      HasFixedIndirectBranch = true;
+      addEntryPointAtOffset(IndirectTarget - getAddress());
     } else {
       MIB->convertJmpToTailCall(Instruction);
       BC.addInterproceduralReference(this, IndirectTarget);
@@ -1891,9 +1889,6 @@ bool BinaryFunction::postProcessIndirectBranches(
 
     LastIndirectJumpBB->updateJumpTableSuccessors();
   }
-
-  if (HasFixedIndirectBranch)
-    return false;
 
   // Validate that all data references to function offsets are claimed by
   // recognized jump tables. Register externally referenced blocks as entry
