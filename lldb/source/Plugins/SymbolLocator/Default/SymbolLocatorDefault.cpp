@@ -51,7 +51,8 @@ SymbolLocatorDefault::SymbolLocatorDefault() : SymbolLocator() {}
 void SymbolLocatorDefault::Initialize() {
   PluginManager::RegisterPlugin(
       GetPluginNameStatic(), GetPluginDescriptionStatic(), CreateInstance,
-      LocateExecutableObjectFile, LocateExecutableSymbolFile);
+      LocateExecutableObjectFile, LocateExecutableSymbolFile,
+      DownloadObjectAndSymbolFile);
 }
 
 void SymbolLocatorDefault::Terminate() {
@@ -229,4 +230,11 @@ std::optional<FileSpec> SymbolLocatorDefault::LocateExecutableSymbolFile(
   }
 
   return {};
+}
+
+bool SymbolLocatorDefault::DownloadObjectAndSymbolFile(ModuleSpec &module_spec,
+                                                       Status &error,
+                                                       bool force_lookup,
+                                                       bool copy_executable) {
+  return false;
 }
