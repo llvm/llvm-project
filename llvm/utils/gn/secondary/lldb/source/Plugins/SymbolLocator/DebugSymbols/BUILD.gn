@@ -1,0 +1,11 @@
+static_library("DebugSymbols") {
+  output_name = "lldbPluginSymbolLocatorDebugSymbols "
+  configs += [ "//llvm/utils/gn/build:lldb_code" ]
+  deps = [
+    "//lldb/source/Core",
+    "//lldb/source/Host",
+    "//lldb/source/Symbol",
+  ]
+
+  sources = [ "SymbolLocatorDebugSymbols.cpp" ]
+}
