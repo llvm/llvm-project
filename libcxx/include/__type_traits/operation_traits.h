@@ -18,11 +18,14 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-template <class _Operation, class _Canonical>
-struct __desugars_to : false_type {};
+// Tags to represent the canonical operations
+struct __equal_tag {};
+struct __plus_tag {};
 
-template <class _Operation>
-struct __desugars_to<_Operation, _Operation> : true_type {};
+// In the general case, __desugars_to is false
+
+template <class _CanonicalTag, class _Operation, class... _Args>
+struct __desugars_to : false_type {};
 
 _LIBCPP_END_NAMESPACE_STD
 

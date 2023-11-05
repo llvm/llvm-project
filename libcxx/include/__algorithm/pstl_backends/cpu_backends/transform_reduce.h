@@ -34,7 +34,9 @@ template < typename _DifferenceType,
            typename _Tp,
            typename _BinaryOperation,
            typename _UnaryOperation,
-           __enable_if_t<__desugars_to<_BinaryOperation, plus<_Tp> >::value && is_arithmetic_v<_Tp>, int> = 0>
+           typename _UnaryResult = invoke_result_t<_UnaryOperation, _DifferenceType>,
+           __enable_if_t<__desugars_to<__plus_tag, _BinaryOperation, _Tp, _UnaryResult>::value && is_arithmetic_v<_Tp>,
+                         int>    = 0>
 _LIBCPP_HIDE_FROM_ABI _Tp
 __simd_transform_reduce(_DifferenceType __n, _Tp __init, _BinaryOperation, _UnaryOperation __f) noexcept {
   _PSTL_PRAGMA_SIMD_REDUCTION(+ : __init)
@@ -43,11 +45,14 @@ __simd_transform_reduce(_DifferenceType __n, _Tp __init, _BinaryOperation, _Unar
   return __init;
 }
 
-template < typename _Size,
-           typename _Tp,
-           typename _BinaryOperation,
-           typename _UnaryOperation,
-           __enable_if_t<!(__desugars_to<_BinaryOperation, plus<_Tp> >::value && is_arithmetic_v<_Tp>), int> = 0>
+template <
+    typename _Size,
+    typename _Tp,
+    typename _BinaryOperation,
+    typename _UnaryOperation,
+    typename _UnaryResult = invoke_result_t<_UnaryOperation, _Size>,
+    __enable_if_t<!(__desugars_to<__plus_tag, _BinaryOperation, _Tp, _UnaryResult>::value && is_arithmetic_v<_Tp>),
+                  int>    = 0>
 _LIBCPP_HIDE_FROM_ABI _Tp
 __simd_transform_reduce(_Size __n, _Tp __init, _BinaryOperation __binary_op, _UnaryOperation __f) noexcept {
   const _Size __block_size = __lane_size / sizeof(_Tp);

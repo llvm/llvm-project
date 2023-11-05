@@ -96,8 +96,10 @@ struct greater_equal {
 
 } // namespace ranges
 
-template <>
-struct __desugars_to<ranges::equal_to, std::equal_to<>> : true_type {};
+// For ranges we do not require that the types on each side of the equality
+// operator are of the same type
+template <class _Tp, class _Up>
+struct __desugars_to<__equal_tag, ranges::equal_to, _Tp, _Up> : true_type {};
 
 #endif // _LIBCPP_STD_VER >= 20
 
