@@ -603,8 +603,8 @@ bool RISCVInstructionSelector::selectGlobalValue(
       // Use PC-relative addressing to access the symbol. This generates the
       // pattern (PseudoLLA sym), which expands to (addi (auipc %pcrel_hi(sym))
       // %pcrel_lo(auipc)).
-      Result = MIB.buildInstr(RISCV::PseudoLLA, {DefReg}, {})
-                   .addGlobalAddress(GV, 0);
+      Result =
+          MIB.buildInstr(RISCV::PseudoLLA, {DefReg}, {}).addGlobalAddress(GV);
     } else {
       // Use PC-relative addressing to access the GOT for this symbol, then
       // load the address from the GOT. This generates the pattern (PseudoLGA
@@ -618,7 +618,7 @@ bool RISCVInstructionSelector::selectGlobalValue(
           DefTy, Align(DefTy.getSizeInBits() / 8));
 
       Result = MIB.buildInstr(RISCV::PseudoLGA, {DefReg}, {})
-                   .addGlobalAddress(GV, 0)
+                   .addGlobalAddress(GV)
                    .addMemOperand(MemOp);
     }
 
@@ -641,7 +641,7 @@ bool RISCVInstructionSelector::selectGlobalValue(
     // (lui %hi(sym)) %lo(sym)).
     Register AddrHiDest = MRI.createVirtualRegister(&RISCV::GPRRegClass);
     MachineInstr *AddrHi = MIB.buildInstr(RISCV::LUI, {AddrHiDest}, {})
-                               .addGlobalAddress(GV, RISCVII::MO_HI);
+                               .addGlobalAddress(GV, 0, RISCVII::MO_HI);
 
     if (!constrainSelectedInstRegOperands(*AddrHi, TII, TRI, RBI))
       return false;
@@ -673,14 +673,14 @@ bool RISCVInstructionSelector::selectGlobalValue(
           DefTy, Align(DefTy.getSizeInBits() / 8));
 
       Result = MIB.buildInstr(RISCV::PseudoLGA, {DefReg}, {})
-                   .addGlobalAddress(GV, 0)
+                   .addGlobalAddress(GV)
                    .addMemOperand(MemOp);
     } else {
       // Generate a sequence for accessing addresses within any 2GiB range
       // within the address space. This generates the pattern (PseudoLLA sym),
       // which expands to (addi (auipc %pcrel_hi(sym)) %pcrel_lo(auipc)).
-      Result = MIB.buildInstr(RISCV::PseudoLLA, {DefReg}, {})
-                   .addGlobalAddress(GV, 0);
+      Result =
+          MIB.buildInstr(RISCV::PseudoLLA, {DefReg}, {}).addGlobalAddress(GV);
     }
 
     if (!constrainSelectedInstRegOperands(*Result, TII, TRI, RBI))
