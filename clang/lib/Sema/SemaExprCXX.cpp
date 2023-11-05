@@ -2023,7 +2023,8 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
 
   MultiExprArg Exprs(&Initializer, Initializer ? 1 : 0);
   if (ParenListExpr *List = dyn_cast_or_null<ParenListExpr>(Initializer)) {
-    assert(initStyle == CXXNewInitializationStyle::Call && "paren init for non-call init");
+    assert(initStyle == CXXNewInitializationStyle::Call &&
+           "paren init for non-call init");
     Exprs = MultiExprArg(List->getExprs(), List->getNumExprs());
   }
 
@@ -2034,18 +2035,19 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
       //     - If the new-initializer is omitted, the object is default-
       //       initialized (8.5); if no initialization is performed,
       //       the object has indeterminate value
-      = initStyle == CXXNewInitializationStyle::None || initStyle == CXXNewInitializationStyle::Implicit
+      = initStyle == CXXNewInitializationStyle::None ||
+                initStyle == CXXNewInitializationStyle::Implicit
             ? InitializationKind::CreateDefault(TypeRange.getBegin())
-            //     - Otherwise, the new-initializer is interpreted according to
-            //     the
-            //       initialization rules of 8.5 for direct-initialization.
-            : initStyle == CXXNewInitializationStyle::List
-                  ? InitializationKind::CreateDirectList(
-                        TypeRange.getBegin(), Initializer->getBeginLoc(),
-                        Initializer->getEndLoc())
-                  : InitializationKind::CreateDirect(TypeRange.getBegin(),
-                                                     DirectInitRange.getBegin(),
-                                                     DirectInitRange.getEnd());
+        //     - Otherwise, the new-initializer is interpreted according to
+        //     the
+        //       initialization rules of 8.5 for direct-initialization.
+        : initStyle == CXXNewInitializationStyle::List
+            ? InitializationKind::CreateDirectList(TypeRange.getBegin(),
+                                                   Initializer->getBeginLoc(),
+                                                   Initializer->getEndLoc())
+            : InitializationKind::CreateDirect(TypeRange.getBegin(),
+                                               DirectInitRange.getBegin(),
+                                               DirectInitRange.getEnd());
 
   // C++11 [dcl.spec.auto]p6. Deduce the type which 'auto' stands in for.
   auto *Deduced = AllocType->getContainedDeducedType();
@@ -2072,7 +2074,8 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
       Inits = MultiExprArg(ILE->getInits(), ILE->getNumInits());
     }
 
-    if (initStyle == CXXNewInitializationStyle::None || initStyle == CXXNewInitializationStyle::Implicit || Inits.empty())
+    if (initStyle == CXXNewInitializationStyle::None ||
+        initStyle == CXXNewInitializationStyle::Implicit || Inits.empty())
       return ExprError(Diag(StartLoc, diag::err_auto_new_requires_ctor_arg)
                        << AllocType << TypeRange);
     if (Inits.size() > 1) {

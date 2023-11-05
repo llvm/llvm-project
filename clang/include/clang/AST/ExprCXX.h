@@ -2389,7 +2389,7 @@ public:
 
   /// Whether this new-expression has any initializer at all.
   bool hasInitializer() const {
-    switch(getInitializationStyle()) {
+    switch (getInitializationStyle()) {
     case CXXNewInitializationStyle::None:
       return true;
     case CXXNewInitializationStyle::Implicit:

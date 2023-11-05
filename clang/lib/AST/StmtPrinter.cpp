@@ -2299,7 +2299,8 @@ void StmtPrinter::VisitCXXNewExpr(CXXNewExpr *E) {
     OS << ")";
 
   CXXNewInitializationStyle InitStyle = E->getInitializationStyle();
-  if (InitStyle != CXXNewInitializationStyle::None && InitStyle != CXXNewInitializationStyle::Implicit) {
+  if (InitStyle != CXXNewInitializationStyle::None &&
+      InitStyle != CXXNewInitializationStyle::Implicit) {
     bool Bare = InitStyle == CXXNewInitializationStyle::Call &&
                 !isa<ParenListExpr>(E->getInitializer());
     if (Bare)
