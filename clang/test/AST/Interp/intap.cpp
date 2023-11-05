@@ -121,4 +121,20 @@ namespace AddSubOffset {
   static_assert(*P2 == 1,"");
 }
 
+namespace Bitfields {
+  struct S1 {
+    unsigned _BitInt(128) a : 2;
+  };
+  constexpr S1 s1{100}; // ref-warning {{changes value from 100 to 0}} \
+                        // expected-warning {{changes value from 100 to 0}}
+  constexpr S1 s12{3};
+  static_assert(s12.a == 3, "");
+
+  struct S2 {
+    unsigned __int128 a : 2;
+  };
+  constexpr S2 s2{100}; // ref-warning {{changes value from 100 to 0}} \
+                        // expected-warning {{changes value from 100 to 0}}
+}
+
 #endif
