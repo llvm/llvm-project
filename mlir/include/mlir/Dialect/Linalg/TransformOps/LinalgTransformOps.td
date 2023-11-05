@@ -2248,56 +2248,6 @@ def ConvertConv2DToImg2ColOp : Op<Transform_Dialect,
 }
 
 //===----------------------------------------------------------------------===//
-// HoistRedundantTensorSubsetsOp
-//===----------------------------------------------------------------------===//
-
-def HoistRedundantTensorSubsetsOp :
-  Op<Transform_Dialect, "structured.hoist_redundant_tensor_subsets",
-    [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
-     TransformEachOpTrait,
-     TransformOpInterface,
-     ReportTrackingListenerFailuresOpTrait]> {
-  let description = [{
-    Hoists supported tensor subset extract/insert operation pairs out of
-    immediately enclosing loop iteratively, if the following conditions
-    are true:
-       1. The 2 ops access the same tensor subset.
-       2. All operands are invariant under the enclosing loop.
-
-    The supported subset extract/insert operation pairs currently comprise:
-       - tensor.extract_slice / tensor.insert_slice
-       - vector.transfer_read / vector.transfer_write on tensors
-
-    Only scf.for loops are currently supported.
-
-    When applied to:
-       1. an scf.for loop, hoist out of this loop only.
-       2. a non-loop op, apply hoisting to all the contained loop ops.
-
-    #### Return modes:
-
-    The operation always succeeds and returns nothing.
-  }];
-
-  let arguments = (ins TransformHandleTypeInterface:$target);
-  let results = (outs);
-
-  let assemblyFormat = [{
-    $target
-    attr-dict
-    `:` functional-type(operands, results)
-  }];
-
-  let extraClassDeclaration = [{
-    ::mlir::DiagnosedSilenceableFailure applyToOne(
-        ::mlir::transform::TransformRewriter &rewriter,
-        ::mlir::Operation *target,
-        ::mlir::transform::ApplyToEachResultList &results,
-        ::mlir::transform::TransformState &state);
-  }];
-}
-
-//===----------------------------------------------------------------------===//
 // InsertSliceToCopyOp
 //===----------------------------------------------------------------------===//
 

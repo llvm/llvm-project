@@ -3164,35 +3164,6 @@ DiagnosedSilenceableFailure transform::ConvertConv2DToImg2ColOp::applyToOne(
 }
 
 //===----------------------------------------------------------------------===//
-// HoistRedundantTensorSubsetsOp
-//===----------------------------------------------------------------------===//
-
-DiagnosedSilenceableFailure
-transform::HoistRedundantTensorSubsetsOp::applyToOne(
-    transform::TransformRewriter &rewriter, Operation *target,
-    transform::ApplyToEachResultList &results,
-    transform::TransformState &state) {
-  auto forOp = dyn_cast<scf::ForOp>(target);
-  if (forOp) {
-    linalg::hoistRedundantSubsetExtractInsert(rewriter, forOp);
-    return DiagnosedSilenceableFailure::success();
-  }
-
-  // TODO: walking in some reverse / inside-out order would be more efficient
-  // and would capture more cases.
-  target->walk([&](scf::ForOp forOp) {
-    hoistRedundantSubsetExtractInsert(rewriter, forOp);
-  });
-  return DiagnosedSilenceableFailure::success();
-}
-
-void transform::HoistRedundantTensorSubsetsOp::getEffects(
-    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
-  transform::onlyReadsHandle(getTarget(), effects);
-  transform::modifiesPayload(effects);
-}
-
-//===----------------------------------------------------------------------===//
 // InsertSliceToCopyOp
 //===----------------------------------------------------------------------===//
 template <typename OpTy>
