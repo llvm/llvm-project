@@ -164,8 +164,7 @@ static llvm::Constant *buildBlockDescriptor(CodeGenModule &CGM,
       CGM.getLangOpts().getGC() == LangOptions::NonGC) {
     descName = getBlockDescriptorName(blockInfo, CGM);
     if (llvm::GlobalValue *desc = CGM.getModule().getNamedValue(descName))
-      return llvm::ConstantExpr::getBitCast(desc,
-                                            CGM.getBlockDescriptorType());
+      return desc;
   }
 
   // If there isn't an equivalent block descriptor global variable, create a new
@@ -245,7 +244,7 @@ static llvm::Constant *buildBlockDescriptor(CodeGenModule &CGM,
     global->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
   }
 
-  return llvm::ConstantExpr::getBitCast(global, CGM.getBlockDescriptorType());
+  return global;
 }
 
 /*
