@@ -3483,17 +3483,17 @@ void JoinVals::eraseInstrs(SmallPtrSetImpl<MachineInstr*> &ErasedInstrs,
   }
 }
 
-// If the overlapping segment all be mark as CR_Replace resolution, 
+// If the overlapping segment all be mark as CR_Replace resolution,
 // but can't be resolved resolveConflicts/pruneValues function.
-// 
-// This function target this particular pattern and make joinVReg fail. 
 //
-// For example: 
-//   LHS: %12 [32r,80r:0)[96r,240r:1) 0@32r 1@96r 
+// This function target this particular pattern and make joinVReg fail.
+//
+// For example:
+//   LHS: %12 [32r,80r:0)[96r,240r:1) 0@32r 1@96r
 //   RHS: %17 [240e,288r:1) 0@48r 1@240e
-// [96r,240r:2) and [240e,288r:1) both be mark as CR_Replace, 
+// [96r,240r:2) and [240e,288r:1) both be mark as CR_Replace,
 // but does't be resolved after pruneValues.
-// 
+//
 bool JoinVals::canCRReplaceBeResolved(JoinVals &Other) {
   for (auto Seg : LR.segments) {
     for (auto OtherSeg : Other.LR.segments) {
@@ -3635,7 +3635,8 @@ bool RegisterCoalescer::joinVirtRegs(CoalescerPair &CP) {
     return false;
 
   // Some CR_Replace can't be solved by pruneValues. Early exit here.
-  if (!LHSVals.canCRReplaceBeResolved(RHSVals) || !RHSVals.canCRReplaceBeResolved(LHSVals))
+  if (!LHSVals.canCRReplaceBeResolved(RHSVals) ||
+      !RHSVals.canCRReplaceBeResolved(LHSVals))
     return false;
 
   // All clear, the live ranges can be merged.
