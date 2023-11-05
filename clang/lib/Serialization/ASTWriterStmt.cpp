@@ -1602,7 +1602,8 @@ void ASTStmtWriter::VisitCXXConstructExpr(CXXConstructExpr *E) {
   Record.push_back(E->isListInitialization());
   Record.push_back(E->isStdInitListInitialization());
   Record.push_back(E->requiresZeroInitialization());
-  Record.push_back(E->getConstructionKind()); // FIXME: stable encoding
+  Record.push_back(
+      llvm::to_underlying(E->getConstructionKind())); // FIXME: stable encoding
   Record.push_back(E->isImmediateEscalating());
   Record.AddSourceLocation(E->getLocation());
   Record.AddDeclRef(E->getConstructor());

@@ -1462,16 +1462,16 @@ void JSONNodeDumper::VisitCXXConstructExpr(const CXXConstructExpr *CE) {
   attributeOnlyIfTrue("isImmediateEscalating", CE->isImmediateEscalating());
 
   switch (CE->getConstructionKind()) {
-  case CXXConstructExpr::CK_Complete:
+  case CXXConstructionKind::Complete:
     JOS.attribute("constructionKind", "complete");
     break;
-  case CXXConstructExpr::CK_Delegating:
+  case CXXConstructionKind::Delegating:
     JOS.attribute("constructionKind", "delegating");
     break;
-  case CXXConstructExpr::CK_NonVirtualBase:
+  case CXXConstructionKind::NonVirtualBase:
     JOS.attribute("constructionKind", "non-virtual base");
     break;
-  case CXXConstructExpr::CK_VirtualBase:
+  case CXXConstructionKind::VirtualBase:
     JOS.attribute("constructionKind", "virtual base");
     break;
   }
