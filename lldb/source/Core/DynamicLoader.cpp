@@ -232,8 +232,8 @@ ModuleSP DynamicLoader::LoadBinaryWithUUIDAndAddress(
     // If we haven't found a binary, or we don't have a SymbolFile, see
     // if there is an external search tool that can find it.
     if (!module_sp || !module_sp->GetSymbolFileFileSpec()) {
-      Symbols::DownloadObjectAndSymbolFile(module_spec, error,
-                                           force_symbol_search);
+      PluginManager::DownloadObjectAndSymbolFile(module_spec, error,
+                                                 force_symbol_search);
       if (FileSystem::Instance().Exists(module_spec.GetFileSpec())) {
         module_sp = std::make_shared<Module>(module_spec);
       } else if (force_symbol_search && error.AsCString("") &&
