@@ -12,6 +12,7 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleList.h"
 #include "lldb/Core/ModuleSpec.h"
+#include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Progress.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Symbol/ObjectFile.h"
@@ -27,10 +28,6 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/ThreadPool.h"
-
-// From MacOSX system header "mach/machine.h"
-typedef int cpu_type_t;
-typedef int cpu_subtype_t;
 
 using namespace lldb;
 using namespace lldb_private;
@@ -52,9 +49,9 @@ void Symbols::DownloadSymbolFileAsync(const UUID &uuid) {
     Status error;
     ModuleSpec module_spec;
     module_spec.GetUUID() = uuid;
-    if (!Symbols::DownloadObjectAndSymbolFile(module_spec, error,
-                                              /*force_lookup=*/true,
-                                              /*copy_executable=*/false))
+    if (!PluginManager::DownloadObjectAndSymbolFile(module_spec, error,
+                                                    /*force_lookup=*/true,
+                                                    /*copy_executable=*/false))
       return;
 
     if (error.Fail())
@@ -63,15 +60,3 @@ void Symbols::DownloadSymbolFileAsync(const UUID &uuid) {
     Debugger::ReportSymbolChange(module_spec);
   });
 }
-
-#if !defined(__APPLE__)
-
-bool Symbols::DownloadObjectAndSymbolFile(ModuleSpec &module_spec,
-                                          Status &error, bool force_lookup,
-                                          bool copy_executable) {
-  // Fill in the module_spec.GetFileSpec() for the object file and/or the
-  // module_spec.GetSymbolFileSpec() for the debug symbols file.
-  return false;
-}
-
-#endif
