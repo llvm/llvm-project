@@ -1774,14 +1774,14 @@ ConstantRange ConstantRange::ctpop() const {
   if (isFullSet())
     return getNonEmpty(Zero, APInt(BitWidth, BitWidth + 1));
   if (!isWrappedSet())
-    return getUnsignedPopCountRange(getLower(), getUpper());
+    return getUnsignedPopCountRange(Lower, Upper);
   // The range is wrapped. We decompose it into two ranges, [0, Upper) and
   // [Lower, 0).
   // Handle [Lower, 0) == [Lower, Max]
-  ConstantRange CR1 = ConstantRange(APInt(BitWidth, getLower().countl_one()),
+  ConstantRange CR1 = ConstantRange(APInt(BitWidth, Lower.countl_one()),
                                     APInt(BitWidth, BitWidth + 1));
   // Handle [0, Upper)
-  ConstantRange CR2 = getUnsignedPopCountRange(Zero, getUpper());
+  ConstantRange CR2 = getUnsignedPopCountRange(Zero, Upper);
   return CR1.unionWith(CR2);
 }
 
