@@ -595,7 +595,8 @@ void ASTStmtWriter::VisitPredefinedExpr(PredefinedExpr *E) {
 
   bool HasFunctionName = E->getFunctionName() != nullptr;
   Record.push_back(HasFunctionName);
-  Record.push_back(E->getIdentKind()); // FIXME: stable encoding
+  Record.push_back(
+      llvm::to_underlying(E->getIdentKind())); // FIXME: stable encoding
   Record.push_back(E->isTransparent());
   Record.AddSourceLocation(E->getLocation());
   if (HasFunctionName)

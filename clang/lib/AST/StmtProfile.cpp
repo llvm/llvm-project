@@ -1328,7 +1328,7 @@ void StmtProfiler::VisitSYCLUniqueStableNameExpr(
 
 void StmtProfiler::VisitPredefinedExpr(const PredefinedExpr *S) {
   VisitExpr(S);
-  ID.AddInteger(S->getIdentKind());
+  ID.AddInteger(llvm::to_underlying(S->getIdentKind()));
 }
 
 void StmtProfiler::VisitIntegerLiteral(const IntegerLiteral *S) {
