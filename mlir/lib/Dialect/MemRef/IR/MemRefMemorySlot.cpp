@@ -189,21 +189,15 @@ DeletionKind memref::LoadOp::removeBlockingUses(
 
 /// Returns the index of a memref in attribute form, given its indices. Returns
 /// a null pointer if whether the indices form a valid index for the provided
-/// MemRefType cannot be computed.
+/// MemRefType cannot be computed. The indices must come from a valid memref
+/// StoreOp or LoadOp.
 static Attribute getAttributeIndexFromIndexOperands(MLIRContext *ctx,
                                                     ValueRange indices,
                                                     MemRefType memrefType) {
-  ArrayRef<int64_t> shape = memrefType.getShape();
-  if (indices.size() != memrefType.getShape().size())
-    return {};
   SmallVector<Attribute> index;
-  for (size_t i = 0; i < shape.size(); i++) {
-    Value coord = indices[i];
-    int64_t dimSize = shape[i];
+  for (auto [coord, dimSize] : llvm::zip(indices, memrefType.getShape())) {
     IntegerAttr coordAttr;
     if (!matchPattern(coord, m_Constant<IntegerAttr>(&coordAttr)))
-      return {};
-    if (!coordAttr.getType().isIndex())
       return {};
     // MemRefType shape dimensions are always positive (checked by verifier).
     std::optional<uint64_t> coordInt = coordAttr.getValue().tryZExtValue();
