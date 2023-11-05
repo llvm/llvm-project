@@ -1772,8 +1772,8 @@ ConstantRange ConstantRange::cttz(bool ZeroIsPoison) const {
   if (isEmptySet())
     return getEmpty();
 
-  APInt Zero = APInt::getZero(getBitWidth());
-
+  unsigned BitWidth = getBitWidth();
+  APInt Zero = APInt::getZero(BitWidth);
   if (ZeroIsPoison && contains(Zero)) {
     // ZeroIsPoison is set, and zero is contained. We discern three cases, in
     // which a zero can appear:
@@ -1781,37 +1781,36 @@ ConstantRange ConstantRange::cttz(bool ZeroIsPoison) const {
     // 2) Upper is zero, wrapped set, handling cases of kind [3, 0], etc.
     // 3) Zero contained in a wrapped set, e.g., [3, 2), [3, 1), etc.
 
-    if (getLower().isZero()) {
-      if (getUpper() == 1) {
+    if (Lower.isZero()) {
+      if (Upper == 1) {
         // We have in input interval of kind [0, 1). In this case we cannot
         // really help but return empty-set.
         return getEmpty();
       }
 
       // Compute the resulting range by excluding zero from Lower.
-      return getUnsignedCountTrailingZerosRange(APInt(getBitWidth(), 1),
-                                                getUpper());
-    } else if (getUpper() == 1) {
+      return getUnsignedCountTrailingZerosRange(APInt(BitWidth, 1), Upper);
+    } else if (Upper == 1) {
       // Compute the resulting range by excluding zero from Upper.
-      return getUnsignedCountTrailingZerosRange(getLower(), Zero);
+      return getUnsignedCountTrailingZerosRange(Lower, Zero);
     } else {
-      ConstantRange CR1 = getUnsignedCountTrailingZerosRange(getLower(), Zero);
-      ConstantRange CR2 = getUnsignedCountTrailingZerosRange(
-          APInt(getBitWidth(), 1), getUpper());
+      ConstantRange CR1 = getUnsignedCountTrailingZerosRange(Lower, Zero);
+      ConstantRange CR2 =
+          getUnsignedCountTrailingZerosRange(APInt(BitWidth, 1), Upper);
       return CR1.unionWith(CR2);
     }
   }
 
   if (isFullSet())
-    return getNonEmpty(Zero, APInt(getBitWidth(), getBitWidth() + 1));
+    return getNonEmpty(Zero, APInt(BitWidth, BitWidth + 1));
   if (!isWrappedSet())
-    return getUnsignedCountTrailingZerosRange(getLower(), getUpper());
+    return getUnsignedCountTrailingZerosRange(Lower, Upper);
   // The range is wrapped. We decompose it into two ranges, [0, Upper) and
   // [Lower, 0).
   // Handle [Lower, 0)
-  ConstantRange CR1 = getUnsignedCountTrailingZerosRange(getLower(), Zero);
+  ConstantRange CR1 = getUnsignedCountTrailingZerosRange(Lower, Zero);
   // Handle [0, Upper)
-  ConstantRange CR2 = getUnsignedCountTrailingZerosRange(Zero, getUpper());
+  ConstantRange CR2 = getUnsignedCountTrailingZerosRange(Zero, Upper);
   return CR1.unionWith(CR2);
 }
 
