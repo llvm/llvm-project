@@ -63,7 +63,7 @@ define <2 x ptr> @fold_2x_vec_i64(<2 x ptr> %p, <2 x i64> %m0) {
 ; CHECK-LABEL: define <2 x ptr> @fold_2x_vec_i64
 ; CHECK-SAME: (<2 x ptr> [[P:%.*]], <2 x i64> [[M0:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i64> [[M0]], <i64 -2, i64 -2>
-; CHECK-NEXT:    [[P1:%.*]] = call <2 x ptr> @llvm.ptrmask.v2p0.v2i64(<2 x ptr> [[P]], <2 x i64> [[TMP1]])
+; CHECK-NEXT:    [[P1:%.*]] = call align 2 <2 x ptr> @llvm.ptrmask.v2p0.v2i64(<2 x ptr> [[P]], <2 x i64> [[TMP1]])
 ; CHECK-NEXT:    ret <2 x ptr> [[P1]]
 ;
   %p0 = call <2 x ptr> @llvm.ptrmask.v2p0.v2i64(<2 x ptr> %p, <2 x i64> %m0)
