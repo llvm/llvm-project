@@ -1040,6 +1040,8 @@ void BitcodeFile::parse() {
       fakeSC = &ctx.ltoDataSectionChunk.chunk;
     if (objSym.isUndefined()) {
       sym = ctx.symtab.addUndefined(symName, this, false);
+      if (objSym.isWeak())
+        sym->deferUndefined = true;
     } else if (objSym.isCommon()) {
       sym = ctx.symtab.addCommon(this, symName, objSym.getCommonSize());
     } else if (objSym.isWeak() && objSym.isIndirect()) {
