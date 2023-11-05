@@ -2391,11 +2391,11 @@ public:
   bool hasInitializer() const {
     switch (getInitializationStyle()) {
     case CXXNewInitializationStyle::None:
-      return true;
+      return false;
     case CXXNewInitializationStyle::Implicit:
     case CXXNewInitializationStyle::Call:
     case CXXNewInitializationStyle::List:
-      return false;
+      return true;
     }
   }
 
