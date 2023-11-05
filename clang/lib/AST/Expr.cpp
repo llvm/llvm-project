@@ -982,21 +982,21 @@ std::string FixedPointLiteral::getValueAsString(unsigned Radix) const {
   return std::string(S.str());
 }
 
-void CharacterLiteral::print(unsigned Val, CharacterKind Kind,
+void CharacterLiteral::print(unsigned Val, CharacterLiteralKind Kind,
                              raw_ostream &OS) {
   switch (Kind) {
-  case CharacterLiteral::Ascii:
+  case CharacterLiteralKind::Ascii:
     break; // no prefix.
-  case CharacterLiteral::Wide:
+  case CharacterLiteralKind::Wide:
     OS << 'L';
     break;
-  case CharacterLiteral::UTF8:
+  case CharacterLiteralKind::UTF8:
     OS << "u8";
     break;
-  case CharacterLiteral::UTF16:
+  case CharacterLiteralKind::UTF16:
     OS << 'u';
     break;
-  case CharacterLiteral::UTF32:
+  case CharacterLiteralKind::UTF32:
     OS << 'U';
     break;
   }
@@ -1009,7 +1009,7 @@ void CharacterLiteral::print(unsigned Val, CharacterKind Kind,
     // would result in an invalid \U escape sequence.
     // FIXME: multicharacter literals such as '\xFF\xFF\xFF\xFF'
     // are not correctly handled.
-    if ((Val & ~0xFFu) == ~0xFFu && Kind == CharacterLiteral::Ascii)
+    if ((Val & ~0xFFu) == ~0xFFu && Kind == CharacterLiteralKind::Ascii)
       Val &= 0xFFu;
     if (Val < 256 && isPrintable((unsigned char)Val))
       OS << "'" << (char)Val << "'";

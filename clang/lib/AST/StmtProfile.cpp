@@ -1353,7 +1353,7 @@ void StmtProfiler::VisitFixedPointLiteral(const FixedPointLiteral *S) {
 
 void StmtProfiler::VisitCharacterLiteral(const CharacterLiteral *S) {
   VisitExpr(S);
-  ID.AddInteger(S->getKind());
+  ID.AddInteger(llvm::to_underlying(S->getKind()));
   ID.AddInteger(S->getValue());
 }
 
