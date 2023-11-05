@@ -25,6 +25,7 @@
 #include "mlir/IR/Dominance.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/Interfaces/DestinationStyleOpInterface.h"
+#include "mlir/Transforms/LoopInvariantCodeMotionUtils.h"
 #include "mlir/Transforms/RegionUtils.h"
 #include "llvm/Support/Debug.h"
 
@@ -292,8 +293,8 @@ void HoistPaddingAnalysis::enableHoistPadding(RewriterBase &rewriter) {
   // enclosing loop, try to apply hoisting on this outermost loop.
   // TODO: we may want finer-grained hoisting of only that particular `sliceOp`.
   if (!outermostEnclosingForOp.isDefinedOutsideOfLoop(sliceOp.getSource())) {
-    outermostEnclosingForOp =
-        hoistRedundantSubsetExtractInsert(rewriter, outermostEnclosingForOp);
+    outermostEnclosingForOp = cast<scf::ForOp>(
+        hoistLoopInvariantSubsets(rewriter, outermostEnclosingForOp));
   }
 }
 
