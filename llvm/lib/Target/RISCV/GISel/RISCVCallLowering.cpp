@@ -478,12 +478,6 @@ bool RISCVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   SmallVector<ArgInfo, 4> SplitRetInfos;
   splitToValueTypes(Info.OrigRet, SplitRetInfos, DL, CC);
 
-  // Assignments should be handled *before* the merging of values takes place.
-  // To ensure this, the insert point is temporarily adjusted to just after the
-  // call instruction.
-  MachineBasicBlock::iterator CallInsertPt = Call;
-  MIRBuilder.setInsertPt(MIRBuilder.getMBB(), std::next(CallInsertPt));
-
   RISCVIncomingValueAssigner RetAssigner(
       CC == CallingConv::Fast ? RISCV::CC_RISCV_FastCC : RISCV::CC_RISCV,
       /*IsRet=*/true);
@@ -491,9 +485,6 @@ bool RISCVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   if (!determineAndHandleAssignments(RetHandler, RetAssigner, SplitRetInfos,
                                      MIRBuilder, CC, Info.IsVarArg))
     return false;
-
-  // Readjust insert point to end of basic block.
-  MIRBuilder.setMBB(MIRBuilder.getMBB());
 
   return true;
 }
