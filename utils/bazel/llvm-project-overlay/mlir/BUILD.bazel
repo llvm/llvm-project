@@ -4416,6 +4416,7 @@ cc_library(
         ":SCFTransformOps",
         ":SparseTensorTransformOps",
         ":TensorTransformOps",
+        ":TransformLoopExtension",
         ":TransformPDLExtension",
         ":UBToLLVM",
         ":VectorTransformOps",
@@ -8677,6 +8678,7 @@ cc_library(
         ":TosaToLinalg",
         ":TransformDialect",
         ":TransformDialectTransforms",
+        ":TransformLoopExtension",
         ":TransformPDLExtension",
         ":Transforms",
         ":TransformsPassIncGen",
@@ -11397,6 +11399,52 @@ cc_library(
         ":Support",
         ":TransformDialect",
         ":TransformPDLExtensionOpsIncGen",
+        "//llvm:Support",
+    ],
+)
+
+td_library(
+    name = "TransformLoopExtensionTdFiles",
+    srcs = glob(["include/mlir/Dialect/Transform/LoopExtension/*.td"]),
+    deps = [
+        ":TransformDialectTdFiles",
+    ],
+)
+
+gentbl_cc_library(
+    name = "TransformLoopExtensionOpsIncGen",
+    tbl_outs = [
+        (
+            [
+                "-gen-op-decls",
+            ],
+            "include/mlir/Dialect/Transform/LoopExtension/LoopExtensionOps.h.inc",
+        ),
+        (
+            [
+                "-gen-op-defs",
+            ],
+            "include/mlir/Dialect/Transform/LoopExtension/LoopExtensionOps.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/Transform/LoopExtension/LoopExtensionOps.td",
+    deps = [":TransformLoopExtensionTdFiles"],
+)
+
+cc_library(
+    name = "TransformLoopExtension",
+    srcs = glob(["lib/Dialect/Transform/LoopExtension/*.cpp"]),
+    hdrs = glob(["include/mlir/Dialect/Transform/LoopExtension/*.h"]),
+    deps = [
+        ":IR",
+        ":LoopLikeInterface",
+        ":Rewrite",
+        ":SideEffectInterfaces",
+        ":Support",
+        ":TransformDialect",
+        ":TransformLoopExtensionOpsIncGen",
+        ":Transforms",
         "//llvm:Support",
     ],
 )
