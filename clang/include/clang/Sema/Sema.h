@@ -5727,8 +5727,7 @@ public:
   // __FUNCTION__) are replaced (expanded) with string-literal Tokens.
   std::vector<Token> ExpandFunctionLocalPredefinedMacros(ArrayRef<Token> Toks);
 
-  ExprResult BuildPredefinedExpr(SourceLocation Loc,
-                                 PredefinedExpr::IdentKind IK);
+  ExprResult BuildPredefinedExpr(SourceLocation Loc, PredefinedIdentKind IK);
   ExprResult ActOnPredefinedExpr(SourceLocation Loc, tok::TokenKind Kind);
   ExprResult ActOnIntegerConstant(SourceLocation Loc, uint64_t Val);
 
@@ -6328,36 +6327,30 @@ public:
   /// including handling of its default argument expressions.
   ///
   /// \param ConstructKind - a CXXConstructExpr::ConstructionKind
-  ExprResult
-  BuildCXXConstructExpr(SourceLocation ConstructLoc, QualType DeclInitType,
-                        NamedDecl *FoundDecl,
-                        CXXConstructorDecl *Constructor, MultiExprArg Exprs,
-                        bool HadMultipleCandidates, bool IsListInitialization,
-                        bool IsStdInitListInitialization,
-                        bool RequiresZeroInit, unsigned ConstructKind,
-                        SourceRange ParenRange);
+  ExprResult BuildCXXConstructExpr(
+      SourceLocation ConstructLoc, QualType DeclInitType, NamedDecl *FoundDecl,
+      CXXConstructorDecl *Constructor, MultiExprArg Exprs,
+      bool HadMultipleCandidates, bool IsListInitialization,
+      bool IsStdInitListInitialization, bool RequiresZeroInit,
+      CXXConstructionKind ConstructKind, SourceRange ParenRange);
 
   /// Build a CXXConstructExpr whose constructor has already been resolved if
   /// it denotes an inherited constructor.
-  ExprResult
-  BuildCXXConstructExpr(SourceLocation ConstructLoc, QualType DeclInitType,
-                        CXXConstructorDecl *Constructor, bool Elidable,
-                        MultiExprArg Exprs,
-                        bool HadMultipleCandidates, bool IsListInitialization,
-                        bool IsStdInitListInitialization,
-                        bool RequiresZeroInit, unsigned ConstructKind,
-                        SourceRange ParenRange);
+  ExprResult BuildCXXConstructExpr(
+      SourceLocation ConstructLoc, QualType DeclInitType,
+      CXXConstructorDecl *Constructor, bool Elidable, MultiExprArg Exprs,
+      bool HadMultipleCandidates, bool IsListInitialization,
+      bool IsStdInitListInitialization, bool RequiresZeroInit,
+      CXXConstructionKind ConstructKind, SourceRange ParenRange);
 
   // FIXME: Can we remove this and have the above BuildCXXConstructExpr check if
   // the constructor can be elidable?
-  ExprResult
-  BuildCXXConstructExpr(SourceLocation ConstructLoc, QualType DeclInitType,
-                        NamedDecl *FoundDecl,
-                        CXXConstructorDecl *Constructor, bool Elidable,
-                        MultiExprArg Exprs, bool HadMultipleCandidates,
-                        bool IsListInitialization,
-                        bool IsStdInitListInitialization, bool RequiresZeroInit,
-                        unsigned ConstructKind, SourceRange ParenRange);
+  ExprResult BuildCXXConstructExpr(
+      SourceLocation ConstructLoc, QualType DeclInitType, NamedDecl *FoundDecl,
+      CXXConstructorDecl *Constructor, bool Elidable, MultiExprArg Exprs,
+      bool HadMultipleCandidates, bool IsListInitialization,
+      bool IsStdInitListInitialization, bool RequiresZeroInit,
+      CXXConstructionKind ConstructKind, SourceRange ParenRange);
 
   ExprResult ConvertMemberDefaultInitExpression(FieldDecl *FD, Expr *InitExpr,
                                                 SourceLocation InitLoc);
