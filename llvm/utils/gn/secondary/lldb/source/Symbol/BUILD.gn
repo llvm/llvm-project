@@ -45,7 +45,4 @@ static_library("Symbol") {
     "Variable.cpp",
     "VariableList.cpp",
   ]
-  if (current_os == "mac") {
-    sources += [ "LocateSymbolFileMacOSX.cpp" ]
-  }
 }
