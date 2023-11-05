@@ -50,10 +50,10 @@ typedef __bf16 __m128bh __attribute__((__vector_size__(16), __aligned__(16)));
 
 /* Define the default attributes for the functions in this file. */
 #define __DEFAULT_FN_ATTRS                                                     \
-  __attribute__((__always_inline__, __nodebug__, __target__("sse2"),           \
+  __attribute__((__always_inline__, __nodebug__, __target__("sse2,no-evex512"),           \
                  __min_vector_width__(128)))
 #define __DEFAULT_FN_ATTRS_MMX                                                 \
-  __attribute__((__always_inline__, __nodebug__, __target__("mmx,sse2"),       \
+  __attribute__((__always_inline__, __nodebug__, __target__("mmx,sse2,no-evex512"),       \
                  __min_vector_width__(64)))
 
 /// Adds lower double-precision values in both operands and returns the

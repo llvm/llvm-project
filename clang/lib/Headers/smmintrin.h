@@ -18,7 +18,7 @@
 
 /* Define the default attributes for the functions in this file. */
 #define __DEFAULT_FN_ATTRS                                                     \
-  __attribute__((__always_inline__, __nodebug__, __target__("sse4.1"),         \
+  __attribute__((__always_inline__, __nodebug__, __target__("sse4.1,no-evex512"),         \
                  __min_vector_width__(128)))
 
 /* SSE4 Rounding macros. */
