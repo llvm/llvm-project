@@ -52,10 +52,10 @@ TEST_CONSTEXPR_CXX17 void test_iter() {
 }
 
 TEST_CONSTEXPR_CXX17 bool test() {
-  test_iter<cpp17_input_iterator<int*>>();
-  test_iter<forward_iterator<int*>>();
-  test_iter<bidirectional_iterator<int*>>();
-  test_iter<random_access_iterator<int*>>();
+  test_iter<cpp17_input_iterator<int*> >();
+  test_iter<forward_iterator<int*> >();
+  test_iter<bidirectional_iterator<int*> >();
+  test_iter<random_access_iterator<int*> >();
   return true;
 }
 
