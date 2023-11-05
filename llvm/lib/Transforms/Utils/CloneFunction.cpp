@@ -44,7 +44,6 @@ BasicBlock *llvm::CloneBasicBlock(const BasicBlock *BB, ValueToValueMapTy &VMap,
                                   ClonedCodeInfo *CodeInfo,
                                   DebugInfoFinder *DIFinder) {
   BasicBlock *NewBB = BasicBlock::Create(BB->getContext(), "", F);
-  NewBB->IsNewDbgInfoFormat = BB->IsNewDbgInfoFormat;
   if (BB->hasName())
     NewBB->setName(BB->getName() + NameSuffix);
 
@@ -478,7 +477,6 @@ void PruningFunctionCloner::CloneBlock(
   BasicBlock *NewBB;
   Twine NewName(BB->hasName() ? Twine(BB->getName()) + NameSuffix : "");
   BBEntry = NewBB = BasicBlock::Create(BB->getContext(), NewName, NewFunc);
-  NewBB->IsNewDbgInfoFormat = BB->IsNewDbgInfoFormat;
 
   // It is only legal to clone a function if a block address within that
   // function is never referenced outside of the function.  Given that, we
