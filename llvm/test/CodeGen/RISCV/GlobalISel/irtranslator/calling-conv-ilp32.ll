@@ -30,7 +30,7 @@ define i32 @caller_float_in_regs() nounwind {
   ; RV32I-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_FCONSTANT float 2.000000e+00
   ; RV32I-NEXT:   $x10 = COPY [[C]](s32)
   ; RV32I-NEXT:   $x11 = COPY [[C1]](s32)
-  ; RV32I-NEXT:   PseudoCALL target-flags(riscv-call) @callee_float_in_regs, implicit-def $x1, implicit $x10, implicit $x11, implicit-def $x10
+  ; RV32I-NEXT:   PseudoCALL target-flags(riscv-call) @callee_float_in_regs, csr_ilp32_lp64, implicit-def $x1, implicit $x10, implicit $x11, implicit-def $x10
   ; RV32I-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $x10
   ; RV32I-NEXT:   $x10 = COPY [[COPY]](s32)
   ; RV32I-NEXT:   PseudoRET implicit $x10
@@ -91,7 +91,7 @@ define i32 @caller_float_on_stack() nounwind {
   ; RV32I-NEXT:   $x15 = COPY [[UV5]](s32)
   ; RV32I-NEXT:   $x16 = COPY [[UV6]](s32)
   ; RV32I-NEXT:   $x17 = COPY [[UV7]](s32)
-  ; RV32I-NEXT:   PseudoCALL target-flags(riscv-call) @callee_float_on_stack, implicit-def $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit $x14, implicit $x15, implicit $x16, implicit $x17, implicit-def $x10
+  ; RV32I-NEXT:   PseudoCALL target-flags(riscv-call) @callee_float_on_stack, csr_ilp32_lp64, implicit-def $x1, implicit $x10, implicit $x11, implicit $x12, implicit $x13, implicit $x14, implicit $x15, implicit $x16, implicit $x17, implicit-def $x10
   ; RV32I-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $x10
   ; RV32I-NEXT:   $x10 = COPY [[COPY1]](s32)
   ; RV32I-NEXT:   PseudoRET implicit $x10
@@ -111,7 +111,7 @@ define float @callee_tiny_scalar_ret() nounwind {
 define i32 @caller_tiny_scalar_ret() nounwind {
   ; RV32I-LABEL: name: caller_tiny_scalar_ret
   ; RV32I: bb.1 (%ir-block.0):
-  ; RV32I-NEXT:   PseudoCALL target-flags(riscv-call) @callee_tiny_scalar_ret, implicit-def $x1, implicit-def $x10
+  ; RV32I-NEXT:   PseudoCALL target-flags(riscv-call) @callee_tiny_scalar_ret, csr_ilp32_lp64, implicit-def $x1, implicit-def $x10
   ; RV32I-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $x10
   ; RV32I-NEXT:   $x10 = COPY [[COPY]](s32)
   ; RV32I-NEXT:   PseudoRET implicit $x10

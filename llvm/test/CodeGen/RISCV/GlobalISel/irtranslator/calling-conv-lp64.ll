@@ -36,7 +36,7 @@ define i64 @caller_float_in_regs() nounwind {
   ; RV64I-NEXT:   [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[C1]](s32)
   ; RV64I-NEXT:   $x10 = COPY [[C]](s64)
   ; RV64I-NEXT:   $x11 = COPY [[ANYEXT]](s64)
-  ; RV64I-NEXT:   PseudoCALL target-flags(riscv-call) @callee_float_in_regs, implicit-def $x1, implicit $x10, implicit $x11, implicit-def $x10
+  ; RV64I-NEXT:   PseudoCALL target-flags(riscv-call) @callee_float_in_regs, csr_ilp32_lp64, implicit-def $x1, implicit $x10, implicit $x11, implicit-def $x10
   ; RV64I-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
   ; RV64I-NEXT:   $x10 = COPY [[COPY]](s64)
   ; RV64I-NEXT:   PseudoRET implicit $x10
@@ -48,7 +48,7 @@ define i64 @caller_float_in_regs() nounwind {
   ; RV64F-NEXT:   $x10 = COPY [[C]](s64)
   ; RV64F-NEXT:   [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[C1]](s32)
   ; RV64F-NEXT:   $x11 = COPY [[ANYEXT]](s64)
-  ; RV64F-NEXT:   PseudoCALL target-flags(riscv-call) @callee_float_in_regs, implicit-def $x1, implicit $x10, implicit $x11, implicit-def $x10
+  ; RV64F-NEXT:   PseudoCALL target-flags(riscv-call) @callee_float_in_regs, csr_ilp32_lp64, implicit-def $x1, implicit $x10, implicit $x11, implicit-def $x10
   ; RV64F-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
   ; RV64F-NEXT:   $x10 = COPY [[COPY]](s64)
   ; RV64F-NEXT:   PseudoRET implicit $x10
@@ -69,7 +69,7 @@ define float @callee_tiny_scalar_ret() nounwind {
 define i64 @caller_tiny_scalar_ret() nounwind {
   ; RV64-LABEL: name: caller_tiny_scalar_ret
   ; RV64: bb.1 (%ir-block.0):
-  ; RV64-NEXT:   PseudoCALL target-flags(riscv-call) @callee_tiny_scalar_ret, implicit-def $x1, implicit-def $x10
+  ; RV64-NEXT:   PseudoCALL target-flags(riscv-call) @callee_tiny_scalar_ret, csr_ilp32_lp64, implicit-def $x1, implicit-def $x10
   ; RV64-NEXT:   [[COPY:%[0-9]+]]:_(s64) = COPY $x10
   ; RV64-NEXT:   [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
   ; RV64-NEXT:   [[SEXT:%[0-9]+]]:_(s64) = G_SEXT [[TRUNC]](s32)
