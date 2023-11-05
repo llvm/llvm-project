@@ -540,7 +540,7 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
         Inputs, [](const InputInfo &II) -> bool { return II.isFilename(); });
     if (Input == Inputs.end())
       // For a very rare case, all of the inputs to the linker are
-      // flags. If that happens, just use the first InputInfo.
+      // InputArg. If that happens, just use the first InputInfo.
       Input = Inputs.begin();
 
     addLTOOptions(ToolChain, Args, CmdArgs, Output, *Input,
