@@ -238,6 +238,10 @@ Changes in existing checks
   Casting to ``void`` no longer suppresses issues by default, control this
   behavior with the new `AllowCastToVoid` option.
 
+- Improved :doc:`container-data-pointer
+  <clang-tidy/checks/readability/container-data-pointer>` check
+  to use ``c_str()`` when it's present on a container.
+
 - Improved :doc:`cppcoreguidelines-avoid-non-const-global-variables
   <clang-tidy/checks/cppcoreguidelines/avoid-non-const-global-variables>` check
   to ignore ``static`` variables declared within the scope of

@@ -12,8 +12,8 @@
 #include "../ClangTidyCheck.h"
 
 namespace clang::tidy::readability {
-/// Checks whether a call to `operator[]` and `&` can be replaced with a call to
-/// `data()`.
+/// Finds cases where code references the address of the element at index 0 in a
+/// container and replaces them with calls to ``data()`` or ``c_str()``.
 ///
 /// This only replaces the case where the offset being accessed through the
 /// subscript operation is a known constant 0.  This avoids a potential invalid
