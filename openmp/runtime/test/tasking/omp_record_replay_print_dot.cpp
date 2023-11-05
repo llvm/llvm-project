@@ -1,3 +1,4 @@
+// REQUIRES: ompx_taskgraph
 // RUN: %libomp-cxx-compile-and-run
 #include <iostream>
 #include <fstream>
@@ -25,7 +26,7 @@ void func(int *num_exec) {
 std::string tdg_string= "digraph TDG {\n"
 "   compound=true\n"
 "   subgraph cluster {\n"
-"      label=TDG_33263\n"
+"      label=TDG_0\n"
 "      0[style=bold]\n"
 "      1[style=bold]\n"
 "      2[style=bold]\n"
@@ -46,8 +47,9 @@ int main() {
   #pragma omp parallel
   #pragma omp single
   {
-    #pragma ompx taskgraph
-    {
+    int gtid = __kmpc_global_thread_num(nullptr);
+    int res = __kmpc_start_record_task(nullptr, gtid, /* kmp_tdg_flags */ 0, /* tdg_id */ 0);
+    if (res) {
       #pragma omp task depend(out : x)
       func(&num_exec);
       #pragma omp task depend(in : x) depend(out : y)
@@ -57,11 +59,13 @@ int main() {
       #pragma omp task depend(in : y)
       func(&num_exec);
     }
+
+    __kmpc_end_record_task(nullptr, gtid, /* kmp_tdg_flags */ 0, /* tdg_id */ 0);
   }
 
   assert(num_exec == 4);
 
-  std::ifstream tdg_file("tdg_33263.dot");
+  std::ifstream tdg_file("tdg_0.dot");
   assert(tdg_file.is_open());
 
   std::stringstream tdg_file_stream;

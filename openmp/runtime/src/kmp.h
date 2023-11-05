@@ -2550,6 +2550,7 @@ typedef struct {
   } ed;
 } kmp_event_t;
 
+#if OMPX_TASKGRAPH
 // Initial number of allocated nodes while recording
 #define INIT_MAPSIZE 50
 
@@ -2600,10 +2601,11 @@ typedef struct kmp_tdg_info {
 extern int __kmp_tdg_dot;
 extern kmp_int32 __kmp_max_tdgs;
 extern kmp_tdg_info_t **__kmp_global_tdgs;
-extern kmp_int32 __kmp_curr_tdg_id;
+extern kmp_int32 __kmp_curr_tdg_idx;
 extern kmp_int32 __kmp_successors_size;
 extern std::atomic<kmp_int32> __kmp_tdg_task_id;
 extern kmp_int32 __kmp_num_tdg;
+#endif
 
 #ifdef BUILD_TIED_TASK_STACK
 
@@ -2625,8 +2627,12 @@ typedef struct kmp_task_stack {
 typedef struct kmp_tasking_flags { /* Total struct must be exactly 32 bits */
 #if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
   /* Same fields as in the #else branch, but in reverse order */
+#if OMPX_TASKGRAPH
   unsigned reserved31 : 6;
   unsigned onced : 1;
+#else
+  unsigned reserved31 : 7;
+#endif
   unsigned native : 1;
   unsigned freed : 1;
   unsigned complete : 1;
@@ -2675,8 +2681,12 @@ typedef struct kmp_tasking_flags { /* Total struct must be exactly 32 bits */
   unsigned complete : 1; /* 1==complete, 0==not complete   */
   unsigned freed : 1; /* 1==freed, 0==allocated        */
   unsigned native : 1; /* 1==gcc-compiled task, 0==intel */
+#if OMPX_TASKGRAPH
   unsigned onced : 1; /* 1==ran once already, 0==never ran, record & replay purposes */
   unsigned reserved31 : 6; /* reserved for library use */
+#else
+  unsigned reserved31 : 7; /* reserved for library use */
+#endif
 #endif
 } kmp_tasking_flags_t;
 
@@ -2726,8 +2736,10 @@ struct kmp_taskdata { /* aligned during dynamic allocation       */
 #if OMPT_SUPPORT
   ompt_task_info_t ompt_task_info;
 #endif
+#if OMPX_TASKGRAPH
   bool is_taskgraph = 0; // whether the task is within a TDG
   kmp_tdg_info_t *tdg; // used to associate task with a TDG
+#endif
   kmp_target_data_t td_target_data;
 }; // struct kmp_taskdata
 
@@ -4287,6 +4299,7 @@ KMP_EXPORT void __kmpc_init_nest_lock_with_hint(ident_t *loc, kmp_int32 gtid,
                                                 void **user_lock,
                                                 uintptr_t hint);
 
+#if OMPX_TASKGRAPH
 // Taskgraph's Record & Replay mechanism
 // __kmp_tdg_is_recording: check whether a given TDG is recording
 // status: the tdg's current status
@@ -4299,9 +4312,7 @@ KMP_EXPORT kmp_int32 __kmpc_start_record_task(ident_t *loc, kmp_int32 gtid,
                                               kmp_int32 tdg_id);
 KMP_EXPORT void __kmpc_end_record_task(ident_t *loc, kmp_int32 gtid,
                                        kmp_int32 input_flags, kmp_int32 tdg_id);
-KMP_EXPORT void __kmpc_taskgraph(ident_t *loc_ref, kmp_int32 gtid,
-                                 kmp_int32 input_flags, kmp_uint32 tdg_id,
-                                 void (*entry)(void *), void *args);
+#endif
 /* Interface to fast scalable reduce methods routines */
 
 KMP_EXPORT kmp_int32 __kmpc_reduce_nowait(

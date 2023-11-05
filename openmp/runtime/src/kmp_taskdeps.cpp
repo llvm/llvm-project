@@ -218,6 +218,7 @@ static kmp_depnode_list_t *__kmp_add_node(kmp_info_t *thread,
 static inline void __kmp_track_dependence(kmp_int32 gtid, kmp_depnode_t *source,
                                           kmp_depnode_t *sink,
                                           kmp_task_t *sink_task) {
+#if OMPX_TASKGRAPH
   kmp_taskdata_t *task_source = KMP_TASK_TO_TASKDATA(source->dn.task);
   kmp_taskdata_t *task_sink = KMP_TASK_TO_TASKDATA(sink_task);
   if (source->dn.task && sink_task) {
@@ -254,6 +255,7 @@ static inline void __kmp_track_dependence(kmp_int32 gtid, kmp_depnode_t *source,
       sink_info->npredecessors++;
     }
   }
+#endif
 #ifdef KMP_SUPPORT_GRAPH_OUTPUT
   kmp_taskdata_t *task_source = KMP_TASK_TO_TASKDATA(source->dn.task);
   // do not use sink->dn.task as that is only filled after the dependences
@@ -292,6 +294,7 @@ __kmp_depnode_link_successor(kmp_int32 gtid, kmp_info_t *thread,
   // link node as successor of list elements
   for (kmp_depnode_list_t *p = plist; p; p = p->next) {
     kmp_depnode_t *dep = p->node;
+#if OMPX_TASKGRAPH
     kmp_tdg_status tdg_status = KMP_TDG_NONE;
     if (task) {
       kmp_taskdata_t *td = KMP_TASK_TO_TASKDATA(task);
@@ -300,10 +303,13 @@ __kmp_depnode_link_successor(kmp_int32 gtid, kmp_info_t *thread,
       if (__kmp_tdg_is_recording(tdg_status))
         __kmp_track_dependence(gtid, dep, node, task);
     }
+#endif
     if (dep->dn.task) {
       KMP_ACQUIRE_DEPNODE(gtid, dep);
       if (dep->dn.task) {
+#if OMPX_TASKGRAPH
         if (!(__kmp_tdg_is_recording(tdg_status)) && task)
+#endif
           __kmp_track_dependence(gtid, dep, node, task);
         dep->dn.successors = __kmp_add_node(thread, dep->dn.successors, node);
         KA_TRACE(40, ("__kmp_process_deps: T#%d adding dependence from %p to "
@@ -326,6 +332,7 @@ static inline kmp_int32 __kmp_depnode_link_successor(kmp_int32 gtid,
   if (!sink)
     return 0;
   kmp_int32 npredecessors = 0;
+#if OMPX_TASKGRAPH
   kmp_tdg_status tdg_status = KMP_TDG_NONE;
   kmp_taskdata_t *td = KMP_TASK_TO_TASKDATA(task);
   if (task) {
@@ -334,17 +341,21 @@ static inline kmp_int32 __kmp_depnode_link_successor(kmp_int32 gtid,
     if (__kmp_tdg_is_recording(tdg_status) && sink->dn.task)
       __kmp_track_dependence(gtid, sink, source, task);
   }
+#endif
   if (sink->dn.task) {
     // synchronously add source to sink' list of successors
     KMP_ACQUIRE_DEPNODE(gtid, sink);
     if (sink->dn.task) {
+#if OMPX_TASKGRAPH
       if (!(__kmp_tdg_is_recording(tdg_status)) && task)
+#endif
         __kmp_track_dependence(gtid, sink, source, task);
       sink->dn.successors = __kmp_add_node(thread, sink->dn.successors, source);
       KA_TRACE(40, ("__kmp_process_deps: T#%d adding dependence from %p to "
                     "%p\n",
                     gtid, KMP_TASK_TO_TASKDATA(sink->dn.task),
                     KMP_TASK_TO_TASKDATA(task)));
+#if OMPX_TASKGRAPH
       if (__kmp_tdg_is_recording(tdg_status)) {
         kmp_taskdata_t *tdd = KMP_TASK_TO_TASKDATA(sink->dn.task);
         if (tdd->is_taskgraph) {
@@ -356,6 +367,7 @@ static inline kmp_int32 __kmp_depnode_link_successor(kmp_int32 gtid,
             npredecessors--;
         }
       }
+#endif
       npredecessors++;
     }
     KMP_RELEASE_DEPNODE(gtid, sink);
@@ -660,6 +672,7 @@ kmp_int32 __kmpc_omp_task_with_deps(ident_t *loc_ref, kmp_int32 gtid,
   kmp_info_t *thread = __kmp_threads[gtid];
   kmp_taskdata_t *current_task = thread->th.th_current_task;
 
+#if OMPX_TASKGRAPH
   // record TDG with deps
   if (new_taskdata->is_taskgraph &&
       __kmp_tdg_is_recording(new_taskdata->tdg->tdg_status)) {
@@ -679,7 +692,7 @@ kmp_int32 __kmpc_omp_task_with_deps(ident_t *loc_ref, kmp_int32 gtid,
 
         __kmp_free(old_record);
 
-        for (kmp_uint i = old_size; i < new_size; i++) {
+        for (kmp_int i = old_size; i < new_size; i++) {
           kmp_int32 *successorsList = (kmp_int32 *)__kmp_allocate(
               __kmp_successors_size * sizeof(kmp_int32));
           new_record[i].task = nullptr;
@@ -700,6 +713,7 @@ kmp_int32 __kmpc_omp_task_with_deps(ident_t *loc_ref, kmp_int32 gtid,
         new_taskdata->td_parent;
     KMP_ATOMIC_INC(&tdg->num_tasks);
   }
+#endif
 #if OMPT_SUPPORT
   if (ompt_enabled.enabled) {
     if (!current_task->ompt_task_info.frame.enter_frame.ptr)
