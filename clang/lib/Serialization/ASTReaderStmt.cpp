@@ -680,7 +680,7 @@ void ASTStmtReader::VisitCharacterLiteral(CharacterLiteral *E) {
   VisitExpr(E);
   E->setValue(Record.readInt());
   E->setLocation(readSourceLocation());
-  E->setKind(static_cast<CharacterLiteral::CharacterKind>(Record.readInt()));
+  E->setKind(static_cast<CharacterLiteralKind>(Record.readInt()));
 }
 
 void ASTStmtReader::VisitParenExpr(ParenExpr *E) {
