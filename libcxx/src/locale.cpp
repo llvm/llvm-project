@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <clocale>
 #include <codecvt>
+#include <cstddef>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -87,7 +88,7 @@ struct release
 template <class T, class ...Args>
 T& make(Args ...args)
 {
-    static typename aligned_storage<sizeof(T)>::type buf;
+    alignas(T) static std::byte buf[sizeof(T)];
     auto *obj = ::new (&buf) T(args...);
     return *obj;
 }
@@ -541,7 +542,7 @@ const locale&
 locale::__imp::make_classic()
 {
     // only one thread can get in here and it only gets in once
-    static aligned_storage<sizeof(locale)>::type buf;
+    alignas(locale) static std::byte buf[sizeof(locale)];
     locale* c = reinterpret_cast<locale*>(&buf);
     c->__locale_ = &make<__imp>(1u);
     return *c;
@@ -558,7 +559,7 @@ locale&
 locale::__imp::make_global()
 {
     // only one thread can get in here and it only gets in once
-    static aligned_storage<sizeof(locale)>::type buf;
+    alignas(locale) static std::byte buf[sizeof(locale)];
     auto *obj = ::new (&buf) locale(locale::classic());
     return *obj;
 }

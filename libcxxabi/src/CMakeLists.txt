@@ -171,7 +171,7 @@ target_link_libraries(cxxabi_shared_objects PUBLIC cxxabi-headers)
 set_target_properties(cxxabi_shared_objects
   PROPERTIES
     CXX_EXTENSIONS OFF
-    CXX_STANDARD 20
+    CXX_STANDARD 23
     CXX_STANDARD_REQUIRED OFF
     COMPILE_FLAGS "${LIBCXXABI_COMPILE_FLAGS}"
     DEFINE_SYMBOL ""
@@ -251,7 +251,7 @@ target_link_libraries(cxxabi_static_objects PUBLIC cxxabi-headers)
 set_target_properties(cxxabi_static_objects
   PROPERTIES
     CXX_EXTENSIONS OFF
-    CXX_STANDARD 20
+    CXX_STANDARD 23
     CXX_STANDARD_REQUIRED OFF
     COMPILE_FLAGS "${LIBCXXABI_COMPILE_FLAGS}"
 )
