@@ -1288,9 +1288,7 @@ libcxx/test/std/algorithms/alg.sorting/alg.sort/stable.sort/stable_sort.pass.cpp
 libcxx/test/std/algorithms/alg.sorting/alg.three.way/lexicographical_compare_three_way_comp.pass.cpp
 libcxx/test/std/algorithms/alg.sorting/alg.three.way/lexicographical_compare_three_way.pass.cpp
 libcxx/test/std/algorithms/alg.sorting/sortable_helpers.h
-libcxx/test/std/algorithms/ranges_robust_against_dangling.pass.cpp
 libcxx/test/std/algorithms/ranges_robust_against_differing_projections.pass.cpp
-libcxx/test/std/algorithms/ranges_robust_against_proxy_iterators.pass.cpp
 libcxx/test/std/algorithms/robust_against_adl.compile.pass.cpp
 libcxx/test/std/algorithms/robust_against_adl_on_new.pass.cpp
 libcxx/test/std/algorithms/robust_against_proxy_iterators_lifetime_bugs.pass.cpp
