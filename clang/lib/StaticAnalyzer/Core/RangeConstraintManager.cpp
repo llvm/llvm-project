@@ -2252,9 +2252,9 @@ bool ConstraintAssignor::handleEquivalentAlternativeSymOperands(
 
   // Crosscheck the inferred ranges.
   for (SymSymExpr AltSymSym : AlternativeSymSyms) {
-    RangeSet AltSymSymConstrant =
+    RangeSet AltSymSymConstraint =
         SymbolicRangeInferrer::inferRange(RangeFactory, State, &AltSymSym);
-    Constraint = intersect(RangeFactory, Constraint, AltSymSymConstrant);
+    Constraint = intersect(RangeFactory, Constraint, AltSymSymConstraint);
 
     // Check if we witnessed a contradiction with the equivalent alternative
     // operand.
