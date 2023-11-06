@@ -554,6 +554,8 @@ def : Pat<(XLenVT (and (shiftop<srl> GPR:$rs1, (XLenVT GPR:$rs2)), 1)),
 
 def : Pat<(XLenVT (shiftop<shl> 1, (XLenVT GPR:$rs2))),
           (BSET (XLenVT X0), GPR:$rs2)>;
+def : Pat<(XLenVT (xor (shiftopw<riscv_sllw> -1, (XLenVT GPR:$rs2)), -1)),
+         (ADDIW (BSET (XLenVT X0), GPR:$rs2), -1)>;
 
 def : Pat<(XLenVT (and GPR:$rs1, BCLRMask:$mask)),
           (BCLRI GPR:$rs1, BCLRMask:$mask)>;

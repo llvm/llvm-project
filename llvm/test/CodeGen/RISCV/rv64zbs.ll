@@ -146,6 +146,24 @@ define signext i32 @bset_i32_no_mask(i32 signext %a, i32 signext %b) nounwind {
   ret i32 %or
 }
 
+define signext i32 @bset_i32_not_mask(i32 signext %a) nounwind {
+; RV64I-LABEL: bset_i32_not_mask:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    li a1, -1
+; RV64I-NEXT:    sllw a0, a1, a0
+; RV64I-NEXT:    not a0, a0
+; RV64I-NEXT:    ret
+;
+; RV64ZBS-LABEL: bset_i32_not_mask
+; RV64ZBS:       # %bb.0:
+; RV64ZBS-NEXT:    bset a0, zero, a0
+; RV64ZBS-NEXT:    addiw a0, a0, -1
+; RV64ZBS-NEXT:    ret
+  %notmask = shl nsw i32 -1, %a
+  %sub = xor i32 %notmask, -1
+  ret i32 %sub
+}
+
 define signext i32 @bset_i32_load(ptr %p, i32 signext %b) nounwind {
 ; RV64I-LABEL: bset_i32_load:
 ; RV64I:       # %bb.0:
@@ -370,19 +388,19 @@ define void @bext_i32_trunc(i32 signext %0, i32 signext %1) {
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    srlw a0, a0, a1
 ; RV64I-NEXT:    andi a0, a0, 1
-; RV64I-NEXT:    beqz a0, .LBB19_2
+; RV64I-NEXT:    beqz a0, .LBB20_2
 ; RV64I-NEXT:  # %bb.1:
 ; RV64I-NEXT:    ret
-; RV64I-NEXT:  .LBB19_2:
+; RV64I-NEXT:  .LBB20_2:
 ; RV64I-NEXT:    tail bar@plt
 ;
 ; RV64ZBS-LABEL: bext_i32_trunc:
 ; RV64ZBS:       # %bb.0:
 ; RV64ZBS-NEXT:    bext a0, a0, a1
-; RV64ZBS-NEXT:    beqz a0, .LBB19_2
+; RV64ZBS-NEXT:    beqz a0, .LBB20_2
 ; RV64ZBS-NEXT:  # %bb.1:
 ; RV64ZBS-NEXT:    ret
-; RV64ZBS-NEXT:  .LBB19_2:
+; RV64ZBS-NEXT:  .LBB20_2:
 ; RV64ZBS-NEXT:    tail bar@plt
   %3 = shl i32 1, %1
   %4 = and i32 %3, %0
