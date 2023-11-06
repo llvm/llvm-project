@@ -429,6 +429,9 @@ PrototypeDescriptor::parsePrototypeDescriptor(
   case 'l':
     PT = BaseTypeModifier::SignedLong;
     break;
+  case 'f':
+    PT = BaseTypeModifier::Float32;
+    break;
   default:
     llvm_unreachable("Illegal primitive type transformers!");
   }
@@ -664,6 +667,10 @@ void RVVType::applyModifier(const PrototypeDescriptor &Transformer) {
     break;
   case BaseTypeModifier::SignedLong:
     ScalarType = ScalarTypeKind::SignedLong;
+    break;
+  case BaseTypeModifier::Float32:
+    ElementBitwidth = 32;
+    ScalarType = ScalarTypeKind::Float;
     break;
   case BaseTypeModifier::Invalid:
     ScalarType = ScalarTypeKind::Invalid;
@@ -1149,7 +1156,7 @@ void RVVIntrinsic::updateNamesAndPolicy(
 
 SmallVector<PrototypeDescriptor> parsePrototypes(StringRef Prototypes) {
   SmallVector<PrototypeDescriptor> PrototypeDescriptors;
-  const StringRef Primaries("evwqom0ztul");
+  const StringRef Primaries("evwqom0ztulf");
   while (!Prototypes.empty()) {
     size_t Idx = 0;
     // Skip over complex prototype because it could contain primitive type
