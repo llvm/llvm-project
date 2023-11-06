@@ -72,6 +72,14 @@ template <typename T> struct FPTest : public Test {
   static constexpr T max_normal = FPBits::max_normal();
   static constexpr T min_denormal = FPBits::min_denormal();
   static constexpr T max_denormal = FPBits::max_denormal();
+
+  static constexpr int N_ROUNDING_MODES = 4;
+  static constexpr fputil::testing::RoundingMode ROUNDING_MODES[4] = {
+      fputil::testing::RoundingMode::Nearest,
+      fputil::testing::RoundingMode::Upward,
+      fputil::testing::RoundingMode::Downward,
+      fputil::testing::RoundingMode::TowardZero,
+  };
 };
 
 } // namespace testing

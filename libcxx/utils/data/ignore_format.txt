@@ -492,6 +492,7 @@ libcxx/src/any.cpp
 libcxx/src/atomic.cpp
 libcxx/src/barrier.cpp
 libcxx/src/bind.cpp
+libcxx/src/call_once.cpp
 libcxx/src/charconv.cpp
 libcxx/src/chrono.cpp
 libcxx/src/condition_variable.cpp
@@ -1138,8 +1139,6 @@ libcxx/test/std/algorithms/alg.nonmodifying/alg.equal/ranges.equal.pass.cpp
 libcxx/test/std/algorithms/alg.nonmodifying/alg.find.end/find_end.pass.cpp
 libcxx/test/std/algorithms/alg.nonmodifying/alg.find.end/find_end_pred.pass.cpp
 libcxx/test/std/algorithms/alg.nonmodifying/alg.find.end/ranges.find_end.pass.cpp
-libcxx/test/std/algorithms/alg.nonmodifying/alg.find/find_if_not.pass.cpp
-libcxx/test/std/algorithms/alg.nonmodifying/alg.find/find_if.pass.cpp
 libcxx/test/std/algorithms/alg.nonmodifying/alg.find.first.of/find_first_of.pass.cpp
 libcxx/test/std/algorithms/alg.nonmodifying/alg.find.first.of/find_first_of_pred.pass.cpp
 libcxx/test/std/algorithms/alg.nonmodifying/alg.find.first.of/ranges.find_first_of.pass.cpp

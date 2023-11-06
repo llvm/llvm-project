@@ -1997,6 +1997,10 @@ def fignore_exceptions : Flag<["-"], "fignore-exceptions">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Enable support for ignoring exception handling constructs">,
   MarshallingInfoFlag<LangOpts<"IgnoreExceptions">>;
+defm assume_nothrow_exception_dtor: BoolFOption<"assume-nothrow-exception-dtor",
+  LangOpts<"AssumeNothrowExceptionDtor">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option], "Assume that exception objects' destructors are non-throwing">,
+  NegFlag<SetFalse>>;
 def fexcess_precision_EQ : Joined<["-"], "fexcess-precision=">, Group<f_Group>,
   Visibility<[ClangOption, CLOption]>,
   HelpText<"Allows control over excess precision on targets where native "
@@ -4785,6 +4789,12 @@ def mrop_protect : Flag<["-"], "mrop-protect">,
     Group<m_ppc_Features_Group>;
 def mprivileged : Flag<["-"], "mprivileged">,
     Group<m_ppc_Features_Group>;
+
+defm regnames : BoolOption<"m", "regnames",
+  CodeGenOpts<"PPCUseFullRegisterNames">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option], "Use full register names when writing assembly output">,
+  NegFlag<SetFalse, [], [ClangOption], "Use only register numbers when writing assembly output">>,
+  Group<m_Group>;
 } // let Flags = [TargetSpecific]
 def maix_small_local_exec_tls : Flag<["-"], "maix-small-local-exec-tls">,
   Group<m_ppc_Features_Group>,

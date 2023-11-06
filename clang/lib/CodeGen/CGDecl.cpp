@@ -2518,7 +2518,7 @@ void CodeGenFunction::EmitParmDecl(const VarDecl &D, ParamValue Arg,
     // Suppressing debug info for ThreadPrivateVar parameters, else it hides
     // debug info of TLS variables.
     NoDebugInfo =
-        (IPD->getParameterKind() == ImplicitParamDecl::ThreadPrivateVar);
+        (IPD->getParameterKind() == ImplicitParamKind::ThreadPrivateVar);
   }
 
   Address DeclPtr = Address::invalid();
