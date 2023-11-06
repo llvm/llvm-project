@@ -2450,10 +2450,51 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
       // as:
       //   %newptr = getelementptr i32, ptr %ptr, i64 %idx1
       //   %newgep = getelementptr i32, ptr %newptr, i64 %idx2
-      auto *NewPtr = Builder.CreateGEP(GEP.getResultElementType(),
-                                       GEP.getPointerOperand(), Idx1);
-      return GetElementPtrInst::Create(GEP.getResultElementType(), NewPtr,
-                                       Idx2);
+      // If %gep is inbounds then %newgep can be inbounds only if %newptr is as
+      // well, as an inbounds gep requires the base pointer to be inbounds. We
+      // can mark %newptr as inbounds if we have a loop like
+      //   for (i = 0; ...)
+      //     ptr[i+x]
+      // If x is the same in each loop iteration then we know that we have a
+      // series of geps starting with ptr[x], which means that ptr[x] must be
+      // inbounds.
+      auto CheckIdx = [&](Value *LoopIdx, Value *FixedIdx) {
+        // Check that LoopIdx is a loop induction variable that starts at 0.
+        auto *PHI = dyn_cast<PHINode>(LoopIdx);
+        BinaryOperator *BO;
+        Value *Start, *End;
+        if (!PHI || !matchSimpleRecurrence(PHI, BO, Start, End) ||
+            !match(Start, m_Zero()))
+          return false;
+        // If FixedIdx dominates the phi then it's the same in each loop
+        // iteration.
+        if (DT.dominates(FixedIdx, PHI))
+          return true;
+        // If FixedIdx is a binary expression of values that dominate the phi
+        // then it's the same in each loop iteration.
+        Value *Left, *Right;
+        if (match(FixedIdx, m_BinOp(m_Value(Left), m_Value(Right))) &&
+            DT.dominates(Left, PHI) && DT.dominates(Right, PHI))
+          return true;
+        // We can't handle anything else.
+        return false;
+      };
+      bool InBounds = false;
+      if (GEP.isInBounds()) {
+        if (CheckIdx(Idx2, Idx1)) {
+          InBounds = true;
+        } else if (CheckIdx(Idx1, Idx2)) {
+          std::swap(Idx1, Idx2);
+          InBounds = true;
+        }
+      }
+      auto *NewPtr =
+          Builder.CreateGEP(GEP.getResultElementType(), GEP.getPointerOperand(),
+                            Idx1, "", InBounds);
+      auto *NewGEP =
+          GetElementPtrInst::Create(GEP.getResultElementType(), NewPtr, Idx2);
+      NewGEP->setIsInBounds(InBounds);
+      return NewGEP;
     }
     ConstantInt *C;
     if (match(GEP.getOperand(1), m_OneUse(m_SExt(m_OneUse(m_NSWAdd(
