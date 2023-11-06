@@ -1,7 +1,7 @@
 // REQUIRES: riscv-registered-target
 // RUN: %clang_cc1 -triple riscv64 -target-feature +v -target-feature +xsfvcp \
 // RUN:     -target-feature +xsfvqmaccdod -target-feature +xsfvqmaccqoq \
-// RUN:     -target-feature +zvfh -target-feature +xsfvfwmaccqqq \
+// RUN:     -target-feature +experimental-zvfbfmin -target-feature +xsfvfwmaccqqq \
 // RUN:     -target-feature +xsfvfnrclipxfqf %s -fsyntax-only -verify
 
 // expected-no-diagnostics
