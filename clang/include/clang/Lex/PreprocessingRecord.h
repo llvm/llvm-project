@@ -228,15 +228,18 @@ class Token;
 
     /// Whether the file name was in quotation marks; otherwise, it was
     /// in angle brackets.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned InQuotes : 1;
 
     /// The kind of inclusion directive we have.
     ///
     /// This is a value of type InclusionKind.
+    LLVM_PREFERRED_TYPE(InclusionKind)
     unsigned Kind : 2;
 
     /// Whether the inclusion directive was automatically turned into
     /// a module import.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned ImportedModule : 1;
 
     /// The file that was included.
