@@ -274,32 +274,32 @@ void CommentASTToHTMLConverter::visitInlineCommandComment(
     return;
 
   switch (C->getRenderKind()) {
-  case InlineCommandComment::RenderNormal:
+  case InlineCommandRenderKind::Normal:
     for (unsigned i = 0, e = C->getNumArgs(); i != e; ++i) {
       appendToResultWithHTMLEscaping(C->getArgText(i));
       Result << " ";
     }
     return;
 
-  case InlineCommandComment::RenderBold:
+  case InlineCommandRenderKind::Bold:
     assert(C->getNumArgs() == 1);
     Result << "<b>";
     appendToResultWithHTMLEscaping(Arg0);
     Result << "</b>";
     return;
-  case InlineCommandComment::RenderMonospaced:
+  case InlineCommandRenderKind::Monospaced:
     assert(C->getNumArgs() == 1);
     Result << "<tt>";
     appendToResultWithHTMLEscaping(Arg0);
     Result<< "</tt>";
     return;
-  case InlineCommandComment::RenderEmphasized:
+  case InlineCommandRenderKind::Emphasized:
     assert(C->getNumArgs() == 1);
     Result << "<em>";
     appendToResultWithHTMLEscaping(Arg0);
     Result << "</em>";
     return;
-  case InlineCommandComment::RenderAnchor:
+  case InlineCommandRenderKind::Anchor:
     assert(C->getNumArgs() == 1);
     Result << "<span id=\"" << Arg0 << "\"></span>";
     return;
@@ -623,31 +623,31 @@ void CommentASTToXMLConverter::visitInlineCommandComment(
     return;
 
   switch (C->getRenderKind()) {
-  case InlineCommandComment::RenderNormal:
+  case InlineCommandRenderKind::Normal:
     for (unsigned i = 0, e = C->getNumArgs(); i != e; ++i) {
       appendToResultWithXMLEscaping(C->getArgText(i));
       Result << " ";
     }
     return;
-  case InlineCommandComment::RenderBold:
+  case InlineCommandRenderKind::Bold:
     assert(C->getNumArgs() == 1);
     Result << "<bold>";
     appendToResultWithXMLEscaping(Arg0);
     Result << "</bold>";
     return;
-  case InlineCommandComment::RenderMonospaced:
+  case InlineCommandRenderKind::Monospaced:
     assert(C->getNumArgs() == 1);
     Result << "<monospaced>";
     appendToResultWithXMLEscaping(Arg0);
     Result << "</monospaced>";
     return;
-  case InlineCommandComment::RenderEmphasized:
+  case InlineCommandRenderKind::Emphasized:
     assert(C->getNumArgs() == 1);
     Result << "<emphasized>";
     appendToResultWithXMLEscaping(Arg0);
     Result << "</emphasized>";
     return;
-  case InlineCommandComment::RenderAnchor:
+  case InlineCommandRenderKind::Anchor:
     assert(C->getNumArgs() == 1);
     Result << "<anchor id=\"" << Arg0 << "\"></anchor>";
     return;

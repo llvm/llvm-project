@@ -380,9 +380,7 @@ InlineContentComment *Sema::actOnUnknownCommand(SourceLocation LocBegin,
                                                 unsigned CommandID) {
   ArrayRef<InlineCommandComment::Argument> Args;
   return new (Allocator) InlineCommandComment(
-                                  LocBegin, LocEnd, CommandID,
-                                  InlineCommandComment::RenderNormal,
-                                  Args);
+      LocBegin, LocEnd, CommandID, InlineCommandRenderKind::Normal, Args);
 }
 
 TextComment *Sema::actOnText(SourceLocation LocBegin,
@@ -1108,16 +1106,15 @@ StringRef Sema::correctTypoInTParamReference(
   return StringRef();
 }
 
-InlineCommandComment::RenderKind
-Sema::getInlineCommandRenderKind(StringRef Name) const {
+InlineCommandRenderKind Sema::getInlineCommandRenderKind(StringRef Name) const {
   assert(Traits.getCommandInfo(Name)->IsInlineCommand);
 
-  return llvm::StringSwitch<InlineCommandComment::RenderKind>(Name)
-      .Case("b", InlineCommandComment::RenderBold)
-      .Cases("c", "p", InlineCommandComment::RenderMonospaced)
-      .Cases("a", "e", "em", InlineCommandComment::RenderEmphasized)
-      .Case("anchor", InlineCommandComment::RenderAnchor)
-      .Default(InlineCommandComment::RenderNormal);
+  return llvm::StringSwitch<InlineCommandRenderKind>(Name)
+      .Case("b", InlineCommandRenderKind::Bold)
+      .Cases("c", "p", InlineCommandRenderKind::Monospaced)
+      .Cases("a", "e", "em", InlineCommandRenderKind::Emphasized)
+      .Case("anchor", InlineCommandRenderKind::Anchor)
+      .Default(InlineCommandRenderKind::Normal);
 }
 
 } // end namespace comments
