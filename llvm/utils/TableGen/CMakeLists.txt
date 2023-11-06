@@ -68,7 +68,6 @@ add_tablegen(llvm-tblgen LLVM
   InstrDocsEmitter.cpp
   OptEmitter.cpp
   OptParserEmitter.cpp
-  OptRSTEmitter.cpp
   PredicateExpander.cpp
   PseudoLoweringEmitter.cpp
   CompressInstEmitter.cpp
