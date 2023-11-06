@@ -17,12 +17,14 @@
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/FPUtil/nearest_integer.h"
 #include "src/__support/FPUtil/rounding_mode.h"
-#include "src/__support/FPUtil/sqrt.h"
+#include "src/__support/FPUtil/sqrt.h" // Speedup for powf(x, 1/2) = sqrtf(x)
 #include "src/__support/builtin_wrappers.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 #include "src/math/exp10f.h"
-#include "src/math/exp2f.h"
+
+#include "exp10f_impl.h" // Speedup for powf(10, y) = exp10f(y)
+#include "exp2f_impl.h"  // Speedup for powf(2, y) = exp2f(y)
 
 #include <errno.h>
 
@@ -602,10 +604,10 @@ LLVM_LIBC_FUNCTION(float, powf, (float x, float y)) {
     // TODO: Put these 2 entrypoint dependency under control flag.
     case 0x4000'0000: // x = 2.0f
       // pow(2, y) = exp2(y)
-      return exp2f(y);
+      return generic::exp2f(y);
     case 0x4120'0000: // x = 10.0f
       // pow(10, y) = exp10(y)
-      return exp10f(y);
+      return generic::exp10f(y);
     }
 
     bool x_sign = x_u >= FloatProp::SIGN_MASK;
