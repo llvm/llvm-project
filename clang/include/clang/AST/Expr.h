@@ -5114,6 +5114,7 @@ private:
 
   /// Whether this designated initializer used the GNU deprecated
   /// syntax rather than the C99 '=' syntax.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned GNUSyntax : 1;
 
   /// The number of designators in this initializer expression.
@@ -5745,6 +5746,7 @@ class GenericSelectionExpr final
   /// if and only if the generic selection expression is result-dependent.
   unsigned NumAssocs : 15;
   unsigned ResultIndex : 15; // NB: ResultDependentIndex is tied to this width.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsExprPredicate : 1;
   enum : unsigned {
     ResultDependentIndex = 0x7FFF
