@@ -687,7 +687,7 @@ Value *MemCmpExpansion::getMemCmpOneBlock() {
     if (ICmpInst::isSigned(Pred)) {
       Value *Cmp = Builder.CreateICmp(CmpInst::getUnsignedPredicate(Pred),
                                       Loads.Lhs, Loads.Rhs);
-      auto *Result = NeedsZExt ? Builder.CreateZExt(Cmp, U->getType()) : Cmp;
+      auto *Result = NeedsZExt ? Builder.CreateZExt(Cmp, UI->getType()) : Cmp;
       UI->replaceAllUsesWith(Result);
       UI->eraseFromParent();
       CI->eraseFromParent();
