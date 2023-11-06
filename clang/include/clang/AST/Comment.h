@@ -47,6 +47,17 @@ enum CommandMarkerKind {
   CMK_At = 1
 };
 
+enum class CommentKind {
+  None = 0,
+#define COMMENT(CLASS, PARENT) CLASS,
+#define COMMENT_RANGE(BASE, FIRST, LAST)                                       \
+  First##BASE##Constant = FIRST, Last##BASE##Constant = LAST,
+#define LAST_COMMENT_RANGE(BASE, FIRST, LAST)                                  \
+  First##BASE##Constant = FIRST, Last##BASE##Constant = LAST
+#define ABSTRACT_COMMENT(COMMENT)
+#include "clang/AST/CommentNodes.inc"
+};
+
 /// Any part of the comment.
 /// Abstract class.
 class Comment {
@@ -183,17 +194,6 @@ protected:
   }
 
 public:
-  enum CommentKind {
-    NoCommentKind = 0,
-#define COMMENT(CLASS, PARENT) CLASS##Kind,
-#define COMMENT_RANGE(BASE, FIRST, LAST) \
-    First##BASE##Constant=FIRST##Kind, Last##BASE##Constant=LAST##Kind,
-#define LAST_COMMENT_RANGE(BASE, FIRST, LAST) \
-    First##BASE##Constant=FIRST##Kind, Last##BASE##Constant=LAST##Kind
-#define ABSTRACT_COMMENT(COMMENT)
-#include "clang/AST/CommentNodes.inc"
-  };
-
   struct Argument {
     SourceRange Range;
     StringRef Text;
@@ -203,7 +203,7 @@ public:
           SourceLocation LocBegin,
           SourceLocation LocEnd) :
       Loc(LocBegin), Range(SourceRange(LocBegin, LocEnd)) {
-    CommentBits.Kind = K;
+    CommentBits.Kind = llvm::to_underlying(K);
   }
 
   CommentKind getCommentKind() const {
@@ -249,8 +249,9 @@ protected:
 
 public:
   static bool classof(const Comment *C) {
-    return C->getCommentKind() >= FirstInlineContentCommentConstant &&
-           C->getCommentKind() <= LastInlineContentCommentConstant;
+    return C->getCommentKind() >=
+               CommentKind::FirstInlineContentCommentConstant &&
+           C->getCommentKind() <= CommentKind::LastInlineContentCommentConstant;
   }
 
   void addTrailingNewline() {
@@ -267,16 +268,14 @@ class TextComment : public InlineContentComment {
   StringRef Text;
 
 public:
-  TextComment(SourceLocation LocBegin,
-              SourceLocation LocEnd,
-              StringRef Text) :
-      InlineContentComment(TextCommentKind, LocBegin, LocEnd),
-      Text(Text) {
+  TextComment(SourceLocation LocBegin, SourceLocation LocEnd, StringRef Text)
+      : InlineContentComment(CommentKind::TextComment, LocBegin, LocEnd),
+        Text(Text) {
     TextCommentBits.IsWhitespaceValid = false;
   }
 
   static bool classof(const Comment *C) {
-    return C->getCommentKind() == TextCommentKind;
+    return C->getCommentKind() == CommentKind::TextComment;
   }
 
   child_iterator child_begin() const { return nullptr; }
@@ -316,19 +315,18 @@ protected:
   ArrayRef<Argument> Args;
 
 public:
-  InlineCommandComment(SourceLocation LocBegin,
-                       SourceLocation LocEnd,
-                       unsigned CommandID,
-                       RenderKind RK,
-                       ArrayRef<Argument> Args) :
-      InlineContentComment(InlineCommandCommentKind, LocBegin, LocEnd),
-      Args(Args) {
+  InlineCommandComment(SourceLocation LocBegin, SourceLocation LocEnd,
+                       unsigned CommandID, RenderKind RK,
+                       ArrayRef<Argument> Args)
+      : InlineContentComment(CommentKind::InlineCommandComment, LocBegin,
+                             LocEnd),
+        Args(Args) {
     InlineCommandCommentBits.RenderKind = RK;
     InlineCommandCommentBits.CommandID = CommandID;
   }
 
   static bool classof(const Comment *C) {
-    return C->getCommentKind() == InlineCommandCommentKind;
+    return C->getCommentKind() == CommentKind::InlineCommandComment;
   }
 
   child_iterator child_begin() const { return nullptr; }
@@ -386,8 +384,8 @@ protected:
 
 public:
   static bool classof(const Comment *C) {
-    return C->getCommentKind() >= FirstHTMLTagCommentConstant &&
-           C->getCommentKind() <= LastHTMLTagCommentConstant;
+    return C->getCommentKind() >= CommentKind::FirstHTMLTagCommentConstant &&
+           C->getCommentKind() <= CommentKind::LastHTMLTagCommentConstant;
   }
 
   StringRef getTagName() const LLVM_READONLY { return TagName; }
@@ -443,18 +441,16 @@ private:
   ArrayRef<Attribute> Attributes;
 
 public:
-  HTMLStartTagComment(SourceLocation LocBegin,
-                      StringRef TagName) :
-      HTMLTagComment(HTMLStartTagCommentKind,
-                     LocBegin, LocBegin.getLocWithOffset(1 + TagName.size()),
-                     TagName,
-                     LocBegin.getLocWithOffset(1),
-                     LocBegin.getLocWithOffset(1 + TagName.size())) {
+  HTMLStartTagComment(SourceLocation LocBegin, StringRef TagName)
+      : HTMLTagComment(CommentKind::HTMLStartTagComment, LocBegin,
+                       LocBegin.getLocWithOffset(1 + TagName.size()), TagName,
+                       LocBegin.getLocWithOffset(1),
+                       LocBegin.getLocWithOffset(1 + TagName.size())) {
     HTMLStartTagCommentBits.IsSelfClosing = false;
   }
 
   static bool classof(const Comment *C) {
-    return C->getCommentKind() == HTMLStartTagCommentKind;
+    return C->getCommentKind() == CommentKind::HTMLStartTagComment;
   }
 
   child_iterator child_begin() const { return nullptr; }
@@ -498,18 +494,14 @@ public:
 /// A closing HTML tag.
 class HTMLEndTagComment : public HTMLTagComment {
 public:
-  HTMLEndTagComment(SourceLocation LocBegin,
-                    SourceLocation LocEnd,
-                    StringRef TagName) :
-      HTMLTagComment(HTMLEndTagCommentKind,
-                     LocBegin, LocEnd,
-                     TagName,
-                     LocBegin.getLocWithOffset(2),
-                     LocBegin.getLocWithOffset(2 + TagName.size()))
-  { }
+  HTMLEndTagComment(SourceLocation LocBegin, SourceLocation LocEnd,
+                    StringRef TagName)
+      : HTMLTagComment(CommentKind::HTMLEndTagComment, LocBegin, LocEnd,
+                       TagName, LocBegin.getLocWithOffset(2),
+                       LocBegin.getLocWithOffset(2 + TagName.size())) {}
 
   static bool classof(const Comment *C) {
-    return C->getCommentKind() == HTMLEndTagCommentKind;
+    return C->getCommentKind() == CommentKind::HTMLEndTagComment;
   }
 
   child_iterator child_begin() const { return nullptr; }
@@ -529,8 +521,9 @@ protected:
 
 public:
   static bool classof(const Comment *C) {
-    return C->getCommentKind() >= FirstBlockContentCommentConstant &&
-           C->getCommentKind() <= LastBlockContentCommentConstant;
+    return C->getCommentKind() >=
+               CommentKind::FirstBlockContentCommentConstant &&
+           C->getCommentKind() <= CommentKind::LastBlockContentCommentConstant;
   }
 };
 
@@ -539,11 +532,10 @@ class ParagraphComment : public BlockContentComment {
   ArrayRef<InlineContentComment *> Content;
 
 public:
-  ParagraphComment(ArrayRef<InlineContentComment *> Content) :
-      BlockContentComment(ParagraphCommentKind,
-                          SourceLocation(),
-                          SourceLocation()),
-      Content(Content) {
+  ParagraphComment(ArrayRef<InlineContentComment *> Content)
+      : BlockContentComment(CommentKind::ParagraphComment, SourceLocation(),
+                            SourceLocation()),
+        Content(Content) {
     if (Content.empty()) {
       ParagraphCommentBits.IsWhitespace = true;
       ParagraphCommentBits.IsWhitespaceValid = true;
@@ -558,7 +550,7 @@ public:
   }
 
   static bool classof(const Comment *C) {
-    return C->getCommentKind() == ParagraphCommentKind;
+    return C->getCommentKind() == CommentKind::ParagraphComment;
   }
 
   child_iterator child_begin() const {
@@ -606,20 +598,19 @@ protected:
   }
 
 public:
-  BlockCommandComment(SourceLocation LocBegin,
-                      SourceLocation LocEnd,
-                      unsigned CommandID,
-                      CommandMarkerKind CommandMarker) :
-      BlockContentComment(BlockCommandCommentKind, LocBegin, LocEnd),
-      Paragraph(nullptr) {
+  BlockCommandComment(SourceLocation LocBegin, SourceLocation LocEnd,
+                      unsigned CommandID, CommandMarkerKind CommandMarker)
+      : BlockContentComment(CommentKind::BlockCommandComment, LocBegin, LocEnd),
+        Paragraph(nullptr) {
     setLocation(getCommandNameBeginLoc());
     BlockCommandCommentBits.CommandID = CommandID;
     BlockCommandCommentBits.CommandMarker = CommandMarker;
   }
 
   static bool classof(const Comment *C) {
-    return C->getCommentKind() >= FirstBlockCommandCommentConstant &&
-           C->getCommentKind() <= LastBlockCommandCommentConstant;
+    return C->getCommentKind() >=
+               CommentKind::FirstBlockCommandCommentConstant &&
+           C->getCommentKind() <= CommentKind::LastBlockCommandCommentConstant;
   }
 
   child_iterator child_begin() const {
@@ -702,19 +693,17 @@ public:
     VarArgParamIndex = ~0U/*InvalidParamIndex*/ - 1U
   };
 
-  ParamCommandComment(SourceLocation LocBegin,
-                      SourceLocation LocEnd,
-                      unsigned CommandID,
-                      CommandMarkerKind CommandMarker) :
-      BlockCommandComment(ParamCommandCommentKind, LocBegin, LocEnd,
-                          CommandID, CommandMarker),
-      ParamIndex(InvalidParamIndex) {
+  ParamCommandComment(SourceLocation LocBegin, SourceLocation LocEnd,
+                      unsigned CommandID, CommandMarkerKind CommandMarker)
+      : BlockCommandComment(CommentKind::ParamCommandComment, LocBegin, LocEnd,
+                            CommandID, CommandMarker),
+        ParamIndex(InvalidParamIndex) {
     ParamCommandCommentBits.Direction = In;
     ParamCommandCommentBits.IsDirectionExplicit = false;
   }
 
   static bool classof(const Comment *C) {
-    return C->getCommentKind() == ParamCommandCommentKind;
+    return C->getCommentKind() == CommentKind::ParamCommandComment;
   }
 
   enum PassDirection {
@@ -796,16 +785,13 @@ private:
   ArrayRef<unsigned> Position;
 
 public:
-  TParamCommandComment(SourceLocation LocBegin,
-                       SourceLocation LocEnd,
-                       unsigned CommandID,
-                       CommandMarkerKind CommandMarker) :
-      BlockCommandComment(TParamCommandCommentKind, LocBegin, LocEnd, CommandID,
-                          CommandMarker)
-  { }
+  TParamCommandComment(SourceLocation LocBegin, SourceLocation LocEnd,
+                       unsigned CommandID, CommandMarkerKind CommandMarker)
+      : BlockCommandComment(CommentKind::TParamCommandComment, LocBegin, LocEnd,
+                            CommandID, CommandMarker) {}
 
   static bool classof(const Comment *C) {
-    return C->getCommentKind() == TParamCommandCommentKind;
+    return C->getCommentKind() == CommentKind::TParamCommandComment;
   }
 
   bool hasParamName() const {
@@ -847,16 +833,13 @@ class VerbatimBlockLineComment : public Comment {
   StringRef Text;
 
 public:
-  VerbatimBlockLineComment(SourceLocation LocBegin,
-                           StringRef Text) :
-      Comment(VerbatimBlockLineCommentKind,
-              LocBegin,
-              LocBegin.getLocWithOffset(Text.size())),
-      Text(Text)
-  { }
+  VerbatimBlockLineComment(SourceLocation LocBegin, StringRef Text)
+      : Comment(CommentKind::VerbatimBlockLineComment, LocBegin,
+                LocBegin.getLocWithOffset(Text.size())),
+        Text(Text) {}
 
   static bool classof(const Comment *C) {
-    return C->getCommentKind() == VerbatimBlockLineCommentKind;
+    return C->getCommentKind() == CommentKind::VerbatimBlockLineComment;
   }
 
   child_iterator child_begin() const { return nullptr; }
@@ -878,16 +861,15 @@ protected:
   ArrayRef<VerbatimBlockLineComment *> Lines;
 
 public:
-  VerbatimBlockComment(SourceLocation LocBegin,
-                       SourceLocation LocEnd,
-                       unsigned CommandID) :
-      BlockCommandComment(VerbatimBlockCommentKind,
-                          LocBegin, LocEnd, CommandID,
-                          CMK_At) // FIXME: improve source fidelity.
-  { }
+  VerbatimBlockComment(SourceLocation LocBegin, SourceLocation LocEnd,
+                       unsigned CommandID)
+      : BlockCommandComment(CommentKind::VerbatimBlockComment, LocBegin, LocEnd,
+                            CommandID,
+                            CMK_At) // FIXME: improve source fidelity.
+  {}
 
   static bool classof(const Comment *C) {
-    return C->getCommentKind() == VerbatimBlockCommentKind;
+    return C->getCommentKind() == CommentKind::VerbatimBlockComment;
   }
 
   child_iterator child_begin() const {
@@ -929,21 +911,16 @@ protected:
   SourceLocation TextBegin;
 
 public:
-  VerbatimLineComment(SourceLocation LocBegin,
-                      SourceLocation LocEnd,
-                      unsigned CommandID,
-                      SourceLocation TextBegin,
-                      StringRef Text) :
-      BlockCommandComment(VerbatimLineCommentKind,
-                          LocBegin, LocEnd,
-                          CommandID,
-                          CMK_At), // FIXME: improve source fidelity.
-      Text(Text),
-      TextBegin(TextBegin)
-  { }
+  VerbatimLineComment(SourceLocation LocBegin, SourceLocation LocEnd,
+                      unsigned CommandID, SourceLocation TextBegin,
+                      StringRef Text)
+      : BlockCommandComment(CommentKind::VerbatimLineComment, LocBegin, LocEnd,
+                            CommandID,
+                            CMK_At), // FIXME: improve source fidelity.
+        Text(Text), TextBegin(TextBegin) {}
 
   static bool classof(const Comment *C) {
-    return C->getCommentKind() == VerbatimLineCommentKind;
+    return C->getCommentKind() == CommentKind::VerbatimLineComment;
   }
 
   child_iterator child_begin() const { return nullptr; }
@@ -1079,9 +1056,9 @@ class FullComment : public Comment {
   DeclInfo *ThisDeclInfo;
 
 public:
-  FullComment(ArrayRef<BlockContentComment *> Blocks, DeclInfo *D) :
-      Comment(FullCommentKind, SourceLocation(), SourceLocation()),
-      Blocks(Blocks), ThisDeclInfo(D) {
+  FullComment(ArrayRef<BlockContentComment *> Blocks, DeclInfo *D)
+      : Comment(CommentKind::FullComment, SourceLocation(), SourceLocation()),
+        Blocks(Blocks), ThisDeclInfo(D) {
     if (Blocks.empty())
       return;
 
@@ -1091,7 +1068,7 @@ public:
   }
 
   static bool classof(const Comment *C) {
-    return C->getCommentKind() == FullCommentKind;
+    return C->getCommentKind() == CommentKind::FullComment;
   }
 
   child_iterator child_begin() const {
