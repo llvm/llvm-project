@@ -345,7 +345,8 @@ bool DynamicLoaderFreeBSDKernel::KModImageInfo::LoadImageUsingMemoryModule(
       ModuleSpec module_spec(FileSpec(GetPath()), target.GetArchitecture());
       if (IsKernel()) {
         Status error;
-        if (Symbols::DownloadObjectAndSymbolFile(module_spec, error, true)) {
+        if (PluginManager::DownloadObjectAndSymbolFile(module_spec, error,
+                                                       true)) {
           if (FileSystem::Instance().Exists(module_spec.GetFileSpec()))
             m_module_sp = std::make_shared<Module>(module_spec.GetFileSpec(),
                                                    target.GetArchitecture());
