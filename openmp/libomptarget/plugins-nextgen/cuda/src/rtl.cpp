@@ -37,7 +37,7 @@ struct CUDAKernelTy;
 struct CUDADeviceTy;
 struct CUDAPluginTy;
 
-#if (defined(CUDART_VERSION) && (CUDART_VERSION < 11000))
+#if (defined(CUDA_VERSION) && (CUDA_VERSION < 11000))
 /// Forward declarations for all Virtual Memory Management
 /// related data structures and functions. This is necessary
 /// for older cuda versions.
@@ -543,7 +543,7 @@ struct CUDADeviceTy : public GenericDeviceTy {
 
   /// CUDA support VA management
   bool supportVAManagement() const override {
-#if (defined(CUDART_VERSION) && (CUDART_VERSION >= 11000))
+#if (defined(CUDA_VERSION) && (CUDA_VERSION >= 11000))
     return true;
 #else
     return false;
