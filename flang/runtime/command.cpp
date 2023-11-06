@@ -14,6 +14,7 @@
 #include "flang/Runtime/descriptor.h"
 #include <cstdlib>
 #include <limits>
+#include <time.h>
 
 namespace Fortran::runtime {
 std::int32_t RTNAME(ArgumentCount)() {
@@ -123,6 +124,33 @@ static bool FitsInDescriptor(
   int kind{typeCode->second};
   return Fortran::runtime::ApplyIntegerKind<FitsInIntegerKind, bool>(
       kind, terminator, value);
+}
+
+void removeNewLine(char *str) {
+  char *newlinePos = strchr(str, '\n');
+  if (newlinePos != NULL) {
+    *newlinePos = '\0'; // Replace with null terminator
+  }
+}
+
+std::int32_t RTNAME(FDate)(const Descriptor *value, const Descriptor *errmsg) {
+  FillWithSpaces(*value);
+
+  time_t current_time;
+  time(&current_time);
+
+  char *time_string = ctime(&current_time);
+  removeNewLine(time_string);
+  std::int64_t stringLen{StringLength(time_string)};
+  if (stringLen <= 0) {
+    return ToErrmsg(errmsg, StatMissingArgument);
+  }
+
+  if (value) {
+    return CopyToDescriptor(*value, time_string, stringLen, errmsg);
+  }
+
+  return StatOk;
 }
 
 std::int32_t RTNAME(GetCommandArgument)(std::int32_t n, const Descriptor *value,

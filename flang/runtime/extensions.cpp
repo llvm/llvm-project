@@ -30,6 +30,11 @@ void FORTRAN_PROCEDURE_NAME(flush)(const int &unit) {
 // RESULT = IARGC()
 std::int32_t FORTRAN_PROCEDURE_NAME(iargc)() { return RTNAME(ArgumentCount)(); }
 
+void FORTRAN_PROCEDURE_NAME(fdate)(std::int8_t *arg, std::int64_t length) {
+  Descriptor value{*Descriptor::Create(1, length, arg, 0)};
+  (void)RTNAME(FDate)(&value, nullptr);
+}
+
 // CALL GETARG(N, ARG)
 void FORTRAN_PROCEDURE_NAME(getarg)(
     std::int32_t &n, std::int8_t *arg, std::int64_t length) {

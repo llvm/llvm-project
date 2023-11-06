@@ -225,6 +225,12 @@ TEST_F(ZeroArguments, GetCommandArgument) {
   CheckMissingArgumentValue(1);
 }
 
+TEST_F(ZeroArguments, FDate) {
+  CheckMissingArgumentValue(-1);
+  CheckArgumentValue(commandOnlyArgv[0], 0);
+  CheckMissingArgumentValue(1);
+}
+
 TEST_F(ZeroArguments, GetCommand) { CheckCommandValue(commandOnlyArgv, 1); }
 
 static const char *oneArgArgv[]{"aProgram", "anArgumentOfLength20"};
@@ -236,6 +242,13 @@ protected:
 TEST_F(OneArgument, ArgumentCount) { EXPECT_EQ(1, RTNAME(ArgumentCount)()); }
 
 TEST_F(OneArgument, GetCommandArgument) {
+  CheckMissingArgumentValue(-1);
+  CheckArgumentValue(oneArgArgv[0], 0);
+  CheckArgumentValue(oneArgArgv[1], 1);
+  CheckMissingArgumentValue(2);
+}
+
+TEST_F(OneArgument, FDate) {
   CheckMissingArgumentValue(-1);
   CheckArgumentValue(oneArgArgv[0], 0);
   CheckArgumentValue(oneArgArgv[1], 1);
@@ -284,6 +297,7 @@ TEST_F(SeveralArguments, ArgValueTooShort) {
   ASSERT_NE(tooShort, nullptr);
   EXPECT_EQ(RTNAME(GetCommandArgument)(1, tooShort.get()), -1);
   CheckDescriptorEqStr(tooShort.get(), severalArgsArgv[1]);
+  EXPECT_EQ(RTNAME(FDate)(tooShort.get()), -1);
 
   OwningPtr<Descriptor> length{EmptyIntDescriptor()};
   ASSERT_NE(length, nullptr);
