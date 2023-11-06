@@ -137,6 +137,9 @@ namespace {
     bool Changed = false;           // True if a loop is changed.
     bool FirstInLoop = false;       // True if it's the first LICM in the loop.
 
+    // Holds information about whether it is allowed to move load instructions
+    // out of the loop
+    SmallDenseMap<MachineLoop *, bool> AllowedToHoistLoads;
 
     // Exit blocks of each Loop.
     DenseMap<MachineLoop *, SmallVector<MachineBasicBlock *, 8>> ExitBlockMap;
@@ -227,11 +230,9 @@ namespace {
 
     void AddToLiveIns(MCRegister Reg, MachineLoop *CurLoop);
 
-    bool IsLICMCandidate(MachineInstr &I, MachineLoop *CurLoop,
-                         bool SafeToMoveLoad);
+    bool IsLICMCandidate(MachineInstr &I, MachineLoop *CurLoop);
 
-    bool IsLoopInvariantInst(MachineInstr &I, MachineLoop *CurLoop,
-                             bool SafeToMoveLoad);
+    bool IsLoopInvariantInst(MachineInstr &I, MachineLoop *CurLoop);
 
     bool HasLoopPHIUse(const MachineInstr *MI, MachineLoop *CurLoop);
 
@@ -284,7 +285,7 @@ namespace {
     bool MayCSE(MachineInstr *MI);
 
     unsigned Hoist(MachineInstr *MI, MachineBasicBlock *Preheader,
-                   MachineLoop *CurLoop, bool SafeToMoveLoad);
+                   MachineLoop *CurLoop);
 
     void InitCSEMap(MachineBasicBlock *BB);
 
@@ -376,6 +377,36 @@ bool MachineLICMBase::runOnMachineFunction(MachineFunction &MF) {
   AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
 
   SmallVector<MachineLoop *, 8> Worklist(MLI->begin(), MLI->end());
+
+  // Initialize `AllowedToHoistLoads' if needed.
+  if (HoistConstLoads) {
+    auto TmpWorklist = Worklist;
+    // Initialize all loops with true values
+    while (!TmpWorklist.empty()) {
+      auto *L = TmpWorklist.pop_back_val();
+      AllowedToHoistLoads[L] = true;
+      TmpWorklist.insert(TmpWorklist.end(), L->getSubLoops().begin(),
+                         L->getSubLoops().end());
+    }
+    // Go through all the instructions inside top-level loops and, after finding
+    // one that makes it potentially unsafe to move loads, update load hoisting
+    // information for each loop containing this instruction.
+    for (auto *TopLoop : Worklist) {
+      for (auto *MBB : TopLoop->blocks()) {
+        for (auto &MI : *MBB) {
+          if (!MI.mayStore() && !MI.isCall() &&
+              !(MI.mayLoad() && MI.hasOrderedMemoryRef()))
+            continue;
+          for (MachineLoop *L = MLI->getLoopFor(MI.getParent()); L != TopLoop;
+               L = L->getParentLoop())
+            AllowedToHoistLoads[L] = false;
+          AllowedToHoistLoads[TopLoop] = false;
+          break;
+        }
+      }
+    }
+  }
+
   while (!Worklist.empty()) {
     MachineLoop *CurLoop = Worklist.pop_back_val();
     MachineBasicBlock *CurPreheader = nullptr;
@@ -501,7 +532,7 @@ void MachineLICMBase::ProcessMI(MachineInstr *MI, BitVector &PhysRegDefs,
   // operands. FIXME: Consider unfold load folding instructions.
   if (Def && !RuledOut) {
     int FI = std::numeric_limits<int>::min();
-    if ((!HasNonInvariantUse && IsLICMCandidate(*MI, CurLoop, false)) ||
+    if ((!HasNonInvariantUse && IsLICMCandidate(*MI, CurLoop)) ||
         (TII->isLoadFromStackSlot(*MI, FI) && MFI->isSpillSlotObjectIndex(FI)))
       Candidates.push_back(CandidateInfo(MI, Def, FI));
   }
@@ -779,33 +810,6 @@ void MachineLICMBase::HoistOutOfLoop(MachineDomTreeNode *HeaderN,
   BackTrace.clear();
   InitRegPressure(Preheader);
 
-  // Compute information about whether it is allowed to move load instruction
-  // out of the current loop or one of the inner loops
-  SmallDenseMap<MachineLoop *, bool> AllowedToHoistLoads;
-  if (HoistConstLoads) {
-    SmallVector<MachineLoop *, 4> Worklist{CurLoop};
-
-    while (!Worklist.empty()) {
-      auto *L = Worklist.pop_back_val();
-      AllowedToHoistLoads[L] = true;
-      Worklist.insert(Worklist.end(), L->getSubLoops().begin(),
-                      L->getSubLoops().end());
-    }
-
-    for (auto *MBB : CurLoop->blocks()) {
-      for (auto &MI : *MBB) {
-        if (MI.mayStore() || MI.isCall() ||
-            (MI.mayLoad() && MI.hasOrderedMemoryRef())) {
-          for (MachineLoop *L = MLI->getLoopFor(MI.getParent()); L != CurLoop;
-               L = L->getParentLoop())
-            AllowedToHoistLoads[L] = false;
-          AllowedToHoistLoads[CurLoop] = false;
-          break;
-        }
-      }
-    }
-  }
-
   // Now perform LICM.
   for (MachineDomTreeNode *Node : Scopes) {
     MachineBasicBlock *MBB = Node->getBlock();
@@ -814,10 +818,9 @@ void MachineLICMBase::HoistOutOfLoop(MachineDomTreeNode *HeaderN,
 
     // Process the block
     SpeculationState = SpeculateUnknown;
-    bool SafeToMoveLoad = HoistConstLoads && AllowedToHoistLoads[CurLoop];
     for (MachineInstr &MI : llvm::make_early_inc_range(*MBB)) {
       unsigned HoistRes = HoistResult::NotHoisted;
-      HoistRes = Hoist(&MI, Preheader, CurLoop, SafeToMoveLoad);
+      HoistRes = Hoist(&MI, Preheader, CurLoop);
       if (HoistRes & HoistResult::NotHoisted) {
         // We have failed to hoist MI to outermost loop's preheader. If MI is in
         // a subloop, try to hoist it to subloop's preheader.
@@ -828,12 +831,9 @@ void MachineLICMBase::HoistOutOfLoop(MachineDomTreeNode *HeaderN,
 
         while (!InnerLoopWorkList.empty()) {
           MachineLoop *InnerLoop = InnerLoopWorkList.pop_back_val();
-          bool SafeToMoveLoadInner =
-              HoistConstLoads && AllowedToHoistLoads[InnerLoop];
           MachineBasicBlock *InnerLoopPreheader = InnerLoop->getLoopPreheader();
           if (InnerLoopPreheader) {
-            HoistRes =
-                Hoist(&MI, InnerLoopPreheader, InnerLoop, SafeToMoveLoadInner);
+            HoistRes = Hoist(&MI, InnerLoopPreheader, InnerLoop);
             if (HoistRes & HoistResult::Hoisted)
               break;
           }
@@ -1028,10 +1028,9 @@ static bool isCopyFeedingInvariantStore(const MachineInstr &MI,
 
 /// Returns true if the instruction may be a suitable candidate for LICM.
 /// e.g. If the instruction is a call, then it's obviously not safe to hoist it.
-bool MachineLICMBase::IsLICMCandidate(MachineInstr &I, MachineLoop *CurLoop,
-                                      bool SafeToMoveLoad) {
+bool MachineLICMBase::IsLICMCandidate(MachineInstr &I, MachineLoop *CurLoop) {
   // Check if it's safe to move the instruction.
-  bool DontMoveAcrossStore = !SafeToMoveLoad;
+  bool DontMoveAcrossStore = !HoistConstLoads || !AllowedToHoistLoads[CurLoop];
   if ((!I.isSafeToMove(AA, DontMoveAcrossStore)) &&
       !(HoistConstStores && isInvariantStore(I, TRI, MRI))) {
     LLVM_DEBUG(dbgs() << "LICM: Instruction not safe to move.\n");
@@ -1064,9 +1063,9 @@ bool MachineLICMBase::IsLICMCandidate(MachineInstr &I, MachineLoop *CurLoop,
 }
 
 /// Returns true if the instruction is loop invariant.
-bool MachineLICMBase::IsLoopInvariantInst(MachineInstr &I, MachineLoop *CurLoop,
-                                          bool SafeToMoveLoad) {
-  if (!IsLICMCandidate(I, CurLoop, SafeToMoveLoad)) {
+bool MachineLICMBase::IsLoopInvariantInst(MachineInstr &I,
+                                          MachineLoop *CurLoop) {
+  if (!IsLICMCandidate(I, CurLoop)) {
     LLVM_DEBUG(dbgs() << "LICM: Instruction not a LICM candidate\n");
     return false;
   }
@@ -1344,7 +1343,7 @@ MachineInstr *MachineLICMBase::ExtractHoistableLoad(MachineInstr *MI,
   MBB->insert(Pos, NewMIs[1]);
   // If unfolding produced a load that wasn't loop-invariant or profitable to
   // hoist, discard the new instructions and bail.
-  if (!IsLoopInvariantInst(*NewMIs[0], CurLoop, /*SaveToMovLoad=*/false) ||
+  if (!IsLoopInvariantInst(*NewMIs[0], CurLoop) ||
       !IsProfitableToHoist(*NewMIs[0], CurLoop)) {
     NewMIs[0]->eraseFromParent();
     NewMIs[1]->eraseFromParent();
@@ -1471,7 +1470,7 @@ bool MachineLICMBase::MayCSE(MachineInstr *MI) {
 /// that are safe to hoist, this instruction is called to do the dirty work.
 /// It returns true if the instruction is hoisted.
 unsigned MachineLICMBase::Hoist(MachineInstr *MI, MachineBasicBlock *Preheader,
-                                MachineLoop *CurLoop, bool SafeToMoveLoad) {
+                                MachineLoop *CurLoop) {
   MachineBasicBlock *SrcBlock = MI->getParent();
 
   // Disable the instruction hoisting due to block hotness
@@ -1483,7 +1482,7 @@ unsigned MachineLICMBase::Hoist(MachineInstr *MI, MachineBasicBlock *Preheader,
   }
   // First check whether we should hoist this instruction.
   bool HasExtractHoistableLoad = false;
-  if (!IsLoopInvariantInst(*MI, CurLoop, SafeToMoveLoad) ||
+  if (!IsLoopInvariantInst(*MI, CurLoop) ||
       !IsProfitableToHoist(*MI, CurLoop)) {
     // If not, try unfolding a hoistable load.
     MI = ExtractHoistableLoad(MI, CurLoop);
