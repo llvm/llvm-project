@@ -1287,6 +1287,10 @@ void Verifier::visitDICompositeType(const DICompositeType &N) {
     CheckDI(N.getTag() == dwarf::DW_TAG_array_type,
             "rank can only appear in array type");
   }
+
+  if (N.getTag() == dwarf::DW_TAG_array_type) {
+    CheckDI(N.getRawBaseType(), "array types must have a base type", &N);
+  }
 }
 
 void Verifier::visitDISubroutineType(const DISubroutineType &N) {
