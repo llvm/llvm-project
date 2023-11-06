@@ -1503,7 +1503,10 @@ def S_INCPERFLEVEL : SOPP_Pseudo <"s_incperflevel", (ins i32imm:$simm16), "$simm
 def S_DECPERFLEVEL : SOPP_Pseudo <"s_decperflevel", (ins i32imm:$simm16), "$simm16",
   [(int_amdgcn_s_decperflevel timm:$simm16)]> {
 }
-def S_TTRACEDATA : SOPP_Pseudo <"s_ttracedata", (ins)> {
+
+let Uses = [M0] in
+def S_TTRACEDATA : SOPP_Pseudo <"s_ttracedata", (ins), "",
+                                [(int_amdgcn_s_ttracedata M0)]> {
   let simm16 = 0;
   let fixed_imm = 1;
 }
@@ -1547,8 +1550,10 @@ let SubtargetPredicate = isGFX10Plus in {
       [(SIdenorm_mode (i32 timm:$simm16))]>;
   }
 
+  let hasSideEffects = 1 in
   def S_TTRACEDATA_IMM :
-    SOPP_Pseudo<"s_ttracedata_imm", (ins s16imm:$simm16), "$simm16">;
+    SOPP_Pseudo<"s_ttracedata_imm", (ins s16imm:$simm16), "$simm16",
+                [(int_amdgcn_s_ttracedata_imm timm:$simm16)]>;
 } // End SubtargetPredicate = isGFX10Plus
 
 let SubtargetPredicate = isGFX11Plus in {
