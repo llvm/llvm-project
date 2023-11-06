@@ -3092,8 +3092,6 @@ genOMP(Fortran::lower::AbstractConverter &converter,
         !std::get_if<Fortran::parser::OmpClause::Allocate>(&clause.u) &&
         !std::get_if<Fortran::parser::OmpClause::Default>(&clause.u) &&
         !std::get_if<Fortran::parser::OmpClause::Final>(&clause.u) &&
-        !std::get_if<Fortran::parser::OmpClause::Untied>(&clause.u) &&
-        !std::get_if<Fortran::parser::OmpClause::Mergeable>(&clause.u) &&
         !std::get_if<Fortran::parser::OmpClause::Priority>(&clause.u) &&
         !std::get_if<Fortran::parser::OmpClause::Reduction>(&clause.u) &&
         !std::get_if<Fortran::parser::OmpClause::Depend>(&clause.u) &&
