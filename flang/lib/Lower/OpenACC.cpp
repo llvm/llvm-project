@@ -2752,7 +2752,6 @@ static void createDeclareGlobalOp(mlir::OpBuilder &modBuilder,
   builder.createBlock(&declareGlobalOp.getRegion(),
                       declareGlobalOp.getRegion().end(), {}, {});
   builder.setInsertionPointToEnd(&declareGlobalOp.getRegion().back());
-  mlir::Value entryAddr;
 
   fir::AddrOfOp addrOp = builder.create<fir::AddrOfOp>(
       loc, fir::ReferenceType::get(globalOp.getType()), globalOp.getSymbol());
