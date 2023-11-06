@@ -4847,7 +4847,7 @@ SDValue LowerSMELdrStr(SDValue N, SelectionDAG &DAG, bool IsLoad) {
   SDValue VecNum = N->getOperand(4);
   SDValue Remainder = DAG.getTargetConstant(0, DL, MVT::i32);
 
-  // true if the base and slice registers need to me modified
+  // true if the base and slice registers need to be modified
   bool NeedsAdd = true;
   if (auto ImmNode = dyn_cast<ConstantSDNode>(VecNum)) {
     int Imm = ImmNode->getSExtValue();

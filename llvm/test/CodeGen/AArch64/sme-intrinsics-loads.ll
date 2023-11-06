@@ -299,11 +299,11 @@ define void @ldr_with_off_16mulvl(ptr %ptr) {
 define void @ldr_with_off_var(ptr %base, i32 %off) {
 ; CHECK-LABEL: ldr_with_off_var:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $w2 killed $w2 def $x2
-; CHECK-NEXT:    sxtw x8, w2
+; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
+; CHECK-NEXT:    sxtw x8, w1
 ; CHECK-NEXT:    rdsvl x9, #1
-; CHECK-NEXT:    add w12, w0, w2
-; CHECK-NEXT:    madd x8, x9, x8, x1
+; CHECK-NEXT:    add w12, w1, #16
+; CHECK-NEXT:    madd x8, x9, x8, x0
 ; CHECK-NEXT:    ldr za[w12, 0], [x8]
 ; CHECK-NEXT:    ret
   call void @llvm.aarch64.sme.ldr(i32 16, ptr %base, i32 %off)
@@ -324,8 +324,8 @@ define void @ldr_with_off_16imm(ptr %base) {
 ; CHECK-LABEL: ldr_with_off_16imm:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    rdsvl x8, #1
-; CHECK-NEXT:    add w12, w0, #15
-; CHECK-NEXT:    sub x9, x1, x8
+; CHECK-NEXT:    mov w12, #31 // =0x1f
+; CHECK-NEXT:    sub x9, x0, x8
 ; CHECK-NEXT:    add x8, x9, x8, lsl #4
 ; CHECK-NEXT:    ldr za[w12, 1], [x8, #1, mul vl]
 ; CHECK-NEXT:    ret
