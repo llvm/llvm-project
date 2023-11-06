@@ -74,26 +74,34 @@ module {
     //
     // Initialize a 2-dim dense tensor.
     //
-    %t = arith.constant dense<[
-       [  1.0,  2.0,  3.0,  4.0 ],
-       [  5.0,  6.0,  7.0,  8.0 ]
-    ]> : tensor<2x4xf64>
+    %t = arith.constant sparse<[[0, 0], [0, 1], [0, 2], [0, 3],
+                                [1, 0], [1, 1], [1, 2], [1, 3]],
+                                [ 1.0, 2.0, 3.0, 4.0,
+                                  5.0, 6.0, 7.0, 8.0 ]> : tensor<2x4xf64>
 
+    %td = arith.constant dense<[[ 1.0, 2.0, 3.0, 4.0 ],
+                                [ 5.0, 6.0, 7.0, 8.0 ]]> : tensor<2x4xf64>
 
-    %1 = sparse_tensor.convert %t : tensor<2x4xf64> to tensor<2x4xf64, #CSR>
-    %2 = sparse_tensor.convert %1 : tensor<2x4xf64, #CSR> to tensor<2x4xf64, #BSR>
-    %3 = sparse_tensor.convert %2 : tensor<2x4xf64, #BSR> to tensor<2x4xf64, #CSC>
+    // constant -> BSR (either from SparseElementAttibutes or DenseElementAttribute)
+    %1 = sparse_tensor.convert %t : tensor<2x4xf64> to tensor<2x4xf64, #BSR>
+    %2 = sparse_tensor.convert %td : tensor<2x4xf64> to tensor<2x4xf64, #BSR>
+    %3 = sparse_tensor.convert %1 : tensor<2x4xf64, #BSR> to tensor<2x4xf64, #CSR>
+    %4 = sparse_tensor.convert %1 : tensor<2x4xf64, #BSR> to tensor<2x4xf64, #CSC>
 
-    %v1 = sparse_tensor.values %1 : tensor<2x4xf64, #CSR> to memref<?xf64>
+    %v1 = sparse_tensor.values %1 : tensor<2x4xf64, #BSR> to memref<?xf64>
     %v2 = sparse_tensor.values %2 : tensor<2x4xf64, #BSR> to memref<?xf64>
-    %v3 = sparse_tensor.values %3 : tensor<2x4xf64, #CSC> to memref<?xf64>
+    %v3 = sparse_tensor.values %3 : tensor<2x4xf64, #CSR> to memref<?xf64>
+    %v4 = sparse_tensor.values %4 : tensor<2x4xf64, #CSC> to memref<?xf64>
 
-    // CHECK:      ( 1, 2, 3, 4, 5, 6, 7, 8 )
+
+    // CHECK:      ( 1, 2, 5, 6, 3, 4, 7, 8 )
     // CHECK-NEXT: ( 1, 2, 5, 6, 3, 4, 7, 8 )
+    // CHECK-NEXT: ( 1, 2, 3, 4, 5, 6, 7, 8 )
     // CHECK-NEXT: ( 1, 5, 2, 6, 3, 7, 4, 8 )
     call @dumpf64(%v1) : (memref<?xf64>) -> ()
     call @dumpf64(%v2) : (memref<?xf64>) -> ()
     call @dumpf64(%v3) : (memref<?xf64>) -> ()
+    call @dumpf64(%v4) : (memref<?xf64>) -> ()
 
     return
   }
