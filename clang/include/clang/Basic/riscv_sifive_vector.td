@@ -104,6 +104,14 @@ let SupportOverloading = false in {
   }
 }
 
+multiclass RVVVFWMACCBuiltinSet<list<list<string>> suffixes_prototypes> {
+  let OverloadedName = NAME,
+      Name = NAME,
+      HasMasked = false,
+      Log2LMUL = [-2, -1, 0, 1, 2] in
+    defm NAME : RVVOutOp1Op2BuiltinSet<NAME, "x", suffixes_prototypes>;
+}
+
 multiclass RVVVQMACCBuiltinSet<list<list<string>> suffixes_prototypes> {
   let OverloadedName = NAME,
       Name = NAME,
@@ -127,3 +135,7 @@ let UnMaskedPolicyScheme = HasPolicyOperand in
     defm sf_vqmaccus_4x8x4 : RVVVQMACCBuiltinSet<[["", "v", "vv(FixedSEW:8)SUv(FixedSEW:8)v"]]>;
     defm sf_vqmaccsu_4x8x4 : RVVVQMACCBuiltinSet<[["", "v", "vv(FixedSEW:8)Sv(FixedSEW:8)Uv"]]>;
   }
+
+let UnMaskedPolicyScheme = HasPolicyOperand in
+  let RequiredFeatures = ["Xsfvfwmaccqqq"] in
+    defm sf_vfwmacc_4x4x4 : RVVVFWMACCBuiltinSet<[["", "w", "wwSvv"]]>;
