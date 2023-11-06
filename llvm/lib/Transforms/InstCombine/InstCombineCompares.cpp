@@ -7324,17 +7324,14 @@ Instruction *InstCombinerImpl::foldFCmpIntToFPConst(FCmpInst &I,
   }
 
   // Okay, now we know that the FP constant fits in the range [SMIN, SMAX] or
-  // [0, UMAX], but it may still be fractional.  See if it is fractional by
-  // casting the FP value to the integer value and back, checking for equality.
+  // [0, UMAX], but it may still be fractional. Check whether this is the case
+  // using the IsExact flag.
   // Don't do this for zero, because -0.0 is not fractional.
-  Constant *RHSInt = LHSUnsigned
-    ? ConstantExpr::getFPToUI(RHSC, IntTy)
-    : ConstantExpr::getFPToSI(RHSC, IntTy);
+  APSInt RHSInt(IntWidth, LHSUnsigned);
+  bool IsExact;
+  RHS.convertToInteger(RHSInt, APFloat::rmTowardZero, &IsExact);
   if (!RHS.isZero()) {
-    bool Equal = LHSUnsigned
-      ? ConstantExpr::getUIToFP(RHSInt, RHSC->getType()) == RHSC
-      : ConstantExpr::getSIToFP(RHSInt, RHSC->getType()) == RHSC;
-    if (!Equal) {
+    if (!IsExact) {
       // If we had a comparison against a fractional value, we have to adjust
       // the compare predicate and sometimes the value.  RHSC is rounded towards
       // zero at this point.
@@ -7400,7 +7397,7 @@ Instruction *InstCombinerImpl::foldFCmpIntToFPConst(FCmpInst &I,
 
   // Lower this FP comparison into an appropriate integer version of the
   // comparison.
-  return new ICmpInst(Pred, LHSI->getOperand(0), RHSInt);
+  return new ICmpInst(Pred, LHSI->getOperand(0), Builder.getInt(RHSInt));
 }
 
 /// Fold (C / X) < 0.0 --> X < 0.0 if possible. Swap predicate if necessary.
