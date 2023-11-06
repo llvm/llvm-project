@@ -1746,7 +1746,8 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
       AArch64::AEK_SSVE_FP8FMA,  AArch64::AEK_FP8DOT2,
       AArch64::AEK_SSVE_FP8DOT2, AArch64::AEK_FP8DOT4,
       AArch64::AEK_SSVE_FP8DOT4, AArch64::AEK_LUT,
-      AArch64::AEK_SME_LUTv2};
+      AArch64::AEK_SME_LUTv2,    AArch64::AEK_SMEF8F16,
+      AArch64::AEK_SMEF8F32};
 
   std::vector<StringRef> Features;
 
@@ -1829,6 +1830,8 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
   EXPECT_TRUE(llvm::is_contained(Features, "+ssve-fp8dot4"));
   EXPECT_TRUE(llvm::is_contained(Features, "+lut"));
   EXPECT_TRUE(llvm::is_contained(Features, "+sme-lutv2"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+sme-f8f16"));
+  EXPECT_TRUE(llvm::is_contained(Features, "+sme-f8f32"));
 
   // Assuming we listed every extension above, this should produce the same
   // result. (note that AEK_NONE doesn't have a name so it won't be in the
@@ -1963,6 +1966,8 @@ TEST(TargetParserTest, AArch64ArchExtFeature) {
       {"ssve-fp8dot4", "nossve-fp8dot4", "+ssve-fp8dot4", "-ssve-fp8dot4"},
       {"lut", "nolut", "+lut", "-lut"},
       {"sme-lutv2", "nosme-lutv2", "+sme-lutv2", "-sme-lutv2"},
+      {"sme-f8f16", "nosme-f8f16", "+sme-f8f16", "-sme-f8f16"},
+      {"sme-f8f32", "nosme-f8f32", "+sme-f8f32", "-sme-f8f32"},
   };
 
   for (unsigned i = 0; i < std::size(ArchExt); i++) {
