@@ -1347,8 +1347,6 @@ add_fp_unittest(
     libc.src.math.fmodf
     libc.src.__support.FPUtil.basic_operations
     libc.src.__support.FPUtil.nearest_integer_operations
-  # Requires C++ limits.
-  UNIT_TEST_ONLY
 )
 
 add_fp_unittest(
@@ -1365,8 +1363,6 @@ add_fp_unittest(
     libc.src.math.fmod
     libc.src.__support.FPUtil.basic_operations
     libc.src.__support.FPUtil.nearest_integer_operations
-  # Requires C++ limits.
-  UNIT_TEST_ONLY
 )
 
 add_fp_unittest(

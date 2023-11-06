@@ -76,13 +76,13 @@ LIBC_INLINE float exp2f(float x) {
       if (x_u < 0x7f80'0000U) {
         int rounding = fputil::quick_get_round();
         if (rounding == FE_DOWNWARD || rounding == FE_TOWARDZERO)
-          return static_cast<float>(FPBits(FPBits::MAX_NORMAL));
+          return FPBits::max_normal();
 
         fputil::set_errno_if_required(ERANGE);
         fputil::raise_except_if_required(FE_OVERFLOW);
       }
       // x is +inf or nan
-      return x + FPBits::inf().get_val();
+      return x + FPBits::inf();
     }
     // x <= -150
     if (x_u >= 0xc316'0000U) {
@@ -93,7 +93,7 @@ LIBC_INLINE float exp2f(float x) {
       if (xbits.is_nan())
         return x;
       if (fputil::fenv_is_round_up())
-        return FPBits(FPBits::MIN_SUBNORMAL).get_val();
+        return FPBits::min_denormal();
       if (x != 0.0f) {
         fputil::set_errno_if_required(ERANGE);
         fputil::raise_except_if_required(FE_UNDERFLOW);
