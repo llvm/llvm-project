@@ -925,7 +925,9 @@ void InputSection::relocateNonAlloc(uint8_t *buf, ArrayRef<RelTy> rels) {
     if (expr == R_NONE)
       continue;
 
-    if (tombstoneValueToUse) {
+    auto *ds = dyn_cast<Defined>(&sym);
+    if (tombstoneValueToUse &&
+        (!sym.getOutputSection() || (ds && ds->folded && !isDebugLine))) {
       // Resolve relocations in .debug_* referencing (discarded symbols or ICF
       // folded section symbols) to a tombstone value. Resolving to addend is
       // unsatisfactory because the result address range may collide with a
@@ -959,12 +961,8 @@ void InputSection::relocateNonAlloc(uint8_t *buf, ArrayRef<RelTy> rels) {
       // One usage example is in .debug_names LocatTU tombstoning.
       if (!tombstone && type == target.symbolicRel)
         tombstoneValueToUse = SignExtend64<32>(*tombstoneValueToUse);
-
-      auto *ds = dyn_cast<Defined>(&sym);
-      if (!sym.getOutputSection() || (ds && ds->folded && !isDebugLine)) {
-        target.relocateNoSym(bufLoc, type, *tombstoneValueToUse);
-        continue;
-      }
+      target.relocateNoSym(bufLoc, type, *tombstoneValueToUse);
+      continue;
     }
 
     // For a relocatable link, content relocated by RELA remains unchanged and
