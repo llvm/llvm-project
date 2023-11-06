@@ -1041,14 +1041,14 @@ void Writer::createMiscChunks() {
 
   // Create Debug Information Chunks
   OutputSection *debugInfoSec = config->mingw ? buildidSec : rdataSec;
-  if (config->debug || config->repro || config->cetCompat) {
+  if (config->buildID || config->debug || config->repro || config->cetCompat) {
     debugDirectory =
         make<DebugDirectoryChunk>(ctx, debugRecords, config->repro);
     debugDirectory->setAlignment(4);
     debugInfoSec->addChunk(debugDirectory);
   }
 
-  if (config->debug) {
+  if (config->debug || config->buildID) {
     // Make a CVDebugRecordChunk even when /DEBUG:CV is not specified.  We
     // output a PDB no matter what, and this chunk provides the only means of
     // allowing a debugger to match a PDB and an executable.  So we need it even
@@ -1067,6 +1067,16 @@ void Writer::createMiscChunks() {
   for (std::pair<COFF::DebugType, Chunk *> r : debugRecords) {
     r.second->setAlignment(4);
     debugInfoSec->addChunk(r.second);
+  }
+
+  // If .buildid section was not chosen and /build-id is given, create .buildid
+  // section.
+  if (config->buildID && debugInfoSec != buildidSec) {
+    buildidSec->addChunk(debugDirectory);
+    for (std::pair<COFF::DebugType, Chunk *> r : debugRecords) {
+      r.second->setAlignment(4);
+      buildidSec->addChunk(r.second);
+    }
   }
 
   // Create SEH table. x86-only.
@@ -2028,7 +2038,7 @@ void Writer::writeBuildId() {
   // PE contents.
   Configuration *config = &ctx.config;
 
-  if (config->debug) {
+  if (config->debug || config->buildID) {
     assert(buildId && "BuildId is not set!");
     // BuildId->BuildId was filled in when the PDB was written.
   }
@@ -2043,16 +2053,14 @@ void Writer::writeBuildId() {
 
   uint32_t timestamp = config->timestamp;
   uint64_t hash = 0;
-  bool generateSyntheticBuildId =
-      config->mingw && config->debug && config->pdbPath.empty();
 
-  if (config->repro || generateSyntheticBuildId)
+  if (config->repro || config->buildID)
     hash = xxh3_64bits(outputFileData);
 
   if (config->repro)
     timestamp = static_cast<uint32_t>(hash);
 
-  if (generateSyntheticBuildId) {
+  if (config->buildID) {
     // For MinGW builds without a PDB file, we still generate a build id
     // to allow associating a crash dump to the executable.
     buildId->buildId->PDB70.CVSignature = OMF::Signature::PDB70;

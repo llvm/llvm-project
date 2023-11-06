@@ -2332,6 +2332,11 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     }
   }
 
+  // Generate build id hash in .buildid section when:
+  // 1. /build-id
+  // 2. /lldmingw + /debug and not generating pdb file.
+  config->buildID = args.hasArg(OPT_build_id) ||
+                    (config->mingw && config->debug && !shouldCreatePDB);
   // Set default image base if /base is not given.
   if (config->imageBase == uint64_t(-1))
     config->imageBase = getDefaultImageBase();

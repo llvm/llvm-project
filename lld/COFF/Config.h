@@ -317,6 +317,7 @@ struct Configuration {
   bool writeCheckSum = false;
   EmitKind emit = EmitKind::Obj;
   bool allowDuplicateWeak = false;
+  bool buildID = false;
 };
 
 } // namespace lld::coff
