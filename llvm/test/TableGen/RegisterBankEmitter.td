@@ -13,3 +13,9 @@ let Size = 32 in {
 // CHECK: MyTarget::ClassARegClassID
 // CHECK: MyTarget::ClassBRegClassID
 def GPRRegBank : RegisterBank<"GPR", [ClassA]>;
+
+// CHECK: enum PartialMappingIdx
+// CHECK: const RegisterBankInfo::PartialMapping PartMappings
+// CHECK: const PartialMappingIdx BankIDToFirstRegisterClassIdx
+// CHECK: const int BankIDToRegisterClassCount
+  
