@@ -2270,14 +2270,14 @@ bool ConstantExpr::isDesirableCastOp(unsigned Opcode) {
   switch (Opcode) {
   case Instruction::ZExt:
   case Instruction::SExt:
-    return false;
-  case Instruction::Trunc:
   case Instruction::FPTrunc:
   case Instruction::FPExt:
   case Instruction::UIToFP:
   case Instruction::SIToFP:
   case Instruction::FPToUI:
   case Instruction::FPToSI:
+    return false;
+  case Instruction::Trunc:
   case Instruction::PtrToInt:
   case Instruction::IntToPtr:
   case Instruction::BitCast:
