@@ -3574,8 +3574,10 @@ class Rewriter(ClangObject):
     def overwriteChangedFiles(self):
         """
         Save all changed files to disk.
+
+        Returns 1 if any files were not saved successfully, returns 0 otherwise.
         """
-        conf.lib.clang_CXRewriter_overwriteChangedFiles(self)
+        return conf.lib.clang_CXRewriter_overwriteChangedFiles(self)
 
     def writeMainFileToStdOut(self):
         """
