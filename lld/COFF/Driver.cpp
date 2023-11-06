@@ -1616,37 +1616,48 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
 
   // Handle /debug
   bool shouldCreatePDB = false;
-  if (auto *arg = args.getLastArg(OPT_debug, OPT_debug_opt)) {
-    std::string s;
+  for (auto *arg : args.filtered(OPT_debug, OPT_debug_opt)) {
+    std::string str;
     if (arg->getOption().getID() == OPT_debug)
-      s = "full";
+      str = "full";
     else
-      s = StringRef(arg->getValue()).lower();
-    if (s == "fastlink") {
-      warn("/debug:fastlink unsupported; using /debug:full");
-      s = "full";
-    }
-    if (s == "none") {
-    } else if (s == "full" || s == "ghash" || s == "noghash") {
-      config->debug = true;
-      config->incremental = true;
-      config->includeDwarfChunks = true;
-      if (s == "full" || s == "ghash")
-        config->debugGHashes = true;
-      shouldCreatePDB = true;
-      doGC = false;
-    } else if (s == "dwarf") {
-      config->debug = true;
-      config->incremental = true;
-      config->includeDwarfChunks = true;
-      config->writeSymtab = true;
-      config->warnLongSectionNames = false;
-      doGC = false;
-    } else if (s == "symtab") {
-      config->writeSymtab = true;
-      doGC = false;
-    } else {
-      error("/debug: unknown option: " + s);
+      str = StringRef(arg->getValue()).lower();
+    SmallVector<StringRef, 1> vec;
+    StringRef(str).split(vec, ',');
+    for (StringRef s : vec) {
+      if (s == "fastlink") {
+        warn("/debug:fastlink unsupported; using /debug:full");
+        s = "full";
+      }
+      if (s == "none") {
+        config->debug = false;
+        config->incremental = false;
+        config->includeDwarfChunks = false;
+        config->debugGHashes = false;
+        config->writeSymtab = false;
+        shouldCreatePDB = false;
+        doGC = true;
+      } else if (s == "full" || s == "ghash" || s == "noghash") {
+        config->debug = true;
+        config->incremental = true;
+        config->includeDwarfChunks = true;
+        if (s == "full" || s == "ghash")
+          config->debugGHashes = true;
+        shouldCreatePDB = true;
+        doGC = false;
+      } else if (s == "dwarf") {
+        config->debug = true;
+        config->incremental = true;
+        config->includeDwarfChunks = true;
+        config->writeSymtab = true;
+        config->warnLongSectionNames = false;
+        doGC = false;
+      } else if (s == "symtab") {
+        config->writeSymtab = true;
+        doGC = false;
+      } else {
+        error("/debug: unknown option: " + s);
+      }
     }
   }
 
