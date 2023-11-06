@@ -27,6 +27,8 @@ class TemplateParameterList;
 
 namespace comments {
 class FullComment;
+enum class InlineCommandRenderKind;
+enum class ParamCommandPassDirection;
 
 /// Describes the syntax that was used in a documentation command.
 ///
@@ -72,6 +74,7 @@ protected:
     friend class Comment;
 
     /// Type of this AST node.
+    LLVM_PREFERRED_TYPE(CommentKind)
     unsigned Kind : 8;
   };
   enum { NumCommentBits = 8 };
@@ -79,10 +82,12 @@ protected:
   class InlineContentCommentBitfields {
     friend class InlineContentComment;
 
+    LLVM_PREFERRED_TYPE(CommentBitfields)
     unsigned : NumCommentBits;
 
     /// True if there is a newline after this inline content node.
     /// (There is no separate AST node for a newline.)
+    LLVM_PREFERRED_TYPE(bool)
     unsigned HasTrailingNewline : 1;
   };
   enum { NumInlineContentCommentBits = NumCommentBits + 1 };
@@ -90,12 +95,15 @@ protected:
   class TextCommentBitfields {
     friend class TextComment;
 
+    LLVM_PREFERRED_TYPE(InlineContentCommentBitfields)
     unsigned : NumInlineContentCommentBits;
 
     /// True if \c IsWhitespace field contains a valid value.
+    LLVM_PREFERRED_TYPE(bool)
     mutable unsigned IsWhitespaceValid : 1;
 
     /// True if this comment AST node contains only whitespace.
+    LLVM_PREFERRED_TYPE(bool)
     mutable unsigned IsWhitespace : 1;
   };
   enum { NumTextCommentBits = NumInlineContentCommentBits + 2 };
@@ -103,10 +111,13 @@ protected:
   class InlineCommandCommentBitfields {
     friend class InlineCommandComment;
 
+    LLVM_PREFERRED_TYPE(InlineContentCommentBitfields)
     unsigned : NumInlineContentCommentBits;
 
+    LLVM_PREFERRED_TYPE(InlineCommandRenderKind)
     unsigned RenderKind : 3;
 
+    LLVM_PREFERRED_TYPE(CommandTraits::KnownCommandIDs)
     unsigned CommandID : CommandInfo::NumCommandIDBits;
   };
   enum { NumInlineCommandCommentBits = NumInlineContentCommentBits + 3 +
@@ -115,9 +126,11 @@ protected:
   class HTMLTagCommentBitfields {
     friend class HTMLTagComment;
 
+    LLVM_PREFERRED_TYPE(InlineContentCommentBitfields)
     unsigned : NumInlineContentCommentBits;
 
     /// True if we found that this tag is malformed in some way.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned IsMalformed : 1;
   };
   enum { NumHTMLTagCommentBits = NumInlineContentCommentBits + 1 };
@@ -125,10 +138,12 @@ protected:
   class HTMLStartTagCommentBitfields {
     friend class HTMLStartTagComment;
 
+    LLVM_PREFERRED_TYPE(HTMLTagCommentBitfields)
     unsigned : NumHTMLTagCommentBits;
 
     /// True if this tag is self-closing (e. g., <br />).  This is based on tag
     /// spelling in comment (plain <br> would not set this flag).
+    LLVM_PREFERRED_TYPE(bool)
     unsigned IsSelfClosing : 1;
   };
   enum { NumHTMLStartTagCommentBits = NumHTMLTagCommentBits + 1 };
@@ -136,12 +151,15 @@ protected:
   class ParagraphCommentBitfields {
     friend class ParagraphComment;
 
+    LLVM_PREFERRED_TYPE(CommentBitfields)
     unsigned : NumCommentBits;
 
     /// True if \c IsWhitespace field contains a valid value.
+    LLVM_PREFERRED_TYPE(bool)
     mutable unsigned IsWhitespaceValid : 1;
 
     /// True if this comment AST node contains only whitespace.
+    LLVM_PREFERRED_TYPE(bool)
     mutable unsigned IsWhitespace : 1;
   };
   enum { NumParagraphCommentBits = NumCommentBits + 2 };
@@ -149,12 +167,15 @@ protected:
   class BlockCommandCommentBitfields {
     friend class BlockCommandComment;
 
+    LLVM_PREFERRED_TYPE(CommentBitfields)
     unsigned : NumCommentBits;
 
+    LLVM_PREFERRED_TYPE(CommandTraits::KnownCommandIDs)
     unsigned CommandID : CommandInfo::NumCommandIDBits;
 
     /// Describes the syntax that was used in a documentation command.
     /// Contains values from CommandMarkerKind enum.
+    LLVM_PREFERRED_TYPE(CommandMarkerKind)
     unsigned CommandMarker : 1;
   };
   enum { NumBlockCommandCommentBits = NumCommentBits +
@@ -163,12 +184,15 @@ protected:
   class ParamCommandCommentBitfields {
     friend class ParamCommandComment;
 
+    LLVM_PREFERRED_TYPE(BlockCommandCommentBitfields)
     unsigned : NumBlockCommandCommentBits;
 
-    /// Parameter passing direction, see ParamCommandComment::PassDirection.
+    /// Parameter passing direction.
+    LLVM_PREFERRED_TYPE(ParamCommandPassDirection)
     unsigned Direction : 2;
 
     /// True if direction was specified explicitly in the comment.
+    LLVM_PREFERRED_TYPE(bool)
     unsigned IsDirectionExplicit : 1;
   };
   enum { NumParamCommandCommentBits = NumBlockCommandCommentBits + 3 };
@@ -299,7 +323,13 @@ private:
 
 /// The most appropriate rendering mode for this command, chosen on command
 /// semantics in Doxygen.
-enum InlineCommandRenderKind { Normal, Bold, Monospaced, Emphasized, Anchor };
+enum class InlineCommandRenderKind {
+  Normal,
+  Bold,
+  Monospaced,
+  Emphasized,
+  Anchor
+};
 
 /// A command with word-like arguments that is considered inline content.
 class InlineCommandComment : public InlineContentComment {
@@ -1005,28 +1035,35 @@ struct DeclInfo {
   };
 
   /// If false, only \c CommentDecl is valid.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsFilled : 1;
 
   /// Simplified kind of \c CommentDecl, see \c DeclKind enum.
+  LLVM_PREFERRED_TYPE(DeclKind)
   unsigned Kind : 3;
 
   /// Is \c CommentDecl a template declaration.
+  LLVM_PREFERRED_TYPE(TemplateDeclKind)
   unsigned TemplateKind : 2;
 
   /// Is \c CommentDecl an ObjCMethodDecl.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsObjCMethod : 1;
 
   /// Is \c CommentDecl a non-static member function of C++ class or
   /// instance method of ObjC class.
   /// Can be true only if \c IsFunctionDecl is true.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsInstanceMethod : 1;
 
   /// Is \c CommentDecl a static member function of C++ class or
   /// class method of ObjC class.
   /// Can be true only if \c IsFunctionDecl is true.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsClassMethod : 1;
 
   /// Is \c CommentDecl something we consider a "function" that's variadic.
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsVariadic : 1;
 
   void fill();
