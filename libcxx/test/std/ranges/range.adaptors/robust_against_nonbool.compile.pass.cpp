@@ -38,7 +38,8 @@ auto pred1     = StrictUnaryPredicate;
 auto pred2     = StrictBinaryPredicate;
 
 void f(Range in) {
-  (void)pred1; (void)pred2;
+  (void)pred1;
+  (void)pred2;
 
 #if TEST_STD_VER >= 23
   {
