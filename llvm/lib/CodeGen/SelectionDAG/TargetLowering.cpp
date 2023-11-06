@@ -8374,11 +8374,6 @@ SDValue TargetLowering::expandFMINIMUM_FMAXIMUM(SDNode *N,
   unsigned Opc = N->getOpcode();
   EVT VT = N->getValueType(0);
   EVT CCVT = getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
-  bool NoNaN = (N->getFlags().hasNoNaNs() ||
-                (DAG.isKnownNeverNaN(LHS) && DAG.isKnownNeverNaN(RHS)));
-  bool NoZeroSign =
-      (N->getFlags().hasNoSignedZeros() || DAG.isKnownNeverZeroFloat(LHS) ||
-       DAG.isKnownNeverZeroFloat(RHS));
   bool IsMax = Opc == ISD::FMAXIMUM;
 
   if (VT.isVector() &&
@@ -8389,19 +8384,21 @@ SDValue TargetLowering::expandFMINIMUM_FMAXIMUM(SDNode *N,
   // available, use plain select with setcc instead.
   SDValue MinMax;
   if (isOperationLegalOrCustom(IsMax ? ISD::FMAXNUM_IEEE : ISD::FMINNUM_IEEE,
-                               VT))
+                               VT)) {
     MinMax = DAG.getNode(IsMax ? ISD::FMAXNUM_IEEE : ISD::FMINNUM_IEEE, DL, VT,
                          LHS, RHS);
-  else if (isOperationLegalOrCustom(IsMax ? ISD::FMAXNUM : ISD::FMINNUM, VT))
+  } else if (isOperationLegalOrCustom(IsMax ? ISD::FMAXNUM : ISD::FMINNUM,
+                                      VT)) {
     MinMax = DAG.getNode(IsMax ? ISD::FMAXNUM : ISD::FMINNUM, DL, VT, LHS, RHS);
-  else
-    MinMax = DAG.getSelect(
-        DL, VT,
-        DAG.getSetCC(DL, CCVT, LHS, RHS, IsMax ? ISD::SETGT : ISD::SETLT), LHS,
-        RHS);
+  } else {
+    SDValue Compare =
+        DAG.getSetCC(DL, CCVT, LHS, RHS, IsMax ? ISD::SETGT : ISD::SETLT);
+    MinMax = DAG.getSelect(DL, VT, Compare, LHS, RHS);
+  }
 
   // Propagate any NaN of both operands
-  if (!NoNaN) {
+  if (!N->getFlags().hasNoNaNs() &&
+      (!DAG.isKnownNeverNaN(LHS) || !DAG.isKnownNeverNaN(RHS))) {
     ConstantFP *FPNaN = ConstantFP::get(
         *DAG.getContext(), APFloat::getNaN(DAG.EVTToAPFloatSemantics(VT)));
     MinMax = DAG.getSelect(DL, VT, DAG.getSetCC(DL, CCVT, LHS, RHS, ISD::SETUO),
@@ -8409,7 +8406,8 @@ SDValue TargetLowering::expandFMINIMUM_FMAXIMUM(SDNode *N,
   }
 
   // fminimum/fmaximum requires -0.0 less than +0.0
-  if (!NoZeroSign) {
+  if (!N->getFlags().hasNoSignedZeros() && !DAG.isKnownNeverZeroFloat(LHS) &&
+      !DAG.isKnownNeverZeroFloat(RHS)) {
     SDValue IsZero = DAG.getSetCC(DL, CCVT, MinMax,
                                   DAG.getConstantFP(0.0, DL, VT), ISD::SETEQ);
     SDValue TestZero =
