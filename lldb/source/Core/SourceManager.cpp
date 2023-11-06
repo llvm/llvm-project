@@ -300,6 +300,16 @@ size_t SourceManager::DisplaySourceLinesWithLineNumbersUsingLastFile(
         break;
       }
     }
+
+    Checksum checksum = last_file_sp->GetFileSpec().GetChecksum();
+    if (checksum && checksum != last_file_sp->GetChecksum()) {
+      llvm::call_once(last_file_sp->GetChecksumOnceFlag(), [&]() {
+        s->Printf("warning: source file checksum mismatch between the debug "
+                  "info (%s) and the file on disk (%s).\n",
+                  checksum.digest().c_str(),
+                  last_file_sp->GetChecksum().digest().c_str());
+      });
+    }
   }
   return *delta;
 }
@@ -446,13 +456,13 @@ void SourceManager::FindLinesMatchingRegex(FileSpec &file_spec,
 
 SourceManager::File::File(const FileSpec &file_spec,
                           lldb::DebuggerSP debugger_sp)
-    : m_file_spec_orig(file_spec), m_file_spec(), m_mod_time(),
+    : m_file_spec_orig(file_spec), m_file_spec(), m_mod_time(), m_checksum(),
       m_debugger_wp(debugger_sp), m_target_wp(TargetSP()) {
   CommonInitializer(file_spec, {});
 }
 
 SourceManager::File::File(const FileSpec &file_spec, TargetSP target_sp)
-    : m_file_spec_orig(file_spec), m_file_spec(), m_mod_time(),
+    : m_file_spec_orig(file_spec), m_file_spec(), m_mod_time(), m_checksum(),
       m_debugger_wp(target_sp ? target_sp->GetDebugger().shared_from_this()
                               : DebuggerSP()),
       m_target_wp(target_sp) {
@@ -523,14 +533,17 @@ void SourceManager::File::CommonInitializer(const FileSpec &file_spec,
   }
 
   // If the file exists, read in the data.
-  if (m_mod_time != llvm::sys::TimePoint<>())
+  if (m_mod_time != llvm::sys::TimePoint<>()) {
     m_data_sp = FileSystem::Instance().CreateDataBuffer(m_file_spec);
+    m_checksum = llvm::MD5::hash(m_data_sp->GetData());
+  }
 }
 
 void SourceManager::File::SetFileSpec(FileSpec file_spec) {
   resolve_tilde(file_spec);
   m_file_spec = std::move(file_spec);
   m_mod_time = FileSystem::Instance().GetModificationTime(m_file_spec);
+  m_checksum = file_spec.GetChecksum();
 }
 
 uint32_t SourceManager::File::GetLineOffset(uint32_t line) {
@@ -821,13 +834,16 @@ SourceManager::FileSP SourceManager::SourceFileCache::FindSourceFile(
 }
 
 void SourceManager::SourceFileCache::Dump(Stream &stream) const {
-  stream << "Modification time   Lines    Path\n";
-  stream << "------------------- -------- --------------------------------\n";
+  stream
+      << "Modification time   MD5 Checksum                     Lines    Path\n";
+  stream << "------------------- -------------------------------- -------- "
+            "--------------------------------\n";
   for (auto &entry : m_file_cache) {
     if (!entry.second)
       continue;
     FileSP file = entry.second;
-    stream.Format("{0:%Y-%m-%d %H:%M:%S} {1,8:d} {2}\n", file->GetTimestamp(),
+    stream.Format("{0:%Y-%m-%d %H:%M:%S} {1} {2,8:d} {3}\n",
+                  file->GetTimestamp(), file->GetChecksum().digest(),
                   file->GetNumLines(), entry.first.GetPath());
   }
 }
