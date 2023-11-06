@@ -341,7 +341,7 @@ def testVectorType():
             print("Exception not produced")
 
         try:
-            VectorType.get(shape, f32, scalable=[False, True], scalable_dims=[42])
+            VectorType.get(shape, f32, scalable_dims=[42])
         except ValueError as e:
             # CHECK: Scalable dimension index out of bounds.
             print(e)
