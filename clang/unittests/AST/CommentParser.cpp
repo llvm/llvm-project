@@ -193,8 +193,9 @@ HasParamCommandAt(const Comment *C, const CommandTraits &Traits, size_t Idx,
 
   if (PCC->getDirection() != Direction)
     return ::testing::AssertionFailure()
-        << "ParamCommandComment has direction " << PCC->getDirection() << ", "
-           "expected " << Direction;
+           << "ParamCommandComment has direction "
+           << llvm::to_underlying(PCC->getDirection()) << ", expected "
+           << llvm::to_underlying(Direction);
 
   if (PCC->isDirectionExplicit() != IsDirectionExplicit)
     return ::testing::AssertionFailure()
