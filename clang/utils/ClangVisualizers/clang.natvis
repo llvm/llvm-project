@@ -817,7 +817,7 @@ For later versions of Visual Studio, no setup is required-->
     <DisplayString IncludeView="cached"> {IncludeMacroStack._Mypair._Myval2._Mylast - 1,na}</DisplayString>
     <DisplayString Condition="CurLexer._Mypair._Myval2 != 0">{CurLexer._Mypair._Myval2,na}</DisplayString>
     <DisplayString Condition="CurTokenLexer._Mypair._Myval2 != 0">Expanding Macro: {CurTokenLexer._Mypair._Myval2,na}</DisplayString>
-    <!-- Can't use CurLexerKind because natvis sees the type rather than the variable -->
+    <!-- Can't use CurLexerCallback because natvis sees the type rather than the variable -->
     <DisplayString Condition="IncludeMacroStack._Mypair._Myval2._Mylast - IncludeMacroStack._Mypair._Myval2._Myfirst">
       {this,view(cached)}
     </DisplayString>
