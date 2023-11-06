@@ -68,7 +68,7 @@ Partial mesh::getPartialTypeFromReduction(IteratorType iType) {
   case IteratorType::ReductionMin:
     return Partial::Min;
   default:
-    assert(0 && "No corresponding partial type can be found");
+    llvm_unreachable("No corresponding partial type can be found");
   }
 }
 
