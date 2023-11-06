@@ -280,6 +280,7 @@ private:
       const parser::Name &, const Symbol &, Symbol::Flag);
   void AllowOnlyArrayAndSubArray(const parser::AccObjectList &objectList);
   void DoNotAllowAssumedSizedArray(const parser::AccObjectList &objectList);
+  void AllowOnlyVariable(const parser::AccObject &object);
   void EnsureAllocatableOrPointer(
       const llvm::acc::Clause clause, const parser::AccObjectList &objectList);
   void AddRoutineInfoToSymbol(
@@ -1117,6 +1118,25 @@ void AccAttributeVisitor::DoNotAllowAssumedSizedArray(
   }
 }
 
+void AccAttributeVisitor::AllowOnlyVariable(const parser::AccObject &object) {
+  common::visit(
+      common::visitors{
+          [&](const parser::Designator &designator) {
+            const auto &name{GetLastName(designator)};
+            if (name.symbol && !semantics::IsVariableName(*name.symbol)) {
+              context_.Say(designator.source,
+                  "Only variables are allowed in data clauses on the %s "
+                  "directive"_err_en_US,
+                  parser::ToUpperCaseLetters(
+                      llvm::acc::getOpenACCDirectiveName(GetContext().directive)
+                          .str()));
+            }
+          },
+          [&](const auto &name) {},
+      },
+      object.u);
+}
+
 bool AccAttributeVisitor::Pre(const parser::OpenACCCacheConstruct &x) {
   const auto &verbatim{std::get<parser::Verbatim>(x.t)};
   PushContext(verbatim.source, llvm::acc::Directive::ACCD_cache);
@@ -1281,6 +1301,7 @@ Symbol *AccAttributeVisitor::ResolveAccCommonBlockName(
 void AccAttributeVisitor::ResolveAccObjectList(
     const parser::AccObjectList &accObjectList, Symbol::Flag accFlag) {
   for (const auto &accObject : accObjectList.v) {
+    AllowOnlyVariable(accObject);
     ResolveAccObject(accObject, accFlag);
   }
 }
