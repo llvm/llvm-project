@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // This tablegen backend is responsible for emitting a description of a target
-// register bank for a code generator.
+// register bank and register bank info for a code generator.
 //
 //===----------------------------------------------------------------------===//
 
@@ -112,7 +112,11 @@ private:
   void emitBaseClassDefinition(raw_ostream &OS, const StringRef TargetName,
                                const std::vector<RegisterBank> &Banks);
   void emitBaseClassImplementation(raw_ostream &OS, const StringRef TargetName,
-                                   std::vector<RegisterBank> &Banks);
+                                   const std::vector<RegisterBank> &Banks);
+  void emitRBIHeader(raw_ostream &OS, const StringRef TargetName,
+                     const std::vector<RegisterBank> &Banks);
+  void emitRBIImplementation(raw_ostream &OS, const StringRef TargetName,
+                   const std::vector<RegisterBank> &Banks);
 
 public:
   RegisterBankEmitter(RecordKeeper &R) : Target(R), Records(R) {}
@@ -213,7 +217,7 @@ static void visitRegisterBankClasses(
 
 void RegisterBankEmitter::emitBaseClassImplementation(
     raw_ostream &OS, StringRef TargetName,
-    std::vector<RegisterBank> &Banks) {
+    const std::vector<RegisterBank> &Banks) {
   const CodeGenRegBank &RegisterClassHierarchy = Target.getRegBank();
   const CodeGenHwModes &CGH = Target.getHwModes();
 
@@ -231,7 +235,9 @@ void RegisterBankEmitter::emitBaseClassImplementation(
     for (const auto &RCs : RCsGroupedByWord) {
       OS << "    // " << LowestIdxInWord << "-" << (LowestIdxInWord + 31) << "\n";
       for (const auto &RC : RCs) {
-        OS << "    (1u << (" << RC->getQualifiedIdName() << " - "
+        std::string QualifiedRegClassID =
+            (Twine(RC->Namespace) + "::" + RC->getName() + "RegClassID").str();
+        OS << "    (1u << (" << QualifiedRegClassID << " - "
            << LowestIdxInWord << ")) |\n";
       }
       OS << "    0,\n";
@@ -244,7 +250,7 @@ void RegisterBankEmitter::emitBaseClassImplementation(
   for (const auto &Bank : Banks) {
     std::string QualifiedBankID =
         (TargetName + "::" + Bank.getEnumeratorName()).str();
-    OS << "constexpr RegisterBank " << Bank.getInstanceVarName() << "(/* ID */ "
+    OS << "const RegisterBank " << Bank.getInstanceVarName() << "(/* ID */ "
        << QualifiedBankID << ", /* Name */ \"" << Bank.getName() << "\", "
        << "/* CoveredRegClasses */ " << Bank.getCoverageArrayName()
        << ", /* NumRegClasses */ "
@@ -289,6 +295,76 @@ void RegisterBankEmitter::emitBaseClassImplementation(
      << "} // end namespace llvm\n";
 }
 
+void RegisterBankEmitter::emitRBIHeader(
+    raw_ostream &OS, const StringRef TargetName,
+    const std::vector<RegisterBank> &Banks) {
+  const CodeGenRegBank &RegisterClassHierarchy = Target.getRegBank();
+
+  OS << "namespace llvm {\n"
+     << "namespace " << TargetName << " {\n"
+     << "enum PartialMappingIdx {\n"
+     << "  PMI_None = -1,\n";
+
+  // Banks and Register Classes are *not* emitted in their original text order
+  int ID = 0;
+  for (const auto &Bank : Banks) {
+    for (const CodeGenRegisterClass *RC :
+         Bank.getExplicitlySpecifiedRegisterClasses(RegisterClassHierarchy)) {
+      OS << "  PMI_" << RC->getName() << " = " << ID++ << ",\n";
+    }
+  }
+  OS << "};\n";
+  OS << "} // end namespace " << TargetName << "\n"
+     << "} // end namespace llvm\n";
+}
+
+void RegisterBankEmitter::emitRBIImplementation(raw_ostream &OS,
+                                      const StringRef TargetName,
+                                      const std::vector<RegisterBank> &Banks) {
+  const CodeGenRegBank &RegisterClassHierarchy = Target.getRegBank();
+
+  OS << "namespace llvm {\n"
+     << "namespace " << TargetName << " {\n"
+     << "RegisterBankInfo::PartialMapping PartMappings[] = {\n";
+  for (const auto &Bank : Banks) {
+    for (const CodeGenRegisterClass *RC :
+         Bank.getExplicitlySpecifiedRegisterClasses(RegisterClassHierarchy)) {
+      if (RC->RSI.isSimple()) {
+        // StartIdx is currently 0 in all of the in-tree backends
+        OS << "  { 0, " << RC->RSI.getSimple().RegSize << ", "
+           << Bank.getInstanceVarName() << " },\n";
+      } else {
+        // FIXME: dumb workaround for RISCV assert() for now
+        OS << " // non-Simple() RegisterClass " << RC->getName() << "\n";
+      }
+    }
+  }
+  OS << "};\n\n";
+
+  // emit PartialMappingIdx of the first Register Class of each Register Bank
+  OS << "PartialMappingIdx BankIDToFirstRegisterClassIdx[] = {\n";
+  for (const auto &Bank : Banks) {
+    OS << "  PMI_"
+       << Bank.getExplicitlySpecifiedRegisterClasses(RegisterClassHierarchy)[0]
+              ->getName()
+       << ",\n";
+  }
+  OS << "};\n\n";
+
+  // emit count of Register Classes of each Register Bank
+  OS << "int BankIDToRegisterClassCount[] = {\n";
+  for (const auto &Bank : Banks) {
+    OS << "  "
+       << Bank.getExplicitlySpecifiedRegisterClasses(RegisterClassHierarchy)
+              .size()
+       << ",\n";
+  }
+  OS << "};\n\n";
+
+  OS << "} // end namespace " << TargetName << "\n"
+     << "} // end namespace llvm\n";
+}
+
 void RegisterBankEmitter::run(raw_ostream &OS) {
   StringRef TargetName = Target.getName();
   const CodeGenRegBank &RegisterClassHierarchy = Target.getRegBank();
@@ -330,7 +406,8 @@ void RegisterBankEmitter::run(raw_ostream &OS) {
   }
 
   Records.startTimer("Emit output");
-  emitSourceFileHeader("Register Bank Source Fragments", OS);
+  emitSourceFileHeader("Register Bank And Register Bank Info Source Fragments",
+                       OS);
   OS << "#ifdef GET_REGBANK_DECLARATIONS\n"
      << "#undef GET_REGBANK_DECLARATIONS\n";
   emitHeader(OS, TargetName, Banks);
@@ -342,8 +419,17 @@ void RegisterBankEmitter::run(raw_ostream &OS) {
      << "#ifdef GET_TARGET_REGBANK_IMPL\n"
      << "#undef GET_TARGET_REGBANK_IMPL\n";
   emitBaseClassImplementation(OS, TargetName, Banks);
-  OS << "#endif // GET_TARGET_REGBANK_IMPL\n";
+  OS << "#endif // GET_TARGET_REGBANK_IMPL\n\n"
+     << "#ifdef GET_REGBANKINFO_DECLARATIONS\n"
+     << "#undef GET_REGBANKINFO_DECLARATIONS\n";
+  emitRBIHeader(OS, TargetName, Banks);
+  OS << "#endif // GET_REGBANKINFO_DECLARATIONS\n\n"
+     << "#ifdef GET_REGBANKINFO_IMPL\n"
+     << "#undef GET_REGBANKINFO_IMPL\n";
+  emitRBIImplementation(OS, TargetName, Banks);
+  OS << "#endif // GET_REGBANKINFO_IMPL\n";
 }
 
 static TableGen::Emitter::OptClass<RegisterBankEmitter>
-    X("gen-register-bank", "Generate registers bank descriptions");
+    X("gen-register-bank",
+      "Generate register bank and register bank info descriptions");
