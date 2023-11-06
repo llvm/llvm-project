@@ -724,7 +724,7 @@ mlir::Type getTypeFromBounds(llvm::SmallVector<mlir::Value> &bounds,
     if (shape.empty() || shape.size() != bounds.size())
       return ty;
     auto newSeqTy = fir::SequenceType::get(shape, seqTy.getEleTy());
-    if (mlir::isa<fir::ReferenceType>(ty))
+    if (mlir::isa<fir::ReferenceType, fir::PointerType>(ty))
       return fir::ReferenceType::get(newSeqTy);
     return newSeqTy;
   }
