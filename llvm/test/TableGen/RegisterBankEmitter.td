@@ -15,7 +15,9 @@ let Size = 32 in {
 def GPRRegBank : RegisterBank<"GPR", [ClassA]>;
 
 // CHECK: enum PartialMappingIdx
+// CHECK: PMI_ClassA = 0,
 // CHECK: const RegisterBankInfo::PartialMapping PartMappings
+// CHECK: { 0, 32, GPRRegBank },
 // CHECK: const PartialMappingIdx BankIDToFirstRegisterClassIdx
+// CHECK: PMI_ClassA,
 // CHECK: const int BankIDToRegisterClassCount
-  
