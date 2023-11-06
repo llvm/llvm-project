@@ -34,10 +34,11 @@ static_assert(std::is_trivially_destructible_v<DeclInfo>,
 
 const char *Comment::getCommentKindName() const {
   switch (getCommentKind()) {
-  case NoCommentKind: return "NoCommentKind";
+  case CommentKind::None:
+    return "None";
 #define ABSTRACT_COMMENT(COMMENT)
-#define COMMENT(CLASS, PARENT) \
-  case CLASS##Kind: \
+#define COMMENT(CLASS, PARENT)                                                 \
+  case CommentKind::CLASS:                                                     \
     return #CLASS;
 #include "clang/AST/CommentNodes.inc"
 #undef COMMENT
@@ -81,10 +82,11 @@ static inline void CheckCommentASTNodes() {
 
 Comment::child_iterator Comment::child_begin() const {
   switch (getCommentKind()) {
-  case NoCommentKind: llvm_unreachable("comment without a kind");
+  case CommentKind::None:
+    llvm_unreachable("comment without a kind");
 #define ABSTRACT_COMMENT(COMMENT)
-#define COMMENT(CLASS, PARENT) \
-  case CLASS##Kind: \
+#define COMMENT(CLASS, PARENT)                                                 \
+  case CommentKind::CLASS:                                                     \
     return static_cast<const CLASS *>(this)->child_begin();
 #include "clang/AST/CommentNodes.inc"
 #undef COMMENT
@@ -95,10 +97,11 @@ Comment::child_iterator Comment::child_begin() const {
 
 Comment::child_iterator Comment::child_end() const {
   switch (getCommentKind()) {
-  case NoCommentKind: llvm_unreachable("comment without a kind");
+  case CommentKind::None:
+    llvm_unreachable("comment without a kind");
 #define ABSTRACT_COMMENT(COMMENT)
-#define COMMENT(CLASS, PARENT) \
-  case CLASS##Kind: \
+#define COMMENT(CLASS, PARENT)                                                 \
+  case CommentKind::CLASS:                                                     \
     return static_cast<const CLASS *>(this)->child_end();
 #include "clang/AST/CommentNodes.inc"
 #undef COMMENT
