@@ -89,6 +89,9 @@ typedef SymbolVendor *(*SymbolVendorCreateInstance)(
     const lldb::ModuleSP &module_sp,
     lldb_private::Stream
         *feedback_strm); // Module can be NULL for default system symbol vendor
+typedef SymbolLocator *(*SymbolLocatorCreateInstance)();
+typedef std::optional<ModuleSpec> (*SymbolLocatorLocateExecutableObjectFile)(
+    const ModuleSpec &module_spec);
 typedef bool (*BreakpointHitCallback)(void *baton,
                                       StoppointCallbackContext *context,
                                       lldb::user_id_t break_id,

@@ -345,6 +345,19 @@ public:
   static SymbolVendorCreateInstance
   GetSymbolVendorCreateCallbackAtIndex(uint32_t idx);
 
+  // SymbolLocator
+  static bool RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
+                             SymbolLocatorCreateInstance create_callback,
+                             SymbolLocatorLocateExecutableObjectFile
+                                 locate_executable_object_file = nullptr);
+
+  static bool UnregisterPlugin(SymbolLocatorCreateInstance create_callback);
+
+  static SymbolLocatorCreateInstance
+  GetSymbolLocatorCreateCallbackAtIndex(uint32_t idx);
+
+  static ModuleSpec LocateExecutableObjectFile(const ModuleSpec &module_spec);
+
   // Trace
   static bool RegisterPlugin(
       llvm::StringRef name, llvm::StringRef description,
