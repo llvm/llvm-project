@@ -76,10 +76,6 @@ LLVMTypeConverter::LLVMTypeConverter(MLIRContext *ctx,
                                         : std::nullopt;
   });
 
-  // LLVM container types may (recursively) contain other types that must be
-  // converted even when the outer type is compatible.
-  addConversion([&](LLVM::LLVMPointerType type) { return type; });
-
   addConversion([&](LLVM::LLVMStructType type, SmallVectorImpl<Type> &results)
                     -> std::optional<LogicalResult> {
     // Fastpath for types that won't be converted by this callback anyway.
