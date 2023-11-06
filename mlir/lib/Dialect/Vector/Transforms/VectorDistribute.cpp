@@ -1560,6 +1560,9 @@ struct WarpOpScfForOp : public OpRewritePattern<WarpExecuteOnLane0Op> {
         operand.set(innerWarp.getBodyRegion().getArgument(it->second));
       }
     });
+
+    // Finally, hoist out any now uniform code from the inner warp op.
+    mlir::vector::moveScalarUniformCode(innerWarp);
     return success();
   }
 
