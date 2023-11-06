@@ -15,7 +15,6 @@
 
 #include "Utils.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
-#include "mlir/Dialect/SPIRV/IR/SPIRVAttributes.h"
 #include "mlir/Pass/Pass.h"
 #include <optional>
 

@@ -227,7 +227,7 @@ def GpuSPIRVAttachTarget: Pass<"spirv-attach-target", ""> {
            /*default=*/ "\"Unknown\"",
            "Device Type">,
     Option<"deviceId", "device_id", "uint32_t",
-           /*default=*/ "mlir::spirv::TargetEnvAttr::kUnknownDeviceID",
+           /*default=*/ "",
            "Device ID">,
   ];
 }
