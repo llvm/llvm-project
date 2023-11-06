@@ -1,4 +1,4 @@
-; RUN: opt < %s -passes=asan -S | FileCheck %s
+; RUN: opt < %s -passes=asan -asan-use-odr-indicator=0 -asan-use-private-alias=0 -S | FileCheck %s
 
 ; Generated like so:
 ; $ clang -S -emit-llvm -Xclang -disable-llvm-passes -fsanitize=address -O1 t.cpp -o t.ll

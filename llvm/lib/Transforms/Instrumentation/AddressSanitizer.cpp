@@ -404,12 +404,12 @@ static cl::opt<uint32_t> ClForceExperiment(
 static cl::opt<bool>
     ClUsePrivateAlias("asan-use-private-alias",
                       cl::desc("Use private aliases for global variables"),
-                      cl::Hidden, cl::init(false));
+                      cl::Hidden, cl::init(true));
 
 static cl::opt<bool>
     ClUseOdrIndicator("asan-use-odr-indicator",
                       cl::desc("Use odr indicators to improve ODR reporting"),
-                      cl::Hidden, cl::init(false));
+                      cl::Hidden, cl::init(true));
 
 static cl::opt<bool>
     ClUseGlobalsGC("asan-globals-live-support",
@@ -780,7 +780,7 @@ class ModuleAddressSanitizer {
 public:
   ModuleAddressSanitizer(Module &M, bool CompileKernel = false,
                          bool Recover = false, bool UseGlobalsGC = true,
-                         bool UseOdrIndicator = false,
+                         bool UseOdrIndicator = true,
                          AsanDtorKind DestructorKind = AsanDtorKind::Global,
                          AsanCtorKind ConstructorKind = AsanCtorKind::Global)
       : CompileKernel(ClEnableKasan.getNumOccurrences() > 0 ? ClEnableKasan
@@ -788,8 +788,12 @@ public:
         Recover(ClRecover.getNumOccurrences() > 0 ? ClRecover : Recover),
         UseGlobalsGC(UseGlobalsGC && ClUseGlobalsGC && !this->CompileKernel),
         // Enable aliases as they should have no downside with ODR indicators.
-        UsePrivateAlias(UseOdrIndicator || ClUsePrivateAlias),
-        UseOdrIndicator(UseOdrIndicator || ClUseOdrIndicator),
+        UsePrivateAlias(ClUsePrivateAlias.getNumOccurrences() > 0
+                            ? ClUsePrivateAlias
+                            : UseOdrIndicator),
+        UseOdrIndicator(ClUseOdrIndicator.getNumOccurrences() > 0
+                            ? ClUseOdrIndicator
+                            : UseOdrIndicator),
         // Not a typo: ClWithComdat is almost completely pointless without
         // ClUseGlobalsGC (because then it only works on modules without
         // globals, which are rare); it is a prerequisite for ClUseGlobalsGC;

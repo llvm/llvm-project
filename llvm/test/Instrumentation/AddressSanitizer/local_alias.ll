@@ -1,5 +1,5 @@
 ; Defaults
-; RUN: opt < %s -passes=asan -S | FileCheck %s --check-prefixes=CHECK-NOALIAS,CHECK-NOINDICATOR
+; RUN: opt < %s -passes=asan -S | FileCheck %s --check-prefixes=CHECK-ALIAS,CHECK-INDICATOR
 
 ; {newPM,legacyPM} x {alias0,alias1} x {odr0,odr1}
 ; RUN: opt < %s -passes=asan             -asan-use-private-alias=0 -asan-use-odr-indicator=0 -S | FileCheck %s --check-prefixes=CHECK-NOALIAS,CHECK-NOINDICATOR
