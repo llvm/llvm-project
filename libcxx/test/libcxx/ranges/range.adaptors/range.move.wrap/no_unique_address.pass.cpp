@@ -20,7 +20,7 @@
 template <class T, bool ExpectNoUniqueAddress>
 void test_no_unique_address() {
   struct Test {
-    [[no_unique_address]] std::ranges::__movable_box<T> box_;
+    _LIBCPP_NO_UNIQUE_ADDRESS std::ranges::__movable_box<T> box_;
     bool b2;
   };
 
