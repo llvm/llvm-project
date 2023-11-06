@@ -1280,15 +1280,7 @@ Expected<bool> XCOFFSymbolRef::isFunction() const {
     if (!NextSym.isCsectSymbol())
       return true;
 
-    Expected<uint64_t> SymbolAddressOrErr = getAddress();
-    if (!SymbolAddressOrErr)
-      return false;
-
-    Expected<uint64_t> NextSymbolAddressOrErr = NextSym.getAddress();
-    if (!NextSymbolAddressOrErr)
-      return true;
-
-    if (SymbolAddressOrErr.get() != NextSymbolAddressOrErr.get())
+    if (cantFail(getAddress()) != cantFail(NextSym.getAddress()))
       return true;
 
     // Check next symbol is XTY_LD. If so, this symbol is not a function.
