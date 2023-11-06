@@ -4619,8 +4619,8 @@ llvm::DILocalVariable *CGDebugInfo::EmitDeclare(const VarDecl *VD,
   // If this is implicit parameter of CXXThis or ObjCSelf kind, then give it an
   // object pointer flag.
   if (const auto *IPD = dyn_cast<ImplicitParamDecl>(VD)) {
-    if (IPD->getParameterKind() == ImplicitParamDecl::CXXThis ||
-        IPD->getParameterKind() == ImplicitParamDecl::ObjCSelf)
+    if (IPD->getParameterKind() == ImplicitParamKind::CXXThis ||
+        IPD->getParameterKind() == ImplicitParamKind::ObjCSelf)
       Flags |= llvm::DINode::FlagObjectPointer;
   }
 
@@ -4953,7 +4953,7 @@ void CGDebugInfo::EmitDeclareOfBlockDeclRefVariable(
   // Self is passed along as an implicit non-arg variable in a
   // block. Mark it as the object pointer.
   if (const auto *IPD = dyn_cast<ImplicitParamDecl>(VD))
-    if (IPD->getParameterKind() == ImplicitParamDecl::ObjCSelf)
+    if (IPD->getParameterKind() == ImplicitParamKind::ObjCSelf)
       Ty = CreateSelfType(VD->getType(), Ty);
 
   // Get location information.

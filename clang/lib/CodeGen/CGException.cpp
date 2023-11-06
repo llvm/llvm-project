@@ -2028,17 +2028,17 @@ void CodeGenFunction::startOutlinedSEHHelper(CodeGenFunction &ParentCGF,
       Args.push_back(ImplicitParamDecl::Create(
           getContext(), /*DC=*/nullptr, StartLoc,
           &getContext().Idents.get("exception_pointers"),
-          getContext().VoidPtrTy, ImplicitParamDecl::Other));
+          getContext().VoidPtrTy, ImplicitParamKind::Other));
     } else {
       Args.push_back(ImplicitParamDecl::Create(
           getContext(), /*DC=*/nullptr, StartLoc,
           &getContext().Idents.get("abnormal_termination"),
-          getContext().UnsignedCharTy, ImplicitParamDecl::Other));
+          getContext().UnsignedCharTy, ImplicitParamKind::Other));
     }
     Args.push_back(ImplicitParamDecl::Create(
         getContext(), /*DC=*/nullptr, StartLoc,
         &getContext().Idents.get("frame_pointer"), getContext().VoidPtrTy,
-        ImplicitParamDecl::Other));
+        ImplicitParamKind::Other));
   }
 
   QualType RetTy = IsFilter ? getContext().LongTy : getContext().VoidTy;

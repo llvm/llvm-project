@@ -1338,7 +1338,7 @@ QualType CodeGenFunction::BuildFunctionArgList(GlobalDecl GD,
 
       auto *Implicit = ImplicitParamDecl::Create(
           getContext(), Param->getDeclContext(), Param->getLocation(),
-          /*Id=*/nullptr, getContext().getSizeType(), ImplicitParamDecl::Other);
+          /*Id=*/nullptr, getContext().getSizeType(), ImplicitParamKind::Other);
       SizeArguments[Param] = Implicit;
       Args.push_back(Implicit);
     }

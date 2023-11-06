@@ -1717,7 +1717,7 @@ void ItaniumCXXABI::addImplicitStructorParams(CodeGenFunction &CGF,
     QualType T = Context.getPointerType(Q);
     auto *VTTDecl = ImplicitParamDecl::Create(
         Context, /*DC=*/nullptr, MD->getLocation(), &Context.Idents.get("vtt"),
-        T, ImplicitParamDecl::CXXVTT);
+        T, ImplicitParamKind::CXXVTT);
     Params.insert(Params.begin() + 1, VTTDecl);
     getStructorImplicitParamDecl(CGF) = VTTDecl;
   }
