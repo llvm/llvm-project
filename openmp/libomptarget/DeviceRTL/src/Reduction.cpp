@@ -44,45 +44,119 @@ void gpu_irregular_warp_reduce(void *reduce_data, ShuffleReductFnTy shflFct,
   }
 }
 
-static int32_t nvptx_parallel_reduce_nowait(void *reduce_data,
+#if !defined(__CUDA_ARCH__) || __CUDA_ARCH__ < 700
+static uint32_t gpu_irregular_simd_reduce(void *reduce_data,
+                                          ShuffleReductFnTy shflFct) {
+  uint32_t size, remote_id, physical_lane_id;
+  physical_lane_id = mapping::getThreadIdInBlock() % mapping::getWarpSize();
+  __kmpc_impl_lanemask_t lanemask_lt = mapping::lanemaskLT();
+  __kmpc_impl_lanemask_t Liveness = mapping::activemask();
+  uint32_t logical_lane_id = utils::popc(Liveness & lanemask_lt) * 2;
+  __kmpc_impl_lanemask_t lanemask_gt = mapping::lanemaskGT();
+  do {
+    Liveness = mapping::activemask();
+    remote_id = utils::ffs(Liveness & lanemask_gt);
+    size = utils::popc(Liveness);
+    logical_lane_id /= 2;
+    shflFct(reduce_data, /*LaneId =*/logical_lane_id,
+            /*Offset=*/remote_id - 1 - physical_lane_id, /*AlgoVersion=*/2);
+  } while (logical_lane_id % 2 == 0 && size > 1);
+  return (logical_lane_id == 0);
+}
+#endif
+
+static int32_t nvptx_parallel_reduce_nowait(int32_t TId, int32_t num_vars,
+                                            uint64_t reduce_size,
+                                            void *reduce_data,
                                             ShuffleReductFnTy shflFct,
-                                            InterWarpCopyFnTy cpyFct) {
+                                            InterWarpCopyFnTy cpyFct,
+                                            bool isSPMDExecutionMode, bool) {
+  uint32_t BlockThreadId = mapping::getThreadIdInBlock();
+  if (mapping::isMainThreadInGenericMode(/* IsSPMD */ false))
+    BlockThreadId = 0;
   uint32_t NumThreads = omp_get_num_threads();
-  // Handle degenerated parallel regions, including all nested ones, first.
   if (NumThreads == 1)
     return 1;
+    /*
+     * This reduce function handles reduction within a team. It handles
+     * parallel regions in both L1 and L2 parallelism levels. It also
+     * supports Generic, SPMD, and NoOMP modes.
+     *
+     * 1. Reduce within a warp.
+     * 2. Warp master copies value to warp 0 via shared memory.
+     * 3. Warp 0 reduces to a single value.
+     * 4. The reduced value is available in the thread that returns 1.
+     */
 
-  /*
-   * 1. Reduce within a warp.
-   * 2. Warp master copies value to warp 0 via shared memory.
-   * 3. Warp 0 reduces to a single value.
-   * 4. The reduced value is available in the thread that returns 1.
-   */
-
-  uint32_t BlockThreadId = mapping::getThreadIdInBlock();
-  uint32_t NumWarps =
+#if defined(__CUDA_ARCH__) && __CUDA_ARCH__ >= 700
+  uint32_t WarpsNeeded =
       (NumThreads + mapping::getWarpSize() - 1) / mapping::getWarpSize();
+  uint32_t WarpId = mapping::getWarpIdInBlock();
 
+  // Volta execution model:
   // For the Generic execution mode a parallel region either has 1 thread and
   // beyond that, always a multiple of 32. For the SPMD execution mode we may
   // have any number of threads.
-  gpu_regular_warp_reduce(reduce_data, shflFct);
+  if ((NumThreads % mapping::getWarpSize() == 0) || (WarpId < WarpsNeeded - 1))
+    gpu_regular_warp_reduce(reduce_data, shflFct);
+  else if (NumThreads > 1) // Only SPMD execution mode comes thru this case.
+    gpu_irregular_warp_reduce(reduce_data, shflFct,
+                              /*LaneCount=*/NumThreads % mapping::getWarpSize(),
+                              /*LaneId=*/mapping::getThreadIdInBlock() %
+                                  mapping::getWarpSize());
 
   // When we have more than [mapping::getWarpSize()] number of threads
   // a block reduction is performed here.
+  //
+  // Only L1 parallel region can enter this if condition.
   if (NumThreads > mapping::getWarpSize()) {
     // Gather all the reduced values from each warp
     // to the first warp.
-    cpyFct(reduce_data, NumWarps);
+    cpyFct(reduce_data, WarpsNeeded);
 
-    if (BlockThreadId < mapping::getWarpSize())
-      gpu_irregular_warp_reduce(reduce_data, shflFct, NumWarps, BlockThreadId);
+    if (WarpId == 0)
+      gpu_irregular_warp_reduce(reduce_data, shflFct, WarpsNeeded,
+                                BlockThreadId);
+  }
+  return BlockThreadId == 0;
+#else
+  __kmpc_impl_lanemask_t Liveness = mapping::activemask();
+  if (Liveness == lanes::All) // Full warp
+    gpu_regular_warp_reduce(reduce_data, shflFct);
+  else if (!(Liveness & (Liveness + 1))) // Partial warp but contiguous lanes
+    gpu_irregular_warp_reduce(reduce_data, shflFct,
+                              /*LaneCount=*/utils::popc(Liveness),
+                              /*LaneId=*/mapping::getThreadIdInBlock() %
+                                  mapping::getWarpSize());
+  else { // Dispersed lanes. Only threads in L2
+         // parallel region may enter here; return
+         // early.
+    return gpu_irregular_simd_reduce(reduce_data, shflFct);
   }
 
-  // In Generic and in SPMD mode block thread Id 0 is what we want.
-  // It's either the main thread in SPMD mode or the "acting" main thread in the
-  // parallel region.
-  return BlockThreadId == 0;
+  // When we have more than [mapping::getWarpSize()] number of threads
+  // a block reduction is performed here.
+  //
+  // Only L1 parallel region can enter this if condition.
+  if (NumThreads > mapping::getWarpSize()) {
+    uint32_t WarpsNeeded =
+        (NumThreads + mapping::getWarpSize() - 1) / mapping::getWarpSize();
+    // Gather all the reduced values from each warp
+    // to the first warp.
+    cpyFct(reduce_data, WarpsNeeded);
+
+    uint32_t WarpId = BlockThreadId / mapping::getWarpSize();
+    if (WarpId == 0)
+      gpu_irregular_warp_reduce(reduce_data, shflFct, WarpsNeeded,
+                                BlockThreadId);
+
+    return BlockThreadId == 0;
+  }
+
+  // Get the OMP thread Id. This is different from BlockThreadId in the case of
+  // an L2 parallel region.
+  return TId == 0;
+#endif // __CUDA_ARCH__ >= 700
 }
 
 uint32_t roundToWarpsize(uint32_t s) {
@@ -99,7 +173,9 @@ extern "C" {
 int32_t __kmpc_nvptx_parallel_reduce_nowait_v2(
     IdentTy *Loc, int32_t TId, int32_t num_vars, uint64_t reduce_size,
     void *reduce_data, ShuffleReductFnTy shflFct, InterWarpCopyFnTy cpyFct) {
-  return nvptx_parallel_reduce_nowait(reduce_data, shflFct, cpyFct);
+  return nvptx_parallel_reduce_nowait(TId, num_vars, reduce_size, reduce_data,
+                                      shflFct, cpyFct, mapping::isSPMDMode(),
+                                      false);
 }
 
 /// Mostly like _v2 but with the builtin assumption that we have less than
