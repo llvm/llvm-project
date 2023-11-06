@@ -52,6 +52,10 @@ public:
 std::string getBinaryIdentifier(StringRef binaryName) {
   return binaryName.str() + "_bin_cst";
 }
+// Returns an identifier for the global int64 holding the binary size.
+std::string getBinarySizeIdentifier(StringRef binaryName) {
+  return binaryName.str() + "_bin_size_cst";
+}
 } // namespace
 
 void mlir::gpu::registerOffloadingLLVMTranslationInterfaceExternalModels(
@@ -124,6 +128,17 @@ LogicalResult SelectObjectAttrImpl::embedBinary(
   serializedObj->setLinkage(llvm::GlobalValue::LinkageTypes::InternalLinkage);
   serializedObj->setAlignment(llvm::MaybeAlign(8));
   serializedObj->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::None);
+
+  // Embed the object size as a global constant.
+  llvm::Constant *binarySize =
+      llvm::ConstantInt::get(builder.getInt64Ty(), object.getObject().size());
+  llvm::GlobalVariable *serializedSize = new llvm::GlobalVariable(
+      *module, binarySize->getType(), true,
+      llvm::GlobalValue::LinkageTypes::InternalLinkage, binarySize,
+      getBinarySizeIdentifier(op.getName()));
+  serializedSize->setLinkage(llvm::GlobalValue::LinkageTypes::InternalLinkage);
+  serializedSize->setAlignment(llvm::MaybeAlign(8));
+  serializedSize->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::None);
   return success();
 }
 
@@ -172,6 +187,7 @@ private:
   IRBuilderBase &builder;
   mlir::LLVM::ModuleTranslation &moduleTranslation;
   Type *i32Ty{};
+  Type *i64Ty{};
   Type *voidTy{};
   Type *intPtrTy{};
   PointerType *ptrTy{};
@@ -213,6 +229,7 @@ llvm::LaunchKernel::LaunchKernel(
     mlir::LLVM::ModuleTranslation &moduleTranslation)
     : module(module), builder(builder), moduleTranslation(moduleTranslation) {
   i32Ty = builder.getInt32Ty();
+  i64Ty = builder.getInt64Ty();
   ptrTy = builder.getPtrTy(0);
   voidTy = builder.getVoidTy();
   intPtrTy = builder.getIntPtrTy(module.getDataLayout());
@@ -221,11 +238,11 @@ llvm::LaunchKernel::LaunchKernel(
 llvm::FunctionCallee llvm::LaunchKernel::getKernelLaunchFn() {
   return module.getOrInsertFunction(
       "mgpuLaunchKernel",
-      FunctionType::get(
-          voidTy,
-          ArrayRef<Type *>({ptrTy, intPtrTy, intPtrTy, intPtrTy, intPtrTy,
-                            intPtrTy, intPtrTy, i32Ty, ptrTy, ptrTy, ptrTy}),
-          false));
+      FunctionType::get(voidTy,
+                        ArrayRef<Type *>({ptrTy, intPtrTy, intPtrTy, intPtrTy,
+                                          intPtrTy, intPtrTy, intPtrTy, i32Ty,
+                                          ptrTy, ptrTy, ptrTy, i64Ty}),
+                        false));
 }
 
 llvm::FunctionCallee llvm::LaunchKernel::getModuleFunctionFn() {
@@ -237,7 +254,7 @@ llvm::FunctionCallee llvm::LaunchKernel::getModuleFunctionFn() {
 llvm::FunctionCallee llvm::LaunchKernel::getModuleLoadFn() {
   return module.getOrInsertFunction(
       "mgpuModuleLoad",
-      FunctionType::get(ptrTy, ArrayRef<Type *>({ptrTy}), false));
+      FunctionType::get(ptrTy, ArrayRef<Type *>({ptrTy, i64Ty}), false));
 }
 
 llvm::FunctionCallee llvm::LaunchKernel::getModuleLoadJITFn() {
@@ -377,10 +394,21 @@ llvm::LaunchKernel::createKernelLaunch(mlir::gpu::LaunchFuncOp op,
   if (!binary)
     return op.emitError() << "Couldn't find the binary: " << binaryIdentifier;
 
+  llvm::Constant *paramsCount =
+      llvm::ConstantInt::get(i64Ty, op.getNumKernelOperands());
+
+  std::string binarySizeIdentifier = getBinarySizeIdentifier(moduleName);
+  Value *binarySizeVar = module.getGlobalVariable(binarySizeIdentifier, true);
+  if (!binarySizeVar)
+    return op.emitError() << "Couldn't find the binary size: "
+                          << binarySizeIdentifier;
+  Value *binarySize =
+      dyn_cast<llvm::GlobalVariable>(binarySizeVar)->getInitializer();
+
   Value *moduleObject =
       object.getFormat() == gpu::CompilationTarget::Assembly
           ? builder.CreateCall(getModuleLoadJITFn(), {binary, optV})
-          : builder.CreateCall(getModuleLoadFn(), {binary});
+          : builder.CreateCall(getModuleLoadFn(), {binary, binarySize});
 
   // Load the kernel function.
   Value *moduleFunction = builder.CreateCall(
@@ -401,10 +429,10 @@ llvm::LaunchKernel::createKernelLaunch(mlir::gpu::LaunchFuncOp op,
 
   // Create the launch call.
   Value *nullPtr = ConstantPointerNull::get(ptrTy);
-  builder.CreateCall(
-      getKernelLaunchFn(),
-      ArrayRef<Value *>({moduleFunction, gx, gy, gz, bx, by, bz,
-                         dynamicMemorySize, stream, argArray, nullPtr}));
+  builder.CreateCall(getKernelLaunchFn(),
+                     ArrayRef<Value *>({moduleFunction, gx, gy, gz, bx, by, bz,
+                                        dynamicMemorySize, stream, argArray,
+                                        nullPtr, paramsCount}));
 
   // Sync & destroy the stream, for synchronous launches.
   if (handleStream) {

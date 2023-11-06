@@ -4,6 +4,7 @@
 module attributes {gpu.container_module} {
   // CHECK: [[ARGS_TY:%.*]] = type { i32, i32 }
   // CHECK: @kernel_module_bin_cst = internal constant [4 x i8] c"BLOB", align 8
+  // CHECK:  @kernel_module_bin_size_cst = internal constant i64 4, align 8
   // CHECK: @kernel_module_kernel_kernel_name = private unnamed_addr constant [7 x i8] c"kernel\00", align 1
   gpu.binary @kernel_module  [#gpu.object<#nvvm.target, "BLOB">]
   llvm.func @foo() {
@@ -17,10 +18,10 @@ module attributes {gpu.container_module} {
     // CHECK: store i32 32, ptr [[ARG1]], align 4
     // CHECK: %{{.*}} = getelementptr ptr, ptr [[ARGS_ARRAY]], i32 1
     // CHECK: store ptr [[ARG1]], ptr %{{.*}}, align 8
-    // CHECK: [[MODULE:%.*]] = call ptr @mgpuModuleLoad(ptr @kernel_module_bin_cst)
+    // CHECK: [[MODULE:%.*]] = call ptr @mgpuModuleLoad(ptr @kernel_module_bin_cst, i64 4)
     // CHECK: [[FUNC:%.*]] = call ptr @mgpuModuleGetFunction(ptr [[MODULE]], ptr @kernel_module_kernel_kernel_name)
     // CHECK: [[STREAM:%.*]] = call ptr @mgpuStreamCreate()
-    // CHECK: call void @mgpuLaunchKernel(ptr [[FUNC]], i64 8, i64 8, i64 8, i64 8, i64 8, i64 8, i32 256, ptr [[STREAM]], ptr [[ARGS_ARRAY]], ptr null)
+    // CHECK: call void @mgpuLaunchKernel(ptr [[FUNC]], i64 8, i64 8, i64 8, i64 8, i64 8, i64 8, i32 256, ptr [[STREAM]], ptr [[ARGS_ARRAY]], ptr null, i64 2)
     // CHECK: call void @mgpuStreamSynchronize(ptr [[STREAM]])
     // CHECK: call void @mgpuStreamDestroy(ptr [[STREAM]])
     // CHECK: call void @mgpuModuleUnload(ptr [[MODULE]])
@@ -59,9 +60,9 @@ module attributes {gpu.container_module} {
     // CHECK: = call ptr @mgpuStreamCreate()
     // CHECK-NEXT: = alloca {{.*}}, align 8
     // CHECK-NEXT: [[ARGS:%.*]] = alloca ptr, i64 0, align 8
-    // CHECK-NEXT: [[MODULE:%.*]] = call ptr @mgpuModuleLoad(ptr @kernel_module_bin_cst)
+    // CHECK-NEXT: [[MODULE:%.*]] = call ptr @mgpuModuleLoad(ptr @kernel_module_bin_cst, i64 4)
     // CHECK-NEXT: [[FUNC:%.*]] = call ptr @mgpuModuleGetFunction(ptr [[MODULE]], ptr @kernel_module_kernel_kernel_name)
-    // CHECK-NEXT: call void @mgpuLaunchKernel(ptr [[FUNC]], i64 8, i64 8, i64 8, i64 8, i64 8, i64 8, i32 0, ptr {{.*}}, ptr [[ARGS]], ptr null)
+    // CHECK-NEXT: call void @mgpuLaunchKernel(ptr [[FUNC]], i64 8, i64 8, i64 8, i64 8, i64 8, i64 8, i32 0, ptr {{.*}}, ptr [[ARGS]], ptr null, i64 0)
     // CHECK-NEXT: call void @mgpuModuleUnload(ptr [[MODULE]])
     // CHECK-NEXT: call void @mgpuStreamSynchronize(ptr %{{.*}})
     // CHECK-NEXT: call void @mgpuStreamDestroy(ptr %{{.*}})
