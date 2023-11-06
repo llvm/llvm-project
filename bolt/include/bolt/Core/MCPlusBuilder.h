@@ -1181,7 +1181,7 @@ public:
 
   /// Set the label of \p Inst. This label will be emitted right before \p Inst
   /// is emitted to MCStreamer.
-  bool setLabel(MCInst &Inst, MCSymbol *Label, AllocatorIdTy AllocatorId = 0);
+  bool setLabel(MCInst &Inst, MCSymbol *Label) const;
 
   /// Return MCSymbol that represents a target of this instruction at a given
   /// operand number \p OpNum. If there's no symbol associated with
@@ -1816,6 +1816,8 @@ public:
   const ValueType &addAnnotation(MCInst &Inst, unsigned Index,
                                  const ValueType &Val,
                                  AllocatorIdTy AllocatorId = 0) {
+    assert(Index >= MCPlus::MCAnnotation::kGeneric &&
+           "Generic annotation type expected.");
     assert(!hasAnnotation(Inst, Index));
     AnnotationAllocator &Allocator = getAnnotationAllocator(AllocatorId);
     auto *A = new (Allocator.ValueAllocator)
