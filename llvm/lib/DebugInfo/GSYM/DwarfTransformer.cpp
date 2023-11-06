@@ -156,7 +156,7 @@ getQualifiedNameIndex(DWARFDie &Die, uint64_t Language, GsymCreator &Gsym) {
   // Some GCC optimizations create functions with names ending with .isra.<num>
   // or .part.<num> and those names are just DW_AT_name, not DW_AT_linkage_name
   // If it looks like it could be the case, don't add any prefix
-  if (ShortName.startswith("_Z") &&
+  if (ShortName.starts_with("_Z") &&
       (ShortName.contains(".isra.") || ShortName.contains(".part.")))
     return Gsym.insertString(ShortName, /* Copy */ false);
 
