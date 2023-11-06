@@ -100,11 +100,17 @@ namespace clang {
   }
 
 class DiagnosticMapping {
+  LLVM_PREFERRED_TYPE(diag::Severity)
   unsigned Severity : 3;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsUser : 1;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned IsPragma : 1;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned HasNoWarningAsError : 1;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned HasNoErrorAsFatal : 1;
+  LLVM_PREFERRED_TYPE(bool)
   unsigned WasUpgradedFromWarning : 1;
 
 public:
