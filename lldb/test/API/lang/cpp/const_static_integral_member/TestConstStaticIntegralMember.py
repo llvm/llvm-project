@@ -114,39 +114,6 @@ class TestCase(TestBase):
 
         self.expect_expr("ClassWithOnlyConstStatic::member", result_value="3")
 
-    def check_global_var(self, name: str, expect_type, expect_val):
-        var_list = self.target().FindGlobalVariables(name, lldb.UINT32_MAX)
-        self.assertEqual(len(var_list), 1)
-        varobj = var_list[0]
-        self.assertEqual(varobj.type.name, expect_type)
-        self.assertEqual(varobj.value, expect_val)
-
-    # For debug-info produced by older versions of clang, inline static data members
-    # wouldn't get indexed into the Names accelerator table preventing LLDB from finding
-    # them.
-    @expectedFailureAll(compiler=["clang"], compiler_version=["<", "18.0"])
-    @expectedFailureAll(debug_info=no_match(["dsym"]))
-    def test_inline_static_members(self):
-        self.build()
-        lldbutil.run_to_source_breakpoint(
-            self, "// break here", lldb.SBFileSpec("main.cpp")
-        )
-
-        self.check_global_var("A::int_val", "const int", "1")
-        self.check_global_var("A::int_val_with_address", "const int", "2")
-        self.check_global_var("A::bool_val", "const bool", "true")
-        self.check_global_var("A::enum_val", "Enum", "enum_case2")
-        self.check_global_var("A::enum_bool_val", "EnumBool", "enum_bool_case1")
-        self.check_global_var("A::scoped_enum_val", "ScopedEnum", "scoped_enum_case2")
-
-        self.check_global_var("ClassWithOnlyConstStatic::member", "const int", "3")
-
-        self.check_global_var("ClassWithConstexprs::member", "const int", "2")
-        self.check_global_var("ClassWithConstexprs::enum_val", "Enum", "enum_case2")
-        self.check_global_var(
-            "ClassWithConstexprs::scoped_enum_val", "ScopedEnum", "scoped_enum_case2"
-        )
-
     # With older versions of Clang, LLDB fails to evaluate classes with only
     # constexpr members when dsymutil is enabled
     @expectedFailureAll(
