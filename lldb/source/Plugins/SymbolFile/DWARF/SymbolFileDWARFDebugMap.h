@@ -142,7 +142,8 @@ public:
   void DumpClangAST(Stream &s) override;
 
   /// List separate oso files.
-  bool GetSeparateDebugInfo(StructuredData::Dictionary &d) override;
+  bool GetSeparateDebugInfo(StructuredData::Dictionary &d,
+                            bool errors_only) override;
 
   bool GetCompileOption(const char *option, std::string &value,
                         CompileUnit *cu) override;
