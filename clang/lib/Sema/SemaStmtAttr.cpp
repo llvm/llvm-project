@@ -344,7 +344,7 @@ CodeAlignAttr *Sema::BuildCodeAlignAttr(const AttributeCommonInfo &CI,
     if (AlignValue > CodeAlignAttr::getMaxValue() || !ArgVal.isPowerOf2()) {
       Diag(CI.getLoc(), diag::err_attribute_power_of_two_in_range)
           << CI << CodeAlignAttr::getMinValue() << CodeAlignAttr::getMaxValue()
-	  << AlignValue;
+          << AlignValue;
       return nullptr;
     }
   }
@@ -358,16 +358,15 @@ static Attr *handleCodeAlignAttr(Sema &S, Stmt *St, const ParsedAttr &A) {
 }
 
 // Emit duplicate error for [[clang::code_align()]] attribute.
-static void
-CheckForDuplicateCodeAlignAttribute(Sema &S,
-                                    const SmallVectorImpl<const Attr *> &Attrs) {
+static void CheckForDuplicateCodeAlignAttribute(
+    Sema &S, const SmallVectorImpl<const Attr *> &Attrs) {
   const Attr *A = nullptr;
   for (const auto *I : Attrs) {
     if (isa<CodeAlignAttr>(I)) {
       if (A) {
         // Cannot specify same type of attribute twice.
         S.Diag(I->getLocation(), diag::err_loop_attr_duplication) << A;
-	S.Diag(A->getLocation(),diag::note_previous_attribute);
+        S.Diag(A->getLocation(), diag::note_previous_attribute);
       }
       A = I;
     }
