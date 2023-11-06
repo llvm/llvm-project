@@ -295,6 +295,7 @@ void RegisterBankEmitter::emitBaseClassImplementation(
      << "} // end namespace llvm\n";
 }
 
+// RegisterBankInfo tables and enums are discussed in https://discourse.llvm.org/t/74459
 void RegisterBankEmitter::emitRBIHeader(
     raw_ostream &OS, const StringRef TargetName,
     const std::vector<RegisterBank> &Banks) {
