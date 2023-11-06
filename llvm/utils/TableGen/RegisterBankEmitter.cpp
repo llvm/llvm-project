@@ -116,7 +116,7 @@ private:
   void emitRBIHeader(raw_ostream &OS, const StringRef TargetName,
                      const std::vector<RegisterBank> &Banks);
   void emitRBIImplementation(raw_ostream &OS, const StringRef TargetName,
-                   const std::vector<RegisterBank> &Banks);
+                             const std::vector<RegisterBank> &Banks);
 
 public:
   RegisterBankEmitter(RecordKeeper &R) : Target(R), Records(R) {}
@@ -237,8 +237,8 @@ void RegisterBankEmitter::emitBaseClassImplementation(
       for (const auto &RC : RCs) {
         std::string QualifiedRegClassID =
             (Twine(RC->Namespace) + "::" + RC->getName() + "RegClassID").str();
-        OS << "    (1u << (" << QualifiedRegClassID << " - "
-           << LowestIdxInWord << ")) |\n";
+        OS << "    (1u << (" << QualifiedRegClassID << " - " << LowestIdxInWord
+           << ")) |\n";
       }
       OS << "    0,\n";
       LowestIdxInWord += 32;
@@ -318,9 +318,10 @@ void RegisterBankEmitter::emitRBIHeader(
      << "} // end namespace llvm\n";
 }
 
-void RegisterBankEmitter::emitRBIImplementation(raw_ostream &OS,
-                                      const StringRef TargetName,
-                                      const std::vector<RegisterBank> &Banks) {
+void RegisterBankEmitter::emitRBIImplementation(
+    raw_ostream &OS,
+    const StringRef TargetName,
+    const std::vector<RegisterBank> &Banks) {
   const CodeGenRegBank &RegisterClassHierarchy = Target.getRegBank();
 
   OS << "namespace llvm {\n"
