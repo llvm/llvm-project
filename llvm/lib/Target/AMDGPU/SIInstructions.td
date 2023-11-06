@@ -669,8 +669,8 @@ def : GCNPat<
 // This is essentially a tail call, but it also takes a mask to put in EXEC
 // right before jumping to the callee.
 class SI_CS_CHAIN_TC<
-    ValueType execvt,
-    RegisterOperand execrc = !if(!eq(execvt, i32), SSrc_b32, SSrc_b64)>
+    ValueType execvt, Predicate wavesizepred,
+    RegisterOperand execrc = getSOPSrcForVT<execvt>.ret>
     : SPseudoInstSI <(outs),
       (ins CCR_SGPR_64:$src0, unknown:$callee, i32imm:$fpdiff, execrc:$exec)> {
   let FixedSize = 0;
@@ -682,11 +682,11 @@ class SI_CS_CHAIN_TC<
   let SchedRW = [WriteBranch];
   let isConvergent = 1;
 
-  let WaveSizePredicate = !if(!eq(execvt, i32), isWave32, isWave64);
+  let WaveSizePredicate = wavesizepred;
 }
 
-def SI_CS_CHAIN_TC_W32 : SI_CS_CHAIN_TC<i32>;
-def SI_CS_CHAIN_TC_W64 : SI_CS_CHAIN_TC<i64>;
+def SI_CS_CHAIN_TC_W32 : SI_CS_CHAIN_TC<i32, isWave32>;
+def SI_CS_CHAIN_TC_W64 : SI_CS_CHAIN_TC<i64, isWave64>;
 
 // Handle selecting direct & indirect calls via SI_CS_CHAIN_TC_W32/64
 multiclass si_cs_chain_tc_pattern<
@@ -699,7 +699,7 @@ def : GCNPat<
 
 multiclass si_cs_chain_tc_patterns<
   ValueType execvt,
-  RegisterOperand execrc = !if(!eq(execvt, i32), SSrc_b32, SSrc_b64),
+  RegisterOperand execrc = getSOPSrcForVT<execvt>.ret,
   Instruction tc = !if(!eq(execvt, i32), SI_CS_CHAIN_TC_W32, SI_CS_CHAIN_TC_W64)
   > {
   defm direct: si_cs_chain_tc_pattern<(tglobaladdr:$callee), execvt, execrc, tc>;

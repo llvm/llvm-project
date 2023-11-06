@@ -122,9 +122,8 @@ void SILateBranchLowering::expandChainCall(MachineInstr &MI) {
   // 2 instructions, one for setting EXEC and one for the actual tail call.
   constexpr unsigned ExecIdx = 3;
 
-  auto SetExec =
-      BuildMI(*MI.getParent(), MI, MI.getDebugLoc(), TII->get(MovOpc), ExecReg);
-  SetExec->addOperand(MI.getOperand(ExecIdx));
+  BuildMI(*MI.getParent(), MI, MI.getDebugLoc(), TII->get(MovOpc), ExecReg)
+      ->addOperand(MI.getOperand(ExecIdx));
   MI.removeOperand(ExecIdx);
 
   MI.setDesc(TII->get(AMDGPU::SI_TCRETURN));

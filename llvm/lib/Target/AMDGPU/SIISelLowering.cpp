@@ -3606,8 +3606,6 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
     InGlue = Chain.getValue(1);
   }
 
-  auto *TRI = static_cast<const SIRegisterInfo *>(Subtarget->getRegisterInfo());
-
   std::vector<SDValue> Ops;
   Ops.push_back(Chain);
   Ops.push_back(Callee);
@@ -3627,9 +3625,8 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
     Ops.push_back(DAG.getTargetConstant(FPDiff, DL, MVT::i32));
   }
 
-  if (IsChainCallConv) {
+  if (IsChainCallConv)
     Ops.push_back(RequestedExec.Node);
-  }
 
   // Add argument registers to the end of the list so that they are known live
   // into the call.
@@ -3639,7 +3636,7 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
   }
 
   // Add a register mask operand representing the call-preserved registers.
-
+  auto *TRI = static_cast<const SIRegisterInfo *>(Subtarget->getRegisterInfo());
   const uint32_t *Mask = TRI->getCallPreservedMask(MF, CallConv);
   assert(Mask && "Missing call preserved mask for calling convention");
   Ops.push_back(DAG.getRegisterMask(Mask));

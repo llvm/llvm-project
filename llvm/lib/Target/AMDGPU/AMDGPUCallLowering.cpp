@@ -1387,9 +1387,11 @@ bool AMDGPUCallLowering::lowerChainCall(MachineIRBuilder &MIRBuilder,
 bool AMDGPUCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
                                    CallLoweringInfo &Info) const {
   if (Function *F = Info.CB->getCalledFunction())
-    if (F->isIntrinsic())
-      return F->getIntrinsicID() == Intrinsic::amdgcn_cs_chain &&
-             lowerChainCall(MIRBuilder, Info);
+    if (F->isIntrinsic()) {
+      assert(F->getIntrinsicID() == Intrinsic::amdgcn_cs_chain &&
+             "Unexpected intrinsic");
+      return lowerChainCall(MIRBuilder, Info);
+    }
 
   if (Info.IsVarArg) {
     LLVM_DEBUG(dbgs() << "Variadic functions not implemented\n");
