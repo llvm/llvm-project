@@ -86,9 +86,8 @@ def libc_function(
     # We compile the code twice, the first target is suffixed with ".__internal__" and contains the
     # C++ functions in the "LIBC_NAMESPACE" namespace. This allows us to test the function in the
     # presence of another libc.
-    _libc_library(
+    libc_support_library(
         name = libc_internal_target(name),
-        hidden = False,
         srcs = srcs,
         copts = copts,
         **kwargs
