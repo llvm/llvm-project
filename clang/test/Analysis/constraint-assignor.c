@@ -115,6 +115,17 @@ void gh_62215_contradicting_left_equivalent(int x, int y, int z) {
   (void)(x + y + z); // keep the constraints alive.
 }
 
+void gh_62215_left_and_right(int x, int y, int z, int w) {
+  if (x != y) return; // x == y
+  if (z != w) return; // z == w
+  if (z <= x) return; // z > x
+  if (w >= y) return; // w < y
+  // FIXME: We fail to recognize that `w` and `y` are equivalent with `x` and `z`
+  // respectively and recognize the contradiction.
+  clang_analyzer_warnIfReached(); // expected-warning{{REACHABLE}} should be dead code
+  (void)(x + y + z + w);
+}
+
 void gh_62215_contradicting_nested_right_equivalent(int x, int y, int z) {
   if (y > 1 && y < 10) { // y: [2,9]
     if (x == y && z > x) {

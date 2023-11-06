@@ -2234,6 +2234,16 @@ bool ConstraintAssignor::handleEquivalentAlternativeSymOperands(
   SymbolSet SymbolsEqWithRHS = RHSClass.getClassMembers(State);
   llvm::SmallVector<SymSymExpr, 10> AlternativeSymSyms;
 
+  // FIXME: We don't do a full cross-product (leftAlts x rightAlts) to try all
+  // possible combinations, instead what we do is:
+  // (LHS OP rightAlts) union (leftAlts OP RHS)
+
+  // We don't do it, because it still wouldn't be enough. For example, if a
+  // sub-symbol of an operand should be substituted to discover the
+  // contradiction. Doing a cross-product of the operand alternatives is likely
+  // too expensive for the practical gain, let alone doing the cross-product
+  // with all possible equivalent sub-symbols - but I haven't measured.
+
   // Gather left alternatives.
   for (SymbolRef AlternativeLHS : SymbolsEqWithLHS) {
     if (AlternativeLHS == LHS)
