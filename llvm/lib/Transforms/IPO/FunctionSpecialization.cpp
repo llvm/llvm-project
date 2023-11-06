@@ -39,10 +39,15 @@ static cl::opt<unsigned> MaxClones(
     "The maximum number of clones allowed for a single function "
     "specialization"));
 
+static cl::opt<unsigned> MaxDiscoveryDepth(
+    "funcspec-max-discovery-depth", cl::init(10), cl::Hidden,
+    cl::desc("The maximum recursion depth allowed when searching for strongly "
+             "connected phis"));
+
 static cl::opt<unsigned> MaxIncomingPhiValues(
-    "funcspec-max-incoming-phi-values", cl::init(4), cl::Hidden, cl::desc(
-    "The maximum number of incoming values a PHI node can have to be "
-    "considered during the specialization bonus estimation"));
+    "funcspec-max-incoming-phi-values", cl::init(8), cl::Hidden,
+    cl::desc("The maximum number of incoming values a PHI node can have to be "
+             "considered during the specialization bonus estimation"));
 
 static cl::opt<unsigned> MaxBlockPredecessors(
     "funcspec-max-block-predecessors", cl::init(2), cl::Hidden, cl::desc(
@@ -64,9 +69,9 @@ static cl::opt<unsigned> MinCodeSizeSavings(
     "much percent of the original function size"));
 
 static cl::opt<unsigned> MinLatencySavings(
-    "funcspec-min-latency-savings", cl::init(70), cl::Hidden, cl::desc(
-    "Reject specializations whose latency savings are less than this"
-    "much percent of the original function size"));
+    "funcspec-min-latency-savings", cl::init(45), cl::Hidden,
+    cl::desc("Reject specializations whose latency savings are less than this"
+             "much percent of the original function size"));
 
 static cl::opt<unsigned> MinInliningBonus(
     "funcspec-min-inlining-bonus", cl::init(300), cl::Hidden, cl::desc(
@@ -262,30 +267,86 @@ Cost InstCostVisitor::estimateBranchInst(BranchInst &I) {
   return estimateBasicBlocks(WorkList);
 }
 
+void InstCostVisitor::discoverStronglyConnectedComponent(PHINode *PN,
+                                                         unsigned Depth) {
+  if (Depth > MaxDiscoveryDepth)
+    return;
+
+  if (PN->getNumIncomingValues() > MaxIncomingPhiValues)
+    return;
+
+  if (!StronglyConnectedPHIs.insert(PN).second)
+    return;
+
+  for (unsigned I = 0, E = PN->getNumIncomingValues(); I != E; ++I) {
+    Value *V = PN->getIncomingValue(I);
+    if (auto *Phi = dyn_cast<PHINode>(V)) {
+      if (Phi == PN || DeadBlocks.contains(PN->getIncomingBlock(I)))
+        continue;
+      discoverStronglyConnectedComponent(Phi, Depth + 1);
+    }
+  }
+}
+
 Constant *InstCostVisitor::visitPHINode(PHINode &I) {
   if (I.getNumIncomingValues() > MaxIncomingPhiValues)
     return nullptr;
 
   bool Inserted = VisitedPHIs.insert(&I).second;
   Constant *Const = nullptr;
+  SmallVector<PHINode *, 8> UnknownIncomingValues;
 
-  for (unsigned Idx = 0, E = I.getNumIncomingValues(); Idx != E; ++Idx) {
-    Value *V = I.getIncomingValue(Idx);
-    if (auto *Inst = dyn_cast<Instruction>(V))
-      if (Inst == &I || DeadBlocks.contains(I.getIncomingBlock(Idx)))
-        continue;
-    Constant *C = findConstantFor(V, KnownConstants);
-    if (!C) {
-      if (Inserted)
-        PendingPHIs.push_back(&I);
-      return nullptr;
+  auto CanConstantFoldPhi = [&](PHINode *PN) -> bool {
+    UnknownIncomingValues.clear();
+
+    for (unsigned I = 0, E = PN->getNumIncomingValues(); I != E; ++I) {
+      Value *V = PN->getIncomingValue(I);
+
+      // Disregard self-references and dead incoming values.
+      if (auto *Inst = dyn_cast<Instruction>(V))
+        if (Inst == PN || DeadBlocks.contains(PN->getIncomingBlock(I)))
+          continue;
+
+      if (Constant *C = findConstantFor(V, KnownConstants)) {
+        if (!Const)
+          Const = C;
+        // Not all incoming values are the same constant. Bail immediately.
+        else if (C != Const)
+          return false;
+      } else if (auto *Phi = dyn_cast<PHINode>(V)) {
+        // It's not a strongly connected phi. Collect it and bail at the end.
+        if (!StronglyConnectedPHIs.contains(Phi))
+          UnknownIncomingValues.push_back(Phi);
+      } else {
+        // We can't reason about anything else.
+        return false;
+      }
     }
-    if (!Const)
-      Const = C;
-    else if (C != Const)
-      return nullptr;
+    return UnknownIncomingValues.empty();
+  };
+
+  if (CanConstantFoldPhi(&I))
+    return Const;
+
+  if (Inserted) {
+    // First time we are seeing this phi. We'll retry later, after all
+    // the constant arguments have been propagated. Bail for now.
+    PendingPHIs.push_back(&I);
+    return nullptr;
   }
-  return Const;
+
+  for (PHINode *Phi : UnknownIncomingValues)
+    discoverStronglyConnectedComponent(Phi, 1);
+
+  bool CannotConstantFoldPhi = false;
+  for (PHINode *Phi : StronglyConnectedPHIs) {
+    if (!CanConstantFoldPhi(Phi)) {
+      CannotConstantFoldPhi = true;
+      break;
+    }
+  }
+  StronglyConnectedPHIs.clear();
+  return CannotConstantFoldPhi ? nullptr : Const;
 }
 
 Constant *InstCostVisitor::visitFreezeInst(FreezeInst &I) {
@@ -809,20 +870,40 @@ bool FunctionSpecializer::findSpecializations(Function *F, unsigned FuncSize,
       auto IsProfitable = [](Bonus &B, unsigned Score, unsigned FuncSize,
                              unsigned FuncGrowth) -> bool {
         // No check required.
-        if (ForceSpecialization)
+        if (ForceSpecialization) {
+          LLVM_DEBUG(dbgs() << "Force is on\n");
           return true;
+        }
         // Minimum inlining bonus.
-        if (Score > MinInliningBonus * FuncSize / 100)
+        if (Score > MinInliningBonus * FuncSize / 100) {
+          LLVM_DEBUG(dbgs()
+                     << "FnSpecialization: Min inliningbous: Score = " << Score
+                     << " > " << MinInliningBonus * FuncSize / 100 << "\n");
           return true;
+        }
         // Minimum codesize savings.
-        if (B.CodeSize < MinCodeSizeSavings * FuncSize / 100)
+        if (B.CodeSize < MinCodeSizeSavings * FuncSize / 100) {
+          LLVM_DEBUG(dbgs()
+                     << "FnSpecialization: Min CodeSize Saving: CodeSize = "
+                     << B.CodeSize << " > "
+                     << MinCodeSizeSavings * FuncSize / 100 << "\n");
           return false;
+        }
         // Minimum latency savings.
-        if (B.Latency < MinLatencySavings * FuncSize / 100)
+        if (B.Latency < MinLatencySavings * FuncSize / 100) {
+          LLVM_DEBUG(dbgs()
+                     << "FnSpecialization: Min Latency Saving: Latency = "
+                     << B.Latency << " > " << MinLatencySavings * FuncSize / 100
+                     << "\n");
           return false;
+        }
         // Maximum codesize growth.
-        if (FuncGrowth / FuncSize > MaxCodeSizeGrowth)
+        if (FuncGrowth / FuncSize > MaxCodeSizeGrowth) {
+          LLVM_DEBUG(dbgs() << "FnSpecialization: Max Func Growth: CodeSize = "
+                            << FuncGrowth / FuncSize << " > "
+                            << MaxCodeSizeGrowth << "\n");
           return false;
+        }
         return true;
       };
 

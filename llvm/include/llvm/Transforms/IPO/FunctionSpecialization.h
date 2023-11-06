@@ -183,6 +183,8 @@ class InstCostVisitor : public InstVisitor<InstCostVisitor, Constant *> {
   DenseSet<BasicBlock *> DeadBlocks;
   // PHI nodes we have visited before.
   DenseSet<Instruction *> VisitedPHIs;
+  // PHI nodes forming a strongly connected component.
+  DenseSet<PHINode *> StronglyConnectedPHIs;
   // PHI nodes we have visited once without successfully constant folding them.
   // Once the InstCostVisitor has processed all the specialization arguments,
   // it should be possible to determine whether those PHIs can be folded
@@ -216,6 +218,8 @@ private:
   Cost estimateBasicBlocks(SmallVectorImpl<BasicBlock *> &WorkList);
   Cost estimateSwitchInst(SwitchInst &I);
   Cost estimateBranchInst(BranchInst &I);
+
+  void discoverStronglyConnectedComponent(PHINode *PN, unsigned Depth);
 
   Constant *visitInstruction(Instruction &I) { return nullptr; }
   Constant *visitPHINode(PHINode &I);
