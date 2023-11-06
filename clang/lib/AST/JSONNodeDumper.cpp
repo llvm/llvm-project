@@ -1351,15 +1351,9 @@ void JSONNodeDumper::VisitCXXNewExpr(const CXXNewExpr *NE) {
   attributeOnlyIfTrue("isArray", NE->isArray());
   attributeOnlyIfTrue("isPlacement", NE->getNumPlacementArgs() != 0);
   switch (NE->getInitializationStyle()) {
-  case CXXNewInitializationStyle::None:
-  case CXXNewInitializationStyle::Implicit:
-    break;
-  case CXXNewInitializationStyle::Call:
-    JOS.attribute("initStyle", "call");
-    break;
-  case CXXNewInitializationStyle::List:
-    JOS.attribute("initStyle", "list");
-    break;
+  case CXXNewExpr::NoInit: break;
+  case CXXNewExpr::CallInit: JOS.attribute("initStyle", "call"); break;
+  case CXXNewExpr::ListInit: JOS.attribute("initStyle", "list"); break;
   }
   if (const FunctionDecl *FD = NE->getOperatorNew())
     JOS.attribute("operatorNewDecl", createBareDeclRef(FD));

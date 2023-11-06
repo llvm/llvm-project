@@ -323,8 +323,7 @@ bool MakeSmartPtrCheck::replaceNew(DiagnosticBuilder &Diag,
     return false;
   };
   switch (New->getInitializationStyle()) {
-  case CXXNewInitializationStyle::None:
-  case CXXNewInitializationStyle::Implicit: {
+  case CXXNewExpr::NoInit: {
     if (ArraySizeExpr.empty()) {
       Diag << FixItHint::CreateRemoval(SourceRange(NewStart, NewEnd));
     } else {
@@ -335,7 +334,7 @@ bool MakeSmartPtrCheck::replaceNew(DiagnosticBuilder &Diag,
     }
     break;
   }
-  case CXXNewInitializationStyle::Call: {
+  case CXXNewExpr::CallInit: {
     // FIXME: Add fixes for constructors with parameters that can be created
     // with a C++11 braced-init-list (e.g. std::vector, std::map).
     // Unlike ordinal cases, braced list can not be deduced in
@@ -372,7 +371,7 @@ bool MakeSmartPtrCheck::replaceNew(DiagnosticBuilder &Diag,
     }
     break;
   }
-  case CXXNewInitializationStyle::List: {
+  case CXXNewExpr::ListInit: {
     // Range of the substring that we do not want to remove.
     SourceRange InitRange;
     if (const auto *NewConstruct = New->getConstructExpr()) {
