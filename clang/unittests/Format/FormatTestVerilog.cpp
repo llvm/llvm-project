@@ -1005,7 +1005,7 @@ TEST_F(FormatTestVerilog, Operators) {
   verifyFormat("x = x ^~ x;");
   verifyFormat("x = x && x;");
   verifyFormat("x = x || x;");
-  verifyFormat("x = x->x;");
+  verifyFormat("x = x -> x;");
   verifyFormat("x = x <-> x;");
   verifyFormat("x += x;");
   verifyFormat("x -= x;");
